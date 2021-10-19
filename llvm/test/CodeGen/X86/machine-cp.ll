@@ -106,7 +106,7 @@ define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-NEXT:    movaps %xmm3, %xmm2
 ; CHECK-NEXT:    cmpltps %xmm0, %xmm2
 ; CHECK-NEXT:    movaps %xmm2, %xmm4
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm4
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
 ; CHECK-NEXT:    movaps %xmm4, %xmm10
 ; CHECK-NEXT:    andnps %xmm2, %xmm10
 ; CHECK-NEXT:    movaps %xmm8, %xmm5
@@ -148,7 +148,7 @@ define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-NEXT:    andps %xmm3, %xmm14
 ; CHECK-NEXT:    orps %xmm14, %xmm2
 ; CHECK-NEXT:    andps %xmm3, %xmm10
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm4
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
 ; CHECK-NEXT:    cvttps2dq %xmm9, %xmm1
 ; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; CHECK-NEXT:    andps %xmm1, %xmm4

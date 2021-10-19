@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
+/// \file
 /// Provides implementations for PassManager and AnalysisManager template
 /// methods. These classes should be explicitly instantiated for any IR unit,
 /// and files doing the explicit instantiation should include this header.
@@ -20,9 +20,7 @@
 namespace llvm {
 
 template <typename IRUnitT, typename... ExtraArgTs>
-inline AnalysisManager<IRUnitT, ExtraArgTs...>::AnalysisManager(
-    bool DebugLogging)
-    : DebugLogging(DebugLogging) {}
+inline AnalysisManager<IRUnitT, ExtraArgTs...>::AnalysisManager() {}
 
 template <typename IRUnitT, typename... ExtraArgTs>
 inline AnalysisManager<IRUnitT, ExtraArgTs...>::AnalysisManager(
@@ -37,8 +35,8 @@ template <typename IRUnitT, typename... ExtraArgTs>
 inline void
 AnalysisManager<IRUnitT, ExtraArgTs...>::clear(IRUnitT &IR,
                                                llvm::StringRef Name) {
-  if (DebugLogging)
-    dbgs() << "Clearing all analysis results for: " << Name << "\n";
+  if (auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR))
+    PI->runAnalysesCleared(Name);
 
   auto ResultsListI = AnalysisResultLists.find(&IR);
   if (ResultsListI == AnalysisResultLists.end())
@@ -133,9 +131,8 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
         continue;
       }
 
-      if (DebugLogging)
-        dbgs() << "Invalidating analysis: " << this->lookUpPass(ID).name()
-               << " on " << IR.getName() << "\n";
+      if (auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR))
+        PI->runAnalysisInvalidated(this->lookUpPass(ID), IR);
 
       I = ResultsList.erase(I);
       AnalysisResults.erase({ID, &IR});

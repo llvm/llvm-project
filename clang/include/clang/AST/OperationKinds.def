@@ -77,9 +77,10 @@ CAST_OPERATION(LValueToRValueBitCast)
 CAST_OPERATION(LValueToRValue)
 
 /// CK_NoOp - A conversion which does not affect the type other than
-/// (possibly) adding qualifiers.
+/// (possibly) adding qualifiers or removing noexcept.
 ///   int    -> int
 ///   char** -> const char * const *
+///   void () noexcept -> void ()
 CAST_OPERATION(NoOp)
 
 /// CK_BaseToDerived - A conversion from a C++ class pointer/reference
@@ -180,6 +181,9 @@ CAST_OPERATION(PointerToBoolean)
 ///    (void) malloc(2048)
 CAST_OPERATION(ToVoid)
 
+/// CK_MatrixCast - A cast between matrix types of the same dimensions.
+CAST_OPERATION(MatrixCast)
+
 /// CK_VectorSplat - A conversion from an arithmetic type to a
 /// vector of that element type.  Fills all elements ("splats") with
 /// the source value.
@@ -200,6 +204,14 @@ CAST_OPERATION(IntegralToBoolean)
 /// CK_IntegralToFloating - Integral to floating point.
 ///    float f = i;
 CAST_OPERATION(IntegralToFloating)
+
+/// CK_FloatingToFixedPoint - Floating to fixed point.
+///    _Accum a = f;
+CAST_OPERATION(FloatingToFixedPoint)
+
+/// CK_FixedPointToFloating - Fixed point to floating.
+///    (float) 2.5k
+CAST_OPERATION(FixedPointToFloating)
 
 /// CK_FixedPointCast - Fixed point to fixed point.
 ///    (_Accum) 0.5r

@@ -15,3 +15,6 @@ add_lldb_library(lldbPluginPlatformMacOSXObjCXX
     Object
     Support
   )
+
+
+target_compile_options(lldbPluginPlatformMacOSXObjCXX PRIVATE -fno-objc-exceptions)

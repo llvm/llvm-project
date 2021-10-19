@@ -73,7 +73,7 @@ struct test_uninitialized_copy_move
         std::destroy_n(exec, out_first, n);
     }
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
+#if defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) || defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN)
     template <typename InputIterator, typename OutputIterator>
     void
     operator()(pstl::execution::unsequenced_policy, InputIterator first, InputIterator last, OutputIterator out_first,
@@ -133,8 +133,8 @@ main()
     test_uninitialized_copy_move_by_type<float64_t>();
 
     // for user-defined types
-#if !_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN && !_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN &&     \
-    !_PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN
+#if !defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) && !defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) &&     \
+    !defined(_PSTL_ICC_16_VC14_TEST_PAR_TBB_RT_RELEASE_64_BROKEN)
     test_uninitialized_copy_move_by_type<Wrapper<int8_t>>();
 #endif
 

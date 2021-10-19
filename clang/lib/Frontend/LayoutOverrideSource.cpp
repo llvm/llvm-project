@@ -16,11 +16,11 @@ using namespace clang;
 
 /// Parse a simple identifier.
 static std::string parseName(StringRef S) {
-  if (S.empty() || !isIdentifierHead(S[0]))
+  if (S.empty() || !isAsciiIdentifierStart(S[0]))
     return "";
 
   unsigned Offset = 1;
-  while (Offset < S.size() && isIdentifierBody(S[Offset]))
+  while (Offset < S.size() && isAsciiIdentifierContinue(S[Offset]))
     ++Offset;
 
   return S.substr(0, Offset).str();

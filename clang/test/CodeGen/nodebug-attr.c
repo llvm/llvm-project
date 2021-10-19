@@ -3,7 +3,7 @@
 // RUN:   | FileCheck %s
 
 // Makes sure there is no !dbg between function attributes and '{'.
-// CHECK-LABEL: define void @foo{{.*}} #{{[0-9]+}} {
+// CHECK-LABEL: define{{.*}} void @foo{{.*}} #{{[0-9]+}} {
 // CHECK-NOT: ret {{.*}}!dbg
 __attribute__((nodebug)) void foo(int *a) {
   *a = 1;

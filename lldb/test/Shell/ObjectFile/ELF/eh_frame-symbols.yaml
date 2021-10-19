@@ -1,0 +1,32 @@
+# RUN: yaml2obj %s >%t
+# RUN: %lldb %t -o "image dump symtab" -b | FileCheck %s
+
+# CHECK: Index   UserID DSX Type            File Address/Value Load Address       Size               Flags      Name
+# CHECK: [    0]      1     SourceFile      0x0000000000000000                    0x0000000000000000 0x00000004 -
+# CHECK: [    1]      2  SX Code            0x0000000000201180                    0x0000000000000010 0x00000000 ___lldb_unnamed_symbol{{[0-9]*}}
+# CHECK: [    2]      3  SX Code            0x0000000000201190                    0x0000000000000006 0x00000000 ___lldb_unnamed_symbol{{[0-9]*}}
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200120
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000401000000600000000410E108602430D06410C07080000001C0000003C000000301000000600000000410E108602430D06410C070800000000000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x201180
+    AddressAlign:    0x10
+    Content:         554889E55DC3662E0F1F840000000000554889E55DC3
+Symbols:
+  - Name:            '-'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+...

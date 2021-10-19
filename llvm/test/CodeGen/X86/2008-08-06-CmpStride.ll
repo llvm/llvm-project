@@ -16,7 +16,7 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    movl $.str, %edi
 ; CHECK-NEXT:    movl %ebx, %esi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    addl $-10, %ebx
 ; CHECK-NEXT:    cmpl $1, %ebx
 ; CHECK-NEXT:    jne .LBB0_1

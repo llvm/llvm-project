@@ -100,7 +100,7 @@ define <4 x i32> @add_sext_ifpos_vec_splat(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = sext <4 x i1> %c to <4 x i32>
@@ -113,7 +113,7 @@ define <4 x i32> @add_sext_ifpos_vec_nonsplat(<4 x i32> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = icmp sgt <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = sext <4 x i1> %c to <4 x i32>
@@ -224,7 +224,7 @@ define <4 x i32> @add_lshr_not_vec_splat(<4 x i32> %x) {
 ; CHECK-LABEL: add_lshr_not_vec_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = lshr <4 x i32> %c, <i32 31, i32 31, i32 31, i32 31>
@@ -236,7 +236,7 @@ define <4 x i32> @add_lshr_not_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: add_lshr_not_vec_nonsplat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = lshr <4 x i32> %c, <i32 31, i32 31, i32 31, i32 31>
@@ -261,7 +261,7 @@ define <4 x i32> @sub_lshr_not_vec_splat(<4 x i32> %x) {
 ; CHECK-LABEL: sub_lshr_not_vec_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrld $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = lshr <4 x i32> %c, <i32 31, i32 31, i32 31, i32 31>
@@ -273,7 +273,7 @@ define <4 x i32> @sub_lshr_not_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: sub_lshr_not_vec_nonsplat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrld $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %c = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %e = lshr <4 x i32> %c, <i32 31, i32 31, i32 31, i32 31>
@@ -321,7 +321,7 @@ define <4 x i32> @sub_const_op_lshr_vec_splat(<4 x i32> %x) {
 ; CHECK-LABEL: sub_const_op_lshr_vec_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %sh
@@ -332,7 +332,7 @@ define <4 x i32> @sub_const_op_lshr_vec_nonsplat(<4 x i32> %x) {
 ; CHECK-LABEL: sub_const_op_lshr_vec_nonsplat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %sh = lshr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %r = sub <4 x i32> <i32 42, i32 43, i32 44, i32 45>, %sh

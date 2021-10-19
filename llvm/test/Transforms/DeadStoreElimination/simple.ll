@@ -11,7 +11,7 @@ declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %DEAD = load i32, i32* %Q
@@ -19,20 +19,6 @@ define void @test1(i32* %Q, i32* %P) {
   store i32 0, i32* %P
   ret void
 }
-
-; PR8576 - Should delete store of 10 even though p/q are may aliases.
-define void @test2(i32 *%p, i32 *%q) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    store i32 20, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store i32 30, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    ret void
-;
-  store i32 10, i32* %p, align 4
-  store i32 20, i32* %q, align 4
-  store i32 30, i32* %p, align 4
-  ret void
-}
-
 
 ; PR8677
 @g = global i32 1
@@ -56,7 +42,7 @@ define i32 @test3(i32* %g_addr) nounwind {
 define void @test4(i32* %Q) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]]
+; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load i32, i32* %Q
@@ -64,13 +50,16 @@ define void @test4(i32* %Q) {
   ret void
 }
 
-define void @test5(i32* %Q) {
-; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
+; PR8576 - Should delete store of 10 even though p/q are may aliases.
+define void @test2(i32 *%p, i32 *%q) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:    store i32 20, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 30, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %a = load volatile i32, i32* %Q
-  store i32 %a, i32* %Q
+  store i32 10, i32* %p, align 4
+  store i32 20, i32* %q, align 4
+  store i32 30, i32* %p, align 4
   ret void
 }
 
@@ -133,9 +122,9 @@ define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %
 ; Do not delete stores that are only partially killed.
 define i32 @test8() {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[V:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1234567, i32* [[V]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]]
+; CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1234567, i32* [[V]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %V = alloca i32
@@ -147,10 +136,9 @@ define i32 @test8() {
 
 }
 
-
 ; Test for byval handling.
 %struct.x = type { i32, i32, i32, i32 }
-define void @test9(%struct.x* byval  %a) nounwind  {
+define void @test9(%struct.x* byval(%struct.x)  %a) nounwind  {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    ret void
 ;
@@ -160,7 +148,7 @@ define void @test9(%struct.x* byval  %a) nounwind  {
 }
 
 ; Test for inalloca handling.
-define void @test9_2(%struct.x* inalloca  %a) nounwind  {
+define void @test9_2(%struct.x* inalloca(%struct.x) %a) nounwind {
 ; CHECK-LABEL: @test9_2(
 ; CHECK-NEXT:    ret void
 ;
@@ -182,8 +170,8 @@ define void @test9_3(%struct.x* preallocated(%struct.x)  %a) nounwind  {
 ; va_arg has fuzzy dependence, the store shouldn't be zapped.
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*
-; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]]
+; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP_0:%.*]] = va_arg i8** [[X_ADDR]], double
 ; CHECK-NEXT:    ret double [[TMP_0]]
 ;
@@ -192,7 +180,6 @@ define double @test10(i8* %X) {
   %tmp.0 = va_arg i8** %X_addr, double
   ret double %tmp.0
 }
-
 
 ; DSE should delete the dead trampoline.
 declare void @test11f()
@@ -206,27 +193,6 @@ define void @test11() {
   ret void
 }
 
-
-; PR2599 - load -> store to same address.
-define void @test12({ i32, i32 }* %x) nounwind  {
-; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[X:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 0, [[TMP8]]
-; CHECK-NEXT:    store i32 [[TMP17]], i32* [[TMP7]], align 4
-; CHECK-NEXT:    ret void
-;
-  %tmp4 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 0
-  %tmp5 = load i32, i32* %tmp4, align 4
-  %tmp7 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 1
-  %tmp8 = load i32, i32* %tmp7, align 4
-  %tmp17 = sub i32 0, %tmp8
-  store i32 %tmp5, i32* %tmp4, align 4
-  store i32 %tmp17, i32* %tmp7, align 4
-  ret void
-}
-
-
 ; %P doesn't escape, the DEAD instructions should be removed.
 declare void @test13f()
 define i32* @test13() {
@@ -234,7 +200,7 @@ define i32* @test13() {
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 4)
 ; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32* [[P]]
 ;
   %ptr = tail call i8* @malloc(i32 4)
@@ -253,7 +219,7 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 ; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
 ; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]]
+; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]], align 4
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
 ;
   %p = tail call i8* @malloc(i32 4)
@@ -267,11 +233,9 @@ define i32 addrspace(1)* @test13_addrspacecast() {
   ret i32 addrspace(1)* %P
 }
 
-declare noalias i8* @malloc(i32)
-declare noalias i8* @calloc(i32, i32)
-declare noalias i8* @aligned_alloc(i32, i32)
-declare void @free(i8*)
 
+declare noalias i8* @malloc(i32) willreturn
+declare noalias i8* @calloc(i32, i32) willreturn
 
 define void @test14(i32* %Q) {
 ; CHECK-LABEL: @test14(
@@ -284,211 +248,21 @@ define void @test14(i32* %Q) {
 
 }
 
-; Dead store on an aligned_alloc: should know that %M doesn't alias with %A.
-define i32 @test14a(i8* %M, i8 %value) {
-; CHECK-LABEL: @test14a(
-; CHECK-NOT: store
-; CHECK:     ret i32 0
-;
-  %A = tail call i8* @aligned_alloc(i32 32, i32 1024)
-  store i8 %value, i8* %A
-  tail call void @free(i8* %A)
-  ret i32 0
-}
-
-; PR8701
-
-;; Fully dead overwrite of memcpy.
-define void @test15(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test15(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  ret void
-}
-
-;; Fully dead overwrite of memcpy.
-define void @test15_atomic(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test15_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Fully dead overwrite of memcpy.
-define void @test15_atomic_weaker(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test15_atomic_weaker(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Fully dead overwrite of memcpy.
-define void @test15_atomic_weaker_2(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test15_atomic_weaker_2(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
-  ret void
-}
-
-;; Full overwrite of smaller memcpy.
-define void @test16(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test16(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 8, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  ret void
-}
-
-;; Full overwrite of smaller memcpy.
-define void @test16_atomic(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test16_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i32 1)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Full overwrite of smaller memory where overwrite has stronger atomicity
-define void @test16_atomic_weaker(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test16_atomic_weaker(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i1 false)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Full overwrite of smaller memory where overwrite has weaker atomicity.
-define void @test16_atomic_weaker_2(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test16_atomic_weaker_2(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 8, i32 1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
-  ret void
-}
-
-;; Overwrite of memset by memcpy.
-define void @test17(i8* %P, i8* noalias %Q) nounwind ssp {
-; CHECK-LABEL: @test17(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  ret void
-}
-
-;; Overwrite of memset by memcpy.
-define void @test17_atomic(i8* %P, i8* noalias %Q) nounwind ssp {
-; CHECK-LABEL: @test17_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i32 1)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Overwrite of memset by memcpy. Overwrite is stronger atomicity. We can
-;; remove the memset.
-define void @test17_atomic_weaker(i8* %P, i8* noalias %Q) nounwind ssp {
-; CHECK-LABEL: @test17_atomic_weaker(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i1 false)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  ret void
-}
-
-;; Overwrite of memset by memcpy. Overwrite is weaker atomicity. We can remove
-;; the memset.
-define void @test17_atomic_weaker_2(i8* %P, i8* noalias %Q) nounwind ssp {
-; CHECK-LABEL: @test17_atomic_weaker_2(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %P, i8 42, i64 8, i32 1)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i1 false)
-  ret void
-}
-
-; Should not delete the volatile memset.
-define void @test17v(i8* %P, i8* %Q) nounwind ssp {
-; CHECK-LABEL: @test17v(
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i64(i8* [[P:%.*]], i8 42, i64 8, i1 true)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memset.p0i8.i64(i8* %P, i8 42, i64 8, i1 true)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  ret void
-}
-
-; PR8728
-; Do not delete instruction where possible situation is:
-; A = B
-; A = A
-;
-; NB! See PR11763 - currently LLVM allows memcpy's source and destination to be
-; equal (but not inequal and overlapping).
-define void @test18(i8* %P, i8* %Q, i8* %R) nounwind ssp {
-; CHECK-LABEL: @test18(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P]], i8* [[R:%.*]], i64 12, i1 false)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %R, i64 12, i1 false)
-  ret void
-}
-
-define void @test18_atomic(i8* %P, i8* %Q, i8* %R) nounwind ssp {
-; CHECK-LABEL: @test18_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
-; CHECK-NEXT:    ret void
-;
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %Q, i64 12, i32 1)
-  tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 %P, i8* align 1 %R, i64 12, i32 1)
-  ret void
-}
-
-
 ; The store here is not dead because the byval call reads it.
-declare void @test19f({i32}* byval align 4 %P)
+declare void @test19f({i32}* byval({i32}) align 4 %P)
 
-define void @test19({i32} * nocapture byval align 4 %arg5) nounwind ssp {
+define void @test19({i32}* nocapture byval({i32}) align 4 %arg5) nounwind ssp {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[ARG5:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store i32 912, i32* [[TMP7]]
-; CHECK-NEXT:    call void @test19f({ i32 }* byval align 4 [[ARG5]])
+; CHECK-NEXT:    store i32 912, i32* [[TMP7]], align 4
+; CHECK-NEXT:    call void @test19f({ i32 }* byval({ i32 }) align 4 [[ARG5]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %tmp7 = getelementptr inbounds {i32}, {i32}* %arg5, i32 0, i32 0
   store i32 912, i32* %tmp7
-  call void @test19f({i32}* byval align 4 %arg5)
+  call void @test19f({i32}* byval({i32}) align 4 %arg5)
   ret void
 
 }
@@ -511,8 +285,15 @@ define void @test21() {
   ret void
 }
 
+; Currently elimination of stores at the end of a function is limited to a
+; single underlying object, for compile-time. This case appears to not be
+; very important in practice.
 define void @test22(i1 %i, i32 %k, i32 %m) nounwind {
 ; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[K_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[K_ADDR_M_ADDR:%.*]] = select i1 [[I:%.*]], i32* [[K_ADDR]], i32* [[M_ADDR]]
+; CHECK-NEXT:    store i32 0, i32* [[K_ADDR_M_ADDR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %k.addr = alloca i32
@@ -531,7 +312,7 @@ define noalias i8* @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) #3
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) [[ATTR3:#.*]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -569,7 +350,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #6
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) [[ATTR6:#.*]]
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -579,54 +360,6 @@ define i8* @test25(i8* %p) nounwind {
   %q = call i8* @strdup(i8* %p) nounwind optsize
   store i8 %tmp, i8* %p.4, align 1
   ret i8* %q
-}
-
-; Remove redundant store if loaded value is in another block.
-define i32 @test26(i1 %c, i32* %p) {
-; CHECK-LABEL: @test26(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %v = load i32, i32* %p, align 4
-  br i1 %c, label %bb1, label %bb2
-bb1:
-  br label %bb3
-bb2:
-  store i32 %v, i32* %p, align 4
-  br label %bb3
-bb3:
-  ret i32 0
-}
-
-; Remove redundant store if loaded value is in another block.
-define i32 @test27(i1 %c, i32* %p) {
-; CHECK-LABEL: @test27(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %v = load i32, i32* %p, align 4
-  br i1 %c, label %bb1, label %bb2
-bb1:
-  br label %bb3
-bb2:
-  br label %bb3
-bb3:
-  store i32 %v, i32* %p, align 4
-  ret i32 0
 }
 
 ; Don't remove redundant store because of may-aliased store.
@@ -719,26 +452,6 @@ bb3:
   ret i32 0
 }
 
-; Remove redundant store if loaded value is in another block inside a loop.
-define i32 @test31(i1 %c, i32* %p, i32 %i) {
-; CHECK-LABEL: @test31(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %v = load i32, i32* %p, align 4
-  br label %bb1
-bb1:
-  store i32 %v, i32* %p, align 4
-  br i1 undef, label %bb1, label %bb2
-bb2:
-  ret i32 0
-}
-
 ; Don't remove redundant store in a loop with a may-alias store.
 define i32 @test32(i1 %c, i32* %p, i32 %i) {
 ; CHECK-LABEL: @test32(
@@ -764,39 +477,13 @@ bb2:
   ret i32 0
 }
 
-; Remove redundant store, which is in the lame loop as the load.
-define i32 @test33(i1 %c, i32* %p, i32 %i) {
-; CHECK-LABEL: @test33(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB2:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB3:%.*]]
-; CHECK:       bb3:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  br label %bb1
-bb1:
-  %v = load i32, i32* %p, align 4
-  br label %bb2
-bb2:
-  store i32 %v, i32* %p, align 4
-  ; Might read and overwrite value at %p, but doesn't matter.
-  call void @unknown_func()
-  br i1 undef, label %bb1, label %bb3
-bb3:
-  ret i32 0
-}
-
-; Don't remove redundant store: unknown_func could unwind
+; We cannot remove any stores, because @unknown_func may unwind and the caller
+; may read %p while unwinding.
 define void @test34(i32* noalias %p) {
 ; CHECK-LABEL: @test34(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %p
@@ -809,7 +496,7 @@ define void @test34(i32* noalias %p) {
 define void @test35(i32* noalias %p) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown_func()
@@ -867,7 +554,8 @@ define void @test37_atomic(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
-; Same caveat about memcpy as in @test18 applies here.
+; See PR11763 - LLVM allows memcpy's source and destination to be equal (but not
+; inequal and overlapping).
 define void @test38(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38(
 ; CHECK-NEXT:    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
@@ -880,6 +568,8 @@ define void @test38(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
+; See PR11763 - LLVM allows memcpy's source and destination to be equal (but not
+; inequal and overlapping).
 define void @test38_atomic(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38_atomic(
 ; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
@@ -916,299 +606,164 @@ define void @test39_atomic(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
-define i32 @test40() {
-; CHECK-LABEL: @test40(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br label %loop
-loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %loop ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
-  store i8 1, i8* %p.next
-  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
-  store i8 0, i8* %p
-  %continue = icmp ugt i64 %indvars.iv, 15
-  br i1 %continue, label %loop, label %return
-return:
-  ret i32 0
-}
-
-define i32 @test41() {
-; CHECK-LABEL: @test41(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br label %loop
-loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
-  store i8 1, i8* %p.next
-  br label %cont
-
-cont:
-  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
-  store i8 0, i8* %p
-  %continue = icmp ugt i64 %indvars.iv, 15
-  br i1 %continue, label %loop, label %return
-
-return:
-  ret i32 0
-}
-
-; The store is redundant here, but currently we fail to eliminate it.
-; We are walking from the store up to the calloc and translate phis as
-; needed. In this case we fail to translate %p while going over the
-; backedge. Because of that we conservatively assume that zero initialized
-; memory is clobbered.
-define i32 @test42() {
-; CHECK-LABEL: @test42(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br label %loop
-loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br label %cont
-
-cont:
-  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
-  store i8 0, i8* %p
-  %continue = icmp ugt i64 %indvars.iv, 15
-  br i1 %continue, label %loop, label %return
-
-return:
-  ret i32 0
-}
-
-define i32 @test43() {
-; CHECK-LABEL: @test43(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT_2:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    br label [[CONT_2]]
-; CHECK:       cont.2:
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br label %loop
-loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont.2 ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
-  store i8 1, i8* %p.next
-  br label %cont
-
-cont:
-  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
-  store i8 0, i8* %p
-  br label %cont.2
-
-cont.2:
-  %continue = icmp ugt i64 %indvars.iv, 15
-  br i1 %continue, label %loop, label %return
-
-return:
-  ret i32 0
-}
-
-define i32 @test44() {
-; CHECK-LABEL: @test44(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT_2:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       cont:
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
-; CHECK-NEXT:    br label [[CONT_2]]
-; CHECK:       cont.2:
-; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br label %loop
-loop:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %cont.2 ]
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %p.next = getelementptr inbounds i8, i8* %m, i64 %indvars.iv.next
-  %p = getelementptr inbounds i8, i8* %m, i64 %indvars.iv
-  store i8 0, i8* %p
-  br label %cont
-
-cont:
-  store i8 1, i8* %p.next
-  br label %cont.2
-
-cont.2:
-  %continue = icmp ugt i64 %indvars.iv, 15
-  br i1 %continue, label %loop, label %return
-
-return:
-  ret i32 0
-}
-
-; This is an example which can potentially benefit from PHI translation.
-; Current implementation doesn't handle this case though. This is because
-; we don't visit the same block with different addresses while looking for
-; clobbering instructions.
-define i32 @test45(i1 %c) {
-; CHECK-LABEL: @test45(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
-; CHECK:       true:
-; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 1
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       false:
-; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
-; CHECK-NEXT:    store i8 1, i8* [[P_2]]
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    [[OFFSET:%.*]] = phi i64 [ 2, [[TRUE]] ], [ 1, [[FALSE]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  br i1 %c, label %true, label %false
-
-true:
-  %p.1 = getelementptr inbounds i8, i8* %m, i64 1
-  store i8 1, i8* %p.1
-  br label %cont
-
-false:
-  %p.2 = getelementptr inbounds i8, i8* %m, i64 2
-  store i8 1, i8* %p.2
-  br label %cont
-
-cont:
-  %offset = phi i64 [ 2, %true ], [ 1, %false ]
-  %p = getelementptr inbounds i8, i8* %m, i64 %offset
-  store i8 0, i8* %p
-  br label %return
-
-return:
-  ret i32 0
-}
-
-; This is test45 modified in a way to demonstrate PHI translation
-; improving the accuracy of the analysis (on a slightly convoluted
-; case though).
-define i32 @test46(i1 %c) {
-; CHECK-LABEL: @test46(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[M:%.*]] = call i8* @calloc(i32 9, i32 20)
-; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 1
-; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
-; CHECK:       true:
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
-; CHECK-NEXT:    br label [[CONT:%.*]]
-; CHECK:       false:
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
-; CHECK-NEXT:    br label [[CONT]]
-; CHECK:       cont:
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret i32 0
-;
-entry:
-  %m = call i8* @calloc(i32 9, i32 20)
-  %p.1 = getelementptr inbounds i8, i8* %m, i64 1
-  %p.2 = getelementptr inbounds i8, i8* %m, i64 2
-  br i1 %c, label %true, label %false
-
-true:
-  store i8 1, i8* %p.1
-  br label %cont
-
-false:
-  store i8 1, i8* %p.1
-  br label %cont
-
-cont:
-  %offset = phi i64 [ 2, %true ], [ 2, %false ]
-  %p = getelementptr inbounds i8, i8* %m, i64 %offset
-  store i8 0, i8* %p
-  br label %return
-
-return:
-  ret i32 0
-}
-
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
 declare void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i32)
+
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+define void @test40(i32** noalias %Pp, i32* noalias %Q)  {
+; CHECK-LABEL: @test40(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[AC:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[AC]])
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32** [[PP:%.*]] to i8**
+; CHECK-NEXT:    [[PC:%.*]] = load i8*, i8** [[TMP0]], align 8
+; CHECK-NEXT:    [[QC:%.*]] = bitcast i32* [[Q:%.*]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 [[AC]], i8* align 4 [[QC]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[PC]], i8* nonnull align 4 [[AC]], i64 4, i1 true)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[AC]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %A = alloca i32, align 4
+  %Ac = bitcast i32* %A to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %Ac)
+  %0 = bitcast i32** %Pp to i8**
+  %Pc = load i8*, i8** %0, align 8
+  %Qc = bitcast i32* %Q to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %Ac, i8* align 4 %Qc, i64 4, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %Pc, i8* nonnull align 4 %Ac, i64 4, i1 true)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %Ac)
+  ret void
+}
+
+declare void @free(i8* nocapture)
+
+; We cannot remove `store i32 1, i32* %p`, because @unknown_func may unwind
+; and the caller may read %p while unwinding.
+define void @test41(i32* noalias %P) {
+; CHECK-LABEL: @test41(
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
+; CHECK-NEXT:    call void @unknown_func()
+; CHECK-NEXT:    call void @free(i8* [[P2]])
+; CHECK-NEXT:    ret void
+;
+  %P2 = bitcast i32* %P to i8*
+  store i32 1, i32* %P
+  call void @unknown_func()
+  store i32 2, i32* %P
+  call void @free(i8* %P2)
+  ret void
+}
+
+define void @test42(i32* %P, i32* %Q) {
+; CHECK-LABEL: @test42(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
+; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i8 3, i8* [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P
+  %P2 = bitcast i32* %P to i8*
+  store i32 2, i32* %Q
+  store i8 3, i8* %P2
+  ret void
+}
+
+define void @test42a(i32* %P, i32* %Q) {
+; CHECK-LABEL: @test42a(
+; CHECK-NEXT:    store atomic i32 1, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
+; CHECK-NEXT:    store atomic i32 2, i32* [[Q:%.*]] unordered, align 4
+; CHECK-NEXT:    store atomic i8 3, i8* [[P2]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 1, i32* %P unordered, align 4
+  %P2 = bitcast i32* %P to i8*
+  store atomic i32 2, i32* %Q unordered, align 4
+  store atomic i8 3, i8* %P2 unordered, align 4
+  ret void
+}
+
+define void @test43a(i32* %P, i32* noalias %Q) {
+; CHECK-LABEL: @test43a(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store atomic i32 50331649, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    store atomic i32 2, i32* [[Q:%.*]] unordered, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store atomic i32 1, i32* %P unordered, align 4
+  %P2 = bitcast i32* %P to i8*
+  store atomic i32 2, i32* %Q unordered, align 4
+  store atomic i8 3, i8* %P2 unordered, align 4
+  ret void
+}
+
+; Some tests where volatile may block removing a store.
+
+; Here we can remove the first non-volatile store. We cannot remove the
+; volatile store.
+define void @test44_volatile(i32* %P) {
+; CHECK-LABEL: @test44_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test45_volatile(i32* %P) {
+; CHECK-LABEL: @test45_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %P, align 4
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test46_volatile(i32* %P) {
+; CHECK-LABEL: @test46_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store i32 1, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define void @test47_volatile(i32* %P) {
+; CHECK-LABEL: @test47_volatile(
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store volatile i32 2, i32* %P, align 4
+  store volatile i32 3, i32* %P, align 4
+  ret void
+}
+
+define i32 @test48(i32* %P, i32* noalias %Q, i32* %R) {
+; CHECK-LABEL: @test48(
+; CHECK-NEXT:    store i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  store i32 1, i32* %Q
+  store i32 2, i32* %P
+  store i32 3, i32* %Q
+  %l = load i32, i32* %R
+  ret i32 %l
+}

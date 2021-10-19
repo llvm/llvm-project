@@ -37,6 +37,8 @@
 
 namespace clang {
 namespace clangd {
+class HeuristicResolver;
+
 /// Describes the link between an AST node and a Decl it refers to.
 enum class DeclRelation : unsigned;
 /// A bitfield of DeclRelations.
@@ -81,14 +83,15 @@ class DeclRelationSet;
 ///
 /// FIXME: some AST nodes cannot be DynTypedNodes, these cannot be specified.
 llvm::SmallVector<const NamedDecl *, 1>
-targetDecl(const ast_type_traits::DynTypedNode &, DeclRelationSet Mask);
+targetDecl(const DynTypedNode &, DeclRelationSet Mask,
+           const HeuristicResolver *Resolver);
 
 /// Similar to targetDecl(), however instead of applying a filter, all possible
 /// decls are returned along with their DeclRelationSets.
 /// This is suitable for indexing, where everything is recorded and filtering
 /// is applied later.
 llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
-allTargetDecls(const ast_type_traits::DynTypedNode &);
+allTargetDecls(const DynTypedNode &, const HeuristicResolver *);
 
 enum class DeclRelation : unsigned {
   // Template options apply when the declaration is an instantiated template.
@@ -102,13 +105,20 @@ enum class DeclRelation : unsigned {
   TemplatePattern,
 
   // Alias options apply when the declaration is an alias.
-  // e.g. namespace clang { [[StringRef]] S; }
+  // e.g. namespace client { [[X]] x; }
 
   /// This declaration is an alias that was referred to.
-  /// e.g. using llvm::StringRef (the UsingDecl directly referenced).
+  /// e.g. using ns::X (the UsingDecl directly referenced),
+  ///      using Z = ns::Y (the TypeAliasDecl directly referenced)
   Alias,
-  /// This is the underlying declaration for an alias, decltype etc.
-  /// e.g. class llvm::StringRef (the underlying declaration referenced).
+  /// This is the underlying declaration for a renaming-alias, decltype etc.
+  /// e.g. class ns::Y (the underlying declaration referenced).
+  ///
+  /// Note that we don't treat `using ns::X` as a first-class declaration like
+  /// `using Z = ns::Y`. Therefore reference to X that goes through this
+  /// using-decl is considered a direct reference (without the Underlying bit).
+  /// Nevertheless, we report `using ns::X` as an Alias, so that some features
+  /// like go-to-definition can still target it.
   Underlying,
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelation);
@@ -139,11 +149,14 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, ReferenceLoc R);
 /// FIXME: currently this does not report references to overloaded operators.
 /// FIXME: extend to report location information about declaration names too.
 void findExplicitReferences(const Stmt *S,
-                            llvm::function_ref<void(ReferenceLoc)> Out);
+                            llvm::function_ref<void(ReferenceLoc)> Out,
+                            const HeuristicResolver *Resolver);
 void findExplicitReferences(const Decl *D,
-                            llvm::function_ref<void(ReferenceLoc)> Out);
+                            llvm::function_ref<void(ReferenceLoc)> Out,
+                            const HeuristicResolver *Resolver);
 void findExplicitReferences(const ASTContext &AST,
-                            llvm::function_ref<void(ReferenceLoc)> Out);
+                            llvm::function_ref<void(ReferenceLoc)> Out,
+                            const HeuristicResolver *Resolver);
 
 /// Find declarations explicitly referenced in the source code defined by \p N.
 /// For templates, will prefer to return a template instantiation whenever
@@ -155,8 +168,8 @@ void findExplicitReferences(const ASTContext &AST,
 ///    ^~~ there is no Decl for 'Ptr<int>', so we return the template pattern.
 /// \p Mask should not contain TemplatePattern or TemplateInstantiation.
 llvm::SmallVector<const NamedDecl *, 1>
-explicitReferenceTargets(ast_type_traits::DynTypedNode N,
-                         DeclRelationSet Mask);
+explicitReferenceTargets(DynTypedNode N, DeclRelationSet Mask,
+                         const HeuristicResolver *Resolver);
 
 // Boring implementation details of bitfield.
 
@@ -187,6 +200,9 @@ public:
   DeclRelationSet &operator&=(DeclRelationSet Other) {
     S &= Other.S;
     return *this;
+  }
+  bool contains(DeclRelationSet Other) const {
+    return (S & Other.S) == Other.S;
   }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, DeclRelationSet);
 };

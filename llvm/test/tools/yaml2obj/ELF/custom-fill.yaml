@@ -119,16 +119,14 @@ Sections:
     Pattern: ""
     Size:    0x45
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0x100
-    Sections:
-      - Section: fill1
-      - Section: .bar
-      - Section: fill2
-  - Type:  PT_GNU_RELRO
-    VAddr: 0x105
-    Sections:
-      - Section: fill2
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: fill1
+    LastSec:  fill2
+  - Type:     PT_GNU_RELRO
+    VAddr:    0x105
+    FirstSec: fill2
+    LastSec:  fill2
 
 ## Check that the "Pattern" field is not mandatory.
 # RUN: yaml2obj --docnum=4 2>&1 -o %t4 %s
@@ -269,7 +267,8 @@ Sections:
 ## an unknown section or fill and have at least one Fill defined.
 
 # RUN: not yaml2obj --docnum=10 2>&1 %s | FileCheck %s --check-prefix=UNKNOWN-ERR
-# UNKNOWN-ERR: error: unknown section or fill referenced: 'fill' by program header
+# UNKNOWN-ERR: error: unknown section or fill referenced: 'fill' by the 'FirstSec' key of the program header with index 0
+# UNKNOWN-ERR: error: unknown section or fill referenced: 'fill' by the 'LastSec' key of the program header with index 0
 
 --- !ELF
 FileHeader:
@@ -281,9 +280,9 @@ Sections:
     Pattern: ""
     Size:    0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: fill
+  - Type:     PT_LOAD
+    FirstSec: fill
+    LastSec:  fill
 
 ## Show that we can use the "Offset" key to set an arbitrary offset for a Fill.
 

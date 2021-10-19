@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   Coroutines
   Coverage
+  Demangle
   Extensions
   FrontendOpenMP
   IPO
@@ -92,7 +93,6 @@ add_clang_library(clangCodeGen
   LINK_LIBS
   clangAnalysis
   clangAST
-  clangASTMatchers
   clangBasic
   clangFrontend
   clangLex

@@ -58,14 +58,29 @@ constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   auto ConstReferenceOrValue =
-      qualType(anyOf(referenceType(pointee(qualType(isConstQualified()))),
-                     unless(anyOf(referenceType(), pointerType()))));
+      qualType(anyOf(matchers::isReferenceToConst(),
+                     unless(anyOf(referenceType(), pointerType(),
+                                  substTemplateTypeParmType()))));
+  auto ConstReferenceOrValueOrReplaced = qualType(anyOf(
+      ConstReferenceOrValue,
+      substTemplateTypeParmType(hasReplacementType(ConstReferenceOrValue))));
   auto UsedAsConstRefOrValueArg = forEachArgumentWithParam(
-      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValue)));
-  Matches = match(findAll(callExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
+      DeclRefToVar, parmVarDecl(hasType(ConstReferenceOrValueOrReplaced)));
+  Matches = match(findAll(invocation(UsedAsConstRefOrValueArg)), Stmt, Context);
+  extractNodesByIdTo(Matches, "declRef", DeclRefs);
+  // References and pointers to const assignments.
+  Matches =
+      match(findAll(declStmt(
+                has(varDecl(hasType(qualType(matchers::isReferenceToConst())),
+                            hasInitializer(ignoringImpCasts(DeclRefToVar)))))),
+            Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   Matches =
-      match(findAll(cxxConstructExpr(UsedAsConstRefOrValueArg)), Stmt, Context);
+      match(findAll(declStmt(has(varDecl(
+                hasType(qualType(matchers::isPointerToConst())),
+                hasInitializer(ignoringImpCasts(unaryOperator(
+                    hasOperatorName("&"), hasUnaryOperand(DeclRefToVar)))))))),
+            Stmt, Context);
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }

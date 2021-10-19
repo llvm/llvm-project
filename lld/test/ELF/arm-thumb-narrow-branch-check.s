@@ -7,7 +7,7 @@
 // RUN:          .R_ARM_PC11_2 : { *(.R_ARM_PC11_2) } \
 // RUN:          .text : { *(.text) } } " > %t.script
 // RUN: ld.lld --script %t.script %t %S/Inputs/arm-thumb-narrow-branch.o -o %t2
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d %t2 | FileCheck %s
 
 // Test the R_ARM_PC11 relocation which is used with the narrow encoding of B.N
 // the source of these relocations is a binary file arm-thumb-narrow-branch.o
@@ -57,14 +57,12 @@ callee_high_far = 0x180d
 // CHECK-NEXT: Disassembly of section .caller:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callers>:
-// 1004 - 0x800 (2048) + 4 = 0x808 = callee_low_far
-// CHECK-NEXT:    1004:       00 e4   b       #-2048
-// 1006 - 0xa (10) + 4 = 0x1000 = callee_low
-// CHECK-NEXT:    1006:       fb e7   b       #-10
-// 1008 + 4 + 4 = 0x1010 = callee_high
-// CHECK-NEXT:    1008:       02 e0   b       #4
-// 100a + 0x7fe (2046) + 4 = 0x180c = callee_high_far
-// CHECK-NEXT:    100a:       ff e3   b       #2046
+/// callee_low_far = 0x809
+// CHECK-NEXT:    1004:       00 e4   b       0x808
+// CHECK-NEXT:    1006:       fb e7   b       0x1000 <callee_low>
+// CHECK-NEXT:    1008:       02 e0   b       0x1010 <callee_high>
+/// callee_high_far = 0x180d
+// CHECK-NEXT:    100a:       ff e3   b       0x180c
 // CHECK-NEXT:    100c:       70 47   bx      lr
 // CHECK-NEXT:    100e:       00 bf   nop
 // CHECK-EMPTY:
@@ -76,5 +74,5 @@ callee_high_far = 0x180d
 // CHECK-NEXT: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:    1014:       ff f7 f6 ff     bl      #-20
+// CHECK-NEXT:    1014:       ff f7 f6 ff     bl      0x1004 <callers>
 // CHECK-NEXT:    1018:       70 47   bx      lr

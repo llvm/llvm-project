@@ -557,11 +557,10 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     // Theoretically, this could be in a different address space, so
     // don't assume standard pointer size/align.
     llvm::Type *llvmType = CGM.getTypes().ConvertType(thisType);
-    std::pair<CharUnits,CharUnits> tinfo
-      = CGM.getContext().getTypeInfoInChars(thisType);
-    maxFieldAlign = std::max(maxFieldAlign, tinfo.second);
+    auto TInfo = CGM.getContext().getTypeInfoInChars(thisType);
+    maxFieldAlign = std::max(maxFieldAlign, TInfo.Align);
 
-    layout.push_back(BlockLayoutChunk(tinfo.second, tinfo.first,
+    layout.push_back(BlockLayoutChunk(TInfo.Align, TInfo.Width,
                                       Qualifiers::OCL_None,
                                       nullptr, llvmType, thisType));
   }
@@ -580,7 +579,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
       // Since a __block variable cannot be captured by lambdas, its type and
       // the capture field type should always match.
-      assert(getCaptureFieldType(*CGF, CI) == variable->getType() &&
+      assert(CGF && getCaptureFieldType(*CGF, CI) == variable->getType() &&
              "capture type differs from the variable type");
       layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
                                         Qualifiers::OCL_None, &CI,
@@ -1024,7 +1023,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                           type, VK_LValue, SourceLocation());
 
       ImplicitCastExpr l2r(ImplicitCastExpr::OnStack, type, CK_LValueToRValue,
-                           &declRef, VK_RValue);
+                           &declRef, VK_PRValue, FPOptionsOverride());
       // FIXME: Pass a specific location for the expr init so that the store is
       // attributed to a reasonable location - otherwise it may be attributed to
       // locations of subexpressions in the initialization.
@@ -1191,8 +1190,10 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
 
     // First argument of a block call is a generic block literal casted to
     // generic void pointer, i.e. i8 addrspace(4)*
+    llvm::Type *GenericVoidPtrTy =
+        CGM.getOpenCLRuntime().getGenericVoidPointerType();
     llvm::Value *BlockDescriptor = Builder.CreatePointerCast(
-        BlockPtr, CGM.getOpenCLRuntime().getGenericVoidPointerType());
+        BlockPtr, GenericVoidPtrTy);
     QualType VoidPtrQualTy = Ctx.getPointerType(
         Ctx.getAddrSpaceQualType(Ctx.VoidTy, LangAS::opencl_generic));
     Args.add(RValue::get(BlockDescriptor), VoidPtrQualTy);
@@ -1204,7 +1205,8 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
       Func = CGM.getOpenCLRuntime().getInvokeFunction(E->getCallee());
     else {
       llvm::Value *FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 2);
-      Func = Builder.CreateAlignedLoad(FuncPtr, getPointerAlign());
+      Func = Builder.CreateAlignedLoad(GenericVoidPtrTy, FuncPtr,
+                                       getPointerAlign());
     }
   } else {
     // Bitcast the block literal to a generic block literal.
@@ -1220,7 +1222,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
     EmitCallArgs(Args, FnType->getAs<FunctionProtoType>(), E->arguments());
 
     // Load the function.
-    Func = Builder.CreateAlignedLoad(FuncPtr, getPointerAlign());
+    Func = Builder.CreateAlignedLoad(VoidPtrTy, FuncPtr, getPointerAlign());
   }
 
   const FunctionType *FuncTy = FnType->castAs<FunctionType>();
@@ -1373,7 +1375,7 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     llvm::IRBuilder<> b(llvm::BasicBlock::Create(CGM.getLLVMContext(), "entry",
           Init));
     b.CreateAlignedStore(CGM.getNSConcreteGlobalBlock(),
-                         b.CreateStructGEP(literal, 0),
+                         b.CreateStructGEP(literal->getValueType(), literal, 0),
                          CGM.getPointerAlign().getAsAlign());
     b.CreateRetVoid();
     // We can't use the normal LLVM global initialisation array, because we
@@ -1900,7 +1902,7 @@ static void setBlockHelperAttributesVisibility(bool CapturesNonExternalType,
   } else {
     Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
     Fn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn);
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
   }
 }
@@ -1946,21 +1948,13 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
-  IdentifierInfo *II = &C.Idents.get(FuncName);
-
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(C.VoidPtrTy);
   ArgTys.push_back(C.VoidPtrTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
 
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  // This is necessary to avoid inheriting the previous line number.
-  FD->setImplicit();
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
 
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
@@ -2141,21 +2135,12 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
   if (CGM.supportsCOMDAT())
     Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
-  IdentifierInfo *II = &C.Idents.get(FuncName);
-
   SmallVector<QualType, 1> ArgTys;
   ArgTys.push_back(C.VoidPtrTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      FunctionTy, nullptr, SC_Static, false, false);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  // This is necessary to avoid inheriting the previous line number.
-  FD->setImplicit();
-  StartFunction(FD, ReturnTy, Fn, FI, args);
+  StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
   markAsIgnoreThreadCheckingAtRuntime(Fn);
 
   auto AL = ApplyDebugLocation::CreateArtificial(*this);
@@ -2393,21 +2378,15 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
     llvm::Function::Create(LTy, llvm::GlobalValue::InternalLinkage,
                            "__Block_byref_object_copy_", &CGF.CGM.getModule());
 
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_copy_");
-
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(Context.VoidPtrTy);
   ArgTys.push_back(Context.VoidPtrTy);
-  QualType FunctionTy = Context.getFunctionType(ReturnTy, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      Context, Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  CGF.StartFunction(FD, ReturnTy, Fn, FI, args);
+  CGF.StartFunction(GlobalDecl(), ReturnTy, Fn, FI, args);
+    // Create a scope with an artificial location for the body of this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   if (generator.needsCopy()) {
     llvm::Type *byrefPtrType = byrefInfo.Type->getPointerTo(0);
@@ -2469,20 +2448,14 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
                            "__Block_byref_object_dispose_",
                            &CGF.CGM.getModule());
 
-  IdentifierInfo *II
-    = &Context.Idents.get("__Block_byref_object_dispose_");
-
   SmallVector<QualType, 1> ArgTys;
   ArgTys.push_back(Context.VoidPtrTy);
-  QualType FunctionTy = Context.getFunctionType(R, ArgTys, {});
-
-  FunctionDecl *FD = FunctionDecl::Create(
-      Context, Context.getTranslationUnitDecl(), SourceLocation(),
-      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  CGF.StartFunction(FD, R, Fn, FI, args);
+  CGF.StartFunction(GlobalDecl(), R, Fn, FI, args);
+    // Create a scope with an artificial location for the body of this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
   if (generator.needsDispose()) {
     Address addr = CGF.GetAddrOfLocalVar(&Src);
@@ -2698,7 +2671,7 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   }
 
   bool HasByrefExtendedLayout = false;
-  Qualifiers::ObjCLifetime Lifetime;
+  Qualifiers::ObjCLifetime Lifetime = Qualifiers::OCL_None;
   if (getContext().getByrefLifetime(Ty, Lifetime, HasByrefExtendedLayout) &&
       HasByrefExtendedLayout) {
     /// void *__byref_variable_layout;
@@ -2722,8 +2695,8 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
     size = varOffset;
 
   // Conversely, we might have to prevent LLVM from inserting padding.
-  } else if (CGM.getDataLayout().getABITypeAlignment(varTy)
-               > varAlign.getQuantity()) {
+  } else if (CGM.getDataLayout().getABITypeAlignment(varTy) >
+             uint64_t(varAlign.getQuantity())) {
     packed = true;
   }
   types.push_back(varTy);
@@ -2768,8 +2741,8 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   const VarDecl &D = *emission.Variable;
   QualType type = D.getType();
 
-  bool HasByrefExtendedLayout;
-  Qualifiers::ObjCLifetime ByrefLifetime;
+  bool HasByrefExtendedLayout = false;
+  Qualifiers::ObjCLifetime ByrefLifetime = Qualifiers::OCL_None;
   bool ByRefHasLifetime =
     getContext().getByrefLifetime(type, ByrefLifetime, HasByrefExtendedLayout);
 
@@ -2885,7 +2858,7 @@ static void configureBlocksRuntimeObject(CodeGenModule &CGM,
            "expected Function or GlobalVariable");
 
     const NamedDecl *ND = nullptr;
-    for (const auto &Result : DC->lookup(&II))
+    for (const auto *Result : DC->lookup(&II))
       if ((ND = dyn_cast<FunctionDecl>(Result)) ||
           (ND = dyn_cast<VarDecl>(Result)))
         break;
@@ -2937,9 +2910,8 @@ llvm::Constant *CodeGenModule::getNSConcreteGlobalBlock() {
   if (NSConcreteGlobalBlock)
     return NSConcreteGlobalBlock;
 
-  NSConcreteGlobalBlock = GetOrCreateLLVMGlobal("_NSConcreteGlobalBlock",
-                                                Int8PtrTy->getPointerTo(),
-                                                nullptr);
+  NSConcreteGlobalBlock = GetOrCreateLLVMGlobal(
+      "_NSConcreteGlobalBlock", Int8PtrTy, LangAS::Default, nullptr);
   configureBlocksRuntimeObject(*this, NSConcreteGlobalBlock);
   return NSConcreteGlobalBlock;
 }
@@ -2948,9 +2920,8 @@ llvm::Constant *CodeGenModule::getNSConcreteStackBlock() {
   if (NSConcreteStackBlock)
     return NSConcreteStackBlock;
 
-  NSConcreteStackBlock = GetOrCreateLLVMGlobal("_NSConcreteStackBlock",
-                                               Int8PtrTy->getPointerTo(),
-                                               nullptr);
+  NSConcreteStackBlock = GetOrCreateLLVMGlobal(
+      "_NSConcreteStackBlock", Int8PtrTy, LangAS::Default, nullptr);
   configureBlocksRuntimeObject(*this, NSConcreteStackBlock);
   return NSConcreteStackBlock;
 }

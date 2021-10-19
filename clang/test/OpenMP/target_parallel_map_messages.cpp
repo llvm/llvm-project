@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 void foo() {
 }
@@ -20,7 +20,7 @@ void xxx(int argc) {
     ;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}} // expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -152,25 +152,25 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   foo();
-#pragma omp target parallel map(k), map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+#pragma omp target parallel map(k), map(k) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
   foo();
-#pragma omp target parallel map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
+#pragma omp target parallel map(k), map(k[:5]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}} lt50-note 2 {{used here}}
   foo();
 #pragma omp target parallel map(da)
   foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note 2 {{used here}}
-#pragma omp target parallel map(k[:4]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l)   // lt50-note 2 {{used here}}
+#pragma omp target parallel map(k[:4]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
   foo();
 #pragma omp target parallel map(j)
   foo();
-#pragma omp target parallel map(l) map(l[:5]) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+#pragma omp target parallel map(l) map(l[:5]) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note 2 {{used here}}
-{
-#pragma omp target parallel map(k) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
-  foo();
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note 2 {{used here}}
+  {
+#pragma omp target parallel map(k) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+    foo();
 #pragma omp target parallel map(j)
   foo();
 #pragma omp target parallel map(l)
@@ -181,8 +181,8 @@ T tmain(T argc) {
   foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
   foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target parallel map(tofrom, always: x)
   foo();
@@ -267,25 +267,25 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target parallel map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
   foo();
-#pragma omp target parallel map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target parallel map(k), map(k) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   foo();
-#pragma omp target parallel map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+#pragma omp target parallel map(k), map(k[:5]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}} lt50-note {{used here}}
   foo();
 #pragma omp target parallel map(da)
   foo();
 #pragma omp target parallel map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note {{used here}}
-#pragma omp target parallel map(k[:4]) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l)   // lt50-note {{used here}}
+#pragma omp target parallel map(k[:4]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
   foo();
 #pragma omp target parallel map(j)
   foo();
-#pragma omp target parallel map(l) map(l[:5]) // expected-error 1 {{variable already marked as mapped in current construct}} expected-note 1 {{used here}}
+#pragma omp target parallel map(l) map(l[:5]) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note 1 {{used here}}
-{
-#pragma omp target parallel map(k) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
-  foo();
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note {{used here}}
+  {
+#pragma omp target parallel map(k) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
+    foo();
 #pragma omp target parallel map(j)
   foo();
 #pragma omp target parallel map(l)
@@ -296,8 +296,8 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target parallel map(always: x) // expected-error {{missing map type}}
   foo();
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target parallel map(tofrom, always: x)
   foo();

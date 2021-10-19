@@ -1,0 +1,6 @@
+set(LLVM_OPTIONAL_SOURCES
+  mlir_test_spirv_cpu_runner_c_wrappers.cpp
+  )
+
+add_llvm_library(mlir_test_spirv_cpu_runner_c_wrappers SHARED mlir_test_spirv_cpu_runner_c_wrappers.cpp)
+target_compile_definitions(mlir_test_spirv_cpu_runner_c_wrappers PRIVATE mlir_test_spirv_cpu_runner_c_wrappers_EXPORTS)

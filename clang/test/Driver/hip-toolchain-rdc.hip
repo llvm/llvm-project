@@ -8,15 +8,21 @@
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
 // RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   -fhip-dump-offload-linker-script \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
+
+// check code object alignment in dumped llvm-mc input
+// CHECK: .protected __hip_fatbin
+// CHECK: .p2align 12
 
 // emit objects for host side path
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
+// CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
@@ -24,6 +30,7 @@
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
+// CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
@@ -32,10 +39,11 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
+// CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -43,10 +51,11 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility" "hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
+// CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
@@ -62,7 +71,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc"
+// CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-o" [[A_BC2:".*bc"]] "-x" "hip"
@@ -72,9 +81,10 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: "-fcuda-is-device" "-fgpu-rdc"
+// CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
+// CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC2:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
@@ -87,10 +97,11 @@
 
 // combine images generated into hip fat binary object
 // CHECK: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
-// CHECK-SAME: "-targets={{.*}},hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// CHECK-SAME: "-bundle-align=4096"
+// CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-inputs={{.*}},[[IMG_DEV1]],[[IMG_DEV2]]" "-outputs=[[BUNDLE:.*hipfb]]"
 
-// CHECK: [[MC:".*llvm-mc"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*llvm-mc.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
 
 // output the executable
 // CHECK: [[LD:".*ld.*"]] {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]

@@ -14,8 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "dfa-emitter"
-
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "DFAEmitter.h"
@@ -33,6 +31,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#define DEBUG_TYPE "dfa-emitter"
 
 using namespace llvm;
 
@@ -157,8 +157,8 @@ int DFAPacketizerEmitter::collectAllComboFuncs(ArrayRef<Record *> ComboFuncList)
       uint64_t ComboResources = ComboBit;
       LLVM_DEBUG(dbgs() << "      combo: " << ComboFuncName << ":0x"
                         << Twine::utohexstr(ComboResources) << "\n");
-      for (unsigned k = 0, M = FuncList.size(); k < M; ++k) {
-        std::string FuncName = std::string(FuncList[k]->getName());
+      for (auto *K : FuncList) {
+        std::string FuncName = std::string(K->getName());
         uint64_t FuncResources = FUNameToBitsMap[FuncName];
         LLVM_DEBUG(dbgs() << "        " << FuncName << ":0x"
                           << Twine::utohexstr(FuncResources) << "\n");
@@ -263,7 +263,7 @@ void DFAPacketizerEmitter::emitForItineraries(
     OS << "  " << ProcModelStartIdx[Model] << ", // " << Model->ModelName
        << "\n";
   }
-  OS << ScheduleClasses.size() << "\n};\n\n";
+  OS << "  " << ScheduleClasses.size() << "\n};\n\n";
 
   // The type of a state in the nondeterministic automaton we're defining.
   using NfaStateTy = uint64_t;

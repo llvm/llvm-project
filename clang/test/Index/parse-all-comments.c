@@ -75,7 +75,7 @@ int trdoxyO;
 
 // RUN: c-index-test -write-pch %t/out.pch -fparse-all-comments -x c++ -std=c++11 %s
 
-// RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s -std=c++11 -fparse-all-comments > %t/out.c-index-direct
+// RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng -x c++ -std=c++11 %s -fparse-all-comments > %t/out.c-index-direct
 // RUN: c-index-test -test-load-tu %t/out.pch all > %t/out.c-index-pch
 
 // RUN: FileCheck %s -check-prefix=WRONG < %t/out.c-index-direct

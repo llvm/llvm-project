@@ -20,7 +20,7 @@
 
 #include "int_lib.h"
 
-#ifndef __SOFT_FP__
+#ifndef __SOFTFP__
 // Support for systems that have hardware floating-point; we'll set the inexact
 // flag as a side-effect of this computation.
 
@@ -103,4 +103,8 @@ AEABI_RTABI double __aeabi_ul2d(du_int a) { return __floatundidf(a); }
 #else
 COMPILER_RT_ALIAS(__floatundidf, __aeabi_ul2d)
 #endif
+#endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__floatundidf, __u64tod)
 #endif

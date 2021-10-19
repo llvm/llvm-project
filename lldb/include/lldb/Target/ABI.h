@@ -11,6 +11,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 
@@ -117,16 +118,18 @@ public:
   // "pc".
   virtual bool CodeAddressIsValid(lldb::addr_t pc) = 0;
 
-  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) {
-    // Some targets might use bits in a code address to indicate a mode switch.
-    // ARM uses bit zero to signify a code address is thumb, so any ARM ABI
-    // plug-ins would strip those bits.
-    return pc;
-  }
+  /// Some targets might use bits in a code address to indicate a mode switch.
+  /// ARM uses bit zero to signify a code address is thumb, so any ARM ABI
+  /// plug-ins would strip those bits.
+  /// @{
+  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc) { return pc; }
+  virtual lldb::addr_t FixDataAddress(lldb::addr_t pc) { return pc; }
+  /// @}
 
   llvm::MCRegisterInfo &GetMCRegisterInfo() { return *m_mc_register_info_up; }
 
-  virtual void AugmentRegisterInfo(RegisterInfo &info) = 0;
+  virtual void
+  AugmentRegisterInfo(std::vector<DynamicRegisterInfo::Register> &regs) = 0;
 
   virtual bool GetPointerReturnRegister(const char *&name) { return false; }
 
@@ -147,6 +150,10 @@ protected:
   lldb::ProcessWP m_process_wp;
   std::unique_ptr<llvm::MCRegisterInfo> m_mc_register_info_up;
 
+  virtual lldb::addr_t FixCodeAddress(lldb::addr_t pc, lldb::addr_t mask) {
+    return pc;
+  }
+
 private:
   ABI(const ABI &) = delete;
   const ABI &operator=(const ABI &) = delete;
@@ -154,24 +161,27 @@ private:
 
 class RegInfoBasedABI : public ABI {
 public:
-  void AugmentRegisterInfo(RegisterInfo &info) override;
+  void AugmentRegisterInfo(
+      std::vector<DynamicRegisterInfo::Register> &regs) override;
 
 protected:
   using ABI::ABI;
 
-  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
+  bool GetRegisterInfoByName(llvm::StringRef name, RegisterInfo &info);
 
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 };
 
 class MCBasedABI : public ABI {
 public:
-  void AugmentRegisterInfo(RegisterInfo &info) override;
+  void AugmentRegisterInfo(
+      std::vector<DynamicRegisterInfo::Register> &regs) override;
 
   /// If the register name is of the form "<from_prefix>[<number>]" then change
   /// the name to "<to_prefix>[<number>]". Otherwise, leave the name unchanged.
   static void MapRegisterName(std::string &reg, llvm::StringRef from_prefix,
-               llvm::StringRef to_prefix);
+                              llvm::StringRef to_prefix);
+
 protected:
   using ABI::ABI;
 

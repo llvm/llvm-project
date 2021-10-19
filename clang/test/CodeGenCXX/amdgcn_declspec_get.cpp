@@ -12,7 +12,7 @@ struct A {
 
 extern const A a;
 
-// CHECK-LABEL: define void @_Z4testv()
+// CHECK-LABEL: define{{.*}} void @_Z4testv()
 // CHECK:  %i = alloca i32, align 4, addrspace(5)
 // CHECK:  %[[ii:.*]] = addrspacecast i32 addrspace(5)* %i to i32*
 // CHECK:  %[[cast:.*]] = bitcast i32 addrspace(5)* %i to i8 addrspace(5)*

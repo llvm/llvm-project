@@ -13,9 +13,9 @@
 define void @bar(i8* %h, void (i8*)* nocapture %foo) nounwind {
 entry:
   tail call void %foo(i8* %h) nounwind
-; CHECK: mov{{l|q}}	%{{e|r}}si, %{{e|r}}[[REG:.*]]{{d?}}
-; CHECK: callq	*%r[[REG]]
+; CHECK: mov{{l|q}}	%{{e|r}}si,
+; CHECK: callq	*%r
   tail call void %foo(i8* %h) nounwind
-; CHECK: jmpq	*%r{{[^,]*}}
+; CHECK: jmpq	*%r
   ret void
 }

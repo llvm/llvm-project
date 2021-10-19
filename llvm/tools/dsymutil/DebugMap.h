@@ -114,9 +114,7 @@ public:
 
   const Triple &getTriple() const { return BinaryTriple; }
 
-  const ArrayRef<uint8_t> getUUID() const {
-    return ArrayRef<uint8_t>(BinaryUUID);
-  }
+  ArrayRef<uint8_t> getUUID() const { return ArrayRef<uint8_t>(BinaryUUID); }
 
   StringRef getBinaryPath() const { return BinaryPath; }
 

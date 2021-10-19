@@ -9,7 +9,7 @@ typedef struct {
 
 // Insert padding to ensure arguments of type S0 are aligned to 16-byte boundaries.
 
-// N64-LABEL: define void @foo1(i32 signext %a0, i64 %0, double inreg %a1.coerce0, i64 inreg %a1.coerce1, i64 inreg %a1.coerce2, i64 inreg %a1.coerce3, double inreg %a2.coerce0, i64 inreg %a2.coerce1, i64 inreg %a2.coerce2, i64 inreg %a2.coerce3, i32 signext %b, i64 %1, double inreg %a3.coerce0, i64 inreg %a3.coerce1, i64 inreg %a3.coerce2, i64 inreg %a3.coerce3)
+// N64-LABEL: define{{.*}} void @foo1(i32 signext %a0, i64 %0, double inreg %a1.coerce0, i64 inreg %a1.coerce1, i64 inreg %a1.coerce2, i64 inreg %a1.coerce3, double inreg %a2.coerce0, i64 inreg %a2.coerce1, i64 inreg %a2.coerce2, i64 inreg %a2.coerce3, i32 signext %b, i64 %1, double inreg %a3.coerce0, i64 inreg %a3.coerce1, i64 inreg %a3.coerce2, i64 inreg %a3.coerce3)
 // N64: tail call void @foo2(i32 signext 1, i32 signext 2, i32 signext %a0, i64 undef, double inreg %a1.coerce0, i64 inreg %a1.coerce1, i64 inreg %a1.coerce2, i64 inreg %a1.coerce3, double inreg %a2.coerce0, i64 inreg %a2.coerce1, i64 inreg %a2.coerce2, i64 inreg %a2.coerce3, i32 signext 3, i64 undef, double inreg %a3.coerce0, i64 inreg %a3.coerce1, i64 inreg %a3.coerce2, i64 inreg %a3.coerce3)
 // N64: declare void @foo2(i32 signext, i32 signext, i32 signext, i64, double inreg, i64 inreg, i64 inreg, i64 inreg, double inreg, i64 inreg, i64 inreg, i64 inreg, i32 signext, i64, double inreg, i64 inreg, i64 inreg, i64 inreg)
 
@@ -21,7 +21,7 @@ void foo1(int a0, S0 a1, S0 a2, int b, S0 a3) {
 
 // Insert padding before long double argument.
 //
-// N64-LABEL: define void @foo3(i32 signext %a0, i64 %0, fp128 %a1)
+// N64-LABEL: define{{.*}} void @foo3(i32 signext %a0, i64 %0, fp128 %a1)
 // N64: tail call void @foo4(i32 signext 1, i32 signext 2, i32 signext %a0, i64 undef, fp128 %a1)
 // N64: declare void @foo4(i32 signext, i32 signext, i32 signext, i64, fp128)
 
@@ -33,9 +33,9 @@ void foo3(int a0, long double a1) {
 
 // Insert padding after hidden argument.
 //
-// N64-LABEL: define void @foo5(%struct.S0* noalias sret align 16 %agg.result, i64 %0, fp128 %a0)
-// N64: call void @foo6(%struct.S0* sret align 16 %agg.result, i32 signext 1, i32 signext 2, i64 undef, fp128 %a0)
-// N64: declare void @foo6(%struct.S0* sret align 16, i32 signext, i32 signext, i64, fp128)
+// N64-LABEL: define{{.*}} void @foo5(%struct.S0* noalias sret(%struct.S0) align 16 %agg.result, i64 %0, fp128 %a0)
+// N64: call void @foo6(%struct.S0* sret(%struct.S0) align 16 %agg.result, i32 signext 1, i32 signext 2, i64 undef, fp128 %a0)
+// N64: declare void @foo6(%struct.S0* sret(%struct.S0) align 16, i32 signext, i32 signext, i64, fp128)
 
 extern S0 foo6(int, int, long double);
 
@@ -45,7 +45,7 @@ S0 foo5(long double a0) {
 
 // Do not insert padding if ABI is O32.
 //
-// O32-LABEL: define void @foo7(float %a0, double %a1)
+// O32-LABEL: define{{.*}} void @foo7(float %a0, double %a1)
 // O32: declare void @foo8(float, double)
 
 extern void foo8(float, double);
@@ -54,7 +54,7 @@ void foo7(float a0, double a1) {
   foo8(a0 + 1.0f, a1 + 2.0);
 }
 
-// O32-LABEL: define void @foo9()
+// O32-LABEL: define{{.*}} void @foo9()
 // O32: declare void @foo10(i32 signext, i32
 
 typedef struct __attribute__((aligned(16))) {

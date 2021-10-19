@@ -14,7 +14,7 @@
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -interface-stub-version=experimental-ifs-v2 \
+// RUN: -interface-stub-version=ifs-v1 \
 // RUN: -DPARENT_CLASS_VISIBILITY=HIDDEN -DCHILD_CLASS_VISIBILITY="" \
 // RUN: -DPARENT_METHOD_VISIBILITY="" -DCHILD_METHOD_VISIBILITY="" %s | \
 // RUN: FileCheck -check-prefix=CHECK-HP2 %s
@@ -57,14 +57,14 @@
 // CHECK-X-DAG: _ZN1C1mEv
 // CHECK-X-DAG: _ZN1S1nEv
 
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1C1mEv
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CC2Ev
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CD0Ev
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CD2Ev
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1S1nEv
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SC2Ev
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SD0Ev
-// CHECK-X-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SD2Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1C1mEv
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CC2Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CD0Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CD2Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1S1nEv
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SC2Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SD0Ev
+// CHECK-X-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SD2Ev
 
 // CHECK-HP2-DAG: _ZN1CC2Ev
 // CHECK-HP2-DAG: _ZN1CD0Ev
@@ -76,14 +76,14 @@
 // CHECK-HP-NOT: _ZN1SD0Ev
 // CHECK-HP-NOT: _ZN1SD2Ev
 
-// CHECK-HP-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1C1mEv
-// CHECK-HP-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CC2Ev
-// CHECK-HP-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CD0Ev
-// CHECK-HP-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1CD2Ev
-// CHECK-HP-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1S1nEv
-// CHECK-HP-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SC2Ev
-// CHECK-HP-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SD0Ev
-// CHECK-HP-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SD2Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1C1mEv
+// CHECK-HP-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CC2Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CD0Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1CD2Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1S1nEv
+// CHECK-HP-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SC2Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SD0Ev
+// CHECK-HP-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SD2Ev
 
 // CHECK-HC2-DAG: _ZN1SC2Ev
 // CHECK-HC2-DAG: _ZN1SD0Ev
@@ -95,14 +95,14 @@
 // CHECK-HC-NOT: _ZN1CD0Ev
 // CHECK-HC-NOT: _ZN1CD2Ev
 
-// CHECK-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1C1mEv
-// CHECK-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CC2Ev
-// CHECK-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CD0Ev
-// CHECK-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CD2Ev
-// CHECK-HC-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1S1nEv
-// CHECK-HC-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SC2Ev
-// CHECK-HC-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SD0Ev
-// CHECK-HC-RE: FUNC    WEAK   DEFAULT   {{[0-9]+}} _ZN1SD2Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1C1mEv
+// CHECK-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CC2Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CD0Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CD2Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1S1nEv
+// CHECK-HC-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SC2Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SD0Ev
+// CHECK-HC-RE-DAG: FUNC    WEAK   DEFAULT   [[#]] _ZN1SD2Ev
 
 // CHECK-HP-HC-NOT: _ZN1CC2Ev
 // CHECK-HP-HC-NOT: _ZN1CD0Ev
@@ -113,14 +113,14 @@
 // CHECK-HP-HC-NOT: _ZN1C1mEv
 // CHECK-HP-HC-NOT: _ZN1S1nEv
 
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1C1mEv
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CC2Ev
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CD0Ev
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1CD2Ev
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1S1nEv
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SC2Ev
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SD0Ev
-// CHECK-HP-HC-RE: FUNC    WEAK   HIDDEN    {{[0-9]+}} _ZN1SD2Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1C1mEv
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CC2Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CD0Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1CD2Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1S1nEv
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SC2Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SD0Ev
+// CHECK-HP-HC-RE-DAG: FUNC    WEAK   HIDDEN    [[#]] _ZN1SD2Ev
 
 // TODO: clang+llvm does not materialize complete ctors and dtors for the
 // Itanium abi. Figure out why and add the check-not for these:

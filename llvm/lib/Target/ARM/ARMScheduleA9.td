@@ -2525,8 +2525,8 @@ def : ReadAdvance<ReadFPMAC, 0>;
 def : InstRW< [WriteALU],
       (instregex "ANDri", "ORRri", "EORri", "BICri", "ANDrr", "ORRrr", "EORrr",
                  "BICrr")>;
-def : InstRW< [WriteALUsi], (instregex "ANDrsi", "ORRrsi", "EORrsi", "BICrsi")>;
-def : InstRW< [WriteALUsr], (instregex "ANDrsr", "ORRrsr", "EORrsr", "BICrsr")>;
+def : InstRW< [WriteALUsi], (instrs ANDrsi, ORRrsi, EORrsi, BICrsi)>;
+def : InstRW< [WriteALUsr], (instrs ANDrsr, ORRrsr, EORrsr, BICrsr)>;
 
 
 def : SchedAlias<WriteCMP, A9WriteALU>;

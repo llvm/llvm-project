@@ -17,9 +17,9 @@ class ModuleList;
 using namespace lldb_private;
 
 // AddressResolver:
-AddressResolver::AddressResolver() {}
+AddressResolver::AddressResolver() = default;
 
-AddressResolver::~AddressResolver() {}
+AddressResolver::~AddressResolver() = default;
 
 void AddressResolver::ResolveAddressInModules(SearchFilter &filter,
                                               ModuleList &modules) {

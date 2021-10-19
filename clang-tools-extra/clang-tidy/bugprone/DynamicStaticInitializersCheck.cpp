@@ -21,7 +21,7 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   if (Init && !Init->isValueDependent()) {
     if (Node.isConstexpr())
       return true;
-    return Node.checkInitIsICE();
+    return Node.evaluateValue();
   }
   return false;
 }
@@ -34,8 +34,8 @@ DynamicStaticInitializersCheck::DynamicStaticInitializersCheck(StringRef Name,
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
                                   HeaderFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    llvm::errs() << "Invalid header file extension: "
-                 << RawStringHeaderFileExtensions << "\n";
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
   }
 }
 

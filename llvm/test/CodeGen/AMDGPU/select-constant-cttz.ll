@@ -8,15 +8,16 @@ define amdgpu_kernel void @select_constant_cttz(i32 addrspace(1)* noalias %out, 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dword s8, s[2:3], 0x0
+; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshr_b32 s0, 1, s8
-; GCN-NEXT:    s_ff1_i32_b32 s0, s0
 ; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_lshr_b32 s0, 1, s2
+; GCN-NEXT:    s_ff1_i32_b32 s0, s0
+; GCN-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_cmp_ne_u32_e64 s[2:3], s8, 0
+; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -1, s[2:3]
 ; GCN-NEXT:    v_ffbh_i32_e32 v1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[0:1], 0, v0

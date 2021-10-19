@@ -8,8 +8,8 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -65,9 +65,13 @@ JITTargetMachineBuilder &JITTargetMachineBuilder::addFeatures(
 }
 
 #ifndef NDEBUG
-raw_ostream &operator<<(raw_ostream &OS, const JITTargetMachineBuilder &JTMB) {
-  OS << "{ Triple = \"" << JTMB.TT.str() << "\", CPU = \"" << JTMB.CPU
-     << "\", Options = <not-printable>, Relocation Model = ";
+void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
+  OS << Indent << "{\n"
+     << Indent << "  Triple = \"" << JTMB.TT.str() << "\"\n"
+     << Indent << "  CPU = \"" << JTMB.CPU << "\"\n"
+     << Indent << "  Features = \"" << JTMB.Features.getString() << "\"\n"
+     << Indent << "  Options = <not-printable>\n"
+     << Indent << "  Relocation Model = ";
 
   if (JTMB.RM) {
     switch (*JTMB.RM) {
@@ -91,9 +95,10 @@ raw_ostream &operator<<(raw_ostream &OS, const JITTargetMachineBuilder &JTMB) {
       break;
     }
   } else
-    OS << "unspecified";
+    OS << "unspecified (will use target default)";
 
-  OS << ", Code Model = ";
+  OS << "\n"
+     << Indent << "  Code Model = ";
 
   if (JTMB.CM) {
     switch (*JTMB.CM) {
@@ -114,9 +119,10 @@ raw_ostream &operator<<(raw_ostream &OS, const JITTargetMachineBuilder &JTMB) {
       break;
     }
   } else
-    OS << "unspecified";
+    OS << "unspecified (will use target default)";
 
-  OS << ", Optimization Level = ";
+  OS << "\n"
+     << Indent << "  Optimization Level = ";
   switch (JTMB.OptLevel) {
   case CodeGenOpt::None:
     OS << "None";
@@ -132,8 +138,7 @@ raw_ostream &operator<<(raw_ostream &OS, const JITTargetMachineBuilder &JTMB) {
     break;
   }
 
-  OS << " }";
-  return OS;
+  OS << "\n" << Indent << "}\n";
 }
 #endif // NDEBUG
 

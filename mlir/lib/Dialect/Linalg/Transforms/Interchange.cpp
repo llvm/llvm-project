@@ -14,9 +14,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
@@ -32,54 +30,65 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-LogicalResult mlir::linalg::interchangeGenericLinalgOpPrecondition(
-    Operation *op, ArrayRef<unsigned> interchangeVector) {
-  if (interchangeVector.empty())
-    return failure();
-  // Transformation applies to generic ops only.
-  if (!isa<GenericOp, IndexedGenericOp>(op))
-    return failure();
-  LinalgOp linOp = cast<LinalgOp>(op);
-  // Transformation applies to buffers only.
-  if (!linOp.hasBufferSemantics())
-    return failure();
-  // Permutation must be applicable.
-  if (linOp.getIndexingMap(0).getNumInputs() != interchangeVector.size())
+LogicalResult mlir::linalg::interchangeGenericOpPrecondition(
+    GenericOp genericOp, ArrayRef<unsigned> interchangeVector) {
+  // Interchange vector must be non-empty and match the number of loops.
+  if (interchangeVector.empty() ||
+      genericOp.getNumLoops() != interchangeVector.size())
     return failure();
   // Permutation map must be invertible.
-  if (!inversePermutation(
-          AffineMap::getPermutationMap(interchangeVector, op->getContext())))
+  if (!inversePermutation(AffineMap::getPermutationMap(interchangeVector,
+                                                       genericOp.getContext())))
     return failure();
   return success();
 }
 
-LinalgOp mlir::linalg::interchange(LinalgOp op,
-                                   ArrayRef<unsigned> interchangeVector) {
-  if (interchangeVector.empty())
-    return op;
-
-  MLIRContext *context = op.getContext();
-  auto permutationMap = inversePermutation(
+void mlir::linalg::interchangeGenericOp(PatternRewriter &rewriter,
+                                        GenericOp genericOp,
+                                        ArrayRef<unsigned> interchangeVector) {
+  // 1. Compute the inverse permutation map.
+  MLIRContext *context = genericOp.getContext();
+  AffineMap permutationMap = inversePermutation(
       AffineMap::getPermutationMap(interchangeVector, context));
   assert(permutationMap && "expected permutation to be invertible");
+  assert(interchangeVector.size() == genericOp.getNumLoops() &&
+         "expected interchange vector to have entry for every loop");
+
+  // 2. Compute the interchanged indexing maps.
   SmallVector<Attribute, 4> newIndexingMaps;
-  auto indexingMaps = op.indexing_maps().getValue();
-  for (unsigned i = 0, e = op.getNumInputsAndOutputs(); i != e; ++i) {
-    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue();
+  for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
+    AffineMap m = genericOp.getTiedIndexingMap(opOperand);
     if (!permutationMap.isEmpty())
       m = m.compose(permutationMap);
     newIndexingMaps.push_back(AffineMapAttr::get(m));
   }
-  auto itTypes = op.iterator_types().getValue();
+  genericOp->setAttr(getIndexingMapsAttrName(),
+                     ArrayAttr::get(context, newIndexingMaps));
+
+  // 3. Compute the interchanged iterator types.
+  ArrayRef<Attribute> itTypes = genericOp.iterator_types().getValue();
   SmallVector<Attribute, 4> itTypesVector;
-  for (unsigned i = 0, e = itTypes.size(); i != e; ++i)
-    itTypesVector.push_back(itTypes[i]);
-  applyPermutationToVector(itTypesVector, interchangeVector);
+  llvm::append_range(itTypesVector, itTypes);
+  SmallVector<int64_t> permutation(interchangeVector.begin(),
+                                   interchangeVector.end());
+  applyPermutationToVector(itTypesVector, permutation);
+  genericOp->setAttr(getIteratorTypesAttrName(),
+                     ArrayAttr::get(context, itTypesVector));
 
-  op.setAttr(getIndexingMapsAttrName(),
-             ArrayAttr::get(newIndexingMaps, context));
-  op.setAttr(getIteratorTypesAttrName(),
-             ArrayAttr::get(itTypesVector, context));
-
-  return op;
+  // 4. Transform the index operations by applying the permutation map.
+  if (genericOp.hasIndexSemantics()) {
+    OpBuilder::InsertionGuard guard(rewriter);
+    for (IndexOp indexOp :
+         llvm::make_early_inc_range(genericOp.getBody()->getOps<IndexOp>())) {
+      rewriter.setInsertionPoint(indexOp);
+      SmallVector<Value> allIndices;
+      allIndices.reserve(genericOp.getNumLoops());
+      llvm::transform(llvm::seq<uint64_t>(0, genericOp.getNumLoops()),
+                      std::back_inserter(allIndices), [&](uint64_t dim) {
+                        return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
+                      });
+      rewriter.replaceOpWithNewOp<AffineApplyOp>(
+          indexOp, permutationMap.getSubMap(indexOp.dim()), allIndices);
+    }
+  }
 }

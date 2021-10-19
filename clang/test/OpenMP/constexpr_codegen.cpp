@@ -12,7 +12,7 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK: @{{.*}}Foo{{.*}}bar{{.*}} = constant i32 1,
+// CHECK: @{{.*}}Foo{{.*}}bar{{.*}} ={{.*}} constant i32 1,
 
 // Section A - Define a class with a static constexpr data member.
 struct Foo {

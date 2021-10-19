@@ -381,8 +381,8 @@ void Init() {
 typedef int inte2 __attribute__((__ext_vector_type__(2)));
 
 void test_vector_literal(inte4 res) {
-  inte2 a = (inte2)(1, 2); //expected-warning{{expression result unused}}
-  inte4 b = (inte4)(a, a); //expected-error{{C-style cast from vector 'inte2' (vector of 2 'int' values) to vector 'inte4' (vector of 4 'int' values) of different size}} //expected-warning{{expression result unused}}
+  inte2 a = (inte2)(1, 2); //expected-warning{{left operand of comma operator has no effect}}
+  inte4 b = (inte4)(a, a); //expected-error{{C-style cast from vector 'inte2' (vector of 2 'int' values) to vector 'inte4' (vector of 4 'int' values) of different size}} //expected-warning{{left operand of comma operator has no effect}}
 }
 
 typedef __attribute__((__ext_vector_type__(4))) float vector_float4;
@@ -426,6 +426,13 @@ struct ConstantValueNoDiag {
   }
   static constexpr double k = 1;
 };
+template <typename T, int N>
+struct ConstantValueNoDiagDependentValue {
+  float4 f(float4 x) {
+    return k * x;
+  }
+  static constexpr double k = N;
+};
 
 // The following two both diagnose because they cause a truncation.  Test both
 // the dependent type and non-dependent type versions.
@@ -436,6 +443,14 @@ struct DiagTrunc {
     return k * x;
   }
   static constexpr double k = 1340282346638528859811704183484516925443.000000;
+};
+template <typename T, int N>
+struct DiagTruncDependentValue {
+  float4 f(float4 x) {
+    // expected-error@+1{{as implicit conversion would cause truncation}}
+    return k * x;
+  }
+  static constexpr double k = N + 1340282346638528859811704183484516925443.000000;
 };
 template <typename T>
 struct DiagTruncDependentType {
@@ -467,8 +482,10 @@ void use() {
   NormalMember<double>().f(theFloat4);
 #if __cplusplus >= 201103L
   ConstantValueNoDiag<double>().f(theFloat4);
-  // expected-note@+1{{in instantiation of member function}}
+  ConstantValueNoDiagDependentValue<double, 1>().f(theFloat4);
   DiagTrunc<double>().f(theFloat4);
+  // expected-note@+1{{in instantiation of member function}}
+  DiagTruncDependentValue<double, 0>().f(theFloat4);
   // expected-note@+1{{in instantiation of member function}}
   DiagTruncDependentType<double>().f(theFloat4);
   PR45298Consumer<double>().f(theFloat4);
@@ -496,3 +513,20 @@ void use(char16 c) {
 }
 
 } // namespace PR45780
+
+namespace PR48540 {
+// The below used to cause an OOM error, or an assert, make sure it is still
+//  valid.
+int (__attribute__((vector_size(16))) a);
+
+template <typename T, int I>
+struct S {
+  T (__attribute__((vector_size(16))) a);
+  int (__attribute__((vector_size(I))) b);
+  T (__attribute__((vector_size(I))) c);
+};
+
+void use() {
+  S<int, 16> s;
+}
+} // namespace PR48540

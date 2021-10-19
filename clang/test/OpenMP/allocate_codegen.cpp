@@ -85,6 +85,7 @@ int main () {
 // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
 // CHECK:      store i32 %{{.+}}, i32* [[V_ADDR]],
 // CHECK-NEXT: [[V_VAL:%.+]] = load i32, i32* [[V_ADDR]],
+// CHECK-NEXT: [[V_VOID_ADDR:%.+]] = bitcast i32* [[V_ADDR]] to i8*
 // CHECK-NEXT: call void @__kmpc_free(i32 [[GTID]], i8* [[V_VOID_ADDR]], i8* inttoptr (i64 6 to i8*))
 // CHECK-NOT:  {{__kmpc_alloc|__kmpc_free}}
 // CHECK:      ret i32 [[V_VAL]]
@@ -92,7 +93,7 @@ int main () {
 // CHECK-NOT:  call {{.+}} {{__kmpc_alloc|__kmpc_free}}
 extern template int ST<int>::m;
 
-// CHECK: define void @{{.+}}bar{{.+}}(i32 %{{.+}}, float* {{.+}})
+// CHECK: define{{.*}} void @{{.+}}bar{{.+}}(i32 %{{.+}}, float* {{.+}})
 void bar(int a, float &z) {
 // CHECK: [[A_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 4, i8* inttoptr (i64 1 to i8*))
 // CHECK: [[A_ADDR:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*
@@ -101,7 +102,9 @@ void bar(int a, float &z) {
 // CHECK: [[Z_ADDR:%.+]] = bitcast i8* [[Z_VOID_PTR]] to float**
 // CHECK: store float* %{{.+}}, float** [[Z_ADDR]],
 #pragma omp allocate(a,z) allocator(omp_default_mem_alloc)
+// CHECK-NEXT: [[Z_VOID_PTR:%.+]] = bitcast float** [[Z_ADDR]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[Z_VOID_PTR]], i8* inttoptr (i64 1 to i8*))
+// CHECK-NEXT: [[A_VOID_PTR:%.+]] = bitcast i32* [[A_ADDR]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[A_VOID_PTR]], i8* inttoptr (i64 1 to i8*))
 // CHECK: ret void
 }

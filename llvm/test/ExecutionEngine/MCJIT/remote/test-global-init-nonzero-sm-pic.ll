@@ -1,4 +1,4 @@
-; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
+; RUN: %lli -jit-kind=mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
 ; RUN:   -relocation-model=pic -code-model=small %s > /dev/null
 ; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, windows-gnu, windows-msvc
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
@@ -6,7 +6,7 @@
 
 @count = global i32 1, align 4
 
-define i32 @main() nounwind uwtable {
+define i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4

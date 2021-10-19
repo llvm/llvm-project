@@ -70,6 +70,8 @@ InputFile *Symbol::getFile() {
     return sym->file;
   if (auto *sym = dyn_cast<LazyObject>(this))
     return sym->file;
+  if (auto *sym = dyn_cast<LazyDLLSymbol>(this))
+    return sym->file;
   return nullptr;
 }
 

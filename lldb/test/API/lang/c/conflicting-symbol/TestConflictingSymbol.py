@@ -19,7 +19,6 @@ class TestConflictingSymbols(TestBase):
         lldbutil.mkdir_p(self.getBuildArtifact("Two"))
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
-    @expectedFailureNetBSD
     def test_conflicting_symbols(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

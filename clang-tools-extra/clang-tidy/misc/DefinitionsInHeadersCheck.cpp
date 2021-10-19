@@ -36,10 +36,8 @@ DefinitionsInHeadersCheck::DefinitionsInHeadersCheck(StringRef Name,
   if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
                                   HeaderFileExtensions,
                                   utils::defaultFileExtensionDelimiters())) {
-    // FIXME: Find a more suitable way to handle invalid configuration
-    // options.
-    llvm::errs() << "Invalid header file extension: "
-                 << RawStringHeaderFileExtensions << "\n";
+    this->configurationDiag("Invalid header file extension: '%0'")
+        << RawStringHeaderFileExtensions;
   }
 }
 
@@ -129,6 +127,9 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
          "in a header file; function definitions in header files can lead to "
          "ODR violations")
         << IsFullSpec << FD;
+    // inline is not allowed for main function.
+    if (FD->isMain())
+      return;
     diag(FD->getLocation(), /*FixDescription=*/"make as 'inline'",
          DiagnosticIDs::Note)
         << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");

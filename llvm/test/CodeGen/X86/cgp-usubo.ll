@@ -177,7 +177,7 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) nounwi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpq %rsi, %rbx
 ; CHECK-NEXT:    setb %dil
-; CHECK-NEXT:    callq call
+; CHECK-NEXT:    callq call@PLT
 ; CHECK-NEXT:    subq %r15, %rbx
 ; CHECK-NEXT:    jae .LBB9_2
 ; CHECK-NEXT:  # %bb.4: # %end

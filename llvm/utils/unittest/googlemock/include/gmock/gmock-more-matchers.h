@@ -26,8 +26,7 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Author: marcus.boerger@google.com (Marcus Boerger)
+
 
 // Google Mock - a framework for writing C++ mock classes.
 //
@@ -36,14 +35,28 @@
 // Note that tests are implemented in gmock-matchers_test.cc rather than
 // gmock-more-matchers-test.cc.
 
+// GOOGLETEST_CM0002 DO NOT DELETE
+
 // IWYU pragma: private, include "gmock/gmock.h"
 
-#ifndef GMOCK_GMOCK_MORE_MATCHERS_H_
-#define GMOCK_GMOCK_MORE_MATCHERS_H_
+#ifndef GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_
+#define GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_
 
 #include "gmock/gmock-generated-matchers.h"
 
 namespace testing {
+
+// Silence C4100 (unreferenced formal
+// parameter) for MSVC
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4100)
+#if (_MSC_VER == 1900)
+// and silence C4800 (C4800: 'int *const ': forcing value
+// to bool 'true' or 'false') for MSVC 14
+# pragma warning(disable:4800)
+  #endif
+#endif
 
 // Defines a matcher that matches an empty container. The container must
 // support both size() and empty(), which all STL-like containers provide.
@@ -55,6 +68,27 @@ MATCHER(IsEmpty, negation ? "isn't empty" : "is empty") {
   return false;
 }
 
+// Define a matcher that matches a value that evaluates in boolean
+// context to true.  Useful for types that define "explicit operator
+// bool" operators and so can't be compared for equality with true
+// and false.
+MATCHER(IsTrue, negation ? "is false" : "is true") {
+  return static_cast<bool>(arg);
+}
+
+// Define a matcher that matches a value that evaluates in boolean
+// context to false.  Useful for types that define "explicit operator
+// bool" operators and so can't be compared for equality with true
+// and false.
+MATCHER(IsFalse, negation ? "is true" : "is false") {
+  return !static_cast<bool>(arg);
+}
+
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+
+
 }  // namespace testing
 
-#endif  // GMOCK_GMOCK_MORE_MATCHERS_H_
+#endif  // GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_

@@ -88,7 +88,7 @@ ModulePass *llvm::createGlobalDCEPass() {
 static bool isEmptyFunction(Function *F) {
   BasicBlock &Entry = F->getEntryBlock();
   for (auto &I : Entry) {
-    if (isa<DbgInfoIntrinsic>(I))
+    if (I.isDebugOrPseudoInst())
       continue;
     if (auto *RI = dyn_cast<ReturnInst>(&I))
       return !RI->getReturnValue();
@@ -210,7 +210,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     Constant *Ptr =
         getPointerAtOffset(VTable->getInitializer(), VTableOffset + CallOffset,
-                           *Caller->getParent());
+                           *Caller->getParent(), VTable);
     if (!Ptr) {
       LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
       VFESafeVTables.erase(VTable);
@@ -416,6 +416,16 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // virtual function pointers with null, allowing us to remove the
       // function itself.
       ++NumVFuncs;
+
+      // Detect vfuncs that are referenced as "relative pointers" which are used
+      // in Swift vtables, i.e. entries in the form of:
+      //
+      //   i32 trunc (i64 sub (i64 ptrtoint @f, i64 ptrtoint ...)) to i32)
+      //
+      // In this case, replace the whole "sub" expression with constant 0 to
+      // avoid leaving a weird sub(0, symbol) expression behind.
+      replaceRelativePointerUsersWithZero(F);
+
       F->replaceNonMetadataUsesWith(ConstantPointerNull::get(F->getType()));
     }
     EraseUnusedGlobalValue(F);

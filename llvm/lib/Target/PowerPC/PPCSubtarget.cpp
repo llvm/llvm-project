@@ -11,16 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCSubtarget.h"
+#include "GISel/PPCCallLowering.h"
+#include "GISel/PPCLegalizerInfo.h"
+#include "GISel/PPCRegisterBankInfo.h"
 #include "PPC.h"
 #include "PPCRegisterInfo.h"
 #include "PPCTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cstdlib>
 
@@ -53,7 +57,15 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
       IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
               TargetTriple.getArch() == Triple::ppc64le),
       TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, FS)),
-      InstrInfo(*this), TLInfo(TM, *this) {}
+      InstrInfo(*this), TLInfo(TM, *this) {
+  CallLoweringInfo.reset(new PPCCallLowering(*getTargetLowering()));
+  Legalizer.reset(new PPCLegalizerInfo(*this));
+  auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+
+  InstSelector.reset(createPPCInstructionSelector(
+      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+}
 
 void PPCSubtarget::initializeEnvironment() {
   StackAlignment = Align(16);
@@ -65,6 +77,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasHardFloat = false;
   HasAltivec = false;
   HasSPE = false;
+  HasEFPU2 = false;
   HasFPU = false;
   HasVSX = false;
   NeedsTwoConstNR = false;
@@ -74,6 +87,8 @@ void PPCSubtarget::initializeEnvironment() {
   HasP9Vector = false;
   HasP9Altivec = false;
   HasMMA = false;
+  HasROPProtect = false;
+  HasPrivileged = false;
   HasP10Vector = false;
   HasPrefixInstrs = false;
   HasPCRelativeMemops = false;
@@ -104,12 +119,16 @@ void PPCSubtarget::initializeEnvironment() {
   HasICBT = false;
   HasInvariantFunctionDescriptors = false;
   HasPartwordAtomics = false;
+  HasQuadwordAtomics = false;
   HasDirectMove = false;
   HasHTM = false;
   HasFloat128 = false;
   HasFusion = false;
+  HasStoreFusion = false;
   HasAddiLoadFusion = false;
   HasAddisLoadFusion = false;
+  IsISA2_06 = false;
+  IsISA2_07 = false;
   IsISA3_0 = false;
   IsISA3_1 = false;
   UseLongCalls = false;
@@ -119,6 +138,8 @@ void PPCSubtarget::initializeEnvironment() {
   UsePPCPostRASchedStrategy = false;
   PairedVectorMemops = false;
   PredictableSelectIsExpensive = false;
+  HasModernAIXAs = false;
+  IsAIX = false;
 
   HasPOPCNTD = POPCNTD_Unavailable;
 }
@@ -165,8 +186,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   StackAlignment = getPlatformStackAlignment();
 
   // Determine endianness.
-  // FIXME: Part of the TargetMachine.
-  IsLittleEndian = (TargetTriple.getArch() == Triple::ppc64le);
+  IsLittleEndian = TM.isLittleEndian();
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
@@ -226,4 +246,21 @@ bool PPCSubtarget::isPPC64() const { return TM.isPPC64(); }
 bool PPCSubtarget::isUsingPCRelativeCalls() const {
   return isPPC64() && hasPCRelativeMemops() && isELFv2ABI() &&
          CodeModel::Medium == getTargetMachine().getCodeModel();
+}
+
+// GlobalISEL
+const CallLowering *PPCSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+const RegisterBankInfo *PPCSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}
+
+const LegalizerInfo *PPCSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+InstructionSelector *PPCSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
 }

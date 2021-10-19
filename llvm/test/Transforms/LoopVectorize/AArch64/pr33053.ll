@@ -5,10 +5,9 @@ target triple = "aarch64--linux-gnu"
 @b = common local_unnamed_addr global i32 0, align 4
 @a = common local_unnamed_addr global i16* null, align 8
 
-; Function Attrs: norecurse nounwind readonly
 define i32 @fn1() local_unnamed_addr #0 {
-; Ensure that we don't emit reduction intrinsics for unsupported short reductions.
-; CHECK-NOT: @llvm.experimental.vector.reduce
+; We expect the backend to expand all reductions.
+; CHECK: @llvm.vector.reduce
 entry:
   %0 = load i32, i32* @b, align 4, !tbaa !1
   %cmp40 = icmp sgt i32 %0, 0

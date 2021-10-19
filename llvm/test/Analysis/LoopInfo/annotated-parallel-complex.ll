@@ -1,4 +1,4 @@
-; RUN: opt -loops -analyze < %s | FileCheck %s
+; RUN: opt -passes='print<loops>' -disable-output %s 2>&1 | FileCheck %s
 ;
 ; void func(long n, double A[static const restrict 4*n], double B[static const restrict 4*n]) {
 ;   for (long i = 0; i < n; i += 1)

@@ -1,4 +1,17 @@
+<!--===- docs/Semantics.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
 # Semantic Analysis
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 The semantic analysis pass determines if a syntactically correct Fortran
 program is is legal by enforcing the constraints of the language.
@@ -133,6 +146,49 @@ perform the remaining semantic checks.
 By this phase, all names and expressions that can be successfully resolved
 have been. But there may be names without symbols or expressions without
 analyzed form if errors occurred earlier.
+
+### Initialization processing
+
+Fortran supports many means of specifying static initializers for variables,
+object pointers, and procedure pointers, as well as default initializers for
+derived type object components, pointers, and type parameters.
+
+Non-pointer static initializers of variables and named constants are
+scanned, analyzed, folded, scalar-expanded, and validated as they are
+traversed during declaration processing in name resolution.
+So are the default initializers of non-pointer object components in
+non-parameterized derived types.
+Name constant arrays with implied shapes take their actual shape from
+the initialization expression.
+
+Default initializers of non-pointer components and type parameters
+in distinct parameterized
+derived type instantiations are similarly processed as those instances
+are created, as their expressions may depend on the values of type
+parameters.
+Error messages produced during parameterized derived type instantiation
+are decorated with contextual attachments that point to the declarations
+or other type specifications that caused the instantiation.
+
+Static initializations in `DATA` statements are collected, validated,
+and converted into static initialization in the symbol table, as if
+the initialized objects had used the newer style of static initialization
+in their entity declarations.
+
+All statically initialized pointers, and default component initializers for
+pointers, are processed late in name resolution after all specification parts
+have been traversed.
+This allows for forward references even in the presence of `IMPLICIT NONE`.
+Object pointer initializers in parameterized derived type instantiations are
+also cloned and folded at this late stage.
+Validation of pointer initializers takes place later in declaration
+checking (below).
+
+### Declaration checking
+
+Whenever possible, the enforcement of constraints and "shalls" pertaining to
+properties of symbols is deferred to a single read-only pass over the symbol table
+that takes place after all name resolution and typing is complete.
 
 ### Write module files
 

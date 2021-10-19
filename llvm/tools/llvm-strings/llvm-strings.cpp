@@ -11,51 +11,81 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Opts.inc"
 #include "llvm/Object/Binary.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/WithColor.h"
 #include <cctype>
 #include <string>
 
 using namespace llvm;
 using namespace llvm::object;
 
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Opts.inc"
+#undef PREFIX
+
+static const opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {                                                                            \
+      PREFIX,      NAME,      HELPTEXT,                                        \
+      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
+      PARAM,       FLAGS,     OPT_##GROUP,                                     \
+      OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
+
+class StringsOptTable : public opt::OptTable {
+public:
+  StringsOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+};
+} // namespace
+
+const char ToolName[] = "llvm-strings";
+
 static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::desc("<input object files>"),
                                             cl::ZeroOrMore);
 
-static cl::opt<bool>
-    PrintFileName("print-file-name",
-                  cl::desc("Print the name of the file before each string"));
-static cl::alias PrintFileNameShort("f", cl::desc(""),
-                                    cl::aliasopt(PrintFileName));
-
-static cl::opt<int>
-    MinLength("bytes", cl::desc("Print sequences of the specified length"),
-              cl::init(4));
-static cl::alias MinLengthShort("n", cl::desc(""), cl::aliasopt(MinLength));
-
-static cl::opt<bool>
-    AllSections("all",
-                  cl::desc("Check all sections, not just the data section"));
-static cl::alias AllSectionsShort("a", cl::desc(""),
-                                    cl::aliasopt(AllSections));
+static int MinLength = 4;
+static bool PrintFileName;
 
 enum radix { none, octal, hexadecimal, decimal };
-static cl::opt<radix>
-    Radix("radix", cl::desc("print the offset within the file"),
-          cl::values(clEnumValN(octal, "o", "octal"),
-                     clEnumValN(hexadecimal, "x", "hexadecimal"),
-                     clEnumValN(decimal, "d", "decimal")),
-          cl::init(none));
-static cl::alias RadixShort("t", cl::desc(""), cl::aliasopt(Radix));
+static radix Radix;
 
-static cl::extrahelp
-    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+[[noreturn]] static void reportCmdLineError(const Twine &Message) {
+  WithColor::error(errs(), ToolName) << Message << "\n";
+  exit(1);
+}
+
+template <typename T>
+static void parseIntArg(const opt::InputArgList &Args, int ID, T &Value) {
+  if (const opt::Arg *A = Args.getLastArg(ID)) {
+    StringRef V(A->getValue());
+    if (!llvm::to_integer(V, Value, 0) || Value <= 0)
+      reportCmdLineError("expected a positive integer, but got '" + V + "'");
+  }
+}
 
 static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
   auto print = [&OS, FileName](unsigned Offset, StringRef L) {
@@ -96,13 +126,48 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  StringsOptTable Tbl;
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver,
+                    [&](StringRef Msg) { reportCmdLineError(Msg); });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(
+        outs(),
+        (Twine(ToolName) + " [options] <input object files>").str().c_str(),
+        "llvm string dumper");
+    // TODO Replace this with OptTable API once it adds extrahelp support.
+    outs() << "\nPass @FILE as argument to read options from FILE.\n";
+    return 0;
+  }
+  if (Args.hasArg(OPT_version)) {
+    outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
+    return 0;
+  }
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm string dumper\n");
+  parseIntArg(Args, OPT_bytes_EQ, MinLength);
+  PrintFileName = Args.hasArg(OPT_print_file_name);
+  StringRef R = Args.getLastArgValue(OPT_radix_EQ);
+  if (R.empty())
+    Radix = none;
+  else if (R == "o")
+    Radix = octal;
+  else if (R == "d")
+    Radix = decimal;
+  else if (R == "x")
+    Radix = hexadecimal;
+  else
+    reportCmdLineError("--radix value should be one of: '' (no offset), 'o' "
+                       "(octal), 'd' (decimal), 'x' (hexadecimal)");
+
   if (MinLength == 0) {
     errs() << "invalid minimum string length 0\n";
     return EXIT_FAILURE;
   }
 
+  std::vector<std::string> InputFileNames = Args.getAllArgValues(OPT_INPUT);
   if (InputFileNames.empty())
     InputFileNames.push_back("-");
 

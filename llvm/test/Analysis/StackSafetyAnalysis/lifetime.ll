@@ -924,6 +924,31 @@ entry:
   ret void
 }
 
+define void @multiple_start_end() {
+; CHECK-LABEL: define void @multiple_start_end
+entry:
+; CHECK: entry:
+; CHECK-NEXT: Alive: <>
+  %x = alloca i8
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK-NEXT: Alive: <x>
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK-NEXT: Alive: <x>
+
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; CHECK-NEXT: Alive: <>
+
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; CHECK-NEXT: Alive: <>
+
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.start.p0i32(i64, i32* nocapture)

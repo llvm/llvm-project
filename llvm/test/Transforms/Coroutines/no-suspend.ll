@@ -1,6 +1,5 @@
 ; Test no suspend coroutines
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 ; Coroutine with no-suspends will turn into:
 ;
@@ -415,7 +414,7 @@ lpad:
 }
 
 declare i8* @malloc(i32)
-declare void @free(i8*)
+declare void @free(i8*) willreturn
 declare void @print(i32)
 declare void @foo()
 

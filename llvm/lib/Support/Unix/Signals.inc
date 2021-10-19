@@ -255,7 +255,7 @@ static struct {
 // stack if we remove our signal handlers; that can't be done reliably if
 // someone else is also trying to do the same thing.
 static stack_t OldAltStack;
-static void* NewAltStackPointer;
+LLVM_ATTRIBUTE_USED static void *NewAltStackPointer;
 
 static void CreateSigAltStack() {
   const size_t AltStackSize = MINSIGSTKSZ + 64 * 1024;
@@ -331,7 +331,7 @@ static void RegisterHandlers() { // Not signal-safe.
     registerHandler(S, SignalKind::IsInfo);
 }
 
-static void UnregisterHandlers() {
+void sys::unregisterHandlers() {
   // Restore all of the signal handlers to how they were before we showed up.
   for (unsigned i = 0, e = NumRegisteredSignals.load(); i != e; ++i) {
     sigaction(RegisteredSignalInfo[i].SigNo,
@@ -367,7 +367,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
   // instead of recursing in the signal handler.
-  UnregisterHandlers();
+  sys::unregisterHandlers();
 
   // Unmask all potentially blocked kill signals.
   sigset_t SigMask;
@@ -382,13 +382,15 @@ static RETSIGTYPE SignalHandler(int Sig) {
               OneShotPipeSignalFunction.exchange(nullptr))
         return OldOneShotPipeFunction();
 
-    if (llvm::is_contained(IntSigs, Sig)) {
+    bool IsIntSig = llvm::is_contained(IntSigs, Sig);
+    if (IsIntSig)
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
 
-      raise(Sig);   // Execute the default handler.
+    if (Sig == SIGPIPE || IsIntSig) {
+      raise(Sig); // Execute the default handler.
       return;
-   }
+    }
   }
 
   // Otherwise if it is a fault (like SEGV) run any handler.
@@ -576,6 +578,9 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
     Depth = depth;
   if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
+  OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "
+        "your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point "
+        "to it):\n";
 #if HAVE_DLFCN_H && HAVE_DLADDR
   int width = 0;
   for (int i = 0; i < depth; ++i) {

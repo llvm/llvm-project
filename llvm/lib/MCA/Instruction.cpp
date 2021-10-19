@@ -27,7 +27,8 @@ void WriteState::writeStartEvent(unsigned IID, MCPhysReg RegID,
   DependentWrite = nullptr;
 }
 
-void ReadState::writeStartEvent(unsigned IID, MCPhysReg RegID, unsigned Cycles) {
+void ReadState::writeStartEvent(unsigned IID, MCPhysReg RegID,
+                                unsigned Cycles) {
   assert(DependentWrites);
   assert(CyclesLeft == UNKNOWN_CYCLES);
 
@@ -124,14 +125,6 @@ void ReadState::cycleEvent() {
 void WriteState::dump() const {
   dbgs() << "{ OpIdx=" << WD->OpIndex << ", Lat=" << getLatency() << ", RegID "
          << getRegisterID() << ", Cycles Left=" << getCyclesLeft() << " }";
-}
-
-void WriteRef::dump() const {
-  dbgs() << "IID=" << getSourceIndex() << ' ';
-  if (isValid())
-    getWriteState()->dump();
-  else
-    dbgs() << "(null)";
 }
 #endif
 
@@ -247,8 +240,6 @@ void Instruction::cycleEvent() {
   if (!CyclesLeft)
     Stage = IS_EXECUTED;
 }
-
-const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
 
 } // namespace mca
 } // namespace llvm

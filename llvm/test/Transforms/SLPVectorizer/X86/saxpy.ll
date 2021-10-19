@@ -11,16 +11,14 @@ define void @SAXPY(i32* noalias nocapture %x, i32* noalias nocapture %y, i32 %a,
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[Y:%.*]], i64 [[I]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP1]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[A]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[A]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[A]], i32 3
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i32> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP11:%.*]] = load <4 x i32>, <4 x i32>* [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <4 x i32> [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP1]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* [[TMP13]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw <4 x i32> [[TMP4]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP2]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[TMP1]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP10]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds i32, i32* %x, i64 %i

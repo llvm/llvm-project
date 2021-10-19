@@ -59,22 +59,23 @@ options.
 
 * ``path/to/compiler-rt``
 * ``-G Ninja``
-* ``-DCOMPILER_RT_BUILD_BUILTINS=ON``
-* ``-DCOMPILER_RT_BUILD_SANITIZERS=OFF``
-* ``-DCOMPILER_RT_BUILD_XRAY=OFF``
-* ``-DCOMPILER_RT_BUILD_LIBFUZZER=OFF``
-* ``-DCOMPILER_RT_BUILD_PROFILE=OFF``
-* ``-DCMAKE_C_COMPILER=/path/to/clang``
 * ``-DCMAKE_AR=/path/to/llvm-ar``
+* ``-DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf"``
+* ``-DCMAKE_ASM_FLAGS="build-c-flags"``
+* ``-DCMAKE_C_COMPILER=/path/to/clang``
+* ``-DCMAKE_C_COMPILER_TARGET="arm-linux-gnueabihf"``
+* ``-DCMAKE_C_FLAGS="build-c-flags"``
+* ``-DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"``
 * ``-DCMAKE_NM=/path/to/llvm-nm``
 * ``-DCMAKE_RANLIB=/path/to/llvm-ranlib``
-* ``-DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld"``
-* ``-DCMAKE_C_COMPILER_TARGET="arm-linux-gnueabihf"``
-* ``-DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf"``
+* ``-DCOMPILER_RT_BUILD_BUILTINS=ON``
+* ``-DCOMPILER_RT_BUILD_LIBFUZZER=OFF``
+* ``-DCOMPILER_RT_BUILD_MEMPROF=OFF``
+* ``-DCOMPILER_RT_BUILD_PROFILE=OFF``
+* ``-DCOMPILER_RT_BUILD_SANITIZERS=OFF``
+* ``-DCOMPILER_RT_BUILD_XRAY=OFF``
 * ``-DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON``
 * ``-DLLVM_CONFIG_PATH=/path/to/llvm-config``
-* ``-DCMAKE_C_FLAGS="build-c-flags"``
-* ``-DCMAKE_ASM_FLAGS="build-c-flags"``
 
 The ``build-c-flags`` need to be sufficient to pass the C-make compiler check,
 compile compiler-rt, and if you are running the tests, compile and link the
@@ -136,8 +137,8 @@ The cmake try compile stage fails
 At an early stage cmake will attempt to compile and link a simple C program to
 test if the toolchain is working.
 
-This stage can often fail at link time if the ``--sysroot`` and
-``--gcc-toolchain`` options are not passed to the compiler. Check the
+This stage can often fail at link time if the ``--sysroot=`` and
+``--gcc-toolchain=`` options are not passed to the compiler. Check the
 ``CMAKE_C_FLAGS`` and ``CMAKE_C_COMPILER_TARGET`` flags.
 
 It can be useful to build a simple example outside of cmake with your toolchain
@@ -147,7 +148,7 @@ Clang uses the host header files
 --------------------------------
 On debian based systems it is possible to install multiarch support for
 arm-linux-gnueabi and arm-linux-gnueabihf. In many cases clang can successfully
-use this multiarch support when -gcc-toolchain and --sysroot are not supplied.
+use this multiarch support when ``--gcc-toolchain=`` and ``--sysroot=`` are not supplied.
 Unfortunately clang adds ``/usr/local/include`` before
 ``/usr/include/arm-linux-gnueabihf`` leading to errors when compiling the hosts
 header files.

@@ -15,8 +15,6 @@
 
 include "mlir/IR/OpBase.td"
 
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
 //===----------------------------------------------------------------------===//
 // Shape Inference dialect definitions
 //===----------------------------------------------------------------------===//
@@ -36,34 +34,18 @@ def ShapeDialect : Dialect {
     concatting etc. on how to combine them).
   }];
 
-  let cppNamespace = "shape";
+  let cppNamespace = "::mlir::shape";
+  let dependentDialects = ["arith::ArithmeticDialect", "tensor::TensorDialect"];
 
   let hasConstantMaterializer = 1;
-}
-
-def Shape_ComponentType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ComponentType>()">, "component type">,
-    BuildableType<"$_builder.getType<::mlir::shape::ComponentType>()"> {
-  let typeDescription = [{
-    `shape.component_type` represents the tuple of shape, element type and
-    attribute.
-  }];
-}
-
-def Shape_ElementType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::ElementType>()">, "element type">,
-    BuildableType<"$_builder.getType<::mlir::shape::ElementType>()"> {
-  let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
-  }];
+  let hasOperationAttrVerify = 1;
 }
 
 def Shape_ShapeType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::ShapeType>()">, "shape">,
     BuildableType<"$_builder.getType<::mlir::shape::ShapeType>()"> {
-  let typeDescription = [{
-    `shape.type` represents either an unranked shape, a ranked shape with
+  let description = [{
+    `shape.shape` represents either an unranked shape, a ranked shape with
     possibly unknown dimensions or an invalid shape. The rank is of type
     `shape.size` and, if rank is known, the extent is a 1D tensor of type
     `shape.size`.
@@ -81,7 +63,7 @@ def Shape_ShapeType : DialectType<ShapeDialect,
 def Shape_SizeType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::SizeType>()">, "size">,
     BuildableType<"$_builder.getType<::mlir::shape::SizeType>()"> {
-  let typeDescription = [{
+  let description = [{
     `shape.size` represents a non-negative integer with support for being
     unknown and invalid.
 
@@ -95,15 +77,15 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::ValueShapeType>()">, "value shape">,
     BuildableType<"::mlir::shape::ValueShapeType::get($_builder.getContext())">
 {
-  let typeDescription = [{
+  let description = [{
     `shape.value_shape` represents the value produced by an operation (this
     corresponds to `Value` in the compiler) and a shape. Conceptually this is a
-    tuple of a value (potentially unknown) and `shape.type`. The value and shape
-    can either or both be unknown. If both the `value` and `shape` are known,
-    then the shape of `value` is conformant with `shape`. That is, the shape of
-    the value conforms to the shape of the ValueShape, so that if we have
-    ValueShape `(value, shape)` then `join(shape_of(value), shape)` would be
-    error free and in particular it means that if both are statically known,
+    tuple of a value (potentially unknown) and `shape.shape`. The value and
+    shape can either or both be unknown. If both the `value` and `shape` are
+    known, then the shape of `value` is conformant with `shape`. That is, the
+    shape of the value conforms to the shape of the ValueShape, so that if we
+    have ValueShape `(value, shape)` then `join(shape_of(value), shape)` would
+    be error free and in particular it means that if both are statically known,
     then they are equal.
   }];
 }
@@ -112,10 +94,10 @@ def Shape_ExtentTensorType :
     1DTensorOf<[Index]>,
     BuildableType<"::mlir::RankedTensorType::get({ShapedType::kDynamicSize}, "
                   "$_builder.getType<::mlir::IndexType>())"> {
-  let typeDescription = [{
+  let description = [{
     The extent tensor is a tensor of rank one with arbitrarily many index
-    elements. Like `!shape.shape`, it is used to represent shapes with the
-    difference that it is guaranteed to be error-free.
+    elements (tensor<?xindex>). Like `!shape.shape`, it is used to represent
+    shapes with the difference that it is guaranteed to be error-free.
   }];
 }
 
@@ -131,7 +113,7 @@ def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
 def Shape_WitnessType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
     BuildableType<"$_builder.getType<::mlir::shape::WitnessType>()"> {
-  let typeDescription = [{
+  let description = [{
     A witness is a structural device in the compiler to maintain ordering of
     code relying on information obtained from passing assertions. Witnesses do
     not represent any physical data.

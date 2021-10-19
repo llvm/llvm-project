@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: j=666wmj=j+1wm211
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: j = 666WMj=j+1WM211
 * use KWM expansion as continuation indicators
 #define KWM 0
 #define KWM2 1

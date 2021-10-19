@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::condition_variable_any cv;
@@ -46,7 +47,7 @@ int main(int, char**)
   notReady = threadCount;
   std::vector<std::thread> threads(threadCount);
   for (unsigned i = 0; i < threadCount; i++)
-    threads[i] = std::thread(helper);
+    threads[i] = support::make_test_thread(helper);
   {
     while (notReady > 0)
       std::this_thread::yield();

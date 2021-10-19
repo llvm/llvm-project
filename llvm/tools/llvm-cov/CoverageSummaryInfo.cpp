@@ -16,6 +16,34 @@
 using namespace llvm;
 using namespace coverage;
 
+static void sumBranches(size_t &NumBranches, size_t &CoveredBranches,
+                        const ArrayRef<CountedRegion> &Branches) {
+  for (const auto &BR : Branches) {
+    // Skip folded branches.
+    if (BR.Folded)
+      continue;
+
+    // "True" Condition Branches.
+    ++NumBranches;
+    if (BR.ExecutionCount > 0)
+      ++CoveredBranches;
+    // "False" Condition Branches.
+    ++NumBranches;
+    if (BR.FalseExecutionCount > 0)
+      ++CoveredBranches;
+  }
+}
+
+static void sumBranchExpansions(size_t &NumBranches, size_t &CoveredBranches,
+                                const CoverageMapping &CM,
+                                ArrayRef<ExpansionRecord> Expansions) {
+  for (const auto &Expansion : Expansions) {
+    auto CE = CM.getCoverageForExpansion(Expansion);
+    sumBranches(NumBranches, CoveredBranches, CE.getBranches());
+    sumBranchExpansions(NumBranches, CoveredBranches, CM, CE.getExpansions());
+  }
+}
+
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const CoverageMapping &CM,
                              const coverage::FunctionRecord &Function) {
@@ -40,10 +68,16 @@ FunctionCoverageSummary::get(const CoverageMapping &CM,
       ++CoveredLines;
   }
 
+  // Compute the branch coverage, including branches from expansions.
+  size_t NumBranches = 0, CoveredBranches = 0;
+  sumBranches(NumBranches, CoveredBranches, CD.getBranches());
+  sumBranchExpansions(NumBranches, CoveredBranches, CM, CD.getExpansions());
+
   return FunctionCoverageSummary(
       Function.Name, Function.ExecutionCount,
       RegionCoverageInfo(CoveredRegions, NumCodeRegions),
-      LineCoverageInfo(CoveredLines, NumLines));
+      LineCoverageInfo(CoveredLines, NumLines),
+      BranchCoverageInfo(CoveredBranches, NumBranches));
 }
 
 FunctionCoverageSummary
@@ -62,9 +96,11 @@ FunctionCoverageSummary::get(const InstantiationGroup &Group,
   Summary.ExecutionCount = Group.getTotalExecutionCount();
   Summary.RegionCoverage = Summaries[0].RegionCoverage;
   Summary.LineCoverage = Summaries[0].LineCoverage;
+  Summary.BranchCoverage = Summaries[0].BranchCoverage;
   for (const auto &FCS : Summaries.drop_front()) {
     Summary.RegionCoverage.merge(FCS.RegionCoverage);
     Summary.LineCoverage.merge(FCS.LineCoverage);
+    Summary.BranchCoverage.merge(FCS.BranchCoverage);
   }
   return Summary;
 }

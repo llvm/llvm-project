@@ -387,7 +387,7 @@ now is:
     -quiet        - Don't print informational messages
 
 In this case, it is sort of awkward that flag names correspond directly to enum
-names, because we probably don't want a enum definition named "``g``" in our
+names, because we probably don't want an enum definition named "``g``" in our
 program.  Because of this, we can alternatively write this example like this:
 
 .. code-block:: c++
@@ -661,7 +661,7 @@ declared, the command line option ``-help-list`` becomes visible which will
 print the command line options as uncategorized list.
 
 Note that Options that are not explicitly categorized will be placed in the
-``cl::GeneralCategory`` category.
+``cl::getGeneralCategory()`` category.
 
 .. _Reference Guide:
 

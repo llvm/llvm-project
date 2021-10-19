@@ -28,8 +28,10 @@ namespace {
 
 class IncludeInserterCheckBase : public ClangTidyCheck {
 public:
-  IncludeInserterCheckBase(StringRef CheckName, ClangTidyContext *Context)
-      : ClangTidyCheck(CheckName, Context) {}
+  IncludeInserterCheckBase(StringRef CheckName, ClangTidyContext *Context,
+                           utils::IncludeSorter::IncludeStyle Style =
+                               utils::IncludeSorter::IS_Google)
+      : ClangTidyCheck(CheckName, Context), Inserter(Style) {}
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override {
@@ -43,16 +45,14 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
     auto Diag = diag(Result.Nodes.getNodeAs<DeclStmt>("stmt")->getBeginLoc(),
                      "foo, bar");
-    for (StringRef Header : HeadersToInclude()) {
-      Diag << Inserter.createMainFileIncludeInsertion(Header,
-                                                      IsAngledInclude());
+    for (StringRef Header : headersToInclude()) {
+      Diag << Inserter.createMainFileIncludeInsertion(Header);
     }
   }
 
-  virtual std::vector<StringRef> HeadersToInclude() const = 0;
-  virtual bool IsAngledInclude() const = 0;
+  virtual std::vector<StringRef> headersToInclude() const = 0;
 
-  utils::IncludeInserter Inserter{utils::IncludeSorter::IS_Google};
+  utils::IncludeInserter Inserter;
 };
 
 class NonSystemHeaderInserterCheck : public IncludeInserterCheckBase {
@@ -60,10 +60,9 @@ public:
   NonSystemHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"path/to/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class EarlyInAlphabetHeaderInserterCheck : public IncludeInserterCheckBase {
@@ -71,10 +70,9 @@ public:
   EarlyInAlphabetHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"a/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class MultipleHeaderInserterCheck : public IncludeInserterCheckBase {
@@ -82,10 +80,9 @@ public:
   MultipleHeaderInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
+  std::vector<StringRef> headersToInclude() const override {
     return {"path/to/header.h", "path/to/header2.h", "path/to/header.h"};
   }
-  bool IsAngledInclude() const override { return false; }
 };
 
 class CSystemIncludeInserterCheck : public IncludeInserterCheckBase {
@@ -93,10 +90,9 @@ public:
   CSystemIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override {
-    return {"stdlib.h"};
+  std::vector<StringRef> headersToInclude() const override {
+    return {"<stdlib.h>"};
   }
-  bool IsAngledInclude() const override { return true; }
 };
 
 class CXXSystemIncludeInserterCheck : public IncludeInserterCheckBase {
@@ -104,8 +100,53 @@ public:
   CXXSystemIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
       : IncludeInserterCheckBase(CheckName, Context) {}
 
-  std::vector<StringRef> HeadersToInclude() const override { return {"set"}; }
-  bool IsAngledInclude() const override { return true; }
+  std::vector<StringRef> headersToInclude() const override { return {"<set>"}; }
+};
+
+class InvalidIncludeInserterCheck : public IncludeInserterCheckBase {
+public:
+  InvalidIncludeInserterCheck(StringRef CheckName, ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"a.h", "<stdlib.h", "cstdlib>", "b.h", "<c.h>", "<d>"};
+  }
+};
+
+class ObjCEarlyInAlphabetHeaderInserterCheck : public IncludeInserterCheckBase {
+public:
+  ObjCEarlyInAlphabetHeaderInserterCheck(StringRef CheckName,
+                                         ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context,
+                                 utils::IncludeSorter::IS_Google_ObjC) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"a/header.h"};
+  }
+};
+
+class ObjCCategoryHeaderInserterCheck : public IncludeInserterCheckBase {
+public:
+  ObjCCategoryHeaderInserterCheck(StringRef CheckName,
+                                  ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context,
+                                 utils::IncludeSorter::IS_Google_ObjC) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"top_level_test_header+foo.h"};
+  }
+};
+
+class ObjCGeneratedHeaderInserterCheck : public IncludeInserterCheckBase {
+public:
+  ObjCGeneratedHeaderInserterCheck(StringRef CheckName,
+                                   ClangTidyContext *Context)
+      : IncludeInserterCheckBase(CheckName, Context,
+                                 utils::IncludeSorter::IS_Google_ObjC) {}
+
+  std::vector<StringRef> headersToInclude() const override {
+    return {"clang_tidy/tests/generated_file.proto.h"};
+  }
 };
 
 template <typename Check>
@@ -117,12 +158,24 @@ std::string runCheckOnCode(StringRef Code, StringRef Filename) {
                                       {"clang_tidy/tests/"
                                        "insert_includes_test_header.h",
                                        "\n"},
+                                      // Top-level main file include +
+                                      // category.
+                                      {"top_level_test_header.h", "\n"},
+                                      {"top_level_test_header+foo.h", "\n"},
+                                      // ObjC category.
+                                      {"clang_tidy/tests/"
+                                       "insert_includes_test_header+foo.h",
+                                       "\n"},
                                       // Non system headers
                                       {"a/header.h", "\n"},
                                       {"path/to/a/header.h", "\n"},
                                       {"path/to/z/header.h", "\n"},
                                       {"path/to/header.h", "\n"},
                                       {"path/to/header2.h", "\n"},
+                                      // Generated headers
+                                      {"clang_tidy/tests/"
+                                       "generated_file.proto.h",
+                                       "\n"},
                                       // Fake system headers.
                                       {"stdlib.h", "\n"},
                                       {"unistd.h", "\n"},
@@ -157,9 +210,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_input2.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
 TEST(IncludeInserterTest, InsertMultipleIncludesAndDeduplicate) {
@@ -188,9 +241,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<MultipleHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_input2.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<MultipleHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
 TEST(IncludeInserterTest, InsertBeforeFirstNonSystemInclude) {
@@ -218,9 +271,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_input2.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
 TEST(IncludeInserterTest, InsertBetweenNonSystemIncludes) {
@@ -250,9 +303,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_input2.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
 TEST(IncludeInserterTest, NonSystemIncludeAlreadyIncluded) {
@@ -269,9 +322,9 @@ TEST(IncludeInserterTest, NonSystemIncludeAlreadyIncluded) {
 void foo() {
   int a = 0;
 })";
-  EXPECT_EQ(PreCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                         PreCode, "clang_tidy/tests/"
-                                  "insert_includes_test_input2.cc"));
+  EXPECT_EQ(PreCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_input2.cc"));
 }
 
 TEST(IncludeInserterTest, InsertNonSystemIncludeAfterLastCXXSystemInclude) {
@@ -296,9 +349,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertNonSystemIncludeAfterMainFileInclude) {
@@ -317,9 +370,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<NonSystemHeaderInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<NonSystemHeaderInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeAfterLastCXXSystemInclude) {
@@ -347,9 +400,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<CXXSystemIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeBeforeFirstCXXSystemInclude) {
@@ -375,9 +428,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<CXXSystemIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeBetweenCXXSystemIncludes) {
@@ -405,9 +458,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<CXXSystemIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeAfterMainFileInclude) {
@@ -430,9 +483,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<CXXSystemIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeAfterCSystemInclude) {
@@ -459,9 +512,9 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<CXXSystemIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCXXSystemIncludeBeforeNonSystemInclude) {
@@ -480,9 +533,10 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "devtools/cymbal/clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(
+      PostCode,
+      runCheckOnCode<CXXSystemIncludeInserterCheck>(
+          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertCSystemIncludeBeforeCXXSystemInclude) {
@@ -505,9 +559,10 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CSystemIncludeInserterCheck>(
-                          PreCode, "devtools/cymbal/clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(
+      PostCode,
+      runCheckOnCode<CSystemIncludeInserterCheck>(
+          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, InsertIncludeIfThereWasNoneBefore) {
@@ -522,9 +577,10 @@ void foo() {
   int a = 0;
 })";
 
-  EXPECT_EQ(PostCode, runCheckOnCode<CXXSystemIncludeInserterCheck>(
-                          PreCode, "devtools/cymbal/clang_tidy/tests/"
-                                   "insert_includes_test_header.cc"));
+  EXPECT_EQ(
+      PostCode,
+      runCheckOnCode<CXXSystemIncludeInserterCheck>(
+          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.cc"));
 }
 
 TEST(IncludeInserterTest, DontInsertDuplicateIncludeEvenIfMiscategorized) {
@@ -596,6 +652,113 @@ void foo() {
   EXPECT_EQ(PostCode, runCheckOnCode<EarlyInAlphabetHeaderInserterCheck>(
                           PreCode, "workspace_folder/clang_tidy/tests/"
                                    "insert_includes_test_header.cc"));
+}
+
+TEST(IncludeInserterTest, InvalidHeaderName) {
+  const char *PreCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+  const char *PostCode = R"(
+#include "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <c.h>
+
+#include <d>
+#include <list>
+#include <map>
+
+#include "a.h"
+#include "b.h"
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<InvalidIncludeInserterCheck>(
+                PreCode, "clang_tidy/tests/insert_includes_test_header.cc"));
+}
+
+TEST(IncludeInserterTest, InsertHeaderObjectiveC) {
+  const char *PreCode = R"(
+#import "clang_tidy/tests/insert_includes_test_header.h"
+
+void foo() {
+  int a = 0;
+})";
+  const char *PostCode = R"(
+#import "clang_tidy/tests/insert_includes_test_header.h"
+
+#import "a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+
+  EXPECT_EQ(
+      PostCode,
+      runCheckOnCode<ObjCEarlyInAlphabetHeaderInserterCheck>(
+          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.mm"));
+}
+
+TEST(IncludeInserterTest, InsertCategoryHeaderObjectiveC) {
+  const char *PreCode = R"(
+#import "top_level_test_header.h"
+
+void foo() {
+  int a = 0;
+})";
+  const char *PostCode = R"(
+#import "top_level_test_header.h"
+#import "top_level_test_header+foo.h"
+
+void foo() {
+  int a = 0;
+})";
+
+  EXPECT_EQ(PostCode, runCheckOnCode<ObjCCategoryHeaderInserterCheck>(
+                          PreCode, "top_level_test_header.mm"));
+}
+
+TEST(IncludeInserterTest, InsertGeneratedHeaderObjectiveC) {
+  const char *PreCode = R"(
+#import "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+
+void foo() {
+  int a = 0;
+})";
+  const char *PostCode = R"(
+#import "clang_tidy/tests/insert_includes_test_header.h"
+
+#include <list>
+#include <map>
+
+#include "path/to/a/header.h"
+
+#import "clang_tidy/tests/generated_file.proto.h"
+
+void foo() {
+  int a = 0;
+})";
+
+  EXPECT_EQ(
+      PostCode,
+      runCheckOnCode<ObjCGeneratedHeaderInserterCheck>(
+          PreCode, "repo/clang_tidy/tests/insert_includes_test_header.mm"));
 }
 
 } // anonymous namespace

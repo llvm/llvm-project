@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SafeStackLayout.h"
-#include "llvm/Analysis/StackLifetime.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -38,7 +37,7 @@ LLVM_DUMP_METHOD void StackLayout::print(raw_ostream &OS) {
   }
 }
 
-void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
+void StackLayout::addObject(const Value *V, unsigned Size, uint64_t Alignment,
                             const StackLifetime::LiveRange &Range) {
   StackObjects.push_back({V, Size, Alignment, Range});
   ObjectAlignments[V] = Alignment;
@@ -46,7 +45,7 @@ void StackLayout::addObject(const Value *V, unsigned Size, unsigned Alignment,
 }
 
 static unsigned AdjustStackOffset(unsigned Offset, unsigned Size,
-                                  unsigned Alignment) {
+                                  uint64_t Alignment) {
   return alignTo(Offset + Size, Alignment) - Size;
 }
 
@@ -141,10 +140,10 @@ void StackLayout::computeLayout() {
 
   // Sort objects by size (largest first) to reduce fragmentation.
   if (StackObjects.size() > 2)
-    std::stable_sort(StackObjects.begin() + 1, StackObjects.end(),
-                     [](const StackObject &a, const StackObject &b) {
-                       return a.Size > b.Size;
-                     });
+    llvm::stable_sort(drop_begin(StackObjects),
+                      [](const StackObject &a, const StackObject &b) {
+                        return a.Size > b.Size;
+                      });
 
   for (auto &Obj : StackObjects)
     layoutObject(Obj);

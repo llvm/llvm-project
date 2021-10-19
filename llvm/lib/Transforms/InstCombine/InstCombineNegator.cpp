@@ -115,6 +115,19 @@ Negator::~Negator() {
 }
 #endif
 
+// Due to the InstCombine's worklist management, there are no guarantees that
+// each instruction we'll encounter has been visited by InstCombine already.
+// In particular, most importantly for us, that means we have to canonicalize
+// constants to RHS ourselves, since that is helpful sometimes.
+std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
+  assert(I->getNumOperands() == 2 && "Only for binops!");
+  std::array<Value *, 2> Ops{I->getOperand(0), I->getOperand(1)};
+  if (I->isCommutative() && InstCombiner::getComplexity(I->getOperand(0)) <
+                                InstCombiner::getComplexity(I->getOperand(1)))
+    std::swap(Ops[0], Ops[1]);
+  return Ops;
+}
+
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
 LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
@@ -159,11 +172,13 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
 
   // In some cases we can give the answer without further recursion.
   switch (I->getOpcode()) {
-  case Instruction::Add:
+  case Instruction::Add: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `inc` is always negatible.
-    if (match(I->getOperand(1), m_One()))
-      return Builder.CreateNot(I->getOperand(0), I->getName() + ".neg");
+    if (match(Ops[1], m_One()))
+      return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     break;
+  }
   case Instruction::Xor:
     // `not` is always negatible.
     if (match(I, m_Not(m_Value(X))))
@@ -204,26 +219,28 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     break; // Other instructions require recursive reasoning.
   }
 
+  if (I->getOpcode() == Instruction::Sub &&
+      (I->hasOneUse() || match(I->getOperand(0), m_ImmConstant()))) {
+    // `sub` is always negatible.
+    // However, only do this either if the old `sub` doesn't stick around, or
+    // it was subtracting from a constant. Otherwise, this isn't profitable.
+    return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
+                             I->getName() + ".neg");
+  }
+
   // Some other cases, while still don't require recursion,
   // are restricted to the one-use case.
   if (!V->hasOneUse())
     return nullptr;
 
   switch (I->getOpcode()) {
-  case Instruction::Sub:
-    // `sub` is always negatible.
-    // But if the old `sub` sticks around, even thought we don't increase
-    // instruction count, this is a likely regression since we increased
-    // live-range of *both* of the operands, which might lead to more spilling.
-    return Builder.CreateSub(I->getOperand(1), I->getOperand(0),
-                             I->getName() + ".neg");
   case Instruction::SDiv:
     // `sdiv` is negatible if divisor is not undef/INT_MIN/1.
     // While this is normally not behind a use-check,
     // let's consider division to be special since it's costly.
     if (auto *Op1C = dyn_cast<Constant>(I->getOperand(1))) {
-      if (!Op1C->containsUndefElement() && Op1C->isNotMinSignedValue() &&
-          Op1C->isNotOneValue()) {
+      if (!Op1C->containsUndefOrPoisonElement() &&
+          Op1C->isNotMinSignedValue() && Op1C->isNotOneValue()) {
         Value *BO =
             Builder.CreateSDiv(I->getOperand(0), ConstantExpr::getNeg(Op1C),
                                I->getName() + ".neg");
@@ -344,16 +361,18 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
         ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
         I->getName() + ".neg");
   }
-  case Instruction::Or:
+  case Instruction::Or: {
     if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
                              &DT))
       return nullptr; // Don't know how to handle `or` in general.
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `or`/`add` are interchangeable when operands have no common bits set.
     // `inc` is always negatible.
-    if (match(I->getOperand(1), m_One()))
-      return Builder.CreateNot(I->getOperand(0), I->getName() + ".neg");
+    if (match(Ops[1], m_One()))
+      return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     // Else, just defer to Instruction::Add handling.
     LLVM_FALLTHROUGH;
+  }
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
     SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
@@ -383,26 +402,29 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return Builder.CreateSub(NegatedOps[0], NonNegatedOps[0],
                              I->getName() + ".neg");
   }
-  case Instruction::Xor:
+  case Instruction::Xor: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `xor` is negatible if one of its operands is invertible.
     // FIXME: InstCombineInverter? But how to connect Inverter and Negator?
-    if (auto *C = dyn_cast<Constant>(I->getOperand(1))) {
-      Value *Xor = Builder.CreateXor(I->getOperand(0), ConstantExpr::getNot(C));
+    if (auto *C = dyn_cast<Constant>(Ops[1])) {
+      Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
       return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
                                I->getName() + ".neg");
     }
     return nullptr;
+  }
   case Instruction::Mul: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `mul` is negatible if one of its operands is negatible.
     Value *NegatedOp, *OtherOp;
     // First try the second operand, in case it's a constant it will be best to
     // just invert it instead of sinking the `neg` deeper.
-    if (Value *NegOp1 = negate(I->getOperand(1), Depth + 1)) {
+    if (Value *NegOp1 = negate(Ops[1], Depth + 1)) {
       NegatedOp = NegOp1;
-      OtherOp = I->getOperand(0);
-    } else if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1)) {
+      OtherOp = Ops[0];
+    } else if (Value *NegOp0 = negate(Ops[0], Depth + 1)) {
       NegatedOp = NegOp0;
-      OtherOp = I->getOperand(1);
+      OtherOp = Ops[1];
     } else
       // Can't negate either of them.
       return nullptr;
@@ -457,8 +479,8 @@ LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
     // endless combine looping.
-    llvm::for_each(llvm::reverse(NewInstructions),
-                   [&](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(NewInstructions))
+      I->eraseFromParent();
     return llvm::None;
   }
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
@@ -501,8 +523,8 @@ LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
   NegatorNumInstructionsNegatedSuccess += Res->first.size();
 
   // They are in def-use order, so nothing fancy, just insert them in order.
-  llvm::for_each(Res->first,
-                 [&](Instruction *I) { IC.Builder.Insert(I, I->getName()); });
+  for (Instruction *I : Res->first)
+    IC.Builder.Insert(I, I->getName());
 
   // And return the new root.
   return Res->second;

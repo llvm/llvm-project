@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! 10.2.3.1(2) All masks and LHS of assignments in a WHERE must conform
 
 subroutine s1

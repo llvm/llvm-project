@@ -1,7 +1,7 @@
 # This test generates all variants of load/store instructions and verifies that
 # LLVM generates correct PTX for them.
 
-# RUN: python %s > %t.ll
+# RUN: %python %s > %t.ll
 # RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P64 %t.ll
 # RUN: llc < %t.ll -march=nvptx -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P32 %t.ll
 

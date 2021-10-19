@@ -4,10 +4,10 @@
 
 // Brace-enclosed string array initializers
 char a[] = { "asdf" };
-// CHECK: @a = global [5 x i8] c"asdf\00"
+// CHECK: @a ={{.*}} global [5 x i8] c"asdf\00"
 
 char a2[2][5] = { "asdf" };
-// CHECK: @a2 = global [2 x [5 x i8]] {{\[}}[5 x i8] c"asdf\00", [5 x i8] zeroinitializer]
+// CHECK: @a2 ={{.*}} global [2 x [5 x i8]] {{\[}}[5 x i8] c"asdf\00", [5 x i8] zeroinitializer]
 
 // Double-implicit-conversions of array/functions (not legal C, but
 // clang accepts it for gcc compat).
@@ -26,40 +26,40 @@ union s2 {
 
 int g0 = (int)(&(((union s2 *) 0)->f0.f0) - 0);
 
-// CHECK: @g1x = global { double, double } { double 1.000000e+00{{[0]*}}, double 0.000000e+00{{[0]*}} }
+// CHECK: @g1x ={{.*}} global { double, double } { double 1.000000e+00{{[0]*}}, double 0.000000e+00{{[0]*}} }
 _Complex double g1x = 1.0f;
-// CHECK: @g1y = global { double, double } { double 0.000000e+00{{[0]*}}, double 1.000000e+00{{[0]*}} }
+// CHECK: @g1y ={{.*}} global { double, double } { double 0.000000e+00{{[0]*}}, double 1.000000e+00{{[0]*}} }
 _Complex double g1y = 1.0fi;
-// CHECK: @g1 = global { i8, i8 } { i8 1, i8 10 }
+// CHECK: @g1 ={{.*}} global { i8, i8 } { i8 1, i8 10 }
 _Complex char g1 = (char) 1 + (char) 10 * 1i;
-// CHECK: @g2 = global { i32, i32 } { i32 1, i32 10 }
+// CHECK: @g2 ={{.*}} global { i32, i32 } { i32 1, i32 10 }
 _Complex int g2 = 1 + 10i;
-// CHECK: @g3 = global { float, float } { float 1.000000e+00{{[0]*}}, float 1.000000e+0{{[0]*}}1 }
+// CHECK: @g3 ={{.*}} global { float, float } { float 1.000000e+00{{[0]*}}, float 1.000000e+0{{[0]*}}1 }
 _Complex float g3 = 1.0 + 10.0i;
-// CHECK: @g4 = global { double, double } { double 1.000000e+00{{[0]*}}, double 1.000000e+0{{[0]*}}1 }
+// CHECK: @g4 ={{.*}} global { double, double } { double 1.000000e+00{{[0]*}}, double 1.000000e+0{{[0]*}}1 }
 _Complex double g4 = 1.0 + 10.0i;
-// CHECK: @g5 = global { i32, i32 } zeroinitializer
+// CHECK: @g5 ={{.*}} global { i32, i32 } zeroinitializer
 _Complex int g5 = (2 + 3i) == (5 + 7i);
-// CHECK: @g6 = global { double, double } { double -1.100000e+0{{[0]*}}1, double 2.900000e+0{{[0]*}}1 }
+// CHECK: @g6 ={{.*}} global { double, double } { double -1.100000e+0{{[0]*}}1, double 2.900000e+0{{[0]*}}1 }
 _Complex double g6 = (2.0 + 3.0i) * (5.0 + 7.0i);
-// CHECK: @g7 = global i32 1
+// CHECK: @g7 ={{.*}} global i32 1
 int g7 = (2 + 3i) * (5 + 7i) == (-11 + 29i);
-// CHECK: @g8 = global i32 1
+// CHECK: @g8 ={{.*}} global i32 1
 int g8 = (2.0 + 3.0i) * (5.0 + 7.0i) == (-11.0 + 29.0i);
-// CHECK: @g9 = global i32 0
+// CHECK: @g9 ={{.*}} global i32 0
 int g9 = (2 + 3i) * (5 + 7i) != (-11 + 29i);
-// CHECK: @g10 = global i32 0
+// CHECK: @g10 ={{.*}} global i32 0
 int g10 = (2.0 + 3.0i) * (5.0 + 7.0i) != (-11.0 + 29.0i);
 
 // PR5108
-// CHECK: @gv1 = global %struct.anon <{ i32 0, i8 7 }>, align 1
+// CHECK: @gv1 ={{.*}} global %struct.anon <{ i32 0, i8 7 }>, align 1
 struct {
   unsigned long a;
   unsigned long b:3;
 } __attribute__((__packed__)) gv1  = { .a = 0x0, .b = 7,  };
 
 // PR5118
-// CHECK: @gv2 = global %struct.anon.0 <{ i8 1, i8* null }>, align 1 
+// CHECK: @gv2 ={{.*}} global %struct.anon.0 <{ i8 1, i8* null }>, align 1 
 struct {
   unsigned char a;
   char *b;
@@ -72,11 +72,11 @@ long g11() {
   return l0; 
 }
 
-// CHECK: @g12 = global i32 ptrtoint (i8* @g12_tmp to i32)
+// CHECK: @g12 ={{.*}} global i32 ptrtoint (i8* @g12_tmp to i32)
 static char g12_tmp;
 long g12 = (long) &g12_tmp;
 
-// CHECK: @g13 = global [1 x %struct.g13_s0] [%struct.g13_s0 { i32 ptrtoint (i8* @g12_tmp to i32) }]
+// CHECK: @g13 ={{.*}} global [1 x %struct.g13_s0] [%struct.g13_s0 { i32 ptrtoint (i8* @g12_tmp to i32) }]
 struct g13_s0 {
    long a;
 };
@@ -84,16 +84,16 @@ struct g13_s0 g13[] = {
    { (long) &g12_tmp }
 };
 
-// CHECK: @g14 = global i8* inttoptr (i32 100 to i8*)
+// CHECK: @g14 ={{.*}} global i8* inttoptr (i32 100 to i8*)
 void *g14 = (void*) 100;
 
-// CHECK: @g15 = global i32 -1
+// CHECK: @g15 ={{.*}} global i32 -1
 int g15 = (int) (char) ((void*) 0 + 255);
 
-// CHECK: @g16 = global i64 4294967295
+// CHECK: @g16 ={{.*}} global i64 4294967295
 long long g16 = (long long) ((void*) 0xFFFFFFFF);
 
-// CHECK: @g17 = global i32* @g15
+// CHECK: @g17 ={{.*}} global i32* @g15
 int *g17 = (int *) ((long) &g15);
 
 // CHECK: @g18.p = internal global [1 x i32*] [i32* @g19]

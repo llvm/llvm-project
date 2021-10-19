@@ -429,11 +429,16 @@ def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$scratch),
 }
 
 let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $scratch",
-    mayLoad = 1, mayStore = 1 in
-def CMP_SWAP_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32:$scratch),
-                          (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
-                               GPR64:$newLo, GPR64:$newHi), []>,
-                   Sched<[WriteAtomic]>;
+    mayLoad = 1, mayStore = 1 in {
+class cmp_swap_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32common:$scratch),
+                           (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
+                                GPR64:$newLo, GPR64:$newHi), []>,
+                     Sched<[WriteAtomic]>;
+def CMP_SWAP_128 : cmp_swap_128;
+def CMP_SWAP_128_RELEASE : cmp_swap_128;
+def CMP_SWAP_128_ACQUIRE : cmp_swap_128;
+def CMP_SWAP_128_MONOTONIC : cmp_swap_128;
+}
 
 // v8.1 Atomic instructions:
 let Predicates = [HasLSE] in {

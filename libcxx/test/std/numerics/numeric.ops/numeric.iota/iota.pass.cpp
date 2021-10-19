@@ -8,6 +8,7 @@
 
 // <numeric>
 
+// Became constexpr in C++20
 // template <class ForwardIterator, class T>
 //     void iota(ForwardIterator first, ForwardIterator last, T value);
 
@@ -18,7 +19,7 @@
 #include "test_iterators.h"
 
 template <class InIter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5};
@@ -29,12 +30,22 @@ test()
         assert(ia[i] == ir[i]);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

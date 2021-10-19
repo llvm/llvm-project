@@ -10,4 +10,4 @@
 // RUN: %clang -target aarch64-linux-gnu -fsanitize=hwaddress %s -### 2>&1 |  FileCheck %s
 // RUN: %clang -target aarch64-linux-android -fsanitize=hwaddress %s -### 2>&1 |  FileCheck %s
 
-// CHECK: -munwind-tables
+// CHECK: -funwind-tables=2

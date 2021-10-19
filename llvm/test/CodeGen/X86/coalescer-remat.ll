@@ -10,8 +10,8 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $1, %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    lock cmpxchgq %rcx, {{.*}}(%rip)
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    lock cmpxchgq %rcx, _val(%rip)
+; CHECK-NEXT:    leaq LC(%rip), %rdi
 ; CHECK-NEXT:    movq %rax, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq _printf

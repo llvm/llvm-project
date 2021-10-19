@@ -3,7 +3,6 @@
 ; Test basic inline assembly. Pass -no-integrated-as since these aren't
 ; actually valid assembly syntax.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: foo:
@@ -44,6 +43,32 @@ define i64 @foo_i64(i64 %r) {
 entry:
   %0 = tail call i64 asm sideeffect "# $0 = aaa($1)", "=r,r"(i64 %r) #0, !srcloc !0
   ret i64 %0
+}
+
+; CHECK-LABEL: foo_float:
+; CHECK-NEXT: .functype foo_float (f32) -> (f32){{$}}
+; CHECK-NEXT: #APP{{$}}
+; CHECK-NEXT: # 0 = aaa(0){{$}}
+; CHECK-NEXT: #NO_APP{{$}}
+; CHECK-NEXT: local.get $push0=, 0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define float @foo_float(float %r) {
+entry:
+  %0 = tail call float asm sideeffect "# $0 = aaa($1)", "=r,r"(float %r) #0, !srcloc !0
+  ret float %0
+}
+
+; CHECK-LABEL: foo_double:
+; CHECK-NEXT: .functype foo_double (f64) -> (f64){{$}}
+; CHECK-NEXT: #APP{{$}}
+; CHECK-NEXT: # 0 = aaa(0){{$}}
+; CHECK-NEXT: #NO_APP{{$}}
+; CHECK-NEXT: local.get $push0=, 0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define double @foo_double(double %r) {
+entry:
+  %0 = tail call double asm sideeffect "# $0 = aaa($1)", "=r,r"(double %r) #0, !srcloc !0
+  ret double %0
 }
 
 ; CHECK-LABEL: X_i16:

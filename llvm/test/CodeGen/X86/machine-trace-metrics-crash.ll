@@ -25,7 +25,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 4-byte Reload
 ; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
@@ -42,7 +42,7 @@ define void @PR24199(i32 %a0) {
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx

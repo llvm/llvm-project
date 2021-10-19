@@ -11,6 +11,7 @@
 #include "flang/Parser/char-buffer.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
@@ -50,24 +51,26 @@ void SourceFile::IdentifyPayload() {
 }
 
 std::string DirectoryName(std::string path) {
-  auto lastSlash{path.rfind("/")};
-  return lastSlash == std::string::npos ? path : path.substr(0, lastSlash);
+  llvm::SmallString<128> pathBuf{path};
+  llvm::sys::path::remove_filename(pathBuf);
+  return pathBuf.str().str();
 }
 
-std::string LocateSourceFile(
-    std::string name, const std::vector<std::string> &searchPath) {
-  if (name.empty() || name == "-" || name[0] == '/') {
+std::optional<std::string> LocateSourceFile(
+    std::string name, const std::list<std::string> &searchPath) {
+  if (name == "-" || llvm::sys::path::is_absolute(name)) {
     return name;
   }
   for (const std::string &dir : searchPath) {
-    std::string path{dir + '/' + name};
+    llvm::SmallString<128> path{dir};
+    llvm::sys::path::append(path, name);
     bool isDir{false};
     auto er = llvm::sys::fs::is_directory(path, isDir);
     if (!er && !isDir) {
-      return path;
+      return path.str().str();
     }
   }
-  return name;
+  return std::nullopt;
 }
 
 std::size_t RemoveCarriageReturns(llvm::MutableArrayRef<char> buf) {
@@ -120,7 +123,6 @@ bool SourceFile::Open(std::string path, llvm::raw_ostream &error) {
 bool SourceFile::ReadStandardInput(llvm::raw_ostream &error) {
   Close();
   path_ = "standard input";
-
   auto buf_or = llvm::MemoryBuffer::getSTDIN();
   if (!buf_or) {
     auto err = buf_or.getError();
@@ -143,7 +145,6 @@ void SourceFile::ReadFile() {
       auto tmp_buf{llvm::WritableMemoryBuffer::getNewUninitMemBuffer(
           content().size() + 1)};
       llvm::copy(content(), tmp_buf->getBufferStart());
-      Close();
       buf_ = std::move(tmp_buf);
     }
     buf_end_++;

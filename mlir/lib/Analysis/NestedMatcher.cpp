@@ -39,14 +39,37 @@ llvm::BumpPtrAllocator *&NestedPattern::allocator() {
   return allocator;
 }
 
+void NestedPattern::copyNestedToThis(ArrayRef<NestedPattern> nested) {
+  if (nested.empty())
+    return;
+
+  auto *newNested = allocator()->Allocate<NestedPattern>(nested.size());
+  std::uninitialized_copy(nested.begin(), nested.end(), newNested);
+  nestedPatterns = ArrayRef<NestedPattern>(newNested, nested.size());
+}
+
+void NestedPattern::freeNested() {
+  for (const auto &p : nestedPatterns)
+    p.~NestedPattern();
+}
+
 NestedPattern::NestedPattern(ArrayRef<NestedPattern> nested,
                              FilterFunctionType filter)
     : nestedPatterns(), filter(filter), skip(nullptr) {
-  if (!nested.empty()) {
-    auto *newNested = allocator()->Allocate<NestedPattern>(nested.size());
-    std::uninitialized_copy(nested.begin(), nested.end(), newNested);
-    nestedPatterns = ArrayRef<NestedPattern>(newNested, nested.size());
-  }
+  copyNestedToThis(nested);
+}
+
+NestedPattern::NestedPattern(const NestedPattern &other)
+    : nestedPatterns(), filter(other.filter), skip(other.skip) {
+  copyNestedToThis(other.nestedPatterns);
+}
+
+NestedPattern &NestedPattern::operator=(const NestedPattern &other) {
+  freeNested();
+  filter = other.filter;
+  skip = other.skip;
+  copyNestedToThis(other.nestedPatterns);
+  return *this;
 }
 
 unsigned NestedPattern::getDepth() const {

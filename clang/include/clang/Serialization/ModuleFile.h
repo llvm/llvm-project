@@ -20,6 +20,7 @@
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/ModuleFileExtension.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SetVector.h"
@@ -67,13 +68,13 @@ class InputFile {
     OutOfDate = 2,
     NotFound = 3
   };
-  llvm::PointerIntPair<const FileEntry *, 2, unsigned> Val;
+  llvm::PointerIntPair<const FileEntryRef::MapEntry *, 2, unsigned> Val;
 
 public:
   InputFile() = default;
 
-  InputFile(const FileEntry *File,
-            bool isOverridden = false, bool isOutOfDate = false) {
+  InputFile(FileEntryRef File, bool isOverridden = false,
+            bool isOutOfDate = false) {
     assert(!(isOverridden && isOutOfDate) &&
            "an overridden cannot be out-of-date");
     unsigned intVal = 0;
@@ -81,7 +82,7 @@ public:
       intVal = Overridden;
     else if (isOutOfDate)
       intVal = OutOfDate;
-    Val.setPointerAndInt(File, intVal);
+    Val.setPointerAndInt(&File.getMapEntry(), intVal);
   }
 
   static InputFile getNotFound() {
@@ -90,7 +91,11 @@ public:
     return File;
   }
 
-  const FileEntry *getFile() const { return Val.getPointer(); }
+  OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
+    if (auto *P = Val.getPointer())
+      return FileEntryRef(*P);
+    return None;
+  }
   bool isOverridden() const { return Val.getInt() == Overridden; }
   bool isOutOfDate() const { return Val.getInt() == OutOfDate; }
   bool isNotFound() const { return Val.getInt() == NotFound; }
@@ -159,7 +164,7 @@ public:
   bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
-  const FileEntry *File = nullptr;
+  OptionalFileEntryRefDegradesToFileEntryPtr File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.
@@ -168,6 +173,9 @@ public:
   /// The signature of the AST block of the module file, this can be used to
   /// unique module files based on AST contents.
   ASTFileSignature ASTBlockHash;
+
+  /// The bit vector denoting usage of each header search entry (true = used).
+  llvm::BitVector SearchPathUsage;
 
   /// Whether this module has been directly imported by the
   /// user.
@@ -256,7 +264,7 @@ public:
   int SLocEntryBaseID = 0;
 
   /// The base offset in the source manager's view of this module.
-  unsigned SLocEntryBaseOffset = 0;
+  SourceLocation::UIntTy SLocEntryBaseOffset = 0;
 
   /// Base file offset for the offsets in SLocEntryOffsets. Real file offset
   /// for the entry is SLocEntryOffsetsBase + SLocEntryOffsets[i].
@@ -270,7 +278,8 @@ public:
   SmallVector<uint64_t, 4> PreloadSLocEntries;
 
   /// Remapping table for source locations in this module.
-  ContinuousRangeMap<uint32_t, int, 2> SLocRemap;
+  ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>
+      SLocRemap;
 
   // === Identifiers ===
 
@@ -294,7 +303,7 @@ public:
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
   /// table for identifiers actually lives.
-  const char *IdentifierTableData = nullptr;
+  const unsigned char *IdentifierTableData = nullptr;
 
   /// A pointer to an on-disk hash table of opaque type
   /// IdentifierHashTable.

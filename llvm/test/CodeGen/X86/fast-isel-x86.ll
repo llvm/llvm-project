@@ -14,7 +14,7 @@ define float @test0() nounwind {
 ; This should pop 4 bytes on return.
 ; CHECK-LABEL: test1:
 ; CHECK: retl $4
-define void @test1({i32, i32, i32, i32}* sret %p) nounwind {
+define void @test1({i32, i32, i32, i32}* sret({i32, i32, i32, i32}) %p) nounwind {
   store {i32, i32, i32, i32} zeroinitializer, {i32, i32, i32, i32}* %p
   ret void
 }
@@ -34,7 +34,7 @@ define x86_thiscallcc i32 @thiscallfun(i32* %this, i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT: addl $65536, %esp
 ; CHECK-NEXT: pushl %ecx
 ; CHECK-NEXT: retl
-define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval %b) nounwind {
+define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval([65533 x i8]) %b) nounwind {
   ret void
 }
 
@@ -65,7 +65,7 @@ define i32 @test2() nounwind {
 define void @test3() nounwind ssp {
 entry:
   %tmp = alloca %struct.a, align 8
-  call void @test3sret(%struct.a* sret %tmp)
+  call void @test3sret(%struct.a* sret(%struct.a) %tmp)
   ret void
 ; CHECK-LABEL: test3:
 ; CHECK: subl $44
@@ -73,13 +73,13 @@ entry:
 ; CHECK: calll _test3sret
 ; CHECK: addl $40
 }
-declare void @test3sret(%struct.a* sret)
+declare void @test3sret(%struct.a* sret(%struct.a))
 
 ; Check that fast-isel sret works with fastcc (and does not callee-pop)
 define void @test4() nounwind ssp {
 entry:
   %tmp = alloca %struct.a, align 8
-  call fastcc void @test4fastccsret(%struct.a* sret %tmp)
+  call fastcc void @test4fastccsret(%struct.a* sret(%struct.a) %tmp)
   ret void
 ; CHECK-LABEL: test4:
 ; CHECK: subl $28
@@ -87,4 +87,4 @@ entry:
 ; CHECK: calll _test4fastccsret
 ; CHECK: addl $28
 }
-declare fastcc void @test4fastccsret(%struct.a* sret)
+declare fastcc void @test4fastccsret(%struct.a* sret(%struct.a))

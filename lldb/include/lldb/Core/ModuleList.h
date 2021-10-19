@@ -27,8 +27,8 @@
 #include <mutex>
 #include <vector>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class ConstString;
@@ -45,6 +45,7 @@ class Target;
 class TypeList;
 class UUID;
 class VariableList;
+struct ModuleFunctionSearchOptions;
 
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
@@ -56,7 +57,7 @@ public:
   ModuleListProperties();
 
   FileSpec GetClangModulesCachePath() const;
-  bool SetClangModulesCachePath(llvm::StringRef path);
+  bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
 
@@ -139,7 +140,13 @@ public:
   ///
   /// \param[in] module_sp
   ///     A shared pointer to a module to replace in this collection.
-  void ReplaceEquivalent(const lldb::ModuleSP &module_sp);
+  ///
+  /// \param[in] old_modules
+  ///     Optional pointer to a vector which, if provided, will have shared
+  ///     pointers to the replaced module(s) appended to it.
+  void ReplaceEquivalent(
+      const lldb::ModuleSP &module_sp,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules = nullptr);
 
   /// Append a module to the module list, if it is not already there.
   ///
@@ -231,20 +238,6 @@ public:
   /// \see ModuleList::GetSize()
   Module *GetModulePointerAtIndex(size_t idx) const;
 
-  /// Get the module pointer for the module at index \a idx without acquiring
-  /// the ModuleList mutex.  This MUST already have been acquired with
-  /// ModuleList::GetMutex and locked for this call to be safe.
-  ///
-  /// \param[in] idx
-  ///     An index into this module collection.
-  ///
-  /// \return
-  ///     A pointer to a Module which can by nullptr if \a idx is out
-  ///     of range.
-  ///
-  /// \see ModuleList::GetSize()
-  Module *GetModulePointerAtIndexUnlocked(size_t idx) const;
-
   /// Find compile units by partial or full path.
   ///
   /// Finds all compile units that match \a path in all of the modules and
@@ -260,7 +253,7 @@ public:
 
   /// \see Module::FindFunctions ()
   void FindFunctions(ConstString name, lldb::FunctionNameType name_type_mask,
-                     bool include_symbols, bool include_inlines,
+                     const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctionSymbols ()
@@ -269,8 +262,9 @@ public:
                            SymbolContextList &sc_list);
 
   /// \see Module::FindFunctions ()
-  void FindFunctions(const RegularExpression &name, bool include_symbols,
-                     bool include_inlines, SymbolContextList &sc_list);
+  void FindFunctions(const RegularExpression &name,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find global and static variables by name.
   ///
@@ -443,12 +437,11 @@ public:
 
   static bool ModuleIsInCache(const Module *module_ptr);
 
-  static Status GetSharedModule(const ModuleSpec &module_spec,
-                                lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr,
-                                lldb::ModuleSP *old_module_sp_ptr,
-                                bool *did_create_ptr,
-                                bool always_create = false);
+  static Status
+  GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
+                  const FileSpecList *module_search_paths_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
+                  bool *did_create_ptr, bool always_create = false);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -480,17 +473,19 @@ protected:
   collection m_modules; ///< The collection of modules.
   mutable std::recursive_mutex m_modules_mutex;
 
-  Notifier *m_notifier;
+  Notifier *m_notifier = nullptr;
 
 public:
   typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,
                                  std::recursive_mutex>
       ModuleIterable;
-  ModuleIterable Modules() { return ModuleIterable(m_modules, GetMutex()); }
+  ModuleIterable Modules() const {
+    return ModuleIterable(m_modules, GetMutex());
+  }
 
   typedef AdaptedIterable<collection, lldb::ModuleSP, vector_adapter>
       ModuleIterableNoLocking;
-  ModuleIterableNoLocking ModulesNoLocking() {
+  ModuleIterableNoLocking ModulesNoLocking() const {
     return ModuleIterableNoLocking(m_modules);
   }
 };

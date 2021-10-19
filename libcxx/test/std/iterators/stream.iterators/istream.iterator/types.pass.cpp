@@ -11,12 +11,19 @@
 // template <class T, class charT = char, class traits = char_traits<charT>,
 //           class Distance = ptrdiff_t>
 // class istream_iterator
-//     : public iterator<input_iterator_tag, T, Distance, const T*, const T&>
+//  : public iterator<input_iterator_tag, T, Distance, const T*, const T&> // until C++17
 // {
 // public:
-//     typedef charT char_type;
-//     typedef traits traits_type;
-//     typedef basic_istream<charT,traits> istream_type;
+//     typedef input_iterator_tag           iterator_category;
+//     typedef T                            value_type;
+//     typedef Distance                     difference_type;
+//     typedef const T*                     pointer;
+//     typedef const T&                     reference;
+//
+//     typedef basic_istream<charT, Traits> istream_type;
+//     typedef charT                        char_type;
+//     typedef traits                       traits_type;
+//     typedef basic_istream<charT, traits> istream_type;
 //     ...
 //
 // Before C++17, we have:
@@ -40,41 +47,43 @@
 
 int main(int, char**)
 {
+    {
     typedef std::istream_iterator<double> I1; // double is trivially destructible
 #if TEST_STD_VER <= 14
-    static_assert((std::is_convertible<I1,
-        std::iterator<std::input_iterator_tag, double, std::ptrdiff_t,
-        const double*, const double&> >::value), "");
-#else
+    typedef std::iterator<std::input_iterator_tag, double, std::ptrdiff_t, double const*, double const&> iterator_base;
+    static_assert((std::is_base_of<iterator_base, I1>::value), "");
+#endif
     static_assert((std::is_same<I1::iterator_category, std::input_iterator_tag>::value), "");
     static_assert((std::is_same<I1::value_type, double>::value), "");
     static_assert((std::is_same<I1::difference_type, std::ptrdiff_t>::value), "");
     static_assert((std::is_same<I1::pointer, const double*>::value), "");
     static_assert((std::is_same<I1::reference, const double&>::value), "");
-#endif
     static_assert((std::is_same<I1::char_type, char>::value), "");
     static_assert((std::is_same<I1::traits_type, std::char_traits<char> >::value), "");
     static_assert((std::is_same<I1::istream_type, std::istream>::value), "");
     static_assert( std::is_trivially_copy_constructible<I1>::value, "");
     static_assert( std::is_trivially_destructible<I1>::value, "");
+    }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    {
     typedef std::istream_iterator<unsigned, wchar_t> I2; // unsigned is trivially destructible
 #if TEST_STD_VER <= 14
-    static_assert((std::is_convertible<I2,
-        std::iterator<std::input_iterator_tag, unsigned, std::ptrdiff_t,
-        const unsigned*, const unsigned&> >::value), "");
-#else
+    typedef std::iterator<std::input_iterator_tag, unsigned, std::ptrdiff_t, const unsigned*, const unsigned&> iterator_base;
+    static_assert((std::is_base_of<iterator_base, I2>::value), "");
+#endif
     static_assert((std::is_same<I2::iterator_category, std::input_iterator_tag>::value), "");
     static_assert((std::is_same<I2::value_type, unsigned>::value), "");
     static_assert((std::is_same<I2::difference_type, std::ptrdiff_t>::value), "");
     static_assert((std::is_same<I2::pointer, const unsigned*>::value), "");
     static_assert((std::is_same<I2::reference, const unsigned&>::value), "");
-#endif
     static_assert((std::is_same<I2::char_type, wchar_t>::value), "");
     static_assert((std::is_same<I2::traits_type, std::char_traits<wchar_t> >::value), "");
     static_assert((std::is_same<I2::istream_type, std::wistream>::value), "");
     static_assert( std::is_trivially_copy_constructible<I2>::value, "");
     static_assert( std::is_trivially_destructible<I2>::value, "");
+    }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
     typedef std::istream_iterator<std::string> I3; // string is NOT trivially destructible
     static_assert(!std::is_trivially_copy_constructible<I3>::value, "");

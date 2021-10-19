@@ -13,7 +13,7 @@ define <7 x i1> @create_mask7(i64 %0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mov rax, rdi
 ; CHECK-NEXT:    vpbroadcastq zmm0, rsi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kshiftrb k1, k0, 6
 ; CHECK-NEXT:    kmovd r8d, k1
 ; CHECK-NEXT:    kshiftrb k1, k0, 5
@@ -57,8 +57,8 @@ define <16 x i1> @create_mask16(i64 %0) {
 ; CHECK-LABEL: create_mask16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k0, k1, k0
 ; CHECK-NEXT:    vpmovm2b xmm0, k0
 ; CHECK-NEXT:    vzeroupper
@@ -71,11 +71,11 @@ define <32 x i1> @create_mask32(i64 %0) {
 ; CHECK-LABEL: create_mask32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k1, k1, k2
 ; CHECK-NEXT:    kunpckwd k0, k1, k0
 ; CHECK-NEXT:    vpmovm2b ymm0, k0
@@ -88,18 +88,18 @@ define <64 x i1> @create_mask64(i64 %0) {
 ; CHECK-LABEL: create_mask64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k1, k1, k2
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckwd k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k1, k1, k2
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleuq k3, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleuq k3, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckbw k2, k3, k2
 ; CHECK-NEXT:    kunpckwd k1, k2, k1
 ; CHECK-NEXT:    kunpckdq k0, k1, k0
@@ -113,7 +113,7 @@ define <16 x i1> @create_mask16_i32(i32 %0) {
 ; CHECK-LABEL: create_mask16_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastd zmm0, edi
-; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    vpmovm2b xmm0, k0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret
@@ -125,11 +125,11 @@ define <64 x i1> @create_mask64_i32(i32 %0) {
 ; CHECK-LABEL: create_mask64_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpbroadcastd zmm0, edi
-; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
-; CHECK-NEXT:    vpcmpnleud k2, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    vpcmpnleud k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckwd k0, k1, k0
-; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.LCPI.*}}]
+; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
 ; CHECK-NEXT:    kunpckwd k1, k1, k2
 ; CHECK-NEXT:    kunpckdq k0, k1, k0
 ; CHECK-NEXT:    vpmovm2b zmm0, k0

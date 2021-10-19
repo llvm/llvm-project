@@ -141,7 +141,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       if (!error.Success()) {
         new_args.Clear();
         result.AppendError(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
         return;
       } else
         names_found.insert(std::string(current_arg));
@@ -170,7 +169,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
             new_args.Clear();
             result.AppendErrorWithFormat("'%d' is not a valid breakpoint ID.\n",
                                          bp_id->GetBreakpointID());
-            result.SetStatus(eReturnStatusFailed);
             return;
           }
           const size_t num_locations = breakpoint_sp->GetNumLocations();
@@ -199,7 +197,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       new_args.Clear();
       result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
                                    range_from.str().c_str());
-      result.SetStatus(eReturnStatusFailed);
       return;
     }
 
@@ -208,7 +205,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
       new_args.Clear();
       result.AppendErrorWithFormat("'%s' is not a valid breakpoint ID.\n",
                                    range_to.str().c_str());
-      result.SetStatus(eReturnStatusFailed);
       return;
     }
     break_id_t start_bp_id = start_bp->GetBreakpointID();
@@ -224,7 +220,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
                          "both ends of range must specify"
                          " a breakpoint location, or neither can "
                          "specify a breakpoint location.");
-      result.SetStatus(eReturnStatusFailed);
       return;
     }
 
@@ -247,7 +242,6 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
             " must be within the same major breakpoint; you specified two"
             " different major breakpoints, %d and %d.\n",
             start_bp_id, end_bp_id);
-        result.SetStatus(eReturnStatusFailed);
         return;
       }
     }

@@ -116,7 +116,7 @@ void Analysis::writeSnippet(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
     raw_svector_ostream OSS(InstPrinterStr);
     InstPrinter_->printInst(&MI, 0, "", *SubtargetInfo_, OSS);
     Bytes = Bytes.drop_front(MISize);
-    Lines.emplace_back(StringRef(InstPrinterStr).trim());
+    Lines.emplace_back(InstPrinterStr.str().trim());
   }
   writeEscaped<Tag>(OS, join(Lines, Separator));
 }
@@ -151,11 +151,15 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   OS << "\n";
 }
 
-Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
+Analysis::Analysis(const Target &Target,
+                   std::unique_ptr<MCSubtargetInfo> SubtargetInfo,
+                   std::unique_ptr<MCInstrInfo> InstrInfo,
                    const InstructionBenchmarkClustering &Clustering,
                    double AnalysisInconsistencyEpsilon,
-                   bool AnalysisDisplayUnstableOpcodes)
-    : Clustering_(Clustering), InstrInfo_(std::move(InstrInfo)),
+                   bool AnalysisDisplayUnstableOpcodes,
+                   const std::string &ForceCpuName)
+    : Clustering_(Clustering), SubtargetInfo_(std::move(SubtargetInfo)),
+      InstrInfo_(std::move(InstrInfo)),
       AnalysisInconsistencyEpsilonSquared_(AnalysisInconsistencyEpsilon *
                                            AnalysisInconsistencyEpsilon),
       AnalysisDisplayUnstableOpcodes_(AnalysisDisplayUnstableOpcodes) {
@@ -163,18 +167,21 @@ Analysis::Analysis(const Target &Target, std::unique_ptr<MCInstrInfo> InstrInfo,
     return;
 
   const InstructionBenchmark &FirstPoint = Clustering.getPoints().front();
+  const std::string CpuName =
+      ForceCpuName.empty() ? FirstPoint.CpuName : ForceCpuName;
   RegInfo_.reset(Target.createMCRegInfo(FirstPoint.LLVMTriple));
   MCTargetOptions MCOptions;
   AsmInfo_.reset(
       Target.createMCAsmInfo(*RegInfo_, FirstPoint.LLVMTriple, MCOptions));
-  SubtargetInfo_.reset(Target.createMCSubtargetInfo(FirstPoint.LLVMTriple,
-                                                    FirstPoint.CpuName, ""));
+  SubtargetInfo_.reset(
+      Target.createMCSubtargetInfo(FirstPoint.LLVMTriple, CpuName, ""));
   InstPrinter_.reset(Target.createMCInstPrinter(
       Triple(FirstPoint.LLVMTriple), 0 /*default variant*/, *AsmInfo_,
       *InstrInfo_, *RegInfo_));
 
-  Context_ = std::make_unique<MCContext>(AsmInfo_.get(), RegInfo_.get(),
-                                         &ObjectFileInfo_);
+  Context_ =
+      std::make_unique<MCContext>(Triple(FirstPoint.LLVMTriple), AsmInfo_.get(),
+                                  RegInfo_.get(), SubtargetInfo_.get());
   Disasm_.reset(Target.createMCDisassembler(*SubtargetInfo_, *Context_));
   assert(Disasm_ && "cannot create MCDisassembler. missing call to "
                     "InitializeXXXTargetDisassembler ?");
@@ -195,9 +202,8 @@ Error Analysis::run<Analysis::PrintClusters>(raw_ostream &OS) const {
   OS << "\n";
 
   // Write the points.
-  const auto &Clusters = Clustering_.getValidClusters();
-  for (size_t I = 0, E = Clusters.size(); I < E; ++I) {
-    for (const size_t PointId : Clusters[I].PointIndices) {
+  for (const auto &ClusterIt : Clustering_.getValidClusters()) {
+    for (const size_t PointId : ClusterIt.PointIndices) {
       printInstructionRowCsv(PointId, OS);
     }
     OS << "\n\n";
@@ -555,11 +561,10 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
         continue; // Ignore noise and errors. FIXME: take noise into account ?
       if (ClusterId.isUnstable() ^ AnalysisDisplayUnstableOpcodes_)
         continue; // Either display stable or unstable clusters only.
-      auto SchedClassClusterIt =
-          std::find_if(SchedClassClusters.begin(), SchedClassClusters.end(),
-                       [ClusterId](const SchedClassCluster &C) {
-                         return C.id() == ClusterId;
-                       });
+      auto SchedClassClusterIt = llvm::find_if(
+          SchedClassClusters, [ClusterId](const SchedClassCluster &C) {
+            return C.id() == ClusterId;
+          });
       if (SchedClassClusterIt == SchedClassClusters.end()) {
         SchedClassClusters.emplace_back();
         SchedClassClusterIt = std::prev(SchedClassClusters.end());

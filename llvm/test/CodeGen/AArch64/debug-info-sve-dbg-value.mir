@@ -1,0 +1,127 @@
+# RUN: llc -o %t -filetype=obj -start-before=prologepilog %s
+# RUN: llvm-dwarfdump --name="value0" %t | FileCheck %s --check-prefix=CHECK0
+# RUN: llvm-dwarfdump --name="value1" %t | FileCheck %s --check-prefix=CHECK1
+# RUN: llvm-dwarfdump --name="value2" %t | FileCheck %s --check-prefix=CHECK2
+# RUN: llvm-dwarfdump --name="value3" %t | FileCheck %s --check-prefix=CHECK3
+# RUN: llvm-dwarfdump --name="value4" %t | FileCheck %s --check-prefix=CHECK4
+# RUN: llvm-dwarfdump --name="value5" %t | FileCheck %s --check-prefix=CHECK5
+
+# CHECK0: : DW_OP_breg31 WSP+8, DW_OP_lit16, DW_OP_plus)
+# CHECK0: DW_AT_type {{.*}}ty32
+#
+# CHECK1: : DW_OP_breg31 WSP+16)
+# CHECK1: DW_AT_type {{.*}}ty32
+#
+# CHECK2: : DW_OP_breg31 WSP+16, DW_OP_lit16, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
+# CHECK2: DW_AT_type {{.*}}svint32_t
+#
+# CHECK3: : DW_OP_breg31 WSP+16, DW_OP_lit8, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
+# CHECK3: DW_AT_type {{.*}}svint32_t
+#
+# CHECK4: : DW_OP_breg31 WSP+16, DW_OP_lit7, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
+# CHECK4: DW_AT_type {{.*}}svbool_t
+#
+# CHECK5: : DW_OP_breg31 WSP+16, DW_OP_lit6, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
+# CHECK5: DW_AT_type {{.*}}svbool_t
+
+--- |
+  ; ModuleID = 'bla.mir'
+  source_filename = "bla.mir"
+  target triple = "aarch64-unknown-linux-gnu"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
+  define void @foo() #0 !dbg !5 {
+  entry:
+    unreachable, !dbg !8
+  }
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  attributes #0 = { "target-features"="+sve" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.debugify = !{!3, !3}
+  !llvm.module.flags = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "bla.mir", directory: "/")
+  !2 = !{}
+  !3 = !{i32 1}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !9)
+  !6 = !DISubroutineType(types: !2)
+  !7 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_signed)
+  !8 = !DILocation(line: 1, column: 1, scope: !5)
+  !9 = !{!10, !11, !12, !13, !14, !15}
+  !10 = !DILocalVariable(name: "value0", scope: !5, file: !1, line: 1, type: !7)
+  !11 = !DILocalVariable(name: "value1", scope: !5, file: !1, line: 1, type: !7)
+  !12 = !DILocalVariable(name: "value2", scope: !5, file: !1, line: 1, type: !16)
+  !13 = !DILocalVariable(name: "value3", scope: !5, file: !1, line: 1, type: !16)
+  !14 = !DILocalVariable(name: "value4", scope: !5, file: !1, line: 1, type: !21)
+  !15 = !DILocalVariable(name: "value5", scope: !5, file: !1, line: 1, type: !21)
+  !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "svint32_t", file: !1, line: 1, baseType: !17)
+  !17 = !DIDerivedType(tag: DW_TAG_typedef, name: "__SVInt32_t", file: !1, baseType: !18)
+  !18 = !DICompositeType(tag: DW_TAG_array_type, baseType: !7, flags: DIFlagVector, elements: !19)
+  !19 = !{!20}
+  !20 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 2, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "svbool_t", file: !1, line: 90, baseType: !22)
+  !22 = !DIDerivedType(tag: DW_TAG_typedef, name: "__SVBool_t", file: !1, baseType: !23)
+  !23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !24, flags: DIFlagVector, elements: !25)
+  !24 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
+  !25 = !{!26}
+  !26 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 1, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$z0' }
+  - { reg: '$z1' }
+  - { reg: '$p0' }
+  - { reg: '$p1' }
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 8,  alignment: 8 }
+  - { id: 1, size: 8,  alignment: 8 }
+  - { id: 2, size: 16, alignment: 16, stack-id: scalable-vector }
+  - { id: 3, size: 16, alignment: 16, stack-id: scalable-vector }
+  - { id: 4, size: 2,  alignment: 2,  stack-id: scalable-vector }
+  - { id: 5, size: 2,  alignment: 2,  stack-id: scalable-vector }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $p0, $p1, $w0, $x1, $z0, $z1
+
+    ; Avoid stack slot scavenging.
+    $lr = IMPLICIT_DEF
+
+    STRXui killed renamable $x0, %stack.0, 0, debug-location !8
+    DBG_VALUE %stack.0, $noreg, !10, !DIExpression(DW_OP_constu, 16, DW_OP_plus, DW_OP_deref), debug-location !8
+    STRXui killed renamable $x1, %stack.1, 0, debug-location !8
+    DBG_VALUE %stack.1, $noreg, !11, !DIExpression(DW_OP_constu, 16, DW_OP_plus, DW_OP_deref), debug-location !8
+
+    renamable $p2 = PTRUE_S 31, debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ST1W_IMM renamable $z0, renamable $p2, %stack.2, 0, debug-location !DILocation(line: 5, column: 1, scope: !5)
+    DBG_VALUE %stack.2, $noreg, !12, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ST1W_IMM renamable $z1, killed renamable $p2, %stack.3, 0, debug-location !DILocation(line: 6, column: 1, scope: !5)
+    DBG_VALUE %stack.3, $noreg, !13, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 6, column: 1, scope: !5)
+
+    STR_PXI killed renamable $p0, %stack.4, 0, debug-location !DILocation(line: 2, column: 1, scope: !5)
+    DBG_VALUE %stack.4, $noreg, !14, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 2, column: 1, scope: !5)
+    STR_PXI killed renamable $p1, %stack.5, 0, debug-location !DILocation(line: 3, column: 1, scope: !5)
+    DBG_VALUE %stack.5, $noreg, !15, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 3, column: 1, scope: !5)
+
+    RET_ReallyLR implicit $z0, implicit $z1, debug-location !DILocation(line: 7, column: 1, scope: !5)
+
+...

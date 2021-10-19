@@ -9,24 +9,8 @@
 /* Begin PBXBuildFile section */
 		23043C9D1D35DBEC00FC25CA /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA51D2DB54300E98261 /* JSON.cpp */; };
 		23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA81D2DB96A00E98261 /* StringConvert.cpp */; };
-		2307CCCB1D4A5D630016ABC0 /* LogFilterExactMatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */; };
 		233B4EA71D2DB54300E98261 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA51D2DB54300E98261 /* JSON.cpp */; };
 		233B4EA91D2DB96A00E98261 /* StringConvert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B4EA81D2DB96A00E98261 /* StringConvert.cpp */; };
-		23562ED21D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */; };
-		23562ED31D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */; };
-		23562ED61D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */; };
-		23562ED71D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */; };
-		23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED81D342B0000AB2BD4 /* LogMessage.cpp */; };
-		23562EDA1D342B0000AB2BD4 /* LogMessage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23562ED81D342B0000AB2BD4 /* LogMessage.cpp */; };
-		237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */; };
-		23AC04C61D2F41A00072351D /* LogFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C41D2F41A00072351D /* LogFilter.cpp */; };
-		23AC04C71D2F41A00072351D /* LogFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C41D2F41A00072351D /* LogFilter.cpp */; };
-		23AC04CA1D2F42250072351D /* LogFilterChain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C81D2F42250072351D /* LogFilterChain.cpp */; };
-		23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04C81D2F42250072351D /* LogFilterChain.cpp */; };
-		23AC04CF1D2F58AF0072351D /* LogFilterRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */; };
-		23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */; };
-		23AE72E41D25DECF00945BCE /* DarwinLogCollector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */; };
-		23AE72E51D25DEE100945BCE /* DarwinLogCollector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */; };
 		23D1B0291D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
 		23D1B02A1D497E8B00FF831B /* OsLogger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D1B0271D497E8B00FF831B /* OsLogger.cpp */; };
 		264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 264D5D571293835600ED4C01 /* DNBArch.cpp */; };
@@ -107,28 +91,7 @@
 		2307CCCC1D4A5DAE0016ABC0 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		233B4EA51D2DB54300E98261 /* JSON.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		233B4EA61D2DB54300E98261 /* JSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSON.h; sourceTree = "<group>"; };
-		233B4EA81D2DB96A00E98261 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringConvert.cpp; path = ../../../source/Host/common/StringConvert.cpp; sourceTree = "<group>"; };
-		23562ECF1D34110D00AB2BD4 /* DarwinLogTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogTypes.h; sourceTree = "<group>"; };
-		23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogMessageOsLog.cpp; sourceTree = "<group>"; };
-		23562ED11D3424DF00AB2BD4 /* LogMessageOsLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogMessageOsLog.h; sourceTree = "<group>"; };
-		23562ED41D3426DD00AB2BD4 /* ActivityStore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActivityStore.h; sourceTree = "<group>"; };
-		23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ActivityStore.cpp; sourceTree = "<group>"; };
-		23562ED81D342B0000AB2BD4 /* LogMessage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogMessage.cpp; sourceTree = "<group>"; };
-		237821AD1D4917D20028B7A1 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
-		237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterExactMatch.cpp; sourceTree = "<group>"; };
-		237821AF1D4917D20028B7A1 /* LogFilterExactMatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterExactMatch.h; sourceTree = "<group>"; };
-		23AC04C41D2F41A00072351D /* LogFilter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilter.cpp; sourceTree = "<group>"; };
-		23AC04C51D2F41A00072351D /* LogFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilter.h; sourceTree = "<group>"; };
-		23AC04C81D2F42250072351D /* LogFilterChain.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterChain.cpp; sourceTree = "<group>"; };
-		23AC04C91D2F42250072351D /* LogFilterChain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterChain.h; sourceTree = "<group>"; };
-		23AC04CC1D2F42F10072351D /* DarwinLogInterfaces.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogInterfaces.h; sourceTree = "<group>"; };
-		23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LogFilterRegex.cpp; sourceTree = "<group>"; };
-		23AC04CE1D2F58AF0072351D /* LogFilterRegex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LogFilterRegex.h; sourceTree = "<group>"; };
-		23AC04D11D2F60130072351D /* LogMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LogMessage.h; sourceTree = "<group>"; };
-		23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DarwinLogCollector.cpp; sourceTree = "<group>"; };
-		23AE72E31D25DECF00945BCE /* DarwinLogCollector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DarwinLogCollector.h; sourceTree = "<group>"; };
-		23AE72E61D25DEFB00945BCE /* ActivityStreamSPI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ActivityStreamSPI.h; sourceTree = "<group>"; };
-		23CF6F5E1D28A3760088ADC9 /* DarwinLogEvent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarwinLogEvent.h; sourceTree = "<group>"; };
+		233B4EA81D2DB96A00E98261 /* StringConvert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringConvert.cpp; sourceTree = "<group>"; };
 		23D1B0271D497E8B00FF831B /* OsLogger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OsLogger.cpp; sourceTree = "<group>"; };
 		23D1B0281D497E8B00FF831B /* OsLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OsLogger.h; sourceTree = "<group>"; };
 		260828DE0CBAF7F400F95054 /* DNBRuntimeAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBRuntimeAction.h; sourceTree = "<group>"; };
@@ -267,34 +230,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		23AC04C31D2F3E9A0072351D /* DarwinLog */ = {
-			isa = PBXGroup;
-			children = (
-				237821AD1D4917D20028B7A1 /* CMakeLists.txt */,
-				23562ED41D3426DD00AB2BD4 /* ActivityStore.h */,
-				23562ED51D342A5A00AB2BD4 /* ActivityStore.cpp */,
-				23AE72E61D25DEFB00945BCE /* ActivityStreamSPI.h */,
-				23AE72E31D25DECF00945BCE /* DarwinLogCollector.h */,
-				23AE72E21D25DECF00945BCE /* DarwinLogCollector.cpp */,
-				23CF6F5E1D28A3760088ADC9 /* DarwinLogEvent.h */,
-				23AC04CC1D2F42F10072351D /* DarwinLogInterfaces.h */,
-				23562ECF1D34110D00AB2BD4 /* DarwinLogTypes.h */,
-				23AC04C51D2F41A00072351D /* LogFilter.h */,
-				23AC04C41D2F41A00072351D /* LogFilter.cpp */,
-				23AC04C91D2F42250072351D /* LogFilterChain.h */,
-				23AC04C81D2F42250072351D /* LogFilterChain.cpp */,
-				237821AF1D4917D20028B7A1 /* LogFilterExactMatch.h */,
-				237821AE1D4917D20028B7A1 /* LogFilterExactMatch.cpp */,
-				23AC04CE1D2F58AF0072351D /* LogFilterRegex.h */,
-				23AC04CD1D2F58AF0072351D /* LogFilterRegex.cpp */,
-				23AC04D11D2F60130072351D /* LogMessage.h */,
-				23562ED81D342B0000AB2BD4 /* LogMessage.cpp */,
-				23562ED11D3424DF00AB2BD4 /* LogMessageOsLog.h */,
-				23562ED01D3424DF00AB2BD4 /* LogMessageOsLog.cpp */,
-			);
-			path = DarwinLog;
-			sourceTree = "<group>";
-		};
 		266B5ECE1460A68200E43F0A /* arm64 */ = {
 			isa = PBXGroup;
 			children = (
@@ -395,7 +330,6 @@
 		26C637E60C71334A0024798E /* MacOSX */ = {
 			isa = PBXGroup;
 			children = (
-				23AC04C31D2F3E9A0072351D /* DarwinLog */,
 				2695DD920D3EBFF6007E4CA2 /* CFBundle.h */,
 				2695DD910D3EBFF6007E4CA2 /* CFBundle.cpp */,
 				2695DD9A0D3EC160007E4CA2 /* CFString.h */,
@@ -586,29 +520,21 @@
 				26CE05B6115C36390022F371 /* MachTask.mm in Sources */,
 				26CE05B7115C363B0022F371 /* DNB.cpp in Sources */,
 				AFEC3364194A8B0B00FF05C6 /* Genealogy.cpp in Sources */,
-				23AC04CF1D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,
 				233B4EA91D2DB96A00E98261 /* StringConvert.cpp in Sources */,
-				23562ED21D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */,
 				26CE05B8115C363C0022F371 /* DNBBreakpoint.cpp in Sources */,
 				26CE05B9115C363D0022F371 /* DNBDataRef.cpp in Sources */,
-				23AC04CA1D2F42250072351D /* LogFilterChain.cpp in Sources */,
-				23562ED61D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */,
 				26CE05BA115C363E0022F371 /* DNBLog.cpp in Sources */,
-				23AC04C61D2F41A00072351D /* LogFilter.cpp in Sources */,
 				26CE05BB115C363F0022F371 /* DNBRegisterInfo.cpp in Sources */,
 				26CE05BC115C36420022F371 /* PThreadEvent.cpp in Sources */,
 				26CE05BD115C36430022F371 /* PThreadMutex.cpp in Sources */,
 				26CE05BE115C36440022F371 /* SysSignal.cpp in Sources */,
-				23AE72E41D25DECF00945BCE /* DarwinLogCollector.cpp in Sources */,
 				26CE05BF115C364D0022F371 /* DNBArchImplX86_64.cpp in Sources */,
 				26CE05C0115C364F0022F371 /* DNBArchImplI386.cpp in Sources */,
 				26CE05C1115C36510022F371 /* DNBArchImpl.cpp in Sources */,
 				26CE05C5115C36590022F371 /* CFBundle.cpp in Sources */,
 				26CE05C3115C36580022F371 /* CFString.cpp in Sources */,
-				23562ED91D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				26CE05F1115C387C0022F371 /* PseudoTerminal.cpp in Sources */,
 				264D5D581293835600ED4C01 /* DNBArch.cpp in Sources */,
-				237821B01D4917D20028B7A1 /* LogFilterExactMatch.cpp in Sources */,
 				266B5ED11460A68200E43F0A /* DNBArchImplARM64.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -629,38 +555,30 @@
 				456F674D1AD46CE9002850C2 /* dbgnub-mig.defs in Sources */,
 				456F674E1AD46CE9002850C2 /* MachException.cpp in Sources */,
 				456F674F1AD46CE9002850C2 /* MachProcess.mm in Sources */,
-				2307CCCB1D4A5D630016ABC0 /* LogFilterExactMatch.cpp in Sources */,
 				456F67501AD46CE9002850C2 /* MachThread.cpp in Sources */,
 				456F67511AD46CE9002850C2 /* MachThreadList.cpp in Sources */,
 				456F67521AD46CE9002850C2 /* MachVMMemory.cpp in Sources */,
 				456F67531AD46CE9002850C2 /* MachVMRegion.cpp in Sources */,
-				23562ED71D342A5A00AB2BD4 /* ActivityStore.cpp in Sources */,
 				456F67541AD46CE9002850C2 /* MachTask.mm in Sources */,
 				456F67551AD46CE9002850C2 /* DNB.cpp in Sources */,
 				456F67561AD46CE9002850C2 /* Genealogy.cpp in Sources */,
 				456F67571AD46CE9002850C2 /* DNBBreakpoint.cpp in Sources */,
 				456F67581AD46CE9002850C2 /* DNBDataRef.cpp in Sources */,
 				456F67591AD46CE9002850C2 /* DNBLog.cpp in Sources */,
-				23562ED31D3424DF00AB2BD4 /* LogMessageOsLog.cpp in Sources */,
 				456F675A1AD46CE9002850C2 /* DNBRegisterInfo.cpp in Sources */,
 				456F675B1AD46CE9002850C2 /* PThreadEvent.cpp in Sources */,
 				456F675C1AD46CE9002850C2 /* PThreadMutex.cpp in Sources */,
 				456F675D1AD46CE9002850C2 /* SysSignal.cpp in Sources */,
-				23AE72E51D25DEE100945BCE /* DarwinLogCollector.cpp in Sources */,
 				456F675E1AD46CE9002850C2 /* DNBArchImplX86_64.cpp in Sources */,
-				23562EDA1D342B0000AB2BD4 /* LogMessage.cpp in Sources */,
 				456F675F1AD46CE9002850C2 /* DNBArchImplI386.cpp in Sources */,
 				456F67601AD46CE9002850C2 /* DNBArchImpl.cpp in Sources */,
-				23AC04C71D2F41A00072351D /* LogFilter.cpp in Sources */,
 				23043C9E1D35DBFA00FC25CA /* StringConvert.cpp in Sources */,
 				AF588449206077BD00A0CB5A /* SocketAddress.cpp in Sources */,
 				456F67621AD46CE9002850C2 /* CFString.cpp in Sources */,
-				23AC04CB1D2F42250072351D /* LogFilterChain.cpp in Sources */,
 				AF48558D1D75127500D19C07 /* StdStringExtractor.cpp in Sources */,
 				456F67641AD46CE9002850C2 /* CFBundle.cpp in Sources */,
 				456F67651AD46CE9002850C2 /* PseudoTerminal.cpp in Sources */,
 				456F67671AD46CE9002850C2 /* DNBArch.cpp in Sources */,
-				23AC04D01D2F58AF0072351D /* LogFilterRegex.cpp in Sources */,
 				456F67691AD46CE9002850C2 /* DNBArchImplARM64.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -743,124 +661,6 @@
 			};
 			name = Release;
 		};
-		262419A11198A93E00067686 /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEAD_CODE_STRIPPING = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
-				LLDB_USE_OS_LOG = 1;
-				OTHER_CFLAGS = "";
-				STRIPFLAGS = "-x";
-				STRIP_STYLE = debugging;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_BUILDER = "$(USER)";
-			};
-			name = BuildAndIntegration;
-		};
-		262419A21198A93E00067686 /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "-";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_BUILDANDINTEGRATION;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
-				INSTALL_PATH = /usr/bin;
-				"INSTALL_PATH[sdk=iphoneos*]" = /Developer/usr/bin/;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_FBS",
-					"-DWITH_BKS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = "";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-					"-framework",
-					Security,
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				"SKIP_INSTALL[sdk=iphoneos*]" = NO;
-				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = BuildAndIntegration;
-		};
 		26CE0596115C31C30022F371 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -907,6 +707,10 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
+				"OTHER_CPLUSPLUSFLAGS[sdk=watchos*]" = (
+					"$(OTHER_CFLAGS)",
+					"-DWITH_CAROUSEL=1",
+				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -930,6 +734,21 @@
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"-framework",
 					Security,
+				);
+				"OTHER_LDFLAGS[sdk=watchos*]" = (
+					"-framework",
+					SpringBoardServices,
+					"-framework",
+					BackBoardServices,
+					"-llockdown",
+					"-framework",
+					FrontBoardServices,
+					"-framework",
+					MobileCoreServices,
+					"$(LLDB_ENERGY_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-framework",
+					CarouselServices,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -987,6 +806,10 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
+				"OTHER_CPLUSPLUSFLAGS[sdk=watchos*]" = (
+					"$(OTHER_CFLAGS)",
+					"-DWITH_CAROUSEL=1",
+				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -1010,6 +833,21 @@
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"-framework",
 					Security,
+				);
+				"OTHER_LDFLAGS[sdk=watchos*]" = (
+					"-framework",
+					SpringBoardServices,
+					"-framework",
+					BackBoardServices,
+					"-llockdown",
+					"-framework",
+					FrontBoardServices,
+					"-framework",
+					MobileCoreServices,
+					"$(LLDB_ENERGY_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-framework",
+					CarouselServices,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1110,67 +948,6 @@
 			};
 			name = Debug;
 		};
-		456F676F1AD46CE9002850C2 /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/local/bin;
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = "$(LLDB_ENERGY_CFLAGS)";
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = "";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					Foundation,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = "debugserver-nonui";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = DebugClang;
-		};
 		456F67701AD46CE9002850C2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1238,606 +1015,6 @@
 			};
 			name = Release;
 		};
-		456F67711AD46CE9002850C2 /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "-";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_BUILDANDINTEGRATION;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
-				INSTALL_PATH = /usr/local/bin;
-				"INSTALL_PATH[sdk=iphoneos*]" = /usr/local/bin;
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
-					"-Wparentheses",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					Foundation,
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = "debugserver-nonui";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				"SKIP_INSTALL[sdk=iphoneos*]" = NO;
-				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = BuildAndIntegration;
-		};
-		4968B7A916657FAE00741ABB /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "";
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
-				LLDB_USE_OS_LOG = 0;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
-				STRIP_INSTALLED_PRODUCT = NO;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_BUILDER = "$(USER)";
-			};
-			name = DebugClang;
-		};
-		4968B7AA16657FAE00741ABB /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/bin;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_FBS",
-					"-DWITH_BKS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = DebugClang;
-		};
-		940AD5251B1FE3B10051E88F /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "";
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
-				LLDB_USE_OS_LOG = 0;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
-				STRIP_INSTALLED_PRODUCT = NO;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_BUILDER = "$(USER)";
-			};
-			name = DebugPresubmission;
-		};
-		940AD5261B1FE3B10051E88F /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/bin;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_FBS",
-					"-DWITH_BKS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = DebugPresubmission;
-		};
-		940AD5271B1FE3B10051E88F /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/local/bin;
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					Foundation,
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = "debugserver-nonui";
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = DebugPresubmission;
-		};
-		94BA9B361B1A7C5700035A23 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "lldb-debugserver-nonui";
-			};
-			name = "CustomSwift-Debug";
-		};
-		94BA9B371B1A7C5700035A23 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = "lldb-debugserver-nonui";
-			};
-			name = "CustomSwift-Release";
-		};
-		94D72C871ADF10AA00A3F718 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "";
-				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
-				LLDB_USE_OS_LOG = 0;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
-				STRIP_INSTALLED_PRODUCT = NO;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_BUILDER = "$(USER)";
-			};
-			name = "CustomSwift-Debug";
-		};
-		94D72C881ADF10AA00A3F718 /* CustomSwift-Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/bin;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_BKS",
-					"-DWITH_FBS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = "";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = "CustomSwift-Debug";
-		};
-		94D72C891ADF10B000A3F718 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				"ARCHS[sdk=iphoneos*]" = arm64;
-				"ARCHS[sdk=macosx*]" = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEAD_CODE_STRIPPING = YES;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_OS_LOG_CFLAGS = "-DLLDB_USE_OS_LOG=$(LLDB_USE_OS_LOG)";
-				LLDB_USE_OS_LOG = 0;
-				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
-				STRIPFLAGS = "-x";
-				STRIP_STYLE = debugging;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_BUILDER = "$(USER)";
-			};
-			name = "CustomSwift-Release";
-		};
-		94D72C8A1ADF10B000A3F718 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "source/debugserver-entitlements.plist";
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "source/debugserver-macosx-entitlements.plist";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "";
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				FRAMEWORK_SEARCH_PATHS = $SDKROOT/System/Library/PrivateFrameworks;
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*][arch=*]" = (
-					"$(SDKROOT)/System/Library/PrivateFrameworks",
-					"$(SDKROOT)/Developer/Library/PrivateFrameworks",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=macosx*][arch=*]" = "$(SDKROOT)/System/Library/PrivateFrameworks";
-				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_RELEASE;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
-				INSTALL_PATH = /usr/bin;
-				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_DEBUGSERVER = 1;
-				LLDB_ENERGY_CFLAGS = "";
-				"LLDB_ENERGY_CFLAGS[sdk=*.internal]" = "-DLLDB_ENERGY";
-				LLDB_ENERGY_LDFLAGS = "-lpmenergy -lpmsample";
-				OTHER_CFLAGS = (
-					"-Wparentheses",
-					"-DDT_VARIANT_$(DT_VARIANT)",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-				);
-				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-Wparentheses",
-					"-DWITH_LOCKDOWN",
-					"-DWITH_FBS",
-					"-DWITH_BKS",
-					"-DOS_OBJECT_USE_OBJC=0",
-					"$(LLDB_ENERGY_CFLAGS)",
-					"$(LLDB_OS_LOG_CFLAGS)",
-					"-isystem",
-					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
-				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
-				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
-				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-				USER_HEADER_SEARCH_PATHS = "./source ../../source $(DERIVED_SOURCES_DIR) ../../include";
-				ZERO_LINK = NO;
-			};
-			name = "CustomSwift-Release";
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1845,43 +1022,28 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1DEB914F08733D8E0010E9CD /* Debug */,
-				94D72C871ADF10AA00A3F718 /* CustomSwift-Debug */,
-				4968B7A916657FAE00741ABB /* DebugClang */,
-				940AD5251B1FE3B10051E88F /* DebugPresubmission */,
 				1DEB915008733D8E0010E9CD /* Release */,
-				94D72C891ADF10B000A3F718 /* CustomSwift-Release */,
-				262419A11198A93E00067686 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
+			defaultConfigurationName = Debug;
 		};
 		26CE05A4115C31ED0022F371 /* Build configuration list for PBXNativeTarget "debugserver" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				26CE0596115C31C30022F371 /* Debug */,
-				94D72C881ADF10AA00A3F718 /* CustomSwift-Debug */,
-				4968B7AA16657FAE00741ABB /* DebugClang */,
-				940AD5261B1FE3B10051E88F /* DebugPresubmission */,
 				26CE0597115C31C30022F371 /* Release */,
-				94D72C8A1ADF10B000A3F718 /* CustomSwift-Release */,
-				262419A21198A93E00067686 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
+			defaultConfigurationName = Debug;
 		};
 		456F676D1AD46CE9002850C2 /* Build configuration list for PBXNativeTarget "debugserver-mini" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				456F676E1AD46CE9002850C2 /* Debug */,
-				456F676F1AD46CE9002850C2 /* DebugClang */,
-				940AD5271B1FE3B10051E88F /* DebugPresubmission */,
 				456F67701AD46CE9002850C2 /* Release */,
-				456F67711AD46CE9002850C2 /* BuildAndIntegration */,
-				94BA9B361B1A7C5700035A23 /* CustomSwift-Debug */,
-				94BA9B371B1A7C5700035A23 /* CustomSwift-Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};

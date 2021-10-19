@@ -106,11 +106,11 @@ body:             |
   ; CHECK:   liveins: $rbx, $r14
   ; CHECK:   EH_LABEL <mcsymbol Ltmp0>
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   MOV64mr [[STACK0:%stack.[0-9]+]], 1, $noreg, 0, $noreg, killed $rbx :: (store 8 into [[STACK0]])
-  ; CHECK:   MOV64mr [[STACK1:%stack.[0-9]+]], 1, $noreg, 0, $noreg, killed $r14 :: (store 8 into [[STACK1]])
-  ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 0, 1, 8, [[STACK0]], 0, 1, 8, [[STACK0]], 0, 1, 8, [[STACK1]], 0, 1, 8, [[STACK1]], 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on [[STACK0]]), (load store 8 on [[STACK1]])
-  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK0]])
-  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK1]])
+  ; CHECK:   MOV64mr [[STACK0:%stack.[0-9]+]], 1, $noreg, 0, $noreg, killed $rbx :: (store (s64) into [[STACK0]])
+  ; CHECK:   MOV64mr [[STACK1:%stack.[0-9]+]], 1, $noreg, 0, $noreg, killed $r14 :: (store (s64) into [[STACK1]])
+  ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, [[STACK0]], 0, 1, 8, [[STACK1]], 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on [[STACK1]]), (load store (s64) on [[STACK0]])
+  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK0]])
+  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK1]])
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   EH_LABEL <mcsymbol Ltmp1>
   ; CHECK:   JMP_1 %bb.3
@@ -119,19 +119,19 @@ body:             |
   ; CHECK:   liveins: $rbx, $r14
   ; CHECK:   EH_LABEL <mcsymbol Ltmp2>
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-DAG:   MOV64mr [[STACK0]], 1, $noreg, 0, $noreg, killed $rbx :: (store 8 into [[STACK0]])
-  ; CHECK-DAG:   MOV64mr [[STACK1]], 1, $noreg, 0, $noreg, killed $r14 :: (store 8 into [[STACK1]])
-  ; CHECK:   STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 0, 1, 8, [[STACK0]], 0, 1, 8, [[STACK0]], 0, 1, 8, [[STACK1]], 0, 1, 8, [[STACK1]], 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on [[STACK0]]), (load store 8 on [[STACK1]])
-  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK0]])
-  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK1]])
+  ; CHECK-DAG:   MOV64mr [[STACK0]], 1, $noreg, 0, $noreg, killed $rbx :: (store (s64) into [[STACK0]])
+  ; CHECK-DAG:   MOV64mr [[STACK1]], 1, $noreg, 0, $noreg, killed $r14 :: (store (s64) into [[STACK1]])
+  ; CHECK:   STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, [[STACK1]], 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on [[STACK1]]), (load store (s64) on [[STACK0]])
+  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK0]])
+  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK1]])
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK:   EH_LABEL <mcsymbol Ltmp3>
   ; CHECK:   JMP_1 %bb.5
   ; CHECK: bb.4 (landing-pad):
   ; CHECK:   liveins: $rax, $rdx, $r14
   ; CHECK:   EH_LABEL <mcsymbol Ltmp4>
-  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK0]])
-  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load 8 from [[STACK1]])
+  ; CHECK-DAG:   $rbx = MOV64rm [[STACK0]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK0]])
+  ; CHECK-DAG:   $r14 = MOV64rm [[STACK1]], 1, $noreg, 0, $noreg :: (load (s64) from [[STACK1]])
   ; CHECK:   $rax = COPY killed renamable $r14
   ; CHECK:   RET 0, $rax
   bb.0:
@@ -150,7 +150,7 @@ body:             |
 
     EH_LABEL <mcsymbol Ltmp0>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    renamable $rbx, renamable $r14 = STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 0, killed renamable $rbx, renamable $rbx(tied-def 0), killed renamable $r14, renamable $r14(tied-def 1), csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $rbx, renamable $r14 = STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), killed renamable $r14(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol Ltmp1>
     JMP_1 %bb.3
@@ -161,7 +161,7 @@ body:             |
 
     EH_LABEL <mcsymbol Ltmp2>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    renamable $rbx, renamable $r14 = STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 0, killed renamable $rbx, renamable $rbx(tied-def 0), killed renamable $r14, renamable $r14(tied-def 1), csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $rbx, renamable $r14 = STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), killed renamable $r14(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol Ltmp3>
     JMP_1 %bb.5

@@ -18,34 +18,15 @@
 namespace llvm {
 namespace jitlink {
 
-namespace MachO_x86_64_Edges {
+/// Create a LinkGraph from a MachO/x86-64 relocatable object.
+///
+/// Note: The graph does not take ownership of the underlying buffer, nor copy
+/// its contents. The caller is responsible for ensuring that the object buffer
+/// outlives the graph.
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject_x86_64(MemoryBufferRef ObjectBuffer);
 
-enum MachOX86RelocationKind : Edge::Kind {
-  Branch32 = Edge::FirstRelocation,
-  Branch32ToStub,
-  Pointer32,
-  Pointer64,
-  Pointer64Anon,
-  PCRel32,
-  PCRel32Minus1,
-  PCRel32Minus2,
-  PCRel32Minus4,
-  PCRel32Anon,
-  PCRel32Minus1Anon,
-  PCRel32Minus2Anon,
-  PCRel32Minus4Anon,
-  PCRel32GOTLoad,
-  PCRel32GOT,
-  PCRel32TLV,
-  Delta32,
-  Delta64,
-  NegDelta32,
-  NegDelta64,
-};
-
-} // namespace MachO_x86_64_Edges
-
-/// jit-link the given object buffer, which must be a MachO x86-64 object file.
+/// jit-link the given LinkGraph.
 ///
 /// If PrePrunePasses is empty then a default mark-live pass will be inserted
 /// that will mark all exported atoms live. If PrePrunePasses is not empty, the
@@ -54,10 +35,16 @@ enum MachOX86RelocationKind : Edge::Kind {
 /// If PostPrunePasses is empty then a default GOT-and-stubs insertion pass will
 /// be inserted. If PostPrunePasses is not empty then the caller is responsible
 /// for including a pass to insert GOT and stub edges.
-void jitLink_MachO_x86_64(std::unique_ptr<JITLinkContext> Ctx);
+void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
+                       std::unique_ptr<JITLinkContext> Ctx);
 
-/// Return the string name of the given MachO x86-64 edge kind.
-StringRef getMachOX86RelocationKindName(Edge::Kind R);
+/// Returns a pass suitable for splitting __eh_frame sections in MachO/x86-64
+/// objects.
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64();
+
+/// Returns a pass suitable for fixing missing edges in an __eh_frame section
+/// in a MachO/x86-64 object.
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64();
 
 } // end namespace jitlink
 } // end namespace llvm

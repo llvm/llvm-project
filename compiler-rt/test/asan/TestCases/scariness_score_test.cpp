@@ -1,9 +1,45 @@
 // Test how we produce the scariness score.
 
+// UAR Mode: runtime
 // RUN: %clangxx_asan -O0 %s -o %t
 // On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
 // off by default. It's safe for these tests, though, so we turn it on.
 // RUN: export %env_asan_opts=detect_stack_use_after_return=1:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
+// Make sure the stack is limited (may not be the default under GNU make)
+// RUN: ulimit -s 4096
+// RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1
+// RUN: not %run %t  2 2>&1 | FileCheck %s --check-prefix=CHECK2
+// RUN: not %run %t  3 2>&1 | FileCheck %s --check-prefix=CHECK3
+// RUN: not %run %t  4 2>&1 | FileCheck %s --check-prefix=CHECK4
+// RUN: not %run %t  5 2>&1 | FileCheck %s --check-prefix=CHECK5
+// RUN: not %run %t  6 2>&1 | FileCheck %s --check-prefix=CHECK6
+// RUN: not %run %t  7 2>&1 | FileCheck %s --check-prefix=CHECK7
+// RUN: not %run %t  8 2>&1 | FileCheck %s --check-prefix=CHECK8
+// RUN: not %run %t  9 2>&1 | FileCheck %s --check-prefix=CHECK9
+// RUN: not %run %t 10 2>&1 | FileCheck %s --check-prefix=CHECK10
+// RUN: not %run %t 11 2>&1 | FileCheck %s --check-prefix=CHECK11
+// RUN: not %run %t 12 2>&1 | FileCheck %s --check-prefix=CHECK12
+// RUN: not %run %t 13 2>&1 | FileCheck %s --check-prefix=CHECK13
+// RUN: not %run %t 14 2>&1 | FileCheck %s --check-prefix=CHECK14
+// RUN: not %run %t 15 2>&1 | FileCheck %s --check-prefix=CHECK15
+// RUN: not %run %t 16 2>&1 | FileCheck %s --check-prefix=CHECK16
+// RUN: not %run %t 17 2>&1 | FileCheck %s --check-prefix=CHECK17
+// RUN: not %run %t 18 2>&1 | FileCheck %s --check-prefix=CHECK18
+// RUN: not %run %t 19 2>&1 | FileCheck %s --check-prefix=CHECK19
+// RUN: not %run %t 20 2>&1 | FileCheck %s --check-prefix=CHECK20
+// RUN: not %run %t 21 2>&1 | FileCheck %s --check-prefix=CHECK21
+// RUN: not %run %t 22 2>&1 | FileCheck %s --check-prefix=CHECK22
+// RUN: not %run %t 23 2>&1 | FileCheck %s --check-prefix=CHECK23
+// RUN: not %run %t 24 2>&1 | FileCheck %s --check-prefix=CHECK24
+// RUN: not %run %t 25 2>&1 | FileCheck %s --check-prefix=CHECK25
+// RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
+// RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
+//
+// UAR Mode: always
+// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always
+// On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
+// off by default. It's safe for these tests, though, so we turn it on.
+// RUN: export %env_asan_opts=handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
 // Make sure the stack is limited (may not be the default under GNU make)
 // RUN: ulimit -s 4096
 // RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1

@@ -26,7 +26,7 @@ typedef struct test_struct {
 
 kernel void test_single(int_single input, global int* output) {
 // CHECK: spir_kernel
-// AMDGCN: define amdgpu_kernel void @test_single
+// AMDGCN: define{{.*}} amdgpu_kernel void @test_single
 // CHECK: struct.int_single* nocapture {{.*}} byval(%struct.int_single)
 // CHECK: i32* nocapture %output
  output[0] = input.a;
@@ -34,7 +34,7 @@ kernel void test_single(int_single input, global int* output) {
 
 kernel void test_pair(int_pair input, global int* output) {
 // CHECK: spir_kernel
-// AMDGCN: define amdgpu_kernel void @test_pair
+// AMDGCN: define{{.*}} amdgpu_kernel void @test_pair
 // CHECK: struct.int_pair* nocapture {{.*}} byval(%struct.int_pair)
 // CHECK: i32* nocapture %output
  output[0] = (int)input.a;
@@ -43,7 +43,7 @@ kernel void test_pair(int_pair input, global int* output) {
 
 kernel void test_kernel(test_struct input, global int* output) {
 // CHECK: spir_kernel
-// AMDGCN: define amdgpu_kernel void @test_kernel
+// AMDGCN: define{{.*}} amdgpu_kernel void @test_kernel
 // CHECK: struct.test_struct* nocapture {{.*}} byval(%struct.test_struct)
 // CHECK: i32* nocapture %output
  output[0] = input.elementA;
@@ -58,7 +58,7 @@ kernel void test_kernel(test_struct input, global int* output) {
 
 void test_function(int_pair input, global int* output) {
 // CHECK-NOT: spir_kernel
-// AMDGCN-NOT: define amdgpu_kernel void @test_function
+// AMDGCN-NOT: define{{.*}} amdgpu_kernel void @test_function
 // CHECK: i64 %input.coerce0, i64 %input.coerce1, i32* nocapture %output
  output[0] = (int)input.a;
  output[1] = (int)input.b;

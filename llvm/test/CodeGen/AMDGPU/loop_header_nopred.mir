@@ -9,40 +9,29 @@ name:            loop_header_nopred
 body:             |
   ; GCN-LABEL: name: loop_header_nopred
   ; GCN: bb.0:
-  ; GCN:   successors: %bb.1(0x80000000)
-  ; GCN:   S_INST_PREFETCH 1
-  ; GCN:   S_BRANCH %bb.1
-  ; GCN: bb.6 (align 64):
-  ; GCN:   successors: %bb.7(0x04000000), %bb.1(0x7c000000)
-  ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc
-  ; GCN: bb.1:
-  ; GCN:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GCN:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
-  ; GCN: bb.3:
-  ; GCN:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
-  ; GCN:   SI_MASK_BRANCH %bb.6, implicit $exec
-  ; GCN:   S_BRANCH %bb.4
-  ; GCN: bb.2 (align 64):
-  ; GCN:   successors: %bb.4(0x40000000), %bb.6(0x40000000)
-  ; GCN:   SI_MASK_BRANCH %bb.6, implicit $exec
-  ; GCN:   S_BRANCH %bb.4
-  ; GCN: bb.4:
-  ; GCN:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_NOP 0
-  ; GCN:   S_CBRANCH_EXECZ %bb.4, implicit $exec
+  ; GCN:   successors: %bb.2(0x80000000)
+  ; GCN:   S_BRANCH %bb.2
+  ; GCN: bb.1 (align 64):
+  ; GCN:   successors: %bb.7(0x04000000), %bb.2(0x7c000000)
+  ; GCN:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo
+  ; GCN: bb.2:
+  ; GCN:   successors: %bb.5(0x40000000), %bb.1(0x40000000)
+  ; GCN:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GCN: bb.5:
-  ; GCN:   successors: %bb.6(0x80000000)
-  ; GCN:   S_BRANCH %bb.6
+  ; GCN:   successors: %bb.1(0x04000000), %bb.5(0x7c000000)
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_NOP 0
+  ; GCN:   S_CBRANCH_EXECZ %bb.5, implicit $exec
+  ; GCN:   S_BRANCH %bb.1
   ; GCN: bb.7:
   ; GCN:   S_ENDPGM 0
   bb.0:
@@ -60,7 +49,7 @@ body:             |
   bb.3:
     successors: %bb.4(0x40000000), %bb.6(0x40000000)
 
-    SI_MASK_BRANCH %bb.6, implicit $exec
+    S_CBRANCH_EXECZ %bb.6, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:

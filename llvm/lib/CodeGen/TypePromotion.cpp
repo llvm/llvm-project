@@ -30,9 +30,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
@@ -134,8 +131,9 @@ public:
     Ctx(C), OrigTy(Ty), PromotedWidth(Width), Visited(visited),
     Sources(sources), Sinks(sinks), SafeWrap(wrap) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
-    assert(OrigTy->getPrimitiveSizeInBits() < ExtTy->getPrimitiveSizeInBits()
-           && "Original type not smaller than extended type");
+    assert(OrigTy->getPrimitiveSizeInBits().getFixedSize() <
+               ExtTy->getPrimitiveSizeInBits().getFixedSize() &&
+           "Original type not smaller than extended type");
   }
 
   void Mutate();
@@ -185,6 +183,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.setPreservesCFG();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -194,11 +193,8 @@ public:
 
 }
 
-static bool GenerateSignBits(Value *V) {
-  if (!isa<Instruction>(V))
-    return false;
-
-  unsigned Opc = cast<Instruction>(V)->getOpcode();
+static bool GenerateSignBits(Instruction *I) {
+  unsigned Opc = I->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SExt;
 }
@@ -369,7 +365,7 @@ bool TypePromotion::isSafeWrap(Instruction *I) {
   Total += OverflowConst->getValue().getBitWidth() < 32 ?
     OverflowConst->getValue().abs().zext(32) : OverflowConst->getValue().abs();
 
-  APInt Max = APInt::getAllOnesValue(TypePromotion::TypeSize);
+  APInt Max = APInt::getAllOnes(TypePromotion::TypeSize);
 
   if (Total.getBitWidth() > Max.getBitWidth()) {
     if (Total.ugt(Max.zext(Total.getBitWidth())))
@@ -405,17 +401,14 @@ bool TypePromotion::shouldPromote(Value *V) {
 
 /// Return whether we can safely mutate V's type to ExtTy without having to be
 /// concerned with zero extending or truncation.
-static bool isPromotedResultSafe(Value *V) {
-  if (GenerateSignBits(V))
+static bool isPromotedResultSafe(Instruction *I) {
+  if (GenerateSignBits(I))
     return false;
 
-  if (!isa<Instruction>(V))
+  if (!isa<OverflowingBinaryOperator>(I))
     return true;
 
-  if (!isa<OverflowingBinaryOperator>(V))
-    return true;
-
-  return cast<Instruction>(V)->hasNoUnsignedWrap();
+  return I->hasNoUnsignedWrap();
 }
 
 void IRPromoter::ReplaceAllUsersOfWith(Value *From, Value *To) {
@@ -517,8 +510,6 @@ void IRPromoter::ExtendSources() {
 void IRPromoter::PromoteTree() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Mutating the tree..\n");
 
-  IRBuilder<> Builder{Ctx};
-
   // Mutate the types of the instructions within the tree. Here we handle
   // constant operands.
   for (auto *V : Visited) {
@@ -541,8 +532,8 @@ void IRPromoter::PromoteTree() {
         I->setOperand(i, UndefValue::get(ExtTy));
     }
 
-    // Mutate the result type, unless this is an icmp.
-    if (!isa<ICmpInst>(I)) {
+    // Mutate the result type, unless this is an icmp or switch.
+    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);
       Promoted.insert(I);
     }
@@ -577,7 +568,7 @@ void IRPromoter::TruncateSinks() {
 
     // Handle calls separately as we need to iterate over arg operands.
     if (auto *Call = dyn_cast<CallInst>(I)) {
-      for (unsigned i = 0; i < Call->getNumArgOperands(); ++i) {
+      for (unsigned i = 0; i < Call->arg_size(); ++i) {
         Value *Arg = Call->getArgOperand(i);
         Type *Ty = TruncTysMap[Call][i];
         if (Instruction *Trunc = InsertTrunc(Arg, Ty)) {
@@ -680,10 +671,8 @@ void IRPromoter::Mutate() {
   // Cache original types of the values that will likely need truncating
   for (auto *I : Sinks) {
     if (auto *Call = dyn_cast<CallInst>(I)) {
-      for (unsigned i = 0; i < Call->getNumArgOperands(); ++i) {
-        Value *Arg = Call->getArgOperand(i);
+      for (Value *Arg : Call->args())
         TruncTysMap[Call].push_back(Arg->getType());
-      }
     } else if (auto *Switch = dyn_cast<SwitchInst>(I))
       TruncTysMap[I].push_back(Switch->getCondition()->getType());
     else {
@@ -800,7 +789,7 @@ bool TypePromotion::isLegalToPromote(Value *V) {
   if (SafeToPromote.count(I))
    return true;
 
-  if (isPromotedResultSafe(V) || isSafeWrap(I)) {
+  if (isPromotedResultSafe(I) || isSafeWrap(I)) {
     SafeToPromote.insert(I);
     return true;
   }
@@ -809,7 +798,7 @@ bool TypePromotion::isLegalToPromote(Value *V) {
 
 bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   Type *OrigTy = V->getType();
-  TypeSize = OrigTy->getPrimitiveSizeInBits();
+  TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedSize();
   SafeToPromote.clear();
   SafeWrap.clear();
 
@@ -922,9 +911,6 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
   if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
     return false;
 
-  if (ToPromote < 2)
-    return false;
-
   IRPromoter Promoter(*Ctx, cast<IntegerType>(OrigTy), PromotedWidth,
                       CurrentVisited, Sources, Sinks, SafeWrap);
   Promoter.Mutate();
@@ -951,7 +937,8 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   const TargetTransformInfo &TII =
     getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  RegisterBitWidth = TII.getRegisterBitWidth(false);
+  RegisterBitWidth =
+      TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
   Ctx = &F.getParent()->getContext();
 
   // Search up from icmps to try to promote their operands.
@@ -980,15 +967,14 @@ bool TypePromotion::runOnFunction(Function &F) {
           if (TLI->getTypeAction(ICmp->getContext(), SrcVT) !=
               TargetLowering::TypePromoteInteger)
             break;
-
           EVT PromotedVT = TLI->getTypeToTransformTo(ICmp->getContext(), SrcVT);
-          if (RegisterBitWidth < PromotedVT.getSizeInBits()) {
+          if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
             LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
                        << "for promoted type\n");
             break;
           }
 
-          MadeChange |= TryToPromote(I, PromotedVT.getSizeInBits());
+          MadeChange |= TryToPromote(I, PromotedVT.getFixedSizeInBits());
           break;
         }
       }

@@ -1,9 +1,8 @@
-# RUN: llvm-ifs -action write-ifs -o - %s %S/object.ifs
+# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/object.ifs
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple:          x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target:          x86_64-unknown-linux-gnu
 Symbols:
   - { Name: a, Type: Func }
 ...

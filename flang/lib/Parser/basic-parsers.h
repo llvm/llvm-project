@@ -108,7 +108,7 @@ public:
     ParseState backtrack{state};
     std::optional<resultType> result{parser_.Parse(state)};
     if (result) {
-      state.messages().Restore(std::move(messages));
+      state.messages().Annex(std::move(messages));
     } else {
       state = std::move(backtrack);
       state.messages() = std::move(messages);
@@ -311,7 +311,7 @@ public:
         ParseRest<1>(result, state, backtrack);
       }
     }
-    state.messages().Restore(std::move(messages));
+    state.messages().Annex(std::move(messages));
     return result;
   }
 
@@ -371,7 +371,7 @@ public:
     }
     Messages messages{std::move(state.messages())};
     if (std::optional<resultType> ax{pa_.Parse(state)}) {
-      state.messages().Restore(std::move(messages));
+      state.messages().Annex(std::move(messages));
       return ax;
     }
     messages.Annex(std::move(state.messages()));
@@ -729,13 +729,7 @@ public:
       return RESULT{};
     } else {
       if constexpr (sizeof...(PARSER) == 1) {
-        if constexpr (std::is_same_v<Success, typename PARSER::resultType...>) {
-          if (std::get<0>(parsers_).Parse(state)) {
-            return RESULT{};
-          }
-        } else if (auto arg{std::get<0>(parsers_).Parse(state)}) {
-          return RESULT{std::move(*arg)};
-        }
+        return ParseOne(state);
       } else {
         ApplyArgs<PARSER...> results;
         using Sequence = std::index_sequence_for<PARSER...>;
@@ -749,6 +743,17 @@ public:
   }
 
 private:
+  std::optional<resultType> ParseOne(ParseState &state) const {
+    if constexpr (std::is_same_v<Success, typename PARSER::resultType...>) {
+      if (std::get<0>(parsers_).Parse(state)) {
+        return RESULT{};
+      }
+    } else if (auto arg{std::get<0>(parsers_).Parse(state)}) {
+      return RESULT{std::move(*arg)};
+    }
+    return std::nullopt;
+  }
+
   const std::tuple<PARSER...> parsers_;
 };
 
@@ -782,7 +787,8 @@ public:
   constexpr NonemptySeparated(const NonemptySeparated &) = default;
   constexpr NonemptySeparated(PA p, PB sep) : parser_{p}, separator_{sep} {}
   std::optional<resultType> Parse(ParseState &state) const {
-    return applyFunction(prepend<paType>, parser_, many(separator_ >> parser_))
+    return applyFunction<std::list<paType>>(
+        prepend<paType>, parser_, many(separator_ >> parser_))
         .Parse(state);
   }
 

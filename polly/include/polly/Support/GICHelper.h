@@ -150,71 +150,148 @@ inline llvm::APInt APIntFromVal(isl::val V) {
 
 /// Get c++ string from Isl objects.
 //@{
-std::string stringFromIslObj(__isl_keep isl_map *map);
-std::string stringFromIslObj(__isl_keep isl_union_map *umap);
-std::string stringFromIslObj(__isl_keep isl_set *set);
-std::string stringFromIslObj(__isl_keep isl_union_set *uset);
-std::string stringFromIslObj(__isl_keep isl_schedule *schedule);
-std::string stringFromIslObj(__isl_keep isl_multi_aff *maff);
-std::string stringFromIslObj(__isl_keep isl_pw_multi_aff *pma);
-std::string stringFromIslObj(__isl_keep isl_multi_pw_aff *mpa);
-std::string stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma);
-std::string stringFromIslObj(__isl_keep isl_aff *aff);
-std::string stringFromIslObj(__isl_keep isl_pw_aff *pwaff);
-std::string stringFromIslObj(__isl_keep isl_space *space);
+#define ISL_CPP_OBJECT_TO_STRING(name)                                         \
+  inline std::string stringFromIslObj(const name &Obj,                         \
+                                      std::string DefaultValue = "") {         \
+    return stringFromIslObj(Obj.get(), DefaultValue);                          \
+  }
+
+#define ISL_OBJECT_TO_STRING(name)                                             \
+  std::string stringFromIslObj(__isl_keep isl_##name *Obj,                     \
+                               std::string DefaultValue = "");                 \
+  ISL_CPP_OBJECT_TO_STRING(isl::name)
+
+ISL_OBJECT_TO_STRING(aff)
+ISL_OBJECT_TO_STRING(ast_expr)
+ISL_OBJECT_TO_STRING(ast_node)
+ISL_OBJECT_TO_STRING(basic_map)
+ISL_OBJECT_TO_STRING(basic_set)
+ISL_OBJECT_TO_STRING(map)
+ISL_OBJECT_TO_STRING(set)
+ISL_OBJECT_TO_STRING(id)
+ISL_OBJECT_TO_STRING(multi_aff)
+ISL_OBJECT_TO_STRING(multi_pw_aff)
+ISL_OBJECT_TO_STRING(multi_union_pw_aff)
+ISL_OBJECT_TO_STRING(point)
+ISL_OBJECT_TO_STRING(pw_aff)
+ISL_OBJECT_TO_STRING(pw_multi_aff)
+ISL_OBJECT_TO_STRING(schedule)
+ISL_OBJECT_TO_STRING(schedule_node)
+ISL_OBJECT_TO_STRING(space)
+ISL_OBJECT_TO_STRING(union_access_info)
+ISL_OBJECT_TO_STRING(union_flow)
+ISL_OBJECT_TO_STRING(union_set)
+ISL_OBJECT_TO_STRING(union_map)
+ISL_OBJECT_TO_STRING(union_pw_aff)
+ISL_OBJECT_TO_STRING(union_pw_multi_aff)
 //@}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// C++ wrapper for isl_*_dump() functions.
+//@{
+
+#define ISL_DUMP_OBJECT(name)                                                  \
+  void dumpIslObj(const isl::name &Obj);                                       \
+  void dumpIslObj(isl_##name *Obj);
+
+ISL_DUMP_OBJECT(aff)
+ISL_DUMP_OBJECT(aff_list)
+ISL_DUMP_OBJECT(ast_expr)
+ISL_DUMP_OBJECT(ast_node)
+ISL_DUMP_OBJECT(ast_node_list)
+ISL_DUMP_OBJECT(basic_map)
+ISL_DUMP_OBJECT(basic_map_list)
+ISL_DUMP_OBJECT(basic_set)
+ISL_DUMP_OBJECT(basic_set_list)
+ISL_DUMP_OBJECT(constraint)
+ISL_DUMP_OBJECT(id)
+ISL_DUMP_OBJECT(id_list)
+ISL_DUMP_OBJECT(id_to_ast_expr)
+ISL_DUMP_OBJECT(local_space)
+ISL_DUMP_OBJECT(map)
+ISL_DUMP_OBJECT(map_list)
+ISL_DUMP_OBJECT(multi_aff)
+ISL_DUMP_OBJECT(multi_pw_aff)
+ISL_DUMP_OBJECT(multi_union_pw_aff)
+ISL_DUMP_OBJECT(multi_val)
+ISL_DUMP_OBJECT(point)
+ISL_DUMP_OBJECT(pw_aff)
+ISL_DUMP_OBJECT(pw_aff_list)
+ISL_DUMP_OBJECT(pw_multi_aff)
+ISL_DUMP_OBJECT(schedule)
+ISL_DUMP_OBJECT(schedule_constraints)
+ISL_DUMP_OBJECT(schedule_node)
+ISL_DUMP_OBJECT(set)
+ISL_DUMP_OBJECT(set_list)
+ISL_DUMP_OBJECT(space)
+ISL_DUMP_OBJECT(union_map)
+ISL_DUMP_OBJECT(union_pw_aff)
+ISL_DUMP_OBJECT(union_pw_aff_list)
+ISL_DUMP_OBJECT(union_pw_multi_aff)
+ISL_DUMP_OBJECT(union_set)
+ISL_DUMP_OBJECT(union_set_list)
+ISL_DUMP_OBJECT(val)
+ISL_DUMP_OBJECT(val_list)
+//@}
+
+/// Emit the equivaltent of the isl_*_dump output into a raw_ostream.
+/// @{
+void dumpIslObj(const isl::schedule_node &Node, llvm::raw_ostream &OS);
+void dumpIslObj(__isl_keep isl_schedule_node *node, llvm::raw_ostream &OS);
+/// @}
+#endif
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_map *Map) {
-  OS << polly::stringFromIslObj(Map);
+  OS << polly::stringFromIslObj(Map, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_map *Map) {
-  OS << polly::stringFromIslObj(Map);
+  OS << polly::stringFromIslObj(Map, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_set *Set) {
-  OS << polly::stringFromIslObj(Set);
+  OS << polly::stringFromIslObj(Set, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_pw_aff *Map) {
-  OS << polly::stringFromIslObj(Map);
+  OS << polly::stringFromIslObj(Map, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_pw_multi_aff *PMA) {
-  OS << polly::stringFromIslObj(PMA);
+  OS << polly::stringFromIslObj(PMA, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_multi_aff *MA) {
-  OS << polly::stringFromIslObj(MA);
+  OS << polly::stringFromIslObj(MA, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_union_pw_multi_aff *UPMA) {
-  OS << polly::stringFromIslObj(UPMA);
+  OS << polly::stringFromIslObj(UPMA, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_schedule *Schedule) {
-  OS << polly::stringFromIslObj(Schedule);
+  OS << polly::stringFromIslObj(Schedule, "null");
   return OS;
 }
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      __isl_keep isl_space *Space) {
-  OS << polly::stringFromIslObj(Space);
+  OS << polly::stringFromIslObj(Space, "null");
   return OS;
 }
 
@@ -263,7 +340,7 @@ std::string getIslCompatibleName(const std::string &Prefix,
 inline llvm::DiagnosticInfoOptimizationBase &
 operator<<(llvm::DiagnosticInfoOptimizationBase &OS,
            const isl::union_map &Obj) {
-  OS << Obj.to_str();
+  OS << stringFromIslObj(Obj);
   return OS;
 }
 

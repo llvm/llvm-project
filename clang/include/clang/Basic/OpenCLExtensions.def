@@ -10,98 +10,118 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Macro OPENCLEXT or OPENCLEXT_INTERNAL can be defined to enumerate the
+// Macro OPENCLEXTNAME or OPENCL_GENERIC_EXTENSION can be defined to enumerate all
 // OpenCL extensions listed in this file.
 //
-// If the extensions are to be enumerated without the supported OpenCL version,
-// define OPENCLEXT(ext) where ext is the name of the extension.
-//
-// If the extensions are to be enumerated with supported OpenCL version,
-// define OPENCLEXT_INTERNAL(ext, avail, core) where
+// If extensions are to be enumerated with information about whether
+// an extension is core or optional core and minimum OpenCL version
+// when an extension becomes available,
+// define OPENCL_GENERIC_EXTENSION(ext, pragma, avail, core, opt) where
 //   ext - name of the extension or optional core feature.
+//   pragma - true if extension needs pragmas or false otherwise.
+//            NOTE: extension pragma without any documentation detailing
+//            its behavior explicitly is deprecated. Therefore the default
+//            value is false.
 //   avail - minimum OpenCL version supporting it.
-//   core - minimum OpenCL version when the extension becomes optional core
-//          feature or core feature. ~0U indicates not a core feature or an
-//          optional core feature.
+//   core - OpenCL versions mask when the extension becomes core feature.
+//          0U indicates not a core feature.
+//   opt - OpenCL versions mask when the extension becomes optional core
+//         feature. 0U indicates not a optional core feature.
+//
+// If extensions are to be enumerated without any information,
+// define OPENCLEXTNAME(ext) where ext is the name of the extension.
+//
+// Difference between optional core feature and core feature is that the 
+// later is unconditionally supported in specific OpenCL version.
+//
+// As per The OpenCL Extension Specification, Section 1.2, in this file, an
+// extension is defined if and only it either:
+//  * affects the OpenCL language semantics or its syntax,
+//  * adds built-in functions to the language.
+//
+// For such an extension, a preprocessor #define that matches the extension
+// name must be created and a #pragma is required if and only if the
+// compilation flow is impacted, e.g. due to a difference of syntax or
+// semantics in the language compared to the core standard. #pragma directive
+// has no effect for optional core and core features.
 
-#ifndef OPENCLEXT_INTERNAL
-#ifndef OPENCLEXT
-#pragma error "macro OPENCLEXT or OPENCLEXT_INTERNAL is required"
+#ifndef OPENCL_GENERIC_EXTENSION
+#ifndef OPENCLEXTNAME
+#pragma error "macro OPENCLEXTNAME or OPENCL_GENERIC_EXTENSION is required"
 #else
-#define OPENCLEXT_INTERNAL(ext, ...) OPENCLEXT(ext)
-#endif // OPENCLEXT
-#endif // OPENCLEXT_INTERNAL
+#define OPENCL_GENERIC_EXTENSION(ext, ...) OPENCLEXTNAME(ext)
+#endif // OPENCLEXTNAME
+#endif // OPENCL_GENERIC_EXTENSION
+
+// Declaration helpers
+#define OPENCL_EXTENSION(ext, pragma, avail) OPENCL_GENERIC_EXTENSION(ext, pragma, avail, 0U, 0U)
+#define OPENCL_COREFEATURE(ext, pragma, avail, core)  OPENCL_GENERIC_EXTENSION(ext, pragma, avail, core, 0U)
+#define OPENCL_OPTIONALCOREFEATURE(ext, pragma, avail, opt) OPENCL_GENERIC_EXTENSION(ext, pragma, avail, 0U, opt)
 
 // OpenCL 1.0.
-OPENCLEXT_INTERNAL(cl_khr_3d_image_writes, 100, 200)
-// fprounding mode is special since it is not mentioned beyond 1.0
-OPENCLEXT_INTERNAL(cl_khr_select_fprounding_mode, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_byte_addressable_store, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_fp16, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_fp64, 100, 120)
-OPENCLEXT_INTERNAL(cl_khr_global_int32_base_atomics, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_global_int32_extended_atomics, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_local_int32_base_atomics, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_local_int32_extended_atomics, 100, 110)
-OPENCLEXT_INTERNAL(cl_khr_int64_base_atomics, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_int64_extended_atomics, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_gl_sharing, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_icd, 100, ~0U)
-
-// OpenCL 1.1.
-OPENCLEXT_INTERNAL(cl_khr_gl_event, 110, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_d3d10_sharing, 110, ~0U)
+OPENCL_COREFEATURE(cl_khr_byte_addressable_store, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_global_int32_base_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_global_int32_extended_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_local_int32_base_atomics, true, 100, OCL_C_11P)
+OPENCL_COREFEATURE(cl_khr_local_int32_extended_atomics, true, 100, OCL_C_11P)
+OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, true, 100, OCL_C_12P)
+OPENCL_EXTENSION(cl_khr_fp16, true, 100)
+OPENCL_EXTENSION(cl_khr_int64_base_atomics, true, 100)
+OPENCL_EXTENSION(cl_khr_int64_extended_atomics, true, 100)
+OPENCL_GENERIC_EXTENSION(cl_khr_3d_image_writes, true, 100, OCL_C_20, OCL_C_30)
 
 // EMBEDDED_PROFILE
-OPENCLEXT_INTERNAL(cles_khr_int64, 110, ~0U)
+OPENCL_EXTENSION(cles_khr_int64, true, 110)
 
 // OpenCL 1.2.
-OPENCLEXT_INTERNAL(cl_khr_context_abort, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_d3d11_sharing, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_depth_images, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_dx9_media_sharing, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_image2d_from_buffer, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_initialize_memory, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_gl_depth_images, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_gl_msaa_sharing, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_spir, 120, ~0U)
+OPENCL_EXTENSION(cl_khr_depth_images, true, 120)
+OPENCL_EXTENSION(cl_khr_gl_msaa_sharing,true, 120)
 
 // OpenCL 2.0.
-OPENCLEXT_INTERNAL(cl_khr_egl_event, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_egl_image, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_mipmap_image, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_mipmap_image_writes, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_srgb_image_writes, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroups, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_terminate_context, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_extended_types, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_non_uniform_vote, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_ballot, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_non_uniform_arithmetic, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_shuffle, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_shuffle_relative, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_subgroup_clustered_reduce, 200, ~0U)
+OPENCL_EXTENSION(cl_khr_mipmap_image, true, 200)
+OPENCL_EXTENSION(cl_khr_mipmap_image_writes, true, 200)
+OPENCL_EXTENSION(cl_khr_srgb_image_writes, true, 200)
+OPENCL_EXTENSION(cl_khr_subgroups, true, 200)
 
 // Clang Extensions.
-OPENCLEXT_INTERNAL(cl_clang_storage_class_specifiers, 100, ~0U)
+OPENCL_EXTENSION(cl_clang_storage_class_specifiers, true, 100)
+OPENCL_EXTENSION(__cl_clang_function_pointers, true, 100)
+OPENCL_EXTENSION(__cl_clang_variadic_functions, true, 100)
+OPENCL_EXTENSION(__cl_clang_non_portable_kernel_param_types, true, 100)
+OPENCL_EXTENSION(__cl_clang_bitfields, true, 100)
 
 // AMD OpenCL extensions
-OPENCLEXT_INTERNAL(cl_amd_media_ops, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_amd_media_ops2, 100, ~0U)
+OPENCL_EXTENSION(cl_amd_media_ops, true, 100)
+OPENCL_EXTENSION(cl_amd_media_ops2, true, 100)
 
 // ARM OpenCL extensions
-OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_int8, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_int8, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_int16, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_arm_integer_dot_product_accumulate_saturate_int8, 120, ~0U)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_int8, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int8, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_int16, true, 120)
+OPENCL_EXTENSION(cl_arm_integer_dot_product_accumulate_saturate_int8, true, 120)
 
 // Intel OpenCL extensions
-OPENCLEXT_INTERNAL(cl_intel_subgroups, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_intel_subgroups_short, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_intel_device_side_avc_motion_estimation, 120, ~0U)
+OPENCL_EXTENSION(cl_intel_subgroups, true, 120)
+OPENCL_EXTENSION(cl_intel_subgroups_short, true, 120)
+OPENCL_EXTENSION(cl_intel_device_side_avc_motion_estimation, true, 120)
 
-#undef OPENCLEXT_INTERNAL
+// OpenCL C 3.0 features (6.2.1. Features)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_pipes, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_generic_address_space, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_acq_rel, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_atomic_order_seq_cst, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_subgroups, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_3d_image_writes, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_device_enqueue, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_read_write_images, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_program_scope_global_variables, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_fp64, false, 300, OCL_C_30)
+OPENCL_OPTIONALCOREFEATURE(__opencl_c_images, false, 300, OCL_C_30)
 
-#ifdef OPENCLEXT
-#undef OPENCLEXT
+#undef OPENCL_OPTIONALCOREFEATURE
+#undef OPENCL_COREFEATURE
+#undef OPENCL_GENERIC_EXTENSION
+
+#ifdef OPENCLEXTNAME
+#undef OPENCLEXTNAME
 #endif

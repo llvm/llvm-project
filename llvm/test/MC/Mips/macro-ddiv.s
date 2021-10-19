@@ -76,7 +76,7 @@
 # CHECK-TRAP: addiu $1, $zero, 1          # encoding: [0x24,0x01,0x00,0x01]
 # CHECK-TRAP: dsll32 $1, $1, 31           # encoding: [0x00,0x01,0x0f,0xfc]
 # CHECK-TRAP: teq $zero, $1, 6            # encoding: [0x00,0x01,0x01,0xb4]
-# CHECH-TRAP: .Ltmp2:
+# CHECK-TRAP: .Ltmp2:
 # CHECK-TRAP: mflo $zero                  # encoding: [0x00,0x00,0x00,0x12]
 
   ddiv $0,$0

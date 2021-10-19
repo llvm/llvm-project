@@ -14,8 +14,8 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 namespace lldb_private {
 

@@ -106,7 +106,87 @@ Within the `rewrite` section of a pattern, the following constraints apply:
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 
-### Pattern Rewriter
+### Application Recursion
+
+Recursion is an important topic in the context of pattern rewrites, as a pattern
+may often be applicable to its own result. For example, imagine a pattern that
+peels a single iteration from a loop operation. If the loop has multiple
+peelable iterations, this pattern may apply multiple times during the
+application process. By looking at the implementation of this pattern, the bound
+for recursive application may be obvious, e.g. there are no peelable iterations
+within the loop, but from the perspective of the pattern driver this recursion
+is potentially dangerous. Often times the recursive application of a pattern
+indicates a bug in the matching logic. These types of bugs generally do not
+cause crashes, but create infinite loops within the application process. Given
+this, the pattern rewriting infrastructure conservatively assumes that no
+patterns have a proper bounded recursion, and will fail if recursion is
+detected. A pattern that is known to have proper support for handling recursion
+can signal this by calling `setHasBoundedRewriteRecursion` when initializing the
+pattern. This will signal to the pattern driver that recursive application of
+this pattern may happen, and the pattern is equipped to safely handle it.
+
+### Debug Names and Labels
+
+To aid in debugging, patterns may specify: a debug name (via `setDebugName`),
+which should correspond to an identifier that uniquely identifies the specific
+pattern; and a set of debug labels (via `addDebugLabels`), which correspond to
+identifiers that uniquely identify groups of patterns. This information is used
+by various utilities to aid in the debugging of pattern rewrites, e.g. in debug
+logs, to provide pattern filtering, etc. A simple code example is shown below:
+
+```c++
+class MyPattern : public RewritePattern {
+public:
+  /// Inherit constructors from RewritePattern.
+  using RewritePattern::RewritePattern;
+
+  void initialize() {
+    setDebugName("MyPattern");
+    addDebugLabels("MyRewritePass");
+  }
+
+  // ...
+};
+
+void populateMyPatterns(RewritePatternSet &patterns, MLIRContext *ctx) {
+  // Debug labels may also be attached to patterns during insertion. This allows
+  // for easily attaching common labels to groups of patterns.
+  patterns.addWithLabel<MyPattern, ...>("MyRewritePatterns", ctx);
+}
+```
+
+### Initialization
+
+Several pieces of pattern state require explicit initialization by the pattern,
+for example setting `setHasBoundedRewriteRecursion` if a pattern safely handles
+recursive application. This pattern state can be initialized either in the
+constructor of the pattern or via the utility `initialize` hook. Using the
+`initialize` hook removes the need to redefine pattern constructors just to
+inject additional pattern state initialization. An example is shown below:
+
+```c++
+class MyPattern : public RewritePattern {
+public:
+  /// Inherit the constructors from RewritePattern.
+  using RewritePattern::RewritePattern;
+
+  /// Initialize the pattern.
+  void initialize() {
+    /// Signal that this pattern safely handles recursive application.
+    setHasBoundedRewriteRecursion();
+  }
+
+  // ...
+};
+```
+
+### Construction
+
+Constructing a RewritePattern should be performed by using the static
+`RewritePattern::create<T>` utility method. This method ensures that the pattern
+is properly initialized and prepared for insertion into a `RewritePatternSet`.
+
+## Pattern Rewriter
 
 A `PatternRewriter` is a special class that allows for a pattern to communicate
 with the driver of pattern application. As noted above, *all* IR mutations,
@@ -114,7 +194,7 @@ including creations, are required to be performed via the `PatternRewriter`
 class. This is required because the underlying pattern driver may have state
 that would be invalidated when a mutation takes place. Examples of some of the
 more prevalent `PatternRewriter` API is shown below, please refer to the
-[class documentation](https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/IR/PatternMatch.h#L235)
+[class documentation](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/PatternMatch.h#L235)
 for a more up-to-date listing of the available API:
 
 *   Erase an Operation : `eraseOp`
@@ -154,10 +234,10 @@ creation, as well as many useful attribute and type construction methods.
 After a set of patterns have been defined, they are collected and provided to a
 specific driver for application. A driver consists of several high levels parts:
 
-*   Input `OwningRewritePatternList`
+*   Input `RewritePatternSet`
 
 The input patterns to a driver are provided in the form of an
-`OwningRewritePatternList`. This class provides a simplified API for building a
+`RewritePatternSet`. This class provides a simplified API for building a
 list of patterns.
 
 *   Driver-specific `PatternRewriter`
@@ -173,11 +253,11 @@ mutation directly.
 Each driver is responsible for defining its own operation visitation order as
 well as pattern cost model, but the final application is performed via a
 `PatternApplicator` class. This class takes as input the
-`OwningRewritePatternList` and transforms the patterns based upon a provided
-cost model. This cost model computes a final benefit for a given rewrite
-pattern, using whatever driver specific information necessary. After a cost
-model has been computed, the driver may begin to match patterns against
-operations using `PatternApplicator::matchAndRewrite`.
+`RewritePatternSet` and transforms the patterns based upon a provided
+cost model. This cost model computes a final benefit for a given pattern, using
+whatever driver specific information necessary. After a cost model has been
+computed, the driver may begin to match patterns against operations using
+`PatternApplicator::matchAndRewrite`.
 
 An example is shown below:
 
@@ -189,8 +269,8 @@ public:
 };
 
 /// Populate the pattern list.
-void collectMyPatterns(OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<MyPattern>(/*benefit=*/1, ctx);
+void collectMyPatterns(RewritePatternSet &patterns, MLIRContext *ctx) {
+  patterns.add<MyPattern>(/*benefit=*/1, ctx);
 }
 
 /// Define a custom PatternRewriter for use by the driver.
@@ -203,13 +283,13 @@ public:
 
 /// Apply the custom driver to `op`.
 void applyMyPatternDriver(Operation *op,
-                          const OwningRewritePatternList &patterns) {
+                          const RewritePatternSet &patterns) {
   // Initialize the custom PatternRewriter.
   MyPatternRewriter rewriter(op->getContext());
 
   // Create the applicator and apply our cost model.
   PatternApplicator applicator(patterns);
-  applicator.applyCostModel([](const RewritePattern &pattern) {
+  applicator.applyCostModel([](const Pattern &pattern) {
     // Apply a default cost model.
     // Note: This is just for demonstration, if the default cost model is truly
     //       desired `applicator.applyDefaultCostModel()` should be used
@@ -238,12 +318,12 @@ between, and within dialects using a concept of "legality". This framework
 allows for transforming illegal operations to those supported by a provided
 conversion target, via a set of pattern-based operation rewriting patterns. This
 framework also provides support for type conversions. More information on this
-driver can be found [here](DialectConversion.nd).
+driver can be found [here](DialectConversion.md).
 
 ### Greedy Pattern Rewrite Driver
 
-This driver performs a post order traversal over the provided operations and
-greedily applies the patterns that locally have the most benefit. The benefit of
+This driver walks the provided operations and greedily applies the patterns that
+locally have the most benefit. The benefit of
 a pattern is decided solely by the benefit specified on the pattern, and the
 relative order of the pattern within the pattern list (when two patterns have
 the same local benefit). Patterns are iteratively applied to operations until a
@@ -252,5 +332,99 @@ used via the following: `applyPatternsAndFoldGreedily` and
 `applyOpPatternsAndFold`. The latter of which only applies patterns to the
 provided operation, and will not traverse the IR.
 
+The driver is configurable and supports two modes: 1) you may opt-in to a
+"top-down" traversal, which seeds the worklist with each operation top down and
+in a pre-order over the region tree.  This is generally more efficient in
+compile time.  2) the default is a "bottom up" traversal, which builds the
+initial worklist with a postorder traversal of the region tree.  This may
+match larger patterns with ambiguous pattern sets.
+
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
-[pass](Passes.md#-canonicalize-canonicalize-operations) in MLIR.
+[pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
+
+## Debugging
+
+### Pattern Filtering
+
+To simplify test case definition and reduction, the `FrozenRewritePatternSet`
+class provides built-in support for filtering which patterns should be provided
+to the pattern driver for application. Filtering behavior is specified by
+providing a `disabledPatterns` and `enabledPatterns` list when constructing the
+`FrozenRewritePatternSet`. The `disabledPatterns` list should contain a set of
+debug names or labels for patterns that are disabled during pattern application,
+i.e. which patterns should be filtered out. The `enabledPatterns` list should
+contain a set of debug names or labels for patterns that are enabled during
+pattern application, patterns that do not satisfy this constraint are filtered
+out. Note that patterns specified by the `disabledPatterns` list will be
+filtered out even if they match criteria in the `enabledPatterns` list. An
+example is shown below:
+
+```c++
+void MyPass::initialize(MLIRContext *context) {
+  // No patterns are explicitly disabled.
+  SmallVector<std::string> disabledPatterns;
+  // Enable only patterns with a debug name or label of `MyRewritePatterns`.
+  SmallVector<std::string> enabledPatterns(1, "MyRewritePatterns");
+
+  RewritePatternSet rewritePatterns(context);
+  // ...
+  frozenPatterns = FrozenRewritePatternSet(rewritePatterns, disabledPatterns,
+                                           enabledPatterns);
+}
+```
+
+### Common Pass Utilities
+
+Passes that utilize rewrite patterns should aim to provide a common set of
+options and toggles to simplify the debugging experience when switching between
+different passes/projects/etc. To aid in this endeavor, MLIR provides a common
+set of utilities that can be easily included when defining a custom pass. These
+are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
+
+```tablegen
+def MyRewritePass : Pass<"..."> {
+  let summary = "...";
+  let constructor = "createMyRewritePass()";
+
+  // Inherit the common pattern rewrite options from `RewritePassUtils`.
+  let options = RewritePassUtils.options;
+}
+```
+
+#### Rewrite Pass Options
+
+This section documents common pass options that are useful for controlling the
+behavior of rewrite pattern application.
+
+##### Pattern Filtering
+
+Two common pattern filtering options are exposed, `disable-patterns` and
+`enable-patterns`, matching the behavior of the `disabledPatterns` and
+`enabledPatterns` lists described in the [Pattern Filtering](#pattern-filtering)
+section above. A snippet of the tablegen definition of these options is shown
+below:
+
+```tablegen
+ListOption<"disabledPatterns", "disable-patterns", "std::string",
+           "Labels of patterns that should be filtered out during application",
+           "llvm::cl::MiscFlags::CommaSeparated">,
+ListOption<"enabledPatterns", "enable-patterns", "std::string",
+           "Labels of patterns that should be used during application, all "
+           "other patterns are filtered out",
+           "llvm::cl::MiscFlags::CommaSeparated">,
+```
+
+These options may be used to provide filtering behavior when constructing any
+`FrozenRewritePatternSet`s within the pass:
+
+```c++
+void MyRewritePass::initialize(MLIRContext *context) {
+  RewritePatternSet rewritePatterns(context);
+  // ...
+
+  // When constructing the `FrozenRewritePatternSet`, we provide the filter
+  // list options.
+  frozenPatterns = FrozenRewritePatternSet(rewritePatterns, disabledPatterns,
+                                           enabledPatterns);
+}
+```

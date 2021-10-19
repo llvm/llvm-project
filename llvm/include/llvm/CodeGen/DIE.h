@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
-#define LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#ifndef LLVM_CODEGEN_DIE_H
+#define LLVM_CODEGEN_DIE_H
 
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -247,6 +247,7 @@ public:
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
+  uint64_t getIndex() const { return Index; }
 };
 
 //===--------------------------------------------------------------------===//
@@ -345,6 +346,22 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
+/// A BaseTypeRef DIE.
+class DIEAddrOffset {
+  DIEInteger Addr;
+  DIEDelta Offset;
+
+public:
+  explicit DIEAddrOffset(uint64_t Idx, const MCSymbol *Hi, const MCSymbol *Lo)
+      : Addr(Idx), Offset(Hi, Lo) {}
+
+  void emitValue(const AsmPrinter *AP, dwarf::Form Form) const;
+  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
+
+  void print(raw_ostream &O) const;
+};
+
+//===--------------------------------------------------------------------===//
 /// A debug information entry value. Some of these roughly correlate
 /// to DWARF attribute classes.
 class DIEBlock;
@@ -367,9 +384,10 @@ private:
   ///
   /// All values that aren't standard layout (or are larger than 8 bytes)
   /// should be stored by reference instead of by value.
-  using ValTy = AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
-                                      DIEDelta *, DIEEntry, DIEBlock *,
-                                      DIELoc *, DIELocList, DIEBaseTypeRef *>;
+  using ValTy =
+      AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
+                            DIEDelta *, DIEEntry, DIEBlock *, DIELoc *,
+                            DIELocList, DIEBaseTypeRef *, DIEAddrOffset *>;
 
   static_assert(sizeof(ValTy) <= sizeof(uint64_t) ||
                     sizeof(ValTy) <= sizeof(void *),
@@ -382,12 +400,12 @@ private:
     static_assert(std::is_standard_layout<T>::value ||
                       std::is_pointer<T>::value,
                   "Expected standard layout or pointer");
-    new (reinterpret_cast<void *>(Val.buffer)) T(V);
+    new (reinterpret_cast<void *>(&Val)) T(V);
   }
 
-  template <class T> T *get() { return reinterpret_cast<T *>(Val.buffer); }
+  template <class T> T *get() { return reinterpret_cast<T *>(&Val); }
   template <class T> const T *get() const {
-    return reinterpret_cast<const T *>(Val.buffer);
+    return reinterpret_cast<const T *>(&Val);
   }
   template <class T> void destruct() { get<T>()->~T(); }
 
@@ -589,7 +607,6 @@ public:
     T &operator*() const { return *static_cast<T *>(N); }
 
     bool operator==(const iterator &X) const { return N == X.N; }
-    bool operator!=(const iterator &X) const { return N != X.N; }
   };
 
   class const_iterator
@@ -612,7 +629,6 @@ public:
     const T &operator*() const { return *static_cast<const T *>(N); }
 
     bool operator==(const const_iterator &X) const { return N == X.N; }
-    bool operator!=(const const_iterator &X) const { return N != X.N; }
   };
 
   iterator begin() {
@@ -788,7 +804,7 @@ public:
 
   /// Get the absolute offset within the .debug_info or .debug_types section
   /// for this DIE.
-  unsigned getDebugSectionOffset() const;
+  uint64_t getDebugSectionOffset() const;
 
   /// Compute the offset of this DIE and all its children.
   ///
@@ -890,8 +906,8 @@ public:
   ///
   /// \returns Section pointer which can be NULL.
   MCSection *getSection() const { return Section; }
-  void setDebugSectionOffset(unsigned O) { Offset = O; }
-  unsigned getDebugSectionOffset() const { return Offset; }
+  void setDebugSectionOffset(uint64_t O) { Offset = O; }
+  uint64_t getDebugSectionOffset() const { return Offset; }
   DIE &getUnitDie() { return Die; }
   const DIE &getUnitDie() const { return Die; }
 };
@@ -973,4 +989,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ASMPRINTER_DIE_H
+#endif // LLVM_CODEGEN_DIE_H

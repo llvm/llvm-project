@@ -16,8 +16,7 @@
 
 #include <new>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   assert(argc == 2);
   if (!strcmp(argv[1], "gooddel")) {
     long long *p = new long long;

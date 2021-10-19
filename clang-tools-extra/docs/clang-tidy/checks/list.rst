@@ -30,6 +30,11 @@ Clang-Tidy Checks
    `abseil-time-comparison <abseil-time-comparison.html>`_, "Yes"
    `abseil-time-subtraction <abseil-time-subtraction.html>`_, "Yes"
    `abseil-upgrade-duration-conversions <abseil-upgrade-duration-conversions.html>`_, "Yes"
+   `altera-id-dependent-backward-branch <altera-id-dependent-backward-branch.html>`_,
+   `altera-kernel-name-restriction <altera-kernel-name-restriction.html>`_,
+   `altera-single-work-item-barrier <altera-single-work-item-barrier.html>`_,
+   `altera-struct-pack-align <altera-struct-pack-align.html>`_, "Yes"
+   `altera-unroll-loops <altera-unroll-loops.html>`_,
    `android-cloexec-accept <android-cloexec-accept.html>`_, "Yes"
    `android-cloexec-accept4 <android-cloexec-accept4.html>`_,
    `android-cloexec-creat <android-cloexec-creat.html>`_, "Yes"
@@ -54,10 +59,12 @@ Clang-Tidy Checks
    `bugprone-copy-constructor-init <bugprone-copy-constructor-init.html>`_, "Yes"
    `bugprone-dangling-handle <bugprone-dangling-handle.html>`_,
    `bugprone-dynamic-static-initializers <bugprone-dynamic-static-initializers.html>`_,
+   `bugprone-easily-swappable-parameters <bugprone-easily-swappable-parameters.html>`_,
    `bugprone-exception-escape <bugprone-exception-escape.html>`_,
    `bugprone-fold-init-type <bugprone-fold-init-type.html>`_,
    `bugprone-forward-declaration-namespace <bugprone-forward-declaration-namespace.html>`_,
    `bugprone-forwarding-reference-overload <bugprone-forwarding-reference-overload.html>`_,
+   `bugprone-implicit-widening-of-multiplication-result <bugprone-implicit-widening-of-multiplication-result.html>`_, "Yes"
    `bugprone-inaccurate-erase <bugprone-inaccurate-erase.html>`_, "Yes"
    `bugprone-incorrect-roundings <bugprone-incorrect-roundings.html>`_,
    `bugprone-infinite-loop <bugprone-infinite-loop.html>`_,
@@ -76,6 +83,7 @@ Clang-Tidy Checks
    `bugprone-posix-return <bugprone-posix-return.html>`_, "Yes"
    `bugprone-redundant-branch-condition <bugprone-redundant-branch-condition.html>`_, "Yes"
    `bugprone-reserved-identifier <bugprone-reserved-identifier.html>`_, "Yes"
+   `bugprone-signal-handler <bugprone-signal-handler.html>`_,
    `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `bugprone-sizeof-container <bugprone-sizeof-container.html>`_,
    `bugprone-sizeof-expression <bugprone-sizeof-expression.html>`_,
@@ -85,6 +93,7 @@ Clang-Tidy Checks
    `bugprone-string-literal-with-embedded-nul <bugprone-string-literal-with-embedded-nul.html>`_,
    `bugprone-suspicious-enum-usage <bugprone-suspicious-enum-usage.html>`_,
    `bugprone-suspicious-include <bugprone-suspicious-include.html>`_,
+   `bugprone-suspicious-memory-comparison <bugprone-suspicious-memory-comparison.html>`_,
    `bugprone-suspicious-memset-usage <bugprone-suspicious-memset-usage.html>`_, "Yes"
    `bugprone-suspicious-missing-comma <bugprone-suspicious-missing-comma.html>`_,
    `bugprone-suspicious-semicolon <bugprone-suspicious-semicolon.html>`_, "Yes"
@@ -95,6 +104,7 @@ Clang-Tidy Checks
    `bugprone-too-small-loop-variable <bugprone-too-small-loop-variable.html>`_,
    `bugprone-undefined-memory-manipulation <bugprone-undefined-memory-manipulation.html>`_,
    `bugprone-undelegated-constructor <bugprone-undelegated-constructor.html>`_,
+   `bugprone-unhandled-exception-at-new <bugprone-unhandled-exception-at-new.html>`_,
    `bugprone-unhandled-self-assignment <bugprone-unhandled-self-assignment.html>`_,
    `bugprone-unused-raii <bugprone-unused-raii.html>`_, "Yes"
    `bugprone-unused-return-value <bugprone-unused-return-value.html>`_,
@@ -108,7 +118,9 @@ Clang-Tidy Checks
    `cert-err52-cpp <cert-err52-cpp.html>`_,
    `cert-err58-cpp <cert-err58-cpp.html>`_,
    `cert-err60-cpp <cert-err60-cpp.html>`_,
+   `cert-exp42-c <cert-exp42-c.html>`_,
    `cert-flp30-c <cert-flp30-c.html>`_,
+   `cert-flp37-c <cert-flp37-c.html>`_,
    `cert-mem57-cpp <cert-mem57-cpp.html>`_,
    `cert-msc50-cpp <cert-msc50-cpp.html>`_,
    `cert-msc51-cpp <cert-msc51-cpp.html>`_,
@@ -134,6 +146,8 @@ Clang-Tidy Checks
    `clang-analyzer-valist.CopyToSelf <clang-analyzer-valist.CopyToSelf.html>`_,
    `clang-analyzer-valist.Uninitialized <clang-analyzer-valist.Uninitialized.html>`_,
    `clang-analyzer-valist.Unterminated <clang-analyzer-valist.Unterminated.html>`_,
+   `concurrency-mt-unsafe <concurrency-mt-unsafe.html>`_,
+   `concurrency-thread-canceltype-asynchronous <concurrency-thread-canceltype-asynchronous.html>`_,
    `cppcoreguidelines-avoid-goto <cppcoreguidelines-avoid-goto.html>`_,
    `cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines-avoid-non-const-global-variables.html>`_,
    `cppcoreguidelines-init-variables <cppcoreguidelines-init-variables.html>`_, "Yes"
@@ -142,7 +156,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-narrowing-conversions <cppcoreguidelines-narrowing-conversions.html>`_,
    `cppcoreguidelines-no-malloc <cppcoreguidelines-no-malloc.html>`_,
    `cppcoreguidelines-owning-memory <cppcoreguidelines-owning-memory.html>`_,
-   `cppcoreguidelines-prefer-member-initializer <cppcoreguidelines-prefer-member-initializer.html>`_,
+   `cppcoreguidelines-prefer-member-initializer <cppcoreguidelines-prefer-member-initializer.html>`_, "Yes"
    `cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines-pro-bounds-array-to-pointer-decay.html>`_,
    `cppcoreguidelines-pro-bounds-constant-array-index <cppcoreguidelines-pro-bounds-constant-array-index.html>`_, "Yes"
    `cppcoreguidelines-pro-bounds-pointer-arithmetic <cppcoreguidelines-pro-bounds-pointer-arithmetic.html>`_,
@@ -155,6 +169,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-pro-type-vararg <cppcoreguidelines-pro-type-vararg.html>`_,
    `cppcoreguidelines-slicing <cppcoreguidelines-slicing.html>`_,
    `cppcoreguidelines-special-member-functions <cppcoreguidelines-special-member-functions.html>`_,
+   `cppcoreguidelines-virtual-class-destructor <cppcoreguidelines-virtual-class-destructor.html>`_, "Yes"
    `darwin-avoid-spinlock <darwin-avoid-spinlock.html>`_,
    `darwin-dispatch-once-nonstatic <darwin-dispatch-once-nonstatic.html>`_, "Yes"
    `fuchsia-default-arguments-calls <fuchsia-default-arguments-calls.html>`_,
@@ -179,7 +194,6 @@ Clang-Tidy Checks
    `google-readability-todo <google-readability-todo.html>`_,
    `google-runtime-int <google-runtime-int.html>`_,
    `google-runtime-operator <google-runtime-operator.html>`_,
-   `google-runtime-references <google-runtime-references.html>`_,
    `google-upgrade-googletest-case <google-upgrade-googletest-case.html>`_, "Yes"
    `hicpp-avoid-goto <hicpp-avoid-goto.html>`_,
    `hicpp-exception-baseclass <hicpp-exception-baseclass.html>`_,
@@ -259,8 +273,9 @@ Clang-Tidy Checks
    `performance-inefficient-string-concatenation <performance-inefficient-string-concatenation.html>`_,
    `performance-inefficient-vector-operation <performance-inefficient-vector-operation.html>`_, "Yes"
    `performance-move-const-arg <performance-move-const-arg.html>`_, "Yes"
-   `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
+   `performance-move-constructor-init <performance-move-constructor-init.html>`_,
    `performance-no-automatic-move <performance-no-automatic-move.html>`_,
+   `performance-no-int-to-ptr <performance-no-int-to-ptr.html>`_,
    `performance-noexcept-move-constructor <performance-noexcept-move-constructor.html>`_, "Yes"
    `performance-trivially-destructible <performance-trivially-destructible.html>`_, "Yes"
    `performance-type-promotion-in-math-fn <performance-type-promotion-in-math-fn.html>`_, "Yes"
@@ -274,9 +289,10 @@ Clang-Tidy Checks
    `readability-container-size-empty <readability-container-size-empty.html>`_, "Yes"
    `readability-convert-member-functions-to-static <readability-convert-member-functions-to-static.html>`_,
    `readability-delete-null-pointer <readability-delete-null-pointer.html>`_, "Yes"
-   `readability-deleted-default <readability-deleted-default.html>`_,
    `readability-else-after-return <readability-else-after-return.html>`_, "Yes"
+   `readability-function-cognitive-complexity <readability-function-cognitive-complexity.html>`_,
    `readability-function-size <readability-function-size.html>`_,
+   `readability-identifier-length <readability-identifier-length.html>`_,
    `readability-identifier-naming <readability-identifier-naming.html>`_, "Yes"
    `readability-implicit-bool-conversion <readability-implicit-bool-conversion.html>`_, "Yes"
    `readability-inconsistent-declaration-parameter-name <readability-inconsistent-declaration-parameter-name.html>`_, "Yes"
@@ -302,6 +318,7 @@ Clang-Tidy Checks
    `readability-static-accessed-through-instance <readability-static-accessed-through-instance.html>`_, "Yes"
    `readability-static-definition-in-anonymous-namespace <readability-static-definition-in-anonymous-namespace.html>`_, "Yes"
    `readability-string-compare <readability-string-compare.html>`_, "Yes"
+   `readability-suspicious-call-argument <readability-suspicious-call-argument.html>`_,
    `readability-uniqueptr-delete-release <readability-uniqueptr-delete-release.html>`_, "Yes"
    `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
    `readability-use-anyofallof <readability-use-anyofallof.html>`_,
@@ -324,9 +341,11 @@ Clang-Tidy Checks
    `cert-fio38-c <cert-fio38-c.html>`_, `misc-non-copyable-objects <misc-non-copyable-objects.html>`_,
    `cert-msc30-c <cert-msc30-c.html>`_, `cert-msc50-cpp <cert-msc50-cpp.html>`_,
    `cert-msc32-c <cert-msc32-c.html>`_, `cert-msc51-cpp <cert-msc51-cpp.html>`_,
-   `cert-oop11-cpp <cert-oop11-cpp.html>`_, `performance-move-constructor-init <performance-move-constructor-init.html>`_, "Yes"
+   `cert-oop11-cpp <cert-oop11-cpp.html>`_, `performance-move-constructor-init <performance-move-constructor-init.html>`_,
    `cert-oop54-cpp <cert-oop54-cpp.html>`_, `bugprone-unhandled-self-assignment <bugprone-unhandled-self-assignment.html>`_,
    `cert-pos44-c <cert-pos44-c.html>`_, `bugprone-bad-signal-to-kill-thread <bugprone-bad-signal-to-kill-thread.html>`_,
+   `cert-pos47-c <cert-pos47-c.html>`_, `concurrency-thread-canceltype-asynchronous <concurrency-thread-canceltype-asynchronous.html>`_,
+   `cert-sig30-c <cert-sig30-c.html>`_, `bugprone-signal-handler <bugprone-signal-handler.html>`_,
    `cert-str34-c <cert-str34-c.html>`_, `bugprone-signed-char-misuse <bugprone-signed-char-misuse.html>`_,
    `clang-analyzer-core.CallAndMessage <clang-analyzer-core.CallAndMessage.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,
    `clang-analyzer-core.DivideZero <clang-analyzer-core.DivideZero.html>`_, `Clang Static Analyzer <https://clang.llvm.org/docs/analyzer/checkers.html>`_,

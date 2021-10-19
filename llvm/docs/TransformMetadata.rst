@@ -196,7 +196,7 @@ is transformed into (using an unroll factor of 4):
 .. code-block:: c
 
     int i = 0;
-    for (; i + 3 < n; i+=4) // unrolled loop
+    for (; i + 3 < n; i+=4) { // unrolled loop
       Stmt(i);
       Stmt(i+1);
       Stmt(i+2);

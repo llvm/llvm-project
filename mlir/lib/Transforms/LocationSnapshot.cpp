@@ -22,11 +22,11 @@ using namespace mlir;
 /// NameLoc with the given tag as the name, and then fused with the existing
 /// locations. Otherwise, the existing locations are replaced.
 static void generateLocationsFromIR(raw_ostream &os, StringRef fileName,
-                                    Operation *op, OpPrintingFlags flags,
+                                    Operation *op, const OpPrintingFlags &flags,
                                     StringRef tag) {
   // Print the IR to the stream, and collect the raw line+column information.
   AsmState::LocationMap opToLineCol;
-  AsmState state(op, &opToLineCol);
+  AsmState state(op, flags, &opToLineCol);
   op->print(os, state, flags);
 
   Builder builder(op->getContext());
@@ -44,8 +44,7 @@ static void generateLocationsFromIR(raw_ostream &os, StringRef fileName,
     if (it == opToLineCol.end())
       return;
     const std::pair<unsigned, unsigned> &lineCol = it->second;
-    auto newLoc =
-        builder.getFileLineColLoc(file, lineCol.first, lineCol.second);
+    auto newLoc = FileLineColLoc::get(file, lineCol.first, lineCol.second);
 
     // If we don't have a tag, set the location directly
     if (!tagIdentifier) {

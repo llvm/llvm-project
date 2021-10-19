@@ -17,13 +17,10 @@
 #include <system_error>
 #include <string>
 #include <cassert>
-#include <clocale>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::setlocale (LC_ALL, "C");
+int main(int, char**) {
     std::string what_arg("test message");
     std::system_error se(make_error_code(std::errc::not_a_directory), what_arg.c_str());
     assert(se.code() == std::make_error_code(std::errc::not_a_directory));
@@ -31,5 +28,5 @@ int main(int, char**)
     assert(what_message.find(what_arg) != std::string::npos);
     assert(what_message.find("Not a directory") != std::string::npos);
 
-  return 0;
+    return 0;
 }

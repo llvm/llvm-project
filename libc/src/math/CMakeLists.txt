@@ -1,523 +1,180 @@
-add_object_library(
-  math_utils
-  SRCS
-    math_utils.cpp
-  HDRS
-    math_utils.h
-  DEPENDS
-    libc.include.errno
-    libc.include.math
-    libc.src.errno.__errno_location
-)
+add_subdirectory(generic)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+endif()
 
-add_object_library(
-  sincosf_utils
-  HDRS
-    sincosf_utils.h
-  SRCS
-    sincosf_data.cpp
-  DEPENDS
-    .math_utils
-)
+function(add_math_entrypoint_object name)
+  # We prefer machine specific implementation if available. Hence we check
+  # that first and retrun early if we are able to add an alias target for the
+  # machine specific implementation.
+  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
+  if(TARGET ${fq_machine_specific_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_ARCHITECTURE}.${name}
+    )
+    return()
+  endif()
 
-add_entrypoint_object(
-  cosf
-  SRCS
-    cosf.cpp
-  HDRS
-    cosf.h
-  DEPENDS
-    .sincosf_utils
-    libc.include.math
-    libc.src.errno.__errno_location
-)
+  get_fq_target_name("generic.${name}" fq_generic_target_name)
+  if(TARGET ${fq_generic_target_name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .generic.${name}
+    )
+    return()
+  endif()
 
-add_entrypoint_object(
-  sinf
-  SRCS
-    sinf.cpp
-  HDRS
-    sinf.h
-  DEPENDS
-    .sincosf_utils
-    libc.include.math
-    libc.src.errno.__errno_location
-)
+  # Add a dummy entrypoint object for missing implementations. They will be skipped
+  # anyway as there will be no entry for them in the target entrypoints list.
+  add_entrypoint_object(
+    ${name}
+    SRCS
+      dummy_srcs
+    HDRS
+      dummy_hdrs
+  )
+endfunction()
 
 add_entrypoint_object(
-  sincosf
+  fmaf
   SRCS
-    sincosf.cpp
+    fmaf.cpp
   HDRS
-    sincosf.h
+    fmaf.h
   DEPENDS
-    .sincosf_utils
-    libc.include.math
-    libc.src.errno.__errno_location
-)
-
-add_entrypoint_object(
-  fabs
-  SRCS
-    fabs.cpp
-  HDRS
-    fabs.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
 
 add_entrypoint_object(
-  fabsf
+  fma
   SRCS
-    fabsf.cpp
+    fma.cpp
   HDRS
-    fabsf.h
+    fma.h
   DEPENDS
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
 )
 
-add_entrypoint_object(
-  fabsl
-  SRCS
-    fabsl.cpp
-  HDRS
-    fabsl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(ceil)
+add_math_entrypoint_object(ceilf)
+add_math_entrypoint_object(ceill)
 
-add_entrypoint_object(
-  trunc
-  SRCS
-    trunc.cpp
-  HDRS
-    trunc.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(copysign)
+add_math_entrypoint_object(copysignf)
+add_math_entrypoint_object(copysignl)
 
-add_entrypoint_object(
-  truncf
-  SRCS
-    truncf.cpp
-  HDRS
-    truncf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(cos)
+add_math_entrypoint_object(cosf)
 
-add_entrypoint_object(
-  truncl
-  SRCS
-    truncl.cpp
-  HDRS
-    truncl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(expf)
 
-add_entrypoint_object(
-  ceil
-  SRCS
-    ceil.cpp
-  HDRS
-    ceil.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(exp2f)
 
-add_entrypoint_object(
-  ceilf
-  SRCS
-    ceilf.cpp
-  HDRS
-    ceilf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(expm1f)
 
-add_entrypoint_object(
-  ceill
-  SRCS
-    ceill.cpp
-  HDRS
-    ceill.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(fabs)
+add_math_entrypoint_object(fabsf)
+add_math_entrypoint_object(fabsl)
 
-add_entrypoint_object(
-  floor
-  SRCS
-    floor.cpp
-  HDRS
-    floor.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(fdim)
+add_math_entrypoint_object(fdimf)
+add_math_entrypoint_object(fdiml)
 
-add_entrypoint_object(
-  floorf
-  SRCS
-    floorf.cpp
-  HDRS
-    floorf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(floor)
+add_math_entrypoint_object(floorf)
+add_math_entrypoint_object(floorl)
 
-add_entrypoint_object(
-  floorl
-  SRCS
-    floorl.cpp
-  HDRS
-    floorl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(fmax)
+add_math_entrypoint_object(fmaxf)
+add_math_entrypoint_object(fmaxl)
 
-add_entrypoint_object(
-  round
-  SRCS
-    round.cpp
-  HDRS
-    round.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(fmin)
+add_math_entrypoint_object(fminf)
+add_math_entrypoint_object(fminl)
 
-add_entrypoint_object(
-  roundf
-  SRCS
-    roundf.cpp
-  HDRS
-    roundf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(frexp)
+add_math_entrypoint_object(frexpf)
+add_math_entrypoint_object(frexpl)
 
-add_entrypoint_object(
-  roundl
-  SRCS
-    roundl.cpp
-  HDRS
-    roundl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(hypot)
+add_math_entrypoint_object(hypotf)
 
-add_object_library(
-  exp_utils
-  HDRS
-    exp_utils.h
-  SRCS
-    exp_utils.cpp
-  DEPENDS
-    .math_utils
-)
+add_math_entrypoint_object(ilogb)
+add_math_entrypoint_object(ilogbf)
+add_math_entrypoint_object(ilogbl)
 
-add_entrypoint_object(
-  expf
-  SRCS
-    expf.cpp
-  HDRS
-    expf.h
-  DEPENDS
-    .exp_utils
-    .math_utils
-    libc.include.math
-)
+add_math_entrypoint_object(ldexp)
+add_math_entrypoint_object(ldexpf)
+add_math_entrypoint_object(ldexpl)
 
-add_entrypoint_object(
-  exp2f
-  SRCS
-    exp2f.cpp
-  HDRS
-    exp2f.h
-  DEPENDS
-    .exp_utils
-    .math_utils
-    libc.include.math
-)
+add_math_entrypoint_object(logb)
+add_math_entrypoint_object(logbf)
+add_math_entrypoint_object(logbl)
 
-add_entrypoint_object(
-  copysign
-  SRCS
-    copysign.cpp
-  HDRS
-    copysign.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(llrint)
+add_math_entrypoint_object(llrintf)
+add_math_entrypoint_object(llrintl)
 
-add_entrypoint_object(
-  copysignf
-  SRCS
-    copysignf.cpp
-  HDRS
-    copysignf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(llround)
+add_math_entrypoint_object(llroundf)
+add_math_entrypoint_object(llroundl)
 
-add_entrypoint_object(
-  copysignl
-  SRCS
-    copysignl.cpp
-  HDRS
-    copysignl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(lrint)
+add_math_entrypoint_object(lrintf)
+add_math_entrypoint_object(lrintl)
 
-add_entrypoint_object(
-  frexp
-  SRCS
-    frexp.cpp
-  HDRS
-    frexp.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(lround)
+add_math_entrypoint_object(lroundf)
+add_math_entrypoint_object(lroundl)
 
-add_entrypoint_object(
-  frexpf
-  SRCS
-    frexpf.cpp
-  HDRS
-    frexpf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(modf)
+add_math_entrypoint_object(modff)
+add_math_entrypoint_object(modfl)
 
-add_entrypoint_object(
-  frexpl
-  SRCS
-    frexpl.cpp
-  HDRS
-    frexpl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(nearbyint)
+add_math_entrypoint_object(nearbyintf)
+add_math_entrypoint_object(nearbyintl)
 
-add_entrypoint_object(
-  logb
-  SRCS
-    logb.cpp
-  HDRS
-    logb.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(nextafter)
+add_math_entrypoint_object(nextafterf)
+add_math_entrypoint_object(nextafterl)
 
-add_entrypoint_object(
-  logbf
-  SRCS
-    logbf.cpp
-  HDRS
-    logbf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(remainder)
+add_math_entrypoint_object(remainderf)
+add_math_entrypoint_object(remainderl)
 
-add_entrypoint_object(
-  logbl
-  SRCS
-    logbl.cpp
-  HDRS
-    logbl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(remquo)
+add_math_entrypoint_object(remquof)
+add_math_entrypoint_object(remquol)
 
-add_entrypoint_object(
-  modf
-  SRCS
-    modf.cpp
-  HDRS
-    modf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(rint)
+add_math_entrypoint_object(rintf)
+add_math_entrypoint_object(rintl)
 
-add_entrypoint_object(
-  modff
-  SRCS
-    modff.cpp
-  HDRS
-    modff.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(round)
+add_math_entrypoint_object(roundf)
+add_math_entrypoint_object(roundl)
 
-add_entrypoint_object(
-  modfl
-  SRCS
-    modfl.cpp
-  HDRS
-    modfl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(sincosf)
 
-add_entrypoint_object(
-  fmin
-  SRCS
-    fmin.cpp
-  HDRS
-    fmin.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(sin)
+add_math_entrypoint_object(sinf)
 
-add_entrypoint_object(
-  fminf
-  SRCS
-    fminf.cpp
-  HDRS
-    fminf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(sqrt)
+add_math_entrypoint_object(sqrtf)
+add_math_entrypoint_object(sqrtl)
 
-add_entrypoint_object(
-  fminl
-  SRCS
-    fminl.cpp
-  HDRS
-    fminl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(tan)
 
-add_entrypoint_object(
-  fmax
-  SRCS
-    fmax.cpp
-  HDRS
-    fmax.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  fmaxf
-  SRCS
-    fmaxf.cpp
-  HDRS
-    fmaxf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  fmaxl
-  SRCS
-    fmaxl.cpp
-  HDRS
-    fmaxl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  sqrt
-  SRCS
-    sqrt.cpp
-  HDRS
-    sqrt.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  sqrtf
-  SRCS
-    sqrtf.cpp
-  HDRS
-    sqrtf.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
-
-add_entrypoint_object(
-  sqrtl
-  SRCS
-    sqrtl.cpp
-  HDRS
-    sqrtl.h
-  DEPENDS
-    libc.utils.FPUtil.fputil
-  COMPILE_OPTIONS
-    -O2
-)
+add_math_entrypoint_object(trunc)
+add_math_entrypoint_object(truncf)
+add_math_entrypoint_object(truncl)

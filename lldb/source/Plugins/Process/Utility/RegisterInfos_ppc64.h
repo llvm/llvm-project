@@ -8,7 +8,7 @@
 
 #ifdef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
-#include <stddef.h>
+#include <cstddef>
 
 // Computes the offset of the given GPR_PPC64 in the user data area.
 #define GPR_PPC64_OFFSET(regname) (offsetof(GPR_PPC64, regname))
@@ -31,7 +31,7 @@
                                           lldb_kind,                           \
                                           LLDB_INVALID_REGNUM,                 \
                                           gpr_##reg##_ppc64 },                 \
-                                          NULL, NULL, NULL, 0                  \
+                                          NULL, NULL,                          \
   }
 #define DEFINE_FPR_PPC64(reg, alt, lldb_kind)                                  \
   {                                                                            \
@@ -40,7 +40,7 @@
         {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
          ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
          fpr_##reg##_ppc64 },                                                  \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 #define DEFINE_VMX_PPC64(reg, lldb_kind)                                       \
   {                                                                            \
@@ -49,23 +49,23 @@
         {ppc64_dwarf::dwarf_##reg##_ppc64,                                     \
          ppc64_dwarf::dwarf_##reg##_ppc64, lldb_kind, LLDB_INVALID_REGNUM,     \
          vmx_##reg##_ppc64 },                                                  \
-         NULL, NULL, NULL, 0                                                   \
+         NULL, NULL,                                                           \
   }
 
 // General purpose registers.
 // EH_Frame, Generic, Process Plugin
 #define PPC64_REGS                                                             \
   DEFINE_GPR_PPC64(r0, NULL, LLDB_INVALID_REGNUM)                              \
-  , DEFINE_GPR_PPC64(r1, "sp", LLDB_REGNUM_GENERIC_SP),                        \
+  , DEFINE_GPR_PPC64(r1, NULL, LLDB_REGNUM_GENERIC_SP),                        \
       DEFINE_GPR_PPC64(r2, NULL, LLDB_INVALID_REGNUM),                         \
-      DEFINE_GPR_PPC64(r3, "arg1", LLDB_REGNUM_GENERIC_ARG1),                  \
-      DEFINE_GPR_PPC64(r4, "arg2", LLDB_REGNUM_GENERIC_ARG2),                  \
-      DEFINE_GPR_PPC64(r5, "arg3", LLDB_REGNUM_GENERIC_ARG3),                  \
-      DEFINE_GPR_PPC64(r6, "arg4", LLDB_REGNUM_GENERIC_ARG4),                  \
-      DEFINE_GPR_PPC64(r7, "arg5", LLDB_REGNUM_GENERIC_ARG5),                  \
-      DEFINE_GPR_PPC64(r8, "arg6", LLDB_REGNUM_GENERIC_ARG6),                  \
-      DEFINE_GPR_PPC64(r9, "arg7", LLDB_REGNUM_GENERIC_ARG7),                  \
-      DEFINE_GPR_PPC64(r10, "arg8", LLDB_REGNUM_GENERIC_ARG8),                 \
+      DEFINE_GPR_PPC64(r3, NULL, LLDB_REGNUM_GENERIC_ARG1),                    \
+      DEFINE_GPR_PPC64(r4, NULL, LLDB_REGNUM_GENERIC_ARG2),                    \
+      DEFINE_GPR_PPC64(r5, NULL, LLDB_REGNUM_GENERIC_ARG3),                    \
+      DEFINE_GPR_PPC64(r6, NULL, LLDB_REGNUM_GENERIC_ARG4),                    \
+      DEFINE_GPR_PPC64(r7, NULL, LLDB_REGNUM_GENERIC_ARG5),                    \
+      DEFINE_GPR_PPC64(r8, NULL, LLDB_REGNUM_GENERIC_ARG6),                    \
+      DEFINE_GPR_PPC64(r9, NULL, LLDB_REGNUM_GENERIC_ARG7),                    \
+      DEFINE_GPR_PPC64(r10, NULL, LLDB_REGNUM_GENERIC_ARG8),                   \
       DEFINE_GPR_PPC64(r11, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_GPR_PPC64(r12, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_GPR_PPC64(r13, NULL, LLDB_INVALID_REGNUM),                        \
@@ -87,12 +87,12 @@
       DEFINE_GPR_PPC64(r29, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_GPR_PPC64(r30, NULL, LLDB_INVALID_REGNUM),                        \
       DEFINE_GPR_PPC64(r31, NULL, LLDB_INVALID_REGNUM),                        \
-      DEFINE_GPR_PPC64(cr, "cr", LLDB_REGNUM_GENERIC_FLAGS),                   \
-      DEFINE_GPR_PPC64(msr, "msr", LLDB_INVALID_REGNUM),                       \
-      DEFINE_GPR_PPC64(xer, "xer", LLDB_INVALID_REGNUM),                       \
-      DEFINE_GPR_PPC64(lr, "lr", LLDB_REGNUM_GENERIC_RA),                      \
-      DEFINE_GPR_PPC64(ctr, "ctr", LLDB_INVALID_REGNUM),                       \
-      DEFINE_GPR_PPC64(pc, "pc", LLDB_REGNUM_GENERIC_PC),                      \
+      DEFINE_GPR_PPC64(cr, NULL, LLDB_REGNUM_GENERIC_FLAGS),                   \
+      DEFINE_GPR_PPC64(msr, NULL, LLDB_INVALID_REGNUM),                        \
+      DEFINE_GPR_PPC64(xer, NULL, LLDB_INVALID_REGNUM),                        \
+      DEFINE_GPR_PPC64(lr, NULL, LLDB_REGNUM_GENERIC_RA),                      \
+      DEFINE_GPR_PPC64(ctr, NULL, LLDB_INVALID_REGNUM),                        \
+      DEFINE_GPR_PPC64(pc, NULL, LLDB_REGNUM_GENERIC_PC),                      \
       DEFINE_FPR_PPC64(f0, NULL, LLDB_INVALID_REGNUM),                         \
       DEFINE_FPR_PPC64(f1, NULL, LLDB_INVALID_REGNUM),                         \
       DEFINE_FPR_PPC64(f2, NULL, LLDB_INVALID_REGNUM),                         \
@@ -136,8 +136,7 @@
         LLDB_INVALID_REGNUM, fpr_fpscr_ppc64},                                 \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},                                                                     \
+       },                                                                      \
       DEFINE_VMX_PPC64(vr0, LLDB_INVALID_REGNUM),                              \
       DEFINE_VMX_PPC64(vr1, LLDB_INVALID_REGNUM),                              \
       DEFINE_VMX_PPC64(vr2, LLDB_INVALID_REGNUM),                              \
@@ -180,8 +179,7 @@
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, vmx_vscr_ppc64},             \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},                                                                     \
+       },                                                                      \
       {"vrsave",                                                               \
        NULL,                                                                   \
        4,                                                                      \
@@ -193,8 +191,7 @@
         LLDB_INVALID_REGNUM, vmx_vrsave_ppc64},                                \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},  /* */
+       },  /* */
 
 typedef struct _GPR_PPC64 {
   uint64_t r0;

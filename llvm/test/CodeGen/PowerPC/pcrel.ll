@@ -8,13 +8,14 @@
 
 ; Constant Pool Index.
 ; CHECK-S-LABEL: ConstPool
-; CHECK-S:       plfd f1, .LCPI0_0@PCREL(0), 1
+; CHECK-S:       xxsplti32dx vs1, 0, 1081002676
+; CHECK-S-NEXT:       xxsplti32dx vs1, 1, 962072674
 ; CHECK-S:       blr
 
 ; CHECK-O-LABEL: ConstPool
-; CHECK-O:       plfd 1, 0(0), 1
-; CHECK-O-NEXT:  R_PPC64_PCREL34  .rodata.cst8
-; CHECK-O:       blr
+; CHECK-O:       xxsplti32dx 1, 0, 1081002676
+; CHECK-O-NEXT:  xxsplti32dx 1, 1, 962072674
+; CHECK-O-NEXT:  blr
 define dso_local double @ConstPool() local_unnamed_addr {
   entry:
     ret double 0x406ECAB439581062
@@ -41,8 +42,8 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; CHECK-S-LABEL: ReadGlobalVarInt
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, valIntGlob@got@pcrel(0), 1
-; CHECK-S-NEXT: .Lpcrel:
-; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; CHECK-S-NEXT: .Lpcrel0:
+; CHECK-S-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-S-NEXT:    lwa r3, 0(r3)
 ; CHECK-S-NEXT:    blr
 

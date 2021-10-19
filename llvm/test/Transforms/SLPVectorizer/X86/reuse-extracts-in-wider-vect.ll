@@ -17,7 +17,7 @@ define i32 @foo(i32 %0, i32* %1, float* %2)  {
 ; CHECK:       t37:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x float> [ [[TMP5]], [[TMP3:%.*]] ], [ [[T89:%.*]], [[T37]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP6]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 0
 ; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 1
 ; CHECK-NEXT:    [[T31:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 2

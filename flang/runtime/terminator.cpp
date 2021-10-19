@@ -1,4 +1,4 @@
-//===-- runtime/terminate.cpp -----------------------------------*- C++ -*-===//
+//===-- runtime/terminate.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@ namespace Fortran::runtime {
   va_list ap;
   va_start(ap, message);
   CrashArgs(message, ap);
+  va_end(ap);
 }
 
 static void (*crashHandler)(const char *, int, const char *, va_list &){
@@ -52,6 +53,11 @@ void Terminator::RegisterCrashHandler(
     const char *predicate, const char *file, int line) const {
   Crash("Internal error: RUNTIME_CHECK(%s) failed at %s(%d)", predicate, file,
       line);
+}
+
+[[noreturn]] void Terminator::CheckFailed(const char *predicate) const {
+  Crash("Internal error: RUNTIME_CHECK(%s) failed at %s(%d)", predicate,
+      sourceFileName_, sourceLine_);
 }
 
 // TODO: These will be defined in the coarray runtime library

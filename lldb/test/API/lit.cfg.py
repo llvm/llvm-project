@@ -17,10 +17,10 @@ config.name = 'lldb-api'
 config.suffixes = ['.py']
 
 # test_source_root: The root path where tests are located.
-# test_exec_root: The root path where tests should be run.
 config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = config.test_source_root
 
+# test_exec_root: The root path where tests should be run.
+config.test_exec_root = os.path.join(config.lldb_obj_root, 'test', 'API')
 
 def mkdir_p(path):
   import errno
@@ -129,22 +129,19 @@ if is_configured('shared_libs'):
     lit_config.warning("unable to inject shared library path on '{}'".format(
         platform.system()))
 
-# Propagate LLDB_CAPTURE_REPRODUCER
-if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
-  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
-      'LLDB_CAPTURE_REPRODUCER']
-
-# Support running the test suite under the lldb-repro wrapper. This makes it
-# possible to capture a test suite run and then rerun all the test from the
-# just captured reproducer.
-lldb_repro_mode = lit_config.params.get('lldb-run-with-repro', None)
-if lldb_repro_mode:
-  lit_config.note("Running API tests in {} mode.".format(lldb_repro_mode))
-  mkdir_p(config.lldb_reproducer_directory)
-  if lldb_repro_mode == 'capture':
-    config.available_features.add('lldb-repro-capture')
-  elif lldb_repro_mode == 'replay':
-    config.available_features.add('lldb-repro-replay')
+lldb_use_simulator = lit_config.params.get('lldb-run-with-simulator', None)
+if lldb_use_simulator:
+  if lldb_use_simulator == "ios":
+    lit_config.note("Running API tests on iOS simulator")
+    config.available_features.add('lldb-simulator-ios')
+  elif lldb_use_simulator == "watchos":
+    lit_config.note("Running API tests on watchOS simulator")
+    config.available_features.add('lldb-simulator-watchos')
+  elif lldb_use_simulator == "tvos":
+    lit_config.note("Running API tests on tvOS simulator")
+    config.available_features.add('lldb-simulator-tvos')
+  else:
+    lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
@@ -194,11 +191,11 @@ if is_configured('test_compiler'):
 if is_configured('dsymutil'):
   dotest_cmd += ['--dsymutil', config.dsymutil]
 
-if is_configured('filecheck'):
-  dotest_cmd += ['--filecheck', config.filecheck]
+if is_configured('llvm_tools_dir'):
+  dotest_cmd += ['--llvm-tools-dir', config.llvm_tools_dir]
 
-if is_configured('yaml2obj'):
-  dotest_cmd += ['--yaml2obj', config.yaml2obj]
+if is_configured('server'):
+  dotest_cmd += ['--server', config.server]
 
 if is_configured('lldb_libs_dir'):
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
@@ -209,6 +206,16 @@ if is_configured('lldb_framework_dir'):
 if 'lldb-repro-capture' in config.available_features or \
     'lldb-repro-replay' in config.available_features:
   dotest_cmd += ['--skip-category=lldb-vscode', '--skip-category=std-module']
+
+if 'lldb-simulator-ios' in config.available_features:
+  dotest_cmd += ['--apple-sdk', 'iphonesimulator',
+                 '--platform-name', 'ios-simulator']
+elif 'lldb-simulator-watchos' in config.available_features:
+  dotest_cmd += ['--apple-sdk', 'watchsimulator',
+                 '--platform-name', 'watchos-simulator']
+elif 'lldb-simulator-tvos' in config.available_features:
+  dotest_cmd += ['--apple-sdk', 'appletvsimulator',
+                 '--platform-name', 'tvos-simulator']
 
 if is_configured('enabled_plugins'):
   for plugin in config.enabled_plugins:
@@ -227,3 +234,12 @@ import lldbtest
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lldbtest.LLDBTest(dotest_cmd)
+
+# Propagate FREEBSD_LEGACY_PLUGIN
+if 'FREEBSD_LEGACY_PLUGIN' in os.environ:
+  config.environment['FREEBSD_LEGACY_PLUGIN'] = os.environ[
+      'FREEBSD_LEGACY_PLUGIN']
+
+# Propagate XDG_CACHE_HOME
+if 'XDG_CACHE_HOME' in os.environ:
+  config.environment['XDG_CACHE_HOME'] = os.environ['XDG_CACHE_HOME']

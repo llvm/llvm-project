@@ -4,32 +4,32 @@
 # rendering the operand.
 
   subu  $4, $4, 4          # CHECK: ADDiu
-                           # CHECK; Imm:-4
+                           # CHECK: Imm:-4
   subu  $gp, $gp, 4        # CHECK: ADDiu
-                           # CHECK; Imm:-4
+                           # CHECK: Imm:-4
   subu  $sp, $sp, 4        # CHECK: ADDiu
-                           # CHECK; Imm:-4
+                           # CHECK: Imm:-4
   subu  $4, $4, -4         # CHECK: ADDiu
-                           # CHECK; Imm:4
+                           # CHECK: Imm:4
   subu  $gp, $gp, -4       # CHECK: ADDiu
-                           # CHECK; Imm:4
+                           # CHECK: Imm:4
   subu  $sp, $sp, -4       # CHECK: ADDiu
-                           # CHECK; Imm:4
+                           # CHECK: Imm:4
   subu  $sp, $sp, -(4 + 4) # CHECK: ADDiu
                            # CHECK: Imm:8
 
   subu  $4, 8              # CHECK: ADDiu
-                           # CHECK; Imm:-8
+                           # CHECK: Imm:-8
   subu  $gp, 8             # CHECK: ADDiu
-                           # CHECK; Imm:-8
+                           # CHECK: Imm:-8
   subu  $sp, 8             # CHECK: ADDiu
-                           # CHECK; Imm:-8
+                           # CHECK: Imm:-8
   subu  $4, -8             # CHECK: ADDiu
-                           # CHECK; Imm:8
+                           # CHECK: Imm:8
   subu  $gp, -8            # CHECK: ADDiu
-                           # CHECK; Imm:8
+                           # CHECK: Imm:8
   subu  $sp, -8            # CHECK: ADDiu
-                           # CHECK; Imm:8
+                           # CHECK: Imm:8
   subu  $sp, -(4 + 4)      # CHECK: ADDiu
                            # CHECK: Imm:8
 

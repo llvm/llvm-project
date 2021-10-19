@@ -1,14 +1,14 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+atomics < %s | FileCheck %s
 
 main:
   .functype main () -> ()
 
-  # CHECK:  atomic.notify 0 # encoding: [0xfe,0x00,0x02,0x00]
-  atomic.notify 0
-  # CHECK:  i32.atomic.wait 0 # encoding: [0xfe,0x01,0x02,0x00]
-  i32.atomic.wait 0
-  # CHECK:  i64.atomic.wait 0 # encoding: [0xfe,0x02,0x03,0x00]
-  i64.atomic.wait 0
+  # CHECK:  memory.atomic.notify 0 # encoding: [0xfe,0x00,0x02,0x00]
+  memory.atomic.notify 0
+  # CHECK:  memory.atomic.wait32 0 # encoding: [0xfe,0x01,0x02,0x00]
+  memory.atomic.wait32 0
+  # CHECK:  memory.atomic.wait64 0 # encoding: [0xfe,0x02,0x03,0x00]
+  memory.atomic.wait64 0
 
   # CHECK: atomic.fence # encoding: [0xfe,0x03,0x00]
   atomic.fence

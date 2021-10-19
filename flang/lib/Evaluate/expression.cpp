@@ -12,7 +12,12 @@
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/variable.h"
+#include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "flang/Semantics/scope.h"
+#include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
+#include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -101,6 +106,16 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       },
       derived().u);
 }
+
+DynamicType Parentheses<SomeDerived>::GetType() const {
+  return left().GetType().value();
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
+  llvm::errs() << "Expr is <{" << AsFortran() << "}>\n";
+}
+#endif
 
 // Equality testing
 
@@ -206,13 +221,75 @@ bool Expr<SomeType>::operator==(const Expr<SomeType> &that) const {
 
 DynamicType StructureConstructor::GetType() const { return result_.GetType(); }
 
-const Expr<SomeType> *StructureConstructor::Find(
+std::optional<Expr<SomeType>> StructureConstructor::CreateParentComponent(
+    const Symbol &component) const {
+  if (const semantics::DerivedTypeSpec *
+      parentSpec{GetParentTypeSpec(derivedTypeSpec())}) {
+    StructureConstructor structureConstructor{*parentSpec};
+    if (const auto *parentDetails{
+            component.detailsIf<semantics::DerivedTypeDetails>()}) {
+      auto parentIter{parentDetails->componentNames().begin()};
+      for (const auto &childIter : values_) {
+        if (parentIter == parentDetails->componentNames().end()) {
+          break; // There are more components in the child
+        }
+        SymbolRef componentSymbol{childIter.first};
+        structureConstructor.Add(
+            *componentSymbol, common::Clone(childIter.second.value()));
+        ++parentIter;
+      }
+      Constant<SomeDerived> constResult{std::move(structureConstructor)};
+      Expr<SomeDerived> result{std::move(constResult)};
+      return std::optional<Expr<SomeType>>{result};
+    }
+  }
+  return std::nullopt;
+}
+
+static const Symbol *GetParentComponentSymbol(const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::ParentComp)) {
+    // we have a created parent component
+    const auto &compObject{symbol.get<semantics::ObjectEntityDetails>()};
+    if (const semantics::DeclTypeSpec * compType{compObject.type()}) {
+      const semantics::DerivedTypeSpec &dtSpec{compType->derivedTypeSpec()};
+      const semantics::Symbol &compTypeSymbol{dtSpec.typeSymbol()};
+      return &compTypeSymbol;
+    }
+  }
+  if (symbol.detailsIf<semantics::DerivedTypeDetails>()) {
+    // we have an implicit parent type component
+    return &symbol;
+  }
+  return nullptr;
+}
+
+std::optional<Expr<SomeType>> StructureConstructor::Find(
     const Symbol &component) const {
   if (auto iter{values_.find(component)}; iter != values_.end()) {
-    return &iter->second.value();
-  } else {
-    return nullptr;
+    return iter->second.value();
   }
+  // The component wasn't there directly, see if we're looking for the parent
+  // component of an extended type
+  if (const Symbol * typeSymbol{GetParentComponentSymbol(component)}) {
+    return CreateParentComponent(*typeSymbol);
+  }
+  // Look for the component in the parent type component.  The parent type
+  // component is always the first one
+  if (!values_.empty()) {
+    const Expr<SomeType> *parentExpr{&values_.begin()->second.value()};
+    if (const Expr<SomeDerived> *derivedExpr{
+            std::get_if<Expr<SomeDerived>>(&parentExpr->u)}) {
+      if (const Constant<SomeDerived> *constExpr{
+              std::get_if<Constant<SomeDerived>>(&derivedExpr->u)}) {
+        if (std::optional<StructureConstructor> parentComponentValue{
+                constExpr->GetScalarValue()}) {
+          // Try to find the component in the parent structure constructor
+          return parentComponentValue->Find(component);
+        }
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 StructureConstructor &StructureConstructor::Add(

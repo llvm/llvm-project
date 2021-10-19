@@ -64,8 +64,8 @@ class ModuleLoadedNotifysTestCase(TestBase):
                                 False,     # Stop at entry
                                 error)     # error
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             PROCESS_STOPPED)
 
         total_solibs_added = 0

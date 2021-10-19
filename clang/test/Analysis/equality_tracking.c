@@ -185,3 +185,51 @@ void avoidInfeasibleConstraintsForClasses(int a, int b) {
     }
   }
 }
+
+void avoidInfeasibleConstraintforGT(int a, int b) {
+  int c = b - a;
+  if (c <= 0)
+    return;
+  // c > 0
+  // b - a > 0
+  // b > a
+  if (a != b) {
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    return;
+  }
+  clang_analyzer_warnIfReached(); // no warning
+  // a == b
+  if (c < 0)
+    ;
+}
+
+void avoidInfeasibleConstraintforLT(int a, int b) {
+  int c = b - a;
+  if (c >= 0)
+    return;
+  // c < 0
+  // b - a < 0
+  // b < a
+  if (a != b) {
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+    return;
+  }
+  clang_analyzer_warnIfReached(); // no warning
+  // a == b
+  if (c < 0)
+    ;
+}
+
+void implyDisequalityFromGT(int a, int b) {
+  if (a > b) {
+    clang_analyzer_eval(a == b); // expected-warning{{FALSE}}
+    clang_analyzer_eval(a != b); // expected-warning{{TRUE}}
+  }
+}
+
+void implyDisequalityFromLT(int a, int b) {
+  if (a < b) {
+    clang_analyzer_eval(a == b); // expected-warning{{FALSE}}
+    clang_analyzer_eval(a != b); // expected-warning{{TRUE}}
+  }
+}

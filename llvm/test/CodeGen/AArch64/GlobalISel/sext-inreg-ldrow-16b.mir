@@ -4,9 +4,9 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  @x = global i32 -32768, align 4
+  @x = dso_local global i32 -32768, align 4
 
-  define i32 @check_sext_not_lost(i32* %ptr) {
+  define dso_local i32 @check_sext_not_lost(i32* %ptr) {
   entry:
     %ptr.addr = alloca i32*, align 8
     store i32* %ptr, i32** %ptr.addr, align 8
@@ -59,25 +59,26 @@ body:             |
 
     ; CHECK-LABEL: name: check_sext_not_lost
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: STRXui [[COPY]], %stack.0.ptr.addr, 0 :: (store 8 into %ir.ptr.addr)
-    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0.ptr.addr, 0 :: (dereferenceable load 8 from %ir.ptr.addr)
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK: STRXui [[COPY1]], %stack.0.ptr.addr, 0 :: (store (p0) into %ir.ptr.addr)
+    ; CHECK: [[LDRXui:%[0-9]+]]:gpr64common = LDRXui %stack.0.ptr.addr, 0 :: (dereferenceable load (p0) from %ir.ptr.addr)
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @x
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @x :: (dereferenceable load 4 from @x)
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32common = LDRWui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @x :: (dereferenceable load (s32) from @x)
     ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = nsw SUBSWri [[LDRWui]], 8, 12, implicit-def $nzcv
     ; CHECK: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWri]], %subreg.sub_32
     ; CHECK: [[SBFMXri:%[0-9]+]]:gpr64 = SBFMXri [[INSERT_SUBREG]], 0, 15
-    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[LDRXui]], [[SBFMXri]], 0, 1 :: (load 4 from %ir.arrayidx)
+    ; CHECK: [[LDRWroX:%[0-9]+]]:gpr32 = LDRWroX [[LDRXui]], [[SBFMXri]], 0, 1 :: (load (s32) from %ir.arrayidx)
     ; CHECK: $w0 = COPY [[LDRWroX]]
     ; CHECK: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
     %1:gpr(p0) = G_FRAME_INDEX %stack.0.ptr.addr
-    G_STORE %0(p0), %1(p0) :: (store 8 into %ir.ptr.addr)
-    %2:gpr(p0) = G_LOAD %1(p0) :: (dereferenceable load 8 from %ir.ptr.addr)
+    G_STORE %0(p0), %1(p0) :: (store (p0) into %ir.ptr.addr)
+    %2:gpr(p0) = G_LOAD %1(p0) :: (dereferenceable load (p0) from %ir.ptr.addr)
     %15:gpr64(p0) = ADRP target-flags(aarch64-page) @x
     %4:gpr(p0) = G_ADD_LOW %15(p0), target-flags(aarch64-pageoff, aarch64-nc) @x
-    %3:gpr(s32) = G_LOAD %4(p0) :: (dereferenceable load 4 from @x)
+    %3:gpr(s32) = G_LOAD %4(p0) :: (dereferenceable load (s32) from @x)
     %5:gpr(s32) = G_CONSTANT i32 32768
     %6:gpr(s32) = nsw G_SUB %3, %5
     %16:gpr(s64) = G_ANYEXT %6(s32)
@@ -85,7 +86,7 @@ body:             |
     %14:gpr(s64) = G_CONSTANT i64 2
     %10:gpr(s64) = G_SHL %8, %14(s64)
     %11:gpr(p0) = G_PTR_ADD %2, %10(s64)
-    %13:gpr(s32) = G_LOAD %11(p0) :: (load 4 from %ir.arrayidx)
+    %13:gpr(s32) = G_LOAD %11(p0) :: (load (s32) from %ir.arrayidx)
     $w0 = COPY %13(s32)
     RET_ReallyLR implicit $w0
 

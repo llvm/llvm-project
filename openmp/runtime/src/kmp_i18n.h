@@ -103,7 +103,7 @@ struct kmp_msg {
   kmp_msg_type_t type;
   int num;
   char *str;
-  int len;
+  size_t len;
 }; // struct kmp_message
 typedef struct kmp_msg kmp_msg_t;
 
@@ -170,7 +170,7 @@ void __kmp_i18n_dump_catalog(kmp_str_buf_t *buffer);
 #endif // KMP_DEBUG
 
 #ifdef __cplusplus
-}; // extern "C"
+} // extern "C"
 #endif // __cplusplus
 
 #endif // KMP_I18N_H

@@ -2,9 +2,11 @@
 
 declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i1) #0
 declare void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* nocapture, i8* nocapture, i32, i1) #0
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #0
 
 declare void @llvm.memmove.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i1) #0
 declare void @llvm.memmove.p1i8.p0i8.i32(i8 addrspace(1)* nocapture, i8* nocapture, i32, i1) #0
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) #0
 
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #0
 
@@ -58,6 +60,36 @@ define amdgpu_kernel void @promote_with_objectsize(i32 addrspace(1)* %out) #0 {
   %alloca.bc = bitcast [17 x i32]* %alloca to i8*
   %size = call i32 @llvm.objectsize.i32.p0i8(i8* %alloca.bc, i1 false, i1 false, i1 false)
   store i32 %size, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABEL: @promote_alloca_used_twice_in_memcpy(
+; CHECK: %i = bitcast double addrspace(3)* %arrayidx1 to i8 addrspace(3)*
+; CHECK: %i1 = bitcast double addrspace(3)* %arrayidx2 to i8 addrspace(3)*
+; CHECK: call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* align 8 dereferenceable(16) %i, i8 addrspace(3)* align 8 dereferenceable(16) %i1, i64 16, i1 false)
+define amdgpu_kernel void @promote_alloca_used_twice_in_memcpy(i32 %c) {
+entry:
+  %r = alloca double, align 8
+  %arrayidx1 = getelementptr inbounds double, double* %r, i32 1
+  %i = bitcast double* %arrayidx1 to i8*
+  %arrayidx2 = getelementptr inbounds double, double* %r, i32 %c
+  %i1 = bitcast double* %arrayidx2 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 dereferenceable(16) %i, i8* align 8 dereferenceable(16) %i1, i64 16, i1 false)
+  ret void
+}
+
+; CHECK-LABEL: @promote_alloca_used_twice_in_memmove(
+; CHECK: %i = bitcast double addrspace(3)* %arrayidx1 to i8 addrspace(3)*
+; CHECK: %i1 = bitcast double addrspace(3)* %arrayidx2 to i8 addrspace(3)*
+; CHECK: call void @llvm.memmove.p3i8.p3i8.i64(i8 addrspace(3)* align 8 dereferenceable(16) %i, i8 addrspace(3)* align 8 dereferenceable(16) %i1, i64 16, i1 false)
+define amdgpu_kernel void @promote_alloca_used_twice_in_memmove(i32 %c) {
+entry:
+  %r = alloca double, align 8
+  %arrayidx1 = getelementptr inbounds double, double* %r, i32 1
+  %i = bitcast double* %arrayidx1 to i8*
+  %arrayidx2 = getelementptr inbounds double, double* %r, i32 %c
+  %i1 = bitcast double* %arrayidx2 to i8*
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* align 8 dereferenceable(16) %i, i8* align 8 dereferenceable(16) %i1, i64 16, i1 false)
   ret void
 }
 

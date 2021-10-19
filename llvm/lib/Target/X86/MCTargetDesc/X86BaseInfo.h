@@ -55,15 +55,18 @@ namespace X86 {
   /// The constants to describe instr prefixes if there are
   enum IPREFIXES {
     IP_NO_PREFIX = 0,
-    IP_HAS_OP_SIZE = 1,
-    IP_HAS_AD_SIZE = 2,
-    IP_HAS_REPEAT_NE = 4,
-    IP_HAS_REPEAT = 8,
-    IP_HAS_LOCK = 16,
-    IP_HAS_NOTRACK = 32,
-    IP_USE_VEX3 = 64,
-    IP_USE_DISP8 = 128,
-    IP_USE_DISP32 = 256,
+    IP_HAS_OP_SIZE =   1U << 0,
+    IP_HAS_AD_SIZE =   1U << 1,
+    IP_HAS_REPEAT_NE = 1U << 2,
+    IP_HAS_REPEAT =    1U << 3,
+    IP_HAS_LOCK =      1U << 4,
+    IP_HAS_NOTRACK =   1U << 5,
+    IP_USE_VEX =       1U << 6,
+    IP_USE_VEX2 =      1U << 7,
+    IP_USE_VEX3 =      1U << 8,
+    IP_USE_EVEX =      1U << 9,
+    IP_USE_DISP8 =     1U << 10,
+    IP_USE_DISP32 =    1U << 11,
   };
 
   enum OperandType : unsigned {
@@ -112,6 +115,7 @@ namespace X86 {
     Cmp,
     // AND
     And,
+    // FIXME: Zen 3 support branch fusion for OR/XOR.
     // ADD, SUB
     AddSub,
     // INC, DEC
@@ -180,6 +184,7 @@ namespace X86 {
     case X86::AND8rr:
     case X86::AND8rr_REV:
       return FirstMacroFusionInstKind::And;
+    // FIXME: Zen 3 support branch fusion for OR/XOR.
     // CMP
     case X86::CMP16i16:
     case X86::CMP16mr:
@@ -785,7 +790,7 @@ namespace X86II {
     // belongs to. i.e. one-byte, two-byte, 0x0f 0x38, 0x0f 0x3a, etc.
     //
     OpMapShift = OpPrefixShift + 2,
-    OpMapMask  = 0x7 << OpMapShift,
+    OpMapMask  = 0xF << OpMapShift,
 
     // OB - OneByte - Set if this instruction has a one byte opcode.
     OB = 0 << OpMapShift,
@@ -814,13 +819,17 @@ namespace X86II {
     /// this flag to indicate that the encoder should do the wacky 3DNow! thing.
     ThreeDNow = 7 << OpMapShift,
 
+    // MAP5, MAP6 - Prefix after the 0x0F prefix.
+    T_MAP5 = 8 << OpMapShift,
+    T_MAP6 = 9 << OpMapShift,
+
     //===------------------------------------------------------------------===//
     // REX_W - REX prefixes are instruction prefixes used in 64-bit mode.
     // They are used to specify GPRs and SSE registers, 64-bit operand size,
     // etc. We only cares about REX.W and REX.R bits and only the former is
     // statically determined.
     //
-    REXShift    = OpMapShift + 3,
+    REXShift    = OpMapShift + 4,
     REX_W       = 1 << REXShift,
 
     //===------------------------------------------------------------------===//
@@ -949,7 +958,11 @@ namespace X86II {
 
     // NOTRACK prefix
     NoTrackShift = EVEX_RCShift + 1,
-    NOTRACK = 1ULL << NoTrackShift
+    NOTRACK = 1ULL << NoTrackShift,
+
+    // Force VEX encoding
+    ExplicitVEXShift = NoTrackShift + 1,
+    ExplicitVEXPrefix = 1ULL << ExplicitVEXShift
   };
 
   /// \returns true if the instruction with given opcode is a prefix.

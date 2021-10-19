@@ -22,7 +22,6 @@ define amdgpu_ps float @add3(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: add3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = add i32 %x, %c
@@ -47,7 +46,6 @@ define amdgpu_ps float @mad_no_add3(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; GFX10-LABEL: mad_no_add3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v0, v1, v4
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_mad_u32_u24 v0, v2, v3, v0
 ; GFX10-NEXT:    ; return to shader part epilog
   %a0 = shl i32 %a, 8
@@ -87,7 +85,6 @@ define amdgpu_ps float @add3_vgpr_b(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX10-LABEL: add3_vgpr_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, s3, s2, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = add i32 %x, %c
@@ -110,7 +107,6 @@ define amdgpu_ps float @add3_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: add3_vgpr_all2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, v1, v2, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %b, %c
   %result = add i32 %a, %x
@@ -133,7 +129,6 @@ define amdgpu_ps float @add3_vgpr_bc(i32 inreg %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: add3_vgpr_bc:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, s2, v0, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = add i32 %x, %c
@@ -156,7 +151,6 @@ define amdgpu_ps float @add3_vgpr_const(i32 %a, i32 %b) {
 ; GFX10-LABEL: add3_vgpr_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, v0, v1, 16
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = add i32 %a, %b
   %result = add i32 %x, 16
@@ -181,7 +175,6 @@ define amdgpu_ps <2 x float> @add3_multiuse_outer(i32 %a, i32 %b, i32 %c, i32 %x
 ; GFX10-LABEL: add3_multiuse_outer:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add3_u32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v0, v3
 ; GFX10-NEXT:    ; return to shader part epilog
   %inner = add i32 %a, %b
@@ -209,7 +202,6 @@ define amdgpu_ps <2 x float> @add3_multiuse_inner(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: add3_multiuse_inner:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog
   %inner = add i32 %a, %b
@@ -225,9 +217,9 @@ define amdgpu_ps <2 x float> @add3_multiuse_inner(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float inreg %c) {
 ; VI-LABEL: add3_uniform_vgpr:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; VI-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; VI-NEXT:    v_add_f32_e64 v1, s3, 2.0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; VI-NEXT:    v_add_f32_e32 v2, s4, v2
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v2, v0
@@ -235,9 +227,9 @@ define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ;
 ; GFX9-LABEL: add3_uniform_vgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GFX9-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; GFX9-NEXT:    v_add_f32_e64 v1, s3, 2.0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x40400000
 ; GFX9-NEXT:    v_add_f32_e32 v2, s4, v2
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v2
@@ -248,7 +240,6 @@ define amdgpu_ps float @add3_uniform_vgpr(float inreg %a, float inreg %b, float 
 ; GFX10-NEXT:    v_add_f32_e64 v0, s2, 1.0
 ; GFX10-NEXT:    v_add_f32_e64 v1, s3, 2.0
 ; GFX10-NEXT:    v_add_f32_e64 v2, 0x40400000, s4
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v0, v2
 ; GFX10-NEXT:    ; return to shader part epilog

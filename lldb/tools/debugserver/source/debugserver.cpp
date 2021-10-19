@@ -8,8 +8,8 @@
 
 #include <arpa/inet.h>
 #include <asl.h>
+#include <cerrno>
 #include <crt_externs.h>
-#include <errno.h>
 #include <getopt.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -156,18 +156,36 @@ RNBRunLoopMode RNBRunLoopGetStartModeFromRemote(RNBRemote *remote) {
   return eRNBRunLoopModeExit;
 }
 
-// Check the name to see if it ends with .app
-static bool is_dot_app (const char *app_name) {
-  size_t len = strlen(app_name);
-  if (len < 4)
+static nub_launch_flavor_t default_launch_flavor(const char *app_name) {
+#if defined(WITH_FBS) || defined(WITH_BKS) || defined(WITH_SPRINGBOARD)
+  // Check the name to see if it ends with .app
+  auto is_dot_app = [](const char *app_name) {
+    size_t len = strlen(app_name);
+    if (len < 4)
+      return false;
+
+    if (app_name[len - 4] == '.' && app_name[len - 3] == 'a' &&
+        app_name[len - 2] == 'p' && app_name[len - 1] == 'p')
+      return true;
     return false;
-  
-  if (app_name[len - 4] == '.' &&
-      app_name[len - 3] == 'a' && 
-      app_name[len - 2] == 'p' &&
-      app_name[len - 1] == 'p')
-    return true;
-  return false;
+  };
+
+  if (is_dot_app(app_name)) {
+#if defined WITH_FBS
+    // Check if we have an app bundle, if so launch using FrontBoard Services.
+    return eLaunchFlavorFBS;
+#elif defined WITH_BKS
+    // Check if we have an app bundle, if so launch using BackBoard Services.
+    return eLaunchFlavorBKS;
+#elif defined WITH_SPRINGBOARD
+    // Check if we have an app bundle, if so launch using SpringBoard.
+    return eLaunchFlavorSpringBoard;
+#endif
+  }
+#endif
+
+  // Our default launch method is posix spawn
+  return eLaunchFlavorPosixSpawn;
 }
 
 // This run loop mode will wait for the process to launch and hit its
@@ -208,29 +226,8 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
   // figure our how we are going to launch automatically.
 
   nub_launch_flavor_t launch_flavor = g_launch_flavor;
-  if (launch_flavor == eLaunchFlavorDefault) {
-    // Our default launch method is posix spawn
-    launch_flavor = eLaunchFlavorPosixSpawn;
-
-    const bool dot_app = is_dot_app(inferior_argv[0]);
-    (void)dot_app;
-#if defined WITH_FBS
-    // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorFBS;
-    }
-#elif defined WITH_BKS
-    // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorBKS;
-    }
-#elif defined WITH_SPRINGBOARD
-    // Check if we have an app bundle, if so launch using SpringBoard.
-    if (dot_app) {
-      launch_flavor = eLaunchFlavorSpringBoard;
-    }
-#endif
-  }
+  if (launch_flavor == eLaunchFlavorDefault)
+    launch_flavor = default_launch_flavor(inferior_argv[0]);
 
   ctx.SetLaunchFlavor(launch_flavor);
   char resolved_path[PATH_MAX];
@@ -248,8 +245,8 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
                                        : ctx.GetWorkingDirectory());
   const char *process_event = ctx.GetProcessEvent();
   nub_process_t pid = DNBProcessLaunch(
-      resolved_path, &inferior_argv[0], &inferior_envp[0], cwd, stdin_path,
-      stdout_path, stderr_path, no_stdio, launch_flavor, g_disable_aslr,
+      &ctx, resolved_path, &inferior_argv[0], &inferior_envp[0], cwd,
+      stdin_path, stdout_path, stderr_path, no_stdio, g_disable_aslr,
       process_event, launch_err_str, sizeof(launch_err_str));
 
   g_pid = pid;
@@ -371,7 +368,8 @@ RNBRunLoopMode RNBRunLoopLaunchAttaching(RNBRemote *remote,
   DNBLogThreadedIf(LOG_RNB_MINIMAL, "%s Attaching to pid %i...", __FUNCTION__,
                    attach_pid);
   char err_str[1024];
-  pid = DNBProcessAttach(attach_pid, NULL, err_str, sizeof(err_str));
+  pid = DNBProcessAttach(attach_pid, NULL, ctx.GetUnmaskSignals(), err_str,
+                         sizeof(err_str));
   g_pid = pid;
 
   if (pid == INVALID_NUB_PROCESS) {
@@ -528,10 +526,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
       // packets
       event_mask &= ~RNBContext::event_proc_stdio_available;
       event_mask &= ~RNBContext::event_proc_profile_data;
-      // When we enable async structured data packets over another logical
-      // channel,
-      // this can be relaxed.
-      event_mask &= ~RNBContext::event_darwin_log_data_available;
     }
 
     // We want to make sure we consume all process state changes and have
@@ -558,10 +552,6 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
         remote->SendAsyncProfileData();
       }
 
-      if (set_events & RNBContext::event_darwin_log_data_available) {
-        remote->SendAsyncDarwinLogData();
-      }
-
       if (set_events & RNBContext::event_read_packet_available) {
         // handleReceivedPacket will take care of resetting the
         // event_read_packet_available events when there are no more...
@@ -585,29 +575,34 @@ RNBRunLoopMode RNBRunLoopInferiorExecuting(RNBRemote *remote) {
       }
 
       if (set_events & RNBContext::event_proc_thread_exiting) {
+        DNBLog("debugserver's process monitoring thread has exited.");
         mode = eRNBRunLoopModeExit;
       }
 
       if (set_events & RNBContext::event_read_thread_exiting) {
         // Out remote packet receiving thread exited, exit for now.
+        DNBLog(
+            "debugserver's packet communication to lldb has been shut down.");
         if (ctx.HasValidProcessID()) {
+          nub_process_t pid = ctx.ProcessID();
           // TODO: We should add code that will leave the current process
           // in its current state and listen for another connection...
           if (ctx.ProcessStateRunning()) {
             if (ctx.GetDetachOnError()) {
-              DNBLog("debugserver's event read thread is exiting, detaching "
-                     "from the inferior process.");
-              DNBProcessDetach(ctx.ProcessID());
+              DNBLog("debugserver has a valid PID %d, it is still running. "
+                     "detaching from the inferior process.",
+                     pid);
+              DNBProcessDetach(pid);
             } else {
-              DNBLog("debugserver's event read thread is exiting, killing the "
-                     "inferior process.");
-              DNBProcessKill(ctx.ProcessID());
+              DNBLog("debugserver killing the inferior process, pid %d.", pid);
+              DNBProcessKill(pid);
             }
           } else {
             if (ctx.GetDetachOnError()) {
-              DNBLog("debugserver's event read thread is exiting, detaching "
-                     "from the inferior process.");
-              DNBProcessDetach(ctx.ProcessID());
+              DNBLog("debugserver has a valid PID %d but it may no longer "
+                     "be running, detaching from the inferior process.",
+                     pid);
+              DNBProcessDetach(pid);
             }
           }
         }
@@ -806,8 +801,11 @@ void FileLogCallback(void *baton, uint32_t flags, const char *format,
 }
 
 void show_version_and_exit(int exit_code) {
-  printf("%s-%s for %s.\n", DEBUGSERVER_PROGRAM_NAME, DEBUGSERVER_VERSION_STR,
-         RNB_ARCH);
+  const char *in_translation = "";
+  if (DNBDebugserverIsTranslated())
+    in_translation = " (running under translation)";
+  printf("%s-%s for %s%s.\n", DEBUGSERVER_PROGRAM_NAME, DEBUGSERVER_VERSION_STR,
+         RNB_ARCH, in_translation);
   exit(exit_code);
 }
 
@@ -892,6 +890,10 @@ static struct option g_long_options[] = {
      'F'}, // When debugserver launches the process, forward debugserver's
            // current environment variables to the child process ("./debugserver
            // -F localhost:1234 -- /bin/ls"
+    {"unmask-signals", no_argument, NULL,
+     'U'}, // debugserver will ignore EXC_MASK_BAD_ACCESS,
+           // EXC_MASK_BAD_INSTRUCTION and EXC_MASK_ARITHMETIC, which results in
+           // SIGSEGV, SIGILL and SIGFPE being propagated to the target process.
     {NULL, 0, NULL, 0}};
 
 int communication_fd = -1;
@@ -1102,21 +1104,30 @@ int main(int argc, char *argv[]) {
       if (optarg && optarg[0]) {
         if (strcasecmp(optarg, "auto") == 0)
           g_launch_flavor = eLaunchFlavorDefault;
-        else if (strcasestr(optarg, "posix") == optarg)
+        else if (strcasestr(optarg, "posix") == optarg) {
+          DNBLog(
+              "[LaunchAttach] launch flavor is posix_spawn via cmdline option");
           g_launch_flavor = eLaunchFlavorPosixSpawn;
-        else if (strcasestr(optarg, "fork") == optarg)
+        } else if (strcasestr(optarg, "fork") == optarg)
           g_launch_flavor = eLaunchFlavorForkExec;
 #ifdef WITH_SPRINGBOARD
-        else if (strcasestr(optarg, "spring") == optarg)
+        else if (strcasestr(optarg, "spring") == optarg) {
+          DNBLog(
+              "[LaunchAttach] launch flavor is SpringBoard via cmdline option");
           g_launch_flavor = eLaunchFlavorSpringBoard;
+        }
 #endif
 #ifdef WITH_BKS
-        else if (strcasestr(optarg, "backboard") == optarg)
+        else if (strcasestr(optarg, "backboard") == optarg) {
+          DNBLog("[LaunchAttach] launch flavor is BKS via cmdline option");
           g_launch_flavor = eLaunchFlavorBKS;
+        }
 #endif
 #ifdef WITH_FBS
-        else if (strcasestr(optarg, "frontboard") == optarg)
+        else if (strcasestr(optarg, "frontboard") == optarg) {
+          DNBLog("[LaunchAttach] launch flavor is FBS via cmdline option");
           g_launch_flavor = eLaunchFlavorFBS;
+        }
 #endif
 
         else {
@@ -1263,6 +1274,10 @@ int main(int argc, char *argv[]) {
       forward_env = true;
       break;
 
+    case 'U':
+      ctx.SetUnmaskSignals(true);
+      break;
+
     case '2':
       // File descriptor passed to this process during fork/exec and is already
       // open and ready for communication.
@@ -1333,8 +1348,12 @@ int main(int argc, char *argv[]) {
   // as long as we're dropping remotenub in as a replacement for gdbserver,
   // explicitly note that this is not gdbserver.
 
-  RNBLogSTDOUT("%s-%s %sfor %s.\n", DEBUGSERVER_PROGRAM_NAME,
-               DEBUGSERVER_VERSION_STR, compile_options.c_str(), RNB_ARCH);
+  const char *in_translation = "";
+  if (DNBDebugserverIsTranslated())
+    in_translation = " (running under translation)";
+  RNBLogSTDOUT("%s-%s %sfor %s%s.\n", DEBUGSERVER_PROGRAM_NAME,
+               DEBUGSERVER_VERSION_STR, compile_options.c_str(), RNB_ARCH,
+               in_translation);
 
   std::string host;
   int port = INT32_MAX;
@@ -1392,6 +1411,7 @@ int main(int argc, char *argv[]) {
         dup2(null, STDOUT_FILENO);
         dup2(null, STDERR_FILENO);
       } else if (g_applist_opt != 0) {
+        DNBLog("debugserver running in --applist mode");
         // List all applications we are able to see
         std::string applist_plist;
         int err = ListApplications(applist_plist, false, false);
@@ -1449,6 +1469,7 @@ int main(int argc, char *argv[]) {
             mode = eRNBRunLoopModeExit;
           } else if (g_applist_opt != 0) {
             // List all applications we are able to see
+            DNBLog("debugserver running in applist mode under lockdown");
             std::string applist_plist;
             if (ListApplications(applist_plist, false, false) == 0) {
               DNBLogDebug("Task list: %s", applist_plist.c_str());
@@ -1509,35 +1530,16 @@ int main(int argc, char *argv[]) {
           timeout_ptr = &attach_timeout_abstime;
         }
         nub_launch_flavor_t launch_flavor = g_launch_flavor;
-        if (launch_flavor == eLaunchFlavorDefault) {
-          // Our default launch method is posix spawn
-          launch_flavor = eLaunchFlavorPosixSpawn;
-
-#if defined WITH_FBS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorFBS;
-          }
-#elif defined WITH_BKS
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorBKS;
-          }
-#elif defined WITH_SPRINGBOARD
-          // Check if we have an app bundle, if so launch using SpringBoard.
-          if (is_dot_app(waitfor_pid_name.c_str())) {
-            launch_flavor = eLaunchFlavorSpringBoard;
-          }
-#endif
-        }
+        if (launch_flavor == eLaunchFlavorDefault)
+          launch_flavor = default_launch_flavor(waitfor_pid_name.c_str());
 
         ctx.SetLaunchFlavor(launch_flavor);
         bool ignore_existing = false;
         RNBLogSTDOUT("Waiting to attach to process %s...\n",
                      waitfor_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachWait(
-            waitfor_pid_name.c_str(), launch_flavor, ignore_existing,
-            timeout_ptr, waitfor_interval, err_str, sizeof(err_str));
+            &ctx, waitfor_pid_name.c_str(), ignore_existing, timeout_ptr,
+            waitfor_interval, err_str, sizeof(err_str));
         g_pid = pid;
 
         if (pid == INVALID_NUB_PROCESS) {
@@ -1572,7 +1574,8 @@ int main(int argc, char *argv[]) {
 
         RNBLogSTDOUT("Attaching to process %s...\n", attach_pid_name.c_str());
         nub_process_t pid = DNBProcessAttachByName(
-            attach_pid_name.c_str(), timeout_ptr, err_str, sizeof(err_str));
+            attach_pid_name.c_str(), timeout_ptr, ctx.GetUnmaskSignals(),
+            err_str, sizeof(err_str));
         g_pid = pid;
         if (pid == INVALID_NUB_PROCESS) {
           ctx.LaunchStatus().SetError(-1, DNBError::Generic);
@@ -1643,6 +1646,8 @@ int main(int argc, char *argv[]) {
           const char *proc_name = "<unknown>";
           if (ctx.ArgumentCount() > 0)
             proc_name = ctx.ArgumentAtIndex(0);
+          DNBLog("[LaunchAttach] Successfully launched %s (pid = %d).\n",
+                 proc_name, ctx.ProcessID());
           RNBLogSTDOUT("Got a connection, launched process %s (pid = %d).\n",
                        proc_name, ctx.ProcessID());
         }

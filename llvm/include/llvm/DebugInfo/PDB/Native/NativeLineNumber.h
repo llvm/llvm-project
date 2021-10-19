@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_NATIVELINENUMBER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVELINENUMBER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"

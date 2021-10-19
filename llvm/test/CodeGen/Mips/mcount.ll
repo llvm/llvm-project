@@ -15,8 +15,7 @@
 
 ; Test that checks ABI for _mcount calls.
 
-; Function Attrs: noinline nounwind optnone
-define void @foo() #0 {
+define void @foo() {
 ; MIPS32-LABEL: foo:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -24
@@ -117,7 +116,8 @@ define void @foo() #0 {
 ; MIPS32-MM-PIC-NEXT:    jr $ra
 ; MIPS32-MM-PIC-NEXT:    addiu $sp, $sp, 24
 entry:
+  call void @_mcount()
   ret void
 }
 
-attributes #0 = { "instrument-function-entry-inlined"="_mcount" }
+declare void @_mcount()

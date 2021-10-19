@@ -60,7 +60,7 @@ Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
 }
 
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
-  return llvm::StringSwitch<FmtContext::PHKind>(str)
+  return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
       .Case("_op", FmtContext::PHKind::Op)
       .Case("_self", FmtContext::PHKind::Self)
@@ -97,12 +97,21 @@ FmtObjectBase::splitFmtSegment(StringRef fmt) {
   // First try to see if it's a positional placeholder, and then handle special
   // placeholders.
 
-  size_t end = fmt.find_if_not([](char c) { return std::isdigit(c); }, 1);
+  size_t end =
+      fmt.find_if_not([](char c) { return std::isdigit(c); }, /*From=*/1);
   if (end != 1) {
     // We have a positional placeholder. Parse the index.
     size_t index = 0;
     if (fmt.substr(1, end - 1).consumeInteger(0, index)) {
       llvm_unreachable("invalid replacement sequence index");
+    }
+
+    // Check if this is the part of a range specification.
+    if (fmt.substr(end, 3) == "...") {
+      // Currently only ranges without upper bound are supported.
+      return {
+          FmtReplacement{fmt.substr(0, end + 3), index, FmtReplacement::kUnset},
+          fmt.substr(end + 3)};
     }
 
     if (end == StringRef::npos) {
@@ -164,6 +173,20 @@ void FmtObjectBase::format(raw_ostream &s) const {
       continue;
     }
 
+    if (repl.type == FmtReplacement::Type::PositionalRangePH) {
+      if (repl.index >= adapters.size()) {
+        s << repl.spec << kMarkerForNoSubst;
+        continue;
+      }
+      auto range = llvm::makeArrayRef(adapters);
+      range = range.drop_front(repl.index);
+      if (repl.end != FmtReplacement::kUnset)
+        range = range.drop_back(adapters.size() - repl.end);
+      llvm::interleaveComma(range, s,
+                            [&](auto &x) { x->format(s, /*Options=*/""); });
+      continue;
+    }
+
     assert(repl.type == FmtReplacement::Type::PositionalPH);
 
     if (repl.index >= adapters.size()) {
@@ -172,4 +195,23 @@ void FmtObjectBase::format(raw_ostream &s) const {
     }
     adapters[repl.index]->format(s, /*Options=*/"");
   }
+}
+
+FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
+                                 ArrayRef<std::string> params)
+    : FmtObjectBase(fmt, ctx, params.size()) {
+  parameters.reserve(params.size());
+  for (std::string p : params)
+    parameters.push_back(llvm::detail::build_format_adapter(std::move(p)));
+
+  adapters.reserve(parameters.size());
+  for (auto &p : parameters)
+    adapters.push_back(&p);
+}
+
+FmtStrVecObject::FmtStrVecObject(FmtStrVecObject &&that)
+    : FmtObjectBase(std::move(that)), parameters(std::move(that.parameters)) {
+  adapters.reserve(parameters.size());
+  for (auto &p : parameters)
+    adapters.push_back(&p);
 }

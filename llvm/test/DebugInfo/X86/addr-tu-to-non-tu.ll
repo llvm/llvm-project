@@ -47,7 +47,7 @@
 ; CHECK:   DW_AT_name ("t2<&foo>")
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name    ("v1")
-; CHECK:     DW_AT_type    ([[T1]] "t1")
+; CHECK:     DW_AT_type    ([[T1]] "(anonymous namespace)::t1")
 
 ; CHECK: .debug_types contents:
 

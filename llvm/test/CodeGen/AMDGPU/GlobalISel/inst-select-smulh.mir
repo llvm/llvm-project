@@ -2,6 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs %s -o - 2>%t | FileCheck -check-prefix=SI %s
 # RUN: FileCheck -check-prefix=ERR  %s < %t
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX9 %s
 
 # ERR-NOT: remark:
 # ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(s32) = G_SMULH %0:sgpr, %1:sgpr (in function: smulh_s32_ss)
@@ -44,13 +45,13 @@ body: |
     ; SI-LABEL: name: smulh_s32_sv
     ; SI: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; SI: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; SI: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; SI: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     ; GFX9-LABEL: name: smulh_s32_sv
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; GFX9: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = G_SMULH %0, %1
@@ -69,13 +70,13 @@ body: |
     ; SI-LABEL: name: smulh_s32_vs
     ; SI: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; SI: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; SI: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; SI: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     ; GFX9-LABEL: name: smulh_s32_vs
     ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX9: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; GFX9: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s32) = G_SMULH %0, %1
@@ -94,13 +95,13 @@ body: |
     ; SI-LABEL: name: smulh_s32_vv
     ; SI: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; SI: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; SI: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; SI: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; SI: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     ; GFX9-LABEL: name: smulh_s32_vv
     ; GFX9: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; GFX9: [[V_MUL_HI_I32_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32 [[COPY]], [[COPY1]], implicit $exec
-    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_]]
+    ; GFX9: [[V_MUL_HI_I32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_HI_I32_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX9: S_ENDPGM 0, implicit [[V_MUL_HI_I32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = G_SMULH %0, %1

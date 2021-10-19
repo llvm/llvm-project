@@ -24,8 +24,10 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
   ConstantSDNode *SizeValue = dyn_cast<ConstantSDNode>(Size);
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
-  const char *bzeroName = (V && V->isNullValue())
-      ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO) : nullptr;
+  const char *bzeroName =
+      (V && V->isZero())
+          ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO)
+          : nullptr;
   // For small size (< 256), it is not beneficial to use bzero
   // instead of memset.
   if (bzeroName && (!SizeValue || SizeValue->getZExtValue() > 256)) {
@@ -51,10 +53,6 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
     return CallResult.second;
   }
   return SDValue();
-}
-bool AArch64SelectionDAGInfo::generateFMAsInMachineCombiner(
-    CodeGenOpt::Level OptLevel) const {
-  return OptLevel >= CodeGenOpt::Aggressive;
 }
 
 static const int kSetTagLoopThreshold = 176;

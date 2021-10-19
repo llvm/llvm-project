@@ -19,7 +19,7 @@
 # CHECK-NEXT:     Info:    .text
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:   R_X86_64_NONE
-# CHECK-NEXT:       - Offset: 0x0000000000000004
+# CHECK-NEXT:       - Offset: 0x4
 # CHECK-NEXT:         Type:   R_X86_64_NONE
 # CHECK-NEXT: ...
 

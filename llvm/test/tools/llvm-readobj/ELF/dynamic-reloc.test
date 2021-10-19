@@ -33,9 +33,9 @@ FileHeader:
 
 # LLVM-RELOCS:      Dynamic Relocations {
 # LLVM-RELOCS-NEXT:   0x1 R_X86_64_NONE foo 0x0
-# LLVM-RELOCS-NEXT:   0x2 R_X86_64_NONE foo 0x0
-# LLVM-RELOCS-NEXT:   0x4 R_X86_64_RELATIVE - 0x0
-# LLVM-RELOCS-NEXT:   0x8 R_X86_64_NONE foo 0x0
+# LLVM-RELOCS-NEXT:   0x2 R_X86_64_NONE foo
+# LLVM-RELOCS-NEXT:   0x4 R_X86_64_RELATIVE
+# LLVM-RELOCS-NEXT:   0x8 R_X86_64_NONE foo
 # LLVM-RELOCS-NEXT: }
 
 #       GNU-RELOCS:'RELA' relocation section at offset 0x78 contains 24 bytes:
@@ -125,10 +125,41 @@ Symbols:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .rel.dyn
-      - Section: .relr.dyn
-      - Section: .plt
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .rela.dyn
+    LastSec:  .dynamic
+
+## Check we report a warning when the value of the DT_PLTREL dynamic tag is invalid.
+## We currently accept DT_RELA(7) and DT_REL(17) values. This test case uses 0xff.
+
+# RUN: yaml2obj --docnum=2 %s -DDTPLTREL=0xFF -o %t3
+# RUN: llvm-readobj --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --implicit-check-not=warning: --check-prefix=PLTRELUNKNOWN-LLVM
+# RUN: llvm-readelf --dyn-relocations %t3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t3 --implicit-check-not=warning: --check-prefix=PLTRELUNKNOWN-GNU
+
+# PLTRELUNKNOWN-LLVM:      warning: '[[FILE]]': unknown DT_PLTREL value of 255
+# PLTRELUNKNOWN-LLVM:      Dynamic Relocations {
+# PLTRELUNKNOWN-LLVM-NEXT:   0x1 R_X86_64_NONE foo 0x0
+# PLTRELUNKNOWN-LLVM-NEXT:   0x2 R_X86_64_NONE foo{{$}}
+# PLTRELUNKNOWN-LLVM-NEXT:   0x4 R_X86_64_RELATIVE -{{$}}
+# PLTRELUNKNOWN-LLVM-NEXT: warning: '[[FILE]]': invalid DT_PLTRELSZ value (0x10) or PLTREL entry size (0x0)
+# PLTRELUNKNOWN-LLVM-NEXT: }
+
+# PLTRELUNKNOWN-GNU:        warning: '[[FILE]]': unknown DT_PLTREL value of 255
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'RELA' relocation section at offset 0x78 contains 24 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000001  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'REL' relocation section at offset 0x90 contains 16 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000002  0000000100000000 R_X86_64_NONE          0000000000000000 foo
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'RELR' relocation section at offset 0xa0 contains 8 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000004  0000000000000008 R_X86_64_RELATIVE
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'PLT' relocation section at offset 0xa8 contains 16 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   warning: '[[FILE]]': invalid DT_PLTRELSZ value (0x10) or PLTREL entry size (0x0)

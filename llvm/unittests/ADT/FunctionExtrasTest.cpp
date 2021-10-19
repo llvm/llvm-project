@@ -262,4 +262,52 @@ TEST(UniqueFunctionTest, Const) {
   EXPECT_EQ("const", X());
 }
 
+// Test that overloads on unique_functions are resolved as expected.
+std::string returns(StringRef) { return "not a function"; }
+std::string returns(unique_function<double()> F) { return "number"; }
+std::string returns(unique_function<StringRef()> F) { return "string"; }
+
+TEST(UniqueFunctionTest, SFINAE) {
+  EXPECT_EQ("not a function", returns("boo!"));
+  EXPECT_EQ("number", returns([] { return 42; }));
+  EXPECT_EQ("string", returns([] { return "hello"; }));
+}
+
+// A forward declared type, and a templated type.
+class Incomplete;
+template <typename T> class Templated { T A; };
+
+// Check that we can define unique_function that have references to
+// incomplete types, even if those types are templated over an
+// incomplete type.
+TEST(UniqueFunctionTest, IncompleteTypes) {
+  unique_function<void(Templated<Incomplete> &&)>
+      IncompleteArgumentRValueReference;
+  unique_function<void(Templated<Incomplete> &)>
+      IncompleteArgumentLValueReference;
+  unique_function<void(Templated<Incomplete> *)> IncompleteArgumentPointer;
+  unique_function<Templated<Incomplete> &()> IncompleteResultLValueReference;
+  unique_function<Templated<Incomplete> && ()> IncompleteResultRValueReference2;
+  unique_function<Templated<Incomplete> *()> IncompleteResultPointer;
+}
+
+// Incomplete function returning an incomplete type
+Incomplete incompleteFunction();
+const Incomplete incompleteFunctionConst();
+
+// Check that we can assign a callable to a unique_function when the
+// callable return value is incomplete.
+TEST(UniqueFunctionTest, IncompleteCallableType) {
+  unique_function<Incomplete()> IncompleteReturnInCallable{incompleteFunction};
+  unique_function<const Incomplete()> IncompleteReturnInCallableConst{
+      incompleteFunctionConst};
+  unique_function<const Incomplete()> IncompleteReturnInCallableConstConversion{
+      incompleteFunction};
+}
+
+// Define the incomplete function
+class Incomplete {};
+Incomplete incompleteFunction() { return {}; }
+const Incomplete incompleteFunctionConst() { return {}; }
+
 } // anonymous namespace

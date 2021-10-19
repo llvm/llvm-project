@@ -1,4 +1,4 @@
-# RUN: llc -run-pass opt-phis -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass opt-phis -mtriple=x86_64-- -o - %s | FileCheck %s
 # All PHIs should be removed since they can be securely replaced
 # by %8 register.
 # CHECK-NOT: PHI
@@ -33,7 +33,7 @@ body:             |
     JCC_1 %bb.8, 7, implicit $eflags
 
   bb.9:
-    JMP64m $noreg, 8, %10, %jump-table.0, $noreg :: (load 8 from jump-table)
+    JMP64m $noreg, 8, %10, %jump-table.0, $noreg :: (load (s64) from jump-table)
 
   bb.1:
     %0:vr256 = COPY %8

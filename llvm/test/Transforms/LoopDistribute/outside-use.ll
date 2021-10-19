@@ -36,8 +36,12 @@ entry:
 ; CHECK: for.body.ph:
 ; CHECK: for.body:
 ; CHECK:   %sum_add = add nuw nsw i32 %sum, %loadC
+; CHECK: for.end.loopexit:
+; CHECK:   %sum_add.lver.ph = phi i32 [ %sum_add.lver.orig, %for.body.lver.orig ]
+; CHECK: for.end.loopexit6:
+; CHECK:   %sum_add.lver.ph7 = phi i32 [ %sum_add, %for.body ]
 ; CHECK: for.end:
-; CHECK:   %sum_add.lver = phi i32 [ %sum_add, %for.body ], [ %sum_add.lver.orig, %for.body.lver.orig ]
+; CHECK:   %sum_add.lver = phi i32 [ %sum_add.lver.ph, %for.end.loopexit ], [ %sum_add.lver.ph7, %for.end.loopexit6 ]
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]

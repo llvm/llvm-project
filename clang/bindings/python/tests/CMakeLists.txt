@@ -15,14 +15,13 @@ if(NOT LLVM_ENABLE_PIC)
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 
-# Do not try to run if libclang was built with ASan because
+# Do not try to run if libclang was built with sanitizers because
 # the sanitizer library will likely be loaded too late to perform
 # interception and will then fail.
 # We could use LD_PRELOAD/DYLD_INSERT_LIBRARIES but this isn't
 # portable so its easier just to not run the tests when building
 # with ASan.
-list(FIND LLVM_USE_SANITIZER "Address" LLVM_USE_ASAN_INDEX)
-if(NOT LLVM_USE_ASAN_INDEX EQUAL -1)
+if(NOT LLVM_USE_SANITIZER STREQUAL "")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 

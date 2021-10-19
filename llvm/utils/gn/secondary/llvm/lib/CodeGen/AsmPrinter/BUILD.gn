@@ -15,6 +15,7 @@ static_library("AsmPrinter") {
     "//llvm/lib/Target",
   ]
   sources = [
+    "AIXException.cpp",
     "ARMException.cpp",
     "AccelTable.cpp",
     "AddressPool.cpp",
@@ -37,6 +38,7 @@ static_library("AsmPrinter") {
     "EHStreamer.cpp",
     "ErlangGCPrinter.cpp",
     "OcamlGCPrinter.cpp",
+    "PseudoProbePrinter.cpp",
     "WasmException.cpp",
     "WinCFGuard.cpp",
     "WinException.cpp",

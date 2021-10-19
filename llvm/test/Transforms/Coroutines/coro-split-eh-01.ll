@@ -1,7 +1,6 @@
 ; Tests that coro-split removes cleanup code after coro.end in resume functions
 ; and retains it in the start function.
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f2(i1 %val) "coroutine.presplit"="1" personality i32 4 {
 entry:
@@ -78,4 +77,3 @@ declare i1 @llvm.coro.end(i8*, i1)
 declare noalias i8* @malloc(i32)
 declare void @print(i32)
 declare void @free(i8*)
-

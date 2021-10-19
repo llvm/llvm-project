@@ -31,10 +31,6 @@ public:
 
   virtual const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) = 0;
 
-  // Detect the register size dynamically.
-  uint32_t UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
-                                     RegisterInfo *reg_info);
-
   virtual size_t GetRegisterSetCount() = 0;
 
   virtual const RegisterSet *GetRegisterSet(size_t reg_set) = 0;
@@ -148,6 +144,31 @@ public:
 
   uint64_t GetPC(uint64_t fail_value = LLDB_INVALID_ADDRESS);
 
+  /// Get an address suitable for symbolication.
+  /// When symbolicating -- computing line, block, function --
+  /// for a function in the middle of the stack, using the return
+  /// address can lead to unexpected results for the user.
+  /// A function that ends in a tail-call may have another function
+  /// as the "return" address, but it will never actually return.
+  /// Or a noreturn call in the middle of a function is the end of
+  /// a block of instructions, and a DWARF location list entry for
+  /// the return address may be a very different code path with
+  /// incorrect results when printing variables for this frame.
+  ///
+  /// At a source line view, the user expects the current-line indictation
+  /// to point to the function call they're under, not the next source line.
+  ///
+  /// The return address (GetPC()) should always be shown to the user,
+  /// but when computing context, keeping within the bounds of the
+  /// call instruction is what the user expects to see.
+  ///
+  /// \param [out] address
+  ///     An Address object that will be filled in, if a PC can be retrieved.
+  ///
+  /// \return
+  ///     Returns true if the Address param was filled in.
+  bool GetPCForSymbolication(Address &address);
+
   bool SetPC(uint64_t pc);
 
   bool SetPC(Address addr);
@@ -196,6 +217,19 @@ public:
   void SetStopID(uint32_t stop_id) { m_stop_id = stop_id; }
 
 protected:
+  /// Indicates that this frame is currently executing code,
+  /// that the PC value is not a return-pc but an actual executing
+  /// instruction.  Some places in lldb will treat a return-pc
+  /// value differently than the currently-executing-pc value,
+  /// and this method can indicate if that should be done.
+  /// The base class implementation only uses the frame index,
+  /// but subclasses may have additional information that they
+  /// can use to detect frames in this state, for instance a
+  /// frame above a trap handler (sigtramp etc)..
+  virtual bool BehavesLikeZerothFrame() const {
+    return m_concrete_frame_idx == 0;
+  }
+
   // Classes that inherit from RegisterContext can see and modify these
   Thread &m_thread; // The thread that this register context belongs to.
   uint32_t m_concrete_frame_idx; // The concrete frame index for this register

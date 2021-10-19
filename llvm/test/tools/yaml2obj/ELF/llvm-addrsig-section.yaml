@@ -118,11 +118,13 @@ Sections:
     Type: SHT_LLVM_ADDRSIG
     Content: "1122334455"
 
-## Either "Content" or "Symbols" must be specifed for SHT_LLVM_ADDRSIG sections.
+## Check we emit an empty section if neither "Content", "Size" nor "Symbols" were set.
 
-# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readelf --sections %t6 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: error: one of "Content", "Size" or "Symbols" must be specified
+# NO-TAGS: [Nr] Name          Type         Address          Off    Size
+# NO-TAGS: [ 1] .llvm_addrsig LLVM_ADDRSIG 0000000000000000 000040 000000
 
 --- !ELF
 FileHeader:
@@ -232,7 +234,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=11 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
 
-# SIZE-CONTENT-ERR: error: "Size" must be greater than or equal to the content size
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
 
 --- !ELF
 FileHeader:

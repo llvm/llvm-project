@@ -1,0 +1,54 @@
+#RUN: not --crash llc -march=x86-64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# These copies have mismatched type sizes that are allowed because the
+# register class is defined to directly include the narrower type.
+---
+name:            test_valid_copies
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $xmm0, $xmm1, $xmm2, $xmm3, $xmm4
+    %0:_(s32) = COPY $xmm0
+    %1:_(s64) = COPY $xmm1
+    %2:_(s128) = COPY $xmm2
+    %3:_(<4 x s32>) = COPY $xmm3
+    %4:_(<2 x s64>) = COPY $xmm4
+    $xmm0 = COPY %0
+    $xmm1 = COPY %1
+    $xmm2 = COPY %2
+    $xmm3 = COPY %3
+    $xmm4 = COPY %4
+...
+
+---
+name:            test_invalid_copies
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $xmm0, $xmm1, $xmm2, $xmm3
+
+    ; FP16 reg is sub_reg of xmm
+    %0:_(s16) = COPY $xmm0
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    %1:_(<4 x s16>) = COPY $xmm1
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    %2:_(s256) = COPY $xmm2
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    %3:_(<8 x s32>) = COPY $xmm3
+
+    ; FP16 reg is sub_reg of xmm
+    $xmm0 = COPY %0
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    $xmm1 = COPY %1
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    $xmm2 = COPY %2
+
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    $xmm3 = COPY %3
+...

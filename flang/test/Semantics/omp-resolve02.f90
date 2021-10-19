@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 
 ! Test the effect to name resolution from illegal clause
 

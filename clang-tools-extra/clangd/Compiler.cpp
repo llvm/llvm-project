@@ -9,6 +9,7 @@
 #include "Compiler.h"
 #include "support/Logger.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,9 +42,49 @@ void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   IgnoreDiagnostics::log(DiagLevel, Info);
 }
 
+void disableUnsupportedOptions(CompilerInvocation &CI) {
+  // Disable "clang -verify" diagnostics, they are rarely useful in clangd, and
+  // our compiler invocation set-up doesn't seem to work with it (leading
+  // assertions in VerifyDiagnosticConsumer).
+  CI.getDiagnosticOpts().VerifyDiagnostics = false;
+  CI.getDiagnosticOpts().ShowColors = false;
+
+  // Disable any dependency outputting, we don't want to generate files or write
+  // to stdout/stderr.
+  CI.getDependencyOutputOpts().ShowIncludesDest = ShowIncludesDestination::None;
+  CI.getDependencyOutputOpts().OutputFile.clear();
+  CI.getDependencyOutputOpts().HeaderIncludeOutputFile.clear();
+  CI.getDependencyOutputOpts().DOTOutputFile.clear();
+  CI.getDependencyOutputOpts().ModuleDependencyOutputDir.clear();
+
+  // Disable any pch generation/usage operations. Since serialized preamble
+  // format is unstable, using an incompatible one might result in unexpected
+  // behaviours, including crashes.
+  CI.getPreprocessorOpts().ImplicitPCHInclude.clear();
+  CI.getPreprocessorOpts().PrecompiledPreambleBytes = {0, false};
+  CI.getPreprocessorOpts().PCHThroughHeader.clear();
+  CI.getPreprocessorOpts().PCHWithHdrStop = false;
+  CI.getPreprocessorOpts().PCHWithHdrStopCreate = false;
+  // Don't crash on `#pragma clang __debug parser_crash`
+  CI.getPreprocessorOpts().DisablePragmaDebugCrash = true;
+
+  // Always default to raw container format as clangd doesn't registry any other
+  // and clang dies when faced with unknown formats.
+  CI.getHeaderSearchOpts().ModuleFormat =
+      PCHContainerOperations().getRawReader().getFormat().str();
+
+  CI.getFrontendOpts().Plugins.clear();
+  CI.getFrontendOpts().AddPluginActions.clear();
+  CI.getFrontendOpts().PluginArgs.clear();
+  CI.getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
+  CI.getFrontendOpts().ActionName.clear();
+}
+
 std::unique_ptr<CompilerInvocation>
 buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
                         std::vector<std::string> *CC1Args) {
+  if (Inputs.CompileCommand.CommandLine.empty())
+    return nullptr;
   std::vector<const char *> ArgStrs;
   for (const auto &S : Inputs.CompileCommand.CommandLine)
     ArgStrs.push_back(S.c_str());
@@ -61,31 +102,7 @@ buildCompilerInvocation(const ParseInputs &Inputs, clang::DiagnosticConsumer &D,
   CI->getLangOpts()->CommentOpts.ParseAllComments = true;
   CI->getLangOpts()->RetainCommentsFromSystemHeaders = true;
 
-  // Disable any dependency outputting, we don't want to generate files or write
-  // to stdout/stderr.
-  CI->getDependencyOutputOpts().ShowIncludesDest =
-      ShowIncludesDestination::None;
-  CI->getDependencyOutputOpts().OutputFile.clear();
-  CI->getDependencyOutputOpts().HeaderIncludeOutputFile.clear();
-  CI->getDependencyOutputOpts().DOTOutputFile.clear();
-  CI->getDependencyOutputOpts().ModuleDependencyOutputDir.clear();
-
-  // Disable any pch generation/usage operations. Since serialized preamble
-  // format is unstable, using an incompatible one might result in unexpected
-  // behaviours, including crashes.
-  CI->getPreprocessorOpts().ImplicitPCHInclude.clear();
-  CI->getPreprocessorOpts().PrecompiledPreambleBytes = {0, false};
-  CI->getPreprocessorOpts().PCHThroughHeader.clear();
-  CI->getPreprocessorOpts().PCHWithHdrStop = false;
-  CI->getPreprocessorOpts().PCHWithHdrStopCreate = false;
-  // Don't crash on `#pragma clang __debug parser_crash`
-  CI->getPreprocessorOpts().DisablePragmaDebugCrash = true;
-
-  // Recovery expression currently only works for C++.
-  if (CI->getLangOpts()->CPlusPlus) {
-    CI->getLangOpts()->RecoveryAST = Inputs.Opts.BuildRecoveryAST;
-    CI->getLangOpts()->RecoveryASTType = Inputs.Opts.PreserveRecoveryASTType;
-  }
+  disableUnsupportedOptions(*CI);
   return CI;
 }
 
@@ -119,9 +136,7 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
     VFS = VFSWithRemapping;
   Clang->createFileManager(VFS);
 
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return nullptr;
 
   // RemappedFileBuffers will handle the lifetime of the Buffer pointer,

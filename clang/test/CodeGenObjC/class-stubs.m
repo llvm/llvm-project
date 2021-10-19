@@ -39,7 +39,7 @@ __attribute__((objc_subclassing_restricted))
 int main() {
   [Base classMethod];
 }
-// CHECK-LABEL: define i32 @main()
+// CHECK-LABEL: define{{.*}} i32 @main()
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[CLASS:%.*]] = call %struct._class_t* @objc_loadClassref(i8** @"OBJC_CLASSLIST_REFERENCES_$_")
 // CHECK-NEXT:   [[SELECTOR:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_

@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEARGUMENTS_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEARGUMENTS_H
+
 #include "Delta.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -19,3 +22,5 @@
 namespace llvm {
 void reduceArgumentsDeltaPass(TestRunner &Test);
 } // namespace llvm
+
+#endif

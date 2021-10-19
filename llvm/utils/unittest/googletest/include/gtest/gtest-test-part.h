@@ -27,8 +27,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Author: mheule@google.com (Markus Heule)
-//
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 #ifndef GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
 #define GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
@@ -37,6 +36,9 @@
 #include <vector>
 #include "gtest/internal/gtest-internal.h"
 #include "gtest/internal/gtest-string.h"
+
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
+/* class A needs to have dll-interface to be used by clients of class B */)
 
 namespace testing {
 
@@ -51,22 +53,20 @@ class GTEST_API_ TestPartResult {
   enum Type {
     kSuccess,          // Succeeded.
     kNonFatalFailure,  // Failed but the test can continue.
-    kFatalFailure      // Failed and the test should be terminated.
+    kFatalFailure,     // Failed and the test should be terminated.
+    kSkip              // Skipped.
   };
 
   // C'tor.  TestPartResult does NOT have a default constructor.
   // Always use this constructor (with parameters) to create a
   // TestPartResult object.
-  TestPartResult(Type a_type,
-                 const char* a_file_name,
-                 int a_line_number,
+  TestPartResult(Type a_type, const char* a_file_name, int a_line_number,
                  const char* a_message)
       : type_(a_type),
-        file_name_(a_file_name == NULL ? "" : a_file_name),
+        file_name_(a_file_name == nullptr ? "" : a_file_name),
         line_number_(a_line_number),
         summary_(ExtractSummary(a_message)),
-        message_(a_message) {
-  }
+        message_(a_message) {}
 
   // Gets the outcome of the test part.
   Type type() const { return type_; }
@@ -74,7 +74,7 @@ class GTEST_API_ TestPartResult {
   // Gets the name of the source file where the test part took place, or
   // NULL if it's unknown.
   const char* file_name() const {
-    return file_name_.empty() ? NULL : file_name_.c_str();
+    return file_name_.empty() ? nullptr : file_name_.c_str();
   }
 
   // Gets the line in the source file where the test part took place,
@@ -87,17 +87,20 @@ class GTEST_API_ TestPartResult {
   // Gets the message associated with the test part.
   const char* message() const { return message_.c_str(); }
 
-  // Returns true iff the test part passed.
+  // Returns true if and only if the test part was skipped.
+  bool skipped() const { return type_ == kSkip; }
+
+  // Returns true if and only if the test part passed.
   bool passed() const { return type_ == kSuccess; }
 
-  // Returns true iff the test part failed.
-  bool failed() const { return type_ != kSuccess; }
-
-  // Returns true iff the test part non-fatally failed.
+  // Returns true if and only if the test part non-fatally failed.
   bool nonfatally_failed() const { return type_ == kNonFatalFailure; }
 
-  // Returns true iff the test part fatally failed.
+  // Returns true if and only if the test part fatally failed.
   bool fatally_failed() const { return type_ == kFatalFailure; }
+
+  // Returns true if and only if the test part failed.
+  bool failed() const { return fatally_failed() || nonfatally_failed(); }
 
  private:
   Type type_;
@@ -143,7 +146,7 @@ class GTEST_API_ TestPartResultArray {
 };
 
 // This interface knows how to report a test part result.
-class TestPartResultReporterInterface {
+class GTEST_API_ TestPartResultReporterInterface {
  public:
   virtual ~TestPartResultReporterInterface() {}
 
@@ -162,8 +165,8 @@ class GTEST_API_ HasNewFatalFailureHelper
     : public TestPartResultReporterInterface {
  public:
   HasNewFatalFailureHelper();
-  virtual ~HasNewFatalFailureHelper();
-  virtual void ReportTestPartResult(const TestPartResult& result);
+  ~HasNewFatalFailureHelper() override;
+  void ReportTestPartResult(const TestPartResult& result) override;
   bool has_new_fatal_failure() const { return has_new_fatal_failure_; }
  private:
   bool has_new_fatal_failure_;
@@ -175,5 +178,7 @@ class GTEST_API_ HasNewFatalFailureHelper
 }  // namespace internal
 
 }  // namespace testing
+
+GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
 
 #endif  // GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_

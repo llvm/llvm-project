@@ -9,18 +9,8 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/BitVector.h"
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// BlockArgument
-//===----------------------------------------------------------------------===//
-
-/// Returns the number of this argument.
-unsigned BlockArgument::getArgNumber() const {
-  // Arguments are not stored in place, so we have to find it within the list.
-  auto argList = getOwner()->getArguments();
-  return std::distance(argList.begin(), llvm::find(argList, *this));
-}
 
 //===----------------------------------------------------------------------===//
 // Block
@@ -148,46 +138,114 @@ auto Block::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
   return ValueTypeRange<BlockArgListType>(getArguments());
 }
 
-BlockArgument Block::addArgument(Type type) {
-  BlockArgument arg = BlockArgument::create(type, this);
+BlockArgument Block::addArgument(Type type, Optional<Location> loc) {
+  // TODO: Require locations for BlockArguments.
+  if (!loc.hasValue()) {
+    // Use the location of the parent operation if the block is attached.
+    if (Operation *parentOp = getParentOp())
+      loc = parentOp->getLoc();
+    else
+      loc = UnknownLoc::get(type.getContext());
+  }
+
+  BlockArgument arg = BlockArgument::create(type, this, arguments.size(), *loc);
   arguments.push_back(arg);
   return arg;
 }
 
 /// Add one argument to the argument list for each type specified in the list.
-auto Block::addArguments(TypeRange types) -> iterator_range<args_iterator> {
+auto Block::addArguments(TypeRange types, ArrayRef<Location> locs)
+    -> iterator_range<args_iterator> {
+  // TODO: Require locations for BlockArguments.
+  assert((locs.empty() || types.size() == locs.size()) &&
+         "incorrect number of block argument locations");
   size_t initialSize = arguments.size();
+
   arguments.reserve(initialSize + types.size());
-  for (auto type : types)
-    addArgument(type);
+
+  // TODO: Require locations for BlockArguments.
+  if (locs.empty()) {
+    for (auto type : types)
+      addArgument(type);
+  } else {
+    for (auto typeAndLoc : llvm::zip(types, locs))
+      addArgument(std::get<0>(typeAndLoc), std::get<1>(typeAndLoc));
+  }
   return {arguments.data() + initialSize, arguments.data() + arguments.size()};
 }
 
-BlockArgument Block::insertArgument(unsigned index, Type type) {
-  auto arg = BlockArgument::create(type, this);
+BlockArgument Block::insertArgument(unsigned index, Type type,
+                                    Optional<Location> loc) {
+  // TODO: Require locations for BlockArguments.
+  if (!loc.hasValue()) {
+    // Use the location of the parent operation if the block is attached.
+    if (Operation *parentOp = getParentOp())
+      loc = parentOp->getLoc();
+    else
+      loc = UnknownLoc::get(type.getContext());
+  }
+
+  auto arg = BlockArgument::create(type, this, index, *loc);
   assert(index <= arguments.size());
   arguments.insert(arguments.begin() + index, arg);
+  // Update the cached position for all the arguments after the newly inserted
+  // one.
+  ++index;
+  for (BlockArgument arg : llvm::drop_begin(arguments, index))
+    arg.setArgNumber(index++);
   return arg;
+}
+
+/// Insert one value to the given position of the argument list. The existing
+/// arguments are shifted. The block is expected not to have predecessors.
+BlockArgument Block::insertArgument(args_iterator it, Type type,
+                                    Optional<Location> loc) {
+  assert(llvm::empty(getPredecessors()) &&
+         "cannot insert arguments to blocks with predecessors");
+  return insertArgument(it->getArgNumber(), type, loc);
 }
 
 void Block::eraseArgument(unsigned index) {
   assert(index < arguments.size());
   arguments[index].destroy();
   arguments.erase(arguments.begin() + index);
+  for (BlockArgument arg : llvm::drop_begin(arguments, index))
+    arg.setArgNumber(index++);
 }
 
-/// Insert one value to the given position of the argument list. The existing
-/// arguments are shifted. The block is expected not to have predecessors.
-BlockArgument Block::insertArgument(args_iterator it, Type type) {
-  assert(llvm::empty(getPredecessors()) &&
-         "cannot insert arguments to blocks with predecessors");
+void Block::eraseArguments(ArrayRef<unsigned> argIndices) {
+  llvm::BitVector eraseIndices(getNumArguments());
+  for (unsigned i : argIndices)
+    eraseIndices.set(i);
+  eraseArguments(eraseIndices);
+}
 
-  // Use the args_iterator (on the BlockArgListType) to compute the insertion
-  // iterator in the underlying argument storage.
-  size_t distance = std::distance(args_begin(), it);
-  auto arg = BlockArgument::create(type, this);
-  arguments.insert(std::next(arguments.begin(), distance), arg);
-  return arg;
+void Block::eraseArguments(const llvm::BitVector &eraseIndices) {
+  eraseArguments(
+      [&](BlockArgument arg) { return eraseIndices.test(arg.getArgNumber()); });
+}
+
+void Block::eraseArguments(function_ref<bool(BlockArgument)> shouldEraseFn) {
+  auto firstDead = llvm::find_if(arguments, shouldEraseFn);
+  if (firstDead == arguments.end())
+    return;
+
+  // Destroy the first dead argument, this avoids reapplying the predicate to
+  // it.
+  unsigned index = firstDead->getArgNumber();
+  firstDead->destroy();
+
+  // Iterate the remaining arguments to remove any that are now dead.
+  for (auto it = std::next(firstDead), e = arguments.end(); it != e; ++it) {
+    // Destroy dead arguments, and shift those that are still live.
+    if (shouldEraseFn(*it)) {
+      it->destroy();
+    } else {
+      it->setArgNumber(index++);
+      *firstDead++ = *it;
+    }
+  }
+  arguments.erase(firstDead, arguments.end());
 }
 
 //===----------------------------------------------------------------------===//
@@ -197,7 +255,7 @@ BlockArgument Block::insertArgument(args_iterator it, Type type) {
 /// Get the terminator operation of this block. This function asserts that
 /// the block has a valid terminator operation.
 Operation *Block::getTerminator() {
-  assert(!empty() && !back().isKnownNonTerminator());
+  assert(!empty() && back().mightHaveTrait<OpTrait::IsTerminator>());
   return &back();
 }
 
@@ -282,16 +340,46 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Successors
+// SuccessorRange
 //===----------------------------------------------------------------------===//
 
-SuccessorRange::SuccessorRange(Block *block) : SuccessorRange(nullptr, 0) {
-  if (Operation *term = block->getTerminator())
-    if ((count = term->getNumSuccessors()))
-      base = term->getBlockOperands().data();
+SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
+
+SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
+ if (block->empty() || llvm::hasSingleElement(*block->getParent()))
+  return;
+ Operation *term = &block->back();
+ if ((count = term->getNumSuccessors()))
+   base = term->getBlockOperands().data();
 }
 
-SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange(nullptr, 0) {
+SuccessorRange::SuccessorRange(Operation *term) : SuccessorRange() {
   if ((count = term->getNumSuccessors()))
     base = term->getBlockOperands().data();
+}
+
+//===----------------------------------------------------------------------===//
+// BlockRange
+//===----------------------------------------------------------------------===//
+
+BlockRange::BlockRange(ArrayRef<Block *> blocks) : BlockRange(nullptr, 0) {
+  if ((count = blocks.size()))
+    base = blocks.data();
+}
+
+BlockRange::BlockRange(SuccessorRange successors)
+    : BlockRange(successors.begin().getBase(), successors.size()) {}
+
+/// See `llvm::detail::indexed_accessor_range_base` for details.
+BlockRange::OwnerT BlockRange::offset_base(OwnerT object, ptrdiff_t index) {
+  if (auto *operand = object.dyn_cast<BlockOperand *>())
+    return {operand + index};
+  return {object.dyn_cast<Block *const *>() + index};
+}
+
+/// See `llvm::detail::indexed_accessor_range_base` for details.
+Block *BlockRange::dereference_iterator(OwnerT object, ptrdiff_t index) {
+  if (const auto *operand = object.dyn_cast<BlockOperand *>())
+    return operand[index].get();
+  return object.dyn_cast<Block *const *>()[index];
 }

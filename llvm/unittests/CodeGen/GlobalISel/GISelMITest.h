@@ -21,10 +21,10 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/FileCheck/FileCheck.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/FileCheck.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -169,7 +169,7 @@ class AMDGPUGISelMITest : public GISelMITest {
       (void)s128;                                                              \
       do                                                                       \
         SettingUpActionsBlock while (0);                                       \
-      computeTables();                                                         \
+      getLegacyLegalizerInfo().computeTables();                                \
       verify(*ST.getInstrInfo());                                              \
     }                                                                          \
   };

@@ -26,7 +26,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_cl_o_2d:
-; GCN: image_gather4_c_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1{{$}}
+; GCN: image_gather4_c_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1{{$}}
 define amdgpu_ps <4 x float> @gather4_c_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.cl.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -42,7 +42,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_b_o_2d:
-; GCN: image_gather4_c_b_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1{{$}}
+; GCN: image_gather4_c_b_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1{{$}}
 define amdgpu_ps <4 x float> @gather4_c_b_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %zcompare, float %s, float %t) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -50,7 +50,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_b_cl_o_2d:
-; GCN: image_gather4_b_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1{{$}}
+; GCN: image_gather4_b_cl_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1{{$}}
 define amdgpu_ps <4 x float> @gather4_b_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -58,7 +58,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_b_cl_o_2d:
-; GCN: image_gather4_c_b_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1{{$}}
+; GCN: image_gather4_c_b_cl_o v[0:3], v[0:5], s[0:7], s[8:11] dmask:0x1{{$}}
 define amdgpu_ps <4 x float> @gather4_c_b_cl_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.cl.o.2d.v4f32.f32.f32(i32 1, i32 %offset, float %bias, float %zcompare, float %s, float %t, float %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -74,7 +74,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_l_o_2d:
-; GCN: image_gather4_c_l_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1{{$}}
+; GCN: image_gather4_c_l_o v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1{{$}}
 define amdgpu_ps <4 x float> @gather4_c_l_o_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, float %s, float %t, float %lod) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.o.2d.v4f32.f32(i32 1, i32 %offset, float %zcompare, float %s, float %t, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

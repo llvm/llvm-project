@@ -16,7 +16,8 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/HashBuilder.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <cassert>
 #include <cstdint>
 
@@ -59,12 +60,7 @@ public:
     return SanitizerMask(mask1, mask2);
   }
 
-  unsigned countPopulation() const {
-    unsigned total = 0;
-    for (const auto &Val : maskLoToHigh)
-      total += llvm::countPopulation(Val);
-    return total;
-  }
+  unsigned countPopulation() const;
 
   void flipAllBits() {
     for (auto &Val : maskLoToHigh)
@@ -76,6 +72,12 @@ public:
   }
 
   llvm::hash_code hash_value() const;
+
+  template <typename HasherT, llvm::support::endianness Endianness>
+  friend void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+                      const SanitizerMask &SM) {
+    HBuilder.addRange(&SM.maskLoToHigh[0], &SM.maskLoToHigh[kNumElem]);
+  }
 
   constexpr explicit operator bool() const {
     return maskLoToHigh[0] || maskLoToHigh[1];
@@ -178,6 +180,10 @@ struct SanitizerSet {
 /// Returns a non-zero SanitizerMask, or \c 0 if \p Value is not known.
 SanitizerMask parseSanitizerValue(StringRef Value, bool AllowGroups);
 
+/// Serialize a SanitizerSet into values for -fsanitize= or -fno-sanitize=.
+void serializeSanitizerSet(SanitizerSet Set,
+                           SmallVectorImpl<StringRef> &Values);
+
 /// For each sanitizer group bit set in \p Kinds, set the bits for sanitizers
 /// this group enables.
 SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
@@ -188,6 +194,16 @@ inline SanitizerMask getPPTransparentSanitizers() {
          SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
          SanitizerKind::Undefined | SanitizerKind::FloatDivideByZero;
 }
+
+StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
+
+llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
+
+StringRef AsanDetectStackUseAfterReturnModeToString(
+    llvm::AsanDetectStackUseAfterReturnMode mode);
+
+llvm::AsanDetectStackUseAfterReturnMode
+AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr);
 
 } // namespace clang
 

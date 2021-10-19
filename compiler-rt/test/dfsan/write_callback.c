@@ -1,5 +1,6 @@
-// RUN: %clang_dfsan                         %s -o %t && %run %t | FileCheck %s
-// RUN: %clang_dfsan  -mllvm -dfsan-args-abi %s -o %t && %run %t | FileCheck %s
+// RUN: %clang_dfsan %s -o %t && %run %t | FileCheck %s
+//
+// REQUIRES: x86_64-target-arch
 
 // Tests that the custom implementation of write() does writes with or without
 // a callback set using dfsan_set_write_callback().

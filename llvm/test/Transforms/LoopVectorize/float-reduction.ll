@@ -44,3 +44,47 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret float %sub
 }
+
+;CHECK-LABEL: @foodiv(
+;CHECK: fdiv fast <4 x float>
+;CHECK: ret
+define float @foodiv(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %sum.04 = phi float [ 1.000000e+00, %entry ], [ %sub, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
+  %0 = load float, float* %arrayidx, align 4
+  %sub = fdiv fast float %sum.04, %0
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 200
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret float %sub
+}
+
+;CHECK-LABEL: @foonodiv(
+;CHECK-NOT: fdiv fast <4 x float>
+;CHECK: ret
+define float @foonodiv(float* nocapture %A, i32* nocapture %n) nounwind uwtable readonly ssp {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %sum.04 = phi float [ 1.000000e+00, %entry ], [ %sub, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
+  %0 = load float, float* %arrayidx, align 4
+  %sub = fdiv fast float %0, %sum.04
+  %indvars.iv.next = add i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, 200
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret float %sub
+}

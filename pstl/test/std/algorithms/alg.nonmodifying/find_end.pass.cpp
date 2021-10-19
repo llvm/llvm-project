@@ -20,8 +20,8 @@ using namespace TestUtils;
 
 struct test_one_policy
 {
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
-    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
+#if defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) ||                                                             \
+    defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) //dummy specialization by policy type, in case of broken configuration
     template <typename Iterator1, typename Iterator2, typename Predicate>
     void
     operator()(pstl::execution::unsequenced_policy, Iterator1 b, Iterator1 e, Iterator2 bsub, Iterator2 esub,
@@ -81,7 +81,7 @@ test(const std::size_t bits)
             for (auto r : res)
             {
                 std::size_t i = r, isub = 0;
-                for (; i < n1 & isub < n2; ++i, ++isub)
+                for (; i < n1 && isub < n2; ++i, ++isub)
                     in[i] = sub[isub];
                 invoke_on_all_policies(test_one_policy(), in.begin(), in.begin() + n1, sub.begin(), sub.begin() + n2,
                                        std::equal_to<T>());
@@ -112,7 +112,7 @@ main()
     test<int32_t>(8 * sizeof(int32_t));
     test<uint16_t>(8 * sizeof(uint16_t));
     test<float64_t>(53);
-#if !_PSTL_ICC_16_17_TEST_REDUCTION_BOOL_TYPE_RELEASE_64_BROKEN
+#if !defined(_PSTL_ICC_16_17_TEST_REDUCTION_BOOL_TYPE_RELEASE_64_BROKEN)
     test<bool>(1);
 #endif
 

@@ -10,11 +10,11 @@ define i16 @test1(float %f) nounwind {
 ; X32-LABEL: test1:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    addss LCPI0_0, %xmm0
-; X32-NEXT:    mulss LCPI0_1, %xmm0
+; X32-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    xorps %xmm1, %xmm1
 ; X32-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32-NEXT:    minss LCPI0_2, %xmm0
+; X32-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    maxss %xmm1, %xmm0
 ; X32-NEXT:    cvttss2si %xmm0, %eax
 ; X32-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -22,11 +22,11 @@ define i16 @test1(float %f) nounwind {
 ;
 ; X64-LABEL: test1:
 ; X64:       ## %bb.0:
-; X64-NEXT:    addss {{.*}}(%rip), %xmm0
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64-NEXT:    minss {{.*}}(%rip), %xmm0
+; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    maxss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -35,11 +35,11 @@ define i16 @test1(float %f) nounwind {
 ; X32_AVX1-LABEL: test1:
 ; X32_AVX1:       ## %bb.0:
 ; X32_AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32_AVX1-NEXT:    vaddss LCPI0_0, %xmm0, %xmm0
-; X32_AVX1-NEXT:    vmulss LCPI0_1, %xmm0, %xmm0
+; X32_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X32_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32_AVX1-NEXT:    vminss LCPI0_2, %xmm0, %xmm0
+; X32_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X32_AVX1-NEXT:    vcvttss2si %xmm0, %eax
 ; X32_AVX1-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -47,11 +47,11 @@ define i16 @test1(float %f) nounwind {
 ;
 ; X64_AVX1-LABEL: test1:
 ; X64_AVX1:       ## %bb.0:
-; X64_AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
-; X64_AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64_AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64_AVX1-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX1-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX1-NEXT:    vcvttss2si %xmm0, %eax
 ; X64_AVX1-NEXT:    ## kill: def $ax killed $ax killed $eax
@@ -60,11 +60,11 @@ define i16 @test1(float %f) nounwind {
 ; X32_AVX512-LABEL: test1:
 ; X32_AVX512:       ## %bb.0:
 ; X32_AVX512-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32_AVX512-NEXT:    vaddss LCPI0_0, %xmm0, %xmm0
-; X32_AVX512-NEXT:    vmulss LCPI0_1, %xmm0, %xmm0
+; X32_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X32_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X32_AVX512-NEXT:    vminss LCPI0_2, %xmm0, %xmm0
+; X32_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X32_AVX512-NEXT:    vcvttss2si %xmm0, %eax
@@ -73,11 +73,11 @@ define i16 @test1(float %f) nounwind {
 ;
 ; X64_AVX512-LABEL: test1:
 ; X64_AVX512:       ## %bb.0:
-; X64_AVX512-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
-; X64_AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64_AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; X64_AVX512-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX512-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX512-NEXT:    vcvttss2si %xmm0, %eax
@@ -100,9 +100,9 @@ define i16 @test2(float %f) nounwind {
 ; X32-LABEL: test2:
 ; X32:       ## %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    addss LCPI1_0, %xmm0
-; X32-NEXT:    mulss LCPI1_1, %xmm0
-; X32-NEXT:    minss LCPI1_2, %xmm0
+; X32-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    xorps %xmm1, %xmm1
 ; X32-NEXT:    maxss %xmm1, %xmm0
 ; X32-NEXT:    cvttss2si %xmm0, %eax
@@ -111,9 +111,9 @@ define i16 @test2(float %f) nounwind {
 ;
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0:
-; X64-NEXT:    addss {{.*}}(%rip), %xmm0
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
-; X64-NEXT:    minss {{.*}}(%rip), %xmm0
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    xorps %xmm1, %xmm1
 ; X64-NEXT:    maxss %xmm1, %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
@@ -123,9 +123,9 @@ define i16 @test2(float %f) nounwind {
 ; X32_AVX-LABEL: test2:
 ; X32_AVX:       ## %bb.0:
 ; X32_AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32_AVX-NEXT:    vaddss LCPI1_0, %xmm0, %xmm0
-; X32_AVX-NEXT:    vmulss LCPI1_1, %xmm0, %xmm0
-; X32_AVX-NEXT:    vminss LCPI1_2, %xmm0, %xmm0
+; X32_AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X32_AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X32_AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32_AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X32_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X32_AVX-NEXT:    vcvttss2si %xmm0, %eax
@@ -134,9 +134,9 @@ define i16 @test2(float %f) nounwind {
 ;
 ; X64_AVX-LABEL: test2:
 ; X64_AVX:       ## %bb.0:
-; X64_AVX-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
-; X64_AVX-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm0
-; X64_AVX-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; X64_AVX-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64_AVX-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64_AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64_AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64_AVX-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; X64_AVX-NEXT:    vcvttss2si %xmm0, %eax

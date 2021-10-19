@@ -38,7 +38,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr));
     ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts));
     ASSERT_NOEXCEPT(fs::permissions(p, pr, ec));
-    ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec));
+    LIBCPP_ONLY(ASSERT_NOT_NOEXCEPT(fs::permissions(p, pr, opts, ec)));
 }
 
 TEST_CASE(test_error_reporting)
@@ -126,18 +126,22 @@ TEST_CASE(basic_permissions_test)
           permissions(TC.p, TC.set_perms, TC.opts, ec);
           TEST_CHECK(!ec);
           auto pp = status(TC.p).permissions();
-          TEST_CHECK(pp == TC.expected);
+          TEST_CHECK(pp == NormalizeExpectedPerms(TC.expected));
         }
         if (TC.opts == perm_options::replace) {
           std::error_code ec = GetTestEC();
           permissions(TC.p, TC.set_perms, ec);
           TEST_CHECK(!ec);
           auto pp = status(TC.p).permissions();
-          TEST_CHECK(pp == TC.expected);
+          TEST_CHECK(pp == NormalizeExpectedPerms(TC.expected));
         }
     }
 }
 
+#ifndef _WIN32
+// This test isn't currently meaningful on Windows; the Windows file
+// permissions visible via std::filesystem doesn't show any difference
+// between owner/group/others.
 TEST_CASE(test_no_resolve_symlink_on_symlink)
 {
     scoped_test_env env;
@@ -172,10 +176,14 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
 #endif
         std::error_code ec = GetTestEC();
         permissions(sym, TC.set_perms, TC.opts | perm_options::nofollow, ec);
-        TEST_CHECK(ec == expected_ec);
+        if (expected_ec)
+            TEST_CHECK(ErrorIs(ec, static_cast<std::errc>(expected_ec.value())));
+        else
+            TEST_CHECK(!ec);
         TEST_CHECK(status(file).permissions() == file_perms);
         TEST_CHECK(symlink_status(sym).permissions() == expected_link_perms);
     }
 }
+#endif
 
 TEST_SUITE_END()

@@ -60,7 +60,7 @@ define void @unknown_use_of_invariant_start({}** %p) {
 
 define {}* @minimal_invariant_start_use(i8 %x) {
 ; CHECK-LABEL: @minimal_invariant_start_use(
-; CHECK-NEXT:    ret {}* undef
+; CHECK-NEXT:    ret {}* poison
 ;
   %a = alloca i8
   %i = call {}* @llvm.invariant.start.p0i8(i64 1, i8* %a)

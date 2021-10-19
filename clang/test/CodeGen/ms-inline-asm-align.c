@@ -13,7 +13,7 @@ void align_test() {
   __asm ALIGN 256;
 }
 
-// DARWIN-LABEL: define void @align_test()
+// DARWIN-LABEL: define{{.*}} void @align_test()
 // DARWIN: call void asm sideeffect inteldialect
 // DARWIN-SAME: .align 3
 // DARWIN-SAME: .align 4

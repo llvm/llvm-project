@@ -1,12 +1,12 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi | FileCheck %s
 
 %struct.s = type { [4 x i32] }
-@v = constant %struct.s zeroinitializer; 
+@v = constant %struct.s zeroinitializer;
 
 declare void @f(%struct.s* %p);
 
 ; CHECK-LABEL: t:
-define void @t(i32 %a, %struct.s* byval %s) nounwind {
+define void @t(i32 %a, %struct.s* byval(%struct.s) %s) nounwind {
 entry:
 
 ; Here we need to only check proper start address of restored %s argument.
@@ -25,6 +25,6 @@ entry:
 define void @caller() {
 
 ; CHECK:      ldm     r{{[0-9]+}}, {r1, r2, r3}
-  call void @t(i32 0, %struct.s* @v);
+  call void @t(i32 0, %struct.s* byval(%struct.s) @v);
   ret void
 }

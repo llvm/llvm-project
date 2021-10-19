@@ -8,8 +8,8 @@ bb:
   %tmp5 = getelementptr i16, i16* null, i64 2
   %tmp6 = load i16, i16* %tmp1, align 2, !tbaa !0
   store i16 %tmp6, i16* %tmp5, align 2, !tbaa !0
-  ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD %{{[0-9]+}}(p0) :: (load 2 from %ir.tmp1, !tbaa !0)
-  ; CHECK: G_STORE [[LOAD]](s16), %{{[0-9]+}}(p0) :: (store 2 into %ir.tmp5, !tbaa !0)
+  ; CHECK: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD %{{[0-9]+}}(p0) :: (load (s16) from %ir.tmp1, !tbaa !0)
+  ; CHECK: G_STORE [[LOAD]](s16), %{{[0-9]+}}(p0) :: (store (s16) into %ir.tmp5, !tbaa !0)
   ret void
 }
 

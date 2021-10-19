@@ -9,8 +9,8 @@ define void @f() nounwind  {
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
-; CHECK-NEXT:    psllw LCPI0_1-L0$pb(%eax), %xmm1
-; CHECK-NEXT:    pavgw LCPI0_2-L0$pb(%eax), %xmm0
+; CHECK-NEXT:    psllw {{\.?LCPI[0-9]+_[0-9]+}}-L0$pb(%eax), %xmm1
+; CHECK-NEXT:    pavgw {{\.?LCPI[0-9]+_[0-9]+}}-L0$pb(%eax), %xmm0
 ; CHECK-NEXT:    paddsw %xmm0, %xmm0
 ; CHECK-NEXT:    paddw %xmm1, %xmm0
 ; CHECK-NEXT:    .p2align 4, 0x90

@@ -3,20 +3,24 @@
 # The mock driver below is a shell script:
 # REQUIRES: shell
 
+# Create a bin directory to store the mock-driver and add it to the path
+# RUN: mkdir -p %t.dir/bin
+# RUN: export PATH=%t.dir/bin:$PATH
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
-# RUN: echo '#!/bin/sh' >> %t.dir/my_driver.sh
-# RUN: echo '[ "$0" = "%t.dir/my_driver.sh" ] || exit' >> %t.dir/my_driver.sh
-# RUN: echo 'args="$*"' >> %t.dir/my_driver.sh
-# RUN: echo '[ -z "${args##*"-nostdinc"*}" ] || exit' >> %t.dir/my_driver.sh
-# RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/my_driver.sh
-# RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/my_driver.sh
-# RUN: echo 'echo line to ignore >&2' >> %t.dir/my_driver.sh
-# RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/my_driver.sh
-# RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/my_driver.sh
-# RUN: echo 'echo %t.dir/my/dir2/ >&2' >> %t.dir/my_driver.sh
-# RUN: echo 'printf "End of search list.\r\n" >&2' >> %t.dir/my_driver.sh
-# RUN: chmod +x %t.dir/my_driver.sh
+# RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ "$0" = "%t.dir/bin/my_driver.sh" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'args="$*"' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"-nostdinc"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'echo line to ignore >&2' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'echo %t.dir/my/dir2/ >&2' >> %t.dir/bin/my_driver.sh
+# RUN: echo 'printf "End of search list.\r\n" >&2' >> %t.dir/bin/my_driver.sh
+# RUN: chmod +x %t.dir/bin/my_driver.sh
 
 # Create header files my/dir/a.h and my/dir2/b.h
 # RUN: mkdir -p %t.dir/my/dir
@@ -26,7 +30,7 @@
 
 # Generate a compile_commands.json that will query the mock driver we've
 # created. Which should add a.h and b.h into include search path.
-# RUN: echo '[{"directory": "%/t.dir", "command": "%/t.dir/my_driver.sh the-file.cpp -nostdinc --sysroot /my/sysroot/path -isysroot=/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "my_driver.sh the-file.cpp -nostdinc --sysroot /my/sysroot/path -isysroot=/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # RUN: sed -e "s|INPUT_DIR|%/t.dir|g" %s > %t.test.1
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
@@ -45,7 +49,7 @@
       "uri": "file://INPUT_DIR/the-file.cpp",
       "languageId":"cpp",
       "version":1,
-      "text":"#include <a.h>\n#include <b.h>"
+      "text":"#include <a.h>\n#include <b.h>\n#if !defined(__ARM_ARCH) || !defined(__gnu_linux__)\n#error \"Invalid target\"\n#endif"
     }
   }
 }

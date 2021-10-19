@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -enable-amdgpu-aa=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -enable-amdgpu-aa=0 -march=amdgcn -mcpu=tonga -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -enable-amdgpu-aa=0 -march=amdgcn -mcpu=tonga -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck %s
 
 ; We expect a two digit VGPR usage here, not a three digit.
 ; CHECK: NumVgprs: {{[0-9][0-9]$}}

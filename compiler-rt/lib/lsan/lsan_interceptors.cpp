@@ -115,7 +115,11 @@ INTERCEPTOR(void*, memalign, uptr alignment, uptr size) {
   return lsan_memalign(alignment, size, stack);
 }
 #define LSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
+#else
+#define LSAN_MAYBE_INTERCEPT_MEMALIGN
+#endif  // SANITIZER_INTERCEPT_MEMALIGN
 
+#if SANITIZER_INTERCEPT___LIBC_MEMALIGN
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
@@ -125,9 +129,8 @@ INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
 }
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
-#define LSAN_MAYBE_INTERCEPT_MEMALIGN
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN
-#endif // SANITIZER_INTERCEPT_MEMALIGN
+#endif  // SANITIZER_INTERCEPT___LIBC_MEMALIGN
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void*, aligned_alloc, uptr alignment, uptr size) {
@@ -457,7 +460,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
   if (res == 0) {
     int tid = ThreadCreate(GetCurrentThread(), *(uptr *)th,
                            IsStateDetached(detached));
-    CHECK_NE(tid, 0);
+    CHECK_NE(tid, kMainTid);
     atomic_store(&p.tid, tid, memory_order_release);
     while (atomic_load(&p.tid, memory_order_acquire) != 0)
       internal_sched_yield();
@@ -473,6 +476,15 @@ INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   int res = REAL(pthread_join)(th, ret);
   if (res == 0)
     ThreadJoin(tid);
+  return res;
+}
+
+INTERCEPTOR(int, pthread_detach, void *th) {
+  ENSURE_LSAN_INITED;
+  int tid = ThreadTid((uptr)th);
+  int res = REAL(pthread_detach)(th);
+  if (res == 0)
+    ThreadDetach(tid);
   return res;
 }
 
@@ -508,6 +520,7 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLINFO;
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
+  INTERCEPT_FUNCTION(pthread_detach);
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(_exit);
 

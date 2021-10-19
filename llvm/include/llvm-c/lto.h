@@ -46,7 +46,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 27
+#define LTO_API_VERSION 29
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -313,6 +313,16 @@ extern lto_bool_t lto_module_get_macho_cputype(lto_module_t mod,
                                                unsigned int *out_cpusubtype);
 
 /**
+ * This function can be used by the linker to check if a given module has
+ * any constructor or destructor functions.
+ *
+ * Returns true if the module has either the @llvm.global_ctors or the
+ * @llvm.global_dtors symbol. Otherwise returns false.
+ *
+ * \since LTO_API_VERSION=29
+ */
+extern lto_bool_t lto_module_has_ctor_dtor(lto_module_t mod);
+/**
  * Diagnostic severity.
  *
  * \since LTO_API_VERSION=7
@@ -527,7 +537,23 @@ extern unsigned int
 lto_api_version(void);
 
 /**
- * Sets options to help debug codegen bugs.
+ * Parses options immediately, making them available as early as possible. For
+ * example during executing codegen::InitTargetOptionsFromCodeGenFlags. Since
+ * parsing shud only happen once, only one of lto_codegen_debug_options or
+ * lto_set_debug_options should be called.
+ *
+ * This function takes one or more options separated by spaces.
+ * Warning: passing file paths through this function may confuse the argument
+ * parser if the paths contain spaces.
+ *
+ * \since LTO_API_VERSION=28
+ */
+extern void lto_set_debug_options(const char *const *options, int number);
+
+/**
+ * Sets options to help debug codegen bugs. Since parsing shud only happen once,
+ * only one of lto_codegen_debug_options or lto_set_debug_options
+ * should be called.
  *
  * This function takes one or more options separated by spaces.
  * Warning: passing file paths through this function may confuse the argument

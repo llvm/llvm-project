@@ -30,7 +30,9 @@ void f1() noexcept
     assert(false);
 }
 
-int main()
+int main(int, char**)
 {
     f1();
+
+    return 0;
 }

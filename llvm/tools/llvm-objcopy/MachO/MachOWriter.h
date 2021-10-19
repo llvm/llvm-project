@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../Buffer.h"
 #include "MachOLayoutBuilder.h"
 #include "MachOObjcopy.h"
 #include "Object.h"
@@ -24,7 +23,8 @@ class MachOWriter {
   bool Is64Bit;
   bool IsLittleEndian;
   uint64_t PageSize;
-  Buffer &B;
+  std::unique_ptr<WritableMemoryBuffer> Buf;
+  raw_ostream &Out;
   MachOLayoutBuilder LayoutBuilder;
 
   size_t headerSize() const;
@@ -48,14 +48,15 @@ class MachOWriter {
   void writeLinkData(Optional<size_t> LCIndex, const LinkData &LD);
   void writeCodeSignatureData();
   void writeDataInCodeData();
+  void writeLinkerOptimizationHint();
   void writeFunctionStartsData();
   void writeTail();
 
 public:
   MachOWriter(Object &O, bool Is64Bit, bool IsLittleEndian, uint64_t PageSize,
-              Buffer &B)
+              raw_ostream &Out)
       : O(O), Is64Bit(Is64Bit), IsLittleEndian(IsLittleEndian),
-        PageSize(PageSize), B(B), LayoutBuilder(O, Is64Bit, PageSize) {}
+        PageSize(PageSize), Out(Out), LayoutBuilder(O, Is64Bit, PageSize) {}
 
   size_t totalSize() const;
   Error finalize();

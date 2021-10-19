@@ -14,9 +14,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// UNSUPPORTED: apple-clang-9, apple-clang-10
-// UNSUPPORTED: clang-6, clang-7
-
 #include <new>
 
 #include <cassert>
@@ -67,11 +64,12 @@ void A::operator delete(A* a, std::destroying_delete_t) {
 #  endif
 #endif
 
-int main() {
+int main(int, char**) {
   // Ensure that we call the destroying delete and not the destructor.
   A* ap = A::New();
   assert(A_constructed);
   delete ap;
   assert(!A_destroyed);
   assert(A_destroying_deleted);
+  return 0;
 }

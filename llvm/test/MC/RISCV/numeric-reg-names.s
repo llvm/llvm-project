@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 < %s -riscv-arch-reg-names \
+# RUN: llvm-mc -triple riscv32 -M numeric %s \
 # RUN:     | FileCheck -check-prefix=CHECK-NUMERIC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d -M numeric - \

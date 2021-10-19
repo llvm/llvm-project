@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=VI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}selectcc_i64:
 ; EG: XOR_INT
@@ -11,6 +11,8 @@
 ; SI: v_cmp_eq_u64
 ; SI: v_cndmask
 ; SI: v_cndmask
+; VI: s_cmp_eq_u64
+; VI: s_cselect_b64
 define amdgpu_kernel void @selectcc_i64(i64 addrspace(1) * %out, i64 %lhs, i64 %rhs, i64 %true, i64 %false) {
 entry:
   %0 = icmp eq i64 %lhs, %rhs

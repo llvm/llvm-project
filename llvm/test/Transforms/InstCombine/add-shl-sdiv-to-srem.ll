@@ -200,7 +200,7 @@ define <3 x i8> @add-shl-sdiv-negative3(<3 x i8> %x) {
 
 define <2 x i64> @add-shl-sdiv-negative4(<2 x i64> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-negative4(
-; CHECK-NEXT:    ret <2 x i64> undef
+; CHECK-NEXT:    ret <2 x i64> poison
 ;
   %sd = sdiv <2 x i64> %x, <i64 32, i64 32>
   %sl = shl <2 x i64> %sd, <i64 -5, i64 -5>
@@ -212,7 +212,7 @@ define <2 x i64> @add-shl-sdiv-negative4(<2 x i64> %x) {
 
 define <3 x i8> @add-shl-sdiv-3xi8-undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @add-shl-sdiv-3xi8-undef0(
-; CHECK-NEXT:    ret <3 x i8> [[X:%.*]]
+; CHECK-NEXT:    ret <3 x i8> poison
 ;
   %sd = sdiv <3 x i8> %x, <i8 -4, i8 undef, i8 -4>
   %sl = shl <3 x i8> %sd, <i8 2, i8 2, i8 2>

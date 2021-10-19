@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s
-; RUN: llc < %s -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mtriple=arm64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
+; RUN: llc < %s -global-isel -global-isel-abort=1 -pass-remarks-missed=gisel* -mtriple=arm64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=GISEL,FALLBACK
 
 %0 = type { i64, i64 }
 
-define i128 @f0(i8* %p) nounwind readonly {
+define dso_local i128 @f0(i8* %p) nounwind readonly {
 ; CHECK-LABEL: f0:
 ; CHECK: ldxp {{x[0-9]+}}, {{x[0-9]+}}, [x0]
 entry:
@@ -17,7 +17,7 @@ entry:
   ret i128 %4
 }
 
-define i32 @f1(i8* %ptr, i128 %val) nounwind {
+define dso_local i32 @f1(i8* %ptr, i128 %val) nounwind {
 ; CHECK-LABEL: f1:
 ; CHECK: stxp {{w[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, [x0]
 entry:
@@ -31,10 +31,10 @@ entry:
 declare %0 @llvm.aarch64.ldxp(i8*) nounwind
 declare i32 @llvm.aarch64.stxp(i64, i64, i8*) nounwind
 
-@var = global i64 0, align 8
+@var = dso_local global i64 0, align 8
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_i8
-define void @test_load_i8(i8* %addr) {
+define dso_local void @test_load_i8(i8* %addr) {
 ; CHECK-LABEL: test_load_i8:
 ; CHECK: ldxrb w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxtb
@@ -53,7 +53,7 @@ define void @test_load_i8(i8* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_i16
-define void @test_load_i16(i16* %addr) {
+define dso_local void @test_load_i16(i16* %addr) {
 ; CHECK-LABEL: test_load_i16:
 ; CHECK: ldxrh w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxth
@@ -72,7 +72,7 @@ define void @test_load_i16(i16* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_i32
-define void @test_load_i32(i32* %addr) {
+define dso_local void @test_load_i32(i32* %addr) {
 ; CHECK-LABEL: test_load_i32:
 ; CHECK: ldxr w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxtw
@@ -91,7 +91,7 @@ define void @test_load_i32(i32* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_i64
-define void @test_load_i64(i64* %addr) {
+define dso_local void @test_load_i64(i64* %addr) {
 ; CHECK-LABEL: test_load_i64:
 ; CHECK: ldxr x[[LOADVAL:[0-9]+]], [x0]
 ; CHECK: str x[[LOADVAL]], [{{x[0-9]+}}, :lo12:var]
@@ -112,7 +112,7 @@ declare i64 @llvm.aarch64.ldxr.p0i32(i32*) nounwind
 declare i64 @llvm.aarch64.ldxr.p0i64(i64*) nounwind
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_i8
-define i32 @test_store_i8(i32, i8 %val, i8* %addr) {
+define dso_local i32 @test_store_i8(i32, i8 %val, i8* %addr) {
 ; CHECK-LABEL: test_store_i8:
 ; CHECK-NOT: uxtb
 ; CHECK-NOT: and
@@ -127,7 +127,7 @@ define i32 @test_store_i8(i32, i8 %val, i8* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_i16
-define i32 @test_store_i16(i32, i16 %val, i16* %addr) {
+define dso_local i32 @test_store_i16(i32, i16 %val, i16* %addr) {
 ; CHECK-LABEL: test_store_i16:
 ; CHECK-NOT: uxth
 ; CHECK-NOT: and
@@ -142,7 +142,7 @@ define i32 @test_store_i16(i32, i16 %val, i16* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_i32
-define i32 @test_store_i32(i32, i32 %val, i32* %addr) {
+define dso_local i32 @test_store_i32(i32, i32 %val, i32* %addr) {
 ; CHECK-LABEL: test_store_i32:
 ; CHECK-NOT: uxtw
 ; CHECK-NOT: and
@@ -157,7 +157,7 @@ define i32 @test_store_i32(i32, i32 %val, i32* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_i64
-define i32 @test_store_i64(i32, i64 %val, i64* %addr) {
+define dso_local i32 @test_store_i64(i32, i64 %val, i64* %addr) {
 ; CHECK-LABEL: test_store_i64:
 ; CHECK: stxr w0, x1, [x2]
 ; GISEL-LABEL: test_store_i64:
@@ -173,14 +173,14 @@ declare i32 @llvm.aarch64.stxr.p0i64(i64, i64*) nounwind
 
 ; CHECK: test_clear:
 ; CHECK: clrex
-define void @test_clear() {
+define dso_local void @test_clear() {
   call void @llvm.aarch64.clrex()
   ret void
 }
 
 declare void @llvm.aarch64.clrex() nounwind
 
-define i128 @test_load_acquire_i128(i8* %p) nounwind readonly {
+define dso_local i128 @test_load_acquire_i128(i8* %p) nounwind readonly {
 ; CHECK-LABEL: test_load_acquire_i128:
 ; CHECK: ldaxp {{x[0-9]+}}, {{x[0-9]+}}, [x0]
 entry:
@@ -194,7 +194,7 @@ entry:
   ret i128 %4
 }
 
-define i32 @test_store_release_i128(i8* %ptr, i128 %val) nounwind {
+define dso_local i32 @test_store_release_i128(i8* %ptr, i128 %val) nounwind {
 ; CHECK-LABEL: test_store_release_i128:
 ; CHECK: stlxp {{w[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, [x0]
 entry:
@@ -209,7 +209,7 @@ declare %0 @llvm.aarch64.ldaxp(i8*) nounwind
 declare i32 @llvm.aarch64.stlxp(i64, i64, i8*) nounwind
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_acquire_i8
-define void @test_load_acquire_i8(i8* %addr) {
+define dso_local void @test_load_acquire_i8(i8* %addr) {
 ; CHECK-LABEL: test_load_acquire_i8:
 ; CHECK: ldaxrb w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxtb
@@ -227,7 +227,7 @@ define void @test_load_acquire_i8(i8* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_acquire_i16
-define void @test_load_acquire_i16(i16* %addr) {
+define dso_local void @test_load_acquire_i16(i16* %addr) {
 ; CHECK-LABEL: test_load_acquire_i16:
 ; CHECK: ldaxrh w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxth
@@ -245,7 +245,7 @@ define void @test_load_acquire_i16(i16* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_acquire_i32
-define void @test_load_acquire_i32(i32* %addr) {
+define dso_local void @test_load_acquire_i32(i32* %addr) {
 ; CHECK-LABEL: test_load_acquire_i32:
 ; CHECK: ldaxr w[[LOADVAL:[0-9]+]], [x0]
 ; CHECK-NOT: uxtw
@@ -263,7 +263,7 @@ define void @test_load_acquire_i32(i32* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_load_acquire_i64
-define void @test_load_acquire_i64(i64* %addr) {
+define dso_local void @test_load_acquire_i64(i64* %addr) {
 ; CHECK-LABEL: test_load_acquire_i64:
 ; CHECK: ldaxr x[[LOADVAL:[0-9]+]], [x0]
 ; CHECK: str x[[LOADVAL]], [{{x[0-9]+}}, :lo12:var]
@@ -283,7 +283,7 @@ declare i64 @llvm.aarch64.ldaxr.p0i32(i32*) nounwind
 declare i64 @llvm.aarch64.ldaxr.p0i64(i64*) nounwind
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_release_i8
-define i32 @test_store_release_i8(i32, i8 %val, i8* %addr) {
+define dso_local i32 @test_store_release_i8(i32, i8 %val, i8* %addr) {
 ; CHECK-LABEL: test_store_release_i8:
 ; CHECK-NOT: uxtb
 ; CHECK-NOT: and
@@ -298,7 +298,7 @@ define i32 @test_store_release_i8(i32, i8 %val, i8* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_release_i16
-define i32 @test_store_release_i16(i32, i16 %val, i16* %addr) {
+define dso_local i32 @test_store_release_i16(i32, i16 %val, i16* %addr) {
 ; CHECK-LABEL: test_store_release_i16:
 ; CHECK-NOT: uxth
 ; CHECK-NOT: and
@@ -313,7 +313,7 @@ define i32 @test_store_release_i16(i32, i16 %val, i16* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_release_i32
-define i32 @test_store_release_i32(i32, i32 %val, i32* %addr) {
+define dso_local i32 @test_store_release_i32(i32, i32 %val, i32* %addr) {
 ; CHECK-LABEL: test_store_release_i32:
 ; CHECK-NOT: uxtw
 ; CHECK-NOT: and
@@ -328,7 +328,7 @@ define i32 @test_store_release_i32(i32, i32 %val, i32* %addr) {
 }
 
 ; FALLBACK-NOT: remark:{{.*}}test_store_release_i64
-define i32 @test_store_release_i64(i32, i64 %val, i64* %addr) {
+define dso_local i32 @test_store_release_i64(i32, i64 %val, i64* %addr) {
 ; CHECK-LABEL: test_store_release_i64:
 ; CHECK: stlxr w0, x1, [x2]
 ; GISEL-LABEL: test_store_release_i64:

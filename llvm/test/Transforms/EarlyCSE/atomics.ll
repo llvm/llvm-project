@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -early-cse | FileCheck %s
+; RUN: opt < %s -S -early-cse -earlycse-debug-hash | FileCheck %s
 ; RUN: opt < %s -S -basic-aa -early-cse-memssa | FileCheck %s
 
 ; CHECK-LABEL: @test12(

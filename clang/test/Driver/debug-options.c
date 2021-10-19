@@ -18,6 +18,8 @@
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_LLDB %s
 // RUN: %clang -### -c -gsce %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_SCE %s
+// RUN: %clang -### -c -gdbx %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
 
 // Android.
 // Android should always generate DWARF4.
@@ -102,6 +104,34 @@
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
 
+// On the AIX, -g defaults to -gdbx and limited debug info.
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
+
+// For DBX, -g defaults to -gstrict-dwarf.
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=STRICT %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=STRICT %s
+// RUN: %clang -### -c -g -gno-strict-dwarf %s -target powerpc-ibm-aix-xcoff \
+// RUN:             2>&1 | FileCheck -check-prefix=NOSTRICT %s
+// RUN: %clang -### -c -g %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOSTRICT %s
+// RUN: %clang -### -c -g -ggdb %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOSTRICT %s
+
+// On the AIX, -g defaults to -gno-column-info.
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff -gcolumn-info 2>&1 \
+// RUN:             | FileCheck -check-prefix=CI %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff -gcolumn-info \
+// RUN:             2>&1 | FileCheck -check-prefix=CI %s
+
 // RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 //
@@ -115,7 +145,7 @@
 // PS4 defaults to sce; -ggdb0 changes tuning but turns off debug info,
 // then -g turns it back on without affecting tuning.
 // RUN: %clang -### -c -ggdb0 -g -target x86_64-scei-ps4 %s 2>&1 \
-// RUN:             | FileCheck -check-prefix=G -check-prefix=G_GDB %s
+// RUN:             | FileCheck -check-prefix=G_GDB %s
 //
 // RUN: %clang -### -c -g1 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
@@ -196,8 +226,7 @@
 // RUN: %clang -### -c -gpubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
-// RUN: %clang -### -c -gsplit-dwarf %s 2>&1 | FileCheck -check-prefix=GPUB %s
-// RUN: %clang -### -c -gsplit-dwarf -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+// RUN: %clang -### -c -gsplit-dwarf -g -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -fdebug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=RNGBSE %s
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
@@ -213,6 +242,9 @@
 //
 // RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-unknown-linux %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOFDTS %s
+//
+// RUN: %clang -### -fdebug-types-section -target wasm32-unknown-unknown %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=FDTS %s
 //
 // RUN: %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTSE %s
@@ -274,24 +306,28 @@
 // GLIO_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_ONLY: "-cc1"
-// G_ONLY: "-debug-info-kind=limited"
+// G_ONLY: "-debug-info-kind=constructor"
 //
 // These tests assert that "-gline-tables-only" "-g" uses the latter,
 // but otherwise not caring about the DebugInfoKind.
 // G_ONLY_DWARF2: "-cc1"
-// G_ONLY_DWARF2: "-debug-info-kind={{standalone|limited}}"
+// G_ONLY_DWARF2: "-debug-info-kind={{standalone|constructor}}"
 // G_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_STANDALONE: "-cc1"
 // G_STANDALONE: "-debug-info-kind=standalone"
 // G_LIMITED: "-cc1"
-// G_LIMITED: "-debug-info-kind=limited"
+// G_LIMITED: "-debug-info-kind=constructor"
 // G_DWARF2: "-dwarf-version=2"
 // G_DWARF4: "-dwarf-version=4"
 //
 // G_GDB:  "-debugger-tuning=gdb"
 // G_LLDB: "-debugger-tuning=lldb"
 // G_SCE:  "-debugger-tuning=sce"
+// G_DBX:  "-debugger-tuning=dbx"
+//
+// STRICT:  "-gstrict-dwarf"
+// NOSTRICT-NOT:  "-gstrict-dwarf"
 //
 // G_NOTUNING: "-cc1"
 // G_NOTUNING-NOT: "-debugger-tuning="
@@ -339,7 +375,7 @@
 // NOCI: "-gno-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
-// GEXTREFS: "-debug-info-kind={{standalone|limited}}"
+// GEXTREFS: "-debug-info-kind={{standalone|constructor}}"
 
 // RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
@@ -370,5 +406,40 @@
 // RUN:        | FileCheck -check-prefix=NO_DEBUG_UNUSED_TYPES %s
 // RUN: %clang -### -fno-eliminate-unused-debug-types -g1 -c %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NO_DEBUG_UNUSED_TYPES %s
-// NO_DEBUG_UNUSED_TYPES: "-debug-info-kind={{limited|line-tables-only|standalone}}"
+// NO_DEBUG_UNUSED_TYPES: "-debug-info-kind={{constructor|line-tables-only|standalone}}"
 // NO_DEBUG_UNUSED_TYPES-NOT: "-debug-info-kind=unused-types"
+//
+// RUN: %clang -### -c -gdwarf-5 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf-3 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf-2 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 -target x86_64 %s 2>&1 \
+// RUN:       | FileCheck -check-prefix=GDWARF64_ON %s
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target i386-linux-gnu %s 2>&1 \
+// RUN:       | FileCheck -check-prefix=GDWARF64_32ARCH %s
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
+// RUN:       | FileCheck -check-prefix=GDWARF64_ELF %s
+//
+// GDWARF64_ON:  "-gdwarf64"
+// GDWARF64_VER:  error: invalid argument '-gdwarf64' only allowed with 'DWARFv3 or greater'
+// GDWARF64_32ARCH: error: invalid argument '-gdwarf64' only allowed with '64 bit architecture'
+// GDWARF64_ELF: error: invalid argument '-gdwarf64' only allowed with 'ELF platforms'
+
+/// Default to -fno-dwarf-directory-asm for -fno-integrated-as before DWARF v5.
+// RUN: %clang -### -target x86_64 -c -gdwarf-2 %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-4 -fno-integrated-as %s 2>&1 | FileCheck --check-prefix=NODIRECTORY %s
+// RUN: %clang -### -target x86_64 -c -gdwarf-5 -fno-integrated-as %s 2>&1 | FileCheck --check-prefix=DIRECTORY %s
+
+// RUN: %clang -### -target x86_64 -c -gdwarf-4 -fno-dwarf-directory-asm %s 2>&1 | FileCheck --check-prefix=NODIRECTORY %s
+
+// DIRECTORY-NOT: "-fno-dwarf-directory-asm"
+// NODIRECTORY: "-fno-dwarf-directory-asm"
+
+// RUN: %clang -### -target x86_64 -c -g -gsimple-template-names %s 2>&1 | FileCheck --check-prefix=SIMPLE_TEMP_NAMES %s
+// SIMPLE_TEMP_NAMES: -gsimple-template-names=simple
+// SIMPLE_TEMP_NAMES: -debug-forward-template-params
+// RUN: not %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
+// MANGLED_TEMP_NAMES: error: unknown argument: '-gsimple-template-names=mangled'
+// RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
+// FULL_TEMP_NAMES-NOT: -gsimple-template-names

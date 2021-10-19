@@ -11,11 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetMachine.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -27,26 +27,27 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
-  auto PR = PassRegistry::getPassRegistry();
+  auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
+  initializeRISCVGatherScatterLoweringPass(*PR);
+  initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
+  initializeRISCVInsertVSETVLIPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit()) {
+  if (TT.isArch64Bit())
     return "e-m:e-p:64:64-i64:64-i128:128-n64-S128";
-  } else {
-    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-    return "e-m:e-p:32:32-i64:64-n32-S128";
-  }
+  assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+  return "e-m:e-p:32:32-i64:64-n32-S128";
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
@@ -75,13 +76,16 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
 const RISCVSubtarget *
 RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string TuneCPU =
+      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  std::string Key = CPU + FS;
+  std::string Key = CPU + TuneCPU + FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -98,7 +102,7 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       }
       ABIName = ModuleTargetABI->getString();
     }
-    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, FS, ABIName, *this);
+    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, TuneCPU, FS, ABIName, *this);
   }
   return I.get();
 }
@@ -106,6 +110,15 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
 TargetTransformInfo
 RISCVTargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(RISCVTTIImpl(this, F));
+}
+
+// A RISC-V hart has a single byte-addressable address space of 2^XLEN bytes
+// for all memory accesses, so it is reasonable to assume that an
+// implementation has no-op address space casts. If an implementation makes a
+// change to this, they can override it here.
+bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+                                             unsigned DstAS) const {
+  return true;
 }
 
 namespace {
@@ -129,7 +142,7 @@ public:
   void addPreSched2() override;
   void addPreRegAlloc() override;
 };
-}
+} // namespace
 
 TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new RISCVPassConfig(*this, PM);
@@ -137,6 +150,9 @@ TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
+
+  addPass(createRISCVGatherScatterLoweringPass());
+
   TargetPassConfig::addIRPasses();
 }
 
@@ -147,7 +163,7 @@ bool RISCVPassConfig::addInstSelector() {
 }
 
 bool RISCVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslator(getOptLevel()));
   return false;
 }
 
@@ -162,7 +178,7 @@ bool RISCVPassConfig::addRegBankSelect() {
 }
 
 bool RISCVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelect(getOptLevel()));
   return false;
 }
 
@@ -179,5 +195,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
-  addPass(createRISCVMergeBaseOffsetOptPass());
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createRISCVMergeBaseOffsetOptPass());
+  addPass(createRISCVInsertVSETVLIPass());
 }

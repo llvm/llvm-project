@@ -13,7 +13,6 @@
 
 #include "RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVAsmBackend.h"
-#include "RISCV.h"
 #include "RISCVFixupKinds.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmLayout.h"
@@ -93,29 +92,16 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  // Explicitly drop the layout and assembler to prevent any symbolic folding in
+  // the expression handling.  This is required to preserve symbolic difference
+  // expressions to emit the paired relocations.
+  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
     return false;
 
-  // Some custom fixup types are not valid with symbol difference expressions
-  if (Res.getSymA() && Res.getSymB()) {
-    switch (getKind()) {
-    default:
-      return true;
-    case VK_RISCV_LO:
-    case VK_RISCV_HI:
-    case VK_RISCV_PCREL_LO:
-    case VK_RISCV_PCREL_HI:
-    case VK_RISCV_GOT_HI:
-    case VK_RISCV_TPREL_LO:
-    case VK_RISCV_TPREL_HI:
-    case VK_RISCV_TPREL_ADD:
-    case VK_RISCV_TLS_GOT_HI:
-    case VK_RISCV_TLS_GD_HI:
-      return false;
-    }
-  }
-
-  return true;
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  // Custom fixup types are not valid with symbol difference expressions.
+  return Res.getSymB() ? getKind() == VK_RISCV_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
@@ -139,7 +125,8 @@ RISCVMCExpr::VariantKind RISCVMCExpr::getVariantKindForName(StringRef name) {
 
 StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
   switch (Kind) {
-  default:
+  case VK_RISCV_Invalid:
+  case VK_RISCV_None:
     llvm_unreachable("Invalid ELF symbol kind");
   case VK_RISCV_LO:
     return "lo";
@@ -161,7 +148,14 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
     return "tls_ie_pcrel_hi";
   case VK_RISCV_TLS_GD_HI:
     return "tls_gd_pcrel_hi";
+  case VK_RISCV_CALL:
+    return "call";
+  case VK_RISCV_CALL_PLT:
+    return "call_plt";
+  case VK_RISCV_32_PCREL:
+    return "32_pcrel";
   }
+  llvm_unreachable("Invalid ELF symbol kind");
 }
 
 static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {

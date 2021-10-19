@@ -17,6 +17,7 @@ static bool isFirstClassAggregateOrScalableType(Type *Ty) {
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
                                      const DataLayout &DL) {
   Type *StoredTy = StoredVal->getType();
+
   if (StoredTy == LoadTy)
     return true;
 
@@ -36,17 +37,29 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
   if (StoreSize < DL.getTypeSizeInBits(LoadTy).getFixedSize())
     return false;
 
+  bool StoredNI = DL.isNonIntegralPointerType(StoredTy->getScalarType());
+  bool LoadNI = DL.isNonIntegralPointerType(LoadTy->getScalarType());
   // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()) !=
-      DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
+  if (StoredNI != LoadNI) {
     // As a special case, allow coercion of memset used to initialize
     // an array w/null.  Despite non-integral pointers not generally having a
     // specific bit pattern, we do assume null is zero.
     if (auto *CI = dyn_cast<Constant>(StoredVal))
       return CI->isNullValue();
     return false;
+  } else if (StoredNI && LoadNI &&
+             StoredTy->getPointerAddressSpace() !=
+                 LoadTy->getPointerAddressSpace()) {
+    return false;
   }
-  
+
+
+  // The implementation below uses inttoptr for vectors of unequal size; we
+  // can't allow this for non integral pointers. We could teach it to extract
+  // exact subvectors if desired. 
+  if (StoredNI && StoreSize != DL.getTypeSizeInBits(LoadTy).getFixedSize())
+    return false;
+
   return true;
 }
 
@@ -176,14 +189,6 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   if (StoreBase != LoadBase)
     return -1;
 
-  // If the load and store are to the exact same address, they should have been
-  // a must alias.  AA must have gotten confused.
-  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
-  // to a load from the base of the memset.
-
-  // If the load and store don't overlap at all, the store doesn't provide
-  // anything to the load.  In this case, they really don't alias at all, AA
-  // must have gotten confused.
   uint64_t LoadSize = DL.getTypeSizeInBits(LoadTy).getFixedSize();
 
   if ((WriteSizeInBits & 7) | (LoadSize & 7))
@@ -191,21 +196,24 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
   uint64_t StoreSize = WriteSizeInBits / 8; // Convert to bytes.
   LoadSize /= 8;
 
-  bool isAAFailure = false;
-  if (StoreOffset < LoadOffset)
-    isAAFailure = StoreOffset + int64_t(StoreSize) <= LoadOffset;
-  else
-    isAAFailure = LoadOffset + int64_t(LoadSize) <= StoreOffset;
-
-  if (isAAFailure)
-    return -1;
-
   // If the Load isn't completely contained within the stored bits, we don't
   // have all the bits to feed it.  We could do something crazy in the future
   // (issue a smaller load then merge the bits in) but this seems unlikely to be
   // valuable.
   if (StoreOffset > LoadOffset ||
       StoreOffset + StoreSize < LoadOffset + LoadSize)
+    return -1;
+
+  // If the load and store are to the exact same address, they should have been
+  // a must alias.  AA must have gotten confused.
+  // FIXME: Study to see if/when this happens.  One case is forwarding a memset
+  // to a load from the base of the memset.
+
+  // If the load and store don't overlap at all, the store doesn't provide
+  // anything to the load.  In this case, they really don't alias at all, AA
+  // must have gotten confused.  The if statement above ensure the condition
+  // that StoreOffset <= LoadOffset.
+  if (StoreOffset + int64_t(StoreSize) <= LoadOffset)
     return -1;
 
   // Okay, we can do this transformation.  Return the number of bytes into the
@@ -223,14 +231,8 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
   if (isFirstClassAggregateOrScalableType(StoredVal->getType()))
     return -1;
 
-  // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()) !=
-      DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
-    // Allow casts of zero values to null as a special case
-    auto *CI = dyn_cast<Constant>(StoredVal);
-    if (!CI || !CI->isNullValue())
-      return -1;
-  }
+  if (!canCoerceMustAliasedValueToLoad(StoredVal, LoadTy, DL))
+    return -1;
 
   Value *StorePtr = DepSI->getPointerOperand();
   uint64_t StoreSize =
@@ -333,9 +335,7 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
   if (DepLI->getType()->isStructTy() || DepLI->getType()->isArrayTy())
     return -1;
 
-  // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(DepLI->getType()->getScalarType()) !=
-      DL.isNonIntegralPointerType(LoadTy->getScalarType()))
+  if (!canCoerceMustAliasedValueToLoad(DepLI, LoadTy, DL))
     return -1;
 
   Value *DepPtr = DepLI->getPointerOperand();

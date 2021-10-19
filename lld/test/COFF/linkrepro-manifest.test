@@ -1,12 +1,15 @@
 REQUIRES: x86, gnutar, manifest_tool
 
 RUN: rm -rf %t && mkdir %t && cd %t
-RUN: lld-link -entry:__ImageBase -nodefaultlib -linkrepro:%t -manifest:embed %p/Inputs/std32.lib -subsystem:console
+RUN: lld-link -entry:__ImageBase -nodefaultlib -linkrepro:%t \
+RUN:     -manifest:embed %p/Inputs/std32.lib -subsystem:console \
+RUN:     -manifestinput:%p/Inputs/manifestinput.test
+
 RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
-RUN: tar xOf repro.tar repro/response.txt | FileCheck %s
+RUN: tar xOf repro.tar repro/response.txt \
+RUN:     | FileCheck --implicit-check-not=.manifest.res %s
 
-LIST: manifest.res
+LIST: {{.*}}manifestinput.test
 
-CHECK-NOT: -manifest:
-CHECK: .manifest.res
-CHECK-NOT: -manifest:
+CHECK-DAG: -manifest:embed
+CHECK-DAG: -manifestinput:{{.*}}manifestinput.test

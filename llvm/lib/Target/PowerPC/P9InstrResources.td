@@ -138,6 +138,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C],
     (instregex "SUBF(E|ME|ZE)?(8)?(O)?(_rec)?$"),
     (instregex "NEG(8)?(O)?(_rec)?$"),
     (instregex "POPCNTB$"),
+    (instregex "POPCNTB8$"),
     (instregex "ADD(I|IS)?(8)?$"),
     (instregex "LI(S)?(8)?$"),
     (instregex "(X)?OR(I|IS)?(8)?(_rec)?$"),
@@ -733,7 +734,6 @@ def : InstRW<[P9_LS_4C, IP_AGEN_1C, DISP_1C],
     (instregex "DCBZ(L)?(EP)?$"),
     (instregex "DCBTST(EP)?$"),
     (instregex "CP_COPY(8)?$"),
-    (instregex "CP_PASTE(8)?$"),
     (instregex "ICBI(EP)?$"),
     (instregex "ICBT(LS)?$"),
     (instregex "LBARX(L)?$"),
@@ -1079,7 +1079,8 @@ def : InstRW<[P9_ALU_3C, P9_ALU_3C, IP_EXEC_1C, IP_EXEC_1C,
               DISP_3SLOTS_1C, DISP_3SLOTS_1C],
       (instrs
     (instregex "MTFSF(b|_rec)?$"),
-    (instregex "MTFSFI(_rec)?$")
+    (instregex "MTFSFI(_rec)?$"),
+    MTFSFIb
 )>;
 
 // Cracked instruction made of two ALU ops.
@@ -1410,6 +1411,7 @@ def : InstRW<[],
   (instregex "NOP_GT_PWR(6|7)$"),
   (instregex "TLB(IA|IVAX|SX|SX2|SX2D|LD|LI|RE|RE2|WE|WE2)$"),
   (instregex "WRTEE(I)?$"),
+  (instregex "HASH(ST|STP|CHK|CHKP)$"),
   ATTN,
   CLRBHRB,
   MFBHRBE,
@@ -1427,5 +1429,7 @@ def : InstRW<[],
   DCBA,
   DCBI,
   DCCCI,
-  ICCCI
+  ICCCI,
+  ADDEX,
+  ADDEX8
 )> { let Unsupported = 1; }

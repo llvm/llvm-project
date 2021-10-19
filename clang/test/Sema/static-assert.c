@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fms-compatibility -DMS -fsyntax-only -verify=expected,ms %s
 // RUN: %clang_cc1 -std=c99 -pedantic -fsyntax-only -verify=expected,ext %s
 // RUN: %clang_cc1 -xc++ -std=c++11 -pedantic -fsyntax-only -verify=expected,ext,cxx %s
 
@@ -11,10 +12,17 @@ _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 ex
 _Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed "0 is nonzero"}} \
                                    // ext-warning {{'_Static_assert' is a C11 extension}}
 
+#ifdef MS
+static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without inclusion of <assert.h> is a Microsoft extension}}
+#endif
+
 void foo(void) {
   _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
   _Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed "0 is nonzero"}} \
                                      // ext-warning {{'_Static_assert' is a C11 extension}}
+#ifdef MS
+  static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
+#endif
 }
 
 _Static_assert(1, invalid); // expected-error {{expected string literal for diagnostic message in static_assert}} \
@@ -25,6 +33,9 @@ struct A {
   _Static_assert(1, "1 is nonzero"); // ext-warning {{'_Static_assert' is a C11 extension}}
   _Static_assert(0, "0 is nonzero"); // expected-error {{static_assert failed "0 is nonzero"}} \
                                      // ext-warning {{'_Static_assert' is a C11 extension}}
+#ifdef MS
+  static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
+#endif
 };
 
 #ifdef __cplusplus
@@ -47,3 +58,15 @@ typedef UNION(char, short) U3; // expected-error {{static_assert failed due to r
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
 typedef UNION(float, 0.5f) U4; // expected-error {{expected a type}} \
                                // ext-warning 3 {{'_Static_assert' is a C11 extension}}
+
+// After defining the assert macro in MS-compatibility mode, we should
+// no longer warn about including <assert.h> under the assumption the
+// user already did that.
+#ifdef MS
+#define assert(expr)
+static_assert(1, "1 is nonzero"); // ok
+
+// But we should still warn if the user did something bonkers.
+#undef static_assert
+static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without}}
+#endif

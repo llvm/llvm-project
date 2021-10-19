@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_GLOB_PATTERN_H
-#define LLVM_SUPPORT_GLOB_PATTERN_H
+#ifndef LLVM_SUPPORT_GLOBPATTERN_H
+#define LLVM_SUPPORT_GLOBPATTERN_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
@@ -31,6 +31,16 @@ public:
   static Expected<GlobPattern> create(StringRef Pat);
   bool match(StringRef S) const;
 
+  // Returns true for glob pattern "*". Can be used to avoid expensive
+  // preparation/acquisition of the input for match().
+  bool isTrivialMatchAll() const {
+    if (Prefix && Prefix->empty()) {
+      assert(!Suffix);
+      return true;
+    }
+    return false;
+  }
+
 private:
   bool matchOne(ArrayRef<BitVector> Pat, StringRef S) const;
 
@@ -44,4 +54,4 @@ private:
 };
 }
 
-#endif // LLVM_SUPPORT_GLOB_PATTERN_H
+#endif // LLVM_SUPPORT_GLOBPATTERN_H

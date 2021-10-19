@@ -32,13 +32,11 @@ Sections:
     Content:         "32323232"
     Size:            0x1000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
-      - Section: .text2
-      - Section: .text3
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text3
 
 # CHECK: 000000 de ad be ef
 

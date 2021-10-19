@@ -89,9 +89,11 @@ enum RemapFlags {
   /// \a MapMetadata() always ignores this flag.
   RF_IgnoreMissingLocals = 2,
 
-  /// Instruct the remapper to move distinct metadata instead of duplicating it
-  /// when there are module-level changes.
-  RF_MoveDistinctMDs = 4,
+  /// Instruct the remapper to reuse and mutate distinct metadata (remapping
+  /// them in place) instead of cloning remapped copies. This flag has no
+  /// effect when when RF_NoModuleLevelChanges, since that implies an identity
+  /// mapping.
+  RF_ReuseAndMutateDistinctMDs = 4,
 
   /// Any global values not in value map are mapped to null instead of mapping
   /// to self.  Illegal if RF_IgnoreMissingLocals is also set.

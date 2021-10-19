@@ -8,7 +8,7 @@ target triple = "aarch64--linux-gnu"
 define void @test1(%structA* nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> undef, i32 [[XMIN:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:
@@ -53,7 +53,7 @@ for.end27:
 define void @test2(%structA* nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> undef, i32 [[XMIN:%.*]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:

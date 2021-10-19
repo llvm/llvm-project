@@ -1,4 +1,4 @@
-add_lld_library(lldMachO
+add_lld_library(lldMachOOld
   ArchHandler.cpp
   ArchHandler_arm.cpp
   ArchHandler_arm64.cpp

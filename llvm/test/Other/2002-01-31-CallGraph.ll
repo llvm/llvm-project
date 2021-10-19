@@ -1,6 +1,6 @@
 ;  Call graph construction crash: Not handling indirect calls right
 ;
-; RUN: opt < %s -analyze -print-callgraph > /dev/null 2>&1
+; RUN: opt < %s -passes=print-callgraph > /dev/null 2>&1
 ;
 
         %FunTy = type i32 (i32)

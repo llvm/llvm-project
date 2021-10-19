@@ -142,11 +142,14 @@ template <> struct hash<std::error_condition>;
 
 */
 
+#include <__config>
 #include <__errc>
-#include <type_traits>
-#include <stdexcept>
+#include <__functional/unary_function.h>
 #include <__functional_base>
+#include <compare>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -162,7 +165,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_code_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
+inline constexpr size_t is_error_code_enum_v = is_error_code_enum<_Tp>::value;
 #endif
 
 // is_error_condition_enum
@@ -173,7 +176,7 @@ struct _LIBCPP_TEMPLATE_VIS is_error_condition_enum
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
+inline constexpr size_t is_error_condition_enum_v = is_error_condition_enum<_Tp>::value;
 #endif
 
 template <>
@@ -253,7 +256,7 @@ public:
     template <class _Ep>
         _LIBCPP_INLINE_VISIBILITY
         error_condition(_Ep __e,
-              typename enable_if<is_error_condition_enum<_Ep>::value>::type* = 0
+              typename enable_if<is_error_condition_enum<_Ep>::value>::type* = nullptr
                                                                      ) _NOEXCEPT
             {*this = make_error_condition(__e);}
 
@@ -289,8 +292,7 @@ public:
     string message() const;
 
     _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_EXPLICIT
-        operator bool() const _NOEXCEPT {return __val_ != 0;}
+    explicit operator bool() const _NOEXCEPT {return __val_ != 0;}
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -325,7 +327,7 @@ public:
     template <class _Ep>
         _LIBCPP_INLINE_VISIBILITY
         error_code(_Ep __e,
-                   typename enable_if<is_error_code_enum<_Ep>::value>::type* = 0
+                   typename enable_if<is_error_code_enum<_Ep>::value>::type* = nullptr
                                                                      ) _NOEXCEPT
             {*this = make_error_code(__e);}
 
@@ -366,8 +368,7 @@ public:
     string message() const;
 
     _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_EXPLICIT
-        operator bool() const _NOEXCEPT {return __val_ != 0;}
+    explicit operator bool() const _NOEXCEPT {return __val_ != 0;}
 };
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -484,4 +485,4 @@ void __throw_system_error(int ev, const char* what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_SYSTEM_ERROR
+#endif // _LIBCPP_SYSTEM_ERROR

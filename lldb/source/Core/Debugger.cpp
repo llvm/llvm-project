@@ -23,6 +23,7 @@
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
@@ -64,13 +65,13 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <list>
 #include <memory>
 #include <mutex>
 #include <set>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <string>
 #include <system_error>
 
@@ -256,6 +257,12 @@ const FormatEntity::Entry *Debugger::GetFrameFormat() const {
 const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
   const uint32_t idx = ePropertyFrameFormatUnique;
   return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+}
+
+uint32_t Debugger::GetStopDisassemblyMaxSize() const {
+  const uint32_t idx = ePropertyStopDisassemblyMaxSize;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::GetNotifyVoid() const {
@@ -598,6 +605,17 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
   if (!debugger_sp)
     return;
 
+  CommandInterpreter &cmd_interpreter = debugger_sp->GetCommandInterpreter();
+
+  if (cmd_interpreter.GetSaveSessionOnQuit()) {
+    CommandReturnObject result(debugger_sp->GetUseColor());
+    cmd_interpreter.SaveTranscript(result);
+    if (result.Succeeded())
+      debugger_sp->GetOutputStream() << result.GetOutputData() << '\n';
+    else
+      debugger_sp->GetErrorStream() << result.GetErrorData() << '\n';
+  }
+
   debugger_sp->Clear();
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
@@ -655,6 +673,11 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
   return target_sp;
 }
 
+ConstString Debugger::GetStaticBroadcasterClass() {
+  static ConstString class_name("lldb.debugger");
+  return class_name;
+}
+
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
@@ -671,6 +694,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_io_handler_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
+      m_broadcaster(m_broadcaster_manager_sp,
+                    GetStaticBroadcasterClass().AsCString()),
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   if (log_callback)
@@ -682,17 +707,26 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   assert(default_platform_sp);
   m_platform_list.Append(default_platform_sp, true);
 
-  m_dummy_target_sp = m_target_list.GetDummyTarget(*this);
+  // Create the dummy target.
+  {
+    ArchSpec arch(Target::GetDefaultArchitecture());
+    if (!arch.IsValid())
+      arch = HostInfo::GetArchitecture();
+    assert(arch.IsValid() && "No valid default or host archspec");
+    const bool is_dummy_target = true;
+    m_dummy_target_sp.reset(
+        new Target(*this, arch, default_platform_sp, is_dummy_target));
+  }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
   m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
       ConstString("target"),
       ConstString("Settings specify to debugging targets."), true,
-      Target::GetGlobalProperties()->GetValueProperties());
+      Target::GetGlobalProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("platform"), ConstString("Platform settings."), true,
-      Platform::GetGlobalPlatformProperties()->GetValueProperties());
+      Platform::GetGlobalPlatformProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
       ConstString("symbols"), ConstString("Symbol lookup and cache settings."),
       true, ModuleList::GetGlobalModuleListProperties().GetValueProperties());
@@ -739,12 +773,9 @@ void Debugger::Clear() {
     StopIOHandlerThread();
     StopEventHandlerThread();
     m_listener_sp->Clear();
-    int num_targets = m_target_list.GetNumTargets();
-    for (int i = 0; i < num_targets; i++) {
-      TargetSP target_sp(m_target_list.GetTargetAtIndex(i));
+    for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
-        ProcessSP process_sp(target_sp->GetProcessSP());
-        if (process_sp)
+        if (ProcessSP process_sp = target_sp->GetProcessSP())
           process_sp->Finalize();
         target_sp->Destroy();
       }
@@ -807,24 +838,9 @@ void Debugger::SaveInputTerminalState() {
 void Debugger::RestoreInputTerminalState() { m_terminal_state.Restore(); }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
-  ExecutionContext exe_ctx;
-  TargetSP target_sp(GetSelectedTarget());
-  exe_ctx.SetTargetSP(target_sp);
-
-  if (target_sp) {
-    ProcessSP process_sp(target_sp->GetProcessSP());
-    exe_ctx.SetProcessSP(process_sp);
-    if (process_sp && !process_sp->IsRunning()) {
-      ThreadSP thread_sp(process_sp->GetThreadList().GetSelectedThread());
-      if (thread_sp) {
-        exe_ctx.SetThreadSP(thread_sp);
-        exe_ctx.SetFrameSP(thread_sp->GetSelectedFrame());
-        if (exe_ctx.GetFramePtr() == nullptr)
-          exe_ctx.SetFrameSP(thread_sp->GetStackFrameAtIndex(0));
-      }
-    }
-  }
-  return exe_ctx;
+  bool adopt_selected = true;
+  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
+  return ExecutionContext(exe_ctx_ref);
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -1137,6 +1153,74 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<StreamCallback>(log_callback, baton);
 }
 
+ConstString Debugger::ProgressEventData::GetFlavorString() {
+  static ConstString g_flavor("Debugger::ProgressEventData");
+  return g_flavor;
+}
+
+ConstString Debugger::ProgressEventData::GetFlavor() const {
+  return Debugger::ProgressEventData::GetFlavorString();
+}
+
+void Debugger::ProgressEventData::Dump(Stream *s) const {
+  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
+  if (m_completed == 0 || m_completed == m_total)
+    s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
+  else
+    s->PutCString(", type = update");
+  // If m_total is UINT64_MAX, there is no progress to report, just "start"
+  // and "end". If it isn't we will show the completed and total amounts.
+  if (m_total != UINT64_MAX)
+    s->Printf(", progress = %" PRIu64 " of %" PRIu64, m_completed, m_total);
+}
+
+const Debugger::ProgressEventData *
+Debugger::ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
+  if (event_ptr)
+    if (const EventData *event_data = event_ptr->GetData())
+      if (event_data->GetFlavor() == ProgressEventData::GetFlavorString())
+        return static_cast<const ProgressEventData *>(event_ptr->GetData());
+  return nullptr;
+}
+
+static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
+                                  const std::string &message,
+                                  uint64_t completed, uint64_t total,
+                                  bool is_debugger_specific) {
+  // Only deliver progress events if we have any progress listeners.
+  const uint32_t event_type = Debugger::eBroadcastBitProgress;
+  if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
+    return;
+  EventSP event_sp(new Event(event_type, new Debugger::ProgressEventData(
+                                             progress_id, message, completed,
+                                             total, is_debugger_specific)));
+  debugger.GetBroadcaster().BroadcastEvent(event_sp);
+}
+
+void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
+                              uint64_t completed, uint64_t total,
+                              llvm::Optional<lldb::user_id_t> debugger_id) {
+  // Check if this progress is for a specific debugger.
+  if (debugger_id.hasValue()) {
+    // It is debugger specific, grab it and deliver the event if the debugger
+    // still exists.
+    DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
+    if (debugger_sp)
+      PrivateReportProgress(*debugger_sp, progress_id, message, completed,
+                            total, /*is_debugger_specific*/ true);
+    return;
+  }
+  // The progress event is not debugger specific, iterate over all debuggers
+  // and deliver a progress event to each one.
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
+    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
+      PrivateReportProgress(*(*pos), progress_id, message, completed, total,
+                            /*is_debugger_specific*/ false);
+  }
+}
+
 bool Debugger::EnableLog(llvm::StringRef channel,
                          llvm::ArrayRef<const char *> categories,
                          llvm::StringRef log_file, uint32_t log_options,
@@ -1159,7 +1243,7 @@ bool Debugger::EnableLog(llvm::StringRef channel,
       log_stream_sp = pos->second.lock();
     if (!log_stream_sp) {
       File::OpenOptions flags =
-          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+          File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate;
       if (log_options & LLDB_LOG_OPTION_APPEND)
         flags |= File::eOpenOptionAppend;
       else
@@ -1339,10 +1423,9 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
               output_stream_sp->PutCString(content_stream.GetString());
             }
           } else {
-            error_stream_sp->Printf("Failed to print structured "
-                                    "data with plugin %s: %s",
-                                    plugin_sp->GetPluginName().AsCString(),
-                                    error.AsCString());
+            error_stream_sp->Format("Failed to print structured "
+                                    "data with plugin {0}: {1}",
+                                    plugin_sp->GetPluginName(), error);
           }
         }
       }
@@ -1569,14 +1652,11 @@ void Debugger::JoinIOHandlerThread() {
   }
 }
 
-Target *Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  Target *target = nullptr;
+Target &Debugger::GetSelectedOrDummyTarget(bool prefer_dummy) {
   if (!prefer_dummy) {
-    target = m_target_list.GetSelectedTarget().get();
-    if (target)
-      return target;
+    if (TargetSP target = m_target_list.GetSelectedTarget())
+      return *target;
   }
-
   return GetDummyTarget();
 }
 

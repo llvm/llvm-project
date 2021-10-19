@@ -52,7 +52,9 @@ public:
   /// Return true if this argument has the nonnull attribute. Also returns true
   /// if at least one byte is known to be dereferenceable and the pointer is in
   /// addrspace(0).
-  bool hasNonNullAttr() const;
+  /// If AllowUndefOrPoison is true, respect the semantics of nonnull attribute
+  /// and return true even if the argument can be undef or poison.
+  bool hasNonNullAttr(bool AllowUndefOrPoison = true) const;
 
   /// If this argument has the dereferenceable attribute, return the number of
   /// bytes known to be dereferenceable. Otherwise, zero is returned.
@@ -83,8 +85,8 @@ public:
   /// in-memory ABI size copied to the stack for the call. Otherwise, return 0.
   uint64_t getPassPointeeByValueCopySize(const DataLayout &DL) const;
 
-  /// Return true if this argument has the byval, inalloca, preallocated, or
-  /// byref attribute. These attributes represent arguments being passed by
+  /// Return true if this argument has the byval, sret, inalloca, preallocated,
+  /// or byref attribute. These attributes represent arguments being passed by
   /// value (which may or may not involve a stack copy)
   bool hasPointeeInMemoryValueAttr() const;
 
@@ -95,16 +97,24 @@ public:
   /// If this is a byval or inalloca argument, return its alignment.
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
-  unsigned getParamAlignment() const;
+  uint64_t getParamAlignment() const;
 
   /// If this is a byval or inalloca argument, return its alignment.
   MaybeAlign getParamAlign() const;
 
+  MaybeAlign getParamStackAlign() const;
+
   /// If this is a byval argument, return its type.
   Type *getParamByValType() const;
 
+  /// If this is an sret argument, return its type.
+  Type *getParamStructRetType() const;
+
   /// If this is a byref argument, return its type.
   Type *getParamByRefType() const;
+
+  /// If this is an inalloca argument, return its type.
+  Type *getParamInAllocaType() const;
 
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;
@@ -114,6 +124,9 @@ public:
 
   /// Return true if this argument has the nocapture attribute.
   bool hasNoCaptureAttr() const;
+
+  /// Return true if this argument has the nofree attribute.
+  bool hasNoFreeAttr() const;
 
   /// Return true if this argument has the sret attribute.
   bool hasStructRetAttr() const;
@@ -148,6 +161,8 @@ public:
 
   /// Remove attributes from an argument.
   void removeAttr(Attribute::AttrKind Kind);
+
+  void removeAttrs(const AttrBuilder &B);
 
   /// Check if an argument has a given attribute.
   bool hasAttribute(Attribute::AttrKind Kind) const;

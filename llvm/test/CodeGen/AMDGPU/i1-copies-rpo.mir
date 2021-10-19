@@ -49,3 +49,4 @@ body:             |
     %6:sreg_64 = V_CMP_EQ_U32_e64 killed %4, killed %5, implicit $exec
     %1:vreg_1 = COPY %6
     S_BRANCH %bb.1
+...

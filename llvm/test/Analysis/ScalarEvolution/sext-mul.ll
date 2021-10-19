@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
 ; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; CHECK: %tmp9 = shl i64 %tmp8, 33
@@ -12,7 +11,7 @@
 ; CHECK: %tmp15 = getelementptr inbounds i32, i32* %arg, i64 %tmp14
 ; CHECK-NEXT: --> {{.*}} Exits: (4 + (4 * (sext i32 (-2 + (2 * %arg2)) to i64))<nsw> + %arg)
 ; CHECK:Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
-; CHECK-NEXT:Loop %bb7: max backedge-taken count is 4294967294
+; CHECK-NEXT:Loop %bb7: max backedge-taken count is 2147483646
 ; CHECK-NEXT:Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg2 to i64))<nsw>
 
 define void @foo(i32* nocapture %arg, i32 %arg1, i32 %arg2) {
@@ -53,7 +52,7 @@ bb7:                                              ; preds = %bb7, %bb3
 ; CHECK: %t14 = or i128 %t10, 1
 ; CHECK-NEXT: --> {{.*}} Exits: (1 + (sext i127 (-633825300114114700748351602688 + (633825300114114700748351602688 * (zext i32 %arg5 to i127))) to i128))<nuw><nsw>
 ; CHECK: Loop %bb7: backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
-; CHECK-NEXT: Loop %bb7: max backedge-taken count is 4294967294
+; CHECK-NEXT: Loop %bb7: max backedge-taken count is 2147483646
 ; CHECK-NEXT: Loop %bb7: Predicated backedge-taken count is (-1 + (zext i32 %arg5 to i128))<nsw>
 
 define void @goo(i32* nocapture %arg3, i32 %arg4, i32 %arg5) {

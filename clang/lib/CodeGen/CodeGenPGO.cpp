@@ -160,10 +160,13 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   PGOHash Hash;
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
+  /// The profile version.
+  uint64_t ProfileVersion;
 
-  MapRegionCounters(PGOHashVersion HashVersion,
+  MapRegionCounters(PGOHashVersion HashVersion, uint64_t ProfileVersion,
                     llvm::DenseMap<const Stmt *, unsigned> &CounterMap)
-      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap) {}
+      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
+        ProfileVersion(ProfileVersion) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
   // traverse them in the parent context.
@@ -201,6 +204,18 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (Type != PGOHash::None)
       CounterMap[S] = NextCounter++;
     return Type;
+  }
+
+  /// The RHS of all logical operators gets a fresh counter in order to count
+  /// how many times the RHS evaluates to true or false, depending on the
+  /// semantics of the operator. This is only valid for ">= v7" of the profile
+  /// version so that we facilitate backward compatibility.
+  bool VisitBinaryOperator(BinaryOperator *S) {
+    if (ProfileVersion >= llvm::IndexedInstrProf::Version7)
+      if (S->isLogicalOp() &&
+          CodeGenFunction::isInstrumentedCondition(S->getRHS()))
+        CounterMap[S->getRHS()] = NextCounter++;
+    return Base::VisitBinaryOperator(S);
   }
 
   /// Include \p S in the function hash.
@@ -634,6 +649,14 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitIfStmt(const IfStmt *S) {
     RecordStmtCount(S);
+
+    if (S->isConsteval()) {
+      const Stmt *Stm = S->isNegatedConsteval() ? S->getThen() : S->getElse();
+      if (Stm)
+        Visit(Stm);
+      return;
+    }
+
     uint64_t ParentCount = CurrentCount;
     if (S->getInit())
       Visit(S->getInit());
@@ -797,6 +820,9 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
     return;
 
   CGM.ClearUnusedCoverageMapping(D);
+  if (Fn->hasFnAttribute(llvm::Attribute::NoProfile))
+    return;
+
   setFuncName(Fn);
 
   mapRegionCounters(D);
@@ -814,11 +840,14 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   // Use the latest hash version when inserting instrumentation, but use the
   // version in the indexed profile if we're reading PGO data.
   PGOHashVersion HashVersion = PGO_HASH_LATEST;
-  if (auto *PGOReader = CGM.getPGOReader())
+  uint64_t ProfileVersion = llvm::IndexedInstrProf::Version;
+  if (auto *PGOReader = CGM.getPGOReader()) {
     HashVersion = getPGOHashVersion(PGOReader, CGM);
+    ProfileVersion = PGOReader->getVersion();
+  }
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
-  MapRegionCounters Walker(HashVersion, *RegionCounterMap);
+  MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap);
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
@@ -941,6 +970,12 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S,
         makeArrayRef(Args));
 }
 
+void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
+    M.addModuleFlag(llvm::Module::Warning, "EnableValueProfiling",
+                    uint32_t(EnableValueProfiling));
+}
+
 // This method either inserts a call to the profile run-time during
 // instrumentation or puts profile data into metadata for PGO use.
 void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
@@ -1038,7 +1073,7 @@ static uint32_t scaleBranchWeight(uint64_t Weight, uint64_t Scale) {
 }
 
 llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
-                                                    uint64_t FalseCount) {
+                                                    uint64_t FalseCount) const {
   // Check for empty weights.
   if (!TrueCount && !FalseCount)
     return nullptr;
@@ -1052,7 +1087,7 @@ llvm::MDNode *CodeGenFunction::createProfileWeights(uint64_t TrueCount,
 }
 
 llvm::MDNode *
-CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) {
+CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
   // We need at least two elements to create meaningful weights.
   if (Weights.size() < 2)
     return nullptr;
@@ -1074,8 +1109,9 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) {
   return MDHelper.createBranchWeights(ScaledWeights);
 }
 
-llvm::MDNode *CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
-                                                           uint64_t LoopCount) {
+llvm::MDNode *
+CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
+                                             uint64_t LoopCount) const {
   if (!PGO.haveRegionCounts())
     return nullptr;
   Optional<uint64_t> CondCount = PGO.getStmtCount(Cond);

@@ -8,7 +8,6 @@
 
 #include "lldb/Symbol/UnwindPlan.h"
 
-#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -83,7 +82,7 @@ static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *threa
     llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle,
                              order_and_width->second);
     llvm::DWARFExpression(data, order_and_width->second, llvm::dwarf::DWARF32)
-        .print(s.AsRawOstream(), nullptr, nullptr);
+        .print(s.AsRawOstream(), llvm::DIDumpOptions(), nullptr, nullptr);
   } else
     s.PutCString("dwarf-expr");
 }
@@ -217,6 +216,7 @@ void UnwindPlan::Row::Clear() {
   m_cfa_value.SetUnspecified();
   m_afa_value.SetUnspecified();
   m_offset = 0;
+  m_unspecified_registers_are_undefined = false;
   m_register_locations.clear();
 }
 
@@ -242,11 +242,9 @@ void UnwindPlan::Row::Dump(Stream &s, const UnwindPlan *unwind_plan,
     idx->second.Dump(s, unwind_plan, this, thread, verbose);
     s.PutChar(' ');
   }
-  s.EOL();
 }
 
-UnwindPlan::Row::Row()
-    : m_offset(0), m_cfa_value(), m_afa_value(), m_register_locations() {}
+UnwindPlan::Row::Row() : m_cfa_value(), m_afa_value(), m_register_locations() {}
 
 bool UnwindPlan::Row::GetRegisterInfo(
     uint32_t reg_num,
@@ -254,6 +252,10 @@ bool UnwindPlan::Row::GetRegisterInfo(
   collection::const_iterator pos = m_register_locations.find(reg_num);
   if (pos != m_register_locations.end()) {
     register_location = pos->second;
+    return true;
+  }
+  if (m_unspecified_registers_are_undefined) {
+    register_location.SetUndefined();
     return true;
   }
   return false;
@@ -348,10 +350,11 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
 }
 
 bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
-  return m_offset == rhs.m_offset &&
-      m_cfa_value == rhs.m_cfa_value &&
-      m_afa_value == rhs.m_afa_value &&
-      m_register_locations == rhs.m_register_locations;
+  return m_offset == rhs.m_offset && m_cfa_value == rhs.m_cfa_value &&
+         m_afa_value == rhs.m_afa_value &&
+         m_unspecified_registers_are_undefined ==
+             rhs.m_unspecified_registers_are_undefined &&
+         m_register_locations == rhs.m_register_locations;
 }
 
 void UnwindPlan::AppendRow(const UnwindPlan::RowSP &row_sp) {
@@ -552,6 +555,7 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
   for (pos = begin; pos != end; ++pos) {
     s.Printf("row[%u]: ", (uint32_t)std::distance(begin, pos));
     (*pos)->Dump(s, this, thread, base_addr);
+    s.Printf("\n");
   }
 }
 

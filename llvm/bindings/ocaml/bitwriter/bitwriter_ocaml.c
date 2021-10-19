@@ -22,13 +22,13 @@
 #include "caml/memory.h"
 
 /* Llvm.llmodule -> string -> bool */
-CAMLprim value llvm_write_bitcode_file(LLVMModuleRef M, value Path) {
+value llvm_write_bitcode_file(LLVMModuleRef M, value Path) {
   int Result = LLVMWriteBitcodeToFile(M, String_val(Path));
   return Val_bool(Result == 0);
 }
 
 /* ?unbuffered:bool -> Llvm.llmodule -> Unix.file_descr -> bool */
-CAMLprim value llvm_write_bitcode_to_fd(value U, LLVMModuleRef M, value FD) {
+value llvm_write_bitcode_to_fd(value U, LLVMModuleRef M, value FD) {
   int Unbuffered;
   int Result;
 
@@ -43,6 +43,6 @@ CAMLprim value llvm_write_bitcode_to_fd(value U, LLVMModuleRef M, value FD) {
 }
 
 /* Llvm.llmodule -> Llvm.llmemorybuffer */
-CAMLprim LLVMMemoryBufferRef llvm_write_bitcode_to_memory_buffer(LLVMModuleRef M) {
+LLVMMemoryBufferRef llvm_write_bitcode_to_memory_buffer(LLVMModuleRef M) {
   return LLVMWriteBitcodeToMemoryBuffer(M);
 }

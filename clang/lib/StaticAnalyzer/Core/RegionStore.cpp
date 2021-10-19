@@ -23,7 +23,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
@@ -1479,7 +1478,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     return UnknownVal();
 
   if (const FieldRegion* FR = dyn_cast<FieldRegion>(R))
-    return CastRetrievedVal(getBindingForField(B, FR), FR, T);
+    return svalBuilder.evalCast(getBindingForField(B, FR), T, QualType{});
 
   if (const ElementRegion* ER = dyn_cast<ElementRegion>(R)) {
     // FIXME: Here we actually perform an implicit conversion from the loaded
@@ -1487,7 +1486,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // more intelligently.  For example, an 'element' can encompass multiple
     // bound regions (e.g., several bound bytes), or could be a subset of
     // a larger value.
-    return CastRetrievedVal(getBindingForElement(B, ER), ER, T);
+    return svalBuilder.evalCast(getBindingForElement(B, ER), T, QualType{});
   }
 
   if (const ObjCIvarRegion *IVR = dyn_cast<ObjCIvarRegion>(R)) {
@@ -1497,7 +1496,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // reinterpretted, it is possible we stored a different value that could
     // fit within the ivar.  Either we need to cast these when storing them
     // or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForObjCIvar(B, IVR), IVR, T);
+    return svalBuilder.evalCast(getBindingForObjCIvar(B, IVR), T, QualType{});
   }
 
   if (const VarRegion *VR = dyn_cast<VarRegion>(R)) {
@@ -1507,7 +1506,7 @@ SVal RegionStoreManager::getBinding(RegionBindingsConstRef B, Loc L, QualType T)
     // variable is reinterpretted, it is possible we stored a different value
     // that could fit within the variable.  Either we need to cast these when
     // storing them or reinterpret them lazily (as we do here).
-    return CastRetrievedVal(getBindingForVar(B, VR), VR, T);
+    return svalBuilder.evalCast(getBindingForVar(B, VR), T, QualType{});
   }
 
   const SVal *V = B.lookup(R, BindingKey::Direct);
@@ -1669,23 +1668,50 @@ SVal RegionStoreManager::getBindingForElement(RegionBindingsConstRef B,
         if (const auto *InitList = dyn_cast<InitListExpr>(Init)) {
           // The array index has to be known.
           if (auto CI = R->getIndex().getAs<nonloc::ConcreteInt>()) {
-            int64_t i = CI->getValue().getSExtValue();
-            // If it is known that the index is out of bounds, we can return
-            // an undefined value.
-            if (i < 0)
+            // If it is not an array, return Undef.
+            QualType T = VD->getType();
+            const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(T);
+            if (!CAT)
               return UndefinedVal();
 
-            if (auto CAT = Ctx.getAsConstantArrayType(VD->getType()))
-              if (CAT->getSize().sle(i))
+            // Support one-dimensional array.
+            // C++20 [expr.add] 7.6.6.4 (excerpt):
+            //   If P points to an array element i of an array object x with n
+            //   elements, where i < 0 or i > n, the behavior is undefined.
+            //   Dereferencing is not allowed on the "one past the last
+            //   element", when i == n.
+            // Example:
+            //   const int arr[4] = {1, 2};
+            //   const int *ptr = arr;
+            //   int x0 = ptr[0]; // 1
+            //   int x1 = ptr[1]; // 2
+            //   int x2 = ptr[2]; // 0
+            //   int x3 = ptr[3]; // 0
+            //   int x4 = ptr[4]; // UB
+            // TODO: Support multidimensional array.
+            if (!isa<ConstantArrayType>(CAT->getElementType())) {
+              // One-dimensional array.
+              const llvm::APSInt &Idx = CI->getValue();
+              const auto I = static_cast<uint64_t>(Idx.getExtValue());
+              // Use `getZExtValue` because array extent can not be negative.
+              const uint64_t Extent = CAT->getSize().getZExtValue();
+              // Check for `Idx < 0`, NOT for `I < 0`, because `Idx` CAN be
+              // negative, but `I` can NOT.
+              if (Idx < 0 || I >= Extent)
                 return UndefinedVal();
 
-            // If there is a list, but no init, it must be zero.
-            if (i >= InitList->getNumInits())
-              return svalBuilder.makeZeroVal(R->getElementType());
+              // C++20 [expr.add] 9.4.17.5 (excerpt):
+              //   i-th array element is value-initialized for each k < i ≤ n,
+              //   where k is an expression-list size and n is an array extent.
+              if (I >= InitList->getNumInits())
+                return svalBuilder.makeZeroVal(R->getElementType());
 
-            if (const Expr *ElemInit = InitList->getInit(i))
-              if (Optional<SVal> V = svalBuilder.getConstantVal(ElemInit))
+              // Return a constant value, if it is presented.
+              // FIXME: Support other SVals.
+              const Expr *E = InitList->getInit(I);
+              if (Optional<SVal> V = svalBuilder.getConstantVal(E))
                 return *V;
+            }
           }
         }
       }

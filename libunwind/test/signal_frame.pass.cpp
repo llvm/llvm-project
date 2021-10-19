@@ -9,6 +9,15 @@
 
 // Ensure that functions marked as signal frames are reported as such.
 
+// TODO: Investigate these failures
+// XFAIL: asan, tsan, ubsan
+
+// TODO: Investigate this failure on macOS
+// XFAIL: target={{.+}}-apple-darwin{{.+}}
+
+// TODO: Investigate this failure
+// XFAIL: 32bits-on-64bits
+
 // UNSUPPORTED: libunwind-arm-ehabi
 
 #include <assert.h>
@@ -25,7 +34,7 @@ void test() {
   assert(unw_is_signal_frame(&cursor));
 }
 
-int main() {
+int main(int, char**) {
   test();
   return 0;
 }

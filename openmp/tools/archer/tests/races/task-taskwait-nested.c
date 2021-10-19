@@ -1,7 +1,6 @@
 /*
  * task-taskwait-nested.c -- Archer testcase
  */
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // RUN: %libarcher-compile-and-run-race | FileCheck %s
+// RUN: %libarcher-compile-and-run-race-noserial | FileCheck %s
 // REQUIRES: tsan
 #include "ompt/ompt-signal.h"
 #include <omp.h>
@@ -21,7 +21,7 @@
 int main(int argc, char *argv[]) {
   int var = 0, a = 0;
 
-#pragma omp parallel num_threads(2) shared(var, a)
+#pragma omp parallel num_threads(8) shared(var, a)
 #pragma omp master
   {
 #pragma omp task shared(var, a)

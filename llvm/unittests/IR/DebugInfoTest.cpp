@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -182,7 +183,65 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
-  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue()));
+  EXPECT_EQ(DVIs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
+}
+
+TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  DISubrange *Subrange = DIB.getOrCreateSubrange(1,1);
+  SmallVector<Metadata*, 4> Subranges;
+  Subranges.push_back(Subrange);
+  DINodeArray Subscripts = DIB.getOrCreateArray(Subranges);
+
+  auto getDIExpression = [&DIB](int offset) {
+    SmallVector<uint64_t, 4> ops;
+    ops.push_back(llvm::dwarf::DW_OP_push_object_address);
+    DIExpression::appendOffset(ops, offset);
+    ops.push_back(llvm::dwarf::DW_OP_deref);
+
+    return DIB.createExpression(ops);
+  };
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      dwarf::DW_LANG_C, DIB.createFile("main.c", "/"), "llvm-c", true, "", 0);
+
+  DIVariable *DataLocation =
+      DIB.createTempGlobalVariableFwdDecl(CU, "dl", "_dl", F, 1, nullptr, true);
+  DIExpression *Associated = getDIExpression(1);
+  DIExpression *Allocated = getDIExpression(2);
+  DIExpression *Rank = DIB.createConstantValueExpression(3);
+
+  DICompositeType *ArrayType = DIB.createArrayType(0, 0, nullptr, Subscripts,
+                                                   DataLocation, Associated,
+                                                   Allocated, Rank);
+
+  EXPECT_TRUE(isa_and_nonnull<DICompositeType>(ArrayType));
+  EXPECT_EQ(ArrayType->getRawDataLocation(), DataLocation);
+  EXPECT_EQ(ArrayType->getRawAssociated(), Associated);
+  EXPECT_EQ(ArrayType->getRawAllocated(), Allocated);
+  EXPECT_EQ(ArrayType->getRawRank(), Rank);
+
+  // Avoid memory leak.
+  DIVariable::deleteTemporary(DataLocation);
+}
+
+TEST(DIBuilder, CreateSetType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIType *Type = DIB.createBasicType("Int", 64, dwarf::DW_ATE_signed);
+  DIFile *F = DIB.createFile("main.c", "/");
+
+  DIDerivedType *SetType = DIB.createSetType(Scope, "set1", F, 1, 64, 64, Type);
+  EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
 } // end namespace

@@ -16,8 +16,8 @@
 
 #include <string>
 
-#include <inttypes.h>
-#include <stddef.h>
+#include <cinttypes>
+#include <cstddef>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -28,11 +28,11 @@ Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order,
       m_indent_level(0), m_forwarder(*this, colors) {}
 
 Stream::Stream(bool colors)
-    : m_flags(0), m_addr_size(4), m_byte_order(endian::InlHostByteOrder()),
-      m_indent_level(0), m_forwarder(*this, colors) {}
+    : m_flags(0), m_byte_order(endian::InlHostByteOrder()),
+      m_forwarder(*this, colors) {}
 
 // Destructor
-Stream::~Stream() {}
+Stream::~Stream() = default;
 
 ByteOrder Stream::SetByteOrder(ByteOrder byte_order) {
   ByteOrder old_byte_order = m_byte_order;

@@ -95,10 +95,10 @@ int main(int argc, char **argv) {
   std::error_code EC;
 #if HAVE_LLVM >= 0x0600
   std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(OutputFilename, EC, sys::fs::F_None));
+      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
 #else
   std::unique_ptr<tool_output_file> Out(
-      new tool_output_file(OutputFilename, EC, sys::fs::F_None));
+      new tool_output_file(OutputFilename, EC, sys::fs::OF_None));
 #endif
   if (EC) {
     errs() << EC.message() << '\n';

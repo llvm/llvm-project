@@ -38,10 +38,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @vdup_i64(i64 %src) {
 ; CHECK-LABEL: vdup_i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.32 q0[0], r0
-; CHECK-NEXT:    vmov.32 q0[1], r1
-; CHECK-NEXT:    vmov.32 q0[2], r0
-; CHECK-NEXT:    vmov.32 q0[3], r1
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r1, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = insertelement <2 x i64> undef, i64 %src, i32 0
@@ -105,37 +103,28 @@ entry:
   ret <4 x float> %outbc
 }
 
-; TODO: Calling convention needs fixing to pass half types directly to functions
-define arm_aapcs_vfpcc <8 x half> @vdup_f16(half* %src1, half* %src2) {
+define arm_aapcs_vfpcc <8 x half> @vdup_f16(half %0, half %1) {
 ; CHECK-LABEL: vdup_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NEXT:    vadd.f16 s0, s0, s1
 ; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vdup.16 q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load half, half *%src1, align 2
-  %1 = load half, half *%src2, align 2
   %2 = fadd half %0, %1
   %3 = insertelement <8 x half> undef, half %2, i32 0
   %out = shufflevector <8 x half> %3, <8 x half> undef, <8 x i32> zeroinitializer
   ret <8 x half> %out
 }
 
-define arm_aapcs_vfpcc <8 x half> @vdup_f16_bc(half* %src1, half* %src2) {
+define arm_aapcs_vfpcc <8 x half> @vdup_f16_bc(half %0, half %1) {
 ; CHECK-LABEL: vdup_f16_bc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NEXT:    vadd.f16 s0, s0, s1
 ; CHECK-NEXT:    vmov.f16 r0, s0
 ; CHECK-NEXT:    vdup.16 q0, r0
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load half, half *%src1, align 2
-  %1 = load half, half *%src2, align 2
   %2 = fadd half %0, %1
   %bc = bitcast half %2 to i16
   %3 = insertelement <8 x i16> undef, i16 %bc, i32 0
@@ -147,7 +136,6 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @vdup_f64(double %src) {
 ; CHECK-LABEL: vdup_f64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vmov.f32 s2, s0
 ; CHECK-NEXT:    vmov.f32 s3, s1
 ; CHECK-NEXT:    bx lr
@@ -250,16 +238,12 @@ entry:
   ret float %ext
 }
 
-define arm_aapcs_vfpcc half @vdup_f16_extract(half* %src1, half* %src2) {
+define arm_aapcs_vfpcc half @vdup_f16_extract(half %0, half %1) {
 ; CHECK-LABEL: vdup_f16_extract:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r0]
-; CHECK-NEXT:    vadd.f16 s0, s2, s0
+; CHECK-NEXT:    vadd.f16 s0, s0, s1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = load half, half *%src1, align 2
-  %1 = load half, half *%src2, align 2
   %2 = fadd half %0, %1
   %bc = bitcast half %2 to i16
   %3 = insertelement <8 x i16> undef, i16 %bc, i32 0

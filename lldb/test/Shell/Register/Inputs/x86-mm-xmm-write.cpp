@@ -9,7 +9,7 @@ union alignas(16) xmm_t {
 
 int main() {
   constexpr xmm_t xmm_fill = {
-    .as_uint64 = { 0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F }
+    .as_uint64 = { 0, 0 }
   };
 
   uint64_t mm[8];

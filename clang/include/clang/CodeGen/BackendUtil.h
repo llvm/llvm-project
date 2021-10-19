@@ -39,17 +39,11 @@ namespace clang {
   void EmitBackendOutput(DiagnosticsEngine &Diags, const HeaderSearchOptions &,
                          const CodeGenOptions &CGOpts,
                          const TargetOptions &TOpts, const LangOptions &LOpts,
-                         const llvm::DataLayout &TDesc, llvm::Module *M,
-                         BackendAction Action,
+                         StringRef TDesc, llvm::Module *M, BackendAction Action,
                          std::unique_ptr<raw_pwrite_stream> OS);
 
   void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                     llvm::MemoryBufferRef Buf);
-
-  llvm::Expected<llvm::BitcodeModule>
-  FindThinLTOModule(llvm::MemoryBufferRef MBRef);
-  llvm::BitcodeModule *
-  FindThinLTOModule(llvm::MutableArrayRef<llvm::BitcodeModule> BMs);
 }
 
 #endif

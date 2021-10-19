@@ -6,8 +6,9 @@
 # CHECK: bl {{.*}} <__cfi_slowpath@plt>
 
 # RUN: yaml2obj %s -o %t.aarch64
-# RUN: llvm-objdump -d --mattr=+bti %t.aarch64 | \
-# RUN:   FileCheck --check-prefix=CHECK-BTI %s
+# RUN: llvm-objdump -d --mattr=+bti %t.aarch64 | FileCheck --check-prefix=CHECK-BTI %s
+# RUN: yaml2obj -DENDIAN=MSB %s -o %t.aarch64_be
+# RUN: llvm-objdump -d --mattr=+bti %t.aarch64_be | FileCheck --check-prefix=CHECK-BTI %s
 # CHECK-BTI: bl {{.*}} <f1@plt>
 # CHECK-BTI: bl {{.*}} <f2@plt>
 # CHECK-BTI: Disassembly of section .plt:
@@ -34,7 +35,7 @@
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
+  Data:    ELFDATA2[[ENDIAN=LSB]]
   Type:    ET_EXEC
   Machine: EM_AARCH64
 Sections:
@@ -62,6 +63,7 @@ Sections:
     Content: 5F2403D5F07BBFA910010090110A40F91042009120021FD61F2003D51F2003D55F2403D510010090110E40F9106200919F2103D520021FD65F2403D510010090111240F9108200919F2103D520021FD6
   - Name:    .got.plt
     Type:    SHT_PROGBITS
+## The content is in little-endian, but it does not affect aarch64_be PLT decoding.
     Content: '000000000000000000000000000000000000000000000000100021000000000010002100000000001000210000000000'
 Symbols:
   - Name:    f1

@@ -54,12 +54,10 @@ define i16 @halfinsts_add_i16(i16 %arg0) #1 {
   ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY2]]
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   $vgpr0 = COPY [[COPY3]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
-  ; CHECK:   S_SETPC_B64_return [[COPY4]], implicit $vgpr0
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+  ; CHECK:   $vgpr0 = COPY [[ADD]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
+  ; CHECK:   S_SETPC_B64_return [[COPY2]], implicit $vgpr0
   %add = add i16 %arg0, %arg0
   ret i16 %add
 }
@@ -71,18 +69,12 @@ define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY4]]
-  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY5]], [[COPY6]]
-  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
-  ; CHECK:   $vgpr0 = COPY [[COPY7]](s32)
-  ; CHECK:   $vgpr1 = COPY [[COPY8]](s32)
-  ; CHECK:   [[COPY9:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; CHECK:   S_SETPC_B64_return [[COPY9]], implicit $vgpr0, implicit $vgpr1
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY]]
+  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[COPY1]]
+  ; CHECK:   $vgpr0 = COPY [[ADD]](s32)
+  ; CHECK:   $vgpr1 = COPY [[ADD1]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0, implicit $vgpr1
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
 }

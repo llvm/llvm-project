@@ -1,6 +1,9 @@
-; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck -allow-deprecated-dag-overlap %s
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
+; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
 
 @_ZTIi = external constant i8*
 @_ZTIf = external constant i8*
@@ -60,7 +63,22 @@ try.cont:                                         ; preds = %entry, %catch.start
 ; entries with the first landing pad because they end with the same sequence
 ; (double -> ...). But the third landing table cannot share action table entries
 ; with others, so it should create its own entries.
+
 ; CHECK-LABEL: test1:
+; In static linking, we load GCC_except_table as a constant directly.
+; NOPIC:      i[[PTR]].const  $push[[CONTEXT:.*]]=, __wasm_lpad_context
+; NOPIC-NEXT: i[[PTR]].const  $push[[EXCEPT_TABLE:.*]]=, GCC_except_table1
+; NOPIC-NEXT: i[[PTR]].store  {{[48]}}($pop[[CONTEXT]]), $pop[[EXCEPT_TABLE]]
+
+; In case of PIC, we make GCC_except_table symbols a relative on based on
+; __memory_base.
+; PIC:        global.get  $push[[CONTEXT:.*]]=, __wasm_lpad_context@GOT
+; PIC-NEXT:   local.tee  $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
+; PIC:        global.get  $push[[MEMORY_BASE:.*]]=, __memory_base
+; PIC-NEXT:   i[[PTR]].const  $push[[EXCEPT_TABLE_REL:.*]]=, GCC_except_table1@MBREL
+; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $pop[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
+; PIC-NEXT:   i[[PTR]].store  {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
+
 ; CHECK: .section  .rodata.gcc_except_table,"",@
 ; CHECK-NEXT:   .p2align  2
 ; CHECK-NEXT: GCC_except_table[[START:[0-9]+]]:
@@ -102,10 +120,10 @@ try.cont:                                         ; preds = %entry, %catch.start
 ; CHECK-NEXT:   .int8  125                     #   Continue to action 5
 ; CHECK-NEXT:   .p2align  2
 ; CHECK-NEXT:                                  # >> Catch TypeInfos <<
-; CHECK-NEXT:   .int32  _ZTIi                  # TypeInfo 4
-; CHECK-NEXT:   .int32  _ZTIf                  # TypeInfo 3
-; CHECK-NEXT:   .int32  _ZTId                  # TypeInfo 2
-; CHECK-NEXT:   .int32  0                      # TypeInfo 1
+; CHECK-NEXT:   .int[[PTR]]  _ZTIi             # TypeInfo 4
+; CHECK-NEXT:   .int[[PTR]]  _ZTIf             # TypeInfo 3
+; CHECK-NEXT:   .int[[PTR]]  _ZTId             # TypeInfo 2
+; CHECK-NEXT:   .int[[PTR]]  0                 # TypeInfo 1
 ; CHECK-NEXT: .Lttbase0:
 ; CHECK-NEXT:   .p2align  2
 ; CHECK-NEXT: .LGCC_except_table_end[[END:[0-9]+]]:
@@ -230,10 +248,15 @@ catch:                                            ; preds = %catch.fallthrough2
 }
 
 declare void @may_throw()
-declare i32 @llvm.eh.typeid.for(i8*)
-declare i8* @llvm.wasm.get.exception(token)
-declare i32 @llvm.wasm.get.ehselector(token)
+; Function Attrs: nounwind
+declare i32 @llvm.eh.typeid.for(i8*) #0
+; Function Attrs: nounwind
+declare i8* @llvm.wasm.get.exception(token) #0
+; Function Attrs: nounwind
+declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @__cxa_rethrow()
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare i32 @__gxx_wasm_personality_v0(...)
+
+attributes #0 = { nounwind }

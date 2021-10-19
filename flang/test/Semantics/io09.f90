@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
   !ERROR: String edit descriptor in READ format expression
   read(*,'("abc")')
 

@@ -28,8 +28,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
+#include <cinttypes>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -57,7 +57,7 @@ static bool checkSize(MemoryBufferRef M, std::error_code &EC, uint64_t Size) {
 template <typename T>
 static Error getObject(const T *&Obj, MemoryBufferRef M, const void *Ptr,
                        const uint64_t Size = sizeof(T)) {
-  uintptr_t Addr = uintptr_t(Ptr);
+  uintptr_t Addr = reinterpret_cast<uintptr_t>(Ptr);
   if (Error E = Binary::checkOffset(M, Addr, Size))
     return E;
   Obj = reinterpret_cast<const T *>(Addr);
@@ -103,10 +103,11 @@ const coff_symbol_type *COFFObjectFile::toSymb(DataRefImpl Ref) const {
   const coff_symbol_type *Addr =
       reinterpret_cast<const coff_symbol_type *>(Ref.p);
 
-  assert(!checkOffset(Data, uintptr_t(Addr), sizeof(*Addr)));
+  assert(!checkOffset(Data, reinterpret_cast<uintptr_t>(Addr), sizeof(*Addr)));
 #ifndef NDEBUG
   // Verify that the symbol points to a valid entry in the symbol table.
-  uintptr_t Offset = uintptr_t(Addr) - uintptr_t(base());
+  uintptr_t Offset =
+      reinterpret_cast<uintptr_t>(Addr) - reinterpret_cast<uintptr_t>(base());
 
   assert((Offset - getPointerToSymbolTable()) % sizeof(coff_symbol_type) == 0 &&
          "Symbol did not point to the beginning of a symbol");
@@ -123,7 +124,8 @@ const coff_section *COFFObjectFile::toSec(DataRefImpl Ref) const {
   if (Addr < SectionTable || Addr >= (SectionTable + getNumberOfSections()))
     report_fatal_error("Section was outside of section table.");
 
-  uintptr_t Offset = uintptr_t(Addr) - uintptr_t(SectionTable);
+  uintptr_t Offset = reinterpret_cast<uintptr_t>(Addr) -
+                     reinterpret_cast<uintptr_t>(SectionTable);
   assert(Offset % sizeof(coff_section) == 0 &&
          "Section did not point to the beginning of a section");
 #endif
@@ -326,13 +328,20 @@ bool COFFObjectFile::isSectionBSS(DataRefImpl Ref) const {
 
 // The .debug sections are the only debug sections for COFF
 // (\see MCObjectFileInfo.cpp).
-bool COFFObjectFile::isDebugSection(StringRef SectionName) const {
+bool COFFObjectFile::isDebugSection(DataRefImpl Ref) const {
+  Expected<StringRef> SectionNameOrErr = getSectionName(Ref);
+  if (!SectionNameOrErr) {
+    // TODO: Report the error message properly.
+    consumeError(SectionNameOrErr.takeError());
+    return false;
+  }
+  StringRef SectionName = SectionNameOrErr.get();
   return SectionName.startswith(".debug");
 }
 
 unsigned COFFObjectFile::getSectionID(SectionRef Sec) const {
   uintptr_t Offset =
-      uintptr_t(Sec.getRawDataRefImpl().p) - uintptr_t(SectionTable);
+      Sec.getRawDataRefImpl().p - reinterpret_cast<uintptr_t>(SectionTable);
   assert((Offset % sizeof(coff_section)) == 0);
   return (Offset / sizeof(coff_section)) + 1;
 }
@@ -376,7 +385,7 @@ getFirstReloc(const coff_section *Sec, MemoryBufferRef M, const uint8_t *Base) {
     // relocations.
     begin++;
   }
-  if (auto E = Binary::checkOffset(M, uintptr_t(begin),
+  if (auto E = Binary::checkOffset(M, reinterpret_cast<uintptr_t>(begin),
                                    sizeof(coff_relocation) * NumRelocs)) {
     consumeError(std::move(E));
     return nullptr;
@@ -467,7 +476,8 @@ Error COFFObjectFile::getRvaPtr(uint32_t Addr, uintptr_t &Res) const {
     uint32_t SectionEnd = Section->VirtualAddress + Section->VirtualSize;
     if (SectionStart <= Addr && Addr < SectionEnd) {
       uint32_t Offset = Addr - SectionStart;
-      Res = uintptr_t(base()) + Section->PointerToRawData + Offset;
+      Res = reinterpret_cast<uintptr_t>(base()) + Section->PointerToRawData +
+            Offset;
       return Error::success();
     }
   }
@@ -484,8 +494,8 @@ Error COFFObjectFile::getRvaAndSizeAsBytes(uint32_t RVA, uint32_t Size,
     uint32_t OffsetIntoSection = RVA - SectionStart;
     if (SectionStart <= RVA && OffsetIntoSection < Section->VirtualSize &&
         Size <= Section->VirtualSize - OffsetIntoSection) {
-      uintptr_t Begin =
-          uintptr_t(base()) + Section->PointerToRawData + OffsetIntoSection;
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(base()) +
+                        Section->PointerToRawData + OffsetIntoSection;
       Contents =
           ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(Begin), Size);
       return Error::success();
@@ -649,6 +659,38 @@ Error COFFObjectFile::initDebugDirectoryPtr() {
   return Error::success();
 }
 
+Error COFFObjectFile::initTLSDirectoryPtr() {
+  // Get the RVA of the TLS directory. Do nothing if it does not exist.
+  const data_directory *DataEntry = getDataDirectory(COFF::TLS_TABLE);
+  if (!DataEntry)
+    return Error::success();
+
+  // Do nothing if the RVA is NULL.
+  if (DataEntry->RelativeVirtualAddress == 0)
+    return Error::success();
+
+  uint64_t DirSize =
+      is64() ? sizeof(coff_tls_directory64) : sizeof(coff_tls_directory32);
+
+  // Check that the size is correct.
+  if (DataEntry->Size != DirSize)
+    return createStringError(
+        object_error::parse_failed,
+        "TLS Directory size (%u) is not the expected size (%" PRIu64 ").",
+        static_cast<uint32_t>(DataEntry->Size), DirSize);
+
+  uintptr_t IntPtr = 0;
+  if (Error E = getRvaPtr(DataEntry->RelativeVirtualAddress, IntPtr))
+    return E;
+
+  if (is64())
+    TLSDirectory64 = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
+  else
+    TLSDirectory32 = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
+
+  return Error::success();
+}
+
 Error COFFObjectFile::initLoadConfigPtr() {
   // Get the RVA of the debug directory. Do nothing if it does not exist.
   const data_directory *DataEntry = getDataDirectory(COFF::LOAD_CONFIG_TABLE);
@@ -682,7 +724,8 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object)
       ImportDirectory(nullptr), DelayImportDirectory(nullptr),
       NumberOfDelayImportDirectory(0), ExportDirectory(nullptr),
       BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
-      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr) {}
+      DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr),
+      TLSDirectory32(nullptr), TLSDirectory64(nullptr) {}
 
 Error COFFObjectFile::initialize() {
   // Check that we at least have enough room for a header.
@@ -809,8 +852,12 @@ Error COFFObjectFile::initialize() {
   if (Error E = initBaseRelocPtr())
     return E;
 
-  // Initialize the pointer to the export table.
+  // Initialize the pointer to the debug directory.
   if (Error E = initDebugDirectoryPtr())
+    return E;
+
+  // Initialize the pointer to the TLS directory.
+  if (Error E = initTLSDirectoryPtr())
     return E;
 
   if (Error E = initLoadConfigPtr())
@@ -1090,7 +1137,8 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
   // The only thing that we need to verify is that the contents is contained
   // within the file bounds. We don't need to make sure it doesn't cover other
   // data, as there's nothing that says that is not allowed.
-  uintptr_t ConStart = uintptr_t(base()) + Sec->PointerToRawData;
+  uintptr_t ConStart =
+      reinterpret_cast<uintptr_t>(base()) + Sec->PointerToRawData;
   uint32_t SectionSize = getSectionSize(Sec);
   if (Error E = checkOffset(Data, ConStart, SectionSize))
     return E;
@@ -1750,10 +1798,9 @@ Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
   Relocs.reserve(OrigRelocs.size());
   for (const coff_relocation &R : OrigRelocs)
     Relocs.push_back(&R);
-  std::sort(Relocs.begin(), Relocs.end(),
-            [](const coff_relocation *A, const coff_relocation *B) {
-              return A->VirtualAddress < B->VirtualAddress;
-            });
+  llvm::sort(Relocs, [](const coff_relocation *A, const coff_relocation *B) {
+    return A->VirtualAddress < B->VirtualAddress;
+  });
   return Error::success();
 }
 

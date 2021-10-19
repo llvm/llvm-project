@@ -1,5 +1,5 @@
 This folder contains resources needed to create a docker container for
-llvm-libc builbot worker.
+llvm-libc buildbot worker.
 
 Dockerfile: Sets up the docker image with all pre-requisites.
 

@@ -269,7 +269,7 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
     std::vector<GlobalValue *> ToRemove;
     // First, remove aliases to functions we're about to purge.
     for (GlobalAlias &Alias : M->aliases()) {
-      GlobalObject *Root = Alias.getBaseObject();
+      GlobalObject *Root = Alias.getAliaseeObject();
       Function *F = dyn_cast_or_null<Function>(Root);
       if (F) {
         if (Functions.count(F))
@@ -358,8 +358,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
   for (auto A : Attrs)
     AB.addAttribute(A);
   AttributeList NewAttrs;
-  NewAttrs =
-      NewAttrs.addAttributes(BD.getContext(), AttributeList::FunctionIndex, AB);
+  NewAttrs = NewAttrs.addFnAttributes(BD.getContext(), AB);
 
   // Set this new list of attributes on the function.
   F->setAttributes(NewAttrs);
@@ -375,7 +374,7 @@ bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
 
     // Pass along the set of attributes that caused the crash.
     Attrs.clear();
-    for (Attribute A : NewAttrs.getFnAttributes()) {
+    for (Attribute A : NewAttrs.getFnAttrs()) {
       Attrs.push_back(A);
     }
     return true;
@@ -425,7 +424,7 @@ void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
 }
 /// ReduceCrashingBlocks reducer - This works by setting the terminators of
 /// all terminators except the specified basic blocks to a 'ret' instruction,
-/// then running the simplify-cfg pass.  This has the effect of chopping up
+/// then running the simplifycfg pass.  This has the effect of chopping up
 /// the CFG really fast which can reduce large functions quickly.
 ///
 class ReduceCrashingBlocks : public ListReducer<const BasicBlock *> {
@@ -1232,7 +1231,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
         assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
-        for (Attribute A : Fn->getAttributes().getFnAttributes())
+        for (Attribute A : Fn->getAttributes().getFnAttrs())
           Attrs.push_back(A);
 
         OldSize += Attrs.size();

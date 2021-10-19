@@ -15,17 +15,17 @@ entry:
 	ret i32 undef
 }
 
-declare void @llvm.va_start(i8*) nounwind 
+declare void @llvm.va_start(i8*) nounwind
 
-declare void @llvm.va_end(i8*) nounwind 
+declare void @llvm.va_end(i8*) nounwind
 
 define i32 @main() {
 entry:
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	%tmp = getelementptr [4 x %struct.point], [4 x %struct.point]* @pts, i32 0, i32 0		; <%struct.point*> [#uses=1]
-	%tmp1 = call i32 (i32, ...) @va1( i32 1, %struct.point* byval  %tmp ) nounwind 		; <i32> [#uses=0]
-	call void @exit( i32 0 ) noreturn nounwind 
+	%tmp1 = call i32 (i32, ...) @va1(i32 1, %struct.point* byval(%struct.point) %tmp) nounwind 		; <i32> [#uses=0]
+	call void @exit( i32 0 ) noreturn nounwind
 	unreachable
 }
 
-declare void @exit(i32) noreturn nounwind 
+declare void @exit(i32) noreturn nounwind

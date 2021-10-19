@@ -123,22 +123,18 @@ DynamicSymbols:
     Section: .data
     Value:   0x200
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0
-    Sections:
-      - Section: .text
-      - Section: .data
-  - Type:  PT_LOAD
-    VAddr: 0x400
-    Sections:
-      - Section: .dynsym
-      - Section: .hash
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type:  PT_DYNAMIC
-    VAddr: 0xA00
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0
+    FirstSec: .text
+    LastSec:  .data
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    FirstSec: .dynsym
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0xA00
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 2: Table size from DT_HASH does not match size from section header.
 # RUN: yaml2obj --docnum=2 %s -o %t2-smaller -DCHAIN="[1, 2]"
@@ -290,22 +286,18 @@ DynamicSymbols:
     Section: .data
     Value:   0x300
 ProgramHeaders:
-  - Type:  PT_LOAD
-    VAddr: 0
-    Sections:
-      - Section: .text
-      - Section: .data
-  - Type:  PT_LOAD
-    VAddr: 0x400
-    Sections:
-      - Section: .dynsym
-      - Section: .hash
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type:  PT_DYNAMIC
-    VAddr: 0xA00
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0
+    FirstSec: .text
+    LastSec:  .data
+  - Type:     PT_LOAD
+    VAddr:    0x400
+    FirstSec: .dynsym
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0xA00
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 3: DT_HASH is missing.
 ## Show that no warning occurs if there are section headers.
@@ -324,3 +316,92 @@ ProgramHeaders:
 
 # LLVM3: DynamicSymbols [
 # LLVM3: ]
+
+## Case 4: The size of the dynamic symbol table, inferred from the hash table, is broken.
+##         It is so large that symbol table goes past the end of the file. We have a dynamic
+##         relocation which refers to a symbol with an index that is also too large to be
+##         in the file. Check we report a warning when trying to dump this relocation.
+
+# RUN: yaml2obj --docnum=3 %s -o %t4.1
+
+## Remember the size of the output produced.
+# RUN: wc -c %t4.1 > %t4.out.gnu.txt
+# RUN: llvm-readelf --sections --dyn-relocations %t4.1 >> %t4.out.gnu.txt 2>&1
+# RUN: FileCheck %s -DFILE=%t4.1 --input-file=%t4.out.gnu.txt --check-prefix=BROKEN-NCHAIN-GNU
+
+# BROKEN-NCHAIN-GNU: [[#%u, FILESIZE:]]
+# BROKEN-NCHAIN-GNU: warning: '[[FILE]]': the size (0x17ffffffe8) of the dynamic symbol table at 0x[[#%x, DYNSYMOFF:]], derived from the hash table, goes past the end of the file (0x[[#%x, FILESIZE]]) and will be ignored
+
+# BROKEN-NCHAIN-GNU: [Nr] Name      Type   Address          Off
+# BROKEN-NCHAIN-GNU: [ 1] .rela.plt RELA   0000000000001000 0000[[#%x, RELAOFF:]]
+# BROKEN-NCHAIN-GNU: [ 4] .dynsym   DYNSYM 0000000000001078 0000[[#%x, DYNSYMOFF]]
+
+# BROKEN-NCHAIN-GNU:      'PLT' relocation section at offset 0x[[#%x, RELAOFF]] contains 24 bytes:
+# BROKEN-NCHAIN-GNU-NEXT: Offset            Info             Type              Symbol's Value  Symbol's Name + Addend
+# BROKEN-NCHAIN-GNU-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4292739037: index is greater than or equal to the number of dynamic symbols (1)
+# BROKEN-NCHAIN-GNU-NEXT: 0000000000000000  ffddffdd00000000 R_X86_64_NONE                     <corrupt> + 0
+
+# RUN: wc -c %t4.1 > %t4.out.llvm.txt
+# RUN: llvm-readobj --sections --dyn-relocations %t4.1 2>&1 >> %t4.out.llvm.txt 2>&1
+# RUN: FileCheck %s -DFILE=%t4.1 --input-file=%t4.out.llvm.txt --check-prefix=BROKEN-NCHAIN-LLVM
+
+# BROKEN-NCHAIN-LLVM: [[#%u, FILESIZE:]]
+# BROKEN-NCHAIN-LLVM: warning: '[[FILE]]': the size (0x17ffffffe8) of the dynamic symbol table at 0x[[#%x, DYNSYMOFF:]], derived from the hash table, goes past the end of the file (0x[[#%x, FILESIZE]]) and will be ignored
+
+# BROKEN-NCHAIN-LLVM:      Name: .dynsym
+# BROKEN-NCHAIN-LLVM-NEXT: Type: SHT_DYNSYM
+# BROKEN-NCHAIN-LLVM-NEXT: Flags [
+# BROKEN-NCHAIN-LLVM-NEXT:   SHF_ALLOC
+# BROKEN-NCHAIN-LLVM-NEXT: ]
+# BROKEN-NCHAIN-LLVM-NEXT: Address: 0x1078
+# BROKEN-NCHAIN-LLVM-NEXT: Offset: 0x[[#%X, DYNSYMOFF]]
+
+# BROKEN-NCHAIN-LLVM:      Dynamic Relocations {
+# BROKEN-NCHAIN-LLVM-NEXT: warning: '[[FILE]]': unable to get name of the dynamic symbol with index 4292739037: index is greater than or equal to the number of dynamic symbols (1)
+# BROKEN-NCHAIN-LLVM-NEXT:   0x0 R_X86_64_NONE <corrupt> 0x0
+# BROKEN-NCHAIN-LLVM-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .rela.plt
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Symbol: 0xFFDDFFDD
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_PLTRELSZ
+        Value: 0x18
+      - Tag:   DT_JMPREL
+## 0x1000 - PT_LOAD's p_vaddr (0x1000) == 0x0.
+## 0x0 + PT_LOAD's p_offset (0x78) == .rela.plt section offset (0x78).
+        Value: 0x1000
+      - Tag:   DT_PLTREL
+        Value: 0x7 ## 7 == DT_RELA
+      - Tag:   DT_HASH
+## 0x1068 - PT_LOAD's p_vaddr (0x1000) == 0x68.
+## 0x68 + PT_LOAD's p_offset (0x78) == .hash section offset (0xE0).
+        Value: 0x1068
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ 0 ]
+    NChain: 0xFFFFFFFF
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .rela.plt
+    LastSec:  .hash
+    VAddr: 0x1000

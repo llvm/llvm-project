@@ -8,10 +8,10 @@
 // Automatically generated file, do not edit!
 //===----------------------------------------------------------------------===//
 
+
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPMASK_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPMASK_H
 
-// clang-format off
 HexagonInstruction InstructionEncodings[] = {
 { /*Tag:A2_addi*/
   /*Rd32=add(Rs32,#s16)*/
@@ -2816,6 +2816,5 @@ HexagonInstruction InstructionEncodings[] = {
   0x00002404,
   0 }
 };
-// clang-format off
 
 #endif  // LLVM_LIB_TARGET_HEXAGON_HEXAGONDEPMASK_H

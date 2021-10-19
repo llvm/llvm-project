@@ -5,7 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   VulkanRuntime.h
   )
 
-if (MLIR_VULKAN_RUNNER_ENABLED)
+if (MLIR_ENABLE_VULKAN_RUNNER)
   message(STATUS "Building the Vulkan runner")
 
   # At first try "FindVulkan" from:
@@ -52,23 +52,26 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     ${Vulkan_LIBRARY}
   )
 
-  get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
   get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
   set(LIBS
-    ${dialect_libs}
     ${conversion_libs}
-    LLVMCore
-    LLVMSupport
     MLIRAnalysis
-    MLIREDSC
+    MLIRArithmetic
     MLIRExecutionEngine
+    MLIRGPUOps
     MLIRIR
     MLIRJitRunner
     MLIRLLVMIR
+    MLIRLLVMCommonConversion
+    MLIRLLVMToLLVMIRTranslation
+    MLIRMemRef
+    MLIRMemRefToLLVM
     MLIRParser
+    MLIRSPIRV
     MLIRSPIRVTransforms
+    MLIRStandard
     MLIRSupport
-    MLIRTargetLLVMIR
+    MLIRTargetLLVMIRExport
     MLIRTransforms
     MLIRTranslation
     ${Vulkan_LIBRARY}
@@ -87,9 +90,11 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
 
   add_llvm_tool(mlir-vulkan-runner
     mlir-vulkan-runner.cpp
+
+    DEPENDS
+    vulkan-runtime-wrappers
   )
-  add_dependencies(mlir-vulkan-runner vulkan-runtime-wrappers)
   llvm_update_compile_flags(mlir-vulkan-runner)
-  target_link_libraries(mlir-vulkan-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+  target_link_libraries(mlir-vulkan-runner PRIVATE ${LIBS})
 
 endif()

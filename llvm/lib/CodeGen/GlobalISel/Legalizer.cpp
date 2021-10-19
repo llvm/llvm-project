@@ -43,6 +43,13 @@ static cl::opt<bool>
                          cl::desc("Should enable CSE in Legalizer"),
                          cl::Optional, cl::init(false));
 
+// This is a temporary hack, should be removed soon.
+static cl::opt<bool> AllowGInsertAsArtifact(
+    "allow-ginsert-as-artifact",
+    cl::desc("Allow G_INSERT to be considered an artifact. Hack around AMDGPU "
+             "test infinite loops."),
+    cl::Optional, cl::init(true));
+
 enum class DebugLocVerifyLevel {
   None,
   Legalizations,
@@ -103,6 +110,8 @@ static bool isArtifact(const MachineInstr &MI) {
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_EXTRACT:
     return true;
+  case TargetOpcode::G_INSERT:
+    return AllowGInsertAsArtifact;
   }
 }
 using InstListTy = GISelWorkList<256>;
@@ -209,9 +218,6 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
   RAIIMFObsDelInstaller Installer(MF, WrapperObserver);
   LegalizerHelper Helper(MF, LI, WrapperObserver, MIRBuilder);
   LegalizationArtifactCombiner ArtCombiner(MIRBuilder, MRI, LI);
-  auto RemoveDeadInstFromLists = [&WrapperObserver](MachineInstr *DeadMI) {
-    WrapperObserver.erasingInstr(*DeadMI);
-  };
   bool Changed = false;
   SmallVector<MachineInstr *, 128> RetryList;
   do {
@@ -223,14 +229,12 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead; erasing.\n");
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
 
       // Do the legalization for this instruction.
-      auto Res = Helper.legalizeInstrStep(MI);
+      auto Res = Helper.legalizeInstrStep(MI, LocObserver);
       // Error out if we couldn't legalize this instruction. We may want to
       // fall back to DAG ISel instead in the future.
       if (Res == LegalizerHelper::UnableToLegalize) {
@@ -272,10 +276,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       assert(isPreISelGenericOpcode(MI.getOpcode()) &&
              "Expecting generic opcode");
       if (isTriviallyDead(MI, MRI)) {
-        LLVM_DEBUG(dbgs() << MI << "Is dead\n");
-        RemoveDeadInstFromLists(&MI);
-        MI.eraseFromParentAndMarkDBGValuesForRemoval();
-        LocObserver.checkpoint(false);
+        eraseInstr(MI, MRI, &LocObserver);
         continue;
       }
       SmallVector<MachineInstr *, 4> DeadInstructions;
@@ -283,11 +284,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
       if (ArtCombiner.tryCombineInstruction(MI, DeadInstructions,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
-        for (auto *DeadMI : DeadInstructions) {
-          LLVM_DEBUG(dbgs() << "Is dead: " << *DeadMI);
-          RemoveDeadInstFromLists(DeadMI);
-          DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
-        }
+        eraseInstrs(DeadInstructions, MRI, &LocObserver);
         LocObserver.checkpoint(
             VerifyDebugLocs ==
             DebugLocVerifyLevel::LegalizationsAndArtifactCombiners);

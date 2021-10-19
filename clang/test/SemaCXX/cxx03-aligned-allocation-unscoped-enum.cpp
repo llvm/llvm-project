@@ -12,7 +12,7 @@ enum align_val_t : size_t {};
 }
 _Static_assert(__is_same(__underlying_type(std::align_val_t), size_t), "");
 
-// CHECK-LABEL: define void @_Z1fPi(
+// CHECK-LABEL: define{{.*}} void @_Z1fPi(
 void f(int *p) {
   // CHECK-NOT: call void @_ZdlPvSt11align_val_t(
   // CHECK: call void @_ZdlPv(

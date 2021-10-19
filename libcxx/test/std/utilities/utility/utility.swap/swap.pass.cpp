@@ -13,9 +13,10 @@
 //   void
 //   swap(T& a, T& b);
 
-#include <utility>
 #include <cassert>
 #include <memory>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 

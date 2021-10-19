@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
 // <istream>
 
 // template <class charT, class traits = char_traits<charT> >
@@ -58,6 +56,7 @@ int main(int, char**)
         assert(is.precision() == 6);
         assert(is.getloc().name() == "C");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         test_iostream<wchar_t> is1(&sb);
@@ -74,6 +73,7 @@ int main(int, char**)
         assert(is.precision() == 6);
         assert(is.getloc().name() == "C");
     }
+#endif
 
   return 0;
 }

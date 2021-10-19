@@ -206,8 +206,7 @@ exit:
 define void @maxvisitor(i32 %limit, i32* %base) nounwind {
 ; CHECK-LABEL: @maxvisitor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[LIMIT:%.*]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[LIMIT]], i32 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LIMIT:%.*]], i32 1)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -218,12 +217,12 @@ define void @maxvisitor(i32 %limit, i32* %base) nounwind {
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[VAL]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    br label [[LOOP_INC]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LOOP_INC]]
 ; CHECK:       loop.inc:
-; CHECK-NEXT:    [[MAX_NEXT]] = phi i32 [ [[TMP1]], [[IF_THEN]] ], [ [[MAX]], [[IF_ELSE]] ]
+; CHECK-NEXT:    [[MAX_NEXT]] = phi i32 [ [[TMP0]], [[IF_THEN]] ], [ [[MAX]], [[IF_ELSE]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]

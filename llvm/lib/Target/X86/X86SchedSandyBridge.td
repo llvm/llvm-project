@@ -112,6 +112,7 @@ def : WriteRes<WriteStoreNT, [SBPort23, SBPort4]>;
 def : WriteRes<WriteLoad,    [SBPort23]> { let Latency = 5; }
 def : WriteRes<WriteMove,    [SBPort015]>;
 def : WriteRes<WriteZero,    []>;
+def : WriteRes<WriteVecMaskedGatherWriteback, []> { let Latency = 5; let NumMicroOps = 0; }
 
 // Arithmetic.
 defm : SBWriteResPair<WriteALU,    [SBPort015], 1>;
@@ -123,12 +124,17 @@ defm : X86WriteRes<WriteIMul16Imm,    [SBPort1,SBPort015], 4, [1,1], 2>;
 defm : X86WriteRes<WriteIMul16ImmLd,  [SBPort1,SBPort015,SBPort23], 8, [1,1,1], 3>;
 defm : SBWriteResPair<WriteIMul16Reg, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul32,    [SBPort1,SBPort05,SBPort015], 4, [1,1,1], 3>;
+defm : SBWriteResPair<WriteMULX32,    [SBPort1,SBPort05,SBPort015], 3, [1,1,1], 3>;
 defm : SBWriteResPair<WriteIMul32Imm, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul32Reg, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64,    [SBPort1,SBPort0], 4, [1,1], 2>;
+defm : SBWriteResPair<WriteMULX64,    [SBPort1,SBPort0], 3, [1,1], 2>;
 defm : SBWriteResPair<WriteIMul64Imm, [SBPort1],   3>;
 defm : SBWriteResPair<WriteIMul64Reg, [SBPort1],   3>;
-def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def SBWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 4; }
+def  : WriteRes<WriteIMulHLd, []> {
+  let Latency = !add(SBWriteIMulH.Latency, SandyBridgeModel.LoadLatency);
+}
 
 defm : X86WriteRes<WriteXCHG,      [SBPort015], 2, [3], 3>;
 defm : X86WriteRes<WriteBSWAP32,   [SBPort1], 1, [1], 1>;
@@ -573,6 +579,7 @@ def : WriteRes<WriteNop, []>;
 defm : SBWriteResPair<WriteFShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFVarShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteShuffle256, [SBPort5], 1, [1], 1, 7>;
+defm : SBWriteResPair<WriteVPMOV256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteVarShuffle256, [SBPort5], 1, [1], 1, 7>;
 defm : SBWriteResPair<WriteFMA,  [SBPort01],  5>;
 defm : SBWriteResPair<WriteFMAX, [SBPort01],  5>;

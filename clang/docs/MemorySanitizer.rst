@@ -85,8 +85,17 @@ particular function.  MemorySanitizer may still instrument such functions to
 avoid false positives.  This attribute may not be supported by other compilers,
 so we suggest to use it together with ``__has_feature(memory_sanitizer)``.
 
-Blacklist
----------
+``__attribute__((disable_sanitizer_instrumentation))``
+--------------------------------------------------------
+
+The ``disable_sanitizer_instrumentation`` attribute can be applied to functions
+to prevent all kinds of instrumentation. As a result, it may introduce false
+positives and therefore should be used with care, and only if absolutely
+required; for example for certain code that cannot tolerate any instrumentation
+and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
+
+Ignorelist
+----------
 
 MemorySanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to relax MemorySanitizer

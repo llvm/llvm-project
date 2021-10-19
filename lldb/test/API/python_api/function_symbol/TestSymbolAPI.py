@@ -24,7 +24,6 @@ class SymbolAPITestCase(TestBase):
         self.line2 = line_number(
             'main.c', '// Find the line number for breakpoint 2 here.')
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test(self):
         """Exercise some SBSymbol and SBAddress APIs."""
@@ -53,7 +52,7 @@ class SymbolAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -62,7 +61,7 @@ class SymbolAPITestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         symbol_line1 = frame0.GetSymbol()
         # We should have a symbol type of code.
-        self.assertTrue(symbol_line1.GetType() == lldb.eSymbolTypeCode)
+        self.assertEqual(symbol_line1.GetType(), lldb.eSymbolTypeCode)
         addr_line1 = symbol_line1.GetStartAddress()
         # And a section type of code, too.
         self.assertTrue(addr_line1.GetSection().GetSectionType()
@@ -70,7 +69,7 @@ class SymbolAPITestCase(TestBase):
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -79,7 +78,7 @@ class SymbolAPITestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         symbol_line2 = frame0.GetSymbol()
         # We should have a symbol type of code.
-        self.assertTrue(symbol_line2.GetType() == lldb.eSymbolTypeCode)
+        self.assertEqual(symbol_line2.GetType(), lldb.eSymbolTypeCode)
         addr_line2 = symbol_line2.GetStartAddress()
         # And a section type of code, too.
         self.assertTrue(addr_line2.GetSection().GetSectionType()

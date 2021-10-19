@@ -7,20 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "StreamWrapper.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
 namespace __llvm_libc {
 namespace testutils {
 
-StreamWrapper outs() { return {std::addressof(llvm::outs())}; }
+StreamWrapper outs() { return {std::addressof(std::cout)}; }
 
 template <typename T> StreamWrapper &StreamWrapper::operator<<(T t) {
   assert(OS);
-  llvm::raw_ostream &Stream = *reinterpret_cast<llvm::raw_ostream *>(OS);
+  std::ostream &Stream = *reinterpret_cast<std::ostream *>(OS);
   Stream << t;
+  Stream.flush();
   return *this;
 }
 
@@ -43,6 +45,15 @@ template StreamWrapper &
     StreamWrapper::operator<<<unsigned long long>(unsigned long long t);
 template StreamWrapper &StreamWrapper::operator<<<bool>(bool t);
 template StreamWrapper &StreamWrapper::operator<<<std::string>(std::string t);
+template StreamWrapper &StreamWrapper::operator<<<float>(float t);
+template StreamWrapper &StreamWrapper::operator<<<double>(double t);
+
+OutputFileStream::OutputFileStream(const char *FN)
+    : StreamWrapper(new std::ofstream(FN)) {}
+
+OutputFileStream::~OutputFileStream() {
+  delete reinterpret_cast<std::ofstream *>(OS);
+}
 
 } // namespace testutils
 } // namespace __llvm_libc

@@ -91,13 +91,14 @@ struct Derived : Base, Base1, virtual V {
 
 struct Current : Derived {
   int Derived;
-  Current() : Derived(1), ::Derived(), // expected-warning {{field 'Derived' will be initialized after base '::Derived'}} \
-                                       // expected-warning {{base class '::Derived' will be initialized after base 'Derived::V'}}
-                          ::Derived::Base(), // expected-error {{type '::Derived::Base' is not a direct or virtual base of 'Current'}}
-                           Derived::Base1(), // expected-error {{type 'Derived::Base1' is not a direct or virtual base of 'Current'}}
-                           Derived::V(),
-                           ::NonExisting(), // expected-error {{member initializer 'NonExisting' does not name a non-static data member or}}
-                           INT::NonExisting()  {} // expected-error {{'INT' (aka 'int') is not a class, namespace, or enumeration}} \
+  Current() : Derived(1), ::Derived(), // expected-warning {{initializer order does not match the declaration order}} \
+                                       // expected-note {{field 'Derived' will be initialized after base '::Derived'}} \
+                                       // expected-note {{base class '::Derived' will be initialized after base 'Derived::V'}}
+              ::Derived::Base(),       // expected-error {{type '::Derived::Base' is not a direct or virtual base of 'Current'}}
+              Derived::Base1(),        // expected-error {{type 'Derived::Base1' is not a direct or virtual base of 'Current'}}
+              Derived::V(),
+              ::NonExisting(),      // expected-error {{member initializer 'NonExisting' does not name a non-static data member or}}
+              INT::NonExisting() {} // expected-error {{'INT' (aka 'int') is not a class, namespace, or enumeration}} \
                                                   // expected-error {{member initializer 'NonExisting' does not name a non-static data member or}}
 };
 

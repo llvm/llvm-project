@@ -1,10 +1,10 @@
-; RUN: opt %s -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
+; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 define i32 @daorder(i32 %n) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'daorder'
+; CHECK-LABEL: Divergence Analysis' for function 'daorder'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %cond = icmp slt i32 %tid, 0

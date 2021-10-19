@@ -6,7 +6,7 @@ struct A { int a[1]; };
 typedef A x[];
 int f() {
   x{{{1}}};
-  // CHECK-LABEL: define i32 @_Z1fv
+  // CHECK-LABEL: define{{.*}} i32 @_Z1fv
   // CHECK: store i32 1
   // (It's okay if the output changes here, as long as we don't crash.)
   return 0;
@@ -33,7 +33,7 @@ namespace ValueInitArrayOfMemPtr {
     S1();
   };
 
-  // CHECK-LABEL: define void @_ZN22ValueInitArrayOfMemPtr1fEi
+  // CHECK-LABEL: define{{.*}} void @_ZN22ValueInitArrayOfMemPtr1fEi
   void f(int n) {
     Agg1 a = { n };
     // CHECK: store i32 -1,
@@ -43,7 +43,7 @@ namespace ValueInitArrayOfMemPtr {
   }
 
   // Test dynamic initialization.
-  // CHECK-LABEL: define void @_ZN22ValueInitArrayOfMemPtr1gEMNS_1SEi
+  // CHECK-LABEL: define{{.*}} void @_ZN22ValueInitArrayOfMemPtr1gEMNS_1SEi
   void g(p ptr) {
     // CHECK: store i32 -1,
     f(a{ptr});
@@ -55,7 +55,7 @@ namespace array_dtor {
   using T = S[3];
   void f(const T &);
   void f(T *);
-  // CHECK-LABEL: define void @_ZN10array_dtor1gEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN10array_dtor1gEv(
   void g() {
     // CHECK: %[[ARRAY:.*]] = alloca [3 x
     // CHECK: br
@@ -74,7 +74,7 @@ namespace array_dtor {
 
     // CHECK: ret void
   }
-  // CHECK-LABEL: define void @_ZN10array_dtor1hEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN10array_dtor1hEv(
   void h() {
     // CHECK: %[[ARRAY:.*]] = alloca [3 x
     // CHECK: br
@@ -92,7 +92,7 @@ namespace array_dtor {
 
     // CHECK: ret void
   }
-  // CHECK-LABEL: define void @_ZN10array_dtor1iEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN10array_dtor1iEv(
   void i() {
     // CHECK: %[[ARRAY:.*]] = alloca [3 x
     // CHECK: br

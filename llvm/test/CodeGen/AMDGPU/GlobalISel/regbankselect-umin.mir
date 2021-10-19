@@ -13,9 +13,8 @@ body: |
     ; CHECK-LABEL: name: umin_s32_ss
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
-    ; CHECK: $sgpr0 = COPY [[SELECT]](s32)
+    ; CHECK: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[COPY]], [[COPY1]]
+    ; CHECK: $sgpr0 = COPY [[UMIN]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_UMIN %0, %1
@@ -97,9 +96,8 @@ body: |
     ; CHECK-LABEL: name: umin_s32_ss_vgpr_use
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
-    ; CHECK: $vgpr0 = COPY [[SELECT]](s32)
+    ; CHECK: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[COPY]], [[COPY1]]
+    ; CHECK: $vgpr0 = COPY [[UMIN]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_UMIN %0, %1
@@ -121,9 +119,8 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
     ; CHECK: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s16)
     ; CHECK: [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC %8(s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[ZEXT]](s32), [[ZEXT1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[ZEXT]], [[ZEXT1]]
+    ; CHECK: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[ZEXT]], [[ZEXT1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC [[UMIN]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s16)
     ; CHECK: $sgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $sgpr0
@@ -151,9 +148,8 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
     ; CHECK: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s16)
     ; CHECK: [[ZEXT1:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC %8(s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[ZEXT]](s32), [[ZEXT1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[ZEXT]], [[ZEXT1]]
+    ; CHECK: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[ZEXT]], [[ZEXT1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC [[UMIN]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s16)
     ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $sgpr0
@@ -187,11 +183,9 @@ body: |
     ; CHECK: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C2]](s32)
     ; CHECK: [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
     ; CHECK: [[AND1:%[0-9]+]]:sgpr(s32) = G_AND [[BITCAST1]], [[C3]]
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[AND]](s32), [[AND1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[AND]], [[AND1]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ult), [[LSHR]](s32), [[LSHR1]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP1]](s32), [[LSHR]], [[LSHR1]]
-    ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SELECT]](s32), [[SELECT1]](s32)
+    ; CHECK: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[AND]], [[AND1]]
+    ; CHECK: [[UMIN1:%[0-9]+]]:sgpr(s32) = G_UMIN [[LSHR]], [[LSHR1]]
+    ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[UMIN]](s32), [[UMIN1]](s32)
     ; CHECK: $sgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $sgpr1

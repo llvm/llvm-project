@@ -63,7 +63,8 @@ TEST(Threading, RunOnThreadSyncAsync) {
     ThreadFinished.notify();
   };
 
-  llvm::llvm_execute_on_thread_async(ThreadFunc);
+  llvm::thread Thread(ThreadFunc);
+  Thread.detach();
   ASSERT_TRUE(ThreadStarted.wait());
   ThreadAdvanced.notify();
   ASSERT_TRUE(ThreadFinished.wait());
@@ -71,11 +72,23 @@ TEST(Threading, RunOnThreadSyncAsync) {
 
 TEST(Threading, RunOnThreadSync) {
   std::atomic_bool Executed(false);
-  llvm::llvm_execute_on_thread(
+  llvm::thread Thread(
       [](void *Arg) { *static_cast<std::atomic_bool *>(Arg) = true; },
       &Executed);
+  Thread.join();
   ASSERT_EQ(Executed, true);
 }
+
+#if defined(__APPLE__)
+TEST(Threading, AppleStackSize) {
+  llvm::thread Thread([] {
+    volatile unsigned char Var[8 * 1024 * 1024 - 10240];
+    Var[0] = 0xff;
+    ASSERT_EQ(Var[0], 0xff);
+  });
+  Thread.join();
+}
+#endif
 #endif
 
 } // end anon namespace

@@ -62,27 +62,17 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
       static_cast<CvSignature>(static_cast<uint32_t>(*signature));
 
   if (cv_signature == CvSignature::Pdb70) {
-    const CvRecordPdb70 *pdb70_uuid = nullptr;
+    const UUID::CvRecordPdb70 *pdb70_uuid = nullptr;
     Status error = consumeObject(cv_record, pdb70_uuid);
     if (error.Fail())
       return UUID();
-
-    CvRecordPdb70 swapped;
-    if (!GetArchitecture().GetTriple().isOSBinFormatELF()) {
-      // LLDB's UUID class treats the data as a sequence of bytes, but breakpad
-      // interprets it as a sequence of little-endian fields, which it converts
-      // to big-endian when converting to text. Swap the bytes to big endian so
-      // that the string representation comes out right.
-      swapped = *pdb70_uuid;
-      llvm::sys::swapByteOrder(swapped.Uuid.Data1);
-      llvm::sys::swapByteOrder(swapped.Uuid.Data2);
-      llvm::sys::swapByteOrder(swapped.Uuid.Data3);
-      llvm::sys::swapByteOrder(swapped.Age);
-      pdb70_uuid = &swapped;
+    if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
+      if (pdb70_uuid->Age != 0)
+        return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
+      return UUID::fromOptionalData(&pdb70_uuid->Uuid,
+                                    sizeof(pdb70_uuid->Uuid));
     }
-    if (pdb70_uuid->Age != 0)
-      return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
-    return UUID::fromOptionalData(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
+    return UUID::fromCvRecord(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
     return UUID::fromOptionalData(cv_record);
 
@@ -273,13 +263,18 @@ CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
   auto data = parser.GetStream(StreamType::LinuxMaps);
   if (data.empty())
     return false;
-  ParseLinuxMapRegions(llvm::toStringRef(data),
-                       [&](const lldb_private::MemoryRegionInfo &region,
-                           const lldb_private::Status &status) -> bool {
-                         if (status.Success())
-                           regions.push_back(region);
-                         return true;
-                       });
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+  ParseLinuxMapRegions(
+      llvm::toStringRef(data),
+      [&regions, &log](llvm::Expected<MemoryRegionInfo> region) -> bool {
+        if (region)
+          regions.push_back(*region);
+        else
+          LLDB_LOG_ERROR(log, region.takeError(),
+                         "Reading memory region from minidump failed: {0}");
+        return true;
+      });
   return !regions.empty();
 }
 
@@ -396,19 +391,23 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
       filtered_modules.push_back(&module);
     } else {
       // We have a duplicate module entry. Check the linux regions to see if
-      // the module we already have is not really a mapped executable. If it
-      // isn't check to see if the current duplicate module entry is a real
-      // mapped executable, and if so, replace it. This can happen when a
-      // process mmap's in the file for an executable in order to read bytes
-      // from the executable file. A memory region mapping will exist for the
-      // mmap'ed version and for the loaded executable, but only one will have
-      // a consecutive region that is executable in the memory regions.
+      // either module is not really a mapped executable. If one but not the
+      // other is a real mapped executable, prefer the executable one. This
+      // can happen when a process mmap's in the file for an executable in
+      // order to read bytes from the executable file. A memory region mapping
+      // will exist for the mmap'ed version and for the loaded executable, but
+      // only one will have a consecutive region that is executable in the
+      // memory regions.
       auto dup_module = filtered_modules[iter->second];
       ConstString name(*ExpectedName);
-      if (!CheckForLinuxExecutable(name, linux_regions,
-                                   dup_module->BaseOfImage) &&
-          CheckForLinuxExecutable(name, linux_regions, module.BaseOfImage)) {
-        filtered_modules[iter->second] = &module;
+      bool is_executable =
+          CheckForLinuxExecutable(name, linux_regions, module.BaseOfImage);
+      bool dup_is_executable =
+          CheckForLinuxExecutable(name, linux_regions, dup_module->BaseOfImage);
+
+      if (is_executable != dup_is_executable) {
+        if (is_executable)
+          filtered_modules[iter->second] = &module;
         continue;
       }
       // This module has been seen. Modules are sometimes mentioned multiple

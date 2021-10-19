@@ -28,7 +28,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm {
 class raw_ostream;
@@ -37,7 +37,7 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
+Status::Status() : m_string() {}
 
 Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}
@@ -286,10 +286,6 @@ int Status::SetErrorStringWithVarArg(const char *format, va_list args) {
 // Returns true if the error code in this object is considered a successful
 // return value.
 bool Status::Success() const { return m_code == 0; }
-
-bool Status::WasInterrupted() const {
-  return (m_type == eErrorTypePOSIX && m_code == EINTR);
-}
 
 void llvm::format_provider<lldb_private::Status>::format(
     const lldb_private::Status &error, llvm::raw_ostream &OS,

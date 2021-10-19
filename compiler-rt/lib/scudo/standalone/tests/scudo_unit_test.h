@@ -10,20 +10,39 @@
 
 #if SCUDO_FUCHSIA
 #include <zxtest/zxtest.h>
+using Test = ::zxtest::Test;
 #else
 #include "gtest/gtest.h"
+using Test = ::testing::Test;
 #endif
 
 // If EXPECT_DEATH isn't defined, make it a no-op.
 #ifndef EXPECT_DEATH
+// If ASSERT_DEATH is defined, make EXPECT_DEATH a wrapper to it.
+#ifdef ASSERT_DEATH
+#define EXPECT_DEATH(X, Y) ASSERT_DEATH(([&] { X; }), "")
+#else
 #define EXPECT_DEATH(X, Y)                                                     \
   do {                                                                         \
   } while (0)
-#endif
+#endif // ASSERT_DEATH
+#endif // EXPECT_DEATH
 
 // If EXPECT_STREQ isn't defined, define our own simple one.
 #ifndef EXPECT_STREQ
 #define EXPECT_STREQ(X, Y) EXPECT_EQ(strcmp(X, Y), 0)
+#endif
+
+#if SCUDO_FUCHSIA
+#define SKIP_ON_FUCHSIA(T) DISABLED_##T
+#else
+#define SKIP_ON_FUCHSIA(T) T
+#endif
+
+#if SCUDO_DEBUG
+#define SKIP_NO_DEBUG(T) T
+#else
+#define SKIP_NO_DEBUG(T) DISABLED_##T
 #endif
 
 extern bool UseQuarantine;

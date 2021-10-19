@@ -3,7 +3,8 @@
 template<class> class Foo {
   template<class UBar // expected-error {{expected ';' after class}}
                       // expected-note@-1 {{'UBar' declared here}}
-  void foo1(); // expected-error {{a non-type template parameter cannot have type 'class UBar'}}
+                      // expected-note@-2 {{forward declaration of 'UBar'}}
+  void foo1(); // expected-error {{non-type template parameter has incomplete type 'class UBar'}}
                // expected-error@-1 {{expected ',' or '>' in template-parameter-list}}
                // expected-error@-2 {{declaration does not declare anything}}
 };

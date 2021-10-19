@@ -11,9 +11,16 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
+
+StringTableBuilder::Kind
+MachOLayoutBuilder::getStringTableBuilderKind(const Object &O, bool Is64Bit) {
+  if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT)
+    return Is64Bit ? StringTableBuilder::MachO64 : StringTableBuilder::MachO;
+  return Is64Bit ? StringTableBuilder::MachO64Linked
+                 : StringTableBuilder::MachOLinked;
+}
 
 uint32_t MachOLayoutBuilder::computeSizeOfCmds() const {
   uint32_t Size = 0;
@@ -148,7 +155,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
              "Section's address cannot be smaller than Segment's one");
       uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
       if (IsObjectFile) {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           uint64_t PaddingSize =
@@ -158,7 +165,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           SegFileSize += PaddingSize + Sec->Size;
         }
       } else {
-        if (Sec->isVirtualSection()) {
+        if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
           Sec->Offset = SegOffset + SectOffset;
@@ -244,7 +251,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfFunctionStarts = StartOfExportTrie + O.Exports.Trie.size();
   uint64_t StartOfDataInCode =
       StartOfFunctionStarts + O.FunctionStarts.Data.size();
-  uint64_t StartOfSymbols = StartOfDataInCode + O.DataInCode.Data.size();
+  uint64_t StartOfLinkerOptimizationHint =
+      StartOfDataInCode + O.DataInCode.Data.size();
+  uint64_t StartOfSymbols =
+      StartOfLinkerOptimizationHint + O.LinkerOptimizationHint.Data.size();
   uint64_t StartOfIndirectSymbols =
       StartOfSymbols + NListSize * O.SymTable.Symbols.size();
   uint64_t StartOfSymbolStrings =
@@ -252,6 +262,8 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
   uint64_t StartOfCodeSignature =
       StartOfSymbolStrings + StrTableBuilder.getSize();
+  if (O.CodeSignatureCommandIndex)
+    StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
   uint64_t LinkEditSize =
       (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
 
@@ -311,6 +323,11 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       MLC.linkedit_data_command_data.dataoff = StartOfDataInCode;
       MLC.linkedit_data_command_data.datasize = O.DataInCode.Data.size();
       break;
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
+      MLC.linkedit_data_command_data.dataoff = StartOfLinkerOptimizationHint;
+      MLC.linkedit_data_command_data.datasize =
+          O.LinkerOptimizationHint.Data.size();
+      break;
     case MachO::LC_FUNCTION_STARTS:
       MLC.linkedit_data_command_data.dataoff = StartOfFunctionStarts;
       MLC.linkedit_data_command_data.datasize = O.FunctionStarts.Data.size();
@@ -361,6 +378,12 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_LOAD_WEAK_DYLIB:
     case MachO::LC_UUID:
     case MachO::LC_SOURCE_VERSION:
+    case MachO::LC_THREAD:
+    case MachO::LC_UNIXTHREAD:
+    case MachO::LC_SUB_FRAMEWORK:
+    case MachO::LC_SUB_UMBRELLA:
+    case MachO::LC_SUB_CLIENT:
+    case MachO::LC_SUB_LIBRARY:
       // Nothing to update.
       break;
     default:
@@ -382,7 +405,3 @@ Error MachOLayoutBuilder::layout() {
   Offset = layoutRelocations(Offset);
   return layoutTail(Offset);
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm

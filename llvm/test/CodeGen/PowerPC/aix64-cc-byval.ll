@@ -21,8 +21,8 @@ entry:
 ; CHECK-NEXT:   - { id: 0, type: default, offset: 48, size: 8, alignment: 16,
 ; CHECK:        bb.0.entry:
 ; CHECK-NEXT:     liveins: $x3
-; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
-; CHECK-NEXT:     renamable $x3 = LBZ8 4, %fixed-stack.0 :: (dereferenceable load 1
+; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
+; CHECK-NEXT:     renamable $x3 = LBZ8 4, %fixed-stack.0 :: (dereferenceable load (s8)
 
 ; CHECKASM-LABEL: .test_byval_5Byte:
 
@@ -46,8 +46,8 @@ entry:
 ; CHECK-NEXT:   - { id: 0, type: default, offset: 48, size: 8, alignment: 16,
 ; CHECK:        bb.0.entry:
 ; CHECK-NEXT:     liveins: $x3
-; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
-; CHECK-NEXT:     renamable $x3 = LBZ8 5, %fixed-stack.0 :: (dereferenceable load 1
+; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
+; CHECK-NEXT:     renamable $x3 = LBZ8 5, %fixed-stack.0 :: (dereferenceable load (s8)
 
 ; CHECKASM-LABEL: .test_byval_6Byte:
 
@@ -71,8 +71,8 @@ entry:
 ; CHECK-NEXT:   - { id: 0, type: default, offset: 48, size: 8, alignment: 16,
 ; CHECK:        bb.0.entry:
 ; CHECK-NEXT:     liveins: $x3
-; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
-; CHECK-NEXT:     renamable $x3 = LBZ8 6, %fixed-stack.0 :: (dereferenceable load 1
+; CHECK:          STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
+; CHECK-NEXT:     renamable $x3 = LBZ8 6, %fixed-stack.0 :: (dereferenceable load (s8)
 
 ; CHECKASM-LABEL: .test_byval_7Byte:
 
@@ -98,7 +98,7 @@ entry:
 ; CHECK-NEXT:     liveins: $x3
 ; CHECK:          renamable $x[[SCRATCH:[0-9]+]] = COPY $x3
 ; CHECK-DAG:      renamable $x3 = RLDICL $x3, 0, 56
-; CHECK-DAG:      STD killed renamable $x[[SCRATCH]], 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0, align 16)
+; CHECK-DAG:      STD killed renamable $x[[SCRATCH]], 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 
 
 ; CHECKASM-LABEL: .test_byval_8Byte:
@@ -125,15 +125,15 @@ declare void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1)
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; CHECK:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
-; CHECK-NEXT:  renamable $x[[REGADDR:[0-9]+]] = LDtoc @gS64, $x2 :: (load 8 from got)
-; CHECK-DAG:   renamable $x3 = LD 0, killed renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x4 = LD 8, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x5 = LD 16, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x6 = LD 24, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x7 = LD 32, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x8 = LD 40, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x9 = LD 48, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-DAG:   renamable $x10 = LD 56, renamable $x[[REGADDR]] :: (load 8)
+; CHECK-NEXT:  renamable $x[[REGADDR:[0-9]+]] = LDtoc @gS64, $x2 :: (load (s64) from got)
+; CHECK-DAG:   renamable $x3 = LD 0, killed renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x4 = LD 8, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x5 = LD 16, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x6 = LD 24, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x7 = LD 32, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x8 = LD 40, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x9 = LD 48, renamable $x[[REGADDR]] :: (load (s64))
+; CHECK-DAG:   renamable $x10 = LD 56, renamable $x[[REGADDR]] :: (load (s64))
 ; CHECK-NEXT:  BL8_NOP <mcsymbol .test_byval_64Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; CHECK-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 

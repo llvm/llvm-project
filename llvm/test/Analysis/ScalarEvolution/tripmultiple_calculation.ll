@@ -1,4 +1,3 @@
-; RUN: opt -S -analyze -enable-new-pm=0 -scalar-evolution < %s 2>&1 | FileCheck %s
 ; RUN: opt -S -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 2>&1 | FileCheck %s
 
 ; umin is represented using -1 * umax in scalar evolution. -1 is considered as the
@@ -119,6 +118,30 @@ l3:
   %inc = add i32 %x.0, 1
   %exitcond = icmp eq i32 %inc, 3
   br i1 %exitcond, label %exit, label %l3
+
+exit:
+  ret i32 0
+}
+
+; If there are multiple exits, the result is the GCD of the multiples
+; of each individual exit (since we don't know which is taken).
+
+; CHECK: Loop %l4: Trip multiple is 50
+
+define i32 @foo5(i32 %n) {
+entry:
+  br label %l4
+
+l4:
+  %x.0 = phi i32 [ 0, %entry ], [ %inc, %l4-latch ]
+  call void @f()
+  %inc = add i32 %x.0, 1
+  %earlycond = icmp eq i32 %inc, 150
+  br i1 %earlycond, label %exit, label %l4-latch
+
+l4-latch:
+  %exitcond = icmp eq i32 %inc, 200
+  br i1 %exitcond, label %exit, label %l4
 
 exit:
   ret i32 0

@@ -350,13 +350,13 @@ static bool isMyCode(const SymbolGroup &Group) {
   StringRef Name = Group.name();
   if (Name.startswith("Import:"))
     return false;
-  if (Name.endswith_lower(".dll"))
+  if (Name.endswith_insensitive(".dll"))
     return false;
-  if (Name.equals_lower("* linker *"))
+  if (Name.equals_insensitive("* linker *"))
     return false;
-  if (Name.startswith_lower("f:\\binaries\\Intermediate\\vctools"))
+  if (Name.startswith_insensitive("f:\\binaries\\Intermediate\\vctools"))
     return false;
-  if (Name.startswith_lower("f:\\dd\\vctools\\crt"))
+  if (Name.startswith_insensitive("f:\\dd\\vctools\\crt"))
     return false;
   return true;
 }
@@ -738,21 +738,17 @@ namespace {
 constexpr uint32_t kNoneUdtKind = 0;
 constexpr uint32_t kSimpleUdtKind = 1;
 constexpr uint32_t kUnknownUdtKind = 2;
-const StringRef NoneLabel("<none type>");
-const StringRef SimpleLabel("<simple type>");
-const StringRef UnknownLabel("<unknown type>");
-
 } // namespace
 
-static StringRef getUdtStatLabel(uint32_t Kind) {
+static std::string getUdtStatLabel(uint32_t Kind) {
   if (Kind == kNoneUdtKind)
-    return NoneLabel;
+    return "<none type>";
 
   if (Kind == kSimpleUdtKind)
-    return SimpleLabel;
+    return "<simple type>";
 
   if (Kind == kUnknownUdtKind)
-    return UnknownLabel;
+    return "<unknown type>";
 
   return formatTypeLeafKind(static_cast<TypeLeafKind>(Kind));
 }
@@ -760,7 +756,7 @@ static StringRef getUdtStatLabel(uint32_t Kind) {
 static uint32_t getLongestTypeLeafName(const StatCollection &Stats) {
   size_t L = 0;
   for (const auto &Stat : Stats.Individual) {
-    StringRef Label = getUdtStatLabel(Stat.first);
+    std::string Label = getUdtStatLabel(Stat.first);
     L = std::max(L, Label.size());
   }
   return static_cast<uint32_t>(L);
@@ -869,7 +865,7 @@ Error DumpOutputStyle::dumpUdtStats() {
 
   P.formatLine("{0}", fmt_repeat('-', TableWidth));
   for (const auto &Stat : UdtTargetStats.getStatsSortedBySize()) {
-    StringRef Label = getUdtStatLabel(Stat.first);
+    std::string Label = getUdtStatLabel(Stat.first);
     P.formatLine("{0} | {1:N}  {2:N}",
                  fmt_align(Label, AlignStyle::Right, FieldWidth),
                  fmt_align(Stat.second.Count, AlignStyle::Right, CD),
@@ -1911,7 +1907,6 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
                             P.getIndentLevel(), Header.Characteristics, 1, ""));
     ++I;
   }
-  return;
 }
 
 Error DumpOutputStyle::dumpSectionContribs() {

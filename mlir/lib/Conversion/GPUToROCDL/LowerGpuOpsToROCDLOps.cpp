@@ -13,15 +13,22 @@
 
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToROCDL/VectorToROCDL.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
@@ -52,69 +59,102 @@ struct LowerGpuOpsToROCDLOpsPass
     gpu::GPUModuleOp m = getOperation();
 
     /// Customize the bitwidth used for the device side index computations.
-    LowerToLLVMOptions options = {/*useBarePtrCallConv =*/false,
-                                  /*emitCWrappers =*/true,
-                                  /*indexBitwidth =*/indexBitwidth,
-                                  /*useAlignedAlloc =*/false};
+    LowerToLLVMOptions options(
+        m.getContext(),
+        DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
+    options.emitCWrappers = true;
+    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+      options.overrideIndexBitwidth(indexBitwidth);
     LLVMTypeConverter converter(m.getContext(), options);
 
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(m.getContext());
+    RewritePatternSet llvmPatterns(m.getContext());
 
-    populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsAndFoldGreedily(m, patterns);
-    patterns.clear();
+    populateGpuRewritePatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
-    populateVectorToLLVMConversionPatterns(converter, patterns);
-    populateVectorToROCDLConversionPatterns(converter, patterns);
-    populateStdToLLVMConversionPatterns(converter, patterns);
-    populateGpuToROCDLConversionPatterns(converter, patterns);
+    mlir::arith::populateArithmeticToLLVMConversionPatterns(converter,
+                                                            llvmPatterns);
+    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
+    populateVectorToROCDLConversionPatterns(converter, llvmPatterns);
+    populateStdToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
-    target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
-                        LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op>();
-    target.addIllegalOp<FuncOp>();
-    target.addLegalDialect<ROCDL::ROCDLDialect>();
-    // TODO: Remove once we support replacing non-root ops.
-    target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-    if (failed(applyPartialConversion(m, target, patterns)))
+    configureGpuToROCDLConversionLegality(target);
+    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
   }
 };
 
 } // anonymous namespace
 
-void mlir::populateGpuToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  populateWithGenerated(converter.getDialect()->getContext(), &patterns);
-  patterns.insert<
-      GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
-                                  ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
-                                  ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
-                                  ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
-                                  ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
-      GPUFuncOpLowering<5>, GPUReturnOpLowering>(converter);
-  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__ocml_fabs_f32",
-                                                "__ocml_fabs_f64");
-  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__ocml_ceil_f32",
-                                                 "__ocml_ceil_f64");
-  patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__ocml_cos_f32",
-                                               "__ocml_cos_f64");
-  patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__ocml_exp_f32",
-                                               "__ocml_exp_f64");
-  patterns.insert<OpToFuncCallLowering<FloorFOp>>(converter, "__ocml_floor_f32",
-                                                  "__ocml_floor_f64");
-  patterns.insert<OpToFuncCallLowering<LogOp>>(converter, "__ocml_log_f32",
-                                               "__ocml_log_f64");
-  patterns.insert<OpToFuncCallLowering<Log10Op>>(converter, "__ocml_log10_f32",
-                                                 "__ocml_log10_f64");
-  patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__ocml_log2_f32",
-                                                "__ocml_log2_f64");
-  patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__ocml_tanh_f32",
-                                                "__ocml_tanh_f64");
+void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
+  target.addIllegalOp<FuncOp>();
+  target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<ROCDL::ROCDLDialect>();
+  target.addIllegalDialect<gpu::GPUDialect>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+
+  // TODO: Remove once we support replacing non-root ops.
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+}
+
+void mlir::populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
+                                                RewritePatternSet &patterns) {
+  populateWithGenerated(patterns);
+  patterns
+      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
+                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
+                                       ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
+                                       ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
+                                       ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
+           GPUReturnOpLowering>(converter);
+  patterns.add<GPUFuncOpLowering>(
+      converter, /*allocaAddrSpace=*/5,
+      Identifier::get(ROCDL::ROCDLDialect::getKernelFuncAttrName(),
+                      &converter.getContext()));
+  patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__ocml_fabs_f32",
+                                                  "__ocml_fabs_f64");
+  patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__ocml_atan_f32",
+                                                   "__ocml_atan_f64");
+  patterns.add<OpToFuncCallLowering<math::Atan2Op>>(
+      converter, "__ocml_atan2_f32", "__ocml_atan2_f64");
+  patterns.add<OpToFuncCallLowering<math::CeilOp>>(converter, "__ocml_ceil_f32",
+                                                   "__ocml_ceil_f64");
+  patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__ocml_cos_f32",
+                                                  "__ocml_cos_f64");
+  patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__ocml_exp_f32",
+                                                  "__ocml_exp_f64");
+  patterns.add<OpToFuncCallLowering<math::Exp2Op>>(converter, "__ocml_exp2_f32",
+                                                   "__ocml_exp2_f64");
+  patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(
+      converter, "__ocml_expm1_f32", "__ocml_expm1_f64");
+  patterns.add<OpToFuncCallLowering<math::FloorOp>>(
+      converter, "__ocml_floor_f32", "__ocml_floor_f64");
+  patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__ocml_log_f32",
+                                                  "__ocml_log_f64");
+  patterns.add<OpToFuncCallLowering<math::Log10Op>>(
+      converter, "__ocml_log10_f32", "__ocml_log10_f64");
+  patterns.add<OpToFuncCallLowering<math::Log1pOp>>(
+      converter, "__ocml_log1p_f32", "__ocml_log1p_f64");
+  patterns.add<OpToFuncCallLowering<math::Log2Op>>(converter, "__ocml_log2_f32",
+                                                   "__ocml_log2_f64");
+  patterns.add<OpToFuncCallLowering<math::PowFOp>>(converter, "__ocml_pow_f32",
+                                                   "__ocml_pow_f64");
+  patterns.add<OpToFuncCallLowering<math::RsqrtOp>>(
+      converter, "__ocml_rsqrt_f32", "__ocml_rsqrt_f64");
+  patterns.add<OpToFuncCallLowering<math::SinOp>>(converter, "__ocml_sin_f32",
+                                                  "__ocml_sin_f64");
+  patterns.add<OpToFuncCallLowering<math::SqrtOp>>(converter, "__ocml_sqrt_f32",
+                                                   "__ocml_sqrt_f64");
+  patterns.add<OpToFuncCallLowering<math::TanhOp>>(converter, "__ocml_tanh_f32",
+                                                   "__ocml_tanh_f64");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

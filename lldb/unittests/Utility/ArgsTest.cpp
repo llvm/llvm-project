@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StringList.h"
 
 #include <limits>
@@ -312,4 +313,32 @@ TEST(ArgsTest, Yaml) {
   EXPECT_EQ(entries[1].GetQuoteChar(), '\'');
   EXPECT_EQ(entries[2].GetQuoteChar(), '"');
   EXPECT_EQ(entries[3].GetQuoteChar(), '\0');
+}
+
+TEST(ArgsTest, GetShellSafeArgument) {
+  // Try escaping with bash at start/middle/end of the argument.
+  FileSpec bash("/bin/bash", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "\"b"), "\\\"b");
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a\""), "a\\\"");
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a\"b"), "a\\\"b");
+
+  FileSpec zsh("/bin/zsh", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(zsh, R"('";()<>&|\)"),
+            R"(\'\"\;\(\)\<\>\&\|\\)");
+  // Normal characters and expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(zsh, "aA$1*"), "aA$1*");
+
+  // String that doesn't need to be escaped
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a"), "a");
+
+  // Try escaping with tcsh and the tcsh-specific "$" escape.
+  FileSpec tcsh("/bin/tcsh", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(tcsh, "a$b"), "a\\$b");
+  // Bash however doesn't need escaping for "$".
+  EXPECT_EQ(Args::GetShellSafeArgument(bash, "a$b"), "a$b");
+
+  // Try escaping with an unknown shell.
+  FileSpec unknown_shell("/bin/unknown_shell", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(unknown_shell, "a'b"), "a\\'b");
+  EXPECT_EQ(Args::GetShellSafeArgument(unknown_shell, "a\"b"), "a\\\"b");
 }

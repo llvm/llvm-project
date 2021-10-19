@@ -25,7 +25,7 @@ define float @sqrt_div_fast(float %a, float %b) #0 {
 ; CHECK: sqrt.approx.f32
 ; CHECK: div.approx.f32
 define float @sqrt_div_fast_ninf(float %a, float %b) #0 {
-  %t1 = tail call ninf float @llvm.sqrt.f32(float %a)
+  %t1 = tail call ninf afn float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
 }
@@ -52,7 +52,7 @@ define float @sqrt_div_fast_ftz(float %a, float %b) #0 #1 {
 ; CHECK: sqrt.approx.ftz.f32
 ; CHECK: div.approx.ftz.f32
 define float @sqrt_div_fast_ftz_ninf(float %a, float %b) #0 #1 {
-  %t1 = tail call ninf float @llvm.sqrt.f32(float %a)
+  %t1 = tail call ninf afn float @llvm.sqrt.f32(float %a)
   %t2 = fdiv float %t1, %b
   ret float %t2
 }
@@ -74,7 +74,7 @@ define double @sqrt_div_fast_ftz_f64(double %a, double %b) #0 #1 {
 ; CHECK: rcp.approx.ftz.f64
 ; CHECK: div.rn.f64
 define double @sqrt_div_fast_ftz_f64_ninf(double %a, double %b) #0 #1 {
-  %t1 = tail call ninf double @llvm.sqrt.f64(double %a)
+  %t1 = tail call ninf afn double @llvm.sqrt.f64(double %a)
   %t2 = fdiv double %t1, %b
   ret double %t2
 }
@@ -149,10 +149,23 @@ define float @repeated_div_recip_allowed(i1 %pred, float %a, float %b, float %di
 ; CHECK: rcp.rn.f32
 ; CHECK: mul.rn.f32
 ; CHECK: mul.rn.f32
+; CHECK: mul.rn.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_recip_allowed_sel
+define float @repeated_div_recip_allowed_sel(i1 %pred, float %a, float %b, float %divisor) {
+; CHECK: selp.f32
+; CHECK: div.rn.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_recip_allowed_ftz
@@ -160,10 +173,23 @@ define float @repeated_div_recip_allowed_ftz(i1 %pred, float %a, float %b, float
 ; CHECK: rcp.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
 ; CHECK: mul.rn.ftz.f32
+; CHECK: mul.rn.ftz.f32
+; CHECK: selp.f32
   %x = fdiv arcp float %a, %divisor
   %y = fdiv arcp float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_recip_allowed_ftz_sel
+define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #1 {
+; CHECK: selp.f32
+; CHECK: div.rn.ftz.f32
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv arcp float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_fast
@@ -171,10 +197,23 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
 ; CHECK: rcp.approx.f32
 ; CHECK: mul.f32
 ; CHECK: mul.f32
+; CHECK: mul.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_fast_sel
+define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) #0 {
+; CHECK: selp.f32
+; CHECK: div.approx.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 ; CHECK-LABEL: repeated_div_fast_ftz
@@ -182,10 +221,23 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK: rcp.approx.ftz.f32
 ; CHECK: mul.ftz.f32
 ; CHECK: mul.ftz.f32
+; CHECK: mul.ftz.f32
+; CHECK: selp.f32
   %x = fdiv float %a, %divisor
   %y = fdiv float %b, %divisor
-  %z = select i1 %pred, float %x, float %y
-  ret float %z
+  %z = fmul float %x, %y
+  %w = select i1 %pred, float %z, float %y
+  ret float %w
+}
+
+; CHECK-LABEL: repeated_div_fast_ftz_sel
+define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+; CHECK: selp.f32
+; CHECK: div.approx.ftz.f32
+  %x = fdiv float %a, %divisor
+  %y = fdiv float %b, %divisor
+  %w = select i1 %pred, float %x, float %y
+  ret float %w
 }
 
 attributes #0 = { "unsafe-fp-math" = "true" }

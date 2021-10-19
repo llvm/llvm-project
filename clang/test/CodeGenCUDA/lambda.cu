@@ -13,7 +13,7 @@
 
 // Check functions emitted for test_capture in host compilation.
 // Check lambda is not emitted in host compilation.
-// HOST-LABEL: define void @_Z12test_capturev
+// HOST-LABEL: define{{.*}} void @_Z12test_capturev
 // HOST:  call void @_Z19test_capture_helperIZ12test_capturevEUlvE_EvT_
 // HOST-LABEL: define internal void @_Z19test_capture_helperIZ12test_capturevEUlvE_EvT_
 // HOST:  call void @_Z16__device_stub__gIZ12test_capturevEUlvE_EvT_
@@ -22,7 +22,7 @@
 // Check functions emitted for test_resolve in host compilation.
 // Check host version of template function 'overloaded' is emitted and called
 // by the lambda function.
-// HOST-LABEL: define void @_Z12test_resolvev
+// HOST-LABEL: define{{.*}} void @_Z12test_resolvev
 // HOST:  call void @_Z19test_resolve_helperIZ12test_resolvevEUlvE_EvT_()
 // HOST-LABEL: define internal void @_Z19test_resolve_helperIZ12test_resolvevEUlvE_EvT_
 // HOST:  call void @_Z16__device_stub__gIZ12test_resolvevEUlvE_EvT_
@@ -36,11 +36,11 @@
 // HOST: @__hipRegisterFunction({{.*}}@[[KERN_CAPTURE]]
 // HOST: @__hipRegisterFunction({{.*}}@[[KERN_RESOLVE]]
 
-// DEV: @a = addrspace(1) externally_initialized global i32 0
+// DEV: @a ={{.*}} addrspace(1) externally_initialized global i32 0
 
 // Check functions emitted for test_capture in device compilation.
 // Check lambda is emitted in device compilation and accessing device variable.
-// DEV-LABEL: define amdgpu_kernel void @_Z1gIZ12test_capturevEUlvE_EvT_
+// DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_capturevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_capturevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_capturevENKUlvE_clEv
 // DEV:  store i32 1, i32* addrspacecast (i32 addrspace(1)* @a to i32*)
@@ -48,7 +48,7 @@
 // Check functions emitted for test_resolve in device compilation.
 // Check device version of template function 'overloaded' is emitted and called
 // by the lambda function.
-// DEV-LABEL: define amdgpu_kernel void @_Z1gIZ12test_resolvevEUlvE_EvT_
+// DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_resolvevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_resolvevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_resolvevENKUlvE_clEv
 // DEV:  call i32 @_Z10overloadedIiET_v

@@ -71,12 +71,12 @@ body:             |
     $rsp = frame-setup SUB64ri8 $rsp, 24, implicit-def dead $eflags
 
     ; Spill
-    MOV32mr $rsp, 1, $noreg, 16, $noreg, $r9d :: (store 4 into %stack.0)
+    MOV32mr $rsp, 1, $noreg, 16, $noreg, $r9d :: (store (s32) into %stack.0)
     DBG_VALUE $rsp, 0, !9, !DIExpression(DW_OP_plus_uconst, 16), debug-location !10
 
     ; This load from the stack can be misinterpreted as a stack restore of
     ; any DBG_VALUe pointing at $rsp.
-    $rsi = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
+    $rsi = MOV64rm $rsp, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
 
     ; Return faff
     $eax = MOV32ri 0

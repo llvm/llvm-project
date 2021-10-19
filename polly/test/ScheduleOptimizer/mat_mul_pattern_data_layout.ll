@@ -7,7 +7,7 @@
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
 ; RUN: -polly-optimized-scops \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -disable-output < %s 2>&1 | FileCheck %s
+; RUN: -disable-output < %s
 ;
 ;    /* C := alpha*A*B + beta*C */
 ;    for (i = 0; i < _PB_NI; i++)
@@ -17,38 +17,6 @@
 ;	   for (k = 0; k < _PB_NK; ++k)
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
-;
-; CHECK:        double Packed_B[ { [] -> [(256)] } ][ { [] -> [(256)] } ][ { [] -> [(8)] } ];
-; CHECK-NEXT:        double Packed_A[ { [] -> [(24)] } ][ { [] -> [(256)] } ][ { [] -> [(4)] } ]; // Element size 8
-;
-; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg6[i0, i2] };
-; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_A[o0, o1, o2] : (-i2 + o1) mod 256 = 0 and (-i0 + 4o0 + o2) mod 96 = 0 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 }
-;
-; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK-NEXT:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : (-i2 + o1) mod 256 = 0 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 }
-;
-; CHECK:    	CopyStmt_0
-; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                { CopyStmt_0[i0, i1, i2] : 0 <= i0 <= 1055 and 0 <= i1 <= 1055 and 0 <= i2 <= 1023 };
-; CHECK-NEXT:            Schedule :=
-; CHECK-NEXT:                ;
-; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> Packed_B[o0, o1, i1 - 8o0] : (-i2 + o1) mod 256 = 0 and -7 + i1 <= 8o0 <= i1 and 0 <= o1 <= 255 }
-; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK-NEXT:    	CopyStmt_1
-; CHECK-NEXT:            Domain :=
-; CHECK-NEXT:                { CopyStmt_1[i0, i1, i2] : 0 <= i0 <= 1055 and 0 <= i1 <= 1055 and 0 <= i2 <= 1023 };
-; CHECK-NEXT:            Schedule :=
-; CHECK-NEXT:                ;
-; CHECK-NEXT:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_1[i0, i1, i2] -> Packed_A[o0, o1, o2] : (-i2 + o1) mod 256 = 0 and (-i0 + 4o0 + o2) mod 96 = 0 and 0 <= o1 <= 255 and o2 >= 0 and -4o0 <= o2 <= 95 - 4o0 and o2 <= 3 };
-; CHECK-NEXT:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
-; CHECK-NEXT:                ;
-; CHECK-NEXT:           new: { CopyStmt_1[i0, i1, i2] -> MemRef_arg6[i0, i2] };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

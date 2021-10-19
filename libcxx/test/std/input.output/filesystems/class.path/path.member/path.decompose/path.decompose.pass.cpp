@@ -44,20 +44,21 @@
 
 
 #include "filesystem_include.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
 #include <type_traits>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "assert_checkpoint.h"
-#include "verbose_assert.h"
 
 struct ComparePathExact {
-  bool operator()(std::string const& LHS, std::string const& RHS) const {
-    return LHS == RHS;
+  bool operator()(fs::path const& LHS, std::string const& RHS) const {
+    return LHS.string() == RHS;
   }
 };
 
@@ -85,8 +86,15 @@ const PathDecomposeTestcase PathTestCases[] =
     , {"/foo/", {"/", "foo", ""}, "/", "", "/", "foo/", "/foo", ""}
     , {"foo/bar", {"foo","bar"}, "",  "", "",  "foo/bar", "foo", "bar"}
     , {"/foo//bar", {"/","foo","bar"}, "/", "", "/", "foo/bar", "/foo", "bar"}
+#ifdef _WIN32
+    , {"//net", {"//net"}, "//net", "//net", "", "", "//net", ""}
+    , {"//net/", {"//net", "/"}, "//net/", "//net", "/", "", "//net/", ""}
+    , {"//net/foo", {"//net", "/", "foo"}, "//net/", "//net", "/", "foo", "//net/", "foo"}
+#else
     , {"//net", {"/", "net"}, "/", "", "/", "net", "/", "net"}
+    , {"//net/", {"/", "net", ""}, "/", "", "/", "net/", "//net", ""}
     , {"//net/foo", {"/", "net", "foo"}, "/", "", "/", "net/foo", "/net", "foo"}
+#endif
     , {"///foo///", {"/", "foo", ""}, "/", "", "/", "foo///", "///foo", ""}
     , {"///foo///bar", {"/", "foo", "bar"}, "/", "", "/", "foo///bar", "///foo", "bar"}
     , {"/.", {"/", "."}, "/", "", "/", ".", "/", "."}
@@ -99,6 +107,15 @@ const PathDecomposeTestcase PathTestCases[] =
     , {"foo/./bar", {"foo", ".", "bar"}, "", "", "", "foo/./bar", "foo/.", "bar"}
     , {"foo/../", {"foo", "..", ""}, "", "", "", "foo/../", "foo/..", ""}
     , {"foo/../bar", {"foo", "..", "bar"}, "", "", "", "foo/../bar", "foo/..", "bar"}
+#ifdef _WIN32
+    , {"c:", {"c:"}, "c:", "c:", "", "", "c:", ""}
+    , {"c:/", {"c:", "/"}, "c:/", "c:", "/", "", "c:/", ""}
+    , {"c:foo", {"c:", "foo"}, "c:", "c:", "", "foo", "c:", "foo"}
+    , {"c:/foo", {"c:", "/", "foo"}, "c:/", "c:", "/", "foo", "c:/", "foo"}
+    , {"c:foo/", {"c:", "foo", ""}, "c:", "c:", "", "foo/", "c:foo", ""}
+    , {"c:/foo/", {"c:", "/", "foo", ""}, "c:/", "c:", "/", "foo/",  "c:/foo", ""}
+    , {"c:/foo/bar", {"c:", "/", "foo", "bar"}, "c:/", "c:", "/", "foo/bar", "c:/foo", "bar"}
+#else
     , {"c:", {"c:"}, "", "", "", "c:", "", "c:"}
     , {"c:/", {"c:", ""}, "", "", "", "c:/", "c:", ""}
     , {"c:foo", {"c:foo"}, "", "", "", "c:foo", "", "c:foo"}
@@ -106,13 +123,23 @@ const PathDecomposeTestcase PathTestCases[] =
     , {"c:foo/", {"c:foo", ""}, "", "", "", "c:foo/", "c:foo", ""}
     , {"c:/foo/", {"c:", "foo", ""}, "", "", "", "c:/foo/",  "c:/foo", ""}
     , {"c:/foo/bar", {"c:", "foo", "bar"}, "", "", "", "c:/foo/bar", "c:/foo", "bar"}
+#endif
     , {"prn:", {"prn:"}, "", "", "", "prn:", "", "prn:"}
+#ifdef _WIN32
+    , {"c:\\", {"c:", "\\"}, "c:\\", "c:", "\\", "", "c:\\", ""}
+    , {"c:\\foo", {"c:", "\\", "foo"}, "c:\\", "c:", "\\", "foo", "c:\\", "foo"}
+    , {"c:foo\\", {"c:", "foo", ""}, "c:", "c:", "", "foo\\", "c:foo", ""}
+    , {"c:\\foo\\", {"c:", "\\", "foo", ""}, "c:\\", "c:", "\\", "foo\\", "c:\\foo", ""}
+    , {"c:\\foo/",  {"c:", "\\", "foo", ""}, "c:\\", "c:", "\\", "foo/", "c:\\foo", ""}
+    , {"c:/foo\\bar", {"c:", "/", "foo", "bar"}, "c:\\", "c:", "\\", "foo\\bar", "c:/foo", "bar"}
+#else
     , {"c:\\", {"c:\\"}, "", "", "", "c:\\", "", "c:\\"}
     , {"c:\\foo", {"c:\\foo"}, "", "", "", "c:\\foo", "", "c:\\foo"}
     , {"c:foo\\", {"c:foo\\"}, "", "", "", "c:foo\\", "", "c:foo\\"}
     , {"c:\\foo\\", {"c:\\foo\\"}, "", "", "", "c:\\foo\\", "", "c:\\foo\\"}
     , {"c:\\foo/",  {"c:\\foo", ""}, "", "", "", "c:\\foo/", "c:\\foo", ""}
     , {"c:/foo\\bar", {"c:", "foo\\bar"}, "", "", "", "c:/foo\\bar", "c:", "foo\\bar"}
+#endif
     , {"//", {"/"}, "/", "", "/", "", "/", ""}
   };
 
@@ -120,48 +147,65 @@ void decompPathTest()
 {
   using namespace fs;
   for (auto const & TC : PathTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
-    ASSERT(p == TC.raw);
+    assert(p == TC.raw);
 
-    ASSERT_EQ(p.root_path(), TC.root_path);
-    ASSERT_NEQ(p.has_root_path(), TC.root_path.empty());
+    assert(p.root_path() == TC.root_path);
+    assert(p.has_root_path() != TC.root_path.empty());
 
-    ASSERT(p.root_name().native().empty())
-        << DISPLAY(p.root_name());
-    ASSERT_EQ(p.root_name(),TC.root_name);
-    ASSERT_NEQ(p.has_root_name(), TC.root_name.empty());
+#ifndef _WIN32
+    assert(p.root_name().native().empty());
+#endif
+    assert(p.root_name() == TC.root_name);
+    assert(p.has_root_name() != TC.root_name.empty());
 
-    ASSERT_EQ(p.root_directory(), TC.root_directory);
-    ASSERT_NEQ(p.has_root_directory(), TC.root_directory.empty());
+    assert(p.root_directory() == TC.root_directory);
+    assert(p.has_root_directory() != TC.root_directory.empty());
 
-    ASSERT_EQ(p.relative_path(), TC.relative_path);
-    ASSERT_NEQ(p.has_relative_path(), TC.relative_path.empty());
+    assert(p.relative_path() == TC.relative_path);
+    assert(p.has_relative_path() != TC.relative_path.empty());
 
-    ASSERT_EQ(p.parent_path(), TC.parent_path);
-    ASSERT_NEQ(p.has_parent_path(), TC.parent_path.empty());
+    assert(p.parent_path() == TC.parent_path);
+    assert(p.has_parent_path() != TC.parent_path.empty());
 
-    ASSERT_EQ(p.filename(), TC.filename);
-    ASSERT_NEQ(p.has_filename(), TC.filename.empty());
+    assert(p.filename() == TC.filename);
+    assert(p.has_filename() != TC.filename.empty());
 
-    ASSERT_EQ(p.is_absolute(), p.has_root_directory());
-    ASSERT_NEQ(p.is_relative(), p.is_absolute());
+#ifdef _WIN32
+    if (!p.has_root_name()) {
+      assert(p.is_absolute() == false);
+    } else {
+      std::string root_name = p.root_name().string();
+      assert(root_name.length() >= 2);
+      if (root_name[1] == ':') {
+        // Drive letter, absolute if has a root directory
+        assert(p.is_absolute() == p.has_root_directory());
+      } else {
+        // Possibly a server path
+        // Convert to one separator style, for simplicity
+        std::replace(root_name.begin(), root_name.end(), '\\', '/');
+        if (root_name[0] == '/' && root_name[1] == '/')
+          assert(p.is_absolute() == true);
+        else
+          assert(p.is_absolute() == false);
+      }
+    }
+#else
+    assert(p.is_absolute() == p.has_root_directory());
+#endif
+    assert(p.is_relative() != p.is_absolute());
     if (p.empty())
-      ASSERT(p.is_relative());
+      assert(p.is_relative());
 
-    ASSERT_COLLECTION_EQ_COMP(
-        p.begin(), p.end(),
-        TC.elements.begin(), TC.elements.end(),
-        ComparePathExact()
-    );
+    assert(static_cast<std::size_t>(std::distance(p.begin(), p.end())) == TC.elements.size());
+    assert(std::equal(p.begin(), p.end(), TC.elements.begin(), ComparePathExact()));
+
     // check backwards
-
     std::vector<fs::path> Parts;
     for (auto it = p.end(); it != p.begin(); )
       Parts.push_back(*--it);
-    ASSERT_COLLECTION_EQ_COMP(Parts.begin(), Parts.end(),
-                                 TC.elements.rbegin(), TC.elements.rend(),
-                              ComparePathExact());
+    assert(static_cast<std::size_t>(std::distance(Parts.begin(), Parts.end())) == TC.elements.size());
+    assert(std::equal(Parts.begin(), Parts.end(), TC.elements.rbegin(), ComparePathExact()));
   }
 }
 
@@ -192,19 +236,18 @@ void decompFilenameTest()
 {
   using namespace fs;
   for (auto const & TC : FilenameTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
-    ASSERT_EQ(p, TC.raw);
+    assert(p == TC.raw);
     ASSERT_NOEXCEPT(p.empty());
 
-    ASSERT_EQ(p.filename(), TC.filename);
-    ASSERT_NEQ(p.has_filename(), TC.filename.empty());
+    assert(p.filename() == TC.filename);
+    assert(p.has_filename() != TC.filename.empty());
 
-    ASSERT_EQ(p.stem(), TC.stem);
-    ASSERT_NEQ(p.has_stem(), TC.stem.empty());
+    assert(p.stem() == TC.stem);
+    assert(p.has_stem() != TC.stem.empty());
 
-    ASSERT_EQ(p.extension(), TC.extension);
-    ASSERT_NEQ(p.has_extension(), TC.extension.empty());
+    assert(p.extension() == TC.extension);
+    assert(p.has_extension() != TC.extension.empty());
   }
 }
 

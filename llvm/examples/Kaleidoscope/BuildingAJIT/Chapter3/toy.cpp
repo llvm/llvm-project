@@ -680,7 +680,7 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
   if (auto E = ParseExpression()) {
     // Make an anonymous proto.
     auto Proto = std::make_unique<PrototypeAST>("__anon_expr",
-                                                 std::vector<std::string>());
+                                                std::vector<std::string>());
     return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;
@@ -696,12 +696,13 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 // Code Generation
 //===----------------------------------------------------------------------===//
 
-static LLVMContext TheContext;
-static IRBuilder<> Builder(TheContext);
+static std::unique_ptr<KaleidoscopeJIT> TheJIT;
+static std::unique_ptr<LLVMContext> TheContext;
+static std::unique_ptr<IRBuilder<>> Builder;
 static std::unique_ptr<Module> TheModule;
 static std::map<std::string, AllocaInst *> NamedValues;
-static std::unique_ptr<KaleidoscopeJIT> TheJIT;
 static std::map<std::string, std::unique_ptr<PrototypeAST>> FunctionProtos;
+static ExitOnError ExitOnErr;
 
 Value *LogErrorV(const char *Str) {
   LogError(Str);
@@ -729,11 +730,11 @@ static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           StringRef VarName) {
   IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                    TheFunction->getEntryBlock().begin());
-  return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), nullptr, VarName);
+  return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr, VarName);
 }
 
 Value *NumberExprAST::codegen() {
-  return ConstantFP::get(TheContext, APFloat(Val));
+  return ConstantFP::get(*TheContext, APFloat(Val));
 }
 
 Value *VariableExprAST::codegen() {
@@ -743,7 +744,7 @@ Value *VariableExprAST::codegen() {
     return LogErrorV("Unknown variable name");
 
   // Load the value.
-  return Builder.CreateLoad(V, Name.c_str());
+  return Builder->CreateLoad(Type::getDoubleTy(*TheContext), V, Name.c_str());
 }
 
 Value *UnaryExprAST::codegen() {
@@ -755,7 +756,7 @@ Value *UnaryExprAST::codegen() {
   if (!F)
     return LogErrorV("Unknown unary operator");
 
-  return Builder.CreateCall(F, OperandV, "unop");
+  return Builder->CreateCall(F, OperandV, "unop");
 }
 
 Value *BinaryExprAST::codegen() {
@@ -778,7 +779,7 @@ Value *BinaryExprAST::codegen() {
     if (!Variable)
       return LogErrorV("Unknown variable name");
 
-    Builder.CreateStore(Val, Variable);
+    Builder->CreateStore(Val, Variable);
     return Val;
   }
 
@@ -789,15 +790,15 @@ Value *BinaryExprAST::codegen() {
 
   switch (Op) {
   case '+':
-    return Builder.CreateFAdd(L, R, "addtmp");
+    return Builder->CreateFAdd(L, R, "addtmp");
   case '-':
-    return Builder.CreateFSub(L, R, "subtmp");
+    return Builder->CreateFSub(L, R, "subtmp");
   case '*':
-    return Builder.CreateFMul(L, R, "multmp");
+    return Builder->CreateFMul(L, R, "multmp");
   case '<':
-    L = Builder.CreateFCmpULT(L, R, "cmptmp");
+    L = Builder->CreateFCmpULT(L, R, "cmptmp");
     // Convert bool 0/1 to double 0.0 or 1.0
-    return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext), "booltmp");
+    return Builder->CreateUIToFP(L, Type::getDoubleTy(*TheContext), "booltmp");
   default:
     break;
   }
@@ -808,7 +809,7 @@ Value *BinaryExprAST::codegen() {
   assert(F && "binary operator not found!");
 
   Value *Ops[] = {L, R};
-  return Builder.CreateCall(F, Ops, "binop");
+  return Builder->CreateCall(F, Ops, "binop");
 }
 
 Value *CallExprAST::codegen() {
@@ -828,7 +829,7 @@ Value *CallExprAST::codegen() {
       return nullptr;
   }
 
-  return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+  return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
 Value *IfExprAST::codegen() {
@@ -837,46 +838,46 @@ Value *IfExprAST::codegen() {
     return nullptr;
 
   // Convert condition to a bool by comparing equal to 0.0.
-  CondV = Builder.CreateFCmpONE(
-      CondV, ConstantFP::get(TheContext, APFloat(0.0)), "ifcond");
+  CondV = Builder->CreateFCmpONE(
+      CondV, ConstantFP::get(*TheContext, APFloat(0.0)), "ifcond");
 
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
   // Create blocks for the then and else cases.  Insert the 'then' block at the
   // end of the function.
-  BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
-  BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
-  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+  BasicBlock *ThenBB = BasicBlock::Create(*TheContext, "then", TheFunction);
+  BasicBlock *ElseBB = BasicBlock::Create(*TheContext, "else");
+  BasicBlock *MergeBB = BasicBlock::Create(*TheContext, "ifcont");
 
-  Builder.CreateCondBr(CondV, ThenBB, ElseBB);
+  Builder->CreateCondBr(CondV, ThenBB, ElseBB);
 
   // Emit then value.
-  Builder.SetInsertPoint(ThenBB);
+  Builder->SetInsertPoint(ThenBB);
 
   Value *ThenV = Then->codegen();
   if (!ThenV)
     return nullptr;
 
-  Builder.CreateBr(MergeBB);
+  Builder->CreateBr(MergeBB);
   // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
-  ThenBB = Builder.GetInsertBlock();
+  ThenBB = Builder->GetInsertBlock();
 
   // Emit else block.
   TheFunction->getBasicBlockList().push_back(ElseBB);
-  Builder.SetInsertPoint(ElseBB);
+  Builder->SetInsertPoint(ElseBB);
 
   Value *ElseV = Else->codegen();
   if (!ElseV)
     return nullptr;
 
-  Builder.CreateBr(MergeBB);
+  Builder->CreateBr(MergeBB);
   // Codegen of 'Else' can change the current block, update ElseBB for the PHI.
-  ElseBB = Builder.GetInsertBlock();
+  ElseBB = Builder->GetInsertBlock();
 
   // Emit merge block.
   TheFunction->getBasicBlockList().push_back(MergeBB);
-  Builder.SetInsertPoint(MergeBB);
-  PHINode *PN = Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, "iftmp");
+  Builder->SetInsertPoint(MergeBB);
+  PHINode *PN = Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, "iftmp");
 
   PN->addIncoming(ThenV, ThenBB);
   PN->addIncoming(ElseV, ElseBB);
@@ -903,7 +904,7 @@ Value *IfExprAST::codegen() {
 //   br endcond, loop, endloop
 // outloop:
 Value *ForExprAST::codegen() {
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
   // Create an alloca for the variable in the entry block.
   AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
@@ -914,17 +915,17 @@ Value *ForExprAST::codegen() {
     return nullptr;
 
   // Store the value into the alloca.
-  Builder.CreateStore(StartVal, Alloca);
+  Builder->CreateStore(StartVal, Alloca);
 
   // Make the new basic block for the loop header, inserting after current
   // block.
-  BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop", TheFunction);
 
   // Insert an explicit fall through from the current block to the LoopBB.
-  Builder.CreateBr(LoopBB);
+  Builder->CreateBr(LoopBB);
 
   // Start insertion in LoopBB.
-  Builder.SetInsertPoint(LoopBB);
+  Builder->SetInsertPoint(LoopBB);
 
   // Within the loop, the variable is defined equal to the PHI node.  If it
   // shadows an existing variable, we have to restore it, so save it now.
@@ -945,7 +946,7 @@ Value *ForExprAST::codegen() {
       return nullptr;
   } else {
     // If not specified, use 1.0.
-    StepVal = ConstantFP::get(TheContext, APFloat(1.0));
+    StepVal = ConstantFP::get(*TheContext, APFloat(1.0));
   }
 
   // Compute the end condition.
@@ -955,23 +956,24 @@ Value *ForExprAST::codegen() {
 
   // Reload, increment, and restore the alloca.  This handles the case where
   // the body of the loop mutates the variable.
-  Value *CurVar = Builder.CreateLoad(Alloca, VarName.c_str());
-  Value *NextVar = Builder.CreateFAdd(CurVar, StepVal, "nextvar");
-  Builder.CreateStore(NextVar, Alloca);
+  Value *CurVar = Builder->CreateLoad(Type::getDoubleTy(*TheContext), Alloca,
+                                      VarName.c_str());
+  Value *NextVar = Builder->CreateFAdd(CurVar, StepVal, "nextvar");
+  Builder->CreateStore(NextVar, Alloca);
 
   // Convert condition to a bool by comparing equal to 0.0.
-  EndCond = Builder.CreateFCmpONE(
-      EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+  EndCond = Builder->CreateFCmpONE(
+      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
 
   // Create the "after loop" block and insert it.
   BasicBlock *AfterBB =
-      BasicBlock::Create(TheContext, "afterloop", TheFunction);
+      BasicBlock::Create(*TheContext, "afterloop", TheFunction);
 
   // Insert the conditional branch into the end of LoopEndBB.
-  Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
+  Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
 
   // Any new code will be inserted in AfterBB.
-  Builder.SetInsertPoint(AfterBB);
+  Builder->SetInsertPoint(AfterBB);
 
   // Restore the unshadowed variable.
   if (OldVal)
@@ -980,13 +982,13 @@ Value *ForExprAST::codegen() {
     NamedValues.erase(VarName);
 
   // for expr always returns 0.0.
-  return Constant::getNullValue(Type::getDoubleTy(TheContext));
+  return Constant::getNullValue(Type::getDoubleTy(*TheContext));
 }
 
 Value *VarExprAST::codegen() {
   std::vector<AllocaInst *> OldBindings;
 
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
   // Register all variables and emit their initializer.
   for (unsigned i = 0, e = VarNames.size(); i != e; ++i) {
@@ -1004,11 +1006,11 @@ Value *VarExprAST::codegen() {
       if (!InitVal)
         return nullptr;
     } else { // If not specified, use 0.0.
-      InitVal = ConstantFP::get(TheContext, APFloat(0.0));
+      InitVal = ConstantFP::get(*TheContext, APFloat(0.0));
     }
 
     AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
-    Builder.CreateStore(InitVal, Alloca);
+    Builder->CreateStore(InitVal, Alloca);
 
     // Remember the old variable binding so that we can restore the binding when
     // we unrecurse.
@@ -1033,9 +1035,9 @@ Value *VarExprAST::codegen() {
 
 Function *PrototypeAST::codegen() {
   // Make the function type:  double(double,double) etc.
-  std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(TheContext));
+  std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(*TheContext));
   FunctionType *FT =
-      FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
+      FunctionType::get(Type::getDoubleTy(*TheContext), Doubles, false);
 
   Function *F =
       Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
@@ -1062,8 +1064,8 @@ Function *FunctionAST::codegen() {
     BinopPrecedence[P.getOperatorName()] = P.getBinaryPrecedence();
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
-  Builder.SetInsertPoint(BB);
+  BasicBlock *BB = BasicBlock::Create(*TheContext, "entry", TheFunction);
+  Builder->SetInsertPoint(BB);
 
   // Record the function arguments in the NamedValues map.
   NamedValues.clear();
@@ -1072,7 +1074,7 @@ Function *FunctionAST::codegen() {
     AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName());
 
     // Store the initial value into the alloca.
-    Builder.CreateStore(&Arg, Alloca);
+    Builder->CreateStore(&Arg, Alloca);
 
     // Add arguments to variable symbol table.
     NamedValues[std::string(Arg.getName())] = Alloca;
@@ -1080,7 +1082,7 @@ Function *FunctionAST::codegen() {
 
   if (Value *RetVal = Body->codegen()) {
     // Finish off the function.
-    Builder.CreateRet(RetVal);
+    Builder->CreateRet(RetVal);
 
     // Validate the generated code, checking for consistency.
     verifyFunction(*TheFunction);
@@ -1101,9 +1103,13 @@ Function *FunctionAST::codegen() {
 //===----------------------------------------------------------------------===//
 
 static void InitializeModule() {
-  // Open a new module.
-  TheModule = std::make_unique<Module>("my cool jit", TheContext);
-  TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+  // Open a new context and module.
+  TheContext = std::make_unique<LLVMContext>();
+  TheModule = std::make_unique<Module>("my cool jit", *TheContext);
+  TheModule->setDataLayout(TheJIT->getDataLayout());
+
+  // Create a new builder for the module.
+  Builder = std::make_unique<IRBuilder<>>(*TheContext);
 }
 
 static void HandleDefinition() {
@@ -1112,7 +1118,8 @@ static void HandleDefinition() {
       fprintf(stderr, "Read function definition:");
       FnIR->print(errs());
       fprintf(stderr, "\n");
-      TheJIT->addModule(std::move(TheModule));
+      auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
+      ExitOnErr(TheJIT->addModule(std::move(TSM)));
       InitializeModule();
     }
   } else {
@@ -1139,22 +1146,24 @@ static void HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
   if (auto FnAST = ParseTopLevelExpr()) {
     if (FnAST->codegen()) {
-      // JIT the module containing the anonymous expression, keeping a handle so
-      // we can free it later.
-      auto H = TheJIT->addModule(std::move(TheModule));
+      // Create a ResourceTracker to track JIT'd memory allocated to our
+      // anonymous expression -- that way we can free it after executing.
+      auto RT = TheJIT->getMainJITDylib().createResourceTracker();
+
+      auto TSM = ThreadSafeModule(std::move(TheModule), std::move(TheContext));
+      ExitOnErr(TheJIT->addModule(std::move(TSM), RT));
       InitializeModule();
 
-      // Search the JIT for the __anon_expr symbol.
-      auto ExprSymbol = TheJIT->findSymbol("__anon_expr");
-      assert(ExprSymbol && "Function not found");
+      // Get the anonymous expression's JITSymbol.
+      auto Sym = ExitOnErr(TheJIT->lookup("__anon_expr"));
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = (double (*)())(intptr_t)cantFail(ExprSymbol.getAddress());
+      auto *FP = (double (*)())(intptr_t)Sym.getAddress();
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.
-      TheJIT->removeModule(H);
+      ExitOnErr(RT->remove());
     }
   } else {
     // Skip token for error recovery.
@@ -1222,8 +1231,7 @@ int main() {
   fprintf(stderr, "ready> ");
   getNextToken();
 
-  TheJIT = std::make_unique<KaleidoscopeJIT>();
-
+  TheJIT = ExitOnErr(KaleidoscopeJIT::Create());
   InitializeModule();
 
   // Run the main "interpreter loop" now.

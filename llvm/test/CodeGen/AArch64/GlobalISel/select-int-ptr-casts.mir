@@ -10,6 +10,8 @@
   define void @ptrtoint_s16_p0() { ret void }
   define void @ptrtoint_s8_p0() { ret void }
   define void @ptrtoint_s1_p0() { ret void }
+  define void @inttoptr_v2p0_v2s64() { ret void }
+  define void @ptrtoint_v2s64_v2p0() { ret void }
 ...
 
 ---
@@ -134,4 +136,45 @@ body:             |
     %1(s1) = G_PTRTOINT %0
     %2:gpr(s32) = G_ANYEXT %1
     $w0 = COPY %2(s32)
+...
+
+---
+name:            inttoptr_v2p0_v2s64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $x0
+    ; CHECK-LABEL: name: inttoptr_v2p0_v2s64
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
+    ; CHECK: $x0 = COPY [[COPY1]]
+    ; CHECK: RET_ReallyLR implicit $x0
+    %1:fpr(<2 x s64>) = COPY $q0
+    %2:fpr(<2 x p0>) = G_INTTOPTR %1(<2 x s64>)
+    %4:gpr(s64) = G_CONSTANT i64 0
+    %3:fpr(p0) = G_EXTRACT_VECTOR_ELT %2(<2 x p0>), %4(s64)
+    $x0 = COPY %3(p0)
+    RET_ReallyLR implicit $x0
+...
+...
+---
+name:            ptrtoint_v2s64_v2p0
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0
+    ; CHECK-LABEL: name: ptrtoint_v2s64_v2p0
+    ; CHECK: liveins: $q0
+    ; CHECK: %ptr:fpr128 = COPY $q0
+    ; CHECK: $q0 = COPY %ptr
+    ; CHECK: RET_ReallyLR implicit $q0
+    %ptr:fpr(<2 x p0>) = COPY $q0
+    %int:fpr(<2 x s64>) = G_PTRTOINT %ptr(<2 x p0>)
+    $q0 = COPY %int(<2 x s64>)
+    RET_ReallyLR implicit $q0
 ...

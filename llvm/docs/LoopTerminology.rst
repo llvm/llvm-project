@@ -7,118 +7,240 @@ LLVM Loop Terminology (and Canonical Forms)
 .. contents::
    :local:
 
-Introduction
-============
-
-Loops are a core concept in any optimizer.  This page spells out some
-of the common terminology used within LLVM code to describe loop
-structures.
-
-First, let's start with the basics. In LLVM, a Loop is a maximal set of basic
-blocks that form a strongly connected component (SCC) in the Control
-Flow Graph (CFG) where there exists a dedicated entry/header block that
-dominates all other blocks within the loop. Thus, without leaving the
-loop, one can reach every block in the loop from the header block and
-the header block from every block in the loop.
-
-Note that there are some important implications of this definition:
-
-* Not all SCCs are loops.  There exist SCCs that do not meet the
-  dominance requirement and such are not considered loops.  
-
-* Loops can contain non-loop SCCs and non-loop SCCs may contain
-  loops.  Loops may also contain sub-loops.
-
-* A header block is uniquely associated with one loop.  There can be
-  multiple SCC within that loop, but the strongly connected component
-  (SCC) formed from their union must always be unique.
-
-* Given the use of dominance in the definition, all loops are
-  statically reachable from the entry of the function.  
-
-* Every loop must have a header block, and some set of predecessors
-  outside the loop.  A loop is allowed to be statically infinite, so
-  there need not be any exiting edges.
-
-* Any two loops are either fully disjoint (no intersecting blocks), or
-  one must be a sub-loop of the other.
-
-* Loops in a function form a forest. One implication of this fact
-  is that a loop either has no parent or a single parent.
-
-A loop may have an arbitrary number of exits, both explicit (via
-control flow) and implicit (via throwing calls which transfer control
-out of the containing function).  There is no special requirement on
-the form or structure of exit blocks (the block outside the loop which
-is branched to).  They may have multiple predecessors, phis, etc...
-
-Key Terminology
+Loop Definition
 ===============
 
-**Header Block** - The basic block which dominates all other blocks
-contained within the loop.  As such, it is the first one executed if
-the loop executes at all.  Note that a block can be the header of
-two separate loops at the same time, but only if one is a sub-loop
-of the other.
+Loops are an important concept for a code optimizer. In LLVM, detection
+of loops in a control-flow graph is done by :ref:`loopinfo`. It is based
+on the following definition.
 
-**Exiting Block** - A basic block contained within a given loop which has
-at least one successor outside of the loop and one successor inside the
-loop.  (The latter is a consequence of the block being contained within
-an SCC which is part of the loop.)  That is, it has a successor which
-is an Exit Block.  
+A loop is a subset of nodes from the control-flow graph (CFG; where
+nodes represent basic blocks) with the following properties:
 
-**Exit Block** - A basic block outside of the associated loop which has a
-predecessor inside the loop.  That is, it has a predecessor which is
-an Exiting Block.
+1. The induced subgraph (which is the subgraph that contains all the
+   edges from the CFG within the loop) is strongly connected
+   (every node is reachable from all others).
 
-**Latch Block** - A basic block within the loop whose successors include
-the header block of the loop.  Thus, a latch is a source of backedge.
-A loop may have multiple latch blocks.  A latch block may be either
-conditional or unconditional.
+2. All edges from outside the subset into the subset point to the same
+   node, called the **header**. As a consequence, the header dominates
+   all nodes in the loop (i.e. every execution path to any of the loop's
+   node will have to pass through the header).
 
-**Backedge(s)** - The edge(s) in the CFG from latch blocks to the header
-block.  Note that there can be multiple such edges, and even multiple
-such edges leaving a single latch block.  
+3. The loop is the maximum subset with these properties. That is, no
+   additional nodes from the CFG can be added such that the induced
+   subgraph would still be strongly connected and the header would
+   remain the same.
 
-**Loop Predecessor** -  The predecessor blocks of the loop header which
-are not contained by the loop itself.  These are the only blocks
-through which execution can enter the loop.  When used in the
-singular form implies that there is only one such unique block. 
+In computer science literature, this is often called a *natural loop*.
+In LLVM, this is the only definition of a loop.
 
-**Preheader Block** - A preheader is a (singular) loop predecessor which
-ends in an unconditional transfer of control to the loop header.  Note
-that not all loops have such blocks.
 
-**Backedge Taken Count** - The number of times the backedge will execute
-before some interesting event happens.  Commonly used without
-qualification of the event as a shorthand for when some exiting block
-branches to some exit block. May be zero, or not statically computable.
+Terminology
+-----------
 
-**Iteration Count** - The number of times the header will execute before
-some interesting event happens.  Commonly used without qualification to
-refer to the iteration count at which the loop exits.  Will always be
-one greater than the backedge taken count.  *Warning*: Preceding
-statement is true in the *integer domain*; if you're dealing with fixed
-width integers (such as LLVM Values or SCEVs), you need to be cautious
-of overflow when converting one to the other.
+The definition of a loop comes with some additional terminology:
 
-It's important to note that the same basic block can play multiple
-roles in the same loop, or in different loops at once.  For example, a
-single block can be the header for two nested loops at once, while
-also being an exiting block for the inner one only, and an exit block
-for a sibling loop.  Example:
+* An **entering block** (or **loop predecessor**) is a non-loop node
+  that has an edge into the loop (necessarily the header). If there is
+  only one entering block entering block, and its only edge is to the
+  header, it is also called the loop's **preheader**. The preheader
+  dominates the loop without itself being part of the loop.
+
+* A **latch** is a loop node that has an edge to the header.
+
+* A **backedge** is an edge from a latch to the header.
+
+* An **exiting edge** is an edge from inside the loop to a node outside
+  of the loop. The source of such an edge is called an **exiting block**, its
+  target is an **exit block**.
+
+.. image:: ./loop-terminology.svg
+   :width: 400 px
+
+
+Important Notes
+---------------
+
+This loop definition has some noteworthy consequences:
+
+* A node can be the header of at most one loop. As such, a loop can be
+  identified by its header. Due to the header being the only entry into
+  a loop, it can be called a Single-Entry-Multiple-Exits (SEME) region.
+
+
+* For basic blocks that are not reachable from the function's entry, the
+  concept of loops is undefined. This follows from the concept of
+  dominance being undefined as well.
+
+
+* The smallest loop consists of a single basic block that branches to
+  itself. In this case that block is the header, latch (and exiting
+  block if it has another edge to a different block) at the same time.
+  A single block that has no branch to itself is not considered a loop,
+  even though it is trivially strongly connected.
+
+.. image:: ./loop-single.svg
+   :width: 300 px
+
+In this case, the role of header, exiting block and latch fall to the
+same node. :ref:`loopinfo` reports this as:
+
+.. code-block:: console
+
+  $ opt input.ll -loops -analyze
+  Loop at depth 1 containing: %for.body<header><latch><exiting>
+
+
+* Loops can be nested inside each other. That is, a loop's node set can
+  be a subset of another loop with a different loop header. The loop
+  hierarchy in a function forms a forest: Each top-level loop is the
+  root of the tree of the loops nested inside it.
+
+.. image:: ./loop-nested.svg
+   :width: 350 px
+
+
+* It is not possible that two loops share only a few of their nodes.
+  Two loops are either disjoint or one is nested inside the other. In
+  the example below the left and right subsets both violate the
+  maximality condition. Only the merge of both sets is considered a loop.
+
+.. image:: ./loop-nonmaximal.svg
+   :width: 250 px
+
+
+* It is also possible that two logical loops share a header, but are
+  considered a single loop by LLVM:
 
 .. code-block:: C
 
-  while (..) {
-    for (..) {}
-    do {
-      do {
-        // <-- block of interest
-        if (exit) break;
-      } while (..);
-    } while (..)
+  for (int i = 0; i < 128; ++i)
+    for (int j = 0; j < 128; ++j)
+      body(i,j);
+
+which might be represented in LLVM-IR as follows. Note that there is
+only a single header and hence just a single loop.
+
+.. image:: ./loop-merge.svg
+   :width: 400 px
+
+The :ref:`LoopSimplify <loop-terminology-loop-simplify>` pass will
+detect the loop and ensure separate headers for the outer and inner loop.
+
+.. image:: ./loop-separate.svg
+   :width: 400 px
+
+* A cycle in the CFG does not imply there is a loop. The example below
+  shows such a CFG, where there is no header node that dominates all
+  other nodes in the cycle. This is called **irreducible control-flow**.
+
+.. image:: ./loop-irreducible.svg
+   :width: 150 px
+
+The term reducible results from the ability to collapse the CFG into a
+single node by successively replacing one of three base structures with
+a single node: A sequential execution of basic blocks, a conditional
+branching (or switch) with re-joining, and a basic block looping on itself.
+`Wikipedia <https://en.wikipedia.org/wiki/Control-flow_graph#Reducibility>`_
+has a more formal definition, which basically says that every cycle has
+a dominating header.
+
+
+* Irreducible control-flow can occur at any level of the loop nesting.
+  That is, a loop that itself does not contain any loops can still have
+  cyclic control flow in its body; a loop that is not nested inside
+  another loop can still be part of an outer cycle; and there can be
+  additional cycles between any two loops where one is contained in the other.
+
+
+* Exiting edges are not the only way to break out of a loop. Other
+  possibilities are unreachable terminators, [[noreturn]] functions,
+  exceptions, signals, and your computer's power button.
+
+
+* A basic block "inside" the loop that does not have a path back to the
+  loop (i.e. to a latch or header) is not considered part of the loop.
+  This is illustrated by the following code.
+
+.. code-block:: C
+
+  for (unsigned i = 0; i <= n; ++i) {
+    if (c1) {
+      // When reaching this block, we will have exited the loop.
+      do_something();
+      break;
+    }
+    if (c2) {
+      // abort(), never returns, so we have exited the loop.
+      abort();
+    }
+    if (c3) {
+      // The unreachable allows the compiler to assume that this will not rejoin the loop.
+      do_something();
+      __builtin_unreachable();
+    }
+    if (c4) {
+      // This statically infinite loop is not nested because control-flow will not continue with the for-loop.
+      while(true) {
+        do_something();
+      }
+    }
   }
+
+
+* There is no requirement for the control flow to eventually leave the
+  loop, i.e. a loop can be infinite. A **statically infinite loop** is a
+  loop that has no exiting edges. A **dynamically infinite loop** has
+  exiting edges, but it is possible to be never taken. This may happen
+  only under some circumstances, such as when n == UINT_MAX in the code
+  below.
+
+.. code-block:: C
+
+  for (unsigned i = 0; i <= n; ++i)
+    body(i);
+
+It is possible for the optimizer to turn a dynamically infinite loop
+into a statically infinite loop, for instance when it can prove that the
+exiting condition is always false. Because the exiting edge is never
+taken, the optimizer can change the conditional branch into an
+unconditional one.
+
+Note that under some circumstances the compiler may assume that a loop will
+eventually terminate without proving it. For instance, it may remove a loop
+that does not do anything in its body. If the loop was infinite, this
+optimization resulted in an "infinite" performance speed-up. A call
+to the intrinsic :ref:`llvm.sideeffect<llvm_sideeffect>` can be added
+into the loop to ensure that the optimizer does not make this assumption
+without proof.
+
+
+* The number of executions of the loop header before leaving the loop is
+  the **loop trip count** (or **iteration count**). If the loop should
+  not be executed at all, a **loop guard** must skip the entire loop:
+
+.. image:: ./loop-guard.svg
+   :width: 500 px
+
+Since the first thing a loop header might do is to check whether there
+is another execution and if not, immediately exit without doing any work
+(also see :ref:`loop-terminology-loop-rotate`), loop trip count is not
+the best measure of a loop's number of iterations. For instance, the
+number of header executions of the code below for a non-positive n
+(before loop rotation) is 1, even though the loop body is not executed
+at all.
+
+.. code-block:: C
+
+  for (int i = 0; i < n; ++i)
+    body(i);
+
+A better measure is the **backedge-taken count**, which is the number of
+times any of the backedges is taken before the loop. It is one less than
+the trip count for executions that enter the header.
+
+
+.. _loopinfo:
 
 LoopInfo
 ========
@@ -139,7 +261,7 @@ are important for working successfully with this interface.
   be removed from LoopInfo. If this can not be done for some reason,
   then the optimization is *required* to preserve the static
   reachability of the loop.
-  
+
 
 .. _loop-terminology-loop-simplify:
 
@@ -169,10 +291,11 @@ Loop Closed SSA (LCSSA)
 A program is in Loop Closed SSA Form if it is in SSA form
 and all values that are defined in a loop are used only inside
 this loop.
+
 Programs written in LLVM IR are always in SSA form but not necessarily
-in LCSSA. To achieve the latter, single entry PHI nodes are inserted
-at the end of the loops for all values that are live
-across the loop boundary [#lcssa-construction]_.
+in LCSSA. To achieve the latter, for each value that is live across the
+loop boundary, single entry PHI nodes are inserted to each of the exit blocks
+[#lcssa-construction]_ in order to "close" these values inside the loop.
 In particular, consider the following loop:
 
 .. code-block:: C
@@ -214,8 +337,23 @@ scheduling a LoopPass.
 After the loop optimizations are done, these extra phi nodes
 will be deleted by :ref:`-instcombine <passes-instcombine>`.
 
-The major benefit of this transformation is that it makes many other
-loop optimizations simpler.
+Note that an exit block is outside of a loop, so how can such a phi "close"
+the value inside the loop since it uses it outside of it ? First of all,
+for phi nodes, as
+`mentioned in the LangRef <https://llvm.org/docs/LangRef.html#id311>`_:
+"the use of each incoming value is deemed to occur on the edge from the
+corresponding predecessor block to the current block". Now, an
+edge to an exit block is considered outside of the loop because
+if we take that edge, it leads us clearly out of the loop.
+
+However, an edge doesn't actually contain any IR, so in source code,
+we have to choose a convention of whether the use happens in
+the current block or in the respective predecessor. For LCSSA's purpose,
+we consider the use happens in the latter (so as to consider the
+use inside) [#point-of-use-phis]_.
+
+The major benefit of LCSSA is that it makes many other loop optimizations
+simpler.
 
 First of all, a simple observation is that if one needs to see all
 the outside users, they can just iterate over all the (loop closing)
@@ -291,7 +429,7 @@ In general, it's easier to use SCEV in loops that are in LCSSA form.
 The evolution of a scalar (loop-variant) expression that
 SCEV can analyze is, by definition, relative to a loop.
 An expression is represented in LLVM by an
-`llvm::Instruction <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`.
+`llvm::Instruction <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`_.
 If the expression is inside two (or more) loops (which can only
 happen if the loops are nested, like in the example above) and you want
 to get an analysis of its evolution (from SCEV),
@@ -313,6 +451,27 @@ the context / scope / relative loop.
 
 .. [#lcssa-construction] To insert these loop-closing PHI nodes, one has to
   (re-)compute dominance frontiers (if the loop has multiple exits).
+
+.. [#point-of-use-phis] Considering the point of use of a PHI entry value
+  to be in the respective predecessor is a convention across the whole LLVM.
+  The reason is mostly practical; for example it preserves the dominance
+  property of SSA. It is also just an overapproximation of the actual
+  number of uses; the incoming block could branch to another block in which
+  case the value is not actually used but there are no side-effects (it might
+  increase its live range which is not relevant in LCSSA though).
+  Furthermore, we can gain some intuition if we consider liveness:
+  A PHI is *usually* inserted in the current block because the value can't
+  be used from this point and onwards (i.e. the current block is a dominance
+  frontier). It doesn't make sense to consider that the value is used in
+  the current block (because of the PHI) since the value stops being live
+  before the PHI. In some sense the PHI definition just "replaces" the original
+  value definition and doesn't actually use it. It should be stressed that
+  this analogy is only used as an example and does not pose any strict
+  requirements. For example, the value might dominate the current block
+  but we can still insert a PHI (as we do with LCSSA PHI nodes) *and*
+  use the original value afterwards (in which case the two live ranges overlap,
+  although in LCSSA (the whole point is that) we never do that).
+
 
 .. [#def-use-chain] A property of SSA is that there exists a def-use chain
   for each definition, which is a list of all the uses of this definition.

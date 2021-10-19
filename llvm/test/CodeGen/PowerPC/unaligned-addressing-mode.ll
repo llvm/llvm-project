@@ -55,10 +55,10 @@ entry:
 define void @test_xoaddr(i32* %arr, i32* %arrTo) {
 ; CHECK-LABEL: test_xoaddr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi r3, r3, 8
-; CHECK-NEXT:    addi r4, r4, 4
-; CHECK-NEXT:    lxvx vs0, 0, r3
-; CHECK-NEXT:    stxvx vs0, 0, r4
+; CHECK-NEXT:    li r5, 8
+; CHECK-NEXT:    lxvx vs0, r3, r5
+; CHECK-NEXT:    li r3, 4
+; CHECK-NEXT:    stxvx vs0, r4, r3
 ; CHECK-NEXT:    blr
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %arrTo, i64 1
@@ -80,15 +80,16 @@ define i64 @test_xaddrX4_loop(i8* %p) {
 ; CHECK-NEXT:    li r5, 3
 ; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    li r3, 0
-; loop instruction number is changed from 5 to 4, so its align is changed from 5 to 4.
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_1: # %for.body
-; CHECK:         ldu r6, 8(r4)
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ldu r6, 8(r4)
 ; CHECK-NEXT:    ldx r7, r4, r5
 ; CHECK-NEXT:    maddld r3, r7, r6, r3
 ; CHECK-NEXT:    bdnz .LBB4_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    blr
+; loop instruction number is changed from 5 to 4, so its align is changed from 5 to 4.
 entry:
   br label %for.body
 

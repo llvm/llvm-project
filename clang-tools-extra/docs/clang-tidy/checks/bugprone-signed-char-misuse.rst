@@ -4,7 +4,7 @@ bugprone-signed-char-misuse
 ===========================
 
 `cert-str34-c` redirects here as an alias for this check. For the CERT alias,
-the `DiagnoseSignedUnsignedCharComparisons` option is set to `0`.
+the `DiagnoseSignedUnsignedCharComparisons` option is set to `false`.
 
 Finds those ``signed char`` -> integer conversions which might indicate a
 programming error. The basic problem with the ``signed char``, that it might
@@ -114,5 +114,5 @@ so both arguments will have the same type.
 
 .. option:: DiagnoseSignedUnsignedCharComparisons
 
-  When nonzero, the check will warn on ``signed char``/``unsigned char`` comparisons,
-  otherwise these comparisons are ignored. By default, this option is set to ``1``.
+  When `true`, the check will warn on ``signed char``/``unsigned char`` comparisons,
+  otherwise these comparisons are ignored. By default, this option is set to `true`.

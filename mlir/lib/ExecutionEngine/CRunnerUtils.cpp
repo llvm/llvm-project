@@ -14,8 +14,20 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
+#ifndef _WIN32
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#include <cstdlib>
+#else
+#include <alloca.h>
+#endif
+#include <sys/time.h>
+#else
+#include "malloc.h"
+#endif // _WIN32
+
 #include <cinttypes>
 #include <cstdio>
+#include <string.h>
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
@@ -23,13 +35,88 @@
 // By providing elementary printing methods only, this
 // library can remain fully unaware of low-level implementation
 // details of our vectors. Also useful for direct LLVM IR output.
-extern "C" void print_i32(int32_t i) { fprintf(stdout, "%" PRId32, i); }
-extern "C" void print_i64(int64_t l) { fprintf(stdout, "%" PRId64, l); }
-extern "C" void print_f32(float f) { fprintf(stdout, "%g", f); }
-extern "C" void print_f64(double d) { fprintf(stdout, "%lg", d); }
-extern "C" void print_open() { fputs("( ", stdout); }
-extern "C" void print_close() { fputs(" )", stdout); }
-extern "C" void print_comma() { fputs(", ", stdout); }
-extern "C" void print_newline() { fputc('\n', stdout); }
+extern "C" void printI64(int64_t i) { fprintf(stdout, "%" PRId64, i); }
+extern "C" void printU64(uint64_t u) { fprintf(stdout, "%" PRIu64, u); }
+extern "C" void printF32(float f) { fprintf(stdout, "%g", f); }
+extern "C" void printF64(double d) { fprintf(stdout, "%lg", d); }
+extern "C" void printOpen() { fputs("( ", stdout); }
+extern "C" void printClose() { fputs(" )", stdout); }
+extern "C" void printComma() { fputs(", ", stdout); }
+extern "C" void printNewline() { fputc('\n', stdout); }
 
-#endif
+extern "C" MLIR_CRUNNERUTILS_EXPORT void
+memrefCopy(int64_t elemSize, UnrankedMemRefType<char> *srcArg,
+           UnrankedMemRefType<char> *dstArg) {
+  DynamicMemRefType<char> src(*srcArg);
+  DynamicMemRefType<char> dst(*dstArg);
+
+  int64_t rank = src.rank;
+  // Handle empty shapes -> nothing to copy.
+  for (int rankp = 0; rankp < rank; ++rankp)
+    if (src.sizes[rankp] == 0)
+      return;
+
+  char *srcPtr = src.data + src.offset * elemSize;
+  char *dstPtr = dst.data + dst.offset * elemSize;
+
+  if (rank == 0) {
+    memcpy(dstPtr, srcPtr, elemSize);
+    return;
+  }
+
+  int64_t *indices = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+  int64_t *srcStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+  int64_t *dstStrides = static_cast<int64_t *>(alloca(sizeof(int64_t) * rank));
+
+  // Initialize index and scale strides.
+  for (int rankp = 0; rankp < rank; ++rankp) {
+    indices[rankp] = 0;
+    srcStrides[rankp] = src.strides[rankp] * elemSize;
+    dstStrides[rankp] = dst.strides[rankp] * elemSize;
+  }
+
+  int64_t readIndex = 0, writeIndex = 0;
+  for (;;) {
+    // Copy over the element, byte by byte.
+    memcpy(dstPtr + writeIndex, srcPtr + readIndex, elemSize);
+    // Advance index and read position.
+    for (int64_t axis = rank - 1; axis >= 0; --axis) {
+      // Advance at current axis.
+      auto newIndex = ++indices[axis];
+      readIndex += srcStrides[axis];
+      writeIndex += dstStrides[axis];
+      // If this is a valid index, we have our next index, so continue copying.
+      if (src.sizes[axis] != newIndex)
+        break;
+      // We reached the end of this axis. If this is axis 0, we are done.
+      if (axis == 0)
+        return;
+      // Else, reset to 0 and undo the advancement of the linear index that
+      // this axis had. Then continue with the axis one outer.
+      indices[axis] = 0;
+      readIndex -= src.sizes[axis] * srcStrides[axis];
+      writeIndex -= dst.sizes[axis] * dstStrides[axis];
+    }
+  }
+}
+
+/// Prints GFLOPS rating.
+extern "C" void print_flops(double flops) {
+  fprintf(stderr, "%lf GFLOPS\n", flops / 1.0E9);
+}
+
+/// Returns the number of seconds since Epoch 1970-01-01 00:00:00 +0000 (UTC).
+extern "C" double rtclock() {
+#ifndef _WIN32
+  struct timeval tp;
+  int stat = gettimeofday(&tp, NULL);
+  if (stat != 0)
+    fprintf(stderr, "Error returning time from gettimeofday: %d\n", stat);
+  return (tp.tv_sec + tp.tv_usec * 1.0e-6);
+#else
+  fprintf(stderr, "Timing utility not implemented on Windows\n");
+  return 0.0;
+#endif // _WIN32
+}
+
+#endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

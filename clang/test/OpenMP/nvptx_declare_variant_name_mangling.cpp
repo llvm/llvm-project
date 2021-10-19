@@ -6,10 +6,10 @@
 
 // CHECK-DAG: @_Z3barv
 // CHECK-DAG: @_Z3bazv
-// CHECK-DAG: @"_Z54bar$ompvariant$S2$s8$Pnvptx$Pnvptx64$S3$s10$Pmatch_anyv"
-// CHECK-DAG: @"_Z54baz$ompvariant$S2$s8$Pnvptx$Pnvptx64$S3$s10$Pmatch_anyv"
-// CHECK-DAG: call i32 @"_Z54bar$ompvariant$S2$s8$Pnvptx$Pnvptx64$S3$s10$Pmatch_anyv"()
-// CHECK-DAG: call i32 @"_Z54baz$ompvariant$S2$s8$Pnvptx$Pnvptx64$S3$s10$Pmatch_anyv"()
+// CHECK-DAG: define{{.*}} @"_Z53bar$ompvariant$S2$s7$Pnvptx$Pnvptx64$S3$s9$Pmatch_anyv"
+// CHECK-DAG: define{{.*}} @"_Z53baz$ompvariant$S2$s7$Pnvptx$Pnvptx64$S3$s9$Pmatch_anyv"
+// CHECK-DAG: call i32 @"_Z53bar$ompvariant$S2$s7$Pnvptx$Pnvptx64$S3$s9$Pmatch_anyv"()
+// CHECK-DAG: call i32 @"_Z53baz$ompvariant$S2$s7$Pnvptx$Pnvptx64$S3$s9$Pmatch_anyv"()
 
 #ifndef HEADER
 #define HEADER

@@ -1,8 +1,8 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -mattr=+e -show-encoding \
-# RUN:     | FileCheck -check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+e < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # This file provides a basic sanity check for RV32E, checking that the expected
 # set of registers and instructions are accepted.
@@ -12,20 +12,26 @@ lui x0, 1
 # CHECK-ASM-AND-OBJ: auipc ra, 2
 auipc x1, 2
 
-# CHECK-ASM-AND-OBJ: jal sp, 4
+# CHECK-OBJ: jal sp, 0xc
+# CHECK-ASM: jal sp, 4
 jal x2, 4
 # CHECK-ASM-AND-OBJ: jalr gp, 4(gp)
 jalr x3, x3, 4
 
-# CHECK-ASM-AND-OBJ: beq tp, t0, 8
+# CHECK-OBJ: beq tp, t0, 0x18
+# CHECK-ASM: beq tp, t0, 8
 beq x4, x5, 8
-# CHECK-ASM-AND-OBJ: bne t1, t2, 12
+# CHECK-OBJ: bne t1, t2, 0x20
+# CHECK-ASM: bne t1, t2, 12
 bne x6, x7, 12
-# CHECK-ASM-AND-OBJ: blt s0, s1, 16
+# CHECK-OBJ: blt s0, s1, 0x28
+# CHECK-ASM: blt s0, s1, 16
 blt x8, x9, 16
-# CHECK-ASM-AND-OBJ: bge a0, a1, 20
+# CHECK-OBJ: bge a0, a1, 0x30
+# CHECK-ASM: bge a0, a1, 20
 bge x10, x11, 20
-# CHECK-ASM-AND-OBJ: bgeu a2, a3, 24
+# CHECK-OBJ: bgeu a2, a3, 0x38
+# CHECK-ASM: bgeu a2, a3, 24
 bgeu x12, x13, 24
 
 # CHECK-ASM-AND-OBJ: lb a4, 25(a5)

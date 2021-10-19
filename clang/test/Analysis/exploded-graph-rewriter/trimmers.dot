@@ -1,17 +1,17 @@
 // RUN: %exploded_graph_rewriter %s \
 // RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,FOUR
 // RUN: %exploded_graph_rewriter -s %s \
-// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,FOUR
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTTHREE,FOUR
 // RUN: %exploded_graph_rewriter --to=0x2 %s \
-// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,NOFOUR
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTTHREE,NOTFOUR
 // RUN: %exploded_graph_rewriter --to 2 %s \
-// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,NOFOUR
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTTHREE,NOTFOUR
 // RUN: %exploded_graph_rewriter --to 2,3 %s \
-// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,NOFOUR
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,NOTFOUR
 // RUN: %exploded_graph_rewriter --to 4 %s \
 // RUN:     | FileCheck %s -check-prefixes=ONE,TWO,THREE,FOUR
 // RUN: %exploded_graph_rewriter --to 4 -s %s \
-// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTHREE,FOUR
+// RUN:     | FileCheck %s -check-prefixes=ONE,TWO,NOTTHREE,FOUR
 
 Node0x1 [shape=record,label=
  "{{ "state_id": 0, "program_state": null, "program_points": [

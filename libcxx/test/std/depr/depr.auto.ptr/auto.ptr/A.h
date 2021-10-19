@@ -19,6 +19,8 @@ public:
     A(const A& a) : id_(a.id_) {++count;}
     ~A() {assert(id_ >= 0); id_ = -1; --count;}
 
+    A& operator=(const A& other) { id_ = other.id_; return *this; }
+
     int id() const {return id_;}
 
     static int count;
@@ -26,4 +28,4 @@ public:
 
 int A::count = 0;
 
-#endif  // A_H
+#endif // A_H

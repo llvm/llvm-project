@@ -145,8 +145,8 @@ typedef struct {
 @end
 
 // rdar://problem/7854674
-// CHECK:    define void @test0([[A:%.*]]*
-// CHECK-NF: define void @test0([[A:%.*]]*
+// CHECK:    define{{.*}} void @test0([[A:%.*]]*
+// CHECK-NF: define{{.*}} void @test0([[A:%.*]]*
 void test0(A *x) {
   // CHECK:         [[X:%.*]] = alloca [[A]]*
   // CHECK-NEXT:    [[POINT:%.*]] = alloca [[POINT_T:%.*]],

@@ -85,8 +85,8 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
     // Replace explicit uses of the physical register with a virtual register.
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PReg);
     unsigned VReg = WebAssembly::NoRegister;
-    for (auto I = MRI.reg_begin(PReg), E = MRI.reg_end(); I != E;) {
-      MachineOperand &MO = *I++;
+    for (MachineOperand &MO :
+         llvm::make_early_inc_range(MRI.reg_operands(PReg))) {
       if (!MO.isImplicit()) {
         if (VReg == WebAssembly::NoRegister) {
           VReg = MRI.createVirtualRegister(RC);
@@ -101,8 +101,6 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
           }
         }
         MO.setReg(VReg);
-        if (MO.getParent()->isDebugValue())
-          MO.setIsDebug();
         Changed = true;
       }
     }

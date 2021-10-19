@@ -50,7 +50,7 @@ struct ChunkMetadata {
 };
 
 #if defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
-    defined(__arm__)
+    defined(__arm__) || SANITIZER_RISCV64 || defined(__hexagon__)
 template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;

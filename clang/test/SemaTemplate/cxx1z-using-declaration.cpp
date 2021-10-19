@@ -4,14 +4,14 @@
 template<typename ...T> struct Unexpanded : T... {
   using T::f; // expected-error {{unexpanded}}
   using typename T::type; // expected-error {{unexpanded}}
-  template<typename ...U> void g(U ...u) { f(u...); } // expected-error {{undeclared identifier 'f'}}
+  template<typename ...U> void g(U ...u) { f(u...); } // expected-error {{explicit qualification required to use member 'f' from dependent base class}}
   void h() {
     Unexpanded<type...> *p; // expected-error {{undeclared identifier 'type'}}
   }
 };
 void test_Unexpanded() {
-  struct A { void f(); }; // expected-note {{must qualify}}
-  struct B { void f(int); }; // expected-note {{must qualify}}
+  struct A { void f(); };
+  struct B { void f(int); }; // expected-note {{here}}
   Unexpanded<A, B>().g(0); // expected-note {{instantiation of}}
 }
 

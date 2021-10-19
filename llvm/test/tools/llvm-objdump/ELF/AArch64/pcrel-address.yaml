@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump %t -d --no-show-raw-insn --no-leading-addr | FileCheck %s
+
+# CHECK-LABEL: <_start>:
+# CHECK-NEXT:    adrp x2, 0x220000 <_start+0x80>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x200100
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '02010090'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x220000
+Symbols:
+  - Name:    _start
+    Section: .text
+    Value:   0x200100

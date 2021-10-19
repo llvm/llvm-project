@@ -99,10 +99,13 @@ const unsigned struct_kernel_stat64_sz = 144;
 const unsigned struct___old_kernel_stat_sz = 0;
 const unsigned struct_kernel_stat_sz = 64;
 const unsigned struct_kernel_stat64_sz = 104;
-#elif defined(__riscv) && __riscv_xlen == 64
+#elif SANITIZER_RISCV64
 const unsigned struct_kernel_stat_sz = 128;
-const unsigned struct_kernel_stat64_sz = 104;
-#endif
+const unsigned struct_kernel_stat64_sz = 0;  // RISCV64 does not use stat64
+#    elif defined(__hexagon__)
+const unsigned struct_kernel_stat_sz = 128;
+const unsigned struct_kernel_stat64_sz = 0;
+#    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
   unsigned size;
@@ -367,7 +370,7 @@ struct __sanitizer_group {
   char **gr_mem;
 };
 
-#if defined(__x86_64__) && !defined(_LP64)
+#  if (defined(__x86_64__) && !defined(_LP64)) || defined(__hexagon__)
 typedef long long __sanitizer_time_t;
 #else
 typedef long __sanitizer_time_t;
@@ -443,6 +446,8 @@ struct __sanitizer_cmsghdr {
   int cmsg_type;
 };
 #else
+// In POSIX, int msg_iovlen; socklen_t msg_controllen; socklen_t cmsg_len; but
+// many implementations don't conform to the standard.
 struct __sanitizer_msghdr {
   void *msg_name;
   unsigned msg_namelen;
@@ -473,23 +478,23 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#elif SANITIZER_ANDROID || defined(__x86_64__)
+#  elif SANITIZER_ANDROID || defined(__x86_64__) || defined(__hexagon__)
 struct __sanitizer_dirent {
   unsigned long long d_ino;
   unsigned long long d_off;
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#else
+#  else
 struct __sanitizer_dirent {
   uptr d_ino;
   uptr d_off;
   unsigned short d_reclen;
   // more fields that we don't care about
 };
-#endif
+#  endif
 
-#if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if SANITIZER_LINUX && !SANITIZER_ANDROID
 struct __sanitizer_dirent64 {
   unsigned long long d_ino;
   unsigned long long d_off;
@@ -509,8 +514,8 @@ typedef int __sanitizer_clockid_t;
 #endif
 
 #if SANITIZER_LINUX
-#if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
-    defined(__mips__)
+#    if defined(_LP64) || defined(__x86_64__) || defined(__powerpc__) || \
+        defined(__mips__) || defined(__hexagon__)
 typedef unsigned __sanitizer___kernel_uid_t;
 typedef unsigned __sanitizer___kernel_gid_t;
 #else
@@ -648,14 +653,14 @@ struct __sanitizer_sigaction {
 #endif // !SANITIZER_ANDROID
 
 #if defined(__mips__)
-struct __sanitizer_kernel_sigset_t {
-  uptr sig[2];
-};
+#define __SANITIZER_KERNEL_NSIG 128
 #else
-struct __sanitizer_kernel_sigset_t {
-  u8 sig[8];
-};
+#define __SANITIZER_KERNEL_NSIG 64
 #endif
+
+struct __sanitizer_kernel_sigset_t {
+  uptr sig[__SANITIZER_KERNEL_NSIG / (sizeof(uptr) * 8)];
+};
 
 // Linux system headers define the 'sa_handler' and 'sa_sigaction' macros.
 #if SANITIZER_MIPS
@@ -708,6 +713,13 @@ struct __sanitizer_protoent {
   char *p_name;
   char **p_aliases;
   int p_proto;
+};
+
+struct __sanitizer_netent {
+  char *n_name;
+  char **n_aliases;
+  int n_addrtype;
+  u32 n_net;
 };
 
 struct __sanitizer_addrinfo {
@@ -771,6 +783,10 @@ extern int glob_altdirfunc;
 
 extern unsigned path_max;
 
+#  if !SANITIZER_ANDROID
+extern const int wordexp_wrde_dooffs;
+#  endif  // !SANITIZER_ANDROID
+
 struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;
@@ -804,7 +820,7 @@ typedef void __sanitizer_FILE;
 #if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
     (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \
      defined(__powerpc64__) || defined(__aarch64__) || defined(__arm__) || \
-     defined(__s390__))
+     defined(__s390__) || SANITIZER_RISCV64)
 extern unsigned struct_user_regs_struct_sz;
 extern unsigned struct_user_fpregs_struct_sz;
 extern unsigned struct_user_fpxregs_struct_sz;
@@ -981,7 +997,6 @@ extern unsigned struct_vt_mode_sz;
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
 extern unsigned struct_ax25_parms_struct_sz;
-extern unsigned struct_cyclades_monitor_sz;
 extern unsigned struct_input_keymap_entry_sz;
 extern unsigned struct_ipx_config_data_sz;
 extern unsigned struct_kbdiacrs_sz;
@@ -1326,15 +1341,6 @@ extern unsigned IOCTL_VT_WAITACTIVE;
 #endif  // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-extern unsigned IOCTL_CYGETDEFTHRESH;
-extern unsigned IOCTL_CYGETDEFTIMEOUT;
-extern unsigned IOCTL_CYGETMON;
-extern unsigned IOCTL_CYGETTHRESH;
-extern unsigned IOCTL_CYGETTIMEOUT;
-extern unsigned IOCTL_CYSETDEFTHRESH;
-extern unsigned IOCTL_CYSETDEFTIMEOUT;
-extern unsigned IOCTL_CYSETTHRESH;
-extern unsigned IOCTL_CYSETTIMEOUT;
 extern unsigned IOCTL_EQL_EMANCIPATE;
 extern unsigned IOCTL_EQL_ENSLAVE;
 extern unsigned IOCTL_EQL_GETMASTRCFG;

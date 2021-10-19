@@ -17,12 +17,15 @@
 namespace lld {
 namespace wasm {
 
+// For --unresolved-symbols.
+enum class UnresolvedPolicy { ReportError, Warn, Ignore };
+
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  bool allowUndefined;
+  bool bsymbolic;
   bool checkFeatures;
   bool compressRelocations;
   bool demangle;
@@ -37,6 +40,7 @@ struct Configuration {
   bool importMemory;
   bool sharedMemory;
   bool importTable;
+  bool importUndefined;
   llvm::Optional<bool> is64;
   bool mergeDataSegments;
   bool pie;
@@ -56,13 +60,18 @@ struct Configuration {
   unsigned ltoo;
   unsigned optimize;
   llvm::StringRef thinLTOJobs;
+  bool ltoNewPassManager;
+  bool ltoDebugPassManager;
+  UnresolvedPolicy unresolvedSymbols;
 
   llvm::StringRef entry;
+  llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef thinLTOCacheDir;
 
   llvm::StringSet<> allowUndefinedSymbols;
   llvm::StringSet<> exportedSymbols;
+  std::vector<llvm::StringRef> requiredExports;
   std::vector<llvm::StringRef> searchPaths;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::Optional<std::vector<std::string>> features;
@@ -72,6 +81,10 @@ struct Configuration {
 
   // True if we are creating position-independent code.
   bool isPic;
+
+  // True if we have an MVP input that uses __indirect_function_table and which
+  // requires it to be allocated to table number 0.
+  bool legacyFunctionTable = false;
 
   // The table offset at which to place function addresses.  We reserve zero
   // for the null function pointer.  This gets set to 1 for executables and 0

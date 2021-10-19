@@ -22,12 +22,10 @@ define internal void @loadFP(double* %d) #0 {
 ; CHECK-NEXT:    paddi r3, 0, .L.str@PCREL, 1
 ; CHECK-NEXT:    bl printf@notoc
 ; CHECK-NEXT:    ld r4, 104(r1)
-; CHECK-NEXT:    lis r5, 16403
-; CHECK-NEXT:    ori r5, r5, 62914
-; CHECK-NEXT:    sldi r5, r5, 32
-; CHECK-NEXT:    oris r5, r5, 36700
-; CHECK-NEXT:    ori r5, r5, 10486
-; CHECK-NEXT:    std r5, 0(r4)
+; CHECK-NEXT:    pli r5, 1075049922
+; CHECK-NEXT:    pli r3, 2405181686
+; CHECK-NEXT:    rldimi r3, r5, 32, 0
+; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -50,16 +48,14 @@ define internal void @loadGV() #0 {
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -112(r1)
+; CHECK-NEXT:    stdu r1, -96(r1)
 ; CHECK-NEXT:    paddi r3, 0, .L.str.1@PCREL, 1
 ; CHECK-NEXT:    bl printf@notoc
-; CHECK-NEXT:    pld r4, stdout@got@pcrel(0), 1
-; CHECK-NEXT:    ld r4, 0(r4)
-; CHECK-NEXT:    li r5, 97
-; CHECK-NEXT:    std r3, 104(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr r3, r5
+; CHECK-NEXT:    pld r3, stdout@got@pcrel(0), 1
+; CHECK-NEXT:    ld r4, 0(r3)
+; CHECK-NEXT:    li r3, 97
 ; CHECK-NEXT:    bl _IO_putc@notoc
-; CHECK-NEXT:    addi r1, r1, 112
+; CHECK-NEXT:    addi r1, r1, 96
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr

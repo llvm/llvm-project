@@ -39,10 +39,8 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     // Check if software floating point is enabled
-    auto Feature = llvm::find(Features, "+soft-float");
-    if (Feature != Features.end()) {
+    if (llvm::is_contained(Features, "+soft-float"))
       SoftFloat = true;
-    }
     return true;
   }
   void getTargetDefines(const LangOptions &Opts,
@@ -166,10 +164,15 @@ public:
       PtrDiffType = SignedLong;
       break;
     }
-    // Up to 32 bits are lock-free atomic, but we're willing to do atomic ops
-    // on up to 64 bits.
+    // Up to 32 bits (V8) or 64 bits (V9) are lock-free atomic, but we're
+    // willing to do atomic ops on up to 64 bits.
     MaxAtomicPromoteWidth = 64;
-    MaxAtomicInlineWidth = 32;
+    if (getCPUGeneration(CPU) == CG_V9)
+      MaxAtomicInlineWidth = 64;
+    else
+      // FIXME: This isn't correct for plain V8 which lacks CAS,
+      // only for LEON 3+ and Myriad.
+      MaxAtomicInlineWidth = 32;
   }
 
   void getTargetDefines(const LangOptions &Opts,

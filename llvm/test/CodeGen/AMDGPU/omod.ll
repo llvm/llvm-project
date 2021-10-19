@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VI %s
 
-; IEEE bit enabled for compute kernel, no shouldn't use.
+; IEEE bit enabled for compute kernel, so shouldn't use.
 ; GCN-LABEL: {{^}}v_omod_div2_f32_enable_ieee_signed_zeros:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
@@ -17,7 +17,23 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_signed_zeros(float addrsp
   ret void
 }
 
-; IEEE bit enabled for compute kernel, no shouldn't use even though nsz is allowed
+; IEEE bit enabled for compute kernel, so shouldn't use.
+; GCN-LABEL: {{^}}v_omod_div2_f64_enable_ieee_signed_zeros:
+; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
+; GCN: v_add_f64 [[ADD:v\[[0-9]+:[0-9]+\]]], [[A]], 1.0{{$}}
+; GCN: v_mul_f64 v{{\[[0-9]+:[0-9]+\]}}, [[ADD]], 0.5{{$}}
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_signed_zeros(double addrspace(1)* %out, double addrspace(1)* %aptr) #4 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %a = load double, double addrspace(1)* %gep0
+  %add = fadd double %a, 1.0
+  %div2 = fmul double %add, 0.5
+  store double %div2, double addrspace(1)* %out.gep
+  ret void
+}
+
+; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed
 ; GCN-LABEL: {{^}}v_omod_div2_f32_enable_ieee_nsz:
 ; GCN: {{buffer|flat}}_load_dword [[A:v[0-9]+]]
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, [[A]]{{$}}
@@ -33,6 +49,22 @@ define amdgpu_kernel void @v_omod_div2_f32_enable_ieee_nsz(float addrspace(1)* %
   ret void
 }
 
+; IEEE bit enabled for compute kernel, so shouldn't use even though nsz is allowed.
+; GCN-LABEL: {{^}}v_omod_div2_f64_enable_ieee_nsz:
+; GCN: {{buffer|flat}}_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]]
+; GCN: v_add_f64 [[ADD:v\[[0-9]+:[0-9]+\]]], [[A]], 1.0{{$}}
+; GCN: v_mul_f64 v{{\[[0-9]+:[0-9]+\]}}, [[ADD]], 0.5{{$}}
+define amdgpu_kernel void @v_omod_div2_f64_enable_ieee_nsz(double addrspace(1)* %out, double addrspace(1)* %aptr) #5 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr double, double addrspace(1)* %out, i32 %tid
+  %a = load double, double addrspace(1)* %gep0
+  %add = fadd double %a, 1.0
+  %div2 = fmul double %add, 0.5
+  store double %div2, double addrspace(1)* %out.gep
+  ret void
+}
+
 ; Only allow without IEEE bit if signed zeros are significant.
 ; GCN-LABEL: {{^}}v_omod_div2_f32_signed_zeros:
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, v0{{$}}
@@ -41,6 +73,17 @@ define amdgpu_ps void @v_omod_div2_f32_signed_zeros(float %a) #4 {
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 0.5
   store float %div2, float addrspace(1)* undef
+  ret void
+}
+
+; Only allow without IEEE bit if signed zeros are significant.
+; GCN-LABEL: {{^}}v_omod_div2_f64_signed_zeros:
+; GCN: v_add_f64 [[ADD:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, 1.0{{$}}
+; GCN: v_mul_f64 v{{\[[0-9]+:[0-9]+\]}}, [[ADD]], 0.5{{$}}
+define amdgpu_ps void @v_omod_div2_f64_signed_zeros(double %a) #4 {
+  %add = fadd double %a, 1.0
+  %div2 = fmul double %add, 0.5
+  store double %div2, double addrspace(1)* undef
   ret void
 }
 
@@ -53,6 +96,15 @@ define amdgpu_ps void @v_omod_div2_f32(float %a) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_omod_div2_f64:
+; GCN: v_add_f64  v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 1.0 div:2{{$}}
+define amdgpu_ps void @v_omod_div2_f64(double %a) #5 {
+  %add = fadd nsz double %a, 1.0
+  %div2 = fmul nsz double %add, 0.5
+  store double %div2, double addrspace(1)* undef
+  ret void
+}
+
 ; GCN-LABEL: {{^}}v_omod_mul2_f32:
 ; GCN: v_add_f32_e64 v{{[0-9]+}}, v0, 1.0 mul:2{{$}}
 define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
@@ -62,12 +114,30 @@ define amdgpu_ps void @v_omod_mul2_f32(float %a) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_omod_mul2_f64:
+; GCN: v_add_f64  v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 1.0 mul:2{{$}}
+define amdgpu_ps void @v_omod_mul2_f64(double %a) #5 {
+  %add = fadd nsz double %a, 1.0
+  %div2 = fmul nsz double %add, 2.0
+  store double %div2, double addrspace(1)* undef
+  ret void
+}
+
 ; GCN-LABEL: {{^}}v_omod_mul4_f32:
 ; GCN: v_add_f32_e64 v{{[0-9]+}}, v0, 1.0 mul:4{{$}}
 define amdgpu_ps void @v_omod_mul4_f32(float %a) #0 {
   %add = fadd float %a, 1.0
   %div2 = fmul float %add, 4.0
   store float %div2, float addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_omod_mul4_f64:
+; GCN: v_add_f64  v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, 1.0 mul:4{{$}}
+define amdgpu_ps void @v_omod_mul4_f64(double %a) #5 {
+  %add = fadd nsz double %a, 1.0
+  %div2 = fmul nsz double %add, 4.0
+  store double %div2, double addrspace(1)* undef
   ret void
 }
 
@@ -207,6 +277,17 @@ define amdgpu_ps void @v_omod_div2_f32_denormals(float %a) #2 {
   ret void
 }
 
+; Don't fold omod if denorms enabled.
+; GCN-LABEL: {{^}}v_omod_div2_f64_denormals:
+; GCN: v_add_f64 [[ADD:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, 1.0{{$}}
+; GCN: v_mul_f64 v{{\[[0-9]+:[0-9]+\]}}, [[ADD]], 0.5{{$}}
+define amdgpu_ps void @v_omod_div2_f64_denormals(double %a) #6 {
+  %add = fadd double %a, 1.0
+  %div2 = fmul double %add, 0.5
+  store double %div2, double addrspace(1)* undef
+  ret void
+}
+
 ; Don't fold omod if denorms enabled for add form.
 ; GCN-LABEL: {{^}}v_omod_mul2_f32_denormals:
 ; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 1.0, v0{{$}}
@@ -215,6 +296,17 @@ define amdgpu_ps void @v_omod_mul2_f32_denormals(float %a) #2 {
   %add = fadd float %a, 1.0
   %mul2 = fadd float %add, %add
   store float %mul2, float addrspace(1)* undef
+  ret void
+}
+
+; Don't fold omod if denorms enabled for add form.
+; GCN-LABEL: {{^}}v_omod_mul2_f64_denormals:
+; GCN: v_add_f64 [[ADD:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, 1.0{{$}}
+; GCN: v_add_f64 v{{\[[0-9]+:[0-9]+\]}}, [[ADD]], [[ADD]]{{$}}
+define amdgpu_ps void @v_omod_mul2_f64_denormals(double %a) #2 {
+  %add = fadd double %a, 1.0
+  %mul2 = fadd double %add, %add
+  store double %mul2, double addrspace(1)* undef
   ret void
 }
 
@@ -280,6 +372,8 @@ attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
 attributes #3 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "no-signed-zeros-fp-math"="true" }
 attributes #4 = { nounwind "no-signed-zeros-fp-math"="false" }
+attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" "no-signed-zeros-fp-math"="true" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

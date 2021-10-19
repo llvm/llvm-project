@@ -91,6 +91,40 @@ A:
   ret i32 %6
 }
 
+define dso_local i32 @test4a(i32* readonly %0, i1 %cond) {
+; CHECK-LABEL: @test4a(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP0:%.*]], i32 4), "align"(i32* [[TMP0]], i32 8) ]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[A]]
+; CHECK:       A:
+; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP2:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 8
+; CHECK-NEXT:    br label [[TMP4]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ 0, [[A]] ]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  call void @llvm.assume(i1 true) ["dereferenceable"(i32* %0, i32 4), "align"(i32* %0, i32 8)]
+  br i1 %cond, label %A, label %B
+
+B:
+  br label %A
+
+A:
+  %2 = icmp eq i32* %0, null
+  br i1 %2, label %5, label %3
+
+3:                                                ; preds = %1
+  %4 = load i32, i32* %0, align 4
+  br label %5
+
+5:                                                ; preds = %1, %3
+  %6 = phi i32 [ %4, %3 ], [ 0, %A ]
+  ret i32 %6
+}
+
 define dso_local i32 @test4b(i32* readonly %0, i1 %cond) null_pointer_is_valid {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[TMP0:%.*]], i32 4) ]

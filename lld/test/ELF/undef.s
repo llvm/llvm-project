@@ -27,9 +27,7 @@
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x15)
 # CHECK-NEXT: >>> the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
 
-# Check that this symbol isn't demangled
-
-# CHECK:      error: undefined symbol: __Z3fooi
+# CHECK:      error: undefined symbol: foo(int)
 # CHECK-NEXT: >>> referenced by undef.s
 # CHECK-NEXT: >>>               {{.*}}:(.text+0x1A)
 

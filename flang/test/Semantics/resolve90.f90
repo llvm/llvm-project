@@ -1,10 +1,13 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Testing for pointer constant, along with :
 ! C751 A component shall not have both the ALLOCATABLE and POINTER attributes.
 ! C752 If the CONTIGUOUS attribute is specified, the component shall be an 
 !   array with the POINTER attribute.
 ! C753 The * char-length option is permitted only if the component is of type 
 !   character.
 subroutine s()
+  !ERROR: 'nullint' may not have both the POINTER and PARAMETER attributes
+  integer, pointer, parameter :: nullint => null()
   type derivedType
     !ERROR: 'pointerallocatablefield' may not have both the POINTER and ALLOCATABLE attributes
     real, pointer, allocatable :: pointerAllocatableField

@@ -587,7 +587,8 @@ enum kmp_lock_kind {
 #endif
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
   lk_hle,
-  lk_rtm,
+  lk_rtm_queuing,
+  lk_rtm_spin,
 #endif
   lk_ticket,
   lk_queuing,
@@ -654,9 +655,8 @@ extern int (*__kmp_acquire_user_lock_with_checks_)(kmp_user_lock_p lck,
       KMP_INIT_YIELD(spins);                                                   \
       do {                                                                     \
         KMP_YIELD_OVERSUB_ELSE_SPIN(spins);                                    \
-      } while (                                                                \
-          lck->tas.lk.poll != 0 ||                                             \
-          !__kmp_atomic_compare_store_acq(&lck->tas.lk.poll, 0, gtid + 1));    \
+      } while (lck->tas.lk.poll != 0 || !__kmp_atomic_compare_store_acq(       \
+                                            &lck->tas.lk.poll, 0, gtid + 1));  \
     }                                                                          \
     KMP_FSYNC_ACQUIRED(lck);                                                   \
   } else {                                                                     \
@@ -1041,19 +1041,19 @@ extern void __kmp_cleanup_user_locks();
 // All nested locks are indirect lock types.
 #if KMP_USE_TSX
 #if KMP_USE_FUTEX
-#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a) m(hle, a)
+#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a) m(hle, a) m(rtm_spin, a)
 #define KMP_FOREACH_I_LOCK(m, a)                                               \
-  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm, a)              \
+  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm_queuing, a)      \
       m(nested_tas, a) m(nested_futex, a) m(nested_ticket, a)                  \
           m(nested_queuing, a) m(nested_drdpa, a)
 #else
-#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(hle, a)
+#define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(hle, a) m(rtm_spin, a)
 #define KMP_FOREACH_I_LOCK(m, a)                                               \
-  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm, a)              \
+  m(ticket, a) m(queuing, a) m(adaptive, a) m(drdpa, a) m(rtm_queuing, a)      \
       m(nested_tas, a) m(nested_ticket, a) m(nested_queuing, a)                \
           m(nested_drdpa, a)
 #endif // KMP_USE_FUTEX
-#define KMP_LAST_D_LOCK lockseq_hle
+#define KMP_LAST_D_LOCK lockseq_rtm_spin
 #else
 #if KMP_USE_FUTEX
 #define KMP_FOREACH_D_LOCK(m, a) m(tas, a) m(futex, a)
@@ -1217,22 +1217,41 @@ extern kmp_lock_flags_t (*__kmp_indirect_get_flags[KMP_NUM_I_LOCKS])(
        ? __kmp_indirect_get_flags[(lck)->type]((lck)->lock)                    \
        : NULL)
 
-#define KMP_I_LOCK_CHUNK                                                       \
-  1024 // number of kmp_indirect_lock_t objects to be allocated together
+// number of kmp_indirect_lock_t objects to be allocated together
+#define KMP_I_LOCK_CHUNK 1024
+// Keep at a power of 2 since it is used in multiplication & division
+KMP_BUILD_ASSERT(KMP_I_LOCK_CHUNK % 2 == 0);
+// number of row entries in the initial lock table
+#define KMP_I_LOCK_TABLE_INIT_NROW_PTRS 8
 
 // Lock table for indirect locks.
 typedef struct kmp_indirect_lock_table {
   kmp_indirect_lock_t **table; // blocks of indirect locks allocated
-  kmp_lock_index_t size; // size of the indirect lock table
+  kmp_uint32 nrow_ptrs; // number *table pointer entries in table
   kmp_lock_index_t next; // index to the next lock to be allocated
+  struct kmp_indirect_lock_table *next_table;
 } kmp_indirect_lock_table_t;
 
 extern kmp_indirect_lock_table_t __kmp_i_lock_table;
 
 // Returns the indirect lock associated with the given index.
-#define KMP_GET_I_LOCK(index)                                                  \
-  (*(__kmp_i_lock_table.table + (index) / KMP_I_LOCK_CHUNK) +                  \
-   (index) % KMP_I_LOCK_CHUNK)
+// Returns nullptr if no lock at given index
+static inline kmp_indirect_lock_t *__kmp_get_i_lock(kmp_lock_index_t idx) {
+  kmp_indirect_lock_table_t *lock_table = &__kmp_i_lock_table;
+  while (lock_table) {
+    kmp_lock_index_t max_locks = lock_table->nrow_ptrs * KMP_I_LOCK_CHUNK;
+    if (idx < max_locks) {
+      kmp_lock_index_t row = idx / KMP_I_LOCK_CHUNK;
+      kmp_lock_index_t col = idx % KMP_I_LOCK_CHUNK;
+      if (!lock_table->table[row] || idx >= lock_table->next)
+        break;
+      return &lock_table->table[row][col];
+    }
+    idx -= max_locks;
+    lock_table = lock_table->next_table;
+  }
+  return nullptr;
+}
 
 // Number of locks in a lock block, which is fixed to "1" now.
 // TODO: No lock block implementation now. If we do support, we need to manage
@@ -1241,8 +1260,9 @@ extern int __kmp_num_locks_in_block;
 
 // Fast lock table lookup without consistency checking
 #define KMP_LOOKUP_I_LOCK(l)                                                   \
-  ((OMP_LOCK_T_SIZE < sizeof(void *)) ? KMP_GET_I_LOCK(KMP_EXTRACT_I_INDEX(l)) \
-                                      : *((kmp_indirect_lock_t **)(l)))
+  ((OMP_LOCK_T_SIZE < sizeof(void *))                                          \
+       ? __kmp_get_i_lock(KMP_EXTRACT_I_INDEX(l))                              \
+       : *((kmp_indirect_lock_t **)(l)))
 
 // Used once in kmp_error.cpp
 extern kmp_int32 __kmp_get_user_lock_owner(kmp_user_lock_p, kmp_uint32);

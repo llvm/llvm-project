@@ -84,6 +84,9 @@ class Driver {
   /// LTO mode selected via -f(no-)?lto(=.*)? options.
   LTOKind LTOMode;
 
+  /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
+  LTOKind OffloadLTOMode;
+
 public:
   enum OpenMPRuntimeKind {
     /// An unknown OpenMP runtime. We can't generate effective OpenMP code
@@ -156,14 +159,17 @@ public:
   /// Information about the host which can be overridden by the user.
   std::string HostBits, HostMachine, HostSystem, HostRelease;
 
+  /// The file to log CC_PRINT_PROC_STAT_FILE output to, if enabled.
+  std::string CCPrintStatReportFilename;
+
   /// The file to log CC_PRINT_OPTIONS output to, if enabled.
-  const char *CCPrintOptionsFilename;
+  std::string CCPrintOptionsFilename;
 
   /// The file to log CC_PRINT_HEADERS output to, if enabled.
-  const char *CCPrintHeadersFilename;
+  std::string CCPrintHeadersFilename;
 
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
-  const char *CCLogDiagnosticsFilename;
+  std::string CCLogDiagnosticsFilename;
 
   /// A list of inputs and their types for the given arguments.
   typedef SmallVector<std::pair<types::ID, const llvm::opt::Arg *>, 16>
@@ -204,6 +210,10 @@ public:
   /// Whether the driver is generating diagnostics for debugging purposes.
   unsigned CCGenDiagnostics : 1;
 
+  /// Set CC_PRINT_PROC_STAT mode, which causes the driver to dump
+  /// performance report to CC_PRINT_PROC_STAT_FILE or to stdout.
+  unsigned CCPrintProcessStats : 1;
+
   /// Pointer to the ExecuteCC1Tool function, if available.
   /// When the clangDriver lib is used through clang.exe, this provides a
   /// shortcut for executing the -cc1 command-line directly, in the same
@@ -243,6 +253,14 @@ public:
   /// or when using the -gen-reproducer driver flag.
   unsigned GenReproducer : 1;
 
+  // getFinalPhase - Determine which compilation mode we are in and record
+  // which option we used to determine the final phase.
+  // TODO: Much of what getFinalPhase returns are not actually true compiler
+  //       modes. Fold this functionality into Types::getCompilationPhases and
+  //       handleArguments.
+  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
+                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
+
 private:
   /// Certain options suppress the 'no input files' warning.
   unsigned SuppressMissingInputWarning : 1;
@@ -259,14 +277,6 @@ private:
   /// arguments, after applying the standard argument translations.
   llvm::opt::DerivedArgList *
   TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
-
-  // getFinalPhase - Determine which compilation mode we are in and record
-  // which option we used to determine the final phase.
-  // TODO: Much of what getFinalPhase returns are not actually true compiler
-  //       modes. Fold this functionality into Types::getCompilationPhases and
-  //       handleArguments.
-  phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
-                           llvm::opt::Arg **FinalPhaseArg = nullptr) const;
 
   // handleArguments - All code related to claiming and printing diagnostics
   // related to arguments to the driver are done here.
@@ -301,7 +311,7 @@ public:
                                       StringRef CustomResourceDir = "");
 
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
-         DiagnosticsEngine &Diags,
+         DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// @name Accessors
@@ -314,7 +324,7 @@ public:
 
   const llvm::opt::OptTable &getOpts() const { return getDriverOptTable(); }
 
-  const DiagnosticsEngine &getDiags() const { return Diags; }
+  DiagnosticsEngine &getDiags() const { return Diags; }
 
   llvm::vfs::FileSystem &getVFS() const { return *VFS; }
 
@@ -369,12 +379,6 @@ public:
   /// indicate an error condition, the diagnostics should be queried
   /// to determine if an error occurred.
   Compilation *BuildCompilation(ArrayRef<const char *> Args);
-
-  /// @name Driver Steps
-  /// @{
-
-  /// ParseDriverMode - Look for and handle the driver mode option in Args.
-  void ParseDriverMode(StringRef ProgramName, ArrayRef<const char *> Args);
 
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
@@ -552,10 +556,14 @@ public:
   bool ShouldEmitStaticLibrary(const llvm::opt::ArgList &Args) const;
 
   /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO() const { return LTOMode != LTOK_None; }
+  bool isUsingLTO(bool IsOffload = false) const {
+    return getLTOMode(IsOffload) != LTOK_None;
+  }
 
   /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode() const { return LTOMode; }
+  LTOKind getLTOMode(bool IsOffload = false) const {
+    return IsOffload ? OffloadLTOMode : LTOMode;
+  }
 
 private:
 
@@ -570,9 +578,9 @@ private:
   /// \returns true, if error occurred while reading.
   bool readConfigFile(StringRef FileName);
 
-  /// Set the driver mode (cl, gcc, etc) from an option string of the form
-  /// --driver-mode=<mode>.
-  void setDriverModeFromOption(StringRef Opt);
+  /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
+  /// option.
+  void setDriverMode(StringRef DriverModeValue);
 
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
@@ -631,6 +639,16 @@ bool isOptimizationLevelFast(const llvm::opt::ArgList &Args);
 
 /// \return True if the argument combination will end up generating remarks.
 bool willEmitRemarks(const llvm::opt::ArgList &Args);
+
+/// Returns the driver mode option's value, i.e. `X` in `--driver-mode=X`. If \p
+/// Args doesn't mention one explicitly, tries to deduce from `ProgName`.
+/// Returns empty on failure.
+/// Common values are "gcc", "g++", "cpp", "cl" and "flang". Returned value need
+/// not be one of these.
+llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
+
+/// Checks whether the value produced by getDriverMode is for CL mode.
+bool IsClangCL(StringRef DriverMode);
 
 } // end namespace driver
 } // end namespace clang

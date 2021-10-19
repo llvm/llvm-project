@@ -1,4 +1,5 @@
-; RUN: opt -analyze -module-debuginfo < %s | FileCheck %s
+; RUN: opt -passes='print<module-debuginfo>' -disable-output 2>&1 < %s \
+; RUN:   | FileCheck %s
 
 ; Verify that both compile units, even though one compile units's functions
 ; were entirely inlined into the other.

@@ -77,7 +77,7 @@ bb3:                                              ; preds = %bb2
   %tmp60 = fadd <4 x float> %tmp59, undef
   %tmp61 = fadd <4 x float> %tmp60, zeroinitializer
   %tmp62 = load void (i8*, i8*)*, void (i8*, i8*)** undef, align 4
-  call arm_aapcs_vfpcc  void %tmp62(i8* sret undef, i8* undef) nounwind
+  call arm_aapcs_vfpcc  void %tmp62(i8* sret(i8) undef, i8* undef) nounwind
   %tmp63 = bitcast <4 x float> %tmp46 to i128
   %tmp64 = bitcast <4 x float> %tmp54 to i128
   %tmp65 = bitcast <4 x float> %tmp61 to i128
@@ -93,7 +93,7 @@ bb3:                                              ; preds = %bb2
   %tmp75 = insertvalue [8 x i64] %tmp74, i64 undef, 5
   %tmp76 = insertvalue [8 x i64] %tmp75, i64 undef, 6
   %tmp77 = insertvalue [8 x i64] %tmp76, i64 undef, 7
-  call arm_aapcs_vfpcc  void @bar(i8* sret null, [8 x i64] %tmp77) nounwind
+  call arm_aapcs_vfpcc  void @bar(i8* sret(i8) null, [8 x i64] %tmp77) nounwind
   %tmp78 = call arm_aapcs_vfpcc  i8* null(i8* null) nounwind
   %tmp79 = bitcast i8* %tmp78 to i512*
   %tmp80 = load i512, i512* %tmp79, align 16
@@ -115,4 +115,4 @@ bb92:                                             ; preds = %bb2
   ret void
 }
 
-declare arm_aapcs_vfpcc void @bar(i8* noalias nocapture sret, [8 x i64]) nounwind uwtable inlinehint
+declare arm_aapcs_vfpcc void @bar(i8* noalias nocapture sret(i8), [8 x i64]) nounwind uwtable inlinehint

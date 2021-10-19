@@ -1,4 +1,5 @@
 ; RUN: llc -debug-entry-values -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -filetype=asm -o - %s | FileCheck %s
 
 ; The q0 register does not have a DWARF register number, and is instead emitted
 ; as a composite location description with two sub-registers. Previously we

@@ -350,8 +350,7 @@ static enum BaseType getBaseType(const Value *Val) {
     // Push all the incoming values of phi node into the worklist for
     // processing.
     if (const auto *PN = dyn_cast<PHINode>(V)) {
-      for (Value *InV: PN->incoming_values())
-        Worklist.push_back(InV);
+      append_range(Worklist, PN->incoming_values());
       continue;
     }
     if (const auto *SI = dyn_cast<SelectInst>(V)) {
@@ -561,8 +560,7 @@ GCPtrTracker::GCPtrTracker(const Function &F, const DominatorTree &DT,
 }
 
 BasicBlockState *GCPtrTracker::getBasicBlockState(const BasicBlock *BB) {
-  auto it = BlockMap.find(BB);
-  return it != BlockMap.end() ? it->second : nullptr;
+  return BlockMap.lookup(BB);
 }
 
 const BasicBlockState *GCPtrTracker::getBasicBlockState(

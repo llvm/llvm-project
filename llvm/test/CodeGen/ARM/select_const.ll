@@ -137,23 +137,21 @@ define i32 @select_1_or_0_signext(i1 signext %cond) {
 define i32 @select_0_or_neg1(i1 %cond) {
 ; ARM-LABEL: select_0_or_neg1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r1, #1
-; ARM-NEXT:    bic r0, r1, r0
-; ARM-NEXT:    rsb r0, r0, #0
+; ARM-NEXT:    and r0, r0, #1
+; ARM-NEXT:    sub r0, r0, #1
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB2-LABEL: select_0_or_neg1:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    movs r1, #1
-; THUMB2-NEXT:    bic.w r0, r1, r0
-; THUMB2-NEXT:    rsbs r0, r0, #0
+; THUMB2-NEXT:    and r0, r0, #1
+; THUMB2-NEXT:    subs r0, #1
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMB-LABEL: select_0_or_neg1:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    bics r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    ands r1, r0
+; THUMB-NEXT:    subs r0, r1, #1
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -162,21 +160,17 @@ define i32 @select_0_or_neg1(i1 %cond) {
 define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 ; ARM-LABEL: select_0_or_neg1_zeroext:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    eor r0, r0, #1
-; ARM-NEXT:    rsb r0, r0, #0
+; ARM-NEXT:    sub r0, r0, #1
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB2-LABEL: select_0_or_neg1_zeroext:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    eor r0, r0, #1
-; THUMB2-NEXT:    rsbs r0, r0, #0
+; THUMB2-NEXT:    subs r0, #1
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMB-LABEL: select_0_or_neg1_zeroext:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    eors r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    subs r0, r0, #1
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -764,3 +758,52 @@ define i64 @opaque_constant2(i1 %cond, i64 %x) {
   ret i64 %bo
 }
 
+define i64 @func(i64 %arg) {
+; ARM-LABEL: func:
+; ARM:       @ %bb.0: @ %entry
+; ARM-NEXT:    adds r0, r0, #1
+; ARM-NEXT:    mov r2, #0
+; ARM-NEXT:    adcs r0, r1, #0
+; ARM-NEXT:    mov r1, #0
+; ARM-NEXT:    adcs r0, r2, #0
+; ARM-NEXT:    movne r0, #8
+; ARM-NEXT:    mov pc, lr
+;
+; THUMB2-LABEL: func:
+; THUMB2:       @ %bb.0: @ %entry
+; THUMB2-NEXT:    adds r0, #1
+; THUMB2-NEXT:    mov.w r2, #0
+; THUMB2-NEXT:    adcs r0, r1, #0
+; THUMB2-NEXT:    mov.w r1, #0
+; THUMB2-NEXT:    adcs r0, r2, #0
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    movne r0, #8
+; THUMB2-NEXT:    bx lr
+;
+; THUMB-LABEL: func:
+; THUMB:       @ %bb.0: @ %entry
+; THUMB-NEXT:    .save {r4, lr}
+; THUMB-NEXT:    push {r4, lr}
+; THUMB-NEXT:    movs r2, #0
+; THUMB-NEXT:    adds r3, r0, #1
+; THUMB-NEXT:    push {r1}
+; THUMB-NEXT:    pop {r3}
+; THUMB-NEXT:    adcs r3, r2
+; THUMB-NEXT:    push {r2}
+; THUMB-NEXT:    pop {r3}
+; THUMB-NEXT:    adcs r3, r2
+; THUMB-NEXT:    subs r4, r3, #1
+; THUMB-NEXT:    adds r0, r0, #1
+; THUMB-NEXT:    adcs r1, r2
+; THUMB-NEXT:    sbcs r3, r4
+; THUMB-NEXT:    lsls r0, r3, #3
+; THUMB-NEXT:    movs r1, r2
+; THUMB-NEXT:    pop {r4}
+; THUMB-NEXT:    pop {r2}
+; THUMB-NEXT:    bx r2
+entry:
+  %0 = add i64 %arg, 1
+  %1 = icmp ult i64 %0, 1
+  %2 = select i1 %1, i64 8, i64 0
+  ret i64 %2
+}

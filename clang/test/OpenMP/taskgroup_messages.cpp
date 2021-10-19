@@ -71,7 +71,7 @@ int foo() {
     foo();
   }
 
-#pragma omp taskgroup init // expected-warning {{extra tokens at the end of '#pragma omp taskgroup' are ignored}}
+#pragma omp taskgroup initi // expected-warning {{extra tokens at the end of '#pragma omp taskgroup' are ignored}}
   ;
   return 0;
 }

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 module m1
   implicit none
@@ -6,7 +6,7 @@ module m1
     integer :: n
   end type
   type t2
-    ! t and t2 must be resolved to types in m, not components in t2
+    ! t and t2 must be resolved to types in m1, not components in t2
     type(t) :: t(10) = t(1)
     type(t) :: x = t(1)
     integer :: t2

@@ -91,7 +91,7 @@ public:
   //  `-ImplicitCastExpr
   //  (possibly `-UnaryOperator Deref)
   //        `-CXXThisExpr 'S *' this
-  bool VisitUser(const ImplicitCastExpr *Cast) {
+  bool visitUser(const ImplicitCastExpr *Cast) {
     if (Cast->getCastKind() != CK_NoOp)
       return false; // Stop traversal.
 
@@ -115,14 +115,14 @@ public:
 
     // ((const S*)this)->Member
     if (const auto *Member = dyn_cast<MemberExpr>(Parent))
-      return VisitUser(Member, /*OnConstObject=*/true);
+      return visitUser(Member, /*OnConstObject=*/true);
 
     return false; // Stop traversal.
   }
 
   // If OnConstObject is true, then this is a MemberExpr using
   // a constant this, i.e. 'const S' or 'const S *'.
-  bool VisitUser(const MemberExpr *Member, bool OnConstObject) {
+  bool visitUser(const MemberExpr *Member, bool OnConstObject) {
     if (Member->isBoundMemberFunction(Ctxt)) {
       if (!OnConstObject || Member->getFoundDecl().getAccess() != AS_public) {
         // Non-public non-static member functions might not preserve the
@@ -159,7 +159,7 @@ public:
     }
 
     if (const auto *M = dyn_cast_or_null<MemberExpr>(Parent))
-      return VisitUser(M, /*OnConstObject=*/false);
+      return visitUser(M, /*OnConstObject=*/false);
 
     return false; // Stop traversal.
   }
@@ -182,7 +182,7 @@ public:
     //  ((const S*)this)->f()
     // when 'f' is a public member function.
     if (const auto *Cast = dyn_cast_or_null<ImplicitCastExpr>(Parent)) {
-      if (VisitUser(Cast))
+      if (visitUser(Cast))
         return true;
 
       // And it's also okay to
@@ -190,7 +190,7 @@ public:
       //   (LValueToRValue)(S->t)
       // when 't' is either of builtin type or a public member.
     } else if (const auto *Member = dyn_cast_or_null<MemberExpr>(Parent)) {
-      if (VisitUser(Member, /*OnConstObject=*/false))
+      if (visitUser(Member, /*OnConstObject=*/false))
         return true;
     }
 
@@ -212,7 +212,7 @@ AST_MATCHER(CXXMethodDecl, usesThisAsConst) {
 void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxMethodDecl(
               isDefinition(), isUserProvided(),
               unless(anyOf(
@@ -248,7 +248,7 @@ void MakeMemberFunctionConstCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Definition = Result.Nodes.getNodeAs<CXXMethodDecl>("x");
 
-  auto Declaration = Definition->getCanonicalDecl();
+  const auto *Declaration = Definition->getCanonicalDecl();
 
   auto Diag = diag(Definition->getLocation(), "method %0 can be made const")
               << Definition

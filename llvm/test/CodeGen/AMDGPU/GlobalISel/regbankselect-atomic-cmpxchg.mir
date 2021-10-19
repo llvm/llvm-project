@@ -16,11 +16,11 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
     ; CHECK: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p1), [[COPY4]], [[COPY5]] :: (load store seq_cst 4, addrspace 1)
+    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p1), [[COPY4]], [[COPY5]] :: (load store seq_cst (s32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst 4, addrspace 1)
+    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 1)
 ...
 
 ---
@@ -37,11 +37,11 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(p0) = COPY [[COPY]](p0)
     ; CHECK: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p0), [[COPY4]], [[COPY5]] :: (load store seq_cst 4)
+    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p0), [[COPY4]], [[COPY5]] :: (load store seq_cst (s32))
     %0:_(p0) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst 4, addrspace 0)
+    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 0)
 ...
 
 ---
@@ -58,9 +58,9 @@ body: |
     ; CHECK: [[COPY3:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
     ; CHECK: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p3), [[COPY4]], [[COPY5]] :: (load store seq_cst 4, addrspace 3)
+    ; CHECK: [[ATOMIC_CMPXCHG:%[0-9]+]]:vgpr(s32) = G_ATOMIC_CMPXCHG [[COPY3]](p3), [[COPY4]], [[COPY5]] :: (load store seq_cst (s32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst 4, addrspace 3)
+    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 3)
 ...

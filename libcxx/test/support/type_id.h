@@ -9,13 +9,11 @@
 #define SUPPORT_TYPE_ID_H
 
 #include <functional>
-#include <typeinfo>
 #include <string>
 #include <cstdio>
 #include <cassert>
 
 #include "test_macros.h"
-#include "demangle.h"
 
 #if TEST_STD_VER < 11
 #error This header requires C++11 or greater
@@ -30,12 +28,7 @@ struct TypeID {
   {return LHS.m_id != RHS.m_id; }
 
   std::string name() const {
-    return demangle(m_id);
-  }
-
-  void dump() const {
-    std::string s = name();
-    std::printf("TypeID: %s\n", s.c_str());
+    return m_id;
   }
 
 private:
@@ -49,18 +42,15 @@ private:
 };
 
 // makeTypeID - Return the TypeID for the specified type 'T'.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4640) // '%s' construction of local static object is not thread safe (/Zc:threadSafeInit-)
-#endif // _MSC_VER
 template <class T>
 inline TypeID const& makeTypeIDImp() {
-  static const TypeID id(typeid(T).name());
+#ifdef _MSC_VER
+  static const TypeID id(__FUNCSIG__);
+#else
+  static const TypeID id(__PRETTY_FUNCTION__);
+#endif // _MSC_VER
   return id;
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 template <class T>
 struct TypeWrapper {};

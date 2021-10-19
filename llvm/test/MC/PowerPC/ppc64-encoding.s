@@ -241,6 +241,12 @@
 # CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
 # CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
             ldmx 2, 3, 4
+# CHECK-BE: lq 2, 128(4)                    # encoding: [0xe0,0x44,0x00,0x80]
+# CHECK-LE: lq 2, 128(4)                    # encoding: [0x80,0x00,0x44,0xe0]
+            lq 2, 128(4)
+# CHECK-BE: lq 28, 128(30)                  # encoding: [0xe3,0x9e,0x00,0x80]
+# CHECK-LE: lq 28, 128(30)                  # encoding: [0x80,0x00,0x9e,0xe3]
+            lq 28, 128(30)
 
 # Fixed-point store instructions
 
@@ -292,6 +298,12 @@
 # CHECK-BE: stdux 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x6a]
 # CHECK-LE: stdux 2, 3, 4                   # encoding: [0x6a,0x21,0x43,0x7c]
             stdux 2, 3, 4
+# CHECK-BE: stq 2, 128(4)                   # encoding: [0xf8,0x44,0x00,0x82]
+# CHECK-LE: stq 2, 128(4)                   # encoding: [0x82,0x00,0x44,0xf8]
+            stq 2, 128(4)
+# CHECK-BE: stq 28, 128(30)                 # encoding: [0xfb,0x9e,0x00,0x82]
+# CHECK-LE: stq 28, 128(30)                 # encoding: [0x82,0x00,0x9e,0xfb]
+            stq 28, 128(30)
 
 # Fixed-point load and store with byte reversal instructions
 
@@ -404,6 +416,9 @@
 # CHECK-BE: addeo. 2, 3, 4                  # encoding: [0x7c,0x43,0x25,0x15]
 # CHECK-LE: addeo. 2, 3, 4                  # encoding: [0x15,0x25,0x43,0x7c]
             addeo. 2, 3, 4
+# CHECK-BE: addex 2, 4, 5, 0                # encoding: [0x7c,0x44,0x29,0x54]
+# CHECK-LE: addex 2, 4, 5, 0                # encoding: [0x54,0x29,0x44,0x7c]
+            addex 2, 4, 5, 0
 # CHECK-BE: subfe 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x10]
 # CHECK-LE: subfe 2, 3, 4                   # encoding: [0x10,0x21,0x43,0x7c]
             subfe 2, 3, 4
@@ -1053,15 +1068,16 @@
             mfsrin  %r10,%r12
 
 # Copy-Paste Facility
-# CHECK-BE: copy 2, 19, 1                      # encoding: [0x7c,0x22,0x9e,0x0c]
-# CHECK-LE: copy 2, 19, 1                      # encoding: [0x0c,0x9e,0x22,0x7c]
-            copy 2, 19, 1
-# CHECK-BE: paste 17, 1, 1                     # encoding: [0x7c,0x31,0x0f,0x0c]
-# CHECK-LE: paste 17, 1, 1                     # encoding: [0x0c,0x0f,0x31,0x7c]
-            paste 17, 1, 1
-# CHECK-BE: cp_abort                           # encoding: [0x7c,0x00,0x06,0x8c]
-# CHECK-LE: cp_abort                           # encoding: [0x8c,0x06,0x00,0x7c]
-            cp_abort
+# CHECK-BE: copy 2, 19                        # encoding: [0x7c,0x22,0x9e,0x0c]
+# CHECK-LE: copy 2, 19                        # encoding: [0x0c,0x9e,0x22,0x7c]
+            copy 2, 19
+# CHECK-BE: paste. 17, 1                      # encoding: [0x7c,0x31,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1                      # encoding: [0x0d,0x0f,0x31,0x7c]
+            paste. 17, 1, 1
+# CHECK-BE: cpabort                           # encoding: [0x7c,0x00,0x06,0x8c]
+# CHECK-LE: cpabort                           # encoding: [0x8c,0x06,0x00,0x7c]
+            cpabort
+
 
 # Message Synchronize
 # CHECK-BE: msgsync                            # encoding: [0x7c,0x00,0x06,0xec]

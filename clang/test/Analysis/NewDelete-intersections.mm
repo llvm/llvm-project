@@ -24,9 +24,6 @@ extern "C" void *alloca(size_t);
 extern "C" void free(void *);
 
 void testMallocFreeNoWarn() {
-  int i;
-  free(&i); // no warn
-
   int *p1 = (int *)malloc(sizeof(int));
   free(++p1); // no warn
 
@@ -51,7 +48,7 @@ void testDeleteMalloced() {
 
   int *p2 = (int *)__builtin_alloca(sizeof(int));
   delete p2; // no warn
-} 
+}
 
 void testUseZeroAllocatedMalloced() {
   int *p1 = (int *)malloc(0);
@@ -79,13 +76,13 @@ void testObjcFreeNewed() {
 }
 
 void testFreeAfterDelete() {
-  int *p = new int;  
+  int *p = new int;
   delete p;
   free(p); // newdelete-warning{{Use of memory after it is freed}}
 }
 
 void testStandardPlacementNewAfterDelete() {
-  int *p = new int;  
+  int *p = new int;
   delete p;
   p = new (p) int; // newdelete-warning{{Use of memory after it is freed}}
 }

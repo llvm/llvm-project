@@ -15,6 +15,8 @@
 #ifndef LLVM_CLANG_BASIC_MODULE_H
 #define LLVM_CLANG_BASIC_MODULE_H
 
+#include "clang/Basic/DirectoryEntry.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -43,8 +45,6 @@ class raw_ostream;
 
 namespace clang {
 
-class DirectoryEntry;
-class FileEntry;
 class FileManager;
 class LangOptions;
 class TargetInfo;
@@ -133,13 +133,16 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  const void *Umbrella = nullptr;
+  llvm::PointerUnion<const FileEntry *, const DirectoryEntry *> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
 
   /// The name of the umbrella entry, as written in the module map.
   std::string UmbrellaAsWritten;
+
+  // The path to the umbrella entry relative to the root module's \c Directory.
+  std::string UmbrellaRelativeToRootModuleDirectory;
 
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
@@ -160,7 +163,7 @@ private:
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  const FileEntry *ASTFile = nullptr;
+  Optional<FileEntryRef> ASTFile;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
@@ -188,6 +191,7 @@ public:
   /// file.
   struct Header {
     std::string NameAsWritten;
+    std::string PathRelativeToRootModuleDirectory;
     const FileEntry *Entry;
 
     explicit operator bool() { return Entry; }
@@ -197,6 +201,7 @@ public:
   /// file.
   struct DirectoryName {
     std::string NameAsWritten;
+    std::string PathRelativeToRootModuleDirectory;
     const DirectoryEntry *Entry;
 
     explicit operator bool() { return Entry; }
@@ -301,9 +306,6 @@ public:
   /// Whether this module came from a "private" module map, found next
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
-
-  /// Whether Umbrella is a directory or header.
-  unsigned HasUmbrellaDir : 1;
 
   /// Describes the visibility of the various names within a
   /// particular module.
@@ -529,14 +531,14 @@ public:
   }
 
   /// The serialized AST file for this module, if one was created.
-  const FileEntry *getASTFile() const {
+  OptionalFileEntryRefDegradesToFileEntryPtr getASTFile() const {
     return getTopLevelModule()->ASTFile;
   }
 
   /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(const FileEntry *File) {
-    assert((File == nullptr || getASTFile() == nullptr ||
-            getASTFile() == File) && "file path changed");
+  void setASTFile(Optional<FileEntryRef> File) {
+    assert((!File || !getASTFile() || getASTFile() == File) &&
+           "file path changed");
     getTopLevelModule()->ASTFile = File;
   }
 
@@ -547,15 +549,17 @@ public:
   /// Retrieve the header that serves as the umbrella header for this
   /// module.
   Header getUmbrellaHeader() const {
-    if (!HasUmbrellaDir)
-      return Header{UmbrellaAsWritten,
-                    static_cast<const FileEntry *>(Umbrella)};
+    if (auto *FE = Umbrella.dyn_cast<const FileEntry *>())
+      return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
+                    FE};
     return Header{};
   }
 
   /// Determine whether this module has an umbrella directory that is
   /// not based on an umbrella header.
-  bool hasUmbrellaDir() const { return Umbrella && HasUmbrellaDir; }
+  bool hasUmbrellaDir() const {
+    return Umbrella && Umbrella.is<const DirectoryEntry *>();
+  }
 
   /// Add a top-level header associated with this module.
   void addTopHeader(const FileEntry *File);
@@ -639,7 +643,7 @@ public:
   }
 
   /// Print the module map for this module to the given stream.
-  void print(raw_ostream &OS, unsigned Indent = 0) const;
+  void print(raw_ostream &OS, unsigned Indent = 0, bool Dump = false) const;
 
   /// Dump the contents of this module to the given output stream.
   void dump() const;

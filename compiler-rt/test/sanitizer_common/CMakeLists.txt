@@ -2,10 +2,6 @@ set(SANITIZER_COMMON_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(SANITIZER_COMMON_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 
-if(CMAKE_HOST_UNIX)
-  list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerLintCheck)
-endif()
-
 set(SANITIZER_COMMON_TESTSUITES)
 
 # FIXME(dliew): We should switch to COMPILER_RT_SANITIZERS_TO_BUILD instead of
@@ -65,6 +61,9 @@ foreach(tool ${SUPPORTED_TOOLS})
   if(${tool} STREQUAL "asan")
     list(REMOVE_ITEM TEST_ARCH sparc sparcv9)
   endif()
+  if(OS_NAME MATCHES "SunOS" AND ${tool} STREQUAL "asan")
+    list(REMOVE_ITEM TEST_ARCH x86_64)
+  endif()
 
   # TODO(dliew): We should iterate over the different
   # Apple platforms, not just macOS.
@@ -73,10 +72,22 @@ foreach(tool ${SUPPORTED_TOOLS})
     set(SANITIZER_COMMON_TEST_TARGET_ARCH ${arch})
     get_test_cc_for_arch(${arch} SANITIZER_COMMON_TEST_TARGET_CC SANITIZER_COMMON_TEST_TARGET_CFLAGS)
     set(CONFIG_NAME ${tool}-${arch}-${OS_NAME})
+
+    # ARM on Linux might use the slow unwinder as default and the unwind table is
+    # required to get a complete stacktrace.
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID)
+      list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS -funwind-tables)
+      if(CMAKE_SYSROOT)
+        list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS "--sysroot=${CMAKE_SYSROOT}")
+      endif()
+      string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS
+                             "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
+    endif()
+
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
-    # FIXME(dliew): LSan i386 on Darwin is completly broken right now.
+    # FIXME(dliew): LSan i386 on Darwin is completely broken right now.
     # so don't run the tests by default.
     if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
              ${tool} STREQUAL "lsan" AND

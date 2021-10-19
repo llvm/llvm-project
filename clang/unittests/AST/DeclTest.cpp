@@ -75,7 +75,7 @@ TEST(Decl, AsmLabelAttr) {
   auto AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
   ASTContext &Ctx = AST->getASTContext();
-  assert(Ctx.getTargetInfo().getDataLayout().getGlobalPrefix() &&
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
          "Expected target to have a global prefix");
   DiagnosticsEngine &Diags = AST->getDiagnostics();
 
@@ -103,4 +103,38 @@ TEST(Decl, AsmLabelAttr) {
 
   ASSERT_TRUE(0 == MangleF.compare("\x01" "foo"));
   ASSERT_TRUE(0 == MangleG.compare("goo"));
+}
+
+TEST(Decl, MangleDependentSizedArray) {
+  StringRef Code = R"(
+    template <int ...N>
+    int A[] = {N...};
+
+    template <typename T, int N>
+    struct S {
+      T B[N];
+    };
+  )";
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-target", "i386-apple-darwin"});
+  ASTContext &Ctx = AST->getASTContext();
+  assert(Ctx.getTargetInfo().getUserLabelPrefix() == StringRef("_") &&
+         "Expected target to have a global prefix");
+  DiagnosticsEngine &Diags = AST->getDiagnostics();
+
+  const auto *DeclA =
+      selectFirst<VarDecl>("A", match(varDecl().bind("A"), Ctx));
+  const auto *DeclB =
+      selectFirst<FieldDecl>("B", match(fieldDecl().bind("B"), Ctx));
+
+  std::string MangleA, MangleB;
+  llvm::raw_string_ostream OS_A(MangleA), OS_B(MangleB);
+  std::unique_ptr<ItaniumMangleContext> MC(
+      ItaniumMangleContext::create(Ctx, Diags));
+
+  MC->mangleTypeName(DeclA->getType(), OS_A);
+  MC->mangleTypeName(DeclB->getType(), OS_B);
+
+  ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
+  ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
 }

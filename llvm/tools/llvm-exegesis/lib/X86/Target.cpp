@@ -22,10 +22,15 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Host.h"
 
 #include <memory>
 #include <string>
 #include <vector>
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#include <immintrin.h>
+#include <intrin.h>
+#endif
 
 namespace llvm {
 namespace exegesis {
@@ -53,7 +58,7 @@ static cl::opt<unsigned> LbrSamplingPeriod(
 static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   switch (Instr.Description.TSFlags & X86II::FormMask) {
   default:
-    llvm_unreachable("Unknown FormMask value");
+    return "Unknown FormMask value";
   // These have no memory access.
   case X86II::Pseudo:
   case X86II::RawFrm:
@@ -189,9 +194,25 @@ static const char *isInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
     return "unsupported opcode: pseudo instruction";
-  if (OpcodeName.startswith("POP") || OpcodeName.startswith("PUSH") ||
-      OpcodeName.startswith("ADJCALLSTACK") || OpcodeName.startswith("LEAVE"))
+  if ((OpcodeName.startswith("POP") && !OpcodeName.startswith("POPCNT")) ||
+      OpcodeName.startswith("PUSH") || OpcodeName.startswith("ADJCALLSTACK") ||
+      OpcodeName.startswith("LEAVE"))
     return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
+  switch (Instr.Description.Opcode) {
+  case X86::LFS16rm:
+  case X86::LFS32rm:
+  case X86::LFS64rm:
+  case X86::LGS16rm:
+  case X86::LGS32rm:
+  case X86::LGS64rm:
+  case X86::LSS16rm:
+  case X86::LSS32rm:
+  case X86::LSS64rm:
+  case X86::SYSENTER:
+    return "unsupported opcode";
+  default:
+    break;
+  }
   if (const auto reason = isInvalidMemoryInstr(Instr))
     return reason;
   // We do not handle instructions with OPERAND_PCREL.
@@ -594,6 +615,47 @@ void ConstantInliner::initStack(unsigned Bytes) {
 
 namespace {
 
+class X86SavedState : public ExegesisTarget::SavedState {
+public:
+  X86SavedState() {
+#ifdef __x86_64__
+# if defined(_MSC_VER)
+    _fxsave64(FPState);
+    Eflags = __readeflags();
+# elif defined(__GNUC__)
+    __builtin_ia32_fxsave64(FPState);
+    Eflags = __builtin_ia32_readeflags_u64();
+# endif
+#else
+    llvm_unreachable("X86 exegesis running on non-X86 target");
+#endif
+  }
+
+  ~X86SavedState() {
+    // Restoring the X87 state does not flush pending exceptions, make sure
+    // these exceptions are flushed now.
+#ifdef __x86_64__
+# if defined(_MSC_VER)
+    _clearfp();
+    _fxrstor64(FPState);
+    __writeeflags(Eflags);
+# elif defined(__GNUC__)
+    asm volatile("fwait");
+    __builtin_ia32_fxrstor64(FPState);
+    __builtin_ia32_writeeflags_u64(Eflags);
+# endif
+#else
+    llvm_unreachable("X86 exegesis running on non-X86 target");
+#endif
+  }
+
+private:
+#ifdef __x86_64__
+  alignas(16) char FPState[512];
+  uint64_t Eflags;
+#endif
+};
+
 class ExegesisX86Target : public ExegesisTarget {
 public:
   ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
@@ -672,6 +734,39 @@ private:
 
   bool matchesArch(Triple::ArchType Arch) const override {
     return Arch == Triple::x86_64 || Arch == Triple::x86;
+  }
+
+  Error checkFeatureSupport() const override {
+    // LBR is the only feature we conditionally support now.
+    // So if LBR is not requested, then we should be able to run the benchmarks.
+    if (LbrSamplingPeriod == 0)
+      return Error::success();
+
+#if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
+    defined(LIBPFM_HAS_FIELD_CYCLES)
+      // FIXME: Fix this.
+      // https://bugs.llvm.org/show_bug.cgi?id=48918
+      // For now, only do the check if we see an Intel machine because
+      // the counter uses some intel-specific magic and it could
+      // be confuse and think an AMD machine actually has LBR support.
+#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
+    defined(_M_X64)
+    using namespace sys::detail::x86;
+
+    if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)
+      // If the kernel supports it, the hardware still may not have it.
+      return X86LbrCounter::checkLbrSupport();
+#else
+    llvm_unreachable("Running X86 exegesis on non-X86 target");
+#endif
+#endif
+    return llvm::make_error<llvm::StringError>(
+        "LBR not supported on this kernel and/or platform",
+        llvm::errc::not_supported);
+  }
+
+  std::unique_ptr<SavedState> withSavedState() const override {
+    return std::make_unique<X86SavedState>();
   }
 
   static const unsigned kUnavailableRegisters[4];
@@ -823,9 +918,9 @@ std::vector<InstructionTemplate> ExegesisX86Target::generateInstructionVariants(
       continue;
     case X86::OperandType::OPERAND_COND_CODE: {
       Exploration = true;
-      auto CondCodes = seq((int)X86::CondCode::COND_O,
-                           1 + (int)X86::CondCode::LAST_VALID_COND);
-      Choices.reserve(std::distance(CondCodes.begin(), CondCodes.end()));
+      auto CondCodes =
+          seq_inclusive(X86::CondCode::COND_O, X86::CondCode::LAST_VALID_COND);
+      Choices.reserve(CondCodes.size());
       for (int CondCode : CondCodes)
         Choices.emplace_back(MCOperand::createImm(CondCode));
       break;

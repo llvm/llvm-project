@@ -57,7 +57,9 @@
 // CHECK-NEXT: Loaded summary for: unsigned int fwrite(const void *restrict, size_t, size_t, FILE *restrict)
 // CHECK-NEXT: Loaded summary for: ssize_t read(int, void *, size_t)
 // CHECK-NEXT: Loaded summary for: ssize_t write(int, const void *, size_t)
-// CHECK-NEXT: Loaded summary for: ssize_t getline(char **, size_t *, FILE *)
+// CHECK-NEXT: Loaded summary for: ssize_t getline(char **restrict, size_t *restrict, FILE *restrict)
+// CHECK-NEXT: Loaded summary for: ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict)
+
 
 void clang_analyzer_eval(int);
 
@@ -126,7 +128,8 @@ void test_fread_uninitialized(void) {
   (void)fread(ptr, sz, nmem, fp); // expected-warning {{1st function call argument is an uninitialized value}}
 }
 
-ssize_t getline(char **, size_t *, FILE *);
+ssize_t getline(char **restrict, size_t *restrict, FILE *restrict);
+ssize_t getdelim(char **restrict, size_t *restrict, int, FILE *restrict);
 void test_getline(FILE *fp) {
   char *line = 0;
   size_t n = 0;
@@ -250,4 +253,12 @@ void test_call_by_pointer() {
   clang_analyzer_eval(f('A')); // expected-warning{{TRUE}}
   f = ispunct;
   clang_analyzer_eval(f('A')); // expected-warning{{FALSE}}
+}
+
+char *getenv(const char *name);
+void test_getenv() {
+  // getenv() bifurcates here.
+  clang_analyzer_eval(getenv("FOO") == 0);
+  // expected-warning@-1 {{TRUE}}
+  // expected-warning@-2 {{FALSE}}
 }

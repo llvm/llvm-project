@@ -21,6 +21,7 @@
 #include "msan_report.h"
 #include "msan_thread.h"
 #include "msan_poisoning.h"
+#include "sanitizer_common/sanitizer_errno_codes.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -285,7 +286,7 @@ INTERCEPTOR(void, malloc_stats, void) {
 INTERCEPTOR(char *, strcpy, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T n = REAL(strlen)(src);
+  SIZE_T n = internal_strlen(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
   char *res = REAL(strcpy)(dest, src);
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
@@ -295,7 +296,7 @@ INTERCEPTOR(char *, strcpy, char *dest, const char *src) {
 INTERCEPTOR(char *, strncpy, char *dest, const char *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T copy_size = REAL(strnlen)(src, n);
+  SIZE_T copy_size = internal_strnlen(src, n);
   if (copy_size < n)
     copy_size++;  // trailing \0
   char *res = REAL(strncpy)(dest, src, n);
@@ -308,7 +309,7 @@ INTERCEPTOR(char *, strncpy, char *dest, const char *src, SIZE_T n) {
 INTERCEPTOR(char *, stpcpy, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T n = REAL(strlen)(src);
+  SIZE_T n = internal_strlen(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
   char *res = REAL(stpcpy)(dest, src);
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
@@ -324,7 +325,7 @@ INTERCEPTOR(char *, strdup, char *src) {
   GET_STORE_STACK_TRACE;
   // On FreeBSD strdup() leverages strlen().
   InterceptorScope interceptor_scope;
-  SIZE_T n = REAL(strlen)(src);
+  SIZE_T n = internal_strlen(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
   char *res = REAL(strdup)(src);
   CopyShadowAndOrigin(res, src, n + 1, &stack);
@@ -335,7 +336,7 @@ INTERCEPTOR(char *, strdup, char *src) {
 INTERCEPTOR(char *, __strdup, char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T n = REAL(strlen)(src);
+  SIZE_T n = internal_strlen(src);
   CHECK_UNPOISONED_STRING(src + n, 0);
   char *res = REAL(__strdup)(src);
   CopyShadowAndOrigin(res, src, n + 1, &stack);
@@ -350,7 +351,7 @@ INTERCEPTOR(char *, __strdup, char *src) {
 INTERCEPTOR(char *, gcvt, double number, SIZE_T ndigit, char *buf) {
   ENSURE_MSAN_INITED();
   char *res = REAL(gcvt)(number, ndigit, buf);
-  SIZE_T n = REAL(strlen)(buf);
+  SIZE_T n = internal_strlen(buf);
   __msan_unpoison(buf, n + 1);
   return res;
 }
@@ -362,8 +363,8 @@ INTERCEPTOR(char *, gcvt, double number, SIZE_T ndigit, char *buf) {
 INTERCEPTOR(char *, strcat, char *dest, const char *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T src_size = REAL(strlen)(src);
-  SIZE_T dest_size = REAL(strlen)(dest);
+  SIZE_T src_size = internal_strlen(src);
+  SIZE_T dest_size = internal_strlen(dest);
   CHECK_UNPOISONED_STRING(src + src_size, 0);
   CHECK_UNPOISONED_STRING(dest + dest_size, 0);
   char *res = REAL(strcat)(dest, src);
@@ -374,8 +375,8 @@ INTERCEPTOR(char *, strcat, char *dest, const char *src) {
 INTERCEPTOR(char *, strncat, char *dest, const char *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T dest_size = REAL(strlen)(dest);
-  SIZE_T copy_size = REAL(strnlen)(src, n);
+  SIZE_T dest_size = internal_strlen(dest);
+  SIZE_T copy_size = internal_strnlen(src, n);
   CHECK_UNPOISONED_STRING(dest + dest_size, 0);
   char *res = REAL(strncat)(dest, src, n);
   CopyShadowAndOrigin(dest + dest_size, src, copy_size, &stack);
@@ -611,7 +612,8 @@ INTERCEPTOR(char *, fcvt, double x, int a, int *b, int *c) {
   char *res = REAL(fcvt)(x, a, b, c);
   __msan_unpoison(b, sizeof(*b));
   __msan_unpoison(c, sizeof(*c));
-  if (res) __msan_unpoison(res, REAL(strlen)(res) + 1);
+  if (res)
+    __msan_unpoison(res, internal_strlen(res) + 1);
   return res;
 }
 #define MSAN_MAYBE_INTERCEPT_FCVT INTERCEPT_FUNCTION(fcvt)
@@ -624,7 +626,8 @@ INTERCEPTOR(char *, getenv, char *name) {
     return REAL(getenv)(name);
   ENSURE_MSAN_INITED();
   char *res = REAL(getenv)(name);
-  if (res) __msan_unpoison(res, REAL(strlen)(res) + 1);
+  if (res)
+    __msan_unpoison(res, internal_strlen(res) + 1);
   return res;
 }
 
@@ -634,7 +637,7 @@ static void UnpoisonEnviron() {
   char **envp = environ;
   for (; *envp; ++envp) {
     __msan_unpoison(envp, sizeof(*envp));
-    __msan_unpoison(*envp, REAL(strlen)(*envp) + 1);
+    __msan_unpoison(*envp, internal_strlen(*envp) + 1);
   }
   // Trailing NULL pointer.
   __msan_unpoison(envp, sizeof(*envp));
@@ -757,7 +760,7 @@ INTERCEPTOR(char *, fgets_unlocked, char *s, int size, void *stream) {
   ENSURE_MSAN_INITED();
   char *res = REAL(fgets_unlocked)(s, size, stream);
   if (res)
-    __msan_unpoison(s, REAL(strlen)(s) + 1);
+    __msan_unpoison(s, internal_strlen(s) + 1);
   return res;
 }
 #define MSAN_MAYBE_INTERCEPT_FGETS_UNLOCKED INTERCEPT_FUNCTION(fgets_unlocked)
@@ -827,8 +830,8 @@ INTERCEPTOR(int, prlimit64, int pid, int resource, void *new_rlimit,
 INTERCEPTOR(int, gethostname, char *name, SIZE_T len) {
   ENSURE_MSAN_INITED();
   int res = REAL(gethostname)(name, len);
-  if (!res) {
-    SIZE_T real_len = REAL(strnlen)(name, len);
+  if (!res || (res == -1 && errno == errno_ENAMETOOLONG)) {
+    SIZE_T real_len = internal_strnlen(name, len);
     if (real_len < len)
       ++real_len;
     __msan_unpoison(name, real_len);
@@ -1079,9 +1082,9 @@ INTERCEPTOR(void, tzset, int fake) {
   InterceptorScope interceptor_scope;
   REAL(tzset)(fake);
   if (tzname[0])
-    __msan_unpoison(tzname[0], REAL(strlen)(tzname[0]) + 1);
+    __msan_unpoison(tzname[0], internal_strlen(tzname[0]) + 1);
   if (tzname[1])
-    __msan_unpoison(tzname[1], REAL(strlen)(tzname[1]) + 1);
+    __msan_unpoison(tzname[1], internal_strlen(tzname[1]) + 1);
   return;
 }
 
@@ -1091,7 +1094,7 @@ struct MSanAtExitRecord {
 };
 
 struct InterceptorContext {
-  BlockingMutex atexit_mu;
+  Mutex atexit_mu;
   Vector<struct MSanAtExitRecord *> AtExitStack;
 
   InterceptorContext()
@@ -1107,7 +1110,7 @@ InterceptorContext *interceptor_ctx() {
 void MSanAtExitWrapper() {
   MSanAtExitRecord *r;
   {
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     uptr element = interceptor_ctx()->AtExitStack.Size() - 1;
     r = interceptor_ctx()->AtExitStack[element];
@@ -1141,7 +1144,7 @@ INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
 
 // Unpoison argument shadow for C++ module destructors.
 INTERCEPTOR(int, atexit, void (*func)()) {
-  // Avoid calling real atexit as it is unrechable on at least on Linux.
+  // Avoid calling real atexit as it is unreachable on at least on Linux.
   if (msan_init_is_running)
     return REAL(__cxa_atexit)((void (*)(void *a))func, 0, 0);
   return setup_at_exit_wrapper((void(*)())func, 0, 0);
@@ -1158,7 +1161,7 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
     // NetBSD does not preserve the 2nd argument if dso is equal to 0
     // Store ctx in a local stack-like structure
 
-    BlockingMutexLock l(&interceptor_ctx()->atexit_mu);
+    Lock l(&interceptor_ctx()->atexit_mu);
 
     res = REAL(__cxa_atexit)((void (*)(void *a))MSanAtExitWrapper, 0, 0);
     if (!res) {
@@ -1245,22 +1248,30 @@ int OnExit() {
       CHECK_UNPOISONED_0(x, n);                                 \
   } while (0)
 
-#define MSAN_INTERCEPT_FUNC(name)                                        \
-  do {                                                                   \
-    if (!INTERCEPT_FUNCTION(name))                                       \
-      VReport(1, "MemorySanitizer: failed to intercept '%s'\n'", #name); \
+#define MSAN_INTERCEPT_FUNC(name)                                       \
+  do {                                                                  \
+    if (!INTERCEPT_FUNCTION(name))                                      \
+      VReport(1, "MemorySanitizer: failed to intercept '%s'\n", #name); \
   } while (0)
 
 #define MSAN_INTERCEPT_FUNC_VER(name, ver)                                 \
   do {                                                                     \
     if (!INTERCEPT_FUNCTION_VER(name, ver))                                \
       VReport(1, "MemorySanitizer: failed to intercept '%s@@%s'\n", #name, \
-              #ver);                                                       \
+              ver);                                                        \
+  } while (0)
+#define MSAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)             \
+  do {                                                                      \
+    if (!INTERCEPT_FUNCTION_VER(name, ver) && !INTERCEPT_FUNCTION(name))    \
+      VReport(1, "MemorySanitizer: failed to intercept '%s@@%s' or '%s'\n", \
+              #name, ver, #name);                                           \
   } while (0)
 
 #define COMMON_INTERCEPT_FUNCTION(name) MSAN_INTERCEPT_FUNC(name)
-#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
   MSAN_INTERCEPT_FUNC_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
+  MSAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)
 #define COMMON_INTERCEPTOR_UNPOISON_PARAM(count)  \
   UnpoisonParam(count)
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
@@ -1269,14 +1280,15 @@ int OnExit() {
   CHECK_UNPOISONED_CTX(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_INITIALIZE_RANGE(ptr, size) \
   __msan_unpoison(ptr, size)
-#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)                  \
-  if (msan_init_is_running) return REAL(func)(__VA_ARGS__);       \
-  ENSURE_MSAN_INITED();                                           \
-  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()};     \
-  ctx = (void *)&msan_ctx;                                        \
-  (void)ctx;                                                      \
-  InterceptorScope interceptor_scope;                             \
-  __msan_unpoison(__errno_location(), sizeof(int)); /* NOLINT */
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...)              \
+  if (msan_init_is_running)                                   \
+    return REAL(func)(__VA_ARGS__);                           \
+  ENSURE_MSAN_INITED();                                       \
+  MSanInterceptorContext msan_ctx = {IsInInterceptorScope()}; \
+  ctx = (void *)&msan_ctx;                                    \
+  (void)ctx;                                                  \
+  InterceptorScope interceptor_scope;                         \
+  __msan_unpoison(__errno_location(), sizeof(int));
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
   do {                                            \
   } while (false)
@@ -1365,11 +1377,14 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
                           __sanitizer_sigaction *oldact) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (act) read_sigaction(act);
   int res;
   if (flags()->wrap_signals) {
     SpinMutexLock lock(&sigactions_mu);
-    CHECK_LT(signo, kMaxSignals);
     uptr old_cb = atomic_load(&sigactions[signo], memory_order_relaxed);
     __sanitizer_sigaction new_act;
     __sanitizer_sigaction *pnew_act = act ? &new_act : nullptr;
@@ -1403,8 +1418,11 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
 
 static uptr signal_impl(int signo, uptr cb) {
   ENSURE_MSAN_INITED();
+  if (signo <= 0 || signo >= kMaxSignals) {
+    errno = errno_EINVAL;
+    return -1;
+  }
   if (flags()->wrap_signals) {
-    CHECK_LT(signo, kMaxSignals);
     SpinMutexLock lock(&sigactions_mu);
     if (cb != __sanitizer::sig_ign && cb != __sanitizer::sig_dfl) {
       atomic_store(&sigactions[signo], cb, memory_order_relaxed);
@@ -1439,9 +1457,9 @@ INTERCEPTOR(int, dladdr, void *addr, dlinfo *info) {
   if (res != 0) {
     __msan_unpoison(info, sizeof(*info));
     if (info->dli_fname)
-      __msan_unpoison(info->dli_fname, REAL(strlen)(info->dli_fname) + 1);
+      __msan_unpoison(info->dli_fname, internal_strlen(info->dli_fname) + 1);
     if (info->dli_sname)
-      __msan_unpoison(info->dli_sname, REAL(strlen)(info->dli_sname) + 1);
+      __msan_unpoison(info->dli_sname, internal_strlen(info->dli_sname) + 1);
   }
   return res;
 }
@@ -1450,7 +1468,8 @@ INTERCEPTOR(char *, dlerror, int fake) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, dlerror, fake);
   char *res = REAL(dlerror)(fake);
-  if (res) __msan_unpoison(res, REAL(strlen)(res) + 1);
+  if (res)
+    __msan_unpoison(res, internal_strlen(res) + 1);
   return res;
 }
 
@@ -1468,7 +1487,7 @@ static int msan_dl_iterate_phdr_cb(__sanitizer_dl_phdr_info *info, SIZE_T size,
     if (info->dlpi_phdr && info->dlpi_phnum)
       __msan_unpoison(info->dlpi_phdr, struct_ElfW_Phdr_sz * info->dlpi_phnum);
     if (info->dlpi_name)
-      __msan_unpoison(info->dlpi_name, REAL(strlen)(info->dlpi_name) + 1);
+      __msan_unpoison(info->dlpi_name, internal_strlen(info->dlpi_name) + 1);
   }
   dl_iterate_phdr_data *cbdata = (dl_iterate_phdr_data *)data;
   UnpoisonParam(3);
@@ -1510,7 +1529,7 @@ INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dest, const wchar_t *src) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
   wchar_t *res = REAL(wcscpy)(dest, src);
-  CopyShadowAndOrigin(dest, src, sizeof(wchar_t) * (REAL(wcslen)(src) + 1),
+  CopyShadowAndOrigin(dest, src, sizeof(wchar_t) * (internal_wcslen(src) + 1),
                       &stack);
   return res;
 }
@@ -1518,7 +1537,7 @@ INTERCEPTOR(wchar_t *, wcscpy, wchar_t *dest, const wchar_t *src) {
 INTERCEPTOR(wchar_t *, wcsncpy, wchar_t *dest, const wchar_t *src, SIZE_T n) {
   ENSURE_MSAN_INITED();
   GET_STORE_STACK_TRACE;
-  SIZE_T copy_size = REAL(wcsnlen)(src, n);
+  SIZE_T copy_size = internal_wcsnlen(src, n);
   if (copy_size < n) copy_size++;           // trailing \0
   wchar_t *res = REAL(wcsncpy)(dest, src, n);
   CopyShadowAndOrigin(dest, src, copy_size * sizeof(wchar_t), &stack);
@@ -1582,7 +1601,7 @@ void *__msan_memmove(void *dest, const void *src, SIZE_T n) {
 
 void __msan_unpoison_string(const char* s) {
   if (!MEM_IS_APP(s)) return;
-  __msan_unpoison(s, REAL(strlen)(s) + 1);
+  __msan_unpoison(s, internal_strlen(s) + 1);
 }
 
 namespace __msan {

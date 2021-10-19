@@ -1150,7 +1150,7 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // lowering & isel wouldn't diverge.
   bool andCC = false;
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    if (RHSC->isNullValue() && LHS.hasOneUse() &&
+    if (RHSC->isZero() && LHS.hasOneUse() &&
         (LHS.getOpcode() == ISD::AND ||
          (LHS.getOpcode() == ISD::TRUNCATE &&
           LHS.getOperand(0).getOpcode() == ISD::AND))) {
@@ -1208,9 +1208,8 @@ SDValue MSP430TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return SR;
   } else {
     SDValue Zero = DAG.getConstant(0, dl, VT);
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
     SDValue Ops[] = {One, Zero, TargetCC, Flag};
-    return DAG.getNode(MSP430ISD::SELECT_CC, dl, VTs, Ops);
+    return DAG.getNode(MSP430ISD::SELECT_CC, dl, Op.getValueType(), Ops);
   }
 }
 
@@ -1226,10 +1225,9 @@ SDValue MSP430TargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue TargetCC;
   SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Flag};
 
-  return DAG.getNode(MSP430ISD::SELECT_CC, dl, VTs, Ops);
+  return DAG.getNode(MSP430ISD::SELECT_CC, dl, Op.getValueType(), Ops);
 }
 
 SDValue MSP430TargetLowering::LowerSIGN_EXTEND(SDValue Op,
@@ -1391,14 +1389,15 @@ bool MSP430TargetLowering::isTruncateFree(Type *Ty1,
   if (!Ty1->isIntegerTy() || !Ty2->isIntegerTy())
     return false;
 
-  return (Ty1->getPrimitiveSizeInBits() > Ty2->getPrimitiveSizeInBits());
+  return (Ty1->getPrimitiveSizeInBits().getFixedSize() >
+          Ty2->getPrimitiveSizeInBits().getFixedSize());
 }
 
 bool MSP430TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
   if (!VT1.isInteger() || !VT2.isInteger())
     return false;
 
-  return (VT1.getSizeInBits() > VT2.getSizeInBits());
+  return (VT1.getFixedSizeInBits() > VT2.getFixedSizeInBits());
 }
 
 bool MSP430TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {

@@ -14,7 +14,7 @@
 #include "DNBError.h"
 #include "DNBLog.h"
 #include <arpa/inet.h>
-#include <errno.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <map>
 #include <netdb.h>
@@ -29,38 +29,6 @@
 #ifdef WITH_LOCKDOWN
 #include "lockdown.h"
 #endif
-
-/* Once we have a RNBSocket object with a port # specified,
-   this function is called to wait for an incoming connection.
-   This function blocks while waiting for that connection.  */
-
-bool ResolveIPV4HostName(const char *hostname, in_addr_t &addr) {
-  if (hostname == NULL || hostname[0] == '\0' ||
-      strcmp(hostname, "localhost") == 0 ||
-      strcmp(hostname, "127.0.0.1") == 0) {
-    addr = htonl(INADDR_LOOPBACK);
-    return true;
-  } else if (strcmp(hostname, "*") == 0) {
-    addr = htonl(INADDR_ANY);
-    return true;
-  } else {
-    // See if an IP address was specified as numbers
-    int inet_pton_result = ::inet_pton(AF_INET, hostname, &addr);
-
-    if (inet_pton_result == 1)
-      return true;
-
-    struct hostent *host_entry = gethostbyname(hostname);
-    if (host_entry) {
-      std::string ip_str(
-          ::inet_ntoa(*(struct in_addr *)*host_entry->h_addr_list));
-      inet_pton_result = ::inet_pton(AF_INET, ip_str.c_str(), &addr);
-      if (inet_pton_result == 1)
-        return true;
-    }
-  }
-  return false;
-}
 
 rnb_err_t RNBSocket::Listen(const char *listen_host, uint16_t port,
                             PortBoundCallback callback,

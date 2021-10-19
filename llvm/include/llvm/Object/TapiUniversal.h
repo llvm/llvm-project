@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_TAPI_UNIVERSAL_H
-#define LLVM_OBJECT_TAPI_UNIVERSAL_H
+#ifndef LLVM_OBJECT_TAPIUNIVERSAL_H
+#define LLVM_OBJECT_TAPIUNIVERSAL_H
 
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/TapiFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 
 namespace llvm {
 namespace object {
@@ -101,6 +101,8 @@ public:
     return make_range(begin_objects(), end_objects());
   }
 
+  const MachO::InterfaceFile &getInterfaceFile() { return *ParsedFile; }
+
   uint32_t getNumberOfObjects() const { return Libraries.size(); }
 
   static bool classof(const Binary *v) { return v->isTapiUniversal(); }
@@ -118,4 +120,4 @@ private:
 } // end namespace object.
 } // end namespace llvm.
 
-#endif // LLVM_OBJECT_TAPI_UNIVERSAL_H
+#endif // LLVM_OBJECT_TAPIUNIVERSAL_H

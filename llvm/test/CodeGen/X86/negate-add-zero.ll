@@ -276,23 +276,23 @@ declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZStlsISt11
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZNSolsEd(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, double)
 
-declare void @_Z14orthoTransformIdLi3ELi3EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,3,0,0>"*)
+declare void @_Z14orthoTransformIdLi3ELi3EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,3,0,0>"), %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,3,0,0>"*)
 
 declare void @_ZN12HNodeRotate27calcRotEv(%struct.HNodeRotate2*)
 
 declare void @_ZN21HNodeTranslateRotate27calcRotEv(%struct.HNodeTranslateRotate2*)
 
-declare void @_ZmlIdLi6ELi6EE11FixedVectorIT_XT0_ELi0EERK11FixedMatrixIS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_ZmlIdLi6ELi6EE11FixedVectorIT_XT0_ELi0EERK11FixedMatrixIS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
-declare void @_ZmlIdLi6ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret, %struct.Mat6*, %struct.Mat6*)
+declare void @_ZmlIdLi6ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %struct.Mat6*, %struct.Mat6*)
 
-declare void @_ZmlIdLi6ELi6ELi3EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,3,6,0,0>"*)
+declare void @_ZmlIdLi6ELi6ELi3EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,6,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,3,6,0,0>"*)
 
-declare void @_ZmlIdLi6ELi6ELi2EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,2,6,0,0>"*)
+declare void @_ZmlIdLi6ELi6ELi2EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,6,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,2,6,0,0>"*)
 
-declare void @_ZmlIdLi5ELi6EE11FixedVectorIT_XT0_ELi0EERK11FixedMatrixIS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedVector<double,5,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_ZmlIdLi5ELi6EE11FixedVectorIT_XT0_ELi0EERK11FixedMatrixIS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedVector<double,5,0>"* noalias sret(%"struct.FixedVector<double,5,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
-declare void @_ZmlIdLi6ELi6ELi5EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_ZmlIdLi6ELi6ELi5EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,6,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,5,6,0,0>"*)
 
 declare void @_ZN12HNodeRotate39setPosVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEES5_(%struct.HNodeRotate3*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*)
 
@@ -376,7 +376,7 @@ declare void @_ZN13HingeNodeSpecILi3EE9setPosVelERK9CDSVectorIdLi1EN3CDS12Defaul
 
 declare void @_ZN13HingeNodeSpecILi3EE18enforceConstraintsER9CDSVectorIdLi1EN3CDS12DefaultAllocEES5_(%"struct.HingeNodeSpec<3>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*) nounwind
 
-declare void @_Z14orthoTransformIdLi6ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret, %struct.Mat6*, %struct.Mat6*)
+declare void @_Z14orthoTransformIdLi6ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %struct.Mat6*, %struct.Mat6*)
 
 declare double @_ZN13HingeNodeSpecILi1EE8kineticEEv(%"struct.HingeNodeSpec<1>"*)
 
@@ -388,7 +388,7 @@ declare double @_ZN13HingeNodeSpecILi6EE8kineticEEv(%"struct.HingeNodeSpec<6>"*)
 
 declare double @_ZN13HingeNodeSpecILi5EE8kineticEEv(%"struct.HingeNodeSpec<5>"*)
 
-declare void @_ZmlIdLi6ELi5ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_ZmlIdLi6ELi5ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,5,6,0,0>"*)
 
 declare void @_ZN13HingeNodeSpecILi1EE9setPosVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEES6_(%"struct.HingeNodeSpec<1>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*)
 
@@ -396,29 +396,29 @@ declare void @_ZN13HingeNodeSpecILi5EE9setPosVelERK9CDSVectorIdLi1EN3CDS12Defaul
 
 declare void @_ZN13HingeNodeSpecILi2EE9setPosVelERK9CDSVectorIdLi1EN3CDS12DefaultAllocEES6_(%"struct.HingeNodeSpec<2>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*, %"struct.CDSVector<double,0,CDS::DefaultAlloc>"*)
 
-declare void @_Z14orthoTransformIdLi3ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret, %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi3ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,6,0,0>"*)
 
-declare void @_ZmlIdLi6ELi1ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_ZmlIdLi6ELi1ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %"struct.FixedMatrix<double,1,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
-declare void @_ZmlIdLi6ELi5ELi5EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,5,5,0,0>"*)
+declare void @_ZmlIdLi6ELi5ELi5EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,6,0,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*, %"struct.FixedMatrix<double,5,5,0,0>"*)
 
-declare void @_Z14orthoTransformIdLi5ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret, %"struct.FixedMatrix<double,5,5,0,0>"*, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi5ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %"struct.FixedMatrix<double,5,5,0,0>"*, %"struct.FixedMatrix<double,5,6,0,0>"*)
 
-declare void @_Z14orthoTransformIdLi2ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret, %"struct.FixedMatrix<double,2,2,0,0>"*, %"struct.FixedMatrix<double,2,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi2ELi6EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%struct.Mat6* noalias sret(%struct.Mat6), %"struct.FixedMatrix<double,2,2,0,0>"*, %"struct.FixedMatrix<double,2,6,0,0>"*)
 
-declare void @_ZmlIdLi1ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*, %struct.Mat6*)
+declare void @_ZmlIdLi1ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,6,0,0>"*, %struct.Mat6*)
 
-declare void @_ZmlIdLi5ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*, %struct.Mat6*)
+declare void @_ZmlIdLi5ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,6,0,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*, %struct.Mat6*)
 
-declare void @_Z14orthoTransformIdLi6ELi5EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,5,5,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi6ELi5EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,5,5,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,5,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,5,6,0,0>"*)
 
-declare void @_ZmlIdLi2ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,2,6,0,0>"*, %struct.Mat6*)
+declare void @_ZmlIdLi2ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,6,0,0>"), %"struct.FixedMatrix<double,2,6,0,0>"*, %struct.Mat6*)
 
-declare void @_Z14orthoTransformIdLi6ELi2EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,2,2,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,2,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi6ELi2EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,2,2,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,2,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,2,6,0,0>"*)
 
-declare void @_ZmlIdLi3ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,6,0,0>"*, %struct.Mat6*)
+declare void @_ZmlIdLi3ELi6ELi6EE11FixedMatrixIT_XT0_EXT2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT1_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,6,0,0>"), %"struct.FixedMatrix<double,3,6,0,0>"*, %struct.Mat6*)
 
-declare void @_Z14orthoTransformIdLi6ELi3EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret, %struct.Mat6*, %"struct.FixedMatrix<double,3,6,0,0>"*)
+declare void @_Z14orthoTransformIdLi6ELi3EE11FixedMatrixIT_XT1_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT0_ELi0ELi0EERKS0_IS1_XT1_EXT0_ELi0ELi0EE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,3,0,0>"), %struct.Mat6*, %"struct.FixedMatrix<double,3,6,0,0>"*)
 
 declare void @_ZNSt8ios_base4InitC1Ev(%"struct.CDS::DefaultAlloc"*)
 
@@ -436,7 +436,7 @@ declare void @_ZN9HingeNode8addChildEPS_(%struct.HingeNode*, %struct.HingeNode*)
 
 declare void @_ZN7CDSListIP9HingeNodeE6appendES1_(%"struct.CDSList<HingeNode*>"*, %struct.HingeNode*)
 
-declare void @_ZN9HingeNode4getHEv(%struct.RMat* noalias sret, %struct.HingeNode*)
+declare void @_ZN9HingeNode4getHEv(%struct.RMat* noalias sret(%struct.RMat), %struct.HingeNode*)
 
 declare i8* @__cxa_allocate_exception(i32) nounwind
 
@@ -622,7 +622,7 @@ declare void @_ZN13HingeNodeSpecILi1EE5printEi(%"struct.HingeNodeSpec<1>"*, i32)
 
 declare void @_ZN13HingeNodeSpecILi1EE9calcAccelEv(%"struct.HingeNodeSpec<1>"*)
 
-declare void @_ZN13HingeNodeSpecILi1EE4getHEv(%struct.RMat* noalias sret, %"struct.HingeNodeSpec<1>"*)
+declare void @_ZN13HingeNodeSpecILi1EE4getHEv(%struct.RMat* noalias sret(%struct.RMat), %"struct.HingeNodeSpec<1>"*)
 
 declare void @__cxa_pure_virtual() nounwind
 
@@ -652,7 +652,7 @@ declare void @_ZN13HingeNodeSpecILi3EE5printEi(%"struct.HingeNodeSpec<3>"*, i32)
 
 declare void @_ZN13HingeNodeSpecILi3EE9calcAccelEv(%"struct.HingeNodeSpec<3>"*)
 
-declare void @_ZN13HingeNodeSpecILi3EE4getHEv(%struct.RMat* noalias sret, %"struct.HingeNodeSpec<3>"*)
+declare void @_ZN13HingeNodeSpecILi3EE4getHEv(%struct.RMat* noalias sret(%struct.RMat), %"struct.HingeNodeSpec<3>"*)
 
 declare void @_ZN13HingeNodeSpecILi2EED0Ev(%"struct.HingeNodeSpec<2>"*)
 
@@ -680,7 +680,7 @@ declare void @_ZN13HingeNodeSpecILi2EE5printEi(%"struct.HingeNodeSpec<2>"*, i32)
 
 declare void @_ZN13HingeNodeSpecILi2EE9calcAccelEv(%"struct.HingeNodeSpec<2>"*)
 
-declare void @_ZN13HingeNodeSpecILi2EE4getHEv(%struct.RMat* noalias sret, %"struct.HingeNodeSpec<2>"*)
+declare void @_ZN13HingeNodeSpecILi2EE4getHEv(%struct.RMat* noalias sret(%struct.RMat), %"struct.HingeNodeSpec<2>"*)
 
 declare void @_ZN13HingeNodeSpecILi6EED0Ev(%"struct.HingeNodeSpec<6>"*)
 
@@ -708,7 +708,7 @@ declare void @_ZN13HingeNodeSpecILi6EE5printEi(%"struct.HingeNodeSpec<6>"*, i32)
 
 declare void @_ZN13HingeNodeSpecILi6EE9calcAccelEv(%"struct.HingeNodeSpec<6>"*)
 
-declare void @_ZN13HingeNodeSpecILi6EE4getHEv(%struct.RMat* noalias sret, %"struct.HingeNodeSpec<6>"*)
+declare void @_ZN13HingeNodeSpecILi6EE4getHEv(%struct.RMat* noalias sret(%struct.RMat), %"struct.HingeNodeSpec<6>"*)
 
 declare void @_ZN13HingeNodeSpecILi5EED0Ev(%"struct.HingeNodeSpec<5>"*)
 
@@ -736,7 +736,7 @@ declare void @_ZN13HingeNodeSpecILi5EE5printEi(%"struct.HingeNodeSpec<5>"*, i32)
 
 declare void @_ZN13HingeNodeSpecILi5EE9calcAccelEv(%"struct.HingeNodeSpec<5>"*)
 
-declare void @_ZN13HingeNodeSpecILi5EE4getHEv(%struct.RMat* noalias sret, %"struct.HingeNodeSpec<5>"*)
+declare void @_ZN13HingeNodeSpecILi5EE4getHEv(%struct.RMat* noalias sret(%struct.RMat), %"struct.HingeNodeSpec<5>"*)
 
 declare void @_ZN12HNodeTorsion7calcRotEv(%struct.HNodeTorsion*)
 
@@ -766,9 +766,9 @@ declare void @_ZN13HingeNodeSpecILi6EEC2EPK9HingeNodeRi(%"struct.HingeNodeSpec<6
 
 declare void @_ZN13HingeNodeSpecILi5EEC2EPK9HingeNodeRi(%"struct.HingeNodeSpec<5>"*, %struct.HingeNode*, i32*)
 
-declare void @_ZplI4Vec3K11FixedVectorIdLi6ELi0EEET_RK9SubVectorIT0_ERKS4_(%struct.Vec3* noalias sret, %"struct.SubVector<FixedVector<double, 6, 0> >"*, %struct.Vec3*)
+declare void @_ZplI4Vec3K11FixedVectorIdLi6ELi0EEET_RK9SubVectorIT0_ERKS4_(%struct.Vec3* noalias sret(%struct.Vec3), %"struct.SubVector<FixedVector<double, 6, 0> >"*, %struct.Vec3*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi1ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi1ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,6,0,0>"*)
 
 declare void @_ZN12HNodeRotate314setVelFromSVelERK11FixedVectorIdLi6ELi0EE(%struct.HNodeRotate3*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
@@ -782,7 +782,7 @@ declare void @_ZN13HingeNodeSpecILi1EE9calcPropsEv(%"struct.HingeNodeSpec<1>"*)
 
 declare zeroext i8 @_ZNK3IVM12minimizationEv(%struct.IVM*)
 
-declare void @_Z8blockVecIdLi3ELi3EE11FixedVectorIT_XplT0_T1_ELi0EERKS0_IS1_XT0_ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
+declare void @_Z8blockVecIdLi3ELi3EE11FixedVectorIT_XplT0_T1_ELi0EERKS0_IS1_XT0_ELi0EERKS0_IS1_XT1_ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
 
 declare void @_ZN12HNodeTorsion11toCartesianEv(%struct.HNodeTorsion*)
 
@@ -798,11 +798,11 @@ declare void @_ZN13HingeNodeSpecILi5EE18calcCartesianForceEv(%"struct.HingeNodeS
 
 declare void @_ZN12HNodeTorsion5calcHEv(%struct.HNodeTorsion*)
 
-declare void @_Z10blockMat12IdLi1ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
+declare void @_Z10blockMat12IdLi1ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
 
 declare void @_ZN13CDSMatrixBaseIdEC2I11FixedMatrixIdLi1ELi6ELi0ELi0EEEERKT_(%"struct.CDSMatrixBase<double>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi1ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi1ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,6,0,0>"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZStlsIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_St13_Setprecision(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, i32)
 
@@ -814,13 +814,13 @@ declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi3EE
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi1EERSoS0_RK15FixedVectorBaseIT_XT0_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,1,1>"*)
 
-declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi1ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*, i32, i32, i32)
+declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi1ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,3,0,0>"), %"struct.FixedMatrix<double,1,6,0,0>"*, i32, i32, i32)
 
 declare %"struct.FixedMatrixBase<double,6,6>"* @_ZN15FixedMatrixBaseIdLi6ELi6EEpLERKS0_(%"struct.FixedMatrixBase<double,6,6>"*, %"struct.FixedMatrixBase<double,6,6>"*)
 
 declare void @_ZN13HingeNodeSpecILi6EE9calcPropsEv(%"struct.HingeNodeSpec<6>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%struct.Mat6* noalias sret, %struct.Mat6*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%struct.Mat6* noalias sret(%struct.Mat6), %struct.Mat6*)
 
 declare void @_ZN21HNodeTranslateRotate311toCartesianEv(%struct.HNodeTranslateRotate3*)
 
@@ -941,21 +941,21 @@ define linkonce void @_ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS1
 	unreachable
 }
 
-declare void @_ZmlRK11FixedMatrixIdLi6ELi6ELi0ELi0EERK18PhiMatrixTranspose(%struct.Mat6* noalias sret, %struct.Mat6*, %struct.PhiMatrixTranspose*)
+declare void @_ZmlRK11FixedMatrixIdLi6ELi6ELi0ELi0EERK18PhiMatrixTranspose(%struct.Mat6* noalias sret(%struct.Mat6), %struct.Mat6*, %struct.PhiMatrixTranspose*)
 
-declare void @_ZmlI4Mat3K11FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS4_(%struct.Mat3* noalias sret, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
+declare void @_ZmlI4Mat3K11FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS4_(%struct.Mat3* noalias sret(%struct.Mat3), %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
 
-declare void @_ZmiI4Mat3K11FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS4_(%struct.Mat3* noalias sret, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
+declare void @_ZmiI4Mat3K11FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS4_(%struct.Mat3* noalias sret(%struct.Mat3), %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
 
 declare %"struct.FixedMatrixBase<double,3,3>"* @_ZN15FixedMatrixBaseIdLi3ELi3EEmIERKS0_(%"struct.FixedMatrixBase<double,3,3>"*, %"struct.FixedMatrixBase<double,3,3>"*)
 
-declare void @_ZplI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RKS3_RK9SubMatrixIT0_E(%struct.Mat3* noalias sret, %struct.Mat3*, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*)
+declare void @_ZplI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RKS3_RK9SubMatrixIT0_E(%struct.Mat3* noalias sret(%struct.Mat3), %struct.Mat3*, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*)
 
 declare void @_ZN13CDSVectorBaseIdN3CDS12DefaultAllocEED2Ev(%"struct.CDSVectorBase<double,CDS::DefaultAlloc>"*)
 
 declare void @_ZN13HingeNodeSpecILi1EE7calcD_GERK11FixedMatrixIdLi6ELi6ELi0ELi0EE(%"struct.HingeNodeSpec<1>"*, %struct.Mat6*)
 
-declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi1ELi1ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,1,1,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,1,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
+declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi1ELi1ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,1,1,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,1,0,0>"), %"struct.FixedMatrix<double,1,1,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
 
 declare i8* @__cxa_get_exception_ptr(i8*) nounwind
 
@@ -975,15 +975,15 @@ declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZSt4endlIc
 
 declare void @__cxa_end_catch()
 
-declare void @_ZmlI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RKS3_RK9SubMatrixIT0_E(%struct.Mat3* noalias sret, %struct.Mat3*, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*)
+declare void @_ZmlI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RKS3_RK9SubMatrixIT0_E(%struct.Mat3* noalias sret(%struct.Mat3), %struct.Mat3*, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*)
 
-declare void @_ZmlI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS3_(%struct.Mat3* noalias sret, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
+declare void @_ZmlI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS3_(%struct.Mat3* noalias sret(%struct.Mat3), %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
 
-declare void @_ZmiI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS3_(%struct.Mat3* noalias sret, %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
+declare void @_ZmiI4Mat311FixedMatrixIdLi6ELi6ELi0ELi0EEET_RK9SubMatrixIT0_ERKS3_(%struct.Mat3* noalias sret(%struct.Mat3), %"struct.SubMatrix<FixedMatrix<double, 6, 6, 0, 0> >"*, %struct.Mat3*)
 
 declare %"struct.FixedMatrixBase<double,6,6>"* @_ZN15FixedMatrixBaseIdLi6ELi6EEmIERKS0_(%"struct.FixedMatrixBase<double,6,6>"*, %"struct.FixedMatrixBase<double,6,6>"*)
 
-declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEEC2EiS2_(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*, i32, %"struct.CDS::DefaultAlloc"* byval align 4)
+declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEEC2EiS2_(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*, i32, %"struct.CDS::DefaultAlloc"* byval(%"struct.CDS::DefaultAlloc") align 4)
 
 declare void @_ZN13CDSVectorBaseI4Vec3N3CDS12DefaultAllocEED2Ev(%"struct.CDSVectorBase<Vec3,CDS::DefaultAlloc>"*)
 
@@ -1055,7 +1055,7 @@ declare void @_ZN14HNodeTranslate11toCartesianEv(%struct.HNodeTranslate*)
 
 declare void @_ZN12HNodeRotate3C2EPK9HingeNodeP7IVMAtomRib(%struct.HNodeRotate3*, %struct.HingeNode*, %struct.IVMAtom*, i32*, i8 zeroext)
 
-declare void @_ZN8AtomTree6findCMEPK9HingeNode(%struct.Vec3* noalias sret, %struct.HingeNode*)
+declare void @_ZN8AtomTree6findCMEPK9HingeNode(%struct.Vec3* noalias sret(%struct.Vec3), %struct.HingeNode*)
 
 declare %struct.IVMAtom** @_ZN7CDSListIP7IVMAtomE7prependERKS1_(%struct.AtomList*, %struct.IVMAtom**)
 
@@ -1067,15 +1067,15 @@ declare void @_ZN21HNodeTranslateRotate3C2EPK9HingeNodeP7IVMAtomRib(%struct.HNod
 
 declare void @_ZN13HingeNodeSpecILi3EE9calcPropsEv(%"struct.HingeNodeSpec<3>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi3ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi3ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,6,0,0>"), %"struct.FixedMatrix<double,3,6,0,0>"*)
 
-declare void @_ZN11MatrixTools9transposeI4Mat3EENT_13TransposeTypeERKS2_(%struct.Mat3* noalias sret, %struct.Mat3*)
+declare void @_ZN11MatrixTools9transposeI4Mat3EENT_13TransposeTypeERKS2_(%struct.Mat3* noalias sret(%struct.Mat3), %struct.Mat3*)
 
-declare void @_Z10blockMat12IdLi3ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,3,0,0>"*)
+declare void @_Z10blockMat12IdLi3ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,6,0,0>"), %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.FixedMatrix<double,3,3,0,0>"*)
 
 declare void @_ZN13CDSMatrixBaseIdEC2I11FixedMatrixIdLi3ELi6ELi0ELi0EEEERKT_(%"struct.CDSMatrixBase<double>"*, %"struct.FixedMatrix<double,3,6,0,0>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi3ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi3ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,3,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,6,0,0>"), %"struct.FixedMatrix<double,3,6,0,0>"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi4EERSoS0_RK15FixedVectorBaseIT_XT0_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,2,2>"*)
 
@@ -1085,17 +1085,17 @@ declare %"struct.FixedMatrixBase<double,2,2>"* @_ZN15FixedVectorBaseIdLi4EEdVERK
 
 declare %"struct.FixedMatrixBase<double,2,2>"* @_ZN15FixedVectorBaseIdLi4EEmIERKS0_(%"struct.FixedMatrixBase<double,2,2>"*, %"struct.FixedMatrixBase<double,2,2>"*)
 
-declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi3ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,6,0,0>"*, i32, i32, i32)
+declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi3ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,3,0,0>"), %"struct.FixedMatrix<double,3,6,0,0>"*, i32, i32, i32)
 
 declare void @_ZN13HingeNodeSpecILi3EE7calcD_GERK11FixedMatrixIdLi6ELi6ELi0ELi0EE(%"struct.HingeNodeSpec<3>"*, %struct.Mat6*)
 
-declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi3ELi3ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
+declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi3ELi3ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,3,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,3,3,0,0>"), %"struct.FixedMatrix<double,3,3,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi3ELi3EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,3,3>"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi3ELi6EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,3,6>"*)
 
-declare void @_Z7unitVecRK4Vec3(%struct.Vec3* noalias sret, %struct.Vec3*)
+declare void @_Z7unitVecRK4Vec3(%struct.Vec3* noalias sret(%struct.Vec3), %struct.Vec3*)
 
 declare double @_Z4normIdLi3EET_RK11FixedVectorIS0_XT0_ELi0EE(%"struct.FixedMatrix<double,1,3,0,0>"*)
 
@@ -1109,15 +1109,15 @@ declare void @_ZN21HNodeTranslateRotate2C2EPK9HingeNodeRi(%struct.HNodeTranslate
 
 declare void @_ZN13HingeNodeSpecILi2EE9calcPropsEv(%"struct.HingeNodeSpec<2>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi2ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,2,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi2ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,6,0,0>"), %"struct.FixedMatrix<double,2,6,0,0>"*)
 
-declare void @_Z10blockMat21IdLi1ELi3ELi1EE11FixedMatrixIT_XplT0_T2_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT2_EXT1_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
+declare void @_Z10blockMat21IdLi1ELi3ELi1EE11FixedMatrixIT_XplT0_T2_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT2_EXT1_ELi0ELi0EE(%"struct.FixedMatrix<double,1,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,6,0,0>"), %"struct.FixedMatrix<double,1,3,0,0>"*, %"struct.FixedMatrix<double,1,3,0,0>"*)
 
-declare void @_Z10blockMat12IdLi2ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,1,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
+declare void @_Z10blockMat12IdLi2ELi3ELi3EE11FixedMatrixIT_XT0_EXplT1_T2_ELi0ELi0EERKS0_IS1_XT0_EXT1_ELi0ELi0EERKS0_IS1_XT0_EXT2_ELi0ELi0EE(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,6,0,0>"), %"struct.FixedMatrix<double,1,6,0,0>"*, %"struct.FixedMatrix<double,1,6,0,0>"*)
 
 declare void @_ZN13CDSMatrixBaseIdEC2I11FixedMatrixIdLi2ELi6ELi0ELi0EEEERKT_(%"struct.CDSMatrixBase<double>"*, %"struct.FixedMatrix<double,2,6,0,0>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi2ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,2,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi2ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,2,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,6,0,0>"), %"struct.FixedMatrix<double,2,6,0,0>"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi2EERSoS0_RK15FixedVectorBaseIT_XT0_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedVectorBase<double,2>"*)
 
@@ -1125,11 +1125,11 @@ declare %"struct.FixedMatrixBase<double,1,3>"* @_ZN15FixedVectorBaseIdLi3EEdVERK
 
 declare %"struct.FixedMatrixBase<double,1,3>"* @_ZN15FixedVectorBaseIdLi3EEmIERKS0_(%"struct.FixedMatrixBase<double,1,3>"*, %"struct.FixedMatrixBase<double,1,3>"*)
 
-declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi2ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,2,6,0,0>"*, i32, i32, i32)
+declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi2ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,3,0,0>"), %"struct.FixedMatrix<double,2,6,0,0>"*, i32, i32, i32)
 
 declare void @_ZN13HingeNodeSpecILi2EE7calcD_GERK11FixedMatrixIdLi6ELi6ELi0ELi0EE(%"struct.HingeNodeSpec<2>"*, %struct.Mat6*)
 
-declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi2ELi2ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,2,2,0,0>"* noalias sret, %"struct.FixedMatrix<double,2,2,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
+declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi2ELi2ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,2,2,0,0>"* noalias sret(%"struct.FixedMatrix<double,2,2,0,0>"), %"struct.FixedMatrix<double,2,2,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi2ELi2EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,2,2>"*)
 
@@ -1151,29 +1151,29 @@ declare i32 @_ZNK7CDSListIP9HingeNodeE8getIndexERKS1_(%"struct.CDSList<HingeNode
 
 declare void @_ZN13CDSMatrixBaseIdEC2I11FixedMatrixIdLi6ELi6ELi0ELi0EEEERKT_(%"struct.CDSMatrixBase<double>"*, %struct.Mat6*)
 
-declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi6ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret, %struct.Mat6*, i32, i32, i32)
+declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi6ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,3,0,0>"), %struct.Mat6*, i32, i32, i32)
 
 declare void @_ZN13HingeNodeSpecILi6EE7calcD_GERK11FixedMatrixIdLi6ELi6ELi0ELi0EE(%"struct.HingeNodeSpec<6>"*, %struct.Mat6*)
 
-declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi6ELi6ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%struct.Mat6* noalias sret, %struct.Mat6*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
+declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi6ELi6ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%struct.Mat6* noalias sret(%struct.Mat6), %struct.Mat6*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi6ELi6EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,6,6>"*)
 
 declare void @_ZN13HingeNodeSpecILi5EE9calcPropsEv(%"struct.HingeNodeSpec<5>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi5ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi5ELi6ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,6,0,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*)
 
 declare void @_ZN13CDSMatrixBaseIdEC2I11FixedMatrixIdLi5ELi6ELi0ELi0EEEERKT_(%"struct.CDSMatrixBase<double>"*, %"struct.FixedMatrix<double,5,6,0,0>"*)
 
-declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi5ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*)
+declare void @_ZN11MatrixTools9transposeI11FixedMatrixIdLi6ELi5ELi0ELi0EEEENT_13TransposeTypeERKS3_(%"struct.FixedMatrix<double,5,6,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,6,0,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi5EERSoS0_RK15FixedVectorBaseIT_XT0_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedVectorBase<double,5>"*)
 
-declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi5ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,6,0,0>"*, i32, i32, i32)
+declare void @_ZN11FixedVectorIdLi3ELi0EE6subColILi6ELi5ELi0ELi0EEES0_RK11FixedMatrixIdXT_EXT0_EXT1_EXT2_EEiii(%"struct.FixedMatrix<double,1,3,0,0>"* noalias sret(%"struct.FixedMatrix<double,1,3,0,0>"), %"struct.FixedMatrix<double,5,6,0,0>"*, i32, i32, i32)
 
 declare void @_ZN13HingeNodeSpecILi5EE7calcD_GERK11FixedMatrixIdLi6ELi6ELi0ELi0EE(%"struct.HingeNodeSpec<5>"*, %struct.Mat6*)
 
-declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi5ELi5ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,5,5,0,0>"* noalias sret, %"struct.FixedMatrix<double,5,5,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
+declare void @_ZN11MatrixTools7inverseI11FixedMatrixIdLi5ELi5ELi0ELi0EEEET_RKS3_NS_14InverseResultsINS3_10MatrixTypeEEE(%"struct.FixedMatrix<double,5,5,0,0>"* noalias sret(%"struct.FixedMatrix<double,5,5,0,0>"), %"struct.FixedMatrix<double,5,5,0,0>"*, %"struct.MatrixTools::InverseResults<FullMatrix<double> >"*)
 
 declare %"struct.std::basic_ostream<char,std::char_traits<char> >"* @_ZlsIdLi5ELi5EERSoS0_RK15FixedMatrixBaseIT_XT0_EXT1_EE(%"struct.std::basic_ostream<char,std::char_traits<char> >"*, %"struct.FixedMatrixBase<double,5,5>"*)
 

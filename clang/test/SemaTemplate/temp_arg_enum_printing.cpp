@@ -17,7 +17,7 @@ void test() {
   NamedEnumNS::foo<Val0>();
   // CHECK: template<> void foo<NamedEnumNS::Val1>()
   NamedEnumNS::foo<(NamedEnum)1>();
-  // CHECK: template<> void foo<2>()
+  // CHECK: template<> void foo<(NamedEnumNS::NamedEnum)2>()
   NamedEnumNS::foo<(NamedEnum)2>();
 }
   

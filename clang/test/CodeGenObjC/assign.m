@@ -12,7 +12,7 @@ struct s0 {
 
 // Check that we get exactly the message sends we expect, and no more.
 //
-// CHECK-LABEL: define void @f0
+// CHECK-LABEL: define{{.*}} void @f0
 void f0(C0 *a) {
 // CHECK: objc_msgSend
   int l0 = (a.x0 = 1);

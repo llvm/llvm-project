@@ -63,8 +63,10 @@ static MCUInfo AVRMcus[] = {
     {"attiny85", "__AVR_ATtiny85__"},
     {"attiny261", "__AVR_ATtiny261__"},
     {"attiny261a", "__AVR_ATtiny261A__"},
+    {"attiny441", "__AVR_ATtiny441__"},
     {"attiny461", "__AVR_ATtiny461__"},
     {"attiny461a", "__AVR_ATtiny461A__"},
+    {"attiny841", "__AVR_ATtiny841__"},
     {"attiny861", "__AVR_ATtiny861__"},
     {"attiny861a", "__AVR_ATtiny861A__"},
     {"attiny87", "__AVR_ATtiny87__"},
@@ -92,11 +94,13 @@ static MCUInfo AVRMcus[] = {
     {"atmega48", "__AVR_ATmega48__"},
     {"atmega48a", "__AVR_ATmega48A__"},
     {"atmega48pa", "__AVR_ATmega48PA__"},
+    {"atmega48pb", "__AVR_ATmega48PB__"},
     {"atmega48p", "__AVR_ATmega48P__"},
     {"atmega88", "__AVR_ATmega88__"},
     {"atmega88a", "__AVR_ATmega88A__"},
     {"atmega88p", "__AVR_ATmega88P__"},
     {"atmega88pa", "__AVR_ATmega88PA__"},
+    {"atmega88pb", "__AVR_ATmega88PB__"},
     {"atmega8515", "__AVR_ATmega8515__"},
     {"atmega8535", "__AVR_ATmega8535__"},
     {"atmega8hva", "__AVR_ATmega8HVA__"},
@@ -124,6 +128,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega168a", "__AVR_ATmega168A__"},
     {"atmega168p", "__AVR_ATmega168P__"},
     {"atmega168pa", "__AVR_ATmega168PA__"},
+    {"atmega168pb", "__AVR_ATmega168PB__"},
     {"atmega169", "__AVR_ATmega169__"},
     {"atmega169a", "__AVR_ATmega169A__"},
     {"atmega169p", "__AVR_ATmega169P__"},
@@ -134,6 +139,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega324a", "__AVR_ATmega324A__"},
     {"atmega324p", "__AVR_ATmega324P__"},
     {"atmega324pa", "__AVR_ATmega324PA__"},
+    {"atmega324pb", "__AVR_ATmega324PB__"},
     {"atmega325", "__AVR_ATmega325__"},
     {"atmega325a", "__AVR_ATmega325A__"},
     {"atmega325p", "__AVR_ATmega325P__"},
@@ -144,6 +150,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega3250pa", "__AVR_ATmega3250PA__"},
     {"atmega328", "__AVR_ATmega328__"},
     {"atmega328p", "__AVR_ATmega328P__"},
+    {"atmega328pb", "__AVR_ATmega328PB__"},
     {"atmega329", "__AVR_ATmega329__"},
     {"atmega329a", "__AVR_ATmega329A__"},
     {"atmega329p", "__AVR_ATmega329P__"},
@@ -216,7 +223,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega256rfr2", "__AVR_ATmega256RFR2__"},
     {"atmega2564rfr2", "__AVR_ATmega2564RFR2__"},
     {"atxmega16a4", "__AVR_ATxmega16A4__"},
-    {"atxmega16a4u", "__AVR_ATxmega16a4U__"},
+    {"atxmega16a4u", "__AVR_ATxmega16A4U__"},
     {"atxmega16c4", "__AVR_ATxmega16C4__"},
     {"atxmega16d4", "__AVR_ATxmega16D4__"},
     {"atxmega32a4", "__AVR_ATxmega32A4__"},
@@ -258,7 +265,7 @@ static MCUInfo AVRMcus[] = {
     {"atxmega384d3", "__AVR_ATxmega384D3__"},
     {"atxmega128a1", "__AVR_ATxmega128A1__"},
     {"atxmega128a1u", "__AVR_ATxmega128A1U__"},
-    {"atxmega128a4u", "__AVR_ATxmega128a4U__"},
+    {"atxmega128a4u", "__AVR_ATxmega128A4U__"},
     {"attiny4", "__AVR_ATtiny4__"},
     {"attiny5", "__AVR_ATtiny5__"},
     {"attiny9", "__AVR_ATtiny9__"},
@@ -267,6 +274,31 @@ static MCUInfo AVRMcus[] = {
     {"attiny40", "__AVR_ATtiny40__"},
     {"attiny102", "__AVR_ATtiny102__"},
     {"attiny104", "__AVR_ATtiny104__"},
+    {"attiny202", "__AVR_ATtiny202__"},
+    {"attiny402", "__AVR_ATtiny402__"},
+    {"attiny204", "__AVR_ATtiny204__"},
+    {"attiny404", "__AVR_ATtiny404__"},
+    {"attiny804", "__AVR_ATtiny804__"},
+    {"attiny1604", "__AVR_ATtiny1604__"},
+    {"attiny406", "__AVR_ATtiny406__"},
+    {"attiny806", "__AVR_ATtiny806__"},
+    {"attiny1606", "__AVR_ATtiny1606__"},
+    {"attiny807", "__AVR_ATtiny807__"},
+    {"attiny1607", "__AVR_ATtiny1607__"},
+    {"attiny212", "__AVR_ATtiny212__"},
+    {"attiny412", "__AVR_ATtiny412__"},
+    {"attiny214", "__AVR_ATtiny214__"},
+    {"attiny414", "__AVR_ATtiny414__"},
+    {"attiny814", "__AVR_ATtiny814__"},
+    {"attiny1614", "__AVR_ATtiny1614__"},
+    {"attiny416", "__AVR_ATtiny416__"},
+    {"attiny816", "__AVR_ATtiny816__"},
+    {"attiny1616", "__AVR_ATtiny1616__"},
+    {"attiny3216", "__AVR_ATtiny3216__"},
+    {"attiny417", "__AVR_ATtiny417__"},
+    {"attiny817", "__AVR_ATtiny817__"},
+    {"attiny1617", "__AVR_ATtiny1617__"},
+    {"attiny3217", "__AVR_ATtiny3217__"},
 };
 
 } // namespace targets
@@ -279,8 +311,7 @@ static constexpr llvm::StringLiteral ValidFamilyNames[] = {
     "avrxmega6", "avrxmega7", "avrtiny"};
 
 bool AVRTargetInfo::isValidCPUName(StringRef Name) const {
-  bool IsFamily =
-      llvm::find(ValidFamilyNames, Name) != std::end(ValidFamilyNames);
+  bool IsFamily = llvm::is_contained(ValidFamilyNames, Name);
 
   bool IsMCU =
       llvm::find_if(AVRMcus, [&](const MCUInfo &Info) {
@@ -301,6 +332,7 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AVR");
   Builder.defineMacro("__AVR__");
   Builder.defineMacro("__ELF__");
+  Builder.defineMacro("__flash", "__attribute__((address_space(1)))");
 
   if (!this->CPU.empty()) {
     auto It = llvm::find_if(

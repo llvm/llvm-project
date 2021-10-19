@@ -33,8 +33,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(output and len(output) > 0,
                         "expect program output")
         lines = output.splitlines()
-        self.assertTrue(program in lines[0],
-                        "make sure program path is in first argument")
+        self.assertIn(program, lines[0],
+                      "make sure program path is in first argument")
 
     @skipIfWindows
     @skipIfRemote
@@ -104,9 +104,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             if line.startswith('cwd = \"'):
                 quote_path = '"%s"' % (program_parent_dir)
                 found = True
-                self.assertTrue(quote_path in line,
-                                "working directory '%s' not in '%s'" % (
-                                    program_parent_dir, line))
+                self.assertIn(quote_path, line,
+                              "working directory '%s' not in '%s'" % (
+                                  program_parent_dir, line))
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
@@ -181,7 +181,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfLinux # shell argument expansion doesn't seem to work on Linux
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "netbsd"],
+                        bugnumber="llvm.org/pr48349")
     @skipIfRemote
     def test_shellExpandArguments_enabled(self):
         '''
@@ -201,9 +202,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (program)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" expanded to "%s"' % (
-                                    glob, program))
+                self.assertIn(quote_path, line,
+                              'verify "%s" expanded to "%s"' % (
+                                  glob, program))
 
     @skipIfWindows
     @skipIfRemote
@@ -227,9 +228,9 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         for line in lines:
             quote_path = '"%s"' % (glob)
             if line.startswith("arg[1] ="):
-                self.assertTrue(quote_path in line,
-                                'verify "%s" stayed to "%s"' % (
-                                    glob, glob))
+                self.assertIn(quote_path, line,
+                              'verify "%s" stayed to "%s"' % (
+                                  glob, glob))
 
     @skipIfWindows
     @skipIfRemote
@@ -254,8 +255,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Make sure arguments we specified are correct
         for (i, arg) in enumerate(args):
             quoted_arg = '"%s"' % (arg)
-            self.assertTrue(quoted_arg in lines[i],
-                            'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
+            self.assertIn(quoted_arg, lines[i],
+                          'arg[%i] "%s" not in "%s"' % (i+1, quoted_arg, lines[i]))
 
     @skipIfWindows
     @skipIfRemote
@@ -292,6 +293,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(archs=["arm", "aarch64"]) # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         '''
             Tests the "initCommands", "preRunCommands", "stopCommands",
@@ -312,12 +314,14 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         program = self.getBuildArtifact("a.out")
         initCommands = ['target list', 'platform list']
         preRunCommands = ['image list a.out', 'image dump sections a.out']
+        postRunCommands = ['help trace', 'help process trace']
         stopCommands = ['frame variable', 'bt']
         exitCommands = ['expr 2+3', 'expr 3+4']
         terminateCommands = ['expr 4+2']
         self.build_and_launch(program,
                               initCommands=initCommands,
                               preRunCommands=preRunCommands,
+                              postRunCommands=postRunCommands,
                               stopCommands=stopCommands,
                               exitCommands=exitCommands,
                               terminateCommands=terminateCommands)
@@ -329,6 +333,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.verify_commands('initCommands', output, initCommands)
         # Verify all "preRunCommands" were found in console output
         self.verify_commands('preRunCommands', output, preRunCommands)
+        # Verify all "postRunCommands" were found in console output
+        self.verify_commands('postRunCommands', output, postRunCommands)
 
         source = 'main.c'
         first_line = line_number(source, '// breakpoint 1')
@@ -382,8 +388,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # breakpoints get hit
         launchCommands = [
             'target create "%s"' % (program),
-            'br s -f main.c -l %d' % first_line,
-            'br s -f main.c -l %d' % second_line,
+            'breakpoint s -f main.c -l %d' % first_line,
+            'breakpoint s -f main.c -l %d' % second_line,
             'process launch --stop-at-entry'
         ]
 
@@ -439,7 +445,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         '''
         self.build_and_create_debug_adaptor()
         program = self.getBuildArtifact("a.out")
-        
+
         terminateCommands = ['expr 4+2']
         self.launch(program=program,
                     terminateCommands=terminateCommands)

@@ -6,12 +6,12 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include <stddef.h>
+#include <cstddef>
 
 // Computes the offset of the given GPR in the user data area.
 #define GPR_OFFSET(regname) (offsetof(GPR, regname))
-#define FPR_OFFSET(regname) (offsetof(FPR, regname))
-#define VMX_OFFSET(regname) (offsetof(VMX, regname))
+#define FPR_OFFSET(regname) (sizeof(GPR) + offsetof(FPR, regname))
+#define VMX_OFFSET(regname) (sizeof(GPR) + sizeof(FPR) + offsetof(VMX, regname))
 #define GPR_SIZE(regname) (sizeof(((GPR *)NULL)->regname))
 
 #ifdef DECLARE_REGISTER_INFOS_POWERPC_STRUCT
@@ -24,7 +24,7 @@
                                           dwarf_##reg##_powerpc, lldb_kind,    \
                                           LLDB_INVALID_REGNUM,                 \
                                           gpr_##reg##_powerpc },               \
-                                          NULL, NULL, NULL, 0                  \
+                                          NULL, NULL,                          \
   }
 #define DEFINE_FPR(reg, lldb_kind)                                             \
   {                                                                            \
@@ -32,7 +32,7 @@
                               {dwarf_##reg##_powerpc, dwarf_##reg##_powerpc,   \
                                lldb_kind, LLDB_INVALID_REGNUM,                 \
                                fpr_##reg##_powerpc },                          \
-                               NULL, NULL, NULL, 0                             \
+                               NULL, NULL,                                     \
   }
 #define DEFINE_VMX(reg, lldb_kind)                                             \
   {                                                                            \
@@ -40,23 +40,23 @@
                                {dwarf_##reg##_powerpc, dwarf_##reg##_powerpc,  \
                                 lldb_kind, LLDB_INVALID_REGNUM,                \
                                 vmx_##reg##_powerpc },                         \
-                                NULL, NULL, NULL, 0                            \
+                                NULL, NULL,                                    \
   }
 
 // General purpose registers.            EH_Frame,                  DWARF,
 // Generic,                Process Plugin
 #define POWERPC_REGS                                                           \
   DEFINE_GPR(r0, NULL, LLDB_INVALID_REGNUM)                                    \
-  , DEFINE_GPR(r1, "sp", LLDB_REGNUM_GENERIC_SP),                              \
+  , DEFINE_GPR(r1, NULL, LLDB_REGNUM_GENERIC_SP),                              \
       DEFINE_GPR(r2, NULL, LLDB_INVALID_REGNUM),                               \
-      DEFINE_GPR(r3, "arg1", LLDB_REGNUM_GENERIC_ARG1),                        \
-      DEFINE_GPR(r4, "arg2", LLDB_REGNUM_GENERIC_ARG2),                        \
-      DEFINE_GPR(r5, "arg3", LLDB_REGNUM_GENERIC_ARG3),                        \
-      DEFINE_GPR(r6, "arg4", LLDB_REGNUM_GENERIC_ARG4),                        \
-      DEFINE_GPR(r7, "arg5", LLDB_REGNUM_GENERIC_ARG5),                        \
-      DEFINE_GPR(r8, "arg6", LLDB_REGNUM_GENERIC_ARG6),                        \
-      DEFINE_GPR(r9, "arg7", LLDB_REGNUM_GENERIC_ARG7),                        \
-      DEFINE_GPR(r10, "arg8", LLDB_REGNUM_GENERIC_ARG8),                       \
+      DEFINE_GPR(r3, NULL, LLDB_REGNUM_GENERIC_ARG1),                          \
+      DEFINE_GPR(r4, NULL, LLDB_REGNUM_GENERIC_ARG2),                          \
+      DEFINE_GPR(r5, NULL, LLDB_REGNUM_GENERIC_ARG3),                          \
+      DEFINE_GPR(r6, NULL, LLDB_REGNUM_GENERIC_ARG4),                          \
+      DEFINE_GPR(r7, NULL, LLDB_REGNUM_GENERIC_ARG5),                          \
+      DEFINE_GPR(r8, NULL, LLDB_REGNUM_GENERIC_ARG6),                          \
+      DEFINE_GPR(r9, NULL, LLDB_REGNUM_GENERIC_ARG7),                          \
+      DEFINE_GPR(r10, NULL, LLDB_REGNUM_GENERIC_ARG8),                         \
       DEFINE_GPR(r11, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r12, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r13, NULL, LLDB_INVALID_REGNUM),                              \
@@ -78,11 +78,11 @@
       DEFINE_GPR(r29, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r30, NULL, LLDB_INVALID_REGNUM),                              \
       DEFINE_GPR(r31, NULL, LLDB_INVALID_REGNUM),                              \
-      DEFINE_GPR(lr, "lr", LLDB_REGNUM_GENERIC_RA),                            \
-      DEFINE_GPR(cr, "cr", LLDB_REGNUM_GENERIC_FLAGS),                         \
-      DEFINE_GPR(xer, "xer", LLDB_INVALID_REGNUM),                             \
-      DEFINE_GPR(ctr, "ctr", LLDB_INVALID_REGNUM),                             \
-      DEFINE_GPR(pc, "pc", LLDB_REGNUM_GENERIC_PC),                            \
+      DEFINE_GPR(lr, NULL, LLDB_REGNUM_GENERIC_RA),                            \
+      DEFINE_GPR(cr, NULL, LLDB_REGNUM_GENERIC_FLAGS),                         \
+      DEFINE_GPR(xer, NULL, LLDB_INVALID_REGNUM),                              \
+      DEFINE_GPR(ctr, NULL, LLDB_INVALID_REGNUM),                              \
+      DEFINE_GPR(pc, NULL, LLDB_REGNUM_GENERIC_PC),                            \
       DEFINE_FPR(f0, LLDB_INVALID_REGNUM),                                     \
       DEFINE_FPR(f1, LLDB_INVALID_REGNUM),                                     \
       DEFINE_FPR(f2, LLDB_INVALID_REGNUM),                                     \
@@ -125,8 +125,7 @@
         LLDB_INVALID_REGNUM, fpr_fpscr_powerpc},                               \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},                                                                     \
+        },                                                                     \
       DEFINE_VMX(v0, LLDB_INVALID_REGNUM),                                     \
       DEFINE_VMX(v1, LLDB_INVALID_REGNUM),                                     \
       DEFINE_VMX(v2, LLDB_INVALID_REGNUM),                                     \
@@ -169,8 +168,7 @@
         LLDB_INVALID_REGNUM, vmx_vrsave_powerpc},                              \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},                                                                     \
+        },                                                                     \
       {"vscr",                                                                 \
        NULL,                                                                   \
        4,                                                                      \
@@ -181,8 +179,7 @@
         LLDB_INVALID_REGNUM, vmx_vscr_powerpc},                                \
        NULL,                                                                   \
        NULL,                                                                   \
-       NULL,                                                                   \
-       0},
+       },
 
 static RegisterInfo g_register_infos_powerpc64[] = {
 #define GPR GPR64

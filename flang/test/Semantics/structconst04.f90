@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Error tests for structure constructors: C1594 violations
 ! from assigning globally-visible data to POINTER components.
 ! This test is structconst03.f90 with the type parameters removed.
@@ -66,7 +66,6 @@ module module1
     !ERROR: Externally visible object 'dummy1' may not be associated with pointer component 'pt1' in a pure procedure
     x1 = t1(dummy1)
     x1 = t1(dummy2)
-    !ERROR: Externally visible object 'dummy3' may not be associated with pointer component 'pt1' in a pure procedure
     x1 = t1(dummy3)
 ! TODO when semantics handles coindexing:
 ! TODO !ERROR: Externally visible object may not be associated with a pointer in a pure procedure
@@ -101,9 +100,7 @@ module module1
       !ERROR: Externally visible object 'dummy1a' may not be associated with pointer component 'pt1' in a pure procedure
       x1a = t1(dummy1a)
       x1a = t1(dummy2a)
-      !ERROR: Externally visible object 'dummy3' may not be associated with pointer component 'pt1' in a pure procedure
       x1a = t1(dummy3)
-      !ERROR: Externally visible object 'dummy3a' may not be associated with pointer component 'pt1' in a pure procedure
       x1a = t1(dummy3a)
 ! TODO when semantics handles coindexing:
 ! TODO !ERROR: Externally visible object may not be associated with a pointer in a pure procedure
@@ -117,6 +114,21 @@ module module1
       x4a = t4(modulevar4)
     end subroutine subr
   end subroutine
+
+  pure integer function pf1(dummy3)
+    real, pointer :: dummy3
+    type(t1) :: x1
+    !ERROR: Externally visible object 'dummy3' may not be associated with pointer component 'pt1' in a pure procedure
+    x1 = t1(dummy3)
+   contains
+    pure subroutine subr(dummy3a)
+      real, pointer :: dummy3a
+      type(t1) :: x1a
+      !ERROR: Externally visible object 'dummy3' may not be associated with pointer component 'pt1' in a pure procedure
+      x1a = t1(dummy3)
+      x1a = t1(dummy3a)
+    end subroutine
+  end function
 
   impure real function ipf1(dummy1, dummy2, dummy3, dummy4)
     real, target :: local1

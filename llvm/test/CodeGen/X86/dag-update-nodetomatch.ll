@@ -22,6 +22,41 @@
 ; Test for PR30775
 define void @_Z1nv() local_unnamed_addr {
 ; CHECK-LABEL: _Z1nv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq k@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl 4(%rax), %r11d
+; CHECK-NEXT:    movq c@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movswl (%rax), %r10d
+; CHECK-NEXT:    movq b@GOTPCREL(%rip), %r8
+; CHECK-NEXT:    movswl (%r8), %r9d
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rsi
+; CHECK-NEXT:    movl (%rsi), %esi
+; CHECK-NEXT:    movq l@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl (%rax), %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shll $7, %eax
+; CHECK-NEXT:    sarl $7, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovel %esi, %eax
+; CHECK-NEXT:    movzwl %r11w, %ecx
+; CHECK-NEXT:    leal (%r10,%rcx,2), %ecx
+; CHECK-NEXT:    addl %r9d, %ecx
+; CHECK-NEXT:    cmpl %eax, %ecx
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testl $33554431, %edi # imm = 0x1FFFFFF
+; CHECK-NEXT:    sete %dl
+; CHECK-NEXT:    orb %al, %dl
+; CHECK-NEXT:    movzbl %dl, %eax
+; CHECK-NEXT:    movq e@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movw %ax, (%rdx)
+; CHECK-NEXT:    notl %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    addl %r11d, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    sarl %cl, %esi
+; CHECK-NEXT:    movw %si, (%r8)
+; CHECK-NEXT:    retq
 entry:
   %bf.load = load i32, i32* bitcast (i24* getelementptr inbounds (%struct.m, %struct.m* @k, i64 0, i32 0, i32 1) to i32*), align 4
   %0 = load i16, i16* @c, align 2
@@ -60,6 +95,180 @@ entry:
 ; Test for PR31536
 define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-LABEL: _Z2x6v:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    .cfi_def_cfa_offset 40
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 56
+; CHECK-NEXT:    .cfi_offset %rbx, -56
+; CHECK-NEXT:    .cfi_offset %r12, -48
+; CHECK-NEXT:    .cfi_offset %r13, -40
+; CHECK-NEXT:    .cfi_offset %r14, -32
+; CHECK-NEXT:    .cfi_offset %r15, -24
+; CHECK-NEXT:    .cfi_offset %rbp, -16
+; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl (%rax), %ecx
+; CHECK-NEXT:    andl $511, %ecx # imm = 0x1FF
+; CHECK-NEXT:    leaq 1(%rcx), %r13
+; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl %r13d, (%rax)
+; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl (%rax), %edx
+; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    je .LBB1_18
+; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
+; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq (%rax), %r12
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    leaq 8(,%rax,8), %r14
+; CHECK-NEXT:    imulq %r13, %r14
+; CHECK-NEXT:    addq %r12, %r14
+; CHECK-NEXT:    movq x2@GOTPCREL(%rip), %r15
+; CHECK-NEXT:    movl (%r15), %eax
+; CHECK-NEXT:    leal 8(,%rcx,8), %ecx
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leaq 8(%r12), %rcx
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leaq 32(%r12), %rbx
+; CHECK-NEXT:    shlq $3, %r13
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %r12, %rdi
+; CHECK-NEXT:    jmp .LBB1_2
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB1_15: # %for.cond1.for.inc3_crit_edge
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movl %eax, (%r15)
+; CHECK-NEXT:  .LBB1_16: # %for.inc3
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    addq %r13, %rdi
+; CHECK-NEXT:    incq %rsi
+; CHECK-NEXT:    addq %r13, %rbx
+; CHECK-NEXT:    incl %edx
+; CHECK-NEXT:    je .LBB1_17
+; CHECK-NEXT:  .LBB1_2: # %for.cond1thread-pre-split
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB1_12 Depth 2
+; CHECK-NEXT:    # Child Loop BB1_14 Depth 2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    jns .LBB1_16
+; CHECK-NEXT:  # %bb.3: # %for.body2.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movslq %eax, %r9
+; CHECK-NEXT:    testq %r9, %r9
+; CHECK-NEXT:    movq $-1, %rbp
+; CHECK-NEXT:    cmovnsq %r9, %rbp
+; CHECK-NEXT:    subq %r9, %rbp
+; CHECK-NEXT:    incq %rbp
+; CHECK-NEXT:    cmpq $4, %rbp
+; CHECK-NEXT:    jb .LBB1_14
+; CHECK-NEXT:  # %bb.4: # %min.iters.checked
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movq %rbp, %r8
+; CHECK-NEXT:    andq $-4, %r8
+; CHECK-NEXT:    je .LBB1_14
+; CHECK-NEXT:  # %bb.5: # %vector.memcheck
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
+; CHECK-NEXT:    imulq %rsi, %r10
+; CHECK-NEXT:    leaq (%r12,%r10), %rax
+; CHECK-NEXT:    leaq (%rax,%r9,8), %rax
+; CHECK-NEXT:    testq %r9, %r9
+; CHECK-NEXT:    movq $-1, %r11
+; CHECK-NEXT:    cmovnsq %r9, %r11
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    jae .LBB1_7
+; CHECK-NEXT:  # %bb.6: # %vector.memcheck
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Folded Reload
+; CHECK-NEXT:    leaq (%r10,%r11,8), %rax
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    ja .LBB1_14
+; CHECK-NEXT:  .LBB1_7: # %vector.body.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    leaq -4(%r8), %rax
+; CHECK-NEXT:    movq %rax, %r10
+; CHECK-NEXT:    shrq $2, %r10
+; CHECK-NEXT:    btl $2, %eax
+; CHECK-NEXT:    jb .LBB1_8
+; CHECK-NEXT:  # %bb.9: # %vector.body.prol.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; CHECK-NEXT:    movdqu %xmm0, (%rdi,%r9,8)
+; CHECK-NEXT:    movdqu %xmm0, 16(%rdi,%r9,8)
+; CHECK-NEXT:    movl $4, %r11d
+; CHECK-NEXT:    testq %r10, %r10
+; CHECK-NEXT:    jne .LBB1_11
+; CHECK-NEXT:    jmp .LBB1_13
+; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    xorl %r11d, %r11d
+; CHECK-NEXT:    testq %r10, %r10
+; CHECK-NEXT:    je .LBB1_13
+; CHECK-NEXT:  .LBB1_11: # %vector.body.preheader.new
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; CHECK-NEXT:    movq %r11, %rax
+; CHECK-NEXT:    subq %r8, %rax
+; CHECK-NEXT:    addq %r9, %r11
+; CHECK-NEXT:    leaq (%rbx,%r11,8), %r11
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB1_12: # %vector.body
+; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    movdqu %xmm0, -32(%r11)
+; CHECK-NEXT:    movdqu %xmm0, -16(%r11)
+; CHECK-NEXT:    movdqu %xmm0, (%r11)
+; CHECK-NEXT:    movdqu %xmm0, 16(%r11)
+; CHECK-NEXT:    addq $64, %r11
+; CHECK-NEXT:    addq $8, %rax
+; CHECK-NEXT:    jne .LBB1_12
+; CHECK-NEXT:  .LBB1_13: # %middle.block
+; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
+; CHECK-NEXT:    addq %r8, %r9
+; CHECK-NEXT:    cmpq %r8, %rbp
+; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    je .LBB1_15
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB1_14: # %for.body2
+; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    movq (%rcx), %rax
+; CHECK-NEXT:    movq %rax, (%rdi,%r9,8)
+; CHECK-NEXT:    leaq 1(%r9), %rax
+; CHECK-NEXT:    cmpq $-1, %r9
+; CHECK-NEXT:    movq %rax, %r9
+; CHECK-NEXT:    jl .LBB1_14
+; CHECK-NEXT:    jmp .LBB1_15
+; CHECK-NEXT:  .LBB1_17: # %for.cond.for.end5_crit_edge
+; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq %r14, (%rax)
+; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl $0, (%rax)
+; CHECK-NEXT:  .LBB1_18: # %for.end5
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    .cfi_def_cfa_offset 40
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
 entry:
   %0 = load i32, i32* @x1, align 4
   %and = and i32 %0, 511

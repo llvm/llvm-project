@@ -10,14 +10,14 @@
 // Check that the IRELATIVE relocations are last in the .got
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (5) .rel.dyn {
-// CHECK-NEXT:     0x302E0 R_ARM_GLOB_DAT bar2 0x0
-// CHECK-NEXT:     0x302E4 R_ARM_GLOB_DAT zed2 0x0
-// CHECK-NEXT:     0x302E8 R_ARM_IRELATIVE - 0x0
-// CHECK-NEXT:     0x302EC R_ARM_IRELATIVE - 0x0
+// CHECK-NEXT:     0x302E0 R_ARM_GLOB_DAT bar2
+// CHECK-NEXT:     0x302E4 R_ARM_GLOB_DAT zed2
+// CHECK-NEXT:     0x302E8 R_ARM_IRELATIVE -
+// CHECK-NEXT:     0x302EC R_ARM_IRELATIVE -
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (6) .rel.plt {
-// CHECK-NEXT:     0x402FC R_ARM_JUMP_SLOT bar2 0x0
-// CHECK-NEXT:     0x40300 R_ARM_JUMP_SLOT zed2 0x0
+// CHECK-NEXT:     0x402FC R_ARM_JUMP_SLOT bar2
+// CHECK-NEXT:     0x40300 R_ARM_JUMP_SLOT zed2
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -35,13 +35,13 @@
 // DISASM: <bar>:
 // DISASM-NEXT:    201e0:       bx      lr
 // DISASM: <_start>:
-// DISASM-NEXT:    201e4:       bl      #84
-// DISASM-NEXT:    201e8:       bl      #96
+// DISASM-NEXT:    201e4:       bl      0x20240
+// DISASM-NEXT:    201e8:       bl      0x20250
 // DISASM: <$d.1>:
 // DISASM-NEXT:    201ec:       00 00 00 00     .word   0x00000000
 // DISASM-NEXT:    201f0:       04 00 00 00     .word   0x00000004
-// DISASM:         201f4:       bl      #36
-// DISASM-NEXT:    201f8:       bl      #48
+// DISASM:         201f4:       bl      0x20220
+// DISASM-NEXT:    201f8:       bl      0x20230
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:

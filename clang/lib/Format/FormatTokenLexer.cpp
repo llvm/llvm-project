@@ -33,12 +33,16 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
-  Lex.reset(new Lexer(ID, SourceMgr.getBuffer(ID), SourceMgr,
+  Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr,
                       getFormattingLangOpts(Style)));
   Lex->SetKeepWhitespaceMode(true);
 
   for (const std::string &ForEachMacro : Style.ForEachMacros)
     Macros.insert({&IdentTable.get(ForEachMacro), TT_ForEachMacro});
+  for (const std::string &IfMacro : Style.IfMacros)
+    Macros.insert({&IdentTable.get(IfMacro), TT_IfMacro});
+  for (const std::string &AttributeMacro : Style.AttributeMacros)
+    Macros.insert({&IdentTable.get(AttributeMacro), TT_AttributeMacro});
   for (const std::string &StatementMacro : Style.StatementMacros)
     Macros.insert({&IdentTable.get(StatementMacro), TT_StatementMacro});
   for (const std::string &TypenameMacro : Style.TypenameMacros)
@@ -50,6 +54,10 @@ FormatTokenLexer::FormatTokenLexer(
     Macros.insert(
         {&IdentTable.get(WhitespaceSensitiveMacro), TT_UntouchableMacroFunc});
   }
+  for (const std::string &StatementAttributeLikeMacro :
+       Style.StatementAttributeLikeMacros)
+    Macros.insert({&IdentTable.get(StatementAttributeLikeMacro),
+                   TT_StatementAttributeLikeMacro});
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -86,20 +94,46 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (Style.isCpp() && tryTransformTryUsageForC())
     return;
 
+  if (Style.Language == FormatStyle::LK_JavaScript || Style.isCSharp()) {
+    static const tok::TokenKind NullishCoalescingOperator[] = {tok::question,
+                                                               tok::question};
+    static const tok::TokenKind NullPropagatingOperator[] = {tok::question,
+                                                             tok::period};
+    static const tok::TokenKind FatArrow[] = {tok::equal, tok::greater};
+
+    if (tryMergeTokens(FatArrow, TT_FatArrow))
+      return;
+    if (tryMergeTokens(NullishCoalescingOperator, TT_NullCoalescingOperator)) {
+      // Treat like the "||" operator (as opposed to the ternary ?).
+      Tokens.back()->Tok.setKind(tok::pipepipe);
+      return;
+    }
+    if (tryMergeTokens(NullPropagatingOperator, TT_NullPropagatingOperator)) {
+      // Treat like a regular "." access.
+      Tokens.back()->Tok.setKind(tok::period);
+      return;
+    }
+    if (tryMergeNullishCoalescingEqual()) {
+      return;
+    }
+  }
+
   if (Style.isCSharp()) {
+    static const tok::TokenKind CSharpNullConditionalLSquare[] = {
+        tok::question, tok::l_square};
+
     if (tryMergeCSharpKeywordVariables())
       return;
     if (tryMergeCSharpStringLiteral())
       return;
-    if (tryMergeCSharpDoubleQuestion())
-      return;
-    if (tryMergeCSharpNullConditional())
-      return;
     if (tryTransformCSharpForEach())
       return;
-    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
-    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
+    if (tryMergeTokens(CSharpNullConditionalLSquare,
+                       TT_CSharpNullConditionalLSquare)) {
+      // Treat like a regular "[" operator.
+      Tokens.back()->Tok.setKind(tok::l_square);
       return;
+    }
   }
 
   if (tryMergeNSStringLiteral())
@@ -111,14 +145,11 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                                                    tok::equal};
     static const tok::TokenKind JSShiftEqual[] = {tok::greater, tok::greater,
                                                   tok::greaterequal};
-    static const tok::TokenKind JSRightArrow[] = {tok::equal, tok::greater};
     static const tok::TokenKind JSExponentiation[] = {tok::star, tok::star};
     static const tok::TokenKind JSExponentiationEqual[] = {tok::star,
                                                            tok::starequal};
-    static const tok::TokenKind JSNullPropagatingOperator[] = {tok::question,
-                                                               tok::period};
-    static const tok::TokenKind JSNullishOperator[] = {tok::question,
-                                                       tok::question};
+    static const tok::TokenKind JSPipePipeEqual[] = {tok::pipepipe, tok::equal};
+    static const tok::TokenKind JSAndAndEqual[] = {tok::ampamp, tok::equal};
 
     // FIXME: Investigate what token type gives the correct operator priority.
     if (tryMergeTokens(JSIdentity, TT_BinaryOperator))
@@ -127,23 +158,16 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       return;
     if (tryMergeTokens(JSShiftEqual, TT_BinaryOperator))
       return;
-    if (tryMergeTokens(JSRightArrow, TT_JsFatArrow))
-      return;
     if (tryMergeTokens(JSExponentiation, TT_JsExponentiation))
       return;
     if (tryMergeTokens(JSExponentiationEqual, TT_JsExponentiationEqual)) {
       Tokens.back()->Tok.setKind(tok::starequal);
       return;
     }
-    if (tryMergeTokens(JSNullishOperator, TT_JsNullishCoalescingOperator)) {
-      // Treat like the "||" operator (as opposed to the ternary ?).
-      Tokens.back()->Tok.setKind(tok::pipepipe);
-      return;
-    }
-    if (tryMergeTokens(JSNullPropagatingOperator,
-                       TT_JsNullPropagatingOperator)) {
-      // Treat like a regular "." access.
-      Tokens.back()->Tok.setKind(tok::period);
+    if (tryMergeTokens(JSAndAndEqual, TT_JsAndAndEqual) ||
+        tryMergeTokens(JSPipePipeEqual, TT_JsPipePipeEqual)) {
+      // Treat like the "=" assignment operator.
+      Tokens.back()->Tok.setKind(tok::equal);
       return;
     }
     if (tryMergeJSPrivateIdentifier())
@@ -293,45 +317,20 @@ const llvm::StringSet<> FormatTokenLexer::CSharpAttributeTargets = {
     "param",    "property", "return", "type",
 };
 
-bool FormatTokenLexer::tryMergeCSharpDoubleQuestion() {
+bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
   if (Tokens.size() < 2)
     return false;
-  auto &FirstQuestion = *(Tokens.end() - 2);
-  auto &SecondQuestion = *(Tokens.end() - 1);
-  if (!FirstQuestion->is(tok::question) || !SecondQuestion->is(tok::question))
+  auto &NullishCoalescing = *(Tokens.end() - 2);
+  auto &Equal = *(Tokens.end() - 1);
+  if (NullishCoalescing->getType() != TT_NullCoalescingOperator ||
+      !Equal->is(tok::equal))
     return false;
-  FirstQuestion->Tok.setKind(tok::question); // no '??' in clang tokens.
-  FirstQuestion->TokenText = StringRef(FirstQuestion->TokenText.begin(),
-                                       SecondQuestion->TokenText.end() -
-                                           FirstQuestion->TokenText.begin());
-  FirstQuestion->ColumnWidth += SecondQuestion->ColumnWidth;
-  FirstQuestion->setType(TT_CSharpNullCoalescing);
-  Tokens.erase(Tokens.end() - 1);
-  return true;
-}
-
-// Merge '?[' and '?.' pairs into single tokens.
-bool FormatTokenLexer::tryMergeCSharpNullConditional() {
-  if (Tokens.size() < 2)
-    return false;
-  auto &Question = *(Tokens.end() - 2);
-  auto &PeriodOrLSquare = *(Tokens.end() - 1);
-  if (!Question->is(tok::question) ||
-      !PeriodOrLSquare->isOneOf(tok::l_square, tok::period))
-    return false;
-  Question->TokenText =
-      StringRef(Question->TokenText.begin(),
-                PeriodOrLSquare->TokenText.end() - Question->TokenText.begin());
-  Question->ColumnWidth += PeriodOrLSquare->ColumnWidth;
-
-  if (PeriodOrLSquare->is(tok::l_square)) {
-    Question->Tok.setKind(tok::question); // no '?[' in clang tokens.
-    Question->setType(TT_CSharpNullConditionalLSquare);
-  } else {
-    Question->Tok.setKind(tok::question); // no '?.' in clang tokens.
-    Question->setType(TT_CSharpNullConditional);
-  }
-
+  NullishCoalescing->Tok.setKind(tok::equal); // no '??=' in clang tokens.
+  NullishCoalescing->TokenText =
+      StringRef(NullishCoalescing->TokenText.begin(),
+                Equal->TokenText.end() - NullishCoalescing->TokenText.begin());
+  NullishCoalescing->ColumnWidth += Equal->ColumnWidth;
+  NullishCoalescing->setType(TT_NullCoalescingEqual);
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -399,7 +398,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (!Try->is(tok::kw_try))
     return false;
   auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon))
+  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
     return false;
 
   if (Tokens.size() > 2) {
@@ -761,7 +760,7 @@ bool FormatTokenLexer::tryMergeConflictMarkers() {
   unsigned FirstInLineOffset;
   std::tie(ID, FirstInLineOffset) = SourceMgr.getDecomposedLoc(
       Tokens[FirstInLineIndex]->getStartOfNonWhitespace());
-  StringRef Buffer = SourceMgr.getBuffer(ID)->getBuffer();
+  StringRef Buffer = SourceMgr.getBufferOrFake(ID).getBuffer();
   // Calculate the offset of the start of the current line.
   auto LineOffset = Buffer.rfind('\n', FirstInLineOffset);
   if (LineOffset == StringRef::npos) {
@@ -1017,6 +1016,13 @@ FormatToken *FormatTokenLexer::getNextToken() {
               tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
+      if (it->second == TT_IfMacro) {
+        // The lexer token currently has type tok::kw_unknown. However, for this
+        // substitution to be treated correctly in the TokenAnnotator, faking
+        // the tok value seems to be needed. Not sure if there's a more elegant
+        // way.
+        FormatTok->Tok.setKind(tok::kw_if);
+      }
     } else if (FormatTok->is(tok::identifier)) {
       if (MacroBlockBeginRegex.match(Text)) {
         FormatTok->setType(TT_MacroBlockBegin);

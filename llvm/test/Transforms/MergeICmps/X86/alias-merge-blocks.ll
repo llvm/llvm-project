@@ -6,8 +6,8 @@
 define zeroext i1 @opeq1(
 ; X86-LABEL: @opeq1(
 ; X86-NEXT:  "entry+land.rhs.i+land.rhs.i.2+land.rhs.i.3":
-; X86-NEXT:    [[PTR:%.*]] = alloca i32
-; X86-NEXT:    store i32 42, i32* [[PTR]]
+; X86-NEXT:    [[PTR:%.*]] = alloca i32, align 4
+; X86-NEXT:    store i32 42, i32* [[PTR]], align 4
 ; X86-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[S:%.*]], %S* [[A:%.*]], i64 0, i32 0
 ; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
 ; X86-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
@@ -19,7 +19,7 @@ define zeroext i1 @opeq1(
 ; X86-NEXT:    ret i1 [[TMP2]]
 ;
   %S* nocapture readonly dereferenceable(16) %a,
-  %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr #0 {
+  %S* nocapture readonly dereferenceable(16) %b) local_unnamed_addr nofree nosync {
 
 entry:
   %ptr = alloca i32

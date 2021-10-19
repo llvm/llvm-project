@@ -35,7 +35,7 @@ void test0() {
 @end
 extern Test1 *test1_helper(void);
 
-// CHECK-LABEL: define void @test1a_message()
+// CHECK-LABEL: define{{.*}} void @test1a_message()
 void test1a_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
@@ -69,7 +69,7 @@ void test1a_message(void) {
 }
 
 
-// CHECK-LABEL: define void @test1a_property()
+// CHECK-LABEL: define{{.*}} void @test1a_property()
 void test1a_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
@@ -103,7 +103,7 @@ void test1a_property(void) {
 }
 
 
-// CHECK-LABEL: define void @test1b_message()
+// CHECK-LABEL: define{{.*}} void @test1b_message()
 void test1b_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
@@ -134,7 +134,7 @@ void test1b_message(void) {
   char *c = [ptr interior];
 }
 
-// CHECK-LABEL: define void @test1b_property()
+// CHECK-LABEL: define{{.*}} void @test1b_property()
 void test1b_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[C:%.*]] = alloca i8*, align 8
@@ -165,7 +165,7 @@ void test1b_property(void) {
   char *c = ptr.interior;
 }
 
-// CHECK-LABEL: define void @test1c_message()
+// CHECK-LABEL: define{{.*}} void @test1c_message()
 void test1c_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
@@ -198,7 +198,7 @@ void test1c_message(void) {
   char *pc = [ptr PropertyReturnsInnerPointer];
 }
 
-// CHECK-LABEL: define void @test1c_property()
+// CHECK-LABEL: define{{.*}} void @test1c_property()
 void test1c_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
@@ -231,7 +231,7 @@ void test1c_property(void) {
   char *pc = ptr.PropertyReturnsInnerPointer;
 }
 
-// CHECK-LABEL: define void @test1d_message()
+// CHECK-LABEL: define{{.*}} void @test1d_message()
 void test1d_message(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
@@ -261,7 +261,7 @@ void test1d_message(void) {
   char *pc = [ptr PropertyReturnsInnerPointer];
 }
 
-// CHECK-LABEL: define void @test1d_property()
+// CHECK-LABEL: define{{.*}} void @test1d_property()
 void test1d_property(void) {
   // CHECK:      [[PTR:%.*]] = alloca [[PTR_T:%.*]]*, align 8
   // CHECK:      [[PC:%.*]] = alloca i8*, align 8
@@ -296,7 +296,7 @@ void test1d_property(void) {
   id ivar;
 }
 @end
-// CHECK-LABEL:      define void @test2(
+// CHECK-LABEL:      define{{.*}} void @test2(
 void test2(Test2 *x) {
   x->ivar = 0;
   // CHECK:      [[X:%.*]] = alloca [[TEST2:%.*]]*
@@ -322,7 +322,7 @@ void test2(Test2 *x) {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL:      define void @test3(i8*
+// CHECK-LABEL:      define{{.*}} void @test3(i8*
 void test3(PRECISE_LIFETIME id x) {
   // CHECK:      [[X:%.*]] = alloca i8*,
   // CHECK-NEXT: [[T0:%.*]] = call i8* @llvm.objc.retain(i8* {{%.*}}) [[NUW]]

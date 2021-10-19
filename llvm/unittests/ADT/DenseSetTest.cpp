@@ -68,7 +68,7 @@ typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
                          const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
                          SmallDenseSet<unsigned, 64, TestDenseSetInfo>>
     DenseSetTestTypes;
-TYPED_TEST_CASE(DenseSetTest, DenseSetTestTypes);
+TYPED_TEST_SUITE(DenseSetTest, DenseSetTestTypes, );
 
 TYPED_TEST(DenseSetTest, Constructor) {
   constexpr unsigned a[] = {1, 2, 4};

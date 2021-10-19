@@ -12,6 +12,77 @@ import json
 import lit.formats
 import lit.util
 
+# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
+# it's not available.
+try:
+  import shlex
+  sh_quote = shlex.quote
+except:
+  import pipes
+  sh_quote = pipes.quote
+
+def find_compiler_libdir():
+  """
+    Returns the path to library resource directory used
+    by the compiler.
+  """
+  if config.compiler_id != 'Clang':
+    lit_config.warning(f'Determining compiler\'s runtime directory is not supported for {config.compiler_id}')
+    # TODO: Support other compilers.
+    return None
+  def get_path_from_clang(args, allow_failure):
+    clang_cmd = [
+      config.clang.strip(),
+      f'--target={config.target_triple}',
+    ]
+    clang_cmd.extend(args)
+    path = None
+    try:
+      result = subprocess.run(
+        clang_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=True
+      )
+      path = result.stdout.decode().strip()
+    except subprocess.CalledProcessError as e:
+      msg = f'Failed to run {clang_cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}'
+      if allow_failure:
+        lit_config.warning(msg)
+      else:
+        lit_config.fatal(msg)
+    return path, clang_cmd
+
+  # Try using `-print-runtime-dir`. This is only supported by very new versions of Clang.
+  # so allow failure here.
+  runtime_dir, clang_cmd = get_path_from_clang(shlex.split(config.target_cflags)
+                                               + ['-print-runtime-dir'],
+                                               allow_failure=True)
+  if runtime_dir:
+    if os.path.exists(runtime_dir):
+      return os.path.realpath(runtime_dir)
+    # TODO(dliew): This should be a fatal error but it seems to trip the `llvm-clang-win-x-aarch64`
+    # bot which is likely misconfigured
+    lit_config.warning(
+      f'Path reported by clang does not exist: \"{runtime_dir}\". '
+      f'This path was found by running {clang_cmd}.'
+    )
+    return None
+
+  # Fall back for older AppleClang that doesn't support `-print-runtime-dir`
+  # Note `-print-file-name=<path to compiler-rt lib>` was broken for Apple
+  # platforms so we can't use that approach here (see https://reviews.llvm.org/D101682).
+  if config.host_os == 'Darwin':
+    lib_dir, _ = get_path_from_clang(['-print-file-name=lib'], allow_failure=False)
+    runtime_dir = os.path.join(lib_dir, 'darwin')
+    if not os.path.exists(runtime_dir):
+      lit_config.fatal(f'Path reported by clang does not exist: {runtime_dir}')
+    return os.path.realpath(runtime_dir)
+
+  lit_config.warning('Failed to determine compiler\'s runtime directory')
+  return None
+
+
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
@@ -54,21 +125,52 @@ else:
 # Add compiler ID to the list of available features.
 config.available_features.add(compiler_id)
 
+# When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
+# config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
+# triple as the trailing path component. The value is incorrect for -m32/-m64.
+# Adjust config.compiler_rt accordingly.
+if config.enable_per_target_runtime_dir:
+    if '-m32' in shlex.split(config.target_cflags):
+        config.compiler_rt_libdir = re.sub(r'/x86_64(?=-[^/]+$)', '/i386', config.compiler_rt_libdir)
+    elif '-m64' in shlex.split(config.target_cflags):
+        config.compiler_rt_libdir = re.sub(r'/i386(?=-[^/]+$)', '/x86_64', config.compiler_rt_libdir)
+
+# Ask the compiler for the path to libraries it is going to use. If this
+# doesn't match config.compiler_rt_libdir then it means we might be testing the
+# compiler's own runtime libraries rather than the ones we just built.
+# Warn about about this and handle appropriately.
+compiler_libdir = find_compiler_libdir()
+if compiler_libdir:
+  compiler_rt_libdir_real = os.path.realpath(config.compiler_rt_libdir)
+  if compiler_libdir != compiler_rt_libdir_real:
+    lit_config.warning(
+      'Compiler lib dir != compiler-rt lib dir\n'
+      f'Compiler libdir:     "{compiler_libdir}"\n'
+      f'compiler-rt libdir:  "{compiler_rt_libdir_real}"')
+    if config.test_standalone_build_libs:
+      # Use just built runtime libraries, i.e. the the libraries this built just built.
+      if not config.test_suite_supports_overriding_runtime_lib_path:
+        # Test suite doesn't support this configuration.
+        # TODO(dliew): This should be an error but it seems several bots are
+        # testing incorrectly and having this as an error breaks them.
+        lit_config.warning(
+            'COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=ON, but this test suite '
+            'does not support testing the just-built runtime libraries '
+            'when the test compiler is configured to use different runtime '
+            'libraries. Either modify this test suite to support this test '
+            'configuration, or set COMPILER_RT_TEST_STANDALONE_BUILD_LIBS=OFF '
+            'to test the runtime libraries included in the compiler instead.'
+        )
+    else:
+      # Use Compiler's resource library directory instead.
+      config.compiler_rt_libdir = compiler_libdir
+    lit_config.note(f'Testing using libraries in "{config.compiler_rt_libdir}"')
+
 # If needed, add cflag for shadow scale.
 if config.asan_shadow_scale != '':
   config.target_cflags += " -mllvm -asan-mapping-scale=" + config.asan_shadow_scale
-
-# BFD linker in 64-bit android toolchains fails to find libc++_shared.so, which
-# is a transitive shared library dependency (via asan runtime).
-if config.android:
-  # Prepend the flag so that it can be overridden.
-  config.target_cflags = "-pie -fuse-ld=gold " + config.target_cflags
-  if config.android_ndk_version < 19:
-    # With a new compiler and NDK < r19 this flag ends up meaning "link against
-    # libc++", but NDK r19 makes this mean "link against the stub libstdc++ that
-    # just contains a handful of ABI functions", which makes most C++ code fail
-    # to link. In r19 and later we just use the default which is libc++.
-    config.cxx_mode_flags.append('-stdlib=libstdc++')
+if config.memprof_shadow_scale != '':
+  config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
 config.environment = dict(os.environ)
 
@@ -132,9 +234,24 @@ if config.host_os == 'NetBSD':
 else:
   config.substitutions.append( ('%run_nomprotect', '%run') )
 
+# Copied from libcxx's config.py
+def get_lit_conf(name, default=None):
+    # Allow overriding on the command line using --param=<name>=<val>
+    val = lit_config.params.get(name, None)
+    if val is None:
+        val = getattr(config, name, None)
+        if val is None:
+            val = default
+    return val
+
+emulator = get_lit_conf('emulator', None)
+
+def get_ios_commands_dir():
+  return os.path.join(config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands")
+
 # Allow tests to be executed on a simulator or remotely.
-if config.emulator:
-  config.substitutions.append( ('%run', config.emulator) )
+if emulator:
+  config.substitutions.append( ('%run', emulator) )
   config.substitutions.append( ('%env ', "env ") )
   # TODO: Implement `%device_rm` to perform removal of files in the emulator.
   # For now just make it a no-op.
@@ -171,7 +288,7 @@ elif config.host_os == 'Darwin' and config.apple_platform != "osx":
   if config.apple_platform != "ios" and config.apple_platform != "iossim":
     config.available_features.add(config.apple_platform)
 
-  ios_commands_dir = os.path.join(config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands")
+  ios_commands_dir = get_ios_commands_dir()
 
   run_wrapper = os.path.join(ios_commands_dir, ios_or_iossim + "_run.py")
   env_wrapper = os.path.join(ios_commands_dir, ios_or_iossim + "_env.py")
@@ -203,10 +320,6 @@ elif config.android:
   config.compile_wrapper = compile_wrapper
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
-  # TODO: Implement `%device_rm` to perform removal of files on a device.  For
-  # now just make it a no-op.
-  lit_config.warning('%device_rm is not implemented')
-  config.substitutions.append( ('%device_rm', 'echo ') )
 else:
   config.substitutions.append( ('%run', "") )
   config.substitutions.append( ('%env ', "env ") )
@@ -249,6 +362,12 @@ if libdispatch:
 sanitizer_can_use_cxxabi = getattr(config, 'sanitizer_can_use_cxxabi', True)
 if sanitizer_can_use_cxxabi:
   config.available_features.add('cxxabi')
+
+if not getattr(config, 'sanitizer_uses_static_cxxabi', False):
+  config.available_features.add('shared_cxxabi')
+
+if not getattr(config, 'sanitizer_uses_static_unwind', False):
+  config.available_features.add('shared_unwind')
 
 if config.has_lld:
   config.available_features.add('lld-available')
@@ -343,39 +462,56 @@ if config.android:
     config.environment['ANDROID_SERIAL'] = config.android_serial
 
   adb = os.environ.get('ADB', 'adb')
+
+  # These are needed for tests to upload/download temp files, such as
+  # suppression-files, to device.
+  config.substitutions.append( ('%device_rundir/', "/data/local/tmp/Output/") )
+  config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%device_rm', "%s -s '%s' shell 'rm ' " % (adb, env['ANDROID_SERIAL']) ) )
+
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
+    android_api_codename = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.codename"], env=env).rstrip().decode("utf-8")
   except (subprocess.CalledProcessError, OSError):
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb)" % adb)
   try:
     android_api_level = int(android_api_level_str)
   except ValueError:
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb): got '%s'" % (adb, android_api_level_str))
-  if android_api_level >= 26:
-    config.available_features.add('android-26')
-  if android_api_level >= 28:
-    config.available_features.add('android-28')
+  android_api_level = min(android_api_level, int(config.android_api_level))
+  for required in [26, 28, 29, 30]:
+    if android_api_level >= required:
+      config.available_features.add('android-%s' % required)
+  # FIXME: Replace with appropriate version when availible.
+  if android_api_level > 30 or (android_api_level == 30 and android_api_codename == 'S'):
+    config.available_features.add('android-thread-properties-api')
 
   # Prepare the device.
   android_tmpdir = '/data/local/tmp/Output'
   subprocess.check_call([adb, "shell", "mkdir", "-p", android_tmpdir], env=env)
   for file in config.android_files_to_push:
     subprocess.check_call([adb, "push", file, android_tmpdir], env=env)
+else:
+  config.substitutions.append( ('%device_rundir/', "") )
+  config.substitutions.append( ('%push_to_device', "echo ") )
+  config.substitutions.append( ('%adb_shell', "echo ") )
 
 if config.host_os == 'Linux':
   # detect whether we are using glibc, and which version
-  # NB: 'ldd' is just one of the tools commonly installed as part of glibc
+  # NB: 'ldd' is just one of the tools commonly installed as part of glibc/musl
   ldd_ver_cmd = subprocess.Popen(['ldd', '--version'],
                                  stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL,
                                  env={'LANG': 'C'})
   sout, _ = ldd_ver_cmd.communicate()
-  ver_line = sout.splitlines()[0]
-  if ver_line.startswith(b"ldd "):
+  ver_lines = sout.splitlines()
+  if not config.android and len(ver_lines) and ver_lines[0].startswith(b"ldd "):
     from distutils.version import LooseVersion
-    ver = LooseVersion(ver_line.split()[-1].decode())
-    # 2.27 introduced some incompatibilities
-    if ver >= LooseVersion("2.27"):
-      config.available_features.add("glibc-2.27")
+    ver = LooseVersion(ver_lines[0].split()[-1].decode())
+    for required in ["2.27", "2.30"]:
+      if ver >= LooseVersion(required):
+        config.available_features.add("glibc-" + required)
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
@@ -502,7 +638,7 @@ for postfix in ["2", "1", ""]:
   config.substitutions.append( ("%xdynamiclib_filename" + postfix, 'lib%xdynamiclib_namespec{}.so'.format(postfix)) )
   config.substitutions.append( ("%xdynamiclib_namespec", '%basename_t.dynamic') )
 
-# Provide a substituion that can be used to tell Clang to use a static libstdc++.
+# Provide a substitution that can be used to tell Clang to use a static libstdc++.
 # The substitution expands to nothing on non Linux platforms.
 # FIXME: This should check the target OS, not the host OS.
 if config.host_os == 'Linux':
@@ -542,6 +678,11 @@ if config.asan_shadow_scale:
 else:
   config.available_features.add("shadow-scale-3")
 
+if config.memprof_shadow_scale:
+  config.available_features.add("memprof-shadow-scale-%s" % config.memprof_shadow_scale)
+else:
+  config.available_features.add("memprof-shadow-scale-3")
+
 if config.expensive_checks:
   config.available_features.add("expensive_checks")
 
@@ -561,5 +702,27 @@ if config.use_lld and config.has_lld and not config.use_lto:
 elif config.use_lld and (not config.has_lld):
   config.unsupported = True
 
+# Append any extra flags passed in lit_config
+append_target_cflags = lit_config.params.get('append_target_cflags', None)
+if append_target_cflags:
+  lit_config.note('Appending to extra_cflags: "{}"'.format(append_target_cflags))
+  extra_cflags += [append_target_cflags]
+
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
+
+if config.host_os == 'Darwin':
+  config.substitutions.append((
+    "%get_pid_from_output",
+    "{} {}/get_pid_from_output.py".format(
+      sh_quote(config.python_executable),
+      sh_quote(get_ios_commands_dir())
+    ))
+  )
+  config.substitutions.append(
+    ("%print_crashreport_for_pid",
+    "{} {}/print_crashreport_for_pid.py".format(
+      sh_quote(config.python_executable),
+      sh_quote(get_ios_commands_dir())
+    ))
+  )

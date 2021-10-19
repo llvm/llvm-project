@@ -21,6 +21,7 @@ unittest("LLVMExegesisPowerPCTests") {
   ]
   sources = [
     "AnalysisTest.cpp",
+    "SnippetGeneratorTest.cpp",
     "TargetTest.cpp",
   ]
 }

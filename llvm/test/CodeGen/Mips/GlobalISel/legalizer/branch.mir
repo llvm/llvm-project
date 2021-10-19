@@ -68,8 +68,7 @@ body:             |
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
   ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
+  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
   ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
   ; MIPS32:   G_BR %bb.2
   ; MIPS32: bb.1.if.then:

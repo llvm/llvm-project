@@ -9,7 +9,7 @@ target triple = "powerpc64-fsl-linux"
 
 %struct.teststruct = type { [24 x i32], i32 }
 
-define void @copy(%struct.teststruct* noalias nocapture sret %agg.result, %struct.teststruct* nocapture %in) nounwind {
+define void @copy(%struct.teststruct* noalias nocapture sret(%struct.teststruct) %agg.result, %struct.teststruct* nocapture %in) nounwind {
 entry:
 ; CHECK: @copy
 ; CHECK-NOT: bl memcpy

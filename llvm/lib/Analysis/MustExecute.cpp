@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -16,9 +17,11 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
@@ -300,30 +303,31 @@ bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I,
 }
 
 namespace {
-  struct MustExecutePrinter : public FunctionPass {
+struct MustExecutePrinter : public FunctionPass {
 
-    static char ID; // Pass identification, replacement for typeid
-    MustExecutePrinter() : FunctionPass(ID) {
-      initializeMustExecutePrinterPass(*PassRegistry::getPassRegistry());
-    }
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-      AU.addRequired<DominatorTreeWrapperPass>();
-      AU.addRequired<LoopInfoWrapperPass>();
-    }
-    bool runOnFunction(Function &F) override;
-  };
-  struct MustBeExecutedContextPrinter : public ModulePass {
-    static char ID;
+  static char ID; // Pass identification, replacement for typeid
+  MustExecutePrinter() : FunctionPass(ID) {
+    initializeMustExecutePrinterPass(*PassRegistry::getPassRegistry());
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+  }
+  bool runOnFunction(Function &F) override;
+};
+struct MustBeExecutedContextPrinter : public ModulePass {
+  static char ID;
 
-    MustBeExecutedContextPrinter() : ModulePass(ID) {
-      initializeMustBeExecutedContextPrinterPass(*PassRegistry::getPassRegistry());
-    }
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-    bool runOnModule(Module &M) override;
-  };
+  MustBeExecutedContextPrinter() : ModulePass(ID) {
+    initializeMustBeExecutedContextPrinterPass(
+        *PassRegistry::getPassRegistry());
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+  bool runOnModule(Module &M) override;
+};
 }
 
 char MustExecutePrinter::ID = 0;
@@ -339,15 +343,16 @@ FunctionPass *llvm::createMustExecutePrinter() {
 }
 
 char MustBeExecutedContextPrinter::ID = 0;
-INITIALIZE_PASS_BEGIN(
-    MustBeExecutedContextPrinter, "print-must-be-executed-contexts",
-    "print the must-be-executed-contexed for all instructions", false, true)
+INITIALIZE_PASS_BEGIN(MustBeExecutedContextPrinter,
+                      "print-must-be-executed-contexts",
+                      "print the must-be-executed-context for all instructions",
+                      false, true)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(MustBeExecutedContextPrinter,
                     "print-must-be-executed-contexts",
-                    "print the must-be-executed-contexed for all instructions",
+                    "print the must-be-executed-context for all instructions",
                     false, true)
 
 ModulePass *llvm::createMustBeExecutedContextPrinter() {
@@ -447,13 +452,9 @@ public:
     else
       OS << " ; (mustexec in: ";
 
-    bool first = true;
-    for (const Loop *L : Loops) {
-      if (!first)
-        OS << ", ";
-      first = false;
-      OS << L->getHeader()->getName();
-    }
+    ListSeparator LS;
+    for (const Loop *L : Loops)
+      OS << LS << L->getHeader()->getName();
     OS << ")";
   }
 };
@@ -627,8 +628,7 @@ MustBeExecutedContextExplorer::findForwardJoinPoint(const BasicBlock *InitBB) {
       if (!TransfersExecution)
         return nullptr;
 
-      for (const BasicBlock *AdjacentBB : successors(ToBB))
-        Worklist.push_back(AdjacentBB);
+      append_range(Worklist, successors(ToBB));
     }
   }
 
@@ -834,4 +834,43 @@ const Instruction *MustBeExecutedIterator::advance() {
     return Tail;
   Tail = nullptr;
   return nullptr;
+}
+
+PreservedAnalyses MustExecutePrinterPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+
+  MustExecuteAnnotatedWriter Writer(F, DT, LI);
+  F.print(OS, &Writer);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+MustBeExecutedContextPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  GetterTy<const LoopInfo> LIGetter = [&](const Function &F) {
+    return &FAM.getResult<LoopAnalysis>(const_cast<Function &>(F));
+  };
+  GetterTy<const DominatorTree> DTGetter = [&](const Function &F) {
+    return &FAM.getResult<DominatorTreeAnalysis>(const_cast<Function &>(F));
+  };
+  GetterTy<const PostDominatorTree> PDTGetter = [&](const Function &F) {
+    return &FAM.getResult<PostDominatorTreeAnalysis>(const_cast<Function &>(F));
+  };
+
+  MustBeExecutedContextExplorer Explorer(
+      /* ExploreInterBlock */ true,
+      /* ExploreCFGForward */ true,
+      /* ExploreCFGBackward */ true, LIGetter, DTGetter, PDTGetter);
+
+  for (Function &F : M) {
+    for (Instruction &I : instructions(F)) {
+      OS << "-- Explore context of: " << I << "\n";
+      for (const Instruction *CI : Explorer.range(&I))
+        OS << "  [F: " << CI->getFunction()->getName() << "] " << *CI << "\n";
+    }
+  }
+  return PreservedAnalyses::all();
 }

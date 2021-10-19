@@ -32,16 +32,32 @@ long double TestLD(long double x) {
   return x * x;
 }
 // GNU32: define dso_local x86_fp80 @TestLD(x86_fp80 %x)
-// GNU64: define dso_local void @TestLD(x86_fp80* noalias sret align 16 %agg.result, x86_fp80* %0)
+// GNU64: define dso_local void @TestLD(x86_fp80* noalias sret(x86_fp80) align 16 %agg.result, x86_fp80* %0)
 // MSC64: define dso_local double @TestLD(double %x)
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 }
-// GNU32: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret align 4 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %x)
-// GNU64: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret align 16 %agg.result, { x86_fp80, x86_fp80 }* %x)
-// MSC64: define dso_local void @TestLDC({ double, double }* noalias sret align 8 %agg.result, { double, double }* %x)
+// GNU32: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %x)
+// GNU64: define dso_local void @TestLDC({ x86_fp80, x86_fp80 }* noalias sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, { x86_fp80, x86_fp80 }* %x)
+// MSC64: define dso_local void @TestLDC({ double, double }* noalias sret({ double, double }) align 8 %agg.result, { double, double }* %x)
 
 // GNU32: declare dso_local void @__mulxc3
 // GNU64: declare dso_local void @__mulxc3
 // MSC64: declare dso_local void @__muldc3
+
+void VarArgLD(int a, ...) {
+  // GNU32-LABEL: define{{.*}} void @VarArgLD
+  // GNU64-LABEL: define{{.*}} void @VarArgLD
+  // MSC64-LABEL: define{{.*}} void @VarArgLD
+  __builtin_va_list ap;
+  __builtin_va_start(ap, a);
+  long double LD = __builtin_va_arg(ap, long double);
+  // GNU32-NOT: load x86_fp80*, x86_fp80**
+  // GNU32: load x86_fp80, x86_fp80*
+  // GNU64: load x86_fp80*, x86_fp80**
+  // GNU64: load x86_fp80, x86_fp80*
+  // MSC64-NOT: load double*, double**
+  // MSC64: load double, double*
+  __builtin_va_end(ap);
+}

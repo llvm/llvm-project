@@ -1,4 +1,5 @@
 # RUN: llvm-objdump --macho --section=__data %p/Inputs/bind2.macho-x86_64 | FileCheck %s
+# RUN: llvm-otool -d %p/Inputs/bind2.macho-x86_64 | FileCheck %s
 
 # CHECK: bind2.macho-x86_64:
 

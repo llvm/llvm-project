@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -triple=thumbv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONARM --check-prefix=CHECK-THUMBV7 %s
-// RUN: not llvm-mc -triple=thumbv8 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NONARM --check-prefix=CHECK-THUMBV8 %s
-// RUN: llvm-mc -triple=armv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ARM %s
+// RUN: not llvm-mc -triple=thumbv7 -show-encoding < %s 2>&1 | FileCheck --check-prefixes=CHECK-NONARM,CHECK-THUMBV7 %s
+// RUN: not llvm-mc -triple=thumbv8 -show-encoding < %s 2>&1 | FileCheck --check-prefixes=CHECK-NONARM,CHECK-THUMBV8 %s
+// RUN: llvm-mc -triple=armv7 -show-encoding < %s 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
 
         // lsl #0 is actually mov, so here we check that it behaves the same as
         // mov with regards to the permitted registers
@@ -72,9 +72,11 @@
 // CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
 // CHECK-THUMBV8: note: operand must be a register in range [r0, r14]
 
-// CHECK-THUMBV7: error: operand must be a register in range [r0, r12] or r14
-// CHECK-THUMBV8: error: operand must be a register in range [r0, r14]
+// CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: movs pc, r0, lsl #0
+// CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
+// CHECK-THUMBV8: note: operand must be a register in range [r0, r14]
+// CHECK-NONARM: note: invalid operand for instruction
 
 // CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: movs r0, pc, lsl #0
@@ -82,9 +84,11 @@
 // CHECK-NONARM: note: invalid operand for instruction
 // CHECK-NONARM: note: invalid operand for instruction
 
-// CHECK-THUMBV7: error: operand must be a register in range [r0, r12] or r14
-// CHECK-THUMBV8: error: operand must be a register in range [r0, r14]
+// CHECK-NONARM: error: invalid instruction, any one of the following would fix this:
 // CHECK-NONARM-NEXT: movs pc, pc, lsl #0
+// CHECK-THUMBV7: note: operand must be a register in range [r0, r12] or r14
+// CHECK-THUMBV8: note: operand must be a register in range [r0, r14]
+// CHECK-NONARM: note: invalid operand for instruction
 
 // CHECK-ARM: mov pc, r0                @ encoding: [0x00,0xf0,0xa0,0xe1]
 // CHECK-ARM: mov r0, pc                @ encoding: [0x0f,0x00,0xa0,0xe1]

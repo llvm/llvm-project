@@ -634,6 +634,14 @@ __isl_give isl_set *isl_set_from_point(__isl_take isl_point *pnt)
 	return isl_set_from_basic_set(bset);
 }
 
+/* This function performs the same operation as isl_set_from_point,
+ * but is considered as a function on an isl_point when exported.
+ */
+__isl_give isl_set *isl_point_to_set(__isl_take isl_point *pnt)
+{
+	return isl_set_from_point(pnt);
+}
+
 /* Construct a union set, containing the single element "pnt".
  * If "pnt" is void, then return an empty union set.
  */

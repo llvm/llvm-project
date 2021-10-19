@@ -158,7 +158,7 @@ class Symbolizer final {
   // its method should be protected by |mu_|.
   class ModuleNameOwner {
    public:
-    explicit ModuleNameOwner(BlockingMutex *synchronized_by)
+    explicit ModuleNameOwner(Mutex *synchronized_by)
         : last_match_(nullptr), mu_(synchronized_by) {
       storage_.reserve(kInitialCapacity);
     }
@@ -169,7 +169,7 @@ class Symbolizer final {
     InternalMmapVector<const char*> storage_;
     const char *last_match_;
 
-    BlockingMutex *mu_;
+    Mutex *mu_;
   } module_names_;
 
   /// Platform-specific function for creating a Symbolizer object.
@@ -192,7 +192,7 @@ class Symbolizer final {
   // Mutex locked from public methods of |Symbolizer|, so that the internals
   // (including individual symbolizer tools and platform-specific methods) are
   // always synchronized.
-  BlockingMutex mu_;
+  Mutex mu_;
 
   IntrusiveList<SymbolizerTool> tools_;
 

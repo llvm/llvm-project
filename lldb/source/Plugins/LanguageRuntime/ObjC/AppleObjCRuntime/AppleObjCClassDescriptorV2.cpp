@@ -252,6 +252,7 @@ bool ClassDescriptorV2::method_list_t::Read(Process *process,
 }
 
 bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
+                                       lldb::addr_t relative_selector_base_addr,
                                        bool is_small, bool has_direct_sel) {
   size_t ptr_size = process->GetAddressByteSize();
   size_t size = GetSize(process, is_small);
@@ -281,6 +282,8 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr,
                                                           0, error);
       if (!error.Success())
         return false;
+    } else if (relative_selector_base_addr != LLDB_INVALID_ADDRESS) {
+      m_name_ptr = relative_selector_base_addr + nameref_offset;
     }
     m_types_ptr = addr + 4 + types_offset;
     m_imp_ptr = addr + 8 + imp_offset;
@@ -389,14 +392,14 @@ bool ClassDescriptorV2::Describe(
     if (base_method_list->m_entsize != method_t::GetSize(process, is_small))
       return false;
 
-    std::unique_ptr<method_t> method;
-    method = std::make_unique<method_t>();
-
+    std::unique_ptr<method_t> method = std::make_unique<method_t>();
+    lldb::addr_t relative_selector_base_addr =
+        m_runtime.GetRelativeSelectorBaseAddr();
     for (uint32_t i = 0, e = base_method_list->m_count; i < e; ++i) {
       method->Read(process,
                    base_method_list->m_first_ptr +
                        (i * base_method_list->m_entsize),
-                   is_small, has_direct_selector);
+                   relative_selector_base_addr, is_small, has_direct_selector);
 
       if (instance_method_func(method->m_name.c_str(), method->m_types.c_str()))
         break;
@@ -514,8 +517,7 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   return 0;
 }
 
-ClassDescriptorV2::iVarsStorage::iVarsStorage()
-    : m_filled(false), m_ivars(), m_mutex() {}
+ClassDescriptorV2::iVarsStorage::iVarsStorage() : m_ivars(), m_mutex() {}
 
 size_t ClassDescriptorV2::iVarsStorage::size() { return m_ivars.size(); }
 

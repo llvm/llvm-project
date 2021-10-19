@@ -275,7 +275,8 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(i32 addrspace
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_3_adjacent_loads_i32:
-; SI-DAG: buffer_load_dwordx4
+; SI-DAG: buffer_load_dwordx2
+; SI-DAG: buffer_load_dword
 ; CI-DAG: buffer_load_dwordx3
 ; GCN: s_waitcnt
 ; SI-DAG: buffer_store_dwordx2
@@ -529,8 +530,8 @@ define amdgpu_kernel void @merge_local_store_4_constants_i32(i32 addrspace(3)* %
 ; GCN-LABEL: {{^}}merge_global_store_5_constants_i32:
 ; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], 9{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[HI4:[0-9]+]], -12{{$}}
-; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 11{{$}}
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LO]]:[[HI4]]{{\]}}
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 11{{$}}
 ; GCN: buffer_store_dword v[[HI]]
 define amdgpu_kernel void @merge_global_store_5_constants_i32(i32 addrspace(1)* %out) {
   store i32 9, i32 addrspace(1)* %out, align 4
@@ -613,7 +614,8 @@ define amdgpu_kernel void @merge_global_store_8_constants_i32(i32 addrspace(1)* 
 
 ; GCN-LABEL: {{^}}copy_v3i32_align4:
 ; GCN-NOT: SCRATCH_RSRC_DWORD
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; SI-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; SI-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
 ; CI-DAG: buffer_load_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN-NOT: offen
 ; GCN: s_waitcnt vmcnt
@@ -647,7 +649,8 @@ define amdgpu_kernel void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %ou
 
 ; GCN-LABEL: {{^}}copy_v3f32_align4:
 ; GCN-NOT: SCRATCH_RSRC_DWORD
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; SI-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; SI-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
 ; CI-DAG: buffer_load_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN-NOT: offen
 ; GCN: s_waitcnt vmcnt

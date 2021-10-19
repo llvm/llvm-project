@@ -21,7 +21,7 @@ static void initChecksum(void) {
     scudo::HashAlgorithm = scudo::Checksum::HardwareCRC32;
 }
 
-TEST(ScudoChunkTest, ChunkBasic) {
+TEST(ScudoChunkDeathTest, ChunkBasic) {
   initChecksum();
   const scudo::uptr Size = 0x100U;
   scudo::Chunk::UnpackedHeader Header = {};
@@ -41,7 +41,7 @@ TEST(ScudoChunkTest, ChunkCmpXchg) {
   initChecksum();
   const scudo::uptr Size = 0x100U;
   scudo::Chunk::UnpackedHeader OldHeader = {};
-  OldHeader.Origin = scudo::Chunk::Origin::Malloc;
+  OldHeader.OriginOrWasZeroed = scudo::Chunk::Origin::Malloc;
   OldHeader.ClassId = 0x42U;
   OldHeader.SizeOrUnusedBytes = Size;
   OldHeader.State = scudo::Chunk::State::Allocated;
@@ -60,7 +60,7 @@ TEST(ScudoChunkTest, ChunkCmpXchg) {
   free(Block);
 }
 
-TEST(ScudoChunkTest, CorruptHeader) {
+TEST(ScudoChunkDeathTest, CorruptHeader) {
   initChecksum();
   const scudo::uptr Size = 0x100U;
   scudo::Chunk::UnpackedHeader Header = {};

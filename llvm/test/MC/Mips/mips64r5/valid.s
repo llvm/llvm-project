@@ -263,6 +263,7 @@ a:
         mtlo      $25
         mul       $s0,$s4,$at
         mul.d     $f20,$f20,$f16
+        mul.ps    $f14,$f0,$f16        # CHECK: mul.ps $f14, $f0, $f16 # encoding: [0x46,0xd0,0x03,0x82]
         mul.s     $f30,$f10,$f2
         mult      $sp,$s4
         mult      $sp,$v0
@@ -399,6 +400,7 @@ a:
         sub       $22,$17,-3126        # CHECK: addi $22, $17, 3126    # encoding: [0x22,0x36,0x0c,0x36]
         sub       $13,6512             # CHECK: addi $13, $13, -6512   # encoding: [0x21,0xad,0xe6,0x90]
         sub.d     $f18,$f3,$f17
+        sub.ps    $f5,$f14,$f26        # CHECK: sub.ps $f5, $f14, $f26 # encoding: [0x46,0xda,0x71,0x41]
         sub.s     $f23,$f22,$f22
         subu      $sp,$s6,$s6
         suxc1     $f12,$k1($13)

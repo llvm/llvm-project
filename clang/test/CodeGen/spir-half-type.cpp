@@ -116,7 +116,7 @@ _Float16 fsub() {
   return a - b - 3.0f16;
 }
 
-// CHECK: define spir_func half @_Z4fmulDF16_(half %arg)
+// CHECK: define{{.*}} spir_func half @_Z4fmulDF16_(half %arg)
 _Float16 fmul(_Float16 arg) {
   _Float16 a = 1.0f16;
   const _Float16 b = 2.0f16;

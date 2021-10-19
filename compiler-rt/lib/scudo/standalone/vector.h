@@ -19,14 +19,14 @@ namespace scudo {
 // small vectors. The current implementation supports only POD types.
 template <typename T> class VectorNoCtor {
 public:
-  void init(uptr InitialCapacity) {
-    CapacityBytes = 0;
-    Size = 0;
-    Data = nullptr;
-    reserve(InitialCapacity);
+  constexpr void init(uptr InitialCapacity = 0) {
+    Data = &LocalData[0];
+    CapacityBytes = sizeof(LocalData);
+    if (InitialCapacity > capacity())
+      reserve(InitialCapacity);
   }
   void destroy() {
-    if (Data)
+    if (Data != &LocalData[0])
       unmap(Data, CapacityBytes);
   }
   T &operator[](uptr I) {
@@ -56,7 +56,7 @@ public:
   uptr size() const { return Size; }
   const T *data() const { return Data; }
   T *data() { return Data; }
-  uptr capacity() const { return CapacityBytes / sizeof(T); }
+  constexpr uptr capacity() const { return CapacityBytes / sizeof(T); }
   void reserve(uptr NewSize) {
     // Never downsize internal buffer.
     if (NewSize > capacity())
@@ -82,26 +82,24 @@ private:
   void reallocate(uptr NewCapacity) {
     DCHECK_GT(NewCapacity, 0);
     DCHECK_LE(Size, NewCapacity);
-    const uptr NewCapacityBytes =
-        roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
+    NewCapacity = roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
     T *NewData =
-        reinterpret_cast<T *>(map(nullptr, NewCapacityBytes, "scudo:vector"));
-    if (Data) {
-      memcpy(NewData, Data, Size * sizeof(T));
-      unmap(Data, CapacityBytes);
-    }
+        reinterpret_cast<T *>(map(nullptr, NewCapacity, "scudo:vector"));
+    memcpy(NewData, Data, Size * sizeof(T));
+    destroy();
     Data = NewData;
-    CapacityBytes = NewCapacityBytes;
+    CapacityBytes = NewCapacity;
   }
 
-  T *Data;
-  uptr CapacityBytes;
-  uptr Size;
+  T *Data = nullptr;
+  T LocalData[256 / sizeof(T)] = {};
+  uptr CapacityBytes = 0;
+  uptr Size = 0;
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {
 public:
-  Vector() { VectorNoCtor<T>::init(1); }
+  constexpr Vector() { VectorNoCtor<T>::init(); }
   explicit Vector(uptr Count) {
     VectorNoCtor<T>::init(Count);
     this->resize(Count);

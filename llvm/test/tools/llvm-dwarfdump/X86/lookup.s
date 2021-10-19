@@ -37,9 +37,9 @@
 # LEX:       DW_AT_low_pc  (0x0000000000000004)
 # LEX:       DW_AT_high_pc (0x0000000000000014)
 
-# A: Line info: file 'foo.c', line 3, column 9, start line 1
-# B: Line info: file 'foo.c', line 4, column 6, start line 1
-# C: Line info: file 'foo.c', line 6, column 1, start line 1
+# A: Line info: file 'foo.c', line 3, column 9, start file 'foo.c', start line 1
+# B: Line info: file 'foo.c', line 4, column 6, start file 'foo.c', start line 1
+# C: Line info: file 'foo.c', line 6, column 1, start file 'foo.c', start line 1
 
 	.section	__TEXT,__text,regular,pure_instructions
 	.macosx_version_min 10, 13

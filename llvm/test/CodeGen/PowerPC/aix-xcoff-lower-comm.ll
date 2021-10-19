@@ -1,11 +1,14 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes=CHECK,ASM32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck --check-prefixes=CHECK,ASM64 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,ASM32 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,ASM64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
-; RUN: llvm-readobj -r --expand-relocs -t %t.o | FileCheck --check-prefixes=RELOC,SYM %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
+; RUN: llvm-readobj -r --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
-; RUN: FileCheck --check-prefix=XCOFF64 %s
+; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: -data-sections=false -filetype=obj < %s 2>&1 | \
+; RUN:   FileCheck --check-prefix=XCOFF64 %s
 ; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
 
 @common = common global i32 0, align 4

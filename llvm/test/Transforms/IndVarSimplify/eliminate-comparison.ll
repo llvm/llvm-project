@@ -14,7 +14,7 @@ define void @foo(i64 %n, i32* nocapture %p) nounwind {
 ; CHECK-NEXT:    [[CMP9:%.*]] = icmp sgt i64 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[PRE:%.*]], label [[RETURN:%.*]]
 ; CHECK:       pre:
-; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[T3]], 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -23,7 +23,7 @@ define void @foo(i64 %n, i32* nocapture %p) nounwind {
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [0 x double], [0 x double]* @X, i64 0, i64 [[I]]
-; CHECK-NEXT:    store double 3.200000e+00, double* [[ARRAYIDX]]
+; CHECK-NEXT:    store double 3.200000e+00, double* [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I]], 1
@@ -144,7 +144,7 @@ define void @func_10() nounwind {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i64 [[INDVARS_IV]], i64* null
+; CHECK-NEXT:    store i64 [[INDVARS_IV]], i64* null, align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -176,32 +176,18 @@ define i32 @func_11() nounwind uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FORCOND:%.*]]
 ; CHECK:       forcond:
-; CHECK-NEXT:    [[__KEY6_0:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[TMP37:%.*]], [[NOASSERT:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[__KEY6_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[NOASSERT]], label [[FORCOND38_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT:%.*]], label [[FORCOND38_PREHEADER:%.*]]
 ; CHECK:       forcond38.preheader:
 ; CHECK-NEXT:    br label [[FORCOND38:%.*]]
 ; CHECK:       noassert:
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv i32 -32768, [[__KEY6_0]]
-; CHECK-NEXT:    [[TMP2936:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[SEXT23:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP2936]], [[SEXT23]]
-; CHECK-NEXT:    [[TMP37]] = add nuw nsw i32 [[__KEY6_0]], 1
-; CHECK-NEXT:    br i1 [[TMP32]], label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
 ; CHECK:       assert33:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       forcond38:
-; CHECK-NEXT:    [[__KEY8_0:%.*]] = phi i32 [ [[TMP81:%.*]], [[NOASSERT68:%.*]] ], [ 2, [[FORCOND38_PREHEADER]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[__KEY8_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[NOASSERT68]], label [[UNROLLEDEND:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT68:%.*]], label [[UNROLLEDEND:%.*]]
 ; CHECK:       noassert68:
-; CHECK-NEXT:    [[TMP57:%.*]] = sdiv i32 -32768, [[__KEY8_0]]
-; CHECK-NEXT:    [[SEXT34:%.*]] = shl i32 [[TMP57]], 16
-; CHECK-NEXT:    [[SEXT21:%.*]] = shl i32 [[TMP57]], 16
-; CHECK-NEXT:    [[TMP76:%.*]] = icmp eq i32 [[SEXT34]], [[SEXT21]]
-; CHECK-NEXT:    [[TMP81]] = add nuw nsw i32 [[__KEY8_0]], 1
-; CHECK-NEXT:    br i1 [[TMP76]], label [[FORCOND38]], label [[ASSERT77:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND38]], label [[ASSERT77:%.*]]
 ; CHECK:       assert77:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -252,6 +238,73 @@ unrolledend:                                      ; preds = %forcond38
   ret i32 0
 }
 
+define i32 @func_11_flipped() nounwind uwtable {
+; CHECK-LABEL: @func_11_flipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FORCOND:%.*]]
+; CHECK:       forcond:
+; CHECK-NEXT:    br i1 true, label [[FORCOND38_PREHEADER:%.*]], label [[NOASSERT:%.*]]
+; CHECK:       forcond38.preheader:
+; CHECK-NEXT:    br label [[FORCOND38:%.*]]
+; CHECK:       noassert:
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK:       assert33:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       forcond38:
+; CHECK-NEXT:    br i1 false, label [[NOASSERT68:%.*]], label [[UNROLLEDEND:%.*]]
+; CHECK:       noassert68:
+; CHECK-NEXT:    br i1 true, label [[FORCOND38]], label [[ASSERT77:%.*]]
+; CHECK:       assert77:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+; CHECK:       unrolledend:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %forcond
+
+forcond:                                          ; preds = %noassert, %entry
+  %__key6.0 = phi i32 [ 2, %entry ], [ %tmp37, %noassert ]
+  %tmp5 = icmp sge i32 %__key6.0, 10
+  br i1 %tmp5, label %forcond38.preheader, label %noassert
+
+forcond38.preheader:                              ; preds = %forcond
+  br label %forcond38
+
+noassert:                                         ; preds = %forbody
+  %tmp13 = sdiv i32 -32768, %__key6.0
+  %tmp2936 = shl i32 %tmp13, 24
+  %sext23 = shl i32 %tmp13, 24
+  %tmp32 = icmp eq i32 %tmp2936, %sext23
+  %tmp37 = add i32 %__key6.0, 1
+  br i1 %tmp32, label %forcond, label %assert33
+
+assert33:                                         ; preds = %noassert
+  tail call void @llvm.trap()
+  unreachable
+
+forcond38:                                        ; preds = %noassert68, %forcond38.preheader
+  %__key8.0 = phi i32 [ %tmp81, %noassert68 ], [ 2, %forcond38.preheader ]
+  %tmp46 = icmp slt i32 %__key8.0, 10
+  br i1 %tmp46, label %noassert68, label %unrolledend
+
+noassert68:                                       ; preds = %forbody39
+  %tmp57 = sdiv i32 -32768, %__key8.0
+  %sext34 = shl i32 %tmp57, 16
+  %sext21 = shl i32 %tmp57, 16
+  %tmp76 = icmp eq i32 %sext34, %sext21
+  %tmp81 = add i32 %__key8.0, 1
+  br i1 %tmp76, label %forcond38, label %assert77
+
+assert77:                                         ; preds = %noassert68
+  tail call void @llvm.trap()
+  unreachable
+
+unrolledend:                                      ; preds = %forcond38
+  ret i32 0
+}
+
 declare void @llvm.trap() noreturn nounwind
 
 ; In this case the second loop only has a single iteration, fold the header away
@@ -260,18 +313,11 @@ define i32 @func_12() nounwind uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FORCOND:%.*]]
 ; CHECK:       forcond:
-; CHECK-NEXT:    [[__KEY6_0:%.*]] = phi i32 [ 2, [[ENTRY:%.*]] ], [ [[TMP37:%.*]], [[NOASSERT:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[__KEY6_0]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[NOASSERT]], label [[FORCOND38_PREHEADER:%.*]]
+; CHECK-NEXT:    br i1 false, label [[NOASSERT:%.*]], label [[FORCOND38_PREHEADER:%.*]]
 ; CHECK:       forcond38.preheader:
 ; CHECK-NEXT:    br label [[FORCOND38:%.*]]
 ; CHECK:       noassert:
-; CHECK-NEXT:    [[TMP13:%.*]] = sdiv i32 -32768, [[__KEY6_0]]
-; CHECK-NEXT:    [[TMP2936:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[SEXT23:%.*]] = shl i32 [[TMP13]], 24
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP2936]], [[SEXT23]]
-; CHECK-NEXT:    [[TMP37]] = add nuw nsw i32 [[__KEY6_0]], 1
-; CHECK-NEXT:    br i1 [[TMP32]], label [[FORCOND]], label [[ASSERT33:%.*]]
+; CHECK-NEXT:    br i1 true, label [[FORCOND]], label [[ASSERT33:%.*]]
 ; CHECK:       assert33:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -334,7 +380,7 @@ declare void @side_effect()
 define void @func_13(i32* %len.ptr) {
 ; CHECK-LABEL: @func_13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[LEN_IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_IS_ZERO]], label [[LEAVE:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
@@ -378,7 +424,7 @@ leave:
 define void @func_14(i32* %len.ptr) {
 ; CHECK-LABEL: @func_14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LEN_IS_ZERO:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    [[LEN_IS_INT_MIN:%.*]] = icmp eq i32 [[LEN]], -2147483648
 ; CHECK-NEXT:    [[NO_ENTRY:%.*]] = or i1 [[LEN_IS_ZERO]], [[LEN_IS_INT_MIN]]
@@ -426,7 +472,7 @@ leave:
 define void @func_15(i32* %len.ptr) {
 ; CHECK-LABEL: @func_15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LEN_ADD_1:%.*]] = add i32 [[LEN]], 1
 ; CHECK-NEXT:    [[LEN_ADD_1_IS_ZERO:%.*]] = icmp eq i32 [[LEN_ADD_1]], 0
 ; CHECK-NEXT:    br i1 [[LEN_ADD_1_IS_ZERO]], label [[LEAVE:%.*]], label [[LOOP_PREHEADER:%.*]]
@@ -471,7 +517,7 @@ leave:
 define void @func_16(i32* %len.ptr) {
 ; CHECK-LABEL: @func_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LEN_ADD_5:%.*]] = add i32 [[LEN]], 5
 ; CHECK-NEXT:    [[ENTRY_COND_0:%.*]] = icmp slt i32 [[LEN]], 2147483643
 ; CHECK-NEXT:    [[ENTRY_COND_1:%.*]] = icmp slt i32 4, [[LEN_ADD_5]]
@@ -522,16 +568,15 @@ leave:
 define void @func_17(i32* %len.ptr) {
 ; CHECK-LABEL: @func_17(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]]
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LEN_ADD_5:%.*]] = add i32 [[LEN]], -5
 ; CHECK-NEXT:    [[ENTRY_COND_0:%.*]] = icmp slt i32 [[LEN]], -2147483643
 ; CHECK-NEXT:    [[ENTRY_COND_1:%.*]] = icmp slt i32 -6, [[LEN_ADD_5]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = and i1 [[ENTRY_COND_0]], [[ENTRY_COND_1]]
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[LEN]], 0
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[LEN]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[SMAX]], -5
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LEN]], i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX]], -5
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_INC:%.*]], [[BE:%.*]] ], [ -6, [[LOOP_PREHEADER]] ]
@@ -540,7 +585,7 @@ define void @func_17(i32* %len.ptr) {
 ; CHECK-NEXT:    br i1 true, label [[BE]], label [[LEAVE_LOOPEXIT:%.*]]
 ; CHECK:       be:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[TMP1]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE_LOOPEXIT]]
 ; CHECK:       leave.loopexit:
 ; CHECK-NEXT:    br label [[LEAVE]]
@@ -579,7 +624,7 @@ leave:
 define i1 @func_18(i16* %tmp20, i32* %len.addr) {
 ; CHECK-LABEL: @func_18(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_ADDR:%.*]], !range !0
+; CHECK-NEXT:    [[LEN:%.*]] = load i32, i32* [[LEN_ADDR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[BB2:%.*]], label [[BB0_PREHEADER:%.*]]
 ; CHECK:       bb0.preheader:
@@ -591,7 +636,7 @@ define i1 @func_18(i16* %tmp20, i32* %len.addr) {
 ; CHECK-NEXT:    br i1 true, label [[STAY:%.*]], label [[BB2_LOOPEXIT:%.*]]
 ; CHECK:       stay:
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i16, i16* [[TMP20:%.*]], i32 [[VAR_1]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = load i16, i16* [[TMP25]], align 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i16 [[TMP26]], 0
 ; CHECK-NEXT:    br i1 [[TMP29]], label [[BB1]], label [[BB2_LOOPEXIT]]
 ; CHECK:       bb1:
@@ -641,7 +686,7 @@ bb3:
 define void @func_19(i32* %length.ptr) {
 ; CHECK-LABEL: @func_19(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LENGTH_IS_NONZERO:%.*]] = icmp ne i32 [[LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[LENGTH_IS_NONZERO]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -684,12 +729,11 @@ leave:
 define void @func_20(i32* %length.ptr) {
 ; CHECK-LABEL: @func_20(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]]
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LENGTH_IS_NONZERO:%.*]] = icmp ne i32 [[LENGTH]], 0
 ; CHECK-NEXT:    br i1 [[LENGTH_IS_NONZERO]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[LENGTH]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[LENGTH]], i32 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[LENGTH]], i32 1)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_INC:%.*]], [[BE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
@@ -730,7 +774,7 @@ leave:
 define void @func_21(i32* %length.ptr) {
 ; CHECK-LABEL: @func_21(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[LIM:%.*]] = sub i32 [[LENGTH]], 1
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp sgt i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
@@ -775,7 +819,7 @@ leave:
 define void @func_22(i32* %length.ptr) {
 ; CHECK-LABEL: @func_22(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp sgt i32 [[LENGTH]], 1
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -817,7 +861,7 @@ leave:
 define void @func_23(i32* %length.ptr) {
 ; CHECK-LABEL: @func_23(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[LENGTH:%.*]] = load i32, i32* [[LENGTH_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp ult i32 4, [[LENGTH]]
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -858,7 +902,7 @@ leave:
 define void @func_24(i32* %init.ptr) {
 ; CHECK-LABEL: @func_24(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INIT:%.*]] = load i32, i32* [[INIT_PTR:%.*]], !range !0
+; CHECK-NEXT:    [[INIT:%.*]] = load i32, i32* [[INIT_PTR:%.*]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[ENTRY_COND:%.*]] = icmp ugt i32 [[INIT]], 4
 ; CHECK-NEXT:    br i1 [[ENTRY_COND]], label [[LOOP_PREHEADER:%.*]], label [[LEAVE:%.*]]
 ; CHECK:       loop.preheader:
@@ -894,6 +938,210 @@ be:
 
 leave:
   ret void
+}
+
+declare i1 @cond_func()
+
+define i32 @func_25(i32 %start) {
+; CHECK-LABEL: @func_25(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    br i1 true, label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp ne i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  %c2 = icmp ne i32 %iv, 0
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  %c3 = icmp ne i32 %iv, 0
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @func_26(i32 %start) {
+; CHECK-LABEL: @func_26(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    br i1 true, label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp slt i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  %c2 = icmp slt i32 %iv, 1
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  %c3 = icmp slt i32 %iv, 2
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @func_27(i32 %start) {
+; CHECK-LABEL: @func_27(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], 2
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[IV]], 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    br i1 [[C2]], label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    br i1 [[C3]], label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp slt i32 %iv, 2
+  %c2 = icmp slt i32 %iv, 1
+  %c3 = icmp slt i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
+}
+
+define i32 @func_28(i32 %start) {
+; CHECK-LABEL: @func_28(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
+; CHECK:       checked.1:
+; CHECK-NEXT:    br i1 true, label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK:       checked.2:
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       fail:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %c1 = icmp ne i32 %iv, 0
+  %c2 = icmp ne i32 %iv, 0
+  %c3 = icmp ne i32 %iv, 0
+  br i1 %c1, label %checked.1, label %fail
+
+checked.1:
+  br i1 %c2, label %checked.2, label %fail
+
+checked.2:
+  br i1 %c3, label %backedge, label %fail
+
+backedge:
+  %iv.next = add i32 %iv, 758394
+  %loop.cond = call i1 @cond_func()
+  br i1 %loop.cond, label %loop, label %exit
+
+fail:
+  unreachable
+
+exit:
+  ret i32 %iv
 }
 
 !0 = !{i32 0, i32 2147483647}

@@ -29,7 +29,6 @@ class ObjCDynamicValueTestCase(TestBase):
         self.main_before_setProperty_line = line_number(
             self.source_name, '// Break here to see if we can step into real method.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     @expectedFailureDarwin("llvm.org/pr20271 rdar://18684107")
     def test_get_objc_dynamic_vals(self):

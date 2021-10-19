@@ -1,4 +1,5 @@
-# LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process.
+# LLVM_TARGET_DEFINITIONS must contain the name of the .td file to process,
+# while LLVM_TARGET_DEPENDS may contain additional file dependencies.
 # Extra parameters for `tblgen' may come after `ofn' parameter.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 
@@ -8,9 +9,8 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s)
-  # DEPFILE is available for Ninja Generator with CMake>=3.7.
-  if(CMAKE_GENERATOR STREQUAL "Ninja" AND NOT CMAKE_VERSION VERSION_LESS 3.7)
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
+  if(CMAKE_GENERATOR STREQUAL "Ninja")
     # Make output path relative to build.ninja, assuming located on
     # ${CMAKE_BINARY_DIR}.
     # CMake emits build targets as relative paths but Ninja doesn't identify
@@ -80,14 +80,6 @@ function(tablegen project ofn)
     set(tblgen_change_flag "--write-if-changed")
   endif()
 
-  # With CMake 3.12 this can be reduced to:
-  # get_directory_property(tblgen_includes "INCLUDE_DIRECTORIES")
-  # list(TRANSFORM tblgen_includes PREPEND -I)
-  set(tblgen_includes)
-  get_directory_property(includes "INCLUDE_DIRECTORIES")
-  foreach(include ${includes})
-    list(APPEND tblgen_includes -I ${include})
-  endforeach()
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies
@@ -97,6 +89,9 @@ function(tablegen project ofn)
   # dependency twice in the result file when
   # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
   # but lets us having smaller and cleaner code here.
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(TRANSFORM tblgen_includes PREPEND -I)
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${${project}_TABLEGEN_EXE} ${ARGN} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${tblgen_includes}
@@ -110,6 +105,7 @@ function(tablegen project ofn)
     DEPENDS ${${project}_TABLEGEN_TARGET} ${${project}_TABLEGEN_EXE}
       ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
+    ${LLVM_TARGET_DEPENDS}
     COMMENT "Building ${ofn}..."
     )
 
@@ -139,8 +135,8 @@ macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
-  # CMake-3.9 doesn't let compilation units depend on their dependent libraries.
-  if(NOT (CMAKE_GENERATOR STREQUAL "Ninja" AND NOT CMAKE_VERSION VERSION_LESS 3.9) AND NOT XCODE)
+  # CMake doesn't let compilation units depend on their dependent libraries on some generators.
+  if(NOT CMAKE_GENERATOR STREQUAL "Ninja" AND NOT XCODE)
     # FIXME: It leaks to user, callee of add_tablegen.
     set(LLVM_ENABLE_OBJLIB ON)
   endif()

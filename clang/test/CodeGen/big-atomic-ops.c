@@ -16,13 +16,13 @@ typedef enum memory_order {
 
 int fi1(_Atomic(int) *i) {
   // CHECK: @fi1
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst
+  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
   return __c11_atomic_load(i, memory_order_seq_cst);
 }
 
 int fi1a(int *i) {
   // CHECK: @fi1a
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst
+  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
   int v;
   __atomic_load(i, &v, memory_order_seq_cst);
   return v;
@@ -30,60 +30,60 @@ int fi1a(int *i) {
 
 int fi1b(int *i) {
   // CHECK: @fi1b
-  // CHECK: load atomic i32, i32* {{.*}} seq_cst
+  // CHECK: load atomic i32, i32* {{.*}} seq_cst, align 4
   return __atomic_load_n(i, memory_order_seq_cst);
 }
 
 void fi2(_Atomic(int) *i) {
   // CHECK: @fi2
-  // CHECK: store atomic i32 {{.*}} seq_cst
+  // CHECK: store atomic i32 {{.*}} seq_cst, align 4
   __c11_atomic_store(i, 1, memory_order_seq_cst);
 }
 
 void fi2a(int *i) {
   // CHECK: @fi2a
-  // CHECK: store atomic i32 {{.*}} seq_cst
+  // CHECK: store atomic i32 {{.*}} seq_cst, align 4
   int v = 1;
   __atomic_store(i, &v, memory_order_seq_cst);
 }
 
 void fi2b(int *i) {
   // CHECK: @fi2b
-  // CHECK: store atomic i32 {{.*}} seq_cst
+  // CHECK: store atomic i32 {{.*}} seq_cst, align 4
   __atomic_store_n(i, 1, memory_order_seq_cst);
 }
 
 int fi3(_Atomic(int) *i) {
   // CHECK: @fi3
-  // CHECK: atomicrmw and
+  // CHECK: atomicrmw and {{.*}} seq_cst, align 4
   // CHECK-NOT: and
   return __c11_atomic_fetch_and(i, 1, memory_order_seq_cst);
 }
 
 int fi3a(int *i) {
   // CHECK: @fi3a
-  // CHECK: atomicrmw xor
+  // CHECK: atomicrmw xor {{.*}} seq_cst, align 4
   // CHECK-NOT: xor
   return __atomic_fetch_xor(i, 1, memory_order_seq_cst);
 }
 
 int fi3b(int *i) {
   // CHECK: @fi3b
-  // CHECK: atomicrmw add
+  // CHECK: atomicrmw add {{.*}} seq_cst, align 4
   // CHECK: add
   return __atomic_add_fetch(i, 1, memory_order_seq_cst);
 }
 
 int fi3c(int *i) {
   // CHECK: @fi3c
-  // CHECK: atomicrmw nand
+  // CHECK: atomicrmw nand {{.*}} seq_cst, align 4
   // CHECK-NOT: and
   return __atomic_fetch_nand(i, 1, memory_order_seq_cst);
 }
 
 int fi3d(int *i) {
   // CHECK: @fi3d
-  // CHECK: atomicrmw nand
+  // CHECK: atomicrmw nand {{.*}} seq_cst, align 4
   // CHECK: and
   // CHECK: xor
   return __atomic_nand_fetch(i, 1, memory_order_seq_cst);
@@ -91,14 +91,14 @@ int fi3d(int *i) {
 
 _Bool fi4(_Atomic(int) *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg i32*
+  // CHECK: cmpxchg i32* {{.*}} acquire acquire, align 4
   int cmp = 0;
   return __c11_atomic_compare_exchange_strong(i, &cmp, 1, memory_order_acquire, memory_order_acquire);
 }
 
 _Bool fi4a(int *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg i32*
+  // CHECK: cmpxchg i32* {{.*}} acquire acquire, align 4
   int cmp = 0;
   int desired = 1;
   return __atomic_compare_exchange(i, &cmp, &desired, 0, memory_order_acquire, memory_order_acquire);
@@ -106,20 +106,20 @@ _Bool fi4a(int *i) {
 
 _Bool fi4b(int *i) {
   // CHECK: @fi4
-  // CHECK: cmpxchg weak i32*
+  // CHECK: cmpxchg weak i32* {{.*}} acquire acquire, align 4
   int cmp = 0;
   return __atomic_compare_exchange_n(i, &cmp, 1, 1, memory_order_acquire, memory_order_acquire);
 }
 
 float ff1(_Atomic(float) *d) {
   // CHECK: @ff1
-  // CHECK: load atomic i32, i32* {{.*}} monotonic
+  // CHECK: load atomic i32, i32* {{.*}} monotonic, align 4
   return __c11_atomic_load(d, memory_order_relaxed);
 }
 
 void ff2(_Atomic(float) *d) {
   // CHECK: @ff2
-  // CHECK: store atomic i32 {{.*}} release
+  // CHECK: store atomic i32 {{.*}} release, align 4
   __c11_atomic_store(d, 1, memory_order_release);
 }
 
@@ -129,41 +129,41 @@ float ff3(_Atomic(float) *d) {
 
 int* fp1(_Atomic(int*) *p) {
   // CHECK: @fp1
-  // CHECK: load atomic i64, i64* {{.*}} seq_cst
+  // CHECK: load atomic i64, i64* {{.*}} seq_cst, align 8
   return __c11_atomic_load(p, memory_order_seq_cst);
 }
 
 int* fp2(_Atomic(int*) *p) {
   // CHECK: @fp2
   // CHECK: store i64 4
-  // CHECK: atomicrmw add {{.*}} monotonic
+  // CHECK: atomicrmw add {{.*}} monotonic, align 8
   return __c11_atomic_fetch_add(p, 1, memory_order_relaxed);
 }
 
 int *fp2a(int **p) {
   // CHECK: @fp2a
   // CHECK: store i64 4
-  // CHECK: atomicrmw sub {{.*}} monotonic
+  // CHECK: atomicrmw sub {{.*}} monotonic, align 8
   // Note, the GNU builtins do not multiply by sizeof(T)!
   return __atomic_fetch_sub(p, 4, memory_order_relaxed);
 }
 
 _Complex float fc(_Atomic(_Complex float) *c) {
   // CHECK: @fc
-  // CHECK: atomicrmw xchg i64*
+  // CHECK: atomicrmw xchg i64* {{.*}} seq_cst, align 8
   return __c11_atomic_exchange(c, 2, memory_order_seq_cst);
 }
 
 typedef struct X { int x; } X;
 X fs(_Atomic(X) *c) {
   // CHECK: @fs
-  // CHECK: atomicrmw xchg i32*
+  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
   return __c11_atomic_exchange(c, (X){2}, memory_order_seq_cst);
 }
 
 X fsa(X *c, X *d) {
   // CHECK: @fsa
-  // CHECK: atomicrmw xchg i32*
+  // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
   X ret;
   __atomic_exchange(c, d, &ret, memory_order_seq_cst);
   return ret;
@@ -171,20 +171,20 @@ X fsa(X *c, X *d) {
 
 _Bool fsb(_Bool *c) {
   // CHECK: @fsb
-  // CHECK: atomicrmw xchg i8*
+  // CHECK: atomicrmw xchg i8* {{.*}} seq_cst, align 1
   return __atomic_exchange_n(c, 1, memory_order_seq_cst);
 }
 
 char flag1;
 volatile char flag2;
 void test_and_set() {
-  // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst
+  // CHECK: atomicrmw xchg i8* @flag1, i8 1 seq_cst, align 1
   __atomic_test_and_set(&flag1, memory_order_seq_cst);
-  // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire
+  // CHECK: atomicrmw volatile xchg i8* @flag2, i8 1 acquire, align 1
   __atomic_test_and_set(&flag2, memory_order_acquire);
-  // CHECK: store atomic volatile i8 0, i8* @flag2 release
+  // CHECK: store atomic volatile i8 0, i8* @flag2 release, align 1
   __atomic_clear(&flag2, memory_order_release);
-  // CHECK: store atomic i8 0, i8* @flag1 seq_cst
+  // CHECK: store atomic i8 0, i8* @flag1 seq_cst, align 1
   __atomic_clear(&flag1, memory_order_seq_cst);
 }
 
@@ -309,6 +309,12 @@ void atomic_init_foo()
 
   // CHECK-NOT: atomic
   // CHECK: }
+}
+
+// Check this doesn't crash
+// CHECK: @test_atomic_array_param(
+void test_atomic_array_param(_Atomic(struct foo) a) {
+  test_atomic_array_param(a);
 }
 
 #endif

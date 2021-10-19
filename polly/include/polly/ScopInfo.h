@@ -35,14 +35,42 @@
 #include <cstddef>
 #include <forward_list>
 
-using namespace llvm;
-
 namespace llvm {
 void initializeScopInfoRegionPassPass(PassRegistry &);
 void initializeScopInfoWrapperPassPass(PassRegistry &);
 } // end namespace llvm
 
 namespace polly {
+using llvm::AnalysisInfoMixin;
+using llvm::ArrayRef;
+using llvm::AssertingVH;
+using llvm::AssumptionCache;
+using llvm::cast;
+using llvm::DataLayout;
+using llvm::DenseMap;
+using llvm::DenseSet;
+using llvm::function_ref;
+using llvm::isa;
+using llvm::iterator_range;
+using llvm::LoadInst;
+using llvm::make_range;
+using llvm::MapVector;
+using llvm::MemIntrinsic;
+using llvm::Optional;
+using llvm::PassInfoMixin;
+using llvm::PHINode;
+using llvm::RegionNode;
+using llvm::RegionPass;
+using llvm::RGPassManager;
+using llvm::SetVector;
+using llvm::SmallPtrSetImpl;
+using llvm::SmallVector;
+using llvm::SmallVectorImpl;
+using llvm::StringMap;
+using llvm::Type;
+using llvm::Use;
+using llvm::Value;
+using llvm::ValueToValueMap;
 
 class MemoryAccess;
 
@@ -236,16 +264,6 @@ public:
   ///                          with old sizes
   bool updateSizes(ArrayRef<const SCEV *> Sizes, bool CheckConsistency = true);
 
-  /// Make the ScopArrayInfo model a Fortran array.
-  /// It receives the Fortran array descriptor and stores this.
-  /// It also adds a piecewise expression for the outermost dimension
-  /// since this information is available for Fortran arrays at runtime.
-  void applyAndSetFAD(Value *FAD);
-
-  /// Get the FortranArrayDescriptor corresponding to this array if it exists,
-  /// nullptr otherwise.
-  Value *getFortranArrayDescriptor() const { return this->FAD; }
-
   /// Set the base pointer to @p BP.
   void setBasePtr(Value *BP) { BasePtr = BP; }
 
@@ -412,10 +430,6 @@ private:
 
   /// The scop this SAI object belongs to.
   Scop &S;
-
-  /// If this array models a Fortran array, then this points
-  /// to the Fortran array descriptor.
-  Value *FAD = nullptr;
 };
 
 /// Represent memory accesses in statements.
@@ -608,13 +622,6 @@ private:
 
   /// Updated access relation read from JSCOP file.
   isl::map NewAccessRelation;
-
-  /// Fortran arrays whose sizes are not statically known are stored in terms
-  /// of a descriptor struct. This maintains a raw pointer to the memory,
-  /// along with auxiliary fields with information such as dimensions.
-  /// We hold a reference to the descriptor corresponding to a MemoryAccess
-  /// into a Fortran array. FAD for "Fortran Array Descriptor"
-  AssertingVH<Value> FAD;
   // @}
 
   isl::basic_map createBasicAccessMap(ScopStmt *Statement);
@@ -907,10 +914,6 @@ public:
   /// the dimension of the innermost loop containing the statement.
   isl::set getStride(isl::map Schedule) const;
 
-  /// Get the FortranArrayDescriptor corresponding to this memory access if
-  /// it exists, and nullptr otherwise.
-  Value *getFortranArrayDescriptor() const { return this->FAD; }
-
   /// Is the stride of the access equal to a certain width? Schedule is a map
   /// from the statement to a schedule where the innermost dimension is the
   /// dimension of the innermost loop containing the statement.
@@ -1032,10 +1035,6 @@ public:
 
   /// Get the reduction type of this access
   ReductionType getReductionType() const { return RedType; }
-
-  /// Set the array descriptor corresponding to the Array on which the
-  /// memory access is performed.
-  void setFortranArrayDescriptor(Value *FAD);
 
   /// Update the original access relation.
   ///
@@ -1212,7 +1211,7 @@ private:
   /// The memory accesses of this statement.
   ///
   /// The only side effects of a statement are its memory accesses.
-  using MemoryAccessVec = SmallVector<MemoryAccess *, 8>;
+  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   MemoryAccessVec MemAccs;
 
   /// Mapping from instructions to (scalar) memory accesses.
@@ -1760,7 +1759,7 @@ private:
   DenseMap<BasicBlock *, isl::set> DomainMap;
 
   /// Constraints on parameters.
-  isl::set Context = nullptr;
+  isl::set Context;
 
   /// The affinator used to translate SCEVs to isl expressions.
   SCEVAffinator Affinator;
@@ -1805,6 +1804,22 @@ private:
   /// need to be "false". Otherwise they behave the same.
   isl::set InvalidContext;
 
+  /// The context under which the SCoP must have defined behavior. Optimizer and
+  /// code generator can assume that the SCoP will only be executed with
+  /// parameter values within this context. This might be either because we can
+  /// prove that other values are impossible or explicitly have undefined
+  /// behavior, such as due to no-wrap flags. If this becomes too complex, can
+  /// also be nullptr.
+  ///
+  /// In contrast to Scop::AssumedContext and Scop::InvalidContext, these do not
+  /// need to be checked at runtime.
+  ///
+  /// Scop::Context on the other side is an overapproximation and does not
+  /// include all requirements, but is always defined. However, there is still
+  /// no guarantee that there is no undefined behavior in
+  /// DefinedBehaviorContext.
+  isl::set DefinedBehaviorContext;
+
   /// The schedule of the SCoP
   ///
   /// The schedule of the SCoP describes the execution order of the statements
@@ -1839,7 +1854,10 @@ private:
   /// set of statement instances that will be scheduled in a subtree. There
   /// are also several other nodes. A full description of the different nodes
   /// in a schedule tree is given in the isl manual.
-  isl::schedule Schedule = nullptr;
+  isl::schedule Schedule;
+
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  bool HasDisableHeuristicsHint = false;
 
   /// Whether the schedule has been modified after derived from the CFG by
   /// ScopBuilder.
@@ -1901,11 +1919,8 @@ private:
   //@}
 
   /// Initialize this ScopBuilder.
-  void init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
+  void init(AAResults &AA, AssumptionCache &AC, DominatorTree &DT,
             LoopInfo &LI);
-
-  /// Add parameter constraints to @p C that imply a non-empty domain.
-  isl::set addNonEmptyDomainConstraints(isl::set C) const;
 
   /// Return the access for the base ptr of @p MA if any.
   MemoryAccess *lookupBasePtrAccess(MemoryAccess *MA);
@@ -1994,7 +2009,6 @@ public:
   ///
   /// A new statement will be created and added to the statement vector.
   ///
-  /// @param Stmt       The parent statement.
   /// @param SourceRel  The source location.
   /// @param TargetRel  The target location.
   /// @param Domain     The original domain under which the copy statement would
@@ -2203,6 +2217,19 @@ public:
   /// @return The constraint on parameter of this Scop.
   isl::set getContext() const;
 
+  /// Return the context where execution behavior is defined. Might return
+  /// nullptr.
+  isl::set getDefinedBehaviorContext() const { return DefinedBehaviorContext; }
+
+  /// Return the define behavior context, or if not available, its approximation
+  /// from all other contexts.
+  isl::set getBestKnownDefinedBehaviorContext() const {
+    if (!DefinedBehaviorContext.is_null())
+      return DefinedBehaviorContext;
+
+    return Context.intersect_params(AssumedContext).subtract(InvalidContext);
+  }
+
   /// Return space of isl context parameters.
   ///
   /// Returns the set of context parameters that are currently constrained. In
@@ -2257,6 +2284,10 @@ public:
   bool trackAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
                        AssumptionSign Sign, BasicBlock *BB);
 
+  /// Add the conditions from @p Set (or subtract them if @p Sign is
+  /// AS_RESTRICTION) to the defined behaviour context.
+  void intersectDefinedBehavior(isl::set Set, AssumptionSign Sign);
+
   /// Add assumptions to assumed context.
   ///
   /// The assumptions added will be assumed to hold during the execution of the
@@ -2275,8 +2306,9 @@ public:
   ///             (needed/assumptions) or negative (invalid/restrictions).
   /// @param BB   The block in which this assumption was taken. Used to
   ///             calculate hotness when emitting remark.
+  /// @param RTC  Does the assumption require a runtime check?
   void addAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
-                     AssumptionSign Sign, BasicBlock *BB);
+                     AssumptionSign Sign, BasicBlock *BB, bool RTC = true);
 
   /// Mark the scop as invalid.
   ///
@@ -2685,6 +2717,13 @@ public:
   /// various places. If statistics are disabled, only zeros are returned to
   /// avoid the overhead.
   ScopStatistics getStatistics() const;
+
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  /// In this case, only user-directed transformations are allowed.
+  bool hasDisableHeuristicsHint() const { return HasDisableHeuristicsHint; }
+
+  /// Mark this Scop to not apply an optimization heuristic.
+  void markDisableHeuristics() { HasDisableHeuristicsHint = true; }
 };
 
 /// Print Scop scop to raw_ostream OS.
@@ -2737,15 +2776,15 @@ private:
   ScopDetection &SD;
   ScalarEvolution &SE;
   LoopInfo &LI;
-  AliasAnalysis &AA;
+  AAResults &AA;
   DominatorTree &DT;
   AssumptionCache &AC;
   OptimizationRemarkEmitter &ORE;
 
 public:
   ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
-           LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
-           AssumptionCache &AC, OptimizationRemarkEmitter &ORE);
+           LoopInfo &LI, AAResults &AA, DominatorTree &DT, AssumptionCache &AC,
+           OptimizationRemarkEmitter &ORE);
 
   /// Get the Scop object for the given Region.
   ///

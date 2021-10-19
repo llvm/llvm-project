@@ -17,7 +17,7 @@ class __attribute__((visibility("default"))) i {
   std::shared_ptr<int> foo() const;
 };
 
-// CHECK: define void @_ZNK1iISt10shared_ptrI3BarEE3fooEv
+// CHECK: define{{.*}} void @_ZNK1iISt10shared_ptrI3BarEE3fooEv
 template <> std::shared_ptr<int> i<>::foo() const {
   return std::shared_ptr<int>();
 }

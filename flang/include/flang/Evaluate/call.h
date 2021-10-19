@@ -13,6 +13,7 @@
 #include "constant.h"
 #include "formatting.h"
 #include "type.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/char-block.h"
@@ -73,6 +74,7 @@ public:
   explicit ActualArgument(Expr<SomeType> &&);
   explicit ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&);
   explicit ActualArgument(AssumedType);
+  explicit ActualArgument(common::Label);
   ~ActualArgument();
   ActualArgument &operator=(Expr<SomeType> &&);
 
@@ -101,17 +103,26 @@ public:
     }
   }
 
+  common::Label GetLabel() const { return std::get<common::Label>(u_); }
+
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool operator==(const ActualArgument &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
   std::optional<parser::CharBlock> keyword() const { return keyword_; }
-  void set_keyword(parser::CharBlock x) { keyword_ = x; }
-  bool isAlternateReturn() const { return isAlternateReturn_; }
-  void set_isAlternateReturn() { isAlternateReturn_ = true; }
+  ActualArgument &set_keyword(parser::CharBlock x) {
+    keyword_ = x;
+    return *this;
+  }
+  bool isAlternateReturn() const {
+    return std::holds_alternative<common::Label>(u_);
+  }
   bool isPassedObject() const { return isPassedObject_; }
-  void set_isPassedObject(bool yes = true) { isPassedObject_ = yes; }
+  ActualArgument &set_isPassedObject(bool yes = true) {
+    isPassedObject_ = yes;
+    return *this;
+  }
 
   bool Matches(const characteristics::DummyArgument &) const;
   common::Intent dummyIntent() const { return dummyIntent_; }
@@ -131,9 +142,10 @@ private:
   // e.g. between X and (X).  The parser attempts to parse each argument
   // first as a variable, then as an expression, and the distinction appears
   // in the parse tree.
-  std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType> u_;
+  std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType,
+      common::Label>
+      u_;
   std::optional<parser::CharBlock> keyword_;
-  bool isAlternateReturn_{false}; // whether expr is a "*label" number
   bool isPassedObject_{false};
   common::Intent dummyIntent_{common::Intent::Default};
 };
@@ -206,6 +218,22 @@ public:
   int Rank() const;
   bool IsElemental() const { return proc_.IsElemental(); }
   bool hasAlternateReturns() const { return hasAlternateReturns_; }
+
+  Expr<SomeType> *UnwrapArgExpr(int n) {
+    if (static_cast<std::size_t>(n) < arguments_.size() && arguments_[n]) {
+      return arguments_[n]->UnwrapExpr();
+    } else {
+      return nullptr;
+    }
+  }
+  const Expr<SomeType> *UnwrapArgExpr(int n) const {
+    if (static_cast<std::size_t>(n) < arguments_.size() && arguments_[n]) {
+      return arguments_[n]->UnwrapExpr();
+    } else {
+      return nullptr;
+    }
+  }
+
   bool operator==(const ProcedureRef &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
@@ -224,9 +252,6 @@ public:
       : ProcedureRef{std::move(p), std::move(a)} {}
 
   std::optional<DynamicType> GetType() const { return proc_.GetType(); }
-  std::optional<Constant<Result>> Fold(FoldingContext &); // for intrinsics
 };
-
-FOR_EACH_SPECIFIC_TYPE(extern template class FunctionRef, )
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/verdef-defaultver.s -o %t1
-# RUN: echo "V1 { global: a; local: *; };" > %t.script
+# RUN: echo "V1 { global: a; b; local: *; };" > %t.script
 # RUN: echo "V2 { global: b; c; } V1;" >> %t.script
 # RUN: ld.lld --hash-style=sysv -shared -soname shared %t1 --version-script %t.script -o %t.so
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck --check-prefix=DSO %s
@@ -17,8 +17,8 @@
 # DSO-NEXT:      Section: Undefined
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
-# DSO-NEXT:      Name: a@@V1
-# DSO-NEXT:      Value: 0x12E8
+# DSO-NEXT:      Name: b@V1
+# DSO-NEXT:      Value: 0x12E9
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -35,8 +35,8 @@
 # DSO-NEXT:      Section: .text
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
-# DSO-NEXT:      Name: b@V1
-# DSO-NEXT:      Value: 0x12E9
+# DSO-NEXT:      Name: a@@V1
+# DSO-NEXT:      Value: 0x12E8
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
 # DSO-NEXT:      Type: Function
@@ -60,7 +60,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 2
-# DSO-NEXT:      Name: a@@V1
+# DSO-NEXT:      Name: b@V1
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 3
@@ -68,7 +68,7 @@
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 2
-# DSO-NEXT:      Name: b@V1
+# DSO-NEXT:      Name: a@@V1
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 3

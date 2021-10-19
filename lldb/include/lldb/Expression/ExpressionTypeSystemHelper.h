@@ -36,7 +36,7 @@ public:
 
   ExpressionTypeSystemHelper(LLVMCastKind kind) : m_kind(kind) {}
 
-  ~ExpressionTypeSystemHelper() {}
+  ~ExpressionTypeSystemHelper() = default;
 
 protected:
   LLVMCastKind m_kind;

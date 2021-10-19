@@ -106,7 +106,7 @@ define i32 @_Z1il(i32 %val, i1 %k) {
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[K:%.*]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[K]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[VAL:%.*]], 50
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEXT]], label [[MEH:%.*]]
 ; CHECK:       meh:
@@ -132,7 +132,7 @@ define i1 @_z1im(i32 %val, i1 %k, i1 %j) {
 ; CHECK-NEXT:    br i1 [[J:%.*]], label [[NEXT:%.*]], label [[MEH:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[K:%.*]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[K]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    br label [[MEH]]
 ; CHECK:       meh:
 ; CHECK-NEXT:    ret i1 [[K]]

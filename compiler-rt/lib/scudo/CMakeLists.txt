@@ -7,6 +7,9 @@ set(SCUDO_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 list(APPEND SCUDO_CFLAGS -fbuiltin)
 append_rtti_flag(OFF SCUDO_CFLAGS)
 
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format SCUDO_CFLAGS)
+
 set(SCUDO_MINIMAL_DYNAMIC_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 append_list_if(COMPILER_RT_HAS_LIBDL dl SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt SCUDO_MINIMAL_DYNAMIC_LIBS)
@@ -27,19 +30,16 @@ if(ANDROID)
   endif()
 endif()
 
-# The minimal Scudo runtime does not inlude the UBSan runtime.
+# The minimal Scudo runtime does not include the UBSan runtime.
 set(SCUDO_MINIMAL_OBJECT_LIBS
   RTSanitizerCommonNoTermination
   RTSanitizerCommonLibc
   RTInterception)
 
 if (COMPILER_RT_HAS_GWP_ASAN)
-  # Currently, Scudo uses the GwpAsan flag parser. This backs onto the flag
-  # parsing mechanism of sanitizer_common. Once Scudo has its own flag parsing,
-  # and parses GwpAsan options, you can remove this dependency.
-  list(APPEND SCUDO_MINIMAL_OBJECT_LIBS RTGwpAsan RTGwpAsanOptionsParser
-                                        RTGwpAsanBacktraceLibc
-                                        RTGwpAsanSegvHandler)
+  list(APPEND SCUDO_MINIMAL_OBJECT_LIBS
+       RTGwpAsan RTGwpAsanOptionsParser RTGwpAsanBacktraceLibc
+       RTGwpAsanSegvHandler)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()
 

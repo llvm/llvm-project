@@ -1,5 +1,4 @@
-// RUN: %strip_comments > %t.stripped.cpp
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name classtemplate.cpp %t.stripped.cpp > %tmapping
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name classtemplate.cpp %s > %tmapping
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-CONSTRUCTOR
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-GETTER
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-SETTER
@@ -81,7 +80,7 @@ struct map {
 
 // CHECK-INIT-LIST-LABEL: _Z5Test4v:
 std::map<int, int> Test4() { // CHECK-INIT-LIST: File 0, [[@LINE]]:28 -> [[@LINE+3]]:2 = #0
-  abort();
+  abort();                           // CHECK-INIT-LIST-NEXT: Gap,File 0, [[@LINE]]:11 -> [[@LINE+1]]:3 = 0
   return std::map<int, int>{{0, 0}}; // CHECK-INIT-LIST-NEXT: [[@LINE]]:3 -> [[@LINE]]:36 = 0
 }
 

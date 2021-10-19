@@ -25,6 +25,9 @@ bb3:
 ; CHECK: NoAlias: i32* %f1, i32* %g1
   %f1 = getelementptr i32, i32* %ptr_phi , i32 1
   %g1 = getelementptr i32, i32* %ptr_phi2 , i32 1
+; This should also work if the access size is not the same.
+; CHECK: NoAlias: i16* %h1, i32* %f1
+  %h1 = bitcast i32* %g1 to i16*
 
 ret i32 0
 }

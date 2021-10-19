@@ -46,7 +46,9 @@ struct StrCatCheckResult {
   std::vector<FixItHint> Hints;
 };
 
-void RemoveCallLeaveArgs(const CallExpr* Call, StrCatCheckResult* CheckResult) {
+void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
+  if (Call->getNumArgs() == 0)
+    return;
   // Remove 'Foo('
   CheckResult->Hints.push_back(
       FixItHint::CreateRemoval(CharSourceRange::getCharRange(
@@ -57,28 +59,28 @@ void RemoveCallLeaveArgs(const CallExpr* Call, StrCatCheckResult* CheckResult) {
           Call->getRParenLoc(), Call->getEndLoc().getLocWithOffset(1))));
 }
 
-const clang::CallExpr* ProcessArgument(const Expr* Arg,
-                                       const MatchFinder::MatchResult& Result,
-                                       StrCatCheckResult* CheckResult) {
+const clang::CallExpr *processArgument(const Expr *Arg,
+                                       const MatchFinder::MatchResult &Result,
+                                       StrCatCheckResult *CheckResult) {
   const auto IsAlphanum = hasDeclaration(cxxMethodDecl(hasName("AlphaNum")));
   static const auto* const Strcat = new auto(hasName("::absl::StrCat"));
   const auto IsStrcat = cxxBindTemporaryExpr(
       has(callExpr(callee(functionDecl(*Strcat))).bind("StrCat")));
   if (const auto *SubStrcatCall = selectFirst<const CallExpr>(
           "StrCat",
-          match(stmt(traverse(ast_type_traits::TK_AsIs,
+          match(stmt(traverse(TK_AsIs,
                               anyOf(cxxConstructExpr(IsAlphanum,
                                                      hasArgument(0, IsStrcat)),
                                     IsStrcat))),
                 *Arg->IgnoreParenImpCasts(), *Result.Context))) {
-    RemoveCallLeaveArgs(SubStrcatCall, CheckResult);
+    removeCallLeaveArgs(SubStrcatCall, CheckResult);
     return SubStrcatCall;
   }
   return nullptr;
 }
 
-StrCatCheckResult ProcessCall(const CallExpr* RootCall, bool IsAppend,
-                              const MatchFinder::MatchResult& Result) {
+StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
+                              const MatchFinder::MatchResult &Result) {
   StrCatCheckResult CheckResult;
   std::deque<const CallExpr*> CallsToProcess = {RootCall};
 
@@ -92,8 +94,8 @@ StrCatCheckResult ProcessCall(const CallExpr* RootCall, bool IsAppend,
     for (const auto *Arg : CallExpr->arguments()) {
       if (StartArg-- > 0) 
       	continue;
-      if (const clang::CallExpr* Sub =
-              ProcessArgument(Arg, Result, &CheckResult)) {
+      if (const clang::CallExpr *Sub =
+              processArgument(Arg, Result, &CheckResult)) {
         CallsToProcess.push_back(Sub);
       }
     }
@@ -121,8 +123,7 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  const StrCatCheckResult CheckResult =
-      ProcessCall(RootCall, IsAppend, Result);
+  const StrCatCheckResult CheckResult = processCall(RootCall, IsAppend, Result);
   if (CheckResult.NumCalls == 1) {
     // Just one call, so nothing to fix.
     return;

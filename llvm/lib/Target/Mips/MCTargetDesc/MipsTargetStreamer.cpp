@@ -902,7 +902,7 @@ void MipsTargetELFStreamer::finish() {
       if (Alignment) {
         OS.SwitchSection(&Section);
         if (Section.UseCodeAlign())
-          OS.emitCodeAlignment(Alignment, Alignment);
+          OS.emitCodeAlignment(Alignment, &STI, Alignment);
         else
           OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
       }
@@ -1309,7 +1309,7 @@ void MipsTargetELFStreamer::emitMipsAbiFlags() {
   MCContext &Context = MCA.getContext();
   MCStreamer &OS = getStreamer();
   MCSectionELF *Sec = Context.getELFSection(
-      ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24, "");
+      ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24);
   MCA.registerSection(*Sec);
   Sec->setAlignment(Align(8));
   OS.SwitchSection(Sec);

@@ -58,5 +58,5 @@ int global2 = *(int*)((char*)&global1+1);
 
 // BL: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
 
-// TSAN: attributes [[NOATTR]] = { noinline nounwind{{.*}} }
+// TSAN: attributes [[NOATTR]] = { mustprogress noinline nounwind{{.*}} }
 // TSAN: attributes [[WITH]] = { noinline nounwind sanitize_thread{{.*}} }

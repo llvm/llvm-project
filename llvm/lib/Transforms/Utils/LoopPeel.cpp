@@ -14,6 +14,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -73,10 +74,6 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
-static cl::opt<bool> UnrollPeelMultiDeoptExit(
-    "unroll-peel-multi-deopt-exit", cl::init(true), cl::Hidden,
-    cl::desc("Allow peeling of loops with multiple deopt exits."));
-
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Designates that a Phi is estimated to become invariant after an "infinite"
@@ -91,34 +88,31 @@ bool llvm::canPeel(Loop *L) {
   if (!L->isLoopSimplifyForm())
     return false;
 
-  if (UnrollPeelMultiDeoptExit) {
-    SmallVector<BasicBlock *, 4> Exits;
-    L->getUniqueNonLatchExitBlocks(Exits);
-
-    if (!Exits.empty()) {
-      // Latch's terminator is a conditional branch, Latch is exiting and
-      // all non Latch exits ends up with deoptimize.
-      const BasicBlock *Latch = L->getLoopLatch();
-      const BranchInst *T = dyn_cast<BranchInst>(Latch->getTerminator());
-      return T && T->isConditional() && L->isLoopExiting(Latch) &&
-             all_of(Exits, [](const BasicBlock *BB) {
-               return BB->getTerminatingDeoptimizeCall();
-             });
-    }
-  }
-
-  // Only peel loops that contain a single exit
-  if (!L->getExitingBlock() || !L->getUniqueExitBlock())
-    return false;
-
   // Don't try to peel loops where the latch is not the exiting block.
   // This can be an indication of two different things:
   // 1) The loop is not rotated.
   // 2) The loop contains irreducible control flow that involves the latch.
-  if (L->getLoopLatch() != L->getExitingBlock())
+  const BasicBlock *Latch = L->getLoopLatch();
+  if (!L->isLoopExiting(Latch))
     return false;
 
-  return true;
+  // Peeling is only supported if the latch is a branch.
+  if (!isa<BranchInst>(Latch->getTerminator()))
+    return false;
+
+  SmallVector<BasicBlock *, 4> Exits;
+  L->getUniqueNonLatchExitBlocks(Exits);
+  // The latch must either be the only exiting block or all non-latch exit
+  // blocks have either a deopt or unreachable terminator. Both deopt and
+  // unreachable terminators are a strong indication they are not taken. Note
+  // that this is a profitability check, not a legality check. Also note that
+  // LoopPeeling currently can only update the branch weights of latch blocks
+  // and branch weights to blocks with deopt or unreachable do not need
+  // updating.
+  return all_of(Exits, [](const BasicBlock *BB) {
+    return BB->getTerminatingDeoptimizeCall() ||
+           isa<UnreachableInst>(BB->getTerminator());
+  });
 }
 
 // This function calculates the number of iterations after which the given Phi
@@ -172,6 +166,67 @@ static unsigned calculateIterationsToInvariance(
   return ToInvariance;
 }
 
+// Try to find any invariant memory reads that will become dereferenceable in
+// the remainder loop after peeling. The load must also be used (transitively)
+// by an exit condition. Returns the number of iterations to peel off (at the
+// moment either 0 or 1).
+static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
+                                                      DominatorTree &DT) {
+  // Skip loops with a single exiting block, because there should be no benefit
+  // for the heuristic below.
+  if (L.getExitingBlock())
+    return 0;
+
+  // All non-latch exit blocks must have an UnreachableInst terminator.
+  // Otherwise the heuristic below may not be profitable.
+  SmallVector<BasicBlock *, 4> Exits;
+  L.getUniqueNonLatchExitBlocks(Exits);
+  if (any_of(Exits, [](const BasicBlock *BB) {
+        return !isa<UnreachableInst>(BB->getTerminator());
+      }))
+    return 0;
+
+  // Now look for invariant loads that dominate the latch and are not known to
+  // be dereferenceable. If there are such loads and no writes, they will become
+  // dereferenceable in the loop if the first iteration is peeled off. Also
+  // collect the set of instructions controlled by such loads. Only peel if an
+  // exit condition uses (transitively) such a load.
+  BasicBlock *Header = L.getHeader();
+  BasicBlock *Latch = L.getLoopLatch();
+  SmallPtrSet<Value *, 8> LoadUsers;
+  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
+      if (I.mayWriteToMemory())
+        return 0;
+
+      auto Iter = LoadUsers.find(&I);
+      if (Iter != LoadUsers.end()) {
+        for (Value *U : I.users())
+          LoadUsers.insert(U);
+      }
+      // Do not look for reads in the header; they can already be hoisted
+      // without peeling.
+      if (BB == Header)
+        continue;
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        Value *Ptr = LI->getPointerOperand();
+        if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
+            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, &DT))
+          for (Value *U : I.users())
+            LoadUsers.insert(U);
+      }
+    }
+  }
+  SmallVector<BasicBlock *> ExitingBlocks;
+  L.getExitingBlocks(ExitingBlocks);
+  if (any_of(ExitingBlocks, [&LoadUsers](BasicBlock *Exiting) {
+        return LoadUsers.contains(Exiting->getTerminator());
+      }))
+    return 1;
+  return 0;
+}
+
 // Return the number of iterations to peel off that make conditions in the
 // body true/false. For example, if we peel 2 iterations off the loop below,
 // the condition i < 2 can be evaluated at compile time.
@@ -206,9 +261,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
-    if (SE.isKnownPredicate(Pred, LeftSCEV, RightSCEV) ||
-        SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LeftSCEV,
-                            RightSCEV))
+    if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
       continue;
 
     // Check if we have a condition with one AddRec and one non AddRec
@@ -227,11 +280,9 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // consider AddRecs of the loop we are trying to peel.
     if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
       continue;
-    bool Increasing;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
-        !SE.isMonotonicPredicate(LeftAR, Pred, Increasing))
+        !SE.getMonotonicPredicateType(LeftAR, Pred))
       continue;
-    (void)Increasing;
 
     // Check if extending the current DesiredPeelCount lets us evaluate Pred
     // or !Pred in the loop body statically.
@@ -291,8 +342,8 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
-                            unsigned &TripCount, ScalarEvolution &SE,
-                            unsigned Threshold) {
+                            unsigned &TripCount, DominatorTree &DT,
+                            ScalarEvolution &SE, unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -304,7 +355,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // Only try to peel innermost loops by default.
   // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
   // or by the flag -unroll-allow-loop-nests-peeling.
-  if (!PP.AllowLoopNestsPeeling && !L->empty())
+  if (!PP.AllowLoopNestsPeeling && !L->isInnermost())
     return;
 
   // If the user provided a peel count, use that.
@@ -358,6 +409,9 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 
     DesiredPeelCount = std::max(DesiredPeelCount,
                                 countToEliminateCompares(*L, MaxPeelCount, SE));
+
+    if (DesiredPeelCount == 0)
+      DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
 
     if (DesiredPeelCount > 0) {
       DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -506,7 +560,7 @@ static void cloneLoopBlocks(
     SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
     ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
-    LoopInfo *LI) {
+    LoopInfo *LI, ArrayRef<MDNode *> LoopLocalNoAliasDeclScopes) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *PreHeader = L->getLoopPreheader();
@@ -540,6 +594,15 @@ static void cloneLoopBlocks(
         DT->addNewBlock(NewBB, cast<BasicBlock>(VMap[IDom->getBlock()]));
       }
     }
+  }
+
+  {
+    // Identify what other metadata depends on the cloned version. After
+    // cloning, replace the metadata with the corrected version for both
+    // memory instructions and noalias intrinsics.
+    std::string Ext = (Twine("Peel") + Twine(IterNumber)).str();
+    cloneAndAdaptNoAliasScopes(LoopLocalNoAliasDeclScopes, NewBlocks,
+                               Header->getContext(), Ext);
   }
 
   // Recursively create the new Loop objects for nested loops, if any,
@@ -766,13 +829,19 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   uint64_t ExitWeight = 0, FallThroughWeight = 0;
   initBranchWeights(Header, LatchBR, ExitWeight, FallThroughWeight);
 
+  // Identify what noalias metadata is inside the loop: if it is inside the
+  // loop, the associated metadata must be cloned for each iteration.
+  SmallVector<MDNode *, 6> LoopLocalNoAliasDeclScopes;
+  identifyNoAliasScopesToClone(L->getBlocks(), LoopLocalNoAliasDeclScopes);
+
   // For each peeled-off iteration, make a copy of the loop.
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
     SmallVector<BasicBlock *, 8> NewBlocks;
     ValueToValueMapTy VMap;
 
     cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
-                    LoopBlocks, VMap, LVMap, DT, LI);
+                    LoopBlocks, VMap, LVMap, DT, LI,
+                    LoopLocalNoAliasDeclScopes);
 
     // Remap to use values from the current iteration instead of the
     // previous one.

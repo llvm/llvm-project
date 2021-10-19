@@ -21,7 +21,7 @@
 ; CHECK-NEXT: [N] -> {  :  }
 ; CHECK-NEXT: Invalid Context:
 ; CHECK-NEXT: [N] -> {  : false }
-; CHECK-NEXT: p0: %N
+; CHECK:      p0: %N
 ; CHECK-NEXT: Arrays {
 ; CHECK-NEXT:     i32 MemRef_j_0__phi; // Element size 4
 ; CHECK-NEXT:     i32 MemRef_j_0; // Element size 4

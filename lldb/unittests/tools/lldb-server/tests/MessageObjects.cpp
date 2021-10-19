@@ -157,8 +157,6 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
       },
       nullptr,
       nullptr,
-      nullptr, // Dwarf expression opcode bytes pointer
-      0        // Dwarf expression opcode bytes length
   };
   Info.name = ConstString(Elements["name"]).GetCString();
   if (!Info.name)
@@ -171,7 +169,7 @@ Expected<RegisterInfo> RegisterInfoParser::create(StringRef Response) {
   Info.byte_size /= CHAR_BIT;
 
   if (!to_integer(Elements["offset"], Info.byte_offset, 10))
-    return make_parsing_error("qRegisterInfo: offset");
+    Info.byte_offset = LLDB_INVALID_INDEX32;
 
   Info.encoding = Args::StringToEncoding(Elements["encoding"]);
   if (Info.encoding == eEncodingInvalid)

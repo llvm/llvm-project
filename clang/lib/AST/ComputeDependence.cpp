@@ -37,9 +37,39 @@ ExprDependence clang::computeDependence(ParenExpr *E) {
   return E->getSubExpr()->getDependence();
 }
 
-ExprDependence clang::computeDependence(UnaryOperator *E) {
-  return toExprDependence(E->getType()->getDependence()) |
-         E->getSubExpr()->getDependence();
+ExprDependence clang::computeDependence(UnaryOperator *E,
+                                        const ASTContext &Ctx) {
+  ExprDependence Dep = toExprDependence(E->getType()->getDependence()) |
+                       E->getSubExpr()->getDependence();
+
+  // C++ [temp.dep.constexpr]p5:
+  //   An expression of the form & qualified-id where the qualified-id names a
+  //   dependent member of the current instantiation is value-dependent. An
+  //   expression of the form & cast-expression is also value-dependent if
+  //   evaluating cast-expression as a core constant expression succeeds and
+  //   the result of the evaluation refers to a templated entity that is an
+  //   object with static or thread storage duration or a member function.
+  //
+  // What this amounts to is: constant-evaluate the operand and check whether it
+  // refers to a templated entity other than a variable with local storage.
+  if (Ctx.getLangOpts().CPlusPlus && E->getOpcode() == UO_AddrOf &&
+      !(Dep & ExprDependence::Value)) {
+    Expr::EvalResult Result;
+    SmallVector<PartialDiagnosticAt, 8> Diag;
+    Result.Diag = &Diag;
+    // FIXME: This doesn't enforce the C++98 constant expression rules.
+    if (E->getSubExpr()->EvaluateAsConstantExpr(Result, Ctx) && Diag.empty() &&
+        Result.Val.isLValue()) {
+      auto *VD = Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
+      if (VD && VD->isTemplated()) {
+        auto *VarD = dyn_cast<VarDecl>(VD);
+        if (!VarD || !VarD->hasLocalStorage())
+          Dep |= ExprDependence::Value;
+      }
+    }
+  }
+
+  return Dep;
 }
 
 ExprDependence clang::computeDependence(UnaryExprOrTypeTraitExpr *E) {
@@ -423,22 +453,21 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
     Deps |= ExprDependence::UnexpandedPack;
   Deps |= toExprDependence(Type->getDependence()) & ExprDependence::Error;
 
-  // (TD) C++ [temp.dep.expr]p3:
+  // C++ [temp.dep.expr]p3:
   //   An id-expression is type-dependent if it contains:
-  //
-  // and
-  //
-  // (VD) C++ [temp.dep.constexpr]p2:
-  //  An identifier is value-dependent if it is:
 
-  //  (TD)  - an identifier that was declared with dependent type
-  //  (VD)  - a name declared with a dependent type,
+  //    - an identifier associated by name lookup with one or more declarations
+  //      declared with a dependent type
+  //
+  // [The "or more" case is not modeled as a DeclRefExpr. There are a bunch
+  // more bullets here that we handle by treating the declaration as having a
+  // dependent type if they involve a placeholder type that can't be deduced.]
   if (Type->isDependentType())
     return Deps | ExprDependence::TypeValueInstantiation;
   else if (Type->isInstantiationDependentType())
     Deps |= ExprDependence::Instantiation;
 
-  //  (TD)  - a conversion-function-id that specifies a dependent type
+  //    - a conversion-function-id that specifies a dependent type
   if (Decl->getDeclName().getNameKind() ==
       DeclarationName::CXXConversionFunctionName) {
     QualType T = Decl->getDeclName().getCXXNameType();
@@ -449,48 +478,65 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
       Deps |= ExprDependence::Instantiation;
   }
 
-  //  (VD)  - the name of a non-type template parameter,
+  //   - a template-id that is dependent,
+  //   - a nested-name-specifier or a qualified-id that names a member of an
+  //     unknown specialization
+  //   [These are not modeled as DeclRefExprs.]
+
+  //   or if it names a dependent member of the current instantiation that is a
+  //   static data member of type "array of unknown bound of T" for some T
+  //   [handled below].
+
+  // C++ [temp.dep.constexpr]p2:
+  //  An id-expression is value-dependent if:
+
+  //    - it is type-dependent [handled above]
+
+  //    - it is the name of a non-type template parameter,
   if (isa<NonTypeTemplateParmDecl>(Decl))
     return Deps | ExprDependence::ValueInstantiation;
 
-  //  (VD) - a constant with integral or enumeration type and is
-  //         initialized with an expression that is value-dependent.
-  //  (VD) - a constant with literal type and is initialized with an
-  //         expression that is value-dependent [C++11].
-  //  (VD) - FIXME: Missing from the standard:
-  //       -  an entity with reference type and is initialized with an
-  //          expression that is value-dependent [C++11]
-  if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
-    if ((Ctx.getLangOpts().CPlusPlus11
-             ? Var->getType()->isLiteralType(Ctx)
-             : Var->getType()->isIntegralOrEnumerationType()) &&
-        (Var->getType().isConstQualified() ||
-         Var->getType()->isReferenceType())) {
-      if (const Expr *Init = Var->getAnyInitializer())
-        if (Init->isValueDependent()) {
+  //   - it names a potentially-constant variable that is initialized with an
+  //     expression that is value-dependent
+  if (const auto *Var = dyn_cast<VarDecl>(Decl)) {
+    if (Var->mightBeUsableInConstantExpressions(Ctx)) {
+      if (const Expr *Init = Var->getAnyInitializer()) {
+        if (Init->isValueDependent())
           Deps |= ExprDependence::ValueInstantiation;
-        }
+        if (Init->containsErrors())
+          Deps |= ExprDependence::Error;
+      }
     }
 
-    // (VD) - FIXME: Missing from the standard:
-    //      -  a member function or a static data member of the current
-    //         instantiation
+    // - it names a static data member that is a dependent member of the
+    //   current instantiation and is not initialized in a member-declarator,
     if (Var->isStaticDataMember() &&
-        Var->getDeclContext()->isDependentContext()) {
-      Deps |= ExprDependence::ValueInstantiation;
-      TypeSourceInfo *TInfo = Var->getFirstDecl()->getTypeSourceInfo();
-      if (TInfo->getType()->isIncompleteArrayType())
-        Deps |= ExprDependence::Type;
+        Var->getDeclContext()->isDependentContext() &&
+        !Var->getFirstDecl()->hasInit()) {
+      const VarDecl *First = Var->getFirstDecl();
+      TypeSourceInfo *TInfo = First->getTypeSourceInfo();
+      if (TInfo->getType()->isIncompleteArrayType()) {
+        Deps |= ExprDependence::TypeValueInstantiation;
+      } else if (!First->hasInit()) {
+        Deps |= ExprDependence::ValueInstantiation;
+      }
     }
 
     return Deps;
   }
 
-  // (VD) - FIXME: Missing from the standard:
-  //      -  a member function or a static data member of the current
-  //         instantiation
-  if (isa<CXXMethodDecl>(Decl) && Decl->getDeclContext()->isDependentContext())
-    Deps |= ExprDependence::ValueInstantiation;
+  //   - it names a static member function that is a dependent member of the
+  //     current instantiation
+  //
+  // FIXME: It's unclear that the restriction to static members here has any
+  // effect: any use of a non-static member function name requires either
+  // forming a pointer-to-member or providing an object parameter, either of
+  // which makes the overall expression value-dependent.
+  if (auto *MD = dyn_cast<CXXMethodDecl>(Decl)) {
+    if (MD->isStatic() && Decl->getDeclContext()->isDependentContext())
+      Deps |= ExprDependence::ValueInstantiation;
+  }
+
   return Deps;
 }
 
@@ -508,6 +554,10 @@ ExprDependence clang::computeDependence(RecoveryExpr *E) {
   for (auto *S : E->subExpressions())
     D |= S->getDependence();
   return D;
+}
+
+ExprDependence clang::computeDependence(SYCLUniqueStableNameExpr *E) {
+  return toExprDependence(E->getTypeSourceInfo()->getType()->getDependence());
 }
 
 ExprDependence clang::computeDependence(PredefinedExpr *E) {
@@ -694,6 +744,14 @@ ExprDependence clang::computeDependence(CXXConstructExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(CXXDefaultInitExpr *E) {
+  return E->getExpr()->getDependence();
+}
+
+ExprDependence clang::computeDependence(CXXDefaultArgExpr *E) {
+  return E->getExpr()->getDependence();
+}
+
 ExprDependence clang::computeDependence(LambdaExpr *E,
                                         bool ContainsUnexpandedParameterPack) {
   auto D = toExprDependence(E->getType()->getDependence());
@@ -705,8 +763,6 @@ ExprDependence clang::computeDependence(LambdaExpr *E,
 ExprDependence clang::computeDependence(CXXUnresolvedConstructExpr *E) {
   auto D = ExprDependence::ValueInstantiation;
   D |= toExprDependence(E->getType()->getDependence());
-  if (E->getType()->getContainedDeducedType())
-    D |= ExprDependence::Type;
   for (auto *A : E->arguments())
     D |= A->getDependence() &
          (ExprDependence::UnexpandedPack | ExprDependence::Error);

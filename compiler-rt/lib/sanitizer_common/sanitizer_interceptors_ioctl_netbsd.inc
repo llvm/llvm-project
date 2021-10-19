@@ -1406,7 +1406,7 @@ static void ioctl_table_fill() {
   _(URIO_SEND_COMMAND, READWRITE, struct_urio_command_sz);
   _(URIO_RECV_COMMAND, READWRITE, struct_urio_command_sz);
 #undef _
-} // NOLINT
+}
 
 static bool ioctl_initialized = false;
 

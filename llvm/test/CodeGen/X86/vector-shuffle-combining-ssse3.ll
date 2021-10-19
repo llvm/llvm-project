@@ -244,7 +244,7 @@ define <16 x i8> @combine_pshufb_psrldq(<16 x i8> %a0) {
 define <16 x i8> @combine_and_pshufb(<16 x i8> %a0) {
 ; SSSE3-LABEL: combine_and_pshufb:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_and_pshufb:
@@ -266,7 +266,7 @@ define <16 x i8> @combine_and_pshufb(<16 x i8> %a0) {
 define <16 x i8> @combine_pshufb_and(<16 x i8> %a0) {
 ; SSSE3-LABEL: combine_pshufb_and:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_pshufb_and:

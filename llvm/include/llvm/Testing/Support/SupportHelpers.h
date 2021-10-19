@@ -12,6 +12,8 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest-printers.h"
@@ -103,7 +105,143 @@ detail::ValueIsMatcher<InnerMatcher> ValueIs(const InnerMatcher &ValueMatcher) {
   return detail::ValueIsMatcher<InnerMatcher>(ValueMatcher);
 }
 namespace unittest {
+
 SmallString<128> getInputFileDirectory(const char *Argv0);
+
+/// A RAII object that creates a temporary directory upon initialization and
+/// removes it upon destruction.
+class TempDir {
+  SmallString<128> Path;
+
+public:
+  /// Creates a managed temporary directory.
+  ///
+  /// @param Name The name of the directory to create.
+  /// @param Unique If true, the directory will be created using
+  ///               llvm::sys::fs::createUniqueDirectory.
+  explicit TempDir(StringRef Name, bool Unique = false) {
+    std::error_code EC;
+    if (Unique) {
+      EC = llvm::sys::fs::createUniqueDirectory(Name, Path);
+      if (!EC) {
+        // Resolve any symlinks in the new directory.
+        std::string UnresolvedPath(Path.str());
+        EC = llvm::sys::fs::real_path(UnresolvedPath, Path);
+      }
+    } else {
+      Path = Name;
+      EC = llvm::sys::fs::create_directory(Path);
+    }
+    if (EC)
+      Path.clear();
+    EXPECT_FALSE(EC) << EC.message();
+  }
+
+  ~TempDir() {
+    if (!Path.empty()) {
+      EXPECT_FALSE(llvm::sys::fs::remove_directories(Path.str()));
+    }
+  }
+
+  TempDir(const TempDir &) = delete;
+  TempDir &operator=(const TempDir &) = delete;
+
+  TempDir(TempDir &&) = default;
+  TempDir &operator=(TempDir &&) = default;
+
+  /// The path to the temporary directory.
+  StringRef path() const { return Path; }
+
+  /// The null-terminated C string pointing to the path.
+  const char *c_str() { return Path.c_str(); }
+
+  /// Creates a new path by appending the argument to the path of the managed
+  /// directory using the native path separator.
+  SmallString<128> path(StringRef component) const {
+    SmallString<128> Result(Path);
+    SmallString<128> ComponentToAppend(component);
+    llvm::sys::path::native(ComponentToAppend);
+    llvm::sys::path::append(Result, Twine(ComponentToAppend));
+    return Result;
+  }
+};
+
+/// A RAII object that creates a link upon initialization and
+/// removes it upon destruction.
+///
+/// The link may be a soft or a hard link, depending on the platform.
+class TempLink {
+  SmallString<128> Path;
+
+public:
+  /// Creates a managed link at path Link pointing to Target.
+  TempLink(StringRef Target, StringRef Link) {
+    Path = Link;
+    std::error_code EC = sys::fs::create_link(Target, Link);
+    if (EC)
+      Path.clear();
+    EXPECT_FALSE(EC);
+  }
+  ~TempLink() {
+    if (!Path.empty()) {
+      EXPECT_FALSE(llvm::sys::fs::remove(Path.str()));
+    }
+  }
+
+  TempLink(const TempLink &) = delete;
+  TempLink &operator=(const TempLink &) = delete;
+
+  TempLink(TempLink &&) = default;
+  TempLink &operator=(TempLink &&) = default;
+
+  /// The path to the link.
+  StringRef path() const { return Path; }
+};
+
+/// A RAII object that creates a file upon initialization and
+/// removes it upon destruction.
+class TempFile {
+  SmallString<128> Path;
+
+public:
+  /// Creates a managed file.
+  ///
+  /// @param Name The name of the file to create.
+  /// @param Contents The string to write to the file.
+  /// @param Unique If true, the file will be created using
+  ///               llvm::sys::fs::createTemporaryFile.
+  TempFile(StringRef Name, StringRef Suffix = "", StringRef Contents = "",
+           bool Unique = false) {
+    std::error_code EC;
+    int fd;
+    if (Unique) {
+      EC = llvm::sys::fs::createTemporaryFile(Name, Suffix, fd, Path);
+    } else {
+      Path = Name;
+      if (!Suffix.empty()) {
+        Path.append(".");
+        Path.append(Suffix);
+      }
+      EC = llvm::sys::fs::openFileForWrite(Path, fd);
+    }
+    EXPECT_FALSE(EC);
+    raw_fd_ostream OS(fd, /*shouldClose*/ true);
+    OS << Contents;
+    OS.flush();
+    EXPECT_FALSE(OS.error());
+    if (EC || OS.error())
+      Path.clear();
+  }
+  ~TempFile() {
+    if (!Path.empty()) {
+      EXPECT_FALSE(llvm::sys::fs::remove(Path.str()));
+    }
+  }
+
+  /// The path to the file.
+  StringRef path() const { return Path; }
+};
+
 } // namespace unittest
 } // namespace llvm
 

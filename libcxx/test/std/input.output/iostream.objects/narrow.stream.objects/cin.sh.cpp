@@ -6,32 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdin
-
 // <iostream>
 
 // istream cin;
 
+// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} echo "123" \| %t.exe > %t.out
-// RUN: grep -e 'The number is 123!' %t.out
+// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
 
 #include <iostream>
 #include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+int main(int, char**) {
     int i;
     std::cin >> i;
-    std::cout << "The number is " << i << "!";
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::cin.tie() == NULL);
-#else
-    assert(std::cin.tie() == &std::cout);
-#endif
-
-  return 0;
+    assert(i == 1234);
+    return 0;
 }

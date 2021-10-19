@@ -11,6 +11,7 @@
 
 import sys, os
 from datetime import date
+from recommonmark.parser import CommonMarkParser
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -18,6 +19,13 @@ from datetime import date
 #sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration -----------------------------------------------------
+
+# https://github.com/readthedocs/recommonmark/issues/177
+#Method used to remove the warning message.
+class CustomCommonMarkParser(CommonMarkParser):
+    def visit_document(self, node):
+        pass
+
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
@@ -44,14 +52,36 @@ else:
     # This requires 0.5 or later.
     extensions.append('recommonmark')
   else:
-    source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
+    source_parsers = {'.md': CustomCommonMarkParser}
   source_suffix['.md'] = 'markdown'
+  extensions.append('sphinx_markdown_tables')
+
+  # Setup AutoStructify for inline .rst toctrees in index.md
+  from recommonmark.transform import AutoStructify
+
+  # Stolen from https://github.com/readthedocs/recommonmark/issues/93
+  # Monkey patch to fix recommonmark 0.4 doc reference issues.
+  from recommonmark.states import DummyStateMachine
+  orig_run_role = DummyStateMachine.run_role
+  def run_role(self, name, options=None, content=None):
+    if name == 'doc':
+      name = 'any'
+      return orig_run_role(self, name, options, content)
+  DummyStateMachine.run_role = run_role
+
+  def setup(app):
+    # Disable inline math to avoid
+    # https://github.com/readthedocs/recommonmark/issues/120 in Extensions.md
+    app.add_config_value('recommonmark_config', {
+      'enable_inline_math': False
+    }, True)
+    app.add_transform(AutoStructify)
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'Overview'
+master_doc = 'index'
 
 # General information about the project.
 project = u'Flang'
@@ -156,7 +186,13 @@ html_last_updated_fmt = '%b %d, %Y'
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+    '**': [
+        'indexsidebar.html',
+        'searchbox.html',
+    ]
+}
+
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

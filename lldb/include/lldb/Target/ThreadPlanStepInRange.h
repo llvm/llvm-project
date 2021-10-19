@@ -22,14 +22,7 @@ class ThreadPlanStepInRange : public ThreadPlanStepRange,
 public:
   ThreadPlanStepInRange(Thread &thread, const AddressRange &range,
                         const SymbolContext &addr_context,
-                        lldb::RunMode stop_others,
-                        LazyBool step_in_avoids_code_without_debug_info,
-                        LazyBool step_out_avoids_code_without_debug_info);
-
-  ThreadPlanStepInRange(Thread &thread, const AddressRange &range,
-                        const SymbolContext &addr_context,
-                        const char *step_into_function_name,
-                        lldb::RunMode stop_others,
+                        const char *step_into_target, lldb::RunMode stop_others,
                         LazyBool step_in_avoids_code_without_debug_info,
                         LazyBool step_out_avoids_code_without_debug_info);
 
@@ -40,10 +33,6 @@ public:
   bool ShouldStop(Event *event_ptr) override;
 
   void SetAvoidRegexp(const char *name);
-
-  void SetStepInTarget(const char *target) {
-    m_step_into_target.SetCString(target);
-  }
 
   static void SetDefaultFlagValue(uint32_t new_value);
 
@@ -78,17 +67,6 @@ protected:
   bool FrameMatchesAvoidCriteria();
 
 private:
-  friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
-      bool abort_other_plans, const AddressRange &range,
-      const SymbolContext &addr_context, lldb::RunMode stop_others,
-      Status &status, LazyBool avoid_code_without_debug_info);
-  friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
-      bool abort_other_plans, const AddressRange &range,
-      const SymbolContext &addr_context, const char *step_in_target,
-      lldb::RunMode stop_others, Status &status,
-      LazyBool step_in_avoids_code_without_debug_info,
-      LazyBool step_out_avoids_code_without_debug_info);
-
   void SetupAvoidNoDebug(LazyBool step_in_avoids_code_without_debug_info,
                          LazyBool step_out_avoids_code_without_debug_info);
   // Need an appropriate marker for the current stack so we can tell step out

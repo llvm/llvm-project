@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 # RUN: rm -f %t
 # RUN: llvm-ar rcs %t %t.o
-# RUN: llvm-nm -M %t | FileCheck %s
+# RUN: llvm-nm --print-armap %t | FileCheck %s
 
 # Test that weak undefined symbols don't show up in the archive symbol
 # table.

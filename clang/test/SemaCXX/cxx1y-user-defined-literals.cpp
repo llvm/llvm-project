@@ -34,7 +34,7 @@ duration a = 1ns, b = 1us, c = 1ms, d = 1s, e = 1min, f = 1h;
 string s = "foo"s;
 char error = 'x's; // expected-error {{invalid suffix}} expected-error {{expected ';'}}
 
-int _1z = 1z; // expected-error {{invalid suffix}}
+int _1y = 1y; // expected-error {{invalid suffix}}
 int _1b = 1b; // expected-error {{invalid digit}}
 
 complex<float> cf1 = 1if, cf2 = 2.if, cf3 = 0x3if;

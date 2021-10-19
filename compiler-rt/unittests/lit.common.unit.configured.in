@@ -7,11 +7,13 @@ config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.compiler_rt_src_root = "@COMPILER_RT_SOURCE_DIR@"
 config.compiler_rt_libdir = "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@"
+config.enable_per_target_runtime_dir = @LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_PYBOOL@
 config.llvm_build_mode = "@LLVM_BUILD_MODE@"
 config.host_arch = "@HOST_ARCH@"
 config.host_os = "@HOST_OS@"
 config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
 config.gwp_asan = @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@
+config.emulator = "@COMPILER_RT_EMULATOR@"
 
 # LLVM tools dir and build mode can be passed in lit parameters,
 # so try to apply substitution.

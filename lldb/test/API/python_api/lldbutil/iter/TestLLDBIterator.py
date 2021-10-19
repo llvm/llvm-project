@@ -23,7 +23,6 @@ class LLDBIteratorTestCase(TestBase):
             'main.cpp', '// Set break point at this line.')
         self.line2 = line_number('main.cpp', '// And that line.')
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_module(self):
         """Test module_iter works correctly for SBTarget -> SBModule."""
         self.build()
@@ -50,16 +49,15 @@ class LLDBIteratorTestCase(TestBase):
         for m in target.module_iter():
             mine.append(m)
 
-        self.assertTrue(len(yours) == len(mine))
+        self.assertEqual(len(yours), len(mine))
         for i in range(len(yours)):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(
-                yours[i] == mine[i],
+            self.assertEqual(
+                yours[i], mine[i],
                 "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_breakpoint(self):
         """Test breakpoint_iter works correctly for SBTarget -> SBBreakpoint."""
         self.build()
@@ -73,7 +71,7 @@ class LLDBIteratorTestCase(TestBase):
         breakpoint = target.BreakpointCreateByLocation("main.cpp", self.line2)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        self.assertTrue(target.GetNumBreakpoints() == 2)
+        self.assertEqual(target.GetNumBreakpoints(), 2)
 
         from lldbsuite.test.lldbutil import get_description
         yours = []
@@ -83,15 +81,14 @@ class LLDBIteratorTestCase(TestBase):
         for b in target.breakpoint_iter():
             mine.append(b)
 
-        self.assertTrue(len(yours) == len(mine))
+        self.assertEqual(len(yours), len(mine))
         for i in range(len(yours)):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(yours[i] == mine[i],
+            self.assertEqual(yours[i], mine[i],
                             "ID of yours[{0}] and mine[{0}] matches".format(i))
 
-    @add_test_categories(['pyapi'])
     def test_lldb_iter_frame(self):
         """Test iterator works correctly for SBProcess->SBThread->SBFrame."""
         self.build()
@@ -119,7 +116,7 @@ class LLDBIteratorTestCase(TestBase):
             if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
                 stopped_due_to_breakpoint = True
             for frame in thread:
-                self.assertTrue(frame.GetThread().GetThreadID() == ID)
+                self.assertEqual(frame.GetThread().GetThreadID(), ID)
                 if self.TraceOn():
                     print(frame)
 

@@ -6,7 +6,7 @@
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s --check-prefix=CHECK-LE \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 
-@glob = local_unnamed_addr global i32 0, align 4
+@glob = dso_local local_unnamed_addr global i32 0, align 4
 
 define i64 @test_lllesi(i32 signext %a, i32 signext %b)  {
 ; CHECK-LABEL: test_lllesi:
@@ -60,7 +60,7 @@ entry:
   ret i64 %conv1
 }
 
-define void @test_lllesi_store(i32 signext %a, i32 signext %b) {
+define dso_local void @test_lllesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_lllesi_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -71,12 +71,11 @@ define void @test_lllesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesi_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesi_store:
@@ -94,7 +93,7 @@ entry:
   ret void
 }
 
-define void @test_lllesi_sext_store(i32 signext %a, i32 signext %b) {
+define dso_local void @test_lllesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: test_lllesi_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r4, r3
@@ -105,12 +104,11 @@ define void @test_lllesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_lllesi_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    sub r3, r4, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    rldicl r3, r3, 1, 63
 ; CHECK-BE-NEXT:    addi r3, r3, -1
-; CHECK-BE-NEXT:    stw r3, 0(r4)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_lllesi_sext_store:

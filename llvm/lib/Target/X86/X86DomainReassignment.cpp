@@ -141,7 +141,7 @@ public:
       return false;
     // It's illegal to replace an instruction that implicitly defines a register
     // with an instruction that doesn't, unless that register dead.
-    for (auto &MO : MI->implicit_operands())
+    for (const auto &MO : MI->implicit_operands())
       if (MO.isReg() && MO.isDef() && !MO.isDead() &&
           !TII->get(DstOpcode).hasImplicitDefOfPhysReg(MO.getReg()))
         return false;
@@ -180,7 +180,7 @@ public:
                     MachineRegisterInfo *MRI) const override {
     assert(isLegal(MI, TII) && "Cannot convert instruction");
     MachineBasicBlock *MBB = MI->getParent();
-    auto &DL = MI->getDebugLoc();
+    const DebugLoc &DL = MI->getDebugLoc();
 
     Register Reg = MRI->createVirtualRegister(
         TII->getRegClass(TII->get(DstOpcode), 0, MRI->getTargetRegisterInfo(),
@@ -220,14 +220,12 @@ public:
     // Don't allow copies to/flow GR8/GR16 physical registers.
     // FIXME: Is there some better way to support this?
     Register DstReg = MI->getOperand(0).getReg();
-    if (Register::isPhysicalRegister(DstReg) &&
-        (X86::GR8RegClass.contains(DstReg) ||
-         X86::GR16RegClass.contains(DstReg)))
+    if (DstReg.isPhysical() && (X86::GR8RegClass.contains(DstReg) ||
+                                X86::GR16RegClass.contains(DstReg)))
       return false;
     Register SrcReg = MI->getOperand(1).getReg();
-    if (Register::isPhysicalRegister(SrcReg) &&
-        (X86::GR8RegClass.contains(SrcReg) ||
-         X86::GR16RegClass.contains(SrcReg)))
+    if (SrcReg.isPhysical() && (X86::GR8RegClass.contains(SrcReg) ||
+                                X86::GR16RegClass.contains(SrcReg)))
       return false;
 
     return true;
@@ -237,7 +235,7 @@ public:
                       MachineRegisterInfo *MRI) const override {
     assert(MI->getOpcode() == TargetOpcode::COPY && "Expected a COPY");
 
-    for (auto &MO : MI->operands()) {
+    for (const auto &MO : MI->operands()) {
       // Physical registers will not be converted. Assume that converting the
       // COPY to the destination domain will eventually result in a actual
       // instruction.
@@ -300,7 +298,7 @@ typedef DenseMap<InstrConverterBaseKeyTy, std::unique_ptr<InstrConverterBase>>
 class Closure {
 private:
   /// Virtual registers in the closure.
-  DenseSet<unsigned> Edges;
+  DenseSet<Register> Edges;
 
   /// Instructions in the closure.
   SmallVector<MachineInstr *, 8> Instrs;
@@ -332,11 +330,9 @@ public:
 
   bool empty() const { return Edges.empty(); }
 
-  bool insertEdge(unsigned Reg) {
-    return Edges.insert(Reg).second;
-  }
+  bool insertEdge(Register Reg) { return Edges.insert(Reg).second; }
 
-  using const_edge_iterator = DenseSet<unsigned>::const_iterator;
+  using const_edge_iterator = DenseSet<Register>::const_iterator;
   iterator_range<const_edge_iterator> edges() const {
     return iterator_range<const_edge_iterator>(Edges.begin(), Edges.end());
   }
@@ -352,7 +348,7 @@ public:
   LLVM_DUMP_METHOD void dump(const MachineRegisterInfo *MRI) const {
     dbgs() << "Registers: ";
     bool First = true;
-    for (unsigned Reg : Edges) {
+    for (Register Reg : Edges) {
       if (!First)
         dbgs() << ", ";
       First = false;
@@ -407,10 +403,10 @@ private:
   void initConverters();
 
   /// Starting from \Reg, expand the closure as much as possible.
-  void buildClosure(Closure &, unsigned Reg);
+  void buildClosure(Closure &, Register Reg);
 
   /// Enqueue \p Reg to be considered for addition to the closure.
-  void visitRegister(Closure &, unsigned Reg, RegDomain &Domain,
+  void visitRegister(Closure &, Register Reg, RegDomain &Domain,
                      SmallVectorImpl<unsigned> &Worklist);
 
   /// Reassign the closure to \p Domain.
@@ -430,13 +426,13 @@ char X86DomainReassignment::ID = 0;
 
 } // End anonymous namespace.
 
-void X86DomainReassignment::visitRegister(Closure &C, unsigned Reg,
+void X86DomainReassignment::visitRegister(Closure &C, Register Reg,
                                           RegDomain &Domain,
                                           SmallVectorImpl<unsigned> &Worklist) {
   if (EnclosedEdges.count(Reg))
     return;
 
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
 
   if (!MRI->hasOneDef(Reg))
@@ -507,7 +503,7 @@ void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
 
   // Iterate all registers in the closure, replace them with registers in the
   // destination domain.
-  for (unsigned Reg : C.edges()) {
+  for (Register Reg : C.edges()) {
     MRI->setRegClass(Reg, getDstRC(MRI->getRegClass(Reg), Domain));
     for (auto &MO : MRI->use_operands(Reg)) {
       if (MO.isReg())
@@ -517,13 +513,13 @@ void X86DomainReassignment::reassign(const Closure &C, RegDomain Domain) const {
     }
   }
 
-  for (auto MI : ToErase)
+  for (auto *MI : ToErase)
     MI->eraseFromParent();
 }
 
 /// \returns true when \p Reg is used as part of an address calculation in \p
 /// MI.
-static bool usedAsAddr(const MachineInstr &MI, unsigned Reg,
+static bool usedAsAddr(const MachineInstr &MI, Register Reg,
                        const TargetInstrInfo *TII) {
   if (!MI.mayLoadOrStore())
     return false;
@@ -537,14 +533,14 @@ static bool usedAsAddr(const MachineInstr &MI, unsigned Reg,
   for (unsigned MemOpIdx = MemOpStart,
                 MemOpEnd = MemOpStart + X86::AddrNumOperands;
        MemOpIdx < MemOpEnd; ++MemOpIdx) {
-    auto &Op = MI.getOperand(MemOpIdx);
+    const MachineOperand &Op = MI.getOperand(MemOpIdx);
     if (Op.isReg() && Op.getReg() == Reg)
       return true;
   }
   return false;
 }
 
-void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
+void X86DomainReassignment::buildClosure(Closure &C, Register Reg) {
   SmallVector<unsigned, 4> Worklist;
   RegDomain Domain = NoDomain;
   visitRegister(C, Reg, Domain, Worklist);
@@ -594,7 +590,7 @@ void X86DomainReassignment::buildClosure(Closure &C, unsigned Reg) {
           continue;
 
         Register DefReg = DefOp.getReg();
-        if (!Register::isVirtualRegister(DefReg)) {
+        if (!DefReg.isVirtual()) {
           C.setAllIllegal();
           continue;
         }
@@ -753,7 +749,7 @@ bool X86DomainReassignment::runOnMachineFunction(MachineFunction &MF) {
   // Go over all virtual registers and calculate a closure.
   unsigned ClosureID = 0;
   for (unsigned Idx = 0; Idx < MRI->getNumVirtRegs(); ++Idx) {
-    unsigned Reg = Register::index2VirtReg(Idx);
+    Register Reg = Register::index2VirtReg(Idx);
 
     // GPR only current source domain supported.
     if (!isGPR(MRI->getRegClass(Reg)))

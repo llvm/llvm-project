@@ -940,8 +940,7 @@ TEST_F(PatternMatchTest, VectorOps) {
   VecElemIdxs.push_back(ConstantInt::get(i32, 2));
   auto *IdxVec = ConstantVector::get(VecElemIdxs);
 
-  Value *UndefVec = UndefValue::get(VecTy);
-  Value *VI1 = IRB.CreateInsertElement(UndefVec, IRB.getInt8(1), (uint64_t)0);
+  Value *VI1 = IRB.CreateInsertElement(VecTy, IRB.getInt8(1), (uint64_t)0);
   Value *VI2 = IRB.CreateInsertElement(VI1, Val2, Val);
   Value *VI3 = IRB.CreateInsertElement(VI1, Val2, (uint64_t)1);
   Value *VI4 = IRB.CreateInsertElement(VI1, IRB.getInt8(2), Val);
@@ -950,11 +949,14 @@ TEST_F(PatternMatchTest, VectorOps) {
   Value *EX2 = IRB.CreateExtractElement(VI4, (uint64_t)0);
   Value *EX3 = IRB.CreateExtractElement(IdxVec, (uint64_t)1);
 
-  Value *Zero = ConstantAggregateZero::get(i32VecTy);
-  Value *SI1 = IRB.CreateShuffleVector(VI1, UndefVec, Zero);
+  Constant *Zero = ConstantAggregateZero::get(i32VecTy);
+  SmallVector<int, 16> ZeroMask;
+  ShuffleVectorInst::getShuffleMask(Zero, ZeroMask);
+
+  Value *SI1 = IRB.CreateShuffleVector(VI1, ZeroMask);
   Value *SI2 = IRB.CreateShuffleVector(VI3, VI4, IdxVec);
-  Value *SI3 = IRB.CreateShuffleVector(VI3, UndefVec, Zero);
-  Value *SI4 = IRB.CreateShuffleVector(VI4, UndefVec, Zero);
+  Value *SI3 = IRB.CreateShuffleVector(VI3, ZeroMask);
+  Value *SI4 = IRB.CreateShuffleVector(VI4, ZeroMask);
 
   Value *SP1 = IRB.CreateVectorSplat(2, IRB.getInt8(2));
   Value *SP2 = IRB.CreateVectorSplat(2, Val);
@@ -1019,6 +1021,37 @@ TEST_F(PatternMatchTest, VectorOps) {
   EXPECT_TRUE(A == Val);
 }
 
+TEST_F(PatternMatchTest, UndefPoisonMix) {
+  Type *ScalarTy = IRB.getInt8Ty();
+  ArrayType *ArrTy = ArrayType::get(ScalarTy, 2);
+  StructType *StTy = StructType::get(ScalarTy, ScalarTy);
+  StructType *StTy2 = StructType::get(ScalarTy, StTy);
+  StructType *StTy3 = StructType::get(StTy, ScalarTy);
+  Constant *Zero = ConstantInt::getNullValue(ScalarTy);
+  UndefValue *U = UndefValue::get(ScalarTy);
+  UndefValue *P = PoisonValue::get(ScalarTy);
+
+  EXPECT_TRUE(match(ConstantVector::get({U, P}), m_Undef()));
+  EXPECT_TRUE(match(ConstantVector::get({P, U}), m_Undef()));
+
+  EXPECT_TRUE(match(ConstantArray::get(ArrTy, {U, P}), m_Undef()));
+  EXPECT_TRUE(match(ConstantArray::get(ArrTy, {P, U}), m_Undef()));
+
+  auto *UP = ConstantStruct::get(StTy, {U, P});
+  EXPECT_TRUE(match(ConstantStruct::get(StTy2, {U, UP}), m_Undef()));
+  EXPECT_TRUE(match(ConstantStruct::get(StTy2, {P, UP}), m_Undef()));
+  EXPECT_TRUE(match(ConstantStruct::get(StTy3, {UP, U}), m_Undef()));
+  EXPECT_TRUE(match(ConstantStruct::get(StTy3, {UP, P}), m_Undef()));
+
+  EXPECT_FALSE(match(ConstantStruct::get(StTy, {U, Zero}), m_Undef()));
+  EXPECT_FALSE(match(ConstantStruct::get(StTy, {Zero, U}), m_Undef()));
+  EXPECT_FALSE(match(ConstantStruct::get(StTy, {P, Zero}), m_Undef()));
+  EXPECT_FALSE(match(ConstantStruct::get(StTy, {Zero, P}), m_Undef()));
+
+  EXPECT_FALSE(match(ConstantStruct::get(StTy2, {Zero, UP}), m_Undef()));
+  EXPECT_FALSE(match(ConstantStruct::get(StTy3, {UP, Zero}), m_Undef()));
+}
+
 TEST_F(PatternMatchTest, VectorUndefInt) {
   Type *ScalarTy = IRB.getInt8Ty();
   Type *VectorTy = FixedVectorType::get(ScalarTy, 4);
@@ -1059,29 +1092,29 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APInt(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APIntForbidUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APInt(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APIntForbidUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
 
   // Whether splats with undef can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APInt(C)));
   EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidUndef(C)));
   C = nullptr;
   EXPECT_TRUE(match(VectorZeroUndef, m_APIntAllowUndef(C)));
-  EXPECT_TRUE(C->isNullValue());
+  EXPECT_TRUE(C->isZero());
 }
 
 TEST_F(PatternMatchTest, VectorUndefFloat) {
@@ -1093,39 +1126,77 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   Constant *VectorZero = Constant::getNullValue(VectorTy);
   Constant *ScalarPosInf = ConstantFP::getInfinity(ScalarTy, false);
   Constant *ScalarNegInf = ConstantFP::getInfinity(ScalarTy, true);
+  Constant *ScalarNaN = ConstantFP::getNaN(ScalarTy, true);
 
-  SmallVector<Constant *, 4> Elems;
-  Elems.push_back(ScalarUndef);
-  Elems.push_back(ScalarZero);
-  Elems.push_back(ScalarUndef);
-  Elems.push_back(ScalarZero);
-  Constant *VectorZeroUndef = ConstantVector::get(Elems);
+  Constant *VectorZeroUndef =
+      ConstantVector::get({ScalarUndef, ScalarZero, ScalarUndef, ScalarZero});
 
-  SmallVector<Constant *, 4> InfElems;
-  InfElems.push_back(ScalarPosInf);
-  InfElems.push_back(ScalarNegInf);
-  InfElems.push_back(ScalarUndef);
-  InfElems.push_back(ScalarPosInf);
-  Constant *VectorInfUndef = ConstantVector::get(InfElems);
+  Constant *VectorInfUndef = ConstantVector::get(
+      {ScalarPosInf, ScalarNegInf, ScalarUndef, ScalarPosInf});
+
+  Constant *VectorNaNUndef =
+      ConstantVector::get({ScalarUndef, ScalarNaN, ScalarNaN, ScalarNaN});
 
   EXPECT_TRUE(match(ScalarUndef, m_Undef()));
   EXPECT_TRUE(match(VectorUndef, m_Undef()));
   EXPECT_FALSE(match(ScalarZero, m_Undef()));
   EXPECT_FALSE(match(VectorZero, m_Undef()));
   EXPECT_FALSE(match(VectorZeroUndef, m_Undef()));
+  EXPECT_FALSE(match(VectorInfUndef, m_Undef()));
+  EXPECT_FALSE(match(VectorNaNUndef, m_Undef()));
 
   EXPECT_FALSE(match(ScalarUndef, m_AnyZeroFP()));
   EXPECT_FALSE(match(VectorUndef, m_AnyZeroFP()));
   EXPECT_TRUE(match(ScalarZero, m_AnyZeroFP()));
   EXPECT_TRUE(match(VectorZero, m_AnyZeroFP()));
   EXPECT_TRUE(match(VectorZeroUndef, m_AnyZeroFP()));
+  EXPECT_FALSE(match(VectorInfUndef, m_AnyZeroFP()));
+  EXPECT_FALSE(match(VectorNaNUndef, m_AnyZeroFP()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_NaN()));
+  EXPECT_FALSE(match(VectorUndef, m_NaN()));
+  EXPECT_FALSE(match(VectorZeroUndef, m_NaN()));
+  EXPECT_FALSE(match(ScalarPosInf, m_NaN()));
+  EXPECT_FALSE(match(ScalarNegInf, m_NaN()));
+  EXPECT_TRUE(match(ScalarNaN, m_NaN()));
+  EXPECT_FALSE(match(VectorInfUndef, m_NaN()));
+  EXPECT_TRUE(match(VectorNaNUndef, m_NaN()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_NonNaN()));
+  EXPECT_FALSE(match(VectorUndef, m_NonNaN()));
+  EXPECT_TRUE(match(VectorZeroUndef, m_NonNaN()));
+  EXPECT_TRUE(match(ScalarPosInf, m_NonNaN()));
+  EXPECT_TRUE(match(ScalarNegInf, m_NonNaN()));
+  EXPECT_FALSE(match(ScalarNaN, m_NonNaN()));
+  EXPECT_TRUE(match(VectorInfUndef, m_NonNaN()));
+  EXPECT_FALSE(match(VectorNaNUndef, m_NonNaN()));
 
   EXPECT_FALSE(match(ScalarUndef, m_Inf()));
   EXPECT_FALSE(match(VectorUndef, m_Inf()));
   EXPECT_FALSE(match(VectorZeroUndef, m_Inf()));
   EXPECT_TRUE(match(ScalarPosInf, m_Inf()));
   EXPECT_TRUE(match(ScalarNegInf, m_Inf()));
+  EXPECT_FALSE(match(ScalarNaN, m_Inf()));
   EXPECT_TRUE(match(VectorInfUndef, m_Inf()));
+  EXPECT_FALSE(match(VectorNaNUndef, m_Inf()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_NonInf()));
+  EXPECT_FALSE(match(VectorUndef, m_NonInf()));
+  EXPECT_TRUE(match(VectorZeroUndef, m_NonInf()));
+  EXPECT_FALSE(match(ScalarPosInf, m_NonInf()));
+  EXPECT_FALSE(match(ScalarNegInf, m_NonInf()));
+  EXPECT_TRUE(match(ScalarNaN, m_NonInf()));
+  EXPECT_FALSE(match(VectorInfUndef, m_NonInf()));
+  EXPECT_TRUE(match(VectorNaNUndef, m_NonInf()));
+
+  EXPECT_FALSE(match(ScalarUndef, m_Finite()));
+  EXPECT_FALSE(match(VectorUndef, m_Finite()));
+  EXPECT_TRUE(match(VectorZeroUndef, m_Finite()));
+  EXPECT_FALSE(match(ScalarPosInf, m_Finite()));
+  EXPECT_FALSE(match(ScalarNegInf, m_Finite()));
+  EXPECT_FALSE(match(ScalarNaN, m_Finite()));
+  EXPECT_FALSE(match(VectorInfUndef, m_Finite()));
+  EXPECT_FALSE(match(VectorNaNUndef, m_Finite()));
 
   const APFloat *C;
   // Regardless of whether undefs are allowed,
@@ -1162,6 +1233,9 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_FALSE(match(VectorZeroUndef, m_APFloatForbidUndef(C)));
   C = nullptr;
   EXPECT_TRUE(match(VectorZeroUndef, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroUndef, m_Finite(C)));
   EXPECT_TRUE(C->isZero());
 }
 
@@ -1366,7 +1440,7 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
 namespace {
 
 struct is_unsigned_zero_pred {
-  bool isValue(const APInt &C) { return C.isNullValue(); }
+  bool isValue(const APInt &C) { return C.isZero(); }
 };
 
 struct is_float_zero_pred {
@@ -1394,8 +1468,8 @@ struct is_float_nan_pred {
 TEST_F(PatternMatchTest, ConstantPredicateType) {
 
   // Scalar integer
-  APInt U32Max = APInt::getAllOnesValue(32);
-  APInt U32Zero = APInt::getNullValue(32);
+  APInt U32Max = APInt::getAllOnes(32);
+  APInt U32Zero = APInt::getZero(32);
   APInt U32DeadBeef(32, 0xDEADBEEF);
 
   Type *U32Ty = Type::getInt32Ty(Ctx);
@@ -1540,12 +1614,125 @@ TEST_F(PatternMatchTest, ConstantPredicateType) {
       match(CF32NaNWithUndef, cstfp_pred_ty<always_false_pred<APFloat>>()));
 }
 
+TEST_F(PatternMatchTest, InsertValue) {
+  Type *StructTy = StructType::create(IRB.getContext(),
+                                      {IRB.getInt32Ty(), IRB.getInt64Ty()});
+  Value *Ins0 =
+      IRB.CreateInsertValue(UndefValue::get(StructTy), IRB.getInt32(20), 0);
+  Value *Ins1 = IRB.CreateInsertValue(Ins0, IRB.getInt64(90), 1);
+
+  EXPECT_TRUE(match(Ins0, m_InsertValue<0>(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Ins0, m_InsertValue<1>(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Ins1, m_InsertValue<0>(m_Value(), m_Value())));
+  EXPECT_TRUE(match(Ins1, m_InsertValue<1>(m_Value(), m_Value())));
+
+  EXPECT_TRUE(match(Ins0, m_InsertValue<0>(m_Undef(), m_SpecificInt(20))));
+  EXPECT_FALSE(match(Ins0, m_InsertValue<0>(m_Undef(), m_SpecificInt(0))));
+
+  EXPECT_TRUE(
+      match(Ins1, m_InsertValue<1>(m_InsertValue<0>(m_Value(), m_Value()),
+                                   m_SpecificInt(90))));
+  EXPECT_FALSE(match(IRB.getInt64(99), m_InsertValue<0>(m_Value(), m_Value())));
+}
+
+TEST_F(PatternMatchTest, LogicalSelects) {
+  Value *Alloca = IRB.CreateAlloca(IRB.getInt1Ty());
+  Value *X = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Value *Y = IRB.CreateLoad(IRB.getInt1Ty(), Alloca);
+  Constant *T = IRB.getInt1(true);
+  Constant *F = IRB.getInt1(false);
+  Value *And = IRB.CreateSelect(X, Y, F);
+  Value *Or = IRB.CreateSelect(X, T, Y);
+
+  // Logical and:
+  // Check basic no-capture logic - opcode and constant must match.
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(And, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(And, m_c_LogicalOr(m_Value(), m_Value())));
+
+  // Check with captures.
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(And, m_LogicalAnd(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Value())));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Value(), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_LogicalAnd(m_Specific(Y), m_Specific(Y))));
+
+  // Check captures for commutative match.
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Value())));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Value(), m_Specific(X))));
+  EXPECT_TRUE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(And, m_c_LogicalAnd(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(And, m_c_LogicalAnd(m_Specific(Y), m_Specific(Y))));
+
+  // Logical or:
+  // Check basic no-capture logic - opcode and constant must match.
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Or, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(Or, m_c_LogicalAnd(m_Value(), m_Value())));
+
+  // Check with captures.
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(Or, m_LogicalOr(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Value())));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Value(), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_LogicalOr(m_Specific(Y), m_Specific(Y))));
+
+  // Check captures for commutative match.
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(X), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Specific(Y))));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(X), m_Specific(Y))));
+
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Value())));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Value(), m_Specific(X))));
+  EXPECT_TRUE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(X))));
+
+  EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(X), m_Specific(X))));
+  EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(Y))));
+}
+
+TEST_F(PatternMatchTest, VScale) {
+  DataLayout DL = M->getDataLayout();
+
+  Type *VecTy = ScalableVectorType::get(IRB.getInt8Ty(), 1);
+  Type *VecPtrTy = VecTy->getPointerTo();
+  Value *NullPtrVec = Constant::getNullValue(VecPtrTy);
+  Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
+  Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
+  EXPECT_TRUE(match(PtrToInt, m_VScale(DL)));
+
+  // Prior to this patch, this case would cause assertion failures when attempting to match m_VScale
+  Type *VecTy2 = ScalableVectorType::get(IRB.getInt8Ty(), 2);
+  Value *NullPtrVec2 = Constant::getNullValue(VecTy2->getPointerTo());
+  Value *BitCast = IRB.CreateBitCast(NullPtrVec2, VecPtrTy);
+  Value *GEP2 = IRB.CreateGEP(VecTy, BitCast, IRB.getInt64(1));
+  Value *PtrToInt2 =
+      IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
+  EXPECT_FALSE(match(PtrToInt2, m_VScale(DL)));
+}
+
 template <typename T> struct MutableConstTest : PatternMatchTest { };
 
 typedef ::testing::Types<std::tuple<Value*, Instruction*>,
                          std::tuple<const Value*, const Instruction *>>
     MutableConstTestTypes;
-TYPED_TEST_CASE(MutableConstTest, MutableConstTestTypes);
+TYPED_TEST_SUITE(MutableConstTest, MutableConstTestTypes, );
 
 TYPED_TEST(MutableConstTest, ICmp) {
   auto &IRB = PatternMatchTest::IRB;

@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/EvaluatedExprVisitor.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
@@ -25,14 +26,12 @@ using namespace sema;
 static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                    SourceRange Range) {
   FallThroughAttr Attr(S.Context, A);
-  if (!isa<NullStmt>(St)) {
+  if (isa<SwitchCase>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
-        << Attr.getSpelling() << St->getBeginLoc();
-    if (isa<SwitchCase>(St)) {
-      SourceLocation L = S.getLocForEndOfToken(Range.getEnd());
-      S.Diag(L, diag::note_fallthrough_insert_semi_fixit)
-          << FixItHint::CreateInsertion(L, ";");
-    }
+        << A << St->getBeginLoc();
+    SourceLocation L = S.getLocForEndOfToken(Range.getEnd());
+    S.Diag(L, diag::note_fallthrough_insert_semi_fixit)
+        << FixItHint::CreateInsertion(L, ";");
     return nullptr;
   }
   auto *FnScope = S.getCurFunction();
@@ -53,11 +52,6 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
-  if (A.getNumArgs() < 1) {
-    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
-    return nullptr;
-  }
-
   std::vector<StringRef> DiagnosticIdentifiers;
   for (unsigned I = 0, E = A.getNumArgs(); I != E; ++I) {
     StringRef RuleName;
@@ -87,10 +81,10 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  PragmaNameLoc->Ident->getName())
           .Default("clang loop");
 
-  if (St->getStmtClass() != Stmt::DoStmtClass &&
-      St->getStmtClass() != Stmt::ForStmtClass &&
-      St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
-      St->getStmtClass() != Stmt::WhileStmtClass) {
+  // This could be handled automatically by adding a Subjects definition in
+  // Attr.td, but that would make the diagnostic behavior worse in this case
+  // because the user spells this attribute as a pragma.
+  if (!isa<DoStmt, ForStmt, CXXForRangeStmt, WhileStmt>(St)) {
     std::string Pragma = "#pragma " + std::string(PragmaName);
     S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
     return nullptr;
@@ -139,10 +133,18 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
                  .Default(LoopHintAttr::Vectorize);
-    if (Option == LoopHintAttr::VectorizeWidth ||
-        Option == LoopHintAttr::InterleaveCount ||
-        Option == LoopHintAttr::UnrollCount ||
-        Option == LoopHintAttr::PipelineInitiationInterval) {
+    if (Option == LoopHintAttr::VectorizeWidth) {
+      assert((ValueExpr || (StateLoc && StateLoc->Ident)) &&
+             "Attribute must have a valid value expression or argument.");
+      if (ValueExpr && S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
+        return nullptr;
+      if (StateLoc && StateLoc->Ident && StateLoc->Ident->isStr("scalable"))
+        State = LoopHintAttr::ScalableWidth;
+      else
+        State = LoopHintAttr::FixedWidth;
+    } else if (Option == LoopHintAttr::InterleaveCount ||
+               Option == LoopHintAttr::UnrollCount ||
+               Option == LoopHintAttr::PipelineInitiationInterval) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
       if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
         return nullptr;
@@ -196,9 +198,6 @@ public:
 static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                SourceRange Range) {
   NoMergeAttr NMA(S.Context, A);
-  if (S.CheckAttrNoArgs(A))
-    return nullptr;
-
   CallExprFinder CEF(S, St);
 
   if (!CEF.foundCallExpr()) {
@@ -210,9 +209,46 @@ static Attr *handleNoMergeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) NoMergeAttr(S.Context, A);
 }
 
+static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                SourceRange Range) {
+  // Validation is in Sema::ActOnAttributedStmt().
+  return ::new (S.Context) MustTailAttr(S.Context, A);
+}
+
+static Attr *handleLikely(Sema &S, Stmt *St, const ParsedAttr &A,
+                          SourceRange Range) {
+
+  if (!S.getLangOpts().CPlusPlus20 && A.isCXX11Attribute() && !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx20_attr) << A << Range;
+
+  return ::new (S.Context) LikelyAttr(S.Context, A);
+}
+
+static Attr *handleUnlikely(Sema &S, Stmt *St, const ParsedAttr &A,
+                            SourceRange Range) {
+
+  if (!S.getLangOpts().CPlusPlus20 && A.isCXX11Attribute() && !A.getScopeName())
+    S.Diag(A.getLoc(), diag::ext_cxx20_attr) << A << Range;
+
+  return ::new (S.Context) UnlikelyAttr(S.Context, A);
+}
+
+#define WANT_STMT_MERGE_LOGIC
+#include "clang/Sema/AttrParsedAttrImpl.inc"
+#undef WANT_STMT_MERGE_LOGIC
+
 static void
 CheckForIncompatibleAttributes(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
+  // The vast majority of attributed statements will only have one attribute
+  // on them, so skip all of the checking in the common case.
+  if (Attrs.size() < 2)
+    return;
+
+  // First, check for the easy cases that are table-generated for us.
+  if (!DiagnoseMutualExclusions(S, Attrs))
+    return;
+
   // There are 6 categories of loop hints attributes: vectorize, interleave,
   // unroll, unroll_and_jam, pipeline and distribute. Except for distribute they
   // come in two variants: a state form and a numeric form.  The state form
@@ -324,17 +360,8 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   // opencl_unroll_hint can have 0 arguments (compiler
   // determines unrolling factor) or 1 argument (the unroll factor provided
   // by the user).
-
-  unsigned NumArgs = A.getNumArgs();
-
-  if (NumArgs > 1) {
-    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 1;
-    return nullptr;
-  }
-
   unsigned UnrollFactor = 0;
-
-  if (NumArgs == 1) {
+  if (A.getNumArgs() == 1) {
     Expr *E = A.getArgAsExpr(0);
     Optional<llvm::APSInt> ArgVal;
 
@@ -345,28 +372,42 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
     }
 
     int Val = ArgVal->getSExtValue();
-
     if (Val <= 0) {
       S.Diag(A.getRange().getBegin(),
              diag::err_attribute_requires_positive_integer)
           << A << /* positive */ 0;
       return nullptr;
     }
-    UnrollFactor = Val;
+    UnrollFactor = static_cast<unsigned>(Val);
   }
 
-  return OpenCLUnrollHintAttr::CreateImplicit(S.Context, UnrollFactor);
+  return ::new (S.Context) OpenCLUnrollHintAttr(S.Context, A, UnrollFactor);
 }
 
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
-  switch (A.getKind()) {
-  case ParsedAttr::UnknownAttribute:
+  if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
+    return nullptr;
+
+  // Unknown attributes are automatically warned on. Target-specific attributes
+  // which do not apply to the current target architecture are treated as
+  // though they were unknown attributes.
+  const TargetInfo *Aux = S.Context.getAuxTargetInfo();
+  if (A.getKind() == ParsedAttr::UnknownAttribute ||
+      !(A.existsInTarget(S.Context.getTargetInfo()) ||
+        (S.Context.getLangOpts().SYCLIsDevice && Aux &&
+         A.existsInTarget(*Aux)))) {
     S.Diag(A.getLoc(), A.isDeclspecAttribute()
                            ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
                            : (unsigned)diag::warn_unknown_attribute_ignored)
-        << A;
+        << A << A.getRange();
     return nullptr;
+  }
+
+  if (S.checkCommonAttributeFeatures(St, A))
+    return nullptr;
+
+  switch (A.getKind()) {
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
   case ParsedAttr::AT_LoopHint:
@@ -377,28 +418,29 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleSuppressAttr(S, St, A, Range);
   case ParsedAttr::AT_NoMerge:
     return handleNoMergeAttr(S, St, A, Range);
+  case ParsedAttr::AT_MustTail:
+    return handleMustTailAttr(S, St, A, Range);
+  case ParsedAttr::AT_Likely:
+    return handleLikely(S, St, A, Range);
+  case ParsedAttr::AT_Unlikely:
+    return handleUnlikely(S, St, A, Range);
   default:
-    // if we're here, then we parsed a known attribute, but didn't recognize
-    // it as a statement attribute => it is declaration attribute
+    // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
+    // declaration attribute is not written on a statement, but this code is
+    // needed for attributes in Attr.td that do not list any subjects.
     S.Diag(A.getRange().getBegin(), diag::err_decl_attribute_invalid_on_stmt)
         << A << St->getBeginLoc();
     return nullptr;
   }
 }
 
-StmtResult Sema::ProcessStmtAttributes(Stmt *S,
-                                       const ParsedAttributesView &AttrList,
-                                       SourceRange Range) {
-  SmallVector<const Attr*, 8> Attrs;
-  for (const ParsedAttr &AL : AttrList) {
-    if (Attr *a = ProcessStmtAttribute(*this, S, AL, Range))
-      Attrs.push_back(a);
+void Sema::ProcessStmtAttributes(Stmt *S,
+                                 const ParsedAttributesWithRange &InAttrs,
+                                 SmallVectorImpl<const Attr *> &OutAttrs) {
+  for (const ParsedAttr &AL : InAttrs) {
+    if (const Attr *A = ProcessStmtAttribute(*this, S, AL, InAttrs.Range))
+      OutAttrs.push_back(A);
   }
 
-  CheckForIncompatibleAttributes(*this, Attrs);
-
-  if (Attrs.empty())
-    return S;
-
-  return ActOnAttributedStmt(Range.getBegin(), Attrs, S);
+  CheckForIncompatibleAttributes(*this, OutAttrs);
 }

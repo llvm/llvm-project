@@ -72,6 +72,8 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
 
   unsigned CRC : 1;
   unsigned Crypto : 1;
+  unsigned SHA2 : 1;
+  unsigned AES : 1;
   unsigned DSP : 1;
   unsigned Unaligned : 1;
   unsigned DotProd : 1;

@@ -12,6 +12,7 @@
 
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #include <thread>
+#include "make_test_thread.h"
 #endif
 
 #include "test_macros.h"
@@ -97,7 +98,8 @@ namespace test4 {
     }
 
     void test() {
-        std::thread t1(helper), t2(helper);
+        std::thread t1 = support::make_test_thread(helper);
+        std::thread t2 = support::make_test_thread(helper);
         t1.join();
         t2.join();
         assert(run_count == 1);
@@ -124,19 +126,19 @@ namespace test5 {
 
     void helper() {
         static int a = one(); ((void)a);
-        std::thread t(another_helper);
+        std::thread t = support::make_test_thread(another_helper);
         t.join();
     }
 
     void test() {
-        std::thread t(helper);
+        std::thread t = support::make_test_thread(helper);
         t.join();
         assert(run_count == 1);
     }
 }
 #endif /* _LIBCXXABI_HAS_NO_THREADS */
 
-int main()
+int main(int, char**)
 {
     test1::test();
     test2::test();
@@ -145,4 +147,6 @@ int main()
     test4::test();
     test5::test();
 #endif
+
+    return 0;
 }

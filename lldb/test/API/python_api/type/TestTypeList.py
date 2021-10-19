@@ -25,7 +25,6 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = 'main.cpp'
         self.line = line_number(self.source, '// Break at this line')
 
-    @add_test_categories(['pyapi'])
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {'EXE': self.exe_name}
@@ -47,7 +46,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
-        self.assertTrue(process.GetState() == lldb.eStateStopped)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertTrue(
@@ -113,13 +112,13 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(task_head_type)
         self.assertTrue(task_head_type.IsPointerType())
 
-        self.assertTrue(task_head_type == task_pointer_type)
+        self.assertEqual(task_head_type, task_pointer_type)
 
         # Get the pointee type of 'task_head'.
         task_head_pointee_type = task_head_type.GetPointeeType()
         self.DebugSBType(task_head_pointee_type)
 
-        self.assertTrue(task_type == task_head_pointee_type)
+        self.assertEqual(task_type, task_head_pointee_type)
 
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName('id')
@@ -130,4 +129,41 @@ class TypeAndTypeListTestCase(TestBase):
         # SBType.GetBasicType() takes an enum 'BasicType'
         # (lldb-enumerations.h).
         int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
-        self.assertTrue(id_type == int_type)
+        self.assertEqual(id_type, int_type)
+
+        # Find 'myint_arr' and check the array element type.
+        myint_arr = frame0.FindVariable('myint_arr')
+        self.assertTrue(myint_arr, VALID_VARIABLE)
+        self.DebugSBValue(myint_arr)
+        myint_arr_type = myint_arr.GetType()
+        self.DebugSBType(myint_arr_type)
+        self.assertTrue(myint_arr_type.IsArrayType())
+        myint_arr_element_type = myint_arr_type.GetArrayElementType()
+        self.DebugSBType(myint_arr_element_type)
+        myint_type = target.FindFirstType('myint')
+        self.DebugSBType(myint_type)
+        self.assertEqual(myint_arr_element_type, myint_type)
+
+        # Test enum methods. Requires DW_AT_enum_class which was added in Dwarf 4.
+        if configuration.dwarf_version >= 4:
+            enum_type = target.FindFirstType('EnumType')
+            self.assertTrue(enum_type)
+            self.DebugSBType(enum_type)
+            self.assertFalse(enum_type.IsScopedEnumerationType())
+
+            scoped_enum_type = target.FindFirstType('ScopedEnumType')
+            self.assertTrue(scoped_enum_type)
+            self.DebugSBType(scoped_enum_type)
+            self.assertTrue(scoped_enum_type.IsScopedEnumerationType())
+            int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
+            self.assertTrue(int_scoped_enum_type)
+            self.DebugSBType(int_scoped_enum_type)
+            self.assertEquals(int_scoped_enum_type.GetName(), 'int')
+
+            enum_uchar = target.FindFirstType('EnumUChar')
+            self.assertTrue(enum_uchar)
+            self.DebugSBType(enum_uchar)
+            int_enum_uchar = enum_uchar.GetEnumerationIntegerType()
+            self.assertTrue(int_enum_uchar)
+            self.DebugSBType(int_enum_uchar)
+            self.assertEquals(int_enum_uchar.GetName(), 'unsigned char')

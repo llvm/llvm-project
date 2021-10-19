@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
-#define LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
+#ifndef LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H
+#define LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Endian.h"
@@ -61,12 +60,9 @@ public:
   ArrayRef<uint8_t> RecordData;
 };
 
-template <typename Kind> struct RemappedRecord {
-  explicit RemappedRecord(const CVRecord<Kind> &R) : OriginalRecord(R) {}
-
-  CVRecord<Kind> OriginalRecord;
-  SmallVector<std::pair<uint32_t, TypeIndex>, 8> Mappings;
-};
+// There are two kinds of codeview records: type and symbol records.
+using CVType = CVRecord<TypeLeafKind>;
+using CVSymbol = CVRecord<SymbolKind>;
 
 template <typename Record, typename Func>
 Error forEachCodeViewRecord(ArrayRef<uint8_t> StreamBuffer, Func F) {
@@ -126,6 +122,12 @@ struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
   }
 };
 
+namespace codeview {
+using CVSymbolArray = VarStreamArray<CVSymbol>;
+using CVTypeArray = VarStreamArray<CVType>;
+using CVTypeRange = iterator_range<CVTypeArray::Iterator>;
+} // namespace codeview
+
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_RECORDITERATOR_H
+#endif // LLVM_DEBUGINFO_CODEVIEW_CVRECORD_H

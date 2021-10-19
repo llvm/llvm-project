@@ -1,9 +1,9 @@
 ##===----------------------------------------------------------------------===##
-# 
+#
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# 
+#
 ##===----------------------------------------------------------------------===##
 #
 # Build offloading library and related plugins.
@@ -17,11 +17,12 @@ endif()
 # Add cmake directory to search for custom cmake functions.
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules ${CMAKE_MODULE_PATH})
 
-if(OPENMP_STANDALONE_BUILD)
-  # Build all libraries into a common place so that tests can find them.
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-endif()
+# Set the path of all resulting libraries to a unified location so that it can
+# be used for testing.
+set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 
 # Message utilities.
 include(LibomptargetUtils)
@@ -29,8 +30,14 @@ include(LibomptargetUtils)
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
 
+# LLVM source tree is required at build time for libomptarget
+if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
+  message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_INCLUDE_DIRS")
+endif()
+
 # This is a list of all the targets that are supported/tested right now.
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} amdgcn-amd-amdhsa")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64-ibm-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} x86_64-pc-linux-gnu")
@@ -40,6 +47,19 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} nvptx64-nvidia-cuda")
 # the list of supported targets in the current system.
 set (LIBOMPTARGET_SYSTEM_TARGETS "")
 set (LIBOMPTARGET_TESTED_PLUGINS "")
+
+# Check OMPT support
+set(OMPT_DEFAULT_IN_LIBOMPTARGET FALSE)
+if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
+  set(OMPT_DEFAULT_IN_LIBOMPTARGET TRUE)
+endif()
+set(LIBOMP_OMPT_SUPPORT_IN_LIBOMPTARGET ${OMPT_DEFAULT_IN_LIBOMPTARGET} CACHE BOOL
+        "OMPT-support in libomptarget?")
+if(LIBOMP_OMPT_SUPPORT_IN_LIBOMPTARGET)
+  message(STATUS "OMPT enabled in libomptarget")
+else()
+  message(STATUS "OMPT disabled in libomptarget")
+endif()
 
 # Check whether using debug mode. In debug mode, allow dumping progress
 # messages at runtime by default. Otherwise, it can be enabled
@@ -54,32 +74,25 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
 endif()
 
-include_directories(include)
+set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${LIBOMPTARGET_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
-add_subdirectory(src)
-
-# Retrieve the path to the resulting library so that it can be used for 
-# testing.
-get_target_property(LIBOMPTARGET_LIBRARY_DIR omptarget LIBRARY_OUTPUT_DIRECTORY)
-if(NOT LIBOMPTARGET_LIBRARY_DIR)
-  set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-endif()
+set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${LIBOMPTARGET_SRC_DIR})
 
 # Definitions for testing, for reuse when testing libomptarget-nvptx.
-if(OPENMP_STANDALONE_BUILD)
-  set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src" CACHE STRING
-    "Path to folder containing omp.h")
-  set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src" CACHE STRING
-    "Path to folder containing libomp.so")
-else()
-  set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src")
-endif()
+set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+  "Path to folder containing omp.h")
+set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+  "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
 add_subdirectory(deviceRTLs)
+add_subdirectory(DeviceRTL)
+add_subdirectory(tools)
 
 # Add tests.
 add_subdirectory(test)

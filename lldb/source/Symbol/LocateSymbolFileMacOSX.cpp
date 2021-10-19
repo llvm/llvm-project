@@ -342,13 +342,6 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
       }
     }
 
-    cf_str = (CFStringRef)CFDictionaryGetValue((CFDictionaryRef)uuid_dict,
-                                               CFSTR("DBGArchitecture"));
-    if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
-      if (CFCString::FileSystemRepresentation(cf_str, str))
-        module_spec.GetArchitecture().SetTriple(str.c_str());
-    }
-
     std::string DBGBuildSourcePath;
     std::string DBGSourcePath;
 
@@ -621,7 +614,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             &signo,          // Signal int *
             &command_output, // Command output
             std::chrono::seconds(
-               120), // Large timeout to allow for long dsym download times
+               640), // Large timeout to allow for long dsym download times
             false);  // Don't run in a shell (we don't need shell expansion)
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           CFCData data(CFDataCreateWithBytesNoCopy(

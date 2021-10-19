@@ -42,7 +42,16 @@ std::string LoopHintAttr::getValueString(const PrintingPolicy &Policy) const {
   OS << "(";
   if (state == Numeric)
     value->printPretty(OS, nullptr, Policy);
-  else if (state == Enable)
+  else if (state == FixedWidth || state == ScalableWidth) {
+    if (value) {
+      value->printPretty(OS, nullptr, Policy);
+      if (state == ScalableWidth)
+        OS << ", scalable";
+    } else if (state == ScalableWidth)
+      OS << "scalable";
+    else
+      OS << "fixed";
+  } else if (state == Enable)
     OS << "enable";
   else if (state == Full)
     OS << "full";
@@ -132,57 +141,44 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
     OS << ' ' << ConvertMapTypeTyToStr(getMapType());
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
-OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
+llvm::Optional<OMPDeclareTargetDeclAttr *>
+OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   if (!VD->hasAttrs())
     return llvm::None;
   unsigned Level = 0;
-  const OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
-  for (const auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
-    if (Level < Attr->getLevel()) {
+  OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
+  for (auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
+    if (Level <= Attr->getLevel()) {
       Level = Attr->getLevel();
       FoundAttr = Attr;
     }
   }
   if (FoundAttr)
-    return FoundAttr->getMapType();
+    return FoundAttr;
+  return llvm::None;
+}
 
+llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
+  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  if (ActiveAttr.hasValue())
+    return ActiveAttr.getValue()->getMapType();
   return llvm::None;
 }
 
 llvm::Optional<OMPDeclareTargetDeclAttr::DevTypeTy>
 OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
-  if (!VD->hasAttrs())
-    return llvm::None;
-  unsigned Level = 0;
-  const OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
-  for (const auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
-    if (Level < Attr->getLevel()) {
-      Level = Attr->getLevel();
-      FoundAttr = Attr;
-    }
-  }
-  if (FoundAttr)
-    return FoundAttr->getDevType();
-
+  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  if (ActiveAttr.hasValue())
+    return ActiveAttr.getValue()->getDevType();
   return llvm::None;
 }
 
 llvm::Optional<SourceLocation>
 OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
-  if (!VD->hasAttrs())
-    return llvm::None;
-  unsigned Level = 0;
-  const OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
-  for (const auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
-    if (Level < Attr->getLevel()) {
-      Level = Attr->getLevel();
-      FoundAttr = Attr;
-    }
-  }
-  if (FoundAttr)
-    return FoundAttr->getRange().getBegin();
-
+  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  if (ActiveAttr.hasValue())
+    return ActiveAttr.getValue()->getRange().getBegin();
   return llvm::None;
 }
 
@@ -199,6 +195,25 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ")";
   }
   OS << " match(" << traitInfos << ")";
+
+  auto PrintExprs = [&OS, &Policy](Expr **Begin, Expr **End) {
+    for (Expr **I = Begin; I != End; ++I) {
+      assert(*I && "Expected non-null Stmt");
+      if (I != Begin)
+        OS << ",";
+      (*I)->printPretty(OS, nullptr, Policy);
+    }
+  };
+  if (adjustArgsNothing_size()) {
+    OS << " adjust_args(nothing:";
+    PrintExprs(adjustArgsNothing_begin(), adjustArgsNothing_end());
+    OS << ")";
+  }
+  if (adjustArgsNeedDevicePtr_size()) {
+    OS << " adjust_args(need_device_ptr:";
+    PrintExprs(adjustArgsNeedDevicePtr_begin(), adjustArgsNeedDevicePtr_end());
+    OS << ")";
+  }
 }
 
 #include "clang/AST/AttrImpl.inc"

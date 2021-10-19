@@ -14,7 +14,7 @@
 # CHECK-NEXT:   Values: [0xB8860BA, 0xB887389]
 # CHECK-NEXT: }
 
-.globl foo, bar
+.globl bar, foo
 foo:
 bar:
   ret

@@ -10,27 +10,26 @@
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-declare i1 @return_i1()
-declare void @func()
-declare void @consume(i32 addrspace(1)*)
-declare void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
-declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local i1 @return_i1()
+declare dso_local void @func()
+declare dso_local void @consume(i32 addrspace(1)*)
+declare dso_local void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
+declare dso_local void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare dso_local void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_relocate
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
 ; CHECK-VREG:    %2:gr8 = COPY $al
 ; CHECK-VREG:    $rdi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_relocate
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, killed renamable $rbx(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store 8 on %stack.0)
+; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
 ; CHECK-PREG:    renamable $bpl = COPY killed $al
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
@@ -48,10 +47,7 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-VREG:    %2:gr64 = COPY $rdx
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, %1 :: (store 8 into %stack.1)
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %2 :: (store 8 into %stack.0)
-; CHECK-VREG:    MOV64mr %stack.2, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.2)
-; CHECK-VREG:    %3:gr64, %4:gr64, %5:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %2(tied-def 0), 2, 0, 2, 0, 1, 8, %stack.1, 0, %1(tied-def 1), 1, 8, %stack.2, 0, %0(tied-def 2), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.2)
+; CHECK-VREG:    %3:gr64, %4:gr64, %5:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, %2(tied-def 0), 2, 0, %1(tied-def 1), %0(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    %6:gr32 = MOV32r0 implicit-def dead $eflags
 ; CHECK-VREG:    %7:gr64 = SUBREG_TO_REG 0, killed %6, %subreg.sub_32bit
 ; CHECK-VREG:    $rdi = COPY %5
@@ -65,10 +61,7 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-PREG:    renamable $r14 = COPY $rdx
 ; CHECK-PREG:    renamable $r15 = COPY $rsi
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, renamable $r15 :: (store 8 into %stack.1)
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $r14 :: (store 8 into %stack.0)
-; CHECK-PREG:    MOV64mr %stack.2, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %stack.2)
-; CHECK-PREG:    renamable $r14, renamable $r15, renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, killed renamable $r14(tied-def 0), 2, 0, 2, 0, 1, 8, %stack.1, 0, killed renamable $r15(tied-def 1), 1, 8, %stack.2, 0, killed renamable $rbx(tied-def 2), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.2)
+; CHECK-PREG:    renamable $r14, renamable $r15, renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, killed renamable $r14(tied-def 0), 2, 0, killed renamable $r15(tied-def 1), killed renamable $rbx(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 ; CHECK-PREG:    $rdx = COPY killed renamable $r15
@@ -91,20 +84,18 @@ entry:
 define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_alloca
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0.alloca, 1, $noreg, 0, $noreg, %0 :: (store 8 into %ir.alloca)
-; CHECK-VREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.1)
-; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.1, 0, %0(tied-def 0), 0, %stack.0.alloca, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.0.alloca)
+; CHECK-VREG:    MOV64mr %stack.0.alloca, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.alloca)
+; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 1, 0, %stack.0.alloca, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store (s64) on %stack.0.alloca)
 ; CHECK-VREG:    %2:gr8 = COPY $al
-; CHECK-VREG:    %3:gr64 = MOV64rm %stack.0.alloca, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.alloca)
+; CHECK-VREG:    %3:gr64 = MOV64rm %stack.0.alloca, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.alloca)
 ; CHECK-VREG:    $rdi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_alloca
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    MOV64mr %stack.0.alloca, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %ir.alloca)
-; CHECK-PREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %stack.1)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.1, 0, killed renamable $rbx(tied-def 0), 0, %stack.0.alloca, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al :: (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.0.alloca)
-; CHECK-PREG:    renamable $r14 = MOV64rm %stack.0.alloca, 1, $noreg, 0, $noreg :: (dereferenceable load 8 from %ir.alloca)
+; CHECK-PREG:    MOV64mr %stack.0.alloca, 1, $noreg, 0, $noreg, renamable $rbx :: (store (s64) into %ir.alloca)
+; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $rbx(tied-def 0), 2, 1, 0, %stack.0.alloca, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $al :: (volatile load store (s64) on %stack.0.alloca)
+; CHECK-PREG:    renamable $r14 = MOV64rm %stack.0.alloca, 1, $noreg, 0, $noreg :: (dereferenceable load (s64) from %ir.alloca)
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
@@ -123,15 +114,13 @@ define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %deriv
 ; CHECK-VREG-LABEL: name:            test_base_derived
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %1(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %2:gr64, %3:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 1, 1, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    $rdi = COPY %2
 ; CHECK-VREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_base_derived
 ; CHECK-PREG:    renamable $rbx = COPY $rsi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, killed renamable $rbx(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-PREG:    renamable $rbx, dead renamable $r14 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), killed renamable $r14(tied-def 1), 2, 0, 2, 1, 1, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
@@ -146,17 +135,15 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 ; CHECK-VREG-LABEL: name:            test_deopt_gcpointer
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, %1 :: (store 8 into %stack.1)
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, %1(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1)
+; CHECK-VREG:    %2:gr64, %3:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, %0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    $rdi = COPY %2
 ; CHECK-VREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    RET 0
 
 ; CHECK-PREG-LABEL: name:            test_deopt_gcpointer
 ; CHECK-PREG:    renamable $rbx = COPY $rsi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, killed renamable $rbx(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1)
+; CHECK-PREG:    renamable $r14 = COPY $rdi
+; CHECK-PREG:    renamable $rbx, dead renamable $r14 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, killed renamable $r14, 2, 2, killed renamable $rbx(tied-def 0), renamable $r14(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
@@ -170,16 +157,14 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_gcrelocate_uniqueing
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    $rdi = COPY %1
 ; CHECK-VREG:    $rsi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @consume2, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_gcrelocate_uniqueing
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, killed renamable $rbx, 2, 4278124286, 1, 8, %stack.0, 0, renamable $rbx(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, killed renamable $rbx, 2, 4278124286, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY renamable $rbx
 ; CHECK-PREG:    $rsi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume2, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
@@ -195,20 +180,17 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_gcptr_uniqueing
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %1:gr64 = COPY %2
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    $rdi = COPY %2
+; CHECK-VREG:    $rdi = COPY %1
 ; CHECK-VREG:    $rsi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @use1, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_gcptr_uniqueing
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rbx :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, killed renamable $rbx, 2, 4278124286, 1, 8, %stack.0, 0, renamable $rbx(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, killed renamable $rbx, 2, 4278124286, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY renamable $rbx
 ; CHECK-PREG:    $rsi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @use1, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
@@ -222,18 +204,14 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
   ret void
 }
 
-;
-; Cross-basicblock relocates are handled with spilling for now.
-; No need to check post-RA output
 define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_cross_bb
 ; CHECK-VREG:  bb.0.entry:
 ; CHECK-VREG:         %1:gr32 = COPY $esi
 ; CHECK-VREG-NEXT:    %0:gr64 = COPY $rdi
 ; CHECK-VREG-NEXT:    %4:gr8 = COPY %1.sub_8bit
-; CHECK-VREG-NEXT:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
 ; CHECK-VREG-NEXT:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG-NEXT:    %2:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al :: (volatile load store 8 on %stack.0)
+; CHECK-VREG-NEXT:    %2:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
 ; CHECK-VREG-NEXT:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ; CHECK-VREG-NEXT:    %5:gr8 = COPY $al
 ; CHECK-VREG-NEXT:    %3:gr8 = COPY %5
@@ -270,8 +248,8 @@ right:
 define i1 @duplicate_reloc() gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            duplicate_reloc
 ; CHECK-VREG:  bb.0.entry:
-; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
-; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    %0:gr8 = MOV8ri 1
 ; CHECK-VREG:    $al = COPY %0
 ; CHECK-VREG:    RET 0, $al
@@ -294,9 +272,9 @@ entry:
 define <2 x i8 addrspace(1)*> @test_vector(<2 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_vector
 ; CHECK-VREG:    %0:vr128 = COPY $xmm0
-; CHECK-VREG:    MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 16 into %stack.0)
-; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 16, %stack.0, 0, 1, 16, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 16 on %stack.0)
-; CHECK-VREG:    %1:vr128 = MOVAPSrm %stack.0, 1, $noreg, 0, $noreg :: (load 16 from %stack.0)
+; CHECK-VREG:    MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store (s128) into %stack.0)
+; CHECK-VREG:    STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 1, 1, 16, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s128) on %stack.0)
+; CHECK-VREG:    %1:vr128 = MOVAPSrm %stack.0, 1, $noreg, 0, $noreg :: (load (s128) from %stack.0)
 ; CHECK-VREG:    $xmm0 = COPY %1
 ; CHECK-VREG:    RET 0, $xmm0
 
@@ -315,13 +293,9 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-VREG:    %2:gr64 = COPY $rdx
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.1, 1, $noreg, 0, $noreg, %3 :: (store 8 into %stack.1)
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %4 :: (store 8 into %stack.0)
-; CHECK-VREG:    MOV64mr %stack.2, 1, $noreg, 0, $noreg, %2 :: (store 8 into %stack.2)
-; CHECK-VREG:    MOV64mr %stack.3, 1, $noreg, 0, $noreg, %1 :: (store 8 into %stack.3)
-; CHECK-VREG:    MOV64mr %stack.4, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.4)
-; CHECK-VREG:    %5:gr64, %6:gr64, %7:gr64, %8:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %4(tied-def 0), 1, 8, %stack.1, 0, %3(tied-def 1), 1, 8, %stack.2, 0, %2(tied-def 2), 1, 8, %stack.3, 0, %1(tied-def 3), 1, 8, %stack.4, 0, 1, 8, %stack.4, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (volatile load store 8 on %stack.1), (volatile load store 8 on %stack.2), (volatile load store 8 on %stack.3), (volatile load store 8 on %stack.4)
-; CHECK-VREG:    %9:gr64 = MOV64rm %stack.4, 1, $noreg, 0, $noreg :: (load 8 from %stack.4)
+; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %stack.0)
+; CHECK-VREG:    %5:gr64, %6:gr64, %7:gr64, %8:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 5, %4(tied-def 0), %3(tied-def 1), %2(tied-def 2), %1(tied-def 3), 1, 8, %stack.0, 0, 2, 0, 2, 5, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
+; CHECK-VREG:    %9:gr64 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK-VREG:    $rdi = COPY %9
 ; CHECK-VREG:    $rsi = COPY %8
 ; CHECK-VREG:    $rdx = COPY %7
@@ -340,78 +314,39 @@ entry:
   ret void
 }
 
+; Test that CopyFromReg emitted during ISEL processing of gc.relocate are properly ordered w.r.t. statepoint.
+define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i32 %2) gc "statepoint-example" {
+;CHECK-VREG-LABEL: name:            test_isel_sched
+;CHECK-VREG:  bb.0.entry:
+;CHECK-VREG:        %2:gr32 = COPY $edx
+;CHECK-VREG:        %1:gr64 = COPY $rsi
+;CHECK-VREG:        %0:gr64 = COPY $rdi
+;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
+;CHECK-VREG:        %5:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
+;CHECK-VREG:        %6:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK-VREG:        %7:gr64 = SUBREG_TO_REG 0, killed %6, %subreg.sub_32bit
+;CHECK-VREG:        $rdi = COPY %7
+;CHECK-VREG:        $rsi = COPY %5
+;CHECK-VREG:        %3:gr64, %4:gr64 = STATEPOINT 10, 0, 2, @bar, $rdi, $rsi, 2, 0, 2, 0, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
+;CHECK-VREG:        %8:gr64 = CMOV64rr %3, %4, 4, implicit $eflags
+;CHECK-VREG:        $rax = COPY %8
+;CHECK-VREG:        RET 0, $rax
+entry:
+  %cmp = icmp eq i32 %2, 0
+  %ptr = select i1 %cmp, i8 addrspace(1)* %0, i8 addrspace(1)* %1
+  %token = call token (i64, i32, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 10, i32 0, void (i8 addrspace(1)*, i8 addrspace(1)*)* @bar, i32 2, i32 0, i8 addrspace(1)* null, i8 addrspace(1)* %ptr, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %0, i8 addrspace(1)* %1) ]
+  %rel0 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0)
+  %rel1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 1, i32 1)
+  %res = select i1 %cmp, i8 addrspace(1)* %rel0, i8 addrspace(1)* %rel1
+  ret i8 addrspace(1)* %res
+}
+
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare dso_local i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+declare dso_local i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
 declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
-declare i1 @llvm.experimental.gc.result.i1(token)
+declare dso_local i1 @llvm.experimental.gc.result.i1(token)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
 
-; Entry for test_relocate
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $rbx
-; Location 5 Register $rbx
-;  Entry for test_mixed
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $r14
-; Location 5 Register $r14
-; Location 6 Constant 0
-; Location 7 Constant 0
-; Location 8 Register $r15
-; Location 9 Register $r15
-; Location 10 Register $rbx
-; Location 11 Register $rbx
-; Entry for test_alloca
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $rbx
-; Location 5 Register $rbx
-; Location 6 Direct $rsp + 0
-; Entry for test_base_derive
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Indirect $rsp + 8
-; Location 5 Register $rbx
-; Entry for test_deopt_gcpointer
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 1
-; Location 4Indirect $rsp + 8
-; Location 5 Register $rbx
-; Location 6
-; Entry for test_gcrelocate_uniqueing
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 2
-; Location 4 Register $rbx
-; Location 5 Constant Index 0
-; Location 6 Register $rbx
-; Location 7 Register $rbx
-; Entry for test_gcptr_uniqueing
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 2
-; Location 4 Register $rbx
-; Location 5 Constant Index 0
-; Location 6 Register $rbx
-; Location 7 Register $rbx
-; Entry for test_cross_bb
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Indirect $rsp + 0
-; Location 5 Indirect $rsp + 0

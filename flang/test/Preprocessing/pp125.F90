@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: if(777 .eq. 777) then
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: if (777 .eq. 777) then
 ! #DEFINE works in free form
       integer, parameter :: KWM = 666
 #DEFINE KWM 777

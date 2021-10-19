@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LTO_THINLTOCODEGENERATOR_H
-#define LLVM_LTO_THINLTOCODEGENERATOR_H
+#ifndef LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
+#define LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringSet.h"
@@ -226,6 +226,12 @@ public:
     OptLevel = (NewOptLevel > 3) ? 3 : NewOptLevel;
   }
 
+  /// Enable or disable the new pass manager.
+  void setUseNewPM(unsigned Enabled) { UseNewPM = Enabled; }
+
+  /// Enable or disable debug output for the new pass manager.
+  void setDebugPassManager(unsigned Enabled) { DebugPassManager = Enabled; }
+
   /// Disable CodeGen, only run the stages till codegen and stop. The output
   /// will be bitcode.
   void disableCodeGen(bool Disable) { DisableCodeGen = Disable; }
@@ -341,6 +347,14 @@ private:
 
   /// IR Optimization Level [0-3].
   unsigned OptLevel = 3;
+
+  /// Flag to indicate whether the new pass manager should be used for IR
+  /// optimizations.
+  bool UseNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
+
+  /// Flag to indicate whether debug output should be enabled for the new pass
+  /// manager.
+  bool DebugPassManager = false;
 };
 }
 #endif

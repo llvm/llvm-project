@@ -10,25 +10,21 @@
 
 // istream wcerr;
 
+// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
+// FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
-// RUN: %{exec} %t.exe 2> %t.err
-// RUN: grep -e 'Hello World!' %t.err
+// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
 
 #include <iostream>
 #include <cassert>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::wcerr << L"Hello World!\n";
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::wcerr.tie() == NULL);
-#else
-    assert(std::wcerr.tie() == &std::wcout);
-#endif
+int main(int, char**) {
+    std::wcerr << L"1234";
     assert(std::wcerr.flags() & std::ios_base::unitbuf);
-
+    assert(std::wcerr.tie() == &std::wcout);
     return 0;
 }

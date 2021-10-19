@@ -3,7 +3,7 @@
 declare i8* @llvm.objc.retain(i8*)
 declare void @llvm.objc.release(i8*)
 declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
-declare i8* @llvm.objc.msgSend(i8*, i8*, ...)
+declare i8* @objc_msgSend(i8*, i8*, ...)
 declare void @use_pointer(i8*)
 declare void @callee()
 declare i8* @returner()
@@ -22,7 +22,7 @@ define void @test0(i8* %zipFile) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   call i8* @llvm.objc.retain(i8* %zipFile) nounwind
   call void @use_pointer(i8* %zipFile)
-  invoke void bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to void (i8*)*)(i8* %zipFile) 
+  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*)*)(i8* %zipFile) 
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -54,7 +54,7 @@ define void @test1(i8* %zipFile) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   call i8* @llvm.objc.retain(i8* %zipFile) nounwind
   call void @use_pointer(i8* %zipFile)
-  invoke void bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to void (i8*)*)(i8* %zipFile)
+  invoke void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*)*)(i8* %zipFile)
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -87,12 +87,12 @@ done:
 ; CHECK: }
 define void @test2() personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*) {
 entry:
-  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* ()*)()
+  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* ()*)()
           to label %invoke.cont unwind label %finally.rethrow, !clang.arc.no_objc_arc_exceptions !0
 
 invoke.cont:                                      ; preds = %entry
   %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %call) nounwind
-  call void bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to void ()*)(), !clang.arc.no_objc_arc_exceptions !0
+  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void ()*)(), !clang.arc.no_objc_arc_exceptions !0
   invoke void @use_pointer(i8* %call)
           to label %finally.cont unwind label %finally.rethrow, !clang.arc.no_objc_arc_exceptions !0
 

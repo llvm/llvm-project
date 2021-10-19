@@ -1,5 +1,5 @@
+import("//clang-tools-extra/clang-tidy/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
-import("//clang/tools/libclang/include_clang_tools_extra.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("clang_tools_extra_lit_site_cfg_files.gni")
@@ -38,16 +38,10 @@ write_lit_config("lit_site_cfg") {
     "Python3_EXECUTABLE=$python_path",
   ]
 
-  if (clang_enable_static_analyzer) {
-    extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
+  if (clang_tidy_enable_static_analyzer) {
+    extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=1" ]
   } else {
-    extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=0" ]
-  }
-
-  if (libclang_include_clang_tools_extra) {
-    extra_values += [ "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=1" ]
-  } else {
-    extra_values += [ "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA=0" ]
+    extra_values += [ "CLANG_TIDY_ENABLE_STATIC_ANALYZER=0" ]
   }
 }
 

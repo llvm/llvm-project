@@ -46,7 +46,7 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
-      .Case("unimplemented-simd128", SIMDLevel >= UnimplementedSIMD128)
+      .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
       .Case("exception-handling", HasExceptionHandling)
@@ -60,7 +60,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 bool WebAssemblyTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void WebAssemblyTargetInfo::fillValidCPUList(
@@ -73,8 +73,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
   if (SIMDLevel >= SIMD128)
     Builder.defineMacro("__wasm_simd128__");
-  if (SIMDLevel >= UnimplementedSIMD128)
-    Builder.defineMacro("__wasm_unimplemented_simd128__");
+  if (SIMDLevel >= RelaxedSIMD)
+    Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasNontrappingFPToInt)
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasSignExt)
@@ -99,8 +99,8 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
                                          SIMDEnum Level, bool Enabled) {
   if (Enabled) {
     switch (Level) {
-    case UnimplementedSIMD128:
-      Features["unimplemented-simd128"] = true;
+    case RelaxedSIMD:
+      Features["relaxed-simd"] = true;
       LLVM_FALLTHROUGH;
     case SIMD128:
       Features["simd128"] = true;
@@ -116,8 +116,8 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
   case SIMD128:
     Features["simd128"] = false;
     LLVM_FALLTHROUGH;
-  case UnimplementedSIMD128:
-    Features["unimplemented-simd128"] = false;
+  case RelaxedSIMD:
+    Features["relaxed-simd"] = false;
     break;
   }
 }
@@ -127,8 +127,8 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                                               bool Enabled) const {
   if (Name == "simd128")
     setSIMDLevel(Features, SIMD128, Enabled);
-  else if (Name == "unimplemented-simd128")
-    setSIMDLevel(Features, UnimplementedSIMD128, Enabled);
+  else if (Name == "relaxed-simd")
+    setSIMDLevel(Features, RelaxedSIMD, Enabled);
   else
     Features[Name] = Enabled;
 }
@@ -160,12 +160,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
       continue;
     }
-    if (Feature == "+unimplemented-simd128") {
-      SIMDLevel = std::max(SIMDLevel, SIMDEnum(UnimplementedSIMD128));
+    if (Feature == "+relaxed-simd") {
+      SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
       continue;
     }
-    if (Feature == "-unimplemented-simd128") {
-      SIMDLevel = std::min(SIMDLevel, SIMDEnum(UnimplementedSIMD128 - 1));
+    if (Feature == "-relaxed-simd") {
+      SIMDLevel = std::min(SIMDLevel, SIMDEnum(RelaxedSIMD - 1));
       continue;
     }
     if (Feature == "+nontrapping-fptoint") {
@@ -251,6 +251,16 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
 ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
   return llvm::makeArrayRef(BuiltinInfo, clang::WebAssembly::LastTSBuiltin -
                                              Builtin::FirstTSBuiltin);
+}
+
+void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
+                                   LangOptions &Opts) {
+  // If the Atomics feature isn't available, turn off POSIXThreads and
+  // ThreadModel, so that we don't predefine _REENTRANT or __STDCPP_THREADS__.
+  if (!HasAtomics) {
+    Opts.POSIXThreads = false;
+    Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
+  }
 }
 
 void WebAssembly32TargetInfo::getTargetDefines(const LangOptions &Opts,

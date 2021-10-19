@@ -705,6 +705,7 @@ void USRGenerator::VisitType(QualType T) {
           c = 'f'; break;
         case BuiltinType::Double:
           c = 'd'; break;
+        case BuiltinType::Ibm128: // FIXME: Need separate tag
         case BuiltinType::LongDouble:
           c = 'D'; break;
         case BuiltinType::Float128:
@@ -729,6 +730,11 @@ void USRGenerator::VisitType(QualType T) {
 #define SVE_TYPE(Name, Id, SingletonId) \
         case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+        case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
         case BuiltinType::ShortAccum:
         case BuiltinType::Accum:
         case BuiltinType::LongAccum:
@@ -1098,15 +1104,14 @@ bool clang::index::generateUSRForMacro(const MacroDefinitionRecord *MD,
 bool clang::index::generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
                                        const SourceManager &SM,
                                        SmallVectorImpl<char> &Buf) {
-  // Don't generate USRs for things with invalid locations.
-  if (MacroName.empty() || Loc.isInvalid())
+  if (MacroName.empty())
     return true;
 
   llvm::raw_svector_ostream Out(Buf);
 
   // Assume that system headers are sane.  Don't put source location
   // information into the USR if the macro comes from a system header.
-  bool ShouldGenerateLocation = !SM.isInSystemHeader(Loc);
+  bool ShouldGenerateLocation = Loc.isValid() && !SM.isInSystemHeader(Loc);
 
   Out << getUSRSpacePrefix();
   if (ShouldGenerateLocation)

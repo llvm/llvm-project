@@ -14,8 +14,8 @@ unittest("ClangCodeGenTests") {
   ]
   sources = [
     "BufferSourceTest.cpp",
+    "CheckTargetFeaturesTest.cpp",
     "CodeGenExternalTest.cpp",
-    "IncrementalProcessingTest.cpp",
     "TBAAMetadataTest.cpp",
   ]
 }

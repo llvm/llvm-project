@@ -118,6 +118,10 @@ public:
   /// Whether this function contains any indirect gotos.
   bool HasIndirectGoto : 1;
 
+  /// Whether this function contains any statement marked with
+  /// \c [[clang::musttail]].
+  bool HasMustTail : 1;
+
   /// Whether a statement was dropped because it was invalid.
   bool HasDroppedStmt : 1;
 
@@ -126,6 +130,9 @@ public:
 
   /// Whether there is a fallthrough statement in this function.
   bool HasFallthroughStmt : 1;
+
+  /// Whether this function uses constrained floating point intrinsics
+  bool UsesFPIntrin : 1;
 
   /// Whether we make reference to a declaration that could be
   /// unavailable.
@@ -367,13 +374,13 @@ protected:
 public:
   FunctionScopeInfo(DiagnosticsEngine &Diag)
       : Kind(SK_Function), HasBranchProtectedScope(false),
-        HasBranchIntoScope(false), HasIndirectGoto(false),
+        HasBranchIntoScope(false), HasIndirectGoto(false), HasMustTail(false),
         HasDroppedStmt(false), HasOMPDeclareReductionCombiner(false),
-        HasFallthroughStmt(false), HasPotentialAvailabilityViolations(false),
-        ObjCShouldCallSuper(false), ObjCIsDesignatedInit(false),
-        ObjCWarnForNoDesignatedInitChain(false), ObjCIsSecondaryInit(false),
-        ObjCWarnForNoInitDelegation(false), NeedsCoroutineSuspends(true),
-        ErrorTrap(Diag) {}
+        HasFallthroughStmt(false), UsesFPIntrin(false),
+        HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
+        ObjCIsDesignatedInit(false), ObjCWarnForNoDesignatedInitChain(false),
+        ObjCIsSecondaryInit(false), ObjCWarnForNoInitDelegation(false),
+        NeedsCoroutineSuspends(true), ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
 
@@ -419,6 +426,8 @@ public:
     HasIndirectGoto = true;
   }
 
+  void setHasMustTail() { HasMustTail = true; }
+
   void setHasDroppedStmt() {
     HasDroppedStmt = true;
   }
@@ -429,6 +438,10 @@ public:
 
   void setHasFallthroughStmt() {
     HasFallthroughStmt = true;
+  }
+
+  void setUsesFPIntrin() {
+    UsesFPIntrin = true;
   }
 
   void setHasCXXTry(SourceLocation TryLoc) {
@@ -442,9 +455,8 @@ public:
   }
 
   bool NeedsScopeChecking() const {
-    return !HasDroppedStmt &&
-        (HasIndirectGoto ||
-          (HasBranchProtectedScope && HasBranchIntoScope));
+    return !HasDroppedStmt && (HasIndirectGoto || HasMustTail ||
+                               (HasBranchProtectedScope && HasBranchIntoScope));
   }
 
   // Add a block introduced in this function.
@@ -841,6 +853,11 @@ public:
   /// Source range covering the explicit template parameter list (if it exists).
   SourceRange ExplicitTemplateParamsRange;
 
+  /// The requires-clause immediately following the explicit template parameter
+  /// list, if any. (Note that there may be another requires-clause included as
+  /// part of the lambda-declarator.)
+  ExprResult RequiresClause;
+
   /// If this is a generic lambda, and the template parameter
   /// list has been created (from the TemplateParams) then store
   /// a reference to it (cache it to avoid reconstructing it).
@@ -984,10 +1001,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    PotentiallyCapturingExprs.erase(
-        std::remove(PotentiallyCapturingExprs.begin(),
-            PotentiallyCapturingExprs.end(), E),
-        PotentiallyCapturingExprs.end());
+    llvm::erase_value(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();

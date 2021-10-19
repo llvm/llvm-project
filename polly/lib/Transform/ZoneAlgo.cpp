@@ -246,14 +246,15 @@ static isl::map makeUnknownForDomain(isl::set Domain) {
 static bool isMapToUnknown(const isl::map &Map) {
   isl::space Space = Map.get_space().range();
   return Space.has_tuple_id(isl::dim::set).is_false() &&
-         Space.is_wrapping().is_false() && Space.dim(isl::dim::set) == 0;
+         Space.is_wrapping().is_false() &&
+         Space.dim(isl::dim::set).release() == 0;
 }
 
 isl::union_map polly::filterKnownValInst(const isl::union_map &UMap) {
-  isl::union_map Result = isl::union_map::empty(UMap.get_space());
+  isl::union_map Result = isl::union_map::empty(UMap.ctx());
   for (isl::map Map : UMap.get_map_list()) {
     if (!isMapToUnknown(Map))
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
   }
   return Result;
 }
@@ -336,7 +337,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
     // To avoid solving any ILP problems, always add entire arrays instead of
     // just the elements that are accessed.
     auto ArrayElts = isl::set::universe(AccRelMap.get_space().range());
-    AllElts = AllElts.add_set(ArrayElts);
+    AllElts = AllElts.unite(ArrayElts);
 
     if (MA->isRead()) {
       // Reject load after store to same location.
@@ -350,7 +351,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
         R << ", loading: " << AccRel << ")";
         S->getFunction().getContext().diagnose(R);
 
-        IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+        IncompatibleElts = IncompatibleElts.unite(ArrayElts);
       }
 
       Loads = Loads.unite(AccRel);
@@ -367,7 +368,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << "store is in a non-affine subregion";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     // Do not allow more than one store to the same location.
@@ -380,7 +381,7 @@ void ZoneAlgorithm::collectIncompatibleElts(ScopStmt *Stmt,
       R << ", storing: " << AccRel << ")";
       S->getFunction().getContext().diagnose(R);
 
-      IncompatibleElts = IncompatibleElts.add_set(ArrayElts);
+      IncompatibleElts = IncompatibleElts.unite(ArrayElts);
     }
 
     Stores = Stores.unite(AccRel);
@@ -394,7 +395,7 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
 
   // { DomainRead[] -> Element[] }
   auto AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
-  AllReads = AllReads.add_map(AccRel);
+  AllReads = AllReads.unite(AccRel);
 
   if (LoadInst *Load = dyn_cast_or_null<LoadInst>(MA->getAccessInstruction())) {
     // { DomainRead[] -> ValInst[] }
@@ -407,7 +408,7 @@ void ZoneAlgorithm::addArrayReadAccess(MemoryAccess *MA) {
     // { [Element[] -> DomainRead[]] -> ValInst[] }
     isl::map EltLoadValInst = LoadValInst.apply_domain(IncludeElement);
 
-    AllReadValInst = AllReadValInst.add_map(EltLoadValInst);
+    AllReadValInst = AllReadValInst.unite(EltLoadValInst);
   }
 }
 
@@ -452,14 +453,14 @@ void ZoneAlgorithm::addArrayWriteAccess(MemoryAccess *MA) {
   isl::map AccRel = intersectRange(getAccessRelationFor(MA), CompatibleElts);
 
   if (MA->isMustWrite())
-    AllMustWrites = AllMustWrites.add_map(AccRel);
+    AllMustWrites = AllMustWrites.unite(AccRel);
 
   if (MA->isMayWrite())
-    AllMayWrites = AllMayWrites.add_map(AccRel);
+    AllMayWrites = AllMayWrites.unite(AccRel);
 
   // { Domain[] -> ValInst[] }
   isl::union_map WriteValInstance = getWrittenValue(MA, AccRel);
-  if (!WriteValInstance)
+  if (WriteValInstance.is_null())
     WriteValInstance = makeUnknownForDomain(Stmt);
 
   // { Domain[] -> [Element[] -> Domain[]] }
@@ -541,6 +542,13 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
   if (It != PerPHIMaps.end())
     return It->second;
 
+  // Cannot reliably compute immediate predecessor for undefined executions, so
+  // bail out if we do not know. This in particular applies to undefined control
+  // flow.
+  isl::set DefinedContext = S->getDefinedBehaviorContext();
+  if (DefinedContext.is_null())
+    return {};
+
   assert(SAI->isPHIKind());
 
   // { DomainPHIWrite[] -> Scatter[] }
@@ -549,7 +557,7 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
   // Collect all incoming block timepoints.
   for (MemoryAccess *MA : S->getPHIIncomings(SAI)) {
     isl::map Scatter = getScatterFor(MA);
-    PHIWriteScatter = PHIWriteScatter.add_map(Scatter);
+    PHIWriteScatter = PHIWriteScatter.unite(Scatter);
   }
 
   // { DomainPHIRead[] -> Scatter[] }
@@ -565,8 +573,7 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
   isl::map PHIWriteTimes = BeforeRead.intersect_range(WriteTimes);
 
   // Remove instances outside the context.
-  PHIWriteTimes = PHIWriteTimes.intersect_params(S->getAssumedContext());
-  PHIWriteTimes = subtractParams(PHIWriteTimes, S->getInvalidContext());
+  PHIWriteTimes = PHIWriteTimes.intersect_params(DefinedContext);
 
   isl::map LastPerPHIWrites = PHIWriteTimes.lexmax();
 
@@ -581,11 +588,11 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
 }
 
 isl::union_set ZoneAlgorithm::makeEmptyUnionSet() const {
-  return isl::union_set::empty(ParamSpace);
+  return isl::union_set::empty(ParamSpace.ctx());
 }
 
 isl::union_map ZoneAlgorithm::makeEmptyUnionMap() const {
-  return isl::union_map::empty(ParamSpace);
+  return isl::union_map::empty(ParamSpace.ctx());
 }
 
 void ZoneAlgorithm::collectCompatibleElts() {
@@ -624,7 +631,7 @@ isl::map ZoneAlgorithm::getScatterFor(isl::set Domain) const {
   auto UDomain = isl::union_set(Domain);
   auto UResult = getScatterFor(std::move(UDomain));
   auto Result = singleton(std::move(UResult), std::move(ResultSpace));
-  assert(!Result || Result.domain().is_equal(Domain) == isl_bool_true);
+  assert(Result.is_null() || Result.domain().is_equal(Domain) == isl_bool_true);
   return Result;
 }
 
@@ -674,20 +681,21 @@ isl::map ZoneAlgorithm::getDefToTarget(ScopStmt *DefStmt,
   //   { DefStmt[i] -> TargetStmt[i,j] }
   //
   // In practice, this should cover the majority of cases.
-  if (!Result && S->isOriginalSchedule() &&
+  if (Result.is_null() && S->isOriginalSchedule() &&
       isInsideLoop(DefStmt->getSurroundingLoop(),
                    TargetStmt->getSurroundingLoop())) {
     isl::set DefDomain = getDomainFor(DefStmt);
     isl::set TargetDomain = getDomainFor(TargetStmt);
-    assert(DefDomain.dim(isl::dim::set) <= TargetDomain.dim(isl::dim::set));
+    assert(DefDomain.tuple_dim().release() <=
+           TargetDomain.tuple_dim().release());
 
     Result = isl::map::from_domain_and_range(DefDomain, TargetDomain);
-    for (unsigned i = 0, DefDims = DefDomain.dim(isl::dim::set); i < DefDims;
+    for (unsigned i = 0, DefDims = DefDomain.tuple_dim().release(); i < DefDims;
          i += 1)
       Result = Result.equate(isl::dim::in, i, isl::dim::out, i);
   }
 
-  if (!Result) {
+  if (Result.is_null()) {
     // { DomainDef[] -> DomainTarget[] }
     Result = computeUseToDefFlowDependency(TargetStmt, DefStmt).reverse();
     simplify(Result);
@@ -698,7 +706,7 @@ isl::map ZoneAlgorithm::getDefToTarget(ScopStmt *DefStmt,
 
 isl::map ZoneAlgorithm::getScalarReachingDefinition(ScopStmt *Stmt) {
   auto &Result = ScalarReachDefZone[Stmt];
-  if (Result)
+  if (!Result.is_null())
     return Result;
 
   auto Domain = getDomainFor(Stmt);
@@ -723,7 +731,7 @@ isl::map ZoneAlgorithm::makeUnknownForDomain(ScopStmt *Stmt) const {
 
 isl::id ZoneAlgorithm::makeValueId(Value *V) {
   if (!V)
-    return nullptr;
+    return {};
 
   auto &Id = ValueIds[V];
   if (Id.is_null()) {
@@ -771,8 +779,8 @@ isl::map ZoneAlgorithm::makeValInst(Value *Val, ScopStmt *UserStmt, Loop *Scope,
     // Construct the SCEV space.
     // TODO: Add only the induction variables referenced in SCEVAddRecExpr
     // expressions, not just all of them.
-    auto ScevId = isl::manage(isl_id_alloc(
-        UseDomainSpace.get_ctx().get(), nullptr, const_cast<SCEV *>(ScevExpr)));
+    auto ScevId = isl::manage(isl_id_alloc(UseDomainSpace.ctx().get(), nullptr,
+                                           const_cast<SCEV *>(ScevExpr)));
 
     auto ScevSpace = UseDomainSpace.drop_dims(isl::dim::set, 0, 0);
     ScevSpace = ScevSpace.set_tuple_id(isl::dim::set, ScevId);
@@ -840,7 +848,7 @@ isl::map ZoneAlgorithm::makeValInst(Value *Val, ScopStmt *UserStmt, Loop *Scope,
 static isl::union_map normalizeValInst(isl::union_map Input,
                                        const DenseSet<PHINode *> &ComputedPHIs,
                                        isl::union_map NormalizeMap) {
-  isl::union_map Result = isl::union_map::empty(Input.get_space());
+  isl::union_map Result = isl::union_map::empty(Input.ctx());
   for (isl::map Map : Input.get_map_list()) {
     isl::space Space = Map.get_space();
     isl::space RangeSpace = Space.range();
@@ -848,7 +856,7 @@ static isl::union_map normalizeValInst(isl::union_map Input,
     // Instructions within the SCoP are always wrapped. Non-wrapped tuples
     // are therefore invariant in the SCoP and don't need normalization.
     if (!RangeSpace.is_wrapping()) {
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
       continue;
     }
 
@@ -857,7 +865,7 @@ static isl::union_map normalizeValInst(isl::union_map Input,
 
     // If no normalization is necessary, then the ValInst stands for itself.
     if (!ComputedPHIs.count(PHI)) {
-      Result = Result.add_map(Map);
+      Result = Result.unite(Map);
       continue;
     }
 
@@ -1025,6 +1033,13 @@ void ZoneAlgorithm::computeNormalizedPHIs() {
       auto *PHI = cast<PHINode>(MA->getAccessInstruction());
       const ScopArrayInfo *SAI = MA->getOriginalScopArrayInfo();
 
+      // Determine which instance of the PHI statement corresponds to which
+      // incoming value. Skip if we cannot determine PHI predecessors.
+      // { PHIDomain[] -> IncomingDomain[] }
+      isl::union_map PerPHI = computePerPHI(SAI);
+      if (PerPHI.is_null())
+        continue;
+
       // { PHIDomain[] -> PHIValInst[] }
       isl::map PHIValInst = makeValInst(PHI, &Stmt, Stmt.getSurroundingLoop());
 
@@ -1045,13 +1060,8 @@ void ZoneAlgorithm::computeNormalizedPHIs() {
         isl::map IncomingValInst = makeValInst(
             IncomingVal, IncomingStmt, IncomingStmt->getSurroundingLoop());
 
-        IncomingValInsts = IncomingValInsts.add_map(IncomingValInst);
+        IncomingValInsts = IncomingValInsts.unite(IncomingValInst);
       }
-
-      // Determine which instance of the PHI statement corresponds to which
-      // incoming value.
-      // { PHIDomain[] -> IncomingDomain[] }
-      isl::union_map PerPHI = computePerPHI(SAI);
 
       // { PHIValInst[] -> IncomingValInst[] }
       isl::union_map PHIMap =
@@ -1076,7 +1086,7 @@ void ZoneAlgorithm::computeNormalizedPHIs() {
   ComputedPHIs = AllPHIs;
   NormalizeMap = AllPHIMaps;
 
-  assert(!NormalizeMap || isNormalized(NormalizeMap));
+  assert(NormalizeMap.is_null() || isNormalized(NormalizeMap));
 }
 
 void ZoneAlgorithm::printAccesses(llvm::raw_ostream &OS, int Indent) const {

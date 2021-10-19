@@ -28,6 +28,10 @@ class AffineForOp;
 class Location;
 class OpBuilder;
 
+namespace memref {
+class AllocOp;
+} // end namespace memref
+
 /// Replaces all "dereferencing" uses of `oldMemRef` with `newMemRef` while
 /// optionally remapping the old memref's indices using the supplied affine map,
 /// `indexRemap`. The new memref could be of a different shape or rank.
@@ -41,13 +45,14 @@ class OpBuilder;
 /// correspond to memref's indices, and its symbolic inputs if any should be
 /// provided in `symbolOperands`.
 ///
-/// `domInstFilter`, if non-null, restricts the replacement to only those
-/// operations that are dominated by the former; similarly, `postDomInstFilter`
+/// `domOpFilter`, if non-null, restricts the replacement to only those
+/// operations that are dominated by the former; similarly, `postDomOpFilter`
 /// restricts replacement to only those operations that are postdominated by it.
 ///
 /// 'allowNonDereferencingOps', if set, allows replacement of non-dereferencing
-/// uses of a memref without any requirement for access index rewrites. The
-/// default value of this flag variable is false.
+/// uses of a memref without any requirement for access index rewrites as long
+/// as the user operation has the MemRefsNormalizable trait. The default value
+/// of this flag is false.
 ///
 /// 'replaceInDeallocOp', if set, lets DeallocOp, a non-dereferencing user, to
 /// also be a candidate for replacement. The default value of this flag is
@@ -69,9 +74,9 @@ class OpBuilder;
 LogicalResult replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices = {},
     AffineMap indexRemap = AffineMap(), ArrayRef<Value> extraOperands = {},
-    ArrayRef<Value> symbolOperands = {}, Operation *domInstFilter = nullptr,
-    Operation *postDomInstFilter = nullptr,
-    bool allowNonDereferencingOps = false, bool replaceInDeallocOp = false);
+    ArrayRef<Value> symbolOperands = {}, Operation *domOpFilter = nullptr,
+    Operation *postDomOpFilter = nullptr, bool allowNonDereferencingOps = false,
+    bool replaceInDeallocOp = false);
 
 /// Performs the same replacement as the other version above but only for the
 /// dereferencing uses of `oldMemRef` in `op`, except in cases where
@@ -88,7 +93,7 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 /// Rewrites the memref defined by this alloc op to have an identity layout map
 /// and updates all its indexing uses. Returns failure if any of its uses
 /// escape (while leaving the IR in a valid state).
-LogicalResult normalizeMemRef(AllocOp op);
+LogicalResult normalizeMemRef(memref::AllocOp *op);
 
 /// Uses the old memref type map layout and computes the new memref type to have
 /// a new shape and a layout map, where the old layout map has been normalized

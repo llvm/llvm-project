@@ -30,6 +30,6 @@ int main () {
   return 0;
 }
 
-// CHECK-FRAGILE: @_FooClassReference = global
+// CHECK-FRAGILE: @_FooClassReference ={{.*}} global
 // CHECK-NONFRAGILE: @"OBJC_CLASS_$_Object" = external global
-// CHECK-NONFRAGILE: "OBJC_CLASS_$_Foo" = global
+// CHECK-NONFRAGILE: "OBJC_CLASS_$_Foo" ={{.*}} global

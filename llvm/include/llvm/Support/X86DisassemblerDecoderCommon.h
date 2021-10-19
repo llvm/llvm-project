@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_X86_DISASSEMBLER_X86DISASSEMBLERDECODERCOMMON_H
-#define LLVM_LIB_TARGET_X86_DISASSEMBLER_X86DISASSEMBLERDECODERCOMMON_H
+#ifndef LLVM_SUPPORT_X86DISASSEMBLERDECODERCOMMON_H
+#define LLVM_SUPPORT_X86DISASSEMBLERDECODERCOMMON_H
 
 #include "llvm/Support/DataTypes.h"
 
@@ -31,6 +31,8 @@ namespace X86Disassembler {
 #define XOP9_MAP_SYM      x86DisassemblerXOP9Opcodes
 #define XOPA_MAP_SYM      x86DisassemblerXOPAOpcodes
 #define THREEDNOW_MAP_SYM x86Disassembler3DNowOpcodes
+#define MAP5_SYM          x86DisassemblerMap5Opcodes
+#define MAP6_SYM          x86DisassemblerMap6Opcodes
 
 #define INSTRUCTIONS_STR  "x86DisassemblerInstrSpecifiers"
 #define CONTEXTS_STR      "x86DisassemblerContexts"
@@ -42,6 +44,8 @@ namespace X86Disassembler {
 #define XOP9_MAP_STR      "x86DisassemblerXOP9Opcodes"
 #define XOPA_MAP_STR      "x86DisassemblerXOPAOpcodes"
 #define THREEDNOW_MAP_STR "x86Disassembler3DNowOpcodes"
+#define MAP5_STR          "x86DisassemblerMap5Opcodes"
+#define MAP6_STR          "x86DisassemblerMap6Opcodes"
 
 // Attributes of an instruction that must be known before the opcode can be
 // processed correctly.  Most of these indicate the presence of particular
@@ -116,6 +120,8 @@ enum attributeBits {
   ENUM_ENTRY(IC_VEX_XS,             2,  "requires VEX and the XS prefix")      \
   ENUM_ENTRY(IC_VEX_XD,             2,  "requires VEX and the XD prefix")      \
   ENUM_ENTRY(IC_VEX_OPSIZE,         2,  "requires VEX and the OpSize prefix")  \
+  ENUM_ENTRY(IC_64BIT_VEX_OPSIZE,        4, "requires 64-bit mode and VEX")         \
+  ENUM_ENTRY(IC_64BIT_VEX_OPSIZE_ADSIZE, 5, "requires 64-bit mode, VEX, and AdSize")\
   ENUM_ENTRY(IC_VEX_W,              3,  "requires VEX and the W prefix")       \
   ENUM_ENTRY(IC_VEX_W_XS,           4,  "requires VEX, W, and XS prefix")      \
   ENUM_ENTRY(IC_VEX_W_XD,           4,  "requires VEX, W, and XD prefix")      \
@@ -290,7 +296,9 @@ enum OpcodeType {
   XOP8_MAP      = 4,
   XOP9_MAP      = 5,
   XOPA_MAP      = 6,
-  THREEDNOW_MAP = 7
+  THREEDNOW_MAP = 7,
+  MAP5          = 8,
+  MAP6          = 9
 };
 
 // The following structs are used for the hierarchical decode table.  After

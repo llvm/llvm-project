@@ -97,7 +97,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
       // values through live-range splitting and stackification, it will have to
       // do.
       MF.getInfo<WebAssemblyFunctionInfo>()->setFrameBaseVreg(
-          SplitLIs.back()->reg);
+          SplitLIs.back()->reg());
     }
     SplitLIs.clear();
   }
@@ -106,13 +106,12 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
   // instructions to satisfy LiveIntervals' requirement that all uses be
   // dominated by defs. Now that LiveIntervals has computed which of these
   // defs are actually needed and which are dead, remove the dead ones.
-  for (auto MII = MF.begin()->begin(), MIE = MF.begin()->end(); MII != MIE;) {
-    MachineInstr *MI = &*MII++;
-    if (MI->isImplicitDef() && MI->getOperand(0).isDead()) {
-      LiveInterval &LI = LIS.getInterval(MI->getOperand(0).getReg());
-      LIS.removeVRegDefAt(LI, LIS.getInstructionIndex(*MI).getRegSlot());
-      LIS.RemoveMachineInstrFromMaps(*MI);
-      MI->eraseFromParent();
+  for (MachineInstr &MI : llvm::make_early_inc_range(MF.front())) {
+    if (MI.isImplicitDef() && MI.getOperand(0).isDead()) {
+      LiveInterval &LI = LIS.getInterval(MI.getOperand(0).getReg());
+      LIS.removeVRegDefAt(LI, LIS.getInstructionIndex(MI).getRegSlot());
+      LIS.RemoveMachineInstrFromMaps(MI);
+      MI.eraseFromParent();
     }
   }
 

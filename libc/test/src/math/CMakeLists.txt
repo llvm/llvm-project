@@ -1,29 +1,5 @@
 add_libc_testsuite(libc_math_unittests)
 
-function(add_fp_unittest name)
-  cmake_parse_arguments(
-    "MATH_UNITTEST"
-    "NEED_MPFR" # No optional arguments
-    "" # Single value arguments
-    "" # Multi-value arguments
-    ${ARGN}
-  )
-
-  if(MATH_UNITTEST_NEED_MPFR)
-    if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message("WARNING: Math test ${name} will be skipped as MPFR library is not available.")
-      return()
-    endif()
-  endif()
-
-  add_libc_unittest(${name} ${MATH_UNITTEST_UNPARSED_ARGUMENTS})
-  get_fq_target_name(${name} fq_target_name)
-  if(MATH_UNITTEST_NEED_MPFR)
-    target_link_libraries(${fq_target_name} PRIVATE libcMPFRWrapper -lmpfr -lgmp)
-  endif()
-  target_link_libraries(${fq_target_name} PRIVATE LibcFPTestHelpers)
-endfunction(add_fp_unittest)
-
 add_fp_unittest(
   cosf_test
   NEED_MPFR
@@ -37,7 +13,19 @@ add_fp_unittest(
     libc.include.errno
     libc.src.math.cosf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  cos_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    cos_test.cpp
+  DEPENDS
+    libc.src.math.cos
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -53,7 +41,19 @@ add_fp_unittest(
     libc.include.errno
     libc.src.math.sinf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sin_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    libc.src.math.sin
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -69,7 +69,7 @@ add_fp_unittest(
     libc.include.errno
     libc.src.math.sincosf
     libc.utils.CPP.standalone_cpp
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -79,10 +79,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabs_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabs
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -92,10 +94,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabsf_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabsf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -105,10 +109,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fabsl_test.cpp
+  HDRS
+    FAbsTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fabsl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -118,10 +124,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     trunc_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.trunc
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -131,10 +139,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     truncf_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.truncf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -144,10 +154,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     truncl_test.cpp
+  HDRS
+    TruncTest.h
   DEPENDS
     libc.include.math
     libc.src.math.truncl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -157,10 +169,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceil_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceil
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -170,10 +184,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceilf_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceilf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -183,10 +199,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     ceill_test.cpp
+  HDRS
+    CeilTest.h
   DEPENDS
     libc.include.math
     libc.src.math.ceill
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -196,10 +214,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floor_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floor
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -209,10 +229,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floorf_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floorf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -222,10 +244,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     floorl_test.cpp
+  HDRS
+    FloorTest.h
   DEPENDS
     libc.include.math
     libc.src.math.floorl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -235,10 +259,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     round_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.round
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -248,10 +274,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     roundf_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.roundf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -261,10 +289,267 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     roundl_test.cpp
+  HDRS
+    RoundTest.h
   DEPENDS
     libc.include.math
     libc.src.math.roundl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lround_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lround
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lroundf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lroundl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.lroundl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llround_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llround_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llround
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llroundf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llroundf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llroundl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llroundl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.errno.__errno_location
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.math.llroundl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  rint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rint_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rint
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  rintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rintf_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rintf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  rintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    rintl_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.rintl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrint
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrintf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  lrintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    lrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.lrintl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrint_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrint_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrint
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrintf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrintf_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrintf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  llrintl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    llrintl_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.llrintl
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -278,7 +563,7 @@ add_fp_unittest(
     libc.include.errno
     libc.include.math
     libc.src.math.expf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -292,7 +577,7 @@ add_fp_unittest(
     libc.include.errno
     libc.include.math
     libc.src.math.exp2f
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -301,10 +586,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysign_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysign
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -313,10 +600,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysignf_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysignf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -325,10 +614,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     copysignl_test.cpp
+  HDRS
+    CopySignTest.h
   DEPENDS
     libc.include.math
     libc.src.math.copysignl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -338,10 +629,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexp_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexp
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -351,10 +644,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexpf_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexpf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -364,10 +659,96 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     frexpl_test.cpp
+  HDRS
+    FrexpTest.h
   DEPENDS
     libc.include.math
     libc.src.math.frexpl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ilogb_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogb_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogb
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ilogbf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogbf_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogbf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ilogbl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ilogbl_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ilogbl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexp_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexp_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexp
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpf_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  ldexpl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    ldexpl_test.cpp
+  HDRS
+    LdExpTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.ldexpl
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -379,7 +760,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.logb
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -391,7 +772,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.logbf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -400,10 +781,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     logbl_test.cpp
+  HDRS
+    LogbTest.h
   DEPENDS
     libc.include.math
     libc.src.math.logbl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -412,10 +795,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modf_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -424,10 +809,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modff_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modff
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -436,10 +823,54 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     modfl_test.cpp
+  HDRS
+    ModfTest.h
   DEPENDS
     libc.include.math
     libc.src.math.modfl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdimf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdimf_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdimf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdim_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdim_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdim
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fdiml_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fdiml_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.fdiml
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -448,10 +879,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fminf_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fminf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -460,10 +893,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmin_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmin
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -472,10 +907,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fminl_test.cpp
+  HDRS
+    FMinTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fminl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -484,10 +921,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmaxf_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmaxf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -496,10 +935,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmax_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmax
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -508,10 +949,12 @@ add_fp_unittest(
     libc_math_unittests
   SRCS
     fmaxl_test.cpp
+  HDRS
+    FMaxTest.h
   DEPENDS
     libc.include.math
     libc.src.math.fmaxl
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -524,7 +967,7 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.sqrtf
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
 add_fp_unittest(
@@ -537,18 +980,207 @@ add_fp_unittest(
   DEPENDS
     libc.include.math
     libc.src.math.sqrt
-    libc.utils.FPUtil.fputil
+    libc.src.__support.FPUtil.fputil
 )
 
+# The quad precision test for sqrt against MPFR currently suffers
+# from insufficient precision in MPFR calculations leading to
+# https://hal.archives-ouvertes.fr/hal-01091186/document. We will
+# renable after fixing the precision issue.
+if(${LIBC_TARGET_ARCHITECTURE_IS_X86})
+  add_fp_unittest(
+    sqrtl_test
+    NEED_MPFR
+    SUITE
+      libc_math_unittests
+    SRCS
+      sqrtl_test.cpp
+    DEPENDS
+      libc.include.math
+      libc.src.math.sqrtl
+      libc.src.__support.FPUtil.fputil
+  )
+else()
+  message(STATUS "Skipping sqrtl_test")
+endif()
+
 add_fp_unittest(
-  sqrtl_test
+  remquof_test
   NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
-    sqrtl_test.cpp
+    remquof_test.cpp
+  HDRS
+    RemQuoTest.h
   DEPENDS
     libc.include.math
-    libc.src.math.sqrtl
-    libc.utils.FPUtil.fputil
+    libc.src.math.remquof
+    libc.src.__support.FPUtil.fputil
 )
+
+add_fp_unittest(
+  remquo_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    remquo_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.remquo
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  remquol_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    remquol_test.cpp
+  HDRS
+    RemQuoTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.remquol
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  hypotf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    hypotf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.hypotf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  hypot_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    hypot_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.hypot
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  nextafter_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafter_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafter
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  nextafterf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafterf_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  nextafterl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    nextafterl_test.cpp
+  HDRS
+    NextAfterTest.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.nextafterl
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fmaf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmaf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmaf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  fma_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    fma_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fma
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  tan_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    tan_test.cpp
+  DEPENDS
+    libc.src.math.tan
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  expm1f_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    expm1f_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.math
+    libc.src.math.expm1f
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  mod_k_pi_test
+  NEED_MPFR
+  SUITE
+    libc-long-running-tests
+  SRCS
+    mod_k_pi_test.cpp
+  DEPENDS
+    libc.src.math.generic.dp_trig
+    libc.src.__support.FPUtil.fputil
+)
+
+add_subdirectory(generic)
+add_subdirectory(exhaustive)
+add_subdirectory(differential_testing)

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for C1128:
 ! A variable-name that appears in a LOCAL or LOCAL_INIT locality-spec shall not
 ! have the ALLOCATABLE; INTENT (IN); or OPTIONAL attribute; shall not be of
@@ -36,25 +36,24 @@ subroutine s4(arg)
   end do
 end subroutine s4
 
-subroutine s5()
+module m
 ! Cannot have a variable of a finalizable type in a locality spec
   type t1
     integer :: i
   contains
     final :: f
   end type t1
-
-  type(t1) :: var
-
-!ERROR: Finalizable variable 'var' not allowed in a locality-spec
-  do concurrent(i=1:5) local(var)
-  end do
-
-contains
+ contains
+  subroutine s5()
+    type(t1) :: var
+    !ERROR: Finalizable variable 'var' not allowed in a locality-spec
+    do concurrent(i=1:5) local(var)
+    end do
+  end subroutine s5
   subroutine f(x)
     type(t1) :: x
   end subroutine f
-end subroutine s5
+end module m
 
 subroutine s6
 ! Cannot have a nonpointer polymorphic dummy argument in a locality spec

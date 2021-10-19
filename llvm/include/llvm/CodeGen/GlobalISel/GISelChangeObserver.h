@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// This contains common code to allow clients to notify changes to machine
 /// instr.
-//
+///
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CODEGEN_GLOBALISEL_GISELCHANGEOBSERVER_H
 #define LLVM_CODEGEN_GLOBALISEL_GISELCHANGEOBSERVER_H
 

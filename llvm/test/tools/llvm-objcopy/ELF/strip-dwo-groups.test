@@ -1,40 +1,38 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-dwo %t
-# RUN: llvm-readobj --symbols -S --elf-section-groups %t | FileCheck %s
+# RUN: llvm-readobj --symbols -S --section-groups %t | \
+# RUN:   FileCheck %s --implicit-check-not=.debug_
 
-## `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of 
+## `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of
 ## the symbol table, the indices of the symbols and the indices of the sections
-## which go after the removed ones will change. Consequently, the fields 
-## Link, Info and the content of .group need to be updated.
+## which go after the removed ones will change. Consequently, the fields Link,
+## Info and the content of .group need to be updated.
 
-# CHECK-NOT: .debug_
+## Note. 'Signature' is generated using 'Link' and 'Info', so checking it
+## validates updating these fields.
 
 # CHECK:      Groups {
 # CHECK-NEXT:  Group {
-# CHECK-NEXT:   Name: .group (1)
-# CHECK-NEXT:   Index: 1{{$}}
-# CHECK-NEXT:   Link: 6
-# CHECK-NEXT:   Info: 2
-# CHECK-NEXT:   Type: COMDAT (0x1)
+# CHECK-NEXT:   Name: .group
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   Type:
 # CHECK-NEXT:   Signature: group1
 # CHECK-NEXT:   Section(s) in group [
-# CHECK-NEXT:     .text.group1 (3)
+# CHECK-NEXT:     .text.group1
 # CHECK-NEXT:   ]
 
-# CHECK-NOT: .debug_
-
-# CHECK:      Name: .group (1)
-# CHECK-NEXT: Index: 2{{$}}
-# CHECK-NEXT: Link: 6
-# CHECK-NEXT: Info: 1
-# CHECK-NEXT: Type: COMDAT (0x1)
-# CHECK-NEXT: Signature: group2
-# CHECK-NEXT: Section(s) in group [
-# CHECK-NEXT:   .text.group2 (4)
-# CHECK-NEXT:   .rela.text.group2 (5)
-# CHECK-NEXT: ]
-
-# CHECK-NOT: .debug_
+# CHECK:        Name: .group
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   Type:
+# CHECK-NEXT:   Signature: group2
+# CHECK-NEXT:   Section(s) in group [
+# CHECK-NEXT:     .text.group2
+# CHECK-NEXT:     .rela.text.group2
+# CHECK-NEXT:   ]
 
 --- !ELF
 FileHeader:
@@ -75,9 +73,11 @@ Sections:
 Symbols:
   - Name:    debug_before
     Section: .debug_before.dwo
-  - Name:    group2
-    Section: .text.group2
-  - Name:    group1
-    Section: .text.group1
   - Name:    debug_after
     Section: .debug_after.dwo
+  - Name:    group2
+    Section: .text.group2
+    Binding: STB_WEAK
+  - Name:    group1
+    Section: .text.group1
+    Binding: STB_WEAK

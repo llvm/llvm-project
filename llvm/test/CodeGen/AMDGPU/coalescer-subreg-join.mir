@@ -46,10 +46,10 @@ body:             |
     %0 = COPY $sgpr2_sgpr3
     %1 = COPY $vgpr2
     %2 = COPY $vgpr3
-    %3 = S_LOAD_DWORDX8_IMM %0, 0, 0, 0
-    %4 = S_LOAD_DWORDX4_IMM %0, 12, 0, 0
-    %5 = S_LOAD_DWORDX8_IMM %0, 16, 0, 0
-    %6 = S_LOAD_DWORDX4_IMM %0, 28, 0, 0
+    %3 = S_LOAD_DWORDX8_IMM %0, 0, 0
+    %4 = S_LOAD_DWORDX4_IMM %0, 12, 0
+    %5 = S_LOAD_DWORDX8_IMM %0, 16, 0
+    %6 = S_LOAD_DWORDX4_IMM %0, 28, 0
     undef %7.sub0 = S_MOV_B32 212739
     %20 = COPY %7
     %11 = COPY %20
@@ -61,7 +61,7 @@ body:             |
     %11.sub6 = COPY %1
     %11.sub7 = COPY %1
     %11.sub8 = COPY %1
-    dead %18 = IMAGE_SAMPLE_C_D_O_V1_V16 %11, %3, %4, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 4)
+    dead %18 = IMAGE_SAMPLE_C_D_O_V1_V16 %11, %3, %4, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
     %20.sub1 = COPY %2
     %20.sub2 = COPY %2
     %20.sub3 = COPY %2
@@ -70,6 +70,6 @@ body:             |
     %20.sub6 = COPY %2
     %20.sub7 = COPY %2
     %20.sub8 = COPY %2
-    dead %27 = IMAGE_SAMPLE_C_D_O_V1_V16 %20, %5, %6, 1, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load 4)
+    dead %27 = IMAGE_SAMPLE_C_D_O_V1_V16 %20, %5, %6, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s32))
 
 ...

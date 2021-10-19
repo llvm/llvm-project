@@ -38,8 +38,15 @@ namespace llvm {
 class InstrProfReader;
 
 /// A file format agnostic iterator over profiling data.
-class InstrProfIterator : public std::iterator<std::input_iterator_tag,
-                                               NamedInstrProfRecord> {
+class InstrProfIterator {
+public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = NamedInstrProfRecord;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
+private:
   InstrProfReader *Reader = nullptr;
   value_type Record;
 
@@ -50,8 +57,12 @@ public:
   InstrProfIterator(InstrProfReader *Reader) : Reader(Reader) { Increment(); }
 
   InstrProfIterator &operator++() { Increment(); return *this; }
-  bool operator==(const InstrProfIterator &RHS) { return Reader == RHS.Reader; }
-  bool operator!=(const InstrProfIterator &RHS) { return Reader != RHS.Reader; }
+  bool operator==(const InstrProfIterator &RHS) const {
+    return Reader == RHS.Reader;
+  }
+  bool operator!=(const InstrProfIterator &RHS) const {
+    return Reader != RHS.Reader;
+  }
   value_type &operator*() { return Record; }
   value_type *operator->() { return &Record; }
 };
@@ -70,6 +81,9 @@ public:
 
   /// Read a single record.
   virtual Error readNextRecord(NamedInstrProfRecord &Record) = 0;
+
+  /// Print binary ids on stream OS.
+  virtual Error printBinaryIds(raw_ostream &OS) { return success(); };
 
   /// Iterator over profile data.
   InstrProfIterator begin() { return InstrProfIterator(this); }
@@ -211,6 +225,9 @@ private:
   uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
 
+  uint64_t BinaryIdsSize;
+  const uint8_t *BinaryIdsStart;
+
 public:
   RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer)
       : DataBuffer(std::move(DataBuffer)) {}
@@ -220,6 +237,7 @@ public:
   static bool hasFormat(const MemoryBuffer &DataBuffer);
   Error readHeader() override;
   Error readNextRecord(NamedInstrProfRecord &Record) override;
+  Error printBinaryIds(raw_ostream &OS) override;
 
   bool isIRLevelProfile() const override {
     return (Version & VARIANT_MASK_IR_PROF) != 0;

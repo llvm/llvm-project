@@ -1,0 +1,29 @@
+# This testing configuration handles running the test suite against LLVM's libc++
+# using a static library.
+
+import sys
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -isystem %{include} -isystem %{target-include} -I %{libcxx}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -lc++ -lc++abi -pthread'
+))
+config.substitutions.append(('%{exec}',
+    '{} %{{libcxx}}/utils/run.py --execdir %T -- '.format(sys.executable)
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.newconfig, libcxx.test.newconfig
+libcxx.test.newconfig.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

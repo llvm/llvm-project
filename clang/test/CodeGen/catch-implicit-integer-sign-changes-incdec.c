@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-NOSANITIZE
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK-NOSANITIZE
 
-// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
-// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fsanitize-recover=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
-// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fsanitize-trap=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
+// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
+// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fsanitize-recover=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK-SANITIZE,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
+// RUN: %clang_cc1 -fsanitize=implicit-integer-sign-change -fsanitize-trap=implicit-integer-sign-change -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_implicit_conversion" --check-prefixes=CHECK-SANITIZE,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
 
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[INT:.*]] = {{.*}} c"'int'\00" }
 // CHECK-SANITIZE-ANYRECOVER-DAG: @[[UNSIGNED_SHORT:.*]] = {{.*}} c"'unsigned short'\00" }
@@ -38,7 +38,7 @@ unsigned short t0(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_100]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -73,7 +73,7 @@ unsigned short t1(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_200]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -109,7 +109,7 @@ unsigned short t2(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_300]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -145,7 +145,7 @@ unsigned short t3(unsigned short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], false, !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_400]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -182,7 +182,7 @@ signed short t4(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_500]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -218,7 +218,7 @@ signed short t5(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_600]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -255,7 +255,7 @@ signed short t6(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_700]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize
@@ -292,7 +292,7 @@ signed short t7(signed short x) {
 // CHECK-SANITIZE-NEXT:               [[SIGNCHANGECHECK:%.*]] = icmp eq i1 [[SRC_INC_NEGATIVITYCHECK]], [[DST_NEGATIVITYCHECK]], !nosanitize
 // CHECK-SANITIZE-NEXT:               br i1 [[SIGNCHANGECHECK]], label %[[CONT:.*]], label %[[HANDLER_IMPLICIT_X_PROMOTEDERSION:[^,]+]],{{.*}} !nosanitize
 // CHECK-SANITIZE:                  [[HANDLER_IMPLICIT_X_PROMOTEDERSION]]:
-// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+// CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP1:%.*]] = zext i32 [[INC]] to i64, !nosanitize
 // CHECK-SANITIZE-ANYRECOVER-NEXT:    [[TMP2:%.*]] = zext i16 [[X_PROMOTED_DEMOTED]] to i64, !nosanitize
 // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_800]] to i8*), i64 [[TMP1]], i64 [[TMP2]]) #2, !nosanitize

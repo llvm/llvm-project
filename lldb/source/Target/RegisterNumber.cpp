@@ -26,9 +26,7 @@ RegisterNumber::RegisterNumber(lldb_private::Thread &thread,
   }
 }
 
-RegisterNumber::RegisterNumber()
-    : m_reg_ctx_sp(), m_regnum(LLDB_INVALID_REGNUM),
-      m_kind(lldb::kNumRegisterKinds), m_kind_regnum_map(), m_name(nullptr) {}
+RegisterNumber::RegisterNumber() : m_reg_ctx_sp(), m_kind_regnum_map() {}
 
 void RegisterNumber::init(lldb_private::Thread &thread, lldb::RegisterKind kind,
                           uint32_t num) {

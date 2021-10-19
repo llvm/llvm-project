@@ -1,6 +1,5 @@
-; RUN: opt -S -instcombine < %s | FileCheck %s
+; RUN: opt --mtriple=aarch64-unknown-linux -S -instcombine < %s | FileCheck %s
 ; ARM64 neon intrinsic variants - <rdar://problem/12349617>
-; REQUIRES: aarch64
 
 define <4 x i32> @mulByZeroARM64(<4 x i16> %x) nounwind readnone ssp {
 entry:
@@ -67,5 +66,5 @@ declare <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16>, <4 x i16>) nounwind 
 declare <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16>, <4 x i16>) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind readnone ssp }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nofree nosync nounwind readnone willreturn }
 ; CHECK: attributes [[NUW]] = { nounwind }

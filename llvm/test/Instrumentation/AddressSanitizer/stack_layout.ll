@@ -1,11 +1,7 @@
 ; Test the ASan's stack layout.
 ; More tests in tests/Transforms/Utils/ASanStackFrameLayoutTest.cpp
-; RUN: opt < %s -asan -asan-module -asan-stack-dynamic-alloca=0 -asan-use-after-scope -S -enable-new-pm=0 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC
 ; RUN: opt < %s -passes='asan-pipeline' -asan-stack-dynamic-alloca=0 -asan-use-after-scope -S \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC
-; RUN: opt < %s -asan -asan-module -asan-stack-dynamic-alloca=1 -asan-use-after-scope -S -enable-new-pm=0 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC
 ; RUN: opt < %s -passes='asan-pipeline' -asan-stack-dynamic-alloca=1 -asan-use-after-scope -S \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC
 

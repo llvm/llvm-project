@@ -63,29 +63,17 @@ clang_tablegen("DiagnosticIndexName") {
 # Attributes
 
 clang_tablegen("AttrList") {
-  args = [
-    "-gen-clang-attr-list",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-list" ]
   td_file = "Attr.td"
 }
 
 clang_tablegen("AttrSubMatchRulesList") {
-  args = [
-    "-gen-clang-attr-subject-match-rule-list",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-subject-match-rule-list" ]
   td_file = "Attr.td"
 }
 
 clang_tablegen("AttrHasAttributeImpl") {
-  args = [
-    "-gen-clang-attr-has-attribute-impl",
-    "-I",
-    rebase_path("../..", root_out_dir),
-  ]
+  args = [ "-gen-clang-attr-has-attribute-impl" ]
   td_file = "Attr.td"
 }
 
@@ -157,4 +145,16 @@ clang_tablegen("arm_cde_builtin_sema") {
 clang_tablegen("arm_cde_builtin_aliases") {
   args = [ "-gen-arm-cde-builtin-aliases" ]
   td_file = "arm_cde.td"
+}
+
+# RISC-V
+
+clang_tablegen("riscv_vector_builtins") {
+  args = [ "-gen-riscv-vector-builtins" ]
+  td_file = "riscv_vector.td"
+}
+
+clang_tablegen("riscv_vector_builtin_cg") {
+  args = [ "-gen-riscv-vector-builtin-codegen" ]
+  td_file = "riscv_vector.td"
 }

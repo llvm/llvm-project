@@ -158,7 +158,7 @@ T Results::GetAs(const char* entry_name) const {
 
 // clang-format off
 
-#define _CHECK_RESULT_VALUE(entry, getfn, var_type, var_name, relationship, value) \
+#define CHECK_RESULT_VALUE_IMPL(entry, getfn, var_type, var_name, relationship, value) \
     CONCAT(CHECK_, relationship)                                        \
     (entry.getfn< var_type >(var_name), (value)) << "\n"                \
     << __FILE__ << ":" << __LINE__ << ": " << (entry).name << ":\n"     \
@@ -169,7 +169,7 @@ T Results::GetAs(const char* entry_name) const {
 
 // check with tolerance. eps_factor is the tolerance window, which is
 // interpreted relative to value (eg, 0.1 means 10% of value).
-#define _CHECK_FLOAT_RESULT_VALUE(entry, getfn, var_type, var_name, relationship, value, eps_factor) \
+#define CHECK_FLOAT_RESULT_VALUE_IMPL(entry, getfn, var_type, var_name, relationship, value, eps_factor) \
     CONCAT(CHECK_FLOAT_, relationship)                                  \
     (entry.getfn< var_type >(var_name), (value), (eps_factor) * (value)) << "\n" \
     << __FILE__ << ":" << __LINE__ << ": " << (entry).name << ":\n"     \
@@ -187,16 +187,16 @@ T Results::GetAs(const char* entry_name) const {
     << "%)"
 
 #define CHECK_RESULT_VALUE(entry, var_type, var_name, relationship, value) \
-    _CHECK_RESULT_VALUE(entry, GetAs, var_type, var_name, relationship, value)
+    CHECK_RESULT_VALUE_IMPL(entry, GetAs, var_type, var_name, relationship, value)
 
 #define CHECK_COUNTER_VALUE(entry, var_type, var_name, relationship, value) \
-    _CHECK_RESULT_VALUE(entry, GetCounterAs, var_type, var_name, relationship, value)
+    CHECK_RESULT_VALUE_IMPL(entry, GetCounterAs, var_type, var_name, relationship, value)
 
 #define CHECK_FLOAT_RESULT_VALUE(entry, var_name, relationship, value, eps_factor) \
-    _CHECK_FLOAT_RESULT_VALUE(entry, GetAs, double, var_name, relationship, value, eps_factor)
+    CHECK_FLOAT_RESULT_VALUE_IMPL(entry, GetAs, double, var_name, relationship, value, eps_factor)
 
 #define CHECK_FLOAT_COUNTER_VALUE(entry, var_name, relationship, value, eps_factor) \
-    _CHECK_FLOAT_RESULT_VALUE(entry, GetCounterAs, double, var_name, relationship, value, eps_factor)
+    CHECK_FLOAT_RESULT_VALUE_IMPL(entry, GetCounterAs, double, var_name, relationship, value, eps_factor)
 
 // clang-format on
 

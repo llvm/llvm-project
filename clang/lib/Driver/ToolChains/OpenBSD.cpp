@@ -28,10 +28,13 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                       const InputInfoList &Inputs,
                                       const ArgList &Args,
                                       const char *LinkingOutput) const {
+  const toolchains::OpenBSD &ToolChain =
+      static_cast<const toolchains::OpenBSD &>(getToolChain());
+
   claimNoWarnArgs(Args);
   ArgStringList CmdArgs;
 
-  switch (getToolChain().getArch()) {
+  switch (ToolChain.getArch()) {
   case llvm::Triple::x86:
     // When building 32-bit code on OpenBSD/amd64, we have to explicitly
     // instruct as in the base system to assemble 32-bit code.
@@ -45,9 +48,11 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::sparcv9: {
     CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(Args, getToolChain().getTriple());
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, getToolChain().getTriple()));
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+    std::string CPU = getCPUName(ToolChain.getDriver(), Args,
+                                 ToolChain.getTriple());
+    CmdArgs.push_back(
+        sparc::getSparcAsmModeForCPU(CPU, ToolChain.getTriple()));
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
@@ -55,17 +60,17 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   case llvm::Triple::mips64el: {
     StringRef CPUName;
     StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, getToolChain().getTriple(), CPUName, ABIName);
+    mips::getMipsCPUAndABI(Args, ToolChain.getTriple(), CPUName, ABIName);
 
     CmdArgs.push_back("-mabi");
     CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
 
-    if (getToolChain().getTriple().isLittleEndian())
+    if (ToolChain.getTriple().isLittleEndian())
       CmdArgs.push_back("-EL");
     else
       CmdArgs.push_back("-EB");
 
-    AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
+    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
     break;
   }
 
@@ -81,9 +86,10 @@ void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
+  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -93,7 +99,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const char *LinkingOutput) const {
   const toolchains::OpenBSD &ToolChain =
       static_cast<const toolchains::OpenBSD &>(getToolChain());
-  const Driver &D = getToolChain().getDriver();
+  const Driver &D = ToolChain.getDriver();
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -173,6 +179,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    // Use the static OpenMP runtime with -static-openmp
+    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
+                        !Args.hasArg(options::OPT_static);
+    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
@@ -220,9 +231,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
   }
 
+  ToolChain.addProfileRTLibs(Args, CmdArgs);
+
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 SanitizerMask OpenBSD::getSupportedSanitizers() const {
@@ -294,6 +308,7 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
 
   CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
   CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
+  CmdArgs.push_back(Profiling ? "-lpthread_p" : "-lpthread");
 }
 
 std::string OpenBSD::getCompilerRT(const ArgList &Args,

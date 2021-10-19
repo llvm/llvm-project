@@ -9,7 +9,7 @@ entry:
 
 lnext:
   %elementArray = load i32*, i32** %elementArrayPtr, align 8
-; CHECK: lwz [[LDREG:[0-9]+]], 124(1)                   # 4-byte Folded Reload
+; CHECK: lwz [[LDREG:[0-9]+]], 140(1)                   # 4-byte Folded Reload
 ; CHECK: # implicit-def: $x[[TEMPREG:[0-9]+]]
   %element = load i32, i32* %elementArray, align 4
 ; CHECK: mr [[TEMPREG]], [[LDREG]]

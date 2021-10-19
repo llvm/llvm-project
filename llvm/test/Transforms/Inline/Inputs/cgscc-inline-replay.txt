@@ -1,0 +1,2 @@
+remark: calls.cc:10:0: '_Z3sumii' inlined into 'main' with (cost=45, threshold=337) at callsite main:3:0.1;
+remark: calls.cc:4:0: '_Z3subii' inlined into 'main' with (cost=-5, threshold=337) at callsite _Z3sumii:1:0 @ main:3:0.1;

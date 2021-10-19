@@ -27,7 +27,6 @@ int nosplit() {
 
 // CHECK-NOSEGSTK: define dso_local i32 @_Z3foov() [[NSS0:#[0-9]+]] {
 // CHECK-NOSEGSTK: define dso_local i32 @_Z7nosplitv() [[NSS1:#[0-9]+]] {
-// CHECK-NOSEGSTK: define linkonce_odr dso_local i32 @_Z8tnosplitIiEiv() [[NSS2:#[0-9]+]] comdat {
+// CHECK-NOSEGSTK: define linkonce_odr dso_local i32 @_Z8tnosplitIiEiv() [[NSS0]] comdat {
+// CHECK-NOSEGSTK-NOT: [[NSS0]] = { {{.*}} "split-stack" {{.*}} }
 // CHECK-NOSEGSTK-NOT: [[NSS1]] = { {{.*}} "split-stack" {{.*}} }
-// CHECK-NOSEGSTK-NOT: [[NSS2]] = { {{.*}} "split-stack" {{.*}} }
-// CHECK-NOSEGSTK-NOT: [[NSS3]] = { {{.*}} "split-stack" {{.*}} }

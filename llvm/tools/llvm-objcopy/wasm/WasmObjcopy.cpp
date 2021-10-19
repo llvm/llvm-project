@@ -7,19 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "WasmObjcopy.h"
-#include "Buffer.h"
-#include "CopyConfig.h"
+#include "CommonConfig.h"
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
-#include "llvm-objcopy.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileOutputBuffer.h"
 
 namespace llvm {
 namespace objcopy {
 namespace wasm {
 
 using namespace object;
+using SectionPred = std::function<bool(const Section &Sec)>;
+
+static bool isDebugSection(const Section &Sec) {
+  return Sec.Name.startswith(".debug");
+}
+
+static bool isLinkerSection(const Section &Sec) {
+  return Sec.Name.startswith("reloc.") || Sec.Name == "linking";
+}
+
+static bool isNameSection(const Section &Sec) { return Sec.Name == "name"; }
+
+// Sections which are known to be "comments" or informational and do not affect
+// program semantics.
+static bool isCommentSection(const Section &Sec) {
+  return Sec.Name == "producers";
+}
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
@@ -40,7 +56,60 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   return createStringError(errc::invalid_argument, "section '%s' not found",
                            SecName.str().c_str());
 }
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
+
+static void removeSections(const CommonConfig &Config, Object &Obj) {
+  SectionPred RemovePred = [](const Section &) { return false; };
+
+  // Explicitly-requested sections.
+  if (!Config.ToRemove.empty()) {
+    RemovePred = [&Config](const Section &Sec) {
+      return Config.ToRemove.matches(Sec.Name);
+    };
+  }
+
+  if (Config.StripDebug) {
+    RemovePred = [RemovePred](const Section &Sec) {
+      return RemovePred(Sec) || isDebugSection(Sec);
+    };
+  }
+
+  if (Config.StripAll) {
+    RemovePred = [RemovePred](const Section &Sec) {
+      return RemovePred(Sec) || isDebugSection(Sec) || isLinkerSection(Sec) ||
+             isNameSection(Sec) || isCommentSection(Sec);
+    };
+  }
+
+  if (Config.OnlyKeepDebug) {
+    RemovePred = [&Config](const Section &Sec) {
+      // Keep debug sections, unless explicitly requested to remove.
+      // Remove everything else, including known sections.
+      return Config.ToRemove.matches(Sec.Name) || !isDebugSection(Sec);
+    };
+  }
+
+  if (!Config.OnlySection.empty()) {
+    RemovePred = [&Config](const Section &Sec) {
+      // Explicitly keep these sections regardless of previous removes.
+      // Remove everything else, inluding known sections.
+      return !Config.OnlySection.matches(Sec.Name);
+    };
+  }
+
+  if (!Config.KeepSection.empty()) {
+    RemovePred = [&Config, RemovePred](const Section &Sec) {
+      // Explicitly keep these sections regardless of previous removes.
+      if (Config.KeepSection.matches(Sec.Name))
+        return false;
+      // Otherwise defer to RemovePred.
+      return RemovePred(Sec);
+    };
+  }
+
+  Obj.removeSections(RemovePred);
+}
+
+static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   // Only support AddSection, DumpSection, RemoveSection for now.
   for (StringRef Flag : Config.DumpSection) {
     StringRef SecName;
@@ -50,11 +119,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       return createFileError(FileName, std::move(E));
   }
 
-  Obj.removeSections([&Config](const Section &Sec) {
-    if (Config.ToRemove.matches(Sec.Name))
-      return true;
-    return false;
-  });
+  removeSections(Config, Obj);
 
   for (StringRef Flag : Config.AddSection) {
     StringRef SecName, FileName;
@@ -73,28 +138,11 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     Obj.addSectionWithOwnedContents(Sec, std::move(Buf));
   }
 
-  if (!Config.AddGnuDebugLink.empty() || !Config.BuildIdLinkDir.empty() ||
-      Config.BuildIdLinkInput || Config.BuildIdLinkOutput ||
-      Config.ExtractPartition || !Config.SplitDWO.empty() ||
-      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
-      Config.DiscardMode != DiscardType::None || Config.NewSymbolVisibility ||
-      !Config.SymbolsToAdd.empty() || !Config.RPathToAdd.empty() ||
-      !Config.OnlySection.empty() || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToRemove.empty() ||
-      !Config.UnneededSymbolsToRemove.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SetSectionAlignment.empty() ||
-      !Config.SetSectionFlags.empty() || !Config.SymbolsToRename.empty()) {
-    return createStringError(
-        llvm::errc::invalid_argument,
-        "only add-section, dump-section, and remove-section are supported");
-  }
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::WasmObjectFile &In, Buffer &Out) {
+Error executeObjcopyOnBinary(const CommonConfig &Config, const WasmConfig &,
+                             object::WasmObjectFile &In, raw_ostream &Out) {
   Reader TheReader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = TheReader.create();
   if (!ObjOrErr)

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -38,8 +37,9 @@ Func CreateFunc() {
   return f;
 }
 #else
-int main() {
+int main(int, char**) {
   Func f = CreateFunc();
   f(42);
+  return 0;
 }
 #endif

@@ -46,7 +46,7 @@ define i10 @promote() {
 define <2 x i10> @promote_vec() {
 ; CHECK-LABEL: promote_vec:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movw $1674, %ax ## imm = 0x68A
+; CHECK-NEXT:    movw $650, %ax ## imm = 0x28A
 ; CHECK-NEXT:    movw $518, %dx ## imm = 0x206
 ; CHECK-NEXT:    retl
   %a = freeze <2 x i10> <i10 682, i10 125>

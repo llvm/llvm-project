@@ -27,10 +27,8 @@ int main(int, char**) {
   // Check that we get a static assertion when we try to use the bracket
   // operator on shared_ptr<T> when T is not an array type.
   const std::shared_ptr<Foo[]> p1;
-  (void)p1
-      ->call(); // expected-error@memory:* {{std::shared_ptr<T>::operator-> is only valid when T is not an array type.}}
+  (void)p1->call(); // expected-error@*:* {{std::shared_ptr<T>::operator-> is only valid when T is not an array type.}}
   const std::shared_ptr<Foo[4]> p2;
-  (void)p2
-      ->call(); // expected-error@memory:* {{std::shared_ptr<T>::operator-> is only valid when T is not an array type.}}
+  (void)p2->call(); // expected-error@*:* {{std::shared_ptr<T>::operator-> is only valid when T is not an array type.}}
   return 0;
 }

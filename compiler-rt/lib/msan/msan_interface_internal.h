@@ -31,7 +31,7 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_warning();
 
 // Print a warning and die.
-// Intrumentation inserts calls to this function when building in "fast" mode
+// Instrumentation inserts calls to this function when building in "fast" mode
 // (i.e. -mllvm -msan-keep-going)
 SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn))
 void __msan_warning_noreturn();
@@ -129,8 +129,8 @@ void __msan_set_keep_going(int keep_going);
 SANITIZER_INTERFACE_ATTRIBUTE
 int __msan_set_poison_in_malloc(int do_poison);
 
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-/* OPTIONAL */ const char* __msan_default_options();
+SANITIZER_INTERFACE_ATTRIBUTE
+const char *__msan_default_options();
 
 // For testing.
 SANITIZER_INTERFACE_ATTRIBUTE

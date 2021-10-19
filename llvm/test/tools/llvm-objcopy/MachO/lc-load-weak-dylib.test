@@ -20,6 +20,6 @@ LoadCommands:
      timestamp:       2
      current_version: 65536
      compatibility_version: 65536
-   PayloadString:   '/System/Library/Frameworks/Network.framework/Network'
+   Content:         '/System/Library/Frameworks/Network.framework/Network'
    ZeroPadBytes:    4
 ...

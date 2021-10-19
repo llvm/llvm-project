@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}shl_base_atomicrmw_global_ptr:
 ; GCN: v_add_co_u32_e32 v[[EXTRA_LO:[0-9]+]], vcc, 0x80, v4
@@ -29,12 +29,12 @@ define void @shl_base_global_ptr_global_atomic_fadd(i32 addrspace(1)* %out, i64 
   %cast = ptrtoint i32 addrspace(1)* %arrayidx0 to i64
   %shl = shl i64 %cast, 2
   %castback = inttoptr i64 %shl to float addrspace(1)*
-  call void @llvm.amdgcn.global.atomic.fadd.p1f32.f32(float addrspace(1)* %castback, float 100.0)
+  call float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* %castback, float 100.0)
   store volatile i64 %cast, i64 addrspace(1)* %extra.use, align 4
   ret void
 }
 
-declare void @llvm.amdgcn.global.atomic.fadd.p1f32.f32(float addrspace(1)* nocapture, float) #1
+declare float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)* nocapture, float) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind willreturn }

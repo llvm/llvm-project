@@ -23,44 +23,56 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::codecvt_utf16<wchar_t> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 4);
-    }
-    {
-        typedef std::codecvt_utf16<wchar_t, 0xFFFFFFFF, std::consume_header> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 6);
-    }
-    {
-        typedef std::codecvt_utf16<char16_t> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 2);
-    }
-    {
-        typedef std::codecvt_utf16<char16_t, 0xFFFFFFFF, std::consume_header> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 4);
-    }
-    {
-        typedef std::codecvt_utf16<char32_t> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 4);
-    }
-    {
-        typedef std::codecvt_utf16<char32_t, 0xFFFFFFFF, std::consume_header> C;
-        C c;
-        int r = c.max_length();
-        assert(r == 6);
-    }
+template <class CharT, size_t = sizeof(CharT)>
+struct TestHelper;
 
+template <class CharT>
+struct TestHelper<CharT, 2> {
+  static void test();
+};
+
+template <class CharT>
+struct TestHelper<CharT, 4> {
+  static void test();
+};
+
+template <class CharT>
+void TestHelper<CharT, 2>::test() {
+  {
+    typedef std::codecvt_utf16<CharT> C;
+    C c;
+    int r = c.max_length();
+    assert(r == 2);
+  }
+  {
+    typedef std::codecvt_utf16<CharT, 0xFFFFFFFF, std::consume_header> C;
+    C c;
+    int r = c.max_length();
+    assert(r == 4);
+  }
+}
+
+template <class CharT>
+void TestHelper<CharT, 4>::test() {
+  {
+    typedef std::codecvt_utf16<CharT> C;
+    C c;
+    int r = c.max_length();
+    assert(r == 4);
+  }
+  {
+    typedef std::codecvt_utf16<CharT, 0xFFFFFFFF, std::consume_header> C;
+    C c;
+    int r = c.max_length();
+    assert(r == 6);
+  }
+}
+
+int main(int, char**) {
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  TestHelper<wchar_t>::test();
+#endif
+  TestHelper<char16_t>::test();
+  TestHelper<char32_t>::test();
   return 0;
 }

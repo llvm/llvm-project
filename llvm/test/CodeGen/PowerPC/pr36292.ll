@@ -15,17 +15,18 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    ld 29, 0(3)
 ; CHECK-NEXT:    ld 30, 32(1)
 ; CHECK-NEXT:    cmpld 30, 29
-; CHECK-NEXT:    bge 0, .LBB0_2
+; CHECK-NEXT:    bge- 0, .LBB0_2
+; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_1: # %bounds.ok
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lfsx 2, 0, 3
+; CHECK-NEXT:    lfs 2, 0(3)
 ; CHECK-NEXT:    xxlxor 1, 1, 1
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 30, 30, 1
-; CHECK-NEXT:    stfsx 1, 0, 3
+; CHECK-NEXT:    stfs 1, 0(3)
 ; CHECK-NEXT:    cmpld 30, 29
-; CHECK-NEXT:    blt 0, .LBB0_1
+; CHECK-NEXT:    blt+ 0, .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: # %bounds.fail
 ; CHECK-NEXT:    std 30, 32(1)
   %pos = alloca i64, align 8

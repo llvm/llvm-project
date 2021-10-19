@@ -10,7 +10,9 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTIi = external constant i8*
 declare i8* @_Znwm(i64)
 declare void @_ZN1DC2Ev(%struct.D*)
-declare %struct.Derived* @_ZN1D4funcEv(%struct.D*)
+define %struct.Derived* @_ZN1D4funcEv(%struct.D*) {
+  ret %struct.Derived* null
+}
 declare void @_ZN1DD0Ev(%struct.D*)
 declare void @_ZdlPv(i8*)
 declare i32 @__gxx_personality_v0(...)

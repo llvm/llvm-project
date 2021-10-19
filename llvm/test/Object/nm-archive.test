@@ -48,7 +48,7 @@ RUN: llvm-nm %p/Inputs/archive-test.a-gnu-minimal
 
 
 And don't crash when asked to print a non-existing symtab.
-RUN: llvm-nm -M %p/Inputs/archive-test.a-gnu-minimal
+RUN: llvm-nm --print-armap %p/Inputs/archive-test.a-gnu-minimal
 
 Don't reject an empty archive.
 RUN: llvm-nm %p/Inputs/archive-test.a-empty
@@ -58,7 +58,7 @@ GNU AR is able to parse the unaligned member and warns about the member with
 the unknown format. We should probably simply warn on both. For now we just
 produce an error for the unknown format.
 RUN: not llvm-nm %p/Inputs/corrupt-archive.a 2>&1 | FileCheck %s -check-prefix CORRUPT
-CORRUPT: corrupt-archive.a(trivial-object-test2.elf-x86-64) Insufficient alignment
+CORRUPT: corrupt-archive.a(trivial-object-test2.elf-x86-64): Insufficient alignment
 
 
 RUN: llvm-nm %p/Inputs/thin.a | FileCheck %s -check-prefix THIN

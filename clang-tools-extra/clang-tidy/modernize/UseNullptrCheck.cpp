@@ -41,12 +41,28 @@ StatementMatcher makeCastSequenceMatcher() {
       unless(hasImplicitDestinationType(qualType(substTemplateTypeParmType()))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))));
 
+  auto IsOrHasDescendant = [](auto InnerMatcher) {
+    return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
+  };
+
   return traverse(
-      ast_type_traits::TK_AsIs,
-      castExpr(anyOf(ImplicitCastToNull,
-                     explicitCastExpr(hasDescendant(ImplicitCastToNull))),
-               unless(hasAncestor(explicitCastExpr())))
-          .bind(CastSequence));
+      TK_AsIs,
+      anyOf(castExpr(anyOf(ImplicitCastToNull,
+                           explicitCastExpr(hasDescendant(ImplicitCastToNull))),
+                     unless(hasAncestor(explicitCastExpr())),
+                     unless(hasAncestor(cxxRewrittenBinaryOperator())))
+                .bind(CastSequence),
+            cxxRewrittenBinaryOperator(
+                // Match rewritten operators, but verify (in the check method)
+                // that if an implicit cast is found, it is not from another
+                // nested rewritten operator.
+                expr().bind("matchBinopOperands"),
+                hasEitherOperand(IsOrHasDescendant(
+                    implicitCastExpr(
+                        ImplicitCastToNull,
+                        hasAncestor(cxxRewrittenBinaryOperator().bind(
+                            "checkBinopOperands")))
+                        .bind(CastSequence))))));
 }
 
 bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -173,9 +189,9 @@ private:
 class CastSequenceVisitor : public RecursiveASTVisitor<CastSequenceVisitor> {
 public:
   CastSequenceVisitor(ASTContext &Context, ArrayRef<StringRef> NullMacros,
-                      ClangTidyCheck &check)
+                      ClangTidyCheck &Check)
       : SM(Context.getSourceManager()), Context(Context),
-        NullMacros(NullMacros), Check(check), FirstSubExpr(nullptr),
+        NullMacros(NullMacros), Check(Check), FirstSubExpr(nullptr),
         PruneSubtree(false) {}
 
   bool TraverseStmt(Stmt *S) {
@@ -277,10 +293,9 @@ private:
       return false;
 
     // Step 2: Find the first ancestor that doesn't expand from this macro.
-    ast_type_traits::DynTypedNode ContainingAncestor;
-    if (!findContainingAncestor(
-            ast_type_traits::DynTypedNode::create<Stmt>(*CE), MacroLoc,
-            ContainingAncestor))
+    DynTypedNode ContainingAncestor;
+    if (!findContainingAncestor(DynTypedNode::create<Stmt>(*CE), MacroLoc,
+                                ContainingAncestor))
       return false;
 
     // Step 3:
@@ -407,9 +422,8 @@ private:
   ///
   /// \pre MacroLoc.isFileID()
   /// \returns true if such an ancestor was found, false otherwise.
-  bool findContainingAncestor(ast_type_traits::DynTypedNode Start,
-                              SourceLocation MacroLoc,
-                              ast_type_traits::DynTypedNode &Result) {
+  bool findContainingAncestor(DynTypedNode Start, SourceLocation MacroLoc,
+                              DynTypedNode &Result) {
     // Below we're only following the first parent back up the AST. This should
     // be fine since for the statements we care about there should only be one
     // parent, except for the case specified below.
@@ -431,7 +445,7 @@ private:
         }
       }
 
-      const ast_type_traits::DynTypedNode &Parent = Parents[0];
+      const DynTypedNode &Parent = Parents[0];
 
       SourceLocation Loc;
       if (const auto *D = Parent.get<Decl>())
@@ -481,6 +495,11 @@ void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *NullCast = Result.Nodes.getNodeAs<CastExpr>(CastSequence);
   assert(NullCast && "Bad Callback. No node provided");
+
+  if (Result.Nodes.getNodeAs<CXXRewrittenBinaryOperator>(
+          "matchBinopOperands") !=
+      Result.Nodes.getNodeAs<CXXRewrittenBinaryOperator>("checkBinopOperands"))
+    return;
 
   // Given an implicit null-ptr cast or an explicit cast with an implicit
   // null-to-pointer cast within use CastSequenceVisitor to identify sequences

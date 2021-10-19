@@ -8,6 +8,8 @@ add_mlir_dialect_library(MLIROpenACC
   MLIROpenACCOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithmetic
   MLIRIR
+  MLIRStandard
   )
 

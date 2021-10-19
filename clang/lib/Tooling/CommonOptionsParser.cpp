@@ -115,8 +115,7 @@ llvm::Error CommonOptionsParser::init(
   // Stop initializing if command-line option parsing failed.
   if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
     OS.flush();
-    return llvm::make_error<llvm::StringError>("[CommonOptionsParser]: " +
-                                                   ErrorMessage,
+    return llvm::make_error<llvm::StringError>(ErrorMessage,
                                                llvm::inconvertibleErrorCode());
   }
 
@@ -171,7 +170,7 @@ CommonOptionsParser::CommonOptionsParser(
   llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
   if (Err) {
     llvm::report_fatal_error(
-        "CommonOptionsParser: failed to parse command-line arguments. " +
+        Twine("CommonOptionsParser: failed to parse command-line arguments. ") +
         llvm::toString(std::move(Err)));
   }
 }

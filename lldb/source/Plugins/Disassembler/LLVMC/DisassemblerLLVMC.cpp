@@ -21,9 +21,9 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "lldb/Core/Address.h"
@@ -61,6 +61,8 @@ public:
   bool CanBranch(llvm::MCInst &mc_inst) const;
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
+  bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
@@ -100,6 +102,16 @@ public:
   bool HasDelaySlot() override {
     VisitInstruction();
     return m_has_delay_slot;
+  }
+
+  bool IsLoad() override {
+    VisitInstruction();
+    return m_is_load;
+  }
+
+  bool IsAuthenticated() override {
+    VisitInstruction();
+    return m_is_authenticated;
   }
 
   DisassemblerLLVMC::MCDisasmInstance *GetDisasmToUse(bool &is_alternate_isa) {
@@ -817,9 +829,13 @@ protected:
   //   - Might branch
   //   - Does not have a delay slot
   //   - Is not a call
+  //   - Is not a load
+  //   - Is not an authenticated instruction
   bool m_does_branch = true;
   bool m_has_delay_slot = false;
   bool m_is_call = false;
+  bool m_is_load = false;
+  bool m_is_authenticated = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -849,6 +865,8 @@ protected:
     m_does_branch = mc_disasm_ptr->CanBranch(inst);
     m_has_delay_slot = mc_disasm_ptr->HasDelaySlot(inst);
     m_is_call = mc_disasm_ptr->IsCall(inst);
+    m_is_load = mc_disasm_ptr->IsLoad(inst);
+    m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
   }
 
 private:
@@ -905,7 +923,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
     return Instance();
 
   std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(asm_info_up.get(), reg_info_up.get(), nullptr));
+      new llvm::MCContext(llvm::Triple(triple), asm_info_up.get(),
+                          reg_info_up.get(), subtarget_info_up.get()));
   if (!context_up)
     return Instance();
 
@@ -1026,10 +1045,32 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).isCall();
 }
 
+bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
+    llvm::MCInst &mc_inst) const {
+  auto InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
+
+  // Treat software auth traps (brk 0xc470 + aut key, where 0x70 == 'p', 0xc4
+  // == 'a' + 'c') as authenticated instructions for reporting purposes, in
+  // addition to the standard authenticated instructions specified in ARMv8.3.
+  bool IsBrkC47x = false;
+  if (InstrDesc.isTrap() && mc_inst.getNumOperands() == 1) {
+    const llvm::MCOperand &Op0 = mc_inst.getOperand(0);
+    if (Op0.isImm() && Op0.getImm() >= 0xc470 && Op0.getImm() <= 0xc474)
+      IsBrkC47x = true;
+  }
+
+  return InstrDesc.isAuthenticated() || IsBrkC47x;
+}
+
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string)
     : Disassembler(arch, flavor_string), m_exe_ctx(nullptr), m_inst(nullptr),
-      m_data_from_file(false) {
+      m_data_from_file(false), m_adrp_address(LLDB_INVALID_ADDRESS),
+      m_adrp_insn() {
   if (!FlavorValidForArchSpec(arch, m_flavor.c_str())) {
     m_flavor.assign("default");
   }
@@ -1056,7 +1097,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       thumb_arch_name.erase(0, 3);
       thumb_arch_name.insert(0, "thumb");
     } else {
-      thumb_arch_name = "thumbv8.2a";
+      thumb_arch_name = "thumbv8.7a";
     }
     thumb_arch.GetTriple().setArchName(llvm::StringRef(thumb_arch_name));
   }
@@ -1068,7 +1109,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // specified)
   if (triple.getArch() == llvm::Triple::arm &&
       triple.getSubArch() == llvm::Triple::NoSubArch)
-    triple.setArchName("armv8.2a");
+    triple.setArchName("armv8.7a");
 
   std::string features_str = "";
   const char *triple_str = triple.getTriple().c_str();
@@ -1137,16 +1178,13 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable the ARMv8.5 ISA with SVE extensions so we
-  // can disassemble newer instructions.
-  if (triple.getArch() == llvm::Triple::aarch64 || 
-      triple.getArch() == llvm::Triple::aarch64_32)
-    features_str += "+v8.5a,+sve2";
+  // If any AArch64 variant, enable latest ISA with any optional
+  // extensions like SVE.
+  if (triple.isAArch64()) {
+    features_str += "+v8.7a,+sve2,+mte";
 
-  if ((triple.getArch() == llvm::Triple::aarch64 ||
-       triple.getArch() == llvm::Triple::aarch64_32)
-      && triple.getVendor() == llvm::Triple::Apple) {
-    cpu = "apple-latest";
+    if (triple.getVendor() == llvm::Triple::Apple)
+      cpu = "apple-latest";
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
@@ -1312,6 +1350,46 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
       Target *target = m_exe_ctx ? m_exe_ctx->GetTargetPtr() : nullptr;
       Address value_so_addr;
       Address pc_so_addr;
+      if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64 ||
+          target->GetArchitecture().GetMachine() == llvm::Triple::aarch64_be ||
+          target->GetArchitecture().GetMachine() == llvm::Triple::aarch64_32) {
+        if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
+          m_adrp_address = pc;
+          m_adrp_insn = value;
+          *name = nullptr;
+          *type_ptr = LLVMDisassembler_ReferenceType_InOut_None;
+          return nullptr;
+        }
+        // If this instruction is an ADD and
+        // the previous instruction was an ADRP and
+        // the ADRP's register and this ADD's register are the same,
+        // then this is a pc-relative address calculation.
+        if (*type_ptr == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
+            m_adrp_insn.hasValue() && m_adrp_address == pc - 4 &&
+            (m_adrp_insn.getValue() & 0x1f) == ((value >> 5) & 0x1f)) {
+          uint32_t addxri_inst;
+          uint64_t adrp_imm, addxri_imm;
+          // Get immlo and immhi bits, OR them together to get the ADRP imm
+          // value.
+          adrp_imm = ((m_adrp_insn.getValue() & 0x00ffffe0) >> 3) |
+                     ((m_adrp_insn.getValue() >> 29) & 0x3);
+          // if high bit of immhi after right-shifting set, sign extend
+          if (adrp_imm & (1ULL << 20))
+            adrp_imm |= ~((1ULL << 21) - 1);
+
+          addxri_inst = value;
+          addxri_imm = (addxri_inst >> 10) & 0xfff;
+          // check if 'sh' bit is set, shift imm value up if so
+          // (this would make no sense, ADRP already gave us this part)
+          if ((addxri_inst >> (12 + 5 + 5)) & 1)
+            addxri_imm <<= 12;
+          value = (m_adrp_address & 0xfffffffffffff000LL) + (adrp_imm << 12) +
+                  addxri_imm;
+        }
+        m_adrp_address = LLDB_INVALID_ADDRESS;
+        m_adrp_insn.reset();
+      }
+
       if (m_inst->UsingFileAddress()) {
         ModuleSP module_sp(m_inst->GetAddress().GetModule());
         if (module_sp) {
@@ -1373,12 +1451,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
     }
   }
 
+  // TODO: llvm-objdump sets the type_ptr to the
+  // LLVMDisassembler_ReferenceType_Out_* values
+  // based on where value_so_addr is pointing, with
+  // Mach-O specific augmentations in MachODump.cpp. e.g.
+  // see what AArch64ExternalSymbolizer::tryAddingSymbolicOperand
+  // handles.
   *type_ptr = LLVMDisassembler_ReferenceType_InOut_None;
   *name = nullptr;
   return nullptr;
 }
-
-// PluginInterface protocol
-ConstString DisassemblerLLVMC::GetPluginName() { return GetPluginNameStatic(); }
-
-uint32_t DisassemblerLLVMC::GetPluginVersion() { return 1; }

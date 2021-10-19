@@ -17,10 +17,10 @@
 // Android's gcc and llvm use fp128 for long double.
 // NaCl uses double format for long double, but still has separate overloads.
 void test(long, float, double, long double, long double _Complex) { }
-// A64:  define void @_Z4testlfdgCg(i64 %0, float %1, double %2, fp128 %3, { fp128, fp128 }*
-// G64:  define void @_Z4testlfdeCe(i64 %0, float %1, double %2, x86_fp80 %3, { x86_fp80, x86_fp80 }*
-// P64:  define void @_Z4testlfdgCg(i64 %0, float %1, double %2, ppc_fp128 %3, ppc_fp128 {{.*}}, ppc_fp128
-// A32:  define void @_Z4testlfdeCe(i32 %0, float %1, double %2, double %3, { double, double }*
-// G32:  define void @_Z4testlfdeCe(i32 %0, float %1, double %2, x86_fp80 %3, { x86_fp80, x86_fp80 }*
-// P32:  define void @_Z4testlfdgCg(i32 %0, float %1, double %2, ppc_fp128 %3, { ppc_fp128, ppc_fp128 }*
-// N64: define void @_Z4testlfdeCe(i32 %0, float %1, double %2, double %3, double {{.*}}, double
+// A64:  define{{.*}} void @_Z4testlfdgCg(i64 %0, float %1, double %2, fp128 %3, { fp128, fp128 }*
+// G64:  define{{.*}} void @_Z4testlfdeCe(i64 %0, float %1, double %2, x86_fp80 %3, { x86_fp80, x86_fp80 }*
+// P64:  define{{.*}} void @_Z4testlfdgCg(i64 %0, float %1, double %2, ppc_fp128 %3, ppc_fp128 {{.*}}, ppc_fp128
+// A32:  define{{.*}} void @_Z4testlfdeCe(i32 %0, float %1, double %2, double %3, { double, double }*
+// G32:  define{{.*}} void @_Z4testlfdeCe(i32 %0, float %1, double %2, x86_fp80 %3, { x86_fp80, x86_fp80 }*
+// P32:  define{{.*}} void @_Z4testlfdgCg(i32 %0, float %1, double %2, ppc_fp128 %3, { ppc_fp128, ppc_fp128 }*
+// N64: define{{.*}} void @_Z4testlfdeCe(i32 %0, float %1, double %2, double %3, double {{.*}}, double

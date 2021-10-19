@@ -14,8 +14,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class Block;
@@ -116,7 +116,7 @@ public:
   ///
   /// Initialize with a invalid section (NULL) and an invalid offset
   /// (LLDB_INVALID_ADDRESS).
-  Address() : m_section_wp(), m_offset(LLDB_INVALID_ADDRESS) {}
+  Address() : m_section_wp() {}
 
   /// Copy constructor
   ///
@@ -209,6 +209,10 @@ public:
       return Address::CompareModulePointerAndOffset(a, b) < 0;
     }
   };
+
+  /// Write a description of this object to a Stream.
+  bool GetDescription(Stream &s, Target &target,
+                      lldb::DescriptionLevel level) const;
 
   /// Dump a description of this object to a Stream.
   ///
@@ -487,7 +491,8 @@ public:
 protected:
   // Member variables.
   lldb::SectionWP m_section_wp; ///< The section for the address, can be NULL.
-  lldb::addr_t m_offset; ///< Offset into section if \a m_section_wp is valid...
+  lldb::addr_t m_offset = LLDB_INVALID_ADDRESS; ///< Offset into section if \a
+                                                ///< m_section_wp is valid...
 
   // Returns true if the m_section_wp once had a reference to a valid section
   // shared pointer, but no longer does. This can happen if we have an address

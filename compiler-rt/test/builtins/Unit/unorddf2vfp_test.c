@@ -9,7 +9,7 @@
 
 extern int __unorddf2vfp(double a, double b);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
 int test__unorddf2vfp(double a, double b)
 {
     int actual = __unorddf2vfp(a, b);
@@ -23,7 +23,7 @@ int test__unorddf2vfp(double a, double b)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
     if (test__unorddf2vfp(0.0, NAN))
         return 1;
     if (test__unorddf2vfp(NAN, 1.0))

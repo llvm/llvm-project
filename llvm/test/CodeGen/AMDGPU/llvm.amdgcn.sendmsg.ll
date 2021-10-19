@@ -1,6 +1,6 @@
-;RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SIVI %s
-;RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIPLUS -check-prefix=SIVI %s
-;RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIPLUS -check-prefix=GFX9 %s
+;RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,SIVI %s
+;RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VIPLUS,SIVI %s
+;RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,VIPLUS,GFX9 %s
 
 ; GCN-LABEL: {{^}}test_interrupt:
 ; GCN: s_mov_b32 m0, 0
@@ -134,12 +134,9 @@ body:
   ret void
 }
 
-; TODO: This should use s_mul_i32 instead of v_mul_u32_u24 + v_readfirstlane!
-;
 ; GCN-LABEL: {{^}}test_mul24:
-; GCN: v_mul_u32_u24_e32
-; GCN: v_readfirstlane_b32
-; GCN: s_mov_b32 m0,
+; GCN: s_and_b32 s0, s0, 0x1ff
+; GCN: s_mul_i32 m0, s0, 0x3000
 ; GCN: s_sendmsg sendmsg(MSG_INTERRUPT)
 define amdgpu_gs void @test_mul24(i32 inreg %arg) {
 body:

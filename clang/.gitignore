@@ -26,13 +26,9 @@ cscope.out
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
-# Clang extra user tools, which is tracked independently (clang-tools-extra).
-tools/extra
 # Sphinx build products
 docs/_build
 docs/analyzer/_build
-# debug info testsuite
-test/debuginfo-tests
 
 # VS2017 and VSCode config files.
 .vscode

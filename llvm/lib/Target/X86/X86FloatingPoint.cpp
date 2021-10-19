@@ -610,7 +610,7 @@ static int Lookup(ArrayRef<TableEntry> Table, unsigned Opcode) {
   {                                                                            \
     static std::atomic<bool> TABLE##Checked(false);                            \
     if (!TABLE##Checked.load(std::memory_order_relaxed)) {                     \
-      assert(std::is_sorted(std::begin(TABLE), std::end(TABLE)) &&             \
+      assert(is_sorted(TABLE) &&                                               \
              "All lookup tables must be sorted for efficient access!");        \
       TABLE##Checked.store(true, std::memory_order_relaxed);                   \
     }                                                                          \
@@ -785,6 +785,9 @@ static const TableEntry OpcodeTable[] = {
   { X86::UCOM_Fpr32   , X86::UCOM_Fr   },
   { X86::UCOM_Fpr64   , X86::UCOM_Fr   },
   { X86::UCOM_Fpr80   , X86::UCOM_Fr   },
+  { X86::XAM_Fp32     , X86::XAM_F     },
+  { X86::XAM_Fp64     , X86::XAM_F     },
+  { X86::XAM_Fp80     , X86::XAM_F     },
 };
 
 static unsigned getConcreteOpcode(unsigned Opcode) {
@@ -848,6 +851,7 @@ void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
     I->setDesc(TII->get(Opcode));
     if (Opcode == X86::FCOMPP || Opcode == X86::UCOM_FPPr)
       I->RemoveOperand(0);
+    MI.dropDebugNumber();
   } else {    // Insert an explicit pop
     I = BuildMI(*MBB, ++I, dl, TII->get(X86::ST_FPrr)).addReg(X86::ST0);
   }
@@ -979,8 +983,24 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
   MachineInstr &MI = *I;
   unsigned STReturns = 0;
 
+  bool ClobbersFPStack = false;
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &Op = MI.getOperand(i);
+    // Check if this call clobbers the FP stack.
+    // is sufficient.
+    if (Op.isRegMask()) {
+      bool ClobbersFP0 = Op.clobbersPhysReg(X86::FP0);
+#ifndef NDEBUG
+      static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
+      for (unsigned i = 1; i != 8; ++i)
+        assert(Op.clobbersPhysReg(X86::FP0 + i) == ClobbersFP0 &&
+               "Inconsistent FP register clobber");
+#endif
+
+      if (ClobbersFP0)
+        ClobbersFPStack = true;
+    }
+
     if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
       continue;
 
@@ -994,6 +1014,14 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
     --i;
     --e;
   }
+
+  // Most calls should have a regmask that clobbers the FP registers. If it
+  // isn't present then the register allocator didn't spill the FP registers
+  // so they are still on the stack.
+  assert((ClobbersFPStack || STReturns == 0) &&
+         "ST returns without FP stack clobber");
+  if (!ClobbersFPStack)
+    return;
 
   unsigned N = countTrailingOnes(STReturns);
 
@@ -1009,6 +1037,11 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
 
   for (unsigned I = 0; I < N; ++I)
     pushReg(N - I - 1);
+
+  // If this call has been modified, drop all variable values defined by it.
+  // We can't track them once they've been stackified.
+  if (STReturns)
+    I->dropDebugNumber();
 }
 
 /// If RET has an FP register use operand, pass the first one in ST(0) and
@@ -1112,6 +1145,8 @@ void FPS::handleZeroArgFP(MachineBasicBlock::iterator &I) {
 
   // Result gets pushed on the stack.
   pushReg(DestReg);
+
+  MI.dropDebugNumber();
 }
 
 /// handleOneArgFP - fst <mem>, ST(0)
@@ -1165,6 +1200,8 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
   } else if (KillsSrc) { // Last use of operand?
     popStackAfter(I);
   }
+
+  MI.dropDebugNumber();
 }
 
 
@@ -1205,6 +1242,7 @@ void FPS::handleOneArgFPRW(MachineBasicBlock::iterator &I) {
   MI.RemoveOperand(1); // Drop the source operand.
   MI.RemoveOperand(0); // Drop the destination operand.
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
+  MI.dropDebugNumber();
 }
 
 
@@ -1297,7 +1335,7 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
   bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
   bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
-  DebugLoc dl = MI.getDebugLoc();
+  const DebugLoc &dl = MI.getDebugLoc();
 
   unsigned TOS = getStackEntry(0);
 
@@ -1404,6 +1442,7 @@ void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
   MI.getOperand(0).setReg(getSTReg(Op1));
   MI.RemoveOperand(1);
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
+  MI.dropDebugNumber();
 
   // If any of the operands are killed by this instruction, free them.
   if (KillsOp0) freeStackSlotAfter(I, Op0);
@@ -1430,6 +1469,7 @@ void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
   MI.RemoveOperand(1);
   MI.getOperand(0).setReg(getSTReg(Op1));
   MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
+  MI.dropDebugNumber();
 
   // If we kill the second operand, make sure to pop it from the stack.
   if (Op0 != Op1 && KillsOp1) {
@@ -1526,7 +1566,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 
     // Scan the assembly for ST registers used, defined and clobbered. We can
     // only tell clobbers from defs by looking at the asm descriptor.
-    unsigned STUses = 0, STDefs = 0, STClobbers = 0, STDeadDefs = 0;
+    unsigned STUses = 0, STDefs = 0, STClobbers = 0;
     unsigned NumOps = 0;
     SmallSet<unsigned, 1> FRegIdx;
     unsigned RCID;
@@ -1559,8 +1599,6 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       case InlineAsm::Kind_RegDef:
       case InlineAsm::Kind_RegDefEarlyClobber:
         STDefs |= (1u << STReg);
-        if (MO.isDead())
-          STDeadDefs |= (1u << STReg);
         break;
       case InlineAsm::Kind_Clobber:
         STClobbers |= (1u << STReg);

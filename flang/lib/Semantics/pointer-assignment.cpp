@@ -44,11 +44,13 @@ public:
       : context_{context}, source_{source}, description_{description} {}
   PointerAssignmentChecker(evaluate::FoldingContext &context, const Symbol &lhs)
       : context_{context}, source_{lhs.name()},
-        description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs},
-        procedure_{Procedure::Characterize(lhs, context.intrinsics())} {
+        description_{"pointer '"s + lhs.name().ToString() + '\''}, lhs_{&lhs} {
     set_lhsType(TypeAndShape::Characterize(lhs, context));
     set_isContiguous(lhs.attrs().test(Attr::CONTIGUOUS));
     set_isVolatile(lhs.attrs().test(Attr::VOLATILE));
+    if (IsProcedure(lhs)) {
+      procedure_ = Procedure::Characterize(lhs, context);
+    }
   }
   PointerAssignmentChecker &set_lhsType(std::optional<TypeAndShape> &&);
   PointerAssignmentChecker &set_isContiguous(bool);
@@ -143,7 +145,7 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (const auto *intrinsic{f.proc().GetSpecificIntrinsic()}) {
     funcName = intrinsic->name;
   }
-  auto proc{Procedure::Characterize(f.proc(), context_.intrinsics())};
+  auto proc{Procedure::Characterize(f.proc(), context_)};
   if (!proc) {
     return false;
   }
@@ -169,9 +171,10 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);
-    if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape)) {
-      msg = "%s is associated with the result of a reference to function '%s'"
-            " whose pointer result has an incompatible type or shape"_err_en_US;
+    if (!lhsType_->IsCompatibleWith(context_.messages(), *frTypeAndShape,
+            "pointer", "function result", false /*elemental*/,
+            evaluate::CheckConformanceFlags::BothDeferredShape)) {
+      return false; // IsCompatibleWith() emitted message
     }
   }
   if (msg) {
@@ -219,7 +222,7 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
     } else {
-      if (!lhsType_->type().IsTypeCompatibleWith(rhsType->type())) {
+      if (!lhsType_->type().IsTkCompatibleWith(rhsType->type())) {
         msg = MessageFormattedText{
             "Target type %s is not compatible with pointer type %s"_err_en_US,
             rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
@@ -250,59 +253,11 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   return true;
 }
 
-// Compare procedure characteristics for equality except that lhs may be
-// Pure or Elemental when rhs is not.
-static bool CharacteristicsMatch(const Procedure &lhs, const Procedure &rhs) {
-  using Attr = Procedure::Attr;
-  auto lhsAttrs{rhs.attrs};
-  lhsAttrs.set(
-      Attr::Pure, lhs.attrs.test(Attr::Pure) | rhs.attrs.test(Attr::Pure));
-  lhsAttrs.set(Attr::Elemental,
-      lhs.attrs.test(Attr::Elemental) | rhs.attrs.test(Attr::Elemental));
-  return lhsAttrs == rhs.attrs && lhs.functionResult == rhs.functionResult &&
-      lhs.dummyArguments == rhs.dummyArguments;
-}
-
 // Common handling for procedure pointer right-hand sides
 bool PointerAssignmentChecker::Check(
     parser::CharBlock rhsName, bool isCall, const Procedure *rhsProcedure) {
-  std::optional<MessageFixedText> msg;
-  if (!procedure_) {
-    msg = "In assignment to object %s, the target '%s' is a procedure"
-          " designator"_err_en_US;
-  } else if (!rhsProcedure) {
-    msg = "In assignment to procedure %s, the characteristics of the target"
-          " procedure '%s' could not be determined"_err_en_US;
-  } else if (CharacteristicsMatch(*procedure_, *rhsProcedure)) {
-    // OK
-  } else if (isCall) {
-    msg = "Procedure %s associated with result of reference to function '%s'"
-          " that is an incompatible procedure pointer"_err_en_US;
-  } else if (procedure_->IsPure() && !rhsProcedure->IsPure()) {
-    msg = "PURE procedure %s may not be associated with non-PURE"
-          " procedure designator '%s'"_err_en_US;
-  } else if (procedure_->IsElemental() && !rhsProcedure->IsElemental()) {
-    msg = "ELEMENTAL procedure %s may not be associated with non-ELEMENTAL"
-          " procedure designator '%s'"_err_en_US;
-  } else if (procedure_->IsFunction() && !rhsProcedure->IsFunction()) {
-    msg = "Function %s may not be associated with subroutine"
-          " designator '%s'"_err_en_US;
-  } else if (!procedure_->IsFunction() && rhsProcedure->IsFunction()) {
-    msg = "Subroutine %s may not be associated with function"
-          " designator '%s'"_err_en_US;
-  } else if (procedure_->HasExplicitInterface() &&
-      !rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with explicit interface may not be associated with"
-          " procedure designator '%s' with implicit interface"_err_en_US;
-  } else if (!procedure_->HasExplicitInterface() &&
-      rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with implicit interface may not be associated with"
-          " procedure designator '%s' with explicit interface"_err_en_US;
-  } else {
-    msg = "Procedure %s associated with incompatible procedure"
-          " designator '%s'"_err_en_US;
-  }
-  if (msg) {
+  if (std::optional<MessageFixedText> msg{
+          evaluate::CheckProcCompatibility(isCall, procedure_, rhsProcedure)}) {
     Say(std::move(*msg), description_, rhsName);
     return false;
   }
@@ -310,7 +265,7 @@ bool PointerAssignmentChecker::Check(
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
-  if (auto chars{Procedure::Characterize(d, context_.intrinsics())}) {
+  if (auto chars{Procedure::Characterize(d, context_)}) {
     return Check(d.GetName(), false, &*chars);
   } else {
     return Check(d.GetName(), false);
@@ -319,7 +274,7 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureRef &ref) {
   const Procedure *procedure{nullptr};
-  auto chars{Procedure::Characterize(ref, context_.intrinsics())};
+  auto chars{Procedure::Characterize(ref, context_)};
   if (chars) {
     procedure = &*chars;
     if (chars->functionResult) {
@@ -347,10 +302,13 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
 template <typename... A>
 parser::Message *PointerAssignmentChecker::Say(A &&...x) {
   auto *msg{context_.messages().Say(std::forward<A>(x)...)};
-  if (lhs_) {
-    return evaluate::AttachDeclaration(msg, *lhs_);
-  } else if (!source_.empty()) {
-    msg->Attach(source_, "Declaration of %s"_en_US, description_);
+  if (msg) {
+    if (lhs_) {
+      return evaluate::AttachDeclaration(msg, *lhs_);
+    }
+    if (!source_.empty()) {
+      msg->Attach(source_, "Declaration of %s"_en_US, description_);
+    }
   }
   return msg;
 }
@@ -406,7 +364,7 @@ static bool CheckPointerBounds(
     }
   }
   if (isBoundsRemapping && rhs.Rank() != 1 &&
-      !evaluate::IsSimplyContiguous(rhs, context.intrinsics())) {
+      !evaluate::IsSimplyContiguous(rhs, context)) {
     messages.Say("Pointer bounds remapping target must have rank 1 or be"
                  " simply contiguous"_err_en_US); // 10.2.2.3(9)
   }

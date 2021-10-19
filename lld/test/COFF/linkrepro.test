@@ -1,9 +1,13 @@
 # REQUIRES: x86, shell
 
 # RUN: rm -rf %t.dir
-# RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: echo '_main@0' > %t.order
+# RUN: touch %t.def
+# RUN: touch %t.cg
 
+Test link.exe-style /linkrepro: flag.
+# RUN: mkdir -p %t.dir/build1
 # RUN: cd %t.dir/build1
 # RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \
 # RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
@@ -12,7 +16,7 @@
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
 
-# RUN: cd %t.dir/build1
+Test lld-style /reproduce: flag.
 # RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \
 # RUN:   /entry:main@0 /reproduce:repro2.tar /out:%t.exe
 # RUN: tar xf repro2.tar
@@ -20,26 +24,75 @@
 # RUN: diff %p/Inputs/std32.lib repro2/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro2/response.txt
 
+Test LLD_REPRODUCE env var.
+# RUN: mkdir -p %t.dir/build2
 # RUN: cd %t.dir/build2
-# RUN: lld-link %t.obj /libpath:%p/Inputs /defaultlib:std32 /subsystem:console \
-# RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
+# RUN: env LLD_REPRODUCE=repro.tar lld-link %t.obj %p/Inputs/std32.lib \
+# RUN:    /subsystem:console /entry:main@0 /out:%t.exe
 # RUN: tar xf repro.tar
 # RUN: diff %t.obj repro/%:t.obj
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
 
+Test adding .lib files with /libpath: to repro archive,
+and various other flags.
+# RUN: mkdir -p %t.dir/build3
 # RUN: cd %t.dir/build3
-# RUN: env LIB=%p/Inputs lld-link %t.obj /defaultlib:std32 /subsystem:console \
-# RUN:   /entry:main@0 /linkrepro:. /out:%t.exe
+# RUN: lld-link %t.obj /libpath:%p/Inputs /defaultlib:std32 /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. /out:%t.exe /order:@%t.order /def:%t.def
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
 # RUN: tar xf repro.tar
 # RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.order repro/%:t.order
+# RUN: diff %t.def repro/%:t.def
 # RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
 # RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+Test adding .lib files with LIB env var to repro archive,
+and various other flags.
+# RUN: mkdir -p %t.dir/build4
+# RUN: cd %t.dir/build4
+# RUN: env LIB=%p/Inputs lld-link %t.obj /defaultlib:std32 /subsystem:console \
+# RUN:   /entry:main@0 /linkrepro:. /out:%t.exe /order:@%t.order /def:%t.def
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LIST %s
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.order repro/%:t.order
+# RUN: diff %t.def repro/%:t.def
+# RUN: diff %p/Inputs/std32.lib repro/%:p/Inputs/std32.lib
+# RUN: FileCheck %s --check-prefix=RSP < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# LIST: .obj
+# LIST: std32.lib
+# LIST: response.txt
+# LIST: .def
+# LIST: .order
 
 # RSP: /subsystem:console
 # RSP: /entry:main@0
-# RSP-NOT: /linkrepro:
 # RSP: /out:
+# RSP-NOT: /order:@/
+# RSP-NOT: /def:/
 # RSP: linkrepro.test.tmp.obj
 # RSP-NOT: defaultlib
 # RSP: std32.lib
+
+Test /call-graph-ordering-file (can't be used with /order:, needs separate test)
+# RUN: mkdir -p %t.dir/build5
+# RUN: cd %t.dir/build5
+# RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \
+# RUN:     /entry:main@0 /linkrepro:. /out:%t.exe /call-graph-ordering-file:%t.cg
+# RUN: tar tf repro.tar | FileCheck --check-prefix=LISTCG %s
+# RUN: tar xf repro.tar
+# RUN: diff %t.obj repro/%:t.obj
+# RUN: diff %t.cg repro/%:t.cg
+# RUN: FileCheck %s --check-prefix=RSPCG < repro/response.txt
+# RUN: cd repro; lld-link @response.txt
+
+# LISTCG: .obj
+# LISTCG: response.txt
+# LISTCG: .cg
+
+# RSPCG-NOT: /call-graph-ordering-file:/

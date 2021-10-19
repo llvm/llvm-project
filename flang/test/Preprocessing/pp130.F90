@@ -1,4 +1,4 @@
-! RUN: (%f18 -E %s 2>&1 || true) | FileCheck %s
+! RUN: not %flang -E %s 2>&1 | FileCheck %s
 ! CHECK: error: bad character ('&') in Fortran token
 ! #define KWM &, use for continuation w/o pasting (ifort and nag seem to continue #define)
 #define KWM &

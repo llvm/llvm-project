@@ -10,17 +10,43 @@
 // run-time libraries.
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_stacktrace.h"
+
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
-#include "sanitizer_stacktrace.h"
+#include "sanitizer_platform.h"
+#include "sanitizer_ptrauth.h"
 
 namespace __sanitizer {
 
 uptr StackTrace::GetNextInstructionPc(uptr pc) {
 #if defined(__sparc__) || defined(__mips__)
   return pc + 8;
-#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__)
+#elif defined(__powerpc__) || defined(__arm__) || defined(__aarch64__) || \
+    defined(__hexagon__)
   return pc + 4;
+#elif SANITIZER_RISCV64
+  // Current check order is 4 -> 2 -> 6 -> 8
+  u8 InsnByte = *(u8 *)(pc);
+  if (((InsnByte & 0x3) == 0x3) && ((InsnByte & 0x1c) != 0x1c)) {
+    // xxxxxxxxxxxbbb11 | 32 bit | bbb != 111
+    return pc + 4;
+  }
+  if ((InsnByte & 0x3) != 0x3) {
+    // xxxxxxxxxxxxxxaa | 16 bit | aa != 11
+    return pc + 2;
+  }
+  // RISC-V encoding allows instructions to be up to 8 bytes long
+  if ((InsnByte & 0x3f) == 0x1f) {
+    // xxxxxxxxxx011111 | 48 bit |
+    return pc + 6;
+  }
+  if ((InsnByte & 0x7f) == 0x3f) {
+    // xxxxxxxxx0111111 | 64 bit |
+    return pc + 8;
+  }
+  // bail-out if could not figure out the instruction size
+  return 0;
 #else
   return pc + 1;
 #endif
@@ -39,7 +65,7 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
   top_frame_bp = 0;
 }
 
-// Sparc implemention is in its own file.
+// Sparc implementation is in its own file.
 #if !defined(__sparc__)
 
 // In GCC on ARM bp points to saved lr, not fp, so we should check the next
@@ -94,8 +120,11 @@ void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
     uhwptr pc1 = caller_frame[2];
 #elif defined(__s390__)
     uhwptr pc1 = frame[14];
+#elif defined(__riscv)
+    // frame[-1] contains the return address
+    uhwptr pc1 = frame[-1];
 #else
-    uhwptr pc1 = frame[1];
+    uhwptr pc1 = STRIP_PAC_PC((void *)frame[1]);
 #endif
     // Let's assume that any pointer in the 0th page (i.e. <0x1000 on i386 and
     // x86_64) is invalid and stop unwinding here.  If we're adding support for
@@ -106,7 +135,13 @@ void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
       trace_buffer[size++] = (uptr) pc1;
     }
     bottom = (uptr)frame;
-    frame = GetCanonicFrame((uptr)frame[0], stack_top, bottom);
+#if defined(__riscv)
+    // frame[-2] contain fp of the previous frame
+    uptr new_bp = (uptr)frame[-2];
+#else
+    uptr new_bp = (uptr)frame[0];
+#endif
+    frame = GetCanonicFrame(new_bp, stack_top, bottom);
   }
 }
 

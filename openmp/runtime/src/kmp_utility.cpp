@@ -92,7 +92,7 @@ int __kmp_get_logical_id(int log_per_phy, int apic_id) {
 
 static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     char const *frequency // I: Float number and unit: MHz, GHz, or TGz.
-    ) {
+) {
 
   double value = 0.0;
   char *unit = NULL;
@@ -113,7 +113,7 @@ static kmp_uint64 __kmp_parse_frequency( // R: Frequency in Hz.
     } else { // Wrong unit.
       return result;
     }
-    result = value;
+    result = (kmp_uint64)value; // rounds down
   }
   return result;
 
@@ -129,7 +129,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
 
   p->initialized = 1;
 
-  p->sse2 = 1; // Assume SSE2 by default.
+  p->flags.sse2 = 1; // Assume SSE2 by default.
 
   __kmp_x86_cpuid(0, 0, &buf);
 
@@ -169,7 +169,7 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       data[i] = (t & 0xff);
     }
 
-    p->sse2 = (buf.edx >> 26) & 1;
+    p->flags.sse2 = (buf.edx >> 26) & 1;
 
 #ifdef KMP_DEBUG
 
@@ -230,16 +230,6 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
       log_per_phy = data[2];
       p->apic_id = data[3]; /* Bits 31-24: Processor Initial APIC ID (X) */
       KA_TRACE(trace_level, (" HT(%d TPUs)", log_per_phy));
-
-      if (log_per_phy > 1) {
-/* default to 1k FOR JT-enabled processors (4k on OS X*) */
-#if KMP_OS_DARWIN
-        p->cpu_stackoffset = 4 * 1024;
-#else
-        p->cpu_stackoffset = 1 * 1024;
-#endif
-      }
-
       p->physical_id = __kmp_get_physical_id(log_per_phy, p->apic_id);
       p->logical_id = __kmp_get_logical_id(log_per_phy, p->apic_id);
     }
@@ -257,15 +247,21 @@ void __kmp_query_cpuid(kmp_cpuinfo_t *p) {
                 i, buf.eax, buf.ebx, buf.ecx, buf.edx));
     }
 #endif
-#if KMP_USE_ADAPTIVE_LOCKS
-    p->rtm = 0;
+    p->flags.rtm = 0;
+    p->flags.hybrid = 0;
     if (max_arg > 7) {
       /* RTM bit CPUID.07:EBX, bit 11 */
+      /* HYRBID bit CPUID.07:EDX, bit 15 */
       __kmp_x86_cpuid(7, 0, &buf);
-      p->rtm = (buf.ebx >> 11) & 1;
-      KA_TRACE(trace_level, (" RTM"));
+      p->flags.rtm = (buf.ebx >> 11) & 1;
+      p->flags.hybrid = (buf.edx >> 15) & 1;
+      if (p->flags.rtm) {
+        KA_TRACE(trace_level, (" RTM"));
+      }
+      if (p->flags.hybrid) {
+        KA_TRACE(trace_level, (" HYBRID"));
+      }
     }
-#endif
   }
 
   { // Parse CPU brand string for frequency, saving the string for later.

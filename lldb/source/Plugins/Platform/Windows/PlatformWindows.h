@@ -17,8 +17,6 @@ class PlatformWindows : public RemoteAwarePlatform {
 public:
   PlatformWindows(bool is_host);
 
-  ~PlatformWindows() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -31,9 +29,9 @@ public:
 
   static const char *GetPluginDescriptionStatic(bool is_host);
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost()).GetStringRef();
+  }
 
   // lldb_private::Platform functions
   const char *GetDescription() override {
@@ -46,7 +44,7 @@ public:
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
-                               lldb_private::Target *target,
+                               lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
   lldb::ProcessSP Attach(lldb_private::ProcessAttachInfo &attach_info,
@@ -66,9 +64,8 @@ public:
 
   ConstString GetFullNameForDylib(ConstString basename) override;
 
-private:
-  PlatformWindows(const PlatformWindows &) = delete;
-  const PlatformWindows &operator=(const PlatformWindows &) = delete;
+  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
+                                         BreakpointSite *bp_site) override;
 };
 
 } // namespace lldb_private

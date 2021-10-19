@@ -1,5 +1,5 @@
-; RUN: opt < %s -inline -loop-extract -S | FileCheck %s
-; RUN: opt < %s -argpromotion -loop-extract -S | FileCheck %s
+; RUN: opt < %s -inline -loop-simplify -loop-extract -S | FileCheck %s
+; RUN: opt < %s -argpromotion -loop-simplify -loop-extract -S | FileCheck %s
 
 ; This test used to trigger an assert (PR8929).
 
@@ -37,10 +37,10 @@ declare void @foo()
 ; CHECK-LABEL: define internal void @test.loopentry()
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label %loopentry
-; CHECK:       loopexit.exitStub:
-; CHECK-NEXT:    ret void
 ; CHECK:       loopentry:
 ; CHECK-NEXT:    br i1 false, label %loopbody, label %loopexit.exitStub
 ; CHECK:       loopbody:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %loopentry
+; CHECK:       loopexit.exitStub:
+; CHECK-NEXT:    ret void

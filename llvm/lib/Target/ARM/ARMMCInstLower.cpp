@@ -110,7 +110,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     APFloat Val = MO.getFPImm()->getValueAPF();
     bool ignored;
     Val.convert(APFloat::IEEEdouble(), APFloat::rmTowardZero, &ignored);
-    MCOp = MCOperand::createFPImm(Val.convertToDouble());
+    MCOp = MCOperand::createDFPImm(bit_cast<uint64_t>(Val.convertToDouble()));
     break;
   }
   case MachineOperand::MO_RegisterMask:
@@ -194,7 +194,7 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   //   BLX ip
   //   POP{ r0, lr }
   //
-  OutStreamer->emitCodeAlignment(4);
+  OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();

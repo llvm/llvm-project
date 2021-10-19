@@ -83,8 +83,7 @@ namespace clang {
   /// over bytes that are in a RopePieceBTree.  This first iterates over bytes
   /// in a RopePiece, then iterates over RopePiece's in a RopePieceBTreeLeaf,
   /// then iterates over RopePieceBTreeLeaf's in a RopePieceBTree.
-  class RopePieceBTreeIterator :
-      public std::iterator<std::forward_iterator_tag, const char, ptrdiff_t> {
+  class RopePieceBTreeIterator {
     /// CurNode - The current B+Tree node that we are inspecting.
     const void /*RopePieceBTreeLeaf*/ *CurNode = nullptr;
 
@@ -96,6 +95,12 @@ namespace clang {
     unsigned CurChar = 0;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = const char;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     RopePieceBTreeIterator() = default;
     RopePieceBTreeIterator(const void /*RopePieceBTreeNode*/ *N);
 

@@ -14,30 +14,29 @@ define void @b_copy_ctor() personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-LABEL: @b_copy_ctor(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load %struct.L*, %struct.L** @GV1, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint %struct.L* [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.L* [[TMP0]] to i8*
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[CALL_I_NOEXC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i64 [[LSR_IV]] to %struct.L*
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = inttoptr i64 [[LSR_IV]] to %struct.L*
 ; CHECK-NEXT:    invoke void @a_copy_ctor()
 ; CHECK-NEXT:    to label [[CALL_I_NOEXC]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       call.i.noexc:
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 16
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -16
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[TMP2:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP3:%.*]] = catchpad within [[TMP2]] [i8* null, i32 64, i8* null]
-; CHECK-NEXT:    [[CMP16:%.*]] = icmp eq %struct.L* [[TMP]], null
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[TMP1]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* getelementptr inbounds (%struct.L, %struct.L* @GV2, i32 0, i32 0), i64 [[TMP4]]
+; CHECK-NEXT:    [[CMP16:%.*]] = icmp eq %struct.L* [[LSR_IV2]], null
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, i8* [[TMP1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[UGLYGEP1:%.*]] = bitcast i8* [[UGLYGEP]] to %struct.L*
 ; CHECK-NEXT:    br i1 [[CMP16]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[LSR_IV]] to %struct.L*
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq %struct.L* [[UGLYGEP1]], [[TMP5]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq %struct.L* [[UGLYGEP1]], @GV2
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

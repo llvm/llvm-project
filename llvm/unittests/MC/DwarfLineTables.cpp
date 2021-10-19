@@ -13,7 +13,7 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace {
 struct Context {
-  const char *Triple = "x86_64-pc-linux";
+  const char *TripleName = "x86_64-pc-linux";
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> Ctx;
@@ -33,14 +33,15 @@ struct Context {
 
     // If we didn't build x86, do not run the test.
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
     if (!TheTarget)
       return;
 
-    MRI.reset(TheTarget->createMCRegInfo(Triple));
+    MRI.reset(TheTarget->createMCRegInfo(TripleName));
     MCTargetOptions MCOptions;
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, Triple, MCOptions));
-    Ctx = std::make_unique<MCContext>(MAI.get(), MRI.get(), nullptr);
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
+                                      /*MSTI=*/nullptr);
   }
 
   operator bool() { return Ctx.get(); }

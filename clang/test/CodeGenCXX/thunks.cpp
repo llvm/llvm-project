@@ -1,18 +1,18 @@
 // Sparc64 doesn't support musttail (yet), so it uses method cloning for
 // variadic thunks. Use it for testing.
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -munwind-tables -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT %s
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -munwind-tables -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -debug-info-kind=standalone -dwarf-version=5 -funwind-tables=2 -emit-llvm -o - \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-NONOPT,CHECK-DBG %s
-// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -munwind-tables -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=sparc64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-CLONE,CHECK-OPT %s
 
 // Test x86_64, which uses musttail for variadic thunks.
-// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -munwind-tables -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=x86_64-pc-linux-gnu -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=CHECK,CHECK-TAIL,CHECK-OPT %s
 
 // Finally, reuse these tests for the MS ABI.
-// RUN: %clang_cc1 %s -triple=x86_64-windows-msvc -munwind-tables -emit-llvm -o - -O1 -disable-llvm-passes \
+// RUN: %clang_cc1 %s -triple=x86_64-windows-msvc -funwind-tables=2 -emit-llvm -o - -O1 -disable-llvm-passes \
 // RUN:     | FileCheck --check-prefixes=WIN64 %s
 
 
@@ -30,11 +30,11 @@ struct B {
 
 struct C : A, B {
   virtual void c();
-  
+
   virtual void f();
 };
 
-// CHECK-LABEL: define void @_ZThn8_N5Test11C1fEv(
+// CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test11C1fEv(
 // CHECK-DBG-NOT: dbg.declare
 // CHECK: ret void
 //
@@ -59,7 +59,7 @@ struct B : virtual A {
   virtual void f();
 };
 
-// CHECK-LABEL: define void @_ZTv0_n24_N5Test21B1fEv(
+// CHECK-LABEL: define{{.*}} void @_ZTv0_n24_N5Test21B1fEv(
 // CHECK-DBG-NOT: dbg.declare
 // CHECK: ret void
 void B::f() { }
@@ -83,11 +83,11 @@ struct A {
 
 struct B : A {
   virtual void b();
-  
+
   virtual V2 *f();
 };
 
-// CHECK: define %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
+// CHECK: define{{.*}} %{{.*}}* @_ZTch0_v0_n24_N5Test31B1fEv(
 // WIN64: define weak_odr dso_local %{{.*}} @"?f@B@Test3@@QEAAPEAUV1@2@XZ"(
 V2 *B::f() { return 0; }
 
@@ -107,7 +107,7 @@ struct B {
 
 struct __attribute__((visibility("protected"))) C : A, B {
   virtual void c();
-  
+
   virtual void f();
 };
 
@@ -142,8 +142,8 @@ namespace Test4B {
   void C::f() {}
 
   // Force C::f to be used.
-  void f() { 
-    C c; 
+  void f() {
+    C c;
     c.f();
   }
 }
@@ -203,16 +203,16 @@ namespace Test6 {
     virtual X f();
   };
 
-  // CHECK-LABEL: define void @_ZThn16_N5Test66Thunks1fEv
+  // CHECK-LABEL: define{{.*}} void @_ZThn16_N5Test66Thunks1fEv
 	// CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
-  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret align 1}}
+  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret(.+) align 1}}
   // CHECK: ret void
   X Thunks::f() { return X(); }
 
-  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
+  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret({{.*}}) align 1 %{{.*}})
   // WIN64-NOT: memcpy
-  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
+  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret({{.*}}) align 1 %{{.*}})
 }
 
 namespace Test7 {
@@ -254,7 +254,7 @@ namespace Test7 {
 
   void D::baz(X, X&, _Complex float, Small, Small&, Large) { }
 
-  // CHECK-LABEL: define void @_ZThn8_N5Test71D3bazENS_1XERS1_CfNS_5SmallERS4_NS_5LargeE(
+  // CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test71D3bazENS_1XERS1_CfNS_5SmallERS4_NS_5LargeE(
   // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
   // CHECK: ret void
@@ -269,10 +269,10 @@ namespace Test8 {
   struct B { virtual void bar(NonPOD); };
   struct C : A, B { virtual void bar(NonPOD); static void helper(NonPOD); };
 
-  // CHECK: define void @_ZN5Test81C6helperENS_6NonPODE([[NONPODTYPE:%.*]]*
+  // CHECK: define{{.*}} void @_ZN5Test81C6helperENS_6NonPODE([[NONPODTYPE:%.*]]*
   void C::helper(NonPOD var) {}
 
-  // CHECK-LABEL: define void @_ZThn8_N5Test81C3barENS_6NonPODE(
+  // CHECK-LABEL: define{{.*}} void @_ZThn8_N5Test81C3barENS_6NonPODE(
   // CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: load [[NONPODTYPE]], [[NONPODTYPE]]*
   // CHECK-NOT: memcpy
@@ -412,7 +412,7 @@ namespace Test13 {
   // CHECK: getelementptr inbounds i8, i8* {{.*}}, i64 8
   // CHECK: ret %"struct.Test13::D"*
 
-  // WIN64-LABEL: define weak_odr dso_local nonnull align 8 dereferenceable(8) %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
+  // WIN64-LABEL: define weak_odr dso_local %"struct.Test13::D"* @"?foo1@D@Test13@@$4PPPPPPPE@A@EAAAEAUB1@2@XZ"(
   //    This adjustment.
   // WIN64: getelementptr inbounds i8, i8* {{.*}}, i64 -12
   //    Call implementation.
@@ -436,7 +436,7 @@ namespace Test14 {
   };
   void C::f() {
   }
-  // CHECK: define void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
+  // CHECK: define{{.*}} void @_ZThn8_N6Test141C1fEv({{.*}}) unnamed_addr [[NUW:#[0-9]+]]
   // CHECK-DBG-NOT: dbg.declare
   // CHECK: ret void
 }
@@ -529,7 +529,7 @@ C c;
 // CHECK-NONOPT-LABEL: define linkonce_odr void @_ZThn8_N6Test101C3fooEv
 
 // Checking with opt
-// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* %this) unnamed_addr #0 align 2
+// CHECK-OPT-LABEL: define internal void @_ZThn8_N6Test4B12_GLOBAL__N_11C1fEv(%"struct.Test4B::(anonymous namespace)::C"* %this) unnamed_addr #1 align 2
 
 // This is from Test5:
 // CHECK-OPT-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test51B1fEv

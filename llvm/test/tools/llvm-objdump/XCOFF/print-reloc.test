@@ -1,5 +1,3 @@
-# REQUIRES: powerpc-registered-target
-
 # RUN: llvm-objdump -r %p/Inputs/xcoff-section-headers.o | \
 # RUN:   FileCheck --match-full-lines --strict-whitespace %s
 

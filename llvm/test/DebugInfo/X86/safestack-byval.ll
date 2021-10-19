@@ -21,7 +21,7 @@
 @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global i8*
 
 ; Function Attrs: norecurse nounwind readonly safestack uwtable
-define i32 @_Z1f1Sm(%struct.S* byval nocapture readonly align 8 %zzz, i64 %len) #0 !dbg !12 {
+define i32 @_Z1f1Sm(%struct.S* byval(%struct.S) nocapture readonly align 8 %zzz, i64 %len) #0 !dbg !12 {
 entry:
   %unsafe_stack_ptr = load i8*, i8** @__safestack_unsafe_stack_ptr, !dbg !22
   %unsafe_stack_static_top = getelementptr i8, i8* %unsafe_stack_ptr, i32 -400, !dbg !22

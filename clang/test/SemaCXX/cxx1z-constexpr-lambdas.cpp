@@ -93,7 +93,7 @@ void f() {
 }
   
 void f(char c) { //expected-note{{declared here}}
-  auto L = [] { return c; }; //expected-error{{cannot be implicitly captured}} expected-note{{lambda expression begins here}}
+  auto L = [] { return c; }; //expected-error{{cannot be implicitly captured}} expected-note{{lambda expression begins here}} expected-note 2 {{capture 'c' by}} expected-note 2 {{default capture by}}
   int I = L();
 }
 

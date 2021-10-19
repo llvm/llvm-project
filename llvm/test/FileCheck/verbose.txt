@@ -51,9 +51,9 @@ V-NEXT: {{^}}^~~{{$}}
 VV-NEXT: verbose.txt:[[@LINE-17]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
 VV-NEXT:  {{C}}HECK-NOT: raboof{{$}}
 VV-NEXT: {{^}}           ^{{$}}
-VV-NEXT: verbose.txt:[[@LINE-22]]:1: note: scanning from here
-VV-NEXT: {{^}}bar{{$}}
-VV-NEXT: {{^}}^{{$}}
+VV-NEXT: verbose.txt:[[@LINE-23]]:4: note: scanning from here
+VV-NEXT: {{^}}foo{{$}}
+VV-NEXT: {{^}}   ^{{$}}
 
 STRVAR=foobar
 STRVAR:foobar
@@ -109,9 +109,9 @@ V-NEXT: {{^}}^{{$}}
 VV-NEXT: verbose.txt:[[#@LINE-23]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
 VV-NEXT: {{C}}HECK-NOT: {{[[][[]#NUMVAR [+] 1[]][]]$}}
 VV-NEXT:   {{^}}           ^{{$}}
-VV-NEXT: verbose.txt:[[#@LINE-28]]:1: note: scanning from here
-VV-NEXT: {{^}}NUMVAR - 1:41{{$}}
-VV-NEXT: {{^}}^{{$}}
+VV-NEXT: verbose.txt:[[#@LINE-29]]:10: note: scanning from here
+VV-NEXT: {{^}}NUMVAR=42{{$}}
+VV-NEXT: {{^}}         ^{{$}}
 
 before empty
 
@@ -191,9 +191,9 @@ VV:      {{^}}^
 VV-NEXT: verbose.txt:[[@LINE-16]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
 VV-NEXT: {{C}}HECK-NOT: {{[{][{]z[}][}]yx$}}
 VV-NEXT:   {{^}}           ^{{$}}
-VV-NEXT: verbose.txt:[[@LINE-20]]:1: note: scanning from here
-VV-NEXT: {{^C}}HECK: xyz{{$}}
-VV-NEXT: {{^}}^{{$}}
+VV-NEXT: verbose.txt:[[@LINE-21]]:4: note: scanning from here
+VV-NEXT: {{^}}xyz{{$}}
+VV-NEXT: {{^}}   ^{{$}}
 
 QUIET-NOT: {{.}}
 V-NOT: {{.}}

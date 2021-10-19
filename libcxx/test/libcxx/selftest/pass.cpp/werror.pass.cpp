@@ -17,6 +17,6 @@
 // TODO: We don't enable -Werror on GCC right now, because too many tests fail.
 // UNSUPPORTED: gcc
 
-int main() {
+int main(int, char**) {
     int foo;
 }

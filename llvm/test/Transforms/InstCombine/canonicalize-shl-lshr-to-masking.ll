@@ -171,7 +171,7 @@ define <3 x i32> @positive_sameconst_vec_undef1(<3 x i32> %x) {
 
 define <3 x i32> @positive_sameconst_vec_undef2(<3 x i32> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef2(
-; CHECK-NEXT:    [[RET:%.*]] = and <3 x i32> [[X:%.*]], <i32 134217727, i32 undef, i32 134217727>
+; CHECK-NEXT:    [[RET:%.*]] = and <3 x i32> [[X:%.*]], <i32 134217727, i32 poison, i32 134217727>
 ; CHECK-NEXT:    ret <3 x i32> [[RET]]
 ;
   %tmp0 = shl <3 x i32> %x, <i32 5, i32 undef, i32 5>

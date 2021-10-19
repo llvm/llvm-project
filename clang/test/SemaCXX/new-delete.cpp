@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
 
 #include <stddef.h>
 
@@ -31,10 +32,10 @@ inline void *operator new(size_t) { // no warning, due to __attribute__((used))
 }
 
 // PR5823
-void* operator new(const size_t); // expected-note 2 {{candidate}}
-void* operator new(size_t, int*); // expected-note 3 {{candidate}}
-void* operator new(size_t, float*); // expected-note 3 {{candidate}}
-void* operator new(size_t, S); // expected-note 2 {{candidate}}
+void* operator new(const size_t); // expected-note {{candidate}}
+void* operator new(size_t, int*); // expected-note 2{{candidate}}
+void* operator new(size_t, float*); // expected-note 2{{candidate}}
+void* operator new(size_t, S); // expected-note {{candidate}}
 
 struct foo { };
 
@@ -129,7 +130,7 @@ void bad_news(int *ip)
   (void)new (0, 0) int; // expected-error {{no matching function for call to 'operator new'}}
   (void)new (0L) int; // expected-error {{call to 'operator new' is ambiguous}}
   // This must fail, because the member version shouldn't be found.
-  (void)::new ((S*)0) U; // expected-error {{no matching function for call to 'operator new'}}
+  (void)::new ((S*)0) U; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
   // This must fail, because any member version hides all global versions.
   (void)new U; // expected-error {{no matching function for call to 'operator new'}}
   (void)new (int[]); // expected-error {{array size must be specified in new expression with no initializer}}
@@ -140,6 +141,14 @@ void bad_news(int *ip)
 #if __cplusplus < 201103L
   (void)new int[]{}; // expected-error {{array size must be specified in new expression with no initializer}}
 #endif
+}
+
+void no_matching_placement_new() {
+  struct X { int n; };
+  __attribute__((aligned(__alignof(X)))) unsigned char buffer[sizeof(X)];
+  (void)new(buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
+  (void)new(+buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
+  (void)new(&buffer) X; // expected-error {{no matching 'operator new' function for non-allocating placement new expression; include <new>}}
 }
 
 void good_deletes()
@@ -620,4 +629,14 @@ template<typename ...T> int *dependent_array_size(T ...v) {
 int *p0 = dependent_array_size();
 int *p3 = dependent_array_size(1, 2, 3);
 int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
+#endif
+
+// FIXME: Our behavior here is incredibly inconsistent. GCC allows
+// constant-folding in array bounds in new-expressions.
+int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
+#if __cplusplus >= 201402L
+// expected-error@-2 {{array size is not a constant expression}}
+// expected-note@-3 {{cannot refer to element 12 of non-array}}
+#elif __cplusplus < 201103L
+// expected-error@-5 {{cannot allocate object of variably modified type}}
 #endif

@@ -10,7 +10,7 @@ define float @negfp(float %a, float %b) nounwind {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    subss {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
 ; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    popl %eax

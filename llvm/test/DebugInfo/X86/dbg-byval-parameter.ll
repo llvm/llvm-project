@@ -1,10 +1,10 @@
-; RUN: %llc_dwarf -march=x86 -asm-verbose < %s | grep DW_TAG_formal_parameter
+; RUN: llc -mtriple=x86_64 -asm-verbose < %s | grep DW_TAG_formal_parameter
 
 
 %struct.Pt = type { double, double }
 %struct.Rect = type { %struct.Pt, %struct.Pt }
 
-define double @foo(%struct.Rect* byval %my_r0) nounwind ssp !dbg !1 {
+define double @foo(%struct.Rect* byval(%struct.Rect) %my_r0) nounwind ssp !dbg !1 {
 entry:
   %retval = alloca double                         ; <double*> [#uses=2]
   %0 = alloca double                              ; <double*> [#uses=2]

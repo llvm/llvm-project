@@ -29,22 +29,15 @@ public:
   X86CallLowering(const X86TargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<Register> VRegs) const override;
+                   ArrayRef<Register> VRegs,
+                   FunctionLoweringInfo &FLI) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs,
+                            FunctionLoweringInfo &FLI) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
-
-private:
-  /// A function of this type is used to perform value split action.
-  using SplitArgTy = std::function<void(ArrayRef<Register>)>;
-
-  bool splitToValueTypes(const ArgInfo &OrigArgInfo,
-                         SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL, MachineRegisterInfo &MRI,
-                         SplitArgTy SplitArg) const;
 };
 
 } // end namespace llvm

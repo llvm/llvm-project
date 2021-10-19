@@ -7,4 +7,5 @@
 //===----------------------------------------------------------------------===//
 
 class CatInlineAsm : DiagCategory<"Inline Assembly Issue">;
+class CatSourceMgr : DiagCategory<"SourceMgr Reported Issue">;
 class CatBackend : DiagCategory<"Backend Issue">;

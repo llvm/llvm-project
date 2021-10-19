@@ -268,7 +268,8 @@ void Fortran::lower::CharacterExprHelper::createAssign(
   // Pad if needed.
   if (!compileTimeSameLength) {
     auto one = builder.createIntegerConstant(loc, lhs.getLen().getType(), 1);
-    auto maxPadding = builder.create<mlir::SubIOp>(loc, lhs.getLen(), one);
+    auto maxPadding =
+        builder.create<mlir::arith::SubIOp>(loc, lhs.getLen(), one);
     createPadding(lhs, copyCount, maxPadding);
   }
 }
@@ -276,17 +277,17 @@ void Fortran::lower::CharacterExprHelper::createAssign(
 fir::CharBoxValue Fortran::lower::CharacterExprHelper::createConcatenate(
     const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
   mlir::Value len =
-      builder.create<mlir::AddIOp>(loc, lhs.getLen(), rhs.getLen());
+      builder.create<mlir::arith::AddIOp>(loc, lhs.getLen(), rhs.getLen());
   auto temp = createTemp(getCharacterType(rhs), len);
   createCopy(temp, lhs, lhs.getLen());
   auto one = builder.createIntegerConstant(loc, len.getType(), 1);
-  auto upperBound = builder.create<mlir::SubIOp>(loc, len, one);
+  auto upperBound = builder.create<mlir::arith::SubIOp>(loc, len, one);
   auto lhsLen =
       builder.createConvert(loc, builder.getIndexType(), lhs.getLen());
   Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
       lhs.getLen(), upperBound, one,
       [&](Fortran::lower::FirOpBuilder &bldr, mlir::Value index) {
-        auto rhsIndex = bldr.create<mlir::SubIOp>(loc, index, lhsLen);
+        auto rhsIndex = bldr.create<mlir::arith::SubIOp>(loc, index, lhsLen);
         auto charVal = createLoadCharAt(rhs, rhsIndex);
         createStoreCharAt(temp, index, charVal);
       });
@@ -312,7 +313,8 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
   auto lowerBound = castBounds[0];
   // FIR CoordinateOp is zero based but Fortran substring are one based.
   auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
-  auto offset = builder.create<mlir::SubIOp>(loc, lowerBound, one).getResult();
+  auto offset =
+      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
   auto idxType = builder.getIndexType();
   if (offset.getType() != idxType)
     offset = builder.createConvert(loc, idxType, offset);
@@ -323,17 +325,17 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
   mlir::Value substringLen{};
   if (nbounds < 2) {
     substringLen =
-        builder.create<mlir::SubIOp>(loc, str.getLen(), castBounds[0]);
+        builder.create<mlir::arith::SubIOp>(loc, str.getLen(), castBounds[0]);
   } else {
     substringLen =
-        builder.create<mlir::SubIOp>(loc, castBounds[1], castBounds[0]);
+        builder.create<mlir::arith::SubIOp>(loc, castBounds[1], castBounds[0]);
   }
-  substringLen = builder.create<mlir::AddIOp>(loc, substringLen, one);
+  substringLen = builder.create<mlir::arith::AddIOp>(loc, substringLen, one);
 
   // Set length to zero if bounds were reversed (Fortran 2018 9.4.1)
   auto zero = builder.createIntegerConstant(loc, substringLen.getType(), 0);
-  auto cdt = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::slt,
-                                          substringLen, zero);
+  auto cdt = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, substringLen, zero);
   substringLen = builder.create<mlir::SelectOp>(loc, cdt, zero, substringLen);
 
   return {substringRef, substringLen};
@@ -341,36 +343,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
 
 mlir::Value Fortran::lower::CharacterExprHelper::createLenTrim(
     const fir::CharBoxValue &str) {
-  // Note: Runtime for LEN_TRIM should also be available at some
-  // point. For now use an inlined implementation.
-  auto indexType = builder.getIndexType();
-  auto len = builder.createConvert(loc, indexType, str.getLen());
-  auto one = builder.createIntegerConstant(loc, indexType, 1);
-  auto minusOne = builder.createIntegerConstant(loc, indexType, -1);
-  auto zero = builder.createIntegerConstant(loc, indexType, 0);
-  auto trueVal = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
-  auto blank = createBlankConstantCode(getCharacterType(str));
-  mlir::Value lastChar = builder.create<mlir::SubIOp>(loc, len, one);
-
-  auto iterWhile = builder.create<fir::IterWhileOp>(
-      loc, lastChar, zero, minusOne, trueVal, lastChar);
-  auto insPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToStart(iterWhile.getBody());
-  auto index = iterWhile.getInductionVar();
-  // Look for first non-blank from the right of the character.
-  auto c = createLoadCharAt(str, index);
-  c = builder.createConvert(loc, blank.getType(), c);
-  auto isBlank =
-      builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::eq, blank, c);
-  llvm::SmallVector<mlir::Value, 2> results = {isBlank, index};
-  builder.create<fir::ResultOp>(loc, results);
-  builder.restoreInsertionPoint(insPt);
-  // Compute length after iteration (zero if all blanks)
-  mlir::Value newLen =
-      builder.create<mlir::AddIOp>(loc, iterWhile.getResult(1), one);
-  auto result =
-      builder.create<SelectOp>(loc, iterWhile.getResult(0), zero, newLen);
-  return builder.createConvert(loc, getLengthType(), result);
+  return {};
 }
 
 mlir::Value Fortran::lower::CharacterExprHelper::createTemp(mlir::Type type,

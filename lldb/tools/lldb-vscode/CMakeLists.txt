@@ -27,16 +27,19 @@ add_lldb_tool(lldb-vscode
   lldb-vscode.cpp
   BreakpointBase.cpp
   ExceptionBreakpoint.cpp
+  FifoFiles.cpp
   FunctionBreakpoint.cpp
   IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
+  OutputRedirector.cpp
+  ProgressEvent.cpp
+  RunInTerminal.cpp
   SourceBreakpoint.cpp
   VSCode.cpp
 
   LINK_LIBS
     liblldb
-    ${host_lib}
     ${extra_libs}
 
   LINK_COMPONENTS

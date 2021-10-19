@@ -21,8 +21,8 @@
 
 ; We are expecting foo() to be inlined in main() (almost all the cycles are
 ; spent inside foo).
-; CHECK: remark: remarks.cc:13:21: _Z3foov inlined into main to match profiling context with (cost=130, threshold=225) at callsite main:0
-; CHECK: remark: remarks.cc:9:19: rand inlined into main to match profiling context with (cost=always): always inline attribute at callsite _Z3foov:6 @ main:0
+; CHECK: remark: remarks.cc:13:21: '_Z3foov' inlined into 'main' to match profiling context with (cost=130, threshold=2147483647) at callsite main:0:21;
+; CHECK: remark: remarks.cc:9:19: 'rand' inlined into 'main' to match profiling context with (cost=always): always inline attribute at callsite _Z3foov:6:19 @ main:0:21;
 
 ; The back edge for the loop is the hottest edge in the loop subgraph.
 ; CHECK: remark: remarks.cc:6:9: most popular destination for conditional branches at remarks.cc:5:3
@@ -37,22 +37,27 @@
 ;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 13, Column: 21 }
 ;YAML-NEXT:  Function:        main
 ;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - Callee:          _Z3foov
 ;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 3, Column: 0 }
-;YAML-NEXT:    - String:          ' inlined into '
+;YAML-NEXT:    - String:          ''' inlined into '
 ;YAML-NEXT:    - Caller:          main
 ;YAML-NEXT:        DebugLoc:        { File: remarks.cc, Line: 13, Column: 0 }
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - String:          ' to match profiling context'
 ;YAML-NEXT:    - String:          ' with '
 ;YAML-NEXT:    - String:          '(cost='
 ;YAML-NEXT:    - Cost:            '130'
 ;YAML-NEXT:    - String:          ', threshold='
-;YAML-NEXT:    - Threshold:       '225'
+;YAML-NEXT:    - Threshold:       '2147483647'
 ;YAML-NEXT:    - String:          ')'
 ;YAML-NEXT:    - String:          ' at callsite '
 ;YAML-NEXT:    - String:          main
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Line:            '0'
+;YAML-NEXT:    - String:          ':'
+;YAML-NEXT:    - Column:          '21'
+;YAML-NEXT:    - String:          ';'
 ;YAML-NEXT:  ...
 ;YAML:       --- !Passed
 ;YAML-NEXT:  Pass:            sample-profile-inline
@@ -60,11 +65,13 @@
 ;YAML-NEXT:  DebugLoc:        { File: remarks.cc, Line: 9, Column: 19 }
 ;YAML-NEXT:  Function:        main
 ;YAML-NEXT:  Args:
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - Callee:          rand
 ;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 90, Column: 0 }
-;YAML-NEXT:    - String:          ' inlined into '
+;YAML-NEXT:    - String:          ''' inlined into '''
 ;YAML-NEXT:    - Caller:          main
 ;YAML-NEXT:      DebugLoc:        { File: remarks.cc, Line: 13, Column: 0 }
+;YAML-NEXT:    - String:          ''''
 ;YAML-NEXT:    - String:          ' to match profiling context'
 ;YAML-NEXT:    - String:          ' with '
 ;YAML-NEXT:    - String:          '(cost=always)'
@@ -74,10 +81,15 @@
 ;YAML-NEXT:    - String:          _Z3foov
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Line:            '6'
+;YAML-NEXT:    - String:          ':'
+;YAML-NEXT:    - Column:          '19'
 ;YAML-NEXT:    - String:          ' @ '
 ;YAML-NEXT:    - String:          main
 ;YAML-NEXT:    - String:          ':'
 ;YAML-NEXT:    - Line:            '0'
+;YAML-NEXT:    - String:          ':'
+;YAML-NEXT:    - Column:          '21'
+;YAML-NEXT:    - String:          ';'
 ;YAML:  --- !Analysis
 ;YAML-NEXT:  Pass:            sample-profile
 ;YAML-NEXT:  Name:            AppliedSamples

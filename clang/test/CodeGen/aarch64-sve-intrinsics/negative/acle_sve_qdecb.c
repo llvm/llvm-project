@@ -105,3 +105,9 @@ uint64_t test_svqdecb_pat_n_u64_1(uint64_t op)
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [1, 16]}}
   return SVE_ACLE_FUNC(svqdecb_pat,_n_u64,,)(op, SV_VL7, 17);
 }
+
+uint64_t test_svqdecb_svprfop(uint64_t op)
+{
+  // expected-warning@+1 {{implicit conversion from enumeration type 'enum svprfop' to different enumeration type 'enum svpattern'}}
+  return SVE_ACLE_FUNC(svqdecb_pat,_n_u64,,)(op, SV_PLDL1KEEP, 1);
+}

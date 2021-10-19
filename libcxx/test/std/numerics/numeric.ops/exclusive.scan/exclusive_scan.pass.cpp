@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
+// <numeric>
+
+// Became constexpr in C++20
 // template<class InputIterator, class OutputIterator, class T>
 //     OutputIterator exclusive_scan(InputIterator first, InputIterator last,
 //                                   OutputIterator result, T init);
@@ -16,52 +18,53 @@
 
 #include <numeric>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
-#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template <class Iter1, class T, class Iter2>
-void
-test(Iter1 first, Iter1 last, T init, Iter2 rFirst, Iter2 rLast)
+template <class Iter1, class T>
+TEST_CONSTEXPR_CXX20 void
+test(Iter1 first, Iter1 last, T init, const T *rFirst, const T *rLast)
 {
-    std::vector<typename std::iterator_traits<Iter1>::value_type> v;
+    assert((rLast - rFirst) <= 5);  // or else increase the size of "out"
+    T out[5];
 
-//  Not in place
-    std::exclusive_scan(first, last, std::back_inserter(v), init);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // Not in place
+    T *end = std::exclusive_scan(first, last, out, init);
+    assert(std::equal(out, end, rFirst, rLast));
 
-//  In place
-    v.clear();
-    v.assign(first, last);
-    std::exclusive_scan(v.begin(), v.end(), v.begin(), init);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // In place
+    std::copy(first, last, out);
+    end = std::exclusive_scan(out, end, out, init);
+    assert(std::equal(out, end, rFirst, rLast));
 }
 
-
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
-          int ia[]   = {1, 3, 5, 7,  9};
+    int ia[]         = {1, 3, 5, 7,  9};
     const int pRes[] = {0, 1, 4, 9, 16};
     const unsigned sa = sizeof(ia) / sizeof(ia[0]);
     static_assert(sa == sizeof(pRes) / sizeof(pRes[0]));       // just to be sure
 
-    for (unsigned int i = 0; i < sa; ++i )
+    for (unsigned int i = 0; i < sa; ++i) {
         test(Iter(ia), Iter(ia + i), 0, pRes, pRes + i);
+    }
 }
 
-size_t triangle(size_t n) { return n*(n+1)/2; }
+constexpr size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
-void basic_tests()
+TEST_CONSTEXPR_CXX20 void
+basic_tests()
 {
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::fill(v.begin(), v.end(), 3);
     std::exclusive_scan(v.begin(), v.end(), v.begin(), size_t{50});
     for (size_t i = 0; i < v.size(); ++i)
@@ -69,7 +72,7 @@ void basic_tests()
     }
 
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::iota(v.begin(), v.end(), 0);
     std::exclusive_scan(v.begin(), v.end(), v.begin(), size_t{30});
     for (size_t i = 0; i < v.size(); ++i)
@@ -77,7 +80,7 @@ void basic_tests()
     }
 
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::iota(v.begin(), v.end(), 1);
     std::exclusive_scan(v.begin(), v.end(), v.begin(), size_t{40});
     for (size_t i = 0; i < v.size(); ++i)
@@ -86,17 +89,27 @@ void basic_tests()
 
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
     basic_tests();
 
 //  All the iterator categories
-    test<input_iterator        <const int*> >();
+    test<cpp17_input_iterator        <const int*> >();
     test<forward_iterator      <const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
     test<      int*>();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

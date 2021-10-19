@@ -9,17 +9,24 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZCALLINGCONV_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZCALLINGCONV_H
 
+#include "SystemZSubtarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
 namespace llvm {
 namespace SystemZ {
-  const unsigned NumArgGPRs = 5;
-  extern const MCPhysReg ArgGPRs[NumArgGPRs];
+  const unsigned ELFNumArgGPRs = 5;
+  extern const MCPhysReg ELFArgGPRs[ELFNumArgGPRs];
 
-  const unsigned NumArgFPRs = 4;
-  extern const MCPhysReg ArgFPRs[NumArgFPRs];
+  const unsigned ELFNumArgFPRs = 4;
+  extern const MCPhysReg ELFArgFPRs[ELFNumArgFPRs];
+
+  const unsigned XPLINK64NumArgGPRs = 3;
+  extern const MCPhysReg XPLINK64ArgGPRs[XPLINK64NumArgGPRs];
+
+  const unsigned XPLINK64NumArgFPRs = 4;
+  extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
 } // end namespace SystemZ
 
 class SystemZCCState : public CCState {
@@ -107,7 +114,16 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   // OK, we've collected all parts in the pending list.  Allocate
   // the location (register or stack slot) for the indirect pointer.
   // (This duplicates the usual i64 calling convention rules.)
-  unsigned Reg = State.AllocateReg(SystemZ::ArgGPRs);
+  unsigned Reg;
+  const SystemZSubtarget &Subtarget =
+      State.getMachineFunction().getSubtarget<SystemZSubtarget>();
+  if (Subtarget.isTargetELF())
+    Reg = State.AllocateReg(SystemZ::ELFArgGPRs);
+  else if (Subtarget.isTargetXPLINK64())
+    Reg = State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
+  else
+    llvm_unreachable("Unknown Calling Convention!");
+
   unsigned Offset = Reg ? 0 : State.AllocateStack(8, Align(8));
 
   // Use that same location for all the pending parts.
@@ -122,6 +138,80 @@ inline bool CC_SystemZ_I128Indirect(unsigned &ValNo, MVT &ValVT,
   PendingMembers.clear();
 
   return true;
+}
+
+inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                   CCValAssign::LocInfo &LocInfo,
+                                   ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  if (LocVT == MVT::f32 || LocVT == MVT::f64) {
+    State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
+  }
+  if (LocVT == MVT::f128 || LocVT.is128BitVector()) {
+    // Shadow next two GPRs, if available.
+    State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
+    State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
+
+    // Quad precision floating point needs to
+    // go inside pre-defined FPR pair.
+    if (LocVT == MVT::f128) {
+      for (unsigned I = 0; I < SystemZ::XPLINK64NumArgFPRs; I += 2)
+        if (State.isAllocated(SystemZ::XPLINK64ArgFPRs[I]))
+          State.AllocateReg(SystemZ::XPLINK64ArgFPRs[I + 1]);
+    }
+  }
+  return false;
+}
+
+inline bool CC_XPLINK64_Allocate128BitVararg(unsigned &ValNo, MVT &ValVT,
+                                             MVT &LocVT,
+                                             CCValAssign::LocInfo &LocInfo,
+                                             ISD::ArgFlagsTy &ArgFlags,
+                                             CCState &State) {
+  if (LocVT.getSizeInBits() < 128)
+    return false;
+
+  if (static_cast<SystemZCCState *>(&State)->IsFixed(ValNo))
+    return false;
+
+  // For any C or C++ program, this should always be
+  // false, since it is illegal to have a function
+  // where the first argument is variadic. Therefore
+  // the first fixed argument should already have
+  // allocated GPR1 either through shadowing it or
+  // using it for parameter passing.
+  State.AllocateReg(SystemZ::R1D);
+
+  bool AllocGPR2 = State.AllocateReg(SystemZ::R2D);
+  bool AllocGPR3 = State.AllocateReg(SystemZ::R3D);
+
+  // If GPR2 and GPR3 are available, then we may pass vararg in R2Q.
+  if (AllocGPR2 && AllocGPR3) {
+    State.addLoc(
+        CCValAssign::getReg(ValNo, ValVT, SystemZ::R2Q, LocVT, LocInfo));
+    return true;
+  }
+
+  // If only GPR3 is available, we allocate on stack but need to
+  // set custom handling to copy hi bits into GPR3.
+  if (!AllocGPR2 && AllocGPR3) {
+    auto Offset = State.AllocateStack(16, Align(8));
+    State.addLoc(
+        CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+    return true;
+  }
+
+  return false;
+}
+
+inline bool RetCC_SystemZ_Error(unsigned &, MVT &, MVT &,
+                                CCValAssign::LocInfo &, ISD::ArgFlagsTy &,
+                                CCState &) {
+  llvm_unreachable("Return value calling convention currently unsupported.");
+}
+
+inline bool CC_SystemZ_Error(unsigned &, MVT &, MVT &, CCValAssign::LocInfo &,
+                             ISD::ArgFlagsTy &, CCState &) {
+  llvm_unreachable("Argument calling convention currently unsupported.");
 }
 
 inline bool CC_SystemZ_GHC_Error(unsigned &, MVT &, MVT &,

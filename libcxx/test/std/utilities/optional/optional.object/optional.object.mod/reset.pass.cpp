@@ -28,7 +28,7 @@ struct X
 
 bool X::dtor_called = false;
 
-int main(int, char**)
+constexpr bool check_reset()
 {
     {
         optional<int> opt;
@@ -41,6 +41,15 @@ int main(int, char**)
         opt.reset();
         assert(static_cast<bool>(opt) == false);
     }
+    return true;
+}
+
+int main(int, char**)
+{
+    check_reset();
+#if TEST_STD_VER >= 20
+    static_assert(check_reset());
+#endif
     {
         optional<X> opt;
         static_assert(noexcept(opt.reset()) == true, "");

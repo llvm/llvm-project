@@ -15,8 +15,6 @@
 
 #include "ManagedStringPool.h"
 #include "NVPTXSubtarget.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -64,6 +62,7 @@ public:
   }
 
   void adjustPassManager(PassManagerBuilder &) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   TargetTransformInfo getTargetTransformInfo(const Function &F) override;
 

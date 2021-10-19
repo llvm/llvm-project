@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -analyzer-config eagerly-assume=false %s
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -verify -DEAGERLY_ASSUME=1 -w %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -verify -DEAGERLY_ASSUME=1 -DBIT32=1 -w %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-store=region -Wno-pointer-to-int-cast -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -verify -DEAGERLY_ASSUME=1 -w %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -fenable-matrix -analyzer-checker=core,alpha.core,debug.ExprInspection -Wno-pointer-to-int-cast -verify -DEAGERLY_ASSUME=1 -DBIT32=1 -w %s
 
 extern void clang_analyzer_eval(_Bool);
 
@@ -193,6 +193,27 @@ void testSwitchWithSizeofs() {
   }
 }
 
+void test_ToUnion_cast(unsigned long long x) {
+  union Key {
+    unsigned long long data;
+  };
+  void clang_analyzer_dump_union(union Key);
+  clang_analyzer_dump_union((union Key)x); // expected-warning {{Unknown}}
+}
+
+typedef char cx5x5 __attribute__((matrix_type(5, 5)));
+typedef int ix5x5 __attribute__((matrix_type(5, 5)));
+void test_MatrixCast_cast(cx5x5 c) {
+  void clang_analyzer_dump_ix5x5(ix5x5);
+  clang_analyzer_dump_ix5x5((ix5x5)c); // expected-warning {{Unknown}}
+}
+
+void test_VectorSplat_cast(long x) {
+  typedef int __attribute__((ext_vector_type(2))) V;
+  void clang_analyzer_dump_V(V);
+  clang_analyzer_dump_V((V)x); // expected-warning {{Unknown}}
+}
+
 #endif
 
 #ifdef EAGERLY_ASSUME
@@ -245,3 +266,15 @@ double no_crash_reinterpret_double_as_sym_ptr(double a, void * b) {
   return a * a;
 }
 
+void no_crash_reinterpret_char_as_uchar(char ***a, int *b) {
+  *(unsigned char **)a = (unsigned char *)b;
+  if (**a == 0) // no-crash
+    ;
+}
+
+// PR50179.
+struct S {};
+void symbolic_offset(struct S *ptr, int i) {
+  const struct S *pS = ptr + i;
+  struct S s = *pS; // no-crash
+}

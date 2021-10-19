@@ -9,9 +9,6 @@
 #ifdef DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
 enum {
-  sve_fpsr = fpu_fpsr,
-  sve_fpcr = fpu_fpcr,
-
   sve_vg = exc_far,
 
   sve_z0,
@@ -266,71 +263,6 @@ static uint32_t g_sve_v30_invalidates[] = {sve_z30, fpu_d30, fpu_s30,
 static uint32_t g_sve_v31_invalidates[] = {sve_z31, fpu_d31, fpu_s31,
                                            LLDB_INVALID_REGNUM};
 
-static uint32_t g_sve_z0_invalidates[] = {fpu_v0, fpu_d0, fpu_s0,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z1_invalidates[] = {fpu_v1, fpu_d1, fpu_s1,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z2_invalidates[] = {fpu_v2, fpu_d2, fpu_s2,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z3_invalidates[] = {fpu_v3, fpu_d3, fpu_s3,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z4_invalidates[] = {fpu_v4, fpu_d4, fpu_s4,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z5_invalidates[] = {fpu_v5, fpu_d5, fpu_s5,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z6_invalidates[] = {fpu_v6, fpu_d6, fpu_s6,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z7_invalidates[] = {fpu_v7, fpu_d7, fpu_s7,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z8_invalidates[] = {fpu_v8, fpu_d8, fpu_s8,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z9_invalidates[] = {fpu_v9, fpu_d9, fpu_s9,
-                                          LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z10_invalidates[] = {fpu_v10, fpu_d10, fpu_s10,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z11_invalidates[] = {fpu_v11, fpu_d11, fpu_s11,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z12_invalidates[] = {fpu_v12, fpu_d12, fpu_s12,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z13_invalidates[] = {fpu_v13, fpu_d13, fpu_s13,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z14_invalidates[] = {fpu_v14, fpu_d14, fpu_s14,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z15_invalidates[] = {fpu_v15, fpu_d15, fpu_s15,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z16_invalidates[] = {fpu_v16, fpu_d16, fpu_s16,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z17_invalidates[] = {fpu_v17, fpu_d17, fpu_s17,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z18_invalidates[] = {fpu_v18, fpu_d18, fpu_s18,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z19_invalidates[] = {fpu_v19, fpu_d19, fpu_s19,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z20_invalidates[] = {fpu_v20, fpu_d20, fpu_s20,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z21_invalidates[] = {fpu_v21, fpu_d21, fpu_s21,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z22_invalidates[] = {fpu_v22, fpu_d22, fpu_s22,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z23_invalidates[] = {fpu_v23, fpu_d23, fpu_s23,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z24_invalidates[] = {fpu_v24, fpu_d24, fpu_s24,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z25_invalidates[] = {fpu_v25, fpu_d25, fpu_s25,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z26_invalidates[] = {fpu_v26, fpu_d26, fpu_s26,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z27_invalidates[] = {fpu_v27, fpu_d27, fpu_s27,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z28_invalidates[] = {fpu_v28, fpu_d28, fpu_s28,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z29_invalidates[] = {fpu_v29, fpu_d29, fpu_s29,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z30_invalidates[] = {fpu_v30, fpu_d30, fpu_s30,
-                                           LLDB_INVALID_REGNUM};
-static uint32_t g_sve_z31_invalidates[] = {fpu_v31, fpu_d31, fpu_s31,
-                                           LLDB_INVALID_REGNUM};
-
 static uint32_t g_contained_z0[] = {sve_z0, LLDB_INVALID_REGNUM};
 static uint32_t g_contained_z1[] = {sve_z1, LLDB_INVALID_REGNUM};
 static uint32_t g_contained_z2[] = {sve_z2, LLDB_INVALID_REGNUM};
@@ -377,7 +309,6 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #vreg, nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,  \
         VREG_KIND(vreg), g_contained_##zreg, g_sve_##vreg##_invalidates,       \
-        nullptr, 0                                                             \
   }
 
 // Defines S and D pseudo registers mapping over corresponding vector register
@@ -385,21 +316,20 @@ static uint32_t g_contained_z31[] = {sve_z31, LLDB_INVALID_REGNUM};
   {                                                                            \
     #reg, nullptr, size, 0, lldb::eEncodingIEEE754, lldb::eFormatFloat,        \
         LLDB_KIND(fpu_##reg), g_contained_##zreg, g_sve_##reg##_invalidates,   \
-        nullptr, 0                                                             \
   }
 
 // Defines a Z vector register with 16-byte default size
 #define DEFINE_ZREG(reg)                                                       \
   {                                                                            \
     #reg, nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,   \
-        SVE_REG_KIND(reg), nullptr, g_sve_##reg##_invalidates, nullptr, 0      \
+        SVE_REG_KIND(reg), nullptr, nullptr,                                   \
   }
 
 // Defines a P vector register with 2-byte default size
 #define DEFINE_PREG(reg)                                                       \
   {                                                                            \
     #reg, nullptr, 2, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,    \
-        SVE_REG_KIND(reg), nullptr, nullptr, nullptr, 0                        \
+        SVE_REG_KIND(reg), nullptr, nullptr,                                   \
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_sve_le[] = {

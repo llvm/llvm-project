@@ -107,6 +107,12 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
   NumInstrsSteppedOver = 0;
 
   while (Iter != EndIter) {
+    if (Iter->isDebugInstr()) {
+      // Skip debug instructions
+      ++Iter;
+      continue;
+    }
+
     NextPred = getVPTInstrPredicate(*Iter, PredReg);
     assert(NextPred != ARMVCC::Else &&
            "VPT block pass does not expect Else preds");
@@ -170,6 +176,8 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
   LLVM_DEBUG(for (MachineBasicBlock::instr_iterator AddedInstIter =
                       std::next(BlockBeg);
                   AddedInstIter != Iter; ++AddedInstIter) {
+    if (AddedInstIter->isDebugInstr())
+      continue;
     dbgs() << "  adding: ";
     AddedInstIter->dump();
   });
@@ -197,7 +205,7 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
     if (!IsVPRDefinedOrKilledByBlock(Iter, VPNOTBlockEndIter))
       break;
 
-    LLVM_DEBUG(dbgs() << "  removing VPNOT: "; Iter->dump(););
+    LLVM_DEBUG(dbgs() << "  removing VPNOT: "; Iter->dump());
 
     // Record the new size of the block
     BlockSize += ElseInstCnt;
@@ -211,6 +219,9 @@ CreateVPTBlock(MachineBasicBlock::instr_iterator &Iter,
     // Note that we are using "Iter" to iterate over the block so we can update
     // it at the same time.
     for (; Iter != VPNOTBlockEndIter; ++Iter) {
+      if (Iter->isDebugInstr())
+        continue;
+
       // Find the register in which the predicate is
       int OpIdx = findFirstVPTPredOperandIdx(*Iter);
       assert(OpIdx != -1);
@@ -270,24 +281,31 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       MIBuilder.add(VCMP->getOperand(1));
       MIBuilder.add(VCMP->getOperand(2));
       MIBuilder.add(VCMP->getOperand(3));
+
+      // We need to remove any kill flags between the original VCMP and the new
+      // insertion point.
+      for (MachineInstr &MII :
+           make_range(VCMP->getIterator(), MI->getIterator())) {
+        MII.clearRegisterKills(VCMP->getOperand(1).getReg(), TRI);
+        MII.clearRegisterKills(VCMP->getOperand(2).getReg(), TRI);
+      }
+
       VCMP->eraseFromParent();
     } else {
       MIBuilder = BuildMI(Block, MI, DL, TII->get(ARM::MVE_VPST));
       MIBuilder.addImm((uint64_t)BlockMask);
     }
 
+    // Erase all dead instructions (VPNOT's). Do that now so that they do not
+    // mess with the bundle creation.
+    for (MachineInstr *DeadMI : DeadInstructions)
+      DeadMI->eraseFromParent();
+    DeadInstructions.clear();
+
     finalizeBundle(
         Block, MachineBasicBlock::instr_iterator(MIBuilder.getInstr()), MBIter);
 
     Modified = true;
-  }
-
-  // Erase all dead instructions
-  for (MachineInstr *DeadMI : DeadInstructions) {
-    if (DeadMI->isInsideBundle())
-      DeadMI->eraseFromBundle();
-    else
-      DeadMI->eraseFromParent();
   }
 
   return Modified;

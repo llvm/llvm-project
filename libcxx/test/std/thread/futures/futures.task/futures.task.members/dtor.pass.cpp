@@ -18,6 +18,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 class A
@@ -34,10 +35,7 @@ void func(std::packaged_task<double(int, char)>)
 {
 }
 
-void func2(std::packaged_task<double(int, char)> p)
-{
-    p(3, 'a');
-}
+void func2(std::packaged_task<double(int, char)> p) { p(3, 97); }
 
 int main(int, char**)
 {
@@ -45,7 +43,7 @@ int main(int, char**)
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        std::thread(func, std::move(p)).detach();
+        support::make_test_thread(func, std::move(p)).detach();
         try
         {
             double i = f.get();
@@ -61,7 +59,7 @@ int main(int, char**)
     {
         std::packaged_task<double(int, char)> p(A(5));
         std::future<double> f = p.get_future();
-        std::thread(func2, std::move(p)).detach();
+        support::make_test_thread(func2, std::move(p)).detach();
         assert(f.get() == 105.0);
     }
 

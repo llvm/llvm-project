@@ -793,7 +793,7 @@ void parallel_simd(float *a) {
 #pragma omp for simd
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     invoke i32 {{.*}}bar{{.*}}()
-  // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
+  // TERM_DEBUG:     unwind label %[[TERM_LPAD:[a-zA-Z0-9\.]+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     [[TERM_LPAD]]
   // TERM_DEBUG:     call void @__clang_call_terminate

@@ -14,8 +14,8 @@ define arm_aapcs_vfpcc float @vctpi32(float* %0, i32 %1) {
 ; CHECK-NEXT:    vmvn.i32 q1, #0x1f
 ; CHECK-NEXT:    vmov.32 q3[0], r0
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vadd.i32 q1, q3, q1
 ; CHECK-NEXT:    subs r3, r1, #1
+; CHECK-NEXT:    vadd.i32 q1, q3, q1
 ; CHECK-NEXT:    vidup.u32 q2, r2, #8
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vadd.i32 q1, q2, r0

@@ -21,12 +21,12 @@ typedef union {
 
 void f0(transp_t0 obj);
 
-// CHECK-LABEL: define void @f1_0(i32* %a0)
+// CHECK-LABEL: define{{.*}} void @f1_0(i32* %a0)
 // CHECK:  call void @f0(i8* %{{.*}})
 // CHECK:  call void %{{.*}}(i8* %{{[a-z0-9]*}})
 // CHECK: }
 
-// ARM-LABEL: define arm_aapcscc void @f1_0(i32* %a0)
+// ARM-LABEL: define{{.*}} arm_aapcscc void @f1_0(i32* %a0)
 // ARM:  call arm_aapcscc void @f0(i8* %{{.*}})
 // ARM:  call arm_aapcscc void %{{.*}}(i8* %{{[a-z0-9]*}})
 // ARM: }

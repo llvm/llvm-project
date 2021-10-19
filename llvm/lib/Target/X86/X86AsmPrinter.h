@@ -23,6 +23,7 @@ class MCCodeEmitter;
 class MCStreamer;
 class X86Subtarget;
 class TargetMachine;
+struct ASanAccessInfo;
 
 class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   const X86Subtarget *Subtarget = nullptr;
@@ -98,6 +99,23 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   void LowerFENTRY_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
 
+  // Address sanitizer specific lowering for X86.
+  void LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI);
+  void emitAsanMemaccessSymbols(Module &M);
+  void emitAsanMemaccessPartial(Module &M, unsigned Reg,
+                                const ASanAccessInfo &AccessInfo,
+                                MCSubtargetInfo &STI);
+  void emitAsanMemaccessFull(Module &M, unsigned Reg,
+                             const ASanAccessInfo &AccessInfo,
+                             MCSubtargetInfo &STI);
+  void emitAsanReportError(Module &M, unsigned Reg,
+                           const ASanAccessInfo &AccessInfo,
+                           MCSubtargetInfo &STI);
+
+  typedef std::tuple<unsigned /*Reg*/, uint32_t /*AccessInfo*/>
+      AsanMemaccessTuple;
+  std::map<AsanMemaccessTuple, MCSymbol *> AsanMemaccessSymbols;
+
   // Choose between emitting .seh_ directives and .cv_fpo_ directives.
   void EmitSEHInstruction(const MachineInstr *MI);
 
@@ -134,9 +152,9 @@ public:
   }
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &OS) override;
+                       const char *ExtraCode, raw_ostream &O) override;
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                             const char *ExtraCode, raw_ostream &OS) override;
+                             const char *ExtraCode, raw_ostream &O) override;
 
   bool doInitialization(Module &M) override {
     SMShadowTracker.reset(0);
@@ -145,7 +163,7 @@ public:
     return AsmPrinter::doInitialization(M);
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
   void emitFunctionBodyStart() override;
   void emitFunctionBodyEnd() override;
 };

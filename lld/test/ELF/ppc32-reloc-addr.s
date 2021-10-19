@@ -19,8 +19,13 @@
 # CHECK-LABEL: section .R_PPC_ADDR16_LO:
 # CHECK: addi 4, 4, 4660
 
+.section .R_PPC_ADDR24,"ax",@progbits
+  ba a
+# CHECK-LABEL: section .R_PPC_ADDR24:
+# CHECK: ba 4660
+
 .section .R_PPC_ADDR32,"a",@progbits
   .long a
   .long b
 # HEX-LABEL: section .R_PPC_ADDR32:
-# HEX-NEXT: 100000b4 00001234 000bcdef
+# HEX-NEXT: {{.*}} 00001234 000bcdef

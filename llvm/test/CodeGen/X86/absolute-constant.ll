@@ -14,7 +14,7 @@ define void @bar(i8* %x) {
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp xf # TAILCALL
+; CHECK-NEXT:    jmp xf@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB0_1: # %if.end
 ; CHECK-NEXT:    retq
 ;

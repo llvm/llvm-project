@@ -7,7 +7,7 @@
 ; Check that no FP constants in this testcase ends up in the 
 ; constant pool.
 
-@G = external global float              ; <float*> [#uses=1]
+@G = external dso_local global float              ; <float*> [#uses=1]
 
 declare void @extfloat(float)
 

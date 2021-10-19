@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -32,8 +32,7 @@ class SarifDiagnostics : public PathDiagnosticConsumer {
   const LangOptions &LO;
 
 public:
-  SarifDiagnostics(AnalyzerOptions &, const std::string &Output,
-                   const LangOptions &LO)
+  SarifDiagnostics(const std::string &Output, const LangOptions &LO)
       : OutputFile(Output), LO(LO) {}
   ~SarifDiagnostics() override = default;
 
@@ -48,16 +47,18 @@ public:
 } // end anonymous namespace
 
 void ento::createSarifDiagnosticConsumer(
-    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
     const std::string &Output, const Preprocessor &PP,
-    const cross_tu::CrossTranslationUnitContext &CTU) {
+    const cross_tu::CrossTranslationUnitContext &CTU,
+    const MacroExpansionContext &MacroExpansions) {
 
   // TODO: Emit an error here.
   if (Output.empty())
     return;
 
-  C.push_back(new SarifDiagnostics(AnalyzerOpts, Output, PP.getLangOpts()));
-  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, Output, PP, CTU);
+  C.push_back(new SarifDiagnostics(Output, PP.getLangOpts()));
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
+                                          CTU, MacroExpansions);
 }
 
 static StringRef getFileName(const FileEntry &FE) {
@@ -160,9 +161,8 @@ static unsigned int adjustColumnPos(const SourceManager &SM, SourceLocation Loc,
   assert(LocInfo.second > SM.getExpansionColumnNumber(Loc) &&
          "position in file is before column number?");
 
-  bool InvalidBuffer = false;
-  const MemoryBuffer *Buf = SM.getBuffer(LocInfo.first, &InvalidBuffer);
-  assert(!InvalidBuffer && "got an invalid buffer for the location's file");
+  Optional<MemoryBufferRef> Buf = SM.getBufferOrNone(LocInfo.first);
+  assert(Buf && "got an invalid buffer for the location's file");
   assert(Buf->getBufferSize() >= (LocInfo.second + TokenLen) &&
          "token extends past end of buffer?");
 
@@ -387,7 +387,7 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
   // file can become large very quickly, so decoding into JSON to append a run
   // may be an expensive operation.
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC) {
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=R600 %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=R600 %s
 
 @private1 = private unnamed_addr addrspace(4) constant [4 x float] [float 0.0, float 1.0, float 2.0, float 3.0]
 @private2 = private unnamed_addr addrspace(4) constant [4 x float] [float 4.0, float 5.0, float 6.0, float 7.0]
@@ -13,10 +13,10 @@
 
 ; Non-R600 OSes use relocations.
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], private1@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], private1@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], private1@rel32@hi+12
 ; GCN: s_getpc_b64 s{{\[}}[[PC1_LO:[0-9]+]]:[[PC1_HI:[0-9]+]]{{\]}}
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC1_LO]], private2@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], private2@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], private2@rel32@hi+12
 
 ; R600-LABEL: private_test
 define amdgpu_kernel void @private_test(i32 %index, float addrspace(1)* %out) {
@@ -32,7 +32,7 @@ define amdgpu_kernel void @private_test(i32 %index, float addrspace(1)* %out) {
 ; GCN-LABEL: {{^}}available_externally_test:
 ; GCN: s_getpc_b64 s{{\[}}[[PC0_LO:[0-9]+]]:[[PC0_HI:[0-9]+]]{{\]}}
 ; GCN: s_add_u32 s{{[0-9]+}}, s[[PC0_LO]], available_externally@gotpcrel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], available_externally@gotpcrel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC0_HI]], available_externally@gotpcrel32@hi+12
 ; R600-LABEL: available_externally_test
 define amdgpu_kernel void @available_externally_test(i32 addrspace(1)* %out) {
   %ptr = getelementptr [256 x i32], [256 x i32] addrspace(4)* @available_externally, i32 0, i32 1

@@ -9,7 +9,7 @@
 
 extern COMPILER_RT_ABI unsigned int __fixunsdfsivfp(double a);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
 int test__fixunsdfsivfp(double a)
 {
     unsigned int actual = __fixunsdfsivfp(a);
@@ -23,7 +23,7 @@ int test__fixunsdfsivfp(double a)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
     if (test__fixunsdfsivfp(0.0))
         return 1;
     if (test__fixunsdfsivfp(1.0))

@@ -9,7 +9,7 @@
 #ifndef LLDB_CORE_DEBUGGER_H
 #define LLDB_CORE_DEBUGGER_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <memory>
 #include <vector>
@@ -42,9 +42,9 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Threading.h"
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdio>
 
 namespace llvm {
 class raw_ostream;
@@ -73,6 +73,50 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
   friend class SourceManager; // For GetSourceFileCache.
 
 public:
+  /// Broadcaster event bits definitions.
+  enum {
+    eBroadcastBitProgress = (1 << 0),
+  };
+
+  static ConstString GetStaticBroadcasterClass();
+
+  /// Get the public broadcaster for this debugger.
+  Broadcaster &GetBroadcaster() { return m_broadcaster; }
+  const Broadcaster &GetBroadcaster() const { return m_broadcaster; }
+
+  class ProgressEventData : public EventData {
+
+  public:
+    ProgressEventData(uint64_t progress_id, const std::string &message,
+                      uint64_t completed, uint64_t total,
+                      bool debugger_specific)
+        : m_message(message), m_id(progress_id), m_completed(completed),
+          m_total(total), m_debugger_specific(debugger_specific) {}
+
+    static ConstString GetFlavorString();
+
+    ConstString GetFlavor() const override;
+
+    void Dump(Stream *s) const override;
+
+    static const ProgressEventData *
+    GetEventDataFromEvent(const Event *event_ptr);
+    uint64_t GetID() const { return m_id; }
+    uint64_t GetCompleted() const { return m_completed; }
+    uint64_t GetTotal() const { return m_total; }
+    const std::string &GetMessage() const { return m_message; }
+    bool IsDebuggerSpecific() const { return m_debugger_specific; }
+
+  private:
+    std::string m_message;
+    const uint64_t m_id;
+    uint64_t m_completed;
+    const uint64_t m_total;
+    const bool m_debugger_specific;
+    ProgressEventData(const ProgressEventData &) = delete;
+    const ProgressEventData &operator=(const ProgressEventData &) = delete;
+  };
+
   ~Debugger() override;
 
   static lldb::DebuggerSP
@@ -246,6 +290,8 @@ public:
 
   const FormatEntity::Entry *GetFrameFormatUnique() const;
 
+  uint32_t GetStopDisassemblyMaxSize() const;
+
   const FormatEntity::Entry *GetThreadFormat() const;
 
   const FormatEntity::Entry *GetThreadStopFormat() const;
@@ -334,8 +380,8 @@ public:
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target is present you want to prime the dummy
   // target with entities that will be copied over to new targets.
-  Target *GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target *GetDummyTarget() { return m_dummy_target_sp.get(); }
+  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
+  Target &GetDummyTarget() { return *m_dummy_target_sp; }
 
   lldb::BroadcasterManagerSP GetBroadcasterManager() {
     return m_broadcaster_manager_sp;
@@ -344,6 +390,40 @@ public:
 protected:
   friend class CommandInterpreter;
   friend class REPL;
+  friend class Progress;
+
+  /// Report progress events.
+  ///
+  /// Progress events will be delivered to any debuggers that have listeners
+  /// for the eBroadcastBitProgress. This function is called by the
+  /// lldb_private::Progress class to deliver the events to any debuggers that
+  /// qualify.
+  ///
+  /// \param [in] progress_id
+  ///   The unique integer identifier for the progress to report.
+  ///
+  /// \param[in] message
+  ///   The title of the progress dialog to display in the UI.
+  ///
+  /// \param [in] completed
+  ///   The amount of work completed. If \a completed is zero, then this event
+  ///   is a progress started event. If \a completed is equal to \a total, then
+  ///   this event is a progress end event. Otherwise completed indicates the
+  ///   current progress compare to the total value.
+  ///
+  /// \param [in] total
+  ///   The total amount of work units that need to be completed. If this value
+  ///   is UINT64_MAX, then an indeterminate progress indicator should be
+  ///   displayed.
+  ///
+  /// \param [in] debugger_id
+  ///   If this optional parameter has a value, it indicates the unique
+  ///   debugger identifier that this progress should be delivered to. If this
+  ///   optional parameter does not have a value, the progress will be
+  ///   delivered to all debuggers.
+  static void ReportProgress(uint64_t progress_id, const std::string &message,
+                             uint64_t completed, uint64_t total,
+                             llvm::Optional<lldb::user_id_t> debugger_id);
 
   bool StartEventHandlerThread();
 
@@ -430,7 +510,8 @@ protected:
   LoadedPluginsList m_loaded_plugins;
   HostThread m_event_handler_thread;
   HostThread m_io_handler_thread;
-  Broadcaster m_sync_broadcaster;
+  Broadcaster m_sync_broadcaster; ///< Private debugger synchronization.
+  Broadcaster m_broadcaster;      ///< Public Debugger event broadcaster.
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;

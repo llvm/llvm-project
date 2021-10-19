@@ -143,14 +143,10 @@ bool PlatformRemoteiOS::GetSupportedArchitectureAtIndex(uint32_t idx,
   return ARMGetSupportedArchitectureAtIndex(idx, arch);
 }
 
-
-void PlatformRemoteiOS::GetDeviceSupportDirectoryNames (std::vector<std::string> &dirnames) 
-{
-    dirnames.clear();
-    dirnames.push_back("iOS DeviceSupport");
+llvm::StringRef PlatformRemoteiOS::GetDeviceSupportDirectoryName() {
+  return "iOS DeviceSupport";
 }
 
-std::string PlatformRemoteiOS::GetPlatformName ()
-{
-    return "iPhoneOS.platform";
+llvm::StringRef PlatformRemoteiOS::GetPlatformName() {
+  return "iPhoneOS.platform";
 }

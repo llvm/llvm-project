@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -23,9 +24,6 @@ using namespace mlir;
 
 #define DEBUG_TYPE "pattern-matcher"
 
-/// The max number of iterations scanning for pattern match.
-static unsigned maxPatternMatchIterations = 10;
-
 //===----------------------------------------------------------------------===//
 // GreedyPatternRewriteDriver
 //===----------------------------------------------------------------------===//
@@ -36,15 +34,16 @@ namespace {
 class GreedyPatternRewriteDriver : public PatternRewriter {
 public:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
-                                      const OwningRewritePatternList &patterns)
-      : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
+                                      const FrozenRewritePatternSet &patterns,
+                                      const GreedyRewriteConfig &config)
+      : PatternRewriter(ctx), matcher(patterns), folder(ctx), config(config) {
     worklist.reserve(64);
 
     // Apply a simple cost model based solely on pattern benefit.
     matcher.applyDefaultCostModel();
   }
 
-  bool simplify(MutableArrayRef<Region> regions, int maxIterations);
+  bool simplify(MutableArrayRef<Region> regions);
 
   void addToWorklist(Operation *op) {
     // Check to see if the worklist already contains this op.
@@ -82,6 +81,25 @@ protected:
   // inserted ops are added to the worklist for processing.
   void notifyOperationInserted(Operation *op) override { addToWorklist(op); }
 
+  // Look over the provided operands for any defining operations that should
+  // be re-added to the worklist. This function should be called when an
+  // operation is modified or removed, as it may trigger further
+  // simplifications.
+  template <typename Operands>
+  void addToWorklist(Operands &&operands) {
+    for (Value operand : operands) {
+      // If the use count of this operand is now < 2, we re-add the defining
+      // operation to the worklist.
+      // TODO: This is based on the fact that zero use operations
+      // may be deleted, and that single use values often have more
+      // canonicalization opportunities.
+      if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
+        continue;
+      if (auto *defOp = operand.getDefiningOp())
+        addToWorklist(defOp);
+    }
+  }
+
   // If an operation is about to be removed, make sure it is not in our
   // worklist anymore because we'd get dangling references to it.
   void notifyOperationRemoved(Operation *op) override {
@@ -101,25 +119,6 @@ protected:
         addToWorklist(user);
   }
 
-private:
-  // Look over the provided operands for any defining operations that should
-  // be re-added to the worklist. This function should be called when an
-  // operation is modified or removed, as it may trigger further
-  // simplifications.
-  template <typename Operands> void addToWorklist(Operands &&operands) {
-    for (Value operand : operands) {
-      // If the use count of this operand is now < 2, we re-add the defining
-      // operation to the worklist.
-      // TODO: This is based on the fact that zero use operations
-      // may be deleted, and that single use values often have more
-      // canonicalization opportunities.
-      if (!operand.use_empty() && !operand.hasOneUse())
-        continue;
-      if (auto *defInst = operand.getDefiningOp())
-        addToWorklist(defInst);
-    }
-  }
-
   /// The low-level pattern applicator.
   PatternApplicator matcher;
 
@@ -132,22 +131,38 @@ private:
 
   /// Non-pattern based folder for operations.
   OperationFolder folder;
+
+private:
+  /// Configuration information for how to simplify.
+  GreedyRewriteConfig config;
 };
 } // end anonymous namespace
 
 /// Performs the rewrites while folding and erasing any dead ops. Returns true
 /// if the rewrite converges in `maxIterations`.
-bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
-                                          int maxIterations) {
-  // Add the given operation to the worklist.
-  auto collectOps = [this](Operation *op) { addToWorklist(op); };
-
+bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
   bool changed = false;
-  int i = 0;
+  unsigned iteration = 0;
   do {
-    // Add all nested operations to the worklist.
-    for (auto &region : regions)
-      region.walk(collectOps);
+    worklist.clear();
+    worklistMap.clear();
+
+    if (!config.useTopDownTraversal) {
+      // Add operations to the worklist in postorder.
+      for (auto &region : regions)
+        region.walk([this](Operation *op) { addToWorklist(op); });
+    } else {
+      // Add all nested operations to the worklist in preorder.
+      for (auto &region : regions)
+        region.walk<WalkOrder::PreOrder>(
+            [this](Operation *op) { worklist.push_back(op); });
+
+      // Reverse the list so our pop-back loop processes them in-order.
+      std::reverse(worklist.begin(), worklist.end());
+      // Remember the reverse index.
+      for (size_t i = 0, e = worklist.size(); i != e; ++i)
+        worklistMap[worklist[i]] = i;
+    }
 
     // These are scratch vectors used in the folding loop below.
     SmallVector<Value, 8> originalOperands, resultValues;
@@ -185,6 +200,9 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
         notifyOperationRemoved(op);
       };
 
+      // Add the given operation to the worklist.
+      auto collectOps = [this](Operation *op) { addToWorklist(op); };
+
       // Try to fold this op.
       bool inPlaceUpdate;
       if ((succeeded(folder.tryToFold(op, collectOps, preReplaceAction,
@@ -195,17 +213,19 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
       }
 
       // Try to match one of the patterns. The rewriter is automatically
-      // notified of any necessary changes, so there is nothing else to do here.
+      // notified of any necessary changes, so there is nothing else to do
+      // here.
       changed |= succeeded(matcher.matchAndRewrite(op, *this));
     }
 
-    // After applying patterns, make sure that the CFG of each of the regions is
-    // kept up to date.
-    if (succeeded(simplifyRegions(regions))) {
-      folder.clear();
-      changed = true;
-    }
-  } while (changed && ++i < maxIterations);
+    // After applying patterns, make sure that the CFG of each of the regions
+    // is kept up to date.
+    if (config.enableRegionSimplification)
+      changed |= succeeded(simplifyRegions(*this, regions));
+  } while (changed &&
+           (++iteration < config.maxIterations ||
+            config.maxIterations == GreedyRewriteConfig::kNoIterationLimit));
+
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
 }
@@ -217,14 +237,9 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 /// top-level operation itself.
 ///
 LogicalResult
-mlir::applyPatternsAndFoldGreedily(Operation *op,
-                                   const OwningRewritePatternList &patterns) {
-  return applyPatternsAndFoldGreedily(op->getRegions(), patterns);
-}
-/// Rewrite the given regions, which must be isolated from above.
-LogicalResult
 mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                                   const OwningRewritePatternList &patterns) {
+                                   const FrozenRewritePatternSet &patterns,
+                                   GreedyRewriteConfig config) {
   if (regions.empty())
     return success();
 
@@ -232,18 +247,18 @@ mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
   // prevent performing canonicalizations on operations defined at or above
   // the region containing 'op'.
   auto regionIsIsolated = [](Region &region) {
-    return region.getParentOp()->isKnownIsolatedFromAbove();
+    return region.getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>();
   };
   (void)regionIsIsolated;
   assert(llvm::all_of(regions, regionIsIsolated) &&
          "patterns can only be applied to operations IsolatedFromAbove");
 
   // Start the pattern driver.
-  GreedyPatternRewriteDriver driver(regions[0].getContext(), patterns);
-  bool converged = driver.simplify(regions, maxPatternMatchIterations);
+  GreedyPatternRewriteDriver driver(regions[0].getContext(), patterns, config);
+  bool converged = driver.simplify(regions);
   LLVM_DEBUG(if (!converged) {
     llvm::dbgs() << "The pattern rewrite doesn't converge after scanning "
-                 << maxPatternMatchIterations << " times";
+                 << config.maxIterations << " times\n";
   });
   return success(converged);
 }
@@ -258,17 +273,12 @@ namespace {
 class OpPatternRewriteDriver : public PatternRewriter {
 public:
   explicit OpPatternRewriteDriver(MLIRContext *ctx,
-                                  const OwningRewritePatternList &patterns)
+                                  const FrozenRewritePatternSet &patterns)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
     // Apply a simple cost model based solely on pattern benefit.
     matcher.applyDefaultCostModel();
   }
 
-  /// Performs the rewrites and folding only on `op`. The simplification
-  /// converges if the op is erased as a result of being folded, replaced, or
-  /// dead, or no more changes happen in an iteration. Returns success if the
-  /// rewrite converges in `maxIterations`. `erased` is set to true if `op` gets
-  /// erased.
   LogicalResult simplifyLocally(Operation *op, int maxIterations, bool &erased);
 
   // These are hooks implemented for PatternRewriter.
@@ -296,16 +306,23 @@ private:
 
 } // anonymous namespace
 
+/// Performs the rewrites and folding only on `op`. The simplification
+/// converges if the op is erased as a result of being folded, replaced, or
+/// becoming dead, or no more changes happen in an iteration. Returns success if
+/// the rewrite converges in `maxIterations`. `erased` is set to true if `op`
+/// gets erased.
 LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
                                                       int maxIterations,
                                                       bool &erased) {
   bool changed = false;
   erased = false;
   opErasedViaPatternRewrites = false;
-  int i = 0;
+  int iterations = 0;
   // Iterate until convergence or until maxIterations. Deletion of the op as
   // a result of being dead or folded is convergence.
   do {
+    changed = false;
+
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
       op->erase();
@@ -330,27 +347,192 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
     changed |= succeeded(matcher.matchAndRewrite(op, *this));
     if ((erased = opErasedViaPatternRewrites))
       return success();
-  } while (changed && ++i < maxIterations);
+  } while (changed &&
+           (++iterations < maxIterations ||
+            maxIterations == GreedyRewriteConfig::kNoIterationLimit));
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return failure(changed);
+}
+
+//===----------------------------------------------------------------------===//
+// MultiOpPatternRewriteDriver
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// This is a specialized GreedyPatternRewriteDriver to apply patterns and
+/// perform folding for a supplied set of ops. It repeatedly simplifies while
+/// restricting the rewrites to only the provided set of ops or optionally
+/// to those directly affected by it (result users or operand providers).
+class MultiOpPatternRewriteDriver : public GreedyPatternRewriteDriver {
+public:
+  explicit MultiOpPatternRewriteDriver(MLIRContext *ctx,
+                                       const FrozenRewritePatternSet &patterns,
+                                       bool strict)
+      : GreedyPatternRewriteDriver(ctx, patterns, GreedyRewriteConfig()),
+        strictMode(strict) {}
+
+  bool simplifyLocally(ArrayRef<Operation *> op);
+
+private:
+  // Look over the provided operands for any defining operations that should
+  // be re-added to the worklist. This function should be called when an
+  // operation is modified or removed, as it may trigger further
+  // simplifications. If `strict` is set to true, only ops in
+  // `strictModeFilteredOps` are considered.
+  template <typename Operands>
+  void addOperandsToWorklist(Operands &&operands) {
+    for (Value operand : operands) {
+      if (auto *defOp = operand.getDefiningOp()) {
+        if (!strictMode || strictModeFilteredOps.contains(defOp))
+          addToWorklist(defOp);
+      }
+    }
+  }
+
+  void notifyOperationRemoved(Operation *op) override {
+    GreedyPatternRewriteDriver::notifyOperationRemoved(op);
+    if (strictMode)
+      strictModeFilteredOps.erase(op);
+  }
+
+  /// If `strictMode` is true, any pre-existing ops outside of
+  /// `strictModeFilteredOps` remain completely untouched by the rewrite driver.
+  /// If `strictMode` is false, operations that use results of (or supply
+  /// operands to) any rewritten ops stemming from the simplification of the
+  /// provided ops are in turn simplified; any other ops still remain untouched
+  /// (i.e., regardless of `strictMode`).
+  bool strictMode = false;
+
+  /// The list of ops we are restricting our rewrites to if `strictMode` is on.
+  /// These include the supplied set of ops as well as new ops created while
+  /// rewriting those ops. This set is not maintained when strictMode is off.
+  llvm::SmallDenseSet<Operation *, 4> strictModeFilteredOps;
+};
+
+} // end anonymous namespace
+
+/// Performs the specified rewrites on `ops` while also trying to fold these ops
+/// as well as any other ops that were in turn created due to these rewrite
+/// patterns. Any pre-existing ops outside of `ops` remain completely
+/// unmodified if `strictMode` is true. If `strictMode` is false, other
+/// operations that use results of rewritten ops or supply operands to such ops
+/// are in turn simplified; any other ops still remain unmodified (i.e.,
+/// regardless of `strictMode`). Note that ops in `ops` could be erased as a
+/// result of folding, becoming dead, or via pattern rewrites. Returns true if
+/// at all any changes happened.
+// Unlike `OpPatternRewriteDriver::simplifyLocally` which works on a single op
+// or GreedyPatternRewriteDriver::simplify, this method just iterates until
+// the worklist is empty. As our objective is to keep simplification "local",
+// there is no strong rationale to re-add all operations into the worklist and
+// rerun until an iteration changes nothing. If more widereaching simplification
+// is desired, GreedyPatternRewriteDriver should be used.
+bool MultiOpPatternRewriteDriver::simplifyLocally(ArrayRef<Operation *> ops) {
+  if (strictMode) {
+    strictModeFilteredOps.clear();
+    strictModeFilteredOps.insert(ops.begin(), ops.end());
+  }
+
+  bool changed = false;
+  worklist.clear();
+  worklistMap.clear();
+  for (Operation *op : ops)
+    addToWorklist(op);
+
+  // These are scratch vectors used in the folding loop below.
+  SmallVector<Value, 8> originalOperands, resultValues;
+  while (!worklist.empty()) {
+    Operation *op = popFromWorklist();
+
+    // Nulls get added to the worklist when operations are removed, ignore
+    // them.
+    if (op == nullptr)
+      continue;
+
+    // If the operation is trivially dead - remove it.
+    if (isOpTriviallyDead(op)) {
+      notifyOperationRemoved(op);
+      op->erase();
+      changed = true;
+      continue;
+    }
+
+    // Collects all the operands and result uses of the given `op` into work
+    // list. Also remove `op` and nested ops from worklist.
+    originalOperands.assign(op->operand_begin(), op->operand_end());
+    auto preReplaceAction = [&](Operation *op) {
+      // Add the operands to the worklist for visitation.
+      addOperandsToWorklist(originalOperands);
+
+      // Add all the users of the result to the worklist so we make sure
+      // to revisit them.
+      for (Value result : op->getResults())
+        for (Operation *userOp : result.getUsers()) {
+          if (!strictMode || strictModeFilteredOps.contains(userOp))
+            addToWorklist(userOp);
+        }
+      notifyOperationRemoved(op);
+    };
+
+    // Add the given operation generated by the folder to the worklist.
+    auto processGeneratedConstants = [this](Operation *op) {
+      // Newly created ops are also simplified -- these are also "local".
+      addToWorklist(op);
+      // When strict mode is off, we don't need to maintain
+      // strictModeFilteredOps.
+      if (strictMode)
+        strictModeFilteredOps.insert(op);
+    };
+
+    // Try to fold this op.
+    bool inPlaceUpdate;
+    if (succeeded(folder.tryToFold(op, processGeneratedConstants,
+                                   preReplaceAction, &inPlaceUpdate))) {
+      changed = true;
+      if (!inPlaceUpdate) {
+        // Op has been erased.
+        continue;
+      }
+    }
+
+    // Try to match one of the patterns. The rewriter is automatically
+    // notified of any necessary changes, so there is nothing else to do
+    // here.
+    changed |= succeeded(matcher.matchAndRewrite(op, *this));
+  }
+
+  return changed;
 }
 
 /// Rewrites only `op` using the supplied canonicalization patterns and
 /// folding. `erased` is set to true if the op is erased as a result of being
 /// folded, replaced, or dead.
 LogicalResult mlir::applyOpPatternsAndFold(
-    Operation *op, const OwningRewritePatternList &patterns, bool *erased) {
+    Operation *op, const FrozenRewritePatternSet &patterns, bool *erased) {
   // Start the pattern driver.
+  GreedyRewriteConfig config;
   OpPatternRewriteDriver driver(op->getContext(), patterns);
   bool opErased;
   LogicalResult converged =
-      driver.simplifyLocally(op, maxPatternMatchIterations, opErased);
+      driver.simplifyLocally(op, config.maxIterations, opErased);
   if (erased)
     *erased = opErased;
   LLVM_DEBUG(if (failed(converged)) {
     llvm::dbgs() << "The pattern rewrite doesn't converge after scanning "
-                 << maxPatternMatchIterations << " times";
+                 << config.maxIterations << " times";
   });
   return converged;
+}
+
+bool mlir::applyOpPatternsAndFold(ArrayRef<Operation *> ops,
+                                  const FrozenRewritePatternSet &patterns,
+                                  bool strict) {
+  if (ops.empty())
+    return false;
+
+  // Start the pattern driver.
+  MultiOpPatternRewriteDriver driver(ops.front()->getContext(), patterns,
+                                     strict);
+  return driver.simplifyLocally(ops);
 }

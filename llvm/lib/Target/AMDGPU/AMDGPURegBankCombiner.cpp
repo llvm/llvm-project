@@ -11,24 +11,143 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUTargetMachine.h"
+#include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
+#include "AMDGPURegisterBankInfo.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/Debug.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-
+#include "llvm/Target/TargetMachine.h"
 #define DEBUG_TYPE "amdgpu-regbank-combiner"
 
 using namespace llvm;
 using namespace MIPatternMatch;
 
+class AMDGPURegBankCombinerHelper {
+protected:
+  MachineIRBuilder &B;
+  MachineFunction &MF;
+  MachineRegisterInfo &MRI;
+  const RegisterBankInfo &RBI;
+  const TargetRegisterInfo &TRI;
+  CombinerHelper &Helper;
+
+public:
+  AMDGPURegBankCombinerHelper(MachineIRBuilder &B, CombinerHelper &Helper)
+      : B(B), MF(B.getMF()), MRI(*B.getMRI()),
+        RBI(*MF.getSubtarget().getRegBankInfo()),
+        TRI(*MF.getSubtarget().getRegisterInfo()), Helper(Helper){};
+
+  bool isVgprRegBank(Register Reg);
+
+  struct MinMaxMedOpc {
+    unsigned Min, Max, Med;
+  };
+
+  struct Med3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
+  MinMaxMedOpc getMinMaxPair(unsigned Opc);
+
+  template <class m_Cst, typename CstTy>
+  bool matchMed(MachineInstr &MI, MachineRegisterInfo &MRI, MinMaxMedOpc MMMOpc,
+                Register &Val, CstTy &K0, CstTy &K1);
+
+  bool matchIntMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
+  void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo);
+};
+
+bool AMDGPURegBankCombinerHelper::isVgprRegBank(Register Reg) {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
+}
+
+AMDGPURegBankCombinerHelper::MinMaxMedOpc
+AMDGPURegBankCombinerHelper::getMinMaxPair(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unsupported opcode");
+  case AMDGPU::G_SMAX:
+  case AMDGPU::G_SMIN:
+    return {AMDGPU::G_SMIN, AMDGPU::G_SMAX, AMDGPU::G_AMDGPU_SMED3};
+  case AMDGPU::G_UMAX:
+  case AMDGPU::G_UMIN:
+    return {AMDGPU::G_UMIN, AMDGPU::G_UMAX, AMDGPU::G_AMDGPU_UMED3};
+  }
+}
+
+template <class m_Cst, typename CstTy>
+bool AMDGPURegBankCombinerHelper::matchMed(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           MinMaxMedOpc MMMOpc, Register &Val,
+                                           CstTy &K0, CstTy &K1) {
+  // 4 operand commutes of: min(max(Val, K0), K1).
+  // Find K1 from outer instr: min(max(...), K1) or min(K1, max(...)).
+  // Find K0 and Val from inner instr: max(K0, Val) or max(Val, K0).
+  // 4 operand commutes of: max(min(Val, K1), K0).
+  // Find K0 from outer instr: max(min(...), K0) or max(K0, min(...)).
+  // Find K1 and Val from inner instr: min(K1, Val) or min(Val, K1).
+  return mi_match(
+      MI, MRI,
+      m_any_of(
+          m_CommutativeBinOp(
+              MMMOpc.Min, m_CommutativeBinOp(MMMOpc.Max, m_Reg(Val), m_Cst(K0)),
+              m_Cst(K1)),
+          m_CommutativeBinOp(
+              MMMOpc.Max, m_CommutativeBinOp(MMMOpc.Min, m_Reg(Val), m_Cst(K1)),
+              m_Cst(K0))));
+}
+
+bool AMDGPURegBankCombinerHelper::matchIntMinMaxToMed3(
+    MachineInstr &MI, Med3MatchInfo &MatchInfo) {
+  Register Dst = MI.getOperand(0).getReg();
+  if (!isVgprRegBank(Dst))
+    return false;
+
+  if (MRI.getType(Dst).isVector())
+    return false;
+
+  MinMaxMedOpc OpcodeTriple = getMinMaxPair(MI.getOpcode());
+  Register Val;
+  Optional<ValueAndVReg> K0, K1;
+  // Match min(max(Val, K0), K1) or max(min(Val, K1), K0). Then see if K0 <= K1.
+  if (!matchMed<GCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
+    return false;
+
+  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_SMED3 && K0->Value.sgt(K1->Value))
+    return false;
+  if (OpcodeTriple.Med == AMDGPU::G_AMDGPU_UMED3 && K0->Value.ugt(K1->Value))
+    return false;
+
+  MatchInfo = {OpcodeTriple.Med, Val, K0->VReg, K1->VReg};
+  return true;
+}
+
+void AMDGPURegBankCombinerHelper::applyMed3(MachineInstr &MI,
+                                            Med3MatchInfo &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+  MI.eraseFromParent();
+}
+
+class AMDGPURegBankCombinerHelperState {
+protected:
+  CombinerHelper &Helper;
+  AMDGPURegBankCombinerHelper &RegBankHelper;
+
+public:
+  AMDGPURegBankCombinerHelperState(CombinerHelper &Helper,
+                                   AMDGPURegBankCombinerHelper &RegBankHelper)
+      : Helper(Helper), RegBankHelper(RegBankHelper) {}
+};
 
 #define AMDGPUREGBANKCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AMDGPUGenRegBankGICombiner.inc"
@@ -64,9 +183,11 @@ bool AMDGPURegBankCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, KB, MDT);
-  AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg);
+  AMDGPURegBankCombinerHelper RegBankHelper(B, Helper);
+  AMDGPUGenRegBankCombinerHelper Generated(GeneratedRuleCfg, Helper,
+                                           RegBankHelper);
 
-  if (Generated.tryCombineAll(Observer, MI, B, Helper))
+  if (Generated.tryCombineAll(Observer, MI, B))
     return true;
 
   return false;

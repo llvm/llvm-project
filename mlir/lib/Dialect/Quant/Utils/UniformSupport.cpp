@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Quant/UniformSupport.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include <numeric>
 
 using namespace mlir;
@@ -79,7 +79,7 @@ UniformQuantizedPerAxisValueConverter::convert(DenseFPElementsAttr attr) {
   int64_t chunkSize =
       std::accumulate(std::next(shape.begin(), quantizationDim + 1),
                       shape.end(), 1, std::multiplies<int64_t>());
-  Type newElementType = IntegerType::get(storageBitWidth, attr.getContext());
+  Type newElementType = IntegerType::get(attr.getContext(), storageBitWidth);
   return attr.mapValues(newElementType, [&](const APFloat &old) {
     int chunkIndex = (flattenIndex++) / chunkSize;
     return converters[chunkIndex % dimSize].quantizeFloatToInt(old);

@@ -1,16 +1,16 @@
 # REQUIRES: x86
-# RUN: split-file %s %t
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libweak-defines.s -o %t/libweak-defines.o
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -dylib %t/libweak-defines.o -o %t/libweak-defines.dylib
+# RUN: %lld -dylib %t/libweak-defines.o -o %t/libweak-defines.dylib
 # RUN: llvm-readobj --file-headers %t/libweak-defines.dylib | FileCheck %s --check-prefix=WEAK-DEFINES-AND-BINDS
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/binds-to-weak.s -o %t/binds-to-weak.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -L%t -lweak-defines -o %t/binds-to-weak %t/binds-to-weak.o
+# RUN: %lld -lSystem -L%t -lweak-defines -o %t/binds-to-weak %t/binds-to-weak.o
 # RUN: llvm-readobj --file-headers %t/binds-to-weak | FileCheck %s --check-prefix=WEAK-BINDS-ONLY
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/overrides-weak.s -o %t/overrides-weak.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -L%t -lweak-defines -o %t/overrides-weak %t/overrides-weak.o
+# RUN: %lld -lSystem -L%t -lweak-defines -o %t/overrides-weak %t/overrides-weak.o
 # RUN: llvm-readobj --file-headers %t/overrides-weak | FileCheck %s --check-prefix=WEAK-DEFINES-ONLY
 
 # WEAK-DEFINES-AND-BINDS: MH_BINDS_TO_WEAK

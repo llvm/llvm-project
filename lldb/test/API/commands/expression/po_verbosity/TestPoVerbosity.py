@@ -21,7 +21,7 @@ class PoVerbosityTestCase(TestBase):
         self.line = line_number('main.m',
                                 '// Stop here')
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test(self):
         """Test that the po command acts correctly."""
         self.build()

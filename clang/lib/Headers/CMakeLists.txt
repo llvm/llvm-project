@@ -17,6 +17,7 @@ set(files
   avx512dqintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512fp16intrin.h
   avx512ifmaintrin.h
   avx512ifmavlintrin.h
   avx512pfintrin.h
@@ -28,6 +29,7 @@ set(files
   avx512vlbwintrin.h
   avx512vlcdintrin.h
   avx512vldqintrin.h
+  avx512vlfp16intrin.h
   avx512vlintrin.h
   avx512vp2intersectintrin.h
   avx512vlvp2intersectintrin.h
@@ -35,24 +37,29 @@ set(files
   avx512vnniintrin.h
   avx512vlvnniintrin.h
   avxintrin.h
+  avxvnniintrin.h
   bmi2intrin.h
   bmiintrin.h
+  builtins.h
   __clang_cuda_builtin_vars.h
   __clang_cuda_math.h
   __clang_cuda_cmath.h
   __clang_cuda_complex_builtins.h
   __clang_cuda_device_functions.h
   __clang_cuda_intrinsics.h
+  __clang_cuda_texture_intrinsics.h
   __clang_cuda_libdevice_declares.h
   __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
   __clang_hip_libdevice_declares.h
+  __clang_hip_cmath.h
   __clang_hip_math.h
   __clang_hip_runtime_wrapper.h
   cetintrin.h
   cet.h
   cldemoteintrin.h
   clzerointrin.h
+  crc32intrin.h
   cpuid.h
   clflushoptintrin.h
   clwbintrin.h
@@ -64,6 +71,11 @@ set(files
   fmaintrin.h
   fxsrintrin.h
   gfniintrin.h
+  hexagon_circ_brev_intrinsics.h
+  hexagon_protos.h
+  hexagon_types.h
+  hvx_hexagon_protos.h
+  hresetintrin.h
   htmintrin.h
   htmxlintrin.h
   ia32intrin.h
@@ -72,6 +84,7 @@ set(files
   inttypes.h
   invpcidintrin.h
   iso646.h
+  keylockerintrin.h
   limits.h
   lwpintrin.h
   lzcntintrin.h
@@ -110,6 +123,7 @@ set(files
   tgmath.h
   tmmintrin.h
   tsxldtrkintrin.h
+  uintrintrin.h
   unwind.h
   vadefs.h
   vaesintrin.h
@@ -122,6 +136,7 @@ set(files
   wmmintrin.h
   __wmmintrin_aes.h
   __wmmintrin_pclmul.h
+  x86gprintrin.h
   x86intrin.h
   xmmintrin.h
   xopintrin.h
@@ -154,6 +169,7 @@ set(openmp_wrapper_files
   openmp_wrappers/complex.h
   openmp_wrappers/complex
   openmp_wrappers/__clang_openmp_device_functions.h
+  openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
 )
 
@@ -202,6 +218,8 @@ clang_generate_header(-gen-arm-bf16 arm_bf16.td arm_bf16.h)
 clang_generate_header(-gen-arm-mve-header arm_mve.td arm_mve.h)
 # Generate arm_cde.h
 clang_generate_header(-gen-arm-cde-header arm_cde.td arm_cde.h)
+# Generate riscv_vector.h
+clang_generate_header(-gen-riscv-vector-header riscv_vector.td riscv_vector.h)
 
 add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
 set_target_properties(clang-resource-headers PROPERTIES

@@ -1,4 +1,4 @@
-// RUN: %clang_profgen -O2 -o %t %s
+// RUN: %clang_profgen -mllvm -enable-value-profiling -O2 -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata > %t.out
@@ -72,6 +72,7 @@ int main(int argc, const char *argv[]) {
   }
 }
 
+// CHECK:         Counters:
 // CHECK-1-LABEL:   caller_with_value_site_never_called2:
 // CHECK-1-NEXT:    Hash: 0x0000000000000000
 // CHECK-1-NEXT:    Counters:

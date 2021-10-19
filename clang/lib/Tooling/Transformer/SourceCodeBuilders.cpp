@@ -93,6 +93,8 @@ tooling::buildDereference(const Expr &E, const ASTContext &Context) {
 
 llvm::Optional<std::string> tooling::buildAddressOf(const Expr &E,
                                                     const ASTContext &Context) {
+  if (E.isImplicitCXXThis())
+    return std::string("this");
   if (const auto *Op = dyn_cast<UnaryOperator>(&E))
     if (Op->getOpcode() == UO_Deref) {
       // Strip leading '*'.

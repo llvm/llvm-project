@@ -31,7 +31,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <utility>
 
 namespace llvm {
 
@@ -305,6 +304,9 @@ public:
       case MachineOperand::MO_BlockAddress:
         return addBlockAddress(Disp.getBlockAddress(), Disp.getOffset() + off,
                                TargetFlags);
+      case MachineOperand::MO_JumpTableIndex:
+        assert(off == 0 && "cannot create offset into jump tables");
+        return addJumpTableIndex(Disp.getIndex(), TargetFlags);
     }
   }
 
@@ -448,8 +450,15 @@ MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
 /// for a MachineOperand.
 MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
                             const MCInstrDesc &MCID, bool IsIndirect,
-                            MachineOperand &MO, const MDNode *Variable,
+                            const MachineOperand &MO, const MDNode *Variable,
                             const MDNode *Expr);
+
+/// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
+/// for a MachineOperand.
+MachineInstrBuilder BuildMI(MachineFunction &MF, const DebugLoc &DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            ArrayRef<MachineOperand> MOs,
+                            const MDNode *Variable, const MDNode *Expr);
 
 /// This version of the builder builds a DBG_VALUE intrinsic
 /// for either a value in a register or a register-indirect
@@ -468,14 +477,27 @@ MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                             MachineOperand &MO, const MDNode *Variable,
                             const MDNode *Expr);
 
+/// This version of the builder builds a DBG_VALUE or DBG_VALUE_LIST intrinsic
+/// for a machine operand and inserts it at position I.
+MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
+                            MachineBasicBlock::iterator I, const DebugLoc &DL,
+                            const MCInstrDesc &MCID, bool IsIndirect,
+                            ArrayRef<MachineOperand> MOs,
+                            const MDNode *Variable, const MDNode *Expr);
+
 /// Clone a DBG_VALUE whose value has been spilled to FrameIndex.
 MachineInstr *buildDbgValueForSpill(MachineBasicBlock &BB,
                                     MachineBasicBlock::iterator I,
-                                    const MachineInstr &Orig, int FrameIndex);
+                                    const MachineInstr &Orig, int FrameIndex,
+                                    Register SpillReg);
+MachineInstr *
+buildDbgValueForSpill(MachineBasicBlock &BB, MachineBasicBlock::iterator I,
+                      const MachineInstr &Orig, int FrameIndex,
+                      SmallVectorImpl<const MachineOperand *> &SpilledOperands);
 
 /// Update a DBG_VALUE whose value has been spilled to FrameIndex. Useful when
 /// modifying an instruction in place while iterating over a basic block.
-void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex);
+void updateDbgValueForSpill(MachineInstr &Orig, int FrameIndex, Register Reg);
 
 inline unsigned getDefRegState(bool B) {
   return B ? RegState::Define : 0;

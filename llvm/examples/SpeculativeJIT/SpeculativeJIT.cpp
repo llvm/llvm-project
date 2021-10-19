@@ -8,6 +8,7 @@
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SpeculateAnalyses.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,7 +49,11 @@ public:
     if (!DL)
       return DL.takeError();
 
-    auto ES = std::make_unique<ExecutionSession>();
+    auto EPC = SelfExecutorProcessControl::Create();
+    if (!EPC)
+      return EPC.takeError();
+
+    auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
     auto LCTMgr = createLocalLazyCallThroughManager(
         JTMB->getTargetTriple(), *ES,
@@ -111,16 +116,13 @@ private:
                  std::move(ISMBuilder)) {
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
-    this->ES->setDispatchMaterialization(
-        [this](std::unique_ptr<MaterializationUnit> MU,
-               MaterializationResponsibility MR) {
-          // FIXME: Switch to move capture once we have C++14.
-          auto SharedMU = std::shared_ptr<MaterializationUnit>(std::move(MU));
-          auto SharedMR =
-            std::make_shared<MaterializationResponsibility>(std::move(MR));
-          CompileThreads.async([SharedMU, SharedMR]() {
-            SharedMU->materialize(std::move(*SharedMR));
-          });
+    this->ES->setDispatchTask(
+        [this](std::unique_ptr<Task> T) {
+          CompileThreads.async(
+              [UnownedT = T.release()]() {
+                std::unique_ptr<Task> T(UnownedT);
+                T->run();
+              });
         });
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
     LocalCXXRuntimeOverrides CXXRuntimeoverrides;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: libcpp-has-no-localization
 
 // <experimental/iterator>
 //
@@ -35,13 +36,17 @@ int main(int, char**) {
 
     { exper::ostream_joiner<char>         oj(std::cout, '8');                 test(oj); }
     { exper::ostream_joiner<std::string>  oj(std::cout, std::string("9"));    test(oj); }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     { exper::ostream_joiner<std::wstring> oj(std::cout, std::wstring(L"10")); test(oj); }
+#endif
     { exper::ostream_joiner<int>          oj(std::cout, 11);                  test(oj); }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     { exper::ostream_joiner<char, wchar_t>         oj(std::wcout, '8');                 test(oj); }
     { exper::ostream_joiner<std::string, wchar_t>  oj(std::wcout, std::string("9"));    test(oj); }
     { exper::ostream_joiner<std::wstring, wchar_t> oj(std::wcout, std::wstring(L"10")); test(oj); }
     { exper::ostream_joiner<int, wchar_t>          oj(std::wcout, 11);                  test(oj); }
+#endif
 
   return 0;
 }

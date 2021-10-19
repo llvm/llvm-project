@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// These tests require locale for non-char paths
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <filesystem>
 
 // class path
@@ -43,13 +46,22 @@ int main(int, char**)
     assert(s == value);
   }
   {
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    ASSERT_SAME_TYPE(decltype(p.u8string()), std::u8string);
+    std::u8string s = p.u8string();
+    assert(s == (const char8_t*)MS);
+#else
+    ASSERT_SAME_TYPE(decltype(p.u8string()), std::string);
     std::string s = p.u8string();
     assert(s == (const char*)MS);
+#endif
   }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::wstring s = p.wstring();
     assert(s == (const wchar_t*)MS);
   }
+#endif
   {
     std::u16string s = p.u16string();
     assert(s == (const char16_t*)MS);

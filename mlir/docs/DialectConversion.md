@@ -45,6 +45,9 @@ conversion modes that may be selected from:
         operations.
     -   An analysis conversion can be applied via `applyAnalysisConversion`.
 
+In all cases, the framework walks the operations in preorder, examining an op
+before the ops in any regions it has.
+
 ## Conversion Target
 
 The conversion target is a formal definition of what is considered to be legal
@@ -63,10 +66,7 @@ legality actions below:
 
     -   This action signals that only some instances of a given operation are
         legal. This allows for defining fine-tune constraints, e.g. saying that
-        `addi` is only legal when operating on 32-bit integers.
-    -   If a specific handler is not provided when setting the action, the
-        target must override the `isDynamicallyLegal` hook provided by
-        `ConversionTarget`.
+        `arith.addi` is only legal when operating on 32-bit integers.
 
 *   Illegal
 
@@ -84,20 +84,17 @@ struct MyTarget : public ConversionTarget {
     // Marking an operation as Legal:
 
     /// Mark all operations within the LLVM dialect are legal.
-    addLegalDialects<LLVMDialect>();
+    addLegalDialect<LLVMDialect>();
 
-    /// Mark `std.constant` op is always legal on this target.
-    addLegalOps<ConstantOp>();
+    /// Mark `arith.constant` op is always legal on this target.
+    addLegalOp<arith::ConstantOp>();
 
     //--------------------------------------------------------------------------
     // Marking an operation as dynamically legal.
 
     /// Mark all operations within Affine dialect have dynamic legality
     /// constraints.
-    addDynamicallyLegalDialects<AffineDialect>();
-
-    /// Mark `std.return` as dynamically legal.
-    addDynamicallyLegalOp<ReturnOp>();
+    addDynamicallyLegalDialect<AffineDialect>([](Operation *op) { ... });
 
     /// Mark `std.return` as dynamically legal, but provide a specific legality
     /// callback.
@@ -105,7 +102,6 @@ struct MyTarget : public ConversionTarget {
 
     /// Treat unknown operations, i.e. those without a legalization action
     /// directly set, as dynamically legal.
-    markUnknownOpDynamicallyLegal();
     markUnknownOpDynamicallyLegal([](Operation *op) { ... });
 
     //--------------------------------------------------------------------------

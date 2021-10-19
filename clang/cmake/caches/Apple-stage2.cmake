@@ -56,6 +56,17 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-objdump
   llvm-nm
   llvm-size
+  llvm-cxxfilt
+  llvm-config
+  CACHE STRING "")
+
+set(LLVM_BUILD_UTILS ON CACHE BOOL "")
+set(LLVM_INSTALL_UTILS ON CACHE BOOL "")
+set(LLVM_TOOLCHAIN_UTILITIES
+  FileCheck
+  yaml2obj
+  not
+  count
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS
@@ -66,6 +77,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   cxx-headers
   Remarks
   ${LLVM_TOOLCHAIN_TOOLS}
+  ${LLVM_TOOLCHAIN_UTILITIES}
   CACHE STRING "")
 
 # test args

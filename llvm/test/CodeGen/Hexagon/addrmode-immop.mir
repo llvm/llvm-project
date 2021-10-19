@@ -33,7 +33,7 @@ tracksRegLiveness: true
 body: |
   bb.0.b0:
     $r2 = A2_tfrsi @g0 + 12
-    $r2 = L2_loadri_io killed $r2, @f1 - 1 :: (load 4 from `i32 (%s.0*)** bitcast (i8* getelementptr (i8, i8* bitcast (i8** getelementptr inbounds ({ [3 x i8*], [3 x i8*] }, { [3 x i8*], [3 x i8*] }* @g0, i32 0, inrange i32 0, i32 3) to i8*), i32 sub (i32 ptrtoint (i32 (%s.0*)* @f1 to i32), i32 1)) to i32 (%s.0*)**)`)
+    $r2 = L2_loadri_io killed $r2, @f1 - 1 :: (load (s32) from `i32 (%s.0*)** bitcast (i8* getelementptr (i8, i8* bitcast (i8** getelementptr inbounds ({ [3 x i8*], [3 x i8*] }, { [3 x i8*], [3 x i8*] }* @g0, i32 0, inrange i32 0, i32 3) to i8*), i32 sub (i32 ptrtoint (i32 (%s.0*)* @f1 to i32), i32 1)) to i32 (%s.0*)**)`)
     ADJCALLSTACKDOWN 0, 0, implicit-def $r29, implicit-def dead $r30, implicit $r31, implicit $r30, implicit $r29
     PS_callr_nr killed $r2, hexagoncsr, implicit undef $r0, implicit-def $r29, implicit-def dead $r0
     ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit-def dead $r30, implicit-def dead $r31, implicit $r29

@@ -1,9 +1,13 @@
 executable("llvm-ifs") {
   deps = [
+    "//llvm/lib/InterfaceStub",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",
     "//llvm/lib/TextAPI",
   ]
-  sources = [ "llvm-ifs.cpp" ]
+  sources = [
+    "ErrorCollector.cpp",
+    "llvm-ifs.cpp",
+  ]
 }

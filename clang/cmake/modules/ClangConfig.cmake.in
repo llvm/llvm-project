@@ -11,7 +11,7 @@ set(CLANG_INCLUDE_DIRS "@CLANG_CONFIG_INCLUDE_DIRS@")
 set(CLANG_LINK_CLANG_DYLIB "@CLANG_LINK_CLANG_DYLIB@")
 
 # Provide all our library targets to users.
-include("@CLANG_CONFIG_EXPORTS_FILE@")
+@CLANG_CONFIG_INCLUDE_EXPORTS@
 
 # By creating clang-tablegen-targets here, subprojects that depend on Clang's
 # tablegen-generated headers can always depend on this target whether building

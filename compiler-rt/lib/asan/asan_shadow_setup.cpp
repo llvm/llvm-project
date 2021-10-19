@@ -13,12 +13,11 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 
-// asan_fuchsia.cpp and asan_rtems.cpp have their own
-// InitializeShadowMemory implementation.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+// asan_fuchsia.cpp has their own InitializeShadowMemory implementation.
+#if !SANITIZER_FUCHSIA
 
-#include "asan_internal.h"
-#include "asan_mapping.h"
+#  include "asan_internal.h"
+#  include "asan_mapping.h"
 
 namespace __asan {
 
@@ -44,7 +43,8 @@ static void ProtectGap(uptr addr, uptr size) {
 }
 
 static void MaybeReportLinuxPIEBug() {
-#if SANITIZER_LINUX && (defined(__x86_64__) || defined(__aarch64__))
+#if SANITIZER_LINUX && \
+    (defined(__x86_64__) || defined(__aarch64__) || SANITIZER_RISCV64)
   Report("This might be related to ELF_ET_DYN_BASE change in Linux 4.12.\n");
   Report(
       "See https://github.com/google/sanitizers/issues/856 for possible "
@@ -122,4 +122,4 @@ void InitializeShadowMemory() {
 
 }  // namespace __asan
 
-#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#endif  // !SANITIZER_FUCHSIA

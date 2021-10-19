@@ -20,7 +20,6 @@
 
 #define GET_REGBANK_DECLARATIONS
 #include "AMDGPUGenRegisterBank.inc"
-#undef GET_REGBANK_DECLARATIONS
 
 namespace llvm {
 
@@ -39,6 +38,7 @@ protected:
 #define GET_TARGET_REGBANK_CLASS
 #include "AMDGPUGenRegisterBank.inc"
 };
+
 class AMDGPURegisterBankInfo final : public AMDGPUGenRegisterBankInfo {
 public:
   const GCNSubtarget &Subtarget;
@@ -81,10 +81,7 @@ public:
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
   bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
-  bool applyMappingBFEIntrinsic(const OperandsMapper &OpdMapper,
-                                bool Signed) const;
-
-  void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
+  bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;

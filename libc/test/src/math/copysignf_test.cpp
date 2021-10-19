@@ -6,44 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/math.h"
+#include "CopySignTest.h"
+
 #include "src/math/copysignf.h"
-#include "utils/FPUtil/FPBits.h"
-#include "utils/FPUtil/TestHelpers.h"
-#include "utils/UnitTest/Test.h"
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
-
-static const float zero = FPBits::zero();
-static const float negZero = FPBits::negZero();
-static const float nan = FPBits::buildNaN(1);
-static const float inf = FPBits::inf();
-static const float negInf = FPBits::negInf();
-
-TEST(CopySinfTest, SpecialNumbers) {
-  EXPECT_FP_EQ(nan, __llvm_libc::copysignf(nan, -1.0));
-  EXPECT_FP_EQ(nan, __llvm_libc::copysignf(nan, 1.0));
-
-  EXPECT_FP_EQ(negInf, __llvm_libc::copysignf(inf, -1.0));
-  EXPECT_FP_EQ(inf, __llvm_libc::copysignf(negInf, 1.0));
-
-  EXPECT_FP_EQ(negZero, __llvm_libc::copysignf(zero, -1.0));
-  EXPECT_FP_EQ(zero, __llvm_libc::copysignf(negZero, 1.0));
-}
-
-TEST(CopySinfTest, InFloatRange) {
-  using UIntType = FPBits::UIntType;
-  constexpr UIntType count = 1000000;
-  constexpr UIntType step = UIntType(-1) / count;
-  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = FPBits(v);
-    if (isnan(x) || isinf(x) || x == 0)
-      continue;
-
-    float res1 = __llvm_libc::copysignf(x, -x);
-    ASSERT_FP_EQ(res1, -x);
-
-    float res2 = __llvm_libc::copysignf(x, x);
-    ASSERT_FP_EQ(res2, x);
-  }
-}
+LIST_COPYSIGN_TESTS(float, __llvm_libc::copysignf)

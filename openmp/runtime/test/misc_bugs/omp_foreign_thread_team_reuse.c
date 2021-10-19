@@ -37,6 +37,7 @@ void* thread_function(void* arg) {
       a++;
     }
   }
+  return NULL;
 }
 
 int test_omp_team_reuse()

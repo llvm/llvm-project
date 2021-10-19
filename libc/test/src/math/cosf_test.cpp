@@ -6,74 +6,51 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
-#include "include/math.h"
-#include "src/errno/llvmlibc_errno.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/cosf.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/ClassificationFunctions.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
+#include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::fputil::isNegativeQuietNaN;
-using __llvm_libc::fputil::isQuietNaN;
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
-
-using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
-
 using __llvm_libc::testing::sdcomp26094Values;
+using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(CosfTest, SpecialNumbers) {
-  llvmlibc_errno = 0;
+DECLARE_SPECIAL_CONSTANTS(float)
 
-  EXPECT_TRUE(
-      isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::aQuietNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+TEST(LlvmLibcCosfTest, SpecialNumbers) {
+  errno = 0;
 
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::cosf(valueFromBits(BitPatterns::aNegativeQuietNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(aNaN));
+  EXPECT_EQ(errno, 0);
 
-  EXPECT_TRUE(isQuietNaN(
-      __llvm_libc::cosf(valueFromBits(BitPatterns::aSignallingNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_FP_EQ(1.0f, __llvm_libc::cosf(0.0f));
+  EXPECT_EQ(errno, 0);
 
-  EXPECT_TRUE(isNegativeQuietNaN(
-      __llvm_libc::cosf(valueFromBits(BitPatterns::aNegativeSignallingNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_FP_EQ(1.0f, __llvm_libc::cosf(-0.0f));
+  EXPECT_EQ(errno, 0);
 
-  EXPECT_EQ(BitPatterns::one,
-            valueAsBits(__llvm_libc::cosf(valueFromBits(BitPatterns::zero))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  errno = 0;
+  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(inf));
+  EXPECT_EQ(errno, EDOM);
 
-  EXPECT_EQ(BitPatterns::one, valueAsBits(__llvm_libc::cosf(
-                                  valueFromBits(BitPatterns::negZero))));
-  EXPECT_EQ(llvmlibc_errno, 0);
-
-  llvmlibc_errno = 0;
-  EXPECT_TRUE(isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::inf))));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
-
-  llvmlibc_errno = 0;
-  EXPECT_TRUE(
-      isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::negInf))));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  errno = 0;
+  EXPECT_FP_EQ(aNaN, __llvm_libc::cosf(negInf));
+  EXPECT_EQ(errno, EDOM);
 }
 
-TEST(CosfTest, InFloatRange) {
+TEST(LlvmLibcCosfTest, InFloatRange) {
   constexpr uint32_t count = 1000000;
   constexpr uint32_t step = UINT32_MAX / count;
   for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = valueFromBits(v);
+    float x = float(FPBits(v));
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), 1.0);
@@ -81,23 +58,23 @@ TEST(CosfTest, InFloatRange) {
 }
 
 // For small values, cos(x) is 1.
-TEST(CosfTest, SmallValues) {
-  float x = valueFromBits(0x17800000U);
+TEST(LlvmLibcCosfTest, SmallValues) {
+  float x = float(FPBits(0x17800000U));
   float result = __llvm_libc::cosf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result, 1.0);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(result));
+  EXPECT_FP_EQ(1.0f, result);
 
-  x = valueFromBits(0x0040000U);
+  x = float(FPBits(0x0040000U));
   result = __llvm_libc::cosf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result, 1.0);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(result));
+  EXPECT_FP_EQ(1.0f, result);
 }
 
 // SDCOMP-26094: check cosf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(CosfTest, SDCOMP_26094) {
+TEST(LlvmLibcCosfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
-    float x = valueFromBits(v);
+    float x = float(FPBits(v));
     ASSERT_MPFR_MATCH(mpfr::Operation::Cos, x, __llvm_libc::cosf(x), 1.0);
   }
 }

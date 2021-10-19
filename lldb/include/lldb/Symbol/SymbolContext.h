@@ -139,6 +139,14 @@ public:
   ///     be printed.  In disassembly formatting, where we want a format
   ///     like "<*+36>", this should be false and "*" will be printed
   ///     instead.
+  ///
+  /// \param[in] show_inline_callsite_line_info
+  ///     When processing an inline block, the line info of the callsite
+  ///     is dumped if this flag is \b true, otherwise the line info
+  ///     of the actual inlined function is dumped.
+  ///
+  /// \return
+  ///     \b true if some text was dumped, \b false otherwise.
   bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
@@ -308,12 +316,13 @@ public:
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query
   lldb::ModuleSP module_sp; ///< The Module for a given query
-  CompileUnit *comp_unit;   ///< The CompileUnit for a given query
-  Function *function;       ///< The Function for a given query
-  Block *block;             ///< The Block for a given query
+  CompileUnit *comp_unit = nullptr; ///< The CompileUnit for a given query
+  Function *function = nullptr;     ///< The Function for a given query
+  Block *block = nullptr;           ///< The Block for a given query
   LineEntry line_entry;     ///< The LineEntry for a given query
-  Symbol *symbol;           ///< The Symbol for a given query
-  Variable *variable;       ///< The global variable matching the given query
+  Symbol *symbol = nullptr; ///< The Symbol for a given query
+  Variable *variable =
+      nullptr; ///< The global variable matching the given query
 };
 
 class SymbolContextSpecifier {
@@ -340,7 +349,7 @@ public:
 
   void Clear();
 
-  bool SymbolContextMatches(SymbolContext &sc);
+  bool SymbolContextMatches(const SymbolContext &sc);
 
   bool AddressMatches(lldb::addr_t addr);
 

@@ -34,11 +34,13 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/SanitizerBlacklist.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/XRayLists.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -100,7 +102,9 @@ class ParentMapContext;
 class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
+enum class FloatModeKind;
 class GlobalDecl;
+class ItaniumMangleContext;
 class MangleContext;
 class MangleNumberingContext;
 class MaterializeTemporaryExpr;
@@ -161,14 +165,46 @@ namespace serialization {
 template <class> class AbstractTypeReader;
 } // namespace serialization
 
+enum class AlignRequirementKind {
+  /// The alignment was not explicit in code.
+  None,
+
+  /// The alignment comes from an alignment attribute on a typedef.
+  RequiredByTypedef,
+
+  /// The alignment comes from an alignment attribute on a record type.
+  RequiredByRecord,
+
+  /// The alignment comes from an alignment attribute on a enum type.
+  RequiredByEnum,
+};
+
 struct TypeInfo {
   uint64_t Width = 0;
   unsigned Align = 0;
-  bool AlignIsRequired : 1;
+  AlignRequirementKind AlignRequirement;
 
-  TypeInfo() : AlignIsRequired(false) {}
-  TypeInfo(uint64_t Width, unsigned Align, bool AlignIsRequired)
-      : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
+  TypeInfo() : AlignRequirement(AlignRequirementKind::None) {}
+  TypeInfo(uint64_t Width, unsigned Align,
+           AlignRequirementKind AlignRequirement)
+      : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
+  bool isAlignRequired() {
+    return AlignRequirement != AlignRequirementKind::None;
+  }
+};
+
+struct TypeInfoChars {
+  CharUnits Width;
+  CharUnits Align;
+  AlignRequirementKind AlignRequirement;
+
+  TypeInfoChars() : AlignRequirement(AlignRequirementKind::None) {}
+  TypeInfoChars(CharUnits Width, CharUnits Align,
+                AlignRequirementKind AlignRequirement)
+      : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
+  bool isAlignRequired() {
+    return AlignRequirement != AlignRequirementKind::None;
+  }
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -279,14 +315,18 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Mapping from GUIDs to the corresponding MSGuidDecl.
   mutable llvm::FoldingSet<MSGuidDecl> MSGuidDecls;
 
-  /// Used to cleanups APValues stored in the AST.
-  mutable llvm::SmallVector<APValue *, 0> APValueCleanups;
+  /// Mapping from APValues to the corresponding TemplateParamObjects.
+  mutable llvm::FoldingSet<TemplateParamObjectDecl> TemplateParamObjectDecls;
 
   /// A cache mapping a string value to a StringLiteral object with the same
   /// value.
   ///
   /// This is lazily created.  This is intentionally not serialized.
   mutable llvm::StringMap<StringLiteral *> StringLiteralCache;
+
+  /// MD5 hash of CUID. It is calculated when first used and cached by this
+  /// data member.
+  mutable std::string CUIDHash;
 
   /// Representation of a "canonical" template template parameter that
   /// is used in canonical template names.
@@ -442,6 +482,7 @@ private:
   friend class ASTWriter;
   template <class> friend class serialization::AbstractTypeReader;
   friend class CXXRecordDecl;
+  friend class IncrementalParser;
 
   /// A mapping to contain the template or declaration that
   /// a variable declaration describes or was instantiated from,
@@ -501,6 +542,17 @@ private:
   /// B<int> to the UnresolvedUsingDecl in B<T>.
   llvm::DenseMap<NamedDecl *, NamedDecl *> InstantiatedFromUsingDecl;
 
+  /// Like InstantiatedFromUsingDecl, but for using-enum-declarations. Maps
+  /// from the instantiated using-enum to the templated decl from whence it
+  /// came.
+  /// Note that using-enum-declarations cannot be dependent and
+  /// thus will never be instantiated from an "unresolved"
+  /// version thereof (as with using-declarations), so each mapping is from
+  /// a (resolved) UsingEnumDecl to a (resolved) UsingEnumDecl.
+  llvm::DenseMap<UsingEnumDecl *, UsingEnumDecl *>
+      InstantiatedFromUsingEnumDecl;
+
+  /// Simlarly maps instantiated UsingShadowDecls to their origin.
   llvm::DenseMap<UsingShadowDecl*, UsingShadowDecl*>
     InstantiatedFromUsingShadowDecl;
 
@@ -527,6 +579,9 @@ private:
   /// need them (like static local vars).
   llvm::MapVector<const NamedDecl *, unsigned> MangleNumbers;
   llvm::MapVector<const VarDecl *, unsigned> StaticLocalNumbers;
+  /// Mapping the associated device lambda mangling number if present.
+  mutable llvm::DenseMap<const CXXRecordDecl *, unsigned>
+      DeviceLambdaManglingNumbers;
 
   /// Mapping that stores parameterIndex values for ParmVarDecls when
   /// that value exceeds the bitfield size of ParmVarDeclBits.ParameterIndex.
@@ -536,7 +591,7 @@ private:
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
 
-  TranslationUnitDecl *TUDecl;
+  TranslationUnitDecl *TUDecl = nullptr;
   mutable ExternCContextDecl *ExternCContext = nullptr;
   mutable BuiltinTemplateDecl *MakeIntegerSeqDecl = nullptr;
   mutable BuiltinTemplateDecl *TypePackElementDecl = nullptr;
@@ -548,13 +603,17 @@ private:
   ///  this ASTContext object.
   LangOptions &LangOpts;
 
-  /// Blacklist object that is used by sanitizers to decide which
+  /// NoSanitizeList object that is used by sanitizers to decide which
   /// entities should not be instrumented.
-  std::unique_ptr<SanitizerBlacklist> SanitizerBL;
+  std::unique_ptr<NoSanitizeList> NoSanitizeL;
 
   /// Function filtering mechanism to determine whether a given function
   /// should be imbued with the XRay "always" or "never" attributes.
   std::unique_ptr<XRayFunctionFilter> XRayFilter;
+
+  /// ProfileList object that is used by the profile instrumentation
+  /// to decide which entities should be instrumented.
+  std::unique_ptr<ProfileList> ProfList;
 
   /// The allocator used to create AST objects.
   ///
@@ -563,7 +622,7 @@ private:
   mutable llvm::BumpPtrAllocator BumpAlloc;
 
   /// Allocator for partial diagnostics.
-  PartialDiagnostic::StorageAllocator DiagAllocator;
+  PartialDiagnostic::DiagStorageAllocator DiagAllocator;
 
   /// The current C++ ABI.
   std::unique_ptr<CXXABI> ABI;
@@ -582,10 +641,14 @@ private:
   std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
+  /// Keeps track of the deallocated DeclListNodes for future reuse.
+  DeclListNode *ListNodeFreeList = nullptr;
+
 public:
   IdentifierTable &Idents;
   SelectorTable &Selectors;
   Builtin::Context &BuiltinInfo;
+  const TranslationUnitKind TUKind;
   mutable DeclarationNameTable DeclarationNames;
   IntrusiveRefCntPtr<ExternalASTSource> ExternalSource;
   ASTMutationListener *Listener = nullptr;
@@ -597,11 +660,22 @@ public:
   ParentMapContext &getParentMapContext();
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
-  // RecursiveASTVisitor::TraverseAST will only visit reachable nodes, and
+  // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.
   // getParents() will only observe reachable parent edges.
   //
-  // The scope is defined by a set of "top-level" declarations.
-  // Initially, it is the entire TU: {getTranslationUnitDecl()}.
+  // The scope is defined by a set of "top-level" declarations which will be
+  // visible under the TranslationUnitDecl.
+  // Initially, it is the entire TU, represented by {getTranslationUnitDecl()}.
+  //
+  // After setTraversalScope({foo, bar}), the exposed AST looks like:
+  // TranslationUnitDecl
+  //  - foo
+  //    - ...
+  //  - bar
+  //    - ...
+  // All other siblings of foo and bar are pruned from the tree.
+  // (However they are still accessible via TranslationUnitDecl->decls())
+  //
   // Changing the scope clears the parent cache, which is expensive to rebuild.
   std::vector<Decl *> getTraversalScope() const { return TraversalScope; }
   void setTraversalScope(const std::vector<Decl *> &);
@@ -621,6 +695,12 @@ public:
   SourceManager& getSourceManager() { return SourceMgr; }
   const SourceManager& getSourceManager() const { return SourceMgr; }
 
+  // Cleans up some of the data structures. This allows us to do cleanup
+  // normally done in the destructor earlier. Renders much of the ASTContext
+  // unusable, mostly the actual AST nodes, so should be called when we no
+  // longer need access to the AST.
+  void cleanup();
+
   llvm::BumpPtrAllocator &getAllocator() const {
     return BumpAlloc;
   }
@@ -633,6 +713,24 @@ public:
   }
   void Deallocate(void *Ptr) const {}
 
+  /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
+  /// pool.
+  DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
+    if (DeclListNode *Alloc = ListNodeFreeList) {
+      ListNodeFreeList = Alloc->Rest.dyn_cast<DeclListNode*>();
+      Alloc->D = ND;
+      Alloc->Rest = nullptr;
+      return Alloc;
+    }
+    return new (*this) DeclListNode(ND);
+  }
+  /// Deallcates a \c DeclListNode by returning it to the \c ListNodeFreeList
+  /// pool.
+  void DeallocateDeclListNode(DeclListNode *N) {
+    N->Rest = ListNodeFreeList;
+    ListNodeFreeList = N;
+  }
+
   /// Return the total amount of physical memory allocated for representing
   /// AST nodes and type information.
   size_t getASTAllocatedMemory() const {
@@ -642,7 +740,7 @@ public:
   /// Return the total memory used for various side tables.
   size_t getSideTableAllocatedMemory() const;
 
-  PartialDiagnostic::StorageAllocator &getDiagAllocator() {
+  PartialDiagnostic::DiagStorageAllocator &getDiagAllocator() {
     return DiagAllocator;
   }
 
@@ -659,25 +757,39 @@ public:
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
-  QualType getRealTypeForBitwidth(unsigned DestWidth, bool ExplicitIEEE) const;
+  QualType getRealTypeForBitwidth(unsigned DestWidth,
+                                  FloatModeKind ExplicitType) const;
 
   bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
 
   const LangOptions& getLangOpts() const { return LangOpts; }
 
-  const SanitizerBlacklist &getSanitizerBlacklist() const {
-    return *SanitizerBL;
+  // If this condition is false, typo correction must be performed eagerly
+  // rather than delayed in many places, as it makes use of dependent types.
+  // the condition is false for clang's C-only codepath, as it doesn't support
+  // dependent types yet.
+  bool isDependenceAllowed() const {
+    return LangOpts.CPlusPlus || LangOpts.RecoveryAST;
   }
+
+  const NoSanitizeList &getNoSanitizeList() const { return *NoSanitizeL; }
 
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
   }
+
+  const ProfileList &getProfileList() const { return *ProfList; }
 
   DiagnosticsEngine &getDiagnostics() const;
 
   FullSourceLoc getFullLoc(SourceLocation Loc) const {
     return FullSourceLoc(Loc,SourceMgr);
   }
+
+  /// Return the C++ ABI kind that should be used. The C++ ABI can be overriden
+  /// at compile time with `-fc++-abi=`. If this is not provided, we instead use
+  /// the default ABI set by the target.
+  TargetCXXABI::Kind getCXXABIKind() const;
 
   /// All comments in this translation unit.
   RawCommentList Comments;
@@ -828,30 +940,38 @@ public:
   MemberSpecializationInfo *getInstantiatedFromStaticDataMember(
                                                            const VarDecl *Var);
 
-  TemplateOrSpecializationInfo
-  getTemplateOrSpecializationInfo(const VarDecl *Var);
-
   /// Note that the static data member \p Inst is an instantiation of
   /// the static data member template \p Tmpl of a class template.
   void setInstantiatedFromStaticDataMember(VarDecl *Inst, VarDecl *Tmpl,
                                            TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
 
+  TemplateOrSpecializationInfo
+  getTemplateOrSpecializationInfo(const VarDecl *Var);
+
   void setTemplateOrSpecializationInfo(VarDecl *Inst,
                                        TemplateOrSpecializationInfo TSI);
 
-  /// If the given using decl \p Inst is an instantiation of a
-  /// (possibly unresolved) using decl from a template instantiation,
-  /// return it.
+  /// If the given using decl \p Inst is an instantiation of
+  /// another (possibly unresolved) using decl, return it.
   NamedDecl *getInstantiatedFromUsingDecl(NamedDecl *Inst);
 
   /// Remember that the using decl \p Inst is an instantiation
   /// of the using decl \p Pattern of a class template.
   void setInstantiatedFromUsingDecl(NamedDecl *Inst, NamedDecl *Pattern);
 
+  /// If the given using-enum decl \p Inst is an instantiation of
+  /// another using-enum decl, return it.
+  UsingEnumDecl *getInstantiatedFromUsingEnumDecl(UsingEnumDecl *Inst);
+
+  /// Remember that the using enum decl \p Inst is an instantiation
+  /// of the using enum decl \p Pattern of a class template.
+  void setInstantiatedFromUsingEnumDecl(UsingEnumDecl *Inst,
+                                        UsingEnumDecl *Pattern);
+
+  UsingShadowDecl *getInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst);
   void setInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst,
                                           UsingShadowDecl *Pattern);
-  UsingShadowDecl *getInstantiatedFromUsingShadowDecl(UsingShadowDecl *Inst);
 
   FieldDecl *getInstantiatedFromUnnamedFieldDecl(FieldDecl *Field);
 
@@ -934,7 +1054,18 @@ public:
   /// Get the initializations to perform when importing a module, if any.
   ArrayRef<Decl*> getModuleInitializers(Module *M);
 
-  TranslationUnitDecl *getTranslationUnitDecl() const { return TUDecl; }
+  TranslationUnitDecl *getTranslationUnitDecl() const {
+    return TUDecl->getMostRecentDecl();
+  }
+  void addTranslationUnitDecl() {
+    assert(!TUDecl || TUKind == TU_Incremental);
+    TranslationUnitDecl *NewTUDecl = TranslationUnitDecl::Create(*this);
+    if (TraversalScope.empty() || TraversalScope.back() == TUDecl)
+      TraversalScope = {NewTUDecl};
+    if (TUDecl)
+      NewTUDecl->setPreviousDecl(TUDecl);
+    TUDecl = NewTUDecl;
+  }
 
   ExternCContextDecl *getExternCContextDecl() const;
   BuiltinTemplateDecl *getMakeIntegerSeqDecl() const;
@@ -953,7 +1084,7 @@ public:
   CanQualType SignedCharTy, ShortTy, IntTy, LongTy, LongLongTy, Int128Ty;
   CanQualType UnsignedCharTy, UnsignedShortTy, UnsignedIntTy, UnsignedLongTy;
   CanQualType UnsignedLongLongTy, UnsignedInt128Ty;
-  CanQualType FloatTy, DoubleTy, LongDoubleTy, Float128Ty;
+  CanQualType FloatTy, DoubleTy, LongDoubleTy, Float128Ty, Ibm128Ty;
   CanQualType ShortAccumTy, AccumTy,
       LongAccumTy;  // ISO/IEC JTC1 SC22 WG14 N1169 Extension
   CanQualType UnsignedShortAccumTy, UnsignedAccumTy, UnsignedLongAccumTy;
@@ -968,8 +1099,6 @@ public:
   CanQualType HalfTy; // [OpenCL 6.1.1.1], ARM NEON
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
-  CanQualType FloatComplexTy, DoubleComplexTy, LongDoubleComplexTy;
-  CanQualType Float128ComplexTy;
   CanQualType VoidPtrTy, NullPtrTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -989,6 +1118,12 @@ public:
 #define SVE_TYPE(Name, Id, SingletonId) \
   CanQualType SingletonId;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+  CanQualType Id##Ty;
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) \
+  CanQualType SingletonId;
+#include "clang/Basic/RISCVVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1001,11 +1136,12 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
-  /// Keep track of CUDA/HIP static device variables referenced by host code.
-  llvm::DenseSet<const VarDecl *> CUDAStaticDeviceVarReferencedByHost;
+  /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
+  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
-             SelectorTable &sels, Builtin::Context &builtins);
+             SelectorTable &sels, Builtin::Context &builtins,
+             TranslationUnitKind TUKind);
   ASTContext(const ASTContext &) = delete;
   ASTContext &operator=(const ASTContext &) = delete;
   ~ASTContext();
@@ -1232,6 +1368,12 @@ public:
   /// Get address space for OpenCL type.
   LangAS getOpenCLTypeAddrSpace(const Type *T) const;
 
+  /// Returns default address space based on OpenCL version and enabled features
+  inline LangAS getDefaultOpenCLPointeeAddrSpace() {
+    return LangOpts.OpenCLGenericAddressSpace ? LangAS::opencl_generic
+                                              : LangAS::opencl_private;
+  }
+
   void setcudaConfigureCallDecl(FunctionDecl *FD) {
     cudaConfigureCallDecl = FD;
   }
@@ -1410,7 +1552,7 @@ public:
   /// Return the unique reference to the type for the specified
   /// typedef-name decl.
   QualType getTypedefType(const TypedefNameDecl *Decl,
-                          QualType Canon = QualType()) const;
+                          QualType Underlying = QualType()) const;
 
   QualType getRecordType(const RecordDecl *Decl) const;
 
@@ -1522,6 +1664,8 @@ public:
   /// GCC extension.
   QualType getTypeOfExprType(Expr *e) const;
   QualType getTypeOfType(QualType t) const;
+
+  QualType getReferenceQualifiedType(const Expr *e) const;
 
   /// C++11 decltype.
   QualType getDecltypeType(Expr *e, QualType UnderlyingType) const;
@@ -2026,6 +2170,10 @@ public:
     GE_Missing_ucontext
   };
 
+  QualType DecodeTypeStr(const char *&Str, const ASTContext &Context,
+                         ASTContext::GetBuiltinTypeError &Error,
+                         bool &RequireICE, bool AllowTypeModifiers) const;
+
   /// Return the type for the specified builtin.
   ///
   /// If \p IntegerConstantArgs is non-null, it is filled in with a bitmask of
@@ -2062,6 +2210,10 @@ public:
   /// is a fixed-length representation of the SVE builtin for a specific
   /// vector-length.
   bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
+  /// Return true if the given vector types are lax-compatible SVE vector types,
+  /// false otherwise.
+  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
   /// Return true if the type has been explicitly qualified with ObjC ownership.
   /// A type may be implicitly qualified with ownership under ObjC ARC, and in
@@ -2134,15 +2286,24 @@ public:
   }
   unsigned getTypeUnadjustedAlign(const Type *T) const;
 
-  /// Return the ABI-specified alignment of a type, in bits, or 0 if
+  /// Return the alignment of a type, in bits, or 0 if
   /// the type is incomplete and we cannot determine the alignment (for
-  /// example, from alignment attributes).
-  unsigned getTypeAlignIfKnown(QualType T) const;
+  /// example, from alignment attributes). The returned alignment is the
+  /// Preferred alignment if NeedsPreferredAlignment is true, otherwise is the
+  /// ABI alignment.
+  unsigned getTypeAlignIfKnown(QualType T,
+                               bool NeedsPreferredAlignment = false) const;
 
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// characters.
   CharUnits getTypeAlignInChars(QualType T) const;
   CharUnits getTypeAlignInChars(const Type *T) const;
+
+  /// Return the PreferredAlignment of a (complete) type \p T, in
+  /// characters.
+  CharUnits getPreferredTypeAlignInChars(QualType T) const {
+    return toCharUnitsFromBits(getPreferredTypeAlign(T));
+  }
 
   /// getTypeUnadjustedAlignInChars - Return the ABI-specified alignment of a type,
   /// in characters, before alignment adjustments. This method does not work on
@@ -2152,10 +2313,10 @@ public:
 
   // getTypeInfoDataSizeInChars - Return the size of a type, in chars. If the
   // type is a record, its data size is returned.
-  std::pair<CharUnits, CharUnits> getTypeInfoDataSizeInChars(QualType T) const;
+  TypeInfoChars getTypeInfoDataSizeInChars(QualType T) const;
 
-  std::pair<CharUnits, CharUnits> getTypeInfoInChars(const Type *T) const;
-  std::pair<CharUnits, CharUnits> getTypeInfoInChars(QualType T) const;
+  TypeInfoChars getTypeInfoInChars(const Type *T) const;
+  TypeInfoChars getTypeInfoInChars(QualType T) const;
 
   /// Determine if the alignment the type has was required using an
   /// alignment attribute.
@@ -2166,7 +2327,12 @@ public:
   /// the current target, in bits.
   ///
   /// This can be different than the ABI alignment in cases where it is
-  /// beneficial for performance to overalign a data type.
+  /// beneficial for performance or backwards compatibility preserving to
+  /// overalign a data type. (Note: despite the name, the preferred alignment
+  /// is ABI-impacting, and not an optimization.)
+  unsigned getPreferredTypeAlign(QualType T) const {
+    return getPreferredTypeAlign(T.getTypePtr());
+  }
   unsigned getPreferredTypeAlign(const Type *T) const;
 
   /// Return the default alignment for __attribute__((aligned)) on
@@ -2259,12 +2425,22 @@ public:
                                 const ObjCImplementationDecl *ID,
                                 const ObjCIvarDecl *Ivar) const;
 
+  /// Find the 'this' offset for the member path in a pointer-to-member
+  /// APValue.
+  CharUnits getMemberPointerPathAdjustment(const APValue &MP) const;
+
   bool isNearlyEmpty(const CXXRecordDecl *RD) const;
 
   VTableContextBase *getVTableContext();
 
   /// If \p T is null pointer, assume the target in ASTContext.
   MangleContext *createMangleContext(const TargetInfo *T = nullptr);
+
+  /// Creates a device mangle context to correctly mangle lambdas in a mixed
+  /// architecture compile by setting the lambda mangling number source to the
+  /// DeviceLambdaManglingNumber. Currently this asserts that the TargetInfo
+  /// (from the AuxTargetInfo) is a an itanium target.
+  MangleContext *createDeviceMangleContext(const TargetInfo &T);
 
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;
@@ -2354,12 +2530,10 @@ public:
         return (*SuperTnullability == NullabilityKind::NonNull &&
                 *SubTnullability == NullabilityKind::Nullable);
       }
-      else {
-        // For the return type, it's okay for the superclass method to specify
-        // "nullable" and the subclass method specify "nonnull"
-        return (*SuperTnullability == NullabilityKind::Nullable &&
-                *SubTnullability == NullabilityKind::NonNull);
-      }
+      // For the return type, it's okay for the superclass method to specify
+      // "nullable" and the subclass method specify "nonnull"
+      return (*SuperTnullability == NullabilityKind::Nullable &&
+              *SubTnullability == NullabilityKind::NonNull);
     }
     return true;
   }
@@ -2367,8 +2541,10 @@ public:
   bool ObjCMethodsAreEqual(const ObjCMethodDecl *MethodDecl,
                            const ObjCMethodDecl *MethodImp);
 
-  bool UnwrapSimilarTypes(QualType &T1, QualType &T2);
-  bool UnwrapSimilarArrayTypes(QualType &T1, QualType &T2);
+  bool UnwrapSimilarTypes(QualType &T1, QualType &T2,
+                          bool AllowPiMismatch = true);
+  void UnwrapSimilarArrayTypes(QualType &T1, QualType &T2,
+                               bool AllowPiMismatch = true);
 
   /// Determine if two types are similar, according to the C++ rules. That is,
   /// determine if they are the same other than qualifiers on the initial
@@ -2667,6 +2843,14 @@ public:
   // a given fixed point type.
   QualType getCorrespondingUnsignedType(QualType T) const;
 
+  // Per C99 6.2.5p6, for every signed integer type, there is a corresponding
+  // unsigned integer type.  This method takes an unsigned type, and returns the
+  // corresponding signed integer type.
+  // With the introduction of fixed point types in ISO N1169, this method also
+  // accepts fixed point types and returns the corresponding signed type for
+  // a given fixed point type.
+  QualType getCorrespondingSignedType(QualType T) const;
+
   // Per ISO N1169, this method accepts fixed point types and returns the
   // corresponding saturated type for a given fixed point type.
   QualType getCorrespondingSaturatedType(QualType Ty) const;
@@ -2838,6 +3022,11 @@ public:
   /// Return a declaration for the global GUID object representing the given
   /// GUID value.
   MSGuidDecl *getMSGuidDecl(MSGuidDeclParts Parts) const;
+
+  /// Return the template parameter object of the given type with the given
+  /// value.
+  TemplateParamObjectDecl *getTemplateParamObjectDecl(QualType T,
+                                                      const APValue &V) const;
 
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
@@ -3034,13 +3223,12 @@ public:
   };
 
   struct SectionInfo {
-    DeclaratorDecl *Decl;
+    NamedDecl *Decl;
     SourceLocation PragmaSectionLocation;
     int SectionFlags;
 
     SectionInfo() = default;
-    SectionInfo(DeclaratorDecl *Decl,
-                SourceLocation PragmaSectionLocation,
+    SectionInfo(NamedDecl *Decl, SourceLocation PragmaSectionLocation,
                 int SectionFlags)
         : Decl(Decl), PragmaSectionLocation(PragmaSectionLocation),
           SectionFlags(SectionFlags) {}
@@ -3057,6 +3245,8 @@ public:
   /// Whether a C++ static variable should be externalized.
   bool shouldExternalizeStaticVar(const Decl *D) const;
 
+  StringRef getCUIDHash() const;
+
 private:
   /// All OMPTraitInfo objects live in this collection, one per
   /// `pragma omp [begin] declare variant` directive.
@@ -3064,8 +3254,8 @@ private:
 };
 
 /// Insertion operator for diagnostics.
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    const ASTContext::SectionInfo &Section);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      const ASTContext::SectionInfo &Section);
 
 /// Utility function for constructing a nullary selector.
 inline Selector GetNullarySelector(StringRef name, ASTContext &Ctx) {

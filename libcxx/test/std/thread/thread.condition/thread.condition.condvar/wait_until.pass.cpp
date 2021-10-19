@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+// ALLOW_RETRIES: 2
 
 // <condition_variable>
 
@@ -23,6 +24,7 @@
 #include <chrono>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 struct TestClock
@@ -83,7 +85,7 @@ void run_test()
     test2 = 0;
     {
         std::unique_lock<std::mutex>lk(mut);
-        std::thread t(f<Clock>);
+        std::thread t = support::make_test_thread(f<Clock>);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);
@@ -97,7 +99,7 @@ void run_test()
     test2 = 0;
     {
         std::unique_lock<std::mutex>lk(mut);
-        std::thread t(f<Clock>);
+        std::thread t = support::make_test_thread(f<Clock>);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);

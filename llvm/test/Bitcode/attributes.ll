@@ -26,8 +26,8 @@ define void @f4(i8 inreg %0)
         ret void;
 }
 
-define void @f5(i8* sret %0)
-; CHECK: define void @f5(i8* sret %0)
+define void @f5(i8* sret(i8) %0)
+; CHECK: define void @f5(i8* sret(i8) %0)
 {
         ret void;
 }
@@ -44,7 +44,7 @@ define void @f7(i8* noalias %0)
         ret void;
 }
 
-define void @f8(i8* byval %0)
+define void @f8(i8* byval(i8) %0)
 ; CHECK: define void @f8(i8* byval(i8) %0)
 {
         ret void;
@@ -98,8 +98,8 @@ define void @f16() sspreq
         ret void;
 }
 
-define void @f17(i8 align 4 %0)
-; CHECK: define void @f17(i8 align 4 %0)
+define void @f17(i8* align 4 %0)
+; CHECK: define void @f17(i8* align 4 %0)
 {
         ret void;
 }
@@ -214,8 +214,8 @@ define void @f35() optnone noinline
         ret void;
 }
 
-define void @f36(i8* inalloca %0) {
-; CHECK: define void @f36(i8* inalloca %0) {
+define void @f36(i8* inalloca(i8) %0) {
+; CHECK: define void @f36(i8* inalloca(i8) %0) {
         ret void
 }
 
@@ -398,6 +398,86 @@ define void @f67(i32* byref(i32) %a)
   ret void
 }
 
+; CHECK: define void @f68() #41
+define void @f68() mustprogress
+{
+  ret void
+}
+
+; CHECK: define void @f69() #42
+define void @f69() nocallback
+{
+  ret void
+}
+
+; CHECK: define void @f70() #43
+define void @f70() cold
+{
+  ret void
+}
+
+; CHECK: define void @f71() #44
+define void @f71() hot
+{
+  ret void
+}
+
+; CHECK: define void @f72() #45
+define void @f72() vscale_range(8)
+{
+  ret void
+}
+
+; CHECK: define void @f73() #46
+define void @f73() vscale_range(1,8)
+{
+  ret void
+}
+
+; CHECK: define void @f74() #47
+define void @f74() vscale_range(1,0)
+{
+  ret void
+}
+
+; CHECK: define void @f75()
+; CHECK-NOT: define void @f75() #
+define void @f75() vscale_range(0,0)
+{
+  ret void
+}
+
+; CHECK: define void @f76(i8* swiftasync %0)
+define void @f76(i8* swiftasync %0)
+{
+  ret void;
+}
+
+; CHECK: define void @f77() #48
+define void @f77() nosanitize_coverage
+{
+        ret void;
+}
+
+; CHECK: define void @f78() #49
+define void @f78() noprofile
+{
+        ret void;
+}
+
+declare void @llvm.some.intrinsic(i32*)
+define void @f79() {
+; CHECK: call void @llvm.some.intrinsic(i32* elementtype(i32) null)
+  call void @llvm.some.intrinsic(i32* elementtype(i32) null)
+  ret void
+}
+
+; CHECK: define void @f80() #50
+define void @f80() disable_sanitizer_instrumentation
+{
+        ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -439,4 +519,14 @@ define void @f67(i32* byref(i32) %a)
 ; CHECK: attributes #38 = { nosync }
 ; CHECK: attributes #39 = { sanitize_memtag }
 ; CHECK: attributes #40 = { null_pointer_is_valid }
+; CHECK: attributes #41 = { mustprogress }
+; CHECK: attributes #42 = { nocallback }
+; CHECK: attributes #43 = { cold }
+; CHECK: attributes #44 = { hot }
+; CHECK: attributes #45 = { vscale_range(8,8) }
+; CHECK: attributes #46 = { vscale_range(1,8) }
+; CHECK: attributes #47 = { vscale_range(1,0) }
+; CHECK: attributes #48 = { nosanitize_coverage }
+; CHECK: attributes #49 = { noprofile }
+; CHECK: attributes #50 = { disable_sanitizer_instrumentation }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

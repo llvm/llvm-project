@@ -33,7 +33,7 @@ Options
 
    Triggers detection of violations of the CERT recommendation ERR09-CPP. Throw
    anonymous temporaries.
-   Default is `1`.
+   Default is `true`.
 
 .. option:: WarnOnLargeObject
 
@@ -41,12 +41,12 @@ Options
    object by value is not dangerous but affects the performance negatively. The
    maximum size of an object allowed to be caught without warning can be set
    using the `MaxSize` option.
-   Default is `0`.
+   Default is `false`.
 
 .. option:: MaxSize
 
    Determines the maximum size of an object allowed to be caught without
-   warning. Only applicable if `WarnOnLargeObject` is set to `1`. If option is
-   set by the user to `std::numeric_limits<uint64_t>::max()` then it reverts to
-   the default value.
+   warning. Only applicable if :option:`WarnOnLargeObject` is set to `true`. If 
+   the option is set by the user to `std::numeric_limits<uint64_t>::max()` then
+   it reverts to the default value.
    Default is the size of `size_t`.

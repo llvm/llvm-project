@@ -16,9 +16,14 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
+
+namespace detail {
+struct TypeIDExported;
+} // namespace detail
 
 /// This class provides an efficient unique identifier for a specific C++ type.
 /// This allows for a C++ type to be compared, hashed, and stored in an opaque
@@ -53,7 +58,6 @@ class TypeID {
 
 public:
   TypeID() : TypeID(get<void>()) {}
-  TypeID(const TypeID &) = default;
 
   /// Comparison operations.
   bool operator==(const TypeID &other) const {
@@ -62,19 +66,10 @@ public:
   bool operator!=(const TypeID &other) const { return !(*this == other); }
 
   /// Construct a type info object for the given type T.
-  /// TODO: This currently won't work when using DLLs as it requires properly
-  /// attaching dllimport and dllexport. Fix this when that information is
-  /// available within LLVM.
   template <typename T>
-  LLVM_EXTERNAL_VISIBILITY static TypeID get() {
-    static Storage instance;
-    return TypeID(&instance);
-  }
+  static TypeID get();
   template <template <typename> class Trait>
-  LLVM_EXTERNAL_VISIBILITY static TypeID get() {
-    static Storage instance;
-    return TypeID(&instance);
-  }
+  static TypeID get();
 
   /// Methods for supporting PointerLikeTypeTraits.
   const void *getAsOpaquePointer() const {
@@ -92,6 +87,9 @@ private:
 
   /// The storage of this type info object.
   const Storage *storage;
+
+  // See TypeIDExported below for an explanation of the trampoline behavior.
+  friend struct detail::TypeIDExported;
 };
 
 /// Enable hashing TypeID.
@@ -99,7 +97,72 @@ inline ::llvm::hash_code hash_value(TypeID id) {
   return llvm::hash_value(id.storage);
 }
 
+namespace detail {
+
+/// The static local instance of each get method must be emitted with
+/// "default" (public) visibility across all shared libraries, regardless of
+/// whether they are compiled with hidden visibility or not. The only reliable
+/// way to make this happen is to set the visibility attribute at the
+/// containing namespace/struct scope. We don't do this on the TypeID (internal
+/// API) class in order to reduce the scope of what gets exported with
+/// public visibility. Instead, the get() methods on TypeID trampoline
+/// through those on this detail class with specific visibility controls
+/// applied, making visibility declarations on the internal TypeID class not
+/// required (all visibility relevant pieces are here).
+/// TODO: This currently won't work when using DLLs as it requires properly
+/// attaching dllimport and dllexport. Fix this when that information is
+/// available within LLVM.
+struct LLVM_EXTERNAL_VISIBILITY TypeIDExported {
+  template <typename T>
+  static TypeID get() {
+    static TypeID::Storage instance;
+    return TypeID(&instance);
+  }
+  template <template <typename> class Trait>
+  static TypeID get() {
+    static TypeID::Storage instance;
+    return TypeID(&instance);
+  }
+};
+
+} // namespace detail
+
+template <typename T>
+TypeID TypeID::get() {
+  return detail::TypeIDExported::get<T>();
+}
+template <template <typename> class Trait>
+TypeID TypeID::get() {
+  return detail::TypeIDExported::get<Trait>();
+}
+
 } // end namespace mlir
+
+// Declare/define an explicit specialization for TypeID: this forces the
+// compiler to emit a strong definition for a class and controls which
+// translation unit and shared object will actually have it.
+// This can be useful to turn to a link-time failure what would be in other
+// circumstances a hard-to-catch runtime bug when a TypeID is hidden in two
+// different shared libraries and instances of the same class only gets the same
+// TypeID inside a given DSO.
+#define DECLARE_EXPLICIT_TYPE_ID(CLASS_NAME)                                   \
+  namespace mlir {                                                             \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  LLVM_EXTERNAL_VISIBILITY TypeID TypeIDExported::get<CLASS_NAME>();           \
+  }                                                                            \
+  }
+
+#define DEFINE_EXPLICIT_TYPE_ID(CLASS_NAME)                                    \
+  namespace mlir {                                                             \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  LLVM_EXTERNAL_VISIBILITY TypeID TypeIDExported::get<CLASS_NAME>() {          \
+    static TypeID::Storage instance;                                           \
+    return TypeID(&instance);                                                  \
+  }                                                                            \
+  }                                                                            \
+  }
 
 namespace llvm {
 template <> struct DenseMapInfo<mlir::TypeID> {

@@ -81,13 +81,16 @@ def make_absolute(f, directory):
 
 def get_tidy_invocation(f, clang_tidy_binary, checks, tmpdir, build_path,
                         header_filter, allow_enabling_alpha_checkers,
-                        extra_arg, extra_arg_before, quiet, config):
+                        extra_arg, extra_arg_before, quiet, config,
+                        line_filter):
   """Gets a command line for clang-tidy."""
-  start = [clang_tidy_binary]
+  start = [clang_tidy_binary, '--use-color']
   if allow_enabling_alpha_checkers:
     start.append('-allow-enabling-analyzer-alpha-checkers')
   if header_filter is not None:
     start.append('-header-filter=' + header_filter)
+  if line_filter is not None:
+    start.append('-line-filter=' + line_filter)
   if checks:
     start.append('-checks=' + checks)
   if tmpdir is not None:
@@ -165,11 +168,14 @@ def run_tidy(args, tmpdir, build_path, queue, lock, failed_files):
                                      tmpdir, build_path, args.header_filter,
                                      args.allow_enabling_alpha_checkers,
                                      args.extra_arg, args.extra_arg_before,
-                                     args.quiet, args.config)
+                                     args.quiet, args.config, args.line_filter)
 
     proc = subprocess.Popen(invocation, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = proc.communicate()
     if proc.returncode != 0:
+      if proc.returncode < 0:
+        msg = "%s: terminated by signal %d\n" % (name, -proc.returncode)
+        err += msg.encode('utf-8')
       failed_files.append(name)
     with lock:
       sys.stdout.write(' '.join(invocation) + '\n' + output.decode('utf-8'))
@@ -209,6 +215,9 @@ def main():
                       'headers to output diagnostics from. Diagnostics from '
                       'the main file of each translation unit are always '
                       'displayed.')
+  parser.add_argument('-line-filter', default=None,
+                      help='List of files with line ranges to filter the'
+                      'warnings.')
   if yaml:
     parser.add_argument('-export-fixes', metavar='filename', dest='export_fixes',
                         help='Create a yaml file to store suggested fixes in, '

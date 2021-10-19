@@ -28,143 +28,121 @@ using namespace lldb_private;
 
 char ObjectFile::ID;
 
+static ObjectFileSP
+CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
+                          lldb::offset_t file_offset, lldb::offset_t file_size,
+                          DataBufferSP &data_sp, lldb::offset_t &data_offset) {
+  ObjectContainerCreateInstance callback;
+  for (uint32_t idx = 0;
+       (callback = PluginManager::GetObjectContainerCreateCallbackAtIndex(
+            idx)) != nullptr;
+       ++idx) {
+    std::unique_ptr<ObjectContainer> object_container_up(callback(
+        module_sp, data_sp, data_offset, file, file_offset, file_size));
+    if (object_container_up)
+      return object_container_up->GetObjectFile(file);
+  }
+  return {};
+}
+
 ObjectFileSP
 ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
                        lldb::offset_t file_offset, lldb::offset_t file_size,
                        DataBufferSP &data_sp, lldb::offset_t &data_offset) {
-  ObjectFileSP object_file_sp;
+  LLDB_SCOPED_TIMERF(
+      "ObjectFile::FindPlugin (module = %s, file = %p, file_offset = "
+      "0x%8.8" PRIx64 ", file_size = 0x%8.8" PRIx64 ")",
+      module_sp->GetFileSpec().GetPath().c_str(),
+      static_cast<const void *>(file), static_cast<uint64_t>(file_offset),
+      static_cast<uint64_t>(file_size));
 
-  if (module_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(
-        func_cat,
-        "ObjectFile::FindPlugin (module = %s, file = %p, file_offset = "
-        "0x%8.8" PRIx64 ", file_size = 0x%8.8" PRIx64 ")",
-        module_sp->GetFileSpec().GetPath().c_str(),
-        static_cast<const void *>(file), static_cast<uint64_t>(file_offset),
-        static_cast<uint64_t>(file_size));
-    if (file) {
-      FileSpec archive_file;
-      ObjectContainerCreateInstance create_object_container_callback;
+  if (!module_sp)
+    return {};
 
-      if (!data_sp) {
-        const bool file_exists = FileSystem::Instance().Exists(*file);
-        // We have an object name which most likely means we have a .o file in
-        // a static archive (.a file). Try and see if we have a cached archive
-        // first without reading any data first
-        if (file_exists && module_sp->GetObjectName()) {
-          for (uint32_t idx = 0;
-               (create_object_container_callback =
-                    PluginManager::GetObjectContainerCreateCallbackAtIndex(
-                        idx)) != nullptr;
-               ++idx) {
-            std::unique_ptr<ObjectContainer> object_container_up(
-                create_object_container_callback(module_sp, data_sp,
-                                                 data_offset, file, file_offset,
-                                                 file_size));
+  if (!file)
+    return {};
 
-            if (object_container_up)
-              object_file_sp = object_container_up->GetObjectFile(file);
+  if (!data_sp) {
+    const bool file_exists = FileSystem::Instance().Exists(*file);
+    // We have an object name which most likely means we have a .o file in
+    // a static archive (.a file). Try and see if we have a cached archive
+    // first without reading any data first
+    if (file_exists && module_sp->GetObjectName()) {
+      ObjectFileSP object_file_sp = CreateObjectFromContainer(
+          module_sp, file, file_offset, file_size, data_sp, data_offset);
+      if (object_file_sp)
+        return object_file_sp;
+    }
+    // Ok, we didn't find any containers that have a named object, now lets
+    // read the first 512 bytes from the file so the object file and object
+    // container plug-ins can use these bytes to see if they can parse this
+    // file.
+    if (file_size > 0) {
+      data_sp = FileSystem::Instance().CreateDataBuffer(file->GetPath(), 512,
+                                                        file_offset);
+      data_offset = 0;
+    }
+  }
 
-            if (object_file_sp.get())
-              return object_file_sp;
-          }
-        }
-        // Ok, we didn't find any containers that have a named object, now lets
-        // read the first 512 bytes from the file so the object file and object
-        // container plug-ins can use these bytes to see if they can parse this
-        // file.
-        if (file_size > 0) {
-          data_sp = FileSystem::Instance().CreateDataBuffer(file->GetPath(),
-                                                            512, file_offset);
-          data_offset = 0;
-        }
-      }
+  if (!data_sp || data_sp->GetByteSize() == 0) {
+    // Check for archive file with format "/path/to/archive.a(object.o)"
+    llvm::SmallString<256> path_with_object;
+    module_sp->GetFileSpec().GetPath(path_with_object);
 
-      if (!data_sp || data_sp->GetByteSize() == 0) {
-        // Check for archive file with format "/path/to/archive.a(object.o)"
-        llvm::SmallString<256> path_with_object;
-        module_sp->GetFileSpec().GetPath(path_with_object);
-
-        ConstString archive_object;
-        const bool must_exist = true;
-        if (ObjectFile::SplitArchivePathWithObject(
-                path_with_object, archive_file, archive_object, must_exist)) {
-          file_size = FileSystem::Instance().GetByteSize(archive_file);
-          if (file_size > 0) {
-            file = &archive_file;
-            module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
-            // Check if this is a object container by iterating through all
-            // object container plugin instances and then trying to get an
-            // object file from the container plugins since we had a name.
-            // Also, don't read
-            // ANY data in case there is data cached in the container plug-ins
-            // (like BSD archives caching the contained objects within an
-            // file).
-            for (uint32_t idx = 0;
-                 (create_object_container_callback =
-                      PluginManager::GetObjectContainerCreateCallbackAtIndex(
-                          idx)) != nullptr;
-                 ++idx) {
-              std::unique_ptr<ObjectContainer> object_container_up(
-                  create_object_container_callback(module_sp, data_sp,
-                                                   data_offset, file,
-                                                   file_offset, file_size));
-
-              if (object_container_up)
-                object_file_sp = object_container_up->GetObjectFile(file);
-
-              if (object_file_sp.get())
-                return object_file_sp;
-            }
-            // We failed to find any cached object files in the container plug-
-            // ins, so lets read the first 512 bytes and try again below...
-            data_sp = FileSystem::Instance().CreateDataBuffer(
-                archive_file.GetPath(), 512, file_offset);
-          }
-        }
-      }
-
-      if (data_sp && data_sp->GetByteSize() > 0) {
-        // Check if this is a normal object file by iterating through all
-        // object file plugin instances.
-        ObjectFileCreateInstance create_object_file_callback;
-        for (uint32_t idx = 0;
-             (create_object_file_callback =
-                  PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
-             nullptr;
-             ++idx) {
-          object_file_sp.reset(create_object_file_callback(
-              module_sp, data_sp, data_offset, file, file_offset, file_size));
-          if (object_file_sp.get())
-            return object_file_sp;
-        }
-
-        // Check if this is a object container by iterating through all object
-        // container plugin instances and then trying to get an object file
-        // from the container.
-        for (uint32_t idx = 0;
-             (create_object_container_callback =
-                  PluginManager::GetObjectContainerCreateCallbackAtIndex(
-                      idx)) != nullptr;
-             ++idx) {
-          std::unique_ptr<ObjectContainer> object_container_up(
-              create_object_container_callback(module_sp, data_sp, data_offset,
-                                               file, file_offset, file_size));
-
-          if (object_container_up)
-            object_file_sp = object_container_up->GetObjectFile(file);
-
-          if (object_file_sp.get())
-            return object_file_sp;
-        }
+    FileSpec archive_file;
+    ConstString archive_object;
+    const bool must_exist = true;
+    if (ObjectFile::SplitArchivePathWithObject(path_with_object, archive_file,
+                                               archive_object, must_exist)) {
+      file_size = FileSystem::Instance().GetByteSize(archive_file);
+      if (file_size > 0) {
+        file = &archive_file;
+        module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
+        // Check if this is a object container by iterating through all
+        // object container plugin instances and then trying to get an
+        // object file from the container plugins since we had a name.
+        // Also, don't read
+        // ANY data in case there is data cached in the container plug-ins
+        // (like BSD archives caching the contained objects within an
+        // file).
+        ObjectFileSP object_file_sp = CreateObjectFromContainer(
+            module_sp, file, file_offset, file_size, data_sp, data_offset);
+        if (object_file_sp)
+          return object_file_sp;
+        // We failed to find any cached object files in the container plug-
+        // ins, so lets read the first 512 bytes and try again below...
+        data_sp = FileSystem::Instance().CreateDataBuffer(
+            archive_file.GetPath(), 512, file_offset);
       }
     }
   }
+
+  if (data_sp && data_sp->GetByteSize() > 0) {
+    // Check if this is a normal object file by iterating through all
+    // object file plugin instances.
+    ObjectFileCreateInstance callback;
+    for (uint32_t idx = 0;
+         (callback = PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
+         nullptr;
+         ++idx) {
+      ObjectFileSP object_file_sp(callback(module_sp, data_sp, data_offset,
+                                           file, file_offset, file_size));
+      if (object_file_sp.get())
+        return object_file_sp;
+    }
+
+    // Check if this is a object container by iterating through all object
+    // container plugin instances and then trying to get an object file
+    // from the container.
+    ObjectFileSP object_file_sp = CreateObjectFromContainer(
+        module_sp, file, file_offset, file_size, data_sp, data_offset);
+    if (object_file_sp)
+      return object_file_sp;
+  }
+
   // We didn't find it, so clear our shared pointer in case it contains
   // anything and return an empty shared pointer
-  object_file_sp.reset();
-  return object_file_sp;
+  return {};
 }
 
 ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
@@ -174,9 +152,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   ObjectFileSP object_file_sp;
 
   if (module_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat,
-                       "ObjectFile::FindPlugin (module = "
+    LLDB_SCOPED_TIMERF("ObjectFile::FindPlugin (module = "
                        "%s, process = %p, header_addr = "
                        "0x%" PRIx64 ")",
                        module_sp->GetFileSpec().GetPath().c_str(),
@@ -503,6 +479,9 @@ size_t ObjectFile::ReadSectionData(Section *section,
     return section->GetObjectFile()->ReadSectionData(section, section_offset,
                                                      dst, dst_len);
 
+  if (!section->IsRelocated())
+    RelocateSection(section);
+
   if (IsInMemory()) {
     ProcessSP process_sp(m_process_wp.lock());
     if (process_sp) {
@@ -514,9 +493,6 @@ size_t ObjectFile::ReadSectionData(Section *section,
                                       dst_len, error);
     }
   } else {
-    if (!section->IsRelocated())
-      RelocateSection(section);
-
     const lldb::offset_t section_file_size = section->GetFileSize();
     if (section_offset < section_file_size) {
       const size_t section_bytes_left = section_file_size - section_offset;
@@ -547,6 +523,9 @@ size_t ObjectFile::ReadSectionData(Section *section,
   if (section->GetObjectFile() != this)
     return section->GetObjectFile()->ReadSectionData(section, section_data);
 
+  if (!section->IsRelocated())
+    RelocateSection(section);
+
   if (IsInMemory()) {
     ProcessSP process_sp(m_process_wp.lock());
     if (process_sp) {
@@ -563,17 +542,12 @@ size_t ObjectFile::ReadSectionData(Section *section,
         }
       }
     }
-    return GetData(section->GetFileOffset(), section->GetFileSize(),
-                   section_data);
-  } else {
-    // The object file now contains a full mmap'ed copy of the object file
-    // data, so just use this
-    if (!section->IsRelocated())
-      RelocateSection(section);
-
-    return GetData(section->GetFileOffset(), section->GetFileSize(),
-                   section_data);
   }
+
+  // The object file now contains a full mmap'ed copy of the object file
+  // data, so just use this
+  return GetData(section->GetFileOffset(), section->GetFileSize(),
+                  section_data);
 }
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
@@ -640,14 +614,6 @@ ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
     }
   }
   return symbol_type_hint;
-}
-
-ConstString ObjectFile::GetNextSyntheticSymbolName() {
-  StreamString ss;
-  ConstString file_name = GetModule()->GetFileSpec().GetFilename();
-  ss.Printf("___lldb_unnamed_symbol%u$$%s", ++m_synthetic_symbol_idx,
-            file_name.GetCString());
-  return ConstString(ss.GetString());
 }
 
 std::vector<ObjectFile::LoadableData>

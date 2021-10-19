@@ -80,11 +80,7 @@ class BasicExprCommandsTestCase(TestBase):
     def test_evaluate_expression_python(self):
         """Test SBFrame.EvaluateExpression() API for evaluating an expression."""
         self.build()
-
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         # Create the breakpoint.
         filespec = lldb.SBFileSpec("main.cpp", False)
@@ -177,7 +173,6 @@ class BasicExprCommandsTestCase(TestBase):
     # rdar://problem/8686536
     # CommandInterpreter::HandleCommand is stripping \'s from input for
     # WantsRawCommand commands
-    @expectedFailureNetBSD
     def test_expr_commands_can_handle_quotes(self):
         """Throw some expression commands with quotes at lldb."""
         self.build()

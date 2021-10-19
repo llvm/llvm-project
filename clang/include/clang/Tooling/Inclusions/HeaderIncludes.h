@@ -40,8 +40,6 @@ private:
   const IncludeStyle Style;
   bool IsMainFile;
   std::string FileName;
-  // This refers to a substring in FileName.
-  StringRef FileStem;
   SmallVector<llvm::Regex, 4> CategoryRegexs;
 };
 
@@ -86,7 +84,7 @@ private:
 
     // An include header quoted with either <> or "".
     std::string Name;
-    // The range of the whole line of include directive including any eading
+    // The range of the whole line of include directive including any leading
     // whitespaces and trailing comment.
     tooling::Range R;
   };
@@ -128,7 +126,6 @@ private:
   // Matches a whole #include directive.
   llvm::Regex IncludeRegex;
 };
-
 
 } // namespace tooling
 } // namespace clang

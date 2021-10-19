@@ -794,13 +794,15 @@ public:
 
       llvm::Optional<uint64_t> byte_size = m_type.GetByteSize(exe_scope);
       if (!byte_size) {
-        err.SetErrorString("can't get size of type");
+        err.SetErrorStringWithFormat("can't get size of type \"%s\"",
+                                     m_type.GetTypeName().AsCString());
         return;
       }
 
       llvm::Optional<size_t> opt_bit_align = m_type.GetTypeBitAlign(exe_scope);
       if (!opt_bit_align) {
-        err.SetErrorString("can't get the type alignment");
+        err.SetErrorStringWithFormat("can't get the alignment of type  \"%s\"",
+                                     m_type.GetTypeName().AsCString());
         return;
       }
 
@@ -1282,9 +1284,8 @@ public:
 
     m_register_contents.reset();
 
-    RegisterValue register_value(
-        const_cast<uint8_t *>(register_data.GetDataStart()),
-        register_data.GetByteSize(), register_data.GetByteOrder());
+    RegisterValue register_value(register_data.GetData(),
+                                 register_data.GetByteOrder());
 
     if (!reg_context_sp->WriteRegister(&m_register_info, register_value)) {
       err.SetErrorStringWithFormat("couldn't write the value of register %s",

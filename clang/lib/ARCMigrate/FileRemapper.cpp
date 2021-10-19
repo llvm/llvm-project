@@ -63,7 +63,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
   std::vector<std::pair<const FileEntry *, const FileEntry *> > pairs;
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBuf =
-      llvm::MemoryBuffer::getFile(infoFile);
+      llvm::MemoryBuffer::getFile(infoFile, /*IsText=*/true);
   if (!fileBuf)
     return report("Error opening file: " + infoFile, Diag);
 
@@ -121,7 +121,7 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
 
   std::error_code EC;
   std::string infoFile = std::string(outputPath);
-  llvm::raw_fd_ostream infoOut(infoFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream infoOut(infoFile, EC, llvm::sys::fs::OF_Text);
   if (EC)
     return report(EC.message(), Diag);
 
@@ -142,9 +142,10 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
 
       SmallString<64> tempPath;
       int fd;
-      if (fs::createTemporaryFile(path::filename(origFE->getName()),
-                                  path::extension(origFE->getName()).drop_front(), fd,
-                                  tempPath))
+      if (fs::createTemporaryFile(
+              path::filename(origFE->getName()),
+              path::extension(origFE->getName()).drop_front(), fd, tempPath,
+              llvm::sys::fs::OF_Text))
         return report("Could not create file: " + tempPath.str(), Diag);
 
       llvm::raw_fd_ostream newOut(fd, /*shouldClose=*/true);
@@ -188,6 +189,21 @@ bool FileRemapper::overwriteOriginal(DiagnosticsEngine &Diag,
 
   clear(outputDir);
   return false;
+}
+
+void FileRemapper::forEachMapping(
+    llvm::function_ref<void(StringRef, StringRef)> CaptureFile,
+    llvm::function_ref<void(StringRef, const llvm::MemoryBufferRef &)>
+        CaptureBuffer) const {
+  for (auto &Mapping : FromToMappings) {
+    if (const FileEntry *FE = Mapping.second.dyn_cast<const FileEntry *>()) {
+      CaptureFile(Mapping.first->getName(), FE->getName());
+      continue;
+    }
+    CaptureBuffer(
+        Mapping.first->getName(),
+        Mapping.second.get<llvm::MemoryBuffer *>()->getMemBufferRef());
+  }
 }
 
 void FileRemapper::applyMappings(PreprocessorOptions &PPOpts) const {

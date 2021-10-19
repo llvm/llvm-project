@@ -1,22 +1,22 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs -O0 \
-; RUN:   | FileCheck %s --check-prefixes=ENABLED,ENABLED-O0,FALLBACK,VERIFY,VERIFY-O0
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK,VERIFY,VERIFY-O0
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=1 \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix NOFALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,NOFALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=2  \
-; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix ENABLED-O0 --check-prefix FALLBACK
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
@@ -56,17 +56,22 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
-; ENABLED-NEXT:  PreLegalizerCombiner
+; ENABLED-O1-NEXT:  Analysis containing CSE Info
+; ENABLED-O1-NEXT:  PreLegalizerCombiner
+; VERIFY-O0-NEXT:  AArch64O0PreLegalizerCombiner
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Analysis containing CSE Info
+; VERIFY-O0-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED:  RegBankSelect
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code
-; ENABLED-NEXT: Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT: Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
+; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect
+; ENABLED-O1-NEXT:  AArch64 Post Select Optimizer
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  ResetMachineFunction
 

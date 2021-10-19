@@ -203,10 +203,10 @@ declare swiftcc { double, double, double, double, i32, i32, i32, i32 } @gen6()
 ; CHECK-DAG:   mov      w3, w0
 ; CHECK:   ret
 ; CHECK-O0-LABEL: _gen7
-; CHECK-O0:  str     w0, [sp, #12]
-; CHECK-O0:  ldr     w1, [sp, #12]
-; CHECK-O0:  ldr     w2, [sp, #12]
-; CHECK-O0:  ldr     w3, [sp, #12]
+; CHECK-O0:  mov w3, w0
+; CHECK-O0:  mov w0, w3
+; CHECK-O0:  mov w1, w3
+; CHECK-O0:  mov w2, w3
 define swiftcc { i32, i32, i32, i32 } @gen7(i32 %key) {
   %v0 = insertvalue { i32, i32, i32, i32 } undef, i32 %key, 0
   %v1 = insertvalue { i32, i32, i32, i32 } %v0, i32 %key, 1
@@ -221,10 +221,10 @@ define swiftcc { i32, i32, i32, i32 } @gen7(i32 %key) {
 ; CHECK:  mov      w3, w0
 ; CHECK:  ret
 ; CHECK-O0-LABEL: _gen9
-; CHECK-O0:  str     w0, [sp, #12]
-; CHECK-O0:  ldr     w1, [sp, #12]
-; CHECK-O0:  ldr     w2, [sp, #12]
-; CHECK-O0:  ldr     w3, [sp, #12]
+; CHECK-O0:  mov w3, w0
+; CHECK-O0:  mov w0, w3
+; CHECK-O0:  mov w1, w3
+; CHECK-O0:  mov w2, w3
 define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
   %v0 = insertvalue { i8, i8, i8, i8 } undef, i8 %key, 0
   %v1 = insertvalue { i8, i8, i8, i8 } %v0, i8 %key, 1
@@ -234,9 +234,9 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 }
 
 ; CHECK-LABEL: _gen10
-; CHECK:  mov.16b         v1, v0
-; CHECK:  mov.16b         v2, v0
-; CHECK:  mov.16b         v3, v0
+; CHECK:  fmov         d1, d0
+; CHECK:  fmov         d2, d0
+; CHECK:  fmov         d3, d0
 ; CHECK:  mov      w1, w0
 ; CHECK:  mov      w2, w0
 ; CHECK:  mov      w3, w0
@@ -277,8 +277,8 @@ declare swiftcc { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @gen11()
 
 ; CHECK-LABEL: _test12
 ; CHECK:  fadd.4s v0, v0, v1
+; CHECK:  fmov s1, s3
 ; CHECK:  fadd.4s v0, v0, v2
-; CHECK:  mov.16b v1, v3
 define swiftcc { <4 x float>, float } @test12() #0 {
 entry:
   %call = call swiftcc { <4 x float>, <4 x float>, <4 x float>, float } @gen12()

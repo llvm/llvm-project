@@ -175,20 +175,17 @@ size_t lspLength(llvm::StringRef Code) {
 llvm::Expected<size_t> positionToOffset(llvm::StringRef Code, Position P,
                                         bool AllowColumnsBeyondLineLength) {
   if (P.line < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Line value can't be negative ({0})", P.line),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "Line value can't be negative ({0})", P.line);
   if (P.character < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Character value can't be negative ({0})", P.character),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "Character value can't be negative ({0})", P.character);
   size_t StartOfLine = 0;
   for (int I = 0; I != P.line; ++I) {
     size_t NextNL = Code.find('\n', StartOfLine);
     if (NextNL == llvm::StringRef::npos)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Line value is out of range ({0})", P.line),
-          llvm::errc::invalid_argument);
+      return error(llvm::errc::invalid_argument,
+                   "Line value is out of range ({0})", P.line);
     StartOfLine = NextNL + 1;
   }
   StringRef Line =
@@ -198,10 +195,9 @@ llvm::Expected<size_t> positionToOffset(llvm::StringRef Code, Position P,
   bool Valid;
   size_t ByteInLine = measureUnits(Line, P.character, lspEncoding(), Valid);
   if (!Valid && !AllowColumnsBeyondLineLength)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("{0} offset {1} is invalid for line {2}", lspEncoding(),
-                      P.character, P.line),
-        llvm::errc::invalid_argument);
+    return error(llvm::errc::invalid_argument,
+                 "{0} offset {1} is invalid for line {2}", lspEncoding(),
+                 P.character, P.line);
   return StartOfLine + ByteInLine;
 }
 
@@ -449,9 +445,8 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
 
 llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R) {
   assert(isValidFileRange(SM, R));
-  bool Invalid = false;
-  auto *Buf = SM.getBuffer(SM.getFileID(R.getBegin()), &Invalid);
-  assert(!Invalid);
+  auto Buf = SM.getBufferOrNone(SM.getFileID(R.getBegin()));
+  assert(Buf);
 
   size_t BeginOffset = SM.getFileOffset(R.getBegin());
   size_t EndOffset = SM.getFileOffset(R.getEnd());
@@ -460,7 +455,7 @@ llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R) {
 
 llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P) {
-  llvm::StringRef Code = SM.getBuffer(SM.getMainFileID())->getBuffer();
+  llvm::StringRef Code = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
   auto Offset =
       positionToOffset(Code, P, /*AllowColumnBeyondLineLength=*/false);
   if (!Offset)
@@ -474,6 +469,13 @@ Range halfOpenToRange(const SourceManager &SM, CharSourceRange R) {
   Position End = sourceLocToPosition(SM, R.getEnd());
 
   return {Begin, End};
+}
+
+void unionRanges(Range &A, Range B) {
+  if (B.start < A.start)
+    A.start = B.start;
+  if (A.end < B.end)
+    A.end = B.end;
 }
 
 std::pair<size_t, size_t> offsetToClangLineColumn(llvm::StringRef Code,
@@ -604,7 +606,7 @@ lex(llvm::StringRef Code, const LangOptions &LangOpts,
         Action) {
   // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
   std::string NullTerminatedCode = Code.str();
-  SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
+  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
   for (const auto &Tok : syntax::tokenize(SM.getMainFileID(), SM, LangOpts))
     Action(Tok, SM);
@@ -635,6 +637,12 @@ std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
         Ranges.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
       });
   return Ranges;
+}
+
+bool isKeyword(llvm::StringRef NewName, const LangOptions &LangOpts) {
+  // Keywords are initialized in constructor.
+  clang::IdentifierTable KeywordsTable(LangOpts);
+  return KeywordsTable.find(NewName) != KeywordsTable.end();
 }
 
 namespace {
@@ -778,8 +786,8 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
 }
 
 // Returns the prefix namespaces of NS: {"" ... NS}.
-llvm::SmallVector<llvm::StringRef, 8> ancestorNamespaces(llvm::StringRef NS) {
-  llvm::SmallVector<llvm::StringRef, 8> Results;
+llvm::SmallVector<llvm::StringRef> ancestorNamespaces(llvm::StringRef NS) {
+  llvm::SmallVector<llvm::StringRef> Results;
   Results.push_back(NS.take_front(0));
   NS.split(Results, "::", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (llvm::StringRef &R : Results)
@@ -944,9 +952,9 @@ llvm::Optional<SpelledWord> SpelledWord::touching(SourceLocation SpelledLoc,
   if (Invalid)
     return llvm::None;
   unsigned B = Offset, E = Offset;
-  while (B > 0 && isIdentifierBody(Code[B - 1]))
+  while (B > 0 && isAsciiIdentifierContinue(Code[B - 1]))
     --B;
-  while (E < Code.size() && isIdentifierBody(Code[E]))
+  while (E < Code.size() && isAsciiIdentifierContinue(Code[E]))
     ++E;
   if (B == E)
     return llvm::None;
@@ -974,17 +982,30 @@ llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
   if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
     return None;
 
-  // Get the definition just before the searched location so that a macro
-  // referenced in a '#undef MACRO' can still be found. Note that we only do
-  // that if Loc is not pointing at start of file.
-  if (SM.getLocForStartOfFile(SM.getFileID(Loc)) != Loc)
-    Loc = Loc.getLocWithOffset(-1);
-  MacroDefinition MacroDef = PP.getMacroDefinitionAtLoc(IdentifierInfo, Loc);
-  if (auto *MI = MacroDef.getMacroInfo())
-    return DefinedMacro{
-        IdentifierInfo->getName(), MI,
-        translatePreamblePatchLocation(MI->getDefinitionLoc(), SM)};
-  return None;
+  // We need to take special case to handle #define and #undef.
+  // Preprocessor::getMacroDefinitionAtLoc() only considers a macro
+  // definition to be in scope *after* the location of the macro name in a
+  // #define that introduces it, and *before* the location of the macro name
+  // in an #undef that undefines it. To handle these cases, we check for
+  // the macro being in scope either just after or just before the location
+  // of the token. In getting the location before, we also take care to check
+  // for start-of-file.
+  FileID FID = SM.getFileID(Loc);
+  assert(Loc != SM.getLocForEndOfFile(FID));
+  SourceLocation JustAfterToken = Loc.getLocWithOffset(1);
+  auto *MacroInfo =
+      PP.getMacroDefinitionAtLoc(IdentifierInfo, JustAfterToken).getMacroInfo();
+  if (!MacroInfo && SM.getLocForStartOfFile(FID) != Loc) {
+    SourceLocation JustBeforeToken = Loc.getLocWithOffset(-1);
+    MacroInfo = PP.getMacroDefinitionAtLoc(IdentifierInfo, JustBeforeToken)
+                    .getMacroInfo();
+  }
+  if (!MacroInfo) {
+    return None;
+  }
+  return DefinedMacro{
+      IdentifierInfo->getName(), MacroInfo,
+      translatePreamblePatchLocation(MacroInfo->getDefinitionLoc(), SM)};
 }
 
 llvm::Expected<std::string> Edit::apply() const {
@@ -1036,6 +1057,49 @@ llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style) {
     E.Replacements = std::move(*NewEdits);
   else
     return NewEdits.takeError();
+  return llvm::Error::success();
+}
+
+llvm::Error applyChange(std::string &Contents,
+                        const TextDocumentContentChangeEvent &Change) {
+  if (!Change.range) {
+    Contents = Change.text;
+    return llvm::Error::success();
+  }
+
+  const Position &Start = Change.range->start;
+  llvm::Expected<size_t> StartIndex = positionToOffset(Contents, Start, false);
+  if (!StartIndex)
+    return StartIndex.takeError();
+
+  const Position &End = Change.range->end;
+  llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
+  if (!EndIndex)
+    return EndIndex.takeError();
+
+  if (*EndIndex < *StartIndex)
+    return error(llvm::errc::invalid_argument,
+                 "Range's end position ({0}) is before start position ({1})",
+                 End, Start);
+
+  // Since the range length between two LSP positions is dependent on the
+  // contents of the buffer we compute the range length between the start and
+  // end position ourselves and compare it to the range length of the LSP
+  // message to verify the buffers of the client and server are in sync.
+
+  // EndIndex and StartIndex are in bytes, but Change.rangeLength is in UTF-16
+  // code units.
+  ssize_t ComputedRangeLength =
+      lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
+
+  if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
+    return error(llvm::errc::invalid_argument,
+                 "Change's rangeLength ({0}) doesn't match the "
+                 "computed range length ({1}).",
+                 *Change.rangeLength, ComputedRangeLength);
+
+  Contents.replace(*StartIndex, *EndIndex - *StartIndex, Change.text);
+
   return llvm::Error::success();
 }
 

@@ -22,9 +22,6 @@ class CreateAfterAttachTestCase(TestBase):
         self.break_2 = line_number('main.cpp', '// Set second breakpoint here')
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
 
-    @skipIfFreeBSD  # Hangs.  May be the same as Linux issue llvm.org/pr16229 but
-    # not yet investigated.  Revisit once required functionality
-    # is implemented for FreeBSD.
     # Occasionally hangs on Windows, may be same as other issues.
     @skipIfWindows
     @skipIfiOSSimulator
@@ -35,7 +32,8 @@ class CreateAfterAttachTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
 
         # Spawn a new process
-        popen = self.spawnSubprocess(exe)
+        # use realpath to workaround llvm.org/pr48376
+        popen = self.spawnSubprocess(os.path.realpath(exe))
         pid = popen.pid
 
         # Attach to the spawned process
@@ -103,6 +101,6 @@ class CreateAfterAttachTestCase(TestBase):
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)

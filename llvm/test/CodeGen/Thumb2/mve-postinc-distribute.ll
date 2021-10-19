@@ -14,7 +14,6 @@ define i32 @vaddv(i32* nocapture readonly %data, i32 %N) {
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #32
@@ -65,16 +64,16 @@ define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocaptu
 ; CHECK-NEXT:    vldrh.u16 q0, [r0]
 ; CHECK-NEXT:    vldrh.u16 q1, [r1]
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    lsr.w lr, r7, #3
+; CHECK-NEXT:    lsr.w r9, r7, #3
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    mov r11, r12
-; CHECK-NEXT:    wls lr, lr, .LBB1_4
+; CHECK-NEXT:    wls lr, r9, .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %while.body.preheader
+; CHECK-NEXT:    add.w r8, r0, r9, lsl #5
 ; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    add.w r8, r0, lr, lsl #5
 ; CHECK-NEXT:    adds r0, #32
 ; CHECK-NEXT:    add.w r6, r1, #32
-; CHECK-NEXT:    lsl.w r9, lr, #4
+; CHECK-NEXT:    lsl.w r9, r9, #4
 ; CHECK-NEXT:    mov r4, r11
 ; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    mov r12, r11
@@ -101,9 +100,9 @@ define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocaptu
 ; CHECK-NEXT:    ldr.w r8, [sp, #36]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    mov r5, r7
-; CHECK-NEXT:    and lr, r2, #3
+; CHECK-NEXT:    and r2, r2, #3
 ; CHECK-NEXT:    lsrl r6, r5, #6
-; CHECK-NEXT:    wls lr, lr, .LBB1_7
+; CHECK-NEXT:    wls lr, r2, .LBB1_7
 ; CHECK-NEXT:  .LBB1_5: @ %while.body11
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh r9, [r0], #4
@@ -286,7 +285,6 @@ define void @fma8(float* noalias nocapture readonly %A, float* noalias nocapture
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #3
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    mov r6, r2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r4, #16]
@@ -309,17 +307,13 @@ define void @fma8(float* noalias nocapture readonly %A, float* noalias nocapture
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s0, [r0]
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    vldr s2, [r1]
-; CHECK-NEXT:    adds r1, #4
+; CHECK-NEXT:    vldmia r0!, {s0}
+; CHECK-NEXT:    vldmia r1!, {s2}
 ; CHECK-NEXT:    vldr s4, [r2]
 ; CHECK-NEXT:    vfma.f32 s4, s2, s0
-; CHECK-NEXT:    vstr s4, [r2]
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    vstmia r2!, {s4}
 ; CHECK-NEXT:    le lr, .LBB2_7
 ; CHECK-NEXT:  .LBB2_8: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

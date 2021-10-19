@@ -1,4 +1,4 @@
-# In earlier version of isl, this test case would take an inordinate
+# In earlier versions of isl, this test case would take an inordinate
 # amount of time (in the order of 30s versus 0.1s in later versions)
 # due to a call to isl_basic_set_coefficients.
 # Check that this no longer happens in the sense that this test case

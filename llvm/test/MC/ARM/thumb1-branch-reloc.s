@@ -27,5 +27,5 @@ global:
         b global
 
 @CHECK:      Section {{.*}} .rel.text.insection {
-@CHECK-NEXT:   0x2 R_ARM_THM_JUMP11 global 0x0
+@CHECK-NEXT:   0x2 R_ARM_THM_JUMP11 global
 @CHECK-NEXT: }

@@ -25,8 +25,8 @@ define void @_Z3foov() !dbg !9 {
                              isOptimized: true, flags: "-O2",
                              splitDebugFilename: "abc.debug", emissionKind: 2)
 
-; CHECK: !9 = !DISubprogram(scope: null, spFlags: 0)
-!9 = !DISubprogram(isDefinition: false)
+; CHECK: !9 = distinct !DISubprogram(scope: null, spFlags: 0)
+!9 = distinct !DISubprogram(isDefinition: false)
 
 ; CHECK: !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1, file: !2, line: 7, type: !3, scopeLine: 8, containingType: !4, virtualIndex: 10, thisAdjustment: 3, flags: DIFlagPrototyped | DIFlagNoReturn, spFlags: DISPFlagPureVirtual | DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !8, templateParams: !5, declaration: !9, retainedNodes: !6)
 !10 = distinct !DISubprogram(name: "foo", linkageName: "_Zfoov", scope: !1,

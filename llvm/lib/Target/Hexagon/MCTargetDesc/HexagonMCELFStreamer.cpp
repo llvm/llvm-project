@@ -10,7 +10,6 @@
 // instructions on to the real streamer.
 //
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "hexagonmcelfstreamer"
 
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
@@ -36,6 +35,8 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
+
+#define DEBUG_TYPE "hexagonmcelfstreamer"
 
 using namespace llvm;
 

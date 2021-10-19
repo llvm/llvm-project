@@ -75,9 +75,9 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[LOBIT]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
+; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[LOBIT]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
   %not = xor <4 x i32> %lobit, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -91,7 +91,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
 ; CHECK-NEXT:    ret <4 x i32> [[LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -389,7 +389,7 @@ define double @bitcast_extelt4(i128 %A) {
 
 define <2 x i32> @test4(i32 %A, i32 %B){
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> undef, i32 [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
@@ -404,7 +404,7 @@ define <2 x i32> @test4(i32 %A, i32 %B){
 ; rdar://8360454
 define <2 x float> @test5(float %A, float %B) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[B:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP2]]
 ;
@@ -420,7 +420,7 @@ define <2 x float> @test5(float %A, float %B) {
 
 define <2 x float> @test6(float %A){
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float undef>, float [[A:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> <float 4.200000e+01, float poison>, float [[A:%.*]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
 ;
   %tmp23 = bitcast float %A to i32
@@ -463,6 +463,14 @@ define i32 @All111(i32 %in) {
 ;
   %out = and i32 %in, xor (i32 bitcast (<1 x float> bitcast (i32 -1 to <1 x float>) to i32), i32 -1)
   ret i32 %out
+}
+
+define <vscale x 1 x i32> @ScalableAll111(<vscale x 1 x i32> %in) {
+; CHECK-LABEL: @ScalableAll111(
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[IN:%.*]]
+;
+  %out = and <vscale x 1 x i32> %in, bitcast (<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -1, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer) to <vscale x 1 x i32>)
+  ret <vscale x 1 x i32> %out
 }
 
 define <2 x i16> @BitcastInsert(i32 %a) {
@@ -564,6 +572,22 @@ define void @constant_fold_vector_to_half() {
 
 ; Ensure that we do not crash when looking at such a weird bitcast.
 define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptrvec) {
+; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i8*> [[PTRVEC:%.*]], i32 0
+; CHECK-NEXT:    ret i8* [[TMP1]]
+;
   %ptr = bitcast <1 x i8*> %ptrvec to i8*
   ret i8* %ptr
+}
+
+declare void @f1()
+declare void @f2()
+define i8* @select_bitcast_unsized_pointer(i1 %c) {
+; CHECK-LABEL: @select_bitcast_unsized_pointer(
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8* bitcast (void ()* @f1 to i8*), i8* bitcast (void ()* @f2 to i8*)
+; CHECK-NEXT:    ret i8* [[B]]
+;
+  %s = select i1 %c, void ()* @f1, void ()* @f2
+  %b = bitcast void ()* %s to i8*
+  ret i8* %b
 }

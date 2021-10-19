@@ -1,0 +1,63 @@
+; Check handling of diagnostics for problematic matches (e.g., variable capture
+; overflow) in the case of expected patterns (e.g., CHECK).
+
+RUN: echo > %t.chk 'CHECK: [[#122+1]] [[STR:abc]] [[#NUM:]]'
+RUN: echo > %t.in '123 abc 1000000000000000000000000000000000000000000000000000'
+
+  ERR-NOT:{{.}}
+      ERR:{{.*}}: remark: CHECK: expected string found in input
+ ERR-NEXT:CHECK: {{.*}}
+ ERR-NEXT:{{ *}}^
+ ERR-NEXT:<stdin>:1:1: note: found here
+ ERR-NEXT:123 abc 10{{0*}}
+ ERR-NEXT:^~~~~~~~~{{~*}}
+ ERR-NEXT:<stdin>:1:1: note: with "122+1" equal to "123"
+ ERR-NEXT:123 abc 10{{0*}}
+ ERR-NEXT:^
+ ERR-NEXT:<stdin>:1:5: note: captured var "STR"
+ ERR-NEXT:123 abc 10{{0*}}
+ ERR-NEXT:    ^~~
+ ERR-NEXT:<stdin>:1:9: error: unable to represent numeric value
+ ERR-NEXT:123 abc 10{{0*}}
+ ERR-NEXT:        ^
+  ERR-NOT:{{error|note|remark}}:
+
+     DUMP:<<<<<<
+DUMP-NEXT:           1: 123 abc 10{{0*}} 
+DUMP-NEXT:check:1'0     ^~~~~~~~~~{{~*}}
+DUMP-NEXT:check:1'1                       with "122+1" equal to "123"
+DUMP-NEXT:check:1'2         ^~~           captured var "STR"
+DUMP-NEXT:check:1'3             !~{{~*}}  error: unable to represent numeric value
+DUMP-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check -dump-input=never cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+;--------------------------------------------------
+; Check -dump-input=fail cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP

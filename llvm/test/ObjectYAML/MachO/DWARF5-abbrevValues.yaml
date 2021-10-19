@@ -280,17 +280,17 @@ DWARF:
           Tag:             DW_TAG_compile_unit
           Children:        DW_CHILDREN_yes
           Attributes:
-            - Attribute:       0x2001
+            - Attribute:       0x22FF
               Form:            DW_FORM_implicit_const
               Value:           0x12345678
 ...
 
 #CHECK: DWARF:           
 #CHECK:   debug_abbrev:
-#CHECK:     - Code:            0x0000000000000001
+#CHECK:     - Code:            0x1
 #CHECK:       Tag:             DW_TAG_compile_unit
 #CHECK:       Children:        DW_CHILDREN_yes
 #CHECK:       Attributes:
-#CHECK:         - Attribute:       0x2001
+#CHECK:         - Attribute:       0x22FF
 #CHECK:           Form:            DW_FORM_implicit_const
-#CHECK:           Value:           0x0000000012345678
+#CHECK:           Value:           0x12345678

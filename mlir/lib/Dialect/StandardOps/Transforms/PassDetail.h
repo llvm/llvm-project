@@ -9,11 +9,16 @@
 #ifndef DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
 class AtomicRMWOp;
+
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h.inc"

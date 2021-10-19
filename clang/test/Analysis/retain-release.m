@@ -2282,7 +2282,7 @@ void useAfterRelease() {
 
 void testAutoreleaseReturnsInput() {
   extern CFTypeRef CFCreateSomething();
-  CFTypeRef obj = CFCreateSomething(); // expected-warning{{Potential leak of an object stored into 'obj'}}
+  CFTypeRef obj = CFCreateSomething(); // expected-warning{{Potential leak of an object stored into 'second'}}
   CFTypeRef second = CFAutorelease(obj);
   CFRetain(second);
 }
@@ -2302,7 +2302,7 @@ void autoreleaseTypedObject() {
 }
 
 void autoreleaseReturningTypedObject() {
-  CFArrayRef arr = CFArrayCreateMutable(0, 10, &kCFTypeArrayCallBacks); // expected-warning{{Potential leak of an object stored into 'arr'}}
+  CFArrayRef arr = CFArrayCreateMutable(0, 10, &kCFTypeArrayCallBacks); // expected-warning{{Potential leak of an object stored into 'alias'}}
   CFArrayRef alias = (CFArrayRef)CFAutorelease((CFTypeRef)arr);
   CFRetain(alias);
 }

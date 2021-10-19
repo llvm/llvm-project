@@ -20,8 +20,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class Stream;
@@ -38,7 +38,7 @@ template <typename T> class SmallVectorImpl;
 
 namespace lldb_private {
 
-/// \class FileSpec FileSpec.h "lldb/Host/FileSpec.h"
+/// \class FileSpec FileSpec.h "lldb/Utility/FileSpec.h"
 /// A file utility class.
 ///
 /// A file specification class that divides paths up into a directory

@@ -40,11 +40,10 @@ class MachineFunctionAnalysisManager : public AnalysisManager<MachineFunction> {
 public:
   using Base = AnalysisManager<MachineFunction>;
 
-  MachineFunctionAnalysisManager() : Base(false), FAM(nullptr), MAM(nullptr) {}
+  MachineFunctionAnalysisManager() : Base(), FAM(nullptr), MAM(nullptr) {}
   MachineFunctionAnalysisManager(FunctionAnalysisManager &FAM,
-                                 ModuleAnalysisManager &MAM,
-                                 bool DebugLogging = false)
-      : Base(DebugLogging), FAM(&FAM), MAM(&MAM) {}
+                                 ModuleAnalysisManager &MAM)
+      : Base(), FAM(&FAM), MAM(&MAM) {}
   MachineFunctionAnalysisManager(MachineFunctionAnalysisManager &&) = default;
   MachineFunctionAnalysisManager &
   operator=(MachineFunctionAnalysisManager &&) = default;
@@ -91,7 +90,7 @@ public:
   ///
   /// This method never runs the analysis.
   ///
-  /// \returns null if there is no cached result.
+  /// returns null if there is no cached result.
   using Base::getCachedResult;
 
   // FIXME: Add LoopAnalysisManager or CGSCCAnalysisManager if needed.
@@ -136,7 +135,7 @@ public:
   MachineFunctionPassManager(bool DebugLogging = false,
                              bool RequireCodeGenSCCOrder = false,
                              bool VerifyMachineFunction = false)
-      : Base(DebugLogging), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
+      : Base(), RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
         VerifyMachineFunction(VerifyMachineFunction) {}
   MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
   MachineFunctionPassManager &

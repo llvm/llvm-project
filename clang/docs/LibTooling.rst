@@ -198,4 +198,4 @@ Linking
 
 For a list of libraries to link, look at one of the tools' CMake files (for
 example `clang-check/CMakeList.txt
-<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-check/CMakeLists.txt>`_).
+<https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-check/CMakeLists.txt>`_).

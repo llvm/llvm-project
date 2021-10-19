@@ -1,4 +1,4 @@
-; RUN: opt -S %s -early-cse | FileCheck %s
+; RUN: opt -S %s -early-cse -earlycse-debug-hash | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 

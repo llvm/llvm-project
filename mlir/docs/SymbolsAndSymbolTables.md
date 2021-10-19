@@ -2,13 +2,13 @@
 
 [TOC]
 
-With [Regions](LangRef.md#regions), the multi-level aspect of MLIR is structural
-in the IR. A lot of infrastructure within the compiler is built around this
-nesting structure; including the processing of operations within the
-[pass manager](PassManagement.md#pass-manager). One advantage of the MLIR design
-is that it is able to process operations in parallel, utilizing multiple
+With [Regions](LangRef.md/#regions), the multi-level aspect of MLIR is
+structural in the IR. A lot of infrastructure within the compiler is built
+around this nesting structure; including the processing of operations within the
+[pass manager](PassManagement.md/#pass-manager). One advantage of the MLIR
+design is that it is able to process operations in parallel, utilizing multiple
 threads. This is possible due to a property of the IR known as
-[`IsolatedFromAbove`](Traits.md#isolatedfromabove).
+[`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
 
 Without this property, any operation could affect or mutate the use-list of
 operations defined above. Making this thread-safe requires expensive locking in
@@ -31,16 +31,16 @@ defines a [`SymbolTable`](#symbol-table). The name of a symbol *must* be unique
 within the parent `SymbolTable`. This name is semantically similarly to an SSA
 result value, and may be referred to by other operations to provide a symbolic
 link, or use, to the symbol. An example of a `Symbol` operation is
-[`func`](LangRef.md#functions). `func` defines a symbol name, which is
-[referred to](#referencing-a-symbol) by operations like
-[`std.call`](Dialects/Standard.md#call).
+[`builtin.func`](Dialects/Builtin.md/#func-mlirfuncop). `builtin.func` defines a
+symbol name, which is [referred to](#referencing-a-symbol) by operations like
+[`std.call`](Dialects/Standard.md/#stdcall-callop).
 
-### Defining a Symbol
+### Defining or declaring a Symbol
 
-A `Symbol` operation may use the `OpTrait::Symbol` trait to provide the
-necessary verification and accessors, but this is not required as some
-operations, such as `module`, conditionally define a symbol. `Symbol`s must have
-the following properties:
+A `Symbol` operation should use the `SymbolOpInterface` interface to provide the
+necessary verification and accessors; it also supports operations, such as
+`builtin.module`, that conditionally define a symbol. `Symbol`s must have the
+following properties:
 
 *   A `StringAttr` attribute named
     'SymbolTable::getSymbolAttrName()'(`sym_name`).
@@ -52,6 +52,9 @@ the following properties:
 *   No SSA results
     -   Intermixing the different ways to `use` an operation quickly becomes
         unwieldy and difficult to analyze.
+*   Whether this operation is a declaration or definition (`isDeclaration`)
+    -   Declarations do not define a new symbol but reference a symbol defined
+        outside the visible IR.
 
 ## Symbol Table
 
@@ -64,7 +67,7 @@ Operations defining a `SymbolTable` must use the `OpTrait::SymbolTable` trait.
 ### Referencing a Symbol
 
 `Symbol`s are referenced symbolically by name via the
-[`SymbolRefAttr`](LangRef.md#symbol-reference-attribute) attribute. A symbol
+[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) attribute. A symbol
 reference attribute contains a named reference to an operation that is nested
 within a symbol table. It may optionally contain a set of nested references that
 further resolve to a symbol nested within a different symbol table. When
@@ -74,7 +77,7 @@ operation that is also a [symbol table](#symbol-table).
 Below is an example of how an operation can reference a symbol operation:
 
 ```mlir
-// This `func` operation defines a symbol named `symbol`.
+// This `builtin.func` operation defines a symbol named `symbol`.
 func @symbol()
 
 // Our `foo.user` operation contains a SymbolRefAttr with the name of the
@@ -103,7 +106,7 @@ module {
 // Here we define another nested symbol table, except this time it also defines
 // a symbol.
 module @module_symbol {
-  // This `func` operation defines a symbol named `nested_symbol`.
+  // This `builtin.func` operation defines a symbol named `nested_symbol`.
   func @nested_symbol()
 }
 
@@ -115,8 +118,8 @@ module @module_symbol {
 Using an attribute, as opposed to an SSA value, has several benefits:
 
 *   References may appear in more places than the operand list; including
-    [nested attribute dictionaries](LangRef.md#dictionary-attribute),
-    [array attributes](LangRef.md#array-attribute), etc.
+    [nested attribute dictionaries](Dialects/Builtin.md/dictionaryattr),
+    [array attributes](Dialects/Builtin.md/#arrayattr), etc.
 
 *   Handling of SSA dominance remains unchanged.
 
@@ -134,13 +137,17 @@ operations that materialize SSA values from a symbol reference. Each has
 different trade offs depending on the situation. A function call may directly
 use a `SymbolRef` as the callee, whereas a reference to a global variable might
 use a materialization operation so that the variable can be used in other
-operations like `std.addi`.
-[`llvm.mlir.addressof`](Dialects/LLVM.md#llvmmliraddressof) is one example of
-such an operation.
+operations like `arith.addi`.
+[`llvm.mlir.addressof`](Dialects/LLVM.md/#llvmmliraddressof-mlirllvmaddressofop)
+is one example of such an operation.
 
 See the `LangRef` definition of the
-[`SymbolRefAttr`](LangRef.md#symbol-reference-attribute) for more information
-about the structure of this attribute.
+[`SymbolRefAttr`](Dialects/Builtin.md/#symbolrefattr) for more information about
+the structure of this attribute.
+
+Operations that reference a `Symbol` and want to perform verification and
+general mutation of the symbol should implement the `SymbolUserOpInterface` to
+ensure that symbol accesses are legal and efficient.
 
 ### Manipulating a Symbol
 
@@ -178,7 +185,10 @@ symbol has one of the following visibilities:
 *   Public (Default)
 
     -   The symbol may be referenced from outside of the visible IR. We cannot
-        assume that all of the uses of this symbol are observable.
+        assume that all of the uses of this symbol are observable. If the
+        operation declares a symbol (as opposed to defining it), public
+        visibility is not allowed because symbol declarations are not intended
+        to be used from outside the visible IR.
 
 *   Private
 
@@ -190,20 +200,21 @@ symbol has one of the following visibilities:
         table, but not outside of the visible IR, as long as each symbol table
         parent also defines a non-private symbol.
 
-A few examples of what this looks like in the IR are shown below:
+For Functions, the visibility is printed after the operation name without a
+quote. A few examples of what this looks like in the IR are shown below:
 
 ```mlir
 module @public_module {
   // This function can be accessed by 'live.user', but cannot be referenced
   // externally; all uses are known to reside within parent regions.
-  func @nested_function() attributes { sym_visibility = "nested" }
+  func nested @nested_function()
 
   // This function cannot be accessed outside of 'public_module'.
-  func @private_function() attributes { sym_visibility = "private" }
+  func private @private_function()
 }
 
 // This function can only be accessed from within the top-level module.
-func @private_function() attributes { sym_visibility = "private" }
+func private @private_function()
 
 // This function may be referenced externally.
 func @public_function()

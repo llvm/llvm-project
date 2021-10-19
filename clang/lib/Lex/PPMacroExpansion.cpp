@@ -25,6 +25,7 @@
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -154,11 +155,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   // If we were the first overrider for any macro, it's no longer a leaf.
   auto &LeafMacros = LeafModuleMacros[II];
   if (HidAny) {
-    LeafMacros.erase(std::remove_if(LeafMacros.begin(), LeafMacros.end(),
-                                    [](ModuleMacro *MM) {
-                                      return MM->NumOverriddenBy != 0;
-                                    }),
-                     LeafMacros.end());
+    llvm::erase_if(LeafMacros,
+                   [](ModuleMacro *MM) { return MM->NumOverriddenBy != 0; });
   }
 
   // The new macro is always a leaf macro.
@@ -170,7 +168,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   return MM;
 }
 
-ModuleMacro *Preprocessor::getModuleMacro(Module *Mod, IdentifierInfo *II) {
+ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
+                                          const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ModuleMacro::Profile(ID, Mod, II);
 
@@ -345,7 +344,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident_Pragma  = RegisterBuiltinMacro(*this, "_Pragma");
 
   // C++ Standing Document Extensions.
-  if (LangOpts.CPlusPlus)
+  if (getLangOpts().CPlusPlus)
     Ident__has_cpp_attribute =
         RegisterBuiltinMacro(*this, "__has_cpp_attribute");
   else
@@ -357,7 +356,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__TIMESTAMP__     = RegisterBuiltinMacro(*this, "__TIMESTAMP__");
 
   // Microsoft Extensions.
-  if (LangOpts.MicrosoftExt) {
+  if (getLangOpts().MicrosoftExt) {
     Ident__identifier = RegisterBuiltinMacro(*this, "__identifier");
     Ident__pragma = RegisterBuiltinMacro(*this, "__pragma");
   } else {
@@ -371,7 +370,7 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_extension    = RegisterBuiltinMacro(*this, "__has_extension");
   Ident__has_builtin      = RegisterBuiltinMacro(*this, "__has_builtin");
   Ident__has_attribute    = RegisterBuiltinMacro(*this, "__has_attribute");
-  if (!LangOpts.CPlusPlus)
+  if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro(*this, "__has_c_attribute");
   else
     Ident__has_c_attribute = nullptr;
@@ -389,7 +388,7 @@ void Preprocessor::RegisterBuiltinMacros() {
 
   // Modules.
   Ident__building_module  = RegisterBuiltinMacro(*this, "__building_module");
-  if (!LangOpts.CurrentModule.empty())
+  if (!getLangOpts().CurrentModule.empty())
     Ident__MODULE__ = RegisterBuiltinMacro(*this, "__MODULE__");
   else
     Ident__MODULE__ = nullptr;
@@ -424,7 +423,7 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
 
   // If this is a function-like macro invocation, it's safe to trivially expand
   // as long as the identifier is not a macro argument.
-  return std::find(MI->param_begin(), MI->param_end(), II) == MI->param_end();
+  return !llvm::is_contained(MI->params(), II);
 }
 
 /// isNextPPTokenLParen - Determine whether the next preprocessor token to be
@@ -469,6 +468,8 @@ bool Preprocessor::isNextPPTokenLParen() {
 /// expanded as a macro, handle it and return the next token as 'Identifier'.
 bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
                                                  const MacroDefinition &M) {
+  emitMacroExpansionWarnings(Identifier);
+
   MacroInfo *MI = M.getMacroInfo();
 
   // If this is a macro expansion in the "#if !defined(x)" line for the file,
@@ -889,10 +890,10 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Empty arguments are standard in C99 and C++0x, and are supported as an
     // extension in other modes.
-    if (ArgTokens.size() == ArgTokenStart && !LangOpts.C99)
-      Diag(Tok, LangOpts.CPlusPlus11 ?
-           diag::warn_cxx98_compat_empty_fnmacro_arg :
-           diag::ext_empty_fnmacro_arg);
+    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99)
+      Diag(Tok, getLangOpts().CPlusPlus11
+                    ? diag::warn_cxx98_compat_empty_fnmacro_arg
+                    : diag::ext_empty_fnmacro_arg);
 
     // Add a marker EOF token to the end of the token list for this argument.
     Token EOFTok;
@@ -984,7 +985,11 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
       // If the macro contains the comma pasting extension, the diagnostic
       // is suppressed; we know we'll get another diagnostic later.
       if (!MI->hasCommaPasting()) {
-        Diag(Tok, diag::ext_missing_varargs_arg);
+        // C++20 allows this construct, but standards before C++20 and all C
+        // standards do not allow the construct (we allow it as an extension).
+        Diag(Tok, getLangOpts().CPlusPlus20
+                      ? diag::warn_cxx17_compat_missing_varargs_arg
+                      : diag::ext_missing_varargs_arg);
         Diag(MI->getDefinitionLoc(), diag::note_macro_here)
           << MacroName.getIdentifierInfo();
       }
@@ -1285,7 +1290,7 @@ static bool EvaluateHasIncludeNext(Token &Tok,
 /// integer values.
 static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
                                             Token &Tok, IdentifierInfo *II,
-                                            Preprocessor &PP,
+                                            Preprocessor &PP, bool ExpandArgs,
                                             llvm::function_ref<
                                               int(Token &Tok,
                                                   bool &HasLexedNextTok)> Op) {
@@ -1311,7 +1316,10 @@ static void EvaluateFeatureLikeBuiltinMacro(llvm::raw_svector_ostream& OS,
   bool SuppressDiagnostic = false;
   while (true) {
     // Parse next token.
-    PP.LexUnexpandedToken(Tok);
+    if (ExpandArgs)
+      PP.Lex(Tok);
+    else
+      PP.LexUnexpandedToken(Tok);
 
 already_lexed:
     switch (Tok.getKind()) {
@@ -1428,7 +1436,7 @@ static bool isTargetVendor(const TargetInfo &TI, const IdentifierInfo *II) {
   StringRef VendorName = TI.getTriple().getVendorName();
   if (VendorName.empty())
     VendorName = "unknown";
-  return VendorName.equals_lower(II->getName());
+  return VendorName.equals_insensitive(II->getName());
 }
 
 /// Implements the __is_target_os builtin macro.
@@ -1449,15 +1457,6 @@ static bool isTargetEnvironment(const TargetInfo &TI,
   std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
   llvm::Triple Env(EnvName);
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
-}
-
-static void remapMacroPath(
-    SmallString<256> &Path,
-    const std::map<std::string, std::string, std::greater<std::string>>
-        &MacroPrefixMap) {
-  for (const auto &Entry : MacroPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
-      break;
 }
 
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
@@ -1541,7 +1540,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
       } else {
         FN += PLoc.getFilename();
       }
-      remapMacroPath(FN, PPOpts->MacroPrefixMap);
+      getLangOpts().remapPathPrefix(FN);
       Lexer::Stringify(FN);
       OS << '"' << FN << '"';
     }
@@ -1610,25 +1609,24 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     OS << CounterValue++;
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_feature) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
         return II && HasFeature(*this, II->getName());
       });
   } else if (II == Ident__has_extension) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
         return II && HasExtension(*this, II->getName());
       });
   } else if (II == Ident__has_builtin) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
-        const LangOptions &LangOpts = getLangOpts();
         if (!II)
           return false;
         else if (II->getBuiltinID() != 0) {
@@ -1664,8 +1662,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
         } else {
           return llvm::StringSwitch<bool>(II->getName())
               // Report builtin templates as being builtins.
-              .Case("__make_integer_seq", LangOpts.CPlusPlus)
-              .Case("__type_pack_element", LangOpts.CPlusPlus)
+              .Case("__make_integer_seq", getLangOpts().CPlusPlus)
+              .Case("__type_pack_element", getLangOpts().CPlusPlus)
               // Likewise for some builtin preprocessor macros.
               // FIXME: This is inconsistent; we usually suggest detecting
               // builtin macros via #ifdef. Don't add more cases here.
@@ -1677,12 +1675,12 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
         }
       });
   } else if (II == Ident__is_identifier) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [](Token &Tok, bool &HasLexedNextToken) -> int {
         return Tok.is(tok::identifier);
       });
   } else if (II == Ident__has_attribute) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, true,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
@@ -1690,18 +1688,24 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
                                  getTargetInfo(), getLangOpts()) : 0;
       });
   } else if (II == Ident__has_declspec) {
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, true,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                            diag::err_feature_check_malformed);
-        return II ? hasAttribute(AttrSyntax::Declspec, nullptr, II,
-                                 getTargetInfo(), getLangOpts()) : 0;
+        if (II) {
+          const LangOptions &LangOpts = getLangOpts();
+          return LangOpts.DeclSpecKeyword &&
+                 hasAttribute(AttrSyntax::Declspec, nullptr, II,
+                              getTargetInfo(), LangOpts);
+        }
+
+        return false;
       });
   } else if (II == Ident__has_cpp_attribute ||
              II == Ident__has_c_attribute) {
     bool IsCXX = II == Ident__has_cpp_attribute;
-    EvaluateFeatureLikeBuiltinMacro(
-        OS, Tok, II, *this, [&](Token &Tok, bool &HasLexedNextToken) -> int {
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, true,
+        [&](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *ScopeII = nullptr;
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
@@ -1715,7 +1719,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             HasLexedNextToken = true;
           else {
             ScopeII = II;
-            LexUnexpandedToken(Tok);
+            // Lex an expanded token for the attribute name.
+            Lex(Tok);
             II = ExpectFeatureIdentifierInfo(Tok, *this,
                                              diag::err_feature_check_malformed);
           }
@@ -1742,7 +1747,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__has_warning) {
     // The argument should be a parenthesized string literal.
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         std::string WarningName;
         SourceLocation StrStartLoc = Tok.getLocation();
@@ -1773,7 +1778,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // The argument to this builtin should be an identifier. The
     // builtin evaluates to 1 when that identifier names the module we are
     // currently building.
-    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this,
+    EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [this](Token &Tok, bool &HasLexedNextToken) -> int {
         IdentifierInfo *II = ExpectFeatureIdentifierInfo(Tok, *this,
                                        diag::err_expected_id_building_module);
@@ -1807,7 +1812,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
     if (!Tok.isAnnotation() && Tok.getIdentifierInfo())
       Tok.setKind(tok::identifier);
-    else {
+    else if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
+      StringLiteralParser Literal(Tok, *this);
+      if (Literal.hadError)
+        return;
+
+      Tok.setIdentifierInfo(getIdentifierInfo(Literal.GetString()));
+      Tok.setKind(tok::identifier);
+    } else {
       Diag(Tok.getLocation(), diag::err_pp_identifier_arg_not_identifier)
         << Tok.getKind();
       // Don't walk past anything that's not a real token.
@@ -1826,28 +1838,32 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     return;
   } else if (II == Ident__is_target_arch) {
     EvaluateFeatureLikeBuiltinMacro(
-        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           return II && isTargetArch(getTargetInfo(), II);
         });
   } else if (II == Ident__is_target_vendor) {
     EvaluateFeatureLikeBuiltinMacro(
-        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           return II && isTargetVendor(getTargetInfo(), II);
         });
   } else if (II == Ident__is_target_os) {
     EvaluateFeatureLikeBuiltinMacro(
-        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           return II && isTargetOS(getTargetInfo(), II);
         });
   } else if (II == Ident__is_target_environment) {
     EvaluateFeatureLikeBuiltinMacro(
-        OS, Tok, II, *this, [this](Token &Tok, bool &HasLexedNextToken) -> int {
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           return II && isTargetEnvironment(getTargetInfo(), II);

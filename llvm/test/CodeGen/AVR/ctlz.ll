@@ -10,8 +10,7 @@ declare i8 @llvm.ctlz.i8(i8)
 
 ; CHECK-LABEL: count_leading_zeros:
 ; CHECK: cpi    [[RESULT:r[0-9]+]], 0
-; CHECK: brne   .LBB0_1
-; CHECK: rjmp   .LBB0_2
+; CHECK: breq   .LBB0_2
 ; CHECK: mov    [[SCRATCH:r[0-9]+]], {{.*}}[[RESULT]]
 ; CHECK: lsr    {{.*}}[[SCRATCH]]
 ; CHECK: or     {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]
@@ -20,10 +19,8 @@ declare i8 @llvm.ctlz.i8(i8)
 ; CHECK: lsr    {{.*}}[[RESULT]]
 ; CHECK: or     {{.*}}[[RESULT]], {{.*}}[[SCRATCH]]
 ; CHECK: mov    {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]
-; CHECK: lsr    {{.*}}[[SCRATCH]]
-; CHECK: lsr    {{.*}}[[SCRATCH]]
-; CHECK: lsr    {{.*}}[[SCRATCH]]
-; CHECK: lsr    {{.*}}[[SCRATCH]]
+; CHECK: swap   {{.*}}[[SCRATCH]]
+; CHECK: andi   {{.*}}[[SCRATCH]], 15
 ; CHECK: or     {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]
 ; CHECK: com    {{.*}}[[SCRATCH]]
 ; CHECK: mov    {{.*}}[[RESULT]], {{.*}}[[SCRATCH]]
@@ -37,10 +34,7 @@ declare i8 @llvm.ctlz.i8(i8)
 ; CHECK: andi   {{.*}}[[SCRATCH]], 51
 ; CHECK: add    {{.*}}[[SCRATCH]], {{.*}}[[RESULT]]
 ; CHECK: mov    {{.*}}[[RESULT]], {{.*}}[[SCRATCH]]
-; CHECK: lsr    {{.*}}[[RESULT]]
-; CHECK: lsr    {{.*}}[[RESULT]]
-; CHECK: lsr    {{.*}}[[RESULT]]
-; CHECK: lsr    {{.*}}[[RESULT]]
+; CHECK: swap   {{.*}}[[RESULT]]
 ; CHECK: add    {{.*}}[[RESULT]], {{.*}}[[SCRATCH]]
 ; CHECK: andi   {{.*}}[[RESULT]], 15
 ; CHECK: ret

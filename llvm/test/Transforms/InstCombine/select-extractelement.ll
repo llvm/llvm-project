@@ -209,5 +209,28 @@ define <4 x i32> @extract_cond_type_mismatch(<4 x i32> %x, <4 x i32> %y, <5 x i1
   ret <4 x i32> %r
 }
 
+; This would infinite loop because a select transform would create
+; a complete -1 vector constant and demanded elements would change
+; it back to  partial undef.
+
+define i32 @inf_loop_partial_undef(<2 x i1> %a, <2 x i1> %b, <2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @inf_loop_partial_undef(
+; CHECK-NEXT:    [[T5:%.*]] = add nsw <2 x i32> [[Y:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[T6:%.*]] = icmp sge <2 x i32> [[T5]], [[X:%.*]]
+; CHECK-NEXT:    [[AB:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[T7:%.*]] = select <2 x i1> [[AB]], <2 x i1> [[T6]], <2 x i1> <i1 true, i1 poison>
+; CHECK-NEXT:    [[P:%.*]] = select <2 x i1> [[T7]], <2 x i32> <i32 0, i32 poison>, <2 x i32> [[Y]]
+; CHECK-NEXT:    [[T11:%.*]] = extractelement <2 x i32> [[P]], i32 0
+; CHECK-NEXT:    ret i32 [[T11]]
+;
+  %t5 = add nsw <2 x i32> %y, <i32 2147483647, i32 2147483647>
+  %t6 = icmp slt <2 x i32> %t5, %x
+  %ab = and <2 x i1> %a, %b
+  %t7 = select <2 x i1> %ab, <2 x i1> %t6, <2 x i1> <i1 0, i1 poison>
+  %t10 = xor <2 x i1> %t7, <i1 true, i1 poison>
+  %p = select <2 x i1> %t10, <2 x i32> zeroinitializer, <2 x i32> %y
+  %t11 = extractelement <2 x i32> %p, i32 0
+  ret i32 %t11
+}
 
 attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

@@ -21,3 +21,11 @@ void K(int k) {
   asm volatile ("" :: "K"(BelowMin)); // expected-error{{value '-1' out of range for constraint 'K'}}
   asm volatile ("" :: "K"(AboveMax)); // expected-error{{value '32' out of range for constraint 'K'}}
 }
+
+void test_clobber_conflict(void) {
+  register long x10 asm("x10");
+  asm volatile("" :: "r"(x10) : "x10"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" :: "r"(x10) : "a0"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" : "=r"(x10) :: "x10"); // expected-error {{conflicts with asm clobber list}}
+  asm volatile("" : "=r"(x10) :: "a0"); // expected-error {{conflicts with asm clobber list}}
+}

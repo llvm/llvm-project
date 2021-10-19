@@ -4,8 +4,9 @@
 
 ; RUN: opt -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
 ; RUN: opt -mtriple=amdgcn-- -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-WXX %s
-; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+WavefrontSize32 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
-; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+WavefrontSize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
+; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
+; RUN: opt -mtriple=amdgcn-- -passes='default<O3>' -mattr=+wavefrontsize32 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
+; RUN: opt -mtriple=amdgcn-- -O3 -mattr=+wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=tonga -O3 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=+wavefrontsize32,-wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W32 %s
 ; RUN: opt -mtriple=amdgcn-- -mcpu=gfx1010 -O3 -mattr=-wavefrontsize32,+wavefrontsize64 -S < %s | FileCheck -check-prefixes=OPT,OPT-W64 %s
@@ -15,7 +16,7 @@
 
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 32
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 64
-; GCN:       store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:       store_dword v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 32, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 64, i32 addrspace(1)* %arg, align 4
@@ -36,7 +37,7 @@ bb:
 ; W32:       v_mov_b32_e32 [[V:v[0-9]+]], 1{{$}}
 ; W64:       v_mov_b32_e32 [[V:v[0-9]+]], 2{{$}}
 ; GCN-NOT:   cndmask
-; GCN:       store_dword v[{{[0-9:]+}}], [[V]]
+; GCN:       store_dword v{{.+}}, [[V]]
 
 ; OPT-W32:   store i32 1, i32 addrspace(1)* %arg, align 4
 ; OPT-W64:   store i32 2, i32 addrspace(1)* %arg, align 4

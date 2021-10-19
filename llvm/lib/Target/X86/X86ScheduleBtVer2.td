@@ -209,7 +209,10 @@ defm : JWriteResIntPair<WriteIMul32Reg, [JALU1, JMul], 3, [1, 1], 1>;
 defm : JWriteResIntPair<WriteIMul64,    [JALU1, JMul], 6, [1, 4], 2>;  
 defm : JWriteResIntPair<WriteIMul64Imm, [JALU1, JMul], 6, [1, 4], 1>;
 defm : JWriteResIntPair<WriteIMul64Reg, [JALU1, JMul], 6, [1, 4], 1>;
-defm : X86WriteRes<WriteIMulH,          [JALU1], 6, [4], 1>;
+defm : X86WriteResUnsupported<WriteIMulH>;
+defm : X86WriteResUnsupported<WriteIMulHLd>;
+defm : X86WriteResPairUnsupported<WriteMULX32>;
+defm : X86WriteResPairUnsupported<WriteMULX64>;
 
 defm : JWriteResIntPair<WriteDiv8,   [JALU1, JDiv], 12, [1, 12], 1>;
 defm : JWriteResIntPair<WriteDiv16,  [JALU1, JDiv], 17, [1, 17], 2>;
@@ -273,6 +276,7 @@ def : WriteRes<WriteLoad,    [JLAGU]> { let Latency = 3; }
 def : WriteRes<WriteStore,   [JSAGU]>;
 def : WriteRes<WriteStoreNT, [JSAGU]>;
 def : WriteRes<WriteMove,    [JALU01]>;
+defm : X86WriteResUnsupported<WriteVecMaskedGatherWriteback>;
 
 // Load/store MXCSR.
 def : WriteRes<WriteLDMXCSR, [JLAGU]> { let Latency = 3; }
@@ -733,6 +737,7 @@ defm : JWriteResFpuPair<WriteVecTest,     [JFPU0, JFPA, JALU0], 3>;
 defm : JWriteResYMMPair<WriteVecTestY,    [JFPU01, JFPX, JFPA, JALU0], 4, [2, 2, 2, 1], 3>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
 defm : X86WriteResPairUnsupported<WriteShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -833,8 +838,8 @@ def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JAL
   let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
   let NumMicroOps = 63;
 }
-def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
-                                         VMASKMOVDQU, VMASKMOVDQU64)>;
+def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64, MASKMOVDQUX32,
+                                         VMASKMOVDQU, VMASKMOVDQU64, VMASKMOVDQUX32)>;
 
 ///////////////////////////////////////////////////////////////////////////////
 //  SchedWriteVariant definitions.

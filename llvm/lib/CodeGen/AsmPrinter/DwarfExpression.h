@@ -148,6 +148,7 @@ protected:
   enum { EntryValue = 1 << 0, Indirect = 1 << 1, CallSiteParamValue = 1 << 2 };
 
   unsigned LocationKind : 3;
+  unsigned SavedLocationKind : 3;
   unsigned LocationFlags : 3;
   unsigned DwarfVersion : 4;
 
@@ -218,7 +219,7 @@ protected:
   /// Return whether the given machine register is the frame register in the
   /// current function.
   virtual bool isFrameRegister(const TargetRegisterInfo &TRI,
-                               unsigned MachineReg) = 0;
+                               llvm::Register MachineReg) = 0;
 
   /// Emit a DW_OP_reg operation. Note that this is only legal inside a DWARF
   /// register location description.
@@ -245,7 +246,7 @@ protected:
   /// multiple subregisters that alias the register.
   ///
   /// \return false if no DWARF register exists for MachineReg.
-  bool addMachineReg(const TargetRegisterInfo &TRI, unsigned MachineReg,
+  bool addMachineReg(const TargetRegisterInfo &TRI, llvm::Register MachineReg,
                      unsigned MaxSize = ~1U);
 
   /// Emit a DW_OP_piece or DW_OP_bit_piece operation for a variable fragment.
@@ -284,8 +285,8 @@ protected:
 public:
   DwarfExpression(unsigned DwarfVersion, DwarfCompileUnit &CU)
       : CU(CU), SubRegisterSizeInBits(0), SubRegisterOffsetInBits(0),
-        LocationKind(Unknown), LocationFlags(Unknown),
-        DwarfVersion(DwarfVersion) {}
+        LocationKind(Unknown), SavedLocationKind(Unknown),
+        LocationFlags(Unknown), DwarfVersion(DwarfVersion) {}
 
   /// This needs to be called last to commit any pending changes.
   void finalize();
@@ -325,7 +326,8 @@ public:
   /// \return                         false if no DWARF register exists
   ///                                 for MachineReg.
   bool addMachineRegExpression(const TargetRegisterInfo &TRI,
-                               DIExpressionCursor &Expr, unsigned MachineReg,
+                               DIExpressionCursor &Expr,
+                               llvm::Register MachineReg,
                                unsigned FragmentOffsetInBits = 0);
 
   /// Begin emission of an entry value dwarf operation. The entry value's
@@ -345,6 +347,9 @@ public:
   ///                                 fragment inside the entire variable.
   void addExpression(DIExpressionCursor &&Expr,
                      unsigned FragmentOffsetInBits = 0);
+  void
+  addExpression(DIExpressionCursor &&Expr,
+                llvm::function_ref<bool(unsigned, DIExpressionCursor &)> InsertArg);
 
   /// If applicable, emit an empty DW_OP_piece / DW_OP_bit_piece to advance to
   /// the fragment described by \c Expr.
@@ -388,7 +393,7 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void commitTemporaryBuffer() override;
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
-                       unsigned MachineReg) override;
+                       llvm::Register MachineReg) override;
 
 public:
   DebugLocDwarfExpression(unsigned DwarfVersion, BufferByteStreamer &BS,
@@ -418,7 +423,7 @@ class DIEDwarfExpression final : public DwarfExpression {
   void commitTemporaryBuffer() override;
 
   bool isFrameRegister(const TargetRegisterInfo &TRI,
-                       unsigned MachineReg) override;
+                       llvm::Register MachineReg) override;
 
 public:
   DIEDwarfExpression(const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE);

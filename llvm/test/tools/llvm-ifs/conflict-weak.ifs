@@ -1,13 +1,12 @@
-# RUN: llvm-ifs -action write-ifs -o - %s %S/func.ifs 2>&1 | \
+# RUN: llvm-ifs --input-format=IFS --output-format=IFS -o - %s %S/func.ifs 2>&1 | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
 # CHECK-IFS: Symbols:
 # CHECK-IFS-NEXT: - { Name: a, Type: Func, Weak: true }
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: x86_64-unknown-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-unknown-linux-gnu
 Symbols:
   - { Name: a, Type: Func, Weak: true }
 ...

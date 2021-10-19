@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
+// CHECK: %[[STRUCT_TEST13_A:.*]] = type { i32, i32 }
+
 typedef __typeof(sizeof(0)) size_t;
 
 // Declare the reserved global placement new.
@@ -30,21 +32,21 @@ namespace test1 {
   struct A { A(int); A(int, int); ~A(); void *p; };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11aEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11aEv()
     // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 5)
+    // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 5)
     // CHECK:      ret [[A]]* [[CAST]]
     // CHECK:      call void @_ZdlPv(i8* [[NEW]])
     return new A(5);
   }
 
   A *b() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11bEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11bEv()
     // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
     // CHECK-NEXT: [[FOO:%.*]] = invoke i32 @_ZN5test13fooEv()
-    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[FOO]])
+    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 [[FOO]])
     // CHECK:      ret [[A]]* [[CAST]]
     // CHECK:      call void @_ZdlPv(i8* [[NEW]])
     extern int foo();
@@ -55,19 +57,19 @@ namespace test1 {
   B makeB();
 
   A *c() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11cEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11cEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* {{[^,]*}} [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = getelementptr inbounds [[B]], [[B]]* [[T0]], i32 0, i32 0
     // CHECK-NEXT: [[T2:%.*]] = load i32, i32* [[T1]], align 4
-    // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[T2]])
+    // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 [[T2]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
 
-    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* [[T0]])
-    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* [[T0]])
+    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
+    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
 
     // CHECK:      ret [[A]]* [[CAST]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, i1* [[ACTIVE]]
@@ -84,18 +86,18 @@ namespace test1 {
   // CHECK98-NEXT:   unreachable
 
   A *d() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11dEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11dEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T0]])
-    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[T1]])
+    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* {{[^,]*}} [[T0:%.*]])
+    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* {{[^,]*}} [[T0]])
+    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 [[T1]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
 
-    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* [[T0]])
-    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* [[T0]])
+    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
+    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
 
     // CHECK:      ret [[A]]* [[CAST]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, i1* [[ACTIVE]]
@@ -105,23 +107,23 @@ namespace test1 {
   }
 
   A *e() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11eEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11eEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T0]])
-    // CHECK:      invoke void @_ZN5test11BC1Ev([[B]]* [[T2:%.*]])
-    // CHECK:      [[T3:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T2]])
-    // CHECK:      invoke void @_ZN5test11AC1Eii([[A]]* [[CAST]], i32 [[T1]], i32 [[T3]])
+    // CHECK-NEXT: invoke void @_ZN5test11BC1Ev([[B:%.*]]* {{[^,]*}} [[T0:%.*]])
+    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* {{[^,]*}} [[T0]])
+    // CHECK:      invoke void @_ZN5test11BC1Ev([[B]]* {{[^,]*}} [[T2:%.*]])
+    // CHECK:      [[T3:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* {{[^,]*}} [[T2]])
+    // CHECK:      invoke void @_ZN5test11AC1Eii([[A]]* {{[^,]*}} [[CAST]], i32 [[T1]], i32 [[T3]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
 
-    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* [[T2]])
-    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* [[T2]])
+    // CHECK98-NEXT: invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T2]])
+    // CHECK11-NEXT: call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T2]])
 
-    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* [[T0]])
-    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* [[T0]])
+    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
+    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
 
     // CHECK:      ret [[A]]* [[CAST]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, i1* [[ACTIVE]]
@@ -140,25 +142,25 @@ namespace test1 {
   }
 
   A *i() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11iEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test11iEv()
     // CHECK:      [[X:%.*]] = alloca [[A]]*, align 8
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T0]])
-    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[T1]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T0:%.*]])
+    // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* {{[^,]*}} [[T0]])
+    // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 [[T1]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
     // CHECK-NEXT: store [[A]]* [[CAST]], [[A]]** [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load [[A]]*, [[A]]** [[X]], align 8
 
-    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* [[T2]])
-    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* [[T2]])
+    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T2]])
+    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T2]])
 
-    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* [[T0]])
-    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* [[T0]])
+    // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
+    // CHECK11:      call void @_ZN5test11BD1Ev([[B]]* {{[^,]*}} [[T0]])
 
     // CHECK:      ret [[A]]* [[RET]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, i1* [[ACTIVE]]
@@ -178,10 +180,10 @@ namespace test2 {
   };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test21aEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test21aEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_ZN5test21AnwEm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test21AC1Ei([[A]]* [[CAST]], i32 5)
+    // CHECK-NEXT: invoke void @_ZN5test21AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 5)
     // CHECK:      ret [[A]]* [[CAST]]
 
     // CHECK98:      invoke void @_ZN5test21AdlEPvm(i8* [[NEW]], i64 8)
@@ -205,12 +207,12 @@ namespace test3 {
   A makeA(), *makeAPtr();
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test31aEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test31aEv()
     // CHECK:      [[FOO:%.*]] = call i8* @_ZN5test33fooEv()
     // CHECK:      [[BAR:%.*]] = call double @_ZN5test33barEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_ZN5test31AnwEmPvd(i64 8, i8* [[FOO]], double [[BAR]])
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test31AC1Ei([[A]]* [[CAST]], i32 5)
+    // CHECK-NEXT: invoke void @_ZN5test31AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 5)
     // CHECK:      ret [[A]]* [[CAST]]
 
     // CHECK98:      invoke void @_ZN5test31AdlEPvS1_d(i8* [[NEW]], i8* [[FOO]], double [[BAR]])
@@ -223,7 +225,7 @@ namespace test3 {
   // rdar://problem/8439196
   A *b(bool cond) {
 
-    // CHECK:    define [[A:%.*]]* @_ZN5test31bEb(i1 zeroext
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test31bEb(i1 zeroext
     // CHECK:      [[SAVED0:%.*]] = alloca i8*
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca i8*
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
@@ -239,7 +241,7 @@ namespace test3 {
     // CHECK-NEXT: store i8* [[FOO]], i8** [[SAVED1]]
     // CHECK-NEXT: store i1 true, i1* [[CLEANUPACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret align 8 [[CAST]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret([[A]]) align 8 [[CAST]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :
@@ -273,12 +275,12 @@ namespace test4 {
   };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test41aEv()
+    // CHECK:    define{{( dso_local)?}} [[A:%.*]]* @_ZN5test41aEv()
     // CHECK:      [[FOO:%.*]] = call i8* @_ZN5test43fooEv()
     // CHECK-NEXT: [[BAR:%.*]] = call i8* @_ZN5test43barEv()
     // CHECK-NEXT: [[NEW:%.*]] = call i8* @_ZN5test41AnwEmPvS1_(i64 8, i8* [[FOO]], i8* [[BAR]])
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: call void @_ZN5test41AC1Ei([[A]]* [[CAST]], i32 5)
+    // CHECK-NEXT: call void @_ZN5test41AC1Ei([[A]]* {{[^,]*}} [[CAST]], i32 5)
     // CHECK-NEXT: ret [[A]]* [[CAST]]
     extern void *foo(), *bar();
 
@@ -297,7 +299,7 @@ namespace test5 {
 
   void foo();
 
-  // CHECK-LABEL:    define void @_ZN5test54testEv()
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test54testEv()
   // CHECK:      [[EXNSLOT:%.*]] = alloca i8*
   // CHECK-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
   // CHECK-NEXT: [[A:%.*]] = alloca [[A_T:%.*]], align 1
@@ -306,14 +308,14 @@ namespace test5 {
   // CHECK:      [[EXN:%.*]] = load i8*, i8** [[EXNSLOT]]
   // CHECK-NEXT: [[ADJ:%.*]] = call i8* @__cxa_get_exception_ptr(i8* [[EXN]])
   // CHECK-NEXT: [[SRC:%.*]] = bitcast i8* [[ADJ]] to [[A_T]]*
-  // CHECK-NEXT: invoke void @_ZN5test51TC1Ev([[T_T]]* [[T]])
-  // CHECK:      invoke void @_ZN5test51AC1ERKS0_RKNS_1TE([[A_T]]* [[A]], [[A_T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[SRC]], [[T_T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T]])
+  // CHECK-NEXT: invoke void @_ZN5test51TC1Ev([[T_T]]* {{[^,]*}} [[T]])
+  // CHECK:      invoke void @_ZN5test51AC1ERKS0_RKNS_1TE([[A_T]]* {{[^,]*}} [[A]], [[A_T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[SRC]], [[T_T]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[T]])
 
-  // CHECK98:      invoke void @_ZN5test51TD1Ev([[T_T]]* [[T]])
-  // CHECK11:      call void @_ZN5test51TD1Ev([[T_T]]* [[T]])
+  // CHECK98:      invoke void @_ZN5test51TD1Ev([[T_T]]* {{[^,]*}} [[T]])
+  // CHECK11:      call void @_ZN5test51TD1Ev([[T_T]]* {{[^,]*}} [[T]])
 
   // CHECK98:      call i8* @__cxa_begin_catch(i8* [[EXN]]) [[NUW]]
-  // CHECK98-NEXT: invoke void @_ZN5test51AD1Ev([[A_T]]* [[A]])
+  // CHECK98-NEXT: invoke void @_ZN5test51AD1Ev([[A_T]]* {{[^,]*}} [[A]])
 
   // CHECK:      call void @__cxa_end_catch()
   void test() {
@@ -349,7 +351,7 @@ namespace test7 {
   };
 
   B *test() {
-    // CHECK: define [[B:%.*]]* @_ZN5test74testEv()
+    // CHECK: define{{( dso_local)?}} [[B:%.*]]* @_ZN5test74testEv()
     // CHECK:      [[OUTER_NEW:%.*]] = alloca i1
     // CHECK-NEXT: alloca [[A:%.*]],
     // CHECK-NEXT: alloca i8*
@@ -439,7 +441,7 @@ namespace test8 {
   void test() {
     throw makeA();
   }
-  // CHECK-LABEL: define void @_ZN5test84testEv
+  // CHECK-LABEL: define{{.*}} void @_ZN5test84testEv
 }
 
 // Make sure we generate the correct code for the delete[] call which
@@ -454,7 +456,7 @@ namespace test9 {
   A* test() {
     return new A[10];
   }
-  // CHECK: define {{%.*}}* @_ZN5test94testEv
+  // CHECK: define{{.*}} {{%.*}}* @_ZN5test94testEv
   // CHECK: [[TEST9_NEW:%.*]] = call noalias nonnull i8* @_Znam
   // CHECK: call void @_ZdaPv(i8* [[TEST9_NEW]])
 }
@@ -468,14 +470,14 @@ namespace test10 {
 
   struct A { ~A(); };
   A::~A() try { cleanup(); } catch (...) { return; }
-  // CHECK-LABEL:    define void @_ZN6test101AD1Ev(
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test101AD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK-NOT:  rethrow
   // CHECK:      ret void
 
   struct B { ~B(); };
   B::~B() try { cleanup(); } catch (...) {}
-  // CHECK-LABEL:    define void @_ZN6test101BD1Ev(
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test101BD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call i8* @__cxa_begin_catch
   // CHECK-NEXT: invoke void @__cxa_rethrow()
@@ -483,7 +485,7 @@ namespace test10 {
 
   struct C { ~C(); };
   C::~C() try { cleanup(); } catch (...) { if (suppress) return; }
-  // CHECK-LABEL:    define void @_ZN6test101CD1Ev(
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test101CD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call i8* @__cxa_begin_catch
   // CHECK-NEXT: load i8, i8* @_ZN6test108suppressE, align 1
@@ -517,18 +519,18 @@ namespace test11 {
   C::C() {
     throw 0;
   }
-  // CHECK-LABEL:    define void @_ZN6test111CC2Ev(
+  // CHECK-LABEL:    define{{.*}} void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load [[C:%.*]]*, [[C:%.*]]** {{%.*}}
   //   Construct single.
   // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C]], [[C]]* [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN6test111AC1Ev([[A:%.*]]* [[SINGLE]])
+  // CHECK-NEXT: call void @_ZN6test111AC1Ev([[A:%.*]]* {{[^,]*}} [[SINGLE]])
   //   Construct array.
   // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C]], [[C]]* [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A]]]], [2 x [3 x [[A]]]]* [[ARRAY]], i32 0, i32 0, i32 0
   // CHECK-NEXT: [[ARRAYEND:%.*]] = getelementptr inbounds [[A]], [[A]]* [[ARRAYBEGIN]], i64 6
   // CHECK-NEXT: br label
   // CHECK:      [[CUR:%.*]] = phi [[A]]* [ [[ARRAYBEGIN]], {{%.*}} ], [ [[NEXT:%.*]], {{%.*}} ]
-  // CHECK-NEXT: invoke void @_ZN6test111AC1Ev([[A:%.*]]* [[CUR]])
+  // CHECK-NEXT: invoke void @_ZN6test111AC1Ev([[A:%.*]]* {{[^,]*}} [[CUR]])
   // CHECK:      [[NEXT]] = getelementptr inbounds [[A]], [[A]]* [[CUR]], i64 1
   // CHECK-NEXT: [[DONE:%.*]] = icmp eq [[A]]* [[NEXT]], [[ARRAYEND]]
   // CHECK-NEXT: br i1 [[DONE]],
@@ -542,8 +544,8 @@ namespace test11 {
   // CHECK:      [[AFTER:%.*]] = phi [[A]]* [ [[CUR]], {{%.*}} ], [ [[ELT:%.*]], {{%.*}} ]
   // CHECK-NEXT: [[ELT]] = getelementptr inbounds [[A]], [[A]]* [[AFTER]], i64 -1
 
-  // CHECK98-NEXT: invoke void @_ZN6test111AD1Ev([[A]]* [[ELT]])
-  // CHECK11-NEXT: call void @_ZN6test111AD1Ev([[A]]* [[ELT]])
+  // CHECK98-NEXT: invoke void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[ELT]])
+  // CHECK11-NEXT: call void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[ELT]])
 
   // CHECK:      [[DONE:%.*]] = icmp eq [[A]]* [[ELT]], [[ARRAYBEGIN]]
   // CHECK-NEXT: br i1 [[DONE]],
@@ -558,8 +560,8 @@ namespace test11 {
   // CHECK:      [[AFTER:%.*]] = phi [[A]]* [ [[ARRAYEND]], {{%.*}} ], [ [[ELT:%.*]], {{%.*}} ]
   // CHECK-NEXT: [[ELT]] = getelementptr inbounds [[A]], [[A]]* [[AFTER]], i64 -1
 
-  // CHECK98-NEXT: invoke void @_ZN6test111AD1Ev([[A]]* [[ELT]])
-  // CHECK11-NEXT: call void @_ZN6test111AD1Ev([[A]]* [[ELT]])
+  // CHECK98-NEXT: invoke void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[ELT]])
+  // CHECK11-NEXT: call void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[ELT]])
 
   // CHECK:      [[DONE:%.*]] = icmp eq [[A]]* [[ELT]], [[ARRAYBEGIN]]
   // CHECK-NEXT: br i1 [[DONE]],
@@ -567,8 +569,8 @@ namespace test11 {
   // CHECK:      br label
   //   Finally, the cleanup for single.
 
-  // CHECK98:      invoke void @_ZN6test111AD1Ev([[A]]* [[SINGLE]])
-  // CHECK11:      call void @_ZN6test111AD1Ev([[A]]* [[SINGLE]])
+  // CHECK98:      invoke void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[SINGLE]])
+  // CHECK11:      call void @_ZN6test111AD1Ev([[A]]* {{[^,]*}} [[SINGLE]])
 
   // CHECK:      br label
   // CHECK:      resume
@@ -587,11 +589,48 @@ namespace test12 {
   // CHECK-LABEL: define {{.*}} @_ZN6test124testEPv(
   // CHECK:       [[PTR:%.*]] = load i8*, i8*
   // CHECK-NEXT:  [[CAST:%.*]] = bitcast i8* [[PTR]] to [[A:%.*]]*
-  // CHECK-NEXT:  invoke void @_ZN6test121AC1Ev([[A]]* [[CAST]])
+  // CHECK-NEXT:  invoke void @_ZN6test121AC1Ev([[A]]* {{[^,]*}} [[CAST]])
   // CHECK:       ret [[A]]* [[CAST]]
 
   // CHECK98:       invoke void @_ZN6test121AdlEPvS1_(i8* [[PTR]], i8* [[PTR]])
   // CHECK11:       call void @_ZN6test121AdlEPvS1_(i8* [[PTR]], i8* [[PTR]])
+}
+
+namespace test13 {
+
+struct A {
+  A();
+  ~A();
+  int a, b;
+};
+
+// CHECK: define{{.*}} void @_ZN6test134testEi(
+// CHECK: %[[REF_TMP:.*]] = alloca %[[STRUCT_TEST13_A]], align 4
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[REF_TMP1:.*]] = alloca %[[STRUCT_TEST13_A]], align 4
+// CHECK: %[[CLEANUP_COND2:.*]] = alloca i1, align 1
+
+// CHECK: call void @_ZN6test131AC1Ev(%[[STRUCT_TEST13_A]]* {{[^,]*}} %[[REF_TMP]])
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+// CHECK: br
+
+// CHECK: invoke void @_ZN6test131AC1Ev(%[[STRUCT_TEST13_A]]* {{[^,]*}} %[[REF_TMP1]])
+
+// CHECK: store i1 true, i1* %[[CLEANUP_COND2]], align 1
+// CHECK: br
+
+// Check the flag before destructing the temporary.
+
+// CHECK: landingpad { i8*, i32 }
+// CHECK: %[[CLEANUP_IS_ACTIVE:.*]] = load i1, i1* %[[CLEANUP_COND]], align 1
+// CHECK: br i1 %[[CLEANUP_IS_ACTIVE]],
+
+// CHECK: void @_ZN6test131AD1Ev(%[[STRUCT_TEST13_A]]* {{[^,]*}} %[[REF_TMP]])
+
+void test(int c) {
+  const A &s = c ? static_cast<const A &>(A()) : static_cast<const A &>(A());
+}
+
 }
 
 // CHECK98: attributes [[NI_NR_NUW]] = { noinline noreturn nounwind }

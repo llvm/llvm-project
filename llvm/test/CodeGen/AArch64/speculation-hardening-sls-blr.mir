@@ -32,16 +32,16 @@ body:             |
   bb.0.entry:
     liveins: $lr
 
-    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 ; :: (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 ; :: (store (s64) into %stack.0)
     frame-setup CFI_INSTRUCTION def_cfa_offset 16
     frame-setup CFI_INSTRUCTION offset $w30, -16
     renamable $x8 = ADRP target-flags(aarch64-page) @a
-    renamable $x8 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load 8 from `i32 ()** bitcast (i32 (...)** @a to i32 ()**)`)
+    renamable $x8 = LDRXui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @a :: (dereferenceable load (s64) from `i32 ()** bitcast (i32 (...)** @a to i32 ()**)`)
     BLRNoIP killed renamable $x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
   ; CHECK:  BL <mcsymbol __llvm_slsblr_thunk_x8>, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0, implicit killed $x8
     renamable $x8 = ADRP target-flags(aarch64-page) @b
-    STRWui killed renamable $w0, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @b :: (store 4 into @b)
-    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 ; :: (load 8 from %stack.0)
+    STRWui killed renamable $w0, killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @b :: (store (s32) into @b)
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 ; :: (load (s64) from %stack.0)
     RET undef $lr
 
 

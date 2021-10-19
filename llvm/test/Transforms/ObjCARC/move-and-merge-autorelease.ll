@@ -25,7 +25,7 @@ target triple = "x86_64-apple-darwin11.0.0"
 @"\01L_OBJC_SELECTOR_REFERENCES_624" = external hidden global i8*, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 @"\01L_OBJC_SELECTOR_REFERENCES_626" = external hidden global i8*, section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 
-declare i8* @llvm.objc.msgSend(i8*, i8*, ...)
+declare i8* @objc_msgSend(i8*, i8*, ...)
 
 declare i8* @llvm.objc.retain(i8*)
 
@@ -37,10 +37,10 @@ define hidden %0* @foo(%1* %arg, %3* %arg3) {
 bb:
   %tmp16 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_620", align 8
   %tmp17 = bitcast %3* %arg3 to i8*
-  %tmp18 = call %4* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %4* (i8*, i8*)*)(i8* %tmp17, i8* %tmp16)
+  %tmp18 = call %4* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %4* (i8*, i8*)*)(i8* %tmp17, i8* %tmp16)
   %tmp19 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_622", align 8
   %tmp20 = bitcast %4* %tmp18 to i8*
-  %tmp21 = call %5* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %5* (i8*, i8*)*)(i8* %tmp20, i8* %tmp19)
+  %tmp21 = call %5* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %5* (i8*, i8*)*)(i8* %tmp20, i8* %tmp19)
   %tmp22 = bitcast %5* %tmp21 to i8*
   %tmp23 = call i8* @llvm.objc.retain(i8* %tmp22) nounwind
   %tmp24 = bitcast i8* %tmp23 to %5*
@@ -50,10 +50,10 @@ bb:
 bb27:                                             ; preds = %bb
   %tmp29 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_11", align 8
   %tmp30 = bitcast %1* %arg to i8*
-  %tmp31 = call i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* (i8*, i8*)*)(i8* %tmp30, i8* %tmp29)
+  %tmp31 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %tmp30, i8* %tmp29)
   %tmp34 = call i8* @llvm.objc.retain(i8* %tmp31) nounwind
   %tmp37 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_421455", align 8
-  %tmp39 = call %0* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %0* (i8*, i8*)*)(i8* %tmp34, i8* %tmp37)
+  %tmp39 = call %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %0* (i8*, i8*)*)(i8* %tmp34, i8* %tmp37)
   %tmp40 = bitcast %0* %tmp39 to i8*
   %tmp41 = call i8* @llvm.objc.retain(i8* %tmp40) nounwind
   %tmp42 = bitcast i8* %tmp41 to %0*
@@ -62,7 +62,7 @@ bb27:                                             ; preds = %bb
 
 bb45:                                             ; preds = %bb27
   %tmp47 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_624", align 8
-  %tmp49 = call %0* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %0* (i8*, i8*)*)(i8* %tmp34, i8* %tmp47)
+  %tmp49 = call %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %0* (i8*, i8*)*)(i8* %tmp34, i8* %tmp47)
   %tmp51 = bitcast %0* %tmp49 to i8*
   %tmp52 = call i8* @llvm.objc.retain(i8* %tmp51) nounwind
   call void @llvm.objc.release(i8* %tmp41) nounwind
@@ -76,14 +76,14 @@ bb55:                                             ; preds = %bb27, %bb45
 bb58:                                             ; preds = %bb55
   %tmp60 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_598", align 8
   %tmp61 = bitcast %0* %tmp13.0 to i8*
-  %tmp62 = call signext i8 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8 (i8*, i8*)*)(i8* %tmp61, i8* %tmp60)
+  %tmp62 = call signext i8 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8 (i8*, i8*)*)(i8* %tmp61, i8* %tmp60)
   %tmp64 = icmp eq i8 %tmp62, 0
   br i1 %tmp64, label %bb76, label %bb65
 
 bb65:                                             ; preds = %bb58
   %tmp68 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_626", align 8
   %tmp69 = bitcast %0* %tmp13.0 to i8*
-  %tmp70 = call %0* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to %0* (i8*, i8*, %5*)*)(i8* %tmp69, i8* %tmp68, %5* %tmp24)
+  %tmp70 = call %0* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to %0* (i8*, i8*, %5*)*)(i8* %tmp69, i8* %tmp68, %5* %tmp24)
   %tmp72 = bitcast %0* %tmp70 to i8*
   %tmp73 = call i8* @llvm.objc.retain(i8* %tmp72) nounwind
   br label %bb76

@@ -12,17 +12,21 @@
 
 #include "BPFTargetMachine.h"
 #include "BPF.h"
+#include "BPFTargetTransformInfo.h"
 #include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 using namespace llvm;
 
@@ -37,8 +41,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   RegisterTargetMachine<BPFTargetMachine> Z(getTheBPFTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeBPFAbstractMemberAccessPass(PR);
+  initializeBPFAbstractMemberAccessLegacyPassPass(PR);
   initializeBPFPreserveDITypePass(PR);
+  initializeBPFIRPeepholePass(PR);
+  initializeBPFAdjustOptPass(PR);
+  initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPeepholeTruncElimPass(PR);
 }
@@ -52,9 +59,7 @@ static std::string computeDataLayout(const Triple &TT) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
-  return *RM;
+  return RM.getValueOr(Reloc::PIC_);
 }
 
 BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
@@ -98,19 +103,54 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
+ Builder.addExtension(
+      PassManagerBuilder::EP_EarlyAsPossible,
+      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+        PM.add(createBPFAbstractMemberAccess(this));
+        PM.add(createBPFPreserveDIType());
+        PM.add(createBPFIRPeephole());
+      });
+
   Builder.addExtension(
       PassManagerBuilder::EP_Peephole,
       [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
         PM.add(createCFGSimplificationPass(
             SimplifyCFGOptions().hoistCommonInsts(true)));
       });
+  Builder.addExtension(
+      PassManagerBuilder::EP_ModuleOptimizerEarly,
+      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+        PM.add(createBPFAdjustOpt());
+      });
+}
+
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerPipelineStartEPCallback(
+      [=](ModulePassManager &MPM, OptimizationLevel) {
+        FunctionPassManager FPM;
+        FPM.addPass(BPFAbstractMemberAccessPass(this));
+        FPM.addPass(BPFPreserveDITypePass());
+        FPM.addPass(BPFIRPeepholePass());
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      });
+  PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
+                                    OptimizationLevel Level) {
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
+  });
+  PB.registerPipelineEarlySimplificationEPCallback(
+      [=](ModulePassManager &MPM, OptimizationLevel) {
+        MPM.addPass(BPFAdjustOptPass());
+      });
 }
 
 void BPFPassConfig::addIRPasses() {
-  addPass(createBPFAbstractMemberAccess(&getBPFTargetMachine()));
-  addPass(createBPFPreserveDIType());
-
+  addPass(createBPFCheckAndAdjustIR());
   TargetPassConfig::addIRPasses();
+}
+
+TargetTransformInfo
+BPFTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(BPFTTIImpl(this, F));
 }
 
 // Install an instruction selector pass using

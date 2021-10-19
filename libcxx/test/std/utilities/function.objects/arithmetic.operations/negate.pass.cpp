@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <functional>
 
 // negate
@@ -20,8 +22,10 @@ int main(int, char**)
 {
     typedef std::negate<int> F;
     const F f = F();
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<F::argument_type, int>::value), "" );
     static_assert((std::is_same<F::result_type, int>::value), "" );
+#endif
     assert(f(36) == -36);
 #if TEST_STD_VER > 11
     typedef std::negate<> F2;

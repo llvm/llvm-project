@@ -16,7 +16,7 @@ define i32 @main() nounwind {
 ; RV32IFD-LABEL: main:
 ; RV32IFD:       # %bb.0: # %entry
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    sw ra, 12(sp)
+; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IFD-NEXT:    lui a1, 262144
 ; RV32IFD-NEXT:    mv a0, zero
 ; RV32IFD-NEXT:    call test
@@ -34,10 +34,10 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    and a0, a0, a1
 ; RV32IFD-NEXT:    bnez a0, .LBB1_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.then
-; RV32IFD-NEXT:    call abort
+; RV32IFD-NEXT:    call abort@plt
 ; RV32IFD-NEXT:  .LBB1_2: # %if.end
 ; RV32IFD-NEXT:    mv a0, zero
-; RV32IFD-NEXT:    call exit
+; RV32IFD-NEXT:    call exit@plt
 entry:
   %call = call double @test(double 2.000000e+00)
   %cmp = fcmp olt double %call, 2.400000e-01

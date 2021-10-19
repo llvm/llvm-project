@@ -6,23 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdout
-
 // <iostream>
 
 // istream cout;
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
+// FILE_DEPENDENCIES: ../check-stdout.sh
 // RUN: %{build}
-// RUN: %{exec} %t.exe > %t.out
-// RUN: grep -e 'Hello World!' %t.out
+// RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"
 
 #include <iostream>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    std::cout << "Hello World!\n";
-
+int main(int, char**) {
+    std::cout << "1234";
     return 0;
 }

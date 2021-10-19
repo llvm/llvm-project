@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
@@ -25,7 +26,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -61,35 +61,36 @@ ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
 
 template <class ELFT>
 static Expected<std::unique_ptr<ELFObjectFile<ELFT>>>
-createPtr(MemoryBufferRef Object) {
-  auto Ret = ELFObjectFile<ELFT>::create(Object);
+createPtr(MemoryBufferRef Object, bool InitContent) {
+  auto Ret = ELFObjectFile<ELFT>::create(Object, InitContent);
   if (Error E = Ret.takeError())
     return std::move(E);
   return std::make_unique<ELFObjectFile<ELFT>>(std::move(*Ret));
 }
 
 Expected<std::unique_ptr<ObjectFile>>
-ObjectFile::createELFObjectFile(MemoryBufferRef Obj) {
+ObjectFile::createELFObjectFile(MemoryBufferRef Obj, bool InitContent) {
   std::pair<unsigned char, unsigned char> Ident =
       getElfArchType(Obj.getBuffer());
   std::size_t MaxAlignment =
-      1ULL << countTrailingZeros(uintptr_t(Obj.getBufferStart()));
+      1ULL << countTrailingZeros(
+          reinterpret_cast<uintptr_t>(Obj.getBufferStart()));
 
   if (MaxAlignment < 2)
     return createError("Insufficient alignment");
 
   if (Ident.first == ELF::ELFCLASS32) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF32LE>(Obj);
+      return createPtr<ELF32LE>(Obj, InitContent);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF32BE>(Obj);
+      return createPtr<ELF32BE>(Obj, InitContent);
     else
       return createError("Invalid ELF data");
   } else if (Ident.first == ELF::ELFCLASS64) {
     if (Ident.second == ELF::ELFDATA2LSB)
-      return createPtr<ELF64LE>(Obj);
+      return createPtr<ELF64LE>(Obj, InitContent);
     else if (Ident.second == ELF::ELFDATA2MSB)
-      return createPtr<ELF64BE>(Obj);
+      return createPtr<ELF64BE>(Obj, InitContent);
     else
       return createError("Invalid ELF data");
   }
@@ -414,6 +415,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx600";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:
     return "gfx601";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX602:
+    return "gfx602";
 
   // AMDGCN GFX7.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:
@@ -426,6 +429,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx703";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:
     return "gfx704";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX705:
+    return "gfx705";
 
   // AMDGCN GFX8.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:
@@ -434,6 +439,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx802";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:
     return "gfx803";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX805:
+    return "gfx805";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:
     return "gfx810";
 
@@ -450,6 +457,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx908";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
     return "gfx909";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A:
+    return "gfx90a";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
+    return "gfx90c";
 
   // AMDGCN GFX10.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
@@ -458,9 +469,20 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1011";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012:
     return "gfx1012";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1013:
+    return "gfx1013";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030:
     return "gfx1030";
-
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031:
+    return "gfx1031";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032:
+    return "gfx1032";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1033:
+    return "gfx1033";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1034:
+    return "gfx1034";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1035:
+    return "gfx1035";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
@@ -516,9 +538,16 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
     case ARMBuildAttrs::v6K:
       Triple += "v6k";
       break;
-    case ARMBuildAttrs::v7:
-      Triple += "v7";
+    case ARMBuildAttrs::v7: {
+      Optional<unsigned> ArchProfileAttr =
+          Attributes.getAttributeValue(ARMBuildAttrs::CPU_arch_profile);
+      if (ArchProfileAttr.hasValue() &&
+          ArchProfileAttr.getValue() == ARMBuildAttrs::MicroControllerProfile)
+        Triple += "v7m";
+      else
+        Triple += "v7";
       break;
+    }
     case ARMBuildAttrs::v6_M:
       Triple += "v6m";
       break;
@@ -567,6 +596,7 @@ ELFObjectFileBase::getPltAddresses() const {
       JumpSlotReloc = ELF::R_X86_64_JUMP_SLOT;
       break;
     case Triple::aarch64:
+    case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
     default:
@@ -623,4 +653,73 @@ ELFObjectFileBase::getPltAddresses() const {
     }
   }
   return Result;
+}
+
+template <class ELFT>
+static Expected<std::vector<VersionEntry>>
+readDynsymVersionsImpl(const ELFFile<ELFT> &EF,
+                       ELFObjectFileBase::elf_symbol_iterator_range Symbols) {
+  using Elf_Shdr = typename ELFT::Shdr;
+  const Elf_Shdr *VerSec = nullptr;
+  const Elf_Shdr *VerNeedSec = nullptr;
+  const Elf_Shdr *VerDefSec = nullptr;
+  // The user should ensure sections() can't fail here.
+  for (const Elf_Shdr &Sec : cantFail(EF.sections())) {
+    if (Sec.sh_type == ELF::SHT_GNU_versym)
+      VerSec = &Sec;
+    else if (Sec.sh_type == ELF::SHT_GNU_verdef)
+      VerDefSec = &Sec;
+    else if (Sec.sh_type == ELF::SHT_GNU_verneed)
+      VerNeedSec = &Sec;
+  }
+  if (!VerSec)
+    return std::vector<VersionEntry>();
+
+  Expected<SmallVector<Optional<VersionEntry>, 0>> MapOrErr =
+      EF.loadVersionMap(VerNeedSec, VerDefSec);
+  if (!MapOrErr)
+    return MapOrErr.takeError();
+
+  std::vector<VersionEntry> Ret;
+  size_t I = 0;
+  for (auto It = Symbols.begin(), E = Symbols.end(); It != E; ++It) {
+    ++I;
+    Expected<const typename ELFT::Versym *> VerEntryOrErr =
+        EF.template getEntry<typename ELFT::Versym>(*VerSec, I);
+    if (!VerEntryOrErr)
+      return createError("unable to read an entry with index " + Twine(I) +
+                         " from " + describe(EF, *VerSec) + ": " +
+                         toString(VerEntryOrErr.takeError()));
+
+    Expected<uint32_t> FlagsOrErr = It->getFlags();
+    if (!FlagsOrErr)
+      return createError("unable to read flags for symbol with index " +
+                         Twine(I) + ": " + toString(FlagsOrErr.takeError()));
+
+    bool IsDefault;
+    Expected<StringRef> VerOrErr = EF.getSymbolVersionByIndex(
+        (*VerEntryOrErr)->vs_index, IsDefault, *MapOrErr,
+        (*FlagsOrErr) & SymbolRef::SF_Undefined);
+    if (!VerOrErr)
+      return createError("unable to get a version for entry " + Twine(I) +
+                         " of " + describe(EF, *VerSec) + ": " +
+                         toString(VerOrErr.takeError()));
+
+    Ret.push_back({(*VerOrErr).str(), IsDefault});
+  }
+
+  return Ret;
+}
+
+Expected<std::vector<VersionEntry>>
+ELFObjectFileBase::readDynsymVersions() const {
+  elf_symbol_iterator_range Symbols = getDynamicSymbolIterators();
+  if (const auto *Obj = dyn_cast<ELF32LEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  if (const auto *Obj = dyn_cast<ELF32BEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  if (const auto *Obj = dyn_cast<ELF64LEObjectFile>(this))
+    return readDynsymVersionsImpl(Obj->getELFFile(), Symbols);
+  return readDynsymVersionsImpl(cast<ELF64BEObjectFile>(this)->getELFFile(),
+                                Symbols);
 }

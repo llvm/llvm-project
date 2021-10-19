@@ -14,7 +14,7 @@
 #ifndef LLVM_CODEGEN_LINKALLCODEGENCOMPONENTS_H
 #define LLVM_CODEGEN_LINKALLCODEGENCOMPONENTS_H
 
-#include "llvm/CodeGen/BuiltinGCs.h"
+#include "llvm/IR/BuiltinGCs.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/Target/TargetMachine.h"

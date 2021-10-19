@@ -146,7 +146,7 @@ define <2 x double> @test_mm_i32gather_pd(double *%a0, <2 x i64> %a1) {
   ret <2 x double> %res
 }
 
-@x = global [1024 x float] zeroinitializer, align 16
+@x = dso_local global [1024 x float] zeroinitializer, align 16
 
 define <4 x float> @gather_global(<4 x i64>, i32* nocapture readnone) {
 ; X32-LABEL: gather_global:

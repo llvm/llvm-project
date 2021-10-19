@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1123 -- Expressions in DO CONCURRENT header cannot reference variables
 ! declared in the same header
 PROGRAM dosemantics04

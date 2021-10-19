@@ -1438,6 +1438,55 @@ class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{7-0}   = op{7-0};
 }
 
+class InstVRRj<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<5> V3;
+  bits<4> M4;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-28} = V3{3-0};
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M4;
+  let Inst{19-16} = 0;
+  let Inst{15-12} = 0;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9}     = V3{4};
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
+class InstVRRk<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstSystemZ<6, outs, ins, asmstr, pattern> {
+  field bits<48> Inst;
+  field bits<48> SoftFail = 0;
+
+  bits<5> V1;
+  bits<5> V2;
+  bits<4> M3;
+
+  let Inst{47-40} = op{15-8};
+  let Inst{39-36} = V1{3-0};
+  let Inst{35-32} = V2{3-0};
+  let Inst{31-28} = 0;
+  let Inst{27-24} = 0;
+  let Inst{23-20} = M3;
+  let Inst{19-16} = 0;
+  let Inst{15-12} = 0;
+  let Inst{11}    = V1{4};
+  let Inst{10}    = V2{4};
+  let Inst{9}     = 0;
+  let Inst{8}     = 0;
+  let Inst{7-0}   = op{7-0};
+}
+
 class InstVRSa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
@@ -1764,6 +1813,55 @@ class DirectiveInsnSSF<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{35-32} = enc{35-32};
 }
 
+class DirectiveInsnVRI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRIe<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRR<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRRc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRS<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRSc<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRV<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRV<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVRX<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVRX<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+class DirectiveInsnVSI<dag outs, dag ins, string asmstr, list<dag> pattern>
+  : InstVSI<0, outs, ins, asmstr, pattern> {
+  bits<48> enc;
+
+  let Inst{47-40} = enc{47-40};
+  let Inst{7-0}   = enc{7-0};
+}
+
+
 //===----------------------------------------------------------------------===//
 // Variants of instructions with condition mask
 //===----------------------------------------------------------------------===//
@@ -1796,7 +1894,8 @@ class DirectiveInsnSSF<dag outs, dag ins, string asmstr, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 
 // A class to describe a variant of an instruction with condition mask.
-class CondVariant<bits<4> ccmaskin, string suffixin, bit alternatein> {
+class CondVariant<bits<4> ccmaskin, string suffixin, bit alternatein,
+                  string asmvariantin = ""> {
   // The fixed condition mask to use.
   bits<4> ccmask = ccmaskin;
 
@@ -1805,6 +1904,11 @@ class CondVariant<bits<4> ccmaskin, string suffixin, bit alternatein> {
 
   // Whether this is an alternate that needs to be marked isAsmParserOnly.
   bit alternate = alternatein;
+
+  // Whether this needs be to restricted to a specific dialect.
+  // Valid values are "att" and "hlasm", which when passed in
+  // will set AsmVariantName.
+  string asmvariant = asmvariantin;
 }
 
 // Condition mask 15 means "always true", which is used to define
@@ -1815,20 +1919,20 @@ def CondAlways : CondVariant<15, "", 0>;
 def CondVariantO   : CondVariant<1,  "o",   0>;
 def CondVariantH   : CondVariant<2,  "h",   0>;
 def CondVariantP   : CondVariant<2,  "p",   1>;
-def CondVariantNLE : CondVariant<3,  "nle", 0>;
+def CondVariantNLE : CondVariant<3,  "nle", 0, "att">;
 def CondVariantL   : CondVariant<4,  "l",   0>;
 def CondVariantM   : CondVariant<4,  "m",   1>;
-def CondVariantNHE : CondVariant<5,  "nhe", 0>;
-def CondVariantLH  : CondVariant<6,  "lh",  0>;
+def CondVariantNHE : CondVariant<5,  "nhe", 0, "att">;
+def CondVariantLH  : CondVariant<6,  "lh",  0, "att">;
 def CondVariantNE  : CondVariant<7,  "ne",  0>;
 def CondVariantNZ  : CondVariant<7,  "nz",  1>;
 def CondVariantE   : CondVariant<8,  "e",   0>;
 def CondVariantZ   : CondVariant<8,  "z",   1>;
-def CondVariantNLH : CondVariant<9,  "nlh", 0>;
-def CondVariantHE  : CondVariant<10, "he",  0>;
+def CondVariantNLH : CondVariant<9,  "nlh", 0, "att">;
+def CondVariantHE  : CondVariant<10, "he",  0, "att">;
 def CondVariantNL  : CondVariant<11, "nl",  0>;
 def CondVariantNM  : CondVariant<11, "nm",  1>;
-def CondVariantLE  : CondVariant<12, "le",  0>;
+def CondVariantLE  : CondVariant<12, "le",  0, "att">;
 def CondVariantNH  : CondVariant<13, "nh",  0>;
 def CondVariantNP  : CondVariant<13, "np",  1>;
 def CondVariantNO  : CondVariant<14, "no",  0>;
@@ -1837,30 +1941,42 @@ def CondVariantNO  : CondVariant<14, "no",  0>;
 class CV<string name>
   : CondVariant<!cast<CondVariant>("CondVariant"#name).ccmask,
                 !cast<CondVariant>("CondVariant"#name).suffix,
-                !cast<CondVariant>("CondVariant"#name).alternate>;
+                !cast<CondVariant>("CondVariant"#name).alternate,
+                !cast<CondVariant>("CondVariant"#name).asmvariant>;
 
 // Condition masks for integer instructions (e.g. compare-and-branch).
 // This is like the list above, except that condition 3 is not possible
 // and that the low bit of the mask is therefore always 0.  This means
 // that each condition has two names.  Conditions "o" and "no" are not used.
 def IntCondVariantH   : CondVariant<2,  "h",   0>;
-def IntCondVariantNLE : CondVariant<2,  "nle", 1>;
+def IntCondVariantNLE : CondVariant<2,  "nle", 1, "att">;
 def IntCondVariantL   : CondVariant<4,  "l",   0>;
-def IntCondVariantNHE : CondVariant<4,  "nhe", 1>;
-def IntCondVariantLH  : CondVariant<6,  "lh",  0>;
+def IntCondVariantNHE : CondVariant<4,  "nhe", 1, "att">;
+def IntCondVariantLH  : CondVariant<6,  "lh",  0, "att">;
 def IntCondVariantNE  : CondVariant<6,  "ne",  1>;
 def IntCondVariantE   : CondVariant<8,  "e",   0>;
-def IntCondVariantNLH : CondVariant<8,  "nlh", 1>;
-def IntCondVariantHE  : CondVariant<10, "he",  0>;
+def IntCondVariantNLH : CondVariant<8,  "nlh", 1, "att">;
+def IntCondVariantHE  : CondVariant<10, "he",  0, "att">;
 def IntCondVariantNL  : CondVariant<10, "nl",  1>;
-def IntCondVariantLE  : CondVariant<12, "le",  0>;
+def IntCondVariantLE  : CondVariant<12, "le",  0, "att">;
 def IntCondVariantNH  : CondVariant<12, "nh",  1>;
 
 // A helper class to look up one of the above by name.
 class ICV<string name>
   : CondVariant<!cast<CondVariant>("IntCondVariant"#name).ccmask,
                 !cast<CondVariant>("IntCondVariant"#name).suffix,
-                !cast<CondVariant>("IntCondVariant"#name).alternate>;
+                !cast<CondVariant>("IntCondVariant"#name).alternate,
+                !cast<CondVariant>("IntCondVariant"#name).asmvariant>;
+
+// Defines a class that makes it easier to define
+// a MnemonicAlias when CondVariant's are involved.
+multiclass MnemonicCondBranchAlias<CondVariant V, string from, string to,
+                                   string asmvariant = V.asmvariant> {
+  if !or(!eq(V.asmvariant, ""), !eq(V.asmvariant, asmvariant)) then
+    def "" : MnemonicAlias<!subst("#", V.suffix, from),
+                           !subst("#", V.suffix, to),
+                           asmvariant>;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction definitions with semantics
@@ -2071,6 +2187,7 @@ class FixedCondBranchRI<CondVariant V, string mnemonic, bits<12> opcode,
   : InstRIc<opcode, (outs), (ins brtarget16:$RI2),
             !subst("#", V.suffix, mnemonic)#"\t$RI2", [(operator bb:$RI2)]> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M1 = V.ccmask;
 }
 
@@ -2088,6 +2205,7 @@ class FixedCondBranchRIL<CondVariant V, string mnemonic, bits<12> opcode>
   : InstRILc<opcode, (outs), (ins brtarget32:$RI2),
              !subst("#", V.suffix, mnemonic)#"\t$RI2", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M1 = V.ccmask;
 }
 
@@ -2106,6 +2224,7 @@ class FixedCondBranchRR<CondVariant V, string mnemonic, bits<8> opcode,
   : InstRR<opcode, (outs), (ins ADDR64:$R2),
            !subst("#", V.suffix, mnemonic)#"\t$R2", [(operator ADDR64:$R2)]> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let R1 = V.ccmask;
 }
 
@@ -2123,6 +2242,7 @@ class FixedCondBranchRX<CondVariant V, string mnemonic, bits<8> opcode>
   : InstRXb<opcode, (outs), (ins bdxaddr12only:$XBD2),
             !subst("#", V.suffix, mnemonic)#"\t$XBD2", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M1 = V.ccmask;
 }
 
@@ -2145,6 +2265,7 @@ class FixedCondBranchRXY<CondVariant V, string mnemonic, bits<16> opcode,
              !subst("#", V.suffix, mnemonic)#"\t$XBD2",
              [(operator (load bdxaddr20only:$XBD2))]> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M1 = V.ccmask;
   let mayLoad = 1;
 }
@@ -2164,6 +2285,7 @@ class FixedCmpBranchRIEa<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRIEa<opcode, (outs), (ins cls:$R1, imm:$I2),
              mnemonic#V.suffix#"\t$R1, $I2", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2191,6 +2313,7 @@ class FixedCmpBranchRIEb<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRIEb<opcode, (outs), (ins cls:$R1, cls:$R2, brtarget16:$RI4),
              mnemonic#V.suffix#"\t$R1, $R2, $RI4", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2218,6 +2341,7 @@ class FixedCmpBranchRIEc<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRIEc<opcode, (outs), (ins cls:$R1, imm:$I2, brtarget16:$RI4),
              mnemonic#V.suffix#"\t$R1, $I2, $RI4", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2250,6 +2374,7 @@ class FixedCmpBranchRRFc<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRRFc<opcode, (outs), (ins cls:$R1, cls:$R2),
              mnemonic#V.suffix#"\t$R1, $R2", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2270,6 +2395,7 @@ class FixedCmpBranchRRS<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRRS<opcode, (outs), (ins cls:$R1, cls:$R2, bdaddr12only:$BD4),
             mnemonic#V.suffix#"\t$R1, $R2, $BD4", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2297,6 +2423,7 @@ class FixedCmpBranchRIS<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRIS<opcode, (outs), (ins cls:$R1, imm:$I2, bdaddr12only:$BD4),
             mnemonic#V.suffix#"\t$R1, $I2, $BD4", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2329,6 +2456,7 @@ class FixedCmpBranchRSYb<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRSYb<opcode, (outs), (ins cls:$R1, bdaddr20only:$BD2),
              mnemonic#V.suffix#"\t$R1, $BD2", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2663,6 +2791,7 @@ class FixedCondStoreRSY<CondVariant V, string mnemonic, bits<16> opcode,
   let mayStore = 1;
   let AccessBytes = bytes;
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -2698,6 +2827,16 @@ class SideEffectUnaryS<string mnemonic, bits<16> opcode,
           mnemonic#"\t$BD2", [(operator mode:$BD2)]> {
   let mayLoad = 1;
   let AccessBytes = bytes;
+}
+
+class SideEffectUnarySIY<string mnemonic, bits<16> opcode,
+                         bits<5> bytes,
+                         AddressingMode mode = bdaddr20only>
+  : InstSIY<opcode, (outs), (ins mode:$BD1),
+            mnemonic#"\t$BD1", []> {
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+  let I2 = 0;
 }
 
 class SideEffectAddressS<string mnemonic, bits<16> opcode,
@@ -2837,6 +2976,7 @@ class FixedCondUnaryRSY<CondVariant V, string mnemonic, bits<16> opcode,
   let mayLoad = 1;
   let AccessBytes = bytes;
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -3240,6 +3380,7 @@ class FixedCondBinaryRRF<CondVariant V, string mnemonic, bits<16> opcode,
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -3278,6 +3419,7 @@ class FixedCondBinaryRRFa<CondVariant V, string mnemonic, bits<16> opcode,
   : InstRRFa<opcode, (outs cls1:$R1), (ins cls3:$R3, cls2:$R2),
              mnemonic#V.suffix#"\t$R1, $R2, $R3", []> {
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M4 = V.ccmask;
 }
 
@@ -3347,6 +3489,7 @@ class FixedCondBinaryRIE<CondVariant V, string mnemonic, bits<16> opcode,
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
   let isAsmParserOnly = V.alternate;
+  let AsmVariantName = V.asmvariant;
   let M3 = V.ccmask;
 }
 
@@ -3576,6 +3719,17 @@ class BinaryVRRb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M5 = modifier;
 }
 
+class BinaryExtraVRRb<string mnemonic, bits<16> opcode, bits<4> type = 0>
+  : InstVRRb<opcode, (outs VR128:$V1), (ins VR128:$V2, VR128:$V3, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M5", []> {
+  let M4 = type;
+}
+
+class BinaryExtraVRRbGeneric<string mnemonic, bits<16> opcode>
+  : InstVRRb<opcode, (outs VR128:$V1),
+             (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+
 // Declare a pair of instructions, one which sets CC and one which doesn't.
 // The CC-setting form ends with "S" and sets the low bit of M5.
 multiclass BinaryVRRbSPair<string mnemonic, bits<16> opcode,
@@ -3688,6 +3842,10 @@ class BinaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
              mnemonic#"\t$R1, $V2, $M3", []> {
   let M4 = 0;
 }
+
+class BinaryVRRk<string mnemonic, bits<16> opcode>
+  : InstVRRk<opcode, (outs VR128:$V1), (ins VR128:$V2, imm32zx4:$M3),
+             mnemonic#"\t$V1, $V2, $M3", []>;
 
 class BinaryVRSa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type>
@@ -4450,6 +4608,11 @@ class TernaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
                                       imm32zx4:$M3, imm32zx4:$M4),
              mnemonic#"\t$R1, $V2, $M3, $M4", []>;
 
+class TernaryVRRj<string mnemonic, bits<16> opcode>
+  : InstVRRj<opcode, (outs VR128:$V1), (ins VR128:$V2,
+                                        VR128:$V3, imm32zx4:$M4),
+             mnemonic#"\t$V1, $V2, $V3, $M4", []>;
+
 class TernaryVRSbGeneric<string mnemonic, bits<16> opcode>
   : InstVRSb<opcode, (outs VR128:$V1),
              (ins VR128:$V1src, GR64:$R3, shift12only:$BD2, imm32zx4:$M4),
@@ -5166,37 +5329,37 @@ multiclass CondUnaryRSYPseudoAndMemFold<string mnemonic,
 
 // Define an instruction that operates on two fixed-length blocks of memory,
 // and associated pseudo instructions for operating on blocks of any size.
-// The Sequence form uses a straight-line sequence of instructions and
-// the Loop form uses a loop of length-256 instructions followed by
-// another instruction to handle the excess.
-multiclass MemorySS<string mnemonic, bits<8> opcode,
-                    SDPatternOperator sequence, SDPatternOperator loop> {
+// There are two pseudos for the different cases of when the length is
+// constant or variable. The length operand of a pseudo is actually one less
+// than the intended number of bytes, since the register case needs to use an
+// EXRL with a target instruction that adds one to the length always.
+multiclass MemorySS<string mnemonic, bits<8> opcode, SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length)]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(loop bdaddr12only:$dest, bdaddr12only:$src,
-                             imm64:$length, GR64:$count256)]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     imm64:$length)]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                             [(memop bdaddr12only:$dest, bdaddr12only:$src,
+                                     ADDR64:$length)]>;
   }
 }
 
 // The same, but setting a CC result as comparison operator.
 multiclass CompareMemorySS<string mnemonic, bits<8> opcode,
-                          SDPatternOperator sequence, SDPatternOperator loop> {
+                           SDPatternOperator memop> {
   def "" : SideEffectBinarySSa<mnemonic, opcode>;
   let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
-    def Sequence : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                       imm64:$length),
-                           [(set CC, (sequence bdaddr12only:$dest, bdaddr12only:$src,
-                                               imm64:$length))]>;
-    def Loop : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
-                                   imm64:$length, GR64:$count256),
-                      [(set CC, (loop bdaddr12only:$dest, bdaddr12only:$src,
-                                      imm64:$length, GR64:$count256))]>;
+    def Imm : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  imm64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           imm64:$length))]>;
+    def Reg : Pseudo<(outs), (ins bdaddr12only:$dest, bdaddr12only:$src,
+                                  ADDR64:$length),
+                          [(set CC, (memop bdaddr12only:$dest, bdaddr12only:$src,
+                                           ADDR64:$length))]>;
   }
 }
 

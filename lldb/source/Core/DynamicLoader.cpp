@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include <assert.h>
+#include <cassert>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -59,8 +59,6 @@ DynamicLoader *DynamicLoader::FindPlugin(Process *process,
 }
 
 DynamicLoader::DynamicLoader(Process *process) : m_process(process) {}
-
-DynamicLoader::~DynamicLoader() = default;
 
 // Accessosors to the global setting as to whether to stop at image (shared
 // library) loading/unloading.

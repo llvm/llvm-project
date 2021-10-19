@@ -21,7 +21,6 @@
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "llvm/Support/Error.h"
 #include <functional>
-#include <string>
 
 namespace clang {
 namespace transformer {

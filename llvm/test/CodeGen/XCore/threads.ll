@@ -1,5 +1,5 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
-; RUN: llc -march=xcore -O=0 < %s | FileCheck %s -check-prefix=PHINODE
+; RUN: llc -mtriple=xcore-unknown-unknown < %s | FileCheck %s
+; RUN: llc -mtriple=xcore-unknown-unknown -O=0 < %s | FileCheck %s -check-prefix=PHINODE
 
 declare i8 addrspace(1)* @llvm.xcore.getst.p1i8.p1i8(i8 addrspace(1)* %r)
 declare void @llvm.xcore.msync.p1i8(i8 addrspace(1)* %r)
@@ -87,7 +87,7 @@ define i32* @f_tle() {
 ; CHECK: shl [[R0:r[0-9]]], r11, 3
 ; CHECK: ldaw [[R1:r[0-9]]], dp[tle]
 ; r0 = &tl + id*8
-; CHECK: add r0, [[R0]], [[R1]]
+; CHECK: add r0, [[R1]], [[R0]]
   ret i32* getelementptr inbounds ([2 x i32], [2 x i32]* @tle, i32 0, i32 0)
 }
 
@@ -96,7 +96,7 @@ define i32 @f_tlExpr () {
 ; CHECK: get r11, id
 ; CHECK: shl [[R0:r[0-9]]], r11, 3
 ; CHECK: ldaw [[R1:r[0-9]]], dp[tle]
-; CHECK: add [[R2:r[0-9]]], [[R0]], [[R1]]
+; CHECK: add [[R2:r[0-9]]], [[R1]], [[R0]]
 ; CHECK: add r0, [[R2]], [[R2]]
   ret i32 add(
       i32 ptrtoint( i32* getelementptr inbounds ([2 x i32], [2 x i32]* @tle, i32 0, i32 0) to i32),

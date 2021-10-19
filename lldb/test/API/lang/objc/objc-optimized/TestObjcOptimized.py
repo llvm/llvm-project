@@ -19,7 +19,6 @@ from lldbsuite.test import lldbutil
 # test failure: objc_optimized does not work for "-C clang -A i386"
 
 
-@skipUnlessDarwin
 class ObjcOptimizedTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

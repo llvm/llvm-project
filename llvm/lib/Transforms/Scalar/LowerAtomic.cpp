@@ -40,7 +40,7 @@ static bool LowerAtomicCmpXchgInst(AtomicCmpXchgInst *CXI) {
   return true;
 }
 
-static bool LowerAtomicRMWInst(AtomicRMWInst *RMWI) {
+bool llvm::lowerAtomicRMWInst(AtomicRMWInst *RMWI) {
   IRBuilder<> Builder(RMWI);
   Value *Ptr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
@@ -123,7 +123,7 @@ static bool runOnBasicBlock(BasicBlock &BB) {
     else if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(&Inst))
       Changed |= LowerAtomicCmpXchgInst(CXI);
     else if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(&Inst))
-      Changed |= LowerAtomicRMWInst(RMWI);
+      Changed |= lowerAtomicRMWInst(RMWI);
     else if (LoadInst *LI = dyn_cast<LoadInst>(&Inst)) {
       if (LI->isAtomic())
         LowerLoadInst(LI);

@@ -262,7 +262,7 @@ TEST(ArrayRefTest, makeArrayRefFromStdArray) {
   }
 }
 
-static_assert(is_trivially_copyable<ArrayRef<int>>::value,
+static_assert(std::is_trivially_copyable<ArrayRef<int>>::value,
               "trivially copyable");
 
 } // end anonymous namespace

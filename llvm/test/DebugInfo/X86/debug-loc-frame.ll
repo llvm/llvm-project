@@ -40,12 +40,12 @@
 ; ModuleID = 'frame.c'
 source_filename = "frame.c"
 
-@data = global i32 17, align 4, !dbg !0
-@sum = local_unnamed_addr global i32 0, align 4, !dbg !6
-@zero = local_unnamed_addr global i32 0, align 4, !dbg !9
-@ptr = common local_unnamed_addr global i32* null, align 8, !dbg !11
+@data = dso_local global i32 17, align 4, !dbg !0
+@sum = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
+@zero = dso_local local_unnamed_addr global i32 0, align 4, !dbg !9
+@ptr = common dso_local local_unnamed_addr global i32* null, align 8, !dbg !11
 
-define i32 @main() local_unnamed_addr !dbg !17 {
+define dso_local i32 @main() local_unnamed_addr !dbg !17 {
 entry:
   %val = alloca i32, align 4
   %0 = bitcast i32* %val to i8*, !dbg !22

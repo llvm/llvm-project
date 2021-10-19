@@ -48,6 +48,7 @@ typedef unsigned ID;
 
 class AssemblyAnnotationWriter;
 class Constant;
+struct DenormalMode;
 class DISubprogram;
 class LLVMContext;
 class Module;
@@ -58,7 +59,8 @@ class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
 
-class Function : public GlobalObject, public ilist_node<Function> {
+class LLVM_EXTERNAL_VISIBILITY Function : public GlobalObject,
+                                          public ilist_node<Function> {
 public:
   using BasicBlockListType = SymbolTableList<BasicBlock>;
 
@@ -153,6 +155,16 @@ public:
   static Function *Create(FunctionType *Ty, LinkageTypes Linkage,
                           const Twine &N, Module &M);
 
+  /// Creates a function with some attributes recorded in llvm.module.flags
+  /// applied.
+  ///
+  /// Use this when synthesizing new functions that need attributes that would
+  /// have been set by command line options.
+  static Function *createWithDefaultAttr(FunctionType *Ty, LinkageTypes Linkage,
+                                         unsigned AddrSpace,
+                                         const Twine &N = "",
+                                         Module *M = nullptr);
+
   // Provide fast operand accessors.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -199,6 +211,10 @@ public:
   /// returns Intrinsic::not_intrinsic!
   bool isIntrinsic() const { return HasLLVMReservedName; }
 
+  /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
+  /// certain target. If it is a generic intrinsic false is returned.
+  static bool isTargetIntrinsic(Intrinsic::ID IID);
+
   /// isTargetIntrinsic - Returns true if this function is an intrinsic and the
   /// intrinsic is specific to a certain target. If this is not an intrinsic
   /// or a generic intrinsic, false is returned.
@@ -229,39 +245,6 @@ public:
     auto ID = static_cast<unsigned>(CC);
     assert(!(ID & ~CallingConv::MaxID) && "Unsupported calling convention");
     setValueSubclassData((getSubclassDataFromValue() & 0xc00f) | (ID << 4));
-  }
-
-  /// Return the attribute list for this Function.
-  AttributeList getAttributes() const { return AttributeSets; }
-
-  /// Set the attribute list for this Function.
-  void setAttributes(AttributeList Attrs) { AttributeSets = Attrs; }
-
-  /// Add function attributes to this function.
-  void addFnAttr(Attribute::AttrKind Kind) {
-    addAttribute(AttributeList::FunctionIndex, Kind);
-  }
-
-  /// Add function attributes to this function.
-  void addFnAttr(StringRef Kind, StringRef Val = StringRef()) {
-    addAttribute(AttributeList::FunctionIndex,
-                 Attribute::get(getContext(), Kind, Val));
-  }
-
-  /// Add function attributes to this function.
-  void addFnAttr(Attribute Attr) {
-    addAttribute(AttributeList::FunctionIndex, Attr);
-  }
-
-  /// Remove function attributes from this function.
-  void removeFnAttr(Attribute::AttrKind Kind) {
-    removeAttribute(AttributeList::FunctionIndex, Kind);
-  }
-
-  /// Remove function attribute from this function.
-  void removeFnAttr(StringRef Kind) {
-    setAttributes(getAttributes().removeAttribute(
-        getContext(), AttributeList::FunctionIndex, Kind));
   }
 
   enum ProfileCountType { PCT_Invalid, PCT_Real, PCT_Synthetic };
@@ -331,43 +314,6 @@ public:
   /// Get the section prefix for this function.
   Optional<StringRef> getSectionPrefix() const;
 
-  /// Return true if the function has the attribute.
-  bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
-  }
-
-  /// Return true if the function has the attribute.
-  bool hasFnAttribute(StringRef Kind) const {
-    return AttributeSets.hasFnAttribute(Kind);
-  }
-
-  /// Return the attribute for the given attribute kind.
-  Attribute getFnAttribute(Attribute::AttrKind Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
-  }
-
-  /// Return the attribute for the given attribute kind.
-  Attribute getFnAttribute(StringRef Kind) const {
-    return getAttribute(AttributeList::FunctionIndex, Kind);
-  }
-
-  /// Return the stack alignment for the function.
-  unsigned getFnStackAlignment() const {
-    if (!hasFnAttribute(Attribute::StackAlignment))
-      return 0;
-    if (const auto MA =
-            AttributeSets.getStackAlignment(AttributeList::FunctionIndex))
-      return MA->value();
-    return 0;
-  }
-
-  /// Return the stack alignment for the function.
-  MaybeAlign getFnStackAlign() const {
-    if (!hasFnAttribute(Attribute::StackAlignment))
-      return None;
-    return AttributeSets.getStackAlignment(AttributeList::FunctionIndex);
-  }
-
   /// hasGC/getGC/setGC/clearGC - The name of the garbage collection algorithm
   ///                             to use during code generation.
   bool hasGC() const {
@@ -377,14 +323,36 @@ public:
   void setGC(std::string Str);
   void clearGC();
 
-  /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute::AttrKind Kind);
+  /// Return the attribute list for this Function.
+  AttributeList getAttributes() const { return AttributeSets; }
 
-  /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute Attr);
+  /// Set the attribute list for this Function.
+  void setAttributes(AttributeList Attrs) { AttributeSets = Attrs; }
 
-  /// adds the attributes to the list of attributes.
-  void addAttributes(unsigned i, const AttrBuilder &Attrs);
+  // TODO: remove non-AtIndex versions of these methods.
+  /// adds the attribute to the list of attributes.
+  void addAttributeAtIndex(unsigned i, Attribute Attr);
+
+  /// Add function attributes to this function.
+  void addFnAttr(Attribute::AttrKind Kind);
+
+  /// Add function attributes to this function.
+  void addFnAttr(StringRef Kind, StringRef Val = StringRef());
+
+  /// Add function attributes to this function.
+  void addFnAttr(Attribute Attr);
+
+  /// Add function attributes to this function.
+  void addFnAttrs(const AttrBuilder &Attrs);
+
+  /// Add return value attributes to this function.
+  void addRetAttr(Attribute::AttrKind Kind);
+
+  /// Add return value attributes to this function.
+  void addRetAttr(Attribute Attr);
+
+  /// Add return value attributes to this function.
+  void addRetAttrs(const AttrBuilder &Attrs);
 
   /// adds the attribute to the list of attributes for the given arg.
   void addParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
@@ -396,13 +364,27 @@ public:
   void addParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs);
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, Attribute::AttrKind Kind);
+  void removeAttributeAtIndex(unsigned i, Attribute::AttrKind Kind);
 
   /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, StringRef Kind);
+  void removeAttributeAtIndex(unsigned i, StringRef Kind);
 
-  /// removes the attributes from the list of attributes.
-  void removeAttributes(unsigned i, const AttrBuilder &Attrs);
+  /// Remove function attributes from this function.
+  void removeFnAttr(Attribute::AttrKind Kind);
+
+  /// Remove function attribute from this function.
+  void removeFnAttr(StringRef Kind);
+
+  void removeFnAttrs(const AttrBuilder &Attrs);
+
+  /// removes the attribute from the return value list of attributes.
+  void removeRetAttr(Attribute::AttrKind Kind);
+
+  /// removes the attribute from the return value list of attributes.
+  void removeRetAttr(StringRef Kind);
+
+  /// removes the attributes from the return value list of attributes.
+  void removeRetAttrs(const AttrBuilder &Attrs);
 
   /// removes the attribute from the list of attributes.
   void removeParamAttr(unsigned ArgNo, Attribute::AttrKind Kind);
@@ -413,41 +395,48 @@ public:
   /// removes the attribute from the list of attributes.
   void removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs);
 
-  /// check if an attributes is in the list of attributes.
-  bool hasAttribute(unsigned i, Attribute::AttrKind Kind) const {
-    return getAttributes().hasAttribute(i, Kind);
-  }
+  /// Return true if the function has the attribute.
+  bool hasFnAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return true if the function has the attribute.
+  bool hasFnAttribute(StringRef Kind) const;
+
+  /// check if an attribute is in the list of attributes for the return value.
+  bool hasRetAttribute(Attribute::AttrKind Kind) const;
 
   /// check if an attributes is in the list of attributes.
-  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    return getAttributes().hasParamAttribute(ArgNo, Kind);
-  }
+  bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
+
+  /// gets the attribute from the list of attributes.
+  Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const;
+
+  /// gets the attribute from the list of attributes.
+  Attribute getAttributeAtIndex(unsigned i, StringRef Kind) const;
+
+  /// Return the attribute for the given attribute kind.
+  Attribute getFnAttribute(Attribute::AttrKind Kind) const;
+
+  /// Return the attribute for the given attribute kind.
+  Attribute getFnAttribute(StringRef Kind) const;
 
   /// gets the specified attribute from the list of attributes.
-  Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const {
-    return getAttributes().getParamAttr(ArgNo, Kind);
+  Attribute getParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
+
+  /// removes noundef and other attributes that imply undefined behavior if a
+  /// `undef` or `poison` value is passed from the list of attributes.
+  void removeParamUndefImplyingAttrs(unsigned ArgNo);
+
+  /// Return the stack alignment for the function.
+  MaybeAlign getFnStackAlign() const {
+    return AttributeSets.getFnStackAlignment();
   }
 
-  /// gets the attribute from the list of attributes.
-  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
-    return AttributeSets.getAttribute(i, Kind);
-  }
-
-  /// gets the attribute from the list of attributes.
-  Attribute getAttribute(unsigned i, StringRef Kind) const {
-    return AttributeSets.getAttribute(i, Kind);
-  }
-
-  /// adds the dereferenceable attribute to the list of attributes.
-  void addDereferenceableAttr(unsigned i, uint64_t Bytes);
+  /// Returns true if the function has ssp, sspstrong, or sspreq fn attrs.
+  bool hasStackProtectorFnAttr() const;
 
   /// adds the dereferenceable attribute to the list of attributes for
   /// the given arg.
   void addDereferenceableParamAttr(unsigned ArgNo, uint64_t Bytes);
-
-  /// adds the dereferenceable_or_null attribute to the list of
-  /// attributes.
-  void addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes);
 
   /// adds the dereferenceable_or_null attribute to the list of
   /// attributes for the given arg.
@@ -456,7 +445,7 @@ public:
   /// Extract the alignment for a call or parameter (0=unknown).
   /// FIXME: Remove this function once transition to Align is over.
   /// Use getParamAlign() instead.
-  unsigned getParamAlignment(unsigned ArgNo) const {
+  uint64_t getParamAlignment(unsigned ArgNo) const {
     if (const auto MA = getParamAlign(ArgNo))
       return MA->value();
     return 0;
@@ -466,10 +455,23 @@ public:
     return AttributeSets.getParamAlignment(ArgNo);
   }
 
+  MaybeAlign getParamStackAlign(unsigned ArgNo) const {
+    return AttributeSets.getParamStackAlignment(ArgNo);
+  }
+
   /// Extract the byval type for a parameter.
   Type *getParamByValType(unsigned ArgNo) const {
-    Type *Ty = AttributeSets.getParamByValType(ArgNo);
-    return Ty ? Ty : (arg_begin() + ArgNo)->getType()->getPointerElementType();
+    return AttributeSets.getParamByValType(ArgNo);
+  }
+
+  /// Extract the sret type for a parameter.
+  Type *getParamStructRetType(unsigned ArgNo) const {
+    return AttributeSets.getParamStructRetType(ArgNo);
+  }
+
+  /// Extract the inalloca type for a parameter.
+  Type *getParamInAllocaType(unsigned ArgNo) const {
+    return AttributeSets.getParamInAllocaType(ArgNo);
   }
 
   /// Extract the byref type for a parameter.
@@ -477,11 +479,9 @@ public:
     return AttributeSets.getParamByRefType(ArgNo);
   }
 
-  /// Extract the number of dereferenceable bytes for a call or
-  /// parameter (0=unknown).
-  /// @param i AttributeList index, referring to a return value or argument.
-  uint64_t getDereferenceableBytes(unsigned i) const {
-    return AttributeSets.getDereferenceableBytes(i);
+  /// Extract the preallocated type for a parameter.
+  Type *getParamPreallocatedType(unsigned ArgNo) const {
+    return AttributeSets.getParamPreallocatedType(ArgNo);
   }
 
   /// Extract the number of dereferenceable bytes for a parameter.
@@ -490,18 +490,17 @@ public:
     return AttributeSets.getParamDereferenceableBytes(ArgNo);
   }
 
-  /// Extract the number of dereferenceable_or_null bytes for a call or
-  /// parameter (0=unknown).
-  /// @param i AttributeList index, referring to a return value or argument.
-  uint64_t getDereferenceableOrNullBytes(unsigned i) const {
-    return AttributeSets.getDereferenceableOrNullBytes(i);
-  }
-
   /// Extract the number of dereferenceable_or_null bytes for a
   /// parameter.
   /// @param ArgNo AttributeList ArgNo, referring to an argument.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const {
     return AttributeSets.getParamDereferenceableOrNullBytes(ArgNo);
+  }
+
+  /// A function will have the "coroutine.presplit" attribute if it's
+  /// a coroutine and has not gone through full CoroSplit pass.
+  bool isPresplitCoroutine() const {
+    return hasFnAttribute("coroutine.presplit");
   }
 
   /// Determine if the function does not access memory.
@@ -607,6 +606,14 @@ public:
     addFnAttr(Attribute::NoFree);
   }
 
+  /// Determine if the call can synchroize with other threads
+  bool hasNoSync() const {
+    return hasFnAttribute(Attribute::NoSync);
+  }
+  void setNoSync() {
+    addFnAttr(Attribute::NoSync);
+  }
+
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.
   bool doesNotRecurse() const {
@@ -615,6 +622,17 @@ public:
   void setDoesNotRecurse() {
     addFnAttr(Attribute::NoRecurse);
   }
+
+  /// Determine if the function is required to make forward progress.
+  bool mustProgress() const {
+    return hasFnAttribute(Attribute::MustProgress) ||
+           hasFnAttribute(Attribute::WillReturn);
+  }
+  void setMustProgress() { addFnAttr(Attribute::MustProgress); }
+
+  /// Determine if the function will return.
+  bool willReturn() const { return hasFnAttribute(Attribute::WillReturn); }
+  void setWillReturn() { addFnAttr(Attribute::WillReturn); }
 
   /// True if the ABI mandates (or the user requested) that this
   /// function be in a unwind table.
@@ -633,19 +651,16 @@ public:
   /// Determine if the function returns a structure through first
   /// or second pointer argument.
   bool hasStructRetAttr() const {
-    return AttributeSets.hasParamAttribute(0, Attribute::StructRet) ||
-           AttributeSets.hasParamAttribute(1, Attribute::StructRet);
+    return AttributeSets.hasParamAttr(0, Attribute::StructRet) ||
+           AttributeSets.hasParamAttr(1, Attribute::StructRet);
   }
 
   /// Determine if the parameter or return value is marked with NoAlias
   /// attribute.
   bool returnDoesNotAlias() const {
-    return AttributeSets.hasAttribute(AttributeList::ReturnIndex,
-                                      Attribute::NoAlias);
+    return AttributeSets.hasRetAttr(Attribute::NoAlias);
   }
-  void setReturnDoesNotAlias() {
-    addAttribute(AttributeList::ReturnIndex, Attribute::NoAlias);
-  }
+  void setReturnDoesNotAlias() { addRetAttr(Attribute::NoAlias); }
 
   /// Do not optimize this function (-O0).
   bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
@@ -657,6 +672,10 @@ public:
   bool hasOptSize() const {
     return hasFnAttribute(Attribute::OptimizeForSize) || hasMinSize();
   }
+
+  /// Returns the denormal handling type for the default rounding mode of the
+  /// function.
+  DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -840,11 +859,15 @@ public:
 
   /// hasAddressTaken - returns true if there are any uses of this function
   /// other than direct calls or invokes to it, or blockaddress expressions.
-  /// Optionally passes back an offending user for diagnostic purposes and
-  /// ignores callback uses.
-  ///
+  /// Optionally passes back an offending user for diagnostic purposes,
+  /// ignores callback uses, assume like pointer annotation calls, references in
+  /// llvm.used and llvm.compiler.used variables, and operand bundle
+  /// "clang.arc.attachedcall".
   bool hasAddressTaken(const User ** = nullptr,
-                       bool IgnoreCallbackUses = false) const;
+                       bool IgnoreCallbackUses = false,
+                       bool IgnoreAssumeLikeCalls = true,
+                       bool IngoreLLVMUsed = false,
+                       bool IgnoreARCAttachedCall = false) const;
 
   /// isDefTriviallyDead - Return true if it is trivially safe to remove
   /// this function definition from the module (because it isn't externally

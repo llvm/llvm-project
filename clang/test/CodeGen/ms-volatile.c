@@ -17,32 +17,32 @@ struct qux {
 void test1(struct foo *p, struct foo *q) {
   *p = *q;
   // CHECK-LABEL: @test1
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test2(volatile int *p, volatile int *q) {
   *p = *q;
   // CHECK-LABEL: @test2
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test3(struct foo *p, struct foo *q) {
   p->x = q->x;
   // CHECK-LABEL: @test3
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test4(volatile struct foo *p, volatile struct foo *q) {
   p->x = q->x;
   // CHECK-LABEL: @test4
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test5(volatile struct foo *p, volatile struct foo *q) {
   *p = *q;
   // CHECK-LABEL: @test5
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test6(struct bar *p, struct bar *q) {
   *p = *q;
@@ -53,35 +53,35 @@ void test6(struct bar *p, struct bar *q) {
 void test7(volatile struct bar *p, volatile struct bar *q) {
   *p = *q;
   // CHECK-LABEL: @test7
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 void test8(volatile double *p, volatile double *q) {
   *p = *q;
   // CHECK-LABEL: @test8
-  // CHECK: load volatile {{.*}}
-  // CHECK: store volatile {{.*}}, {{.*}}
+  // CHECK: load volatile {{.*}}, align 8
+  // CHECK: store volatile {{.*}}, {{.*}}, align 8
 }
 void test9(volatile baz *p, baz *q) {
   *p = *q;
   // CHECK-LABEL: @test9
-  // CHECK: store volatile {{.*}}, {{.*}}
-  // CHECK: store volatile {{.*}}, {{.*}}
+  // CHECK: store volatile {{.*}}, {{.*}}, align 8
+  // CHECK: store volatile {{.*}}, {{.*}}, align 4
 }
 void test10(volatile long long *p, volatile long long *q) {
   *p = *q;
   // CHECK-LABEL: @test10
-  // CHECK: load volatile {{.*}}
-  // CHECK: store volatile {{.*}}, {{.*}}
+  // CHECK: load volatile {{.*}}, align 8
+  // CHECK: store volatile {{.*}}, {{.*}}, align 8
 }
 void test11(volatile float *p, volatile float *q) {
   *p = *q;
   // CHECK-LABEL: @test11
-  // CHECK: load atomic volatile {{.*}} acquire
-  // CHECK: store atomic volatile {{.*}}, {{.*}} release
+  // CHECK: load atomic volatile {{.*}} acquire, align 4
+  // CHECK: store atomic volatile {{.*}}, {{.*}} release, align 4
 }
 int test12(struct qux *p) {
   return p->f;
   // CHECK-LABEL: @test12
-  // CHECK: load volatile {{.*}}
+  // CHECK: load volatile {{.*}}, align 1
 }

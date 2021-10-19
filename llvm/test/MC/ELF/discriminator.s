@@ -53,7 +53,7 @@ foo:
 
 # CHECK:      Relocations [
 # CHECK:        Section ({{[^ ]+}}) .rel.debug_line {
-# CHECK-NEXT:     0x2E R_386_32 .text 0x0
+# CHECK-NEXT:     0x2E R_386_32 .text
 # CHECK-NEXT:   }
 
 # DWARF-DUMP: Address            Line   Column File   ISA Discriminator Flags

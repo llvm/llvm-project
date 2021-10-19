@@ -13,13 +13,16 @@
 #ifndef HWASAN_ALLOCATOR_H
 #define HWASAN_ALLOCATOR_H
 
+#include "hwasan.h"
+#include "hwasan_interface_internal.h"
+#include "hwasan_mapping.h"
+#include "hwasan_poisoning.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
-#include "hwasan_poisoning.h"
 
 #if !defined(__aarch64__) && !defined(__x86_64__)
 #error Unsupported platform
@@ -28,9 +31,17 @@
 namespace __hwasan {
 
 struct Metadata {
-  u32 requested_size : 31;  // sizes are < 2G.
-  u32 right_aligned  : 1;
+  u32 requested_size_low;
+  u32 requested_size_high : 31;
+  u32 right_aligned : 1;
   u32 alloc_context_id;
+  u64 get_requested_size() {
+    return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
+  }
+  void set_requested_size(u64 size) {
+    requested_size_low = size & ((1ul << 32) - 1);
+    requested_size_high = size >> 32;
+  }
 };
 
 struct HwasanMapUnmapCallback {
@@ -43,11 +54,16 @@ struct HwasanMapUnmapCallback {
   }
 };
 
-static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
+static const uptr kMaxAllowedMallocSize = 1UL << 40;  // 1T
 
 struct AP64 {
   static const uptr kSpaceBeg = ~0ULL;
+
+#if defined(HWASAN_ALIASING_MODE)
+  static const uptr kSpaceSize = 1ULL << kAddressTagShift;
+#else
   static const uptr kSpaceSize = 0x2000000000ULL;
+#endif
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef __sanitizer::VeryDenseSizeClassMap SizeClassMap;
   using AddressSpaceView = LocalAddressSpaceView;
@@ -93,6 +109,16 @@ struct HeapAllocationRecord {
 typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
 
 void GetAllocatorStats(AllocatorStatCounters s);
+
+inline bool InTaggableRegion(uptr addr) {
+#if defined(HWASAN_ALIASING_MODE)
+  // Aliases are mapped next to shadow so that the upper bits match the shadow
+  // base.
+  return (addr >> kTaggableRegionCheckShift) ==
+         (GetShadowOffset() >> kTaggableRegionCheckShift);
+#endif
+  return true;
+}
 
 } // namespace __hwasan
 

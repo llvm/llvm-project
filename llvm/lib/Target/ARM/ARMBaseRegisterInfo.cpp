@@ -55,10 +55,8 @@
 using namespace llvm;
 
 ARMBaseRegisterInfo::ARMBaseRegisterInfo()
-    : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC) {}
-
-static unsigned getFramePointerReg(const ARMSubtarget &STI) {
-  return STI.useR7AsFramePointer() ? ARM::R7 : ARM::R11;
+    : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC) {
+  ARM_MC::initLLVMToCVRegMapping(this);
 }
 
 const MCPhysReg*
@@ -77,6 +75,11 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   } else if (F.getCallingConv() == CallingConv::CFGuard_Check) {
     return CSR_Win_AAPCS_CFGuard_Check_SaveList;
+  } else if (F.getCallingConv() == CallingConv::SwiftTail) {
+    return STI.isTargetDarwin()
+               ? CSR_iOS_SwiftTail_SaveList
+               : (UseSplitPush ? CSR_AAPCS_SplitPush_SwiftTail_SaveList
+                               : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
@@ -127,6 +130,10 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_NoRegs_RegMask;
   if (CC == CallingConv::CFGuard_Check)
     return CSR_Win_AAPCS_CFGuard_Check_RegMask;
+  if (CC == CallingConv::SwiftTail) {
+    return STI.isTargetDarwin() ? CSR_iOS_SwiftTail_RegMask
+                                : CSR_AAPCS_SwiftTail_RegMask;
+  }
   if (STI.getTargetLowering()->supportSwiftError() &&
       MF.getFunction().getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return STI.isTargetDarwin() ? CSR_iOS_SwiftError_RegMask
@@ -195,7 +202,7 @@ getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, ARM::FPSCR);
   markSuperRegs(Reserved, ARM::APSR_NZCV);
   if (TFI->hasFP(MF))
-    markSuperRegs(Reserved, getFramePointerReg(STI));
+    markSuperRegs(Reserved, STI.getFramePointerReg());
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
   // Some targets reserve R9.
@@ -232,7 +239,7 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, ARM::PC);
   if (TFI->hasFP(MF))
-    markSuperRegs(Reserved, getFramePointerReg(STI));
+    markSuperRegs(Reserved, STI.getFramePointerReg());
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
   assert(checkAllSuperRegsMarked(Reserved));
@@ -256,6 +263,13 @@ ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     case ARM::QQQQPRRegClassID:
       if (MF.getSubtarget<ARMSubtarget>().hasNEON())
         return Super;
+      break;
+    case ARM::MQPRRegClassID:
+    case ARM::MQQPRRegClassID:
+    case ARM::MQQQQPRRegClassID:
+      if (MF.getSubtarget<ARMSubtarget>().hasMVEIntegerOps())
+        return Super;
+      break;
     }
     Super = *I++;
   } while (Super);
@@ -328,9 +342,13 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegPairOdd:
     Odd = 1;
     break;
-  default:
+  case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+    if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
+      Hints.push_back(ARM::LR);
     return false;
+  default:
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
   }
 
   // This register should preferably be even (Odd == 0) or odd (Odd == 1).
@@ -397,7 +415,7 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // If we have stack realignment and VLAs, we have no pointer to use to
   // access the stack. If we have stack realignment, and a large call frame,
   // we have no place to allocate the emergency spill slot.
-  if (needsStackRealignment(MF) && !TFI->hasReservedCallFrame(MF))
+  if (hasStackRealignment(MF) && !TFI->hasReservedCallFrame(MF))
     return true;
 
   // Thumb has trouble with negative offsets from the FP. Thumb2 has a limited
@@ -429,6 +447,7 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
+  const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   // We can't realign the stack if:
   // 1. Dynamic stack realignment is explicitly disabled,
   // 2. There are VLAs in the function and the base pointer is disabled.
@@ -436,7 +455,7 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
     return false;
   // Stack realignment requires a frame pointer.  If we already started
   // register allocation with frame pointer elimination, it is too late now.
-  if (!MRI->canReserveReg(getFramePointerReg(MF.getSubtarget<ARMSubtarget>())))
+  if (!MRI->canReserveReg(STI.getFramePointerReg()))
     return false;
   // We may also need a base pointer if there are dynamic allocas or stack
   // pointer adjustments around calls.
@@ -452,8 +471,8 @@ cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
     return true;
-  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken()
-    || needsStackRealignment(MF);
+  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+         hasStackRealignment(MF);
 }
 
 Register
@@ -462,7 +481,7 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
   if (TFI->hasFP(MF))
-    return getFramePointerReg(STI);
+    return STI.getFramePointerReg();
   return ARM::SP;
 }
 
@@ -634,10 +653,10 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
 
 /// materializeFrameBaseRegister - Insert defining instruction(s) for BaseReg to
 /// be a pointer to FrameIdx at the beginning of the basic block.
-void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
-                                                       Register BaseReg,
-                                                       int FrameIdx,
-                                                       int64_t Offset) const {
+Register
+ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                                  int FrameIdx,
+                                                  int64_t Offset) const {
   ARMFunctionInfo *AFI = MBB->getParent()->getInfo<ARMFunctionInfo>();
   unsigned ADDriOpc = !AFI->isThumbFunction() ? ARM::ADDri :
     (AFI->isThumb1OnlyFunction() ? ARM::tADDframe : ARM::t2ADDri);
@@ -651,6 +670,7 @@ void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
+  Register BaseReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
   MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
 
   MachineInstrBuilder MIB = BuildMI(*MBB, Ins, DL, MCID, BaseReg)
@@ -658,6 +678,8 @@ void ARMBaseRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   if (!AFI->isThumb1OnlyFunction())
     MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
+
+  return BaseReg;
 }
 
 void ARMBaseRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
@@ -899,4 +921,18 @@ bool ARMBaseRegisterInfo::shouldCoalesce(MachineInstr *MI,
     return true;
   }
   return false;
+}
+
+bool ARMBaseRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                                               unsigned DefSubReg,
+                                               const TargetRegisterClass *SrcRC,
+                                               unsigned SrcSubReg) const {
+  // We can't extract an SPR from an arbitary DPR (as opposed to a DPR_VFP2).
+  if (DefRC == &ARM::SPRRegClass && DefSubReg == 0 &&
+      SrcRC == &ARM::DPRRegClass &&
+      (SrcSubReg == ARM::ssub_0 || SrcSubReg == ARM::ssub_1))
+    return false;
+
+  return TargetRegisterInfo::shouldRewriteCopySrc(DefRC, DefSubReg,
+                                                  SrcRC, SrcSubReg);
 }

@@ -37,8 +37,9 @@ public:
 
   /// PluginInterface protocol.
   /// \{
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
   /// \}
 };
 

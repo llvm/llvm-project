@@ -62,7 +62,6 @@
 // epilogue of the function.
 
 #include "ARMWinEHPrinter.h"
-#include "Error.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMWinEH.h"
@@ -101,7 +100,7 @@ static std::string formatSymbol(StringRef Name, uint64_t Address,
     OS << Name << " ";
 
   if (Offset)
-    OS << format("+0x%X (0x%" PRIX64 ")", Offset, Address);
+    OS << format("+0x%" PRIX64 " (0x%" PRIX64 ")", Offset, Address);
   else if (!Name.empty())
     OS << format("(0x%" PRIX64 ")", Address);
   else
@@ -168,6 +167,11 @@ const Decoder::RingEntry Decoder::Ring64[] = {
   { 0xff, 0xe3, 1, &Decoder::opcode_nop },
   { 0xff, 0xe4, 1, &Decoder::opcode_end },
   { 0xff, 0xe5, 1, &Decoder::opcode_end_c },
+  { 0xff, 0xe6, 1, &Decoder::opcode_save_next },
+  { 0xff, 0xe8, 1, &Decoder::opcode_trap_frame },
+  { 0xff, 0xe9, 1, &Decoder::opcode_machine_frame },
+  { 0xff, 0xea, 1, &Decoder::opcode_context },
+  { 0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call },
 };
 
 void Decoder::printRegisters(const std::pair<uint16_t, uint32_t> &RegisterMask) {
@@ -180,31 +184,16 @@ void Decoder::printRegisters(const std::pair<uint16_t, uint32_t> &RegisterMask) 
   const uint16_t VFPMask = std::get<1>(RegisterMask);
 
   OS << '{';
-  bool Comma = false;
-  for (unsigned RI = 0, RE = 11; RI < RE; ++RI) {
-    if (GPRMask & (1 << RI)) {
-      if (Comma)
-        OS << ", ";
-      OS << GPRRegisterNames[RI];
-      Comma = true;
-    }
-  }
-  for (unsigned RI = 0, RE = 32; RI < RE; ++RI) {
-    if (VFPMask & (1 << RI)) {
-      if (Comma)
-        OS << ", ";
-      OS << "d" << unsigned(RI);
-      Comma = true;
-    }
-  }
-  for (unsigned RI = 11, RE = 16; RI < RE; ++RI) {
-    if (GPRMask & (1 << RI)) {
-      if (Comma)
-        OS << ", ";
-      OS << GPRRegisterNames[RI];
-      Comma = true;
-    }
-  }
+  ListSeparator LS;
+  for (unsigned RI = 0, RE = 11; RI < RE; ++RI)
+    if (GPRMask & (1 << RI))
+      OS << LS << GPRRegisterNames[RI];
+  for (unsigned RI = 0, RE = 32; RI < RE; ++RI)
+    if (VFPMask & (1 << RI))
+      OS << LS << "d" << unsigned(RI);
+  for (unsigned RI = 11, RE = 16; RI < RE; ++RI)
+    if (GPRMask & (1 << RI))
+      OS << LS << GPRRegisterNames[RI];
   OS << '}';
 }
 
@@ -217,7 +206,7 @@ Decoder::getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
     if (VA >= Address && (VA - Address) <= Size)
       return Section;
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
@@ -235,7 +224,7 @@ ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
     if (*Address == VA)
       return Symbol;
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
@@ -246,7 +235,71 @@ ErrorOr<SymbolRef> Decoder::getRelocatedSymbol(const COFFObjectFile &,
     if (RelocationOffset == Offset)
       return *Relocation.getSymbol();
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
+}
+
+SymbolRef Decoder::getPreferredSymbol(const COFFObjectFile &COFF, SymbolRef Sym,
+                                      uint64_t &SymbolOffset) {
+  // The symbol resolved by getRelocatedSymbol can be any internal
+  // nondescriptive symbol; try to resolve a more descriptive one.
+  COFFSymbolRef CoffSym = COFF.getCOFFSymbol(Sym);
+  if (CoffSym.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+      CoffSym.getSectionDefinition() == nullptr)
+    return Sym;
+  for (const auto &S : COFF.symbols()) {
+    COFFSymbolRef CS = COFF.getCOFFSymbol(S);
+    if (CS.getSectionNumber() == CoffSym.getSectionNumber() &&
+        CS.getValue() <= CoffSym.getValue() + SymbolOffset &&
+        CS.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+        CS.getSectionDefinition() == nullptr) {
+      uint32_t Offset = CoffSym.getValue() + SymbolOffset - CS.getValue();
+      if (Offset <= SymbolOffset) {
+        SymbolOffset = Offset;
+        Sym = S;
+        CoffSym = CS;
+        if (CS.isExternal() && SymbolOffset == 0)
+          return Sym;
+      }
+    }
+  }
+  return Sym;
+}
+
+ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
+    const COFFObjectFile &COFF, const SectionRef &Section,
+    uint64_t OffsetInSection, uint64_t ImmediateOffset, uint64_t &SymbolAddress,
+    uint64_t &SymbolOffset, bool FunctionOnly) {
+  // Try to locate a relocation that points at the offset in the section
+  ErrorOr<SymbolRef> SymOrErr =
+      getRelocatedSymbol(COFF, Section, OffsetInSection);
+  if (SymOrErr) {
+    // We found a relocation symbol; the immediate offset needs to be added
+    // to the symbol address.
+    SymbolOffset = ImmediateOffset;
+
+    Expected<uint64_t> AddressOrErr = SymOrErr->getAddress();
+    if (!AddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(AddressOrErr.takeError(), OS);
+      report_fatal_error(Twine(OS.str()));
+    }
+    // We apply SymbolOffset here directly. We return it separately to allow
+    // the caller to print it as an offset on the symbol name.
+    SymbolAddress = *AddressOrErr + SymbolOffset;
+
+    if (FunctionOnly) // Resolve label/section symbols into function names.
+      SymOrErr = getPreferredSymbol(COFF, *SymOrErr, SymbolOffset);
+  } else {
+    // No matching relocation found; operating on a linked image. Try to
+    // find a descriptive symbol if possible. The immediate offset contains
+    // the image relative address, and we shouldn't add any offset to the
+    // symbol.
+    SymbolAddress = COFF.getImageBase() + ImmediateOffset;
+    SymbolOffset = 0;
+    SymOrErr = getSymbol(COFF, SymbolAddress, FunctionOnly);
+  }
+  return SymOrErr;
 }
 
 bool Decoder::opcode_0xxxxxxx(const uint8_t *OC, unsigned &Offset,
@@ -742,7 +795,9 @@ bool Decoder::opcode_alloc_l(const uint8_t *OC, unsigned &Offset,
 
 bool Decoder::opcode_setfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
-  SW.startLine() << format("0x%02x                ; mov fp, sp\n", OC[Offset]);
+  SW.startLine() << format("0x%02x                ; mov %s, %s\n", OC[Offset],
+                           static_cast<const char *>(Prologue ? "fp" : "sp"),
+                           static_cast<const char *>(Prologue ? "sp" : "fp"));
   ++Offset;
   return false;
 }
@@ -750,8 +805,11 @@ bool Decoder::opcode_setfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
 bool Decoder::opcode_addfp(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
   unsigned NumBytes = OC[Offset + 1] << 3;
-  SW.startLine() << format("0x%02x%02x              ; add fp, sp, #%u\n",
-                           OC[Offset], OC[Offset + 1], NumBytes);
+  SW.startLine() << format(
+      "0x%02x%02x              ; %s %s, %s, #%u\n", OC[Offset], OC[Offset + 1],
+      static_cast<const char *>(Prologue ? "add" : "sub"),
+      static_cast<const char *>(Prologue ? "fp" : "sp"),
+      static_cast<const char *>(Prologue ? "sp" : "fp"), NumBytes);
   Offset += 2;
   return false;
 }
@@ -775,6 +833,47 @@ bool Decoder::opcode_end_c(const uint8_t *OC, unsigned &Offset, unsigned Length,
   SW.startLine() << format("0x%02x                ; end_c\n", OC[Offset]);
   ++Offset;
   return true;
+}
+
+bool Decoder::opcode_save_next(const uint8_t *OC, unsigned &Offset,
+                               unsigned Length, bool Prologue) {
+  if (Prologue)
+    SW.startLine() << format("0x%02x                ; save next\n", OC[Offset]);
+  else
+    SW.startLine() << format("0x%02x                ; restore next\n",
+                             OC[Offset]);
+  ++Offset;
+  return false;
+}
+
+bool Decoder::opcode_trap_frame(const uint8_t *OC, unsigned &Offset,
+                                unsigned Length, bool Prologue) {
+  SW.startLine() << format("0x%02x                ; trap frame\n", OC[Offset]);
+  ++Offset;
+  return false;
+}
+
+bool Decoder::opcode_machine_frame(const uint8_t *OC, unsigned &Offset,
+                                   unsigned Length, bool Prologue) {
+  SW.startLine() << format("0x%02x                ; machine frame\n",
+                           OC[Offset]);
+  ++Offset;
+  return false;
+}
+
+bool Decoder::opcode_context(const uint8_t *OC, unsigned &Offset,
+                             unsigned Length, bool Prologue) {
+  SW.startLine() << format("0x%02x                ; context\n", OC[Offset]);
+  ++Offset;
+  return false;
+}
+
+bool Decoder::opcode_clear_unwound_to_call(const uint8_t *OC, unsigned &Offset,
+                                           unsigned Length, bool Prologue) {
+  SW.startLine() << format("0x%02x                ; clear unwound to call\n",
+                           OC[Offset]);
+  ++Offset;
+  return false;
 }
 
 void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
@@ -884,16 +983,16 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
   }
 
   if (XData.X()) {
-    const uint64_t Address = COFF.getImageBase() + XData.ExceptionHandlerRVA();
     const uint32_t Parameter = XData.ExceptionHandlerParameter();
-    const size_t HandlerOffset = HeaderWords(XData)
-                               + (XData.E() ? 0 : XData.EpilogueCount())
-                               + XData.CodeWords();
+    const size_t HandlerOffset = HeaderWords(XData) +
+                                 (XData.E() ? 0 : XData.EpilogueCount()) +
+                                 XData.CodeWords();
 
-    ErrorOr<SymbolRef> Symbol = getRelocatedSymbol(
-        COFF, Section, Offset + HandlerOffset * sizeof(uint32_t));
-    if (!Symbol)
-      Symbol = getSymbol(COFF, Address, /*FunctionOnly=*/true);
+    uint64_t Address, SymbolOffset;
+    ErrorOr<SymbolRef> Symbol = getSymbolForLocation(
+        COFF, Section, Offset + HandlerOffset * sizeof(uint32_t),
+        XData.ExceptionHandlerRVA(), Address, SymbolOffset,
+        /*FunctionOnly=*/true);
     if (!Symbol) {
       ListScope EHS(SW, "ExceptionHandler");
       SW.printHex("Routine", Address);
@@ -906,12 +1005,11 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
 
     ListScope EHS(SW, "ExceptionHandler");
-    SW.printString("Routine", formatSymbol(*Name, Address));
+    SW.printString("Routine", formatSymbol(*Name, Address, SymbolOffset));
     SW.printHex("Parameter", Parameter);
   }
 
@@ -924,14 +1022,15 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
   assert(RF.Flag() == RuntimeFunctionFlag::RFF_Unpacked &&
          "packed entry cannot be treated as an unpacked entry");
 
-  ErrorOr<SymbolRef> Function = getRelocatedSymbol(COFF, Section, Offset);
-  if (!Function)
-    Function = getSymbol(COFF, COFF.getImageBase() + RF.BeginAddress,
-                         /*FunctionOnly=*/true);
+  uint64_t FunctionAddress, FunctionOffset;
+  ErrorOr<SymbolRef> Function = getSymbolForLocation(
+      COFF, Section, Offset, RF.BeginAddress, FunctionAddress, FunctionOffset,
+      /*FunctionOnly=*/true);
 
-  ErrorOr<SymbolRef> XDataRecord = getRelocatedSymbol(COFF, Section, Offset + 4);
-  if (!XDataRecord)
-    XDataRecord = getSymbol(COFF, RF.ExceptionInformationRVA());
+  uint64_t XDataAddress, XDataOffset;
+  ErrorOr<SymbolRef> XDataRecord = getSymbolForLocation(
+      COFF, Section, Offset + 4, RF.ExceptionInformationRVA(), XDataAddress,
+      XDataOffset);
 
   if (!RF.BeginAddress && !Function)
     return false;
@@ -939,31 +1038,19 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     return false;
 
   StringRef FunctionName;
-  uint64_t FunctionAddress;
   if (Function) {
     Expected<StringRef> FunctionNameOrErr = Function->getName();
     if (!FunctionNameOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     FunctionName = *FunctionNameOrErr;
-    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
-    if (!FunctionAddressOrErr) {
-      std::string Buf;
-      llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
-    }
-    FunctionAddress = *FunctionAddressOrErr;
-  } else {
-    FunctionAddress = COFF.getImageBase() + RF.BeginAddress;
   }
 
-  SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));
+  SW.printString("Function",
+                 formatSymbol(FunctionName, FunctionAddress, FunctionOffset));
 
   if (XDataRecord) {
     Expected<StringRef> Name = XDataRecord->getName();
@@ -971,21 +1058,11 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
 
-    Expected<uint64_t> AddressOrErr = XDataRecord->getAddress();
-    if (!AddressOrErr) {
-      std::string Buf;
-      llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(AddressOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
-    }
-    uint64_t Address = *AddressOrErr;
-
-    SW.printString("ExceptionRecord", formatSymbol(*Name, Address));
+    SW.printString("ExceptionRecord",
+                   formatSymbol(*Name, XDataAddress, XDataOffset));
 
     Expected<section_iterator> SIOrErr = XDataRecord->getSection();
     if (!SIOrErr) {
@@ -995,18 +1072,15 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     }
     section_iterator SI = *SIOrErr;
 
-    // FIXME: Do we need to add an offset from the relocation?
-    return dumpXDataRecord(COFF, *SI, FunctionAddress,
-                           RF.ExceptionInformationRVA());
+    return dumpXDataRecord(COFF, *SI, FunctionAddress, XDataAddress);
   } else {
-    uint64_t Address = COFF.getImageBase() + RF.ExceptionInformationRVA();
-    SW.printString("ExceptionRecord", formatSymbol("", Address));
+    SW.printString("ExceptionRecord", formatSymbol("", XDataAddress));
 
-    ErrorOr<SectionRef> Section = getSectionContaining(COFF, Address);
+    ErrorOr<SectionRef> Section = getSectionContaining(COFF, XDataAddress);
     if (!Section)
       return false;
 
-    return dumpXDataRecord(COFF, *Section, FunctionAddress, Address);
+    return dumpXDataRecord(COFF, *Section, FunctionAddress, XDataAddress);
   }
 }
 
@@ -1017,36 +1091,25 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
           RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
          "unpacked entry cannot be treated as a packed entry");
 
-  ErrorOr<SymbolRef> Function = getRelocatedSymbol(COFF, Section, Offset);
-  if (!Function)
-    Function = getSymbol(COFF, RF.BeginAddress, /*FunctionOnly=*/true);
+  uint64_t FunctionAddress, FunctionOffset;
+  ErrorOr<SymbolRef> Function = getSymbolForLocation(
+      COFF, Section, Offset, RF.BeginAddress, FunctionAddress, FunctionOffset,
+      /*FunctionOnly=*/true);
 
   StringRef FunctionName;
-  uint64_t FunctionAddress;
   if (Function) {
     Expected<StringRef> FunctionNameOrErr = Function->getName();
     if (!FunctionNameOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
+      report_fatal_error(Twine(OS.str()));
     }
     FunctionName = *FunctionNameOrErr;
-    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
-    if (!FunctionAddressOrErr) {
-      std::string Buf;
-      llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS);
-      OS.flush();
-      report_fatal_error(Buf);
-    }
-    FunctionAddress = *FunctionAddressOrErr;
-  } else {
-    FunctionAddress = COFF.getPE32Header()->ImageBase + RF.BeginAddress;
   }
 
-  SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));
+  SW.printString("Function",
+                 formatSymbol(FunctionName, FunctionAddress, FunctionOffset));
   if (!isAArch64)
     SW.printBoolean("Fragment",
                     RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment);
@@ -1057,6 +1120,134 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
                  printRegisters(SavedRegisterMask(RF));
   OS << '\n';
   SW.printNumber("StackAdjustment", StackAdjustment(RF) << 2);
+
+  return true;
+}
+
+bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
+                                   const SectionRef Section, uint64_t Offset,
+                                   unsigned Index,
+                                   const RuntimeFunctionARM64 &RF) {
+  assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
+          RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
+         "unpacked entry cannot be treated as a packed entry");
+
+  uint64_t FunctionAddress, FunctionOffset;
+  ErrorOr<SymbolRef> Function = getSymbolForLocation(
+      COFF, Section, Offset, RF.BeginAddress, FunctionAddress, FunctionOffset,
+      /*FunctionOnly=*/true);
+
+  StringRef FunctionName;
+  if (Function) {
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
+      report_fatal_error(Twine(OS.str()));
+    }
+    FunctionName = *FunctionNameOrErr;
+  }
+
+  SW.printString("Function",
+                 formatSymbol(FunctionName, FunctionAddress, FunctionOffset));
+  SW.printBoolean("Fragment",
+                  RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment);
+  SW.printNumber("FunctionLength", RF.FunctionLength());
+  SW.printNumber("RegF", RF.RegF());
+  SW.printNumber("RegI", RF.RegI());
+  SW.printBoolean("HomedParameters", RF.H());
+  SW.printNumber("CR", RF.CR());
+  SW.printNumber("FrameSize", RF.FrameSize() << 4);
+  ListScope PS(SW, "Prologue");
+
+  // Synthesize the equivalent prologue according to the documentation
+  // at https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling,
+  // printed in reverse order compared to the docs, to match how prologues
+  // are printed for the non-packed case.
+  int IntSZ = 8 * RF.RegI();
+  if (RF.CR() == 1)
+    IntSZ += 8;
+  int FpSZ = 8 * RF.RegF();
+  if (RF.RegF())
+    FpSZ += 8;
+  int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
+  int LocSZ = (RF.FrameSize() << 4) - SavSZ;
+
+  if (RF.CR() == 3) {
+    SW.startLine() << "mov x29, sp\n";
+    if (LocSZ <= 512) {
+      SW.startLine() << format("stp x29, lr, [sp, #-%d]!\n", LocSZ);
+    } else {
+      SW.startLine() << "stp x29, lr, [sp, #0]\n";
+    }
+  }
+  if (LocSZ > 4080) {
+    SW.startLine() << format("sub sp, sp, #%d\n", LocSZ - 4080);
+    SW.startLine() << "sub sp, sp, #4080\n";
+  } else if ((RF.CR() != 3 && LocSZ > 0) || LocSZ > 512) {
+    SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
+  }
+  if (RF.H()) {
+    SW.startLine() << format("stp x6, x7, [sp, #%d]\n", IntSZ + FpSZ + 48);
+    SW.startLine() << format("stp x4, x5, [sp, #%d]\n", IntSZ + FpSZ + 32);
+    SW.startLine() << format("stp x2, x3, [sp, #%d]\n", IntSZ + FpSZ + 16);
+    if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
+      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", IntSZ + FpSZ);
+    } else {
+      // This case isn't documented; if neither RegI nor RegF nor CR=1
+      // have decremented the stack pointer by SavSZ, we need to do it here
+      // (as the final stack adjustment of LocSZ excludes SavSZ).
+      SW.startLine() << format("stp x0, x1, [sp, #-%d]!\n", SavSZ);
+    }
+  }
+  int FloatRegs = RF.RegF() > 0 ? RF.RegF() + 1 : 0;
+  for (int I = (FloatRegs + 1) / 2 - 1; I >= 0; I--) {
+    if (I == (FloatRegs + 1) / 2 - 1 && FloatRegs % 2 == 1) {
+      // The last register, an odd register without a pair
+      SW.startLine() << format("str d%d, [sp, #%d]\n", 8 + 2 * I,
+                               IntSZ + 16 * I);
+    } else if (I == 0 && RF.RegI() == 0 && RF.CR() != 1) {
+      SW.startLine() << format("stp d%d, d%d, [sp, #-%d]!\n", 8 + 2 * I,
+                               8 + 2 * I + 1, SavSZ);
+    } else {
+      SW.startLine() << format("stp d%d, d%d, [sp, #%d]\n", 8 + 2 * I,
+                               8 + 2 * I + 1, IntSZ + 16 * I);
+    }
+  }
+  if (RF.CR() == 1 && (RF.RegI() % 2) == 0) {
+    if (RF.RegI() == 0)
+      SW.startLine() << format("str lr, [sp, #-%d]!\n", SavSZ);
+    else
+      SW.startLine() << format("str lr, [sp, #%d]\n", IntSZ - 8);
+  }
+  for (int I = (RF.RegI() + 1) / 2 - 1; I >= 0; I--) {
+    if (I == (RF.RegI() + 1) / 2 - 1 && RF.RegI() % 2 == 1) {
+      // The last register, an odd register without a pair
+      if (RF.CR() == 1) {
+        if (I == 0) { // If this is the only register pair
+          // CR=1 combined with RegI=1 doesn't map to a documented case;
+          // it doesn't map to any regular unwind info opcode, and the
+          // actual unwinder doesn't support it.
+          SW.startLine() << "INVALID!\n";
+        } else
+          SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
+                                   16 * I);
+      } else {
+        if (I == 0)
+          SW.startLine() << format("str x%d, [sp, #-%d]!\n", 19 + 2 * I, SavSZ);
+        else
+          SW.startLine() << format("str x%d, [sp, #%d]\n", 19 + 2 * I, 16 * I);
+      }
+    } else if (I == 0) {
+      // The first register pair
+      SW.startLine() << format("stp x19, x20, [sp, #-%d]!\n", SavSZ);
+    } else {
+      SW.startLine() << format("stp x%d, x%d, [sp, #%d]\n", 19 + 2 * I,
+                               19 + 2 * I + 1, 16 * I);
+    }
+  }
+  SW.startLine() << "end\n";
 
   return true;
 }
@@ -1073,8 +1264,8 @@ bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
   if (Entry.Flag() == RuntimeFunctionFlag::RFF_Unpacked)
     return dumpUnpackedEntry(COFF, Section, Offset, Index, Entry);
   if (isAArch64) {
-    SW.startLine() << "Packed unwind data not yet supported for ARM64\n";
-    return true;
+    const RuntimeFunctionARM64 EntryARM64(Data);
+    return dumpPackedARM64Entry(COFF, Section, Offset, Index, EntryARM64);
   }
   return dumpPackedEntry(COFF, Section, Offset, Index, Entry);
 }

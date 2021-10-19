@@ -174,78 +174,10 @@ class RadarClassificationParameter(SelectionParameter):
     else:
       return '7'
 
-class RadarReporter(object):
-    @staticmethod
-    def isAvailable():
-        # FIXME: Find this .scpt better
-        path = os.path.join(os.path.dirname(__file__),'../share/scan-view/GetRadarVersion.scpt')
-        try:
-          p = subprocess.Popen(['osascript',path], 
-          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except:
-            return False
-        data,err = p.communicate()
-        res = p.wait()
-        # FIXME: Check version? Check for no errors?
-        return res == 0
-
-    def getName(self):
-        return 'Radar'
-
-    def getParameters(self):
-        return [ TextParameter('Component'), TextParameter('Component Version'),
-                 RadarClassificationParameter() ]
-
-    def fileReport(self, report, parameters):
-        component = parameters.get('Component', '')
-        componentVersion = parameters.get('Component Version', '')
-        classification = parameters.get('Classification', '')
-        personID = ""
-        diagnosis = ""
-        config = ""
-
-        if not component.strip():
-            component = 'Bugs found by clang Analyzer'
-        if not componentVersion.strip():
-            componentVersion = 'X'
-
-        script = os.path.join(os.path.dirname(__file__),'../share/scan-view/FileRadar.scpt')
-        args = ['osascript', script, component, componentVersion, classification, personID, report.title,
-                report.description, diagnosis, config] + [os.path.abspath(f) for f in report.files]
-#        print >>sys.stderr, args
-        try:
-          p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except:
-            raise ReportFailure("Unable to file radar (AppleScript failure).")
-        data, err = p.communicate()
-        res = p.wait()
-
-        if res:
-            raise ReportFailure("Unable to file radar (AppleScript failure).")
-
-        try:
-            values = eval(data)
-        except:
-            raise ReportFailure("Unable to process radar results.")
-
-        # We expect (int: bugID, str: message)
-        if len(values) != 2 or not isinstance(values[0], int):
-            raise ReportFailure("Unable to process radar results.")
-
-        bugID,message = values
-        bugID = int(bugID)
-        
-        if not bugID:
-            raise ReportFailure(message)
-        
-        return "Filed: <a href=\"rdar://%d/\">%d</a>"%(bugID,bugID)
-
 ###
 
 def getReporters():
     reporters = []
-    if RadarReporter.isAvailable():
-        reporters.append(RadarReporter())
     reporters.append(EmailReporter())
     return reporters
 

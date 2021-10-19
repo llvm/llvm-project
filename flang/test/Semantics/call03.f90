@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.5.2.4 constraints and restrictions for non-POINTER non-ALLOCATABLE
 ! dummy arguments.
 
@@ -7,6 +7,9 @@ module m01
   end type
   type :: pdt(n)
     integer, len :: n
+  end type
+  type :: pdtWithDefault(n)
+    integer, len :: n = 3
   end type
   type :: tbp
    contains
@@ -29,7 +32,7 @@ module m01
     class(tbp), intent(in) :: this
   end subroutine
   subroutine subr02(this)
-    class(final), intent(in) :: this
+    type(final), intent(inout) :: this
   end subroutine
 
   subroutine poly(x)
@@ -113,18 +116,66 @@ module m01
 
   subroutine test05 ! 15.5.2.4(2)
     type(final) :: x
-    !ERROR: Actual argument associated with TYPE(*) dummy argument 'x=' may not have FINAL subroutine 'subr02'
+    !ERROR: Actual argument associated with TYPE(*) dummy argument 'x=' may not have derived type 'final' with FINAL subroutine 'subr02'
     call typestar(x)
   end subroutine
 
   subroutine ch2(x)
     character(2), intent(in out) :: x
   end subroutine
+  subroutine pdtdefault (derivedArg)
+    !ERROR: Type parameter 'n' lacks a value and has no default
+    type(pdt) :: derivedArg
+  end subroutine pdtdefault
+  subroutine pdt3 (derivedArg)
+    type(pdt(4)) :: derivedArg
+  end subroutine pdt3
+  subroutine pdt4 (derivedArg)
+    type(pdt(*)) :: derivedArg
+  end subroutine pdt4
+  subroutine pdtWithDefaultDefault (derivedArg)
+    type(pdtWithDefault) :: derivedArg
+  end subroutine pdtWithDefaultdefault
+  subroutine pdtWithDefault3 (derivedArg)
+    type(pdtWithDefault(4)) :: derivedArg
+  end subroutine pdtWithDefault3
+  subroutine pdtWithDefault4 (derivedArg)
+    type(pdtWithDefault(*)) :: derivedArg
+  end subroutine pdtWithDefault4
   subroutine test06 ! 15.5.2.4(4)
+    !ERROR: Type parameter 'n' lacks a value and has no default
+    type(pdt) :: vardefault
+    type(pdt(3)) :: var3
+    type(pdt(4)) :: var4
+    type(pdtWithDefault) :: defaultVardefault
+    type(pdtWithDefault(3)) :: defaultVar3
+    type(pdtWithDefault(4)) :: defaultVar4
     character :: ch1
     ! The actual argument is converted to a padded expression.
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call ch2(ch1)
+    call pdtdefault(vardefault)
+    call pdtdefault(var3)
+    call pdtdefault(var4) ! error
+    call pdt3(vardefault) ! error
+    !ERROR: Actual argument type 'pdt(n=3_4)' is not compatible with dummy argument type 'pdt(n=4_4)'
+    call pdt3(var3) ! error
+    call pdt3(var4)
+    call pdt4(vardefault)
+    call pdt4(var3)
+    call pdt4(var4)
+    call pdtWithDefaultdefault(defaultVardefault)
+    call pdtWithDefaultdefault(defaultVar3)
+    !ERROR: Actual argument type 'pdtwithdefault(n=4_4)' is not compatible with dummy argument type 'pdtwithdefault(n=3_4)'
+    call pdtWithDefaultdefault(defaultVar4) ! error
+    !ERROR: Actual argument type 'pdtwithdefault(n=3_4)' is not compatible with dummy argument type 'pdtwithdefault(n=4_4)'
+    call pdtWithDefault3(defaultVardefault) ! error
+    !ERROR: Actual argument type 'pdtwithdefault(n=3_4)' is not compatible with dummy argument type 'pdtwithdefault(n=4_4)'
+    call pdtWithDefault3(defaultVar3) ! error
+    call pdtWithDefault3(defaultVar4)
+    call pdtWithDefault4(defaultVardefault)
+    call pdtWithDefault4(defaultVar3)
+    call pdtWithDefault4(defaultVar4)
   end subroutine
 
   subroutine out01(x)
@@ -189,6 +240,8 @@ module m01
     call intentout(x) ! ok
     !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'x=' must be definable
     call intentout((x))
+    !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'count=' must be definable
+    call system_clock(count=2)
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call intentinout(in)
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
@@ -198,6 +251,8 @@ module m01
     call intentinout(x) ! ok
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call intentinout((x))
+    !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'exitstat=' must be definable
+    call execute_command_line(command="echo hello", exitstat=0)
   end subroutine
 
   subroutine test12 ! 15.5.2.4(21)

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s
   !ERROR: Declaration of 'x' conflicts with its use as internal procedure
   real :: x

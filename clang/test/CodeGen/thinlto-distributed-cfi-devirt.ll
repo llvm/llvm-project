@@ -7,7 +7,7 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
-; RUN: llvm-lto2 run -thinlto-distributed-indexes %t.o \
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t2.index \
@@ -36,12 +36,20 @@
 ; Round trip it through llvm-as
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK-DIS
 ; CHECK-DIS: ^0 = module: (path: "{{.*}}thinlto-distributed-cfi-devirt.ll.tmp.o", hash: ({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}))
-; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 18, typeIdInfo: (typeTests: (^2), typeCheckedLoadVCalls: (vFuncId: (^2, offset: 8), vFuncId: (^2, offset: 0))))))
+; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 18, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1), typeIdInfo: (typeTests: (^2), typeCheckedLoadVCalls: (vFuncId: (^2, offset: 8), vFuncId: (^2, offset: 0))))))
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi"))))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 \
-; RUN:   -emit-llvm -o - -x ir %t.o | FileCheck %s --check-prefixes=CHECK-IR
+; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=CHECK-IR --check-prefixes=REMARKS
+
+; Check that the devirtualization is suppressed via -wholeprogramdevirt-skip
+; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu -mllvm -wholeprogramdevirt-skip=_ZN1A1nEi \
+; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc -O2 -Rpass=wholeprogramdevirt \
+; RUN:   -emit-llvm -o - -x ir %t.o 2>&1 | FileCheck %s --check-prefixes=SKIP-IR --check-prefixes=SKIP-REMARKS
+
+; REMARKS: single-impl: devirtualized a call to _ZN1A1nEi
+; SKIP-REMARKS-NOT: single-impl
 
 ; Check that backend does not fail generating native code.
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
@@ -78,6 +86,7 @@ cont:
 
   ; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
+  ; SKIP-IR-NOT: %call = tail call i32 @_ZN1A1nEi
   %call = tail call i32 %4(%struct.A* nonnull %obj, i32 %a)
   %vtable16 = load i8*, i8** %0
   %5 = tail call { i8*, i1 } @llvm.type.checked.load(i8* %vtable16, i32 0, metadata !"_ZTS1A")

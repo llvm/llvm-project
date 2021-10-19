@@ -14,6 +14,7 @@
 
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/OptionDefinition.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private.h"
@@ -39,12 +40,6 @@ struct OptionArgElement {
 };
 
 typedef std::vector<OptionArgElement> OptionElementVector;
-
-static inline bool isprint8(int ch) {
-  if (ch & 0xffffff00u)
-    return false;
-  return llvm::isPrint(ch);
-}
 
 /// \class Options Options.h "lldb/Interpreter/Options.h"
 /// A command line option parsing protocol class.
@@ -259,8 +254,7 @@ public:
 
 class OptionGroupOptions : public Options {
 public:
-  OptionGroupOptions()
-      : Options(), m_option_defs(), m_option_infos(), m_did_finalize(false) {}
+  OptionGroupOptions() = default;
 
   ~OptionGroupOptions() override = default;
 
@@ -323,7 +317,7 @@ public:
 
   std::vector<OptionDefinition> m_option_defs;
   OptionInfos m_option_infos;
-  bool m_did_finalize;
+  bool m_did_finalize = false;
 };
 
 } // namespace lldb_private

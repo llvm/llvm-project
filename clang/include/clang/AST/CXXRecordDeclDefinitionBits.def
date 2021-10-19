@@ -131,6 +131,10 @@ FIELD(HasUninitializedFields, 1, NO_MERGE)
 /// constructors from a base class.
 FIELD(HasInheritedConstructor, 1, NO_MERGE)
 
+/// True if there are any member using-declarations that inherit
+/// default constructors from a base class.
+FIELD(HasInheritedDefaultConstructor, 1, NO_MERGE)
+
 /// True if there are any member using-declarations named
 /// 'operator='.
 FIELD(HasInheritedAssignment, 1, NO_MERGE)
@@ -210,6 +214,9 @@ FIELD(DefaultedDestructorIsConstexpr, 1, NO_MERGE)
 /// member or base class of non-literal or volatile type.
 FIELD(HasNonLiteralTypeFieldsOrBases, 1, NO_MERGE)
 
+/// True if this class is a structural type, assuming it is a literal type.
+FIELD(StructuralIfLiteral, 1, NO_MERGE)
+
 /// Whether we have a C++11 user-provided default constructor (not
 /// explicitly deleted or defaulted).
 FIELD(UserProvidedDefaultConstructor, 1, NO_MERGE)
@@ -234,5 +241,9 @@ FIELD(HasDeclaredCopyConstructorWithConstParam, 1, MERGE_OR)
 /// Whether any declared copy assignment operator has either a
 /// const-qualified reference parameter or a non-reference parameter.
 FIELD(HasDeclaredCopyAssignmentWithConstParam, 1, MERGE_OR)
+
+/// Whether the destructor is no-return. Either explicitly, or if any
+/// base classes or fields have a no-return destructor
+FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
 
 #undef FIELD

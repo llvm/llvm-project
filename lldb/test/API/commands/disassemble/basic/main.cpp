@@ -2,6 +2,7 @@ int
 sum (int a, int b)
 {
     int result = a + b; // Set a breakpoint here
+    asm("nop");
     return result;
 }
 

@@ -1,6 +1,5 @@
-; RUN: opt %s -disable-output -branch-prob -instcombine -block-freq -verify-dom-info
-; RUN: opt %s -postdomtree -analyze | FileCheck --check-prefixes=CHECK-POSTDOM %s
-; RUN: opt %s -passes='print<postdomtree>' 2>&1 | FileCheck --check-prefixes=CHECK-POSTDOM %s
+; RUN: opt < %s -disable-output -instcombine -verify-dom-info
+; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck --check-prefixes=CHECK-POSTDOM %s
 
 ; Demonstrate that Predicate Canonicalization (InstCombine) does not invalidate PostDomTree
 ; if the basic block is post-dom unreachable.

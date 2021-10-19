@@ -17,6 +17,7 @@
 // RUN: %{build} -Wunused-variable
 // RUN: %{run}
 
-int main() {
+int main(int, char**) {
     int foo;
+    return 0;
 }

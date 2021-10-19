@@ -2,7 +2,6 @@
 
 ; Test a subset of compiler-rt/libm libcalls expected to be emitted by the wasm backend
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare fp128 @llvm.sqrt.f128(fp128)
@@ -10,12 +9,12 @@ declare fp128 @llvm.floor.f128(fp128)
 declare fp128 @llvm.trunc.f128(fp128)
 declare fp128 @llvm.nearbyint.f128(fp128)
 declare fp128 @llvm.pow.f128(fp128, fp128)
-declare fp128 @llvm.powi.f128(fp128, i32)
+declare fp128 @llvm.powi.f128.i32(fp128, i32)
 
 declare double @llvm.cos.f64(double)
 declare double @llvm.log10.f64(double)
 declare double @llvm.pow.f64(double, double)
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.log.f64(double)
 declare double @llvm.exp.f64(double)
 declare i32 @llvm.lround(double)
@@ -39,7 +38,7 @@ define fp128 @fp128libcalls(fp128 %x, fp128 %y, i32 %z) {
   ; CHECK: call powl
   %f = call fp128 @llvm.pow.f128(fp128 %e, fp128 %y)
   ; CHECK: call __powitf2
-  %g = call fp128 @llvm.powi.f128(fp128 %f, i32 %z)
+  %g = call fp128 @llvm.powi.f128.i32(fp128 %f, i32 %z)
   ; CHECK: call truncl
   %h = call fp128 @llvm.trunc.f128(fp128 %g)
   ; CHECK: call nearbyintl
@@ -68,7 +67,7 @@ define i32 @f64libcalls(double %x, double %y, i32 %z) {
  ; CHECK: call $push{{[0-9]}}=, pow
  %c = call double @llvm.pow.f64(double %b, double %y)
  ; CHECK: call $push{{[0-9]}}=, __powidf2
- %d = call double @llvm.powi.f64(double %c, i32 %z)
+ %d = call double @llvm.powi.f64.i32(double %c, i32 %z)
  ; CHECK: call $push{{[0-9]}}=, log
  %e = call double @llvm.log.f64(double %d)
  ; CHECK: call $push{{[0-9]}}=, exp

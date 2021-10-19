@@ -215,7 +215,7 @@ void Create_InheritsFrom_WithVirtualDtor() {
 // i.e. we ignore -mconstructor-aliases when field paddings are added
 // because the paddings in InheritsFrom_WithVirtualDtor needs to be unpoisoned
 // in the dtor.
-// WITH_CTOR_ALIASES-LABEL: define void @_Z35Create_InheritsFrom_WithVirtualDtor
+// WITH_CTOR_ALIASES-LABEL: define{{.*}} void @_Z35Create_InheritsFrom_WithVirtualDtor
 // WITH_CTOR_ALIASES-NOT: call void @_ZN15WithVirtualDtorD2Ev
 // WITH_CTOR_ALIASES: call void @_ZN28InheritsFrom_WithVirtualDtorD2Ev
 // WITH_CTOR_ALIASES: ret void
@@ -234,6 +234,6 @@ void MakeTrivialCopy(ClassWithTrivialCopy *s1, ClassWithTrivialCopy *s2) {
   ClassWithTrivialCopy s3(*s2);
 }
 
-// CHECK-LABEL: define void @_Z15MakeTrivialCopyP20ClassWithTrivialCopyS0_
+// CHECK-LABEL: define{{.*}} void @_Z15MakeTrivialCopyP20ClassWithTrivialCopyS0_
 // CHECK-NOT: memcpy
 // CHECK: ret void

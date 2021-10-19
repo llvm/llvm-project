@@ -15,9 +15,6 @@ class AsanTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
@@ -34,9 +31,7 @@ class AsanTestCase(TestBase):
         self.line_breakpoint = line_number('main.c', '// break line')
 
     def asan_tests(self):
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         self.registerSanitizerLibrariesWithTarget(target)
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
+#include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -43,21 +44,20 @@ class DummyProcess : public Process {
 public:
   using Process::Process;
 
-  virtual bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) {
+  bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) override {
     return true;
   }
-  virtual Status DoDestroy() { return {}; }
-  virtual void RefreshStateAfterStop() {}
-  virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                              Status &error) {
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
     return 0;
   }
-  virtual bool UpdateThreadList(ThreadList &old_thread_list,
-                                ThreadList &new_thread_list) {
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override {
     return false;
   }
-  virtual ConstString GetPluginName() { return ConstString("Dummy"); }
-  virtual uint32_t GetPluginVersion() { return 0; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
 
   ProcessModID &GetModIDNonConstRef() { return m_mod_id; }
 };
@@ -111,15 +111,10 @@ typedef std::shared_ptr<Process::ProcessEventData> ProcessEventDataSP;
 typedef std::shared_ptr<Event> EventSP;
 
 TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
-  Status error;
   PlatformSP platform_sp;
   TargetSP target_sp;
-  error = debugger_sp->GetTargetList().CreateTarget(
+  debugger_sp->GetTargetList().CreateTarget(
       *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
-
-  if (target_sp) {
-    debugger_sp->GetTargetList().SetSelectedTarget(target_sp.get());
-  }
 
   return target_sp;
 }
@@ -151,7 +146,7 @@ ThreadSP CreateThread(ProcessSP &process_sp, bool should_stop,
 TEST_F(ProcessEventDataTest, DoOnRemoval) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(PlatformMacOSX::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);
@@ -191,7 +186,7 @@ TEST_F(ProcessEventDataTest, DoOnRemoval) {
 TEST_F(ProcessEventDataTest, ShouldStop) {
   ArchSpec arch("x86_64-apple-macosx-");
 
-  Platform::SetHostPlatform(PlatformMacOSX::CreateInstance(true, &arch));
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   DebuggerSP debugger_sp = Debugger::CreateInstance();
   ASSERT_TRUE(debugger_sp);

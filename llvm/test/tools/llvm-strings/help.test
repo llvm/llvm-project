@@ -1,15 +1,11 @@
 ## Show that help text is printed correctly when requested.
 
-RUN: llvm-strings -h | FileCheck %s --check-prefixes=CHECK,CATEG
-RUN: llvm-strings --help | FileCheck %s --check-prefixes=CHECK,CATEG
-RUN: llvm-strings --help-list \
-RUN:   | FileCheck %s --check-prefixes=CHECK,LIST
+RUN: llvm-strings -h | FileCheck %s
+RUN: llvm-strings --help | FileCheck %s
 
 CHECK: OVERVIEW: llvm string dumper
-CHECK: USAGE: llvm-strings{{(.exe)?}} [options] <input object files>{{$}}
+CHECK: USAGE: llvm-strings [options] <input object files>{{$}}
 CHECK: OPTIONS:
-CATEG:    General options:
-LIST-NOT: General options:
-CATEG:    Generic Options:
-LIST-NOT: Generic Options:
-CHECK: @FILE
+CHECK:   --all
+CHECK:   -a
+CHECK: Pass @FILE as argument to read options from FILE.

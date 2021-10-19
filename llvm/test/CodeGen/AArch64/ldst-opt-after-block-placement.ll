@@ -20,7 +20,7 @@ define void @foo(i1 %cond, i64* %ptr) {
 ; CHECK-NEXT:    b.ge .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: // %exit1
 ; CHECK-NEXT:    str xzr, [x1, #8]
-; CHECK-NEXT:  .LBB0_4: // %exit2
+; CHECK-NEXT:  .LBB0_4: // %common.ret
 ; CHECK-NEXT:    ret
 entry:
   br i1 %cond, label %if.then, label %if.else

@@ -95,42 +95,46 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
   if (ObjFile.getBinary()->isELF()) {
     uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
       if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF32BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF64LEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else if (const auto *ELFObj =
                    dyn_cast<object::ELF64BEObjectFile>(ObjFile))
-        return ELFObj->getELFFile()->getRelativeRelocationType();
+        return ELFObj->getELFFile().getRelativeRelocationType();
       else
         return static_cast<uint32_t>(0);
     }(ObjFile.getBinary());
 
-    bool (*SupportsRelocation)(uint64_t);
+    object::SupportsRelocation Supports;
     object::RelocationResolver Resolver;
-    std::tie(SupportsRelocation, Resolver) =
+    std::tie(Supports, Resolver) =
         object::getRelocationResolver(*ObjFile.getBinary());
 
     for (const object::SectionRef &Section : Sections) {
       for (const object::RelocationRef &Reloc : Section.relocations()) {
         if (ObjFile.getBinary()->getArch() == Triple::arm) {
-          if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
+          if (Supports && Supports(Reloc.getType())) {
             Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
             if (!ValueOrErr)
               return ValueOrErr.takeError();
-            Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, 0)});
+            Relocs.insert(
+                {Reloc.getOffset(),
+                 object::resolveRelocation(Resolver, Reloc, *ValueOrErr, 0)});
           }
-        } else if (SupportsRelocation && SupportsRelocation(Reloc.getType())) {
+        } else if (Supports && Supports(Reloc.getType())) {
           auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend();
           auto A = AddendOrErr ? *AddendOrErr : 0;
           Expected<uint64_t> ValueOrErr = Reloc.getSymbol()->getValue();
           if (!ValueOrErr)
             // TODO: Test this error.
             return ValueOrErr.takeError();
-          Relocs.insert({Reloc.getOffset(), Resolver(Reloc, *ValueOrErr, A)});
+          Relocs.insert(
+              {Reloc.getOffset(),
+               object::resolveRelocation(Resolver, Reloc, *ValueOrErr, A)});
         } else if (Reloc.getType() == RelativeRelocation) {
           if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
             Relocs.insert({Reloc.getOffset(), *AddendOrErr});
@@ -186,7 +190,7 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
         SledEntry::FunctionKinds::TAIL,
         SledEntry::FunctionKinds::LOG_ARGS_ENTER,
         SledEntry::FunctionKinds::CUSTOM_EVENT};
-    if (Kind >= sizeof(Kinds))
+    if (Kind >= sizeof(Kinds) / sizeof(Kinds[0]))
       return errorCodeToError(
           std::make_error_code(std::errc::executable_format_error));
     Entry.Kind = Kinds[Kind];

@@ -6,69 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
 
+#include "src/string/memory_utils/elements.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
-
-// Sets `kBlockSize` bytes starting from `src` to `value`.
-template <size_t kBlockSize> static void SetBlock(char *dst, unsigned value) {
-  // Theoretically the compiler is allowed to call memset here and end up with a
-  // recursive call, practically it doesn't happen, however this should be
-  // replaced with a __builtin_memset_inline once it's available in clang.
-  __builtin_memset(dst, value, kBlockSize);
-}
-
-// Sets `kBlockSize` bytes from `src + count - kBlockSize` to `value`.
-// Precondition: `count >= kBlockSize`.
-template <size_t kBlockSize>
-static void SetLastBlock(char *dst, unsigned value, size_t count) {
-  SetBlock<kBlockSize>(dst + count - kBlockSize, value);
-}
-
-// Sets `kBlockSize` bytes twice with an overlap between the two.
-//
-// [1234567812345678123]
-// [__XXXXXXXXXXXXXX___]
-// [__XXXXXXXX_________]
-// [________XXXXXXXX___]
-//
-// Precondition: `count >= kBlockSize && count <= kBlockSize`.
-template <size_t kBlockSize>
-static void SetBlockOverlap(char *dst, unsigned value, size_t count) {
-  SetBlock<kBlockSize>(dst, value);
-  SetLastBlock<kBlockSize>(dst, value, count);
-}
-
-// Sets `count` bytes by blocks of `kBlockSize` bytes.
-// Sets at the start and end of the buffer are unaligned.
-// Sets in the middle of the buffer are aligned to `kBlockSize`.
-//
-// e.g. with
-// [12345678123456781234567812345678]
-// [__XXXXXXXXXXXXXXXXXXXXXXXXXXX___]
-// [__XXXXXXXX______________________]
-// [________XXXXXXXX________________]
-// [________________XXXXXXXX________]
-// [_____________________XXXXXXXX___]
-//
-// Precondition: `count > 2 * kBlockSize` for efficiency.
-//               `count >= kBlockSize` for correctness.
-template <size_t kBlockSize>
-static void SetAlignedBlocks(char *dst, unsigned value, size_t count) {
-  SetBlock<kBlockSize>(dst, value); // Set first block
-
-  // Set aligned blocks
-  size_t offset = kBlockSize - offset_from_last_aligned<kBlockSize>(dst);
-  for (; offset + kBlockSize < count; offset += kBlockSize)
-    SetBlock<kBlockSize>(dst + offset, value);
-
-  SetLastBlock<kBlockSize>(dst, value, count); // Set last block
-}
 
 // A general purpose implementation assuming cheap unaligned writes for sizes:
 // 1, 2, 4, 8, 16, 32 and 64 Bytes. Note that some architecture can't store 32
@@ -103,29 +49,33 @@ static void SetAlignedBlocks(char *dst, unsigned value, size_t count) {
 // superior for sizes that mattered.
 inline static void GeneralPurposeMemset(char *dst, unsigned char value,
                                         size_t count) {
+#if defined(__i386__) || defined(__x86_64__)
+  using namespace ::__llvm_libc::x86;
+#else
+  using namespace ::__llvm_libc::scalar;
+#endif
+
   if (count == 0)
     return;
   if (count == 1)
-    return SetBlock<1>(dst, value);
+    return SplatSet<_1>(dst, value);
   if (count == 2)
-    return SetBlock<2>(dst, value);
+    return SplatSet<_2>(dst, value);
   if (count == 3)
-    return SetBlock<3>(dst, value);
-  if (count == 4)
-    return SetBlock<4>(dst, value);
+    return SplatSet<_3>(dst, value);
   if (count <= 8)
-    return SetBlockOverlap<4>(dst, value, count);
+    return SplatSet<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return SetBlockOverlap<8>(dst, value, count);
+    return SplatSet<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return SetBlockOverlap<16>(dst, value, count);
+    return SplatSet<HeadTail<_16>>(dst, value, count);
   if (count <= 64)
-    return SetBlockOverlap<32>(dst, value, count);
+    return SplatSet<HeadTail<_32>>(dst, value, count);
   if (count <= 128)
-    return SetBlockOverlap<64>(dst, value, count);
-  return SetAlignedBlocks<32>(dst, value, count);
+    return SplatSet<HeadTail<_64>>(dst, value, count);
+  return SplatSet<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
 }
 
 } // namespace __llvm_libc
 
-#endif //  LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_UTILS_H

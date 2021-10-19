@@ -26,31 +26,12 @@
 /// to reduce MOV count.
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
 #include "R600Defines.h"
-#include "R600InstrInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "R600Subtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 

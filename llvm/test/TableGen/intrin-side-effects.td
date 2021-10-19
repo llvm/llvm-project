@@ -18,12 +18,12 @@ class IntrinsicProperty<bit is_default = 0> {
 def IntrNoMem : IntrinsicProperty;
 def IntrHasSideEffects : IntrinsicProperty;
 
-
 class Intrinsic<list<LLVMType> ret_types,
                 list<LLVMType> param_types = [],
                 list<IntrinsicProperty> intr_properties = [],
                 string name = "",
-                list<SDNodeProperty> sd_properties = []> : SDPatternOperator {
+                list<SDNodeProperty> sd_properties = [],
+                bit disable_default_attributes = 0> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";
   list<LLVMType> RetTypes = ret_types;
@@ -34,6 +34,7 @@ class Intrinsic<list<LLVMType> ret_types,
 
 
   bit isTarget = 0;
+  bit DisableDefaultAttributes = disable_default_attributes;
 }
 
 // ... this intrinsic.

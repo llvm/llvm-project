@@ -8,7 +8,7 @@
 define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
 ; CHECK-LABEL: uaddo_i64_increment_alt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1 // =1
+; CHECK-NEXT:    adds x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -23,7 +23,7 @@ define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
 define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
 ; CHECK-LABEL: uaddo_i64_increment_alt_dom:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x0, #1 // =1
+; CHECK-NEXT:    adds x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -38,7 +38,7 @@ define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
 define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
 ; CHECK-LABEL: uaddo_i64_decrement_alt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1 // =1
+; CHECK-NEXT:    subs x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
@@ -53,7 +53,7 @@ define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
 define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
 ; CHECK-LABEL: uaddo_i64_decrement_alt_dom:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    subs x8, x0, #1 // =1
+; CHECK-NEXT:    subs x8, x0, #1
 ; CHECK-NEXT:    cset w0, hs
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret

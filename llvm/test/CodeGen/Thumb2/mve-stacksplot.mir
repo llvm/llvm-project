@@ -39,10 +39,10 @@ body: |
     ; CHECK: $r11 = IMPLICIT_DEF
     ; CHECK: $r12 = IMPLICIT_DEF
     ; CHECK: $lr = IMPLICIT_DEF
-    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.1)
+    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.1)
     ; CHECK: $r0 = tMOVr killed $sp, 14 /* CC::al */, $noreg
-    ; CHECK: renamable $q2 = MVE_VLDRBU32 killed $r0, 16, 0, $noreg :: (load 4 from %stack.0 + 12)
-    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.1)
+    ; CHECK: renamable $q2 = MVE_VLDRBU32 killed $r0, 16, 0, $noreg, $noreg :: (load (s32) from %stack.0 + 12)
+    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.1)
     ; CHECK: KILL $r0
     ; CHECK: KILL $r1
     ; CHECK: KILL $r2
@@ -72,7 +72,7 @@ body: |
     $r12 = IMPLICIT_DEF
     $lr = IMPLICIT_DEF
 
-    renamable $q2 = MVE_VLDRBU32 %stack.0, 12, 0, $noreg :: (load 4 from %stack.0 + 12)
+    renamable $q2 = MVE_VLDRBU32 %stack.0, 12, 0, $noreg, $noreg :: (load (s32) from %stack.0 + 12)
 
     KILL $r0
     KILL $r1
@@ -132,10 +132,10 @@ body: |
     ; CHECK: $r11 = IMPLICIT_DEF
     ; CHECK: $r12 = IMPLICIT_DEF
     ; CHECK: $lr = IMPLICIT_DEF
-    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store 4 into %stack.2)
+    ; CHECK: t2STRi12 killed $r0, $sp, 0, 14 /* CC::al */, $noreg :: (store (s32) into %stack.2)
     ; CHECK: $r0 = t2ADDri killed $sp, 1152, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: renamable $q2 = MVE_VLDRBU8 killed $r0, 52, 0, $noreg :: (load 4 from %stack.0)
-    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.2)
+    ; CHECK: renamable $q2 = MVE_VLDRBU8 killed $r0, 52, 0, $noreg, $noreg :: (load (s32) from %stack.0)
+    ; CHECK: $r0 = t2LDRi12 $sp, 0, 14 /* CC::al */, $noreg :: (load (s32) from %stack.2)
     ; CHECK: KILL $r0
     ; CHECK: KILL $r1
     ; CHECK: KILL $r2
@@ -165,7 +165,7 @@ body: |
     $r12 = IMPLICIT_DEF
     $lr = IMPLICIT_DEF
 
-    renamable $q2 = MVE_VLDRBU8 %stack.0, 0, 0, $noreg :: (load 4 from %stack.0)
+    renamable $q2 = MVE_VLDRBU8 %stack.0, 0, 0, $noreg, $noreg :: (load (s32) from %stack.0)
 
     KILL $r0
     KILL $r1

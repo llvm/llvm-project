@@ -105,7 +105,7 @@ private:
   void adjustCallSequence(MachineFunction &MF, const CallContext &Context);
 
   MachineInstr *canFoldIntoRegPush(MachineBasicBlock::iterator FrameSetup,
-                                   unsigned Reg);
+                                   Register Reg);
 
   enum InstClassification { Convert, Skip, Exit };
 
@@ -202,7 +202,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   Align StackAlign = TFL->getStackAlign();
 
   int64_t Advantage = 0;
-  for (auto CC : CallSeqVector) {
+  for (const auto &CC : CallSeqVector) {
     // Call sites where no parameters are passed on the stack
     // do not affect the cost, since there needs to be no
     // stack adjustment.
@@ -265,7 +265,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   if (!isProfitable(MF, CallSeqVector))
     return false;
 
-  for (auto CC : CallSeqVector) {
+  for (const auto &CC : CallSeqVector) {
     if (CC.UsePush) {
       adjustCallSequence(MF, CC);
       Changed = true;
@@ -288,13 +288,13 @@ X86CallFrameOptimization::classifyInstruction(
     case X86::AND16mi8:
     case X86::AND32mi8:
     case X86::AND64mi8: {
-      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == 0 ? Convert : Exit;
     }
     case X86::OR16mi8:
     case X86::OR32mi8:
     case X86::OR64mi8: {
-      MachineOperand ImmOp = MI->getOperand(X86::AddrNumOperands);
+      const MachineOperand &ImmOp = MI->getOperand(X86::AddrNumOperands);
       return ImmOp.getImm() == -1 ? Convert : Exit;
     }
     case X86::MOV32mi:
@@ -336,7 +336,7 @@ X86CallFrameOptimization::classifyInstruction(
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (!Register::isPhysicalRegister(Reg))
+    if (!Reg.isPhysical())
       continue;
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
       return Exit;
@@ -454,7 +454,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
       if (!MO.isReg())
         continue;
       Register Reg = MO.getReg();
-      if (Register::isPhysicalRegister(Reg))
+      if (Reg.isPhysical())
         UsedRegs.insert(Reg);
     }
   }
@@ -499,14 +499,14 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   MachineBasicBlock &MBB = *(FrameSetup->getParent());
   TII->setFrameAdjustment(*FrameSetup, Context.ExpectedDist);
 
-  DebugLoc DL = FrameSetup->getDebugLoc();
+  const DebugLoc &DL = FrameSetup->getDebugLoc();
   bool Is64Bit = STI->is64Bit();
   // Now, iterate through the vector in reverse order, and replace the store to
   // stack with pushes. MOVmi/MOVmr doesn't have any defs, so no need to
   // replace uses.
   for (int Idx = (Context.ExpectedDist >> Log2SlotSize) - 1; Idx >= 0; --Idx) {
     MachineBasicBlock::iterator Store = *Context.ArgStoreVector[Idx];
-    MachineOperand PushOp = Store->getOperand(X86::AddrNumOperands);
+    const MachineOperand &PushOp = Store->getOperand(X86::AddrNumOperands);
     MachineBasicBlock::iterator Push = nullptr;
     unsigned PushOpcode;
     switch (Store->getOpcode()) {
@@ -563,8 +563,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
         unsigned NumOps = DefMov->getDesc().getNumOperands();
         for (unsigned i = NumOps - X86::AddrNumOperands; i != NumOps; ++i)
           Push->addOperand(DefMov->getOperand(i));
-        Push->cloneMergedMemRefs(MF, {&*DefMov, &*Store});
-
+        Push->cloneMergedMemRefs(MF, {DefMov, &*Store});
         DefMov->eraseFromParent();
       } else {
         PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
@@ -600,7 +599,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 }
 
 MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
-    MachineBasicBlock::iterator FrameSetup, unsigned Reg) {
+    MachineBasicBlock::iterator FrameSetup, Register Reg) {
   // Do an extremely restricted form of load folding.
   // ISel will often create patterns like:
   // movl    4(%edi), %eax
@@ -611,7 +610,7 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   // movl    %eax, (%esp)
   // call
   // Get rid of those with prejudice.
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return nullptr;
 
   // Make sure this is the only use of Reg.

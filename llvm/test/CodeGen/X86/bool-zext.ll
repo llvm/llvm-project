@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s -check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s -check-prefix=X64
 
-; It's not necessary to zero-extend the arg because it is specified 'zeroext'. 
+; It's not necessary to zero-extend the arg because it is specified 'zeroext'.
 define void @bar1(i1 zeroext %v1) nounwind ssp {
 ; X32-LABEL: bar1:
 ; X32:       # %bb.0:
@@ -44,19 +44,19 @@ define void @bar2(i8 zeroext %v1) nounwind ssp {
 define zeroext i1 @bar3() nounwind ssp {
 ; X32-LABEL: bar3:
 ; X32:       # %bb.0:
-; X32-NEXT:    calll foo2
+; X32-NEXT:    calll foo2@PLT
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: bar3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo2
+; X64-NEXT:    callq foo2@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %call = call i1 @foo2() nounwind
   ret i1 %call
 }
 
-declare i32 @foo1(...)
+declare dso_local i32 @foo1(...)
 declare zeroext i1 @foo2()
 

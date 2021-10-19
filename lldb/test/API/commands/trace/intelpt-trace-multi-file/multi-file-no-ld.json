@@ -1,0 +1,43 @@
+{
+  "trace": {
+    "type": "intel-pt",
+    "cpuInfo": {
+      "vendor": "intel",
+      "family": 6,
+      "model": 79,
+      "stepping": 1
+    }
+  },
+  "processes": [
+    {
+      "pid": 815455,
+      "triple": "x86_64-*-linux",
+      "threads": [
+        {
+          "tid": 815455,
+          "traceFile": "multi-file.trace"
+        }
+      ],
+      "modules": [
+        {
+          "file": "a.out",
+          "systemPath": "a.out",
+          "loadAddress": "0x0000000000400000",
+          "uuid": "D2414468-7112-B7C5-408D-FF07E30D5B17-A5BFD2C4"
+        },
+        {
+          "file": "libfoo.so",
+          "systemPath": "libfoo.so",
+          "loadAddress": "0x00007ffff7bd9000",
+          "uuid": "B30FFEDA-8BB2-3D08-4580-C5937ED11E2B-21BE778C"
+        },
+        {
+          "file": "libbar.so",
+          "systemPath": "libbar.so",
+          "loadAddress": "0x00007ffff79d7000",
+          "uuid": "6633B038-EA73-D1A6-FF9A-7D0C0EDF733D-95FEA2CC"
+        }
+      ]
+    }
+  ]
+}

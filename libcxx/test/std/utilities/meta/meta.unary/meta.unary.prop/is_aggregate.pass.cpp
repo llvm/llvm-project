@@ -19,7 +19,6 @@
 template <class T>
 void test_true()
 {
-#if !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
     static_assert( std::is_aggregate<T>::value, "");
     static_assert( std::is_aggregate<const T>::value, "");
     static_assert( std::is_aggregate<volatile T>::value, "");
@@ -28,13 +27,11 @@ void test_true()
     static_assert( std::is_aggregate_v<const T>, "");
     static_assert( std::is_aggregate_v<volatile T>, "");
     static_assert( std::is_aggregate_v<const volatile T>, "");
-#endif
 }
 
 template <class T>
 void test_false()
 {
-#if !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
     static_assert(!std::is_aggregate<T>::value, "");
     static_assert(!std::is_aggregate<const T>::value, "");
     static_assert(!std::is_aggregate<volatile T>::value, "");
@@ -43,7 +40,6 @@ void test_false()
     static_assert(!std::is_aggregate_v<const T>, "");
     static_assert(!std::is_aggregate_v<volatile T>, "");
     static_assert(!std::is_aggregate_v<const volatile T>, "");
-#endif
 }
 
 struct Aggregate {};

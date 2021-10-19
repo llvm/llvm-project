@@ -26,25 +26,21 @@ define amdgpu_kernel void @test_sink_small_offset_global_atomic_csub_i32(i32 add
 ; GCN-LABEL: test_sink_small_offset_global_atomic_csub_i32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
-; GCN-NEXT:    ; implicit-def: $vcc_hi
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GCN-NEXT:    s_cbranch_execz BB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, 2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    v_mov_b32_e32 v2, 2
-; GCN-NEXT:    global_atomic_csub v0, v[0:1], v2, off offset:28 glc
+; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:28 glc
 ; GCN-NEXT:  BB0_2: ; %endif
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_add_co_u32_e64 v1, s0, 0x3d0800, s0
-; GCN-NEXT:    v_add_co_ci_u32_e64 v2, s0, 0, s1, s0
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_store_dword v[1:2], v0, off offset:252
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x3d0800
+; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    global_store_dword v1, v0, s[0:1] offset:252
 ; GCN-NEXT:    s_endpgm
 entry:
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 999999
@@ -68,7 +64,6 @@ done:
 
 declare i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* nocapture, i32) #0
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
-declare void @llvm.amdgcn.global.atomic.fadd.p1f32.f32(float addrspace(1)* nocapture, float) #2
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }

@@ -6,12 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+// PR33425 and PR33487 are not fixed until the dylib shipped with macOS 10.15
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.14
+
+// PR33439 isn't fixed until the dylib shipped with macOS 10.14
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
+
 #include <cassert>
 
 // This test explicitly tests dynamic cast with types that have inaccessible
 // bases.
 #if defined(__clang__)
-#pragma clang diagnostic ignored "-Winaccessible-base"
+#   pragma clang diagnostic ignored "-Winaccessible-base"
+#elif defined(__GNUC__)
+#   pragma GCC diagnostic ignored "-Winaccessible-base"
 #endif
 
 typedef char Pad1[43981];
@@ -143,11 +151,13 @@ void test()
 
 }  // t5
 
-int main()
+int main(int, char**)
 {
     t1::test();
     t2::test();
     t3::test();
     t4::test();
     t5::test();
+
+    return 0;
 }

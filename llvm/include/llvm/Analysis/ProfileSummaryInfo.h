@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
-#define LLVM_ANALYSIS_PROFILE_SUMMARY_INFO_H
+#ifndef LLVM_ANALYSIS_PROFILESUMMARYINFO_H
+#define LLVM_ANALYSIS_PROFILESUMMARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
@@ -38,7 +38,7 @@ class Function;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
-  Module &M;
+  const Module *M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
@@ -58,7 +58,7 @@ private:
   mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(Module &M) : M(M) { refresh(); }
+  ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
   /// If no summary is present, attempt to refresh.
@@ -134,9 +134,13 @@ public:
   bool isColdCount(uint64_t C) const;
   /// Returns true if count \p C is considered hot with regard to a given
   /// hot percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isHotCountNthPercentile(int PercentileCutoff, uint64_t C) const;
   /// Returns true if count \p C is considered cold with regard to a given
   /// cold percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isColdCountNthPercentile(int PercentileCutoff, uint64_t C) const;
   /// Returns true if BasicBlock \p BB is considered hot.
   bool isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) const;
@@ -144,10 +148,14 @@ public:
   bool isColdBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) const;
   /// Returns true if BasicBlock \p BB is considered hot with regard to a given
   /// hot percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isHotBlockNthPercentile(int PercentileCutoff, const BasicBlock *BB,
                                BlockFrequencyInfo *BFI) const;
   /// Returns true if BasicBlock \p BB is considered cold with regard to a given
   /// cold percentile cutoff value.
+  /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
+  /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
   bool isColdBlockNthPercentile(int PercentileCutoff, const BasicBlock *BB,
                                 BlockFrequencyInfo *BFI) const;
   /// Returns true if the call site \p CB is considered hot.

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -33,49 +32,6 @@ static cl::list<std::string> ForceRemoveAttributes(
              "example -force-remove-attribute=foo:noinline. This "
              "option can be specified multiple times."));
 
-static Attribute::AttrKind parseAttrKind(StringRef Kind) {
-  return StringSwitch<Attribute::AttrKind>(Kind)
-      .Case("alwaysinline", Attribute::AlwaysInline)
-      .Case("builtin", Attribute::Builtin)
-      .Case("cold", Attribute::Cold)
-      .Case("convergent", Attribute::Convergent)
-      .Case("inlinehint", Attribute::InlineHint)
-      .Case("jumptable", Attribute::JumpTable)
-      .Case("minsize", Attribute::MinSize)
-      .Case("naked", Attribute::Naked)
-      .Case("nobuiltin", Attribute::NoBuiltin)
-      .Case("noduplicate", Attribute::NoDuplicate)
-      .Case("noimplicitfloat", Attribute::NoImplicitFloat)
-      .Case("noinline", Attribute::NoInline)
-      .Case("nonlazybind", Attribute::NonLazyBind)
-      .Case("noredzone", Attribute::NoRedZone)
-      .Case("noreturn", Attribute::NoReturn)
-      .Case("nocf_check", Attribute::NoCfCheck)
-      .Case("norecurse", Attribute::NoRecurse)
-      .Case("nounwind", Attribute::NoUnwind)
-      .Case("optforfuzzing", Attribute::OptForFuzzing)
-      .Case("optnone", Attribute::OptimizeNone)
-      .Case("optsize", Attribute::OptimizeForSize)
-      .Case("readnone", Attribute::ReadNone)
-      .Case("readonly", Attribute::ReadOnly)
-      .Case("argmemonly", Attribute::ArgMemOnly)
-      .Case("returns_twice", Attribute::ReturnsTwice)
-      .Case("safestack", Attribute::SafeStack)
-      .Case("shadowcallstack", Attribute::ShadowCallStack)
-      .Case("sanitize_address", Attribute::SanitizeAddress)
-      .Case("sanitize_hwaddress", Attribute::SanitizeHWAddress)
-      .Case("sanitize_memory", Attribute::SanitizeMemory)
-      .Case("sanitize_thread", Attribute::SanitizeThread)
-      .Case("sanitize_memtag", Attribute::SanitizeMemTag)
-      .Case("speculative_load_hardening", Attribute::SpeculativeLoadHardening)
-      .Case("ssp", Attribute::StackProtect)
-      .Case("sspreq", Attribute::StackProtectReq)
-      .Case("sspstrong", Attribute::StackProtectStrong)
-      .Case("strictfp", Attribute::StrictFP)
-      .Case("uwtable", Attribute::UWTable)
-      .Default(Attribute::None);
-}
-
 /// If F has any forced attributes given on the command line, add them.
 /// If F has any forced remove attributes given on the command line, remove
 /// them. When both force and force-remove are given to a function, the latter
@@ -86,22 +42,22 @@ static void forceAttributes(Function &F) {
     auto KV = StringRef(S).split(':');
     if (KV.first != F.getName())
       return Kind;
-    Kind = parseAttrKind(KV.second);
-    if (Kind == Attribute::None) {
+    Kind = Attribute::getAttrKindFromName(KV.second);
+    if (Kind == Attribute::None || !Attribute::canUseAsFnAttr(Kind)) {
       LLVM_DEBUG(dbgs() << "ForcedAttribute: " << KV.second
-                        << " unknown or not handled!\n");
+                        << " unknown or not a function attribute!\n");
     }
     return Kind;
   };
 
-  for (auto &S : ForceAttributes) {
+  for (const auto &S : ForceAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || F.hasFnAttribute(Kind))
       continue;
     F.addFnAttr(Kind);
   }
 
-  for (auto &S : ForceRemoveAttributes) {
+  for (const auto &S : ForceRemoveAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
       continue;

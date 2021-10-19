@@ -51,16 +51,8 @@ u32 GetMallocContextSize();
   stack.Unwind(pc, bp, nullptr,                    \
                common_flags()->fast_unwind_on_fatal)
 
-#define GET_STACK_TRACE_SIGNAL(sig)                                        \
-  BufferedStackTrace stack;                                                \
-  stack.Unwind((sig).pc, (sig).bp, (sig).context,                          \
-               common_flags()->fast_unwind_on_fatal)
-
 #define GET_STACK_TRACE_FATAL_HERE                                \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)
-
-#define GET_STACK_TRACE_CHECK_HERE                                \
-  GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_check)
 
 #define GET_STACK_TRACE_THREAD                                    \
   GET_STACK_TRACE(kStackTraceMax, true)
@@ -74,12 +66,6 @@ u32 GetMallocContextSize();
   {                             \
     GET_STACK_TRACE_FATAL_HERE; \
     stack.Print();              \
-  }
-
-#define PRINT_CURRENT_STACK_CHECK() \
-  {                                 \
-    GET_STACK_TRACE_CHECK_HERE;     \
-    stack.Print();                  \
   }
 
 #endif // ASAN_STACK_H

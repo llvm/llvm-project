@@ -9,7 +9,7 @@
 define i64 @e(i8* nocapture readonly %f) local_unnamed_addr #0 {
 ; CHECK-LABEL: e:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ldx r3, 0, r3
+; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, i8* %f, align 1

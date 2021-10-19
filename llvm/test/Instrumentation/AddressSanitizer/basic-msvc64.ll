@@ -1,6 +1,5 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt -asan -asan-module -enable-new-pm=0 -S  < %s | FileCheck %s
 ; RUN: opt -passes='asan-pipeline' -S  < %s | FileCheck %s
 
 target triple = "x86_64-pc-windows-msvc"

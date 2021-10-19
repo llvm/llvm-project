@@ -30,7 +30,7 @@ __attribute__((optnone)) void TouchMemory(void *Ptr) {
   *(reinterpret_cast<volatile char *>(Ptr)) = 7;
 }
 
-TEST_F(BacktraceGuardedPoolAllocator, DoubleFree) {
+TEST_F(BacktraceGuardedPoolAllocatorDeathTest, DoubleFree) {
   void *Ptr = AllocateMemory(GPA);
   DeallocateMemory(GPA, Ptr);
 
@@ -45,7 +45,12 @@ TEST_F(BacktraceGuardedPoolAllocator, DoubleFree) {
   ASSERT_DEATH(DeallocateMemory2(GPA, Ptr), DeathRegex);
 }
 
-TEST_F(BacktraceGuardedPoolAllocator, UseAfterFree) {
+TEST_F(BacktraceGuardedPoolAllocatorDeathTest, UseAfterFree) {
+#if defined(__linux__) && __ARM_ARCH == 7
+  // Incomplete backtrace on Armv7 Linux
+  GTEST_SKIP();
+#endif
+
   void *Ptr = AllocateMemory(GPA);
   DeallocateMemory(GPA, Ptr);
 

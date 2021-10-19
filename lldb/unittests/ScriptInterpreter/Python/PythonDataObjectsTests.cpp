@@ -583,7 +583,7 @@ TEST_F(PythonDataObjectsTest, TestPythonCallableInvoke) {
 
 TEST_F(PythonDataObjectsTest, TestPythonFile) {
   auto file = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
-                                          File::eOpenOptionRead);
+                                          File::eOpenOptionReadOnly);
   ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
   auto py_file = PythonFile::FromFile(*file.get(), "r");
   ASSERT_THAT_EXPECTED(py_file, llvm::Succeeded());

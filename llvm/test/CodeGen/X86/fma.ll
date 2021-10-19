@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin10  -mattr=+avx,-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMACALL32
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -mattr=+fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMA64
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMACALL64
-; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512f,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512 --check-prefix=AVX51264
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512f,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10  -mattr=+avx512vl,-fma4 -show-mc-encoding | FileCheck %s --check-prefix=AVX512VL
-; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma4 -show-mc-encoding | FileCheck %s --check-prefixes=FMA32,FMA32_BDVER2
+; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma4 -show-mc-encoding | FileCheck %s --check-prefix=FMA32
 ; RUN: llc < %s -mtriple=i386-apple-darwin10 -mcpu=bdver2 -mattr=-fma,-fma4 -show-mc-encoding | FileCheck %s --check-prefixes=FMACALL32,FMACALL32_BDVER2
 
 define float @test_f32(float %a, float %b, float %c) #0 {
@@ -251,41 +251,41 @@ entry:
 define float @test_f32_cst() #0 {
 ; FMA32-LABEL: test_f32_cst:
 ; FMA32:       ## %bb.0: ## %entry
-; FMA32-NEXT:    flds LCPI4_0 ## encoding: [0xd9,0x05,A,A,A,A]
-; FMA32-NEXT:    ## fixup A - offset: 2, value: LCPI4_0, kind: FK_Data_4
+; FMA32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}} ## encoding: [0xd9,0x05,A,A,A,A]
+; FMA32-NEXT:    ## fixup A - offset: 2, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; FMA32-NEXT:    retl ## encoding: [0xc3]
 ;
 ; FMACALL32-LABEL: test_f32_cst:
 ; FMACALL32:       ## %bb.0: ## %entry
-; FMACALL32-NEXT:    flds LCPI4_0 ## encoding: [0xd9,0x05,A,A,A,A]
-; FMACALL32-NEXT:    ## fixup A - offset: 2, value: LCPI4_0, kind: FK_Data_4
+; FMACALL32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}} ## encoding: [0xd9,0x05,A,A,A,A]
+; FMACALL32-NEXT:    ## fixup A - offset: 2, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; FMACALL32-NEXT:    retl ## encoding: [0xc3]
 ;
 ; FMA64-LABEL: test_f32_cst:
 ; FMA64:       ## %bb.0: ## %entry
-; FMA64-NEXT:    vmovss {{.*}}(%rip), %xmm0 ## encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
-; FMA64-NEXT:    ## fixup A - offset: 4, value: LCPI4_0-4, kind: reloc_riprel_4byte
+; FMA64-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 ## encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; FMA64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; FMA64-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; FMA64-NEXT:    retq ## encoding: [0xc3]
 ;
 ; FMACALL64-LABEL: test_f32_cst:
 ; FMACALL64:       ## %bb.0: ## %entry
-; FMACALL64-NEXT:    movss {{.*}}(%rip), %xmm0 ## encoding: [0xf3,0x0f,0x10,0x05,A,A,A,A]
-; FMACALL64-NEXT:    ## fixup A - offset: 4, value: LCPI4_0-4, kind: reloc_riprel_4byte
+; FMACALL64-NEXT:    movss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 ## encoding: [0xf3,0x0f,0x10,0x05,A,A,A,A]
+; FMACALL64-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; FMACALL64-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; FMACALL64-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_f32_cst:
 ; AVX512:       ## %bb.0: ## %entry
-; AVX512-NEXT:    vmovss {{.*}}(%rip), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
-; AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI4_0-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
 ; AVX512VL-LABEL: test_f32_cst:
 ; AVX512VL:       ## %bb.0: ## %entry
-; AVX512VL-NEXT:    vmovss {{.*}}(%rip), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
-; AVX512VL-NEXT:    ## fixup A - offset: 4, value: LCPI4_0-4, kind: reloc_riprel_4byte
+; AVX512VL-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x05,A,A,A,A]
+; AVX512VL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512VL-NEXT:    ## xmm0 = mem[0],zero,zero,zero
 ; AVX512VL-NEXT:    retq ## encoding: [0xc3]
 entry:
@@ -642,161 +642,161 @@ define <8 x float> @test_v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c) #
 ;
 ; FMACALL32_BDVER2-LABEL: test_v8f32:
 ; FMACALL32_BDVER2:       ## %bb.0: ## %entry
-; FMACALL32_BDVER2-NEXT:    subl $316, %esp ## encoding: [0x81,0xec,0x3c,0x01,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    ## imm = 0x13C
+; FMACALL32_BDVER2-NEXT:    subl $284, %esp ## encoding: [0x81,0xec,0x1c,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## imm = 0x11C
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm2, %xmm3 ## encoding: [0xc4,0xe3,0x7d,0x19,0xd3,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x94,0x24,0x00,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x94,0x24,0xf0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm1, %xmm2 ## encoding: [0xc4,0xe3,0x7d,0x19,0xca,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x8c,0x24,0xe0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x8c,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm0, %xmm1 ## encoding: [0xc4,0xe3,0x7d,0x19,0xc1,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x84,0x24,0xc0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x84,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x5c,0x24,0x60]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x5c,0x24,0x50]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm3, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x5c,0x24,0x08,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x54,0x24,0x50]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x54,0x24,0x40]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm2, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x54,0x24,0x04,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x4c,0x24,0x40]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x29,0x4c,0x24,0x30]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm1, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x0c,0x24,0x02]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0xb4,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0xa4,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x60]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x50]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x54,0x24,0x50]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x54,0x24,0x40]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x4c,0x24,0x40]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x4c,0x24,0x30]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x01]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm2, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x54,0x24,0x04,0x01]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm1, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x0c,0x24,0x01]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0xa8,0x00,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x60]
-; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x08]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x98,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x50]
-; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x04]
+; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x08]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x40]
+; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x04]
+; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x30]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x9c,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x8c,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0x00,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xf0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xe0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x03]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xc0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x03]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x90,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x80,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0x00,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xf0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xe0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x02]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xc0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $2, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x02]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xbc,0x24,0x84,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x7c,0x24,0x74]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0x00,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xf0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xe0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x04,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xc0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractps $1, %xmm0, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x04,0x24,0x01]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Spill
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x7c,0x24,0x78]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x7c,0x24,0x68]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0x00,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xf0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x08]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xe0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xd0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc5,0xfa,0x11,0x44,0x24,0x04]
 ; FMACALL32_BDVER2-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %ymm0 ## 32-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xc0,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x10,0x84,0x24,0xb0,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vmovss %xmm0, (%esp) ## encoding: [0xc5,0xfa,0x11,0x04,0x24]
 ; FMACALL32_BDVER2-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x60]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x44,0x24,0x50]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x54,0x24,0x50]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x54,0x24,0x40]
 ; FMACALL32_BDVER2-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 16-byte Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x4c,0x24,0x40]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xf8,0x28,0x4c,0x24,0x30]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x44,0x24,0x08,0x03]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm2, {{[0-9]+}}(%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x54,0x24,0x04,0x03]
 ; FMACALL32_BDVER2-NEXT:    vextractps $3, %xmm1, (%esp) ## encoding: [0xc4,0xe3,0x79,0x17,0x0c,0x24,0x03]
-; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x3c]
-; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x6c,0x24,0x78]
-; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x38]
-; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x84,0x00,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x34]
-; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x90,0x00,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x30]
-; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x9c,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x2c]
 ; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0xa8,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x6c,0x24,0x68]
 ; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x28]
 ; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
-; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0xb4,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0x6c,0x24,0x74]
 ; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x24]
+; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x80,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x20]
+; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x8c,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x1c]
+; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0x98,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x18]
+; FMACALL32_BDVER2-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) ## 10-byte Folded Reload
+; FMACALL32_BDVER2-NEXT:    ## encoding: [0xdb,0xac,0x24,0xa4,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x14]
 ; FMACALL32_BDVER2-NEXT:    calll _fmaf ## encoding: [0xe8,A,A,A,A]
 ; FMACALL32_BDVER2-NEXT:    ## fixup A - offset: 1, value: _fmaf-4, kind: FK_PCRel_4
-; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x20]
-; FMACALL32_BDVER2-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xc5,0xfa,0x10,0x44,0x24,0x3c]
+; FMACALL32_BDVER2-NEXT:    fstps {{[0-9]+}}(%esp) ## encoding: [0xd9,0x5c,0x24,0x10]
+; FMACALL32_BDVER2-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm0 ## encoding: [0xc5,0xfa,0x10,0x44,0x24,0x2c]
 ; FMACALL32_BDVER2-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; FMACALL32_BDVER2-NEXT:    vinsertps $16, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x38,0x10]
+; FMACALL32_BDVER2-NEXT:    vinsertps $16, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x28,0x10]
 ; FMACALL32_BDVER2-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[2,3]
-; FMACALL32_BDVER2-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm1 ## encoding: [0xc5,0xfa,0x10,0x4c,0x24,0x2c]
+; FMACALL32_BDVER2-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm1 ## encoding: [0xc5,0xfa,0x10,0x4c,0x24,0x1c]
 ; FMACALL32_BDVER2-NEXT:    ## xmm1 = mem[0],zero,zero,zero
-; FMACALL32_BDVER2-NEXT:    vinsertps $16, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x28,0x10]
+; FMACALL32_BDVER2-NEXT:    vinsertps $16, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x18,0x10]
 ; FMACALL32_BDVER2-NEXT:    ## xmm1 = xmm1[0],mem[0],xmm1[2,3]
-; FMACALL32_BDVER2-NEXT:    vinsertps $32, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x34,0x20]
+; FMACALL32_BDVER2-NEXT:    vinsertps $32, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x24,0x20]
 ; FMACALL32_BDVER2-NEXT:    ## xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; FMACALL32_BDVER2-NEXT:    vinsertps $32, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x24,0x20]
+; FMACALL32_BDVER2-NEXT:    vinsertps $32, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x14,0x20]
 ; FMACALL32_BDVER2-NEXT:    ## xmm1 = xmm1[0,1],mem[0],xmm1[3]
-; FMACALL32_BDVER2-NEXT:    vinsertps $48, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x30,0x30]
+; FMACALL32_BDVER2-NEXT:    vinsertps $48, {{[0-9]+}}(%esp), %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x21,0x44,0x24,0x20,0x30]
 ; FMACALL32_BDVER2-NEXT:    ## xmm0 = xmm0[0,1,2],mem[0]
-; FMACALL32_BDVER2-NEXT:    vinsertps $48, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x20,0x30]
+; FMACALL32_BDVER2-NEXT:    vinsertps $48, {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc4,0xe3,0x71,0x21,0x4c,0x24,0x10,0x30]
 ; FMACALL32_BDVER2-NEXT:    ## xmm1 = xmm1[0,1,2],mem[0]
 ; FMACALL32_BDVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
-; FMACALL32_BDVER2-NEXT:    addl $316, %esp ## encoding: [0x81,0xc4,0x3c,0x01,0x00,0x00]
-; FMACALL32_BDVER2-NEXT:    ## imm = 0x13C
+; FMACALL32_BDVER2-NEXT:    addl $284, %esp ## encoding: [0x81,0xc4,0x1c,0x01,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    ## imm = 0x11C
 ; FMACALL32_BDVER2-NEXT:    retl ## encoding: [0xc3]
 entry:
   %call = call <8 x float> @llvm.fma.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c)
@@ -1663,7 +1663,7 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %
 ;
 ; FMACALL32_BDVER2-LABEL: test_v4f64:
 ; FMACALL32_BDVER2:       ## %bb.0: ## %entry
-; FMACALL32_BDVER2-NEXT:    subl $252, %esp ## encoding: [0x81,0xec,0xfc,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    subl $236, %esp ## encoding: [0x81,0xec,0xec,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    vextractf128 $1, %ymm2, %xmm3 ## encoding: [0xc4,0xe3,0x7d,0x19,0xd3,0x01]
 ; FMACALL32_BDVER2-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 32-byte Spill
 ; FMACALL32_BDVER2-NEXT:    ## encoding: [0xc5,0xfc,0x11,0x94,0x24,0xc0,0x00,0x00,0x00]
@@ -1742,7 +1742,7 @@ define <4 x double> @test_v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %
 ; FMACALL32_BDVER2-NEXT:    vmovhps {{[0-9]+}}(%esp), %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x16,0x4c,0x24,0x18]
 ; FMACALL32_BDVER2-NEXT:    ## xmm1 = xmm1[0,1],mem[0,1]
 ; FMACALL32_BDVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0 ## encoding: [0xc4,0xe3,0x7d,0x18,0xc1,0x01]
-; FMACALL32_BDVER2-NEXT:    addl $252, %esp ## encoding: [0x81,0xc4,0xfc,0x00,0x00,0x00]
+; FMACALL32_BDVER2-NEXT:    addl $236, %esp ## encoding: [0x81,0xc4,0xec,0x00,0x00,0x00]
 ; FMACALL32_BDVER2-NEXT:    retl ## encoding: [0xc3]
 entry:
   %call = call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> %b, <4 x double> %c)

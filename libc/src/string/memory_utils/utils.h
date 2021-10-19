@@ -6,10 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_H
-#define LLVM_LIBC_SRC_MEMORY_UTILS_H
+#ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
+#define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 
-#include "src/string/memory_utils/cacheline_size.h"
+// Cache line sizes for ARM: These values are not strictly correct since
+// cache line sizes depend on implementations, not architectures.  There
+// are even implementations with cache line sizes configurable at boot
+// time.
+#if defined(__aarch64__)
+#define LLVM_LIBC_CACHELINE_SIZE 64
+#elif defined(__ARM_ARCH_5T__)
+#define LLVM_LIBC_CACHELINE_SIZE 32
+#elif defined(__ARM_ARCH_7A__)
+#define LLVM_LIBC_CACHELINE_SIZE 64
+#elif defined(__PPC64__)
+#define LLVM_LIBC_CACHELINE_SIZE 128
+#elif defined(__i386__) || defined(__x86_64__)
+#define LLVM_LIBC_CACHELINE_SIZE 64
+#else
+#error "Unsupported platform for memory functions."
+#endif
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t
@@ -60,6 +76,10 @@ static inline intptr_t offset_to_next_cache_line(const void *ptr) {
   return offset_to_next_aligned<LLVM_LIBC_CACHELINE_SIZE>(ptr);
 }
 
+template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
+  return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
+}
+
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_MEMORY_UTILS_H
+#endif // LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H

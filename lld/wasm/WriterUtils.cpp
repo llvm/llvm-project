@@ -30,8 +30,8 @@ std::string toString(ValType type) {
     return "f64";
   case ValType::V128:
     return "v128";
-  case ValType::EXNREF:
-    return "exnref";
+  case ValType::FUNCREF:
+    return "funcref";
   case ValType::EXTERNREF:
     return "externref";
   }
@@ -58,16 +58,27 @@ std::string toString(const WasmGlobalType &type) {
          toString(static_cast<ValType>(type.Type));
 }
 
-std::string toString(const WasmEventType &type) {
-  if (type.Attribute == WASM_EVENT_ATTRIBUTE_EXCEPTION)
-    return "exception";
-  return "unknown";
+static std::string toString(const llvm::wasm::WasmLimits &limits) {
+  std::string ret;
+  ret += "flags=0x" + std::to_string(limits.Flags);
+  ret += "; min=" + std::to_string(limits.Minimum);
+  if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
+    ret += "; max=" + std::to_string(limits.Maximum);
+  return ret;
+}
+
+std::string toString(const WasmTableType &type) {
+  SmallString<128> ret("");
+  return "type=" + toString(static_cast<ValType>(type.ElemType)) +
+         "; limits=[" + toString(type.Limits) + "]";
 }
 
 namespace wasm {
+#ifdef LLVM_DEBUG
 void debugWrite(uint64_t offset, const Twine &msg) {
   LLVM_DEBUG(dbgs() << format("  | %08lld: ", offset) << msg << "\n");
 }
+#endif
 
 void writeUleb128(raw_ostream &os, uint64_t number, const Twine &msg) {
   debugWrite(os.tell(), msg + "[" + utohexstr(number) + "]");
@@ -134,6 +145,14 @@ void writeI64Const(raw_ostream &os, int64_t number, const Twine &msg) {
   writeSleb128(os, number, msg);
 }
 
+void writePtrConst(raw_ostream &os, int64_t number, bool is64,
+                   const Twine &msg) {
+  if (is64)
+    writeI64Const(os, number, msg);
+  else
+    writeI32Const(os, static_cast<int32_t>(number), msg);
+}
+
 void writeMemArg(raw_ostream &os, uint32_t alignment, uint64_t offset) {
   writeUleb128(os, alignment, "alignment");
   writeUleb128(os, offset, "offset");
@@ -168,7 +187,7 @@ void writeInitExpr(raw_ostream &os, const WasmInitExpr &initExpr) {
 
 void writeLimits(raw_ostream &os, const WasmLimits &limits) {
   writeU8(os, limits.Flags, "limits flags");
-  writeUleb128(os, limits.Initial, "limits initial");
+  writeUleb128(os, limits.Minimum, "limits min");
   if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     writeUleb128(os, limits.Maximum, "limits max");
 }
@@ -179,22 +198,8 @@ void writeGlobalType(raw_ostream &os, const WasmGlobalType &type) {
   writeU8(os, type.Mutable, "global mutable");
 }
 
-void writeGlobal(raw_ostream &os, const WasmGlobal &global) {
-  writeGlobalType(os, global.Type);
-  writeInitExpr(os, global.InitExpr);
-}
-
-void writeEventType(raw_ostream &os, const WasmEventType &type) {
-  writeUleb128(os, type.Attribute, "event attribute");
-  writeUleb128(os, type.SigIndex, "sig index");
-}
-
-void writeEvent(raw_ostream &os, const WasmEvent &event) {
-  writeEventType(os, event.Type);
-}
-
-void writeTableType(raw_ostream &os, const llvm::wasm::WasmTable &type) {
-  writeU8(os, WASM_TYPE_FUNCREF, "table type");
+void writeTableType(raw_ostream &os, const WasmTableType &type) {
+  writeValueType(os, ValType(type.ElemType), "table type");
   writeLimits(os, type.Limits);
 }
 
@@ -209,8 +214,9 @@ void writeImport(raw_ostream &os, const WasmImport &import) {
   case WASM_EXTERNAL_GLOBAL:
     writeGlobalType(os, import.Global);
     break;
-  case WASM_EXTERNAL_EVENT:
-    writeEventType(os, import.Event);
+  case WASM_EXTERNAL_TAG:
+    writeUleb128(os, 0, "tag attribute"); // Reserved "attribute" field
+    writeUleb128(os, import.SigIndex, "import sig index");
     break;
   case WASM_EXTERNAL_MEMORY:
     writeLimits(os, import.Memory);
@@ -233,8 +239,8 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
   case WASM_EXTERNAL_GLOBAL:
     writeUleb128(os, export_.Index, "global index");
     break;
-  case WASM_EXTERNAL_EVENT:
-    writeUleb128(os, export_.Index, "event index");
+  case WASM_EXTERNAL_TAG:
+    writeUleb128(os, export_.Index, "tag index");
     break;
   case WASM_EXTERNAL_MEMORY:
     writeUleb128(os, export_.Index, "memory index");

@@ -99,6 +99,8 @@ STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
 STATISTIC(NonEmptyGuardBlock, "Candidate has a non-empty guard block with "
                               "instructions that cannot be moved");
 STATISTIC(NotRotated, "Candidate is not rotated");
+STATISTIC(OnlySecondCandidateIsGuarded,
+          "The second candidate is guarded while the first one is not");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -370,11 +372,13 @@ private:
   bool reportInvalidCandidate(llvm::Statistic &Stat) const {
     using namespace ore;
     assert(L && Preheader && "Fusion candidate not initialized properly!");
+#if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
                                         L->getStartLoc(), Preheader)
              << "[" << Preheader->getParent()->getName() << "]: "
              << "Loop is not a candidate for fusion: " << Stat.getDesc());
+#endif
     return false;
   }
 };
@@ -891,6 +895,14 @@ private:
             continue;
           }
 
+          if (!FC0->GuardBranch && FC1->GuardBranch) {
+            LLVM_DEBUG(dbgs() << "The second candidate is guarded while the "
+                                 "first one is not. Not fusing.\n");
+            reportLoopFusion<OptimizationRemarkMissed>(
+                *FC0, *FC1, OnlySecondCandidateIsGuarded);
+            continue;
+          }
+
           // Ensure that FC0 and FC1 have identical guards.
           // If one (or both) are not guarded, this check is not necessary.
           if (FC0->GuardBranch && FC1->GuardBranch &&
@@ -1392,7 +1404,7 @@ private:
     }
 
     // The pre-header of L1 is not necessary anymore.
-    assert(pred_begin(FC1.Preheader) == pred_end(FC1.Preheader));
+    assert(pred_empty(FC1.Preheader));
     FC1.Preheader->getTerminator()->eraseFromParent();
     new UnreachableInst(FC1.Preheader->getContext(), FC1.Preheader);
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
@@ -1474,8 +1486,7 @@ private:
     mergeLatch(FC0, FC1);
 
     // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
-                                        FC1.L->block_end());
+    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
       FC0.L->addBlockEntry(BB);
       FC1.L->removeBlockFromLoop(BB);
@@ -1483,7 +1494,7 @@ private:
         continue;
       LI.changeLoopFor(BB, FC0.L);
     }
-    while (!FC1.L->empty()) {
+    while (!FC1.L->isInnermost()) {
       const auto &ChildLoopIt = FC1.L->begin();
       Loop *ChildLoop = *ChildLoopIt;
       FC1.L->removeChildLoop(ChildLoopIt);
@@ -1524,6 +1535,7 @@ private:
     assert(FC0.Preheader && FC1.Preheader &&
            "Expecting valid fusion candidates");
     using namespace ore;
+#if LLVM_ENABLE_STATS
     ++Stat;
     ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLoc(),
                         FC0.Preheader)
@@ -1531,6 +1543,7 @@ private:
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
              << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
              << ": " << Stat.getDesc());
+#endif
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.
@@ -1610,9 +1623,9 @@ private:
                           FC0ExitBlockSuccessor);
     }
 
-    assert(pred_begin(FC1GuardBlock) == pred_end(FC1GuardBlock) &&
+    assert(pred_empty(FC1GuardBlock) &&
            "Expecting guard block to have no predecessors");
-    assert(succ_begin(FC1GuardBlock) == succ_end(FC1GuardBlock) &&
+    assert(succ_empty(FC1GuardBlock) &&
            "Expecting guard block to have no successors");
 
     // Remember the phi nodes originally in the header of FC0 in order to rewire
@@ -1666,14 +1679,13 @@ private:
     // TODO: In the future, we can handle non-empty exit blocks my merging any
     // instructions from FC0 exit block into FC1 exit block prior to removing
     // the block.
-    assert(pred_begin(FC0.ExitBlock) == pred_end(FC0.ExitBlock) &&
-           "Expecting exit block to be empty");
+    assert(pred_empty(FC0.ExitBlock) && "Expecting exit block to be empty");
     FC0.ExitBlock->getTerminator()->eraseFromParent();
     new UnreachableInst(FC0.ExitBlock->getContext(), FC0.ExitBlock);
 
     // Remove FC1 Preheader
     // The pre-header of L1 is not necessary anymore.
-    assert(pred_begin(FC1.Preheader) == pred_end(FC1.Preheader));
+    assert(pred_empty(FC1.Preheader));
     FC1.Preheader->getTerminator()->eraseFromParent();
     new UnreachableInst(FC1.Preheader->getContext(), FC1.Preheader);
     TreeUpdates.emplace_back(DominatorTree::UpdateType(
@@ -1736,10 +1748,8 @@ private:
     // All done
     // Apply the updates to the Dominator Tree and cleanup.
 
-    assert(succ_begin(FC1GuardBlock) == succ_end(FC1GuardBlock) &&
-           "FC1GuardBlock has successors!!");
-    assert(pred_begin(FC1GuardBlock) == pred_end(FC1GuardBlock) &&
-           "FC1GuardBlock has predecessors!!");
+    assert(succ_empty(FC1GuardBlock) && "FC1GuardBlock has successors!!");
+    assert(pred_empty(FC1GuardBlock) && "FC1GuardBlock has predecessors!!");
 
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
@@ -1768,8 +1778,7 @@ private:
     mergeLatch(FC0, FC1);
 
     // Merge the loops.
-    SmallVector<BasicBlock *, 8> Blocks(FC1.L->block_begin(),
-                                        FC1.L->block_end());
+    SmallVector<BasicBlock *, 8> Blocks(FC1.L->blocks());
     for (BasicBlock *BB : Blocks) {
       FC0.L->addBlockEntry(BB);
       FC1.L->removeBlockFromLoop(BB);
@@ -1777,7 +1786,7 @@ private:
         continue;
       LI.changeLoopFor(BB, FC0.L);
     }
-    while (!FC1.L->empty()) {
+    while (!FC1.L->isInnermost()) {
       const auto &ChildLoopIt = FC1.L->begin();
       Loop *ChildLoop = *ChildLoopIt;
       FC1.L->removeChildLoop(ChildLoopIt);

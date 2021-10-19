@@ -11,6 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/GraphWriter.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,8 +32,21 @@
 
 using namespace llvm;
 
-static cl::opt<bool> ViewBackground("view-background", cl::Hidden,
-  cl::desc("Execute graph viewer in the background. Creates tmp file litter."));
+#ifdef __APPLE__
+namespace {
+struct CreateViewBackground {
+  static void *call() {
+    return new cl::opt<bool>("view-background", cl::Hidden,
+                             cl::desc("Execute graph viewer in the background. "
+                                      "Creates tmp file litter."));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool>, CreateViewBackground> ViewBackground;
+void llvm::initGraphWriterOptions() { *ViewBackground; }
+#else
+void llvm::initGraphWriterOptions() {}
+#endif
 
 std::string llvm::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
@@ -54,7 +70,7 @@ std::string llvm::DOT::EscapeString(const std::string &Label) {
             Str.erase(Str.begin()+i); continue;
           default: break;
         }
-        LLVM_FALLTHROUGH;
+      LLVM_FALLTHROUGH;
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
@@ -178,7 +194,7 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
   GraphSession S;
 
 #ifdef __APPLE__
-  wait &= !ViewBackground;
+  wait &= !*ViewBackground;
   if (S.TryFindProgram("open", ViewerPath)) {
     std::vector<StringRef> args;
     args.push_back(ViewerPath);

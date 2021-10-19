@@ -1,11 +1,10 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs | FileCheck %s
 
 ; CHECK: %bb.0
-; CHECK: #DEBUG_VALUE: usage:self <- %4
+; CHECK: #DEBUG_VALUE: usage:self <- !target-index(0,0)
 ; CHECK: %bb.1
 ; CHECK: DW_TAG_variable
 source_filename = "test/CodeGen/WebAssembly/dbgvalue.ll"
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 @key = external local_unnamed_addr global [15 x i8], align 1
@@ -69,4 +68,3 @@ attributes #0 = { nounwind readnone }
 !25 = !DILocation(line: 15, column: 17, scope: !15)
 !26 = !DILocation(line: 16, column: 3, scope: !15)
 !27 = !DILocation(line: 17, column: 3, scope: !15)
-

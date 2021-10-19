@@ -64,7 +64,7 @@ public:
 };
 } // namespace
 
-LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
+[[noreturn]] static void reportError(Twine Msg) {
   WithColor::error(errs(), "llvm-mt") << Msg << '\n';
   exit(1);
 }
@@ -73,12 +73,7 @@ static void reportError(StringRef Input, std::error_code EC) {
   reportError(Twine(Input) + ": " + EC.message());
 }
 
-void error(std::error_code EC) {
-  if (EC)
-    reportError(EC.message());
-}
-
-void error(Error EC) {
+static void error(Error EC) {
   if (EC)
     handleAllErrors(std::move(EC), [&](const ErrorInfoBase &EI) {
       reportError(EI.message());
@@ -114,7 +109,7 @@ int main(int Argc, const char **Argv) {
   }
 
   if (InputArgs.hasArg(OPT_help)) {
-    T.PrintHelp(outs(), "llvm-mt [options] file...", "Manifest Tool", false);
+    T.printHelp(outs(), "llvm-mt [options] file...", "Manifest Tool", false);
     return 0;
   }
 
@@ -140,8 +135,7 @@ int main(int Argc, const char **Argv) {
         MemoryBuffer::getFile(File);
     if (!ManifestOrErr)
       reportError(File, ManifestOrErr.getError());
-    MemoryBuffer &Manifest = *ManifestOrErr.get();
-    error(Merger.merge(Manifest));
+    error(Merger.merge(*ManifestOrErr.get()));
   }
 
   std::unique_ptr<MemoryBuffer> OutputBuffer = Merger.getMergedManifest();

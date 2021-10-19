@@ -1,4 +1,5 @@
-; RUN: opt -analyze -module-debuginfo < %s | FileCheck %s
+; RUN: opt -passes='print<module-debuginfo>' -disable-output 2>&1 < %s \
+; RUN:   | FileCheck %s
 
 ; This module is generated from the following c-code:
 ;

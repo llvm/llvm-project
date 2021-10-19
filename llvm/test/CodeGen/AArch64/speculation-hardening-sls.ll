@@ -1,7 +1,9 @@
-; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB,ISBDSBDAGISEL
+; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT,ISBDSB,ISBDSBDAGISEL
+; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr,harden-sls-nocomdat -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT-OFF,ISBDSB,ISBDSBDAGISEL
 ; RUN: llc -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB,SBDAGISEL
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT,ISBDSB
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,NOHARDEN
-; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,ISBDSB
+; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr,harden-sls-nocomdat -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,HARDEN-COMDAT-OFF,ISBDSB
 ; RUN: llc -global-isel -global-isel-abort=0 -mattr=harden-sls-retbr,harden-sls-blr -mattr=+sb -verify-machineinstrs -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,HARDEN,SB
 
 ; Function Attrs: norecurse nounwind readnone
@@ -144,26 +146,19 @@ entry:
 
 ; Verify that neither x16 nor x17 are used when the BLR mitigation is enabled,
 ; as a linker is allowed to clobber x16 or x17 on calls, which would break the
-; correct execution of the code sequence produced by the mitigation.
-; The below test carefully increases register pressure to persuade code
-; generation to produce a BLR x16. Yes, that is a bit fragile.
-define i64 @check_x16(i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** nocapture readonly %fp, i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** nocapture readonly %fp2) "target-features"="+neon,+reserve-x10,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15,+reserve-x18,+reserve-x20,+reserve-x21,+reserve-x22,+reserve-x23,+reserve-x24,+reserve-x25,+reserve-x26,+reserve-x27,+reserve-x28,+reserve-x30,+reserve-x9" {
+; correct execution of the code sequence produced by the mitigation. The below
+; test attempts to force *%f into x16 using inline assembly.
+define i64 @check_x16(i64 ()** nocapture readonly %fp, i64 ()** nocapture readonly %fp2) "target-features"="+neon,+reserve-x10,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15,+reserve-x18,+reserve-x20,+reserve-x21,+reserve-x22,+reserve-x23,+reserve-x24,+reserve-x25,+reserve-x26,+reserve-x27,+reserve-x28,+reserve-x30,+reserve-x9" {
 entry:
 ; CHECK-LABEL: check_x16:
-  %0 = load i64 (i8*, i64, i64, i64, i64, i64, i64, i64)*, i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** %fp, align 8
-  %1 = bitcast i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** %fp2 to i8**
-  %2 = load i8*, i8** %1, align 8
-  %call = call i64 %0(i8* %2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
-  %3 = load i64 (i8*, i64, i64, i64, i64, i64, i64, i64)*, i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** %fp2, align 8
-  %4 = bitcast i64 (i8*, i64, i64, i64, i64, i64, i64, i64)** %fp to i8**
-  %5 = load i8*, i8** %4, align 8;, !tbaa !2
-  %call1 = call i64 %3(i8* %5, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
+  %f = load i64 ()*, i64 ()** %fp, align 8
+  %x16_f = tail call i64 ()* asm "add $0, $1, #0", "={x16},{x16}"(i64 ()* %f) nounwind
+  %call1 = call i64 %x16_f()
 ; NOHARDEN:   blr x16
 ; ISBDSB-NOT: bl __llvm_slsblr_thunk_x16
 ; SB-NOT:     bl __llvm_slsblr_thunk_x16
 ; CHECK
-  %add = add nsw i64 %call1, %call
-  ret i64 %add
+  ret i64 %call1
 ; CHECK: .Lfunc_end
 }
 
@@ -210,6 +205,14 @@ entry:
 ; SB-NEXT:     dsb sy
 ; SB-NEXT:     isb
 ; HARDEN-NEXT: .Lfunc_end
+; HARDEN-COMDAT:  .section .text.__llvm_slsblr_thunk_x19
+; HARDEN-COMDAT:  .hidden __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT:  .weak __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT: .type  __llvm_slsblr_thunk_x19,@function
+; HARDEN-COMDAT-OFF-NOT:  .section .text.__llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF-NOT:  .hidden __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF-NOT:  .weak __llvm_slsblr_thunk_x19
+; HARDEN-COMDAT-OFF:      .type __llvm_slsblr_thunk_x19,@function
 ; HARDEN-label: __llvm_slsblr_thunk_x19:
 ; HARDEN:    mov x16, x19
 ; HARDEN:    br x16

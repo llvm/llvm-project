@@ -30,7 +30,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq ___stack_chk_guard@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorl %r12d, %r12d
@@ -70,7 +70,7 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:    jmp LBB0_5
 ; CHECK-NEXT:  LBB0_7: ## %for.end11
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_.str2(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rsp, %rcx
@@ -121,14 +121,14 @@ define i32 @test_branches_order() uwtable ssp {
 ; CHECK-NEXT:    incq %rbp
 ; CHECK-NEXT:    jne LBB0_12
 ; CHECK-NEXT:  LBB0_5: ## %if.then
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_str4(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq _exit
 ; CHECK-NEXT:  LBB0_16: ## %for.end40
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdi
+; CHECK-NEXT:    leaq L_.str3(%rip), %rdi
 ; CHECK-NEXT:    callq _puts
-; CHECK-NEXT:    movq ___stack_chk_guard@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    jne LBB0_18

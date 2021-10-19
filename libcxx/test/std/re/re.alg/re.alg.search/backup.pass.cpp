@@ -24,7 +24,7 @@
 int main(int, char**)
 {
     // This regex_iterator uses regex_search(__wrap_iter<_Iter> __first, ...)
-    // Test for https://bugs.llvm.org/show_bug.cgi?id=16240 fixed in r185273.
+    // Test for https://llvm.org/PR16240 fixed in r185273.
     {
         std::string s("aaaa a");
         std::regex re("\\ba");

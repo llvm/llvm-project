@@ -3,23 +3,29 @@ import("//llvm/utils/unittest/unittest.gni")
 # Keyed off LLVM_ENABLE_PLUGINS in the CMake build, which is usually false
 # on Windows and true elsewhere.
 if (host_os != "win") {
-  loadable_module("TestPlugin") {
-    # Put plugin next to the unit test executable.
-    output_dir = target_out_dir
+  foreach(plugin,
+          [
+            "TestPlugin",
+            "DoublerPlugin",
+          ]) {
+    loadable_module(plugin) {
+      # Put plugin next to the unit test executable.
+      output_dir = target_out_dir
 
-    sources = [ "TestPlugin.cpp" ]
+      sources = [ "$plugin.cpp" ]
 
-    deps = [
-      # TestPlugin doesn't want to link in any LLVM code, it just needs its
-      # headers.
-      "//llvm/include/llvm/IR:public_tablegen",
-    ]
+      deps = [
+        # TestPlugin doesn't want to link in any LLVM code, it just needs its
+        # headers.
+        "//llvm/include/llvm/IR:public_tablegen",
+      ]
 
-    if (host_os != "mac" && host_os != "win") {
-      # The GN build currently doesn't globally pass -fPIC, but that's
-      # needed for building .so files on ELF.  Just pass it manually
-      # for loadable_modules for now.
-      cflags = [ "-fPIC" ]
+      if (host_os != "mac" && host_os != "win") {
+        # The GN build currently doesn't globally pass -fPIC, but that's
+        # needed for building .so files on ELF.  Just pass it manually
+        # for loadable_modules for now.
+        cflags = [ "-fPIC" ]
+      }
     }
   }
 }
@@ -38,7 +44,10 @@ unittest("PluginsTests") {
   # Otherwise, reconfiguring with plugins disabled will leave behind a stale
   # executable.
   if (host_os != "win") {
-    deps += [ ":TestPlugin" ]
+    deps += [
+      ":DoublerPlugin",
+      ":TestPlugin",
+    ]
     defines = [ "LLVM_ENABLE_PLUGINS" ]
   }
 
@@ -46,4 +55,16 @@ unittest("PluginsTests") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
+}
+
+unittest("PassesBindingsTests") {
+  deps = [
+    "//llvm/include/llvm/Config:config",
+    "//llvm/lib/IR",
+    "//llvm/lib/Passes",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [ "PassBuilderBindingsTest.cpp" ]
 }

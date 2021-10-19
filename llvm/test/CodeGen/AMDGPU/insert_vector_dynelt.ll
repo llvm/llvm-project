@@ -3,13 +3,17 @@
 ; GCN-LABEL: {{^}}float4_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX:s[0-9]+]], 3
+; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 3
+; GCN-DAG: s_cselect_b64 [[CC1:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_LAST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC2:[^,]+]], [[IDX]], 2
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[CC2:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC2]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC3:[^,]+]], [[IDX]], 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 1
+; GCN-DAG: s_cselect_b64 [[CC3:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC3]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC4:[^,]+]], [[IDX]], 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
+; GCN-DAG: s_cselect_b64 [[CC4:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC4]]
 ; GCN:     flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST]]:[[ELT_LAST]]]
 define amdgpu_kernel void @float4_inselt(<4 x float> addrspace(1)* %out, <4 x float> %vec, i32 %sel) {
@@ -61,9 +65,11 @@ entry:
 ; GCN-LABEL: {{^}}float2_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 1
+; GCN-DAG: s_cselect_b64 [[CC1:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_LAST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC2:[^,]+]], [[IDX]], 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
+; GCN-DAG: s_cselect_b64 [[CC2:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC2]]
 ; GCN:     flat_store_dwordx2 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST]]:[[ELT_LAST]]]
 define amdgpu_kernel void @float2_inselt(<2 x float> addrspace(1)* %out, <2 x float> %vec, i32 %sel) {
@@ -76,21 +82,29 @@ entry:
 ; GCN-LABEL: {{^}}float8_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX:s[0-9]+]], 3
+; GCN-DAG: s_cmp_lg_u32 [[IDX:s[0-9]+]], 3
+; GCN-DAG: s_cselect_b64 [[CC1:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_LAST0:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC2:[^,]+]], [[IDX]], 2
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 2
+; GCN-DAG: s_cselect_b64 [[CC2:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC2]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC3:[^,]+]], [[IDX]], 1
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 1
+; GCN-DAG: s_cselect_b64 [[CC3:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC3]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC4:[^,]+]], [[IDX]], 0
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 0
+; GCN-DAG: s_cselect_b64 [[CC4:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST0:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC4]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC5:[^,]+]], [[IDX:s[0-9]+]], 7
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 7
+; GCN-DAG: s_cselect_b64 [[CC5:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_LAST1:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC5]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC6:[^,]+]], [[IDX]], 6
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 6
+; GCN-DAG: s_cselect_b64 [[CC6:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC6]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC7:[^,]+]], [[IDX]], 5
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 5
+; GCN-DAG: s_cselect_b64 [[CC7:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, [[CC7]]
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC8:[^,]+]], [[IDX]], 4
+; GCN-DAG: s_cmp_lg_u32 [[IDX]], 4
+; GCN-DAG: s_cselect_b64 [[CC8:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v[[ELT_FIRST1:[0-9]+]], 1.0, v{{[0-9]+}}, [[CC8]]
 ; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST0]]:[[ELT_LAST0]]]
 ; GCN-DAG: flat_store_dwordx4 v[{{[0-9:]+}}], v{{\[}}[[ELT_FIRST1]]:[[ELT_LAST1]]]
@@ -125,10 +139,11 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x3c003c00
-; GCN:     v_mov_b32_e32 [[V:v[0-9]+]], [[K]]
-; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
-; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
+; GCN:     s_andn2_b64
+; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x3c003c00
+; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
+; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
+; GCN:     s_or_b64
 define amdgpu_kernel void @half4_inselt(<4 x half> addrspace(1)* %out, <4 x half> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x half> %vec, half 1.000000e+00, i32 %sel
@@ -142,7 +157,9 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b32 [[V:s[0-9]+]], 0xffff, [[SEL]]
-; GCN:     v_bfi_b32 v{{[0-9]+}}, [[V]], v{{[0-9]+}}, v{{[0-9]+}}
+; GCN:     s_andn2_b32
+; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3c003c00
+; GCN:     s_or_b32
 define amdgpu_kernel void @half2_inselt(<2 x half> addrspace(1)* %out, <2 x half> %vec, i32 %sel) {
 entry:
   %v = insertelement <2 x half> %vec, half 1.000000e+00, i32 %sel
@@ -153,14 +170,14 @@ entry:
 ; GCN-LABEL: {{^}}half8_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 0
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 1
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 2
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 3
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 4
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 5
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 6
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 7
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 0
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 1
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 2
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 3
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 4
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 5
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 6
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 7
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e32
@@ -184,10 +201,11 @@ entry:
 ; GCN-NOT: v_cndmask_b32
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN:     v_mov_b32_e32 [[K:v[0-9]+]], 0x10001
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b32 [[V:s[0-9]+]], 0xffff, [[SEL]]
-; GCN:     v_bfi_b32 v{{[0-9]+}}, [[V]], [[K]], v{{[0-9]+}}
+; GCN:     s_andn2_b32
+; GCN:     s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x10001
+; GCN:     s_or_b32
 define amdgpu_kernel void @short2_inselt(<2 x i16> addrspace(1)* %out, <2 x i16> %vec, i32 %sel) {
 entry:
   %v = insertelement <2 x i16> %vec, i16 1, i32 %sel
@@ -201,10 +219,11 @@ entry:
 ; GCN-NOT: buffer_
 ; GCN:     s_lshl_b32 [[SEL:s[0-9]+]], s{{[0-9]+}}, 4
 ; GCN:     s_lshl_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], [[SEL]]
-; GCN:     s_mov_b32 [[K:s[0-9]+]], 0x10001
-; GCN:     v_mov_b32_e32 [[V:v[0-9]+]], [[K]]
-; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
-; GCN:     v_bfi_b32 v{{[0-9]+}}, s{{[0-9]+}}, [[V]], v{{[0-9]+}}
+; GCN:     s_andn2_b64
+; GCN:     s_mov_b32 s[[KLO:[0-9]+]], 0x10001
+; GCN:     s_mov_b32 s[[KHI:[0-9]+]], s[[KLO]]
+; GCN:     s_and_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s{{\[}}[[KLO]]:[[KHI]]]
+; GCN:     s_or_b64
 define amdgpu_kernel void @short4_inselt(<4 x i16> addrspace(1)* %out, <4 x i16> %vec, i32 %sel) {
 entry:
   %v = insertelement <4 x i16> %vec, i16 1, i32 %sel
@@ -232,8 +251,8 @@ entry:
 ; GCN-LABEL: {{^}}byte16_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 0
-; GCN-DAG: v_cmp_ne_u32_e64 {{[^,]+}}, {{s[0-9]+}}, 15
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 0
+; GCN-DAG: s_cmp_lg_u32 {{s[0-9]+}}, 15
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e32
 ; GCN-DAG: v_cndmask_b32_e32
@@ -266,14 +285,18 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}double2_inselt:
+; GCN: s_load_dwordx4 s{{\[}}[[FIRST:[0-9]+]]:[[LAST:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}]
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_eq_u32_e64 [[CC1:[^,]+]], [[IDX:s[0-9]+]], 1
-; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, 0, [[CC1]]
-; GCN-DAG: v_cmp_eq_u32_e64 [[CC2:[^,]+]], [[IDX]], 0
-; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, [[CC2]]
-; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, v{{[0-9]+}}, 0, [[CC2]]
+; GCN: s_cmp_lg_u32 [[IDX:s[0-9]+]], 1
+; GCN: s_cselect_b64 s{{\[}}[[P0_LO:[0-9]+]]:[[P0_HI:[0-9]+]]{{\]}}, s{{\[}}{{[0-9]+}}:[[LAST]]{{\]}}, 1.0
+; GCN: s_cmp_lg_u32 [[IDX]], 0
+; GCN: s_cselect_b64 s{{\[}}[[P1_LO:[0-9]+]]:[[P1_HI:[0-9]+]]{{\]}}, s{{\[}}[[FIRST]]:{{[0-9]+}}{{\]}}, 1.0
+; GCN: v_mov_b32_e32 v[[V_FIRST:[0-9]+]], s[[P1_LO]]
+; GCN: v_mov_b32_e32 v[[V_SECOND:[0-9]+]], s[[P1_HI]]
+; GCN: v_mov_b32_e32 v[[V_THIRD:[0-9]+]], s[[P0_LO]]
+; GCN: v_mov_b32_e32 v[[V_LAST:[0-9]+]], s[[P0_HI]]
+; GCN: flat_store_dwordx4 {{v\[[0-9]+:[0-9]+\]}}, v{{\[}}[[V_FIRST]]:[[V_LAST]]{{\]}}
 define amdgpu_kernel void @double2_inselt(<2 x double> addrspace(1)* %out, <2 x double> %vec, i32 %sel) {
 entry:
   %v = insertelement <2 x double> %vec, double 1.000000e+00, i32 %sel
@@ -284,7 +307,7 @@ entry:
 ; GCN-LABEL: {{^}}double5_inselt:
 ; GCN-NOT: v_movrel
 ; GCN-NOT: buffer_
-; GCN-COUNT-10: v_cndmask_b32
+; GCN-COUNT-5: s_cselect_b64
 define amdgpu_kernel void @double5_inselt(<5 x double> addrspace(1)* %out, <5 x double> %vec, i32 %sel) {
 entry:
   %v = insertelement <5 x double> %vec, double 1.000000e+00, i32 %sel
@@ -367,10 +390,12 @@ entry:
 
 ; GCN-LABEL: {{^}}bit128_inselt:
 ; GCN-NOT: buffer_
-; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], s{{[0-9]+}}, 0
+; GCN-DAG: s_cmp_lg_u32 s{{[0-9]+}}, 0
+; GCN-DAG: s_cselect_b64 [[CC1:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: v_mov_b32_e32 [[LASTIDX:v[0-9]+]], 0x7f
-; GCN-DAG: v_cmp_ne_u32_e32 [[CCL:[^,]+]], s{{[0-9]+}}, [[LASTIDX]]
+
+; GCN-DAG: s_cmpk_lg_i32 {{s[0-9]+}}, 0x7f
+; GCN-DAG: s_cselect_b64 [[CCL:[^,]+]], -1, 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 1, v{{[0-9]+}}, [[CCL]]
 define amdgpu_kernel void @bit128_inselt(<128 x i1> addrspace(1)* %out, <128 x i1> %vec, i32 %sel) {
 entry:

@@ -4,8 +4,8 @@ target datalayout = "e-p:64:64:64"
 
 ; CHECK-LABEL: @foo(
 ; CHECK: entry.end_crit_edge:
-; CHECK: %[[INDEX:[a-z0-9.]+]] = sext i32 %x to i64{{.*}} !dbg [[ZERO_LOC:![0-9]+]]
-; CHECK: %[[ADDRESS:[a-z0-9.]+]] = getelementptr [100 x i32], [100 x i32]* @G, i64 0, i64 %[[INDEX]]{{.*}} !dbg [[ZERO_LOC]]
+; CHECK: %[[INDEX:[a-z0-9.]+]] = sext i32 %x to i64{{$}}
+; CHECK: %[[ADDRESS:[a-z0-9.]+]] = getelementptr [100 x i32], [100 x i32]* @G, i64 0, i64 %[[INDEX]]{{$}}
 ; CHECK:   %n.pre = load i32, i32* %[[ADDRESS]], align 4, !dbg [[N_LOC:![0-9]+]]
 ; CHECK: br label %end
 ; CHECK: then:
@@ -14,8 +14,7 @@ target datalayout = "e-p:64:64:64"
 ; CHECK:   %n = phi i32 [ %n.pre, %entry.end_crit_edge ], [ %z, %then ], !dbg [[N_LOC]]
 ; CHECK:   ret i32 %n
 
-; CHECK-DAG: [[N_LOC]] = !DILocation(line: 47, column: 1, scope: !{{.*}})
-; CHECK-DAG: [[ZERO_LOC]] = !DILocation(line: 0
+; CHECK: [[N_LOC]] = !DILocation(line: 47, column: 1, scope: !{{.*}})
 
 @G = external global [100 x i32]
 define i32 @foo(i32 %x, i32 %z) !dbg !6 {

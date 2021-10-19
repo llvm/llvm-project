@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !Test for checking data constraints, C882-C887
 module m1
   type person
@@ -59,8 +59,8 @@ subroutine CheckValue
   !OK: constant array element
   data x / a(1) /
   !C886, C887
-  !ERROR: Must be a constant value
+  !ERROR: DATA statement value 'a(int(i,kind=8))' for 'y' is not a constant
   data y / a(i) /
-  !ERROR: Must be a constant value
+  !ERROR: DATA statement value 'b(1_8)' for 'z' is not a constant
   data z / b(1) /
 end

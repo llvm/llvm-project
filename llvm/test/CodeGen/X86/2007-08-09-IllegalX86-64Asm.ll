@@ -55,7 +55,7 @@ define %struct.PyObject* @ubyte_divmod(%struct.PyObject* %a, %struct.PyObject* %
 ; CHECK-NEXT:    cmpl $-1, %ecx
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  LBB0_3: ## %bb4
-; CHECK-NEXT:    movq _PyArray_API@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _PyArray_API@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq 16(%rax), %rax
 ; CHECK-NEXT:    jmp LBB0_10
@@ -66,7 +66,7 @@ define %struct.PyObject* @ubyte_divmod(%struct.PyObject* %a, %struct.PyObject* %
 ; CHECK-NEXT:    cmpl $-1, %eax
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:  LBB0_6: ## %bb35
-; CHECK-NEXT:    movq _PyUFunc_API@{{.*}}(%rip), %rbp
+; CHECK-NEXT:    movq _PyUFunc_API@GOTPCREL(%rip), %rbp
 ; CHECK-NEXT:    movq (%rbp), %rax
 ; CHECK-NEXT:    callq *216(%rax)
 ; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %dl
@@ -86,7 +86,7 @@ define %struct.PyObject* @ubyte_divmod(%struct.PyObject* %a, %struct.PyObject* %
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    jne LBB0_27
 ; CHECK-NEXT:  ## %bb.9: ## %cond_next
-; CHECK-NEXT:    movq _PyArray_API@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _PyArray_API@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq 80(%rax), %rax
 ; CHECK-NEXT:  LBB0_10: ## %bb4
@@ -128,7 +128,7 @@ define %struct.PyObject* @ubyte_divmod(%struct.PyObject* %a, %struct.PyObject* %
 ; CHECK-NEXT:  ## %bb.19: ## %cond_true61
 ; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    movq (%rbp), %rax
-; CHECK-NEXT:    movq _.str5@{{.*}}(%rip), %rdi
+; CHECK-NEXT:    movq _.str5@GOTPCREL(%rip), %rdi
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
@@ -152,7 +152,7 @@ define %struct.PyObject* @ubyte_divmod(%struct.PyObject* %a, %struct.PyObject* %
 ; CHECK-NEXT:    je LBB0_27
 ; CHECK-NEXT:  ## %bb.22: ## %cond_next97
 ; CHECK-NEXT:    movq %rax, %rbx
-; CHECK-NEXT:    movq _PyArray_API@{{.*}}(%rip), %rbp
+; CHECK-NEXT:    movq _PyArray_API@GOTPCREL(%rip), %rbp
 ; CHECK-NEXT:    movq (%rbp), %rax
 ; CHECK-NEXT:    movq 200(%rax), %rdi
 ; CHECK-NEXT:    xorl %esi, %esi

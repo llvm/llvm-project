@@ -1,6 +1,5 @@
 ; Tests that coro-split pass splits the coroutine into f, f.resume and f.destroy
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f() "coroutine.presplit"="1" {
 entry:
@@ -77,4 +76,4 @@ declare i1 @llvm.coro.end(i8*, i1)
 
 declare noalias i8* @malloc(i32)
 declare void @print(i32)
-declare void @free(i8*)
+declare void @free(i8*) willreturn

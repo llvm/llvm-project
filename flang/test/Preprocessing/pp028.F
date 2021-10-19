@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: res=kw
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: res =                                                           KW
 * fixed-form clipping done before KWM expansion on source line
       integer, parameter :: KW = 777
 #define KWM 666

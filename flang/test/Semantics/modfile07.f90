@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Check modfile generation for generic interfaces
 module m1
   interface foo
@@ -331,4 +331,296 @@ end
 !Expect: m6b.mod
 !module m6b
 ! use m6a,only:operator(.lt.)
+!end
+
+module m7a
+  interface g_integer
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    integer :: x
+  end
+end
+!Expect: m7a.mod
+!module m7a
+! interface g_integer
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  integer(4) :: x
+! end
+!end
+
+module m7b
+  interface g_real
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    real :: x
+  end subroutine
+end
+!Expect: m7b.mod
+!module m7b
+! interface g_real
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  real(4) :: x
+! end
+!end
+
+module m7c
+  use m7a, only: g => g_integer
+  use m7b, only: g => g_real
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    complex :: x
+  end subroutine
+  subroutine test()
+    real :: x
+    integer :: y
+    complex :: z
+    call g(x)
+    call g(y)
+    call g(z)
+  end
+end
+!Expect: m7c.mod
+!module m7c
+! use m7b, only: g => g_real
+! use m7a, only: g => g_integer
+! interface g
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  complex(4) :: x
+! end
+! subroutine test()
+! end
+!end
+
+! Test m8 is like m7 but without renaming.
+
+module m8a
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    integer :: x
+  end
+end
+!Expect: m8a.mod
+!module m8a
+! interface g
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  integer(4) :: x
+! end
+!end
+
+module m8b
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    real :: x
+  end subroutine
+end
+!Expect: m8b.mod
+!module m8b
+! interface g
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  real(4) :: x
+! end
+!end
+
+module m8c
+  use m8a
+  use m8b
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    complex :: x
+  end subroutine
+  subroutine test()
+    real :: x
+    integer :: y
+    complex :: z
+    call g(x)
+    call g(y)
+    call g(z)
+  end
+end
+!Expect: m8c.mod
+!module m8c
+! use m8b, only: g
+! use m8a, only: g
+! interface g
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  complex(4) :: x
+! end
+! subroutine test()
+! end
+!end
+
+! Merging a use-associated generic with a local generic
+
+module m9a
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    integer :: x
+  end
+end
+!Expect: m9a.mod
+!module m9a
+! interface g
+!  procedure :: s
+! end interface
+! private :: s
+!contains
+! subroutine s(x)
+!  integer(4) :: x
+! end
+!end
+
+module m9b
+  use m9a
+  interface g
+    module procedure s
+  end interface
+  private :: s
+contains
+  subroutine s(x)
+    real :: x
+  end
+  subroutine test()
+    call g(1)
+    call g(1.0)
+  end
+end
+!Expect: m9b.mod
+!module m9b
+! use m9a,only:g
+! interface g
+!   procedure::s
+! end interface
+! private::s
+!contains
+! subroutine s(x)
+!   real(4)::x
+! end
+! subroutine test()
+! end
+!end
+
+! Verify that equivalent names are used when generic operators are merged
+
+module m10a
+  interface operator(.ne.)
+  end interface
+end
+!Expect: m10a.mod
+!module m10a
+! interface operator(.ne.)
+! end interface
+!end
+
+module m10b
+  interface operator(<>)
+  end interface
+end
+!Expect: m10b.mod
+!module m10b
+! interface operator(<>)
+! end interface
+!end
+
+module m10c
+  use m10a
+  use m10b
+  interface operator(/=)
+  end interface
+end
+!Expect: m10c.mod
+!module m10c
+! use m10b,only:operator(.ne.)
+! use m10a,only:operator(.ne.)
+! interface operator(.ne.)
+! end interface
+!end
+
+module m10d
+  use m10a
+  use m10c
+  private :: operator(<>)
+end
+!Expect: m10d.mod
+!module m10d
+! use m10c,only:operator(.ne.)
+! use m10a,only:operator(.ne.)
+! interface operator(.ne.)
+! end interface
+! private::operator(.ne.)
+!end
+
+module m11a
+contains
+  subroutine s1()
+  end
+end
+!Expect: m11a.mod
+!module m11a
+!contains
+! subroutine s1()
+! end
+!end
+
+module m11b
+  use m11a
+  interface g
+    module procedure s1
+  end interface
+end
+!Expect: m11b.mod
+!module m11b
+! use m11a,only:s1
+! interface g
+!  procedure::s1
+! end interface
 !end

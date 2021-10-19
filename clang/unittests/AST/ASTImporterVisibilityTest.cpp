@@ -177,11 +177,11 @@ TEST_P(ImportClassTemplatesVisibilityChain, ImportChain) {
 }
 
 // Automatic instantiation of the value-parameterized tests.
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFunctionsVisibilityChain,
-                        ::testing::Combine(
-                           DefaultTestValuesForRunOptions,
-                           ::testing::Values(ExternF, StaticF, AnonF)), );
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportFunctionsVisibilityChain,
+                         ::testing::Combine(DefaultTestValuesForRunOptions,
+                                            ::testing::Values(ExternF, StaticF,
+                                                              AnonF)));
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportVariablesVisibilityChain,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -192,31 +192,31 @@ INSTANTIATE_TEST_CASE_P(
         // initializer is a tentative definition, subsequent definitions may be
         // provided but they must have the same linkage.  See also the test
         // ImportVariableChainInC which test for this special C Lang case.
-        ::testing::Values(ExternV, AnonV)), );
-INSTANTIATE_TEST_CASE_P(
+        ::testing::Values(ExternV, AnonV)) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportClassesVisibilityChain,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
-        ::testing::Values(ExternC, AnonC)), );
-INSTANTIATE_TEST_CASE_P(
+        ::testing::Values(ExternC, AnonC)) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportScopedEnumsVisibilityChain,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
-        ::testing::Values(ExternEC, AnonEC)), );
-INSTANTIATE_TEST_CASE_P(ParameterizedTests,
+        ::testing::Values(ExternEC, AnonEC)) );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests,
                         ImportFunctionTemplatesVisibilityChain,
                         ::testing::Combine(DefaultTestValuesForRunOptions,
                                            ::testing::Values(ExternFT, StaticFT,
-                                                             AnonFT)), );
-INSTANTIATE_TEST_CASE_P(ParameterizedTests,
+                                                             AnonFT)) );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests,
                         ImportVariableTemplatesVisibilityChain,
                         ::testing::Combine(DefaultTestValuesForRunOptions,
                                            ::testing::Values(ExternVT,
-                                                             AnonVT)), );
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportClassTemplatesVisibilityChain,
+                                                             AnonVT)) );
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportClassTemplatesVisibilityChain,
                         ::testing::Combine(DefaultTestValuesForRunOptions,
                                            ::testing::Values(ExternCT,
-                                                             AnonCT)), );
+                                                             AnonCT)) );
 
 // First value in tuple: Compile options.
 // Second value in tuple: Tuple with informations for the test.
@@ -398,7 +398,7 @@ TEST_P(ImportClassTemplatesVisibility, ImportAfterImport) {
 const bool ExpectLinkedDeclChain = true;
 const bool ExpectUnlinkedDeclChain = false;
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportFunctionsVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -411,8 +411,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(StaticF, AnonF, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonF, ExternF, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonF, StaticF, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonF, AnonF, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonF, AnonF, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportVariablesVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -425,8 +425,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(StaticV, AnonV, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonV, ExternV, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonV, StaticV, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonV, AnonV, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonV, AnonV, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportClassesVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -434,8 +434,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(ExternC, ExternC, ExpectLinkedDeclChain),
             std::make_tuple(ExternC, AnonC, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonC, ExternC, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonC, AnonC, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonC, AnonC, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportEnumsVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -443,8 +443,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(ExternE, ExternE, ExpectLinkedDeclChain),
             std::make_tuple(ExternE, AnonE, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonE, ExternE, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonE, AnonE, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonE, AnonE, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportScopedEnumsVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -452,8 +452,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(ExternEC, ExternEC, ExpectLinkedDeclChain),
             std::make_tuple(ExternEC, AnonEC, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonEC, ExternEC, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonEC, AnonEC, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonEC, AnonEC, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportTypedefNameVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -480,8 +480,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(ExternTypedef, AnonUsing, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonTypedef, ExternUsing, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonTypedef, AnonUsing,
-                            ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+                            ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportFunctionTemplatesVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -494,8 +494,8 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(StaticFT, AnonFT, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonFT, ExternFT, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonFT, StaticFT, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonFT, AnonFT, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonFT, AnonFT, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportVariableTemplatesVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
@@ -508,14 +508,14 @@ INSTANTIATE_TEST_CASE_P(
             std::make_tuple(StaticVT, AnonVT, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonVT, ExternVT, ExpectUnlinkedDeclChain),
             std::make_tuple(AnonVT, StaticVT, ExpectUnlinkedDeclChain),
-            std::make_tuple(AnonVT, AnonVT, ExpectUnlinkedDeclChain))), );
-INSTANTIATE_TEST_CASE_P(
+            std::make_tuple(AnonVT, AnonVT, ExpectUnlinkedDeclChain))) );
+INSTANTIATE_TEST_SUITE_P(
     ParameterizedTests, ImportClassTemplatesVisibility,
     ::testing::Combine(
         DefaultTestValuesForRunOptions,
         ::testing::Values(std::make_tuple(ExternCT, ExternCT, ExpectLinkedDeclChain),
                           std::make_tuple(ExternCT, AnonCT, ExpectUnlinkedDeclChain),
                           std::make_tuple(AnonCT, ExternCT, ExpectUnlinkedDeclChain),
-                          std::make_tuple(AnonCT, AnonCT, ExpectUnlinkedDeclChain))), );
+                          std::make_tuple(AnonCT, AnonCT, ExpectUnlinkedDeclChain))) );
 } // end namespace ast_matchers
 } // end namespace clang

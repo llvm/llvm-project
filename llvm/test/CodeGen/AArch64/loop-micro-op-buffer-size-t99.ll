@@ -1,19 +1,17 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=thunderx2t99 -loop-unroll --debug-only=loop-unroll --debug-only=basicblock-utils -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
+; RUN: opt -mcpu=thunderx2t99 -passes=loop-unroll --debug-only=loop-unroll --debug-only=basicblock-utils -S -unroll-allow-partial < %s 2>&1 | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; CHECK: Loop Unroll: F[foo] Loop %loop.2.header
-; CHECK: Loop Size = 19
-; CHECK: Trip Count = 512
-; CHECK: Trip Multiple = 512
-; CHECK: UNROLLING loop %loop.2.header by 4 with a breakout at trip 0
-; CHECK: Merging:
 ; CHECK: Loop Unroll: F[foo] Loop %loop.header
 ; CHECK:   Loop Size = 18
-; CHECK:   Trip Count = 512
-; CHECK:   Trip Multiple = 512
-; CHECK: UNROLLING loop %loop.header by 4 with a breakout at trip 0
+; CHECK:   Exiting block %loop.inc: TripCount=512, TripMultiple=0, BreakoutTrip=0
+; CHECK: UNROLLING loop %loop.header by 4
+; CHECK: Merging:
+; CHECK: Loop Unroll: F[foo] Loop %loop.2.header
+; CHECK:   Loop Size = 19
+; CHECK:   Exiting block %loop.2.inc: TripCount=512, TripMultiple=0, BreakoutTrip=0
+; CHECK: UNROLLING loop %loop.2.header by 4
 ; CHECK: Merging:
 ; CHECK: %counter = phi i32 [ 0, %entry ], [ %inc.3, %loop.inc.3 ]
 ; CHECK: %val = add nuw nsw i32 %counter, 5

@@ -12,6 +12,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/JSON.h"
 #include <limits>
 #include <utility>
 
@@ -86,7 +87,12 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
   std::string Doc =
       RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  return looksLikeDocComment(Doc) ? Doc : "";
+  if (!looksLikeDocComment(Doc))
+    return "";
+  // Clang requires source to be UTF-8, but doesn't enforce this in comments.
+  if (!llvm::json::isUTF8(Doc))
+    Doc = llvm::json::fixUTF8(Doc);
+  return Doc;
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
@@ -108,6 +114,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
   }
   unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
+  bool HadInformativeChunks = false;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -123,10 +130,14 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   reclassified as qualifiers.
       //
       // Objective-C:
-      //   Objective-C methods may have multiple typed-text chunks, so we must
-      //   treat them carefully. For Objective-C methods, all typed-text chunks
-      //   will end in ':' (unless there are no arguments, in which case we
-      //   can safely treat them as C++).
+      //   Objective-C methods expressions may have multiple typed-text chunks,
+      //   so we must treat them carefully. For Objective-C methods, all
+      //   typed-text and informative chunks will end in ':' (unless there are
+      //   no arguments, in which case we can safely treat them as C++).
+      //
+      //   Completing a method declaration itself (not a method expression) is
+      //   similar except that we use the `RequiredQualifiers` to store the
+      //   text before the selector, e.g. `- (void)`.
       if (!llvm::StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
@@ -141,6 +152,28 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
         // methods.
         if (!HadObjCArguments) {
           HadObjCArguments = true;
+          // If we have no previous informative chunks (informative selector
+          // fragments in practice), we treat any previous chunks as
+          // `RequiredQualifiers` so they will be added as a prefix during the
+          // completion.
+          //
+          // e.g. to complete `- (void)doSomething:(id)argument`:
+          // - Completion name: `doSomething:`
+          // - RequiredQualifiers: `- (void)`
+          // - Snippet/Signature suffix: `(id)argument`
+          //
+          // This differs from the case when we're completing a method
+          // expression with a previous informative selector fragment.
+          //
+          // e.g. to complete `[self doSomething:nil ^somethingElse:(id)]`:
+          // - Previous Informative Chunk: `doSomething:`
+          // - Completion name: `somethingElse:`
+          // - Snippet/Signature suffix: `(id)`
+          if (!HadInformativeChunks) {
+            if (RequiredQualifiers)
+              *RequiredQualifiers = std::move(*Signature);
+            Snippet->clear();
+          }
           Signature->clear();
         } else { // Subsequent argument, considered part of snippet/signature.
           *Signature += Chunk.Text;
@@ -167,6 +200,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       *Snippet += '}';
       break;
     case CodeCompletionString::CK_Informative:
+      HadInformativeChunks = true;
       // For example, the word "const" for a const method, or the name of
       // the base class for methods that are part of the base class.
       *Signature += Chunk.Text;

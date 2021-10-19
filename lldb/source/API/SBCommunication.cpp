@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCommunication::SBCommunication() : m_opaque(nullptr), m_opaque_owned(false) {
+SBCommunication::SBCommunication() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommunication);
 }
 

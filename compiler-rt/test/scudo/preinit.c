@@ -25,8 +25,7 @@ void __fini(void) {
     free(global_p);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   void *p = malloc(1);
   assert(p);
   free(p);
@@ -34,7 +33,5 @@ int main(int argc, char **argv)
   return 0;
 }
 
-__attribute__((section(".preinit_array"), used))
-  void (*__local_preinit)(void) = __init;
-__attribute__((section(".fini_array"), used))
-  void (*__local_fini)(void) = __fini;
+__attribute__((section(".preinit_array"), used)) void (*__local_preinit)(void) = __init;
+__attribute__((section(".fini_array"), used)) void (*__local_fini)(void) = __fini;

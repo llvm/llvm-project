@@ -30,6 +30,9 @@ namespace build {
 /// https://google.github.io/styleguide/cppguide.html#Namespaces
 ///
 /// Corresponding cpplint.py check name: 'build/namespaces'.
+///
+/// For the user-facing documentation see:
+/// http://clang.llvm.org/extra/clang-tidy/checks/google-build-namespaces.html
 class UnnamedNamespaceInHeaderCheck : public ClangTidyCheck {
 public:
   UnnamedNamespaceInHeaderCheck(StringRef Name, ClangTidyContext *Context);

@@ -153,6 +153,8 @@ public:
   ProfileSummaryInfo *PSI;
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   // Shim for old PM.
   LoopVectorizeResult
@@ -173,6 +175,13 @@ public:
 void reportVectorizationFailure(const StringRef DebugMsg,
     const StringRef OREMsg, const StringRef ORETag,
     OptimizationRemarkEmitter *ORE, Loop *TheLoop, Instruction *I = nullptr);
+
+/// Reports an informative message: print \p Msg for debugging purposes as well
+/// as an optimization remark. Uses either \p I as location of the remark, or
+/// otherwise \p TheLoop.
+void reportVectorizationInfo(const StringRef OREMsg, const StringRef ORETag,
+                             OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+                             Instruction *I = nullptr);
 
 } // end namespace llvm
 

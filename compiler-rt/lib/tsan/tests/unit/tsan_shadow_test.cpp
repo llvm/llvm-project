@@ -63,15 +63,81 @@ TEST(Shadow, Mapping) {
 TEST(Shadow, Celling) {
   u64 aligned_data[4];
   char *data = (char*)aligned_data;
-  CHECK_EQ((uptr)data % kShadowSize, 0);
-  uptr s0 = MemToShadow((uptr)&data[0]);
-  CHECK_EQ(s0 % kShadowSize, 0);
+  CHECK(IsAligned(reinterpret_cast<uptr>(data), kShadowSize));
+  RawShadow *s0 = MemToShadow((uptr)&data[0]);
+  CHECK(IsAligned(reinterpret_cast<uptr>(s0), kShadowSize));
   for (unsigned i = 1; i < kShadowCell; i++)
     CHECK_EQ(s0, MemToShadow((uptr)&data[i]));
   for (unsigned i = kShadowCell; i < 2*kShadowCell; i++)
-    CHECK_EQ(s0 + kShadowSize*kShadowCnt, MemToShadow((uptr)&data[i]));
+    CHECK_EQ(s0 + kShadowCnt, MemToShadow((uptr)&data[i]));
   for (unsigned i = 2*kShadowCell; i < 3*kShadowCell; i++)
-    CHECK_EQ(s0 + 2*kShadowSize*kShadowCnt, MemToShadow((uptr)&data[i]));
+    CHECK_EQ(s0 + 2 * kShadowCnt, MemToShadow((uptr)&data[i]));
 }
+
+// Detect is the Mapping has kBroken field.
+template <uptr>
+struct Has {
+  typedef bool Result;
+};
+
+template <typename Mapping>
+bool broken(...) {
+  return false;
+}
+
+template <typename Mapping>
+bool broken(uptr what, typename Has<Mapping::kBroken>::Result = false) {
+  return Mapping::kBroken & what;
+}
+
+struct MappingTest {
+  template <typename Mapping>
+  static void Apply() {
+    // Easy (but ugly) way to print the mapping name.
+    Printf("%s\n", __PRETTY_FUNCTION__);
+    TestRegion<Mapping>(Mapping::kLoAppMemBeg, Mapping::kLoAppMemEnd);
+    TestRegion<Mapping>(Mapping::kMidAppMemBeg, Mapping::kMidAppMemEnd);
+    TestRegion<Mapping>(Mapping::kHiAppMemBeg, Mapping::kHiAppMemEnd);
+    TestRegion<Mapping>(Mapping::kHeapMemBeg, Mapping::kHeapMemEnd);
+  }
+
+  template <typename Mapping>
+  static void TestRegion(uptr beg, uptr end) {
+    if (beg == end)
+      return;
+    Printf("checking region [0x%zx-0x%zx)\n", beg, end);
+    uptr prev = 0;
+    for (uptr p0 = beg; p0 <= end; p0 += (end - beg) / 256) {
+      for (int x = -(int)kShadowCell; x <= (int)kShadowCell; x += kShadowCell) {
+        const uptr p = RoundDown(p0 + x, kShadowCell);
+        if (p < beg || p >= end)
+          continue;
+        const uptr s = MemToShadowImpl::Apply<Mapping>(p);
+        u32 *const m = MemToMetaImpl::Apply<Mapping>(p);
+        const uptr r = ShadowToMemImpl::Apply<Mapping>(s);
+        Printf("  addr=0x%zx: shadow=0x%zx meta=%p reverse=0x%zx\n", p, s, m,
+               r);
+        CHECK(IsAppMemImpl::Apply<Mapping>(p));
+        if (!broken<Mapping>(kBrokenMapping))
+          CHECK(IsShadowMemImpl::Apply<Mapping>(s));
+        CHECK(IsMetaMemImpl::Apply<Mapping>(reinterpret_cast<uptr>(m)));
+        CHECK_EQ(p, RestoreAddrImpl::Apply<Mapping>(CompressAddr(p)));
+        if (!broken<Mapping>(kBrokenReverseMapping))
+          CHECK_EQ(p, r);
+        if (prev && !broken<Mapping>(kBrokenLinearity)) {
+          // Ensure that shadow and meta mappings are linear within a single
+          // user range. Lots of code that processes memory ranges assumes it.
+          const uptr prev_s = MemToShadowImpl::Apply<Mapping>(prev);
+          u32 *const prev_m = MemToMetaImpl::Apply<Mapping>(prev);
+          CHECK_EQ(s - prev_s, (p - prev) * kShadowMultiplier);
+          CHECK_EQ(m - prev_m, (p - prev) / kMetaShadowCell);
+        }
+        prev = p;
+      }
+    }
+  }
+};
+
+TEST(Shadow, AllMappings) { ForEachMapping<MappingTest>(); }
 
 }  // namespace __tsan

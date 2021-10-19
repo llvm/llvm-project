@@ -10,6 +10,7 @@
 #include "ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -28,15 +29,13 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-1)),
-        "EMPTY");
+    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                         "EMPTY");
   }
 
   static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-2)),
-        "TOMBSTONE");
+    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                         "TOMBSTONE");
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
@@ -44,7 +43,8 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
     std::hash<NamingCheckId::second_type> SecondHash;
-    return Val.first.getRawEncoding() + SecondHash(Val.second);
+    return DenseMapInfo<clang::SourceLocation>::getHashValue(Val.first) +
+           SecondHash(Val.second);
   }
 
   static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
@@ -135,6 +135,23 @@ void RenamerClangTidyCheck::registerPPCallbacks(
                                                          this));
 }
 
+/// Returns the function that \p Method is overridding. If There are none or
+/// multiple overrides it returns nullptr. If the overridden function itself is
+/// overridding then it will recurse up to find the first decl of the function.
+static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
+  if (Method->size_overridden_methods() != 1)
+    return nullptr;
+  while (true) {
+    Method = *Method->begin_overridden_methods();
+    assert(Method && "Overridden method shouldn't be null");
+    unsigned NumOverrides = Method->size_overridden_methods();
+    if (NumOverrides == 0)
+      return Method;
+    if (NumOverrides > 1)
+      return nullptr;
+  }
+}
+
 void RenamerClangTidyCheck::addUsage(
     const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
     SourceManager *SourceMgr) {
@@ -156,8 +173,7 @@ void RenamerClangTidyCheck::addUsage(
   // is already in there
   RenamerClangTidyCheck::NamingCheckFailure &Failure =
       NamingCheckFailures[Decl];
-
-  if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
+  if (!Failure.RawUsageLocs.insert(FixLocation).second)
     return;
 
   if (!Failure.ShouldFix())
@@ -172,6 +188,10 @@ void RenamerClangTidyCheck::addUsage(
 
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
                                      SourceManager *SourceMgr) {
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
+      Decl = Overridden;
+  }
   Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
   return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
@@ -412,6 +432,14 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
       }
     }
 
+    // Fix overridden methods
+    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("decl")) {
+      if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
+        addUsage(Overridden, Method->getLocation());
+        return; // Don't try to add the actual decl as a Failure.
+      }
+    }
+
     // Ignore ClassTemplateSpecializationDecl which are creating duplicate
     // replacements with CXXRecordDecl.
     if (isa<ClassTemplateSpecializationDecl>(Decl))
@@ -436,6 +464,8 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
         Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
       else if (Ident->hasMacroDefinition())
         Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
+    } else if (!isValidAsciiIdentifier(Info.Fixup)) {
+      Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
     }
 
     Failure.Info = std::move(Info);
@@ -476,7 +506,8 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
 static std::string
 getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
                     const std::string &Fixup) {
-  if (Fixup.empty())
+  if (Fixup.empty() ||
+      FixStatus == RenamerClangTidyCheck::ShouldFixStatus::FixInvalidIdentifier)
     return "; cannot be fixed automatically";
   if (FixStatus == RenamerClangTidyCheck::ShouldFixStatus::ShouldFix)
     return {};
@@ -490,7 +521,6 @@ getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
       RenamerClangTidyCheck::ShouldFixStatus::ConflictsWithMacroDefinition)
     return "; cannot be fixed because '" + Fixup +
            "' would conflict with a macro definition";
-
   llvm_unreachable("invalid ShouldFixStatus");
 }
 
@@ -521,9 +551,8 @@ void RenamerClangTidyCheck::onEndOfTranslationUnit() {
           //
           // Other multi-token identifiers, such as operators are not checked at
           // all.
-          Diag << FixItHint::CreateReplacement(
-              SourceRange(SourceLocation::getFromRawEncoding(Loc)),
-              Failure.Info.Fixup);
+          Diag << FixItHint::CreateReplacement(SourceRange(Loc),
+                                               Failure.Info.Fixup);
         }
       }
     }

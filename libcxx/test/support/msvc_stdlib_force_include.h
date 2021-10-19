@@ -14,7 +14,7 @@
 
 #ifndef _LIBCXX_IN_DEVCRT
     // Silence warnings about CRT machinery.
-    #define _CRT_SECURE_NO_WARNINGS
+    #define _CRT_SECURE_NO_WARNINGS 1
 
     // Avoid assertion dialogs.
     #define _CRT_SECURE_INVALID_PARAMETER(EXPR) ::abort()

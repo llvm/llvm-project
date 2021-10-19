@@ -330,6 +330,6 @@ define float @float_powsqrt(float %x) nounwind readnone {
 ; MINGW64-NOT: float @powf
 ; MINGW64: float @sqrtf
 ; MINGW64: float @llvm.fabs.f32(
-    %1 = call float @powf(float %x, float 0.5)
+    %1 = call ninf float @powf(float %x, float 0.5)
     ret float %1
 }

@@ -12,7 +12,8 @@
 
 #include "mlir/Translation.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/FileUtilities.h"
@@ -97,9 +98,11 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
   registerTranslation(name, [function, dialectRegistration](
                                 llvm::SourceMgr &sourceMgr, raw_ostream &output,
                                 MLIRContext *context) {
-    dialectRegistration(context->getDialectRegistry());
+    DialectRegistry registry;
+    dialectRegistration(registry);
+    context->appendDialectRegistry(registry);
     auto module = OwningModuleRef(parseSourceFile(sourceMgr, context));
-    if (!module)
+    if (!module || failed(verify(*module)))
       return failure();
     return function(module.get(), output);
   });
@@ -157,7 +160,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                            llvm::cl::Required);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
-  llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR translation driver\n");
+  llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
 
   std::string errorMessage;
   auto input = openInputFile(inputFilename, &errorMessage);
@@ -175,7 +178,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   // Processes the memory buffer with a new MLIRContext.
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
-    MLIRContext context(false);
+    MLIRContext context;
     context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
     sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), llvm::SMLoc());
@@ -189,7 +192,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
     // failed (in most cases, it is expected to fail). Instead, we check if the
     // diagnostics were produced as expected.
     SourceMgrDiagnosticVerifierHandler sourceMgrHandler(sourceMgr, &context);
-    (*translationRequested)(sourceMgr, os, &context);
+    (void)(*translationRequested)(sourceMgr, os, &context);
     return sourceMgrHandler.verify();
   };
 

@@ -26,6 +26,8 @@ let hasSideEffects = 1, Defs = [CC] in {
   def LPSW : SideEffectUnaryS<"lpsw", 0x8200, null_frag, 8>;
   def LPSWE : SideEffectUnaryS<"lpswe", 0xB2B2, null_frag, 16>;
 }
+let Predicates = [FeatureBEAREnhancement], hasSideEffects = 1, Defs = [CC] in
+  def LPSWEY : SideEffectUnarySIY<"lpswey", 0xEB71, 16>;
 
 // Insert PSW key.
 let Uses = [R2L], Defs = [R2L] in
@@ -104,6 +106,20 @@ let hasSideEffects = 1 in
   def STPX : StoreInherentS<"stpx", 0xB211, null_frag, 4>;
 
 //===----------------------------------------------------------------------===//
+// Breaking-Event-Address-Register Instructions.
+//===----------------------------------------------------------------------===//
+
+let Predicates = [FeatureBEAREnhancement] in {
+  // Load BEAR.
+  let hasSideEffects = 1 in
+    def LBEAR : SideEffectUnaryS<"lbear", 0xB200, null_frag, 8>;
+
+  // Store BEAR.
+  let hasSideEffects = 1 in
+    def STBEAR : StoreInherentS<"stbear", 0xB201, null_frag, 8>;
+}
+
+//===----------------------------------------------------------------------===//
 // Storage-Key and Real Memory Instructions.
 //===----------------------------------------------------------------------===//
 
@@ -156,6 +172,10 @@ let hasSideEffects = 1 in
 // Invalidate DAT table entry.
 let hasSideEffects = 1 in
   defm IDTE : SideEffectQuaternaryRRFbOpt<"idte", 0xB98E, GR64, GR64, GR64>;
+
+// Reset DAT protection.
+let Predicates = [FeatureResetDATProtection], hasSideEffects = 1 in
+  defm RDP : SideEffectQuaternaryRRFbOpt<"rdp", 0xB98B, GR64, GR64, GR64>;
 
 // Compare and replace DAT table entry.
 let Predicates = [FeatureEnhancedDAT2], hasSideEffects = 1, Defs = [CC] in
@@ -371,6 +391,11 @@ let hasSideEffects = 1 in
 let Predicates = [FeatureMessageSecurityAssist3],
     hasSideEffects = 1, Uses = [R0L, R1D] in
   def PCKMO : SideEffectInherentRRE<"pckmo", 0xB928>;
+
+// Query processor activity counter information.
+let Predicates = [FeatureProcessorActivityInstrumentation],
+    hasSideEffects = 1, Uses = [R0D], Defs = [R0D, CC] in
+  def QPACI : StoreInherentS<"qpaci", 0xB28F, null_frag, 0>;
 
 //===----------------------------------------------------------------------===//
 // Miscellaneous Instructions.

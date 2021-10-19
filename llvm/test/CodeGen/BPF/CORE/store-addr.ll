@@ -1,5 +1,9 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
+; RUN: opt -passes='default<O2>' %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ; Source code:
 ;   struct t {
 ;     int a;
@@ -11,7 +15,9 @@
 ;       return foo(param);
 ;   }
 ; Compiler flag to generate IR:
-;   clang -target bpf -S -O2 -g -emit-llvm test.c
+;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.t = type { i32 }
 
@@ -23,7 +29,7 @@ entry:
   %0 = bitcast [1 x i64]* %param to i8*, !dbg !28
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #5, !dbg !28
   call void @llvm.dbg.declare(metadata [1 x i64]* %param, metadata !23, metadata !DIExpression()), !dbg !29
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* %arg, i32 0, i32 0), !dbg !30, !llvm.preserve.access.index !18
+  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* elementtype(%struct.t) %arg, i32 0, i32 0), !dbg !30, !llvm.preserve.access.index !18
   %2 = ptrtoint i32* %1 to i64, !dbg !31
   %arrayidx = getelementptr inbounds [1 x i64], [1 x i64]* %param, i64 0, i64 0, !dbg !32
   store i64 %2, i64* %arrayidx, align 8, !dbg !33, !tbaa !34

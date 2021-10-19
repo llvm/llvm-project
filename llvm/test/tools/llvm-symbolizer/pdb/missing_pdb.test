@@ -1,10 +1,10 @@
-RUN: llvm-symbolizer 0x401000 0x401001 -obj="%p/Inputs/missing_pdb.exe" 2>%t.err \
+RUN: llvm-symbolizer 0x401000 0x401001 --obj="%p/Inputs/missing_pdb.exe" 2>%t.err \
 RUN:    | FileCheck %s
-RUN: FileCheck --check-prefix=ERROR %s < %t.err
+RUN: FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s < %t.err
 
 llvm-symbolizer should print one error and two unknown line info records.
 
-ERROR: LLVMSymbolizer: error reading file: {{.*}}: {{N|n}}o such file or directory
+ERROR: LLVMSymbolizer: error reading file: {{.*}}: [[MSG]]
 ERROR-NOT: error reading file
 
 CHECK: ??

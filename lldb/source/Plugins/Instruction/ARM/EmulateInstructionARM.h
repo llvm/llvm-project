@@ -19,8 +19,8 @@ namespace lldb_private {
 // ITSession - Keep track of the IT Block progression.
 class ITSession {
 public:
-  ITSession() : ITCounter(0), ITState(0) {}
-  ~ITSession() {}
+  ITSession() = default;
+  ~ITSession() = default;
 
   // InitIT - Initializes ITCounter/ITState.
   bool InitIT(uint32_t bits7_0);
@@ -39,8 +39,8 @@ public:
   uint32_t GetCond();
 
 private:
-  uint32_t ITCounter; // Possible values: 0, 1, 2, 3, 4.
-  uint32_t ITState;   // A2.5.2 Consists of IT[7:5] and IT[4:0] initially.
+  uint32_t ITCounter = 0; // Possible values: 0, 1, 2, 3, 4.
+  uint32_t ITState = 0;   // A2.5.2 Consists of IT[7:5] and IT[4:0] initially.
 };
 
 class EmulateInstructionARM : public EmulateInstruction {
@@ -83,11 +83,9 @@ public:
     return false;
   }
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
-
-  uint32_t GetPluginVersion() override { return 1; }
 
   bool SetTargetTriple(const ArchSpec &arch) override;
 

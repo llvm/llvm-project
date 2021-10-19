@@ -12,80 +12,123 @@
 // struct allocator_traits
 // {
 //     template <class Ptr>
-//         static void destroy(allocator_type& a, Ptr p);
+//     static constexpr void destroy(allocator_type& a, Ptr p);
 //     ...
 // };
 
 #include <memory>
-#include <new>
-#include <type_traits>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "incomplete_type_helper.h"
 
 template <class T>
-struct A
+struct NoDestroy
 {
     typedef T value_type;
 
-};
-
-int b_destroy = 0;
-
-template <class T>
-struct B
-{
-    typedef T value_type;
-
-    template <class U>
-    void destroy(U* p)
+    TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n)
     {
-        ++b_destroy;
-        p->~U();
+        return std::allocator<T>().allocate(n);
+    }
+
+    TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n)
+    {
+        return std::allocator<T>().deallocate(p, n);
     }
 };
 
-struct A0
+template <class T>
+struct CountDestroy
 {
-    static int count;
-    ~A0() {++count;}
+    TEST_CONSTEXPR explicit CountDestroy(int* counter)
+        : counter_(counter)
+    { }
+
+    typedef T value_type;
+
+    TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n)
+    {
+        return std::allocator<T>().allocate(n);
+    }
+
+    TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n)
+    {
+        return std::allocator<T>().deallocate(p, n);
+    }
+
+    template <class U>
+    TEST_CONSTEXPR_CXX20 void destroy(U* p)
+    {
+        ++*counter_;
+        p->~U();
+    }
+
+    int* counter_;
 };
 
-int A0::count = 0;
+struct CountDestructor
+{
+    TEST_CONSTEXPR explicit CountDestructor(int* counter)
+        : counter_(counter)
+    { }
+
+    TEST_CONSTEXPR_CXX20 ~CountDestructor() { ++*counter_; }
+
+    int* counter_;
+};
+
+TEST_CONSTEXPR_CXX20 bool test()
+{
+    {
+        typedef NoDestroy<CountDestructor> Alloc;
+        int destructors = 0;
+        Alloc alloc;
+        CountDestructor* pool = std::allocator_traits<Alloc>::allocate(alloc, 1);
+
+        std::allocator_traits<Alloc>::construct(alloc, pool, &destructors);
+        assert(destructors == 0);
+
+        std::allocator_traits<Alloc>::destroy(alloc, pool);
+        assert(destructors == 1);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 1);
+    }
+    {
+        typedef IncompleteHolder* T;
+        typedef NoDestroy<T> Alloc;
+        Alloc alloc;
+        T* pool = std::allocator_traits<Alloc>::allocate(alloc, 1);
+        std::allocator_traits<Alloc>::construct(alloc, pool, nullptr);
+        std::allocator_traits<Alloc>::destroy(alloc, pool);
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 1);
+    }
+    {
+        typedef CountDestroy<CountDestructor> Alloc;
+        int destroys_called = 0;
+        int destructors_called = 0;
+        Alloc alloc(&destroys_called);
+
+        CountDestructor* pool = std::allocator_traits<Alloc>::allocate(alloc, 1);
+        std::allocator_traits<Alloc>::construct(alloc, pool, &destructors_called);
+        assert(destroys_called == 0);
+        assert(destructors_called == 0);
+
+        std::allocator_traits<Alloc>::destroy(alloc, pool);
+        assert(destroys_called == 1);
+        assert(destructors_called == 1);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 1);
+    }
+    return true;
+}
 
 int main(int, char**)
 {
-    {
-        A0::count = 0;
-        A<int> a;
-        std::aligned_storage<sizeof(A0)>::type a0;
-        std::allocator_traits<A<int> >::construct(a, (A0*)&a0);
-        assert(A0::count == 0);
-        std::allocator_traits<A<int> >::destroy(a, (A0*)&a0);
-        assert(A0::count == 1);
-    }
-    {
-      typedef IncompleteHolder* VT;
-      typedef A<VT> Alloc;
-      Alloc a;
-      std::aligned_storage<sizeof(VT)>::type store;
-      std::allocator_traits<Alloc>::destroy(a, (VT*)&store);
-    }
-#if defined(_LIBCPP_VERSION) || TEST_STD_VER >= 11
-    {
-        A0::count = 0;
-        b_destroy = 0;
-        B<int> b;
-        std::aligned_storage<sizeof(A0)>::type a0;
-        std::allocator_traits<B<int> >::construct(b, (A0*)&a0);
-        assert(A0::count == 0);
-        assert(b_destroy == 0);
-        std::allocator_traits<B<int> >::destroy(b, (A0*)&a0);
-        assert(A0::count == 1);
-        assert(b_destroy == 1);
-    }
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
 #endif
-
-  return 0;
+    return 0;
 }

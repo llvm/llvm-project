@@ -85,8 +85,9 @@ private:
   void reset();
   void parseFile();
   void parseLevel(bool HasOpeningBrace);
-  void parseBlock(bool MustBeDeclaration, bool AddLevel = true,
-                  bool MunchSemi = true);
+  void parseBlock(bool MustBeDeclaration, unsigned AddLevels = 1u,
+                  bool MunchSemi = true,
+                  bool UnindentWhitesmithsBraces = false);
   void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();
@@ -96,7 +97,7 @@ private:
   void parsePPEndIf();
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
-  void parseStructuralElement();
+  void parseStructuralElement(bool IsTopLevel = false);
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
@@ -113,11 +114,17 @@ private:
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();
+  bool parseStructLike();
+  void parseConcept();
+  void parseRequires();
+  void parseRequiresExpression(unsigned int OriginalLevel);
+  void parseConstraintExpression(unsigned int OriginalLevel);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
   void parseRecord(bool ParseAsExpr = false);
+  void parseObjCLightweightGenerics();
   void parseObjCMethod();
   void parseObjCProtocolList();
   void parseObjCUntilAtEnd();
@@ -135,7 +142,12 @@ private:
   bool tryToParsePropertyAccessor();
   void tryToParseJSFunction();
   bool tryToParseSimpleAttribute();
-  void addUnwrappedLine();
+
+  // Used by addUnwrappedLine to denote whether to keep or remove a level
+  // when resetting the line state.
+  enum class LineLevel { Remove, Keep };
+
+  void addUnwrappedLine(LineLevel AdjustLevel = LineLevel::Remove);
   bool eof() const;
   // LevelDifference is the difference of levels after and before the current
   // token. For example:

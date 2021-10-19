@@ -22,12 +22,12 @@
   (list
    ;; Attributes
    `(,(regexp-opt
-       '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
-         "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "naked" "nobuiltin"
-         "noduplicate" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
-         "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
-         "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
-         "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
+       '("alwaysinline" "argmemonly" "allocsize" "builtin" "cold" "convergent" "dereferenceable" "dereferenceable_or_null" "hot" "inaccessiblememonly"
+         "inaccessiblemem_or_argmemonly" "inalloca" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin" "nonnull"
+         "nocallback" "nocf_check" "noduplicate" "nofree" "noimplicitfloat" "noinline" "nomerge" "nonlazybind" "noprofile" "noredzone" "noreturn"
+         "norecurse" "nosync" "noundef" "nounwind" "nosanitize_coverage" "null_pointer_is_valid" "optforfuzzing" "optnone" "optsize" "preallocated" "readnone" "readonly" "returned" "returns_twice"
+         "shadowcallstack" "speculatable" "speculative_load_hardening" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
+         "sanitize_thread" "sanitize_memory" "strictfp" "swifterror" "uwtable" "vscale_range" "willreturn" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
    ;; Variables
    '("%[-a-zA-Z$._][-a-zA-Z$._0-9]*" . font-lock-variable-name-face)
    ;; Labels
@@ -35,7 +35,9 @@
    ;; Unnamed variable slots
    '("%[-]?[0-9]+" . font-lock-variable-name-face)
    ;; Types
-   `(,(regexp-opt '("void" "i1" "i8" "i16" "i32" "i64" "i128" "float" "double" "type" "label" "opaque") 'symbols) . font-lock-type-face)
+   `(,(regexp-opt
+       '("void" "i1" "i8" "i16" "i32" "i64" "i128" "half" "bfloat" "float" "double" "fp128" "x86_fp80" "ppc_fp128" "x86_mmx" "x86_amx"
+         "type" "label" "opaque" "token") 'symbols) . font-lock-type-face)
    ;; Integer literals
    '("\\b[-]?[0-9]+\\b" . font-lock-preprocessor-face)
    ;; Floating point constants
@@ -45,19 +47,27 @@
    ;; Keywords
    `(,(regexp-opt
        '(;; Toplevel entities
-         "declare" "define" "module" "target" "source_filename" "global" "constant" "const"
+         "declare" "define" "module" "target" "source_filename" "global" "constant" "const" "alias" "ifunc" "comdat"
          "attributes" "uselistorder" "uselistorder_bb"
          ;; Linkage types
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
          ;; Values
-         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress"
+         "true" "false" "null" "undef" "zeroinitializer" "none" "c" "asm" "blockaddress" "poison"
 
          ;; Calling conventions
          "ccc" "fastcc" "coldcc" "webkit_jscc" "anyregcc" "preserve_mostcc" "preserve_allcc"
-         "cxx_fast_tlscc" "swiftcc"
+         "cxx_fast_tlscc" "swiftcc" "tailcc" "swifttailcc" "cfguard_checkcc"
+         ;; Visibility styles
+         "default" "hidden" "protected"
+         ;; DLL storages
+         "dllimport" "dllexport"
+         ;; Thread local
+         "thread_local" "localdynamic" "initialexec" "localexec"
+         ;; Runtime preemption specifiers
+         "dso_preemptable" "dso_local" "dso_local_equivalent"
 
-         "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
+         "gc" "atomic" "volatile" "personality" "prologue" "section") 'symbols) . font-lock-keyword-face)
    ;; Arithmetic and Logical Operators
    `(,(regexp-opt '("add" "sub" "mul" "sdiv" "udiv" "urem" "srem" "and" "or" "xor"
                     "setne" "seteq" "setlt" "setgt" "setle" "setge") 'symbols) . font-lock-keyword-face)
@@ -66,7 +76,7 @@
    ;; Special instructions
    `(,(regexp-opt '("phi" "tail" "call" "select" "to" "shl" "lshr" "ashr" "fcmp" "icmp" "va_arg" "landingpad" "freeze") 'symbols) . font-lock-keyword-face)
    ;; Control instructions
-   `(,(regexp-opt '("ret" "br" "switch" "invoke" "resume" "unwind" "unreachable" "indirectbr") 'symbols) . font-lock-keyword-face)
+   `(,(regexp-opt '("ret" "br" "switch" "invoke" "resume" "unwind" "unreachable" "indirectbr" "callbr") 'symbols) . font-lock-keyword-face)
    ;; Memory operators
    `(,(regexp-opt '("malloc" "alloca" "free" "load" "store" "getelementptr" "fence" "cmpxchg" "atomicrmw") 'symbols) . font-lock-keyword-face)
    ;; Casts
@@ -77,18 +87,16 @@
    `(,(regexp-opt '("extractvalue" "insertvalue") 'symbols) . font-lock-keyword-face)
    ;; Metadata types
    `(,(regexp-opt '("distinct") 'symbols) . font-lock-keyword-face)
+   ;; Atomic memory ordering constraints
+   `(,(regexp-opt '("unordered" "monotonic" "acquire" "release" "acq_rel" "seq_cst") 'symbols) . font-lock-keyword-face)
+   ;; Fast-math flags
+   `(,(regexp-opt '("nnan" "ninf" "nsz" "arcp" "contract" "afn" "reassoc" "fast") 'symbols) . font-lock-keyword-face)
    ;; Use-list order directives
    `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
-;; Emacs 23 compatibility.
-(defalias 'llvm-mode-prog-mode
-  (if (fboundp 'prog-mode)
-      'prog-mode
-    'fundamental-mode))
-
 ;;;###autoload
-(define-derived-mode llvm-mode llvm-mode-prog-mode "LLVM"
+(define-derived-mode llvm-mode prog-mode "LLVM"
   "Major mode for editing LLVM source files.
 \\{llvm-mode-map}
   Runs `llvm-mode-hook' on startup."

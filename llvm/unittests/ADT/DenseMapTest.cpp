@@ -105,7 +105,7 @@ typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
                                        CtorTesterMapInfo>
                          > DenseMapTestTypes;
-TYPED_TEST_CASE(DenseMapTest, DenseMapTestTypes);
+TYPED_TEST_SUITE(DenseMapTest, DenseMapTestTypes, );
 
 // Empty map tests
 TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
@@ -545,6 +545,15 @@ TEST(DenseMapCustomTest, FindAsTest) {
   EXPECT_EQ(2u, map.find_as("b")->second);
   EXPECT_EQ(3u, map.find_as("c")->second);
   EXPECT_TRUE(map.find_as("d") == map.end());
+}
+
+TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
+  SmallDenseMap<int, int> M = {{0, 0}, {0, 1}, {1, 2}};
+  EXPECT_EQ(2u, M.size());
+  EXPECT_EQ(1u, M.count(0));
+  EXPECT_EQ(0, M[0]);
+  EXPECT_EQ(1u, M.count(1));
+  EXPECT_EQ(2, M[1]);
 }
 
 struct ContiguousDenseMapInfo {

@@ -29,7 +29,6 @@ class MiniDumpNewTestCase(TestBase):
         self.process = self.target.LoadCore(minidump_path)
         return self.process
 
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def check_state(self):
         with open(os.devnull) as devnul:
             # sanitize test output
@@ -110,7 +109,7 @@ class MiniDumpNewTestCase(TestBase):
             ci.HandleCommand(command, result, False)
             message = 'Ensure memory "%s" shows up in output for "%s"' % (
                 region_name, command)
-            self.assertTrue(region_name in result.GetOutput(), message)
+            self.assertIn(region_name, result.GetOutput(), message)
 
     def test_thread_info_in_minidump(self):
         """Test that lldb can read the thread information from the Minidump."""
@@ -122,8 +121,9 @@ class MiniDumpNewTestCase(TestBase):
         thread = self.process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
         stop_description = thread.GetStopDescription(256)
-        self.assertTrue("SIGSEGV" in stop_description)
+        self.assertIn("SIGSEGV", stop_description)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_stack_info_in_minidump(self):
         """Test that we can see a trivial stack in a breakpad-generated Minidump."""
         # target create linux-x86_64 -c linux-x86_64.dmp
@@ -333,7 +333,7 @@ class MiniDumpNewTestCase(TestBase):
             frame = thread.GetFrameAtIndex(index)
             self.assertTrue(frame.IsValid())
             function_name = frame.GetFunctionName()
-            self.assertTrue(name in function_name)
+            self.assertIn(name, function_name)
 
     @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump(self):
@@ -344,7 +344,6 @@ class MiniDumpNewTestCase(TestBase):
                                   "linux-x86_64_not_crashed.dmp",
                                   self._linux_x86_64_not_crashed_pid)
 
-    @skipIfReproducer # VFS is a snapshot.
     def do_change_pid_in_minidump(self, core, newcore, offset, oldpid, newpid):
         """ This assumes that the minidump is breakpad generated on Linux -
         meaning that the PID in the file will be an ascii string part of
@@ -362,6 +361,7 @@ class MiniDumpNewTestCase(TestBase):
             newpid += "\n"
             f.write(newpid.encode('utf-8'))
 
+    @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump_with_same_pid_running(self):
         """Test that we read the information from the core correctly even if we
         have a running process with the same PID"""
@@ -373,6 +373,7 @@ class MiniDumpNewTestCase(TestBase):
                                        str(os.getpid()))
         self.do_test_deeper_stack("linux-x86_64_not_crashed", new_core, os.getpid())
 
+    @skipIfLLVMTargetMissing("X86")
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID """
         new_core = self.getBuildArtifact("linux-x86_64_not_crashed-pid.dmp")
@@ -385,6 +386,7 @@ class MiniDumpNewTestCase(TestBase):
                                   new_core, self._linux_x86_64_pid)
         self.test_stack_info_in_minidump()
 
+    @skipIfLLVMTargetMissing("X86")
     def test_local_variables_in_minidump(self):
         """Test that we can examine local variables in a Minidump."""
         # Launch with the Minidump, and inspect a local variable.
@@ -455,3 +457,30 @@ class MiniDumpNewTestCase(TestBase):
         check_region(17, 0x40169000, 0x4016b000, True,  True,  False, True,  d)
         check_region(18, 0x4016b000, 0x40176000, True,  True,  False, True,  n)
         check_region(-1, 0x40176000, max_int,    False, False, False, False, n)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_minidump_sysroot(self):
+        """Test that lldb can find a module referenced in an i386 linux minidump using the sysroot."""
+
+        # Copy linux-x86_64 executable to tmp_sysroot/temp/test/ (since it was compiled as
+        # /tmp/test/linux-x86_64)
+        tmp_sysroot = os.path.join(
+            self.getBuildDir(), "lldb_i386_mock_sysroot")
+        executable = os.path.join(
+            tmp_sysroot, "tmp", "test", "linux-x86_64")
+        exe_dir = os.path.dirname(executable)
+        lldbutil.mkdir_p(exe_dir)
+        shutil.copyfile("linux-x86_64", executable)
+
+        # Set sysroot and load core
+        self.runCmd("platform select remote-linux --sysroot '%s'" %
+                    tmp_sysroot)
+        self.process_from_yaml("linux-x86_64.yaml")
+        self.check_state()
+
+        # Check that we loaded the module from the sysroot
+        self.assertEqual(self.target.GetNumModules(), 1)
+        module = self.target.GetModuleAtIndex(0)
+        spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
+        exe_dir_norm = os.path.normcase(exe_dir)
+        self.assertEqual(spec_dir_norm, exe_dir_norm)

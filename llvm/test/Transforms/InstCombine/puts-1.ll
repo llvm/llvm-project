@@ -25,7 +25,7 @@ define void @test_simplify1() {
 
 define i32 @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([1 x i8], [1 x i8]* @empty, i32 0, i32 0))
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @puts(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x i8], [1 x i8]* @empty, i32 0, i32 0))
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %str = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0

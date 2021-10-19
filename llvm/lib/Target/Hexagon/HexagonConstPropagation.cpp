@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hcp"
-
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -44,6 +42,8 @@
 #include <set>
 #include <utility>
 #include <vector>
+
+#define DEBUG_TYPE "hcp"
 
 using namespace llvm;
 
@@ -83,7 +83,8 @@ namespace {
   // FIXME: Use TargetInstrInfo::RegSubRegPair. Also duplicated in
   // HexagonGenPredicate
   struct RegisterSubReg {
-    unsigned Reg, SubReg;
+    Register Reg;
+    unsigned SubReg;
 
     explicit RegisterSubReg(unsigned R, unsigned SR = 0) : Reg(R), SubReg(SR) {}
     explicit RegisterSubReg(const MachineOperand &MO)
@@ -216,16 +217,16 @@ namespace {
 
       void clear() { Map.clear(); }
 
-      bool has(unsigned R) const {
+      bool has(Register R) const {
         // All non-virtual registers are considered "bottom".
-        if (!Register::isVirtualRegister(R))
+        if (!R.isVirtual())
           return true;
         MapType::const_iterator F = Map.find(R);
         return F != Map.end();
       }
 
-      const LatticeCell &get(unsigned R) const {
-        if (!Register::isVirtualRegister(R))
+      const LatticeCell &get(Register R) const {
+        if (!R.isVirtual())
           return Bottom;
         MapType::const_iterator F = Map.find(R);
         if (F != Map.end())
@@ -234,14 +235,12 @@ namespace {
       }
 
       // Invalidates any const references.
-      void update(unsigned R, const LatticeCell &L) {
-        Map[R] = L;
-      }
+      void update(Register R, const LatticeCell &L) { Map[R] = L; }
 
       void print(raw_ostream &os, const TargetRegisterInfo &TRI) const;
 
     private:
-      using MapType = std::map<unsigned, LatticeCell>;
+      using MapType = std::map<Register, LatticeCell>;
 
       MapType Map;
       // To avoid creating "top" entries, return a const reference to
@@ -633,7 +632,7 @@ void MachineConstPropagator::visitPHI(const MachineInstr &PN) {
 
   const MachineOperand &MD = PN.getOperand(0);
   RegisterSubReg DefR(MD);
-  assert(Register::isVirtualRegister(DefR.Reg));
+  assert(DefR.Reg.isVirtual());
 
   bool Changed = false;
 
@@ -662,7 +661,7 @@ Bottomize:
     RegisterSubReg UseR(SO);
     // If the input is not a virtual register, we don't really know what
     // value it holds.
-    if (!Register::isVirtualRegister(UseR.Reg))
+    if (!UseR.Reg.isVirtual())
       goto Bottomize;
     // If there is no cell for an input register, it means top.
     if (!Cells.has(UseR.Reg))
@@ -704,7 +703,7 @@ void MachineConstPropagator::visitNonBranch(const MachineInstr &MI) {
       continue;
     RegisterSubReg DefR(MO);
     // Only track virtual registers.
-    if (!Register::isVirtualRegister(DefR.Reg))
+    if (!DefR.Reg.isVirtual())
       continue;
     bool Changed = false;
     // If the evaluation failed, set cells for all output registers to bottom.
@@ -1086,7 +1085,7 @@ bool MachineConstPropagator::run(MachineFunction &MF) {
 
 bool MachineConstEvaluator::getCell(const RegisterSubReg &R, const CellMap &Inputs,
       LatticeCell &RC) {
-  if (!Register::isVirtualRegister(R.Reg))
+  if (!R.Reg.isVirtual())
     return false;
   const LatticeCell &L = Inputs.get(R.Reg);
   if (!R.SubReg) {
@@ -1884,7 +1883,7 @@ namespace {
     bool evaluateHexVector2(const MachineInstr &MI, const CellMap &Inputs,
           CellMap &Outputs);
 
-    void replaceAllRegUsesWith(unsigned FromReg, unsigned ToReg);
+    void replaceAllRegUsesWith(Register FromReg, Register ToReg);
     bool rewriteHexBranch(MachineInstr &BrI, const CellMap &Inputs);
     bool rewriteHexConstDefs(MachineInstr &MI, const CellMap &Inputs,
           bool &AllDefs);
@@ -1942,7 +1941,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   unsigned Opc = MI.getOpcode();
   RegisterSubReg DefR(MD);
   assert(!DefR.SubReg);
-  if (!Register::isVirtualRegister(DefR.Reg))
+  if (!DefR.Reg.isVirtual())
     return false;
 
   if (MI.isCopy()) {
@@ -2809,7 +2808,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
       if (!MO.isReg() || !MO.isUse() || MO.isImplicit())
         continue;
       RegisterSubReg R(MO);
-      if (!Register::isVirtualRegister(R.Reg))
+      if (!R.Reg.isVirtual())
         continue;
       HasUse = true;
       // PHIs can legitimately have "top" cells after propagation.
@@ -2851,7 +2850,7 @@ bool HexagonConstEvaluator::rewriteHexConstDefs(MachineInstr &MI,
     if (!MO.isReg() || !MO.isDef())
       continue;
     Register R = MO.getReg();
-    if (!Register::isVirtualRegister(R))
+    if (!R.isVirtual())
       continue;
     assert(!MO.getSubReg());
     assert(Inputs.has(R));
@@ -3130,10 +3129,10 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
   return Changed;
 }
 
-void HexagonConstEvaluator::replaceAllRegUsesWith(unsigned FromReg,
-      unsigned ToReg) {
-  assert(Register::isVirtualRegister(FromReg));
-  assert(Register::isVirtualRegister(ToReg));
+void HexagonConstEvaluator::replaceAllRegUsesWith(Register FromReg,
+                                                  Register ToReg) {
+  assert(FromReg.isVirtual());
+  assert(ToReg.isVirtual());
   for (auto I = MRI->use_begin(FromReg), E = MRI->use_end(); I != E;) {
     MachineOperand &O = *I;
     ++I;

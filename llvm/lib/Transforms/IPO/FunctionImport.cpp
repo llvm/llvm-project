@@ -39,6 +39,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -84,6 +85,10 @@ static cl::opt<int> ImportCutoff(
     "import-cutoff", cl::init(-1), cl::Hidden, cl::value_desc("N"),
     cl::desc("Only import first N functions if N>=0 (default -1)"));
 
+static cl::opt<bool>
+    ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
+                   cl::desc("Import functions with noinline attribute"));
+
 static cl::opt<float>
     ImportInstrFactor("import-instr-evolution-factor", cl::init(0.7),
                       cl::Hidden, cl::value_desc("x"),
@@ -124,14 +129,8 @@ static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
                                  cl::desc("Compute dead symbols"));
 
 static cl::opt<bool> EnableImportMetadata(
-    "enable-import-metadata", cl::init(
-#if !defined(NDEBUG)
-                                  true /*Enabled with asserts.*/
-#else
-                                  false
-#endif
-                                  ),
-    cl::Hidden, cl::desc("Enable import metadata like 'thinlto_src_module'"));
+    "enable-import-metadata", cl::init(false), cl::Hidden,
+    cl::desc("Enable import metadata like 'thinlto_src_module'"));
 
 /// Summary file to use for function importing when using -function-import from
 /// the command line.
@@ -189,23 +188,6 @@ selectCallee(const ModuleSummaryIndex &Index,
           return false;
         }
 
-        // For SamplePGO, in computeImportForFunction the OriginalId
-        // may have been used to locate the callee summary list (See
-        // comment there).
-        // The mapping from OriginalId to GUID may return a GUID
-        // that corresponds to a static variable. Filter it out here.
-        // This can happen when
-        // 1) There is a call to a library function which is not defined
-        // in the index.
-        // 2) There is a static variable with the  OriginalGUID identical
-        // to the GUID of the library function in 1);
-        // When this happens, the logic for SamplePGO kicks in and
-        // the static variable in 2) will be found, which needs to be
-        // filtered out.
-        if (GVSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind) {
-          Reason = FunctionImporter::ImportFailureReason::GlobalVar;
-          return false;
-        }
         if (GlobalValue::isInterposableLinkage(GVSummary->linkage())) {
           Reason = FunctionImporter::ImportFailureReason::InterposableLinkage;
           // There is no point in importing these, we can't inline them
@@ -233,7 +215,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         if ((Summary->instCount() > Threshold) &&
-            !Summary->fflags().AlwaysInline) {
+            !Summary->fflags().AlwaysInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::TooLarge;
           return false;
         }
@@ -246,7 +228,7 @@ selectCallee(const ModuleSummaryIndex &Index,
         }
 
         // Don't bother importing if we can't inline it anyway.
-        if (Summary->fflags().NoInline) {
+        if (Summary->fflags().NoInline && !ForceImportAll) {
           Reason = FunctionImporter::ImportFailureReason::NoInline;
           return false;
         }
@@ -266,19 +248,27 @@ using EdgeInfo =
 
 } // anonymous namespace
 
-static ValueInfo
-updateValueInfoForIndirectCalls(const ModuleSummaryIndex &Index, ValueInfo VI) {
-  if (!VI.getSummaryList().empty())
-    return VI;
-  // For SamplePGO, the indirect call targets for local functions will
-  // have its original name annotated in profile. We try to find the
-  // corresponding PGOFuncName as the GUID.
-  // FIXME: Consider updating the edges in the graph after building
-  // it, rather than needing to perform this mapping on each walk.
-  auto GUID = Index.getGUIDFromOriginalID(VI.getGUID());
-  if (GUID == 0)
-    return ValueInfo();
-  return Index.getValueInfo(GUID);
+static bool shouldImportGlobal(const ValueInfo &VI,
+                               const GVSummaryMapTy &DefinedGVSummaries) {
+  const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
+  if (GVS == DefinedGVSummaries.end())
+    return true;
+  // We should not skip import if the module contains a definition with
+  // interposable linkage type. This is required for correctness in
+  // the situation with two following conditions:
+  // * the def with interposable linkage is non-prevailing,
+  // * there is a prevailing def available for import and marked read-only.
+  // In this case, the non-prevailing def will be converted to a declaration,
+  // while the prevailing one becomes internal, thus no definitions will be
+  // available for linking. In order to prevent undefined symbol link error,
+  // the prevailing definition must be imported.
+  // FIXME: Consider adding a check that the suitable prevailing definition
+  // exists and marked read-only.
+  if (VI.getSummaryList().size() > 1 &&
+      GlobalValue::isInterposableLinkage(GVS->second->linkage()))
+    return true;
+
+  return false;
 }
 
 static void computeImportForReferencedGlobals(
@@ -288,7 +278,7 @@ static void computeImportForReferencedGlobals(
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists) {
   for (auto &VI : Summary.refs()) {
-    if (DefinedGVSummaries.count(VI.getGUID())) {
+    if (!shouldImportGlobal(VI, DefinedGVSummaries)) {
       LLVM_DEBUG(
           dbgs() << "Ref ignored! Target already in destination module.\n");
       continue;
@@ -379,11 +369,10 @@ static void computeImportForFunction(
       continue;
     }
 
-    VI = updateValueInfoForIndirectCalls(Index, VI);
-    if (!VI)
-      continue;
-
     if (DefinedGVSummaries.count(VI.getGUID())) {
+      // FIXME: Consider not skipping import if the module contains
+      // a non-prevailing def with interposable linkage. The prevailing copy
+      // can safely be imported (see shouldImportGlobal()).
       LLVM_DEBUG(dbgs() << "ignored! Target already in destination module.\n");
       continue;
     }
@@ -467,17 +456,28 @@ static void computeImportForFunction(
           FailureInfo = std::make_unique<FunctionImporter::ImportFailureInfo>(
               VI, Edge.second.getHotness(), Reason, 1);
         }
-        LLVM_DEBUG(
-            dbgs() << "ignored! No qualifying callee with summary found.\n");
-        continue;
+        if (ForceImportAll) {
+          std::string Msg = std::string("Failed to import function ") +
+                            VI.name().str() + " due to " +
+                            getFailureName(Reason);
+          auto Error = make_error<StringError>(
+              Msg, make_error_code(errc::not_supported));
+          logAllUnhandledErrors(std::move(Error), errs(),
+                                "Error importing module: ");
+          break;
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "ignored! No qualifying callee with summary found.\n");
+          continue;
+        }
       }
 
       // "Resolve" the summary
       CalleeSummary = CalleeSummary->getBaseObject();
       ResolvedCalleeSummary = cast<FunctionSummary>(CalleeSummary);
 
-      assert((ResolvedCalleeSummary->fflags().AlwaysInline ||
-	     (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
+      assert((ResolvedCalleeSummary->fflags().AlwaysInline || ForceImportAll ||
+              (ResolvedCalleeSummary->instCount() <= NewThreshold)) &&
              "selectCallee() didn't honor the threshold");
 
       auto ExportModulePath = ResolvedCalleeSummary->modulePath();
@@ -804,16 +804,61 @@ void llvm::ComputeCrossModuleImportForModuleFromIndex(
 #endif
 }
 
-void llvm::computeDeadSymbols(
+// For SamplePGO, the indirect call targets for local functions will
+// have its original name annotated in profile. We try to find the
+// corresponding PGOFuncName as the GUID, and fix up the edges
+// accordingly.
+void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
+                                     FunctionSummary *FS) {
+  for (auto &EI : FS->mutableCalls()) {
+    if (!EI.first.getSummaryList().empty())
+      continue;
+    auto GUID = Index.getGUIDFromOriginalID(EI.first.getGUID());
+    if (GUID == 0)
+      continue;
+    // Update the edge to point directly to the correct GUID.
+    auto VI = Index.getValueInfo(GUID);
+    if (llvm::any_of(
+            VI.getSummaryList(),
+            [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
+              // The mapping from OriginalId to GUID may return a GUID
+              // that corresponds to a static variable. Filter it out here.
+              // This can happen when
+              // 1) There is a call to a library function which is not defined
+              // in the index.
+              // 2) There is a static variable with the  OriginalGUID identical
+              // to the GUID of the library function in 1);
+              // When this happens the static variable in 2) will be found,
+              // which needs to be filtered out.
+              return SummaryPtr->getSummaryKind() ==
+                     GlobalValueSummary::GlobalVarKind;
+            }))
+      continue;
+    EI.first = VI;
+  }
+}
+
+void llvm::updateIndirectCalls(ModuleSummaryIndex &Index) {
+  for (const auto &Entry : Index) {
+    for (auto &S : Entry.second.SummaryList) {
+      if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        updateValueInfoForIndirectCalls(Index, FS);
+    }
+  }
+}
+
+void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
     ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing) {
   assert(!Index.withGlobalValueDeadStripping());
-  if (!ComputeDead)
+  if (!ComputeDead ||
+      // Don't do anything when nothing is live, this is friendly with tests.
+      GUIDPreservedSymbols.empty()) {
+    // Still need to update indirect calls.
+    updateIndirectCalls(Index);
     return;
-  if (GUIDPreservedSymbols.empty())
-    // Don't do anything when nothing is live, this is friendly with tests.
-    return;
+  }
   unsigned LiveSymbols = 0;
   SmallVector<ValueInfo, 128> Worklist;
   Worklist.reserve(GUIDPreservedSymbols.size() * 2);
@@ -828,13 +873,16 @@ void llvm::computeDeadSymbols(
   // Add values flagged in the index as live roots to the worklist.
   for (const auto &Entry : Index) {
     auto VI = Index.getValueInfo(Entry);
-    for (auto &S : Entry.second.SummaryList)
+    for (auto &S : Entry.second.SummaryList) {
+      if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
+        updateValueInfoForIndirectCalls(Index, FS);
       if (S->isLive()) {
         LLVM_DEBUG(dbgs() << "Live root: " << VI << "\n");
         Worklist.push_back(VI);
         ++LiveSymbols;
         break;
       }
+    }
   }
 
   // Make value live and add it to the worklist if it was not live before.
@@ -847,9 +895,6 @@ void llvm::computeDeadSymbols(
     // binary, which increases the binary size unnecessarily. Note that
     // if this code changes, the importer needs to change so that edges
     // to functions marked dead are skipped.
-    VI = updateValueInfoForIndirectCalls(Index, VI);
-    if (!VI)
-      return;
 
     if (llvm::any_of(VI.getSummaryList(),
                      [](const std::unique_ptr<llvm::GlobalValueSummary> &S) {
@@ -894,7 +939,6 @@ void llvm::computeDeadSymbols(
   while (!Worklist.empty()) {
     auto VI = Worklist.pop_back_val();
     for (auto &Summary : VI.getSummaryList()) {
-      Summary->setLive(true);
       if (auto *AS = dyn_cast<AliasSummary>(Summary.get())) {
         // If this is an alias, visit the aliasee VI to ensure that all copies
         // are marked live and it is added to the worklist for further
@@ -924,7 +968,8 @@ void llvm::computeDeadSymbolsWithConstProp(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled) {
-  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsAndUpdateIndirectCalls(Index, GUIDPreservedSymbols,
+                                           isPrevailing);
   if (ImportEnabled)
     Index.propagateAttributes(GUIDPreservedSymbols);
 }
@@ -1006,17 +1051,34 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
   return true;
 }
 
-/// Fixup prevailing symbol linkages in \p TheModule based on summary analysis.
-void llvm::thinLTOResolvePrevailingInModule(
-    Module &TheModule, const GVSummaryMapTy &DefinedGlobals) {
-  auto updateLinkage = [&](GlobalValue &GV) {
+void llvm::thinLTOFinalizeInModule(Module &TheModule,
+                                   const GVSummaryMapTy &DefinedGlobals,
+                                   bool PropagateAttrs) {
+  auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
     const auto &GS = DefinedGlobals.find(GV.getGUID());
     if (GS == DefinedGlobals.end())
       return;
+
+    if (Propagate)
+      if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GS->second)) {
+        if (Function *F = dyn_cast<Function>(&GV)) {
+          // TODO: propagate ReadNone and ReadOnly.
+          if (FS->fflags().ReadNone && !F->doesNotAccessMemory())
+            F->setDoesNotAccessMemory();
+
+          if (FS->fflags().ReadOnly && !F->onlyReadsMemory())
+            F->setOnlyReadsMemory();
+
+          if (FS->fflags().NoRecurse && !F->doesNotRecurse())
+            F->setDoesNotRecurse();
+
+          if (FS->fflags().NoUnwind && !F->doesNotThrow())
+            F->setDoesNotThrow();
+        }
+      }
+
     auto NewLinkage = GS->second->linkage();
-    if (NewLinkage == GV.getLinkage())
-      return;
     if (GlobalValue::isLocalLinkage(GV.getLinkage()) ||
         // Don't internalize anything here, because the code below
         // lacks necessary correctness checks. Leave this job to
@@ -1024,6 +1086,16 @@ void llvm::thinLTOResolvePrevailingInModule(
         GlobalValue::isLocalLinkage(NewLinkage) ||
         // In case it was dead and already converted to declaration.
         GV.isDeclaration())
+      return;
+
+    // Set the potentially more constraining visibility computed from summaries.
+    // The DefaultVisibility condition is because older GlobalValueSummary does
+    // not record DefaultVisibility and we don't want to change protected/hidden
+    // to default.
+    if (GS->second->getVisibility() != GlobalValue::DefaultVisibility)
+      GV.setVisibility(GS->second->getVisibility());
+
+    if (NewLinkage == GV.getLinkage())
       return;
 
     // Check for a non-prevailing def that has interposable linkage
@@ -1064,11 +1136,11 @@ void llvm::thinLTOResolvePrevailingInModule(
 
   // Process functions and global now
   for (auto &GV : TheModule)
-    updateLinkage(GV);
+    FinalizeInModule(GV, PropagateAttrs);
   for (auto &GV : TheModule.globals())
-    updateLinkage(GV);
+    FinalizeInModule(GV);
   for (auto &GV : TheModule.aliases())
-    updateLinkage(GV);
+    FinalizeInModule(GV);
 }
 
 /// Run internalization on \p TheModule based on symmary analysis.
@@ -1112,7 +1184,7 @@ void llvm::thinLTOInternalizeModule(Module &TheModule,
 
 /// Make alias a clone of its aliasee.
 static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
-  Function *Fn = cast<Function>(GA->getBaseObject());
+  Function *Fn = cast<Function>(GA->getAliaseeObject());
 
   ValueToValueMapTy VMap;
   Function *NewFn = CloneFunction(Fn, VMap);
@@ -1218,12 +1290,12 @@ Expected<bool> FunctionImporter::importFunctions(
         if (Error Err = GA.materialize())
           return std::move(Err);
         // Import alias as a copy of its aliasee.
-        GlobalObject *Base = GA.getBaseObject();
-        if (Error Err = Base->materialize())
+        GlobalObject *GO = GA.getAliaseeObject();
+        if (Error Err = GO->materialize())
           return std::move(Err);
         auto *Fn = replaceAliasWithAliasee(SrcModule.get(), &GA);
-        LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << Base->getGUID()
-                          << " " << Base->getName() << " from "
+        LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
+                          << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
         if (EnableImportMetadata) {
           // Add 'thinlto_src_module' metadata for statistics and debugging.
@@ -1262,7 +1334,7 @@ Expected<bool> FunctionImporter::importFunctions(
             std::move(SrcModule), GlobalsToImport.getArrayRef(),
             [](GlobalValue &, IRMover::ValueAdder) {},
             /*IsPerformingImport=*/true))
-      report_fatal_error("Function Import: link error: " +
+      report_fatal_error(Twine("Function Import: link error: ") +
                          toString(std::move(Err)));
 
     ImportedCount += GlobalsToImport.size();
@@ -1320,7 +1392,7 @@ static bool doImportingForModule(Module &M) {
 
   // Next we need to promote to global scope and rename any local values that
   // are potentially exported to other modules.
-  if (renameModuleForThinLTO(M, *Index, /*clearDSOOnDeclarations=*/false,
+  if (renameModuleForThinLTO(M, *Index, /*ClearDSOLocalOnDeclarations=*/false,
                              /*GlobalsToImport=*/nullptr)) {
     errs() << "Error renaming module\n";
     return false;

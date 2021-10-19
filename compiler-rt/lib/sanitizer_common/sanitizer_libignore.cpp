@@ -9,7 +9,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || \
-    SANITIZER_NETBSD || SANITIZER_OPENBSD
+    SANITIZER_NETBSD
 
 #include "sanitizer_libignore.h"
 #include "sanitizer_flags.h"
@@ -22,9 +22,9 @@ LibIgnore::LibIgnore(LinkerInitialized) {
 }
 
 void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   if (count_ >= kMaxLibs) {
-    Report("%s: too many ignored libraries (max: %d)\n", SanitizerToolName,
+    Report("%s: too many ignored libraries (max: %zu)\n", SanitizerToolName,
            kMaxLibs);
     Die();
   }
@@ -36,9 +36,9 @@ void LibIgnore::AddIgnoredLibrary(const char *name_templ) {
 }
 
 void LibIgnore::OnLibraryLoaded(const char *name) {
-  BlockingMutexLock lock(&mutex_);
+  Lock lock(&mutex_);
   // Try to match suppressions with symlink target.
-  InternalScopedString buf(kMaxPathLength);
+  InternalMmapVector<char> buf(kMaxPathLength);
   if (name && internal_readlink(name, buf.data(), buf.size() - 1) > 0 &&
       buf[0]) {
     for (uptr i = 0; i < count_; i++) {
@@ -105,7 +105,7 @@ void LibIgnore::OnLibraryLoaded(const char *name) {
           continue;
         if (IsPcInstrumented(range.beg) && IsPcInstrumented(range.end - 1))
           continue;
-        VReport(1, "Adding instrumented range %p-%p from library '%s'\n",
+        VReport(1, "Adding instrumented range 0x%zx-0x%zx from library '%s'\n",
                 range.beg, range.end, mod.full_name());
         const uptr idx =
             atomic_load(&instrumented_ranges_count_, memory_order_relaxed);

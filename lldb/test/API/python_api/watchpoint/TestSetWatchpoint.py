@@ -25,7 +25,6 @@ class SetWatchpointAPITestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=['s390x'])
     def test_watch_val(self):
@@ -49,7 +48,7 @@ class SetWatchpointAPITestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -98,14 +97,9 @@ class SetWatchpointAPITestCase(TestBase):
         process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)
 
         self.dbg.DeleteTarget(target)
-
-        # The next check relies on the watchpoint being destructed, which does
-        # not happen during replay because objects are intentionally kept alive
-        # forever.
-        if not configuration.is_reproducer():
-            self.assertFalse(watchpoint.IsValid())
+        self.assertFalse(watchpoint.IsValid())

@@ -25,9 +25,9 @@ using namespace lldb;
 using namespace lldb_private;
 
 // Options
-Options::Options() : m_getopt_table() { BuildValidOptionSets(); }
+Options::Options() { BuildValidOptionSets(); }
 
-Options::~Options() {}
+Options::~Options() = default;
 
 void Options::NotifyOptionParsingStarting(ExecutionContext *execution_context) {
   m_seen_options.clear();
@@ -137,7 +137,6 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   } else {
     result.AppendError("invalid combination of options for the given command");
-    result.SetStatus(eReturnStatusFailed);
   }
 
   return options_are_valid;
@@ -223,7 +222,7 @@ Option *Options::GetLongOptions() {
         std::map<int, uint32_t>::const_iterator pos =
             option_seen.find(short_opt);
         StreamString strm;
-        if (isprint8(short_opt))
+        if (defs[i].HasShortOption())
           Host::SystemLog(Host::eSystemLogError,
                           "option[%u] --%s has a short option -%c that "
                           "conflicts with option[%u] --%s, short option won't "
@@ -355,9 +354,7 @@ enum OptionDisplayType {
 static bool PrintOption(const OptionDefinition &opt_def,
                         OptionDisplayType display_type, const char *header,
                         const char *footer, bool show_optional, Stream &strm) {
-  const bool has_short_option = isprint8(opt_def.short_option) != 0;
-
-  if (display_type == eDisplayShortOption && !has_short_option)
+  if (display_type == eDisplayShortOption && !opt_def.HasShortOption())
     return false;
 
   if (header && header[0])
@@ -366,7 +363,7 @@ static bool PrintOption(const OptionDefinition &opt_def,
   if (show_optional && !opt_def.required)
     strm.PutChar('[');
   const bool show_short_option =
-      has_short_option && display_type != eDisplayLongOption;
+      opt_def.HasShortOption() && display_type != eDisplayLongOption;
   if (show_short_option)
     strm.Printf("-%c", opt_def.short_option);
   else
@@ -445,7 +442,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       std::set<int> options;
       std::set<int>::const_iterator options_pos, options_end;
       for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
+        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
           // Add current option to the end of out_stream.
 
           if (def.required && def.option_has_arg == OptionParser::eNoArgument) {
@@ -470,7 +467,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
 
       options.clear();
       for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
+        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
           // Add current option to the end of out_stream.
 
           if (!def.required &&
@@ -498,7 +495,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       // First go through and print the required options (list them up front).
 
       for (auto &def : opt_defs) {
-        if (def.usage_mask & opt_set_mask && isprint8(def.short_option)) {
+        if (def.usage_mask & opt_set_mask && def.HasShortOption()) {
           if (def.required && def.option_has_arg != OptionParser::eNoArgument)
             PrintOption(def, eDisplayBestOption, " ", nullptr, true, strm);
         }
@@ -579,7 +576,7 @@ void Options::GenerateOptionUsage(Stream &strm, CommandObject *cmd,
       arg_name_str.Printf("<%s>", CommandObject::GetArgumentName(arg_type));
 
       strm.Indent();
-      if (opt_defs[i].short_option && isprint8(opt_defs[i].short_option)) {
+      if (opt_defs[i].short_option && opt_defs[i].HasShortOption()) {
         PrintOption(opt_defs[i], eDisplayShortOption, nullptr, nullptr, false,
                     strm);
         PrintOption(opt_defs[i], eDisplayLongOption, " ( ", " )", false, strm);

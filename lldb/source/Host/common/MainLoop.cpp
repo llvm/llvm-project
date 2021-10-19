@@ -16,7 +16,7 @@
 #include <cassert>
 #include <cerrno>
 #include <csignal>
-#include <time.h>
+#include <ctime>
 #include <vector>
 
 // Multiplexing is implemented using kqueue on systems that support it (BSD
@@ -302,13 +302,15 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
   error.SetErrorString("Signal polling is not supported on this platform.");
   return nullptr;
 #else
-  if (m_signals.find(signo) != m_signals.end()) {
-    error.SetErrorStringWithFormat("Signal %d already monitored.", signo);
-    return nullptr;
+  auto signal_it = m_signals.find(signo);
+  if (signal_it != m_signals.end()) {
+    auto callback_it = signal_it->second.callbacks.insert(
+        signal_it->second.callbacks.end(), callback);
+    return SignalHandleUP(new SignalHandle(*this, signo, callback_it));
   }
 
   SignalInfo info;
-  info.callback = callback;
+  info.callbacks.push_back(callback);
   struct sigaction new_action;
   new_action.sa_sigaction = &SignalHandler;
   new_action.sa_flags = SA_SIGINFO;
@@ -338,9 +340,10 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
                         &new_action.sa_mask, &old_set);
   assert(ret == 0 && "pthread_sigmask failed");
   info.was_blocked = sigismember(&old_set, signo);
-  m_signals.insert({signo, info});
+  auto insert_ret = m_signals.insert({signo, info});
 
-  return SignalHandleUP(new SignalHandle(*this, signo));
+  return SignalHandleUP(new SignalHandle(
+      *this, signo, insert_ret.first->second.callbacks.begin()));
 #endif
 }
 
@@ -350,12 +353,18 @@ void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
   assert(erased);
 }
 
-void MainLoop::UnregisterSignal(int signo) {
+void MainLoop::UnregisterSignal(int signo,
+                                std::list<Callback>::iterator callback_it) {
 #if SIGNAL_POLLING_UNSUPPORTED
   Status("Signal polling is not supported on this platform.");
 #else
   auto it = m_signals.find(signo);
   assert(it != m_signals.end());
+
+  it->second.callbacks.erase(callback_it);
+  // Do not remove the signal handler unless all callbacks have been erased.
+  if (!it->second.callbacks.empty())
+    return;
 
   sigaction(signo, &it->second.old_action, nullptr);
 
@@ -398,8 +407,14 @@ Status MainLoop::Run() {
 
 void MainLoop::ProcessSignal(int signo) {
   auto it = m_signals.find(signo);
-  if (it != m_signals.end())
-    it->second.callback(*this); // Do the work
+  if (it != m_signals.end()) {
+    // The callback may actually register/unregister signal handlers,
+    // so we need to create a copy first.
+    llvm::SmallVector<Callback, 4> callbacks_to_run{
+        it->second.callbacks.begin(), it->second.callbacks.end()};
+    for (auto &x : callbacks_to_run)
+      x(*this); // Do the work
+  }
 }
 
 void MainLoop::ProcessReadObject(IOObject::WaitableHandle handle) {

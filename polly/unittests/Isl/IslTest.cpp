@@ -47,15 +47,7 @@ static bool operator==(const isl::space &LHS, const isl::space &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
-static bool operator==(const isl::basic_set &LHS, const isl::basic_set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
 static bool operator==(const isl::set &LHS, const isl::set &RHS) {
-  return bool(LHS.is_equal(RHS));
-}
-
-static bool operator==(const isl::basic_map &LHS, const isl::basic_map &RHS) {
   return bool(LHS.is_equal(RHS));
 }
 
@@ -144,7 +136,7 @@ TEST(Isl, APIntToIslVal) {
   {
     APInt APNOne(32, (1ull << 32) - 1, false);
     auto IslNOne = valFromAPInt(IslCtx, APNOne, false);
-    auto IslRef = isl::val(IslCtx, 32).pow2().sub_ui(1);
+    auto IslRef = isl::val(IslCtx, 32).pow2().sub(1);
     EXPECT_EQ(IslNOne, IslRef);
   }
 
@@ -231,7 +223,7 @@ TEST(Isl, IslValToAPInt) {
   }
 
   {
-    auto IslNOne = isl::val(IslCtx, 32).pow2().sub_ui(1);
+    auto IslNOne = isl::val(IslCtx, 32).pow2().sub(1);
     auto APNOne = APIntFromVal(IslNOne);
     EXPECT_EQ((1ull << 32) - 1, APNOne);
     EXPECT_EQ(33u, APNOne.getBitWidth());
@@ -240,7 +232,7 @@ TEST(Isl, IslValToAPInt) {
   {
     auto IslLargeNum = isl::val(IslCtx, 60);
     IslLargeNum = IslLargeNum.pow2();
-    IslLargeNum = IslLargeNum.sub_ui(1);
+    IslLargeNum = IslLargeNum.sub(1);
     auto APLargeNum = APIntFromVal(IslLargeNum);
     EXPECT_EQ((1ull << 60) - 1, APLargeNum);
     EXPECT_EQ(61u, APLargeNum.getBitWidth());
@@ -388,63 +380,59 @@ TEST(Isl, Foreach) {
   std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
                                                         &isl_ctx_free);
 
-  auto MapSpace = isl::space(Ctx.get(), 0, 1, 1);
-  auto TestBMap = isl::basic_map::universe(MapSpace);
-  TestBMap = TestBMap.fix_si(isl::dim::out, 0, 0);
-  TestBMap = TestBMap.fix_si(isl::dim::out, 0, 0);
-  isl::map TestMap = TestBMap;
-  isl::union_map TestUMap = TestMap;
+  isl::map TestMap{Ctx.get(), "{ [2] -> [7]; [5] -> [7] }"};
+  isl::union_map TestUMap{Ctx.get(), "{ A[i] -> [7]; B[i] -> [7] }"};
 
-  auto SetSpace = isl::space(Ctx.get(), 0, 1);
-  isl::basic_set TestBSet = isl::point(SetSpace);
-  isl::set TestSet = TestBSet;
-  isl::union_set TestUSet = TestSet;
+  isl::set TestSet{Ctx.get(), "{ [0,7]; [i,7]: i >= 2 }"};
+  isl::union_set TestUSet{Ctx.get(), "{ A[0,7]; B[i,7] }"};
+
+  isl::set Seven{Ctx.get(), "{ [7] }"};
 
   {
     auto NumBMaps = 0;
     isl::stat Stat =
         TestMap.foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
-          EXPECT_EQ(BMap, TestBMap);
+          EXPECT_EQ(BMap.range(), Seven);
           NumBMaps++;
           return isl::stat::ok();
         });
 
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumBMaps);
+    EXPECT_EQ(2, NumBMaps);
   }
 
   {
     auto NumBSets = 0;
     isl::stat Stat =
         TestSet.foreach_basic_set([&](isl::basic_set BSet) -> isl::stat {
-          EXPECT_EQ(BSet, TestBSet);
+          EXPECT_EQ(BSet.project_out(isl::dim::set, 0, 1), Seven);
           NumBSets++;
           return isl::stat::ok();
         });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumBSets);
+    EXPECT_EQ(2, NumBSets);
   }
 
   {
     auto NumMaps = 0;
     isl::stat Stat = TestUMap.foreach_map([&](isl::map Map) -> isl::stat {
-      EXPECT_EQ(Map, TestMap);
+      EXPECT_EQ(Map.range(), Seven);
       NumMaps++;
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumMaps);
+    EXPECT_EQ(2, NumMaps);
   }
 
   {
     auto NumSets = 0;
     isl::stat Stat = TestUSet.foreach_set([&](isl::set Set) -> isl::stat {
-      EXPECT_EQ(Set, TestSet);
+      EXPECT_EQ(Set.project_out(isl::dim::set, 0, 1), Seven);
       NumSets++;
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumSets);
+    EXPECT_EQ(2, NumSets);
   }
 
   {
@@ -456,14 +444,14 @@ TEST(Isl, Foreach) {
       return isl::stat::ok();
     });
     EXPECT_TRUE(Stat.is_ok());
-    EXPECT_EQ(1, NumPwAffs);
+    EXPECT_EQ(2, NumPwAffs);
   }
 
   {
     auto NumBMaps = 0;
     EXPECT_TRUE(TestMap
                     .foreach_basic_map([&](isl::basic_map BMap) -> isl::stat {
-                      EXPECT_EQ(BMap, TestBMap);
+                      EXPECT_EQ(BMap.range(), Seven);
                       NumBMaps++;
                       return isl::stat::error();
                     })
@@ -475,7 +463,7 @@ TEST(Isl, Foreach) {
     auto NumMaps = 0;
     EXPECT_TRUE(TestUMap
                     .foreach_map([&](isl::map Map) -> isl::stat {
-                      EXPECT_EQ(Map, TestMap);
+                      EXPECT_EQ(Map.range(), Seven);
                       NumMaps++;
                       return isl::stat::error();
                     })
@@ -656,16 +644,16 @@ TEST(ISLTools, getNumScatterDims) {
                                                         &isl_ctx_free);
 
   // Basic usage
-  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ [] -> [] }")));
-  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ [] -> [i] }")));
-  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ [] -> [i,j] }")));
-  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ [] -> [i,j,k] }")));
+  EXPECT_EQ(0, getNumScatterDims(UMAP("{ [] -> [] }")));
+  EXPECT_EQ(1, getNumScatterDims(UMAP("{ [] -> [i] }")));
+  EXPECT_EQ(2, getNumScatterDims(UMAP("{ [] -> [i,j] }")));
+  EXPECT_EQ(3, getNumScatterDims(UMAP("{ [] -> [i,j,k] }")));
 
   // Different scatter spaces
-  EXPECT_EQ(0u, getNumScatterDims(UMAP("{ A[] -> []; [] -> []}")));
-  EXPECT_EQ(1u, getNumScatterDims(UMAP("{ A[] -> []; [] -> [i] }")));
-  EXPECT_EQ(2u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
-  EXPECT_EQ(3u, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
+  EXPECT_EQ(0, getNumScatterDims(UMAP("{ A[] -> []; [] -> []}")));
+  EXPECT_EQ(1, getNumScatterDims(UMAP("{ A[] -> []; [] -> [i] }")));
+  EXPECT_EQ(2, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j] }")));
+  EXPECT_EQ(3, getNumScatterDims(UMAP("{ A[] -> [i]; [] -> [i,j,k] }")));
 }
 
 TEST(ISLTools, getScatterSpace) {
@@ -1117,4 +1105,77 @@ TEST(DeLICM, apply) {
                 UMAP("{ DomainRangeA[] -> NewDomainRangeA[];"
                      "DomainRangeB[] -> NewDomainRangeB[] }")));
 }
+
+TEST(Isl, Quota) {
+  std::unique_ptr<isl_ctx, decltype(&isl_ctx_free)> Ctx(isl_ctx_alloc(),
+                                                        &isl_ctx_free);
+
+  isl::set TestSet1{Ctx.get(), "{ [0] }"};
+  isl::set TestSet2{Ctx.get(), "{ [i] : i > 0 }"};
+
+  {
+    IslMaxOperationsGuard MaxOpGuard(Ctx.get(), 1);
+    ASSERT_EQ(isl_options_get_on_error(Ctx.get()), ISL_ON_ERROR_CONTINUE);
+    ASSERT_EQ(isl_ctx_get_max_operations(Ctx.get()), 1ul);
+    ASSERT_FALSE(MaxOpGuard.hasQuotaExceeded());
+
+    // Intentionally exceed the quota. Each allocation will use at least one
+    // operation, guaranteed to exceed the max_operations of 1.
+    isl::id::alloc(Ctx.get(), "A", nullptr);
+    isl::id::alloc(Ctx.get(), "B", nullptr);
+    ASSERT_TRUE(MaxOpGuard.hasQuotaExceeded());
+
+    // Check returned object after exceeded quota.
+    isl::set Union = TestSet1.unite(TestSet2);
+    EXPECT_TRUE(Union.is_null());
+
+    // Check isl::boolean result after exceeded quota.
+    isl::boolean BoolResult = TestSet1.is_empty();
+    EXPECT_TRUE(BoolResult.is_error());
+    EXPECT_FALSE(BoolResult.is_false());
+    EXPECT_FALSE(BoolResult.is_true());
+    EXPECT_DEATH((void)(bool)BoolResult,
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((void)(bool)!BoolResult,
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH(
+        {
+          if (BoolResult) {
+          }
+        },
+        "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((void)(BoolResult == false),
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+    EXPECT_DEATH((void)(BoolResult == true),
+                 "IMPLEMENTATION ERROR: Unhandled error state");
+
+    // Check isl::stat result after exceeded quota.
+    isl::stat StatResult =
+        TestSet1.foreach_point([](isl::point) { return isl::stat::ok(); });
+    EXPECT_TRUE(StatResult.is_error());
+    EXPECT_FALSE(StatResult.is_ok());
+  }
+  ASSERT_EQ(isl_ctx_last_error(Ctx.get()), isl_error_quota);
+  ASSERT_EQ(isl_options_get_on_error(Ctx.get()), ISL_ON_ERROR_WARN);
+  ASSERT_EQ(isl_ctx_get_max_operations(Ctx.get()), 0ul);
+
+  // Operations must work again after leaving the quota scope.
+  {
+    isl::set Union = TestSet1.unite(TestSet2);
+    EXPECT_FALSE(Union.is_null());
+
+    isl::boolean BoolResult = TestSet1.is_empty();
+    EXPECT_FALSE(BoolResult.is_error());
+    EXPECT_TRUE(BoolResult.is_false());
+    EXPECT_FALSE(BoolResult.is_true());
+    EXPECT_FALSE(BoolResult);
+    EXPECT_TRUE(!BoolResult);
+
+    isl::stat StatResult =
+        TestSet1.foreach_point([](isl::point) { return isl::stat::ok(); });
+    EXPECT_FALSE(StatResult.is_error());
+    EXPECT_TRUE(StatResult.is_ok());
+  }
+}
+
 } // anonymous namespace

@@ -27,8 +27,6 @@
 
 #include "test_macros.h"
 
-#include <iostream>
-
 int main(int, char**)
 {
     using year       = std::chrono::year;
@@ -79,7 +77,6 @@ int main(int, char**)
         for (int j = 1; j <= 12; ++j)
     {
         months diff = year_month{y, month(i)} - year_month{y, month(j)};
-        std::cout << "i: " << i << " j: " << j << " -> " << diff.count() << std::endl;
         assert(diff.count() == i - j);
     }
 

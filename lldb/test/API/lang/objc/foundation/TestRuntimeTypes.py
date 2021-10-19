@@ -10,7 +10,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
 class RuntimeTypesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -19,12 +18,8 @@ class RuntimeTypesTestCase(TestBase):
         oslist=["macosx"],
         debug_info="gmodules",
         bugnumber="llvm.org/pr27862")
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_break(self):
         """Test setting objc breakpoints using '_regexp-break' and 'breakpoint set'."""
-        if self.getArchitecture() != 'x86_64':
-            self.skipTest("This only applies to the v2 runtime")
-
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Error tests for structure constructors.
 ! Errors caught by name resolution are tested elsewhere; these are the
 ! errors meant to be caught by expression semantic analysis, as well as

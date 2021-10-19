@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 class TestTailCallFrameSBAPI(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @skipIf(dwarf_version=['<', '4'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_tail_call_frame_sbapi(self):
@@ -61,5 +61,5 @@ class TestTailCallFrameSBAPI(TestBase):
             # platform-dependent. E.g we see "void sink(void)" on Windows, but
             # "sink()" on Darwin. This seems like a bug -- just work around it
             # for now.
-            self.assertTrue(name in frame.GetDisplayFunctionName())
+            self.assertIn(name, frame.GetDisplayFunctionName())
             self.assertEqual(frame.IsArtificial(), is_artificial)

@@ -12,7 +12,7 @@ char w[__builtin_constant_p(expr) ? expr : 1];
 char v[sizeof(__builtin_constant_p(0)) == sizeof(int) ? 1 : -1];
 
 int implicitConversion = 1.0;
-char floatArith[(int)(1.0+2.0)]; // expected-warning {{must be an integer constant expression}}
+char floatArith[(int)(1.0+2.0)]; // expected-warning {{variable length array folded to constant array as an extension}}
 
 // __builtin_constant_p as the condition of ?: allows arbitrary foldable
 // constants to be transmogrified into i-c-e's.
@@ -25,7 +25,23 @@ struct c {
            ) : -1);
 };
 
+// Check that we can evaluate statement-expressions properly when
+// constant-folding inside an ICE.
+void PR49239() {
+  goto check_not_vla;
+  char not_vla[__builtin_constant_p(1) ? ({ 42; }) : -1]; // expected-warning {{statement expression}}
+check_not_vla:;
+  _Static_assert(sizeof(not_vla) == 42, ""); // expected-warning {{C11 extension}}
 
+  // It's not clear that this should be valid: __builtin_expect(expr1, expr2)
+  // should probably be an ICE if and only if expr1 is an ICE, but we roughly
+  // follow GCC in treating it as an ICE if and only if we can evaluate expr1
+  // regardless of whether it's an ICE.
+  goto check_also_not_vla;
+  char also_not_vla[__builtin_expect(({ 76; }), 0)]; // expected-warning {{statement expression}}
+check_also_not_vla:;
+  _Static_assert(sizeof(also_not_vla) == 76, ""); // expected-warning {{C11 extension}}
+}
 
 
 void test1(int n, int* p) { *(n ? p : (void *)(7-7)) = 1; }
@@ -54,10 +70,12 @@ char y[__builtin_constant_p(expr) ? -1 : 1];
 char z[__builtin_constant_p(4) ? 1 : -1];
 
 // Comma tests
-int comma1[0?1,2:3];
-int comma2[1||(1,2)]; // expected-warning {{use of logical '||' with constant operand}} \
-                      // expected-note {{use '|' for a bitwise operation}}
-int comma3[(1,2)]; // expected-warning {{size of static array must be an integer constant expression}}
+int comma1[0?1,2:3]; // expected-warning {{left operand of comma operator has no effect}}
+int comma2[1 || (1, 2)]; // expected-warning {{use of logical '||' with constant operand}} \
+                      // expected-note {{use '|' for a bitwise operation}} \
+                      // expected-warning {{left operand of comma operator has no effect}}
+int comma3[(1, 2)];   // expected-warning {{variable length array folded to constant array as an extension}} \
+                      // expected-warning {{left operand of comma operator has no effect}}
 
 // Pointer + __builtin_constant_p
 char pbcp[__builtin_constant_p(4) ? (intptr_t)&expr : 0]; // expected-error {{variable length array declaration not allowed at file scope}}

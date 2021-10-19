@@ -1,6 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  Core
-  MC
   Support
   )
 
@@ -10,7 +8,7 @@ find_first_existing_vc_file("${CLANG_SOURCE_DIR}" clang_vc)
 # The VC revision include that we want to generate.
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
 
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(llvm_vc AND LLVM_APPEND_VC_REV)
   set(llvm_source_dir ${LLVM_MAIN_SRC_DIR})
@@ -33,19 +31,24 @@ set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
 
-set_property(SOURCE Version.cpp APPEND PROPERTY
-             COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
+if(CLANG_VENDOR)
+  set_source_files_properties(Version.cpp
+    PROPERTIES COMPILE_DEFINITIONS "CLANG_VENDOR=\"${CLANG_VENDOR} \"")
+endif()
 
 add_clang_library(clangBasic
   Attributes.cpp
   Builtins.cpp
+  CLWarnings.cpp
   CharInfo.cpp
   CodeGenOptions.cpp
   Cuda.cpp
+  DarwinSDKInfo.cpp
   Diagnostic.cpp
   DiagnosticIDs.cpp
   DiagnosticOptions.cpp
   ExpressionTraits.cpp
+  FileEntry.cpp
   FileManager.cpp
   FileSystemStatCache.cpp
   IdentifierTable.cpp
@@ -53,9 +56,11 @@ add_clang_library(clangBasic
   LangStandards.cpp
   Module.cpp
   ObjCRuntime.cpp
+  OpenCLOptions.cpp
   OpenMPKinds.cpp
   OperatorPrecedence.cpp
-  SanitizerBlacklist.cpp
+  ProfileList.cpp
+  NoSanitizeList.cpp
   SanitizerSpecialCaseList.cpp
   Sanitizers.cpp
   SourceLocation.cpp
@@ -73,6 +78,7 @@ add_clang_library(clangBasic
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
   Targets/Le64.cpp
+  Targets/M68k.cpp
   Targets/MSP430.cpp
   Targets/Mips.cpp
   Targets/NVPTX.cpp

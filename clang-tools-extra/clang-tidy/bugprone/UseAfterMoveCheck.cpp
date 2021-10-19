@@ -256,7 +256,7 @@ void UseAfterMoveFinder::getDeclRefs(
     if (!S)
       continue;
 
-    auto addDeclRefs = [this, Block,
+    auto AddDeclRefs = [this, Block,
                         DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
@@ -275,10 +275,9 @@ void UseAfterMoveFinder::getDeclRefs(
                                       unless(inDecltypeOrTemplateArg()))
                               .bind("declref");
 
-    addDeclRefs(
-        match(traverse(ast_type_traits::TK_AsIs, findAll(DeclRefMatcher)),
-              *S->getStmt(), *Context));
-    addDeclRefs(match(findAll(cxxOperatorCallExpr(
+    AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
+                      *Context));
+    AddDeclRefs(match(findAll(cxxOperatorCallExpr(
                                   hasAnyOverloadedOperatorName("*", "->", "[]"),
                                   hasArgument(0, DeclRefMatcher))
                                   .bind("operator")),
@@ -311,9 +310,7 @@ void UseAfterMoveFinder::getReinits(
                // Assignment. In addition to the overloaded assignment operator,
                // test for built-in assignment as well, since template functions
                // may be instantiated to use std::move() on built-in types.
-               binaryOperator(hasOperatorName("="), hasLHS(DeclRefMatcher)),
-               cxxOperatorCallExpr(hasOverloadedOperatorName("="),
-                                   hasArgument(0, DeclRefMatcher)),
+               binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
                // Declaration. We treat this as a type of reinitialization too,
                // so we don't need to treat it separately.
                declStmt(hasDescendant(equalsNode(MovedVariable))),
@@ -342,7 +339,7 @@ void UseAfterMoveFinder::getReinits(
                // Passing variable to a function as a non-const lvalue reference
                // (unless that function is std::move()).
                callExpr(forEachArgumentWithParam(
-                            traverse(ast_type_traits::TK_AsIs, DeclRefMatcher),
+                            traverse(TK_AsIs, DeclRefMatcher),
                             unless(parmVarDecl(hasType(
                                 references(qualType(isConstQualified())))))),
                         unless(callee(functionDecl(hasName("::std::move")))))))
@@ -401,12 +398,18 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                hasArgument(0, declRefExpr().bind("arg")),
                anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
                      hasAncestor(functionDecl().bind("containing-func"))),
-               unless(inDecltypeOrTemplateArg()))
+               unless(inDecltypeOrTemplateArg()),
+               // try_emplace is a common maybe-moving function that returns a
+               // bool to tell callers whether it moved. Ignore std::move inside
+               // try_emplace to avoid false positives as we don't track uses of
+               // the bool.
+               unless(hasParent(cxxMemberCallExpr(
+                   callee(cxxMethodDecl(hasName("try_emplace")))))))
           .bind("call-move");
 
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           // To find the Stmt that we assume performs the actual move, we look
           // for the direct ancestor of the std::move() that isn't one of the
           // node types ignored by ignoringParenImpCasts().
@@ -449,9 +452,9 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Arg->getDecl()->getDeclContext()->isFunctionOrMethod())
     return;
 
-  UseAfterMoveFinder finder(Result.Context);
+  UseAfterMoveFinder Finder(Result.Context);
   UseAfterMove Use;
-  if (finder.find(FunctionBody, MovingCall, Arg->getDecl(), &Use))
+  if (Finder.find(FunctionBody, MovingCall, Arg->getDecl(), &Use))
     emitDiagnostic(MovingCall, Arg, Use, this, Result.Context);
 }
 

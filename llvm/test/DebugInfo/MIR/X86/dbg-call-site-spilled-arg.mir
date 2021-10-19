@@ -157,11 +157,11 @@ body:             |
     CFI_INSTRUCTION offset $r13, -40
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
-    MOV32mr $rbp, 1, $noreg, -44, $noreg, $edi :: (store 4 into %stack.0)
+    MOV32mr $rbp, 1, $noreg, -44, $noreg, $edi :: (store (s32) into %stack.0)
     DBG_VALUE $rbp, 0, !15, !DIExpression(DW_OP_constu, 44, DW_OP_minus), debug-location !16
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !18, debug-location !17
     DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16
-    $edi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load 4 from %stack.0)
+    $edi = MOV32rm $rbp, 1, $noreg, -44, $noreg :: (load (s32) from %stack.0)
     DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !16
     CALL64pcrel32 @_Z6calleei, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !19
     DBG_VALUE $edi, $noreg, !15, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !16

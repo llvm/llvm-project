@@ -12,4 +12,4 @@ class BuildError(Exception):
     @staticmethod
     def format_build_error(command, command_output):
         return "Error when building test subject.\n\nBuild Command:\n{}\n\nBuild Command Output:\n{}".format(
-            command, command_output.decode("utf-8"))
+            command, command_output.decode("utf-8", errors='ignore'))

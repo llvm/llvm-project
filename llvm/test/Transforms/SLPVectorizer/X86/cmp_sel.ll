@@ -13,7 +13,7 @@ define i32 @foo(double* noalias nocapture %A, double* noalias nocapture %B, doub
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <2 x double> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[G:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[G:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[G]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x double> [[TMP4]], <2 x double> <double 1.000000e+00, double 1.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*

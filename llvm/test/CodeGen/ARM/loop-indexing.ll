@@ -1,9 +1,23 @@
-; RUN: llc --mtriple=thumbv7em -mattr=+fp-armv8 -O3 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -O3 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-backedge-indexing=false %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
+; RUN: llc --mtriple=thumbv7em -mattr=+fp-armv8 -O3 %s -o - | \
+; RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
+
+; RUN: llc --mtriple=thumbv7em -mattr=+fp-armv8 -O3 -lsr-preferred-addressing-mode=none %s -o - | \
+; RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -O3 %s -o - | \
+; RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT --check-prefix=CHECK-T2
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-preferred-addressing-mode=postindexed %s -o - | \
+; RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-preferred-addressing-mode=preindexed %s -o - | \
+; RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-T2
+
 ; RUN: llc -mtriple=thumbv8m.base %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
 ; RUN: llc -mtriple=thumbv8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -O3 -lsr-complexity-limit=2147483647 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-COMPLEX --check-prefix=CHECK-T2
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -O3 -lsr-complexity-limit=2147483647 %s -o - | \
+; RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-COMPLEX --check-prefix=CHECK-T2
 
 ; Tests to check that post increment addressing modes are used instead of
 ; updating base pointers with add instructions.

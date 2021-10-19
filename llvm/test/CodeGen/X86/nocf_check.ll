@@ -10,6 +10,7 @@
 ;; void NoCfCheckCall(FuncPointer f) {                                       ;;
 ;;   __attribute__((nocf_check)) FuncPointer p = f;                          ;;
 ;;   (*p)();                                                                 ;;
+;;   NoCfCheckFunc();                                                        ;;
 ;; }                                                                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -23,10 +24,13 @@ entry:
   ret void
 }
 
-; Make sure that notrack prefix is added before a call with ''nocf_check'' attribute.
-define void @NoCfCheckCall(void ()* %f) {
+; Ensure the notrack prefix is added before an indirect call using a pointer
+; with ''nocf_check'' attribute. Also ensure a direct call to a function with
+; the ''nocf_check'' attribute is correctly generated without notrack prefix.
+define void @NoCfCheckCall(void ()* %f) #1 {
 ; CHECK-LABEL: NoCfCheckCall
 ; CHECK:       notrack call
+; CHECK:       callq NoCfCheckFunc
 entry:
   %f.addr = alloca void ()*, align 4
   %p = alloca void ()*, align 4
@@ -34,12 +38,14 @@ entry:
   %0 = load void ()*, void ()** %f.addr, align 4
   store void ()* %0, void ()** %p, align 4
   %1 = load void ()*, void ()** %p, align 4
-  call void %1() #1
+  call void %1() #2
+	call void @NoCfCheckFunc() #2
   ret void
 }
 
-attributes #0 = { noinline nocf_check nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nocf_check }
+attributes #0 = { nocf_check noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nocf_check }
 
 !llvm.module.flags = !{!0}
 

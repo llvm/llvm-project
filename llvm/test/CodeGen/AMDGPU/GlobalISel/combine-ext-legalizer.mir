@@ -9,8 +9,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_trunc_i64_i32_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY1]], 32
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
     ; CHECK: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_TRUNC %0
@@ -27,8 +26,7 @@ body: |
     ; CHECK-LABEL: name: test_zext_trunc_i64_i32_i64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
     ; CHECK: $vgpr0_vgpr1 = COPY [[AND]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_TRUNC %0

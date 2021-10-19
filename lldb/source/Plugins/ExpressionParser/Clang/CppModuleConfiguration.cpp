@@ -38,9 +38,11 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f) {
 
   // Check for /c++/vX/ that is used by libc++.
   static llvm::Regex libcpp_regex(R"regex(/c[+][+]/v[0-9]/)regex");
-  if (libcpp_regex.match(f.GetPath())) {
-    // Strip away libc++'s /experimental directory if there is one.
-    posix_dir.consume_back("/experimental");
+  // If the path is in the libc++ include directory use it as the found libc++
+  // path. Ignore subdirectories such as /c++/v1/experimental as those don't
+  // need to be specified in the header search.
+  if (libcpp_regex.match(f.GetPath()) &&
+      parent_path(posix_dir, Style::posix).endswith("c++")) {
     return m_std_inc.TrySet(posix_dir);
   }
 
@@ -55,9 +57,38 @@ bool CppModuleConfiguration::analyzeFile(const FileSpec &f) {
   return true;
 }
 
+/// Utility function for just appending two paths.
+static std::string MakePath(llvm::StringRef lhs, llvm::StringRef rhs) {
+  llvm::SmallString<256> result(lhs);
+  llvm::sys::path::append(result, rhs);
+  return std::string(result);
+}
+
 bool CppModuleConfiguration::hasValidConfig() {
-  // We all these include directories to have a valid usable configuration.
-  return m_c_inc.Valid() && m_std_inc.Valid();
+  // We need to have a C and C++ include dir for a valid configuration.
+  if (!m_c_inc.Valid() || !m_std_inc.Valid())
+    return false;
+
+  // Do some basic sanity checks on the directories that we don't activate
+  // the module when it's clear that it's not usable.
+  const std::vector<std::string> files_to_check = {
+      // * Check that the C library contains at least one random C standard
+      //   library header.
+      MakePath(m_c_inc.Get(), "stdio.h"),
+      // * Without a libc++ modulemap file we can't have a 'std' module that
+      //   could be imported.
+      MakePath(m_std_inc.Get(), "module.modulemap"),
+      // * Check for a random libc++ header (vector in this case) that has to
+      //   exist in a working libc++ setup.
+      MakePath(m_std_inc.Get(), "vector"),
+  };
+
+  for (llvm::StringRef file_to_check : files_to_check) {
+    if (!FileSystem::Instance().Exists(file_to_check))
+      return false;
+  }
+
+  return true;
 }
 
 CppModuleConfiguration::CppModuleConfiguration(
@@ -76,7 +107,8 @@ CppModuleConfiguration::CppModuleConfiguration(
     m_resource_inc = std::string(resource_dir.str());
 
     // This order matches the way Clang orders these directories.
-    m_include_dirs = {m_std_inc.Get(), m_resource_inc, m_c_inc.Get()};
+    m_include_dirs = {m_std_inc.Get().str(), m_resource_inc,
+                      m_c_inc.Get().str()};
     m_imported_modules = {"std"};
   }
 }

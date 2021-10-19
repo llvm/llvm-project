@@ -185,7 +185,7 @@ main()
     for (int32_t mode = 0; mode < 2; ++mode)
     {
         inclusive = mode != 0;
-#if !_PSTL_ICC_19_TEST_SIMD_UDS_WINDOWS_RELEASE_BROKEN
+#if !defined(_PSTL_ICC_19_TEST_SIMD_UDS_WINDOWS_RELEASE_BROKEN)
         // Test with highly restricted type and associative but not commutative operation
         test_matrix<Matrix2x2<int32_t>, Matrix2x2<int32_t>>(Matrix2x2<int32_t>(), multiply_matrix<int32_t>,
                                                             Matrix2x2<int32_t>(-666, 666));

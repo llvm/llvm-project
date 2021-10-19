@@ -26,14 +26,12 @@
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 # USE_PRIVATE_MODULE_CACHE := YES
-#
-# And test/functionalities/archives/Makefile:
-# MAKE_DSYM := NO
-# ARCHIVE_NAME := libfoo.a
-# ARCHIVE_C_SOURCES := a.c b.c
 
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
+
+# Suppress built-in suffix rules. We explicitly define rules for %.o.
+.SUFFIXES:
 
 SRCDIR := $(shell dirname $(firstword $(MAKEFILE_LIST)))
 BUILDDIR := $(shell pwd)
@@ -56,12 +54,12 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
-HOST_OS = $(shell uname -s)
+HOST_OS := $(shell uname -s)
 ifneq (,$(findstring windows32,$(HOST_OS)))
-	HOST_OS = Windows_NT
+	HOST_OS := Windows_NT
 endif
 ifeq "$(OS)" ""
-	OS = $(HOST_OS)
+	OS := $(HOST_OS)
 endif
 
 #----------------------------------------------------------------------
@@ -281,11 +279,6 @@ CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS) $(CXXFLAGS_EXTRAS)
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
-ifneq (,$(LLVM_LIBS_DIR))
-	ifeq ($(OS),NetBSD)
-		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LLVM_LIBS_DIR)
-	endif
-endif
 ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
 		LDFLAGS += -pthread
@@ -395,20 +388,17 @@ endif
 
 ifeq (1,$(USE_LIBCPP))
 	CXXFLAGS += -DLLDB_USING_LIBCPP
-	ifeq "$(OS)" "Linux"
-		ifneq (,$(findstring clang,$(CC)))
-			CXXFLAGS += -stdlib=libc++
-			LDFLAGS += -stdlib=libc++
-		else
-			CXXFLAGS += -isystem /usr/include/c++/v1
-			LDFLAGS += -lc++
-		endif
-	else ifeq "$(OS)" "Android"
+	ifeq "$(OS)" "Android"
 		# Nothing to do, this is already handled in
 		# Android.rules.
 	else
 		CXXFLAGS += -stdlib=libc++
 		LDFLAGS += -stdlib=libc++
+	endif
+	ifneq (,$(filter $(OS), FreeBSD Linux NetBSD))
+		ifneq (,$(LLVM_LIBS_DIR))
+			LDFLAGS += -Wl,-rpath,$(LLVM_LIBS_DIR)
+		endif
 	endif
 endif
 
@@ -477,56 +467,6 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	endif
 endif
 
-#----------------------------------------------------------------------
-# Check if we have any C source files for archive
-#----------------------------------------------------------------------
-ifneq "$(strip $(ARCHIVE_C_SOURCES))" ""
-	ARCHIVE_OBJECTS +=$(strip $(ARCHIVE_C_SOURCES:.c=.o))
-endif
-
-#----------------------------------------------------------------------
-# Check if we have any C++ source files for archive
-#----------------------------------------------------------------------
-ifneq "$(strip $(ARCHIVE_CXX_SOURCES))" ""
-	ARCHIVE_OBJECTS +=$(strip $(ARCHIVE_CXX_SOURCES:.cpp=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
-endif
-
-#----------------------------------------------------------------------
-# Check if we have any ObjC source files for archive
-#----------------------------------------------------------------------
-ifneq "$(strip $(ARCHIVE_OBJC_SOURCES))" ""
-	ARCHIVE_OBJECTS +=$(strip $(ARCHIVE_OBJC_SOURCES:.m=.o))
-	LDFLAGS +=-lobjc
-endif
-
-#----------------------------------------------------------------------
-# Check if we have any ObjC++ source files for archive
-#----------------------------------------------------------------------
-ifneq "$(strip $(ARCHIVE_OBJCXX_SOURCES))" ""
-	ARCHIVE_OBJECTS +=$(strip $(ARCHIVE_OBJCXX_SOURCES:.mm=.o))
-	CXX = $(call cxx_compiler,$(CC))
-	LD = $(call cxx_linker,$(CC))
-	ifeq "$(findstring lobjc,$(LDFLAGS))" ""
-		LDFLAGS +=-lobjc
-	endif
-endif
-
-#----------------------------------------------------------------------
-# Check if we are compiling with gcc 4.6
-#----------------------------------------------------------------------
-ifneq "$(strip $(CXX_SOURCES) $(OBJCXX_SOURCES))" ""
-ifneq "$(filter g++,$(CXX))" ""
-	CXXVERSION = $(shell $(CXX) -dumpversion | cut -b 1-3)
-	ifeq "$(CXXVERSION)" "4.6"
-		# GCC 4.6 cannot handle -std=c++11, so replace it with -std=c++0x
-		# instead. FIXME: remove once GCC version is upgraded.
-		override CXXFLAGS := $(subst -std=c++11,-std=c++0x,$(CXXFLAGS))
-	endif
-endif
-endif
-
 ifeq ($(findstring clang, $(CXX)), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
@@ -548,8 +488,8 @@ endif
 #----------------------------------------------------------------------
 ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
-$(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
-	$(LD) $(OBJECTS) $(ARCHIVE_NAME) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
+$(EXE) : $(OBJECTS) $(DYLIB_FILENAME)
+	$(LD) $(OBJECTS) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -557,8 +497,8 @@ else
 EXE = $(DYLIB_FILENAME)
 endif
 else
-$(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
-	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+$(EXE) : $(OBJECTS)
+	$(LD) $(OBJECTS) $(LDFLAGS) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -577,19 +517,6 @@ else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(EXE)" "$(DSYM)"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DSYM)" "$(EXE)" "$(EXE)"
-endif
-endif
-
-#----------------------------------------------------------------------
-# Make the archive
-#----------------------------------------------------------------------
-ifneq "$(ARCHIVE_NAME)" ""
-ifeq "$(OS)" "Darwin"
-$(ARCHIVE_NAME) : $(ARCHIVE_OBJECTS)
-	$(AR) $(ARFLAGS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS)
-	$(RM) $(ARCHIVE_OBJECTS)
-else
-$(ARCHIVE_NAME) : $(foreach ar_obj,$(ARCHIVE_OBJECTS),$(ARCHIVE_NAME)($(ar_obj)))
 endif
 endif
 
@@ -642,12 +569,22 @@ endif
 # Make the precompiled header and compile C++ sources against it
 #----------------------------------------------------------------------
 
-#ifneq "$(PCH_OUTPUT)" ""
+ifneq "$(PCH_OUTPUT)" ""
 $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
 	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
-%.o : %.cpp $(PCH_OUTPUT)
-	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -c -o $@ $<
-#endif
+endif
+
+%.o: %.c %.d
+	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+
+%.o: %.cpp %.d $(PCH_OUTPUT)
+	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+
+%.o: %.m %.d
+	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+
+%.o: %.mm %.d
+	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create
@@ -656,42 +593,20 @@ $(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
 # files by replacing all .c files with .d.
 #----------------------------------------------------------------------
 PREREQS := $(OBJECTS:.o=.d)
-DWOS := $(OBJECTS:.o=.dwo) $(ARCHIVE_OBJECTS:.o=.dwo)
+DWOS := $(OBJECTS:.o=.dwo)
 ifneq "$(DYLIB_NAME)" ""
 	DYLIB_PREREQS := $(DYLIB_OBJECTS:.o=.d)
 	DYLIB_DWOS := $(DYLIB_OBJECTS:.o=.dwo)
 endif
 
-#----------------------------------------------------------------------
-# Rule for Generating Prerequisites Automatically using .d files and
-# the compiler -MM option. The -M option will list all system headers,
-# and the -MM option will list all non-system dependencies.
-#----------------------------------------------------------------------
-%.d: %.c
-	$(CC) -M $(CFLAGS) $< -MF $@ -MT $@ -MT $*.o
-
-%.d: %.cpp
-	@$(CXX) -M $(CXXFLAGS) $< -MF $@ -MT $@ -MT $*.o
-
-%.d: %.m
-	@$(CC) -M $(CFLAGS) $< -MF $@ -MT $@ -MT $*.o
-
-%.d: %.mm
-	@$(CXX) -M $(CXXFLAGS) $< -MF $@ -MT $@ -MT $*.o
+# Don't error if a .d file is deleted.
+$(PREREQS) $(DYLIB_PREREQS): ;
 
 #----------------------------------------------------------------------
 # Include all of the makefiles for each source file so we don't have
 # to manually track all of the prerequisites for each source file.
 #----------------------------------------------------------------------
-sinclude $(PREREQS)
-ifneq "$(DYLIB_NAME)" ""
-	sinclude $(DYLIB_PREREQS)
-endif
-
-# Define a suffix rule for .mm -> .o
-.SUFFIXES: .mm .o
-.mm.o:
-	$(CXX) $(CXXFLAGS) -c $<
+include $(wildcard $(PREREQS) $(DYLIB_PREREQS))
 
 .PHONY: clean
 dsym:	$(DSYM)

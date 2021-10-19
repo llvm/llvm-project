@@ -30,7 +30,7 @@ void NORETURN Die() {
   internal__exit(common_flags()->exitcode);
 }
 
-void SetCheckFailedCallback(CheckFailedCallbackType callback) {}
+void SetCheckUnwindCallback(void (*callback)()) {}
 
 void NORETURN CheckFailed(const char *File, int Line, const char *Condition,
                           u64 Value1, u64 Value2) {

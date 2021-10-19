@@ -120,7 +120,7 @@ namespace Builtins {
   extern "C" int strncmp(const char *, const char *, decltype(sizeof(0))) noexcept;
 
   // Check we recognized both as builtins.
-  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)];
+  typedef int arr[strcmp("bar", "foo") + 4 * strncmp("foo", "bar", 4)]; // expected-warning {{variable length array}}
   typedef int arr[3];
 }
 

@@ -40,8 +40,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_s16_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s32) = G_ANYEXT %1
@@ -56,8 +55,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_s24_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s24) = G_TRUNC %0
     %2:_(s32) = G_ANYEXT %1
@@ -101,9 +99,7 @@ body: |
     ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s32>) = G_ANYEXT %0
@@ -126,11 +122,7 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST]](s32), [[LSHR]](s32), [[BITCAST1]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<3 x s16>) = G_EXTRACT %0, 0
@@ -250,8 +242,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_s7_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[COPY1]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s7) = G_TRUNC %0
     %2:_(s32) = G_ANYEXT %1
@@ -266,8 +257,7 @@ body: |
 
     ; CHECK-LABEL: name: test_anyext_s8_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: S_ENDPGM 0, implicit [[COPY1]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
     %2:_(s32) = G_ANYEXT %1
@@ -633,10 +623,8 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C1]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
     ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
     ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
@@ -660,8 +648,7 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: test_anyext_s112_to_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY [[COPY]](s128)
-    ; CHECK: S_ENDPGM 0, implicit [[COPY1]](s128)
+    ; CHECK: S_ENDPGM 0, implicit [[COPY]](s128)
     %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s112) = G_TRUNC %0
     %2:_(s128) = G_ANYEXT %1

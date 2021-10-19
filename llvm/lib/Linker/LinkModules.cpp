@@ -24,6 +24,8 @@ using namespace llvm;
 
 namespace {
 
+enum class LinkFrom { Dst, Src, Both };
+
 /// This is an implementation class for the LinkModules function, which is the
 /// entrypoint for this file.
 class ModuleLinker {
@@ -67,11 +69,11 @@ class ModuleLinker {
                                      Comdat::SelectionKind Src,
                                      Comdat::SelectionKind Dst,
                                      Comdat::SelectionKind &Result,
-                                     bool &LinkFromSrc);
-  std::map<const Comdat *, std::pair<Comdat::SelectionKind, bool>>
+                                     LinkFrom &From);
+  DenseMap<const Comdat *, std::pair<Comdat::SelectionKind, LinkFrom>>
       ComdatsChosen;
   bool getComdatResult(const Comdat *SrcC, Comdat::SelectionKind &SK,
-                       bool &LinkFromSrc);
+                       LinkFrom &From);
   // Keep track of the lazy linked global members of each comdat in source.
   DenseMap<const Comdat *, std::vector<GlobalValue *>> LazyComdatMembers;
 
@@ -103,7 +105,7 @@ class ModuleLinker {
   void dropReplacedComdat(GlobalValue &GV,
                           const DenseSet<const Comdat *> &ReplacedDstComdats);
 
-  bool linkIfNeeded(GlobalValue &GV);
+  bool linkIfNeeded(GlobalValue &GV, SmallVectorImpl<GlobalValue *> &GVToClone);
 
 public:
   ModuleLinker(IRMover &Mover, std::unique_ptr<Module> SrcM, unsigned Flags,
@@ -114,7 +116,7 @@ public:
 
   bool run();
 };
-}
+} // namespace
 
 static GlobalValue::VisibilityTypes
 getMinVisibility(GlobalValue::VisibilityTypes A,
@@ -131,7 +133,7 @@ bool ModuleLinker::getComdatLeader(Module &M, StringRef ComdatName,
                                    const GlobalVariable *&GVar) {
   const GlobalValue *GVal = M.getNamedValue(ComdatName);
   if (const auto *GA = dyn_cast_or_null<GlobalAlias>(GVal)) {
-    GVal = GA->getBaseObject();
+    GVal = GA->getAliaseeObject();
     if (!GVal)
       // We cannot resolve the size of the aliasee yet.
       return emitError("Linking COMDATs named '" + ComdatName +
@@ -151,7 +153,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
                                                  Comdat::SelectionKind Src,
                                                  Comdat::SelectionKind Dst,
                                                  Comdat::SelectionKind &Result,
-                                                 bool &LinkFromSrc) {
+                                                 LinkFrom &From) {
   Module &DstM = Mover.getModule();
   // The ability to mix Comdat::SelectionKind::Any with
   // Comdat::SelectionKind::Largest is a behavior that comes from COFF.
@@ -175,11 +177,11 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
   switch (Result) {
   case Comdat::SelectionKind::Any:
     // Go with Dst.
-    LinkFromSrc = false;
+    From = LinkFrom::Dst;
     break;
-  case Comdat::SelectionKind::NoDuplicates:
-    return emitError("Linking COMDATs named '" + ComdatName +
-                     "': noduplicates has been violated!");
+  case Comdat::SelectionKind::NoDeduplicate:
+    From = LinkFrom::Both;
+    break;
   case Comdat::SelectionKind::ExactMatch:
   case Comdat::SelectionKind::Largest:
   case Comdat::SelectionKind::SameSize: {
@@ -197,14 +199,14 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
       if (SrcGV->getInitializer() != DstGV->getInitializer())
         return emitError("Linking COMDATs named '" + ComdatName +
                          "': ExactMatch violated!");
-      LinkFromSrc = false;
+      From = LinkFrom::Dst;
     } else if (Result == Comdat::SelectionKind::Largest) {
-      LinkFromSrc = SrcSize > DstSize;
+      From = SrcSize > DstSize ? LinkFrom::Src : LinkFrom::Dst;
     } else if (Result == Comdat::SelectionKind::SameSize) {
       if (SrcSize != DstSize)
         return emitError("Linking COMDATs named '" + ComdatName +
                          "': SameSize violated!");
-      LinkFromSrc = false;
+      From = LinkFrom::Dst;
     } else {
       llvm_unreachable("unknown selection kind");
     }
@@ -217,7 +219,7 @@ bool ModuleLinker::computeResultingSelectionKind(StringRef ComdatName,
 
 bool ModuleLinker::getComdatResult(const Comdat *SrcC,
                                    Comdat::SelectionKind &Result,
-                                   bool &LinkFromSrc) {
+                                   LinkFrom &From) {
   Module &DstM = Mover.getModule();
   Comdat::SelectionKind SSK = SrcC->getSelectionKind();
   StringRef ComdatName = SrcC->getName();
@@ -226,15 +228,14 @@ bool ModuleLinker::getComdatResult(const Comdat *SrcC,
 
   if (DstCI == ComdatSymTab.end()) {
     // Use the comdat if it is only available in one of the modules.
-    LinkFromSrc = true;
+    From = LinkFrom::Src;
     Result = SSK;
     return false;
   }
 
   const Comdat *DstC = &DstCI->second;
   Comdat::SelectionKind DSK = DstC->getSelectionKind();
-  return computeResultingSelectionKind(ComdatName, SSK, DSK, Result,
-                                       LinkFromSrc);
+  return computeResultingSelectionKind(ComdatName, SSK, DSK, Result, From);
 }
 
 bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
@@ -248,7 +249,7 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
   }
 
   // We always have to add Src if it has appending linkage.
-  if (Src.hasAppendingLinkage()) {
+  if (Src.hasAppendingLinkage() || Dest.hasAppendingLinkage()) {
     LinkFromSrc = true;
     return false;
   }
@@ -325,7 +326,8 @@ bool ModuleLinker::shouldLinkFromSource(bool &LinkFromSrc,
                    "': symbol multiply defined!");
 }
 
-bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
+bool ModuleLinker::linkIfNeeded(GlobalValue &GV,
+                                SmallVectorImpl<GlobalValue *> &GVToClone) {
   GlobalValue *DGV = getLinkedToGlobal(&GV);
 
   if (shouldLinkOnlyNeeded()) {
@@ -377,17 +379,18 @@ bool ModuleLinker::linkIfNeeded(GlobalValue &GV) {
   if (GV.isDeclaration())
     return false;
 
+  LinkFrom ComdatFrom = LinkFrom::Dst;
   if (const Comdat *SC = GV.getComdat()) {
-    bool LinkFromSrc;
-    Comdat::SelectionKind SK;
-    std::tie(SK, LinkFromSrc) = ComdatsChosen[SC];
-    if (!LinkFromSrc)
+    std::tie(std::ignore, ComdatFrom) = ComdatsChosen[SC];
+    if (ComdatFrom == LinkFrom::Dst)
       return false;
   }
 
   bool LinkFromSrc = true;
   if (DGV && shouldLinkFromSource(LinkFromSrc, *DGV, GV))
     return true;
+  if (DGV && ComdatFrom == LinkFrom::Both)
+    GVToClone.push_back(LinkFromSrc ? DGV : &GV);
   if (LinkFromSrc)
     ValuesToLink.insert(&GV);
   return false;
@@ -438,13 +441,12 @@ void ModuleLinker::dropReplacedComdat(
   } else {
     auto &Alias = cast<GlobalAlias>(GV);
     Module &M = *Alias.getParent();
-    PointerType &Ty = *cast<PointerType>(Alias.getType());
     GlobalValue *Declaration;
     if (auto *FTy = dyn_cast<FunctionType>(Alias.getValueType())) {
       Declaration = Function::Create(FTy, GlobalValue::ExternalLinkage, "", &M);
     } else {
       Declaration =
-          new GlobalVariable(M, Ty.getElementType(), /*isConstant*/ false,
+          new GlobalVariable(M, Alias.getValueType(), /*isConstant*/ false,
                              GlobalValue::ExternalLinkage,
                              /*Initializer*/ nullptr);
     }
@@ -463,12 +465,12 @@ bool ModuleLinker::run() {
     if (ComdatsChosen.count(&C))
       continue;
     Comdat::SelectionKind SK;
-    bool LinkFromSrc;
-    if (getComdatResult(&C, SK, LinkFromSrc))
+    LinkFrom From;
+    if (getComdatResult(&C, SK, From))
       return true;
-    ComdatsChosen[&C] = std::make_pair(SK, LinkFromSrc);
+    ComdatsChosen[&C] = std::make_pair(SK, From);
 
-    if (!LinkFromSrc)
+    if (From != LinkFrom::Src)
       continue;
 
     Module::ComdatSymTabType &ComdatSymTab = DstM.getComdatSymbolTable();
@@ -515,17 +517,44 @@ bool ModuleLinker::run() {
 
   // Insert all of the globals in src into the DstM module... without linking
   // initializers (which could refer to functions not yet mapped over).
+  SmallVector<GlobalValue *, 0> GVToClone;
   for (GlobalVariable &GV : SrcM->globals())
-    if (linkIfNeeded(GV))
+    if (linkIfNeeded(GV, GVToClone))
       return true;
 
   for (Function &SF : *SrcM)
-    if (linkIfNeeded(SF))
+    if (linkIfNeeded(SF, GVToClone))
       return true;
 
   for (GlobalAlias &GA : SrcM->aliases())
-    if (linkIfNeeded(GA))
+    if (linkIfNeeded(GA, GVToClone))
       return true;
+
+  for (GlobalIFunc &GI : SrcM->ifuncs())
+    if (linkIfNeeded(GI, GVToClone))
+      return true;
+
+  // For a variable in a comdat nodeduplicate, its initializer should be
+  // preserved (its content may be implicitly used by other members) even if
+  // symbol resolution does not pick it. Clone it into an unnamed private
+  // variable.
+  for (GlobalValue *GV : GVToClone) {
+    if (auto *Var = dyn_cast<GlobalVariable>(GV)) {
+      auto *NewVar = new GlobalVariable(*Var->getParent(), Var->getValueType(),
+                                        Var->isConstant(), Var->getLinkage(),
+                                        Var->getInitializer());
+      NewVar->copyAttributesFrom(Var);
+      NewVar->setVisibility(GlobalValue::DefaultVisibility);
+      NewVar->setLinkage(GlobalValue::PrivateLinkage);
+      NewVar->setDSOLocal(true);
+      NewVar->setComdat(Var->getComdat());
+      if (Var->getParent() != &Mover.getModule())
+        ValuesToLink.insert(NewVar);
+    } else {
+      emitError("linking '" + GV->getName() +
+                "': non-variables in comdat nodeduplicate are not handled");
+    }
+  }
 
   for (unsigned I = 0; I < ValuesToLink.size(); ++I) {
     GlobalValue *GV = ValuesToLink[I];

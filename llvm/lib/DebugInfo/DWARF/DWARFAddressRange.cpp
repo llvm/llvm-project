@@ -18,8 +18,9 @@ void DWARFAddressRange::dump(raw_ostream &OS, uint32_t AddressSize,
                              const DWARFObject *Obj) const {
 
   OS << (DumpOpts.DisplayRawContents ? " " : "[");
-  OS << format("0x%*.*" PRIx64 ", ", AddressSize * 2, AddressSize * 2, LowPC)
-     << format("0x%*.*" PRIx64, AddressSize * 2, AddressSize * 2, HighPC);
+  DWARFFormValue::dumpAddress(OS, AddressSize, LowPC);
+  OS << ", ";
+  DWARFFormValue::dumpAddress(OS, AddressSize, HighPC);
   OS << (DumpOpts.DisplayRawContents ? "" : ")");
 
   if (Obj)

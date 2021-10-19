@@ -16,7 +16,7 @@ struct B : A {
 };
 B b;
 
-// CHECK: @b = global {{.*}} i32 1, {{.*}} { i32 2 }, {{.*}} { i32 3 }, {{.*}} { i32 4 }
+// CHECK: @b ={{.*}} global {{.*}} i32 1, {{.*}} { i32 2 }, {{.*}} { i32 3 }, {{.*}} { i32 4 }
 // CHECK-NOT: _ZN1BC
 
 namespace ModifyStaticTemporary {
@@ -24,22 +24,22 @@ namespace ModifyStaticTemporary {
   constexpr int f(int &r) { r *= 9; return r - 12; }
   A a = { 6, f(a.temporary) };
   // CHECK: @_ZGRN21ModifyStaticTemporary1aE_ = internal global i32 54
-  // CHECK: @_ZN21ModifyStaticTemporary1aE = global {{.*}} i32* @_ZGRN21ModifyStaticTemporary1aE_, i32 42
+  // CHECK: @_ZN21ModifyStaticTemporary1aE ={{.*}} global {{.*}} i32* @_ZGRN21ModifyStaticTemporary1aE_, i32 42
 
   A b = { 7, ++b.temporary };
   // CHECK: @_ZGRN21ModifyStaticTemporary1bE_ = internal global i32 8
-  // CHECK: @_ZN21ModifyStaticTemporary1bE = global {{.*}} i32* @_ZGRN21ModifyStaticTemporary1bE_, i32 8
+  // CHECK: @_ZN21ModifyStaticTemporary1bE ={{.*}} global {{.*}} i32* @_ZGRN21ModifyStaticTemporary1bE_, i32 8
 
   // Can't emit all of 'c' as a constant here, so emit the initial value of
   // 'c.temporary', not the value as modified by the partial evaluation within
   // the initialization of 'c.x'.
   A c = { 10, (++c.temporary, b.x) };
   // CHECK: @_ZGRN21ModifyStaticTemporary1cE_ = internal global i32 10
-  // CHECK: @_ZN21ModifyStaticTemporary1cE = global {{.*}} zeroinitializer
+  // CHECK: @_ZN21ModifyStaticTemporary1cE ={{.*}} global {{.*}} zeroinitializer
 }
 
 // CHECK: @_ZGRN28VariableTemplateWithConstRef1iIvEE_ = linkonce_odr constant i32 5, align 4
-// CHECK: @_ZN28VariableTemplateWithConstRef3useE = constant i32* @_ZGRN28VariableTemplateWithConstRef1iIvEE_
+// CHECK: @_ZN28VariableTemplateWithConstRef3useE ={{.*}} constant i32* @_ZGRN28VariableTemplateWithConstRef1iIvEE_
 namespace VariableTemplateWithConstRef {
   template <typename T>
   const int &i = 5;
@@ -47,7 +47,7 @@ namespace VariableTemplateWithConstRef {
 }
 
 // CHECK: @_ZGRN34HiddenVariableTemplateWithConstRef1iIvEE_ = linkonce_odr hidden constant i32 5, align 4
-// CHECK: @_ZN34HiddenVariableTemplateWithConstRef3useE = constant i32* @_ZGRN34HiddenVariableTemplateWithConstRef1iIvEE_
+// CHECK: @_ZN34HiddenVariableTemplateWithConstRef3useE ={{.*}} constant i32* @_ZGRN34HiddenVariableTemplateWithConstRef1iIvEE_
 namespace HiddenVariableTemplateWithConstRef {
   template <typename T>
   __attribute__((visibility("hidden"))) const int &i = 5;
@@ -63,7 +63,7 @@ namespace HiddenVariableTemplateWithConstRef {
 // CHECK: @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE7_ = linkonce_odr constant i32 4
 // CHECK: @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE6_ = linkonce_odr global {{.*}} { i32* @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE7_ }
 // CHECK: @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE_ = linkonce_odr global %"struct.VariableTemplateWithPack::S" { {{.*}}* @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE0_, {{.*}}* @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE2_, {{.*}}* @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE4_, {{.*}}* @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE6_ }
-// CHECK: @_ZN24VariableTemplateWithPack1pE = global {{.*}} @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE_
+// CHECK: @_ZN24VariableTemplateWithPack1pE ={{.*}} global {{.*}} @_ZGRN24VariableTemplateWithPack1sIJLi1ELi2ELi3ELi4EEEE_
 namespace VariableTemplateWithPack {
   struct A {
     const int &r;

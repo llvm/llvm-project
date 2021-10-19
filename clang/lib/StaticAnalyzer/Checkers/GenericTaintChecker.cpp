@@ -103,6 +103,9 @@ private:
 
   struct FunctionData {
     FunctionData() = delete;
+    FunctionData(const FunctionDecl *FDecl, StringRef Name,
+                 std::string FullName)
+        : FDecl(FDecl), Name(Name), FullName(std::move(FullName)) {}
     FunctionData(const FunctionData &) = default;
     FunctionData(FunctionData &&) = default;
     FunctionData &operator=(const FunctionData &) = delete;
@@ -123,7 +126,7 @@ private:
       if (Name.empty() || FullName.empty())
         return None;
 
-      return FunctionData{FDecl, Name, FullName};
+      return FunctionData{FDecl, Name, std::move(FullName)};
     }
 
     bool isInScope(StringRef Scope) const {
@@ -257,7 +260,7 @@ private:
     }
 
     bool isDestinationArgument(unsigned ArgNum) const {
-      return (llvm::find(DstArgs, ArgNum) != DstArgs.end());
+      return llvm::is_contained(DstArgs, ArgNum);
     }
 
     static bool isTaintedOrPointsToTainted(const Expr *E,
@@ -432,7 +435,6 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
           .Case("getch", {{}, {ReturnValueIndex}})
           .Case("getchar", {{}, {ReturnValueIndex}})
           .Case("getchar_unlocked", {{}, {ReturnValueIndex}})
-          .Case("getenv", {{}, {ReturnValueIndex}})
           .Case("gets", {{}, {0, ReturnValueIndex}})
           .Case("scanf", {{}, {}, VariadicType::Dst, 1})
           .Case("socket", {{},
@@ -465,6 +467,16 @@ GenericTaintChecker::TaintPropagationRule::getTaintPropagationRule(
 
   if (!Rule.isNull())
     return Rule;
+
+  // `getenv` returns taint only in untrusted environments.
+  if (FData.FullName == "getenv") {
+    if (C.getAnalysisManager()
+            .getAnalyzerOptions()
+            .ShouldAssumeControlledEnvironment)
+      return {};
+    return {{}, {ReturnValueIndex}};
+  }
+
   assert(FData.FDecl);
 
   // Check if it's one of the memory setting/copying functions.

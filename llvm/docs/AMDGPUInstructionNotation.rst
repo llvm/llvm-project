@@ -54,14 +54,39 @@ Notation
 
 An operand is described using the following notation:
 
-    *<name><tag0><tag1>...*
+    *<kind><name><tag0><tag1>...*
 
 Where:
 
+* *kind* is an optional prefix describing operand :ref:`kind<amdgpu_syn_instruction_operand_kinds>`.
 * *name* is a link to a description of the operand.
-* *tags* are optional. They are used to indicate special operand properties:
+* *tags* are optional. They are used to indicate :ref:`special operand properties<amdgpu_syn_instruction_operand_tags>`.
+
+.. _amdgpu_syn_instruction_operand_kinds:
+
+Operand Kinds
+^^^^^^^^^^^^^
+
+Operand kind indicates which values are accepted by the operand.
+
+* Operands which only accept *vector* registers are labelled with 'v' prefix.
+* Operands which only accept *scalar* values are labelled with 's' prefix.
+* Operands which accept both *vector* registers and *scalar* values have no prefix.
+
+Examples:
+
+.. parsed-literal::
+
+    vdata          // operand only accepts vector registers
+    sdst           // operand only accepts scalar registers
+    src1           // operand accepts both scalar and vector registers
 
 .. _amdgpu_syn_instruction_operand_tags:
+
+Operand Tags
+^^^^^^^^^^^^
+
+Operand tags indicate special operand properties.
 
     ============== =================================================================================
     Operand tag    Meaning

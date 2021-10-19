@@ -368,8 +368,8 @@ Sema::DiagnoseUnexpandedParameterPacks(SourceLocation Loc,
       Locations.push_back(Unexpanded[I].second);
   }
 
-  DiagnosticBuilder DB = Diag(Loc, diag::err_unexpanded_parameter_pack)
-                         << (int)UPPC << (int)Names.size();
+  auto DB = Diag(Loc, diag::err_unexpanded_parameter_pack)
+            << (int)UPPC << (int)Names.size();
   for (size_t I = 0, E = std::min(Names.size(), (size_t)2); I != E; ++I)
     DB << Names[I];
 
@@ -893,6 +893,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_Fract:
   case TST_Float16:
   case TST_float128:
+  case TST_ibm128:
   case TST_bool:
   case TST_decimal32:
   case TST_decimal64:
@@ -1095,7 +1096,7 @@ Sema::getTemplateArgumentPackExpansionPattern(
   case TemplateArgument::TemplateExpansion:
     Ellipsis = OrigLoc.getTemplateEllipsisLoc();
     NumExpansions = Argument.getNumTemplateExpansions();
-    return TemplateArgumentLoc(Argument.getPackExpansionPattern(),
+    return TemplateArgumentLoc(Context, Argument.getPackExpansionPattern(),
                                OrigLoc.getTemplateQualifierLoc(),
                                OrigLoc.getTemplateNameLoc());
 

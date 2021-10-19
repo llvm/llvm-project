@@ -4,15 +4,14 @@ struct BB {};
 
 struct BB1 {};
 
-class complex : public BB, BB1 { 
-public: 
+class complex : public BB, BB1 {
+public:
   complex()
-    : s2(1), // expected-warning {{field 's2' will be initialized after field 's1'}}
-      s1(1),
-      s3(3), // expected-warning {{field 's3' will be initialized after base 'BB1'}} 
-      BB1(), // expected-warning {{base class 'BB1' will be initialized after base 'BB'}}
-      BB()
-  {}
+      : s2(1), // expected-warning {{initializer order does not match the declaration order}} expected-note {{field 's2' will be initialized after field 's1'}}
+        s1(1),
+        s3(3), // expected-note {{field 's3' will be initialized after base 'BB1'}}
+        BB1(), // expected-note {{base class 'BB1' will be initialized after base 'BB'}}
+        BB() {}
   int s1;
   int s2;
   int s3;

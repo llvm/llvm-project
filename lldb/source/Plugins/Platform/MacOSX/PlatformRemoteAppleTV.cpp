@@ -223,15 +223,10 @@ bool PlatformRemoteAppleTV::GetSupportedArchitectureAtIndex(uint32_t idx,
   return false;
 }
 
-
-void PlatformRemoteAppleTV::GetDeviceSupportDirectoryNames (std::vector<std::string> &dirnames) 
-{
-    dirnames.clear();
-    dirnames.push_back("tvOS DeviceSupport");
+llvm::StringRef PlatformRemoteAppleTV::GetDeviceSupportDirectoryName() {
+  return "tvOS DeviceSupport";
 }
 
-std::string PlatformRemoteAppleTV::GetPlatformName ()
-{
-    return "AppleTVOS.platform";
+llvm::StringRef PlatformRemoteAppleTV::GetPlatformName() {
+  return "AppleTVOS.platform";
 }
-

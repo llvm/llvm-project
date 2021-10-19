@@ -5,13 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_DIALECT_FIRDIALECT_H
-#define OPTIMIZER_DIALECT_FIRDIALECT_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
+#define FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
 
 #include "mlir/IR/Dialect.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/InitAllPasses.h"
 
 namespace fir {
 
@@ -30,48 +32,24 @@ public:
                                  mlir::Type type) const override;
   void printAttribute(mlir::Attribute attr,
                       mlir::DialectAsmPrinter &p) const override;
+
+private:
+  // Register the Attributes of this dialect.
+  void registerAttributes();
+  // Register the Types of this dialect.
+  void registerTypes();
 };
 
-/// Register the dialect with the provided registry.
-inline void registerFIRDialects(mlir::DialectRegistry &registry) {
-  // clang-format off
-  registry.insert<mlir::AffineDialect,
-                  mlir::LLVM::LLVMDialect,
-                  mlir::omp::OpenMPDialect,
-                  mlir::scf::SCFDialect,
-                  mlir::StandardOpsDialect,
-                  mlir::vector::VectorDialect,
-                  FIROpsDialect>();
-  // clang-format on
-}
+/// The FIR codegen dialect is a dialect containing a small set of transient
+/// operations used exclusively during code generation.
+class FIRCodeGenDialect final : public mlir::Dialect {
+public:
+  explicit FIRCodeGenDialect(mlir::MLIRContext *ctx);
+  virtual ~FIRCodeGenDialect();
 
-/// Register the standard passes we use. This comes from registerAllPasses(),
-/// but is a smaller set since we aren't using many of the passes found there.
-inline void registerGeneralPasses() {
-  mlir::createCanonicalizerPass();
-  mlir::createCSEPass();
-  mlir::createSuperVectorizePass({});
-  mlir::createLoopUnrollPass();
-  mlir::createLoopUnrollAndJamPass();
-  mlir::createSimplifyAffineStructuresPass();
-  mlir::createLoopFusionPass();
-  mlir::createLoopInvariantCodeMotionPass();
-  mlir::createAffineLoopInvariantCodeMotionPass();
-  mlir::createPipelineDataTransferPass();
-  mlir::createLowerAffinePass();
-  mlir::createLoopTilingPass(0);
-  mlir::createLoopCoalescingPass();
-  mlir::createAffineDataCopyGenerationPass(0, 0);
-  mlir::createMemRefDataFlowOptPass();
-  mlir::createStripDebugInfoPass();
-  mlir::createPrintOpStatsPass();
-  mlir::createInlinerPass();
-  mlir::createSymbolDCEPass();
-  mlir::createLocationSnapshotPass({});
-}
-
-inline void registerFIRPasses() { registerGeneralPasses(); }
+  static llvm::StringRef getDialectNamespace() { return "fircg"; }
+};
 
 } // namespace fir
 
-#endif // OPTIMIZER_DIALECT_FIRDIALECT_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H

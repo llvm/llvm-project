@@ -6,11 +6,11 @@ define signext i8 @sdiv_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: sdiv_i8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    sll $1, $5, 24
+; MIPS32-NEXT:    sra $2, $1, 24
+; MIPS32-NEXT:    sll $1, $4, 24
 ; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    sll $2, $4, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    div $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    div $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -25,11 +25,11 @@ define signext i16 @sdiv_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: sdiv_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    sll $1, $5, 16
+; MIPS32-NEXT:    sra $2, $1, 16
+; MIPS32-NEXT:    sll $1, $4, 16
 ; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    sll $2, $4, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    div $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    div $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -60,12 +60,12 @@ define signext i64 @sdiv_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 32
 ; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    sw $4, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $4, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $5, 24($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $4, $6
-; MIPS32-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $6, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    move $5, $7
-; MIPS32-NEXT:    lw $6, 24($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $7, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $7, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jal __divdi3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
@@ -82,11 +82,11 @@ define signext i8 @srem_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: srem_i8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    sll $1, $5, 24
+; MIPS32-NEXT:    sra $2, $1, 24
+; MIPS32-NEXT:    sll $1, $4, 24
 ; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    sll $2, $4, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    div $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    div $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -101,11 +101,11 @@ define signext i16 @srem_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: srem_i16:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    sll $1, $5, 16
+; MIPS32-NEXT:    sra $2, $1, 16
+; MIPS32-NEXT:    sll $1, $4, 16
 ; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    sll $2, $4, 16
-; MIPS32-NEXT:    sra $2, $2, 16
-; MIPS32-NEXT:    div $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    div $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -136,12 +136,12 @@ define signext i64 @srem_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 32
 ; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    sw $4, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $4, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $5, 24($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $4, $6
-; MIPS32-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $6, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    move $5, $7
-; MIPS32-NEXT:    lw $6, 24($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $7, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $7, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jal __moddi3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
@@ -157,10 +157,10 @@ entry:
 define signext i8 @udiv_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: udiv_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 255
-; MIPS32-NEXT:    andi $2, $4, 255
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    andi $2, $5, 255
+; MIPS32-NEXT:    andi $1, $4, 255
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -174,10 +174,10 @@ entry:
 define signext i16 @udiv_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: udiv_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 65535
-; MIPS32-NEXT:    andi $2, $4, 65535
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    andi $2, $5, 65535
+; MIPS32-NEXT:    andi $1, $4, 65535
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -208,12 +208,12 @@ define signext i64 @udiv_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 32
 ; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    sw $4, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $4, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $5, 24($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $4, $6
-; MIPS32-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $6, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    move $5, $7
-; MIPS32-NEXT:    lw $6, 24($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $7, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $7, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jal __udivdi3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
@@ -229,10 +229,10 @@ entry:
 define signext i8 @urem_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: urem_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 255
-; MIPS32-NEXT:    andi $2, $4, 255
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    andi $2, $5, 255
+; MIPS32-NEXT:    andi $1, $4, 255
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -246,10 +246,10 @@ entry:
 define signext i16 @urem_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: urem_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    andi $1, $5, 65535
-; MIPS32-NEXT:    andi $2, $4, 65535
-; MIPS32-NEXT:    divu $zero, $1, $2
-; MIPS32-NEXT:    teq $2, $zero, 7
+; MIPS32-NEXT:    andi $2, $5, 65535
+; MIPS32-NEXT:    andi $1, $4, 65535
+; MIPS32-NEXT:    divu $zero, $2, $1
+; MIPS32-NEXT:    teq $1, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -280,12 +280,12 @@ define signext i64 @urem_i64(i64 signext %a, i64 signext %b) {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 32
 ; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    sw $4, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $4, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $5, 24($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $4, $6
-; MIPS32-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    lw $6, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    move $5, $7
-; MIPS32-NEXT:    lw $6, 24($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $7, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $7, 24($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jal __umoddi3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload

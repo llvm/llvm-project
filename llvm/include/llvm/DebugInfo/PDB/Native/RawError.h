@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_RAWERROR_H
-#define LLVM_DEBUGINFO_PDB_RAW_RAWERROR_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_RAWERROR_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_RAWERROR_H
 
 #include "llvm/Support/Error.h"
-
-#include <string>
 
 namespace llvm {
 namespace pdb {

@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
 ; RUN: llc -mtriple=aarch64-none-none-eabi -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
 
-declare extern_weak i32 @var()
+declare extern_weak dso_local i32 @var()
 
 define i32()* @foo() {
 ; The usual ADRP/ADD pair can't be used for a weak reference because it must
@@ -39,12 +39,10 @@ define i32* @bar() {
 
   ret i32* %addr
 
-  ; In the large model, the usual relocations are absolute and can
-  ; materialise 0.
-; CHECK-LARGE: movz [[ADDR:x[0-9]+]], #:abs_g0_nc:arr_var
-; CHECK-LARGE: movk [[ADDR]], #:abs_g1_nc:arr_var
-; CHECK-LARGE: movk [[ADDR]], #:abs_g2_nc:arr_var
-; CHECK-LARGE: movk [[ADDR]], #:abs_g3:arr_var
+  ; Note, In the large model, if dso_local, the relocations are absolute and can materialise 0.
+; CHECK-LARGE:      adrp x[[ADDR:[0-9]+]], :got:arr_var
+; CHECK-LARGE-NEXT: ldr x[[ADDR]], [x[[ADDR]], :got_lo12:arr_var]
+; CHECK-LARGE-NEXT: add x0, x[[ADDR]], #20
 
 ; CHECK-TINY: ldr [[BASE:x[0-9]+]], :got:arr_var
 ; CHECK-TINY: add x0, [[BASE]], #20

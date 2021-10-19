@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "SemanticSelection.h"
 #include "FindSymbols.h"
 #include "ParsedAST.h"
@@ -13,8 +14,16 @@
 #include "SourceCode.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Tooling/Syntax/BuildTree.h"
+#include "clang/Tooling/Syntax/Nodes.h"
+#include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include <queue>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -28,17 +37,65 @@ void addIfDistinct(const Range &R, std::vector<Range> &Result) {
   }
 }
 
-// Recursively collects FoldingRange from a symbol and its children.
-void collectFoldingRanges(DocumentSymbol Symbol,
-                          std::vector<FoldingRange> &Result) {
+llvm::Optional<FoldingRange> toFoldingRange(SourceRange SR,
+                                            const SourceManager &SM) {
+  const auto Begin = SM.getDecomposedLoc(SR.getBegin()),
+             End = SM.getDecomposedLoc(SR.getEnd());
+  // Do not produce folding ranges if either range ends is not within the main
+  // file. Macros have their own FileID so this also checks if locations are not
+  // within the macros.
+  if ((Begin.first != SM.getMainFileID()) || (End.first != SM.getMainFileID()))
+    return llvm::None;
   FoldingRange Range;
-  Range.startLine = Symbol.range.start.line;
-  Range.startCharacter = Symbol.range.start.character;
-  Range.endLine = Symbol.range.end.line;
-  Range.endCharacter = Symbol.range.end.character;
-  Result.push_back(Range);
-  for (const auto &Child : Symbol.children)
-    collectFoldingRanges(Child, Result);
+  Range.startCharacter = SM.getColumnNumber(Begin.first, Begin.second) - 1;
+  Range.startLine = SM.getLineNumber(Begin.first, Begin.second) - 1;
+  Range.endCharacter = SM.getColumnNumber(End.first, End.second) - 1;
+  Range.endLine = SM.getLineNumber(End.first, End.second) - 1;
+  return Range;
+}
+
+llvm::Optional<FoldingRange> extractFoldingRange(const syntax::Node *Node,
+                                                 const SourceManager &SM) {
+  if (const auto *Stmt = dyn_cast<syntax::CompoundStatement>(Node)) {
+    const auto *LBrace = cast_or_null<syntax::Leaf>(
+        Stmt->findChild(syntax::NodeRole::OpenParen));
+    // FIXME(kirillbobyrev): This should find the last child. Compound
+    // statements have only one pair of braces so this is valid but for other
+    // node kinds it might not be correct.
+    const auto *RBrace = cast_or_null<syntax::Leaf>(
+        Stmt->findChild(syntax::NodeRole::CloseParen));
+    if (!LBrace || !RBrace)
+      return llvm::None;
+    // Fold the entire range within braces, including whitespace.
+    const SourceLocation LBraceLocInfo = LBrace->getToken()->endLocation(),
+                         RBraceLocInfo = RBrace->getToken()->location();
+    auto Range = toFoldingRange(SourceRange(LBraceLocInfo, RBraceLocInfo), SM);
+    // Do not generate folding range for compound statements without any
+    // nodes and newlines.
+    if (Range && Range->startLine != Range->endLine)
+      return Range;
+  }
+  return llvm::None;
+}
+
+// Traverse the tree and collect folding ranges along the way.
+std::vector<FoldingRange> collectFoldingRanges(const syntax::Node *Root,
+                                               const SourceManager &SM) {
+  std::queue<const syntax::Node *> Nodes;
+  Nodes.push(Root);
+  std::vector<FoldingRange> Result;
+  while (!Nodes.empty()) {
+    const syntax::Node *Node = Nodes.front();
+    Nodes.pop();
+    const auto Range = extractFoldingRange(Node, SM);
+    if (Range)
+      Result.push_back(*Range);
+    if (const auto *T = dyn_cast<syntax::Tree>(Node))
+      for (const auto *NextNode = T->getFirstChild(); NextNode;
+           NextNode = NextNode->getNextSibling())
+        Nodes.push(NextNode);
+  }
+  return Result;
 }
 
 } // namespace
@@ -100,20 +157,11 @@ llvm::Expected<SelectionRange> getSemanticRanges(ParsedAST &AST, Position Pos) {
 // FIXME(kirillbobyrev): Collect comments, PP conditional regions, includes and
 // other code regions (e.g. public/private/protected sections of classes,
 // control flow statement bodies).
-// Related issue:
-// https://github.com/clangd/clangd/issues/310
+// Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
-  // FIXME(kirillbobyrev): getDocumentSymbols() is conveniently available but
-  // limited (e.g. doesn't yield blocks inside functions and provides ranges for
-  // nodes themselves instead of their contents which is less useful). Replace
-  // this with a more general RecursiveASTVisitor implementation instead.
-  auto DocumentSymbols = getDocumentSymbols(AST);
-  if (!DocumentSymbols)
-    return DocumentSymbols.takeError();
-  std::vector<FoldingRange> Result;
-  for (const auto &Symbol : *DocumentSymbols)
-    collectFoldingRanges(Symbol, Result);
-  return Result;
+  syntax::Arena A(AST.getSourceManager(), AST.getLangOpts(), AST.getTokens());
+  const auto *SyntaxTree = syntax::buildSyntaxTree(A, AST.getASTContext());
+  return collectFoldingRanges(SyntaxTree, AST.getSourceManager());
 }
 
 } // namespace clangd

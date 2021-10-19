@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check that if constructs only accept scalar logical expressions.
 ! TODO: expand the test to check this restriction for more types.
 

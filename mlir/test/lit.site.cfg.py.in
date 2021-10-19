@@ -7,12 +7,12 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
+config.llvm_lib_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.python_executable = "@PYTHON_EXECUTABLE@"
+config.python_executable = "@Python3_EXECUTABLE@"
 config.gold_executable = "@GOLD_EXECUTABLE@"
 config.ld64_executable = "@LD64_EXECUTABLE@"
 config.enable_shared = @ENABLE_SHARED@
@@ -23,6 +23,7 @@ config.llvm_bindings = "@LLVM_BINDINGS@".split(' ')
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
+config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 config.host_cmake = "@CMAKE_COMMAND@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
@@ -33,22 +34,30 @@ config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 config.mlir_obj_root = "@MLIR_BINARY_DIR@"
 config.mlir_runner_utils_dir = "@MLIR_RUNNER_UTILS_DIR@"
 config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
+config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.linalg_test_lib_dir = "@MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR@"
 config.build_examples = @LLVM_BUILD_EXAMPLES@
-config.run_cuda_tests = @MLIR_CUDA_CONVERSIONS_ENABLED@
-config.cuda_wrapper_library_dir = "@MLIR_CUDA_WRAPPER_LIBRARY_DIR@"
-config.enable_cuda_runner = @MLIR_CUDA_RUNNER_ENABLED@
-config.run_rocm_tests = @MLIR_ROCM_CONVERSIONS_ENABLED@
-config.rocm_wrapper_library_dir = "@MLIR_ROCM_WRAPPER_LIBRARY_DIR@"
-config.enable_rocm_runner = @MLIR_ROCM_RUNNER_ENABLED@
+config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
+config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
+config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
+config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@
+config.spirv_wrapper_library_dir = "@MLIR_SPIRV_WRAPPER_LIBRARY_DIR@"
+config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.vulkan_wrapper_library_dir = "@MLIR_VULKAN_WRAPPER_LIBRARY_DIR@"
-config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
-config.enable_bindings_python = @MLIR_BINDINGS_PYTHON_ENABLED@
+config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
+config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
+config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
+config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
+config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
+config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
+config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
+config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
 
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_lib_dir = config.llvm_lib_dir % lit_config.params
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
 except KeyError:
     e = sys.exc_info()[1]

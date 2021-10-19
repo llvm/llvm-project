@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mattr=mips16 -relocation-model=static -O3 < %s -mips-mixed-16-32  | FileCheck %s -check-prefix=16
+; RUN: llc  -mtriple=mipsel -mattr=mips16 -relocation-model=static -O3 < %s -mips-mixed-16-32  | FileCheck %s -check-prefix=16
 
 define void @foo() #0 {
 entry:

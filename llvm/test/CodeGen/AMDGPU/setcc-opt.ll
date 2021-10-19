@@ -4,8 +4,9 @@
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_eq_0:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_ne_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT:buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 
@@ -21,8 +22,9 @@ define amdgpu_kernel void @sext_bool_icmp_eq_0(i1 addrspace(1)* %out, i32 %a, i3
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_ne_0:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_ne_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 
@@ -38,8 +40,9 @@ define amdgpu_kernel void @sext_bool_icmp_ne_0(i1 addrspace(1)* %out, i32 %a, i3
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_eq_neg1:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_eq_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_eq_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @sext_bool_icmp_eq_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -52,8 +55,9 @@ define amdgpu_kernel void @sext_bool_icmp_eq_neg1(i1 addrspace(1)* %out, i32 %a,
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_ne_neg1:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_eq_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_eq_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @sext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -66,8 +70,9 @@ define amdgpu_kernel void @sext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a,
 
 ; FUNC-LABEL: {{^}}zext_bool_icmp_eq_0:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_ne_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @zext_bool_icmp_eq_0(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -80,8 +85,9 @@ define amdgpu_kernel void @zext_bool_icmp_eq_0(i1 addrspace(1)* %out, i32 %a, i3
 
 ; FUNC-LABEL: {{^}}zext_bool_icmp_ne_0:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_ne_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_lg_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @zext_bool_icmp_ne_0(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -94,8 +100,9 @@ define amdgpu_kernel void @zext_bool_icmp_ne_0(i1 addrspace(1)* %out, i32 %a, i3
 
 ; FUNC-LABEL: {{^}}zext_bool_icmp_eq_1:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_eq_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_eq_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @zext_bool_icmp_eq_1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
@@ -108,8 +115,9 @@ define amdgpu_kernel void @zext_bool_icmp_eq_1(i1 addrspace(1)* %out, i32 %a, i3
 
 ; FUNC-LABEL: {{^}}zext_bool_icmp_ne_1:
 ; GCN-NOT: v_cmp
-; GCN: v_cmp_eq_u32_e32 vcc,
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_eq_u32
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 define amdgpu_kernel void @zext_bool_icmp_ne_1(i1 addrspace(1)* %out, i32 %a, i32 %b) nounwind {
   %icmp0 = icmp ne i32 %a, %b
@@ -149,14 +157,16 @@ define amdgpu_kernel void @zext_bool_icmp_ne_neg1(i1 addrspace(1)* %out, i32 %a,
 ; SI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dword [[VALUE:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN: s_movk_i32 [[K255:s[0-9]+]], 0xff
-; GCN-DAG: v_mov_b32_e32 [[VK255:v[0-9]+]], [[K255]]
 ; SI-DAG: s_and_b32 [[B:s[0-9]+]], [[VALUE]], [[K255]]
-; SI: v_cmp_ne_u32_e32 vcc, [[B]], [[VK255]]
+; SI: s_cmp_lg_u32 [[B]], [[K255]]
+; SI: s_cselect_b64 [[CC:[^,]+]], -1, 0
 
-; VI-DAG: v_and_b32_e32 [[B:v[0-9]+]], [[VALUE]], [[VK255]]
+; VI: v_mov_b32_e32 [[VK255:v[0-9]+]], [[K255]]
+; VI: v_and_b32_e32 [[B:v[0-9]+]], [[VALUE]], [[VK255]]
 ; VI: v_cmp_ne_u16_e32 vcc, [[K255]], [[B]]
 
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
+; VI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
 ; GCN: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @cmp_zext_k_i8max(i1 addrspace(1)* %out, i8 %b) nounwind {
@@ -200,9 +210,9 @@ define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
 ; VI: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
 ; GCN: s_movk_i32 [[K:s[0-9]+]], 0xff
 ; GCN-DAG: s_and_b32 [[B:s[0-9]+]], [[VAL]], [[K]]
-; GCN-DAG: v_mov_b32_e32 [[VK:v[0-9]+]], [[K]]
-; GCN: v_cmp_ne_u32_e32 vcc, [[B]], [[VK]]{{$}}
-; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, vcc
+; GCN: s_cmp_lg_u32 [[B]], [[K]]{{$}}
+; GCN: s_cselect_b64 [[CC:[^,]+]], -1, 0
+; GCN: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CC]]
 ; GCN: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @cmp_sext_k_neg1_i8_arg(i1 addrspace(1)* %out, i8 %b) nounwind {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -disable-output
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 
 define void @polnel_() {
 entry:

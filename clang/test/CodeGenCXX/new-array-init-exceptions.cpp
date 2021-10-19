@@ -7,7 +7,7 @@ struct Throws {
   ~Throws();
 };
 
-// CHECK-LABEL: define void @_Z7cleanupi
+// CHECK-LABEL: define{{.*}} void @_Z7cleanupi
 void cleanup(int n) {
   // CHECK: invoke void @_ZN6ThrowsC1Ei
   // CHECK-NEXT: to label %{{[^ ]+}} unwind label %[[LPAD:[^ ]+]]
@@ -25,7 +25,7 @@ void cleanup(int n) {
 }
 
 
-// CHECK-LABEL: define void @_Z7cleanupv
+// CHECK-LABEL: define{{.*}} void @_Z7cleanupv
 void cleanup() {
   // CHECK: invoke void @_ZN6ThrowsC1Ei
   // CHECK-NEXT: to label %{{[^ ]+}} unwind label %[[LPAD2:[^ ]+]]

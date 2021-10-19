@@ -26,12 +26,16 @@ int main(int, char**)
         typedef int T;
         T a2[] = {1,  2,  3,  4,  0};
         bool a3[] = {true,  false,  false,  false,  true};
-        const unsigned N = sizeof(a2)/sizeof(a2[0]);
+        const unsigned N = 5;
         std::valarray<T> v2(a2, N);
         std::valarray<bool> v3 = 2 > v2;
-        assert(v2.size() == v3.size());
-        for (std::size_t i = 0; i < v3.size(); ++i)
+        std::valarray<bool> v3a = +(2 > v2);
+        assert(v3.size() == N);
+        assert(v3a.size() == N);
+        for (std::size_t i = 0; i < N; ++i) {
             assert(v3[i] == a3[i]);
+            assert(v3a[i] == a3[i]);
+        }
     }
 
   return 0;

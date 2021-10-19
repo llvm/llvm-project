@@ -74,6 +74,9 @@ void run()
     CHECK_ALWAYS_LOCK_FREE(char);
     CHECK_ALWAYS_LOCK_FREE(signed char);
     CHECK_ALWAYS_LOCK_FREE(unsigned char);
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    CHECK_ALWAYS_LOCK_FREE(char8_t);
+#endif
     CHECK_ALWAYS_LOCK_FREE(char16_t);
     CHECK_ALWAYS_LOCK_FREE(char32_t);
     CHECK_ALWAYS_LOCK_FREE(wchar_t);
@@ -122,6 +125,9 @@ void run()
     static_assert(std::atomic<char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
     static_assert(std::atomic<signed char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
     static_assert(std::atomic<unsigned char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    static_assert(std::atomic<char8_t>::is_always_lock_free == (2 == ATOMIC_CHAR8_T_LOCK_FREE), "");
+#endif
     static_assert(std::atomic<char16_t>::is_always_lock_free == (2 == ATOMIC_CHAR16_T_LOCK_FREE), "");
     static_assert(std::atomic<char32_t>::is_always_lock_free == (2 == ATOMIC_CHAR32_T_LOCK_FREE), "");
     static_assert(std::atomic<wchar_t>::is_always_lock_free == (2 == ATOMIC_WCHAR_T_LOCK_FREE), "");
@@ -134,6 +140,11 @@ void run()
     checkLongLongTypes();
     static_assert(std::atomic<void*>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE), "");
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE), "");
+
+#if TEST_STD_VER >= 20
+    static_assert(std::atomic_signed_lock_free::is_always_lock_free, "");
+    static_assert(std::atomic_unsigned_lock_free::is_always_lock_free, "");
+#endif
 }
 
 int main(int, char**) { run(); return 0; }

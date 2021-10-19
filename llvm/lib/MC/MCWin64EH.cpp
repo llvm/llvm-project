@@ -144,8 +144,8 @@ static void EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->End);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->End);
   streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
                                              MCSymbolRefExpr::VK_COFF_IMGREL32,
                                              context), 4);
@@ -238,8 +238,9 @@ void llvm::Win64EH::UnwindEmitter::Emit(MCStreamer &Streamer) const {
   }
 }
 
-void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(
-    MCStreamer &Streamer, WinEH::FrameInfo *info) const {
+void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
+                                                  WinEH::FrameInfo *info,
+                                                  bool HandlerData) const {
   // Switch sections (the static function above is meant to be called from
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
@@ -264,8 +265,7 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   return value;
 }
 
-static uint32_t
-ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
+static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
   uint32_t Count = 0;
   for (const auto &I : Insns) {
     switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
@@ -279,6 +279,9 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
       break;
     case Win64EH::UOP_AllocLarge:
       Count += 4;
+      break;
+    case Win64EH::UOP_SaveR19R20X:
+      Count += 1;
       break;
     case Win64EH::UOP_SaveFPLRX:
       Count += 1;
@@ -296,6 +299,9 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
       Count += 2;
       break;
     case Win64EH::UOP_SaveRegX:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveLRPair:
       Count += 2;
       break;
     case Win64EH::UOP_SaveFReg:
@@ -320,6 +326,21 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
       Count += 1;
       break;
     case Win64EH::UOP_End:
+      Count += 1;
+      break;
+    case Win64EH::UOP_SaveNext:
+      Count += 1;
+      break;
+    case Win64EH::UOP_TrapFrame:
+      Count += 1;
+      break;
+    case Win64EH::UOP_PushMachFrame:
+      Count += 1;
+      break;
+    case Win64EH::UOP_Context:
+      Count += 1;
+      break;
+    case Win64EH::UOP_ClearUnwoundToCall:
       Count += 1;
       break;
     }
@@ -375,6 +396,11 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     b = 0xE3;
     streamer.emitInt8(b);
     break;
+  case Win64EH::UOP_SaveR19R20X:
+    b = 0x20;
+    b |= (inst.Offset >> 3) & 0x1F;
+    streamer.emitInt8(b);
+    break;
   case Win64EH::UOP_SaveFPLRX:
     b = 0x80;
     b |= ((inst.Offset - 1) >> 3) & 0x3F;
@@ -417,6 +443,16 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     b = ((reg & 0x3) << 6) | ((inst.Offset >> 3) - 1);
     streamer.emitInt8(b);
     break;
+  case Win64EH::UOP_SaveLRPair:
+    assert(inst.Register >= 19 && "Saved reg must be >= 19");
+    reg = inst.Register - 19;
+    assert((reg % 2) == 0 && "Saved reg must be 19+2*X");
+    reg /= 2;
+    b = 0xD6 | ((reg & 0x7) >> 2);
+    streamer.emitInt8(b);
+    b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
+    streamer.emitInt8(b);
+    break;
   case Win64EH::UOP_SaveFReg:
     assert(inst.Register >= 8 && "Saved dreg must be >= 8");
     reg = inst.Register - 8;
@@ -451,6 +487,26 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     break;
   case Win64EH::UOP_End:
     b = 0xE4;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_SaveNext:
+    b = 0xE6;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_TrapFrame:
+    b = 0xE8;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_PushMachFrame:
+    b = 0xE9;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_Context:
+    b = 0xEA;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_ClearUnwoundToCall:
+    b = 0xEC;
     streamer.emitInt8(b);
     break;
   }
@@ -488,9 +544,338 @@ FindMatchingEpilog(const std::vector<WinEH::Instruction>& EpilogInstrs,
   return nullptr;
 }
 
+static void simplifyOpcodes(std::vector<WinEH::Instruction> &Instructions,
+                            bool Reverse) {
+  unsigned PrevOffset = -1;
+  unsigned PrevRegister = -1;
+
+  auto VisitInstruction = [&](WinEH::Instruction &Inst) {
+    // Convert 2-byte opcodes into equivalent 1-byte ones.
+    if (Inst.Operation == Win64EH::UOP_SaveRegP && Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLR;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 29) {
+      Inst.Operation = Win64EH::UOP_SaveFPLRX;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX &&
+               Inst.Register == 19 && Inst.Offset <= 248) {
+      Inst.Operation = Win64EH::UOP_SaveR19R20X;
+      Inst.Register = -1;
+    } else if (Inst.Operation == Win64EH::UOP_AddFP && Inst.Offset == 0) {
+      Inst.Operation = Win64EH::UOP_SetFP;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP &&
+               Inst.Register == PrevRegister + 2 &&
+               Inst.Offset == PrevOffset + 16) {
+      Inst.Operation = Win64EH::UOP_SaveNext;
+      Inst.Register = -1;
+      Inst.Offset = 0;
+      // Intentionally not creating UOP_SaveNext for float register pairs,
+      // as current versions of Windows (up to at least 20.04) is buggy
+      // regarding SaveNext for float pairs.
+    }
+    // Update info about the previous instruction, for detecting if
+    // the next one can be made a UOP_SaveNext
+    if (Inst.Operation == Win64EH::UOP_SaveR19R20X) {
+      PrevOffset = 0;
+      PrevRegister = 19;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegPX) {
+      PrevOffset = 0;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveRegP) {
+      PrevOffset = Inst.Offset;
+      PrevRegister = Inst.Register;
+    } else if (Inst.Operation == Win64EH::UOP_SaveNext) {
+      PrevRegister += 2;
+      PrevOffset += 16;
+    } else {
+      PrevRegister = -1;
+      PrevOffset = -1;
+    }
+  };
+
+  // Iterate over instructions in a forward order (for prologues),
+  // backwards for epilogues (i.e. always reverse compared to how the
+  // opcodes are stored).
+  if (Reverse) {
+    for (auto It = Instructions.rbegin(); It != Instructions.rend(); It++)
+      VisitInstruction(*It);
+  } else {
+    for (WinEH::Instruction &Inst : Instructions)
+      VisitInstruction(Inst);
+  }
+}
+
+static int checkPackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
+                             int PrologCodeBytes) {
+  // Can only pack if there's one single epilog
+  if (info->EpilogMap.size() != 1)
+    return -1;
+
+  const std::vector<WinEH::Instruction> &Epilog =
+      info->EpilogMap.begin()->second;
+
+  // Can pack if the epilog is a subset of the prolog but not vice versa
+  if (Epilog.size() > info->Instructions.size())
+    return -1;
+
+  // Check that the epilog actually is a perfect match for the end (backwrds)
+  // of the prolog.
+  for (int I = Epilog.size() - 1; I >= 0; I--) {
+    if (info->Instructions[I] != Epilog[Epilog.size() - 1 - I])
+      return -1;
+  }
+
+  // Check that the epilog actually is at the very end of the function,
+  // otherwise it can't be packed.
+  uint32_t DistanceFromEnd = (uint32_t)GetAbsDifference(
+      streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
+  if (DistanceFromEnd / 4 != Epilog.size())
+    return -1;
+
+  int Offset = Epilog.size() == info->Instructions.size()
+                   ? 0
+                   : ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
+                         &info->Instructions[Epilog.size()],
+                         info->Instructions.size() - Epilog.size()));
+
+  // Check that the offset and prolog size fits in the first word; it's
+  // unclear whether the epilog count in the extension word can be taken
+  // as packed epilog offset.
+  if (Offset > 31 || PrologCodeBytes > 124)
+    return -1;
+
+  info->EpilogMap.clear();
+  return Offset;
+}
+
+static bool tryPackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
+                            int PackedEpilogOffset) {
+  if (PackedEpilogOffset == 0) {
+    // Fully symmetric prolog and epilog, should be ok for packed format.
+    // For CR=3, the corresponding synthesized epilog actually lacks the
+    // SetFP opcode, but unwinding should work just fine despite that
+    // (if at the SetFP opcode, the unwinder considers it as part of the
+    // function body and just unwinds the full prolog instead).
+  } else if (PackedEpilogOffset == 1) {
+    // One single case of differences between prolog and epilog is allowed:
+    // The epilog can lack a single SetFP that is the last opcode in the
+    // prolog, for the CR=3 case.
+    if (info->Instructions.back().Operation != Win64EH::UOP_SetFP)
+      return false;
+  } else {
+    // Too much difference between prolog and epilog.
+    return false;
+  }
+  unsigned RegI = 0, RegF = 0;
+  int Predecrement = 0;
+  enum {
+    Start,
+    Start2,
+    IntRegs,
+    FloatRegs,
+    InputArgs,
+    StackAdjust,
+    FrameRecord,
+    End
+  } Location = Start;
+  bool StandaloneLR = false, FPLRPair = false;
+  int StackOffset = 0;
+  int Nops = 0;
+  // Iterate over the prolog and check that all opcodes exactly match
+  // the canonical order and form. A more lax check could verify that
+  // all saved registers are in the expected locations, but not enforce
+  // the order - that would work fine when unwinding from within
+  // functions, but not be exactly right if unwinding happens within
+  // prologs/epilogs.
+  for (const WinEH::Instruction &Inst : info->Instructions) {
+    switch (Inst.Operation) {
+    case Win64EH::UOP_End:
+      if (Location != Start)
+        return false;
+      Location = Start2;
+      break;
+    case Win64EH::UOP_SaveR19R20X:
+      if (Location != Start2)
+        return false;
+      Predecrement = Inst.Offset;
+      RegI = 2;
+      Location = IntRegs;
+      break;
+    case Win64EH::UOP_SaveRegX:
+      if (Location != Start2)
+        return false;
+      Predecrement = Inst.Offset;
+      if (Inst.Register == 19)
+        RegI += 1;
+      else if (Inst.Register == 30)
+        StandaloneLR = true;
+      else
+        return false;
+      // Odd register; can't be any further int registers.
+      Location = FloatRegs;
+      break;
+    case Win64EH::UOP_SaveRegPX:
+      // Can't have this in a canonical prologue. Either this has been
+      // canonicalized into SaveR19R20X or SaveFPLRX, or it's an unsupported
+      // register pair.
+      // It can't be canonicalized into SaveR19R20X if the offset is
+      // larger than 248 bytes, but even with the maximum case with
+      // RegI=10/RegF=8/CR=1/H=1, we end up with SavSZ = 216, which should
+      // fit into SaveR19R20X.
+      // The unwinding opcodes can't describe the otherwise seemingly valid
+      // case for RegI=1 CR=1, that would start with a
+      // "stp x19, lr, [sp, #-...]!" as that fits neither SaveRegPX nor
+      // SaveLRPair.
+      return false;
+    case Win64EH::UOP_SaveRegP:
+      if (Location != IntRegs || Inst.Offset != 8 * RegI ||
+          Inst.Register != 19 + RegI)
+        return false;
+      RegI += 2;
+      break;
+    case Win64EH::UOP_SaveReg:
+      if (Location != IntRegs || Inst.Offset != 8 * RegI)
+        return false;
+      if (Inst.Register == 19 + RegI)
+        RegI += 1;
+      else if (Inst.Register == 30)
+        StandaloneLR = true;
+      else
+        return false;
+      // Odd register; can't be any further int registers.
+      Location = FloatRegs;
+      break;
+    case Win64EH::UOP_SaveLRPair:
+      if (Location != IntRegs || Inst.Offset != 8 * RegI ||
+          Inst.Register != 19 + RegI)
+        return false;
+      RegI += 1;
+      StandaloneLR = true;
+      Location = FloatRegs;
+      break;
+    case Win64EH::UOP_SaveFRegX:
+      // Packed unwind can't handle prologs that only save one single
+      // float register.
+      return false;
+    case Win64EH::UOP_SaveFReg:
+      if (Location != FloatRegs || RegF == 0 || Inst.Register != 8 + RegF ||
+          Inst.Offset != 8 * (RegI + (StandaloneLR ? 1 : 0) + RegF))
+        return false;
+      RegF += 1;
+      Location = InputArgs;
+      break;
+    case Win64EH::UOP_SaveFRegPX:
+      if (Location != Start2 || Inst.Register != 8)
+        return false;
+      Predecrement = Inst.Offset;
+      RegF = 2;
+      Location = FloatRegs;
+      break;
+    case Win64EH::UOP_SaveFRegP:
+      if ((Location != IntRegs && Location != FloatRegs) ||
+          Inst.Register != 8 + RegF ||
+          Inst.Offset != 8 * (RegI + (StandaloneLR ? 1 : 0) + RegF))
+        return false;
+      RegF += 2;
+      Location = FloatRegs;
+      break;
+    case Win64EH::UOP_SaveNext:
+      if (Location == IntRegs)
+        RegI += 2;
+      else if (Location == FloatRegs)
+        RegF += 2;
+      else
+        return false;
+      break;
+    case Win64EH::UOP_Nop:
+      if (Location != IntRegs && Location != FloatRegs && Location != InputArgs)
+        return false;
+      Location = InputArgs;
+      Nops++;
+      break;
+    case Win64EH::UOP_AllocSmall:
+    case Win64EH::UOP_AllocMedium:
+      if (Location != Start2 && Location != IntRegs && Location != FloatRegs &&
+          Location != InputArgs && Location != StackAdjust)
+        return false;
+      // Can have either a single decrement, or a pair of decrements with
+      // 4080 and another decrement.
+      if (StackOffset == 0)
+        StackOffset = Inst.Offset;
+      else if (StackOffset != 4080)
+        return false;
+      else
+        StackOffset += Inst.Offset;
+      Location = StackAdjust;
+      break;
+    case Win64EH::UOP_SaveFPLRX:
+      // Not allowing FPLRX after StackAdjust; if a StackAdjust is used, it
+      // should be followed by a FPLR instead.
+      if (Location != Start2 && Location != IntRegs && Location != FloatRegs &&
+          Location != InputArgs)
+        return false;
+      StackOffset = Inst.Offset;
+      Location = FrameRecord;
+      FPLRPair = true;
+      break;
+    case Win64EH::UOP_SaveFPLR:
+      // This can only follow after a StackAdjust
+      if (Location != StackAdjust || Inst.Offset != 0)
+        return false;
+      Location = FrameRecord;
+      FPLRPair = true;
+      break;
+    case Win64EH::UOP_SetFP:
+      if (Location != FrameRecord)
+        return false;
+      Location = End;
+      break;
+    }
+  }
+  if (RegI > 10 || RegF > 8)
+    return false;
+  if (StandaloneLR && FPLRPair)
+    return false;
+  if (FPLRPair && Location != End)
+    return false;
+  if (Nops != 0 && Nops != 4)
+    return false;
+  int H = Nops == 4;
+  int IntSZ = 8 * RegI;
+  if (StandaloneLR)
+    IntSZ += 8;
+  int FpSZ = 8 * RegF; // RegF not yet decremented
+  int SavSZ = (IntSZ + FpSZ + 8 * 8 * H + 0xF) & ~0xF;
+  if (Predecrement != SavSZ)
+    return false;
+  if (FPLRPair && StackOffset < 16)
+    return false;
+  if (StackOffset % 16)
+    return false;
+  uint32_t FrameSize = (StackOffset + SavSZ) / 16;
+  if (FrameSize > 0x1FF)
+    return false;
+  assert(RegF != 1 && "One single float reg not allowed");
+  if (RegF > 0)
+    RegF--; // Convert from actual number of registers, to value stored
+  assert(FuncLength <= 0x7FF && "FuncLength should have been checked earlier");
+  int Flag = 0x01; // Function segments not supported yet
+  int CR = FPLRPair ? 3 : StandaloneLR ? 1 : 0;
+  info->PackedInfo |= Flag << 0;
+  info->PackedInfo |= (FuncLength & 0x7FF) << 2;
+  info->PackedInfo |= (RegF & 0x7) << 13;
+  info->PackedInfo |= (RegI & 0xF) << 16;
+  info->PackedInfo |= (H & 0x1) << 20;
+  info->PackedInfo |= (CR & 0x3) << 21;
+  info->PackedInfo |= (FrameSize & 0x1FF) << 23;
+  return true;
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
-static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
+static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
+                                bool TryPacked = true) {
   // If this UNWIND_INFO already has a symbol, it's already been emitted.
   if (info->Symbol)
     return;
@@ -515,6 +900,10 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
                      "did get unwind info that can't be emitted");
     return;
   }
+
+  simplifyOpcodes(info->Instructions, false);
+  for (auto &I : info->EpilogMap)
+    simplifyOpcodes(I.second, true);
 
   MCContext &context = streamer.getContext();
   MCSymbol *Label = context.createTempSymbol();
@@ -562,6 +951,22 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
   uint32_t TotalCodeBytes = PrologCodeBytes;
 
+  int PackedEpilogOffset = checkPackedEpilog(streamer, info, PrologCodeBytes);
+
+  if (PackedEpilogOffset >= 0 && !info->HandlesExceptions &&
+      FuncLength <= 0x7ff && TryPacked) {
+    // Matching prolog/epilog and no exception handlers; check if the
+    // prolog matches the patterns that can be described by the packed
+    // format.
+
+    // info->Symbol was already set even if we didn't actually write any
+    // unwind info there. Keep using that as indicator that this unwind
+    // info has been generated already.
+
+    if (tryPackedUnwind(info, FuncLength, PackedEpilogOffset))
+      return;
+  }
+
   // Process epilogs.
   MapVector<MCSymbol *, uint32_t> EpilogInfo;
   // Epilogs processed so far.
@@ -594,15 +999,17 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   uint32_t CodeWordsMod = TotalCodeBytes % 4;
   if (CodeWordsMod)
     CodeWords++;
-  uint32_t EpilogCount = info->EpilogMap.size();
+  uint32_t EpilogCount =
+      PackedEpilogOffset >= 0 ? PackedEpilogOffset : info->EpilogMap.size();
   bool ExtensionWord = EpilogCount > 31 || TotalCodeBytes > 124;
   if (!ExtensionWord) {
     row1 |= (EpilogCount & 0x1F) << 22;
     row1 |= (CodeWords & 0x1F) << 27;
   }
-  // E is always 0 right now, TODO: packed epilog setup
   if (info->HandlesExceptions) // X
     row1 |= 1 << 20;
+  if (PackedEpilogOffset >= 0) // E
+    row1 |= 1 << 21;
   row1 |= FuncLength & 0x3FFFF;
   streamer.emitInt32(row1);
 
@@ -666,11 +1073,14 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  EmitSymbolRefWithOfs(streamer, info->Function, info->Begin);
-  streamer.emitValue(MCSymbolRefExpr::create(info->Symbol,
-                                             MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                             context),
-                     4);
+  EmitSymbolRefWithOfs(streamer, info->Begin, info->Begin);
+  if (info->PackedInfo)
+    streamer.emitInt32(info->PackedInfo);
+  else
+    streamer.emitValue(
+        MCSymbolRefExpr::create(info->Symbol, MCSymbolRefExpr::VK_COFF_IMGREL32,
+                                context),
+        4);
 }
 
 void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
@@ -698,8 +1108,9 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
   }
 }
 
-void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(
-    MCStreamer &Streamer, WinEH::FrameInfo *info) const {
+void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
+                                                       WinEH::FrameInfo *info,
+                                                       bool HandlerData) const {
   // Called if there's an .seh_handlerdata directive before the end of the
   // function. This forces writing the xdata record already here - and
   // in this case, the function isn't actually ended already, but the xdata
@@ -714,5 +1125,5 @@ void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
   Streamer.SwitchSection(XData);
-  ARM64EmitUnwindInfo(Streamer, info);
+  ARM64EmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
 }

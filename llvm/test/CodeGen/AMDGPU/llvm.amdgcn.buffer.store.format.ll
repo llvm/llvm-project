@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=VERDE %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
+;RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=VERDE %s
+;RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_store:
 ;CHECK-NOT: s_waitcnt

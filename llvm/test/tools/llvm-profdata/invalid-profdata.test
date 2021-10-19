@@ -21,8 +21,8 @@ RUN: echo "1"                                            >> %t.input
 RUN: echo ":10"                                          >> %t.input
 
 RUN: not llvm-profdata merge %t.input -text -output=/dev/null 2>&1  | FileCheck %s --check-prefix=BROKEN
-BROKEN: warning: {{.*}}invalid-profdata.test.tmp.input: Malformed instrumentation profile data
-BROKEN-NEXT: error: No profiles could be merged.
+BROKEN: warning: {{.*}}invalid-profdata.test.tmp.input: malformed instrumentation profile data
+BROKEN-NEXT: error: no profile can be merged
 
 RUN: echo ":ir"                     > %t.input
 RUN: echo "_ZN6Thread5StartEv"      >> %t.input

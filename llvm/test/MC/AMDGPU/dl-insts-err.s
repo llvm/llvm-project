@@ -1,7 +1,8 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx800 -show-encoding %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx906 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx800 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck %s --check-prefix=GFX906-GFX908
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1013 %s 2>&1 | FileCheck %s --check-prefix=GFX1013
 
 //
 // Test unsupported GPUs.
@@ -12,18 +13,25 @@ v_fmac_f32 v0, v1, v2
 // CHECK: error: instruction not supported on this GPU
 v_xnor_b32 v0, v1, v2
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot2_f32_f16 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot2_i32_i16 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot2_u32_u16 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot4_i32_i8 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot4_u32_u8 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot8_i32_i4 v0, v1, v2, v3
 // CHECK: error: instruction not supported on this GPU
+// GFX1013: error: instruction not supported on this GPU
 v_dot8_u32_u4 v0, v1, v2, v3
 
 //
@@ -44,17 +52,17 @@ v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[]
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
@@ -72,17 +80,17 @@ v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[]
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_f32_f16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]
@@ -100,17 +108,17 @@ v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[]
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_lo value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,0,0,0,0]
@@ -128,17 +136,17 @@ v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[]
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid neg_hi value.
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_f32_f16 v0, v1, v2, v3 neg_hi:[0,0,0,0,0]
@@ -156,17 +164,17 @@ v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[]
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
@@ -184,17 +192,17 @@ v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[]
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_i32_i16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]
@@ -216,17 +224,17 @@ v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[]
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[,]
 // GFX906-GFX908: error: unknown token in expression
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel:[0,0,0,0,0]
@@ -246,15 +254,15 @@ v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[,]
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[,0]
 // GFX906-GFX908: error: invalid op_sel_hi value
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[0,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[2,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[2,2]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[0,-1]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[-1,0]
-// GFX906-GFX908: error: failed parsing operand
+// GFX906-GFX908: error: invalid op_sel_hi value.
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[-1,-1]
 // GFX906-GFX908: error: expected a closing square bracket
 v_dot2_u32_u16 v0, v1, v2, v3 op_sel_hi:[0,0,0,0,0]

@@ -23,15 +23,21 @@ namespace bugprone {
 static const char CondVarStr[] = "cond_var";
 static const char OuterIfStr[] = "outer_if";
 static const char InnerIfStr[] = "inner_if";
+static const char OuterIfVar1Str[] = "outer_if_var1";
+static const char OuterIfVar2Str[] = "outer_if_var2";
+static const char InnerIfVar1Str[] = "inner_if_var1";
+static const char InnerIfVar2Str[] = "inner_if_var2";
 static const char FuncStr[] = "func";
 
-/// Returns whether `Var` is changed in `S` before `NextS`.
-static bool isChangedBefore(const Stmt *S, const Stmt *NextS,
+/// Returns whether `Var` is changed in range (`PrevS`..`NextS`).
+static bool isChangedBefore(const Stmt *S, const Stmt *NextS, const Stmt *PrevS,
                             const VarDecl *Var, ASTContext *Context) {
   ExprMutationAnalyzer MutAn(*S, *Context);
   const auto &SM = Context->getSourceManager();
   const Stmt *MutS = MutAn.findMutation(Var);
   return MutS &&
+         SM.isBeforeInTranslationUnit(PrevS->getEndLoc(),
+                                      MutS->getBeginLoc()) &&
          SM.isBeforeInTranslationUnit(MutS->getEndLoc(), NextS->getBeginLoc());
 }
 
@@ -42,20 +48,23 @@ void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
           .bind(CondVarStr);
   Finder->addMatcher(
       ifStmt(
-          hasCondition(ignoringParenImpCasts(anyOf(
-              declRefExpr(hasDeclaration(ImmutableVar)),
-              binaryOperator(hasOperatorName("&&"),
-                             hasEitherOperand(ignoringParenImpCasts(declRefExpr(
-                                 hasDeclaration(ImmutableVar)))))))),
+          hasCondition(anyOf(
+              declRefExpr(hasDeclaration(ImmutableVar)).bind(OuterIfVar1Str),
+              binaryOperator(
+                  hasOperatorName("&&"),
+                  hasEitherOperand(declRefExpr(hasDeclaration(ImmutableVar))
+                                       .bind(OuterIfVar2Str))))),
           hasThen(hasDescendant(
-              ifStmt(hasCondition(ignoringParenImpCasts(
-                         anyOf(declRefExpr(hasDeclaration(
-                                   varDecl(equalsBoundNode(CondVarStr)))),
-                               binaryOperator(
-                                   hasAnyOperatorName("&&", "||"),
-                                   hasEitherOperand(ignoringParenImpCasts(
-                                       declRefExpr(hasDeclaration(varDecl(
-                                           equalsBoundNode(CondVarStr)))))))))))
+              ifStmt(hasCondition(anyOf(
+                         declRefExpr(hasDeclaration(
+                                         varDecl(equalsBoundNode(CondVarStr))))
+                             .bind(InnerIfVar1Str),
+                         binaryOperator(
+                             hasAnyOperatorName("&&", "||"),
+                             hasEitherOperand(
+                                 declRefExpr(hasDeclaration(varDecl(
+                                                 equalsBoundNode(CondVarStr))))
+                                     .bind(InnerIfVar2Str))))))
                   .bind(InnerIfStr))),
           forFunction(functionDecl().bind(FuncStr)))
           .bind(OuterIfStr),
@@ -69,20 +78,39 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
   const auto *CondVar = Result.Nodes.getNodeAs<VarDecl>(CondVarStr);
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>(FuncStr);
 
+  const DeclRefExpr *OuterIfVar, *InnerIfVar;
+  if (const auto *Inner = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar1Str))
+    InnerIfVar = Inner;
+  else
+    InnerIfVar = Result.Nodes.getNodeAs<DeclRefExpr>(InnerIfVar2Str);
+  if (const auto *Outer = Result.Nodes.getNodeAs<DeclRefExpr>(OuterIfVar1Str))
+    OuterIfVar = Outer;
+  else
+    OuterIfVar = Result.Nodes.getNodeAs<DeclRefExpr>(OuterIfVar2Str);
+
+  if (OuterIfVar && InnerIfVar) {
+    if (isChangedBefore(OuterIf->getThen(), InnerIfVar, OuterIfVar, CondVar,
+                        Result.Context))
+      return;
+
+    if (isChangedBefore(OuterIf->getCond(), InnerIfVar, OuterIfVar, CondVar,
+                        Result.Context))
+      return;
+  }
+
   // If the variable has an alias then it can be changed by that alias as well.
   // FIXME: could potentially support tracking pointers and references in the
   // future to improve catching true positives through aliases.
   if (hasPtrOrReferenceInFunc(Func, CondVar))
     return;
 
-  if (isChangedBefore(OuterIf->getThen(), InnerIf, CondVar, Result.Context))
-    return;
-
   auto Diag = diag(InnerIf->getBeginLoc(), "redundant condition %0") << CondVar;
 
   // For standalone condition variables and for "or" binary operations we simply
   // remove the inner `if`.
-  const auto *BinOpCond = dyn_cast<BinaryOperator>(InnerIf->getCond());
+  const auto *BinOpCond =
+      dyn_cast<BinaryOperator>(InnerIf->getCond()->IgnoreParenImpCasts());
+
   if (isa<DeclRefExpr>(InnerIf->getCond()->IgnoreParenImpCasts()) ||
       (BinOpCond && BinOpCond->getOpcode() == BO_LOr)) {
     SourceLocation IfBegin = InnerIf->getBeginLoc();
@@ -121,7 +149,7 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
           CharSourceRange::getTokenRange(IfBegin, IfEnd));
     }
 
-    // For comound statements also remove the right brace at the end.
+    // For compound statements also remove the right brace at the end.
     if (isa<CompoundStmt>(Body))
       Diag << FixItHint::CreateRemoval(
           CharSourceRange::getTokenRange(Body->getEndLoc(), Body->getEndLoc()));
@@ -129,7 +157,8 @@ void RedundantBranchConditionCheck::check(const MatchFinder::MatchResult &Result
     // For "and" binary operations we remove the "and" operation with the
     // condition variable from the inner if.
   } else {
-    const auto *CondOp = cast<BinaryOperator>(InnerIf->getCond());
+    const auto *CondOp =
+        cast<BinaryOperator>(InnerIf->getCond()->IgnoreParenImpCasts());
     const auto *LeftDRE =
         dyn_cast<DeclRefExpr>(CondOp->getLHS()->IgnoreParenImpCasts());
     if (LeftDRE && LeftDRE->getDecl() == CondVar) {

@@ -1,5 +1,8 @@
+add_subdirectory(Analysis)
+add_subdirectory(Conversion)
 add_subdirectory(Dialect)
 add_subdirectory(IR)
 add_subdirectory(Pass)
 add_subdirectory(Reducer)
+add_subdirectory(Rewrite)
 add_subdirectory(Transforms)

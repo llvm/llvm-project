@@ -62,5 +62,5 @@ ELF-I386-NEXT: _ZTV1A[8]: _ZN1A1fEv
 
 MIXEDARCOFF-I386:      ??_7S@@6B@[0]: ??_R4S@@6B@
 
-RUN: not llvm-cxxdump %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: {{.*}}.blah: error: {{[Nn]}}o such file or directory
+RUN: not llvm-cxxdump %t.blah 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=ENOENT %s
+ENOENT: {{.*}}.blah: error: [[MSG]]

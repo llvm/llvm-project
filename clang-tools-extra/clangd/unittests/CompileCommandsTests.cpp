@@ -11,8 +11,12 @@
 #include "TestFS.h"
 #include "support/Context.h"
 
+#include "clang/Tooling/ArgumentsAdjusters.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -41,20 +45,19 @@ TEST(CommandMangler, Everything) {
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
-  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load", "-Xclang",
-                                  "plugin",  "-MF",     "dep",   "foo.cc"};
-  Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"), "foo.cc",
-                               "-fsyntax-only",
+  std::vector<std::string> Cmd = {"clang++", "--", "foo.cc", "bar.cc"};
+  Mangler.adjust(Cmd, "foo.cc");
+  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"),
                                "-resource-dir=" + testPath("fake/resources"),
-                               "-isysroot", testPath("fake/sysroot")));
+                               "-isysroot", testPath("fake/sysroot"), "--",
+                               "foo.cc"));
 }
 
 TEST(CommandMangler, ResourceDir) {
   auto Mangler = CommandMangler::forTests();
   Mangler.ResourceDir = testPath("fake/resources");
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_THAT(Cmd, Contains("-resource-dir=" + testPath("fake/resources")));
 }
 
@@ -63,41 +66,9 @@ TEST(CommandMangler, Sysroot) {
   Mangler.Sysroot = testPath("fake/sysroot");
 
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_THAT(llvm::join(Cmd, " "),
               HasSubstr("-isysroot " + testPath("fake/sysroot")));
-}
-
-TEST(CommandMangler, StripPlugins) {
-  auto Mangler = CommandMangler::forTests();
-  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load",
-                                  "-Xclang", "plugin",  "foo.cc"};
-  Mangler.adjust(Cmd);
-  for (const char* Stripped : {"-Xclang", "-load", "plugin"})
-    EXPECT_THAT(Cmd, Not(Contains(Stripped)));
-}
-
-TEST(CommandMangler, StripOutput) {
-  auto Mangler = CommandMangler::forTests();
-  std::vector<std::string> Cmd = {"clang++", "-MF", "dependency", "-c",
-                                  "foo.cc"};
-  Mangler.adjust(Cmd);
-  for (const char* Stripped : {"-MF", "dependency"})
-    EXPECT_THAT(Cmd, Not(Contains(Stripped)));
-}
-
-TEST(CommandMangler, StripShowIncludes) {
-  auto Mangler = CommandMangler::forTests();
-  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes", "foo.cc"};
-  Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, Not(Contains("/showIncludes")));
-}
-
-TEST(CommandMangler, StripShowIncludesUser) {
-  auto Mangler = CommandMangler::forTests();
-  std::vector<std::string> Cmd = {"clang-cl", "/showIncludes:user", "foo.cc"};
-  Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, Not(Contains("/showIncludes:user")));
 }
 
 TEST(CommandMangler, ClangPath) {
@@ -105,19 +76,19 @@ TEST(CommandMangler, ClangPath) {
   Mangler.ClangPath = testPath("fake/clang");
 
   std::vector<std::string> Cmd = {"clang++", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_EQ(testPath("fake/clang++"), Cmd.front());
 
   Cmd = {"unknown-binary", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_EQ(testPath("fake/unknown-binary"), Cmd.front());
 
   Cmd = {testPath("path/clang++"), "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_EQ(testPath("path/clang++"), Cmd.front());
 
   Cmd = {"foo/unknown-binary", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_EQ("foo/unknown-binary", Cmd.front());
 }
 
@@ -160,7 +131,7 @@ TEST(CommandMangler, ClangPathResolve) {
   auto Mangler = CommandMangler::forTests();
   Mangler.ClangPath = testPath("fake/clang");
   std::vector<std::string> Cmd = {(TempDir + "/bin/foo").str(), "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   // Directory based on resolved symlink, basename preserved.
   EXPECT_EQ((TempDir + "/lib/foo").str(), Cmd.front());
 
@@ -177,13 +148,13 @@ TEST(CommandMangler, ClangPathResolve) {
   Mangler.ClangPath = testPath("fake/clang");
   // Driver found on PATH.
   Cmd = {"foo", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   // Found the symlink and resolved the path as above.
   EXPECT_EQ((TempDir + "/lib/foo").str(), Cmd.front());
 
   // Symlink not resolved with -no-canonical-prefixes.
   Cmd = {"foo", "-no-canonical-prefixes", "foo.cc"};
-  Mangler.adjust(Cmd);
+  Mangler.adjust(Cmd, "foo.cc");
   EXPECT_EQ((TempDir + "/bin/foo").str(), Cmd.front());
 }
 #endif
@@ -198,23 +169,25 @@ TEST(CommandMangler, ConfigEdits) {
         for (char &C : Arg)
           C = llvm::toUpper(C);
     });
-    Cfg.CompileFlags.Edits.push_back(
-        [](std::vector<std::string> &Argv) { Argv.push_back("--hello"); });
+    Cfg.CompileFlags.Edits.push_back([](std::vector<std::string> &Argv) {
+      Argv = tooling::getInsertArgumentAdjuster("--hello")(Argv, "");
+    });
     WithContextValue WithConfig(Config::Key, std::move(Cfg));
-    Mangler.adjust(Cmd);
+    Mangler.adjust(Cmd, "foo.cc");
   }
-  // Edits are applied in given order and before other mangling.
-  EXPECT_THAT(Cmd, ElementsAre(_, "FOO.CC", "--hello", "-fsyntax-only"));
+  // Edits are applied in given order and before other mangling and they always
+  // go before filename.
+  EXPECT_THAT(Cmd, ElementsAre(_, "--hello", "--", "FOO.CC"));
 }
 
 static std::string strip(llvm::StringRef Arg, llvm::StringRef Argv) {
-  llvm::SmallVector<llvm::StringRef, 8> Parts;
+  llvm::SmallVector<llvm::StringRef> Parts;
   llvm::SplitString(Argv, Parts);
   std::vector<std::string> Args = {Parts.begin(), Parts.end()};
   ArgStripper S;
   S.strip(Arg);
   S.process(Args);
-  return llvm::join(Args, " ");
+  return printArgv(Args);
 }
 
 TEST(ArgStripperTest, Spellings) {
@@ -367,7 +340,69 @@ TEST(ArgStripperTest, OrderDependent) {
   EXPECT_THAT(Args, ElementsAre("clang", "foo.cc"));
 }
 
+TEST(PrintArgvTest, All) {
+  std::vector<llvm::StringRef> Args = {
+      "one", "two", "thr ee", "f\"o\"ur", "fi\\ve", "$"
+  };
+  const char *Expected = R"(one two "thr ee" "f\"o\"ur" "fi\\ve" $)";
+  EXPECT_EQ(Expected, printArgv(Args));
+}
+
+TEST(CommandMangler, InputsAfterDashDash) {
+  const auto Mangler = CommandMangler::forTests();
+  {
+    std::vector<std::string> Args = {"clang", "/Users/foo.cc"};
+    Mangler.adjust(Args, "/Users/foo.cc");
+    EXPECT_THAT(llvm::makeArrayRef(Args).take_back(2),
+                ElementsAre("--", "/Users/foo.cc"));
+    EXPECT_THAT(llvm::makeArrayRef(Args).drop_back(2),
+                Not(Contains("/Users/foo.cc")));
+  }
+  // In CL mode /U triggers an undef operation, hence `/Users/foo.cc` shouldn't
+  // be interpreted as a file.
+  {
+    std::vector<std::string> Args = {"clang", "--driver-mode=cl", "bar.cc",
+                                     "/Users/foo.cc"};
+    Mangler.adjust(Args, "bar.cc");
+    EXPECT_THAT(llvm::makeArrayRef(Args).take_back(2),
+                ElementsAre("--", "bar.cc"));
+    EXPECT_THAT(llvm::makeArrayRef(Args).drop_back(2), Not(Contains("bar.cc")));
+  }
+  // All inputs but the main file is dropped.
+  {
+    std::vector<std::string> Args = {"clang", "foo.cc", "bar.cc"};
+    Mangler.adjust(Args, "baz.cc");
+    EXPECT_THAT(llvm::makeArrayRef(Args).take_back(2),
+                ElementsAre("--", "baz.cc"));
+    EXPECT_THAT(
+        llvm::makeArrayRef(Args).drop_back(2),
+        testing::AllOf(Not(Contains("foo.cc")), Not(Contains("bar.cc"))));
+  }
+}
+
+TEST(CommandMangler, StripsMultipleArch) {
+  const auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Args = {"clang", "-arch", "foo",
+                                   "-arch", "bar",   "/Users/foo.cc"};
+  Mangler.adjust(Args, "/Users/foo.cc");
+  EXPECT_EQ(
+      llvm::count_if(Args, [](llvm::StringRef Arg) { return Arg == "-arch"; }),
+      0);
+
+  // Single arch option is preserved.
+  Args = {"clang", "-arch", "foo", "/Users/foo.cc"};
+  Mangler.adjust(Args, "/Users/foo.cc");
+  EXPECT_EQ(
+      llvm::count_if(Args, [](llvm::StringRef Arg) { return Arg == "-arch"; }),
+      1);
+}
+
+TEST(CommandMangler, EmptyArgs) {
+  const auto Mangler = CommandMangler::forTests();
+  std::vector<std::string> Args = {};
+  // Make sure we don't crash.
+  Mangler.adjust(Args, "foo.cc");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
-

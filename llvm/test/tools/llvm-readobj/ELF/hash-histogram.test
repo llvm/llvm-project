@@ -63,23 +63,22 @@ DynamicSymbols:
   - Name: c
   - Name: d
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Show that we report a warning for a hash table which contains an entry of
 ## the bucket array pointing to a cycle.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
-# RUN: llvm-readelf --elf-hash-histogram 2>&1 %t2.o | FileCheck -DFILE=%t2.o %s --check-prefix=BROKEN
+# RUN: llvm-readelf --elf-hash-histogram 2>&1 %t2.o | \
+# RUN:   FileCheck -DFILE=%t2.o %s --check-prefix=BROKEN --implicit-check-not=warning:
 
 # BROKEN:       warning: '[[FILE]]': .hash section is invalid: bucket 1: a cycle was detected in the linked chain
-# BROKEN:       Histogram for bucket list length (total of 1 buckets)
+# BROKEN:       Histogram for bucket list length (total of 2 buckets)
 # BROKEN-NEXT:  Length  Number     % of total  Coverage
 # BROKEN-NEXT:       0  0          (  0.0%)       0.0%
-# BROKEN-NEXT:       1  1          (100.0%)     100.0%
+# BROKEN-NEXT:       1  2          (100.0%)     100.0%
 
 --- !ELF
 FileHeader:
@@ -90,7 +89,7 @@ Sections:
   - Name:   .hash
     Type:   SHT_HASH
     Link:   .dynsym
-    Bucket: [ 1 ]
+    Bucket: [ 1, 1 ]
     Chain:  [ 0, 1 ]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
@@ -106,10 +105,9 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
@@ -142,9 +140,8 @@ DynamicSymbols: []
 ProgramHeaders:
   - Type:     PT_LOAD
     FileSize: 0x23a
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a warning when the hash table goes past the end of the file.
 
@@ -167,6 +164,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t4.3.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t4.3.o --implicit-check-not="warning:"
 # ERR3: warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+# ERR3: warning: '[[FILE]]': the size (0x5d0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 
 ## Case B.2: the hash table ends 1 byte past the EOF. We have a broken nchain
 ##           field that has a value larger than the number of chains.
@@ -174,6 +172,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t4.4.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR4 -DFILE=%t4.4.o --implicit-check-not="warning:"
 # ERR4: warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+# ERR4: warning: '[[FILE]]': the size (0x5e0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # ERR4: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 1, nchain = 94{{$}}
 
 --- !ELF
@@ -199,10 +198,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we dump a histogram for the .gnu.hash table even when the .hash table is skipped.
 
@@ -256,11 +254,9 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a proper warning when the GNU hash table goes past the end of the file.
 
@@ -306,10 +302,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Linkers might produce an empty no-op SHT_GNU_HASH section when
 ## there are no dynamic symbols or when all dynamic symbols are undefined.
@@ -329,7 +324,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t9 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t9 --check-prefix=ERR6
 
-# ERR6: warning: '[[FILE]]': unable to print the GNU hash table histogram: the first hashed symbol index (16) is larger than the number of dynamic symbols (1)
+# ERR6: warning: '[[FILE]]': unable to print the GNU hash table histogram: the first hashed symbol index (16) is greater than or equal to the number of dynamic symbols (1)
 
 ## Case B: we do not report a warning when the buckets array contains only zero values.
 # RUN: yaml2obj --docnum=7 -DVAL=0x0 %s -o %t10
@@ -367,10 +362,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check we report warnings when the dynamic symbol table is absent or empty.
 
@@ -414,6 +408,6 @@ Sections:
     Type: [[TYPE]]
     Size: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .gnu.hash
+  - Type:     PT_LOAD
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash

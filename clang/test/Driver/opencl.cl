@@ -1,7 +1,9 @@
 // RUN: %clang -S -### -cl-std=CL %s 2>&1 | FileCheck --check-prefix=CHECK-CL %s
+// RUN: %clang -S -### -cl-std=CL1.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL10 %s
 // RUN: %clang -S -### -cl-std=CL1.1 %s 2>&1 | FileCheck --check-prefix=CHECK-CL11 %s
 // RUN: %clang -S -### -cl-std=CL1.2 %s 2>&1 | FileCheck --check-prefix=CHECK-CL12 %s
 // RUN: %clang -S -### -cl-std=CL2.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL20 %s
+// RUN: %clang -S -### -cl-std=CL3.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL30 %s
 // RUN: %clang -S -### -cl-std=clc++ %s 2>&1 | FileCheck --check-prefix=CHECK-CLCPP %s
 // RUN: %clang -S -### -cl-opt-disable %s 2>&1 | FileCheck --check-prefix=CHECK-OPT-DISABLE %s
 // RUN: %clang -S -### -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-STRICT-ALIASING %s
@@ -17,11 +19,15 @@
 // RUN: %clang -S -### -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
+// RUN: %clang -S -### -target spir-unknown-unknown %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
+// RUN: %clang -S -### -target amdgcn-amd-amdhsa-opencl %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
 
 // CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
+// CHECK-CL10: "-cc1" {{.*}} "-cl-std=CL1.0"
 // CHECK-CL11: "-cc1" {{.*}} "-cl-std=CL1.1"
 // CHECK-CL12: "-cc1" {{.*}} "-cl-std=CL1.2"
 // CHECK-CL20: "-cc1" {{.*}} "-cl-std=CL2.0"
+// CHECK-CL30: "-cc1" {{.*}} "-cl-std=CL3.0"
 // CHECK-CLCPP: "-cc1" {{.*}} "-cl-std=clc++"
 // CHECK-OPT-DISABLE: "-cc1" {{.*}} "-cl-opt-disable"
 // CHECK-STRICT-ALIASING: "-cc1" {{.*}} "-cl-strict-aliasing"
@@ -40,5 +46,8 @@
 // CHECK-UNIFORM-WG: "-cc1" {{.*}} "-cl-uniform-work-group-size"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'
+
+// CHECK-W-SPIR-COMPAT: "-Wspir-compat"
+// CHECK-NO-W-SPIR-COMPAT-NOT: "-Wspir-compat"
 
 kernel void func(void);

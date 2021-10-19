@@ -11,8 +11,8 @@ entry:
 ; CHECK-LABEL: @bar
 ; CHECK-DAG: li [[REG1:[0-9]+]], 1023
 ; CHECK-DAG: li [[REG2:[0-9]+]], {{1$}}
-; CHECK-DAG: sldi 3, [[REG1]], 52
-; CHECK-DAG: sldi 4, [[REG2]], 62
+; CHECK-DAG: rldic 3, [[REG1]], 52, 2
+; CHECK-DAG: rldic 4, [[REG2]], 62, 1
 ; CHECK: bl xxx
 ; CHECK: blr
 }

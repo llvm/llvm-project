@@ -29,7 +29,7 @@ define void @testExpandPostRAPseudo(i32* nocapture readonly %ptr) {
 ; CHECK-P9:    addis r4, r2, .LC0@toc@ha
 ; CHECK-P9:    lxvwsx vs0, 0, r3
 ; CHECK-P9:    ld r4, .LC0@toc@l(r4)
-; CHECK-P9:    stxvx vs0, 0, r4
+; CHECK-P9:    stxv vs0, 0(r4)
 ; CHECK-P9:    lis r4, 1024
 ; CHECK-P9:    lfiwax f0, 0, r3
 ; CHECK-P9:    addis r3, r2, .LC1@toc@ha

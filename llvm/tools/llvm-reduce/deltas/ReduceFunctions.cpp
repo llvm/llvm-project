@@ -23,14 +23,16 @@ using namespace llvm;
 
 /// Removes all the Defined Functions
 /// that aren't inside any of the desired Chunks.
-static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
-                                       Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractFunctionsFromModule(Oracle &O, Module &Program) {
   // Record all out-of-chunk functions.
   std::vector<std::reference_wrapper<Function>> FuncsToRemove;
-  copy_if(Program->functions(), std::back_inserter(FuncsToRemove),
-          [&O](auto &unused) { return !O.shouldKeep(); });
+  copy_if(Program.functions(), std::back_inserter(FuncsToRemove),
+          [&O](Function &F) {
+            // Intrinsics don't have function bodies that are useful to
+            // reduce. Additionally, intrinsics may have additional operand
+            // constraints. But, do drop intrinsics that are not referenced.
+            return (!F.isIntrinsic() || F.use_empty()) && !O.shouldKeep();
+          });
 
   // Then, drop body of each of them. We want to batch this and do nothing else
   // here so that minimal number of remaining exteranal uses will remain.
@@ -46,15 +48,19 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
   }
 }
 
-/// Counts the amount of non-declaration functions and prints their
+/// Counts the amount of functions and prints their
 /// respective name & index
-static int countFunctions(Module *Program) {
+static int countFunctions(Module &Program) {
   // TODO: Silence index with --quiet flag
   errs() << "----------------------------\n";
   errs() << "Function Index Reference:\n";
   int FunctionCount = 0;
-  for (auto &F : *Program)
-    errs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
+  for (auto &F : Program) {
+    if (F.isIntrinsic() && !F.use_empty())
+      continue;
+
+    errs() << '\t' << ++FunctionCount << ": " << F.getName() << '\n';
+  }
 
   errs() << "----------------------------\n";
   return FunctionCount;

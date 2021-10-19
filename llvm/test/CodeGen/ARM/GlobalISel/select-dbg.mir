@@ -1,5 +1,5 @@
-# RUN: llc -O0 -mtriple arm-- -mattr=+vfp2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,ARM
-# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
+# RUN: llc -O0 -mtriple arm-- -mattr=+vfp2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2,+vfp2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK
 --- |
   define void @test_dbg_value() #0 { ret void }
 

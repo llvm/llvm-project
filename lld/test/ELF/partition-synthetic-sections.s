@@ -3,7 +3,7 @@
 // REQUIRES: x86
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %S/Inputs/verneed1.s -o %t1.o
-// RUN: echo "v1 {}; v2 {}; v3 { local: *; };" > %t1.script
+// RUN: echo "v1 {}; v2 {}; v3 { global: f1; local: *; };" > %t1.script
 // RUN: ld.lld -shared %t1.o --version-script %t1.script -o %t1.so -soname verneed1.so.0 -z separate-code
 
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
@@ -106,8 +106,8 @@
 // PART0-NEXT: {{0*}}[[INIT_ARRAY_ADDR]]       {{.*}} R_X86_64_64 {{.*}} p0@@x1 + 0
 // PART1-NEXT: 000000000000[[DATA_SEGMENT]]148 {{.*}} R_X86_64_RELATIVE 3178
 // PART1-NEXT: 000000000000[[DATA_SEGMENT]]130 {{.*}} R_X86_64_64 {{.*}} f2@v2 + 0
-// PART1-NEXT: 000000000000[[DATA_SEGMENT]]138 {{.*}} R_X86_64_64 {{.*}} p0@@x1 + 0
-// PART1-NEXT: 000000000000[[DATA_SEGMENT]]140 {{.*}} R_X86_64_64 {{.*}} p0@@x1 + 0
+// PART1-NEXT: 000000000000[[DATA_SEGMENT]]138 {{.*}} R_X86_64_64 {{.*}} p0@x1 + 0
+// PART1-NEXT: 000000000000[[DATA_SEGMENT]]140 {{.*}} R_X86_64_64 {{.*}} p0@x1 + 0
 
 // PART0: Relocation section '.rela.plt'
 // PART0-NEXT: Offset
@@ -133,7 +133,7 @@
 // PART0: 2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND f2@v2
 // PART0: 3: {{0*}}[[TEXT_ADDR]]  0 NOTYPE  GLOBAL DEFAULT {{.*}} p0@@x1
 // PART1: 1: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND f2@v2
-// PART1: 2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND p0@@x1
+// PART1: 2: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND p0@x1
 // PART1: 3: {{0*}}[[TEXT_ADDR]]  0 NOTYPE  GLOBAL DEFAULT {{.*}} p1@@x2
 // PART1: 4: {{0*}}[[TEXT_ADDR]]  0 NOTYPE  GLOBAL DEFAULT {{.*}} p1alias@@x2
 // CHECK-EMPTY:
@@ -143,7 +143,7 @@
 // PART0: 0000000000000498     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_end
 
 // PART-INDEX: Contents of section .dynstr:
-// PART-INDEX-NEXT: 03a8 00663100 66320070 30007061 72743100  .f1.f2.p0.part1.
+// PART-INDEX-NEXT: 03a8 00703000 66310066 32007061 72743100 .p0.f1.f2.part1.
 // PART-INDEX: Contents of section .rodata:
 //                       0x48c + 0xffffff26 = 0x3b2
 //                                0x490 + 0x3b70 = 0x4000

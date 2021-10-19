@@ -13,26 +13,11 @@
 
 // Aligned allocation was not provided before macosx10.14 and as a result we
 // get availability errors when the deployment target is older than macosx10.14.
-// However, AppleClang 10 (and older) don't trigger availability errors, and
-// Clang < 8.0 doesn't warn for 10.13.
-// XFAIL: !(apple-clang-9 || apple-clang-10 || clang-7) && availability=macosx10.13
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.12
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.11
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.10
-// XFAIL: !(apple-clang-9 || apple-clang-10) && availability=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13}}
 
-// On AppleClang 10 (and older), instead of getting an availability failure
-// like above, we get a link error when we link against a dylib that does
-// not export the aligned allocation functions.
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.12
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.11
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.10
-// XFAIL: (apple-clang-9 || apple-clang-10) && with_system_cxx_lib=macosx10.9
-
-// On Windows libc++ doesn't provide its own definitions for new/delete
-// but instead depends on the ones in VCRuntime. However VCRuntime does not
-// yet provide aligned new/delete definitions so this test fails to link.
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
 
 // test operator new
 

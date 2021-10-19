@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-LE %s
-// RUN: %clang_cc1 -triple armeb-none-eabi -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-BE %s
+// RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple armeb-none-eabi -emit-llvm -o - %s | FileCheck %s
 
 #include <stdarg.h>
 
@@ -9,7 +9,7 @@
 va_list the_list;
 
 int simple_int(void) {
-// CHECK-LABEL: define i32 @simple_int
+// CHECK-LABEL: define{{.*}} i32 @simple_int
   return va_arg(the_list, int);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 4
@@ -24,7 +24,7 @@ struct bigstruct {
 };
 
 struct bigstruct simple_struct(void) {
-// CHECK-LABEL: define void @simple_struct(%struct.bigstruct* noalias sret align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @simple_struct(%struct.bigstruct* noalias sret(%struct.bigstruct) align 4 %agg.result)
   return va_arg(the_list, struct bigstruct);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 40
@@ -42,7 +42,7 @@ struct aligned_bigstruct {
 };
 
 struct aligned_bigstruct simple_aligned_struct(void) {
-// CHECK-LABEL: define void @simple_aligned_struct(%struct.aligned_bigstruct* noalias sret align 8 %agg.result)
+// CHECK-LABEL: define{{.*}} void @simple_aligned_struct(%struct.aligned_bigstruct* noalias sret(%struct.aligned_bigstruct) align 8 %agg.result)
   return va_arg(the_list, struct aligned_bigstruct);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -59,7 +59,7 @@ struct aligned_bigstruct simple_aligned_struct(void) {
 }
 
 double simple_double(void) {
-// CHECK-LABEL: define double @simple_double
+// CHECK-LABEL: define{{.*}} double @simple_double
   return va_arg(the_list, double);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -78,7 +78,7 @@ struct hfa {
 };
 
 struct hfa simple_hfa(void) {
-// CHECK-LABEL: define void @simple_hfa(%struct.hfa* noalias sret align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @simple_hfa(%struct.hfa* noalias sret(%struct.hfa) align 4 %agg.result)
   return va_arg(the_list, struct hfa);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 8
@@ -96,7 +96,7 @@ struct hfa simple_hfa(void) {
 
 typedef int underaligned_int __attribute__((packed,aligned(2)));
 underaligned_int underaligned_int_test() {
-// CHECK-LABEL: define i32 @underaligned_int_test()
+// CHECK-LABEL: define{{.*}} i32 @underaligned_int_test()
   return va_arg(the_list, underaligned_int);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 4
@@ -108,7 +108,7 @@ underaligned_int underaligned_int_test() {
 
 typedef int overaligned_int __attribute__((aligned(32)));
 overaligned_int overaligned_int_test() {
-// CHECK-LABEL: define i32 @overaligned_int_test()
+// CHECK-LABEL: define{{.*}} i32 @overaligned_int_test()
   return va_arg(the_list, overaligned_int);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 4
@@ -120,7 +120,7 @@ overaligned_int overaligned_int_test() {
 
 typedef long long underaligned_long_long  __attribute__((packed,aligned(2)));
 underaligned_long_long underaligned_long_long_test() {
-// CHECK-LABEL: define i64 @underaligned_long_long_test()
+// CHECK-LABEL: define{{.*}} i64 @underaligned_long_long_test()
   return va_arg(the_list, underaligned_long_long);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -136,7 +136,7 @@ underaligned_long_long underaligned_long_long_test() {
 
 typedef long long overaligned_long_long  __attribute__((aligned(32)));
 overaligned_long_long overaligned_long_long_test() {
-// CHECK-LABEL: define i64 @overaligned_long_long_test()
+// CHECK-LABEL: define{{.*}} i64 @overaligned_long_long_test()
   return va_arg(the_list, overaligned_long_long);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -166,7 +166,7 @@ typedef struct __attribute__((packed,aligned(2))) {
   int val;
 } underaligned_int_struct;
 underaligned_int_struct underaligned_int_struct_test() {
-// CHECK-LABEL: define i32 @underaligned_int_struct_test()
+// CHECK-LABEL: define{{.*}} i32 @underaligned_int_struct_test()
   return va_arg(the_list, underaligned_int_struct);
 // CHECK: [[RETVAL:%[a-z0-9._]+]] = alloca %struct.underaligned_int_struct, align 2
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
@@ -185,7 +185,7 @@ typedef struct __attribute__((aligned(16))) {
   int val;
 } overaligned_int_struct;
 overaligned_int_struct overaligned_int_struct_test() {
-// CHECK-LABEL: define void @overaligned_int_struct_test(%struct.overaligned_int_struct* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int_struct_test(%struct.overaligned_int_struct* noalias sret(%struct.overaligned_int_struct) align 16 %agg.result)
   return va_arg(the_list, overaligned_int_struct);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 16
@@ -201,7 +201,7 @@ typedef struct __attribute__((packed,aligned(2))) {
   long long val;
 } underaligned_long_long_struct;
 underaligned_long_long_struct underaligned_long_long_struct_test() {
-// CHECK-LABEL: define void @underaligned_long_long_struct_test(%struct.underaligned_long_long_struct* noalias sret align 2 %agg.result)
+// CHECK-LABEL: define{{.*}} void @underaligned_long_long_struct_test(%struct.underaligned_long_long_struct* noalias sret(%struct.underaligned_long_long_struct) align 2 %agg.result)
   return va_arg(the_list, underaligned_long_long_struct);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 8
@@ -217,7 +217,7 @@ typedef struct __attribute__((aligned(16))) {
   long long val;
 } overaligned_long_long_struct;
 overaligned_long_long_struct overaligned_long_long_struct_test() {
-// CHECK-LABEL: define void @overaligned_long_long_struct_test(%struct.overaligned_long_long_struct* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_long_long_struct_test(%struct.overaligned_long_long_struct* noalias sret(%struct.overaligned_long_long_struct) align 16 %agg.result)
   return va_arg(the_list, overaligned_long_long_struct);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -240,7 +240,7 @@ typedef struct {
   int val __attribute__((packed,aligned(2)));
 } underaligned_int_struct_member;
 underaligned_int_struct_member underaligned_int_struct_member_test() {
-// CHECK-LABEL: define i32 @underaligned_int_struct_member_test()
+// CHECK-LABEL: define{{.*}} i32 @underaligned_int_struct_member_test()
   return va_arg(the_list, underaligned_int_struct_member);
 // CHECK: [[RETVAL:%[a-z0-9._]+]] = alloca %struct.underaligned_int_struct_member, align 2
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
@@ -259,7 +259,7 @@ typedef struct {
   int val __attribute__((aligned(16)));
 } overaligned_int_struct_member;
 overaligned_int_struct_member overaligned_int_struct_member_test() {
-// CHECK-LABEL: define void @overaligned_int_struct_member_test(%struct.overaligned_int_struct_member* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_int_struct_member_test(%struct.overaligned_int_struct_member* noalias sret(%struct.overaligned_int_struct_member) align 16 %agg.result)
   return va_arg(the_list, overaligned_int_struct_member);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -279,7 +279,7 @@ typedef struct {
   long long val __attribute__((packed,aligned(2)));
 } underaligned_long_long_struct_member;
 underaligned_long_long_struct_member underaligned_long_long_struct_member_test() {
-// CHECK-LABEL: define void @underaligned_long_long_struct_member_test(%struct.underaligned_long_long_struct_member* noalias sret align 2 %agg.result)
+// CHECK-LABEL: define{{.*}} void @underaligned_long_long_struct_member_test(%struct.underaligned_long_long_struct_member* noalias sret(%struct.underaligned_long_long_struct_member) align 2 %agg.result)
   return va_arg(the_list, underaligned_long_long_struct_member);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, i8* [[CUR]], i32 8
@@ -295,7 +295,7 @@ typedef struct {
   long long val __attribute__((aligned(16)));
 } overaligned_long_long_struct_member;
 overaligned_long_long_struct_member overaligned_long_long_struct_member_test() {
-// CHECK-LABEL: define void @overaligned_long_long_struct_member_test(%struct.overaligned_long_long_struct_member* noalias sret align 16 %agg.result)
+// CHECK-LABEL: define{{.*}} void @overaligned_long_long_struct_member_test(%struct.overaligned_long_long_struct_member* noalias sret(%struct.overaligned_long_long_struct_member) align 16 %agg.result)
   return va_arg(the_list, overaligned_long_long_struct_member);
 // CHECK: [[CUR:%[a-z0-9._]+]] = load i8*, i8** getelementptr inbounds (%struct.__va_list, %struct.__va_list* @the_list, i32 0, i32 0), align 4
 // CHECK: [[CUR_INT:%[a-z0-9._]+]] = ptrtoint i8* [[CUR]] to i32
@@ -312,7 +312,7 @@ overaligned_long_long_struct_member overaligned_long_long_struct_member_test() {
 }
 
 void check_start(int n, ...) {
-// CHECK-LABEL: define void @check_start(i32 %n, ...)
+// CHECK-LABEL: define{{.*}} void @check_start(i32 %n, ...)
 
   va_list the_list;
   va_start(the_list, n);

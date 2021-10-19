@@ -11,7 +11,7 @@ typedef struct _NSRange { } NSRange;
 
 // GCC allows pointer expressions in integer constant expressions.
 struct {
-  char control[((int)(char *)2)];
+  char control[((int)(char *)2)]; // expected-warning {{extension}}
 } xx;
 
 @implementation PBXDocBookmark // expected-warning {{method definition for 'autorelease' not found}}\

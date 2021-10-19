@@ -20,34 +20,30 @@ namespace readability {
 
 void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto DeleteExpr =
-      cxxDeleteExpr(has(castExpr(has(declRefExpr(
-                        to(decl(equalsBoundNode("deletedPointer"))))))))
+      cxxDeleteExpr(
+          has(declRefExpr(to(decl(equalsBoundNode("deletedPointer"))))))
           .bind("deleteExpr");
 
   const auto DeleteMemberExpr =
-      cxxDeleteExpr(has(castExpr(has(memberExpr(hasDeclaration(
-                        fieldDecl(equalsBoundNode("deletedMemberPointer"))))))))
+      cxxDeleteExpr(has(memberExpr(hasDeclaration(
+                        fieldDecl(equalsBoundNode("deletedMemberPointer"))))))
           .bind("deleteMemberExpr");
 
-  const auto PointerExpr = ignoringImpCasts(anyOf(
+  const auto PointerExpr = anyOf(
       declRefExpr(to(decl().bind("deletedPointer"))),
-      memberExpr(hasDeclaration(fieldDecl().bind("deletedMemberPointer")))));
+      memberExpr(hasDeclaration(fieldDecl().bind("deletedMemberPointer"))));
 
-  const auto PointerCondition = castExpr(hasCastKind(CK_PointerToBoolean),
-                                         hasSourceExpression(PointerExpr));
-  const auto BinaryPointerCheckCondition = binaryOperator(
-      hasOperands(castExpr(hasCastKind(CK_NullToPointer)), PointerExpr));
+  const auto BinaryPointerCheckCondition = binaryOperator(hasOperands(
+      anyOf(cxxNullPtrLiteralExpr(), integerLiteral(equals(0))), PointerExpr));
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               ifStmt(hasCondition(
-                          anyOf(PointerCondition, BinaryPointerCheckCondition)),
-                      hasThen(anyOf(DeleteExpr, DeleteMemberExpr,
-                                    compoundStmt(anyOf(has(DeleteExpr),
-                                                       has(DeleteMemberExpr)),
-                                                 statementCountIs(1))
-                                        .bind("compound"))))
-                   .bind("ifWithDelete")),
+      ifStmt(hasCondition(anyOf(PointerExpr, BinaryPointerCheckCondition)),
+             hasThen(anyOf(
+                 DeleteExpr, DeleteMemberExpr,
+                 compoundStmt(anyOf(has(DeleteExpr), has(DeleteMemberExpr)),
+                              statementCountIs(1))
+                     .bind("compound"))))
+          .bind("ifWithDelete"),
       this);
 }
 

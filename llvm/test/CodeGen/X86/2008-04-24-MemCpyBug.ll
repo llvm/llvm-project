@@ -3,9 +3,9 @@
 ; Don't accidentally add the offset twice for trailing bytes.
 
 	%struct.S63 = type { [63 x i8] }
-@g1s63 = external global %struct.S63		; <%struct.S63*> [#uses=1]
+@g1s63 = external dso_local global %struct.S63		; <%struct.S63*> [#uses=1]
 
-declare void @test63(%struct.S63* byval align 4 ) nounwind
+declare void @test63(%struct.S63* byval(%struct.S63) align 4 ) nounwind
 
 define void @testit63_entry_2E_ce() nounwind  {
 ; CHECK-LABEL: testit63_entry_2E_ce:
@@ -21,11 +21,11 @@ define void @testit63_entry_2E_ce() nounwind  {
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl g1s63+60, %eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    calll test63
+; CHECK-NEXT:    calll test63@PLT
 ; CHECK-NEXT:    addl $64, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-	tail call void @test63( %struct.S63* byval align 4  @g1s63 ) nounwind
+	tail call void @test63(%struct.S63* byval(%struct.S63) align 4  @g1s63) nounwind
 	ret void
 }

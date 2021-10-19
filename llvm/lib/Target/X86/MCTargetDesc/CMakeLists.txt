@@ -13,4 +13,14 @@ add_llvm_component_library(LLVMX86Desc
   X86WinCOFFObjectWriter.cpp
   X86WinCOFFStreamer.cpp
   X86WinCOFFTargetStreamer.cpp
+
+  LINK_COMPONENTS
+  MC
+  MCDisassembler
+  Support
+  X86Info
+  BinaryFormat
+
+  ADD_TO_COMPONENT
+  X86
   )

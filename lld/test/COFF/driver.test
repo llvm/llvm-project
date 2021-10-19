@@ -1,6 +1,6 @@
 # RUN: not lld-link nosuchfile.obj >& %t.log
-# RUN: FileCheck -check-prefix=MISSING %s < %t.log
-MISSING: 'nosuchfile.obj': {{[Nn]}}o such file or directory
+# RUN: FileCheck -DMSG=%errc_ENOENT -check-prefix=MISSING %s < %t.log
+MISSING: 'nosuchfile.obj': [[MSG]]
 
 # RUN: lld-link --version | FileCheck -check-prefix=VERSION %s
 VERSION: {{LLD [0-9]+\.[0-9]+}}
@@ -11,20 +11,21 @@ VERSION: {{LLD [0-9]+\.[0-9]+}}
 BADFILE: bad file type. Did you specify a DLL instead of an import library?
 
 # RUN: lld-link /lib /help | FileCheck -check-prefix=LIBHELP %s
+# RUN: lld-link -lib -help | FileCheck -check-prefix=LIBHELP %s
 LIBHELP: OVERVIEW: LLVM Lib
 
-# RUN: not lld-link /WX /lib 2>&1 | FileCheck -check-prefix=LIBBAD %s
+# RUN: env LLD_IN_TEST=1 not lld-link /WX /lib 2>&1 | FileCheck -check-prefix=LIBBAD %s
 LIBBAD: ignoring /lib since it's not the first argument
 
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: not lld-link /out:/ %t.obj 2>&1 | FileCheck -check-prefix=DIR %s
 DIR: cannot open output file
 
-# RUN: not lld-link -version 2>&1 | FileCheck -check-prefix=SPELLVERSION %s
+# RUN: env LLD_IN_TEST=1 not lld-link -version 2>&1 | FileCheck -check-prefix=SPELLVERSION %s
 SPELLVERSION: ignoring unknown argument '-version', did you mean '--version'
 SPELLVERSION: no input files
 
-# RUN: not lld-link -nodefaultlibs 2>&1 | FileCheck -check-prefix=SPELLNODEFAULTLIB %s
+# RUN: env LLD_IN_TEST=1 not lld-link -nodefaultlibs 2>&1 | FileCheck -check-prefix=SPELLNODEFAULTLIB %s
 SPELLNODEFAULTLIB: ignoring unknown argument '-nodefaultlibs', did you mean '-nodefaultlib'
 SPELLNODEFAULTLIB: no input files
 

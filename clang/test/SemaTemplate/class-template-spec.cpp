@@ -22,7 +22,7 @@ int test_incomplete_specs(A<double, double> *a1,
                           A<double> *a2)
 {
   (void)a1->x; // expected-error{{member access into incomplete type}}
-  (void)a2->x; // expected-error{{implicit instantiation of undefined template 'A<double, int>'}}
+  (void)a2->x; // expected-error{{implicit instantiation of undefined template 'A<double>'}}
 }
 
 typedef float FLOAT;

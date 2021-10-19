@@ -107,8 +107,9 @@ namespace {
     KEYCXX20      = 0x200000,
     KEYOPENCLCXX  = 0x400000,
     KEYMSCOMPAT   = 0x800000,
+    KEYSYCL       = 0x1000000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-    KEYALL = (0xffffff & ~KEYNOMS18 &
+    KEYALL = (0x1ffffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
   };
 
@@ -155,6 +156,8 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus && (Flags & KEYALLCXX)) return KS_Future;
   if (LangOpts.CPlusPlus && !LangOpts.CPlusPlus20 && (Flags & CHAR8SUPPORT))
     return KS_Future;
+  if (LangOpts.isSYCL() && (Flags & KEYSYCL))
+    return KS_Enabled;
   return KS_Disabled;
 }
 
@@ -227,6 +230,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
   if (LangOpts.DeclSpecKeyword)
     AddKeyword("__declspec", tok::kw___declspec, KEYALL, LangOpts, *this);
 
+  if (LangOpts.IEEE128)
+    AddKeyword("__ieee128", tok::kw___float128, KEYALL, LangOpts, *this);
+
   // Add the 'import' contextual keyword.
   get("import").setModulesImport(true);
 }
@@ -270,6 +276,39 @@ bool IdentifierInfo::isCPlusPlusKeyword(const LangOptions &LangOpts) const {
   return !isKeyword(LangOptsNoCPP);
 }
 
+ReservedIdentifierStatus
+IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
+  StringRef Name = getName();
+
+  // '_' is a reserved identifier, but its use is so common (e.g. to store
+  // ignored values) that we don't warn on it.
+  if (Name.size() <= 1)
+    return ReservedIdentifierStatus::NotReserved;
+
+  // [lex.name] p3
+  if (Name[0] == '_') {
+
+    // Each name that begins with an underscore followed by an uppercase letter
+    // or another underscore is reserved.
+    if (Name[1] == '_')
+      return ReservedIdentifierStatus::StartsWithDoubleUnderscore;
+
+    if ('A' <= Name[1] && Name[1] <= 'Z')
+      return ReservedIdentifierStatus::
+          StartsWithUnderscoreFollowedByCapitalLetter;
+
+    // This is a bit misleading: it actually means it's only reserved if we're
+    // at global scope because it starts with an underscore.
+    return ReservedIdentifierStatus::StartsWithUnderscoreAtGlobalScope;
+  }
+
+  // Each name that contains a double underscore (__) is reserved.
+  if (LangOpts.CPlusPlus && Name.contains("__"))
+    return ReservedIdentifierStatus::ContainsDoubleUnderscore;
+
+  return ReservedIdentifierStatus::NotReserved;
+}
+
 tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   // We use a perfect hash function here involving the length of the keyword,
   // the first and third character.  For preprocessor ID's there are no
@@ -305,9 +344,11 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   CASE( 6, 'p', 'a', pragma);
 
   CASE( 7, 'd', 'f', defined);
+  CASE( 7, 'e', 'i', elifdef);
   CASE( 7, 'i', 'c', include);
   CASE( 7, 'w', 'r', warning);
 
+  CASE( 8, 'e', 'i', elifndef);
   CASE( 8, 'u', 'a', unassert);
   CASE(12, 'i', 'c', include_next);
 
@@ -713,6 +754,11 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
 
   case NullabilityKind::Nullable:
     return isContextSensitive ? "nullable" : "_Nullable";
+
+  case NullabilityKind::NullableResult:
+    assert(!isContextSensitive &&
+           "_Nullable_result isn't supported as context-sensitive keyword");
+    return "_Nullable_result";
 
   case NullabilityKind::Unspecified:
     return isContextSensitive ? "null_unspecified" : "_Null_unspecified";

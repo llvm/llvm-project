@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/ProcessInfo.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -38,10 +39,44 @@ YamlRecorder::Create(const FileSpec &filename) {
 void VersionProvider::Keep() {
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
   os << m_version << "\n";
+}
+
+FlushingFileCollector::FlushingFileCollector(llvm::StringRef files_path,
+                                             llvm::StringRef dirs_path,
+                                             std::error_code &ec) {
+  auto clear = llvm::make_scope_exit([this]() {
+    m_files_os.reset();
+    m_dirs_os.reset();
+  });
+  m_files_os.emplace(files_path, ec, llvm::sys::fs::OF_Append);
+  if (ec)
+    return;
+  m_dirs_os.emplace(dirs_path, ec, llvm::sys::fs::OF_Append);
+  if (ec)
+    return;
+  clear.release();
+}
+
+void FlushingFileCollector::addFileImpl(StringRef file) {
+  if (m_files_os) {
+    *m_files_os << file << '\0';
+    m_files_os->flush();
+  }
+}
+
+llvm::vfs::directory_iterator
+FlushingFileCollector::addDirectoryImpl(const Twine &dir,
+                                        IntrusiveRefCntPtr<vfs::FileSystem> vfs,
+                                        std::error_code &dir_ec) {
+  if (m_dirs_os) {
+    *m_dirs_os << dir << '\0';
+    m_dirs_os->flush();
+  }
+  return vfs->dir_begin(dir, dir_ec);
 }
 
 void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
@@ -73,7 +108,7 @@ void ProcessInfoProvider::Keep() {
 
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
   llvm::yaml::Output yout(os);
@@ -118,7 +153,7 @@ void SymbolFileProvider::AddSymbolFile(const UUID *uuid,
 void SymbolFileProvider::Keep() {
   FileSpec file = this->GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
 

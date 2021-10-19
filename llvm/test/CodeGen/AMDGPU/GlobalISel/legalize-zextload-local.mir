@@ -9,10 +9,10 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i32_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 1, addrspace 3)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
     ; CHECK: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load 1, addrspace 3)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 3)
     $vgpr0 = COPY %1
 ...
 ---
@@ -23,10 +23,10 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i32_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 2, addrspace 3)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load (s16), addrspace 3)
     ; CHECK: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load 2, addrspace 3)
+    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), addrspace 3)
     $vgpr0 = COPY %1
 ...
 ---
@@ -37,11 +37,10 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i31_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 1, addrspace 3)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ZEXTLOAD]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
+    ; CHECK: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s31) = G_ZEXTLOAD %0 :: (load 1, addrspace 3)
+    %1:_(s31) = G_ZEXTLOAD %0 :: (load (s8), addrspace 3)
     %2:_(s32) = G_ANYEXT %1
     $vgpr0 = COPY %2
 ...
@@ -53,11 +52,11 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i64_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 1, addrspace 3)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ZEXTLOAD]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_ZEXTLOAD %0 :: (load 1, addrspace 3)
+    %1:_(s64) = G_ZEXTLOAD %0 :: (load (s8), addrspace 3)
     $vgpr0_vgpr1 = COPY %1
 ...
 ---
@@ -68,11 +67,11 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i64_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load 2, addrspace 3)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p3) :: (load (s16), addrspace 3)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ZEXTLOAD]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_ZEXTLOAD %0 :: (load 2, addrspace 3)
+    %1:_(s64) = G_ZEXTLOAD %0 :: (load (s16), addrspace 3)
     $vgpr0_vgpr1 = COPY %1
 ...
 ---
@@ -83,10 +82,10 @@ body: |
 
     ; CHECK-LABEL: name: test_zextload_local_i64_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load 4, addrspace 3)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s32), addrspace 3)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_ZEXTLOAD %0 :: (load 4, addrspace 3)
+    %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), addrspace 3)
     $vgpr0_vgpr1 = COPY %1
 ...

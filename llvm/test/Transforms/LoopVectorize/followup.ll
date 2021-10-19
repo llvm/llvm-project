@@ -32,7 +32,7 @@ for.end:
 ; CHECK-LABEL: @followup(
 
 ; CHECK-LABEL: vector.body:
-; CHECK: br i1 %13, label %middle.block, label %vector.body, !llvm.loop ![[LOOP_VECTOR:[0-9]+]]
+; CHECK: br i1 %{{[0-9]*}}, label %middle.block, label %vector.body, !llvm.loop ![[LOOP_VECTOR:[0-9]+]]
 ; CHECK-LABEL: for.body:
 ; CHECK: br i1 %exitcond, label %for.end.loopexit, label %for.body, !llvm.loop ![[LOOP_EPILOGUE:[0-9]+]]
 

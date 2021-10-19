@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <string>
@@ -36,7 +37,7 @@ int main(int, char**)
 {
     test();
 
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#if TEST_STD_VER > 17
     static_assert(test());
 #endif
 

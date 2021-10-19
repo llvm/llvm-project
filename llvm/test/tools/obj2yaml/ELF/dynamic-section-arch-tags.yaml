@@ -6,97 +6,97 @@
 # RUN: obj2yaml %t1 | FileCheck %s --check-prefix=MIPS
 
 # MIPS:      - Tag:             DT_MIPS_RLD_VERSION
-# MIPS-NEXT:   Value:           0x0000000000000001
+# MIPS-NEXT:   Value:           0x1
 # MIPS-NEXT: - Tag:             DT_MIPS_TIME_STAMP
-# MIPS-NEXT:   Value:           0x0000000000000002
+# MIPS-NEXT:   Value:           0x2
 # MIPS-NEXT: - Tag:             DT_MIPS_ICHECKSUM
-# MIPS-NEXT:   Value:           0x0000000000000003
+# MIPS-NEXT:   Value:           0x3
 # MIPS-NEXT: - Tag:             DT_MIPS_IVERSION
-# MIPS-NEXT:   Value:           0x0000000000000004
+# MIPS-NEXT:   Value:           0x4
 # MIPS-NEXT: - Tag:             DT_MIPS_FLAGS
-# MIPS-NEXT:   Value:           0x0000000000000005
+# MIPS-NEXT:   Value:           0x5
 # MIPS-NEXT: - Tag:             DT_MIPS_BASE_ADDRESS
-# MIPS-NEXT:   Value:           0x0000000000000006
+# MIPS-NEXT:   Value:           0x6
 # MIPS-NEXT: - Tag:             DT_MIPS_MSYM
-# MIPS-NEXT:   Value:           0x0000000000000007
+# MIPS-NEXT:   Value:           0x7
 # MIPS-NEXT: - Tag:             DT_MIPS_CONFLICT
-# MIPS-NEXT:   Value:           0x0000000000000008
+# MIPS-NEXT:   Value:           0x8
 # MIPS-NEXT: - Tag:             DT_MIPS_LIBLIST
-# MIPS-NEXT:   Value:           0x0000000000000009
+# MIPS-NEXT:   Value:           0x9
 # MIPS-NEXT: - Tag:             DT_MIPS_LOCAL_GOTNO
-# MIPS-NEXT:   Value:           0x000000000000000A
+# MIPS-NEXT:   Value:           0xA
 # MIPS-NEXT: - Tag:             DT_MIPS_CONFLICTNO
-# MIPS-NEXT:   Value:           0x000000000000000B
+# MIPS-NEXT:   Value:           0xB
 # MIPS-NEXT: - Tag:             DT_MIPS_LIBLISTNO
-# MIPS-NEXT:   Value:           0x000000000000000C
+# MIPS-NEXT:   Value:           0xC
 # MIPS-NEXT: - Tag:             DT_MIPS_SYMTABNO
-# MIPS-NEXT:   Value:           0x000000000000000D
+# MIPS-NEXT:   Value:           0xD
 # MIPS-NEXT: - Tag:             DT_MIPS_UNREFEXTNO
-# MIPS-NEXT:   Value:           0x000000000000000E
+# MIPS-NEXT:   Value:           0xE
 # MIPS-NEXT: - Tag:             DT_MIPS_GOTSYM
-# MIPS-NEXT:   Value:           0x000000000000000F
+# MIPS-NEXT:   Value:           0xF
 # MIPS-NEXT: - Tag:             DT_MIPS_HIPAGENO
-# MIPS-NEXT:   Value:           0x0000000000000010
+# MIPS-NEXT:   Value:           0x10
 # MIPS-NEXT: - Tag:             DT_MIPS_RLD_MAP
-# MIPS-NEXT:   Value:           0x0000000000000011
+# MIPS-NEXT:   Value:           0x11
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_CLASS
-# MIPS-NEXT:   Value:           0x0000000000000012
+# MIPS-NEXT:   Value:           0x12
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_CLASS_NO
-# MIPS-NEXT:   Value:           0x0000000000000013
+# MIPS-NEXT:   Value:           0x13
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_INSTANCE
-# MIPS-NEXT:   Value:           0x0000000000000014
+# MIPS-NEXT:   Value:           0x14
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_INSTANCE_NO
-# MIPS-NEXT:   Value:           0x0000000000000015
+# MIPS-NEXT:   Value:           0x15
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_RELOC
-# MIPS-NEXT:   Value:           0x0000000000000016
+# MIPS-NEXT:   Value:           0x16
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_RELOC_NO
-# MIPS-NEXT:   Value:           0x0000000000000017
+# MIPS-NEXT:   Value:           0x17
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_SYM
-# MIPS-NEXT:   Value:           0x0000000000000018
+# MIPS-NEXT:   Value:           0x18
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_SYM_NO
-# MIPS-NEXT:   Value:           0x0000000000000019
+# MIPS-NEXT:   Value:           0x19
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_CLASSSYM
-# MIPS-NEXT:   Value:           0x000000000000001A
+# MIPS-NEXT:   Value:           0x1A
 # MIPS-NEXT: - Tag:             DT_MIPS_DELTA_CLASSSYM_NO
-# MIPS-NEXT:   Value:           0x000000000000001B
+# MIPS-NEXT:   Value:           0x1B
 # MIPS-NEXT: - Tag:             DT_MIPS_CXX_FLAGS
-# MIPS-NEXT:   Value:           0x000000000000001C
+# MIPS-NEXT:   Value:           0x1C
 # MIPS-NEXT: - Tag:             DT_MIPS_PIXIE_INIT
-# MIPS-NEXT:   Value:           0x000000000000001D
+# MIPS-NEXT:   Value:           0x1D
 # MIPS-NEXT: - Tag:             DT_MIPS_SYMBOL_LIB
-# MIPS-NEXT:   Value:           0x000000000000001E
+# MIPS-NEXT:   Value:           0x1E
 # MIPS-NEXT: - Tag:             DT_MIPS_LOCALPAGE_GOTIDX
-# MIPS-NEXT:   Value:           0x000000000000001F
+# MIPS-NEXT:   Value:           0x1F
 # MIPS-NEXT: - Tag:             DT_MIPS_LOCAL_GOTIDX
-# MIPS-NEXT:   Value:           0x0000000000000020
+# MIPS-NEXT:   Value:           0x20
 # MIPS-NEXT: - Tag:             DT_MIPS_HIDDEN_GOTIDX
-# MIPS-NEXT:   Value:           0x0000000000000021
+# MIPS-NEXT:   Value:           0x21
 # MIPS-NEXT: - Tag:             DT_MIPS_PROTECTED_GOTIDX
-# MIPS-NEXT:   Value:           0x0000000000000022
+# MIPS-NEXT:   Value:           0x22
 # MIPS-NEXT: - Tag:             DT_MIPS_OPTIONS
-# MIPS-NEXT:   Value:           0x0000000000000023
+# MIPS-NEXT:   Value:           0x23
 # MIPS-NEXT: - Tag:             DT_MIPS_INTERFACE
-# MIPS-NEXT:   Value:           0x0000000000000024
+# MIPS-NEXT:   Value:           0x24
 # MIPS-NEXT: - Tag:             DT_MIPS_DYNSTR_ALIGN
-# MIPS-NEXT:   Value:           0x0000000000000025
+# MIPS-NEXT:   Value:           0x25
 # MIPS-NEXT: - Tag:             DT_MIPS_INTERFACE_SIZE
-# MIPS-NEXT:   Value:           0x0000000000000026
+# MIPS-NEXT:   Value:           0x26
 # MIPS-NEXT: - Tag:             DT_MIPS_RLD_TEXT_RESOLVE_ADDR
-# MIPS-NEXT:   Value:           0x0000000000000027
+# MIPS-NEXT:   Value:           0x27
 # MIPS-NEXT: - Tag:             DT_MIPS_PERF_SUFFIX
-# MIPS-NEXT:   Value:           0x0000000000000028
+# MIPS-NEXT:   Value:           0x28
 # MIPS-NEXT: - Tag:             DT_MIPS_COMPACT_SIZE
-# MIPS-NEXT:   Value:           0x0000000000000029
+# MIPS-NEXT:   Value:           0x29
 # MIPS-NEXT: - Tag:             DT_MIPS_GP_VALUE
-# MIPS-NEXT:   Value:           0x000000000000002A
+# MIPS-NEXT:   Value:           0x2A
 # MIPS-NEXT: - Tag:             DT_MIPS_AUX_DYNAMIC
-# MIPS-NEXT:   Value:           0x000000000000002B
+# MIPS-NEXT:   Value:           0x2B
 # MIPS-NEXT: - Tag:             DT_MIPS_PLTGOT
-# MIPS-NEXT:   Value:           0x000000000000002C
+# MIPS-NEXT:   Value:           0x2C
 # MIPS-NEXT: - Tag:             DT_MIPS_RWPLT
-# MIPS-NEXT:   Value:           0x000000000000002D
+# MIPS-NEXT:   Value:           0x2D
 # MIPS-NEXT: - Tag:             DT_MIPS_RLD_MAP_REL
-# MIPS-NEXT:   Value:           0x000000000000002E
+# MIPS-NEXT:   Value:           0x2E
 
 --- !ELF
 FileHeader:
@@ -206,11 +206,11 @@ Sections:
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=HEXAGON
 
 # HEXAGON:      - Tag:             DT_HEXAGON_SYMSZ
-# HEXAGON-NEXT:   Value:           0x0000000000000001
+# HEXAGON-NEXT:   Value:           0x1
 # HEXAGON-NEXT: - Tag:             DT_HEXAGON_VER
-# HEXAGON-NEXT:   Value:           0x0000000000000002
+# HEXAGON-NEXT:   Value:           0x2
 # HEXAGON-NEXT: - Tag:             DT_HEXAGON_PLT
-# HEXAGON-NEXT:   Value:           0x0000000000000003
+# HEXAGON-NEXT:   Value:           0x3
 
 --- !ELF
 FileHeader:
@@ -223,20 +223,20 @@ Sections:
     Type:            SHT_DYNAMIC
     Entries:
       - Tag:             DT_HEXAGON_SYMSZ
-        Value:           0x0000000000000001
+        Value:           0x1
       - Tag:             DT_HEXAGON_VER
-        Value:           0x0000000000000002
+        Value:           0x2
       - Tag:             DT_HEXAGON_PLT
-        Value:           0x0000000000000003
+        Value:           0x3
 
 ## Check we can handle PPC specific tags.
 # RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EM_PPC
 
 # EM_PPC:      - Tag:             DT_PPC_GOT
-# EM_PPC-NEXT:   Value:           0x0000000000020000
+# EM_PPC-NEXT:   Value:           0x20000
 # EM_PPC-NEXT: - Tag:             DT_PPC_OPT
-# EM_PPC-NEXT:   Value:           0x0000000000000001
+# EM_PPC-NEXT:   Value:           0x1
 
 --- !ELF
 FileHeader:
@@ -258,7 +258,7 @@ Sections:
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefix=EM_PPC64
 
 # EM_PPC64:      - Tag:             DT_PPC64_GLINK
-# EM_PPC64-NEXT:   Value:           0x0000000000000001
+# EM_PPC64-NEXT:   Value:           0x1
 
 --- !ELF
 FileHeader:
@@ -278,9 +278,9 @@ Sections:
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=AARCH64
 
 # AARCH64:      - Tag:             DT_AARCH64_BTI_PLT
-# AARCH64-NEXT:   Value:           0x0000000000000000
+# AARCH64-NEXT:   Value:           0x0
 # AARCH64-NEXT: - Tag:             DT_AARCH64_PAC_PLT
-# AARCH64-NEXT:   Value:           0x0000000000000000
+# AARCH64-NEXT:   Value:           0x0
 
 --- !ELF
 FileHeader:
@@ -297,12 +297,32 @@ Sections:
       - Tag:             DT_AARCH64_PAC_PLT
         Value:           0x0000000000000000
 
+## Check we can handle RISC-V specific tags.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: obj2yaml %t6 | FileCheck %s --check-prefix=RISCV
+
+# RISCV:      - Tag:             DT_RISCV_VARIANT_CC
+# RISCV-NEXT:   Value:           0x0
+
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS64
+  Data:              ELFDATA2LSB
+  Type:              ET_REL
+  Machine:           EM_RISCV
+Sections:
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Entries:
+      - Tag:             DT_RISCV_VARIANT_CC
+        Value:           0x0000000000000000
+
 ## Check we can't use a tag from a different architecture,
 ## even if it has the same numeric value as a valid tag.
 ## Here for EM_PPC64 we are trying to use DT_HEXAGON_SYMSZ
 ## instead of DT_PPC64_GLINK. They both have value of 0x70000000.
 
-# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR:      error: invalid hex64 number
 # ERR-NEXT: - Tag: DT_HEXAGON_SYMSZ
 

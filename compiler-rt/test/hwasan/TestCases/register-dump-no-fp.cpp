@@ -16,7 +16,7 @@
 __attribute__((noinline)) void f(int *p) { *p = 3; }
 
 // CHECK: ERROR: HWAddressSanitizer:
-// CHECK: #0 {{.*}} in f(int*) {{.*}}register-dump-no-fp.cpp:[[@LINE-3]]
+// CHECK: #{{[0-9]}} {{.*}} in f(int*) {{.*}}register-dump-no-fp.cpp:[[@LINE-3]]
 
 int main() {
   __hwasan_enable_allocator_tagging();
@@ -24,5 +24,5 @@ int main() {
   int *volatile a = new int;
   a = (int *)__hwasan_tag_pointer(a, 0);
   f(a);
-  // CHECK: #1 {{.*}} in main {{.*}}register-dump-no-fp.cpp:[[@LINE-1]]
+  // CHECK: #{{[0-9]}} {{.*}} in main {{.*}}register-dump-no-fp.cpp:[[@LINE-1]]
 }

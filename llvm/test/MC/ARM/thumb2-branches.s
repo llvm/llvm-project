@@ -92,11 +92,17 @@
 @ unconditional branches accept wide suffix and encode to wide encodings
 @------------------------------------------------------------------------------
 
+         bl.w     #256
+         it ne
+         blne.w   #256
          bmi.w    #-256
          bne.w    #254
          blt.w    #-1048576
          bge.w    #1048574
 
+@ CHECK: bl	#256                    @ encoding: [0x00,0xf0,0x80,0xf8]
+@ CHECK: it	ne                      @ encoding: [0x18,0xbf]
+@ CHECK: blne	#256                    @ encoding: [0x00,0xf0,0x80,0xf8]
 @ CHECK: bmi.w	#-256                   @ encoding: [0x3f,0xf5,0x80,0xaf]
 @ CHECK: bne.w	#254                    @ encoding: [0x40,0xf0,0x7f,0x80]
 @ CHECK: blt.w	#-1048576               @ encoding: [0xc0,0xf6,0x00,0x80]

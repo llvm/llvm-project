@@ -15,13 +15,16 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_COMPILER_H
 
-#include "../clang-tidy/ClangTidyOptions.h"
+#include "FeatureModule.h"
 #include "GlobalCompilationDatabase.h"
+#include "TidyProvider.h"
 #include "index/Index.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include <memory>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -37,10 +40,7 @@ public:
 
 // Options to run clang e.g. when parsing AST.
 struct ParseOptions {
-  tidy::ClangTidyOptions ClangTidyOpts;
-  bool SuggestMissingIncludes = false;
-  bool BuildRecoveryAST = false;
-  bool PreserveRecoveryASTType = false;
+  // (empty at present, formerly controlled recovery AST, include-fixer etc)
 };
 
 /// Information required to run clang, e.g. to parse AST or do code completion.
@@ -56,7 +56,16 @@ struct ParseInputs {
   // Used to recover from diagnostics (e.g. find missing includes for symbol).
   const SymbolIndex *Index = nullptr;
   ParseOptions Opts = ParseOptions();
+  TidyProviderRef ClangTidyProvider = {};
+  // Used to acquire ASTListeners when parsing files.
+  FeatureModuleSet *FeatureModules = nullptr;
 };
+
+/// Clears \p CI from options that are not supported by clangd, like codegen or
+/// plugins. This should be combined with CommandMangler::adjust, which provides
+/// similar functionality for options that needs to be stripped from compile
+/// flags.
+void disableUnsupportedOptions(CompilerInvocation &CI);
 
 /// Builds compiler invocation that could be used to build AST or preamble.
 std::unique_ptr<CompilerInvocation>

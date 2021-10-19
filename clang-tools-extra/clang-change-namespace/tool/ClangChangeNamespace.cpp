@@ -99,8 +99,13 @@ llvm::ErrorOr<std::vector<std::string>> GetAllowedSymbolPatterns() {
 
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
-  tooling::CommonOptionsParser OptionsParser(argc, argv,
-                                             ChangeNamespaceCategory);
+  auto ExpectedParser =
+      tooling::CommonOptionsParser::create(argc, argv, ChangeNamespaceCategory);
+  if (!ExpectedParser) {
+    llvm::errs() << ExpectedParser.takeError();
+    return 1;
+  }
+  tooling::CommonOptionsParser &OptionsParser = ExpectedParser.get();
   const auto &Files = OptionsParser.getSourcePathList();
   tooling::RefactoringTool Tool(OptionsParser.getCompilations(), Files);
   llvm::ErrorOr<std::vector<std::string>> AllowedPatterns =

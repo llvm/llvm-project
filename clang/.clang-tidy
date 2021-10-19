@@ -1,24 +1,5 @@
-Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-unused-parameters,-misc-non-private-member-variables-in-classes,-readability-identifier-naming'
 # Note that the readability-identifier-naming check is disabled, there are too
 # many violations in the codebase and they create too much noise in clang-tidy
 # results.
-# Naming settings are kept for documentation purposes and allowing to run the
-# check if the users would override this file, e.g. via a command-line arg.
-CheckOptions:
-  - key:             readability-identifier-naming.ClassCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.EnumCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.FunctionCase
-    value:           camelBack
-  - key:             readability-identifier-naming.MemberCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.ParameterCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.UnionCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.VariableCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
-    value:           1
-
+Checks: '-readability-identifier-naming'
+InheritParentConfig: true

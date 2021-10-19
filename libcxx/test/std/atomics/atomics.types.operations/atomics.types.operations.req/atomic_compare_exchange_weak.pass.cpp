@@ -7,17 +7,21 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-//  ... assertion fails line 34
+// XFAIL: !non-lockfree-atomics
 
 // <atomic>
 
 // template <class T>
 //     bool
-//     atomic_compare_exchange_weak(volatile atomic<T>* obj, T* expc, T desr);
+//     atomic_compare_exchange_weak(volatile atomic<T>*,
+//                                  atomic<T>::value_type*,
+//                                  atomic<T>::value_type) noexcept;
 //
 // template <class T>
 //     bool
-//     atomic_compare_exchange_weak(atomic<T>* obj, T* expc, T desr);
+//     atomic_compare_exchange_weak(atomic<T>*,
+//                                  atomic<T>::value_type*,
+//                                  atomic<T>::value_type) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -32,27 +36,29 @@ struct TestFn {
   void operator()() const {
     {
         typedef std::atomic<T> A;
-        A a;
         T t(T(1));
-        std::atomic_init(&a, t);
+        A a(t);
         assert(c_cmpxchg_weak_loop(&a, &t, T(2)) == true);
         assert(a == T(2));
         assert(t == T(1));
         assert(std::atomic_compare_exchange_weak(&a, &t, T(3)) == false);
         assert(a == T(2));
         assert(t == T(2));
+
+        ASSERT_NOEXCEPT(std::atomic_compare_exchange_weak(&a, &t, T(3)));
     }
     {
         typedef std::atomic<T> A;
-        volatile A a;
         T t(T(1));
-        std::atomic_init(&a, t);
+        volatile A a(t);
         assert(c_cmpxchg_weak_loop(&a, &t, T(2)) == true);
         assert(a == T(2));
         assert(t == T(1));
         assert(std::atomic_compare_exchange_weak(&a, &t, T(3)) == false);
         assert(a == T(2));
         assert(t == T(2));
+
+        ASSERT_NOEXCEPT(std::atomic_compare_exchange_weak(&a, &t, T(3)));
     }
   }
 };

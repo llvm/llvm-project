@@ -91,9 +91,9 @@ LinkEditData:
 
 #CHECK: FileHeader:      
 #CHECK:   magic:           0xFEEDFACE
-#CHECK:   cputype:         0x00000012
-#CHECK:   cpusubtype:      0x00000000
-#CHECK:   filetype:        0x00000001
+#CHECK:   cputype:         0x12
+#CHECK:   cpusubtype:      0x0
+#CHECK:   filetype:        0x1
 #CHECK:   ncmds:           3
 #CHECK:   sizeofcmds:      368
-#CHECK:   flags:           0x00002000
+#CHECK:   flags:           0x2000

@@ -82,12 +82,12 @@ namespace dr213 { // dr213: yes
   template <class T> struct A : T {
     void h(T t) {
       char &r1 = f(t);
-      int &r2 = g(t); // expected-error {{undeclared}}
+      int &r2 = g(t); // expected-error {{explicit qualification required to use member 'g' from dependent base class}}
     }
   };
   struct B {
     int &f(B);
-    int &g(B); // expected-note {{in dependent base class}}
+    int &g(B); // expected-note {{here}}
   };
   char &f(B);
 
@@ -292,9 +292,9 @@ namespace dr224 { // dr224: no
     template <int, typename T> struct X { typedef T type; };
     template <class T> class A {
       static const int i = 5;
-      X<i, int>::type w; // FIXME: expected-error {{missing 'typename'}}
-      X<A::i, char>::type x; // FIXME: expected-error {{missing 'typename'}}
-      X<A<T>::i, double>::type y; // FIXME: expected-error {{missing 'typename'}}
+      X<i, int>::type w;
+      X<A::i, char>::type x;
+      X<A<T>::i, double>::type y;
       X<A<T*>::i, long>::type z; // expected-error {{missing 'typename'}}
       int f();
     };
@@ -597,12 +597,8 @@ namespace dr247 { // dr247: yes
   void (F::*i)() = &F::f;
 }
 
-namespace dr248 { // dr248: yes c++11
-  // FIXME: Should this also apply to c++98 mode? This was a DR against C++98.
+namespace dr248 { // dr248: sup P1949
   int \u040d\u040e = 0;
-#if __cplusplus < 201103L
-  // FIXME: expected-error@-2 {{expected ';'}}
-#endif
 }
 
 namespace dr249 { // dr249: yes
@@ -917,13 +913,13 @@ namespace dr280 { // dr280: yes
     operator f2*(); // expected-note {{candidate}}
     operator f3*(); // expected-note {{candidate}}
   };
-  struct D : private A, B { // expected-note 2{{here}}
+  struct D : private A, B { // expected-note {{here}}
     operator f2*(); // expected-note {{candidate}}
   } d;
   struct E : C, D {} e;
   void g() {
     d(); // ok, public
-    d(0); // expected-error {{private member of 'dr280::A'}} expected-error {{private base class 'dr280::A'}}
+    d(0); // expected-error {{private member of 'dr280::A'}}
     d(0, 0); // ok, suppressed by member in D
     d(0, 0, 0); // expected-error {{private member of 'dr280::B'}}
     e(); // expected-error {{ambiguous}}

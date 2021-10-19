@@ -42,6 +42,10 @@ static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
 static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
                                          cl::init(false));
 
+static cl::opt<double> HideColdPaths(
+    "cfg-hide-cold-paths", cl::init(0.0),
+    cl::desc("Hide blocks with relative frequency below the given value"));
+
 static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Show heat colors in CFG"));
@@ -63,7 +67,7 @@ static void writeCFGToDotFile(Function &F, BlockFrequencyInfo *BFI,
   errs() << "Writing '" << Filename << "'...";
 
   std::error_code EC;
-  raw_fd_ostream File(Filename, EC, sys::fs::F_Text);
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_Text);
 
   DOTFuncInfo CFGInfo(&F, BFI, BPI, MaxFreq);
   CFGInfo.setHeatColors(ShowHeatColors);
@@ -96,6 +100,8 @@ struct CFGViewerLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -111,13 +117,15 @@ struct CFGViewerLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGViewerLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGViewerLegacyPass, "view-cfg", "View CFG of function", false,
                 true)
 
 PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -132,6 +140,8 @@ struct CFGOnlyViewerLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -147,7 +157,7 @@ struct CFGOnlyViewerLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGOnlyViewerLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
@@ -155,6 +165,8 @@ INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
 
 PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -169,6 +181,8 @@ struct CFGPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -184,7 +198,7 @@ struct CFGPrinterLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
@@ -192,6 +206,8 @@ INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -206,6 +222,8 @@ struct CFGOnlyPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -220,7 +238,7 @@ struct CFGOnlyPrinterLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGOnlyPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
@@ -229,6 +247,8 @@ INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -270,30 +290,45 @@ FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass() {
   return new CFGOnlyPrinterLegacyPass();
 }
 
-void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
+/// Find all blocks on the paths which terminate with a deoptimize or 
+/// unreachable (i.e. all blocks which are post-dominated by a deoptimize 
+/// or unreachable). These paths are hidden if the corresponding cl::opts
+/// are enabled.
+void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
+    const Function *F) {
   auto evaluateBB = [&](const BasicBlock *Node) {
-    if (succ_begin(Node) == succ_end(Node)) {
+    if (succ_empty(Node)) {
       const Instruction *TI = Node->getTerminator();
-      isHiddenBasicBlock[Node] =
+      isOnDeoptOrUnreachablePath[Node] =
           (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||
           (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
       return;
     }
-    isHiddenBasicBlock[Node] = std::all_of(
-        succ_begin(Node), succ_end(Node),
-        [this](const BasicBlock *BB) { return isHiddenBasicBlock[BB]; });
+    isOnDeoptOrUnreachablePath[Node] =
+        llvm::all_of(successors(Node), [this](const BasicBlock *BB) {
+          return isOnDeoptOrUnreachablePath[BB];
+        });
   };
   /// The post order traversal iteration is done to know the status of
-  /// isHiddenBasicBlock for all the successors on the current BB.
-  for_each(po_begin(&F->getEntryBlock()), po_end(&F->getEntryBlock()),
-           evaluateBB);
+  /// isOnDeoptOrUnreachablePath for all the successors on the current BB.
+  llvm::for_each(post_order(&F->getEntryBlock()), evaluateBB);
 }
 
-bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node) {
-  // If both restricting flags are false, all nodes are displayed.
-  if (!HideUnreachablePaths && !HideDeoptimizePaths)
-    return false;
-  if (isHiddenBasicBlock.find(Node) == isHiddenBasicBlock.end())
-    computeHiddenNodes(Node->getParent());
-  return isHiddenBasicBlock[Node];
+bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
+                                                 const DOTFuncInfo *CFGInfo) {
+  if (HideColdPaths.getNumOccurrences() > 0)
+    if (auto *BFI = CFGInfo->getBFI()) {
+      uint64_t NodeFreq = BFI->getBlockFreq(Node).getFrequency();
+      uint64_t EntryFreq = BFI->getEntryFreq();
+      // Hide blocks with relative frequency below HideColdPaths threshold.
+      if ((double)NodeFreq / EntryFreq < HideColdPaths)
+        return true;
+    }
+  if (HideUnreachablePaths || HideDeoptimizePaths) {
+    if (isOnDeoptOrUnreachablePath.find(Node) == 
+        isOnDeoptOrUnreachablePath.end())
+      computeDeoptOrUnreachablePaths(Node->getParent());
+    return isOnDeoptOrUnreachablePath[Node];
+  }
+  return false;
 }

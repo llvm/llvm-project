@@ -320,6 +320,13 @@ public:
     return const_cast<ObjCMethodDecl*>(this)->getClassInterface();
   }
 
+  /// If this method is declared or implemented in a category, return
+  /// that category.
+  ObjCCategoryDecl *getCategory();
+  const ObjCCategoryDecl *getCategory() const {
+    return const_cast<ObjCMethodDecl*>(this)->getCategory();
+  }
+
   Selector getSelector() const { return getDeclName().getObjCSelector(); }
 
   QualType getReturnType() const { return MethodDeclType; }
@@ -479,6 +486,9 @@ public:
 
   /// True if the method is tagged as objc_direct
   bool isDirectMethod() const;
+
+  /// True if the method has a parameter that's destroyed in the callee.
+  bool hasParamDestroyedInCallee() const;
 
   /// Returns the property associated with this method's selector.
   ///
@@ -649,20 +659,8 @@ public:
 /// \endcode
 class ObjCTypeParamList final
     : private llvm::TrailingObjects<ObjCTypeParamList, ObjCTypeParamDecl *> {
-  /// Stores the components of a SourceRange as a POD.
-  struct PODSourceRange {
-    unsigned Begin;
-    unsigned End;
-  };
-
-  union {
-    /// Location of the left and right angle brackets.
-    PODSourceRange Brackets;
-
-    // Used only for alignment.
-    ObjCTypeParamDecl *AlignmentHack;
-  };
-
+  /// Location of the left and right angle brackets.
+  SourceRange Brackets;
   /// The number of parameters in the list, which are tail-allocated.
   unsigned NumParams;
 
@@ -710,17 +708,9 @@ public:
     return *(end() - 1);
   }
 
-  SourceLocation getLAngleLoc() const {
-    return SourceLocation::getFromRawEncoding(Brackets.Begin);
-  }
-
-  SourceLocation getRAngleLoc() const {
-    return SourceLocation::getFromRawEncoding(Brackets.End);
-  }
-
-  SourceRange getSourceRange() const {
-    return SourceRange(getLAngleLoc(), getRAngleLoc());
-  }
+  SourceLocation getLAngleLoc() const { return Brackets.getBegin(); }
+  SourceLocation getRAngleLoc() const { return Brackets.getEnd(); }
+  SourceRange getSourceRange() const { return Brackets; }
 
   /// Gather the default set of type arguments to be substituted for
   /// these type parameters when dealing with an unspecialized type.
@@ -865,9 +855,7 @@ public:
   bool isClassProperty() const {
     return PropertyAttributes & ObjCPropertyAttribute::kind_class;
   }
-  bool isDirectProperty() const {
-    return PropertyAttributes & ObjCPropertyAttribute::kind_direct;
-  }
+  bool isDirectProperty() const;
 
   ObjCPropertyQueryKind getQueryKind() const {
     return isClassProperty() ? ObjCPropertyQueryKind::OBJC_PR_query_class :
@@ -1970,6 +1958,13 @@ public:
   const ObjCIvarDecl *getNextIvar() const { return NextIvar; }
   void setNextIvar(ObjCIvarDecl *ivar) { NextIvar = ivar; }
 
+  ObjCIvarDecl *getCanonicalDecl() override {
+    return cast<ObjCIvarDecl>(FieldDecl::getCanonicalDecl());
+  }
+  const ObjCIvarDecl *getCanonicalDecl() const {
+    return const_cast<ObjCIvarDecl *>(this)->getCanonicalDecl();
+  }
+
   void setAccessControl(AccessControl ac) { DeclAccess = ac; }
 
   AccessControl getAccessControl() const { return AccessControl(DeclAccess); }
@@ -2170,6 +2165,14 @@ public:
     assert(hasDefinition() && "Protocol is not defined");
     data().ReferencedProtocols.set(List, Num, Locs, C);
   }
+
+  /// This is true iff the protocol is tagged with the
+  /// `objc_non_runtime_protocol` attribute.
+  bool isNonRuntimeProtocol() const;
+
+  /// Get the set of all protocols implied by this protocols inheritance
+  /// hierarchy.
+  void getImpliedProtocols(llvm::DenseSet<const ObjCProtocolDecl *> &IPs) const;
 
   ObjCProtocolDecl *lookupProtocolNamed(IdentifierInfo *PName);
 

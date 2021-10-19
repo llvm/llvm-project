@@ -20,8 +20,8 @@ define void @test_csel(i32 %lhs32, i32 %rhs32, i64 %lhs64) {
   %tst2 = icmp sle i64 %lhs64, %rhs64
   %val2 = select i1 %tst2, double 1.0, double 0.0
   store double %val2, double* @vardouble
-; FLT0 is reused from above on ARM64.
-; CHECK: fmov d[[FLT1:[0-9]+]], #1.0
+; CHECK-DAG: fmov d[[FLT0:[0-9]+]], xzr
+; CHECK-DAG: fmov d[[FLT1:[0-9]+]], #1.0
 ; CHECK: fcsel {{d[0-9]+}}, d[[FLT1]], d[[FLT0]], le
 
   call void @use_float(float 0.0)

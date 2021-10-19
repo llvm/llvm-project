@@ -898,7 +898,7 @@ static void describeTemplateParameter(raw_ostream &Out,
   if (TArg.getKind() == TemplateArgument::ArgKind::Pack) {
     describeTemplateParameters(Out, TArg.getPackAsArray(), LO);
   } else {
-    TArg.print(PrintingPolicy(LO), Out);
+    TArg.print(PrintingPolicy(LO), Out, /*IncludeType*/ true);
   }
 }
 
@@ -1083,9 +1083,9 @@ unsigned PathDiagnostic::full_size() {
 //===----------------------------------------------------------------------===//
 
 void PathDiagnosticLocation::Profile(llvm::FoldingSetNodeID &ID) const {
-  ID.AddInteger(Range.getBegin().getRawEncoding());
-  ID.AddInteger(Range.getEnd().getRawEncoding());
-  ID.AddInteger(Loc.getRawEncoding());
+  ID.Add(Range.getBegin());
+  ID.Add(Range.getEnd());
+  ID.Add(static_cast<const SourceLocation &>(Loc));
 }
 
 void PathDiagnosticPiece::Profile(llvm::FoldingSetNodeID &ID) const {
@@ -1095,8 +1095,8 @@ void PathDiagnosticPiece::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger((unsigned) getDisplayHint());
   ArrayRef<SourceRange> Ranges = getRanges();
   for (const auto &I : Ranges) {
-    ID.AddInteger(I.getBegin().getRawEncoding());
-    ID.AddInteger(I.getEnd().getRawEncoding());
+    ID.Add(I.getBegin());
+    ID.Add(I.getEnd());
   }
 }
 

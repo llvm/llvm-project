@@ -25,18 +25,17 @@ class X
 {
     int i_;
     int j_ = 0;
+    bool* dtor_called_;
 public:
-    static bool dtor_called;
-    constexpr X() : i_(0) {}
-    constexpr X(int i) : i_(i) {}
-    constexpr X(std::initializer_list<int> il) : i_(il.begin()[0]), j_(il.begin()[1]) {}
-    ~X() {dtor_called = true;}
+    constexpr X(bool& dtor_called) : i_(0), dtor_called_(&dtor_called) {}
+    constexpr X(int i, bool& dtor_called) : i_(i), dtor_called_(&dtor_called) {}
+    constexpr X(std::initializer_list<int> il, bool& dtor_called)
+    : i_(il.begin()[0]), j_(il.begin()[1]), dtor_called_(&dtor_called) {}
+    TEST_CONSTEXPR_CXX20 ~X() {*dtor_called_ = true;}
 
     friend constexpr bool operator==(const X& x, const X& y)
         {return x.i_ == y.i_ && x.j_ == y.j_;}
 };
-
-bool X::dtor_called = false;
 
 class Y
 {
@@ -69,17 +68,38 @@ public:
 
 bool Z::dtor_called = false;
 
+TEST_CONSTEXPR_CXX20 bool check_X()
+{
+    bool dtor_called = false;
+    X x(dtor_called);
+    optional<X> opt(x);
+    assert(dtor_called == false);
+    auto &v = opt.emplace({1, 2}, dtor_called);
+    static_assert( std::is_same_v<X&, decltype(v)>, "" );
+    assert(dtor_called);
+    assert(*opt == X({1, 2}, dtor_called));
+    assert(&v == &*opt);
+    return true;
+}
+
+TEST_CONSTEXPR_CXX20 bool check_Y()
+{
+    optional<Y> opt;
+    auto &v = opt.emplace({1, 2});
+    static_assert( std::is_same_v<Y&, decltype(v)>, "" );
+    assert(static_cast<bool>(opt) == true);
+    assert(*opt == Y({1, 2}));
+    assert(&v == &*opt);
+    return true;
+}
+
 int main(int, char**)
 {
     {
-        X x;
-        optional<X> opt(x);
-        assert(X::dtor_called == false);
-        auto &v = opt.emplace({1, 2});
-        static_assert( std::is_same_v<X&, decltype(v)>, "" );
-        assert(X::dtor_called == true);
-        assert(*opt == X({1, 2}));
-        assert(&v == &*opt);
+        check_X();
+#if TEST_STD_VER > 17
+        static_assert(check_X());
+#endif
     }
     {
         optional<std::vector<int>> opt;
@@ -90,12 +110,10 @@ int main(int, char**)
         assert(&v == &*opt);
     }
     {
-        optional<Y> opt;
-        auto &v = opt.emplace({1, 2});
-        static_assert( std::is_same_v<Y&, decltype(v)>, "" );
-        assert(static_cast<bool>(opt) == true);
-        assert(*opt == Y({1, 2}));
-        assert(&v == &*opt);
+        check_Y();
+#if TEST_STD_VER > 17
+        static_assert(check_Y());
+#endif
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {

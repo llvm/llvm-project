@@ -1,5 +1,5 @@
-; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
-; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
+; RUN: opt -passes='print<regions>' -print-region-style=bb -disable-output < %s 2>&1 | FileCheck -check-prefix=BBIT %s
+; RUN: opt -passes='print<regions>' -print-region-style=rn -disable-output < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
 define void @normal_condition_0() nounwind {
 bb38:                                             ; preds = %bb34, %bb34, %bb37

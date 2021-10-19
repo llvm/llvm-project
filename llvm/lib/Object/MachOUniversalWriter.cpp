@@ -19,7 +19,7 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 
 using namespace llvm;
 using namespace object;
@@ -75,15 +75,20 @@ static uint32_t calculateAlignment(const MachOObjectFile &ObjectFile) {
   }
 }
 
+Slice::Slice(const Archive &A, uint32_t CPUType, uint32_t CPUSubType,
+             std::string ArchName, uint32_t Align)
+    : B(&A), CPUType(CPUType), CPUSubType(CPUSubType),
+      ArchName(std::move(ArchName)), P2Alignment(Align) {}
+
 Slice::Slice(const MachOObjectFile &O, uint32_t Align)
     : B(&O), CPUType(O.getHeader().cputype),
       CPUSubType(O.getHeader().cpusubtype),
       ArchName(std::string(O.getArchTriple().getArchName())),
       P2Alignment(Align) {}
 
-Slice::Slice(const IRObjectFile *IRO, uint32_t CPUType, uint32_t CPUSubType,
+Slice::Slice(const IRObjectFile &IRO, uint32_t CPUType, uint32_t CPUSubType,
              std::string ArchName, uint32_t Align)
-    : B(IRO), CPUType(CPUType), CPUSubType(CPUSubType),
+    : B(&IRO), CPUType(CPUType), CPUSubType(CPUSubType),
       ArchName(std::move(ArchName)), P2Alignment(Align) {}
 
 Slice::Slice(const MachOObjectFile &O) : Slice(O, calculateAlignment(O)) {}
@@ -105,14 +110,14 @@ static Expected<MachoCPUTy> getMachoCPUFromTriple(StringRef TT) {
   return getMachoCPUFromTriple(Triple{TT});
 }
 
-Expected<Slice> Slice::create(const Archive *A, LLVMContext *LLVMCtx) {
+Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
   Error Err = Error::success();
   std::unique_ptr<MachOObjectFile> MFO = nullptr;
   std::unique_ptr<IRObjectFile> IRFO = nullptr;
-  for (const Archive::Child &Child : A->children(Err)) {
+  for (const Archive::Child &Child : A.children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary(LLVMCtx);
     if (!ChildOrErr)
-      return createFileError(A->getFileName(), ChildOrErr.takeError());
+      return createFileError(A.getFileName(), ChildOrErr.takeError());
     Binary *Bin = ChildOrErr.get().get();
     if (Bin->isMachOUniversalBinary())
       return createStringError(std::errc::invalid_argument,
@@ -191,32 +196,32 @@ Expected<Slice> Slice::create(const Archive *A, LLVMContext *LLVMCtx) {
                                    .c_str());
   }
   if (Err)
-    return createFileError(A->getFileName(), std::move(Err));
+    return createFileError(A.getFileName(), std::move(Err));
   if (!MFO && !IRFO)
     return createStringError(
         std::errc::invalid_argument,
         ("empty archive with no architecture specification: " +
-         A->getFileName() + " (can't determine architecture for it)")
+         A.getFileName() + " (can't determine architecture for it)")
             .str()
             .c_str());
 
   if (MFO) {
     Slice ArchiveSlice(*(MFO.get()), MFO->is64Bit() ? 3 : 2);
-    ArchiveSlice.B = A;
+    ArchiveSlice.B = &A;
     return ArchiveSlice;
   }
 
   // For IR objects
-  Expected<Slice> ArchiveSliceOrErr = Slice::create(IRFO.get(), 0);
+  Expected<Slice> ArchiveSliceOrErr = Slice::create(*IRFO, 0);
   if (!ArchiveSliceOrErr)
-    return createFileError(A->getFileName(), ArchiveSliceOrErr.takeError());
+    return createFileError(A.getFileName(), ArchiveSliceOrErr.takeError());
   auto &ArchiveSlice = ArchiveSliceOrErr.get();
-  ArchiveSlice.B = A;
-  return Slice{std::move(ArchiveSlice)};
+  ArchiveSlice.B = &A;
+  return std::move(ArchiveSlice);
 }
 
-Expected<Slice> Slice::create(const IRObjectFile *IRO, uint32_t Align) {
-  Expected<MachoCPUTy> CPUOrErr = getMachoCPUFromTriple(IRO->getTargetTriple());
+Expected<Slice> Slice::create(const IRObjectFile &IRO, uint32_t Align) {
+  Expected<MachoCPUTy> CPUOrErr = getMachoCPUFromTriple(IRO.getTargetTriple());
   if (!CPUOrErr)
     return CPUOrErr.takeError();
   unsigned CPUType, CPUSubType;
@@ -258,8 +263,8 @@ buildFatArchList(ArrayRef<Slice> Slices) {
   return FatArchList;
 }
 
-Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
-                                   StringRef OutputFileName) {
+Error object::writeUniversalBinaryToStream(ArrayRef<Slice> Slices,
+                                           raw_ostream &Out) {
   MachO::fat_header FatHeader;
   FatHeader.magic = MachO::FAT_MAGIC;
   FatHeader.nfat_arch = Slices.size();
@@ -270,42 +275,52 @@ Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
     return FatArchListOrErr.takeError();
   SmallVector<MachO::fat_arch, 2> FatArchList = *FatArchListOrErr;
 
-  const bool IsExecutable = any_of(Slices, [](Slice S) {
-    return sys::fs::can_execute(S.getBinary()->getFileName());
-  });
-  const uint64_t OutputFileSize =
-      static_cast<uint64_t>(FatArchList.back().offset) +
-      FatArchList.back().size;
-  Expected<std::unique_ptr<FileOutputBuffer>> OutFileOrError =
-      FileOutputBuffer::create(OutputFileName, OutputFileSize,
-                               IsExecutable ? FileOutputBuffer::F_executable
-                                            : 0);
-  if (!OutFileOrError)
-    return createFileError(OutputFileName, OutFileOrError.takeError());
-  std::unique_ptr<FileOutputBuffer> OutFile = std::move(OutFileOrError.get());
-  std::memset(OutFile->getBufferStart(), 0, OutputFileSize);
-
   if (sys::IsLittleEndianHost)
     MachO::swapStruct(FatHeader);
-  std::memcpy(OutFile->getBufferStart(), &FatHeader, sizeof(MachO::fat_header));
+  Out.write(reinterpret_cast<const char *>(&FatHeader),
+            sizeof(MachO::fat_header));
 
-  for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
-    MemoryBufferRef BufferRef = Slices[Index].getBinary()->getMemoryBufferRef();
-    std::copy(BufferRef.getBufferStart(), BufferRef.getBufferEnd(),
-              OutFile->getBufferStart() + FatArchList[Index].offset);
-  }
-
-  // FatArchs written after Slices in order to reduce the number of swaps for
-  // the LittleEndian case
   if (sys::IsLittleEndianHost)
     for (MachO::fat_arch &FA : FatArchList)
       MachO::swapStruct(FA);
-  std::memcpy(OutFile->getBufferStart() + sizeof(MachO::fat_header),
-              FatArchList.begin(),
-              sizeof(MachO::fat_arch) * FatArchList.size());
+  Out.write(reinterpret_cast<const char *>(FatArchList.data()),
+            sizeof(MachO::fat_arch) * FatArchList.size());
 
-  if (Error E = OutFile->commit())
-    return createFileError(OutputFileName, std::move(E));
+  if (sys::IsLittleEndianHost)
+    for (MachO::fat_arch &FA : FatArchList)
+      MachO::swapStruct(FA);
 
+  size_t Offset =
+      sizeof(MachO::fat_header) + sizeof(MachO::fat_arch) * FatArchList.size();
+  for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
+    MemoryBufferRef BufferRef = Slices[Index].getBinary()->getMemoryBufferRef();
+    assert((Offset <= FatArchList[Index].offset) && "Incorrect slice offset");
+    Out.write_zeros(FatArchList[Index].offset - Offset);
+    Out.write(BufferRef.getBufferStart(), BufferRef.getBufferSize());
+    Offset = FatArchList[Index].offset + BufferRef.getBufferSize();
+  }
+
+  Out.flush();
   return Error::success();
+}
+
+Error object::writeUniversalBinary(ArrayRef<Slice> Slices,
+                                   StringRef OutputFileName) {
+  const bool IsExecutable = any_of(Slices, [](Slice S) {
+    return sys::fs::can_execute(S.getBinary()->getFileName());
+  });
+  unsigned Mode = sys::fs::all_read | sys::fs::all_write;
+  if (IsExecutable)
+    Mode |= sys::fs::all_exe;
+  Expected<sys::fs::TempFile> Temp = sys::fs::TempFile::create(
+      OutputFileName + ".temp-universal-%%%%%%", Mode);
+  if (!Temp)
+    return Temp.takeError();
+  raw_fd_ostream Out(Temp->FD, false);
+  if (Error E = writeUniversalBinaryToStream(Slices, Out)) {
+    if (Error DiscardError = Temp->discard())
+      return joinErrors(std::move(E), std::move(DiscardError));
+    return E;
+  }
+  return Temp->keep(OutputFileName);
 }

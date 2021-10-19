@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -S < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -S < %s 2>&1 | FileCheck %s
 
 define i16 @test1(i8 %x) {
@@ -126,4 +125,12 @@ define i64 @test10(i64 %a, i64 %b) {
 ; CHECK: %t2
 ; CHECK-NEXT: -->  0
   ret i64 %t2
+}
+
+define i64 @test11(i64 %a) {
+; CHECK-LABEL: @test11
+  %t0 = udiv i64 0, %a
+; CHECK: %t0
+; CHECK-NEXT: -->  0
+  ret i64 %t0
 }

@@ -11,3 +11,7 @@ To build the documents into html configure libc++ with the following cmake optio
 
 After configuring libc++ with these options the make rule `docs-libcxx-html`
 should be available.
+
+The documentation in this directory is published at https://libcxx.llvm.org. It is kept up-to-date
+by a build bot: https://lab.llvm.org/buildbot/#/builders/publish-sphinx-docs. If you notice that the
+documentation is not updating anymore, please contact one of the maintainers.

@@ -112,7 +112,7 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS) {
   OS << "FeatureBitset " << TargetName << ClassName << "::\n"
-     << FuncName << "(const FeatureBitset& FB) const {\n";
+     << FuncName << "(const FeatureBitset &FB) const {\n";
   OS << "  FeatureBitset Features;\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
@@ -130,14 +130,9 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
     if (IsOr)
       OS << "(";
 
-    bool First = true;
+    ListSeparator LS(IsOr ? " || " : " && ");
     for (auto *Arg : D->getArgs()) {
-      if (!First) {
-        if (IsOr)
-          OS << " || ";
-        else
-          OS << " && ";
-      }
+      OS << LS;
       if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
         if (NotArg->getOperator()->getAsString() != "not" ||
             NotArg->getNumArgs() != 1)
@@ -149,8 +144,6 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
           !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
         PrintFatalError(SFI.TheDef->getLoc(), "Invalid AssemblerCondDag!");
       OS << "FB[" << TargetName << "::" << Arg->getAsString() << "]";
-
-      First = false;
     }
 
     if (IsOr)

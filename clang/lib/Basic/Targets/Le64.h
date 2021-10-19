@@ -22,7 +22,6 @@ namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY Le64TargetInfo : public TargetInfo {
-  static const Builtin::Info BuiltinInfo[];
 
 public:
   Le64TargetInfo(const llvm::Triple &Triple, const TargetOptions &)

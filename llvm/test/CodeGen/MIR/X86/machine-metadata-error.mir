@@ -1,0 +1,25 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that the MIR parser detects errors when parsing machine
+# metadata.
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define i32 @test_memcpy(i32* nocapture %p, i32* nocapture readonly %q) {
+    ret i32 0
+  }
+...
+---
+name:            test_memcpy
+machineMetadataNodes:
+  - '!7 = distinct !{!7, !"MemcpyLoweringDomain"}'
+  - '!9 = distinct !{!9, !7, !"Dst"}'
+  - '!5 = !{!6}'
+  - '!6 = distinct !{!6, !7, !"Src"}'
+  - '!10 = !{!9}'
+body:             |
+  bb.0 (%ir-block.0):
+  ; CHECK: [[@LINE+1]]:96: use of undefined metadata '!11'
+    %2:gr64 = MOV64rm %0, 1, $noreg, 16, $noreg :: (load 8, align 4, !alias.scope !5, !noalias !11)
+
+...

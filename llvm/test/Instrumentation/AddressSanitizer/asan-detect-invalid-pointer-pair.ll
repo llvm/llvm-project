@@ -1,13 +1,7 @@
-; RUN: opt < %s -asan -asan-detect-invalid-pointer-cmp -S -enable-new-pm=0 \
-; RUN:     | FileCheck %s --check-prefixes=CMP,NOSUB,ALL
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-detect-invalid-pointer-cmp -S \
 ; RUN:     | FileCheck %s --check-prefixes=CMP,NOSUB,ALL
-; RUN: opt < %s -asan -asan-detect-invalid-pointer-sub -S -enable-new-pm=0 \
-; RUN:     | FileCheck %s --check-prefixes=SUB,NOCMP,ALL
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-detect-invalid-pointer-sub -S \
 ; RUN:     | FileCheck %s --check-prefixes=SUB,NOCMP,ALL
-; RUN: opt < %s -asan -asan-detect-invalid-pointer-pair -S -enable-new-pm=0 \
-; RUN:     | FileCheck %s --check-prefixes=CMP,SUB,ALL
 ; RUN: opt < %s -passes='asan-function-pipeline' -asan-detect-invalid-pointer-pair -S \
 ; RUN:     | FileCheck %s --check-prefixes=CMP,SUB,ALL
 ; Support instrumentation of invalid pointer pair detection.

@@ -432,9 +432,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 1.000000e+00, float* %ref.tmp99, align 4
   store float 0.000000e+00, float* %ref.tmp100, align 4
   %call101 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp97, float* %ref.tmp98, float* %ref.tmp99, float* %ref.tmp100)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp, float* %scale.addr, %class.btVector3* %ref.tmp97)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp, float* %scale.addr, %class.btVector3* %ref.tmp97)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp102, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp102, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes103 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx104 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes103, i32 0, i32 0
   %47 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx104, align 4
@@ -447,9 +447,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF3333340000000, float* %ref.tmp110, align 4
   store float 0.000000e+00, float* %ref.tmp111, align 4
   %call112 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp108, float* %ref.tmp109, float* %ref.tmp110, float* %ref.tmp111)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp107, float* %scale.addr, %class.btVector3* %ref.tmp108)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp107, float* %scale.addr, %class.btVector3* %ref.tmp108)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp107)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp113, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp113, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes114 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx115 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes114, i32 0, i32 1
   %48 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx115, align 4
@@ -462,9 +462,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF99999A0000000, float* %ref.tmp122, align 4
   store float 0.000000e+00, float* %ref.tmp123, align 4
   %call124 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp120, float* %ref.tmp121, float* %ref.tmp122, float* %ref.tmp123)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp119, float* %scale.addr, %class.btVector3* %ref.tmp120)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp119, float* %scale.addr, %class.btVector3* %ref.tmp120)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp119)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp125, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp125, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes126 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx127 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes126, i32 0, i32 2
   %49 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx127, align 4
@@ -477,9 +477,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FE4CCCCC0000000, float* %ref.tmp134, align 4
   store float 0.000000e+00, float* %ref.tmp135, align 4
   %call136 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp132, float* %ref.tmp133, float* %ref.tmp134, float* %ref.tmp135)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp131, float* %scale.addr, %class.btVector3* %ref.tmp132)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp131, float* %scale.addr, %class.btVector3* %ref.tmp132)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp131)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp137, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp137, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes138 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx139 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes138, i32 0, i32 3
   %50 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx139, align 4
@@ -492,9 +492,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FC99999A0000000, float* %ref.tmp146, align 4
   store float 0.000000e+00, float* %ref.tmp147, align 4
   %call148 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp144, float* %ref.tmp145, float* %ref.tmp146, float* %ref.tmp147)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp143, float* %scale.addr, %class.btVector3* %ref.tmp144)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp143, float* %scale.addr, %class.btVector3* %ref.tmp144)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp143)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp149, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp149, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes150 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx151 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes150, i32 0, i32 4
   %51 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx151, align 4
@@ -507,9 +507,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FE4CCCCC0000000, float* %ref.tmp158, align 4
   store float 0.000000e+00, float* %ref.tmp159, align 4
   %call160 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp156, float* %ref.tmp157, float* %ref.tmp158, float* %ref.tmp159)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp155, float* %scale.addr, %class.btVector3* %ref.tmp156)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp155, float* %scale.addr, %class.btVector3* %ref.tmp156)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp155)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp161, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp161, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes162 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx163 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes162, i32 0, i32 5
   %52 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx163, align 4
@@ -522,9 +522,9 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FC99999A0000000, float* %ref.tmp170, align 4
   store float 0.000000e+00, float* %ref.tmp171, align 4
   %call172 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp168, float* %ref.tmp169, float* %ref.tmp170, float* %ref.tmp171)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp167, float* %scale.addr, %class.btVector3* %ref.tmp168)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp167, float* %scale.addr, %class.btVector3* %ref.tmp168)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp167)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp173, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp173, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes174 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx175 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes174, i32 0, i32 6
   %53 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx175, align 4
@@ -537,11 +537,11 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF7333340000000, float* %ref.tmp182, align 4
   store float 0.000000e+00, float* %ref.tmp183, align 4
   %call184 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp180, float* %ref.tmp181, float* %ref.tmp182, float* %ref.tmp183)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp179, float* %scale.addr, %class.btVector3* %ref.tmp180)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp179, float* %scale.addr, %class.btVector3* %ref.tmp180)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp179)
   %call185 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %transform)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call185, float 0.000000e+00, float 0.000000e+00, float 0x3FF921FB60000000)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp186, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp186, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes187 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx188 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes187, i32 0, i32 7
   %54 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx188, align 4
@@ -554,11 +554,11 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF7333340000000, float* %ref.tmp195, align 4
   store float 0.000000e+00, float* %ref.tmp196, align 4
   %call197 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp193, float* %ref.tmp194, float* %ref.tmp195, float* %ref.tmp196)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp192, float* %scale.addr, %class.btVector3* %ref.tmp193)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp192, float* %scale.addr, %class.btVector3* %ref.tmp193)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp192)
   %call198 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %transform)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call198, float 0.000000e+00, float 0.000000e+00, float 0x3FF921FB60000000)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp199, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp199, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes200 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx201 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes200, i32 0, i32 8
   %55 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx201, align 4
@@ -571,11 +571,11 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF7333340000000, float* %ref.tmp208, align 4
   store float 0.000000e+00, float* %ref.tmp209, align 4
   %call210 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp206, float* %ref.tmp207, float* %ref.tmp208, float* %ref.tmp209)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp205, float* %scale.addr, %class.btVector3* %ref.tmp206)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp205, float* %scale.addr, %class.btVector3* %ref.tmp206)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp205)
   %call211 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %transform)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call211, float 0.000000e+00, float 0.000000e+00, float 0xBFF921FB60000000)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp212, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp212, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes213 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx214 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes213, i32 0, i32 9
   %56 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx214, align 4
@@ -588,11 +588,11 @@ invoke.cont90:                                    ; preds = %invoke.cont81
   store float 0x3FF7333340000000, float* %ref.tmp221, align 4
   store float 0.000000e+00, float* %ref.tmp222, align 4
   %call223 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp219, float* %ref.tmp220, float* %ref.tmp221, float* %ref.tmp222)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp218, float* %scale.addr, %class.btVector3* %ref.tmp219)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp218, float* %scale.addr, %class.btVector3* %ref.tmp219)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %transform, %class.btVector3* %ref.tmp218)
   %call224 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %transform)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call224, float 0.000000e+00, float 0.000000e+00, float 0xBFF921FB60000000)
-  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret %ref.tmp225, %class.btTransform* %offset, %class.btTransform* %transform)
+  call void @_ZNK11btTransformmlERKS_(%class.btTransform* sret(%class.btTransform) %ref.tmp225, %class.btTransform* %offset, %class.btTransform* %transform)
   %m_shapes226 = getelementptr inbounds %class.RagDoll, %class.RagDoll* %this1, i32 0, i32 2
   %arrayidx227 = getelementptr inbounds [11 x %class.btCollisionShape*], [11 x %class.btCollisionShape*]* %m_shapes226, i32 0, i32 10
   %57 = load %class.btCollisionShape*, %class.btCollisionShape** %arrayidx227, align 4
@@ -787,7 +787,7 @@ for.end:                                          ; preds = %for.cond
   store float 0x3FC3333340000000, float* %ref.tmp243, align 4
   store float 0.000000e+00, float* %ref.tmp244, align 4
   %call245 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp241, float* %ref.tmp242, float* %ref.tmp243, float* %ref.tmp244)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp240, float* %scale.addr, %class.btVector3* %ref.tmp241)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp240, float* %scale.addr, %class.btVector3* %ref.tmp241)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp240)
   %call246 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call246, float 0.000000e+00, float 0x3FF921FB60000000, float 0.000000e+00)
@@ -795,7 +795,7 @@ for.end:                                          ; preds = %for.cond
   store float 0xBFC3333340000000, float* %ref.tmp250, align 4
   store float 0.000000e+00, float* %ref.tmp251, align 4
   %call252 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp248, float* %ref.tmp249, float* %ref.tmp250, float* %ref.tmp251)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp247, float* %scale.addr, %class.btVector3* %ref.tmp248)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp247, float* %scale.addr, %class.btVector3* %ref.tmp248)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp247)
   %call253 = call noalias i8* @_Znwm(i32 780)
   %100 = bitcast i8* %call253 to %class.btHingeConstraint*
@@ -835,7 +835,7 @@ invoke.cont259:                                   ; preds = %for.end
   store float 0x3FD3333340000000, float* %ref.tmp269, align 4
   store float 0.000000e+00, float* %ref.tmp270, align 4
   %call271 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp267, float* %ref.tmp268, float* %ref.tmp269, float* %ref.tmp270)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp266, float* %scale.addr, %class.btVector3* %ref.tmp267)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp266, float* %scale.addr, %class.btVector3* %ref.tmp267)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp266)
   %call272 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call272, float 0.000000e+00, float 0.000000e+00, float 0x3FF921FB60000000)
@@ -843,7 +843,7 @@ invoke.cont259:                                   ; preds = %for.end
   store float 0xBFC1EB8520000000, float* %ref.tmp276, align 4
   store float 0.000000e+00, float* %ref.tmp277, align 4
   %call278 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp274, float* %ref.tmp275, float* %ref.tmp276, float* %ref.tmp277)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp273, float* %scale.addr, %class.btVector3* %ref.tmp274)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp273, float* %scale.addr, %class.btVector3* %ref.tmp274)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp273)
   %call279 = call noalias i8* @_Znwm(i32 628)
   %110 = bitcast i8* %call279 to %class.btConeTwistConstraint*
@@ -883,7 +883,7 @@ invoke.cont285:                                   ; preds = %invoke.cont259
   store float 0xBFB99999A0000000, float* %ref.tmp298, align 4
   store float 0.000000e+00, float* %ref.tmp299, align 4
   %call300 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp296, float* %ref.tmp297, float* %ref.tmp298, float* %ref.tmp299)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp295, float* %scale.addr, %class.btVector3* %ref.tmp296)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp295, float* %scale.addr, %class.btVector3* %ref.tmp296)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp295)
   %call301 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call301, float 0.000000e+00, float 0.000000e+00, float 0xC00F6A7A20000000)
@@ -891,7 +891,7 @@ invoke.cont285:                                   ; preds = %invoke.cont259
   store float 0x3FCCCCCCC0000000, float* %ref.tmp305, align 4
   store float 0.000000e+00, float* %ref.tmp306, align 4
   %call307 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp303, float* %ref.tmp304, float* %ref.tmp305, float* %ref.tmp306)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp302, float* %scale.addr, %class.btVector3* %ref.tmp303)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp302, float* %scale.addr, %class.btVector3* %ref.tmp303)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp302)
   %call308 = call noalias i8* @_Znwm(i32 628)
   %120 = bitcast i8* %call308 to %class.btConeTwistConstraint*
@@ -931,7 +931,7 @@ invoke.cont314:                                   ; preds = %invoke.cont285
   store float 0xBFCCCCCCC0000000, float* %ref.tmp327, align 4
   store float 0.000000e+00, float* %ref.tmp328, align 4
   %call329 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp325, float* %ref.tmp326, float* %ref.tmp327, float* %ref.tmp328)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp324, float* %scale.addr, %class.btVector3* %ref.tmp325)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp324, float* %scale.addr, %class.btVector3* %ref.tmp325)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp324)
   %call330 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call330, float 0.000000e+00, float 0x3FF921FB60000000, float 0.000000e+00)
@@ -939,7 +939,7 @@ invoke.cont314:                                   ; preds = %invoke.cont285
   store float 0x3FC7AE1480000000, float* %ref.tmp334, align 4
   store float 0.000000e+00, float* %ref.tmp335, align 4
   %call336 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp332, float* %ref.tmp333, float* %ref.tmp334, float* %ref.tmp335)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp331, float* %scale.addr, %class.btVector3* %ref.tmp332)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp331, float* %scale.addr, %class.btVector3* %ref.tmp332)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp331)
   %call337 = call noalias i8* @_Znwm(i32 780)
   %130 = bitcast i8* %call337 to %class.btHingeConstraint*
@@ -979,7 +979,7 @@ invoke.cont343:                                   ; preds = %invoke.cont314
   store float 0xBFB99999A0000000, float* %ref.tmp356, align 4
   store float 0.000000e+00, float* %ref.tmp357, align 4
   %call358 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp354, float* %ref.tmp355, float* %ref.tmp356, float* %ref.tmp357)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp353, float* %scale.addr, %class.btVector3* %ref.tmp354)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp353, float* %scale.addr, %class.btVector3* %ref.tmp354)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp353)
   %call359 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call359, float 0.000000e+00, float 0.000000e+00, float 0x3FE921FB60000000)
@@ -987,7 +987,7 @@ invoke.cont343:                                   ; preds = %invoke.cont314
   store float 0x3FCCCCCCC0000000, float* %ref.tmp363, align 4
   store float 0.000000e+00, float* %ref.tmp364, align 4
   %call365 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp361, float* %ref.tmp362, float* %ref.tmp363, float* %ref.tmp364)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp360, float* %scale.addr, %class.btVector3* %ref.tmp361)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp360, float* %scale.addr, %class.btVector3* %ref.tmp361)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp360)
   %call366 = call noalias i8* @_Znwm(i32 628)
   %140 = bitcast i8* %call366 to %class.btConeTwistConstraint*
@@ -1027,7 +1027,7 @@ invoke.cont372:                                   ; preds = %invoke.cont343
   store float 0xBFCCCCCCC0000000, float* %ref.tmp385, align 4
   store float 0.000000e+00, float* %ref.tmp386, align 4
   %call387 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp383, float* %ref.tmp384, float* %ref.tmp385, float* %ref.tmp386)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp382, float* %scale.addr, %class.btVector3* %ref.tmp383)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp382, float* %scale.addr, %class.btVector3* %ref.tmp383)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp382)
   %call388 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call388, float 0.000000e+00, float 0x3FF921FB60000000, float 0.000000e+00)
@@ -1035,7 +1035,7 @@ invoke.cont372:                                   ; preds = %invoke.cont343
   store float 0x3FC7AE1480000000, float* %ref.tmp392, align 4
   store float 0.000000e+00, float* %ref.tmp393, align 4
   %call394 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp390, float* %ref.tmp391, float* %ref.tmp392, float* %ref.tmp393)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp389, float* %scale.addr, %class.btVector3* %ref.tmp390)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp389, float* %scale.addr, %class.btVector3* %ref.tmp390)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp389)
   %call395 = call noalias i8* @_Znwm(i32 780)
   %150 = bitcast i8* %call395 to %class.btHingeConstraint*
@@ -1075,7 +1075,7 @@ invoke.cont401:                                   ; preds = %invoke.cont372
   store float 0x3FC3333340000000, float* %ref.tmp414, align 4
   store float 0.000000e+00, float* %ref.tmp415, align 4
   %call416 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp412, float* %ref.tmp413, float* %ref.tmp414, float* %ref.tmp415)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp411, float* %scale.addr, %class.btVector3* %ref.tmp412)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp411, float* %scale.addr, %class.btVector3* %ref.tmp412)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp411)
   %call417 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call417, float 0.000000e+00, float 0.000000e+00, float 0x3FF921FB60000000)
@@ -1083,7 +1083,7 @@ invoke.cont401:                                   ; preds = %invoke.cont372
   store float 0xBFC70A3D80000000, float* %ref.tmp421, align 4
   store float 0.000000e+00, float* %ref.tmp422, align 4
   %call423 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp419, float* %ref.tmp420, float* %ref.tmp421, float* %ref.tmp422)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp418, float* %scale.addr, %class.btVector3* %ref.tmp419)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp418, float* %scale.addr, %class.btVector3* %ref.tmp419)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp418)
   %call424 = call noalias i8* @_Znwm(i32 628)
   %160 = bitcast i8* %call424 to %class.btConeTwistConstraint*
@@ -1123,7 +1123,7 @@ invoke.cont430:                                   ; preds = %invoke.cont401
   store float 0x3FC70A3D80000000, float* %ref.tmp443, align 4
   store float 0.000000e+00, float* %ref.tmp444, align 4
   %call445 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp441, float* %ref.tmp442, float* %ref.tmp443, float* %ref.tmp444)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp440, float* %scale.addr, %class.btVector3* %ref.tmp441)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp440, float* %scale.addr, %class.btVector3* %ref.tmp441)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp440)
   %call446 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call446, float 0.000000e+00, float 0x3FF921FB60000000, float 0.000000e+00)
@@ -1131,7 +1131,7 @@ invoke.cont430:                                   ; preds = %invoke.cont401
   store float 0xBFC1EB8520000000, float* %ref.tmp450, align 4
   store float 0.000000e+00, float* %ref.tmp451, align 4
   %call452 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp448, float* %ref.tmp449, float* %ref.tmp450, float* %ref.tmp451)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp447, float* %scale.addr, %class.btVector3* %ref.tmp448)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp447, float* %scale.addr, %class.btVector3* %ref.tmp448)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp447)
   %call453 = call noalias i8* @_Znwm(i32 780)
   %170 = bitcast i8* %call453 to %class.btHingeConstraint*
@@ -1171,7 +1171,7 @@ invoke.cont459:                                   ; preds = %invoke.cont430
   store float 0x3FC3333340000000, float* %ref.tmp472, align 4
   store float 0.000000e+00, float* %ref.tmp473, align 4
   %call474 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp470, float* %ref.tmp471, float* %ref.tmp472, float* %ref.tmp473)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp469, float* %scale.addr, %class.btVector3* %ref.tmp470)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp469, float* %scale.addr, %class.btVector3* %ref.tmp470)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp469)
   %call475 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call475, float 0.000000e+00, float 0.000000e+00, float 0x3FF921FB60000000)
@@ -1179,7 +1179,7 @@ invoke.cont459:                                   ; preds = %invoke.cont430
   store float 0xBFC70A3D80000000, float* %ref.tmp479, align 4
   store float 0.000000e+00, float* %ref.tmp480, align 4
   %call481 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp477, float* %ref.tmp478, float* %ref.tmp479, float* %ref.tmp480)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp476, float* %scale.addr, %class.btVector3* %ref.tmp477)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp476, float* %scale.addr, %class.btVector3* %ref.tmp477)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp476)
   %call482 = call noalias i8* @_Znwm(i32 628)
   %180 = bitcast i8* %call482 to %class.btConeTwistConstraint*
@@ -1219,7 +1219,7 @@ invoke.cont488:                                   ; preds = %invoke.cont459
   store float 0x3FC70A3D80000000, float* %ref.tmp501, align 4
   store float 0.000000e+00, float* %ref.tmp502, align 4
   %call503 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp499, float* %ref.tmp500, float* %ref.tmp501, float* %ref.tmp502)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp498, float* %scale.addr, %class.btVector3* %ref.tmp499)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp498, float* %scale.addr, %class.btVector3* %ref.tmp499)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localA, %class.btVector3* %ref.tmp498)
   %call504 = call %class.btMatrix3x3* @_ZN11btTransform8getBasisEv(%class.btTransform* %localB)
   call void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3* %call504, float 0.000000e+00, float 0x3FF921FB60000000, float 0.000000e+00)
@@ -1227,7 +1227,7 @@ invoke.cont488:                                   ; preds = %invoke.cont459
   store float 0xBFC1EB8520000000, float* %ref.tmp508, align 4
   store float 0.000000e+00, float* %ref.tmp509, align 4
   %call510 = call %class.btVector3* @_ZN9btVector3C1ERKfS1_S1_(%class.btVector3* %ref.tmp506, float* %ref.tmp507, float* %ref.tmp508, float* %ref.tmp509)
-  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret %ref.tmp505, float* %scale.addr, %class.btVector3* %ref.tmp506)
+  call void @_ZmlRKfRK9btVector3(%class.btVector3* sret(%class.btVector3) %ref.tmp505, float* %scale.addr, %class.btVector3* %ref.tmp506)
   call void @_ZN11btTransform9setOriginERK9btVector3(%class.btTransform* %localB, %class.btVector3* %ref.tmp505)
   %call511 = call noalias i8* @_Znwm(i32 780)
   %190 = bitcast i8* %call511 to %class.btHingeConstraint*
@@ -1376,11 +1376,11 @@ terminate.lpad:                                   ; preds = %lpad89, %lpad80, %l
   unreachable
 }
 
-declare void @_ZmlRKfRK9btVector3(%class.btVector3* noalias sret, float*, %class.btVector3*) inlinehint ssp
+declare void @_ZmlRKfRK9btVector3(%class.btVector3* noalias sret(%class.btVector3), float*, %class.btVector3*) inlinehint ssp
 
 declare %class.btRigidBody* @_ZN7RagDoll20localCreateRigidBodyEfRK11btTransformP16btCollisionShape(%class.RagDoll*, float, %class.btTransform*, %class.btCollisionShape*) ssp align 2
 
-declare void @_ZNK11btTransformmlERKS_(%class.btTransform* noalias sret, %class.btTransform*, %class.btTransform*) inlinehint ssp align 2
+declare void @_ZNK11btTransformmlERKS_(%class.btTransform* noalias sret(%class.btTransform), %class.btTransform*, %class.btTransform*) inlinehint ssp align 2
 
 declare void @_ZN11btMatrix3x311setEulerZYXEfff(%class.btMatrix3x3*, float, float, float) ssp align 2
 

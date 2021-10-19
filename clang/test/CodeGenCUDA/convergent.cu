@@ -12,15 +12,15 @@
 
 // DEVICE: Function Attrs:
 // DEVICE-SAME: convergent
-// DEVICE-NEXT: define void @_Z3foov
+// DEVICE-NEXT: define{{.*}} void @_Z3foov
 __device__ void foo() {}
 
 // HOST: Function Attrs:
 // HOST-NOT: convergent
-// HOST-NEXT: define void @_Z3barv
+// HOST-NEXT: define{{.*}} void @_Z3barv
 // DEVICE: Function Attrs:
 // DEVICE-SAME: convergent
-// DEVICE-NEXT: define void @_Z3barv
+// DEVICE-NEXT: define{{.*}} void @_Z3barv
 __host__ __device__ void baz();
 __host__ __device__ void bar() {
   // DEVICE: call void @_Z3bazv() [[CALL_ATTR:#[0-9]+]]
@@ -42,4 +42,4 @@ __host__ __device__ void bar() {
 // HOST: declare void @_Z3bazv() [[BAZ_ATTR:#[0-9]+]]
 // HOST: attributes [[BAZ_ATTR]] = {
 // HOST-NOT: convergent
-// NOST-SAME: }
+// HOST-SAME: }

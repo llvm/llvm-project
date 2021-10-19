@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_REMARK_CONTAINER_H
-#define LLVM_REMARKS_REMARK_CONTAINER_H
+#ifndef LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H
+#define LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -103,4 +103,4 @@ constexpr StringRef RemarkArgWithoutDebugLocName = StringRef("Argument", 8);
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_REMARK_CONTAINER_H */
+#endif // LLVM_REMARKS_BITSTREAMREMARKCONTAINER_H

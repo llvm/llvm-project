@@ -154,6 +154,14 @@ int main(int argc, const char *argv[]) {
   NSNumber *num_at2 = @-12;
   NSNumber *num_at3 = @12.5;
   NSNumber *num_at4 = @-12.5;
+  NSNumber *num_at5 = @'a';
+  NSNumber *num_at6 = @42.123f;
+  NSNumber *num_at7 = @43.123;
+  NSNumber *num_at8 = @12345ll;
+  NSNumber *num_at9 = @0xF1234567890abcdeull;
+  NSNumber *num_at9b = @-1070935975400915746;
+  NSNumber *num_at10 = @YES;
+  NSNumber *num_at11 = @NO;
 
   NSDecimalNumber *decimal_number =
       [NSDecimalNumber decimalNumberWithMantissa:123456
@@ -475,6 +483,12 @@ int main(int argc, const char *argv[]) {
   [newMutableDictionary setObject:@"foo" forKey:@"bar18"];
   [newMutableDictionary setObject:@"foo" forKey:@"bar19"];
   [newMutableDictionary setObject:@"foo" forKey:@"bar20"];
+
+  /* Copying an NSMutableDictionary makes a different member of the
+     class cluster, so let's also make a copy of this one: */
+  NSMutableDictionary *copyDictionary = [newMutableDictionary copy];
+
+  CFMutableDictionaryRef newMutableDictionaryRef = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, newMutableDictionary);
 
   id cfKeys[4] = {@"foo", @"bar", @"baz", @"quux"};
   id cfValues[4] = {@"foo", @"bar", @"baz", @"quux"};

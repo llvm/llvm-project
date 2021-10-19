@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C945_a(srca, srcb, srcc, src_complex, src_logical, &

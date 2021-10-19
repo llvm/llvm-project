@@ -1022,7 +1022,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return true;
   };
 
-  auto UseAligned = [&] (const MachineInstr &MI, unsigned NeedAlign) {
+  auto UseAligned = [&](const MachineInstr &MI, Align NeedAlign) {
     if (MI.memoperands().empty())
       return false;
     return all_of(MI.memoperands(), [NeedAlign](const MachineMemOperand *MMO) {
@@ -1086,7 +1086,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &BaseOp = MI.getOperand(1);
       assert(BaseOp.getSubReg() == 0);
       int Offset = MI.getOperand(2).getImm();
-      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
       unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vL32b_ai
                                                   : Hexagon::V6_vL32Ub_ai;
       BuildMI(MBB, MI, DL, get(NewOpc), DstReg)
@@ -1102,7 +1102,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       assert(BaseOp.getSubReg() == 0);
       int Offset = MI.getOperand(2).getImm();
       unsigned VecOffset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
       unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vL32b_ai
                                                   : Hexagon::V6_vL32Ub_ai;
       BuildMI(MBB, MI, DL, get(NewOpc),
@@ -1124,7 +1124,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       const MachineOperand &BaseOp = MI.getOperand(0);
       assert(BaseOp.getSubReg() == 0);
       int Offset = MI.getOperand(1).getImm();
-      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
       unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vS32b_ai
                                                   : Hexagon::V6_vS32Ub_ai;
       BuildMI(MBB, MI, DL, get(NewOpc))
@@ -1141,7 +1141,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       assert(BaseOp.getSubReg() == 0);
       int Offset = MI.getOperand(1).getImm();
       unsigned VecOffset = HRI.getSpillSize(Hexagon::HvxVRRegClass);
-      unsigned NeedAlign = HRI.getSpillAlignment(Hexagon::HvxVRRegClass);
+      Align NeedAlign = HRI.getSpillAlign(Hexagon::HvxVRRegClass);
       unsigned NewOpc = UseAligned(MI, NeedAlign) ? Hexagon::V6_vS32b_ai
                                                   : Hexagon::V6_vS32Ub_ai;
       BuildMI(MBB, MI, DL, get(NewOpc))
@@ -1639,8 +1639,9 @@ bool HexagonInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   return false;
 }
 
-bool HexagonInstrInfo::DefinesPredicate(MachineInstr &MI,
-      std::vector<MachineOperand> &Pred) const {
+bool HexagonInstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                         std::vector<MachineOperand> &Pred,
+                                         bool SkipDead) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
   for (unsigned oper = 0; oper < MI.getNumOperands(); ++oper) {
@@ -1790,8 +1791,8 @@ HexagonInstrInfo::CreateTargetPostRAHazardRecognizer(
 /// compares against in CmpValue. Return true if the comparison instruction
 /// can be analyzed.
 bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                                      Register &SrcReg2, int &Mask,
-                                      int &Value) const {
+                                      Register &SrcReg2, int64_t &Mask,
+                                      int64_t &Value) const {
   unsigned Opc = MI.getOpcode();
 
   // Set mask and the first source register.
@@ -3626,8 +3627,8 @@ int HexagonInstrInfo::getDotNewOp(const MachineInstr &MI) const {
 
   switch (MI.getOpcode()) {
   default:
-    report_fatal_error(std::string("Unknown .new type: ") +
-      std::to_string(MI.getOpcode()));
+    report_fatal_error(Twine("Unknown .new type: ") +
+                       std::to_string(MI.getOpcode()));
   case Hexagon::S4_storerb_ur:
     return Hexagon::S4_storerbnew_ur;
 

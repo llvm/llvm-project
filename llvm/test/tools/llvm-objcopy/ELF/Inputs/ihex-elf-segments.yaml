@@ -43,18 +43,19 @@ Sections:
     AddressAlign:    0x8
   - Name:            .dummy
     Type:            SHT_PROGBITS
-    Flags:           [ ]
+    Flags:           [ SHF_ALLOC ]
     Address:         0x20FFF8
-    Size:            65536
+    Size:            3
     AddressAlign:    0x8
+  - Name:            .nonalloc
+    Type:            SHT_PROGBITS
+    Flags:           [ ]
+    Address:         0x300000
+    Size:            1
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0xF00000000
-    PAddr: 0x100000
-    Sections:
-      - Section: .text
-      - Section: .data1
-      - Section: .data2
-      - Section: .data3
-      - Section: .bss
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xF00000000
+    PAddr:    0x100000
+    FirstSec: .text
+    LastSec:  .bss

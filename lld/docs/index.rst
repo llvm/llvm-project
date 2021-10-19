@@ -174,6 +174,8 @@ document soon.
    WebAssembly
    windows_support
    missingkeyfunction
+   error_handling_script
    Partitions
    ReleaseNotes
    ELF/linker_script
+   ELF/warn_backrefs

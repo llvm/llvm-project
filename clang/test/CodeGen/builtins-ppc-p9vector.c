@@ -1162,12 +1162,16 @@ void test111(void) {
 
 vector unsigned char test112(void) {
 // CHECK-BE: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
+// CHECK-BE: @llvm.ppc.altivec.lvsr(i8* %{{.+}}
+// CHECK-BE: @llvm.ppc.altivec.vperm
 // CHECK: @llvm.ppc.vsx.lxvll(i8* %{{.+}}, i64
 // CHECK: @llvm.ppc.altivec.lvsr(i8* %{{.+}}
 // CHECK: @llvm.ppc.altivec.vperm
   return vec_xl_len_r(uc,0);
 }
 void test113(void) {
+// CHECK-BE: @llvm.ppc.altivec.lvsl(i8* %{{.+}}
+// CHECK-BE: @llvm.ppc.altivec.vperm
 // CHECK-BE: @llvm.ppc.vsx.stxvll(<4 x i32> %{{.+}}, i8* %{{.+}}, i64
 // CHECK: @llvm.ppc.altivec.lvsl(i8* %{{.+}}
 // CHECK: @llvm.ppc.altivec.vperm
@@ -1227,3 +1231,38 @@ vector unsigned long long test119(void) {
   return vec_extract4b(vuca, -5);
 }
 
+vector signed int test_vec_signexti_si_sc(void) {
+    // CHECK: @llvm.ppc.altivec.vextsb2w(<16 x i8>
+    // CHECK-NEXT: ret <4 x i32>
+    return vec_signexti(vsca);
+}
+
+vector signed int test_vec_signexti_si_ss(void) {
+    // CHECK: @llvm.ppc.altivec.vextsh2w(<8 x i16>
+    // CHECK-NEXT: ret <4 x i32>
+    return vec_signexti(vssa);
+}
+
+vector signed long long test_vec_signextll_sll_sc(void) {
+    // CHECK: @llvm.ppc.altivec.vextsb2d(<16 x i8>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vsca);
+}
+
+vector signed long long test_vec_signextll_sll_ss(void) {
+    // CHECK: @llvm.ppc.altivec.vextsh2d(<8 x i16>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vssa);
+}
+
+vector signed long long test_vec_signextll_sll_si(void) {
+    // CHECK: @llvm.ppc.altivec.vextsw2d(<4 x i32>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vsia);
+}
+
+vector unsigned long long test_vbpermd(void) {
+  // CHECK: @llvm.ppc.altivec.vbpermd(<2 x i64>
+  // CHECK-BE: @llvm.ppc.altivec.vbpermd(<2 x i64>
+  return vec_bperm(vula, vuca);
+}

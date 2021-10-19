@@ -20,13 +20,12 @@
 using namespace llvm;
 using namespace gsym;
 
-
-GsymCreator::GsymCreator() : StrTab(StringTableBuilder::ELF) {
+GsymCreator::GsymCreator(bool Quiet)
+    : StrTab(StringTableBuilder::ELF), Quiet(Quiet) {
   insertFile(StringRef());
 }
 
-uint32_t GsymCreator::insertFile(StringRef Path,
-                                 llvm::sys::path::Style Style) {
+uint32_t GsymCreator::insertFile(StringRef Path, llvm::sys::path::Style Style) {
   llvm::StringRef directory = llvm::sys::path::parent_path(Path, Style);
   llvm::StringRef filename = llvm::sys::path::filename(Path, Style);
   // We must insert the strings first, then call the FileEntry constructor.
@@ -37,7 +36,7 @@ uint32_t GsymCreator::insertFile(StringRef Path,
   const uint32_t Base = insertString(filename);
   FileEntry FE(Dir, Base);
 
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   const auto NextIndex = Files.size();
   // Find FE in hash map and insert if not present.
   auto R = FileEntryToIndex.insert(std::make_pair(FE, NextIndex));
@@ -57,7 +56,7 @@ llvm::Error GsymCreator::save(StringRef Path,
 }
 
 llvm::Error GsymCreator::encode(FileWriter &O) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Funcs.empty())
     return createStringError(std::errc::invalid_argument,
                              "no functions to encode");
@@ -69,7 +68,8 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
     return createStringError(std::errc::invalid_argument,
                              "too many FunctionInfos");
 
-  const uint64_t MinAddr = BaseAddress ? *BaseAddress : Funcs.front().startAddress();
+  const uint64_t MinAddr =
+      BaseAddress ? *BaseAddress : Funcs.front().startAddress();
   const uint64_t MaxAddr = Funcs.back().startAddress();
   const uint64_t AddrDelta = MaxAddr - MinAddr;
   Header Hdr;
@@ -80,7 +80,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   Hdr.BaseAddress = MinAddr;
   Hdr.NumAddresses = static_cast<uint32_t>(Funcs.size());
   Hdr.StrtabOffset = 0; // We will fix this up later.
-  Hdr.StrtabSize = 0; // We will fix this up later.
+  Hdr.StrtabSize = 0;   // We will fix this up later.
   memset(Hdr.UUID, 0, sizeof(Hdr.UUID));
   if (UUID.size() > sizeof(Hdr.UUID))
     return createStringError(std::errc::invalid_argument,
@@ -106,11 +106,19 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   O.alignTo(Hdr.AddrOffSize);
   for (const auto &FuncInfo : Funcs) {
     uint64_t AddrOffset = FuncInfo.startAddress() - Hdr.BaseAddress;
-    switch(Hdr.AddrOffSize) {
-      case 1: O.writeU8(static_cast<uint8_t>(AddrOffset)); break;
-      case 2: O.writeU16(static_cast<uint16_t>(AddrOffset)); break;
-      case 4: O.writeU32(static_cast<uint32_t>(AddrOffset)); break;
-      case 8: O.writeU64(AddrOffset); break;
+    switch (Hdr.AddrOffSize) {
+    case 1:
+      O.writeU8(static_cast<uint8_t>(AddrOffset));
+      break;
+    case 2:
+      O.writeU16(static_cast<uint16_t>(AddrOffset));
+      break;
+    case 4:
+      O.writeU32(static_cast<uint32_t>(AddrOffset));
+      break;
+    case 8:
+      O.writeU64(AddrOffset);
+      break;
     }
   }
 
@@ -127,12 +135,11 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   assert(Files[0].Base == 0);
   size_t NumFiles = Files.size();
   if (NumFiles > UINT32_MAX)
-    return createStringError(std::errc::invalid_argument,
-                             "too many files");
+    return createStringError(std::errc::invalid_argument, "too many files");
   O.writeU32(static_cast<uint32_t>(NumFiles));
-  for (auto File: Files) {
-      O.writeU32(File.Dir);
-      O.writeU32(File.Base);
+  for (auto File : Files) {
+    O.writeU32(File.Dir);
+    O.writeU32(File.Base);
   }
 
   // Write out the sting table.
@@ -144,9 +151,9 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   // Write out the address infos for each function info.
   for (const auto &FuncInfo : Funcs) {
     if (Expected<uint64_t> OffsetOrErr = FuncInfo.encode(O))
-        AddrInfoOffsets.push_back(OffsetOrErr.get());
+      AddrInfoOffsets.push_back(OffsetOrErr.get());
     else
-        return OffsetOrErr.takeError();
+      return OffsetOrErr.takeError();
   }
   // Fixup the string table offset and size in the header
   O.fixup32((uint32_t)StrtabOffset, offsetof(Header, StrtabOffset));
@@ -154,22 +161,41 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
 
   // Fixup all address info offsets
   uint64_t Offset = 0;
-  for (auto AddrInfoOffset: AddrInfoOffsets) {
+  for (auto AddrInfoOffset : AddrInfoOffsets) {
     O.fixup32(AddrInfoOffset, AddrInfoOffsetsOffset + Offset);
     Offset += 4;
   }
   return ErrorSuccess();
 }
 
+// Similar to std::remove_if, but the predicate is binary and it is passed both
+// the previous and the current element.
+template <class ForwardIt, class BinaryPredicate>
+static ForwardIt removeIfBinary(ForwardIt FirstIt, ForwardIt LastIt,
+                                BinaryPredicate Pred) {
+  if (FirstIt != LastIt) {
+    auto PrevIt = FirstIt++;
+    FirstIt = std::find_if(FirstIt, LastIt, [&](const auto &Curr) {
+      return Pred(*PrevIt++, Curr);
+    });
+    if (FirstIt != LastIt)
+      for (ForwardIt CurrIt = FirstIt; ++CurrIt != LastIt;)
+        if (!Pred(*PrevIt, *CurrIt)) {
+          PrevIt = FirstIt;
+          *FirstIt++ = std::move(*CurrIt);
+        }
+  }
+  return FirstIt;
+}
+
 llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
-    return createStringError(std::errc::invalid_argument,
-                             "already finalized");
+    return createStringError(std::errc::invalid_argument, "already finalized");
   Finalized = true;
 
   // Sort function infos so we can emit sorted functions.
-  llvm::sort(Funcs.begin(), Funcs.end());
+  llvm::sort(Funcs);
 
   // Don't let the string table indexes change by finalizing in order.
   StrTab.finalizeInOrder();
@@ -195,55 +221,68 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // we wouldn't find any function for range (end of Y, end of X)
   // with binary search
   auto NumBefore = Funcs.size();
-  auto Curr = Funcs.begin();
-  auto Prev = Funcs.end();
-  while (Curr != Funcs.end()) {
-    // Can't check for overlaps or same address ranges if we don't have a
-    // previous entry
-    if (Prev != Funcs.end()) {
-      if (Prev->Range.intersects(Curr->Range)) {
-        // Overlapping address ranges.
-        if (Prev->Range == Curr->Range) {
-          // Same address range. Check if one is from debug info and the other
-          // is from a symbol table. If so, then keep the one with debug info.
-          // Our sorting guarantees that entries with matching address ranges
-          // that have debug info are last in the sort.
-          if (*Prev == *Curr) {
-            // FunctionInfo entries match exactly (range, lines, inlines)
-            OS << "warning: duplicate function info entries for range: "
-               << Curr->Range << '\n';
-            Curr = Funcs.erase(Prev);
-          } else {
-            if (!Prev->hasRichInfo() && Curr->hasRichInfo()) {
-              // Same address range, one with no debug info (symbol) and the
-              // next with debug info. Keep the latter.
-              Curr = Funcs.erase(Prev);
-            } else {
-              OS << "warning: same address range contains different debug "
-                 << "info. Removing:\n"
-                 << *Prev << "\nIn favor of this one:\n"
-                 << *Curr << "\n";
-              Curr = Funcs.erase(Prev);
-            }
-          }
-        } else {
-          // print warnings about overlaps
-          OS << "warning: function ranges overlap:\n"
-             << *Prev << "\n"
-             << *Curr << "\n";
-        }
-      } else if (Prev->Range.size() == 0 &&
-                 Curr->Range.contains(Prev->Range.Start)) {
-        OS << "warning: removing symbol:\n"
-           << *Prev << "\nKeeping:\n"
-           << *Curr << "\n";
-        Curr = Funcs.erase(Prev);
-      }
-    }
-    if (Curr == Funcs.end())
-      break;
-    Prev = Curr++;
-  }
+  Funcs.erase(
+      removeIfBinary(Funcs.begin(), Funcs.end(),
+                     [&](const auto &Prev, const auto &Curr) {
+                       // Empty ranges won't intersect, but we still need to
+                       // catch the case where we have multiple symbols at the
+                       // same address and coalesce them.
+                       const bool ranges_equal = Prev.Range == Curr.Range;
+                       if (ranges_equal || Prev.Range.intersects(Curr.Range)) {
+                         // Overlapping ranges or empty identical ranges.
+                         if (ranges_equal) {
+                           // Same address range. Check if one is from debug
+                           // info and the other is from a symbol table. If
+                           // so, then keep the one with debug info. Our
+                           // sorting guarantees that entries with matching
+                           // address ranges that have debug info are last in
+                           // the sort.
+                           if (Prev == Curr) {
+                             // FunctionInfo entries match exactly (range,
+                             // lines, inlines)
+
+                             // We used to output a warning here, but this was
+                             // so frequent on some binaries, in particular
+                             // when those were built with GCC, that it slowed
+                             // down processing extremely.
+                             return true;
+                           } else {
+                             if (!Prev.hasRichInfo() && Curr.hasRichInfo()) {
+                               // Same address range, one with no debug info
+                               // (symbol) and the next with debug info. Keep
+                               // the latter.
+                               return true;
+                             } else {
+                               if (!Quiet) {
+                                 OS << "warning: same address range contains "
+                                       "different debug "
+                                    << "info. Removing:\n"
+                                    << Prev << "\nIn favor of this one:\n"
+                                    << Curr << "\n";
+                               }
+                               return true;
+                             }
+                           }
+                         } else {
+                           if (!Quiet) { // print warnings about overlaps
+                             OS << "warning: function ranges overlap:\n"
+                                << Prev << "\n"
+                                << Curr << "\n";
+                           }
+                         }
+                       } else if (Prev.Range.size() == 0 &&
+                                  Curr.Range.contains(Prev.Range.Start)) {
+                         if (!Quiet) {
+                           OS << "warning: removing symbol:\n"
+                              << Prev << "\nKeeping:\n"
+                              << Curr << "\n";
+                         }
+                         return true;
+                       }
+
+                       return false;
+                     }),
+      Funcs.end());
 
   // If our last function info entry doesn't have a size and if we have valid
   // text ranges, we should set the size of the last entry since any search for
@@ -251,8 +290,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   // help ensure we don't cause lookups to always return the last symbol that
   // has no size when doing lookups.
   if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
-    if (auto Range = ValidTextRanges->getRangeThatContains(
-          Funcs.back().Range.Start)) {
+    if (auto Range =
+            ValidTextRanges->getRangeThatContains(Funcs.back().Range.Start)) {
       Funcs.back().Range.End = Range->End;
     }
   }
@@ -264,7 +303,10 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
 uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
   if (S.empty())
     return 0;
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+
+  // The hash can be calculated outside the lock.
+  CachedHashStringRef CHStr(S);
+  std::lock_guard<std::mutex> Guard(Mutex);
   if (Copy) {
     // We need to provide backing storage for the string if requested
     // since StringTableBuilder stores references to strings. Any string
@@ -272,22 +314,22 @@ uint32_t GsymCreator::insertString(StringRef S, bool Copy) {
     // copied, but any string created by code will need to be copied.
     // This allows GsymCreator to be really fast when parsing DWARF and
     // other object files as most strings don't need to be copied.
-    CachedHashStringRef CHStr(S);
     if (!StrTab.contains(CHStr))
-      S = StringStorage.insert(S).first->getKey();
+      CHStr = CachedHashStringRef{StringStorage.insert(S).first->getKey(),
+                                  CHStr.hash()};
   }
-  return StrTab.add(S);
+  return StrTab.add(CHStr);
 }
 
 void GsymCreator::addFunctionInfo(FunctionInfo &&FI) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   Ranges.insert(FI.Range);
-  Funcs.emplace_back(FI);
+  Funcs.emplace_back(std::move(FI));
 }
 
 void GsymCreator::forEachFunctionInfo(
     std::function<bool(FunctionInfo &)> const &Callback) {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   for (auto &FI : Funcs) {
     if (!Callback(FI))
       break;
@@ -296,15 +338,15 @@ void GsymCreator::forEachFunctionInfo(
 
 void GsymCreator::forEachFunctionInfo(
     std::function<bool(const FunctionInfo &)> const &Callback) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   for (const auto &FI : Funcs) {
     if (!Callback(FI))
       break;
   }
 }
 
-size_t GsymCreator::getNumFunctionInfos() const{
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+size_t GsymCreator::getNumFunctionInfos() const {
+  std::lock_guard<std::mutex> Guard(Mutex);
   return Funcs.size();
 }
 
@@ -315,6 +357,6 @@ bool GsymCreator::IsValidTextAddress(uint64_t Addr) const {
 }
 
 bool GsymCreator::hasFunctionInfoForAddress(uint64_t Addr) const {
-  std::lock_guard<std::recursive_mutex> Guard(Mutex);
+  std::lock_guard<std::mutex> Guard(Mutex);
   return Ranges.contains(Addr);
 }

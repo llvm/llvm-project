@@ -178,7 +178,7 @@ RegisterContextFreeBSD_powerpc::RegisterContextFreeBSD_powerpc(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
-RegisterContextFreeBSD_powerpc::~RegisterContextFreeBSD_powerpc() {}
+RegisterContextFreeBSD_powerpc::~RegisterContextFreeBSD_powerpc() = default;
 
 size_t RegisterContextFreeBSD_powerpc::GetGPRSize() const {
   // This is an 'abstract' base, so no GPR struct.
@@ -197,7 +197,7 @@ RegisterContextFreeBSD_powerpc32::RegisterContextFreeBSD_powerpc32(
     const ArchSpec &target_arch)
     : RegisterContextFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc32::~RegisterContextFreeBSD_powerpc32() {}
+RegisterContextFreeBSD_powerpc32::~RegisterContextFreeBSD_powerpc32() = default;
 
 size_t RegisterContextFreeBSD_powerpc32::GetGPRSize() const {
   return sizeof(GPR32);
@@ -217,7 +217,7 @@ RegisterContextFreeBSD_powerpc64::RegisterContextFreeBSD_powerpc64(
     const ArchSpec &target_arch)
     : RegisterContextFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc64::~RegisterContextFreeBSD_powerpc64() {}
+RegisterContextFreeBSD_powerpc64::~RegisterContextFreeBSD_powerpc64() = default;
 
 size_t RegisterContextFreeBSD_powerpc64::GetGPRSize() const {
   return sizeof(GPR64);

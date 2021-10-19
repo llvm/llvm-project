@@ -1,4 +1,3 @@
-
 import json
 import re
 
@@ -166,7 +165,10 @@ class TestGdbRemoteThreadsInStopReply(
 
         return thread_pcs
 
-    def QListThreadsInStopReply_supported(self):
+
+    def test_QListThreadsInStopReply_supported(self):
+        self.build()
+        self.set_inferior_startup_launch()
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
             self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, True)
@@ -174,75 +176,39 @@ class TestGdbRemoteThreadsInStopReply(
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @debugserver_test
-    def test_QListThreadsInStopReply_supported_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.QListThreadsInStopReply_supported()
-
-    @llgs_test
-    def test_QListThreadsInStopReply_supported_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.QListThreadsInStopReply_supported()
-
-    def stop_reply_reports_multiple_threads(self, thread_count):
-        # Gather threads from stop notification when QThreadsInStopReply is
-        # enabled.
-        stop_reply_threads = self.gather_stop_reply_threads(
-            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, thread_count)
-        self.assertEqual(len(stop_reply_threads), thread_count)
-
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @debugserver_test
-    def test_stop_reply_reports_multiple_threads_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.stop_reply_reports_multiple_threads(5)
-
     # In current implementation of llgs on Windows, as a response to '\x03' packet, the debugger
     # of the native process will trigger a call to DebugBreakProcess that will create a new thread
     # to handle the exception debug event. So one more stop thread will be notified to the
     # delegate, e.g. llgs.  So tests below to assert the stop threads number will all fail.
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @llgs_test
-    def test_stop_reply_reports_multiple_threads_llgs(self):
-        self.init_llgs_test()
+    def test_stop_reply_reports_multiple_threads(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.stop_reply_reports_multiple_threads(5)
-
-    def no_QListThreadsInStopReply_supplies_no_threads(self, thread_count):
-        # Gather threads from stop notification when QThreadsInStopReply is not
+        # Gather threads from stop notification when QThreadsInStopReply is
         # enabled.
-        stop_reply_threads = self.gather_stop_reply_threads(None, thread_count)
-        self.assertEqual(len(stop_reply_threads), 0)
-
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @debugserver_test
-    def test_no_QListThreadsInStopReply_supplies_no_threads_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.no_QListThreadsInStopReply_supplies_no_threads(5)
+        stop_reply_threads = self.gather_stop_reply_threads(
+            self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, 5)
+        self.assertEqual(len(stop_reply_threads), 5)
 
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @llgs_test
-    def test_no_QListThreadsInStopReply_supplies_no_threads_llgs(self):
-        self.init_llgs_test()
+    def test_no_QListThreadsInStopReply_supplies_no_threads(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.no_QListThreadsInStopReply_supplies_no_threads(5)
+        # Gather threads from stop notification when QThreadsInStopReply is not
+        # enabled.
+        stop_reply_threads = self.gather_stop_reply_threads(None, 5)
+        self.assertEqual(len(stop_reply_threads), 0)
 
-    def stop_reply_reports_correct_threads(self, thread_count):
+    @expectedFailureAll(oslist=["windows"])
+    @skipIfNetBSD
+    def test_stop_reply_reports_correct_threads(self):
+        self.build()
+        self.set_inferior_startup_launch()
         # Gather threads from stop notification when QThreadsInStopReply is
         # enabled.
+        thread_count = 5
         stop_reply_threads = self.gather_stop_reply_threads(
             self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, thread_count)
         self.assertEqual(len(stop_reply_threads), thread_count)
@@ -260,26 +226,14 @@ class TestGdbRemoteThreadsInStopReply(
 
         # Ensure each thread in q{f,s}ThreadInfo appears in stop reply threads
         for tid in threads:
-            self.assertTrue(tid in stop_reply_threads)
-
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @debugserver_test
-    def test_stop_reply_reports_correct_threads_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.stop_reply_reports_correct_threads(5)
+            self.assertIn(tid, stop_reply_threads)
 
     @expectedFailureAll(oslist=["windows"])
     @skipIfNetBSD
-    @llgs_test
-    def test_stop_reply_reports_correct_threads_llgs(self):
-        self.init_llgs_test()
+    def test_stop_reply_contains_thread_pcs(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.stop_reply_reports_correct_threads(5)
-
-    def stop_reply_contains_thread_pcs(self, thread_count):
+        thread_count = 5
         results = self.gather_stop_reply_pcs(
                 self.ENABLE_THREADS_IN_STOP_REPLY_ENTRIES, thread_count)
         stop_reply_pcs = results["thread_pcs"]
@@ -292,23 +246,6 @@ class TestGdbRemoteThreadsInStopReply(
 
         self.assertEqual(len(threads_info_pcs), thread_count)
         for thread_id in stop_reply_pcs:
-            self.assertTrue(thread_id in threads_info_pcs)
-            self.assertTrue(int(stop_reply_pcs[thread_id], 16)
-                    == int(threads_info_pcs[thread_id], 16))
-
-    @expectedFailureAll(oslist=["windows"])
-    @skipIfNetBSD
-    @llgs_test
-    def test_stop_reply_contains_thread_pcs_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.stop_reply_contains_thread_pcs(5)
-
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @debugserver_test
-    def test_stop_reply_contains_thread_pcs_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.stop_reply_contains_thread_pcs(5)
+            self.assertIn(thread_id, threads_info_pcs)
+            self.assertEqual(int(stop_reply_pcs[thread_id], 16),
+                    int(threads_info_pcs[thread_id], 16))

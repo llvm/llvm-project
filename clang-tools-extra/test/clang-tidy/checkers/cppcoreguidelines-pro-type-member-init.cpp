@@ -208,9 +208,8 @@ struct PositiveMultipleConstructors {
   PositiveMultipleConstructors(const PositiveMultipleConstructors &) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A, B
 
-  // FIXME: The fix-its here collide providing an erroneous fix
   int A, B;
-  // CHECK-FIXES: int A{}{}{}, B{}{}{};
+  // CHECK-FIXES: int A{}, B{};
 };
 
 typedef struct {
@@ -501,3 +500,55 @@ struct NegativeImplicitInheritedCtor : NegativeImplicitInheritedCtorBase {
 void Bug33557() {
   NegativeImplicitInheritedCtor I(5);
 }
+
+struct NegativeDefaultedCtorOutOfDecl {
+  NegativeDefaultedCtorOutOfDecl(const NegativeDefaultedCtorOutOfDecl &);
+  int F;
+};
+
+NegativeDefaultedCtorOutOfDecl::NegativeDefaultedCtorOutOfDecl(const NegativeDefaultedCtorOutOfDecl &) = default;
+
+struct PositiveDefaultConstructorOutOfDecl {
+  PositiveDefaultConstructorOutOfDecl();
+  int F;
+  // CHECK-FIXES: int F{};
+};
+
+PositiveDefaultConstructorOutOfDecl::PositiveDefaultConstructorOutOfDecl() = default;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: constructor does not initialize these fields: F
+
+union U1 {
+  U1() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: union constructor should initialize one of these fields: X, K, Z, Y
+  int X;
+  // CHECK-FIXES: int X{};
+  union {
+    int K;
+    // CHECK-FIXES-NOT: int K{};
+  };
+  union {
+    int Z;
+    // CHECK-FIXES-NOT: int Z{};
+    int Y;
+    // CHECK-FIXES-NOT: int Y{};
+  };
+};
+
+union U2 {
+  U2() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: union constructor should initialize one of these fields: B, C, A
+  struct {
+    int B;
+    // CHECK-FIXES: int B{};
+    union {
+      struct {
+        PositiveMultipleConstructors Value;
+        // CHECK-FIXES-NOT: PositiveMultipleConstructors Value{};
+      };
+      int C;
+      // CHECK-FIXES: int C{};
+    };
+  };
+  int A;
+  // CHECK-FIXES-NOT: int A{};
+};

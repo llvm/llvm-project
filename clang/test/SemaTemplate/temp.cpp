@@ -8,8 +8,8 @@ namespace test0 {
 
 // PR7252
 namespace test1 {
-  namespace A { template<typename T> struct Base { typedef T t; }; } // expected-note 3{{member}}
-  namespace B { template<typename T> struct Base { typedef T t; }; } // expected-note {{member found}}
+  namespace A { template<typename T> struct Base { typedef T t; }; } // expected-note {{member type 'test1::A::Base<char>' found}} expected-note 2{{declared here}}
+  namespace B { template<typename T> struct Base { typedef T t; }; } // expected-note {{member type 'test1::B::Base<int>' found}}
 
   template<typename T> struct Derived : A::Base<char>, B::Base<int> {
     typename Derived::Base<float>::t x; // expected-error {{found in multiple base classes of different types}}

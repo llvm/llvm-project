@@ -29,6 +29,9 @@ using namespace llvm;
 
 static_assert(RISCV::X1 == RISCV::X0 + 1, "Register list not consecutive");
 static_assert(RISCV::X31 == RISCV::X0 + 31, "Register list not consecutive");
+static_assert(RISCV::F1_H == RISCV::F0_H + 1, "Register list not consecutive");
+static_assert(RISCV::F31_H == RISCV::F0_H + 31,
+              "Register list not consecutive");
 static_assert(RISCV::F1_F == RISCV::F0_F + 1, "Register list not consecutive");
 static_assert(RISCV::F31_F == RISCV::F0_F + 31,
               "Register list not consecutive");
@@ -45,6 +48,8 @@ RISCVRegisterInfo::RISCVRegisterInfo(unsigned HwMode)
 const MCPhysReg *
 RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
+  if (MF->getFunction().getCallingConv() == CallingConv::GHC)
+    return CSR_NoRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
@@ -89,6 +94,18 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // variable-sized objects at runtime.
   if (TFI->hasBP(MF))
     markSuperRegs(Reserved, RISCVABI::getBPReg()); // bp
+
+  // V registers for code generation. We handle them manually.
+  markSuperRegs(Reserved, RISCV::VL);
+  markSuperRegs(Reserved, RISCV::VTYPE);
+  markSuperRegs(Reserved, RISCV::VXSAT);
+  markSuperRegs(Reserved, RISCV::VXRM);
+
+  // Floating point environment registers.
+  markSuperRegs(Reserved, RISCV::FRM);
+  markSuperRegs(Reserved, RISCV::FFLAGS);
+  markSuperRegs(Reserved, RISCV::FCSR);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -152,11 +169,13 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   Register FrameReg;
-  int Offset =
-      getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg) +
-      MI.getOperand(FIOperandNum + 1).getImm();
+  StackOffset Offset =
+      getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
+  bool IsRVVSpill = TII->isRVVSpill(MI, /*CheckFIs*/ false);
+  if (!IsRVVSpill)
+    Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset)) {
+  if (!isInt<32>(Offset.getFixed())) {
     report_fatal_error(
         "Frame offsets outside of the signed 32-bit range not supported");
   }
@@ -164,23 +183,107 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineBasicBlock &MBB = *MI.getParent();
   bool FrameRegIsKill = false;
 
-  if (!isInt<12>(Offset)) {
-    assert(isInt<32>(Offset) && "Int32 expected");
+  // If required, pre-compute the scalable factor amount which will be used in
+  // later offset computation. Since this sequence requires up to two scratch
+  // registers -- after which one is made free -- this grants us better
+  // scavenging of scratch registers as only up to two are live at one time,
+  // rather than three.
+  Register ScalableFactorRegister;
+  unsigned ScalableAdjOpc = RISCV::ADD;
+  if (Offset.getScalable()) {
+    int64_t ScalableValue = Offset.getScalable();
+    if (ScalableValue < 0) {
+      ScalableValue = -ScalableValue;
+      ScalableAdjOpc = RISCV::SUB;
+    }
+    // 1. Get vlenb && multiply vlen with the number of vector registers.
+    ScalableFactorRegister =
+        TII->getVLENFactoredAmount(MF, MBB, II, DL, ScalableValue);
+  }
+
+  if (!isInt<12>(Offset.getFixed())) {
     // The offset won't fit in an immediate, so use a scratch register instead
     // Modify Offset and FrameReg appropriately
     Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    TII->movImm(MBB, II, DL, ScratchReg, Offset);
+    TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
+    if (MI.getOpcode() == RISCV::ADDI && !Offset.getScalable()) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::ADD), MI.getOperand(0).getReg())
+        .addReg(FrameReg)
+        .addReg(ScratchReg, RegState::Kill);
+      MI.eraseFromParent();
+      return;
+    }
     BuildMI(MBB, II, DL, TII->get(RISCV::ADD), ScratchReg)
         .addReg(FrameReg)
         .addReg(ScratchReg, RegState::Kill);
-    Offset = 0;
+    Offset = StackOffset::get(0, Offset.getScalable());
     FrameReg = ScratchReg;
     FrameRegIsKill = true;
   }
 
-  MI.getOperand(FIOperandNum)
-      .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
-  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+  if (!Offset.getScalable()) {
+    // Offset = (fixed offset, 0)
+    MI.getOperand(FIOperandNum)
+        .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
+    if (!IsRVVSpill)
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+    else {
+      if (Offset.getFixed()) {
+        Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+        BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), ScratchReg)
+          .addReg(FrameReg, getKillRegState(FrameRegIsKill))
+          .addImm(Offset.getFixed());
+        MI.getOperand(FIOperandNum)
+          .ChangeToRegister(ScratchReg, false, false, true);
+      }
+    }
+  } else {
+    // Offset = (fixed offset, scalable offset)
+    // Step 1, the scalable offset, has already been computed.
+    assert(ScalableFactorRegister &&
+           "Expected pre-computation of scalable factor in earlier step");
+
+    // 2. Calculate address: FrameReg + result of multiply
+    if (MI.getOpcode() == RISCV::ADDI && !Offset.getFixed()) {
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), MI.getOperand(0).getReg())
+          .addReg(FrameReg, getKillRegState(FrameRegIsKill))
+          .addReg(ScalableFactorRegister, RegState::Kill);
+      MI.eraseFromParent();
+      return;
+    }
+    Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), VL)
+        .addReg(FrameReg, getKillRegState(FrameRegIsKill))
+        .addReg(ScalableFactorRegister, RegState::Kill);
+
+    if (IsRVVSpill && Offset.getFixed()) {
+      // Scalable load/store has no immediate argument. We need to add the
+      // fixed part into the load/store base address.
+      BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VL)
+          .addReg(VL)
+          .addImm(Offset.getFixed());
+    }
+
+    // 3. Replace address register with calculated address register
+    MI.getOperand(FIOperandNum).ChangeToRegister(VL, false, false, true);
+    if (!IsRVVSpill)
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+  }
+
+  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MI.getOpcode());
+  if (ZvlssegInfo) {
+    Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VL);
+    uint32_t ShiftAmount = Log2_32(ZvlssegInfo->second);
+    if (ShiftAmount != 0)
+      BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), VL)
+          .addReg(VL)
+          .addImm(ShiftAmount);
+    // The last argument of pseudo spilling opcode for zvlsseg is the length of
+    // one element of zvlsseg types. For example, for vint32m2x2_t, it will be
+    // the length of vint32m2_t.
+    MI.getOperand(FIOperandNum + 1).ChangeToRegister(VL, /*isDef=*/false);
+  }
 }
 
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
@@ -190,9 +293,11 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 const uint32_t *
 RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
-                                        CallingConv::ID /*CC*/) const {
+                                        CallingConv::ID CC) const {
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+  if (CC == CallingConv::GHC)
+    return CSR_NoRegs_RegMask;
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
@@ -206,4 +311,12 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   case RISCVABI::ABI_LP64D:
     return CSR_ILP32D_LP64D_RegMask;
   }
+}
+
+const TargetRegisterClass *
+RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                                             const MachineFunction &) const {
+  if (RC == &RISCV::VMV0RegClass)
+    return &RISCV::VRRegClass;
+  return RC;
 }

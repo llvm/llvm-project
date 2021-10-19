@@ -14,11 +14,13 @@
 #define LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
 
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <limits>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -71,6 +73,8 @@ class FuzzedDataProvider {
 
   // Returns a value from the given array.
   template <typename T, size_t size> T PickValueInArray(const T (&array)[size]);
+  template <typename T, size_t size>
+  T PickValueInArray(const std::array<T, size> &array);
   template <typename T> T PickValueInArray(std::initializer_list<const T> list);
 
   // Writes data to the given destination and returns number of bytes written.
@@ -301,6 +305,12 @@ T FuzzedDataProvider::PickValueInArray(const T (&array)[size]) {
   return array[ConsumeIntegralInRange<size_t>(0, size - 1)];
 }
 
+template <typename T, size_t size>
+T FuzzedDataProvider::PickValueInArray(const std::array<T, size> &array) {
+  static_assert(size > 0, "The array must be non empty.");
+  return array[ConsumeIntegralInRange<size_t>(0, size - 1)];
+}
+
 template <typename T>
 T FuzzedDataProvider::PickValueInArray(std::initializer_list<const T> list) {
   // TODO(Dor1s): switch to static_assert once C++14 is allowed.
@@ -380,7 +390,7 @@ TS FuzzedDataProvider::ConvertUnsignedToSigned(TU value) {
     return static_cast<TS>(value);
   } else {
     constexpr auto TS_min = std::numeric_limits<TS>::min();
-    return TS_min + static_cast<char>(value - TS_min);
+    return TS_min + static_cast<TS>(value - TS_min);
   }
 }
 

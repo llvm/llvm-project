@@ -223,8 +223,9 @@ bool GlobalMerge::doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
   // FIXME: Find better heuristics
   llvm::stable_sort(
       Globals, [&DL](const GlobalVariable *GV1, const GlobalVariable *GV2) {
-        return DL.getTypeAllocSize(GV1->getValueType()) <
-               DL.getTypeAllocSize(GV2->getValueType());
+        // We don't support scalable global variables.
+        return DL.getTypeAllocSize(GV1->getValueType()).getFixedSize() <
+               DL.getTypeAllocSize(GV2->getValueType()).getFixedSize();
       });
 
   // If we want to just blindly group all globals together, do so.

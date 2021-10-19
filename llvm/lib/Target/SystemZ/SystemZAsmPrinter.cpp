@@ -24,7 +24,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -126,10 +126,15 @@ static MCInst lowerSubvectorStore(const MachineInstr *MI, unsigned Opcode) {
 
 void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   SystemZMCInstLower Lower(MF->getContext(), *this);
+  const SystemZSubtarget *Subtarget = &MF->getSubtarget<SystemZSubtarget>();
   MCInst LoweredMI;
   switch (MI->getOpcode()) {
   case SystemZ::Return:
-    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
+    if (Subtarget->isTargetXPLINK64())
+      LoweredMI =
+          MCInstBuilder(SystemZ::B).addReg(SystemZ::R7D).addImm(2).addReg(0);
+    else
+      LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R14D);
     break;
 
   case SystemZ::CondReturn:
@@ -211,6 +216,26 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addImm(0);
     break;
 
+  case SystemZ::CallBRASL_XPLINK64:
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(SystemZ::BRASL)
+                       .addReg(SystemZ::R7D)
+                       .addExpr(Lower.getExpr(MI->getOperand(0),
+                                              MCSymbolRefExpr::VK_PLT)));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R3D));
+    return;
+
+  case SystemZ::CallBASR_XPLINK64:
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::BASR)
+                                     .addReg(SystemZ::R7D)
+                                     .addReg(MI->getOperand(0).getReg()));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::BCRAsm).addImm(0).addReg(SystemZ::R0D));
+    return;
+
   case SystemZ::CallBRASL:
     LoweredMI = MCInstBuilder(SystemZ::BRASL)
       .addReg(SystemZ::R14D)
@@ -236,14 +261,15 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
 
   case SystemZ::CallBR:
-    LoweredMI = MCInstBuilder(SystemZ::BR).addReg(SystemZ::R1D);
+    LoweredMI = MCInstBuilder(SystemZ::BR)
+      .addReg(MI->getOperand(0).getReg());
     break;
 
   case SystemZ::CallBCR:
     LoweredMI = MCInstBuilder(SystemZ::BCR)
       .addImm(MI->getOperand(0).getImm())
       .addImm(MI->getOperand(1).getImm())
-      .addReg(SystemZ::R1D);
+      .addReg(MI->getOperand(2).getReg());
     break;
 
   case SystemZ::CRBCall:
@@ -251,7 +277,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -260,7 +286,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -269,7 +295,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -278,7 +304,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -287,7 +313,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -296,7 +322,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addReg(MI->getOperand(1).getReg())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -305,7 +331,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -314,7 +340,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(0).getReg())
       .addImm(MI->getOperand(1).getImm())
       .addImm(MI->getOperand(2).getImm())
-      .addReg(SystemZ::R1D)
+      .addReg(MI->getOperand(3).getReg())
       .addImm(0);
     break;
 
@@ -515,6 +541,32 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerPATCHPOINT(*MI, Lower);
     return;
 
+  case SystemZ::EXRL_Pseudo: {
+    unsigned TargetInsOpc = MI->getOperand(0).getImm();
+    Register LenMinus1Reg = MI->getOperand(1).getReg();
+    Register DestReg = MI->getOperand(2).getReg();
+    int64_t DestDisp = MI->getOperand(3).getImm();
+    Register SrcReg = MI->getOperand(4).getReg();
+    int64_t SrcDisp = MI->getOperand(5).getImm();
+
+    SystemZTargetStreamer *TS = getTargetStreamer();
+    MCSymbol *DotSym = nullptr;
+    MCInst ET = MCInstBuilder(TargetInsOpc).addReg(DestReg)
+      .addImm(DestDisp).addImm(1).addReg(SrcReg).addImm(SrcDisp);
+    SystemZTargetStreamer::MCInstSTIPair ET_STI(ET, &MF->getSubtarget());
+    SystemZTargetStreamer::EXRLT2SymMap::iterator I =
+        TS->EXRLTargets2Sym.find(ET_STI);
+    if (I != TS->EXRLTargets2Sym.end())
+      DotSym = I->second;
+    else
+      TS->EXRLTargets2Sym[ET_STI] = DotSym = OutContext.createTempSymbol();
+    const MCSymbolRefExpr *Dot = MCSymbolRefExpr::create(DotSym, OutContext);
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::EXRL).addReg(LenMinus1Reg).addExpr(Dot));
+    return;
+  }
+
   default:
     Lower.lower(MI, LoweredMI);
     break;
@@ -701,11 +753,21 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  if (ExtraCode)
-    return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
-  SystemZMCInstLower Lower(MF->getContext(), *this);
-  MCOperand MO(Lower.lowerOperand(MI->getOperand(OpNo)));
-  SystemZInstPrinter::printOperand(MO, MAI, OS);
+  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  MCOperand MCOp;
+  if (ExtraCode) {
+    if (ExtraCode[0] == 'N' && !ExtraCode[1] && MO.isReg() &&
+        SystemZ::GR128BitRegClass.contains(MO.getReg()))
+      MCOp =
+          MCOperand::createReg(MRI.getSubReg(MO.getReg(), SystemZ::subreg_l64));
+    else
+      return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
+  } else {
+    SystemZMCInstLower Lower(MF->getContext(), *this);
+    MCOp = Lower.lowerOperand(MO);
+  }
+  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
   return false;
 }
 
@@ -713,7 +775,7 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::printAddress(MI->getOperand(OpNo).getReg(),
+  SystemZInstPrinter::printAddress(MAI, MI->getOperand(OpNo).getReg(),
                                    MI->getOperand(OpNo + 1).getImm(),
                                    MI->getOperand(OpNo + 2).getReg(), OS);
   return false;

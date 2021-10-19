@@ -27,18 +27,18 @@ define void @test_liwzx1(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
 ;
 ; P8LE-LABEL: test_liwzx1:
 ; P8LE:       # %bb.0:
-; P8LE-NEXT:    lfsx f0, 0, r3
-; P8LE-NEXT:    lfsx f1, 0, r4
+; P8LE-NEXT:    lfs f0, 0(r3)
+; P8LE-NEXT:    lfs f1, 0(r4)
 ; P8LE-NEXT:    xsaddsp f0, f0, f1
-; P8LE-NEXT:    stfsx f0, 0, r5
+; P8LE-NEXT:    stfs f0, 0(r5)
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: test_liwzx1:
 ; P8BE:       # %bb.0:
-; P8BE-NEXT:    lfsx f0, 0, r3
-; P8BE-NEXT:    lfsx f1, 0, r4
+; P8BE-NEXT:    lfs f0, 0(r3)
+; P8BE-NEXT:    lfs f1, 0(r4)
 ; P8BE-NEXT:    xsaddsp f0, f0, f1
-; P8BE-NEXT:    stfsx f0, 0, r5
+; P8BE-NEXT:    stfs f0, 0(r5)
 ; P8BE-NEXT:    blr
 
 
@@ -71,20 +71,20 @@ define <1 x float>* @test_liwzx2(<1 x float>* %A, <1 x float>* %B, <1 x float>* 
 ;
 ; P8LE-LABEL: test_liwzx2:
 ; P8LE:       # %bb.0:
-; P8LE-NEXT:    lfsx f0, 0, r3
-; P8LE-NEXT:    lfsx f1, 0, r4
+; P8LE-NEXT:    lfs f0, 0(r3)
+; P8LE-NEXT:    lfs f1, 0(r4)
 ; P8LE-NEXT:    mr r3, r5
 ; P8LE-NEXT:    xssubsp f0, f0, f1
-; P8LE-NEXT:    stfsx f0, 0, r5
+; P8LE-NEXT:    stfs f0, 0(r5)
 ; P8LE-NEXT:    blr
 ;
 ; P8BE-LABEL: test_liwzx2:
 ; P8BE:       # %bb.0:
-; P8BE-NEXT:    lfsx f0, 0, r3
-; P8BE-NEXT:    lfsx f1, 0, r4
+; P8BE-NEXT:    lfs f0, 0(r3)
+; P8BE-NEXT:    lfs f1, 0(r4)
 ; P8BE-NEXT:    mr r3, r5
 ; P8BE-NEXT:    xssubsp f0, f0, f1
-; P8BE-NEXT:    stfsx f0, 0, r5
+; P8BE-NEXT:    stfs f0, 0(r5)
 ; P8BE-NEXT:    blr
 
 

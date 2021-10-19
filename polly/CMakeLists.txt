@@ -125,7 +125,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
     )
 
   install(DIRECTORY ${POLLY_BINARY_DIR}/include/
@@ -133,7 +132,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "CMakeFiles" EXCLUDE
-    PATTERN ".svn" EXCLUDE
     )
 endif()
 

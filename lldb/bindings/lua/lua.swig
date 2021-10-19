@@ -14,8 +14,16 @@
 %include "headers.swig"
 
 %{
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "../bindings/lua/lua-swigsafecast.swig"
+
+// required headers for typemaps
+#include "lldb/Host/File.h"
+
 using namespace lldb_private;
 using namespace lldb;
 %}
 
 %include "interfaces.swig"
+%include "lua-wrapper.swig"

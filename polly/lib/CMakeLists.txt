@@ -83,6 +83,7 @@ add_llvm_pass_plugin(Polly
   Support/ScopLocation.cpp
   Support/ISLTools.cpp
   Support/DumpModulePass.cpp
+  Support/DumpFunctionPass.cpp
   Support/VirtualInstruction.cpp
   Transform/Canonicalization.cpp
   Transform/CodePreparation.cpp
@@ -96,8 +97,9 @@ add_llvm_pass_plugin(Polly
   Transform/ZoneAlgo.cpp
   Transform/Simplify.cpp
   Transform/MaximalStaticExpansion.cpp
-  Transform/RewriteByReferenceParameters.cpp
   Transform/ScopInliner.cpp
+  Transform/ManualOptimizer.cpp
+  Transform/MatmulOptimizer.cpp
   ${POLLY_HEADER_FILES}
 
   LINK_COMPONENTS
@@ -137,7 +139,7 @@ endif ()
 
 # Create a loadable module Polly.so that can be loaded using
 # LLVM's/clang's "-load" option.
-if (MSVC OR NOT LLVM_ENABLE_PIC)
+if (WIN32 OR NOT LLVM_ENABLE_PIC)
   # Add dummy target, either because loadable modules are not supported
   # as on Windows or because PIC code has been disabled
   add_custom_target(LLVMPolly)

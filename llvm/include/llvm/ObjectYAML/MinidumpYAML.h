@@ -236,7 +236,7 @@ template <> struct BlockScalarTraits<MinidumpYAML::BlockStringRef> {
 
 template <> struct MappingTraits<std::unique_ptr<MinidumpYAML::Stream>> {
   static void mapping(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
-  static StringRef validate(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
+  static std::string validate(IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S);
 };
 
 template <> struct MappingContextTraits<minidump::MemoryDescriptor, BinaryRef> {

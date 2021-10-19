@@ -41,7 +41,7 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 ; GCN-LABEL: {{^}}madak_2_use_f32:
 ; GFX9:         v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
 ; GFX10:        v_mov_b32_e32 [[VK:v[0-9]+]], 0x41200000
-; GFX6-DAG:     buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GFX6-DAG:     buffer_load_dword [[VA:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; GFX6-DAG:     buffer_load_dword [[VB:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; GFX6-DAG:     buffer_load_dword [[VC:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
 ; GFX8_9_10:    {{flat|global}}_load_dword [[VA:v[0-9]+]],

@@ -298,7 +298,7 @@ define i32 @load_doubleword_trunc_word_reuse_shift(i64* %ptr, i64 %off) {
 ; CHECK-LABEL: load_doubleword_trunc_word_reuse_shift:
 ; CHECK: lsl x[[REG1:[0-9]+]], x1, #3
 ; CHECK: ldr w[[REG2:[0-9]+]], [x0, x[[REG1]]]
-; CHECL: add w0, w[[REG2]], w[[REG1]]
+; CHECK: add w0, w[[REG2]], w[[REG1]]
 entry:
   %idx = getelementptr inbounds i64, i64* %ptr, i64 %off
   %x = load i64, i64* %idx, align 8

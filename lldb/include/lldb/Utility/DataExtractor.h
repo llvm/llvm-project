@@ -19,8 +19,8 @@
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <cassert>
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 namespace lldb_private {
 class Log;
@@ -134,7 +134,12 @@ public:
   DataExtractor(const DataExtractor &data, lldb::offset_t offset,
                 lldb::offset_t length, uint32_t target_byte_size = 1);
 
-  DataExtractor(const DataExtractor &rhs);
+  /// Copy constructor.
+  ///
+  /// The copy constructor is explicit as otherwise it is easy to make
+  /// unintended modification of a local copy instead of a caller's instance.
+  /// Also a needless copy of the \a m_data_sp shared pointer is/ expensive.
+  explicit DataExtractor(const DataExtractor &rhs);
 
   /// Assignment operator.
   ///
@@ -148,6 +153,12 @@ public:
   /// \return
   ///     A const reference to this object.
   const DataExtractor &operator=(const DataExtractor &rhs);
+
+  /// Move constructor and move assignment operators to complete the rule of 5.
+  ///
+  /// They would get deleted as we already defined those of rule of 3.
+  DataExtractor(DataExtractor &&rhs) = default;
+  DataExtractor &operator=(DataExtractor &&rhs) = default;
 
   /// Destructor
   ///
@@ -997,15 +1008,16 @@ protected:
   }
 
   // Member variables
-  const uint8_t *m_start; ///< A pointer to the first byte of data.
-  const uint8_t
-      *m_end; ///< A pointer to the byte that is past the end of the data.
+  const uint8_t *m_start = nullptr; ///< A pointer to the first byte of data.
+  const uint8_t *m_end =
+      nullptr; ///< A pointer to the byte that is past the end of the data.
   lldb::ByteOrder
       m_byte_order;     ///< The byte order of the data we are extracting from.
   uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
-  const uint32_t m_target_byte_size;
+  /// Making it const would require implementation of move assignment operator.
+  uint32_t m_target_byte_size = 1;
 };
 
 } // namespace lldb_private

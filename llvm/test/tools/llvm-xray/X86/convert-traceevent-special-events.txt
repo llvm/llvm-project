@@ -1,0 +1,24 @@
+# RUN: llvm-xray convert %s -f trace_event -o - \
+# RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
+# RUN:   | FileCheck %s
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 2601000000
+records:
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 1, function: 'x', cpu: 1, thread: 111, process: 111, kind: custom-event, tsc: 2000, data: "\x03\0\0\0" }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
+...
+
+# CHECK: "traceEvents": [
+# Check fields for an event are present
+# CHECK: "name":
+# CHECK-NEXT: "ph":
+# CHECK-NEXT: "pid":
+# CHECK-NEXT: "sf":
+# CHECK-NEXT: "tid":
+# CHECK-NEXT: "ts":

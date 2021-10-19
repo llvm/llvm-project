@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <utility>
 
 namespace llvm {
@@ -35,6 +36,7 @@ class Function;
 class Loop;
 class LoopInfo;
 class raw_ostream;
+class DominatorTree;
 class PostDominatorTree;
 class TargetLibraryInfo;
 class Value;
@@ -51,20 +53,79 @@ class Value;
 /// identify an edge, since we can have multiple edges from Src to Dst.
 /// As an example, we can have a switch which jumps to Dst with value 0 and
 /// value 10.
+///
+/// Process of computing branch probabilities can be logically viewed as three
+/// step process:
+///
+///   First, if there is a profile information associated with the branch then
+/// it is trivially translated to branch probabilities. There is one exception
+/// from this rule though. Probabilities for edges leading to "unreachable"
+/// blocks (blocks with the estimated weight not greater than
+/// UNREACHABLE_WEIGHT) are evaluated according to static estimation and
+/// override profile information. If no branch probabilities were calculated
+/// on this step then take the next one.
+///
+///   Second, estimate absolute execution weights for each block based on
+/// statically known information. Roots of such information are "cold",
+/// "unreachable", "noreturn" and "unwind" blocks. Those blocks get their
+/// weights set to BlockExecWeight::COLD, BlockExecWeight::UNREACHABLE,
+/// BlockExecWeight::NORETURN and BlockExecWeight::UNWIND respectively. Then the
+/// weights are propagated to the other blocks up the domination line. In
+/// addition, if all successors have estimated weights set then maximum of these
+/// weights assigned to the block itself (while this is not ideal heuristic in
+/// theory it's simple and works reasonably well in most cases) and the process
+/// repeats. Once the process of weights propagation converges branch
+/// probabilities are set for all such branches that have at least one successor
+/// with the weight set. Default execution weight (BlockExecWeight::DEFAULT) is
+/// used for any successors which doesn't have its weight set. For loop back
+/// branches we use their weights scaled by loop trip count equal to
+/// 'LBH_TAKEN_WEIGHT/LBH_NOTTAKEN_WEIGHT'.
+///
+/// Here is a simple example demonstrating how the described algorithm works.
+///
+///          BB1
+///         /   \
+///        v     v
+///      BB2     BB3
+///     /   \
+///    v     v
+///  ColdBB  UnreachBB
+///
+/// Initially, ColdBB is associated with COLD_WEIGHT and UnreachBB with
+/// UNREACHABLE_WEIGHT. COLD_WEIGHT is set to BB2 as maximum between its
+/// successors. BB1 and BB3 has no explicit estimated weights and assumed to
+/// have DEFAULT_WEIGHT. Based on assigned weights branches will have the
+/// following probabilities:
+/// P(BB1->BB2) = COLD_WEIGHT/(COLD_WEIGHT + DEFAULT_WEIGHT) =
+///   0xffff / (0xffff + 0xfffff) = 0.0588(5.9%)
+/// P(BB1->BB3) = DEFAULT_WEIGHT_WEIGHT/(COLD_WEIGHT + DEFAULT_WEIGHT) =
+///          0xfffff / (0xffff + 0xfffff) = 0.941(94.1%)
+/// P(BB2->ColdBB) = COLD_WEIGHT/(COLD_WEIGHT + UNREACHABLE_WEIGHT) = 1(100%)
+/// P(BB2->UnreachBB) =
+///   UNREACHABLE_WEIGHT/(COLD_WEIGHT+UNREACHABLE_WEIGHT) = 0(0%)
+///
+/// If no branch probabilities were calculated on this step then take the next
+/// one.
+///
+///   Third, apply different kinds of local heuristics for each individual
+/// branch until first match. For example probability of a pointer to be null is
+/// estimated as PH_TAKEN_WEIGHT/(PH_TAKEN_WEIGHT + PH_NONTAKEN_WEIGHT). If
+/// no local heuristic has been matched then branch is left with no explicit
+/// probability set and assumed to have default probability.
 class BranchProbabilityInfo {
 public:
   BranchProbabilityInfo() = default;
 
   BranchProbabilityInfo(const Function &F, const LoopInfo &LI,
                         const TargetLibraryInfo *TLI = nullptr,
+                        DominatorTree *DT = nullptr,
                         PostDominatorTree *PDT = nullptr) {
-    calculate(F, LI, TLI, PDT);
+    calculate(F, LI, TLI, DT, PDT);
   }
 
   BranchProbabilityInfo(BranchProbabilityInfo &&Arg)
       : Probs(std::move(Arg.Probs)), LastF(Arg.LastF),
-        PostDominatedByUnreachable(std::move(Arg.PostDominatedByUnreachable)),
-        PostDominatedByColdCall(std::move(Arg.PostDominatedByColdCall)) {}
+        EstimatedBlockWeight(std::move(Arg.EstimatedBlockWeight)) {}
 
   BranchProbabilityInfo(const BranchProbabilityInfo &) = delete;
   BranchProbabilityInfo &operator=(const BranchProbabilityInfo &) = delete;
@@ -72,8 +133,7 @@ public:
   BranchProbabilityInfo &operator=(BranchProbabilityInfo &&RHS) {
     releaseMemory();
     Probs = std::move(RHS.Probs);
-    PostDominatedByColdCall = std::move(RHS.PostDominatedByColdCall);
-    PostDominatedByUnreachable = std::move(RHS.PostDominatedByUnreachable);
+    EstimatedBlockWeight = std::move(RHS.EstimatedBlockWeight);
     return *this;
   }
 
@@ -108,12 +168,6 @@ public:
   /// as having a relative probability >= 80%.
   bool isEdgeHot(const BasicBlock *Src, const BasicBlock *Dst) const;
 
-  /// Retrieve the hot successor of a block if one exists.
-  ///
-  /// Given a basic block, look through its successors and if one exists for
-  /// which \see isEdgeHot would return true, return that successor block.
-  const BasicBlock *getHotSucc(const BasicBlock *BB) const;
-
   /// Print an edge's probability.
   ///
   /// Retrieves an edge's probability similarly to \see getEdgeProbability, but
@@ -121,16 +175,6 @@ public:
   /// returned.
   raw_ostream &printEdgeProbability(raw_ostream &OS, const BasicBlock *Src,
                                     const BasicBlock *Dst) const;
-
-protected:
-  /// Set the raw edge probability for the given edge.
-  ///
-  /// This allows a pass to explicitly set the edge probability for an edge. It
-  /// can be used when updating the CFG to update and preserve the branch
-  /// probability information. Read the implementation of how these edge
-  /// probabilities are calculated carefully before using!
-  void setEdgeProbability(const BasicBlock *Src, unsigned IndexInSuccessors,
-                          BranchProbability Prob);
 
 public:
   /// Set the raw probabilities for all edges from the given block.
@@ -141,17 +185,25 @@ public:
   void setEdgeProbability(const BasicBlock *Src,
                           const SmallVectorImpl<BranchProbability> &Probs);
 
+  /// Copy outgoing edge probabilities from \p Src to \p Dst.
+  ///
+  /// This allows to keep probabilities unset for the destination if they were
+  /// unset for source.
+  void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();
   }
 
   void calculate(const Function &F, const LoopInfo &LI,
-                 const TargetLibraryInfo *TLI, PostDominatorTree *PDT);
+                 const TargetLibraryInfo *TLI, DominatorTree *DT,
+                 PostDominatorTree *PDT);
 
   /// Forget analysis results for the given basic block.
   void eraseBlock(const BasicBlock *BB);
 
+  // Data structure to track SCCs for handling irreducible loops.
   class SccInfo {
     // Enum of types to classify basic blocks in SCC. Basic block belonging to
     // SCC is 'Inner' until it is either 'Header' or 'Exiting'. Note that a
@@ -223,7 +275,6 @@ private:
     void deleted() override {
       assert(BPI != nullptr);
       BPI->eraseBlock(cast<BasicBlock>(getValPtr()));
-      BPI->Handles.erase(*this);
     }
 
   public:
@@ -241,6 +292,8 @@ private:
                        const SccInfo &SccI);
 
     const BasicBlock *getBlock() const { return BB; }
+    BasicBlock *getBlock() { return const_cast<BasicBlock *>(BB); }
+    LoopData getLoopData() const { return LD; }
     Loop *getLoop() const { return LD.first; }
     int getSccNum() const { return LD.second; }
 
@@ -254,6 +307,7 @@ private:
     const BasicBlock *const BB = nullptr;
     LoopData LD = {nullptr, -1};
   };
+
   // Pair of LoopBlocks representing an edge from first to second block.
   using LoopEdge = std::pair<const LoopBlock &, const LoopBlock &>;
 
@@ -263,27 +317,26 @@ private:
   // a pair (PredBlock and an index in the successors) to specify an edge.
   using Edge = std::pair<const BasicBlock *, unsigned>;
 
-  // Default weight value. Used when we don't have information about the edge.
-  // TODO: DEFAULT_WEIGHT makes sense during static predication, when none of
-  // the successors have a weight yet. But it doesn't make sense when providing
-  // weight to an edge that may have siblings with non-zero weights. This can
-  // be handled various ways, but it's probably fine for an edge with unknown
-  // weight to just "inherit" the non-zero weight of an adjacent successor.
-  static const uint32_t DEFAULT_WEIGHT = 16;
-
   DenseMap<Edge, BranchProbability> Probs;
 
   /// Track the last function we run over for printing.
   const Function *LastF = nullptr;
 
+  const LoopInfo *LI = nullptr;
+
   /// Keeps information about all SCCs in a function.
   std::unique_ptr<const SccInfo> SccI;
 
-  /// Track the set of blocks directly succeeded by a returning block.
-  SmallPtrSet<const BasicBlock *, 16> PostDominatedByUnreachable;
+  /// Keeps mapping of a basic block to its estimated weight.
+  SmallDenseMap<const BasicBlock *, uint32_t> EstimatedBlockWeight;
 
-  /// Track the set of blocks that always lead to a cold call.
-  SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
+  /// Keeps mapping of a loop to estimated weight to enter the loop.
+  SmallDenseMap<LoopData, uint32_t> EstimatedLoopWeight;
+
+  /// Helper to construct LoopBlock for \p BB.
+  LoopBlock getLoopBlock(const BasicBlock *BB) const {
+    return LoopBlock(BB, *LI, *SccI.get());
+  }
 
   /// Returns true if destination block belongs to some loop and source block is
   /// either doesn't belong to any loop or belongs to a loop which is not inner
@@ -306,18 +359,55 @@ private:
   void getLoopExitBlocks(const LoopBlock &LB,
                          SmallVectorImpl<BasicBlock *> &Exits) const;
 
-  void computePostDominatedByUnreachable(const Function &F,
-                                         PostDominatorTree *PDT);
-  void computePostDominatedByColdCall(const Function &F,
-                                      PostDominatorTree *PDT);
-  bool calcUnreachableHeuristics(const BasicBlock *BB);
+  /// Returns estimated weight for \p BB. None if \p BB has no estimated weight.
+  Optional<uint32_t> getEstimatedBlockWeight(const BasicBlock *BB) const;
+
+  /// Returns estimated weight to enter \p L. In other words it is weight of
+  /// loop's header block not scaled by trip count. Returns None if \p L has no
+  /// no estimated weight.
+  Optional<uint32_t> getEstimatedLoopWeight(const LoopData &L) const;
+
+  /// Return estimated weight for \p Edge. Returns None if estimated weight is
+  /// unknown.
+  Optional<uint32_t> getEstimatedEdgeWeight(const LoopEdge &Edge) const;
+
+  /// Iterates over all edges leading from \p SrcBB to \p Successors and
+  /// returns maximum of all estimated weights. If at least one edge has unknown
+  /// estimated weight None is returned.
+  template <class IterT>
+  Optional<uint32_t>
+  getMaxEstimatedEdgeWeight(const LoopBlock &SrcBB,
+                            iterator_range<IterT> Successors) const;
+
+  /// If \p LoopBB has no estimated weight then set it to \p BBWeight and
+  /// return true. Otherwise \p BB's weight remains unchanged and false is
+  /// returned. In addition all blocks/loops that might need their weight to be
+  /// re-estimated are put into BlockWorkList/LoopWorkList.
+  bool updateEstimatedBlockWeight(LoopBlock &LoopBB, uint32_t BBWeight,
+                                  SmallVectorImpl<BasicBlock *> &BlockWorkList,
+                                  SmallVectorImpl<LoopBlock> &LoopWorkList);
+
+  /// Starting from \p LoopBB (including \p LoopBB itself) propagate \p BBWeight
+  /// up the domination tree.
+  void propagateEstimatedBlockWeight(const LoopBlock &LoopBB, DominatorTree *DT,
+                                     PostDominatorTree *PDT, uint32_t BBWeight,
+                                     SmallVectorImpl<BasicBlock *> &WorkList,
+                                     SmallVectorImpl<LoopBlock> &LoopWorkList);
+
+  /// Returns block's weight encoded in the IR.
+  Optional<uint32_t> getInitialEstimatedBlockWeight(const BasicBlock *BB);
+
+  // Computes estimated weights for all blocks in \p F.
+  void computeEestimateBlockWeight(const Function &F, DominatorTree *DT,
+                                   PostDominatorTree *PDT);
+
+  /// Based on computed weights by \p computeEstimatedBlockWeight set
+  /// probabilities on branches.
+  bool calcEstimatedHeuristics(const BasicBlock *BB);
   bool calcMetadataWeights(const BasicBlock *BB);
-  bool calcColdCallHeuristics(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
-  bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
   bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
-  bool calcInvokeHeuristics(const BasicBlock *BB);
 };
 
 /// Analysis pass which computes \c BranchProbabilityInfo.

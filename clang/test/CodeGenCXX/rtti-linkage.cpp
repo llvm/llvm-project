@@ -61,8 +61,8 @@
 // CHECK: _ZTI1TILj2EE = external constant
 // CHECK: _ZTSZ2t5vE1A = internal constant
 // CHECK: _ZTIZ2t5vE1A = internal constant
-// CHECK: _ZTS1B = constant
-// CHECK: _ZTI1B = constant
+// CHECK: _ZTS1B ={{.*}} constant
+// CHECK: _ZTI1B ={{.*}} constant
 // CHECK: _ZTS1F = linkonce_odr constant
 // CHECK: _ZTSZ2t6vE1A = linkonce_odr constant
 // CHECK: _ZTIZ2t6vE1A = linkonce_odr constant

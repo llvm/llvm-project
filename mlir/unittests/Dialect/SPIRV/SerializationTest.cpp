@@ -11,16 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/Serialization.h"
-#include "mlir/Dialect/SPIRV/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/SPIRVBinaryUtils.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVModule.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Target/SPIRV/Serialization.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -36,7 +35,7 @@ using namespace mlir;
 
 class SerializationTest : public ::testing::Test {
 protected:
-  SerializationTest() : context(/*loadAllDialects=*/false) {
+  SerializationTest() {
     context.getOrLoadDialect<mlir::spirv::SPIRVDialect>();
     createModuleOp();
   }
@@ -60,7 +59,7 @@ protected:
   }
 
   Type getFloatStructType() {
-    OpBuilder opBuilder(module->body());
+    OpBuilder opBuilder(module->getRegion());
     llvm::SmallVector<Type, 1> elementTypes{opBuilder.getF32Type()};
     llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
     auto structType = spirv::StructType::get(elementTypes, offsetInfo);
@@ -68,7 +67,7 @@ protected:
   }
 
   void addGlobalVar(Type type, llvm::StringRef name) {
-    OpBuilder opBuilder(module->body());
+    OpBuilder opBuilder(module->getRegion());
     auto ptrType = spirv::PointerType::get(type, spirv::StorageClass::Uniform);
     opBuilder.create<spirv::GlobalVariableOp>(
         UnknownLoc::get(&context), TypeAttr::get(ptrType),
@@ -102,7 +101,7 @@ protected:
 
 protected:
   MLIRContext context;
-  spirv::OwningSPIRVModuleRef module;
+  OwningOpRef<spirv::ModuleOp> module;
   SmallVector<uint32_t, 0> binary;
 };
 

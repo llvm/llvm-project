@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-pdbutil dump --symbols %t.obj | FileCheck %s
-# RUN: llvm-readobj -codeview %t.obj | FileCheck %s --check-prefix=READOBJ
+# RUN: llvm-readobj --codeview %t.obj | FileCheck %s --check-prefix=READOBJ
 
 # CHECK:      S_ANNOTATION [size = 20]
 # CHECK-NEXT: addr = 0001:0042

@@ -81,8 +81,8 @@ public:
   void ConsumeAllOutput();
 
 private:
-  static bool IsInputComplete(lldb_private::Editline *editline,
-                              lldb_private::StringList &lines, void *baton);
+  bool IsInputComplete(lldb_private::Editline *editline,
+                       lldb_private::StringList &lines);
 
   std::unique_ptr<lldb_private::Editline> _editline_sp;
 
@@ -99,14 +99,7 @@ EditlineAdapter::EditlineAdapter()
   lldb_private::Status error;
 
   // Open the first master pty available.
-  char error_string[256];
-  error_string[0] = '\0';
-  if (!_pty.OpenFirstAvailablePrimary(O_RDWR, error_string,
-                                      sizeof(error_string))) {
-    fprintf(stderr, "failed to open first available master pty: '%s'\n",
-            error_string);
-    return;
-  }
+  EXPECT_THAT_ERROR(_pty.OpenFirstAvailablePrimary(O_RDWR), llvm::Succeeded());
 
   // Grab the master fd.  This is a file descriptor we will:
   // (1) write to when we want to send input to editline.
@@ -114,10 +107,7 @@ EditlineAdapter::EditlineAdapter()
   _pty_master_fd = _pty.GetPrimaryFileDescriptor();
 
   // Open the corresponding secondary pty.
-  if (!_pty.OpenSecondary(O_RDWR, error_string, sizeof(error_string))) {
-    fprintf(stderr, "failed to open secondary pty: '%s'\n", error_string);
-    return;
-  }
+  EXPECT_THAT_ERROR(_pty.OpenSecondary(O_RDWR), llvm::Succeeded());
   _pty_secondary_fd = _pty.GetSecondaryFileDescriptor();
 
   _el_secondary_file.reset(new FilePointer(fdopen(_pty_secondary_fd, "rw")));
@@ -132,7 +122,10 @@ EditlineAdapter::EditlineAdapter()
   _editline_sp->SetPrompt("> ");
 
   // Hookup our input complete callback.
-  _editline_sp->SetIsInputCompleteCallback(IsInputComplete, this);
+  auto input_complete_cb = [this](Editline *editline, StringList &lines) {
+    return this->IsInputComplete(editline, lines);
+  };
+  _editline_sp->SetIsInputCompleteCallback(input_complete_cb);
 }
 
 void EditlineAdapter::CloseInput() {
@@ -193,8 +186,7 @@ bool EditlineAdapter::GetLines(lldb_private::StringList &lines,
 }
 
 bool EditlineAdapter::IsInputComplete(lldb_private::Editline *editline,
-                                      lldb_private::StringList &lines,
-                                      void *baton) {
+                                      lldb_private::StringList &lines) {
   // We'll call ourselves complete if we've received a balanced set of braces.
   int start_block_count = 0;
   int brace_balance = 0;

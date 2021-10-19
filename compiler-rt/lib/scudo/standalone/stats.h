@@ -29,8 +29,10 @@ typedef uptr StatCounters[StatCount];
 // LocalStats::add'ing, this is OK, we will still get a meaningful number.
 class LocalStats {
 public:
-  void initLinkerInitialized() {}
-  void init() { memset(this, 0, sizeof(*this)); }
+  void init() {
+    for (uptr I = 0; I < StatCount; I++)
+      DCHECK_EQ(get(static_cast<StatType>(I)), 0U);
+  }
 
   void add(StatType I, uptr V) {
     V += atomic_load_relaxed(&StatsArray[I]);
@@ -46,23 +48,17 @@ public:
 
   uptr get(StatType I) const { return atomic_load_relaxed(&StatsArray[I]); }
 
-  LocalStats *Next;
-  LocalStats *Prev;
+  LocalStats *Next = nullptr;
+  LocalStats *Prev = nullptr;
 
 private:
-  atomic_uptr StatsArray[StatCount];
+  atomic_uptr StatsArray[StatCount] = {};
 };
 
 // Global stats, used for aggregation and querying.
 class GlobalStats : public LocalStats {
 public:
-  void initLinkerInitialized() {}
-  void init() {
-    LocalStats::init();
-    Mutex.init();
-    StatsList = {};
-    initLinkerInitialized();
-  }
+  void init() { LocalStats::init(); }
 
   void link(LocalStats *S) {
     ScopedLock L(Mutex);
@@ -89,8 +85,11 @@ public:
       S[I] = static_cast<sptr>(S[I]) >= 0 ? S[I] : 0;
   }
 
-  void disable() { Mutex.lock(); }
-  void enable() { Mutex.unlock(); }
+  void lock() { Mutex.lock(); }
+  void unlock() { Mutex.unlock(); }
+
+  void disable() { lock(); }
+  void enable() { unlock(); }
 
 private:
   mutable HybridMutex Mutex;

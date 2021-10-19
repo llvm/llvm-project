@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=i686-- < %s | FileCheck %s
 
-@Te0 = external global [256 x i32]		; <[256 x i32]*> [#uses=5]
-@Te1 = external global [256 x i32]		; <[256 x i32]*> [#uses=4]
-@Te3 = external global [256 x i32]		; <[256 x i32]*> [#uses=2]
+@Te0 = external dso_local global [256 x i32]		; <[256 x i32]*> [#uses=5]
+@Te1 = external dso_local global [256 x i32]		; <[256 x i32]*> [#uses=4]
+@Te3 = external dso_local global [256 x i32]		; <[256 x i32]*> [#uses=2]
 
 ; CHECK: %entry
 ; CHECK: %bb

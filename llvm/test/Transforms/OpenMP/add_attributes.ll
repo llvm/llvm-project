@@ -1,10 +1,7 @@
-; RUN: opt < %s -S -openmpopt        | FileCheck %s
-; RUN: opt < %s -S -passes=openmpopt | FileCheck %s
-; RUN: opt < %s -S -openmpopt        -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
-; RUN: opt < %s -S -passes=openmpopt -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
-;
-; TODO: Not all omp_XXXX methods are known to the OpenMPIRBuilder/OpenMPOpt.
-;
+; RUN: opt < %s -S -openmp-opt-cgscc        | FileCheck %s
+; RUN: opt < %s -S -passes=openmp-opt-cgscc | FileCheck %s
+; RUN: opt < %s -S -openmp-opt-cgscc        -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
+; RUN: opt < %s -S -passes=openmp-opt-cgscc -openmp-ir-builder-optimistic-attributes | FileCheck %s --check-prefix=OPTIMISTIC
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.omp_lock_t = type { i8* }
@@ -627,33 +624,37 @@ declare i8* @__kmpc_init_allocator(i32, i8*, i32, i8*)
 
 declare void @__kmpc_destroy_allocator(i32, i8*)
 
-declare void @__kmpc_push_target_tripcount(i64, i64)
+declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
-declare i32 @__tgt_target_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**)
+declare i64 @__kmpc_warp_active_thread_mask()
 
-declare i32 @__tgt_target_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__kmpc_syncwarp(i64)
 
-declare i32 @__tgt_target_teams_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32)
+declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare i32 @__tgt_target_teams_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32)
+declare i32 @__tgt_target_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i8*, i32, i8*)
+
+declare i32 @__tgt_target_teams_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32)
+
+declare i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32, i32, i8*, i32, i8*)
 
 declare void @__tgt_register_requires(i64)
 
-declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare void @__tgt_target_data_begin_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare void @__tgt_target_data_end_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_end_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare void @__tgt_target_data_update_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_update_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
-declare void @__tgt_target_data_update_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_update_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 declare i64 @__tgt_mapper_num_components(i8*)
 
-declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64)
+declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 declare i8* @__kmpc_task_allow_completion_event(%struct.ident_t*, i32, i8*)
 
@@ -664,6 +665,11 @@ declare i8* @__kmpc_task_reduction_init(i32, i32, i8*)
 declare i8* @__kmpc_task_reduction_modifier_init(i8*, i32, i32, i32, i8*)
 
 declare void @__kmpc_proxy_task_completed_ooo(i8*)
+
+; Function Attrs: noinline cold
+declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32) #0
+
+attributes #0 = { noinline cold }
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare dso_local void @omp_set_num_threads(i32)
@@ -681,52 +687,52 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK-NEXT: declare dso_local void @omp_set_schedule(i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_threads() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_threads()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local void @use_int(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_dynamic() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_dynamic()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_nested() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_nested()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_max_threads() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_max_threads()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_thread_num() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_thread_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_procs() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_procs()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_in_parallel() #0
+; CHECK-NEXT: declare dso_local i32 @omp_in_parallel()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_in_final() #0
+; CHECK-NEXT: declare dso_local i32 @omp_in_final()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_active_level() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_active_level()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_level() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_level()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32) #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_team_size(i32) #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_team_size(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_thread_limit() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_thread_limit()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_max_active_levels() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_max_active_levels()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly) #0
+; CHECK-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_max_task_priority()
@@ -795,7 +801,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK: declare dso_local i32 @omp_get_team_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_cancellation() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_cancellation()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_initial_device()
@@ -825,25 +831,25 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK: declare dso_local i32 @omp_get_device_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_proc_bind() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_proc_bind()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_num_places() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_num_places()
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_get_place_num_procs(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly) #0
+; CHECK-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_place_num() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_place_num()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_partition_num_places() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_partition_num_places()
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*) #0
+; CHECK-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare dso_local i32 @omp_control_tool(i32, i32, i8*)
@@ -888,313 +894,322 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; CHECK: declare dso_local i32 @omp_pause_resource_all(i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare dso_local i32 @omp_get_supported_active_levels() #0
+; CHECK-NEXT: declare dso_local i32 @omp_get_supported_active_levels()
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_barrier(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_barrier(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32) #0
+; CHECK-NEXT: declare i32 @__kmpc_cancel(%struct.ident_t*, i32, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i32 @__kmpc_cancel_barrier(%struct.ident_t*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_flush(%struct.ident_t*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_flush(%struct.ident_t*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #0
+; CHECK-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) #0
+; CHECK-NEXT: declare void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_omp_taskyield(%struct.ident_t*, i32, i32) #0
+; CHECK-NEXT: declare i32 @__kmpc_omp_taskyield(%struct.ident_t*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_push_num_threads(%struct.ident_t*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_push_num_threads(%struct.ident_t*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_push_proc_bind(%struct.ident_t*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_push_proc_bind(%struct.ident_t*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_serialized_parallel(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_serialized_parallel(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_serialized_parallel(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_end_serialized_parallel(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_master(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare i32 @__kmpc_master(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_master(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_end_master(%struct.ident_t*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_critical(%struct.ident_t*, i32, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_critical(%struct.ident_t*, i32, [8 x i32]*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_critical_with_hint(%struct.ident_t*, i32, [8 x i32]*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_critical_with_hint(%struct.ident_t*, i32, [8 x i32]*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_critical(%struct.ident_t*, i32, [8 x i32]*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_begin(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_begin(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end(%struct.ident_t*) #0
+; CHECK-NEXT: declare void @__kmpc_end(%struct.ident_t*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_reduce(%struct.ident_t*, i32, i32, i64, i8*, void (i8*, i8*)*, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i32 @__kmpc_reduce(%struct.ident_t*, i32, i32, i64, i8*, void (i8*, i8*)*, [8 x i32]*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_reduce_nowait(%struct.ident_t*, i32, i32, i64, i8*, void (i8*, i8*)*, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i32 @__kmpc_reduce_nowait(%struct.ident_t*, i32, i32, i64, i8*, void (i8*, i8*)*, [8 x i32]*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_reduce(%struct.ident_t*, i32, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_reduce(%struct.ident_t*, i32, [8 x i32]*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_reduce_nowait(%struct.ident_t*, i32, [8 x i32]*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_reduce_nowait(%struct.ident_t*, i32, [8 x i32]*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_ordered(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_ordered(%struct.ident_t*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_ordered(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_ordered(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_for_static_init_4(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_for_static_init_4(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_for_static_init_4u(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_for_static_init_4u(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_for_static_init_8(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_for_static_init_8(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_for_static_init_8u(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_for_static_init_8u(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_for_static_fini(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_for_static_fini(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_team_static_init_4(%struct.ident_t*, i32, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_team_static_init_4(%struct.ident_t*, i32, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_team_static_init_4u(%struct.ident_t*, i32, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_team_static_init_4u(%struct.ident_t*, i32, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_team_static_init_8(%struct.ident_t*, i32, i32*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_team_static_init_8(%struct.ident_t*, i32, i32*, i64*, i64*, i64*, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_team_static_init_8u(%struct.ident_t*, i32, i32*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_team_static_init_8u(%struct.ident_t*, i32, i32*, i64*, i64*, i64*, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_4(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_4(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_4u(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32*, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_4u(%struct.ident_t*, i32, i32, i32*, i32*, i32*, i32*, i32*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_8(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_8(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64*, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_8u(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64*, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dist_for_static_init_8u(%struct.ident_t*, i32, i32, i32*, i64*, i64*, i64*, i64*, i64, i64)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_single(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i32 @__kmpc_single(%struct.ident_t*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_single(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_single(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_omp_task_alloc(%struct.ident_t*, i32, i32, i64, i64, i32 (i32, i8*)*) #0
+; CHECK-NEXT: declare i8* @__kmpc_omp_task_alloc(%struct.ident_t*, i32, i32, i64, i64, i32 (i32, i8*)*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_omp_task(%struct.ident_t*, i32, i8*) #0
+; CHECK-NEXT: declare i32 @__kmpc_omp_task(%struct.ident_t*, i32, i8*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_end_taskgroup(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_end_taskgroup(%struct.ident_t*, i32)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_taskgroup(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_taskgroup(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_4(%struct.ident_t*, i32, i32, i32*, i32, i32, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_4(%struct.ident_t*, i32, i32, i32*, i32, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_4u(%struct.ident_t*, i32, i32, i32*, i32, i32, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_4u(%struct.ident_t*, i32, i32, i32*, i32, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_8(%struct.ident_t*, i32, i32, i32*, i64, i64, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_8(%struct.ident_t*, i32, i32, i32*, i64, i64, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_8u(%struct.ident_t*, i32, i32, i32*, i64, i64, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dist_dispatch_init_8u(%struct.ident_t*, i32, i32, i32*, i64, i64, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_init_4(%struct.ident_t*, i32, i32, i32, i32, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_init_4(%struct.ident_t*, i32, i32, i32, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_init_4u(%struct.ident_t*, i32, i32, i32, i32, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_init_4u(%struct.ident_t*, i32, i32, i32, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_init_8(%struct.ident_t*, i32, i32, i64, i64, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_init_8(%struct.ident_t*, i32, i32, i64, i64, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_init_8u(%struct.ident_t*, i32, i32, i64, i64, i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_init_8u(%struct.ident_t*, i32, i32, i64, i64, i64, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_4(%struct.ident_t*, i32, i32*, i32*, i32*, i32*) #0
+; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_4(%struct.ident_t*, i32, i32*, i32*, i32*, i32*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_4u(%struct.ident_t*, i32, i32*, i32*, i32*, i32*) #0
+; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_4u(%struct.ident_t*, i32, i32*, i32*, i32*, i32*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_8(%struct.ident_t*, i32, i32*, i64*, i64*, i64*) #0
+; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_8(%struct.ident_t*, i32, i32*, i64*, i64*, i64*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_8u(%struct.ident_t*, i32, i32*, i64*, i64*, i64*) #0
+; CHECK-NEXT: declare i32 @__kmpc_dispatch_next_8u(%struct.ident_t*, i32, i32*, i64*, i64*, i64*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_fini_4(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_fini_4(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_fini_4u(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_fini_4u(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_fini_8(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_fini_8(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_dispatch_fini_8u(%struct.ident_t*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_dispatch_fini_8u(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_omp_task_begin_if0(%struct.ident_t*, i32, i8*) #0
+; CHECK-NEXT: declare void @__kmpc_omp_task_begin_if0(%struct.ident_t*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_omp_task_complete_if0(%struct.ident_t*, i32, i8*) #0
+; CHECK-NEXT: declare void @__kmpc_omp_task_complete_if0(%struct.ident_t*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_omp_task_with_deps(%struct.ident_t*, i32, i8*, i32, i8*, i32, i8*) #0
+; CHECK-NEXT: declare i32 @__kmpc_omp_task_with_deps(%struct.ident_t*, i32, i8*, i32, i8*, i32, i8*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_omp_wait_deps(%struct.ident_t*, i32, i32, i8*, i32, i8*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_omp_wait_deps(%struct.ident_t*, i32, i32, i8*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__kmpc_cancellationpoint(%struct.ident_t*, i32, i32) #0
+; CHECK-NEXT: declare i32 @__kmpc_cancellationpoint(%struct.ident_t*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_push_num_teams(%struct.ident_t*, i32, i32, i32) #0
+; CHECK-NEXT: declare void @__kmpc_push_num_teams(%struct.ident_t*, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_fork_teams(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) #0
+; CHECK-NEXT: declare void @__kmpc_fork_teams(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_taskloop(%struct.ident_t*, i32, i8*, i32, i64*, i64*, i64, i32, i32, i64, i8*) #0
+; CHECK-NEXT: declare void @__kmpc_taskloop(%struct.ident_t*, i32, i8*, i32, i64*, i64*, i64, i32, i32, i64, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_omp_target_task_alloc(%struct.ident_t*, i32, i32, i64, i64, i32 (i32, i8*)*, i64) #0
+; CHECK-NEXT: declare i8* @__kmpc_omp_target_task_alloc(%struct.ident_t*, i32, i32, i64, i64, i32 (i32, i8*)*, i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_taskred_modifier_init(%struct.ident_t*, i32, i32, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_taskred_modifier_init(%struct.ident_t*, i32, i32, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_taskred_init(i32, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_taskred_init(i32, i32, i8*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_task_reduction_modifier_fini(%struct.ident_t*, i32, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_task_reduction_modifier_fini(%struct.ident_t*, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_copyprivate(%struct.ident_t*, i32, i64, i8*, void (i8*, i8*)*, i32) #0
+; CHECK-NEXT: declare void @__kmpc_copyprivate(%struct.ident_t*, i32, i64, i8*, void (i8*, i8*)*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_threadprivate_cached(%struct.ident_t*, i32, i8*, i64, i8***) #0
+; CHECK-NEXT: declare i8* @__kmpc_threadprivate_cached(%struct.ident_t*, i32, i8*, i64, i8***)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_threadprivate_register(%struct.ident_t*, i8*, i8* (i8*)*, i8* (i8*, i8*)*, void (i8*)*) #0
+; CHECK-NEXT: declare void @__kmpc_threadprivate_register(%struct.ident_t*, i8*, i8* (i8*)*, i8* (i8*, i8*)*, void (i8*)*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_doacross_init(%struct.ident_t*, i32, i32, i8*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_doacross_init(%struct.ident_t*, i32, i32, i8*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_doacross_wait(%struct.ident_t*, i32, i64*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_doacross_wait(%struct.ident_t*, i32, i64*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_doacross_post(%struct.ident_t*, i32, i64*) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_doacross_post(%struct.ident_t*, i32, i64*)
 
-; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_doacross_fini(%struct.ident_t*, i32) #0
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_doacross_fini(%struct.ident_t*, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_alloc(i32, i64, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_alloc(i32, i64, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_free(i32, i8*, i8*) #0
+; CHECK-NEXT: declare void @__kmpc_free(i32, i8*, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_init_allocator(i32, i8*, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_init_allocator(i32, i8*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*) #0
+; CHECK-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_push_target_tripcount(i64, i64) #0
+; CHECK-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
+
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare i64 @__kmpc_warp_active_thread_mask()
 
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_syncwarp(i64)
+
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__tgt_target_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__tgt_target_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare i32 @__tgt_target_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i8*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__tgt_target_teams_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32) #0
+; CHECK-NEXT: declare i32 @__tgt_target_teams_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i32 @__tgt_target_teams_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32) #0
+; CHECK-NEXT: declare i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32, i32, i8*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_register_requires(i64) #0
+; CHECK-NEXT: declare void @__tgt_register_requires(i64)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_end_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_end_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_update_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_update_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_target_data_update_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**) #0
+; CHECK-NEXT: declare void @__tgt_target_data_update_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i64 @__tgt_mapper_num_components(i8*) #0
+; CHECK-NEXT: declare i64 @__tgt_mapper_num_components(i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64) #0
+; CHECK-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_task_allow_completion_event(%struct.ident_t*, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_task_allow_completion_event(%struct.ident_t*, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_task_reduction_get_th_data(i32, i8*, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_task_reduction_get_th_data(i32, i8*, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_task_reduction_init(i32, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_task_reduction_init(i32, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare i8* @__kmpc_task_reduction_modifier_init(i8*, i32, i32, i32, i8*) #0
+; CHECK-NEXT: declare i8* @__kmpc_task_reduction_modifier_init(i8*, i32, i32, i32, i8*)
 
 ; CHECK: ; Function Attrs: nounwind
-; CHECK-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*) #0
+; CHECK-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
+
+; CHECK: ; Function Attrs: cold convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_num_threads(i32)
@@ -1212,52 +1227,52 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_schedule(i32, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_threads() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_threads()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @use_int(i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_dynamic() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_dynamic()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_nested() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_nested()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_threads() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_threads()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_num() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_num()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_procs() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_procs()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_parallel() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_parallel()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_final() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_final()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_active_level() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_active_level()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_level() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_level()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32) #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_team_size(i32) #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_team_size(i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_limit() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_limit()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_active_levels() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_active_levels()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
-; OPTIMISTIC-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly) #2
+; OPTIMISTIC-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_max_task_priority()
@@ -1326,7 +1341,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: declare dso_local i32 @omp_get_team_num()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_cancellation() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_cancellation()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_initial_device()
@@ -1356,25 +1371,25 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: declare dso_local i32 @omp_get_device_num()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_proc_bind() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_proc_bind()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_places() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_places()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_place_num_procs(i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind
-; OPTIMISTIC-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly) #2
+; OPTIMISTIC-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_place_num() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_place_num()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_partition_num_places() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_partition_num_places()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-; OPTIMISTIC-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*) #1
+; OPTIMISTIC-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_control_tool(i32, i32, i8*)
@@ -1419,7 +1434,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: declare dso_local i32 @omp_pause_resource_all(i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
-; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_supported_active_levels() #1
+; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_supported_active_levels()
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture nofree readonly)
@@ -1427,7 +1442,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_fork_call(%struct.ident_t* nocapture nofree readonly, i32, void (i32*, i32*, ...)* nocapture nofree readonly, ...)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
@@ -1451,13 +1466,13 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_master(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_critical(%struct.ident_t* nocapture nofree readonly, i32, [8 x i32]*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_critical_with_hint(%struct.ident_t* nocapture nofree readonly, i32, [8 x i32]*, i32)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_critical(%struct.ident_t* nocapture nofree readonly, i32, [8 x i32]*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1466,22 +1481,22 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end(%struct.ident_t* nocapture nofree readonly)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_reduce(%struct.ident_t* nocapture nofree readonly, i32, i32, i64, i8* nocapture nofree readonly, void (i8*, i8*)*, [8 x i32]*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_reduce_nowait(%struct.ident_t* nocapture nofree readonly, i32, i32, i64, i8* nocapture nofree readonly, void (i8*, i8*)*, [8 x i32]*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_reduce(%struct.ident_t* nocapture nofree readonly, i32, [8 x i32]*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_reduce_nowait(%struct.ident_t* nocapture nofree readonly, i32, [8 x i32]*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_ordered(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_ordered(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
@@ -1523,10 +1538,10 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_for_static_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_single(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_single(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1535,10 +1550,10 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_omp_task(%struct.ident_t* nocapture nofree readonly, i32, i8*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_taskgroup(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_taskgroup(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
@@ -1598,7 +1613,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_omp_task_with_deps(%struct.ident_t* nocapture nofree readonly, i32, i8*, i32, i8* nocapture nofree readonly, i32, i8* nocapture nofree readonly)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_omp_wait_deps(%struct.ident_t* nocapture nofree readonly, i32, i32, i8* nocapture nofree readonly, i32, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1622,7 +1637,7 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare i8* @__kmpc_taskred_init(i32, i32, i8*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_task_reduction_modifier_fini(%struct.ident_t* nocapture nofree readonly, i32, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1634,16 +1649,16 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_threadprivate_register(%struct.ident_t* nocapture nofree readonly, i8*, i8* (i8*)* nocapture nofree readonly, i8* (i8*, i8*)* nocapture nofree readonly, void (i8*)* nocapture nofree readonly)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_doacross_init(%struct.ident_t* nocapture nofree readonly, i32, i32, i8*)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_doacross_wait(%struct.ident_t* nocapture nofree readonly, i32, i64* nocapture nofree readonly)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_doacross_post(%struct.ident_t* nocapture nofree readonly, i32, i64* nocapture nofree readonly)
 
-; OPTIMISTIC: ; Function Attrs: nounwind
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_doacross_fini(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1659,46 +1674,52 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
-; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount(i64, i64)
+; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
+
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
+; OPTIMISTIC-NEXT: declare i64 @__kmpc_warp_active_thread_mask()
+
+; OPTIMISTIC: ; Function Attrs: convergent nounwind
+; OPTIMISTIC-NEXT: declare void @__kmpc_syncwarp(i64)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare i32 @__tgt_target_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare i32 @__tgt_target_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare i32 @__tgt_target_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare i32 @__tgt_target_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i8*, i32, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare i32 @__tgt_target_teams_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32)
+; OPTIMISTIC-NEXT: declare i32 @__tgt_target_teams_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare i32 @__tgt_target_teams_nowait_mapper(i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i32, i32)
+; OPTIMISTIC-NEXT: declare i32 @__tgt_target_teams_nowait_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32, i32, i8*, i32, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare void @__tgt_register_requires(i64)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_begin_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_end_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_nowait_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+; OPTIMISTIC-NEXT: declare void @__tgt_target_data_update_nowait_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare i64 @__tgt_mapper_num_components(i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
-; OPTIMISTIC-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64)
+; OPTIMISTIC-NEXT: declare void @__tgt_push_mapper_component(i8*, i8*, i8*, i64, i64, i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare noalias i8* @__kmpc_task_allow_completion_event(%struct.ident_t* nocapture nofree readonly, i32, i8*)
@@ -1714,3 +1735,10 @@ declare void @__kmpc_proxy_task_completed_ooo(i8*)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_proxy_task_completed_ooo(i8*)
+
+; OPTIMISTIC: ; Function Attrs: cold convergent nounwind 
+; OPTIMISTIC-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}

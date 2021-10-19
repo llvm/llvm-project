@@ -31,4 +31,4 @@ int main(int argc, char** argv) {
 
 // CHECK: (lldb) target modules dump symfile
 // CHECK: Dumping debug symbols for 1 modules.
-// CHECK: SymbolFile pdb
+// CHECK: SymbolFile native-pdb

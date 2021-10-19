@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/APFloat.h"
 
 namespace llvm {
 
@@ -122,6 +123,29 @@ APFixedPoint APFixedPoint::getMax(const FixedPointSemantics &Sema) {
 APFixedPoint APFixedPoint::getMin(const FixedPointSemantics &Sema) {
   auto Val = APSInt::getMinValue(Sema.getWidth(), !Sema.isSigned());
   return APFixedPoint(Val, Sema);
+}
+
+bool FixedPointSemantics::fitsInFloatSemantics(
+    const fltSemantics &FloatSema) const {
+  // A fixed point semantic fits in a floating point semantic if the maximum
+  // and minimum values as integers of the fixed point semantic can fit in the
+  // floating point semantic.
+
+  // If these values do not fit, then a floating point rescaling of the true
+  // maximum/minimum value will not fit either, so the floating point semantic
+  // cannot be used to perform such a rescaling.
+
+  APSInt MaxInt = APFixedPoint::getMax(*this).getValue();
+  APFloat F(FloatSema);
+  APFloat::opStatus Status = F.convertFromAPInt(MaxInt, MaxInt.isSigned(),
+                                                APFloat::rmNearestTiesToAway);
+  if ((Status & APFloat::opOverflow) || !isSigned())
+    return !(Status & APFloat::opOverflow);
+
+  APSInt MinInt = APFixedPoint::getMin(*this).getValue();
+  Status = F.convertFromAPInt(MinInt, MinInt.isSigned(),
+                              APFloat::rmNearestTiesToAway);
+  return !(Status & APFloat::opOverflow);
 }
 
 FixedPointSemantics FixedPointSemantics::getCommonSemantics(
@@ -282,7 +306,7 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
     APInt::sdivrem(ThisVal, OtherVal, Result, Rem);
     // If the quotient is negative and the remainder is nonzero, round
     // towards negative infinity by subtracting epsilon from the result.
-    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isNullValue())
+    if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isZero())
       Result = Result - 1;
   } else
     Result = ThisVal.udiv(OtherVal);
@@ -357,7 +381,7 @@ void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
   // Add 4 digits to hold the value after multiplying 10 (the radix)
   unsigned Width = Val.getBitWidth() + 4;
   APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
-  APInt FractPartMask = APInt::getAllOnesValue(Scale).zext(Width);
+  APInt FractPartMask = APInt::getAllOnes(Scale).zext(Width);
   APInt RadixInt = APInt(Width, 10);
 
   IntPart.toString(Str, /*Radix=*/10);
@@ -417,6 +441,54 @@ APSInt APFixedPoint::convertToInt(unsigned DstWidth, bool DstSign,
   return Result.extOrTrunc(DstWidth);
 }
 
+const fltSemantics *APFixedPoint::promoteFloatSemantics(const fltSemantics *S) {
+  if (S == &APFloat::BFloat())
+    return &APFloat::IEEEdouble();
+  else if (S == &APFloat::IEEEhalf())
+    return &APFloat::IEEEsingle();
+  else if (S == &APFloat::IEEEsingle())
+    return &APFloat::IEEEdouble();
+  else if (S == &APFloat::IEEEdouble())
+    return &APFloat::IEEEquad();
+  llvm_unreachable("Could not promote float type!");
+}
+
+APFloat APFixedPoint::convertToFloat(const fltSemantics &FloatSema) const {
+  // For some operations, rounding mode has an effect on the result, while
+  // other operations are lossless and should never result in rounding.
+  // To signify which these operations are, we define two rounding modes here.
+  APFloat::roundingMode RM = APFloat::rmNearestTiesToEven;
+  APFloat::roundingMode LosslessRM = APFloat::rmTowardZero;
+
+  // Make sure that we are operating in a type that works with this fixed-point
+  // semantic.
+  const fltSemantics *OpSema = &FloatSema;
+  while (!Sema.fitsInFloatSemantics(*OpSema))
+    OpSema = promoteFloatSemantics(OpSema);
+
+  // Convert the fixed point value bits as an integer. If the floating point
+  // value does not have the required precision, we will round according to the
+  // given mode.
+  APFloat Flt(*OpSema);
+  APFloat::opStatus S = Flt.convertFromAPInt(Val, Sema.isSigned(), RM);
+
+  // If we cared about checking for precision loss, we could look at this
+  // status.
+  (void)S;
+
+  // Scale down the integer value in the float to match the correct scaling
+  // factor.
+  APFloat ScaleFactor(std::pow(2, -(int)Sema.getScale()));
+  bool Ignored;
+  ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
+  Flt.multiply(ScaleFactor, LosslessRM);
+
+  if (OpSema != &FloatSema)
+    Flt.convert(FloatSema, RM, &Ignored);
+
+  return Flt;
+}
+
 APFixedPoint APFixedPoint::getFromIntValue(const APSInt &Value,
                                            const FixedPointSemantics &DstFXSema,
                                            bool *Overflow) {
@@ -425,4 +497,78 @@ APFixedPoint APFixedPoint::getFromIntValue(const APSInt &Value,
   return APFixedPoint(Value, IntFXSema).convert(DstFXSema, Overflow);
 }
 
-}  // namespace clang
+APFixedPoint
+APFixedPoint::getFromFloatValue(const APFloat &Value,
+                                const FixedPointSemantics &DstFXSema,
+                                bool *Overflow) {
+  // For some operations, rounding mode has an effect on the result, while
+  // other operations are lossless and should never result in rounding.
+  // To signify which these operations are, we define two rounding modes here,
+  // even though they are the same mode.
+  APFloat::roundingMode RM = APFloat::rmTowardZero;
+  APFloat::roundingMode LosslessRM = APFloat::rmTowardZero;
+
+  const fltSemantics &FloatSema = Value.getSemantics();
+
+  if (Value.isNaN()) {
+    // Handle NaN immediately.
+    if (Overflow)
+      *Overflow = true;
+    return APFixedPoint(DstFXSema);
+  }
+
+  // Make sure that we are operating in a type that works with this fixed-point
+  // semantic.
+  const fltSemantics *OpSema = &FloatSema;
+  while (!DstFXSema.fitsInFloatSemantics(*OpSema))
+    OpSema = promoteFloatSemantics(OpSema);
+
+  APFloat Val = Value;
+
+  bool Ignored;
+  if (&FloatSema != OpSema)
+    Val.convert(*OpSema, LosslessRM, &Ignored);
+
+  // Scale up the float so that the 'fractional' part of the mantissa ends up in
+  // the integer range instead. Rounding mode is irrelevant here.
+  // It is fine if this overflows to infinity even for saturating types,
+  // since we will use floating point comparisons to check for saturation.
+  APFloat ScaleFactor(std::pow(2, DstFXSema.getScale()));
+  ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
+  Val.multiply(ScaleFactor, LosslessRM);
+
+  // Convert to the integral representation of the value. This rounding mode
+  // is significant.
+  APSInt Res(DstFXSema.getWidth(), !DstFXSema.isSigned());
+  Val.convertToInteger(Res, RM, &Ignored);
+
+  // Round the integral value and scale back. This makes the
+  // overflow calculations below work properly. If we do not round here,
+  // we risk checking for overflow with a value that is outside the
+  // representable range of the fixed-point semantic even though no overflow
+  // would occur had we rounded first.
+  ScaleFactor = APFloat(std::pow(2, -(int)DstFXSema.getScale()));
+  ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
+  Val.roundToIntegral(RM);
+  Val.multiply(ScaleFactor, LosslessRM);
+
+  // Check for overflow/saturation by checking if the floating point value
+  // is outside the range representable by the fixed-point value.
+  APFloat FloatMax = getMax(DstFXSema).convertToFloat(*OpSema);
+  APFloat FloatMin = getMin(DstFXSema).convertToFloat(*OpSema);
+  bool Overflowed = false;
+  if (DstFXSema.isSaturated()) {
+    if (Val > FloatMax)
+      Res = getMax(DstFXSema).getValue();
+    else if (Val < FloatMin)
+      Res = getMin(DstFXSema).getValue();
+  } else
+    Overflowed = Val > FloatMax || Val < FloatMin;
+
+  if (Overflow)
+    *Overflow = Overflowed;
+
+  return APFixedPoint(Res, DstFXSema);
+}
+
+} // namespace llvm

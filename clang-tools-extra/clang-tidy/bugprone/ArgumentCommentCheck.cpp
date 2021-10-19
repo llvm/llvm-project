@@ -20,10 +20,14 @@ namespace clang {
 namespace tidy {
 namespace bugprone {
 namespace {
-AST_MATCHER(Decl, isFromStdNamespace) {
+AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
   if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
-    return D->isStdNamespace();
-  return false;
+    if (D->isStdNamespace())
+      return true;
+  if (Node.getLocation().isInvalid())
+    return false;
+  return Node.getASTContext().getSourceManager().isInSystemHeader(
+      Node.getLocation());
 }
 } // namespace
 
@@ -66,13 +70,13 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                // not specified by the standard, and standard library
                // implementations in practice have to use reserved names to
                // avoid conflicts with same-named macros.
-               unless(hasDeclaration(isFromStdNamespace())))
+               unless(hasDeclaration(isFromStdNamespaceOrSystemHeader())))
           .bind("expr"),
       this);
-  Finder->addMatcher(
-      cxxConstructExpr(unless(hasDeclaration(isFromStdNamespace())))
-          .bind("expr"),
-      this);
+  Finder->addMatcher(cxxConstructExpr(unless(hasDeclaration(
+                                          isFromStdNamespaceOrSystemHeader())))
+                         .bind("expr"),
+                     this);
 }
 
 static std::vector<std::pair<SourceLocation, StringRef>>
@@ -176,8 +180,8 @@ static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
     return InComment == InDecl;
   InComment = InComment.trim('_');
   InDecl = InDecl.trim('_');
-  // FIXME: compare_lower only works for ASCII.
-  return InComment.compare_lower(InDecl) == 0;
+  // FIXME: compare_insensitive only works for ASCII.
+  return InComment.compare_insensitive(InDecl) == 0;
 }
 
 static bool looksLikeExpectMethod(const CXXMethodDecl *Expect) {
@@ -280,7 +284,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     IdentifierInfo *II = PVD->getIdentifier();
     if (!II)
       continue;
-    if (auto Template = Callee->getTemplateInstantiationPattern()) {
+    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern()) {
       // Don't warn on arguments for parameters instantiated from template
       // parameter packs. If we find more arguments than the template
       // definition has, it also means that they correspond to a parameter

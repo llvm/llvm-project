@@ -1,8 +1,8 @@
 ; RUN: llc -O3 -aarch64-enable-gep-opt=true -verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -mattr=-use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -mattr=+use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
-; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -aarch64-use-aa=false -print-after=codegenprepare < %s 2>&1 | FileCheck --check-prefix=CHECK-NoAA %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s 2>&1 | FileCheck --check-prefix=CHECK-UseAA %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnueabi"
@@ -15,7 +15,7 @@ target triple = "aarch64-linux-gnueabi"
 %struct = type { i32, i32, i32, i32, [20 x i32] }
 
 ; Check that when two complex GEPs are used in two basic blocks, LLVM can
-; elimilate the common subexpression for the second use.
+; eliminate the common subexpression for the second use.
 define void @test_GEP_CSE([240 x %struct]* %string, i32* %adj, i32 %lib, i64 %idxprom) {
   %liberties = getelementptr [240 x %struct], [240 x %struct]* %string, i64 1, i64 %idxprom, i32 3
   %1 = load i32, i32* %liberties, align 4

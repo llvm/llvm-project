@@ -44,64 +44,64 @@ class VirtRegMap;
   /// Calculate auxiliary information for a virtual register such as its
   /// spill weight and allocation hint.
   class VirtRegAuxInfo {
-  public:
-    using NormalizingFn = float (*)(float, unsigned, unsigned);
-
-  private:
     MachineFunction &MF;
     LiveIntervals &LIS;
-    VirtRegMap *VRM;
+    const VirtRegMap &VRM;
     const MachineLoopInfo &Loops;
     const MachineBlockFrequencyInfo &MBFI;
-    DenseMap<unsigned, float> Hint;
-    NormalizingFn normalize;
+
+    /// Returns true if Reg of live interval LI is used in instruction with many
+    /// operands like STATEPOINT.
+    bool isLiveAtStatepointVarArg(LiveInterval &LI);
 
   public:
-    VirtRegAuxInfo(MachineFunction &mf, LiveIntervals &lis,
-                   VirtRegMap *vrm, const MachineLoopInfo &loops,
-                   const MachineBlockFrequencyInfo &mbfi,
-                   NormalizingFn norm = normalizeSpillWeight)
-        : MF(mf), LIS(lis), VRM(vrm), Loops(loops), MBFI(mbfi), normalize(norm) {}
+    VirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS,
+                   const VirtRegMap &VRM, const MachineLoopInfo &Loops,
+                   const MachineBlockFrequencyInfo &MBFI)
+        : MF(MF), LIS(LIS), VRM(VRM), Loops(Loops), MBFI(MBFI) {}
+
+    virtual ~VirtRegAuxInfo() = default;
 
     /// (re)compute li's spill weight and allocation hint.
-    void calculateSpillWeightAndHint(LiveInterval &li);
+    void calculateSpillWeightAndHint(LiveInterval &LI);
 
-    /// Compute future expected spill weight of a split artifact of li
+    /// Compute future expected spill weight of a split artifact of LI
     /// that will span between start and end slot indexes.
-    /// \param li     The live interval to be split.
-    /// \param start  The expected begining of the split artifact. Instructions
+    /// \param LI     The live interval to be split.
+    /// \param Start  The expected beginning of the split artifact. Instructions
     ///               before start will not affect the weight.
-    /// \param end    The expected end of the split artifact. Instructions
+    /// \param End    The expected end of the split artifact. Instructions
     ///               after end will not affect the weight.
     /// \return The expected spill weight of the split artifact. Returns
-    /// negative weight for unspillable li.
-    float futureWeight(LiveInterval &li, SlotIndex start, SlotIndex end);
+    /// negative weight for unspillable LI.
+    float futureWeight(LiveInterval &LI, SlotIndex Start, SlotIndex End);
 
+    /// Compute spill weights and allocation hints for all virtual register
+    /// live intervals.
+    void calculateSpillWeightsAndHints();
+
+  protected:
     /// Helper function for weight calculations.
-    /// (Re)compute li's spill weight and allocation hint, or, for non null
+    /// (Re)compute LI's spill weight and allocation hint, or, for non null
     /// start and end - compute future expected spill weight of a split
-    /// artifact of li that will span between start and end slot indexes.
-    /// \param li     The live interval for which to compute the weight.
-    /// \param start  The expected begining of the split artifact. Instructions
+    /// artifact of LI that will span between start and end slot indexes.
+    /// \param LI     The live interval for which to compute the weight.
+    /// \param Start  The expected beginning of the split artifact. Instructions
     ///               before start will not affect the weight. Relevant for
     ///               weight calculation of future split artifact.
-    /// \param end    The expected end of the split artifact. Instructions
+    /// \param End    The expected end of the split artifact. Instructions
     ///               after end will not affect the weight. Relevant for
     ///               weight calculation of future split artifact.
-    /// \return The spill weight. Returns negative weight for unspillable li.
-    float weightCalcHelper(LiveInterval &li, SlotIndex *start = nullptr,
-                           SlotIndex *end = nullptr);
+    /// \return The spill weight. Returns negative weight for unspillable LI.
+    float weightCalcHelper(LiveInterval &LI, SlotIndex *Start = nullptr,
+                           SlotIndex *End = nullptr);
+
+    /// Weight normalization function.
+    virtual float normalize(float UseDefFreq, unsigned Size,
+                            unsigned NumInstr) {
+      return normalizeSpillWeight(UseDefFreq, Size, NumInstr);
+    }
   };
-
-  /// Compute spill weights and allocation hints for all virtual register
-  /// live intervals.
-  void calculateSpillWeightsAndHints(LiveIntervals &LIS, MachineFunction &MF,
-                                     VirtRegMap *VRM,
-                                     const MachineLoopInfo &MLI,
-                                     const MachineBlockFrequencyInfo &MBFI,
-                                     VirtRegAuxInfo::NormalizingFn norm =
-                                         normalizeSpillWeight);
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_CALCSPILLWEIGHTS_H

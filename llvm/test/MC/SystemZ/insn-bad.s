@@ -491,11 +491,23 @@
 #CHECK: bras	%r0, 1
 #CHECK: error: offset out of range
 #CHECK: bras	%r0, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jas	%r0, -0x100002
+#CHECK: error: offset out of range
+#CHECK: jas	%r0, -1
+#CHECK: error: offset out of range
+#CHECK: jas	%r0, 1
+#CHECK: error: offset out of range
+#CHECK: jas	%r0, 0x10000
 
 	bras	%r0, -0x100002
 	bras	%r0, -1
 	bras	%r0, 1
 	bras	%r0, 0x10000
+	jas	%r0, -0x100002
+	jas	%r0, -1
+	jas	%r0, 1
+	jas	%r0, 0x10000
 
 #CHECK: error: offset out of range
 #CHECK: brasl	%r0, -0x1000000002
@@ -505,11 +517,23 @@
 #CHECK: brasl	%r0, 1
 #CHECK: error: offset out of range
 #CHECK: brasl	%r0, 0x100000000
+#CHECK: error: offset out of range
+#CHECK: jasl	%r0, -0x1000000002
+#CHECK: error: offset out of range
+#CHECK: jasl	%r0, -1
+#CHECK: error: offset out of range
+#CHECK: jasl	%r0, 1
+#CHECK: error: offset out of range
+#CHECK: jasl	%r0, 0x100000000
 
 	brasl	%r0, -0x1000000002
 	brasl	%r0, -1
 	brasl	%r0, 1
 	brasl	%r0, 0x100000000
+	jasl	%r0, -0x1000000002
+	jasl	%r0, -1
+	jasl	%r0, 1
+	jasl	%r0, 0x100000000
 
 #CHECK: error: offset out of range
 #CHECK: brc	0, -0x100002
@@ -519,11 +543,82 @@
 #CHECK: brc	0, 1
 #CHECK: error: offset out of range
 #CHECK: brc	0, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jnop -0x100002
+#CHECK: error: offset out of range
+#CHECK: jnop    -1
+#CHECK: error: offset out of range
+#CHECK: jnop    1
+#CHECK: error: offset out of range
+#CHECK: jnop    0x10000
 
 	brc	0, -0x100002
 	brc	0, -1
 	brc	0, 1
 	brc	0, 0x10000
+	jnop	-0x100002
+	jnop	-1
+	jnop	1
+	jnop	0x10000
+
+#CHECK: error: invalid instruction
+#CHECK: jlu     label
+#CHECK: error: invalid instruction
+#CHECK: jlne    label
+#CHECK: error: invalid instruction
+#CHECK: jlnh    label
+#CHECK: error: invalid instruction
+#CHECK: jll     label
+#CHECK: error: invalid instruction
+#CHECK: jlnl    label
+#CHECK: error: invalid instruction
+#CHECK: jlhe    label
+#CHECK: error: invalid instruction
+#CHECK: jlnhe   label
+#CHECK: error: invalid instruction
+#CHECK: jlle    label
+#CHECK: error: invalid instruction
+#CHECK: jlnle   label
+#CHECK: error: invalid instruction
+#CHECK: jlz     label
+#CHECK: error: invalid instruction
+#CHECK: jlnz    label
+#CHECK: error: invalid instruction
+#CHECK: jlp     label
+#CHECK: error: invalid instruction
+#CHECK: jlnp    label
+#CHECK: error: invalid instruction
+#CHECK: jlm     label
+#CHECK: error: invalid instruction
+#CHECK: jlnm    label
+#CHECK: error: invalid instruction
+#CHECK: jllh    label
+#CHECK: error: invalid instruction
+#CHECK: jllnlh  label
+#CHECK: error: invalid instruction
+#CHECK: jlo     label
+#CHECK: error: invalid instruction
+#CHECK: jlno    label
+
+	jlu	label
+	jlne	label
+	jlnh	label
+	jll	label
+	jlnl	label
+	jlhe	label
+	jlnhe	label
+	jlle	label
+	jlnle	label
+	jlz	label
+	jlnz	label
+	jlp	label
+	jlnp	label
+	jlm	label
+	jlnm	label
+	jllh	label
+	jllnlh	label
+	jlo	label
+	jlno	label
 
 #CHECK: error: invalid operand
 #CHECK: brc	foo, bar
@@ -544,11 +639,28 @@
 #CHECK: brcl	0, 1
 #CHECK: error: offset out of range
 #CHECK: brcl	0, 0x100000000
+#CHECK: error: offset out of range
+#CHECK: jgnop	-0x1000000002
+#CHECK: error: offset out of range
+#CHECK: jgnop	-1
+#CHECK: error: offset out of range
+#CHECK: jgnop	1
+#CHECK: error: offset out of range
+#CHECK: jgnop	0x100000000
 
 	brcl	0, -0x1000000002
 	brcl	0, -1
 	brcl	0, 1
 	brcl	0, 0x100000000
+	jgnop	-0x1000000002
+	jgnop	-1
+	jgnop	1
+	jgnop	0x100000000
+
+
+#CHECK: error: invalid instruction
+#CHECK: jlnop	label
+	jlnop	label
 
 #CHECK: error: invalid operand
 #CHECK: brcl	foo, bar
@@ -602,11 +714,23 @@
 #CHECK: brxh	%r0, %r2, 1
 #CHECK: error: offset out of range
 #CHECK: brxh	%r0, %r2, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jxh	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: jxh	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: jxh	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: jxh	%r0, %r2, 0x10000
 
 	brxh	%r0, %r2, -0x100002
 	brxh	%r0, %r2, -1
 	brxh	%r0, %r2, 1
 	brxh	%r0, %r2, 0x10000
+	jxh	%r0, %r2, -0x100002
+	jxh	%r0, %r2, -1
+	jxh	%r0, %r2, 1
+	jxh	%r0, %r2, 0x10000
 
 #CHECK: error: offset out of range
 #CHECK: brxhg	%r0, %r2, -0x100002
@@ -616,11 +740,23 @@
 #CHECK: brxhg	%r0, %r2, 1
 #CHECK: error: offset out of range
 #CHECK: brxhg	%r0, %r2, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jxhg	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: jxhg	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: jxhg	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: jxhg	%r0, %r2, 0x10000
 
 	brxhg	%r0, %r2, -0x100002
 	brxhg	%r0, %r2, -1
 	brxhg	%r0, %r2, 1
 	brxhg	%r0, %r2, 0x10000
+	jxhg	%r0, %r2, -0x100002
+	jxhg	%r0, %r2, -1
+	jxhg	%r0, %r2, 1
+	jxhg	%r0, %r2, 0x10000
 
 #CHECK: error: offset out of range
 #CHECK: brxle	%r0, %r2, -0x100002
@@ -630,11 +766,23 @@
 #CHECK: brxle	%r0, %r2, 1
 #CHECK: error: offset out of range
 #CHECK: brxle	%r0, %r2, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jxle	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: jxle	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: jxle	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: jxle	%r0, %r2, 0x10000
 
 	brxle	%r0, %r2, -0x100002
 	brxle	%r0, %r2, -1
 	brxle	%r0, %r2, 1
 	brxle	%r0, %r2, 0x10000
+	jxle	%r0, %r2, -0x100002
+	jxle	%r0, %r2, -1
+	jxle	%r0, %r2, 1
+	jxle	%r0, %r2, 0x10000
 
 #CHECK: error: offset out of range
 #CHECK: brxlg	%r0, %r2, -0x100002
@@ -644,11 +792,23 @@
 #CHECK: brxlg	%r0, %r2, 1
 #CHECK: error: offset out of range
 #CHECK: brxlg	%r0, %r2, 0x10000
+#CHECK: error: offset out of range
+#CHECK: jxleg	%r0, %r2, -0x100002
+#CHECK: error: offset out of range
+#CHECK: jxleg	%r0, %r2, -1
+#CHECK: error: offset out of range
+#CHECK: jxleg	%r0, %r2, 1
+#CHECK: error: offset out of range
+#CHECK: jxleg	%r0, %r2, 0x10000
 
 	brxlg	%r0, %r2, -0x100002
 	brxlg	%r0, %r2, -1
 	brxlg	%r0, %r2, 1
 	brxlg	%r0, %r2, 0x10000
+	jxleg	%r0, %r2, -0x100002
+	jxleg	%r0, %r2, -1
+	jxleg	%r0, %r2, 1
+	jxleg	%r0, %r2, 0x10000
 
 #CHECK: error: invalid operand
 #CHECK: bxh	%r0, %r0, 4096

@@ -14,31 +14,25 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCALLLOWERING_H
 
-#include "AMDGPU.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class GCNSubtarget;
 class MachineInstrBuilder;
+class SIMachineFunctionInfo;
 
 class AMDGPUCallLowering final : public CallLowering {
-  void lowerParameterPtr(Register DstReg, MachineIRBuilder &B, Type *ParamTy,
+  void lowerParameterPtr(Register DstReg, MachineIRBuilder &B,
                          uint64_t Offset) const;
 
-  void lowerParameter(MachineIRBuilder &B, Type *ParamTy, uint64_t Offset,
-                      Align Alignment, Register DstReg) const;
+  void lowerParameter(MachineIRBuilder &B, ArgInfo &AI, uint64_t Offset,
+                      Align Alignment) const;
 
-  /// A function of this type is used to perform value split action.
-  using SplitArgTy = std::function<void(ArrayRef<Register>, Register, LLT, LLT, int)>;
-
-  void splitToValueTypes(MachineIRBuilder &B,
-                         const ArgInfo &OrigArgInfo,
-                         SmallVectorImpl<ArgInfo> &SplitArgs,
-                         const DataLayout &DL,
-                         CallingConv::ID CallConv,
-                         bool IsOutgoing,
-                         SplitArgTy SplitArg) const;
+  bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                      SmallVectorImpl<BaseArgInfo> &Outs,
+                      bool IsVarArg) const override;
 
   bool lowerReturnVal(MachineIRBuilder &B, const Value *Val,
                       ArrayRef<Register> VRegs, MachineInstrBuilder &Ret) const;
@@ -47,19 +41,44 @@ public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &B, const Value *Val,
-                   ArrayRef<Register> VRegs) const override;
+                   ArrayRef<Register> VRegs,
+                   FunctionLoweringInfo &FLI) const override;
 
   bool lowerFormalArgumentsKernel(MachineIRBuilder &B, const Function &F,
                                   ArrayRef<ArrayRef<Register>> VRegs) const;
 
   bool lowerFormalArguments(MachineIRBuilder &B, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs,
+                            FunctionLoweringInfo &FLI) const override;
 
   bool passSpecialInputs(MachineIRBuilder &MIRBuilder,
                          CCState &CCInfo,
                          SmallVectorImpl<std::pair<MCRegister, Register>> &ArgRegs,
                          CallLoweringInfo &Info) const;
 
+  bool
+  doCallerAndCalleePassArgsTheSameWay(CallLoweringInfo &Info,
+                                      MachineFunction &MF,
+                                      SmallVectorImpl<ArgInfo> &InArgs) const;
+
+  bool
+  areCalleeOutgoingArgsTailCallable(CallLoweringInfo &Info, MachineFunction &MF,
+                                    SmallVectorImpl<ArgInfo> &OutArgs) const;
+
+  /// Returns true if the call can be lowered as a tail call.
+  bool
+  isEligibleForTailCallOptimization(MachineIRBuilder &MIRBuilder,
+                                    CallLoweringInfo &Info,
+                                    SmallVectorImpl<ArgInfo> &InArgs,
+                                    SmallVectorImpl<ArgInfo> &OutArgs) const;
+
+  void handleImplicitCallArguments(
+      MachineIRBuilder &MIRBuilder, MachineInstrBuilder &CallInst,
+      const GCNSubtarget &ST, const SIMachineFunctionInfo &MFI,
+      ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const;
+
+  bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
+                     SmallVectorImpl<ArgInfo> &OutArgs) const;
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 

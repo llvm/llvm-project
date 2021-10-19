@@ -21,12 +21,6 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-#if TEST_STD_VER >= 11
-#define DELETE_FUNCTION = delete
-#else
-#define DELETE_FUNCTION
-#endif
-
 int new_count = 0;
 
 struct A
@@ -42,7 +36,7 @@ struct A
     int get_int() const {return int_;}
     char get_char() const {return char_;}
 
-    A* operator& () DELETE_FUNCTION;
+    A* operator& () = delete;
 private:
     int int_;
     char char_;
@@ -93,6 +87,22 @@ struct Three
 };
 
 int Three::count = 0;
+
+template<class T>
+struct AllocNoConstruct : std::allocator<T>
+{
+    AllocNoConstruct() = default;
+
+    template <class T1>
+    AllocNoConstruct(AllocNoConstruct<T1>) {}
+
+    template <class T1>
+    struct rebind {
+        typedef AllocNoConstruct<T1> other;
+    };
+
+    void construct(void*) { assert(false); }
+};
 
 template <class Alloc>
 void test()
@@ -160,6 +170,13 @@ int main(int, char**)
     assert(p->get_char() == 'f');
     }
     assert(A::count == 0);
+
+    // Test that we don't call construct before C++20.
+#if TEST_STD_VER < 20
+    {
+    (void)std::allocate_shared<int>(AllocNoConstruct<int>());
+    }
+#endif // TEST_STD_VER < 20
 
   return 0;
 }

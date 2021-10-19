@@ -23,7 +23,7 @@ Requirements
 ============
 
 In order to use the LLVM testing infrastructure, you will need all of the
-software required to build LLVM, as well as `Python <http://python.org>`_ 2.7 or
+software required to build LLVM, as well as `Python <http://python.org>`_ 3.6 or
 later.
 
 LLVM Testing Infrastructure Organization
@@ -36,16 +36,17 @@ and ``llvm/test`` respectively and are expected to always pass -- they should be
 run before every commit.
 
 The whole programs tests are referred to as the "LLVM test suite" (or
-"test-suite") and are in the ``test-suite`` module in subversion. For
-historical reasons, these tests are also referred to as the "nightly
+"test-suite") and are in the ``test-suite``
+`repository on GitHub <https://github.com/llvm/llvm-test-suite.git>`_.
+For historical reasons, these tests are also referred to as the "nightly
 tests" in places, which is less ambiguous than "test-suite" and remains
 in use although we run them much more often than nightly.
 
 Unit tests
 ----------
 
-Unit tests are written using `Google Test <https://github.com/google/googletest/blob/master/googletest/docs/primer.md>`_
-and `Google Mock <https://github.com/google/googletest/blob/master/googlemock/docs/for_dummies.md>`_
+Unit tests are written using `Google Test <https://github.com/google/googletest/blob/master/docs/primer.md>`_
+and `Google Mock <https://github.com/google/googletest/blob/master/docs/gmock_for_dummies.md>`_
 and are located in the ``llvm/unittests`` directory.
 In general unit tests are reserved for targeting the support library and other
 generic data structure, we prefer relying on regression tests for testing
@@ -73,7 +74,7 @@ transforming it. They are tested in general using the same infrastructure as the
 regression tests, by creating a separate "Printer" pass to consume the analysis
 result and print it on the standard output in a textual format suitable for
 FileCheck.
-See `llvm/test/Analysis/BranchProbabilityInfo/loop.ll <https://github.com/llvm/llvm-project/blob/master/llvm/test/Analysis/BranchProbabilityInfo/loop.ll>`_
+See `llvm/test/Analysis/BranchProbabilityInfo/loop.ll <https://github.com/llvm/llvm-project/blob/main/llvm/test/Analysis/BranchProbabilityInfo/loop.ll>`_
 for an example of such test.
 
 ``test-suite``
@@ -94,7 +95,8 @@ serve as a way of benchmarking LLVM performance, both in terms of the
 efficiency of the programs generated as well as the speed with which
 LLVM compiles, optimizes, and generates code.
 
-The test-suite is located in the ``test-suite`` Subversion module.
+The test-suite is located in the ``test-suite``
+`repository on GitHub <https://github.com/llvm/llvm-test-suite.git>`_.
 
 See the :doc:`TestSuiteGuide` for details.
 
@@ -107,13 +109,13 @@ The test are written in C based languages or in LLVM assembly language.
 These tests are compiled and run under a debugger. The debugger output
 is checked to validate of debugging information. See README.txt in the
 test suite for more information. This test suite is located in the
-``debuginfo-tests`` Subversion module.
+``cross-project-tests/debuginfo-tests`` directory.
 
 Quick start
 ===========
 
-The tests are located in two separate Subversion modules. The unit and
-regression tests are in the main "llvm" module under the directories
+The tests are located in two separate repositories. The unit and
+regression tests are in the main "llvm"/ directory under the directories
 ``llvm/unittests`` and ``llvm/test`` (so you get these tests for free with the
 main LLVM tree). Use ``make check-all`` to run the unit and regression tests
 after building LLVM.
@@ -173,13 +175,18 @@ or to run all of the ARM CodeGen tests:
 
     % llvm-lit ~/llvm/test/CodeGen/ARM
 
+The regression tests will use the Python psutil module only if installed in a
+**non-user** location. Under Linux, install with sudo or within a virtual
+environment. Under Windows, install Python for all users and then run
+``pip install psutil`` in an elevated command prompt.
+
 For more information on using the :program:`lit` tool, see ``llvm-lit --help``
 or the :doc:`lit man page <CommandGuide/lit>`.
 
 Debugging Information tests
 ---------------------------
 
-To run debugging information tests simply add the ``debuginfo-tests``
+To run debugging information tests simply add the ``cross-project-tests``
 project to your ``LLVM_ENABLE_PROJECTS`` define on the cmake
 command-line.
 
@@ -459,8 +466,12 @@ will be a failure if its execution succeeds.
 ``REQUIRES`` and ``UNSUPPORTED`` and ``XFAIL`` all accept a comma-separated
 list of boolean expressions. The values in each expression may be:
 
-- Features added to ``config.available_features`` by
-  configuration files such as ``lit.cfg``.
+- Features added to ``config.available_features`` by configuration files such as ``lit.cfg``.
+  String comparison of features is case-sensitive. Furthermore, a boolean expression can
+  contain any Python regular expression enclosed in ``{{ }}``, in which case the boolean
+  expression is satisfied if any feature matches the regular expression. Regular
+  expressions can appear inside an identifier, so for example ``he{{l+}}o`` would match
+  ``helo``, ``hello``, ``helllo``, and so on.
 - Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
 
 | ``REQUIRES`` enables the test if all expressions are true.
@@ -537,6 +548,17 @@ RUN lines:
 
    Example: ``%:s: C\Desktop Files\foo_test.s.tmp``
 
+``%errc_<ERRCODE>``
+
+ Some error messages may be substituted to allow different spellings
+ based on the host platform.
+
+   The following error codes are currently supported:
+   ENOENT, EISDIR, EINVAL, EACCES.
+
+   Example: ``Linux %errc_ENOENT: No such file or directory``
+
+   Example: ``Windows %errc_ENOENT: no such file or directory``
 
 **LLVM-specific substitutions:**
 

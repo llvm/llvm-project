@@ -23,9 +23,8 @@ define i32 @call_global(i32 %a, i32 %b) {
 ; MIPS32_PIC-NEXT:    .cfi_def_cfa_offset 24
 ; MIPS32_PIC-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32_PIC-NEXT:    .cfi_offset 31, -4
-; MIPS32_PIC-NEXT:    addu $1, $2, $25
-; MIPS32_PIC-NEXT:    lw $25, %call16(f)($1)
-; MIPS32_PIC-NEXT:    move $gp, $1
+; MIPS32_PIC-NEXT:    addu $gp, $2, $25
+; MIPS32_PIC-NEXT:    lw $25, %call16(f)($gp)
 ; MIPS32_PIC-NEXT:    jalr $25
 ; MIPS32_PIC-NEXT:    nop
 ; MIPS32_PIC-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
@@ -46,10 +45,9 @@ define i32 @call_global_with_local_linkage(i32 %a, i32 %b) {
 ; MIPS32_PIC-NEXT:    .cfi_def_cfa_offset 24
 ; MIPS32_PIC-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32_PIC-NEXT:    .cfi_offset 31, -4
-; MIPS32_PIC-NEXT:    addu $1, $2, $25
-; MIPS32_PIC-NEXT:    lw $2, %got(f_with_local_linkage)($1)
-; MIPS32_PIC-NEXT:    addiu $25, $2, %lo(f_with_local_linkage)
-; MIPS32_PIC-NEXT:    move $gp, $1
+; MIPS32_PIC-NEXT:    addu $gp, $2, $25
+; MIPS32_PIC-NEXT:    lw $1, %got(f_with_local_linkage)($gp)
+; MIPS32_PIC-NEXT:    addiu $25, $1, %lo(f_with_local_linkage)
 ; MIPS32_PIC-NEXT:    jalr $25
 ; MIPS32_PIC-NEXT:    nop
 ; MIPS32_PIC-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload

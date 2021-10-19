@@ -15,7 +15,6 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
     @skipIfDarwinEmbedded
     # There is a Clang driver change missing on llvm.org.
     @expectedFailureAll(bugnumber="rdar://problem/54986190>")
-    @skipIfReproducer # This is hitting https://bugs.python.org/issue22393
     def test(self):
         """Test the x86_64-apple-ios-macabi target linked against a macos dylib"""
         self.build()
@@ -34,7 +33,7 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
     def check_debugserver(self, log):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
-        self.assertTrue('ostype' in process_info)
+        self.assertIn('ostype', process_info)
         self.assertEquals(process_info['ostype'], 'maccatalyst')
 
         aout_info = None

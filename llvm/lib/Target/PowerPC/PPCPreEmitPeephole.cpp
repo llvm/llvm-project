@@ -121,7 +121,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
       for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
         // Skip load immediate that is marked to be erased later because it
         // cannot be used to replace any other instructions.
-        if (InstrsToErase.find(&*BBI) != InstrsToErase.end())
+        if (InstrsToErase.contains(&*BBI))
           continue;
         // Skip non-load immediate.
         unsigned Opc = BBI->getOpcode();
@@ -338,8 +338,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
         // Create the symbol.
         MCContext &Context = MF->getContext();
-        MCSymbol *Symbol =
-            Context.createTempSymbol(Twine("pcrel"), false, false);
+        MCSymbol *Symbol = Context.createNamedTempSymbol("pcrel");
         MachineOperand PCRelLabel =
             MachineOperand::CreateMCSymbol(Symbol, PPCII::MO_PCREL_OPT_FLAG);
         Pair->DefInst->addOperand(*MF, PCRelLabel);
@@ -347,6 +346,64 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
         MadeChange |= true;
       }
       return MadeChange;
+    }
+
+    // This function removes redundant pairs of accumulator prime/unprime
+    // instructions. In some situations, it's possible the compiler inserts an
+    // accumulator prime instruction followed by an unprime instruction (e.g.
+    // when we store an accumulator after restoring it from a spill). If the
+    // accumulator is not used between the two, they can be removed. This
+    // function removes these redundant pairs from basic blocks.
+    // The algorithm is quite straightforward - every time we encounter a prime
+    // instruction, the primed register is added to a candidate set. Any use
+    // other than a prime removes the candidate from the set and any de-prime
+    // of a current candidate marks both the prime and de-prime for removal.
+    // This way we ensure we only remove prime/de-prime *pairs* with no
+    // intervening uses.
+    bool removeAccPrimeUnprime(MachineBasicBlock &MBB) {
+      DenseSet<MachineInstr *> InstrsToErase;
+      // Initially, none of the acc registers are candidates.
+      SmallVector<MachineInstr *, 8> Candidates(
+          PPC::UACCRCRegClass.getNumRegs(), nullptr);
+
+      for (MachineInstr &BBI : MBB.instrs()) {
+        unsigned Opc = BBI.getOpcode();
+        // If we are visiting a xxmtacc instruction, we add it and its operand
+        // register to the candidate set.
+        if (Opc == PPC::XXMTACC) {
+          Register Acc = BBI.getOperand(0).getReg();
+          assert(PPC::ACCRCRegClass.contains(Acc) &&
+                 "Unexpected register for XXMTACC");
+          Candidates[Acc - PPC::ACC0] = &BBI;
+        }
+        // If we are visiting a xxmfacc instruction and its operand register is
+        // in the candidate set, we mark the two instructions for removal.
+        else if (Opc == PPC::XXMFACC) {
+          Register Acc = BBI.getOperand(0).getReg();
+          assert(PPC::ACCRCRegClass.contains(Acc) &&
+                 "Unexpected register for XXMFACC");
+          if (!Candidates[Acc - PPC::ACC0])
+            continue;
+          InstrsToErase.insert(&BBI);
+          InstrsToErase.insert(Candidates[Acc - PPC::ACC0]);
+        }
+        // If we are visiting an instruction using an accumulator register
+        // as operand, we remove it from the candidate set.
+        else {
+          for (MachineOperand &Operand : BBI.operands()) {
+            if (!Operand.isReg())
+              continue;
+            Register Reg = Operand.getReg();
+            if (PPC::ACCRCRegClass.contains(Reg))
+              Candidates[Reg - PPC::ACC0] = nullptr;
+          }
+        }
+      }
+
+      for (MachineInstr *MI : InstrsToErase)
+        MI->eraseFromParent();
+      NumRemovedInPreEmit += InstrsToErase.size();
+      return !InstrsToErase.empty();
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
@@ -370,6 +427,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
       for (MachineBasicBlock &MBB : MF) {
         Changed |= removeRedundantLIs(MBB, TRI);
         Changed |= addLinkerOpt(MBB, TRI);
+        Changed |= removeAccPrimeUnprime(MBB);
         for (MachineInstr &MI : MBB) {
           unsigned Opc = MI.getOpcode();
           if (Opc == PPC::UNENCODED_NOP) {

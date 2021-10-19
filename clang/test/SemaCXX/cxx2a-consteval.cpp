@@ -238,7 +238,7 @@ constexpr int f_c(int i) {
 // expected-note@-1 {{declared here}}
   int t = f(i);
 // expected-error@-1 {{is not a constant expression}}
-// expected-note@-2 {{read of non-const variable}}
+// expected-note@-2 {{function parameter}}
   return f(0);  
 }
 
@@ -254,7 +254,7 @@ auto l1 = [](int i) constexpr {
 // expected-note@-1 {{declared here}}
   int t = f(i);
 // expected-error@-1 {{is not a constant expression}}
-// expected-note@-2 {{read of non-const variable}}
+// expected-note@-2 {{function parameter}}
   return f(0);  
 };
 
@@ -594,3 +594,52 @@ void test() {
 }
 
 } // namespace special_ctor
+
+namespace unevaluated {
+
+template <typename T, typename U> struct is_same { static const bool value = false; };
+template <typename T> struct is_same<T, T> { static const bool value = true; };
+
+long f(); // expected-note {{declared here}}
+auto consteval g(auto a) {
+  return a;
+}
+
+auto e = g(f()); // expected-error {{is not a constant expression}}
+                 // expected-note@-1 {{non-constexpr function 'f' cannot be used in a constant expression}}
+
+using T = decltype(g(f()));
+static_assert(is_same<long, T>::value);
+
+} // namespace unevaluated
+
+namespace PR50779 {
+struct derp {
+  int b = 0;
+};
+
+constexpr derp d;
+
+struct test {
+  consteval int operator[](int i) const { return {}; }
+  consteval const derp * operator->() const { return &d; }
+  consteval int f() const { return 12; } // expected-note 2{{declared here}}
+};
+
+constexpr test a;
+
+// We previously rejected both of these overloaded operators as taking the
+// address of a consteval function outside of an immediate context, but we
+// accepted direct calls to the overloaded operator. Now we show that we accept
+// both forms.
+constexpr int s = a.operator[](1);
+constexpr int t = a[1];
+constexpr int u = a.operator->()->b;
+constexpr int v = a->b;
+// FIXME: I believe this case should work, but we currently reject.
+constexpr int w = (a.*&test::f)(); // expected-error {{cannot take address of consteval function 'f' outside of an immediate invocation}}
+constexpr int x = a.f();
+
+// Show that we reject when not in an immediate context.
+int w2 = (a.*&test::f)(); // expected-error {{cannot take address of consteval function 'f' outside of an immediate invocation}}
+}

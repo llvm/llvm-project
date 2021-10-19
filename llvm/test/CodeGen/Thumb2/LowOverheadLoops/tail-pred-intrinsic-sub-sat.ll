@@ -10,7 +10,6 @@ define arm_aapcs_vfpcc void @usub_sat(i16* noalias nocapture readonly %pSrcA, i1
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB0_1: @ %vector.ph
-; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -28,7 +27,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %blockSize, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %blockSize, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -36,7 +34,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %next.gep = getelementptr i16, i16* %pSrcA, i32 %index
   %next.gep20 = getelementptr i16, i16* %pDst, i32 %index
   %next.gep21 = getelementptr i16, i16* %pSrcB, i32 %index
-  %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %blockSize)
   %0 = bitcast i16* %next.gep to <8 x i16>*
   %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %0, i32 2, <8 x i1> %active.lane.mask, <8 x i16> undef)
   %1 = bitcast i16* %next.gep21 to <8 x i16>*
@@ -61,7 +59,6 @@ define arm_aapcs_vfpcc void @ssub_sat(i16* noalias nocapture readonly %pSrcA, i1
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB1_1: @ %vector.ph
-; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -79,7 +76,6 @@ entry:
 vector.ph:                                        ; preds = %entry
   %n.rnd.up = add i32 %blockSize, 7
   %n.vec = and i32 %n.rnd.up, -8
-  %trip.count.minus.1 = add i32 %blockSize, -1
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -87,7 +83,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %next.gep = getelementptr i16, i16* %pSrcA, i32 %index
   %next.gep20 = getelementptr i16, i16* %pDst, i32 %index
   %next.gep21 = getelementptr i16, i16* %pSrcB, i32 %index
-  %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %blockSize)
   %0 = bitcast i16* %next.gep to <8 x i16>*
   %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %0, i32 2, <8 x i1> %active.lane.mask, <8 x i16> undef)
   %1 = bitcast i16* %next.gep21 to <8 x i16>*

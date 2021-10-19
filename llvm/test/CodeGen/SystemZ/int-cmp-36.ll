@@ -3,11 +3,11 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@g = global i16 1
-@h = global i16 1, align 1, section "foo"
+@g = dso_local global i16 1
+@h = dso_local global i16 1, align 1, section "foo"
 
 ; Check signed comparison.
-define i32 @f1(i32 %src1) {
+define dso_local i32 @f1(i32 %src1) {
 ; CHECK-LABEL: f1:
 ; CHECK: chrl %r2, g
 ; CHECK-NEXT: blr %r14
@@ -26,7 +26,7 @@ exit:
 }
 
 ; Check unsigned comparison, which cannot use CHRL.
-define i32 @f2(i32 %src1) {
+define dso_local i32 @f2(i32 %src1) {
 ; CHECK-LABEL: f2:
 ; CHECK-NOT: chrl
 ; CHECK: br %r14
@@ -44,7 +44,7 @@ exit:
 }
 
 ; Check equality.
-define i32 @f3(i32 %src1) {
+define dso_local i32 @f3(i32 %src1) {
 ; CHECK-LABEL: f3:
 ; CHECK: chrl %r2, g
 ; CHECK-NEXT: ber %r14
@@ -63,7 +63,7 @@ exit:
 }
 
 ; Check inequality.
-define i32 @f4(i32 %src1) {
+define dso_local i32 @f4(i32 %src1) {
 ; CHECK-LABEL: f4:
 ; CHECK: chrl %r2, g
 ; CHECK-NEXT: blhr %r14
@@ -82,7 +82,7 @@ exit:
 }
 
 ; Repeat f1 with an unaligned address.
-define i32 @f5(i32 %src1) {
+define dso_local i32 @f5(i32 %src1) {
 ; CHECK-LABEL: f5:
 ; CHECK: lgrl [[REG:%r[0-5]]], h@GOT
 ; CHECK: ch %r2, 0([[REG]])
@@ -102,7 +102,7 @@ exit:
 }
 
 ; Check the comparison can be reversed if that allows CHRL to be used.
-define i32 @f6(i32 %src2) {
+define dso_local i32 @f6(i32 %src2) {
 ; CHECK-LABEL: f6:
 ; CHECK: chrl %r2, g
 ; CHECK-NEXT: bhr %r14

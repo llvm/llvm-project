@@ -29,7 +29,12 @@
 // CHECK:   }
 // CHECK: }
 
+// NO-REWRITE-NOT: #include
+// REWRITE: #include "a.h"
+
 // CHECK: #pragma clang module begin nested.a
+// NO-REWRITE-NOT: #include
+// REWRITE: #include "c.h"
 // CHECK: #pragma clang module begin nested.c
 // CHECK: using T = int;
 // CHECK: #pragma clang module end

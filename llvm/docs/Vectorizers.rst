@@ -254,7 +254,7 @@ The Loop Vectorizer can vectorize loops that count backwards.
 
 .. code-block:: c++
 
-  int foo(int *A, int n) {
+  void foo(int *A, int n) {
     for (int i = n; i > 0; --i)
       A[i] +=1;
   }
@@ -267,7 +267,7 @@ that scatter/gathers memory.
 
 .. code-block:: c++
 
-  int foo(int * A, int * B, int n) {
+  void foo(int * A, int * B, int n) {
     for (intptr_t i = 0; i < n; ++i)
         A[i] += B[i * 4];
   }
@@ -284,7 +284,7 @@ vectorization is profitable.
 
 .. code-block:: c++
 
-  int foo(int *A, char *B, int n) {
+  void foo(int *A, char *B, int n) {
     for (int i = 0; i < n; ++i)
       A[i] += 4 * B[i];
   }
@@ -303,7 +303,7 @@ ignored (as other compilers do) are still being left un-vectorized.
 
   struct { int A[100], K, B[100]; } Foo;
 
-  int foo() {
+  void foo() {
     for (int i = 0; i < 100; ++i)
       Foo.A[i] = Foo.B[i] + 100;
   }
@@ -370,11 +370,30 @@ to be used simultaneously.
 The Loop Vectorizer uses a cost model to decide when it is profitable to unroll loops.
 The decision to unroll the loop depends on the register pressure and the generated code size. 
 
+Epilogue Vectorization
+^^^^^^^^^^^^^^^^^^^^^^
+
+When vectorizing a loop, often a scalar remainder (epilogue) loop is necessary
+to execute tail iterations of the loop if the loop trip count is unknown or it
+does not evenly divide the vectorization and unroll factors. When the
+vectorization and unroll factors are large, it's possible for loops with smaller
+trip counts to end up spending most of their time in the scalar (rather than
+the vector) code. In order to address this issue, the inner loop vectorizer is
+enhanced with a feature that allows it to vectorize epilogue loops with a
+vectorization and unroll factor combination that makes it more likely for small
+trip count loops to still execute in vectorized code. The diagram below shows
+the CFG for a typical epilogue vectorized loop with runtime checks. As
+illustrated the control flow is structured in a way that avoids duplicating the
+runtime pointer checks and optimizes the path length for loops that have very
+small trip counts.
+
+.. image:: epilogue-vectorization-cfg.png
+
 Performance
 -----------
 
 This section shows the execution time of Clang on a simple benchmark:
-`gcc-loops <https://github.com/llvm/llvm-test-suite/tree/master/SingleSource/UnitTests/Vectorizer>`_.
+`gcc-loops <https://github.com/llvm/llvm-test-suite/tree/main/SingleSource/UnitTests/Vectorizer>`_.
 This benchmarks is a collection of loops from the GCC autovectorization
 `page <http://gcc.gnu.org/projects/tree-ssa/vectorization.html>`_ by Dorit Nuzman.
 

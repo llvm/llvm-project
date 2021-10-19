@@ -3,6 +3,11 @@
 // RUN:   -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
 // RUN:   -std=c++11 -verify %s
 
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection\
+// RUN:   -analyzer-checker cplusplus.Move,alpha.cplusplus.SmartPtr\
+// RUN:   -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
+// RUN:   -std=c++20 -verify %s
+
 #include "Inputs/system-header-simulator-cxx.h"
 
 void clang_analyzer_warnIfReached();
@@ -333,7 +338,7 @@ std::unique_ptr<A> &&returnRValRefOfUniquePtr();
 void drefOnAssignedNullFromMethodPtrValidSmartPtr() {
   std::unique_ptr<A> P(new A());
   P = returnRValRefOfUniquePtr();
-  P->foo(); // No warning. 
+  P->foo(); // No warning.
 }
 
 void derefMoveConstructedWithValidPtr() {
@@ -374,7 +379,7 @@ std::unique_ptr<A> &&functionReturnsRValueRef();
 
 void derefMoveConstructedWithRValueRefReturn() {
   std::unique_ptr<A> P(functionReturnsRValueRef());
-  P->foo();  // No warning.
+  P->foo(); // No warning.
 }
 
 void derefConditionOnNullPtr() {
@@ -449,4 +454,92 @@ int derefConditionOnUnKnownPtr(int *q) {
     return *P; // No warning.
   else
     return *P; // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefAfterBranchingOnUnknownInnerPtr(std::unique_ptr<A> P) {
+  A *RP = P.get();
+  if (!RP) {
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  }
+}
+
+// The following is a silly function,
+// but serves to test if we are picking out
+// standard comparision functions from custom ones.
+template <typename T>
+bool operator<(std::unique_ptr<T> &x, double d);
+
+void uniquePtrComparision(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+  auto nullPtr = std::unique_ptr<int>();
+  auto otherPtr = std::unique_ptr<int>(new int(29));
+
+  clang_analyzer_eval(ptr == ptr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > ptr);  // expected-warning{{FALSE}}
+  clang_analyzer_eval(ptr <= ptr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(nullPtr <= unknownPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(unknownPtr >= nullPtr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != otherPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > nullPtr);   // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != nullptr);        // expected-warning{{TRUE}}
+  clang_analyzer_eval(nullPtr != nullptr);    // expected-warning{{FALSE}}
+  clang_analyzer_eval(nullptr <= unknownPtr); // expected-warning{{TRUE}}
+}
+
+void uniquePtrComparisionStateSplitting(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+
+  clang_analyzer_eval(ptr > unknownPtr); // expected-warning{{TRUE}}
+  // expected-warning@-1{{FALSE}}
+}
+
+void uniquePtrComparisionDifferingTypes(std::unique_ptr<int> unknownPtr) {
+  auto ptr = std::unique_ptr<int>(new int(13));
+  auto nullPtr = std::unique_ptr<A>();
+  auto otherPtr = std::unique_ptr<double>(new double(3.14));
+
+  clang_analyzer_eval(nullPtr <= unknownPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(unknownPtr >= nullPtr); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != otherPtr); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr > nullPtr);   // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ptr != nullptr);        // expected-warning{{TRUE}}
+  clang_analyzer_eval(nullPtr != nullptr);    // expected-warning{{FALSE}}
+  clang_analyzer_eval(nullptr <= unknownPtr); // expected-warning{{TRUE}}
+}
+
+#if __cplusplus >= 202002L
+
+void testOstreamOverload(std::unique_ptr<int> P) {
+  auto &Cout = std::cout;
+  auto &PtrCout = std::cout << P;
+  auto &StringCout = std::cout << "hello";
+  // We are testing the fact that in our modelling of
+  // operator<<(basic_ostream<T1> &, const unique_ptr<T2> &)
+  // we set the return SVal to the SVal of the ostream arg.
+  clang_analyzer_eval(&Cout == &PtrCout);    // expected-warning {{TRUE}}
+  // FIXME: Technically, they should be equal,
+  // that hasn't been modelled yet.
+  clang_analyzer_eval(&Cout == &StringCout); // expected-warning {{UNKNOWN}}
+}
+
+int glob;
+void testOstreamDoesntInvalidateGlobals(std::unique_ptr<int> P) {
+  int x = glob;
+  std::cout << P;
+  int y = glob;
+  clang_analyzer_eval(x == y); // expected-warning {{TRUE}}
+}
+
+#endif
+
+// The following test isn't really a "smart-ptr" test
+// It came up during a bug fix (D106296)
+void testCheckForFunctionsWithNoDecl(void (*bar)(bool, bool)) {
+  // This should NOT crash.
+  bar(true, false);
 }

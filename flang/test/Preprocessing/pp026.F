@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: res=((111)+666)
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: res = ((111)+666)
 * ## token pasting works in FLM
       integer function IFLM(x)
         integer :: x

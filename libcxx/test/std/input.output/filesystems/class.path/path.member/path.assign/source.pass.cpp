@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// These tests require locale for non-char paths
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <filesystem>
 
 // class path
@@ -26,17 +29,19 @@
 #include <string_view>
 #include <cassert>
 
+// On Windows, charset conversions cause allocations in the path class in
+// cases where no allocations are done on other platforms.
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include <iostream>
 
 
 template <class CharT>
 void RunTestCase(MultiStringType const& MS) {
   using namespace fs;
-  const char* Expect = MS;
+  const fs::path::value_type* Expect = MS;
   const CharT* TestPath = MS;
   const CharT* TestPathEnd = StrEnd(TestPath);
   const std::size_t Size = TestPathEnd - TestPath;
@@ -49,7 +54,7 @@ void RunTestCase(MultiStringType const& MS) {
     path p; PathReserve(p, S.length() + 1);
     {
       // string provides a contiguous iterator. No allocation needed.
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = (p = S);
       assert(&pref == &p);
     }
@@ -61,7 +66,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = p.assign(S);
       assert(&pref == &p);
     }
@@ -75,7 +80,7 @@ void RunTestCase(MultiStringType const& MS) {
     path p; PathReserve(p, S.length() + 1);
     {
       // string provides a contiguous iterator. No allocation needed.
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = (p = S);
       assert(&pref == &p);
     }
@@ -87,7 +92,7 @@ void RunTestCase(MultiStringType const& MS) {
     const std::basic_string_view<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = p.assign(S);
       assert(&pref == &p);
     }
@@ -102,7 +107,7 @@ void RunTestCase(MultiStringType const& MS) {
     {
       // char* pointers are contiguous and can be used with code_cvt directly.
       // no allocations needed.
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = (p = TestPath);
       assert(&pref == &p);
     }
@@ -112,7 +117,7 @@ void RunTestCase(MultiStringType const& MS) {
   {
     path p; PathReserve(p, Size + 1);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = p.assign(TestPath);
       assert(&pref == &p);
     }
@@ -122,7 +127,7 @@ void RunTestCase(MultiStringType const& MS) {
   {
     path p; PathReserve(p, Size + 1);
     {
-      DisableAllocationGuard g;
+      TEST_NOT_WIN32(DisableAllocationGuard g);
       path& pref = p.assign(TestPath, TestPathEnd);
       assert(&pref == &p);
     }
@@ -132,7 +137,7 @@ void RunTestCase(MultiStringType const& MS) {
   //////////////////////////////////////////////////////////////////////////////
   // Iterators
   {
-    using It = input_iterator<const CharT*>;
+    using It = cpp17_input_iterator<const CharT*>;
     path p; PathReserve(p, Size + 1);
     It it(TestPath);
     {
@@ -145,7 +150,7 @@ void RunTestCase(MultiStringType const& MS) {
     assert(p.string<CharT>() == TestPath);
   }
   {
-    using It = input_iterator<const CharT*>;
+    using It = cpp17_input_iterator<const CharT*>;
     path p; PathReserve(p, Size + 1);
     It it(TestPath);
     {
@@ -156,7 +161,7 @@ void RunTestCase(MultiStringType const& MS) {
     assert(p.string<CharT>() == TestPath);
   }
   {
-    using It = input_iterator<const CharT*>;
+    using It = cpp17_input_iterator<const CharT*>;
     path p; PathReserve(p, Size + 1);
     It it(TestPath);
     It e(TestPathEnd);
@@ -184,7 +189,7 @@ void test_sfinae() {
     static_assert(has_assign<It>(), "");
   }
   {
-    using It = input_iterator<const char*>;
+    using It = cpp17_input_iterator<const char*>;
     static_assert(std::is_assignable<path, It>::value, "");
     static_assert(has_assign<It>(), "");
   }
@@ -196,7 +201,7 @@ void test_sfinae() {
       using reference = const char&;
       using difference_type = std::ptrdiff_t;
     };
-    using It = input_iterator<const char*, Traits>;
+    using It = cpp17_input_iterator<const char*, Traits>;
     static_assert(std::is_assignable<path, It>::value, "");
     static_assert(has_assign<It>(), "");
   }
@@ -212,9 +217,9 @@ void test_sfinae() {
   }
 }
 
-void RunStringMoveTest(const char* Expect) {
+void RunStringMoveTest(const fs::path::value_type* Expect) {
   using namespace fs;
-  std::string ss(Expect);
+  fs::path::string_type ss(Expect);
   path p;
   {
     DisableAllocationGuard g; ((void)g);
@@ -224,14 +229,16 @@ void RunStringMoveTest(const char* Expect) {
   assert(p == Expect);
   {
     // Signature test
-    ASSERT_NOEXCEPT(p = std::move(ss));
+    LIBCPP_ONLY(ASSERT_NOEXCEPT(p = std::move(ss)));
   }
 }
 
 int main(int, char**) {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     RunTestCase<wchar_t>(MS);
+#endif
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
     RunStringMoveTest(MS);

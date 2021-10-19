@@ -88,22 +88,33 @@ private:
 
 /// Struct representing a replacement segment for the formatted string. It can
 /// be a segment of the formatting template (for `Literal`) or a replacement
-/// parameter (for `PositionalPH` and `SpecialPH`).
+/// parameter (for `PositionalPH`, `PositionalRangePH` and `SpecialPH`).
 struct FmtReplacement {
-  enum class Type { Empty, Literal, PositionalPH, SpecialPH };
+  enum class Type {
+    Empty,
+    Literal,
+    PositionalPH,
+    PositionalRangePH,
+    SpecialPH
+  };
 
   FmtReplacement() = default;
   explicit FmtReplacement(StringRef literal)
       : type(Type::Literal), spec(literal) {}
   FmtReplacement(StringRef spec, size_t index)
       : type(Type::PositionalPH), spec(spec), index(index) {}
+  FmtReplacement(StringRef spec, size_t index, size_t end)
+      : type(Type::PositionalRangePH), spec(spec), index(index), end(end) {}
   FmtReplacement(StringRef spec, FmtContext::PHKind placeholder)
       : type(Type::SpecialPH), spec(spec), placeholder(placeholder) {}
 
   Type type = Type::Empty;
   StringRef spec;
   size_t index = 0;
+  size_t end = kUnset;
   FmtContext::PHKind placeholder = FmtContext::PHKind::None;
+
+  static constexpr size_t kUnset = -1;
 };
 
 class FmtObjectBase {
@@ -121,7 +132,7 @@ protected:
   // std::vector<Base*>.
   struct CreateAdapters {
     template <typename... Ts>
-    std::vector<llvm::detail::format_adapter *> operator()(Ts &... items) {
+    std::vector<llvm::detail::format_adapter *> operator()(Ts &...items) {
       return std::vector<llvm::detail::format_adapter *>{&items...};
     }
   };
@@ -186,12 +197,27 @@ public:
   }
 };
 
+class FmtStrVecObject : public FmtObjectBase {
+public:
+  using StrFormatAdapter =
+      decltype(llvm::detail::build_format_adapter(std::declval<std::string>()));
+
+  FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
+                  ArrayRef<std::string> params);
+  FmtStrVecObject(FmtStrVecObject const &that) = delete;
+  FmtStrVecObject(FmtStrVecObject &&that);
+
+private:
+  SmallVector<StrFormatAdapter, 16> parameters;
+};
+
 /// Formats text by substituting placeholders in format string with replacement
 /// parameters.
 ///
 /// There are two categories of placeholders accepted, both led by a '$' sign:
 ///
-/// 1. Positional placeholder: $[0-9]+
+/// 1.a Positional placeholder: $[0-9]+
+/// 1.b Positional range placeholder: $[0-9]+...
 /// 2. Special placeholder:    $[a-zA-Z_][a-zA-Z0-9_]*
 ///
 /// Replacement parameters for positional placeholders are supplied as the
@@ -199,6 +225,9 @@ public:
 /// first parameter in `vals`, $1 by the second one, and so on. Note that you
 /// can use the positional placeholders in any order and repeat any times, for
 /// example, "$2 $1 $1 $0" is accepted.
+///
+/// Replace parameters for positional range placeholders are supplied as if
+/// positional placeholders were specified with commas separating them.
 ///
 /// Replacement parameters for special placeholders are supplied using the `ctx`
 /// format context.
@@ -223,7 +252,7 @@ public:
 /// 2. This utility does not support format layout because it is rarely needed
 ///    in C++ code generation.
 template <typename... Ts>
-inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&... vals)
+inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
     -> FmtObject<decltype(std::make_tuple(
         llvm::detail::build_format_adapter(std::forward<Ts>(vals))...))> {
   using ParamTuple = decltype(std::make_tuple(
@@ -232,6 +261,11 @@ inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&... vals)
       fmt, ctx,
       std::make_tuple(
           llvm::detail::build_format_adapter(std::forward<Ts>(vals))...));
+}
+
+inline FmtStrVecObject tgfmt(StringRef fmt, const FmtContext *ctx,
+                             ArrayRef<std::string> params) {
+  return FmtStrVecObject(fmt, ctx, params);
 }
 
 } // end namespace tblgen

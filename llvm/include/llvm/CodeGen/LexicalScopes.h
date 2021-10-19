@@ -194,9 +194,6 @@ public:
     return I != LexicalScopeMap.end() ? &I->second : nullptr;
   }
 
-  /// dump - Print data structures to dbgs().
-  void dump() const;
-
   /// getOrCreateAbstractScope - Find or create an abstract lexical scope.
   LexicalScope *getOrCreateAbstractScope(const DILocalScope *Scope);
 

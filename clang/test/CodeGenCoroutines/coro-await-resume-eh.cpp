@@ -28,7 +28,7 @@ struct throwing_task {
   };
 };
 
-// CHECK-LABEL: define void @_Z1fv()
+// CHECK-LABEL: define{{.*}} void @_Z1fv()
 throwing_task f() {
   // A variable RESUMETHREW is used to keep track of whether the body
   // of 'await_resume' threw an exception. Exceptions thrown in
@@ -57,12 +57,18 @@ throwing_task f() {
   // CHECK-NEXT: to label %[[RESUMEENDCATCHCONT:.+]] unwind label
   // CHECK: [[RESUMEENDCATCHCONT]]:
   // CHECK-NEXT: br label %[[RESUMETRYCONT]]
+  // CHECK: [[RESUMETRYCONT]]:
+  // CHECK-NEXT: br label %[[CLEANUP:.+]]
+  // CHECK: [[CLEANUP]]:
+  // CHECK: switch i32 %{{.+}}, label %{{.+}} [
+  // CHECK-NEXT: i32 0, label %[[CLEANUPCONT:.+]]
+  // CHECK-NEXT: ]
 
   // The variable RESUMETHREW is loaded and if true, then 'await_resume'
   // threw an exception and the coroutine body is skipped, and the final
   // suspend is executed immediately. Otherwise, the coroutine body is
   // executed, and then the final suspend.
-  // CHECK: [[RESUMETRYCONT]]:
+  // CHECK: [[CLEANUPCONT]]:
   // CHECK-NEXT: %[[RESUMETHREWLOAD:.+]] = load i1, i1* %[[RESUMETHREW]]
   // CHECK-NEXT: br i1 %[[RESUMETHREWLOAD]], label %[[RESUMEDCONT:.+]], label %[[RESUMEDBODY:.+]]
 
@@ -76,7 +82,7 @@ throwing_task f() {
   // CHECK-NEXT: br label %[[COROFINAL]]
 
   // CHECK: [[COROFINAL]]:
-  // CHECK-NEXT: call void @_ZN13throwing_task12promise_type13final_suspendEv
+  // CHECK: call void @_ZN13throwing_task12promise_type13final_suspendEv
   co_return;
 }
 
@@ -96,7 +102,7 @@ struct noexcept_task {
   };
 };
 
-// CHECK-LABEL: define void @_Z1gv()
+// CHECK-LABEL: define{{.*}} void @_Z1gv()
 noexcept_task g() {
   // If the await_resume function is marked as noexcept, none of the additional
   // conditions that are present in f() above are added to the IR.

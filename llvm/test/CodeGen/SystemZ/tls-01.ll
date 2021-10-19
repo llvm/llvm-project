@@ -3,11 +3,11 @@
 ; RUN: llc < %s -mcpu=z10 -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-MAIN
 ; RUN: llc < %s -mcpu=z10 -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-CP
 
-@x = thread_local global i32 0
+@x = dso_local thread_local global i32 0
 
 ; The offset must be loaded from the constant pool.  It doesn't really
 ; matter whether we use LARL/AG or LGRL/AGR for the last part.
-define i32 *@foo() {
+define dso_local i32 *@foo() {
 ; CHECK-CP: .LCP{{.*}}:
 ; CHECK-CP: .quad x@NTPOFF
 ;

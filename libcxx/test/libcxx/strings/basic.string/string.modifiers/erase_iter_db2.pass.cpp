@@ -10,45 +10,22 @@
 
 // Call erase(const_iterator position) with iterator from another container
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <string>
-#include <cassert>
-#include <cstdlib>
-#include <exception>
 
 #include "test_macros.h"
-#include "min_allocator.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
-    {
     std::string l1("123");
     std::string l2("123");
     std::string::const_iterator i = l2.begin();
-    l1.erase(i);
-    assert(false);
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    S l1("123");
-    S l2("123");
-    S::const_iterator i = l2.begin();
-    l1.erase(i);
-    assert(false);
-    }
-#endif
+    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i),
+                               "string::erase(iterator) called with an iterator not referring to this string");
+
+    return 0;
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

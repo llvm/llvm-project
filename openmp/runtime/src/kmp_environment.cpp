@@ -236,7 +236,7 @@ void __kmp_env_unset(char const *name) {
 static void
 ___kmp_env_blk_parse_string(kmp_env_blk_t *block, // M: Env block to fill.
                             char const *env // I: String to parse.
-                            ) {
+) {
 
   char const chr_delimiter = '|';
   char const str_delimiter[] = {chr_delimiter, 0};
@@ -305,7 +305,7 @@ ___kmp_env_blk_parse_string(kmp_env_blk_t *block, // M: Env block to fill.
 static void ___kmp_env_blk_parse_windows(
     kmp_env_blk_t *block, // M: Env block to fill.
     char const *env // I: Pointer to Windows* OS (DOS) environment block.
-    ) {
+) {
 
   char *bulk = NULL;
   kmp_env_var_t *vars = NULL;
@@ -376,20 +376,18 @@ static void ___kmp_env_blk_parse_windows(
         { "HOME=/home/lev", "TERM=xterm", NULL }
 */
 
+#if KMP_OS_UNIX
 static void
 ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
                           char **env // I: Unix environment to parse.
-                          ) {
-
+) {
   char *bulk = NULL;
   kmp_env_var_t *vars = NULL;
   int count = 0;
-  int size = 0; // Size of bulk.
+  size_t size = 0; // Size of bulk.
 
   // Count number of variables and length of required bulk.
   {
-    count = 0;
-    size = 0;
     while (env[count] != NULL) {
       size += KMP_STRLEN(env[count]) + 1;
       ++count;
@@ -405,7 +403,7 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
     char *var; // Pointer to beginning of var.
     char *name; // Pointer to name of variable.
     char *value; // Pointer to value.
-    int len; // Length of variable.
+    size_t len; // Length of variable.
     int i;
     var = bulk;
     for (i = 0; i < count; ++i) {
@@ -426,10 +424,11 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
   block->vars = vars;
   block->count = count;
 }
+#endif
 
 void __kmp_env_blk_init(kmp_env_blk_t *block, // M: Block to initialize.
                         char const *bulk // I: Initialization string, or NULL.
-                        ) {
+) {
 
   if (bulk != NULL) {
     ___kmp_env_blk_parse_string(block, bulk);
@@ -461,7 +460,7 @@ static int ___kmp_env_var_cmp( // Comparison function for qsort().
 
 void __kmp_env_blk_sort(
     kmp_env_blk_t *block // M: Block of environment variables to sort.
-    ) {
+) {
 
   qsort(CCAST(kmp_env_var_t *, block->vars), block->count,
         sizeof(kmp_env_var_t),
@@ -471,7 +470,7 @@ void __kmp_env_blk_sort(
 
 void __kmp_env_blk_free(
     kmp_env_blk_t *block // M: Block of environment variables to free.
-    ) {
+) {
 
   KMP_INTERNAL_FREE(CCAST(kmp_env_var_t *, block->vars));
   __kmp_str_free(&(block->bulk));
@@ -482,10 +481,9 @@ void __kmp_env_blk_free(
 } // __kmp_env_blk_free
 
 char const * // R: Value of variable or NULL if variable does not exist.
-    __kmp_env_blk_var(
-        kmp_env_blk_t *block, // I: Block of environment variables.
-        char const *name // I: Name of variable to find.
-        ) {
+__kmp_env_blk_var(kmp_env_blk_t *block, // I: Block of environment variables.
+                  char const *name // I: Name of variable to find.
+) {
 
   int i;
   for (i = 0; i < block->count; ++i) {

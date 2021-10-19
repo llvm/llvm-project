@@ -32,7 +32,7 @@ define i8 @trunc_i16_i8(i16* %ptr, i16 zeroext %arg0, i8 zeroext %arg1) {
 ; CHECK-LABEL: @trunc_i16_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[ARG1:%.*]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[PTR:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, i16* [[PTR:%.*]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[TMP1]], [[ARG0:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i16 [[TMP2]] to i8
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
@@ -132,7 +132,7 @@ entry:
 define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {
 ; CHECK-LABEL: @or_icmp_ugt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[PTR:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[TMP2]], 1
@@ -246,6 +246,16 @@ exit:
 }
 
 define i16 @bitcast_i16(i16 zeroext %arg0, i16 zeroext %arg1) {
+; CHECK-LABEL: @bitcast_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[ARG0:%.*]] to i32
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i16 12345 to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[CAST]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i32 [[ADD]], [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i16 [[ARG1:%.*]], i16 32657
+; CHECK-NEXT:    ret i16 [[RES]]
+;
 entry:
   %cast = bitcast i16 12345 to i16
   %add = add nuw i16 %arg0, 1
@@ -518,7 +528,7 @@ define i8 @search_through_zext_load(i8* %a, i8 zeroext %b, i16 zeroext %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i8 [[B:%.*]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[C:%.*]] to i32
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[A:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[A:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[LOAD]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -631,7 +641,7 @@ define i16 @trunc_sink_less_than_store(i16 zeroext %a, i16 zeroext %b, i16 zeroe
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[SUB]], 255
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[ADD]] to i8
-; CHECK-NEXT:    store i8 [[TMP5]], i8* [[E:%.*]]
+; CHECK-NEXT:    store i8 [[TMP5]], i8* [[E:%.*]], align 1
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SUB]], [[IF_THEN]] ]
@@ -981,7 +991,7 @@ entry:
 define i32 @replace_trunk_with_mask(i16* %a) {
 ; CHECK-LABEL: @replace_trunk_with_mask(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[A:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[A:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]

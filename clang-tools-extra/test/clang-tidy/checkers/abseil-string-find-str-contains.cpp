@@ -15,6 +15,7 @@ public:
   ~basic_string();
   int find(basic_string s, int pos = 0);
   int find(const C *s, int pos = 0);
+  int find(const C *s, int pos, int n);
   int find(char c, int pos = 0);
   static constexpr size_t npos = -1;
 };
@@ -30,6 +31,7 @@ public:
   ~basic_string_view();
   int find(basic_string_view s, int pos = 0);
   int find(const C *s, int pos = 0);
+  int find(const C *s, int pos, int n);
   int find(char c, int pos = 0);
   static constexpr size_t npos = -1;
 };
@@ -48,6 +50,7 @@ public:
   ~string_view();
   int find(string_view s, int pos = 0);
   int find(const char *s, int pos = 0);
+  int find(const char *s, int pos, int n);
   int find(char c, int pos = 0);
   static constexpr size_t npos = -1;
 };
@@ -226,17 +229,21 @@ void string_literal_and_char_ptr_tests() {
   // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, cc);{{$}}
 }
 
-// Confirms that it does *not* match when the parameter to find() is a char,
-// because absl::StrContains is not implemented for char.
-void no_char_param_tests() {
+void char_param_tests() {
   std::string ss;
   ss.find('c') == std::string::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ss, 'c');{{$}}
 
   std::string_view ssv;
   ssv.find('c') == std::string_view::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(ssv, 'c');{{$}}
 
   absl::string_view asv;
   asv.find('c') == absl::string_view::npos;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use !absl::StrContains instead of
+  // CHECK-FIXES: {{^[[:space:]]*}}!absl::StrContains(asv, 'c');{{$}}
 }
 
 #define FOO(a, b, c, d) ((a).find(b) == std::string::npos ? (c) : (d))
@@ -257,6 +264,18 @@ void no_nonzero_pos() {
 
   absl::string_view asv;
   asv.find("a", 3) == std::string_view::npos;
+}
+
+// Confirms that it does not match when the count parameter is present.
+void no_count() {
+  std::string ss;
+  ss.find("a", 0, 1) == std::string::npos;
+
+  std::string_view ssv;
+  ssv.find("a", 0, 1) == std::string_view::npos;
+
+  absl::string_view asv;
+  asv.find("a", 0, 1) == std::string_view::npos;
 }
 
 // Confirms that it does not match when it's compared to something other than

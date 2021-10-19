@@ -1,8 +1,4 @@
-; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ;
 ; Masked Loads
@@ -60,6 +56,18 @@ define <vscale x 8 x i16> @masked_sload_nxv8i8(<vscale x 8 x i8> *%a, <vscale x 
   %load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8(<vscale x 8 x i8> *%a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> undef)
   %ext = sext <vscale x 8 x i8> %load to <vscale x 8 x i16>
   ret <vscale x 8 x i16> %ext
+}
+
+define <vscale x 2 x i64> @masked_sload_passthru(<vscale x 2 x i32> *%a, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthru) {
+; CHECK-LABEL: masked_sload_passthru:
+; CHECK: ld1sw { [[IN:z[0-9]+]].d }, [[PG1:p[0-9]+]]/z, [x0]
+; CHECK-NEXT: ptrue [[PG2:p[0-9]+]].d
+; CHECK-NEXT: sxtw z0.d, [[PG2]]/m, z0.d
+; CHECK-NEXT: mov z0.d, [[PG1]]/m, [[IN]].d
+; CHECK-NEXT: ret
+  %load = call <vscale x 2 x i32> @llvm.masked.load.nxv2i32(<vscale x 2 x i32> *%a, i32 1, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %passthru)
+  %ext = sext <vscale x 2 x i32> %load to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %ext
 }
 
 declare <vscale x 2 x i8> @llvm.masked.load.nxv2i8(<vscale x 2 x i8>*, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)

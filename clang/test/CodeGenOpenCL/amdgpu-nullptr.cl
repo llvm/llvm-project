@@ -19,82 +19,82 @@ typedef struct {
 
 // Test 0 as initializer.
 
-// CHECK: @private_p = local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
+// CHECK: @private_p ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 private char *private_p = 0;
 
-// CHECK: @local_p = local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
+// CHECK: @local_p ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 local char *local_p = 0;
 
-// CHECK: @global_p = local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
+// CHECK: @global_p ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
 global char *global_p = 0;
 
-// CHECK: @constant_p = local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
+// CHECK: @constant_p ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
 constant char *constant_p = 0;
 
-// CHECK: @generic_p = local_unnamed_addr addrspace(1) global i8* null, align 8
+// CHECK: @generic_p ={{.*}} local_unnamed_addr addrspace(1) global i8* null, align 8
 generic char *generic_p = 0;
 
 // Test NULL as initializer.
 
-// CHECK: @private_p_NULL = local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
+// CHECK: @private_p_NULL ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 private char *private_p_NULL = NULL;
 
-// CHECK: @local_p_NULL = local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
+// CHECK: @local_p_NULL ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 local char *local_p_NULL = NULL;
 
-// CHECK: @global_p_NULL = local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
+// CHECK: @global_p_NULL ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
 global char *global_p_NULL = NULL;
 
-// CHECK: @constant_p_NULL = local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
+// CHECK: @constant_p_NULL ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
 constant char *constant_p_NULL = NULL;
 
-// CHECK: @generic_p_NULL = local_unnamed_addr addrspace(1) global i8* null, align 8
+// CHECK: @generic_p_NULL ={{.*}} local_unnamed_addr addrspace(1) global i8* null, align 8
 generic char *generic_p_NULL = NULL;
 
 // Test constant folding of null pointer.
 // A null pointer should be folded to a null pointer in the target address space.
 
-// CHECK: @fold_generic = local_unnamed_addr addrspace(1) global i32* null, align 8
+// CHECK: @fold_generic ={{.*}} local_unnamed_addr addrspace(1) global i32* null, align 8
 generic int *fold_generic = (global int*)(generic float*)(private char*)0;
 
-// CHECK: @fold_priv = local_unnamed_addr addrspace(1) global i16 addrspace(5)* addrspacecast (i16* null to i16 addrspace(5)*), align 4
+// CHECK: @fold_priv ={{.*}} local_unnamed_addr addrspace(1) global i16 addrspace(5)* addrspacecast (i16* null to i16 addrspace(5)*), align 4
 private short *fold_priv = (private short*)(generic int*)(global void*)0;
 
-// CHECK: @fold_priv_arith = local_unnamed_addr addrspace(1) global i8 addrspace(5)* inttoptr (i32 9 to i8 addrspace(5)*), align 4
+// CHECK: @fold_priv_arith ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(5)* inttoptr (i32 9 to i8 addrspace(5)*), align 4
 private char *fold_priv_arith = (private char*)0 + 10;
 
-// CHECK: @fold_local_arith = local_unnamed_addr addrspace(1) global i8 addrspace(3)* inttoptr (i32 9 to i8 addrspace(3)*), align 4
+// CHECK: @fold_local_arith ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(3)* inttoptr (i32 9 to i8 addrspace(3)*), align 4
 local char *fold_local_arith = (local char*)0 + 10;
 
-// CHECK: @fold_int = local_unnamed_addr addrspace(1) global i32 13, align 4
+// CHECK: @fold_int ={{.*}} local_unnamed_addr addrspace(1) global i32 13, align 4
 int fold_int = (int)(private void*)(generic char*)(global int*)0 + 14;
 
-// CHECK: @fold_int2 = local_unnamed_addr addrspace(1) global i32 12, align 4
+// CHECK: @fold_int2 ={{.*}} local_unnamed_addr addrspace(1) global i32 12, align 4
 int fold_int2 = (int) ((private void*)0 + 13);
 
-// CHECK: @fold_int3 = local_unnamed_addr addrspace(1) global i32 -1, align 4
+// CHECK: @fold_int3 ={{.*}} local_unnamed_addr addrspace(1) global i32 -1, align 4
 int fold_int3 = (int) ((private int*)0);
 
-// CHECK: @fold_int4 = local_unnamed_addr addrspace(1) global i32 7, align 4
+// CHECK: @fold_int4 ={{.*}} local_unnamed_addr addrspace(1) global i32 7, align 4
 int fold_int4 = (int) &((private int*)0)[2];
 
-// CHECK: @fold_int5 = local_unnamed_addr addrspace(1) global i32 3, align 4
+// CHECK: @fold_int5 ={{.*}} local_unnamed_addr addrspace(1) global i32 3, align 4
 int fold_int5 = (int) &((private StructTy1*)0)->p2;
 
 
-// CHECK: @fold_int_local = local_unnamed_addr addrspace(1) global i32 13, align 4
+// CHECK: @fold_int_local ={{.*}} local_unnamed_addr addrspace(1) global i32 13, align 4
 int fold_int_local = (int)(local void*)(generic char*)(global int*)0 + 14;
 
-// CHECK: @fold_int2_local = local_unnamed_addr addrspace(1) global i32 12, align 4
+// CHECK: @fold_int2_local ={{.*}} local_unnamed_addr addrspace(1) global i32 12, align 4
 int fold_int2_local = (int) ((local void*)0 + 13);
 
-// CHECK: @fold_int3_local = local_unnamed_addr addrspace(1) global i32 -1, align 4
+// CHECK: @fold_int3_local ={{.*}} local_unnamed_addr addrspace(1) global i32 -1, align 4
 int fold_int3_local = (int) ((local int*)0);
 
-// CHECK: @fold_int4_local = local_unnamed_addr addrspace(1) global i32 7, align 4
+// CHECK: @fold_int4_local ={{.*}} local_unnamed_addr addrspace(1) global i32 7, align 4
 int fold_int4_local = (int) &((local int*)0)[2];
 
-// CHECK: @fold_int5_local = local_unnamed_addr addrspace(1) global i32 3, align 4
+// CHECK: @fold_int5_local ={{.*}} local_unnamed_addr addrspace(1) global i32 3, align 4
 int fold_int5_local = (int) &((local StructTy1*)0)->p2;
 
 
@@ -104,7 +104,7 @@ int fold_int5_local = (int) &((local StructTy1*)0)->p2;
 // NOOPT: @test_static_var_private.sp2 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.sp3 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.sp4 = internal addrspace(1) global i8 addrspace(5)* null, align 4
-// NOOPT: @test_static_var_private.sp5 = internal addrspace(1) global i8 addrspace(5)* null, align 4
+// NOOPT: @test_static_var_private.sp5 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.SS1 = internal addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 // NOOPT: @test_static_var_private.SS2 = internal addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
 
@@ -123,7 +123,7 @@ void test_static_var_private(void) {
 // NOOPT: @test_static_var_local.sp2 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.sp3 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.sp4 = internal addrspace(1) global i8 addrspace(3)* null, align 4
-// NOOPT: @test_static_var_local.sp5 = internal addrspace(1) global i8 addrspace(3)* null, align 4
+// NOOPT: @test_static_var_local.sp5 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.SS1 = internal addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 // NOOPT: @test_static_var_local.SS2 = internal addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
 void test_static_var_local(void) {
@@ -142,7 +142,7 @@ void test_static_var_local(void) {
 // NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp1, align 4
 // NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp2, align 4
 // NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp3, align 4
-// NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp4, align 4
+// NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_private.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
@@ -162,7 +162,7 @@ void test_func_scope_var_private(void) {
 // NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp1, align 4
 // NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp2, align 4
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp3, align 4
-// NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp4, align 4
+// NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_local.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
@@ -184,39 +184,39 @@ void test_func_scope_var_local(void) {
 // cannot have common linkage since common linkage requires zero initialization
 // and does not have explicit section.
 
-// CHECK: @p1 = local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
+// CHECK: @p1 ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // COMMON: @p1 = weak local_unnamed_addr addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 private char *p1;
 
-// CHECK: @p2 = local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
+// CHECK: @p2 ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // COMMON: @p2 = weak local_unnamed_addr addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 local char *p2;
 
-// CHECK: @p3 = local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
+// CHECK: @p3 ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
 // COMMON: @p3 = common local_unnamed_addr addrspace(1) global i8 addrspace(4)* null, align 8
 constant char *p3;
 
-// CHECK: @p4 = local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
+// CHECK: @p4 ={{.*}} local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
 // COMMON: @p4 = common local_unnamed_addr addrspace(1) global i8 addrspace(1)* null, align 8
 global char *p4;
 
-// CHECK: @p5 = local_unnamed_addr addrspace(1) global i8* null, align 8
+// CHECK: @p5 ={{.*}} local_unnamed_addr addrspace(1) global i8* null, align 8
 // COMMON: @p5 = common local_unnamed_addr addrspace(1) global i8* null, align 8
 generic char *p5;
 
 // Test default initialization of structure.
 
-// CHECK: @S1 = local_unnamed_addr addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
+// CHECK: @S1 ={{.*}} local_unnamed_addr addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 StructTy1 S1;
 
-// CHECK: @S2 = local_unnamed_addr addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
+// CHECK: @S2 ={{.*}} local_unnamed_addr addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
 StructTy2 S2;
 
 // Test default initialization of array.
-// CHECK: @A1 = local_unnamed_addr addrspace(1) global [2 x %struct.StructTy1] [%struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }], align 8
+// CHECK: @A1 ={{.*}} local_unnamed_addr addrspace(1) global [2 x %struct.StructTy1] [%struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }], align 8
 StructTy1 A1[2];
 
-// CHECK: @A2 = local_unnamed_addr addrspace(1) global [2 x %struct.StructTy2] zeroinitializer, align 8
+// CHECK: @A2 ={{.*}} local_unnamed_addr addrspace(1) global [2 x %struct.StructTy2] zeroinitializer, align 8
 StructTy2 A2[2];
 
 // Test comparison with 0.
@@ -516,7 +516,7 @@ typedef struct {
 } StructTy3;
 
 // CHECK-LABEL: test_memset_private
-// CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* align 8 {{.*}}, i8 0, i64 32, i1 false)
+// CHECK: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* noundef align 8 {{.*}}, i8 0, i64 32, i1 false)
 // CHECK: [[GEP:%.*]] = getelementptr inbounds %struct.StructTy3, %struct.StructTy3 addrspace(5)* %ptr, i32 0, i32 4
 // CHECK: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* [[GEP]]
 // CHECK: [[GEP1:%.*]] = getelementptr inbounds i8, i8 addrspace(5)* {{.*}}, i32 36
@@ -598,7 +598,7 @@ int test_not_local_ptr(local char* p) {
 // CHECK-LABEL: test_and_ptr
 // CHECK: %[[tobool:.*]] = icmp ne i8 addrspace(5)* %p1, addrspacecast (i8* null to i8 addrspace(5)*)
 // CHECK: %[[tobool1:.*]] = icmp ne i8 addrspace(3)* %p2, addrspacecast (i8* null to i8 addrspace(3)*)
-// CHECK: %[[res:.*]] = and i1 %[[tobool]], %[[tobool1]]
+// CHECK: %[[res:.*]] = select i1 %[[tobool]], i1 %[[tobool1]], i1 false
 // CHECK: %[[land_ext:.*]] = zext i1 %[[res]] to i32
 // CHECK: ret i32 %[[land_ext]]
 int test_and_ptr(private char* p1, local char* p2) {

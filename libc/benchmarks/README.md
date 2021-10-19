@@ -1,65 +1,59 @@
 # Libc mem* benchmarks
 
-This framework has been designed to evaluate and compare relative performance of
-memory function implementations on a particular host.
+This framework has been designed to evaluate and compare relative performance of memory function implementations on a particular machine.
 
-It will also be use to track implementations performances over time.
+It relies on two tools:
+ - `libc-benchmark-main` a C++ benchmarking utility producing raw measurements,
+ - `libc-benchmark-analysis.py3` a tool to process the measurements into reports.
 
-## Quick start
+## Benchmarking tool
 
 ### Setup
-
-**Python 2** [being deprecated](https://www.python.org/doc/sunset-python-2/) it is
-advised to used **Python 3**.
-
-Then make sure to have `matplotlib`, `scipy` and `numpy` setup correctly:
-
-```shell
-apt-get install python3-pip
-pip3 install matplotlib scipy numpy
-```
-You may need `python3-gtk` or similar package for displaying benchmark results.
-
-To get good reproducibility it is important to make sure that the system runs in
-`performance` mode. This is achieved by running:
-
-```shell
-cpupower frequency-set --governor performance
-```
-
-### Run and display `memcpy` benchmark
-
-The following commands will run the benchmark and display a 95 percentile
-confidence interval curve of **time per copied bytes**. It also features **host
-informations** and **benchmarking configuration**.
 
 ```shell
 cd llvm-project
 cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release -G Ninja
-ninja -C /tmp/build display-libc-memcpy-benchmark-small
+ninja -C /tmp/build libc-benchmark-main
 ```
 
-The display target will attempt to open a window on the machine where you're
-running the benchmark. If this may not work for you then you may want `render`
-or `run` instead as detailed below.
+> Note: The machine should run in `performance` mode. This is achieved by running:
+```shell
+cpupower frequency-set --governor performance
+```
 
-## Benchmarking targets
+### Usage
 
-The benchmarking process occurs in two steps:
+`libc-benchmark-main` can run in two modes:
+ - **stochastic mode** returns the average time per call for a particular size distribution,
+ - **sweep mode** returns the average time per size over a range of sizes.
 
-1. Benchmark the functions and produce a `json` file
-2. Display (or renders) the `json` file
+The tool requires the following flags to be set:
+ - `--study-name`: a name to identify a run and provide label during analysis,
+ - `--function`: the name of the function under test.
 
-Targets are of the form `<action>-libc-<function>-benchmark-<configuration>`
+It also provides optional flags:
+ - `--num-trials`: repeats the benchmark more times, the analysis tool can take this into account and give confidence intervals.
+ - `--output`: specifies a file to write the report - or standard output if not set.
+ - `--aligned-access`: The alignment to use when accessing the buffers, default is unaligned, 0 disables address randomization.
 
- - `action` is one of :
-    - `run`, runs the benchmark and writes the `json` file
-    - `display`, displays the graph on screen
-    - `render`, renders the graph on disk as a `png` file
- - `function` is one of : `memcpy`, `memcmp`, `memset`
- - `configuration` is one of : `small`, `big`
+> Note: `--function` takes a generic function name like `memcpy` or `memset` but the actual function being tested is the llvm-libc implementation (e.g. `__llvm_libc::memcpy`).
 
-## Benchmarking regimes
+### Stochastic mode
+
+This is the preferred mode to use. The function parameters are randomized and the branch predictor is less likely to kick in.
+
+```shell
+/tmp/build/bin/libc-benchmark-main \
+    --study-name="new memcpy" \
+    --function=memcpy \
+    --size-distribution-name="memcpy Google A" \
+    --num-trials=30 \
+    --output=/tmp/benchmark_result.json
+```
+
+The `--size-distribution-name` flag is mandatory and points to one of the [predefined distribution](MemorySizeDistributions.h).
+
+> Note: These distributions are gathered from several important binaries at Google (servers, databases, realtime and batch jobs) and reflect the importance of focusing on small sizes.
 
 Using a profiler to observe size distributions for calls into libc functions, it
 was found most operations act on a small number of bytes.
@@ -70,37 +64,48 @@ memcpy             | 96%                         | 99%
 memset             | 91%                         | 99.9%
 memcmp<sup>1</sup> | 99.5%                       | ~100%
 
-Benchmarking configurations come in two flavors:
-
- - [small](libc/utils/benchmarks/configuration_small.json)
-    - Exercises sizes up to `1KiB`, representative of normal usage
-    - The data is kept in the `L1` cache to prevent measuring the memory
-      subsystem
- - [big](libc/utils/benchmarks/configuration_big.json)
-    - Exercises sizes up to `32MiB` to test large operations
-    - Caching effects can show up here which prevents comparing different hosts
-
 _<sup>1</sup> - The size refers to the size of the buffers to compare and not
 the number of bytes until the first difference._
 
-## Superposing curves
+### Sweep mode
 
-It is possible to **merge** several `json` files into a single graph. This is
-useful to **compare** implementations.
-
-In the following example we superpose the curves for `memcpy`, `memset` and
-`memcmp`:
+This mode is used to measure call latency per size for a certain range of sizes. Because it exercises the same size over and over again the branch predictor can kick in. It can still be useful to compare strength and weaknesses of particular implementations.
 
 ```shell
-> make -C /tmp/build run-libc-memcpy-benchmark-small run-libc-memcmp-benchmark-small run-libc-memset-benchmark-small
-> python libc/utils/benchmarks/render.py3 /tmp/last-libc-memcpy-benchmark-small.json /tmp/last-libc-memcmp-benchmark-small.json /tmp/last-libc-memset-benchmark-small.json
+/tmp/build/bin/libc-benchmark-main \
+    --study-name="new memcpy" \
+    --function=memcpy \
+    --sweep-mode \
+    --sweep-max-size=128 \
+    --output=/tmp/benchmark_result.json
 ```
 
-## Useful `render.py3` flags
+## Analysis tool
 
- - To save the produced graph `--output=/tmp/benchmark_curve.png`.
- - To prevent the graph from appearing on the screen `--headless`.
+### Setup
 
+Make sure to have `matplotlib`, `pandas` and `seaborn` setup correctly:
+
+```shell
+apt-get install python3-pip
+pip3 install matplotlib pandas seaborn
+```
+You may need `python3-gtk` or similar package to display the graphs.
+
+### Usage
+
+```shell
+python3 libc/benchmarks/libc-benchmark-analysis.py3 /tmp/benchmark_result.json ...
+```
+
+When used with __multiple trials Sweep Mode data__ the tool displays the 95% confidence interval.
+
+When providing with multiple reports at the same time, all the graphs from the same machine are displayed side by side to allow for comparison.
+
+The Y-axis unit can be changed via the `--mode` flag:
+ - `time` displays the measured time (this is the default),
+ - `cycles` displays the number of cycles computed from the cpu frequency,
+ - `bytespercycle` displays the number of bytes per cycle (for `Sweep Mode` reports only).
 
 ## Under the hood
 

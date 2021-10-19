@@ -6,7 +6,7 @@ define void @f(float %wt) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl $44
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    calll g
+; CHECK-NEXT:    calll g@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:    xorps %xmm0, %xmm0

@@ -137,9 +137,9 @@ __cxa_vec_cctor(void *dest_array, void *src_array, size_t element_count,
                 void (*destructor)(void *));
 
 // 3.3.5.3 Runtime API
-extern _LIBCXXABI_FUNC_VIS int __cxa_atexit(void (*f)(void *), void *p,
-                                            void *d);
-extern _LIBCXXABI_FUNC_VIS int __cxa_finalize(void *);
+// These functions are part of the C++ ABI, but they are not defined in libc++abi:
+//    int __cxa_atexit(void (*)(void *), void *, void *);
+//    void __cxa_finalize(void *);
 
 // 3.4 Demangler API
 extern _LIBCXXABI_FUNC_VIS char *__cxa_demangle(const char *mangled_name,

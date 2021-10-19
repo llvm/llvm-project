@@ -144,6 +144,7 @@ static IMAKind ClassifyImplicitMemberAccess(Sema &SemaRef,
 
   case Sema::ExpressionEvaluationContext::DiscardedStatement:
   case Sema::ExpressionEvaluationContext::ConstantEvaluated:
+  case Sema::ExpressionEvaluationContext::ImmediateFunctionContext:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluated:
   case Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed:
     break;
@@ -338,13 +339,13 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
       compStr++;
     } while (*compStr && (Idx = vecType->getPointAccessorIdx(*compStr)) != -1);
 
-    // Emit a warning if an rgba selector is used earlier than OpenCL 2.2
+    // Emit a warning if an rgba selector is used earlier than OpenCL C 3.0.
     if (HasRGBA || (*compStr && IsRGBA(*compStr))) {
-      if (S.getLangOpts().OpenCL && S.getLangOpts().OpenCLVersion < 220) {
+      if (S.getLangOpts().OpenCL &&
+          S.getLangOpts().getOpenCLCompatibleVersion() < 300) {
         const char *DiagBegin = HasRGBA ? CompName->getNameStart() : compStr;
         S.Diag(OpLoc, diag::ext_opencl_ext_vector_type_rgba_selector)
-          << StringRef(DiagBegin, 1)
-          << S.getLangOpts().OpenCLVersion << SourceRange(CompLoc);
+            << StringRef(DiagBegin, 1) << SourceRange(CompLoc);
       }
     }
   } else {
@@ -409,7 +410,8 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   if (CompSize == 1)
     return vecType->getElementType();
 
-  if (HasRepeated) VK = VK_RValue;
+  if (HasRepeated)
+    VK = VK_PRValue;
 
   QualType VT = S.Context.getExtVectorType(vecType->getElementType(), CompSize);
   // Now look up the TypeDefDecl from the vector type. Without this,
@@ -564,10 +566,7 @@ bool Sema::CheckQualifiedMemberReference(Expr *BaseExpr,
       return false;
 
     // Note that we use the DC of the decl, not the underlying decl.
-    DeclContext *DC = (*I)->getDeclContext();
-    while (DC->isTransparentContext())
-      DC = DC->getParent();
-
+    DeclContext *DC = (*I)->getDeclContext()->getNonTransparentContext();
     if (!DC->isRecord())
       continue;
 
@@ -612,11 +611,10 @@ public:
     if (Record->containsDecl(ND))
       return true;
 
-    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Record)) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Record)) {
       // Accept candidates that occur in any of the current class' base classes.
       for (const auto &BS : RD->bases()) {
-        if (const RecordType *BSTy =
-                dyn_cast_or_null<RecordType>(BS.getType().getTypePtrOrNull())) {
+        if (const auto *BSTy = BS.getType()->getAs<RecordType>()) {
           if (BSTy->getDecl()->containsDecl(ND))
             return true;
         }
@@ -761,7 +759,7 @@ Sema::BuildMemberReferenceExpr(Expr *Base, QualType BaseType,
   if (!Base) {
     TypoExpr *TE = nullptr;
     QualType RecordTy = BaseType;
-    if (IsArrow) RecordTy = RecordTy->getAs<PointerType>()->getPointeeType();
+    if (IsArrow) RecordTy = RecordTy->castAs<PointerType>()->getPointeeType();
     if (LookupMemberExprInRecord(
             *this, R, nullptr, RecordTy->getAs<RecordType>(), OpLoc, IsArrow,
             SS, TemplateArgs != nullptr, TemplateKWLoc, TE))
@@ -910,7 +908,8 @@ MemberExpr *Sema::BuildMemberExpr(
     bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
     QualType Ty, ExprValueKind VK, ExprObjectKind OK,
     const TemplateArgumentListInfo *TemplateArgs) {
-  assert((!IsArrow || Base->isRValue()) && "-> base must be a pointer rvalue");
+  assert((!IsArrow || Base->isPRValue()) &&
+         "-> base must be a pointer prvalue");
   MemberExpr *E =
       MemberExpr::Create(Context, Base, IsArrow, OpLoc, NNS, TemplateKWLoc,
                          Member, FoundDecl, MemberNameInfo, TemplateArgs, Ty,
@@ -964,13 +963,12 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   // C++1z [expr.ref]p2:
   //   For the first option (dot) the first expression shall be a glvalue [...]
-  if (!IsArrow && BaseExpr && BaseExpr->isRValue()) {
+  if (!IsArrow && BaseExpr && BaseExpr->isPRValue()) {
     ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
     if (Converted.isInvalid())
       return ExprError();
     BaseExpr = Converted.get();
   }
-
 
   const DeclarationNameInfo &MemberNameInfo = R.getLookupNameInfo();
   DeclarationName MemberName = MemberNameInfo.getName();
@@ -1119,7 +1117,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     ExprValueKind valueKind;
     QualType type;
     if (MemberFn->isInstance()) {
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
     } else {
       valueKind = VK_LValue;
@@ -1135,7 +1133,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Enum,
                            FoundDecl, /*HadMultipleCandidates=*/false,
-                           MemberNameInfo, Enum->getType(), VK_RValue,
+                           MemberNameInfo, Enum->getType(), VK_PRValue,
                            OK_Ordinary);
   }
 
@@ -1734,14 +1732,28 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
 }
 
 void Sema::CheckMemberAccessOfNoDeref(const MemberExpr *E) {
-  QualType ResultTy = E->getType();
-
-  // Do not warn on member accesses to arrays since this returns an array
-  // lvalue and does not actually dereference memory.
-  if (isa<ArrayType>(ResultTy))
+  if (isUnevaluatedContext())
     return;
 
-  if (E->isArrow()) {
+  QualType ResultTy = E->getType();
+
+  // Member accesses have four cases:
+  // 1: non-array member via "->": dereferences
+  // 2: non-array member via ".": nothing interesting happens
+  // 3: array member access via "->": nothing interesting happens
+  //    (this returns an array lvalue and does not actually dereference memory)
+  // 4: array member access via ".": *adds* a layer of indirection
+  if (ResultTy->isArrayType()) {
+    if (!E->isArrow()) {
+      // This might be something like:
+      //     (*structPtr).arrayMember
+      // which behaves roughly like:
+      //     &(*structPtr).pointerMember
+      // in that the apparent dereference in the base expression does not
+      // actually happen.
+      CheckAddressOfNoDeref(E->getBase());
+    }
+  } else if (E->isArrow()) {
     if (const auto *Ptr = dyn_cast<PointerType>(
             E->getBase()->getType().getDesugaredType(Context))) {
       if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
@@ -1765,9 +1777,9 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     if (BaseExpr->getObjectKind() == OK_Ordinary)
       VK = BaseExpr->getValueKind();
     else
-      VK = VK_RValue;
+      VK = VK_PRValue;
   }
-  if (VK != VK_RValue && Field->isBitField())
+  if (VK != VK_PRValue && Field->isBitField())
     OK = OK_BitField;
 
   // Figure out the type of the member; see C99 6.5.2.3p3, C++ [expr.ref]
@@ -1777,7 +1789,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     VK = VK_LValue;
   } else {
     QualType BaseType = BaseExpr->getType();
-    if (IsArrow) BaseType = BaseType->getAs<PointerType>()->getPointeeType();
+    if (IsArrow) BaseType = BaseType->castAs<PointerType>()->getPointeeType();
 
     Qualifiers BaseQuals = BaseType.getQualifiers();
 
@@ -1796,6 +1808,14 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     Qualifiers Combined = BaseQuals + MemberQuals;
     if (Combined != MemberQuals)
       MemberType = Context.getQualifiedType(MemberType, Combined);
+
+    // Pick up NoDeref from the base in case we end up using AddrOf on the
+    // result. E.g. the expression
+    //     &someNoDerefPtr->pointerMember
+    // should be a noderef pointer again.
+    if (BaseType->hasAttr(attr::NoDeref))
+      MemberType =
+          Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }
 
   auto *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);

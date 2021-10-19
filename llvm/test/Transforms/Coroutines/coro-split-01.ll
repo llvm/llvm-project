@@ -1,5 +1,4 @@
 ; Tests that a coroutine is split, inlined into the caller and devirtualized.
-; RUN: opt < %s -S -enable-coroutines -O2 | FileCheck %s
 ; RUN: opt < %s -S -enable-coroutines -passes='default<O2>' | FileCheck %s
 
 define i8* @f() {

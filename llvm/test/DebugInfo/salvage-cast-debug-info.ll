@@ -1,4 +1,4 @@
-; RUN: opt %s -debugify -early-cse -S | FileCheck %s
+; RUN: opt %s -debugify -early-cse -earlycse-debug-hash -S | FileCheck %s
 define i32 @foo(i64 %nose, i32 %more) {
 ; CHECK-LABEL: @foo(
 ; CHECK: call void @llvm.dbg.value(metadata i64 %nose, metadata [[V1:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned

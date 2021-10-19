@@ -26,4 +26,4 @@ int inv_sqrt3{std::numbers::inv_sqrt3_v<int>};
 int egamma{std::numbers::egamma_v<int>};
 int phi{std::numbers::phi_v<int>};
 
-int main() { return 0; }
+int main(int, char**) { return 0; }

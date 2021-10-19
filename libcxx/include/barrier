@@ -22,6 +22,8 @@ namespace std
   public:
     using arrival_token = see below;
 
+    static constexpr ptrdiff_t max() noexcept;
+
     constexpr explicit barrier(ptrdiff_t phase_count,
                                CompletionFunction f = CompletionFunction());
     ~barrier();
@@ -43,6 +45,7 @@ namespace std
 
 */
 
+#include <__availability>
 #include <__config>
 #include <atomic>
 #ifndef _LIBCPP_HAS_NO_TREE_BARRIER
@@ -56,6 +59,9 @@ namespace std
 #ifdef _LIBCPP_HAS_NO_THREADS
 # error <barrier> is not supported on this single threaded system
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if _LIBCPP_STD_VER >= 14
 
@@ -101,7 +107,6 @@ void __destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier);
 
 template<class _CompletionF>
 class __barrier_base {
-
     ptrdiff_t                                               __expected;
     unique_ptr<__barrier_algorithm_base,
                void (*)(__barrier_algorithm_base*)>         __base;
@@ -140,7 +145,7 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __old_phase) const
     {
-        auto const __test_fn = [=]() -> bool {
+        auto const __test_fn = [this, __old_phase]() -> bool {
             return __phase.load(memory_order_acquire) != __old_phase;
         };
         __libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
@@ -287,7 +292,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b(__count, std::move(__completion)) {
+        : __b(__count, _VSTD::move(__completion)) {
     }
 
     barrier(barrier const&) = delete;
@@ -301,13 +306,13 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __phase) const
     {
-        __b.wait(std::move(__phase));
+        __b.wait(_VSTD::move(__phase));
     }
-	_LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait()
     {
         wait(arrive());
-	}
+    }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_drop()
     {
@@ -318,5 +323,7 @@ public:
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 14
+
+_LIBCPP_POP_MACROS
 
 #endif //_LIBCPP_BARRIER

@@ -9,7 +9,7 @@
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t3
 // RUN: ld.lld --script %t.script --pie %t3 -o %t4
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
 
 // Check that we can create Arm and Thumb v7a Position Independent Thunks that
 // can span the address space without triggering overflow errors. We use an
@@ -34,7 +34,7 @@ high:
 // CHECK: Disassembly of section .text_low:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:      130:       bl      #0 <__ARMV7PILongThunk_high>
+// CHECK-NEXT:      130:       bl      0x138 <__ARMV7PILongThunk_high>
 // CHECK-NEXT:      134:       bx      lr
 
 // CHECK: <__ARMV7PILongThunk_high>:
@@ -47,7 +47,7 @@ high:
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: <high>:
-// CHECK-NEXT: f0000000:       bl      #0 <__ARMV7PILongThunk__start>
+// CHECK-NEXT: f0000000:       bl      0xf0000008 <__ARMV7PILongThunk__start>
 // CHECK-NEXT: f0000004:       bx      lr
 
 // CHECK: <__ARMV7PILongThunk__start>:
@@ -61,9 +61,8 @@ high:
 // CHECK-THUMB: Disassembly of section .text_low:
 // CHECK-THUMB-EMPTY:
 // CHECK-THUMB-NEXT: <_start>:
-// CHECK-THUMB-NEXT:      130:       bl      #4
+// CHECK-THUMB-NEXT:      130:       bl      0x138 <__ThumbV7PILongThunk_high>
 // CHECK-THUMB-NEXT:      134:       bx      lr
-// CHECK-THUMB-NEXT:      136:       bmi     #-88
 
 // CHECK-THUMB: <__ThumbV7PILongThunk_high>:
 // CHECK-THUMB-NEXT:      138:       movw    r12, #65213
@@ -75,7 +74,7 @@ high:
 // CHECK-THUMB: Disassembly of section .text_high:
 // CHECK-THUMB-EMPTY:
 // CHECK-THUMB-NEXT: <high>:
-// CHECK-THUMB-NEXT: f0000000:       bl      #4
+// CHECK-THUMB-NEXT: f0000000:       bl      0xf0000008 <__ThumbV7PILongThunk__start>
 // CHECK-THUMB-NEXT: f0000004:       bx      lr
 
 // CHECK-THUMB: <__ThumbV7PILongThunk__start>:

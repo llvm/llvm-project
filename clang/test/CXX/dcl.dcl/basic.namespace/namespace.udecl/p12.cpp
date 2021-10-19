@@ -9,7 +9,7 @@
 //   parameter types in a base class (rather than conflicting).
 
 template <unsigned n> struct Opaque {};
-template <unsigned n> void expect(Opaque<n> _) {}
+template <unsigned n> void expect(Opaque<n> _) {} // expected-note 4 {{candidate function template not viable}}
 
 // PR5727
 // This just shouldn't crash.
@@ -134,14 +134,14 @@ namespace test3 {
   void test() {
     expect<0>(Base().foo<int>());
     expect<1>(Base().foo<0>());
-    expect<0>(Derived1().foo<int>()); // expected-error {{no matching member function for call to 'foo'}}
+    expect<0>(Derived1().foo<int>()); // expected-error {{no matching member function for call to 'foo'}} expected-error {{no matching function for call to 'expect'}}
     expect<2>(Derived1().foo<0>());
-    expect<0>(Derived2().foo<int>()); // expected-error {{no matching member function for call to 'foo'}}
+    expect<0>(Derived2().foo<int>()); // expected-error {{no matching member function for call to 'foo'}} expected-error {{no matching function for call to 'expect'}}
     expect<2>(Derived2().foo<0>());
     expect<3>(Derived3().foo<int>());
-    expect<1>(Derived3().foo<0>()); // expected-error {{no matching member function for call to 'foo'}}
+    expect<1>(Derived3().foo<0>()); // expected-error {{no matching member function for call to 'foo'}} expected-error {{no matching function for call to 'expect'}}
     expect<3>(Derived4().foo<int>());
-    expect<1>(Derived4().foo<0>()); // expected-error {{no matching member function for call to 'foo'}}
+    expect<1>(Derived4().foo<0>()); // expected-error {{no matching member function for call to 'foo'}} expected-error {{no matching function for call to 'expect'}}
   }
 }
 

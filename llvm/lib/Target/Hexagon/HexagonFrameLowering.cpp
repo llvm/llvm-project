@@ -306,7 +306,7 @@ static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
           Register R = MO.getReg();
           // Virtual registers will need scavenging, which then may require
           // a stack slot.
-          if (Register::isVirtualRegister(R))
+          if (R.isVirtual())
             return true;
           for (MCSubRegIterator S(R, &HRI, true); S.isValid(); ++S)
             if (CSR[*S])
@@ -576,7 +576,7 @@ static bool enableAllocFrameElim(const MachineFunction &MF) {
   const auto &MFI = MF.getFrameInfo();
   const auto &HST = MF.getSubtarget<HexagonSubtarget>();
   assert(!MFI.hasVarSizedObjects() &&
-         !HST.getRegisterInfo()->needsStackRealignment(MF));
+         !HST.getRegisterInfo()->hasStackRealignment(MF));
   return F.hasFnAttribute(Attribute::NoReturn) &&
     F.hasFnAttribute(Attribute::NoUnwind) &&
     !F.hasFnAttribute(Attribute::UWTable) && HST.noreturnStackElim() &&
@@ -1104,7 +1104,8 @@ void HexagonFrameLowering::insertCFIInstructionsAt(MachineBasicBlock &MBB,
       Offset = MFI.getObjectOffset(F->getFrameIdx());
     } else {
       Register FrameReg;
-      Offset = getFrameIndexReference(MF, F->getFrameIdx(), FrameReg);
+      Offset =
+          getFrameIndexReference(MF, F->getFrameIdx(), FrameReg).getFixed();
     }
     // Subtract 8 to make room for R30 and R31, which are added above.
     Offset -= 8;
@@ -1144,7 +1145,7 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
 
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
-  bool HasExtraAlign = HRI.needsStackRealignment(MF);
+  bool HasExtraAlign = HRI.hasStackRealignment(MF);
   bool HasAlloca = MFI.hasVarSizedObjects();
 
   // Insert ALLOCFRAME if we need to or at -O0 for the debugger.  Think
@@ -1256,15 +1257,15 @@ static const char *getSpillFunctionFor(unsigned MaxReg, SpillKind SpillType,
   return nullptr;
 }
 
-int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                                 int FI,
-                                                 Register &FrameReg) const {
+StackOffset
+HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                             Register &FrameReg) const {
   auto &MFI = MF.getFrameInfo();
   auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
 
   int Offset = MFI.getObjectOffset(FI);
   bool HasAlloca = MFI.hasVarSizedObjects();
-  bool HasExtraAlign = HRI.needsStackRealignment(MF);
+  bool HasExtraAlign = HRI.hasStackRealignment(MF);
   bool NoOpt = MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
@@ -1354,7 +1355,7 @@ int HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   int RealOffset = Offset;
   if (!UseFP && !UseAP)
     RealOffset = FrameSize+Offset;
-  return RealOffset;
+  return StackOffset::getFixed(RealOffset);
 }
 
 bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
@@ -1551,7 +1552,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
               auto *NewMMO = MF.getMachineMemOperand(
                   MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(),
                   MFI.getObjectAlign(FI), MMO->getAAInfo(), MMO->getRanges(),
-                  MMO->getSyncScopeID(), MMO->getOrdering(),
+                  MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
                   MMO->getFailureOrdering());
               new_memops.push_back(NewMMO);
               KeepOld = false;

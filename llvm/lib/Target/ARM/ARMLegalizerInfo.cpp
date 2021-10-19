@@ -33,29 +33,30 @@ using namespace LegalizeActions;
 /// In practice, not specifying those isn't a problem, and the below functions
 /// should disappear quickly as we add support for legalizing non-power-of-2
 /// sized types further.
-static void
-addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
-                                const LegalizerInfo::SizeAndActionsVec &v) {
+static void addAndInterleaveWithUnsupported(
+    LegacyLegalizerInfo::SizeAndActionsVec &result,
+    const LegacyLegalizerInfo::SizeAndActionsVec &v) {
   for (unsigned i = 0; i < v.size(); ++i) {
     result.push_back(v[i]);
     if (i + 1 < v[i].first && i + 1 < v.size() &&
         v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, Unsupported});
+      result.push_back({v[i].first + 1, LegacyLegalizeActions::Unsupported});
   }
 }
 
-static LegalizerInfo::SizeAndActionsVec
-widen_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
+static LegacyLegalizerInfo::SizeAndActionsVec
+widen_8_16(const LegacyLegalizerInfo::SizeAndActionsVec &v) {
   assert(v.size() >= 1);
   assert(v[0].first > 17);
-  LegalizerInfo::SizeAndActionsVec result = {{1, Unsupported},
-                                             {8, WidenScalar},
-                                             {9, Unsupported},
-                                             {16, WidenScalar},
-                                             {17, Unsupported}};
+  LegacyLegalizerInfo::SizeAndActionsVec result = {
+      {1, LegacyLegalizeActions::Unsupported},
+      {8, LegacyLegalizeActions::WidenScalar},
+      {9, LegacyLegalizeActions::Unsupported},
+      {16, LegacyLegalizeActions::WidenScalar},
+      {17, LegacyLegalizeActions::Unsupported}};
   addAndInterleaveWithUnsupported(result, v);
   auto Largest = result.back().first;
-  result.push_back({Largest + 1, Unsupported});
+  result.push_back({Largest + 1, LegacyLegalizeActions::Unsupported});
   return result;
 }
 
@@ -74,9 +75,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    computeTables();
+    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
@@ -88,7 +90,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32})
-      .minScalar(0, s32);
+      .clampScalar(0, s32, s32);
 
   if (ST.hasNEON())
     getActionDefinitionsBuilder({G_ADD, G_SUB})
@@ -116,13 +118,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(0, s32, s32);
 
   for (unsigned Op : {G_SREM, G_UREM}) {
-    setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
+    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
     if (HasHWDivide)
-      setAction({Op, s32}, Lower);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Lower);
     else if (AEABI(ST))
-      setAction({Op, s32}, Custom);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Custom);
     else
-      setAction({Op, s32}, Libcall);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Libcall);
   }
 
   getActionDefinitionsBuilder(G_INTTOPTR)
@@ -147,11 +149,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
   auto &LoadStoreBuilder = getActionDefinitionsBuilder({G_LOAD, G_STORE})
-                               .legalForTypesWithMemDesc({{s1, p0, 8, 8},
-                                                          {s8, p0, 8, 8},
-                                                          {s16, p0, 16, 8},
-                                                          {s32, p0, 32, 8},
-                                                          {p0, p0, 32, 8}})
+                               .legalForTypesWithMemDesc({{s8, p0, s8, 8},
+                                                          {s16, p0, s16, 8},
+                                                          {s32, p0, s32, 8},
+                                                          {p0, p0, p0, 8}})
                                .unsupportedIfMemSizeNotPow2();
 
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
@@ -174,7 +175,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalFor({s32, s64});
 
     LoadStoreBuilder
-        .legalForTypesWithMemDesc({{s64, p0, 64, 32}})
+        .legalForTypesWithMemDesc({{s64, p0, s64, 32}})
         .maxScalar(0, s32);
     PhiBuilder.legalFor({s64});
 
@@ -198,7 +199,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     LoadStoreBuilder.maxScalar(0, s32);
 
     for (auto Ty : {s32, s64})
-      setAction({G_FNEG, Ty}, Lower);
+      LegacyInfo.setAction({G_FNEG, Ty}, LegacyLegalizeActions::Lower);
 
     getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
 
@@ -218,6 +219,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
   }
+
+  // Just expand whatever loads and stores are left.
+  LoadStoreBuilder.lower();
 
   if (!ST.useSoftFloat() && ST.hasVFP4Base())
     getActionDefinitionsBuilder(G_FMA).legalFor({s32, s64});
@@ -246,7 +250,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(0, s32, s32);
   }
 
-  computeTables();
+  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -385,9 +389,9 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
     Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                           OriginalResult};
-    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy},
-                                {{MI.getOperand(1).getReg(), ArgTy},
-                                 {MI.getOperand(2).getReg(), ArgTy}});
+    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy, 0},
+                                {{MI.getOperand(1).getReg(), ArgTy, 0},
+                                 {MI.getOperand(2).getReg(), ArgTy, 0}});
     if (Status != LegalizerHelper::Legalized)
       return false;
     break;
@@ -420,10 +424,10 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
       auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
-      auto Status =
-          createLibcall(MIRBuilder, Libcall.LibcallID, {LibcallResult, RetTy},
-                        {{MI.getOperand(2).getReg(), ArgTy},
-                         {MI.getOperand(3).getReg(), ArgTy}});
+      auto Status = createLibcall(MIRBuilder, Libcall.LibcallID,
+                                  {LibcallResult, RetTy, 0},
+                                  {{MI.getOperand(2).getReg(), ArgTy, 0},
+                                   {MI.getOperand(3).getReg(), ArgTy, 0}});
 
       if (Status != LegalizerHelper::Legalized)
         return false;

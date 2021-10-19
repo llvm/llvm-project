@@ -12,7 +12,7 @@ source_filename = "fp128-g.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux-android"
 
-@ld_ptr = common local_unnamed_addr global fp128* null, align 8, !dbg !0
+@ld_ptr = common dso_local local_unnamed_addr global fp128* null, align 8, !dbg !0
 
 ; Function Attrs: nounwind readonly uwtable
 define fp128 @test_return1(fp128* nocapture readonly %ptr) local_unnamed_addr #0 !dbg !12 {

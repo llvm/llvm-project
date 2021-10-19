@@ -1,0 +1,12 @@
+static_library("APINotes") {
+  output_name = "clangAPINotes"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "APINotesTypes.cpp",
+    "APINotesYAMLCompiler.cpp",
+  ]
+}

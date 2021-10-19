@@ -1,8 +1,10 @@
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions | FileCheck %s --check-prefixes=CHECK,TYPED
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -enable-emscripten-cxx-exceptions -opaque-pointers | FileCheck %s --check-prefixes=CHECK,OPAQUE
 
 ; Test that function pointer casts are replaced with wrappers.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+; The TYPED and OPAQUE prefixes only differ in function ordering.
+
 target triple = "wasm32-unknown-unknown"
 
 define void @has_i32_arg(i32) {
@@ -21,8 +23,10 @@ declare void @foo2()
 declare void @foo3()
 
 ; CHECK-LABEL: test:
-; CHECK:      call        .Lhas_i32_arg_bitcast.2{{$}}
-; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2{{$}}
+; TYPED:      call        .Lhas_i32_arg_bitcast.2{{$}}
+; TYPED-NEXT: call        .Lhas_i32_arg_bitcast.2{{$}}
+; OPAQUE:      call       .Lhas_i32_arg_bitcast{{$}}
+; OPAQUE-NEXT: call       .Lhas_i32_arg_bitcast{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_ret_bitcast{{$}}
 ; CHECK-NEXT: call        $drop=, has_i32_ret
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0
@@ -63,7 +67,8 @@ entry:
 @alias_i32_arg = weak hidden alias void (i32), void (i32)* @has_i32_arg
 
 ; CHECK-LABEL: test_alias:
-; CHECK: call    .Lhas_i32_arg_bitcast.2
+; TYPED: call    .Lhas_i32_arg_bitcast.2
+; OPAQUE: call   .Lhas_i32_arg_bitcast
 define void @test_alias() {
 entry:
   call void bitcast (void (i32)* @alias_i32_arg to void ()*)()
@@ -72,8 +77,10 @@ entry:
 
 
 ; CHECK-LABEL: test_structs:
-; CHECK: call     .Lhas_i32_arg_bitcast.1, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
-; CHECK: call     .Lhas_i32_arg_bitcast, $0, $pop2
+; TYPED: call     .Lhas_i32_arg_bitcast.1, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
+; TYPED: call     .Lhas_i32_arg_bitcast, $0, $pop2
+; OPAQUE: call    .Lhas_i32_arg_bitcast.2, $pop{{[0-9]+}}, $pop{{[0-9]+$}}
+; OPAQUE: call    .Lhas_i32_arg_bitcast.1, $0, $pop2
 ; CHECK: call     .Lhas_struct_arg_bitcast{{$}}
 define void @test_structs() {
 entry:
@@ -153,12 +160,13 @@ define void @test_argument() {
 ; CHECK-LABEL: test_invoke:
 ; CHECK:      i32.const   $push[[L1:[0-9]+]]=, call_func{{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, has_i32_ret{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L1]], $pop[[L0]]{{$}}
+; CHECK-NEXT: call        invoke_vi, $pop[[L1]], $pop[[L0]]{{$}}
 ; CHECK:      i32.const   $push[[L3:[0-9]+]]=, call_func{{$}}
 ; CHECK-NEXT: i32.const   $push[[L2:[0-9]+]]=, has_i32_arg{{$}}
-; CHECK-NEXT: call        "__invoke_void_i32()*", $pop[[L3]], $pop[[L2]]{{$}}
-; CHECK:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2{{$}}
-; CHECK-NEXT: call        __invoke_void, $pop[[L4]]{{$}}
+; CHECK-NEXT: call        invoke_vi, $pop[[L3]], $pop[[L2]]{{$}}
+; TYPED:      i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast.2{{$}}
+; OPAQUE:     i32.const   $push[[L4:[0-9]+]]=, .Lhas_i32_arg_bitcast{{$}}
+; CHECK-NEXT: call        invoke_v, $pop[[L4]]{{$}}
 declare i32 @personality(...)
 define void @test_invoke() personality i32 (...)* @personality {
 entry:
@@ -182,19 +190,35 @@ end:
   ret void
 }
 
-; CHECK-LABEL: .Lhas_i32_arg_bitcast:
-; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast (i32, i32) -> ()
-; CHECK-NEXT: call        has_i32_arg, $1{{$}}
-; CHECK-NEXT: end_function
+; TYPED-LABEL: .Lhas_i32_arg_bitcast:
+; TYPED-NEXT: .functype .Lhas_i32_arg_bitcast (i32, i32) -> ()
+; TYPED-NEXT: call        has_i32_arg, $1{{$}}
+; TYPED-NEXT: end_function
 
-; CHECK-LABEL: .Lhas_i32_arg_bitcast.1:
-; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast.1 (i32, i32) -> ()
-; CHECK-NEXT: call        has_i32_arg, $0{{$}}
-; CHECK-NEXT: end_function
+; TYPED-LABEL: .Lhas_i32_arg_bitcast.1:
+; TYPED-NEXT: .functype .Lhas_i32_arg_bitcast.1 (i32, i32) -> ()
+; TYPED-NEXT: call        has_i32_arg, $0{{$}}
+; TYPED-NEXT: end_function
 
-; CHECK-LABEL: .Lhas_i32_arg_bitcast.2:
-; CHECK:      call        has_i32_arg, $0{{$}}
-; CHECK-NEXT: end_function
+; TYPED-LABEL: .Lhas_i32_arg_bitcast.2:
+; TYPED-NEXT: .functype	.Lhas_i32_arg_bitcast.2 () -> ()
+; TYPED-NEXT: call        has_i32_arg, $0{{$}}
+; TYPED-NEXT: end_function
+
+; OPAQUE-LABEL: .Lhas_i32_arg_bitcast:
+; OPAQUE-NEXT: .functype	.Lhas_i32_arg_bitcast () -> ()
+; OPAQUE-NEXT: call        has_i32_arg, $0{{$}}
+; OPAQUE-NEXT: end_function
+
+; OPAQUE-LABEL: .Lhas_i32_arg_bitcast.1:
+; OPAQUE-NEXT: .functype .Lhas_i32_arg_bitcast.1 (i32, i32) -> ()
+; OPAQUE-NEXT: call        has_i32_arg, $1{{$}}
+; OPAQUE-NEXT: end_function
+
+; OPAQUE-LABEL: .Lhas_i32_arg_bitcast.2:
+; OPAQUE-NEXT: .functype .Lhas_i32_arg_bitcast.2 (i32, i32) -> ()
+; OPAQUE-NEXT: call        has_i32_arg, $0{{$}}
+; OPAQUE-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_ret_bitcast:
 ; CHECK:      call        $drop=, has_i32_ret{{$}}

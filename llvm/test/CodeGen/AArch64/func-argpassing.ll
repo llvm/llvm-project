@@ -3,15 +3,15 @@
 
 %myStruct = type { i64 , i8, i32 }
 
-@var8 = global i8 0
-@var32 = global i32 0
-@var64 = global i64 0
-@var128 = global i128 0
-@varfloat = global float 0.0
-@vardouble = global double 0.0
-@varstruct = global %myStruct zeroinitializer
+@var8 = dso_local global i8 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
+@var128 = dso_local global i128 0
+@varfloat = dso_local global float 0.0
+@vardouble = dso_local global double 0.0
+@varstruct = dso_local global %myStruct zeroinitializer
 
-define void @take_i8s(i8 %val1, i8 %val2) {
+define dso_local void @take_i8s(i8 %val1, i8 %val2) {
 ; CHECK-LABEL: take_i8s:
     store i8 %val2, i8* @var8
     ; Not using w1 may be technically allowed, but it would indicate a
@@ -20,7 +20,7 @@ define void @take_i8s(i8 %val1, i8 %val2) {
     ret void
 }
 
-define void @add_floats(float %val1, float %val2) {
+define dso_local void @add_floats(float %val1, float %val2) {
 ; CHECK-LABEL: add_floats:
     %newval = fadd float %val1, %val2
 ; CHECK: fadd [[ADDRES:s[0-9]+]], s0, s1
@@ -32,7 +32,7 @@ define void @add_floats(float %val1, float %val2) {
 
 ; byval pointers should be allocated to the stack and copied as if
 ; with memcpy.
-define void @take_struct(%myStruct* byval %structval) {
+define dso_local void @take_struct(%myStruct* byval(%myStruct) %structval) {
 ; CHECK-LABEL: take_struct:
     %addr0 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 2
     %addr1 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 0
@@ -52,7 +52,7 @@ define void @take_struct(%myStruct* byval %structval) {
 }
 
 ; %structval should be at sp + 16
-define void @check_byval_align(i32* byval %ignore, %myStruct* byval align 16 %structval) {
+define dso_local void @check_byval_align(i32* byval(i32) %ignore, %myStruct* byval(%myStruct) align 16 %structval) {
 ; CHECK-LABEL: check_byval_align:
 
     %addr0 = getelementptr %myStruct, %myStruct* %structval, i64 0, i32 2
@@ -72,7 +72,7 @@ define void @check_byval_align(i32* byval %ignore, %myStruct* byval align 16 %st
     ret void
 }
 
-define i32 @return_int() {
+define dso_local i32 @return_int() {
 ; CHECK-LABEL: return_int:
     %val = load i32, i32* @var32
     ret i32 %val
@@ -81,7 +81,7 @@ define i32 @return_int() {
 ; CHECK-NEXT: ret
 }
 
-define double @return_double() {
+define dso_local double @return_double() {
 ; CHECK-LABEL: return_double:
     ret double 3.14
 ; CHECK: ldr d0, [{{x[0-9]+}}, {{#?}}:lo12:.LCPI
@@ -106,7 +106,7 @@ define [2 x i64] @return_struct() {
 ; to preserve value semantics) in x8. Strictly this only applies to
 ; structs larger than 16 bytes, but C semantics can still be provided
 ; if LLVM does it to %myStruct too. So this is the simplest check
-define void @return_large_struct(%myStruct* sret %retval) {
+define dso_local void @return_large_struct(%myStruct* sret(%myStruct) %retval) {
 ; CHECK-LABEL: return_large_struct:
     %addr0 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 0
     %addr1 = getelementptr %myStruct, %myStruct* %retval, i64 0, i32 1
@@ -125,8 +125,8 @@ define void @return_large_struct(%myStruct* sret %retval) {
 ; This struct is just too far along to go into registers: (only x7 is
 ; available, but it needs two). Also make sure that %stacked doesn't
 ; sneak into x7 behind.
-define i32 @struct_on_stack(i8 %var0, i16 %var1, i32 %var2, i64 %var3, i128 %var45,
-                          i32* %var6, %myStruct* byval %struct, i32* byval %stacked,
+define dso_local i32 @struct_on_stack(i8 %var0, i16 %var1, i32 %var2, i64 %var3, i128 %var45,
+                          i32* %var6, %myStruct* byval(%myStruct) %struct, i32* byval(i32) %stacked,
                           double %notstacked) {
 ; CHECK-LABEL: struct_on_stack:
     %addr = getelementptr %myStruct, %myStruct* %struct, i64 0, i32 0
@@ -146,7 +146,7 @@ define i32 @struct_on_stack(i8 %var0, i16 %var1, i32 %var2, i64 %var3, i128 %var
 ; CHECK-LE: ldr w0, [sp, #16]
 }
 
-define void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
+define dso_local void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
                          float %var4, float %var5, float %var6, float %var7,
                          float %var8) {
 ; CHECK-LABEL: stacked_fpu:
@@ -161,7 +161,7 @@ define void @stacked_fpu(float %var0, double %var1, float %var2, float %var3,
 
 ; 128-bit integer types should be passed in xEVEN, xODD rather than
 ; the reverse. In this case x2 and x3. Nothing should use x1.
-define i64 @check_i128_regalign(i32 %val0, i128 %val1, i64 %val2) {
+define dso_local i64 @check_i128_regalign(i32 %val0, i128 %val1, i64 %val2) {
 ; CHECK-LABEL: check_i128_regalign
     store i128 %val1, i128* @var128
 ; CHECK-DAG: add x[[VAR128:[0-9]+]], {{x[0-9]+}}, :lo12:var128
@@ -171,7 +171,7 @@ define i64 @check_i128_regalign(i32 %val0, i128 %val1, i64 %val2) {
 ; CHECK-DAG: mov x0, x4
 }
 
-define void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
+define dso_local void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
                                    i32 %val4, i32 %val5, i32 %val6, i32 %val7,
                                    i32 %stack1, i128 %stack2) {
 ; CHECK-LABEL: check_i128_stackalign
@@ -188,7 +188,7 @@ define void @check_i128_stackalign(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 
-define i32 @test_extern() {
+define dso_local i32 @test_extern() {
 ; CHECK-LABEL: test_extern:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 undef, i8* align 4 undef, i32 undef, i1 0)
 ; CHECK: bl memcpy
@@ -198,7 +198,7 @@ define i32 @test_extern() {
 
 ; A sub-i32 stack argument must be loaded on big endian with ldr{h,b}, not just
 ; implicitly extended to a 32-bit load.
-define i16 @stacked_i16(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
+define dso_local i16 @stacked_i16(i32 %val0, i32 %val1, i32 %val2, i32 %val3,
                         i32 %val4, i32 %val5, i32 %val6, i32 %val7,
                         i16 %stack1) {
 ; CHECK-LABEL: stacked_i16

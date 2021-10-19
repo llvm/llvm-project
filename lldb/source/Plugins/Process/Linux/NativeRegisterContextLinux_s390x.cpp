@@ -93,7 +93,7 @@ static const RegisterSet g_reg_sets_s390x[k_num_register_sets] = {
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::make_unique<NativeRegisterContextLinux_s390x>(target_arch,
                                                              native_thread);
 }
@@ -109,8 +109,9 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 
 NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextLinux(native_thread,
-                                 CreateRegisterInfoInterface(target_arch)) {
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:

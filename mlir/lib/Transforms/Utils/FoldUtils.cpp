@@ -13,7 +13,6 @@
 
 #include "mlir/Transforms/FoldUtils.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
@@ -30,7 +29,7 @@ getInsertionRegion(DialectInterfaceCollection<DialectFoldInterface> &interfaces,
     //  * The parent is unregistered, or is known to be isolated from above.
     //  * The parent is a top-level operation.
     auto *parentOp = region->getParentOp();
-    if (!parentOp->isRegistered() || parentOp->isKnownIsolatedFromAbove() ||
+    if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>() ||
         !parentOp->getBlock())
       return region;
 
@@ -61,10 +60,6 @@ static Operation *materializeConstant(Dialect *dialect, OpBuilder &builder,
     return constOp;
   }
 
-  // If the dialect is unable to materialize a constant, check to see if the
-  // standard constant can be used.
-  if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type, value);
   return nullptr;
 }
 
@@ -170,7 +165,7 @@ LogicalResult OperationFolder::tryToFold(
   SmallVector<OpFoldResult, 8> foldResults;
 
   // If this is a commutative operation, move constants to be trailing operands.
-  if (op->getNumOperands() >= 2 && op->isCommutative()) {
+  if (op->getNumOperands() >= 2 && op->hasTrait<OpTrait::IsCommutative>()) {
     std::stable_partition(
         op->getOpOperands().begin(), op->getOpOperands().end(),
         [&](OpOperand &O) { return !matchPattern(O.get(), m_Constant()); });
@@ -209,6 +204,8 @@ LogicalResult OperationFolder::tryToFold(
 
     // Check if the result was an SSA value.
     if (auto repl = foldResults[i].dyn_cast<Value>()) {
+      if (repl.getType() != op->getResult(i).getType())
+        return failure();
       results.emplace_back(repl);
       continue;
     }
@@ -219,6 +216,13 @@ LogicalResult OperationFolder::tryToFold(
     if (auto *constOp =
             tryGetOrCreateConstant(uniquedConstants, dialect, builder, attrRepl,
                                    res.getType(), op->getLoc())) {
+      // Ensure that this constant dominates the operation we are replacing it
+      // with. This may not automatically happen if the operation being folded
+      // was inserted before the constant within the insertion block.
+      Block *opBlock = op->getBlock();
+      if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
+        constOp->moveBefore(&opBlock->front());
+
       results.push_back(constOp->getResult(0));
       continue;
     }
@@ -248,19 +252,19 @@ Operation *OperationFolder::tryGetOrCreateConstant(
     Attribute value, Type type, Location loc) {
   // Check if an existing mapping already exists.
   auto constKey = std::make_tuple(dialect, value, type);
-  auto *&constInst = uniquedConstants[constKey];
-  if (constInst)
-    return constInst;
+  Operation *&constOp = uniquedConstants[constKey];
+  if (constOp)
+    return constOp;
 
   // If one doesn't exist, try to materialize one.
-  if (!(constInst = materializeConstant(dialect, builder, value, type, loc)))
+  if (!(constOp = materializeConstant(dialect, builder, value, type, loc)))
     return nullptr;
 
   // Check to see if the generated constant is in the expected dialect.
-  auto *newDialect = constInst->getDialect();
+  auto *newDialect = constOp->getDialect();
   if (newDialect == dialect) {
-    referencedDialects[constInst].push_back(dialect);
-    return constInst;
+    referencedDialects[constOp].push_back(dialect);
+    return constOp;
   }
 
   // If it isn't, then we also need to make sure that the mapping for the new
@@ -270,13 +274,13 @@ Operation *OperationFolder::tryGetOrCreateConstant(
   // If an existing operation in the new dialect already exists, delete the
   // materialized operation in favor of the existing one.
   if (auto *existingOp = uniquedConstants.lookup(newKey)) {
-    constInst->erase();
+    constOp->erase();
     referencedDialects[existingOp].push_back(dialect);
-    return constInst = existingOp;
+    return constOp = existingOp;
   }
 
   // Otherwise, update the new dialect to the materialized operation.
-  referencedDialects[constInst].assign({dialect, newDialect});
-  auto newIt = uniquedConstants.insert({newKey, constInst});
+  referencedDialects[constOp].assign({dialect, newDialect});
+  auto newIt = uniquedConstants.insert({newKey, constOp});
   return newIt.first->second;
 }

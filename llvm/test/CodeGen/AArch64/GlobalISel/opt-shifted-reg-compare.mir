@@ -23,7 +23,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -49,7 +49,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -75,7 +75,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -101,7 +101,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -127,7 +127,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -153,7 +153,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 0, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -179,7 +179,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 2, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -204,7 +204,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 2, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -229,7 +229,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 2, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -254,7 +254,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -279,7 +279,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -304,7 +304,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -331,7 +331,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -356,7 +356,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -381,7 +381,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -408,7 +408,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 8, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -433,7 +433,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 8, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -458,7 +458,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 8, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -484,7 +484,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -509,7 +509,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -534,7 +534,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -559,7 +559,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -584,7 +584,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -609,7 +609,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -634,7 +634,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 11, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -659,7 +659,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 11, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -684,7 +684,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 11, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -711,7 +711,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 3, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -736,7 +736,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 131, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0
@@ -761,7 +761,7 @@ body:             |
     ; CHECK: liveins: $w0, $w1
     ; CHECK: %copy0:gpr32 = COPY $w0
     ; CHECK: %copy1:gpr32 = COPY $w1
-    ; CHECK: $wzr = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
+    ; CHECK: [[SUBSWrs:%[0-9]+]]:gpr32 = SUBSWrs %copy1, %copy0, 67, implicit-def $nzcv
     ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; CHECK: $w0 = COPY %cmp
     ; CHECK: RET_ReallyLR implicit $w0

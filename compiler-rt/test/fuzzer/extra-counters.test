@@ -1,4 +1,4 @@
-REQUIRES: linux
+UNSUPPORTED: darwin
 
 RUN: %cpp_compiler %S/TableLookupTest.cpp -o %t-TableLookupTest
 RUN: not %run %t-TableLookupTest -print_final_stats=1 2>&1 | FileCheck %s

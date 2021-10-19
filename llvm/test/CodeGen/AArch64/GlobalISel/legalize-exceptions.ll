@@ -18,8 +18,8 @@ declare void @_Unwind_Resume(i8*)
 ; CHECK:     [[PTR:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK:     [[SEL_PTR:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK:     [[SEL_PTR_INT:%[0-9]+]]:_(s32) = G_PTRTOINT [[SEL_PTR]](p0)
-; CHECK:     G_STORE [[PTR]](p0), %0(p0) :: (store 8 into %ir.exn.slot)
-; CHECK:     G_STORE [[SEL_PTR_INT]](s32), %1(p0) :: (store 4 into %ir.ehselector.slot)
+; CHECK:     G_STORE [[PTR]](p0), %0(p0) :: (store (p0) into %ir.exn.slot)
+; CHECK:     G_STORE [[SEL_PTR_INT]](s32), %1(p0) :: (store (s32) into %ir.ehselector.slot)
 
 define void @bar() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %exn.slot = alloca i8*

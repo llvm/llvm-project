@@ -41,11 +41,13 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -57,12 +59,12 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 
-#include <ctype.h>
-#include <inttypes.h>
+#include <cctype>
+#include <cinttypes>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <memory>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <type_traits>
 #include <utility>
 
@@ -76,203 +78,196 @@ struct RegisterInfo;
 using namespace lldb;
 using namespace lldb_private;
 
+using Definition = lldb_private::FormatEntity::Entry::Definition;
+using Entry = FormatEntity::Entry;
+using EntryType = FormatEntity::Entry::Type;
+
 enum FileKind { FileError = 0, Basename, Dirname, Fullpath };
 
-#define ENTRY(n, t)                                                            \
-  { n, nullptr, FormatEntity::Entry::Type::t, 0, 0, nullptr, false }
-#define ENTRY_VALUE(n, t, v)                                                   \
-  { n, nullptr, FormatEntity::Entry::Type::t, v, 0, nullptr, false }
-#define ENTRY_CHILDREN(n, t, c)                                                \
-  {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t, 0,                               \
-        static_cast<uint32_t>(llvm::array_lengthof(c)), c, false               \
-  }
-#define ENTRY_CHILDREN_KEEP_SEP(n, t, c)                                       \
-  {                                                                            \
-    n, nullptr, FormatEntity::Entry::Type::t, 0,                               \
-        static_cast<uint32_t>(llvm::array_lengthof(c)), c, true                \
-  }
-#define ENTRY_STRING(n, s)                                                     \
-  { n, s, FormatEntity::Entry::Type::EscapeCode, 0, 0, nullptr, false }
-static FormatEntity::Entry::Definition g_string_entry[] = {
-    ENTRY("*", ParentString)};
+constexpr Definition g_string_entry[] = {
+    Definition("*", EntryType::ParentString)};
 
-static FormatEntity::Entry::Definition g_addr_entries[] = {
-    ENTRY("load", AddressLoad),
-    ENTRY("file", AddressFile),
-    ENTRY("load", AddressLoadOrFile),
+constexpr Definition g_addr_entries[] = {
+    Definition("load", EntryType::AddressLoad),
+    Definition("file", EntryType::AddressFile)};
+
+constexpr Definition g_file_child_entries[] = {
+    Definition("basename", EntryType::ParentNumber, FileKind::Basename),
+    Definition("dirname", EntryType::ParentNumber, FileKind::Dirname),
+    Definition("fullpath", EntryType::ParentNumber, FileKind::Fullpath)};
+
+constexpr Definition g_frame_child_entries[] = {
+    Definition("index", EntryType::FrameIndex),
+    Definition("pc", EntryType::FrameRegisterPC),
+    Definition("fp", EntryType::FrameRegisterFP),
+    Definition("sp", EntryType::FrameRegisterSP),
+    Definition("flags", EntryType::FrameRegisterFlags),
+    Definition("no-debug", EntryType::FrameNoDebug),
+    Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
+                                  g_string_entry),
+    Definition("is-artificial", EntryType::FrameIsArtificial),
 };
 
-static FormatEntity::Entry::Definition g_file_child_entries[] = {
-    ENTRY_VALUE("basename", ParentNumber, FileKind::Basename),
-    ENTRY_VALUE("dirname", ParentNumber, FileKind::Dirname),
-    ENTRY_VALUE("fullpath", ParentNumber, FileKind::Fullpath)};
+constexpr Definition g_function_child_entries[] = {
+    Definition("id", EntryType::FunctionID),
+    Definition("name", EntryType::FunctionName),
+    Definition("name-without-args", EntryType::FunctionNameNoArgs),
+    Definition("name-with-args", EntryType::FunctionNameWithArgs),
+    Definition("mangled-name", EntryType::FunctionMangledName),
+    Definition("addr-offset", EntryType::FunctionAddrOffset),
+    Definition("concrete-only-addr-offset-no-padding",
+               EntryType::FunctionAddrOffsetConcrete),
+    Definition("line-offset", EntryType::FunctionLineOffset),
+    Definition("pc-offset", EntryType::FunctionPCOffset),
+    Definition("initial-function", EntryType::FunctionInitial),
+    Definition("changed", EntryType::FunctionChanged),
+    Definition("is-optimized", EntryType::FunctionIsOptimized)};
 
-static FormatEntity::Entry::Definition g_frame_child_entries[] = {
-    ENTRY("index", FrameIndex),
-    ENTRY("pc", FrameRegisterPC),
-    ENTRY("fp", FrameRegisterFP),
-    ENTRY("sp", FrameRegisterSP),
-    ENTRY("flags", FrameRegisterFlags),
-    ENTRY("no-debug", FrameNoDebug),
-    ENTRY_CHILDREN("reg", FrameRegisterByName, g_string_entry),
-    ENTRY("is-artificial", FrameIsArtificial),
+constexpr Definition g_line_child_entries[] = {
+    Entry::DefinitionWithChildren("file", EntryType::LineEntryFile,
+                                  g_file_child_entries),
+    Definition("number", EntryType::LineEntryLineNumber),
+    Definition("column", EntryType::LineEntryColumn),
+    Definition("start-addr", EntryType::LineEntryStartAddress),
+    Definition("end-addr", EntryType::LineEntryEndAddress),
 };
 
-static FormatEntity::Entry::Definition g_function_child_entries[] = {
-    ENTRY("id", FunctionID),
-    ENTRY("name", FunctionName),
-    ENTRY("name-without-args", FunctionNameNoArgs),
-    ENTRY("name-with-args", FunctionNameWithArgs),
-    ENTRY("mangled-name", FunctionMangledName),
-    ENTRY("addr-offset", FunctionAddrOffset),
-    ENTRY("concrete-only-addr-offset-no-padding", FunctionAddrOffsetConcrete),
-    ENTRY("line-offset", FunctionLineOffset),
-    ENTRY("pc-offset", FunctionPCOffset),
-    ENTRY("initial-function", FunctionInitial),
-    ENTRY("changed", FunctionChanged),
-    ENTRY("is-optimized", FunctionIsOptimized)};
+constexpr Definition g_module_child_entries[] = {Entry::DefinitionWithChildren(
+    "file", EntryType::ModuleFile, g_file_child_entries)};
 
-static FormatEntity::Entry::Definition g_line_child_entries[] = {
-    ENTRY_CHILDREN("file", LineEntryFile, g_file_child_entries),
-    ENTRY("number", LineEntryLineNumber),
-    ENTRY("column", LineEntryColumn),
-    ENTRY("start-addr", LineEntryStartAddress),
-    ENTRY("end-addr", LineEntryEndAddress),
-};
+constexpr Definition g_process_child_entries[] = {
+    Definition("id", EntryType::ProcessID),
+    Definition("name", EntryType::ProcessFile, FileKind::Basename),
+    Entry::DefinitionWithChildren("file", EntryType::ProcessFile,
+                                  g_file_child_entries)};
 
-static FormatEntity::Entry::Definition g_module_child_entries[] = {
-    ENTRY_CHILDREN("file", ModuleFile, g_file_child_entries),
-};
+constexpr Definition g_svar_child_entries[] = {
+    Definition("*", EntryType::ParentString)};
 
-static FormatEntity::Entry::Definition g_process_child_entries[] = {
-    ENTRY("id", ProcessID),
-    ENTRY_VALUE("name", ProcessFile, FileKind::Basename),
-    ENTRY_CHILDREN("file", ProcessFile, g_file_child_entries),
-};
+constexpr Definition g_var_child_entries[] = {
+    Definition("*", EntryType::ParentString)};
 
-static FormatEntity::Entry::Definition g_svar_child_entries[] = {
-    ENTRY("*", ParentString)};
+constexpr Definition g_thread_child_entries[] = {
+    Definition("id", EntryType::ThreadID),
+    Definition("protocol_id", EntryType::ThreadProtocolID),
+    Definition("index", EntryType::ThreadIndexID),
+    Entry::DefinitionWithChildren("info", EntryType::ThreadInfo,
+                                  g_string_entry),
+    Definition("queue", EntryType::ThreadQueue),
+    Definition("name", EntryType::ThreadName),
+    Definition("stop-reason", EntryType::ThreadStopReason),
+    Definition("stop-reason-raw", EntryType::ThreadStopReasonRaw),
+    Definition("return-value", EntryType::ThreadReturnValue),
+    Definition("completed-expression", EntryType::ThreadCompletedExpression)};
 
-static FormatEntity::Entry::Definition g_var_child_entries[] = {
-    ENTRY("*", ParentString)};
-
-static FormatEntity::Entry::Definition g_thread_child_entries[] = {
-    ENTRY("id", ThreadID),
-    ENTRY("protocol_id", ThreadProtocolID),
-    ENTRY("index", ThreadIndexID),
-    ENTRY_CHILDREN("info", ThreadInfo, g_string_entry),
-    ENTRY("queue", ThreadQueue),
-    ENTRY("name", ThreadName),
-    ENTRY("stop-reason", ThreadStopReason),
-    ENTRY("stop-reason-raw", ThreadStopReasonRaw),
-    ENTRY("return-value", ThreadReturnValue),
-    ENTRY("completed-expression", ThreadCompletedExpression),
-};
-
-static FormatEntity::Entry::Definition g_target_child_entries[] = {
-    ENTRY("arch", TargetArch),
-};
+constexpr Definition g_target_child_entries[] = {
+    Definition("arch", EntryType::TargetArch)};
 
 #define _TO_STR2(_val) #_val
 #define _TO_STR(_val) _TO_STR2(_val)
 
-static FormatEntity::Entry::Definition g_ansi_fg_entries[] = {
-    ENTRY_STRING("black",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_BLACK) ANSI_ESC_END),
-    ENTRY_STRING("red", ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_RED) ANSI_ESC_END),
-    ENTRY_STRING("green",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_GREEN) ANSI_ESC_END),
-    ENTRY_STRING("yellow",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_YELLOW) ANSI_ESC_END),
-    ENTRY_STRING("blue",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_BLUE) ANSI_ESC_END),
-    ENTRY_STRING("purple",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_PURPLE) ANSI_ESC_END),
-    ENTRY_STRING("cyan",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_CYAN) ANSI_ESC_END),
-    ENTRY_STRING("white",
-                 ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_WHITE) ANSI_ESC_END),
+constexpr Definition g_ansi_fg_entries[] = {
+    Definition("black",
+               ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_BLACK) ANSI_ESC_END),
+    Definition("red", ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_RED) ANSI_ESC_END),
+    Definition("green",
+               ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_GREEN) ANSI_ESC_END),
+    Definition("yellow",
+               ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_YELLOW) ANSI_ESC_END),
+    Definition("blue", ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_BLUE) ANSI_ESC_END),
+    Definition("purple",
+               ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_PURPLE) ANSI_ESC_END),
+    Definition("cyan", ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_CYAN) ANSI_ESC_END),
+    Definition("white",
+               ANSI_ESC_START _TO_STR(ANSI_FG_COLOR_WHITE) ANSI_ESC_END),
 };
 
-static FormatEntity::Entry::Definition g_ansi_bg_entries[] = {
-    ENTRY_STRING("black",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_BLACK) ANSI_ESC_END),
-    ENTRY_STRING("red", ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_RED) ANSI_ESC_END),
-    ENTRY_STRING("green",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_GREEN) ANSI_ESC_END),
-    ENTRY_STRING("yellow",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_YELLOW) ANSI_ESC_END),
-    ENTRY_STRING("blue",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_BLUE) ANSI_ESC_END),
-    ENTRY_STRING("purple",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_PURPLE) ANSI_ESC_END),
-    ENTRY_STRING("cyan",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_CYAN) ANSI_ESC_END),
-    ENTRY_STRING("white",
-                 ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_WHITE) ANSI_ESC_END),
+constexpr Definition g_ansi_bg_entries[] = {
+    Definition("black",
+               ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_BLACK) ANSI_ESC_END),
+    Definition("red", ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_RED) ANSI_ESC_END),
+    Definition("green",
+               ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_GREEN) ANSI_ESC_END),
+    Definition("yellow",
+               ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_YELLOW) ANSI_ESC_END),
+    Definition("blue", ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_BLUE) ANSI_ESC_END),
+    Definition("purple",
+               ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_PURPLE) ANSI_ESC_END),
+    Definition("cyan", ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_CYAN) ANSI_ESC_END),
+    Definition("white",
+               ANSI_ESC_START _TO_STR(ANSI_BG_COLOR_WHITE) ANSI_ESC_END),
 };
 
-static FormatEntity::Entry::Definition g_ansi_entries[] = {
-    ENTRY_CHILDREN("fg", Invalid, g_ansi_fg_entries),
-    ENTRY_CHILDREN("bg", Invalid, g_ansi_bg_entries),
-    ENTRY_STRING("normal",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_NORMAL) ANSI_ESC_END),
-    ENTRY_STRING("bold", ANSI_ESC_START _TO_STR(ANSI_CTRL_BOLD) ANSI_ESC_END),
-    ENTRY_STRING("faint", ANSI_ESC_START _TO_STR(ANSI_CTRL_FAINT) ANSI_ESC_END),
-    ENTRY_STRING("italic",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_ITALIC) ANSI_ESC_END),
-    ENTRY_STRING("underline",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_UNDERLINE) ANSI_ESC_END),
-    ENTRY_STRING("slow-blink",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_SLOW_BLINK) ANSI_ESC_END),
-    ENTRY_STRING("fast-blink",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_FAST_BLINK) ANSI_ESC_END),
-    ENTRY_STRING("negative",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_IMAGE_NEGATIVE) ANSI_ESC_END),
-    ENTRY_STRING("conceal",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_CONCEAL) ANSI_ESC_END),
-    ENTRY_STRING("crossed-out",
-                 ANSI_ESC_START _TO_STR(ANSI_CTRL_CROSSED_OUT) ANSI_ESC_END),
+constexpr Definition g_ansi_entries[] = {
+    Entry::DefinitionWithChildren("fg", EntryType::Invalid, g_ansi_fg_entries),
+    Entry::DefinitionWithChildren("bg", EntryType::Invalid, g_ansi_bg_entries),
+    Definition("normal", ANSI_ESC_START _TO_STR(ANSI_CTRL_NORMAL) ANSI_ESC_END),
+    Definition("bold", ANSI_ESC_START _TO_STR(ANSI_CTRL_BOLD) ANSI_ESC_END),
+    Definition("faint", ANSI_ESC_START _TO_STR(ANSI_CTRL_FAINT) ANSI_ESC_END),
+    Definition("italic", ANSI_ESC_START _TO_STR(ANSI_CTRL_ITALIC) ANSI_ESC_END),
+    Definition("underline",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_UNDERLINE) ANSI_ESC_END),
+    Definition("slow-blink",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_SLOW_BLINK) ANSI_ESC_END),
+    Definition("fast-blink",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_FAST_BLINK) ANSI_ESC_END),
+    Definition("negative",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_IMAGE_NEGATIVE) ANSI_ESC_END),
+    Definition("conceal",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_CONCEAL) ANSI_ESC_END),
+    Definition("crossed-out",
+               ANSI_ESC_START _TO_STR(ANSI_CTRL_CROSSED_OUT) ANSI_ESC_END),
 };
 
-static FormatEntity::Entry::Definition g_script_child_entries[] = {
-    ENTRY("frame", ScriptFrame),   ENTRY("process", ScriptProcess),
-    ENTRY("target", ScriptTarget), ENTRY("thread", ScriptThread),
-    ENTRY("var", ScriptVariable),  ENTRY("svar", ScriptVariableSynthetic),
-    ENTRY("thread", ScriptThread),
-};
+constexpr Definition g_script_child_entries[] = {
+    Definition("frame", EntryType::ScriptFrame),
+    Definition("process", EntryType::ScriptProcess),
+    Definition("target", EntryType::ScriptTarget),
+    Definition("thread", EntryType::ScriptThread),
+    Definition("var", EntryType::ScriptVariable),
+    Definition("svar", EntryType::ScriptVariableSynthetic),
+    Definition("thread", EntryType::ScriptThread)};
 
-static FormatEntity::Entry::Definition g_top_level_entries[] = {
-    ENTRY_CHILDREN("addr", AddressLoadOrFile, g_addr_entries),
-    ENTRY("addr-file-or-load", AddressLoadOrFile),
-    ENTRY_CHILDREN("ansi", Invalid, g_ansi_entries),
-    ENTRY("current-pc-arrow", CurrentPCArrow),
-    ENTRY_CHILDREN("file", File, g_file_child_entries),
-    ENTRY("language", Lang),
-    ENTRY_CHILDREN("frame", Invalid, g_frame_child_entries),
-    ENTRY_CHILDREN("function", Invalid, g_function_child_entries),
-    ENTRY_CHILDREN("line", Invalid, g_line_child_entries),
-    ENTRY_CHILDREN("module", Invalid, g_module_child_entries),
-    ENTRY_CHILDREN("process", Invalid, g_process_child_entries),
-    ENTRY_CHILDREN("script", Invalid, g_script_child_entries),
-    ENTRY_CHILDREN_KEEP_SEP("svar", VariableSynthetic, g_svar_child_entries),
-    ENTRY_CHILDREN("thread", Invalid, g_thread_child_entries),
-    ENTRY_CHILDREN("target", Invalid, g_target_child_entries),
-    ENTRY_CHILDREN_KEEP_SEP("var", Variable, g_var_child_entries),
-};
+constexpr Definition g_top_level_entries[] = {
+    Entry::DefinitionWithChildren("addr", EntryType::AddressLoadOrFile,
+                                  g_addr_entries),
+    Definition("addr-file-or-load", EntryType::AddressLoadOrFile),
+    Entry::DefinitionWithChildren("ansi", EntryType::Invalid, g_ansi_entries),
+    Definition("current-pc-arrow", EntryType::CurrentPCArrow),
+    Entry::DefinitionWithChildren("file", EntryType::File,
+                                  g_file_child_entries),
+    Definition("language", EntryType::Lang),
+    Entry::DefinitionWithChildren("frame", EntryType::Invalid,
+                                  g_frame_child_entries),
+    Entry::DefinitionWithChildren("function", EntryType::Invalid,
+                                  g_function_child_entries),
+    Entry::DefinitionWithChildren("line", EntryType::Invalid,
+                                  g_line_child_entries),
+    Entry::DefinitionWithChildren("module", EntryType::Invalid,
+                                  g_module_child_entries),
+    Entry::DefinitionWithChildren("process", EntryType::Invalid,
+                                  g_process_child_entries),
+    Entry::DefinitionWithChildren("script", EntryType::Invalid,
+                                  g_script_child_entries),
+    Entry::DefinitionWithChildren("svar", EntryType::VariableSynthetic,
+                                  g_svar_child_entries, true),
+    Entry::DefinitionWithChildren("thread", EntryType::Invalid,
+                                  g_thread_child_entries),
+    Entry::DefinitionWithChildren("target", EntryType::Invalid,
+                                  g_target_child_entries),
+    Entry::DefinitionWithChildren("var", EntryType::Variable,
+                                  g_var_child_entries, true)};
 
-static FormatEntity::Entry::Definition g_root =
-    ENTRY_CHILDREN("<root>", Root, g_top_level_entries);
+constexpr Definition g_root = Entry::DefinitionWithChildren(
+    "<root>", EntryType::Root, g_top_level_entries);
 
 FormatEntity::Entry::Entry(llvm::StringRef s)
     : string(s.data(), s.size()), printf_format(), children(),
-      definition(nullptr), type(Type::String), fmt(lldb::eFormatDefault),
-      number(0), deref(false) {}
+      type(Type::String), fmt(lldb::eFormatDefault), number(0), deref(false) {}
 
 FormatEntity::Entry::Entry(char ch)
-    : string(1, ch), printf_format(), children(), definition(nullptr),
-      type(Type::String), fmt(lldb::eFormatDefault), number(0), deref(false) {}
+    : string(1, ch), printf_format(), children(), type(Type::String),
+      fmt(lldb::eFormatDefault), number(0), deref(false) {}
 
 void FormatEntity::Entry::AppendChar(char ch) {
   if (children.empty() || children.back().type != Entry::Type::String)
@@ -598,9 +593,7 @@ static bool DumpFile(Stream &s, const FileSpec &file, FileKind file_kind) {
 }
 
 static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
-                         uint32_t reg_num, Format format)
-
-{
+                         uint32_t reg_num, Format format) {
   if (frame) {
     RegisterContext *reg_ctx = frame->GetRegisterContext().get();
 
@@ -624,7 +617,6 @@ static bool DumpRegister(Stream &s, StackFrame *frame, RegisterKind reg_kind,
 }
 
 static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
-                                             StackFrame *frame,
                                              bool deref_pointer) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
   const char *ptr_deref_format = "[%d]";
@@ -956,9 +948,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     bool success = true;
     for (int64_t index = index_lower; index <= index_higher; ++index) {
-      ValueObject *item =
-          ExpandIndexedExpression(target, index, exe_ctx->GetFramePtr(), false)
-              .get();
+      ValueObject *item = ExpandIndexedExpression(target, index, false).get();
 
       if (!item) {
         LLDB_LOGF(log,
@@ -1523,17 +1513,22 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return initial_function;
 
   case Entry::Type::FunctionName: {
+    if (!sc)
+      return false;
+
     Language *language_plugin = nullptr;
     bool language_plugin_handled = false;
     StreamString ss;
+
     if (sc->function)
       language_plugin = Language::FindPlugin(sc->function->GetLanguage());
     else if (sc->symbol)
       language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-    if (language_plugin) {
+
+    if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
           sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
-    }
+
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
@@ -1543,6 +1538,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         name = sc->function->GetName().AsCString(nullptr);
       else if (sc->symbol)
         name = sc->symbol->GetName().AsCString(nullptr);
+
       if (name) {
         s.PutCString(name);
 
@@ -1564,6 +1560,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionNameNoArgs: {
+    if (!sc)
+      return false;
+
     Language *language_plugin = nullptr;
     bool language_plugin_handled = false;
     StreamString ss;
@@ -1571,11 +1570,12 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       language_plugin = Language::FindPlugin(sc->function->GetLanguage());
     else if (sc->symbol)
       language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-    if (language_plugin) {
+
+    if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
           sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
           ss);
-    }
+
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
@@ -1594,6 +1594,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionNameWithArgs: {
+    if (!sc)
+      return false;
+
     Language *language_plugin = nullptr;
     bool language_plugin_handled = false;
     StreamString ss;
@@ -1601,10 +1604,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       language_plugin = Language::FindPlugin(sc->function->GetLanguage());
     else if (sc->symbol)
       language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-    if (language_plugin) {
+
+    if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
           sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
-    }
+
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
@@ -1756,6 +1760,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionMangledName: {
+    if (!sc)
+      return false;
+
     const char *name = nullptr;
     if (sc->symbol)
       name =
@@ -1769,7 +1776,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return false;
     s.PutCString(name);
 
-    if (sc->block->GetContainingInlinedBlock()) {
+    if (sc->block && sc->block->GetContainingInlinedBlock()) {
       if (const InlineFunctionInfo *inline_info =
               sc->block->GetInlinedFunctionInfo()) {
         s.PutCString(" [inlined] ");
@@ -1778,7 +1785,6 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     }
     return true;
   }
-
   case Entry::Type::FunctionAddrOffset:
     if (addr) {
       if (DumpAddressOffsetFromFunction(s, sc, exe_ctx, *addr, false, false,
@@ -1796,9 +1802,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionLineOffset:
-    return (DumpAddressOffsetFromFunction(s, sc, exe_ctx,
-                                          sc->line_entry.range.GetBaseAddress(),
-                                          false, false, false));
+    if (sc)
+      return (DumpAddressOffsetFromFunction(
+          s, sc, exe_ctx, sc->line_entry.range.GetBaseAddress(), false, false,
+          false));
+    return false;
 
   case Entry::Type::FunctionPCOffset:
     if (exe_ctx) {
@@ -1817,7 +1825,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::FunctionIsOptimized: {
     bool is_optimized = false;
-    if (sc->function && sc->function->GetIsOptimized()) {
+    if (sc && sc->function && sc->function->GetIsOptimized()) {
       is_optimized = true;
     }
     return is_optimized;
@@ -1891,8 +1899,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   return false;
 }
 
-static bool DumpCommaSeparatedChildEntryNames(
-    Stream &s, const FormatEntity::Entry::Definition *parent) {
+static bool DumpCommaSeparatedChildEntryNames(Stream &s,
+                                              const Definition *parent) {
   if (parent->children) {
     const size_t n = parent->num_children;
     for (size_t i = 0; i < n; ++i) {
@@ -1906,8 +1914,7 @@ static bool DumpCommaSeparatedChildEntryNames(
 }
 
 static Status ParseEntry(const llvm::StringRef &format_str,
-                         const FormatEntity::Entry::Definition *parent,
-                         FormatEntity::Entry &entry) {
+                         const Definition *parent, FormatEntity::Entry &entry) {
   Status error;
 
   const size_t sep_pos = format_str.find_first_of(".[:");
@@ -1917,7 +1924,7 @@ static Status ParseEntry(const llvm::StringRef &format_str,
 
   const size_t n = parent->num_children;
   for (size_t i = 0; i < n; ++i) {
-    const FormatEntity::Entry::Definition *entry_def = parent->children + i;
+    const Definition *entry_def = parent->children + i;
     if (key.equals(entry_def->name) || entry_def->name[0] == '*') {
       llvm::StringRef value;
       if (sep_char)
@@ -1990,16 +1997,15 @@ static Status ParseEntry(const llvm::StringRef &format_str,
   return error;
 }
 
-static const FormatEntity::Entry::Definition *
-FindEntry(const llvm::StringRef &format_str,
-          const FormatEntity::Entry::Definition *parent,
-          llvm::StringRef &remainder) {
+static const Definition *FindEntry(const llvm::StringRef &format_str,
+                                   const Definition *parent,
+                                   llvm::StringRef &remainder) {
   Status error;
 
   std::pair<llvm::StringRef, llvm::StringRef> p = format_str.split('.');
   const size_t n = parent->num_children;
   for (size_t i = 0; i < n; ++i) {
-    const FormatEntity::Entry::Definition *entry_def = parent->children + i;
+    const Definition *entry_def = parent->children + i;
     if (p.first.equals(entry_def->name) || entry_def->name[0] == '*') {
       if (p.second.empty()) {
         if (format_str.back() == '.')
@@ -2363,8 +2369,7 @@ static std::string MakeMatch(const llvm::StringRef &prefix,
   return match;
 }
 
-static void AddMatches(const FormatEntity::Entry::Definition *def,
-                       const llvm::StringRef &prefix,
+static void AddMatches(const Definition *def, const llvm::StringRef &prefix,
                        const llvm::StringRef &match_prefix,
                        StringList &matches) {
   const size_t n = def->num_children;
@@ -2418,8 +2423,7 @@ void FormatEntity::AutoComplete(CompletionRequest &request) {
 
   // We have a partially specified variable, find it
   llvm::StringRef remainder;
-  const FormatEntity::Entry::Definition *entry_def =
-      FindEntry(partial_variable, &g_root, remainder);
+  const Definition *entry_def = FindEntry(partial_variable, &g_root, remainder);
   if (!entry_def)
     return;
 

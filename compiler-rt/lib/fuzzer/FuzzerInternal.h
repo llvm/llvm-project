@@ -35,8 +35,8 @@ public:
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
          FuzzingOptions Options);
   ~Fuzzer();
-  void Loop(Vector<SizedFile> &CorporaFiles);
-  void ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles);
+  void Loop(std::vector<SizedFile> &CorporaFiles);
+  void ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles);
   void MinimizeCrashLoop(const Unit &U);
   void RereadOutputCorpus(size_t MaxSize);
 
@@ -67,11 +67,14 @@ public:
 
   void ExecuteCallback(const uint8_t *Data, size_t Size);
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
-              InputInfo *II = nullptr, bool *FoundUniqFeatures = nullptr);
+              InputInfo *II = nullptr, bool ForceAddToCorpus = false,
+              bool *FoundUniqFeatures = nullptr);
+  void TPCUpdateObservedPCs();
 
   // Merge Corpora[1:] into Corpora[0].
-  void Merge(const Vector<std::string> &Corpora);
-  void CrashResistantMergeInternalStep(const std::string &ControlFilePath);
+  void Merge(const std::vector<std::string> &Corpora);
+  void CrashResistantMergeInternalStep(const std::string &ControlFilePath,
+                                       bool IsSetCoverMerge);
   MutationDispatcher &GetMD() { return MD; }
   void PrintFinalStats();
   void SetMaxInputLen(size_t MaxInputLen);
@@ -139,7 +142,7 @@ private:
   size_t MaxMutationLen = 0;
   size_t TmpMaxMutationLen = 0;
 
-  Vector<uint32_t> UniqFeatureSetTmp;
+  std::vector<uint32_t> UniqFeatureSetTmp;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;

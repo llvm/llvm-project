@@ -2,6 +2,8 @@
 # RUN: wasm-ld %t.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
+  .functype __wasm_call_ctors () -> ()
+
   .globl  myctor
 myctor:
   .functype myctor () -> (i32)
@@ -43,4 +45,7 @@ _start:
 # CHECK-NEXT:         Name:            myctor
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Name:            _start
+# CHECK-NEXT:     GlobalNames:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Name:            __stack_pointer
 # CHECK-NEXT: ...

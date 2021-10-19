@@ -13,7 +13,7 @@ union U1 {
   S2 s2;
 };
 
-// CHECK-LABEL: define void @{{.*}}f1
+// CHECK-LABEL: define{{.*}} void @{{.*}}f1
 void f1(int *p) {
   U1 u;
 

@@ -49,6 +49,7 @@ FEATURE(memtag_sanitizer, LangOpts.Sanitize.has(SanitizerKind::MemTag))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(coverage_sanitizer, LangOpts.SanitizeCoverage)
 FEATURE(assume_nonnull, true)
 FEATURE(attribute_analyzer_noreturn, true)
 FEATURE(attribute_availability, true)
@@ -85,12 +86,16 @@ FEATURE(cxx_rtti, LangOpts.RTTI &&LangOpts.RTTIData)
 FEATURE(enumerator_attributes, true)
 FEATURE(nullability, true)
 FEATURE(nullability_on_arrays, true)
+FEATURE(nullability_nullable_result, true)
 FEATURE(memory_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Memory |
                                    SanitizerKind::KernelMemory))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
+FEATURE(swiftasynccc,
+  PP.getTargetInfo().checkCallingConvention(CC_SwiftAsync) ==
+  clang::TargetInfo::CCCR_OK)
 // Objective-C features
 FEATURE(objc_arr, LangOpts.ObjCAutoRefCount) // FIXME: REMOVE?
 FEATURE(objc_arc, LangOpts.ObjCAutoRefCount)
@@ -252,9 +257,14 @@ EXTENSION(cxx_variable_templates, LangOpts.CPlusPlus)
 EXTENSION(overloadable_unmarked, true)
 EXTENSION(pragma_clang_attribute_namespaces, true)
 EXTENSION(pragma_clang_attribute_external_declaration, true)
+EXTENSION(statement_attributes_with_gnu_syntax, true)
 EXTENSION(gnu_asm, LangOpts.GNUAsm)
 EXTENSION(gnu_asm_goto_with_outputs, LangOpts.GNUAsm)
 EXTENSION(matrix_types, LangOpts.MatrixTypes)
+EXTENSION(matrix_types_scalar_division, true)
+EXTENSION(cxx_attributes_on_using_declarations, LangOpts.CPlusPlus11)
+
+FEATURE(cxx_abi_relative_vtable, LangOpts.CPlusPlus && LangOpts.RelativeCXXABIVTables)
 
 #undef EXTENSION
 #undef FEATURE

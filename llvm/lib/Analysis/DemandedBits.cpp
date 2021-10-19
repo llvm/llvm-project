@@ -115,7 +115,7 @@ void DemandedBits::determineLiveOperandBits(
   default: break;
   case Instruction::Call:
   case Instruction::Invoke:
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI))
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(UserI)) {
       switch (II->getIntrinsicID()) {
       default: break;
       case Intrinsic::bswap:
@@ -170,7 +170,16 @@ void DemandedBits::determineLiveOperandBits(
         }
         break;
       }
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+        // If low bits of result are not demanded, they are also not demanded
+        // for the min/max operands.
+        AB = APInt::getBitsSetFrom(BitWidth, AOut.countTrailingZeros());
+        break;
       }
+    }
     break;
   case Instruction::Add:
     if (AOut.isMask()) {
@@ -353,7 +362,7 @@ void DemandedBits::performAnalysis() {
       if (Instruction *J = dyn_cast<Instruction>(OI)) {
         Type *T = J->getType();
         if (T->isIntOrIntVectorTy())
-          AliveBits[J] = APInt::getAllOnesValue(T->getScalarSizeInBits());
+          AliveBits[J] = APInt::getAllOnes(T->getScalarSizeInBits());
         else
           Visited.insert(J);
         Worklist.insert(J);
@@ -398,7 +407,7 @@ void DemandedBits::performAnalysis() {
       Type *T = OI->getType();
       if (T->isIntOrIntVectorTy()) {
         unsigned BitWidth = T->getScalarSizeInBits();
-        APInt AB = APInt::getAllOnesValue(BitWidth);
+        APInt AB = APInt::getAllOnes(BitWidth);
         if (InputIsKnownDead) {
           AB = APInt(BitWidth, 0);
         } else {
@@ -408,7 +417,7 @@ void DemandedBits::performAnalysis() {
                                    Known, Known2, KnownBitsComputed);
 
           // Keep track of uses which have no demanded bits.
-          if (AB.isNullValue())
+          if (AB.isZero())
             DeadUses.insert(&OI);
           else
             DeadUses.erase(&OI);
@@ -439,8 +448,34 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
     return Found->second;
 
   const DataLayout &DL = I->getModule()->getDataLayout();
-  return APInt::getAllOnesValue(
-      DL.getTypeSizeInBits(I->getType()->getScalarType()));
+  return APInt::getAllOnes(DL.getTypeSizeInBits(I->getType()->getScalarType()));
+}
+
+APInt DemandedBits::getDemandedBits(Use *U) {
+  Type *T = (*U)->getType();
+  Instruction *UserI = cast<Instruction>(U->getUser());
+  const DataLayout &DL = UserI->getModule()->getDataLayout();
+  unsigned BitWidth = DL.getTypeSizeInBits(T->getScalarType());
+
+  // We only track integer uses, everything else produces a mask with all bits
+  // set
+  if (!T->isIntOrIntVectorTy())
+    return APInt::getAllOnes(BitWidth);
+
+  if (isUseDead(U))
+    return APInt(BitWidth, 0);
+
+  performAnalysis();
+
+  APInt AOut = getDemandedBits(UserI);
+  APInt AB = APInt::getAllOnes(BitWidth);
+  KnownBits Known, Known2;
+  bool KnownBitsComputed = false;
+
+  determineLiveOperandBits(UserI, *U, U->getOperandNo(), AOut, AB, Known,
+                           Known2, KnownBitsComputed);
+
+  return AB;
 }
 
 bool DemandedBits::isInstructionDead(Instruction *I) {
@@ -468,7 +503,7 @@ bool DemandedBits::isUseDead(Use *U) {
   // is dead. These uses might not be explicitly present in the DeadUses map.
   if (UserI->getType()->isIntOrIntVectorTy()) {
     auto Found = AliveBits.find(UserI);
-    if (Found != AliveBits.end() && Found->second.isNullValue())
+    if (Found != AliveBits.end() && Found->second.isZero())
       return true;
   }
 
@@ -476,10 +511,24 @@ bool DemandedBits::isUseDead(Use *U) {
 }
 
 void DemandedBits::print(raw_ostream &OS) {
+  auto PrintDB = [&](const Instruction *I, const APInt &A, Value *V = nullptr) {
+    OS << "DemandedBits: 0x" << Twine::utohexstr(A.getLimitedValue())
+       << " for ";
+    if (V) {
+      V->printAsOperand(OS, false);
+      OS << " in ";
+    }
+    OS << *I << '\n';
+  };
+
   performAnalysis();
   for (auto &KV : AliveBits) {
-    OS << "DemandedBits: 0x" << Twine::utohexstr(KV.second.getLimitedValue())
-       << " for " << *KV.first << '\n';
+    Instruction *I = KV.first;
+    PrintDB(I, KV.second);
+
+    for (Use &OI : I->operands()) {
+      PrintDB(I, getDemandedBits(&OI), OI);
+    }
   }
 }
 

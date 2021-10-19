@@ -11,7 +11,6 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -24,8 +23,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -99,12 +98,10 @@ struct PPCOperand;
 
 class PPCAsmParser : public MCTargetAsmParser {
   bool IsPPC64;
-  bool IsDarwin;
 
   void Warning(SMLoc L, const Twine &Msg) { getParser().Warning(L, Msg); }
 
   bool isPPC64() const { return IsPPC64; }
-  bool isDarwin() const { return IsDarwin; }
 
   bool MatchRegisterName(unsigned &RegNo, int64_t &IntVal);
 
@@ -116,14 +113,12 @@ class PPCAsmParser : public MCTargetAsmParser {
                                         PPCMCExpr::VariantKind &Variant);
   const MCExpr *FixupVariantKind(const MCExpr *E);
   bool ParseExpression(const MCExpr *&EVal);
-  bool ParseDarwinExpression(const MCExpr *&EVal);
 
   bool ParseOperand(OperandVector &Operands);
 
   bool ParseDirectiveWord(unsigned Size, AsmToken ID);
   bool ParseDirectiveTC(unsigned Size, AsmToken ID);
   bool ParseDirectiveMachine(SMLoc L);
-  bool ParseDarwinDirectiveMachine(SMLoc L);
   bool ParseDirectiveAbiVersion(SMLoc L);
   bool ParseDirectiveLocalEntry(SMLoc L);
 
@@ -150,7 +145,6 @@ public:
     // Check for 64-bit vs. 32-bit pointer mode.
     const Triple &TheTriple = STI.getTargetTriple();
     IsPPC64 = TheTriple.isPPC64();
-    IsDarwin = TheTriple.isMacOSX();
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -290,6 +284,21 @@ public:
     return (unsigned) Imm.Val;
   }
 
+  unsigned getACCReg() const {
+    assert(isACCRegNumber() && "Invalid access!");
+    return (unsigned) Imm.Val;
+  }
+
+  unsigned getVSRpEvenReg() const {
+    assert(isVSRpEvenRegNumber() && "Invalid access!");
+    return (unsigned) Imm.Val >> 1;
+  }
+
+  unsigned getG8pReg() const {
+    assert(isEvenRegNumber() && "Invalid access!");
+    return (unsigned)Imm.Val;
+  }
+
   unsigned getCCReg() const {
     assert(isCCRegNumber() && "Invalid access!");
     return (unsigned) (Kind == Immediate ? Imm.Val : Expr.CRVal);
@@ -355,6 +364,15 @@ public:
   bool isS16ImmX4() const { return Kind == Expression ||
                                    (Kind == Immediate && isInt<16>(getImm()) &&
                                     (getImm() & 3) == 0); }
+
+  bool isHashImmX8() const {
+    // The Hash Imm form is used for instructions that check or store a hash.
+    // These instructions have a small immediate range that spans between
+    // -8 and -512.
+    return (Kind == Immediate && getImm() <= -8 && getImm() >= -512 &&
+            (getImm() & 7) == 0);
+  }
+
   bool isS16ImmX16() const { return Kind == Expression ||
                                     (Kind == Immediate && isInt<16>(getImm()) &&
                                      (getImm() & 15) == 0); }
@@ -402,6 +420,12 @@ public:
                                   (getImm() & 3) == 0); }
   bool isImmZero() const { return Kind == Immediate && getImm() == 0; }
   bool isRegNumber() const { return Kind == Immediate && isUInt<5>(getImm()); }
+  bool isACCRegNumber() const {
+    return Kind == Immediate && isUInt<3>(getImm());
+  }
+  bool isVSRpEvenRegNumber() const {
+    return Kind == Immediate && isUInt<6>(getImm()) && ((getImm() & 1) == 0);
+  }
   bool isVSRegNumber() const {
     return Kind == Immediate && isUInt<6>(getImm());
   }
@@ -413,6 +437,9 @@ public:
                                        && isUInt<5>(getExprCRVal())) ||
                                       (Kind == Immediate
                                        && isUInt<5>(getImm())); }
+
+  bool isEvenRegNumber() const { return isRegNumber() && (getImm() & 1) == 0; }
+
   bool isCRBitMask() const { return Kind == Immediate && isUInt<8>(getImm()) &&
                                     isPowerOf2_32(getImm()); }
   bool isATBitsAsHint() const { return false; }
@@ -441,6 +468,11 @@ public:
   void addRegG8RCNoX0Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(XRegsNoX0[getReg()]));
+  }
+
+  void addRegG8pRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(XRegs[getG8pReg()]));
   }
 
   void addRegGxRCOperands(MCInst &Inst, unsigned N) const {
@@ -500,6 +532,21 @@ public:
   void addRegSPERCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(SPERegs[getReg()]));
+  }
+
+  void addRegACCRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(ACCRegs[getACCReg()]));
+  }
+
+  void addRegVSRpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(VSRpRegs[getVSRpEvenReg()]));
+  }
+
+  void addRegVSRpEvenRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(VSRpRegs[getVSRpEvenReg()]));
   }
 
   void addRegCRBITRCOperands(MCInst &Inst, unsigned N) const {
@@ -748,12 +795,18 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
   }
   case PPC::DCBFx:
   case PPC::DCBFL:
-  case PPC::DCBFLP: {
+  case PPC::DCBFLP:
+  case PPC::DCBFPS:
+  case PPC::DCBSTPS: {
     int L = 0;
     if (Opcode == PPC::DCBFL)
       L = 1;
     else if (Opcode == PPC::DCBFLP)
       L = 3;
+    else if (Opcode == PPC::DCBFPS)
+      L = 4;
+    else if (Opcode == PPC::DCBSTPS)
+      L = 6;
 
     MCInst TmpInst;
     TmpInst.setOpcode(PPC::DCBF);
@@ -1101,29 +1154,6 @@ void PPCAsmParser::ProcessInstruction(MCInst &Inst,
     }
     break;
   }
-  case PPC::CP_COPYx:
-  case PPC::CP_COPY_FIRST: {
-    MCInst TmpInst;
-    TmpInst.setOpcode(PPC::CP_COPY);
-    TmpInst.addOperand(Inst.getOperand(0));
-    TmpInst.addOperand(Inst.getOperand(1));
-    TmpInst.addOperand(MCOperand::createImm(Opcode == PPC::CP_COPYx ? 0 : 1));
-
-    Inst = TmpInst;
-    break;
-  }
-  case PPC::CP_PASTEx :
-  case PPC::CP_PASTE_LAST: {
-    MCInst TmpInst;
-    TmpInst.setOpcode(Opcode == PPC::CP_PASTEx ? PPC::CP_PASTE
-                                               : PPC::CP_PASTE_rec);
-    TmpInst.addOperand(Inst.getOperand(0));
-    TmpInst.addOperand(Inst.getOperand(1));
-    TmpInst.addOperand(MCOperand::createImm(Opcode == PPC::CP_PASTEx ? 0 : 1));
-
-    Inst = TmpInst;
-    break;
-  }
   }
 }
 
@@ -1170,38 +1200,41 @@ bool PPCAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 }
 
 bool PPCAsmParser::MatchRegisterName(unsigned &RegNo, int64_t &IntVal) {
-  if (getParser().getTok().is(AsmToken::Identifier)) {
-    StringRef Name = getParser().getTok().getString();
-    if (Name.equals_lower("lr")) {
-      RegNo = isPPC64()? PPC::LR8 : PPC::LR;
-      IntVal = 8;
-    } else if (Name.equals_lower("ctr")) {
-      RegNo = isPPC64()? PPC::CTR8 : PPC::CTR;
-      IntVal = 9;
-    } else if (Name.equals_lower("vrsave")) {
-      RegNo = PPC::VRSAVE;
-      IntVal = 256;
-    } else if (Name.startswith_lower("r") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = isPPC64()? XRegs[IntVal] : RRegs[IntVal];
-    } else if (Name.startswith_lower("f") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = FRegs[IntVal];
-    } else if (Name.startswith_lower("vs") &&
-               !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
-      RegNo = VSRegs[IntVal];
-    } else if (Name.startswith_lower("v") &&
-               !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
-      RegNo = VRegs[IntVal];
-    } else if (Name.startswith_lower("cr") &&
-               !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
-      RegNo = CRRegs[IntVal];
-    } else
-      return true;
-    getParser().Lex();
-    return false;
-  }
-  return true;
+  if (getParser().getTok().is(AsmToken::Percent))
+    getParser().Lex(); // Eat the '%'.
+
+  if (!getParser().getTok().is(AsmToken::Identifier))
+    return true;
+
+  StringRef Name = getParser().getTok().getString();
+  if (Name.equals_insensitive("lr")) {
+    RegNo = isPPC64() ? PPC::LR8 : PPC::LR;
+    IntVal = 8;
+  } else if (Name.equals_insensitive("ctr")) {
+    RegNo = isPPC64() ? PPC::CTR8 : PPC::CTR;
+    IntVal = 9;
+  } else if (Name.equals_insensitive("vrsave")) {
+    RegNo = PPC::VRSAVE;
+    IntVal = 256;
+  } else if (Name.startswith_insensitive("r") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
+  } else if (Name.startswith_insensitive("f") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = FRegs[IntVal];
+  } else if (Name.startswith_insensitive("vs") &&
+             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
+    RegNo = VSRegs[IntVal];
+  } else if (Name.startswith_insensitive("v") &&
+             !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
+    RegNo = VRegs[IntVal];
+  } else if (Name.startswith_insensitive("cr") &&
+             !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
+    RegNo = CRRegs[IntVal];
+  } else
+    return true;
+  getParser().Lex();
+  return false;
 }
 
 bool PPCAsmParser::
@@ -1370,10 +1403,6 @@ FixupVariantKind(const MCExpr *E) {
 /// it handles modifiers.
 bool PPCAsmParser::
 ParseExpression(const MCExpr *&EVal) {
-
-  if (isDarwin())
-    return ParseDarwinExpression(EVal);
-
   // (ELF Platforms)
   // Handle \code @l/@ha \endcode
   if (getParser().parseExpression(EVal))
@@ -1386,53 +1415,6 @@ ParseExpression(const MCExpr *&EVal) {
   if (E)
     EVal = PPCMCExpr::create(Variant, E, getParser().getContext());
 
-  return false;
-}
-
-/// ParseDarwinExpression.  (MachO Platforms)
-/// This differs from the default "parseExpression" in that it handles detection
-/// of the \code hi16(), ha16() and lo16() \endcode modifiers.  At present,
-/// parseExpression() doesn't recognise the modifiers when in the Darwin/MachO
-/// syntax form so it is done here.  TODO: Determine if there is merit in
-/// arranging for this to be done at a higher level.
-bool PPCAsmParser::
-ParseDarwinExpression(const MCExpr *&EVal) {
-  MCAsmParser &Parser = getParser();
-  PPCMCExpr::VariantKind Variant = PPCMCExpr::VK_PPC_None;
-  switch (getLexer().getKind()) {
-  default:
-    break;
-  case AsmToken::Identifier:
-    // Compiler-generated Darwin identifiers begin with L,l,_ or "; thus
-    // something starting with any other char should be part of the
-    // asm syntax.  If handwritten asm includes an identifier like lo16,
-    // then all bets are off - but no-one would do that, right?
-    StringRef poss = Parser.getTok().getString();
-    if (poss.equals_lower("lo16")) {
-      Variant = PPCMCExpr::VK_PPC_LO;
-    } else if (poss.equals_lower("hi16")) {
-      Variant = PPCMCExpr::VK_PPC_HI;
-    } else if (poss.equals_lower("ha16")) {
-      Variant = PPCMCExpr::VK_PPC_HA;
-    }
-    if (Variant != PPCMCExpr::VK_PPC_None) {
-      Parser.Lex(); // Eat the xx16
-      if (getLexer().isNot(AsmToken::LParen))
-        return Error(Parser.getTok().getLoc(), "expected '('");
-      Parser.Lex(); // Eat the '('
-    }
-    break;
-  }
-
-  if (getParser().parseExpression(EVal))
-    return true;
-
-  if (Variant != PPCMCExpr::VK_PPC_None) {
-    if (getLexer().isNot(AsmToken::RParen))
-      return Error(Parser.getTok().getLoc(), "expected ')'");
-    Parser.Lex(); // Eat the ')'
-    EVal = PPCMCExpr::create(Variant, EVal, getParser().getContext());
-  }
   return false;
 }
 
@@ -1449,8 +1431,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   switch (getLexer().getKind()) {
   // Special handling for register names.  These are interpreted
   // as immediates corresponding to the register number.
-  case AsmToken::Percent:
-    Parser.Lex(); // Eat the '%'.
+  case AsmToken::Percent: {
     unsigned RegNo;
     int64_t IntVal;
     if (MatchRegisterName(RegNo, IntVal))
@@ -1458,7 +1439,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
 
     Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
     return false;
-
+  }
   case AsmToken::Identifier:
   case AsmToken::LParen:
   case AsmToken::Plus:
@@ -1468,20 +1449,6 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   case AsmToken::Dollar:
   case AsmToken::Exclaim:
   case AsmToken::Tilde:
-    // Note that non-register-name identifiers from the compiler will begin
-    // with '_', 'L'/'l' or '"'.  Of course, handwritten asm could include
-    // identifiers like r31foo - so we fall through in the event that parsing
-    // a register name fails.
-    if (isDarwin()) {
-      unsigned RegNo;
-      int64_t IntVal;
-      if (!MatchRegisterName(RegNo, IntVal)) {
-        Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
-        return false;
-      }
-    }
-    // All other expressions
-
     if (!ParseExpression(EVal))
       break;
     // Fall-through
@@ -1520,29 +1487,18 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
 
     int64_t IntVal;
     switch (getLexer().getKind()) {
-    case AsmToken::Percent:
-      Parser.Lex(); // Eat the '%'.
+    case AsmToken::Percent: {
       unsigned RegNo;
       if (MatchRegisterName(RegNo, IntVal))
         return Error(S, "invalid register name");
       break;
-
+    }
     case AsmToken::Integer:
-      if (isDarwin())
-        return Error(S, "unexpected integer value");
-      else if (getParser().parseAbsoluteExpression(IntVal) || IntVal < 0 ||
-               IntVal > 31)
+      if (getParser().parseAbsoluteExpression(IntVal) || IntVal < 0 ||
+          IntVal > 31)
         return Error(S, "invalid register number");
       break;
-   case AsmToken::Identifier:
-    if (isDarwin()) {
-      unsigned RegNo;
-      if (!MatchRegisterName(RegNo, IntVal)) {
-        break;
-      }
-    }
-    LLVM_FALLTHROUGH;
-
+    case AsmToken::Identifier:
     default:
       return Error(S, "invalid memory operand");
     }
@@ -1626,12 +1582,7 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 /// ParseDirective parses the PPC specific directives
 bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (isDarwin()) {
-    if (IDVal == ".machine")
-      ParseDarwinDirectiveMachine(DirectiveID.getLoc());
-    else
-      return true;
-  } else if (IDVal == ".word")
+  if (IDVal == ".word")
     ParseDirectiveWord(2, DirectiveID);
   else if (IDVal == ".llong")
     ParseDirectiveWord(8, DirectiveID);
@@ -1703,11 +1654,7 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
 
   // FIXME: Right now, the parser always allows any available
   // instruction, so the .machine directive is not useful.
-  // Implement ".machine any" (by doing nothing) for the benefit
-  // of existing assembler code.  Likewise, we can then implement
-  // ".machine push" and ".machine pop" as no-op.
-  if (CPU != "any" && CPU != "push" && CPU != "pop")
-    return TokError("unrecognized machine type");
+  // In the wild, any/push/pop/ppc64/altivec/power[4-9] are seen.
 
   Parser.Lex();
 
@@ -1719,31 +1666,6 @@ bool PPCAsmParser::ParseDirectiveMachine(SMLoc L) {
   if (TStreamer != nullptr)
     TStreamer->emitMachine(CPU);
 
-  return false;
-}
-
-/// ParseDarwinDirectiveMachine (Mach-o platforms)
-///  ::= .machine cpu-identifier
-bool PPCAsmParser::ParseDarwinDirectiveMachine(SMLoc L) {
-  MCAsmParser &Parser = getParser();
-  if (Parser.getTok().isNot(AsmToken::Identifier) &&
-      Parser.getTok().isNot(AsmToken::String))
-    return Error(L, "unexpected token in directive");
-
-  StringRef CPU = Parser.getTok().getIdentifier();
-  Parser.Lex();
-
-  // FIXME: this is only the 'default' set of cpu variants.
-  // However we don't act on this information at present, this is simply
-  // allowing parsing to proceed with minimal sanity checking.
-  if (check(CPU != "ppc7400" && CPU != "ppc" && CPU != "ppc64", L,
-            "unrecognized cpu type") ||
-      check(isPPC64() && (CPU == "ppc7400" || CPU == "ppc"), L,
-            "wrong cpu type specified for 64bit") ||
-      check(!isPPC64() && CPU == "ppc64", L,
-            "wrong cpu type specified for 32bit") ||
-      parseToken(AsmToken::EndOfStatement))
-    return addErrorSuffix(" in '.machine' directive");
   return false;
 }
 
@@ -1792,8 +1714,9 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
 /// Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
-  RegisterMCAsmParser<PPCAsmParser> B(getThePPC64Target());
-  RegisterMCAsmParser<PPCAsmParser> C(getThePPC64LETarget());
+  RegisterMCAsmParser<PPCAsmParser> B(getThePPC32LETarget());
+  RegisterMCAsmParser<PPCAsmParser> C(getThePPC64Target());
+  RegisterMCAsmParser<PPCAsmParser> D(getThePPC64LETarget());
 }
 
 #define GET_REGISTER_MATCHER

@@ -23,19 +23,18 @@ Sections:
     Content:         "00000000"
     AddressAlign:    0x0000000000001000
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0xAAAA1000
-    PAddr: 0xFFFF1000
-    Sections:
-      - Section: .text
-      - Section: .init
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0xAAAA2000
-    PAddr: 0xFFFF2000
-    Sections:
-      - Section: .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0xAAAA1000
+    PAddr:    0xFFFF1000
+    FirstSec: .text
+    LastSec:  .init
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0xAAAA2000
+    PAddr:    0xFFFF2000
+    FirstSec: .data
+    LastSec:  .data
   - Type: PT_GNU_EH_FRAME
   - Type: PT_GNU_STACK
   - Type: PT_GNU_RELRO
@@ -82,18 +81,92 @@ ProgramHeaders:
 #CHECK-NEXT:]
 
 ## Check we do not allow referencing sections that do not exist.
-# RUN: not yaml2obj --docnum=2 %s -o %t 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj -DFIRST=".unknown1" -DLAST=".unknown2" --docnum=2 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=UNKNOWN-ERR
 
-# ERR: error: unknown section or fill referenced: '.foo' by program header
-# ERR: error: unknown section or fill referenced: '.bar' by program header
+# UNKNOWN-ERR: error: unknown section or fill referenced: '.unknown1' by the 'FirstSec' key of the program header with index 0
+# UNKNOWN-ERR: error: unknown section or fill referenced: '.unknown2' by the 'LastSec' key of the program header with index 0
 
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
+Sections:
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+    Offset: 0x100
+    Size:   0x10
+  - Name:   .bar
+    Type:   SHT_PROGBITS
+    Offset: 0x200
+    Size:   0x20
+  - Name:   .zed
+    Type:   SHT_PROGBITS
+    Offset: 0x300
+    Size:   0x30
+  - Name:   .fill1
+    Type:   Fill
+    Offset: 0x400
+    Size:   0x40
+  - Name:   .fill2
+    Type:   Fill
+    Offset: 0x500
+    Size:   0x50
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .foo
-      - Section: .bar
+  - Type:     PT_LOAD
+    FirstSec: [[FIRST=<none>]]
+    LastSec:  [[LAST=<none>]]
+
+## Check we report an error when the index of the section specified by the "FirstSec" key
+## is greater than the index of the section specified by the "LastSec" key.
+
+# RUN: not yaml2obj -DFIRST=".bar" -DLAST=".foo" --docnum=2 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ORDER-ERR
+
+# ORDER-ERR: error: program header with index 0: the section index of .bar is greater than the index of .foo
+
+## Check that we can't use the "LastSec" key without the "FirstSec" key.
+
+# RUN: not yaml2obj -DLAST=".foo" --docnum=2 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ONLY-LAST-ERR
+
+# ONLY-LAST-ERR: error: the "LastSec" key can't be used without the "FirstSec" key
+
+## Check that we can't use the "FirstSec" key without the "LastSec" key.
+
+# RUN: not yaml2obj -DFIRST=".foo" --docnum=2 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ONLY-FIRST-ERR
+
+# ONLY-FIRST-ERR: error: the "FirstSec" key can't be used without the "LastSec" key
+
+## Check we create an empty segment when neither "FirstSec" nor "LastSec" are specified.
+
+# RUN: yaml2obj --docnum=2 %s -o %t3
+# RUN: llvm-readelf --program-headers %t3 | FileCheck %s --check-prefix=EMPTY-SEGMENT
+
+# EMPTY-SEGMENT:       Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# EMPTY-SEGMENT:       LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000
+# EMPTY-SEGMENT-EMPTY:
+
+## Check that we include all sections between FirstSec and LastSec in the segment when both keys are used.
+
+# RUN: yaml2obj --docnum=2 -DFIRST=".foo" -DLAST=".zed" %s -o %t4
+# RUN: llvm-readelf --program-headers %t4 | FileCheck %s --check-prefix=BOTH
+
+# BOTH:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# BOTH-NEXT: LOAD 0x000100 0x0000000000000000 0x0000000000000000 0x000230 0x000230
+
+## Check that we include fills that are between FirstSec and LastSec in the segment when both keys are used.
+
+# RUN: yaml2obj --docnum=2 -DFIRST=".foo" -DLAST=".fill1" %s -o %t5a
+# RUN: llvm-readelf --program-headers %t5a | FileCheck %s --check-prefix=FILL1
+
+# FILL1: Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# FILL1: LOAD 0x000100 0x0000000000000000 0x0000000000000000 0x000340 0x000340
+
+# RUN: yaml2obj --docnum=2 -DFIRST=".foo" -DLAST=".fill2" %s -o %t5b
+# RUN: llvm-readelf --program-headers %t5b | FileCheck %s --check-prefix=FILL2
+
+# FILL2: Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz
+# FILL2: LOAD 0x000100 0x0000000000000000 0x0000000000000000 0x000450 0x000450

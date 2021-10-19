@@ -9,11 +9,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-def set_thread_id(thread, breakpoint):
+def using_current(test, thread, breakpoint):
+    bp_id = breakpoint.GetID()
+    test.runCmd("break modify -t current {0}".format(bp_id))
+    
+def set_thread_id(test, thread, breakpoint):
     id = thread.id
     breakpoint.SetThreadID(id)
 
-def set_thread_name(thread, breakpoint):
+def set_thread_name(test, thread, breakpoint):
     breakpoint.SetThreadName("main-thread")
 
 class ThreadSpecificBreakTestCase(TestBase):
@@ -31,6 +35,10 @@ class ThreadSpecificBreakTestCase(TestBase):
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
     def test_thread_name(self):
         self.do_test(set_thread_name)
+
+    @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
+    def test_current_token(self):
+        self.do_test(using_current)
 
     def do_test(self, setter_method):
         """Test that we obey thread conditioned breakpoints."""
@@ -51,7 +59,7 @@ class ThreadSpecificBreakTestCase(TestBase):
         # thread joins the secondary thread, and then the main thread will
         # execute the code at the breakpoint.  If the thread-specific
         # breakpoint works, the next stop will be on the main thread.
-        setter_method(main_thread, thread_breakpoint)
+        setter_method(self, main_thread, thread_breakpoint)
 
         process.Continue()
         next_stop_state = process.GetState()

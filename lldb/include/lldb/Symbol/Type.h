@@ -9,9 +9,9 @@
 #ifndef LLDB_SYMBOL_TYPE_H
 #define LLDB_SYMBOL_TYPE_H
 
+#include "lldb/Core/Declaration.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -51,11 +51,12 @@ public:
 
   SymbolFileType(SymbolFile &symbol_file, const lldb::TypeSP &type_sp);
 
-  ~SymbolFileType() {}
+  ~SymbolFileType() = default;
 
   Type *operator->() { return GetType(); }
 
   Type *GetType();
+  SymbolFile &GetSymbolFile() const { return m_symbol_file; }
 
 protected:
   SymbolFile &m_symbol_file;
@@ -108,11 +109,17 @@ public:
 
   void DumpTypeName(Stream *s);
 
-  // Since Type instances only keep a "SymbolFile *" internally, other classes
-  // like TypeImpl need make sure the module is still around before playing
-  // with
-  // Type instances. They can store a weak pointer to the Module;
+  /// Since Type instances only keep a "SymbolFile *" internally, other classes
+  /// like TypeImpl need make sure the module is still around before playing
+  /// with
+  /// Type instances. They can store a weak pointer to the Module;
   lldb::ModuleSP GetModule();
+
+  /// GetModule may return module for compile unit's object file.
+  /// GetExeModule returns module for executable object file that contains
+  /// compile unit where type was actualy defined.
+  /// GetModule and GetExeModule may return the same value.
+  lldb::ModuleSP GetExeModule();
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level, bool show_name,
                       ExecutionContextScope *exe_scope);
@@ -206,17 +213,17 @@ public:
 
 protected:
   ConstString m_name;
-  SymbolFile *m_symbol_file;
+  SymbolFile *m_symbol_file = nullptr;
   /// The symbol context in which this type is defined.
-  SymbolContextScope *m_context;
-  Type *m_encoding_type;
-  lldb::user_id_t m_encoding_uid;
-  EncodingDataType m_encoding_uid_type;
+  SymbolContextScope *m_context = nullptr;
+  Type *m_encoding_type = nullptr;
+  lldb::user_id_t m_encoding_uid = LLDB_INVALID_UID;
+  EncodingDataType m_encoding_uid_type = eEncodingInvalid;
   uint64_t m_byte_size : 63;
   uint64_t m_byte_size_has_value : 1;
   Declaration m_decl;
   CompilerType m_compiler_type;
-  ResolveState m_compiler_type_resolve_state;
+  ResolveState m_compiler_type_resolve_state = ResolveState::Unresolved;
   /// Language-specific flags.
   Payload m_payload;
 
@@ -232,7 +239,7 @@ class TypeImpl {
 public:
   TypeImpl() = default;
 
-  ~TypeImpl() {}
+  ~TypeImpl() = default;
 
   TypeImpl(const lldb::TypeSP &type_sp);
 
@@ -259,6 +266,8 @@ public:
   explicit operator bool() const;
 
   void Clear();
+
+  lldb::ModuleSP GetModule() const;
 
   ConstString GetName() const;
 
@@ -287,8 +296,12 @@ public:
 
 private:
   bool CheckModule(lldb::ModuleSP &module_sp) const;
+  bool CheckExeModule(lldb::ModuleSP &module_sp) const;
+  bool CheckModuleCommon(const lldb::ModuleWP &input_module_wp,
+                         lldb::ModuleSP &module_sp) const;
 
   lldb::ModuleWP m_module_wp;
+  lldb::ModuleWP m_exe_module_wp;
   CompilerType m_static_type;
   CompilerType m_dynamic_type;
 };
@@ -327,8 +340,7 @@ private:
 class TypeMemberImpl {
 public:
   TypeMemberImpl()
-      : m_type_impl_sp(), m_bit_offset(0), m_name(), m_bitfield_bit_size(0),
-        m_is_bitfield(false)
+      : m_type_impl_sp(), m_name()
 
   {}
 
@@ -363,10 +375,10 @@ public:
 
 protected:
   lldb::TypeImplSP m_type_impl_sp;
-  uint64_t m_bit_offset;
+  uint64_t m_bit_offset = 0;
   ConstString m_name;
-  uint32_t m_bitfield_bit_size; // Bit size for bitfield members only
-  bool m_is_bitfield;
+  uint32_t m_bitfield_bit_size = 0; // Bit size for bitfield members only
+  bool m_is_bitfield = false;
 };
 
 ///
@@ -422,9 +434,7 @@ private:
 
 class TypeMemberFunctionImpl {
 public:
-  TypeMemberFunctionImpl()
-      : m_type(), m_decl(), m_name(), m_kind(lldb::eMemberFunctionKindUnknown) {
-  }
+  TypeMemberFunctionImpl() : m_type(), m_decl(), m_name() {}
 
   TypeMemberFunctionImpl(const CompilerType &type, const CompilerDecl &decl,
                          const std::string &name,
@@ -456,13 +466,12 @@ private:
   CompilerType m_type;
   CompilerDecl m_decl;
   ConstString m_name;
-  lldb::MemberFunctionKind m_kind;
+  lldb::MemberFunctionKind m_kind = lldb::eMemberFunctionKindUnknown;
 };
 
 class TypeEnumMemberImpl {
 public:
-  TypeEnumMemberImpl()
-      : m_integer_type_sp(), m_name("<invalid>"), m_value(), m_valid(false) {}
+  TypeEnumMemberImpl() : m_integer_type_sp(), m_name("<invalid>"), m_value() {}
 
   TypeEnumMemberImpl(const lldb::TypeImplSP &integer_type_sp,
                      ConstString name, const llvm::APSInt &value);
@@ -485,7 +494,7 @@ protected:
   lldb::TypeImplSP m_integer_type_sp;
   ConstString m_name;
   llvm::APSInt m_value;
-  bool m_valid;
+  bool m_valid = false;
 };
 
 class TypeEnumMemberListImpl {

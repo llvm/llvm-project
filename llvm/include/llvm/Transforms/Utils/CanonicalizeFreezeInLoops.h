@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_CANONICALIZE_FREEZES_IN_LOOPS_H
-#define LLVM_TRANSFORMS_UTILS_CANONICALIZE_FREEZES_IN_LOOPS_H
+#ifndef LLVM_TRANSFORMS_UTILS_CANONICALIZEFREEZEINLOOPS_H
+#define LLVM_TRANSFORMS_UTILS_CANONICALIZEFREEZEINLOOPS_H
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -30,4 +30,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_CANONICALIZE_FREEZES_IN_LOOPS_H
+#endif // LLVM_TRANSFORMS_UTILS_CANONICALIZEFREEZEINLOOPS_H

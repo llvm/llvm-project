@@ -41,6 +41,10 @@ extern "C" {
 #define LLVM_DISASSEMBLER(TargetName) \
   void LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/Disassemblers.def"
+
+// Declare all of the available TargetMCA initialization functions.
+#define LLVM_TARGETMCA(TargetName) void LLVMInitialize##TargetName##TargetMCA();
+#include "llvm/Config/TargetMCAs.def"
 }
 
 namespace llvm {
@@ -158,6 +162,14 @@ namespace llvm {
 #else
     return true;
 #endif
+  }
+
+  /// InitializeAllTargetMCAs - The main program should call
+  /// this function to initialize the target CustomBehaviour and
+  /// InstrPostProcess classes.
+  inline void InitializeAllTargetMCAs() {
+#define LLVM_TARGETMCA(TargetName) LLVMInitialize##TargetName##TargetMCA();
+#include "llvm/Config/TargetMCAs.def"
   }
 }
 

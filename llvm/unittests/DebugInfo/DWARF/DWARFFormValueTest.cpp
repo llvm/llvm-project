@@ -187,7 +187,7 @@ struct FormSkipValueFixture2 : FormSkipValueFixtureBase {};
 TEST_P(FormSkipValueFixture1, skipValuePart1) { doSkipValueTest(); }
 TEST_P(FormSkipValueFixture2, skipValuePart2) { doSkipValueTest(); }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SkipValueTestParams1, FormSkipValueFixture1,
     testing::Values(
         // Form, Version, AddrSize, DwarfFormat, InitialData, ExpectedSize,
@@ -246,9 +246,9 @@ INSTANTIATE_TEST_CASE_P(
         ParamType(DW_FORM_strp_sup, 0, 1, DWARF32, SampleU32, 0, false),
         ParamType(DW_FORM_strp_sup, 1, 0, DWARF32, SampleU32, 0, false),
         ParamType(DW_FORM_strp_sup, 1, 1, DWARF32, SampleU32, 4, true),
-        ParamType(DW_FORM_strp_sup, 1, 1, DWARF64, SampleU32, 8, true)), );
+        ParamType(DW_FORM_strp_sup, 1, 1, DWARF64, SampleU32, 8, true)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SkipValueTestParams2, FormSkipValueFixture2,
     testing::Values(
         ParamType(DW_FORM_line_strp, 0, 1, DWARF32, SampleU32, 0, false),
@@ -301,8 +301,7 @@ INSTANTIATE_TEST_CASE_P(
                   ArrayRef<uint8_t>(IndirectIndirectEnd,
                                     sizeof(IndirectIndirectEnd)),
                   2, false),
-        ParamType(/*Unknown=*/Form(0xff), 4, 4, DWARF32, SampleU32, 0,
-                  false)), );
+        ParamType(/*Unknown=*/Form(0xff), 4, 4, DWARF32, SampleU32, 0, false)));
 
 using ErrorParams = std::tuple<Form, std::vector<uint8_t>>;
 struct ExtractValueErrorFixture : public testing::TestWithParam<ErrorParams> {
@@ -323,7 +322,7 @@ TEST_P(ExtractValueErrorFixture, Test) {
   EXPECT_FALSE(Form.extractValue(Data, &Offset, {0, 0, DWARF32}));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExtractValueErrorParams, ExtractValueErrorFixture,
     testing::Values(
         ErrorParams{DW_FORM_ref_addr, {}}, ErrorParams{DW_FORM_block, {}},
@@ -336,8 +335,7 @@ INSTANTIATE_TEST_CASE_P(
         ErrorParams{DW_FORM_udata, {}}, ErrorParams{DW_FORM_string, {}},
         ErrorParams{DW_FORM_indirect, {}},
         ErrorParams{DW_FORM_indirect, {DW_FORM_data1}},
-        ErrorParams{DW_FORM_strp_sup, {}},
-        ErrorParams{DW_FORM_ref_sig8, {}}), );
+        ErrorParams{DW_FORM_strp_sup, {}}, ErrorParams{DW_FORM_ref_sig8, {}}));
 
 using DumpValueParams =
     std::tuple<Form, ArrayRef<uint8_t>, DwarfFormat, StringRef>;
@@ -379,7 +377,7 @@ ArrayRef<uint8_t> DumpTestSample32 = toBytes(DumpTestSample32Val);
 const uint64_t DumpTestSample64Val = 0x11223344556677;
 ArrayRef<uint8_t> DumpTestSample64 = toBytes(DumpTestSample64Val);
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DumpValueParams, DumpValueFixture,
     testing::Values(DumpValueParams{DW_FORM_strp, DumpTestSample32, DWARF32,
                                     " .debug_str[0x00112233] = "},
@@ -393,6 +391,6 @@ INSTANTIATE_TEST_CASE_P(
                     DumpValueParams{DW_FORM_sec_offset, DumpTestSample32,
                                     DWARF32, "0x00112233"},
                     DumpValueParams{DW_FORM_sec_offset, DumpTestSample64,
-                                    DWARF64, "0x0011223344556677"}), );
+                                    DWARF64, "0x0011223344556677"}));
 
 } // end anonymous namespace

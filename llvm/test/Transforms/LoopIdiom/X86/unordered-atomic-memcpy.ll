@@ -454,3 +454,55 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+; Make sure that atomic memcpy or memmove don't get recognized by mistake
+; when looping with positive stride
+define void @test_no_memcpy_memmove1(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @test_no_memcpy_memmove1(
+; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
+; CHECK-NOT: call void @llvm.memmove.element.unordered.atomic
+; CHECK: store
+; CHECK: ret void
+bb.nph:
+  br label %for.body
+
+for.body:                                         ; preds = %bb.nph, %for.body
+  %indvar = phi i64 [ 0, %bb.nph ], [ %indvar.next, %for.body ]
+  %Step = add nuw nsw i64 %indvar, 1
+  %SrcI = getelementptr i8, i8* %Src, i64 %Step
+  %DestI = getelementptr i8, i8* %Src, i64 %indvar
+  %V = load i8, i8* %SrcI, align 1
+  store atomic i8 %V, i8* %DestI unordered, align 1
+  %indvar.next = add i64 %indvar, 1
+  %exitcond = icmp eq i64 %indvar.next, %Size
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+; Make sure that atomic memcpy or memmove don't get recognized by mistake
+; when looping with negative stride
+define void @test_no_memcpy_memmove2(i8* %Src, i64 %Size) {
+; CHECK-LABEL: @test_no_memcpy_memmove2(
+; CHECK-NOT: call void @llvm.memcpy.element.unordered.atomic
+; CHECK-NOT: call void @llvm.memmove.element.unordered.atomic
+; CHECK: store
+; CHECK: ret void
+bb.nph:
+  %cmp1 = icmp sgt i64 %Size, 0
+  br i1 %cmp1, label %for.body, label %for.end
+
+for.body:                                           ; preds = %bb.nph, %.for.body
+  %indvar = phi i64 [ %Step, %for.body ], [ %Size, %bb.nph ]
+  %Step = add nsw i64 %indvar, -1
+  %SrcI = getelementptr inbounds i8, i8* %Src, i64 %Step
+  %V = load i8, i8* %SrcI, align 1
+  %DestI = getelementptr inbounds i8, i8* %Src, i64 %indvar
+  store atomic i8 %V, i8* %DestI unordered, align 1
+  %exitcond = icmp sgt i64 %indvar, 1
+  br i1 %exitcond, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}

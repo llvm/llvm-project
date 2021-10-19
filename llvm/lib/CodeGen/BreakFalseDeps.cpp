@@ -118,7 +118,7 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
   if (!MO.isRenamable())
     return false;
 
-  Register OriginalReg = MO.getReg();
+  MCRegister OriginalReg = MO.getReg().asMCReg();
 
   // Update only undef operands that have reg units that are mapped to one root.
   for (MCRegUnitIterator Unit(OriginalReg, TRI); Unit.isValid(); ++Unit) {
@@ -171,8 +171,8 @@ bool BreakFalseDeps::pickBestRegisterForUndef(MachineInstr *MI, unsigned OpIdx,
 
 bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
                                            unsigned Pref) {
-  Register reg = MI->getOperand(OpIdx).getReg();
-  unsigned Clearance = RDA->getClearance(MI, reg);
+  MCRegister Reg = MI->getOperand(OpIdx).getReg().asMCReg();
+  unsigned Clearance = RDA->getClearance(MI, Reg);
   LLVM_DEBUG(dbgs() << "Clearance: " << Clearance << ", want " << Pref);
 
   if (Pref > Clearance) {

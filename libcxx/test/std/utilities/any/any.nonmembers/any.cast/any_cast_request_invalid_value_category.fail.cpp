@@ -9,10 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 // Throwing bad_any_cast is supported starting in macosx10.13
-// UNSUPPORTED: with_system_cxx_lib=macosx10.12
-// UNSUPPORTED: with_system_cxx_lib=macosx10.11
-// UNSUPPORTED: with_system_cxx_lib=macosx10.10
-// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // <any>
 

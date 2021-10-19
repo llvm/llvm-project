@@ -35,7 +35,7 @@ define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP3]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
@@ -124,7 +124,7 @@ define i32 @test2(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP5]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:
@@ -226,11 +226,11 @@ define i32 @test3(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[REORDER_SHUFFLE]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[SHUFFLE]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add i32 [[TMP5]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end:

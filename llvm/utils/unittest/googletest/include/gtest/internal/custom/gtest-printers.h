@@ -31,8 +31,8 @@
 // installation of gTest.
 // It will be included from gtest-printers.h and the overrides in this file
 // will be visible to everyone.
-// See documentation at gtest/gtest-printers.h for details on how to define a
-// custom printer.
+//
+// Injection point for custom user configurations. See README for details
 //
 // ** Custom implementation starts here **
 

@@ -79,6 +79,7 @@ public:
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        const lldb_private::FileSpec &outfile,
+                       lldb::SaveCoreStyle &core_style,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp);
@@ -129,9 +130,9 @@ public:
   ObjectFile::Strata CalculateStrata() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   bool IsWindowsSubsystem();
 

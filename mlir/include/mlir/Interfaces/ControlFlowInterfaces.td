@@ -34,7 +34,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         successor are non-materialized values, i.e. they are internal to the
         operation.
       }],
-      "Optional<MutableOperandRange>", "getMutableSuccessorOperands",
+      "::mlir::Optional<::mlir::MutableOperandRange>", "getMutableSuccessorOperands",
       (ins "unsigned":$index)
     >,
     InterfaceMethod<[{
@@ -43,11 +43,10 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         successor are non-materialized values, i.e. they are internal to the
         operation.
       }],
-      "Optional<OperandRange>", "getSuccessorOperands",
+      "::mlir::Optional<::mlir::OperandRange>", "getSuccessorOperands",
       (ins "unsigned":$index), [{}], [{
-        ConcreteOp *op = static_cast<ConcreteOp *>(this);
-        auto operands = op->getMutableSuccessorOperands(index);
-        return operands ? Optional<OperandRange>(*operands) : llvm::None;
+        auto operands = $_op.getMutableSuccessorOperands(index);
+        return operands ? ::mlir::Optional<::mlir::OperandRange>(*operands) : ::llvm::None;
       }]
     >,
     InterfaceMethod<[{
@@ -55,36 +54,36 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         some successor, or None if `operandIndex` isn't a successor operand
         index.
       }],
-      "Optional<BlockArgument>", "getSuccessorBlockArgument",
+      "::mlir::Optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
-        Operation *opaqueOp = $_op;
+        ::mlir::Operation *opaqueOp = $_op;
         for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
-          if (Optional<BlockArgument> arg = detail::getBranchSuccessorArgument(
+          if (::mlir::Optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
                 $_op.getSuccessorOperands(i), operandIndex,
                 opaqueOp->getSuccessor(i)))
             return arg;
         }
-        return llvm::None;
+        return ::llvm::None;
       }]
     >,
     InterfaceMethod<[{
         Returns the successor that would be chosen with the given constant
         operands. Returns nullptr if a single successor could not be chosen.
       }],
-      "Block *", "getSuccessorForOperands",
-      (ins "ArrayRef<Attribute>":$operands), [{}],
+      "::mlir::Block *", "getSuccessorForOperands",
+      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands), [{}],
       /*defaultImplementation=*/[{ return nullptr; }]
     >
   ];
 
   let verify = [{
-    auto concreteOp = cast<ConcreteOpType>($_op);
+    auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
     for (unsigned i = 0, e = $_op->getNumSuccessors(); i != e; ++i) {
-      Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
-      if (failed(detail::verifyBranchSuccessorOperands($_op, i, operands)))
-        return failure();
+      ::mlir::Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
+      if (::mlir::failed(::mlir::detail::verifyBranchSuccessorOperands($_op, i, operands)))
+        return ::mlir::failure();
     }
-    return success();
+    return ::mlir::success();
   }];
 }
 
@@ -107,10 +106,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         operation by `getSuccessorRegions`. These operands should correspond 1-1
         with the successor inputs specified in `getSuccessorRegions`.
       }],
-      "OperandRange", "getSuccessorEntryOperands",
+      "::mlir::OperandRange", "getSuccessorEntryOperands",
       (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
-        return OperandRange(operandEnd, operandEnd);
+        return ::mlir::OperandRange(operandEnd, operandEnd);
       }]
     >,
     InterfaceMethod<[{
@@ -120,7 +119,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         `index` is None, `operands` is a set of optional attributes that
         either correspond to a constant value for each operand of this
         operation, or null if that operand is not a constant. If `index` is
-        valid, `operands` corresponds to the exit values of the region at
+        valid, `operands` corresponds to the entry values of the region at
         `index`. Only a region, i.e. a valid `index`, may use the parent
         operation as a successor. This method allows for describing which
         regions may be executed when entering an operation, and which regions
@@ -128,22 +127,97 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         successor region must be non-empty.
       }],
       "void", "getSuccessorRegions",
-      (ins "Optional<unsigned>":$index, "ArrayRef<Attribute>":$operands,
-           "SmallVectorImpl<RegionSuccessor> &":$regions)
+      (ins "::mlir::Optional<unsigned>":$index, "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+           "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
+    >,
+    InterfaceMethod<[{
+        Populates countPerRegion with the number of times this operation will
+        invoke the attached regions (assuming the regions yield normally, i.e.
+        do not abort or invoke an infinite loop). If the number of region
+        invocations is not known statically it will set the number of
+        invocations to `kUnknownNumRegionInvocations`.
+
+        `operands` is a set of optional attributes that either correspond to a
+        constant values for each operand of this operation, or null if that
+        operand is not a constant.
+      }],
+      "void", "getNumRegionInvocations",
+      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+           "::mlir::SmallVectorImpl<int64_t> &":$countPerRegion), [{}],
+      /*defaultImplementation=*/[{
+        unsigned numRegions = this->getOperation()->getNumRegions();
+        assert(countPerRegion.empty());
+        countPerRegion.resize(numRegions, kUnknownNumRegionInvocations);
+      }]
     >
   ];
 
   let verify = [{
-    static_assert(!ConcreteOpType::template hasTrait<OpTrait::ZeroRegion>(),
+    static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegion>(),
                   "expected operation to have non-zero regions");
     return success();
   }];
 
   let extraClassDeclaration = [{
+    /// Convenience helper in case none of the operands is known.
+    void getSuccessorRegions(Optional<unsigned> index,
+                             SmallVectorImpl<RegionSuccessor> &regions) {
+       SmallVector<Attribute, 2> nullAttrs(getOperation()->getNumOperands());
+       getSuccessorRegions(index, nullAttrs, regions);
+    }
+
     /// Verify types along control flow edges described by this interface.
     static LogicalResult verifyTypes(Operation *op) {
       return detail::verifyTypesAlongControlFlowEdges(op);
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+def RegionBranchTerminatorOpInterface :
+  OpInterface<"RegionBranchTerminatorOpInterface"> {
+  let description = [{
+    This interface provides information for branching terminator operations
+    in the presence of a parent RegionBranchOpInterface implementation. It
+    specifies which operands are passed to which successor region.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns a mutable range of operands that are semantically "returned" by
+        passing them to the region successor given by `index`.  If `index` is
+        None, this function returns the operands that are passed as a result to
+        the parent operation.
+      }],
+      "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
+      (ins "::mlir::Optional<unsigned>":$index)
+    >,
+    InterfaceMethod<[{
+        Returns a range of operands that are semantically "returned" by passing
+        them to the region successor given by `index`.  If `index` is None, this
+        function returns the operands that are passed as a result to the parent
+        operation.
+      }],
+      "::mlir::OperandRange", "getSuccessorOperands",
+      (ins "::mlir::Optional<unsigned>":$index), [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getMutableSuccessorOperands(index);
+      }]
+    >
+  ];
+
+  let verify = [{
+    static_assert(ConcreteOp::template hasTrait<OpTrait::IsTerminator>(),
+                  "expected operation to be a terminator");
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroResult>(),
+                  "expected operation to have zero results");
+    static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroSuccessor>(),
+                  "expected operation to have zero successors");
+    return success();
   }];
 }
 

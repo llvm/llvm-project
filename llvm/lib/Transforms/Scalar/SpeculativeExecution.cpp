@@ -210,8 +210,8 @@ bool SpeculativeExecutionPass::runOnBasicBlock(BasicBlock &B) {
   return false;
 }
 
-static unsigned ComputeSpeculationCost(const Instruction *I,
-                                       const TargetTransformInfo &TTI) {
+static InstructionCost ComputeSpeculationCost(const Instruction *I,
+                                              const TargetTransformInfo &TTI) {
   switch (Operator::getOpcode(I)) {
     case Instruction::GetElementPtr:
     case Instruction::Add:
@@ -245,10 +245,18 @@ static unsigned ComputeSpeculationCost(const Instruction *I,
     case Instruction::FNeg:
     case Instruction::ICmp:
     case Instruction::FCmp:
+    case Instruction::Trunc:
+    case Instruction::Freeze:
+    case Instruction::ExtractElement:
+    case Instruction::InsertElement:
+    case Instruction::ShuffleVector:
+    case Instruction::ExtractValue:
+    case Instruction::InsertValue:
       return TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 
     default:
-      return UINT_MAX; // Disallow anything not explicitly listed.
+      return InstructionCost::getInvalid(); // Disallow anything not explicitly
+                                            // listed.
   }
 }
 
@@ -258,11 +266,13 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   const auto AllPrecedingUsesFromBlockHoisted = [&NotHoisted](const User *U) {
     // Debug variable has special operand to check it's not hoisted.
     if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(U)) {
-      if (const auto *I =
-              dyn_cast_or_null<Instruction>(DVI->getVariableLocation()))
-        if (NotHoisted.count(I) == 0)
-          return true;
-      return false;
+      return all_of(DVI->location_ops(), [&NotHoisted](Value *V) {
+        if (const auto *I = dyn_cast_or_null<Instruction>(V)) {
+          if (NotHoisted.count(I) == 0)
+            return true;
+        }
+        return false;
+      });
     }
 
     // Usially debug label instrinsic corresponds to label in LLVM IR. In these
@@ -274,18 +284,18 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
 
     for (const Value *V : U->operand_values()) {
       if (const Instruction *I = dyn_cast<Instruction>(V)) {
-        if (NotHoisted.count(I) > 0)
+        if (NotHoisted.contains(I))
           return false;
       }
     }
     return true;
   };
 
-  unsigned TotalSpeculationCost = 0;
+  InstructionCost TotalSpeculationCost = 0;
   unsigned NotHoistedInstCount = 0;
   for (const auto &I : FromBlock) {
-    const unsigned Cost = ComputeSpeculationCost(&I, *TTI);
-    if (Cost != UINT_MAX && isSafeToSpeculativelyExecute(&I) &&
+    const InstructionCost Cost = ComputeSpeculationCost(&I, *TTI);
+    if (Cost.isValid() && isSafeToSpeculativelyExecute(&I) &&
         AllPrecedingUsesFromBlockHoisted(&I)) {
       TotalSpeculationCost += Cost;
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
@@ -333,7 +343,6 @@ PreservedAnalyses SpeculativeExecutionPass::run(Function &F,
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<GlobalsAA>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

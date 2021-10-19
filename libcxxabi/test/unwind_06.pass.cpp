@@ -13,6 +13,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+// Suppress diagnostics about deprecated volatile operations
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic ignored "-Wvolatile"
+#endif
+
 // Compile with -Os to get compiler uses float registers to hold float variables
 
 double get_(int x) { return (double)x; }
@@ -138,7 +143,7 @@ double foo()
   try {
     try1(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -152,7 +157,7 @@ double foo()
   try {
     try2(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -166,7 +171,7 @@ double foo()
   try {
     try3(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -180,7 +185,7 @@ double foo()
   try {
     try4(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -194,7 +199,7 @@ double foo()
   try {
     try5(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -208,7 +213,7 @@ double foo()
   try {
     try6(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -222,7 +227,7 @@ double foo()
   try {
     try7(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -236,7 +241,7 @@ double foo()
   try {
     try8(true);
   }
-  catch (int e) {
+  catch (int) {
   }
   assert(a == get(1));
   assert(b == get(2));
@@ -252,7 +257,7 @@ double foo()
 
 
 
-int main()
-{
+int main(int, char**) {
   foo();
+  return 0;
 }

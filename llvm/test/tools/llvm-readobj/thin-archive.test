@@ -55,12 +55,12 @@
 # Remove the second member and show that the first can still be dumped, but that the last isn't.
 # RUN: rm %t/2.o
 # RUN: not llvm-readobj --file-headers %t.a 2> %t.err | FileCheck %s --check-prefix=MISSING
-# RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err
+# RUN: FileCheck -DMSG=%errc_ENOENT %s --check-prefix=ERR --input-file=%t.err
 
 # MISSING:     File: {{.*}}1.o
 # MISSING:     Format: elf64-x86-64
 # MISSING-NOT: File: {{.*}}3.o
-# ERR: error: '{{.*}}.a': '{{.*}}2.o': {{[Nn]}}o such file or directory
+# ERR: error: '{{.*}}.a': '{{.*}}2.o': [[MSG]]
 
 --- !ELF
 FileHeader:

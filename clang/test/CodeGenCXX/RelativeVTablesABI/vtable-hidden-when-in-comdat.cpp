@@ -2,7 +2,7 @@
 // is not dso_local. The vtable will need to be hidden and not private so it can
 // be used as acomdat key signature.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -S -o - -emit-llvm | FileCheck %s
 
 // CHECK: @_ZTV1B.local = linkonce_odr hidden unnamed_addr constant
 // CHECK: @_ZTV1B = linkonce_odr unnamed_addr alias { [3 x i32] }, { [3 x i32] }* @_ZTV1B.local

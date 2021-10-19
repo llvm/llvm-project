@@ -13,12 +13,11 @@
 #ifndef FORTRAN_LOWER_MANGLER_H
 #define FORTRAN_LOWER_MANGLER_H
 
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
 namespace fir {
-struct NameUniquer;
 
 /// Returns a name suitable to define mlir functions for Fortran intrinsic
 /// Procedure. These names are guaranteed to not conflict with user defined
@@ -40,18 +39,26 @@ class Reference;
 
 namespace semantics {
 class Symbol;
-}
+class DerivedTypeSpec;
+} // namespace semantics
 
-namespace lower {
-namespace mangle {
+namespace lower::mangle {
 
-/// Convert a front-end Symbol to an internal name
-std::string mangleName(fir::NameUniquer &uniquer, const semantics::Symbol &);
+/// Convert a front-end Symbol to an internal name.
+/// If \p keepExternalInScope is true, the mangling of external symbols
+/// retains the scope of the symbol declaring externals. Otherwise,
+/// external symbols are mangled outside of any scope. Keeping the scope is
+/// useful in attributes where all the Fortran context is to be maintained.
+std::string mangleName(const semantics::Symbol &,
+                       bool keepExternalInScope = false);
 
+/// Convert a derived type instance to an internal name.
+std::string mangleName(const semantics::DerivedTypeSpec &);
+
+/// Recover the bare name of the original symbol from an internal name.
 std::string demangleName(llvm::StringRef name);
 
-} // namespace mangle
-} // namespace lower
+} // namespace lower::mangle
 } // namespace Fortran
 
 #endif // FORTRAN_LOWER_MANGLER_H

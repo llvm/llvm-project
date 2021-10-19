@@ -47,9 +47,8 @@ ProgramHeaders:
     Flags:    [ PF_R ]
     VAddr:    0x0000
     FileSize: [[PHDRFILESIZE]]
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Check we do not crash when an object contains a DT_STRTAB entry whose address
 ## is past the end of the object.
@@ -60,7 +59,7 @@ ProgramHeaders:
 # RUN: llvm-readobj %t.err.1.o 2>&1 | FileCheck %s -DFILE=%t.err.1.o --check-prefixes=BROKEN-OFFSET,BROKEN-OFFSET-LLVM
 # RUN: llvm-readelf --dynamic-table %t.err.1.o 2>&1 | FileCheck %s -DFILE=%t.err.1.o --check-prefixes=BROKEN-OFFSET,BROKEN-OFFSET-GNU
 
-# BROKEN-OFFSET:      warning: '[[FILE]]': Unable to parse DT_STRTAB: can't map virtual address 0xfffe to the segment with index 1: the segment ends at 0x10077, which is greater than the file size (0x228)
+# BROKEN-OFFSET:      warning: '[[FILE]]': unable to parse DT_STRTAB: can't map virtual address 0xfffe to the segment with index 1: the segment ends at 0x10077, which is greater than the file size (0x228)
 # BROKEN-OFFSET:      warning: '[[FILE]]': string table was not found
 # BROKEN-OFFSET-LLVM: LoadName: <?>
 # BROKEN-OFFSET-GNU:  0x000000000000000e (SONAME) Library soname: [<?>]

@@ -177,6 +177,18 @@ TEST(DataExtractorTest, Cursor_tell) {
   consumeError(C.takeError());
 }
 
+TEST(DataExtractorTest, Cursor_seek) {
+  DataExtractor::Cursor C(5);
+
+  C.seek(3);
+  EXPECT_EQ(3u, C.tell());
+
+  C.seek(8);
+  EXPECT_EQ(8u, C.tell());
+
+  EXPECT_THAT_ERROR(C.takeError(), Succeeded());
+}
+
 TEST(DataExtractorTest, Cursor_takeError) {
   DataExtractor DE(StringRef("AB"), false, 8);
   DataExtractor::Cursor C(0);
@@ -214,7 +226,8 @@ TEST(DataExtractorTest, Cursor_chaining) {
   EXPECT_THAT_ERROR(C.takeError(), Succeeded());
 }
 
-#if defined(GTEST_HAS_DEATH_TEST) && defined(_DEBUG)
+#if defined(GTEST_HAS_DEATH_TEST) && defined(_DEBUG) &&                        \
+    LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(DataExtractorDeathTest, Cursor) {
   DataExtractor DE(StringRef("AB"), false, 8);
 

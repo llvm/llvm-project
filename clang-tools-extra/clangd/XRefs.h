@@ -16,6 +16,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
 #include "support/Path.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -47,6 +48,8 @@ struct LocatedSymbol {
   Location PreferredDeclaration;
   // Where the symbol is defined, if known. May equal PreferredDeclaration.
   llvm::Optional<Location> Definition;
+  // SymbolID of the located symbol if available.
+  SymbolID ID;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LocatedSymbol &);
 /// Get definition of symbol at a specified \p Pos.
@@ -79,9 +82,29 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
                                                       Position Pos);
 
 struct ReferencesResult {
-  std::vector<Location> References;
+  // Bitmask describing whether the occurrence is a declaration, definition etc.
+  enum ReferenceAttributes : unsigned {
+    Declaration = 1 << 0,
+    Definition = 1 << 1,
+    // The occurrence is an override of the target base method.
+    Override = 1 << 2,
+  };
+  struct Reference {
+    Location Loc;
+    unsigned Attributes = 0;
+  };
+  std::vector<Reference> References;
   bool HasMore = false;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                              const ReferencesResult::Reference &);
+
+/// Returns implementations at a specified \p Pos:
+///   - overrides for a virtual method;
+///   - subclasses for a base class;
+std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
+                                               const SymbolIndex *Index);
+
 /// Returns references of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
@@ -104,6 +127,13 @@ llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
                           const SymbolIndex *Index);
+
+/// Get call hierarchy information at \p Pos.
+std::vector<CallHierarchyItem>
+prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath);
+
+std::vector<CallHierarchyIncomingCall>
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index);
 
 /// Returns all decls that are referenced in the \p FD except local symbols.
 llvm::DenseSet<const Decl *> getNonLocalDeclRefs(ParsedAST &AST,

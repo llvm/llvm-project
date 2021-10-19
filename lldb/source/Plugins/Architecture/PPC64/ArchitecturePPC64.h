@@ -19,8 +19,9 @@ public:
   static void Initialize();
   static void Terminate();
 
-  ConstString GetPluginName() override;
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   void OverrideStopInfo(Thread &thread) const override {}
 

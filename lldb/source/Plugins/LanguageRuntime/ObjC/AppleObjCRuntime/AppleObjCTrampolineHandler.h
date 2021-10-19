@@ -76,10 +76,7 @@ private:
 
     class VTableRegion {
     public:
-      VTableRegion()
-          : m_valid(false), m_owner(nullptr),
-            m_header_addr(LLDB_INVALID_ADDRESS), m_code_start_addr(0),
-            m_code_end_addr(0), m_next_region(0) {}
+      VTableRegion() = default;
 
       VTableRegion(AppleObjCVTables *owner, lldb::addr_t header_addr);
 
@@ -99,13 +96,13 @@ private:
 
       void Dump(Stream &s);
 
-      bool m_valid;
-      AppleObjCVTables *m_owner;
-      lldb::addr_t m_header_addr;
-      lldb::addr_t m_code_start_addr;
-      lldb::addr_t m_code_end_addr;
+      bool m_valid = false;
+      AppleObjCVTables *m_owner = nullptr;
+      lldb::addr_t m_header_addr = LLDB_INVALID_ADDRESS;
+      lldb::addr_t m_code_start_addr = 0;
+      lldb::addr_t m_code_end_addr = 0;
       std::vector<VTableDescriptor> m_descriptors;
-      lldb::addr_t m_next_region;
+      lldb::addr_t m_next_region = 0;
     };
 
   public:

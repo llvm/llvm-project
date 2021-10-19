@@ -214,8 +214,8 @@ static unsigned getSubRegIndex(const TargetRegisterClass *RC) {
   return SubIdx;
 }
 
-static const TargetRegisterClass *getRegClassFromGRPhysReg(unsigned Reg) {
-  assert(Register::isPhysicalRegister(Reg));
+static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
+  assert(Reg.isPhysical());
   if (X86::GR64RegClass.contains(Reg))
     return &X86::GR64RegClass;
   if (X86::GR32RegClass.contains(Reg))
@@ -239,7 +239,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
   const unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
-  if (Register::isPhysicalRegister(DstReg)) {
+  if (DstReg.isPhysical()) {
     assert(I.isCopy() && "Generic operators do not allow physical registers");
 
     if (DstSize > SrcSize && SrcRegBank.getID() == X86::GPRRegBankID &&
@@ -266,12 +266,12 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
     return true;
   }
 
-  assert((!Register::isPhysicalRegister(SrcReg) || I.isCopy()) &&
+  assert((!SrcReg.isPhysical() || I.isCopy()) &&
          "No phys reg on generic operators");
   assert((DstSize == SrcSize ||
           // Copies are a mean to setup initial types, the number of
           // bits may not exactly match.
-          (Register::isPhysicalRegister(SrcReg) &&
+          (SrcReg.isPhysical() &&
            DstSize <= RBI.getSizeInBits(SrcReg, MRI, TRI))) &&
          "Copy with different width?!");
 
@@ -280,7 +280,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
 
   if (SrcRegBank.getID() == X86::GPRRegBankID &&
       DstRegBank.getID() == X86::GPRRegBankID && SrcSize > DstSize &&
-      Register::isPhysicalRegister(SrcReg)) {
+      SrcReg.isPhysical()) {
     // Change the physical register to performe truncate.
 
     const TargetRegisterClass *SrcRC = getRegClassFromGRPhysReg(SrcReg);
@@ -479,7 +479,7 @@ static void X86SelectAddress(const MachineInstr &I,
          "unsupported type.");
 
   if (I.getOpcode() == TargetOpcode::G_PTR_ADD) {
-    if (auto COff = getConstantVRegVal(I.getOperand(2).getReg(), MRI)) {
+    if (auto COff = getIConstantVRegSExtVal(I.getOperand(2).getReg(), MRI)) {
       int64_t Imm = *COff;
       if (isInt<32>(Imm)) { // Check for displacement overflow.
         AM.Disp = static_cast<int32_t>(Imm);
@@ -1065,7 +1065,7 @@ bool X86InstructionSelector::selectUadde(MachineInstr &I,
       return false;
 
     Opcode = X86::ADC32rr;
-  } else if (auto val = getConstantVRegVal(CarryInReg, MRI)) {
+  } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {
     // carry is constant, support only 0.
     if (*val != 0)
       return false;
@@ -1559,10 +1559,9 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
        }},                                                 // i64
   };
 
-  auto OpEntryIt = std::find_if(std::begin(OpTable), std::end(OpTable),
-                                [RegTy](const DivRemEntry &El) {
-                                  return El.SizeInBits == RegTy.getSizeInBits();
-                                });
+  auto OpEntryIt = llvm::find_if(OpTable, [RegTy](const DivRemEntry &El) {
+    return El.SizeInBits == RegTy.getSizeInBits();
+  });
   if (OpEntryIt == std::end(OpTable))
     return false;
 

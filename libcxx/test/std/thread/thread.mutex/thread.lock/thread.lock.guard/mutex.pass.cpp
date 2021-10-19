@@ -21,21 +21,26 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::mutex m;
 
-int main()
-{
+void do_try_lock() {
+  assert(m.try_lock() == false);
+}
+
+int main(int, char**) {
   {
     std::lock_guard<std::mutex> lg(m);
-    assert(m.try_lock() == false);
+    std::thread t = support::make_test_thread(do_try_lock);
+    t.join();
   }
 
   m.lock();
   m.unlock();
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
   std::lock_guard lg(m);
   static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
 #endif

@@ -69,15 +69,15 @@ public:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DISABLED_RenameTemplatedClassStaticVariableTest, RenameMemberTest,
     testing::ValuesIn(std::vector<Case>({
         // FIXME: support renaming static variables for template classes.
         {"void f() { ns::TA<int>::SMoo; }",
          "void f() { ns::TA<int>::SMeh; }", "ns::TA::SMoo", "ns::TA::SMeh"},
-    })), );
+    })) );
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     RenameMemberTest, RenameMemberTest,
     testing::ValuesIn(std::vector<Case>({
         // Normal methods and fields.
@@ -154,7 +154,7 @@ INSTANTIATE_TEST_CASE_P(
          "TA::SFoo", "TB::SBar"},
         {"void f() { ns::TB<int>::SFoo(); }",
          "void f() { ns::TB<int>::SBar(); }", "ns::TA::SFoo", "ns::TB::SBar"},
-    })), );
+    })) );
 
 TEST_P(RenameMemberTest, RenameMembers) {
   auto Param = GetParam();

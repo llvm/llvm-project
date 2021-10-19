@@ -4,7 +4,7 @@
 
 # CHECK-LABEL: DW_TAG_GNU_call_site
 # CHECK-NEXT: DW_AT_abstract_origin [DW_FORM_ref4] (cu + 0x[[BAR_ADDR:[0-9a-f]+]] => {0x{{0*}}[[BAR_ADDR]]} "bar")
-# CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000008 ".text")
+# CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x00000008 ".text")
 
 --- |
   ; ModuleID = 'bundled-call-pr44001.ll'
@@ -68,7 +68,7 @@ body:             |
     DBG_VALUE $r0, $noreg, !14, !DIExpression(), debug-location !15
     DBG_VALUE $r0, $noreg, !14, !DIExpression(), debug-location !15
     BUNDLE implicit-def $r29, implicit-def $r30, implicit-def dead $pc, implicit-def dead $r31, implicit-def $r0, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, implicit $r0, debug-location !16 {
-      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !16 :: (store 4 into stack)
+      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !16 :: (store (s32) into stack)
       J2_call @bar, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit internal killed $r29, implicit $r0, implicit-def $r29, implicit-def $r0, debug-location !16
     }
     BUNDLE implicit-def dead $r0, implicit-def $d15, implicit-def $r30, implicit-def $r31, implicit-def $pc, implicit-def $r29, implicit $r0, implicit killed $r30, implicit killed $framekey, debug-location !17 {

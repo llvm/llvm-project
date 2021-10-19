@@ -16,7 +16,7 @@ define <4 x i32> @f1(<4 x i32> *%src, i32 %repl, i32 %index) {
 ; ALL-NEXT:    [[VAL2_I1:%.*]] = shl i32 2, [[VAL0_I1]]
 ; ALL-NEXT:    [[VAL2_I2:%.*]] = shl i32 3, [[VAL0_I2]]
 ; ALL-NEXT:    [[VAL2_I3:%.*]] = shl i32 4, [[REPL:%.*]]
-; ALL-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> undef, i32 [[VAL2_I0]], i32 0
+; ALL-NEXT:    [[VAL2_UPTO0:%.*]] = insertelement <4 x i32> poison, i32 [[VAL2_I0]], i32 0
 ; ALL-NEXT:    [[VAL2_UPTO1:%.*]] = insertelement <4 x i32> [[VAL2_UPTO0]], i32 [[VAL2_I1]], i32 1
 ; ALL-NEXT:    [[VAL2_UPTO2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO1]], i32 [[VAL2_I2]], i32 2
 ; ALL-NEXT:    [[VAL2:%.*]] = insertelement <4 x i32> [[VAL2_UPTO2]], i32 [[VAL2_I3]], i32 3

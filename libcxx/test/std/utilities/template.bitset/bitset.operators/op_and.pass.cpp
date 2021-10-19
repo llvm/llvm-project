@@ -9,38 +9,27 @@
 // test bitset<N> operator&(const bitset<N>& lhs, const bitset<N>& rhs);
 
 #include <bitset>
-#include <cstdlib>
 #include <cassert>
+#include <cstddef>
+#include <vector>
 
+#include "../bitset_test_cases.h"
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_CLANG)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#elif defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
-
 template <std::size_t N>
-std::bitset<N>
-make_bitset()
-{
-    std::bitset<N> v;
-    for (std::size_t i = 0; i < N; ++i)
-        v[i] = static_cast<bool>(std::rand() & 1);
-    return v;
+void test_op_and() {
+    std::vector<std::bitset<N> > const cases = get_test_cases<N>();
+    for (std::size_t c1 = 0; c1 != cases.size(); ++c1) {
+        for (std::size_t c2 = 0; c2 != cases.size(); ++c2) {
+            std::bitset<N> v1 = cases[c1];
+            std::bitset<N> v2 = cases[c2];
+            std::bitset<N> v3 = v1;
+            assert((v1 & v2) == (v3 &= v2));
+        }
+    }
 }
 
-template <std::size_t N>
-void test_op_and()
-{
-    std::bitset<N> v1 = make_bitset<N>();
-    std::bitset<N> v2 = make_bitset<N>();
-    std::bitset<N> v3 = v1;
-    assert((v1 & v2) == (v3 &= v2));
-}
-
-int main(int, char**)
-{
+int main(int, char**) {
     test_op_and<0>();
     test_op_and<1>();
     test_op_and<31>();
@@ -51,5 +40,5 @@ int main(int, char**)
     test_op_and<65>();
     test_op_and<1000>();
 
-  return 0;
+    return 0;
 }

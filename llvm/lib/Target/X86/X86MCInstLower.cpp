@@ -43,8 +43,11 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 
 using namespace llvm;
 
@@ -977,20 +980,24 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
   NoAutoPaddingScope NoPadScope(*OutStreamer);
-  bool Is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
-                  MI.getOpcode() == X86::TLS_base_addr64;
+  bool Is64Bits = MI.getOpcode() != X86::TLS_addr32 &&
+                  MI.getOpcode() != X86::TLS_base_addr32;
+  bool Is64BitsLP64 = MI.getOpcode() == X86::TLS_addr64 ||
+                      MI.getOpcode() == X86::TLS_base_addr64;
   MCContext &Ctx = OutStreamer->getContext();
 
   MCSymbolRefExpr::VariantKind SRVK;
   switch (MI.getOpcode()) {
   case X86::TLS_addr32:
   case X86::TLS_addr64:
+  case X86::TLS_addrX32:
     SRVK = MCSymbolRefExpr::VK_TLSGD;
     break;
   case X86::TLS_base_addr32:
     SRVK = MCSymbolRefExpr::VK_TLSLDM;
     break;
   case X86::TLS_base_addr64:
+  case X86::TLS_base_addrX32:
     SRVK = MCSymbolRefExpr::VK_TLSLD;
     break;
   default:
@@ -1010,7 +1017,7 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 
   if (Is64Bits) {
     bool NeedsPadding = SRVK == MCSymbolRefExpr::VK_TLSGD;
-    if (NeedsPadding)
+    if (NeedsPadding && Is64BitsLP64)
       EmitAndCountInstruction(MCInstBuilder(X86::DATA16_PREFIX));
     EmitAndCountInstruction(MCInstBuilder(X86::LEA64r)
                                 .addReg(X86::RDI)
@@ -1090,11 +1097,11 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
   if (Subtarget->is64Bit()) {
     // FIXME: We can use NOOPL on 32-bit targets with FeatureNOPL, but the
     // IndexReg/BaseReg below need to be updated.
-    if (Subtarget->hasFeature(X86::FeatureFast7ByteNOP))
+    if (Subtarget->hasFeature(X86::TuningFast7ByteNOP))
       MaxNopLength = 7;
-    else if (Subtarget->hasFeature(X86::FeatureFast15ByteNOP))
+    else if (Subtarget->hasFeature(X86::TuningFast15ByteNOP))
       MaxNopLength = 15;
-    else if (Subtarget->hasFeature(X86::FeatureFast11ByteNOP))
+    else if (Subtarget->hasFeature(X86::TuningFast11ByteNOP))
       MaxNopLength = 11;
     else
       MaxNopLength = 10;
@@ -1319,6 +1326,244 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
           .addExpr(Op));
 }
 
+void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
+  // FIXME: Make this work on non-ELF.
+  if (!TM.getTargetTriple().isOSBinFormatELF()) {
+    report_fatal_error("llvm.asan.check.memaccess only supported on ELF");
+    return;
+  }
+
+  unsigned Reg = MI.getOperand(0).getReg().id();
+  ASanAccessInfo AccessInfo(MI.getOperand(1).getImm());
+
+  MCSymbol *&Sym =
+      AsanMemaccessSymbols[AsanMemaccessTuple(Reg, AccessInfo.Packed)];
+  if (!Sym) {
+    std::string Name = AccessInfo.IsWrite ? "store" : "load";
+    std::string SymName = "__asan_check_" + Name +
+                          utostr(1ULL << AccessInfo.AccessSizeIndex) + "_rn" +
+                          utostr(Reg);
+    Sym = OutContext.getOrCreateSymbol(SymName);
+  }
+
+  EmitAndCountInstruction(
+      MCInstBuilder(X86::CALL64pcrel32)
+          .addExpr(MCSymbolRefExpr::create(Sym, OutContext)));
+}
+
+void X86AsmPrinter::emitAsanMemaccessPartial(Module &M, unsigned Reg,
+                                             const ASanAccessInfo &AccessInfo,
+                                             MCSubtargetInfo &STI) {
+  assert(AccessInfo.AccessSizeIndex == 0 || AccessInfo.AccessSizeIndex == 1 ||
+         AccessInfo.AccessSizeIndex == 2);
+  assert(Reg != X86::R8);
+
+  uint64_t ShadowBase;
+  int MappingScale;
+  bool OrShadowOffset;
+  getAddressSanitizerParams(
+      Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
+      AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::MOV64rr).addReg(X86::R8).addReg(X86::NoRegister + Reg),
+      STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
+                                   .addReg(X86::R8)
+                                   .addReg(X86::R8)
+                                   .addImm(MappingScale),
+                               STI);
+  if (OrShadowOffset) {
+    OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
+                                     .addReg(X86::R8)
+                                     .addReg(X86::R8)
+                                     .addImm(ShadowBase),
+                                 STI);
+    OutStreamer->emitInstruction(MCInstBuilder(X86::MOV8rm)
+                                     .addReg(X86::R8B)
+                                     .addReg(X86::R8)
+                                     .addImm(1)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(0)
+                                     .addReg(X86::NoRegister),
+                                 STI);
+    OutStreamer->emitInstruction(
+        MCInstBuilder(X86::TEST8rr).addReg(X86::R8B).addReg(X86::R8B), STI);
+  } else {
+    OutStreamer->emitInstruction(MCInstBuilder(X86::MOVSX32rm8)
+                                     .addReg(X86::R8D)
+                                     .addReg(X86::R8)
+                                     .addImm(1)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(ShadowBase)
+                                     .addReg(X86::NoRegister),
+                                 STI);
+    OutStreamer->emitInstruction(
+        MCInstBuilder(X86::TEST32rr).addReg(X86::R8D).addReg(X86::R8D), STI);
+  }
+  MCSymbol *AdditionalCheck = OutContext.createTempSymbol();
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JCC_1)
+          .addExpr(MCSymbolRefExpr::create(AdditionalCheck, OutContext))
+          .addImm(X86::COND_NE),
+      STI);
+  MCSymbol *ReturnSym = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(ReturnSym);
+  OutStreamer->emitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)), STI);
+
+  // Shadow byte is non-zero so we need to perform additional checks.
+  OutStreamer->emitLabel(AdditionalCheck);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::PUSH64r).addReg(X86::RCX),
+                               STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
+                                   .addReg(X86::RCX)
+                                   .addReg(X86::NoRegister + Reg),
+                               STI);
+  const size_t Granularity = 1ULL << MappingScale;
+  OutStreamer->emitInstruction(MCInstBuilder(X86::AND32ri8)
+                                   .addReg(X86::NoRegister)
+                                   .addReg(X86::ECX)
+                                   .addImm(Granularity - 1),
+                               STI);
+  if (AccessInfo.AccessSizeIndex == 1) {
+    OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
+                                     .addReg(X86::NoRegister)
+                                     .addReg(X86::ECX)
+                                     .addImm(1),
+                                 STI);
+  } else if (AccessInfo.AccessSizeIndex == 2) {
+    OutStreamer->emitInstruction(MCInstBuilder(X86::ADD32ri8)
+                                     .addReg(X86::NoRegister)
+                                     .addReg(X86::ECX)
+                                     .addImm(3),
+                                 STI);
+  }
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::CMP32rr).addReg(X86::ECX).addReg(X86::R8D).addImm(1),
+      STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::POP64r).addReg(X86::RCX),
+                               STI);
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JCC_1)
+          .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext))
+          .addImm(X86::COND_L),
+      STI);
+
+  emitAsanReportError(M, Reg, AccessInfo, STI);
+}
+
+void X86AsmPrinter::emitAsanMemaccessFull(Module &M, unsigned Reg,
+                                          const ASanAccessInfo &AccessInfo,
+                                          MCSubtargetInfo &STI) {
+  assert(AccessInfo.AccessSizeIndex == 3 || AccessInfo.AccessSizeIndex == 4);
+  assert(Reg != X86::R8);
+
+  uint64_t ShadowBase;
+  int MappingScale;
+  bool OrShadowOffset;
+  getAddressSanitizerParams(
+      Triple(M.getTargetTriple()), M.getDataLayout().getPointerSizeInBits(),
+      AccessInfo.CompileKernel, &ShadowBase, &MappingScale, &OrShadowOffset);
+
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::MOV64rr).addReg(X86::R8).addReg(X86::NoRegister + Reg),
+      STI);
+  OutStreamer->emitInstruction(MCInstBuilder(X86::SHR64ri)
+                                   .addReg(X86::R8)
+                                   .addReg(X86::R8)
+                                   .addImm(MappingScale),
+                               STI);
+  if (OrShadowOffset) {
+    OutStreamer->emitInstruction(MCInstBuilder(X86::OR64ri32)
+                                     .addReg(X86::R8)
+                                     .addReg(X86::R8)
+                                     .addImm(ShadowBase),
+                                 STI);
+    auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
+    OutStreamer->emitInstruction(MCInstBuilder(OpCode)
+                                     .addReg(X86::R8)
+                                     .addImm(1)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(0)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(0),
+                                 STI);
+  } else {
+    auto OpCode = AccessInfo.AccessSizeIndex == 3 ? X86::CMP8mi : X86::CMP16mi8;
+    OutStreamer->emitInstruction(MCInstBuilder(OpCode)
+                                     .addReg(X86::R8)
+                                     .addImm(1)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(ShadowBase)
+                                     .addReg(X86::NoRegister)
+                                     .addImm(0),
+                                 STI);
+  }
+  MCSymbol *ReportCode = OutContext.createTempSymbol();
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JCC_1)
+          .addExpr(MCSymbolRefExpr::create(ReportCode, OutContext))
+          .addImm(X86::COND_NE),
+      STI);
+  MCSymbol *ReturnSym = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(ReturnSym);
+  OutStreamer->emitInstruction(MCInstBuilder(getRetOpcode(*Subtarget)), STI);
+
+  OutStreamer->emitLabel(ReportCode);
+  emitAsanReportError(M, Reg, AccessInfo, STI);
+}
+
+void X86AsmPrinter::emitAsanReportError(Module &M, unsigned Reg,
+                                        const ASanAccessInfo &AccessInfo,
+                                        MCSubtargetInfo &STI) {
+  std::string Name = AccessInfo.IsWrite ? "store" : "load";
+  MCSymbol *ReportError = OutContext.getOrCreateSymbol(
+      "__asan_report_" + Name + utostr(1ULL << AccessInfo.AccessSizeIndex));
+  OutStreamer->emitInstruction(MCInstBuilder(X86::MOV64rr)
+                                   .addReg(X86::RDI)
+                                   .addReg(X86::NoRegister + Reg),
+                               STI);
+  OutStreamer->emitInstruction(
+      MCInstBuilder(X86::JMP_4)
+          .addExpr(MCSymbolRefExpr::create(ReportError, MCSymbolRefExpr::VK_PLT,
+                                           OutContext)),
+      STI);
+}
+
+void X86AsmPrinter::emitAsanMemaccessSymbols(Module &M) {
+  if (AsanMemaccessSymbols.empty())
+    return;
+
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatELF());
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TM.getTarget().createMCSubtargetInfo(TT.str(), "", ""));
+  assert(STI && "Unable to create subtarget info");
+
+  for (auto &P : AsanMemaccessSymbols) {
+    MCSymbol *Sym = P.second;
+    OutStreamer->SwitchSection(OutContext.getELFSection(
+        ".text.hot", ELF::SHT_PROGBITS,
+        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0, Sym->getName(),
+        /*IsComdat=*/true));
+
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
+    OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
+    OutStreamer->emitLabel(Sym);
+
+    unsigned Reg = std::get<0>(P.first);
+    ASanAccessInfo AccessInfo(std::get<1>(P.first));
+
+    if (AccessInfo.AccessSizeIndex < 3) {
+      emitAsanMemaccessPartial(M, Reg, AccessInfo, *STI);
+    } else {
+      emitAsanMemaccessFull(M, Reg, AccessInfo, *STI);
+    }
+  }
+}
+
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
                                       X86MCInstLower &MCIL) {
   // PATCHABLE_OP minsize, opcode, operands
@@ -1330,7 +1575,7 @@ void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
 
   MCInst MCI;
   MCI.setOpcode(Opcode);
-  for (auto &MO : make_range(MI.operands_begin() + 2, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands(), 2))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       MCI.addOperand(MaybeOperand.getValue());
 
@@ -1473,7 +1718,7 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_event_sled_", true);
   OutStreamer->AddComment("# XRay Custom Event Log");
-  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitCodeAlignment(2, &getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1569,7 +1814,7 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // First we emit the label and the jump.
   auto CurSled = OutContext.createTempSymbol("xray_typed_event_sled_", true);
   OutStreamer->AddComment("# XRay Typed Event Log");
-  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitCodeAlignment(2, &getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1671,7 +1916,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
   //   call <relative offset, 32-bits>   // 5 bytes
   //
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitCodeAlignment(2, &getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
 
   // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
@@ -1701,12 +1946,12 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   //
   // This just makes sure that the alignment for the next instruction is 2.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitCodeAlignment(2, &getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
   unsigned OpCode = MI.getOperand(0).getImm();
   MCInst Ret;
   Ret.setOpcode(OpCode);
-  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       Ret.addOperand(MaybeOperand.getValue());
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
@@ -1725,7 +1970,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // the PATCHABLE_FUNCTION_ENTER case, followed by the lowering of the actual
   // tail call much like how we have it in PATCHABLE_RET.
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
-  OutStreamer->emitCodeAlignment(2);
+  OutStreamer->emitCodeAlignment(2, &getSubtargetInfo());
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
 
@@ -1745,7 +1990,7 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // Before emitting the instruction, add a comment to indicate that this is
   // indeed a tail call.
   OutStreamer->AddComment("TAILCALL");
-  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+  for (auto &MO : drop_begin(MI.operands()))
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       TC.addOperand(MaybeOperand.getValue());
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
@@ -1780,10 +2025,7 @@ static const Constant *getConstantFromPool(const MachineInstr &MI,
   if (ConstantEntry.isMachineConstantPoolEntry())
     return nullptr;
 
-  const Constant *C = ConstantEntry.Val.ConstVal;
-  assert((!C || ConstantEntry.getType() == C->getType()) &&
-         "Expected a constant of the same type!");
-  return C;
+  return ConstantEntry.Val.ConstVal;
 }
 
 static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
@@ -2166,7 +2408,7 @@ static void addConstantComments(const MachineInstr *MI,
       const MachineOperand &DstOp = MI->getOperand(0);
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CF = dyn_cast<ConstantFP>(C)) {
-        CS << "0x" << CF->getValueAPF().bitcastToAPInt().toString(16, false);
+        CS << "0x" << toString(CF->getValueAPF().bitcastToAPInt(), 16, false);
         OutStreamer.AddComment(CS.str());
       }
     }
@@ -2445,8 +2687,10 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::TLS_addr32:
   case X86::TLS_addr64:
+  case X86::TLS_addrX32:
   case X86::TLS_base_addr32:
   case X86::TLS_base_addr64:
+  case X86::TLS_base_addrX32:
     return LowerTlsAddr(MCInstLowering, *MI);
 
   case X86::MOVPC32r: {
@@ -2560,6 +2804,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitAndCountInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));
     return;
 
+  case X86::ASAN_CHECK_MEMACCESS:
+    return LowerASAN_CHECK_MEMACCESS(*MI);
+
   case X86::MORESTACK_RET_RESTORE_R10:
     // Return, then restore R10.
     EmitAndCountInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));
@@ -2595,6 +2842,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
   }
+  case X86::UBSAN_UD1:
+    EmitAndCountInstruction(MCInstBuilder(X86::UD1Lm)
+                                .addReg(X86::EAX)
+                                .addReg(X86::EAX)
+                                .addImm(1)
+                                .addReg(X86::NoRegister)
+                                .addImm(MI->getOperand(0).getImm())
+                                .addReg(X86::NoRegister));
+    return;
   }
 
   MCInst TmpInst;

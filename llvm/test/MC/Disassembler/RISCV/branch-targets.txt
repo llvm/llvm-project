@@ -15,13 +15,13 @@ label1:
   bnez a0, label1
   bnez a0, label2
 # CHECK-LABEL: <label1>:
-# CHECK-NEXT: jal zero, 0 <label1>
-# CHECK-NEXT: jal zero, 20 <label2>
-# CHECK-NEXT: bne a0, zero, -8 <label1>
-# CHECK-NEXT: bne a0, zero, 12 <label2>
-# CHECK-NEXT: c.j -16 <label1>
-# CHECK-NEXT: c.j 6 <label2>
-# CHECK-NEXT: c.bnez a0, -20 <label1>
-# CHECK-NEXT: c.bnez a0, 2 <label2>
+# CHECK-NEXT: jal zero, 0x0 <label1>
+# CHECK-NEXT: jal zero, 0x18 <label2>
+# CHECK-NEXT: bne a0, zero, 0x0 <label1>
+# CHECK-NEXT: bne a0, zero, 0x18 <label2>
+# CHECK-NEXT: c.j 0x0 <label1>
+# CHECK-NEXT: c.j 0x18 <label2>
+# CHECK-NEXT: c.bnez a0, 0x0 <label1>
+# CHECK-NEXT: c.bnez a0, 0x18 <label2>
 
 label2:

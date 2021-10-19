@@ -19,11 +19,11 @@ import shlex
 import tempfile
 import shutil
 from distutils.spawn import find_executable
+import multiprocessing
 
 verbose = False
 creduce_cmd = None
 clang_cmd = None
-not_cmd = None
 
 def verbose_print(*args, **kwargs):
   if verbose:
@@ -65,7 +65,7 @@ def write_to_script(text, filename):
   os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
 class Reduce(object):
-  def __init__(self, crash_script, file_to_reduce):
+  def __init__(self, crash_script, file_to_reduce, core_number):
     crash_script_name, crash_script_ext = os.path.splitext(crash_script)
     file_reduce_name, file_reduce_ext = os.path.splitext(file_to_reduce)
 
@@ -77,8 +77,9 @@ class Reduce(object):
     self.clang = clang_cmd
     self.clang_args = []
     self.expected_output = []
-    self.is_crash = True
+    self.needs_stack_trace = False
     self.creduce_flags = ["--tidy"]
+    self.creduce_flags = ["--n", str(core_number)]
 
     self.read_clang_args(crash_script, file_to_reduce)
     self.read_expected_output()
@@ -128,23 +129,21 @@ class Reduce(object):
     crash_output = re.sub(ansi_escape, '', crash_output.decode('utf-8'))
 
     # Look for specific error messages
-    regexes = [r"Assertion `(.+)' failed", # Linux assert()
-               r"Assertion failed: (.+),", # FreeBSD/Mac assert()
-               r"fatal error: error in backend: (.+)",
-               r"LLVM ERROR: (.+)",
-               r"UNREACHABLE executed (at .+)?!",
-               r"LLVM IR generation of declaration '(.+)'",
-               r"Generating code for declaration '(.+)'",
-               r"\*\*\* Bad machine code: (.+) \*\*\*"]
+    regexes = [r"Assertion .+ failed", # Linux assert()
+               r"Assertion failed: .+,", # FreeBSD/Mac assert()
+               r"fatal error: error in backend: .+",
+               r"LLVM ERROR: .+",
+               r"UNREACHABLE executed at .+?!",
+               r"LLVM IR generation of declaration '.+'",
+               r"Generating code for declaration '.+'",
+               r"\*\*\* Bad machine code: .+ \*\*\*",
+               r"ERROR: .*Sanitizer: [^ ]+ "]
     for msg_re in regexes:
       match = re.search(msg_re, crash_output)
       if match:
-        msg = match.group(1)
+        msg = match.group(0)
         result = [msg]
         print("Found message:", msg)
-
-        if "fatal error:" in msg_re:
-          self.is_crash = False
         break
 
     # If no message was found, use the top five stack trace functions,
@@ -152,12 +151,15 @@ class Reduce(object):
     # Five is a somewhat arbitrary number; the goal is to get a small number
     # of identifying functions with some leeway for common functions
     if not result:
+      self.needs_stack_trace = True
       stacktrace_re = r'[0-9]+\s+0[xX][0-9a-fA-F]+\s*([^(]+)\('
-      filters = ["PrintStackTraceSignalHandler",
-                 "llvm::sys::RunSignalHandlers",
-                 "SignalHandler", "__restore_rt", "gsignal", "abort"]
+      filters = ["PrintStackTrace", "RunSignalHandlers", "CleanupOnSignal",
+                 "HandleCrash", "SignalHandler", "__restore_rt", "gsignal", "abort"]
+      def skip_function(func_name):
+        return any(name in func_name for name in filters)
+
       matches = re.findall(stacktrace_re, crash_output)
-      result = [x for x in matches if x and x.strip() not in filters][:5]
+      result = [x for x in matches if x and not skip_function(x)][:5]
       for msg in result:
         print("Found stack trace function:", msg)
 
@@ -184,10 +186,17 @@ class Reduce(object):
   def write_interestingness_test(self):
     print("\nCreating the interestingness test...")
 
-    crash_flag = "--crash" if self.is_crash else ""
+    # Disable symbolization if it's not required to avoid slow symbolization.
+    disable_symbolization = ''
+    if not self.needs_stack_trace:
+      disable_symbolization = 'export LLVM_DISABLE_SYMBOLIZATION=1'
 
-    output = "#!/bin/bash\n%s %s %s >& t.log || exit 1\n" % \
-        (pipes.quote(not_cmd), crash_flag, quote_cmd(self.get_crash_cmd()))
+    output = """#!/bin/bash
+%s
+if %s >& t.log ; then
+  exit 1
+fi
+""" % (disable_symbolization, quote_cmd(self.get_crash_cmd()))
 
     for msg in self.expected_output:
       output += 'grep -F %s t.log || exit 1\n' % pipes.quote(msg)
@@ -372,7 +381,6 @@ def main():
   global verbose
   global creduce_cmd
   global clang_cmd
-  global not_cmd
 
   parser = ArgumentParser(description=__doc__,
                           formatter_class=RawTextHelpFormatter)
@@ -382,15 +390,15 @@ def main():
                       help="Name of the file to be reduced.")
   parser.add_argument('--llvm-bin', dest='llvm_bin', type=str,
                       help="Path to the LLVM bin directory.")
-  parser.add_argument('--llvm-not', dest='llvm_not', type=str,
-                      help="The path to the `not` executable. "
-                      "By default uses the llvm-bin directory.")
   parser.add_argument('--clang', dest='clang', type=str,
                       help="The path to the `clang` executable. "
                       "By default uses the llvm-bin directory.")
   parser.add_argument('--creduce', dest='creduce', type=str,
                       help="The path to the `creduce` executable. "
                       "Required if `creduce` is not in PATH environment.")
+  parser.add_argument('--n', dest='core_number', type=int, 
+                      default=max(4, multiprocessing.cpu_count() / 2),
+                      help="Number of cores to use.")
   parser.add_argument('-v', '--verbose', action='store_true')
   args = parser.parse_args()
 
@@ -398,12 +406,12 @@ def main():
   llvm_bin = os.path.abspath(args.llvm_bin) if args.llvm_bin else None
   creduce_cmd = check_cmd('creduce', None, args.creduce)
   clang_cmd = check_cmd('clang', llvm_bin, args.clang)
-  not_cmd = check_cmd('not', llvm_bin, args.llvm_not)
+  core_number = args.core_number
 
   crash_script = check_file(args.crash_script[0])
   file_to_reduce = check_file(args.file_to_reduce[0])
 
-  r = Reduce(crash_script, file_to_reduce)
+  r = Reduce(crash_script, file_to_reduce, core_number)
 
   r.simplify_clang_args()
   r.write_interestingness_test()

@@ -25,10 +25,34 @@ using namespace polly;
 
 namespace {
 
-class DumpModule : public ModulePass {
+static void runDumpModule(llvm::Module &M, StringRef Filename, bool IsSuffix) {
+  std::string Dumpfile;
+  if (IsSuffix) {
+    StringRef ModuleName = M.getName();
+    StringRef Stem = sys::path::stem(ModuleName);
+    Dumpfile = (Twine(Stem) + Filename + ".ll").str();
+  } else {
+    Dumpfile = Filename.str();
+  }
+  LLVM_DEBUG(dbgs() << "Dumping module to " << Dumpfile << '\n');
+
+  std::unique_ptr<ToolOutputFile> Out;
+  std::error_code EC;
+  Out.reset(new ToolOutputFile(Dumpfile, EC, sys::fs::OF_None));
+  if (EC) {
+    errs() << EC.message() << '\n';
+    return;
+  }
+
+  M.print(Out->os(), nullptr);
+  Out->keep();
+}
+
+class DumpModuleWrapperPass : public ModulePass {
 private:
-  DumpModule(const DumpModule &) = delete;
-  const DumpModule &operator=(const DumpModule &) = delete;
+  DumpModuleWrapperPass(const DumpModuleWrapperPass &) = delete;
+  const DumpModuleWrapperPass &
+  operator=(const DumpModuleWrapperPass &) = delete;
 
   std::string Filename;
   bool IsSuffix;
@@ -39,10 +63,11 @@ public:
   /// This constructor is used e.g. if using opt -polly-dump-module.
   ///
   /// Provide a default suffix to not overwrite the original file.
-  explicit DumpModule() : ModulePass(ID), Filename("-dump"), IsSuffix(true) {}
+  explicit DumpModuleWrapperPass()
+      : ModulePass(ID), Filename("-dump"), IsSuffix(true) {}
 
-  explicit DumpModule(llvm::StringRef Filename, bool IsSuffix)
-      : ModulePass(ID), Filename(Filename), IsSuffix(IsSuffix) {}
+  explicit DumpModuleWrapperPass(std::string Filename, bool IsSuffix)
+      : ModulePass(ID), Filename(std::move(Filename)), IsSuffix(IsSuffix) {}
 
   /// @name ModulePass interface
   //@{
@@ -51,41 +76,27 @@ public:
   }
 
   virtual bool runOnModule(llvm::Module &M) override {
-    std::string Dumpfile;
-    if (IsSuffix) {
-      auto ModuleName = M.getName();
-      auto Stem = sys::path::stem(ModuleName);
-      Dumpfile = (Twine(Stem) + Filename + ".ll").str();
-    } else {
-      Dumpfile = Filename;
-    }
-    LLVM_DEBUG(dbgs() << "Dumping module to " << Dumpfile << '\n');
-
-    std::unique_ptr<ToolOutputFile> Out;
-    std::error_code EC;
-    Out.reset(new ToolOutputFile(Dumpfile, EC, sys::fs::OF_None));
-    if (EC) {
-      errs() << EC.message() << '\n';
-      return false;
-    }
-
-    M.print(Out->os(), nullptr);
-    Out->keep();
-
+    runDumpModule(M, Filename, IsSuffix);
     return false;
   }
   //@}
 };
 
-char DumpModule::ID;
+char DumpModuleWrapperPass::ID;
 } // namespace
 
-ModulePass *polly::createDumpModulePass(llvm::StringRef Filename,
-                                        bool IsSuffix) {
-  return new DumpModule(Filename, IsSuffix);
+ModulePass *polly::createDumpModuleWrapperPass(std::string Filename,
+                                               bool IsSuffix) {
+  return new DumpModuleWrapperPass(std::move(Filename), IsSuffix);
 }
 
-INITIALIZE_PASS_BEGIN(DumpModule, "polly-dump-module", "Polly - Dump Module",
-                      false, false)
-INITIALIZE_PASS_END(DumpModule, "polly-dump-module", "Polly - Dump Module",
-                    false, false)
+llvm::PreservedAnalyses DumpModulePass::run(llvm::Module &M,
+                                            llvm::ModuleAnalysisManager &AM) {
+  runDumpModule(M, Filename, IsSuffix);
+  return PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS_BEGIN(DumpModuleWrapperPass, "polly-dump-module",
+                      "Polly - Dump Module", false, false)
+INITIALIZE_PASS_END(DumpModuleWrapperPass, "polly-dump-module",
+                    "Polly - Dump Module", false, false)

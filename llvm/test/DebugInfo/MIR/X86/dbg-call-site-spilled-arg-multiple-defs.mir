@@ -108,13 +108,13 @@ body:             |
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
     CFI_INSTRUCTION offset $rbp, -16
-    MOV32mr $rsp, 1, $noreg, 4, $noreg, $edi :: (store 4 into %stack.0)
+    MOV32mr $rsp, 1, $noreg, 4, $noreg, $edi :: (store (s32) into %stack.0)
     DBG_VALUE $rsp, 0, !14, !DIExpression(DW_OP_plus_uconst, 4), debug-location !15
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $df, 12, implicit-def early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !17, debug-location !16
-    $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (load 4 from %stack.0)
+    $eax = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (load (s32) from %stack.0)
     DBG_VALUE $eax, $noreg, !14, !DIExpression(), debug-location !15
     CDQ implicit-def $eax, implicit-def $edx, implicit $eax, debug-location !18
-    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax, implicit $rdx, debug-location !18 :: (load 8 from %stack.0)
+    DIV64m $rsp, 1, $noreg, 24, $noreg, implicit-def dead $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax, implicit $rdx, debug-location !18 :: (load (s64) from %stack.0)
     $edi = MOV32rr $edx, debug-location !18
     DBG_VALUE $edi, $noreg, !14, !DIExpression(), debug-location !15
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, debug-location !18

@@ -1066,6 +1066,11 @@ Decl *Sema::ActOnStartClassInterface(
 
   ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
+
+  // Merge attributes from previous declarations.
+  if (PrevIDecl)
+    mergeDeclAttributes(IDecl, PrevIDecl);
+
   PushOnScopeChains(IDecl, TUScope);
 
   // Start the definition of this class. If we're in a redefinition case, there
@@ -1581,7 +1586,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
     DS.SetRangeEnd(loc);
 
     // Form the declarator.
-    Declarator D(DS, DeclaratorContext::TypeNameContext);
+    Declarator D(DS, DeclaratorContext::TypeName);
 
     // If we have a typedef of an Objective-C class type that is missing a '*',
     // add the '*'.
@@ -2609,7 +2614,7 @@ void Sema::WarnExactTypedMethods(ObjCMethodDecl *ImpMethodDecl,
   if (MethodDecl->getImplementationControl() == ObjCMethodDecl::Optional)
     return;
   // don't issue warning when primary class's method is
-  // depecated/unavailable.
+  // deprecated/unavailable.
   if (MethodDecl->hasAttr<UnavailableAttr>() ||
       MethodDecl->hasAttr<DeprecatedAttr>())
     return;
@@ -3125,6 +3130,9 @@ Sema::ActOnForwardClassDeclaration(SourceLocation AtClassLoc,
                                   IdentLocs[i]);
     IDecl->setAtEndRange(IdentLocs[i]);
 
+    if (PrevIDecl)
+      mergeDeclAttributes(IDecl, PrevIDecl);
+
     PushOnScopeChains(IDecl, TUScope);
     CheckObjCDeclScope(IDecl);
     DeclsInGroup.push_back(IDecl);
@@ -3419,8 +3427,10 @@ void Sema::AddMethodToGlobalPool(ObjCMethodDecl *Method, bool impl,
 
   GlobalMethodPool::iterator Pos = MethodPool.find(Method->getSelector());
   if (Pos == MethodPool.end())
-    Pos = MethodPool.insert(std::make_pair(Method->getSelector(),
-                                           GlobalMethods())).first;
+    Pos = MethodPool
+              .insert(std::make_pair(Method->getSelector(),
+                                     GlobalMethodPool::Lists()))
+              .first;
 
   Method->setDefined(impl);
 
@@ -3628,7 +3638,7 @@ ObjCMethodDecl *Sema::LookupImplementedMethodInGlobalPool(Selector Sel) {
   if (Pos == MethodPool.end())
     return nullptr;
 
-  GlobalMethods &Methods = Pos->second;
+  GlobalMethodPool::Lists &Methods = Pos->second;
   for (const ObjCMethodList *Method = &Methods.first; Method;
        Method = Method->getNext())
     if (Method->getMethod() &&
@@ -3904,6 +3914,55 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
   }
 }
 
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCProtocolDecl *PDecl, ObjCCategoryDecl *CDecl);
+
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCCategoryDecl *CDecl,
+    const llvm::iterator_range<ObjCProtocolList::iterator> &Protocols) {
+  for (auto *PI : Protocols)
+    DiagnoseCategoryDirectMembersProtocolConformance(S, PI, CDecl);
+}
+
+static void DiagnoseCategoryDirectMembersProtocolConformance(
+    Sema &S, ObjCProtocolDecl *PDecl, ObjCCategoryDecl *CDecl) {
+  if (!PDecl->isThisDeclarationADefinition() && PDecl->getDefinition())
+    PDecl = PDecl->getDefinition();
+
+  llvm::SmallVector<const Decl *, 4> DirectMembers;
+  const auto *IDecl = CDecl->getClassInterface();
+  for (auto *MD : PDecl->methods()) {
+    if (!MD->isPropertyAccessor()) {
+      if (const auto *CMD =
+              IDecl->getMethod(MD->getSelector(), MD->isInstanceMethod())) {
+        if (CMD->isDirectMethod())
+          DirectMembers.push_back(CMD);
+      }
+    }
+  }
+  for (auto *PD : PDecl->properties()) {
+    if (const auto *CPD = IDecl->FindPropertyVisibleInPrimaryClass(
+            PD->getIdentifier(),
+            PD->isClassProperty()
+                ? ObjCPropertyQueryKind::OBJC_PR_query_class
+                : ObjCPropertyQueryKind::OBJC_PR_query_instance)) {
+      if (CPD->isDirectProperty())
+        DirectMembers.push_back(CPD);
+    }
+  }
+  if (!DirectMembers.empty()) {
+    S.Diag(CDecl->getLocation(), diag::err_objc_direct_protocol_conformance)
+        << CDecl->IsClassExtension() << CDecl << PDecl << IDecl;
+    for (const auto *MD : DirectMembers)
+      S.Diag(MD->getLocation(), diag::note_direct_member_here);
+    return;
+  }
+
+  // Check on this protocols's referenced protocols, recursively.
+  DiagnoseCategoryDirectMembersProtocolConformance(S, CDecl,
+                                                   PDecl->protocols());
+}
+
 // Note: For class/category implementations, allMethods is always null.
 Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
                        ArrayRef<DeclGroupPtrTy> allTUVars) {
@@ -4004,6 +4063,8 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
       ObjCInterfaceDecl *CCPrimary = C->getClassInterface();
       DiagnoseClassExtensionDupMethods(C, CCPrimary);
     }
+
+    DiagnoseCategoryDirectMembersProtocolConformance(*this, C, C->protocols());
   }
   if (ObjCContainerDecl *CDecl = dyn_cast<ObjCContainerDecl>(ClassDecl)) {
     if (CDecl->getIdentifier())
@@ -4348,10 +4409,12 @@ private:
 
 void Sema::CheckObjCMethodDirectOverrides(ObjCMethodDecl *method,
                                           ObjCMethodDecl *overridden) {
-  if (const auto *attr = overridden->getAttr<ObjCDirectAttr>()) {
+  if (overridden->isDirectMethod()) {
+    const auto *attr = overridden->getAttr<ObjCDirectAttr>();
     Diag(method->getLocation(), diag::err_objc_override_direct_method);
     Diag(attr->getLocation(), diag::note_previous_declaration);
-  } else if (const auto *attr = method->getAttr<ObjCDirectAttr>()) {
+  } else if (method->isDirectMethod()) {
+    const auto *attr = method->getAttr<ObjCDirectAttr>();
     Diag(attr->getLocation(), diag::err_objc_direct_on_override)
         << isa<ObjCProtocolDecl>(overridden->getDeclContext());
     Diag(overridden->getLocation(), diag::note_previous_declaration);
@@ -4771,7 +4834,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // If this method overrides a previous @synthesize declaration,
     // register it with the property.  Linear search through all
     // properties here, because the autosynthesized stub hasn't been
-    // made visible yet, so it can be overriden by a later
+    // made visible yet, so it can be overridden by a later
     // user-specified implementation.
     for (ObjCPropertyImplDecl *PropertyImpl : ImpDecl->property_impls()) {
       if (auto *Setter = PropertyImpl->getSetterMethodDecl())
@@ -4797,7 +4860,8 @@ Decl *Sema::ActOnMethodDeclaration(
     // the canonical declaration.
     if (!ObjCMethod->isDirectMethod()) {
       const ObjCMethodDecl *CanonicalMD = ObjCMethod->getCanonicalDecl();
-      if (const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>()) {
+      if (CanonicalMD->isDirectMethod()) {
+        const auto *attr = CanonicalMD->getAttr<ObjCDirectAttr>();
         ObjCMethod->addAttr(
             ObjCDirectAttr::CreateImplicit(Context, attr->getLocation()));
       }
@@ -4842,14 +4906,16 @@ Decl *Sema::ActOnMethodDeclaration(
             Diag(IMD->getLocation(), diag::note_previous_declaration);
           };
 
-          if (const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>()) {
+          if (ObjCMethod->isDirectMethod()) {
+            const auto *attr = ObjCMethod->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else if (!IMD->isDirectMethod()) {
               Diag(attr->getLocation(), diag::err_objc_direct_missing_on_decl);
               Diag(IMD->getLocation(), diag::note_previous_declaration);
             }
-          } else if (const auto *attr = IMD->getAttr<ObjCDirectAttr>()) {
+          } else if (IMD->isDirectMethod()) {
+            const auto *attr = IMD->getAttr<ObjCDirectAttr>();
             if (ObjCMethod->getCanonicalDecl() != IMD) {
               diagContainerMismatch();
             } else {

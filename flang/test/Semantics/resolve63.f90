@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Invalid operand types when user-defined operator is available
 module m1
   type :: t
@@ -158,9 +158,10 @@ module m3
     end
   end interface
 contains
-  subroutine s1(x, y) 
+  subroutine s1(x, y)
     logical :: x
     integer :: y
+    integer, pointer :: px
     logical :: l
     complex :: z
     y = y + z'1'  !OK
@@ -171,8 +172,18 @@ contains
     y = -z'1'
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
     y = x + z'1'
-    !ERROR: Operands of .NE. must have comparable types; have LOGICAL(4) and untyped
+    !ERROR: A NULL() pointer is not allowed as an operand here
     l = x /= null()
+    !ERROR: A NULL() pointer is not allowed as a relational operand
+    l = null(px) /= null(px)
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    l = x /= null(px)
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    l = px /= null()
+    !ERROR: A NULL() pointer is not allowed as a relational operand
+    l = px /= null(px)
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    l = null() /= null()
   end
 end
 
@@ -259,4 +270,77 @@ contains
     !ERROR: No intrinsic or user-defined OPERATOR(+) matches operand types INTEGER(4) and TYPE(t1)
     i = i + x
   end
+end
+
+! Some cases where NULL is acceptable - ensure no false errors
+module m7
+  implicit none
+  type :: t1
+   contains
+    procedure :: s1
+    generic :: operator(/) => s1
+  end type
+  interface operator(-)
+    module procedure s2
+  end interface
+ contains
+  integer function s1(x, y)
+    class(t1), intent(in) :: x
+    class(t1), intent(in), pointer :: y
+    s1 = 1
+  end
+  integer function s2(x, y)
+    type(t1), intent(in), pointer :: x, y
+    s2 = 2
+  end
+  subroutine test
+    integer :: j
+    type(t1), pointer :: x1
+    allocate(x1)
+    ! These cases are fine.
+    j = x1 - x1
+    j = x1 - null(mold=x1)
+    j = null(mold=x1) - null(mold=x1)
+    j = null(mold=x1) - x1
+    j = x1 / x1
+    j = x1 / null(mold=x1)
+    j = null() - null(mold=x1)
+    j = null(mold=x1) - null()
+    j = null() - null()
+    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types untyped and TYPE(t1)
+    j = null() / null(mold=x1)
+    !ERROR: No intrinsic or user-defined OPERATOR(/) matches operand types TYPE(t1) and untyped
+    j = null(mold=x1) / null()
+    !ERROR: A NULL() pointer is not allowed as an operand here
+    j = null() / null()
+  end
+end
+
+! 16.9.144(6)
+module m8
+  interface generic
+    procedure s1, s2
+  end interface
+ contains
+  subroutine s1(ip1, rp1)
+    integer, pointer, intent(in) :: ip1
+    real, pointer, intent(in) :: rp1
+  end subroutine
+  subroutine s2(rp2, ip2)
+    real, pointer, intent(in) :: rp2
+    integer, pointer, intent(in) :: ip2
+  end subroutine
+  subroutine test
+    integer, pointer :: ip
+    real, pointer :: rp
+    call generic(ip, rp) ! ok
+    call generic(ip, null()) ! ok
+    call generic(rp, null()) ! ok
+    call generic(null(), rp) ! ok
+    call generic(null(), ip) ! ok
+    call generic(null(mold=ip), null()) ! ok
+    call generic(null(), null(mold=ip)) ! ok
+    !ERROR: One or more NULL() actual arguments to the generic procedure 'generic' requires a MOLD= for disambiguation
+    call generic(null(), null())
+  end subroutine
 end

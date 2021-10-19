@@ -11,7 +11,7 @@
 # RUN: llvm-readelf --dynamic-table %t1.o 2>&1 \
 # RUN:   | FileCheck -DFILE=%t1.o --check-prefixes=WARNING1,GNU1 %s
 
-# WARNING1: warning: '[[FILE]]': The SHT_DYNAMIC section '.dynamic' is not contained within the PT_DYNAMIC segment
+# WARNING1: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 is not contained within the PT_DYNAMIC segment
 # WARNING1: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x1){{$}}
 # WARNING1: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
 # WARNING1: warning: '[[FILE]]': PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used
@@ -50,15 +50,14 @@ Sections:
     AddressAlign: 0x100
     Content: "00"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
 
 ## Case 2: The dynamic table found using the dynamic program header is different from the
 ##         table found using the section header table.
@@ -69,7 +68,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --dynamic-table %t2.o 2>&1 \
 # RUN:   | FileCheck -DFILE=%t2.o --check-prefixes=WARNING2,GNU2 %s
 
-# WARNING2: warning: '[[FILE]]': The SHT_DYNAMIC section '.dynamic' is not contained within the PT_DYNAMIC segment
+# WARNING2: warning: '[[FILE]]': SHT_DYNAMIC section with index 1 is not contained within the PT_DYNAMIC segment
 # WARNING2: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
 
 # LLVM2:      DynamicSection [ (1 entries)
@@ -104,15 +103,14 @@ Sections:
     AddressAlign: 0x100
     Content: "00000000000000000000000000000000"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:      PT_LOAD
+    VAddr:     0x1000
+    FirstSec:  .dynamic
+    LastSec:   .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
 
 ## Case 3: Both dynamic tables found using SHT_DYNAMIC/PT_DYNAMIC are corrupted.
 
@@ -145,12 +143,11 @@ Sections:
     AddressAlign: 0x100
     Content: "00"
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .text
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .text
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text

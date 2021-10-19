@@ -341,24 +341,24 @@ define i32 @explicit_register_f8(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f8:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs0, 8(sp)
+; RV32IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs0
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs0, 8(sp)
+; RV32IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f8:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs0, 8(sp)
+; RV64IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs0, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs0
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs0, 8(sp)
+; RV64IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f8}"(double %a)
@@ -370,24 +370,24 @@ define i32 @explicit_register_fs0(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs0:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs0, 8(sp)
+; RV32IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs0
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs0, 8(sp)
+; RV32IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs0:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs0, 8(sp)
+; RV64IFD-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs0, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs0
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs0, 8(sp)
+; RV64IFD-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs0}"(double %a)
@@ -399,24 +399,24 @@ define i32 @explicit_register_f9(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f9:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs1, 8(sp)
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs1, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs1
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs1, 8(sp)
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f9:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs1, 8(sp)
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs1, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs1
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs1, 8(sp)
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f9}"(double %a)
@@ -428,24 +428,24 @@ define i32 @explicit_register_fs1(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs1:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs1, 8(sp)
+; RV32IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs1, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs1
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs1, 8(sp)
+; RV32IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs1:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs1, 8(sp)
+; RV64IFD-NEXT:    fsd fs1, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs1, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs1
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs1, 8(sp)
+; RV64IFD-NEXT:    fld fs1, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs1}"(double %a)
@@ -773,24 +773,24 @@ define i32 @explicit_register_f18(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f18:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs2, 8(sp)
+; RV32IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs2, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs2
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs2, 8(sp)
+; RV32IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f18:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs2, 8(sp)
+; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs2, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs2
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs2, 8(sp)
+; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f18}"(double %a)
@@ -802,24 +802,24 @@ define i32 @explicit_register_fs2(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs2:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs2, 8(sp)
+; RV32IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs2, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs2
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs2, 8(sp)
+; RV32IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs2:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs2, 8(sp)
+; RV64IFD-NEXT:    fsd fs2, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs2, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs2
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs2, 8(sp)
+; RV64IFD-NEXT:    fld fs2, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs2}"(double %a)
@@ -831,24 +831,24 @@ define i32 @explicit_register_f19(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f19:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs3, 8(sp)
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs3, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs3
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs3, 8(sp)
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f19:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs3, 8(sp)
+; RV64IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs3, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs3
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs3, 8(sp)
+; RV64IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f19}"(double %a)
@@ -860,24 +860,24 @@ define i32 @explicit_register_fs3(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs3:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs3, 8(sp)
+; RV32IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs3, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs3
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs3, 8(sp)
+; RV32IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs3:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs3, 8(sp)
+; RV64IFD-NEXT:    fsd fs3, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs3, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs3
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs3, 8(sp)
+; RV64IFD-NEXT:    fld fs3, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs3}"(double %a)
@@ -889,24 +889,24 @@ define i32 @explicit_register_f20(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f20:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs4, 8(sp)
+; RV32IFD-NEXT:    fsd fs4, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs4, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs4
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs4, 8(sp)
+; RV32IFD-NEXT:    fld fs4, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f20:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs4, 8(sp)
+; RV64IFD-NEXT:    fsd fs4, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs4, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs4
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs4, 8(sp)
+; RV64IFD-NEXT:    fld fs4, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f20}"(double %a)
@@ -918,24 +918,24 @@ define i32 @explicit_register_fs4(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs4:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs4, 8(sp)
+; RV32IFD-NEXT:    fsd fs4, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs4, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs4
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs4, 8(sp)
+; RV32IFD-NEXT:    fld fs4, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs4:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs4, 8(sp)
+; RV64IFD-NEXT:    fsd fs4, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs4, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs4
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs4, 8(sp)
+; RV64IFD-NEXT:    fld fs4, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs4}"(double %a)
@@ -947,24 +947,24 @@ define i32 @explicit_register_f21(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f21:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs5, 8(sp)
+; RV32IFD-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs5, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs5
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs5, 8(sp)
+; RV32IFD-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f21:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs5, 8(sp)
+; RV64IFD-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs5, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs5
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs5, 8(sp)
+; RV64IFD-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f21}"(double %a)
@@ -976,24 +976,24 @@ define i32 @explicit_register_fs5(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs5:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs5, 8(sp)
+; RV32IFD-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs5, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs5
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs5, 8(sp)
+; RV32IFD-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs5:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs5, 8(sp)
+; RV64IFD-NEXT:    fsd fs5, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs5, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs5
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs5, 8(sp)
+; RV64IFD-NEXT:    fld fs5, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs5}"(double %a)
@@ -1005,24 +1005,24 @@ define i32 @explicit_register_f22(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f22:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs6, 8(sp)
+; RV32IFD-NEXT:    fsd fs6, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs6, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs6
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs6, 8(sp)
+; RV32IFD-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f22:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs6, 8(sp)
+; RV64IFD-NEXT:    fsd fs6, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs6, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs6
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs6, 8(sp)
+; RV64IFD-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f22}"(double %a)
@@ -1034,24 +1034,24 @@ define i32 @explicit_register_fs6(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs6:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs6, 8(sp)
+; RV32IFD-NEXT:    fsd fs6, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs6, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs6
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs6, 8(sp)
+; RV32IFD-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs6:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs6, 8(sp)
+; RV64IFD-NEXT:    fsd fs6, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs6, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs6
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs6, 8(sp)
+; RV64IFD-NEXT:    fld fs6, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs6}"(double %a)
@@ -1063,24 +1063,24 @@ define i32 @explicit_register_f23(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f23:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs7, 8(sp)
+; RV32IFD-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs7, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs7
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs7, 8(sp)
+; RV32IFD-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f23:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs7, 8(sp)
+; RV64IFD-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs7, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs7
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs7, 8(sp)
+; RV64IFD-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f23}"(double %a)
@@ -1092,24 +1092,24 @@ define i32 @explicit_register_fs7(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs7:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs7, 8(sp)
+; RV32IFD-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs7, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs7
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs7, 8(sp)
+; RV32IFD-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs7:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs7, 8(sp)
+; RV64IFD-NEXT:    fsd fs7, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs7, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs7
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs7, 8(sp)
+; RV64IFD-NEXT:    fld fs7, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs7}"(double %a)
@@ -1121,24 +1121,24 @@ define i32 @explicit_register_f24(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f24:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs8, 8(sp)
+; RV32IFD-NEXT:    fsd fs8, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs8, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs8
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs8, 8(sp)
+; RV32IFD-NEXT:    fld fs8, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f24:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs8, 8(sp)
+; RV64IFD-NEXT:    fsd fs8, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs8, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs8
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs8, 8(sp)
+; RV64IFD-NEXT:    fld fs8, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f24}"(double %a)
@@ -1150,24 +1150,24 @@ define i32 @explicit_register_fs8(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs8:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs8, 8(sp)
+; RV32IFD-NEXT:    fsd fs8, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs8, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs8
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs8, 8(sp)
+; RV32IFD-NEXT:    fld fs8, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs8:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs8, 8(sp)
+; RV64IFD-NEXT:    fsd fs8, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs8, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs8
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs8, 8(sp)
+; RV64IFD-NEXT:    fld fs8, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs8}"(double %a)
@@ -1179,24 +1179,24 @@ define i32 @explicit_register_f25(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f25:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs9, 8(sp)
+; RV32IFD-NEXT:    fsd fs9, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs9, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs9
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs9, 8(sp)
+; RV32IFD-NEXT:    fld fs9, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f25:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs9, 8(sp)
+; RV64IFD-NEXT:    fsd fs9, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs9, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs9
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs9, 8(sp)
+; RV64IFD-NEXT:    fld fs9, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f25}"(double %a)
@@ -1208,24 +1208,24 @@ define i32 @explicit_register_fs9(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs9:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs9, 8(sp)
+; RV32IFD-NEXT:    fsd fs9, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs9, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs9
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs9, 8(sp)
+; RV32IFD-NEXT:    fld fs9, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs9:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs9, 8(sp)
+; RV64IFD-NEXT:    fsd fs9, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs9, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs9
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs9, 8(sp)
+; RV64IFD-NEXT:    fld fs9, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs9}"(double %a)
@@ -1237,24 +1237,24 @@ define i32 @explicit_register_f26(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f26:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs10, 8(sp)
+; RV32IFD-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs10, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs10
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs10, 8(sp)
+; RV32IFD-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f26:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs10, 8(sp)
+; RV64IFD-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs10, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs10
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs10, 8(sp)
+; RV64IFD-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f26}"(double %a)
@@ -1266,24 +1266,24 @@ define i32 @explicit_register_fs10(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs10:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs10, 8(sp)
+; RV32IFD-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs10, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs10
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs10, 8(sp)
+; RV32IFD-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs10:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs10, 8(sp)
+; RV64IFD-NEXT:    fsd fs10, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs10, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs10
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs10, 8(sp)
+; RV64IFD-NEXT:    fld fs10, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs10}"(double %a)
@@ -1295,24 +1295,24 @@ define i32 @explicit_register_f27(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_f27:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs11, 8(sp)
+; RV32IFD-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs11, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs11
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs11, 8(sp)
+; RV32IFD-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_f27:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs11, 8(sp)
+; RV64IFD-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs11, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs11
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs11, 8(sp)
+; RV64IFD-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{f27}"(double %a)
@@ -1324,24 +1324,24 @@ define i32 @explicit_register_fs11(double %a) nounwind {
 ; RV32IFD-LABEL: explicit_register_fs11:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    fsd fs11, 8(sp)
+; RV32IFD-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs11, fa0
 ; RV32IFD-NEXT:    #APP
 ; RV32IFD-NEXT:    fcvt.w.d a0, fs11
 ; RV32IFD-NEXT:    #NO_APP
-; RV32IFD-NEXT:    fld fs11, 8(sp)
+; RV32IFD-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 16
 ; RV32IFD-NEXT:    ret
 ;
 ; RV64IFD-LABEL: explicit_register_fs11:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    fsd fs11, 8(sp)
+; RV64IFD-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs11, fa0
 ; RV64IFD-NEXT:    #APP
 ; RV64IFD-NEXT:    fcvt.w.d a0, fs11
 ; RV64IFD-NEXT:    #NO_APP
-; RV64IFD-NEXT:    fld fs11, 8(sp)
+; RV64IFD-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
   %1 = tail call i32 asm "fcvt.w.d $0, $1", "=r,{fs11}"(double %a)

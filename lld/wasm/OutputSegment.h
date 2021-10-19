@@ -22,23 +22,20 @@ class OutputSegment {
 public:
   OutputSegment(StringRef n) : name(n) {}
 
-  void addInputSegment(InputSegment *inSeg) {
-    alignment = std::max(alignment, inSeg->getAlignment());
-    inputSegments.push_back(inSeg);
-    size = llvm::alignTo(size, 1ULL << inSeg->getAlignment());
-    inSeg->outputSeg = this;
-    inSeg->outputSegmentOffset = size;
-    size += inSeg->getSize();
-  }
+  void addInputSegment(InputChunk *inSeg);
+  void finalizeInputSegments();
+
+  bool isTLS() const { return name == ".tdata"; }
 
   StringRef name;
   bool isBss = false;
   uint32_t index = 0;
+  uint32_t linkingFlags = 0;
   uint32_t initFlags = 0;
   uint32_t sectionOffset = 0;
   uint32_t alignment = 0;
   uint64_t startVA = 0;
-  std::vector<InputSegment *> inputSegments;
+  std::vector<InputChunk *> inputSegments;
 
   // Sum of the size of the all the input segments
   uint32_t size = 0;

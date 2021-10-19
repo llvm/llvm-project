@@ -1,6 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -regions -analyze < %s 
-; RUN: opt -regions -stats -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s
+; RUN: opt -stats -passes='print<regions>' -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s
 
 define void @normal_condition() nounwind {
 0:
@@ -14,6 +13,4 @@ define void @normal_condition() nounwind {
 4:
 	ret void
 }
-; CHECK-NOT: =>
-; CHECK: [0] 0 => <Function Return>
 ; STAT: 1 region - The # of regions

@@ -10,19 +10,18 @@ define void @test() personality i32* ()* @snork {
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add i32 [[INDVARS_IV:%.*]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[TMP2:%.*]], [[SMAX:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[TMP1:%.*]], [[SMAX:%.*]]
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB4]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP0]], [[BB1:%.*]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[INDVARS_IV]] = phi i32 [ [[INDVARS_IV_NEXT]], [[BB1]] ], [ undef, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 undef, 36
-; CHECK-NEXT:    [[SMAX]] = select i1 [[TMP1]], i32 [[INDVARS_IV]], i32 36
+; CHECK-NEXT:    [[SMAX]] = call i32 @llvm.smax.i32(i32 [[INDVARS_IV]], i32 36)
 ; CHECK-NEXT:    [[TMP6:%.*]] = invoke i32 @quux() [ "deopt"(i32 0, i32 0, i32 0, i32 180, i32 0, i32 25, i32 0, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 3, i32 [[INDVARS_IV]], i32 3, i32 undef, i32 7, i8* null, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 4, double undef, i32 7, i8* null, i32 4, i64 undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null) ]
 ; CHECK-NEXT:    to label [[BB7:%.*]] unwind label [[BB15:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP6]], [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1]] = add i32 [[TMP6]], [[INDVARS_IV]]
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br i1 true, label [[BB1]], label [[BB9]]

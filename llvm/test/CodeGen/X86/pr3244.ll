@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR3244
 
-@g_62 = external global i16             ; <i16*> [#uses=1]
-@g_487 = external global i32            ; <i32*> [#uses=1]
+@g_62 = external dso_local global i16             ; <i16*> [#uses=1]
+@g_487 = external dso_local global i32            ; <i32*> [#uses=1]
 
 define i32 @func_42(i32 %p_43, i32 %p_44, i32 %p_45, i32 %p_46) nounwind {
 entry:

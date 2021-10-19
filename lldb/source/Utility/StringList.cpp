@@ -14,8 +14,8 @@
 #include "llvm/ADT/ArrayRef.h"
 
 #include <algorithm>
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 using namespace lldb_private;
 
@@ -33,7 +33,7 @@ StringList::StringList(const char **strv, int strc) : m_strings() {
   }
 }
 
-StringList::~StringList() {}
+StringList::~StringList() = default;
 
 void StringList::AppendString(const char *str) {
   if (str)

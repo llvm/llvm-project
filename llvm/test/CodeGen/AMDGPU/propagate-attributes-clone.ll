@@ -1,5 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 < %s | FileCheck -check-prefixes=OPT,OPT-EXT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='default<O1>' < %s | FileCheck -check-prefixes=OPT,OPT-EXT %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -O1 --amdgpu-internalize-symbols < %s | FileCheck -check-prefixes=OPT,OPT-INT %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes='default<O1>' --amdgpu-internalize-symbols < %s | FileCheck -check-prefixes=OPT,OPT-INT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=LLC %s
 
 ; OPT: declare void @foo4() local_unnamed_addr #0
@@ -67,24 +69,24 @@
 ; LLC: sample asm
 ; LLC: foo1:
 ; LLC: foo4@gotpcrel32@lo+4
-; LLC: foo4@gotpcrel32@hi+4
+; LLC: foo4@gotpcrel32@hi+12
 ; LLC: foo3@gotpcrel32@lo+4
-; LLC: foo3@gotpcrel32@hi+4
+; LLC: foo3@gotpcrel32@hi+12
 ; LLC: foo2@gotpcrel32@lo+4
-; LLC: foo2@gotpcrel32@hi+4
+; LLC: foo2@gotpcrel32@hi+12
 ; LLC: foo1@gotpcrel32@lo+4
-; LLC: foo1@gotpcrel32@hi+4
+; LLC: foo1@gotpcrel32@hi+12
 ; LLC: __unnamed_1@gotpcrel32@lo+4
-; LLC: __unnamed_1@gotpcrel32@hi+4
+; LLC: __unnamed_1@gotpcrel32@hi+12
 ; LLC: kernel1:
 ; LLC: foo1@gotpcrel32@lo+4
-; LLC: foo1@gotpcrel32@hi+4
+; LLC: foo1@gotpcrel32@hi+12
 ; LLC: kernel2:
 ; LLC: foo2@gotpcrel32@lo+4
-; LLC: foo2@gotpcrel32@hi+4
+; LLC: foo2@gotpcrel32@hi+12
 ; LLC: kernel3:
 ; LLC: foo1@gotpcrel32@lo+4
-; LLC: foo1@gotpcrel32@hi+4
+; LLC: foo1@gotpcrel32@hi+12
 
 declare void @foo4() #1
 

@@ -100,6 +100,10 @@ public:
     unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
 
+    // Mapping from the original exit blocks, to the new blocks inside
+    // the function.
+    SmallVector<BasicBlock *, 4> OldTargets;
+
     // Suffix to use when creating extracted function (appended to the original
     // function name + "."). If empty, the default is to use the entry block
     // label, if non-empty, otherwise "extracted".
@@ -138,6 +142,20 @@ public:
     /// Returns zero when called on a CodeExtractor instance where isEligible
     /// returns false.
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
+
+    /// Perform the extraction, returning the new function and providing an
+    /// interface to see what was categorized as inputs and outputs.
+    ///
+    /// \param CEAC - Cache to speed up operations for the CodeExtractor when
+    /// hoisting, and extracting lifetime values and assumes.
+    /// \param Inputs [out] - filled with  values marked as inputs to the
+    /// newly outlined function.
+     /// \param Outputs [out] - filled with values marked as outputs to the
+    /// newly outlined function.
+    /// \returns zero when called on a CodeExtractor instance where isEligible
+    /// returns false.
+    Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                ValueSet &Inputs, ValueSet &Outputs);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
     /// Returns true when verifier finds errors. AssumptionCache is passed as

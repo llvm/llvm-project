@@ -9,9 +9,12 @@
 # CHECK-BAD-PATH: error: did not discover any tests for provided path(s)
 
 # Check that we exit with an error if we filter out all tests, but allow it with --allow-empty-runs.
+# Check that we exit with an error if we skip all tests, but allow it with --allow-empty-runs.
 #
 # RUN: not %{lit} --filter 'nonexistent'                    %{inputs}/discovery 2>&1 | FileCheck --check-prefixes=CHECK-BAD-FILTER,CHECK-BAD-FILTER-ERROR %s
 # RUN:     %{lit} --filter 'nonexistent' --allow-empty-runs %{inputs}/discovery 2>&1 | FileCheck --check-prefixes=CHECK-BAD-FILTER,CHECK-BAD-FILTER-ALLOW %s
+# RUN: not %{lit} --filter-out '.*'                    %{inputs}/discovery 2>&1 | FileCheck --check-prefixes=CHECK-BAD-FILTER,CHECK-BAD-FILTER-ERROR %s
+# RUN:     %{lit} --filter-out '.*' --allow-empty-runs %{inputs}/discovery 2>&1 | FileCheck --check-prefixes=CHECK-BAD-FILTER,CHECK-BAD-FILTER-ALLOW %s
 # CHECK-BAD-FILTER: error: filter did not match any tests (of 5 discovered).
 # CHECK-BAD-FILTER-ERROR: Use '--allow-empty-runs' to suppress this error.
 # CHECK-BAD-FILTER-ALLOW: Suppressing error because '--allow-empty-runs' was specified.
@@ -21,6 +24,9 @@
 # RUN: %{lit} --filter 'o[a-z]e' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # RUN: %{lit} --filter 'O[A-Z]E' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # RUN: env LIT_FILTER='o[a-z]e' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
+# RUN: %{lit} --filter-out 'test-t[a-z]' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
+# RUN: %{lit} --filter-out 'test-t[A-Z]' %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
+# RUN: env LIT_FILTER_OUT='test-t[a-z]' %{lit} %{inputs}/discovery | FileCheck --check-prefix=CHECK-FILTER %s
 # CHECK-FILTER: Testing: 2 of 5 tests
 # CHECK-FILTER: Excluded: 3
 

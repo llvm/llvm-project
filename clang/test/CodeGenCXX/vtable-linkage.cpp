@@ -105,16 +105,16 @@ void use_F() {
 
 // D has a key function that is defined in this translation unit so its vtable is
 // defined in the translation unit.
-// CHECK-DAG: @_ZTV1D = unnamed_addr constant
-// CHECK-DAG: @_ZTS1D = constant
-// CHECK-DAG: @_ZTI1D = constant
+// CHECK-DAG: @_ZTV1D ={{.*}} unnamed_addr constant
+// CHECK-DAG: @_ZTS1D ={{.*}} constant
+// CHECK-DAG: @_ZTI1D ={{.*}} constant
 
 // E<char> is an explicit specialization with a key function defined
 // in this translation unit, so its vtable should have external
 // linkage.
-// CHECK-DAG: @_ZTV1EIcE = unnamed_addr constant
-// CHECK-DAG: @_ZTS1EIcE = constant
-// CHECK-DAG: @_ZTI1EIcE = constant
+// CHECK-DAG: @_ZTV1EIcE ={{.*}} unnamed_addr constant
+// CHECK-DAG: @_ZTS1EIcE ={{.*}} constant
+// CHECK-DAG: @_ZTI1EIcE ={{.*}} constant
 
 // E<short> is an explicit template instantiation with a key function
 // defined in this translation unit, so its vtable should have

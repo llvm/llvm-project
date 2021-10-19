@@ -15,10 +15,10 @@
 
 #include "llvm/Support/Chrono.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <stddef.h>
 #include <string>
 #include <vector>
 

@@ -15,8 +15,8 @@ define <2 x double> @test_round_sd(<2 x double> %a, <2 x double> %b) {
 
 define double @test_round_sd_0(double %a, double %b) {
 ; CHECK-LABEL: @test_round_sd_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> undef, <2 x double> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> poison, <2 x double> [[TMP1]], i32 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
@@ -44,8 +44,8 @@ define double @test_round_sd_1(double %a, double %b) {
 
 define double @test_round_sd_2(double %a) {
 ; CHECK-LABEL: @test_round_sd_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> undef, <2 x double> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> poison, <2 x double> [[TMP1]], i32 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
@@ -57,7 +57,7 @@ define double @test_round_sd_2(double %a) {
 
 define <4 x float> @test_round_ss(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test_round_ss(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> <float undef, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, <4 x float> [[B:%.*]], i32 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> <float poison, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, <4 x float> [[B:%.*]], i32 10)
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = insertelement <4 x float> %a, float 1.000000e+00, i32 1
@@ -72,8 +72,8 @@ define <4 x float> @test_round_ss(<4 x float> %a, <4 x float> %b) {
 
 define float @test_round_ss_0(float %a, float %b) {
 ; CHECK-LABEL: @test_round_ss_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> undef, <4 x float> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> poison, <4 x float> [[TMP1]], i32 10)
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -109,8 +109,8 @@ define float @test_round_ss_2(float %a, float %b) {
 
 define float @test_round_ss_3(float %a) {
 ; CHECK-LABEL: @test_round_ss_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[A:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> undef, <4 x float> [[TMP1]], i32 10)
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> poison, <4 x float> [[TMP1]], i32 10)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;

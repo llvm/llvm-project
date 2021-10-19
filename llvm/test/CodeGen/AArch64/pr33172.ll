@@ -22,7 +22,7 @@ entry:
   store i64 %wide.load8281058.4, i64* bitcast (float* getelementptr inbounds ([200 x float], [200 x float]* @main.x, i64 0, i64 16) to i64*), align 8
   store i64 %wide.load8291059.4, i64* bitcast (float* getelementptr inbounds ([200 x float], [200 x float]* @main.x, i64 0, i64 18) to i64*), align 8
   tail call void @llvm.memset.p0i8.i64(i8* align 8 bitcast ([200 x float]* @main.b to i8*), i8 0, i64 undef, i1 false) #2
-  unreachable
+  ret void
 }
 
 ; Function Attrs: argmemonly nounwind

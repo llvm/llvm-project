@@ -18,7 +18,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ;
 ; CHECK: vector.body:
 ; CHECK:   %wide.vec = load <4 x i64>, <4 x i64>* %{{.*}}
-; CHECK:   %strided.vec = shufflevector <4 x i64> %wide.vec, <4 x i64> undef, <2 x i32> <i32 0, i32 2>
+; CHECK:   %strided.vec = shufflevector <4 x i64> %wide.vec, <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ;
 ; CHECK: pred.store.if
 ; CHECK:   %[[X1:.+]] = extractelement <4 x i64> %wide.vec, i32 0
@@ -67,7 +67,7 @@ for.end:
 ;
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <4 x i64>, <4 x i64>* %{{.*}}
-; CHECK:   %strided.vec = shufflevector <4 x i64> %[[L1]], <4 x i64> undef, <2 x i32> <i32 0, i32 2>
+; CHECK:   %strided.vec = shufflevector <4 x i64> %[[L1]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ;
 ; CHECK: pred.store.if
 ; CHECK:   %[[X1:.+]] = extractelement <4 x i64> %wide.vec, i32 0
@@ -126,7 +126,7 @@ for.end:
 ;
 ; CHECK: vector.body:
 ; CHECK:   %[[L1:.+]] = load <4 x i64>, <4 x i64>* %{{.*}}
-; CHECK:   %strided.vec = shufflevector <4 x i64> %[[L1]], <4 x i64> undef, <2 x i32> <i32 0, i32 2>
+; CHECK:   %strided.vec = shufflevector <4 x i64> %[[L1]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK:   store i64 %x, {{.*}}
 ; CHECK:   store i64 %x, {{.*}}
 ;

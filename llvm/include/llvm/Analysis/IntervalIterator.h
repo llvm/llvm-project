@@ -81,7 +81,7 @@ inline void addNodeToInterval(Interval *Int, BasicBlock *BB) {
 // BasicBlocks are added to the interval.
 inline void addNodeToInterval(Interval *Int, Interval *I) {
   // Add all of the nodes in I as new nodes in Int.
-  Int->Nodes.insert(Int->Nodes.end(), I->Nodes.begin(), I->Nodes.end());
+  llvm::append_range(Int->Nodes, I->Nodes);
 }
 
 template<class NodeTy, class OrigContainer_t, class GT = GraphTraits<NodeTy *>,
@@ -227,9 +227,7 @@ private:
 
       if (Int->isSuccessor(NodeHeader)) {
         // If we were in the successor list from before... remove from succ list
-        Int->Successors.erase(std::remove(Int->Successors.begin(),
-                                          Int->Successors.end(), NodeHeader),
-                              Int->Successors.end());
+        llvm::erase_value(Int->Successors, NodeHeader);
       }
 
       // Now that we have discovered that Node is in the interval, perhaps some

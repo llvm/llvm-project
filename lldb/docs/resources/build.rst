@@ -12,7 +12,7 @@ Please refer to the `LLVM Getting Started Guide
 general instructions on how to check out the LLVM monorepo, which contains the
 LLDB sources.
 
-Git browser: https://github.com/llvm/llvm-project/tree/master/lldb
+Git browser: https://github.com/llvm/llvm-project/tree/main/lldb
 
 Preliminaries
 -------------
@@ -34,7 +34,7 @@ If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
 * `Python <http://www.python.org/>`_
-* `SWIG <http://swig.org/>`_ 2 or later.
+* `SWIG <http://swig.org/>`_ 3 or later.
 
 Optional Dependencies
 *********************
@@ -70,11 +70,18 @@ commands below.
 
 ::
 
-  > yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-  > sudo apt-get install build-essential subversion swig python2.7-dev libedit-dev libncurses5-dev
-  > pkg install swig python
-  > pkgin install swig python27 cmake ninja-build
-  > brew install swig cmake ninja
+  $ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
+  $ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
+  $ pkg install swig python
+  $ pkgin install swig python36 cmake ninja-build
+  $ brew install swig cmake ninja
+
+Note that there's an `incompatibility
+<https://github.com/swig/swig/issues/1321>`_ between Python version 3.7 and later
+and swig versions older than 4.0.0 which makes builds of LLDB using debug
+versions of python unusable. This primarily affects Windows, as debug builds of
+LLDB must use debug python as well.
+
 
 Windows
 *******
@@ -83,10 +90,9 @@ Windows
 * The latest Windows SDK.
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3.6 or 3.8 <https://www.python.org/downloads/windows/>`_. Python 3.7
-  is known to be incompatible. Make sure to (1) get the x64 variant if that's
-  what you're targetting and (2) install the debug library if you want to build
-  a debug lldb.
+* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
+  the x64 variant if that's what you're targetting and (2) install the debug
+  library if you want to build a debug lldb.
 * `Python Tools for Visual Studio
   <https://github.com/Microsoft/PTVS/releases>`_. If you plan to debug test
   failures or even write new tests at all, PTVS is an indispensable debugging
@@ -128,13 +134,13 @@ macOS
 Building LLDB with CMake
 ------------------------
 
-The LLVM project is migrating to a single monolithic respository for LLVM and
+The LLVM project is migrating to a single monolithic repository for LLVM and
 its subprojects. This is the recommended way to build LLDB. Check out the
 source-tree with git:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project.git
+  $ git clone https://github.com/llvm/llvm-project.git
 
 CMake is a cross-platform build-generator tool. CMake does not build the
 project, it generates the files needed by your build tool. The recommended
@@ -150,7 +156,7 @@ to the ``llvm`` directory in the source-tree:
 
 ::
 
-  > cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
+  $ cmake -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lldb" [<cmake options>] path/to/llvm-project/llvm
 
 We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
 subprojects to build in addition to LLVM (for more options see
@@ -161,7 +167,7 @@ it only builds what is necessary to run the lldb driver:
 
 ::
 
-  > ninja lldb
+  $ ninja lldb
 
 Standalone builds
 *****************
@@ -180,10 +186,10 @@ Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -DLLVM_ENABLE_PROJECTS=clang \
           [<more cmake options>] /path/to/llvm-project/llvm
-  > ninja
+  $ ninja
 
 Now run CMake a second time with ``-B`` pointing to a new directory for the
 main build-tree and the positional argument pointing to the ``lldb`` directory
@@ -194,10 +200,10 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 
 ::
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  > ninja lldb
+  $ ninja lldb
 
 .. note::
 
@@ -220,7 +226,7 @@ ninja:
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_EXPORT_ALL_SYMBOLS=1 \
       -DCMAKE_BUILD_TYPE=Debug
       <path to root of llvm source tree>
@@ -232,7 +238,7 @@ suite.
 
 ::
 
-  > cmake -G Ninja \
+  $ cmake -G Ninja \
       -DLLDB_TEST_COMPILER=<path to C compiler> \
       <path to root of llvm source tree>
 
@@ -244,7 +250,7 @@ Windows
 
 On Windows the LLDB test suite requires lld. Either add ``lld`` to
 ``LLVM_ENABLE_PROJECTS`` or disable the test suite with
-``LLDB_ENABLE_TESTS=OFF``.
+``LLDB_INCLUDE_TESTS=OFF``.
 
 Although the following CMake variables are by no means Windows specific, they
 are commonly used on Windows.
@@ -270,7 +276,7 @@ Sample command line:
 
 ::
 
-  > cmake -G Ninja^
+  $ cmake -G Ninja^
       -DLLDB_TEST_DEBUG_TEST_CRASHES=1^
       -DPYTHON_HOME=C:\Python35^
       -DLLDB_TEST_COMPILER=d:\src\llvmbuild\ninja_release\bin\clang.exe^
@@ -287,7 +293,7 @@ project in another directory.
 
 ::
 
-  > cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
+  $ cmake -G "Visual Studio 15 2017 Win64" -Thost=x64 <cmake variables> <path to root of llvm source tree>
 
 Then you can open the .sln file in Visual Studio, set lldb as the startup
 project, and use F5 to run it. You need only edit the project settings to set
@@ -300,7 +306,7 @@ macOS
 
 On macOS the LLDB test suite requires libc++. Either add ``libcxx`` to
 ``LLVM_ENABLE_PROJECTS`` or disable the test suite with
-``LLDB_ENABLE_TESTS=OFF``. Further useful options:
+``LLDB_INCLUDE_TESTS=OFF``. Further useful options:
 
 * ``LLDB_BUILD_FRAMEWORK:BOOL``: Builds the LLDB.framework.
 * ``LLDB_CODESIGN_IDENTITY:STRING``: Set the identity to use for code-signing
@@ -321,7 +327,7 @@ CMake scripts and can be useful to reproduce builds for particular use-cases
 A cache is passed to CMake with the ``-C`` flag, following the absolute path to
 the file on disk. Subsequent ``-D`` options are still allowed. Please find the
 currently available caches in the `lldb/cmake/caches/
-<https://github.com/llvm/llvm-project/tree/master/lldb/cmake/caches>`_
+<https://github.com/llvm/llvm-project/tree/main/lldb/cmake/caches>`_
 directory.
 
 Common configurations on macOS
@@ -333,14 +339,14 @@ LLVM <https://llvm.org/docs/BuildingADistribution.html>`_):
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/lldb-build -G Ninja \
+  $ cmake -B /path/to/lldb-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-macOS.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;libcxx;lldb" \
           llvm-project/llvm
 
-  > DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
+  $ DESTDIR=/path/to/lldb-install ninja -C /path/to/lldb-build check-lldb install-distribution
 
 .. _CMakeGeneratedXcodeProject:
 
@@ -348,20 +354,20 @@ Build LLDB standalone for development with Xcode:
 
 ::
 
-  > git clone https://github.com/llvm/llvm-project
+  $ git clone https://github.com/llvm/llvm-project
 
-  > cmake -B /path/to/llvm-build -G Ninja \
+  $ cmake -B /path/to/llvm-build -G Ninja \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-base.cmake \
           -DLLVM_ENABLE_PROJECTS="clang;libcxx" \
           llvm-project/llvm
-  > ninja -C /path/to/llvm-build
+  $ ninja -C /path/to/llvm-build
 
-  > cmake -B /path/to/lldb-build \
+  $ cmake -B /path/to/lldb-build \
           -C /path/to/llvm-project/lldb/cmake/caches/Apple-lldb-Xcode.cmake \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           llvm-project/lldb
-  > open lldb.xcodeproj
-  > cmake --build /path/to/lldb-build --target check-lldb
+  $ open lldb.xcodeproj
+  $ cmake --build /path/to/lldb-build --target check-lldb
 
 .. note::
 
@@ -386,17 +392,17 @@ do:
 
 ::
 
-  > sudo apt-get install doxygen graphviz python3-sphinx
-  > sudo pip install epydoc
+  $ sudo apt-get install doxygen graphviz python3-sphinx
+  $ sudo pip install epydoc
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
 ::
 
-  > ninja docs-lldb-html
-  > ninja docs-lldb-man
-  > ninja lldb-cpp-doc
-  > ninja lldb-python-doc
+  $ ninja docs-lldb-html
+  $ ninja docs-lldb-man
+  $ ninja lldb-cpp-doc
+  $ ninja lldb-python-doc
 
 Cross-compiling LLDB
 --------------------
@@ -553,7 +559,7 @@ the -P flag:
 
 ::
 
-  > export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
+  $ export PYTHONPATH=`$llvm/build/Debug+Asserts/bin/lldb -P`
 
 If you used a different build directory or made a release build, you may need
 to adjust the above to suit your needs. To test that the lldb Python module is
@@ -561,7 +567,7 @@ built correctly and is available to the default Python interpreter, run:
 
 ::
 
-  > python -c 'import lldb'
+  $ python -c 'import lldb'
 
 
 Make sure you're using the Python interpreter that matches the Python library
@@ -575,8 +581,11 @@ Code Signing on macOS
 
 To use the in-tree debug server on macOS, lldb needs to be code signed. The
 Debug, DebugClang and Release builds are set to code sign using a code signing
-certificate named ``lldb_codesign``. This document explains how to set up the
-signing certificate.
+certificate named ``lldb_codesign``.
+
+Automatic setup, run:
+
+* ``scripts/macos-setup-codesign.sh``
 
 Note that it's possible to build and use lldb on macOS without setting up code
 signing by using the system's debug server. To configure lldb in this way with
@@ -588,56 +597,6 @@ and private key. Reboot after deleting them. You will also need to delete and
 build folders that contained old signed items. The darwin kernel will cache
 code signing using the executable's file system node, so you will need to
 delete the file so the kernel clears its cache.
-
-Automatic setup:
-
-* Run ``scripts/macos-setup-codesign.sh``
-
-Manual setup steps:
-
-* Launch /Applications/Utilities/Keychain Access.app
-* In Keychain Access select the ``login`` keychain in the ``Keychains`` list in
-  the upper left hand corner of the window.
-* Select the following menu item: Keychain Access->Certificate Assistant->Create a Certificate...
-* Set the following settings
-
-::
-
-	Name = lldb_codesign
-	Identity Type = Self Signed Root
-	Certificate Type = Code Signing
-
-* Click Create
-* Click Continue
-* Click Done
-* Click on the "My Certificates"
-* Double click on your new ``lldb_codesign`` certificate
-* Turn down the "Trust" disclosure triangle, scroll to the "Code Signing" trust
-  pulldown menu and select "Always Trust" and authenticate as needed using your
-  username and password.
-* Drag the new ``lldb_codesign`` code signing certificate (not the public or
-  private keys of the same name) from the ``login`` keychain to the ``System``
-  keychain in the Keychains pane on the left hand side of the main Keychain
-  Access window. This will move this certificate to the ``System`` keychain.
-  You'll have to authorize a few more times, set it to be "Always trusted" when
-  asked.
-* Remove ``~/Desktop/lldb_codesign.cer`` file on your desktop if there is one.
-* In the Keychain Access GUI, click and drag ``lldb_codesign`` in the
-  ``System`` keychain onto the desktop. The drag will create a
-  ``Desktop/lldb_codesign.cer`` file used in the next step.
-* Switch to Terminal, and run the following:
-
-::
-
-  sudo security add-trust -d -r trustRoot -p basic -p codeSign -k /Library/Keychains/System.keychain ~/Desktop/lldb_codesign.cer
-  rm -f ~/Desktop/lldb_codesign.cer
-
-* Drag the ``lldb_codesign`` certificate from the ``System`` keychain back into
-  the ``login`` keychain
-* Quit Keychain Access
-* Reboot
-* Clean by removing all previously creating code signed binaries and rebuild
-  lldb and you should be able to debug.
 
 When you build your LLDB for the first time, the Xcode GUI will prompt you for
 permission to use the ``lldb_codesign`` keychain. Be sure to click "Always

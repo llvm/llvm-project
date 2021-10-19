@@ -1,7 +1,5 @@
-; RUN: opt -licm -basic-aa -licm-n2-threshold=0 < %s -S | FileCheck %s
-; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -licm -basic-aa < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 define void @test1(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test1(
@@ -9,12 +7,6 @@ define void @test1(i1 %cond, i32* %ptr) {
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
 ; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
-
-; ALIAS-N2-LABEL: @test1(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; ALIAS-N2: %val = load i32, i32* %ptr
-; ALIAS-N2-LABEL: loop:
 
 entry:
   br label %loop
@@ -35,12 +27,6 @@ define void @test2(i1 %cond, i32* %ptr) {
 ; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %piv)
-
-; ALIAS-N2-LABEL: @test2(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2:         %val = load i32, i32* %ptr
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2:         call {}* @llvm.invariant.start.p0i32(i64 4, i32* %piv)
 entry:
   br label %loop
 
@@ -59,12 +45,6 @@ define void @test3(i1 %cond, i32* %ptr) {
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
 ; CHECK: %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
-
-; ALIAS-N2-LABEL: @test3(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; ALIAS-N2: %val = load i32, i32* %ptr
-; ALIAS-N2-LABEL: loop:
 entry:
   br label %loop
 
@@ -87,13 +67,6 @@ define void @test4(i1 %cond, i32* %ptr) {
 ; CHECK:   store i32 0, i32* %ptr
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
 ; CHECK: %val = load i32, i32* %ptr
-
-; ALIAS-N2-LABEL: @test4(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2:   store i32 0, i32* %ptr
-; ALIAS-N2: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; ALIAS-N2: %val = load i32, i32* %ptr
 entry:
   br label %loop
 
@@ -114,13 +87,6 @@ define void @test5(i1 %cond, i32* %ptr) {
 ; CHECK:   store i32 0, i32* %ptr
 ; CHECK: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
 ; CHECK: %val = load i32, i32* %ptr
-
-; ALIAS-N2-LABEL: @test5(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2:   store i32 0, i32* %ptr
-; ALIAS-N2: call {}* @llvm.invariant.start.p0i32(i64 4, i32* %ptr)
-; ALIAS-N2: %val = load i32, i32* %ptr
 entry:
   br label %loop
 

@@ -176,22 +176,22 @@ public:
   constexpr Integer &operator=(const Integer &) = default;
 
   constexpr bool operator<(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Less;
+    return CompareSigned(that) == Ordering::Less;
   }
   constexpr bool operator<=(const Integer &that) const {
-    return CompareUnsigned(that) != Ordering::Greater;
+    return CompareSigned(that) != Ordering::Greater;
   }
   constexpr bool operator==(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Equal;
+    return CompareSigned(that) == Ordering::Equal;
   }
   constexpr bool operator!=(const Integer &that) const {
     return !(*this == that);
   }
   constexpr bool operator>=(const Integer &that) const {
-    return CompareUnsigned(that) != Ordering::Less;
+    return CompareSigned(that) != Ordering::Less;
   }
   constexpr bool operator>(const Integer &that) const {
-    return CompareUnsigned(that) == Ordering::Greater;
+    return CompareSigned(that) == Ordering::Greater;
   }
 
   // Left-justified mask (e.g., MASKL(1) has only its sign bit set)
@@ -358,6 +358,7 @@ public:
 
   static constexpr int DIGITS{bits - 1}; // don't count the sign bit
   static constexpr Integer HUGE() { return MASKR(bits - 1); }
+  static constexpr Integer Least() { return MASKL(1); }
   static constexpr int RANGE{// in the sense of SELECTED_INT_KIND
       // This magic value is LOG10(2.)*1E12.
       static_cast<int>(((bits - 1) * 301029995664) / 1000000000000)};
@@ -462,21 +463,30 @@ public:
     return CompareUnsigned(y);
   }
 
-  constexpr std::uint64_t ToUInt64() const {
-    std::uint64_t n{LEPart(0)};
-    int filled{partBits};
-    for (int j{1}; filled < 64 && j < parts; ++j, filled += partBits) {
-      n |= std::uint64_t{LEPart(j)} << filled;
+  template <typename UINT = std::uint64_t> constexpr UINT ToUInt() const {
+    UINT n{LEPart(0)};
+    std::size_t filled{partBits};
+    constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
+    for (int j{1}; filled < maxBits && j < parts; ++j, filled += partBits) {
+      n |= UINT{LEPart(j)} << filled;
     }
     return n;
   }
 
-  constexpr std::int64_t ToInt64() const {
-    std::int64_t signExtended = ToUInt64();
-    if constexpr (bits < 64) {
-      signExtended |= -(signExtended >> (bits - 1)) << bits;
+  template <typename SINT = std::int64_t, typename UINT = std::uint64_t>
+  constexpr SINT ToSInt() const {
+    SINT n = ToUInt<UINT>();
+    constexpr std::size_t maxBits{CHAR_BIT * sizeof n};
+    if constexpr (bits < maxBits) {
+      n |= -(n >> (bits - 1)) << bits;
     }
-    return signExtended;
+    return n;
+  }
+
+  constexpr std::uint64_t ToUInt64() const { return ToUInt<std::uint64_t>(); }
+
+  constexpr std::int64_t ToInt64() const {
+    return ToSInt<std::int64_t, std::uint64_t>();
   }
 
   // Ones'-complement (i.e., C's ~)

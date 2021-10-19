@@ -309,16 +309,17 @@ public:
   /// unexpanded parameter pack (for C++0x variadic templates).
   bool containsUnexpandedParameterPack() const;
 
+  enum class Qualified { None, AsWritten, Fully };
   /// Print the template name.
   ///
   /// \param OS the output stream to which the template name will be
   /// printed.
   ///
-  /// \param SuppressNNS if true, don't print the
-  /// nested-name-specifier that precedes the template name (if it has
-  /// one).
+  /// \param Qual print the (Qualified::None) simple name,
+  /// (Qualified::AsWritten) any written (possibly partial) qualifier, or
+  /// (Qualified::Fully) the fully qualified name.
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
-             bool SuppressNNS = false) const;
+             Qualified Qual = Qualified::AsWritten) const;
 
   /// Debugging aid that dumps the template name.
   void dump(raw_ostream &OS) const;
@@ -342,10 +343,8 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending TemplateName's
 /// into a diagnostic with <<.
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    TemplateName N);
-const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                    TemplateName N);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      TemplateName N);
 
 /// A structure for storing the information associated with a
 /// substituted template template parameter.

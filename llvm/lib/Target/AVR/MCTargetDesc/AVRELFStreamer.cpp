@@ -53,8 +53,7 @@ static unsigned getEFlagsForFeatureSet(const FeatureBitset &Features) {
   return EFlags;
 }
 
-AVRELFStreamer::AVRELFStreamer(MCStreamer &S,
-                               const MCSubtargetInfo &STI)
+AVRELFStreamer::AVRELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI)
     : AVRTargetStreamer(S) {
 
   MCAssembler &MCA = getStreamer().getAssembler();

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+code-object-v3 -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+code-object-v3 -mcpu=gfx900 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 -amdgpu-dump-hsa-metadata -amdgpu-verify-hsa-metadata -filetype=obj -o - < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 ; CHECK:              ---
 ; CHECK:      amdhsa.kernels:
@@ -29,8 +29,6 @@
 ; CHECK:          .name:           test_kernel
 ; CHECK:          .symbol:         test_kernel.kd
 
-declare <2 x i64> @__ockl_hostcall_internal(i8*, i32, i64, i64, i64, i64, i64, i64, i64, i64)
-
 define amdgpu_kernel void @test_kernel(i8 %a) #0
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !3
     !kernel_arg_base_type !3 !kernel_arg_type_qual !4 {
@@ -50,5 +48,8 @@ attributes #0 = { "amdgpu-implicitarg-num-bytes"="48" }
 
 !opencl.ocl.version = !{!90}
 !90 = !{i32 2, i32 0}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_hostcall", i32 1}
 
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS

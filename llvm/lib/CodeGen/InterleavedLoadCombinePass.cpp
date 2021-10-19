@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -307,12 +308,12 @@ public:
     }
 
     // Multiplying by one is a no-op.
-    if (C.isOneValue()) {
+    if (C.isOne()) {
       return *this;
     }
 
     // Multiplying by zero removes the coefficient B and defines all bits.
-    if (C.isNullValue()) {
+    if (C.isZero()) {
       ErrorMSBs = 0;
       deleteB();
     }
@@ -463,7 +464,7 @@ public:
       return *this;
     }
 
-    if (C.isNullValue())
+    if (C.isZero())
       return *this;
 
     // Test if the result will be zero
@@ -570,7 +571,7 @@ public:
   bool isProvenEqualTo(const Polynomial &o) {
     // Subtract both polynomials and test if it is fully defined and zero.
     Polynomial r = *this - o;
-    return (r.ErrorMSBs == 0) && (!r.isFirstOrder()) && (r.A.isNullValue());
+    return (r.ErrorMSBs == 0) && (!r.isFirstOrder()) && (r.A.isZero());
   }
 
   /// Print the polynomial into a stream.
@@ -1104,10 +1105,8 @@ InterleavedLoadCombineImpl::findFirstLoad(const std::set<LoadInst *> &LIs) {
 
   // All LIs are within the same BB. Select the first for a reference.
   BasicBlock *BB = (*LIs.begin())->getParent();
-  BasicBlock::iterator FLI =
-      std::find_if(BB->begin(), BB->end(), [&LIs](Instruction &I) -> bool {
-        return is_contained(LIs, &I);
-      });
+  BasicBlock::iterator FLI = llvm::find_if(
+      *BB, [&LIs](Instruction &I) -> bool { return is_contained(LIs, &I); });
   assert(FLI != BB->end());
 
   return cast<LoadInst>(FLI);
@@ -1130,8 +1129,9 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   std::set<Instruction *> Is;
   std::set<Instruction *> SVIs;
 
-  unsigned InterleavedCost;
-  unsigned InstructionCost = 0;
+  InstructionCost InterleavedCost;
+  InstructionCost InstructionCost = 0;
+  const TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency;
 
   // Get the interleave factor
   unsigned Factor = InterleavedLoad.size();
@@ -1159,8 +1159,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   // be expected. Also sum the cost of the Instructions beeing left dead.
   for (auto &I : Is) {
     // Compute the old cost
-    InstructionCost +=
-        TTI.getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+    InstructionCost += TTI.getInstructionCost(I, CostKind);
 
     // The final SVIs are allowed not to be dead, all uses will be replaced
     if (SVIs.find(I) != SVIs.end())
@@ -1173,6 +1172,10 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
         return false;
     }
   }
+
+  // We need to have a valid cost in order to proceed.
+  if (!InstructionCost.isValid())
+    return false;
 
   // We know that all LoadInst are within the same BB. This guarantees that
   // either everything or nothing is loaded.
@@ -1209,7 +1212,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
     Indices.push_back(i);
   InterleavedCost = TTI.getInterleavedMemoryOpCost(
       Instruction::Load, ILTy, Factor, Indices, InsertionPoint->getAlign(),
-      InsertionPoint->getPointerAddressSpace());
+      InsertionPoint->getPointerAddressSpace(), CostKind);
 
   if (InterleavedCost >= InstructionCost) {
     return false;
@@ -1236,8 +1239,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
       Mask.push_back(i + j * Factor);
 
     Builder.SetInsertPoint(VI.SVI);
-    auto SVI = Builder.CreateShuffleVector(LI, UndefValue::get(LI->getType()),
-                                           Mask, "interleaved.shuffle");
+    auto SVI = Builder.CreateShuffleVector(LI, Mask, "interleaved.shuffle");
     VI.SVI->replaceAllUsesWith(SVI);
     i++;
   }

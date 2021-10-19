@@ -16,16 +16,16 @@
 ; DARWIN-IR: CALL64pcrel32 @__stack_chk_fail
 
 ; MSVC-SELDAG: # Machine code for function test_branch_weights:
-; MSVC-SELDAG: :: (volatile load 4 from @__security_cookie)
-; MSVC-SELDAG: (store 4 into stack)
-; MSVC-SELDAG: (volatile load 4 from %stack.0.StackGuardSlot)
+; MSVC-SELDAG: :: (volatile load (s32) from @__security_cookie)
+; MSVC-SELDAG: (store (s32) into stack)
+; MSVC-SELDAG: (volatile load (s32) from %stack.0.StackGuardSlot)
 ; MSVC-SELDAG: CALLpcrel32 @__security_check_cookie
 
 ; MSVC always uses selection DAG now.
 ; MSVC-IR: # Machine code for function test_branch_weights:
-; MSVC-IR: :: (volatile load 4 from @__security_cookie)
-; MSVC-IR: (store 4 into stack)
-; MSVC-IR: (volatile load 4 from %stack.0.StackGuardSlot)
+; MSVC-IR: :: (volatile load (s32) from @__security_cookie)
+; MSVC-IR: (store (s32) into stack)
+; MSVC-IR: (volatile load (s32) from %stack.0.StackGuardSlot)
 ; MSVC-IR: CALLpcrel32 @__security_check_cookie
 
 define i32 @test_branch_weights(i32 %n) #0 {

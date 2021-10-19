@@ -43,7 +43,7 @@ static void initializeUsedResources(InstrDesc &ID,
 
   // Populate resources consumed.
   using ResourcePlusCycles = std::pair<uint64_t, ResourceUsage>;
-  std::vector<ResourcePlusCycles> Worklist;
+  SmallVector<ResourcePlusCycles, 4> Worklist;
 
   // Track cycles contributed by resources that are in a "Super" relationship.
   // This is required if we want to correctly match the behavior of method
@@ -109,6 +109,11 @@ static void initializeUsedResources(InstrDesc &ID,
 
   uint64_t UsedResourceUnits = 0;
   uint64_t UsedResourceGroups = 0;
+  auto GroupIt = find_if(Worklist, [](const ResourcePlusCycles &Elt) {
+    return countPopulation(Elt.first) > 1;
+  });
+  unsigned FirstGroupIdx = std::distance(Worklist.begin(), GroupIt);
+  uint64_t ImpliedUsesOfResourceUnits = 0;
 
   // Remove cycles contributed by smaller resources.
   for (unsigned I = 0, E = Worklist.size(); I < E; ++I) {
@@ -127,6 +132,15 @@ static void initializeUsedResources(InstrDesc &ID,
       // Remove the leading 1 from the resource group mask.
       NormalizedMask ^= PowerOf2Floor(NormalizedMask);
       UsedResourceGroups |= (A.first ^ NormalizedMask);
+
+      uint64_t AvailableMask = NormalizedMask & ~UsedResourceUnits;
+      if ((NormalizedMask != AvailableMask) &&
+          countPopulation(AvailableMask) == 1) {
+        // At simulation time, this resource group use will decay into a simple
+        // use of the resource unit identified by `AvailableMask`.
+        ImpliedUsesOfResourceUnits |= AvailableMask;
+        UsedResourceUnits |= AvailableMask;
+      }
     }
 
     for (unsigned J = I + 1; J < E; ++J) {
@@ -136,6 +150,31 @@ static void initializeUsedResources(InstrDesc &ID,
         if (countPopulation(B.first) > 1)
           B.second.NumUnits++;
       }
+    }
+  }
+
+  // Look for implicit uses of processor resource units. These are resource
+  // units which are indirectly consumed by resource groups, and that must be
+  // always available on instruction issue.
+  while (ImpliedUsesOfResourceUnits) {
+    ID.ImplicitlyUsedProcResUnits |= ImpliedUsesOfResourceUnits;
+    ImpliedUsesOfResourceUnits = 0;
+    for (unsigned I = FirstGroupIdx, E = Worklist.size(); I < E; ++I) {
+      ResourcePlusCycles &A = Worklist[I];
+      if (!A.second.size())
+        continue;
+
+      uint64_t NormalizedMask = A.first;
+      assert(countPopulation(NormalizedMask) > 1);
+      // Remove the leading 1 from the resource group mask.
+      NormalizedMask ^= PowerOf2Floor(NormalizedMask);
+      uint64_t AvailableMask = NormalizedMask & ~UsedResourceUnits;
+      if ((NormalizedMask != AvailableMask) &&
+          countPopulation(AvailableMask) != 1)
+        continue;
+
+      UsedResourceUnits |= AvailableMask;
+      ImpliedUsesOfResourceUnits |= AvailableMask;
     }
   }
 
@@ -198,6 +237,8 @@ static void initializeUsedResources(InstrDesc &ID,
       BufferIDs ^= Current;
     }
     dbgs() << "\t\t Used Units=" << format_hex(ID.UsedProcResUnits, 16) << '\n';
+    dbgs() << "\t\tImplicitly Used Units="
+           << format_hex(ID.ImplicitlyUsedProcResUnits, 16) << '\n';
     dbgs() << "\t\tUsed Groups=" << format_hex(ID.UsedProcResGroups, 16)
            << '\n';
   });
@@ -259,8 +300,9 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   //     the opcode descriptor (MCInstrDesc).
   //  2. Uses start at index #(MCDesc.getNumDefs()).
   //  3. There can only be a single optional register definition, an it is
-  //     always the last operand of the sequence (excluding extra operands
-  //     contributed by variadic opcodes).
+  //     either the last operand of the sequence (excluding extra operands
+  //     contributed by variadic opcodes) or one of the explicit register
+  //     definitions. The latter occurs for some Thumb1 instructions.
   //
   // These assumptions work quite well for most out-of-order in-tree targets
   // like x86. This is mainly because the vast majority of instructions is
@@ -308,11 +350,17 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   // The first NumExplicitDefs register operands are expected to be register
   // definitions.
   unsigned CurrentDef = 0;
+  unsigned OptionalDefIdx = MCDesc.getNumOperands() - 1;
   unsigned i = 0;
   for (; i < MCI.getNumOperands() && CurrentDef < NumExplicitDefs; ++i) {
     const MCOperand &Op = MCI.getOperand(i);
     if (!Op.isReg())
       continue;
+
+    if (MCDesc.OpInfo[CurrentDef].isOptionalDef()) {
+      OptionalDefIdx = CurrentDef++;
+      continue;
+    }
 
     WriteDescriptor &Write = ID.Writes[CurrentDef];
     Write.OpIndex = i;
@@ -369,7 +417,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
 
   if (MCDesc.hasOptionalDef()) {
     WriteDescriptor &Write = ID.Writes[NumExplicitDefs + NumImplicitDefs];
-    Write.OpIndex = MCDesc.getNumOperands() - 1;
+    Write.OpIndex = OptionalDefIdx;
     // Assign a default latency for this write.
     Write.Latency = ID.MaxLatency;
     Write.SClassOrWriteResourceID = 0;
@@ -384,15 +432,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   if (!NumVariadicOps)
     return;
 
-  // FIXME: if an instruction opcode is flagged 'mayStore', and it has no
-  // "unmodeledSideEffects', then this logic optimistically assumes that any
-  // extra register operands in the variadic sequence is not a register
-  // definition.
-  //
-  // Otherwise, we conservatively assume that any register operand from the
-  // variadic sequence is both a register read and a register write.
-  bool AssumeUsesOnly = MCDesc.mayStore() && !MCDesc.mayLoad() &&
-                        !MCDesc.hasUnmodeledSideEffects();
+  bool AssumeUsesOnly = !MCDesc.variadicOpsAreDefs();
   CurrentDef = NumExplicitDefs + NumImplicitDefs + MCDesc.hasOptionalDef();
   for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
        I < NumVariadicOps && !AssumeUsesOnly; ++I, ++OpIndex) {
@@ -459,12 +499,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
 
   CurrentUse += NumImplicitUses;
 
-  // FIXME: If an instruction opcode is marked as 'mayLoad', and it has no
-  // "unmodeledSideEffects", then this logic optimistically assumes that any
-  // extra register operand in the variadic sequence is not a register
-  // definition.
-  bool AssumeDefsOnly = !MCDesc.mayStore() && MCDesc.mayLoad() &&
-                        !MCDesc.hasUnmodeledSideEffects();
+  bool AssumeDefsOnly = MCDesc.variadicOpsAreDefs();
   for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
        I < NumVariadicOps && !AssumeDefsOnly; ++I, ++OpIndex) {
     const MCOperand &Op = MCI.getOperand(OpIndex);
@@ -518,7 +553,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   if (IsVariant) {
     unsigned CPUID = SM.getProcessorID();
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, CPUID);
+      SchedClassID =
+          STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
 
     if (!SchedClassID) {
       return make_error<InstructionError<MCInst>>(
@@ -562,6 +598,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   ID->HasSideEffects = MCDesc.hasUnmodeledSideEffects();
   ID->BeginGroup = SCDesc.BeginGroup;
   ID->EndGroup = SCDesc.EndGroup;
+  ID->RetireOOO = SCDesc.RetireOOO;
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);
@@ -607,7 +644,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
-  std::unique_ptr<Instruction> NewIS = std::make_unique<Instruction>(D);
+  std::unique_ptr<Instruction> NewIS =
+      std::make_unique<Instruction>(D, MCI.getOpcode());
 
   // Check if this is a dependency breaking instruction.
   APInt Mask;
@@ -649,7 +687,7 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     if (IsDepBreaking) {
       // A mask of all zeroes means: explicit input operands are not
       // independent.
-      if (Mask.isNullValue()) {
+      if (Mask.isZero()) {
         if (!RD.isImplicitRead())
           RS.setIndependentFromDef();
       } else {

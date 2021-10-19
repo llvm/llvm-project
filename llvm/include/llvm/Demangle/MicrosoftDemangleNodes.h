@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MICROSOFTDEMANGLENODES_H
-#define LLVM_SUPPORT_MICROSOFTDEMANGLENODES_H
+#ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
+#define LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 
 #include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
@@ -67,6 +67,8 @@ enum class CallingConv : uint8_t {
   Eabi,
   Vectorcall,
   Regcall,
+  Swift,      // Clang-only
+  SwiftAsync, // Clang-only
 };
 
 enum class ReferenceKind : uint8_t { None, LValueRef, RValueRef };

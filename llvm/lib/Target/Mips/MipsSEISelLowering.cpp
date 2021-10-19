@@ -422,7 +422,7 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, unsigned, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
 
   if (Subtarget.systemSupportsUnalignedAccess()) {
@@ -569,7 +569,7 @@ static bool isVectorAllOnes(SDValue N) {
   // Endianness doesn't matter in this context because we are looking for
   // an all-ones value.
   if (BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs))
-    return SplatValue.isAllOnesValue();
+    return SplatValue.isAllOnes();
 
   return false;
 }
@@ -701,7 +701,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
 
     // Fold degenerate cases.
     if (IsConstantMask) {
-      if (Mask.isAllOnesValue())
+      if (Mask.isAllOnes())
         return IfSet;
       else if (Mask == 0)
         return IfClr;
@@ -2307,7 +2307,7 @@ static SDValue lowerMSALoadIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
 
   Address = DAG.getNode(ISD::ADD, DL, PtrTy, Address, Offset);
   return DAG.getLoad(ResTy, DL, ChainIn, Address, MachinePointerInfo(),
-                     /* Alignment = */ 16);
+                     Align(16));
 }
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
@@ -2382,7 +2382,7 @@ static SDValue lowerMSAStoreIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
   Address = DAG.getNode(ISD::ADD, DL, PtrTy, Address, Offset);
 
   return DAG.getStore(ChainIn, DL, Value, Address, MachinePointerInfo(),
-                      /* Alignment = */ 16);
+                      Align(16));
 }
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,

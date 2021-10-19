@@ -74,7 +74,7 @@ bool EliminateUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
 /// in it, fold them away. This handles the case when all entries to the PHI
 /// nodes in a block are guaranteed equal, such as when the block has exactly
 /// one predecessor.
-void FoldSingleEntryPHINodes(BasicBlock *BB,
+bool FoldSingleEntryPHINodes(BasicBlock *BB,
                              MemoryDependenceResults *MemDep = nullptr);
 
 /// Examine each PHI in the given block and delete it if it is dead. Also
@@ -109,7 +109,8 @@ bool MergeBlockSuccessorsIntoGivenBlocks(
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 /// Try to remove redundant dbg.value instructions from given basic block.
-/// Returns true if at least one instruction was removed.
+/// Returns true if at least one instruction was removed. Remove redundant
+/// pseudo ops when RemovePseudoOp is true.
 bool RemoveRedundantDbgInstrs(BasicBlock *BB);
 
 /// Replace all uses of an instruction (specified by BI) with a value, then
@@ -178,6 +179,13 @@ struct CriticalEdgeSplittingOptions {
   }
 };
 
+/// When a loop exit edge is split, LCSSA form may require new PHIs in the new
+/// exit block. This function inserts the new PHIs, as needed. Preds is a list
+/// of preds inside the loop, SplitBB is the new loop exit block, and DestBB is
+/// the old loop exit, now the successor of SplitBB.
+void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
+                                BasicBlock *SplitBB, BasicBlock *DestBB);
+
 /// If this edge is a critical edge, insert a new node to split the critical
 /// edge. This will update the analyses passed in through the option struct.
 /// This returns the new block if the edge was split, null otherwise.
@@ -196,30 +204,15 @@ struct CriticalEdgeSplittingOptions {
 /// to.
 BasicBlock *SplitCriticalEdge(Instruction *TI, unsigned SuccNum,
                               const CriticalEdgeSplittingOptions &Options =
-                                  CriticalEdgeSplittingOptions());
+                                  CriticalEdgeSplittingOptions(),
+                              const Twine &BBName = "");
 
-inline BasicBlock *
-SplitCriticalEdge(BasicBlock *BB, succ_iterator SI,
-                  const CriticalEdgeSplittingOptions &Options =
-                      CriticalEdgeSplittingOptions()) {
-  return SplitCriticalEdge(BB->getTerminator(), SI.getSuccessorIndex(),
-                           Options);
-}
-
-/// If the edge from *PI to BB is not critical, return false. Otherwise, split
-/// all edges between the two blocks and return true. This updates all of the
-/// same analyses as the other SplitCriticalEdge function. If P is specified, it
-/// updates the analyses described above.
-inline bool SplitCriticalEdge(BasicBlock *Succ, pred_iterator PI,
-                              const CriticalEdgeSplittingOptions &Options =
-                                  CriticalEdgeSplittingOptions()) {
-  bool MadeChange = false;
-  Instruction *TI = (*PI)->getTerminator();
-  for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-    if (TI->getSuccessor(i) == Succ)
-      MadeChange |= !!SplitCriticalEdge(TI, i, Options);
-  return MadeChange;
-}
+/// If it is known that an edge is critical, SplitKnownCriticalEdge can be
+/// called directly, rather than calling SplitCriticalEdge first.
+BasicBlock *SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
+                                   const CriticalEdgeSplittingOptions &Options =
+                                       CriticalEdgeSplittingOptions(),
+                                   const Twine &BBName = "");
 
 /// If an edge from Src to Dst is critical, split the edge and return true,
 /// otherwise return false. This method requires that there be an edge between
@@ -244,19 +237,88 @@ unsigned SplitAllCriticalEdges(Function &F,
                                const CriticalEdgeSplittingOptions &Options =
                                    CriticalEdgeSplittingOptions());
 
-/// Split the edge connecting specified block.
+/// Split the edge connecting the specified blocks, and return the newly created
+/// basic block between \p From and \p To.
 BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
                       DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
-                      MemorySSAUpdater *MSSAU = nullptr);
+                      MemorySSAUpdater *MSSAU = nullptr,
+                      const Twine &BBName = "");
 
-/// Split the specified block at the specified instruction - everything before
-/// SplitPt stays in Old and everything starting with SplitPt moves to a new
-/// block. The two blocks are joined by an unconditional branch and the loop
-/// info is updated.
-BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                       DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+/// Sets the unwind edge of an instruction to a particular successor.
+void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ);
+
+/// Replaces all uses of OldPred with the NewPred block in all PHINodes in a
+/// block.
+void updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
+                    BasicBlock *NewPred, PHINode *Until = nullptr);
+
+/// Split the edge connect the specficed blocks in the case that \p Succ is an
+/// Exception Handling Block
+BasicBlock *ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
+                             LandingPadInst *OriginalPad = nullptr,
+                             PHINode *LandingPadReplacement = nullptr,
+                             const CriticalEdgeSplittingOptions &Options =
+                                 CriticalEdgeSplittingOptions(),
+                             const Twine &BBName = "");
+
+/// Split the specified block at the specified instruction.
+///
+/// If \p Before is true, splitBlockBefore handles the block
+/// splitting. Otherwise, execution proceeds as described below.
+///
+/// Everything before \p SplitPt stays in \p Old and everything starting with \p
+/// SplitPt moves to a new block. The two blocks are joined by an unconditional
+/// branch. The new block with name \p BBName is returned.
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
+                       LoopInfo *LI = nullptr,
                        MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "");
+                       const Twine &BBName = "", bool Before = false);
+
+/// Split the specified block at the specified instruction.
+///
+/// If \p Before is true, splitBlockBefore handles the block
+/// splitting. Otherwise, execution proceeds as described below.
+///
+/// Everything before \p SplitPt stays in \p Old and everything starting with \p
+/// SplitPt moves to a new block. The two blocks are joined by an unconditional
+/// branch. The new block with name \p BBName is returned.
+BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
+                       MemorySSAUpdater *MSSAU = nullptr,
+                       const Twine &BBName = "", bool Before = false);
+
+/// Split the specified block at the specified instruction \p SplitPt.
+/// All instructions before \p SplitPt are moved to a new block and all
+/// instructions after \p SplitPt stay in the old block. The new block and the
+/// old block are joined by inserting an unconditional branch to the end of the
+/// new block. The new block with name \p BBName is returned.
+BasicBlock *splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
+                             DomTreeUpdater *DTU, LoopInfo *LI,
+                             MemorySSAUpdater *MSSAU, const Twine &BBName = "");
+
+/// This method introduces at least one new basic block into the function and
+/// moves some of the predecessors of BB to be predecessors of the new block.
+/// The new predecessors are indicated by the Preds array. The new block is
+/// given a suffix of 'Suffix'. Returns new basic block to which predecessors
+/// from Preds are now pointing.
+///
+/// If BB is a landingpad block then additional basicblock might be introduced.
+/// It will have Suffix+".split_lp". See SplitLandingPadPredecessors for more
+/// details on this case.
+///
+/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
+/// no other analyses. In particular, it does not preserve LoopSimplify
+/// (because it's complicated to handle the case where one of the edges being
+/// split is an exit of a loop with other exits).
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
+                                   const char *Suffix, DominatorTree *DT,
+                                   LoopInfo *LI = nullptr,
+                                   MemorySSAUpdater *MSSAU = nullptr,
+                                   bool PreserveLCSSA = false);
 
 /// This method introduces at least one new basic block into the function and
 /// moves some of the predecessors of BB to be predecessors of the new block.
@@ -274,7 +336,7 @@ BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
 /// split is an exit of a loop with other exits).
 BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
                                    const char *Suffix,
-                                   DominatorTree *DT = nullptr,
+                                   DomTreeUpdater *DTU = nullptr,
                                    LoopInfo *LI = nullptr,
                                    MemorySSAUpdater *MSSAU = nullptr,
                                    bool PreserveLCSSA = false);
@@ -290,10 +352,31 @@ BasicBlock *SplitBlockPredecessors(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
 /// no other analyses. In particular, it does not preserve LoopSimplify
 /// (because it's complicated to handle the case where one of the edges being
 /// split is an exit of a loop with other exits).
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+void SplitLandingPadPredecessors(BasicBlock *OrigBB,
+                                 ArrayRef<BasicBlock *> Preds,
+                                 const char *Suffix, const char *Suffix2,
+                                 SmallVectorImpl<BasicBlock *> &NewBBs,
+                                 DominatorTree *DT, LoopInfo *LI = nullptr,
+                                 MemorySSAUpdater *MSSAU = nullptr,
+                                 bool PreserveLCSSA = false);
+
+/// This method transforms the landing pad, OrigBB, by introducing two new basic
+/// blocks into the function. One of those new basic blocks gets the
+/// predecessors listed in Preds. The other basic block gets the remaining
+/// predecessors of OrigBB. The landingpad instruction OrigBB is clone into both
+/// of the new basic blocks. The new blocks are given the suffixes 'Suffix1' and
+/// 'Suffix2', and are returned in the NewBBs vector.
+///
+/// This currently updates the LLVM IR, DominatorTree, LoopInfo, and LCCSA but
+/// no other analyses. In particular, it does not preserve LoopSimplify
+/// (because it's complicated to handle the case where one of the edges being
+/// split is an exit of a loop with other exits).
 void SplitLandingPadPredecessors(
     BasicBlock *OrigBB, ArrayRef<BasicBlock *> Preds, const char *Suffix,
     const char *Suffix2, SmallVectorImpl<BasicBlock *> &NewBBs,
-    DominatorTree *DT = nullptr, LoopInfo *LI = nullptr,
+    DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
     MemorySSAUpdater *MSSAU = nullptr, bool PreserveLCSSA = false);
 
 /// This method duplicates the specified return instruction into a predecessor
@@ -325,10 +408,39 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 /// Returns the NewBasicBlock's terminator.
 ///
 /// Updates DT and LI if given.
+///
+/// FIXME: deprecated, switch to the DomTreeUpdater-based one.
+Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
+                                       bool Unreachable, MDNode *BranchWeights,
+                                       DominatorTree *DT,
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ThenBlock = nullptr);
+
+/// Split the containing block at the specified instruction - everything before
+/// SplitBefore stays in the old basic block, and the rest of the instructions
+/// in the BB are moved to a new block. The two blocks are connected by a
+/// conditional branch (with value of Cmp being the condition).
+/// Before:
+///   Head
+///   SplitBefore
+///   Tail
+/// After:
+///   Head
+///   if (Cond)
+///     ThenBlock
+///   SplitBefore
+///   Tail
+///
+/// If \p ThenBlock is not specified, a new block will be created for it.
+/// If \p Unreachable is true, the newly created block will end with
+/// UnreachableInst, otherwise it branches to Tail.
+/// Returns the NewBasicBlock's terminator.
+///
+/// Updates DT and LI if given.
 Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
-                                       DominatorTree *DT = nullptr,
+                                       DomTreeUpdater *DTU = nullptr,
                                        LoopInfo *LI = nullptr,
                                        BasicBlock *ThenBlock = nullptr);
 
@@ -352,15 +464,15 @@ void SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                    MDNode *BranchWeights = nullptr);
 
 /// Check whether BB is the merge point of a if-region.
-/// If so, return the boolean condition that determines which entry into
+/// If so, return the branch instruction that determines which entry into
 /// BB will be taken.  Also, return by references the block that will be
 /// entered from if the condition is true, and the block that will be
 /// entered if the condition is false.
 ///
 /// This does no checking to see if the true/false blocks have large or unsavory
 /// instructions in them.
-Value *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
-                      BasicBlock *&IfFalse);
+BranchInst *GetIfCondition(BasicBlock *BB, BasicBlock *&IfTrue,
+                           BasicBlock *&IfFalse);
 
 // Split critical edges where the source of the edge is an indirectbr
 // instruction. This isn't always possible, but we can handle some easy cases.

@@ -1,11 +1,8 @@
-
-
 import gdbremote_testcase
 import textwrap
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
 
 def _extract_register_value(reg_info, reg_bank, byte_order, bytes_per_entry=8):
     reg_offset = int(reg_info["offset"])*2
@@ -29,7 +26,9 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def run_test_g_packet(self):
+    @skipIfOutOfTreeDebugserver
+    @skipUnlessDarwin # G packet not supported
+    def test_g_packet(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines(
@@ -37,7 +36,6 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
              {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$",
               "capture": {1: "register_bank"}}],
             True)
-        self.connect_to_debug_monitor()
         context = self.expect_gdbremote_sequence()
         register_bank = context.get("register_bank")
         self.assertNotEqual(register_bank[0], 'E')
@@ -49,13 +47,6 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
             True)
         context = self.expect_gdbremote_sequence()
         self.assertNotEqual(context.get("G_reply")[0], 'E')
-
-    @skipIfOutOfTreeDebugserver
-    @debugserver_test
-    @skipIfDarwinEmbedded
-    def test_g_packet_debugserver(self):
-        self.init_debugserver_test()
-        self.run_test_g_packet()
 
     @skipIf(archs=no_match(["x86_64"]))
     def g_returns_correct_data(self, with_suffix):
@@ -137,18 +128,18 @@ class TestGdbRemoteGPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertEqual(
             ['0x727476787a7c7e71', '0x737577797b7d7f70'], get_reg_value('xmm15'))
 
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48420")
     @expectedFailureNetBSD
-    @llgs_test
-    def test_g_returns_correct_data_with_suffix_llgs(self):
-        self.init_llgs_test()
+    @skipIfDarwin # g packet not supported
+    def test_g_returns_correct_data_with_suffix(self):
         self.build()
         self.set_inferior_startup_launch()
         self.g_returns_correct_data(True)
 
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48420")
     @expectedFailureNetBSD
-    @llgs_test
-    def test_g_returns_correct_data_no_suffix_llgs(self):
-        self.init_llgs_test()
+    @skipIfDarwin # g packet not supported
+    def test_g_returns_correct_data_no_suffix(self):
         self.build()
         self.set_inferior_startup_launch()
         self.g_returns_correct_data(False)

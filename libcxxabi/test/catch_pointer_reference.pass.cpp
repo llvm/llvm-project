@@ -14,11 +14,11 @@
 //        (ignoring the top-level cv-qualifiers), or
 //     *  the handler is of type cv T or cv T& and T is an unambiguous base
 //        class of E, or
-//  /  *  the handler is of type cv1 T* cv2 and E is a pointer type that can   \
-//  |     be converted to the type of the handler by either or both of         |
-//  |       o  a standard pointer conversion (4.10 [conv.ptr]) not involving   |
-//  |          conversions to private or protected or ambiguous classes        |
-//  \       o  a qualification conversion                                      /
+//  >  *  the handler is of type cv1 T* cv2 and E is a pointer type that can   <
+//  >     be converted to the type of the handler by either or both of         <
+//  >       o  a standard pointer conversion (4.10 [conv.ptr]) not involving   <
+//  >          conversions to private or protected or ambiguous classes        <
+//  >       o  a qualification conversion                                      <
 //     *  the handler is a pointer or pointer to member type and E is
 //        std::nullptr_t
 //
@@ -427,7 +427,7 @@ void f13()
     assert_cannot_catch<const volatile Base * const volatile &, Protected *, Protected>();
 }
 
-int main()
+int main(int, char**)
 {
     f1();
     f2();
@@ -442,4 +442,6 @@ int main()
     f11();
     f12();
     f13();
+
+    return 0;
 }

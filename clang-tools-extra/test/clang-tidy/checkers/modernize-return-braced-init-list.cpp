@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14 %s modernize-return-braced-init-list %t
-// FIXME: Fix the checker to work in C++17 mode.
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-return-braced-init-list %t
 
 namespace std {
 typedef decltype(sizeof(int)) size_t;

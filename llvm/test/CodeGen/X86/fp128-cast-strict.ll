@@ -3,24 +3,76 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+sse | FileCheck %s --check-prefixes=X64,X64-SSE
 ; RUN: llc < %s -mtriple=x86_64-linux-android -mattr=+avx | FileCheck %s --check-prefixes=X64,X64-AVX
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+avx | FileCheck %s --check-prefixes=X64,X64-AVX
-; RUN: llc < %s -mtriple=x86_64-linux-android -mattr=+avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-linux-android -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512
 ; RUN: llc < %s -mtriple=i686-linux-gnu -mattr=-sse | FileCheck %s --check-prefixes=X86
 
 ; Check soft floating point conversion function calls.
 
-@vf32 = common global float 0.000000e+00, align 4
-@vf64 = common global double 0.000000e+00, align 8
-@vf80 = common global x86_fp80 0xK00000000000000000000, align 8
-@vf128 = common global fp128 0xL00000000000000000000000000000000, align 16
+@vf16 = common dso_local global half 0.000000e+00, align 2
+@vf32 = common dso_local global float 0.000000e+00, align 4
+@vf64 = common dso_local global double 0.000000e+00, align 8
+@vf80 = common dso_local global x86_fp80 0xK00000000000000000000, align 8
+@vf128 = common dso_local global fp128 0xL00000000000000000000000000000000, align 16
 
-define void @TestFPExtF32_F128() nounwind strictfp {
+define dso_local void @TestFPExtF16_F128() nounwind strictfp {
+; X64-SSE-LABEL: TestFPExtF16_F128:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    pushq %rax
+; X64-SSE-NEXT:    movzwl vf16(%rip), %edi
+; X64-SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-SSE-NEXT:    callq __extendsftf2@PLT
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
+; X64-SSE-NEXT:    popq %rax
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX512-LABEL: TestFPExtF16_F128:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    pushq %rax
+; X64-AVX512-NEXT:    vmovsh vf16(%rip), %xmm0
+; X64-AVX512-NEXT:    callq __extendhftf2@PLT
+; X64-AVX512-NEXT:    vmovaps %xmm0, vf128(%rip)
+; X64-AVX512-NEXT:    popq %rax
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: TestFPExtF16_F128:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    movzwl vf16, %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __extendsftf2
+; X86-NEXT:    subl $4, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, vf128+12
+; X86-NEXT:    movl %edx, vf128+8
+; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+entry:
+  %0 = load half, half* @vf16, align 2
+  %conv = call fp128 @llvm.experimental.constrained.fpext.f128.f16(half %0, metadata !"fpexcept.strict") #0
+  store fp128 %conv, fp128* @vf128, align 16
+  ret void
+}
+
+define dso_local void @TestFPExtF32_F128() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPExtF32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-SSE-NEXT:    callq __extendsftf2
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    callq __extendsftf2@PLT
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -28,8 +80,8 @@ define void @TestFPExtF32_F128() nounwind strictfp {
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-AVX-NEXT:    callq __extendsftf2
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    callq __extendsftf2@PLT
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 ;
@@ -62,13 +114,13 @@ entry:
   ret void
 }
 
-define void @TestFPExtF64_F128() nounwind strictfp {
+define dso_local void @TestFPExtF64_F128() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPExtF64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X64-SSE-NEXT:    callq __extenddftf2
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    callq __extenddftf2@PLT
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -76,8 +128,8 @@ define void @TestFPExtF64_F128() nounwind strictfp {
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X64-AVX-NEXT:    callq __extenddftf2
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    callq __extenddftf2@PLT
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 ;
@@ -110,26 +162,26 @@ entry:
   ret void
 }
 
-define void @TestFPExtF80_F128() nounwind strictfp {
+define dso_local void @TestFPExtF80_F128() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPExtF80_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    subq $24, %rsp
-; X64-SSE-NEXT:    fldt {{.*}}(%rip)
+; X64-SSE-NEXT:    fldt vf80(%rip)
 ; X64-SSE-NEXT:    fstpt (%rsp)
 ; X64-SSE-NEXT:    wait
-; X64-SSE-NEXT:    callq __extendxftf2
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    callq __extendxftf2@PLT
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    addq $24, %rsp
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: TestFPExtF80_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    subq $24, %rsp
-; X64-AVX-NEXT:    fldt {{.*}}(%rip)
+; X64-AVX-NEXT:    fldt vf80(%rip)
 ; X64-AVX-NEXT:    fstpt (%rsp)
 ; X64-AVX-NEXT:    wait
-; X64-AVX-NEXT:    callq __extendxftf2
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    callq __extendxftf2@PLT
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    addq $24, %rsp
 ; X64-AVX-NEXT:    retq
 ;
@@ -162,22 +214,60 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F32() nounwind strictfp {
+define dso_local void @TestFPTruncF128_F16() nounwind strictfp {
+; X64-SSE-LABEL: TestFPTruncF128_F16:
+; X64-SSE:       # %bb.0: # %entry
+; X64-SSE-NEXT:    pushq %rax
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
+; X64-SSE-NEXT:    callq __trunctfhf2@PLT
+; X64-SSE-NEXT:    movw %ax, vf16(%rip)
+; X64-SSE-NEXT:    popq %rax
+; X64-SSE-NEXT:    retq
+;
+; X64-AVX512-LABEL: TestFPTruncF128_F16:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    pushq %rax
+; X64-AVX512-NEXT:    vmovaps vf128(%rip), %xmm0
+; X64-AVX512-NEXT:    callq __trunctfhf2@PLT
+; X64-AVX512-NEXT:    vmovsh %xmm0, vf16(%rip)
+; X64-AVX512-NEXT:    popq %rax
+; X64-AVX512-NEXT:    retq
+;
+; X86-LABEL: TestFPTruncF128_F16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl vf128+12
+; X86-NEXT:    pushl vf128+8
+; X86-NEXT:    pushl vf128+4
+; X86-NEXT:    pushl vf128
+; X86-NEXT:    calll __trunctfhf2
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    movw %ax, vf16
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+entry:
+  %0 = load fp128, fp128* @vf128, align 16
+  %conv = call half @llvm.experimental.constrained.fptrunc.f16.f128(fp128 %0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  store half %conv, half* @vf16, align 2
+  ret void
+}
+
+define dso_local void @TestFPTruncF128_F32() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPTruncF128_F32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
-; X64-SSE-NEXT:    callq __trunctfsf2
-; X64-SSE-NEXT:    movss %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
+; X64-SSE-NEXT:    callq __trunctfsf2@PLT
+; X64-SSE-NEXT:    movss %xmm0, vf32(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F32:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
-; X64-AVX-NEXT:    callq __trunctfsf2
-; X64-AVX-NEXT:    vmovss %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
+; X64-AVX-NEXT:    callq __trunctfsf2@PLT
+; X64-AVX-NEXT:    vmovss %xmm0, vf32(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 ;
@@ -201,22 +291,22 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F64() nounwind strictfp {
+define dso_local void @TestFPTruncF128_F64() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPTruncF128_F64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
-; X64-SSE-NEXT:    callq __trunctfdf2
-; X64-SSE-NEXT:    movsd %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
+; X64-SSE-NEXT:    callq __trunctfdf2@PLT
+; X64-SSE-NEXT:    movsd %xmm0, vf64(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: TestFPTruncF128_F64:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
-; X64-AVX-NEXT:    callq __trunctfdf2
-; X64-AVX-NEXT:    vmovsd %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
+; X64-AVX-NEXT:    callq __trunctfdf2@PLT
+; X64-AVX-NEXT:    vmovsd %xmm0, vf64(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 ;
@@ -240,13 +330,13 @@ entry:
   ret void
 }
 
-define void @TestFPTruncF128_F80() nounwind strictfp {
+define dso_local void @TestFPTruncF128_F80() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPTruncF128_F80:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
-; X64-SSE-NEXT:    callq __trunctfxf2
-; X64-SSE-NEXT:    fstpt {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
+; X64-SSE-NEXT:    callq __trunctfxf2@PLT
+; X64-SSE-NEXT:    fstpt vf80(%rip)
 ; X64-SSE-NEXT:    wait
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
@@ -254,9 +344,9 @@ define void @TestFPTruncF128_F80() nounwind strictfp {
 ; X64-AVX-LABEL: TestFPTruncF128_F80:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
-; X64-AVX-NEXT:    callq __trunctfxf2
-; X64-AVX-NEXT:    fstpt {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
+; X64-AVX-NEXT:    callq __trunctfxf2@PLT
+; X64-AVX-NEXT:    fstpt vf80(%rip)
 ; X64-AVX-NEXT:    wait
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
@@ -281,11 +371,11 @@ entry:
   ret void
 }
 
-define i8 @fptosi_i8(fp128 %x) nounwind strictfp {
+define dso_local i8 @fptosi_i8(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptosi_i8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfsi
+; X64-NEXT:    callq __fixtfsi@PLT
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -311,7 +401,7 @@ define i16 @fptosi_i16(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptosi_i16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfsi
+; X64-NEXT:    callq __fixtfsi@PLT
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -333,11 +423,11 @@ entry:
   ret i16 %conv
 }
 
-define i32 @fptosi_i32(fp128 %x) nounwind strictfp {
+define dso_local i32 @fptosi_i32(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptosi_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfsi
+; X64-NEXT:    callq __fixtfsi@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -360,7 +450,7 @@ define i64 @fptosi_i64(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptosi_i64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfdi
+; X64-NEXT:    callq __fixtfdi@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -383,7 +473,7 @@ define i128 @fptosi_i128(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptosi_i128:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfti
+; X64-NEXT:    callq __fixtfti@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -420,11 +510,11 @@ entry:
   ret i128 %conv
 }
 
-define i8 @fptoui_i8(fp128 %x) nounwind strictfp {
+define dso_local i8 @fptoui_i8(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i8:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfsi
+; X64-NEXT:    callq __fixtfsi@PLT
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -450,7 +540,7 @@ define i16 @fptoui_i16(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i16:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixtfsi
+; X64-NEXT:    callq __fixtfsi@PLT
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
@@ -472,11 +562,11 @@ entry:
   ret i16 %conv
 }
 
-define i32 @fptoui_i32(fp128 %x) nounwind strictfp {
+define dso_local i32 @fptoui_i32(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixunstfsi
+; X64-NEXT:    callq __fixunstfsi@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -499,7 +589,7 @@ define i64 @fptoui_i64(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixunstfdi
+; X64-NEXT:    callq __fixunstfdi@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -522,7 +612,7 @@ define i128 @fptoui_i128(fp128 %x) nounwind strictfp {
 ; X64-LABEL: fptoui_i128:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __fixunstfti
+; X64-NEXT:    callq __fixunstfti@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -564,7 +654,7 @@ define fp128 @sitofp_i8(i8 %x) nounwind strictfp {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsbl %dil, %edi
-; X64-NEXT:    callq __floatsitf
+; X64-NEXT:    callq __floatsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -604,7 +694,7 @@ define fp128 @sitofp_i16(i16 %x) nounwind strictfp {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movswl %di, %edi
-; X64-NEXT:    callq __floatsitf
+; X64-NEXT:    callq __floatsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -643,7 +733,7 @@ define fp128 @sitofp_i32(i32 %x) nounwind strictfp {
 ; X64-LABEL: sitofp_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floatsitf
+; X64-NEXT:    callq __floatsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -681,7 +771,7 @@ define fp128 @sitofp_i64(i64 %x) nounwind strictfp {
 ; X64-LABEL: sitofp_i64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floatditf
+; X64-NEXT:    callq __floatditf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -720,7 +810,7 @@ define fp128 @sitofp_i128(i128 %x) nounwind strictfp {
 ; X64-LABEL: sitofp_i128:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floattitf
+; X64-NEXT:    callq __floattitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -762,7 +852,7 @@ define fp128 @uitofp_i8(i8 %x) nounwind strictfp {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movzbl %dil, %edi
-; X64-NEXT:    callq __floatsitf
+; X64-NEXT:    callq __floatsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -802,7 +892,7 @@ define fp128 @uitofp_i16(i16 %x) nounwind strictfp {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __floatsitf
+; X64-NEXT:    callq __floatsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -841,7 +931,7 @@ define fp128 @uitofp_i32(i32 %x) nounwind strictfp {
 ; X64-LABEL: uitofp_i32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floatunsitf
+; X64-NEXT:    callq __floatunsitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -879,7 +969,7 @@ define fp128 @uitofp_i64(i64 %x) nounwind strictfp {
 ; X64-LABEL: uitofp_i64:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floatunditf
+; X64-NEXT:    callq __floatunditf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -918,7 +1008,7 @@ define fp128 @uitofp_i128(i128 %x) nounwind strictfp {
 ; X64-LABEL: uitofp_i128:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __floatuntitf
+; X64-NEXT:    callq __floatuntitf@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
@@ -957,9 +1047,11 @@ entry:
 
 attributes #0 = { strictfp }
 
+declare half @llvm.experimental.constrained.fptrunc.f16.f128(fp128, metadata, metadata)
 declare float @llvm.experimental.constrained.fptrunc.f32.f128(fp128, metadata, metadata)
 declare double @llvm.experimental.constrained.fptrunc.f64.f128(fp128, metadata, metadata)
 declare x86_fp80 @llvm.experimental.constrained.fptrunc.f80.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.f16(half, metadata)
 declare fp128 @llvm.experimental.constrained.fpext.f128.f32(float, metadata)
 declare fp128 @llvm.experimental.constrained.fpext.f128.f64(double, metadata)
 declare fp128 @llvm.experimental.constrained.fpext.f128.f80(x86_fp80, metadata)

@@ -5,6 +5,8 @@ Symbol Visibility Macros
 .. contents::
    :local:
 
+.. _visibility-macros:
+
 Overview
 ========
 
@@ -43,6 +45,10 @@ Visibility Macros
 **_LIBCPP_HIDE_FROM_ABI**
   Mark a function as not being part of the ABI of any final linked image that
   uses it.
+
+**_LIBCPP_INLINE_VISIBILITY**
+  Historical predecessor of ``_LIBCPP_HIDE_FROM_ABI`` -- please use
+  ``_LIBCPP_HIDE_FROM_ABI`` instead.
 
 **_LIBCPP_HIDE_FROM_ABI_AFTER_V1**
   Mark a function as being hidden from the ABI (per `_LIBCPP_HIDE_FROM_ABI`)
@@ -130,12 +136,6 @@ Visibility Macros
   This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
   specified on the primary template and to export the member functions produced
   by the explicit instantiation in the dylib.
-
-  **GCC Behavior**: GCC ignores visibility attributes applied the type in
-  extern template declarations and applying an attribute results in a warning.
-  However since `_LIBCPP_TEMPLATE_VIS` is the same as
-  `__attribute__((visibility("default"))` the visibility is already correct.
-  The macro has an empty definition with GCC.
 
   **Windows Behavior**: `extern template` and `dllexport` are fundamentally
   incompatible *on a class template* on Windows; the former suppresses

@@ -51,23 +51,25 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X86-NEXT:    packuswb %xmm2, %xmm0
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psllw $4, %xmm1
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    psrlw $4, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    psllw $2, %xmm1
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
-; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $2, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    psllw $2, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    paddb %xmm1, %xmm1
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
-; X86-NEXT:    psrlw $1, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pand %xmm2, %xmm0
+; X86-NEXT:    paddb %xmm0, %xmm0
 ; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_demandedbits_bitreverse:
@@ -82,7 +84,7 @@ define <4 x i32> @test_demandedbits_bitreverse(<4 x i32> %a0) nounwind {
 ; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
 ; X64-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %b = or <4 x i32> %a0, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
   %c = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %b)

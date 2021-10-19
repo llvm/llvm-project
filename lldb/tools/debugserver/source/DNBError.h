@@ -13,9 +13,9 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBERROR_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBERROR_H
 
-#include <errno.h>
+#include <cerrno>
+#include <cstdio>
 #include <mach/mach.h>
-#include <stdio.h>
 #include <string>
 
 class DNBError {

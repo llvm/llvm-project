@@ -122,7 +122,7 @@ public:
     m_stack_pointer = stack_frame_top;
   }
 
-  ~InterpreterStackFrame() {}
+  ~InterpreterStackFrame() = default;
 
   void Jump(const BasicBlock *bb) {
     m_prev_bb = m_bb;
@@ -1241,7 +1241,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       if (!write_error.Success()) {
         LLDB_LOGF(log, "Couldn't write to a region on behalf of a LoadInst");
         error.SetErrorToGenericError();
-        error.SetErrorString(memory_read_error);
+        error.SetErrorString(memory_write_error);
         return false;
       }
 
@@ -1398,7 +1398,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       // Find number of arguments
-      const int numArgs = call_inst->getNumArgOperands();
+      const int numArgs = call_inst->arg_size();
 
       // We work with a fixed array of 16 arguments which is our upper limit
       static lldb_private::ABI::CallArgument rawArgs[16];

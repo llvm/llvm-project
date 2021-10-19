@@ -31,6 +31,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mtx_destroy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mtx_destroy
+)
+
+add_entrypoint_object(
   mtx_lock
   ALIAS
   DEPENDS
@@ -42,4 +49,39 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.mtx_unlock
+)
+
+add_entrypoint_object(
+  cnd_init
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_init
+)
+
+add_entrypoint_object(
+  cnd_destroy
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_destroy
+)
+
+add_entrypoint_object(
+  cnd_wait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_wait
+)
+
+add_entrypoint_object(
+  cnd_signal
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_signal
+)
+
+add_entrypoint_object(
+  cnd_broadcast
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_broadcast
 )

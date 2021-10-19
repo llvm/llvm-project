@@ -23,8 +23,8 @@ isl was written by
 	    Domaine de Voluceau - Rocquencourt, B.P. 105
 	    78153 Le Chesnay
 	    France
-2015-2019   Polly Labs
-2018-2019   Cerebras Systems
+2015-2020   Polly Labs
+2018-2020   Cerebras Systems
 	    175 S San Antonio Rd
 	    Los Altos, CA
 	    USA
@@ -38,6 +38,7 @@ Albert Cohen
 Ray Donnelly
 Johannes Doerfert
 Andi Drebes
+Ron Estrin
 Clement Foyer
 Armin Groesslinger
 Tobias Grosser
@@ -47,13 +48,16 @@ Andreas Kloeckner
 Michael Kruse
 Manjunath Kudlur
 Alexander Matz
+Chielo Newctle
 Sebastian Pop
 Louis-Noel Pouchet
 Benoit Pradelle
 Uday Bondhugula
 Andreas Simbuerger
+Tianjiao Sun
 Malhar Thakkar
 Sergei Trofimovich
+Miheer Vaidya
 Sven van Haastregt
 Oleksandr Zinenko
 

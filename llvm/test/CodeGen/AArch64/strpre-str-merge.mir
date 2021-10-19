@@ -1,0 +1,480 @@
+# RUN: llc -o - %s -mtriple=aarch64-none-eabi -mcpu=cortex-a55 -lsr-preferred-addressing-mode=preindexed -stop-after=aarch64-ldst-opt | FileCheck %s
+
+---
+name:            1-strwpre-strwui-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$w1' }
+  - { reg: '$w2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $w1, $w2, $x0
+    ; CHECK-LABEL: name: 1-strwpre-strwui-merge
+    ; CHECK: liveins: $w1, $w2, $x0
+    ; CHECK: early-clobber $x0 = STPWpre renamable $w1, renamable $w2, renamable $x0, 5 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRWpre killed renamable $w1, killed renamable $x0, 20 :: (store (s32))
+    STRWui killed renamable $w2, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+
+...
+
+
+---
+name:            2-strxpre-strxui-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+
+    ; CHECK-LABEL: name: 2-strxpre-strxui-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber $x0 = STPXpre renamable $x1, renamable $x2, renamable $x0, 3 :: (store (s64))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRXpre killed renamable $x1, killed renamable $x0, 24 :: (store (s64))
+    STRXui killed renamable $x2, renamable $x0, 1 :: (store (s64))
+    RET undef $lr, implicit $x0
+
+...
+
+
+---
+name:            3-strspre-strsui-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 3-strspre-strsui-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber $x0 = STPSpre renamable $s0, renamable $s1, renamable $x0, 3 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 12 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            4-strdpre-strdui-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$d0' }
+  - { reg: '$d1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $d0, $d1, $x0
+
+    ; CHECK-LABEL: name: 4-strdpre-strdui-merge
+    ; CHECK: liveins: $d0, $d1, $x0
+    ; CHECK: early-clobber $x0 = STPDpre renamable $d0, renamable $d1, renamable $x0, 16 :: (store (s64))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRDpre killed renamable $d0, killed renamable $x0, 128 :: (store (s64))
+    STRDui killed renamable $d1, renamable $x0, 1 :: (store (s64))
+    RET undef $lr, implicit $x0
+
+...
+
+
+---
+name:            5-strqpre-strqui-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $x0
+
+    ; CHECK-LABEL: name: 5-strqpre-strqui-merge
+    ; CHECK: liveins: $q0, $q1, $x0
+    ; CHECK: early-clobber $x0 = STPQpre renamable $q0, renamable $q1, renamable $x0, 3 :: (store (s128))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
+    STRQui killed renamable $q1, renamable $x0, 1 :: (store (s128))
+    RET undef $lr, implicit $x0
+
+...
+
+
+---
+name:            6-strqui-strqpre-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $x0
+    ; CHECK-LABEL: name: 6-strqui-strqpre-no-merge
+    ; CHECK: liveins: $q0, $q1, $x0
+    ; CHECK: STRQui renamable $q1, renamable $x0, 1 :: (store (s128))
+    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0 :: (store (s128))
+    ; CHECK: RET undef $lr, implicit $x0
+    STRQui killed renamable $q1, renamable $x0, 1 :: (store (s128))
+    early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            7-strspre-strsui-max-offset-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 7-strspre-strsui-max-offset-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber $x0 = STPSpre renamable $s0, renamable $s1, renamable $x0, 63 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 252 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            8-strspre-strsui-min-offset-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 8-strspre-strsui-min-offset-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber $x0 = STPSpre renamable $s0, renamable $s1, renamable $x0, -64 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, -256 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            9-strspre-strsui-mod-base-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0, $x1
+    ; CHECK-LABEL: name: 9-strspre-strsui-mod-base-reg-no-merge
+    ; CHECK: liveins: $s0, $s1, $x0, $x1
+    ; CHECK: dead early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
+    ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 12 :: (store (s32))
+    renamable $x0 = LDRXui renamable $x1, 1 :: (load (s64))
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            10-strspre-strsui-used-base-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0, $x1
+    ; CHECK-LABEL: name: 10-strspre-strsui-used-base-reg-no-merge
+    ; CHECK: liveins: $s0, $s1, $x0, $x1
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: STRXui renamable $x1, renamable $x1, 1 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 12 :: (store (s32))
+
+    STRXui killed renamable $x1, renamable $x1, 1 :: (store (s32))
+
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            11-strspre-strspre-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 11-strspre-strspre-no-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 16, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 4, implicit $w0 :: (store (s32))
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s1, renamable $x0, 4, implicit $w0 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre renamable $s0, killed renamable $x0, 12 :: (store (s32))
+    early-clobber renamable $x0 = STRSpre renamable $s1, killed renamable $x0, 16 :: (store (s32))
+    early-clobber renamable $x0 = STRSpre renamable $s0, killed renamable $x0, 4 :: (store (s32))
+    early-clobber renamable $x0 = STRSpre renamable $s1, killed renamable $x0, 12 :: (store (s32))
+    early-clobber renamable $x0 = STRSpre renamable $s0, killed renamable $x0, 4 :: (store (s32))
+    early-clobber renamable $x0 = STRSpre renamable $s1, killed renamable $x0, 4 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            12-strspre-strsui-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+
+    ; The offset of the second st is not equal to the
+    ; size of the destination register,  and hence can’t be merged.
+
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 12-strspre-strsui-no-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 12, implicit $w0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x0, 2 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 12 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x0, 2 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            13-strqpre-sturqi-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $x0
+
+    ; CHECK-LABEL: name: 13-strqpre-sturqi-merge
+    ; CHECK: liveins: $q0, $q1, $x0
+    ; CHECK: early-clobber $x0 = STPQpre renamable $q0, renamable $q1, renamable $x0, 3 :: (store (s128))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
+    STURQi killed renamable $q1, renamable $x0, 16 :: (store (s128))
+    RET undef $lr, implicit $x0
+
+...
+
+
+---
+name:            14-strqpre-sturqi-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$q0' }
+  - { reg: '$q1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $q0, $q1, $x0
+    ; CHECK-LABEL: name: 14-strqpre-sturqi-no-merge
+    ; CHECK: liveins: $q0, $q1, $x0
+    ; CHECK: early-clobber renamable $x0 = STRQpre renamable $q0, renamable $x0, 48, implicit $w0 :: (store (s128))
+    ; CHECK: STURQi renamable $q1, renamable $x0, 1 :: (store (s128))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRQpre killed renamable $q0, killed renamable $x0, 48 :: (store (s128))
+    STURQi killed renamable $q1, renamable $x0, 1 :: (store (s128))
+    RET undef $lr, implicit $x0
+...
+
+
+---
+name:            15-strspre-strsui-unaligned-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$s0' }
+  - { reg: '$s1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $s0, $s1, $x0
+    ; CHECK-LABEL: name: 15-strspre-strsui-unaligned-no-merge
+    ; CHECK: liveins: $s0, $s1, $x0
+    ; CHECK: early-clobber renamable $x0 = STRSpre renamable $s0, renamable $x0, 251, implicit $w0 :: (store (s32))
+    ; CHECK: STRSui renamable $s1, renamable $x0, 1 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRSpre killed renamable $s0, killed renamable $x0, 251 :: (store (s32))
+    STRSui killed renamable $s1, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+...
+
+---
+name:            16-strxpre-strxui-same-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 16-strxpre-strxui-same-reg-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x0 = STRXpre renamable $x1, renamable $x0, 24, implicit $w0 :: (store (s64))
+    ; CHECK: STRXui renamable $x0, renamable $x0, 1 :: (store (s64))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRXpre killed renamable $x1, killed renamable $x0, 24 :: (store (s64))
+    STRXui renamable $x0, renamable $x0, 1 :: (store (s64))
+    RET undef $lr, implicit $x0
+
+...
+
+---
+name:            17-strwpre-strwui-same-reg-no-merge
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x2
+    ; CHECK-LABEL: name: 17-strwpre-strwui-same-reg-no-merge
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK: early-clobber renamable $x0 = STRWpre renamable $w1, renamable $x0, 24, implicit $w0, implicit-def $w0 :: (store (s32))
+    ; CHECK: STRWui renamable $w0, renamable $x0, 1 :: (store (s32))
+    ; CHECK: RET undef $lr, implicit $x0
+    early-clobber renamable $x0 = STRWpre killed renamable $w1, killed renamable $x0, 24 :: (store (s32))
+    STRWui renamable $w0, renamable $x0, 1 :: (store (s32))
+    RET undef $lr, implicit $x0
+
+...

@@ -22,7 +22,6 @@ define amdgpu_ps float @shl_or(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: shl_or:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
@@ -46,7 +45,6 @@ define amdgpu_ps float @shl_or_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; GFX10-LABEL: shl_or_vgpr_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, s2, s3, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
@@ -69,7 +67,6 @@ define amdgpu_ps float @shl_or_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: shl_or_vgpr_all2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %c, %x
@@ -92,7 +89,6 @@ define amdgpu_ps float @shl_or_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 ; GFX10-LABEL: shl_or_vgpr_ac:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, s2, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, %c
@@ -115,7 +111,6 @@ define amdgpu_ps float @shl_or_vgpr_const(i32 %a, i32 %b) {
 ; GFX10-LABEL: shl_or_vgpr_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, v1, 6
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, %b
   %result = or i32 %x, 6
@@ -138,7 +133,6 @@ define amdgpu_ps float @shl_or_vgpr_const2(i32 %a, i32 %b) {
 ; GFX10-LABEL: shl_or_vgpr_const2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 6, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b
@@ -161,7 +155,6 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar1(i32 inreg %a, i32 %b) {
 ; GFX10-LABEL: shl_or_vgpr_const_scalar1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, s2, 6, v0
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b
@@ -184,7 +177,6 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar2(i32 %a, i32 inreg %b) {
 ; GFX10-LABEL: shl_or_vgpr_const_scalar2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 6, s2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = shl i32 %a, 6
   %result = or i32 %x, %b

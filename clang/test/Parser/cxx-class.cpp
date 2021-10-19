@@ -229,34 +229,34 @@ namespace BadFriend {
 class PR20760_a {
   int a = ); // expected-error {{expected expression}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
   int b = }; // expected-error {{expected expression}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
   int c = ]; // expected-error {{expected expression}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
 };
 class PR20760_b {
   int d = d); // expected-error {{expected ';'}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
   int e = d]; // expected-error {{expected ';'}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
   int f = d // expected-error {{expected ';'}}
 #if __cplusplus <= 199711L
-  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
 #endif
 
 };

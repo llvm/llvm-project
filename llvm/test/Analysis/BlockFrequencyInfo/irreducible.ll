@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -block-freq | FileCheck %s
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; A loop with multiple exits isn't irreducible.  It should be handled
@@ -44,7 +43,7 @@ return:
 ;
 ; In addition to loops, -block-freq has limited support for irreducible SCCs,
 ; which are SCCs with multiple entry blocks.  Irreducible SCCs are discovered
-; on they fly, and modelled as loops with multiple headers.
+; on the fly, and modelled as loops with multiple headers.
 ;
 ; The headers of irreducible sub-SCCs consist of its entry blocks and all nodes
 ; that are targets of a backedge within it (excluding backedges within true

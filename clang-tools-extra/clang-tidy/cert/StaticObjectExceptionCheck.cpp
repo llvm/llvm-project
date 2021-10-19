@@ -22,7 +22,7 @@ void StaticObjectExceptionCheck::registerMatchers(MatchFinder *Finder) {
   // initializer that can throw.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           varDecl(
               anyOf(hasThreadStorageDuration(), hasStaticStorageDuration()),
               unless(anyOf(isConstexpr(), hasType(cxxRecordDecl(isLambda())),

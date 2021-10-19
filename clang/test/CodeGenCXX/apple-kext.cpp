@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fno-use-cxa-atexit -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZN5test01aE = global [[A:%.*]] zeroinitializer
+// CHECK: @_ZN5test01aE ={{.*}} global [[A:%.*]] zeroinitializer
 // CHECK: @llvm.global_ctors = appending global {{.*}} { i32 65535, void ()* [[CTOR0:@.*]], i8* null }
 // CHECK: @llvm.global_dtors = appending global {{.*}} { i32 65535, void ()* [[DTOR0:@.*]], i8* null }
 
@@ -17,11 +17,11 @@ D::~D() {}
 #pragma clang optimize on
 }
 
-// CHECK: define void @_ZN18testBaseDestructor1DD2Ev({{.*}}) unnamed_addr #[[ATTR0:.*]] align 2 {
+// CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD2Ev({{.*}}) unnamed_addr #[[ATTR0:.*]] align 2 {
 
-// CHECK: define void @_ZN18testBaseDestructor1DD1Ev({{.*}}) unnamed_addr #[[ATTR1:.*]] align 2 {
+// CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD1Ev({{.*}}) unnamed_addr #[[ATTR1:.*]] align 2 {
 
-// CHECK: define void @_ZN18testBaseDestructor1DD0Ev({{.*}}) unnamed_addr #[[ATTR1]] align 2 {
+// CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD0Ev({{.*}}) unnamed_addr #[[ATTR1]] align 2 {
 
 // rdar://11241230
 namespace test0 {
@@ -29,7 +29,7 @@ namespace test0 {
   A a;
 }
 // CHECK:    define internal void [[CTOR0_:@.*]]()
-// CHECK:      call void @_ZN5test01AC1Ev([[A]]* @_ZN5test01aE)
+// CHECK:      call void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test01aE)
 // CHECK-NEXT: ret void
 
 // CHECK:    define internal void [[CTOR0]]()

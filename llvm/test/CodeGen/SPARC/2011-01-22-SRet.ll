@@ -2,7 +2,7 @@
 
 %struct.foo_t = type { i32, i32, i32 }
 
-define weak void @make_foo(%struct.foo_t* noalias sret %agg.result, i32 %a, i32 %b, i32 %c) nounwind {
+define weak void @make_foo(%struct.foo_t* noalias sret(%struct.foo_t) %agg.result, i32 %a, i32 %b, i32 %c) nounwind {
 entry:
 ;CHECK-LABEL: make_foo:
 ;CHECK: ld [%sp+64], {{.+}}
@@ -23,7 +23,7 @@ entry:
 ;CHECK: st {{.+}}, [%sp+64]
 ;CHECK: unimp 12
   %f = alloca %struct.foo_t, align 8
-  call void @make_foo(%struct.foo_t* noalias sret %f, i32 10, i32 20, i32 30) nounwind
+  call void @make_foo(%struct.foo_t* noalias sret(%struct.foo_t) %f, i32 10, i32 20, i32 30) nounwind
   %0 = getelementptr inbounds %struct.foo_t, %struct.foo_t* %f, i32 0, i32 0
   %1 = load i32, i32* %0, align 8
   %2 = getelementptr inbounds %struct.foo_t, %struct.foo_t* %f, i32 0, i32 1

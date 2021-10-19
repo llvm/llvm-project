@@ -362,6 +362,22 @@ define i33 @fshr_constant_shift_amount_modulo_bitwidth(i33 %x, i33 %y) {
   ret i33 %r
 }
 
+define i32 @fshl_undef_shift_amount(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_undef_shift_amount(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 undef)
+  ret i32 %r
+}
+
+define i33 @fshr_undef_shift_amount(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_undef_shift_amount(
+; CHECK-NEXT:    ret i33 [[Y:%.*]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 undef)
+  ret i33 %r
+}
+
 @external_global = external global i8
 
 define i33 @fshr_constant_shift_amount_modulo_bitwidth_constexpr(i33 %x, i33 %y) {
@@ -400,6 +416,46 @@ define <2 x i31> @fshl_constant_shift_amount_modulo_bitwidth_vec_const_expr(<2 x
   %shamt = ptrtoint i8* @external_global to i31
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 34, i31 ptrtoint (i8* @external_global to i31)>)
   ret <2 x i31> %r
+}
+
+define <2 x i31> @fshl_undef_shift_amount_vec(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_undef_shift_amount_vec(
+; CHECK-NEXT:    ret <2 x i31> [[X:%.*]]
+;
+  %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> undef)
+  ret <2 x i31> %r
+}
+
+define <2 x i32> @fshr_undef_shift_amount_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_undef_shift_amount_vec(
+; CHECK-NEXT:    ret <2 x i32> [[Y:%.*]]
+;
+  %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> undef)
+  ret <2 x i32> %r
+}
+
+; TODO: Don't let SimplifyDemandedBits split up a rotate - keep the same operand.
+
+define i32 @rotl_common_demanded(i32 %a0) {
+; CHECK-LABEL: @rotl_common_demanded(
+; CHECK-NEXT:    [[X:%.*]] = xor i32 [[A0:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[A0]], i32 8)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = xor i32 %a0, 2
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 8)
+  ret i32 %r
+}
+
+define i33 @rotr_common_demanded(i33 %a0) {
+; CHECK-LABEL: @rotr_common_demanded(
+; CHECK-NEXT:    [[X:%.*]] = xor i33 [[A0:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshl.i33(i33 [[X]], i33 [[A0]], i33 25)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %x = xor i33 %a0, 2
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 %x, i33 8)
+  ret i33 %r
 }
 
 ; The shift modulo bitwidth is the same for all vector elements.
@@ -521,15 +577,15 @@ define i33 @fshr_multi_use(i33 %a) {
 
 define i33 @expanded_fshr_multi_use(i33 %a) {
 ; CHECK-LABEL: @expanded_fshr_multi_use(
-; CHECK-NEXT:    [[TMP:%.*]] = lshr i33 [[A:%.*]], 1
-; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[A]], 24
-; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[TMP]]
+; CHECK-NEXT:    [[B:%.*]] = call i33 @llvm.fshl.i33(i33 [[A:%.*]], i33 [[A]], i33 32)
+; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[B]], 23
+; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = and i33 [[D]], 31
 ; CHECK-NEXT:    ret i33 [[E]]
 ;
-  %tmp = lshr i33 %a, 1
-  %tmp2 = shl i33 %a, 32
-  %b = or i33 %tmp, %tmp2
+  %t = lshr i33 %a, 1
+  %t2 = shl i33 %a, 32
+  %b = or i33 %t, %t2
   %c = lshr i33 %b, 23
   %d = xor i33 %c, %b
   %e = and i33 %d, 31
@@ -604,78 +660,78 @@ define i32 @fshl_bswap_wrong_width(i32 %x) {
 
 define i32 @fshl_mask_args_same1(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same1(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[A:%.*]], 16
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[A:%.*]], 16
+; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %tmp1 = and i32 %a, 4294901760 ; 0xffff0000
-  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 16)
-  ret i32 %tmp2
+  %t1 = and i32 %a, 4294901760 ; 0xffff0000
+  %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 16)
+  ret i32 %t2
 }
 
 define i32 @fshl_mask_args_same2(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same2(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 65280
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[A:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], 65280
+; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %tmp1 = and i32 %a, 255
-  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 8)
-  ret i32 %tmp2
+  %t1 = and i32 %a, 255
+  %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 8)
+  ret i32 %t2
 }
 
 define i32 @fshl_mask_args_same3(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_same3(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[A:%.*]], 24
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[A:%.*]], 24
+; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %tmp1 = and i32 %a, 255
-  %tmp2 = call i32 @llvm.fshl.i32(i32 %tmp1, i32 %tmp1, i32 24)
-  ret i32 %tmp2
+  %t1 = and i32 %a, 255
+  %t2 = call i32 @llvm.fshl.i32(i32 %t1, i32 %t1, i32 24)
+  ret i32 %t2
 }
 
 define i32 @fshl_mask_args_different(i32 %a) {
 ; CHECK-LABEL: @fshl_mask_args_different(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], 130560
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[A:%.*]], 15
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T1]], 130560
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
-  %tmp2 = and i32 %a, 4294901760 ; 0xfffff00f
-  %tmp1 = and i32 %a, 4278190080 ; 0xff00f00f
-  %tmp3 = call i32 @llvm.fshl.i32(i32 %tmp2, i32 %tmp1, i32 17)
-  ret i32 %tmp3
+  %t2 = and i32 %a, 4294901760 ; 0xfffff00f
+  %t1 = and i32 %a, 4278190080 ; 0xff00f00f
+  %t3 = call i32 @llvm.fshl.i32(i32 %t2, i32 %t1, i32 17)
+  ret i32 %t3
 }
 
 define <2 x i31> @fshr_mask_args_same_vector(<2 x i31> %a) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector(
-; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i31> [[A:%.*]], <i31 10, i31 10>
-; CHECK-NEXT:    ret <2 x i31> [[TMP3]]
+; CHECK-NEXT:    [[T3:%.*]] = shl <2 x i31> [[A:%.*]], <i31 10, i31 10>
+; CHECK-NEXT:    ret <2 x i31> [[T3]]
 ;
-  %tmp1 = and <2 x i31> %a, <i31 1000, i31 1000>
-  %tmp2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
-  %tmp3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %tmp2, <2 x i31> %tmp1, <2 x i31> <i31 10, i31 10>)
-  ret <2 x i31> %tmp3
+  %t1 = and <2 x i31> %a, <i31 1000, i31 1000>
+  %t2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
+  %t3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %t2, <2 x i31> %t1, <2 x i31> <i31 10, i31 10>)
+  ret <2 x i31> %t3
 }
 
 define <2 x i32> @fshr_mask_args_same_vector2(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector2(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1000000, i32 100000>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr exact <2 x i32> [[TMP1]], <i32 3, i32 3>
-; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1000000, i32 100000>
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact <2 x i32> [[T1]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
-  %tmp1 = and <2 x i32> %a, <i32 1000000, i32 100000>
-  %tmp2 = and <2 x i32> %a, <i32 6442450943, i32 6442450943>
-  %tmp3 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> <i32 3, i32 3>)
-  ret <2 x i32> %tmp3
+  %t1 = and <2 x i32> %a, <i32 1000000, i32 100000>
+  %t2 = and <2 x i32> %a, <i32 6442450943, i32 6442450943>
+  %t3 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %t1, <2 x i32> %t1, <2 x i32> <i32 3, i32 3>)
+  ret <2 x i32> %t3
 }
 
 define <2 x i31> @fshr_mask_args_same_vector3_different_but_still_prunable(<2 x i31> %a) {
 ; CHECK-LABEL: @fshr_mask_args_same_vector3_different_but_still_prunable(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i31> [[A:%.*]], <i31 1000, i31 1000>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[A]], <2 x i31> [[TMP1]], <2 x i31> <i31 10, i31 3>)
-; CHECK-NEXT:    ret <2 x i31> [[TMP3]]
+; CHECK-NEXT:    [[T1:%.*]] = and <2 x i31> [[A:%.*]], <i31 1000, i31 1000>
+; CHECK-NEXT:    [[T3:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[A]], <2 x i31> [[T1]], <2 x i31> <i31 10, i31 3>)
+; CHECK-NEXT:    ret <2 x i31> [[T3]]
 ;
-  %tmp1 = and <2 x i31> %a, <i31 1000, i31 1000>
-  %tmp2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
-  %tmp3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %tmp2, <2 x i31> %tmp1, <2 x i31> <i31 10, i31 3>)
-  ret <2 x i31> %tmp3
+  %t1 = and <2 x i31> %a, <i31 1000, i31 1000>
+  %t2 = and <2 x i31> %a, <i31 6442450943, i31 6442450943>
+  %t3 = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %t2, <2 x i31> %t1, <2 x i31> <i31 10, i31 3>)
+  ret <2 x i31> %t3
 }

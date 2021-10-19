@@ -66,10 +66,10 @@ int CloseProcessPipe(FILE *F);
 const void *SearchMemory(const void *haystack, size_t haystacklen,
                          const void *needle, size_t needlelen);
 
-std::string CloneArgsWithoutX(const Vector<std::string> &Args,
+std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
                               const char *X1, const char *X2);
 
-inline std::string CloneArgsWithoutX(const Vector<std::string> &Args,
+inline std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
                                      const char *X) {
   return CloneArgsWithoutX(Args, X, X);
 }
@@ -88,9 +88,11 @@ std::string DisassembleCmd(const std::string &FileName);
 
 std::string SearchRegexCmd(const std::string &Regex);
 
-size_t SimpleFastHash(const uint8_t *Data, size_t Size);
+uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial = 0);
 
-inline uint32_t Log(uint32_t X) { return 32 - Clz(X) - 1; }
+inline size_t Log(size_t X) {
+  return static_cast<size_t>((sizeof(unsigned long long) * 8) - Clzll(X) - 1);
+}
 
 inline size_t PageSize() { return 4096; }
 inline uint8_t *RoundUpByPage(uint8_t *P) {

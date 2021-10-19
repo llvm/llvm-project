@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1134 A CYCLE statement must be within a DO construct
 !
 ! C1166 An EXIT statement must be within a DO construct

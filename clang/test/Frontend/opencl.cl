@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL2.0 -DSYNTAX
-// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=clc++ -DSYNTAX
+// RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=clc++1.0 -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -fblocks -DBLOCKS -DSYNTAX
@@ -10,6 +10,7 @@
 // RUN: %clang_cc1 -cl-std=CL1.1 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION11 %s
 // RUN: %clang_cc1 -cl-std=CL1.2 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION12 %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION20 %s
+// RUN: %clang_cc1 -cl-std=clc++1.0 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCLCPP-VERSION10 %s
 
 #ifdef SYNTAX
 class test{
@@ -30,6 +31,7 @@ typedef int (^bl_t)(void);
   // expected-error@-6{{blocks support disabled - compile with -fblocks or pick a deployment target that supports them}}
 #endif
 
-// CHECK-INVALID-OPENCL-VERSION11: warning: OpenCL version 1.1 does not support the option '-cl-strict-aliasing'
-// CHECK-INVALID-OPENCL-VERSION12: warning: OpenCL version 1.2 does not support the option '-cl-strict-aliasing'
-// CHECK-INVALID-OPENCL-VERSION20: warning: OpenCL version 2.0 does not support the option '-cl-strict-aliasing'
+// CHECK-INVALID-OPENCL-VERSION11: warning: OpenCL C version 1.1 does not support the option '-cl-strict-aliasing'
+// CHECK-INVALID-OPENCL-VERSION12: warning: OpenCL C version 1.2 does not support the option '-cl-strict-aliasing'
+// CHECK-INVALID-OPENCL-VERSION20: warning: OpenCL C version 2.0 does not support the option '-cl-strict-aliasing'
+// CHECK-INVALID-OPENCLCPP-VERSION10: warning: C++ for OpenCL version 1.0 does not support the option '-cl-strict-aliasing'

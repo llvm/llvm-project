@@ -19,14 +19,15 @@ entry:
   ret void
 }
 
-; CHECK: define void @foo(float* nocapture %a, float* nocapture readonly %c) #0 {
+; CHECK-LABEL: define void @foo(float* nocapture %a, float* nocapture readonly %c) #0 {
 ; CHECK: entry:
-; CHECK:   %0 = load float, float* %c, align 4, !noalias !0
+; CHECK:   call void @llvm.experimental.noalias.scope.decl
+; CHECK:   [[TMP0:%.+]] = load float, float* %c, align 4, !noalias !0
 ; CHECK:   %arrayidx.i = getelementptr inbounds float, float* %a, i64 5
-; CHECK:   store float %0, float* %arrayidx.i, align 4, !alias.scope !0
-; CHECK:   %1 = load float, float* %c, align 4
+; CHECK:   store float [[TMP0]], float* %arrayidx.i, align 4, !alias.scope !0
+; CHECK:   [[TMP1:%.+]] = load float, float* %c, align 4
 ; CHECK:   %arrayidx = getelementptr inbounds float, float* %a, i64 7
-; CHECK:   store float %1, float* %arrayidx, align 4
+; CHECK:   store float [[TMP1]], float* %arrayidx, align 4
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -49,16 +50,18 @@ entry:
   ret void
 }
 
-; CHECK: define void @foo2(float* nocapture %a, float* nocapture %b, float* nocapture readonly %c) #0 {
+; CHECK-LABEL: define void @foo2(float* nocapture %a, float* nocapture %b, float* nocapture readonly %c) #0 {
 ; CHECK: entry:
-; CHECK:   %0 = load float, float* %c, align 4, !noalias !3
+; CHECK:   call void @llvm.experimental.noalias.scope.decl(metadata !3)
+; CHECK:   call void @llvm.experimental.noalias.scope.decl(metadata !6)
+; CHECK:   [[TMP0:%.+]] = load float, float* %c, align 4, !noalias !8
 ; CHECK:   %arrayidx.i = getelementptr inbounds float, float* %a, i64 5
-; CHECK:   store float %0, float* %arrayidx.i, align 4, !alias.scope !7, !noalias !8
+; CHECK:   store float [[TMP0]], float* %arrayidx.i, align 4, !alias.scope !3, !noalias !6
 ; CHECK:   %arrayidx1.i = getelementptr inbounds float, float* %b, i64 8
-; CHECK:   store float %0, float* %arrayidx1.i, align 4, !alias.scope !8, !noalias !7
-; CHECK:   %1 = load float, float* %c, align 4
+; CHECK:   store float [[TMP0]], float* %arrayidx1.i, align 4, !alias.scope !6, !noalias !3
+; CHECK:   [[TMP1:%.+]] = load float, float* %c, align 4
 ; CHECK:   %arrayidx = getelementptr inbounds float, float* %a, i64 7
-; CHECK:   store float %1, float* %arrayidx, align 4
+; CHECK:   store float [[TMP1]], float* %arrayidx, align 4
 ; CHECK:   ret void
 ; CHECK: }
 
@@ -67,10 +70,9 @@ attributes #0 = { nounwind uwtable }
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello: %a"}
 ; CHECK: !2 = distinct !{!2, !"hello"}
-; CHECK: !3 = !{!4, !6}
+; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !5, !"hello2: %a"}
 ; CHECK: !5 = distinct !{!5, !"hello2"}
-; CHECK: !6 = distinct !{!6, !5, !"hello2: %b"}
-; CHECK: !7 = !{!4}
-; CHECK: !8 = !{!6}
-
+; CHECK: !6 = !{!7}
+; CHECK: !7 = distinct !{!7, !5, !"hello2: %b"}
+; CHECK: !8 = !{!4, !7}

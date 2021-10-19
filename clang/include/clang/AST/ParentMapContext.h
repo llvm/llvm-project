@@ -64,9 +64,10 @@ public:
   Expr *traverseIgnored(Expr *E) const;
   DynTypedNode traverseIgnored(const DynTypedNode &N) const;
 
+  class ParentMap;
+
 private:
   ASTContext &ASTCtx;
-  class ParentMap;
   TraversalKind Traversal = TK_AsIs;
   std::unique_ptr<ParentMap> Parents;
 };
@@ -94,25 +95,24 @@ class DynTypedNodeList {
 
 public:
   DynTypedNodeList(const DynTypedNode &N) : IsSingleNode(true) {
-    new (Storage.buffer) DynTypedNode(N);
+    new (&Storage) DynTypedNode(N);
   }
 
   DynTypedNodeList(ArrayRef<DynTypedNode> A) : IsSingleNode(false) {
-    new (Storage.buffer) ArrayRef<DynTypedNode>(A);
+    new (&Storage) ArrayRef<DynTypedNode>(A);
   }
 
   const DynTypedNode *begin() const {
     if (!IsSingleNode)
-      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(Storage.buffer)
+      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(&Storage)
           ->begin();
-    return reinterpret_cast<const DynTypedNode *>(Storage.buffer);
+    return reinterpret_cast<const DynTypedNode *>(&Storage);
   }
 
   const DynTypedNode *end() const {
     if (!IsSingleNode)
-      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(Storage.buffer)
-          ->end();
-    return reinterpret_cast<const DynTypedNode *>(Storage.buffer) + 1;
+      return reinterpret_cast<const ArrayRef<DynTypedNode> *>(&Storage)->end();
+    return reinterpret_cast<const DynTypedNode *>(&Storage) + 1;
   }
 
   size_t size() const { return end() - begin(); }

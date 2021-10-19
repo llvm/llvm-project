@@ -29,24 +29,34 @@ above.
 
 
 Getting Started with libc++
----------------------------
+===========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    ReleaseNotes
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
+   Contributing
+   Status/Cxx14
+   Status/Cxx17
+   Status/Cxx20
+   Status/Cxx2b
+   Status/Format
+   Status/Ranges
+   Status/Spaceship
 
 
 .. toctree::
     :hidden:
 
+    AddingNewCIJobs
     FeatureTestMacroTable
 
+
 Current Status
---------------
+==============
 
 After its initial introduction, many people have asked "why start a new
 library instead of contributing to an existing library?" (like Apache's
@@ -82,61 +92,60 @@ reasons, but some of the major ones are:
   Further, both projects are apparently abandoned: STLport 5.2.1 was
   released in Oct'08, and STDCXX 4.2.1 in May'08.
 
+
 Platform and Compiler Support
------------------------------
+=============================
 
-For using the libc++ headers
-############################
-The libc++ headers are known to work on the following platforms, using GCC and
-Clang. Note that functionality provided by ``<atomic>`` is only functional with
-Clang and GCC.
+Libc++ aims to support common compilers that implement the C++11 Standard. In order to strike a
+good balance between stability for users and maintenance cost, testing coverage and development
+velocity, libc++ drops support for older compilers as newer ones are released.
 
-============ ==================== ============
-OS           Arch                 Compilers
-============ ==================== ============
-macOS 10.9+  i386, x86_64         Clang, GCC
-FreeBSD 10+  i386, x86_64, ARM    Clang, GCC
-Linux        i386, x86_64         Clang, GCC
-============ ==================== ============
+============ =============== ========================== =====================
+Compiler     Versions        Restrictions               Support policy
+============ =============== ========================== =====================
+Clang        11, 12                                     latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_
+AppleClang   12                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+GCC          11              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+============ =============== ========================== =====================
 
-The following minimum compiler versions are required:
+Libc++ also supports common platforms and architectures:
 
-* Clang 4.0 and above
-* GCC 5.0 and above.
+=============== ========================= ============================
+Target platform Target architecture       Notes
+=============== ========================= ============================
+macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
+FreeBSD 10+     i386, x86_64, arm
+Linux           i386, x86_64, arm, arm64
+Windows         x86_64
+=============== ========================= ============================
 
-The C++03 dialect is only supported with Clang.
+Generally speaking, libc++ should work on any platform that provides a fairly complete
+C Standard Library. It is also possible to turn off parts of the library for use on
+systems that provide incomplete support.
 
-For building the libc++ library
-###############################
-Building the libc++ library (static or shared) requires some features from
-the operating system. As such, it has its own set of (slightly different)
-system requirements.
-
-============ ==================== ============ ========================
-OS           Arch                 Compilers    ABI Library
-============ ==================== ============ ========================
-macOS 10.12+ i386, x86_64         Clang, GCC   libc++abi
-FreeBSD 10+  i386, x86_64, ARM    Clang, GCC   libcxxrt, libc++abi
-Linux        i386, x86_64         Clang, GCC   libc++abi
-============ ==================== ============ ========================
-
-The following minimum compiler versions are required:
-
-* Clang 4.0 and above
-* GCC 5.0 and above.
+However, libc++ aims to provide a high-quality implementation of the C++ Standard
+Library, especially when it comes to correctness. As such, we aim to have test coverage
+for all the platforms and compilers that we claim to support. If a platform or compiler
+is not listed here, it is not officially supported. It may happen to work, and
+in practice the library is known to work on some platforms not listed here, but
+we don't make any guarantees. If you would like your compiler and/or platform
+to be formally supported and listed here, please work with the libc++ team to set
+up testing for your configuration.
 
 
 C++ Dialect Support
----------------------
+===================
 
 * C++11 - Complete
-* `C++14 - Complete <http://libcxx.llvm.org/cxx1y_status.html>`__
-* `C++17 - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
-* `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
+* :ref:`C++14 - Complete <cxx14-status>`
+* :ref:`C++17 - In Progress <cxx17-status>`
+* :ref:`C++20 - In Progress <cxx20-status>`
+* :ref:`C++2b - In Progress <cxx2b-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
+
 Notes and Known Issues
-----------------------
+======================
 
 This list contains known issues with libc++
 
@@ -148,37 +157,34 @@ A full list of currently open libc++ bugs can be `found here`__.
 
 .. __:  https://bugs.llvm.org/buglist.cgi?component=All%20Bugs&product=libc%2B%2B&query_format=advanced&resolution=---&order=changeddate%20DESC%2Cassigned_to%20DESC%2Cbug_status%2Cpriority%2Cbug_id&list_id=74184
 
+
 Design Documents
-----------------
+================
 
 .. toctree::
    :maxdepth: 1
 
-   DesignDocs/AvailabilityMarkup
-   DesignDocs/DebugMode
-   DesignDocs/CapturingConfigInfo
    DesignDocs/ABIVersioning
+   DesignDocs/AtomicDesign
+   DesignDocs/CapturingConfigInfo
+   DesignDocs/DebugMode
    DesignDocs/ExperimentalFeatures
-   DesignDocs/VisibilityMacros
-   DesignDocs/ThreadingSupportAPI
-   DesignDocs/FileTimeType
-   DesignDocs/FeatureTestMacros
    DesignDocs/ExtendedCXX03Support
+   DesignDocs/FeatureTestMacros
+   DesignDocs/FileTimeType
+   DesignDocs/NoexceptPolicy
+   DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
+   DesignDocs/VisibilityMacros
 
-* `<atomic> design <http://libcxx.llvm.org/atomic_design.html>`_
-* `<type_traits> design <http://libcxx.llvm.org/type_traits_design.html>`_
-* `Notes by Marshall Clow`__
-
-.. __: https://cplusplusmusings.wordpress.com/2012/07/05/clang-and-standard-libraries-on-mac-os-x/
 
 Build Bots and Test Coverage
-----------------------------
+============================
 
-* `LLVM Buildbot Builders <http://lab.llvm.org:8011/console>`_
-* `Apple Jenkins Builders <http://lab.llvm.org:8080/green/view/Libcxx/>`_
-* `Windows Appveyor Builders <https://ci.appveyor.com/project/llvm-mirror/libcxx>`_
-* `Code Coverage Results <http://efcs.ca/libcxx-coverage>`_
+* `Buildkite CI pipeline <https://buildkite.com/llvm-project/libcxx-ci>`_
+* `LLVM Buildbot Builders <http://lab.llvm.org:8011>`_
+* :ref:`Adding New CI Jobs <AddingNewCIJobs>`
+
 
 Getting Involved
 ================
@@ -204,7 +210,6 @@ Send discussions and questions to the
 `libcxx-dev mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-dev>`_.
 
 
-
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
@@ -212,4 +217,4 @@ Quick Links
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
 * `libcxx-commits Mailing List`_
 * `libcxx-dev Mailing List`_
-* `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/master/libcxx/>`_
+* `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

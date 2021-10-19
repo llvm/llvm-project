@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -relocation-model=static < %s | FileCheck %s --check-prefix=CHECK
 ; RUN: llc -mcpu=atom -mtriple=x86_64-unknown-linux-gnu -relocation-model=static < %s | FileCheck %s --check-prefix=ATOM
 
-@A = external global [0 x double]
+@A = external dso_local global [0 x double]
 
 define void @foo(i64 %n) nounwind {
 ; CHECK-LABEL: foo:

@@ -160,8 +160,8 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
     auto It = iterator(Token(Token::Kind::ProximityURI, ParentURI));
     if (It->kind() != Iterator::Kind::False) {
       PathProximitySignals.SymbolURI = ParentURI;
-      BoostingIterators.push_back(
-          Corpus.boost(std::move(It), PathProximitySignals.evaluate()));
+      BoostingIterators.push_back(Corpus.boost(
+          std::move(It), PathProximitySignals.evaluateHeuristics()));
     }
   }
   BoostingIterators.push_back(Corpus.all());
@@ -174,7 +174,7 @@ Dex::createTypeBoostingIterator(llvm::ArrayRef<std::string> Types) const {
   std::vector<std::unique_ptr<Iterator>> BoostingIterators;
   SymbolRelevanceSignals PreferredTypeSignals;
   PreferredTypeSignals.TypeMatchesPreferred = true;
-  auto Boost = PreferredTypeSignals.evaluate();
+  auto Boost = PreferredTypeSignals.evaluateHeuristics();
   for (const auto &T : Types)
     BoostingIterators.push_back(
         Corpus.boost(iterator(Token(Token::Kind::Type, T)), Boost));
@@ -311,6 +311,13 @@ void Dex::relations(
     }
     lookup(LookupReq, [&](const Symbol &Object) { Callback(Subject, Object); });
   }
+}
+
+llvm::unique_function<IndexContents(llvm::StringRef) const>
+Dex::indexedFiles() const {
+  return [this](llvm::StringRef FileURI) {
+    return Files.contains(FileURI) ? IdxContents : IndexContents::None;
+  };
 }
 
 size_t Dex::estimateMemoryUsage() const {

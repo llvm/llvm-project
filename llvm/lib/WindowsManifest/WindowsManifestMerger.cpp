@@ -16,7 +16,7 @@
 
 #include <map>
 
-#if LLVM_LIBXML2_ENABLED
+#if LLVM_ENABLE_LIBXML2
 #include <libxml/xmlreader.h>
 #endif
 
@@ -35,13 +35,13 @@ void WindowsManifestError::log(raw_ostream &OS) const { OS << Msg; }
 class WindowsManifestMerger::WindowsManifestMergerImpl {
 public:
   ~WindowsManifestMergerImpl();
-  Error merge(const MemoryBuffer &Manifest);
+  Error merge(MemoryBufferRef Manifest);
   std::unique_ptr<MemoryBuffer> getMergedManifest();
 
 private:
   static void errorCallback(void *Ctx, const char *Format, ...);
   Error getParseError();
-#if LLVM_LIBXML2_ENABLED
+#if LLVM_ENABLE_LIBXML2
   xmlDocPtr CombinedDoc = nullptr;
   std::vector<xmlDocPtr> MergedDocs;
 
@@ -56,7 +56,7 @@ private:
   bool ParseErrorOccurred = false;
 };
 
-#if LLVM_LIBXML2_ENABLED
+#if LLVM_ENABLE_LIBXML2
 
 static constexpr std::pair<StringLiteral, StringLiteral> MtNsHrefsPrefixes[] = {
     {"urn:schemas-microsoft-com:asm.v1", "ms_asmv1"},
@@ -620,7 +620,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 }
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
-    const MemoryBuffer &Manifest) {
+    MemoryBufferRef Manifest) {
   if (Merged)
     return make_error<WindowsManifestError>(
         "merge after getMergedManifest is not supported");
@@ -690,7 +690,7 @@ WindowsManifestMerger::WindowsManifestMergerImpl::~WindowsManifestMergerImpl() {
 }
 
 Error WindowsManifestMerger::WindowsManifestMergerImpl::merge(
-    const MemoryBuffer &Manifest) {
+    MemoryBufferRef Manifest) {
   return make_error<WindowsManifestError>("no libxml2");
 }
 
@@ -708,7 +708,7 @@ WindowsManifestMerger::WindowsManifestMerger()
 
 WindowsManifestMerger::~WindowsManifestMerger() {}
 
-Error WindowsManifestMerger::merge(const MemoryBuffer &Manifest) {
+Error WindowsManifestMerger::merge(MemoryBufferRef Manifest) {
   return Impl->merge(Manifest);
 }
 

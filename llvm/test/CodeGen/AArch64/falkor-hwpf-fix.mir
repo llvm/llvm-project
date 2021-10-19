@@ -12,7 +12,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $w2 = LDRWui $x1, 0 :: ("aarch64-strided-access" load 4)
+    $w2 = LDRWui $x1, 0 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 1
 
     $w0 = SUBWri $w0, 1, 0
@@ -33,7 +33,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $q2
 
-    $q2 = LD1i64 $q2, 0, $x1 :: ("aarch64-strided-access" load 4)
+    $q2 = LD1i64 $q2, 0, $x1 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -54,7 +54,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $q2
 
-    $q2 = LD1i8 $q2, 0, $x1 :: ("aarch64-strided-access" load 4)
+    $q2 = LD1i8 $q2, 0, $x1 :: ("aarch64-strided-access" load (s32))
     $w0 = LDRWui $x1, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -75,7 +75,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $d2 = LD1Onev1d $x1 :: ("aarch64-strided-access" load 4)
+    $d2 = LD1Onev1d $x1 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -96,7 +96,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $d2_d3 = LD1Twov1d $x1 :: ("aarch64-strided-access" load 4)
+    $d2_d3 = LD1Twov1d $x1 :: ("aarch64-strided-access" load (s32))
     $w0 = LDRWui $x1, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -117,7 +117,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $q2, $q3 = LDPQi $x1, 3 :: ("aarch64-strided-access" load 4)
+    $q2, $q3 = LDPQi $x1, 3 :: ("aarch64-strided-access" load (s32))
     $w0 = LDRWui $x1, 3
 
     $w0 = SUBWri $w0, 1, 0
@@ -138,7 +138,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $x2, $x3 = LDPXi $x1, 3 :: ("aarch64-strided-access" load 4)
+    $x2, $x3 = LDPXi $x1, 3 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 2
 
     $w0 = SUBWri $w0, 1, 0
@@ -163,7 +163,7 @@ body: |
   bb.0:
     liveins: $w0, $x1
 
-    $x1, $w2 = LDRWpost $x1, 0 :: ("aarch64-strided-access" load 4)
+    $x1, $w2 = LDRWpost $x1, 0 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 1
 
     $w0 = SUBWri $w0, 1, 0
@@ -185,7 +185,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $q2
 
-    $x1, $q2 = LD1i64_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load 4)
+    $x1, $q2 = LD1i64_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 132
 
     $w0 = SUBWri $w0, 1, 0
@@ -207,7 +207,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $q2
 
-    $x1, $q2 = LD1i8_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load 4)
+    $x1, $q2 = LD1i8_POST $q2, 0, $x1, $x1 :: ("aarch64-strided-access" load (s32))
     $w0 = LDRWui $x1, 132
 
     $w0 = SUBWri $w0, 1, 0
@@ -229,7 +229,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $q2
 
-    $x1, $d2 = LD1Rv1d_POST $x1, $xzr :: ("aarch64-strided-access" load 4)
+    $x1, $d2 = LD1Rv1d_POST $x1, $xzr :: ("aarch64-strided-access" load (s32))
     $w2 = LDRWui $x1, 252
 
     $w0 = SUBWri $w0, 1, 0
@@ -251,7 +251,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
 
-    $x1, $d2_d3_d4 = LD3Threev2s_POST $x1, $x0 :: ("aarch64-strided-access" load 4)
+    $x1, $d2_d3_d4 = LD3Threev2s_POST $x1, $x0 :: ("aarch64-strided-access" load (s32))
     $w0 = LDRWroX $x17, $x0, 0, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -273,7 +273,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
 
-    $x1, $d2, $d3 = LDPDpost $x1, 3 :: ("aarch64-strided-access" load 4)
+    $x1, $d2, $d3 = LDPDpost $x1, 3 :: ("aarch64-strided-access" load (s32))
     $w16 = LDRWui $x17, 2
 
     $w0 = SUBWri $w0, 1, 0
@@ -295,7 +295,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $x17, $q2
 
-    $x1, $x2, $x3 = LDPXpost $x1, 3 :: ("aarch64-strided-access" load 4)
+    $x1, $x2, $x3 = LDPXpost $x1, 3 :: ("aarch64-strided-access" load (s32))
     $w18 = LDRWui $x17, 2
 
     $w0 = SUBWri $w0, 1, 0
@@ -319,9 +319,9 @@ body: |
   bb.0:
     liveins: $w0, $x1, $x17
 
-    $w1 = LDARW $x1 :: ("aarch64-strided-access" load 4)
-    $w1 = LDRWui $x1, 0 :: ("aarch64-strided-access" load 4)
-    $w17 = LDRWui $x17, 0 :: ("aarch64-strided-access" load 4)
+    $w1 = LDARW $x1 :: ("aarch64-strided-access" load (s32))
+    $w1 = LDRWui $x1, 0 :: ("aarch64-strided-access" load (s32))
+    $w17 = LDRWui $x17, 0 :: ("aarch64-strided-access" load (s32))
 
     $w0 = SUBWri $w0, 1, 0
     $wzr = SUBSWri $w0, 0, 0, implicit-def $nzcv
@@ -343,7 +343,7 @@ body: |
   bb.0:
     liveins: $w0, $x15
 
-    $w1 = LDRWui $x15, 0 :: ("aarch64-strided-access" load 4)
+    $w1 = LDRWui $x15, 0 :: ("aarch64-strided-access" load (s32))
     $w17 = LDRWui $sp, 0
 
     $w0 = SUBWri $w0, 1, 0
@@ -366,7 +366,7 @@ body: |
   bb.0:
     liveins: $w0, $x1, $x2, $x17, $x18
 
-    $w10 = LDRWroX $x1, $x2, 0, 0 :: ("aarch64-strided-access" load 4)
+    $w10 = LDRWroX $x1, $x2, 0, 0 :: ("aarch64-strided-access" load (s32))
 
     $x2 = ORRXrs $xzr, $x10, 0
     $w26 = LDRWroX $x1, $x2, 0, 0

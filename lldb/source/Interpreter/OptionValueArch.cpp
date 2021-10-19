@@ -64,10 +64,6 @@ Status OptionValueArch::SetValueFromString(llvm::StringRef value,
   return error;
 }
 
-lldb::OptionValueSP OptionValueArch::DeepCopy() const {
-  return OptionValueSP(new OptionValueArch(*this));
-}
-
 void OptionValueArch::AutoComplete(CommandInterpreter &interpreter,
                                    CompletionRequest &request) {
   CommandCompletions::InvokeCommonCompletionCallbacks(

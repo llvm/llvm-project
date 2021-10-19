@@ -691,11 +691,10 @@ void ClangMoveTool::addIncludes(llvm::StringRef IncludeHeader, bool IsAngled,
                                 llvm::StringRef FileName,
                                 CharSourceRange IncludeFilenameRange,
                                 const SourceManager &SM) {
-  SmallVector<char, 128> HeaderWithSearchPath;
+  SmallString<128> HeaderWithSearchPath;
   llvm::sys::path::append(HeaderWithSearchPath, SearchPath, IncludeHeader);
   std::string AbsoluteIncludeHeader =
-      MakeAbsolutePath(SM, llvm::StringRef(HeaderWithSearchPath.data(),
-                                           HeaderWithSearchPath.size()));
+      MakeAbsolutePath(SM, HeaderWithSearchPath);
   std::string IncludeLine =
       IsAngled ? ("#include <" + IncludeHeader + ">\n").str()
                : ("#include \"" + IncludeHeader + "\"\n").str();

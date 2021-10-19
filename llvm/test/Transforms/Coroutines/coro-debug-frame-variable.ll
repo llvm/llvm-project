@@ -1,4 +1,3 @@
-; RUN: opt < %s -O0 -enable-coroutines -S | FileCheck %s
 ; RUN: opt < %s -passes='default<O0>' -enable-coroutines -S | FileCheck %s
 
 ; Define a function 'f' that resembles the Clang frontend's output for the
@@ -7,15 +6,19 @@
 ;   void foo() {
 ;     int i = 0;
 ;     ++i;
+;     int x = {};
 ;     print(i);  // Prints '1'
 ;
 ;     co_await suspend_always();
 ;
 ;     int j = 0;
+;     x[0] = 1;
+;     x[1] = 2;
 ;     ++i;
 ;     print(i);  // Prints '2'
 ;     ++j;
 ;     print(j);  // Prints '1'
+;     print(x);  // Print '1'
 ;   }
 ;
 ; The CHECKs verify that dbg.declare intrinsics are created for the coroutine
@@ -25,29 +28,38 @@
 ; ones with identical line and column numbers.
 ;
 ; CHECK-LABEL: define void @f() {
-; CHECK:       init.ready:
+; CHECK:       entry:
+; CHECK:         %j = alloca i32, align 4
 ; CHECK:         [[IGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
+; CHECK:         [[XGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 6
+; CHECK:       init.ready:
 ; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP]], metadata ![[IVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC:[0-9]+]]
+; CHECK:         call void @llvm.dbg.declare(metadata [10 x i32]* [[XGEP]], metadata ![[XVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC]]
 ; CHECK:       await.ready:
-; CHECK:         [[JGEP:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP]], metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
+; CHECK:         call void @llvm.dbg.declare(metadata i32* %j, metadata ![[JVAR:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC:[0-9]+]]
 ;
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}}) {
+; CHECK:       entry.resume:
+; CHECK-NEXT:    %[[DBG_PTR:.*]] = alloca %f.Frame*
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[XVAR_RESUME:[0-9]+]],   metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 32)), !dbg
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata %f.Frame** %[[DBG_PTR]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 20)), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
+; CHECK-NEXT:    store %f.Frame* {{.*}}, %f.Frame** %[[DBG_PTR]]
+; CHECK:         %[[J:.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata i32* %[[J]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       init.ready:
-; CHECK:         [[IGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 4
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[IGEP_RESUME]], metadata ![[IVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[IDBGLOC_RESUME:[0-9]+]]
 ; CHECK:       await.ready:
-; CHECK:         [[JGEP_RESUME:%.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 5
-; CHECK:         call void @llvm.dbg.declare(metadata i32* [[JGEP_RESUME]], metadata ![[JVAR_RESUME:[0-9]+]], metadata !DIExpression()), !dbg ![[JDBGLOC_RESUME:[0-9]+]]
 ;
 ; CHECK: ![[IVAR]] = !DILocalVariable(name: "i"
 ; CHECK: ![[SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
 ; CHECK: ![[IDBGLOC]] = !DILocation(line: 24, column: 7, scope: ![[SCOPE]])
+; CHECK: ![[XVAR]] = !DILocalVariable(name: "x"
 ; CHECK: ![[JVAR]] = !DILocalVariable(name: "j"
 ; CHECK: ![[JDBGLOC]] = !DILocation(line: 32, column: 7, scope: ![[SCOPE]])
+
+; CHECK: ![[XVAR_RESUME]] = !DILocalVariable(name: "x"
+; CHECK: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE:[0-9]+]])
+; CHECK: ![[RESUME_SCOPE]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
-; CHECK: ![[RESUME_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
-; CHECK: ![[IDBGLOC_RESUME]] = !DILocation(line: 24, column: 7, scope: ![[RESUME_SCOPE]])
 ; CHECK: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
 ; CHECK: ![[JDBGLOC_RESUME]] = !DILocation(line: 32, column: 7, scope: ![[RESUME_SCOPE]])
 define void @f() {
@@ -55,6 +67,7 @@ entry:
   %__promise = alloca i8, align 8
   %i = alloca i32, align 4
   %j = alloca i32, align 4
+  %x = alloca [10 x i32], align 16
   %id = call token @llvm.coro.id(i32 16, i8* %__promise, i8* null, i8* null)
   %alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %alloc, label %coro.alloc, label %coro.init
@@ -89,6 +102,9 @@ init.ready:                                       ; preds = %init.suspend, %coro
   %i.init.ready.load = load i32, i32* %i, align 4
   %i.init.ready.inc = add nsw i32 %i.init.ready.load, 1
   store i32 %i.init.ready.inc, i32* %i, align 4
+  call void @llvm.dbg.declare(metadata [10 x i32]* %x, metadata !14, metadata !DIExpression()), !dbg !11
+  %memset = bitcast [10 x i32]* %x to i8*, !dbg !11
+  call void @llvm.memset.p0i8.i64(i8* align 16 %memset, i8 0, i64 40, i1 false), !dbg !11
   %i.init.ready.reload = load i32, i32* %i, align 4
   call void @print(i32 %i.init.ready.reload)
   %ready.again = call zeroext i1 @await_ready()
@@ -111,6 +127,10 @@ await.ready:                                      ; preds = %await.suspend, %ini
   call void @await_resume()
   call void @llvm.dbg.declare(metadata i32* %j, metadata !12, metadata !DIExpression()), !dbg !13
   store i32 0, i32* %j, align 4
+  %arrayidx0 = getelementptr inbounds [10 x i32], [10 x i32]* %x, i64 0, i64 0, !dbg !18
+  store i32 1, i32* %arrayidx0, align 16, !dbg !19
+  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* %x, i64 0, i64 1, !dbg !20
+  store i32 2, i32* %arrayidx1, align 4, !dbg !21
   %i.await.ready.load = load i32, i32* %i, align 4
   %i.await.ready.inc = add nsw i32 %i.await.ready.load, 1
   store i32 %i.await.ready.inc, i32* %i, align 4
@@ -193,6 +213,8 @@ declare i8* @from_address(i8*)
 declare void @return_void()
 declare void @final_suspend()
 
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+
 !llvm.dbg.cu = !{!0}
 !llvm.linker.options = !{}
 !llvm.module.flags = !{!3, !4}
@@ -212,3 +234,12 @@ declare void @final_suspend()
 !11 = !DILocation(line: 24, column: 7, scope: !7)
 !12 = !DILocalVariable(name: "j", scope: !7, file: !1, line: 32, type: !10)
 !13 = !DILocation(line: 32, column: 7, scope: !7)
+!14 = !DILocalVariable(name: "x", scope: !22, file: !1, line: 34, type: !15)
+!15 = !DICompositeType(tag: DW_TAG_array_type, baseType: !10, size: 320, elements: !16)
+!16 = !{!17}
+!17 = !DISubrange(count: 10)
+!18 = !DILocation(line: 42, column: 3, scope: !7)
+!19 = !DILocation(line: 42, column: 8, scope: !7)
+!20 = !DILocation(line: 43, column: 3, scope: !7)
+!21 = !DILocation(line: 43, column: 8, scope: !7)
+!22 = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)

@@ -50,7 +50,7 @@ public:
   TestingRegistry();
 };
 
-static llvm::Optional<TestingRegistry> g_registry;
+static std::unique_ptr<TestingRegistry> g_registry;
 static llvm::Optional<Serializer> g_serializer;
 static llvm::Optional<Deserializer> g_deserializer;
 
@@ -75,13 +75,13 @@ inline TestInstrumentationData GetTestInstrumentationData() {
 class TestInstrumentationDataRAII {
 public:
   TestInstrumentationDataRAII(llvm::raw_string_ostream &os) {
-    g_registry.emplace();
+    g_registry = std::make_unique<TestingRegistry>();
     g_serializer.emplace(os);
     g_deserializer.reset();
   }
 
   TestInstrumentationDataRAII(llvm::StringRef buffer) {
-    g_registry.emplace();
+    g_registry = std::make_unique<TestingRegistry>();
     g_serializer.reset();
     g_deserializer.emplace(buffer);
   }
@@ -576,8 +576,11 @@ TEST(SerializationRountripTest, SerializeDeserializeObjectPointer) {
   std::string str;
   llvm::raw_string_ostream os(str);
 
+  unsigned sequence = 123;
+
   Serializer serializer(os);
-  serializer.SerializeAll(static_cast<unsigned>(1), static_cast<unsigned>(2));
+  serializer.SerializeAll(sequence, static_cast<unsigned>(1));
+  serializer.SerializeAll(sequence, static_cast<unsigned>(2));
   serializer.SerializeAll(&foo, &bar);
 
   llvm::StringRef buffer(os.str());
@@ -597,8 +600,11 @@ TEST(SerializationRountripTest, SerializeDeserializeObjectReference) {
   std::string str;
   llvm::raw_string_ostream os(str);
 
+  unsigned sequence = 123;
+
   Serializer serializer(os);
-  serializer.SerializeAll(static_cast<unsigned>(1), static_cast<unsigned>(2));
+  serializer.SerializeAll(sequence, static_cast<unsigned>(1));
+  serializer.SerializeAll(sequence, static_cast<unsigned>(2));
   serializer.SerializeAll(foo, bar);
 
   llvm::StringRef buffer(os.str());
@@ -1113,4 +1119,49 @@ TEST(PassiveReplayTest, InstrumentedBarPtr) {
     bar.SetInstrumentedFoo(&foo);
     bar.Validate();
   }
+}
+
+TEST(RecordReplayTest, ValidSequence) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    unsigned sequence = 1;
+    int (*f)() = &lldb_private::repro::invoke<int (*)()>::method<
+        InstrumentedFoo::F>::record;
+    unsigned id = g_registry->GetID(uintptr_t(f));
+    g_serializer->SerializeAll(sequence, id);
+
+    unsigned result = 0;
+    g_serializer->SerializeAll(sequence, result);
+  }
+
+  TestingRegistry registry;
+  Deserializer deserializer(os.str());
+  registry.Replay(deserializer);
+}
+
+TEST(RecordReplayTest, InvalidSequence) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  {
+    auto data = TestInstrumentationDataRAII::GetRecordingData(os);
+
+    unsigned sequence = 1;
+    int (*f)() = &lldb_private::repro::invoke<int (*)()>::method<
+        InstrumentedFoo::F>::record;
+    unsigned id = g_registry->GetID(uintptr_t(f));
+    g_serializer->SerializeAll(sequence, id);
+
+    unsigned result = 0;
+    unsigned invalid_sequence = 2;
+    g_serializer->SerializeAll(invalid_sequence, result);
+  }
+
+  TestingRegistry registry;
+  Deserializer deserializer(os.str());
+  EXPECT_DEATH(registry.Replay(deserializer), "");
 }

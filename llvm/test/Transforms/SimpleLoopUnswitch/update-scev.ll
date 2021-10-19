@@ -1,5 +1,5 @@
-; RUN: opt -passes='print<scalar-evolution>,loop(unswitch<nontrivial>,loop-instsimplify),print<scalar-evolution>' -S < %s 2>%t.scev | FileCheck %s
-; RUN: opt -verify-memoryssa -passes='print<scalar-evolution>,loop-mssa(unswitch<nontrivial>,loop-instsimplify),print<scalar-evolution>' -S < %s 2>%t.scev | FileCheck %s
+; RUN: opt -passes='print<scalar-evolution>,loop(simple-loop-unswitch<nontrivial>,loop-instsimplify),print<scalar-evolution>' -S < %s 2>%t.scev | FileCheck %s
+; RUN: opt -verify-memoryssa -passes='print<scalar-evolution>,loop-mssa(simple-loop-unswitch<nontrivial>,loop-instsimplify),print<scalar-evolution>' -S < %s 2>%t.scev | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=SCEV < %t.scev
 
 target triple = "x86_64-unknown-linux-gnu"

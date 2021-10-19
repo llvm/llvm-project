@@ -1,10 +1,15 @@
-; RUN: opt -S -passes=openmpopt -aa-pipeline=basic-aa -openmp-hide-memory-transfer-latency -debug-only=openmp-opt < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=openmp-opt-cgscc -aa-pipeline=basic-aa -openmp-hide-memory-transfer-latency -debug-only=openmp-opt < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 @.__omp_offloading_heavyComputation.region_id = weak constant i8 0
 @.offload_maptypes. = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
+
+%struct.ident_t = type { i32, i32, i32, i32, i8* }
+
+@.str = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
+@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0) }, align 8
 
 ; CHECK-LABEL: {{[^@]+}}Successfully got offload values:
 ; CHECK-NEXT: offload_baseptrs: double* %a ---   %size.addr = alloca i32, align 4 ---
@@ -55,13 +60,18 @@ entry:
   store i32* %size.addr, i32** %9, align 8
   %10 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 1
   store i64 4, i64* %10, align 8
-  call void @__tgt_target_data_begin_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null)
+  call void @__tgt_target_data_begin_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null, i8** null)
   %rem = srem i32 %call, 7
-  call void @__tgt_target_data_end_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null)
+  call void @__tgt_target_data_end_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null, i8** null)
   ret i32 %rem
 }
 
-declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
-declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
+declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 declare dso_local i32 @rand(...)
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 7, !"openmp", i32 50}
+

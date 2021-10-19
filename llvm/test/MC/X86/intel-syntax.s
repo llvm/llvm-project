@@ -66,6 +66,12 @@ main:
   ljmp [rax]
 // CHECK: jmp _foo
   jmp short _foo
+// CHECK: jb _foo
+  jc short _foo
+// CHECK: jae _foo
+  jnc short _foo
+// CHECK: jecxz _foo
+  jecxz short _foo
 // CHECK: jp _foo
   jpe short _foo
 

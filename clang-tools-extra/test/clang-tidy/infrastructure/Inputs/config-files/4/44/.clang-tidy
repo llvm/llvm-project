@@ -4,6 +4,6 @@ CheckOptions:
   - key:             modernize-loop-convert.MaxCopySize
     value:           '20'
   - key:             llvm-qualified-auto.AddConstToQualified
-    value:           '1'
+    value:           'true'
   - key:             IgnoreMacros
-    value:           '0'
+    value:           'false'

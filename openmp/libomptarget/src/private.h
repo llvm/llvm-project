@@ -13,40 +13,41 @@
 #ifndef _OMPTARGET_PRIVATE_H
 #define _OMPTARGET_PRIVATE_H
 
+#include "device.h"
+#include <Debug.h>
+#include <SourceInfo.h>
 #include <omptarget.h>
 
 #include <cstdint>
 
-extern int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
-                           void **args, int64_t *arg_sizes, int64_t *arg_types,
-                           void **arg_mappers,
-                           __tgt_async_info *async_info_ptr);
+extern int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
+                           void **args_base, void **args, int64_t *arg_sizes,
+                           int64_t *arg_types, map_var_info_t *arg_names,
+                           void **arg_mappers, AsyncInfoTy &AsyncInfo,
+                           bool FromMapper = false);
 
-extern int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
-                         void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-                         void **ArgMappers, __tgt_async_info *AsyncInfo);
+extern int targetDataEnd(ident_t *loc, DeviceTy &Device, int32_t ArgNum,
+                         void **ArgBases, void **Args, int64_t *ArgSizes,
+                         int64_t *ArgTypes, map_var_info_t *arg_names,
+                         void **ArgMappers, AsyncInfoTy &AsyncInfo,
+                         bool FromMapper = false);
 
-extern int target_data_update(DeviceTy &Device, int32_t arg_num,
-                              void **args_base, void **args,
-                              int64_t *arg_sizes, int64_t *arg_types,
-                              void **arg_mappers,
-                              __tgt_async_info *async_info_ptr = nullptr);
+extern int targetDataUpdate(ident_t *loc, DeviceTy &Device, int32_t arg_num,
+                            void **args_base, void **args, int64_t *arg_sizes,
+                            int64_t *arg_types, map_var_info_t *arg_names,
+                            void **arg_mappers, AsyncInfoTy &AsyncInfo,
+                            bool FromMapper = false);
 
-extern int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+extern int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
-                  int64_t *ArgTypes, void **ArgMappers, int32_t TeamNum,
-                  int32_t ThreadLimit, int IsTeamConstruct);
+                  int64_t *ArgTypes, map_var_info_t *arg_names,
+                  void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
+                  int IsTeamConstruct, AsyncInfoTy &AsyncInfo);
 
-extern int CheckDeviceAndCtors(int64_t device_id);
-
-// enum for OMP_TARGET_OFFLOAD; keep in sync with kmp.h definition
-enum kmp_target_offload_kind {
-  tgt_disabled = 0,
-  tgt_default = 1,
-  tgt_mandatory = 2
-};
-typedef enum kmp_target_offload_kind kmp_target_offload_kind_t;
-extern kmp_target_offload_kind_t TargetOffloadPolicy;
+extern void handleTargetOutcome(bool Success, ident_t *Loc);
+extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
+extern void *targetAllocExplicit(size_t size, int device_num, int kind,
+                                 const char *name);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {
@@ -54,9 +55,11 @@ struct MapComponentInfoTy {
   void *Begin;
   int64_t Size;
   int64_t Type;
+  void *Name;
   MapComponentInfoTy() = default;
-  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type)
-      : Base(Base), Begin(Begin), Size(Size), Type(Type) {}
+  MapComponentInfoTy(void *Base, void *Begin, int64_t Size, int64_t Type,
+                     void *Name)
+      : Base(Base), Begin(Begin), Size(Size), Type(Type), Name(Name) {}
 };
 
 // This structure stores all components of a user-defined mapper. The number of
@@ -70,47 +73,17 @@ struct MapperComponentsTy {
 // The mapper function pointer type. It follows the signature below:
 // void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
 //                                           void *base, void *begin,
-//                                           size_t size, int64_t type);
-typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t);
+//                                           size_t size, int64_t type,
+//                                           void * name);
+typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t,
+                                void *);
 
-// Function pointer type for target_data_* functions (targetDataBegin,
-// targetDataEnd and target_data_update).
-typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
-                                   int64_t *, int64_t *, void **,
-                                   __tgt_async_info *);
-
-////////////////////////////////////////////////////////////////////////////////
-// implementation for messages
-////////////////////////////////////////////////////////////////////////////////
-
-#define MESSAGE0(_str)                                                         \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget message: %s\n", _str);                       \
-  } while (0)
-
-#define MESSAGE(_str, ...)                                                     \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget message: " _str "\n", __VA_ARGS__);          \
-  } while (0)
-
-#define FATAL_MESSAGE0(_num, _str)                                             \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget fatal error %d: %s\n", _num, _str);          \
-    abort();                                                                   \
-  } while (0)
-
-#define FATAL_MESSAGE(_num, _str, ...)                                         \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget fatal error %d:" _str "\n", _num,            \
-            __VA_ARGS__);                                                      \
-    abort();                                                                   \
-  } while (0)
-
-#define FAILURE_MESSAGE(...)                                                   \
-  do {                                                                         \
-    fprintf(stderr, "Libomptarget error: ");                                   \
-    fprintf(stderr, __VA_ARGS__);                                              \
-  } while (0)
+// Function pointer type for targetData* functions (targetDataBegin,
+// targetDataEnd and targetDataUpdate).
+typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
+                                   void **, int64_t *, int64_t *,
+                                   map_var_info_t *, void **, AsyncInfoTy &,
+                                   bool);
 
 // Implemented in libomp, they are called from within __tgt_* functions.
 #ifdef __cplusplus
@@ -118,39 +91,93 @@ extern "C" {
 #endif
 // functions that extract info from libomp; keep in sync
 int omp_get_default_device(void) __attribute__((weak));
-int32_t __kmpc_omp_taskwait(void *loc_ref, int32_t gtid) __attribute__((weak));
 int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
 int __kmpc_get_target_offload(void) __attribute__((weak));
 #ifdef __cplusplus
 }
 #endif
 
-extern int InfoLevel;
-#ifdef OMPTARGET_DEBUG
-extern int DebugLevel;
+#define TARGET_NAME Libomptarget
+#define DEBUG_PREFIX GETNAME(TARGET_NAME)
 
-#define DP(...) \
-  do { \
-    if (DebugLevel > 0) { \
-      DEBUGP("Libomptarget", __VA_ARGS__); \
-    } \
-  } while (false)
-#else // OMPTARGET_DEBUG
-#define DP(...) {}
-#endif // OMPTARGET_DEBUG
+////////////////////////////////////////////////////////////////////////////////
+/// dump a table of all the host-target pointer pairs on failure
+static inline void dumpTargetPointerMappings(const ident_t *Loc,
+                                             DeviceTy &Device) {
+  if (Device.HostDataToTargetMap.empty())
+    return;
 
-// Report debug messages that result in offload failure always
-#ifdef OMPTARGET_DEBUG
-#define REPORT(...)                                                            \
-  do {                                                                         \
-    if (DebugLevel > 0) {                                                      \
-      DP(__VA_ARGS__);                                                         \
-    } else {                                                                   \
-      FAILURE_MESSAGE(__VA_ARGS__);                                            \
-    }                                                                          \
-  } while (false)
+  SourceInfo Kernel(Loc);
+  INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
+       "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
+       Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
+  INFO(OMP_INFOTYPE_ALL, Device.DeviceID, "%-18s %-18s %s %s %s %s\n",
+       "Host Ptr", "Target Ptr", "Size (B)", "DynRefCount", "HoldRefCount",
+       "Declaration");
+  Device.DataMapMtx.lock();
+  for (const auto &HostTargetMap : Device.HostDataToTargetMap) {
+    SourceInfo Info(HostTargetMap.HstPtrName);
+    INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
+         DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
+         DPxPTR(HostTargetMap.HstPtrBegin), DPxPTR(HostTargetMap.TgtPtrBegin),
+         HostTargetMap.HstPtrEnd - HostTargetMap.HstPtrBegin,
+         HostTargetMap.dynRefCountToStr().c_str(),
+         HostTargetMap.holdRefCountToStr().c_str(), Info.getName(),
+         Info.getFilename(), Info.getLine(), Info.getColumn());
+  }
+  Device.DataMapMtx.unlock();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Print out the names and properties of the arguments to each kernel
+static inline void
+printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
+                     const int32_t ArgNum, const int64_t *ArgSizes,
+                     const int64_t *ArgTypes, const map_var_info_t *ArgNames,
+                     const char *RegionType) {
+  SourceInfo info(Loc);
+  INFO(OMP_INFOTYPE_ALL, DeviceId, "%s at %s:%d:%d with %d arguments:\n",
+       RegionType, info.getFilename(), info.getLine(), info.getColumn(),
+       ArgNum);
+
+  for (int32_t i = 0; i < ArgNum; ++i) {
+    const map_var_info_t varName = (ArgNames) ? ArgNames[i] : nullptr;
+    const char *type = nullptr;
+    const char *implicit =
+        (ArgTypes[i] & OMP_TGT_MAPTYPE_IMPLICIT) ? "(implicit)" : "";
+    if (ArgTypes[i] & OMP_TGT_MAPTYPE_TO && ArgTypes[i] & OMP_TGT_MAPTYPE_FROM)
+      type = "tofrom";
+    else if (ArgTypes[i] & OMP_TGT_MAPTYPE_TO)
+      type = "to";
+    else if (ArgTypes[i] & OMP_TGT_MAPTYPE_FROM)
+      type = "from";
+    else if (ArgTypes[i] & OMP_TGT_MAPTYPE_PRIVATE)
+      type = "private";
+    else if (ArgTypes[i] & OMP_TGT_MAPTYPE_LITERAL)
+      type = "firstprivate";
+    else if (ArgSizes[i] != 0)
+      type = "alloc";
+    else
+      type = "use_address";
+
+    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", type,
+         getNameFromMapping(varName).c_str(), ArgSizes[i], implicit);
+  }
+}
+
+#ifdef OMPTARGET_PROFILE_ENABLED
+#include "llvm/Support/TimeProfiler.h"
+#define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
+#define TIMESCOPE_WITH_IDENT(IDENT)                                            \
+  SourceInfo SI(IDENT);                                                        \
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation())
+#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
+  SourceInfo SI(IDENT);                                                        \
+  llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
 #else
-#define REPORT(...) FAILURE_MESSAGE(__VA_ARGS__);
+#define TIMESCOPE()
+#define TIMESCOPE_WITH_IDENT(IDENT)
+#define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
 #endif
 
 #endif

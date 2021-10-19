@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: bb6:
 ; CHECK: DIVERGENT:       %.126.i355.i = phi i1 [ false, %bb5 ], [ true, %bb4 ]

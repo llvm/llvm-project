@@ -46,7 +46,7 @@ define void @caller2_below_threshold(i8 *%p1, i1 %b) {
 ; CHECK-NEXT:    [[SAVEDSTACK:%.*]] = call i8* @llvm.stacksave()
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[VLA_I]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 60000, i8* [[TMP0]])
-; CHECK-NEXT:    call void @extern_call(float* nonnull [[VLA_I]]) #2
+; CHECK-NEXT:    call void @extern_call(float* nonnull [[VLA_I]]) #3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[VLA_I]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 60000, i8* [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.stackrestore(i8* [[SAVEDSTACK]])
@@ -155,7 +155,7 @@ define i8* @test_stack_allocate_always(i32 %size) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca i8, i64 [[CONV_I]], align 8
 ; CHECK-NEXT:    br label [[STACK_ALLOCATE_EXIT:%.*]]
 ; CHECK:       if.end.i:
-; CHECK-NEXT:    [[CALL_I:%.*]] = tail call i8* @malloc(i64 [[CONV_I]]) #2
+; CHECK-NEXT:    [[CALL_I:%.*]] = tail call i8* @malloc(i64 [[CONV_I]]) #3
 ; CHECK-NEXT:    br label [[STACK_ALLOCATE_EXIT]]
 ; CHECK:       stack_allocate.exit:
 ; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i8* [ [[TMP0]], [[IF_THEN_I]] ], [ [[CALL_I]], [[IF_END_I]] ]

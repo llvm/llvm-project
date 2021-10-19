@@ -34,8 +34,9 @@ struct [[deprecated]] Test4 {
 // CHECK-NEXT:   FieldDecl{{.*}}Test6
 // CHECK-NEXT:     DeprecatedAttr 0x{{[^ ]*}} <col:5, col:25> "Frobble" ""
 // CHECK-NEXT:   FieldDecl{{.*}}Test7
-// CHECK-NEXT:     Constant{{.*}}'int'
-// CHECK-NEXT:       IntegerLiteral{{.*}}'int' 12
+// CHECK-NEXT:     ConstantExpr{{.*}}'int'
+// CHECK-NEXT:       value: Int 12
+// CHECK-NEXT:         IntegerLiteral{{.*}}'int' 12
 // CHECK-NEXT:     DeprecatedAttr 0x{{[^ ]*}} <col:15> "" ""
 
 struct [[deprecated]] Test8;
@@ -51,8 +52,3 @@ struct [[deprecated]] Test8;
 void Test11 [[deprecated]](void);
 // CHECK:      FunctionDecl{{.*}}Test11
 // CHECK-NEXT:   DeprecatedAttr 0x{{[^ ]*}} <col:15> "" ""
-
-void Test12(void) [[deprecated]] {}
-// CHECK:      FunctionDecl{{.*}}Test12
-// CHECK-NEXT:   CompoundStmt
-// CHECK-NEXT:   DeprecatedAttr 0x{{[^ ]*}} <col:21> "" ""

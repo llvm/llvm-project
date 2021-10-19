@@ -5,7 +5,7 @@ FileHeader:
 
 Sections:
   - Type:            CUSTOM
-    Name:            dylink
+    Name:            dylink.0
     MemorySize:      4
     MemoryAlignment: 2
     TableSize:       1
@@ -14,10 +14,10 @@ Sections:
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:   - Type:            CUSTOM
-# CHECK:     Name:            dylink
+# CHECK:     Name:            dylink.0
 # CHECK:     MemorySize:      4
 # CHECK:     MemoryAlignment: 2
 # CHECK:     TableSize:       1

@@ -1,15 +1,17 @@
 ; Test -hwasan-with-ifunc flag.
 ;
-; RUN: opt -hwasan -S < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS,CHECK-HISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
+; RUN: opt -passes=hwasan -S < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=1 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-TLS-SLOT,CHECK-HISTORY,CHECK-HISTORY-TLS-SLOT
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=1 -hwasan-record-stack-history=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=0 -hwasan-with-tls=0 < %s | \
 ; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-GLOBAL,CHECK-NOHISTORY
-; RUN: opt -hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
-; RUN:     FileCheck %s --check-prefixes=CHECK,CHECk-NOGLOBAL,CHECK-IFUNC,CHECK-NOHISTORY
+; RUN: opt -passes=hwasan -S -hwasan-with-ifunc=1  -hwasan-with-tls=0 < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-IFUNC,CHECK-NOHISTORY
+; RUN: opt -passes=hwasan -S -mtriple=aarch64-fuchsia < %s | \
+; RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-ZERO-OFFSET,CHECK-SHORT-GRANULES,CHECK-HISTORY,CHECK-HWASAN-TLS,CHECK-HISTORY-HWASAN-TLS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android22"
@@ -25,6 +27,8 @@ define i32 @test_load(i32* %a) sanitize_hwaddress {
 
 ; CHECK-NOGLOBAL:   %[[A:[^ ]*]] = call i8* asm "", "=r,0"([0 x i8]* @__hwasan_shadow)
 ; CHECK-NOGLOBAL:   @llvm.hwasan.check.memaccess(i8* %[[A]]
+; CHECK-ZERO-OFFSET:  %[[A:[^ ]*]] = call i8* asm "", "=r,0"(i8* null)
+; CHECK-SHORT-GRANULES:  @llvm.hwasan.check.memaccess.shortgranules(i8* %[[A]]
 
 ; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
@@ -52,11 +56,13 @@ define void @test_alloca() sanitize_hwaddress {
 
 ; CHECK-GLOBAL: load i8*, i8** @__hwasan_shadow_memory_dynamic_address
 
-; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
-; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
-; CHECK-TLS:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
-; CHECK-TLS:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
-; CHECK-TLS:   %[[E:[^ ]*]] = ashr i64 %[[D]], 3
+; CHECK-TLS-SLOT:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
+; CHECK-TLS-SLOT:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
+; CHECK-TLS-SLOT:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
+; CHECK-TLS-SLOT:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
+; CHECK-TLS-SLOT:   %[[E:[^ ]*]] = ashr i64 %[[D]], 3
+; CHECK-HWASAN-TLS: %[[D:[^ ]*]] = load i64, i64* @__hwasan_tls, align 8
+; CHECK-HWASAN-TLS: %[[E:[^ ]*]] = ashr i64 %[[D]], 3
 
 ; CHECK-NOHISTORY-NOT: store i64
 
@@ -68,7 +74,8 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-HISTORY: %[[D3:[^ ]*]] = xor i64 %[[D2]], -1
 ; CHECK-HISTORY: %[[D4:[^ ]*]] = add i64 %[[D]], 8
 ; CHECK-HISTORY: %[[D5:[^ ]*]] = and i64 %[[D4]], %[[D3]]
-; CHECK-HISTORY: store i64 %[[D5]], i64* %[[C]]
+; CHECK-HISTORY-TLS-SLOT: store i64 %[[D5]], i64* %[[C]]
+; CHECK-HISTORY-HWASAN-TLS: store i64 %[[D5]], i64* @__hwasan_tls
 
 ; CHECK-TLS:   %[[F:[^ ]*]] = or i64 %[[D]], 4294967295
 ; CHECK-TLS:   = add i64 %[[F]], 1

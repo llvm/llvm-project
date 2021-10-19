@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFEXPRESSION_H
-#define LLVM_DEBUGINFO_DWARFEXPRESSION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
@@ -79,7 +80,7 @@ public:
     friend class DWARFExpression::iterator;
     uint8_t Opcode; ///< The Op Opcode, DW_OP_<something>.
     Description Desc;
-    bool Error;
+    bool Error = false;
     uint64_t EndOffset;
     uint64_t Operands[2];
     uint64_t OperandEndOffsets[2];
@@ -93,8 +94,9 @@ public:
     bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset,
                  Optional<dwarf::DwarfFormat> Format);
     bool isError() { return Error; }
-    bool print(raw_ostream &OS, const DWARFExpression *Expr,
-               const MCRegisterInfo *RegInfo, DWARFUnit *U, bool isEH);
+    bool print(raw_ostream &OS, DIDumpOptions DumpOpts,
+               const DWARFExpression *Expr, const MCRegisterInfo *RegInfo,
+               DWARFUnit *U, bool isEH);
     bool verify(DWARFUnit *U);
   };
 
@@ -143,7 +145,8 @@ public:
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, Data.getData().size()); }
 
-  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo, DWARFUnit *U,
+  void print(raw_ostream &OS, DIDumpOptions DumpOpts,
+             const MCRegisterInfo *RegInfo, DWARFUnit *U,
              bool IsEH = false) const;
 
   /// Print the expression in a format intended to be compact and useful to a
@@ -154,6 +157,10 @@ public:
 
   bool verify(DWARFUnit *U);
 
+  bool operator==(const DWARFExpression &RHS) const;
+
+  StringRef getData() const { return Data.getData(); }
+
 private:
   DataExtractor Data;
   uint8_t AddressSize;
@@ -163,11 +170,6 @@ private:
 inline bool operator==(const DWARFExpression::iterator &LHS,
                        const DWARFExpression::iterator &RHS) {
   return LHS.Expr == RHS.Expr && LHS.Offset == RHS.Offset;
-}
-
-inline bool operator!=(const DWARFExpression::iterator &LHS,
-                       const DWARFExpression::iterator &RHS) {
-  return !(LHS == RHS);
 }
 }
 #endif

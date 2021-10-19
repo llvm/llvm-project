@@ -52,7 +52,7 @@ int main(int, char**) {
   // FIXME: It would be great to suppress the below diagnostic all together.
   //        but for now it's sufficient that it appears last. However there is
   //        currently no way to test the order diagnostics are issued.
-  // expected-error@memory:* {{call to implicitly-deleted default constructor of 'std::}}
+  // expected-error@*:* {{call to implicitly-deleted default constructor of 'std::}}
   }
   {
     using Set = std::unordered_set<int, BadHashNoCopy>;

@@ -48,7 +48,7 @@
 #include <cstring>
 #include <utility>
 
-#include <assert.h>
+#include <cassert>
 
 #define DEFAULT_DISASM_BYTE_SIZE 32
 
@@ -58,9 +58,7 @@ using namespace lldb_private;
 DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
                                         const char *flavor,
                                         const char *plugin_name) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
+  LLDB_SCOPED_TIMERF("Disassembler::FindPlugin (arch = %s, plugin_name = %s)",
                      arch.GetArchitectureName(), plugin_name);
 
   DisassemblerCreateInstance create_callback = nullptr;
@@ -124,7 +122,7 @@ static Address ResolveAddress(Target &target, const Address &addr) {
 
 lldb::DisassemblerSP Disassembler::DisassembleRange(
     const ArchSpec &arch, const char *plugin_name, const char *flavor,
-    Target &target, const AddressRange &range, bool prefer_file_cache) {
+    Target &target, const AddressRange &range, bool force_live_memory) {
   if (range.GetByteSize() <= 0)
     return {};
 
@@ -139,7 +137,7 @@ lldb::DisassemblerSP Disassembler::DisassembleRange(
 
   const size_t bytes_disassembled = disasm_sp->ParseInstructions(
       target, range.GetBaseAddress(), {Limit::Bytes, range.GetByteSize()},
-      nullptr, prefer_file_cache);
+      nullptr, force_live_memory);
   if (bytes_disassembled == 0)
     return {};
 
@@ -183,9 +181,9 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (!disasm_sp)
     return false;
 
-  const bool prefer_file_cache = false;
+  const bool force_live_memory = true;
   size_t bytes_disassembled = disasm_sp->ParseInstructions(
-      exe_ctx.GetTargetRef(), address, limit, &strm, prefer_file_cache);
+      exe_ctx.GetTargetRef(), address, limit, &strm, force_live_memory);
   if (bytes_disassembled == 0)
     return false;
 
@@ -540,34 +538,29 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               const char *plugin_name, const char *flavor,
-                               const ExecutionContext &exe_ctx,
-                               uint32_t num_instructions,
-                               bool mixed_source_and_assembly,
-                               uint32_t num_mixed_context_lines,
-                               uint32_t options, Stream &strm) {
+                               StackFrame &frame, Stream &strm) {
   AddressRange range;
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame) {
-    SymbolContext sc(
-        frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
-    if (sc.function) {
-      range = sc.function->GetAddressRange();
-    } else if (sc.symbol && sc.symbol->ValueIsAddress()) {
-      range.GetBaseAddress() = sc.symbol->GetAddressRef();
-      range.SetByteSize(sc.symbol->GetByteSize());
-    } else {
-      range.GetBaseAddress() = frame->GetFrameCodeAddress();
-    }
+  SymbolContext sc(
+      frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
+  if (sc.function) {
+    range = sc.function->GetAddressRange();
+  } else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    range.GetBaseAddress() = sc.symbol->GetAddressRef();
+    range.SetByteSize(sc.symbol->GetByteSize());
+  } else {
+    range.GetBaseAddress() = frame.GetFrameCodeAddress();
+  }
 
     if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
       range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
-  }
 
-  return Disassemble(
-      debugger, arch, plugin_name, flavor, exe_ctx, range.GetBaseAddress(),
-      {Limit::Instructions, num_instructions}, mixed_source_and_assembly,
-      num_mixed_context_lines, options, strm);
+    Disassembler::Limit limit = {Disassembler::Limit::Bytes,
+                                 range.GetByteSize()};
+    if (limit.value == 0)
+      limit.value = DEFAULT_DISASM_BYTE_SIZE;
+
+    return Disassemble(debugger, arch, nullptr, nullptr, frame,
+                       range.GetBaseAddress(), limit, false, 0, 0, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
@@ -957,6 +950,13 @@ InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {
   return inst_sp;
 }
 
+InstructionSP InstructionList::GetInstructionAtAddress(const Address &address) {
+  uint32_t index = GetIndexOfInstructionAtAddress(address);
+  if (index != UINT32_MAX)
+    return GetInstructionAtIndex(index);
+  return nullptr;
+}
+
 void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
                            const ExecutionContext *exe_ctx) {
   const uint32_t max_opcode_byte_size = GetMaxOpcocdeByteSize();
@@ -1036,7 +1036,7 @@ InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
 
 size_t Disassembler::ParseInstructions(Target &target, Address start,
                                        Limit limit, Stream *error_strm_ptr,
-                                       bool prefer_file_cache) {
+                                       bool force_live_memory) {
   m_instruction_list.Clear();
 
   if (!start.IsValid())
@@ -1052,8 +1052,8 @@ size_t Disassembler::ParseInstructions(Target &target, Address start,
   Status error;
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   const size_t bytes_read =
-      target.ReadMemory(start, prefer_file_cache, data_sp->GetBytes(),
-                        data_sp->GetByteSize(), error, &load_addr);
+      target.ReadMemory(start, data_sp->GetBytes(), data_sp->GetByteSize(),
+                        error, force_live_memory, &load_addr);
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
 
   if (bytes_read == 0) {
@@ -1122,6 +1122,10 @@ bool PseudoInstruction::HasDelaySlot() {
   // This is NOT a valid question for a pseudo instruction.
   return false;
 }
+
+bool PseudoInstruction::IsLoad() { return false; }
+
+bool PseudoInstruction::IsAuthenticated() { return false; }
 
 size_t PseudoInstruction::Decode(const lldb_private::Disassembler &disassembler,
                                  const lldb_private::DataExtractor &data,

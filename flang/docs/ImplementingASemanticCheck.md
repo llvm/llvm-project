@@ -1,10 +1,24 @@
-I recently added a semantic check to the f18 compiler front end.  This document
+<!--===- docs/ImplementingASemanticCheck.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+# How to implement a Sematic Check in Flang
+
+```eval_rst
+.. contents::
+   :local:
+```
+
+I recently added a semantic check to the Flang compiler front end.  This document
 describes my thought process and the resulting implementation.
 
 For more information about the compiler, start with the 
 [compiler overview](Overview.md).
 
-# Problem definition
+## Problem definition
 
 In the 2018 Fortran standard, section 11.1.7.4.3, paragraph 2, states that:
 
@@ -21,7 +35,7 @@ emit a warning if an active DO variable was passed to a dummy argument with
 INTENT(INOUT).  Previously, I had implemented similar checks for SUBROUTINE
 calls.
 
-# Creating a test
+## Creating a test
 
 My first step was to create a test case to cause the problem.  I called it testfun.f90 and used it to check the behavior of other Fortran compilers.  Here's the initial version:
 
@@ -53,7 +67,7 @@ of the call to `intentOutFunc()`:
 
 I also used this program to produce a parse tree for the program using the command:
 ```bash
-  f18 -fdebug-dump-parse-tree -fparse-only testfun.f90
+  flang-new -fc1 -fdebug-dump-parse-tree testfun.f90
 ```
 
 Here's the relevant fragment of the parse tree produced by the compiler:
@@ -86,14 +100,14 @@ constant 216 in the statement:
 ```fortran
       dummyArg = 216
 ```
-# Analysis and implementation planning
+## Analysis and implementation planning
 
 I then considered what I needed to do.  I needed to detect situations where an
 active DO variable was passed to a dummy argument with `INTENT(OUT)` or
 `INTENT(INOUT)`.  Once I detected such a situation, I needed to produce a
 message that highlighted the erroneous source code.  
 
-## Deciding where to add the code to the compiler
+### Deciding where to add the code to the compiler
 This new semantic check would depend on several types of information -- the
 parse tree, source code location information, symbols, and expressions.  Thus I
 needed to put my new code in a place in the compiler after the parse tree had
@@ -143,7 +157,7 @@ Since my semantic check was focused on DO CONCURRENT statements, I added it to
 the file `lib/Semantics/check-do.cpp` where most of the semantic checking for
 DO statements already lived.
 
-## Taking advantage of prior work
+### Taking advantage of prior work
 When implementing a similar check for SUBROUTINE calls, I created a utility
 functions in `lib/Semantics/semantics.cpp` to emit messages if
 a symbol corresponding to an active DO variable was being potentially modified:
@@ -165,7 +179,7 @@ information --
 The first and third are needed since they're required to call the utility
 functions.  The second is needed to determine whether to call them.
 
-## Finding the source location
+### Finding the source location
 The source code location information that I'd need for the error message must
 come from the parse tree.  I looked in the file
 `include/flang/Parser/parse-tree.h` and determined that a `struct Expr`
@@ -173,7 +187,7 @@ contained source location information since it had the field `CharBlock
 source`.  Thus, if I visited a `parser::Expr` node, I could get the source
 location information for the associated expression.
 
-## Determining the `INTENT`
+### Determining the `INTENT`
 I knew that I could find the `INTENT` of the dummy argument associated with the
 actual argument from the function called `dummyIntent()` in the class
 `evaluate::ActualArgument` in the file `include/flang/Evaluate/call.h`.  So
@@ -240,7 +254,7 @@ This combination of the traversal framework and `dummyIntent()` would give
 me the `INTENT` of all of the dummy arguments in a FUNCTION call.  Thus, I
 would have the second piece of information I needed.
 
-## Determining if the actual argument is a variable
+### Determining if the actual argument is a variable
 I also guessed that I could determine if the `evaluate::ActualArgument`
 consisted of a variable.  
 
@@ -256,9 +270,9 @@ needed -- the source location of the erroneous text, the `INTENT` of the dummy
 argument, and a symbol that I could use to determine whether the actual
 argument was an active DO variable.
 
-# Implementation
+## Implementation
 
-## Adding a parse tree visitor
+### Adding a parse tree visitor
 I started my implementation by adding a visitor for `parser::Expr` nodes.
 Since this analysis is part of DO construct checking, I did this in
 `lib/Semantics/check-do.cpp`.  I added a print statement to the visitor to
@@ -281,7 +295,7 @@ In `lib/Semantics/check-do.cpp`, I added an (almost empty) implementation:
 I then built the compiler with these changes and ran it on my test program.
 This time, I made sure to invoke semantic checking.  Here's the command I used:
 ```bash
-  f18 -fdebug-resolve-names -fdebug-dump-parse-tree -funparse-with-symbols testfun.f90
+  flang-new -fc1 -fdebug-unparse-with-symbols testfun.f90
 ```
 
 This produced the output:
@@ -300,7 +314,7 @@ source position of the associated expression (`CharBlock source`).  So I
 now had one of the three pieces of information needed to detect and report
 errors.
 
-## Collecting the actual arguments
+### Collecting the actual arguments
 To get the `INTENT` of the dummy arguments and the `semantics::Symbol` associated with the
 actual argument, I needed to find all of the actual arguments embedded in an
 expression that contained a FUNCTION call.  So my next step was to write the
@@ -347,7 +361,7 @@ I noted that a `SymbolSet` did not actually contain an
 full `semantics::Symbol` objects into the set.  Ideally, we would be able to create an
 `std::set<Symbol &>` (a set of C++ references to symbols).  But C++ doesn't
 support sets that contain references.  This limitation is part of the rationale
-for the f18 implementation of type `common::Reference`, which is defined in
+for the Flang implementation of type `common::Reference`, which is defined in
   `include/flang/Common/reference.h`.
 
 `SymbolRef`, the specialization of the template `common::Reference` for
@@ -466,7 +480,7 @@ node.
 
 So far, so good.
 
-## Finding the `INTENT` of the dummy argument
+### Finding the `INTENT` of the dummy argument
 I now wanted to find the `INTENT` of the dummy argument associated with the
 arguments in the set.  As mentioned earlier, the type
 `evaluate::ActualArgument` has a member function called `dummyIntent()`
@@ -510,7 +524,7 @@ I then modified my test case to convince myself that I was getting the correct
 
 So far, so good.
 
-## Finding the symbols for arguments that are variables
+### Finding the symbols for arguments that are variables
 The third and last piece of information I needed was to determine if a variable
 was being passed as an actual argument.  In such cases, I wanted to get the
 symbol table node (`semantics::Symbol`) for the variable.  My starting point was the
@@ -630,7 +644,7 @@ Here's the result of running the modified compiler on my Fortran test case:
 
 Sweet.
 
-## Emitting the messages
+### Emitting the messages
 At this point, using the source location information from the original
 `parser::Expr`, I had enough information to plug into the exiting
 interfaces for emitting messages for active DO variables.  I modified the
@@ -693,7 +707,7 @@ output:
 
 Even sweeter.
 
-# Improving the test case
+## Improving the test case
 At this point, my implementation seemed to be working.  But I was concerned
 about the limitations of my test case.  So I augmented it to include arguments
 other than `INTENT(OUT)` and more complex expressions.  Luckily, my
@@ -754,7 +768,7 @@ Here's the test I ended up with:
   end subroutine s
 ```
 
-# Submitting the pull request
+## Submitting the pull request
 At this point, my implementation seemed functionally complete, so I stripped out all of the debug statements, ran `clang-format` on it and reviewed it
 to make sure that the names were clear.  Here's what I ended up with:
 
@@ -782,7 +796,7 @@ to make sure that the names were clear.  Here's what I ended up with:
 
 I then created a pull request to get review comments.  
 
-# Responding to pull request comments
+## Responding to pull request comments
 I got feedback suggesting that I use an `if` statement rather than a
 `case` statement.  Another comment reminded me that I should look at the
 code I'd previously writted to do a similar check for SUBROUTINE calls to see

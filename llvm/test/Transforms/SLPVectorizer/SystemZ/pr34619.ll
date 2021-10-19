@@ -12,18 +12,17 @@ define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 0), align 4
 ; CHECK-NEXT:    [[ARRAYIDX372:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 0
 ; CHECK-NEXT:    [[ARRAYIDX372_1:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 2), align 4
 ; CHECK-NEXT:    [[ARRAYIDX372_2:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 3), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[ADD277]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> undef, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = ashr <4 x i32> [[TMP7]], <i32 6, i32 6, i32 6, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 2) to <2 x i32>*), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[ADD277]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> poison, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr <4 x i32> [[TMP6]], <i32 6, i32 6, i32 6, i32 6>
 ; CHECK-NEXT:    [[ARRAYIDX372_3:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX372]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX372]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 4
 ; CHECK-NEXT:    unreachable
 ;
 entry:

@@ -6,6 +6,7 @@ add_clang_library(clangToolingRefactoring
   AtomicChange.cpp
   Extract/Extract.cpp
   Extract/SourceExtraction.cpp
+  Lookup.cpp
   RefactoringActions.cpp
   Rename/RenamingAction.cpp
   Rename/SymbolOccurrences.cpp

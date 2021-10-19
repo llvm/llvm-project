@@ -978,8 +978,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   ProgramStateRef State = C.getState();
 
   // Check if this is the branch for the end of the loop.
-  SVal CollectionSentinel = C.getSVal(FCS);
-  if (CollectionSentinel.isZeroConstant()) {
+  if (!ExprEngine::hasMoreIteration(State, FCS, C.getLocationContext())) {
     if (!alreadyExecutedAtLeastOneLoopIteration(C.getPredecessor(), FCS))
       State = assumeCollectionNonEmpty(C, State, FCS, /*Assumption*/false);
 

@@ -117,36 +117,34 @@ void SuspiciousEnumUsageCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void SuspiciousEnumUsageCheck::registerMatchers(MatchFinder *Finder) {
-  const auto enumExpr = [](StringRef RefName, StringRef DeclName) {
-    return expr(ignoringImpCasts(expr().bind(RefName)),
-                ignoringImpCasts(hasType(enumDecl().bind(DeclName))));
+  const auto EnumExpr = [](StringRef RefName, StringRef DeclName) {
+    return expr(hasType(enumDecl().bind(DeclName))).bind(RefName);
   };
 
   Finder->addMatcher(
-      binaryOperator(hasOperatorName("|"), hasLHS(enumExpr("", "enumDecl")),
-                     hasRHS(expr(enumExpr("", "otherEnumDecl"),
-                                 ignoringImpCasts(hasType(enumDecl(
-                                     unless(equalsBoundNode("enumDecl"))))))))
+      binaryOperator(
+          hasOperatorName("|"), hasLHS(hasType(enumDecl().bind("enumDecl"))),
+          hasRHS(hasType(enumDecl(unless(equalsBoundNode("enumDecl")))
+                             .bind("otherEnumDecl"))))
           .bind("diffEnumOp"),
       this);
 
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("+", "|"),
-                     hasLHS(enumExpr("lhsExpr", "enumDecl")),
-                     hasRHS(expr(enumExpr("rhsExpr", ""),
-                                 ignoringImpCasts(hasType(
-                                     enumDecl(equalsBoundNode("enumDecl"))))))),
+                     hasLHS(EnumExpr("lhsExpr", "enumDecl")),
+                     hasRHS(expr(hasType(enumDecl(equalsBoundNode("enumDecl"))))
+                                .bind("rhsExpr"))),
       this);
 
   Finder->addMatcher(
       binaryOperator(
           hasAnyOperatorName("+", "|"),
-          hasOperands(expr(hasType(isInteger()), unless(enumExpr("", ""))),
-                      enumExpr("enumExpr", "enumDecl"))),
+          hasOperands(expr(hasType(isInteger()), unless(hasType(enumDecl()))),
+                      EnumExpr("enumExpr", "enumDecl"))),
       this);
 
   Finder->addMatcher(binaryOperator(hasAnyOperatorName("|=", "+="),
-                                    hasRHS(enumExpr("enumExpr", "enumDecl"))),
+                                    hasRHS(EnumExpr("enumExpr", "enumDecl"))),
                      this);
 }
 

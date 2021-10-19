@@ -14,7 +14,6 @@
 #define LLVM_SUPPORT_MEMORY_H
 
 #include "llvm/Support/DataTypes.h"
-#include <string>
 #include <system_error>
 
 namespace llvm {
@@ -38,7 +37,7 @@ namespace sys {
     /// The size as it was allocated. This is always greater or equal to the
     /// size that was originally requested.
     size_t allocatedSize() const { return AllocatedSize; }
-  
+
   private:
     void *Address;    ///< Address of first byte of memory area
     size_t AllocatedSize; ///< Size, in bytes of the memory area
@@ -116,7 +115,6 @@ namespace sys {
     /// memory was not allocated using the allocateMappedMemory method.
     /// \p Block describes the memory block to be protected.
     /// \p Flags specifies the new protection state to be assigned to the block.
-    /// \p ErrMsg [out] returns a string describing any error that occurred.
     ///
     /// If \p Flags is MF_WRITE, the actual behavior varies
     /// with the operating system (i.e. MF_READ | MF_WRITE on Windows) and the
@@ -150,13 +148,22 @@ namespace sys {
       return *this;
     }
     ~OwningMemoryBlock() {
-      Memory::releaseMappedMemory(M);
+      if (M.base())
+        Memory::releaseMappedMemory(M);
     }
     void *base() const { return M.base(); }
     /// The size as it was allocated. This is always greater or equal to the
     /// size that was originally requested.
     size_t allocatedSize() const { return M.allocatedSize(); }
     MemoryBlock getMemoryBlock() const { return M; }
+    std::error_code release() {
+      std::error_code EC;
+      if (M.base()) {
+        EC = Memory::releaseMappedMemory(M);
+        M = MemoryBlock();
+      }
+      return EC;
+    }
   private:
     MemoryBlock M;
   };

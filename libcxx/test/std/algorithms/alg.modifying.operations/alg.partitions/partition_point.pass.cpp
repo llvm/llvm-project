@@ -9,7 +9,7 @@
 // <algorithm>
 
 // template<class ForwardIterator, class Predicate>
-//     constpexr ForwardIterator       // constexpr after C++17
+//     constexpr ForwardIterator       // constexpr after C++17
 //     partition_point(ForwardIterator first, ForwardIterator last, Predicate pred);
 
 #include <algorithm>

@@ -31,10 +31,10 @@ void test_templated_arguments() {
 void test() {
   test_templated_arguments<int, 32>(); // fine
   test_templated_arguments<struct fwddecl, 16>();
-  // expected-note@-1{{in instantiation of function template specialization 'test_templated_arguments<fwddecl, 16, 16>'}}
+  // expected-note@-1{{in instantiation of function template specialization 'test_templated_arguments<fwddecl, 16L, 16L>'}}
   // expected-note@-2{{forward declaration of 'fwddecl'}}
   test_templated_arguments<int, 7>(); // invalid alignment value
-  // expected-note@-1{{in instantiation of function template specialization 'test_templated_arguments<int, 7, 16>'}}
+  // expected-note@-1{{in instantiation of function template specialization 'test_templated_arguments<int, 7L, 16L>'}}
 }
 
 template <typename T, long ArraySize>

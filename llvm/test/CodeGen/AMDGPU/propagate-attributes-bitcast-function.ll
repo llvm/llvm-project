@@ -4,7 +4,7 @@
 ; v_cndmask_b32_e64 v0, 0, 1, vcc_lo{{$}}
 ; GCN: kernel1:
 ; GCN: foo1@gotpcrel32@lo+4
-; GCN: foo1@gotpcrel32@hi+4
+; GCN: foo1@gotpcrel32@hi+12
 
 define void @foo1(i32 %x) #1 {
 entry:

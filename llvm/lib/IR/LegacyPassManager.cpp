@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
@@ -49,92 +50,17 @@ namespace {
 enum PassDebugLevel {
   Disabled, Arguments, Structure, Executions, Details
 };
-}
+} // namespace
 
-static cl::opt<enum PassDebugLevel>
-PassDebugging("debug-pass", cl::Hidden,
-                  cl::desc("Print PassManager debugging information"),
-                  cl::values(
-  clEnumVal(Disabled  , "disable debug output"),
-  clEnumVal(Arguments , "print pass arguments to pass to 'opt'"),
-  clEnumVal(Structure , "print pass structure before run()"),
-  clEnumVal(Executions, "print pass name before it is executed"),
-  clEnumVal(Details   , "print pass details when it is executed")));
+static cl::opt<enum PassDebugLevel> PassDebugging(
+    "debug-pass", cl::Hidden,
+    cl::desc("Print legacy PassManager debugging information"),
+    cl::values(clEnumVal(Disabled, "disable debug output"),
+               clEnumVal(Arguments, "print pass arguments to pass to 'opt'"),
+               clEnumVal(Structure, "print pass structure before run()"),
+               clEnumVal(Executions, "print pass name before it is executed"),
+               clEnumVal(Details, "print pass details when it is executed")));
 
-namespace {
-typedef llvm::cl::list<const llvm::PassInfo *, bool, PassNameParser>
-PassOptionList;
-}
-
-// Print IR out before/after specified passes.
-static PassOptionList
-PrintBefore("print-before",
-            llvm::cl::desc("Print IR before specified passes"),
-            cl::Hidden);
-
-static PassOptionList
-PrintAfter("print-after",
-           llvm::cl::desc("Print IR after specified passes"),
-           cl::Hidden);
-
-static cl::opt<bool> PrintBeforeAll("print-before-all",
-                                    llvm::cl::desc("Print IR before each pass"),
-                                    cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintAfterAll("print-after-all",
-                                   llvm::cl::desc("Print IR after each pass"),
-                                   cl::init(false), cl::Hidden);
-
-static cl::opt<bool>
-    PrintModuleScope("print-module-scope",
-                     cl::desc("When printing IR for print-[before|after]{-all} "
-                              "always print a module IR"),
-                     cl::init(false), cl::Hidden);
-
-static cl::list<std::string>
-    PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
-                   cl::desc("Only print IR for functions whose name "
-                            "match this for all print-[before|after][-all] "
-                            "options"),
-                   cl::CommaSeparated, cl::Hidden);
-
-/// This is a helper to determine whether to print IR before or
-/// after a pass.
-
-bool llvm::shouldPrintBeforePass() {
-  return PrintBeforeAll || !PrintBefore.empty();
-}
-
-bool llvm::shouldPrintAfterPass() {
-  return PrintAfterAll || !PrintAfter.empty();
-}
-
-static bool ShouldPrintBeforeOrAfterPass(StringRef PassID,
-                                         PassOptionList &PassesToPrint) {
-  for (auto *PassInf : PassesToPrint) {
-    if (PassInf)
-      if (PassInf->getPassArgument() == PassID) {
-        return true;
-      }
-  }
-  return false;
-}
-
-bool llvm::shouldPrintBeforePass(StringRef PassID) {
-  return PrintBeforeAll || ShouldPrintBeforeOrAfterPass(PassID, PrintBefore);
-}
-
-bool llvm::shouldPrintAfterPass(StringRef PassID) {
-  return PrintAfterAll || ShouldPrintBeforeOrAfterPass(PassID, PrintAfter);
-}
-
-bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
-
-bool llvm::isFunctionInPrintList(StringRef FunctionName) {
-  static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
-                                                        PrintFuncsList.end());
-  return PrintFuncNames.empty() ||
-         PrintFuncNames.count(std::string(FunctionName));
-}
 /// isPassDebuggingExecutionsOrMore - Return true if -debug-pass=Executions
 /// or higher is specified.
 bool PMDataManager::isPassDebuggingExecutionsOrMore() const {
@@ -210,8 +136,7 @@ void PMDataManager::emitInstrCountChangedRemark(
     // remarks. Since it's possible that the first function in the module
     // doesn't actually contain a basic block, we have to go and find one that's
     // suitable for emitting remarks.
-    auto It = std::find_if(M.begin(), M.end(),
-                          [](const Function &Fn) { return !Fn.empty(); });
+    auto It = llvm::find_if(M, [](const Function &Fn) { return !Fn.empty(); });
 
     // Didn't find a function. Quit.
     if (It == M.end())
@@ -317,6 +242,8 @@ void PassManagerPrettyStackEntry::print(raw_ostream &OS) const {
 
 namespace llvm {
 namespace legacy {
+bool debugPassSpecified() { return PassDebugging != Disabled; }
+
 //===----------------------------------------------------------------------===//
 // FunctionPassManagerImpl
 //
@@ -642,7 +569,12 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     PDepth = P->getResolver()->getPMDataManager().getDepth();
 
   for (Pass *AP : AnalysisPasses) {
-    LastUser[AP] = P;
+    // Record P as the new last user of AP.
+    auto &LastUserOfAP = LastUser[AP];
+    if (LastUserOfAP)
+      InversedLastUser[LastUserOfAP].erase(AP);
+    LastUserOfAP = P;
+    InversedLastUser[P].insert(AP);
 
     if (P == AP)
       continue;
@@ -672,31 +604,25 @@ PMTopLevelManager::setLastUser(ArrayRef<Pass*> AnalysisPasses, Pass *P) {
     if (P->getResolver())
       setLastUser(LastPMUses, P->getResolver()->getPMDataManager().getAsPass());
 
-
     // If AP is the last user of other passes then make P last user of
     // such passes.
-    for (auto LU : LastUser) {
-      if (LU.second == AP)
-        // DenseMap iterator is not invalidated here because
-        // this is just updating existing entries.
-        LastUser[LU.first] = P;
-    }
+    auto &LastUsedByAP = InversedLastUser[AP];
+    for (Pass *L : LastUsedByAP)
+      LastUser[L] = P;
+    InversedLastUser[P].insert(LastUsedByAP.begin(), LastUsedByAP.end());
+    LastUsedByAP.clear();
   }
 }
 
 /// Collect passes whose last user is P
 void PMTopLevelManager::collectLastUses(SmallVectorImpl<Pass *> &LastUses,
                                         Pass *P) {
-  DenseMap<Pass *, SmallPtrSet<Pass *, 8> >::iterator DMI =
-    InversedLastUser.find(P);
+  auto DMI = InversedLastUser.find(P);
   if (DMI == InversedLastUser.end())
     return;
 
-  SmallPtrSet<Pass *, 8> &LU = DMI->second;
-  for (Pass *LUP : LU) {
-    LastUses.push_back(LUP);
-  }
-
+  auto &LU = DMI->second;
+  LastUses.append(LU.begin(), LU.end());
 }
 
 AnalysisUsage *PMTopLevelManager::findAnalysisUsage(Pass *P) {
@@ -821,8 +747,10 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   }
 
   if (PI && !PI->isAnalysis() && shouldPrintBeforePass(PI->getPassArgument())) {
-    Pass *PP = P->createPrinterPass(
-        dbgs(), ("*** IR Dump Before " + P->getPassName() + " ***").str());
+    Pass *PP =
+        P->createPrinterPass(dbgs(), ("*** IR Dump Before " + P->getPassName() +
+                                      " (" + PI->getPassArgument() + ") ***")
+                                         .str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
   }
 
@@ -830,8 +758,10 @@ void PMTopLevelManager::schedulePass(Pass *P) {
   P->assignPassManager(activeStack, getTopLevelPassManagerType());
 
   if (PI && !PI->isAnalysis() && shouldPrintAfterPass(PI->getPassArgument())) {
-    Pass *PP = P->createPrinterPass(
-        dbgs(), ("*** IR Dump After " + P->getPassName() + " ***").str());
+    Pass *PP =
+        P->createPrinterPass(dbgs(), ("*** IR Dump After " + P->getPassName() +
+                                      " (" + PI->getPassArgument() + ") ***")
+                                         .str());
     PP->assignPassManager(activeStack, getTopLevelPassManagerType());
   }
 }
@@ -930,11 +860,6 @@ void PMTopLevelManager::initializeAllAnalysisInfo() {
   // Initailize other pass managers
   for (PMDataManager *IPM : IndirectPassManagers)
     IPM->initializeAnalysisInfo();
-
-  for (auto LU : LastUser) {
-    SmallPtrSet<Pass *, 8> &L = InversedLastUser[LU.second];
-    L.insert(LU.first);
-  }
 }
 
 /// Destructor
@@ -1025,14 +950,13 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
 
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (unsigned Index = 0; Index < PMT_Last; ++Index) {
-
-    if (!InheritedAnalysis[Index])
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
+    if (!IA)
       continue;
 
-    for (DenseMap<AnalysisID, Pass*>::iterator
-           I = InheritedAnalysis[Index]->begin(),
-           E = InheritedAnalysis[Index]->end(); I != E; ) {
+    for (DenseMap<AnalysisID, Pass *>::iterator I = IA->begin(),
+                                                E = IA->end();
+         I != E;) {
       DenseMap<AnalysisID, Pass *>::iterator Info = I++;
       if (Info->second->getAsImmutablePass() == nullptr &&
           !is_contained(PreservedSet, Info->first)) {
@@ -1042,7 +966,7 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
           dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
           dbgs() << S->getPassName() << "'\n";
         }
-        InheritedAnalysis[Index]->erase(Info);
+        IA->erase(Info);
       }
     }
   }
@@ -1190,12 +1114,6 @@ void PMDataManager::collectRequiredAndUsedAnalyses(
       UP.push_back(AnalysisPass);
     else
       RP_NotAvail.push_back(RequiredID);
-
-  for (const auto &RequiredID : AnUsage->getRequiredTransitiveSet())
-    if (Pass *AnalysisPass = findAnalysisPass(RequiredID, true))
-      UP.push_back(AnalysisPass);
-    else
-      RP_NotAvail.push_back(RequiredID);
 }
 
 // All Required analyses should be available to the pass as it runs!  Here
@@ -1237,6 +1155,8 @@ Pass *PMDataManager::findAnalysisPass(AnalysisID AID, bool SearchParent) {
 
 // Print list of passes that are last used by P.
 void PMDataManager::dumpLastUses(Pass *P, unsigned Offset) const{
+  if (PassDebugging < Details)
+    return;
 
   SmallVector<Pass *, 12> LUses;
 
@@ -1392,8 +1312,8 @@ PMDataManager::~PMDataManager() {
 //===----------------------------------------------------------------------===//
 // NOTE: Is this the right place to define this method ?
 // getAnalysisIfAvailable - Return analysis result or null if it doesn't exist.
-Pass *AnalysisResolver::getAnalysisIfAvailable(AnalysisID ID, bool dir) const {
-  return PM.findAnalysisPass(ID, dir);
+Pass *AnalysisResolver::getAnalysisIfAvailable(AnalysisID ID) const {
+  return PM.findAnalysisPass(ID, true);
 }
 
 std::tuple<Pass *, bool>
@@ -1431,7 +1351,7 @@ void FunctionPassManager::add(Pass *P) {
 ///
 bool FunctionPassManager::run(Function &F) {
   handleAllErrors(F.materialize(), [&](ErrorInfoBase &EIB) {
-    report_fatal_error("Error reading bitcode file: " + EIB.message());
+    report_fatal_error(Twine("Error reading bitcode file: ") + EIB.message());
   });
   return FPM->run(F);
 }

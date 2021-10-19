@@ -62,17 +62,20 @@ enum GPUKind : uint32_t {
   // AMDGCN-based processors.
   GK_GFX600 = 32,
   GK_GFX601 = 33,
+  GK_GFX602 = 34,
 
   GK_GFX700 = 40,
   GK_GFX701 = 41,
   GK_GFX702 = 42,
   GK_GFX703 = 43,
   GK_GFX704 = 44,
+  GK_GFX705 = 45,
 
   GK_GFX801 = 50,
   GK_GFX802 = 51,
   GK_GFX803 = 52,
-  GK_GFX810 = 53,
+  GK_GFX805 = 53,
+  GK_GFX810 = 54,
 
   GK_GFX900 = 60,
   GK_GFX902 = 61,
@@ -80,15 +83,22 @@ enum GPUKind : uint32_t {
   GK_GFX906 = 63,
   GK_GFX908 = 64,
   GK_GFX909 = 65,
+  GK_GFX90A = 66,
+  GK_GFX90C = 67,
 
   GK_GFX1010 = 71,
   GK_GFX1011 = 72,
   GK_GFX1012 = 73,
+  GK_GFX1013 = 74,
   GK_GFX1030 = 75,
   GK_GFX1031 = 76,
+  GK_GFX1032 = 77,
+  GK_GFX1033 = 78,
+  GK_GFX1034 = 79,
+  GK_GFX1035 = 80,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1031,
+  GK_AMDGCN_LAST = GK_GFX1035,
 };
 
 /// Instruction set architecture version.
@@ -119,7 +129,7 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_XNACK = 1 << 7,
 
   // Sram-ecc is available.
-  FEATURE_SRAM_ECC = 1 << 8,
+  FEATURE_SRAMECC = 1 << 8,
 };
 
 StringRef getArchNameAMDGCN(GPUKind AK);
@@ -156,10 +166,14 @@ enum FeatureKind : unsigned {
 };
 
 bool checkCPUKind(CPUKind Kind, bool IsRV64);
+bool checkTuneCPUKind(CPUKind Kind, bool IsRV64);
 CPUKind parseCPUKind(StringRef CPU);
+CPUKind parseTuneCPUKind(StringRef CPU, bool IsRV64);
 StringRef getMArchFromMcpu(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
+void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
+StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
 
 } // namespace RISCV
 

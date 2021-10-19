@@ -44,11 +44,20 @@ Pass *createObjCARCContractPass();
 //
 Pass *createObjCARCOptPass();
 
-class ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
-public:
-  ObjCARCOptPass() {}
+struct ObjCARCOptPass : public PassInfoMixin<ObjCARCOptPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
+struct ObjCARCContractPass : public PassInfoMixin<ObjCARCContractPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct ObjCARCAPElimPass : public PassInfoMixin<ObjCARCAPElimPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
+  PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };
 
 } // End llvm namespace

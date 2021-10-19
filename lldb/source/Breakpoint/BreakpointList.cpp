@@ -26,7 +26,7 @@ BreakpointList::BreakpointList(bool is_internal)
     : m_mutex(), m_breakpoints(), m_next_break_id(0),
       m_is_internal(is_internal) {}
 
-BreakpointList::~BreakpointList() {}
+BreakpointList::~BreakpointList() = default;
 
 break_id_t BreakpointList::Add(BreakpointSP &bp_sp, bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -101,10 +101,8 @@ void BreakpointList::RemoveAllowed(bool notify) {
       NotifyChange(bp_sp, eBreakpointEventTypeRemoved);
   }
 
-  m_breakpoints.erase(
-      std::remove_if(m_breakpoints.begin(), m_breakpoints.end(),
-                     [&](const BreakpointSP &bp) { return bp->AllowDelete(); }),
-      m_breakpoints.end());
+  llvm::erase_if(m_breakpoints,
+                 [&](const BreakpointSP &bp) { return bp->AllowDelete(); });
 }
 
 BreakpointList::bp_collection::iterator

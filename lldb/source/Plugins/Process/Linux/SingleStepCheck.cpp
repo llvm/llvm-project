@@ -8,8 +8,8 @@
 
 #include "SingleStepCheck.h"
 
+#include <csignal>
 #include <sched.h>
-#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -29,7 +29,7 @@ using namespace lldb_private::process_linux;
 #if defined(__arm64__) || defined(__aarch64__)
 namespace {
 
-void LLVM_ATTRIBUTE_NORETURN Child() {
+[[noreturn]] void Child() {
   if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1)
     _exit(1);
 

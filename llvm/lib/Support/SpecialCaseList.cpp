@@ -64,7 +64,7 @@ unsigned SpecialCaseList::Matcher::match(StringRef Query) const {
     return It->second;
   if (Trigrams.isDefinitelyOut(Query))
     return false;
-  for (auto& RegExKV : RegExes)
+  for (const auto &RegExKV : RegExes)
     if (RegExKV.first->match(Query))
       return RegExKV.second;
   return 0;
@@ -93,7 +93,7 @@ SpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
   std::string Error;
   if (auto SCL = create(Paths, FS, Error))
     return SCL;
-  report_fatal_error(Error);
+  report_fatal_error(Twine(Error));
 }
 
 bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
@@ -209,7 +209,7 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 unsigned SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                          StringRef Query,
                                          StringRef Category) const {
-  for (auto &SectionIter : Sections)
+  for (const auto &SectionIter : Sections)
     if (SectionIter.SectionMatcher->match(Section)) {
       unsigned Blame =
           inSectionBlame(SectionIter.Entries, Prefix, Query, Category);

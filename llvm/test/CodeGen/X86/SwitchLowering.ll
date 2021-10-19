@@ -28,7 +28,7 @@ define i8* @FindChar(i8* %CurPtr) {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:    addl %edi, %esi
@@ -62,3 +62,44 @@ bb7:            ; preds = %bb, %bb
 
 declare void @foo(i8)
 
+; PR50080
+; The important part of this test is that we emit only 1 bit test rather than
+; 2 since the default BB of the switch is unreachable.
+define i32 @baz(i32 %0) {
+; CHECK-LABEL: baz:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $13056, %edx # imm = 0x3300
+; CHECK-NEXT:    btl %ecx, %edx
+; CHECK-NEXT:    jae .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %return
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB1_1: # %sw.epilog8
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
+  switch i32 %0, label %if.then.unreachabledefault [
+    i32 4, label %sw.epilog8
+    i32 5, label %sw.epilog8
+    i32 8, label %sw.bb2
+    i32 9, label %sw.bb2
+    i32 12, label %sw.bb4
+    i32 13, label %sw.bb4
+  ]
+
+sw.bb2:
+  br label %return
+
+sw.bb4:
+  br label %return
+
+sw.epilog8:
+  br label %return
+
+if.then.unreachabledefault:
+  unreachable
+
+return:
+  %retval.0 = phi i32 [ 1, %sw.epilog8 ], [ 0, %sw.bb2 ], [ 0, %sw.bb4 ]
+  ret i32 %retval.0
+}

@@ -39,12 +39,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 2: Test that MIPS machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=2 %s -o %t.mips
@@ -259,12 +259,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 3: Test that PPC machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=3 %s -o %t.ppc
@@ -301,12 +301,12 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 4: Test that PPC64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=4 %s -o %t.ppc64
@@ -339,30 +339,32 @@ Sections:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Case 5: Test that AARCH64 machine-specific tags can be dumped.
 # RUN: yaml2obj --docnum=5 %s -o %t.aarch64
 # RUN: llvm-readobj --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=LLVM-AARCH64
 # RUN: llvm-readelf --dynamic-table %t.aarch64 | FileCheck %s --check-prefix=GNU-AARCH64
 
-# LLVM-AARCH64:     DynamicSection [ (3 entries)
-# LLVM-AARCH64-NEXT:  Tag                Type            Name/Value
-# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT 1
-# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT 2
-# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL            0x0
+# LLVM-AARCH64:     DynamicSection [ (4 entries)
+# LLVM-AARCH64-NEXT:  Tag                Type                Name/Value
+# LLVM-AARCH64-NEXT:  0x0000000070000001 AARCH64_BTI_PLT     1
+# LLVM-AARCH64-NEXT:  0x0000000070000003 AARCH64_PAC_PLT     2
+# LLVM-AARCH64-NEXT:  0x0000000070000005 AARCH64_VARIANT_PCS 3
+# LLVM-AARCH64-NEXT:  0x0000000000000000 NULL                0x0
 # LLVM-AARCH64-NEXT:]
 
-# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 3 entries:
-# GNU-AARCH64-NEXT:  Tag                Type              Name/Value
-# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT) 1
-# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT) 2
-# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)            0x0
+# GNU-AARCH64:      Dynamic section at offset {{.*}} contains 4 entries:
+# GNU-AARCH64-NEXT:  Tag                Type                  Name/Value
+# GNU-AARCH64-NEXT:  0x0000000070000001 (AARCH64_BTI_PLT)     1
+# GNU-AARCH64-NEXT:  0x0000000070000003 (AARCH64_PAC_PLT)     2
+# GNU-AARCH64-NEXT:  0x0000000070000005 (AARCH64_VARIANT_PCS) 3
+# GNU-AARCH64-NEXT:  0x0000000000000000 (NULL)                0x0
 
 --- !ELF
 FileHeader:
@@ -378,12 +380,52 @@ Sections:
         Value: 1
       - Tag:   DT_AARCH64_PAC_PLT
         Value: 2
+      - Tag:   DT_AARCH64_VARIANT_PCS
+        Value: 3
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Case 6: Test that RISC-V machine-specific tags can be dumped.
+# RUN: yaml2obj --docnum=6 %s -o %t.rv
+# RUN: llvm-readobj --dynamic-table %t.rv | FileCheck %s --check-prefix=LLVM-RISCV
+# RUN: llvm-readelf --dynamic-table %t.rv | FileCheck %s --check-prefix=GNU-RISCV
+
+# LLVM-RISCV:      DynamicSection [ (2 entries)
+# LLVM-RISCV-NEXT:   Tag                Type                Name/Value
+# LLVM-RISCV-NEXT:   0x0000000070000001 RISCV_VARIANT_CC    0x1
+# LLVM-RISCV-NEXT:   0x0000000000000000 NULL                0x0
+# LLVM-RISCV-NEXT: ]
+
+# GNU-RISCV:       Dynamic section at offset {{.*}} contains 2 entries:
+# GNU-RISCV-NEXT:   Tag                Type                 Name/Value
+# GNU-RISCV-NEXT:   0x0000000070000001 (RISCV_VARIANT_CC)   0x1
+# GNU-RISCV-NEXT:   0x0000000000000000 (NULL)               0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_RISCV
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_RISCV_VARIANT_CC
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

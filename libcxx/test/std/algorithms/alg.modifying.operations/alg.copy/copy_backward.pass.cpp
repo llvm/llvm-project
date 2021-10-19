@@ -51,6 +51,17 @@ test()
     test_copy_backward<const int*, random_access_iterator<int*> >();
     test_copy_backward<const int*, int*>();
 
+#if TEST_STD_VER > 17
+    test_copy_backward<contiguous_iterator<const int*>, bidirectional_iterator<int*>>();
+    test_copy_backward<contiguous_iterator<const int*>, random_access_iterator<int*>>();
+    test_copy_backward<contiguous_iterator<const int*>, int*>();
+
+    test_copy_backward<bidirectional_iterator<const int*>, contiguous_iterator<int*>>();
+    test_copy_backward<random_access_iterator<const int*>, contiguous_iterator<int*>>();
+    test_copy_backward<contiguous_iterator<const int*>, contiguous_iterator<int*>>();
+    test_copy_backward<const int*, contiguous_iterator<int*>>();
+#endif
+
     return true;
 }
 
@@ -58,7 +69,7 @@ int main(int, char**)
 {
     test();
 
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#if TEST_STD_VER > 17
     static_assert(test());
 #endif
 

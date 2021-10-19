@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C735 If EXTENDS appears, SEQUENCE shall not appear.
 ! C738 The same private-or-sequence shall not appear more than once in a
 ! given derived-type-def .

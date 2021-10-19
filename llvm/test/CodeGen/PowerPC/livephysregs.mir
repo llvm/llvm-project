@@ -38,13 +38,13 @@ body: |
 
   bb.6:
     liveins: $x3, $x6, $x29, $x30
-    STD killed $x29, -24, $x1 :: (store 8 into %fixed-stack.1)
-    STD killed $x30, -16, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.1)
+    STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.0, align 16)
     NOP implicit-def dead $x29
     NOP implicit-def dead $x30
 
-    $x30 = LD -16, $x1 :: (load 8 from %fixed-stack.0, align 16)
-    $x29 = LD -24, $x1 :: (load 8 from %fixed-stack.1)
+    $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.0, align 16)
+    $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.1)
   
     $x4 = RLDICR killed $x6, 16, 47
     $x3 = OR8 killed $x4, killed $x3

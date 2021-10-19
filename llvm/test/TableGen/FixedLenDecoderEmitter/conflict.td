@@ -21,11 +21,11 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 def A : I<(outs GPR32:$dst), (ins GPR32:$src1), []> {
   let Size = 4;
-  let Inst{31-0} = 0;
+  let Inst{31...0} = 0;
 }
 def B : I<(outs GPR32:$dst), (ins GPR32:$src1), []> {
   let Size = 4;
-  let Inst{31-0} = 0;
+  let Inst{31...0} = 0;
 }
 
 // CHECK: Decoding Conflict:

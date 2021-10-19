@@ -5,7 +5,7 @@ add_llvm_component_library(LLVMInstrumentation
   ControlHeightReduction.cpp
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
-  HeapProfiler.cpp
+  MemProfiler.cpp
   MemorySanitizer.cpp
   IndirectCallPromotion.cpp
   Instrumentation.cpp
@@ -24,4 +24,12 @@ add_llvm_component_library(LLVMInstrumentation
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  Core
+  MC
+  Support
+  TransformUtils
+  ProfileData
   )

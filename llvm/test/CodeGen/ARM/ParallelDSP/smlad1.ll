@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=arm-arm-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
+; RUN: opt -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s -arm-parallel-dsp -S | FileCheck %s
 
 ; CHECK-LABEL: @test1
 ; CHECK:  %mac1{{\.}}026 = phi i32 [ [[V8:%[0-9]+]], %for.body ], [ 0, %for.body.preheader ]

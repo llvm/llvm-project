@@ -109,7 +109,7 @@ private:
   /// The linked list node subobject inside of RegNode.
   Value *Link = nullptr;
 };
-}
+} // namespace
 
 FunctionPass *llvm::createX86WinEHStatePass() { return new WinEHStatePass(); }
 
@@ -458,7 +458,7 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
 void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
                                        CallBase &Call, Value *State) {
   // Don't rewrite calls with a weird number of arguments.
-  if (Call.getNumArgOperands() != 2)
+  if (Call.arg_size() != 2)
     return;
 
   SmallVector<OperandBundleDef, 1> OpBundles;

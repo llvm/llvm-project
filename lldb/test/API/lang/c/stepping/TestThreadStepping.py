@@ -5,7 +5,6 @@ Test thread stepping features in combination with frame select.
 
 
 import lldb
-import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 

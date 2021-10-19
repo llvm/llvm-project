@@ -13,11 +13,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
 class TestObjCBreakpoints(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @add_test_categories(["objc"])
     def test_break(self):
         """Test setting Objective-C specific breakpoints (DWARF in .o files)."""
         self.build()
@@ -119,10 +119,6 @@ class TestObjCBreakpoints(TestBase):
                 'Make sure all function names have " isEqual:]" in their names')
 
         self.check_category_breakpoints()
-
-        # Stop here for reproducers. They don't capture file system changes.
-        if configuration.is_reproducer():
-            return
 
         if have_dsym:
             shutil.rmtree(exe + ".dSYM")

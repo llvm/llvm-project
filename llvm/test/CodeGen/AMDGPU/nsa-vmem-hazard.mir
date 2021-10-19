@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-xnack -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_image_sample_d_buf_off6
 # GCN:      IMAGE_SAMPLE
@@ -8,8 +8,8 @@
 name:            hazard_image_sample_d_buf_off6
 body:            |
   bb.0:
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, implicit $exec
 ...
 
 # GCN-LABEL: name: no_hazard_image_sample_d_buf_off1
@@ -19,8 +19,8 @@ body:            |
 name:            no_hazard_image_sample_d_buf_off1
 body:            |
   bb.0:
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 1, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 1, 0, 0, 0, implicit $exec
 ...
 
 # GCN-LABEL: name: no_hazard_image_sample_d_buf_far
@@ -31,9 +31,9 @@ body:            |
 name:            no_hazard_image_sample_d_buf_far
 body:            |
   bb.0:
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 undef $vgpr3, undef $vgpr8, undef $vgpr7, undef $vgpr5, undef $vgpr4, undef $vgpr6, undef $vgpr0, undef $vgpr2, undef $vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
     V_NOP_e32 implicit $exec
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, implicit $exec
 ...
 
 # Non-NSA
@@ -44,8 +44,8 @@ body:            |
 name:            no_hazard_image_sample_v4_v2_buf_off6
 body:            |
   bb.0:
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_V4_V2_gfx10 undef $vgpr1_vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load 16)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_V4_V2_gfx10 undef $vgpr1_vgpr2, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, implicit $exec
 ...
 
 # Less than 4 dwords
@@ -56,6 +56,6 @@ body:            |
 name:            no_hazard_image_sample_v4_v3_buf_off6
 body:            |
   bb.0:
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_V4_V3_nsa_gfx10 undef $vgpr1, undef $vgpr2, undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 16)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_SAMPLE_V4_V3_nsa_gfx10 undef $vgpr1, undef $vgpr2, undef $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, undef $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET undef $sgpr0_sgpr1_sgpr2_sgpr3, undef $sgpr4, 6, 0, 0, 0, implicit $exec
 ...

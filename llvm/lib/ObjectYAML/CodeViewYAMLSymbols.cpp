@@ -147,7 +147,30 @@ void ScalarEnumerationTraits<CPUType>::enumeration(IO &io, CPUType &Cpu) {
 }
 
 void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
-  auto RegNames = getRegisterNames(CPUType::X64);
+  const auto *Header = static_cast<COFF::header *>(io.getContext());
+  assert(Header && "The IO context is not initialized");
+
+  Optional<CPUType> CpuType;
+  ArrayRef<EnumEntry<uint16_t>> RegNames;
+
+  switch (Header->Machine) {
+  case COFF::IMAGE_FILE_MACHINE_I386:
+    CpuType = CPUType::Pentium3;
+    break;
+  case COFF::IMAGE_FILE_MACHINE_AMD64:
+    CpuType = CPUType::X64;
+    break;
+  case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    CpuType = CPUType::ARMNT;
+    break;
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    CpuType = CPUType::ARM64;
+    break;
+  }
+
+  if (CpuType)
+    RegNames = getRegisterNames(*CpuType);
+
   for (const auto &E : RegNames) {
     io.enumCase(Reg, E.Name.str().c_str(), static_cast<RegisterId>(E.Value));
   }

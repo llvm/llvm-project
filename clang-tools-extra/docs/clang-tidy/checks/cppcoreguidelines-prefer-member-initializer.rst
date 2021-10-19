@@ -85,7 +85,7 @@ Here ``n`` can be initialized in the constructor initialization list, unlike
 
 .. option:: UseAssignment
 
-   If this option is set to non-zero (default is `0`), the check will initialize
+   If this option is set to `true` (default is `false`), the check will initialize
    members with an assignment. In this case the fix of the first example looks
    like this:
 
@@ -100,3 +100,4 @@ Here ``n`` can be initialized in the constructor initialization list, unlike
         return;
       m = 1;
     }
+  };

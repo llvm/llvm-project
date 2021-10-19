@@ -28,7 +28,7 @@ define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture derefer
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    callq __asan_report_store1
+; CHECK-NEXT:    callq __asan_report_store1@PLT
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 entry:

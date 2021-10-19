@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -57,8 +58,7 @@ FunctionPass *llvm::createAArch64BranchTargetsPass() {
 }
 
 bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  if (!F.hasFnAttribute("branch-target-enforcement"))
+  if (!MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return false;
 
   LLVM_DEBUG(
@@ -77,13 +77,16 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     bool CouldCall = false, CouldJump = false;
-    // If the function is address-taken or externally-visible, it could be
-    // indirectly called. PLT entries and tail-calls use BR, but when they are
+    // Even in cases where a function has internal linkage and is only called
+    // directly in its translation unit, it can still be called indirectly if
+    // the linker decides to add a thunk to it for whatever reason (say, for
+    // example, if it is finally placed far from its call site and a BL is not
+    // long-range enough). PLT entries and tail-calls use BR, but when they are
     // are in guarded pages should all use x16 or x17 to hold the called
     // address, so we don't need to set CouldJump here. BR instructions in
     // non-guarded pages (which might be non-BTI-aware code) are allowed to
     // branch to a "BTI c" using any register.
-    if (&MBB == &*MF.begin() && (F.hasAddressTaken() || !F.hasLocalLinkage()))
+    if (&MBB == &*MF.begin())
       CouldCall = true;
 
     // If the block itself is address-taken, it could be indirectly branched
@@ -118,8 +121,10 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
 
   auto MBBI = MBB.begin();
 
-  // Skip the meta instuctions, those will be removed anyway.
-  for (; MBBI != MBB.end() && MBBI->isMetaInstruction(); ++MBBI)
+  // Skip the meta instructions, those will be removed anyway.
+  for (; MBBI != MBB.end() &&
+         (MBBI->isMetaInstruction() || MBBI->getOpcode() == AArch64::EMITBKEY);
+       ++MBBI)
     ;
 
   // SCTLR_EL1.BT[01] is set to 0 by default which means

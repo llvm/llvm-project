@@ -49,9 +49,7 @@ public:
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
-    ClassDescriptor()
-        : m_is_kvo(eLazyBoolCalculate), m_is_cf(eLazyBoolCalculate),
-          m_type_wp() {}
+    ClassDescriptor() : m_type_wp() {}
 
     virtual ~ClassDescriptor() = default;
 
@@ -87,10 +85,20 @@ public:
 
     virtual bool IsValid() = 0;
 
+    /// There are two routines in the ObjC runtime that tagged pointer clients
+    /// can call to get the value from their tagged pointer, one that retrieves
+    /// it as an unsigned value and one a signed value.  These two
+    /// GetTaggedPointerInfo methods mirror those two ObjC runtime calls.
+    /// @{
     virtual bool GetTaggedPointerInfo(uint64_t *info_bits = nullptr,
                                       uint64_t *value_bits = nullptr,
                                       uint64_t *payload = nullptr) = 0;
 
+    virtual bool GetTaggedPointerInfoSigned(uint64_t *info_bits = nullptr,
+                                            int64_t *value_bits = nullptr,
+                                            uint64_t *payload = nullptr) = 0;
+    /// @}
+ 
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers
@@ -135,8 +143,8 @@ public:
                         bool check_version_specific = false) const;
 
   private:
-    LazyBool m_is_kvo;
-    LazyBool m_is_cf;
+    LazyBool m_is_kvo = eLazyBoolCalculate;
+    LazyBool m_is_cf = eLazyBoolCalculate;
     lldb::TypeWP m_type_wp;
   };
 
@@ -251,7 +259,8 @@ public:
 
   llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
 
-  virtual UtilityFunction *CreateObjectChecker(const char *) = 0;
+  virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;
 
   virtual ObjCRuntimeVersions GetRuntimeVersion() const {
     return ObjCRuntimeVersions::eObjC_VersionUnknown;

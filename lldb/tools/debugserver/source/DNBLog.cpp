@@ -18,11 +18,11 @@ static int g_verbose = 0;
 #if defined(DNBLOG_ENABLED)
 
 #include "PThreadMutex.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
 #include <mach/mach.h>
 #include <pthread.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
 

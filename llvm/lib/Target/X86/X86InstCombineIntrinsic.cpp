@@ -16,6 +16,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
 using namespace llvm;
@@ -24,19 +25,29 @@ using namespace llvm;
 
 /// Return a constant boolean vector that has true elements in all positions
 /// where the input constant data vector has an element with the sign bit set.
-static Constant *getNegativeIsTrueBoolVec(ConstantDataVector *V) {
-  SmallVector<Constant *, 32> BoolVec;
-  IntegerType *BoolTy = Type::getInt1Ty(V->getContext());
-  for (unsigned I = 0, E = V->getNumElements(); I != E; ++I) {
-    Constant *Elt = V->getElementAsConstant(I);
-    assert((isa<ConstantInt>(Elt) || isa<ConstantFP>(Elt)) &&
-           "Unexpected constant data vector element type");
-    bool Sign = V->getElementType()->isIntegerTy()
-                    ? cast<ConstantInt>(Elt)->isNegative()
-                    : cast<ConstantFP>(Elt)->isNegative();
-    BoolVec.push_back(ConstantInt::get(BoolTy, Sign));
-  }
-  return ConstantVector::get(BoolVec);
+static Constant *getNegativeIsTrueBoolVec(Constant *V) {
+  VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
+  V = ConstantExpr::getBitCast(V, IntTy);
+  V = ConstantExpr::getICmp(CmpInst::ICMP_SGT, Constant::getNullValue(IntTy),
+                            V);
+  return V;
+}
+
+/// Convert the x86 XMM integer vector mask to a vector of bools based on
+/// each element's most significant bit (the sign bit).
+static Value *getBoolVecFromMask(Value *Mask) {
+  // Fold Constant Mask.
+  if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask))
+    return getNegativeIsTrueBoolVec(ConstantMask);
+
+  // Mask was extended from a boolean vector.
+  Value *ExtMask;
+  if (PatternMatch::match(
+          Mask, PatternMatch::m_SExt(PatternMatch::m_Value(ExtMask))) &&
+      ExtMask->getType()->isIntOrIntVectorTy(1))
+    return ExtMask;
+
+  return nullptr;
 }
 
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
@@ -47,32 +58,26 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   Value *Mask = II.getOperand(1);
   Constant *ZeroVec = Constant::getNullValue(II.getType());
 
-  // Special case a zero mask since that's not a ConstantDataVector.
-  // This masked load instruction creates a zero vector.
+  // Zero Mask - masked load instruction creates a zero vector.
   if (isa<ConstantAggregateZero>(Mask))
     return IC.replaceInstUsesWith(II, ZeroVec);
 
-  auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
-  if (!ConstMask)
-    return nullptr;
+  // The mask is constant or extended from a bool vector. Convert this x86
+  // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
+  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+    // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
+    // the LLVM intrinsic definition for the pointer argument.
+    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
+    PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
+    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
-  // The mask is constant. Convert this x86 intrinsic to the LLVM instrinsic
-  // to allow target-independent optimizations.
+    // The pass-through vector for an x86 masked load is a zero vector.
+    CallInst *NewMaskedLoad = IC.Builder.CreateMaskedLoad(
+        II.getType(), PtrCast, Align(1), BoolMask, ZeroVec);
+    return IC.replaceInstUsesWith(II, NewMaskedLoad);
+  }
 
-  // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-  // the LLVM intrinsic definition for the pointer argument.
-  unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
-  Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
-
-  // Second, convert the x86 XMM integer vector mask to a vector of bools based
-  // on each element's most significant bit (the sign bit).
-  Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
-
-  // The pass-through vector for an x86 masked load is a zero vector.
-  CallInst *NewMaskedLoad =
-      IC.Builder.CreateMaskedLoad(PtrCast, Align(1), BoolMask, ZeroVec);
-  return IC.replaceInstUsesWith(II, NewMaskedLoad);
+  return nullptr;
 }
 
 // TODO: If the x86 backend knew how to convert a bool vector mask back to an
@@ -83,8 +88,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   Value *Mask = II.getOperand(1);
   Value *Vec = II.getOperand(2);
 
-  // Special case a zero mask since that's not a ConstantDataVector:
-  // this masked store instruction does nothing.
+  // Zero Mask - this masked store instruction does nothing.
   if (isa<ConstantAggregateZero>(Mask)) {
     IC.eraseInstFromFunction(II);
     return true;
@@ -95,28 +99,21 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   if (II.getIntrinsicID() == Intrinsic::x86_sse2_maskmov_dqu)
     return false;
 
-  auto *ConstMask = dyn_cast<ConstantDataVector>(Mask);
-  if (!ConstMask)
-    return false;
+  // The mask is constant or extended from a bool vector. Convert this x86
+  // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
+  if (Value *BoolMask = getBoolVecFromMask(Mask)) {
+    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
+    PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
+    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
-  // The mask is constant. Convert this x86 intrinsic to the LLVM instrinsic
-  // to allow target-independent optimizations.
+    IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
 
-  // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-  // the LLVM intrinsic definition for the pointer argument.
-  unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-  PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
-  Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
+    // 'Replace uses' doesn't work for stores. Erase the original masked store.
+    IC.eraseInstFromFunction(II);
+    return true;
+  }
 
-  // Second, convert the x86 XMM integer vector mask to a vector of bools based
-  // on each element's most significant bit (the sign bit).
-  Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
-
-  IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
-
-  // 'Replace uses' doesn't work for stores. Erase the original masked store.
-  IC.eraseInstFromFunction(II);
-  return true;
+  return false;
 }
 
 static Value *simplifyX86immShift(const IntrinsicInst &II,
@@ -200,11 +197,11 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   }
   assert((LogicalShift || !ShiftLeft) && "Only logical shifts can shift left");
 
-  auto Vec = II.getArgOperand(0);
-  auto Amt = II.getArgOperand(1);
-  auto VT = cast<FixedVectorType>(Vec->getType());
-  auto SVT = VT->getElementType();
-  auto AmtVT = Amt->getType();
+  Value *Vec = II.getArgOperand(0);
+  Value *Amt = II.getArgOperand(1);
+  auto *VT = cast<FixedVectorType>(Vec->getType());
+  Type *SVT = VT->getElementType();
+  Type *AmtVT = Amt->getType();
   unsigned VWidth = VT->getNumElements();
   unsigned BitWidth = SVT->getPrimitiveSizeInBits();
 
@@ -242,9 +239,9 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     KnownBits KnownUpperBits = llvm::computeKnownBits(
         Amt, DemandedUpper, II.getModule()->getDataLayout());
     if (KnownLowerBits.getMaxValue().ult(BitWidth) &&
-        (DemandedUpper.isNullValue() || KnownUpperBits.isZero())) {
+        (DemandedUpper.isZero() || KnownUpperBits.isZero())) {
       SmallVector<int, 16> ZeroSplat(VWidth, 0);
-      Amt = Builder.CreateShuffleVector(Amt, Amt, ZeroSplat);
+      Amt = Builder.CreateShuffleVector(Amt, ZeroSplat);
       return (LogicalShift ? (ShiftLeft ? Builder.CreateShl(Vec, Amt)
                                         : Builder.CreateLShr(Vec, Amt))
                            : Builder.CreateAShr(Vec, Amt));
@@ -252,7 +249,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   }
 
   // Simplify if count is constant vector.
-  auto CDV = dyn_cast<ConstantDataVector>(Amt);
+  auto *CDV = dyn_cast<ConstantDataVector>(Amt);
   if (!CDV)
     return nullptr;
 
@@ -266,13 +263,13 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
   APInt Count(64, 0);
   for (unsigned i = 0, NumSubElts = 64 / BitWidth; i != NumSubElts; ++i) {
     unsigned SubEltIdx = (NumSubElts - 1) - i;
-    auto SubElt = cast<ConstantInt>(CDV->getElementAsConstant(SubEltIdx));
+    auto *SubElt = cast<ConstantInt>(CDV->getElementAsConstant(SubEltIdx));
     Count <<= BitWidth;
     Count |= SubElt->getValue().zextOrTrunc(64);
   }
 
   // If shift-by-zero then just return the original value.
-  if (Count.isNullValue())
+  if (Count.isZero())
     return Vec;
 
   // Handle cases when Shift >= BitWidth.
@@ -348,10 +345,10 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   }
   assert((LogicalShift || !ShiftLeft) && "Only logical shifts can shift left");
 
-  auto Vec = II.getArgOperand(0);
-  auto Amt = II.getArgOperand(1);
-  auto VT = cast<FixedVectorType>(II.getType());
-  auto SVT = VT->getElementType();
+  Value *Vec = II.getArgOperand(0);
+  Value *Amt = II.getArgOperand(1);
+  auto *VT = cast<FixedVectorType>(II.getType());
+  Type *SVT = VT->getElementType();
   int NumElts = VT->getNumElements();
   int BitWidth = SVT->getIntegerBitWidth();
 
@@ -479,7 +476,7 @@ static Value *simplifyX86pack(IntrinsicInst &II,
     // PACKUS: Truncate signed value with unsigned saturation.
     // Source values less than zero are saturated to zero.
     // Source values greater than dst maxuint are saturated to maxuint.
-    MinValue = APInt::getNullValue(SrcScalarSizeInBits);
+    MinValue = APInt::getZero(SrcScalarSizeInBits);
     MaxValue = APInt::getLowBitsSet(SrcScalarSizeInBits, DstScalarSizeInBits);
   }
 
@@ -631,8 +628,8 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
   };
 
   // See if we're dealing with constant values.
-  Constant *C0 = dyn_cast<Constant>(Op0);
-  ConstantInt *CI0 =
+  auto *C0 = dyn_cast<Constant>(Op0);
+  auto *CI0 =
       C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
 
@@ -764,12 +761,12 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
   }
 
   // See if we're dealing with constant values.
-  Constant *C0 = dyn_cast<Constant>(Op0);
-  Constant *C1 = dyn_cast<Constant>(Op1);
-  ConstantInt *CI00 =
+  auto *C0 = dyn_cast<Constant>(Op0);
+  auto *C1 = dyn_cast<Constant>(Op1);
+  auto *CI00 =
       C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
-  ConstantInt *CI10 =
+  auto *CI10 =
       C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
          : nullptr;
 
@@ -806,7 +803,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
 /// Attempt to convert pshufb* to shufflevector if the mask is constant.
 static Value *simplifyX86pshufb(const IntrinsicInst &II,
                                 InstCombiner::BuilderTy &Builder) {
-  Constant *V = dyn_cast<Constant>(II.getArgOperand(1));
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
   if (!V)
     return nullptr;
 
@@ -851,7 +848,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
 /// Attempt to convert vpermilvar* to shufflevector if the mask is constant.
 static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
                                     InstCombiner::BuilderTy &Builder) {
-  Constant *V = dyn_cast<Constant>(II.getArgOperand(1));
+  auto *V = dyn_cast<Constant>(II.getArgOperand(1));
   if (!V)
     return nullptr;
 
@@ -892,8 +889,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  auto V2 = UndefValue::get(V1->getType());
-  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, NumElts));
+  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, NumElts));
 }
 
 /// Attempt to convert vpermd/vpermps to shufflevector if the mask is constant.
@@ -927,8 +923,7 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  auto V2 = UndefValue::get(VecTy);
-  return Builder.CreateShuffleVector(V1, V2, makeArrayRef(Indexes, Size));
+  return Builder.CreateShuffleVector(V1, makeArrayRef(Indexes, Size));
 }
 
 Optional<Instruction *>
@@ -1002,6 +997,20 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
       }
 
+      if (MaskC->getValue().isShiftedMask()) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
+        Value *Input = II.getArgOperand(0);
+        Value *Masked = IC.Builder.CreateAnd(Input, II.getArgOperand(1));
+        Value *Shifted = IC.Builder.CreateLShr(Masked,
+                                               ConstantInt::get(II.getType(),
+                                                                ShiftAmount));
+        return IC.replaceInstUsesWith(II, Shifted);
+      }
+
+
       if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
         uint64_t Src = SrcC->getZExtValue();
         uint64_t Mask = MaskC->getZExtValue();
@@ -1032,6 +1041,18 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
       if (MaskC->isAllOnesValue()) {
         return IC.replaceInstUsesWith(II, II.getArgOperand(0));
+      }
+      if (MaskC->getValue().isShiftedMask()) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        unsigned ShiftAmount = MaskC->getValue().countTrailingZeros();
+        Value *Input = II.getArgOperand(0);
+        Value *Shifted = IC.Builder.CreateShl(Input,
+                                              ConstantInt::get(II.getType(),
+                                                               ShiftAmount));
+        Value *Masked = IC.Builder.CreateAnd(Shifted, II.getArgOperand(1));
+        return IC.replaceInstUsesWith(II, Masked);
       }
 
       if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
@@ -1451,11 +1472,11 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            VWidth1 == 16 && "Unexpected operand sizes");
 
     // See if we're dealing with constant values.
-    Constant *C1 = dyn_cast<Constant>(Op1);
-    ConstantInt *CILength =
+    auto *C1 = dyn_cast<Constant>(Op1);
+    auto *CILength =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
            : nullptr;
-    ConstantInt *CIIndex =
+    auto *CIIndex =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
@@ -1490,8 +1511,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
-    ConstantInt *CILength = dyn_cast<ConstantInt>(II.getArgOperand(1));
-    ConstantInt *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(2));
+    auto *CILength = dyn_cast<ConstantInt>(II.getArgOperand(1));
+    auto *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(2));
 
     // Attempt to simplify to a constant or shuffle vector.
     if (Value *V = simplifyX86extrq(II, Op0, CILength, CIIndex, IC.Builder)) {
@@ -1516,8 +1537,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
-    Constant *C1 = dyn_cast<Constant>(Op1);
-    ConstantInt *CI11 =
+    auto *C1 = dyn_cast<Constant>(Op1);
+    auto *CI11 =
         C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
@@ -1552,8 +1573,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
            VWidth1 == 2 && "Unexpected operand sizes");
 
     // See if we're dealing with constant values.
-    ConstantInt *CILength = dyn_cast<ConstantInt>(II.getArgOperand(2));
-    ConstantInt *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(3));
+    auto *CILength = dyn_cast<ConstantInt>(II.getArgOperand(2));
+    auto *CIIndex = dyn_cast<ConstantInt>(II.getArgOperand(3));
 
     // Attempt to simplify to a constant or shuffle vector.
     if (CILength && CIIndex) {
@@ -1735,8 +1756,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     if (II.getIntrinsicID() == Intrinsic::x86_mmx_pmovmskb) {
       ArgWidth = 8; // Arg is x86_mmx, but treated as <8 x i8>.
     } else {
-      auto Arg = II.getArgOperand(0);
-      auto ArgType = cast<FixedVectorType>(Arg->getType());
+      auto *ArgType = cast<FixedVectorType>(II.getArgOperand(0)->getType());
       ArgWidth = ArgType->getNumElements();
     }
 
@@ -1744,7 +1764,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     // we know that DemandedMask is non-zero already.
     APInt DemandedElts = DemandedMask.zextOrTrunc(ArgWidth);
     Type *VTy = II.getType();
-    if (DemandedElts.isNullValue()) {
+    if (DemandedElts.isZero()) {
       return ConstantInt::getNullValue(VTy);
     }
 
@@ -1886,8 +1906,33 @@ Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
     // Consider things like undef&0.  The result is known zero, not undef.
     if (!UndefElts2[0] || !UndefElts3[0])
       UndefElts.clearBit(0);
-
     break;
+
+  // TODO: Add fmaddsub support?
+  case Intrinsic::x86_sse3_addsub_pd:
+  case Intrinsic::x86_sse3_addsub_ps:
+  case Intrinsic::x86_avx_addsub_pd_256:
+  case Intrinsic::x86_avx_addsub_ps_256: {
+    // If none of the even or none of the odd lanes are required, turn this
+    // into a generic FP math instruction.
+    APInt SubMask = APInt::getSplat(VWidth, APInt(2, 0x1));
+    APInt AddMask = APInt::getSplat(VWidth, APInt(2, 0x2));
+    bool IsSubOnly = DemandedElts.isSubsetOf(SubMask);
+    bool IsAddOnly = DemandedElts.isSubsetOf(AddMask);
+    if (IsSubOnly || IsAddOnly) {
+      assert((IsSubOnly ^ IsAddOnly) && "Can't be both add-only and sub-only");
+      IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+      IC.Builder.SetInsertPoint(&II);
+      Value *Arg0 = II.getArgOperand(0), *Arg1 = II.getArgOperand(1);
+      return IC.Builder.CreateBinOp(
+          IsSubOnly ? Instruction::FSub : Instruction::FAdd, Arg0, Arg1);
+    }
+
+    simplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(&II, 1, DemandedElts, UndefElts2);
+    UndefElts &= UndefElts2;
+    break;
+  }
 
   case Intrinsic::x86_sse2_packssdw_128:
   case Intrinsic::x86_sse2_packsswb_128:

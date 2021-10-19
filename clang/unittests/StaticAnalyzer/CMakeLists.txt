@@ -5,14 +5,17 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
+  BugReportInterestingnessTest.cpp
   CallDescriptionTest.cpp
   CallEventTest.cpp
   FalsePositiveRefutationBRVisitorTest.cpp
+  NoStateChangeFuncVisitorTest.cpp
   ParamRegionTest.cpp
   RangeSetTest.cpp
   RegisterCustomCheckersTest.cpp
-  StoreTest.cpp 
+  StoreTest.cpp
   SymbolReaperTest.cpp
+  SValTest.cpp
   TestReturnValueUnderConstruction.cpp
   )
 

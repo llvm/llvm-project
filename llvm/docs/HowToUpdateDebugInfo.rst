@@ -59,6 +59,17 @@ Examples of transformations for which this rule *does not* apply include:
 * LICM. E.g., if an instruction is moved from the loop body to the preheader,
   the rule for :ref:`dropping locations<WhenToDropLocation>` applies.
 
+In addition to the rule above, a transformation should also preserve the debug
+location of an instruction that is moved between basic blocks, if the
+destination block already contains an instruction with an identical debug
+location.
+
+Examples of transformations that should follow this rule include:
+
+* Moving instructions between basic blocks. For example, if instruction ``I1``
+  in ``BB1`` is moved before ``I2`` in ``BB2``, the source location of ``I1``
+  can be preserved if it has the same source location as ``I2``.
+
 .. _WhenToMergeLocation:
 
 When to merge instruction locations
@@ -117,7 +128,7 @@ When to drop an instruction location
 A transformation should drop debug locations if the rules for
 :ref:`preserving<WhenToPreserveLocation>` and
 :ref:`merging<WhenToMergeLocation>` debug locations do not apply. The API to
-use is ``Instruction::setDebugLoc()``.
+use is ``Instruction::dropLocation()``.
 
 The purpose of this rule is to prevent erratic or misleading single-stepping
 behavior in situations in which an instruction has no clear, unambiguous
@@ -218,8 +229,8 @@ An IR test case for a transformation can, in many cases, be automatically
 mutated to test debug info handling within that transformation. This is a
 simple way to test for proper debug info handling.
 
-The ``debugify`` utility
-^^^^^^^^^^^^^^^^^^^^^^^^
+The ``debugify`` utility pass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``debugify`` testing utility is just a pair of passes: ``debugify`` and
 ``check-debugify``.
@@ -335,6 +346,50 @@ tests. Changes to this pass are not allowed to break existing tests.
 
 .. _MIRDebugify:
 
+Test original debug info preservation in optimizations
+------------------------------------------------------
+
+In addition to automatically generating debug info, the checks provided by
+the ``debugify`` utility pass can also be used to test the preservation of
+pre-existing debug info metadata. It could be run as follows:
+
+.. code-block:: bash
+
+  # Run the pass by checking original Debug Info preservation.
+  $ opt -verify-debuginfo-preserve -pass-to-test sample.ll
+
+  # Check the preservation of original Debug Info after each pass.
+  $ opt -verify-each-debuginfo-preserve -O2 sample.ll
+
+Furthermore, there is a way to export the issues that have been found into
+a JSON file as follows:
+
+.. code-block:: bash
+
+  $ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
+
+and then use the ``llvm/utils/llvm-original-di-preservation.py`` script
+to generate an HTML page with the issues reported in a more human readable form
+as follows:
+
+.. code-block:: bash
+
+  $ llvm-original-di-preservation.py sample.json sample.html
+
+Testing of original debug info preservation can be invoked from front-end level
+as follows:
+
+.. code-block:: bash
+
+  # Test each pass.
+  $ clang -Xclang -fverify-debuginfo-preserve -g -O2 sample.c
+
+  # Test each pass and export the issues report into the JSON file.
+  $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
+
+Please do note that there are some known false positives, for source locations
+and debug intrinsic checking, so that will be addressed as a future work.
+
 Mutation testing for MIR-level transformations
 ----------------------------------------------
 
@@ -342,8 +397,8 @@ A variant of the ``debugify`` utility described in
 :ref:`Mutation testing for IR-level transformations<IRDebugify>` can be used
 for MIR-level transformations as well: much like the IR-level pass,
 ``mir-debugify`` inserts sequentially increasing line locations to each
-``MachineInstr`` in a ``Module`` (although there is no equivalent MIR-level
-``check-debugify`` pass).
+``MachineInstr`` in a ``Module``. And the MIR-level ``mir-check-debugify`` is
+similar to IR-level ``check-debugify`` pass.
 
 For example, here is a snippet before:
 
@@ -403,16 +458,32 @@ and ``-start-after``. For example:
   $ llc -debugify-and-strip-all-safe -run-pass=... <other llc args>
   $ llc -debugify-and-strip-all-safe -O1 <other llc args>
 
+If you want to check it after each pass in a pipeline, use
+``-debugify-check-and-strip-all-safe``. This can also be combined with
+``-start-before`` and ``-start-after``. For example:
+
+.. code-block:: bash
+
+  $ llc -debugify-check-and-strip-all-safe -run-pass=... <other llc args>
+  $ llc -debugify-check-and-strip-all-safe -O1 <other llc args>
+
+To check all debug info from a test, use ``mir-check-debugify``, like:
+
+.. code-block:: bash
+
+  $ llc -run-pass=mir-debugify,other-pass,mir-check-debugify
+
 To strip out all debug info from a test, use ``mir-strip-debug``, like:
 
 .. code-block:: bash
 
   $ llc -run-pass=mir-debugify,other-pass,mir-strip-debug
 
-It can be useful to combine ``mir-debugify`` and ``mir-strip-debug`` to
-identify backend transformations which break in the presence of debug info.
-For example, to run the AArch64 backend tests with all normal passes
-"sandwiched" in between MIRDebugify and MIRStripDebugify mutation passes, run:
+It can be useful to combine ``mir-debugify``, ``mir-check-debugify`` and/or
+``mir-strip-debug`` to identify backend transformations which break in
+the presence of debug info. For example, to run the AArch64 backend tests
+with all normal passes "sandwiched" in between MIRDebugify and
+MIRStripDebugify mutation passes, run:
 
 .. code-block:: bash
 

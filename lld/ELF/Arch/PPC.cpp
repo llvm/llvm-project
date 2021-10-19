@@ -45,8 +45,7 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   int getTlsGdRelaxSkip(RelType type) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
                       uint64_t val) const override;
@@ -152,12 +151,10 @@ void elf::writePPC32GlinkSection(uint8_t *buf, size_t numEntries) {
 PPC::PPC() {
   copyRel = R_PPC_COPY;
   gotRel = R_PPC_GLOB_DAT;
-  noneRel = R_PPC_NONE;
   pltRel = R_PPC_JMP_SLOT;
   relativeRel = R_PPC_RELATIVE;
   iRelativeRel = R_PPC_IRELATIVE;
   symbolicRel = R_PPC_ADDR32;
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 3;
   gotPltHeaderEntriesNum = 0;
   pltHeaderSize = 0;
@@ -223,6 +220,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_ADDR16_HA:
   case R_PPC_ADDR16_HI:
   case R_PPC_ADDR16_LO:
+  case R_PPC_ADDR24:
   case R_PPC_ADDR32:
     return R_ABS;
   case R_PPC_DTPREL16:
@@ -260,7 +258,7 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
   case R_PPC_TPREL16_HA:
   case R_PPC_TPREL16_LO:
   case R_PPC_TPREL16_HI:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
@@ -346,6 +344,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32(loc, (read32(loc) & ~mask) | (val & mask));
     break;
   }
+  case R_PPC_ADDR24:
   case R_PPC_REL24:
   case R_PPC_LOCAL24PC:
   case R_PPC_PLTREL24: {
@@ -360,8 +359,7 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-RelExpr PPC::adjustRelaxExpr(RelType type, const uint8_t *data,
-                             RelExpr expr) const {
+RelExpr PPC::adjustTlsExpr(RelType type, RelExpr expr) const {
   if (expr == R_RELAX_TLS_GD_TO_IE)
     return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
   if (expr == R_RELAX_TLS_LD_TO_LE)

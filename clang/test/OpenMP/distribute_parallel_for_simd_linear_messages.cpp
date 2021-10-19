@@ -116,7 +116,7 @@ template<int LEN> int test_warn() {
   return ind2;
 }
 
-struct S1; // expected-note 2 {{declared here}} expected-note 2 {{forward declaration of 'S1'}}
+struct S1; // expected-note 2 {{declared here}} expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;

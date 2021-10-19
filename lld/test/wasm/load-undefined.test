@@ -21,6 +21,9 @@
 ; CHECK-NEXT:        Name:            ret64
 ; CHECK-NEXT:      - Index:           3
 ; CHECK-NEXT:        Name:            ret32
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
 
 ; NO-LOAD:         Name:            name
@@ -31,6 +34,9 @@
 ; NO-LOAD-NEXT:        Name:            _start
 ; NO-LOAD-NEXT:      - Index:           2
 ; NO-LOAD-NEXT:        Name:            ret64
+; NO-LOAD-NEXT:     GlobalNames:
+; NO-LOAD-NEXT:       - Index:           0
+; NO-LOAD-NEXT:         Name:            __stack_pointer
 ; NO-LOAD-NEXT: ...
 
 ; Verify that referencing a symbol that is not found doesn't result in a link

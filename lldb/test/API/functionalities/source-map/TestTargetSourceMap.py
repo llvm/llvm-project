@@ -24,7 +24,7 @@ class TestTargetSourceMap(TestBase):
             self.dbg.GetCommandInterpreter().HandleCommand("source list -f main.c -l 2", retval)
             self.assertTrue(retval.Succeeded(), "source list didn't succeed.")
             self.assertNotEqual(retval.GetOutput(), None, "We got no ouput from source list")
-            self.assertTrue("return" in retval.GetOutput(), "We didn't find the source file...")
+            self.assertIn("return", retval.GetOutput(), "We didn't find the source file...")
 
         # Set the target soure map to map "./" to the current test directory
         src_dir = self.getSourceDir()

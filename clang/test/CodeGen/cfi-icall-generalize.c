@@ -4,7 +4,7 @@
 // Test that const char* is generalized to const void* and that const char** is
 // generalized to void*
 
-// CHECK: define i32** @f({{.*}} !type [[TYPE:![0-9]+]] !type [[TYPE_GENERALIZED:![0-9]+]]
+// CHECK: define{{.*}} i32** @f({{.*}} !type [[TYPE:![0-9]+]] !type [[TYPE_GENERALIZED:![0-9]+]]
 int** f(const char *a, const char **b) {
   return (int**)0;
 }

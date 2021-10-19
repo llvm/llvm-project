@@ -161,7 +161,7 @@ body:             |
   bb.1.if.then:
     successors: %bb.3(0x80000000)
   
-    MOV32mr $rbp, 1, $noreg, -4, $noreg, $r14d, debug-location !15 :: (store 4 into %ir.local1, !tbaa !16)
+    MOV32mr $rbp, 1, $noreg, -4, $noreg, $r14d, debug-location !15 :: (store (s32) into %ir.local1, !tbaa !16)
     DBG_VALUE $rbp, $noreg, !13, !DIExpression(DW_OP_constu, 4, DW_OP_minus, DW_OP_deref), debug-location !15
     renamable $rdi = LEA64r $rbp, 1, $noreg, -4, $noreg
     CALL64pcrel32 @init, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !15
@@ -173,7 +173,7 @@ body:             |
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !15
     CALL64pcrel32 @init2, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !15
     DBG_VALUE $noreg, $noreg, !14, !DIExpression(), debug-location !15
-    renamable $eax = MOV32rm $rbp, 1, $noreg, -4, $noreg, debug-location !15 :: (dereferenceable load 4 from %ir.local1, !tbaa !16)
+    renamable $eax = MOV32rm $rbp, 1, $noreg, -4, $noreg, debug-location !15 :: (dereferenceable load (s32) from %ir.local1, !tbaa !16)
     $rsp = frame-destroy ADD64ri8 $rsp, 16, implicit-def dead $eflags, debug-location !15
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
     CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !15

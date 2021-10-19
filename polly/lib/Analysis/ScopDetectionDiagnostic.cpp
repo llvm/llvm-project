@@ -47,11 +47,12 @@ using namespace llvm;
 #define SCOP_STAT(NAME, DESC)                                                  \
   { "polly-detect", "NAME", "Number of rejected regions: " DESC }
 
-Statistic RejectStatistics[] = {
+static Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
     SCOP_STAT(InvalidTerminator, "Unsupported terminator instruction"),
-    SCOP_STAT(UnreachableInExit, "Unreachable in exit block"),
     SCOP_STAT(IrreducibleRegion, "Irreducible loops"),
+    SCOP_STAT(UnreachableInExit, "Unreachable in exit block"),
+    SCOP_STAT(IndirectPredecessor, "Branch from indirect terminator"),
     SCOP_STAT(LastCFG, ""),
     SCOP_STAT(AffFunc, ""),
     SCOP_STAT(UndefCond, "Undefined branch condition"),
@@ -237,6 +238,37 @@ std::string ReportUnreachableInExit::getEndUserMessage() const {
 
 bool ReportUnreachableInExit::classof(const RejectReason *RR) {
   return RR->getKind() == RejectReasonKind::UnreachableInExit;
+}
+
+//===----------------------------------------------------------------------===//
+// IndirectPredecessor.
+
+std::string ReportIndirectPredecessor::getRemarkName() const {
+  return "IndirectPredecessor";
+}
+
+const Value *ReportIndirectPredecessor::getRemarkBB() const {
+  if (Inst)
+    return Inst->getParent();
+  return nullptr;
+}
+
+std::string ReportIndirectPredecessor::getMessage() const {
+  if (Inst)
+    return "Branch from indirect terminator: " + *Inst;
+  return getEndUserMessage();
+}
+
+const DebugLoc &ReportIndirectPredecessor::getDebugLoc() const {
+  return DbgLoc;
+}
+
+std::string ReportIndirectPredecessor::getEndUserMessage() const {
+  return "Branch from indirect terminator.";
+}
+
+bool ReportIndirectPredecessor::classof(const RejectReason *RR) {
+  return RR->getKind() == RejectReasonKind::IndirectPredecessor;
 }
 
 //===----------------------------------------------------------------------===//

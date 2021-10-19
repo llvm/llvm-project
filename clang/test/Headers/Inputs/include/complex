@@ -3,6 +3,7 @@
 #include <cmath>
 
 #define INFINITY (__builtin_inff())
+#define NAN (__builtin_nanf (""))
 
 namespace std {
 
@@ -297,5 +298,115 @@ inline bool
 operator!=(const _Tp &__x, const complex<_Tp> &__y) {
   return !(__x == __y);
 }
+
+template <class _Tp> _Tp abs(const std::complex<_Tp> &__c);
+
+// arg
+
+template <class _Tp> _Tp arg(const std::complex<_Tp> &__c);
+
+// norm
+
+template <class _Tp> _Tp norm(const std::complex<_Tp> &__c);
+
+// conj
+
+template <class _Tp> std::complex<_Tp> conj(const std::complex<_Tp> &__c);
+
+// proj
+
+template <class _Tp> std::complex<_Tp> proj(const std::complex<_Tp> &__c);
+
+// polar
+
+template <class _Tp>
+complex<_Tp> polar(const _Tp &__rho, const _Tp &__theta = _Tp());
+
+// log
+
+template <class _Tp> std::complex<_Tp> log(const std::complex<_Tp> &__x);
+
+// log10
+
+template <class _Tp> std::complex<_Tp> log10(const std::complex<_Tp> &__x);
+
+// sqrt
+
+template <class _Tp>
+std::complex<_Tp> sqrt(const std::complex<_Tp> &__x);
+
+// exp
+
+template <class _Tp>
+std::complex<_Tp> exp(const std::complex<_Tp> &__x);
+
+// pow
+
+template <class _Tp>
+std::complex<_Tp> pow(const std::complex<_Tp> &__x,
+                      const std::complex<_Tp> &__y);
+
+// __sqr, computes pow(x, 2)
+
+template <class _Tp> std::complex<_Tp> __sqr(const std::complex<_Tp> &__x);
+
+// asinh
+
+template <class _Tp>
+std::complex<_Tp> asinh(const std::complex<_Tp> &__x);
+
+// acosh
+
+template <class _Tp>
+std::complex<_Tp> acosh(const std::complex<_Tp> &__x);
+
+// atanh
+
+template <class _Tp>
+std::complex<_Tp> atanh(const std::complex<_Tp> &__x);
+
+// sinh
+
+template <class _Tp>
+std::complex<_Tp> sinh(const std::complex<_Tp> &__x);
+
+// cosh
+
+template <class _Tp>
+std::complex<_Tp> cosh(const std::complex<_Tp> &__x);
+
+// tanh
+
+template <class _Tp>
+std::complex<_Tp> tanh(const std::complex<_Tp> &__x);
+
+// asin
+
+template <class _Tp>
+std::complex<_Tp> asin(const std::complex<_Tp> &__x);
+
+// acos
+
+template <class _Tp>
+std::complex<_Tp> acos(const std::complex<_Tp> &__x);
+
+// atan
+
+template <class _Tp>
+std::complex<_Tp> atan(const std::complex<_Tp> &__x);
+
+// sin
+
+template <class _Tp>
+std::complex<_Tp> sin(const std::complex<_Tp> &__x);
+
+// cos
+
+template <class _Tp> std::complex<_Tp> cos(const std::complex<_Tp> &__x);
+
+// tan
+
+template <class _Tp>
+std::complex<_Tp> tan(const std::complex<_Tp> &__x);
 
 } // namespace std

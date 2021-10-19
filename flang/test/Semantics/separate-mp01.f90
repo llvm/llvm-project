@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! case 1: ma_create_new_fun' was not declared a separate module procedure
 module m1

@@ -8,16 +8,14 @@ define i32 @foo(i32* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @bar()
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> undef, i32 [[N:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[N]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[N]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP3]], <i32 5, i32 9, i32 3, i32 10>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP3]], <i32 5, i32 9, i32 3, i32 10>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP6]], <i32 9, i32 9, i32 9, i32 9>
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[N:%.*]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[SHUFFLE]], <i32 5, i32 9, i32 3, i32 10>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[SHUFFLE]], <i32 5, i32 9, i32 3, i32 10>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], <i32 9, i32 9, i32 9, i32 9>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

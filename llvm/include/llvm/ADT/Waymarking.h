@@ -249,11 +249,8 @@ void fillWaymarks(TIter Begin, TIter End, size_t Offset = 0) {
     do {
       ++Off;
 
-      unsigned Tag = Count & Marker::Traits::MARK_MASK;
-
       // If the count can fit into the tag, then the counting must stop.
       if (Count <= Marker::Traits::MARK_MASK) {
-        Tag |= Marker::Traits::STOP_MASK;
         Count = Off;
       } else
         Count >>= Marker::Traits::MARK_SIZE;

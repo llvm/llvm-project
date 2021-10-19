@@ -436,3 +436,59 @@ exit:
 }
 
 declare void @side_effect()
+
+; The exit condition %outer.cond.1 depends on a phi in %inner. Make sure we do
+; not incorrectly determine %x.lcssa <= -1.
+define i32 @exit_cond_depends_on_inner_loop() {
+; CHECK-LABEL: @exit_cond_depends_on_inner_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[IV_OUTER:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_OUTER_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ -1, [[OUTER_HEADER]] ], [ [[CALL:%.*]], [[INNER]] ]
+; CHECK-NEXT:    [[CALL]] = call i32 @match()
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp sgt i32 [[CALL]], -1
+; CHECK-NEXT:    br i1 [[INNER_COND]], label [[INNER]], label [[OUTER_EXITING_1:%.*]]
+; CHECK:       outer.exiting.1:
+; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], [[INNER]] ]
+; CHECK-NEXT:    [[OUTER_COND_1:%.*]] = icmp sgt i32 [[X_LCSSA]], -1
+; CHECK-NEXT:    br i1 [[OUTER_COND_1]], label [[EXIT:%.*]], label [[OUTER_LATCH]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[IV_OUTER_NEXT]] = add nuw nsw i32 [[IV_OUTER]], 1
+; CHECK-NEXT:    [[OUTER_COND_2:%.*]] = icmp ult i32 [[IV_OUTER]], 100
+; CHECK-NEXT:    br i1 [[OUTER_COND_2]], label [[OUTER_HEADER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[X_RES:%.*]] = phi i32 [ [[X_LCSSA]], [[OUTER_EXITING_1]] ], [ -1, [[OUTER_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[X_RES]]
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv.outer = phi i32 [ 0, %entry ], [ %iv.outer.next , %outer.latch ]
+  br label %inner
+
+inner:
+  %x = phi i32 [ -1, %outer.header ], [ %call, %inner ]
+  %call = call i32 @match()
+  %inner.cond = icmp sgt i32 %call, -1
+  br i1 %inner.cond, label %inner, label %outer.exiting.1
+
+outer.exiting.1:
+  %x.lcssa = phi i32 [ %x, %inner ]
+  %outer.cond.1 = icmp sgt i32 %x.lcssa, -1
+  br i1 %outer.cond.1, label %exit, label %outer.latch
+
+outer.latch:
+  %iv.outer.next = add nuw nsw i32 %iv.outer, 1
+  %outer.cond.2 = icmp ult i32 %iv.outer, 100
+  br i1 %outer.cond.2, label %outer.header, label %exit
+
+exit:
+  %x.res = phi i32 [ %x.lcssa, %outer.exiting.1 ], [ -1, %outer.latch ]
+  ret i32 %x.res
+}
+
+declare i32 @match()

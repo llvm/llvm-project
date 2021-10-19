@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::mutex m;
@@ -49,12 +50,12 @@ void f()
 int main(int, char**)
 {
     m.lock();
-    std::thread t(f);
+    std::thread t = support::make_test_thread(f);
     std::this_thread::sleep_for(ms(250));
     m.unlock();
     t.join();
 
-#ifdef __cpp_deduction_guides
+#if TEST_STD_VER >= 17
     std::unique_lock ul(m);
     static_assert((std::is_same<decltype(ul), std::unique_lock<decltype(m)>>::value), "" );
 #endif

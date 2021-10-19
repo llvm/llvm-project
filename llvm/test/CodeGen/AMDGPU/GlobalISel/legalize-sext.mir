@@ -41,8 +41,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_s16_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
     ; CHECK: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
@@ -58,8 +57,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_s24_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 24
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 24
     ; CHECK: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s24) = G_TRUNC %0
@@ -75,8 +73,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_i1_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 1
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 1
     ; CHECK: $vgpr0 = COPY [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
@@ -95,10 +92,8 @@ body: |
     ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 16
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 16
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
     ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
@@ -122,13 +117,9 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 16
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY3]], 16
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 16
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
+    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32), [[SEXT_INREG2]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -151,14 +142,10 @@ body: |
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 16
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY3]], 16
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
-    ; CHECK: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY4]], 16
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST]], 16
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
+    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
+    ; CHECK: [[SEXT_INREG3:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR1]], 16
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32), [[SEXT_INREG2]](s32), [[SEXT_INREG3]](s32)
     ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x s32>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -251,8 +238,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_s8_to_s24
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s24) = G_TRUNC [[SEXT_INREG]](s32)
     ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s24)
     %0:_(s32) = COPY $vgpr0
@@ -269,8 +255,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_s7_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 7
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 7
     ; CHECK: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s7) = G_TRUNC %0
@@ -286,8 +271,7 @@ body: |
 
     ; CHECK-LABEL: name: test_sext_s8_to_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
     ; CHECK: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
@@ -627,16 +611,12 @@ body: |
     ; CHECK: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC4]], [[C5]]
     ; CHECK: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND3]], [[C3]](s16)
     ; CHECK: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[SHL2]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND4:%[0-9]+]]:_(s16) = G_AND [[COPY1]], [[C5]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND5:%[0-9]+]]:_(s16) = G_AND [[COPY2]], [[C5]]
+    ; CHECK: [[AND4:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND5:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL3:%[0-9]+]]:_(s16) = G_SHL [[AND5]], [[C3]](s16)
     ; CHECK: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[SHL3]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND6:%[0-9]+]]:_(s16) = G_AND [[COPY3]], [[C5]]
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND7:%[0-9]+]]:_(s16) = G_AND [[COPY4]], [[C5]]
+    ; CHECK: [[AND6:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND7:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL4:%[0-9]+]]:_(s16) = G_SHL [[AND7]], [[C3]](s16)
     ; CHECK: [[OR3:%[0-9]+]]:_(s16) = G_OR [[AND6]], [[SHL4]]
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
@@ -648,28 +628,20 @@ body: |
     ; CHECK: [[SHL6:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C1]](s32)
     ; CHECK: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL6]]
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR4]](s32), [[OR5]](s32)
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND8:%[0-9]+]]:_(s16) = G_AND [[COPY5]], [[C5]]
-    ; CHECK: [[COPY6:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND9:%[0-9]+]]:_(s16) = G_AND [[COPY6]], [[C5]]
+    ; CHECK: [[AND8:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND9:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL7:%[0-9]+]]:_(s16) = G_SHL [[AND9]], [[C3]](s16)
     ; CHECK: [[OR6:%[0-9]+]]:_(s16) = G_OR [[AND8]], [[SHL7]]
-    ; CHECK: [[COPY7:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND10:%[0-9]+]]:_(s16) = G_AND [[COPY7]], [[C5]]
-    ; CHECK: [[COPY8:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND11:%[0-9]+]]:_(s16) = G_AND [[COPY8]], [[C5]]
+    ; CHECK: [[AND10:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND11:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL8:%[0-9]+]]:_(s16) = G_SHL [[AND11]], [[C3]](s16)
     ; CHECK: [[OR7:%[0-9]+]]:_(s16) = G_OR [[AND10]], [[SHL8]]
-    ; CHECK: [[COPY9:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND12:%[0-9]+]]:_(s16) = G_AND [[COPY9]], [[C5]]
-    ; CHECK: [[COPY10:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND13:%[0-9]+]]:_(s16) = G_AND [[COPY10]], [[C5]]
+    ; CHECK: [[AND12:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND13:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL9:%[0-9]+]]:_(s16) = G_SHL [[AND13]], [[C3]](s16)
     ; CHECK: [[OR8:%[0-9]+]]:_(s16) = G_OR [[AND12]], [[SHL9]]
-    ; CHECK: [[COPY11:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND14:%[0-9]+]]:_(s16) = G_AND [[COPY11]], [[C5]]
-    ; CHECK: [[COPY12:%[0-9]+]]:_(s16) = COPY [[ASHR1]](s16)
-    ; CHECK: [[AND15:%[0-9]+]]:_(s16) = G_AND [[COPY12]], [[C5]]
+    ; CHECK: [[AND14:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
+    ; CHECK: [[AND15:%[0-9]+]]:_(s16) = G_AND [[ASHR1]], [[C5]]
     ; CHECK: [[SHL10:%[0-9]+]]:_(s16) = G_SHL [[AND15]], [[C3]](s16)
     ; CHECK: [[OR9:%[0-9]+]]:_(s16) = G_OR [[AND14]], [[SHL10]]
     ; CHECK: [[ZEXT4:%[0-9]+]]:_(s32) = G_ZEXT [[OR6]](s16)
@@ -724,8 +696,7 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-LABEL: name: test_sext_s112_to_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s128) = COPY [[COPY]](s128)
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](s128)
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
     ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[UV1]], 48
     ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[SEXT_INREG]](s64)
     ; CHECK: S_ENDPGM 0, implicit [[MV]](s128)

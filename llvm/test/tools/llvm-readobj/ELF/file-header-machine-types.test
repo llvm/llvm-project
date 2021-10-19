@@ -400,7 +400,7 @@
 # RUN: llvm-readelf --file-headers %t.ecog16.o | FileCheck %s -DMACHINE="Cyan Technology eCOG16 family"
 
 # RUN: yaml2obj %s -o %t.cr16.o -D MACHINE=EM_CR16
-# RUN: llvm-readelf --file-headers %t.cr16.o | FileCheck %s -DMACHINE="Xilinx MicroBlaze"
+# RUN: llvm-readelf --file-headers %t.cr16.o | FileCheck %s -DMACHINE="National Semiconductor CompactRISC 16-bit processor"
 
 # RUN: yaml2obj %s -o %t.etpu.o -D MACHINE=EM_ETPU
 # RUN: llvm-readelf --file-headers %t.etpu.o | FileCheck %s -DMACHINE="Freescale Extended Time Processing Unit"
@@ -428,6 +428,9 @@
 
 # RUN: yaml2obj %s -o %t.tilepro.o -D MACHINE=EM_TILEPRO
 # RUN: llvm-readelf --file-headers %t.tilepro.o | FileCheck %s -DMACHINE="Tilera TILEPro multicore architecture family"
+
+# RUN: yaml2obj %s -o %t.microblaze.o -D MACHINE=EM_MICROBLAZE
+# RUN: llvm-readelf --file-headers %t.microblaze.o | FileCheck %s -DMACHINE="Xilinx MicroBlaze 32-bit RISC soft processor core"
 
 # RUN: yaml2obj %s -o %t.cuda.o -D MACHINE=EM_CUDA
 # RUN: llvm-readelf --file-headers %t.cuda.o | FileCheck %s -DMACHINE="NVIDIA CUDA architecture"

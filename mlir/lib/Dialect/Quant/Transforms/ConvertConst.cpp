@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::quant;
@@ -82,22 +82,21 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
 
   // When creating the new const op, use a fused location that combines the
   // original const and the qbarrier that led to the quantization.
-  auto fusedLoc = FusedLoc::get(
-      {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()},
-      rewriter.getContext());
-  auto newConstOp =
-      rewriter.create<ConstantOp>(fusedLoc, newConstValueType, newConstValue);
+  auto fusedLoc = rewriter.getFusedLoc(
+      {qbarrier.arg().getDefiningOp()->getLoc(), qbarrier.getLoc()});
+  auto newConstOp = rewriter.create<arith::ConstantOp>(
+      fusedLoc, newConstValueType, newConstValue);
   rewriter.replaceOpWithNewOp<StorageCastOp>(qbarrier, qbarrier.getType(),
                                              newConstOp);
   return success();
 }
 
 void ConvertConstPass::runOnFunction() {
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(&getContext());
   auto func = getFunction();
   auto *context = &getContext();
-  patterns.insert<QuantizedConstRewrite>(context);
-  applyPatternsAndFoldGreedily(func, patterns);
+  patterns.add<QuantizedConstRewrite>(context);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::quant::createConvertConstPass() {

@@ -265,7 +265,8 @@ bool SSAIfConv::InstrDependenciesAllowIfConv(MachineInstr *I) {
 
     // Remember clobbered regunits.
     if (MO.isDef() && Register::isPhysicalRegister(Reg))
-      for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+      for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+           ++Units)
         ClobberedRegUnits.set(*Units);
 
     if (!MO.readsReg() || !Register::isVirtualRegister(Reg))
@@ -364,7 +365,7 @@ bool SSAIfConv::findInsertionPoint() {
   // Keep track of live regunits before the current position.
   // Only track RegUnits that are also in ClobberedRegUnits.
   LiveRegUnits.clear();
-  SmallVector<unsigned, 8> Reads;
+  SmallVector<MCRegister, 8> Reads;
   MachineBasicBlock::iterator FirstTerm = Head->getFirstTerminator();
   MachineBasicBlock::iterator I = Head->end();
   MachineBasicBlock::iterator B = Head->begin();
@@ -386,11 +387,12 @@ bool SSAIfConv::findInsertionPoint() {
         continue;
       // I clobbers Reg, so it isn't live before I.
       if (MO.isDef())
-        for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+        for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+             ++Units)
           LiveRegUnits.erase(*Units);
       // Unless I reads Reg.
       if (MO.readsReg())
-        Reads.push_back(Reg);
+        Reads.push_back(Reg.asMCReg());
     }
     // Anything read by I is live before I.
     while (!Reads.empty())
@@ -408,9 +410,8 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (SparseSet<unsigned>::const_iterator
-             i = LiveRegUnits.begin(), e = LiveRegUnits.end(); i != e; ++i)
-          dbgs() << ' ' << printRegUnit(*i, TRI);
+        for (unsigned LRU : LiveRegUnits)
+          dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });
       continue;
@@ -556,6 +557,52 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
   return true;
 }
 
+/// \return true iff the two registers are known to have the same value.
+static bool hasSameValue(const MachineRegisterInfo &MRI,
+                         const TargetInstrInfo *TII, Register TReg,
+                         Register FReg) {
+  if (TReg == FReg)
+    return true;
+
+  if (!TReg.isVirtual() || !FReg.isVirtual())
+    return false;
+
+  const MachineInstr *TDef = MRI.getUniqueVRegDef(TReg);
+  const MachineInstr *FDef = MRI.getUniqueVRegDef(FReg);
+  if (!TDef || !FDef)
+    return false;
+
+  // If there are side-effects, all bets are off.
+  if (TDef->hasUnmodeledSideEffects())
+    return false;
+
+  // If the instruction could modify memory, or there may be some intervening
+  // store between the two, we can't consider them to be equal.
+  if (TDef->mayLoadOrStore() && !TDef->isDereferenceableInvariantLoad(nullptr))
+    return false;
+
+  // We also can't guarantee that they are the same if, for example, the
+  // instructions are both a copy from a physical reg, because some other
+  // instruction may have modified the value in that reg between the two
+  // defining insts.
+  if (any_of(TDef->uses(), [](const MachineOperand &MO) {
+        return MO.isReg() && MO.getReg().isPhysical();
+      }))
+    return false;
+
+  // Check whether the two defining instructions produce the same value(s).
+  if (!TII->produceSameValue(*TDef, *FDef, &MRI))
+    return false;
+
+  // Further, check that the two defs come from corresponding operands.
+  int TIdx = TDef->findRegisterDefOperandIdx(TReg);
+  int FIdx = FDef->findRegisterDefOperandIdx(FReg);
+  if (TIdx == -1 || FIdx == -1)
+    return false;
+
+  return TIdx == FIdx;
+}
+
 /// replacePHIInstrs - Completely replace PHI instructions with selects.
 /// This is possible when the only Tail predecessors are the if-converted
 /// blocks.
@@ -570,7 +617,15 @@ void SSAIfConv::replacePHIInstrs() {
     PHIInfo &PI = PHIs[i];
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
     Register DstReg = PI.PHI->getOperand(0).getReg();
-    TII->insertSelect(*Head, FirstTerm, HeadDL, DstReg, Cond, PI.TReg, PI.FReg);
+    if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
+      // We do not need the select instruction if both incoming values are
+      // equal, but we do need a COPY.
+      BuildMI(*Head, FirstTerm, HeadDL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(PI.TReg);
+    } else {
+      TII->insertSelect(*Head, FirstTerm, HeadDL, DstReg, Cond, PI.TReg,
+                        PI.FReg);
+    }
     LLVM_DEBUG(dbgs() << "          --> " << *std::prev(FirstTerm));
     PI.PHI->eraseFromParent();
     PI.PHI = nullptr;
@@ -591,7 +646,7 @@ void SSAIfConv::rewritePHIOperands() {
     unsigned DstReg = 0;
 
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
-    if (PI.TReg == PI.FReg) {
+    if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
       // We do not need the select instruction if both incoming values are
       // equal.
       DstReg = PI.TReg;
@@ -866,8 +921,8 @@ bool EarlyIfConverter::shouldConvertIf() {
   // by inserting select instructions.
   MachineTraceMetrics::Trace TailTrace = MinInstr->getTrace(IfConv.Tail);
   struct CriticalPathInfo {
-    unsigned Extra; //< Count of extra cycles that the component adds.
-    unsigned Depth; //< Absolute depth of the component in cycles.
+    unsigned Extra; // Count of extra cycles that the component adds.
+    unsigned Depth; // Absolute depth of the component in cycles.
   };
   CriticalPathInfo Cond{};
   CriticalPathInfo TBlock{};

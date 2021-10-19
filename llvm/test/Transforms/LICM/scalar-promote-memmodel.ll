@@ -1,5 +1,5 @@
 ; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
-; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' -S %s | FileCheck %s
 
 ; Make sure we don't hoist a conditionally-executed store out of the loop;
 ; it would violate the concurrency memory model

@@ -9,7 +9,7 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrw $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X86-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
 ; X86-NEXT:    retl
 ;
@@ -17,7 +17,7 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm1
 ; X64-NEXT:    vpinsrw $1, %esi, %xmm1, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2,3,4,5,6,7]
 ; X64-NEXT:    retq
   %ins1 = insertelement <2 x i16> undef, i16 %x0, i32 0
@@ -30,19 +30,18 @@ define <8 x float> @insert_subvector_256(i16 %x0, i16 %x1, <8 x float> %v) nounw
 define <8 x i64> @insert_subvector_512(i32 %x0, i32 %x1, <8 x i64> %v) nounwind {
 ; X86_AVX256-LABEL: insert_subvector_512:
 ; X86_AVX256:       # %bb.0:
-; X86_AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; X86_AVX256-NEXT:    vpinsrd $0, {{[0-9]+}}(%esp), %xmm2, %xmm2
-; X86_AVX256-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm2, %xmm2
-; X86_AVX256-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X86_AVX256-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %ymm2
+; X86_AVX256-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4],ymm0[5,6,7]
+; X86_AVX256-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %ymm2
+; X86_AVX256-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm2[5],ymm0[6,7]
 ; X86_AVX256-NEXT:    retl
 ;
 ; X64_AVX256-LABEL: insert_subvector_512:
 ; X64_AVX256:       # %bb.0:
 ; X64_AVX256-NEXT:    vmovd %edi, %xmm2
 ; X64_AVX256-NEXT:    vpinsrd $1, %esi, %xmm2, %xmm2
-; X64_AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; X64_AVX256-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3]
-; X64_AVX256-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X64_AVX256-NEXT:    vpbroadcastq %xmm2, %ymm2
+; X64_AVX256-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5],ymm0[6,7]
 ; X64_AVX256-NEXT:    retq
 ;
 ; X86_AVX512-LABEL: insert_subvector_512:

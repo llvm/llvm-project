@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 !Tests for SELECT RANK Construct(R1148)
 program select_rank
@@ -145,11 +145,13 @@ contains
     Rank(2)
       print *, "Now it's rank 2 "
     RANK (*)
-      print *, "Going for a other rank"
+      print *, "Going for another rank"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     !ERROR: Not more than one of the selectors of SELECT RANK statement may be '*'
     RANK (*)
       print *, "This is Wrong"
+      !ERROR: 'kind=' argument must be a constant scalar integer whose value is a supported kind for the intrinsic result type
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(x) == 1))
     END SELECT
    end subroutine
@@ -211,17 +213,19 @@ contains
 
     END SELECT
 
-    !ERROR: Selector 'arr(1:3)+ arr(4:5)' is not an assumed-rank array variable
-    SELECT RANK(arr(1:3)+ arr(4:5))
+    !ERROR: Selector 'arr(1:2)+ arr(4:5)' is not an assumed-rank array variable
+    SELECT RANK(arr(1:2)+ arr(4:5))
 
     END SELECT
 
     SELECT RANK(ptr=>x)
     RANK (3)
       PRINT *, "PRINT RANK 3"
+      !ERROR: 'ptr' is not an object that can appear in an expression
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(ptr) == 0))
     RANK (1)
       PRINT *, "PRINT RANK 1"
+      !ERROR: 'ptr' is not an object that can appear in an expression
       j = INT(0, KIND=MERGE(KIND(0), -1, RANK(ptr) == 1))
     END SELECT
    end subroutine

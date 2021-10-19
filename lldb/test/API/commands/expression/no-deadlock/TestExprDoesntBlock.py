@@ -15,17 +15,11 @@ class ExprDoesntDeadlockTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17946')
     @add_test_categories(["basic_process"])
-    @skipIfReproducer # Timeouts are not currently modeled.
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         # Now create a breakpoint at source line before call_me_to_get_lock
         # gets called.

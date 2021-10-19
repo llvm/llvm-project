@@ -1,9 +1,8 @@
 //===- InstrOrderFile.cpp ---- Late IR instrumentation for order file ----===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -144,7 +143,7 @@ public:
     // Fill up UpdateOrderFileBB: grab the index, update the buffer!
     Value *IdxVal = updateB.CreateAtomicRMW(
         AtomicRMWInst::Add, BufferIdx, ConstantInt::get(Int32Ty, 1),
-        AtomicOrdering::SequentiallyConsistent);
+        MaybeAlign(), AtomicOrdering::SequentiallyConsistent);
     // We need to wrap around the index to fit it inside the buffer.
     Value *WrappedIdx = updateB.CreateAnd(
         IdxVal, ConstantInt::get(Int32Ty, INSTR_ORDER_FILE_BUFFER_MASK));

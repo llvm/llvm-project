@@ -29,7 +29,7 @@ FileLineResolver::FileLineResolver(const FileSpec &file_spec, uint32_t line_no,
     : Searcher(), m_file_spec(file_spec), m_line_number(line_no),
       m_inlines(check_inlines) {}
 
-FileLineResolver::~FileLineResolver() {}
+FileLineResolver::~FileLineResolver() = default;
 
 Searcher::CallbackReturn
 FileLineResolver::SearchCallback(SearchFilter &filter, SymbolContext &context,

@@ -33,7 +33,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-NEXT:    pmullw %xmm0, %xmm1
-; X32-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    packuswb %xmm1, %xmm1
 ; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -73,7 +73,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-NEXT:    pmullw %xmm0, %xmm1
-; X64-NEXT:    pand {{.*}}(%rip), %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    packuswb %xmm1, %xmm1
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -142,12 +142,12 @@ entry:
 define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-LABEL: test1:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    paddd %xmm0, %xmm1
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; X32-NEXT:    pmuludq %xmm0, %xmm1
@@ -156,16 +156,16 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X32-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pand %xmm1, %xmm0
-; X32-NEXT:    movq %xmm0, (%ecx)
+; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    por %xmm0, %xmm1
-; X32-NEXT:    movq %xmm1, (%ecx)
+; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pxor %xmm1, %xmm0
-; X32-NEXT:    movq %xmm0, (%ecx)
+; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    emms
 ; X32-NEXT:    retl
 ;
@@ -390,25 +390,28 @@ define <1 x i64> @test3(<1 x i64>* %a, <1 x i64>* %b, i32 %count) nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    testl %ecx, %ecx
 ; X32-NEXT:    je .LBB3_1
 ; X32-NEXT:  # %bb.2: # %bb26.preheader
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    xorl %ebx, %ebx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB3_3: # %bb26
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl (%edi,%ebx,8), %ebp
+; X32-NEXT:    movl %ecx, %esi
 ; X32-NEXT:    movl 4(%edi,%ebx,8), %ecx
-; X32-NEXT:    addl (%esi,%ebx,8), %ebp
-; X32-NEXT:    adcl 4(%esi,%ebx,8), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    addl (%edi,%ebx,8), %ebp
+; X32-NEXT:    adcl 4(%edi,%ebx,8), %ecx
 ; X32-NEXT:    addl %ebp, %eax
 ; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl %esi, %ecx
 ; X32-NEXT:    incl %ebx
-; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    cmpl %esi, %ebx
 ; X32-NEXT:    jb .LBB3_3
 ; X32-NEXT:    jmp .LBB3_4
 ; X32-NEXT:  .LBB3_1:
@@ -658,7 +661,7 @@ define i64 @pr43922() {
 ; X32-NEXT:    .cfi_def_cfa_register %ebp
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movq {{\.LCPI.*}}, %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X32-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
 ; X32-NEXT:    psrad $255, %mm0
 ; X32-NEXT:    movq %mm0, (%esp)
 ; X32-NEXT:    movl (%esp), %eax
@@ -670,7 +673,7 @@ define i64 @pr43922() {
 ;
 ; X64-LABEL: pr43922:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq {{.*}}(%rip), %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X64-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
 ; X64-NEXT:    psrad $255, %mm0
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq

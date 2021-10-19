@@ -10,8 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFFORMVALUE_H
 
 #include "DWARFDataExtractor.h"
-#include <stddef.h>
 #include "llvm/ADT/Optional.h"
+#include <cstddef>
 
 class DWARFUnit;
 class SymbolFileDWARF;
@@ -20,14 +20,14 @@ class DWARFDIE;
 class DWARFFormValue {
 public:
   typedef struct ValueTypeTag {
-    ValueTypeTag() : value(), data(nullptr) { value.uval = 0; }
+    ValueTypeTag() : value() { value.uval = 0; }
 
     union {
       uint64_t uval;
       int64_t sval;
       const char *cstr;
     } value;
-    const uint8_t *data;
+    const uint8_t *data = nullptr;
   } ValueType;
 
   enum {

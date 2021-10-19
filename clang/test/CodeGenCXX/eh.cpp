@@ -9,7 +9,7 @@ void test1() {
   throw d1;
 }
 
-// CHECK-LABEL:     define void @_Z5test1v()
+// CHECK-LABEL:     define{{.*}} void @_Z5test1v()
 // CHECK:       [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 8)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
 // CHECK-NEXT:  [[EXN2:%.*]] = bitcast [[DSTAR]] [[EXN]] to i8*
@@ -30,12 +30,12 @@ void test2() {
   throw d2;
 }
 
-// CHECK-LABEL:     define void @_Z5test2v()
+// CHECK-LABEL:     define{{.*}} void @_Z5test2v()
 // CHECK:       [[EXNVAR:%.*]] = alloca i8*
 // CHECK-NEXT:  [[SELECTORVAR:%.*]] = alloca i32
 // CHECK-NEXT:  [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 16)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[DSTAR:%[^*]*\*]]
-// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] [[EXN]], [[DSTAR]] nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @d2)
+// CHECK-NEXT:  invoke void @_ZN7test2_DC1ERKS_([[DSTAR]] {{[^,]*}} [[EXN]], [[DSTAR]] nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) @d2)
 // CHECK-NEXT:     to label %[[CONT:.*]] unwind label %{{.*}}
 //      :     [[CONT]]:   (can't check this in Release-Asserts builds)
 // CHECK:       call void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTI7test2_D to i8*), i8* null) [[NR]]
@@ -52,7 +52,7 @@ void test3() {
   throw (volatile test3_D *)0;
 }
 
-// CHECK-LABEL:     define void @_Z5test3v()
+// CHECK-LABEL:     define{{.*}} void @_Z5test3v()
 // CHECK:       [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 8)
 // CHECK-NEXT:  [[EXN:%.*]] = bitcast i8* [[EXNOBJ]] to [[D:%[^*]+]]**
 // CHECK-NEXT:  store [[D]]* null, [[D]]** [[EXN]]
@@ -64,7 +64,7 @@ void test4() {
   throw;
 }
 
-// CHECK-LABEL:     define void @_Z5test4v()
+// CHECK-LABEL:     define{{.*}} void @_Z5test4v()
 // CHECK:        call void @__cxa_rethrow() [[NR]]
 // CHECK-NEXT:   unreachable
 
@@ -80,10 +80,10 @@ namespace test5 {
   void test() {
     try { throw A(); } catch (A &x) {}
   }
-// CHECK-LABEL:      define void @_ZN5test54testEv()
+// CHECK-LABEL:      define{{.*}} void @_ZN5test54testEv()
 // CHECK:      [[EXNOBJ:%.*]] = call i8* @__cxa_allocate_exception(i64 1)
 // CHECK:      [[EXNCAST:%.*]] = bitcast i8* [[EXNOBJ]] to [[A:%[^*]*]]*
-// CHECK-NEXT: invoke void @_ZN5test51AC1Ev([[A]]* [[EXNCAST]])
+// CHECK-NEXT: invoke void @_ZN5test51AC1Ev([[A]]* {{[^,]*}} [[EXNCAST]])
 // CHECK:      invoke void @__cxa_throw(i8* [[EXNOBJ]], i8* bitcast ({{.*}}* @_ZTIN5test51AE to i8*), i8* bitcast (void ([[A]]*)* @_ZN5test51AD1Ev to i8*)) [[NR]]
 // CHECK-NEXT:   to label {{%.*}} unwind label %[[HANDLER:[^ ]*]]
 //      :    [[HANDLER]]:  (can't check this in Release-Asserts builds)
@@ -102,7 +102,7 @@ namespace test6 {
 
 // PR7127
 namespace test7 {
-// CHECK-LABEL:      define i32 @_ZN5test73fooEv() 
+// CHECK-LABEL:      define{{.*}} i32 @_ZN5test73fooEv() 
 // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
   int foo() {
 // CHECK:      [[CAUGHTEXNVAR:%.*]] = alloca i8*
@@ -162,7 +162,7 @@ namespace test8 {
   struct A { A(const A&); ~A(); };
   void bar();
 
-  // CHECK-LABEL: define void @_ZN5test83fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN5test83fooEv()
   void foo() {
     try {
       // CHECK:      invoke void @_ZN5test83barEv()
@@ -187,7 +187,7 @@ namespace test9 {
   struct A { A(); };
 
 
-  // CHECK-LABEL: define void @_ZN5test91AC2Ev(%"struct.test9::A"* %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZN5test91AC2Ev(%"struct.test9::A"* {{[^,]*}} %this) unnamed_addr
   // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
   A::A() try {
   // CHECK:      invoke void @_ZN5test96opaqueEv()
@@ -200,7 +200,7 @@ namespace test9 {
   // CHECK:      invoke void @_ZN5test96opaqueEv()
   // CHECK:      invoke void @__cxa_rethrow()
 
-  // CHECK-LABEL:      define void @_ZN5test91AC1Ev(%"struct.test9::A"* %this) unnamed_addr
+  // CHECK-LABEL:      define{{.*}} void @_ZN5test91AC1Ev(%"struct.test9::A"* {{[^,]*}} %this) unnamed_addr
   // CHECK:      call void @_ZN5test91AC2Ev
   // CHECK-NEXT: ret void
     opaque();
@@ -214,7 +214,7 @@ namespace test10 {
   struct A { ~A(); };
   struct B { int x; };
 
-  // CHECK-LABEL: define void @_ZN6test103fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test103fooEv()
   void foo() {
     A a; // force a cleanup context
 
@@ -248,7 +248,7 @@ namespace test10 {
 namespace test11 {
   void opaque();
 
-  // CHECK-LABEL: define void @_ZN6test113fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test113fooEv()
   void foo() {
     try {
       // CHECK:      invoke void @_ZN6test116opaqueEv()
@@ -265,7 +265,7 @@ namespace test11 {
 
   struct A {};
 
-  // CHECK-LABEL: define void @_ZN6test113barEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test113barEv()
   void bar() {
     try {
       // CHECK:      [[EXNSLOT:%.*]] = alloca i8*
@@ -290,7 +290,7 @@ namespace test12 {
   struct A { ~A() noexcept(false); };
   bool opaque(const A&);
 
-  // CHECK-LABEL: define void @_ZN6test124testEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test124testEv()
   void test() {
     // CHECK: [[X:%.*]] = alloca [[A:%.*]],
     // CHECK: [[EHCLEANUPDEST:%.*]] = alloca i32
@@ -304,8 +304,8 @@ namespace test12 {
       A y;
       A z;
 
-      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* [[Z]])
-      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* [[Y]])
+      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[Z]])
+      // CHECK: invoke void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[Y]])
       // CHECK-NOT: switch
       goto success;
     }
@@ -313,7 +313,7 @@ namespace test12 {
   success:
     bool _ = true;
 
-    // CHECK: call void @_ZN6test121AD1Ev([[A]]* [[X]])
+    // CHECK: call void @_ZN6test121AD1Ev([[A]]* {{[^,]*}} [[X]])
     // CHECK-NEXT: ret void
   }
 }
@@ -375,7 +375,7 @@ namespace test15 {
 
   bool opaque(int);
 
-  // CHECK-LABEL: define void @_ZN6test153fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test153fooEv()
   void foo() {
     A a;
 
@@ -409,7 +409,7 @@ namespace test16 {
   void foo();
   bool cond();
 
-  // CHECK-LABEL: define void @_ZN6test163barEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN6test163barEv()
   void bar() {
     // CHECK:      [[EXN_SAVE:%.*]] = alloca i8*
     // CHECK-NEXT: [[EXN_ACTIVE:%.*]] = alloca i1
@@ -429,16 +429,16 @@ namespace test16 {
     // CHECK-NEXT: store i8* [[EXN]], i8** [[EXN_SAVE]]
     // CHECK-NEXT: store i1 true, i1* [[EXN_ACTIVE]]
     // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[EXN]] to [[B:%.*]]*
-    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* [[TEMP]])
+    // CHECK-NEXT: invoke void @_ZN6test161AC1Ev([[A]]* {{[^,]*}} [[TEMP]])
     // CHECK:      store i1 true, i1* [[TEMP_ACTIVE]]
-    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* [[T0]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
+    // CHECK-NEXT: invoke void @_ZN6test161BC1ERKNS_1AE([[B]]* {{[^,]*}} [[T0]], [[A]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TEMP]])
     // CHECK:      store i1 false, i1* [[EXN_ACTIVE]]
     // CHECK-NEXT: invoke void @__cxa_throw(i8* [[EXN]],
 
     // CHECK:      invoke void @_ZN6test163fooEv()
     // CHECK:      br label
 
-    // CHECK:      invoke void @_ZN6test161AD1Ev([[A]]* [[TEMP]])
+    // CHECK:      invoke void @_ZN6test161AD1Ev([[A]]* {{[^,]*}} [[TEMP]])
     // CHECK:      ret void
 
     // CHECK:      [[T0:%.*]] = load i1, i1* [[EXN_ACTIVE]]

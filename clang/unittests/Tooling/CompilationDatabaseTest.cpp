@@ -172,13 +172,15 @@ TEST(JSONCompilationDatabase, GetAllCompileCommands) {
 }
 
 static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
-                                                    StringRef JSONDatabase,
+                                                    std::string JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
       JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
+  // Overwrite the string to verify we're not reading from it later.
+  JSONDatabase.assign(JSONDatabase.size(), '*');
   std::vector<CompileCommand> Commands = Database->getCompileCommands(FileName);
   EXPECT_LE(Commands.size(), 1u);
   if (Commands.empty())
@@ -208,7 +210,7 @@ TEST(JSONCompilationDatabase, ArgumentsPreferredOverCommand) {
 struct FakeComparator : public PathComparator {
   ~FakeComparator() override {}
   bool equivalent(StringRef FileA, StringRef FileB) const override {
-    return FileA.equals_lower(FileB);
+    return FileA.equals_insensitive(FileB);
   }
 };
 
@@ -383,6 +385,7 @@ TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
   std::vector<std::pair<std::string, std::string>> Cases = {
       {"distcc gcc foo.c", "gcc foo.c"},
       {"gomacc clang++ foo.c", "clang++ foo.c"},
+      {"sccache clang++ foo.c", "clang++ foo.c"},
       {"ccache gcc foo.c", "gcc foo.c"},
       {"ccache.exe gcc foo.c", "gcc foo.c"},
       {"ccache g++.exe foo.c", "g++.exe foo.c"},
@@ -540,6 +543,27 @@ TEST(FixedCompilationDatabase, GetAllCompileCommands) {
   EXPECT_EQ(0ul, Database.getAllCompileCommands().size());
 }
 
+TEST(FixedCompilationDatabase, FromBuffer) {
+  const char *Data = R"(
+
+ -DFOO=BAR
+
+--baz
+
+  )";
+  std::string ErrorMsg;
+  auto CDB =
+      FixedCompilationDatabase::loadFromBuffer("/cdb/dir", Data, ErrorMsg);
+
+  std::vector<CompileCommand> Result = CDB->getCompileCommands("/foo/bar.cc");
+  ASSERT_EQ(1ul, Result.size());
+  EXPECT_EQ("/cdb/dir", Result.front().Directory);
+  EXPECT_EQ("/foo/bar.cc", Result.front().Filename);
+  EXPECT_THAT(
+      Result.front().CommandLine,
+      ElementsAre(EndsWith("clang-tool"), "-DFOO=BAR", "--baz", "/foo/bar.cc"));
+}
+
 TEST(ParseFixedCompilationDatabase, ReturnsNullOnEmptyArgumentList) {
   int Argc = 0;
   std::string ErrorMsg;
@@ -676,6 +700,10 @@ protected:
     SmallVector<StringRef, 8> Argv = {Clang, File, "-D", File};
     llvm::SplitString(Flags, Argv);
 
+    // Trim double quotation from the argumnets if any.
+    for (auto *It = Argv.begin(); It != Argv.end(); ++It)
+      *It = It->trim("\"");
+
     SmallString<32> Dir;
     llvm::sys::path::system_temp_directory(false, Dir);
 
@@ -701,14 +729,14 @@ class InterpolateTest : public MemDBTest {
 protected:
   // Look up the command from a relative path, and return it in string form.
   // The input file is not included in the returned command.
-  std::string getCommand(llvm::StringRef F) {
+  std::string getCommand(llvm::StringRef F, bool MakeNative = true) {
     auto Results =
         inferMissingCompileCommands(std::make_unique<MemCDB>(Entries))
-            ->getCompileCommands(path(F));
+            ->getCompileCommands(MakeNative ? path(F) : F);
     if (Results.empty())
       return "none";
     // drop the input file argument, so tests don't have to deal with path().
-    EXPECT_EQ(Results[0].CommandLine.back(), path(F))
+    EXPECT_EQ(Results[0].CommandLine.back(), MakeNative ? path(F) : F)
         << "Last arg should be the file";
     Results[0].CommandLine.pop_back();
     return llvm::join(Results[0].CommandLine, " ");
@@ -788,6 +816,28 @@ TEST_F(InterpolateTest, Strip) {
   EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall");
 }
 
+TEST_F(InterpolateTest, StripDoubleDash) {
+  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall -- dir/foo.cpp");
+  // input file and output option are removed
+  // -Wall flag isn't
+  // -std option gets re-added as the last argument before the input file
+  // -- is removed as it's not necessary - the new input file doesn't start with
+  // a dash
+  EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall -std=c++14");
+}
+
+TEST_F(InterpolateTest, InsertDoubleDash) {
+  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall");
+  EXPECT_EQ(getCommand("-dir/bar.cpp", false),
+            "clang -D dir/foo.cpp -Wall -std=c++14 --");
+}
+
+TEST_F(InterpolateTest, InsertDoubleDashForClangCL) {
+  add("dir/foo.cpp", "clang-cl", "/std:c++14 /W4");
+  EXPECT_EQ(getCommand("/dir/bar.cpp", false),
+            "clang-cl -D dir/foo.cpp /W4 /std:c++14 --");
+}
+
 TEST_F(InterpolateTest, Case) {
   add("FOO/BAR/BAZ/SHOUT.cc");
   add("foo/bar/baz/quiet.cc");
@@ -807,7 +857,7 @@ TEST_F(InterpolateTest, ClangCL) {
   add("foo.cpp", "clang-cl", "/W4");
 
   // Language flags should be added with CL syntax.
-  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp /W4 /TP");
+  EXPECT_EQ(getCommand("foo.h", false), "clang-cl -D foo.cpp /W4 /TP");
 }
 
 TEST_F(InterpolateTest, DriverModes) {
@@ -815,8 +865,22 @@ TEST_F(InterpolateTest, DriverModes) {
   add("bar.cpp", "clang", "--driver-mode=cl");
 
   // --driver-mode overrides should be respected.
-  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp --driver-mode=gcc -x c++-header");
-  EXPECT_EQ(getCommand("bar.h"), "clang -D bar.cpp --driver-mode=cl /TP");
+  EXPECT_EQ(getCommand("foo.h"),
+            "clang-cl -D foo.cpp --driver-mode=gcc -x c++-header");
+  EXPECT_EQ(getCommand("bar.h", false),
+            "clang -D bar.cpp --driver-mode=cl /TP");
+}
+
+TEST(TransferCompileCommandTest, Smoke) {
+  CompileCommand Cmd;
+  Cmd.Filename = "foo.cc";
+  Cmd.CommandLine = {"clang", "-Wall", "foo.cc"};
+  Cmd.Directory = "dir";
+  CompileCommand Transferred = transferCompileCommand(std::move(Cmd), "foo.h");
+  EXPECT_EQ(Transferred.Filename, "foo.h");
+  EXPECT_THAT(Transferred.CommandLine,
+              ElementsAre("clang", "-Wall", "-x", "c++-header", "foo.h"));
+  EXPECT_EQ(Transferred.Directory, "dir");
 }
 
 TEST(CompileCommandTest, EqualityOperator) {
@@ -900,6 +964,13 @@ TEST_F(ExpandResponseFilesTest, ExpandResponseFiles) {
   add("bar.cpp", "clang", "-Dflag");
   EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag");
   EXPECT_EQ(getCommand("bar.cpp"), "clang bar.cpp -D bar.cpp -Dflag");
+}
+
+TEST_F(ExpandResponseFilesTest, ExpandResponseFilesEmptyArgument) {
+  addFile(path(StringRef("rsp1.rsp")), "-Dflag");
+
+  add("foo.cpp", "clang", "@rsp1.rsp \"\"");
+  EXPECT_EQ(getCommand("foo.cpp"), "clang foo.cpp -D foo.cpp -Dflag ");
 }
 
 } // end namespace tooling

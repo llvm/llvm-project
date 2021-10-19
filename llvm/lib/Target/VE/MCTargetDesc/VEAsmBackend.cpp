@@ -15,8 +15,8 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -164,7 +164,8 @@ public:
     llvm_unreachable("relaxInstruction() should not be called");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
     if ((Count % 8) != 0)
       return false;
 

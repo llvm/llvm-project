@@ -9,95 +9,83 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <iostream>
 
 using namespace llvm;
 
-enum Style {
-  Auto,  ///< auto-detect mangling
-  GNU,   ///< GNU
-  Lucid, ///< Lucid compiler (lcc)
-  ARM,
-  HP,    ///< HP compiler (xCC)
-  EDG,   ///< EDG compiler
-  GNUv3, ///< GNU C++ v3 ABI
-  Java,  ///< Java (gcj)
-  GNAT   ///< ADA compiler (gnat)
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Opts.inc"
+#undef OPTION
 };
-static cl::opt<Style>
-    Format("format", cl::desc("decoration style"),
-           cl::values(clEnumValN(Auto, "auto", "auto-detect style"),
-                      clEnumValN(GNU, "gnu", "GNU (itanium) style")),
-           cl::init(Auto));
-static cl::alias FormatShort("s", cl::desc("alias for --format"),
-                             cl::aliasopt(Format));
 
-static cl::opt<bool> StripUnderscore("strip-underscore",
-                                     cl::desc("strip the leading underscore"),
-                                     cl::init(false));
-static cl::alias StripUnderscoreShort("_",
-                                      cl::desc("alias for --strip-underscore"),
-                                      cl::aliasopt(StripUnderscore));
-static cl::opt<bool>
-    NoStripUnderscore("no-strip-underscore",
-                      cl::desc("do not strip the leading underscore"),
-                      cl::init(false));
-static cl::alias
-    NoStripUnderscoreShort("n", cl::desc("alias for --no-strip-underscore"),
-                           cl::aliasopt(NoStripUnderscore));
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Opts.inc"
+#undef PREFIX
 
-static cl::opt<bool>
-    Types("types",
-          cl::desc("attempt to demangle types as well as function names"),
-          cl::init(false));
-static cl::alias TypesShort("t", cl::desc("alias for --types"),
-                            cl::aliasopt(Types));
+const opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {                                                                            \
+      PREFIX,      NAME,      HELPTEXT,                                        \
+      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
+      PARAM,       FLAGS,     OPT_##GROUP,                                     \
+      OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::list<std::string>
-Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
+class CxxfiltOptTable : public opt::OptTable {
+public:
+  CxxfiltOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+};
+} // namespace
 
-static cl::extrahelp
-    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+static bool StripUnderscore;
+static bool Types;
 
-static bool shouldStripUnderscore() {
-  if (StripUnderscore)
-    return true;
-  if (NoStripUnderscore)
-    return false;
-  // If none of them are set, use the default value for platform.
-  // macho has symbols prefix with "_" so strip by default.
-  return Triple(sys::getProcessTriple()).isOSBinFormatMachO();
+static StringRef ToolName;
+
+static void error(const Twine &Message) {
+  WithColor::error(errs(), ToolName) << Message << '\n';
+  exit(1);
 }
 
 static std::string demangle(const std::string &Mangled) {
-  int Status;
-  std::string Prefix;
-
   const char *DecoratedStr = Mangled.c_str();
-  if (shouldStripUnderscore())
+  if (StripUnderscore)
     if (DecoratedStr[0] == '_')
       ++DecoratedStr;
-  size_t DecoratedLength = strlen(DecoratedStr);
 
+  std::string Result;
+  if (nonMicrosoftDemangle(DecoratedStr, Result))
+    return Result;
+
+  std::string Prefix;
   char *Undecorated = nullptr;
 
-  if (Types ||
-      ((DecoratedLength >= 2 && strncmp(DecoratedStr, "_Z", 2) == 0) ||
-       (DecoratedLength >= 4 && strncmp(DecoratedStr, "___Z", 4) == 0)))
-    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, &Status);
+  if (Types)
+    Undecorated = itaniumDemangle(DecoratedStr, nullptr, nullptr, nullptr);
 
-  if (!Undecorated &&
-      (DecoratedLength > 6 && strncmp(DecoratedStr, "__imp_", 6) == 0)) {
+  if (!Undecorated && strncmp(DecoratedStr, "__imp_", 6) == 0) {
     Prefix = "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, &Status);
+    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr, nullptr, nullptr);
   }
 
-  std::string Result(Undecorated ? Prefix + Undecorated : Mangled);
+  Result = Undecorated ? Prefix + Undecorated : Mangled;
   free(Undecorated);
   return Result;
 }
@@ -133,7 +121,7 @@ static void SplitStringDelims(
 static bool IsLegalItaniumChar(char C) {
   // Itanium CXX ABI [External Names]p5.1.1:
   // '$' and '.' in mangled names are reserved for private implementations.
-  return isalnum(C) || C == '.' || C == '$' || C == '_';
+  return isAlnum(C) || C == '.' || C == '$' || C == '_';
 }
 
 // If 'Split' is true, then 'Mangled' is broken into individual words and each
@@ -154,9 +142,37 @@ static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  CxxfiltOptTable Tbl;
+  ToolName = argv[0];
+  opt::InputArgList Args = Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver,
+                                         [&](StringRef Msg) { error(Msg); });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(outs(),
+                  (Twine(ToolName) + " [options] <mangled>").str().c_str(),
+                  "LLVM symbol undecoration tool");
+    // TODO Replace this with OptTable API once it adds extrahelp support.
+    outs() << "\nPass @FILE as argument to read options from FILE.\n";
+    return 0;
+  }
+  if (Args.hasArg(OPT_version)) {
+    outs() << ToolName << '\n';
+    cl::PrintVersionMessage();
+    return 0;
+  }
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm symbol undecoration tool\n");
+  // The default value depends on the default triple. Mach-O has symbols
+  // prefixed with "_", so strip by default.
+  if (opt::Arg *A =
+          Args.getLastArg(OPT_strip_underscore, OPT_no_strip_underscore))
+    StripUnderscore = A->getOption().matches(OPT_strip_underscore);
+  else
+    StripUnderscore = Triple(sys::getProcessTriple()).isOSBinFormatMachO();
 
+  Types = Args.hasArg(OPT_types);
+
+  std::vector<std::string> Decorated = Args.getAllArgValues(OPT_INPUT);
   if (Decorated.empty())
     for (std::string Mangled; std::getline(std::cin, Mangled);)
       demangleLine(llvm::outs(), Mangled, true);

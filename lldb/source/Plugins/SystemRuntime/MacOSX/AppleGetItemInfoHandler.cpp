@@ -98,7 +98,7 @@ AppleGetItemInfoHandler::AppleGetItemInfoHandler(Process *process)
       m_get_item_info_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_item_info_retbuffer_mutex() {}
 
-AppleGetItemInfoHandler::~AppleGetItemInfoHandler() {}
+AppleGetItemInfoHandler::~AppleGetItemInfoHandler() = default;
 
 void AppleGetItemInfoHandler::Detach() {
 
@@ -142,25 +142,14 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
 
     if (!m_get_item_info_impl_code) {
       if (g_get_item_info_function_code != nullptr) {
-        Status error;
-        m_get_item_info_impl_code.reset(
-            exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-                g_get_item_info_function_code, eLanguageTypeObjC,
-                g_get_item_info_function_name, error));
-        if (error.Fail()) {
-          LLDB_LOGF(log, "Failed to get utility function: %s.",
-                    error.AsCString());
-          return args_addr;
+        auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+            g_get_item_info_function_code, g_get_item_info_function_name,
+            eLanguageTypeObjC, exe_ctx);
+        if (!utility_fn_or_error) {
+          LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                         "Failed to create utility function: {0}.");
         }
-
-        if (!m_get_item_info_impl_code->Install(diagnostics, exe_ctx)) {
-          if (log) {
-            LLDB_LOGF(log, "Failed to install get-item-info introspection.");
-            diagnostics.Dump(log);
-          }
-          m_get_item_info_impl_code.reset();
-          return args_addr;
-        }
+        m_get_item_info_impl_code = std::move(*utility_fn_or_error);
       } else {
         LLDB_LOGF(log, "No get-item-info introspection code found.");
         return LLDB_INVALID_ADDRESS;
@@ -227,7 +216,8 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  TypeSystemClang *clang_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetItemInfoReturnInfo return_value;
@@ -268,26 +258,26 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   CompilerType clang_void_ptr_type =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
   Value return_buffer_ptr_value;
-  return_buffer_ptr_value.SetValueType(Value::eValueTypeScalar);
+  return_buffer_ptr_value.SetValueType(Value::ValueType::Scalar);
   return_buffer_ptr_value.SetCompilerType(clang_void_ptr_type);
 
   CompilerType clang_int_type = clang_ast_context->GetBasicType(eBasicTypeInt);
   Value debug_value;
-  debug_value.SetValueType(Value::eValueTypeScalar);
+  debug_value.SetValueType(Value::ValueType::Scalar);
   debug_value.SetCompilerType(clang_int_type);
 
   CompilerType clang_uint64_type =
       clang_ast_context->GetBasicType(eBasicTypeUnsignedLongLong);
   Value item_value;
-  item_value.SetValueType(Value::eValueTypeScalar);
+  item_value.SetValueType(Value::ValueType::Scalar);
   item_value.SetCompilerType(clang_uint64_type);
 
   Value page_to_free_value;
-  page_to_free_value.SetValueType(Value::eValueTypeScalar);
+  page_to_free_value.SetValueType(Value::ValueType::Scalar);
   page_to_free_value.SetCompilerType(clang_void_ptr_type);
 
   Value page_to_free_size_value;
-  page_to_free_size_value.SetValueType(Value::eValueTypeScalar);
+  page_to_free_size_value.SetValueType(Value::ValueType::Scalar);
   page_to_free_size_value.SetCompilerType(clang_uint64_type);
 
   std::lock_guard<std::mutex> guard(m_get_item_info_retbuffer_mutex);

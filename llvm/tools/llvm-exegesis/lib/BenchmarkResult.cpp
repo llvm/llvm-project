@@ -134,8 +134,8 @@ private:
       OS << getRegName(MCOperand.getReg());
     } else if (MCOperand.isImm()) {
       serializeIntegerOperand(OS, MCOperand.getImm());
-    } else if (MCOperand.isFPImm()) {
-      serializeFPOperand(OS, MCOperand.getFPImm());
+    } else if (MCOperand.isDFPImm()) {
+      serializeFPOperand(OS, bit_cast<double>(MCOperand.getDFPImm()));
     } else {
       OS << kInvalidOperand;
     }
@@ -148,7 +148,7 @@ private:
     if (tryDeserializeIntegerOperand(String, IntValue))
       return MCOperand::createImm(IntValue);
     if (tryDeserializeFPOperand(String, DoubleValue))
-      return MCOperand::createFPImm(DoubleValue);
+      return MCOperand::createDFPImm(bit_cast<uint64_t>(DoubleValue));
     if (auto RegNo = getRegNo(String))
       return MCOperand::createReg(*RegNo);
     if (String != kInvalidOperand)
@@ -255,7 +255,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
                      raw_ostream &Out) {
     YamlContext &Context = getTypedContext(Ctx);
     Out << Context.getRegName(RV.Register) << "=0x"
-        << RV.Value.toString(kRadix, kSigned);
+        << toString(RV.Value, kRadix, kSigned);
   }
 
   static StringRef input(StringRef String, void *Ctx,
@@ -334,7 +334,7 @@ namespace exegesis {
 Expected<InstructionBenchmark>
 InstructionBenchmark::readYaml(const LLVMState &State, StringRef Filename) {
   if (auto ExpectedMemoryBuffer =
-          errorOrToExpected(MemoryBuffer::getFile(Filename))) {
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
     yaml::Input Yin(*ExpectedMemoryBuffer.get());
     YamlContext Context(State);
     InstructionBenchmark Benchmark;
@@ -351,7 +351,7 @@ InstructionBenchmark::readYaml(const LLVMState &State, StringRef Filename) {
 Expected<std::vector<InstructionBenchmark>>
 InstructionBenchmark::readYamls(const LLVMState &State, StringRef Filename) {
   if (auto ExpectedMemoryBuffer =
-          errorOrToExpected(MemoryBuffer::getFile(Filename))) {
+          errorOrToExpected(MemoryBuffer::getFile(Filename, /*IsText=*/true))) {
     yaml::Input Yin(*ExpectedMemoryBuffer.get());
     YamlContext Context(State);
     std::vector<InstructionBenchmark> Benchmarks;
@@ -401,8 +401,9 @@ Error InstructionBenchmark::writeYaml(const LLVMState &State,
       return Err;
   } else {
     int ResultFD = 0;
-    if (auto E = errorCodeToError(openFileForWrite(
-            Filename, ResultFD, sys::fs::CD_CreateAlways, sys::fs::OF_Text))) {
+    if (auto E = errorCodeToError(openFileForWrite(Filename, ResultFD,
+                                                   sys::fs::CD_CreateAlways,
+                                                   sys::fs::OF_TextWithCRLF))) {
       return E;
     }
     raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
@@ -421,6 +422,12 @@ void PerInstructionStats::push(const BenchmarkMeasure &BM) {
   MaxValue = std::max(MaxValue, BM.PerInstructionValue);
   MinValue = std::min(MinValue, BM.PerInstructionValue);
 }
+
+bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
+  return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
+         std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
+}
+
 
 } // namespace exegesis
 } // namespace llvm

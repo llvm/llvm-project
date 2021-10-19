@@ -42,10 +42,10 @@ public:
 
   ClangTidyOptions getModuleOptions() override {
     ClangTidyOptions Options;
-    Options.CheckOptions["llvm-qualified-auto.AddConstToQualified"] = "0";
-    Options.CheckOptions["llvm-else-after-return.WarnOnUnfixable"] = "0";
+    Options.CheckOptions["llvm-qualified-auto.AddConstToQualified"] = "false";
+    Options.CheckOptions["llvm-else-after-return.WarnOnUnfixable"] = "false";
     Options.CheckOptions["llvm-else-after-return.WarnOnConditionVariables"] =
-        "0";
+        "false";
     return Options;
   }
 };

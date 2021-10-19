@@ -11,7 +11,7 @@ the latter, with ``operator+`` by default. This can cause loss of precision
 through:
 
 - Truncation: The following code uses a floating point range and an int
-  initial value, so trucation will happen at every application of ``operator+``
+  initial value, so truncation will happen at every application of ``operator+``
   and the result will be `0`, which might not be what the user expected.
 
 .. code-block:: c++

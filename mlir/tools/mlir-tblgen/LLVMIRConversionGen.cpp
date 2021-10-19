@@ -126,16 +126,17 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     // Then, rewrite the name based on its kind.
     bool isVariadicOperand = isVariadicOperandName(op, name);
     if (isOperandName(op, name)) {
-      auto result = isVariadicOperand
-                        ? formatv("lookupValues(op.{0}())", name)
-                        : formatv("valueMapping.lookup(op.{0}())", name);
+      auto result =
+          isVariadicOperand
+              ? formatv("moduleTranslation.lookupValues(op.{0}())", name)
+              : formatv("moduleTranslation.lookupValue(op.{0}())", name);
       bs << result;
     } else if (isAttributeName(op, name)) {
       bs << formatv("op.{0}()", name);
     } else if (isResultName(op, name)) {
-      bs << formatv("valueMapping[op.{0}()]", name);
+      bs << formatv("moduleTranslation.mapValue(op.{0}())", name);
     } else if (name == "_resultType") {
-      bs << "convertType(op.getResult().getType().cast<LLVM::LLVMType>())";
+      bs << "moduleTranslation.convertType(op.getResult().getType())";
     } else if (name == "_hasResult") {
       bs << "opInst.getNumResults() == 1";
     } else if (name == "_location") {
@@ -221,8 +222,9 @@ static void emitOneEnumToConversion(const llvm::Record *record,
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   // Emit the function converting the enum attribute to its LLVM counterpart.
-  os << formatv("static {0} convert{1}ToLLVM({2}::{1} value) {{\n", llvmClass,
-                cppClassName, cppNamespace);
+  os << formatv(
+      "static LLVM_ATTRIBUTE_UNUSED {0} convert{1}ToLLVM({2}::{1} value) {{\n",
+      llvmClass, cppClassName, cppNamespace);
   os << "  switch (value) {\n";
 
   for (const auto &enumerant : enumAttr.getAllCases()) {
@@ -250,7 +252,8 @@ static void emitOneEnumFromConversion(const llvm::Record *record,
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   // Emit the function converting the enum attribute from its LLVM counterpart.
-  os << formatv("static {0}::{1} convert{1}FromLLVM({2} value) {{\n",
+  os << formatv("inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM({2} "
+                "value) {{\n",
                 cppNamespace, cppClassName, llvmClass);
   os << "  switch (value) {\n";
 

@@ -92,6 +92,19 @@ D
 **DSE**
     Dead Store Elimination
 
+E
+-
+
+**ento**
+    This namespace houses the
+    `Clang Static Analyzer <https://clang.llvm.org/docs/ClangStaticAnalyzer.html>`_.
+    It is an abbreviation of `entomology <https://en.wikipedia.org/wiki/Entomology>`_.
+
+      *"Entomology is the scientific study of insects."*
+
+    In the past, this namespace had not only the name `GR` (aka. Graph Reachability)
+    but also `entoSA`.
+
 F
 -
 

@@ -68,6 +68,31 @@ static ARCCC::CondCode ISDCCtoARCCC(ISD::CondCode isdCC) {
   }
 }
 
+void ARCTargetLowering::ReplaceNodeResults(SDNode *N,
+                                           SmallVectorImpl<SDValue> &Results,
+                                           SelectionDAG &DAG) const {
+  LLVM_DEBUG(dbgs() << "[ARC-ISEL] ReplaceNodeResults ");
+  LLVM_DEBUG(N->dump(&DAG));
+  LLVM_DEBUG(dbgs() << "; use_count=" << N->use_size() << "\n");
+
+  switch (N->getOpcode()) {
+  case ISD::READCYCLECOUNTER:
+    if (N->getValueType(0) == MVT::i64) {
+      // We read the TIMER0 and zero-extend it to 64-bits as the intrinsic
+      // requires.
+      SDValue V =
+          DAG.getNode(ISD::READCYCLECOUNTER, SDLoc(N),
+                      DAG.getVTList(MVT::i32, MVT::Other), N->getOperand(0));
+      SDValue Op = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), MVT::i64, V);
+      Results.push_back(Op);
+      Results.push_back(V.getValue(1));
+    }
+    break;
+  default:
+    break;
+  }
+}
+
 ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
                                      const ARCSubtarget &Subtarget)
     : TargetLowering(TM), Subtarget(Subtarget) {
@@ -95,6 +120,11 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::AND, MVT::i32, Legal);
   setOperationAction(ISD::SMAX, MVT::i32, Legal);
   setOperationAction(ISD::SMIN, MVT::i32, Legal);
+
+  setOperationAction(ISD::ADDC, MVT::i32, Legal);
+  setOperationAction(ISD::ADDE, MVT::i32, Legal);
+  setOperationAction(ISD::SUBC, MVT::i32, Legal);
+  setOperationAction(ISD::SUBE, MVT::i32, Legal);
 
   // Need barrel shifter.
   setOperationAction(ISD::SHL, MVT::i32, Legal);
@@ -135,6 +165,15 @@ ARCTargetLowering::ARCTargetLowering(const TargetMachine &TM,
 
   // Sign extend inreg
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Custom);
+
+  // TODO: Predicate these with `options.hasBitScan() ? Legal : Expand`
+  //       when the HasBitScan predicate is available.
+  setOperationAction(ISD::CTLZ, MVT::i32, Legal);
+  setOperationAction(ISD::CTTZ, MVT::i32, Legal);
+
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i32, Legal);
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64,
+                     isTypeLegal(MVT::i64) ? Legal : Custom);
 }
 
 const char *ARCTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -761,6 +800,13 @@ SDValue ARCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerJumpTable(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
+  case ISD::READCYCLECOUNTER:
+    // As of LLVM 3.8, the lowering code insists that we customize it even
+    // though we've declared the i32 version as legal. This is because it only
+    // thinks i64 is the truly supported version. We've already converted the
+    // i64 version to a widened i32.
+    assert(Op.getSimpleValueType() == MVT::i32);
+    return Op;
   default:
     llvm_unreachable("unimplemented operand");
   }

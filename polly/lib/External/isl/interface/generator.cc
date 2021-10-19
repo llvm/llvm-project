@@ -46,23 +46,35 @@
 const char *isl_class::get_prefix = "get_";
 const char *isl_class::set_callback_prefix = "set_";
 
-/* Should "method" be considered to be a static method?
- * That is, is the first argument something other than
- * an instance of the class?
+/* Is the first argument an instance of the class?
  */
-bool isl_class::is_static(FunctionDecl *method) const
+bool isl_class::first_arg_matches_class(FunctionDecl *method) const
 {
 	ParmVarDecl *param;
 	QualType type;
 
 	if (method->getNumParams() < 1)
-		return true;
+		return false;
 
 	param = method->getParamDecl(0);
 	type = param->getOriginalType();
 	if (!generator::is_isl_type(type))
-		return true;
-	return generator::extract_type(type) != name;
+		return false;
+	return generator::extract_type(type) == name;
+}
+
+/* Should "method" be considered to be a static method?
+ * That is, is the first argument something other than
+ * an instance of the class?
+ *
+ * If this method was copied from a superclass, then check
+ * whether the method is static with respect to this superclass.
+ */
+bool isl_class::is_static(FunctionDecl *method) const
+{
+	if (copied_from.count(method) != 0)
+		return copied_from.at(method).is_static(method);
+	return !first_arg_matches_class(method);
 }
 
 /* Should "method" be considered to be a static method?
@@ -367,6 +379,8 @@ static bool less_name(const FunctionDecl *a, const FunctionDecl *b)
  * functions as belonging to the subclasses.
  * Sort the names of the functions based on their lengths
  * to ensure that nested subclasses are handled later.
+ *
+ * Also extract information about automatic conversion functions.
  */
 generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 	set<FunctionDecl *> exported_functions, set<FunctionDecl *> functions) :
@@ -415,8 +429,8 @@ generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 			std::string name = method->getName().str();
 			die(name + " has unhandled enum argument");
 		} else {
-			string fullname = c->name_without_type_suffixes(method);
-			c->methods[fullname].insert(method);
+			string name = c->method_name(method);
+			c->methods[name].insert(method);
 		}
 	}
 
@@ -789,7 +803,8 @@ static std::string type_suffix(ParmVarDecl *param)
 /* If "suffix" is a suffix of "s", then return "s" with the suffix removed.
  * Otherwise, simply return "s".
  */
-static std::string drop_suffix(const std::string &s, const std::string &suffix)
+std::string generator::drop_suffix(const std::string &s,
+	const std::string &suffix)
 {
 	size_t len, suffix_len;
 
@@ -826,7 +841,7 @@ string isl_class::name_without_type_suffixes(FunctionDecl *method)
 		param = method->getParamDecl(i);
 		type = type_suffix(param);
 
-		name = drop_suffix(name, type);
+		name = generator::drop_suffix(name, type);
 	}
 
 	return name;

@@ -4,12 +4,12 @@
 # CHECK:      - Name:            .rela.text
 # CHECK-NEXT:   Type:            SHT_RELA
 # CHECK-NEXT:    Link:            .symtab
-# CHECK-NEXT:    AddressAlign:    0x0000000000000008
+# CHECK-NEXT:    AddressAlign:    0x8
 # CHECK-NEXT:    Info:            .text
-# CHECK-NEXT:    Relocations:     
+# CHECK-NEXT:    Relocations:
 # CHECK-NEXT:      - Symbol:          main
 # CHECK-NEXT:        Type:            R_AARCH64_ABS64
-# CHECK-NEXT:      - Offset:          0x0000000000000008
+# CHECK-NEXT:      - Offset:          0x8
 # CHECK-NEXT:        Symbol:          main
 # CHECK-NEXT:        Type:            R_AARCH64_TLSGD_ADR_PREL21
 

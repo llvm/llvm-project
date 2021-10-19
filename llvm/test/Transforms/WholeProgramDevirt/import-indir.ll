@@ -1,10 +1,11 @@
 ; Test that we correctly import an indir resolution for type identifier "typeid1".
-; RUN: opt -S -wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-indir.yaml -wholeprogramdevirt-write-summary=%t < %s | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-indir.yaml -wholeprogramdevirt-write-summary=%t < %s | FileCheck %s
 ; RUN: FileCheck --check-prefix=SUMMARY %s < %t
 
 ; SUMMARY:     GlobalValueMap:
 ; SUMMARY-NEXT:  42:
 ; SUMMARY-NEXT:    - Linkage:             0
+; SUMMARY-NEXT:      Visibility:          0
 ; SUMMARY-NEXT:      NotEligibleToImport: false
 ; SUMMARY-NEXT:      Live:                true
 ; SUMMARY-NEXT:      Local:               false

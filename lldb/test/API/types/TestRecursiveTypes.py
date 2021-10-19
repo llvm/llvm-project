@@ -50,5 +50,5 @@ class RecursiveTypesTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("print tpi", RUN_SUCCEEDED)
-        self.expect("print *tpi", RUN_SUCCEEDED)
+        self.runCmd("print tpi")
+        self.runCmd("print *tpi")

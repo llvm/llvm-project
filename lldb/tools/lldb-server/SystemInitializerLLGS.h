@@ -14,6 +14,8 @@
 
 class SystemInitializerLLGS : public lldb_private::SystemInitializerCommon {
 public:
+  SystemInitializerLLGS() : SystemInitializerCommon(nullptr) {}
+
   llvm::Error Initialize() override;
   void Terminate() override;
 };

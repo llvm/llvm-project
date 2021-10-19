@@ -9,12 +9,12 @@ define void @test_memcpy_p1_p3_i64(i8 addrspace(1)* %dst, i8 addrspace(3)* %src)
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[TRUNC]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[TRUNC]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p1i8.p3i8.i64(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i64 256, i1 false)
@@ -27,11 +27,11 @@ define void @test_memcpy_p1_p3_i32(i8 addrspace(1)* %dst, i8 addrspace(3)* %src)
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[C]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[C]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p1i8.p3i8.i32(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 256, i1 false)
@@ -44,12 +44,12 @@ define void @test_memcpy_p1_p3_i16(i8 addrspace(1)* %dst, i8 addrspace(3)* %src)
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s16)
-  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[ZEXT]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMCPY [[MV]](p1), [[COPY2]](p3), [[ZEXT]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p1i8.p3i8.i16(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i16 256, i1 false)
@@ -63,11 +63,11 @@ define void @test_memcpy_p3_p1_i64(i8 addrspace(3)* %dst, i8 addrspace(1)* %src)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[TRUNC]](s32), 0 :: (store 1 into %ir.dst, addrspace 3), (load 1 from %ir.src, addrspace 1)
+  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[TRUNC]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3), (load (s8) from %ir.src, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p3i8.p1i8.i64(i8 addrspace(3)* %dst, i8 addrspace(1)* %src, i64 256, i1 false)
@@ -81,10 +81,10 @@ define void @test_memcpy_p3_p1_i32(i8 addrspace(3)* %dst, i8 addrspace(1)* %src)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[C]](s32), 0 :: (store 1 into %ir.dst, addrspace 3), (load 1 from %ir.src, addrspace 1)
+  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[C]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3), (load (s8) from %ir.src, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p3i8.p1i8.i32(i8 addrspace(3)* %dst, i8 addrspace(1)* %src, i32 256, i1 false)
@@ -98,11 +98,11 @@ define void @test_memcpy_p3_p1_i16(i8 addrspace(3)* %dst, i8 addrspace(1)* %src)
   ; CHECK:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s16)
-  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[ZEXT]](s32), 0 :: (store 1 into %ir.dst, addrspace 3), (load 1 from %ir.src, addrspace 1)
+  ; CHECK:   G_MEMCPY [[COPY]](p3), [[MV]](p1), [[ZEXT]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3), (load (s8) from %ir.src, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memcpy.p3i8.p1i8.i16(i8 addrspace(3)* %dst, i8 addrspace(1)* %src, i16 256, i1 false)
@@ -115,12 +115,12 @@ define void @test_memmove_p1_p3_i64(i8 addrspace(1)* %dst, i8 addrspace(3)* %src
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[TRUNC]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[TRUNC]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memmove.p1i8.p3i8.i64(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i64 256, i1 false)
@@ -133,11 +133,11 @@ define void @test_memmove_p1_p3_i32(i8 addrspace(1)* %dst, i8 addrspace(3)* %src
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[C]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[C]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memmove.p1i8.p3i8.i32(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i32 256, i1 false)
@@ -150,12 +150,12 @@ define void @test_memmove_p1_p3_i16(i8 addrspace(1)* %dst, i8 addrspace(3)* %src
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s16)
-  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[ZEXT]](s32), 0 :: (store 1 into %ir.dst, addrspace 1), (load 1 from %ir.src, addrspace 3)
+  ; CHECK:   G_MEMMOVE [[MV]](p1), [[COPY2]](p3), [[ZEXT]](s32), 0 :: (store (s8) into %ir.dst, addrspace 1), (load (s8) from %ir.src, addrspace 3)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memmove.p1i8.p3i8.i16(i8 addrspace(1)* %dst, i8 addrspace(3)* %src, i16 256, i1 false)
@@ -168,12 +168,12 @@ define void @test_memset_p1_i64(i8 addrspace(1)* %dst, i8 %val) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
-  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[C]](s64), 0 :: (store 1 into %ir.dst, addrspace 1)
+  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[C]](s64), 0 :: (store (s8) into %ir.dst, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memset.p1i8.i64(i8 addrspace(1)* %dst, i8 %val, i64 256, i1 false)
@@ -186,13 +186,13 @@ define void @test_memset_p1_i32(i8 addrspace(1)* %dst, i8 %val) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s32)
-  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[ZEXT]](s64), 0 :: (store 1 into %ir.dst, addrspace 1)
+  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[ZEXT]](s64), 0 :: (store (s8) into %ir.dst, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memset.p1i8.i32(i8 addrspace(1)* %dst, i8 %val, i32 256, i1 false)
@@ -205,13 +205,13 @@ define void @test_memset_p1_i16(i8 addrspace(1)* %dst, i8 %val) {
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[C]](s16)
-  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[ZEXT]](s64), 0 :: (store 1 into %ir.dst, addrspace 1)
+  ; CHECK:   G_MEMSET [[MV]](p1), [[TRUNC]](s8), [[ZEXT]](s64), 0 :: (store (s8) into %ir.dst, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY3]]
   ; CHECK:   S_SETPC_B64_return [[COPY4]]
   call void @llvm.memset.p1i8.i16(i8 addrspace(1)* %dst, i8 %val, i16 256, i1 false)
@@ -228,7 +228,7 @@ define void @test_memset_p3_i64(i8 addrspace(3)* %dst, i8 %val) {
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[TRUNC1]](s32), 0 :: (store 1 into %ir.dst, addrspace 3)
+  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[TRUNC1]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK:   S_SETPC_B64_return [[COPY3]]
   call void @llvm.memset.p3i8.i64(i8 addrspace(3)* %dst, i8 %val, i64 256, i1 false)
@@ -244,7 +244,7 @@ define void @test_memset_p3_i32(i8 addrspace(3)* %dst, i8 %val) {
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[C]](s32), 0 :: (store 1 into %ir.dst, addrspace 3)
+  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[C]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK:   S_SETPC_B64_return [[COPY3]]
   call void @llvm.memset.p3i8.i32(i8 addrspace(3)* %dst, i8 %val, i32 256, i1 false)
@@ -261,7 +261,7 @@ define void @test_memset_p3_i16(i8 addrspace(3)* %dst, i8 %val) {
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 256
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s16)
-  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[ZEXT]](s32), 0 :: (store 1 into %ir.dst, addrspace 3)
+  ; CHECK:   G_MEMSET [[COPY]](p3), [[TRUNC]](s8), [[ZEXT]](s32), 0 :: (store (s8) into %ir.dst, addrspace 3)
   ; CHECK:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK:   S_SETPC_B64_return [[COPY3]]
   call void @llvm.memset.p3i8.i16(i8 addrspace(3)* %dst, i8 %val, i16 256, i1 false)

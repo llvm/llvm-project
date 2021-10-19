@@ -37,6 +37,13 @@ RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=line
 RUN: ./lld-link -debug "-pdbsourcepath:/usr/src" -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
 RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=POSIX %s
 
+Also check without -pdbsourcepath
+RUN: ./lld-link -debug -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj
+RUN: llvm-pdbutil pdb2yaml -modules -module-files -module-syms -subsections=lines,fc %t/out.pdb | FileCheck --check-prefix=ABSOLUTE %s
+
+Clean up copy of large binary copied into temp directory to avoid bloat.
+RUN: rm -f ./lld-link || true
+
 CHECK-LABEL:  - Module:          'c:\src\pdb_lines_1_relative.obj'
 CHECK-NEXT:     ObjFile:         'c:\src\pdb_lines_1_relative.obj'
 CHECK:          SourceFiles:
@@ -103,3 +110,6 @@ POSIX-NEXT:         - pdb
 POSIX-NEXT:         - '/usr/src/out.pdb'
 POSIX-NEXT:         - cmd
 POSIX-NEXT:         - '-debug -pdbsourcepath:/usr/src -entry:main -nodefaultlib -out:out.exe -pdb:out.pdb pdb_lines_1_relative.obj pdb_lines_2_relative.obj'
+
+ABSOLUTE-LABEL: StringTable:
+ABSOLUTE-NOT: {{/|\\}}.{{/|\\}}pdb_lines_1.c

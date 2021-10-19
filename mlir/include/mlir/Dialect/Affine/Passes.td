@@ -18,6 +18,7 @@ include "mlir/Pass/PassBase.td"
 def AffineDataCopyGeneration : FunctionPass<"affine-data-copy-generate"> {
   let summary = "Generate explicit copying for affine memory operations";
   let constructor = "mlir::createAffineDataCopyGenerationPass()";
+  let dependentDialects = ["memref::MemRefDialect"];
   let options = [
     Option<"fastMemoryCapacity", "fast-mem-capacity", "uint64_t",
            /*default=*/"std::numeric_limits<uint64_t>::max()",
@@ -71,6 +72,8 @@ def AffineLoopUnroll : FunctionPass<"affine-loop-unroll"> {
   let options = [
     Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
            "Use this unroll factor for all loops being unrolled">,
+    Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
+           /*default=*/"false", "Allow unrolling up to the factor specified">,
     Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
            "Fully unroll loops">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",
@@ -91,6 +94,52 @@ def AffineLoopUnrollAndJam : FunctionPass<"affine-loop-unroll-jam"> {
   ];
 }
 
+def AffineScalarReplacement : FunctionPass<"affine-scalrep"> {
+  let summary = "Replace affine memref acceses by scalars by forwarding stores "
+                "to loads and eliminating redundant loads";
+  let description = [{
+    This pass performs store to load forwarding and redundant load elimination
+    for affine memref accesses and potentially eliminates the entire memref
+    if all its accesses are forwarded.
+
+    Input
+
+    ```mlir
+    func @store_load_affine_apply() -> memref<10x10xf32> {
+      %cf7 = arith.constant 7.0 : f32
+      %m = alloc() : memref<10x10xf32>
+      affine.for %i0 = 0 to 10 {
+        affine.for %i1 = 0 to 10 {
+          affine.store %cf7, %m[%i0, %i1] : memref<10x10xf32>
+          %v0 = affine.load %m[%i0, %i1] : memref<10x10xf32>
+          %v1 = arith.addf %v0, %v0 : f32
+        }
+      }
+      return %m : memref<10x10xf32>
+    }
+    ```
+
+    Output
+
+    ```mlir
+    module {
+      func @store_load_affine_apply() -> memref<10x10xf32> {
+        %cst = arith.constant 7.000000e+00 : f32
+        %0 = alloc() : memref<10x10xf32>
+        affine.for %arg0 = 0 to 10 {
+          affine.for %arg1 = 0 to 10 {
+            affine.store %cst, %0[%arg0, %arg1] : memref<10x10xf32>
+            %1 = arith.addf %cst, %cst : f32
+          }
+        }
+        return %0 : memref<10x10xf32>
+      }
+    }
+    ```
+  }];
+  let constructor = "mlir::createAffineScalarReplacementPass()";
+}
+
 def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
   let constructor = "mlir::createSuperVectorizePass()";
@@ -109,19 +158,30 @@ def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
                "Specify a 1-D, 2-D or 3-D pattern of fastest varying memory "
                "dimensions to match. See defaultPatterns in Vectorize.cpp for "
                "a description and examples. This is used for testing purposes",
-               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+    Option<"vectorizeReductions", "vectorize-reductions", "bool",
+           /*default=*/"false",
+           "Vectorize known reductions expressed via iter_args. "
+           "Switched off by default.">
   ];
 }
 
 def AffineParallelize : FunctionPass<"affine-parallelize"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
   let constructor = "mlir::createAffineParallelizePass()";
+  let options = [
+    Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
+           "Maximum number of nested parallel loops to produce. "
+           "Defaults to unlimited (UINT_MAX).">,
+    Option<"parallelReductions", "parallel-reductions", "bool",
+           /*default=*/"false",
+           "Whether to parallelize reduction loops. Defaults to false.">
+  ];
 }
 
-def AffineParallelNormalize : FunctionPass<"affine-parallel-normalize"> {
-  let summary = "Normalize affine.parallel ops so that lower bounds are 0 and "
-                "steps are 1";
-  let constructor = "mlir::createAffineParallelNormalizePass()";
+def AffineLoopNormalize : FunctionPass<"affine-loop-normalize"> {
+  let summary = "Apply normalization transformations to affine loop-like ops";
+  let constructor = "mlir::createAffineLoopNormalizePass()";
 }
 
 def SimplifyAffineStructures : FunctionPass<"simplify-affine-structures"> {

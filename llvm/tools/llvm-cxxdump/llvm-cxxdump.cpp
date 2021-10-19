@@ -13,6 +13,7 @@
 #include "llvm-cxxdump.h"
 #include "Error.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolSize.h"
@@ -20,7 +21,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,9 +33,10 @@ using namespace llvm::object;
 using namespace llvm::support;
 
 namespace opts {
+cl::OptionCategory CXXDumpCategory("CXX Dump Options");
 cl::list<std::string> InputFilenames(cl::Positional,
                                      cl::desc("<input object files>"),
-                                     cl::ZeroOrMore);
+                                     cl::ZeroOrMore, cl::cat(CXXDumpCategory));
 } // namespace opts
 
 namespace llvm {
@@ -48,7 +49,7 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void error(Error Err) {
+[[noreturn]] static void error(Error Err) {
   logAllUnhandledErrors(std::move(Err), WithColor::error(outs()),
                         "reading file: ");
   outs().flush();
@@ -549,6 +550,7 @@ int main(int argc, const char *argv[]) {
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
+  cl::HideUnrelatedOptions({&opts::CXXDumpCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM C++ ABI Data Dumper\n");
 
   // Default to stdin if no filename is specified.

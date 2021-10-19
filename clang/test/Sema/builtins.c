@@ -141,7 +141,7 @@ typedef __typeof(sizeof(int)) size_t;
 size_t strlen(const char *);
 
 void test17() {
-#define ASSERT(...) { int arr[(__VA_ARGS__) ? 1 : -1]; }
+#define ASSERT(...) { enum { folded = (__VA_ARGS__) }; int arr[folded ? 1 : -1]; }
 #define T(...) ASSERT(__builtin_constant_p(__VA_ARGS__))
 #define F(...) ASSERT(!__builtin_constant_p(__VA_ARGS__))
 
@@ -179,12 +179,12 @@ void test17() {
   ASSERT(!OPT("abcd"));
   // In these cases, the strlen is non-constant, but the __builtin_constant_p
   // is 0: the array size is not an ICE but is foldable.
-  ASSERT(!OPT(test17_c));        // expected-warning {{folded}}
-  ASSERT(!OPT(&test17_c[0]));    // expected-warning {{folded}}
-  ASSERT(!OPT((char*)test17_c)); // expected-warning {{folded}}
-  ASSERT(!OPT(test17_d));        // expected-warning {{folded}}
-  ASSERT(!OPT(&test17_d[0]));    // expected-warning {{folded}}
-  ASSERT(!OPT((char*)test17_d)); // expected-warning {{folded}}
+  ASSERT(!OPT(test17_c));        // expected-warning {{folding}}
+  ASSERT(!OPT(&test17_c[0]));    // expected-warning {{folding}}
+  ASSERT(!OPT((char*)test17_c)); // expected-warning {{folding}}
+  ASSERT(!OPT(test17_d));        // expected-warning {{folding}}
+  ASSERT(!OPT(&test17_d[0]));    // expected-warning {{folding}}
+  ASSERT(!OPT((char*)test17_d)); // expected-warning {{folding}}
 
 #undef OPT
 #undef T

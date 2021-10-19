@@ -193,7 +193,7 @@ Error TestClient::SendMessage(StringRef message, std::string &response_string,
                               PacketResult expected_result) {
   StringExtractorGDBRemote response;
   GTEST_LOG_(INFO) << "Send Packet: " << message.str();
-  PacketResult result = SendPacketAndWaitForResponse(message, response, false);
+  PacketResult result = SendPacketAndWaitForResponse(message, response);
   response.GetEscapedBinaryData(response_string);
   GTEST_LOG_(INFO) << "Read Packet: " << response_string;
   if (result != expected_result)
@@ -219,6 +219,7 @@ Error TestClient::qProcessInfo() {
 }
 
 Error TestClient::qRegisterInfos() {
+  uint32_t reg_offset = 0;
   for (unsigned int Reg = 0;; ++Reg) {
     std::string Message = formatv("qRegisterInfo{0:x-}", Reg).str();
     Expected<RegisterInfo> InfoOr = SendMessage<RegisterInfoParser>(Message);
@@ -227,6 +228,12 @@ Error TestClient::qRegisterInfos() {
       break;
     }
     m_register_infos.emplace_back(std::move(*InfoOr));
+
+    if (m_register_infos[Reg].byte_offset == LLDB_INVALID_INDEX32)
+      m_register_infos[Reg].byte_offset = reg_offset;
+
+    reg_offset =
+        m_register_infos[Reg].byte_offset + m_register_infos[Reg].byte_size;
     if (m_register_infos[Reg].kinds[eRegisterKindGeneric] ==
         LLDB_REGNUM_GENERIC_PC)
       m_pc_register = Reg;

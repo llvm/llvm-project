@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/GPU/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 using namespace mlir;
@@ -32,10 +35,10 @@ static void createForAllDimensions(OpBuilder &builder, Location loc,
   }
 }
 
-// Add operations generating block/thread ids and grid/block dimensions at the
-// beginning of the `launchFuncOpBody` region. Add mapping from argument in
-// entry block of `launchOpBody`, to the corresponding result value of the added
-// operations.
+/// Adds operations generating block/thread ids and grid/block dimensions at the
+/// beginning of the `launchFuncOpBody` region. Add mapping from argument in
+/// entry block of `launchOpBody`, to the corresponding result value of the
+/// added operations.
 static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
                                      Region &launchOpBody,
                                      BlockAndValueMapping &map) {
@@ -53,8 +56,53 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
     map.map(firstBlock.getArgument(indexOp.index()), indexOp.value());
 }
 
+/// Identifies operations that are beneficial to sink into kernels. These
+/// operations may not have side-effects, as otherwise sinking (and hence
+/// duplicating them) is not legal.
 static bool isSinkingBeneficiary(Operation *op) {
-  return isa<ConstantOp, DimOp>(op);
+  return isa<arith::ConstantOp, ConstantOp, memref::DimOp, SelectOp,
+             arith::CmpIOp>(op);
+}
+
+/// For a given operation `op`, computes whether it is beneficial to sink the
+/// operation into the kernel. An operation can be sunk if doing so does not
+/// introduce new kernel arguments. Whether a value is already available in the
+/// kernel (and hence does not introduce new arguments) is checked by
+/// querying `existingDependencies` and `availableValues`.
+/// If an operand is not yet available, we recursively check whether it can be
+/// made available by siking its defining op.
+/// Operations that are indentified for sinking are added to `beneficiaryOps` in
+/// the order they should appear in the kernel. Furthermore, `availableValues`
+/// is updated with results that will be available after sinking the identified
+/// ops.
+static bool
+extractBeneficiaryOps(Operation *op, SetVector<Value> existingDependencies,
+                      SetVector<Operation *> &beneficiaryOps,
+                      llvm::SmallPtrSetImpl<Value> &availableValues) {
+  if (beneficiaryOps.count(op))
+    return true;
+
+  if (!isSinkingBeneficiary(op))
+    return false;
+
+  for (Value operand : op->getOperands()) {
+    // It is already visible in the kernel, keep going.
+    if (availableValues.count(operand))
+      continue;
+    // Else check whether it can be made available via sinking or already is a
+    // dependency.
+    Operation *definingOp = operand.getDefiningOp();
+    if ((!definingOp ||
+         !extractBeneficiaryOps(definingOp, existingDependencies,
+                                beneficiaryOps, availableValues)) &&
+        !existingDependencies.count(operand))
+      return false;
+  }
+  // We will sink the operation, mark its results as now available.
+  beneficiaryOps.insert(op);
+  for (Value result : op->getResults())
+    availableValues.insert(result);
+  return true;
 }
 
 LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
@@ -62,65 +110,36 @@ LogicalResult mlir::sinkOperationsIntoLaunchOp(gpu::LaunchOp launchOp) {
 
   // Identify uses from values defined outside of the scope of the launch
   // operation.
-  llvm::SetVector<Value> sinkCandidates;
+  SetVector<Value> sinkCandidates;
   getUsedValuesDefinedAbove(launchOpBody, sinkCandidates);
 
-  llvm::SetVector<Value> sunkValues;
-  llvm::SetVector<Operation *> sunkOperations;
+  SetVector<Operation *> toBeSunk;
+  llvm::SmallPtrSet<Value, 4> availableValues;
   for (Value operand : sinkCandidates) {
     Operation *operandOp = operand.getDefiningOp();
-    if (!operandOp || !isSinkingBeneficiary(operandOp))
+    if (!operandOp)
       continue;
-    // Only sink operations that do not create new sinkCandidates.
-    if (!llvm::all_of(operandOp->getOperands(), [&sinkCandidates](Value value) {
-          return sinkCandidates.count(value);
-        }))
-      continue;
-    sunkValues.insert(operand);
-    sunkOperations.insert(operandOp);
+    extractBeneficiaryOps(operandOp, sinkCandidates, toBeSunk, availableValues);
   }
 
   // Insert operations so that the defs get cloned before uses.
   BlockAndValueMapping map;
   OpBuilder builder(launchOpBody);
-  DenseSet<Operation *> processed;
-  SmallVector<Operation *, 2> clonedOps;
-  while (processed.size() != sunkOperations.size()) {
-    auto startSize = processed.size();
-    for (Operation *sunkOperation : sunkOperations) {
-      if (processed.count(sunkOperation))
-        continue;
-
-      // Operation cant be cloned yet if any of its operands is also being sunk,
-      // but isnt cloned yet.
-      if (llvm::any_of(
-              sunkOperation->getOperands(), [&sunkValues, &map](Value value) {
-                return sunkValues.count(value) && !map.lookupOrNull(value);
-              }))
-        continue;
-
-      Operation *clonedOp = builder.clone(*sunkOperation, map);
-      // Only replace uses within the launch op.
-      for (auto result : llvm::enumerate(sunkOperation->getResults())) {
-        auto replacement = clonedOp->getResult(result.index());
-        for (auto &use : llvm::make_early_inc_range(result.value().getUses()))
-          if (use.getOwner()->getParentOfType<gpu::LaunchOp>() == launchOp)
-            use.set(replacement);
-      }
-      processed.insert(sunkOperation);
-    }
-    if (startSize == processed.size())
-      return launchOp.emitError(
-          "found illegal cyclic dependency between operations while sinking");
+  for (Operation *op : toBeSunk) {
+    Operation *clonedOp = builder.clone(*op, map);
+    // Only replace uses within the launch op.
+    for (auto pair : llvm::zip(op->getResults(), clonedOp->getResults()))
+      replaceAllUsesInRegionWith(std::get<0>(pair), std::get<1>(pair),
+                                 launchOp.body());
   }
   return success();
 }
 
-// Outline the `gpu.launch` operation body into a kernel function. Replace
-// `gpu.terminator` operations by `gpu.return` in the generated function.
+/// Outline the `gpu.launch` operation body into a kernel function. Replace
+/// `gpu.terminator` operations by `gpu.return` in the generated function.
 static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
                                             StringRef kernelFnName,
-                                            llvm::SetVector<Value> &operands) {
+                                            SetVector<Value> &operands) {
   Location loc = launchOp.getLoc();
   // Create a builder with no insertion point, insertion will happen separately
   // due to symbol table manipulation.
@@ -138,10 +157,10 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
     kernelOperandTypes.push_back(operand.getType());
   }
   FunctionType type =
-      FunctionType::get(kernelOperandTypes, {}, launchOp.getContext());
+      FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
   auto outlinedFunc = builder.create<gpu::GPUFuncOp>(loc, kernelFnName, type);
-  outlinedFunc.setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                       builder.getUnitAttr());
+  outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
+                        builder.getUnitAttr());
   BlockAndValueMapping map;
 
   // Map the arguments corresponding to the launch parameters like blockIdx,
@@ -182,7 +201,7 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
                                        llvm::SmallVectorImpl<Value> &operands) {
   DenseSet<Value> inputOperandSet;
   inputOperandSet.insert(operands.begin(), operands.end());
-  llvm::SetVector<Value> operandSet(operands.begin(), operands.end());
+  SetVector<Value> operandSet(operands.begin(), operands.end());
   auto funcOp = outlineKernelFuncImpl(launchOp, kernelFnName, operandSet);
   for (auto operand : operandSet) {
     if (!inputOperandSet.count(operand))
@@ -191,16 +210,19 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
   return funcOp;
 }
 
-// Replace `gpu.launch` operations with an `gpu.launch_func` operation launching
-// `kernelFunc`. The kernel func contains the body of the `gpu.launch` with
-// constant region arguments inlined.
+/// Replace `gpu.launch` operations with an `gpu.launch_func` operation
+/// launching `kernelFunc`. The kernel func contains the body of the
+/// `gpu.launch` with constant region arguments inlined.
 static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
                                   gpu::GPUFuncOp kernelFunc,
                                   ValueRange operands) {
   OpBuilder builder(launchOp);
+  // The launch op has an optional dynamic shared memory size. If it doesn't
+  // exist, we use zero.
   builder.create<gpu::LaunchFuncOp>(
       launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(), operands);
+      launchOp.getBlockSizeOperandValues(), launchOp.dynamicSharedMemorySize(),
+      operands);
   launchOp.erase();
 }
 
@@ -222,11 +244,11 @@ public:
     bool modified = false;
     for (auto func : getOperation().getOps<FuncOp>()) {
       // Insert just after the function.
-      Block::iterator insertPt(func.getOperation()->getNextNode());
+      Block::iterator insertPt(func->getNextNode());
       auto funcWalkResult = func.walk([&](gpu::LaunchOp op) {
-        llvm::SetVector<Value> operands;
+        SetVector<Value> operands;
         std::string kernelFnName =
-            Twine(op.getParentOfType<FuncOp>().getName(), "_kernel").str();
+            Twine(op->getParentOfType<FuncOp>().getName(), "_kernel").str();
 
         // Pull in instructions that can be sunk
         if (failed(sinkOperationsIntoLaunchOp(op)))
@@ -252,12 +274,12 @@ public:
     // If any new module was inserted in this module, annotate this module as
     // a container module.
     if (modified)
-      getOperation().setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-                             UnitAttr::get(&getContext()));
+      getOperation()->setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
+                              UnitAttr::get(&getContext()));
   }
 
 private:
-  // Returns a gpu.module containing kernelFunc and all callees (recursive).
+  /// Returns a gpu.module containing kernelFunc and all callees (recursive).
   gpu::GPUModuleOp createKernelModule(gpu::GPUFuncOp kernelFunc,
                                       const SymbolTable &parentSymbolTable) {
     // TODO: This code cannot use an OpBuilder because it must be inserted into
@@ -266,10 +288,8 @@ private:
     // and then this needs to use the OpBuilder.
     auto context = getOperation().getContext();
     OpBuilder builder(context);
-    OperationState state(kernelFunc.getLoc(),
-                         gpu::GPUModuleOp::getOperationName());
-    gpu::GPUModuleOp::build(builder, state, kernelFunc.getName());
-    auto kernelModule = cast<gpu::GPUModuleOp>(Operation::create(state));
+    auto kernelModule = builder.create<gpu::GPUModuleOp>(kernelFunc.getLoc(),
+                                                         kernelFunc.getName());
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);
 

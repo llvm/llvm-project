@@ -14,9 +14,9 @@
 
 #include "llvm/Support/SwapByteOrder.h"
 
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
 
 namespace lldb {
 class SBInstruction;
@@ -38,7 +38,7 @@ public:
     eTypeBytes
   };
 
-  Opcode() : m_byte_order(lldb::eByteOrderInvalid), m_type(eTypeInvalid) {}
+  Opcode() = default;
 
   Opcode(uint8_t inst, lldb::ByteOrder order)
       : m_byte_order(order), m_type(eType8) {
@@ -252,9 +252,9 @@ protected:
             endian::InlHostByteOrder() == lldb::eByteOrderBig);
   }
 
-  lldb::ByteOrder m_byte_order;
+  lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 
-  Opcode::Type m_type;
+  Opcode::Type m_type = eTypeInvalid;
   union {
     uint8_t inst8;
     uint16_t inst16;

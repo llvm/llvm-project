@@ -24,26 +24,41 @@
 #include <iterator>
 struct OtherTag : std::input_iterator_tag {};
 struct OtherTagTwo : std::output_iterator_tag {};
-struct MyIter : std::iterator<std::random_access_iterator_tag, char> {
-  using iterator_concept = int;
-};
-struct MyIter2 : std::iterator<OtherTag, char> {
 
+struct MyIter {
+  using iterator_category = std::random_access_iterator_tag;
+  using iterator_concept = int;
+  using value_type = char;
+  using difference_type = std::ptrdiff_t;
+  using pointer = char*;
+  using reference = char&;
 };
+
+struct MyIter2 {
+  using iterator_category = OtherTag;
+  using value_type = char;
+  using difference_type = std::ptrdiff_t;
+  using pointer = char*;
+  using reference = char&;
+};
+
 struct MyIter3 {};
 
 struct Empty {};
 struct EmptyWithSpecial {};
-namespace std {
 template <>
-struct iterator_traits<MyIter3>
-    : std::iterator<OtherTagTwo, char> {};
+struct std::iterator_traits<MyIter3> {
+  using iterator_category = OtherTagTwo;
+  using value_type = char;
+  using difference_type = std::ptrdiff_t;
+  using pointer = char*;
+  using reference = char&;
+};
 
 template <>
-struct iterator_traits<EmptyWithSpecial> {
+struct std::iterator_traits<EmptyWithSpecial> {
   // empty non-default.
 };
-} // namespace std
 
 int main(int, char**) {
   // If the qualified-id ITER_TRAITS(I)::iterator_concept is valid and names a type,

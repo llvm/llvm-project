@@ -137,3 +137,99 @@ FileHeader:
 # LANAI-NEXT:  StringTableSectionIndex: 2
 # LANAI-NEXT:}
 # LANAI-NOT:{{.}}
+
+## Check we are able to dump the file header when the section header table can't be read.
+
+# RUN: yaml2obj %s --docnum=4 -o %t.invalid1
+# RUN: not llvm-readobj --file-headers %t.invalid1 2>&1 \
+# RUN:  | FileCheck %s --implicit-check-not=warning: -DFILE=%t.invalid1 \
+# RUN:    -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
+# RUN: not llvm-readelf --file-headers %t.invalid1 2>&1 \
+# RUN:  | FileCheck %s --implicit-check-not=warning: -DFILE=%t.invalid1 \
+# RUN:    -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
+
+# INVALID-LLVM:      File: [[FILE]]
+# INVALID-LLVM-NEXT: Format: elf64-unknown
+# INVALID-LLVM-NEXT: Arch: unknown
+# INVALID-LLVM-NEXT: AddressSize: 64bit
+# INVALID-LLVM-NEXT: LoadName: <Not found>
+# INVALID-LLVM-NEXT: ElfHeader {
+# INVALID-LLVM-NEXT:   Ident {
+# INVALID-LLVM-NEXT:     Magic: (7F 45 4C 46)
+# INVALID-LLVM-NEXT:     Class: 64-bit (0x2)
+# INVALID-LLVM-NEXT:     DataEncoding: LittleEndian (0x1)
+# INVALID-LLVM-NEXT:     FileVersion: 1
+# INVALID-LLVM-NEXT:     OS/ABI: SystemV (0x0)
+# INVALID-LLVM-NEXT:     ABIVersion: 0
+# INVALID-LLVM-NEXT:     Unused: (00 00 00 00 00 00 00)
+# INVALID-LLVM-NEXT:   }
+# INVALID-LLVM-NEXT:   Type: Relocatable (0x1)
+# INVALID-LLVM-NEXT:   Machine: EM_NONE (0x0)
+# INVALID-LLVM-NEXT:   Version: 1
+# INVALID-LLVM-NEXT:   Entry: 0x0
+# INVALID-LLVM-NEXT:   ProgramHeaderOffset: 0x0
+# INVALID-LLVM-NEXT:   SectionHeaderOffset: 0x1000
+# INVALID-LLVM-NEXT:   Flags [ (0x0)
+# INVALID-LLVM-NEXT:   ]
+# INVALID-LLVM-NEXT:   HeaderSize: 64
+# INVALID-LLVM-NEXT:   ProgramHeaderEntrySize: 0
+# INVALID-LLVM-NEXT:   ProgramHeaderCount: 0
+# INVALID-LLVM-NEXT:   SectionHeaderEntrySize: 64
+# INVALID-LLVM-NEXT:   SectionHeaderCount: [[SECHDRCOUNT]]
+# INVALID-LLVM-NEXT:   StringTableSectionIndex: [[SECHDRSTRTABINDEX]]
+# INVALID-LLVM-NEXT: }
+# INVALID-LLVM-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section header table goes past the end of the file: e_shoff = 0x1000
+
+# INVALID-GNU:      ELF Header:
+# INVALID-GNU-NEXT:   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
+# INVALID-GNU-NEXT:   Class:                             ELF64
+# INVALID-GNU-NEXT:   Data:                              2's complement, little endian
+# INVALID-GNU-NEXT:   Version:                           1 (current)
+# INVALID-GNU-NEXT:   OS/ABI:                            UNIX - System V
+# INVALID-GNU-NEXT:   ABI Version:                       0
+# INVALID-GNU-NEXT:   Type:                              REL (Relocatable file)
+# INVALID-GNU-NEXT:   Machine:                           None
+# INVALID-GNU-NEXT:   Version:                           0x1
+# INVALID-GNU-NEXT:   Entry point address:               0x0
+# INVALID-GNU-NEXT:   Start of program headers:          0 (bytes into file)
+# INVALID-GNU-NEXT:   Start of section headers:          4096 (bytes into file)
+# INVALID-GNU-NEXT:   Flags:                             0x0
+# INVALID-GNU-NEXT:   Size of this header:               64 (bytes)
+# INVALID-GNU-NEXT:   Size of program headers:           0 (bytes)
+# INVALID-GNU-NEXT:   Number of program headers:         0
+# INVALID-GNU-NEXT:   Size of section headers:           64 (bytes)
+# INVALID-GNU-NEXT:   Number of section headers:         [[SECHDRCOUNT]]
+# INVALID-GNU-NEXT:   Section header string table index: [[SECHDRSTRTABINDEX]]
+# INVALID-GNU-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section header table goes past the end of the file: e_shoff = 0x1000
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+## The section header table offset goes past the EOF.
+  EShOff:    0x1000
+## The number of section headers is too large, the file is
+## too little to contain so many sections.
+  EShNum:    [[SHNUM=0x2000]]
+## The index of the section name string table is too large.
+## The section would be past the EOF.
+  EShStrNdx: [[SHSTRNDX=0x3000]]
+Sections:
+  - Type: SectionHeaderTable
+    NoHeaders: true
+
+## Check we don't dump anything except the file header when the section header table can't be read.
+
+# RUN: not llvm-readobj -a %t.invalid1 2>&1 \
+# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-LLVM
+# RUN: not llvm-readelf -a %t.invalid1 2>&1 \
+# RUN:  | FileCheck %s -DFILE=%t.invalid1 -DSECHDRCOUNT=8192 -DSECHDRSTRTABINDEX=12288 --check-prefix=INVALID-GNU
+
+## Check what we print when e_shnum == 0, e_shstrndx == SHN_XINDEX and the section header table can't be read.
+
+# RUN: yaml2obj %s -DSHNUM=0 -DSHSTRNDX=0xffff --docnum=4 -o %t.invalid2
+# RUN: not llvm-readobj --file-headers %t.invalid2 2>&1 \
+# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-LLVM
+# RUN: not llvm-readelf --file-headers %t.invalid2 2>&1 \
+# RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-GNU

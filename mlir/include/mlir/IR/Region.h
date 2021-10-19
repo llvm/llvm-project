@@ -43,6 +43,10 @@ public:
 
   using BlockListType = llvm::iplist<Block>;
   BlockListType &getBlocks() { return blocks; }
+  Block &emplaceBlock() {
+    push_back(new Block);
+    return back();
+  }
 
   // Iteration over the blocks in the region.
   using iterator = BlockListType::iterator;
@@ -59,6 +63,9 @@ public:
 
   Block &back() { return blocks.back(); }
   Block &front() { return blocks.front(); }
+
+  /// Return true if this region has exactly one block.
+  bool hasOneBlock() { return !empty() && std::next(begin()) == end(); }
 
   /// getSublistAccess() - Returns pointer to member of region.
   static BlockListType Region::*getSublistAccess(Block *) {
@@ -160,13 +167,16 @@ public:
 
   /// Return iterators that walk operations of type 'T' nested directly within
   /// this region.
-  template <typename OpT> op_iterator<OpT> op_begin() {
+  template <typename OpT>
+  op_iterator<OpT> op_begin() {
     return detail::op_filter_iterator<OpT, OpIterator>(op_begin(), op_end());
   }
-  template <typename OpT> op_iterator<OpT> op_end() {
+  template <typename OpT>
+  op_iterator<OpT> op_end() {
     return detail::op_filter_iterator<OpT, OpIterator>(op_end(), op_end());
   }
-  template <typename OpT> iterator_range<op_iterator<OpT>> getOps() {
+  template <typename OpT>
+  iterator_range<op_iterator<OpT>> getOps() {
     auto endIt = op_end();
     return {detail::op_filter_iterator<OpT, OpIterator>(op_begin(), endIt),
             detail::op_filter_iterator<OpT, OpIterator>(endIt, endIt)};
@@ -181,11 +191,12 @@ public:
   Region *getParentRegion();
 
   /// Return the parent operation this region is attached to.
-  Operation *getParentOp();
+  Operation *getParentOp() { return container; }
 
   /// Find the first parent operation of the given type, or nullptr if there is
   /// no ancestor operation.
-  template <typename ParentT> ParentT getParentOfType() {
+  template <typename ParentT>
+  ParentT getParentOfType() {
     auto *region = this;
     do {
       if (auto parent = dyn_cast_or_null<ParentT>(region->container))
@@ -222,16 +233,15 @@ public:
     blocks.splice(blocks.end(), other.getBlocks());
   }
 
-  /// Check that this does not use any value defined outside it.
-  /// Emit errors if `noteLoc` is provided; this location is used to point
-  /// to the operation containing the region, the actual error is reported at
-  /// the operation with an offending use.
-  bool isIsolatedFromAbove(Optional<Location> noteLoc = llvm::None);
-
   /// Returns 'block' if 'block' lies in this region, or otherwise finds the
   /// ancestor of 'block' that lies in this region. Returns nullptr if the
   /// latter fails.
   Block *findAncestorBlockInRegion(Block &block);
+
+  /// Returns 'op' if 'op' lies in this region, or otherwise finds the
+  /// ancestor of 'op' that lies in this region. Returns nullptr if the
+  /// latter fails.
+  Operation *findAncestorOpInRegion(Operation &op);
 
   /// Drop all operand uses from operations within this region, which is
   /// an essential step in breaking cyclic dependences between references when
@@ -242,24 +252,40 @@ public:
   // Operation Walkers
   //===--------------------------------------------------------------------===//
 
-  /// Walk the operations in this region in postorder, calling the callback for
-  /// each operation. This method is invoked for void-returning callbacks.
-  /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  /// Walk the operations in this region. The callback method is called for each
+  /// nested region, block or operation, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). This method is invoked for void-returning
+  /// callbacks. A callback on a block or operation is allowed to erase that
+  /// block or operation only if the walk is in post-order. See non-void method
+  /// for pre-order erasure. See Operation::walk for more details.
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
   walk(FnT &&callback) {
     for (auto &block : *this)
-      block.walk(callback);
+      block.walk<Order>(callback);
   }
 
-  /// Walk the operations in this region in postorder, calling the callback for
-  /// each operation. This method is invoked for interruptible callbacks.
+  /// Walk the operations in this region. The callback method is called for each
+  /// nested region, block or operation, depending on the callback provided.
+  /// Regions, blocks and operations at the same nesting level are visited in
+  /// lexicographical order. The walk order for enclosing regions, blocks and
+  /// operations with respect to their nested ones is specified by 'Order'
+  /// (post-order by default). This method is invoked for skippable or
+  /// interruptible callbacks. A callback on a block or operation is allowed to
+  /// erase that block or operation if either:
+  ///   * the walk is in post-order,
+  ///   * or the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+            typename RetT = detail::walkResultType<FnT>>
   typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
   walk(FnT &&callback) {
     for (auto &block : *this)
-      if (block.walk(callback).wasInterrupted())
+      if (block.walk<Order>(callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }
@@ -270,7 +296,7 @@ public:
 
   /// Displays the CFG in a window. This is for use from the debugger and
   /// depends on Graphviz to generate the graph.
-  /// This function is defined in ViewRegionGraph and only works with that
+  /// This function is defined in ViewOpGraph.cpp and only works with that
   /// target linked.
   void viewGraph(const Twine &regionName);
   void viewGraph();

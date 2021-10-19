@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.1 | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.2 | FileCheck %s
-// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++ | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++1.0 | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL3.0 | FileCheck %s
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++2021 | FileCheck %s
 
 // Test including the default header as a module.
 // The module should be compiled only once and loaded from cache afterwards.
@@ -56,7 +58,7 @@
 // CHECK20: _Z16convert_char_rtec
 char f(char x) {
 // Check functionality from OpenCL 2.0 onwards
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
   ndrange_t t;
   x = ctz(x);
 #endif //__OPENCL_C_VERSION__
@@ -81,12 +83,17 @@ void test_atomics(__generic volatile unsigned int* a) {
 #endif
 
 // Verify that ATOMIC_VAR_INIT is defined.
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#if (__OPENCL_CPP_VERSION__ == 100) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
 global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
+// CHECK-MOD: Reading modules
 
-// Verify that non-builtin cl_intel_planar_yuv extension is defined from
-// OpenCL 1.2 onwards.
+// Check that extension macros are defined correctly.
+
+// For SPIR all extensions are supported.
+#if defined(__SPIR__)
+
+// Verify that cl_intel_planar_yuv extension is defined from OpenCL 1.2 onwards.
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // expected-no-diagnostics
 #else //__OPENCL_C_VERSION__
@@ -94,4 +101,258 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 
-// CHECK-MOD: Reading modules
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
+#if cl_khr_subgroup_extended_types != 1
+#error "Incorrectly defined cl_khr_subgroup_extended_types"
+#endif
+#if cl_khr_subgroup_non_uniform_vote != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_vote"
+#endif
+#if cl_khr_subgroup_ballot != 1
+#error "Incorrectly defined cl_khr_subgroup_ballot"
+#endif
+#if cl_khr_subgroup_non_uniform_arithmetic != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_arithmetic"
+#endif
+#if cl_khr_subgroup_shuffle != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle"
+#endif
+#if cl_khr_subgroup_shuffle_relative != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle_relative"
+#endif
+#if cl_khr_subgroup_clustered_reduce != 1
+#error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
+#endif
+#if cl_khr_extended_bit_ops != 1
+#error "Incorrectly defined cl_khr_extended_bit_ops"
+#endif
+#if cl_khr_integer_dot_product != 1
+#error "Incorrectly defined cl_khr_integer_dot_product"
+#endif
+#if __opencl_c_integer_dot_product_input_4x8bit != 1
+#error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit"
+#endif
+#if __opencl_c_integer_dot_product_input_4x8bit_packed != 1
+#error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit_packed"
+#endif
+#if cl_ext_float_atomics != 1
+#error "Incorrectly defined cl_ext_float_atomics"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_load_store != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_load_store"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_load_store != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_load_store"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp32_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp64_global_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_global_atomic_add"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp32_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp64_local_atomic_add != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_local_atomic_add"
+#endif
+#if __opencl_c_ext_fp16_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp32_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp64_global_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_global_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp16_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp16_local_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp32_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp32_local_atomic_min_max"
+#endif
+#if __opencl_c_ext_fp64_local_atomic_min_max != 1
+#error "Incorrectly defined __opencl_c_ext_fp64_local_atomic_min_max"
+#endif
+
+#else
+
+#ifdef cl_khr_subgroup_extended_types
+#error "Incorrect cl_khr_subgroup_extended_types define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_vote
+#error "Incorrect cl_khr_subgroup_non_uniform_vote define"
+#endif
+#ifdef cl_khr_subgroup_ballot
+#error "Incorrect cl_khr_subgroup_ballot define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_arithmetic
+#error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
+#endif
+#ifdef cl_khr_subgroup_shuffle
+#error "Incorrect cl_khr_subgroup_shuffle define"
+#endif
+#ifdef cl_khr_subgroup_shuffle_relative
+#error "Incorrect cl_khr_subgroup_shuffle_relative define"
+#endif
+#ifdef cl_khr_subgroup_clustered_reduce
+#error "Incorrect cl_khr_subgroup_clustered_reduce define"
+#endif
+#ifdef cl_khr_extended_bit_ops
+#error "Incorrect cl_khr_extended_bit_ops define"
+#endif
+#ifdef cl_khr_integer_dot_product
+#error "Incorrect cl_khr_integer_dot_product define"
+#endif
+#ifdef __opencl_c_integer_dot_product_input_4x8bit
+#error "Incorrect __opencl_c_integer_dot_product_input_4x8bit define"
+#endif
+#ifdef __opencl_c_integer_dot_product_input_4x8bit_packed
+#error "Incorrect __opencl_c_integer_dot_product_input_4x8bit_packed define"
+#endif
+#ifdef cl_ext_float_atomics
+#error "Incorrect cl_ext_float_atomics define"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_load_store
+#error "Incorrectly __opencl_c_ext_fp16_global_atomic_load_store defined"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_load_store
+#error "Incorrectly __opencl_c_ext_fp16_local_atomic_load_store defined"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_add
+#error "Incorrectly __opencl_c_ext_fp16_global_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp32_global_atomic_add
+#error "Incorrectly __opencl_c_ext_fp32_global_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp64_global_atomic_add
+#error "Incorrectly __opencl_c_ext_fp64_global_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_add
+#error "Incorrectly __opencl_c_ext_fp16_local_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp32_local_atomic_add
+#error "Incorrectly __opencl_c_ext_fp32_local_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp64_local_atomic_add
+#error "Incorrectly __opencl_c_ext_fp64_local_atomic_add defined"
+#endif
+#ifdef __opencl_c_ext_fp16_global_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp16_global_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_fp32_global_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp32_global_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_fp64_global_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp64_global_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_fp16_local_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp16_local_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_fp32_local_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp32_local_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_fp64_local_atomic_min_max
+#error "Incorrectly __opencl_c_ext_fp64_local_atomic_min_max defined"
+#endif
+
+#endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
+// OpenCL C features.
+#if (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
+#if __opencl_c_atomic_scope_all_devices != 1
+#error "Incorrectly defined feature macro __opencl_c_atomic_scope_all_devices"
+#endif
+
+#elif (__OPENCL_CPP_VERSION__ == 100 || __OPENCL_C_VERSION__ == 200)
+
+#ifndef  __opencl_c_pipes
+#error "Feature macro __opencl_c_pipes should be defined"
+#endif
+#ifndef __opencl_c_generic_address_space
+#error "Feature macro __opencl_c_generic_address_space should be defined"
+#endif
+#ifndef __opencl_c_work_group_collective_functions
+#error "Feature macro __opencl_c_work_group_collective_functions should be defined"
+#endif
+#ifndef __opencl_c_atomic_order_acq_rel
+#error "Feature macro __opencl_c_atomic_order_acq_rel should be defined"
+#endif
+#ifndef __opencl_c_atomic_order_seq_cst
+#error "Feature macro __opencl_c_atomic_order_seq_cst should be defined"
+#endif
+#ifndef __opencl_c_atomic_scope_device
+#error "Feature macro __opencl_c_atomic_scope_device should be defined"
+#endif
+#ifndef __opencl_c_atomic_scope_all_devices
+#error "Feature macro __opencl_c_atomic_scope_all_devices should be defined"
+#endif
+#ifndef __opencl_c_device_enqueue
+#error "Feature macro __opencl_c_device_enqueue should be defined"
+#endif
+#ifndef __opencl_c_read_write_images
+#error "Feature macro __opencl_c_read_write_images should be defined"
+#endif
+#ifndef __opencl_c_program_scope_global_variables
+#error "Feature macro __opencl_c_program_scope_global_variables should be defined"
+#endif
+#ifndef __opencl_c_images
+#error "Feature macro __opencl_c_images should be defined"
+#endif
+
+#elif (__OPENCL_C_VERSION__ < 200)
+
+#ifdef  __opencl_c_pipes
+#error "Incorrect feature macro __opencl_c_pipes define"
+#endif
+#ifdef __opencl_c_generic_address_space
+#error "Incorrect feature macro __opencl_c_generic_address_space define"
+#endif
+#ifdef __opencl_c_work_group_collective_functions
+#error "Incorrect feature macro __opencl_c_work_group_collective_functions define"
+#endif
+#ifdef __opencl_c_atomic_order_acq_rel
+#error "Incorrect feature macro __opencl_c_atomic_order_acq_rel define"
+#endif
+#ifdef __opencl_c_atomic_order_seq_cst
+#error "Incorrect feature macro __opencl_c_atomic_order_seq_cst define"
+#endif
+#ifdef __opencl_c_atomic_scope_device
+#error "Incorrect feature macro __opencl_c_atomic_scope_device define"
+#endif
+#ifdef __opencl_c_atomic_scope_all_devices
+#error "Incorrect feature macro __opencl_c_atomic_scope_all_devices define"
+#endif
+#ifdef __opencl_c_device_enqueue
+#error "Incorrect feature macro __opencl_c_device_enqueue define"
+#endif
+#ifdef __opencl_c_read_write_images
+#error "Incorrect feature macro __opencl_c_read_write_images define"
+#endif
+#ifdef __opencl_c_program_scope_global_variables
+#error "Incorrect feature macro __opencl_c_program_scope_global_variables define"
+#endif
+#ifdef __opencl_c_images
+#error "Incorrect feature macro __opencl_c_images define"
+#endif
+#ifdef __opencl_c_3d_image_writes
+#error "Incorrect feature macro __opencl_c_3d_image_writes define"
+#endif
+#ifdef __opencl_c_fp64
+#error "Incorrect feature macro __opencl_c_fp64 define"
+#endif
+#ifdef __opencl_c_subgroups
+#error "Incorrect feature macro __opencl_c_subgroups define"
+#endif
+
+#endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
+
+#endif // defined(__SPIR__)

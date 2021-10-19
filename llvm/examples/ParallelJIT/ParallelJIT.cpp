@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -256,6 +257,7 @@ void* callFunc( void* param )
 
 int main() {
   InitializeNativeTarget();
+  LLVMInitializeNativeAsmPrinter();
   LLVMContext Context;
 
   // Create some module to put our function into it.

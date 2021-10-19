@@ -33,33 +33,29 @@
 #include <memory>
 #include <string>
 
-#include <inttypes.h>
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;
 
-Value::Value()
-    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
-      m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
-      m_data_buffer() {}
+Value::Value() : m_value(), m_compiler_type(), m_data_buffer() {}
 
 Value::Value(const Scalar &scalar)
-    : m_value(scalar), m_vector(), m_compiler_type(), m_context(nullptr),
-      m_value_type(eValueTypeScalar), m_context_type(eContextTypeInvalid),
+    : m_value(scalar), m_compiler_type(), m_context(nullptr),
+      m_value_type(ValueType::Scalar), m_context_type(ContextType::Invalid),
       m_data_buffer() {}
 
 Value::Value(const void *bytes, int len)
-    : m_value(), m_vector(), m_compiler_type(), m_context(nullptr),
-      m_value_type(eValueTypeHostAddress), m_context_type(eContextTypeInvalid),
+    : m_value(), m_compiler_type(), m_context(nullptr),
+      m_value_type(ValueType::HostAddress), m_context_type(ContextType::Invalid),
       m_data_buffer() {
   SetBytes(bytes, len);
 }
 
 Value::Value(const Value &v)
-    : m_value(v.m_value), m_vector(v.m_vector),
-      m_compiler_type(v.m_compiler_type), m_context(v.m_context),
-      m_value_type(v.m_value_type), m_context_type(v.m_context_type),
-      m_data_buffer() {
+    : m_value(v.m_value), m_compiler_type(v.m_compiler_type),
+      m_context(v.m_context), m_value_type(v.m_value_type),
+      m_context_type(v.m_context_type), m_data_buffer() {
   const uintptr_t rhs_value =
       (uintptr_t)v.m_value.ULongLong(LLDB_INVALID_ADDRESS);
   if ((rhs_value != 0) &&
@@ -74,7 +70,6 @@ Value::Value(const Value &v)
 Value &Value::operator=(const Value &rhs) {
   if (this != &rhs) {
     m_value = rhs.m_value;
-    m_vector = rhs.m_vector;
     m_compiler_type = rhs.m_compiler_type;
     m_context = rhs.m_context;
     m_value_type = rhs.m_value_type;
@@ -93,13 +88,13 @@ Value &Value::operator=(const Value &rhs) {
 }
 
 void Value::SetBytes(const void *bytes, int len) {
-  m_value_type = eValueTypeHostAddress;
+  m_value_type = ValueType::HostAddress;
   m_data_buffer.CopyData(bytes, len);
   m_value = (uintptr_t)m_data_buffer.GetBytes();
 }
 
 void Value::AppendBytes(const void *bytes, int len) {
-  m_value_type = eValueTypeHostAddress;
+  m_value_type = ValueType::HostAddress;
   m_data_buffer.AppendData(bytes, len);
   m_value = (uintptr_t)m_data_buffer.GetBytes();
 }
@@ -115,27 +110,27 @@ Value::ValueType Value::GetValueType() const { return m_value_type; }
 
 AddressType Value::GetValueAddressType() const {
   switch (m_value_type) {
-  default:
-  case eValueTypeScalar:
+  case ValueType::Invalid:
+  case ValueType::Scalar:
     break;
-  case eValueTypeLoadAddress:
+  case ValueType::LoadAddress:
     return eAddressTypeLoad;
-  case eValueTypeFileAddress:
+  case ValueType::FileAddress:
     return eAddressTypeFile;
-  case eValueTypeHostAddress:
+  case ValueType::HostAddress:
     return eAddressTypeHost;
   }
   return eAddressTypeInvalid;
 }
 
 RegisterInfo *Value::GetRegisterInfo() const {
-  if (m_context_type == eContextTypeRegisterInfo)
+  if (m_context_type == ContextType::RegisterInfo)
     return static_cast<RegisterInfo *>(m_context);
   return nullptr;
 }
 
 Type *Value::GetType() {
-  if (m_context_type == eContextTypeLLDBType)
+  if (m_context_type == ContextType::LLDBType)
     return static_cast<Type *>(m_context);
   return nullptr;
 }
@@ -147,7 +142,9 @@ size_t Value::AppendDataToHostBuffer(const Value &rhs) {
   size_t curr_size = m_data_buffer.GetByteSize();
   Status error;
   switch (rhs.GetValueType()) {
-  case eValueTypeScalar: {
+  case ValueType::Invalid:
+    return 0;
+  case ValueType::Scalar: {
     const size_t scalar_size = rhs.m_value.GetByteSize();
     if (scalar_size > 0) {
       const size_t new_size = curr_size + scalar_size;
@@ -159,20 +156,9 @@ size_t Value::AppendDataToHostBuffer(const Value &rhs) {
       }
     }
   } break;
-  case eValueTypeVector: {
-    const size_t vector_size = rhs.m_vector.length;
-    if (vector_size > 0) {
-      const size_t new_size = curr_size + vector_size;
-      if (ResizeData(new_size) == new_size) {
-        ::memcpy(m_data_buffer.GetBytes() + curr_size, rhs.m_vector.bytes,
-                 vector_size);
-        return vector_size;
-      }
-    }
-  } break;
-  case eValueTypeFileAddress:
-  case eValueTypeLoadAddress:
-  case eValueTypeHostAddress: {
+  case ValueType::FileAddress:
+  case ValueType::LoadAddress:
+  case ValueType::HostAddress: {
     const uint8_t *src = rhs.GetBuffer().GetBytes();
     const size_t src_len = rhs.GetBuffer().GetByteSize();
     if (src && src_len > 0) {
@@ -188,7 +174,7 @@ size_t Value::AppendDataToHostBuffer(const Value &rhs) {
 }
 
 size_t Value::ResizeData(size_t len) {
-  m_value_type = eValueTypeHostAddress;
+  m_value_type = ValueType::HostAddress;
   m_data_buffer.SetByteSize(len);
   m_value = (uintptr_t)m_data_buffer.GetBytes();
   return m_data_buffer.GetByteSize();
@@ -196,12 +182,12 @@ size_t Value::ResizeData(size_t len) {
 
 bool Value::ValueOf(ExecutionContext *exe_ctx) {
   switch (m_context_type) {
-  case eContextTypeInvalid:
-  case eContextTypeRegisterInfo: // RegisterInfo *
-  case eContextTypeLLDBType:     // Type *
+  case ContextType::Invalid:
+  case ContextType::RegisterInfo: // RegisterInfo *
+  case ContextType::LLDBType:     // Type *
     break;
 
-  case eContextTypeVariable: // Variable *
+  case ContextType::Variable: // Variable *
     ResolveValue(exe_ctx);
     return true;
   }
@@ -210,7 +196,7 @@ bool Value::ValueOf(ExecutionContext *exe_ctx) {
 
 uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   switch (m_context_type) {
-  case eContextTypeRegisterInfo: // RegisterInfo *
+  case ContextType::RegisterInfo: // RegisterInfo *
     if (GetRegisterInfo()) {
       if (error_ptr)
         error_ptr->Clear();
@@ -218,9 +204,9 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
     }
     break;
 
-  case eContextTypeInvalid:
-  case eContextTypeLLDBType: // Type *
-  case eContextTypeVariable: // Variable *
+  case ContextType::Invalid:
+  case ContextType::LLDBType: // Type *
+  case ContextType::Variable: // Variable *
   {
     auto *scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
     if (llvm::Optional<uint64_t> size = GetCompilerType().GetByteSize(scope)) {
@@ -239,19 +225,19 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
 const CompilerType &Value::GetCompilerType() {
   if (!m_compiler_type.IsValid()) {
     switch (m_context_type) {
-    case eContextTypeInvalid:
+    case ContextType::Invalid:
       break;
 
-    case eContextTypeRegisterInfo:
+    case ContextType::RegisterInfo:
       break; // TODO: Eventually convert into a compiler type?
 
-    case eContextTypeLLDBType: {
+    case ContextType::LLDBType: {
       Type *lldb_type = GetType();
       if (lldb_type)
         m_compiler_type = lldb_type->GetForwardCompilerType();
     } break;
 
-    case eContextTypeVariable: {
+    case ContextType::Variable: {
       Variable *variable = GetVariable();
       if (variable) {
         Type *variable_type = variable->GetType();
@@ -271,14 +257,14 @@ void Value::SetCompilerType(const CompilerType &compiler_type) {
 
 lldb::Format Value::GetValueDefaultFormat() {
   switch (m_context_type) {
-  case eContextTypeRegisterInfo:
+  case ContextType::RegisterInfo:
     if (GetRegisterInfo())
       return GetRegisterInfo()->format;
     break;
 
-  case eContextTypeInvalid:
-  case eContextTypeLLDBType:
-  case eContextTypeVariable: {
+  case ContextType::Invalid:
+  case ContextType::LLDBType:
+  case ContextType::Variable: {
     const CompilerType &ast_type = GetCompilerType();
     if (ast_type.IsValid())
       return ast_type.GetFormat();
@@ -291,17 +277,16 @@ lldb::Format Value::GetValueDefaultFormat() {
 
 bool Value::GetData(DataExtractor &data) {
   switch (m_value_type) {
-  default:
-    break;
-
-  case eValueTypeScalar:
+  case ValueType::Invalid:
+    return false;
+  case ValueType::Scalar:
     if (m_value.GetData(data))
       return true;
     break;
 
-  case eValueTypeLoadAddress:
-  case eValueTypeFileAddress:
-  case eValueTypeHostAddress:
+  case ValueType::LoadAddress:
+  case ValueType::FileAddress:
+  case ValueType::HostAddress:
     if (m_data_buffer.GetByteSize()) {
       data.SetData(m_data_buffer.GetBytes(), m_data_buffer.GetByteSize(),
                    data.GetByteOrder());
@@ -329,15 +314,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     return error;
 
   switch (m_value_type) {
-  case eValueTypeVector:
-    if (ast_type.IsValid())
-      data.SetAddressByteSize(ast_type.GetPointerByteSize());
-    else
-      data.SetAddressByteSize(sizeof(void *));
-    data.SetData(m_vector.bytes, m_vector.length, m_vector.byte_order);
+  case ValueType::Invalid:
+    error.SetErrorString("invalid value");
     break;
-
-  case eValueTypeScalar: {
+  case ValueType::Scalar: {
     data.SetByteOrder(endian::InlHostByteOrder());
     if (ast_type.IsValid())
       data.SetAddressByteSize(ast_type.GetPointerByteSize());
@@ -357,7 +337,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     error.SetErrorString("extracting data from value failed");
     break;
   }
-  case eValueTypeLoadAddress:
+  case ValueType::LoadAddress:
     if (exe_ctx == nullptr) {
       error.SetErrorString("can't read load address (no execution context)");
     } else {
@@ -394,7 +374,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     }
     break;
 
-  case eValueTypeFileAddress:
+  case ValueType::FileAddress:
     if (exe_ctx == nullptr) {
       error.SetErrorString("can't read file address (no execution context)");
     } else if (exe_ctx->GetTargetPtr() == nullptr) {
@@ -484,7 +464,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     }
     break;
 
-  case eValueTypeHostAddress:
+  case ValueType::HostAddress:
     address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
     address_type = eAddressTypeHost;
     if (exe_ctx) {
@@ -542,15 +522,10 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     } else if ((address_type == eAddressTypeLoad) ||
                (address_type == eAddressTypeFile)) {
       if (file_so_addr.IsValid()) {
-        // We have a file address that we were able to translate into a section
-        // offset address so we might be able to read this from the object
-        // files if we don't have a live process. Lets always try and read from
-        // the process if we have one though since we want to read the actual
-        // value by setting "prefer_file_cache" to false.
-        const bool prefer_file_cache = false;
-        if (exe_ctx->GetTargetRef().ReadMemory(file_so_addr, prefer_file_cache,
-                                               dst, byte_size,
-                                               error) != byte_size) {
+        const bool force_live_memory = true;
+        if (exe_ctx->GetTargetRef().ReadMemory(file_so_addr, dst, byte_size,
+                                               error, force_live_memory) !=
+            byte_size) {
           error.SetErrorStringWithFormat(
               "read memory from 0x%" PRIx64 " failed", (uint64_t)address);
         }
@@ -589,13 +564,13 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
   const CompilerType &compiler_type = GetCompilerType();
   if (compiler_type.IsValid()) {
     switch (m_value_type) {
-    case eValueTypeScalar: // raw scalar value
+    case ValueType::Invalid:
+    case ValueType::Scalar: // raw scalar value
       break;
 
-    default:
-    case eValueTypeFileAddress:
-    case eValueTypeLoadAddress: // load address value
-    case eValueTypeHostAddress: // host address value (for memory in the process
+    case ValueType::FileAddress:
+    case ValueType::LoadAddress: // load address value
+    case ValueType::HostAddress: // host address value (for memory in the process
                                 // that is using liblldb)
     {
       DataExtractor data;
@@ -607,17 +582,17 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
                 data, 0, data.GetByteSize(), scalar,
                 exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)) {
           m_value = scalar;
-          m_value_type = eValueTypeScalar;
+          m_value_type = ValueType::Scalar;
         } else {
           if ((uintptr_t)addr != (uintptr_t)m_data_buffer.GetBytes()) {
             m_value.Clear();
-            m_value_type = eValueTypeScalar;
+            m_value_type = ValueType::Scalar;
           }
         }
       } else {
         if ((uintptr_t)addr != (uintptr_t)m_data_buffer.GetBytes()) {
           m_value.Clear();
-          m_value_type = eValueTypeScalar;
+          m_value_type = ValueType::Scalar;
         }
       }
     } break;
@@ -627,53 +602,52 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
 }
 
 Variable *Value::GetVariable() {
-  if (m_context_type == eContextTypeVariable)
+  if (m_context_type == ContextType::Variable)
     return static_cast<Variable *>(m_context);
   return nullptr;
 }
 
 void Value::Clear() {
   m_value.Clear();
-  m_vector.Clear();
   m_compiler_type.Clear();
-  m_value_type = eValueTypeScalar;
+  m_value_type = ValueType::Scalar;
   m_context = nullptr;
-  m_context_type = eContextTypeInvalid;
+  m_context_type = ContextType::Invalid;
   m_data_buffer.Clear();
 }
 
 const char *Value::GetValueTypeAsCString(ValueType value_type) {
   switch (value_type) {
-  case eValueTypeScalar:
+  case ValueType::Invalid:
+    return "invalid";
+  case ValueType::Scalar:
     return "scalar";
-  case eValueTypeVector:
-    return "vector";
-  case eValueTypeFileAddress:
+  case ValueType::FileAddress:
     return "file address";
-  case eValueTypeLoadAddress:
+  case ValueType::LoadAddress:
     return "load address";
-  case eValueTypeHostAddress:
+  case ValueType::HostAddress:
     return "host address";
   };
-  return "???";
+  llvm_unreachable("enum cases exhausted.");
 }
 
 const char *Value::GetContextTypeAsCString(ContextType context_type) {
   switch (context_type) {
-  case eContextTypeInvalid:
+  case ContextType::Invalid:
     return "invalid";
-  case eContextTypeRegisterInfo:
+  case ContextType::RegisterInfo:
     return "RegisterInfo *";
-  case eContextTypeLLDBType:
+  case ContextType::LLDBType:
     return "Type *";
-  case eContextTypeVariable:
+  case ContextType::Variable:
     return "Variable *";
   };
-  return "???";
+  llvm_unreachable("enum cases exhausted.");
 }
 
 void Value::ConvertToLoadAddress(Module *module, Target *target) {
-  if (!module || !target || (GetValueType() != eValueTypeFileAddress))
+  if (!module || !target || (GetValueType() != ValueType::FileAddress))
     return;
 
   lldb::addr_t file_addr = GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
@@ -687,7 +661,7 @@ void Value::ConvertToLoadAddress(Module *module, Target *target) {
   if (load_addr == LLDB_INVALID_ADDRESS)
     return;
 
-  SetValueType(Value::eValueTypeLoadAddress);
+  SetValueType(Value::ValueType::LoadAddress);
   GetScalar() = load_addr;
 }
 

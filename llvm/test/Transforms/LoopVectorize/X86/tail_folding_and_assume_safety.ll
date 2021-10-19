@@ -51,7 +51,7 @@ for.inc:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !8
 }
 
-; Case2: With pragma assume_safety only the store is masked.
+; Case2: With pragma assume_safety both, load and store are masked.
 ; void assume_safety(int * p, int * q1, int * q2, int guard) {
 ;   #pragma clang loop vectorize(assume_safety)
 ;   for(int ix=0; ix < 1021; ++ix) {
@@ -63,7 +63,7 @@ for.inc:
 
 ;CHECK-LABEL: @assume_safety
 ;CHECK: vector.body:
-;CHECK-NOT: @llvm.masked.load
+;CHECK:  call <8 x i32> @llvm.masked.load
 ;CHECK:  call void @llvm.masked.store
 
 ; Function Attrs: norecurse nounwind uwtable

@@ -1184,10 +1184,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    subq $16, %rsp
 ; ENABLE-NEXT:    xorl %eax, %eax
-; ENABLE-NEXT:    cmpb $0, {{.*}}(%rip)
+; ENABLE-NEXT:    cmpb $0, _b(%rip)
 ; ENABLE-NEXT:    movl $48, %ecx
 ; ENABLE-NEXT:    cmovnel %eax, %ecx
-; ENABLE-NEXT:    movb %cl, {{.*}}(%rip)
+; ENABLE-NEXT:    movb %cl, _c(%rip)
 ; ENABLE-NEXT:    je LBB14_4
 ; ENABLE-NEXT:  ## %bb.1: ## %for.body.lr.ph
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -1204,7 +1204,7 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE-NEXT:    cmpb $45, %dl
 ; ENABLE-NEXT:    jl LBB14_2
 ; ENABLE-NEXT:  ## %bb.3: ## %for.cond.for.end_crit_edge
-; ENABLE-NEXT:    movq _a@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _a@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    movl %esi, (%rax)
 ; ENABLE-NEXT:  LBB14_4: ## %for.end
 ; ENABLE-NEXT:    xorl %edi, %edi
@@ -1219,10 +1219,10 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    subq $16, %rsp
 ; DISABLE-NEXT:    xorl %eax, %eax
-; DISABLE-NEXT:    cmpb $0, {{.*}}(%rip)
+; DISABLE-NEXT:    cmpb $0, _b(%rip)
 ; DISABLE-NEXT:    movl $48, %ecx
 ; DISABLE-NEXT:    cmovnel %eax, %ecx
-; DISABLE-NEXT:    movb %cl, {{.*}}(%rip)
+; DISABLE-NEXT:    movb %cl, _c(%rip)
 ; DISABLE-NEXT:    je LBB14_4
 ; DISABLE-NEXT:  ## %bb.1: ## %for.body.lr.ph
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -1239,7 +1239,7 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    cmpb $45, %dl
 ; DISABLE-NEXT:    jl LBB14_2
 ; DISABLE-NEXT:  ## %bb.3: ## %for.cond.for.end_crit_edge
-; DISABLE-NEXT:    movq _a@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _a@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    movl %esi, (%rax)
 ; DISABLE-NEXT:  LBB14_4: ## %for.end
 ; DISABLE-NEXT:    xorl %edi, %edi
@@ -1296,7 +1296,7 @@ define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1)
 ; ENABLE-NEXT:    je LBB15_2
 ; ENABLE-NEXT:  ## %bb.1: ## %master
 ; ENABLE-NEXT:    movl (%rdx), %ecx
-; ENABLE-NEXT:    movq _sum1@{{.*}}(%rip), %rdi
+; ENABLE-NEXT:    movq _sum1@TLVP(%rip), %rdi
 ; ENABLE-NEXT:    callq *(%rdi)
 ; ENABLE-NEXT:    movl %ecx, (%rax)
 ; ENABLE-NEXT:    jmp LBB15_3
@@ -1317,7 +1317,7 @@ define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1)
 ; DISABLE-NEXT:    je LBB15_2
 ; DISABLE-NEXT:  ## %bb.1: ## %master
 ; DISABLE-NEXT:    movl (%rdx), %ecx
-; DISABLE-NEXT:    movq _sum1@{{.*}}(%rip), %rdi
+; DISABLE-NEXT:    movq _sum1@TLVP(%rip), %rdi
 ; DISABLE-NEXT:    callq *(%rdi)
 ; DISABLE-NEXT:    movl %ecx, (%rax)
 ; DISABLE-NEXT:    jmp LBB15_3
@@ -1377,7 +1377,7 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_offset %rbx, -24
-; ENABLE-NEXT:    movq _irreducibleCFGf@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpb $0, (%rax)
 ; ENABLE-NEXT:    je LBB16_2
 ; ENABLE-NEXT:    .p2align 4, 0x90
@@ -1385,11 +1385,11 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB16_1
 ; ENABLE-NEXT:  LBB16_2: ## %split
-; ENABLE-NEXT:    movq _irreducibleCFGb@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpl $0, (%rax)
 ; ENABLE-NEXT:    je LBB16_3
 ; ENABLE-NEXT:  ## %bb.4: ## %for.body4.i
-; ENABLE-NEXT:    movq _irreducibleCFGa@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    movl (%rax), %edi
 ; ENABLE-NEXT:    xorl %ebx, %ebx
 ; ENABLE-NEXT:    xorl %eax, %eax
@@ -1420,7 +1420,7 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_offset %rbx, -24
-; DISABLE-NEXT:    movq _irreducibleCFGf@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpb $0, (%rax)
 ; DISABLE-NEXT:    je LBB16_2
 ; DISABLE-NEXT:    .p2align 4, 0x90
@@ -1428,11 +1428,11 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    jmp LBB16_1
 ; DISABLE-NEXT:  LBB16_2: ## %split
-; DISABLE-NEXT:    movq _irreducibleCFGb@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _irreducibleCFGb@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpl $0, (%rax)
 ; DISABLE-NEXT:    je LBB16_3
 ; DISABLE-NEXT:  ## %bb.4: ## %for.body4.i
-; DISABLE-NEXT:    movq _irreducibleCFGa@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _irreducibleCFGa@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    movl (%rax), %edi
 ; DISABLE-NEXT:    xorl %ebx, %ebx
 ; DISABLE-NEXT:    xorl %eax, %eax
@@ -1503,7 +1503,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; ENABLE:       ## %bb.0:
 ; ENABLE-NEXT:    pushq %rbp
 ; ENABLE-NEXT:    movq %rsp, %rbp
-; ENABLE-NEXT:    movq _x@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _x@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpl $0, (%rax)
 ; ENABLE-NEXT:    je LBB17_2
 ; ENABLE-NEXT:  ## %bb.1:
@@ -1511,7 +1511,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; ENABLE-NEXT:  LBB17_2:
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _somethingElse
-; ENABLE-NEXT:    movq _y@{{.*}}(%rip), %rax
+; ENABLE-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpl $0, (%rax)
 ; ENABLE-NEXT:    je LBB17_3
 ; ENABLE-NEXT:  ## %bb.5:
@@ -1530,7 +1530,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; DISABLE:       ## %bb.0:
 ; DISABLE-NEXT:    pushq %rbp
 ; DISABLE-NEXT:    movq %rsp, %rbp
-; DISABLE-NEXT:    movq _x@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _x@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpl $0, (%rax)
 ; DISABLE-NEXT:    je LBB17_2
 ; DISABLE-NEXT:  ## %bb.1:
@@ -1538,7 +1538,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; DISABLE-NEXT:  LBB17_2:
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _somethingElse
-; DISABLE-NEXT:    movq _y@{{.*}}(%rip), %rax
+; DISABLE-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpl $0, (%rax)
 ; DISABLE-NEXT:    je LBB17_3
 ; DISABLE-NEXT:  ## %bb.5:

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin %s -o - | FileCheck %s
 
-// CHECK: @x = global %"struct.outer<foo>::inner" zeroinitializer, align 4, !dbg [[X:![0-9]+]]
+// CHECK: @x ={{.*}} global %"struct.outer<foo>::inner" zeroinitializer, align 4, !dbg [[X:![0-9]+]]
 
 struct MyClass {
   template <int i> int add(int j) {

@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_RETIRE_CONTROL_UNIT_H
-#define LLVM_MCA_RETIRE_CONTROL_UNIT_H
+#ifndef LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H
+#define LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H
 
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
@@ -104,9 +104,12 @@ public:
 #ifndef NDEBUG
   void dump() const;
 #endif
+
+  // Assigned to instructions that are not handled by the RCU.
+  static const unsigned UnhandledTokenID = ~0U;
 };
 
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_RETIRE_CONTROL_UNIT_H
+#endif // LLVM_MCA_HARDWAREUNITS_RETIRECONTROLUNIT_H

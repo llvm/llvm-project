@@ -40,11 +40,11 @@ module Clang_Basic {
   textual header "Basic/BuiltinsHexagon.def"
   textual header "Basic/BuiltinsHexagonDep.def"
   textual header "Basic/BuiltinsHexagonMapCustomDep.def"
-  textual header "Basic/BuiltinsLe64.def"
   textual header "Basic/BuiltinsMips.def"
   textual header "Basic/BuiltinsNEON.def"
   textual header "Basic/BuiltinsNVPTX.def"
   textual header "Basic/BuiltinsPPC.def"
+  textual header "Basic/BuiltinsRISCV.def"
   textual header "Basic/BuiltinsSVE.def"
   textual header "Basic/BuiltinsSystemZ.def"
   textual header "Basic/BuiltinsWebAssembly.def"
@@ -62,9 +62,11 @@ module Clang_Basic {
   textual header "Basic/OpenCLExtensionTypes.def"
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
+  textual header "Basic/PPCTypes.def"
+  textual header "Basic/RISCVVTypes.def"
   textual header "Basic/Sanitizers.def"
+  textual header "Basic/TargetCXXABI.def"
   textual header "Basic/TokenKinds.def"
-  textual header "Basic/X86Target.def"
 
   module * { export * }
 }

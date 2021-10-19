@@ -9,24 +9,13 @@ target triple = "thumbv7em-arm-none-eabi"
 define hidden void @fn1() nounwind #0 {
 ; CHECK-LABEL: fn1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vldr d0, .LCPI0_0
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    mov r2, r0
-; CHECK-NEXT:    mov r3, r1
-; CHECK-NEXT:    bl __aeabi_dcmpeq
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    cbnz r0, .LBB0_2
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: @ %land.rhs
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_2: @ %land.end
-; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 3
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 0 @ double 0
-; CHECK-NEXT:    .long 0
+; CHECK-NEXT:    bx lr
 entry:
   %0 = load i32, i32* @a, align 4
   %conv = sitofp i32 %0 to double

@@ -1,549 +1,365 @@
-# RUN: yaml2obj --docnum=1 %s -o %t.o.1
-# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-R600 %s
-# RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-R600 %s
-# RUN: yaml2obj --docnum=2 %s -o %t.o.2
-# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-R630 %s
-# RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-R630 %s
-# RUN: yaml2obj --docnum=3 %s -o %t.o.3
-# RUN: llvm-readobj -S --file-headers %t.o.3 | FileCheck --check-prefixes=ELF-ALL,ELF-RS880 %s
-# RUN: obj2yaml %t.o.3 | FileCheck --check-prefixes=YAML-RS880 %s
-# RUN: yaml2obj --docnum=4 %s -o %t.o.4
-# RUN: llvm-readobj -S --file-headers %t.o.4 | FileCheck --check-prefixes=ELF-ALL,ELF-RV670 %s
-# RUN: obj2yaml %t.o.4 | FileCheck --check-prefixes=YAML-RV670 %s
-# RUN: yaml2obj --docnum=5 %s -o %t.o.5
-# RUN: llvm-readobj -S --file-headers %t.o.5 | FileCheck --check-prefixes=ELF-ALL,ELF-RV710 %s
-# RUN: obj2yaml %t.o.5 | FileCheck --check-prefixes=YAML-RV710 %s
-# RUN: yaml2obj --docnum=6 %s -o %t.o.6
-# RUN: llvm-readobj -S --file-headers %t.o.6 | FileCheck --check-prefixes=ELF-ALL,ELF-RV730 %s
-# RUN: obj2yaml %t.o.6 | FileCheck --check-prefixes=YAML-RV730 %s
-# RUN: yaml2obj --docnum=7 %s -o %t.o.7
-# RUN: llvm-readobj -S --file-headers %t.o.7 | FileCheck --check-prefixes=ELF-ALL,ELF-RV770 %s
-# RUN: obj2yaml %t.o.7 | FileCheck --check-prefixes=YAML-RV770 %s
-# RUN: yaml2obj --docnum=8 %s -o %t.o.8
-# RUN: llvm-readobj -S --file-headers %t.o.8 | FileCheck --check-prefixes=ELF-ALL,ELF-CEDAR %s
-# RUN: obj2yaml %t.o.8 | FileCheck --check-prefixes=YAML-CEDAR %s
-# RUN: yaml2obj --docnum=9 %s -o %t.o.9
-# RUN: llvm-readobj -S --file-headers %t.o.9 | FileCheck --check-prefixes=ELF-ALL,ELF-CYPRESS %s
-# RUN: obj2yaml %t.o.9 | FileCheck --check-prefixes=YAML-CYPRESS %s
-# RUN: yaml2obj --docnum=10 %s -o %t.o.10
-# RUN: llvm-readobj -S --file-headers %t.o.10 | FileCheck --check-prefixes=ELF-ALL,ELF-JUNIPER %s
-# RUN: obj2yaml %t.o.10 | FileCheck --check-prefixes=YAML-JUNIPER %s
-# RUN: yaml2obj --docnum=11 %s -o %t.o.11
-# RUN: llvm-readobj -S --file-headers %t.o.11 | FileCheck --check-prefixes=ELF-ALL,ELF-REDWOOD %s
-# RUN: obj2yaml %t.o.11 | FileCheck --check-prefixes=YAML-REDWOOD %s
-# RUN: yaml2obj --docnum=12 %s -o %t.o.12
-# RUN: llvm-readobj -S --file-headers %t.o.12 | FileCheck --check-prefixes=ELF-ALL,ELF-SUMO %s
-# RUN: obj2yaml %t.o.12 | FileCheck --check-prefixes=YAML-SUMO %s
-# RUN: yaml2obj --docnum=13 %s -o %t.o.13
-# RUN: llvm-readobj -S --file-headers %t.o.13 | FileCheck --check-prefixes=ELF-ALL,ELF-BARTS %s
-# RUN: obj2yaml %t.o.13 | FileCheck --check-prefixes=YAML-BARTS %s
-# RUN: yaml2obj --docnum=14 %s -o %t.o.14
-# RUN: llvm-readobj -S --file-headers %t.o.14 | FileCheck --check-prefixes=ELF-ALL,ELF-CAICOS %s
-# RUN: obj2yaml %t.o.14 | FileCheck --check-prefixes=YAML-CAICOS %s
-# RUN: yaml2obj --docnum=15 %s -o %t.o.15
-# RUN: llvm-readobj -S --file-headers %t.o.15 | FileCheck --check-prefixes=ELF-ALL,ELF-CAYMAN %s
-# RUN: obj2yaml %t.o.15 | FileCheck --check-prefixes=YAML-CAYMAN %s
-# RUN: yaml2obj --docnum=16 %s -o %t.o.16
-# RUN: llvm-readobj -S --file-headers %t.o.16 | FileCheck --check-prefixes=ELF-ALL,ELF-TURKS %s
-# RUN: obj2yaml %t.o.16 | FileCheck --check-prefixes=YAML-TURKS %s
-# RUN: yaml2obj --docnum=17 %s -o %t.o.17
-# RUN: llvm-readobj -S --file-headers %t.o.17 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX600 %s
-# RUN: obj2yaml %t.o.17 | FileCheck --check-prefixes=YAML-GFX600 %s
-# RUN: yaml2obj --docnum=18 %s -o %t.o.18
-# RUN: llvm-readobj -S --file-headers %t.o.18 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX601 %s
-# RUN: obj2yaml %t.o.18 | FileCheck --check-prefixes=YAML-GFX601 %s
-# RUN: yaml2obj --docnum=19 %s -o %t.o.19
-# RUN: llvm-readobj -S --file-headers %t.o.19 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX700 %s
-# RUN: obj2yaml %t.o.19 | FileCheck --check-prefixes=YAML-GFX700 %s
-# RUN: yaml2obj --docnum=20 %s -o %t.o.20
-# RUN: llvm-readobj -S --file-headers %t.o.20 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX701 %s
-# RUN: obj2yaml %t.o.20 | FileCheck --check-prefixes=YAML-GFX701 %s
-# RUN: yaml2obj --docnum=21 %s -o %t.o.21
-# RUN: llvm-readobj -S --file-headers %t.o.21 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX702 %s
-# RUN: obj2yaml %t.o.21 | FileCheck --check-prefixes=YAML-GFX702 %s
-# RUN: yaml2obj --docnum=22 %s -o %t.o.22
-# RUN: llvm-readobj -S --file-headers %t.o.22 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX703 %s
-# RUN: obj2yaml %t.o.22 | FileCheck --check-prefixes=YAML-GFX703 %s
-# RUN: yaml2obj --docnum=23 %s -o %t.o.23
-# RUN: llvm-readobj -S --file-headers %t.o.23 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX704 %s
-# RUN: obj2yaml %t.o.23 | FileCheck --check-prefixes=YAML-GFX704 %s
-# RUN: yaml2obj --docnum=24 %s -o %t.o.24
-# RUN: llvm-readobj -S --file-headers %t.o.24 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX801 %s
-# RUN: obj2yaml %t.o.24 | FileCheck --check-prefixes=YAML-GFX801 %s
-# RUN: yaml2obj --docnum=25 %s -o %t.o.25
-# RUN: llvm-readobj -S --file-headers %t.o.25 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX802 %s
-# RUN: obj2yaml %t.o.25 | FileCheck --check-prefixes=YAML-GFX802 %s
-# RUN: yaml2obj --docnum=26 %s -o %t.o.26
-# RUN: llvm-readobj -S --file-headers %t.o.26 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX803 %s
-# RUN: obj2yaml %t.o.26 | FileCheck --check-prefixes=YAML-GFX803 %s
-# RUN: yaml2obj --docnum=27 %s -o %t.o.27
-# RUN: llvm-readobj -S --file-headers %t.o.27 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX810 %s
-# RUN: obj2yaml %t.o.27 | FileCheck --check-prefixes=YAML-GFX810 %s
-# RUN: yaml2obj --docnum=28 %s -o %t.o.28
-# RUN: llvm-readobj -S --file-headers %t.o.28 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX900 %s
-# RUN: obj2yaml %t.o.28 | FileCheck --check-prefixes=YAML-GFX900 %s
-# RUN: yaml2obj --docnum=29 %s -o %t.o.29
-# RUN: llvm-readobj -S --file-headers %t.o.29 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX902 %s
-# RUN: obj2yaml %t.o.29 | FileCheck --check-prefixes=YAML-GFX902 %s
-# RUN: yaml2obj --docnum=30 %s -o %t.o.30
-# RUN: llvm-readobj -S --file-headers %t.o.30 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX904 %s
-# RUN: obj2yaml %t.o.30 | FileCheck --check-prefixes=YAML-GFX904 %s
-# RUN: yaml2obj --docnum=31 %s -o %t.o.31
-# RUN: llvm-readobj -S --file-headers %t.o.31 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX906 %s
-# RUN: obj2yaml %t.o.31 | FileCheck --check-prefixes=YAML-GFX906 %s
-# RUN: yaml2obj --docnum=32 %s -o %t.o.32
-# RUN: llvm-readobj -s -file-headers %t.o.32 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX908 %s
-# RUN: obj2yaml %t.o.32 | FileCheck --check-prefixes=YAML-GFX908 %s
-# RUN: yaml2obj --docnum=33 %s -o %t.o.33
-# RUN: llvm-readobj -s -file-headers %t.o.33 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX909 %s
-# RUN: obj2yaml %t.o.33 | FileCheck --check-prefixes=YAML-GFX909 %s
-# RUN: yaml2obj --docnum=34 %s -o %t.o.34
-# RUN: llvm-readobj -s -file-headers %t.o.34 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1010 %s
-# RUN: obj2yaml %t.o.34 | FileCheck --check-prefixes=YAML-GFX1010 %s
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_R600/' %s | yaml2obj -o %t.o.R600_R600
+# RUN: llvm-readobj -S --file-headers %t.o.R600_R600 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-R600 %s
+# RUN: obj2yaml %t.o.R600_R600 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-R600 %s
 
-# ELF-ALL:     Flags [
-# ELF-R600:      EF_AMDGPU_MACH_R600_R600     (0x1)
-# ELF-R630:      EF_AMDGPU_MACH_R600_R630     (0x2)
-# ELF-RS880:     EF_AMDGPU_MACH_R600_RS880    (0x3)
-# ELF-RV670:     EF_AMDGPU_MACH_R600_RV670    (0x4)
-# ELF-RV710:     EF_AMDGPU_MACH_R600_RV710    (0x5)
-# ELF-RV730:     EF_AMDGPU_MACH_R600_RV730    (0x6)
-# ELF-RV770:     EF_AMDGPU_MACH_R600_RV770    (0x7)
-# ELF-CEDAR:     EF_AMDGPU_MACH_R600_CEDAR    (0x8)
-# ELF-CYPRESS:   EF_AMDGPU_MACH_R600_CYPRESS  (0x9)
-# ELF-JUNIPER:   EF_AMDGPU_MACH_R600_JUNIPER  (0xA)
-# ELF-REDWOOD:   EF_AMDGPU_MACH_R600_REDWOOD  (0xB)
-# ELF-SUMO:      EF_AMDGPU_MACH_R600_SUMO     (0xC)
-# ELF-BARTS:     EF_AMDGPU_MACH_R600_BARTS    (0xD)
-# ELF-CAICOS:    EF_AMDGPU_MACH_R600_CAICOS   (0xE)
-# ELF-CAYMAN:    EF_AMDGPU_MACH_R600_CAYMAN   (0xF)
-# ELF-TURKS:     EF_AMDGPU_MACH_R600_TURKS    (0x10)
-# ELF-GFX600:    EF_AMDGPU_MACH_AMDGCN_GFX600 (0x20)
-# ELF-GFX601:    EF_AMDGPU_MACH_AMDGCN_GFX601 (0x21)
-# ELF-GFX700:    EF_AMDGPU_MACH_AMDGCN_GFX700 (0x22)
-# ELF-GFX701:    EF_AMDGPU_MACH_AMDGCN_GFX701 (0x23)
-# ELF-GFX702:    EF_AMDGPU_MACH_AMDGCN_GFX702 (0x24)
-# ELF-GFX703:    EF_AMDGPU_MACH_AMDGCN_GFX703 (0x25)
-# ELF-GFX704:    EF_AMDGPU_MACH_AMDGCN_GFX704 (0x26)
-# ELF-GFX801:    EF_AMDGPU_MACH_AMDGCN_GFX801 (0x28)
-# ELF-GFX802:    EF_AMDGPU_MACH_AMDGCN_GFX802 (0x29)
-# ELF-GFX803:    EF_AMDGPU_MACH_AMDGCN_GFX803 (0x2A)
-# ELF-GFX810:    EF_AMDGPU_MACH_AMDGCN_GFX810 (0x2B)
-# ELF-GFX900:    EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
-# ELF-GFX902:    EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)
-# ELF-GFX904:    EF_AMDGPU_MACH_AMDGCN_GFX904 (0x2E)
-# ELF-GFX906:    EF_AMDGPU_MACH_AMDGCN_GFX906 (0x2F)
-# ELF-GFX908:    EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
-# ELF-GFX909:    EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
-# ELF-GFX1010:   EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
-# ELF-ALL:     ]
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_R630/' %s | yaml2obj -o %t.o.R600_R630
+# RUN: llvm-readobj -S --file-headers %t.o.R600_R630 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-R630 %s
+# RUN: obj2yaml %t.o.R600_R630 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-R630 %s
 
-# YAML-R600:    Flags: [ EF_AMDGPU_MACH_R600_R600 ]
-# YAML-R630:    Flags: [ EF_AMDGPU_MACH_R600_R630 ]
-# YAML-RS880:   Flags: [ EF_AMDGPU_MACH_R600_RS880 ]
-# YAML-RV670:   Flags: [ EF_AMDGPU_MACH_R600_RV670 ]
-# YAML-RV710:   Flags: [ EF_AMDGPU_MACH_R600_RV710 ]
-# YAML-RV730:   Flags: [ EF_AMDGPU_MACH_R600_RV730 ]
-# YAML-RV770:   Flags: [ EF_AMDGPU_MACH_R600_RV770 ]
-# YAML-CEDAR:   Flags: [ EF_AMDGPU_MACH_R600_CEDAR ]
-# YAML-CYPRESS: Flags: [ EF_AMDGPU_MACH_R600_CYPRESS ]
-# YAML-JUNIPER: Flags: [ EF_AMDGPU_MACH_R600_JUNIPER ]
-# YAML-REDWOOD: Flags: [ EF_AMDGPU_MACH_R600_REDWOOD ]
-# YAML-SUMO:    Flags: [ EF_AMDGPU_MACH_R600_SUMO ]
-# YAML-BARTS:   Flags: [ EF_AMDGPU_MACH_R600_BARTS ]
-# YAML-CAICOS:  Flags: [ EF_AMDGPU_MACH_R600_CAICOS ]
-# YAML-CAYMAN:  Flags: [ EF_AMDGPU_MACH_R600_CAYMAN ]
-# YAML-TURKS:   Flags: [ EF_AMDGPU_MACH_R600_TURKS ]
-# YAML-GFX600:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX600 ]
-# YAML-GFX601:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX601 ]
-# YAML-GFX700:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX700 ]
-# YAML-GFX701:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX701 ]
-# YAML-GFX702:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX702 ]
-# YAML-GFX703:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX703 ]
-# YAML-GFX704:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX704 ]
-# YAML-GFX801:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX801 ]
-# YAML-GFX802:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX802 ]
-# YAML-GFX803:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX803 ]
-# YAML-GFX810:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX810 ]
-# YAML-GFX900:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
-# YAML-GFX902:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX902 ]
-# YAML-GFX904:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX904 ]
-# YAML-GFX906:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX906 ]
-# YAML-GFX908:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
-# YAML-GFX909:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
-# YAML-GFX1010: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_RS880/' %s | yaml2obj -o %t.o.R600_RS880
+# RUN: llvm-readobj -S --file-headers %t.o.R600_RS880 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-RS880 %s
+# RUN: obj2yaml %t.o.R600_RS880 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-RS880 %s
 
-# Doc1
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_RV670/' %s | yaml2obj -o %t.o.R600_RV670
+# RUN: llvm-readobj -S --file-headers %t.o.R600_RV670 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-RV670 %s
+# RUN: obj2yaml %t.o.R600_RV670 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-RV670 %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_RV710/' %s | yaml2obj -o %t.o.R600_RV710
+# RUN: llvm-readobj -S --file-headers %t.o.R600_RV710 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-RV710 %s
+# RUN: obj2yaml %t.o.R600_RV710 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-RV710 %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_RV730/' %s | yaml2obj -o %t.o.R600_RV730
+# RUN: llvm-readobj -S --file-headers %t.o.R600_RV730 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-RV730 %s
+# RUN: obj2yaml %t.o.R600_RV730 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-RV730 %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_RV770/' %s | yaml2obj -o %t.o.R600_RV770
+# RUN: llvm-readobj -S --file-headers %t.o.R600_RV770 | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-RV770 %s
+# RUN: obj2yaml %t.o.R600_RV770 | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-RV770 %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_CEDAR/' %s | yaml2obj -o %t.o.R600_CEDAR
+# RUN: llvm-readobj -S --file-headers %t.o.R600_CEDAR | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-CEDAR %s
+# RUN: obj2yaml %t.o.R600_CEDAR | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-CEDAR %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_CYPRESS/' %s | yaml2obj -o %t.o.R600_CYPRESS
+# RUN: llvm-readobj -S --file-headers %t.o.R600_CYPRESS | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-CYPRESS %s
+# RUN: obj2yaml %t.o.R600_CYPRESS | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-CYPRESS %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_JUNIPER/' %s | yaml2obj -o %t.o.R600_JUNIPER
+# RUN: llvm-readobj -S --file-headers %t.o.R600_JUNIPER | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-JUNIPER %s
+# RUN: obj2yaml %t.o.R600_JUNIPER | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-JUNIPER %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_REDWOOD/' %s | yaml2obj -o %t.o.R600_REDWOOD
+# RUN: llvm-readobj -S --file-headers %t.o.R600_REDWOOD | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-REDWOOD %s
+# RUN: obj2yaml %t.o.R600_REDWOOD | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-REDWOOD %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_SUMO/' %s | yaml2obj -o %t.o.R600_SUMO
+# RUN: llvm-readobj -S --file-headers %t.o.R600_SUMO | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-SUMO %s
+# RUN: obj2yaml %t.o.R600_SUMO | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-SUMO %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_BARTS/' %s | yaml2obj -o %t.o.R600_BARTS
+# RUN: llvm-readobj -S --file-headers %t.o.R600_BARTS | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-BARTS %s
+# RUN: obj2yaml %t.o.R600_BARTS | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-BARTS %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_CAICOS/' %s | yaml2obj -o %t.o.R600_CAICOS
+# RUN: llvm-readobj -S --file-headers %t.o.R600_CAICOS | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-CAICOS %s
+# RUN: obj2yaml %t.o.R600_CAICOS | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-CAICOS %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_CAYMAN/' %s | yaml2obj -o %t.o.R600_CAYMAN
+# RUN: llvm-readobj -S --file-headers %t.o.R600_CAYMAN | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-CAYMAN %s
+# RUN: obj2yaml %t.o.R600_CAYMAN | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-CAYMAN %s
+
+# RUN: sed -e 's/<BITS>/32/' -e 's/<MACH>/R600_TURKS/' %s | yaml2obj -o %t.o.R600_TURKS
+# RUN: llvm-readobj -S --file-headers %t.o.R600_TURKS | FileCheck --check-prefixes=ELF-R600-ALL,ELF-R600-TURKS %s
+# RUN: obj2yaml %t.o.R600_TURKS | FileCheck --check-prefixes=YAML-R600-ALL,YAML-R600-TURKS %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX600/' %s | yaml2obj -o %t.o.AMDGCN_GFX600
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX600 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX600 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX600 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX600 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX601/' %s | yaml2obj -o %t.o.AMDGCN_GFX601
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX601 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX601 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX601 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX601 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX602/' %s | yaml2obj -o %t.o.AMDGCN_GFX602
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX602 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX602 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX602 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX602 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX700/' %s | yaml2obj -o %t.o.AMDGCN_GFX700
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX700 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX700 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX700 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX700 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX701/' %s | yaml2obj -o %t.o.AMDGCN_GFX701
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX701 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX701 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX701 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX701 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX702/' %s | yaml2obj -o %t.o.AMDGCN_GFX702
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX702 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX702 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX702 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX702 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX703/' %s | yaml2obj -o %t.o.AMDGCN_GFX703
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX703 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX703 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX703 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX703 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX704/' %s | yaml2obj -o %t.o.AMDGCN_GFX704
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX704 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX704 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX704 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX704 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX705/' %s | yaml2obj -o %t.o.AMDGCN_GFX705
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX705 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX705 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX705 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX705 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX801/' %s | yaml2obj -o %t.o.AMDGCN_GFX801
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX801 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX801 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX801 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX801 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX802/' %s | yaml2obj -o %t.o.AMDGCN_GFX802
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX802 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX802 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX802 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX802 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX803/' %s | yaml2obj -o %t.o.AMDGCN_GFX803
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX803 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX803 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX803 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX803 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX805/' %s | yaml2obj -o %t.o.AMDGCN_GFX805
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX805 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX805 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX805 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX805 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX810/' %s | yaml2obj -o %t.o.AMDGCN_GFX810
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX810 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX810 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX810 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX810 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX900/' %s | yaml2obj -o %t.o.AMDGCN_GFX900
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX900 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX900 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX900 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX900 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX902/' %s | yaml2obj -o %t.o.AMDGCN_GFX902
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX902 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX902 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX902 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX902 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX904/' %s | yaml2obj -o %t.o.AMDGCN_GFX904
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX904 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX904 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX904 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX904 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX906/' %s | yaml2obj -o %t.o.AMDGCN_GFX906
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX906 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX906 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX906 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX906 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX908/' %s | yaml2obj -o %t.o.AMDGCN_GFX908
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX908 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX908 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX908 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX908 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX909/' %s | yaml2obj -o %t.o.AMDGCN_GFX909
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX909 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX909 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX909 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX909 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX90A/' %s | yaml2obj -o %t.o.AMDGCN_GFX90A
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX90A | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX90A %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX90A | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX90A %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX90C/' %s | yaml2obj -o %t.o.AMDGCN_GFX90C
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX90C | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX90C %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX90C | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX90C %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1010/' %s | yaml2obj -o %t.o.AMDGCN_GFX1010
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1010 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1010 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1010 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1010 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1011/' %s | yaml2obj -o %t.o.AMDGCN_GFX1011
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1011 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1011 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1011 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1011 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1012/' %s | yaml2obj -o %t.o.AMDGCN_GFX1012
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1012 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1012 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1012 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1012 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1013/' %s | yaml2obj -o %t.o.AMDGCN_GFX1013
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1013 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1013 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1013 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1013 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1030/' %s | yaml2obj -o %t.o.AMDGCN_GFX1030
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1030 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1030 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1030 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1030 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1031/' %s | yaml2obj -o %t.o.AMDGCN_GFX1031
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1031 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1031 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1031 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1031 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1032/' %s | yaml2obj -o %t.o.AMDGCN_GFX1032
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1032 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1032 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1032 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1032 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1033/' %s | yaml2obj -o %t.o.AMDGCN_GFX1033
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1033 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1033 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1033 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1033 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1034/' %s | yaml2obj -o %t.o.AMDGCN_GFX1034
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1034 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1034 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1034 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1034 %s
+
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1035/' %s | yaml2obj -o %t.o.AMDGCN_GFX1035
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1035 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1035 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1035 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1035 %s
+
+# ELF-R600-ALL:       Format: elf32-amdgpu
+# ELF-R600-ALL:       Arch: r600
+# ELF-R600-ALL:       AddressSize: 32bit
+# ELF-R600-ALL:       Flags [
+
+# YAML-R600-ALL:      Class: ELFCLASS32
+
+# ELF-R600-R600:      EF_AMDGPU_MACH_R600_R600     (0x1)
+# YAML-R600-R600:     Flags: [ EF_AMDGPU_MACH_R600_R600 ]
+
+# ELF-R600-R630:      EF_AMDGPU_MACH_R600_R630     (0x2)
+# YAML-R600-R630:     Flags: [ EF_AMDGPU_MACH_R600_R630 ]
+
+# ELF-R600-RS880:     EF_AMDGPU_MACH_R600_RS880    (0x3)
+# YAML-R600-RS880:    Flags: [ EF_AMDGPU_MACH_R600_RS880 ]
+
+# ELF-R600-RV670:     EF_AMDGPU_MACH_R600_RV670    (0x4)
+# YAML-R600-RV670:    Flags: [ EF_AMDGPU_MACH_R600_RV670 ]
+
+# ELF-R600-RV710:     EF_AMDGPU_MACH_R600_RV710    (0x5)
+# YAML-R600-RV710:    Flags: [ EF_AMDGPU_MACH_R600_RV710 ]
+
+# ELF-R600-RV730:     EF_AMDGPU_MACH_R600_RV730    (0x6)
+# YAML-R600-RV730:    Flags: [ EF_AMDGPU_MACH_R600_RV730 ]
+
+# ELF-R600-RV770:     EF_AMDGPU_MACH_R600_RV770    (0x7)
+# YAML-R600-RV770:    Flags: [ EF_AMDGPU_MACH_R600_RV770 ]
+
+# ELF-R600-CEDAR:     EF_AMDGPU_MACH_R600_CEDAR    (0x8)
+# YAML-R600-CEDAR:    Flags: [ EF_AMDGPU_MACH_R600_CEDAR ]
+
+# ELF-R600-CYPRESS:   EF_AMDGPU_MACH_R600_CYPRESS  (0x9)
+# YAML-R600-CYPRESS:  Flags: [ EF_AMDGPU_MACH_R600_CYPRESS ]
+
+# ELF-R600-JUNIPER:   EF_AMDGPU_MACH_R600_JUNIPER  (0xA)
+# YAML-R600-JUNIPER:  Flags: [ EF_AMDGPU_MACH_R600_JUNIPER ]
+
+# ELF-R600-REDWOOD:   EF_AMDGPU_MACH_R600_REDWOOD  (0xB)
+# YAML-R600-REDWOOD:  Flags: [ EF_AMDGPU_MACH_R600_REDWOOD ]
+
+# ELF-R600-SUMO:      EF_AMDGPU_MACH_R600_SUMO     (0xC)
+# YAML-R600-SUMO:     Flags: [ EF_AMDGPU_MACH_R600_SUMO ]
+
+# ELF-R600-BARTS:     EF_AMDGPU_MACH_R600_BARTS    (0xD)
+# YAML-R600-BARTS:    Flags: [ EF_AMDGPU_MACH_R600_BARTS ]
+
+# ELF-R600-CAICOS:    EF_AMDGPU_MACH_R600_CAICOS   (0xE)
+# YAML-R600-CAICOS:   Flags: [ EF_AMDGPU_MACH_R600_CAICOS ]
+
+# ELF-R600-CAYMAN:    EF_AMDGPU_MACH_R600_CAYMAN   (0xF)
+# YAML-R600-CAYMAN:   Flags: [ EF_AMDGPU_MACH_R600_CAYMAN ]
+
+# ELF-R600-TURKS:     EF_AMDGPU_MACH_R600_TURKS    (0x10)
+# YAML-R600-TURKS:    Flags: [ EF_AMDGPU_MACH_R600_TURKS ]
+
+# ELF-R600-ALL:       ]
+
+
+# ELF-AMDGCN-ALL:       Format: elf64-amdgpu
+# ELF-AMDGCN-ALL:       Arch: amdgcn
+# ELF-AMDGCN-ALL:       AddressSize: 64bit
+# ELF-AMDGCN-ALL:       Flags [
+
+# YAML-AMDGCN-ALL:      Class: ELFCLASS64
+
+# ELF-AMDGCN-GFX600:    EF_AMDGPU_MACH_AMDGCN_GFX600 (0x20)
+# YAML-AMDGCN-GFX600:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX600 ]
+
+# ELF-AMDGCN-GFX601:    EF_AMDGPU_MACH_AMDGCN_GFX601 (0x21)
+# YAML-AMDGCN-GFX601:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX601 ]
+
+# ELF-AMDGCN-GFX602:    EF_AMDGPU_MACH_AMDGCN_GFX602 (0x3A)
+# YAML-AMDGCN-GFX602:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX602 ]
+
+# ELF-AMDGCN-GFX700:    EF_AMDGPU_MACH_AMDGCN_GFX700 (0x22)
+# YAML-AMDGCN-GFX700:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX700 ]
+
+# ELF-AMDGCN-GFX701:    EF_AMDGPU_MACH_AMDGCN_GFX701 (0x23)
+# YAML-AMDGCN-GFX701:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX701 ]
+
+# ELF-AMDGCN-GFX702:    EF_AMDGPU_MACH_AMDGCN_GFX702 (0x24)
+# YAML-AMDGCN-GFX702:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX702 ]
+
+# ELF-AMDGCN-GFX703:    EF_AMDGPU_MACH_AMDGCN_GFX703 (0x25)
+# YAML-AMDGCN-GFX703:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX703 ]
+
+# ELF-AMDGCN-GFX704:    EF_AMDGPU_MACH_AMDGCN_GFX704 (0x26)
+# YAML-AMDGCN-GFX704:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX704 ]
+
+# ELF-AMDGCN-GFX705:    EF_AMDGPU_MACH_AMDGCN_GFX705 (0x3B)
+# YAML-AMDGCN-GFX705:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX705 ]
+
+# ELF-AMDGCN-GFX801:    EF_AMDGPU_MACH_AMDGCN_GFX801 (0x28)
+# YAML-AMDGCN-GFX801:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX801 ]
+
+# ELF-AMDGCN-GFX802:    EF_AMDGPU_MACH_AMDGCN_GFX802 (0x29)
+# YAML-AMDGCN-GFX802:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX802 ]
+
+# ELF-AMDGCN-GFX803:    EF_AMDGPU_MACH_AMDGCN_GFX803 (0x2A)
+# YAML-AMDGCN-GFX803:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX803 ]
+
+# ELF-AMDGCN-GFX805:    EF_AMDGPU_MACH_AMDGCN_GFX805 (0x3C)
+# YAML-AMDGCN-GFX805:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX805 ]
+
+# ELF-AMDGCN-GFX810:    EF_AMDGPU_MACH_AMDGCN_GFX810 (0x2B)
+# YAML-AMDGCN-GFX810:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX810 ]
+
+# ELF-AMDGCN-GFX900:    EF_AMDGPU_MACH_AMDGCN_GFX900 (0x2C)
+# YAML-AMDGCN-GFX900:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
+
+# ELF-AMDGCN-GFX902:    EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)
+# YAML-AMDGCN-GFX902:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX902 ]
+
+# ELF-AMDGCN-GFX904:    EF_AMDGPU_MACH_AMDGCN_GFX904 (0x2E)
+# YAML-AMDGCN-GFX904:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX904 ]
+
+# ELF-AMDGCN-GFX906:    EF_AMDGPU_MACH_AMDGCN_GFX906 (0x2F)
+# YAML-AMDGCN-GFX906:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX906 ]
+
+# ELF-AMDGCN-GFX908:    EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
+# YAML-AMDGCN-GFX908:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
+
+# ELF-AMDGCN-GFX909:    EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
+# YAML-AMDGCN-GFX909:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
+
+# ELF-AMDGCN-GFX90A:    EF_AMDGPU_MACH_AMDGCN_GFX90A (0x3F)
+# YAML-AMDGCN-GFX90A:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX90A ]
+
+# ELF-AMDGCN-GFX90C:    EF_AMDGPU_MACH_AMDGCN_GFX90C (0x32)
+# YAML-AMDGCN-GFX90C:   Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX90C ]
+
+# ELF-AMDGCN-GFX1010:   EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
+# YAML-AMDGCN-GFX1010:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
+
+# ELF-AMDGCN-GFX1011:   EF_AMDGPU_MACH_AMDGCN_GFX1011 (0x34)
+# YAML-AMDGCN-GFX1011:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1011 ]
+
+# ELF-AMDGCN-GFX1012:   EF_AMDGPU_MACH_AMDGCN_GFX1012 (0x35)
+# YAML-AMDGCN-GFX1012:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1012 ]
+
+# ELF-AMDGCN-GFX1013:   EF_AMDGPU_MACH_AMDGCN_GFX1013 (0x42)
+# YAML-AMDGCN-GFX1013:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1013 ]
+
+# ELF-AMDGCN-GFX1030:   EF_AMDGPU_MACH_AMDGCN_GFX1030 (0x36)
+# YAML-AMDGCN-GFX1030:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1030 ]
+
+# ELF-AMDGCN-GFX1031:   EF_AMDGPU_MACH_AMDGCN_GFX1031 (0x37)
+# YAML-AMDGCN-GFX1031:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1031 ]
+
+# ELF-AMDGCN-GFX1032:   EF_AMDGPU_MACH_AMDGCN_GFX1032 (0x38)
+# YAML-AMDGCN-GFX1032:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1032 ]
+
+# ELF-AMDGCN-GFX1033:   EF_AMDGPU_MACH_AMDGCN_GFX1033 (0x39)
+# YAML-AMDGCN-GFX1033:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1033 ]
+
+# ELF-AMDGCN-GFX1034:   EF_AMDGPU_MACH_AMDGCN_GFX1034 (0x3E)
+# YAML-AMDGCN-GFX1034:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1034 ]
+
+# ELF-AMDGCN-GFX1035:   EF_AMDGPU_MACH_AMDGCN_GFX1035 (0x3D)
+# YAML-AMDGCN-GFX1035:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1035 ]
+#
+# ELF-AMDGCN-ALL:       ]
+
+
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
+  Class:   ELFCLASS<BITS>
   Data:    ELFDATA2LSB
   OSABI:   ELFOSABI_NONE
   Type:    ET_REL
   Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_R600 ]
+  Flags:   [ EF_AMDGPU_MACH_<MACH> ]
 ...
-
-# Doc2
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_R630 ]
-...
-
-# Doc3
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_RS880 ]
-...
-
-# Doc4
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_RV670 ]
-...
-
-# Doc5
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_RV710 ]
-...
-
-# Doc6
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_RV730 ]
-...
-
-# Doc7
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_RV770 ]
-...
-
-# Doc8
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_CEDAR ]
-...
-
-# Doc9
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_CYPRESS ]
-...
-
-# Doc10
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_JUNIPER ]
-...
-
-# Doc11
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_REDWOOD ]
-...
-
-# Doc12
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_SUMO ]
-...
-
-# Doc13
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_BARTS ]
-...
-
-# Doc14
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_CAICOS ]
-...
-
-# Doc15
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_CAYMAN ]
-...
-
-# Doc16
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_R600_TURKS ]
-...
-
-# Doc17
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX600 ]
-...
-
-# Doc18
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX601 ]
-...
-
-# Doc19
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX700 ]
-...
-
-# Doc20
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX701 ]
-...
-
-# Doc21
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX702 ]
-...
-
-# Doc22
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX703 ]
-...
-
-# Doc23
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX704 ]
-...
-
-# Doc24
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX801 ]
-...
-
-# Doc25
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX802 ]
-...
-
-# Doc26
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX803 ]
-...
-
-# Doc27
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX810 ]
-...
-
-# Doc28
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
-...
-
-# Doc29
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX902 ]
-...
-
-# Doc30
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX904 ]
-...
-
-# Doc31
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX906 ]
-...
-
-# Doc32
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
-...
-
-# Doc33
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
-...
-
-# Doc34
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_NONE
-  Type:    ET_REL
-  Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
-...
-

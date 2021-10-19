@@ -43,7 +43,7 @@ unsigned getOffsetAfterTokenSequence(
         GetOffsetAfterSequence) {
   SourceManagerForFile VirtualSM(FileName, Code);
   SourceManager &SM = VirtualSM.get();
-  Lexer Lex(SM.getMainFileID(), SM.getBuffer(SM.getMainFileID()), SM,
+  Lexer Lex(SM.getMainFileID(), SM.getBufferOrFake(SM.getMainFileID()), SM,
             createLangOpts());
   Token Tok;
   // Get the first token.
@@ -190,9 +190,11 @@ StringRef matchingStem(llvm::StringRef Path) {
 IncludeCategoryManager::IncludeCategoryManager(const IncludeStyle &Style,
                                                StringRef FileName)
     : Style(Style), FileName(FileName) {
-  FileStem = matchingStem(FileName);
-  for (const auto &Category : Style.IncludeCategories)
-    CategoryRegexs.emplace_back(Category.Regex, llvm::Regex::IgnoreCase);
+  for (const auto &Category : Style.IncludeCategories) {
+    CategoryRegexs.emplace_back(Category.Regex, Category.RegexIsCaseSensitive
+                                                    ? llvm::Regex::NoFlags
+                                                    : llvm::Regex::IgnoreCase);
+  }
   IsMainFile = FileName.endswith(".c") || FileName.endswith(".cc") ||
                FileName.endswith(".cpp") || FileName.endswith(".c++") ||
                FileName.endswith(".cxx") || FileName.endswith(".m") ||
@@ -233,12 +235,31 @@ int IncludeCategoryManager::getSortIncludePriority(StringRef IncludeName,
 bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   if (!IncludeName.startswith("\""))
     return false;
-  StringRef HeaderStem = matchingStem(IncludeName.drop_front(1).drop_back(1));
-  if (FileStem.startswith(HeaderStem) ||
-      FileStem.startswith_lower(HeaderStem)) {
+
+  IncludeName =
+      IncludeName.drop_front(1).drop_back(1); // remove the surrounding "" or <>
+  // Not matchingStem: implementation files may have compound extensions but
+  // headers may not.
+  StringRef HeaderStem = llvm::sys::path::stem(IncludeName);
+  StringRef FileStem = llvm::sys::path::stem(FileName); // foo.cu for foo.cu.cc
+  StringRef MatchingFileStem = matchingStem(FileName);  // foo for foo.cu.cc
+  // main-header examples:
+  //  1) foo.h => foo.cc
+  //  2) foo.h => foo.cu.cc
+  //  3) foo.proto.h => foo.proto.cc
+  //
+  // non-main-header examples:
+  //  1) foo.h => bar.cc
+  //  2) foo.proto.h => foo.cc
+  StringRef Matching;
+  if (MatchingFileStem.startswith_insensitive(HeaderStem))
+    Matching = MatchingFileStem; // example 1), 2)
+  else if (FileStem.equals_insensitive(HeaderStem))
+    Matching = FileStem; // example 3)
+  if (!Matching.empty()) {
     llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,
                                  llvm::Regex::IgnoreCase);
-    if (MainIncludeRegex.match(FileStem))
+    if (MainIncludeRegex.match(Matching))
       return true;
   }
   return false;

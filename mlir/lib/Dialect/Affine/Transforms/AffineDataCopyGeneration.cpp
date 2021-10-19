@@ -23,8 +23,10 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -155,7 +157,7 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
       if (recurseInner) {
         // We'll recurse and do the copies at an inner level for 'forInst'.
         // Recurse onto the body of this loop.
-        runOnBlock(forOp.getBody(), copyNests);
+        (void)runOnBlock(forOp.getBody(), copyNests);
       } else {
         // We have enough capacity, i.e., copies will be computed for the
         // portion of the block until 'it', and for 'it', which is 'forOp'. Note
@@ -185,7 +187,8 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
   // Generate the copy for the final block range.
   if (curBegin != block->end()) {
     // Can't be a terminator because it would have been skipped above.
-    assert(!curBegin->isKnownTerminator() && "can't be a terminator");
+    assert(!curBegin->hasTrait<OpTrait::IsTerminator>() &&
+           "can't be a terminator");
     // Exclude the affine.yield - hence, the std::prev.
     affineDataCopyGenerate(/*begin=*/curBegin, /*end=*/std::prev(block->end()),
                            copyOptions, /*filterMemRef=*/llvm::None, copyNests);
@@ -197,7 +200,7 @@ AffineDataCopyGeneration::runOnBlock(Block *block,
 void AffineDataCopyGeneration::runOnFunction() {
   FuncOp f = getFunction();
   OpBuilder topBuilder(f.getBody());
-  zeroIndex = topBuilder.create<ConstantIndexOp>(f.getLoc(), 0);
+  zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
 
   // Nests that are copy-in's or copy-out's; the root AffineForOps of those
   // nests are stored herein.
@@ -207,7 +210,7 @@ void AffineDataCopyGeneration::runOnFunction() {
   copyNests.clear();
 
   for (auto &block : f)
-    runOnBlock(&block, copyNests);
+    (void)runOnBlock(&block, copyNests);
 
   // Promote any single iteration loops in the copy nests and collect
   // load/stores to simplify.
@@ -217,7 +220,7 @@ void AffineDataCopyGeneration::runOnFunction() {
     // continuation of the walk or the collection of load/store ops.
     nest->walk([&](Operation *op) {
       if (auto forOp = dyn_cast<AffineForOp>(op))
-        promoteIfSingleIteration(forOp);
+        (void)promoteIfSingleIteration(forOp);
       else if (isa<AffineLoadOp, AffineStoreOp>(op))
         copyOps.push_back(op);
     });
@@ -225,9 +228,9 @@ void AffineDataCopyGeneration::runOnFunction() {
   // Promoting single iteration loops could lead to simplification of
   // contained load's/store's, and the latter could anyway also be
   // canonicalized.
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(&getContext());
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
-  for (Operation *op : copyOps)
-    applyOpPatternsAndFold(op, std::move(patterns));
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  (void)applyOpPatternsAndFold(copyOps, frozenPatterns, /*strict=*/true);
 }

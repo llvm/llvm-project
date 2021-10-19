@@ -29,11 +29,11 @@ void NoexceptMoveConstructorCheck::registerMatchers(MatchFinder *Finder) {
 void NoexceptMoveConstructorCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *Decl = Result.Nodes.getNodeAs<CXXMethodDecl>("decl")) {
-    StringRef MethodType = "assignment operator";
+    bool IsConstructor = false;
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Decl)) {
       if (!Ctor->isMoveConstructor())
         return;
-      MethodType = "constructor";
+      IsConstructor = true;
     } else if (!Decl->isMoveAssignmentOperator()) {
       return;
     }
@@ -44,9 +44,10 @@ void NoexceptMoveConstructorCheck::check(
       return;
 
     if (!isNoexceptExceptionSpec(ProtoType->getExceptionSpecType())) {
-      auto Diag =
-          diag(Decl->getLocation(), "move %0s should be marked noexcept")
-          << MethodType;
+      auto Diag = diag(Decl->getLocation(),
+                       "move %select{assignment operator|constructor}0s should "
+                       "be marked noexcept")
+                  << IsConstructor;
       // Add FixIt hints.
       SourceManager &SM = *Result.SourceManager;
       assert(Decl->getNumParams() > 0);
@@ -68,8 +69,9 @@ void NoexceptMoveConstructorCheck::check(
       E = E->IgnoreImplicit();
       if (!isa<CXXBoolLiteralExpr>(E)) {
         diag(E->getExprLoc(),
-             "noexcept specifier on the move %0 evaluates to 'false'")
-            << MethodType;
+             "noexcept specifier on the move %select{assignment "
+             "operator|constructor}0 evaluates to 'false'")
+            << IsConstructor;
       }
     }
   }

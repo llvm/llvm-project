@@ -11,110 +11,9 @@
 // to identify loop carried dependences. This is scalar replacement for vector
 // types.
 //
-//-----------------------------------------------------------------------------
-// Motivation: Consider the case where we have the following loop structure.
-//
-// Loop:
-//  t0 = a[i];
-//  t1 = f(t0);
-//  t2 = g(t1);
-//  ...
-//  t3 = a[i+1];
-//  t4 = f(t3);
-//  t5 = g(t4);
-//  t6 = op(t2, t5)
-//  cond_branch <Loop>
-//
-// This can be converted to
-//  t00 = a[0];
-//  t10 = f(t00);
-//  t20 = g(t10);
-// Loop:
-//  t2 = t20;
-//  t3 = a[i+1];
-//  t4 = f(t3);
-//  t5 = g(t4);
-//  t6 = op(t2, t5)
-//  t20 = t5
-//  cond_branch <Loop>
-//
-// SROA does a good job of reusing a[i+1] as a[i] in the next iteration.
-// Such a loop comes to this pass in the following form.
-//
-// LoopPreheader:
-//  X0 = a[0];
-// Loop:
-//  X2 = PHI<(X0, LoopPreheader), (X1, Loop)>
-//  t1 = f(X2)   <-- I1
-//  t2 = g(t1)
-//  ...
-//  X1 = a[i+1]
-//  t4 = f(X1)   <-- I2
-//  t5 = g(t4)
-//  t6 = op(t2, t5)
-//  cond_branch <Loop>
-//
-// In this pass, we look for PHIs such as X2 whose incoming values come only
-// from the Loop Preheader and over the backedge and additionaly, both these
-// values are the results of the same operation in terms of opcode. We call such
-// a PHI node a dependence chain or DepChain. In this case, the dependence of X2
-// over X1 is carried over only one iteration and so the DepChain is only one
-// PHI node long.
-//
-// Then, we traverse the uses of the PHI (X2) and the uses of the value of the
-// PHI coming  over the backedge (X1). We stop at the first pair of such users
-// I1 (of X2) and I2 (of X1) that meet the following conditions.
-// 1. I1 and I2 are the same operation, but with different operands.
-// 2. X2 and X1 are used at the same operand number in the two instructions.
-// 3. All other operands Op1 of I1 and Op2 of I2 are also such that there is a
-//    a DepChain from Op1 to Op2 of the same length as that between X2 and X1.
-//
-// We then make the following transformation
-// LoopPreheader:
-//  X0 = a[0];
-//  Y0 = f(X0);
-// Loop:
-//  X2 = PHI<(X0, LoopPreheader), (X1, Loop)>
-//  Y2 = PHI<(Y0, LoopPreheader), (t4, Loop)>
-//  t1 = f(X2)   <-- Will be removed by DCE.
-//  t2 = g(Y2)
-//  ...
-//  X1 = a[i+1]
-//  t4 = f(X1)
-//  t5 = g(t4)
-//  t6 = op(t2, t5)
-//  cond_branch <Loop>
-//
-// We proceed until we cannot find any more such instructions I1 and I2.
-//
-// --- DepChains & Loop carried dependences ---
-// Consider a single basic block loop such as
-//
-// LoopPreheader:
-//  X0 = ...
-//  Y0 = ...
-// Loop:
-//  X2 = PHI<(X0, LoopPreheader), (X1, Loop)>
-//  Y2 = PHI<(Y0, LoopPreheader), (X2, Loop)>
-//  ...
-//  X1 = ...
-//  ...
-//  cond_branch <Loop>
-//
-// Then there is a dependence between X2 and X1 that goes back one iteration,
-// i.e. X1 is used as X2 in the very next iteration. We represent this as a
-// DepChain from X2 to X1 (X2->X1).
-// Similarly, there is a dependence between Y2 and X1 that goes back two
-// iterations. X1 is used as Y2 two iterations after it is computed. This is
-// represented by a DepChain as (Y2->X2->X1).
-//
-// A DepChain has the following properties.
-// 1. Num of edges in DepChain = Number of Instructions in DepChain = Number of
-//    iterations of carried dependence + 1.
-// 2. All instructions in the DepChain except the last are PHIs.
-//
 //===----------------------------------------------------------------------===//
 
+#include "HexagonVectorLoopCarriedReuse.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -161,8 +60,8 @@ static cl::opt<int> HexagonVLCRIterationLim("hexagon-vlcr-iteration-lim",
 
 namespace llvm {
 
-void initializeHexagonVectorLoopCarriedReusePass(PassRegistry&);
-Pass *createHexagonVectorLoopCarriedReusePass();
+void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
+Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
 
 } // end namespace llvm
 
@@ -262,13 +161,13 @@ namespace {
     return OS;
   }
 
-  class HexagonVectorLoopCarriedReuse : public LoopPass {
+  class HexagonVectorLoopCarriedReuseLegacyPass : public LoopPass {
   public:
     static char ID;
 
-    explicit HexagonVectorLoopCarriedReuse() : LoopPass(ID) {
+    explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {
       PassRegistry *PR = PassRegistry::getPassRegistry();
-      initializeHexagonVectorLoopCarriedReusePass(*PR);
+      initializeHexagonVectorLoopCarriedReuseLegacyPassPass(*PR);
     }
 
     StringRef getPassName() const override {
@@ -276,7 +175,6 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LoopInfoWrapperPass>();
       AU.addRequiredID(LoopSimplifyID);
       AU.addRequiredID(LCSSAID);
       AU.addPreservedID(LCSSAID);
@@ -284,6 +182,13 @@ namespace {
     }
 
     bool runOnLoop(Loop *L, LPPassManager &LPM) override;
+  };
+
+  class HexagonVectorLoopCarriedReuse {
+  public:
+    HexagonVectorLoopCarriedReuse(Loop *L) : CurLoop(L){};
+
+    bool run();
 
   private:
     SetVector<DepChain *> Dependences;
@@ -305,32 +210,48 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonVectorLoopCarriedReuse::ID = 0;
+char HexagonVectorLoopCarriedReuseLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(HexagonVectorLoopCarriedReuse, "hexagon-vlcr",
-    "Hexagon-specific predictive commoning for HVX vectors", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_BEGIN(HexagonVectorLoopCarriedReuseLegacyPass, "hexagon-vlcr",
+                      "Hexagon-specific predictive commoning for HVX vectors",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
-INITIALIZE_PASS_END(HexagonVectorLoopCarriedReuse, "hexagon-vlcr",
-    "Hexagon-specific predictive commoning for HVX vectors", false, false)
+INITIALIZE_PASS_END(HexagonVectorLoopCarriedReuseLegacyPass, "hexagon-vlcr",
+                    "Hexagon-specific predictive commoning for HVX vectors",
+                    false, false)
 
-bool HexagonVectorLoopCarriedReuse::runOnLoop(Loop *L, LPPassManager &LPM) {
+PreservedAnalyses
+HexagonVectorLoopCarriedReusePass::run(Loop &L, LoopAnalysisManager &LAM,
+                                       LoopStandardAnalysisResults &AR,
+                                       LPMUpdater &U) {
+  HexagonVectorLoopCarriedReuse Vlcr(&L);
+  if (!Vlcr.run())
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool HexagonVectorLoopCarriedReuseLegacyPass::runOnLoop(Loop *L,
+                                                        LPPassManager &LPM) {
   if (skipLoop(L))
     return false;
+  HexagonVectorLoopCarriedReuse Vlcr(L);
+  return Vlcr.run();
+}
 
-  if (!L->getLoopPreheader())
+bool HexagonVectorLoopCarriedReuse::run() {
+  if (!CurLoop->getLoopPreheader())
     return false;
 
   // Work only on innermost loops.
-  if (!L->getSubLoops().empty())
+  if (!CurLoop->getSubLoops().empty())
     return false;
 
   // Work only on single basic blocks loops.
-  if (L->getNumBlocks() != 1)
+  if (CurLoop->getNumBlocks() != 1)
     return false;
-
-  CurLoop = L;
 
   return doVLCR();
 }
@@ -745,6 +666,6 @@ void HexagonVectorLoopCarriedReuse::findLoopCarriedDeps() {
                   ++i) { dbgs() << *Dependences[i] << "\n"; });
 }
 
-Pass *llvm::createHexagonVectorLoopCarriedReusePass() {
-  return new HexagonVectorLoopCarriedReuse();
+Pass *llvm::createHexagonVectorLoopCarriedReuseLegacyPass() {
+  return new HexagonVectorLoopCarriedReuseLegacyPass();
 }

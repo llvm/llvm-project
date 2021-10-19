@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"
+#include <tuple>
 
 namespace lld {
 // Returns a string representation for a symbol for diagnostics.
@@ -132,9 +133,11 @@ public:
   // doesn't know the final contents of the symbol.
   uint8_t canInline : 1;
 
-  // Used by Undefined and SharedSymbol to track if there has been at least one
-  // undefined reference to the symbol. The binding may change to STB_WEAK if
-  // the first undefined reference from a non-shared object is weak.
+  // Used to track if there has been at least one undefined reference to the
+  // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
+  // if the first undefined reference from a non-shared object is weak.
+  //
+  // This is also used to retain __wrap_foo when foo is referenced.
   uint8_t referenced : 1;
 
   // True if this symbol is specified by --trace-symbol option.
@@ -160,10 +163,7 @@ public:
 
   // True if this is an undefined weak symbol. This only works once
   // all input files have been added.
-  bool isUndefWeak() const {
-    // See comment on lazy symbols for details.
-    return isWeak() && (isUndefined() || isLazy());
-  }
+  bool isUndefWeak() const { return isWeak() && isUndefined(); }
 
   StringRef getName() const {
     if (nameSize == (uint32_t)-1)
@@ -177,6 +177,15 @@ public:
   }
 
   void parseSymbolVersion();
+
+  // Get the NUL-terminated version suffix ("", "@...", or "@@...").
+  //
+  // For @@, the name has been truncated by insert(). For @, the name has been
+  // truncated by Symbol::parseSymbolVersion().
+  const char *getVersionSuffix() const {
+    (void)getName();
+    return nameData + nameSize;
+  }
 
   bool isInGot() const { return gotIndex != -1U; }
   bool isInPlt() const { return pltIndex != -1U; }
@@ -212,13 +221,13 @@ public:
   // non-lazy object causes a runtime error.
   void fetch() const;
 
-private:
   static bool isExportDynamic(Kind k, uint8_t visibility) {
     if (k == SharedKind)
       return visibility == llvm::ELF::STV_DEFAULT;
     return config->shared || config->exportDynamic;
   }
 
+private:
   void resolveUndefined(const Undefined &other);
   void resolveCommon(const CommonSymbol &other);
   void resolveDefined(const Defined &other);
@@ -567,7 +576,14 @@ void reportBackrefs();
 
 // A mapping from a symbol to an InputFile referencing it backward. Used by
 // --warn-backrefs.
-extern llvm::DenseMap<const Symbol *, const InputFile *> backwardReferences;
+extern llvm::DenseMap<const Symbol *,
+                      std::pair<const InputFile *, const InputFile *>>
+    backwardReferences;
+
+// A tuple of (reference, extractedFile, sym). Used by --why-extract=.
+extern SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>,
+                   0>
+    whyExtract;
 
 } // namespace elf
 } // namespace lld

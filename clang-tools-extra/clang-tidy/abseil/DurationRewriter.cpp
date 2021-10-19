@@ -138,8 +138,8 @@ llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
 }
 
 /// Returns the Time factory function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale scale) {
-  switch (scale) {
+llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
+  switch (Scale) {
   case DurationScale::Hours:
     return "absl::ToUnixHours";
   case DurationScale::Minutes:
@@ -208,7 +208,7 @@ stripFloatLiteralFraction(const MatchFinder::MatchResult &Result,
   if (const auto *LitFloat = llvm::dyn_cast<FloatingLiteral>(&Node))
     // Attempt to simplify a `Duration` factory call with a literal argument.
     if (llvm::Optional<llvm::APSInt> IntValue = truncateIfIntegral(*LitFloat))
-      return IntValue->toString(/*radix=*/10);
+      return toString(*IntValue, /*radix=*/10);
 
   return llvm::None;
 }

@@ -155,9 +155,9 @@ size_t writeLoadCommandData<MachO::segment_command_64>(
 
 size_t writePayloadString(MachOYAML::LoadCommand &LC, raw_ostream &OS) {
   size_t BytesWritten = 0;
-  if (!LC.PayloadString.empty()) {
-    OS.write(LC.PayloadString.c_str(), LC.PayloadString.length());
-    BytesWritten = LC.PayloadString.length();
+  if (!LC.Content.empty()) {
+    OS.write(LC.Content.c_str(), LC.Content.length());
+    BytesWritten = LC.Content.length();
   }
   return BytesWritten;
 }
@@ -184,6 +184,30 @@ size_t writeLoadCommandData<MachO::rpath_command>(MachOYAML::LoadCommand &LC,
 }
 
 template <>
+size_t writeLoadCommandData<MachO::sub_framework_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_umbrella_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_client_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
+size_t writeLoadCommandData<MachO::sub_library_command>(
+    MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
+  return writePayloadString(LC, OS);
+}
+
+template <>
 size_t writeLoadCommandData<MachO::build_version_command>(
     MachOYAML::LoadCommand &LC, raw_ostream &OS, bool IsLittleEndian) {
   size_t BytesWritten = 0;
@@ -199,14 +223,12 @@ size_t writeLoadCommandData<MachO::build_version_command>(
 }
 
 void ZeroFillBytes(raw_ostream &OS, size_t Size) {
-  std::vector<uint8_t> FillData;
-  FillData.insert(FillData.begin(), Size, 0);
+  std::vector<uint8_t> FillData(Size, 0);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
 void Fill(raw_ostream &OS, size_t Size, uint32_t Data) {
-  std::vector<uint32_t> FillData;
-  FillData.insert(FillData.begin(), (Size / 4) + 1, Data);
+  std::vector<uint32_t> FillData((Size / 4) + 1, Data);
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
@@ -285,16 +307,20 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           return createStringError(
               errc::invalid_argument,
               "wrote too much data somewhere, section offsets don't line up");
-        if (0 == strncmp(&Sec.segname[0], "__DWARF", sizeof(Sec.segname))) {
-          StringRef SectName(Sec.sectname,
-                             strnlen(Sec.sectname, sizeof(Sec.sectname)));
-          if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
-            auto EmitFunc =
-                DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
-            if (Error Err = EmitFunc(OS, Obj.DWARF))
-              return Err;
-          }
 
+        StringRef SectName(Sec.sectname,
+                           strnlen(Sec.sectname, sizeof(Sec.sectname)));
+        // If the section's content is specified in the 'DWARF' entry, we will
+        // emit it regardless of the section's segname.
+        if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
+          if (Sec.content)
+            return createStringError(errc::invalid_argument,
+                                     "cannot specify section '" + SectName +
+                                         "' contents in the 'DWARF' entry and "
+                                         "the 'content' at the same time");
+          auto EmitFunc = DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
+          if (Error Err = EmitFunc(OS, Obj.DWARF))
+            return Err;
           continue;
         }
 

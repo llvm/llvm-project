@@ -27,6 +27,11 @@
 # cmp %t4 %t.dwarf.stripped
 # cmp %t5 %t.dwarf.stripped
 
+# RUN: llvm-lipo %t.dwarf -create -output %t.dwarf.universal
+# RUN: llvm-strip %t.dwarf.universal -o %t.dwarf.universal.stripped
+# RUN: llvm-lipo %t.dwarf.universal.stripped -thin x86_64 -output %t6
+# RUN: cmp %t6 %t.dwarf.stripped
+
 ## Make sure that debug sections are removed.
 # DWARF:       Sections [
 # DWARF-NOT:     Name: __debug_str
@@ -40,8 +45,20 @@
 # DWARF-NOT:     Name: __debug_line
 # DWARF:       ]
 
-## Make sure that all relocations and symbols are removed.
+## Make sure that all relocations and symbols
+## (except those which have the flag ReferencedDynamically set) are removed.
 # COMMON:      Relocations [
 # COMMON-NEXT: ]
-# COMMON:      Symbols [
+# COMMON-NEXT: Symbols [
+# COMMON-NEXT:    Symbol {
+# COMMON-NEXT:      Name: __mh_execute_header
+# COMMON-NEXT:      Extern
+# COMMON-NEXT:      Type: Section
+# COMMON-NEXT:      Section: __text
+# COMMON-NEXT:      RefType: UndefinedNonLazy
+# COMMON-NEXT:      Flags [ (0x10)
+# COMMON-NEXT:        ReferencedDynamically (0x10)
+# COMMON-NEXT:      ]
+# COMMON-NEXT:      Value:
+# COMMON-NEXT:    }
 # COMMON-NEXT: ]

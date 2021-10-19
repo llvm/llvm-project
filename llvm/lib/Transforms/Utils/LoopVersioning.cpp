@@ -17,7 +17,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -37,46 +36,40 @@ static cl::opt<bool>
                     cl::desc("Add no-alias annotation for instructions that "
                              "are disambiguated by memchecks"));
 
-LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
-                               DominatorTree *DT, ScalarEvolution *SE,
-                               bool UseLAIChecks)
-    : VersionedLoop(L), NonVersionedLoop(nullptr), LAI(LAI), LI(LI), DT(DT),
+LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
+                               ArrayRef<RuntimePointerCheck> Checks, Loop *L,
+                               LoopInfo *LI, DominatorTree *DT,
+                               ScalarEvolution *SE)
+    : VersionedLoop(L), NonVersionedLoop(nullptr),
+      AliasChecks(Checks.begin(), Checks.end()),
+      Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
-  assert(L->getExitBlock() && "No single exit block");
-  assert(L->isLoopSimplifyForm() && "Loop is not in loop-simplify form");
-  if (UseLAIChecks) {
-    setAliasChecks(LAI.getRuntimePointerChecking()->getChecks());
-    setSCEVChecks(LAI.getPSE().getUnionPredicate());
-  }
-}
-
-void LoopVersioning::setAliasChecks(ArrayRef<RuntimePointerCheck> Checks) {
-  AliasChecks = {Checks.begin(), Checks.end()};
-}
-
-void LoopVersioning::setSCEVChecks(SCEVUnionPredicate Check) {
-  Preds = std::move(Check);
 }
 
 void LoopVersioning::versionLoop(
     const SmallVectorImpl<Instruction *> &DefsUsedOutside) {
-  Instruction *FirstCheckInst;
-  Instruction *MemRuntimeCheck;
+  assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
+  assert(VersionedLoop->isLoopSimplifyForm() &&
+         "Loop is not in loop-simplify form");
+
+  Value *MemRuntimeCheck;
   Value *SCEVRuntimeCheck;
   Value *RuntimeCheck = nullptr;
 
   // Add the memcheck in the original preheader (this is empty initially).
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
-  std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(RuntimeCheckBB->getTerminator(), VersionedLoop,
-                       AliasChecks, RtPtrChecking.getSE());
 
-  const SCEVUnionPredicate &Pred = LAI.getPSE().getUnionPredicate();
+  SCEVExpander Exp2(*RtPtrChecking.getSE(),
+                    VersionedLoop->getHeader()->getModule()->getDataLayout(),
+                    "induction");
+  MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
+                                     VersionedLoop, AliasChecks, Exp2);
+
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
                    "scev.check");
   SCEVRuntimeCheck =
-      Exp.expandCodeForPredicate(&Pred, RuntimeCheckBB->getTerminator());
+      Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
   auto *CI = dyn_cast<ConstantInt>(SCEVRuntimeCheck);
 
   // Discard the SCEV runtime check if it is always true.
@@ -127,6 +120,11 @@ void LoopVersioning::versionLoop(
   // Adds the necessary PHI nodes for the versioned loops based on the
   // loop-defined values used outside of the loop.
   addPHINodes(DefsUsedOutside);
+  formDedicatedExitBlocks(NonVersionedLoop, DT, LI, nullptr, true);
+  formDedicatedExitBlocks(VersionedLoop, DT, LI, nullptr, true);
+  assert(NonVersionedLoop->isLoopSimplifyForm() &&
+         VersionedLoop->isLoopSimplifyForm() &&
+         "The versioned loops should be in simplify form.");
 }
 
 void LoopVersioning::addPHINodes(
@@ -268,17 +266,21 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
   for (Loop *TopLevelLoop : *LI)
     for (Loop *L : depth_first(TopLevelLoop))
       // We only handle inner-most loops.
-      if (L->empty())
+      if (L->isInnermost())
         Worklist.push_back(L);
 
   // Now walk the identified inner loops.
   bool Changed = false;
   for (Loop *L : Worklist) {
+    if (!L->isLoopSimplifyForm() || !L->isRotatedForm() ||
+        !L->getExitingBlock())
+      continue;
     const LoopAccessInfo &LAI = GetLAA(*L);
-    if (L->isLoopSimplifyForm() && !LAI.hasConvergentOp() &&
+    if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
-      LoopVersioning LVer(LAI, L, LI, DT, SE);
+      LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
+                          LI, DT, SE);
       LVer.versionLoop();
       LVer.annotateLoopWithNoAlias();
       Changed = true;
@@ -351,13 +353,11 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  MemorySSA *MSSA = EnableMSSALoopDependency
-                        ? &AM.getResult<MemorySSAAnalysis>(F).getMSSA()
-                        : nullptr;
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+    LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,      SE,
+                                      TLI, TTI, nullptr, nullptr, nullptr};
     return LAM.getResult<LoopAccessAnalysis>(L, AR);
   };
 

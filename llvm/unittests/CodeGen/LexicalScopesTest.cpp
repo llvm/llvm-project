@@ -18,10 +18,11 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -112,12 +113,12 @@ public:
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);
 
     // Make some nested scopes.
-    OutermostLoc = DebugLoc::get(3, 1, OurFunc);
-    InBlockLoc = DebugLoc::get(4, 1, OurBlock);
-    InlinedLoc = DebugLoc::get(10, 1, ToInlineFunc, InBlockLoc.get());
+    OutermostLoc = DILocation::get(Ctx, 3, 1, OurFunc);
+    InBlockLoc = DILocation::get(Ctx, 4, 1, OurBlock);
+    InlinedLoc = DILocation::get(Ctx, 10, 1, ToInlineFunc, InBlockLoc.get());
 
     // Make a scope that isn't nested within the others.
-    NotNestedBlockLoc = DebugLoc::get(4, 1, AnotherBlock);
+    NotNestedBlockLoc = DILocation::get(Ctx, 4, 1, AnotherBlock);
 
     DIB.finalize();
   }

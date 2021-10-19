@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Selection.h"
+#include "AST.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -35,24 +36,47 @@ namespace clang {
 namespace clangd {
 namespace {
 using Node = SelectionTree::Node;
-using ast_type_traits::DynTypedNode;
 
 // Measure the fraction of selections that were enabled by recovery AST.
-void recordMetrics(const SelectionTree &S) {
+void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
+  if (!trace::enabled())
+    return;
+  const char *LanguageLabel = Lang.CPlusPlus ? "C++" : Lang.ObjC ? "ObjC" : "C";
   static constexpr trace::Metric SelectionUsedRecovery(
-      "selection_recovery", trace::Metric::Distribution);
-  static constexpr trace::Metric RecoveryType("selection_recovery_type",
-                                              trace::Metric::Distribution);
+      "selection_recovery", trace::Metric::Distribution, "language");
+  static constexpr trace::Metric RecoveryType(
+      "selection_recovery_type", trace::Metric::Distribution, "language");
   const auto *Common = S.commonAncestor();
   for (const auto *N = Common; N; N = N->Parent) {
     if (const auto *RE = N->ASTNode.get<RecoveryExpr>()) {
-      SelectionUsedRecovery.record(1); // used recovery ast.
-      RecoveryType.record(RE->isTypeDependent() ? 0 : 1);
+      SelectionUsedRecovery.record(1, LanguageLabel); // used recovery ast.
+      RecoveryType.record(RE->isTypeDependent() ? 0 : 1, LanguageLabel);
       return;
     }
   }
   if (Common)
-    SelectionUsedRecovery.record(0); // unused.
+    SelectionUsedRecovery.record(0, LanguageLabel); // unused.
+}
+
+SourceRange getSourceRange(const DynTypedNode &N) {
+  // MemberExprs to implicitly access anonymous fields should not claim any
+  // tokens for themselves. Given:
+  //   struct A { struct { int b; }; };
+  // The clang AST reports the following nodes for an access to b:
+  //   A().b;
+  //   [----] MemberExpr, base = A().<anonymous>, member = b
+  //   [----] MemberExpr: base = A(), member = <anonymous>
+  //   [-]    CXXConstructExpr
+  // For our purposes, we don't want the second MemberExpr to own any tokens,
+  // so we reduce its range to match the CXXConstructExpr.
+  // (It's not clear that changing the clang AST would be correct in general).
+  if (const auto *ME = N.get<MemberExpr>()) {
+    if (!ME->getMemberDecl()->getDeclName())
+      return ME->getBase()
+                 ? getSourceRange(DynTypedNode::create(*ME->getBase()))
+                 : SourceRange();
+  }
+  return N.getSourceRange();
 }
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
@@ -80,8 +104,8 @@ public:
   // Removes the elements of Claim from the set, modifying or removing ranges
   // that overlap it.
   // Returns the continuous subranges of Claim that were actually removed.
-  llvm::SmallVector<llvm::ArrayRef<T>, 4> erase(llvm::ArrayRef<T> Claim) {
-    llvm::SmallVector<llvm::ArrayRef<T>, 4> Out;
+  llvm::SmallVector<llvm::ArrayRef<T>> erase(llvm::ArrayRef<T> Claim) {
+    llvm::SmallVector<llvm::ArrayRef<T>> Out;
     if (Claim.empty())
       return Out;
 
@@ -419,6 +443,15 @@ bool isImplicit(const Stmt *S) {
   if (auto *CTI = llvm::dyn_cast<CXXThisExpr>(S))
     if (CTI->isImplicit())
       return true;
+  // Make sure implicit access of anonymous structs don't end up owning tokens.
+  if (auto *ME = llvm::dyn_cast<MemberExpr>(S)) {
+    if (auto *FD = llvm::dyn_cast<FieldDecl>(ME->getMemberDecl()))
+      if (FD->isAnonymousStructOrUnion())
+        // If Base is an implicit CXXThis, then the whole MemberExpr has no
+        // tokens. If it's a normal e.g. DeclRef, we treat the MemberExpr like
+        // an implicit cast.
+        return isImplicit(ME->getBase());
+  }
   // Refs to operator() and [] are (almost?) always implicit as part of calls.
   if (auto *DRE = llvm::dyn_cast<DeclRefExpr>(S)) {
     if (auto *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl())) {
@@ -467,7 +500,6 @@ public:
   // Two categories of nodes are not "well-behaved":
   //  - those without source range information, we don't record those
   //  - those that can't be stored in DynTypedNode.
-  // We're missing some interesting things like Attr due to the latter.
   bool TraverseDecl(Decl *X) {
     if (X && isa<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
@@ -490,6 +522,12 @@ public:
   bool TraverseConstructorInitializer(CXXCtorInitializer *X) {
     return traverseNode(
         X, [&] { return Base::TraverseConstructorInitializer(X); });
+  }
+  bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &X) {
+    return traverseNode(&X, [&] { return Base::TraverseCXXBaseSpecifier(X); });
+  }
+  bool TraverseAttr(Attr *X) {
+    return traverseNode(X, [&] { return Base::TraverseAttr(X); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
@@ -603,8 +641,12 @@ private:
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
-    SourceRange S = N.getSourceRange();
+    SourceRange S = getSourceRange(N);
     if (auto *TL = N.get<TypeLoc>()) {
+      // FIXME: TypeLoc::getBeginLoc()/getEndLoc() are pretty fragile
+      // heuristics. We should consider only pruning critical TypeLoc nodes, to
+      // be more robust.
+
       // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
       // failing
       // to descend into the child expression.
@@ -616,7 +658,16 @@ private:
       // rid of this patch.
       if (auto DT = TL->getAs<DecltypeTypeLoc>())
         S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
+      // AttributedTypeLoc may point to the attribute's range, NOT the modified
+      // type's range.
+      if (auto AT = TL->getAs<AttributedTypeLoc>())
+        S = AT.getModifiedLoc().getSourceRange();
     }
+    // SourceRange often doesn't manage to accurately cover attributes.
+    // Fortunately, attributes are rare.
+    if (llvm::any_of(getAttributes(N),
+                     [](const Attr *A) { return !A->isImplicit(); }))
+      return false;
     if (!SelChecker.mayHit(S)) {
       dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
       dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
@@ -652,7 +703,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    claimRange(N.ASTNode.getSourceRange(), N.Selected);
+    claimRange(getSourceRange(N.ASTNode), N.Selected);
     if (N.Selected == NoTokens)
       N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
@@ -737,8 +788,7 @@ llvm::SmallString<256> abbreviatedString(DynTypedNode N,
   }
   auto Pos = Result.find('\n');
   if (Pos != llvm::StringRef::npos) {
-    bool MoreText =
-        !llvm::all_of(llvm::StringRef(Result).drop_front(Pos), llvm::isSpace);
+    bool MoreText = !llvm::all_of(Result.str().drop_front(Pos), llvm::isSpace);
     Result.resize(Pos);
     if (MoreText)
       Result.append(" …");
@@ -826,7 +876,7 @@ SelectionTree::SelectionTree(ASTContext &AST, const syntax::TokenBuffer &Tokens,
            .printToString(SM));
   Nodes = SelectionVisitor::collect(AST, Tokens, PrintPolicy, Begin, End, FID);
   Root = Nodes.empty() ? nullptr : &Nodes.front();
-  recordMetrics(*this);
+  recordMetrics(*this, AST.getLangOpts());
   dlog("Built selection tree\n{0}", *this);
 }
 
@@ -855,13 +905,13 @@ const DeclContext &SelectionTree::Node::getDeclContext() const {
 
 const SelectionTree::Node &SelectionTree::Node::ignoreImplicit() const {
   if (Children.size() == 1 &&
-      Children.front()->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+      getSourceRange(Children.front()->ASTNode) == getSourceRange(ASTNode))
     return Children.front()->ignoreImplicit();
   return *this;
 }
 
 const SelectionTree::Node &SelectionTree::Node::outerImplicit() const {
-  if (Parent && Parent->ASTNode.getSourceRange() == ASTNode.getSourceRange())
+  if (Parent && getSourceRange(Parent->ASTNode) == getSourceRange(ASTNode))
     return Parent->outerImplicit();
   return *this;
 }

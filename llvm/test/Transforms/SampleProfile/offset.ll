@@ -1,5 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/offset.prof | opt -analyze -branch-prob | FileCheck %s
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/offset.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/offset.prof | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; Original C++ code for this test case:
 ;

@@ -19,6 +19,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -55,7 +56,8 @@ public:
 
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
-                                        const FileSpec *crash_file_path);
+                                        const FileSpec *crash_file_path,
+                                        bool can_connect);
 
   static void Initialize();
 
@@ -66,6 +68,8 @@ public:
   static ConstString GetPluginNameStatic();
 
   static const char *GetPluginDescriptionStatic();
+
+  static std::chrono::seconds GetPacketTimeout();
 
   // Check if a given Process
   bool CanDebug(lldb::TargetSP target_sp,
@@ -99,9 +103,9 @@ public:
   void DidAttach(ArchSpec &process_arch) override;
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // Process Control
   Status WillResume() override;
@@ -162,20 +166,16 @@ public:
 
   Status GetWatchpointSupportInfo(uint32_t &num) override;
 
-  lldb::user_id_t StartTrace(const TraceOptions &options,
-                             Status &error) override;
+  llvm::Expected<TraceSupportedResponse> TraceSupported() override;
 
-  Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) override;
+  llvm::Error TraceStop(const TraceStopRequest &request) override;
 
-  Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                 llvm::MutableArrayRef<uint8_t> &buffer,
-                 size_t offset = 0) override;
+  llvm::Error TraceStart(const llvm::json::Value &request) override;
 
-  Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                     llvm::MutableArrayRef<uint8_t> &buffer,
-                     size_t offset = 0) override;
+  llvm::Expected<std::string> TraceGetState(llvm::StringRef type) override;
 
-  Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) override;
+  llvm::Expected<std::vector<uint8_t>>
+  TraceGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
   Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
 
@@ -231,10 +231,19 @@ public:
   std::string HarmonizeThreadIdsForProfileData(
       StringExtractorGDBRemote &inputStringExtractor);
 
+  void DidFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidVFork(lldb::pid_t child_pid, lldb::tid_t child_tid) override;
+  void DidVForkDone() override;
+  void DidExec() override;
+
+  llvm::Expected<bool> SaveCore(llvm::StringRef outfile) override;
+
 protected:
   friend class ThreadGDBRemote;
   friend class GDBRemoteCommunicationClient;
   friend class GDBRemoteRegisterContext;
+
+  bool SupportsMemoryTagging() override;
 
   /// Broadcaster event bits definitions.
   enum {
@@ -246,12 +255,11 @@ protected:
   GDBRemoteCommunicationClient m_gdb_comm;
   GDBRemoteCommunicationReplayServer m_gdb_replay_server;
   std::atomic<lldb::pid_t> m_debugserver_pid;
-  std::vector<StringExtractorGDBRemote> m_stop_packet_stack; // The stop packet
-                                                             // stack replaces
-                                                             // the last stop
-                                                             // packet variable
+
+  llvm::Optional<StringExtractorGDBRemote> m_last_stop_packet;
   std::recursive_mutex m_last_stop_packet_mutex;
-  GDBRemoteDynamicRegisterInfo m_register_info;
+
+  GDBRemoteDynamicRegisterInfoSP m_register_info_sp;
   Broadcaster m_async_broadcaster;
   lldb::ListenerSP m_async_listener_sp;
   HostThread m_async_thread;
@@ -292,6 +300,8 @@ protected:
   using FlashRange = FlashRangeVector::Entry;
   FlashRangeVector m_erased_flash_ranges;
 
+  bool m_vfork_in_progress;
+
   // Accessors
   bool IsRunning(lldb::StateType state) {
     return state == lldb::eStateRunning || IsStepping(state);
@@ -309,8 +319,8 @@ protected:
 
   void Clear();
 
-  bool UpdateThreadList(ThreadList &old_thread_list,
-                        ThreadList &new_thread_list) override;
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override;
 
   Status ConnectToReplayServer();
 
@@ -334,9 +344,9 @@ protected:
 
   bool CalculateThreadStopInfo(ThreadGDBRemote *thread);
 
-  size_t UpdateThreadPCsFromStopReplyThreadsValue(std::string &value);
+  size_t UpdateThreadPCsFromStopReplyThreadsValue(llvm::StringRef value);
 
-  size_t UpdateThreadIDsFromStopReplyThreadsValue(std::string &value);
+  size_t UpdateThreadIDsFromStopReplyThreadsValue(llvm::StringRef value);
 
   bool HandleNotifyPacket(StringExtractorGDBRemote &packet);
 
@@ -386,11 +396,14 @@ protected:
 
   DynamicLoader *GetDynamicLoader() override;
 
-  bool GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use,
-                                             std::string xml_filename,
-                                             uint32_t &cur_reg_num,
-                                             uint32_t &reg_offset);
+  bool GetGDBServerRegisterInfoXMLAndProcess(
+    ArchSpec &arch_to_use, std::string xml_filename,
+    std::vector<DynamicRegisterInfo::Register> &registers);
 
+  // Convert DynamicRegisterInfo::Registers into RegisterInfos and add
+  // to the dynamic register list.
+  void AddRemoteRegisters(std::vector<DynamicRegisterInfo::Register> &registers,
+                          const ArchSpec &arch_to_use);
   // Query remote GDBServer for register information
   bool GetGDBServerRegisterInfo(ArchSpec &arch);
 
@@ -406,6 +419,12 @@ protected:
   Status FlashDone();
 
   bool HasErased(FlashRange range);
+
+  llvm::Expected<std::vector<uint8_t>>
+  DoReadMemoryTags(lldb::addr_t addr, size_t len, int32_t type) override;
+
+  Status DoWriteMemoryTags(lldb::addr_t addr, size_t len, int32_t type,
+                           const std::vector<uint8_t> &tags) override;
 
 private:
   // For ProcessGDBRemote only
@@ -452,6 +471,10 @@ private:
 
   ProcessGDBRemote(const ProcessGDBRemote &) = delete;
   const ProcessGDBRemote &operator=(const ProcessGDBRemote &) = delete;
+
+  // fork helpers
+  void DidForkSwitchSoftwareBreakpoints(bool enable);
+  void DidForkSwitchHardwareTraps(bool enable);
 };
 
 } // namespace process_gdb_remote

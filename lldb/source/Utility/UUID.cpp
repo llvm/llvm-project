@@ -12,9 +12,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
 
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
+#include <cctype>
+#include <cstdio>
+#include <cstring>
 
 using namespace lldb_private;
 
@@ -33,6 +33,16 @@ static inline bool separate(size_t count) {
   default:
     return false;
   }
+}
+
+UUID UUID::fromCvRecord(UUID::CvRecordPdb70 debug_info) {
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data1);
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data2);
+  llvm::sys::swapByteOrder(debug_info.Uuid.Data3);
+  llvm::sys::swapByteOrder(debug_info.Age);
+  if (debug_info.Age)
+    return UUID::fromOptionalData(&debug_info, sizeof(debug_info));
+  return UUID::fromOptionalData(&debug_info.Uuid, sizeof(debug_info.Uuid));
 }
 
 std::string UUID::GetAsString(llvm::StringRef separator) const {

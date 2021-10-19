@@ -3,10 +3,10 @@
 
 ; This test hung in the BranchFolding pass during asm-goto bring up
 
-@e = global i32 0
-@j = global i32 0
+@e = dso_local global i32 0
+@j = dso_local global i32 0
 
-define void @n(i32* %o, i32 %p, i32 %u) nounwind {
+define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-LABEL: n:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
@@ -27,7 +27,7 @@ define void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    cmpl $0, {{.*}}(%rip)
+; CHECK-NEXT:    cmpl $0, e(%rip)
 ; CHECK-NEXT:    # implicit-def: $ebx
 ; CHECK-NEXT:    # implicit-def: $r14d
 ; CHECK-NEXT:    je .LBB0_4
@@ -59,7 +59,7 @@ define void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    jmp .LBB0_10
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  # %bb.8: # %if.then20.critedge
-; CHECK-NEXT:    movl {{.*}}(%rip), %edi
+; CHECK-NEXT:    movl j(%rip), %edi
 ; CHECK-NEXT:    movslq %eax, %rcx
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    movq %r15, %rdx
@@ -137,14 +137,14 @@ cleanup:                                          ; preds = %if.else, %if.then20
   ret void
 }
 
-declare i32 @c()
+declare dso_local i32 @c()
 
-declare i32 @l(i32*)
+declare dso_local i32 @l(i32*)
 
-declare i32 @m(i64)
+declare dso_local i32 @m(i64)
 
-declare i32 @i(i32)
+declare dso_local i32 @i(i32)
 
-declare i32 @k(i32, i64, i32*, i64)
+declare dso_local i32 @k(i32, i64, i32*, i64)
 
 !0 = !{!"branch_weights", i32 2000, i32 1}

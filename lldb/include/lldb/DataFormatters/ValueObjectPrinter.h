@@ -27,7 +27,7 @@ public:
   ValueObjectPrinter(ValueObject *valobj, Stream *s,
                      const DumpValueObjectOptions &options);
 
-  ~ValueObjectPrinter() {}
+  ~ValueObjectPrinter() = default;
 
   bool PrintValueObject();
 

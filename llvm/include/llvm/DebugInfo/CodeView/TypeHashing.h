@@ -86,6 +86,16 @@ struct GloballyHashedType {
 
   bool empty() const { return *(const uint64_t*)Hash.data() == 0; }
 
+  friend inline bool operator==(const GloballyHashedType &L,
+                                const GloballyHashedType &R) {
+    return L.Hash == R.Hash;
+  }
+
+  friend inline bool operator!=(const GloballyHashedType &L,
+                                const GloballyHashedType &R) {
+    return !(L.Hash == R.Hash);
+  }
+
   /// Given a sequence of bytes representing a record, compute a global hash for
   /// this record.  Due to the nature of global hashes incorporating the hashes
   /// of referenced records, this function requires a list of types and ids
@@ -161,15 +171,10 @@ struct GloballyHashedType {
     return Hashes;
   }
 };
-#if defined(_MSC_VER)
-// is_trivially_copyable is not available in older versions of libc++, but it is
-// available in all supported versions of MSVC, so at least this gives us some
-// coverage.
 static_assert(std::is_trivially_copyable<GloballyHashedType>::value,
               "GloballyHashedType must be trivially copyable so that we can "
               "reinterpret_cast arrays of hash data to arrays of "
               "GloballyHashedType");
-#endif
 } // namespace codeview
 
 template <> struct DenseMapInfo<codeview::LocallyHashedType> {
@@ -206,7 +211,7 @@ template <> struct DenseMapInfo<codeview::GloballyHashedType> {
 
   static bool isEqual(codeview::GloballyHashedType LHS,
                       codeview::GloballyHashedType RHS) {
-    return LHS.Hash == RHS.Hash;
+    return LHS == RHS;
   }
 };
 

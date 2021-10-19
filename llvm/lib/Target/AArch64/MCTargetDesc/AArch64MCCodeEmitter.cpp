@@ -186,6 +186,13 @@ public:
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
 
+  uint32_t EncodeMatrixTileListRegisterClass(const MCInst &MI, unsigned OpIdx,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const;
+  uint32_t encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
 private:
   FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
   void
@@ -516,6 +523,24 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
   return MO.getImm() - 8;
 }
 
+uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(
+    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  unsigned RegMask = MI.getOperand(OpIdx).getImm();
+  assert(RegMask <= 0xFF && "Invalid register mask!");
+  return RegMask;
+}
+
+uint32_t
+AArch64MCCodeEmitter::encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  assert(RegOpnd >= AArch64::W12 && RegOpnd <= AArch64::W15 &&
+         "Expected register in the range w12-w15!");
+  return RegOpnd - AArch64::W12;
+}
+
 uint32_t
 AArch64MCCodeEmitter::getImm8OptLsl(const MCInst &MI, unsigned OpIdx,
                                     SmallVectorImpl<MCFixup> &Fixups,
@@ -599,8 +624,12 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     // This is a directive which applies an R_AARCH64_TLSDESC_CALL to the
     // following (BLR) instruction. It doesn't emit any code itself so it
     // doesn't go through the normal TableGenerated channels.
-    MCFixupKind Fixup = MCFixupKind(AArch64::fixup_aarch64_tlsdesc_call);
-    Fixups.push_back(MCFixup::create(0, MI.getOperand(0).getExpr(), Fixup));
+    auto Reloc = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32
+                     ? ELF::R_AARCH64_P32_TLSDESC_CALL
+                     : ELF::R_AARCH64_TLSDESC_CALL;
+    Fixups.push_back(
+        MCFixup::create(0, MI.getOperand(0).getExpr(),
+                        MCFixupKind(FirstLiteralRelocationKind + Reloc)));
     return;
   }
 

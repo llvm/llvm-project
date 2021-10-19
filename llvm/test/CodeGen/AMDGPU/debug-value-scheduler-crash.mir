@@ -68,10 +68,10 @@ body:             |
   ; CHECK:   dead $sgpr30_sgpr31 = SI_CALL [[DEF14]], @foo, csr_amdgpu_highregs, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit-def $vgpr0
   ; CHECK:   %25:vgpr_32 = nofpexcept V_ADD_F32_e32 %9, [[DEF8]], implicit $mode, implicit $exec
   ; CHECK:   %25:vgpr_32 = nofpexcept V_MAC_F32_e32 [[DEF12]], [[DEF9]], %25, implicit $mode, implicit $exec
-  ; CHECK:   dead %26:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, [[DEF4]], 0, [[DEF1]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK:   dead %27:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, [[DEF5]], 0, [[DEF2]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK:   dead %28:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, [[DEF6]], 0, [[DEF3]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK:   GLOBAL_STORE_DWORD [[DEF]], [[DEF10]], 0, 0, 0, 0, implicit $exec
+  ; CHECK:   dead %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF4]], 0, [[DEF1]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK:   dead %27:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF5]], 0, [[DEF2]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK:   dead %28:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, [[DEF6]], 0, [[DEF3]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK:   GLOBAL_STORE_DWORD [[DEF]], [[DEF10]], 0, 0, implicit $exec
   ; CHECK:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
@@ -126,10 +126,10 @@ body:             |
     dead $sgpr30_sgpr31 = SI_CALL %24, @foo, csr_amdgpu_highregs, implicit undef $sgpr0_sgpr1_sgpr2_sgpr3, implicit killed $sgpr4, implicit killed $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit-def $vgpr0
     %25:vgpr_32 = nofpexcept V_ADD_F32_e32 %9, %8, implicit $mode, implicit $exec
     %25:vgpr_32 = nofpexcept V_MAC_F32_e32 %15, %10, %25, implicit $mode, implicit $exec
-    %26:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, %4, 0, %1, 0, 0, implicit $mode, implicit $exec
-    %27:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, %5, 0, %2, 0, 0, implicit $mode, implicit $exec
-    %28:vgpr_32 = nofpexcept V_MAD_F32 0, %25, 0, %6, 0, %3, 0, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORD %0, %11, 0, 0, 0, 0, implicit $exec
+    %26:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %4, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %27:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %5, 0, %2, 0, 0, implicit $mode, implicit $exec
+    %28:vgpr_32 = nofpexcept V_MAD_F32_e64 0, %25, 0, %6, 0, %3, 0, 0, implicit $mode, implicit $exec
+    GLOBAL_STORE_DWORD %0, %11, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

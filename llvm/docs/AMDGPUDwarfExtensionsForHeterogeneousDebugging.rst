@@ -500,7 +500,7 @@ If a DWARF expression is ill-formed, then the result is undefined.
 The following sections detail the rules for when a DWARF expression is
 ill-formed or results in an evaluation error.
 
-A DWARF expression can either be encoded as a operation expression (see
+A DWARF expression can either be encoded as an operation expression (see
 :ref:`amdgpu-dwarf-operation-expressions`), or as a location list expression
 (see :ref:`amdgpu-dwarf-location-list-expressions`).
 
@@ -711,8 +711,8 @@ DWARF Expression Value
 ++++++++++++++++++++++
 
 A value has a type and a literal value. It can represent a literal value of any
-supported base type of the target architecture. The base type specifies the size
-and encoding of the literal value.
+supported base type of the target architecture. The base type specifies the
+size, encoding, and endianity of the literal value.
 
 .. note::
 
@@ -727,7 +727,7 @@ and encoding of the literal value.
 
 There is a distinguished base type termed the generic type, which is an integral
 type that has the size of an address in the target architecture default address
-space and unspecified signedness.
+space, a target architecture defined endianity, and unspecified signedness.
 
 *The generic type is the same as the unspecified type used for stack operations
 defined in DWARF Version 4 and before.*
@@ -1271,24 +1271,9 @@ This section describes the operations that push values on the stack.
 
 Each value stack entry has a type and a literal value and can represent a
 literal value of any supported base type of the target architecture. The base
-type specifies the size and encoding of the literal value.
+type specifies the size, encoding, and endianity of the literal value.
 
-Instead of a base type, value stack entries can have a distinguished generic
-type, which is an integral type that has the size of an address in the target
-architecture default address space and unspecified signedness.
-
-*The generic type is the same as the unspecified type used for stack operations
-defined in DWARF Version 4 and before.*
-
-An integral type is a base type that has an encoding of ``DW_ATE_signed``,
-``DW_ATE_signed_char``, ``DW_ATE_unsigned``, ``DW_ATE_unsigned_char``,
-``DW_ATE_boolean``, or any target architecture defined integral encoding in the
-inclusive range ``DW_ATE_lo_user`` to ``DW_ATE_hi_user``.
-
-.. note::
-
-  Unclear if ``DW_ATE_address`` is an integral type. GDB does not seem to
-  consider it as integral.
+The base type of value stack entries can be the distinguished generic type.
 
 .. _amdgpu-dwarf-literal-operations:
 
@@ -2107,8 +2092,8 @@ implicit storage value starting at the bit offset.
 
     ``DW_OP_stack_value`` pops one stack entry that must be a value V.
 
-    An implicit location storage LS is created with the literal value V and a
-    size equal to V's base type size.
+    An implicit location storage LS is created with the literal value V using
+    the size, encoding, and enianity specified by V's base type.
 
     It pushes a location description L with one implicit location description SL
     on the stack. SL specifies LS with a bit offset of 0.
@@ -2405,13 +2390,13 @@ compatible with the definitions in DWARF Version 5.*
     .. note::
 
       Since these extensions allow location descriptions to be entries on the
-      stack, a simpler operation to create composite location descriptions. For
-      example, just one operation that specifies how many parts, and pops pairs
-      of stack entries for the part size and location description. Not only
-      would this be a simpler operation and avoid the complexities of incomplete
-      composite location descriptions, but it may also have a smaller encoding
-      in practice. However, the desire for compatibility with DWARF Version 5 is
-      likely a stronger consideration.
+      stack, a simpler operation to create composite location descriptions could
+      be defined. For example, just one operation that specifies how many parts,
+      and pops pairs of stack entries for the part size and location
+      description. Not only would this be a simpler operation and avoid the
+      complexities of incomplete composite location descriptions, but it may
+      also have a smaller encoding in practice. However, the desire for
+      compatibility with DWARF Version 5 is likely a stronger consideration.
 
 2.  ``DW_OP_bit_piece``
 
@@ -2678,12 +2663,12 @@ architectures.
 
 DWARF address space identifiers are used by:
 
-* The DWARF expession operations: ``DW_OP_LLVM_aspace_bregx``,
+* The DWARF expression operations: ``DW_OP_LLVM_aspace_bregx``,
   ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_implicit_aspace_pointer``,
   and ``DW_OP_xderef*``.
 
-* The CFI instructions: ``DW_CFA_def_aspace_cfa`` and
-  ``DW_CFA_def_aspace_cfa_sf``.
+* The CFI instructions: ``DW_CFA_LLVM_def_aspace_cfa`` and
+  ``DW_CFA_LLVM_def_aspace_cfa_sf``.
 
 .. note::
 
@@ -3387,7 +3372,7 @@ Standard Content Descriptions
     provided by the* ``DW_LNCT_path`` *field. When the source field is absent,
     consumers can access the file to get the source text.*
 
-    *This is particularly useful for programing languages that support runtime
+    *This is particularly useful for programming languages that support runtime
     compilation and runtime generation of source text. In these cases, the
     source text does not reside in any permanent file. For example, the OpenCL
     language [:ref:`OpenCL <amdgpu-dwarf-OpenCL>`] supports online compilation.*
@@ -3768,9 +3753,9 @@ CFA Definition Instructions
     *The action is the same as* ``DW_CFA_def_cfa``\ *, except that the second
     operand is signed and factored.*
 
-3.  ``DW_CFA_def_aspace_cfa`` *New*
+3.  ``DW_CFA_LLVM_def_aspace_cfa`` *New*
 
-    The ``DW_CFA_def_aspace_cfa`` instruction takes three unsigned LEB128
+    The ``DW_CFA_LLVM_def_aspace_cfa`` instruction takes three unsigned LEB128
     operands representing a register number R, a (non-factored) byte
     displacement B, and a target architecture specific address space identifier
     AS. The required action is to define the current CFA rule to be the result
@@ -3780,7 +3765,7 @@ CFA Definition Instructions
     If AS is not one of the values defined by the target architecture specific
     ``DW_ASPACE_*`` values then the DWARF expression is ill-formed.
 
-4.  ``DW_CFA_def_aspace_cfa_sf`` *New*
+4.  ``DW_CFA_LLVM_def_aspace_cfa_sf`` *New*
 
     The ``DW_CFA_def_cfa_sf`` instruction takes three operands: an unsigned
     LEB128 value representing a register number R, a signed LEB128 factored byte
@@ -4195,13 +4180,13 @@ instructions.
 .. table:: Call frame instruction encodings
    :name: amdgpu-dwarf-call-frame-instruction-encodings-table
 
-   ======================== ====== ====== ================ ================ ================
-   Instruction              High 2 Low 6  Operand 1        Operand 2        Operand 3
-                            Bits   Bits
-   ======================== ====== ====== ================ ================ ================
-   DW_CFA_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
-   DW_CFA_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
-   ======================== ====== ====== ================ ================ ================
+   ============================= ====== ====== ================ ================ =====================
+   Instruction                   High 2 Low 6  Operand 1        Operand 2        Operand 3
+                                 Bits   Bits
+   ============================= ====== ====== ================ ================ =====================
+   DW_CFA_LLVM_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
+   DW_CFA_LLVM_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
+   ============================= ====== ====== ================ ================ =====================
 
 Attributes by Tag Value (Informative)
 -------------------------------------

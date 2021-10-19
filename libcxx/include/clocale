@@ -43,12 +43,10 @@ lconv* localeconv();
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::lconv;
-#ifndef _LIBCPP_HAS_NO_THREAD_UNSAFE_C_FUNCTIONS
-using ::setlocale;
-#endif
-using ::localeconv;
+using ::lconv _LIBCPP_USING_IF_EXISTS;
+using ::setlocale _LIBCPP_USING_IF_EXISTS;
+using ::localeconv _LIBCPP_USING_IF_EXISTS;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_CLOCALE
+#endif // _LIBCPP_CLOCALE

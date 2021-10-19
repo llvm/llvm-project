@@ -8,6 +8,7 @@ lto_module_create_from_memory
 lto_module_create_from_memory_with_path
 lto_module_create_in_local_context
 lto_module_create_in_codegen_context
+lto_module_has_ctor_dtor
 lto_module_get_linkeropts
 lto_module_get_macho_cputype
 lto_module_get_num_symbols
@@ -43,6 +44,7 @@ lto_codegen_optimize
 lto_codegen_compile_optimized
 lto_codegen_set_should_internalize
 lto_codegen_set_should_embed_uselists
+lto_set_debug_options
 LLVMCreateDisasm
 LLVMCreateDisasmCPU
 LLVMDisasmDispose

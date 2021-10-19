@@ -2,12 +2,12 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c < %s \
 # RUN:     | llvm-objdump --mattr=+c -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump --mattr=+c -M no-aliases -d -r - \
-# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # TODO: more exhaustive testing of immediate encoding.
 
@@ -24,7 +24,8 @@ c.lw a2, 0(a0)
 # CHECK-ASM: encoding: [0xfc,0xde]
 c.sw a5, 124(a3)
 
-# CHECK-ASM-AND-OBJ: c.j -2048
+# CHECK-OBJ: c.j 0xfffff808
+# CHECK-ASM: c.j -2048
 # CHECK-ASM: encoding: [0x01,0xb0]
 c.j -2048
 # CHECK-ASM-AND-OBJ: c.jr a7
@@ -33,10 +34,12 @@ c.jr a7
 # CHECK-ASM-AND-OBJ: c.jalr a1
 # CHECK-ASM: encoding: [0x82,0x95]
 c.jalr a1
-# CHECK-ASM-AND-OBJ: c.beqz a3, -256
+# CHECK-OBJ: c.beqz a3, 0xffffff0e
+# CHECK-ASM: c.beqz a3, -256
 # CHECK-ASM: encoding: [0x81,0xd2]
 c.beqz a3, -256
-# CHECK-ASM-AND-OBJ: c.bnez a5, 254
+# CHECK-OBJ: c.bnez a5, 0x10e
+# CHECK-ASM: c.bnez a5, 254
 # CHECK-ASM: encoding: [0xfd,0xef]
 c.bnez a5,  254
 

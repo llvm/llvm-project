@@ -1,4 +1,4 @@
-; RUN: opt < %s -coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 target datalayout = "p:64:64:64"
 
@@ -51,8 +51,8 @@ end:
 
 ; CHECK-LABEL: define internal void @f.resume.0(i8* {{.*}} %0, i1 %1) {
 ; CHECK:  [[FRAMEPTR:%.*]] = bitcast i8* %0 to %f.Frame*
-; CHECK: resume:
 ; CHECK:  [[TMP:%.*]] = getelementptr inbounds %f.Frame, %f.Frame* [[FRAMEPTR]], i32 0, i32 0
+; CHECK: resume:
 ; CHECK:  [[CAST:%.*]] = bitcast { i64, i64 }* [[TMP]] to i8*
 ; CHECK:  call void @use(i8* [[CAST]])
 

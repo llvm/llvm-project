@@ -20,13 +20,23 @@
 
 using namespace llvm;
 
+namespace {
 enum DefaultOnOff { Default, Enable, Disable };
+}
 static cl::opt<DefaultOnOff> DwarfExtendedLoc(
     "dwarf-extended-loc", cl::Hidden,
     cl::desc("Disable emission of the extended flags in .loc directives."),
     cl::values(clEnumVal(Default, "Default for platform"),
                clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
     cl::init(Default));
+
+namespace llvm {
+cl::opt<cl::boolOrDefault> UseLEB128Directives(
+    "use-leb128-directives", cl::Hidden,
+    cl::desc(
+        "Disable the usage of LEB128 directives, and generate .byte instead."),
+    cl::init(cl::BOU_UNSET));
+}
 
 MCAsmInfo::MCAsmInfo() {
   SeparatorString = ";";
@@ -51,6 +61,8 @@ MCAsmInfo::MCAsmInfo() {
   WeakDirective = "\t.weak\t";
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
+  if (UseLEB128Directives != cl::BOU_UNSET)
+    HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
 
   // FIXME: Clang's logic should be synced with the logic used to initialize
   //        this member and the two implementations should be merged.
@@ -65,6 +77,7 @@ MCAsmInfo::MCAsmInfo() {
   //   architecture basis.
   //   - The target subclasses for AArch64, ARM, and X86 handle these cases
   UseIntegratedAssembler = true;
+  ParseInlineAsmUsingAsmParser = false;
   PreserveAsmComments = true;
 }
 
@@ -101,8 +114,7 @@ MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 }
 
 bool MCAsmInfo::isAcceptableChar(char C) const {
-  return (C >= 'a' && C <= 'z') || (C >= 'A' && C <= 'Z') ||
-         (C >= '0' && C <= '9') || C == '_' || C == '$' || C == '.' || C == '@';
+  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '@';
 }
 
 bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {

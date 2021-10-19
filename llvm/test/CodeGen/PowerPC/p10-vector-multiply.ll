@@ -10,6 +10,7 @@
 ; This includes the low order and high order versions of vector multiply.
 ; The low order version operates on doublewords, whereas the high order version
 ; operates on signed and unsigned words and doublewords.
+; This file also includes 128 bit vector multiply instructions.
 
 define <2 x i64> @test_vmulld(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_vmulld:
@@ -121,4 +122,55 @@ define <2 x i64> @test_vmulhud_intrinsic(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %mulh = tail call <2 x i64> @llvm.ppc.altivec.vmulhud(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %mulh
+}
+
+declare <1 x i128> @llvm.ppc.altivec.vmuleud(<2 x i64>, <2 x i64>) nounwind readnone
+declare <1 x i128> @llvm.ppc.altivec.vmuloud(<2 x i64>, <2 x i64>) nounwind readnone
+declare <1 x i128> @llvm.ppc.altivec.vmulesd(<2 x i64>, <2 x i64>) nounwind readnone
+declare <1 x i128> @llvm.ppc.altivec.vmulosd(<2 x i64>, <2 x i64>) nounwind readnone
+declare <1 x i128> @llvm.ppc.altivec.vmsumcud(<2 x i64>, <2 x i64>, <1 x i128>) nounwind readnone
+
+define <1 x i128> @test_vmuleud(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
+; CHECK-LABEL: test_vmuleud:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmuleud v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = tail call <1 x i128> @llvm.ppc.altivec.vmuleud(<2 x i64> %x, <2 x i64> %y)
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vmuloud(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
+; CHECK-LABEL: test_vmuloud:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmuloud v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = tail call <1 x i128> @llvm.ppc.altivec.vmuloud(<2 x i64> %x, <2 x i64> %y)
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vmulesd(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
+; CHECK-LABEL: test_vmulesd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmulesd v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = tail call <1 x i128> @llvm.ppc.altivec.vmulesd(<2 x i64> %x, <2 x i64> %y)
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vmulosd(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
+; CHECK-LABEL: test_vmulosd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmulosd v2, v2, v3
+; CHECK-NEXT:    blr
+  %tmp = tail call <1 x i128> @llvm.ppc.altivec.vmulosd(<2 x i64> %x, <2 x i64> %y)
+  ret <1 x i128> %tmp
+}
+
+define <1 x i128> @test_vmsumcud(<2 x i64> %x, <2 x i64> %y, <1 x i128> %z) nounwind readnone {
+; CHECK-LABEL: test_vmsumcud:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmsumcud v2, v2, v3, v4
+; CHECK-NEXT:    blr
+  %tmp = tail call <1 x i128> @llvm.ppc.altivec.vmsumcud(<2 x i64> %x, <2 x i64> %y, <1 x i128> %z)
+  ret <1 x i128> %tmp
 }

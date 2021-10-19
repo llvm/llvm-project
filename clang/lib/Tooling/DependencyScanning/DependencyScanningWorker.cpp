@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -31,11 +32,12 @@ public:
       : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
+    C.handleDependencyOutputOpts(*Opts);
     llvm::SmallString<256> CanonPath;
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      C.handleFileDependency(*Opts, CanonPath);
+      C.handleFileDependency(CanonPath);
     }
   }
 
@@ -44,27 +46,102 @@ private:
   DependencyConsumer &C;
 };
 
-/// A proxy file system that doesn't call `chdir` when changing the working
-/// directory of a clang tool.
-class ProxyFileSystemWithoutChdir : public llvm::vfs::ProxyFileSystem {
+/// A listener that collects the imported modules and optionally the input
+/// files.
+class PrebuiltModuleListener : public ASTReaderListener {
 public:
-  ProxyFileSystemWithoutChdir(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : ProxyFileSystem(std::move(FS)) {}
+  PrebuiltModuleListener(llvm::StringMap<std::string> &PrebuiltModuleFiles,
+                         llvm::StringSet<> &InputFiles, bool VisitInputFiles)
+      : PrebuiltModuleFiles(PrebuiltModuleFiles), InputFiles(InputFiles),
+        VisitInputFiles(VisitInputFiles) {}
 
-  llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
-    assert(!CWD.empty() && "empty CWD");
-    return CWD;
+  bool needsImportVisitation() const override { return true; }
+  bool needsInputFileVisitation() override { return VisitInputFiles; }
+  bool needsSystemInputFileVisitation() override { return VisitInputFiles; }
+
+  void visitImport(StringRef ModuleName, StringRef Filename) override {
+    PrebuiltModuleFiles.insert({ModuleName, Filename.str()});
   }
 
-  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
-    CWD = Path.str();
-    return {};
+  bool visitInputFile(StringRef Filename, bool isSystem, bool isOverridden,
+                      bool isExplicitModule) override {
+    InputFiles.insert(Filename);
+    return true;
   }
 
 private:
-  std::string CWD;
+  llvm::StringMap<std::string> &PrebuiltModuleFiles;
+  llvm::StringSet<> &InputFiles;
+  bool VisitInputFiles;
 };
+
+using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
+
+/// Visit the given prebuilt module and collect all of the modules it
+/// transitively imports and contributing input files.
+static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
+                                CompilerInstance &CI,
+                                PrebuiltModuleFilesT &ModuleFiles,
+                                llvm::StringSet<> &InputFiles,
+                                bool VisitInputFiles) {
+  // Maps the names of modules that weren't yet visited to their PCM path.
+  llvm::StringMap<std::string> ModuleFilesWorklist;
+  // Contains PCM paths of all visited modules.
+  llvm::StringSet<> VisitedModuleFiles;
+
+  PrebuiltModuleListener Listener(ModuleFilesWorklist, InputFiles,
+                                  VisitInputFiles);
+
+  auto GatherModuleFileInfo = [&](StringRef ASTFile) {
+    ASTReader::readASTFileControlBlock(
+        ASTFile, CI.getFileManager(), CI.getPCHContainerReader(),
+        /*FindModuleFileExtensions=*/false, Listener,
+        /*ValidateDiagnosticOptions=*/false);
+  };
+
+  GatherModuleFileInfo(PrebuiltModuleFilename);
+  while (!ModuleFilesWorklist.empty()) {
+    auto WorklistItemIt = ModuleFilesWorklist.begin();
+
+    if (!VisitedModuleFiles.contains(WorklistItemIt->getValue())) {
+      VisitedModuleFiles.insert(WorklistItemIt->getValue());
+      GatherModuleFileInfo(WorklistItemIt->getValue());
+      ModuleFiles[WorklistItemIt->getKey().str()] = WorklistItemIt->getValue();
+    }
+
+    ModuleFilesWorklist.erase(WorklistItemIt);
+  }
+}
+
+/// Transform arbitrary file name into an object-like file name.
+static std::string makeObjFileName(StringRef FileName) {
+  SmallString<128> ObjFileName(FileName);
+  llvm::sys::path::replace_extension(ObjFileName, "o");
+  return std::string(ObjFileName.str());
+}
+
+/// Deduce the dependency target based on the output file and input files.
+static std::string
+deduceDepTarget(const std::string &OutputFile,
+                const SmallVectorImpl<FrontendInputFile> &InputFiles) {
+  if (OutputFile != "-")
+    return OutputFile;
+
+  if (InputFiles.empty() || !InputFiles.front().isFile())
+    return "clang-scan-deps\\ dependency";
+
+  return makeObjFileName(InputFiles.front().getFile());
+}
+
+/// Sanitize diagnostic options for dependency scan.
+static void sanitizeDiagOpts(DiagnosticOptions &DiagOpts) {
+  // Don't print 'X warnings and Y errors generated'.
+  DiagOpts.ShowCarets = false;
+  // Don't write out diagnostic file.
+  DiagOpts.DiagnosticSerializationFile.clear();
+  // Don't treat warnings as errors.
+  DiagOpts.Warnings.push_back("no-error");
+}
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
@@ -74,37 +151,62 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings,
-      ScanningOutputFormat Format)
+      ScanningOutputFormat Format, bool OptimizeArgs,
+      llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings),
-        Format(Format) {}
+        DepFS(std::move(DepFS)), PPSkipMappings(PPSkipMappings), Format(Format),
+        OptimizeArgs(OptimizeArgs), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
+    // Make a deep copy of the original Clang invocation.
+    CompilerInvocation OriginalInvocation(*Invocation);
+
     // Create a compiler instance to handle the actual work.
     CompilerInstance Compiler(std::move(PCHContainerOps));
     Compiler.setInvocation(std::move(Invocation));
 
-    // Don't print 'X warnings and Y errors generated'.
-    Compiler.getDiagnosticOpts().ShowCarets = false;
     // Create the compiler's actual diagnostics engine.
+    sanitizeDiagOpts(Compiler.getDiagnosticOpts());
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
       return false;
 
-    // Use the dependency scanning optimized file system if we can.
+    Compiler.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;
+
+    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
+    Compiler.setFileManager(FileMgr);
+    Compiler.createSourceManager(*FileMgr);
+
+    llvm::StringSet<> PrebuiltModulesInputFiles;
+    // Store the list of prebuilt module files into header search options. This
+    // will prevent the implicit build to create duplicate modules and will
+    // force reuse of the existing prebuilt module files instead.
+    if (!Compiler.getPreprocessorOpts().ImplicitPCHInclude.empty())
+      visitPrebuiltModule(
+          Compiler.getPreprocessorOpts().ImplicitPCHInclude, Compiler,
+          Compiler.getHeaderSearchOpts().PrebuiltModuleFiles,
+          PrebuiltModulesInputFiles, /*VisitInputFiles=*/DepFS != nullptr);
+
+    // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
       const CompilerInvocation &CI = Compiler.getInvocation();
+      DepFS->clearIgnoredFiles();
+      // Ignore any files that contributed to prebuilt modules. The implicit
+      // build validates the modules by comparing the reported sizes of their
+      // inputs to the current state of the filesystem. Minimization would throw
+      // this mechanism off.
+      for (const auto &File : PrebuiltModulesInputFiles)
+        DepFS->ignoreFile(File.getKey());
       // Add any filenames that were explicity passed in the build settings and
       // that might be opened, as we want to ensure we don't run source
       // minimization on them.
-      DepFS->IgnoredFiles.clear();
       for (const auto &Entry : CI.getHeaderSearchOpts().UserEntries)
-        DepFS->IgnoredFiles.insert(Entry.Path);
+        DepFS->ignoreFile(Entry.Path);
       for (const auto &Entry : CI.getHeaderSearchOpts().VFSOverlayFiles)
-        DepFS->IgnoredFiles.insert(Entry);
+        DepFS->ignoreFile(Entry);
 
       // Support for virtual file system overlays on top of the caching
       // filesystem.
@@ -118,10 +220,6 @@ public:
             .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
-    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
-    Compiler.setFileManager(FileMgr);
-    Compiler.createSourceManager(*FileMgr);
-
     // Create the dependency collector that will collect the produced
     // dependencies.
     //
@@ -129,11 +227,14 @@ public:
     // invocation to the collector. The options in the invocation are reset,
     // which ensures that the compiler won't create new dependency collectors,
     // and thus won't write out the extra '.d' files to disk.
-    auto Opts = std::make_unique<DependencyOutputOptions>(
-        std::move(Compiler.getInvocation().getDependencyOutputOpts()));
-    // We need at least one -MT equivalent for the generator to work.
+    auto Opts = std::make_unique<DependencyOutputOptions>();
+    std::swap(*Opts, Compiler.getInvocation().getDependencyOutputOpts());
+    // We need at least one -MT equivalent for the generator of make dependency
+    // files to work.
     if (Opts->Targets.empty())
-      Opts->Targets = {"clang-scan-deps dependency"};
+      Opts->Targets = {deduceDepTarget(Compiler.getFrontendOpts().OutputFile,
+                                       Compiler.getFrontendOpts().Inputs)};
+    Opts->IncludeSystemHeaders = true;
 
     switch (Format) {
     case ScanningOutputFormat::Make:
@@ -143,18 +244,25 @@ public:
       break;
     case ScanningOutputFormat::Full:
       Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer));
+          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation),
+          OptimizeArgs));
       break;
     }
 
     // Consider different header search and diagnostic options to create
     // different modules. This avoids the unsound aliasing of module PCMs.
     //
-    // TODO: Implement diagnostic bucketing and header search pruning to reduce
-    // the impact of strict context hashing.
+    // TODO: Implement diagnostic bucketing to reduce the impact of strict
+    // context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-    auto Action = std::make_unique<PreprocessOnlyAction>();
+    std::unique_ptr<FrontendAction> Action;
+
+    if (ModuleName.hasValue())
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
+    else
+      Action = std::make_unique<ReadPCHAndPreprocessAction>();
+
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();
@@ -167,16 +275,29 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   ScanningOutputFormat Format;
+  bool OptimizeArgs;
+  llvm::Optional<StringRef> ModuleName;
 };
 
 } // end anonymous namespace
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
-    : Format(Service.getFormat()) {
-  DiagOpts = new DiagnosticOptions();
+    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
-  RealFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
+  PCHContainerOps->registerReader(
+      std::make_unique<ObjectFilePCHContainerReader>());
+  // We don't need to write object files, but the current PCH implementation
+  // requires the writer to be registered as well.
+  PCHContainerOps->registerWriter(
+      std::make_unique<ObjectFilePCHContainerWriter>());
+
+  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+      llvm::vfs::createPhysicalFileSystem());
+  InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  OverlayFS->pushOverlay(InMemoryFS);
+  RealFS = OverlayFS;
+
   if (Service.canSkipExcludedPPRanges())
     PPSkipMappings =
         std::make_unique<ExcludedPreprocessorDirectiveSkipMapping>();
@@ -187,36 +308,64 @@ DependencyScanningWorker::DependencyScanningWorker(
     Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
-static llvm::Error runWithDiags(
-    DiagnosticOptions *DiagOpts,
-    llvm::function_ref<bool(DiagnosticConsumer &DC)> BodyShouldSucceed) {
+static llvm::Error
+runWithDiags(DiagnosticOptions *DiagOpts,
+             llvm::function_ref<bool(DiagnosticConsumer &, DiagnosticOptions &)>
+                 BodyShouldSucceed) {
+  sanitizeDiagOpts(*DiagOpts);
+
   // Capture the emitted diagnostics and report them to the client
   // in the case of a failure.
   std::string DiagnosticOutput;
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   TextDiagnosticPrinter DiagPrinter(DiagnosticsOS, DiagOpts);
 
-  if (BodyShouldSucceed(DiagPrinter))
+  if (BodyShouldSucceed(DiagPrinter, *DiagOpts))
     return llvm::Error::success();
   return llvm::make_error<llvm::StringError>(DiagnosticsOS.str(),
                                              llvm::inconvertibleErrorCode());
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
-    const std::string &Input, StringRef WorkingDirectory,
-    const CompilationDatabase &CDB, DependencyConsumer &Consumer) {
+    StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
+    DependencyConsumer &Consumer, llvm::Optional<StringRef> ModuleName) {
+  // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-  return runWithDiags(DiagOpts.get(), [&](DiagnosticConsumer &DC) {
-    /// Create the tool that uses the underlying file system to ensure that any
-    /// file system requests that are made by the driver do not go through the
-    /// dependency scanning filesystem.
-    tooling::ClangTool Tool(CDB, Input, PCHContainerOps, RealFS, Files);
-    Tool.clearArgumentsAdjusters();
-    Tool.setRestoreWorkingDir(false);
-    Tool.setPrintErrorMessage(false);
-    Tool.setDiagnosticConsumer(&DC);
-    DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
-                                    PPSkipMappings.get(), Format);
-    return !Tool.run(&Action);
-  });
+  if (Files)
+    Files->setVirtualFileSystem(RealFS);
+
+  llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
+      Files ? Files : new FileManager(FileSystemOptions(), RealFS);
+
+  Optional<std::vector<std::string>> ModifiedCommandLine;
+  if (ModuleName.hasValue()) {
+    ModifiedCommandLine = CommandLine;
+    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
+    ModifiedCommandLine->emplace_back(*ModuleName);
+  }
+
+  const std::vector<std::string> &FinalCommandLine =
+      ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
+
+  std::vector<const char *> FinalCCommandLine(CommandLine.size(), nullptr);
+  llvm::transform(CommandLine, FinalCCommandLine.begin(),
+                  [](const std::string &Str) { return Str.c_str(); });
+
+  return runWithDiags(CreateAndPopulateDiagOpts(FinalCCommandLine).release(),
+                      [&](DiagnosticConsumer &DC, DiagnosticOptions &DiagOpts) {
+                        DependencyScanningAction Action(
+                            WorkingDirectory, Consumer, DepFS,
+                            PPSkipMappings.get(), Format, OptimizeArgs,
+                            ModuleName);
+                        // Create an invocation that uses the underlying file
+                        // system to ensure that any file system requests that
+                        // are made by the driver do not go through the
+                        // dependency scanning filesystem.
+                        ToolInvocation Invocation(FinalCommandLine, &Action,
+                                                  CurrentFiles.get(),
+                                                  PCHContainerOps);
+                        Invocation.setDiagnosticConsumer(&DC);
+                        Invocation.setDiagnosticOptions(&DiagOpts);
+                        return Invocation.run();
+                      });
 }

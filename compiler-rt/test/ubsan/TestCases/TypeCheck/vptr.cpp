@@ -11,17 +11,17 @@
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t rV
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t oV
 // RUN: %env_ubsan_opts=halt_on_error=1 %run %t zN
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-MEMBER --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t fS 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cS 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --check-prefix=CHECK-%os-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cS 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --allow-unused-prefixes --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t mV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-MEMBER --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t fV 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cV 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t oU 2>&1 | FileCheck %s --check-prefix=CHECK-OFFSET --check-prefix=CHECK-%os-OFFSET --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
-// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t cV 2>&1 | FileCheck %s --check-prefix=CHECK-DOWNCAST --allow-unused-prefixes --check-prefix=CHECK-%os-DOWNCAST --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t oU 2>&1 | FileCheck %s --check-prefix=CHECK-OFFSET --allow-unused-prefixes --check-prefix=CHECK-%os-OFFSET --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
+// RUN: %env_ubsan_opts=halt_on_error=1:print_stacktrace=1 not %run %t m0 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-MEMBER --allow-unused-prefixes --check-prefix=CHECK-%os-NULL-MEMBER --strict-whitespace
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t nN 2>&1 | FileCheck %s --check-prefix=CHECK-NULL-MEMFUN --strict-whitespace
-// RUN: %env_ubsan_opts=print_stacktrace=1 %run %t dT 2>&1 | FileCheck %s --check-prefix=CHECK-DYNAMIC --check-prefix=CHECK-%os-DYNAMIC --strict-whitespace
+// RUN: %env_ubsan_opts=print_stacktrace=1 %run %t dT 2>&1 | FileCheck %s --check-prefix=CHECK-DYNAMIC --allow-unused-prefixes --check-prefix=CHECK-%os-DYNAMIC --strict-whitespace
 
 // RUN: (echo "vptr_check:S"; echo "vptr_check:T"; echo "vptr_check:U") > %t.supp
 // RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.supp"' %run %t mS
@@ -162,7 +162,7 @@ int access_p(T *p, char type) {
   case 'm':
     // CHECK-MEMBER: vptr.cpp:[[@LINE+6]]:15: runtime error: member access within address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMBER-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-MEMBER-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-MEMBER-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-MEMBER-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-MEMBER-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // CHECK-Linux-MEMBER: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]
@@ -178,7 +178,7 @@ int access_p(T *p, char type) {
   case 'f':
     // CHECK-MEMFUN: vptr.cpp:[[@LINE+6]]:15: runtime error: member call on address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-MEMFUN-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-MEMFUN-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-MEMFUN-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-MEMFUN-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-MEMFUN-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // TODO: Add check for stacktrace here.
@@ -196,7 +196,7 @@ int access_p(T *p, char type) {
   case 'c':
     // CHECK-DOWNCAST: vptr.cpp:[[@LINE+6]]:11: runtime error: downcast of address [[PTR:0x[0-9a-f]*]] which does not point to an object of type 'T'
     // CHECK-DOWNCAST-NEXT: [[PTR]]: note: object is of type [[DYN_TYPE:'S'|'U']]
-    // CHECK-DOWNCAST-NEXT: {{^ .. .. .. ..  .. .. .. .. .. .. .. ..  }}
+    // CHECK-DOWNCAST-NEXT: {{^  ?.. .. .. ..  ?.. .. .. ..  ?.. .. .. ..  ?}}
     // CHECK-DOWNCAST-NEXT: {{^              \^~~~~~~~~~~(~~~~~~~~~~~~)? *$}}
     // CHECK-DOWNCAST-NEXT: {{^              vptr for}} [[DYN_TYPE]]
     // CHECK-Linux-DOWNCAST: #0 {{.*}}access_p{{.*}}vptr.cpp:[[@LINE+1]]

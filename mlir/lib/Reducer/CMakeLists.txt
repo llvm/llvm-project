@@ -1,7 +1,17 @@
 add_mlir_library(MLIRReduce
+   OptReductionPass.cpp
+   ReductionNode.cpp
+   ReductionTreePass.cpp
    Tester.cpp
-   DEPENDS
+
+   LINK_LIBS PUBLIC
    MLIRIR
- )
- 
- mlir_check_all_link_libraries(MLIRReduce)
+   MLIRPass
+   MLIRRewrite
+   MLIRTransformUtils
+
+   DEPENDS
+   MLIRReducerIncGen
+)
+
+mlir_check_all_link_libraries(MLIRReduce)

@@ -40,6 +40,13 @@ public:
   // Returns true if this is a variadic type constraint.
   bool isVariadic() const;
 
+  // Returns true if this is a nested variadic type constraint.
+  bool isVariadicOfVariadic() const;
+
+  // Return the segment size attribute used if this is a variadic of variadic
+  // constraint. Asserts isVariadicOfVariadic() is true.
+  StringRef getVariadicOfVariadicSegmentSizeAttr() const;
+
   // Returns true if this is a variable length type constraint. This is either
   // variadic or optional.
   bool isVariableLength() const { return isOptional() || isVariadic(); }
@@ -47,6 +54,9 @@ public:
   // Returns the builder call for this constraint if this is a buildable type,
   // returns None otherwise.
   Optional<StringRef> getBuilderCall() const;
+
+  // Return the C++ class name for this type (which may just be ::mlir::Type).
+  std::string getCPPClassName() const;
 };
 
 // Wrapper class with helper methods for accessing Types defined in TableGen.
@@ -55,7 +65,7 @@ public:
   explicit Type(const llvm::Record *record);
 
   // Returns the description of the type.
-  StringRef getTypeDescription() const;
+  StringRef getDescription() const;
 
   // Returns the dialect for the type if defined.
   Dialect getDialect() const;

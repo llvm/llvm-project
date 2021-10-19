@@ -973,6 +973,9 @@ EOF
     ppc:Linux:*:*)
 	echo powerpc-unknown-linux-gnu
 	exit ;;
+    ppcle:Linux:*:*)
+	echo powerpcle-unknown-linux-gnu
+	exit ;;
     riscv32:Linux:*:* | riscv64:Linux:*:*)
 	LIBC=gnu
 	eval $set_cc_for_build

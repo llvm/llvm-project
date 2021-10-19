@@ -8,14 +8,15 @@
 
 // UNSUPPORTED: no-exceptions
 
-#include <cassert>
+// Compilers emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats, you've just diagnosed the
+// behavior under test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
+// The fix for PR17222 made it in the dylib for macOS 10.10
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.9
+
+#include <cassert>
 
 #if __cplusplus < 201103L
 #define DISABLE_NULLPTR_TESTS
@@ -198,7 +199,7 @@ void test10 ()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
@@ -210,4 +211,6 @@ int main()
     test8();
     test9();
     test10();
+
+    return 0;
 }

@@ -11,11 +11,11 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 # LD-REL:      .rela.dyn {
-# LD-REL-NEXT:   0x202C4 R_PPC_DTPMOD32 - 0x0
+# LD-REL-NEXT:   0x202D0 R_PPC_DTPMOD32 - 0x0
 # LD-REL-NEXT: }
 
-## .got - _GLOBAL_OFFSET_TABLE_ = 0
-# LD:      addi 3, 30, 0
+## &.got[3] - _GLOBAL_OFFSET_TABLE_ = 12
+# LD:      addi 3, 30, 12
 # LD-NEXT: bl 0x101f8
 ## a@dtprel = st_value(a)-0x8000 = 65540-0x8000 = 65536*1-32764
 ## b@dtprel = st_value(a)-0x8000 = 131080-0x8000 = 65536*2-32760
@@ -28,8 +28,8 @@
 
 ## Check that b@got@tlsld does not allocate another GOT entry.
 ## It shares In.Got->TlsIndexOff allocated when processing a@got@tlsld.
-## .got - _GLOBAL_OFFSET_TABLE_ = 0
-# LD-NEXT: addi 3, 9, 0
+## &.got[3] - _GLOBAL_OFFSET_TABLE_ = 12
+# LD-NEXT: addi 3, 9, 12
 # LD-NEXT: bl 0x101f8
 ## b@dtprel = st_value(a)-0x8000 = 131080-0x8000 = 65536*2-32760
 # LD-NEXT: addis 29, 3, 2

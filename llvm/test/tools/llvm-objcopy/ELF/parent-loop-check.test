@@ -33,16 +33,15 @@ Sections:
     Size:            4064
     Content:         "DEADBEEF"
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .note
-      - Section: .rodata
-  - Type: PT_NOTE
-    Flags: [ PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .note
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .note
+    LastSec:  .rodata
+  - Type:     PT_NOTE
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    FirstSec: .note
+    LastSec:  .note
 
 # CHECK: 000000 de ad be ef

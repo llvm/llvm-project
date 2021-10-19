@@ -18,8 +18,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ASTPrint.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -31,10 +33,8 @@ using namespace tooling;
 
 namespace {
 
-using PrintingPolicyModifier = void (*)(PrintingPolicy &policy);
-
 void PrintDecl(raw_ostream &Out, const ASTContext *Context, const Decl *D,
-               PrintingPolicyModifier PolicyModifier) {
+               PrintingPolicyAdjuster PolicyModifier) {
   PrintingPolicy Policy = Context->getPrintingPolicy();
   Policy.TerseOutput = true;
   Policy.Indentation = 0;
@@ -43,74 +43,23 @@ void PrintDecl(raw_ostream &Out, const ASTContext *Context, const Decl *D,
   D->print(Out, Policy, /*Indentation*/ 0, /*PrintInstantiation*/ false);
 }
 
-class PrintMatch : public MatchFinder::MatchCallback {
-  SmallString<1024> Printed;
-  unsigned NumFoundDecls;
-  PrintingPolicyModifier PolicyModifier;
-
-public:
-  PrintMatch(PrintingPolicyModifier PolicyModifier)
-      : NumFoundDecls(0), PolicyModifier(PolicyModifier) {}
-
-  void run(const MatchFinder::MatchResult &Result) override {
-    const Decl *D = Result.Nodes.getNodeAs<Decl>("id");
-    if (!D || D->isImplicit())
-      return;
-    NumFoundDecls++;
-    if (NumFoundDecls > 1)
-      return;
-
-    llvm::raw_svector_ostream Out(Printed);
-    PrintDecl(Out, Result.Context, D, PolicyModifier);
-  }
-
-  StringRef getPrinted() const {
-    return Printed;
-  }
-
-  unsigned getNumFoundDecls() const {
-    return NumFoundDecls;
-  }
-};
-
 ::testing::AssertionResult
 PrintedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
                    const DeclarationMatcher &NodeMatch,
                    StringRef ExpectedPrinted, StringRef FileName,
-                   PrintingPolicyModifier PolicyModifier = nullptr,
+                   PrintingPolicyAdjuster PolicyModifier = nullptr,
                    bool AllowError = false) {
-  PrintMatch Printer(PolicyModifier);
-  MatchFinder Finder;
-  Finder.addMatcher(NodeMatch, &Printer);
-  std::unique_ptr<FrontendActionFactory> Factory(
-      newFrontendActionFactory(&Finder));
-
-  if (!runToolOnCodeWithArgs(Factory->create(), Code, Args, FileName) &&
-      !AllowError)
-    return testing::AssertionFailure()
-      << "Parsing error in \"" << Code.str() << "\"";
-
-  if (Printer.getNumFoundDecls() == 0)
-    return testing::AssertionFailure()
-        << "Matcher didn't find any declarations";
-
-  if (Printer.getNumFoundDecls() > 1)
-    return testing::AssertionFailure()
-        << "Matcher should match only one declaration "
-           "(found " << Printer.getNumFoundDecls() << ")";
-
-  if (Printer.getPrinted() != ExpectedPrinted)
-    return ::testing::AssertionFailure()
-      << "Expected \"" << ExpectedPrinted.str() << "\", "
-         "got \"" << Printer.getPrinted().str() << "\"";
-
-  return ::testing::AssertionSuccess();
+  return PrintedNodeMatches<Decl>(
+      Code, Args, NodeMatch, ExpectedPrinted, FileName, PrintDecl,
+      PolicyModifier, AllowError,
+      // Filter out implicit decls
+      [](const Decl *D) { return !D->isImplicit(); });
 }
 
 ::testing::AssertionResult
 PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
   return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
                             ExpectedPrinted, "input.cc", PolicyModifier);
@@ -119,7 +68,7 @@ PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
 ::testing::AssertionResult
 PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
   return PrintedDeclMatches(Code,
                             Args,
@@ -164,7 +113,7 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
 ::testing::AssertionResult
 PrintedDeclCXX17Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                         StringRef ExpectedPrinted,
-                        PrintingPolicyModifier PolicyModifier = nullptr) {
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args{"-std=c++17", "-fno-delayed-template-parsing"};
   return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
                             PolicyModifier);
@@ -173,7 +122,7 @@ PrintedDeclCXX17Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
 ::testing::AssertionResult
 PrintedDeclC11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                       StringRef ExpectedPrinted,
-                      PrintingPolicyModifier PolicyModifier = nullptr) {
+                      PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c11");
   return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.c",
                             PolicyModifier);
@@ -1437,4 +1386,12 @@ TEST(DeclPrinter, TestObjCCategoryImplInvalidInterface) {
       "@implementation I (Extension) @end",
       namedDecl(hasName("Extension")).bind("id"),
       "@implementation <<error-type>>(Extension)\n@end", /*AllowError=*/true));
+}
+
+TEST(DeclPrinter, VarDeclWithInitializer) {
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 21"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 0x15",
+      [](PrintingPolicy &Policy) { Policy.ConstantsAsWritten = true; }));
 }

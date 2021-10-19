@@ -57,29 +57,101 @@ Sections:
     Link: .symtab
     Entries: [ 0, 0, 0, 0, 0, 0, 0, 0, 1 ]
 Symbols:
-  - Name:    undef
+  - Name:    [[NAME=undef]]
     Binding: STB_GLOBAL
-  - Name:    normal
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=normal]]
     Section: .text
     Binding: STB_GLOBAL
-  - Name:    common
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=common]]
     Index:   SHN_COMMON
     Binding: STB_GLOBAL
-  - Name:    absolute
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=absolute]]
     Index:   SHN_ABS
     Binding: STB_GLOBAL
-  - Name:    proc
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=proc]]
     Index:   0xff01
     Binding: STB_GLOBAL
-  - Name:    os
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=os]]
     Index:   0xff21
     Binding: STB_GLOBAL
-  - Name:    reserved
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=reserved]]
     Index:   0xfffe
     Binding: STB_GLOBAL
-  - Name:    xindex
+    Type:    [[TYPE=STT_NOTYPE]]
+  - Name:    [[NAME=xindex]]
     Index:   SHN_XINDEX
     Binding: STB_GLOBAL
+    Type:    [[TYPE=STT_NOTYPE]]
+
+## Check the behavior for section symbols.
+# RUN: yaml2obj --docnum=1 -DTYPE=STT_SECTION %s -o %t1-sec
+# RUN: llvm-readobj --symbols %t1-sec | FileCheck %s --check-prefix=LLVM1
+# RUN: llvm-readelf --symbols %t1-sec | FileCheck %s --check-prefix=GNU1
+
+## Check the behavior for unnamed section symbols.
+# RUN: yaml2obj --docnum=1 -DTYPE=STT_SECTION -DNAME="''" %s -o %t1-sec-unnamed
+# RUN: llvm-readobj --symbols %t1-sec-unnamed 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1-sec-unnamed --check-prefix=LLVM1-SEC-SYMS
+# RUN: llvm-readelf --symbols %t1-sec-unnamed 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1-sec-unnamed --check-prefix=GNU1-SEC-SYMS
+
+# LLVM1-SEC-SYMS:      Symbols [
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name:  (0)
+# LLVM1-SEC-SYMS:          Section: Undefined (0x0)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Undefined (0x0)
+# LLVM1-SEC-SYMS:        Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: .text (0)
+# LLVM1-SEC-SYMS:          Section: .text (0x1)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Common (0xFFF2)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Absolute (0xFFF1)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xff01 (SHN_LOPROC+0x1)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Processor Specific (0xFF01)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xff21 (SHN_LOOS+0x1)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Operating System Specific (0xFF21)
+# LLVM1-SEC-SYMS: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfffe (SHN_LORESERVE+0xfe)
+# LLVM1-SEC-SYMS-NEXT:   Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: <?> (0)
+# LLVM1-SEC-SYMS:          Section: Reserved (0xFFFE)
+# LLVM1-SEC-SYMS:        Symbol {
+# LLVM1-SEC-SYMS-NEXT:     Name: .text (0)
+# LLVM1-SEC-SYMS:          Section: .text (0x1)
+
+# GNU1-SEC-SYMS:      Num: {{.*}} Ndx Name
+# GNU1-SEC-SYMS-NEXT:   0: {{.*}} UND {{$}}
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# GNU1-SEC-SYMS-NEXT:   1: {{.*}} UND <?>
+# GNU1-SEC-SYMS-NEXT:   2: {{.*}}   1 .text
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# GNU1-SEC-SYMS-NEXT:   3: {{.*}} COM <?>
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# GNU1-SEC-SYMS-NEXT:   4: {{.*}} ABS <?>
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xff01 (SHN_LOPROC+0x1)
+# GNU1-SEC-SYMS-NEXT:   5: {{.*}} PRC[0xff01] <?>
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xff21 (SHN_LOOS+0x1)
+# GNU1-SEC-SYMS-NEXT:   6: {{.*}} OS[0xff21] <?>
+# GNU1-SEC-SYMS-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfffe (SHN_LORESERVE+0xfe)
+# GNU1-SEC-SYMS-NEXT:   7: {{.*}} RSV[0xfffe] <?>
+# GNU1-SEC-SYMS-NEXT:   8: {{.*}}   1 .text
 
 ## In this case, the index does not correspond to a real section. Check that GNU
 ## style just prints the section index as normal and LLVM style prints a warning
@@ -169,8 +241,8 @@ Symbols:
 # GNU3-NEXT:     1: {{.*}} RSV[0xffff] no_shndx
 # GNU3-NEXT:     2: {{.*}} RSV[0xffff] no_shndx2
 
-# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
-# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': extended symbol index (2) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': found an extended symbol index (1), but unable to locate the extended symbol index table
+# NO-SYMTAB-SHNDX: warning: '{{.*}}tmp3': found an extended symbol index (2), but unable to locate the extended symbol index table
 
 --- !ELF
 FileHeader:
@@ -182,3 +254,60 @@ Symbols:
     Index: SHN_XINDEX
   - Name:  no_shndx2
     Index: SHN_XINDEX
+
+## Check we can dump symbols even when the number of entries in the
+## SHT_SYMTAB_SHNDX section doesn't match the number of symbols in the symbol table.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readelf --symbols %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=SHNDX-ERR-GNU
+# RUN: llvm-readobj --symbols %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=SHNDX-ERR-LLVM
+
+#       SHNDX-ERR-GNU: warning: '[[FILE]]': SHT_SYMTAB_SHNDX has 3 entries, but the symbol table associated has 2
+# SHNDX-ERR-GNU-EMPTY:
+#  SHNDX-ERR-GNU-NEXT: Symbol table '.symtab' contains 2 entries:
+#  SHNDX-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+#  SHNDX-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+#  SHNDX-ERR-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+#  SHNDX-ERR-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff]
+# SHNDX-ERR-GNU-EMPTY:
+#   SHNDX-ERR-GNU-NOT:{{.}}
+
+# SHNDX-ERR-LLVM: warning: '[[FILE]]': SHT_SYMTAB_SHNDX has 3 entries, but the symbol table associated has 2
+# SHNDX-ERR-LLVM:      Format: elf64-unknown
+# SHNDX-ERR-LLVM-NEXT: Arch: unknown
+# SHNDX-ERR-LLVM-NEXT: AddressSize: 64bit
+# SHNDX-ERR-LLVM-NEXT: LoadName: <Not found>
+# SHNDX-ERR-LLVM-NEXT: Symbols [
+# SHNDX-ERR-LLVM-NEXT:   Symbol {
+# SHNDX-ERR-LLVM-NEXT:     Name:  (0)
+# SHNDX-ERR-LLVM-NEXT:     Value: 0x0
+# SHNDX-ERR-LLVM-NEXT:     Size: 0
+# SHNDX-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Type: None (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Other: 0
+# SHNDX-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# SHNDX-ERR-LLVM-NEXT:   }
+# SHNDX-ERR-LLVM-NEXT:   Symbol {
+# SHNDX-ERR-LLVM-NEXT:     Name:  (0)
+# SHNDX-ERR-LLVM-NEXT:     Value: 0x0
+# SHNDX-ERR-LLVM-NEXT:     Size: 0
+# SHNDX-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Type: None (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Other: 0
+# SHNDX-ERR-LLVM-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+# SHNDX-ERR-LLVM-NEXT:     Section: Reserved (0xFFFF)
+# SHNDX-ERR-LLVM-NEXT:   }
+# SHNDX-ERR-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1, 2 ]
+    Link:    .symtab
+Symbols:
+  - Index: SHN_XINDEX

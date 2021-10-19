@@ -8,7 +8,6 @@ class TestBitfieldIvars(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
 
-    @skipUnlessDarwin
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.m"))
@@ -25,6 +24,15 @@ class TestBitfieldIvars(TestBase):
                                              'field1 =', '10',
                                              'field2 =', '3',
                                              'field3 =', '4'])
+
+        self.expect_expr('myField', result_type="UCBitFields",
+                 result_children=[
+                     ValueCheck(name="fieldOne", value="'\\0'"),
+                     ValueCheck(name="fieldTwo", value="'\\x01'"),
+                     ValueCheck(name="fieldThree", value="'\\0'"),
+                     ValueCheck(name="fieldFour", value="'\\0'"),
+                     ValueCheck(name="fieldFive", value="'\\x01'")
+                 ])
 
     # This test is meant to be xfailed, but running the test triggers an ASan
     # issue, so it must be skipped for now.

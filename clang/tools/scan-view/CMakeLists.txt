@@ -7,8 +7,6 @@ set(ShareFiles
       ScanView.py
       Reporter.py
       startfile.py
-      FileRadar.scpt
-      GetRadarVersion.scpt
       bugcatcher.ico)
 
 if(CLANG_INSTALL_SCANVIEW)

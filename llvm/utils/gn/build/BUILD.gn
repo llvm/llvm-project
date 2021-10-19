@@ -1,5 +1,6 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
@@ -8,7 +9,7 @@ declare_args() {
   # After building with this, run tests and then run
   #    llvm/utils/prepare-code-coverage-artifact.py  \
   #        .../llvm-profdata .../llvm-cov out/gn/profiles/ report/ \
-  #        out/gn/bin/llvm-undname ...`
+  #        out/gn/bin/llvm-undname ...
   # to generate a HTML report for the binaries passed in the last line.
   llvm_build_instrumented_coverage = false
 
@@ -40,22 +41,44 @@ config("compiler_defaults") {
 
   asmflags = target_flags
   cflags = target_flags
+  cflags_cc = []
   ldflags = target_flags + target_ldflags
 
-  if (host_os == "mac" && clang_base_path != "") {
-    cflags += [
-      "-isysroot",
-      mac_sdk_path,
-    ]
-    ldflags += [
-      "-isysroot",
-      mac_sdk_path,
-    ]
+  # Mostly for compiler-rt, see compiler-rt/cmake/config-ix.cmake
+  if (current_os == "ios") {
+    asmflags += [ "-miphoneos-version-min=8.0" ]
+    cflags += [ "-miphoneos-version-min=8.0" ]
+    ldflags += [ "-miphoneos-version-min=8.0" ]
+  }
+  if (current_os == "mac") {
+    asmflags += [ "-mmacosx-version-min=10.10" ]
+    cflags += [ "-mmacosx-version-min=10.10" ]
+    ldflags += [ "-mmacosx-version-min=10.10" ]
   }
 
+  assert(symbol_level == 0 || symbol_level == 1 || symbol_level == 2,
+         "Unexpected symbol_level")
   if (host_os != "win") {
-    if (is_debug) {
+    if (symbol_level == 2) {
       cflags += [ "-g" ]
+
+      # For full debug-info -g builds, --gdb-index makes links ~15% slower, and
+      # gdb symbol reading time 1500% faster (lld links in 4.4 instead of 3.9s,
+      # and gdb loads and runs it in 2s instead of in 30s).  It's likely that
+      # people doing symbol_level=2 want to run a debugger (since
+      # symbol_level=2 isn't the default). So this seems like the right
+      # tradeoff.
+      if (host_os != "mac" && use_lld) {
+        cflags += [ "-ggnu-pubnames" ]  # PR34820
+        ldflags += [ "-Wl,--gdb-index" ]
+      }
+    } else if (symbol_level == 1) {
+      cflags += [ "-g1" ]
+      # For linetable-only -g1 builds, --gdb-index makes links ~8% slower, but
+      # links are 4x faster than -g builds so it's a fairly small absolute cost.
+      # On the other hand, gdb startup is well below 1s with and without the
+      # index, and people using -g1 likely don't use a debugger. So don't use
+      # the flag here.
     }
     if (is_optimized) {
       cflags += [ "-O3" ]
@@ -64,16 +87,19 @@ config("compiler_defaults") {
     if (use_lld) {
       ldflags += [ "-Wl,--color-diagnostics" ]
     }
-    cflags_cc = [
+    cflags_cc += [
       "-std=c++14",
       "-fvisibility-inlines-hidden",
     ]
   } else {
-    if (is_debug) {
+    if (symbol_level != 0) {
       cflags += [
         "/Zi",
         "/FS",
       ]
+      if (symbol_level == 1 && is_clang) {
+        cflags += [ "-gline-tables-only" ]
+      }
       ldflags += [ "/DEBUG" ]
 
       # Speed up links with ghash on windows.
@@ -208,7 +234,17 @@ config("compiler_defaults") {
       "-fprofile-instr-generate=" +
           rebase_path("$root_build_dir/profiles/%4m.profraw"),
     ]
-    ldflags += [ "-fprofile-instr-generate" ]
+    if (use_goma) {
+      # goma has a bug where it writes the server-side absolute path.
+      # Work around that.
+      # FIXME: Instead, set this to `.` for deterministic builds and pass
+      # the build dir to prepare-code-coverage-artifact.py instead.
+      cflags += [ "-fcoverage-compilation-dir=" + rebase_path(root_build_dir) ]
+    }
+
+    if (host_os != "win") {
+      ldflags += [ "-fprofile-instr-generate" ]
+    }
   }
 
   # Deterministic build setup, see
@@ -235,12 +271,94 @@ config("compiler_defaults") {
       ]
     }
   }
+  if (sysroot != "") {
+    if (current_os == "win") {
+      assert(is_clang, "sysroot only works with clang-cl as host compiler")
+      cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+    } else if (current_os != "ios" && current_os != "mac") {
+      cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+    }
+  }
+  if ((current_os == "ios" || current_os == "mac") &&
+      (clang_base_path != "" || sysroot != "")) {
+    if (current_os == "ios" && current_cpu == "arm64") {
+      sdk_path = ios_sdk_path
+    } else if (current_os == "ios" && current_cpu == "x64") {
+      sdk_path = iossim_sdk_path
+    } else if (current_os == "mac") {
+      sdk_path = mac_sdk_path
+    }
+    cflags += [
+      "-isysroot",
+      rebase_path(sdk_path, root_build_dir),
+    ]
+    ldflags += [
+      "-isysroot",
+      rebase_path(sdk_path, root_build_dir),
+    ]
+  }
+  if (sysroot != "" && current_os != "win" && is_clang) {
+    cflags += [ "-Wpoison-system-directories" ]
+  }
+  assert(
+      !use_goma || sysroot != "",
+      "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
+
+  if (use_ubsan) {
+    assert(is_clang && current_os == "linux",
+           "ubsan only supported on Linux/Clang")
+    cflags += [
+      "-fsanitize=undefined",
+      "-fno-sanitize-recover=all",
+    ]
+    ldflags += [ "-fsanitize=undefined" ]
+  }
+
+  if (use_asan) {
+    assert(is_clang && (current_os == "ios" || current_os == "linux" ||
+                            current_os == "mac"),
+           "asan only supported on iOS/Clang, Linux/Clang, and macOS/Clang")
+    cflags += [ "-fsanitize=address" ]
+    ldflags += [ "-fsanitize=address" ]
+  }
+
+  if (use_tsan) {
+    assert(is_clang && current_os == "linux",
+           "tsan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=thread" ]
+    ldflags += [ "-fsanitize=thread" ]
+  }
+
+  if (use_thinlto) {
+    assert(is_clang, "ThinLTO only supported on Clang")
+
+    lto_opt_level = 2
+
+    cflags += [ "-flto=thin" ]
+
+    if (host_os == "win") {
+      ldflags += [
+        "/opt:lldlto=" + lto_opt_level,
+        "/opt:lldltojobs=" + max_jobs_per_lto_link,
+      ]
+    } else {
+      ldflags += [
+        "-flto=thin",
+        "-Wl,--thinlto-jobs=" + max_jobs_per_lto_link,
+        "-Wl,--lto-O" + lto_opt_level,
+      ]
+    }
+  }
+
+  cflags_objcc = cflags_cc
 }
 
 config("no_exceptions") {
+  cflags_cc = []
   if (host_os != "win") {
-    cflags_cc = [ "-fno-exceptions" ]
+    cflags_cc += [ "-fno-exceptions" ]
   }
+  cflags_objcc = cflags_cc
 }
 
 config("no_rtti") {
@@ -249,12 +367,21 @@ config("no_rtti") {
   } else {
     cflags_cc = [ "-fno-rtti" ]
   }
+  cflags_objcc = cflags_cc
+}
+
+config("zdefs") {
+  # -Wl,-z,defs doesn't work with sanitizers.
+  # https://clang.llvm.org/docs/AddressSanitizer.html
+  if (current_os != "ios" && current_os != "mac" && current_os != "win" && !(use_asan || use_tsan || use_ubsan)) {
+    ldflags = [ "-Wl,-z,defs" ]
+  }
 }
 
 # To make an archive that can be distributed, you need to remove this config and
 # set complete_static_lib.
 config("thin_archive") {
-  if (current_os != "win" && current_os != "mac") {
+  if (current_os != "ios" && current_os != "mac" && current_os != "win") {
     arflags = [ "-T" ]
   }
 }
@@ -264,6 +391,9 @@ config("llvm_code") {
     "//llvm/include",
     "$root_gen_dir/llvm/include",
   ]
+  if (current_os != "win") {
+    cflags = [ "-fPIC" ]
+  }
 }
 
 config("lld_code") {
@@ -290,6 +420,23 @@ config("crt_code") {
     "-funwind-tables",
     "-gline-tables-only",
     "-fvisibility=hidden",
+  ]
+  if (is_clang) {
+    cflags += [
+      "-Werror=thread-safety",
+      "-Werror=thread-safety-reference",
+      "-Werror=thread-safety-beta",
+    ]
+  }
+}
+
+config("lldb_code") {
+  if (host_os != "win") {
+    cflags = [ "-fno-strict-aliasing" ]
+  }
+  include_dirs = [
+    "//lldb/include",
+    "$root_gen_dir/lldb/include",
   ]
 }
 

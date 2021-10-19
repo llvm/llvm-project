@@ -31,7 +31,7 @@ entry:
 define void @test2() gc "statepoint-example" {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) #0 [ "deopt"(i32 57) ]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @foo, i32 0, i32 2, i32 0, i32 0) [[ATTR0:#.*]] [ "deopt"(i32 57) ]
 ; CHECK-NEXT:    ret void
 ;
 

@@ -30,7 +30,7 @@ HistoryUnwind::HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs,
 
 // Destructor
 
-HistoryUnwind::~HistoryUnwind() {}
+HistoryUnwind::~HistoryUnwind() = default;
 
 void HistoryUnwind::DoClear() {
   std::lock_guard<std::recursive_mutex> guard(m_unwind_mutex);

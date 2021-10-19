@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=FUNC %s
 
 @local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
 
@@ -10,7 +10,7 @@
 ; not an immediate.
 
 ; FUNC-LABEL: {{^}}load_i32_local_const_ptr:
-; GCN: v_mov_b32_e32 v[[PTR:[0-9]+]], lds@abs32@lo
+; GCN: v_mov_b32_e32 v[[PTR:[0-9]+]], 0{{$}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v[[PTR]] offset:4
 
 ; R600: LDS_READ_RET

@@ -282,29 +282,14 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
   return state;
 }
 
-ProgramStateRef ExprEngine::handleLVectorSplat(
-    ProgramStateRef state, const LocationContext* LCtx, const CastExpr* CastE,
-    StmtNodeBuilder &Bldr, ExplodedNode* Pred) {
-  // Recover some path sensitivity by conjuring a new value.
-  QualType resultType = CastE->getType();
-  if (CastE->isGLValue())
-    resultType = getContext().getPointerType(resultType);
-  SVal result = svalBuilder.conjureSymbolVal(nullptr, CastE, LCtx,
-                                             resultType,
-                                             currBldrCtx->blockCount());
-  state = state->BindExpr(CastE, LCtx, result);
-  Bldr.generateNode(CastE, Pred, state);
-
-  return state;
-}
-
 void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
                            ExplodedNode *Pred, ExplodedNodeSet &Dst) {
 
   ExplodedNodeSet dstPreStmt;
   getCheckerManager().runCheckersForPreStmt(dstPreStmt, Pred, CastE, *this);
 
-  if (CastE->getCastKind() == CK_LValueToRValue) {
+  if (CastE->getCastKind() == CK_LValueToRValue ||
+      CastE->getCastKind() == CK_LValueToRValueBitCast) {
     for (ExplodedNodeSet::iterator I = dstPreStmt.begin(), E = dstPreStmt.end();
          I!=E; ++I) {
       ExplodedNode *subExprNode = *I;
@@ -332,6 +317,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 
     switch (CastE->getCastKind()) {
       case CK_LValueToRValue:
+      case CK_LValueToRValueBitCast:
         llvm_unreachable("LValueToRValue casts handled earlier.");
       case CK_ToVoid:
         continue;
@@ -380,7 +366,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_Dependent:
       case CK_ArrayToPointerDecay:
       case CK_BitCast:
-      case CK_LValueToRValueBitCast:
       case CK_AddressSpaceConversion:
       case CK_BooleanToSignedIntegral:
       case CK_IntegralToPointer:
@@ -418,6 +403,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_ZeroToOCLOpaqueType:
       case CK_IntToOCLSampler:
       case CK_LValueBitCast:
+      case CK_FloatingToFixedPoint:
+      case CK_FixedPointToFloating:
       case CK_FixedPointCast:
       case CK_FixedPointToBoolean:
       case CK_FixedPointToIntegral:
@@ -524,22 +511,28 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_ReinterpretMemberPointer: {
         SVal V = state->getSVal(Ex, LCtx);
         if (auto PTMSV = V.getAs<nonloc::PointerToMember>()) {
-          SVal CastedPTMSV = svalBuilder.makePointerToMember(
-              getBasicVals().accumCXXBase(
-                  llvm::make_range<CastExpr::path_const_iterator>(
-                      CastE->path_begin(), CastE->path_end()), *PTMSV));
+          SVal CastedPTMSV =
+              svalBuilder.makePointerToMember(getBasicVals().accumCXXBase(
+                  CastE->path(), *PTMSV, CastE->getCastKind()));
           state = state->BindExpr(CastE, LCtx, CastedPTMSV);
           Bldr.generateNode(CastE, Pred, state);
           continue;
         }
         // Explicitly proceed with default handler for this case cascade.
-        state = handleLVectorSplat(state, LCtx, CastE, Bldr, Pred);
-        continue;
       }
+        LLVM_FALLTHROUGH;
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
+      case CK_MatrixCast:
       case CK_VectorSplat: {
-        state = handleLVectorSplat(state, LCtx, CastE, Bldr, Pred);
+        QualType resultType = CastE->getType();
+        if (CastE->isGLValue())
+          resultType = getContext().getPointerType(resultType);
+        SVal result = svalBuilder.conjureSymbolVal(
+            /*symbolTag=*/nullptr, CastE, LCtx, resultType,
+            currBldrCtx->blockCount());
+        state = state->BindExpr(CastE, LCtx, result);
+        Bldr.generateNode(CastE, Pred, state);
         continue;
       }
     }

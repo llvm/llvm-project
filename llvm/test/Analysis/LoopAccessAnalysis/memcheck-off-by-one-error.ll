@@ -1,4 +1,4 @@
-; RUN: opt -analyze --loop-accesses %s | FileCheck %s
+; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
 
 ; This test verifies run-time boundary check of memory accesses.
 ; The original loop:
@@ -18,7 +18,7 @@
 ; The loop was vectorized to 4, 32 byte memory access ( <4 x i64> ),
 ; store a value at *%op touched memory under *%src.
 
-;CHECK: Printing analysis 'Loop Access Analysis' for function 'fastCopy'
+;CHECK: function 'fastCopy':
 ;CHECK: (Low: %op High: (32 + %op))
 ;CHECK: (Low: %src High: (32 + %src))
 

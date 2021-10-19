@@ -11,13 +11,17 @@
 
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -26,9 +30,9 @@
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "instruction-select"
@@ -41,7 +45,7 @@ static cl::opt<std::string>
                    cl::desc("Record GlobalISel rule coverage files of this "
                             "prefix if instrumentation was generated"));
 #else
-static const std::string CoveragePrefix = "";
+static const std::string CoveragePrefix;
 #endif
 
 char InstructionSelect::ID = 0;
@@ -50,16 +54,29 @@ INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect() : MachineFunctionPass(ID) { }
+InstructionSelect::InstructionSelect(CodeGenOpt::Level OL)
+    : MachineFunctionPass(ID), OptLevel(OL) {}
+
+// In order not to crash when calling getAnalysis during testing with -run-pass
+// we use the default opt level here instead of None, so that the addRequired()
+// calls are made in getAnalysisUsage().
+InstructionSelect::InstructionSelect()
+    : MachineFunctionPass(ID), OptLevel(CodeGenOpt::Default) {}
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<GISelKnownBitsAnalysis>();
-  AU.addPreserved<GISelKnownBitsAnalysis>();
+  if (OptLevel != CodeGenOpt::None) {
+    AU.addRequired<GISelKnownBitsAnalysis>();
+    AU.addPreserved<GISelKnownBitsAnalysis>();
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  }
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -71,13 +88,26 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   LLVM_DEBUG(dbgs() << "Selecting function: " << MF.getName() << '\n');
-  GISelKnownBits &KB = getAnalysis<GISelKnownBitsAnalysis>().get(MF);
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
+
+  CodeGenOpt::Level OldOptLevel = OptLevel;
+  auto RestoreOptLevel = make_scope_exit([=]() { OptLevel = OldOptLevel; });
+  OptLevel = MF.getFunction().hasOptNone() ? CodeGenOpt::None
+                                           : MF.getTarget().getOptLevel();
+
+  GISelKnownBits *KB = nullptr;
+  if (OptLevel != CodeGenOpt::None) {
+    KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
+    PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    if (PSI && PSI->hasProfileSummary())
+      BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
+  }
+
   CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, KB, CoverageInfo);
+  ISel->setupMF(MF, KB, CoverageInfo, PSI, BFI);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
@@ -100,8 +130,12 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // Until then, keep track of the number of blocks to assert that we don't.
   const size_t NumBlocks = MF.size();
 #endif
+  // Keep track of selected blocks, so we can delete unreachable ones later.
+  DenseSet<MachineBasicBlock *> SelectedBlocks;
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
+    ISel->CurMBB = MBB;
+    SelectedBlocks.insert(MBB);
     if (MBB->empty())
       continue;
 
@@ -133,6 +167,25 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
+      // Eliminate hints.
+      if (isPreISelGenericOptimizationHint(MI.getOpcode())) {
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(1).getReg();
+
+        // At this point, the destination register class of the hint may have
+        // been decided.
+        //
+        // Propagate that through to the source register.
+        const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
+        if (DstRC)
+          MRI.setRegClass(SrcReg, DstRC);
+        assert(canReplaceReg(DstReg, SrcReg, MRI) &&
+               "Must be able to replace dst with src!");
+        MI.eraseFromParent();
+        MRI.replaceRegWith(DstReg, SrcReg);
+        continue;
+      }
+
       if (!ISel->select(MI)) {
         // FIXME: It would be nice to dump all inserted instructions.  It's
         // not obvious how, esp. considering select() can insert after MI.
@@ -155,6 +208,15 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
     if (MBB.empty())
       continue;
 
+    if (!SelectedBlocks.contains(&MBB)) {
+      // This is an unreachable block and therefore hasn't been selected, since
+      // the main selection loop above uses a postorder block traversal.
+      // We delete all the instructions in this block since it's unreachable.
+      MBB.clear();
+      // Don't delete the block in case the block has it's address taken or is
+      // still being referenced by a phi somewhere.
+      continue;
+    }
     // Try to find redundant copies b/w vregs of the same register class.
     bool ReachedBegin = false;
     for (auto MII = std::prev(MBB.end()), Begin = MBB.begin(); !ReachedBegin;) {

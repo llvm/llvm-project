@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// This test requires the dylib support introduced in D92769.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
+
 // <filesystem>
 
 // bool create_directory(const path& p, const path& attr);
@@ -55,6 +58,8 @@ TEST_CASE(create_existing_directory)
     TEST_CHECK(fs::create_directory(dir, dir2) == false);
 }
 
+// Windows doesn't have the concept of perms::none on directories.
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 TEST_CASE(create_directory_one_level)
 {
     scoped_test_env env;
@@ -74,6 +79,7 @@ TEST_CASE(create_directory_one_level)
     auto st = status(dir);
     TEST_CHECK(st.permissions() == perms::none);
 }
+#endif
 
 TEST_CASE(create_directory_multi_level)
 {
@@ -95,8 +101,21 @@ TEST_CASE(dest_is_file)
     const path attr_dir = env.create_dir("attr_dir");
     std::error_code ec = GetTestEC();
     TEST_CHECK(fs::create_directory(file, attr_dir, ec) == false);
-    TEST_CHECK(!ec);
+    TEST_CHECK(ec);
     TEST_CHECK(is_regular_file(file));
+}
+
+TEST_CASE(dest_part_is_file)
+{
+    scoped_test_env env;
+    const path file = env.create_file("file", 42);
+    const path dir = env.make_env_path("file/dir1");
+    const path attr_dir = env.create_dir("attr_dir");
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(fs::create_directory(dir, attr_dir, ec) == false);
+    TEST_CHECK(ec);
+    TEST_CHECK(is_regular_file(file));
+    TEST_CHECK(!exists(dir));
 }
 
 TEST_CASE(attr_dir_is_invalid) {
@@ -117,14 +136,38 @@ TEST_CASE(attr_dir_is_invalid) {
   }
 }
 
-TEST_CASE(dest_is_symlink) {
+TEST_CASE(dest_is_symlink_to_unexisting) {
   scoped_test_env env;
-  const path dir = env.create_dir("dir");
+  const path attr_dir = env.create_dir("attr_dir");
   const path sym = env.create_symlink("dne_sym", "dne_sym_name");
   {
     std::error_code ec = GetTestEC();
-    TEST_CHECK(create_directory(sym, dir, ec) == false);
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
+    TEST_CHECK(ec);
+  }
+}
+
+TEST_CASE(dest_is_symlink_to_dir) {
+  scoped_test_env env;
+  const path dir = env.create_dir("dir");
+  const path sym = env.create_directory_symlink(dir, "sym_name");
+  const path attr_dir = env.create_dir("attr_dir");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
     TEST_CHECK(!ec);
+  }
+}
+
+TEST_CASE(dest_is_symlink_to_file) {
+  scoped_test_env env;
+  const path file = env.create_file("file");
+  const path sym = env.create_symlink(file, "sym_name");
+  const path attr_dir = env.create_dir("attr_dir");
+  {
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(create_directory(sym, attr_dir, ec) == false);
+    TEST_CHECK(ec);
   }
 }
 

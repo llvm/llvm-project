@@ -1,6 +1,7 @@
-# RUN: llvm-objdump --macho -d %p/Inputs/hello.obj.macho-x86_64 --no-show-raw-insn --print-imm-hex --no-leading-addr | FileCheck %s
+# RUN: llvm-objdump --macho -d %p/Inputs/hello.obj.macho-x86_64 --no-show-raw-insn --print-imm-hex --no-leading-addr | FileCheck --check-prefixes=CHECK,HEAD %s
+# RUN: llvm-otool -tVX %p/Inputs/hello.obj.macho-x86_64 | FileCheck --implicit-check-not=section %s
 
-# CHECK: (__TEXT,__text) section
+# HEAD: (__TEXT,__text) section
 # CHECK: _main:
 # CHECK: 	pushq	%rbp
 # CHECK: 	movq	%rsp, %rbp

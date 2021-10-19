@@ -22,8 +22,21 @@ using std::optional;
 using std::nullopt_t;
 using std::nullopt;
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool test()
 {
+    enum class State { inactive, constructed, destroyed };
+    State state = State::inactive;
+
+    struct StateTracker {
+      TEST_CONSTEXPR_CXX20 StateTracker(State& s)
+      : state_(&s)
+      {
+        s = State::constructed;
+      }
+      TEST_CONSTEXPR_CXX20 ~StateTracker() { *state_ = State::destroyed; }
+
+      State* state_;
+    };
     {
         optional<int> opt;
         static_assert(noexcept(opt = nullopt) == true, "");
@@ -35,6 +48,29 @@ int main(int, char**)
         opt = nullopt;
         assert(static_cast<bool>(opt) == false);
     }
+    {
+        optional<StateTracker> opt;
+        opt = nullopt;
+        assert(state == State::inactive);
+        assert(static_cast<bool>(opt) == false);
+    }
+    {
+        optional<StateTracker> opt(state);
+        assert(state == State::constructed);
+        opt = nullopt;
+        assert(state == State::destroyed);
+        assert(static_cast<bool>(opt) == false);
+    }
+    return true;
+}
+
+
+int main(int, char**)
+{
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    test();
     using TT = TestTypes::TestType;
     TT::reset();
     {

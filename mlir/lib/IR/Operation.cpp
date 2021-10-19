@@ -8,17 +8,16 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/StringExtras.h"
 #include <numeric>
 
 using namespace mlir;
-
-OpAsmParser::~OpAsmParser() {}
 
 //===----------------------------------------------------------------------===//
 // OperationName
@@ -35,29 +34,32 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
 }
 
 /// Return the name of the dialect this operation is registered to.
-StringRef OperationName::getDialect() const {
+StringRef OperationName::getDialectNamespace() const {
+  if (Dialect *dialect = getDialect())
+    return dialect->getNamespace();
   return getStringRef().split('.').first;
 }
 
 /// Return the operation name with dialect name stripped, if it has one.
 StringRef OperationName::stripDialect() const {
-  auto splitName = getStringRef().split(".");
-  return splitName.second.empty() ? splitName.first : splitName.second;
+  return getStringRef().split('.').second;
 }
 
-/// Return the name of this operation.  This always succeeds.
+/// Return the name of this operation. This always succeeds.
 StringRef OperationName::getStringRef() const {
+  return getIdentifier().strref();
+}
+
+/// Return the name of this operation as an identifier. This always succeeds.
+Identifier OperationName::getIdentifier() const {
   if (auto *op = representation.dyn_cast<const AbstractOperation *>())
     return op->name;
-  return representation.get<Identifier>().strref();
+  return representation.get<Identifier>();
 }
 
-const AbstractOperation *OperationName::getAbstractOperation() const {
-  return representation.dyn_cast<const AbstractOperation *>();
-}
-
-OperationName OperationName::getFromOpaquePointer(void *pointer) {
-  return OperationName(RepresentationUnion::getFromOpaqueValue(pointer));
+OperationName OperationName::getFromOpaquePointer(const void *pointer) {
+  return OperationName(
+      RepresentationUnion::getFromOpaqueValue(const_cast<void *>(pointer)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -66,28 +68,25 @@ OperationName OperationName::getFromOpaquePointer(void *pointer) {
 
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
-                             ArrayRef<Type> resultTypes,
-                             ArrayRef<Value> operands,
+                             TypeRange resultTypes, ValueRange operands,
                              ArrayRef<NamedAttribute> attributes,
-                             ArrayRef<Block *> successors,
-                             unsigned numRegions) {
+                             BlockRange successors, unsigned numRegions) {
   return create(location, name, resultTypes, operands,
-                MutableDictionaryAttr(attributes), successors, numRegions);
+                DictionaryAttr::get(location.getContext(), attributes),
+                successors, numRegions);
 }
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  return Operation::create(state.location, state.name, state.types,
-                           state.operands, state.attributes, state.successors,
-                           state.regions);
+  return create(state.location, state.name, state.types, state.operands,
+                state.attributes.getDictionary(state.getContext()),
+                state.successors, state.regions);
 }
 
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
-                             ArrayRef<Type> resultTypes,
-                             ArrayRef<Value> operands,
-                             MutableDictionaryAttr attributes,
-                             ArrayRef<Block *> successors,
+                             TypeRange resultTypes, ValueRange operands,
+                             DictionaryAttr attributes, BlockRange successors,
                              RegionRange regions) {
   unsigned numRegions = regions.size();
   Operation *op = create(location, name, resultTypes, operands, attributes,
@@ -98,19 +97,21 @@ Operation *Operation::create(Location location, OperationName name,
   return op;
 }
 
-/// Overload of create that takes an existing MutableDictionaryAttr to avoid
+/// Overload of create that takes an existing DictionaryAttr to avoid
 /// unnecessarily uniquing a list of attributes.
 Operation *Operation::create(Location location, OperationName name,
-                             ArrayRef<Type> resultTypes,
-                             ArrayRef<Value> operands,
-                             MutableDictionaryAttr attributes,
-                             ArrayRef<Block *> successors,
+                             TypeRange resultTypes, ValueRange operands,
+                             DictionaryAttr attributes, BlockRange successors,
                              unsigned numRegions) {
+  assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
+         "unexpected null result type");
+
   // We only need to allocate additional memory for a subset of results.
   unsigned numTrailingResults = OpResult::getNumTrailing(resultTypes.size());
   unsigned numInlineResults = OpResult::getNumInline(resultTypes.size());
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
+  unsigned numResults = resultTypes.size();
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
@@ -120,30 +121,35 @@ Operation *Operation::create(Location location, OperationName name,
       needsOperandStorage = !abstractOp->hasTrait<OpTrait::ZeroOperands>();
   }
 
-  // Compute the byte size for the operation and the operand storage.
-  auto byteSize =
-      totalSizeToAlloc<detail::InLineOpResult, detail::TrailingOpResult,
-                       BlockOperand, Region, detail::OperandStorage>(
-          numInlineResults, numTrailingResults, numSuccessors, numRegions,
-          needsOperandStorage ? 1 : 0);
-  byteSize +=
-      llvm::alignTo(detail::OperandStorage::additionalAllocSize(numOperands),
-                    alignof(Operation));
-  void *rawMem = malloc(byteSize);
+  // Compute the byte size for the operation and the operand storage. This takes
+  // into account the size of the operation, its trailing objects, and its
+  // prefixed objects.
+  size_t byteSize =
+      totalSizeToAlloc<BlockOperand, Region, detail::OperandStorage>(
+          numSuccessors, numRegions, needsOperandStorage ? 1 : 0) +
+      detail::OperandStorage::additionalAllocSize(numOperands);
+  size_t prefixByteSize = llvm::alignTo(
+      Operation::prefixAllocSize(numTrailingResults, numInlineResults),
+      alignof(Operation));
+  char *mallocMem = reinterpret_cast<char *>(malloc(byteSize + prefixByteSize));
+  void *rawMem = mallocMem + prefixByteSize;
 
   // Create the new Operation.
   Operation *op =
-      ::new (rawMem) Operation(location, name, resultTypes, numSuccessors,
+      ::new (rawMem) Operation(location, name, numResults, numSuccessors,
                                numRegions, attributes, needsOperandStorage);
 
-  assert((numSuccessors == 0 || !op->isKnownNonTerminator()) &&
+  assert((numSuccessors == 0 || op->mightHaveTrait<OpTrait::IsTerminator>()) &&
          "unexpected successors in a non-terminator operation");
 
   // Initialize the results.
-  for (unsigned i = 0; i < numInlineResults; ++i)
-    new (op->getInlineResult(i)) detail::InLineOpResult();
-  for (unsigned i = 0; i < numTrailingResults; ++i)
-    new (op->getTrailingResult(i)) detail::TrailingOpResult(i);
+  auto resultTypeIt = resultTypes.begin();
+  for (unsigned i = 0; i < numInlineResults; ++i, ++resultTypeIt)
+    new (op->getInlineOpResult(i)) detail::InlineOpResult(*resultTypeIt, i);
+  for (unsigned i = 0; i < numTrailingResults; ++i, ++resultTypeIt) {
+    new (op->getOutOfLineOpResult(i))
+        detail::OutOfLineOpResult(*resultTypeIt, i);
+  }
 
   // Initialize the regions.
   for (unsigned i = 0; i != numRegions; ++i)
@@ -161,29 +167,38 @@ Operation *Operation::create(Location location, OperationName name,
   return op;
 }
 
-Operation::Operation(Location location, OperationName name,
-                     ArrayRef<Type> resultTypes, unsigned numSuccessors,
-                     unsigned numRegions,
-                     const MutableDictionaryAttr &attributes,
-                     bool hasOperandStorage)
-    : location(location), numSuccs(numSuccessors), numRegions(numRegions),
-      hasOperandStorage(hasOperandStorage), hasSingleResult(false), name(name),
+Operation::Operation(Location location, OperationName name, unsigned numResults,
+                     unsigned numSuccessors, unsigned numRegions,
+                     DictionaryAttr attributes, bool hasOperandStorage)
+    : location(location), numResults(numResults), numSuccs(numSuccessors),
+      numRegions(numRegions), hasOperandStorage(hasOperandStorage), name(name),
       attrs(attributes) {
-  if (!resultTypes.empty()) {
-    // If there is a single result it is stored in-place, otherwise use a tuple.
-    hasSingleResult = resultTypes.size() == 1;
-    if (hasSingleResult)
-      resultType = resultTypes.front();
-    else
-      resultType = TupleType::get(resultTypes, location->getContext());
-  }
+  assert(attributes && "unexpected null attribute dictionary");
+#ifndef NDEBUG
+  if (!getDialect() && !getContext()->allowsUnregisteredDialects())
+    llvm::report_fatal_error(
+        name.getStringRef() +
+        " created with unregistered dialect. If this is intended, please call "
+        "allowUnregisteredDialects() on the MLIRContext, or use "
+        "-allow-unregistered-dialect with the MLIR tool used.");
+#endif
 }
 
 // Operations are deleted through the destroy() member because they are
 // allocated via malloc.
 Operation::~Operation() {
   assert(block == nullptr && "operation destroyed but still in a block");
-
+#ifndef NDEBUG
+  if (!use_empty()) {
+    {
+      InFlightDiagnostic diag =
+          emitOpError("operation destroyed but still has uses");
+      for (Operation *user : getUsers())
+        diag.attachNote(user->getLoc()) << "- use: " << *user << "\n";
+    }
+    llvm::report_fatal_error("operation destroyed but still has uses");
+  }
+#endif
   // Explicitly run the destructors for the operands.
   if (hasOperandStorage)
     getOperandStorage().~OperandStorage();
@@ -199,30 +214,12 @@ Operation::~Operation() {
 
 /// Destroy this operation or one of its subclasses.
 void Operation::destroy() {
+  // Operations may have additional prefixed allocation, which needs to be
+  // accounted for here when computing the address to free.
+  char *rawMem = reinterpret_cast<char *>(this) -
+                 llvm::alignTo(prefixAllocSize(), alignof(Operation));
   this->~Operation();
-  free(this);
-}
-
-/// Return the context this operation is associated with.
-MLIRContext *Operation::getContext() { return location->getContext(); }
-
-/// Return the dialect this operation is associated with, or nullptr if the
-/// associated dialect is not registered.
-Dialect *Operation::getDialect() {
-  if (auto *abstractOp = getAbstractOperation())
-    return &abstractOp->dialect;
-
-  // If this operation hasn't been registered or doesn't have abstract
-  // operation, try looking up the dialect name in the context.
-  return getContext()->getLoadedDialect(getName().getDialect());
-}
-
-Region *Operation::getParentRegion() {
-  return block ? block->getParent() : nullptr;
-}
-
-Operation *Operation::getParentOp() {
-  return block ? block->getParentOp() : nullptr;
+  free(rawMem);
 }
 
 /// Return true if this operation is a proper ancestor of the `other`
@@ -279,17 +276,9 @@ void Operation::insertOperands(unsigned index, ValueRange operands) {
 InFlightDiagnostic Operation::emitError(const Twine &message) {
   InFlightDiagnostic diag = mlir::emitError(getLoc(), message);
   if (getContext()->shouldPrintOpOnDiagnostic()) {
-    // Print out the operation explicitly here so that we can print the generic
-    // form.
-    // TODO: It would be nice if we could instead provide the
-    // specific printing flags when adding the operation as an argument to the
-    // diagnostic.
-    std::string printedOp;
-    {
-      llvm::raw_string_ostream os(printedOp);
-      print(os, OpPrintingFlags().printGenericOpForm().useLocalScope());
-    }
-    diag.attachNote(getLoc()) << "see current operation: " << printedOp;
+    diag.attachNote(getLoc())
+        .append("see current operation: ")
+        .appendOp(*this, OpPrintingFlags().printGenericOpForm());
   }
   return diag;
 }
@@ -396,7 +385,7 @@ void Operation::updateOrderIfNecessary() {
   // Check to see if there is a valid order between the two.
   if (prevOrder + 1 == nextOrder)
     return block->recomputeOpOrder();
-  orderIndex = prevOrder + 1 + ((nextOrder - prevOrder) / 2);
+  orderIndex = prevOrder + ((nextOrder - prevOrder) / 2);
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,6 +473,12 @@ void Operation::erase() {
     destroy();
 }
 
+/// Remove the operation from its parent block, but don't delete it.
+void Operation::remove() {
+  if (Block *parent = getBlock())
+    parent->getOperations().remove(this);
+}
+
 /// Unlink this operation from its current block and insert it right before
 /// `existingOp` which may be in the same or another block in the same
 /// function.
@@ -535,21 +530,6 @@ void Operation::dropAllDefinedValueUses() {
   for (auto &region : getRegions())
     for (auto &block : region)
       block.dropAllDefinedValueUses();
-}
-
-/// Return the number of results held by this operation.
-unsigned Operation::getNumResults() {
-  if (!resultType)
-    return 0;
-  return hasSingleResult ? 1 : resultType.cast<TupleType>().size();
-}
-
-auto Operation::getResultTypes() -> result_type_range {
-  if (!resultType)
-    return llvm::None;
-  if (hasSingleResult)
-    return resultType;
-  return resultType.cast<TupleType>().getTypes();
 }
 
 void Operation::setSuccessor(Block *block, unsigned index) {
@@ -606,8 +586,8 @@ Operation *Operation::cloneWithoutRegions(BlockAndValueMapping &mapper) {
     successors.push_back(mapper.lookupOrDefault(successor));
 
   // Create the new operation.
-  auto *newOp = Operation::create(getLoc(), getName(), getResultTypes(),
-                                  operands, attrs, successors, getNumRegions());
+  auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
+                       successors, getNumRegions());
 
   // Remember the mapping of any results.
   for (unsigned i = 0, e = getNumResults(); i != e; ++i)
@@ -651,7 +631,19 @@ ParseResult OpState::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 // The fallback for the printer is to print in the generic assembly form.
-void OpState::print(OpAsmPrinter &p) { p.printGenericOp(getOperation()); }
+void OpState::print(Operation *op, OpAsmPrinter &p) { p.printGenericOp(op); }
+// The fallback for the printer is to print in the generic assembly form.
+void OpState::printOpName(Operation *op, OpAsmPrinter &p,
+                          StringRef defaultDialect) {
+  StringRef name = op->getName().getStringRef();
+  if (name.startswith((defaultDialect + ".").str()))
+    name = name.drop_front(defaultDialect.size() + 1);
+  // TODO: remove this special case (and update test/IR/parser.mlir)
+  else if ((defaultDialect.empty() || defaultDialect == "builtin") &&
+           name.startswith("std."))
+    name = name.drop_front(4);
+  p.getStream() << name;
+}
 
 /// Emit an error about fatal conditions with this operation, reporting up to
 /// any diagnostic handlers that may be listening.
@@ -681,6 +673,26 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 // Op Trait implementations
 //===----------------------------------------------------------------------===//
 
+OpFoldResult OpTrait::impl::foldIdempotent(Operation *op) {
+  auto *argumentOp = op->getOperand(0).getDefiningOp();
+  if (argumentOp && op->getName() == argumentOp->getName()) {
+    // Replace the outer operation output with the inner operation.
+    return op->getOperand(0);
+  }
+
+  return {};
+}
+
+OpFoldResult OpTrait::impl::foldInvolution(Operation *op) {
+  auto *argumentOp = op->getOperand(0).getDefiningOp();
+  if (argumentOp && op->getName() == argumentOp->getName()) {
+    // Replace the outer involutions output with inner's input.
+    return argumentOp->getOperand(0);
+  }
+
+  return {};
+}
+
 LogicalResult OpTrait::impl::verifyZeroOperands(Operation *op) {
   if (op->getNumOperands() != 0)
     return op->emitOpError() << "requires zero operands";
@@ -706,7 +718,8 @@ LogicalResult OpTrait::impl::verifyAtLeastNOperands(Operation *op,
                                                     unsigned numOperands) {
   if (op->getNumOperands() < numOperands)
     return op->emitOpError()
-           << "expected " << numOperands << " or more operands";
+           << "expected " << numOperands << " or more operands, but found "
+           << op->getNumOperands();
   return success();
 }
 
@@ -720,6 +733,22 @@ static Type getTensorOrVectorElementType(Type type) {
   if (auto tensor = type.dyn_cast<TensorType>())
     return getTensorOrVectorElementType(tensor.getElementType());
   return type;
+}
+
+LogicalResult OpTrait::impl::verifyIsIdempotent(Operation *op) {
+  // FIXME: Add back check for no side effects on operation.
+  // Currently adding it would cause the shared library build
+  // to fail since there would be a dependency of IR on SideEffectInterfaces
+  // which is cyclical.
+  return success();
+}
+
+LogicalResult OpTrait::impl::verifyIsInvolution(Operation *op) {
+  // FIXME: Add back check for no side effects on operation.
+  // Currently adding it would cause the shared library build
+  // to fail since there would be a dependency of IR on SideEffectInterfaces
+  // which is cyclical.
+  return success();
 }
 
 LogicalResult
@@ -811,11 +840,9 @@ LogicalResult OpTrait::impl::verifySameOperandsShape(Operation *op) {
   if (failed(verifyAtLeastNOperands(op, 1)))
     return failure();
 
-  auto type = op->getOperand(0).getType();
-  for (auto opType : llvm::drop_begin(op->getOperandTypes(), 1)) {
-    if (failed(verifyCompatibleShape(opType, type)))
-      return op->emitOpError() << "requires the same shape for all operands";
-  }
+  if (failed(verifyCompatibleShapes(op->getOperandTypes())))
+    return op->emitOpError() << "requires the same shape for all operands";
+
   return success();
 }
 
@@ -824,17 +851,13 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultShape(Operation *op) {
       failed(verifyAtLeastNResults(op, 1)))
     return failure();
 
-  auto type = op->getOperand(0).getType();
-  for (auto resultType : op->getResultTypes()) {
-    if (failed(verifyCompatibleShape(resultType, type)))
-      return op->emitOpError()
-             << "requires the same shape for all operands and results";
-  }
-  for (auto opType : llvm::drop_begin(op->getOperandTypes(), 1)) {
-    if (failed(verifyCompatibleShape(opType, type)))
-      return op->emitOpError()
-             << "requires the same shape for all operands and results";
-  }
+  SmallVector<Type, 8> types(op->getOperandTypes());
+  types.append(llvm::to_vector<4>(op->getResultTypes()));
+
+  if (failed(verifyCompatibleShapes(types)))
+    return op->emitOpError()
+           << "requires the same shape for all operands and results";
+
   return success();
 }
 
@@ -883,7 +906,7 @@ LogicalResult OpTrait::impl::verifySameOperandsAndResultType(Operation *op) {
 
   auto type = op->getResult(0).getType();
   auto elementType = getElementTypeOrSelf(type);
-  for (auto resultType : op->getResultTypes().drop_front(1)) {
+  for (auto resultType : llvm::drop_begin(op->getResultTypes())) {
     if (getElementTypeOrSelf(resultType) != elementType ||
         failed(verifyCompatibleShape(resultType, type)))
       return op->emitOpError()
@@ -977,17 +1000,22 @@ OpTrait::impl::verifyResultsAreSignlessIntegerLike(Operation *op) {
   return success();
 }
 
-static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
-                                         bool isOperand) {
+LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
+                                                 StringRef attrName,
+                                                 StringRef valueGroupName,
+                                                 size_t expectedCount) {
   auto sizeAttr = op->getAttrOfType<DenseIntElementsAttr>(attrName);
   if (!sizeAttr)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
+    return op->emitOpError("requires 1D i32 elements attribute '")
+           << attrName << "'";
 
-  auto sizeAttrType = sizeAttr.getType().dyn_cast<VectorType>();
-  if (!sizeAttrType || sizeAttrType.getRank() != 1)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
+  auto sizeAttrType = sizeAttr.getType();
+  if (sizeAttrType.getRank() != 1 ||
+      !sizeAttrType.getElementType().isInteger(32))
+    return op->emitOpError("requires 1D i32 elements attribute '")
+           << attrName << "'";
 
-  if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
+  if (llvm::any_of(sizeAttr.getValues<APInt>(), [](const APInt &element) {
         return !element.isNonNegative();
       }))
     return op->emitOpError("'")
@@ -997,25 +1025,22 @@ static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
       sizeAttr.begin(), sizeAttr.end(), 0,
       [](unsigned all, APInt one) { return all + one.getZExtValue(); });
 
-  if (isOperand && totalCount != op->getNumOperands())
-    return op->emitOpError("operand count (")
-           << op->getNumOperands() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
-  else if (!isOperand && totalCount != op->getNumResults())
-    return op->emitOpError("result count (")
-           << op->getNumResults() << ") does not match with the total size ("
-           << totalCount << ") specified in attribute '" << attrName << "'";
+  if (totalCount != expectedCount)
+    return op->emitOpError()
+           << valueGroupName << " count (" << expectedCount
+           << ") does not match with the total size (" << totalCount
+           << ") specified in attribute '" << attrName << "'";
   return success();
 }
 
 LogicalResult OpTrait::impl::verifyOperandSizeAttr(Operation *op,
                                                    StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/true);
+  return verifyValueSizeAttr(op, attrName, "operand", op->getNumOperands());
 }
 
 LogicalResult OpTrait::impl::verifyResultSizeAttr(Operation *op,
                                                   StringRef attrName) {
-  return verifyValueSizeAttr(op, attrName, /*isOperand=*/false);
+  return verifyValueSizeAttr(op, attrName, "result", op->getNumResults());
 }
 
 LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
@@ -1032,6 +1057,100 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
     }
   }
   return success();
+}
+
+LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
+  auto isMappableType = [](Type type) {
+    return type.isa<VectorType, TensorType>();
+  };
+  auto resultMappableTypes = llvm::to_vector<1>(
+      llvm::make_filter_range(op->getResultTypes(), isMappableType));
+  auto operandMappableTypes = llvm::to_vector<2>(
+      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+
+  // If the op only has scalar operand/result types, then we have nothing to
+  // check.
+  if (resultMappableTypes.empty() && operandMappableTypes.empty())
+    return success();
+
+  if (!resultMappableTypes.empty() && operandMappableTypes.empty())
+    return op->emitOpError("if a result is non-scalar, then at least one "
+                           "operand must be non-scalar");
+
+  assert(!operandMappableTypes.empty());
+
+  if (resultMappableTypes.empty())
+    return op->emitOpError("if an operand is non-scalar, then there must be at "
+                           "least one non-scalar result");
+
+  if (resultMappableTypes.size() != op->getNumResults())
+    return op->emitOpError(
+        "if an operand is non-scalar, then all results must be non-scalar");
+
+  SmallVector<Type, 4> types = llvm::to_vector<2>(
+      llvm::concat<Type>(operandMappableTypes, resultMappableTypes));
+  TypeID expectedBaseTy = types.front().getTypeID();
+  if (!llvm::all_of(types,
+                    [&](Type t) { return t.getTypeID() == expectedBaseTy; }) ||
+      failed(verifyCompatibleShapes(types))) {
+    return op->emitOpError() << "all non-scalar operands/results must have the "
+                                "same shape and base type";
+  }
+
+  return success();
+}
+
+/// Check for any values used by operations regions attached to the
+/// specified "IsIsolatedFromAbove" operation defined outside of it.
+LogicalResult OpTrait::impl::verifyIsIsolatedFromAbove(Operation *isolatedOp) {
+  assert(isolatedOp->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+         "Intended to check IsolatedFromAbove ops");
+
+  // List of regions to analyze.  Each region is processed independently, with
+  // respect to the common `limit` region, so we can look at them in any order.
+  // Therefore, use a simple vector and push/pop back the current region.
+  SmallVector<Region *, 8> pendingRegions;
+  for (auto &region : isolatedOp->getRegions()) {
+    pendingRegions.push_back(&region);
+
+    // Traverse all operations in the region.
+    while (!pendingRegions.empty()) {
+      for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
+        for (Value operand : op.getOperands()) {
+          // operand should be non-null here if the IR is well-formed. But
+          // we don't assert here as this function is called from the verifier
+          // and so could be called on invalid IR.
+          if (!operand)
+            return op.emitOpError("operation's operand is null");
+
+          // Check that any value that is used by an operation is defined in the
+          // same region as either an operation result.
+          auto *operandRegion = operand.getParentRegion();
+          if (!region.isAncestor(operandRegion)) {
+            return op.emitOpError("using value defined outside the region")
+                       .attachNote(isolatedOp->getLoc())
+                   << "required by region isolation constraints";
+          }
+        }
+
+        // Schedule any regions in the operation for further checking.  Don't
+        // recurse into other IsolatedFromAbove ops, because they will check
+        // themselves.
+        if (op.getNumRegions() &&
+            !op.hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+          for (Region &subRegion : op.getRegions())
+            pendingRegions.push_back(&subRegion);
+        }
+      }
+    }
+  }
+
+  return success();
+}
+
+bool OpTrait::hasElementwiseMappableTraits(Operation *op) {
+  return op->hasTrait<Elementwise>() && op->hasTrait<Scalarizable>() &&
+         op->hasTrait<Vectorizable>() && op->hasTrait<Tensorizable>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1052,6 +1171,24 @@ ParseResult impl::parseOneResultSameOperandTypeOp(OpAsmParser &parser,
                                                   OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> ops;
   Type type;
+  // If the operand list is in-between parentheses, then we have a generic form.
+  // (see the fallback in `printOneResultOp`).
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  if (!parser.parseOptionalLParen()) {
+    if (parser.parseOperandList(ops) || parser.parseRParen() ||
+        parser.parseOptionalAttrDict(result.attributes) ||
+        parser.parseColon() || parser.parseType(type))
+      return failure();
+    auto fnType = type.dyn_cast<FunctionType>();
+    if (!fnType) {
+      parser.emitError(loc, "expected function type");
+      return failure();
+    }
+    if (parser.resolveOperands(ops, fnType.getInputs(), loc, result.operands))
+      return failure();
+    result.addTypes(fnType.getResults());
+    return success();
+  }
   return failure(parser.parseOperandList(ops) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  parser.parseColonType(type) ||
@@ -1067,11 +1204,11 @@ void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
   auto resultType = op->getResult(0).getType();
   if (llvm::any_of(op->getOperandTypes(),
                    [&](Type type) { return type != resultType; })) {
-    p.printGenericOp(op);
+    p.printGenericOp(op, /*printOpName=*/false);
     return;
   }
 
-  p << op->getName() << ' ';
+  p << ' ';
   p.printOperands(op->getOperands());
   p.printOptionalAttrDict(op->getAttrs());
   // Now we can output only one type for all operands and the result.
@@ -1081,6 +1218,48 @@ void impl::printOneResultOp(Operation *op, OpAsmPrinter &p) {
 //===----------------------------------------------------------------------===//
 // CastOp implementation
 //===----------------------------------------------------------------------===//
+
+/// Attempt to fold the given cast operation.
+LogicalResult
+impl::foldCastInterfaceOp(Operation *op, ArrayRef<Attribute> attrOperands,
+                          SmallVectorImpl<OpFoldResult> &foldResults) {
+  OperandRange operands = op->getOperands();
+  if (operands.empty())
+    return failure();
+  ResultRange results = op->getResults();
+
+  // Check for the case where the input and output types match 1-1.
+  if (operands.getTypes() == results.getTypes()) {
+    foldResults.append(operands.begin(), operands.end());
+    return success();
+  }
+
+  return failure();
+}
+
+/// Attempt to verify the given cast operation.
+LogicalResult impl::verifyCastInterfaceOp(
+    Operation *op, function_ref<bool(TypeRange, TypeRange)> areCastCompatible) {
+  auto resultTypes = op->getResultTypes();
+  if (llvm::empty(resultTypes))
+    return op->emitOpError()
+           << "expected at least one result for cast operation";
+
+  auto operandTypes = op->getOperandTypes();
+  if (!areCastCompatible(operandTypes, resultTypes)) {
+    InFlightDiagnostic diag = op->emitOpError("operand type");
+    if (llvm::empty(operandTypes))
+      diag << "s []";
+    else if (llvm::size(operandTypes) == 1)
+      diag << " " << *operandTypes.begin();
+    else
+      diag << "s " << operandTypes;
+    return diag << " and result type" << (resultTypes.size() == 1 ? " " : "s ")
+                << resultTypes << " are cast incompatible";
+  }
+
+  return success();
+}
 
 void impl::buildCastOp(OpBuilder &builder, OperationState &result, Value source,
                        Type destType) {
@@ -1100,7 +1279,7 @@ ParseResult impl::parseCastOp(OpAsmParser &parser, OperationState &result) {
 }
 
 void impl::printCastOp(Operation *op, OpAsmPrinter &p) {
-  p << op->getName() << ' ' << op->getOperand(0);
+  p << ' ' << op->getOperand(0);
   p.printOptionalAttrDict(op->getAttrs());
   p << " : " << op->getOperand(0).getType() << " to "
     << op->getResult(0).getType();
@@ -1111,6 +1290,19 @@ Value impl::foldCastOp(Operation *op) {
   if (op->getOperand(0).getType() == op->getResult(0).getType())
     return op->getOperand(0);
   return nullptr;
+}
+
+LogicalResult
+impl::verifyCastOp(Operation *op,
+                   function_ref<bool(Type, Type)> areCastCompatible) {
+  auto opType = op->getOperand(0).getType();
+  auto resType = op->getResult(0).getType();
+  if (!areCastCompatible(opType, resType))
+    return op->emitError("operand type ")
+           << opType << " and result type " << resType
+           << " are cast incompatible";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1129,7 +1321,7 @@ void impl::ensureRegionTerminator(
     builder.createBlock(&region);
 
   Block &block = region.back();
-  if (!block.empty() && block.back().isKnownTerminator())
+  if (!block.empty() && block.back().hasTrait<OpTrait::IsTerminator>())
     return;
 
   builder.setInsertionPointToEnd(&block);
@@ -1143,39 +1335,4 @@ void impl::ensureRegionTerminator(
     function_ref<Operation *(OpBuilder &, Location)> buildTerminatorOp) {
   OpBuilder opBuilder(builder.getContext());
   ensureRegionTerminator(region, opBuilder, loc, buildTerminatorOp);
-}
-
-//===----------------------------------------------------------------------===//
-// UseIterator
-//===----------------------------------------------------------------------===//
-
-Operation::UseIterator::UseIterator(Operation *op, bool end)
-    : op(op), res(end ? op->result_end() : op->result_begin()) {
-  // Only initialize current use if there are results/can be uses.
-  if (op->getNumResults())
-    skipOverResultsWithNoUsers();
-}
-
-Operation::UseIterator &Operation::UseIterator::operator++() {
-  // We increment over uses, if we reach the last use then move to next
-  // result.
-  if (use != (*res).use_end())
-    ++use;
-  if (use == (*res).use_end()) {
-    ++res;
-    skipOverResultsWithNoUsers();
-  }
-  return *this;
-}
-
-void Operation::UseIterator::skipOverResultsWithNoUsers() {
-  while (res != op->result_end() && (*res).use_empty())
-    ++res;
-
-  // If we are at the last result, then set use to first use of
-  // first result (sentinel value used for end).
-  if (res == op->result_end())
-    use = {};
-  else
-    use = (*res).use_begin();
 }

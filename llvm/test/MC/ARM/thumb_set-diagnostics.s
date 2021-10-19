@@ -8,7 +8,7 @@
 
 @ CHECK: error: expected identifier after '.thumb_set'
 @ CHECK: 	.thumb_set
-@ CHECL:                  ^
+@ CHECK:                  ^
 
 	.thumb_set ., 0x0b5e55ed
 
@@ -37,7 +37,7 @@
 
 	.thumb_set trailer_trash, 0x11fe1e55,
 
-@ CHECK: error: unexpected token
+@ CHECK: error: expected newline
 @ CHECK: 	.thumb_set trailer_trash, 0x11fe1e55,
 @ CHECK:                                            ^
 

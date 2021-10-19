@@ -86,8 +86,8 @@ sections: []
 symbols: []
 
 ## Here we test that we report a warning and continue dumping when an archive contains
-## a unrecognized object. We place a dummy archive to another archive in the middle,
-## so that it is placed between two valid objects.
+## an unrecognized object. We add a dummy archive to the middle of another archive,
+## so that it is between two valid objects.
 
 # RUN: rm -f %t2.a
 # RUN: llvm-ar rc %t.dir/broken.a %t.dir/trivial.obj.elf-x86-64
@@ -96,5 +96,5 @@ symbols: []
 # RUN: llvm-readelf --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
 
 # BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)
-# BROKEN: warning: '[[ARFILE]]': Unrecognized file type.
+# BROKEN: warning: '[[ARFILE]]': broken.a has an unsupported file type
 # BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)

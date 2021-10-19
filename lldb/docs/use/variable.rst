@@ -131,6 +131,20 @@ which provides the desired output:
    (C) c = {0x03 0x00 0x00 0x00}
    (D) d = 4
 
+Note, that qualifiers such as const and volatile will be stripped when matching types for example:
+
+::
+
+   (lldb) frame var x y z
+   (int) x = 1
+   (const int) y = 2
+   (volatile int) z = 4
+   (lldb) type format add -f hex int
+   (lldb) frame var x y z
+   (int) x = 0x00000001
+   (const int) y = 0x00000002
+   (volatile int) z = 0x00000004
+
 Two additional options that you will want to look at are --skip-pointers (-p)
 and --skip-references (-r). These two options prevent LLDB from applying a
 format for type T to values of type T* and T& respectively.
@@ -677,7 +691,7 @@ passed two parameters: ``valobj`` and ``internal_dict``.
 not touch it.
 
 ``valobj`` is the object encapsulating the actual variable being displayed, and
-its type is SBValue. Out of the many possible operations on an SBValue, the
+its type is `SBValue`. Out of the many possible operations on an `SBValue`, the
 basic one is retrieve the children objects it contains (essentially, the fields
 of the object wrapped by it), by calling ``GetChildMemberWithName()``, passing
 it the child's name as a string.
@@ -685,15 +699,15 @@ it the child's name as a string.
 If the variable has a value, you can ask for it, and return it as a string
 using ``GetValue()``, or as a signed/unsigned number using
 ``GetValueAsSigned()``, ``GetValueAsUnsigned()``. It is also possible to
-retrieve an SBData object by calling ``GetData()`` and then read the object's
-contents out of the SBData.
+retrieve an `SBData` object by calling ``GetData()`` and then read the object's
+contents out of the `SBData`.
 
 If you need to delve into several levels of hierarchy, as you can do with
 summary strings, you can use the method ``GetValueForExpressionPath()``,
 passing it an expression path just like those you could use for summary strings
 (one of the differences is that dereferencing a pointer does not occur by
 prefixing the path with a ``*```, but by calling the ``Dereference()`` method
-on the returned SBValue). If you need to access array slices, you cannot do
+on the returned `SBValue`). If you need to access array slices, you cannot do
 that (yet) via this method call, and you must use ``GetChildAtIndex()``
 querying it for the array items one by one. Also, handling custom formats is
 something you have to deal with on your own.
@@ -874,9 +888,9 @@ update.
 implementing it in terms of num_children is acceptable, implementors are
 encouraged to look for optimized coding alternatives whenever reasonable.
 
-[3] This method is optional (starting with SVN revision 219330). The SBValue
+[3] This method is optional (starting with SVN revision 219330). The `SBValue`
 you return here will most likely be a numeric type (int, float, ...) as its
-value bytes will be used as-if they were the value of the root SBValue proper.
+value bytes will be used as-if they were the value of the root `SBValue` proper.
 As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and
 just define get_value as other methods are defaulted in the superclass as
 returning default no-children responses.
@@ -913,7 +927,7 @@ especially want to begin looking at this example to get a feel for this
 feature, as it is a very easy and well commented example.
 
 The design pattern consistently used in synthetic providers shipping with LLDB
-is to use the __init__ to store the SBValue instance as a part of self. The
+is to use the __init__ to store the `SBValue` instance as a part of self. The
 update function is then used to perform the actual initialization. Once a
 synthetic children provider is written, one must load it into LLDB before it
 can be used. Currently, one can use the LLDB script command to type Python code
@@ -993,7 +1007,7 @@ have many member variables but not all of these are actually necessary for the
 user to see.
 
 A filter will solve this issue by only letting the user see those member
-variables he cares about. Of course, the equivalent of a filter can be
+variables they care about. Of course, the equivalent of a filter can be
 implemented easily using synthetic children, but a filter lets you get the job
 done without having to write Python code.
 

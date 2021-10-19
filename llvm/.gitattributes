@@ -13,7 +13,8 @@ test/tools/llvm-strings/Inputs/numbers binary
 test/MC/AsmParser/incbin_abcd binary
 test/YAMLParser/spec-09-02.test binary
 
-# This file must have CRLF line endings, therefore git should treat it as
+# These files must have CRLF line endings, therefore git should treat them as
 # binary and not autoconvert line endings (for example, when core.autocrlf is
 # on).
 test/MC/AsmParser/preserve-comments-crlf.s binary
+test/tools/llvm-mca/X86/directives-handle-crlf.s binary

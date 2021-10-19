@@ -34,6 +34,17 @@ public:
   bool usesPreprocessorOnly() const override { return false; }
 };
 
+/// Preprocessor-based frontend action that also loads PCH files.
+class ReadPCHAndPreprocessAction : public FrontendAction {
+  void ExecuteAction() override;
+
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
+
+public:
+  bool usesPreprocessorOnly() const override { return false; }
+};
+
 class DumpCompilerOptionsAction : public FrontendAction {
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {
@@ -117,6 +128,8 @@ protected:
   }
 
   bool hasASTFileSupport() const override { return false; }
+
+  bool shouldEraseOutputFiles() override;
 };
 
 class GenerateInterfaceStubsAction : public ASTFrontendAction {
@@ -284,6 +297,15 @@ protected:
   void ExecuteAction() override;
 
   bool hasPCHSupport() const override { return true; }
+};
+
+class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
+  StringRef ModuleName;
+  void ExecuteAction() override;
+
+public:
+  GetDependenciesByModuleNameAction(StringRef ModuleName)
+      : ModuleName(ModuleName) {}
 };
 
 }  // end namespace clang

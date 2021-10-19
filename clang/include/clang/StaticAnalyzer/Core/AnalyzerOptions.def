@@ -190,7 +190,13 @@ ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 false)
 
 ANALYZER_OPTION(bool, ShouldWriteStableReportFilename, "stable-report-filename",
-                "Whether or not the report filename should be random or not.",
+                "Deprecated: report filenames are now always stable. "
+                "See also 'verbose-report-filename'.",
+                false)
+
+ANALYZER_OPTION(bool, ShouldWriteVerboseReportFilename, "verbose-report-filename",
+                "Whether or not the report filename should contain extra "
+                "information about the issue.",
                 false)
 
 ANALYZER_OPTION(
@@ -313,6 +319,22 @@ ANALYZER_OPTION(bool, ShouldApplyFixIts, "apply-fixits",
 ANALYZER_OPTION(bool, ShouldDisplayCheckerNameForText, "display-checker-name",
                 "Display the checker name for textual outputs",
                 true)
+
+ANALYZER_OPTION(
+    bool, ShouldConsiderSingleElementArraysAsFlexibleArrayMembers,
+    "consider-single-element-arrays-as-flexible-array-members",
+    "Consider single element arrays as flexible array member candidates. "
+    "This will prevent the analyzer from assuming that a single element array "
+    "holds a single element.",
+    false)
+
+ANALYZER_OPTION(
+    bool, ShouldAssumeControlledEnvironment, "assume-controlled-environment",
+    "Whether the analyzed application runs in a controlled environment. "
+    "We will assume that environment variables exist in queries and they hold "
+    "no malicious data. For instance, if this option is enabled, 'getenv()' "
+    "might be modeled by the analyzer to never return NULL.",
+    false)
 
 //===----------------------------------------------------------------------===//
 // Unsigned analyzer options.

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -S -debug-counter=early-cse-skip=1,early-cse-count=1 -early-cse \
+; RUN: opt -S -debug-counter=early-cse-skip=1,early-cse-count=1 -early-cse -earlycse-debug-hash \
 ; RUN:        -debug-counter=newgvn-vn-skip=1,newgvn-vn-count=2 -newgvn \
 ; RUN:        -instcombine -print-debug-counter < %s 2>&1 | FileCheck %s
 ;; Test debug counter prints correct info in right order.

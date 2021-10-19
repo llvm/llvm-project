@@ -15,10 +15,10 @@ entry:
   %0 = load float*, float** @y, align 4
   %arrayidx = getelementptr inbounds float, float* %0, i32 64000
   store float 5.500000e+00, float* %arrayidx, align 4
-; CHECK:        lui     $[[REG_FPCONST_INT:[0-9]+]], 16560
-; CHECK:        mtc1    $[[REG_FPCONST_INT]], $f[[REG_FPCONST:[0-9]+]]
 ; CHECK:        lw      $[[REG_Y_GOT:[0-9]+]], %got(y)(${{[0-9]+}})
 ; CHECK:        lw      $[[REG_Y:[0-9]+]], 0($[[REG_Y_GOT]])
+; CHECK:        lui     $[[REG_FPCONST_INT:[0-9]+]], 16560
+; CHECK:        mtc1    $[[REG_FPCONST_INT]], $f[[REG_FPCONST:[0-9]+]]
 ; CHECK:        lui     $[[REG_IDX_UPPER:[0-9]+]], 3
 ; CHECK:        ori     $[[REG_IDX:[0-9]+]], $[[REG_IDX_UPPER]], 59392
 ; CHECK:        addu    $[[REG_Y_IDX:[0-9]+]], $[[REG_IDX]], $[[REG_Y]]

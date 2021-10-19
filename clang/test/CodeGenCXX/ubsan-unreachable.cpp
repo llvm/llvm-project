@@ -2,7 +2,7 @@
 
 void abort() __attribute__((noreturn));
 
-// CHECK-LABEL: define void @_Z14calls_noreturnv()
+// CHECK-LABEL: define{{.*}} void @_Z14calls_noreturnv()
 void calls_noreturn() {
   // Check absence ([^#]*) of call site attributes (including noreturn)
   // CHECK: call void @_Z5abortv(){{[^#]*}}

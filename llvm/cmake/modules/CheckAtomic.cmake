@@ -32,6 +32,7 @@ function(check_working_cxx_atomics64 varname)
 std::atomic<uint64_t> x (0);
 int main() {
   uint64_t i = x.load(std::memory_order_relaxed);
+  (void)i;
   return 0;
 }
 " ${varname})
@@ -42,7 +43,7 @@ endfunction(check_working_cxx_atomics64)
 # Check for (non-64-bit) atomic operations.
 if(MSVC)
   set(HAVE_CXX_ATOMICS_WITHOUT_LIB True)
-elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL")
   # First check if atomics work without the library.
   check_working_cxx_atomics(HAVE_CXX_ATOMICS_WITHOUT_LIB)
   # If not, check if the library exists, and atomics work with it.
@@ -63,7 +64,7 @@ endif()
 # Check for 64 bit atomic operations.
 if(MSVC)
   set(HAVE_CXX_ATOMICS64_WITHOUT_LIB True)
-elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL")
   # First check if atomics work without the library.
   check_working_cxx_atomics64(HAVE_CXX_ATOMICS64_WITHOUT_LIB)
   # If not, check if the library exists, and atomics work with it.

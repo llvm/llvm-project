@@ -25,9 +25,9 @@
   }
 
 #include <cassert>
+#include <cstddef> // for size_t
 #include <cstdint>
 #include <dlfcn.h> // for dlsym()
-#include <sanitizer/common_interface_defs.h>
 
 static void *getFuncAddr(const char *name, uintptr_t wrapper_addr) {
   void *addr = dlsym(RTLD_NEXT, name);
@@ -118,6 +118,25 @@ static char *internal_strstr(const char *haystack, const char *needle) {
 }
 
 extern "C" {
+
+// Weak hooks forward-declared to avoid dependency on
+// <sanitizer/common_interface_defs.h>.
+void __sanitizer_weak_hook_memcmp(void *called_pc, const void *s1,
+                                  const void *s2, size_t n, int result);
+void __sanitizer_weak_hook_strncmp(void *called_pc, const char *s1,
+                                   const char *s2, size_t n, int result);
+void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                       const char *s2, size_t n, int result);
+void __sanitizer_weak_hook_strcmp(void *called_pc, const char *s1,
+                                  const char *s2, int result);
+void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                      const char *s2, int result);
+void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
+                                  const char *s2, char *result);
+void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
+                                      const char *s2, char *result);
+void __sanitizer_weak_hook_memmem(void *called_pc, const void *s1, size_t len1,
+                                  const void *s2, size_t len2, void *result);
 
 DEFINE_REAL(int, bcmp, const void *, const void *, size_t)
 DEFINE_REAL(int, memcmp, const void *, const void *, size_t)

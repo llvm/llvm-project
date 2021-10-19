@@ -16,6 +16,8 @@ int i;
 unsigned int u;
 signed char c;
 
+float fl;
+
 
 // CHECK-LABEL: @add_shfa(
 // CHECK-NEXT:  entry:
@@ -358,6 +360,66 @@ void add_sshsuf() {
   sshf += suf;
 }
 
+// CHECK-LABEL: @add_afl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP0]]
+// CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[ADD]], 3.276800e+04
+// CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void add_afl() {
+  a += fl;
+}
+
+// CHECK-LABEL: @add_fla(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP2]]
+// CHECK-NEXT:    store float [[ADD]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void add_fla() {
+  fl += a;
+}
+
+// CHECK-LABEL: @add_safl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @sa, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP0]]
+// CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[ADD]], 3.276800e+04
+// CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.fptosi.sat.i32.f32(float [[TMP4]])
+// CHECK-NEXT:    store i32 [[TMP5]], i32* @sa, align 4
+// CHECK-NEXT:    ret void
+//
+void add_safl() {
+  sa += fl;
+}
+
+// CHECK-LABEL: @add_flsa(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @sa, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[TMP2:%.*]] = fmul float [[TMP1]], 0x3F00000000000000
+// CHECK-NEXT:    [[TMP3:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP2]]
+// CHECK-NEXT:    store float [[ADD]], float* @fl, align 4
+// CHECK-NEXT:    ret void
+//
+void add_flsa() {
+  fl += sa;
+}
+
 // Subtraction, multiplication and division should work about the same, so
 // just make sure we can do them.
 
@@ -429,6 +491,22 @@ void sub_csa() {
   c -= sa;
 }
 
+// CHECK-LABEL: @sub_afl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[SUB:%.*]] = fsub float [[TMP3]], [[TMP0]]
+// CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[SUB]], 3.276800e+04
+// CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void sub_afl() {
+  a -= fl;
+}
+
 
 // SIGNED-LABEL: @mul_auf(
 // SIGNED-NEXT:  entry:
@@ -498,6 +576,22 @@ void mul_csa() {
   c *= sa;
 }
 
+// CHECK-LABEL: @mul_afl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP3]], [[TMP0]]
+// CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[MUL]], 3.276800e+04
+// CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void mul_afl() {
+  a *= fl;
+}
+
 
 // SIGNED-LABEL: @div_auf(
 // SIGNED-NEXT:  entry:
@@ -565,6 +659,22 @@ void div_ai() {
 //
 void div_csa() {
   c /= sa;
+}
+
+// CHECK-LABEL: @div_afl(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, float* @fl, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], 0x3F00000000000000
+// CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[TMP3]], [[TMP0]]
+// CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[DIV]], 3.276800e+04
+// CHECK-NEXT:    [[TMP5:%.*]] = fptosi float [[TMP4]] to i32
+// CHECK-NEXT:    store i32 [[TMP5]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void div_afl() {
+  a /= fl;
 }
 
 

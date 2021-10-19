@@ -5,11 +5,11 @@
 define i32 @t() {
 ; CHECK-LABEL: t:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    mfence
 ; CHECK-NEXT:    lock decl -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    mfence
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %i = alloca i32, align 4
   store i32 1, i32* %i, align 4

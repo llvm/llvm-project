@@ -9,6 +9,12 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
 ; RUN:   -ppc-gpr-icmps=all -ppc-asm-full-reg-names -mcpu=pwr8 < %s | FileCheck %s \
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
+; RUN:     -ppc-asm-full-reg-names -mcpu=pwr10 < %s | \
+; RUN:     FileCheck %s --check-prefix=CHECK-P10
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
+; RUN:     -ppc-asm-full-reg-names -mcpu=pwr10 < %s | \
+; RUN:     FileCheck %s --check-prefix=CHECK-P10
 @glob = local_unnamed_addr global i64 0, align 8
 @.str = private unnamed_addr constant [12 x i8] c"Value = %d\0A\00", align 1
 
@@ -42,6 +48,15 @@ entry:
 ; CHECK: ld r3, [[OFF]](r1)
 ; CHECK: xori r3, r3, 1
 ; CHECK: blr
+
+; CHECK-P10-LABEL: test
+; CHECK-P10: sub r3,
+; CHECK-P10: extsw r3,
+; CHECK-P10: bl call
+; CHECK-P10: cmpw r29, r30
+; CHECK-P10: #APP
+; CHECK-P10: setbcr r3, gt
+; CHECK-P10: blr
 }
 
 ; Function Attrs: nounwind

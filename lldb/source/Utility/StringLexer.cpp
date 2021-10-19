@@ -9,7 +9,7 @@
 #include "lldb/Utility/StringLexer.h"
 
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <utility>
 
 using namespace lldb_private;

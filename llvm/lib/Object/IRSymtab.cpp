@@ -108,7 +108,7 @@ struct Builder {
 
   Error addModule(Module *M);
   Error addSymbol(const ModuleSymbolTable &Msymtab,
-                  const SmallPtrSet<GlobalValue *, 8> &Used,
+                  const SmallPtrSet<GlobalValue *, 4> &Used,
                   ModuleSymbolTable::Symbol Sym);
 
   Error build(ArrayRef<Module *> Mods);
@@ -119,8 +119,21 @@ Error Builder::addModule(Module *M) {
     return make_error<StringError>("input module has no datalayout",
                                    inconvertibleErrorCode());
 
-  SmallPtrSet<GlobalValue *, 8> Used;
-  collectUsedGlobalVariables(*M, Used, /*CompilerUsed*/ false);
+  // Symbols in the llvm.used list will get the FB_Used bit and will not be
+  // internalized. We do this for llvm.compiler.used as well:
+  //
+  // IR symbol table tracks module-level asm symbol references but not inline
+  // asm. A symbol only referenced by inline asm is not in the IR symbol table,
+  // so we may not know that the definition (in another translation unit) is
+  // referenced. That definition may have __attribute__((used)) (which lowers to
+  // llvm.compiler.used on ELF targets) to communicate to the compiler that it
+  // may be used by inline asm. The usage is perfectly fine, so we treat
+  // llvm.compiler.used conservatively as llvm.used to work around our own
+  // limitation.
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(*M, UsedV, /*CompilerUsed=*/true);
+  SmallPtrSet<GlobalValue *, 4> Used(UsedV.begin(), UsedV.end());
 
   ModuleSymbolTable Msymtab;
   Msymtab.addModule(M);
@@ -186,6 +199,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 
     storage::Comdat Comdat;
     setStr(Comdat.Name, Saver.save(Name));
+    Comdat.SelectionKind = C->getSelectionKind();
     Comdats.push_back(Comdat);
   }
 
@@ -193,7 +207,7 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 }
 
 Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
-                         const SmallPtrSet<GlobalValue *, 8> &Used,
+                         const SmallPtrSet<GlobalValue *, 4> &Used,
                          ModuleSymbolTable::Symbol Msym) {
   Syms.emplace_back();
   storage::Symbol &Sym = Syms.back();
@@ -217,7 +231,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     raw_svector_ostream OS(Name);
     Msymtab.printSymbolName(OS, Msym);
   }
-  setStr(Sym.Name, Saver.save(StringRef(Name)));
+  setStr(Sym.Name, Saver.save(Name.str()));
 
   auto Flags = Msymtab.getSymbolFlags(Msym);
   if (Flags & object::BasicSymbolRef::SF_Undefined)
@@ -247,11 +261,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   setStr(Sym.IRName, GV->getName());
 
-  bool IsBuiltinFunc = false;
-
-  for (const char *LibcallName : LibcallRoutineNames)
-    if (GV->getName() == LibcallName)
-      IsBuiltinFunc = true;
+  bool IsBuiltinFunc = llvm::is_contained(LibcallRoutineNames, GV->getName());
 
   if (Used.count(GV) || IsBuiltinFunc)
     Sym.Flags |= 1 << storage::Symbol::FB_used;
@@ -268,16 +278,20 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     if (!GVar)
       return make_error<StringError>("Only variables can have common linkage!",
                                      inconvertibleErrorCode());
-    Uncommon().CommonSize = GV->getParent()->getDataLayout().getTypeAllocSize(
-        GV->getType()->getElementType());
+    Uncommon().CommonSize =
+        GV->getParent()->getDataLayout().getTypeAllocSize(GV->getValueType());
     Uncommon().CommonAlign = GVar->getAlignment();
   }
 
-  const GlobalObject *Base = GV->getBaseObject();
-  if (!Base)
-    return make_error<StringError>("Unable to determine comdat of alias!",
-                                   inconvertibleErrorCode());
-  if (const Comdat *C = Base->getComdat()) {
+  const GlobalObject *GO = GV->getAliaseeObject();
+  if (!GO) {
+    if (isa<GlobalIFunc>(GV))
+      GO = cast<GlobalIFunc>(GV)->getResolverFunction();
+    if (!GO)
+      return make_error<StringError>("Unable to determine comdat of alias!",
+                                     inconvertibleErrorCode());
+  }
+  if (const Comdat *C = GO->getComdat()) {
     Expected<int> ComdatIndexOrErr = getComdatIndex(C, GV->getParent());
     if (!ComdatIndexOrErr)
       return ComdatIndexOrErr.takeError();
@@ -302,8 +316,8 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     }
   }
 
-  if (!Base->getSection().empty())
-    setStr(Uncommon().SectionName, Saver.save(Base->getSection()));
+  if (!GO->getSection().empty())
+    setStr(Uncommon().SectionName, Saver.save(GO->getSection()));
 
   return Error::success();
 }

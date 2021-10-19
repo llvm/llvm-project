@@ -20,7 +20,7 @@
 
 namespace mlir {
 
-namespace impl {
+namespace function_like_impl {
 
 /// A named class for passing around the variadic flag.
 class VariadicFlag {
@@ -38,6 +38,9 @@ private:
 /// Internally, argument and result attributes are stored as dict attributes
 /// with special names given by getResultAttrName, getArgumentAttrName.
 void addArgAndResultAttrs(Builder &builder, OperationState &result,
+                          ArrayRef<DictionaryAttr> argAttrs,
+                          ArrayRef<DictionaryAttr> resultAttrs);
+void addArgAndResultAttrs(Builder &builder, OperationState &result,
                           ArrayRef<NamedAttrList> argAttrs,
                           ArrayRef<NamedAttrList> resultAttrs);
 
@@ -48,6 +51,16 @@ void addArgAndResultAttrs(Builder &builder, OperationState &result,
 /// argument with a message.
 using FuncTypeBuilder = function_ref<Type(
     Builder &, ArrayRef<Type>, ArrayRef<Type>, VariadicFlag, std::string &)>;
+
+/// Parses function arguments using `parser`. The `allowVariadic` argument
+/// indicates whether functions with variadic arguments are supported. The
+/// trailing arguments are populated by this function with names, types and
+/// attributes of the arguments.
+ParseResult parseFunctionArgumentList(
+    OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+    SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
+    bool &isVariadic);
 
 /// Parses a function signature using `parser`. The `allowVariadic` argument
 /// indicates whether functions with variadic arguments are supported. The
@@ -93,7 +106,7 @@ void printFunctionAttributes(OpAsmPrinter &p, Operation *op, unsigned numInputs,
                              unsigned numResults,
                              ArrayRef<StringRef> elided = {});
 
-} // namespace impl
+} // namespace function_like_impl
 
 } // namespace mlir
 

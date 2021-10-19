@@ -2,11 +2,10 @@
 
 ; Make sure we generate stack alignment.
 ; CHECK: [[REG1:r[0-9]*]] = and(r29,#-64)
-; CHECK: = add([[REG1]],#128)
-; CHECK: = add([[REG1]],#64)
-; Make sure we do not generate another -64 off SP.
-; CHECK: vmem(
-; CHECK-NOT: r{{[0-9]*}} = add(r29,#-64)
+; CHECK: vmem([[REG1]]+#2) =
+; CHECK: vmem([[REG1]]+#1) =
+; CHECK: = vmem([[REG1]]+#2)
+; CHECK: = vmem([[REG1]]+#1)
 
 target triple = "hexagon"
 
@@ -42,5 +41,5 @@ declare <16 x i32> @llvm.hexagon.V6.vaddw(<16 x i32>, <16 x i32>) #1
 
 declare void @f2(...) #0
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
+attributes #0 = { nounwind "target-cpu"="hexagonv65" "target-features"="+hvxv65,+hvx-length64b" }
 attributes #1 = { nounwind readnone }

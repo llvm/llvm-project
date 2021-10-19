@@ -100,28 +100,35 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
                             "4041424344454647484950515253545556575859"
                             "6061626364656667686970717273747576777879"
                             "8081828384858687888990919293949596979899";
-  static constexpr Digit hundredth{radix / 100};
   // Treat the MSD specially: don't emit leading zeroes.
   Digit dig{digit_[digits_ - 1]};
-  for (int k{0}; k < LOG10RADIX; k += 2) {
-    Digit d{common::DivideUnsignedBy<Digit, hundredth>(dig)};
-    dig = 100 * (dig - d * hundredth);
-    const char *q{lut + 2 * d};
-    if (q[0] != '0' || p > start) {
-      *p++ = q[0];
-      *p++ = q[1];
-    } else if (q[1] != '0') {
-      *p++ = q[1];
-    }
+  char stack[LOG10RADIX], *sp{stack};
+  for (int k{0}; k < log10Radix; k += 2) {
+    Digit newDig{dig / 100};
+    auto d{static_cast<std::uint32_t>(dig) -
+        std::uint32_t{100} * static_cast<std::uint32_t>(newDig)};
+    dig = newDig;
+    const char *q{lut + d + d};
+    *sp++ = q[1];
+    *sp++ = q[0];
+  }
+  while (sp > stack && sp[-1] == '0') {
+    --sp;
+  }
+  while (sp > stack) {
+    *p++ = *--sp;
   }
   for (int j{digits_ - 1}; j-- > 0;) {
     Digit dig{digit_[j]};
+    char *reverse{p += log10Radix};
     for (int k{0}; k < log10Radix; k += 2) {
-      Digit d{common::DivideUnsignedBy<Digit, hundredth>(dig)};
-      dig = 100 * (dig - d * hundredth);
-      const char *q{lut + 2 * d};
-      *p++ = q[0];
-      *p++ = q[1];
+      Digit newDig{dig / 100};
+      auto d{static_cast<std::uint32_t>(dig) -
+          std::uint32_t{100} * static_cast<std::uint32_t>(newDig)};
+      dig = newDig;
+      const char *q{lut + d + d};
+      *--reverse = q[1];
+      *--reverse = q[0];
     }
   }
   // Adjust exponent so the effective decimal point is to
@@ -251,9 +258,9 @@ void BigRadixFloatingPointNumber<PREC, LOG10RADIX>::Minimize(
   Digit least{less.digit_[offset]};
   Digit my{digit_[0]};
   while (true) {
-    Digit q{common::DivideUnsignedBy<Digit, 10>(my)};
+    Digit q{my / 10u};
     Digit r{my - 10 * q};
-    Digit lq{common::DivideUnsignedBy<Digit, 10>(least)};
+    Digit lq{least / 10u};
     Digit lr{least - 10 * lq};
     if (r != 0 && lq == q) {
       Digit sub{(r - lr) >> 1};
@@ -303,7 +310,6 @@ ConversionToDecimalResult ConvertToDecimal(char *buffer, std::size_t size,
         more.Next();
       }
       number.Minimize(Big{less, rounding}, Big{more, rounding});
-    } else {
     }
     return number.ConvertToDecimal(buffer, size, flags, digits);
   }
@@ -343,12 +349,19 @@ ConversionToDecimalResult ConvertDoubleToDecimal(char *buffer, std::size_t size,
       rounding, Fortran::decimal::BinaryFloatingPointNumber<53>(x));
 }
 
-#if __x86_64__ && !defined(_MSC_VER)
+#if LONG_DOUBLE == 80
 ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
     std::size_t size, enum DecimalConversionFlags flags, int digits,
     enum FortranRounding rounding, long double x) {
   return Fortran::decimal::ConvertToDecimal(buffer, size, flags, digits,
       rounding, Fortran::decimal::BinaryFloatingPointNumber<64>(x));
+}
+#elif LONG_DOUBLE == 128
+ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
+    std::size_t size, enum DecimalConversionFlags flags, int digits,
+    enum FortranRounding rounding, long double x) {
+  return Fortran::decimal::ConvertToDecimal(buffer, size, flags, digits,
+      rounding, Fortran::decimal::BinaryFloatingPointNumber<113>(x));
 }
 #endif
 }

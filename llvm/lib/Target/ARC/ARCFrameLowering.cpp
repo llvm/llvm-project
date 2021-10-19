@@ -493,6 +493,6 @@ bool ARCFrameLowering::hasFP(const MachineFunction &MF) const {
   bool HasFP = MF.getTarget().Options.DisableFramePointerElim(MF) ||
                MF.getFrameInfo().hasVarSizedObjects() ||
                MF.getFrameInfo().isFrameAddressTaken() ||
-               RegInfo->needsStackRealignment(MF);
+               RegInfo->hasStackRealignment(MF);
   return HasFP;
 }

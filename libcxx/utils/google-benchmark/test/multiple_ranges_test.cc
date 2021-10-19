@@ -28,7 +28,7 @@ class MultipleRangesFixture : public ::benchmark::Fixture {
                         {2, 7, 15},
                         {7, 6, 3}}) {}
 
-  void SetUp(const ::benchmark::State& state) {
+  void SetUp(const ::benchmark::State& state) BENCHMARK_OVERRIDE {
     std::vector<int64_t> ranges = {state.range(0), state.range(1),
                                    state.range(2)};
 
@@ -40,8 +40,7 @@ class MultipleRangesFixture : public ::benchmark::Fixture {
   // NOTE: This is not TearDown as we want to check after _all_ runs are
   // complete.
   virtual ~MultipleRangesFixture() {
-    assert(actualValues.size() == expectedValues.size());
-    if (actualValues.size() != expectedValues.size()) {
+    if (actualValues != expectedValues) {
       std::cout << "EXPECTED\n";
       for (auto v : expectedValues) {
         std::cout << "{";

@@ -21,41 +21,41 @@ class LOCKABLE Mutex {
 
 class Test {
   Mutex mu;
-  int a GUARDED_BY(mu);  // expected-note3 {{Guarded_by declared here.}}
+  int a GUARDED_BY(mu);  // expected-note3 {{guarded_by declared here}}
 
   void foo1() EXCLUSIVE_LOCKS_REQUIRED(mu);
   void foo2() SHARED_LOCKS_REQUIRED(mu);
   void foo3() LOCKS_EXCLUDED(mu);
 
-  void test1() {  // expected-note {{Thread warning in function 'test1'}}
+  void test1() {  // expected-note {{thread warning in function 'test1'}}
     a = 0;        // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
   }
 
-  void test2() {  // expected-note {{Thread warning in function 'test2'}}
+  void test2() {  // expected-note {{thread warning in function 'test2'}}
     int b = a;    // expected-warning {{reading variable 'a' requires holding mutex 'mu'}}
   }
 
-  void test3() {  // expected-note {{Thread warning in function 'test3'}}
+  void test3() {  // expected-note {{thread warning in function 'test3'}}
     foo1();       // expected-warning {{calling function 'foo1' requires holding mutex 'mu' exclusively}}
   }
 
-  void test4() {  // expected-note {{Thread warning in function 'test4'}}
+  void test4() {  // expected-note {{thread warning in function 'test4'}}
     foo2();       // expected-warning {{calling function 'foo2' requires holding mutex 'mu'}}
   }
 
-  void test5() {  // expected-note {{Thread warning in function 'test5'}}
+  void test5() {  // expected-note {{thread warning in function 'test5'}}
     mu.ReaderLock();
     foo1();       // expected-warning {{calling function 'foo1' requires holding mutex 'mu' exclusively}}
     mu.Unlock();
   }
 
-  void test6() {  // expected-note {{Thread warning in function 'test6'}}
+  void test6() {  // expected-note {{thread warning in function 'test6'}}
     mu.ReaderLock();
     a = 0;        // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
     mu.Unlock();
   }
 
-  void test7() {  // expected-note {{Thread warning in function 'test7'}}
+  void test7() {  // expected-note {{thread warning in function 'test7'}}
     mu.Lock();
     foo3();       // expected-warning {{cannot call function 'foo3' while mutex 'mu' is held}}
     mu.Unlock();

@@ -1,10 +1,10 @@
-; RUN: opt %s -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
+; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 define i32 @hidden_diverge(i32 %n, i32 %a, i32 %b) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'hidden_diverge'
+; CHECK-LABEL: Divergence Analysis' for function 'hidden_diverge'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %cond.var = icmp slt i32 %tid, 0

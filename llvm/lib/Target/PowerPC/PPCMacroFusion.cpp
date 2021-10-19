@@ -51,8 +51,8 @@ public:
     Kd(Kind), Supported(HasFeature), DepOpIdx(Index), OpSet1(First), 
     OpSet2(Second) {}
 
-  bool hasOp1(unsigned Opc) const { return OpSet1.count(Opc) != 0; }
-  bool hasOp2(unsigned Opc) const { return OpSet2.count(Opc) != 0; }
+  bool hasOp1(unsigned Opc) const { return OpSet1.contains(Opc); }
+  bool hasOp2(unsigned Opc) const { return OpSet2.contains(Opc); }
   bool isSupported() const { return Supported; }
   Optional<unsigned> depOpIdx() const {
     if (DepOpIdx < 0)

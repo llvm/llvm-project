@@ -1,3 +1,5 @@
+add_llvm_component_group(PowerPC HAS_JIT)
+
 set(LLVM_TARGET_DEFINITIONS PPC.td)
 
 tablegen(LLVM PPCGenAsmMatcher.inc -gen-asm-matcher)
@@ -11,10 +13,13 @@ tablegen(LLVM PPCGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM PPCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM PPCGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM PPCGenExegesis.inc -gen-exegesis)
+tablegen(LLVM PPCGenRegisterBank.inc -gen-register-bank)
+tablegen(LLVM PPCGenGlobalISel.inc -gen-global-isel)
 
 add_public_tablegen_target(PowerPCCommonTableGen)
 
 add_llvm_target(PowerPCCodeGen
+  GISel/PPCInstructionSelector.cpp
   PPCBoolRetToInt.cpp
   PPCAsmPrinter.cpp
   PPCBranchSelector.cpp
@@ -22,6 +27,7 @@ add_llvm_target(PowerPCCodeGen
   PPCCallingConv.cpp
   PPCCCState.cpp
   PPCCTRLoops.cpp
+  PPCExpandAtomicPseudoInsts.cpp
   PPCHazardRecognizers.cpp
   PPCInstrInfo.cpp
   PPCISelDAGToDAG.cpp
@@ -49,6 +55,28 @@ add_llvm_target(PowerPCCodeGen
   PPCExpandISEL.cpp
   PPCPreEmitPeephole.cpp
   PPCLowerMASSVEntries.cpp
+  GISel/PPCCallLowering.cpp
+  GISel/PPCRegisterBankInfo.cpp
+  GISel/PPCLegalizerInfo.cpp
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  BinaryFormat
+  CodeGen
+  Core
+  MC
+  PowerPCDesc
+  PowerPCInfo
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  GlobalISel
+
+  ADD_TO_COMPONENT
+  PowerPC
   )
 
 add_subdirectory(AsmParser)

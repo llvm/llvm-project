@@ -18,14 +18,13 @@ char *CharBuffer::FreeSpace(std::size_t &n) {
   int offset{LastBlockOffset()};
   if (blocks_.empty()) {
     blocks_.emplace_front();
-    last_ = blocks_.begin();
     lastBlockEmpty_ = true;
   } else if (offset == 0 && !lastBlockEmpty_) {
-    last_ = blocks_.emplace_after(last_);
+    blocks_.emplace_back();
     lastBlockEmpty_ = true;
   }
   n = Block::capacity - offset;
-  return last_->data + offset;
+  return blocks_.back().data + offset;
 }
 
 void CharBuffer::Claim(std::size_t n) {

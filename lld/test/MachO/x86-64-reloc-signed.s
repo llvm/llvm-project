@@ -1,21 +1,31 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -o %t %t.o
-# RUN: llvm-objdump -D %t | FileCheck %s
+# RUN: echo _t > %t.order
+# RUN: %lld -o %t -order_file %t.order %t.o
+# RUN: llvm-objdump --section-headers --syms -D %t | FileCheck %s
 
+# CHECK-LABEL: Sections:
+# CHECK:       __foo         {{[0-9a-f]+}}  [[#%x,FOO:]]  DATA
+
+# CHECK-LABEL: SYMBOL TABLE:
+# CHECK:       [[#%x,S:]]  g     O __DATA,__data _s
+
+# CHECK-LABEL: Disassembly of section
 # CHECK:      <_main>:
-# CHECK-NEXT:   movl {{.*}}  # 100001000 <_s>
+# CHECK-NEXT:   movl {{.*}}  ## imm =
+# CHECK-NEXT:                ## 0x[[#S]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # 100001002 <_s+0x2>
+# CHECK-NEXT:   movl {{.*}}  ## 0x[[#S + 2]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # 100001000 <_s>
+# CHECK-NEXT:   movb {{.*}}  ## 0x[[#S]]
 # CHECK-NEXT:   callq {{.*}}
 # CHECK:      <__not_text>:
-# CHECK-NEXT:   movl {{.*}}  # 100001005
+# CHECK-NEXT:   movl {{.*}}  ## imm =
+# CHECK-NEXT:                ## 0x[[#FOO + 8]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movl {{.*}}  # 100001007
+# CHECK-NEXT:   movl {{.*}}  ## 0x[[#FOO + 8 + 2]]
 # CHECK-NEXT:   callq {{.*}}
-# CHECK-NEXT:   movb {{.*}}  # 100001005
+# CHECK-NEXT:   movb {{.*}}  ## 0x[[#FOO + 8]]
 # CHECK-NEXT:   callq {{.*}}
 
 .section __TEXT,__text
@@ -61,4 +71,18 @@ _s:
 ## symbol to create a symbol relocation plus an addend.
 .section __DATA,__foo
 L._s:
-  .space 5
+  .space 1
+
+## This symbol exists in order to split __foo into two subsections, thereby
+## testing that our code matches the relocations with the right target
+## subsection. In particular, although L._s+2 points to an address within _t's
+## subsection, it's defined relative to L._s, and should therefore be associated
+## with L._s' subsection.
+##
+## We furthermore use an order file to rearrange these subsections so that a
+## mistake here will be obvious.
+.globl _t
+_t:
+  .quad 123
+
+.subsections_via_symbols

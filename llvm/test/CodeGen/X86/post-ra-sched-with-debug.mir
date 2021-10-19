@@ -1,10 +1,12 @@
 # RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=btver2 -run-pass=post-RA-sched -o - %s -experimental-debug-variable-locations| FileCheck %s
 
-# Test that multiple DBG_VALUE's following an instruction whose register needs
-# to be changed during the post-RA scheduler pass are updated correctly.
+# Test that multiple DBG_VALUE's and DBG_PHIs following an instruction whose
+# register needs # to be changed during the post-RA scheduler pass are updated
+# correctly.
 
 # Test case was derived from the output from the following command and
-# the source code below:
+# the source code below. DBG_PHIs added manually later:
 #
 #   clang -S -emit-llvm -target x86_64 -march=btver2 -O2 -g -o - <srcfile> |
 #   llc -stop-before=post-RA-sched -o -
@@ -253,6 +255,8 @@ body:             |
     ; CHECK:      [[REGISTER:\$r[a-z0-9]+]] = LEA64r {{\$r[a-z0-9]+}}, 1, $noreg, -20, $noreg
     ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
     ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 0
+    ; CHECK-NEXT: DBG_PHI [[REGISTER]], 1
 
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
@@ -270,16 +274,16 @@ body:             |
     $rdi = LEA64r $rbx, 1, $noreg, 8, $noreg
     DBG_VALUE $rdi, $noreg, !20, !17, debug-location !27
     DBG_VALUE $rdi, $noreg, !10, !17, debug-location !18
-    $rax = MOV64rm $rbx, 1, $noreg, 16, $noreg :: (load 8)
-    MOV64mr $rbx, 1, $noreg, 8, $noreg, killed $rax :: (store 8)
-    MOV64mr $rbx, 1, $noreg, 24, $noreg, $rdi :: (store 8)
+    $rax = MOV64rm $rbx, 1, $noreg, 16, $noreg :: (load (s64))
+    MOV64mr $rbx, 1, $noreg, 8, $noreg, killed $rax :: (store (s64))
+    MOV64mr $rbx, 1, $noreg, 24, $noreg, $rdi :: (store (s64))
     $eax = MOV32ri -1
     $cl = MOV8rr $r14b, implicit killed $r14d
     $eax = SHL32rCL killed $eax, implicit-def dead $eflags, implicit $cl
-    MOV32mr $rbx, 1, $noreg, 32, $noreg, $eax :: (store 4, align 8)
-    MOV32mi $rbp, 1, $noreg, -20, $noreg, 0 :: (store 4)
-    $rcx = MOV64rm $rbx, 1, $noreg, 8, $noreg :: (load 8)
-    MOV64mr $rip, 1, $noreg, @n, $noreg, $rcx :: (store 8)
+    MOV32mr $rbx, 1, $noreg, 32, $noreg, $eax :: (store (s32), align 8)
+    MOV32mi $rbp, 1, $noreg, -20, $noreg, 0 :: (store (s32))
+    $rcx = MOV64rm $rbx, 1, $noreg, 8, $noreg :: (load (s64))
+    MOV64mr $rip, 1, $noreg, @n, $noreg, $rcx :: (store (s64))
     $edx = XOR32rr undef $edx, undef $edx, implicit-def dead $eflags, implicit-def $rdx
     TEST64rr $rcx, $rcx, implicit-def $eflags
     $esi = MOV32ri @o, implicit-def $rsi
@@ -288,11 +292,15 @@ body:             |
     $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
     DBG_VALUE $rcx, $noreg, !46, !17, debug-location !48
     DBG_VALUE $rcx, $noreg, !39, !17, debug-location !44
+    DBG_PHI $rcx, 0
+    DBG_PHI $rcx, 1
     DBG_VALUE $rbp, -20, !29, !17, debug-location !36
     $rcx = CMOV64rr killed $rcx, killed $rdx, 5, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
-    $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load 4, align 8)
-    TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load 4)
+    $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load (s32), align 8)
+    DBG_INSTR_REF 1, 0, !46, !17, debug-location !48
+    DBG_INSTR_REF 2, 0, !39, !17, debug-location !44
+    TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32))
     JCC_1 %bb.2, 5, implicit $eflags
     JMP_1 %bb.3
 
@@ -300,7 +308,7 @@ body:             |
     successors: %bb.2
     liveins: $rbx, $rbp
 
-    $rdi = MOV64rm $rbx, 1, $noreg, 24, $noreg :: (load 8)
+    $rdi = MOV64rm $rbx, 1, $noreg, 24, $noreg :: (load (s64))
 
   bb.2:
     successors: %bb.1, %bb.3
@@ -312,7 +320,7 @@ body:             |
     $ecx = SHR32ri $ecx, 31, implicit-def dead $eflags, implicit killed $rcx, implicit-def $rcx
     $eax = LEA64_32r killed $rax, 1, killed $rcx, -1, $noreg
     $eax = SAR32r1 killed $eax, implicit-def dead $eflags
-    CMP32mr $rbx, 1, $noreg, 0, $noreg, killed $eax, implicit-def $eflags :: (load 4, align 8), (load 4, align 8)
+    CMP32mr $rbx, 1, $noreg, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32), align 8), (load (s32), align 8)
     JCC_1 %bb.1, 15, implicit killed $eflags
 
   bb.3:

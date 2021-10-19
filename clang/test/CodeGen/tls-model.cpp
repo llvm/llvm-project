@@ -30,38 +30,38 @@ struct T thread_local t1;
 // Note that unlike normal C uninitialized global variables,
 // uninitialized TLS variables do NOT have COMMON linkage.
 
-// CHECK-GD: @z1 = global i32 0
-// CHECK-GD: @z2 = global i32 0
-// CHECK-GD: @x = thread_local global i32 0
+// CHECK-GD: @z1 ={{.*}} global i32 0
+// CHECK-GD: @z2 ={{.*}} global i32 0
+// CHECK-GD: @x ={{.*}} thread_local global i32 0
 // CHECK-GD: @_ZZ1fvE1y = internal thread_local global i32 0
-// CHECK-GD: @z = thread_local(initialexec) global i32 0
-// CHECK-GD: @s1 = thread_local global %struct.S zeroinitializer
-// CHECK-GD: @t1 = thread_local global %struct.T zeroinitializer
+// CHECK-GD: @z ={{.*}} thread_local(initialexec) global i32 0
+// CHECK-GD: @s1 ={{.*}} thread_local global %struct.S zeroinitializer
+// CHECK-GD: @t1 ={{.*}} thread_local global %struct.T zeroinitializer
 // CHECK-GD: @__tls_guard = internal thread_local global i8 0
 
-// CHECK-LD: @z1 = global i32 0
-// CHECK-LD: @z2 = global i32 0
-// CHECK-LD: @x = thread_local(localdynamic) global i32 0
+// CHECK-LD: @z1 ={{.*}} global i32 0
+// CHECK-LD: @z2 ={{.*}} global i32 0
+// CHECK-LD: @x ={{.*}} thread_local(localdynamic) global i32 0
 // CHECK-LD: @_ZZ1fvE1y = internal thread_local(localdynamic) global i32 0
-// CHECK-LD: @z = thread_local(initialexec) global i32 0
-// CHECK-LD: @s1 = thread_local(localdynamic) global %struct.S zeroinitializer
-// CHECK-LD: @t1 = thread_local(localdynamic) global %struct.T zeroinitializer
+// CHECK-LD: @z ={{.*}} thread_local(initialexec) global i32 0
+// CHECK-LD: @s1 ={{.*}} thread_local(localdynamic) global %struct.S zeroinitializer
+// CHECK-LD: @t1 ={{.*}} thread_local(localdynamic) global %struct.T zeroinitializer
 // CHECK-LD: @__tls_guard = internal thread_local(localdynamic) global i8 0
 
-// CHECK-IE: @z1 = global i32 0
-// CHECK-IE: @z2 = global i32 0
-// CHECK-IE: @x = thread_local(initialexec) global i32 0
+// CHECK-IE: @z1 ={{.*}} global i32 0
+// CHECK-IE: @z2 ={{.*}} global i32 0
+// CHECK-IE: @x ={{.*}} thread_local(initialexec) global i32 0
 // CHECK-IE: @_ZZ1fvE1y = internal thread_local(initialexec) global i32 0
-// CHECK-IE: @z = thread_local(initialexec) global i32 0
-// CHECK-IE: @s1 = thread_local(initialexec) global %struct.S zeroinitializer
-// CHECK-IE: @t1 = thread_local(initialexec) global %struct.T zeroinitializer
+// CHECK-IE: @z ={{.*}} thread_local(initialexec) global i32 0
+// CHECK-IE: @s1 ={{.*}} thread_local(initialexec) global %struct.S zeroinitializer
+// CHECK-IE: @t1 ={{.*}} thread_local(initialexec) global %struct.T zeroinitializer
 // CHECK-IE: @__tls_guard = internal thread_local(initialexec) global i8 0
 
-// CHECK-LE: @z1 = global i32 0
-// CHECK-LE: @z2 = global i32 0
-// CHECK-LE: @x = thread_local(localexec) global i32 0
+// CHECK-LE: @z1 ={{.*}} global i32 0
+// CHECK-LE: @z2 ={{.*}} global i32 0
+// CHECK-LE: @x ={{.*}} thread_local(localexec) global i32 0
 // CHECK-LE: @_ZZ1fvE1y = internal thread_local(localexec) global i32 0
-// CHECK-LE: @z = thread_local(initialexec) global i32 0
-// CHECK-LE: @s1 = thread_local(localexec) global %struct.S zeroinitializer
-// CHECK-LE: @t1 = thread_local(localexec) global %struct.T zeroinitializer
+// CHECK-LE: @z ={{.*}} thread_local(initialexec) global i32 0
+// CHECK-LE: @s1 ={{.*}} thread_local(localexec) global %struct.S zeroinitializer
+// CHECK-LE: @t1 ={{.*}} thread_local(localexec) global %struct.T zeroinitializer
 // CHECK-LE: @__tls_guard = internal thread_local(localexec) global i8 0

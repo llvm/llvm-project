@@ -16,6 +16,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <unordered_set>
+
 namespace llvm {
 namespace object {
 class COFFImportFile;
@@ -32,8 +34,10 @@ class ScopedPrinter;
 
 class ObjDumper {
 public:
-  ObjDumper(ScopedPrinter &Writer);
+  ObjDumper(ScopedPrinter &Writer, StringRef ObjName);
   virtual ~ObjDumper();
+
+  virtual bool canDumpContent() { return true; }
 
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
@@ -61,18 +65,20 @@ public:
   virtual void printNeededLibraries() { }
   virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
-  virtual void printGnuHashTable(const object::ObjectFile *Obj) {}
+  virtual void printGnuHashTable() {}
   virtual void printHashSymbols() {}
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}
   virtual void printGroupSections() {}
   virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
+  virtual void printBBAddrMaps() {}
   virtual void printAddrsig() {}
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
   virtual void printStackSizes() {}
-  virtual void printArchSpecificInfo() { }
+  virtual void printSectionDetails() {}
+  virtual void printArchSpecificInfo() {}
 
   // Only implemented for PE/COFF.
   virtual void printCOFFImports() { }
@@ -80,6 +86,7 @@ public:
   virtual void printCOFFDirectives() { }
   virtual void printCOFFBaseReloc() { }
   virtual void printCOFFDebugDirectory() { }
+  virtual void printCOFFTLSDirectory() {}
   virtual void printCOFFResources() {}
   virtual void printCOFFLoadConfig() { }
   virtual void printCodeViewDebugInfo() { }
@@ -98,12 +105,21 @@ public:
   virtual void printMachOIndirectSymbols() { }
   virtual void printMachOLinkerOptions() { }
 
+  // Currently only implemented for XCOFF.
+  virtual void printStringTable() { }
+
   virtual void printStackMap() const = 0;
 
-  void printSectionsAsString(const object::ObjectFile *Obj,
+  void printAsStringList(StringRef StringContent, size_t StringDataOffset = 0);
+
+  void printSectionsAsString(const object::ObjectFile &Obj,
                              ArrayRef<std::string> Sections);
-  void printSectionsAsHex(const object::ObjectFile *Obj,
+  void printSectionsAsHex(const object::ObjectFile &Obj,
                           ArrayRef<std::string> Sections);
+
+  std::function<Error(const Twine &Msg)> WarningHandler;
+  void reportUniqueWarning(Error Err) const;
+  void reportUniqueWarning(const Twine &Msg) const;
 
 protected:
   ScopedPrinter &W;
@@ -113,6 +129,8 @@ private:
   virtual void printDynamicSymbols() {}
   virtual void printProgramHeaders() {}
   virtual void printSectionMapping() {}
+
+  std::unordered_set<std::string> Warnings;
 };
 
 std::unique_ptr<ObjDumper> createCOFFDumper(const object::COFFObjectFile &Obj,

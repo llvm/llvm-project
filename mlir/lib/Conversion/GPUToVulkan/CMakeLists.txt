@@ -6,13 +6,13 @@ add_mlir_conversion_library(MLIRGPUToVulkanTransforms
   MLIRConversionPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRGPU
+  MLIRGPUOps
   MLIRIR
   MLIRLLVMIR
   MLIRPass
   MLIRSPIRV
   MLIRSPIRVSerialization
-  MLIRStandardOps
+  MLIRStandard
   MLIRSupport
   MLIRTransforms
   MLIRTranslation

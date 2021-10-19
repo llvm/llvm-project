@@ -3,12 +3,14 @@ option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install
 find_package(LLVM REQUIRED CONFIG HINTS ${LLVM_DIR} NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang REQUIRED CONFIG HINTS ${Clang_DIR} ${LLVM_DIR}/../clang NO_CMAKE_FIND_ROOT_PATH)
 
-# We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
-set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
+# We set LLVM_CMAKE_DIR so that GetSVN.cmake is found correctly when building SVNVersion.inc
+set(LLVM_CMAKE_DIR ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
 
 set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
 set(LLVM_BINARY_DIR ${LLVM_BINARY_DIR} CACHE PATH "Path to LLVM build tree")
+
+set(LLVM_LIT_ARGS "-sv" CACHE STRING "Default options for lit")
 
 set(lit_file_name "llvm-lit")
 if(CMAKE_HOST_WIN32 AND NOT CYGWIN)

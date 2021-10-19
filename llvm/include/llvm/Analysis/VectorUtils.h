@@ -31,7 +31,7 @@ enum class VFParamKind {
   OMP_LinearPos,     // declare simd linear(i:c) uniform(c)
   OMP_LinearValPos,  // declare simd linear(val(i:c)) uniform(c)
   OMP_LinearRefPos,  // declare simd linear(ref(i:c)) uniform(c)
-  OMP_LinearUValPos, // declare simd linear(uval(i:c)) uniform(c
+  OMP_LinearUValPos, // declare simd linear(uval(i:c)) uniform(c)
   OMP_Uniform,       // declare simd uniform(i)
   GlobalPredicate,   // Global logical predicate that acts on all lanes
                      // of the input and output mask concurrently. For
@@ -80,13 +80,11 @@ struct VFParameter {
 /// represent vector functions. in particular, it is not attached to
 /// any target-specific ABI.
 struct VFShape {
-  unsigned VF;     // Vectorization factor.
-  bool IsScalable; // True if the function is a scalable function.
+  ElementCount VF;                        // Vectorization factor.
   SmallVector<VFParameter, 8> Parameters; // List of parameter information.
   // Comparison operator.
   bool operator==(const VFShape &Other) const {
-    return std::tie(VF, IsScalable, Parameters) ==
-           std::tie(Other.VF, Other.IsScalable, Other.Parameters);
+    return std::tie(VF, Parameters) == std::tie(Other.VF, Other.Parameters);
   }
 
   /// Update the parameter in position P.ParamPos to P.
@@ -115,7 +113,7 @@ struct VFShape {
       Parameters.push_back(
           VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
 
-    return {EC.getKnownMinValue(), EC.isScalable(), Parameters};
+    return {EC, Parameters};
   }
   /// Sanity check on the Parameters in the VFShape.
   bool hasValidParameterList() const;
@@ -127,12 +125,6 @@ struct VFInfo {
   std::string ScalarName; /// Scalar Function Name.
   std::string VectorName; /// Vector Function Name associated to this VFInfo.
   VFISAKind ISA;          /// Instruction Set Architecture.
-
-  // Comparison operator.
-  bool operator==(const VFInfo &Other) const {
-    return std::tie(Shape, ScalarName, VectorName, ISA) ==
-           std::tie(Shape, Other.ScalarName, Other.VectorName, Other.ISA);
-  }
 };
 
 namespace VFABI {
@@ -186,12 +178,13 @@ Optional<VFInfo> tryDemangleForVFABI(StringRef MangledName, const Module &M);
 /// <isa> = "_LLVM_"
 /// <mask> = "N". Note: TLI does not support masked interfaces.
 /// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
-///          field of the `VecDesc` struct.
+///          field of the `VecDesc` struct. If the number of lanes is scalable
+///          then 'x' is printed instead.
 /// <vparams> = "v", as many as are the numArgs.
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 std::string mangleTLIVectorName(StringRef VectorName, StringRef ScalarName,
-                                unsigned numArgs, unsigned VF);
+                                unsigned numArgs, ElementCount VF);
 
 /// Retrieve the `VFParamKind` from a string token.
 VFParamKind getVFParamKindFromString(const StringRef Token);
@@ -304,7 +297,7 @@ typedef unsigned ID;
 /// the incoming type is void, we return void. If the EC represents a
 /// scalar, we return the scalar type.
 inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || EC.isScalar())
+  if (Scalar->isVoidTy() || Scalar->isMetadataTy() || EC.isScalar())
     return Scalar;
   return VectorType::get(Scalar, EC);
 }
@@ -321,6 +314,11 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
+
+/// Identifies if the vector form of the intrinsic has a scalar operand that has
+/// an overloaded type.
+bool hasVectorInstrinsicOverloadedScalarOpd(Intrinsic::ID ID,
+                                            unsigned ScalarOpdIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
@@ -358,7 +356,7 @@ int getSplatIndex(ArrayRef<int> Mask);
 /// Get splat value if the input is a splat vector or return nullptr.
 /// The value may be extracted from a splat constants vector or from
 /// a sequence of instructions that broadcast a single value into a vector.
-const Value *getSplatValue(const Value *V);
+Value *getSplatValue(const Value *V);
 
 /// Return true if each element of the vector value \p V is poisoned or equal to
 /// every other non-poisoned element. If an index element is specified, either
@@ -535,6 +533,12 @@ llvm::SmallVector<int, 16> createStrideMask(unsigned Start, unsigned Stride,
 llvm::SmallVector<int, 16>
 createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
 
+/// Given a shuffle mask for a binary shuffle, create the equivalent shuffle
+/// mask assuming both operands are identical. This assumes that the unary
+/// shuffle will use elements from operand 0 (operand 1 will be unused).
+llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
+                                           unsigned NumElts);
+
 /// Concatenate a list of vectors.
 ///
 /// This function generates code that concatenate the vectors in \p Vecs into a
@@ -544,20 +548,20 @@ createSequentialMask(unsigned Start, unsigned NumInts, unsigned NumUndefs);
 /// elements, it will be padded with undefs.
 Value *concatenateVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of the form <Y x i1>, Return true if all of the
-/// elements of this predicate mask are false or undef.  That is, return true
-/// if all lanes can be assumed inactive. 
+/// Given a mask vector of i1, Return true if all of the elements of this
+/// predicate mask are known to be false or undef.  That is, return true if all
+/// lanes can be assumed inactive.
 bool maskIsAllZeroOrUndef(Value *Mask);
 
-/// Given a mask vector of the form <Y x i1>, Return true if all of the
-/// elements of this predicate mask are true or undef.  That is, return true
-/// if all lanes can be assumed active. 
+/// Given a mask vector of i1, Return true if all of the elements of this
+/// predicate mask are known to be true or undef.  That is, return true if all
+/// lanes can be assumed active.
 bool maskIsAllOneOrUndef(Value *Mask);
 
 /// Given a mask vector of the form <Y x i1>, return an APInt (of bitwidth Y)
 /// for each lane which may be active.
 APInt possiblyDemandedEltsInMask(Value *Mask);
-  
+
 /// The group of interleaved loads/stores sharing the same stride and
 /// close to each other.
 ///
@@ -601,10 +605,6 @@ public:
 
   bool isReverse() const { return Reverse; }
   uint32_t getFactor() const { return Factor; }
-  LLVM_ATTRIBUTE_DEPRECATED(uint32_t getAlignment() const,
-                            "Use getAlign instead.") {
-    return Alignment.value();
-  }
   Align getAlign() const { return Alignment; }
   uint32_t getNumMembers() const { return Members.size(); }
 
@@ -619,6 +619,11 @@ public:
     if (!MaybeKey)
       return false;
     int32_t Key = *MaybeKey;
+
+    // Skip if the key is used for either the tombstone or empty special values.
+    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
+        DenseMapInfo<int32_t>::getEmptyKey() == Key)
+      return false;
 
     // Skip if there is already a member with the same index.
     if (Members.find(Key) != Members.end())
@@ -655,11 +660,7 @@ public:
   /// \returns nullptr if contains no such member.
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
-    auto Member = Members.find(Key);
-    if (Member == Members.end())
-      return nullptr;
-
-    return Member->second;
+    return Members.lookup(Key);
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -691,10 +692,8 @@ public:
     if (getMember(getFactor() - 1))
       return false;
 
-    // We have a group with gaps. It therefore cannot be a group of stores,
-    // and it can't be a reversed access, because such groups get invalidated.
-    assert(!getMember(0)->mayWriteToMemory() &&
-           "Group should have been invalidated");
+    // We have a group with gaps. It therefore can't be a reversed access,
+    // because such groups get invalidated (TODO).
     assert(!isReverse() && "Group should have been invalidated");
 
     // This is a group of loads, with gaps, and without a last-member
@@ -777,9 +776,7 @@ public:
   /// \returns nullptr if doesn't have such group.
   InterleaveGroup<Instruction> *
   getInterleaveGroup(const Instruction *Instr) const {
-    if (InterleaveGroupMap.count(Instr))
-      return InterleaveGroupMap.find(Instr)->second;
-    return nullptr;
+    return InterleaveGroupMap.lookup(Instr);
   }
 
   iterator_range<SmallPtrSetIterator<llvm::InterleaveGroup<Instruction> *>>

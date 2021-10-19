@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: asan
+
 // <vector>
 
 // reference operator[](size_type n);
@@ -19,7 +21,6 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-#ifndef _LIBCPP_HAS_NO_ASAN
 extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
 
 void do_exit() {
@@ -41,7 +42,7 @@ int main(int, char**)
 #endif
 
     {
-        typedef input_iterator<int*> MyInputIter;
+        typedef cpp17_input_iterator<int*> MyInputIter;
         // Sould not trigger ASan.
         std::vector<int> v;
         v.reserve(1);
@@ -65,6 +66,3 @@ int main(int, char**)
         ((void)foo);
     }
 }
-#else
-int main(int, char**) { return 0; }
-#endif

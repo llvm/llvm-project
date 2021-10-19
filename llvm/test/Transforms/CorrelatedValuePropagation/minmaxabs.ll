@@ -11,17 +11,12 @@ declare void @use(i1)
 define void @test_umin(i32 %x) {
 ; CHECK-LABEL: @test_umin(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 10)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = call i32 @llvm.umin.i32(i32 %x, i32 10)
-  br label %split
-
-split:
   %c1 = icmp ule i32 %m, 10
   call void @use(i1 %c1)
   %c2 = icmp ult i32 %m, 10
@@ -32,17 +27,12 @@ split:
 define void @test_umax(i32 %x) {
 ; CHECK-LABEL: @test_umax(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 10)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = call i32 @llvm.umax.i32(i32 %x, i32 10)
-  br label %split
-
-split:
   %c1 = icmp uge i32 %m, 10
   call void @use(i1 %c1)
   %c2 = icmp ugt i32 %m, 10
@@ -53,17 +43,12 @@ split:
 define void @test_smin(i32 %x) {
 ; CHECK-LABEL: @test_smin(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 10)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = call i32 @llvm.smin.i32(i32 %x, i32 10)
-  br label %split
-
-split:
   %c1 = icmp sle i32 %m, 10
   call void @use(i1 %c1)
   %c2 = icmp slt i32 %m, 10
@@ -74,17 +59,12 @@ split:
 define void @test_smax(i32 %x) {
 ; CHECK-LABEL: @test_smax(
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 10)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[M]], 10
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %m = call i32 @llvm.smax.i32(i32 %x, i32 10)
-  br label %split
-
-split:
   %c1 = icmp sge i32 %m, 10
   call void @use(i1 %c1)
   %c2 = icmp sgt i32 %m, 10
@@ -94,10 +74,8 @@ split:
 
 define void @test_abs1(i32* %p) {
 ; CHECK-LABEL: @test_abs1(
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 false)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], 15
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
@@ -105,9 +83,6 @@ define void @test_abs1(i32* %p) {
 ;
   %x = load i32, i32* %p, !range !{i32 -15, i32 10}
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
-  br label %split
-
-split:
   %c1 = icmp ule i32 %a, 15
   call void @use(i1 %c1)
   %c2 = icmp ult i32 %a, 15
@@ -118,17 +93,12 @@ split:
 define void @test_abs2(i32 %x) {
 ; CHECK-LABEL: @test_abs2(
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[A]], -2147483648
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
-  br label %split
-
-split:
   %c1 = icmp ule i32 %a, 2147483648
   call void @use(i1 %c1)
   %c2 = icmp ult i32 %a, 2147483648
@@ -139,17 +109,12 @@ split:
 define void @test_abs3(i32 %x) {
 ; CHECK-LABEL: @test_abs3(
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp sgt i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 true)
-  br label %split
-
-split:
   %c1 = icmp sge i32 %a, 0
   call void @use(i1 %c1)
   %c2 = icmp sgt i32 %a, 0

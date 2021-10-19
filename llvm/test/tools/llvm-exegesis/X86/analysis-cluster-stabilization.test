@@ -1,6 +1,6 @@
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.1 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-CLUSTERS %s
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-ALL,CHECK-INCONSISTENCIES-STABLE %s
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-display-unstable-clusters -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-ALL,CHECK-INCONSISTENCIES-UNSTABLE %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-STABLE %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-display-unstable-clusters -analysis-numpoints=1 | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-UNSTABLE %s
 
 # We have one ADD32rr measurement, and two measurements for SQRTSSr.
 # The ADD32rr measurement and one of the SQRTSSr measurements are identical,

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+!RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1
   integer i, j
   real r(2)
@@ -182,3 +182,35 @@ module s15
   !ERROR: 'a(3_8)' and 'a(1_8)' cannot have the same first storage unit
   equivalence(b(2),a(1))
 end module
+
+subroutine s16
+
+  integer var, dupName
+
+  ! There should be no error message for the following
+  equivalence (dupName, var)
+
+  interface
+    subroutine interfaceSub (dupName)
+      integer dupName
+    end subroutine interfaceSub
+  end interface
+
+end subroutine s16
+
+module m17
+  real :: dupName
+contains
+  real function f17a()
+    implicit none
+    real :: y
+    !ERROR: No explicit type declared for 'dupname'
+    equivalence (dupName, y) 
+  end function f17a
+  real function f17b()
+    real :: y
+    ! The following implicitly declares an object called "dupName" local to 
+    ! the function f17b().  OK since there's no "implicit none
+    equivalence (dupName, y) 
+  end function f17b
+end module m17

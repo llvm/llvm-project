@@ -21,9 +21,9 @@
 
 // CHECK-COVERAGE: Filename    Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
 // CHECK-COVERAGE-NEXT: ---
-// CHECK-COVERAGE-NEXT: basic.c      4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
+// CHECK-COVERAGE-NEXT: basic.c      4                 1    75.00%           1                 0   100.00%           5                 1    80.00%
 // CHECK-COVERAGE-NEXT: ---
-// CHECK-COVERAGE-NEXT: TOTAL        4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
+// CHECK-COVERAGE-NEXT: TOTAL        4                 1    75.00%           1                 0   100.00%           5                 1    80.00%
 
 extern int __llvm_profile_is_continuous_mode_enabled(void);
 

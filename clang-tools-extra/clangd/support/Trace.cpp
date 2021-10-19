@@ -53,9 +53,12 @@ public:
 
   // We stash a Span object in the context. It will record the start/end,
   // and this also allows us to look up the parent Span's information.
-  Context beginSpan(llvm::StringRef Name, llvm::json::Object *Args) override {
-    return Context::current().derive(
-        SpanKey, std::make_unique<JSONSpan>(this, Name, Args));
+  Context beginSpan(
+      llvm::StringRef Name,
+      llvm::function_ref<void(llvm::json::Object *)> AttachDetails) override {
+    auto JS = std::make_unique<JSONSpan>(this, Name);
+    AttachDetails(&JS->Args);
+    return Context::current().derive(SpanKey, std::move(JS));
   }
 
   // Trace viewer requires each thread to properly stack events.
@@ -85,9 +88,9 @@ public:
 private:
   class JSONSpan {
   public:
-    JSONSpan(JSONTracer *Tracer, llvm::StringRef Name, llvm::json::Object *Args)
+    JSONSpan(JSONTracer *Tracer, llvm::StringRef Name)
         : StartTime(Tracer->timestamp()), EndTime(0), Name(Name),
-          TID(llvm::get_threadid()), Tracer(Tracer), Args(Args) {
+          TID(llvm::get_threadid()), Tracer(Tracer) {
       // ~JSONSpan() may run in a different thread, so we need to capture now.
       Tracer->captureThreadMetadata();
 
@@ -109,14 +112,14 @@ private:
             "s",
             llvm::json::Object{{"id", FlowID},
                                {"name", "Context crosses threads"},
-                               {"cat", "dummy"}},
+                               {"cat", "mock_cat"}},
             (*Parent)->TID, (*Parent)->StartTime);
         Tracer->jsonEvent(
             "f",
             llvm::json::Object{{"id", FlowID},
                                {"bp", "e"},
                                {"name", "Context crosses threads"},
-                               {"cat", "dummy"}},
+                               {"cat", "mock_cat"}},
             TID);
       }
     }
@@ -125,13 +128,15 @@ private:
       // Finally, record the event (ending at EndTime, not timestamp())!
       Tracer->jsonEvent("X",
                         llvm::json::Object{{"name", std::move(Name)},
-                                           {"args", std::move(*Args)},
+                                           {"args", std::move(Args)},
                                            {"dur", EndTime - StartTime}},
                         TID, StartTime);
     }
 
     // May be called by any thread.
     void markEnded() { EndTime = Tracer->timestamp(); }
+
+    llvm::json::Object Args;
 
   private:
     static int64_t nextID() {
@@ -144,7 +149,6 @@ private:
     std::string Name;
     uint64_t TID;
     JSONTracer *Tracer;
-    llvm::json::Object *Args;
   };
   static Key<std::unique_ptr<JSONSpan>> SpanKey;
 
@@ -277,12 +281,13 @@ void log(const llvm::Twine &Message) {
   T->instant("Log", llvm::json::Object{{"Message", Message.str()}});
 }
 
-// Returned context owns Args.
-static Context makeSpanContext(llvm::Twine Name, llvm::json::Object *Args,
-                               const Metric &LatencyMetric) {
+bool enabled() { return T != nullptr; }
+
+// The JSON object is event args (owned by context), if the tracer wants them.
+static std::pair<Context, llvm::json::Object *>
+makeSpanContext(llvm::Twine Name, const Metric &LatencyMetric) {
   if (!T)
-    return Context::current().clone();
-  WithContextValue WithArgs{std::unique_ptr<llvm::json::Object>(Args)};
+    return std::make_pair(Context::current().clone(), nullptr);
   llvm::Optional<WithContextValue> WithLatency;
   using Clock = std::chrono::high_resolution_clock;
   WithLatency.emplace(llvm::make_scope_exit(
@@ -293,9 +298,15 @@ static Context makeSpanContext(llvm::Twine Name, llvm::json::Object *Args,
                 .count(),
             Name);
       }));
-  return T->beginSpan(Name.isSingleStringRef() ? Name.getSingleStringRef()
-                                               : llvm::StringRef(Name.str()),
-                      Args);
+  llvm::json::Object *Args = nullptr;
+  Context Ctx = T->beginSpan(
+      Name.isSingleStringRef() ? Name.getSingleStringRef()
+                               : llvm::StringRef(Name.str()),
+      [&](llvm::json::Object *A) {
+        assert(A && A->empty() && "Invalid AttachDetails() placeholder!");
+        Args = A;
+      });
+  return std::make_pair(std::move(Ctx), Args);
 }
 
 // Fallback metric that measures latencies for spans without an explicit latency
@@ -307,8 +318,9 @@ constexpr Metric SpanLatency("span_latency", Metric::Distribution, "span_name");
 // beginSpan() context is destroyed, when the tracing engine will consume them.
 Span::Span(llvm::Twine Name) : Span(Name, SpanLatency) {}
 Span::Span(llvm::Twine Name, const Metric &LatencyMetric)
-    : Args(T ? new llvm::json::Object() : nullptr),
-      RestoreCtx(makeSpanContext(Name, Args, LatencyMetric)) {}
+    : Span(makeSpanContext(Name, LatencyMetric)) {}
+Span::Span(std::pair<Context, llvm::json::Object *> Pair)
+    : Args(Pair.second), RestoreCtx(std::move(Pair.first)) {}
 
 Span::~Span() {
   if (T)
@@ -323,7 +335,9 @@ void Metric::record(double Value, llvm::StringRef Label) const {
   T->record(*this, Value, Label);
 }
 
-Context EventTracer::beginSpan(llvm::StringRef Name, llvm::json::Object *Args) {
+Context EventTracer::beginSpan(
+    llvm::StringRef Name,
+    llvm::function_ref<void(llvm::json::Object *)> AttachDetails) {
   return Context::current().clone();
 }
 } // namespace trace

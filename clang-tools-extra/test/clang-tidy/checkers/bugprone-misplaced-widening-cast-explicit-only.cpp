@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: [{key: bugprone-misplaced-widening-cast.CheckImplicitCasts, value: 0}]}" --
+// RUN: %check_clang_tidy %s bugprone-misplaced-widening-cast %t -- -config="{CheckOptions: [{key: bugprone-misplaced-widening-cast.CheckImplicitCasts, value: false}]}" --
 
 void func(long arg) {}
 

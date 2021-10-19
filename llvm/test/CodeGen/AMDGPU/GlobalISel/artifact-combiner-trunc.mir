@@ -10,7 +10,6 @@ body: |
     ; of the merge source
     ; CHECK-LABEL: name: trunc_s16_merge_s64_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
@@ -28,7 +27,6 @@ body: |
     ; Test that trunc(merge) with trunc-size == merge-source-size is eliminated
     ; CHECK-LABEL: name: trunc_s32_merge_s64_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
@@ -123,7 +121,6 @@ body: |
     ; have been combined.
     ; CHECK-LABEL: name: trunc_s68_merge_s128_s32
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK: $vgpr0 = COPY [[C]](s32)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1

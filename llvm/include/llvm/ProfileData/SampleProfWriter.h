@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/ErrorOr.h"
@@ -24,9 +25,19 @@
 #include <memory>
 #include <set>
 #include <system_error>
+#include <unordered_set>
 
 namespace llvm {
 namespace sampleprof {
+
+enum SectionLayout {
+  DefaultLayout,
+  // The layout splits profile with context information from profile without
+  // context information. When Thinlto is enabled, ThinLTO postlink phase only
+  // has to load profile with context information and can skip the other part.
+  CtxSplitLayout,
+  NumOfLayout,
+};
 
 /// Sample-based profile writer. Base class.
 class SampleProfileWriter {
@@ -41,7 +52,7 @@ public:
   /// Write all the sample profiles in the given map of samples.
   ///
   /// \returns status code of the file update operation.
-  virtual std::error_code write(const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code write(const SampleProfileMap &ProfileMap);
 
   raw_ostream &getOutputStream() { return *OutputStream; }
 
@@ -60,18 +71,17 @@ public:
   virtual void setToCompressAllSections() {}
   virtual void setUseMD5() {}
   virtual void setPartialProfile() {}
+  virtual void resetSecLayout(SectionLayout SL) {}
 
 protected:
   SampleProfileWriter(std::unique_ptr<raw_ostream> &OS)
       : OutputStream(std::move(OS)) {}
 
   /// Write a file header for the profile file.
-  virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) = 0;
+  virtual std::error_code writeHeader(const SampleProfileMap &ProfileMap) = 0;
 
   // Write function profiles to the profile file.
-  virtual std::error_code
-  writeFuncProfiles(const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code writeFuncProfiles(const SampleProfileMap &ProfileMap);
 
   /// Output stream where to emit the profile to.
   std::unique_ptr<raw_ostream> OutputStream;
@@ -80,7 +90,7 @@ protected:
   std::unique_ptr<ProfileSummary> Summary;
 
   /// Compute summary for this profile.
-  void computeSummary(const StringMap<FunctionSamples> &ProfileMap);
+  void computeSummary(const SampleProfileMap &ProfileMap);
 
   /// Profile format.
   SampleProfileFormat Format = SPF_None;
@@ -95,8 +105,7 @@ protected:
   SampleProfileWriterText(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS), Indent(0) {}
 
-  std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override {
+  std::error_code writeHeader(const SampleProfileMap &ProfileMap) override {
     return sampleprof_error::success;
   }
 
@@ -120,18 +129,22 @@ public:
   virtual std::error_code writeSample(const FunctionSamples &S) override;
 
 protected:
+  virtual MapVector<StringRef, uint32_t> &getNameTable() { return NameTable; }
   virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
   virtual std::error_code writeNameTable();
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
+  virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(StringRef FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(std::set<StringRef> &V);
+  inline void stablizeNameTable(MapVector<StringRef, uint32_t> &NameTable,
+                                std::set<StringRef> &V);
 
   MapVector<StringRef, uint32_t> NameTable;
 
   void addName(StringRef FName);
+  virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
 
 private:
@@ -144,18 +157,83 @@ class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 };
 
+const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
+    ExtBinaryHdrLayoutTable = {
+        // Note that SecFuncOffsetTable section is written after SecLBRProfile
+        // in the profile, but is put before SecLBRProfile in SectionHdrLayout.
+        // This is because sample reader follows the order in SectionHdrLayout
+        // to read each section. To read function profiles on demand, sample
+        // reader need to get the offset of each function profile first.
+        //
+        // DefaultLayout
+        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
+                                          {SecNameTable, 0, 0, 0, 0},
+                                          {SecCSNameTable, 0, 0, 0, 0},
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
+                                          {SecProfileSymbolList, 0, 0, 0, 0},
+                                          {SecFuncMetadata, 0, 0, 0, 0}}),
+        // CtxSplitLayout
+        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
+                                          {SecNameTable, 0, 0, 0, 0},
+                                          // profile with context
+                                          // for next two sections
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
+                                          // profile without context
+                                          // for next two sections
+                                          {SecFuncOffsetTable, 0, 0, 0, 0},
+                                          {SecLBRProfile, 0, 0, 0, 0},
+                                          {SecProfileSymbolList, 0, 0, 0, 0},
+                                          {SecFuncMetadata, 0, 0, 0, 0}}),
+};
+
 class SampleProfileWriterExtBinaryBase : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 public:
-  virtual std::error_code
-  write(const StringMap<FunctionSamples> &ProfileMap) override;
+  virtual std::error_code write(const SampleProfileMap &ProfileMap) override;
 
   virtual void setToCompressAllSections() override;
   void setToCompressSection(SecType Type);
+  virtual std::error_code writeSample(const FunctionSamples &S) override;
+
+  // Set to use MD5 to represent string in NameTable.
+  virtual void setUseMD5() override {
+    UseMD5 = true;
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
+    // MD5 will be stored as plain uint64_t instead of variable-length
+    // quantity format in NameTable section.
+    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagFixedLengthMD5);
+  }
+
+  // Set the profile to be partial. It means the profile is for
+  // common/shared code. The common profile is usually merged from
+  // profiles collected from running other targets.
+  virtual void setPartialProfile() override {
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagPartial);
+  }
+
+  virtual void setProfileSymbolList(ProfileSymbolList *PSL) override {
+    ProfSymList = PSL;
+  };
+
+  virtual void resetSecLayout(SectionLayout SL) override {
+    verifySecLayout(SL);
+#ifndef NDEBUG
+    // Make sure resetSecLayout is called before any flag setting.
+    for (auto &Entry : SectionHdrLayout) {
+      assert(Entry.Flags == 0 &&
+             "resetSecLayout has to be called before any flag setting");
+    }
+#endif
+    SecLayout = SL;
+    SectionHdrLayout = ExtBinaryHdrLayoutTable[SL];
+  }
 
 protected:
-  uint64_t markSectionStart(SecType Type);
-  std::error_code addNewSection(SecType Sec, uint64_t SectionStart);
+  uint64_t markSectionStart(SecType Type, uint32_t LayoutIdx);
+  std::error_code addNewSection(SecType Sec, uint32_t LayoutIdx,
+                                uint64_t SectionStart);
   template <class SecFlagType>
   void addSectionFlag(SecType Type, SecFlagType Flag) {
     for (auto &Entry : SectionHdrLayout) {
@@ -163,23 +241,58 @@ protected:
         addSecFlag(Entry, Flag);
     }
   }
+  template <class SecFlagType>
+  void addSectionFlag(uint32_t SectionIdx, SecFlagType Flag) {
+    addSecFlag(SectionHdrLayout[SectionIdx], Flag);
+  }
 
-  virtual void initSectionHdrLayout() = 0;
+  virtual void addContext(const SampleContext &Context) override;
+
+  // placeholder for subclasses to dispatch their own section writers.
+  virtual std::error_code writeCustomSection(SecType Type) = 0;
+  // Verify the SecLayout is supported by the format.
+  virtual void verifySecLayout(SectionLayout SL) = 0;
+
+  // specify the order to write sections.
+  virtual std::error_code writeSections(const SampleProfileMap &ProfileMap) = 0;
+
+  // Dispatch section writer for each section. \p LayoutIdx is the sequence
+  // number indicating where the section is located in SectionHdrLayout.
+  virtual std::error_code writeOneSection(SecType Type, uint32_t LayoutIdx,
+                                          const SampleProfileMap &ProfileMap);
+
+  // Helper function to write name table.
+  virtual std::error_code writeNameTable() override;
   virtual std::error_code
-  writeSections(const StringMap<FunctionSamples> &ProfileMap) = 0;
+  writeContextIdx(const SampleContext &Context) override;
+  std::error_code writeCSNameIdx(const SampleContext &Context);
+  std::error_code writeCSNameTableSection();
 
+  std::error_code writeFuncMetadata(const SampleProfileMap &Profiles);
+
+  // Functions to write various kinds of sections.
+  std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
+  std::error_code writeFuncOffsetTable();
+  std::error_code writeProfileSymbolListSection();
+
+  SectionLayout SecLayout = DefaultLayout;
   // Specifiy the order of sections in section header table. Note
-  // the order of sections in the profile may be different that the
+  // the order of sections in SecHdrTable may be different that the
   // order in SectionHdrLayout. sample Reader will follow the order
   // in SectionHdrLayout to read each section.
-  SmallVector<SecHdrTableEntry, 8> SectionHdrLayout;
+  SmallVector<SecHdrTableEntry, 8> SectionHdrLayout =
+      ExtBinaryHdrLayoutTable[DefaultLayout];
+
+  // Save the start of SecLBRProfile so we can compute the offset to the
+  // start of SecLBRProfile for each Function's Profile and will keep it
+  // in FuncOffsetTable.
+  uint64_t SecLBRProfileStart = 0;
 
 private:
   void allocSecHdrTable();
   std::error_code writeSecHdrTable();
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
-  SecHdrTableEntry &getEntryInLayout(SecType Type);
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code compressAndOutput();
 
   // We will swap the raw_ostream held by LocalBufStream and that
@@ -196,70 +309,45 @@ private:
   // The location in the output stream where the SecHdrTable should be
   // written to.
   uint64_t SecHdrTableOffset;
-  // Initial Section Flags setting.
+  // The table contains SecHdrTableEntry entries in order of how they are
+  // populated in the writer. It may be different from the order in
+  // SectionHdrLayout which specifies the sequence in which sections will
+  // be read.
   std::vector<SecHdrTableEntry> SecHdrTable;
+
+  // FuncOffsetTable maps function context to its profile offset in
+  // SecLBRProfile section. It is used to load function profile on demand.
+  MapVector<SampleContext, uint64_t> FuncOffsetTable;
+  // Whether to use MD5 to represent string.
+  bool UseMD5 = false;
+
+  /// CSNameTable maps function context to its offset in SecCSNameTable section.
+  /// The offset will be used everywhere where the context is referenced.
+  MapVector<SampleContext, uint32_t> CSNameTable;
+
+  ProfileSymbolList *ProfSymList = nullptr;
 };
 
 class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
 public:
   SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriterExtBinaryBase(OS) {
-    initSectionHdrLayout();
-  }
-
-  virtual std::error_code writeSample(const FunctionSamples &S) override;
-  virtual void setProfileSymbolList(ProfileSymbolList *PSL) override {
-    ProfSymList = PSL;
-  };
-
-  // Set to use MD5 to represent string in NameTable.
-  virtual void setUseMD5() override {
-    UseMD5 = true;
-    addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagMD5Name);
-  }
-
-  // Set the profile to be partial. It means the profile is for
-  // common/shared code. The common profile is usually merged from
-  // profiles collected from running other targets.
-  virtual void setPartialProfile() override {
-    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagPartial);
-  }
+      : SampleProfileWriterExtBinaryBase(OS) {}
 
 private:
-  virtual void initSectionHdrLayout() override {
-    // Note that SecFuncOffsetTable section is written after SecLBRProfile
-    // in the profile, but is put before SecLBRProfile in SectionHdrLayout.
-    //
-    // This is because sample reader follows the order of SectionHdrLayout to
-    // read each section, to read function profiles on demand sample reader
-    // need to get the offset of each function profile first.
-    //
-    // SecFuncOffsetTable section is written after SecLBRProfile in the
-    // profile because FuncOffsetTable needs to be populated while section
-    // SecLBRProfile is written.
-    SectionHdrLayout = {{SecProfSummary, 0, 0, 0},
-                        {SecNameTable, 0, 0, 0},
-                        {SecFuncOffsetTable, 0, 0, 0},
-                        {SecLBRProfile, 0, 0, 0},
-                        {SecProfileSymbolList, 0, 0, 0}};
-  };
+  std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);
+  std::error_code writeCtxSplitLayout(const SampleProfileMap &ProfileMap);
+
   virtual std::error_code
-  writeSections(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeSections(const SampleProfileMap &ProfileMap) override;
 
-  std::error_code writeFuncOffsetTable();
-  virtual std::error_code writeNameTable() override;
+  virtual std::error_code writeCustomSection(SecType Type) override {
+    return sampleprof_error::success;
+  };
 
-  ProfileSymbolList *ProfSymList = nullptr;
-
-  // Save the start of SecLBRProfile so we can compute the offset to the
-  // start of SecLBRProfile for each Function's Profile and will keep it
-  // in FuncOffsetTable.
-  uint64_t SecLBRProfileStart = 0;
-  // FuncOffsetTable maps function name to its profile offset in SecLBRProfile
-  // section. It is used to load function profile on demand.
-  MapVector<StringRef, uint64_t> FuncOffsetTable;
-  // Whether to use MD5 to represent string.
-  bool UseMD5 = false;
+  virtual void verifySecLayout(SectionLayout SL) override {
+    assert((SL == DefaultLayout || SL == CtxSplitLayout) &&
+           "Unsupported layout");
+  }
 };
 
 // CompactBinary is a compact format of binary profile which both reduces
@@ -297,8 +385,7 @@ class SampleProfileWriterCompactBinary : public SampleProfileWriterBinary {
 
 public:
   virtual std::error_code writeSample(const FunctionSamples &S) override;
-  virtual std::error_code
-  write(const StringMap<FunctionSamples> &ProfileMap) override;
+  virtual std::error_code write(const SampleProfileMap &ProfileMap) override;
 
 protected:
   /// The table mapping from function name to the offset of its FunctionSample
@@ -309,7 +396,7 @@ protected:
   uint64_t TableOffset;
   virtual std::error_code writeNameTable() override;
   virtual std::error_code
-  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeFuncOffsetTable();
 };
 

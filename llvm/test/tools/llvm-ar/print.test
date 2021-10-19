@@ -8,6 +8,11 @@
 
 # RUN: llvm-ar -rc %t/archive.a %t/1.txt %t/2.txt %t/3.txt
 
+## Print empty archive:
+# RUN: llvm-ar cr %t/empty.a
+# RUN: llvm-ar p %t/empty.a 2>&1 | count 0
+# RUN: llvm-ar pv %t/empty.a 2>&1 | count 0
+
 ## Print without member:
 # RUN: llvm-ar p %t/archive.a \
 # RUN:   | FileCheck %s --check-prefix=WITHOUT --match-full-lines --implicit-check-not {{.}}
@@ -73,15 +78,20 @@
 
 ## Archive does not exist:
 # RUN: not llvm-ar p %t/missing.a 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=MISSING-ARCHIVE -DARCHIVE=%t/missing.a
+# RUN:   | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=MISSING-ARCHIVE -DARCHIVE=%t/missing.a
 
-# MISSING-ARCHIVE: error: unable to load '[[ARCHIVE]]': {{[nN]}}o such file or directory
+# MISSING-ARCHIVE: error: unable to load '[[ARCHIVE]]': [[MSG]]
 
 ## Member does not exist:
 # RUN: not llvm-ar p %t/archive.a %t-missing.txt 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t-missing.txt
 
 # MISSING-FILE: error: '[[FILE]]' was not found
+
+## Print empty thin archive:
+# RUN: llvm-ar Trc %t/thin-archive-empty.a
+# RUN: llvm-ar p %t/thin-archive-empty.a 2>&1 | count 0
+# RUN: llvm-ar pv %t/thin-archive-empty.a 2>&1 | count 0
 
 ## Print thin archive:
 # RUN: llvm-ar Trc %t/thin-archive.a %t/1.txt %t/2.txt %t/3.txt

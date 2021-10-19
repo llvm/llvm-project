@@ -28,7 +28,7 @@ typedef struct {
   // Enable sandbox support in sanitizer coverage.
   int coverage_sandboxed;
   // File descriptor to write coverage data to. If -1 is passed, a file will
-  // be pre-opened by __sanitizer_sandobx_on_notify(). This field has no
+  // be pre-opened by __sanitizer_sandbox_on_notify(). This field has no
   // effect if coverage_sandboxed == 0.
   intptr_t coverage_fd;
   // If non-zero, split the coverage data into well-formed blocks. This is
@@ -43,6 +43,9 @@ void __sanitizer_set_report_path(const char *path);
 // Tell the tools to write their reports to the provided file descriptor
 // (casted to void *).
 void __sanitizer_set_report_fd(void *fd);
+// Get the current full report file path, if a path was specified by
+// an earlier call to __sanitizer_set_report_path. Returns null otherwise.
+const char *__sanitizer_get_report_path();
 
 // Notify the tools that the sandbox is going to be turned on. The reserved
 // parameter will be used in the future to hold a structure with functions

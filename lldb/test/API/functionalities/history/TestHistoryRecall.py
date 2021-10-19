@@ -30,8 +30,8 @@ class TestHistoryRecall(TestBase):
 
         interp.HandleCommand("!0", result, False)
         self.assertTrue(result.Succeeded(), "!0 command did not work: %s"%(result.GetError()))
-        self.assertTrue("session history" in result.GetOutput(), "!0 didn't rerun session history")
+        self.assertIn("session history", result.GetOutput(), "!0 didn't rerun session history")
 
         interp.HandleCommand("!-1", result, False)
         self.assertTrue(result.Succeeded(), "!-1 command did not work: %s"%(result.GetError()))
-        self.assertTrue("host:" in result.GetOutput(), "!-1 didn't rerun platform list.")
+        self.assertIn("host:", result.GetOutput(), "!-1 didn't rerun platform list.")

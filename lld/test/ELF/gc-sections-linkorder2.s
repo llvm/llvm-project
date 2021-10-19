@@ -14,3 +14,9 @@ _start:
 .quad 0
 .section .zed,"ao",@progbits,.foo
 .quad 0
+
+.section .nonalloc
+.quad 0
+
+.section .nonalloc_linkorder,"o",@progbits,.nonalloc
+.quad 0

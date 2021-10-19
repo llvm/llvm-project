@@ -47,7 +47,7 @@ class raw_ostream;
 
   public:
     /// Create a BitcodeWriter that writes to Buffer.
-    BitcodeWriter(SmallVectorImpl<char> &Buffer);
+    BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS = nullptr);
 
     ~BitcodeWriter();
 
@@ -152,10 +152,18 @@ class raw_ostream;
                         const std::map<std::string, GVSummaryMapTy>
                             *ModuleToSummariesForIndex = nullptr);
 
-  /// Save a copy of the llvm IR as data in the __LLVM,__bitcode section.
+  /// If EmbedBitcode is set, save a copy of the llvm IR as data in the
+  ///  __LLVM,__bitcode section (.llvmbc on non-MacOS).
+  /// If available, pass the serialized module via the Buf parameter. If not,
+  /// pass an empty (default-initialized) MemoryBufferRef, and the serialization
+  /// will be handled by this API. The same behavior happens if the provided Buf
+  /// is not bitcode (i.e. if it's invalid data or even textual LLVM assembly).
+  /// If EmbedCmdline is set, the command line is also exported in
+  /// the corresponding section (__LLVM,_cmdline / .llvmcmd) - even if CmdArgs
+  /// were empty.
   void EmbedBitcodeInModule(Module &M, MemoryBufferRef Buf, bool EmbedBitcode,
-                            bool EmbedMarker,
-                            const std::vector<uint8_t> *CmdArgs);
+                            bool EmbedCmdline,
+                            const std::vector<uint8_t> &CmdArgs);
 
 } // end namespace llvm
 

@@ -12,7 +12,7 @@
 
 #include "PThreadEvent.h"
 #include "DNBLog.h"
-#include "errno.h"
+#include <cerrno>
 
 PThreadEvent::PThreadEvent(uint32_t bits, uint32_t validBits)
     : m_mutex(), m_set_condition(), m_reset_condition(), m_bits(bits),

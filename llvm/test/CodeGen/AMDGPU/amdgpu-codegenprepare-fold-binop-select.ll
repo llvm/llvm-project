@@ -42,7 +42,7 @@ define i32 @select_sdiv_rhs_const_i32(i1 %cond) {
 
 define <2 x i32> @select_sdiv_lhs_const_v2i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_lhs_const_v2i32(
-; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 666, i32 undef>, <2 x i32> <i32 555, i32 1428>
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 666, i32 poison>, <2 x i32> <i32 555, i32 1428>
 ; IR-NEXT:    ret <2 x i32> [[OP]]
 ;
 ; GCN-LABEL: select_sdiv_lhs_const_v2i32:
@@ -128,7 +128,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
@@ -210,7 +210,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
@@ -259,7 +259,7 @@ define i32 @select_sdiv_rhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x392fa
@@ -289,7 +289,7 @@ define i32 @select_sdiv_rhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0xa410
@@ -360,7 +360,6 @@ define i32 @select_mul_lhs_const_i32(i1 %cond) {
 ; IR-LABEL: @select_mul_lhs_const_i32(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 5000, i32 8000
 ; IR-NEXT:    ret i32 [[OP]]
-;
   %select = select i1 %cond, i32 5, i32 8
   %op = mul i32 1000, %select
   ret i32 %op
@@ -380,7 +379,6 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 ; IR-LABEL: @select_mul_rhs_const_i32(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 5000, i32 8000
 ; IR-NEXT:    ret i32 [[OP]]
-;
   %select = select i1 %cond, i32 5, i32 8
   %op = mul i32 %select, 1000
   ret i32 %op
@@ -398,8 +396,8 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x83
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x80
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_and_b32 s0, 1, s0
-; GCN-NEXT:    v_cmp_eq_u32_e64 vcc, s0, 1
+; GCN-NEXT:    s_bitcmp1_b32 s0, 0
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GCN-NEXT:    flat_store_short v[0:1], v0
 ; GCN-NEXT:    s_endpgm
@@ -420,7 +418,6 @@ define i16 @select_add_trunc_select(i1 %cond) {
 ; IR-LABEL: @select_add_trunc_select(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 47, i16 50
 ; IR-NEXT:    ret i16 [[OP]]
-;
   %select = select i1 %cond, i32 5, i32 8
   %trunc = trunc i32 %select to i16
   %op = add i16 %trunc, 42

@@ -20,9 +20,9 @@ define arm_aapcs_vfpcc void @gather_inc_v4i32_simple(i32* noalias nocapture read
 ; CHECK-NEXT:  .LBB0_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
+; CHECK-NEXT:    dls lr, r4
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    dls lr, r4
 ; CHECK-NEXT:  .LBB0_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2

@@ -1,0 +1,13 @@
+# RUN: llvm-ifs --input-format=IFS --output-format=IFS --output=- %s | FileCheck %s
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
+...
+
+# CHECK:      --- !ifs-v1
+# CHECK-NEXT: IfsVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Symbols: []
+# CHECK-NEXT: ...

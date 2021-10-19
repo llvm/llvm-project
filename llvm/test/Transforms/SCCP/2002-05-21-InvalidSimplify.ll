@@ -2,7 +2,7 @@
 ; this is in fact NOT the case, so the return should still be alive in the code
 ; after sccp and CFG simplification have been performed.
 ;
-; RUN: opt < %s -sccp -simplifycfg -S | \
+; RUN: opt < %s -sccp -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | \
 ; RUN:   grep ret
 
 define void @old_main() {

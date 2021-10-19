@@ -535,7 +535,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
 
-    if (RegInfo.needsStackRealignment(MF)) {
+    if (RegInfo.hasStackRealignment(MF)) {
       // addiu $Reg, $zero, -MaxAlignment
       // andi $sp, $sp, $Reg
       Register VR = MF.getRegInfo().createVirtualRegister(RC);
@@ -774,9 +774,9 @@ void MipsSEFrameLowering::emitInterruptEpilogueStub(
       .addImm(0);
 }
 
-int MipsSEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
-                                                int FI,
-                                                Register &FrameReg) const {
+StackOffset
+MipsSEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                            Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsABIInfo ABI = STI.getABI();
 
@@ -785,8 +785,9 @@ int MipsSEFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   else
     FrameReg = hasBP(MF) ? ABI.GetBasePtr() : ABI.GetStackPtr();
 
-  return MFI.getObjectOffset(FI) + MFI.getStackSize() -
-         getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
+  return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
+                               getOffsetOfLocalArea() +
+                               MFI.getOffsetAdjustment());
 }
 
 bool MipsSEFrameLowering::spillCalleeSavedRegisters(

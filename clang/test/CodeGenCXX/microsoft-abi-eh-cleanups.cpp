@@ -18,9 +18,9 @@ void HasEHCleanup() {
 // WIN32-LABEL: define dso_local void @"?HasEHCleanup@@YAXXZ"() {{.*}} {
 // WIN32:   %[[base:.*]] = call i8* @llvm.stacksave()
 //    If this call throws, we have to restore the stack.
-// WIN32:   call void @"?getA@@YA?AUA@@XZ"(%struct.A* sret align 4 %{{.*}})
+// WIN32:   call void @"?getA@@YA?AUA@@XZ"(%struct.A* sret(%struct.A) align 4 %{{.*}})
 //    If this call throws, we have to cleanup the first temporary.
-// WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(%struct.A* sret align 4 %{{.*}})
+// WIN32:   invoke void @"?getA@@YA?AUA@@XZ"(%struct.A* sret(%struct.A) align 4 %{{.*}})
 //    If this call throws, we have to cleanup the stacksave.
 // WIN32:   call i32 @"?TakesTwo@@YAHUA@@0@Z"
 // WIN32:   call void @llvm.stackrestore
@@ -45,7 +45,7 @@ int HasDeactivatedCleanups() {
 // WIN32:   call x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"
 // WIN32:   invoke void @"?TakeRef@@YAXABUA@@@Z"
 //
-// WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* %[[arg1]])
+// WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* {{[^,]*}} %[[arg1]])
 // WIN32:   store i1 true, i1* %[[isactive]]
 //
 // WIN32:   %[[arg0:.*]] = getelementptr inbounds [[argmem_ty]], [[argmem_ty]]* %[[argmem]], i32 0, i32 0
@@ -54,7 +54,7 @@ int HasDeactivatedCleanups() {
 // WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"
 // WIN32:   store i1 false, i1* %[[isactive]]
 //
-// WIN32:   invoke i32 @"?TakesTwo@@YAHUA@@0@Z"([[argmem_ty]]* inalloca %[[argmem]])
+// WIN32:   invoke i32 @"?TakesTwo@@YAHUA@@0@Z"([[argmem_ty]]* inalloca([[argmem_ty]]) %[[argmem]])
 //        Destroy the two const ref temporaries.
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})
@@ -63,7 +63,7 @@ int HasDeactivatedCleanups() {
 //        Conditionally destroy arg1.
 // WIN32:   %[[cond:.*]] = load i1, i1* %[[isactive]]
 // WIN32:   br i1 %[[cond]]
-// WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* %[[arg1]])
+// WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"(%struct.A* {{[^,]*}} %[[arg1]])
 // WIN32: }
 
 // Test putting the cleanups inside a conditional.
@@ -76,9 +76,9 @@ int HasConditionalCleanup(bool cond) {
 // WIN32:   store i1 false
 // WIN32:   br i1
 // WIN32:   call i8* @llvm.stacksave()
-// WIN32:   call x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* %{{.*}})
+// WIN32:   call x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* {{[^,]*}} %{{.*}})
 // WIN32:   store i1 true
-// WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* %{{.*}})
+// WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"(%struct.A* {{[^,]*}} %{{.*}})
 // WIN32:   call i32 @"?TakesTwo@@YAHUA@@0@Z"
 //
 // WIN32:   call void @llvm.stackrestore
@@ -241,9 +241,9 @@ void f() {
 
 // WIN32-LABEL: define dso_local void @"?f@noexcept_false_dtor@@YAXXZ"()
 // WIN32: invoke i32 @"?CouldThrow@@YAHXZ"()
-// WIN32: call x86_thiscallcc void @"??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}})
+// WIN32: call x86_thiscallcc void @"??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* {{[^,]*}} %{{.*}})
 // WIN32: cleanuppad
-// WIN32: call x86_thiscallcc void @"??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* %{{.*}})
+// WIN32: call x86_thiscallcc void @"??1D@noexcept_false_dtor@@QAE@XZ"(%"struct.noexcept_false_dtor::D"* {{[^,]*}} %{{.*}})
 // WIN32: cleanupret
 
 namespace lifetime_marker {
@@ -293,7 +293,7 @@ struct class_0 : class_1 {
 };
 
 class_0::class_0() {
-  // WIN32: define dso_local x86_thiscallcc %struct.class_0* @"??0class_0@@QAE@XZ"(%struct.class_0* returned %this, i32 %is_most_derived)
+  // WIN32: define dso_local x86_thiscallcc %struct.class_0* @"??0class_0@@QAE@XZ"(%struct.class_0* {{[^,]*}} returned {{[^,]*}} %this, i32 %is_most_derived)
   // WIN32: store i32 %is_most_derived, i32* %[[IS_MOST_DERIVED_VAR:.*]], align 4
   // WIN32: %[[IS_MOST_DERIVED_VAL:.*]] = load i32, i32* %[[IS_MOST_DERIVED_VAR]]
   // WIN32: %[[SHOULD_CALL_VBASE_CTORS:.*]] = icmp ne i32 %[[IS_MOST_DERIVED_VAL]], 0

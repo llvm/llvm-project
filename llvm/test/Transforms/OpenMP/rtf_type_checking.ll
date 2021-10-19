@@ -1,5 +1,7 @@
-; RUN: opt -S -openmpopt -stats < %s 2>&1 | FileCheck %s
-; RUN: opt -S -attributor  -openmpopt -stats < %s 2>&1 | FileCheck %s
+; RUN: opt -S -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
+; RUN: opt -S -passes='devirt<2>(cgscc(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
+; RUN: opt -S -attributor -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
+; RUN: opt -S -passes='attributor,cgscc(devirt<2>(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -47,18 +49,24 @@ declare void @__kmpc_flush(%struct.ident_t*)
 ; Different return type.
 declare void @omp_get_thread_num()
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !4}
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang"}
 !2 = !{!3}
 !3 = !{i64 2, i64 -1, i64 -1, i1 true}
+!4 = !{i32 7, !"openmp", i32 50}
+
+; NPM: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
+; NPM-NOT: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
+; NPM: Running pass: OpenMPOptCGSCCPass on (main)
+; NPM-NOT: Running pass: OpenMPOptCGSCCPass on (main)
 ; ===-------------------------------------------------------------------------===
 ;                         ... Statistics Collected ...
 ; ===-------------------------------------------------------------------------===
 ;
-; CHECK: 1 cgscc-passmgr - Maximum CGSCCPassMgr iterations on one SCC
+; LPM: 1 cgscc-passmgr - Maximum CGSCCPassMgr iterations on one SCC
 ; CHECK: 2 openmp-opt{{.*}}Number of OpenMP runtime functions identified
 ;
 ; There are two matches since the pass is run once per function.

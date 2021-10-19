@@ -1,10 +1,18 @@
-; RUN: llc -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | FileCheck --implicit-check-not=loclists_table_base %s
+; RUN: llc -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,DWARF32 --implicit-check-not=loclists_table_base %s
+; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=asm -function-sections < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,DWARF64 --implicit-check-not=loclists_table_base %s
 
-; CHECK: {{^}}.Lloclists_table_base0:
-; CHECK-NEXT: .long   .Ldebug_loc0-.Lloclists_table_base0
-; CHECK-NEXT: .long   .Ldebug_loc1-.Lloclists_table_base0
-; CHECK: .long   .Lloclists_table_base0  # DW_AT_loclists_base
-; CHECK: .long   .Lloclists_table_base0  # DW_AT_loclists_base
+; CHECK:        {{^}}.Lloclists_table_base0:
+; DWARF32-NEXT: .long   .Ldebug_loc0-.Lloclists_table_base0
+; DWARF32-NEXT: .long   .Ldebug_loc1-.Lloclists_table_base0
+; DWARF64-NEXT: .quad   .Ldebug_loc0-.Lloclists_table_base0
+; DWARF64-NEXT: .quad   .Ldebug_loc1-.Lloclists_table_base0
+
+; DWARF32:      .long   .Lloclists_table_base0  # DW_AT_loclists_base
+; DWARF32:      .long   .Lloclists_table_base0  # DW_AT_loclists_base
+; DWARF64:      .quad   .Lloclists_table_base0  # DW_AT_loclists_base
+; DWARF64:      .quad   .Lloclists_table_base0  # DW_AT_loclists_base
 
 ; Function Attrs: uwtable
 define dso_local void @_Z2f2v() local_unnamed_addr #0 !dbg !15 {

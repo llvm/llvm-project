@@ -25,9 +25,6 @@ class APILogTestCase(TestBase):
         self.dbg.GetScriptingLanguage(None)
         target = self.dbg.CreateTarget(None)
 
-        if configuration.is_reproducer_replay():
-            logfile = self.getReproducerRemappedPath(logfile)
-
         self.assertTrue(os.path.isfile(logfile))
         with open(logfile, 'r') as f:
             log = f.read()

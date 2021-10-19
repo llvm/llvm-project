@@ -40,8 +40,7 @@ void MisplacedWideningCastCheck::registerMatchers(MatchFinder *Finder) {
       implicitCastExpr(hasImplicitDestinationType(isInteger()),
                        has(ignoringParenImpCasts(Calc)));
   const auto Cast =
-      traverse(ast_type_traits::TK_AsIs,
-               expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast"));
+      traverse(TK_AsIs, expr(anyOf(ExplicitCast, ImplicitCast)).bind("Cast"));
 
   Finder->addMatcher(varDecl(hasInitializer(Cast)), this);
   Finder->addMatcher(returnStmt(hasReturnValue(Cast)), this);

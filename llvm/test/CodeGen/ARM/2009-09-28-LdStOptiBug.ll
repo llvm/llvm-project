@@ -3,7 +3,7 @@
 
 %0 = type { double, double }
 
-define void @foo(%0* noalias nocapture sret %agg.result, double %x.0, double %y.0) nounwind {
+define void @foo(%0* noalias nocapture sret(%0) %agg.result, double %x.0, double %y.0) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK: bl __aeabi_dadd
 ; CHECK-NOT: strd

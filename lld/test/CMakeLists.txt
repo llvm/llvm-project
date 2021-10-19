@@ -1,12 +1,17 @@
-set(LLVM_SOURCE_DIR "${LLVM_MAIN_SRC_DIR}")
-set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}")
-set(LLVM_BUILD_MODE "%(build_mode)s")
-set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}/%(build_config)s")
-set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s")
+if (CMAKE_CFG_INTDIR STREQUAL ".")
+  set(LLVM_BUILD_MODE ".")
+else ()
+  set(LLVM_BUILD_MODE "%(build_mode)s")
+endif ()
+
+string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLD_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLD_TOOLS_DIR "${LLVM_RUNTIME_OUTPUT_INTDIR}")
 
 llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
-  LLVM_LIBXML2_ENABLED
+  LLVM_ENABLE_LIBXML2
+  LLD_DEFAULT_LD_LLD_IS_MINGW
+  LLVM_HAVE_LIBXAR
   )
 
 configure_lit_site_cfg(
@@ -25,10 +30,10 @@ configure_lit_site_cfg(
 set(LLD_TEST_DEPS lld)
 if (NOT LLD_BUILT_STANDALONE)
   list(APPEND LLD_TEST_DEPS
-    FileCheck count llc llvm-ar llvm-as llvm-bcanalyzer llvm-config llvm-cvtres
-    llvm-dis llvm-dwarfdump llvm-lib llvm-lipo llvm-mc llvm-nm llvm-objcopy
-    llvm-objdump llvm-pdbutil llvm-readelf llvm-readobj llvm-strip not obj2yaml
-    opt split-file yaml2obj
+    FileCheck count dsymutil llc llvm-ar llvm-as llvm-bcanalyzer llvm-config
+    llvm-cvtres llvm-dis llvm-dwarfdump llvm-lib llvm-lipo llvm-mc llvm-nm
+    llvm-objcopy llvm-objdump llvm-otool llvm-pdbutil llvm-profdata llvm-readelf
+    llvm-readobj llvm-strip llvm-symbolizer not obj2yaml opt split-file yaml2obj
     )
 endif()
 

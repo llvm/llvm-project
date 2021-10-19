@@ -13,14 +13,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
+#define LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include <memory>
+#include <unordered_map>
 
 namespace llvm {
 
@@ -30,6 +31,26 @@ class Loop;
 class PostDominatorTree;
 
 using ConstBlockSet = SmallPtrSet<const BasicBlock *, 4>;
+struct ControlDivergenceDesc {
+  // Join points of divergent disjoint paths.
+  ConstBlockSet JoinDivBlocks;
+  // Divergent loop exits
+  ConstBlockSet LoopDivBlocks;
+};
+
+struct ModifiedPO {
+  std::vector<const BasicBlock *> LoopPO;
+  std::unordered_map<const BasicBlock *, unsigned> POIndex;
+  void appendBlock(const BasicBlock &BB) {
+    POIndex[&BB] = LoopPO.size();
+    LoopPO.push_back(&BB);
+  }
+  unsigned getIndexOf(const BasicBlock &BB) const {
+    return POIndex.find(&BB)->second;
+  }
+  unsigned size() const { return LoopPO.size(); }
+  const BasicBlock *getBlockAt(unsigned Idx) const { return LoopPO[Idx]; }
+};
 
 /// \brief Relates points of divergent control to join points in
 /// reducible CFGs.
@@ -51,30 +72,21 @@ public:
   /// header. Those exit blocks are added to the returned set.
   /// If L is the parent loop of \p Term and an exit of L is in the returned
   /// set then L is a divergent loop.
-  const ConstBlockSet &join_blocks(const Instruction &Term);
-
-  /// \brief Computes divergent join points and loop exits (in the surrounding
-  /// loop) caused by the divergent loop exits of\p Loop.
-  ///
-  /// The set of blocks which are reachable by disjoint paths from the
-  /// loop exits of \p Loop.
-  /// This treats the loop as a single node in \p Loop's parent loop.
-  /// The returned set has the same properties as for join_blocks(TermInst&).
-  const ConstBlockSet &join_blocks(const Loop &Loop);
+  const ControlDivergenceDesc &getJoinBlocks(const Instruction &Term);
 
 private:
-  static ConstBlockSet EmptyBlockSet;
+  static ControlDivergenceDesc EmptyDivergenceDesc;
 
-  ReversePostOrderTraversal<const Function *> FuncRPOT;
+  ModifiedPO LoopPO;
+
   const DominatorTree &DT;
   const PostDominatorTree &PDT;
   const LoopInfo &LI;
 
-  std::map<const Loop *, std::unique_ptr<ConstBlockSet>> CachedLoopExitJoins;
-  std::map<const Instruction *, std::unique_ptr<ConstBlockSet>>
-      CachedBranchJoins;
+  std::map<const Instruction *, std::unique_ptr<ControlDivergenceDesc>>
+      CachedControlDivDescs;
 };
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H

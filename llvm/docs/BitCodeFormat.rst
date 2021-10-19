@@ -104,11 +104,11 @@ value (0 through 7) is encoded directly, with the high bit set to zero.  Values
 larger than N-1 bits emit their bits in a series of N-1 bit chunks, where all
 but the last set the high bit.
 
-For example, the value 27 (0x1B) is encoded as 1011 0011 when emitted as a vbr4
-value.  The first set of four bits indicates the value 3 (011) with a
-continuation piece (indicated by a high bit of 1).  The next word indicates a
-value of 24 (011 << 3) with no continuation.  The sum (3+24) yields the value
-27.
+For example, the value 30 (0x1E) is encoded as 62 (0b0011'1110) when emitted as
+a vbr4 value.  The first set of four bits starting from the least significant
+indicates the value 6 (110) with a continuation piece (indicated by a high bit
+of 1).  The next set of four bits indicates a value of 24 (011 << 3) with no
+continuation.  The sum (6+24) yields the value 30.
 
 .. _char6-encoded value:
 
@@ -264,7 +264,7 @@ Abbreviated Record Encoding
 
 ``[<abbrevid>, fields...]``
 
-An abbreviated record is a abbreviation id followed by a set of fields that are
+An abbreviated record is an abbreviation id followed by a set of fields that are
 encoded according to the `abbreviation definition`_.  This allows records to be
 encoded significantly more densely than records encoded with the
 `UNABBREV_RECORD`_ type, and allows the abbreviation types to be specified in
@@ -795,6 +795,8 @@ function. The operand fields are:
   * ``swiftcc`` : code 16
   * ``cxx_fast_tlscc``: code 17
   * ``tailcc`` : code 18
+  * ``cfguard_checkcc`` : code 19
+  * ``swifttailcc`` : code 20
   * ``x86_stdcallcc``: code 64
   * ``x86_fastcallcc``: code 65
   * ``arm_apcscc``: code 66
@@ -1011,7 +1013,7 @@ The integer codes are mapped to well-known attributes as follows.
 * code 9: ``noalias``
 * code 10: ``nobuiltin``
 * code 11: ``nocapture``
-* code 12: ``noduplicates``
+* code 12: ``nodeduplicate``
 * code 13: ``noimplicitfloat``
 * code 14: ``noinline``
 * code 15: ``nonlazybind``
@@ -1068,12 +1070,25 @@ The integer codes are mapped to well-known attributes as follows.
 * code 66: ``no_merge``
 * code 67: ``null_pointer_is_valid``
 * code 68: ``noundef``
+* code 69: ``byref``
+* code 70: ``mustprogress``
+* code 74: ``vscale_range(<Min>[, <Max>])``
+* code 75: ``swiftasync``
+* code 76: ``nosanitize_coverage``
+* code 77: ``elementtype``
+* code 78: ``disable_sanitizer_instrumentation``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
   arguments, which are 32-bit integers, are packed into one 64-bit integer value
   (i.e. ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
   the sentinel value -1 if it is not specified.
+
+.. note::
+  The ``vscale_range`` attribute has a special encoding for its arguments. Its two
+  arguments, which are 32-bit integers, are packed into one 64-bit integer value
+  (i.e. ``(Min << 32) | Max``), with ``Max`` taking on the value of ``Min`` if
+  it is not specified.
 
 .. _TYPE_BLOCK:
 
@@ -1312,6 +1327,13 @@ operand fields are
 
 * *paramty*: Zero or more type indices representing the parameter types of the
   function
+
+TYPE_CODE_X86_AMX Record
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[X86_AMX]``
+
+The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
 
 .. _CONSTANTS_BLOCK:
 

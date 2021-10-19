@@ -12,8 +12,8 @@
 
 //
 // This test is too subtle to try on non-x86 arch for now.
-// Android does not support swapcontext.
-// REQUIRES: x86-target-arch && !android
+// Android and musl do not support swapcontext.
+// REQUIRES: x86-target-arch && glibc-2.27
 
 #include <pthread.h>
 #include <setjmp.h>

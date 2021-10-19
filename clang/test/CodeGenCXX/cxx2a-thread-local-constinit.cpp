@@ -7,18 +7,18 @@
 
 // CHECK-DAG:  @a = external thread_local global i32
 // CHECK-DAG:  @b = external thread_local global i32
-// LINUX-DAG:  @c = thread_local global i32 0, align 4
+// LINUX-DAG:  @c ={{.*}} thread_local global i32 0, align 4
 // DARWIN-DAG: @c = internal thread_local global i32 0, align 4
-// LINUX-DAG:  @d = thread_local global i32 0, align 4
+// LINUX-DAG:  @d ={{.*}} thread_local global i32 0, align 4
 // DARWIN-DAG: @d = internal thread_local global i32 0, align 4
 // CHECK-DAG:  @e = external thread_local global %struct.Destructed, align 4
-// CHECK-DAG:  @e2 = thread_local global %struct.Destructed zeroinitializer, align 4
-// CHECK-DAG:  @f = thread_local global i32 4, align 4
+// CHECK-DAG:  @e2 ={{.*}} thread_local global %struct.Destructed zeroinitializer, align 4
+// CHECK-DAG:  @f ={{.*}} thread_local global i32 4, align 4
 
 extern thread_local int a;
 extern thread_local constinit int b;
 
-// CHECK-LABEL: define i32 @_Z5get_av()
+// CHECK-LABEL: define{{.*}} i32 @_Z5get_av()
 // CHECK: call {{(cxx_fast_tlscc )?}}i32* @_ZTW1a()
 // CHECK: }
 int get_a() { return a; }
@@ -29,7 +29,7 @@ int get_a() { return a; }
 // LINUX: }
 // DARWIN-NOT: define {{.*}}@_ZTW1a()
 
-// CHECK-LABEL: define i32 @_Z5get_bv()
+// CHECK-LABEL: define{{.*}} i32 @_Z5get_bv()
 // CHECK-NOT: call
 // CHECK: load i32, i32* @b
 // CHECK-NOT: call
@@ -40,7 +40,7 @@ int get_b() { return b; }
 
 extern thread_local int c;
 
-// CHECK-LABEL: define i32 @_Z5get_cv()
+// CHECK-LABEL: define{{.*}} i32 @_Z5get_cv()
 // LINUX: call {{(cxx_fast_tlscc )?}}i32* @_ZTW1c()
 // CHECK: load i32, i32* %
 // CHECK: }
@@ -57,6 +57,15 @@ int get_c() { return c; }
 
 thread_local int c = 0;
 
+// PR51079: We must assume an incomplete class type might have non-trivial
+// destruction, and so speculatively call the thread wrapper.
+
+// CHECK-LABEL: define {{.*}} @_Z6get_e3v(
+// CHECK: call {{.*}}* @_ZTW2e3()
+// CHECK-LABEL: }
+extern thread_local constinit struct DestructedFwdDecl e3;
+DestructedFwdDecl &get_e3() { return e3; }
+
 int d_init();
 
 // CHECK: define {{.*}}[[D_INIT:@__cxx_global_var_init[^(]*]](
@@ -69,7 +78,7 @@ struct Destructed {
 };
 
 extern thread_local constinit Destructed e;
-// CHECK-LABEL: define i32 @_Z5get_ev()
+// CHECK-LABEL: define{{.*}} i32 @_Z5get_ev()
 // CHECK: call {{.*}}* @_ZTW1e()
 // CHECK: }
 int get_e() { return e.n; }
@@ -84,3 +93,11 @@ thread_local constinit int f = 4;
 // CHECK-LABEL: define {{.*}}__tls_init
 // CHECK: call {{.*}} [[D_INIT]]
 // CHECK: call {{.*}} [[E2_INIT]]
+
+// Because the call wrapper may be called speculatively (and simply because
+// it's required by the ABI), it must always be emitted for an external linkage
+// variable, even if the variable has constant initialization and constant
+// destruction.
+struct NotDestructed { int n = 0; };
+thread_local constinit NotDestructed nd;
+// CHECK-LABEL: define {{.*}} @_ZTW2nd

@@ -323,17 +323,19 @@ struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   }
 };
 
-template<typename DenseMapT, typename KeyT>
-class ValueMapIterator :
-    public std::iterator<std::forward_iterator_tag,
-                         std::pair<KeyT, typename DenseMapT::mapped_type>,
-                         ptrdiff_t> {
+template <typename DenseMapT, typename KeyT> class ValueMapIterator {
   using BaseT = typename DenseMapT::iterator;
   using ValueT = typename DenseMapT::mapped_type;
 
   BaseT I;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = std::pair<KeyT, typename DenseMapT::mapped_type>;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   ValueMapIterator() : I() {}
   ValueMapIterator(BaseT I) : I(I) {}
 
@@ -375,17 +377,19 @@ public:
   }
 };
 
-template<typename DenseMapT, typename KeyT>
-class ValueMapConstIterator :
-    public std::iterator<std::forward_iterator_tag,
-                         std::pair<KeyT, typename DenseMapT::mapped_type>,
-                         ptrdiff_t> {
+template <typename DenseMapT, typename KeyT> class ValueMapConstIterator {
   using BaseT = typename DenseMapT::const_iterator;
   using ValueT = typename DenseMapT::mapped_type;
 
   BaseT I;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = std::pair<KeyT, typename DenseMapT::mapped_type>;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   ValueMapConstIterator() : I() {}
   ValueMapConstIterator(BaseT I) : I(I) {}
   ValueMapConstIterator(ValueMapIterator<DenseMapT, KeyT> Other)

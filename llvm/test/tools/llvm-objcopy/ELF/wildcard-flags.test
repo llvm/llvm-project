@@ -62,6 +62,14 @@
 # RUN: llvm-strip --discard-all -w --keep-symbol='f*' %t.o -o %t.ksym.4.o
 # RUN: cmp %t.ksym.3.o %t.ksym.4.o
 
+## --keep-symbols:
+# RUN: echo 'f*' > %t-fstar.txt
+# RUN: llvm-objcopy --discard-all --keep-symbols=%t-fstar.txt %t.o %t.ksym.5.o
+# RUN: cmp %t.ksym.5.o %t.ksym.1.o
+
+# RUN: llvm-objcopy --discard-all -w --keep-symbols=%t-fstar.txt %t.o %t.ksym.6.o
+# RUN: cmp %t.ksym.6.o %t.ksym.3.o
+
 ## --localize-symbol:
 ## Note: Use %t.globsym.2.o instead of %t.o since those symbols are global.
 # RUN: llvm-objcopy --localize-symbol='*' %t.globsym.2.o %t.localsym.1.o
@@ -73,6 +81,14 @@
 # RUN: llvm-readobj --symbols %t.localsym.2.o \
 # RUN:   | FileCheck %s --implicit-check-not=Name: \
 # RUN:       --check-prefixes=CHECK,LOCAL,FOO-SYM,BAR-SYM
+
+## --localize-symbols:
+# RUN: echo '*' > %t-star.txt
+# RUN: llvm-objcopy --localize-symbols=%t-star.txt %t.globsym.2.o %t.localsym.3.o
+# RUN: cmp %t.localsym.3.o %t.localsym.1.o
+
+# RUN: llvm-objcopy -w --localize-symbols=%t-star.txt %t.globsym.2.o %t.localsym.4.o
+# RUN: cmp %t.localsym.4.o %t.localsym.2.o
 
 ## --strip-symbol:
 # RUN: llvm-objcopy --strip-symbol='f*' %t.o %t.stripsym.1.o
@@ -87,6 +103,13 @@
 # RUN: llvm-strip -w --strip-symbol='f*' %t.o -o %t.stripsym.4.o
 # RUN: cmp %t.stripsym.3.o %t.stripsym.4.o
 
+## --strip-symbols:
+# RUN: llvm-objcopy --strip-symbols=%t-fstar.txt %t.o %t.stripsym.5.o
+# RUN: cmp %t.stripsym.5.o %t.stripsym.1.o
+
+# RUN: llvm-objcopy -w --strip-symbols=%t-fstar.txt %t.o %t.stripsym.6.o
+# RUN: cmp %t.stripsym.6.o %t.stripsym.3.o
+
 ## --strip-unneeded-symbol:
 # RUN: llvm-objcopy --strip-unneeded-symbol='f*' %t.o %t.stripunsym.1.o
 # RUN: llvm-readobj --symbols %t.stripunsym.1.o \
@@ -95,6 +118,13 @@
 # RUN: llvm-objcopy -w --strip-unneeded-symbol='f*' %t.o %t.stripunsym.2.o
 # RUN: llvm-readobj --symbols %t.stripunsym.2.o \
 # RUN:   | FileCheck %s --implicit-check-not=Name: --check-prefixes=CHECK,BAR-SYM
+
+## --strip-unneded-symbols:
+# RUN: llvm-objcopy --strip-unneeded-symbols=%t-fstar.txt %t.o %t.stripunsym.3.o
+# RUN: cmp %t.stripunsym.3.o %t.stripunsym.1.o
+
+# RUN: llvm-objcopy -w --strip-unneeded-symbols=%t-fstar.txt %t.o %t.stripunsym.4.o
+# RUN: cmp %t.stripunsym.4.o %t.stripunsym.2.o
 
 ## --weaken-symbol:
 ## Note: Use %t.globsym.2.o instead of %t.o since those symbols are global.
@@ -108,6 +138,13 @@
 # RUN:   | FileCheck %s --implicit-check-not=Name: \
 # RUN:       --check-prefixes=CHECK,WEAK,FOO-SYM,BAR-SYM
 
+## --weaken-symbols:
+# RUN: llvm-objcopy --weaken-symbols=%t-star.txt %t.globsym.2.o %t.weaksym.3.o
+# RUN: cmp %t.weaksym.3.o %t.weaksym.1.o
+
+# RUN: llvm-objcopy -w --weaken-symbols=%t-star.txt %t.globsym.2.o %t.weaksym.4.o
+# RUN: cmp %t.weaksym.4.o %t.weaksym.2.o
+
 ## --keep-global-symbol:
 ## Note: Use %t.globsym.2.o instead of %t.o since those symbols are global.
 # RUN: llvm-objcopy --keep-global-symbol='*' %t.globsym.2.o %t.keepgsym.1.o
@@ -120,9 +157,16 @@
 # RUN:   | FileCheck %s --implicit-check-not=Name: \
 # RUN:       --check-prefixes=CHECK,GLOBAL,FOO-SYM,BAR-SYM
 
+## --keep-global-symbols:
+# RUN: llvm-objcopy --keep-global-symbols=%t-star.txt %t.globsym.2.o %t.keepgsym.3.o
+# RUN: cmp %t.keepgsym.3.o %t.keepgsym.1.o
+
+# RUN: llvm-objcopy -w --keep-global-symbols=%t-star.txt %t.globsym.2.o %t.keepgsym.4.o
+# RUN: cmp %t.keepgsym.4.o %t.keepgsym.2.o
+
 ## Check that -w is accepted as an alias for --wildcard.
-# RUN: llvm-objcopy --wildcard --keep-global-symbol='*' %t.globsym.2.o %t.keepgsym.3.o
-# RUN: cmp %t.keepgsym.2.o %t.keepgsym.3.o
+# RUN: llvm-objcopy --wildcard --keep-global-symbol='*' %t.globsym.2.o %t.keepgsym.5.o
+# RUN: cmp %t.keepgsym.2.o %t.keepgsym.5.o
 
 # CHECK:   LoadName:
 # CHECK:   Name: (0)

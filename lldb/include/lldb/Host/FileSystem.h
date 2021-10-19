@@ -21,8 +21,8 @@
 
 #include "lldb/lldb-types.h"
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <sys/stat.h>
 
 namespace lldb_private {
@@ -33,8 +33,8 @@ public:
 
   FileSystem()
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
-        m_home_directory(), m_mapped(false) {}
-  FileSystem(std::shared_ptr<llvm::FileCollector> collector)
+        m_home_directory() {}
+  FileSystem(std::shared_ptr<llvm::FileCollectorBase> collector)
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(std::move(collector)),
         m_home_directory(), m_mapped(false) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
@@ -48,7 +48,7 @@ public:
   static FileSystem &Instance();
 
   static void Initialize();
-  static void Initialize(std::shared_ptr<llvm::FileCollector> collector);
+  static void Initialize(std::shared_ptr<llvm::FileCollectorBase> collector);
   static llvm::Error Initialize(const FileSpec &mapping);
   static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
   static void Terminate();
@@ -199,9 +199,9 @@ public:
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
-  std::shared_ptr<llvm::FileCollector> m_collector;
+  std::shared_ptr<llvm::FileCollectorBase> m_collector;
   std::string m_home_directory;
-  bool m_mapped;
+  bool m_mapped = false;
 };
 } // namespace lldb_private
 

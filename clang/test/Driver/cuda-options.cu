@@ -94,47 +94,47 @@
 // Verify that --[no-]cuda-gpu-arch arguments are handled correctly.
 // a) --no-cuda-gpu-arch=X negates preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,NOARCH-SM50 %s
 
 // b) --no-cuda-gpu-arch=X negates more than one preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,NOARCH-SM50 %s
 
 // c) if --no-cuda-gpu-arch=X negates all preceding --cuda-gpu-arch=X
-//    we default to sm_20 -- same as if no --cuda-gpu-arch were passed.
+//    we default to sm_35 -- same as if no --cuda-gpu-arch were passed.
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
-// RUN:   --no-cuda-gpu-arch=sm_35 --no-cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes ARCH-SM20,NOARCH-SM30,NOARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes NOARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // d) --no-cuda-gpu-arch=X is a no-op if there's no preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30\
 // RUN:   --no-cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,ARCH-SM35,NOARCH-SM50 %s
 
 // e) --no-cuda-gpu-arch=X does not affect following --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --no-cuda-gpu-arch=sm_35 --no-cuda-gpu-arch=sm_30 \
-// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
+// RUN:   --no-cuda-gpu-arch=sm_50 --no-cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_50 --cuda-gpu-arch=sm_30 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,ARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // f) --no-cuda-gpu-arch=all negates all preceding --cuda-gpu-arch=X
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:   --cuda-gpu-arch=sm_20 --cuda-gpu-arch=sm_30 \
+// RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=all \
-// RUN:   --cuda-gpu-arch=sm_35 \
+// RUN:   --cuda-gpu-arch=sm_50 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes NOARCH-SM20,NOARCH-SM30,ARCH-SM35 %s
+// RUN: | FileCheck -check-prefixes NOARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // g) There's no --cuda-gpu-arch=all
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
@@ -183,14 +183,20 @@
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM35,PTX-SM30 %s
 
+// Verify -flto=thin -fwhole-program-vtables handling. This should result in
+// both options being passed to the host compilation, with neither passed to
+// the device compilation.
+// RUN: %clang -### -target x86_64-linux-gnu -c -flto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,INCLUDES-DEVICE,NOLINK,THINLTOWPD %s
+// THINLTOWPD-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 
-// ARCH-SM20: "-cc1"{{.*}}"-target-cpu" "sm_20"
-// NOARCH-SM20-NOT: "-cc1"{{.*}}"-target-cpu" "sm_20"
 // ARCH-SM30: "-cc1"{{.*}}"-target-cpu" "sm_30"
 // NOARCH-SM30-NOT: "-cc1"{{.*}}"-target-cpu" "sm_30"
 // ARCH-SM35: "-cc1"{{.*}}"-target-cpu" "sm_35"
 // NOARCH-SM35-NOT: "-cc1"{{.*}}"-target-cpu" "sm_35"
-// ARCHALLERROR: error: Unsupported CUDA gpu architecture: all
+// ARCH-SM50: "-cc1"{{.*}}"-target-cpu" "sm_50"
+// NOARCH-SM50-NOT: "-cc1"{{.*}}"-target-cpu" "sm_50"
+// ARCHALLERROR: error: unsupported CUDA gpu architecture: all
 
 // Match device-side preprocessor and compiler phases with -save-temps.
 // DEVICE-SAVE: "-cc1" "-triple" "nvptx64-nvidia-cuda"
@@ -206,8 +212,10 @@
 // Match the job that produces PTX assembly.
 // DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // DEVICE-NOSAVE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
+// THINLTOWPD-NOT: "-flto=thin"
 // DEVICE-SAME: "-fcuda-is-device"
 // DEVICE-SM30-SAME: "-target-cpu" "sm_30"
+// THINLTOWPD-NOT: "-fwhole-program-vtables"
 // DEVICE-SAME: "-o" "[[PTXFILE:[^"]*]]"
 // DEVICE-NOSAVE-SAME: "-x" "cuda"
 // DEVICE-SAVE-SAME: "-x" "ir"
@@ -252,12 +260,14 @@
 // Match host-side compilation.
 // HOST: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // HOST-SAME: "-aux-triple" "nvptx64-nvidia-cuda"
+// THINLTOWPD-SAME: "-flto=thin"
 // HOST-NOT: "-fcuda-is-device"
 // There is only one GPU binary after combining it with fatbinary!
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
 // INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
 // There is only one GPU binary after combining it with fatbinary.
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
+// THINLTOWPD-SAME: "-fwhole-program-vtables"
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
 // HOST-SAVE-SAME: "-x" "cuda-cpp-output"

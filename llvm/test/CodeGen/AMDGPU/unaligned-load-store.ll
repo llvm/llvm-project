@@ -1,6 +1,7 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=ALIGNED %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=+unaligned-access-mode -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=UNALIGNED %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -check-prefix=SI -check-prefix=ALIGNED %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=+unaligned-access-mode -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,UNALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs< %s | FileCheck -check-prefixes=SI,MUBUF,ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,FLATSCR,ALIGNED %s
 
 ; SI-LABEL: {{^}}local_unaligned_load_store_i16:
 ; SI: ds_read_u8
@@ -602,64 +603,70 @@ define amdgpu_kernel void @local_store_align1_v16i8(<16 x i8> addrspace(3)* %out
 }
 
 ; SI-LABEL: {{^}}private_load_align1_f64:
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
-; SI: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; MUBUF: buffer_load_ubyte
+; FLATSCR: scratch_load_dwordx2
 define double @private_load_align1_f64(double addrspace(5)* %in) {
   %x = load double, double addrspace(5)* %in, align 1
   ret double %x
 }
 
 ; SI-LABEL: {{^}}private_store_align1_f64:
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; MUBUF: buffer_store_byte
+; FLATSCR: scratch_store_dwordx2
 define void @private_store_align1_f64(double addrspace(5)* %out, double %x) #0 {
   store double %x, double addrspace(5)* %out, align 1
   ret void
 }
 
 ; SI-LABEL: {{^}}private_load_align4_f64:
-; SI: buffer_load_dword
-; SI: buffer_load_dword
+; MUBUF: buffer_load_dword
+; MUBUF: buffer_load_dword
+; FLATSCR: scratch_load_dwordx2
 define double @private_load_align4_f64(double addrspace(5)* %in) {
   %x = load double, double addrspace(5)* %in, align 4
   ret double %x
 }
 
 ; SI-LABEL: {{^}}private_store_align4_f64:
-; SI: buffer_store_dword
-; SI: buffer_store_dword
+; MUBUF: buffer_store_dword
+; MUBUF: buffer_store_dword
+; FLATSCR: scratch_store_dwordx2
 define void @private_store_align4_f64(double addrspace(5)* %out, double %x) #0 {
   store double %x, double addrspace(5)* %out, align 4
   ret void
 }
 
 ; SI-LABEL: {{^}}private_load_align2_f64:
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
-; SI: buffer_load_ushort
+; MUBUF: buffer_load_ushort
+; MUBUF: buffer_load_ushort
+; MUBUF: buffer_load_ushort
+; MUBUF: buffer_load_ushort
+; FLATSCR: scratch_load_dwordx2
 define double @private_load_align2_f64(double addrspace(5)* %in) {
   %x = load double, double addrspace(5)* %in, align 2
   ret double %x
 }
 
 ; SI-LABEL: {{^}}private_store_align2_f64:
-; SI: buffer_store_short
-; SI: buffer_store_short
-; SI: buffer_store_short
-; SI: buffer_store_short
+; MUBUF: buffer_store_short
+; MUBUF: buffer_store_short
+; MUBUF: buffer_store_short
+; MUBUF: buffer_store_short
+; FLATSCR: scratch_store_dwordx2
 define void @private_store_align2_f64(double addrspace(5)* %out, double %x) #0 {
   store double %x, double addrspace(5)* %out, align 2
   ret void

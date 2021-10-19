@@ -59,7 +59,7 @@ ClangFunctionCaller::ClangFunctionCaller(ExecutionContextScope &exe_scope,
 }
 
 // Destructor
-ClangFunctionCaller::~ClangFunctionCaller() {}
+ClangFunctionCaller::~ClangFunctionCaller() = default;
 
 unsigned
 

@@ -4,7 +4,7 @@
 define void ()* @g() nounwind {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq f@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq f@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    retq
 entry:
 	ret void ()* @f

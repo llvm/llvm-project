@@ -9,9 +9,10 @@
 // Interface to be used in the implementation of OpenMP cancel.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
-#include "interface.h"
 #include "common/debug.h"
+#include "interface.h"
 
 EXTERN int32_t __kmpc_cancellationpoint(kmp_Ident *loc, int32_t global_tid,
                                         int32_t cancelVal) {
@@ -26,3 +27,5 @@ EXTERN int32_t __kmpc_cancel(kmp_Ident *loc, int32_t global_tid,
   // disabled
   return 0;
 }
+
+#pragma omp end declare target

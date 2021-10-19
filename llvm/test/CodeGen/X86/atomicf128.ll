@@ -10,21 +10,16 @@ define void @atomic_fetch_swapf128(fp128 %x) nounwind {
 ; CHECK-LABEL: atomic_fetch_swapf128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq _fsc128@{{.*}}(%rip), %rsi
-; CHECK-NEXT:    movaps (%rsi), %xmm1
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  LBB0_1: ## %atomicrmw.start
-; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rbx
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    movq _fsc128@GOTPCREL(%rip), %rsi
+; CHECK-NEXT:    movq (%rsi), %rax
+; CHECK-NEXT:    movq 8(%rsi), %rdx
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  LBB0_1: ## %atomicrmw.start
+; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lock cmpxchg16b (%rsi)
-; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm1
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
 ; CHECK-NEXT:    popq %rbx
@@ -35,7 +30,7 @@ define void @atomic_fetch_swapf128(fp128 %x) nounwind {
 ; NOSSE-NEXT:    pushq %rbx
 ; NOSSE-NEXT:    movq %rsi, %rcx
 ; NOSSE-NEXT:    movq %rdi, %rbx
-; NOSSE-NEXT:    movq _fsc128@{{.*}}(%rip), %rsi
+; NOSSE-NEXT:    movq _fsc128@GOTPCREL(%rip), %rsi
 ; NOSSE-NEXT:    movq (%rsi), %rax
 ; NOSSE-NEXT:    movq 8(%rsi), %rdx
 ; NOSSE-NEXT:    .p2align 4, 0x90

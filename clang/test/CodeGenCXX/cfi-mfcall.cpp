@@ -21,7 +21,7 @@ void f(S *s, void (S::*p)()) {
   // CHECK: br i1 [[TT]], label {{.*}}, label %[[TRAP1:[^,]*]]
 
   // CHECK: [[TRAP1]]:
-  // CHECK-NEXT: llvm.trap
+  // CHECK-NEXT: llvm.ubsantrap
 
   // CHECK: [[NVFPTR:%.*]] = bitcast void (%struct.S*)* {{.*}} to i8*
   // CHECK: [[TT1:%.*]] = call i1 @llvm.type.test(i8* [[NVFPTR]], metadata !"_ZTSM2B1FvvE")
@@ -31,6 +31,6 @@ void f(S *s, void (S::*p)()) {
   // CHECK: br i1 [[OR2]], label {{.*}}, label %[[TRAP2:[^,]*]]
 
   // CHECK: [[TRAP2]]:
-  // CHECK-NEXT: llvm.trap
+  // CHECK-NEXT: llvm.ubsantrap
   (s->*p)();
 }

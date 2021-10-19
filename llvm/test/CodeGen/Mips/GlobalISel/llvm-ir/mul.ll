@@ -86,13 +86,14 @@ entry:
 define i64 @mul_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: mul_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    mul $2, $6, $4
-; MIPS32-NEXT:    mul $1, $7, $4
-; MIPS32-NEXT:    mul $3, $6, $5
-; MIPS32-NEXT:    multu $6, $4
-; MIPS32-NEXT:    mfhi $4
-; MIPS32-NEXT:    addu $1, $1, $3
-; MIPS32-NEXT:    addu $3, $1, $4
+; MIPS32-NEXT:    move $3, $4
+; MIPS32-NEXT:    mul $2, $6, $3
+; MIPS32-NEXT:    mul $1, $7, $3
+; MIPS32-NEXT:    mul $4, $6, $5
+; MIPS32-NEXT:    multu $6, $3
+; MIPS32-NEXT:    mfhi $3
+; MIPS32-NEXT:    addu $1, $1, $4
+; MIPS32-NEXT:    addu $3, $1, $3
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -103,72 +104,73 @@ entry:
 define i128 @mul_i128(i128 %a, i128 %b) {
 ; MIPS32-LABEL: mul_i128:
 ; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    move $14, $4
+; MIPS32-NEXT:    move $13, $5
+; MIPS32-NEXT:    move $12, $6
+; MIPS32-NEXT:    move $9, $7
 ; MIPS32-NEXT:    addiu $1, $sp, 16
+; MIPS32-NEXT:    lw $6, 0($1)
+; MIPS32-NEXT:    addiu $1, $sp, 20
+; MIPS32-NEXT:    lw $7, 0($1)
+; MIPS32-NEXT:    addiu $1, $sp, 24
+; MIPS32-NEXT:    lw $8, 0($1)
+; MIPS32-NEXT:    addiu $1, $sp, 28
 ; MIPS32-NEXT:    lw $1, 0($1)
-; MIPS32-NEXT:    addiu $2, $sp, 20
-; MIPS32-NEXT:    lw $2, 0($2)
-; MIPS32-NEXT:    addiu $3, $sp, 24
-; MIPS32-NEXT:    lw $3, 0($3)
-; MIPS32-NEXT:    addiu $8, $sp, 28
-; MIPS32-NEXT:    lw $8, 0($8)
-; MIPS32-NEXT:    mul $9, $1, $4
-; MIPS32-NEXT:    mul $10, $2, $4
-; MIPS32-NEXT:    mul $11, $1, $5
-; MIPS32-NEXT:    multu $1, $4
-; MIPS32-NEXT:    mfhi $12
-; MIPS32-NEXT:    addu $10, $10, $11
-; MIPS32-NEXT:    sltu $11, $10, $11
-; MIPS32-NEXT:    andi $11, $11, 1
-; MIPS32-NEXT:    addu $10, $10, $12
-; MIPS32-NEXT:    sltu $12, $10, $12
-; MIPS32-NEXT:    andi $12, $12, 1
-; MIPS32-NEXT:    addu $11, $11, $12
-; MIPS32-NEXT:    mul $12, $3, $4
-; MIPS32-NEXT:    mul $13, $2, $5
-; MIPS32-NEXT:    mul $14, $1, $6
-; MIPS32-NEXT:    multu $2, $4
+; MIPS32-NEXT:    mul $2, $6, $14
+; MIPS32-NEXT:    mul $3, $7, $14
+; MIPS32-NEXT:    mul $4, $6, $13
+; MIPS32-NEXT:    multu $6, $14
+; MIPS32-NEXT:    mfhi $5
+; MIPS32-NEXT:    addu $3, $3, $4
+; MIPS32-NEXT:    sltu $4, $3, $4
+; MIPS32-NEXT:    andi $4, $4, 1
+; MIPS32-NEXT:    addu $3, $3, $5
+; MIPS32-NEXT:    sltu $5, $3, $5
+; MIPS32-NEXT:    andi $5, $5, 1
+; MIPS32-NEXT:    addu $10, $4, $5
+; MIPS32-NEXT:    mul $4, $8, $14
+; MIPS32-NEXT:    mul $5, $7, $13
+; MIPS32-NEXT:    mul $24, $6, $12
+; MIPS32-NEXT:    multu $7, $14
 ; MIPS32-NEXT:    mfhi $15
-; MIPS32-NEXT:    multu $1, $5
-; MIPS32-NEXT:    mfhi $24
-; MIPS32-NEXT:    addu $12, $12, $13
-; MIPS32-NEXT:    sltu $13, $12, $13
-; MIPS32-NEXT:    andi $13, $13, 1
-; MIPS32-NEXT:    addu $12, $12, $14
-; MIPS32-NEXT:    sltu $14, $12, $14
-; MIPS32-NEXT:    andi $14, $14, 1
-; MIPS32-NEXT:    addu $13, $13, $14
-; MIPS32-NEXT:    addu $12, $12, $15
-; MIPS32-NEXT:    sltu $14, $12, $15
-; MIPS32-NEXT:    andi $14, $14, 1
-; MIPS32-NEXT:    addu $13, $13, $14
-; MIPS32-NEXT:    addu $12, $12, $24
-; MIPS32-NEXT:    sltu $14, $12, $24
-; MIPS32-NEXT:    andi $14, $14, 1
-; MIPS32-NEXT:    addu $13, $13, $14
-; MIPS32-NEXT:    addu $12, $12, $11
-; MIPS32-NEXT:    sltu $11, $12, $11
+; MIPS32-NEXT:    multu $6, $13
+; MIPS32-NEXT:    mfhi $11
+; MIPS32-NEXT:    addu $4, $4, $5
+; MIPS32-NEXT:    sltu $5, $4, $5
+; MIPS32-NEXT:    andi $5, $5, 1
+; MIPS32-NEXT:    addu $4, $4, $24
+; MIPS32-NEXT:    sltu $24, $4, $24
+; MIPS32-NEXT:    andi $24, $24, 1
+; MIPS32-NEXT:    addu $5, $5, $24
+; MIPS32-NEXT:    addu $4, $4, $15
+; MIPS32-NEXT:    sltu $15, $4, $15
+; MIPS32-NEXT:    andi $15, $15, 1
+; MIPS32-NEXT:    addu $5, $5, $15
+; MIPS32-NEXT:    addu $4, $4, $11
+; MIPS32-NEXT:    sltu $11, $4, $11
 ; MIPS32-NEXT:    andi $11, $11, 1
-; MIPS32-NEXT:    addu $11, $13, $11
-; MIPS32-NEXT:    mul $8, $8, $4
-; MIPS32-NEXT:    mul $13, $3, $5
-; MIPS32-NEXT:    mul $14, $2, $6
-; MIPS32-NEXT:    mul $7, $1, $7
-; MIPS32-NEXT:    multu $3, $4
-; MIPS32-NEXT:    mfhi $3
-; MIPS32-NEXT:    multu $2, $5
-; MIPS32-NEXT:    mfhi $2
-; MIPS32-NEXT:    multu $1, $6
-; MIPS32-NEXT:    mfhi $1
-; MIPS32-NEXT:    addu $4, $8, $13
-; MIPS32-NEXT:    addu $4, $4, $14
-; MIPS32-NEXT:    addu $4, $4, $7
-; MIPS32-NEXT:    addu $3, $4, $3
-; MIPS32-NEXT:    addu $2, $3, $2
-; MIPS32-NEXT:    addu $1, $2, $1
-; MIPS32-NEXT:    addu $5, $1, $11
-; MIPS32-NEXT:    move $2, $9
-; MIPS32-NEXT:    move $3, $10
-; MIPS32-NEXT:    move $4, $12
+; MIPS32-NEXT:    addu $5, $5, $11
+; MIPS32-NEXT:    addu $4, $4, $10
+; MIPS32-NEXT:    sltu $10, $4, $10
+; MIPS32-NEXT:    andi $10, $10, 1
+; MIPS32-NEXT:    addu $5, $5, $10
+; MIPS32-NEXT:    mul $1, $1, $14
+; MIPS32-NEXT:    mul $11, $8, $13
+; MIPS32-NEXT:    mul $10, $7, $12
+; MIPS32-NEXT:    mul $9, $6, $9
+; MIPS32-NEXT:    multu $8, $14
+; MIPS32-NEXT:    mfhi $8
+; MIPS32-NEXT:    multu $7, $13
+; MIPS32-NEXT:    mfhi $7
+; MIPS32-NEXT:    multu $6, $12
+; MIPS32-NEXT:    mfhi $6
+; MIPS32-NEXT:    addu $1, $1, $11
+; MIPS32-NEXT:    addu $1, $1, $10
+; MIPS32-NEXT:    addu $1, $1, $9
+; MIPS32-NEXT:    addu $1, $1, $8
+; MIPS32-NEXT:    addu $1, $1, $7
+; MIPS32-NEXT:    addu $1, $1, $6
+; MIPS32-NEXT:    addu $5, $1, $5
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
@@ -180,10 +182,11 @@ declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag) {
 ; MIPS32-LABEL: umul_with_overflow:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    multu $4, $5
 ; MIPS32-NEXT:    mfhi $2
+; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    sltu $2, $zero, $2
+; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    andi $2, $2, 1
 ; MIPS32-NEXT:    sb $2, 0($7)
 ; MIPS32-NEXT:    sw $1, 0($6)

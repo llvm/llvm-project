@@ -54,7 +54,9 @@ using basic_string =
 typedef basic_string<char> string;
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef basic_string<wchar_t> wstring;
+#endif
 
 _LIBCPP_END_NAMESPACE_LFTS_PMR
 

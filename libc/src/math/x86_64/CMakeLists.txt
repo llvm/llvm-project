@@ -1,0 +1,59 @@
+add_entrypoint_object(
+  cos
+  SRCS
+    cos.cpp
+  HDRS
+    ../cos.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  sin
+  SRCS
+    sin.cpp
+  HDRS
+    ../sin.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  tan
+  SRCS
+    tan.cpp
+  HDRS
+    ../tan.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  sqrt
+  SRCS
+    sqrt.cpp
+  HDRS
+    ../sqrt.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  sqrtf
+  SRCS
+    sqrtf.cpp
+  HDRS
+    ../sqrtf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  sqrtl
+  SRCS
+    sqrtl.cpp
+  HDRS
+    ../sqrtl.h
+  COMPILE_OPTIONS
+    -O2
+)

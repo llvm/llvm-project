@@ -12,9 +12,11 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
@@ -22,48 +24,61 @@ using namespace mlir::scf;
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
-///                                             step (%arg4, %arg5)
+///                                            step (%arg4, %arg5)
 ///
 /// into
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
-///                                             step (%arg4*tileSize[0],
-///                                                   %arg5*tileSize[1])
+///                                            step (%arg4*tileSize[0],
+///                                                  %arg5*tileSize[1])
 ///     scf.parallel (%j0, %j1) = (0, 0) to (min(%arg4*tileSize[0], %arg2-%i0)
-///                                           min(%arg5*tileSize[1], %arg3-%i1))
-///                                        step (%arg4, %arg5)
+///                                          min(%arg5*tileSize[1], %arg3-%i1))
+///                                      step (%arg4, %arg5)
+///
+/// or, when no-min-max-bounds is true, into
+///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+///                                            step (%arg4*tileSize[0],
+///                                                  %arg5*tileSize[1])
+///     scf.parallel (%j0, %j1) = (0, 0) to (%arg4*tileSize[0],
+///                                          %arg5*tileSize[1])
+///                                      step (%arg4, %arg5)
+///        %inbound = (%j0 * %arg4 + %i0 < %arg2) &&
+///                   (%j1 * %arg5 + %i1 < %arg3)
+///        scf.if (%inbound)
+///          ....
 ///
 /// where the uses of %i0 and %i1 in the loop body are replaced by
 /// %i0 + j0 and %i1 + %j1.
 //
 /// The old loop is replaced with the new one.
-void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
+std::pair<ParallelOp, ParallelOp>
+mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
+                            bool noMinMaxBounds) {
   OpBuilder b(op);
-  auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
+  auto zero = b.create<arith::ConstantIndexOp>(op.getLoc(), 0);
   SmallVector<Value, 2> tileSizeConstants;
   tileSizeConstants.reserve(op.upperBound().size());
   for (size_t i = 0, end = op.upperBound().size(); i != end; ++i) {
     if (i < tileSizes.size())
       tileSizeConstants.push_back(
-          b.create<ConstantIndexOp>(op.getLoc(), tileSizes[i]));
+          b.create<arith::ConstantIndexOp>(op.getLoc(), tileSizes[i]));
     else
       // Just pick 1 for the remaining dimensions.
-      tileSizeConstants.push_back(b.create<ConstantIndexOp>(op.getLoc(), 1));
+      tileSizeConstants.push_back(
+          b.create<arith::ConstantIndexOp>(op.getLoc(), 1));
   }
 
   // Create the outer loop with adjusted steps.
   SmallVector<Value, 2> newSteps;
   newSteps.reserve(op.step().size());
   for (auto step : llvm::zip(op.step(), tileSizeConstants)) {
-    newSteps.push_back(
-        b.create<MulIOp>(op.getLoc(), std::get<0>(step), std::get<1>(step)));
+    newSteps.push_back(b.create<arith::MulIOp>(op.getLoc(), std::get<0>(step),
+                                               std::get<1>(step)));
   }
   auto outerLoop = b.create<ParallelOp>(op.getLoc(), op.lowerBound(),
                                         op.upperBound(), newSteps);
   b.setInsertionPointToStart(outerLoop.getBody());
 
   // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
-  // FIXME: Instead of using min, we want to replicate the tail. This would give
-  // the inner loop constant bounds for easy vectorization.
   auto minMap = AffineMap::get(
       /*dimCount=*/3, /*symbolCount=*/0,
       {getAffineDimExpr(/*position=*/0, b.getContext()),
@@ -74,6 +89,7 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   // Create the inner loop with adjusted bounds.
   SmallVector<Value, 2> newBounds;
   newBounds.reserve(op.upperBound().size());
+  bool needInboundCheck = false;
   for (auto dim : llvm::zip(outerLoop.lowerBound(), outerLoop.upperBound(),
                             outerLoop.step(), outerLoop.getInductionVars(),
                             op.step(), tileSizeConstants)) {
@@ -81,24 +97,33 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
     std::tie(lowerBound, upperBound, newStep, iv, step, tileSizeConstant) = dim;
     // Collect the statically known loop bounds
     auto lowerBoundConstant =
-        dyn_cast_or_null<ConstantIndexOp>(lowerBound.getDefiningOp());
+        dyn_cast_or_null<arith::ConstantIndexOp>(lowerBound.getDefiningOp());
     auto upperBoundConstant =
-        dyn_cast_or_null<ConstantIndexOp>(upperBound.getDefiningOp());
-    auto stepConstant = dyn_cast_or_null<ConstantIndexOp>(step.getDefiningOp());
+        dyn_cast_or_null<arith::ConstantIndexOp>(upperBound.getDefiningOp());
+    auto stepConstant =
+        dyn_cast_or_null<arith::ConstantIndexOp>(step.getDefiningOp());
     auto tileSize =
-        cast<ConstantIndexOp>(tileSizeConstant.getDefiningOp()).getValue();
+        cast<arith::ConstantIndexOp>(tileSizeConstant.getDefiningOp()).value();
     // If the loop bounds and the loop step are constant and if the number of
     // loop iterations is an integer multiple of the tile size, we use a static
     // bound for the inner loop.
     if (lowerBoundConstant && upperBoundConstant && stepConstant) {
-      auto numIterations = llvm::divideCeil(upperBoundConstant.getValue() -
-                                                lowerBoundConstant.getValue(),
-                                            stepConstant.getValue());
+      auto numIterations = llvm::divideCeil(upperBoundConstant.value() -
+                                                lowerBoundConstant.value(),
+                                            stepConstant.value());
       if (numIterations % tileSize == 0) {
         newBounds.push_back(newStep);
         continue;
       }
     }
+
+    // For InboundCheck mode, just use the variable outer step
+    if (noMinMaxBounds) {
+      newBounds.push_back(newStep);
+      needInboundCheck = true;
+      continue;
+    }
+
     // Otherwise, we dynamically compute the bound for
     // each iteration of the outer loop.
     newBounds.push_back(
@@ -109,59 +134,80 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
       op.getLoc(), SmallVector<Value, 2>(newBounds.size(), zero), newBounds,
       op.step());
 
-  // Steal the body of the old parallel loop and erase it.
-  innerLoop.region().takeBody(op.region());
-
-  // Insert computation for new index vectors and replace uses.
-  b.setInsertionPointToStart(innerLoop.getBody());
-  for (auto ivs :
-       llvm::zip(innerLoop.getInductionVars(), outerLoop.getInductionVars())) {
-    Value inner_index = std::get<0>(ivs);
-    AddIOp newIndex =
-        b.create<AddIOp>(op.getLoc(), std::get<0>(ivs), std::get<1>(ivs));
-    inner_index.replaceAllUsesExcept(
-        newIndex, SmallPtrSet<Operation *, 1>{newIndex.getOperation()});
+  if (noMinMaxBounds && needInboundCheck) {
+    b.setInsertionPointToStart(innerLoop.getBody());
+    // Insert in-bound check
+    Value inbound =
+        b.create<arith::ConstantIntOp>(op.getLoc(), 1, b.getIntegerType(1));
+    for (auto dim :
+         llvm::zip(outerLoop.upperBound(), outerLoop.getInductionVars(),
+                   innerLoop.getInductionVars(), innerLoop.step())) {
+      Value outerUpperBound, outerIV, innerIV, innerStep;
+      std::tie(outerUpperBound, outerIV, innerIV, innerStep) = dim;
+      // %in_bound = %in_bound &&
+      //             (%inner_iv * %inner_step + %outer_iv < %outer_upper_bound)
+      Value index = b.create<arith::AddIOp>(
+          op.getLoc(), b.create<arith::MulIOp>(op.getLoc(), innerIV, innerStep),
+          outerIV);
+      Value dimInbound = b.create<arith::CmpIOp>(
+          op.getLoc(), arith::CmpIPredicate::ult, index, outerUpperBound);
+      inbound = b.create<arith::AndIOp>(op.getLoc(), inbound, dimInbound);
+    }
+    auto ifInbound = b.create<IfOp>(op.getLoc(),
+                                    /*resultTypes*/ ArrayRef<Type>{}, inbound,
+                                    /*hasElseRegion*/ false);
+    ifInbound.thenRegion().takeBody(op.region());
+    Block &thenBlock = ifInbound.thenRegion().front();
+    b.setInsertionPointToStart(innerLoop.getBody());
+    for (auto ivs : llvm::enumerate(llvm::zip(innerLoop.getInductionVars(),
+                                              outerLoop.getInductionVars()))) {
+      auto newIndex = b.create<arith::AddIOp>(
+          op.getLoc(), std::get<0>(ivs.value()), std::get<1>(ivs.value()));
+      thenBlock.getArgument(ivs.index())
+          .replaceAllUsesExcept(newIndex, newIndex);
+    }
+    thenBlock.eraseArguments(llvm::to_vector<4>(
+        llvm::seq((unsigned)0, thenBlock.getNumArguments())));
+  } else {
+    innerLoop.region().takeBody(op.region());
+    b.setInsertionPointToStart(innerLoop.getBody());
+    for (auto ivs : llvm::zip(innerLoop.getInductionVars(),
+                              outerLoop.getInductionVars())) {
+      Value innerIndex = std::get<0>(ivs);
+      auto newIndex = b.create<arith::AddIOp>(op.getLoc(), std::get<0>(ivs),
+                                              std::get<1>(ivs));
+      innerIndex.replaceAllUsesExcept(newIndex, newIndex);
+    }
   }
 
   op.erase();
-}
-
-/// Get a list of most nested parallel loops. Assumes that ParallelOps are
-/// only directly nested.
-static bool getInnermostNestedLoops(Block *block,
-                                    SmallVectorImpl<ParallelOp> &loops) {
-  bool hasInnerLoop = false;
-  for (auto parallelOp : block->getOps<ParallelOp>()) {
-    hasInnerLoop = true;
-    if (!getInnermostNestedLoops(parallelOp.getBody(), loops))
-      loops.push_back(parallelOp);
-  }
-  return hasInnerLoop;
+  return std::make_pair(outerLoop, innerLoop);
 }
 
 namespace {
 struct ParallelLoopTiling
     : public SCFParallelLoopTilingBase<ParallelLoopTiling> {
   ParallelLoopTiling() = default;
-  explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes) {
+  explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes,
+                              bool noMinMaxBounds = false) {
     this->tileSizes = tileSizes;
+    this->noMinMaxBounds = noMinMaxBounds;
   }
 
   void runOnFunction() override {
-    SmallVector<ParallelOp, 2> mostNestedParallelOps;
-    for (Block &block : getFunction()) {
-      getInnermostNestedLoops(&block, mostNestedParallelOps);
-    }
-    for (ParallelOp pLoop : mostNestedParallelOps) {
+    SmallVector<ParallelOp, 2> innermostPloops;
+    getInnermostParallelLoops(getFunction().getOperation(), innermostPloops);
+    for (ParallelOp ploop : innermostPloops) {
       // FIXME: Add reduction support.
-      if (pLoop.getNumReductions() == 0)
-        tileParallelLoop(pLoop, tileSizes);
+      if (ploop.getNumReductions() == 0)
+        tileParallelLoop(ploop, tileSizes, noMinMaxBounds);
     }
   }
 };
 } // namespace
 
 std::unique_ptr<Pass>
-mlir::createParallelLoopTilingPass(ArrayRef<int64_t> tileSizes) {
-  return std::make_unique<ParallelLoopTiling>(tileSizes);
+mlir::createParallelLoopTilingPass(ArrayRef<int64_t> tileSizes,
+                                   bool noMinMaxBounds) {
+  return std::make_unique<ParallelLoopTiling>(tileSizes, noMinMaxBounds);
 }

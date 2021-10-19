@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
 
-// CHECK-LABEL: define void @_Z22load_non_null_pointersv
+// CHECK-LABEL: define{{.*}} void @_Z22load_non_null_pointersv
 void load_non_null_pointers() {
   int var;
   var = *&var;
@@ -17,7 +17,7 @@ void load_non_null_pointers() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z31use_us16_aligned_array_elementsv
+// CHECK-LABEL: define{{.*}} void @_Z31use_us16_aligned_array_elementsv
 void use_us16_aligned_array_elements() {
   static const unsigned short Arr[] = {0, 1, 2};
   auto use_array = [](const unsigned short(&X)[3]) -> void {};

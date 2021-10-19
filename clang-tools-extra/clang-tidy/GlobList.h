@@ -10,9 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GLOBLIST_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Regex.h"
-#include <vector>
 
 namespace clang {
 namespace tidy {
@@ -33,15 +33,15 @@ public:
 
   /// Returns \c true if the pattern matches \p S. The result is the last
   /// matching glob's Positive flag.
-  bool contains(StringRef S);
+  bool contains(StringRef S) const;
 
 private:
 
   struct GlobListItem {
     bool IsPositive;
-    mutable llvm::Regex Regex;
+    llvm::Regex Regex;
   };
-  std::vector<GlobListItem> Items;
+  SmallVector<GlobListItem, 0> Items;
 };
 
 } // end namespace tidy

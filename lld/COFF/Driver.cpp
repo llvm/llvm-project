@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
+#include "COFFLinkerContext.h"
 #include "Config.h"
 #include "DebugTypes.h"
 #include "ICF.h"
@@ -26,6 +27,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
@@ -53,12 +55,10 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
-using llvm::sys::Process;
+using namespace llvm::sys;
 
 namespace lld {
 namespace coff {
-
-static Timer inputFileTimer("Input File Reading", Timer::root());
 
 Configuration *config;
 LinkerDriver *driver;
@@ -68,6 +68,10 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   lld::stdoutOS = &stdoutOS;
   lld::stderrOS = &stderrOS;
 
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+  };
+
   errorHandler().logName = args::getFilenameWithoutExe(args[0]);
   errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now"
@@ -75,24 +79,20 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   errorHandler().exitEarly = canExitEarly;
   stderrOS.enable_colors(stderrOS.has_colors());
 
+  COFFLinkerContext ctx;
   config = make<Configuration>();
-  symtab = make<SymbolTable>();
-  driver = make<LinkerDriver>();
+  driver = make<LinkerDriver>(ctx);
 
-  driver->link(args);
+  driver->linkerMain(args);
 
   // Call exit() if we can to avoid calling destructors.
   if (canExitEarly)
     exitLld(errorCount() ? 1 : 0);
 
-  freeArena();
-  ObjFile::instances.clear();
-  ImportFile::instances.clear();
-  BitcodeFile::instances.clear();
-  memset(MergeChunk::instances, 0, sizeof(MergeChunk::instances));
-  TpiSource::clear();
-
-  return !errorCount();
+  bool ret = errorCount() == 0;
+  if (!canExitEarly)
+    errorHandler().reset();
+  return ret;
 }
 
 // Parse options of the form "old;new".
@@ -141,17 +141,17 @@ using MBErrPair = std::pair<std::unique_ptr<MemoryBuffer>, std::error_code>;
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
 static std::future<MBErrPair> createFutureForFile(std::string path) {
-#if _WIN32
+#if _WIN64
   // On Windows, file I/O is relatively slow so it is best to do this
-  // asynchronously.
+  // asynchronously.  But 32-bit has issues with potentially launching tons
+  // of threads
   auto strategy = std::launch::async;
 #else
   auto strategy = std::launch::deferred;
 #endif
   return std::async(strategy, [=]() {
-    auto mbOrErr = MemoryBuffer::getFile(path,
-                                         /*FileSize*/ -1,
-                                         /*RequiresNullTerminator*/ false);
+    auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
+                                         /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
     return MBErrPair{std::move(*mbOrErr), std::error_code()};
@@ -166,8 +166,8 @@ static StringRef mangle(StringRef sym) {
   return sym;
 }
 
-static bool findUnderscoreMangle(StringRef sym) {
-  Symbol *s = symtab->findMangle(mangle(sym));
+bool LinkerDriver::findUnderscoreMangle(StringRef sym) {
+  Symbol *s = ctx.symtab.findMangle(mangle(sym));
   return s && !isa<Undefined>(s);
 }
 
@@ -205,29 +205,33 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
         addArchiveBuffer(m, "<whole-archive>", filename, memberIndex++);
       return;
     }
-    symtab->addFile(make<ArchiveFile>(mbref));
+    ctx.symtab.addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
     if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
+      ctx.symtab.addFile(make<LazyObjFile>(ctx, mbref));
     else
-      symtab->addFile(make<BitcodeFile>(mbref, "", 0));
+      ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
     if (lazy)
-      symtab->addFile(make<LazyObjFile>(mbref));
+      ctx.symtab.addFile(make<LazyObjFile>(ctx, mbref));
     else
-      symtab->addFile(make<ObjFile>(mbref));
+      ctx.symtab.addFile(make<ObjFile>(ctx, mbref));
     break;
   case file_magic::pdb:
-    symtab->addFile(make<PDBInputFile>(mbref));
+    ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
     break;
   case file_magic::coff_cl_gl_object:
     error(filename + ": is not a native COFF file. Recompile without /GL");
     break;
   case file_magic::pecoff_executable:
-    if (filename.endswith_lower(".dll")) {
+    if (config->mingw) {
+      ctx.symtab.addFile(make<DLLFile>(ctx, mbref));
+      break;
+    }
+    if (filename.endswith_insensitive(".dll")) {
       error(filename + ": bad file type. Did you specify a DLL instead of an "
                        "import library?");
       break;
@@ -268,24 +272,24 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
                                     uint64_t offsetInArchive) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::coff_import_library) {
-    InputFile *imp = make<ImportFile>(mb);
+    InputFile *imp = make<ImportFile>(ctx, mb);
     imp->parentName = parentName;
-    symtab->addFile(imp);
+    ctx.symtab.addFile(imp);
     return;
   }
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = make<ObjFile>(mb);
+    obj = make<ObjFile>(ctx, mb);
   } else if (magic == file_magic::bitcode) {
-    obj = make<BitcodeFile>(mb, parentName, offsetInArchive);
+    obj = make<BitcodeFile>(ctx, mb, parentName, offsetInArchive);
   } else {
     error("unknown file type: " + mb.getBufferIdentifier());
     return;
   }
 
   obj->parentName = parentName;
-  symtab->addFile(obj);
+  ctx.symtab.addFile(obj);
   log("Loaded " + toString(obj) + " for " + symName);
 }
 
@@ -371,6 +375,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (StringRef inc : directives.includes)
     addUndefined(inc);
 
+  // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
     case OPT_aligncomm:
@@ -392,6 +397,9 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_incl:
       addUndefined(arg->getValue());
       break;
+    case OPT_manifestdependency:
+      config->manifestDependencies.insert(arg->getValue());
+      break;
     case OPT_merge:
       parseMerge(arg->getValue());
       break;
@@ -401,10 +409,21 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_section:
       parseSection(arg->getValue());
       break;
-    case OPT_subsystem:
-      parseSubsystem(arg->getValue(), &config->subsystem,
-                     &config->majorOSVersion, &config->minorOSVersion);
+    case OPT_stack:
+      parseNumbers(arg->getValue(), &config->stackReserve,
+                   &config->stackCommit);
       break;
+    case OPT_subsystem: {
+      bool gotVersion = false;
+      parseSubsystem(arg->getValue(), &config->subsystem,
+                     &config->majorSubsystemVersion,
+                     &config->minorSubsystemVersion, &gotVersion);
+      if (gotVersion) {
+        config->majorOSVersion = config->majorSubsystemVersion;
+        config->minorOSVersion = config->minorSubsystemVersion;
+      }
+      break;
+    }
     // Only add flags here that link.exe accepts in
     // `#pragma comment(linker, "/flag")`-generated sections.
     case OPT_editandcontinue:
@@ -456,7 +475,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef filename) {
       return None;
   }
 
-  if (path.endswith_lower(".lib"))
+  if (path.endswith_insensitive(".lib"))
     visitedLibs.insert(std::string(sys::path::filename(path)));
   return path;
 }
@@ -520,7 +539,7 @@ void LinkerDriver::addLibSearchPaths() {
 }
 
 Symbol *LinkerDriver::addUndefined(StringRef name) {
-  Symbol *b = symtab->addUndefined(name);
+  Symbol *b = ctx.symtab.addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
     config->gcroot.push_back(b);
@@ -535,14 +554,14 @@ StringRef LinkerDriver::mangleMaybe(Symbol *s) {
     return "";
 
   // Otherwise, see if a similar, mangled symbol exists in the symbol table.
-  Symbol *mangled = symtab->findMangle(unmangled->getName());
+  Symbol *mangled = ctx.symtab.findMangle(unmangled->getName());
   if (!mangled)
     return "";
 
   // If we find a similar mangled symbol, make this an alias to it and return
   // its name.
   log(unmangled->getName() + " aliased to " + mangled->getName());
-  unmangled->weakAlias = symtab->addUndefined(mangled->getName());
+  unmangled->weakAlias = ctx.symtab.addUndefined(mangled->getName());
   return mangled->getName();
 }
 
@@ -607,6 +626,14 @@ static uint64_t getDefaultImageBase() {
   return config->dll ? 0x10000000 : 0x400000;
 }
 
+static std::string rewritePath(StringRef s) {
+  if (fs::exists(s))
+    return relativeToRoot(s);
+  return std::string(s);
+}
+
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
 static std::string createResponseFile(const opt::InputArgList &args,
                                       ArrayRef<StringRef> filePaths,
                                       ArrayRef<StringRef> searchPaths) {
@@ -620,14 +647,28 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
     case OPT_defaultlib:
     case OPT_libpath:
-    case OPT_manifest:
-    case OPT_manifest_colon:
-    case OPT_manifestdependency:
-    case OPT_manifestfile:
-    case OPT_manifestinput:
-    case OPT_manifestuac:
       break;
+    case OPT_call_graph_ordering_file:
+    case OPT_deffile:
+    case OPT_manifestinput:
+    case OPT_natvis:
+      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << '\n';
+      break;
+    case OPT_order: {
+      StringRef orderFile = arg->getValue();
+      orderFile.consume_front("@");
+      os << arg->getSpelling() << '@' << quote(rewritePath(orderFile)) << '\n';
+      break;
+    }
+    case OPT_pdbstream: {
+      const std::pair<StringRef, StringRef> nameFile =
+          StringRef(arg->getValue()).split("=");
+      os << arg->getSpelling() << nameFile.first << '='
+         << quote(rewritePath(nameFile.second)) << '\n';
+      break;
+    }
     case OPT_implib:
+    case OPT_manifestfile:
     case OPT_pdb:
     case OPT_pdbstripped:
     case OPT_out:
@@ -649,7 +690,16 @@ static std::string createResponseFile(const opt::InputArgList &args,
   return std::string(data.str());
 }
 
-enum class DebugKind { Unknown, None, Full, FastLink, GHash, Dwarf, Symtab };
+enum class DebugKind {
+  Unknown,
+  None,
+  Full,
+  FastLink,
+  GHash,
+  NoGHash,
+  Dwarf,
+  Symtab
+};
 
 static DebugKind parseDebugKind(const opt::InputArgList &args) {
   auto *a = args.getLastArg(OPT_debug, OPT_debug_opt);
@@ -659,14 +709,15 @@ static DebugKind parseDebugKind(const opt::InputArgList &args) {
     return DebugKind::Full;
 
   DebugKind debug = StringSwitch<DebugKind>(a->getValue())
-                     .CaseLower("none", DebugKind::None)
-                     .CaseLower("full", DebugKind::Full)
-                     .CaseLower("fastlink", DebugKind::FastLink)
-                     // LLD extensions
-                     .CaseLower("ghash", DebugKind::GHash)
-                     .CaseLower("dwarf", DebugKind::Dwarf)
-                     .CaseLower("symtab", DebugKind::Symtab)
-                     .Default(DebugKind::Unknown);
+                        .CaseLower("none", DebugKind::None)
+                        .CaseLower("full", DebugKind::Full)
+                        .CaseLower("fastlink", DebugKind::FastLink)
+                        // LLD extensions
+                        .CaseLower("ghash", DebugKind::GHash)
+                        .CaseLower("noghash", DebugKind::NoGHash)
+                        .CaseLower("dwarf", DebugKind::Dwarf)
+                        .CaseLower("symtab", DebugKind::Symtab)
+                        .Default(DebugKind::Unknown);
 
   if (debug == DebugKind::FastLink) {
     warn("/debug:fastlink unsupported; using /debug:full");
@@ -772,26 +823,22 @@ static void createImportLibrary(bool asLib) {
     exports.push_back(e2);
   }
 
-  auto handleError = [](Error &&e) {
-    handleAllErrors(std::move(e),
-                    [](ErrorInfoBase &eib) { error(eib.message()); });
-  };
   std::string libName = getImportName(asLib);
   std::string path = getImplibPath();
 
   if (!config->incremental) {
-    handleError(writeImportLibrary(libName, path, exports, config->machine,
-                                   config->mingw));
+    checkError(writeImportLibrary(libName, path, exports, config->machine,
+                                  config->mingw));
     return;
   }
 
   // If the import library already exists, replace it only if the contents
   // have changed.
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
-      path, /*FileSize*/ -1, /*RequiresNullTerminator*/ false);
+      path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
-    handleError(writeImportLibrary(libName, path, exports, config->machine,
-                                   config->mingw));
+    checkError(writeImportLibrary(libName, path, exports, config->machine,
+                                  config->mingw));
     return;
   }
 
@@ -803,25 +850,31 @@ static void createImportLibrary(bool asLib) {
 
   if (Error e = writeImportLibrary(libName, tmpName, exports, config->machine,
                                    config->mingw)) {
-    handleError(std::move(e));
+    checkError(std::move(e));
     return;
   }
 
   std::unique_ptr<MemoryBuffer> newBuf = check(MemoryBuffer::getFile(
-      tmpName, /*FileSize*/ -1, /*RequiresNullTerminator*/ false));
+      tmpName, /*IsText=*/false, /*RequiresNullTerminator=*/false));
   if ((*oldBuf)->getBuffer() != newBuf->getBuffer()) {
     oldBuf->reset();
-    handleError(errorCodeToError(sys::fs::rename(tmpName, path)));
+    checkError(errorCodeToError(sys::fs::rename(tmpName, path)));
   } else {
     sys::fs::remove(tmpName);
   }
 }
 
 static void parseModuleDefs(StringRef path) {
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
   COFFModuleDefinition m = check(parseCOFFModuleDefinition(
       mb->getMemBufferRef(), config->machine, config->mingw));
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 
   if (config->outputFile.empty())
     config->outputFile = std::string(saver.save(m.OutputFile));
@@ -874,7 +927,7 @@ void LinkerDriver::enqueueTask(std::function<void()> task) {
 }
 
 bool LinkerDriver::run() {
-  ScopedTimer t(inputFileTimer);
+  ScopedTimer t(ctx.inputFileTimer);
 
   bool didWork = !taskQueue.empty();
   while (!taskQueue.empty()) {
@@ -887,7 +940,7 @@ bool LinkerDriver::run() {
 // Parse an /order file. If an option is given, the linker places
 // COMDAT sections in the same order as their names appear in the
 // given file.
-static void parseOrderFile(StringRef arg) {
+static void parseOrderFile(COFFLinkerContext &ctx, StringRef arg) {
   // For some reason, the MSVC linker requires a filename to be
   // preceded by "@".
   if (!arg.startswith("@")) {
@@ -897,15 +950,18 @@ static void parseOrderFile(StringRef arg) {
 
   // Get a list of all comdat sections for error checking.
   DenseSet<StringRef> set;
-  for (Chunk *c : symtab->getChunks())
+  for (Chunk *c : ctx.symtab.getChunks())
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         set.insert(sec->sym->getName());
 
   // Open a file.
   StringRef path = arg.substr(1);
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
 
   // Parse a file. An order file contains one symbol per line.
   // All symbols that were not present in a given order file are
@@ -923,15 +979,21 @@ static void parseOrderFile(StringRef arg) {
     else
       config->order[s] = INT_MIN + config->order.size();
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
-static void parseCallGraphFile(StringRef path) {
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+static void parseCallGraphFile(COFFLinkerContext &ctx, StringRef path) {
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
 
   // Build a map from symbol name to section.
   DenseMap<StringRef, Symbol *> map;
-  for (ObjFile *file : ObjFile::instances)
+  for (ObjFile *file : ctx.objFileInstances)
     for (Symbol *sym : file->getSymbols())
       if (sym)
         map[sym->getName()] = sym;
@@ -963,10 +1025,13 @@ static void parseCallGraphFile(StringRef path) {
       if (SectionChunk *to = findSection(fields[1]))
         config->callGraphProfile[{from, to}] += count;
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
-static void readCallGraphsFromObjectFiles() {
-  for (ObjFile *obj : ObjFile::instances) {
+static void readCallGraphsFromObjectFiles(COFFLinkerContext &ctx) {
+  for (ObjFile *obj : ctx.objFileInstances) {
     if (obj->callgraphSec) {
       ArrayRef<uint8_t> contents;
       cantFail(
@@ -1000,7 +1065,7 @@ static void markAddrsig(Symbol *s) {
       c->keepUnique = true;
 }
 
-static void findKeepUniqueSections() {
+static void findKeepUniqueSections(COFFLinkerContext &ctx) {
   // Exported symbols could be address-significant in other executables or DSOs,
   // so we conservatively mark them as address-significant.
   for (Export &r : config->exports)
@@ -1008,7 +1073,7 @@ static void findKeepUniqueSections() {
 
   // Visit the address-significance table in each object file and mark each
   // referenced symbol as address-significant.
-  for (ObjFile *obj : ObjFile::instances) {
+  for (ObjFile *obj : ctx.objFileInstances) {
     ArrayRef<Symbol *> syms = obj->getSymbols();
     if (obj->addrsigSec) {
       ArrayRef<uint8_t> contents;
@@ -1070,9 +1135,9 @@ static void parsePDBAltPath(StringRef altPath) {
     // text between first and second % as variable name.
     buf.append(altPath.substr(cursor, firstMark - cursor));
     StringRef var = altPath.substr(firstMark, secondMark - firstMark + 1);
-    if (var.equals_lower("%_pdb%"))
+    if (var.equals_insensitive("%_pdb%"))
       buf.append(pdbBasename);
-    else if (var.equals_lower("%_ext%"))
+    else if (var.equals_insensitive("%_ext%"))
       buf.append(binaryExtension);
     else {
       warn("only %_PDB% and %_EXT% supported in /pdbaltpath:, keeping " +
@@ -1092,7 +1157,7 @@ static void parsePDBAltPath(StringRef altPath) {
 void LinkerDriver::convertResources() {
   std::vector<ObjFile *> resourceObjFiles;
 
-  for (ObjFile *f : ObjFile::instances) {
+  for (ObjFile *f : ctx.objFileInstances) {
     if (f->isResourceObjFile())
       resourceObjFiles.push_back(f);
   }
@@ -1114,8 +1179,9 @@ void LinkerDriver::convertResources() {
       f->includeResourceChunks();
     return;
   }
-  ObjFile *f = make<ObjFile>(convertResToCOFF(resources, resourceObjFiles));
-  symtab->addFile(f);
+  ObjFile *f =
+      make<ObjFile>(ctx, convertResToCOFF(resources, resourceObjFiles));
+  ctx.symtab.addFile(f);
   f->includeResourceChunks();
 }
 
@@ -1126,10 +1192,10 @@ void LinkerDriver::convertResources() {
 // -exclude-all-symbols option, so that lld-link behaves like link.exe rather
 // than MinGW in the case that nothing is explicitly exported.
 void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
-  if (!config->dll)
-    return;
-
   if (!args.hasArg(OPT_export_all_symbols)) {
+    if (!config->dll)
+      return;
+
     if (!config->exports.empty())
       return;
     if (args.hasArg(OPT_exclude_all_symbols))
@@ -1142,10 +1208,15 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (Optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
 
-  symtab->forEachSymbol([&](Symbol *s) {
+  ctx.symtab.forEachSymbol([&](Symbol *s) {
     auto *def = dyn_cast<Defined>(s);
-    if (!exporter.shouldExport(def))
+    if (!exporter.shouldExport(ctx, def))
       return;
+
+    if (!def->isGCRoot) {
+      def->isGCRoot = true;
+      config->gcroot.push_back(def);
+    }
 
     Export e;
     e.name = def->getName();
@@ -1153,6 +1224,7 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
     if (Chunk *c = def->getChunk())
       if (!(c->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
         e.data = true;
+    s->isUsedInRegularObj = true;
     config->exports.push_back(e);
   });
 }
@@ -1174,11 +1246,16 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
     return std::string(path);
   }
 
+  // This is intentionally not guarded by OPT_lldignoreenv since writing
+  // a repro tar file doesn't affect the main output.
+  if (auto *path = getenv("LLD_REPRODUCE"))
+    return std::string(path);
+
   return None;
 }
 
-void LinkerDriver::link(ArrayRef<const char *> argsArr) {
-  ScopedTimer rootTimer(Timer::root());
+void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
+  ScopedTimer rootTimer(ctx.rootTimer);
 
   // Needed for LTO.
   InitializeAllTargetInfos();
@@ -1189,7 +1266,9 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
-  if (argsArr.size() > 1 && StringRef(argsArr[1]).equals_lower("/lib")) {
+  if (argsArr.size() > 1 &&
+      (StringRef(argsArr[1]).equals_insensitive("/lib") ||
+       StringRef(argsArr[1]).equals_insensitive("-lib"))) {
     if (llvm::libDriverMain(argsArr.slice(1)) != 0)
       fatal("lib failed");
     return;
@@ -1204,6 +1283,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   v.push_back("lld-link (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
+  cl::ResetAllOptionOccurrences();
   cl::ParseCommandLineOptions(v.size(), v.data());
 
   // Handle /errorlimit early, because error() depends on it.
@@ -1242,7 +1322,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // because it doesn't start with "/", but we deliberately chose "--" to
   // avoid conflict with /version and for compatibility with clang-cl.
   if (args.hasArg(OPT_dash_dash_version)) {
-    lld::outs() << getLLDVersion() << "\n";
+    message(getLLDVersion());
     return;
   }
 
@@ -1318,7 +1398,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Handle /debug
   DebugKind debug = parseDebugKind(args);
   if (debug == DebugKind::Full || debug == DebugKind::Dwarf ||
-      debug == DebugKind::GHash) {
+      debug == DebugKind::GHash || debug == DebugKind::NoGHash) {
     config->debug = true;
     config->incremental = true;
   }
@@ -1341,7 +1421,8 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Handle /pdb
   bool shouldCreatePDB =
-      (debug == DebugKind::Full || debug == DebugKind::GHash);
+      (debug == DebugKind::Full || debug == DebugKind::GHash ||
+       debug == DebugKind::NoGHash);
   if (shouldCreatePDB) {
     if (auto *arg = args.getLastArg(OPT_pdb))
       config->pdbPath = arg->getValue();
@@ -1451,8 +1532,18 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Handle /subsystem
   if (auto *arg = args.getLastArg(OPT_subsystem))
-    parseSubsystem(arg->getValue(), &config->subsystem, &config->majorOSVersion,
-                   &config->minorOSVersion);
+    parseSubsystem(arg->getValue(), &config->subsystem,
+                   &config->majorSubsystemVersion,
+                   &config->minorSubsystemVersion);
+
+  // Handle /osversion
+  if (auto *arg = args.getLastArg(OPT_osversion)) {
+    parseVersion(arg->getValue(), &config->majorOSVersion,
+                 &config->minorOSVersion);
+  } else {
+    config->majorOSVersion = config->majorSubsystemVersion;
+    config->minorOSVersion = config->minorSubsystemVersion;
+  }
 
   // Handle /timestamp
   if (llvm::opt::Arg *arg = args.getLastArg(OPT_timestamp, OPT_repro)) {
@@ -1485,9 +1576,12 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
-  unsigned icfLevel =
-      args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
+  Optional<ICFLevel> icfLevel = None;
+  if (args.hasArg(OPT_profile))
+    icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
+  bool ltoNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
+  bool ltoDebugPM = false;
   for (auto *arg : args.filtered(OPT_opt)) {
     std::string str = StringRef(arg->getValue()).lower();
     SmallVector<StringRef, 1> vec;
@@ -1498,13 +1592,23 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       } else if (s == "noref") {
         doGC = false;
       } else if (s == "icf" || s.startswith("icf=")) {
-        icfLevel = 2;
+        icfLevel = ICFLevel::All;
+      } else if (s == "safeicf") {
+        icfLevel = ICFLevel::Safe;
       } else if (s == "noicf") {
-        icfLevel = 0;
+        icfLevel = ICFLevel::None;
       } else if (s == "lldtailmerge") {
         tailMerge = 2;
       } else if (s == "nolldtailmerge") {
         tailMerge = 0;
+      } else if (s == "ltonewpassmanager") {
+        ltoNewPM = true;
+      } else if (s == "noltonewpassmanager") {
+        ltoNewPM = false;
+      } else if (s == "ltodebugpassmanager") {
+        ltoDebugPM = true;
+      } else if (s == "noltodebugpassmanager") {
+        ltoDebugPM = false;
       } else if (s.startswith("lldlto=")) {
         StringRef optLevel = s.substr(7);
         if (optLevel.getAsInteger(10, config->ltoo) || config->ltoo > 3)
@@ -1524,16 +1628,14 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Limited ICF is enabled if GC is enabled and ICF was never mentioned
-  // explicitly.
-  // FIXME: LLD only implements "limited" ICF, i.e. it only merges identical
-  // code. If the user passes /OPT:ICF explicitly, LLD should merge identical
-  // comdat readonly data.
-  if (icfLevel == 1 && !doGC)
-    icfLevel = 0;
+  if (!icfLevel)
+    icfLevel = doGC ? ICFLevel::All : ICFLevel::None;
   config->doGC = doGC;
-  config->doICF = icfLevel > 0;
-  config->tailMerge = (tailMerge == 1 && config->doICF) || tailMerge == 2;
+  config->doICF = icfLevel.getValue();
+  config->tailMerge =
+      (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
+  config->ltoNewPassManager = ltoNewPM;
+  config->ltoDebugPassManager = ltoDebugPM;
 
   // Handle /lldsavetemps
   if (args.hasArg(OPT_lldsavetemps))
@@ -1592,12 +1694,9 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_aligncomm))
     parseAligncomm(arg->getValue());
 
-  // Handle /manifestdependency. This enables /manifest unless /manifest:no is
-  // also passed.
-  if (auto *arg = args.getLastArg(OPT_manifestdependency)) {
-    config->manifestDependency = arg->getValue();
-    config->manifest = Configuration::SideBySide;
-  }
+  // Handle /manifestdependency.
+  for (auto *arg : args.filtered(OPT_manifestdependency))
+    config->manifestDependencies.insert(arg->getValue());
 
   // Handle /manifest and /manifest:
   if (auto *arg = args.getLastArg(OPT_manifest, OPT_manifest_colon)) {
@@ -1634,14 +1733,18 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
+  config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
+  config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   // Handle miscellaneous boolean flags.
+  config->ltoPGOWarnMismatch = args.hasFlag(OPT_lto_pgo_warn_mismatch,
+                                            OPT_lto_pgo_warn_mismatch_no, true);
   config->allowBind = args.hasFlag(OPT_allowbind, OPT_allowbind_no, true);
   config->allowIsolation =
       args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   config->incremental =
       args.hasFlag(OPT_incremental, OPT_incremental_no,
-                   !config->doGC && !config->doICF && !args.hasArg(OPT_order) &&
-                       !args.hasArg(OPT_profile));
+                   !config->doGC && config->doICF == ICFLevel::None &&
+                       !args.hasArg(OPT_order) && !args.hasArg(OPT_profile));
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   config->cetCompat = args.hasFlag(OPT_cetcompat, OPT_cetcompat_no, false);
@@ -1651,7 +1754,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   config->terminalServerAware =
       !config->dll && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   config->debugDwarf = debug == DebugKind::Dwarf;
-  config->debugGHashes = debug == DebugKind::GHash;
+  config->debugGHashes = debug == DebugKind::GHash || debug == DebugKind::Full;
   config->debugSymtab = debug == DebugKind::Symtab;
   config->autoImport =
       args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);
@@ -1659,6 +1762,9 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
       OPT_runtime_pseudo_reloc, OPT_runtime_pseudo_reloc_no, config->mingw);
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_call_graph_profile_sort_no, true);
+  config->stdcallFixup =
+      args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
+  config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
 
   // Don't warn about long section names, such as .debug_info, for mingw or
   // when -debug:dwarf is requested.
@@ -1690,7 +1796,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  if (config->incremental && config->doICF) {
+  if (config->incremental && config->doICF != ICFLevel::None) {
     warn("ignoring '/incremental' because ICF is enabled; use '/opt:noicf' to "
          "disable");
     config->incremental = false;
@@ -1752,10 +1858,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   for (auto *arg : args.filtered(OPT_defaultlib))
     if (Optional<StringRef> path = findLib(arg->getValue()))
       enqueuePath(*path, false, false);
-
-  // Windows specific -- Create a resource file containing a manifest file.
-  if (config->manifest == Configuration::Embed)
-    addBuffer(createManifestRes(), false, false);
 
   // Read all input files given via the command line.
   run();
@@ -1905,29 +2007,32 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (config->imageBase == uint64_t(-1))
     config->imageBase = getDefaultImageBase();
 
-  symtab->addSynthetic(mangle("__ImageBase"), nullptr);
+  ctx.symtab.addSynthetic(mangle("__ImageBase"), nullptr);
   if (config->machine == I386) {
-    symtab->addAbsolute("___safe_se_handler_table", 0);
-    symtab->addAbsolute("___safe_se_handler_count", 0);
+    ctx.symtab.addAbsolute("___safe_se_handler_table", 0);
+    ctx.symtab.addAbsolute("___safe_se_handler_count", 0);
   }
 
-  symtab->addAbsolute(mangle("__guard_fids_count"), 0);
-  symtab->addAbsolute(mangle("__guard_fids_table"), 0);
-  symtab->addAbsolute(mangle("__guard_flags"), 0);
-  symtab->addAbsolute(mangle("__guard_iat_count"), 0);
-  symtab->addAbsolute(mangle("__guard_iat_table"), 0);
-  symtab->addAbsolute(mangle("__guard_longjmp_count"), 0);
-  symtab->addAbsolute(mangle("__guard_longjmp_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_fids_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_fids_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_flags"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_iat_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_iat_table"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_longjmp_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_longjmp_table"), 0);
   // Needed for MSVC 2017 15.5 CRT.
-  symtab->addAbsolute(mangle("__enclave_config"), 0);
+  ctx.symtab.addAbsolute(mangle("__enclave_config"), 0);
+  // Needed for MSVC 2019 16.8 CRT.
+  ctx.symtab.addAbsolute(mangle("__guard_eh_cont_count"), 0);
+  ctx.symtab.addAbsolute(mangle("__guard_eh_cont_table"), 0);
 
   if (config->pseudoRelocs) {
-    symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
-    symtab->addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
+    ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__RUNTIME_PSEUDO_RELOC_LIST_END__"), 0);
   }
   if (config->mingw) {
-    symtab->addAbsolute(mangle("__CTOR_LIST__"), 0);
-    symtab->addAbsolute(mangle("__DTOR_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__CTOR_LIST__"), 0);
+    ctx.symtab.addAbsolute(mangle("__DTOR_LIST__"), 0);
   }
 
   // This code may add new undefined symbols to the link, which may enqueue more
@@ -1953,12 +2058,12 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     for (auto pair : config->alternateNames) {
       StringRef from = pair.first;
       StringRef to = pair.second;
-      Symbol *sym = symtab->find(from);
+      Symbol *sym = ctx.symtab.find(from);
       if (!sym)
         continue;
       if (auto *u = dyn_cast<Undefined>(sym))
         if (!u->weakAlias)
-          u->weakAlias = symtab->addUndefined(to);
+          u->weakAlias = ctx.symtab.addUndefined(to);
     }
 
     // If any inputs are bitcode files, the LTO code generator may create
@@ -1966,27 +2071,33 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     // file's symbol table. If any of those library functions are defined in a
     // bitcode file in an archive member, we need to arrange to use LTO to
     // compile those archive members by adding them to the link beforehand.
-    if (!BitcodeFile::instances.empty())
+    if (!ctx.bitcodeFileInstances.empty())
       for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
-        symtab->addLibcall(s);
+        ctx.symtab.addLibcall(s);
 
     // Windows specific -- if __load_config_used can be resolved, resolve it.
-    if (symtab->findUnderscore("_load_config_used"))
+    if (ctx.symtab.findUnderscore("_load_config_used"))
       addUndefined(mangle("_load_config_used"));
   } while (run());
 
   if (args.hasArg(OPT_include_optional)) {
     // Handle /includeoptional
     for (auto *arg : args.filtered(OPT_include_optional))
-      if (dyn_cast_or_null<LazyArchive>(symtab->find(arg->getValue())))
+      if (dyn_cast_or_null<LazyArchive>(ctx.symtab.find(arg->getValue())))
         addUndefined(arg->getValue());
     while (run());
   }
 
-  if (config->autoImport) {
+  // Create wrapped symbols for -wrap option.
+  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(ctx, args);
+  // Load more object files that might be needed for wrapped symbols.
+  if (!wrapped.empty())
+    while (run());
+
+  if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
     // Load any further object files that might be needed for doing automatic
-    // imports.
+    // imports, and do stdcall fixups.
     //
     // For cases with no automatically imported symbols, this iterates once
     // over the symbol table and doesn't do anything.
@@ -1998,7 +2109,13 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     // normal object file as well (although that won't be used for the
     // actual autoimport later on). If this pass adds new undefined references,
     // we won't iterate further to resolve them.
-    symtab->loadMinGWAutomaticImports();
+    //
+    // If stdcall fixups only are needed for loading import entries from
+    // a DLL without import library, this also just needs running once.
+    // If it ends up pulling in more object files from static libraries,
+    // (and maybe doing more stdcall fixups along the way), this would need
+    // to loop these two calls.
+    ctx.symtab.loadMinGWSymbols();
     run();
   }
 
@@ -2006,15 +2123,22 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // If we are going to do codegen for link-time optimization, check for
   // unresolvable symbols first, so we don't spend time generating code that
   // will fail to link anyway.
-  if (!BitcodeFile::instances.empty() && !config->forceUnresolved)
-    symtab->reportUnresolvable();
+  if (!ctx.bitcodeFileInstances.empty() && !config->forceUnresolved)
+    ctx.symtab.reportUnresolvable();
   if (errorCount())
     return;
+
+  config->hadExplicitExports = !config->exports.empty();
+  if (config->mingw) {
+    // In MinGW, all symbols are automatically exported if no symbols
+    // are chosen to be exported.
+    maybeExportMinGWSymbols(args);
+  }
 
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
-  symtab->addCombinedLTOObjects();
+  ctx.symtab.addCombinedLTOObjects();
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2026,29 +2150,28 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // references to the symbols we use from them.
   run();
 
+  // Apply symbol renames for -wrap.
+  if (!wrapped.empty())
+    wrapSymbols(ctx, wrapped);
+
   // Resolve remaining undefined symbols and warn about imported locals.
-  symtab->resolveRemainingUndefines();
+  ctx.symtab.resolveRemainingUndefines();
   if (errorCount())
     return;
 
-  config->hadExplicitExports = !config->exports.empty();
   if (config->mingw) {
-    // In MinGW, all symbols are automatically exported if no symbols
-    // are chosen to be exported.
-    maybeExportMinGWSymbols(args);
-
     // Make sure the crtend.o object is the last object file. This object
     // file can contain terminating section chunks that need to be placed
     // last. GNU ld processes files and static libraries explicitly in the
     // order provided on the command line, while lld will pull in needed
     // files from static libraries only after the last object file on the
     // command line.
-    for (auto i = ObjFile::instances.begin(), e = ObjFile::instances.end();
+    for (auto i = ctx.objFileInstances.begin(), e = ctx.objFileInstances.end();
          i != e; i++) {
       ObjFile *file = *i;
       if (isCrtend(file->getName())) {
-        ObjFile::instances.erase(i);
-        ObjFile::instances.push_back(file);
+        ctx.objFileInstances.erase(i);
+        ctx.objFileInstances.push_back(file);
         break;
       }
     }
@@ -2073,7 +2196,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     StringRef name = pair.first;
     uint32_t alignment = pair.second;
 
-    Symbol *sym = symtab->find(name);
+    Symbol *sym = ctx.symtab.find(name);
     if (!sym) {
       warn("/aligncomm symbol " + name + " not found");
       continue;
@@ -2089,8 +2212,14 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     c->setAlignment(std::max(c->getAlignment(), alignment));
   }
 
-  // Windows specific -- Create a side-by-side manifest file.
-  if (config->manifest == Configuration::SideBySide)
+  // Windows specific -- Create an embedded or side-by-side manifest.
+  // /manifestdependency: enables /manifest unless an explicit /manifest:no is
+  // also passed.
+  if (config->manifest == Configuration::Embed)
+    addBuffer(createManifestRes(), false, false);
+  else if (config->manifest == Configuration::SideBySide ||
+           (config->manifest == Configuration::Default &&
+            !config->manifestDependencies.empty()))
     createSideBySideManifest();
 
   // Handle /order. We want to do this at this moment because we
@@ -2099,16 +2228,16 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_order)) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       error("/order and /call-graph-order-file may not be used together");
-    parseOrderFile(arg->getValue());
+    parseOrderFile(ctx, arg->getValue());
     config->callGraphProfileSort = false;
   }
 
   // Handle /call-graph-ordering-file and /call-graph-profile-sort (default on).
   if (config->callGraphProfileSort) {
     if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
-      parseCallGraphFile(arg->getValue());
+      parseCallGraphFile(ctx, arg->getValue());
     }
-    readCallGraphsFromObjectFiles();
+    readCallGraphsFromObjectFiles(ctx);
   }
 
   // Handle /print-symbol-order.
@@ -2116,25 +2245,42 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     config->printSymbolOrder = arg->getValue();
 
   // Identify unreferenced COMDAT sections.
-  if (config->doGC)
-    markLive(symtab->getChunks());
+  if (config->doGC) {
+    if (config->mingw) {
+      // markLive doesn't traverse .eh_frame, but the personality function is
+      // only reached that way. The proper solution would be to parse and
+      // traverse the .eh_frame section, like the ELF linker does.
+      // For now, just manually try to retain the known possible personality
+      // functions. This doesn't bring in more object files, but only marks
+      // functions that already have been included to be retained.
+      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0"}) {
+        Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
+        if (d && !d->isGCRoot) {
+          d->isGCRoot = true;
+          config->gcroot.push_back(d);
+        }
+      }
+    }
+
+    markLive(ctx);
+  }
 
   // Needs to happen after the last call to addFile().
   convertResources();
 
   // Identify identical COMDAT sections to merge them.
-  if (config->doICF) {
-    findKeepUniqueSections();
-    doICF(symtab->getChunks());
+  if (config->doICF != ICFLevel::None) {
+    findKeepUniqueSections(ctx);
+    doICF(ctx, config->doICF);
   }
 
   // Write the result.
-  writeResult();
+  writeResult(ctx);
 
   // Stop early so we can print the results.
   rootTimer.stop();
   if (config->showTiming)
-    Timer::root().print();
+    ctx.rootTimer.print();
 }
 
 } // namespace coff

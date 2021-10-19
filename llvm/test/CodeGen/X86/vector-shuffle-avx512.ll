@@ -35,11 +35,11 @@ define <8 x float> @expand1(<4 x float> %a ) {
 ;
 ; KNL-LABEL: expand1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = <u,0,u,1,u,2,u,3>
-; KNL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[3],ymm1[4],ymm0[5],ymm1[6],ymm0[7]
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = [16,0,18,1,20,2,22,3]
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x float> zeroinitializer, <4 x float> %a, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
    ret <8 x float> %res
@@ -268,10 +268,11 @@ define <8 x float> @expand14(<4 x float> %a) {
 ;
 ; KNL-LABEL: expand14:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; KNL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,3]
-; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3],ymm0[4],ymm1[5,6,7]
+; KNL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; KNL-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,0,19,1,21,22,23]
+; KNL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; KNL-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
+; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; KNL-NEXT:    ret{{[l|q]}}
    %addV = fadd <4 x float> <float 0.0,float 1.0,float 2.0,float 0.0> , <float 0.0,float 1.0,float 2.0,float 0.0>
    %res = shufflevector <4 x float> %addV, <4 x float> %a, <8 x i32> <i32 3, i32 3, i32 4, i32 0, i32 5, i32 0, i32 0, i32 0>
@@ -339,12 +340,12 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi16:
 ; KNL64:       # %bb.0: # %entry
-; KNL64-NEXT:    vpternlogd $216, {{.*}}(%rip){1to16}, %zmm1, %zmm0
+; KNL64-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; KNL64-NEXT:    retq
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi16:
 ; KNL32:       # %bb.0: # %entry
-; KNL32-NEXT:    vpternlogd $216, {{\.LCPI.*}}{1to16}, %zmm1, %zmm0
+; KNL32-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <32 x i16> %A, <32 x i16> %W, <32 x i32>  <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
@@ -476,9 +477,11 @@ define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2
 ;
 ; KNL64-LABEL: test_masked_permps_v8f32:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
-; KNL64-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
-; KNL64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; KNL64-NEXT:    vmovaps (%rdi), %ymm1
+; KNL64-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; KNL64-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; KNL64-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL64-NEXT:    retq
 ;
 ; SKX32-LABEL: test_masked_permps_v8f32:
@@ -492,10 +495,12 @@ define <8 x float> @test_masked_permps_v8f32(<8 x float>* %vp, <8 x float> %vec2
 ;
 ; KNL32-LABEL: test_masked_permps_v8f32:
 ; KNL32:       # %bb.0:
+; KNL32-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL32-NEXT:    vpermilps {{.*#+}} ymm1 = mem[3,2,2,3,7,6,6,7]
-; KNL32-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,0,2,3]
-; KNL32-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5],ymm0[6,7]
+; KNL32-NEXT:    vmovaps (%eax), %ymm1
+; KNL32-NEXT:    vmovaps {{.*#+}} ymm2 = [7,6,3,19,7,6,22,23]
+; KNL32-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; KNL32-NEXT:    vmovaps %ymm1, %ymm0
 ; KNL32-NEXT:    retl
   %vec = load <8 x float>, <8 x float>* %vp
   %shuf = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 7, i32 6, i32 3, i32 0, i32 7, i32 6, i32 3, i32 0>
@@ -591,20 +596,35 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(<2 x i32>* %src, <8 x i32>* %d
   ret void
 }
 
+define <32 x float> @PR47534(<8 x float> %tmp) {
+; CHECK-LABEL: PR47534:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vbroadcasti64x4 {{.*#+}} zmm1 = [7,25,26,27,7,29,30,31,7,25,26,27,7,29,30,31]
+; CHECK-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vpermi2ps %zmm2, %zmm0, %zmm1
+; CHECK-NEXT:    ret{{[l|q]}}
+  %tmp1 = shufflevector <8 x float> %tmp, <8 x float> undef, <32 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %tmp2 = shufflevector <32 x float> <float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <32 x float> undef, <32 x i32> <i32 39, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 29, i32 30, i32 31>
+  %tmp18 = shufflevector <32 x float> %tmp2, <32 x float> %tmp1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 39, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 29, i32 30, i32 31>
+  ret <32 x float> %tmp18
+}
+
 %union1= type { <16 x float> }
 @src1 = external dso_local local_unnamed_addr global %union1, align 64
 
 define void @PR43170(<16 x float>* %a0) {
 ; SKX64-LABEL: PR43170:
 ; SKX64:       # %bb.0: # %entry
-; SKX64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; SKX64-NEXT:    vmovaps src1(%rip), %ymm0
 ; SKX64-NEXT:    vmovaps %zmm0, (%rdi)
 ; SKX64-NEXT:    vzeroupper
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: PR43170:
 ; KNL64:       # %bb.0: # %entry
-; KNL64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; KNL64-NEXT:    vmovaps src1(%rip), %ymm0
 ; KNL64-NEXT:    vmovaps %zmm0, (%rdi)
 ; KNL64-NEXT:    retq
 ;

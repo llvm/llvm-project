@@ -9,10 +9,10 @@ define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    movl %esi, -8(%rsp)
-; CHECK-NEXT:    movl %ecx, -16(%rsp)
-; CHECK-NEXT:    movl %edi, -4(%rsp)
-; CHECK-NEXT:    movl %edx, -12(%rsp)
+; CHECK-NEXT:    movl %esi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %edi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leal (%rdi,%rsi), %eax
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    addl %ecx, %eax

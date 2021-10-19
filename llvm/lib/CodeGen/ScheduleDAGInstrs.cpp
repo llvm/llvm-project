@@ -199,7 +199,10 @@ void ScheduleDAGInstrs::exitRegion() {
 }
 
 void ScheduleDAGInstrs::addSchedBarrierDeps() {
-  MachineInstr *ExitMI = RegionEnd != BB->end() ? &*RegionEnd : nullptr;
+  MachineInstr *ExitMI =
+      RegionEnd != BB->end()
+          ? &*skipDebugInstructionsBackward(RegionEnd, RegionBegin)
+          : nullptr;
   ExitSU.setInstr(ExitMI);
   // Add dependencies on the defs and uses of the instruction.
   if (ExitMI) {
@@ -241,8 +244,6 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
                             !DefMIDesc->hasImplicitDefOfPhysReg(MO.getReg()));
   for (MCRegAliasIterator Alias(MO.getReg(), TRI, true);
        Alias.isValid(); ++Alias) {
-    if (!Uses.contains(*Alias))
-      continue;
     for (Reg2SUnitsMap::iterator I = Uses.find(*Alias); I != Uses.end(); ++I) {
       SUnit *UseSU = I->SU;
       if (UseSU == SU)
@@ -513,6 +514,8 @@ void ScheduleDAGInstrs::addVRegDefDeps(SUnit *SU, unsigned OperIdx) {
 /// TODO: Handle ExitSU "uses" properly.
 void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   const MachineInstr *MI = SU->getInstr();
+  assert(!MI->isDebugOrPseudoInstr());
+
   const MachineOperand &MO = MI->getOperand(OperIdx);
   Register Reg = MO.getReg();
 
@@ -569,7 +572,7 @@ void ScheduleDAGInstrs::initSUnits() {
   SUnits.reserve(NumRegionInstrs);
 
   for (MachineInstr &MI : make_range(RegionBegin, RegionEnd)) {
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
 
     SUnit *SU = newSUnit(&MI);
@@ -804,11 +807,12 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       DbgMI = nullptr;
     }
 
-    if (MI.isDebugValue()) {
+    if (MI.isDebugValue() || MI.isDebugPHI()) {
       DbgMI = &MI;
       continue;
     }
-    if (MI.isDebugLabel())
+
+    if (MI.isDebugLabel() || MI.isDebugRef() || MI.isPseudoProbe())
       continue;
 
     SUnit *SU = MISUnitMap[&MI];
@@ -1114,7 +1118,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 
   // Examine block from end to start...
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
-    if (MI.isDebugInstr())
+    if (MI.isDebugOrPseudoInstr())
       continue;
 
     // Update liveness.  Registers that are defed but not used in this
@@ -1149,7 +1153,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
       while (I->isBundledWithSucc())
         ++I;
       do {
-        if (!I->isDebugInstr())
+        if (!I->isDebugOrPseudoInstr())
           toggleKills(MRI, LiveRegs, *I, true);
         --I;
       } while (I != Bundle);
@@ -1184,7 +1188,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   else if (SU == &ExitSU)
     oss << "<exit>";
   else
-    SU->getInstr()->print(oss, /*SkipOpers=*/true);
+    SU->getInstr()->print(oss, /*IsStandalone=*/true);
   return oss.str();
 }
 

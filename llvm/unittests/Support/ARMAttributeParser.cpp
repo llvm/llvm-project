@@ -48,7 +48,7 @@ void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
 }
 
 bool testTagString(unsigned Tag, const char *name) {
-  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::ARMAttributeTags)
+  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::getARMAttributeTags())
              .str() == name;
 }
 
@@ -127,6 +127,10 @@ TEST(ThumbISABuildAttr, testBuildAttr) {
                                ARMBuildAttrs::Not_Allowed));
   EXPECT_TRUE(testBuildAttr(9, 1, ARMBuildAttrs::THUMB_ISA_use,
                                ARMBuildAttrs::Allowed));
+  EXPECT_TRUE(testBuildAttr(9, 2, ARMBuildAttrs::THUMB_ISA_use,
+                               ARMBuildAttrs::AllowThumb32));
+  EXPECT_TRUE(testBuildAttr(9, 3, ARMBuildAttrs::THUMB_ISA_use,
+                               ARMBuildAttrs::AllowThumbDerived));
 }
 
 TEST(FPArchBuildAttr, testBuildAttr) {

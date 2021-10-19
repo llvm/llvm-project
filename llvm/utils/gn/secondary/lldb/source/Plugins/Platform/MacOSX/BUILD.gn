@@ -1,0 +1,50 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("PlatformMacOSXProperties") {
+  args = [ "-gen-lldb-property-defs" ]
+}
+
+lldb_tablegen("PlatformMacOSXPropertiesEnum") {
+  args = [ "-gen-lldb-property-enum-defs" ]
+  td_file = "PlatformMacOSXProperties.td"
+}
+
+static_library("MacOSX") {
+  output_name = "lldbPluginPlatformMacOSX"
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
+  deps = [
+    ":PlatformMacOSXProperties",
+    ":PlatformMacOSXPropertiesEnum",
+    "//clang/lib/Basic",
+    "//lldb/source/Breakpoint",
+    "//lldb/source/Core",
+    "//lldb/source/Host",
+    "//lldb/source/Interpreter",
+    "//lldb/source/Plugins/Platform/POSIX",
+    "//lldb/source/Symbol",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  # Reaches into Plugins/Platform/POSIX.
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "PlatformDarwin.cpp",
+    "PlatformDarwinKernel.cpp",
+    "PlatformMacOSX.cpp",
+    "PlatformRemoteAppleBridge.cpp",
+    "PlatformRemoteAppleTV.cpp",
+    "PlatformRemoteAppleWatch.cpp",
+    "PlatformRemoteDarwinDevice.cpp",
+    "PlatformRemoteMacOSX.cpp",
+    "PlatformRemoteiOS.cpp",
+  ]
+  if (host_os == "mac") {
+    deps += [ "objcxx" ]
+    sources += [ "PlatformAppleSimulator.cpp" ]
+  }
+}

@@ -13,10 +13,10 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:         Offset:          0x0000001C
+; CHECK-NEXT:         Offset:          0x1C
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_I32
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000025
+; CHECK-NEXT:         Offset:          0x25
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         InitFlags:       0
@@ -74,11 +74,11 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:       - Index:       0
 ; CHECK-NEXT:         Name:        .rodata..L.str1
 ; CHECK-NEXT:         Alignment:   0
-; CHECK-NEXT:         Flags:       [ ]
+; CHECK-NEXT:         Flags:       [ STRINGS ]
 ; CHECK-NEXT:       - Index:       1
 ; CHECK-NEXT:         Name:        .rodata..L.str2
 ; CHECK-NEXT:         Alignment:   0
-; CHECK-NEXT:         Flags:       [ ]
+; CHECK-NEXT:         Flags:       [ STRINGS ]
 ; CHECK-NEXT:       - Index:       2
 ; CHECK-NEXT:         Name:        .data.a
 ; CHECK-NEXT:         Alignment:   3

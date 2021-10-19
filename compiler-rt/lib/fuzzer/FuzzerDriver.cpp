@@ -86,7 +86,7 @@ static const FlagDescription FlagDescriptions [] {
 static const size_t kNumFlags =
     sizeof(FlagDescriptions) / sizeof(FlagDescriptions[0]);
 
-static Vector<std::string> *Inputs;
+static std::vector<std::string> *Inputs;
 static std::string *ProgName;
 
 static void PrintHelp() {
@@ -159,14 +159,14 @@ static bool ParseOneFlag(const char *Param) {
     const char *Str = FlagValue(Param, Name);
     if (Str)  {
       if (FlagDescriptions[F].IntFlag) {
-        int Val = MyStol(Str);
-        *FlagDescriptions[F].IntFlag = Val;
+        auto Val = MyStol(Str);
+        *FlagDescriptions[F].IntFlag = static_cast<int>(Val);
         if (Flags.verbosity >= 2)
           Printf("Flag: %s %d\n", Name, Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
-        unsigned int Val = std::stoul(Str);
-        *FlagDescriptions[F].UIntFlag = Val;
+        auto Val = std::stoul(Str);
+        *FlagDescriptions[F].UIntFlag = static_cast<unsigned int>(Val);
         if (Flags.verbosity >= 2)
           Printf("Flag: %s %u\n", Name, Val);
         return true;
@@ -187,7 +187,7 @@ static bool ParseOneFlag(const char *Param) {
 }
 
 // We don't use any library to minimize dependencies.
-static void ParseFlags(const Vector<std::string> &Args,
+static void ParseFlags(const std::vector<std::string> &Args,
                        const ExternalFunctions *EF) {
   for (size_t F = 0; F < kNumFlags; F++) {
     if (FlagDescriptions[F].IntFlag)
@@ -206,7 +206,7 @@ static void ParseFlags(const Vector<std::string> &Args,
            "Disabling -len_control by default.\n", EF->LLVMFuzzerCustomMutator);
   }
 
-  Inputs = new Vector<std::string>;
+  Inputs = new std::vector<std::string>;
   for (size_t A = 1; A < Args.size(); A++) {
     if (ParseOneFlag(Args[A].c_str())) {
       if (Flags.ignore_remaining_args)
@@ -250,14 +250,29 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
   }
 }
 
-static void ValidateDirectoryExists(const std::string &Path) {
-  if (!Path.empty() && !IsDirectory(Path)) {
-    Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
+static void ValidateDirectoryExists(const std::string &Path,
+                                    bool CreateDirectory) {
+  if (Path.empty()) {
+    Printf("ERROR: Provided directory path is an empty string\n");
     exit(1);
   }
+
+  if (IsDirectory(Path))
+    return;
+
+  if (CreateDirectory) {
+    if (!MkDirRecursive(Path)) {
+      Printf("ERROR: Failed to create directory \"%s\"\n", Path.c_str());
+      exit(1);
+    }
+    return;
+  }
+
+  Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
+  exit(1);
 }
 
-std::string CloneArgsWithoutX(const Vector<std::string> &Args,
+std::string CloneArgsWithoutX(const std::vector<std::string> &Args,
                               const char *X1, const char *X2) {
   std::string Cmd;
   for (auto &S : Args) {
@@ -268,18 +283,19 @@ std::string CloneArgsWithoutX(const Vector<std::string> &Args,
   return Cmd;
 }
 
-static int RunInMultipleProcesses(const Vector<std::string> &Args,
+static int RunInMultipleProcesses(const std::vector<std::string> &Args,
                                   unsigned NumWorkers, unsigned NumJobs) {
   std::atomic<unsigned> Counter(0);
   std::atomic<bool> HasErrors(false);
   Command Cmd(Args);
   Cmd.removeFlag("jobs");
   Cmd.removeFlag("workers");
-  Vector<std::thread> V;
+  std::vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
   for (unsigned i = 0; i < NumWorkers; i++)
-    V.push_back(std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs, &HasErrors));
+    V.push_back(std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
+                            &HasErrors));
   for (auto &T : V)
     T.join();
   return HasErrors ? 1 : 0;
@@ -306,7 +322,12 @@ int RunOneTest(Fuzzer *F, const char *InputFilePath, size_t MaxLen) {
   if (MaxLen && MaxLen < U.size())
     U.resize(MaxLen);
   F->ExecuteCallback(U.data(), U.size());
-  F->TryDetectingAMemoryLeak(U.data(), U.size(), true);
+  if (Flags.print_full_coverage) {
+    // Leak detection is not needed when collecting full coverage data.
+    F->TPCUpdateObservedPCs();
+  } else {
+    F->TryDetectingAMemoryLeak(U.data(), U.size(), true);
+  }
   return 0;
 }
 
@@ -328,8 +349,8 @@ static std::string GetDedupTokenFromCmdOutput(const std::string &S) {
   return S.substr(Beg, End - Beg);
 }
 
-int CleanseCrashInput(const Vector<std::string> &Args,
-                       const FuzzingOptions &Options) {
+int CleanseCrashInput(const std::vector<std::string> &Args,
+                      const FuzzingOptions &Options) {
   if (Inputs->size() != 1 || !Flags.exact_artifact_path) {
     Printf("ERROR: -cleanse_crash should be given one input file and"
           " -exact_artifact_path\n");
@@ -352,7 +373,7 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   auto U = FileToVector(CurrentFilePath);
   size_t Size = U.size();
 
-  const Vector<uint8_t> ReplacementBytes = {' ', 0xff};
+  const std::vector<uint8_t> ReplacementBytes = {' ', 0xff};
   for (int NumAttempts = 0; NumAttempts < 5; NumAttempts++) {
     bool Changed = false;
     for (size_t Idx = 0; Idx < Size; Idx++) {
@@ -383,7 +404,7 @@ int CleanseCrashInput(const Vector<std::string> &Args,
   return 0;
 }
 
-int MinimizeCrashInput(const Vector<std::string> &Args,
+int MinimizeCrashInput(const std::vector<std::string> &Args,
                        const FuzzingOptions &Options) {
   if (Inputs->size() != 1) {
     Printf("ERROR: -minimize_crash should be given one input file\n");
@@ -483,14 +504,15 @@ int MinimizeCrashInputInternalStep(Fuzzer *F, InputCorpus *Corpus) {
   return 0;
 }
 
-void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
-           const Vector<std::string> &Corpora, const char *CFPathOrNull) {
+void Merge(Fuzzer *F, FuzzingOptions &Options,
+           const std::vector<std::string> &Args,
+           const std::vector<std::string> &Corpora, const char *CFPathOrNull) {
   if (Corpora.size() < 2) {
     Printf("INFO: Merge requires two or more corpus dirs\n");
     exit(0);
   }
 
-  Vector<SizedFile> OldCorpus, NewCorpus;
+  std::vector<SizedFile> OldCorpus, NewCorpus;
   GetSizedFilesFromDir(Corpora[0], &OldCorpus);
   for (size_t i = 1; i < Corpora.size(); i++)
     GetSizedFilesFromDir(Corpora[i], &NewCorpus);
@@ -498,10 +520,10 @@ void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
   std::sort(NewCorpus.begin(), NewCorpus.end());
 
   std::string CFPath = CFPathOrNull ? CFPathOrNull : TempPath("Merge", ".txt");
-  Vector<std::string> NewFiles;
-  Set<uint32_t> NewFeatures, NewCov;
+  std::vector<std::string> NewFiles;
+  std::set<uint32_t> NewFeatures, NewCov;
   CrashResistantMerge(Args, OldCorpus, NewCorpus, &NewFiles, {}, &NewFeatures,
-                      {}, &NewCov, CFPath, true);
+                      {}, &NewCov, CFPath, true, Flags.set_cover_merge);
   for (auto &Path : NewFiles)
     F->WriteToOutputCorpus(FileToVector(Path, Options.MaxLen));
   // We are done, delete the control file if it was a temporary one.
@@ -511,17 +533,17 @@ void Merge(Fuzzer *F, FuzzingOptions &Options, const Vector<std::string> &Args,
   exit(0);
 }
 
-int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
-                      UnitVector& Corpus) {
+int AnalyzeDictionary(Fuzzer *F, const std::vector<Unit> &Dict,
+                      UnitVector &Corpus) {
   Printf("Started dictionary minimization (up to %d tests)\n",
          Dict.size() * Corpus.size() * 2);
 
   // Scores and usage count for each dictionary unit.
-  Vector<int> Scores(Dict.size());
-  Vector<int> Usages(Dict.size());
+  std::vector<int> Scores(Dict.size());
+  std::vector<int> Usages(Dict.size());
 
-  Vector<size_t> InitialFeatures;
-  Vector<size_t> ModifiedFeatures;
+  std::vector<size_t> InitialFeatures;
+  std::vector<size_t> ModifiedFeatures;
   for (auto &C : Corpus) {
     // Get coverage for the testcase without modifications.
     F->ExecuteCallback(C.data(), C.size());
@@ -531,7 +553,7 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
     });
 
     for (size_t i = 0; i < Dict.size(); ++i) {
-      Vector<uint8_t> Data = C;
+      std::vector<uint8_t> Data = C;
       auto StartPos = std::search(Data.begin(), Data.end(),
                                   Dict[i].begin(), Dict[i].end());
       // Skip dictionary unit, if the testcase does not contain it.
@@ -577,9 +599,9 @@ int AnalyzeDictionary(Fuzzer *F, const Vector<Unit>& Dict,
   return 0;
 }
 
-Vector<std::string> ParseSeedInuts(const char *seed_inputs) {
+std::vector<std::string> ParseSeedInuts(const char *seed_inputs) {
   // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
-  Vector<std::string> Files;
+  std::vector<std::string> Files;
   if (!seed_inputs) return Files;
   std::string SeedInputs;
   if (Flags.seed_inputs[0] == '@')
@@ -600,9 +622,10 @@ Vector<std::string> ParseSeedInuts(const char *seed_inputs) {
   return Files;
 }
 
-static Vector<SizedFile> ReadCorpora(const Vector<std::string> &CorpusDirs,
-    const Vector<std::string> &ExtraSeedFiles) {
-  Vector<SizedFile> SizedFiles;
+static std::vector<SizedFile>
+ReadCorpora(const std::vector<std::string> &CorpusDirs,
+            const std::vector<std::string> &ExtraSeedFiles) {
+  std::vector<SizedFile> SizedFiles;
   size_t LastNumFiles = 0;
   for (auto &Dir : CorpusDirs) {
     GetSizedFilesFromDir(Dir, &SizedFiles);
@@ -625,7 +648,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     EF->LLVMFuzzerInitialize(argc, argv);
   if (EF->__msan_scoped_disable_interceptor_checks)
     EF->__msan_scoped_disable_interceptor_checks();
-  const Vector<std::string> Args(*argv, *argv + *argc);
+  const std::vector<std::string> Args(*argv, *argv + *argc);
   assert(!Args.empty());
   ProgName = new std::string(Args[0]);
   if (Argv0 != *ProgName) {
@@ -656,6 +679,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
   Options.LenControl = Flags.len_control;
+  Options.KeepSeed = Flags.keep_seed;
   Options.UnitTimeoutSec = Flags.timeout;
   Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
@@ -664,6 +688,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
+  Options.CrossOverUniformDist = Flags.cross_over_uniform_dist;
   Options.MutateDepth = Flags.mutate_depth;
   Options.ReduceDepth = Flags.reduce_depth;
   Options.UseCounters = Flags.use_counters;
@@ -691,7 +716,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     std::string OutputCorpusDir = (*Inputs)[0];
     if (!IsFile(OutputCorpusDir)) {
       Options.OutputCorpus = OutputCorpusDir;
-      ValidateDirectoryExists(Options.OutputCorpus);
+      ValidateDirectoryExists(Options.OutputCorpus, Flags.create_missing_dirs);
     }
   }
   Options.ReportSlowUnits = Flags.report_slow_units;
@@ -705,13 +730,14 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (!IsSeparator(ArtifactPathDir[ArtifactPathDir.length() - 1])) {
       ArtifactPathDir = DirName(ArtifactPathDir);
     }
-    ValidateDirectoryExists(ArtifactPathDir);
+    ValidateDirectoryExists(ArtifactPathDir, Flags.create_missing_dirs);
   }
   if (Flags.exact_artifact_path) {
     Options.ExactArtifactPath = Flags.exact_artifact_path;
-    ValidateDirectoryExists(DirName(Options.ExactArtifactPath));
+    ValidateDirectoryExists(DirName(Options.ExactArtifactPath),
+                            Flags.create_missing_dirs);
   }
-  Vector<Unit> Dictionary;
+  std::vector<Unit> Dictionary;
   if (Flags.dict)
     if (!ParseDictionaryFile(FileToString(Flags.dict), &Dictionary))
       return 1;
@@ -725,6 +751,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.PrintFinalStats = Flags.print_final_stats;
   Options.PrintCorpusStats = Flags.print_corpus_stats;
   Options.PrintCoverage = Flags.print_coverage;
+  Options.PrintFullCoverage = Flags.print_full_coverage;
   if (Flags.exit_on_src_pos)
     Options.ExitOnSrcPos = Flags.exit_on_src_pos;
   if (Flags.exit_on_item)
@@ -735,8 +762,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.DataFlowTrace = Flags.data_flow_trace;
   if (Flags.features_dir) {
     Options.FeaturesDir = Flags.features_dir;
-    ValidateDirectoryExists(Options.FeaturesDir);
+    ValidateDirectoryExists(Options.FeaturesDir, Flags.create_missing_dirs);
   }
+  if (Flags.mutation_graph_file)
+    Options.MutationGraphFile = Flags.mutation_graph_file;
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
   if (Flags.stop_file)
@@ -746,31 +775,30 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       (size_t)Flags.entropic_feature_frequency_threshold;
   Options.EntropicNumberOfRarestFeatures =
       (size_t)Flags.entropic_number_of_rarest_features;
-  if (Options.Entropic) {
-    if (!Options.FocusFunction.empty()) {
-      Printf("ERROR: The parameters `--entropic` and `--focus_function` cannot "
-             "be used together.\n");
-      exit(1);
-    }
+  Options.EntropicScalePerExecTime = Flags.entropic_scale_per_exec_time;
+  if (!Options.FocusFunction.empty())
+    Options.Entropic = false; // FocusFunction overrides entropic scheduling.
+  if (Options.Entropic)
     Printf("INFO: Running with entropic power schedule (0x%X, %d).\n",
            Options.EntropicFeatureFrequencyThreshold,
            Options.EntropicNumberOfRarestFeatures);
-  }
   struct EntropicOptions Entropic;
   Entropic.Enabled = Options.Entropic;
   Entropic.FeatureFrequencyThreshold =
       Options.EntropicFeatureFrequencyThreshold;
   Entropic.NumberOfRarestFeatures = Options.EntropicNumberOfRarestFeatures;
+  Entropic.ScalePerExecTime = Options.EntropicScalePerExecTime;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.
   if (Seed == 0)
-    Seed =
-        std::chrono::system_clock::now().time_since_epoch().count() + GetPid();
+    Seed = static_cast<unsigned>(
+        std::chrono::system_clock::now().time_since_epoch().count() + GetPid());
   if (Flags.verbosity)
     Printf("INFO: Seed: %u\n", Seed);
 
-  if (Flags.collect_data_flow && !Flags.fork && !Flags.merge) {
+  if (Flags.collect_data_flow && !Flags.fork &&
+      !(Flags.merge || Flags.set_cover_merge)) {
     if (RunIndividualFiles)
       return CollectDataFlow(Flags.collect_data_flow, Flags.data_flow_trace,
                         ReadCorpora({}, *Inputs));
@@ -805,6 +833,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.HandleXfsz = Flags.handle_xfsz;
   Options.HandleUsr1 = Flags.handle_usr1;
   Options.HandleUsr2 = Flags.handle_usr2;
+  Options.HandleWinExcept = Flags.handle_winexcept;
+
   SetSignalHandler(Options);
 
   std::atexit(Fuzzer::StaticExitCallback);
@@ -840,10 +870,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
+  Options.ForkCorpusGroups = Flags.fork_corpus_groups;
   if (Flags.fork)
     FuzzWithFork(F->GetMD().GetRand(), Options, Args, *Inputs, Flags.fork);
 
-  if (Flags.merge)
+  if (Flags.merge || Flags.set_cover_merge)
     Merge(F, Options, Args, *Inputs, Flags.merge_control_file);
 
   if (Flags.merge_inner) {
@@ -851,7 +882,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (Options.MaxLen == 0)
       F->SetMaxInputLen(kDefaultMaxMergeLen);
     assert(Flags.merge_control_file);
-    F->CrashResistantMergeInternalStep(Flags.merge_control_file);
+    F->CrashResistantMergeInternalStep(Flags.merge_control_file,
+                                       !strncmp(Flags.merge_inner, "2", 1));
     exit(0);
   }
 

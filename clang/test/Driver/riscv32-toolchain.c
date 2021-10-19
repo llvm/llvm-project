@@ -1,17 +1,20 @@
 // A basic clang -cc1 command-line, and simple environment check.
-// REQUIRES: platform-linker
 
-// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 2>&1 | FileCheck -check-prefix=CC1 %s
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
+// RUN:   | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "riscv32"
 
 // Test interaction with -fuse-ld=lld, if lld is available.
-// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 -fuse-ld=lld 2>&1 | FileCheck -check-prefix=LLD %s
+// RUN: %clang %s -### -no-canonical-prefixes -target riscv32 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fuse-ld=lld 2>&1 \
+// RUN:   | FileCheck -check-prefix=LLD %s
 // LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
@@ -26,7 +29,7 @@
 // C-RV32-BAREMETAL-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -no-canonical-prefixes \
+// RUN: %clang %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
@@ -40,7 +43,7 @@
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
@@ -56,7 +59,7 @@
 // CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx %s -### -no-canonical-prefixes \
+// RUN: %clangxx %s -### -no-canonical-prefixes -fuse-ld= \
 // RUN:   -target riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
@@ -177,6 +180,7 @@
 
 // Check that --rtlib can be used to override the used runtime library
 // RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   -target riscv32-unknown-elf --rtlib=libgcc 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-LIBGCC-ILP32 %s
 // C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crt0.o"
@@ -185,6 +189,7 @@
 // C-RV32-RTLIB-LIBGCC-ILP32: "{{.*}}crtend.o"
 
 // RUN: %clang %s -### -no-canonical-prefixes \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
 // RUN:   -target riscv32-unknown-elf --rtlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-RTLIB-COMPILERRT-ILP32 %s
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}crt0.o"

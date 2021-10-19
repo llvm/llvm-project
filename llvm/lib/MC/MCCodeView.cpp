@@ -563,10 +563,7 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
     int LineDelta = CurSourceLoc.Line - LastSourceLoc.Line;
     unsigned EncodedLineDelta = encodeSignedNumber(LineDelta);
     unsigned CodeDelta = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
-    if (CodeDelta == 0 && LineDelta != 0) {
-      compressAnnotation(BinaryAnnotationsOpCode::ChangeLineOffset, Buffer);
-      compressAnnotation(EncodedLineDelta, Buffer);
-    } else if (EncodedLineDelta < 0x8 && CodeDelta <= 0xf) {
+    if (EncodedLineDelta < 0x8 && CodeDelta <= 0xf) {
       // The ChangeCodeOffsetAndLineOffset combination opcode is used when the
       // encoded line delta uses 3 or fewer set bits and the code offset fits
       // in one nibble.

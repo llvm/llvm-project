@@ -8548,7 +8548,7 @@ int64_t test_vshld_s64(int64_t a, int64_t b) {
 // CHECK-LABEL: @test_vshld_u64(
 // CHECK:   [[VSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.ushl.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VSHLD_U64_I]]
-uint64_t test_vshld_u64(uint64_t a, uint64_t b) {
+uint64_t test_vshld_u64(uint64_t a, int64_t b) {
   return vshld_u64(a, b);
 }
 
@@ -8592,7 +8592,7 @@ int64_t test_vqshld_s64(int64_t a, int64_t b) {
 // CHECK:   [[VQSHLB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQSHLB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
-uint8_t test_vqshlb_u8(uint8_t a, uint8_t b) {
+uint8_t test_vqshlb_u8(uint8_t a, int8_t b) {
   return vqshlb_u8(a, b);
 }
 
@@ -8602,21 +8602,21 @@ uint8_t test_vqshlb_u8(uint8_t a, uint8_t b) {
 // CHECK:   [[VQSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
-uint16_t test_vqshlh_u16(uint16_t a, uint16_t b) {
+uint16_t test_vqshlh_u16(uint16_t a, int16_t b) {
   return vqshlh_u16(a, b);
 }
 
 // CHECK-LABEL: @test_vqshls_u32(
 // CHECK:   [[VQSHLS_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uqshl.i32(i32 %a, i32 %b)
 // CHECK:   ret i32 [[VQSHLS_U32_I]]
-uint32_t test_vqshls_u32(uint32_t a, uint32_t b) {
+uint32_t test_vqshls_u32(uint32_t a, int32_t b) {
   return vqshls_u32(a, b);
 }
 
 // CHECK-LABEL: @test_vqshld_u64(
 // CHECK:   [[VQSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uqshl.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VQSHLD_U64_I]]
-uint64_t test_vqshld_u64(uint64_t a, uint64_t b) {
+uint64_t test_vqshld_u64(uint64_t a, int64_t b) {
   return vqshld_u64(a, b);
 }
 
@@ -8630,7 +8630,7 @@ int64_t test_vrshld_s64(int64_t a, int64_t b) {
 // CHECK-LABEL: @test_vrshld_u64(
 // CHECK:   [[VRSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.urshl.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VRSHLD_U64_I]]
-uint64_t test_vrshld_u64(uint64_t a, uint64_t b) {
+uint64_t test_vrshld_u64(uint64_t a, int64_t b) {
   return vrshld_u64(a, b);
 }
 
@@ -8674,7 +8674,7 @@ int64_t test_vqrshld_s64(int64_t a, int64_t b) {
 // CHECK:   [[VQRSHLB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshl.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VQRSHLB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
-uint8_t test_vqrshlb_u8(uint8_t a, uint8_t b) {
+uint8_t test_vqrshlb_u8(uint8_t a, int8_t b) {
   return vqrshlb_u8(a, b);
 }
 
@@ -8684,21 +8684,21 @@ uint8_t test_vqrshlb_u8(uint8_t a, uint8_t b) {
 // CHECK:   [[VQRSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VQRSHLH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
-uint16_t test_vqrshlh_u16(uint16_t a, uint16_t b) {
+uint16_t test_vqrshlh_u16(uint16_t a, int16_t b) {
   return vqrshlh_u16(a, b);
 }
 
 // CHECK-LABEL: @test_vqrshls_u32(
 // CHECK:   [[VQRSHLS_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uqrshl.i32(i32 %a, i32 %b)
 // CHECK:   ret i32 [[VQRSHLS_U32_I]]
-uint32_t test_vqrshls_u32(uint32_t a, uint32_t b) {
+uint32_t test_vqrshls_u32(uint32_t a, int32_t b) {
   return vqrshls_u32(a, b);
 }
 
 // CHECK-LABEL: @test_vqrshld_u64(
 // CHECK:   [[VQRSHLD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uqrshl.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VQRSHLD_U64_I]]
-uint64_t test_vqrshld_u64(uint64_t a, uint64_t b) {
+uint64_t test_vqrshld_u64(uint64_t a, int64_t b) {
   return vqrshld_u64(a, b);
 }
 
@@ -13746,8 +13746,8 @@ void test_vst1_p64_x4(poly64_t *a, poly64x1x4_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp eq i64 %a, %b
 // CHECK:   [[VCEQD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQD_I]]
-int64_t test_vceqd_s64(int64_t a, int64_t b) {
-  return (int64_t)vceqd_s64(a, b);
+uint64_t test_vceqd_s64(int64_t a, int64_t b) {
+  return (uint64_t)vceqd_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vceqd_u64(
@@ -13762,8 +13762,8 @@ uint64_t test_vceqd_u64(uint64_t a, uint64_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp eq i64 %a, 0
 // CHECK:   [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQZ_I]]
-int64_t test_vceqzd_s64(int64_t a) {
-  return (int64_t)vceqzd_s64(a);
+uint64_t test_vceqzd_s64(int64_t a) {
+  return (uint64_t)vceqzd_s64(a);
 }
 
 // CHECK-LABEL: @test_vceqzd_u64(
@@ -13778,8 +13778,8 @@ int64_t test_vceqzd_u64(int64_t a) {
 // CHECK:   [[TMP0:%.*]] = icmp sge i64 %a, %b
 // CHECK:   [[VCEQD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQD_I]]
-int64_t test_vcged_s64(int64_t a, int64_t b) {
-  return (int64_t)vcged_s64(a, b);
+uint64_t test_vcged_s64(int64_t a, int64_t b) {
+  return (uint64_t)vcged_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vcged_u64(
@@ -13794,16 +13794,16 @@ uint64_t test_vcged_u64(uint64_t a, uint64_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp sge i64 %a, 0
 // CHECK:   [[VCGEZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCGEZ_I]]
-int64_t test_vcgezd_s64(int64_t a) {
-  return (int64_t)vcgezd_s64(a);
+uint64_t test_vcgezd_s64(int64_t a) {
+  return (uint64_t)vcgezd_s64(a);
 }
 
 // CHECK-LABEL: @test_vcgtd_s64(
 // CHECK:   [[TMP0:%.*]] = icmp sgt i64 %a, %b
 // CHECK:   [[VCEQD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQD_I]]
-int64_t test_vcgtd_s64(int64_t a, int64_t b) {
-  return (int64_t)vcgtd_s64(a, b);
+uint64_t test_vcgtd_s64(int64_t a, int64_t b) {
+  return (uint64_t)vcgtd_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vcgtd_u64(
@@ -13818,16 +13818,16 @@ uint64_t test_vcgtd_u64(uint64_t a, uint64_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp sgt i64 %a, 0
 // CHECK:   [[VCGTZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCGTZ_I]]
-int64_t test_vcgtzd_s64(int64_t a) {
-  return (int64_t)vcgtzd_s64(a);
+uint64_t test_vcgtzd_s64(int64_t a) {
+  return (uint64_t)vcgtzd_s64(a);
 }
 
 // CHECK-LABEL: @test_vcled_s64(
 // CHECK:   [[TMP0:%.*]] = icmp sle i64 %a, %b
 // CHECK:   [[VCEQD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQD_I]]
-int64_t test_vcled_s64(int64_t a, int64_t b) {
-  return (int64_t)vcled_s64(a, b);
+uint64_t test_vcled_s64(int64_t a, int64_t b) {
+  return (uint64_t)vcled_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vcled_u64(
@@ -13842,16 +13842,16 @@ uint64_t test_vcled_u64(uint64_t a, uint64_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp sle i64 %a, 0
 // CHECK:   [[VCLEZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCLEZ_I]]
-int64_t test_vclezd_s64(int64_t a) {
-  return (int64_t)vclezd_s64(a);
+uint64_t test_vclezd_s64(int64_t a) {
+  return (uint64_t)vclezd_s64(a);
 }
 
 // CHECK-LABEL: @test_vcltd_s64(
 // CHECK:   [[TMP0:%.*]] = icmp slt i64 %a, %b
 // CHECK:   [[VCEQD_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCEQD_I]]
-int64_t test_vcltd_s64(int64_t a, int64_t b) {
-  return (int64_t)vcltd_s64(a, b);
+uint64_t test_vcltd_s64(int64_t a, int64_t b) {
+  return (uint64_t)vcltd_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vcltd_u64(
@@ -13866,8 +13866,8 @@ uint64_t test_vcltd_u64(uint64_t a, uint64_t b) {
 // CHECK:   [[TMP0:%.*]] = icmp slt i64 %a, 0
 // CHECK:   [[VCLTZ_I:%.*]] = sext i1 [[TMP0]] to i64
 // CHECK:   ret i64 [[VCLTZ_I]]
-int64_t test_vcltzd_s64(int64_t a) {
-  return (int64_t)vcltzd_s64(a);
+uint64_t test_vcltzd_s64(int64_t a) {
+  return (uint64_t)vcltzd_s64(a);
 }
 
 // CHECK-LABEL: @test_vtstd_s64(
@@ -13875,8 +13875,8 @@ int64_t test_vcltzd_s64(int64_t a) {
 // CHECK:   [[TMP1:%.*]] = icmp ne i64 [[TMP0]], 0
 // CHECK:   [[VTSTD_I:%.*]] = sext i1 [[TMP1]] to i64
 // CHECK:   ret i64 [[VTSTD_I]]
-int64_t test_vtstd_s64(int64_t a, int64_t b) {
-  return (int64_t)vtstd_s64(a, b);
+uint64_t test_vtstd_s64(int64_t a, int64_t b) {
+  return (uint64_t)vtstd_s64(a, b);
 }
 
 // CHECK-LABEL: @test_vtstd_u64(
@@ -14094,8 +14094,8 @@ int64_t test_vqdmulls_s32(int32_t a, int32_t b) {
 // CHECK:   [[VQMOVUNH_S16_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <8 x i8> [[VQMOVUNH_S16_I]], i64 0
 // CHECK:   ret i8 [[TMP1]]
-int8_t test_vqmovunh_s16(int16_t a) {
-  return (int8_t)vqmovunh_s16(a);
+uint8_t test_vqmovunh_s16(int16_t a) {
+  return (uint8_t)vqmovunh_s16(a);
 }
 
 // CHECK-LABEL: @test_vqmovuns_s32(
@@ -14103,15 +14103,15 @@ int8_t test_vqmovunh_s16(int16_t a) {
 // CHECK:   [[VQMOVUNS_S32_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[TMP0]])
 // CHECK:   [[TMP1:%.*]] = extractelement <4 x i16> [[VQMOVUNS_S32_I]], i64 0
 // CHECK:   ret i16 [[TMP1]]
-int16_t test_vqmovuns_s32(int32_t a) {
-  return (int16_t)vqmovuns_s32(a);
+uint16_t test_vqmovuns_s32(int32_t a) {
+  return (uint16_t)vqmovuns_s32(a);
 }
 
 // CHECK-LABEL: @test_vqmovund_s64(
 // CHECK:   [[VQMOVUND_S64_I:%.*]] = call i32 @llvm.aarch64.neon.scalar.sqxtun.i32.i64(i64 %a)
 // CHECK:   ret i32 [[VQMOVUND_S64_I]]
-int32_t test_vqmovund_s64(int64_t a) {
-  return (int32_t)vqmovund_s64(a);
+uint32_t test_vqmovund_s64(int64_t a) {
+  return (uint32_t)vqmovund_s64(a);
 }
 
 // CHECK-LABEL: @test_vqmovnh_s16(
@@ -18155,7 +18155,7 @@ float64x1_t test_vcvt_n_f64_u64(uint64x1_t a) {
 
 // CHECK-LABEL: @test_vrndn_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// CHECK:   [[VRNDN1_I:%.*]] = call <1 x double> @llvm.aarch64.neon.frintn.v1f64(<1 x double> %a)
+// CHECK:   [[VRNDN1_I:%.*]] = call <1 x double> @llvm.roundeven.v1f64(<1 x double> %a)
 // CHECK:   ret <1 x double> [[VRNDN1_I]]
 float64x1_t test_vrndn_f64(float64x1_t a) {
   return vrndn_f64(a);

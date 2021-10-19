@@ -10,7 +10,11 @@ namespace llvm {
 // DirectiveBase.td and provides helper methods for accessing it.
 class DirectiveLanguage {
 public:
-  explicit DirectiveLanguage(const llvm::Record *Def) : Def(Def) {}
+  explicit DirectiveLanguage(const llvm::RecordKeeper &Records)
+      : Records(Records) {
+    const auto &DirectiveLanguages = getDirectiveLanguages();
+    Def = DirectiveLanguages[0];
+  }
 
   StringRef getName() const { return Def->getValueAsString("name"); }
 
@@ -24,10 +28,6 @@ public:
 
   StringRef getClausePrefix() const {
     return Def->getValueAsString("clausePrefix");
-  }
-
-  StringRef getIncludeHeader() const {
-    return Def->getValueAsString("includeHeader");
   }
 
   StringRef getClauseEnumSetClass() const {
@@ -46,8 +46,23 @@ public:
     return Def->getValueAsBit("enableBitmaskEnumInNamespace");
   }
 
+  std::vector<Record *> getDirectives() const {
+    return Records.getAllDerivedDefinitions("Directive");
+  }
+
+  std::vector<Record *> getClauses() const {
+    return Records.getAllDerivedDefinitions("Clause");
+  }
+
+  bool HasValidityErrors() const;
+
 private:
   const llvm::Record *Def;
+  const llvm::RecordKeeper &Records;
+
+  std::vector<Record *> getDirectiveLanguages() const {
+    return Records.getAllDerivedDefinitions("DirectiveLanguage");
+  }
 };
 
 // Base record class used for Directive and Clause class defined in
@@ -72,6 +87,9 @@ public:
   }
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
+
+  // Returns the record name.
+  StringRef getRecordName() const { return Def->getName(); }
 
 protected:
   const llvm::Record *Def;
@@ -116,11 +134,6 @@ public:
     return Def->getValueAsString("flangClass");
   }
 
-  // Optional field.
-  StringRef getFlangClassValue() const {
-    return Def->getValueAsString("flangClassValue");
-  }
-
   // Get the formatted name for Flang parser class. The generic formatted class
   // name is constructed from the name were the first letter of each word is
   // captitalized and the underscores are removed.
@@ -139,7 +152,7 @@ public:
       }
       return C;
     });
-    N.erase(std::remove(N.begin(), N.end(), '_'), N.end());
+    llvm::erase_value(N, '_');
     return N;
   }
 
@@ -160,7 +173,7 @@ public:
     return Def->getValueAsString("defaultValue");
   }
 
-  bool isImplict() const { return Def->getValueAsBit("isImplicit"); }
+  bool isImplicit() const { return Def->getValueAsBit("isImplicit"); }
 };
 
 // Wrapper class that contains VersionedClause's information defined in

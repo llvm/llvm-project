@@ -23,14 +23,14 @@ TEST(ScudoVectorTest, Basic) {
 }
 
 TEST(ScudoVectorTest, Stride) {
-  scudo::Vector<int> V;
-  for (int i = 0; i < 1000; i++) {
-    V.push_back(i);
-    EXPECT_EQ(V.size(), i + 1U);
-    EXPECT_EQ(V[i], i);
+  scudo::Vector<scudo::uptr> V;
+  for (scudo::uptr I = 0; I < 1000; I++) {
+    V.push_back(I);
+    EXPECT_EQ(V.size(), I + 1U);
+    EXPECT_EQ(V[I], I);
   }
-  for (int i = 0; i < 1000; i++)
-    EXPECT_EQ(V[i], i);
+  for (scudo::uptr I = 0; I < 1000; I++)
+    EXPECT_EQ(V[I], I);
 }
 
 TEST(ScudoVectorTest, ResizeReduction) {

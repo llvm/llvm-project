@@ -5,16 +5,16 @@ struct foo {
     int b;
 };
 
-// CHECK: @u = global %union.anon zeroinitializer
+// CHECK: @u ={{.*}} global %union.anon zeroinitializer
 union { int i; float f; } u = { };
 
-// CHECK: @u2 = global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
+// CHECK: @u2 ={{.*}} global { i32, [4 x i8] } { i32 0, [4 x i8] undef }
 union { int i; double f; } u2 = { };
 
-// CHECK: @u3 = global  %union.anon.1 zeroinitializer
+// CHECK: @u3 ={{.*}} global  %union.anon.1 zeroinitializer
 union { double f; int i; } u3 = { };
 
-// CHECK: @b = global [2 x i32] [i32 0, i32 22]
+// CHECK: @b ={{.*}} global [2 x i32] [i32 0, i32 22]
 int b[2] = {
   [1] = 22
 };
@@ -39,11 +39,11 @@ struct ds ds0 = { { { .a = 0 } } };
 struct ds ds1 = { { .a = 1 } };
 struct ds ds2 = { { .b = 1 } };
 struct ds ds3 = { .a = 0 };
-// CHECK: @ds4 = global %struct.ds { %struct.anon.3 { %struct.anon zeroinitializer, i16 0, %struct.anon.2 { i16 1 } } }
+// CHECK: @ds4 ={{.*}} global %struct.ds { %struct.anon.3 { %struct.anon zeroinitializer, i16 0, %struct.anon.2 { i16 1 } } }
 struct ds ds4 = { .c = 1 };
 struct ds ds5 = { { { .a = 0 } }, .b = 1 };
 struct ds ds6 = { { .a = 0, .b = 1 } };
-// CHECK: @ds7 = global %struct.ds { %struct.anon.3 { %struct.anon { i16 2 }, i16 3, %struct.anon.2 zeroinitializer } }
+// CHECK: @ds7 ={{.*}} global %struct.ds { %struct.anon.3 { %struct.anon { i16 2 }, i16 3, %struct.anon.2 zeroinitializer } }
 struct ds ds7 = {
   { {
       .a = 1
@@ -139,7 +139,7 @@ union_16644_t union_16644_instance_4[2] =
   [1].b[1] = 4
 };
 
-// CHECK: @lab = global { [4 x i8], i32 } { [4 x i8] undef, i32 123 }
+// CHECK: @lab ={{.*}} global { [4 x i8], i32 } { [4 x i8] undef, i32 123 }
 struct leading_anon_bitfield { int : 32; int n; } lab = { .n = 123 };
 
 // rdar://45691981
@@ -152,7 +152,7 @@ struct Derived {
   struct Base B;
 };
 struct Derived D = {{}, .B.A = 42};
-// CHECK: @D = global %struct.Derived { %struct.Base { %struct.anon.4 { i32 42 } } }, align 4
+// CHECK: @D ={{.*}} global %struct.Derived { %struct.Base { %struct.anon.4 { i32 42 } } }, align 4
 
 void test1(int argc, char **argv)
 {

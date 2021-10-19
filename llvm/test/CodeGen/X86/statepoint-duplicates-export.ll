@@ -16,9 +16,9 @@ define i1 @test() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq func
+; CHECK-NEXT:    callq func@PLT
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    callq func
+; CHECK-NEXT:    callq func@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    popq %rcx
@@ -47,9 +47,9 @@ define i1 @test2(i32 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq func
+; CHECK-NEXT:    callq func@PLT
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    callq func
+; CHECK-NEXT:    callq func@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    cmpq $0, (%rsp)
 ; CHECK-NEXT:    sete %al

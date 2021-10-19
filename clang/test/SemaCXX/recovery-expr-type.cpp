@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -fsyntax-only -verify
+// RUN: %clang_cc1 -triple=x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -o - %s -std=gnu++17 -fsyntax-only -verify
 
 namespace test0 {
 struct Indestructible {
@@ -26,7 +26,7 @@ namespace test2 {
 void foo(); // expected-note 3{{requires 0 arguments}}
 void func() {
   // verify that "field has incomplete type" diagnostic is suppressed.
-  typeof(foo(42)) var; // expected-error {{no matching function}}
+  typeof(foo(42)) var; // expected-error {{no matching function}} \
 
   // FIXME: suppress the "cannot initialize a variable" diagnostic.
   int a = foo(1); // expected-error {{no matching function}} \
@@ -53,14 +53,12 @@ struct AA {
     return 2;
   }
   static constexpr int foo2() {
-    return AA<T>::getB(); // expected-error{{no matching function for call to 'getB'}} \
-                          // expected-note {{subexpression not valid in a constant expression}}
+    return AA<T>::getB(); // expected-error{{no matching function for call to 'getB'}}
   }
 };
 // FIXME: should we suppress the "be initialized by a constant expression" diagnostic?
 constexpr auto x2 = AA<int>::foo2(); // expected-error {{be initialized by a constant expression}} \
-                                     // expected-note {{in instantiation of member function}} \
-                                     // expected-note {{in call to}}
+                                     // expected-note {{in instantiation of member function}}
 }
 
 // verify no assertion failure on violating value category.
@@ -92,7 +90,7 @@ namespace test7 {
 struct C {
   C() = delete; // expected-note {{has been explicitly marked deleted}}
 };
-void f(C &); // expected-note {{candidate function not viable: expects an l-value for 1st argument}}
+void f(C &); // expected-note {{candidate function not viable: expects an lvalue for 1st argument}}
 void test() {
   f(C()); // expected-error {{call to deleted constructor}} \
              expected-error {{no matching function for call}}
@@ -105,3 +103,43 @@ typedef int arr[];
 int v = arr(); // expected-error {{array types cannot be value-initialized}} \
                   expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'test8::arr'}}
 }
+
+namespace test9 {
+auto f(); // expected-note {{candidate function not viable}}
+// verify no crash on evaluating the size of undeduced auto type.
+static_assert(sizeof(f(1)), ""); // expected-error {{no matching function for call to 'f'}}
+}
+
+namespace test10 {
+// Ensure we don't assert here.
+int f(); // expected-note {{candidate}}
+template<typename T> const int k = f(T()); // expected-error {{no matching function}}
+static_assert(k<int> == 1, ""); // expected-note {{instantiation of}}
+}
+
+namespace test11 {
+// Verify we do not assert()-fail here.
+template <class T> void foo(T &t);
+template <typename T>
+void bar(T t) {
+  foo(t);
+}
+
+template <typename T = void *>
+struct S { // expected-note {{candidate}}
+  S(T t);  // expected-note {{candidate}}
+  ~S();
+};
+template <typename T> S(T t) -> S<void *>;
+
+void baz() {
+  bar(S(123)); // expected-error {{no matching conversion}}
+}
+} // namespace test11
+
+namespace test12 {
+// Verify we do not crash.
+int fun(int *foo = no_such_function()); // expected-error {{undeclared identifier}}
+void crash1() { fun(); }
+void crash2() { constexpr int s = fun(); }
+} // namespace test12

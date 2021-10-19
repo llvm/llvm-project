@@ -1,7 +1,9 @@
-// RUN: %clangxx_asan -O3 -flto %s -o %t
+/// Instrumented globals are added to llvm.compiler.used, so LTO will not const
+/// merge them (which will cause spurious ODR violation).
+// RUN: %clangxx_asan -O3 -fuse-ld=lld -flto %s -o %t
 // RUN: %run %t 2>&1
 
-// REQUIRES: lto
+// REQUIRES: lld-available, lto
 
 int main(int argc, const char * argv[]) {
   struct { long width, height; } a = {16, 16};

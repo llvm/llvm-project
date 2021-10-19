@@ -11,7 +11,7 @@ define <4 x i32> @test1(<4 x i32> %vec, i1 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test1(
 ; CHECK:         %[[A:.*]] = zext i1 {{.*}} to i8
-; CHECK:         call void @__msan_maybe_warning_1(i8 %[[A]], i32 0)
+; CHECK:         call void @__msan_maybe_warning_1(i8 zeroext %[[A]], i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test2(<4 x i32> %vec, i2 %idx, i32 %x) sanitize_memory {
@@ -20,7 +20,7 @@ define <4 x i32> @test2(<4 x i32> %vec, i2 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test2(
 ; CHECK:         %[[A:.*]] = zext i2 {{.*}} to i8
-; CHECK:         call void @__msan_maybe_warning_1(i8 %[[A]], i32 0)
+; CHECK:         call void @__msan_maybe_warning_1(i8 zeroext %[[A]], i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test8(<4 x i32> %vec, i8 %idx, i32 %x) sanitize_memory {
@@ -29,7 +29,7 @@ define <4 x i32> @test8(<4 x i32> %vec, i8 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test8(
 ; zext i8 -> i8 unnecessary.
-; CHECK:         call void @__msan_maybe_warning_1(i8 %{{.*}}, i32 0)
+; CHECK:         call void @__msan_maybe_warning_1(i8 zeroext %{{.*}}, i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test9(<4 x i32> %vec, i9 %idx, i32 %x) sanitize_memory {
@@ -38,7 +38,7 @@ define <4 x i32> @test9(<4 x i32> %vec, i9 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test9(
 ; CHECK:         %[[A:.*]] = zext i9 {{.*}} to i16
-; CHECK:         call void @__msan_maybe_warning_2(i16 %[[A]], i32 0)
+; CHECK:         call void @__msan_maybe_warning_2(i16 zeroext %[[A]], i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test16(<4 x i32> %vec, i16 %idx, i32 %x) sanitize_memory {
@@ -46,7 +46,7 @@ define <4 x i32> @test16(<4 x i32> %vec, i16 %idx, i32 %x) sanitize_memory {
   ret <4 x i32> %vec1
 }
 ; CHECK-LABEL: @test16(
-; CHECK:         call void @__msan_maybe_warning_2(i16 %{{.*}}, i32 0)
+; CHECK:         call void @__msan_maybe_warning_2(i16 zeroext %{{.*}}, i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test17(<4 x i32> %vec, i17 %idx, i32 %x) sanitize_memory {
@@ -55,7 +55,7 @@ define <4 x i32> @test17(<4 x i32> %vec, i17 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test17(
 ; CHECK:         %[[A:.*]] = zext i17 {{.*}} to i32
-; CHECK:         call void @__msan_maybe_warning_4(i32 %[[A]], i32 0)
+; CHECK:         call void @__msan_maybe_warning_4(i32 zeroext %[[A]], i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test42(<4 x i32> %vec, i42 %idx, i32 %x) sanitize_memory {
@@ -64,7 +64,7 @@ define <4 x i32> @test42(<4 x i32> %vec, i42 %idx, i32 %x) sanitize_memory {
 }
 ; CHECK-LABEL: @test42(
 ; CHECK:         %[[A:.*]] = zext i42 {{.*}} to i64
-; CHECK:         call void @__msan_maybe_warning_8(i64 %[[A]], i32 0)
+; CHECK:         call void @__msan_maybe_warning_8(i64 zeroext %[[A]], i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 define <4 x i32> @test64(<4 x i32> %vec, i64 %idx, i32 %x) sanitize_memory {
@@ -72,7 +72,7 @@ define <4 x i32> @test64(<4 x i32> %vec, i64 %idx, i32 %x) sanitize_memory {
   ret <4 x i32> %vec1
 }
 ; CHECK-LABEL: @test64(
-; CHECK:         call void @__msan_maybe_warning_8(i64 %{{.*}}, i32 0)
+; CHECK:         call void @__msan_maybe_warning_8(i64 zeroext %{{.*}}, i32 zeroext 0)
 ; CHECK:         ret <4 x i32>
 
 ; Type size too large => inline check.

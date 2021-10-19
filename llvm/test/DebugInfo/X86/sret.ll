@@ -3,16 +3,19 @@
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
-; CHECK-DWO: DW_AT_GNU_dwo_id (0x7e62530711b94622)
-; CHECK-DWO: DW_AT_GNU_dwo_id (0x7e62530711b94622)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0xa58a336e896549f1)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0xa58a336e896549f1)
 
-; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck %s
-; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck %s
+; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
+; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
 ; CHECK: _ZN1B9AInstanceEv
 ; CHECK: DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location (0x00000000
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-24, DW_OP_deref)
+; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref
+; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
+; FASTISEL-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref)
+; SDAG-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg5 RDI+0
+; SDAG-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"a"
 
 %class.A = type { i32 (...)**, i32 }
@@ -98,7 +101,7 @@ entry:
 }
 
 ; Function Attrs: uwtable
-define void @_ZN1B9AInstanceEv(%class.A* noalias sret %agg.result, %class.B* %this) #2 align 2 !dbg !53 {
+define void @_ZN1B9AInstanceEv(%class.A* noalias sret(%class.A) %agg.result, %class.B* %this) #2 align 2 !dbg !53 {
 entry:
   %this.addr = alloca %class.B*, align 8
   %nrvo = alloca i1
@@ -153,7 +156,7 @@ entry:
   call void @llvm.dbg.declare(metadata %class.B* %b, metadata !107, metadata !DIExpression()), !dbg !108
   call void @_ZN1BC2Ev(%class.B* %b), !dbg !108
   call void @llvm.dbg.declare(metadata i32* %return_val, metadata !109, metadata !DIExpression()), !dbg !110
-  call void @_ZN1B9AInstanceEv(%class.A* sret %temp.lvalue, %class.B* %b), !dbg !110
+  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %temp.lvalue, %class.B* %b), !dbg !110
   %call = invoke i32 @_ZN1A7get_intEv(%class.A* %temp.lvalue)
           to label %invoke.cont unwind label %lpad, !dbg !110
 
@@ -161,7 +164,7 @@ invoke.cont:                                      ; preds = %entry
   call void @_ZN1AD2Ev(%class.A* %temp.lvalue), !dbg !111
   store i32 %call, i32* %return_val, align 4, !dbg !111
   call void @llvm.dbg.declare(metadata %class.A* %a, metadata !113, metadata !DIExpression()), !dbg !114
-  call void @_ZN1B9AInstanceEv(%class.A* sret %a, %class.B* %b), !dbg !114
+  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %a, %class.B* %b), !dbg !114
   %0 = load i32, i32* %return_val, align 4, !dbg !115
   store i32 %0, i32* %retval, !dbg !115
   store i32 1, i32* %cleanup.dest.slot

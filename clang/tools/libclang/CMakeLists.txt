@@ -1,3 +1,9 @@
+# The SOVERSION should be updated only if a change is made to the libclang
+# ABI, and when it is updated, it should be updated to the current
+# LLVM_VERSION_MAJOR.
+# Please also see clang/tools/libclang/libclang.map
+set(CLANG_SONAME 13)
+
 set(SOURCES
   ARCMigrate.cpp
   BuildSystem.cpp
@@ -20,6 +26,7 @@ set(SOURCES
   CXType.cpp
   Indexing.cpp
   FatalErrorHandler.cpp
+  Rewrite.cpp
 
   ADDITIONAL_HEADERS
   CIndexDiagnostic.h
@@ -41,6 +48,7 @@ set(LIBS
   clangFrontend
   clangIndex
   clangLex
+  clangRewrite
   clangSema
   clangSerialization
   clangTooling
@@ -48,22 +56,6 @@ set(LIBS
 
 if (CLANG_ENABLE_ARCMT)
   list(APPEND LIBS clangARCMigrate)
-endif ()
-
-option(LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA
-  "Include code from clang-tools-extra in libclang." OFF)
-
-if (LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA)
-  if (TARGET clangTidyPlugin)
-    add_definitions(-DCLANG_TOOL_EXTRA_BUILD)
-    list(APPEND LIBS clangTidyPlugin)
-    list(APPEND LIBS clangIncludeFixerPlugin)
-    if(LLVM_ENABLE_MODULES)
-      list(APPEND LLVM_COMPILE_FLAGS "-fmodules-ignore-macro=CLANG_TOOL_EXTRA_BUILD")
-    endif()
-  else ()
-    message(FATAL_ERROR "LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA needs clang-tools-extra in LLVM_ENABLE_PROJECTS")
-  endif ()
 endif ()
 
 if (HAVE_LIBDL)
@@ -78,13 +70,28 @@ endif ()
 option(LIBCLANG_BUILD_STATIC
   "Build libclang as a static library (in addition to a shared one)" OFF)
 
-set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/libclang.exports)
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_BINARY_DIR}/libclang-generic.exports)
+set(LIBCLANG_VERSION_SCRIPT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
 
 if(MSVC)
   # Avoid LNK4197 by not specifying libclang.exports here.
   # Each functions is exported as "dllexport" in include/clang-c.
   # KB835326
   set(LLVM_EXPORTED_SYMBOL_FILE)
+endif()
+
+if (UNIX AND NOT APPLE)
+  set(LLVM_EXPORTED_SYMBOL_FILE)
+  set(USE_VERSION_SCRIPT ${LLVM_HAVE_LINK_VERSION_SCRIPT})
+endif()
+
+if (LLVM_EXPORTED_SYMBOL_FILE)
+  add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
+                     COMMAND "${Python3_EXECUTABLE}"
+                       ARGS ${CMAKE_CURRENT_SOURCE_DIR}/linker-script-to-export-list.py
+                            ${LIBCLANG_VERSION_SCRIPT_FILE}
+                            ${LLVM_EXPORTED_SYMBOL_FILE}
+                     DEPENDS ${LIBCLANG_VERSION_SCRIPT_FILE})
 endif()
 
 if(LLVM_ENABLE_PIC OR (WIN32 AND NOT LIBCLANG_BUILD_STATIC))
@@ -95,11 +102,11 @@ if(NOT LLVM_ENABLE_PIC OR LIBCLANG_BUILD_STATIC)
   set(ENABLE_STATIC STATIC)
 endif()
 
-if (WIN32 AND ENABLE_SHARED AND ENABLE_STATIC)
+if (MSVC AND ENABLE_SHARED AND ENABLE_STATIC)
   unset(ENABLE_STATIC)
 endif()
 
-if(WIN32)
+if(MSVC)
   set(output_name "libclang")
 else()
   set(output_name "clang")
@@ -159,6 +166,21 @@ if(ENABLE_SHARED)
         )
     endif()
   endif()
+  if (USE_VERSION_SCRIPT)
+    target_link_options(libclang PRIVATE "-Wl,--version-script,${CMAKE_CURRENT_SOURCE_DIR}/libclang.map")
+    # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
+    # but requires a special option to enable it.
+    if (${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+      target_link_options(libclang PRIVATE "-Wl,-z,gnu-version-script-compat")
+    endif()
+    # Ensure that libclang.so gets rebuilt when the linker script changes.
+    set_property(SOURCE ARCMigrate.cpp APPEND PROPERTY
+                 OBJECT_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libclang.map)
+
+    set_target_properties(libclang PROPERTIES
+                          VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
+                          SOVERSION ${CLANG_SONAME})
+  endif()
 endif()
 
 if(INTERNAL_INSTALL_PREFIX)
@@ -172,7 +194,6 @@ install(DIRECTORY ../../include/clang-c
   DESTINATION "${LIBCLANG_HEADERS_INSTALL_DESTINATION}"
   FILES_MATCHING
   PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
   )
 
 # LLVM_DISTRIBUTION_COMPONENTS requires that each component have both a

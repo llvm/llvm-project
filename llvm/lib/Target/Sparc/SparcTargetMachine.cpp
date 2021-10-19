@@ -17,7 +17,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
@@ -55,9 +55,7 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::Static;
-  return *RM;
+  return RM.getValueOr(Reloc::Static);
 }
 
 // Code models. Some only make sense for 64-bit code.
@@ -119,9 +117,7 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat =
-      F.hasFnAttribute("use-soft-float") &&
-      F.getFnAttribute("use-soft-float").getValueAsString() == "true";
+  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
 
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";

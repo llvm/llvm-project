@@ -20,6 +20,10 @@ public:
 
   SBMemoryRegionInfo(const lldb::SBMemoryRegionInfo &rhs);
 
+  SBMemoryRegionInfo(const char *name, lldb::addr_t begin, lldb::addr_t end,
+                     uint32_t permissions, bool mapped,
+                     bool stack_memory = false);
+
   ~SBMemoryRegionInfo();
 
   const lldb::SBMemoryRegionInfo &
@@ -73,6 +77,40 @@ public:
   ///     region. If no name can be determined the returns nullptr.
   const char *GetName();
 
+  /// Returns whether this memory region has a list of memory pages
+  /// that have been modified -- that are dirty.
+  ///
+  /// \return
+  ///     True if the dirty page list is available.
+  bool HasDirtyMemoryPageList();
+
+  /// Returns the number of modified pages -- dirty pages -- in this
+  /// memory region.
+  ///
+  /// \return
+  ///     The number of dirty page entries will be returned.  If
+  ///     there are no dirty pages in this memory region, 0 will
+  ///     be returned.  0 will also be returned if the dirty page
+  ///     list is not available for this memory region -- you must
+  ///     use HasDirtyMemoryPageList() to check for that.
+  uint32_t GetNumDirtyPages();
+
+  /// Returns the address of a memory page that has been modified in
+  /// this region.
+  ///
+  /// \return
+  ///     Returns the address for his dirty page in the list.
+  ///     If this memory region does not have a dirty page list,
+  ///     LLDB_INVALID_ADDRESS is returned.
+  addr_t GetDirtyPageAddressAtIndex(uint32_t idx);
+
+  /// Returns the size of a memory page in this region.
+  ///
+  /// \return
+  ///     Returns the size of the memory pages in this region,
+  ///     or 0 if this information is unavailable.
+  int GetPageSize();
+
   bool operator==(const lldb::SBMemoryRegionInfo &rhs) const;
 
   bool operator!=(const lldb::SBMemoryRegionInfo &rhs) const;
@@ -82,6 +120,8 @@ public:
 private:
   friend class SBProcess;
   friend class SBMemoryRegionInfoList;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::MemoryRegionInfo &ref();
 

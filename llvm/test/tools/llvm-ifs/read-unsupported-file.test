@@ -1,0 +1,7 @@
+# RUN: not llvm-ifs --output-format=IFS --output=- %s 2>&1| FileCheck %s
+
+This is just some text that cannot be read by llvm-ifs.
+
+# CHECK: The file was not recognized as a valid object file
+# CHECK: YAML failed reading as IFS
+# CHECK: No file readers succeeded reading `{{.*}}` (unsupported/malformed file?)

@@ -11,24 +11,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-/// Parse a location.
-///
-///   location           ::= `loc` inline-location
-///   inline-location    ::= '(' location-inst ')'
-///
-ParseResult Parser::parseLocation(LocationAttr &loc) {
-  // Check for 'loc' identifier.
-  if (parseToken(Token::kw_loc, "expected 'loc' keyword"))
-    return emitError();
-
-  // Parse the inline-location.
-  if (parseToken(Token::l_paren, "expected '(' in inline location") ||
-      parseLocationInstance(loc) ||
-      parseToken(Token::r_paren, "expected ')' in inline location"))
-    return failure();
-  return success();
-}
-
 /// Specific location instances.
 ///
 /// location-inst ::= filelinecol-location |
@@ -100,9 +82,8 @@ ParseResult Parser::parseFusedLocation(LocationAttr &loc) {
     return success();
   };
 
-  if (parseToken(Token::l_square, "expected '[' in fused location") ||
-      parseCommaSeparatedList(parseElt) ||
-      parseToken(Token::r_square, "expected ']' in fused location"))
+  if (parseCommaSeparatedList(Delimiter::Square, parseElt,
+                              " in fused location"))
     return failure();
 
   // Return the fused location.
@@ -137,7 +118,7 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
       return emitError("expected integer column number in FileLineColLoc");
     consumeToken(Token::integer);
 
-    loc = FileLineColLoc::get(str, line.getValue(), column.getValue(), ctx);
+    loc = FileLineColLoc::get(ctx, str, line.getValue(), column.getValue());
     return success();
   }
 
@@ -163,7 +144,7 @@ ParseResult Parser::parseNameOrFileLineColLocation(LocationAttr &loc) {
                    "expected ')' after child location of NameLoc"))
       return failure();
   } else {
-    loc = NameLoc::get(Identifier::get(str, ctx), ctx);
+    loc = NameLoc::get(Identifier::get(str, ctx));
   }
 
   return success();

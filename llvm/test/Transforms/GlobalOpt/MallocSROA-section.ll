@@ -1,8 +1,5 @@
 ; RUN: opt -globalopt -S < %s | FileCheck %s
-; CHECK: @Y.f0
-; CHECK: section ".foo"
-; CHECK: @Y.f1
-; CHECK: section ".foo"
+; CHECK: @Y = {{.*}} section ".foo"
 
 %struct.xyz = type { double, i32 }
 

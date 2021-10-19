@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=aarch64-arm-none-eabi -o - %s \
+# RUN: -run-pass simple-register-coalescing | FileCheck %s
+
+# In this test case, the 32-bit copy implements a 32 to 64 bit zero extension
+# and relies on the upper 32 bits being zeroed.
+# Coalescing to the result of the 64-bit load meant overwriting
+# the upper 32 bits incorrectly when the loaded byte was negative.
+
+--- |
+  @c = local_unnamed_addr global i8 -1, align 4
+
+  define i64 @bug_e(i32 %i32) local_unnamed_addr {
+  ret i64 0
+  }
+...
+---
+name:            bug_e
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+
+    %1:gpr32 = COPY $w0
+    %2:gpr64common = ADRP target-flags(aarch64-page) @c
+    %3:gpr64 = LDRSBXui %2, target-flags(aarch64-pageoff, aarch64-nc) @c :: (dereferenceable load (s8) from @c, align 4)
+    %0:gpr32 = COPY %3.sub_32
+  ; CHECK: {{.*}}.sub_32:gpr64 = COPY {{.*}}.sub_32
+    STRBBui %1, %2, target-flags(aarch64-pageoff, aarch64-nc) @c :: (store (s8) into @c, align 4)
+    %8:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    $x0 = COPY %8
+  ; CHECK: $x0 = COPY
+    RET_ReallyLR implicit $x0
+...

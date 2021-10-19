@@ -1,37 +1,37 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify -Wno-fortify-source \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify -Wno-fortify-source \
 // RUN:   -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify -Wno-fortify-source \
 // RUN:   -DVARIANT \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify \
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 %s -verify -Wno-fortify-source \
 // RUN:   -DUSE_BUILTINS -DVARIANT \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify -Wno-fortify-source \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify -Wno-fortify-source \
 // RUN:   -DUSE_BUILTINS \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify -Wno-fortify-source \
 // RUN:   -DVARIANT \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter
 
-// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify \
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-cloudabi %s -verify -Wno-fortify-source \
 // RUN:   -DUSE_BUILTINS -DVARIANT \
 // RUN:   -analyzer-checker=security.insecureAPI \
 // RUN:   -analyzer-checker=security.FloatLoopCounter

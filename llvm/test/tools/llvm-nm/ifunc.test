@@ -5,6 +5,9 @@
 
 # CHECK:      i ifunc_local
 # CHECK-NEXT: i ifunc_global
+# CHECK-NEXT: i ifunc_weak
+# CHECK-NEXT: U ifunc_undef
+# CHECK-NEXT: w ifunc_undef_weak
 
 !ELF
 FileHeader:
@@ -25,3 +28,13 @@ Symbols:
     Type:    STT_GNU_IFUNC
     Binding: STB_GLOBAL
     Section: .text
+  - Name:    ifunc_weak
+    Type:    STT_GNU_IFUNC
+    Binding: STB_WEAK
+    Section: .text
+  - Name:    ifunc_undef
+    Type:    STT_GNU_IFUNC
+    Binding: STB_GLOBAL
+  - Name:    ifunc_undef_weak
+    Type:    STT_GNU_IFUNC
+    Binding: STB_WEAK

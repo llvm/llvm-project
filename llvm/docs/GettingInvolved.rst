@@ -12,6 +12,7 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    Contributing
    DeveloperPolicy
    CodeReview
+   SupportPolicy
    SphinxQuickstartTemplate
    Phabricator
    HowToSubmitABug
@@ -27,6 +28,9 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
 
 :doc:`CodeReview`
    The LLVM project's code-review process.
+
+:doc:`SupportPolicy`
+   The LLVM support policy for core and non-core components.
 
 :doc:`SphinxQuickstartTemplate`
   A template + tutorial for writing new Sphinx documentation. It is meant
@@ -61,7 +65,6 @@ Information about LLVM's development process.
    :hidden:
 
    Projects
-   LLVMBuild
    HowToReleaseLLVM
    Packaging
    ReleaseProcess
@@ -73,10 +76,6 @@ Information about LLVM's development process.
   infrastructure.  The templates (directory organization, Makefiles, and test
   tree) allow the project code to be located outside (or inside) the ``llvm/``
   tree, while using LLVM header files and libraries.
-
-:doc:`LLVMBuild`
-  Describes the LLVMBuild organization and files used by LLVM to specify
-  component descriptions.
 
 :doc:`HowToReleaseLLVM`
   This is a guide to preparing LLVM releases. Most developers can ignore it.
@@ -99,7 +98,8 @@ Mailing Lists
 -------------
 
 If you can't find what you need in these docs, try consulting the mailing
-lists.
+lists. In addition to the traditional mailing lists there is also a 
+`Discourse server <https://llvm.discourse.group>`_ available. 
 
 `Developer's List (llvm-dev)`__
   This list is for people who want to be included in technical discussions of
@@ -136,6 +136,80 @@ lists.
 
   .. __: http://lists.llvm.org/mailman/listinfo/llvm-announce
 
+.. _online-sync-ups:
+
+Online Sync-Ups
+---------------
+
+A number of regular calls are organized on specific topics. It should be
+expected that the range of topics will change over time. At the time of
+writing, the following sync-ups are organized:
+
+.. list-table:: LLVM regular sync-up calls
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Topic
+     - Frequency
+     - Calendar link
+     - Minutes/docs link
+   * - RISC-V
+     - Every 2 weeks on Thursday
+     - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/b/1?cid=bG93cmlzYy5vcmdfMG41cGtlc2ZqY25wMGJoNWhwczFwMGJkODBAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     - 
+   * - Scalable Vectors and Arm SVE
+     - Monthly, every 3rd Tuesday
+     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
+   * - ML Guided Compiler Optimizations
+     - Monthly
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1JecbplF09l3swTjze-UVeLh4L48svJxGVy4mz_e9Rhs/edit?usp=gmail#heading=h.ts9cmcjbir1j>`__
+   * - `LLVM security group <https://llvm.org/docs/Security.html>`__
+     - Monthly, every 3rd Tuesday
+     - `ics <https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1GLCE8cl7goCaLSiM9j1eIq5IqeXt6_YTY2UEcC4jmsg/edit?usp=sharing>`__
+   * - `CIRCT <https://github.com/llvm/circt>`__
+     - Weekly, on Wednesday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1fOSRdyZR2w75D87yU2Ma9h2-_lEPL4NxvhJGJd-s5pk/edit#heading=h.mulvhjtr8dk9>`__
+   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+     - Weekly, on Thursdays
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
+   * - flang
+     - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
+     - 
+     - 
+   * - OpenMP
+     - Multiple meeting series, `documented here <https://openmp.llvm.org/docs/SupportAndFAQ.html>`__
+     - 
+     - 
+   * - LLVM Alias Analysis
+     - Every 4 weeks on Tuesdays
+     - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
+     - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
+   * - Windows/COFF related developments
+     - Every 2 months on Thursday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1A-W0Sas_oHWTEl_x_djZYoRtzAdTONMW_6l1BH9G6Bo/edit?usp=sharing>`__
+   * - Vector Predication
+     - Every 2 weeks on Tuesdays, 3pm UTC
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1q26ToudQjnqN5x31zk8zgq_s0lem1-BF8pQmciLa4k8/edit?usp=sharing>`__
+   * - LLVM Pointer Authentication
+     - Every month on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/fr1qtmrmt2s9odufjvurkb6j70%40group.calendar.google.com/public/basic.ics>`__
+     - `Minutes/docs <https://docs.google.com/document/d/14IDnh3YY9m6Ej_PaRKOz8tTTZlObgtLl8mYeRbytAec/edit?usp=sharing>`__
+   * - MemorySSA in LLVM
+     - Every 8 weeks on Mondays
+     - `ics <https://calendar.google.com/calendar/ical/c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=c_1mincouiltpa24ac14of14lhi4%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1-uEEZfmRdPThZlctOq9eXlmUaSSAAi8oKxhrPY_lpjk/edit#>`__
+
 IRC
 ---
 
@@ -154,6 +228,12 @@ This channel has several bots.
 
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
+
+In addition to the traditional IRC there is a 
+`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_ 
+chat server available. To sign up, please use this 
+`invitation link <https://discord.com/invite/xS7Z362>`_.
+  
 
 .. _meetups-social-events:
 

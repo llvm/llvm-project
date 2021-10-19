@@ -6,6 +6,7 @@
 // RUN: llvm-mc -triple thumb -mcpu=cortex-a78 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple thumb -mcpu=cortex-x1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple thumb -mcpu=neoverse-n1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-mc -triple thumb -mcpu=neoverse-n2 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 
 // RUN: not llvm-mc -triple thumb -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ERROR < %t %s

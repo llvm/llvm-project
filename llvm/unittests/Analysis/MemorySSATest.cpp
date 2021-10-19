@@ -7,14 +7,18 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -1034,7 +1038,8 @@ TEST_F(MemorySSATest, TestLoadMustAlias) {
   }
   for (LoadInst *V : {LA3, LA4}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1066,7 +1071,7 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
     MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
-    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
         << "Store " << I
         << " has correct alias information before being optimized?";
     if (V == SA1)
@@ -1083,7 +1088,8 @@ TEST_F(MemorySSATest, TestStoreMustAlias) {
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1117,7 +1123,8 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   unsigned I = 0;
   for (LoadInst *V : {LA1, LB1}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MayAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1125,7 +1132,8 @@ TEST_F(MemorySSATest, TestLoadMayAlias) {
   }
   for (LoadInst *V : {LA2, LB2}) {
     MemoryUse *MemUse = dyn_cast_or_null<MemoryUse>(MSSA.getMemoryAccess(V));
-    EXPECT_EQ(MemUse->getOptimizedAccessType(), MustAlias)
+    EXPECT_EQ(MemUse->getOptimizedAccessType().getValue(),
+              AliasResult::MustAlias)
         << "Load " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1170,7 +1178,7 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     MemoryDef *MemDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(V));
     EXPECT_EQ(MemDef->isOptimized(), false)
         << "Store " << I << " is optimized from the start?";
-    EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+    EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
         << "Store " << I
         << " has correct alias information before being optimized?";
     ++I;
@@ -1185,13 +1193,15 @@ TEST_F(MemorySSATest, TestStoreMayAlias) {
     EXPECT_EQ(MemDef->isOptimized(), true)
         << "Store " << I << " was not optimized";
     if (I == 1 || I == 3 || I == 4)
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MayAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MayAlias)
           << "Store " << I << " doesn't have the correct alias information";
     else if (I == 0 || I == 2)
       EXPECT_EQ(MemDef->getOptimizedAccessType(), None)
           << "Store " << I << " doesn't have the correct alias information";
     else
-      EXPECT_EQ(MemDef->getOptimizedAccessType(), MustAlias)
+      EXPECT_EQ(MemDef->getOptimizedAccessType().getValue(),
+                AliasResult::MustAlias)
           << "Store " << I << " doesn't have the correct alias information";
     // EXPECT_EQ expands such that if we increment I above, it won't get
     // incremented except when we try to print the error message.
@@ -1203,12 +1213,14 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   // Example code:
   // define void @a(i8* %foo) {
   //   %bar = getelementptr i8, i8* %foo, i64 1
+  //   %baz = getelementptr i8, i8* %foo, i64 2
   //   store i8 0, i8* %foo
   //   store i8 0, i8* %bar
-  //   call void @llvm.lifetime.end.p0i8(i64 8, i32* %p)
-  //   call void @llvm.lifetime.start.p0i8(i64 8, i32* %p)
+  //   call void @llvm.lifetime.end.p0i8(i64 3, i8* %foo)
+  //   call void @llvm.lifetime.start.p0i8(i64 3, i8* %foo)
   //   store i8 0, i8* %foo
   //   store i8 0, i8* %bar
+  //   call void @llvm.memset.p0i8(i8* %baz, i8 0, i64 1)
   //   ret void
   // }
   //
@@ -1228,6 +1240,7 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   Value *Foo = &*F->arg_begin();
 
   Value *Bar = B.CreateGEP(B.getInt8Ty(), Foo, B.getInt64(1), "bar");
+  Value *Baz = B.CreateGEP(B.getInt8Ty(), Foo, B.getInt64(2), "baz");
 
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
@@ -1237,12 +1250,13 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   };
 
   B.CreateCall(GetLifetimeIntrinsic(Intrinsic::lifetime_end),
-               {B.getInt64(2), Foo});
+               {B.getInt64(3), Foo});
   Instruction *LifetimeStart = B.CreateCall(
-      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(2), Foo});
+      GetLifetimeIntrinsic(Intrinsic::lifetime_start), {B.getInt64(3), Foo});
 
   Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
   Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);
+  Instruction *BazMemSet = B.CreateMemSet(Baz, B.getInt8(0), 1, Align(1));
 
   setupAnalyses();
   MemorySSA &MSSA = *Analyses->MSSA;
@@ -1256,6 +1270,9 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   MemoryAccess *BarAccess = MSSA.getMemoryAccess(BarStore);
   ASSERT_NE(BarAccess, nullptr);
 
+  MemoryAccess *BazAccess = MSSA.getMemoryAccess(BazMemSet);
+  ASSERT_NE(BazAccess, nullptr);
+
   MemoryAccess *FooClobber =
       MSSA.getWalker()->getClobberingMemoryAccess(FooAccess);
   EXPECT_EQ(FooClobber, LifetimeStartAccess);
@@ -1263,6 +1280,15 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   MemoryAccess *BarClobber =
       MSSA.getWalker()->getClobberingMemoryAccess(BarAccess);
   EXPECT_EQ(BarClobber, LifetimeStartAccess);
+
+  MemoryAccess *BazClobber =
+      MSSA.getWalker()->getClobberingMemoryAccess(BazAccess);
+  EXPECT_EQ(BazClobber, LifetimeStartAccess);
+
+  MemoryAccess *LifetimeStartClobber =
+      MSSA.getWalker()->getClobberingMemoryAccess(
+          LifetimeStartAccess, MemoryLocation::getAfter(Foo));
+  EXPECT_EQ(LifetimeStartClobber, LifetimeStartAccess);
 }
 
 TEST_F(MemorySSATest, DefOptimizationsAreInvalidatedOnMoving) {
@@ -1582,4 +1608,167 @@ TEST_F(MemorySSATest, TestAddedEdgeToBlockWithNoPhiAddNewPhis) {
   EXPECT_NE(MPD, nullptr);
   MemoryPhi *MPE = MSSA.getMemoryAccess(EBlock);
   EXPECT_EQ(MPD, MPE->getIncomingValueForBlock(DBlock));
+}
+
+TEST_F(MemorySSATest, TestCallClobber) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  Value *Pointer1 = &*F->arg_begin();
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Value *Pointer2 = B.CreateGEP(B.getInt8Ty(), Pointer1, B.getInt64(1));
+  Instruction *StorePointer1 = B.CreateStore(B.getInt8(0), Pointer1);
+  Instruction *StorePointer2 = B.CreateStore(B.getInt8(0), Pointer2);
+  Instruction *MemSet = B.CreateMemSet(Pointer2, B.getInt8(0), 1, Align(1));
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  MemoryUseOrDef *Store1Access = MSSA.getMemoryAccess(StorePointer1);
+  MemoryUseOrDef *Store2Access = MSSA.getMemoryAccess(StorePointer2);
+  MemoryUseOrDef *MemSetAccess = MSSA.getMemoryAccess(MemSet);
+
+  MemoryAccess *Pointer1Clobber = Walker->getClobberingMemoryAccess(
+      MemSetAccess, MemoryLocation(Pointer1, LocationSize::precise(1)));
+  EXPECT_EQ(Pointer1Clobber, Store1Access);
+
+  MemoryAccess *Pointer2Clobber = Walker->getClobberingMemoryAccess(
+      MemSetAccess, MemoryLocation(Pointer2, LocationSize::precise(1)));
+  EXPECT_EQ(Pointer2Clobber, MemSetAccess);
+
+  MemoryAccess *MemSetClobber = Walker->getClobberingMemoryAccess(MemSetAccess);
+  EXPECT_EQ(MemSetClobber, Store2Access);
+}
+
+TEST_F(MemorySSATest, TestLoadClobber) {
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+
+  Value *Pointer1 = &*F->arg_begin();
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Value *Pointer2 = B.CreateGEP(B.getInt8Ty(), Pointer1, B.getInt64(1));
+  Instruction *LoadPointer1 =
+      B.CreateLoad(B.getInt8Ty(), Pointer1, /* Volatile */ true);
+  Instruction *LoadPointer2 =
+      B.CreateLoad(B.getInt8Ty(), Pointer2, /* Volatile */ true);
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  MemoryUseOrDef *Load1Access = MSSA.getMemoryAccess(LoadPointer1);
+  MemoryUseOrDef *Load2Access = MSSA.getMemoryAccess(LoadPointer2);
+
+  // When providing a memory location, we should never return a load as the
+  // clobber.
+  MemoryAccess *Pointer1Clobber = Walker->getClobberingMemoryAccess(
+      Load2Access, MemoryLocation(Pointer1, LocationSize::precise(1)));
+  EXPECT_TRUE(MSSA.isLiveOnEntryDef(Pointer1Clobber));
+
+  MemoryAccess *Pointer2Clobber = Walker->getClobberingMemoryAccess(
+      Load2Access, MemoryLocation(Pointer2, LocationSize::precise(1)));
+  EXPECT_TRUE(MSSA.isLiveOnEntryDef(Pointer2Clobber));
+
+  MemoryAccess *Load2Clobber = Walker->getClobberingMemoryAccess(Load2Access);
+  EXPECT_EQ(Load2Clobber, Load1Access);
+}
+
+// We want to test if the location information are retained
+// when the IsGuaranteedLoopInvariant function handles a
+// memory access referring to a pointer defined in the entry
+// block, hence automatically guaranteed to be loop invariant.
+TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
+  SMDiagnostic E;
+  auto LocalM =
+      parseAssemblyString("define void @test(i64 %a0, i8* %a1, i1* %a2) {\n"
+                          "entry:\n"
+                          "%v0 = getelementptr i8, i8* %a1, i64 %a0\n"
+                          "%v1 = bitcast i8* %v0 to i64*\n"
+                          "%v2 = bitcast i8* %v0 to i32*\n"
+                          "%v3 = load i1, i1* %a2\n"
+                          "br i1 %v3, label %body, label %exit\n"
+                          "body:\n"
+                          "store i32 1, i32* %v2\n"
+                          "br label %exit\n"
+                          "exit:\n"
+                          "store i64 0, i64* %v1\n"
+                          "ret void\n"
+                          "}",
+                          E, C);
+  ASSERT_TRUE(LocalM);
+  F = LocalM->getFunction("test");
+  ASSERT_TRUE(F);
+  // Setup the analysis
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  // Find the exit block
+  for (auto &BB : *F) {
+    if (BB.getName() == "exit") {
+      // Get the store instruction
+      auto *SI = BB.getFirstNonPHI();
+      // Get the memory access and location
+      MemoryAccess *MA = MSSA.getMemoryAccess(SI);
+      MemoryLocation ML = MemoryLocation::get(SI);
+      // Use the 'upward_defs_iterator' which internally calls
+      // IsGuaranteedLoopInvariant
+      auto ItA = upward_defs_begin({MA, ML}, MSSA.getDomTree());
+      auto ItB =
+          upward_defs_begin({ItA->first, ItA->second}, MSSA.getDomTree());
+      // Check if the location information have been retained
+      EXPECT_TRUE(ItB->second.Size.isPrecise());
+      EXPECT_TRUE(ItB->second.Size.hasValue());
+      EXPECT_TRUE(ItB->second.Size.getValue() == 8);
+    }
+  }
+}
+
+TEST_F(MemorySSATest, TestInvariantGroup) {
+  SMDiagnostic E;
+  auto M = parseAssemblyString("declare void @f(i8*)\n"
+                               "define i8 @test(i8* %p) {\n"
+                               "entry:\n"
+                               "  store i8 42, i8* %p, !invariant.group !0\n"
+                               "  call void @f(i8* %p)\n"
+                               "  %v = load i8, i8* %p, !invariant.group !0\n"
+                               "  ret i8 %v\n"
+                               "}\n"
+                               "!0 = !{}",
+                               E, C);
+  ASSERT_TRUE(M);
+  F = M->getFunction("test");
+  ASSERT_TRUE(F);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAWalker *Walker = Analyses->Walker;
+
+  auto &BB = F->getEntryBlock();
+  auto &SI = cast<StoreInst>(*BB.begin());
+  auto &Call = cast<CallBase>(*std::next(BB.begin()));
+  auto &LI = cast<LoadInst>(*std::next(std::next(BB.begin())));
+
+  {
+    MemoryAccess *SAccess = MSSA.getMemoryAccess(&SI);
+    MemoryAccess *LAccess = MSSA.getMemoryAccess(&LI);
+    MemoryAccess *SClobber = Walker->getClobberingMemoryAccess(SAccess);
+    EXPECT_TRUE(MSSA.isLiveOnEntryDef(SClobber));
+    MemoryAccess *LClobber = Walker->getClobberingMemoryAccess(LAccess);
+    EXPECT_EQ(SAccess, LClobber);
+  }
+
+  // remove store and verify that the memory accesses still make sense
+  MemorySSAUpdater Updater(&MSSA);
+  Updater.removeMemoryAccess(&SI);
+  SI.eraseFromParent();
+
+  {
+    MemoryAccess *CallAccess = MSSA.getMemoryAccess(&Call);
+    MemoryAccess *LAccess = MSSA.getMemoryAccess(&LI);
+    MemoryAccess *LClobber = Walker->getClobberingMemoryAccess(LAccess);
+    EXPECT_EQ(CallAccess, LClobber);
+  }
 }

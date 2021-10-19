@@ -70,21 +70,21 @@ body:             |
     $r1d = LGR $r3d, implicit-def $r0q
     renamable $r3d = LARL @TTSize
     renamable $r0d = LLILL 0, implicit killed $r0q, implicit-def $r0q
-    renamable $r0q = DL killed renamable $r0q, killed renamable $r3d, 0, $noreg :: (dereferenceable load 4 from @TTSize)
-    renamable $r3d = LGRL @AS_TTable :: (dereferenceable load 8 from @AS_TTable)
+    renamable $r0q = DL killed renamable $r0q, killed renamable $r3d, 0, $noreg :: (dereferenceable load (s32) from @TTSize)
+    renamable $r3d = LGRL @AS_TTable :: (dereferenceable load (s64) from @AS_TTable)
     renamable $r1d = LLGFR renamable $r0l, implicit killed $r0q
     renamable $r5d = LARL @Variant
     renamable $r0l = LHI -3
-    renamable $r0l = A killed renamable $r0l, killed renamable $r5d, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @Variant)
+    renamable $r0l = A killed renamable $r0l, killed renamable $r5d, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @Variant)
     CLFI killed renamable $r0l, 1, implicit-def $cc
     renamable $r0l = LHI 1
     renamable $r0l = LOCHI killed renamable $r0l, 3, 14, 2, implicit killed $cc
-    STC killed renamable $r0l, undef renamable $r1d, 0, $noreg :: (store 1 into `i8* undef`)
-    ST renamable $r2l, undef renamable $r1d, 0, $noreg, implicit killed $r2d :: (store 4 into `i32* undef`)
-    STC renamable $r4l, $noreg, 0, $noreg, implicit killed $r4d :: (store 1 into `i8* null`)
+    STC killed renamable $r0l, undef renamable $r1d, 0, $noreg :: (store (s8) into `i8* undef`)
+    ST renamable $r2l, undef renamable $r1d, 0, $noreg, implicit killed $r2d :: (store (s32) into `i32* undef`)
+    STC renamable $r4l, $noreg, 0, $noreg, implicit killed $r4d :: (store (s8) into `i8* null`)
     renamable $r1d = MGHI killed renamable $r1d, 20
     renamable $r0l = LHI 0
-    STC killed renamable $r0l, killed renamable $r3d, 2, killed renamable $r1d :: (store 1 into %ir.tmp11, align 2)
+    STC killed renamable $r0l, killed renamable $r3d, 2, killed renamable $r1d :: (store (s8) into %ir.tmp11, align 2)
     Return
 
 ...

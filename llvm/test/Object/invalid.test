@@ -43,13 +43,14 @@ Sections:
 
 # INVALID-STRTAB-SIZE: error: '[[FILE]]': section [index 1] has a sh_offset (0x70) + sh_size (0xffffff) that is greater than the file size (0x218)
 
-## Check that llvm-dwarfdump reports an error during relocation resolution
-## when instead of expected SHT_RELA section it locates a section of a different type.
+## Document that llvm-dwarfdump doesn't reports errors/warnings during relocation resolution
+## when instead of SHT_RELA section we have a SHT_REL section in an object.
+## In this case it just doesn't try to read relocation addends and assumes they are 0.
 
+## Note: we don't check the output, because the intention of this test is just to check the
+## exit code and to document the fact that no warnings are reported.
 # RUN: yaml2obj %s --docnum=3 -o %t3
-# RUN: not --crash llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
-
-# RELA: LLVM ERROR: Section is not SHT_RELA
+# RUN: llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --implicit-check-not=warning: %s
 
 --- !ELF
 FileHeader:
@@ -117,7 +118,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=6 -o %t6
 # RUN: llvm-readobj --symbols %t6 2>&1 | FileCheck -DFILE=%t6 --check-prefix=INVALID-SYM-SIZE %s
 
-# INVALID-SYM-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 32
+# INVALID-SYM-SIZE: warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 32
 
 --- !ELF
 FileHeader:
@@ -175,9 +176,11 @@ Sections:
 ## when the e_shentsize field is broken.
 
 # RUN: yaml2obj %s --docnum=9 -o %t9
-# RUN: not llvm-readobj -S %t9 2>&1 | FileCheck --check-prefix=INVALID-SH-ENTSIZE %s
+# RUN: not llvm-readobj -S %t9 2>&1 | \
+# RUN:   FileCheck -DFILE=%t9 --implicit-check-not=warning: --check-prefix=INVALID-SH-ENTSIZE %s
 
-# INVALID-SH-ENTSIZE: error: {{.*}}: invalid  e_shentsize in ELF header: 1
+# INVALID-SH-ENTSIZE:      LoadName: <Not found>
+# INVALID-SH-ENTSIZE-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid e_shentsize in ELF header: 1
 
 --- !ELF
 FileHeader:
@@ -211,9 +214,9 @@ Sections:
 ## sizeof(.symtab_shndx) = (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndx)
 
 # RUN: yaml2obj %s --docnum=11 -o %t11
-# RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
+# RUN: llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 
-# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
+# INVALID-XINDEX-SIZE: warning: {{.*}}: SHT_SYMTAB_SHNDX has 2 entries, but the symbol table associated has 1
 
 --- !ELF
 FileHeader:
@@ -241,7 +244,7 @@ Symbols: []
 # RUN: llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 # RUN:   FileCheck -DFILE=%p/Inputs/invalid-ext-symtab-index.elf-x86-64 --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 
-# INVALID-EXT-SYMTAB-INDEX: warning: '[[FILE]]': extended symbol index (0) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# INVALID-EXT-SYMTAB-INDEX: warning: '[[FILE]]': found an extended symbol index (0), but unable to locate the extended symbol index table
 # INVALID-EXT-SYMTAB-INDEX: Section: Reserved (0xFFFF)
 
 ## Check that llvm-readobj reports an error if a relocation section
@@ -312,10 +315,12 @@ Symbols:
 ## when the e_shnum field is broken (is greater than the actual number of sections).
 
 # RUN: yaml2obj %s --docnum=15 -o %t15
-# RUN: not llvm-readobj -S %t15 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
+# RUN: not llvm-readobj -S %t15 2>&1 | \
+# RUN:   FileCheck -DFILE=%t15 --implicit-check-not=warning: --check-prefix=INVALID-SECTION-NUM %s
 
-# INVALID-SECTION-NUM: error: {{.*}}: section table goes past the end of file
- 
+# INVALID-SECTION-NUM:      LoadName: <Not found>
+# INVALID-SECTION-NUM-NEXT: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section table goes past the end of file
+
 --- !ELF
 FileHeader:
   Class:    ELFCLASS64
@@ -401,7 +406,7 @@ Symbols:
 ## Check llvm-readobj reports it.
 
 # RUN: yaml2obj %s --docnum=19 -o %t19
-# RUN: llvm-readobj -dt %t19 2>&1 | FileCheck -DFILE=%t19 --check-prefix=INVALID-VERSION %s
+# RUN: llvm-readobj --dyn-symbols %t19 2>&1 | FileCheck -DFILE=%t19 --check-prefix=INVALID-VERSION %s
 
 # INVALID-VERSION: warning: '[[FILE]]': SHT_GNU_versym section refers to a version index 255 which is missing
 
@@ -432,7 +437,7 @@ DynamicSymbols:
 # RUN: yaml2obj %s --docnum=20 -o %t20
 # RUN: llvm-readobj --dynamic-table %t20 2>&1 | FileCheck -DFILE=%t20 --check-prefix=INVALID-DTSTRTAB %s
 
-# INVALID-DTSTRTAB: warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0xffff0000
+# INVALID-DTSTRTAB: warning: '[[FILE]]': unable to parse DT_STRTAB: virtual address is not in any segment: 0xffff0000
 
 --- !ELF
 FileHeader:
@@ -450,10 +455,10 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 ## Check that llvm-readobj reports a warning when a dynamic relocation section
 ## has sh_entsize field with size != sizeof(Elf_Rela).
@@ -525,8 +530,8 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: 0xffff0000
-    Sections:
-      - Section: .dynamic
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj --docnum=24 %s -o %t24
 # RUN: not obj2yaml 2>&1 %t24 | FileCheck %s -DFILE=%t24 --check-prefix=INVALID-SHSTRNDX
@@ -551,7 +556,7 @@ Sections:
 # RUN: yaml2obj --docnum=25 %s -o %t25
 # RUN: not llvm-readobj -h %t25 2>&1 | FileCheck -DFILE=%t25 --check-prefix=INVALID-SEC-NUM1 %s
 
-# INVALID-SEC-NUM1: error: '[[FILE]]': invalid section header table offset (e_shoff = 0x58) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
+# INVALID-SEC-NUM1: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid section header table offset (e_shoff = 0x58) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
 
 --- !ELF
 FileHeader:
@@ -570,7 +575,7 @@ Sections:
 # RUN: yaml2obj --docnum=26 %s -o %t26
 # RUN: not llvm-readobj -h %t26 2>&1 | FileCheck -DFILE=%t26 --check-prefix=INVALID-SEC-NUM2 %s
 
-# INVALID-SEC-NUM2: error: '[[FILE]]': invalid number of sections specified in the NULL section's sh_size field (288230376151711744)
+# INVALID-SEC-NUM2: error: '[[FILE]]': unable to continue dumping, the file is corrupt: invalid number of sections specified in the NULL section's sh_size field (288230376151711744)
 
 --- !ELF
 FileHeader:
@@ -588,8 +593,8 @@ Sections:
 # RUN: yaml2obj --docnum=27 %s -o %t27
 # RUN: not llvm-readobj -h %t27 2>&1 | FileCheck -DFILE=%t27 --check-prefix=INVALID-SEC-NUM3 %s
 
-# INVALID-SEC-NUM3: error: '[[FILE]]': section header table goes past the end of the file: e_shoff = 0xffffffffffffffff
- 
+# INVALID-SEC-NUM3: error: '[[FILE]]': unable to continue dumping, the file is corrupt: section header table goes past the end of the file: e_shoff = 0xffffffffffffffff
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -625,7 +630,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=29 -o %t29
 # RUN: llvm-readobj -V %t29 2>&1 | FileCheck -DFILE=%t29 --check-prefix=INVALID-VER-SHENTSIZE %s
 
-# INVALID-VER-SHENTSIZE: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has an invalid sh_entsize: 3
+# INVALID-VER-SHENTSIZE: warning: '[[FILE]]': cannot read content of SHT_GNU_versym section with index 1: section [index 1] has invalid sh_entsize: expected 2, but got 3
 
 --- !ELF
 FileHeader:
@@ -639,7 +644,6 @@ Sections:
     Type:    SHT_GNU_versym
     EntSize: 0x0000000000000003
     Entries: [ ]
-    Link:    .dynsym
 ## Needed to trigger creation of .dynsym.
 DynamicSymbols:
   - Name:    foo

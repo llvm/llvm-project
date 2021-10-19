@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck %s
 
 ; Make sure that with an HSA triple, we don't default to an
 ; unsupported device.

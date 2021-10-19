@@ -16,10 +16,10 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
 ProgramHeaders:
-  - Type:        PT_LOAD
-    FileSize:    0x100000
-    Sections:    
-      - Section: .foo
+  - Type:     PT_LOAD
+    FileSize: 0x100000
+    FirstSec: .foo
+    LastSec:  .foo
 
 ## A similar case, but now the p_offset property of the program header is too large.
 

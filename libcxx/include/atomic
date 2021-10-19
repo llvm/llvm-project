@@ -16,9 +16,12 @@
 namespace std
 {
 
-// feature test macro
+// feature test macro [version.syn]
 
-#define __cpp_lib_atomic_is_always_lock_free // as specified by SG10
+#define __cpp_lib_atomic_is_always_lock_free
+#define __cpp_lib_atomic_flag_test
+#define __cpp_lib_atomic_lock_free_type_aliases
+#define __cpp_lib_atomic_wait
 
  // order and consistency
 
@@ -45,6 +48,7 @@ template <class T> T kill_dependency(T y) noexcept;
 
 #define ATOMIC_BOOL_LOCK_FREE unspecified
 #define ATOMIC_CHAR_LOCK_FREE unspecified
+#define ATOMIC_CHAR8_T_LOCK_FREE unspecified // C++20
 #define ATOMIC_CHAR16_T_LOCK_FREE unspecified
 #define ATOMIC_CHAR32_T_LOCK_FREE unspecified
 #define ATOMIC_WCHAR_T_LOCK_FREE unspecified
@@ -63,7 +67,8 @@ struct atomic
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
 
-    atomic() noexcept = default;
+    atomic() noexcept = default; // until C++20
+    constexpr atomic() noexcept(is_nothrow_default_constructible_v<T>); // since C++20
     constexpr atomic(T desr) noexcept;
     atomic(const atomic&) = delete;
     atomic& operator=(const atomic&) = delete;
@@ -108,6 +113,7 @@ template <>
 struct atomic<integral>
 {
     using value_type = integral;
+    using difference_type = value_type;
 
     static constexpr bool is_always_lock_free;
     bool is_lock_free() const volatile noexcept;
@@ -190,12 +196,14 @@ template <class T>
 struct atomic<T*>
 {
     using value_type = T*;
+    using difference_type = ptrdiff_t;
 
     static constexpr bool is_always_lock_free;
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
 
-    atomic() noexcept = default;
+    atomic() noexcept = default; // until C++20
+    constexpr atomic() noexcept; // since C++20
     constexpr atomic(T* desr) noexcept;
     atomic(const atomic&) = delete;
     atomic& operator=(const atomic&) = delete;
@@ -255,196 +263,137 @@ struct atomic<T*>
 };
 
 
-template <class T>
-  bool atomic_is_lock_free(const volatile atomic<T>* obj) noexcept;
+// [atomics.nonmembers], non-member functions
+template<class T>
+  bool atomic_is_lock_free(const volatile atomic<T>*) noexcept;
+template<class T>
+  bool atomic_is_lock_free(const atomic<T>*) noexcept;
+template<class T>
+  void atomic_store(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  void atomic_store(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  void atomic_store_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  void atomic_store_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_load(const volatile atomic<T>*) noexcept;
+template<class T>
+  T atomic_load(const atomic<T>*) noexcept;
+template<class T>
+  T atomic_load_explicit(const volatile atomic<T>*, memory_order) noexcept;
+template<class T>
+  T atomic_load_explicit(const atomic<T>*, memory_order) noexcept;
+template<class T>
+  T atomic_exchange(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_exchange(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_exchange_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_exchange_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak(volatile atomic<T>*, atomic<T>::value_type*,
+                                    atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak(atomic<T>*, atomic<T>::value_type*,
+                                    atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong(volatile atomic<T>*, atomic<T>::value_type*,
+                                      atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong(atomic<T>*, atomic<T>::value_type*,
+                                      atomic<T>::value_type) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak_explicit(volatile atomic<T>*, atomic<T>::value_type*,
+                                             atomic<T>::value_type,
+                                             memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_weak_explicit(atomic<T>*, atomic<T>::value_type*,
+                                             atomic<T>::value_type,
+                                             memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong_explicit(volatile atomic<T>*, atomic<T>::value_type*,
+                                               atomic<T>::value_type,
+                                               memory_order, memory_order) noexcept;
+template<class T>
+  bool atomic_compare_exchange_strong_explicit(atomic<T>*, atomic<T>::value_type*,
+                                               atomic<T>::value_type,
+                                               memory_order, memory_order) noexcept;
 
-template <class T>
-  bool atomic_is_lock_free(const atomic<T>* obj) noexcept;
+template<class T>
+  T atomic_fetch_add(volatile atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_add(atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_add_explicit(volatile atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_add_explicit(atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_sub(volatile atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_sub(atomic<T>*, atomic<T>::difference_type) noexcept;
+template<class T>
+  T atomic_fetch_sub_explicit(volatile atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_sub_explicit(atomic<T>*, atomic<T>::difference_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_and(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_and(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_and_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_and_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_or(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_or(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_or_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_fetch_or_explicit(atomic<T>*, atomic<T>::value_type,
+                             memory_order) noexcept;
+template<class T>
+  T atomic_fetch_xor(volatile atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_xor(atomic<T>*, atomic<T>::value_type) noexcept;
+template<class T>
+  T atomic_fetch_xor_explicit(volatile atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
+template<class T>
+  T atomic_fetch_xor_explicit(atomic<T>*, atomic<T>::value_type,
+                              memory_order) noexcept;
 
-template <class T>
-  void atomic_store(volatile atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  void atomic_store(atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  void atomic_store_explicit(volatile atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  void atomic_store_explicit(atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  T atomic_load(const volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  T atomic_load(const atomic<T>* obj) noexcept;
-
-template <class T>
-  T atomic_load_explicit(const volatile atomic<T>* obj, memory_order m) noexcept;
-
-template <class T>
-  T atomic_load_explicit(const atomic<T>* obj, memory_order m) noexcept;
-
-template <class T>
-  T atomic_exchange(volatile atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  T atomic_exchange(atomic<T>* obj, T desr) noexcept;
-
-template <class T>
-  T atomic_exchange_explicit(volatile atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  T atomic_exchange_explicit(atomic<T>* obj, T desr, memory_order m) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak(volatile atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak(atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong(volatile atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong(atomic<T>* obj, T* expc, T desr) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak_explicit(volatile atomic<T>* obj, T* expc,
-                                             T desr,
-                                             memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_weak_explicit(atomic<T>* obj, T* expc, T desr,
-                                             memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong_explicit(volatile atomic<T>* obj,
-                                               T* expc, T desr,
-                                               memory_order s, memory_order f) noexcept;
-
-template <class T>
-  bool atomic_compare_exchange_strong_explicit(atomic<T>* obj, T* expc,
-                                               T desr,
-                                               memory_order s, memory_order f) noexcept;
-
-template <class T>
-  void atomic_wait(const volatile atomic<T>* obj, T old) noexcept;
-
-template <class T>
-  void atomic_wait(const atomic<T>* obj, T old) noexcept;
-
-template <class T>
-  void atomic_wait_explicit(const volatile atomic<T>* obj, T old, memory_order m) noexcept;
-
-template <class T>
-  void atomic_wait_explicit(const atomic<T>* obj, T old, memory_order m) noexcept;
-
-template <class T>
-  void atomic_one(volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_one(atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_all(volatile atomic<T>* obj) noexcept;
-
-template <class T>
-  void atomic_all(atomic<T>* obj) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_add_explicit(volatile atomic<Integral>* obj, Integral op,
-                              memory_order m) noexcept;
-template <class Integral>
-  Integral atomic_fetch_add_explicit(atomic<Integral>* obj, Integral op,
-                              memory_order m) noexcept;
-template <class Integral>
-  Integral atomic_fetch_sub(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_sub_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_and_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or_explicit(volatile atomic<Integral>* obj, Integral op,
-                             memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_or_explicit(atomic<Integral>* obj, Integral op,
-                             memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor(volatile atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor(atomic<Integral>* obj, Integral op) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor_explicit(volatile atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class Integral>
-  Integral atomic_fetch_xor_explicit(atomic<Integral>* obj, Integral op,
-                                     memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_add(volatile atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_add(atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_add_explicit(volatile atomic<T*>* obj, ptrdiff_t op,
-                               memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_add_explicit(atomic<T*>* obj, ptrdiff_t op, memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub(volatile atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub(atomic<T*>* obj, ptrdiff_t op) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub_explicit(volatile atomic<T*>* obj, ptrdiff_t op,
-                               memory_order m) noexcept;
-
-template <class T>
-  T* atomic_fetch_sub_explicit(atomic<T*>* obj, ptrdiff_t op, memory_order m) noexcept;
+template<class T>
+  void atomic_wait(const volatile atomic<T>*, atomic<T>::value_type);
+template<class T>
+  void atomic_wait(const atomic<T>*, atomic<T>::value_type);
+template<class T>
+  void atomic_wait_explicit(const volatile atomic<T>*, atomic<T>::value_type,
+                            memory_order);
+template<class T>
+  void atomic_wait_explicit(const atomic<T>*, atomic<T>::value_type,
+                            memory_order);
+template<class T>
+  void atomic_notify_one(volatile atomic<T>*);
+template<class T>
+  void atomic_notify_one(atomic<T>*);
+template<class T>
+  void atomic_notify_all(volatile atomic<T>*);
+template<class T>
+  void atomic_notify_all(atomic<T>*);
 
 // Atomics for standard typedef types
 
@@ -460,6 +409,7 @@ typedef atomic<long>               atomic_long;
 typedef atomic<unsigned long>      atomic_ulong;
 typedef atomic<long long>          atomic_llong;
 typedef atomic<unsigned long long> atomic_ullong;
+typedef atomic<char8_t>            atomic_char8_t; // C++20
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
 typedef atomic<wchar_t>            atomic_wchar_t;
@@ -477,7 +427,7 @@ typedef atomic<int_fast8_t>   atomic_int_fast8_t;
 typedef atomic<uint_fast8_t>  atomic_uint_fast8_t;
 typedef atomic<int_fast16_t>  atomic_int_fast16_t;
 typedef atomic<uint_fast16_t> atomic_uint_fast16_t;
-typedef atomic<int_fast32_t>  atomic_int_fast32_t;    
+typedef atomic<int_fast32_t>  atomic_int_fast32_t;
 typedef atomic<uint_fast32_t> atomic_uint_fast32_t;
 typedef atomic<int_fast64_t>  atomic_int_fast64_t;
 typedef atomic<uint_fast64_t> atomic_uint_fast64_t;
@@ -502,7 +452,8 @@ typedef atomic<uintmax_t> atomic_uintmax_t;
 
 typedef struct atomic_flag
 {
-    atomic_flag() noexcept = default;
+    atomic_flag() noexcept = default; // until C++20
+    constexpr atomic_flag() noexcept; // since C++20
     atomic_flag(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
@@ -554,10 +505,10 @@ void atomic_signal_fence(memory_order m) noexcept;
 // deprecated
 
 template <class T>
-  void atomic_init(volatile atomic<T>* obj, typename atomic<T>::value_type desr) noexcept;
+  void atomic_init(volatile atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 
 template <class T>
-  void atomic_init(atomic<T>* obj, typename atomic<T>::value_type desr) noexcept;
+  void atomic_init(atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 
 #define ATOMIC_VAR_INIT(value) see below
 
@@ -567,6 +518,7 @@ template <class T>
 
 */
 
+#include <__availability>
 #include <__config>
 #include <__threading_support>
 #include <cstddef>
@@ -654,14 +606,14 @@ typedef enum memory_order {
 
 template <typename _Tp> _LIBCPP_INLINE_VISIBILITY
 bool __cxx_nonatomic_compare_equal(_Tp const& __lhs, _Tp const& __rhs) {
-    return memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
+    return _VSTD::memcmp(&__lhs, &__rhs, sizeof(_Tp)) == 0;
 }
 
 static_assert((is_same<underlying_type<memory_order>::type, __memory_order_underlying_t>::value),
   "unexpected underlying type for std::memory_order");
 
 #if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) || \
-	defined(_LIBCPP_ATOMIC_ONLY_USE_BUILTINS)
+    defined(_LIBCPP_ATOMIC_ONLY_USE_BUILTINS)
 
 // [atomics.types.generic]p1 guarantees _Tp is trivially copyable. Because
 // the default operator= in an object is not volatile, a byte-by-byte copy
@@ -1009,26 +961,33 @@ _Tp __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp> * __a, _Tp __value, memory
     return __c11_atomic_exchange(&__a->__a_value, __value, static_cast<__memory_order_underlying_t>(__order));
 }
 
+_LIBCPP_INLINE_VISIBILITY inline _LIBCPP_CONSTEXPR memory_order __to_failure_order(memory_order __order) {
+  // Avoid switch statement to make this a constexpr.
+  return __order == memory_order_release ? memory_order_relaxed:
+         (__order == memory_order_acq_rel ? memory_order_acquire:
+             __order);
+}
+
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) _NOEXCEPT {
-    return __c11_atomic_compare_exchange_strong(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__failure));
+    return __c11_atomic_compare_exchange_strong(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
 }
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(__cxx_atomic_base_impl<_Tp> * __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) _NOEXCEPT {
-    return __c11_atomic_compare_exchange_strong(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__failure));
+    return __c11_atomic_compare_exchange_strong(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
 }
 
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) _NOEXCEPT {
-    return __c11_atomic_compare_exchange_weak(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__failure));
+    return __c11_atomic_compare_exchange_weak(&__a->__a_value, __expected, __value, static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
 }
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(__cxx_atomic_base_impl<_Tp> * __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure) _NOEXCEPT {
-    return __c11_atomic_compare_exchange_weak(&__a->__a_value, __expected, __value,  static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__failure));
+    return __c11_atomic_compare_exchange_weak(&__a->__a_value, __expected, __value,  static_cast<__memory_order_underlying_t>(__success), static_cast<__memory_order_underlying_t>(__to_failure_order(__failure)));
 }
 
 template<class _Tp>
@@ -1119,6 +1078,9 @@ _Tp kill_dependency(_Tp __y) _NOEXCEPT
 #if defined(__CLANG_ATOMIC_BOOL_LOCK_FREE)
 # define ATOMIC_BOOL_LOCK_FREE      __CLANG_ATOMIC_BOOL_LOCK_FREE
 # define ATOMIC_CHAR_LOCK_FREE      __CLANG_ATOMIC_CHAR_LOCK_FREE
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+# define ATOMIC_CHAR8_T_LOCK_FREE   __CLANG_ATOMIC_CHAR8_T_LOCK_FREE
+#endif
 # define ATOMIC_CHAR16_T_LOCK_FREE  __CLANG_ATOMIC_CHAR16_T_LOCK_FREE
 # define ATOMIC_CHAR32_T_LOCK_FREE  __CLANG_ATOMIC_CHAR32_T_LOCK_FREE
 # define ATOMIC_WCHAR_T_LOCK_FREE   __CLANG_ATOMIC_WCHAR_T_LOCK_FREE
@@ -1130,6 +1092,9 @@ _Tp kill_dependency(_Tp __y) _NOEXCEPT
 #elif defined(__GCC_ATOMIC_BOOL_LOCK_FREE)
 # define ATOMIC_BOOL_LOCK_FREE      __GCC_ATOMIC_BOOL_LOCK_FREE
 # define ATOMIC_CHAR_LOCK_FREE      __GCC_ATOMIC_CHAR_LOCK_FREE
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+# define ATOMIC_CHAR8_T_LOCK_FREE   __GCC_ATOMIC_CHAR8_T_LOCK_FREE
+#endif
 # define ATOMIC_CHAR16_T_LOCK_FREE  __GCC_ATOMIC_CHAR16_T_LOCK_FREE
 # define ATOMIC_CHAR32_T_LOCK_FREE  __GCC_ATOMIC_CHAR32_T_LOCK_FREE
 # define ATOMIC_WCHAR_T_LOCK_FREE   __GCC_ATOMIC_WCHAR_T_LOCK_FREE
@@ -1245,10 +1210,10 @@ template <typename _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(volatile __cxx_atomic_lock_impl<_Tp>* __a,
                                           _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  __a->__lock();
   _Tp __temp;
+  __a->__lock();
   __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = __temp == *__expected;
+  bool __ret = (_VSTD::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1261,11 +1226,11 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_strong(__cxx_atomic_lock_impl<_Tp>* __a,
                                           _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  bool __ret = __a->__a_value == *__expected;
+  bool __ret = (_VSTD::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
   if(__ret)
-    __a->__a_value = __value;
+    _VSTD::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
   else
-    *__expected = __a->__a_value;
+    _VSTD::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
   __a->__unlock();
   return __ret;
 }
@@ -1274,10 +1239,10 @@ template <typename _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(volatile __cxx_atomic_lock_impl<_Tp>* __a,
                                         _Tp* __expected, _Tp __value, memory_order, memory_order) {
-  __a->__lock();
   _Tp __temp;
+  __a->__lock();
   __cxx_atomic_assign_volatile(__temp, __a->__a_value);
-  bool __ret = __temp == *__expected;
+  bool __ret = (_VSTD::memcmp(&__temp, __expected, sizeof(_Tp)) == 0);
   if(__ret)
     __cxx_atomic_assign_volatile(__a->__a_value, __value);
   else
@@ -1290,11 +1255,11 @@ _LIBCPP_INLINE_VISIBILITY
 bool __cxx_atomic_compare_exchange_weak(__cxx_atomic_lock_impl<_Tp>* __a,
                                         _Tp* __expected, _Tp __value, memory_order, memory_order) {
   __a->__lock();
-  bool __ret = __a->__a_value == *__expected;
+  bool __ret = (_VSTD::memcmp(&__a->__a_value, __expected, sizeof(_Tp)) == 0);
   if(__ret)
-    __a->__a_value = __value;
+    _VSTD::memcpy(&__a->__a_value, &__value, sizeof(_Tp));
   else
-    *__expected = __a->__a_value;
+    _VSTD::memcpy(__expected, &__a->__a_value, sizeof(_Tp));
   __a->__unlock();
   return __ret;
 }
@@ -1444,9 +1409,14 @@ template<> struct __cxx_is_always_lock_free<bool> { enum { __value = 2 == ATOMIC
 template<> struct __cxx_is_always_lock_free<char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<signed char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<unsigned char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+template<> struct __cxx_is_always_lock_free<char8_t> { enum { __value = 2 == ATOMIC_CHAR8_T_LOCK_FREE }; };
+#endif
 template<> struct __cxx_is_always_lock_free<char16_t> { enum { __value = 2 == ATOMIC_CHAR16_T_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<char32_t> { enum { __value = 2 == ATOMIC_CHAR32_T_LOCK_FREE }; };
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 template<> struct __cxx_is_always_lock_free<wchar_t> { enum { __value = 2 == ATOMIC_WCHAR_T_LOCK_FREE }; };
+#endif
 template<> struct __cxx_is_always_lock_free<short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<unsigned short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
 template<> struct __cxx_is_always_lock_free<int> { enum { __value = 2 == ATOMIC_INT_LOCK_FREE }; };
@@ -1469,11 +1439,8 @@ template <typename _Tp,
           typename _Base = __cxx_atomic_base_impl<_Tp> >
 #endif //_LIBCPP_ATOMIC_ONLY_USE_BUILTINS
 struct __cxx_atomic_impl : public _Base {
-
-#if _GNUC_VER >= 501
     static_assert(is_trivially_copyable<_Tp>::value,
       "std::atomic<Tp> requires that 'Tp' be a trivially copyable type");
-#endif
 
   _LIBCPP_INLINE_VISIBILITY __cxx_atomic_impl() _NOEXCEPT _LIBCPP_DEFAULT
   _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR explicit __cxx_atomic_impl(_Tp value) _NOEXCEPT
@@ -1485,8 +1452,6 @@ struct __cxx_atomic_impl : public _Base {
 #else
     using __cxx_contention_t = int64_t;
 #endif //__linux__
-
-#if _LIBCPP_STD_VER >= 11
 
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 
@@ -1519,7 +1484,7 @@ struct __libcpp_atomic_wait_backoff_impl {
         else if(__elapsed > chrono::microseconds(4))
             __libcpp_thread_yield();
         else
-            ; // poll
+            {} // poll
         return false;
     }
 };
@@ -1564,8 +1529,6 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Tp const __val, mem
     __cxx_atomic_wait_test_fn_impl<_Atp, _Tp> __test_fn = {__a, __val, __order};
     return __cxx_atomic_wait(__a, __test_fn);
 }
-
-#endif //_LIBCPP_STD_VER >= 11
 
 // general atomic<T>
 
@@ -1660,24 +1623,23 @@ struct __atomic_base  // false
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr
+    __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
+#else
     _LIBCPP_INLINE_VISIBILITY
     __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
 
 #ifndef _LIBCPP_CXX03_LANG
     __atomic_base(const __atomic_base&) = delete;
-    __atomic_base& operator=(const __atomic_base&) = delete;
-    __atomic_base& operator=(const __atomic_base&) volatile = delete;
 #else
 private:
     _LIBCPP_INLINE_VISIBILITY
     __atomic_base(const __atomic_base&);
-    _LIBCPP_INLINE_VISIBILITY
-    __atomic_base& operator=(const __atomic_base&);
-    _LIBCPP_INLINE_VISIBILITY
-    __atomic_base& operator=(const __atomic_base&) volatile;
 #endif
 };
 
@@ -1693,8 +1655,10 @@ struct __atomic_base<_Tp, true>
     : public __atomic_base<_Tp, false>
 {
     typedef __atomic_base<_Tp, false> __base;
-    _LIBCPP_INLINE_VISIBILITY
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
 
@@ -1775,8 +1739,16 @@ struct atomic
 {
     typedef __atomic_base<_Tp> __base;
     typedef _Tp value_type;
+    typedef value_type difference_type;
+
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    atomic() = default;
+#else
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
@@ -1786,6 +1758,9 @@ struct atomic
     _LIBCPP_INLINE_VISIBILITY
     _Tp operator=(_Tp __d) _NOEXCEPT
         {__base::store(__d); return __d;}
+
+    atomic& operator=(const atomic&) = delete;
+    atomic& operator=(const atomic&) volatile = delete;
 };
 
 // atomic<T*>
@@ -1796,8 +1771,11 @@ struct atomic<_Tp*>
 {
     typedef __atomic_base<_Tp*> __base;
     typedef _Tp* value_type;
+    typedef ptrdiff_t difference_type;
+
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
@@ -1809,19 +1787,32 @@ struct atomic<_Tp*>
         {__base::store(__d); return __d;}
 
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst)
-                                                                        volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_add(&this->__a_, __op, __m);}
+    _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+        // __atomic_fetch_add accepts function pointers, guard against them.
+        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
+    }
+
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_add(&this->__a_, __op, __m);}
+    _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+        // __atomic_fetch_add accepts function pointers, guard against them.
+        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
+    }
+
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst)
-                                                                        volatile _NOEXCEPT
-        {return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
+    _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
+        // __atomic_fetch_add accepts function pointers, guard against them.
+        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+    }
+
     _LIBCPP_INLINE_VISIBILITY
-    _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT
-        {return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);}
+    _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
+        // __atomic_fetch_add accepts function pointers, guard against them.
+        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* operator++(int) volatile _NOEXCEPT            {return fetch_add(1);}
@@ -1847,6 +1838,9 @@ struct atomic<_Tp*>
     _Tp* operator-=(ptrdiff_t __op) volatile _NOEXCEPT {return fetch_sub(__op) - __op;}
     _LIBCPP_INLINE_VISIBILITY
     _Tp* operator-=(ptrdiff_t __op) _NOEXCEPT          {return fetch_sub(__op) - __op;}
+
+    atomic& operator=(const atomic&) = delete;
+    atomic& operator=(const atomic&) volatile = delete;
 };
 
 // atomic_is_lock_free
@@ -1870,17 +1864,17 @@ atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_init(volatile atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     __cxx_atomic_init(&__o->__a_, __d);
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_init(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     __cxx_atomic_init(&__o->__a_, __d);
 }
@@ -1890,7 +1884,7 @@ atomic_init(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_store(volatile atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_store(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     __o->store(__d);
 }
@@ -1898,7 +1892,7 @@ atomic_store(volatile atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_store(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_store(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     __o->store(__d);
 }
@@ -1908,7 +1902,7 @@ atomic_store(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_store_explicit(volatile atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+atomic_store_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
 {
     __o->store(__d, __m);
@@ -1917,7 +1911,7 @@ atomic_store_explicit(volatile atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOE
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 void
-atomic_store_explicit(atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+atomic_store_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
   _LIBCPP_CHECK_STORE_MEMORY_ORDER(__m)
 {
     __o->store(__d, __m);
@@ -1966,7 +1960,7 @@ atomic_load_explicit(const atomic<_Tp>* __o, memory_order __m) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp
-atomic_exchange(volatile atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_exchange(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->exchange(__d);
 }
@@ -1974,7 +1968,7 @@ atomic_exchange(volatile atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp
-atomic_exchange(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
+atomic_exchange(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->exchange(__d);
 }
@@ -1984,7 +1978,7 @@ atomic_exchange(atomic<_Tp>* __o, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp
-atomic_exchange_explicit(volatile atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+atomic_exchange_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
 {
     return __o->exchange(__d, __m);
 }
@@ -1992,7 +1986,7 @@ atomic_exchange_explicit(volatile atomic<_Tp>* __o, _Tp __d, memory_order __m) _
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp
-atomic_exchange_explicit(atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
+atomic_exchange_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d, memory_order __m) _NOEXCEPT
 {
     return __o->exchange(__d, __m);
 }
@@ -2002,7 +1996,7 @@ atomic_exchange_explicit(atomic<_Tp>* __o, _Tp __d, memory_order __m) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_weak(volatile atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
+atomic_compare_exchange_weak(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->compare_exchange_weak(*__e, __d);
 }
@@ -2010,7 +2004,7 @@ atomic_compare_exchange_weak(volatile atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEX
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_weak(atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
+atomic_compare_exchange_weak(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->compare_exchange_weak(*__e, __d);
 }
@@ -2020,7 +2014,7 @@ atomic_compare_exchange_weak(atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_strong(volatile atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
+atomic_compare_exchange_strong(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->compare_exchange_strong(*__e, __d);
 }
@@ -2028,7 +2022,7 @@ atomic_compare_exchange_strong(volatile atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NO
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_strong(atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
+atomic_compare_exchange_strong(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
     return __o->compare_exchange_strong(*__e, __d);
 }
@@ -2038,8 +2032,8 @@ atomic_compare_exchange_strong(atomic<_Tp>* __o, _Tp* __e, _Tp __d) _NOEXCEPT
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, _Tp* __e,
-                                      _Tp __d,
+atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e,
+                                      typename atomic<_Tp>::value_type __d,
                                       memory_order __s, memory_order __f) _NOEXCEPT
   _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
@@ -2049,7 +2043,7 @@ atomic_compare_exchange_weak_explicit(volatile atomic<_Tp>* __o, _Tp* __e,
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_weak_explicit(atomic<_Tp>* __o, _Tp* __e, _Tp __d,
+atomic_compare_exchange_weak_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d,
                                       memory_order __s, memory_order __f) _NOEXCEPT
   _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
@@ -2062,7 +2056,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
 atomic_compare_exchange_strong_explicit(volatile atomic<_Tp>* __o,
-                                        _Tp* __e, _Tp __d,
+                                        typename atomic<_Tp>::value_type* __e, typename atomic<_Tp>::value_type __d,
                                         memory_order __s, memory_order __f) _NOEXCEPT
   _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
@@ -2072,8 +2066,8 @@ atomic_compare_exchange_strong_explicit(volatile atomic<_Tp>* __o,
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 bool
-atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, _Tp* __e,
-                                        _Tp __d,
+atomic_compare_exchange_strong_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type* __e,
+                                        typename atomic<_Tp>::value_type __d,
                                         memory_order __s, memory_order __f) _NOEXCEPT
   _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__s, __f)
 {
@@ -2154,40 +2148,16 @@ void atomic_notify_all(atomic<_Tp>* __o) _NOEXCEPT
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_add(volatile atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+_Tp
+atomic_fetch_add(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_add(__op);
 }
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_add(atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
-{
-    return __o->fetch_add(__op);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_add(volatile atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
-{
-    return __o->fetch_add(__op);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_add(atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
+_Tp
+atomic_fetch_add(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_add(__op);
 }
@@ -2196,41 +2166,14 @@ atomic_fetch_add(atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_add_explicit(volatile atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+_Tp atomic_fetch_add_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_add(__op, __m);
 }
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_add_explicit(atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
-{
-    return __o->fetch_add(__op, __m);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_add_explicit(volatile atomic<_Tp*>* __o, ptrdiff_t __op,
-                          memory_order __m) _NOEXCEPT
-{
-    return __o->fetch_add(__op, __m);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_add_explicit(atomic<_Tp*>* __o, ptrdiff_t __op, memory_order __m) _NOEXCEPT
+_Tp atomic_fetch_add_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_add(__op, __m);
 }
@@ -2239,40 +2182,14 @@ atomic_fetch_add_explicit(atomic<_Tp*>* __o, ptrdiff_t __op, memory_order __m) _
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_sub(volatile atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+_Tp atomic_fetch_sub(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_sub(__op);
 }
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_sub(atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
-{
-    return __o->fetch_sub(__op);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_sub(volatile atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
-{
-    return __o->fetch_sub(__op);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_sub(atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
+_Tp atomic_fetch_sub(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op) _NOEXCEPT
 {
     return __o->fetch_sub(__op);
 }
@@ -2281,41 +2198,14 @@ atomic_fetch_sub(atomic<_Tp*>* __o, ptrdiff_t __op) _NOEXCEPT
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_sub_explicit(volatile atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+_Tp atomic_fetch_sub_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_sub(__op, __m);
 }
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
-    _Tp
->::type
-atomic_fetch_sub_explicit(atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
-{
-    return __o->fetch_sub(__op, __m);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_sub_explicit(volatile atomic<_Tp*>* __o, ptrdiff_t __op,
-                          memory_order __m) _NOEXCEPT
-{
-    return __o->fetch_sub(__op, __m);
-}
-
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
-_Tp*
-atomic_fetch_sub_explicit(atomic<_Tp*>* __o, ptrdiff_t __op, memory_order __m) _NOEXCEPT
+_Tp atomic_fetch_sub_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::difference_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_sub(__op, __m);
 }
@@ -2329,7 +2219,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_and(volatile atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_and(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_and(__op);
 }
@@ -2341,7 +2231,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_and(atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_and(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_and(__op);
 }
@@ -2355,7 +2245,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_and_explicit(volatile atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_and_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_and(__op, __m);
 }
@@ -2367,7 +2257,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_and_explicit(atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_and_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_and(__op, __m);
 }
@@ -2381,7 +2271,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_or(volatile atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_or(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_or(__op);
 }
@@ -2393,7 +2283,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_or(atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_or(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_or(__op);
 }
@@ -2407,7 +2297,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_or_explicit(volatile atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_or_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_or(__op, __m);
 }
@@ -2419,7 +2309,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_or_explicit(atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_or_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_or(__op, __m);
 }
@@ -2433,7 +2323,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_xor(volatile atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_xor(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_xor(__op);
 }
@@ -2445,7 +2335,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_xor(atomic<_Tp>* __o, _Tp __op) _NOEXCEPT
+atomic_fetch_xor(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT
 {
     return __o->fetch_xor(__op);
 }
@@ -2459,7 +2349,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_xor_explicit(volatile atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_xor_explicit(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_xor(__op, __m);
 }
@@ -2471,7 +2361,7 @@ typename enable_if
     is_integral<_Tp>::value && !is_same<_Tp, bool>::value,
     _Tp
 >::type
-atomic_fetch_xor_explicit(atomic<_Tp>* __o, _Tp __op, memory_order __m) _NOEXCEPT
+atomic_fetch_xor_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT
 {
     return __o->fetch_xor(__op, __m);
 }
@@ -2521,8 +2411,13 @@ typedef struct atomic_flag
     void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr
+    atomic_flag() _NOEXCEPT : __a_(false) {}
+#else
     _LIBCPP_INLINE_VISIBILITY
     atomic_flag() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
@@ -2715,9 +2610,14 @@ typedef atomic<long>               atomic_long;
 typedef atomic<unsigned long>      atomic_ulong;
 typedef atomic<long long>          atomic_llong;
 typedef atomic<unsigned long long> atomic_ullong;
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+typedef atomic<char8_t>            atomic_char8_t;
+#endif
 typedef atomic<char16_t>           atomic_char16_t;
 typedef atomic<char32_t>           atomic_char32_t;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 typedef atomic<wchar_t>            atomic_wchar_t;
+#endif
 
 typedef atomic<int_least8_t>   atomic_int_least8_t;
 typedef atomic<uint_least8_t>  atomic_uint_least8_t;
@@ -2785,4 +2685,4 @@ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_ATOMIC
+#endif // _LIBCPP_ATOMIC

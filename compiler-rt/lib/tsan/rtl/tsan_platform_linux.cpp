@@ -12,14 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_OPENBSD
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
-#include "sanitizer_common/sanitizer_platform_limits_openbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
@@ -87,21 +85,19 @@ static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
 #endif
 
-#ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 uptr vmaSize;
-#endif
 
 enum {
-  MemTotal  = 0,
-  MemShadow = 1,
-  MemMeta   = 2,
-  MemFile   = 3,
-  MemMmap   = 4,
-  MemTrace  = 5,
-  MemHeap   = 6,
-  MemOther  = 7,
-  MemCount  = 8,
+  MemTotal,
+  MemShadow,
+  MemMeta,
+  MemFile,
+  MemMmap,
+  MemTrace,
+  MemHeap,
+  MemOther,
+  MemCount,
 };
 
 void FillProfileCallback(uptr p, uptr rss, bool file,
@@ -111,39 +107,47 @@ void FillProfileCallback(uptr p, uptr rss, bool file,
     mem[MemShadow] += rss;
   else if (p >= MetaShadowBeg() && p < MetaShadowEnd())
     mem[MemMeta] += rss;
-#if !SANITIZER_GO
+  else if ((p >= LoAppMemBeg() && p < LoAppMemEnd()) ||
+           (p >= MidAppMemBeg() && p < MidAppMemEnd()) ||
+           (p >= HiAppMemBeg() && p < HiAppMemEnd()))
+    mem[file ? MemFile : MemMmap] += rss;
   else if (p >= HeapMemBeg() && p < HeapMemEnd())
     mem[MemHeap] += rss;
-  else if (p >= LoAppMemBeg() && p < LoAppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-  else if (p >= HiAppMemBeg() && p < HiAppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#else
-  else if (p >= AppMemBeg() && p < AppMemEnd())
-    mem[file ? MemFile : MemMmap] += rss;
-#endif
   else if (p >= TraceMemBeg() && p < TraceMemEnd())
     mem[MemTrace] += rss;
   else
     mem[MemOther] += rss;
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr mem[MemCount];
-  internal_memset(mem, 0, sizeof(mem[0]) * MemCount);
-  __sanitizer::GetMemoryProfile(FillProfileCallback, mem, 7);
-  StackDepotStats *stacks = StackDepotGetStats();
-  internal_snprintf(buf, buf_size,
-      "RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
-      " trace:%zd heap:%zd other:%zd stacks=%zd[%zd] nthr=%zd/%zd\n",
-      mem[MemTotal] >> 20, mem[MemShadow] >> 20, mem[MemMeta] >> 20,
-      mem[MemFile] >> 20, mem[MemMmap] >> 20, mem[MemTrace] >> 20,
-      mem[MemHeap] >> 20, mem[MemOther] >> 20,
-      stacks->allocated >> 20, stacks->n_uniq_ids,
-      nlive, nthread);
+  internal_memset(mem, 0, sizeof(mem));
+  GetMemoryProfile(FillProfileCallback, mem, MemCount);
+  auto meta = ctx->metamap.GetMemoryStats();
+  StackDepotStats stacks = StackDepotGetStats();
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+  uptr internal_stats[AllocatorStatCount];
+  internal_allocator()->GetStats(internal_stats);
+  // All these are allocated from the common mmap region.
+  mem[MemMmap] -= meta.mem_block + meta.sync_obj + stacks.allocated +
+                  internal_stats[AllocatorStatMapped];
+  if (s64(mem[MemMmap]) < 0)
+    mem[MemMmap] = 0;
+  internal_snprintf(
+      buf, buf_size,
+      "%llus: RSS %zd MB: shadow:%zd meta:%zd file:%zd mmap:%zd"
+      " trace:%zd heap:%zd other:%zd intalloc:%zd memblocks:%zd syncobj:%zu"
+      " stacks=%zd[%zd] nthr=%zd/%zd\n",
+      uptime_ns / (1000 * 1000 * 1000), mem[MemTotal] >> 20,
+      mem[MemShadow] >> 20, mem[MemMeta] >> 20, mem[MemFile] >> 20,
+      mem[MemMmap] >> 20, mem[MemTrace] >> 20, mem[MemHeap] >> 20,
+      mem[MemOther] >> 20, internal_stats[AllocatorStatMapped] >> 20,
+      meta.mem_block >> 20, meta.sync_obj >> 20, stacks.allocated >> 20,
+      stacks.n_uniq_ids, nlive, nthread);
 }
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 void FlushShadowMemoryCallback(
     const SuspendedThreadsList &suspended_threads_list,
     void *argument) {
@@ -180,12 +184,13 @@ static void MapRodata() {
   internal_unlink(name);  // Unlink it now, so that we can reuse the buffer.
   fd_t fd = openrv;
   // Fill the file with kShadowRodata.
-  const uptr kMarkerSize = 512 * 1024 / sizeof(u64);
-  InternalMmapVector<u64> marker(kMarkerSize);
+  const uptr kMarkerSize = 512 * 1024 / sizeof(RawShadow);
+  InternalMmapVector<RawShadow> marker(kMarkerSize);
   // volatile to prevent insertion of memset
-  for (volatile u64 *p = marker.data(); p < marker.data() + kMarkerSize; p++)
+  for (volatile RawShadow *p = marker.data(); p < marker.data() + kMarkerSize;
+       p++)
     *p = kShadowRodata;
-  internal_write(fd, marker.data(), marker.size() * sizeof(u64));
+  internal_write(fd, marker.data(), marker.size() * sizeof(RawShadow));
   // Map the file into memory.
   uptr page = internal_mmap(0, GetPageSizeCached(), PROT_READ | PROT_WRITE,
                             MAP_PRIVATE | MAP_ANONYMOUS, fd, 0);
@@ -205,9 +210,10 @@ static void MapRodata() {
       char *shadow_start = (char *)MemToShadow(segment.start);
       char *shadow_end = (char *)MemToShadow(segment.end);
       for (char *p = shadow_start; p < shadow_end;
-           p += marker.size() * sizeof(u64)) {
-        internal_mmap(p, Min<uptr>(marker.size() * sizeof(u64), shadow_end - p),
-                      PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
+           p += marker.size() * sizeof(RawShadow)) {
+        internal_mmap(
+            p, Min<uptr>(marker.size() * sizeof(RawShadow), shadow_end - p),
+            PROT_READ, MAP_PRIVATE | MAP_FIXED, fd, 0);
       }
     }
   }
@@ -221,7 +227,6 @@ void InitializeShadowMemoryPlatform() {
 #endif  // #if !SANITIZER_GO
 
 void InitializePlatformEarly() {
-#ifdef TSAN_RUNTIME_VMA
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
@@ -252,7 +257,20 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
-#endif
+#elif defined(__mips64)
+# if !SANITIZER_GO
+  if (vmaSize != 40) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 40\n", vmaSize);
+    Die();
+  }
+# else
+  if (vmaSize != 47) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 47\n", vmaSize);
+    Die();
+  }
+# endif
 #endif
 }
 
@@ -329,7 +347,7 @@ int ExtractResolvFDs(void *state, int *fds, int nfd) {
 }
 
 // Extract file descriptors passed via UNIX domain sockets.
-// This is requried to properly handle "open" of these fds.
+// This is required to properly handle "open" of these fds.
 // see 'man recvmsg' and 'man 3 cmsg'.
 int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   int res = 0;
@@ -379,22 +397,32 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
   return mangled_sp ^ xor_key;
 #elif defined(__mips__)
   return mangled_sp;
+#elif defined(__s390x__)
+  // tcbhead_t.stack_guard
+  uptr xor_key = ((uptr *)__builtin_thread_pointer())[5];
+  return mangled_sp ^ xor_key;
 #else
   #error "Unknown platform"
 #endif
 }
 
-#ifdef __powerpc__
+#if SANITIZER_NETBSD
+# ifdef __x86_64__
+#  define LONG_JMP_SP_ENV_SLOT 6
+# else
+#  error unsupported
+# endif
+#elif defined(__powerpc__)
 # define LONG_JMP_SP_ENV_SLOT 0
 #elif SANITIZER_FREEBSD
 # define LONG_JMP_SP_ENV_SLOT 2
-#elif SANITIZER_NETBSD
-# define LONG_JMP_SP_ENV_SLOT 6
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
+# elif defined(__s390x__)
+#  define LONG_JMP_SP_ENV_SLOT 9
 # else
 #  define LONG_JMP_SP_ENV_SLOT 6
 # endif
@@ -425,6 +453,8 @@ static void InitializeLongjmpXorKey() {
 }
 #endif
 
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // Check that the thr object is in tls;
   const uptr thr_beg = (uptr)thr;
@@ -434,21 +464,21 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   CHECK_GE(thr_end, tls_addr);
   CHECK_LE(thr_end, tls_addr + tls_size);
   // Since the thr object is huge, skip it.
-  MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, thr_beg - tls_addr);
-  MemoryRangeImitateWrite(thr, /*pc=*/2, thr_end,
-                          tls_addr + tls_size - thr_end);
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
+  MemoryRangeImitateWrite(thr, pc, tls_addr, thr_beg - tls_addr);
+  MemoryRangeImitateWrite(thr, pc, thr_end, tls_addr + tls_size - thr_end);
 }
 
 // Note: this function runs with async signals enabled,
 // so it must not touch any tsan state.
-int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
-    void *abstime), void *c, void *m, void *abstime,
-    void(*cleanup)(void *arg), void *arg) {
+int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
+                                     void (*cleanup)(void *arg), void *arg) {
   // pthread_cleanup_push/pop are hardcore macros mess.
   // We can't intercept nor call them w/o including pthread.h.
   int res;
   pthread_cleanup_push(cleanup, arg);
-  res = fn(c, m, abstime);
+  res = fn(arg);
   pthread_cleanup_pop(0);
   return res;
 }
@@ -482,7 +512,7 @@ ThreadState *cur_thread() {
         dead_thread_state->fast_state.SetIgnoreBit();
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
-        *const_cast<int*>(&dead_thread_state->tid) = -1;
+        *const_cast<u32*>(&dead_thread_state->tid) = -1;
         CHECK_EQ(0, internal_mprotect(dead_thread_state, sizeof(ThreadState),
                                       PROT_READ));
       }
@@ -513,5 +543,4 @@ void cur_thread_finalize() {
 
 }  // namespace __tsan
 
-#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_OPENBSD
+#endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD

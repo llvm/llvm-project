@@ -27,11 +27,11 @@ fixedStack:
 body:             |
   bb.1.entry:
     ; CHECK-LABEL: name: inttoptr_p0_s32
-    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load 4 from %fixed-stack.0, align 16)
+    ; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (invariant load (s32) from %fixed-stack.0, align 16)
     ; CHECK: $eax = COPY [[MOV32rm]]
     ; CHECK: RET 0, implicit $eax
     %1:gpr(p0) = G_FRAME_INDEX %fixed-stack.0
-    %0:gpr(s32) = G_LOAD %1(p0) :: (invariant load 4 from %fixed-stack.0, align 16)
+    %0:gpr(s32) = G_LOAD %1(p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
     %2:gpr(p0) = G_INTTOPTR %0(s32)
     $eax = COPY %2(p0)
     RET 0, implicit $eax

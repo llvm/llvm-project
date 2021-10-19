@@ -1,4 +1,22 @@
+<!--===- docs/Overview.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
+# Intro
+This document goes briefly over compiler phases in Flang. It focuses on the
+internal implementation and as such, it is intended for Flang developers rather
+than end-users.
+
 # Overview of Compiler Phases
+
+```eval_rst
+.. contents::
+   :local:
+```
 
 Each phase produces either correct output or fatal errors.
 
@@ -20,7 +38,7 @@ See: [Preprocessing.md](Preprocessing.md).
 
 **Entry point:** `parser::Parsing::Prescan`
 
-**Command:** `f18 -E src.f90` dumps the cooked character stream
+**Command:** `flang-new -fc1 -E src.f90` dumps the cooked character stream
 
 ## Parse
 
@@ -33,8 +51,8 @@ See: [Preprocessing.md](Preprocessing.md).
 **Entry point:** `parser::Parsing::Parse`
 
 **Command:**
-  - `f18 -fdebug-dump-parse-tree -fparse-only src.f90` dumps the parse tree
-  - `f18 -funparse src.f90` converts the parse tree to normalized Fortran
+  - `flang-new -fc1 -fdebug-dump-parse-tree src.f90` dumps the parse tree
+  - `flang-new -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
 
 ## Validate Labels and Canonicalize Do Statements
 
@@ -61,7 +79,7 @@ See: [Preprocessing.md](Preprocessing.md).
 
 **Entry points:** `semantics::ResolveNames`, `semantics::RewriteParseTree`
 
-**Command:** `f18 -fdebug-dump-symbols -fparse-only src.f90` dumps the
+**Command:** `flang-new -fc1 -fdebug-dump-symbols src.f90` dumps the
   tree of scopes and symbols in each scope
 
 ## Check DO CONCURRENT Constraints

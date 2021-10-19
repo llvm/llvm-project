@@ -112,7 +112,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-I386 %s
 //
 // CHECK-WINDOWS-I386: "{{.*}}link{{(.exe)?}}"
-// CHECK-WINDOWS-I386: "{{.*}}clang_rt.profile-i386.lib"
+// CHECK-WINDOWS-I386: "{{.*}}clang_rt.profile{{(-i386)?}}.lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-pc-win32 -fprofile-instr-generate \
@@ -120,7 +120,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-X86-64 %s
 //
 // CHECK-WINDOWS-X86-64: "{{.*}}link{{(.exe)?}}"
-// CHECK-WINDOWS-X86-64: "{{.*}}clang_rt.profile-x86_64.lib"
+// CHECK-WINDOWS-X86-64: "{{.*}}clang_rt.profile{{(-x86_64)?}}.lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-mingw32 -fprofile-instr-generate -fuse-ld=ld \
@@ -136,7 +136,7 @@
 // RUN:     -fprofile-instr-generate 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-X86-64-DEPENDENT-LIB %s
 //
-// CHECK-WINDOWS-X86-64-DEPENDENT-LIB: "--dependent-lib={{[^"]*}}clang_rt.profile-{{[^"]*}}.lib"
+// CHECK-WINDOWS-X86-64-DEPENDENT-LIB: "--dependent-lib={{[^"]*}}clang_rt.profile{{[^"]*}}.lib"
 //
 // RUN: %clang %s -### -o %t.o -target x86_64-mingw32 \
 // RUN:     -fprofile-instr-generate 2>&1 \

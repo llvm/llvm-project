@@ -7,6 +7,7 @@
 #include <isl/local_space.h>
 #include <isl_int.h>
 #include <isl_reordering.h>
+#include <isl/stream.h>
 
 /* ls represents the domain space.
  *
@@ -101,6 +102,8 @@ __isl_give isl_aff *isl_aff_normalize(__isl_take isl_aff *aff);
 __isl_give isl_aff *isl_aff_expand_divs( __isl_take isl_aff *aff,
 	__isl_take isl_mat *div, int *exp);
 
+__isl_give isl_aff *isl_stream_read_aff(__isl_keep isl_stream *s);
+
 __isl_give isl_pw_aff *isl_pw_aff_alloc_size(__isl_take isl_space *space,
 	int n);
 __isl_give isl_pw_aff *isl_pw_aff_reset_space(__isl_take isl_pw_aff *pwaff,
@@ -125,6 +128,8 @@ __isl_give isl_pw_aff *isl_pw_aff_scale(__isl_take isl_pw_aff *pwaff,
 	isl_int f);
 __isl_give isl_pw_aff *isl_pw_aff_scale_down(__isl_take isl_pw_aff *pwaff,
 	isl_int f);
+
+__isl_give isl_pw_aff *isl_stream_read_pw_aff(__isl_keep isl_stream *s);
 
 isl_bool isl_aff_matching_params(__isl_keep isl_aff *aff,
 	__isl_keep isl_space *space);
@@ -176,8 +181,14 @@ isl_stat isl_seq_preimage(isl_int *dst, isl_int *src,
 __isl_give isl_aff *isl_aff_substitute_equalities(__isl_take isl_aff *aff,
 	__isl_take isl_basic_set *eq);
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_substitute(
-	__isl_take isl_pw_multi_aff *pma, enum isl_dim_type type, unsigned pos,
+	__isl_take isl_pw_multi_aff *pma, unsigned pos,
 	__isl_keep isl_pw_aff *subs);
+
+__isl_give isl_pw_multi_aff *isl_stream_read_pw_multi_aff(
+	__isl_keep isl_stream *s);
+
+__isl_give isl_union_pw_aff *isl_stream_read_union_pw_aff(
+	__isl_keep isl_stream *s);
 
 isl_stat isl_pw_aff_check_named_params(__isl_keep isl_pw_aff *pa);
 isl_stat isl_multi_aff_check_named_params(__isl_keep isl_multi_aff *ma);
@@ -199,6 +210,9 @@ __isl_give isl_basic_set *isl_aff_pos_basic_set(__isl_take isl_aff *aff);
 #include <isl_multi_templ.h>
 
 #undef EXPLICIT_DOMAIN
+
+__isl_give isl_map *isl_map_intersect_multi_pw_aff_explicit_domain(
+	__isl_take isl_map *map, __isl_keep isl_multi_pw_aff *mpa);
 
 #undef EL
 #define EL isl_union_pw_aff

@@ -15,7 +15,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_SPAWN_CC1
   ENABLE_BACKTRACES
-  ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
+  LLVM_ENABLE_NEW_PASS_MANAGER
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_PLUGINS
@@ -33,9 +33,11 @@ configure_lit_site_cfg(
   "LLVM_LIBS_DIR"
   "SHLIBDIR"
   "LLVM_LIT_TOOLS_DIR"
+  "LLVM_EXTERNAL_LIT"
   "CLANG_BINARY_DIR"
   "CLANG_SOURCE_DIR"
   "CLANG_TOOLS_DIR"
+  "CMAKE_LIBRARY_OUTPUT_DIRECTORY"
   )
 
 configure_lit_site_cfg(
@@ -58,6 +60,7 @@ if(CLANG_TEST_USE_VG)
 endif ()
 
 list(APPEND CLANG_TEST_DEPS
+  apinotes-test
   c-index-test
   clang
   clang-resource-headers
@@ -67,6 +70,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-import-test
   clang-rename
   clang-refactor
+  clang-repl
   clang-diff
   clang-scan-deps
   diagtool
@@ -91,6 +95,7 @@ if (CLANG_BUILD_EXAMPLES)
   list(APPEND CLANG_TEST_DEPS
     Attribute
     AnnotateFunctions
+    CallSuperAttr
     clang-interpreter
     PrintFunctionNames
     )
@@ -105,6 +110,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-config
     FileCheck count not
     llc
+    llvm-ar
     llvm-as
     llvm-bcanalyzer
     llvm-cat
@@ -118,10 +124,15 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-objcopy
     llvm-objdump
     llvm-profdata
+    llvm-rc
     llvm-readelf
     llvm-readobj
+    llvm-strip
     llvm-symbolizer
+    llvm-windres
     opt
+    split-file
+    yaml2obj
     )
 
   if(TARGET llvm-lto)

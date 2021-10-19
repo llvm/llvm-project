@@ -100,13 +100,23 @@ instruments such functions to avoid false positives and provide meaningful stack
 traces.  This attribute may not be supported by other compilers, so we suggest
 to use it together with ``__has_feature(thread_sanitizer)``.
 
-Blacklist
----------
+``__attribute__((disable_sanitizer_instrumentation))``
+--------------------------------------------------------
+
+The ``disable_sanitizer_instrumentation`` attribute can be applied to functions
+to prevent all kinds of instrumentation. As a result, it may introduce false
+positives and incorrect stack traces. Therefore, it should be used with care,
+and only if absolutely required; for example for certain code that cannot
+tolerate any instrumentation and resulting side-effects. This attribute
+overrides ``no_sanitize("thread")``.
+
+Ignorelist
+----------
 
 ThreadSanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to suppress data race reports
 in the specified source files or functions. Unlike functions marked with
-``no_sanitize("thread")`` attribute, blacklisted functions are not instrumented
+``no_sanitize("thread")`` attribute, ignored functions are not instrumented
 at all. This can lead to false positives due to missed synchronization via
 atomic operations and missed stack frames in reports.
 

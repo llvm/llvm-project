@@ -75,7 +75,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include <mutex>
 
@@ -148,10 +148,11 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
     return;
 
   clang::CXXBasePaths paths;
+  llvm::SmallVector<clang::NamedDecl *, 4> decls;
 
   auto find_overridden_methods =
-      [decl](const clang::CXXBaseSpecifier *specifier,
-             clang::CXXBasePath &path) {
+      [&decls, decl](const clang::CXXBaseSpecifier *specifier,
+                     clang::CXXBasePath &path) {
         if (auto *base_record = llvm::dyn_cast<clang::CXXRecordDecl>(
                 specifier->getType()->getAs<clang::RecordType>()->getDecl())) {
 
@@ -162,19 +163,19 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
           if (name.getNameKind() == clang::DeclarationName::CXXDestructorName)
             if (auto *baseDtorDecl = base_record->getDestructor()) {
               if (baseDtorDecl->isVirtual()) {
-                path.Decls = baseDtorDecl;
+                decls.push_back(baseDtorDecl);
                 return true;
               } else
                 return false;
             }
 
           // Otherwise, search for name in the base class.
-          for (path.Decls = base_record->lookup(name); !path.Decls.empty();
-               path.Decls = path.Decls.slice(1)) {
+          for (path.Decls = base_record->lookup(name).begin();
+               path.Decls != path.Decls.end(); ++path.Decls) {
             if (auto *method_decl =
-                    llvm::dyn_cast<clang::CXXMethodDecl>(path.Decls.front()))
+                    llvm::dyn_cast<clang::CXXMethodDecl>(*path.Decls))
               if (method_decl->isVirtual() && !isOverload(decl, method_decl)) {
-                path.Decls = method_decl;
+                decls.push_back(method_decl);
                 return true;
               }
           }
@@ -184,7 +185,7 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
       };
 
   if (decl->getParent()->lookupInBases(find_overridden_methods, paths)) {
-    for (auto *overridden_decl : paths.found_decls())
+    for (auto *overridden_decl : decls)
       decl->addOverriddenMethod(
           llvm::cast<clang::CXXMethodDecl>(overridden_decl));
   }
@@ -476,6 +477,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::OpenCL:
       LangStd = LangStandard::lang_opencl10;
       break;
+    case clang::Language::OpenCLCXX:
+      LangStd = LangStandard::lang_openclcpp10;
+      break;
     case clang::Language::CUDA:
       LangStd = LangStandard::lang_cuda;
       break;
@@ -570,12 +574,6 @@ ConstString TypeSystemClang::GetPluginNameStatic() {
   return ConstString("clang");
 }
 
-ConstString TypeSystemClang::GetPluginName() {
-  return TypeSystemClang::GetPluginNameStatic();
-}
-
-uint32_t TypeSystemClang::GetPluginVersion() { return 1; }
-
 lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
                                                    lldb_private::Module *module,
                                                    Target *target) {
@@ -610,7 +608,7 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
     return std::make_shared<TypeSystemClang>(ast_name, triple);
   } else if (target && target->IsValid())
-    return std::make_shared<TypeSystemClangForExpressions>(*target, triple);
+    return std::make_shared<ScratchTypeSystemClang>(*target, triple);
   return lldb::TypeSystemSP();
 }
 
@@ -683,8 +681,8 @@ void TypeSystemClang::SetTargetTriple(llvm::StringRef target_triple) {
 void TypeSystemClang::SetExternalSource(
     llvm::IntrusiveRefCntPtr<ExternalASTSource> &ast_source_up) {
   ASTContext &ast = getASTContext();
-  ast.setExternalSource(ast_source_up);
   ast.getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
+  ast.setExternalSource(ast_source_up);
 }
 
 ASTContext &TypeSystemClang::getASTContext() {
@@ -742,7 +740,7 @@ void TypeSystemClang::CreateASTContext() {
       *m_diagnostics_engine_up, *m_file_manager_up);
   m_ast_up = std::make_unique<ASTContext>(
       *m_language_options_up, *m_source_manager_up, *m_identifier_table_up,
-      *m_selector_table_up, *m_builtins_up);
+      *m_selector_table_up, *m_builtins_up, TU_Complete);
 
   m_diagnostic_consumer_up = std::make_unique<NullDiagnosticConsumer>();
   m_ast_up->getDiagnostics().setClient(m_diagnostic_consumer_up.get(), false);
@@ -979,21 +977,25 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     }
     break;
 
-  case DW_ATE_complex_float:
-    if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatComplexTy))
-      return GetType(ast.FloatComplexTy);
-    else if (QualTypeMatchesBitSize(bit_size, ast, ast.DoubleComplexTy))
-      return GetType(ast.DoubleComplexTy);
-    else if (QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleComplexTy))
-      return GetType(ast.LongDoubleComplexTy);
-    else {
-      CompilerType complex_float_clang_type =
-          GetBuiltinTypeForDWARFEncodingAndBitSize("float", DW_ATE_float,
-                                                   bit_size / 2);
-      return GetType(
-          ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type)));
-    }
-    break;
+  case DW_ATE_complex_float: {
+    CanQualType FloatComplexTy = ast.getComplexType(ast.FloatTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, FloatComplexTy))
+      return GetType(FloatComplexTy);
+
+    CanQualType DoubleComplexTy = ast.getComplexType(ast.DoubleTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, DoubleComplexTy))
+      return GetType(DoubleComplexTy);
+
+    CanQualType LongDoubleComplexTy = ast.getComplexType(ast.LongDoubleTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, LongDoubleComplexTy))
+      return GetType(LongDoubleComplexTy);
+
+    CompilerType complex_float_clang_type =
+        GetBuiltinTypeForDWARFEncodingAndBitSize("float", DW_ATE_float,
+                                                 bit_size / 2);
+    return GetType(
+        ast.getComplexType(ClangUtil::GetQualType(complex_float_clang_type)));
+  }
 
   case DW_ATE_float:
     if (type_name == "float" &&
@@ -1149,20 +1151,12 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     }
     break;
   }
-  // This assert should fire for anything that we don't catch above so we know
-  // to fix any issues we run into.
-  if (!type_name.empty()) {
-    std::string type_name_str = type_name.str();
-    Host::SystemLog(Host::eSystemLogError,
-                    "error: need to add support for DW_TAG_base_type '%s' "
-                    "encoded with DW_ATE = 0x%x, bit_size = %u\n",
-                    type_name_str.c_str(), dw_ate, bit_size);
-  } else {
-    Host::SystemLog(Host::eSystemLogError, "error: need to add support for "
-                                           "DW_TAG_base_type encoded with "
-                                           "DW_ATE = 0x%x, bit_size = %u\n",
-                    dw_ate, bit_size);
-  }
+
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
+  LLDB_LOG(log,
+           "error: need to add support for DW_TAG_base_type '{0}' "
+           "encoded with DW_ATE = {1:x}, bit_size = {2}",
+           type_name, dw_ate, bit_size);
   return CompilerType();
 }
 
@@ -1353,9 +1347,11 @@ CompilerType TypeSystemClang::CreateRecordType(
 }
 
 namespace {
-  bool IsValueParam(const clang::TemplateArgument &argument) {
-    return argument.getKind() == TemplateArgument::Integral;
-  }
+/// Returns true iff the given TemplateArgument should be represented as an
+/// NonTypeTemplateParmDecl in the AST.
+bool IsValueParam(const clang::TemplateArgument &argument) {
+  return argument.getKind() == TemplateArgument::Integral;
+}
 }
 
 static TemplateParameterList *CreateTemplateParameterList(
@@ -1459,6 +1455,99 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
                                                template_args_ptr, nullptr);
 }
 
+/// Returns true if the given template parameter can represent the given value.
+/// For example, `typename T` can represent `int` but not integral values such
+/// as `int I = 3`.
+static bool TemplateParameterAllowsValue(NamedDecl *param,
+                                         const TemplateArgument &value) {
+  if (auto *type_param = llvm::dyn_cast<TemplateTypeParmDecl>(param)) {
+    // Compare the argument kind, i.e. ensure that <typename> != <int>.
+    if (value.getKind() != TemplateArgument::Type)
+      return false;
+  } else if (auto *type_param =
+                 llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
+    // Compare the argument kind, i.e. ensure that <typename> != <int>.
+    if (!IsValueParam(value))
+      return false;
+    // Compare the integral type, i.e. ensure that <int> != <char>.
+    if (type_param->getType() != value.getIntegralType())
+      return false;
+  } else {
+    // There is no way to create other parameter decls at the moment, so we
+    // can't reach this case during normal LLDB usage. Log that this happened
+    // and assert.
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    LLDB_LOG(log,
+             "Don't know how to compare template parameter to passed"
+             " value. Decl kind of parameter is: {0}",
+             param->getDeclKindName());
+    lldbassert(false && "Can't compare this TemplateParmDecl subclass");
+    // In release builds just fall back to marking the parameter as not
+    // accepting the value so that we don't try to fit an instantiation to a
+    // template that doesn't fit. E.g., avoid that `S<1>` is being connected to
+    // `template<typename T> struct S;`.
+    return false;
+  }
+  return true;
+}
+
+/// Returns true if the given class template declaration could produce an
+/// instantiation with the specified values.
+/// For example, `<typename T>` allows the arguments `float`, but not for
+/// example `bool, float` or `3` (as an integer parameter value).
+static bool ClassTemplateAllowsToInstantiationArgs(
+    ClassTemplateDecl *class_template_decl,
+    const TypeSystemClang::TemplateParameterInfos &instantiation_values) {
+
+  TemplateParameterList &params = *class_template_decl->getTemplateParameters();
+
+  // Save some work by iterating only once over the found parameters and
+  // calculate the information related to parameter packs.
+
+  // Contains the first pack parameter (or non if there are none).
+  llvm::Optional<NamedDecl *> pack_parameter;
+  // Contains the number of non-pack parameters.
+  size_t non_pack_params = params.size();
+  for (size_t i = 0; i < params.size(); ++i) {
+    NamedDecl *param = params.getParam(i);
+    if (param->isParameterPack()) {
+      pack_parameter = param;
+      non_pack_params = i;
+      break;
+    }
+  }
+
+  // The found template needs to have compatible non-pack template arguments.
+  // E.g., ensure that <typename, typename> != <typename>.
+  // The pack parameters are compared later.
+  if (non_pack_params != instantiation_values.args.size())
+    return false;
+
+  // Ensure that <typename...> != <typename>.
+  if (pack_parameter.hasValue() != instantiation_values.hasParameterPack())
+    return false;
+
+  // Compare the first pack parameter that was found with the first pack
+  // parameter value. The special case of having an empty parameter pack value
+  // always fits to a pack parameter.
+  // E.g., ensure that <int...> != <typename...>.
+  if (pack_parameter && !instantiation_values.packed_args->args.empty() &&
+      !TemplateParameterAllowsValue(
+          *pack_parameter, instantiation_values.packed_args->args.front()))
+    return false;
+
+  // Compare all the non-pack parameters now.
+  // E.g., ensure that <int> != <long>.
+  for (const auto pair : llvm::zip_first(instantiation_values.args, params)) {
+    const TemplateArgument &passed_arg = std::get<0>(pair);
+    NamedDecl *found_param = std::get<1>(pair);
+    if (!TemplateParameterAllowsValue(found_param, passed_arg))
+      return false;
+  }
+
+  return class_template_decl;
+}
+
 ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     lldb::AccessType access_type, const char *class_name, int kind,
@@ -1472,12 +1561,22 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   IdentifierInfo &identifier_info = ast.Idents.get(class_name);
   DeclarationName decl_name(&identifier_info);
 
+  // Search the AST for an existing ClassTemplateDecl that could be reused.
   clang::DeclContext::lookup_result result = decl_ctx->lookup(decl_name);
-
   for (NamedDecl *decl : result) {
     class_template_decl = dyn_cast<clang::ClassTemplateDecl>(decl);
-    if (class_template_decl)
-      return class_template_decl;
+    if (!class_template_decl)
+      continue;
+    // The class template has to be able to represents the instantiation
+    // values we received. Without this we might end up putting an instantiation
+    // with arguments such as <int, int> to a template such as:
+    //     template<typename T> struct S;
+    // Connecting the instantiation to an incompatible template could cause
+    // problems later on.
+    if (!ClassTemplateAllowsToInstantiationArgs(class_template_decl,
+                                                template_param_infos))
+      continue;
+    return class_template_decl;
   }
 
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
@@ -1863,8 +1962,8 @@ TypeSystemClang::CreateUsingDeclaration(clang::DeclContext *current_decl_ctx,
         clang::NestedNameSpecifierLoc(), clang::DeclarationNameInfo(), false);
     SetOwningModule(using_decl, owning_module);
     clang::UsingShadowDecl *shadow_decl = clang::UsingShadowDecl::Create(
-        getASTContext(), current_decl_ctx, clang::SourceLocation(), using_decl,
-        target);
+        getASTContext(), current_decl_ctx, clang::SourceLocation(),
+        target->getDeclName(), using_decl, target);
     SetOwningModule(shadow_decl, owning_module);
     using_decl->addShadowDecl(shadow_decl);
     current_decl_ctx->addDecl(using_decl);
@@ -1944,11 +2043,11 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
   case eBasicTypeLongDouble:
     return ast->LongDoubleTy.getAsOpaquePtr();
   case eBasicTypeFloatComplex:
-    return ast->FloatComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->FloatTy).getAsOpaquePtr();
   case eBasicTypeDoubleComplex:
-    return ast->DoubleComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->DoubleTy).getAsOpaquePtr();
   case eBasicTypeLongDoubleComplex:
-    return ast->LongDoubleComplexTy.getAsOpaquePtr();
+    return ast->getComplexType(ast->LongDoubleTy).getAsOpaquePtr();
   case eBasicTypeObjCID:
     return ast->getObjCIdType().getAsOpaquePtr();
   case eBasicTypeObjCClass:
@@ -1991,6 +2090,36 @@ TypeSystemClang::GetDeclarationName(llvm::StringRef name,
   return getASTContext().DeclarationNames.getCXXOperatorName(op_kind);
 }
 
+PrintingPolicy TypeSystemClang::GetTypePrintingPolicy() {
+  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
+  printing_policy.SuppressTagKeyword = true;
+  // Inline namespaces are important for some type formatters (e.g., libc++
+  // and libstdc++ are differentiated by their inline namespaces).
+  printing_policy.SuppressInlineNamespace = false;
+  printing_policy.SuppressUnwrittenScope = false;
+  // Default arguments are also always important for type formatters. Otherwise
+  // we would need to always specify two type names for the setups where we do
+  // know the default arguments and where we don't know default arguments.
+  //
+  // For example, without this we would need to have formatters for both:
+  //   std::basic_string<char>
+  // and
+  //   std::basic_string<char, std::char_traits<char>, std::allocator<char> >
+  // to support setups where LLDB was able to reconstruct default arguments
+  // (and we then would have suppressed them from the type name) and also setups
+  // where LLDB wasn't able to reconstruct the default arguments.
+  printing_policy.SuppressDefaultTemplateArgs = false;
+  return printing_policy;
+}
+
+std::string TypeSystemClang::GetTypeNameForDecl(const NamedDecl *named_decl) {
+  clang::PrintingPolicy printing_policy = GetTypePrintingPolicy();
+  std::string result;
+  llvm::raw_string_ostream os(result);
+  named_decl->printQualifiedName(os, printing_policy);
+  return result;
+}
+
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     llvm::StringRef name, const CompilerType &function_clang_type,
@@ -2012,8 +2141,9 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   func_decl->setStorageClass(storage);
   func_decl->setInlineSpecified(is_inline);
   func_decl->setHasWrittenPrototype(hasWrittenPrototype);
-  func_decl->setConstexprKind(isConstexprSpecified ? CSK_constexpr
-                                                   : CSK_unspecified);
+  func_decl->setConstexprKind(isConstexprSpecified
+                                  ? ConstexprSpecKind::Constexpr
+                                  : ConstexprSpecKind::Unspecified);
   SetOwningModule(func_decl, owning_module);
   if (func_decl)
     decl_ctx->addDecl(func_decl);
@@ -2080,11 +2210,10 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
   return decl;
 }
 
-void TypeSystemClang::SetFunctionParameters(FunctionDecl *function_decl,
-                                            ParmVarDecl **params,
-                                            unsigned num_params) {
+void TypeSystemClang::SetFunctionParameters(
+    FunctionDecl *function_decl, llvm::ArrayRef<ParmVarDecl *> params) {
   if (function_decl)
-    function_decl->setParams(ArrayRef<ParmVarDecl *>(params, num_params));
+    function_decl->setParams(params);
 }
 
 CompilerType
@@ -2434,42 +2563,6 @@ ClangASTMetadata *TypeSystemClang::GetMetadata(const clang::Type *object) {
   if (It != m_type_metadata.end())
     return &It->second;
   return nullptr;
-}
-
-bool TypeSystemClang::SetTagTypeKind(clang::QualType tag_qual_type,
-                                     int kind) const {
-  const clang::Type *clang_type = tag_qual_type.getTypePtr();
-  if (clang_type) {
-    const clang::TagType *tag_type = llvm::dyn_cast<clang::TagType>(clang_type);
-    if (tag_type) {
-      clang::TagDecl *tag_decl =
-          llvm::dyn_cast<clang::TagDecl>(tag_type->getDecl());
-      if (tag_decl) {
-        tag_decl->setTagKind((clang::TagDecl::TagKind)kind);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-bool TypeSystemClang::SetDefaultAccessForRecordFields(
-    clang::RecordDecl *record_decl, int default_accessibility,
-    int *assigned_accessibilities, size_t num_assigned_accessibilities) {
-  if (record_decl) {
-    uint32_t field_idx;
-    clang::RecordDecl::field_iterator field, field_end;
-    for (field = record_decl->field_begin(),
-        field_end = record_decl->field_end(), field_idx = 0;
-         field != field_end; ++field, ++field_idx) {
-      // If no accessibility was assigned, assign the correct one
-      if (field_idx < num_assigned_accessibilities &&
-          assigned_accessibilities[field_idx] == clang::AS_none)
-        field->setAccess((clang::AccessSpecifier)default_accessibility);
-    }
-    return true;
-  }
-  return false;
 }
 
 clang::DeclContext *
@@ -2881,20 +2974,11 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type,
-                                     bool *is_variadic_ptr) {
+bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
 
     if (qual_type->isFunctionType()) {
-      if (is_variadic_ptr) {
-        const clang::FunctionProtoType *function_proto_type =
-            llvm::dyn_cast<clang::FunctionProtoType>(qual_type.getTypePtr());
-        if (function_proto_type)
-          *is_variadic_ptr = function_proto_type->isVariadic();
-        else
-          *is_variadic_ptr = false;
-      }
       return true;
     }
 
@@ -2907,8 +2991,8 @@ bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type,
       const clang::ReferenceType *reference_type =
           llvm::cast<clang::ReferenceType>(qual_type.getTypePtr());
       if (reference_type)
-        return IsFunctionType(reference_type->getPointeeType().getAsOpaquePtr(),
-                              nullptr);
+        return IsFunctionType(
+            reference_type->getPointeeType().getAsOpaquePtr());
     } break;
     }
   }
@@ -3116,6 +3200,20 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
       IsIntegerType(enum_type->getDecl()->getIntegerType().getAsOpaquePtr(),
                     is_signed);
       return true;
+    }
+  }
+
+  return false;
+}
+
+bool TypeSystemClang::IsScopedEnumerationType(
+    lldb::opaque_compiler_type_t type) {
+  if (type) {
+    const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(
+        GetCanonicalQualType(type)->getCanonicalTypeInternal());
+
+    if (enum_type) {
+      return enum_type->isScopedEnumeralType();
     }
   }
 
@@ -3639,15 +3737,23 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
 
   clang::QualType qual_type(GetQualType(type));
 
+  // Remove certain type sugar from the name. Sugar such as elaborated types
+  // or template types which only serve to improve diagnostics shouldn't
+  // act as their own types from the user's perspective (e.g., formatter
+  // shouldn't format a variable differently depending on how the ser has
+  // specified the type. '::Type' and 'Type' should behave the same).
+  // Typedefs and atomic derived types are not removed as they are actually
+  // useful for identifiying specific types.
+  qual_type = RemoveWrappingTypes(qual_type,
+                                  {clang::Type::Typedef, clang::Type::Atomic});
+
   // For a typedef just return the qualified name.
   if (const auto *typedef_type = qual_type->getAs<clang::TypedefType>()) {
     const clang::TypedefNameDecl *typedef_decl = typedef_type->getDecl();
-    return ConstString(typedef_decl->getQualifiedNameAsString());
+    return ConstString(GetTypeNameForDecl(typedef_decl));
   }
 
-  clang::PrintingPolicy printing_policy(getASTContext().getPrintingPolicy());
-  printing_policy.SuppressTagKeyword = true;
-  return ConstString(qual_type.getAsString(printing_policy));
+  return ConstString(qual_type.getAsString(GetTypePrintingPolicy()));
 }
 
 ConstString
@@ -3660,6 +3766,7 @@ TypeSystemClang::GetDisplayTypeName(lldb::opaque_compiler_type_t type) {
   printing_policy.SuppressTagKeyword = true;
   printing_policy.SuppressScope = false;
   printing_policy.SuppressUnwrittenScope = true;
+  printing_policy.SuppressInlineNamespace = true;
   return ConstString(qual_type.getAsString(printing_policy));
 }
 
@@ -4147,6 +4254,13 @@ TypeSystemClang::GetFullyUnqualifiedType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
+CompilerType
+TypeSystemClang::GetEnumerationIntegerType(lldb::opaque_compiler_type_t type) {
+  if (type)
+    return GetEnumerationIntegerType(GetType(GetCanonicalQualType(type)));
+  return CompilerType();
+}
+
 int TypeSystemClang::GetFunctionArgumentCount(
     lldb::opaque_compiler_type_t type) {
   if (type) {
@@ -4368,39 +4482,6 @@ TypeSystemClang::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
-CompilerType TypeSystemClang::CreateTypedefType(
-    const CompilerType &type, const char *typedef_name,
-    const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {
-  if (type && typedef_name && typedef_name[0]) {
-    TypeSystemClang *ast =
-        llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
-    if (!ast)
-      return CompilerType();
-    clang::ASTContext &clang_ast = ast->getASTContext();
-    clang::QualType qual_type(ClangUtil::GetQualType(type));
-
-    clang::DeclContext *decl_ctx =
-        TypeSystemClang::DeclContextGetAsDeclContext(compiler_decl_ctx);
-    if (!decl_ctx)
-      decl_ctx = ast->getASTContext().getTranslationUnitDecl();
-
-    clang::TypedefDecl *decl =
-        clang::TypedefDecl::CreateDeserialized(clang_ast, 0);
-    decl->setDeclContext(decl_ctx);
-    decl->setDeclName(&clang_ast.Idents.get(typedef_name));
-    decl->setTypeSourceInfo(clang_ast.getTrivialTypeSourceInfo(qual_type));
-
-    SetOwningModule(decl, TypePayloadClang(payload).GetOwningModule());
-    decl->setAccess(clang::AS_public); // TODO respect proper access specifier
-
-    decl_ctx->addDecl(decl);
-
-    // Get a uniqued clang::QualType for the typedef decl type
-    return ast->GetType(clang_ast.getTypedefType(decl));
-  }
-  return CompilerType();
-}
-
 CompilerType
 TypeSystemClang::GetPointeeType(lldb::opaque_compiler_type_t type) {
   if (type) {
@@ -4482,7 +4563,7 @@ TypeSystemClang::AddRestrictModifier(lldb::opaque_compiler_type_t type) {
 CompilerType TypeSystemClang::CreateTypedef(
     lldb::opaque_compiler_type_t type, const char *typedef_name,
     const CompilerDeclContext &compiler_decl_ctx, uint32_t payload) {
-  if (type) {
+  if (type && typedef_name && typedef_name[0]) {
     clang::ASTContext &clang_ast = getASTContext();
     clang::QualType qual_type(GetQualType(type));
 
@@ -4491,10 +4572,11 @@ CompilerType TypeSystemClang::CreateTypedef(
     if (!decl_ctx)
       decl_ctx = getASTContext().getTranslationUnitDecl();
 
-    clang::TypedefDecl *decl = clang::TypedefDecl::Create(
-        clang_ast, decl_ctx, clang::SourceLocation(), clang::SourceLocation(),
-        &clang_ast.Idents.get(typedef_name),
-        clang_ast.getTrivialTypeSourceInfo(qual_type));
+    clang::TypedefDecl *decl =
+        clang::TypedefDecl::CreateDeserialized(clang_ast, 0);
+    decl->setDeclContext(decl_ctx);
+    decl->setDeclName(&clang_ast.Idents.get(typedef_name));
+    decl->setTypeSourceInfo(clang_ast.getTrivialTypeSourceInfo(qual_type));
     decl_ctx->addDecl(decl);
     SetOwningModule(decl, TypePayloadClang(payload).GetOwningModule());
 
@@ -4674,7 +4756,6 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Void:
       break;
 
-    case clang::BuiltinType::Bool:
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:
     case clang::BuiltinType::WChar_S:
@@ -4685,6 +4766,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Int128:
       return lldb::eEncodingSint;
 
+    case clang::BuiltinType::Bool:
     case clang::BuiltinType::Char_U:
     case clang::BuiltinType::UChar:
     case clang::BuiltinType::WChar_U:
@@ -4732,6 +4814,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::BFloat16:
+    case clang::BuiltinType::Ibm128:
       return lldb::eEncodingIEEE754;
 
     case clang::BuiltinType::ObjCClass:
@@ -4809,6 +4892,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
       break;
 
+    // PowerPC -- Matrix Multiply Assist
+    case clang::BuiltinType::VectorPair:
+    case clang::BuiltinType::VectorQuad:
+      break;
+
+    // ARM -- Scalable Vector Extension
     case clang::BuiltinType::SveBool:
     case clang::BuiltinType::SveInt8:
     case clang::BuiltinType::SveInt8x2:
@@ -4858,6 +4947,75 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::SveFloat64x2:
     case clang::BuiltinType::SveFloat64x3:
     case clang::BuiltinType::SveFloat64x4:
+      break;
+
+    // RISC-V V builtin types.
+    case clang::BuiltinType::RvvInt8mf8:
+    case clang::BuiltinType::RvvInt8mf4:
+    case clang::BuiltinType::RvvInt8mf2:
+    case clang::BuiltinType::RvvInt8m1:
+    case clang::BuiltinType::RvvInt8m2:
+    case clang::BuiltinType::RvvInt8m4:
+    case clang::BuiltinType::RvvInt8m8:
+    case clang::BuiltinType::RvvUint8mf8:
+    case clang::BuiltinType::RvvUint8mf4:
+    case clang::BuiltinType::RvvUint8mf2:
+    case clang::BuiltinType::RvvUint8m1:
+    case clang::BuiltinType::RvvUint8m2:
+    case clang::BuiltinType::RvvUint8m4:
+    case clang::BuiltinType::RvvUint8m8:
+    case clang::BuiltinType::RvvInt16mf4:
+    case clang::BuiltinType::RvvInt16mf2:
+    case clang::BuiltinType::RvvInt16m1:
+    case clang::BuiltinType::RvvInt16m2:
+    case clang::BuiltinType::RvvInt16m4:
+    case clang::BuiltinType::RvvInt16m8:
+    case clang::BuiltinType::RvvUint16mf4:
+    case clang::BuiltinType::RvvUint16mf2:
+    case clang::BuiltinType::RvvUint16m1:
+    case clang::BuiltinType::RvvUint16m2:
+    case clang::BuiltinType::RvvUint16m4:
+    case clang::BuiltinType::RvvUint16m8:
+    case clang::BuiltinType::RvvInt32mf2:
+    case clang::BuiltinType::RvvInt32m1:
+    case clang::BuiltinType::RvvInt32m2:
+    case clang::BuiltinType::RvvInt32m4:
+    case clang::BuiltinType::RvvInt32m8:
+    case clang::BuiltinType::RvvUint32mf2:
+    case clang::BuiltinType::RvvUint32m1:
+    case clang::BuiltinType::RvvUint32m2:
+    case clang::BuiltinType::RvvUint32m4:
+    case clang::BuiltinType::RvvUint32m8:
+    case clang::BuiltinType::RvvInt64m1:
+    case clang::BuiltinType::RvvInt64m2:
+    case clang::BuiltinType::RvvInt64m4:
+    case clang::BuiltinType::RvvInt64m8:
+    case clang::BuiltinType::RvvUint64m1:
+    case clang::BuiltinType::RvvUint64m2:
+    case clang::BuiltinType::RvvUint64m4:
+    case clang::BuiltinType::RvvUint64m8:
+    case clang::BuiltinType::RvvFloat16mf4:
+    case clang::BuiltinType::RvvFloat16mf2:
+    case clang::BuiltinType::RvvFloat16m1:
+    case clang::BuiltinType::RvvFloat16m2:
+    case clang::BuiltinType::RvvFloat16m4:
+    case clang::BuiltinType::RvvFloat16m8:
+    case clang::BuiltinType::RvvFloat32mf2:
+    case clang::BuiltinType::RvvFloat32m1:
+    case clang::BuiltinType::RvvFloat32m2:
+    case clang::BuiltinType::RvvFloat32m4:
+    case clang::BuiltinType::RvvFloat32m8:
+    case clang::BuiltinType::RvvFloat64m1:
+    case clang::BuiltinType::RvvFloat64m2:
+    case clang::BuiltinType::RvvFloat64m4:
+    case clang::BuiltinType::RvvFloat64m8:
+    case clang::BuiltinType::RvvBool1:
+    case clang::BuiltinType::RvvBool2:
+    case clang::BuiltinType::RvvBool4:
+    case clang::BuiltinType::RvvBool8:
+    case clang::BuiltinType::RvvBool16:
+    case clang::BuiltinType::RvvBool32:
+    case clang::BuiltinType::RvvBool64:
       break;
 
     case clang::BuiltinType::IncompleteMatrixIdx:
@@ -6336,7 +6494,7 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
   case clang::Type::RValueReference:
     if (idx_is_valid) {
       const clang::ReferenceType *reference_type =
-          llvm::cast<clang::ReferenceType>(parent_qual_type.getTypePtr());
+          llvm::cast<clang::ReferenceType>(GetQualType(type).getTypePtr());
       CompilerType pointee_clang_type =
           GetType(reference_type->getPointeeType());
       if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
@@ -6507,8 +6665,11 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           if (cxx_record_decl->lookupInBases(
                   [decl_name](const clang::CXXBaseSpecifier *specifier,
                               clang::CXXBasePath &path) {
-                    return clang::CXXRecordDecl::FindOrdinaryMember(
-                        specifier, path, decl_name);
+                    CXXRecordDecl *record =
+                      specifier->getType()->getAsCXXRecordDecl();
+                    auto r = record->lookup(decl_name);
+                    path.Decls = r.begin();
+                    return !r.empty();
                   },
                   paths)) {
             clang::CXXBasePaths::const_paths_iterator path,
@@ -6531,9 +6692,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                           ->getDecl());
                 }
               }
-              for (clang::NamedDecl *path_decl : path->Decls) {
+              for (clang::DeclContext::lookup_iterator I = path->Decls, E;
+                   I != E; ++I) {
                 child_idx = GetIndexForRecordChild(
-                    parent_record_decl, path_decl, omit_empty_base_classes);
+                    parent_record_decl, *I, omit_empty_base_classes);
                 if (child_idx == UINT32_MAX) {
                   child_indexes.clear();
                   return 0;
@@ -7392,7 +7554,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_dtor_decl->setType(method_qual_type);
     cxx_dtor_decl->setImplicit(is_artificial);
     cxx_dtor_decl->setInlineSpecified(is_inline);
-    cxx_dtor_decl->setConstexprKind(CSK_unspecified);
+    cxx_dtor_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
     cxx_method_decl = cxx_dtor_decl;
   } else if (decl_name == cxx_record_decl->getDeclName()) {
     cxx_ctor_decl = clang::CXXConstructorDecl::CreateDeserialized(
@@ -7404,7 +7566,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_ctor_decl->setType(method_qual_type);
     cxx_ctor_decl->setImplicit(is_artificial);
     cxx_ctor_decl->setInlineSpecified(is_inline);
-    cxx_ctor_decl->setConstexprKind(CSK_unspecified);
+    cxx_ctor_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
     cxx_ctor_decl->setNumCtorInitializers(0);
     cxx_ctor_decl->setExplicitSpecifier(explicit_spec);
     cxx_method_decl = cxx_ctor_decl;
@@ -7430,7 +7592,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         cxx_method_decl->setType(method_qual_type);
         cxx_method_decl->setStorageClass(SC);
         cxx_method_decl->setInlineSpecified(is_inline);
-        cxx_method_decl->setConstexprKind(CSK_unspecified);
+        cxx_method_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
       } else if (num_params == 0) {
         // Conversion operators don't take params...
         auto *cxx_conversion_decl =
@@ -7443,7 +7605,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         cxx_conversion_decl->setType(method_qual_type);
         cxx_conversion_decl->setInlineSpecified(is_inline);
         cxx_conversion_decl->setExplicitSpecifier(explicit_spec);
-        cxx_conversion_decl->setConstexprKind(CSK_unspecified);
+        cxx_conversion_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
         cxx_method_decl = cxx_conversion_decl;
       }
     }
@@ -7456,7 +7618,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
       cxx_method_decl->setType(method_qual_type);
       cxx_method_decl->setInlineSpecified(is_inline);
       cxx_method_decl->setStorageClass(SC);
-      cxx_method_decl->setConstexprKind(CSK_unspecified);
+      cxx_method_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
     }
   }
   SetMemberOwningModule(cxx_method_decl, cxx_record_decl);
@@ -8918,8 +9080,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       if (level == eDescriptionLevelVerbose)
         typedef_decl->dump(llvm_ostrm);
       else {
-        std::string clang_typedef_name(
-            typedef_decl->getQualifiedNameAsString());
+        std::string clang_typedef_name(GetTypeNameForDecl(typedef_decl));
         if (!clang_typedef_name.empty()) {
           s->PutCString("typedef ");
           s->PutCString(clang_typedef_name);
@@ -9204,11 +9365,11 @@ CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
 std::vector<CompilerDecl> TypeSystemClang::DeclContextFindDeclByName(
     void *opaque_decl_ctx, ConstString name, const bool ignore_using_decls) {
   std::vector<CompilerDecl> found_decls;
-  if (opaque_decl_ctx) {
+  SymbolFile *symbol_file = GetSymbolFile();
+  if (opaque_decl_ctx && symbol_file) {
     DeclContext *root_decl_ctx = (DeclContext *)opaque_decl_ctx;
     std::set<DeclContext *> searched;
     std::multimap<DeclContext *, DeclContext *> search_queue;
-    SymbolFile *symbol_file = GetSymbolFile();
 
     for (clang::DeclContext *decl_context = root_decl_ctx;
          decl_context != nullptr && found_decls.empty();
@@ -9302,10 +9463,10 @@ uint32_t TypeSystemClang::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
                                           clang::DeclContext *child_decl_ctx,
                                           ConstString *child_name,
                                           CompilerType *child_type) {
-  if (frame_decl_ctx) {
+  SymbolFile *symbol_file = GetSymbolFile();
+  if (frame_decl_ctx && symbol_file) {
     std::set<DeclContext *> searched;
     std::multimap<DeclContext *, DeclContext *> search_queue;
-    SymbolFile *symbol_file = GetSymbolFile();
 
     // Get the lookup scope for the decl we're trying to find.
     clang::DeclContext *parent_decl_ctx = child_decl_ctx->getParent();
@@ -9396,8 +9557,7 @@ TypeSystemClang::DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) {
     clang::NamedDecl *named_decl =
         llvm::dyn_cast<clang::NamedDecl>((clang::DeclContext *)opaque_decl_ctx);
     if (named_decl)
-      return ConstString(
-          llvm::StringRef(named_decl->getQualifiedNameAsString()));
+      return ConstString(GetTypeNameForDecl(named_decl));
   }
   return ConstString();
 }
@@ -9518,29 +9678,78 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
   return nullptr;
 }
 
-TypeSystemClangForExpressions::TypeSystemClangForExpressions(
-    Target &target, llvm::Triple triple)
-    : TypeSystemClang("scratch ASTContext", triple),
+namespace {
+/// A specialized scratch AST used within ScratchTypeSystemClang.
+/// These are the ASTs backing the different IsolatedASTKinds. They behave
+/// like a normal ScratchTypeSystemClang but they don't own their own
+/// persistent  storage or target reference.
+class SpecializedScratchAST : public TypeSystemClang {
+public:
+  /// \param name The display name of the TypeSystemClang instance.
+  /// \param triple The triple used for the TypeSystemClang instance.
+  /// \param ast_source The ClangASTSource that should be used to complete
+  ///                   type information.
+  SpecializedScratchAST(llvm::StringRef name, llvm::Triple triple,
+                        std::unique_ptr<ClangASTSource> ast_source)
+      : TypeSystemClang(name, triple),
+        m_scratch_ast_source_up(std::move(ast_source)) {
+    // Setup the ClangASTSource to complete this AST.
+    m_scratch_ast_source_up->InstallASTContext(*this);
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
+        m_scratch_ast_source_up->CreateProxy());
+    SetExternalSource(proxy_ast_source);
+  }
+
+  /// The ExternalASTSource that performs lookups and completes types.
+  std::unique_ptr<ClangASTSource> m_scratch_ast_source_up;
+};
+} // namespace
+
+char ScratchTypeSystemClang::ID;
+const llvm::NoneType ScratchTypeSystemClang::DefaultAST = llvm::None;
+
+ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
+                                               llvm::Triple triple)
+    : TypeSystemClang("scratch ASTContext", triple), m_triple(triple),
       m_target_wp(target.shared_from_this()),
-      m_persistent_variables(new ClangPersistentVariables) {
-  m_scratch_ast_source_up = std::make_unique<ClangASTSource>(
-      target.shared_from_this(), m_persistent_variables->GetClangASTImporter());
+      m_persistent_variables(
+          new ClangPersistentVariables(target.shared_from_this())) {
+  m_scratch_ast_source_up = CreateASTSource();
   m_scratch_ast_source_up->InstallASTContext(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
       m_scratch_ast_source_up->CreateProxy());
   SetExternalSource(proxy_ast_source);
 }
 
-void TypeSystemClangForExpressions::Finalize() {
+void ScratchTypeSystemClang::Finalize() {
   TypeSystemClang::Finalize();
   m_scratch_ast_source_up.reset();
 }
 
-UserExpression *TypeSystemClangForExpressions::GetUserExpression(
+TypeSystemClang *
+ScratchTypeSystemClang::GetForTarget(Target &target,
+                                     llvm::Optional<IsolatedASTKind> ast_kind,
+                                     bool create_on_demand) {
+  auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
+      lldb::eLanguageTypeC, create_on_demand);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
+                   std::move(err), "Couldn't get scratch TypeSystemClang");
+    return nullptr;
+  }
+  ScratchTypeSystemClang &scratch_ast =
+      llvm::cast<ScratchTypeSystemClang>(type_system_or_err.get());
+  // If no dedicated sub-AST was requested, just return the main AST.
+  if (ast_kind == DefaultAST)
+    return &scratch_ast;
+  // Search the sub-ASTs.
+  return &scratch_ast.GetIsolatedAST(*ast_kind);
+}
+
+UserExpression *ScratchTypeSystemClang::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
-    const EvaluateExpressionOptions &options,
-    ValueObject *ctx_obj) {
+    const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
   TargetSP target_sp = m_target_wp.lock();
   if (!target_sp)
     return nullptr;
@@ -9549,7 +9758,7 @@ UserExpression *TypeSystemClangForExpressions::GetUserExpression(
                                  desired_type, options, ctx_obj);
 }
 
-FunctionCaller *TypeSystemClangForExpressions::GetFunctionCaller(
+FunctionCaller *ScratchTypeSystemClang::GetFunctionCaller(
     const CompilerType &return_type, const Address &function_address,
     const ValueList &arg_value_list, const char *name) {
   TargetSP target_sp = m_target_wp.lock();
@@ -9564,17 +9773,57 @@ FunctionCaller *TypeSystemClangForExpressions::GetFunctionCaller(
                                  arg_value_list, name);
 }
 
-UtilityFunction *
-TypeSystemClangForExpressions::GetUtilityFunction(const char *text,
-                                                  const char *name) {
+std::unique_ptr<UtilityFunction>
+ScratchTypeSystemClang::CreateUtilityFunction(std::string text,
+                                              std::string name) {
   TargetSP target_sp = m_target_wp.lock();
   if (!target_sp)
-    return nullptr;
+    return {};
 
-  return new ClangUtilityFunction(*target_sp.get(), text, name);
+  return std::make_unique<ClangUtilityFunction>(
+      *target_sp.get(), std::move(text), std::move(name),
+      target_sp->GetDebugUtilityExpression());
 }
 
 PersistentExpressionState *
-TypeSystemClangForExpressions::GetPersistentExpressionState() {
+ScratchTypeSystemClang::GetPersistentExpressionState() {
   return m_persistent_variables.get();
+}
+
+void ScratchTypeSystemClang::ForgetSource(ASTContext *src_ctx,
+                                          ClangASTImporter &importer) {
+  // Remove it as a source from the main AST.
+  importer.ForgetSource(&getASTContext(), src_ctx);
+  // Remove it as a source from all created sub-ASTs.
+  for (const auto &a : m_isolated_asts)
+    importer.ForgetSource(&a.second->getASTContext(), src_ctx);
+}
+
+std::unique_ptr<ClangASTSource> ScratchTypeSystemClang::CreateASTSource() {
+  return std::make_unique<ClangASTSource>(
+      m_target_wp.lock()->shared_from_this(),
+      m_persistent_variables->GetClangASTImporter());
+}
+
+static llvm::StringRef
+GetSpecializedASTName(ScratchTypeSystemClang::IsolatedASTKind feature) {
+  switch (feature) {
+  case ScratchTypeSystemClang::IsolatedASTKind::CppModules:
+    return "scratch ASTContext for C++ module types";
+  }
+  llvm_unreachable("Unimplemented ASTFeature kind?");
+}
+
+TypeSystemClang &ScratchTypeSystemClang::GetIsolatedAST(
+    ScratchTypeSystemClang::IsolatedASTKind feature) {
+  auto found_ast = m_isolated_asts.find(feature);
+  if (found_ast != m_isolated_asts.end())
+    return *found_ast->second;
+
+  // Couldn't find the requested sub-AST, so create it now.
+  std::unique_ptr<TypeSystemClang> new_ast;
+  new_ast.reset(new SpecializedScratchAST(GetSpecializedASTName(feature),
+                                          m_triple, CreateASTSource()));
+  m_isolated_asts[feature] = std::move(new_ast);
+  return *m_isolated_asts[feature];
 }

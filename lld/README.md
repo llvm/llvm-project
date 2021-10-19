@@ -16,4 +16,4 @@ same tests, we create a collection of self contained programs.
 
 It is hosted at https://s3-us-west-2.amazonaws.com/linker-tests/lld-speed-test.tar.xz
 
-The current sha256 is 10eec685463d5a8bbf08d77f4ca96282161d396c65bd97dc99dbde644a31610f.
+The current sha256 is `10eec685463d5a8bbf08d77f4ca96282161d396c65bd97dc99dbde644a31610f`.

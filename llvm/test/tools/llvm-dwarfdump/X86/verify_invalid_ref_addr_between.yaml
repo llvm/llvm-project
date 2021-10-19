@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
+
+#      CHECK: Verifying .debug_info
+# CHECK-NEXT: error: invalid DIE reference 0x00000011. Offset is in between DIEs:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str:
+    - ''
+    - /tmp/main.c
+    - main
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000001
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000000D
+            - Value:           0x0000000000000011
+        - AbbrCode:        0x00000000

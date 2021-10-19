@@ -1,3 +1,5 @@
+// XFAIL: aix
+
 // Test to ensure -emit-llvm profile-sample-accurate is honored in ThinLTO.
 // RUN: %clang -O2 %s -flto=thin -fprofile-sample-accurate -c -o %t.o
 // RUN: llvm-lto -thinlto -o %t %t.o

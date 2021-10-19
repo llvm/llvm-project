@@ -136,6 +136,25 @@ int main(int argc, char **argv) {
     foo();
   }
 
+  double marr[10][5][10];
+#pragma omp target update to(marr[0:2][2:4][1:2]) // lt50-error {{array section does not specify contiguous storage}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  {}
+#pragma omp target update from(marr[0:2][2:4][1:2]) // lt50-error {{array section does not specify contiguous storage}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+#pragma omp target update to(marr[0:][1:2:2][1:2]) // ge50-error {{array section does not specify length for outermost dimension}} lt50-error {{expected ']'}} lt50-note {{to match this '['}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  {}
+#pragma omp target update from(marr[0:][1:2:2][1:2]) // ge50-error {{array section does not specify length for outermost dimension}} lt50-error {{expected ']'}} lt50-note {{to match this '['}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+  int arr[4][3][2][1];
+#pragma omp target update to(arr[0:2][2:4][:2][1]) // lt50-error {{array section does not specify contiguous storage}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  {}
+#pragma omp target update from(arr[0:2][2:4][:2][1]) // lt50-error {{array section does not specify contiguous storage}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
+  double ***dptr;
+#pragma omp target update to(dptr[0:2][2:4][1:2]) // lt50-error {{array section does not specify contiguous storage}} ge50-error 2 {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  {}
+#pragma omp target update from(dptr[0:2][2:4][1:2]) // lt50-error {{array section does not specify contiguous storage}} ge50-error 2 {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}} lt50-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+
   int iarr[5][5];
 // ge50-error@+4 {{section stride is evaluated to a non-positive value -1}}
 // lt50-error@+3 {{expected ']'}}
@@ -148,6 +167,45 @@ int main(int argc, char **argv) {
 // lt50-note@+2 {{to match this '['}}
 // expected-error@+1 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
 #pragma omp target update from(iarr[0:][1:2:-1])
+  {}
+// lt50-error@+5 {{expected expression}}
+// ge50-error@+4 {{array section does not specify length for outermost dimension}}
+// lt50-error@+3 {{expected ']'}}
+// lt50-note@+2 {{to match this '['}}
+// lt50-error@+1 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(iarr[0: :2][1:2])
+  {}
+// lt50-error@+5 {{expected expression}}
+// ge50-error@+4 {{array section does not specify length for outermost dimension}}
+// lt50-error@+3 {{expected ']'}}
+// lt50-note@+2 {{to match this '['}}
+// lt50-error@+1 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update from(iarr[0: :2][1:2])
+  {}
 
   return tmain(argc, argv);
 }
+
+template<typename _Tp, int _Nm> struct array {
+  _Tp & operator[](int __n) noexcept;
+};
+
+#pragma omp declare target
+extern array<double, 4> arr;
+#pragma omp end declare target
+
+void copy_host_to_device()
+{
+  #pragma omp target update from(arr)  // expected-no-error
+  arr[0] = 0;
+}
+
+struct FOO; // expected-note {{forward declaration of 'FOO'}}
+extern FOO a;
+template <typename T, int I>
+struct bar {
+  void func() {
+    #pragma omp target map(to: a) // expected-error {{incomplete type 'FOO' where a complete type is required}}
+    foo();
+  }
+};

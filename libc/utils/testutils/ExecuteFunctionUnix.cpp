@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteFunction.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
+#include <iostream>
 #include <memory>
 #include <poll.h>
 #include <signal.h>
@@ -41,8 +42,8 @@ ProcessStatus invokeInSubprocess(FunctionCaller *Func, unsigned timeoutMS) {
     return ProcessStatus::Error("pipe(2) failed");
 
   // Don't copy the buffers into the child process and print twice.
-  llvm::outs().flush();
-  llvm::errs().flush();
+  std::cout.flush();
+  std::cerr.flush();
   pid_t Pid = ::fork();
   if (Pid == -1)
     return ProcessStatus::Error("fork(2) failed");

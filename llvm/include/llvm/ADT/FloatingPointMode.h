@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===/
 
-#ifndef LLVM_FLOATINGPOINTMODE_H
-#define LLVM_FLOATINGPOINTMODE_H
+#ifndef LLVM_ADT_FLOATINGPOINTMODE_H
+#define LLVM_ADT_FLOATINGPOINTMODE_H
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
@@ -43,6 +43,24 @@ enum class RoundingMode : int8_t {
   Dynamic = 7,    ///< Denotes mode unknown at compile time.
   Invalid = -1    ///< Denotes invalid value.
 };
+
+/// Returns text representation of the given rounding mode.
+inline StringRef spell(RoundingMode RM) {
+  switch (RM) {
+  case RoundingMode::TowardZero: return "towardzero";
+  case RoundingMode::NearestTiesToEven: return "tonearest";
+  case RoundingMode::TowardPositive: return "upward";
+  case RoundingMode::TowardNegative: return "downward";
+  case RoundingMode::NearestTiesToAway: return "tonearestaway";
+  case RoundingMode::Dynamic: return "dynamic";
+  default: return "invalid";
+  }
+}
+
+inline raw_ostream &operator << (raw_ostream &OS, RoundingMode RM) {
+  OS << spell(RM);
+  return OS;
+}
 
 /// Represent subnormal handling kind for floating point instruction inputs and
 /// outputs.
@@ -174,4 +192,4 @@ void DenormalMode::print(raw_ostream &OS) const {
 
 }
 
-#endif // LLVM_FLOATINGPOINTMODE_H
+#endif // LLVM_ADT_FLOATINGPOINTMODE_H

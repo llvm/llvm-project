@@ -15,11 +15,11 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <climits>
+#include <cstdlib>
 #include <grp.h>
-#include <limits.h>
 #include <mutex>
 #include <pwd.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 

@@ -4,8 +4,8 @@
 %0 = type <{ %1, %1 }>
 %1 = type { i8, i8, i8, i8 }
 
-@g_2 = global %0 zeroinitializer
-@g_4 = global %1 zeroinitializer, align 4
+@g_2 = dso_local global %0 zeroinitializer
+@g_4 = dso_local global %1 zeroinitializer, align 4
 
 ; PR8642
 define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {
@@ -15,18 +15,18 @@ define i16 @test1(i1 zeroext %C, i8** nocapture %argv) nounwind ssp {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.false.i
-; CHECK-NEXT:    movl $g_4, %eax
-; CHECK-NEXT:    movl $g_2+4, %ecx
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    sete %sil
+; CHECK-NEXT:    movl $g_2+4, %eax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    cmpq $g_4, %rax
+; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
+; CHECK-NEXT:    divl %ecx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %cond.end.i
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
+
 entry:
   br i1 %C, label %cond.end.i, label %cond.false.i
 

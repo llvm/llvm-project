@@ -8,7 +8,7 @@
     br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
 
   for.body.preheader:                               ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %N)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %N)
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.end, %entry
@@ -18,7 +18,7 @@
     %lsr.iv4 = phi i32* [ %b, %for.body.preheader ], [ %scevgep5, %for.end ]
     %lsr.iv2 = phi i32* [ %c, %for.body.preheader ], [ %scevgep3, %for.end ]
     %lsr.iv1 = phi i32* [ %a, %for.body.preheader ], [ %scevgep, %for.end ]
-    %lsr.iv = phi i32 [ %N, %for.body.preheader ], [ %lsr.iv.next, %for.end ]
+    %lsr.iv = phi i32 [ %start, %for.body.preheader ], [ %lsr.iv.next, %for.end ]
     %size = call i32 @llvm.arm.space(i32 3072, i32 undef)
     %0 = load i32, i32* %lsr.iv4, align 4
     %1 = load i32, i32* %lsr.iv2, align 4
@@ -46,7 +46,7 @@
   declare i32 @llvm.arm.space(i32 immarg, i32) #0
 
   ; Function Attrs: noduplicate nounwind
-  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.start.loop.iterations.i32(i32) #1
 
   ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
@@ -119,6 +119,7 @@ body:             |
   ; CHECK: bb.1.for.body.preheader:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r3
+  ; CHECK:   dead $lr = tMOVr $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = tMOVr killed $r3, 14 /* CC::al */, $noreg
   ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.for.end:
@@ -127,24 +128,24 @@ body:             |
   ; CHECK:   renamable $r1, dead $cpsr = tADDi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tADDi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = tADDi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   tBcc %bb.3, 1 /* CC::ne */, killed $cpsr
   ; CHECK:   t2B %bb.5, 14 /* CC::al */, $noreg
   ; CHECK: bb.3.for.body:
   ; CHECK:   successors: %bb.4(0x50000000), %bb.2(0x30000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
   ; CHECK:   dead renamable $r3 = SPACE 3072, undef renamable $r0
-  ; CHECK:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.lsr.iv4)
-  ; CHECK:   renamable $r12 = t2LDRi12 renamable $r2, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.lsr.iv2)
+  ; CHECK:   renamable $r3 = tLDRi renamable $r1, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.lsr.iv4)
+  ; CHECK:   renamable $r12 = t2LDRi12 renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.lsr.iv2)
   ; CHECK:   tCMPi8 renamable $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   renamable $r4 = nsw t2MUL renamable $r12, renamable $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r4, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv1)
+  ; CHECK:   tSTRi killed renamable $r4, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv1)
   ; CHECK:   t2Bcc %bb.2, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.4.middle.block:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r12
   ; CHECK:   renamable $r3 = t2UDIV killed renamable $r12, killed renamable $r3, 14 /* CC::al */, $noreg
-  ; CHECK:   tSTRi killed renamable $r3, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into %ir.lsr.iv1)
+  ; CHECK:   tSTRi killed renamable $r3, renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.lsr.iv1)
   ; CHECK:   dead renamable $r3 = SPACE 1024, undef renamable $r0
   ; CHECK:   t2B %bb.2, 14 /* CC::al */, $noreg
   ; CHECK: bb.5.for.cond.cleanup:
@@ -166,7 +167,7 @@ body:             |
     liveins: $r0, $r1, $r2, $r3, $r4, $lr
 
     $lr = tMOVr $r3, 14, $noreg
-    t2DoLoopStart killed $r3
+    $lr = t2DoLoopStart killed $r3
     tB %bb.2, 14, $noreg
 
   bb.2.for.end:
@@ -185,11 +186,11 @@ body:             |
     liveins: $lr, $r0, $r1, $r2
 
     dead renamable $r3 = SPACE 3072, undef renamable $r0
-    renamable $r3 = tLDRi renamable $r1, 0, 14, $noreg :: (load 4 from %ir.lsr.iv4)
-    renamable $r12 = t2LDRi12 renamable $r2, 0, 14, $noreg :: (load 4 from %ir.lsr.iv2)
+    renamable $r3 = tLDRi renamable $r1, 0, 14, $noreg :: (load (s32) from %ir.lsr.iv4)
+    renamable $r12 = t2LDRi12 renamable $r2, 0, 14, $noreg :: (load (s32) from %ir.lsr.iv2)
     tCMPi8 renamable $r3, 0, 14, $noreg, implicit-def $cpsr
     renamable $r4 = nsw t2MUL renamable $r12, renamable $r3, 14, $noreg
-    tSTRi killed renamable $r4, renamable $r0, 0, 14, $noreg :: (store 4 into %ir.lsr.iv1)
+    tSTRi killed renamable $r4, renamable $r0, 0, 14, $noreg :: (store (s32) into %ir.lsr.iv1)
     t2Bcc %bb.2, 0, killed $cpsr
 
   bb.4.middle.block:
@@ -197,7 +198,7 @@ body:             |
     liveins: $lr, $r0, $r1, $r2, $r3, $r12
 
     renamable $r3 = t2UDIV killed renamable $r12, killed renamable $r3, 14, $noreg
-    tSTRi killed renamable $r3, renamable $r0, 0, 14, $noreg :: (store 4 into %ir.lsr.iv1)
+    tSTRi killed renamable $r3, renamable $r0, 0, 14, $noreg :: (store (s32) into %ir.lsr.iv1)
     dead renamable $r3 = SPACE 1024, undef renamable $r0
     t2B %bb.2, 14, $noreg
 

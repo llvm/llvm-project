@@ -9,7 +9,7 @@ struct Y {
   ~Y();
 };
 
-// CHECK-LABEL: define void @_Z1fiPPKc(
+// CHECK-LABEL: define{{.*}} void @_Z1fiPPKc(
 void f(int argc, const char* argv[]) {
   // CHECK: call void @_ZN1XC1Ev
   X x;

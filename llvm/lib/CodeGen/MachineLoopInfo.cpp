@@ -16,11 +16,14 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 // Explicitly instantiate methods in LoopInfoImpl.h for MI-level Loops.
@@ -112,8 +115,8 @@ DebugLoc MachineLoop::getStartLoc() const {
 }
 
 MachineBasicBlock *
-MachineLoopInfo::findLoopPreheader(MachineLoop *L,
-                                   bool SpeculativePreheader) const {
+MachineLoopInfo::findLoopPreheader(MachineLoop *L, bool SpeculativePreheader,
+                                   bool FindMultiLoopPreheader) const {
   if (MachineBasicBlock *PB = L->getLoopPreheader())
     return PB;
 
@@ -136,14 +139,69 @@ MachineLoopInfo::findLoopPreheader(MachineLoop *L,
 
   // Check if the preheader candidate is a successor of any other loop
   // headers. We want to avoid having two loop setups in the same block.
-  for (MachineBasicBlock *S : Preheader->successors()) {
-    if (S == HB)
-      continue;
-    MachineLoop *T = getLoopFor(S);
-    if (T && T->getHeader() == S)
-      return nullptr;
+  if (!FindMultiLoopPreheader) {
+    for (MachineBasicBlock *S : Preheader->successors()) {
+      if (S == HB)
+        continue;
+      MachineLoop *T = getLoopFor(S);
+      if (T && T->getHeader() == S)
+        return nullptr;
+    }
   }
   return Preheader;
+}
+
+bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
+  MachineFunction *MF = I.getParent()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+
+  // The instruction is loop invariant if all of its operands are.
+  for (const MachineOperand &MO : I.operands()) {
+    if (!MO.isReg())
+      continue;
+
+    Register Reg = MO.getReg();
+    if (Reg == 0) continue;
+
+    // An instruction that uses or defines a physical register can't e.g. be
+    // hoisted, so mark this as not invariant.
+    if (Register::isPhysicalRegister(Reg)) {
+      if (MO.isUse()) {
+        // If the physreg has no defs anywhere, it's just an ambient register
+        // and we can freely move its uses. Alternatively, if it's allocatable,
+        // it could get allocated to something with a def during allocation.
+        // However, if the physreg is known to always be caller saved/restored
+        // then this use is safe to hoist.
+        if (!MRI->isConstantPhysReg(Reg) &&
+            !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())))
+          return false;
+        // Otherwise it's safe to move.
+        continue;
+      } else if (!MO.isDead()) {
+        // A def that isn't dead can't be moved.
+        return false;
+      } else if (getHeader()->isLiveIn(Reg)) {
+        // If the reg is live into the loop, we can't hoist an instruction
+        // which would clobber it.
+        return false;
+      }
+    }
+
+    if (!MO.isUse())
+      continue;
+
+    assert(MRI->getVRegDef(Reg) &&
+           "Machine instr not mapped for this vreg?!");
+
+    // If the loop contains the definition of an operand, then the instruction
+    // isn't loop invariant.
+    if (contains(MRI->getVRegDef(Reg)))
+      return false;
+  }
+
+  // If we got this far, the instruction is loop invariant!
+  return true;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -18,24 +18,16 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
-#include "AMDGPUTargetMachine.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/IR/Function.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
 
 namespace llvm {
 
-class AMDGPUTargetLowering;
+class AMDGPUTargetMachine;
+class GCNSubtarget;
 class InstCombiner;
 class Loop;
 class ScalarEvolution;
+class SITargetLowering;
 class Type;
 class Value;
 
@@ -47,21 +39,18 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
 
   Triple TargetTriple;
 
-  const GCNSubtarget *ST;
+  const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
 
   const TargetSubtargetInfo *getST() const { return ST; }
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()),
-        TargetTriple(TM->getTargetTriple()),
-        ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
-        TLI(ST->getTargetLowering()) {}
+  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
@@ -76,82 +65,45 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   const GCNSubtarget *ST;
   const SITargetLowering *TLI;
   AMDGPUTTIImpl CommonTTI;
-  bool IsGraphicsShader;
+  bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
   unsigned MaxVGPRs;
 
-  const FeatureBitset InlineFeatureIgnoreList = {
-    // Codegen control options which don't matter.
-    AMDGPU::FeatureEnableLoadStoreOpt,
-    AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding,
-    AMDGPU::FeatureFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca,
-    AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
-
-    AMDGPU::FeatureAutoWaitcntBeforeBarrier,
-
-    // Property of the kernel/environment which can't actually differ.
-    AMDGPU::FeatureSGPRInitBug,
-    AMDGPU::FeatureXNACK,
-    AMDGPU::FeatureTrapHandler,
-    AMDGPU::FeatureCodeObjectV3,
-
-    // The default assumption needs to be ecc is enabled, but no directly
-    // exposed operations depend on it, so it can be safely inlined.
-    AMDGPU::FeatureSRAMECC,
-
-    // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32,
-    AMDGPU::HalfRate64Ops
-  };
+  static const FeatureBitset InlineFeatureIgnoreList;
 
   const GCNSubtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
+  const SITargetLowering *getTLI() const { return TLI; }
 
   static inline int getFullRateInstrCost() {
     return TargetTransformInfo::TCC_Basic;
   }
 
-  static inline int getHalfRateInstrCost() {
-    return 2 * TargetTransformInfo::TCC_Basic;
+  static inline int getHalfRateInstrCost(TTI::TargetCostKind CostKind) {
+    return CostKind == TTI::TCK_CodeSize ? 2
+                                         : 2 * TargetTransformInfo::TCC_Basic;
   }
 
   // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
   // should be 2 or 4.
-  static inline int getQuarterRateInstrCost() {
-    return 3 * TargetTransformInfo::TCC_Basic;
+  static inline int getQuarterRateInstrCost(TTI::TargetCostKind CostKind) {
+    return CostKind == TTI::TCK_CodeSize ? 2
+                                         : 4 * TargetTransformInfo::TCC_Basic;
   }
 
-   // On some parts, normal fp64 operations are half rate, and others
-   // quarter. This also applies to some integer operations.
-  inline int get64BitInstrCost() const {
-    return ST->hasHalfRate64Ops() ?
-      getHalfRateInstrCost() : getQuarterRateInstrCost();
-  }
+  // On some parts, normal fp64 operations are half rate, and others
+  // quarter. This also applies to some integer operations.
+  int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
 
 public:
-  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()),
-        ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
-        TLI(ST->getTargetLowering()), CommonTTI(TM, F),
-        IsGraphicsShader(AMDGPU::isShader(F.getCallingConv())),
-        MaxVGPRs(ST->getMaxNumVGPRs(
-            std::max(ST->getWavesPerEU(F).first,
-                     ST->getWavesPerEUForWorkGroup(
-                         ST->getFlatWorkGroupSizes(F).second)))) {
-    AMDGPU::SIModeRegisterDefaults Mode(F);
-    HasFP32Denormals = Mode.allFP32Denormals();
-    HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
-  }
+  explicit GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F);
 
   bool hasBranchDivergence() { return true; }
   bool useGPUDivergenceAnalysis() const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
@@ -164,8 +116,9 @@ public:
   unsigned getHardwareNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(bool Vector) const;
   unsigned getNumberOfRegisters(unsigned RCID) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
+  unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const;
@@ -195,9 +148,8 @@ public:
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
 
-  int getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -205,28 +157,38 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
 
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
 
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
+                                     unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
   bool isAlwaysUniform(const Value *V) const;
 
   unsigned getFlatAddressSpace() const {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.
-    if (IsGraphicsShader)
+    if (IsGraphics)
       return -1;
     return AMDGPUAS::FLAT_ADDRESS;
   }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const;
+
+  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
+    return AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
+           AS != AMDGPUAS::PRIVATE_ADDRESS;
+  }
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
 
+  bool canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
+                                 InstCombiner &IC) const;
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
   Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
@@ -235,69 +197,29 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
-  unsigned getVectorSplitCost() { return 0; }
+  InstructionCost getVectorSplitCost() { return 0; }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                          VectorType *SubTp);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp);
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() { return 11; }
+  unsigned adjustInliningThreshold(const CallBase *CB) const;
 
   int getInlinerVectorBonusPercent() { return 0; }
 
-  int getArithmeticReductionCost(
-      unsigned Opcode,
-      VectorType *Ty,
-      bool IsPairwise,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
+  InstructionCost getArithmeticReductionCost(
+      unsigned Opcode, VectorType *Ty, Optional<FastMathFlags> FMF,
+      TTI::TargetCostKind CostKind);
 
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind);
-  int getMinMaxReductionCost(
-    VectorType *Ty, VectorType *CondTy, bool IsPairwiseForm, bool IsUnsigned,
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
-};
-
-class R600TTIImpl final : public BasicTTIImplBase<R600TTIImpl> {
-  using BaseT = BasicTTIImplBase<R600TTIImpl>;
-  using TTI = TargetTransformInfo;
-
-  friend BaseT;
-
-  const R600Subtarget *ST;
-  const AMDGPUTargetLowering *TLI;
-  AMDGPUTTIImpl CommonTTI;
-
-public:
-  explicit R600TTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
-      ST(static_cast<const R600Subtarget*>(TM->getSubtargetImpl(F))),
-      TLI(ST->getTargetLowering()),
-      CommonTTI(TM, F) {}
-
-  const R600Subtarget *getST() const { return ST; }
-  const AMDGPUTargetLowering *getTLI() const { return TLI; }
-
-  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
-  void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
-  unsigned getHardwareNumberOfRegisters(bool Vec) const;
-  unsigned getNumberOfRegisters(bool Vec) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
-  unsigned getMinVectorRegisterBitWidth() const;
-  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
-  bool isLegalToVectorizeMemChain(unsigned ChainSizeInBytes, Align Alignment,
-                                  unsigned AddrSpace) const;
-  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes, Align Alignment,
-                                   unsigned AddrSpace) const;
-  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
-                                    unsigned AddrSpace) const;
-  unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
-  int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(
+      VectorType *Ty, VectorType *CondTy, bool IsUnsigned,
+      TTI::TargetCostKind CostKind);
 };
 
 } // end namespace llvm

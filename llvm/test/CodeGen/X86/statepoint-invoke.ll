@@ -9,28 +9,6 @@ declare i64 addrspace(1)* @"some_other_call"(i64 addrspace(1)*)
 declare i32 @"personality_function"()
 
 define i64 addrspace(1)* @test_basic(i64 addrspace(1)* %obj,
-; CHECK-LABEL: test_basic:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    callq some_call
-; CHECK-NEXT:  .Ltmp3:
-; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:  # %bb.1: # %invoke_safepoint_normal_dest
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %exceptional_return
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
                                      i64 addrspace(1)* %obj1)
 gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
@@ -59,26 +37,6 @@ exceptional_return:
 ; CHECK: .p2align 4
 
 define i64 addrspace(1)* @test_result(i64 addrspace(1)* %obj,
-; CHECK-LABEL: test_result:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:  .Ltmp4:
-; CHECK-NEXT:    callq some_other_call
-; CHECK-NEXT:  .Ltmp7:
-; CHECK-NEXT:  .Ltmp5:
-; CHECK-NEXT:  # %bb.1: # %normal_return
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_2: # %exceptional_return
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp6:
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
                                       i64 addrspace(1)* %obj1)
   gc "statepoint-example" personality i32 ()* @personality_function {
 entry:
@@ -102,57 +60,6 @@ exceptional_return:
 ; CHECK: .p2align 4
 
 define i64 addrspace(1)* @test_same_val(i1 %cond, i64 addrspace(1)* %val1, i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)
-; CHECK-LABEL: test_same_val:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    je .LBB2_3
-; CHECK-NEXT:  # %bb.1: # %left
-; CHECK-NEXT:    movq %rsi, (%rsp)
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp11:
-; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    callq some_call
-; CHECK-NEXT:  .Ltmp14:
-; CHECK-NEXT:  .Ltmp12:
-; CHECK-NEXT:  # %bb.2: # %left.relocs
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    jmp .LBB2_5
-; CHECK-NEXT:  .LBB2_3: # %right
-; CHECK-NEXT:    movq %rdx, (%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp8:
-; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    callq some_call
-; CHECK-NEXT:  .Ltmp15:
-; CHECK-NEXT:  .Ltmp9:
-; CHECK-NEXT:  # %bb.4: # %right.relocs
-; CHECK-NEXT:    movq (%rsp), %rcx
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:  .LBB2_5: # %normal_return
-; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    cmoveq %rcx, %rax
-; CHECK-NEXT:  .LBB2_6: # %normal_return
-; CHECK-NEXT:    addq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB2_9: # %exceptional_return.right
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Ltmp10:
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    jmp .LBB2_6
-; CHECK-NEXT:  .LBB2_7: # %exceptional_return.left
-; CHECK-NEXT:  .Ltmp13:
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    jmp .LBB2_6
   gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
   br i1 %cond, label %left, label %right
@@ -195,23 +102,6 @@ exceptional_return.right:
 }
 
 define i64 addrspace(1)* @test_null_undef(i64 addrspace(1)* %val1)
-; CHECK-LABEL: test_null_undef:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp16:
-; CHECK-NEXT:    callq some_call
-; CHECK-NEXT:  .Ltmp19:
-; CHECK-NEXT:  .Ltmp17:
-; CHECK-NEXT:  .LBB3_1: # %normal_return
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_2: # %exceptional_return
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp18:
-; CHECK-NEXT:    jmp .LBB3_1
        gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
   %sp1 = invoke token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 0, i32 0, void (i64 addrspace(1)*)* @some_call, i32 1, i32 0, i64 addrspace(1)* %val1, i32 0, i32 0) ["gc-live"(i64 addrspace(1)* null, i64 addrspace(1)* undef)]
@@ -231,26 +121,6 @@ exceptional_return:
 }
 
 define i64 addrspace(1)* @test_alloca_and_const(i64 addrspace(1)* %val1)
-; CHECK-LABEL: test_alloca_and_const:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp20:
-; CHECK-NEXT:    callq some_call
-; CHECK-NEXT:  .Ltmp23:
-; CHECK-NEXT:  .Ltmp21:
-; CHECK-NEXT:  # %bb.1: # %normal_return
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB4_2: # %exceptional_return
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp22:
-; CHECK-NEXT:    movl $15, %eax
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq
        gc "statepoint-example" personality i32 ()* @"personality_function" {
 entry:
   %a = alloca i32

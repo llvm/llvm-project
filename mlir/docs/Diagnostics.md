@@ -11,69 +11,9 @@ structure of the IR, operations, etc.
 ## Source Locations
 
 Source location information is extremely important for any compiler, because it
-provides a baseline for debuggability and error-reporting. MLIR provides several
-different location types depending on the situational need.
-
-### CallSite Location
-
-```
-callsite-location ::= 'callsite' '(' location 'at' location ')'
-```
-
-An instance of this location allows for representing a directed stack of
-location usages. This connects a location of a `callee` with the location of a
-`caller`.
-
-### FileLineCol Location
-
-```
-filelinecol-location ::= string-literal ':' integer-literal ':' integer-literal
-```
-
-An instance of this location represents a tuple of file, line number, and column
-number. This is similar to the type of location that you get from most source
-languages.
-
-### Fused Location
-
-```
-fused-location ::= `fused` fusion-metadata? '[' location (location ',')* ']'
-fusion-metadata ::= '<' attribute-value '>'
-```
-
-An instance of a `fused` location represents a grouping of several other source
-locations, with optional metadata that describes the context of the fusion.
-There are many places within a compiler in which several constructs may be fused
-together, e.g. pattern rewriting, that normally result partial or even total
-loss of location information. With `fused` locations, this is a non-issue.
-
-### Name Location
-
-```
-name-location ::= string-literal ('(' location ')')?
-```
-
-An instance of this location allows for attaching a name to a child location.
-This can be useful for representing the locations of variable, or node,
-definitions.
-
-### Opaque Location
-
-An instance of this location essentially contains a pointer to some data
-structure that is external to MLIR and an optional location that can be used if
-the first one is not suitable. Since it contains an external structure, only the
-optional location is used during serialization.
-
-### Unknown Location
-
-```
-unknown-location ::= `unknown`
-```
-
-Source location information is an extremely integral part of the MLIR
-infrastructure. As such, location information is always present in the IR, and
-must explicitly be set to unknown. Thus an instance of the `unknown` location,
-represents an unspecified source location.
+provides a baseline for debuggability and error-reporting. The
+[builtin dialect](Dialects/Builtin.md) provides several different location
+attributes types depending on the situational need.
 
 ## Diagnostic Engine
 
@@ -86,7 +26,7 @@ the diagnostic should be propagated to any previously registered handlers. It
 can be interfaced with via an `MLIRContext` instance.
 
 ```c++
-DiagnosticEngine engine = ctx->getDiagEngine();
+DiagnosticEngine& engine = ctx->getDiagEngine();
 
 /// Handle the reported diagnostic.
 // Return success to signal that the diagnostic has either been fully processed,
@@ -120,7 +60,7 @@ InFlightDiagnostic emit(Location loc, DiagnosticSeverity severity);
 ```
 
 Using the `DiagnosticEngine`, though, is generally not the preferred way to emit
-diagnostics in MLIR. [`operation`](LangRef.md#operations) provides utility
+diagnostics in MLIR. [`operation`](LangRef.md/#operations) provides utility
 methods for emitting diagnostics:
 
 ```c++
@@ -215,7 +155,7 @@ operation that may be invalid, especially when debugging verifier failures. An
 example output is shown below:
 
 ```shell
-test.mlir:3:3: error: 'module_terminator' op expects parent op 'module'
+test.mlir:3:3: error: 'module_terminator' op expects parent op 'builtin.module'
   "module_terminator"() : () -> ()
   ^
 test.mlir:3:3: note: see current operation: "module_terminator"() : () -> ()
@@ -232,7 +172,7 @@ diagnostic. This option is useful for understanding which part of the compiler
 generated certain diagnostics. An example output is shown below:
 
 ```shell
-test.mlir:3:3: error: 'module_terminator' op expects parent op 'module'
+test.mlir:3:3: error: 'module_terminator' op expects parent op 'builtin.module'
   "module_terminator"() : () -> ()
   ^
 test.mlir:3:3: note: diagnostic emitted with trace:
@@ -303,6 +243,45 @@ MLIRContext context;
 SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context);
 ```
 
+#### Filtering Locations
+
+In some situations, a diagnostic may be emitted with a callsite location in a
+very deep call stack in which many frames are unrelated to the user source code.
+These situations often arise when the user source code is intertwined with that
+of a large framework or library. The context of the diagnostic in these cases is
+often obfuscated by the unrelated framework source locations. To help alleviate
+this obfuscation, the `SourceMgrDiagnosticHandler` provides support for
+filtering which locations are shown to the user. To enable filtering, a user
+must simply provide a filter function to the `SourceMgrDiagnosticHandler` on
+construction that indicates which locations should be shown. A quick example is
+shown below:
+
+```c++
+// Here we define the functor that controls which locations are shown to the
+// user. This functor should return true when a location should be shown, and
+// false otherwise. When filtering a container location, such as a NameLoc, this
+// function should not recurse into the child location. Recursion into nested
+// location is performed as necessary by the caller.
+auto shouldShowFn = [](Location loc) -> bool {
+  FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>();
+
+  // We don't perform any filtering on non-file locations.
+  // Reminder: The caller will recurse into any necessary child locations.
+  if (!fileLoc)
+    return true;
+
+  // Don't show file locations that contain our framework code.
+  return !fileLoc.getFilename().strref().contains("my/framework/source/");
+};
+
+SourceMgr sourceMgr;
+MLIRContext context;
+SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &context, shouldShowFn);
+```
+
+Note: In the case where all locations are filtered out, the first location in
+the stack will still be shown.
+
 ### SourceMgr Diagnostic Verifier Handler
 
 This handler is a wrapper around a llvm::SourceMgr that is used to verify that
@@ -322,7 +301,7 @@ func @bad_branch() {
 // Expect an error on an adjacent line.
 func @foo(%a : f32) {
   // expected-error@+1 {{unknown comparison predicate "foo"}}
-  %result = cmpf "foo", %a, %a : f32
+  %result = arith.cmpf "foo", %a, %a : f32
   return
 }
 

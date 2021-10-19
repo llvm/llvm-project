@@ -37,7 +37,7 @@ template <> struct std::experimental::coroutine_traits<void> {
 struct Cleanup { ~Cleanup(); };
 void may_throw();
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define{{.*}} void @_Z1fv(
 void f() {
   // CHECK: call noalias nonnull i8* @_Znwm(i64
 
@@ -88,7 +88,7 @@ void f() {
   co_return;
 }
 
-// CHECK-LABEL: define void @_Z1gv(
+// CHECK-LABEL: define{{.*}} void @_Z1gv(
 void g() {
   for (;;)
     co_await suspend_always{};

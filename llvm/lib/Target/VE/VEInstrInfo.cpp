@@ -20,10 +20,10 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 #define DEBUG_TYPE "ve-instr-info"
 
@@ -92,38 +92,46 @@ static VECC::CondCode GetOppositeBranchCondition(VECC::CondCode CC) {
   llvm_unreachable("Invalid cond code");
 }
 
-// Treat br.l [BRCF AT] as unconditional branch
+// Treat a branch relative long always instruction as unconditional branch.
+// For example, br.l.t and br.l.
 static bool isUncondBranchOpcode(int Opc) {
-  return Opc == VE::BRCFLa    || Opc == VE::BRCFWa    ||
-         Opc == VE::BRCFLa_nt || Opc == VE::BRCFWa_nt ||
-         Opc == VE::BRCFLa_t  || Opc == VE::BRCFWa_t  ||
-         Opc == VE::BRCFDa    || Opc == VE::BRCFSa    ||
-         Opc == VE::BRCFDa_nt || Opc == VE::BRCFSa_nt ||
-         Opc == VE::BRCFDa_t  || Opc == VE::BRCFSa_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME) (Opc == NAME##a || Opc == NAME##a_nt || Opc == NAME##a_t)
+  // VE has other branch relative always instructions for word/double/float,
+  // but we use only long branches in our lower.  So, sanity check it here.
+  assert(!BRKIND(BRCFW) && !BRKIND(BRCFD) && !BRKIND(BRCFS) &&
+         "Branch relative word/double/float always instructions should not be "
+         "used!");
+  return BRKIND(BRCFL);
+#undef BRKIND
 }
 
+// Treat branch relative conditional as conditional branch instructions.
+// For example, brgt.l.t and brle.s.nt.
 static bool isCondBranchOpcode(int Opc) {
-  return Opc == VE::BRCFLrr    || Opc == VE::BRCFLir    ||
-         Opc == VE::BRCFLrr_nt || Opc == VE::BRCFLir_nt ||
-         Opc == VE::BRCFLrr_t  || Opc == VE::BRCFLir_t  ||
-         Opc == VE::BRCFWrr    || Opc == VE::BRCFWir    ||
-         Opc == VE::BRCFWrr_nt || Opc == VE::BRCFWir_nt ||
-         Opc == VE::BRCFWrr_t  || Opc == VE::BRCFWir_t  ||
-         Opc == VE::BRCFDrr    || Opc == VE::BRCFDir    ||
-         Opc == VE::BRCFDrr_nt || Opc == VE::BRCFDir_nt ||
-         Opc == VE::BRCFDrr_t  || Opc == VE::BRCFDir_t  ||
-         Opc == VE::BRCFSrr    || Opc == VE::BRCFSir    ||
-         Opc == VE::BRCFSrr_nt || Opc == VE::BRCFSir_nt ||
-         Opc == VE::BRCFSrr_t  || Opc == VE::BRCFSir_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME)                                                           \
+  (Opc == NAME##rr || Opc == NAME##rr_nt || Opc == NAME##rr_t ||               \
+   Opc == NAME##ir || Opc == NAME##ir_nt || Opc == NAME##ir_t)
+  return BRKIND(BRCFL) || BRKIND(BRCFW) || BRKIND(BRCFD) || BRKIND(BRCFS);
+#undef BRKIND
 }
 
+// Treat branch long always instructions as indirect branch.
+// For example, b.l.t and b.l.
 static bool isIndirectBranchOpcode(int Opc) {
-  return Opc == VE::BCFLari    || Opc == VE::BCFLari    ||
-         Opc == VE::BCFLari_nt || Opc == VE::BCFLari_nt ||
-         Opc == VE::BCFLari_t  || Opc == VE::BCFLari_t  ||
-         Opc == VE::BCFLari    || Opc == VE::BCFLari    ||
-         Opc == VE::BCFLari_nt || Opc == VE::BCFLari_nt ||
-         Opc == VE::BCFLari_t  || Opc == VE::BCFLari_t;
+  using namespace llvm::VE;
+
+#define BRKIND(NAME)                                                           \
+  (Opc == NAME##ari || Opc == NAME##ari_nt || Opc == NAME##ari_t)
+  // VE has other branch always instructions for word/double/float, but
+  // we use only long branches in our lower.  So, sanity check it here.
+  assert(!BRKIND(BCFW) && !BRKIND(BCFD) && !BRKIND(BCFS) &&
+         "Branch word/double/float always instructions should not be used!");
+  return BRKIND(BCFL);
+#undef BRKIND
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
@@ -333,6 +341,11 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
       MachineInstrBuilder MIB =
           BuildMI(MBB, I, DL, MCID, SubDest).addReg(SubSrc).addImm(0);
       MovMI = MIB.getInstr();
+    } else if (MCID.getOpcode() == VE::ANDMmm) {
+      // generate "ANDM, dest, vm0, src" instruction.
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, I, DL, MCID, SubDest).addReg(VE::VM0).addReg(SubSrc);
+      MovMI = MIB.getInstr();
     } else {
       llvm_unreachable("Unexpected reg-to-reg copy instruction");
     }
@@ -352,6 +365,35 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addImm(0);
+  } else if (VE::V64RegClass.contains(DestReg, SrcReg)) {
+    // Generate following instructions
+    //   %sw16 = LEA32zii 256
+    //   VORmvl %dest, (0)1, %src, %sw16
+    // TODO: reuse a register if vl is already assigned to a register
+    // FIXME: it would be better to scavenge a register here instead of
+    // reserving SX16 all of the time.
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    Register TmpReg = VE::SX16;
+    Register SubTmp = TRI->getSubReg(TmpReg, VE::sub_i32);
+    BuildMI(MBB, I, DL, get(VE::LEAzii), TmpReg)
+        .addImm(0)
+        .addImm(0)
+        .addImm(256);
+    MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(VE::VORmvl), DestReg)
+                                  .addImm(M1(0)) // Represent (0)1.
+                                  .addReg(SrcReg, getKillRegState(KillSrc))
+                                  .addReg(SubTmp, getKillRegState(true));
+    MIB.getInstr()->addRegisterKilled(TmpReg, TRI, true);
+  } else if (VE::VMRegClass.contains(DestReg, SrcReg)) {
+    BuildMI(MBB, I, DL, get(VE::ANDMmm), DestReg)
+        .addReg(VE::VM0)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+  } else if (VE::VM512RegClass.contains(DestReg, SrcReg)) {
+    // Use two instructions.
+    const unsigned SubRegIdx[] = {VE::sub_vm_even, VE::sub_vm_odd};
+    unsigned int NumSubRegs = 2;
+    copyPhysSubRegs(MBB, I, DL, DestReg, SrcReg, KillSrc, get(VE::ANDMmm),
+                    NumSubRegs, SubRegIdx, &getRegisterInfo());
   } else if (VE::F128RegClass.contains(DestReg, SrcReg)) {
     // Use two instructions.
     const unsigned SubRegIdx[] = {VE::sub_even, VE::sub_odd};
@@ -501,6 +543,184 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     report_fatal_error("Can't load this register from stack slot");
 }
 
+bool VEInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
+                                Register Reg, MachineRegisterInfo *MRI) const {
+  LLVM_DEBUG(dbgs() << "FoldImmediate\n");
+
+  LLVM_DEBUG(dbgs() << "checking DefMI\n");
+  int64_t ImmVal;
+  switch (DefMI.getOpcode()) {
+  default:
+    return false;
+  case VE::ORim:
+    // General move small immediate instruction on VE.
+    LLVM_DEBUG(dbgs() << "checking ORim\n");
+    LLVM_DEBUG(DefMI.dump());
+    // FIXME: We may need to support FPImm too.
+    assert(DefMI.getOperand(1).isImm());
+    assert(DefMI.getOperand(2).isImm());
+    ImmVal =
+        DefMI.getOperand(1).getImm() + mimm2Val(DefMI.getOperand(2).getImm());
+    LLVM_DEBUG(dbgs() << "ImmVal is " << ImmVal << "\n");
+    break;
+  case VE::LEAzii:
+    // General move immediate instruction on VE.
+    LLVM_DEBUG(dbgs() << "checking LEAzii\n");
+    LLVM_DEBUG(DefMI.dump());
+    // FIXME: We may need to support FPImm too.
+    assert(DefMI.getOperand(2).isImm());
+    if (!DefMI.getOperand(3).isImm())
+      // LEAzii may refer label
+      return false;
+    ImmVal = DefMI.getOperand(2).getImm() + DefMI.getOperand(3).getImm();
+    LLVM_DEBUG(dbgs() << "ImmVal is " << ImmVal << "\n");
+    break;
+  }
+
+  // Try to fold like below:
+  //   %1:i64 = ORim 0, 0(1)
+  //   %2:i64 = CMPSLrr %0, %1
+  // To
+  //   %2:i64 = CMPSLrm %0, 0(1)
+  //
+  // Another example:
+  //   %1:i64 = ORim 6, 0(1)
+  //   %2:i64 = CMPSLrr %1, %0
+  // To
+  //   %2:i64 = CMPSLir 6, %0
+  //
+  // Support commutable instructions like below:
+  //   %1:i64 = ORim 6, 0(1)
+  //   %2:i64 = ADDSLrr %1, %0
+  // To
+  //   %2:i64 = ADDSLri %0, 6
+  //
+  // FIXME: Need to support i32.  Current implementtation requires
+  //        EXTRACT_SUBREG, so input has following COPY and it avoids folding:
+  //   %1:i64 = ORim 6, 0(1)
+  //   %2:i32 = COPY %1.sub_i32
+  //   %3:i32 = ADDSWSXrr %0, %2
+  // FIXME: Need to support shift, cmov, and more instructions.
+  // FIXME: Need to support lvl too, but LVLGen runs after peephole-opt.
+
+  LLVM_DEBUG(dbgs() << "checking UseMI\n");
+  LLVM_DEBUG(UseMI.dump());
+  unsigned NewUseOpcSImm7;
+  unsigned NewUseOpcMImm;
+  enum InstType {
+    rr2ri_rm, // rr -> ri or rm, commutable
+    rr2ir_rm, // rr -> ir or rm
+  } InstType;
+
+  using namespace llvm::VE;
+#define INSTRKIND(NAME)                                                        \
+  case NAME##rr:                                                               \
+    NewUseOpcSImm7 = NAME##ri;                                                 \
+    NewUseOpcMImm = NAME##rm;                                                  \
+    InstType = rr2ri_rm;                                                       \
+    break
+#define NCINSTRKIND(NAME)                                                      \
+  case NAME##rr:                                                               \
+    NewUseOpcSImm7 = NAME##ir;                                                 \
+    NewUseOpcMImm = NAME##rm;                                                  \
+    InstType = rr2ir_rm;                                                       \
+    break
+
+  switch (UseMI.getOpcode()) {
+  default:
+    return false;
+
+    INSTRKIND(ADDUL);
+    INSTRKIND(ADDSWSX);
+    INSTRKIND(ADDSWZX);
+    INSTRKIND(ADDSL);
+    NCINSTRKIND(SUBUL);
+    NCINSTRKIND(SUBSWSX);
+    NCINSTRKIND(SUBSWZX);
+    NCINSTRKIND(SUBSL);
+    INSTRKIND(MULUL);
+    INSTRKIND(MULSWSX);
+    INSTRKIND(MULSWZX);
+    INSTRKIND(MULSL);
+    NCINSTRKIND(DIVUL);
+    NCINSTRKIND(DIVSWSX);
+    NCINSTRKIND(DIVSWZX);
+    NCINSTRKIND(DIVSL);
+    NCINSTRKIND(CMPUL);
+    NCINSTRKIND(CMPSWSX);
+    NCINSTRKIND(CMPSWZX);
+    NCINSTRKIND(CMPSL);
+    INSTRKIND(MAXSWSX);
+    INSTRKIND(MAXSWZX);
+    INSTRKIND(MAXSL);
+    INSTRKIND(MINSWSX);
+    INSTRKIND(MINSWZX);
+    INSTRKIND(MINSL);
+    INSTRKIND(AND);
+    INSTRKIND(OR);
+    INSTRKIND(XOR);
+    INSTRKIND(EQV);
+    NCINSTRKIND(NND);
+    NCINSTRKIND(MRG);
+  }
+
+#undef INSTRKIND
+
+  unsigned NewUseOpc;
+  unsigned UseIdx;
+  bool Commute = false;
+  LLVM_DEBUG(dbgs() << "checking UseMI operands\n");
+  switch (InstType) {
+  case rr2ri_rm:
+    UseIdx = 2;
+    if (UseMI.getOperand(1).getReg() == Reg) {
+      Commute = true;
+    } else {
+      assert(UseMI.getOperand(2).getReg() == Reg);
+    }
+    if (isInt<7>(ImmVal)) {
+      // This ImmVal matches to SImm7 slot, so change UseOpc to an instruction
+      // holds a simm7 slot.
+      NewUseOpc = NewUseOpcSImm7;
+    } else if (isMImmVal(ImmVal)) {
+      // Similarly, change UseOpc to an instruction holds a mimm slot.
+      NewUseOpc = NewUseOpcMImm;
+      ImmVal = val2MImm(ImmVal);
+    } else
+      return false;
+    break;
+  case rr2ir_rm:
+    if (UseMI.getOperand(1).getReg() == Reg) {
+      // Check immediate value whether it matchs to the UseMI instruction.
+      if (!isInt<7>(ImmVal))
+        return false;
+      NewUseOpc = NewUseOpcSImm7;
+      UseIdx = 1;
+    } else {
+      assert(UseMI.getOperand(2).getReg() == Reg);
+      // Check immediate value whether it matchs to the UseMI instruction.
+      if (!isMImmVal(ImmVal))
+        return false;
+      NewUseOpc = NewUseOpcMImm;
+      ImmVal = val2MImm(ImmVal);
+      UseIdx = 2;
+    }
+    break;
+  }
+
+  LLVM_DEBUG(dbgs() << "modifying UseMI\n");
+  bool DeleteDef = MRI->hasOneNonDBGUse(Reg);
+  UseMI.setDesc(get(NewUseOpc));
+  if (Commute) {
+    UseMI.getOperand(1).setReg(UseMI.getOperand(UseIdx).getReg());
+  }
+  UseMI.getOperand(UseIdx).ChangeToImmediate(ImmVal);
+  if (DeleteDef)
+    DefMI.eraseFromParent();
+
+  return true;
+}
+
 Register VEInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   VEMachineFunctionInfo *VEFI = MF->getInfo<VEMachineFunctionInfo>();
   Register GlobalBaseReg = VEFI->getGlobalBaseReg();
@@ -520,6 +740,106 @@ Register VEInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   return GlobalBaseReg;
 }
 
+static Register getVM512Upper(Register reg) {
+  return (reg - VE::VMP0) * 2 + VE::VM0;
+}
+
+static Register getVM512Lower(Register reg) { return getVM512Upper(reg) + 1; }
+
+// Expand pseudo logical vector instructions for VM512 registers.
+static void expandPseudoLogM(MachineInstr &MI, const MCInstrDesc &MCID) {
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register VMXu = getVM512Upper(MI.getOperand(0).getReg());
+  Register VMXl = getVM512Lower(MI.getOperand(0).getReg());
+  Register VMYu = getVM512Upper(MI.getOperand(1).getReg());
+  Register VMYl = getVM512Lower(MI.getOperand(1).getReg());
+
+  switch (MI.getOpcode()) {
+  default: {
+    Register VMZu = getVM512Upper(MI.getOperand(2).getReg());
+    Register VMZl = getVM512Lower(MI.getOperand(2).getReg());
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXu).addUse(VMYu).addUse(VMZu);
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXl).addUse(VMYl).addUse(VMZl);
+    break;
+  }
+  case VE::NEGMy:
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXu).addUse(VMYu);
+    BuildMI(*MBB, MI, DL, MCID).addDef(VMXl).addUse(VMYl);
+    break;
+  }
+  MI.eraseFromParent();
+}
+
+static void addOperandsForVFMK(MachineInstrBuilder &MIB, MachineInstr &MI,
+                               bool Upper) {
+  // VM512
+  MIB.addReg(Upper ? getVM512Upper(MI.getOperand(0).getReg())
+                   : getVM512Lower(MI.getOperand(0).getReg()));
+
+  switch (MI.getNumExplicitOperands()) {
+  default:
+    report_fatal_error("unexpected number of operands for pvfmk");
+  case 2: // _Ml: VM512, VL
+    // VL
+    MIB.addReg(MI.getOperand(1).getReg());
+    break;
+  case 4: // _Mvl: VM512, CC, VR, VL
+    // CC
+    MIB.addImm(MI.getOperand(1).getImm());
+    // VR
+    MIB.addReg(MI.getOperand(2).getReg());
+    // VL
+    MIB.addReg(MI.getOperand(3).getReg());
+    break;
+  case 5: // _MvMl: VM512, CC, VR, VM512, VL
+    // CC
+    MIB.addImm(MI.getOperand(1).getImm());
+    // VR
+    MIB.addReg(MI.getOperand(2).getReg());
+    // VM512
+    MIB.addReg(Upper ? getVM512Upper(MI.getOperand(3).getReg())
+                     : getVM512Lower(MI.getOperand(3).getReg()));
+    // VL
+    MIB.addReg(MI.getOperand(4).getReg());
+    break;
+  }
+}
+
+static void expandPseudoVFMK(const TargetInstrInfo &TI, MachineInstr &MI) {
+  // replace to pvfmk.w.up and pvfmk.w.lo
+  // replace to pvfmk.s.up and pvfmk.s.lo
+
+  static std::map<unsigned, std::pair<unsigned, unsigned>> VFMKMap = {
+      {VE::VFMKyal, {VE::VFMKLal, VE::VFMKLal}},
+      {VE::VFMKynal, {VE::VFMKLnal, VE::VFMKLnal}},
+      {VE::VFMKWyvl, {VE::PVFMKWUPvl, VE::PVFMKWLOvl}},
+      {VE::VFMKWyvyl, {VE::PVFMKWUPvml, VE::PVFMKWLOvml}},
+      {VE::VFMKSyvl, {VE::PVFMKSUPvl, VE::PVFMKSLOvl}},
+      {VE::VFMKSyvyl, {VE::PVFMKSUPvml, VE::PVFMKSLOvml}},
+  };
+
+  unsigned Opcode = MI.getOpcode();
+
+  auto Found = VFMKMap.find(Opcode);
+  if (Found == VFMKMap.end())
+    report_fatal_error("unexpected opcode for pseudo vfmk");
+
+  unsigned OpcodeUpper = (*Found).second.first;
+  unsigned OpcodeLower = (*Found).second.second;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  DebugLoc DL = MI.getDebugLoc();
+
+  MachineInstrBuilder Bu = BuildMI(*MBB, MI, DL, TI.get(OpcodeUpper));
+  addOperandsForVFMK(Bu, MI, /* Upper */ true);
+  MachineInstrBuilder Bl = BuildMI(*MBB, MI, DL, TI.get(OpcodeLower));
+  addOperandsForVFMK(Bl, MI, /* Upper */ false);
+
+  MI.eraseFromParent();
+}
+
 bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case VE::EXTEND_STACK: {
@@ -532,6 +852,110 @@ bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case VE::GETSTACKTOP: {
     return expandGetStackTopPseudo(MI);
   }
+
+  case VE::ANDMyy:
+    expandPseudoLogM(MI, get(VE::ANDMmm));
+    return true;
+  case VE::ORMyy:
+    expandPseudoLogM(MI, get(VE::ORMmm));
+    return true;
+  case VE::XORMyy:
+    expandPseudoLogM(MI, get(VE::XORMmm));
+    return true;
+  case VE::EQVMyy:
+    expandPseudoLogM(MI, get(VE::EQVMmm));
+    return true;
+  case VE::NNDMyy:
+    expandPseudoLogM(MI, get(VE::NNDMmm));
+    return true;
+  case VE::NEGMy:
+    expandPseudoLogM(MI, get(VE::NEGMm));
+    return true;
+
+  case VE::LVMyir:
+  case VE::LVMyim:
+  case VE::LVMyir_y:
+  case VE::LVMyim_y: {
+    Register VMXu = getVM512Upper(MI.getOperand(0).getReg());
+    Register VMXl = getVM512Lower(MI.getOperand(0).getReg());
+    int64_t Imm = MI.getOperand(1).getImm();
+    bool IsSrcReg =
+        MI.getOpcode() == VE::LVMyir || MI.getOpcode() == VE::LVMyir_y;
+    Register Src = IsSrcReg ? MI.getOperand(2).getReg() : VE::NoRegister;
+    int64_t MImm = IsSrcReg ? 0 : MI.getOperand(2).getImm();
+    bool KillSrc = IsSrcReg ? MI.getOperand(2).isKill() : false;
+    Register VMX = VMXl;
+    if (Imm >= 4) {
+      VMX = VMXu;
+      Imm -= 4;
+    }
+    MachineBasicBlock *MBB = MI.getParent();
+    DebugLoc DL = MI.getDebugLoc();
+    switch (MI.getOpcode()) {
+    case VE::LVMyir:
+      BuildMI(*MBB, MI, DL, get(VE::LVMir))
+          .addDef(VMX)
+          .addImm(Imm)
+          .addReg(Src, getKillRegState(KillSrc));
+      break;
+    case VE::LVMyim:
+      BuildMI(*MBB, MI, DL, get(VE::LVMim))
+          .addDef(VMX)
+          .addImm(Imm)
+          .addImm(MImm);
+      break;
+    case VE::LVMyir_y:
+      assert(MI.getOperand(0).getReg() == MI.getOperand(3).getReg() &&
+             "LVMyir_y has different register in 3rd operand");
+      BuildMI(*MBB, MI, DL, get(VE::LVMir_m))
+          .addDef(VMX)
+          .addImm(Imm)
+          .addReg(Src, getKillRegState(KillSrc))
+          .addReg(VMX);
+      break;
+    case VE::LVMyim_y:
+      assert(MI.getOperand(0).getReg() == MI.getOperand(3).getReg() &&
+             "LVMyim_y has different register in 3rd operand");
+      BuildMI(*MBB, MI, DL, get(VE::LVMim_m))
+          .addDef(VMX)
+          .addImm(Imm)
+          .addImm(MImm)
+          .addReg(VMX);
+      break;
+    }
+    MI.eraseFromParent();
+    return true;
+  }
+  case VE::SVMyi: {
+    Register Dest = MI.getOperand(0).getReg();
+    Register VMZu = getVM512Upper(MI.getOperand(1).getReg());
+    Register VMZl = getVM512Lower(MI.getOperand(1).getReg());
+    bool KillSrc = MI.getOperand(1).isKill();
+    int64_t Imm = MI.getOperand(2).getImm();
+    Register VMZ = VMZl;
+    if (Imm >= 4) {
+      VMZ = VMZu;
+      Imm -= 4;
+    }
+    MachineBasicBlock *MBB = MI.getParent();
+    DebugLoc DL = MI.getDebugLoc();
+    MachineInstrBuilder MIB =
+        BuildMI(*MBB, MI, DL, get(VE::SVMmi), Dest).addReg(VMZ).addImm(Imm);
+    MachineInstr *Inst = MIB.getInstr();
+    MI.eraseFromParent();
+    if (KillSrc) {
+      const TargetRegisterInfo *TRI = &getRegisterInfo();
+      Inst->addRegisterKilled(MI.getOperand(1).getReg(), TRI, true);
+    }
+    return true;
+  }
+  case VE::VFMKyal:
+  case VE::VFMKynal:
+  case VE::VFMKWyvl:
+  case VE::VFMKWyvyl:
+  case VE::VFMKSyvl:
+  case VE::VFMKSyvyl:
+    expandPseudoVFMK(*this, MI);
   }
   return false;
 }
@@ -634,8 +1058,8 @@ bool VEInstrInfo::expandGetStackTopPseudo(MachineInstr &MI) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const VEFrameLowering &TFL = *STI.getFrameLowering();
 
-  // The VE ABI requires a reserved 176 bytes area at the top
-  // of stack as described in VESubtarget.cpp.  So, we adjust it here.
+  // The VE ABI requires a reserved area at the top of stack as described
+  // in VEFrameLowering.cpp.  So, we adjust it here.
   unsigned NumBytes = STI.getAdjustedFrameSize(0);
 
   // Also adds the size of parameter area.

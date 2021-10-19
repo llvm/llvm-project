@@ -4,7 +4,7 @@
 
 ; CHECK: Relocations [
 ; CHECK: Section (3) .rel.text {
-; CHECK: 0x58 R_AMDGPU_ABS32 .text 0x0
+; CHECK: 0x58 R_AMDGPU_ABS32 .text
 ; CHECK: }
 ; CHECK: ]
 

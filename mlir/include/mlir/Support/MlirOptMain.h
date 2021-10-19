@@ -10,9 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_SUPPORT_MLIROPTMAIN_H
+#define MLIR_SUPPORT_MLIROPTMAIN_H
+
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <cstdlib>
 #include <memory>
 
 namespace llvm {
@@ -46,7 +50,7 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry, bool splitInputFile,
                           bool verifyDiagnostics, bool verifyPasses,
                           bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = true);
+                          bool preloadDialectsInContext = false);
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
@@ -56,6 +60,22 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 ///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry,
-                          bool preloadDialectsInContext = true);
+                          bool preloadDialectsInContext = false);
+
+/// Helper wrapper to return the result of MlirOptMain directly from main.
+///
+/// Example:
+///
+///     int main(int argc, char **argv) {
+///       // ...
+///       return mlir::asMainReturnCode(mlir::MlirOptMain(
+///           argc, argv, /* ... */);
+///     }
+///
+inline int asMainReturnCode(LogicalResult r) {
+  return r.succeeded() ? EXIT_SUCCESS : EXIT_FAILURE;
+}
 
 } // end namespace mlir
+
+#endif // MLIR_SUPPORT_MLIROPTMAIN_H

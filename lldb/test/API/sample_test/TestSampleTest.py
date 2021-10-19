@@ -46,3 +46,8 @@ class RenameThisSampleTestTestCase(TestBase):
         test_value = test_var.GetValueAsUnsigned()
         self.assertEqual(test_value, 10, "Got the right value for test_var")
 
+    def sample_test_no_launch(self):
+        """ Same as above but doesn't launch a process."""
+
+        target = self.createTestTarget()
+        self.expect_expr("global_test_var", result_value="10")

@@ -63,6 +63,7 @@ public:
   bool isUnsigned : 1;
   bool isLong : 1;          // This is *not* set for long long.
   bool isLongLong : 1;
+  bool isSizeT : 1;         // 1z, 1uz (C++2b)
   bool isHalf : 1;          // 1.0h
   bool isFloat : 1;         // 1.0f
   bool isImaginary : 1;     // 1.0i
@@ -223,7 +224,7 @@ class StringLiteralParser {
   unsigned UDSuffixOffset;
 public:
   StringLiteralParser(ArrayRef<Token> StringToks,
-                      Preprocessor &PP, bool Complain = true);
+                      Preprocessor &PP);
   StringLiteralParser(ArrayRef<Token> StringToks,
                       const SourceManager &sm, const LangOptions &features,
                       const TargetInfo &target,

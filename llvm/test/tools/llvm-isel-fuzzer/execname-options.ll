@@ -7,6 +7,11 @@
 
 ; RUN: echo > %t.input
 
+; workaround for https://openradar.appspot.com/FB8914243
+; RUN: rm -f %t.bin--gisel
+; RUN: rm -f %t.bin--gisel-O2
+; RUN: rm -f %t.bin--unexist
+
 ; RUN: cp llvm-isel-fuzzer %t.bin--gisel
 ; RUN: not %t.bin--gisel %t.input 2>&1 | FileCheck -check-prefix=GISEL %s
 ; GISEL: Injected args: -global-isel -O0

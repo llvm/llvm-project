@@ -8,4 +8,4 @@
 
 // Make sure the test passes if it succeeds to run
 
-// RUN: exit 0
+// RUN: true

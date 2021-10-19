@@ -7,7 +7,7 @@ typedef union __attribute__((aligned(4))) {
 
 void bar(vect32 p[][2]);
 
-// CHECK-LABEL: define void @fred
+// CHECK-LABEL: define{{.*}} void @fred
 void fred(unsigned Num, int Vec[2], int *Index, int Arr[4][2]) {
   vect32 Tmp[4][2];
 // Generate tbaa for the load of Index:

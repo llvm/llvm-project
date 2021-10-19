@@ -1,13 +1,12 @@
 #include "testing.h"
-#include "../../runtime/descriptor.h"
-#include "../../runtime/transformational.h"
+#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/transformational.h"
 #include <cinttypes>
 
 using namespace Fortran::common;
 using namespace Fortran::runtime;
 
 int main() {
-  static const SubscriptValue ones[]{1, 1, 1};
   static const SubscriptValue sourceExtent[]{2, 3, 4};
   auto source{Descriptor::Create(TypeCategory::Integer, sizeof(std::int32_t),
       nullptr, 3, sourceExtent, CFI_attribute_allocatable)};
@@ -16,7 +15,10 @@ int main() {
   MATCH(sizeof(std::int32_t), source->ElementBytes());
   TEST(source->IsAllocatable());
   TEST(!source->IsPointer());
-  TEST(source->Allocate(ones, sourceExtent) == CFI_SUCCESS);
+  for (int j{0}; j < 3; ++j) {
+    source->GetDimension(j).SetBounds(1, sourceExtent[j]);
+  }
+  TEST(source->Allocate() == CFI_SUCCESS);
   TEST(source->IsAllocated());
   MATCH(2, source->GetDimension(0).Extent());
   MATCH(3, source->GetDimension(1).Extent());
@@ -51,9 +53,22 @@ int main() {
   MATCH(2, pad.GetDimension(0).Extent());
   MATCH(2, pad.GetDimension(1).Extent());
   MATCH(3, pad.GetDimension(2).Extent());
+  StaticDescriptor<1> orderDescriptor;
+  Descriptor &order{orderDescriptor.descriptor()};
+  static const std::int32_t orderData[]{1, 2};
+  static const SubscriptValue orderExtent[]{2};
+  order.Establish(TypeCategory::Integer, static_cast<int>(sizeof orderData[0]),
+      const_cast<void *>(reinterpret_cast<const void *>(orderData)), 1,
+      orderExtent, CFI_attribute_pointer);
+  orderDescriptor.Check();
+  order.Check();
+  MATCH(1, order.rank());
+  MATCH(2, order.GetDimension(0).Extent());
 
-  auto result{RESHAPE(*source, *shape, &pad)};
+  auto result{Descriptor::Create(TypeCategory::Integer, sizeof(std::int32_t),
+      nullptr, 2, nullptr, CFI_attribute_allocatable)};
   TEST(result.get() != nullptr);
+  RTNAME(Reshape)(*result, *source, *shape, &pad, &order, __FILE__, __LINE__);
   result->Check();
   MATCH(sizeof(std::int32_t), result->ElementBytes());
   MATCH(2, result->rank());
@@ -65,8 +80,6 @@ int main() {
     SubscriptValue ss[2]{1 + (j % 8), 1 + (j / 8)};
     MATCH(j, *result->Element<std::int32_t>(ss));
   }
-
-  // TODO: test ORDER=
 
   return testing::Complete();
 }

@@ -16,8 +16,8 @@
 namespace std {
   struct A { A(); };
   
-  // CHECK-LABEL: define void @_ZNSt1AC2Ev(%"struct.std::A"* %this) unnamed_addr
-  // CHECK-LABEL: define void @_ZNSt1AC1Ev(%"struct.std::A"* %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC2Ev(%"struct.std::A"* {{[^,]*}} %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC1Ev(%"struct.std::A"* {{[^,]*}} %this) unnamed_addr
   A::A() { }
 };
 
@@ -25,14 +25,14 @@ namespace std {
   template<typename> struct allocator { };
 }
 
-// CHECK-LABEL: define void @_Z1fSaIcESaIiE
+// CHECK-LABEL: define{{.*}} void @_Z1fSaIcESaIiE
 void f(std::allocator<char>, std::allocator<int>) { }
 
 namespace std {
   template<typename, typename, typename> struct basic_string { };
 }
 
-// CHECK-LABEL: define void @_Z1fSbIcciE
+// CHECK-LABEL: define{{.*}} void @_Z1fSbIcciE
 void f(std::basic_string<char, char, int>) { }
 
 namespace std {
@@ -91,7 +91,7 @@ namespace std
 }
 
 // Make sure we don't treat the following like std::string
-// CHECK-LABEL: define void @_Z1f12basic_stringIcSt11char_traitsIcESaIcEE
+// CHECK-LABEL: define{{.*}} void @_Z1f12basic_stringIcSt11char_traitsIcESaIcEE
 template<typename, typename, typename> struct basic_string { };
 typedef basic_string<char, std::char_traits<char>, std::allocator<char> > not_string;
 void f(not_string) { }
@@ -107,7 +107,7 @@ namespace N {
   namespace std {
     struct A { void f(); };
     
-    // CHECK-LABEL: define void @_ZN1N3std1A1fEv
+    // CHECK-LABEL: define{{.*}} void @_ZN1N3std1A1fEv
     void A::f() { }
   }
 }

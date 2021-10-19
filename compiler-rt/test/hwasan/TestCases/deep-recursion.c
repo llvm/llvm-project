@@ -7,6 +7,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack histories are currently not recorded on x86.
+// XFAIL: x86_64
+
 #include <stdlib.h>
 // At least -O1 is needed for this function to not have a stack frame on
 // AArch64.

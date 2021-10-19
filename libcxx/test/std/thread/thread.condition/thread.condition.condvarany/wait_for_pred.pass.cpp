@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
+// ALLOW_RETRIES: 2
 
 // <condition_variable>
 
@@ -23,6 +24,7 @@
 #include <chrono>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 class Pred
@@ -77,7 +79,7 @@ int main(int, char**)
     {
         expect_result = true;
         L1 lk(m0);
-        std::thread t(f);
+        std::thread t = support::make_test_thread(f);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);
@@ -92,7 +94,7 @@ int main(int, char**)
     {
         expect_result = false;
         L1 lk(m0);
-        std::thread t(f);
+        std::thread t = support::make_test_thread(f);
         assert(test1 == 0);
         while (test1 == 0)
             cv.wait(lk);

@@ -1,9 +1,9 @@
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=CO-V2 -check-prefix=CI-HSA  %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mattr=-code-object-v3 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=CO-V2 -check-prefix=VI-HSA  %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=UNKNOWN-OS -check-prefix=SI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=ALL -check-prefix=UNKNOWN-OS -check-prefix=VI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=-code-object-v3 -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,SI-MESA %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mattr=-code-object-v3 -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2,VI-MESA %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0

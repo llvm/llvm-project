@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-4,-unaligned-scratch-access  -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT4,ELT4-ALIGNED,ALIGNED,ALL %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-8,-unaligned-scratch-access  -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT8,ELT8-ALIGNED,ALIGNED,ALL %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-16,-unaligned-scratch-access -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT16,ELT16-ALIGNED,ALIGNED,ALL %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-8,-unaligned-scratch-access  -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT8,ALIGNED,ALL %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-16,-unaligned-scratch-access -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT16,ALIGNED,ALL %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-4,+unaligned-scratch-access  -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT4,ELT4-UNALIGNED,UNALIGNED,ALL %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-8,+unaligned-scratch-access  -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT8,ELT8-UNALIGNED,UNALIGNED,ALL %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mattr=+max-private-element-size-16,+unaligned-scratch-access -load-store-vectorizer -S -o - %s | FileCheck -check-prefixes=ELT16,ELT16-UNALIGNED,UNALIGNED,ALL %s

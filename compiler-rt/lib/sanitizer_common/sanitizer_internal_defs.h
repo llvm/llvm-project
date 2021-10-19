@@ -39,7 +39,7 @@
 
 // TLS is handled differently on different platforms
 #if SANITIZER_LINUX || SANITIZER_NETBSD || \
-  SANITIZER_FREEBSD || SANITIZER_OPENBSD
+  SANITIZER_FREEBSD
 # define SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE \
     __attribute__((tls_model("initial-exec"))) thread_local
 #else
@@ -104,8 +104,7 @@
 //
 // FIXME: do we have anything like this on Mac?
 #ifndef SANITIZER_CAN_USE_PREINIT_ARRAY
-#if ((SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_OPENBSD || \
-     SANITIZER_FUCHSIA || SANITIZER_NETBSD) && !defined(PIC)
+#if (SANITIZER_LINUX || SANITIZER_FUCHSIA || SANITIZER_NETBSD) && !defined(PIC)
 #define SANITIZER_CAN_USE_PREINIT_ARRAY 1
 // Before Solaris 11.4, .preinit_array is fully supported only with GNU ld.
 // FIXME: Check for those conditions.
@@ -126,6 +125,10 @@
 # define __has_attribute(x) 0
 #endif
 
+#if !defined(__has_cpp_attribute)
+#  define __has_cpp_attribute(x) 0
+#endif
+
 // For portability reasons we do not include stddef.h, stdint.h or any other
 // system header, but we do need some basic types that are not defined
 // in a portable way by the language itself.
@@ -136,8 +139,13 @@ namespace __sanitizer {
 typedef unsigned long long uptr;
 typedef signed long long sptr;
 #else
+#  if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC || SANITIZER_WINDOWS
 typedef unsigned long uptr;
 typedef signed long sptr;
+#  else
+typedef unsigned int uptr;
+typedef signed int sptr;
+#  endif
 #endif  // defined(_WIN64)
 #if defined(__x86_64__)
 // Since x32 uses ILP32 data model in 64-bit hardware mode, we must use
@@ -169,10 +177,9 @@ typedef long pid_t;
 typedef int pid_t;
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_OPENBSD || SANITIZER_MAC || \
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_MAC ||             \
     (SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)) || \
-    (SANITIZER_LINUX && defined(__x86_64__))
+    (SANITIZER_LINUX && (defined(__x86_64__) || defined(__hexagon__)))
 typedef u64 OFF_T;
 #else
 typedef uptr OFF_T;
@@ -182,7 +189,7 @@ typedef u64  OFF64_T;
 #if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC
 typedef uptr operator_new_size_type;
 #else
-# if SANITIZER_OPENBSD || defined(__s390__) && !defined(__s390x__)
+# if defined(__s390__) && !defined(__s390x__)
 // Special case: 31-bit s390 has unsigned long as size_t.
 typedef unsigned long operator_new_size_type;
 # else
@@ -196,9 +203,6 @@ typedef u64 tid_t;
 // This header should NOT include any other headers to avoid portability issues.
 
 // Common defs.
-#ifndef INLINE
-#define INLINE inline
-#endif
 #define INTERFACE_ATTRIBUTE SANITIZER_INTERFACE_ATTRIBUTE
 #define SANITIZER_WEAK_DEFAULT_IMPL \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE NOINLINE
@@ -254,6 +258,12 @@ typedef u64 tid_t;
 # define NOEXCEPT throw()
 #endif
 
+#if __has_cpp_attribute(clang::fallthrough)
+#  define FALLTHROUGH [[clang::fallthrough]]
+#else
+#  define FALLTHROUGH
+#endif
+
 // Unaligned versions of basic types.
 typedef ALIGNED(1) u16 uu16;
 typedef ALIGNED(1) u32 uu32;
@@ -281,14 +291,16 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
                           u64 v1, u64 v2);
 
 // Check macro
-#define RAW_CHECK_MSG(expr, msg) do { \
-  if (UNLIKELY(!(expr))) { \
-    RawWrite(msg); \
-    Die(); \
-  } \
-} while (0)
+#define RAW_CHECK_MSG(expr, msg, ...)          \
+  do {                                         \
+    if (UNLIKELY(!(expr))) {                   \
+      const char* msgs[] = {msg, __VA_ARGS__}; \
+      for (const char* m : msgs) RawWrite(m);  \
+      Die();                                   \
+    }                                          \
+  } while (0)
 
-#define RAW_CHECK(expr) RAW_CHECK_MSG(expr, #expr)
+#define RAW_CHECK(expr, ...) RAW_CHECK_MSG(expr, #expr "\n", __VA_ARGS__)
 
 #define CHECK_IMPL(c1, op, c2) \
   do { \
@@ -333,13 +345,9 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 
 #define UNIMPLEMENTED() UNREACHABLE("unimplemented")
 
-#define COMPILER_CHECK(pred) IMPL_COMPILER_ASSERT(pred, __LINE__)
+#define COMPILER_CHECK(pred) static_assert(pred, "")
 
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
-
-#define IMPL_PASTE(a, b) a##b
-#define IMPL_COMPILER_ASSERT(pred, line) \
-    typedef char IMPL_PASTE(assertion_failed_##_, line)[2*(int)(pred)-1]
 
 // Limits for integral types. We have to redefine it in case we don't
 // have stdint.h (like in Visual Studio 9).
@@ -417,6 +425,15 @@ inline void Trap() {
     (void)enable_fp;                      \
   } while (0)
 
+// Internal thread identifier allocated by ThreadRegistry.
+typedef u32 Tid;
+constexpr Tid kInvalidTid = -1;
+constexpr Tid kMainTid = 0;
+
+// Stack depot stack identifier.
+typedef u32 StackID;
+const StackID kInvalidStackID = 0;
+
 }  // namespace __sanitizer
 
 namespace __asan {
@@ -453,6 +470,9 @@ namespace __interception {
 using namespace __sanitizer;
 }
 namespace __hwasan {
+using namespace __sanitizer;
+}
+namespace __memprof {
 using namespace __sanitizer;
 }
 

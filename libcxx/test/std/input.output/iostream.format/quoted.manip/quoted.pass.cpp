@@ -22,7 +22,7 @@
 template <class CharT, class Traits>
 bool is_skipws ( const std::basic_istream<CharT, Traits>& is ) {
     return ( is.flags() & std::ios_base::skipws ) != 0;
-    }
+}
 
 template <class CharT, class Traits = std::char_traits<CharT>>
 void both_ways ( const CharT *p ) {
@@ -34,7 +34,7 @@ void both_ways ( const CharT *p ) {
     ((void)skippingws); // Prevent unused warning
     ss << q;
     ss >> q;
-    }
+}
 
 template <class CharT, class Traits = std::char_traits<CharT>>
 void round_trip ( const CharT *p ) {
@@ -46,7 +46,7 @@ void round_trip ( const CharT *p ) {
     ss >> std::quoted(s);
     assert ( s == p );
     assert ( skippingws == is_skipws ( ss ));
-    }
+}
 
 
 template <class CharT, class Traits = std::char_traits<CharT>>
@@ -60,7 +60,7 @@ void round_trip_ws ( const CharT *p ) {
     ss >> std::quoted(s);
     assert ( s == p );
     assert ( skippingws == is_skipws ( ss ));
-    }
+}
 
 template <class CharT, class Traits = std::char_traits<CharT>>
 void round_trip_d ( const CharT *p, char delim ) {
@@ -71,7 +71,7 @@ void round_trip_d ( const CharT *p, char delim ) {
     std::basic_string<CharT, Traits> s;
     ss >> std::quoted(s, d);
     assert ( s == p );
-    }
+}
 
 template <class CharT, class Traits = std::char_traits<CharT>>
 void round_trip_e ( const CharT *p, char escape ) {
@@ -82,7 +82,7 @@ void round_trip_e ( const CharT *p, char escape ) {
     std::basic_string<CharT, Traits> s;
     ss >> std::quoted(s, CharT('"'), e );
     assert ( s == p );
-    }
+}
 
 
 template <class CharT, class Traits = std::char_traits<CharT>>
@@ -132,10 +132,12 @@ int main(int, char**)
     round_trip_d  (  "", 'q' );
     round_trip_e  (  "", 'q' );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"" );
     round_trip_ws ( L"" );
     round_trip_d  ( L"", 'q' );
     round_trip_e  ( L"", 'q' );
+#endif
 
     round_trip    (  "Hi" );
     round_trip_ws (  "Hi" );
@@ -144,34 +146,47 @@ int main(int, char**)
     assert ( quote ( "Hi", '!' ) == "!Hi!" );
     assert ( quote ( "Hi!", '!' ) == R"(!Hi\!!)" );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi" );
     round_trip_ws ( L"Hi" );
     round_trip_d  ( L"Hi", '!' );
     round_trip_e  ( L"Hi", '!' );
     assert ( quote ( L"Hi", '!' )  == L"!Hi!" );
     assert ( quote ( L"Hi!", '!' ) == LR"(!Hi\!!)" );
+#endif
 
     round_trip    (  "Hi Mom" );
     round_trip_ws (  "Hi Mom" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     round_trip    ( L"Hi Mom" );
     round_trip_ws ( L"Hi Mom" );
+#endif
 
     assert ( quote (  "" )  ==  "\"\"" );
-    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote (  "a" ) ==  "\"a\"" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( quote ( L"" )  == L"\"\"" );
     assert ( quote ( L"a" ) == L"\"a\"" );
+#endif
 
-//  missing end quote - must not hang
+    // missing end quote - must not hang
     assert ( unquote (  "\"abc" ) ==  "abc" );
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert ( unquote ( L"\"abc" ) == L"abc" );
+#endif
 
     assert ( unquote (  "abc" ) == "abc" ); // no delimiter
-    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote (  "abc def" ) ==  "abc" ); // no delimiter
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    assert ( unquote ( L"abc" ) == L"abc" ); // no delimiter
     assert ( unquote ( L"abc def" ) == L"abc" ); // no delimiter
+#endif
 
     assert ( unquote (  "" ) ==  "" ); // nothing there
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert ( unquote ( L"" ) == L"" ); // nothing there
+#endif
+
     test_padding ();
 
     return 0;

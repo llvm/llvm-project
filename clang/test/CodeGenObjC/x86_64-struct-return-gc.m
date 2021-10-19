@@ -5,7 +5,7 @@ struct Coerce {
 
 struct Coerce coerce_func(void);
 
-// CHECK-LABEL: define void @Coerce_test()
+// CHECK-LABEL: define{{.*}} void @Coerce_test()
 void Coerce_test(void) {
   struct Coerce c;
   
@@ -21,7 +21,7 @@ struct Indirect {
 
 struct Indirect indirect_func(void);
 
-// CHECK-LABEL: define void @Indirect_test()
+// CHECK-LABEL: define{{.*}} void @Indirect_test()
 void Indirect_test(void) {
   struct Indirect i;
   

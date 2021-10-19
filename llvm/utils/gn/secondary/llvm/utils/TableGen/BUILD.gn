@@ -1,7 +1,6 @@
 executable("llvm-tblgen") {
   deps = [
     "//llvm/include/llvm/Config:llvm-config",
-    "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
     "//llvm/utils/TableGen/GlobalISel",
@@ -13,6 +12,7 @@ executable("llvm-tblgen") {
     "Attributes.cpp",
     "CTagsEmitter.cpp",
     "CallingConvEmitter.cpp",
+    "CodeBeadsGen.cpp",
     "CodeEmitterGen.cpp",
     "CodeGenDAGPatterns.cpp",
     "CodeGenHwModes.cpp",

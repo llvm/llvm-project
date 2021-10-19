@@ -1,4 +1,5 @@
 add_mlir_library(MLIRTransformUtils
+  DialectConversion.cpp
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp
   InliningUtils.cpp
@@ -14,10 +15,13 @@ add_mlir_library(MLIRTransformUtils
   MLIRStandardOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineOps
+  MLIRAffine
+  MLIRArithmetic
   MLIRAnalysis
   MLIRLoopAnalysis
+  MLIRMemRef
   MLIRSCF
   MLIRPass
-  MLIRStandardOps
+  MLIRRewrite
+  MLIRStandard
   )

@@ -21,5 +21,8 @@ MyList * el;
 
 
 static int test7(id keys) {
-  for (id key; in keys) ;  // expected-error {{use of undeclared identifier 'in'}}
+  // FIXME: would be nice to suppress the secondary diagnostics.
+  for (id key; in keys) ;  // expected-error {{use of undeclared identifier 'in'}} \
+                           // expected-error {{expected ';' in 'for' statement specifier}} \
+                           // expected-warning {{expression result unused}}
 }

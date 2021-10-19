@@ -34,3 +34,14 @@ void fn() {
   int (*__attribute__((attr(i[1]))) pi);  // expected-warning{{unknown attribute 'attr' ignored}}
   pi = &i[0];
 }
+
+[[deprecated([""])]] int WrongArgs; // expected-error {{expected variable name or 'this' in lambda capture list}}
+[[,,,,,]] int Commas1; // ok
+[[,, maybe_unused]] int Commas2; // ok
+[[maybe_unused,,,]] int Commas3; // ok
+[[,,maybe_unused,]] int Commas4; // ok
+[[foo bar]] int NoComma; // expected-error {{expected ','}} \
+                         // expected-warning {{unknown attribute 'foo' ignored}}
+// expected-error@+2 2 {{expected ']'}}
+// expected-error@+1 {{expected external declaration}}
+[[foo

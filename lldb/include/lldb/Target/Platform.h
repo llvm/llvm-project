@@ -55,7 +55,6 @@ private:
   void SetDefaultModuleCacheDirectory(const FileSpec &dir_spec);
 };
 
-typedef std::shared_ptr<PlatformProperties> PlatformPropertiesSP;
 typedef llvm::SmallVector<lldb::addr_t, 6> MmapArgList;
 
 /// \class Platform Platform.h "lldb/Target/Platform.h"
@@ -74,8 +73,6 @@ public:
   /// Default Constructor
   Platform(bool is_host_platform);
 
-  /// Destructor.
-  ///
   /// The destructor is virtual since this class is designed to be inherited
   /// from by the plug-in instance.
   ~Platform() override;
@@ -84,7 +81,7 @@ public:
 
   static void Terminate();
 
-  static const PlatformPropertiesSP &GetGlobalPlatformProperties();
+  static PlatformProperties &GetGlobalPlatformProperties();
 
   /// Get the native host platform plug-in.
   ///
@@ -301,11 +298,10 @@ public:
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream *feedback_stream);
 
-  virtual Status GetSharedModule(const ModuleSpec &module_spec,
-                                 Process *process, lldb::ModuleSP &module_sp,
-                                 const FileSpecList *module_search_paths_ptr,
-                                 lldb::ModuleSP *old_module_sp_ptr,
-                                 bool *did_create_ptr);
+  virtual Status GetSharedModule(
+      const ModuleSpec &module_spec, Process *process,
+      lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
+      llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
@@ -364,11 +360,9 @@ public:
   /// platforms will want to subclass this function in order to be able to
   /// intercept STDIO and possibly launch a separate process that will debug
   /// the debuggee.
-  virtual lldb::ProcessSP
-  DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-               Target *target, // Can be nullptr, if nullptr create a new
-                               // target, else use existing one
-               Status &error);
+  virtual lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
+                                       Debugger &debugger, Target &target,
+                                       Status &error);
 
   virtual lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
                                          llvm::StringRef plugin_name,
@@ -621,7 +615,18 @@ public:
   }
 
   virtual lldb_private::Status RunShellCommand(
-      const char *command,         // Shouldn't be nullptr
+      llvm::StringRef command,
+      const FileSpec &working_dir, // Pass empty FileSpec to use the current
+                                   // working directory
+      int *status_ptr, // Pass nullptr if you don't want the process exit status
+      int *signo_ptr,  // Pass nullptr if you don't want the signal that caused
+                       // the process to exit
+      std::string
+          *command_output, // Pass nullptr if you don't want the command output
+      const Timeout<std::micro> &timeout);
+
+  virtual lldb_private::Status RunShellCommand(
+      llvm::StringRef shell, llvm::StringRef command,
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
       int *status_ptr, // Pass nullptr if you don't want the process exit status
@@ -640,7 +645,7 @@ public:
   virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                             uint64_t &high);
 
-  virtual int32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
+  virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
   }
 
@@ -940,9 +945,6 @@ private:
                               Platform &remote_platform);
 
   FileSpec GetModuleCacheRoot();
-
-  Platform(const Platform &) = delete;
-  const Platform &operator=(const Platform &) = delete;
 };
 
 class PlatformList {

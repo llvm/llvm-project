@@ -1,5 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1010,NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX1030,NSA %s
 
 ; GCN-LABEL: {{^}}sample_2d:
 ;
@@ -24,7 +25,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_d_3d:
-; NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
+; GFX1010: image_sample_d v[0:3], v[7:22],
+; GFX1030: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %r, float %t, float %dsdh, float %dtdv, float %dsdv, float %drdv, float %drdh, float %dtdh) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32(i32 15, float %dsdh, float %dtdh, float %drdh, float %dsdv, float %dtdv, float %drdv, float %s, float %t, float %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -32,8 +34,9 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
-; GCN: image_sample_c_l v0, v[0:7],
-; NSA: image_sample v1, [v6, v7, v5],
+; NONSA: image_sample_c_l v5, v[0:4],
+; NSA: image_sample_c_l v{{[0-9]+}}, v[0:4],
+; NSA: image_sample v{{[0-9]+}}, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -44,8 +47,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_nsa:
-; NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
-; NSA: image_sample v1, [v6, v7, v5],
+; NSA: image_sample_c_l v{{[0-9]+}}, [v1, v2, v3, v4, v0],
+; NSA: image_sample v{{[0-9]+}}, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_nsa_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %r2, float %s2, float %t2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -56,8 +59,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_nsa_contig:
-; NSA: image_sample_c_l v0, [v1, v2, v3, v4, v0],
-; NSA: image_sample v1, v[5:7],
+; NSA: image_sample_c_l v{{[0-9]+}}, [v1, v2, v3, v4, v0],
+; NSA: image_sample v{{[0-9]+}}, v[5:7],
 define amdgpu_ps <2 x float> @sample_nsa_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %lod, float %zcompare, float %s1, float %t1, float %r1, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -68,9 +71,10 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_contig:
-; GCN: image_sample_c_l v0, v[0:7],
-; NSA: image_sample v1, v[5:7],
-; NONSA: image_sample v1, v[5:7],
+; NSA: image_sample_c_l v{{[0-9]+}}, v[0:4],
+; NSA: image_sample v{{[0-9]+}}, v[5:7],
+; NONSA: image_sample_c_l v{{[0-9]+}}, v[0:4],
+; NONSA: image_sample v{{[0-9]+}}, v[5:7],
 define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %s2, float %t2, float %r2) {
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

@@ -23,22 +23,10 @@
 #undef MemoryFence
 #endif
 
-static unsigned __stdcall threadFuncSync(void *Arg) {
-  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
-  TI->UserFn(TI->UserData);
-  return 0;
-}
-
-static unsigned __stdcall threadFuncAsync(void *Arg) {
-  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
-  (*Info)();
-  return 0;
-}
-
-static void
-llvm_execute_on_thread_impl(unsigned (__stdcall *ThreadFunc)(void *), void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes,
-                            JoiningPolicy JP) {
+namespace llvm {
+HANDLE
+llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
+                            llvm::Optional<unsigned> StackSizeInBytes) {
   HANDLE hThread = (HANDLE)::_beginthreadex(
       NULL, StackSizeInBytes.getValueOr(0), ThreadFunc, Arg, 0, NULL);
 
@@ -46,15 +34,30 @@ llvm_execute_on_thread_impl(unsigned (__stdcall *ThreadFunc)(void *), void *Arg,
     ReportLastErrorFatal("_beginthreadex failed");
   }
 
-  if (JP == JoiningPolicy::Join) {
-    if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
-      ReportLastErrorFatal("WaitForSingleObject failed");
-    }
+  return hThread;
+}
+
+void llvm_thread_join_impl(HANDLE hThread) {
+  if (::WaitForSingleObject(hThread, INFINITE) == WAIT_FAILED) {
+    ReportLastErrorFatal("WaitForSingleObject failed");
   }
+}
+
+void llvm_thread_detach_impl(HANDLE hThread) {
   if (::CloseHandle(hThread) == FALSE) {
     ReportLastErrorFatal("CloseHandle failed");
   }
 }
+
+DWORD llvm_thread_get_id_impl(HANDLE hThread) {
+  return ::GetThreadId(hThread);
+}
+
+DWORD llvm_thread_get_current_id_impl() {
+  return ::GetCurrentThreadId();
+}
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
   return uint64_t(::GetCurrentThreadId());
@@ -195,14 +198,27 @@ static ArrayRef<ProcessorGroup> getProcessorGroups() {
     if (!IterateProcInfo(RelationProcessorCore, HandleProc))
       return std::vector<ProcessorGroup>();
 
-    // If there's an affinity mask set on one of the CPUs, then assume the user
-    // wants to constrain the current process to only a single CPU.
-    for (auto &G : Groups) {
-      if (G.UsableThreads != G.AllThreads) {
-        ProcessorGroup NewG{G};
+    // If there's an affinity mask set, assume the user wants to constrain the
+    // current process to only a single CPU group. On Windows, it is not
+    // possible for affinity masks to cross CPU group boundaries.
+    DWORD_PTR ProcessAffinityMask = 0, SystemAffinityMask = 0;
+    if (::GetProcessAffinityMask(GetCurrentProcess(), &ProcessAffinityMask,
+                                 &SystemAffinityMask) &&
+        ProcessAffinityMask != SystemAffinityMask) {
+      // We don't expect more that 4 CPU groups on Windows (256 processors).
+      USHORT GroupCount = 4;
+      USHORT GroupArray[4]{};
+      if (::GetProcessGroupAffinity(GetCurrentProcess(), &GroupCount,
+                                    GroupArray)) {
+        assert(GroupCount == 1 &&
+               "On startup, a program is expected to be assigned only to "
+               "one processor group!");
+        unsigned CurrentGroupID = GroupArray[0];
+        ProcessorGroup NewG{Groups[CurrentGroupID]};
+        NewG.Affinity = ProcessAffinityMask;
+        NewG.UsableThreads = countPopulation(ProcessAffinityMask);
         Groups.clear();
         Groups.push_back(NewG);
-        break;
       }
     }
 

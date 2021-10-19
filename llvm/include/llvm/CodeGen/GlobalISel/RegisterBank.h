@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_REGBANK_H
-#define LLVM_CODEGEN_GLOBALISEL_REGBANK_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_REGISTERBANK_H
+#define LLVM_CODEGEN_GLOBALISEL_REGISTERBANK_H
 
 #include "llvm/ADT/BitVector.h"
 

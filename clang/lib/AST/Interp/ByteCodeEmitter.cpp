@@ -11,6 +11,7 @@
 #include "Opcode.h"
 #include "Program.h"
 #include "clang/AST/DeclCXX.h"
+#include <type_traits>
 
 using namespace clang;
 using namespace clang::interp;
@@ -122,29 +123,48 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
   return false;
 }
 
+/// Helper to write bytecode and bail out if 32-bit offsets become invalid.
+/// Pointers will be automatically marshalled as 32-bit IDs.
+template <typename T>
+static std::enable_if_t<!std::is_pointer<T>::value, void>
+emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
+  size_t Size = sizeof(Val);
+  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+    Success = false;
+    return;
+  }
+
+  const char *Data = reinterpret_cast<const char *>(&Val);
+  Code.insert(Code.end(), Data, Data + Size);
+}
+
+template <typename T>
+static std::enable_if_t<std::is_pointer<T>::value, void>
+emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
+  size_t Size = sizeof(uint32_t);
+  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+    Success = false;
+    return;
+  }
+
+  uint32_t ID = P.getOrCreateNativePointer(Val);
+  const char *Data = reinterpret_cast<const char *>(&ID);
+  Code.insert(Code.end(), Data, Data + Size);
+}
+
 template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
   bool Success = true;
 
-  /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
-  auto emit = [this, &Success](const char *Data, size_t Size) {
-    if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
-      Success = false;
-      return;
-    }
-    Code.insert(Code.end(), Data, Data + Size);
-  };
-
   /// The opcode is followed by arguments. The source info is
   /// attached to the address after the opcode.
-  emit(reinterpret_cast<const char *>(&Op), sizeof(Opcode));
+  emit(P, Code, Op, Success);
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
   /// The initializer list forces the expression to be evaluated
   /// for each argument in the variadic template, in order.
-  (void)std::initializer_list<int>{
-      (emit(reinterpret_cast<const char *>(&Args), sizeof(Args)), 0)...};
+  (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
 
   return Success;
 }

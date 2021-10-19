@@ -7,11 +7,11 @@ define void @f(<16 x i8>* %out, <16 x i8> %in, i1 %flag) {
 ; CHECK-NEXT:    calll .L0$pb
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
 ; CHECK-NEXT:  .L0$pb:
-; CHECK-NEXT:    popl %eax
+; CHECK-NEXT:    popl %ecx
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    addl $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %ecx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; CHECK-NEXT:    notb %dl
 ; CHECK-NEXT:    andb $1, %dl
@@ -22,8 +22,8 @@ define void @f(<16 x i8>* %out, <16 x i8> %in, i1 %flag) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; CHECK-NEXT:    paddb %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm1
-; CHECK-NEXT:    pxor {{\.LCPI.*}}@GOTOFF(%eax), %xmm1
-; CHECK-NEXT:    movdqa %xmm1, (%ecx)
+; CHECK-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}@GOTOFF(%ecx), %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%eax)
 ; CHECK-NEXT:    retl
 entry:
   %0 = select i1 %flag, i8 0, i8 2

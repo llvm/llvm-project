@@ -15,10 +15,10 @@
 #define LLVM_LIB_TARGET_MSP430_MSP430TARGETMACHINE_H
 
 #include "MSP430Subtarget.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class StringRef;
 
 /// MSP430TargetMachine
 ///

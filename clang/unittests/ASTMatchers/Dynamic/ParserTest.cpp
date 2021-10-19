@@ -32,6 +32,17 @@ public:
     return M.getID().second;
   }
 
+  bool isBuilderMatcher(MatcherCtor) const override { return false; }
+
+  ASTNodeKind nodeMatcherType(MatcherCtor) const override { return {}; }
+
+  internal::MatcherDescriptorPtr
+  buildMatcherCtor(MatcherCtor, SourceRange NameRange,
+                   ArrayRef<ParserValue> Args,
+                   Diagnostics *Error) const override {
+    return internal::MatcherDescriptorPtr{nullptr};
+  }
+
   void parse(StringRef Code) {
     Diagnostics Error;
     VariantValue Value;
@@ -329,7 +340,7 @@ TEST(ParserTest, Errors) {
             "1:5: Invalid token <(> found when looking for a value.",
             ParseWithError("Foo(("));
   EXPECT_EQ("1:7: Expected end of code.", ParseWithError("expr()a"));
-  EXPECT_EQ("1:11: Malformed bind() expression.",
+  EXPECT_EQ("1:11: Period not followed by valid chained call.",
             ParseWithError("isArrow().biind"));
   EXPECT_EQ("1:15: Malformed bind() expression.",
             ParseWithError("isArrow().bind"));
@@ -340,6 +351,20 @@ TEST(ParserTest, Errors) {
   EXPECT_EQ("1:1: Error building matcher isArrow.\n"
             "1:1: Matcher does not support binding.",
             ParseWithError("isArrow().bind(\"foo\")"));
+  EXPECT_EQ("1:1: Error building matcher isArrow.\n"
+            "1:11: Matcher does not support with call.",
+            ParseWithError("isArrow().with"));
+  EXPECT_EQ(
+      "1:22: Error parsing matcher. Found token <EOF> while looking for '('.",
+      ParseWithError("mapAnyOf(ifStmt).with"));
+  EXPECT_EQ(
+      "1:22: Error parsing matcher. Found end-of-code while looking for ')'.",
+      ParseWithError("mapAnyOf(ifStmt).with("));
+  EXPECT_EQ("1:1: Failed to build matcher: mapAnyOf.",
+            ParseWithError("mapAnyOf()"));
+  EXPECT_EQ("1:1: Error parsing argument 1 for matcher mapAnyOf.\n1:1: Failed "
+            "to build matcher: mapAnyOf.",
+            ParseWithError("mapAnyOf(\"foo\")"));
   EXPECT_EQ("Input value has unresolved overloaded type: "
             "Matcher<DoStmt|ForStmt|WhileStmt|CXXForRangeStmt|FunctionDecl>",
             ParseMatcherWithError("hasBody(stmt())"));
@@ -354,8 +379,7 @@ TEST(ParserTest, Errors) {
             ParseMatcherWithError(R"query(decl(hasAttr("Final")))query"));
   EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
             "1:6: Error building matcher hasAttr.\n"
-            "1:14: Incorrect type for arg 1. (Expected = string) != (Actual = "
-            "String)",
+            "1:14: Value not found: unrelated",
             ParseMatcherWithError(R"query(decl(hasAttr("unrelated")))query"));
   EXPECT_EQ(
       "1:1: Error parsing argument 1 for matcher namedDecl.\n"
@@ -366,8 +390,7 @@ TEST(ParserTest, Errors) {
   EXPECT_EQ(
       "1:1: Error parsing argument 1 for matcher namedDecl.\n"
       "1:11: Error building matcher matchesName.\n"
-      "1:33: Incorrect type for arg 2. (Expected = string) != (Actual = "
-      "String)",
+      "1:33: Value not found: IgnoreCase & BasicRegex",
       ParseMatcherWithError(
           R"query(namedDecl(matchesName("[ABC]*", "IgnoreCase & BasicRegex")))query"));
   EXPECT_EQ(
@@ -472,7 +495,8 @@ decl()))matcher";
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, &NamedValues, &Error);
     EXPECT_FALSE(M.hasValue());
-    EXPECT_EQ("1:11: Malformed bind() expression.", Error.toStringFull());
+    EXPECT_EQ("1:11: Period not followed by valid chained call.",
+              Error.toStringFull());
   }
 
   {
@@ -517,6 +541,29 @@ TEST(ParserTest, CompletionRegistry) {
   ASSERT_EQ(1u, Comps.size());
   EXPECT_EQ("bind(\"", Comps[0].TypedText);
   EXPECT_EQ("bind", Comps[0].MatcherDecl);
+
+  Code = "mapAny";
+  Comps = Parser::completeExpression(Code, 6);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("Of(", Comps[0].TypedText);
+  EXPECT_EQ("Matcher<NestedNameSpecifierLoc|QualType|TypeLoc|...> "
+            "mapAnyOf(NestedNameSpecifierLoc|QualType|TypeLoc|"
+            "NestedNameSpecifier|Decl|Stmt|Type...)",
+            Comps[0].MatcherDecl);
+
+  Code = "mapAnyOf(ifStmt).";
+  Comps = Parser::completeExpression(Code, 17);
+  ASSERT_EQ(2u, Comps.size());
+  EXPECT_EQ("bind(\"", Comps[0].TypedText);
+  EXPECT_EQ("bind", Comps[0].MatcherDecl);
+  EXPECT_EQ("with(", Comps[1].TypedText);
+  EXPECT_EQ("with", Comps[1].MatcherDecl);
+
+  Code = "mapAnyOf(ifS";
+  Comps = Parser::completeExpression(Code, 12);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("tmt", Comps[0].TypedText);
+  EXPECT_EQ("ifStmt", Comps[0].MatcherDecl);
 }
 
 TEST(ParserTest, CompletionNamedValues) {

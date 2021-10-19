@@ -45,6 +45,8 @@
 
 namespace llvm {
 
+template <class GraphType> struct GraphTraits;
+
 namespace yaml {
 
 template <typename T> struct MappingTraits;
@@ -223,7 +225,14 @@ struct ValueInfo {
     return RefAndFlags.getPointer();
   }
 
-  bool isDSOLocal() const;
+  /// Returns the most constraining visibility among summaries. The
+  /// visibilities, ordered from least to most constraining, are: default,
+  /// protected and hidden.
+  GlobalValue::VisibilityTypes getELFVisibility() const;
+
+  /// Checks if all summaries are DSO local (have the flag set). When DSOLocal
+  /// propagation has been done, set the parameter to enable fast check.
+  bool isDSOLocal(bool WithDSOLocalPropagation = false) const;
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   bool canAutoHide() const;
@@ -294,6 +303,9 @@ public:
     /// types based on global summary-based analysis.
     unsigned Linkage : 4;
 
+    /// Indicates the visibility.
+    unsigned Visibility : 2;
+
     /// Indicate if the global value cannot be imported (e.g. it cannot
     /// be renamed or references something that can't be renamed).
     unsigned NotEligibleToImport : 1;
@@ -322,10 +334,12 @@ public:
 
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
+                     GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
                      bool CanAutoHide)
-        : Linkage(Linkage), NotEligibleToImport(NotEligibleToImport),
-          Live(Live), DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
+        : Linkage(Linkage), Visibility(Visibility),
+          NotEligibleToImport(NotEligibleToImport), Live(Live),
+          DSOLocal(IsLocal), CanAutoHide(CanAutoHide) {}
   };
 
 private:
@@ -409,6 +423,13 @@ public:
   void setCanAutoHide(bool CanAutoHide) { Flags.CanAutoHide = CanAutoHide; }
 
   bool canAutoHide() const { return Flags.CanAutoHide; }
+
+  GlobalValue::VisibilityTypes getVisibility() const {
+    return (GlobalValue::VisibilityTypes)Flags.Visibility;
+  }
+  void setVisibility(GlobalValue::VisibilityTypes Vis) {
+    Flags.Visibility = (unsigned)Vis;
+  }
 
   /// Flag that this global value cannot be imported.
   void setNotEligibleToImport() { Flags.NotEligibleToImport = true; }
@@ -551,6 +572,50 @@ public:
     unsigned NoInline : 1;
     // Indicate if function should be always inlined.
     unsigned AlwaysInline : 1;
+    // Indicate if function never raises an exception. Can be modified during
+    // thinlink function attribute propagation
+    unsigned NoUnwind : 1;
+    // Indicate if function contains instructions that mayThrow
+    unsigned MayThrow : 1;
+
+    // If there are calls to unknown targets (e.g. indirect)
+    unsigned HasUnknownCall : 1;
+
+    FFlags &operator&=(const FFlags &RHS) {
+      this->ReadNone &= RHS.ReadNone;
+      this->ReadOnly &= RHS.ReadOnly;
+      this->NoRecurse &= RHS.NoRecurse;
+      this->ReturnDoesNotAlias &= RHS.ReturnDoesNotAlias;
+      this->NoInline &= RHS.NoInline;
+      this->AlwaysInline &= RHS.AlwaysInline;
+      this->NoUnwind &= RHS.NoUnwind;
+      this->MayThrow &= RHS.MayThrow;
+      this->HasUnknownCall &= RHS.HasUnknownCall;
+      return *this;
+    }
+
+    bool anyFlagSet() {
+      return this->ReadNone | this->ReadOnly | this->NoRecurse |
+             this->ReturnDoesNotAlias | this->NoInline | this->AlwaysInline |
+             this->NoUnwind | this->MayThrow | this->HasUnknownCall;
+    }
+
+    operator std::string() {
+      std::string Output;
+      raw_string_ostream OS(Output);
+      OS << "funcFlags: (";
+      OS << "readNone: " << this->ReadNone;
+      OS << ", readOnly: " << this->ReadOnly;
+      OS << ", noRecurse: " << this->NoRecurse;
+      OS << ", returnDoesNotAlias: " << this->ReturnDoesNotAlias;
+      OS << ", noInline: " << this->NoInline;
+      OS << ", alwaysInline: " << this->AlwaysInline;
+      OS << ", noUnwind: " << this->NoUnwind;
+      OS << ", mayThrow: " << this->MayThrow;
+      OS << ", hasUnknownCall: " << this->HasUnknownCall;
+      OS << ")";
+      return OS.str();
+    }
   };
 
   /// Describes the uses of a parameter by the function.
@@ -594,9 +659,10 @@ public:
     return FunctionSummary(
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
+            GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
             /*CanAutoHide=*/false),
-        /*InsCount=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
+        /*NumInsts=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
         std::vector<ValueInfo>(), std::move(Edges),
         std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
@@ -666,6 +732,10 @@ public:
   /// Get function summary flags.
   FFlags fflags() const { return FunFlags; }
 
+  void setNoRecurse() { FunFlags.NoRecurse = true; }
+
+  void setNoUnwind() { FunFlags.NoUnwind = true; }
+
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
 
@@ -677,6 +747,8 @@ public:
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
+
+  std::vector<EdgeTy> &mutableCalls() { return CallGraphEdgeList; }
 
   void addCall(EdgeTy E) { CallGraphEdgeList.push_back(E); }
 
@@ -1037,6 +1109,10 @@ private:
   /// read/write only.
   bool WithAttributePropagation = false;
 
+  /// Indicates that summary-based DSOLocal propagation has run and the flag in
+  /// every summary of a GV is synchronized.
+  bool WithDSOLocalPropagation = false;
+
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
@@ -1191,6 +1267,9 @@ public:
   void setWithAttributePropagation() {
     WithAttributePropagation = true;
   }
+
+  bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
+  void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
 
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();
@@ -1495,7 +1574,7 @@ public:
   /// Print out strongly connected components for debugging.
   void dumpSCCs(raw_ostream &OS);
 
-  /// Analyze index and detect unmodified globals
+  /// Do the access attribute and DSOLocal propagation in combined index.
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.

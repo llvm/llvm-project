@@ -17,7 +17,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -113,7 +113,7 @@ static const unsigned ASRRegDecoderTable[] = {
 static const unsigned PRRegDecoderTable[] = {
   SP::TPC, SP::TNPC, SP::TSTATE, SP::TT, SP::TICK, SP::TBA, SP::PSTATE,
   SP::TL, SP::PIL, SP::CWP, SP::CANSAVE, SP::CANRESTORE, SP::CLEANWIN,
-  SP::OTHERWIN, SP::WSTATE
+  SP::OTHERWIN, SP::WSTATE, SP::PC
 };
 
 static const uint16_t IntPairDecoderTable[] = {

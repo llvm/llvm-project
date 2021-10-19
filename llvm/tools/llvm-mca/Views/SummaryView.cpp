@@ -1,4 +1,4 @@
-//===--------------------- SummaryView.cpp -------------------*- C++ -*-===//
+//===--------------------- SummaryView.cpp ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,8 @@ namespace mca {
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width)
-    : SM(Model), Source(S), DispatchWidth(Width?Width: Model.IssueWidth),
-      LastInstructionIdx(0),
-      TotalCycles(0), NumMicroOps(0),
+    : SM(Model), Source(S), DispatchWidth(Width ? Width : Model.IssueWidth),
+      LastInstructionIdx(0), TotalCycles(0), NumMicroOps(0),
       ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
       ProcResourceMasks(Model.getNumProcResourceKinds()),
       ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0) {
@@ -95,6 +94,20 @@ void SummaryView::collectData(DisplayValues &DV) const {
   DV.IPC = (double)DV.TotalInstructions / TotalCycles;
   DV.BlockRThroughput = computeBlockRThroughput(SM, DispatchWidth, NumMicroOps,
                                                 ProcResourceUsage);
+}
+
+json::Value SummaryView::toJSON() const {
+  DisplayValues DV;
+  collectData(DV);
+  json::Object JO({{"Iterations", DV.Iterations},
+                   {"Instructions", DV.TotalInstructions},
+                   {"TotalCycles", DV.TotalCycles},
+                   {"TotaluOps", DV.TotalUOps},
+                   {"DispatchWidth", DV.DispatchWidth},
+                   {"uOpsPerCycle", DV.UOpsPerCycle},
+                   {"IPC", DV.IPC},
+                   {"BlockRThroughput", DV.BlockRThroughput}});
+  return JO;
 }
 } // namespace mca.
 } // namespace llvm

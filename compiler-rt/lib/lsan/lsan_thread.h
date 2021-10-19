@@ -32,6 +32,7 @@ class ThreadContextLsanBase : public ThreadContextBase {
                           void *onstarted_arg);
 
  protected:
+  ~ThreadContextLsanBase() {}
   uptr stack_begin_ = 0;
   uptr stack_end_ = 0;
   uptr cache_begin_ = 0;
@@ -46,6 +47,7 @@ void InitializeMainThread();
 
 u32 ThreadCreate(u32 tid, uptr uid, bool detached, void *arg = nullptr);
 void ThreadFinish();
+void ThreadDetach(u32 tid);
 void ThreadJoin(u32 tid);
 u32 ThreadTid(uptr uid);
 

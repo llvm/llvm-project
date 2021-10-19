@@ -10,24 +10,12 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-def python_leaky_fd_version(test):
-    import sys
-    # Python random module leaks file descriptors on some versions.
-    if sys.version_info >= (2, 7, 8) and sys.version_info < (2, 7, 10):
-        return "Python random module leaks file descriptors in this python version"
-    return None
-
-
 class AvoidsFdLeakTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
     # The check for descriptor leakage needs to be implemented differently
     # here.
     @skipIfWindows
@@ -36,10 +24,6 @@ class AvoidsFdLeakTestCase(TestBase):
     def test_fd_leak_basic(self):
         self.do_test([])
 
-    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
     # The check for descriptor leakage needs to be implemented differently
     # here.
     @skipIfWindows
@@ -61,17 +45,13 @@ class AvoidsFdLeakTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             "Process should have exited.")
-        self.assertTrue(
-            process.GetExitStatus() == 0,
+        self.assertEqual(
+            process.GetExitStatus(), 0,
             "Process returned non-zero status. Were incorrect file descriptors passed?")
 
-    @expectedFailureIfFn(python_leaky_fd_version, "bugs.freebsd.org/197376")
-    @expectedFailureAll(
-        oslist=['freebsd'],
-        bugnumber="llvm.org/pr25624 still failing with Python 2.7.10")
     # The check for descriptor leakage needs to be implemented differently
     # here.
     @skipIfWindows
@@ -89,8 +69,8 @@ class AvoidsFdLeakTestCase(TestBase):
         process1 = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process1, PROCESS_IS_VALID)
-        self.assertTrue(
-            process1.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process1.GetState(), lldb.eStateStopped,
             "Process should have been stopped.")
 
         target2 = self.dbg.CreateTarget(exe)
@@ -98,9 +78,9 @@ class AvoidsFdLeakTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process2, PROCESS_IS_VALID)
 
-        self.assertTrue(
-            process2.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process2.GetState(), lldb.eStateExited,
             "Process should have exited.")
-        self.assertTrue(
-            process2.GetExitStatus() == 0,
+        self.assertEqual(
+            process2.GetExitStatus(), 0,
             "Process returned non-zero status. Were incorrect file descriptors passed?")

@@ -4,8 +4,8 @@
 define <8 x float> @transpose(<8 x float> %a) {
 ; RM-LABEL: @transpose(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> undef, float [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[SPLIT1]], i64 0
@@ -37,14 +37,14 @@ declare <8 x float> @llvm.matrix.transpose(<8 x float>, i32, i32)
 define <8 x float> @transpose_single_column(<8 x float> %a) {
 ; RM-LABEL: @transpose_single_column(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> undef, <1 x i32> zeroinitializer
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 1>
-; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 2>
-; RM-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 3>
-; RM-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 4>
-; RM-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 5>
-; RM-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 6>
-; RM-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x float> [[A]], <8 x float> undef, <1 x i32> <i32 7>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x float> [[A:%.*]], <8 x float> poison, <1 x i32> zeroinitializer
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 1>
+; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 2>
+; RM-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 3>
+; RM-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 4>
+; RM-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 5>
+; RM-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 6>
+; RM-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x float> [[A]], <8 x float> poison, <1 x i32> <i32 7>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <1 x float> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <8 x float> undef, float [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <1 x float> [[SPLIT1]], i64 0
@@ -73,9 +73,9 @@ declare <12 x float> @llvm.matrix.transpose.v12f32(<12 x float>, i32, i32)
 define <12 x float> @transpose_float_3x4(<12 x float> %a) {
 ; RM-LABEL: @transpose_float_3x4(
 ; RM-NEXT:  entry:
-; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <12 x float> [[A:%.*]], <12 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <12 x float> [[A]], <12 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <12 x float> [[A]], <12 x float> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; RM-NEXT:    [[SPLIT:%.*]] = shufflevector <12 x float> [[A:%.*]], <12 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; RM-NEXT:    [[SPLIT1:%.*]] = shufflevector <12 x float> [[A]], <12 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; RM-NEXT:    [[SPLIT2:%.*]] = shufflevector <12 x float> [[A]], <12 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
 ; RM-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[SPLIT]], i64 0
 ; RM-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> undef, float [[TMP0]], i64 0
 ; RM-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[SPLIT1]], i64 0

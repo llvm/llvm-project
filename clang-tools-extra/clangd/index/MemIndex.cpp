@@ -109,6 +109,13 @@ void MemIndex::relations(
   }
 }
 
+llvm::unique_function<IndexContents(llvm::StringRef) const>
+MemIndex::indexedFiles() const {
+  return [this](llvm::StringRef FileURI) {
+    return Files.contains(FileURI) ? IdxContents : IndexContents::None;
+  };
+}
+
 size_t MemIndex::estimateMemoryUsage() const {
   return Index.getMemorySize() + Refs.getMemorySize() +
          Relations.getMemorySize() + BackingDataSize;

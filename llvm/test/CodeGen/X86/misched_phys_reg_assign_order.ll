@@ -27,10 +27,10 @@ define void @g() #0 {
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    lock cmpxchg8b (%esi)
 ; CHECK-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %k.end
-; CHECK-NEXT:  .LBB0_1: # %.
-; CHECK-NEXT:    calll m
+; CHECK-NEXT:    je .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %.
+; CHECK-NEXT:    calll m@PLT
+; CHECK-NEXT:  .LBB0_2: # %k.end
 entry:
   %p = load i8*, i8** @f
   %v1 = load atomic i8, i8* %p monotonic, align 1

@@ -56,16 +56,16 @@ function(add_loader_object name)
   )
 endfunction()
 
-if(NOT (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_MACHINE}))
-  message(STATUS "Skipping loader for target machine ${LIBC_TARGET_MACHINE}")
+if(NOT (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}))
+  message(STATUS "Skipping loader for target architecture ${LIBC_TARGET_ARCHITECTURE}")
   return()
 endif()
 
-add_subdirectory(${LIBC_TARGET_MACHINE})
+add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 
 add_loader_object(
   crt1
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_MACHINE}.crt1
+    .${LIBC_TARGET_ARCHITECTURE}.crt1
 )

@@ -5,40 +5,54 @@ float function_scope(float a) {
   return a;
 }
 
+// Ok, at namespace scope.
+namespace foo {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Ok, within a language linkage specification.
+extern "C" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
+// Same.
+extern "C++" {
+#pragma float_control(push)
+#pragma float_control(pop)
+}
+
 #ifdef CHECK_ERROR
+// Ok at file scope.
 #pragma float_control(push)
 #pragma float_control(pop)
 #pragma float_control(precise, on, push)
 void check_stack() {
-#pragma float_control(push)                   // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(pop)                    // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(precise, on, push)      // expected-error {{can only appear at file scope or namespace scope}}
-#pragma float_control(except, on, push)       // expected-error {{can only appear at file scope or namespace scope}}
+  // Not okay within a function declaration.
+#pragma float_control(push)                   // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(pop)                    // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(precise, on, push)      // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
+#pragma float_control(except, on, push)       // expected-error {{can only appear at file or namespace scope or within a language linkage specification}}
 #pragma float_control(except, on, push, junk) // expected-error {{float_control is malformed}}
   return;
 }
 #endif
 
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fdenormal-fp-math=preserve-sign,preserve-sign -ftrapping-math -fsyntax-only %s -DDEFAULT -verify
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fdenormal-fp-math=preserve-sign,preserve-sign -fsyntax-only %s -DDEFAULT -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=fast -DPRECISE -verify
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ftrapping-math -ffp-contract=off -frounding-math -ffp-exception-behavior=strict -DSTRICT -verify
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=off -frounding-math -ffp-exception-behavior=strict -DSTRICT -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -menable-no-infs -menable-no-nans -menable-unsafe-fp-math -fno-signed-zeros -mreassociate -freciprocal-math -ffp-contract=fast -ffast-math -ffinite-math-only -fsyntax-only %s -DFAST -verify
 double a = 0.0;
 double b = 1.0;
 
-//FIXME At some point this warning will be removed, until then
-//      document the warning
-#ifdef FAST
-// expected-warning@+1{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
-#pragma STDC FENV_ACCESS ON
-#else
-#pragma STDC FENV_ACCESS ON // expected-warning{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
-#endif
 #ifdef STRICT
 #pragma float_control(precise, off) // expected-error {{'#pragma float_control(precise, off)' is illegal when except is enabled}}
 #else
-// Currently FENV_ACCESS cannot be enabled by pragma, skip error check
-#pragma float_control(precise, off) // not-expected-error {{'#pragma float_control(precise, off)' is illegal when fenv_access is enabled}}
+#ifndef FAST
+#pragma STDC FENV_ACCESS ON
+#pragma float_control(precise, off) // expected-error {{'#pragma float_control(precise, off)' is illegal when except is enabled}}
+#endif
 #endif
 
 #pragma float_control(precise, on)

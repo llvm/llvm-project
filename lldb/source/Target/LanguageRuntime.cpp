@@ -216,8 +216,6 @@ LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
 
 LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 
-LanguageRuntime::~LanguageRuntime() = default;
-
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,
                                           bool throw_bp) {
@@ -259,6 +257,25 @@ BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
   }
 
   return exc_breakpt_sp;
+}
+
+UnwindPlanSP
+LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
+                                      bool &behaves_like_zeroth_frame) {
+  ProcessSP process_sp = thread.GetProcess();
+  if (!process_sp.get())
+    return UnwindPlanSP();
+  if (process_sp->GetDisableLangRuntimeUnwindPlans() == true)
+    return UnwindPlanSP();
+  for (const lldb::LanguageType lang_type : Language::GetSupportedLanguages()) {
+    if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(lang_type)) {
+      UnwindPlanSP plan_sp = runtime->GetRuntimeUnwindPlan(
+          process_sp, regctx, behaves_like_zeroth_frame);
+      if (plan_sp.get())
+        return plan_sp;
+    }
+  }
+  return UnwindPlanSP();
 }
 
 void LanguageRuntime::InitializeCommands(CommandObject *parent) {

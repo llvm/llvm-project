@@ -47,6 +47,7 @@ SEMANTIC_DIAGOPT(IgnoreWarnings, 1, 0)   /// -w
 DIAGOPT(NoRewriteMacros, 1, 0)  /// -Wno-rewrite-macros
 DIAGOPT(Pedantic, 1, 0)         /// -pedantic
 DIAGOPT(PedanticErrors, 1, 0)   /// -pedantic-errors
+DIAGOPT(ShowLine, 1, 1)         /// Show line number on diagnostics.
 DIAGOPT(ShowColumn, 1, 1)       /// Show column number on diagnostics.
 DIAGOPT(ShowLocation, 1, 1)     /// Show source location information.
 DIAGOPT(ShowLevel, 1, 1)        /// Show diagnostic level.
@@ -77,7 +78,6 @@ ENUM_DIAGOPT(VerifyIgnoreUnexpected, DiagnosticLevelMask, 4,
                                         /// -verify.
 DIAGOPT(ElideType, 1, 0)         /// Elide identical types in template diffing
 DIAGOPT(ShowTemplateTree, 1, 0)  /// Print a template tree when diffing
-DIAGOPT(CLFallbackMode, 1, 0)    /// Format for clang-cl fallback mode
 
 VALUE_DIAGOPT(ErrorLimit, 32, 0)           /// Limit # errors emitted.
 /// Limit depth of macro expansion backtrace.

@@ -41,13 +41,13 @@ entry:
   %argmem = alloca inalloca <{ %struct.Foo }>, align 4
   %0 = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %argmem, i32 0, i32 0
   %call = call x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* %0)
-  call void @h(<{ %struct.Foo }>* inalloca %argmem)
+  call void @h(<{ %struct.Foo }>* inalloca(<{ %struct.Foo }>) %argmem)
   call void @llvm.stackrestore(i8* %inalloca.save)
   ret void
 }
 
 ; Function Attrs: alwaysinline inlinehint nounwind
-define internal void @h(<{ %struct.Foo }>* inalloca) alwaysinline {
+define internal void @h(<{ %struct.Foo }>* inalloca(<{ %struct.Foo }>)) alwaysinline {
 entry:
   %o = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %0, i32 0, i32 0
   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo* %o)

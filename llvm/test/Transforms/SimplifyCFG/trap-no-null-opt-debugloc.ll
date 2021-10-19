@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 define void @foo() nounwind ssp #0 !dbg !0 {
 ; CHECK: store i32 42, i32* null
 ; CHECK-NOT: call void @llvm.trap()

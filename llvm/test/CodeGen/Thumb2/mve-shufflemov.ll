@@ -35,23 +35,11 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @shuffle_i16_76543210(<8 x i16> %s1, <8 x i16> %s2) {
 ; CHECK-LABEL: shuffle_i16_76543210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-NEXT:    vmov.16 q0[3], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[1]
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vrev64.16 q1, q0
+; CHECK-NEXT:    vmov.f32 s0, s6
+; CHECK-NEXT:    vmov.f32 s1, s7
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %s1, <8 x i16> %s2, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -188,39 +176,11 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @shuffle_i8_fedcba9876543210(<16 x i8> %s1, <16 x i8> %s2) {
 ; CHECK-LABEL: shuffle_i8_fedcba9876543210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q1, q0
-; CHECK-NEXT:    vmov.u8 r0, q0[15]
-; CHECK-NEXT:    vmov.8 q0[0], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[14]
-; CHECK-NEXT:    vmov.8 q0[1], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[13]
-; CHECK-NEXT:    vmov.8 q0[2], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[12]
-; CHECK-NEXT:    vmov.8 q0[3], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[11]
-; CHECK-NEXT:    vmov.8 q0[4], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[10]
-; CHECK-NEXT:    vmov.8 q0[5], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[9]
-; CHECK-NEXT:    vmov.8 q0[6], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[8]
-; CHECK-NEXT:    vmov.8 q0[7], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[7]
-; CHECK-NEXT:    vmov.8 q0[8], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[6]
-; CHECK-NEXT:    vmov.8 q0[9], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[5]
-; CHECK-NEXT:    vmov.8 q0[10], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[4]
-; CHECK-NEXT:    vmov.8 q0[11], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[3]
-; CHECK-NEXT:    vmov.8 q0[12], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[2]
-; CHECK-NEXT:    vmov.8 q0[13], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[1]
-; CHECK-NEXT:    vmov.8 q0[14], r0
-; CHECK-NEXT:    vmov.u8 r0, q1[0]
-; CHECK-NEXT:    vmov.8 q0[15], r0
+; CHECK-NEXT:    vrev64.8 q1, q0
+; CHECK-NEXT:    vmov.f32 s0, s6
+; CHECK-NEXT:    vmov.f32 s1, s7
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %s1, <16 x i8> %s2, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -346,27 +306,11 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @shuffle_f16_76543210(<8 x half> %s1, <8 x half> %s2) {
 ; CHECK-LABEL: shuffle_f16_76543210:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmovx.f16 s4, s3
-; CHECK-NEXT:    vmov r0, s3
-; CHECK-NEXT:    vmov r1, s4
-; CHECK-NEXT:    vmovx.f16 s8, s2
-; CHECK-NEXT:    vmov.16 q1[0], r1
-; CHECK-NEXT:    vmov.16 q1[1], r0
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.16 q1[2], r0
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    vmovx.f16 s8, s1
-; CHECK-NEXT:    vmov.16 q1[3], r0
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmovx.f16 s8, s0
-; CHECK-NEXT:    vmov.16 q1[4], r0
-; CHECK-NEXT:    vmov r0, s1
-; CHECK-NEXT:    vmov.16 q1[5], r0
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.16 q1[6], r0
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.16 q1[7], r0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vrev64.16 q1, q0
+; CHECK-NEXT:    vmov.f32 s0, s6
+; CHECK-NEXT:    vmov.f32 s1, s7
+; CHECK-NEXT:    vmov.f32 s2, s4
+; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x half> %s1, <8 x half> %s2, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

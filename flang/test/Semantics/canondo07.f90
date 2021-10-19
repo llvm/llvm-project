@@ -1,7 +1,7 @@
 ! Error test -- DO loop uses obsolete loop termination statement
 ! See R1131 and C1131
 
-! RUN: %f18 -funparse-with-symbols -Mstandard %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols -pedantic %s 2>&1 | FileCheck %s
 ! CHECK: A DO loop should terminate with an END DO or CONTINUE
 
 program endDo

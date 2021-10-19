@@ -75,8 +75,7 @@ class PPCBoolRetToInt : public FunctionPass {
     WorkList.push_back(V);
     Defs.insert(V);
     while (!WorkList.empty()) {
-      Value *Curr = WorkList.back();
-      WorkList.pop_back();
+      Value *Curr = WorkList.pop_back_val();
       auto *CurrUser = dyn_cast<User>(Curr);
       // Operands of CallInst/Constant are skipped because they may not be Bool
       // type. For CallInst, their positions are defined by ABI.

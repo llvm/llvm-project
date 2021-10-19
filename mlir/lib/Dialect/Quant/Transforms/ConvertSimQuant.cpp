@@ -11,9 +11,8 @@
 #include "mlir/Dialect/Quant/Passes.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::quant;
@@ -89,9 +88,9 @@ public:
   QuantizedType convertFakeQuantAttrsToType(ConstFakeQuant fqOp,
                                             Type expressedType) const {
     return fakeQuantAttrsToType(
-        fqOp.getLoc(), fqOp.num_bits().getSExtValue(),
-        fqOp.min().convertToFloat(), fqOp.max().convertToFloat(),
-        fqOp.narrow_range(), expressedType, fqOp.is_signed());
+        fqOp.getLoc(), fqOp.num_bits(), fqOp.min().convertToFloat(),
+        fqOp.max().convertToFloat(), fqOp.narrow_range(), expressedType,
+        fqOp.is_signed());
   }
 };
 
@@ -115,9 +114,8 @@ public:
     for (auto m : fqOp.max())
       max.push_back(m.cast<FloatAttr>().getValueAsDouble());
 
-    return fakeQuantAttrsToType(fqOp.getLoc(), fqOp.num_bits().getSExtValue(),
-                                fqOp.axis().getSExtValue(), min, max,
-                                fqOp.narrow_range(), expressedType,
+    return fakeQuantAttrsToType(fqOp.getLoc(), fqOp.num_bits(), fqOp.axis(),
+                                min, max, fqOp.narrow_range(), expressedType,
                                 fqOp.is_signed());
   }
 };
@@ -126,12 +124,12 @@ public:
 
 void ConvertSimulatedQuantPass::runOnFunction() {
   bool hadFailure = false;
-  OwningRewritePatternList patterns;
   auto func = getFunction();
+  RewritePatternSet patterns(func.getContext());
   auto ctx = func.getContext();
-  patterns.insert<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
+  patterns.add<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
       ctx, &hadFailure);
-  applyPatternsAndFoldGreedily(func, patterns);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   if (hadFailure)
     signalPassFailure();
 }

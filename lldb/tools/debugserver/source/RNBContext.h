@@ -30,24 +30,18 @@ public:
     event_read_packet_available = 0x020,
     event_read_thread_running = 0x040, // Sticky
     event_read_thread_exiting = 0x080,
-    event_darwin_log_data_available = 0x100,
 
     normal_event_bits = event_proc_state_changed | event_proc_thread_exiting |
                         event_proc_stdio_available | event_proc_profile_data |
                         event_read_packet_available |
-                        event_read_thread_exiting |
-                        event_darwin_log_data_available,
+                        event_read_thread_exiting ,
 
     sticky_event_bits = event_proc_thread_running | event_read_thread_running,
 
     all_event_bits = sticky_event_bits | normal_event_bits
   } event_t;
   // Constructors and Destructors
-  RNBContext()
-      : m_pid(INVALID_NUB_PROCESS), m_pid_stop_count(0),
-        m_events(0, all_event_bits), m_pid_pthread(), m_launch_status(),
-        m_arg_vec(), m_env_vec(), m_detach_on_error(false) {}
-
+  RNBContext() = default;
   virtual ~RNBContext();
 
   nub_process_t ProcessID() const { return m_pid; }
@@ -124,25 +118,33 @@ public:
   void SetDetachOnError(bool detach) { m_detach_on_error = detach; }
   bool GetDetachOnError() { return m_detach_on_error; }
 
+  void SetUnmaskSignals(bool unmask_signals) {
+    m_unmask_signals = unmask_signals;
+  }
+  bool GetUnmaskSignals() { return m_unmask_signals; }
+
 protected:
   // Classes that inherit from RNBContext can see and modify these
-  nub_process_t m_pid;
+  nub_process_t m_pid = INVALID_NUB_PROCESS;
   std::string m_stdin;
   std::string m_stdout;
   std::string m_stderr;
   std::string m_working_dir;
-  nub_size_t m_pid_stop_count;
-  PThreadEvent m_events; // Threaded events that we can wait for
+  nub_size_t m_pid_stop_count = 0;
+  /// Threaded events that we can wait for.
+  PThreadEvent m_events{0, all_event_bits};
   pthread_t m_pid_pthread;
-  nub_launch_flavor_t m_launch_flavor; // How to launch our inferior process
-  DNBError
-      m_launch_status; // This holds the status from the last launch attempt.
+  /// How to launch our inferior process.
+  nub_launch_flavor_t m_launch_flavor = eLaunchFlavorDefault;
+  /// This holds the status from the last launch attempt.
+  DNBError m_launch_status;
   std::vector<std::string> m_arg_vec;
-  std::vector<std::string>
-      m_env_vec; // This will be unparsed - entries FOO=value
+  /// This will be unparsed entries FOO=value
+  std::vector<std::string> m_env_vec;
   std::string m_working_directory;
   std::string m_process_event;
-  bool m_detach_on_error;
+  bool m_detach_on_error = false;
+  bool m_unmask_signals = false;
 
   void StartProcessStatusThread();
   void StopProcessStatusThread();

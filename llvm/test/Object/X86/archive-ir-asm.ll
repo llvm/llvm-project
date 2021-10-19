@@ -1,7 +1,7 @@
 ; RUN: llvm-as %s -o=%t1
 ; RUN: rm -f %t2
 ; RUN: llvm-ar rcs %t2 %t1
-; RUN: llvm-nm -M %t2 | FileCheck %s
+; RUN: llvm-nm --print-armap %t2 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

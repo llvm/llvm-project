@@ -18,8 +18,9 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: movl $16
 ; CHECK-O0: malloc
-; CHECK-O0: movb $1, 8(%rax)
 ; CHECK-O0: movq %{{.*}}, %r12
+; CHECK-O0: movb $1, 8(%rax)
+
 entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
@@ -121,19 +122,17 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE: ret
 
 ; CHECK-O0-LABEL: foo_if:
-; CHECK-O0: cmpl $0
 ; spill to stack
 ; CHECK-O0: movq %r12, {{.*}}(%rsp)
+; CHECK-O0: cmpl $0
 ; CHECK-O0: je
 ; CHECK-O0: movl $16,
 ; CHECK-O0: malloc
-; CHECK-O0: movq %rax, [[ID:%[a-z]+]]
+; CHECK-O0: movq %rax, %r12
 ; CHECK-O0-DAG: movb $1, 8(%rax)
-; CHECK-O0-DAG: movq [[ID]], %r12
 ; CHECK-O0: ret
 ; reload from stack
-; CHECK-O0: movq {{.*}}(%rsp), [[REG:%[a-z]+]]
-; CHECK-O0: movq [[REG]], %r12
+; CHECK-O0: movq {{.*}}(%rsp), %r12
 ; CHECK-O0: ret
 entry:
   %cond = icmp ne i32 %cc, 0
@@ -177,8 +176,7 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: movb $1, 8([[ID]])
 ; CHECK-O0: jbe
 ; reload from stack
-; CHECK-O0: movq {{.*}}(%rsp), [[REG:%[a-z0-9]+]]
-; CHECK-O0: movq [[REG]], %r12
+; CHECK-O0: movq {{.*}}(%rsp), %r12
 ; CHECK-O0: ret
 entry:
   br label %bb_loop
@@ -206,7 +204,7 @@ bb_end:
 
 ; "foo_sret" is a function that takes a swifterror parameter, it also has a sret
 ; parameter.
-define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
+define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
 ; CHECK-APPLE: movq %rdi, %{{.*}}
 ; CHECK-APPLE: movl $16, %edi
@@ -218,16 +216,15 @@ define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swi
 ; CHECK-APPLE-NOT: x19
 
 ; CHECK-O0-LABEL: foo_sret:
-; CHECK-O0: movl $16,
 ; spill sret to stack
 ; CHECK-O0: movq %rdi,
-; CHECK-O0: movq {{.*}}, %rdi
+; CHECK-O0: movl $16,
 ; CHECK-O0: malloc
-; CHECK-O0: movb $1, 8(%rax)
-; CHECK-O0: movl %{{.*}}, 4(%{{.*}})
-; CHECK-O0: movq %{{.*}}, %r12
 ; reload sret from stack
 ; CHECK-O0: movq {{.*}}(%rsp), %rax
+; CHECK-O0: movq %{{.*}}, %r12
+; CHECK-O0: movb $1, 8(%rcx)
+; CHECK-O0: movl %{{.*}}, 4(%{{.*}})
 ; CHECK-O0: ret
 entry:
   %call = call i8* @malloc(i64 16)
@@ -256,8 +253,8 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-LABEL: caller3:
 ; CHECK-O0: xorl
 ; CHECK-O0: movl {{.*}}, %r12d
+; CHECK-O0: leaq {{.*}}, %rdi
 ; CHECK-O0: movl $1, %esi
-; CHECK-O0: movq {{.*}}, %rdi
 ; CHECK-O0: callq {{.*}}foo_sret
 ; CHECK-O0: movq %r12,
 ; CHECK-O0: cmpq $0
@@ -272,7 +269,7 @@ entry:
   %s = alloca %struct.S, align 8
   %error_ptr_ref = alloca swifterror %swift_error*
   store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @foo_sret(%struct.S* sret %s, i32 1, %swift_error** swifterror %error_ptr_ref)
+  call void @foo_sret(%struct.S* sret(%struct.S) %s, i32 1, %swift_error** swifterror %error_ptr_ref)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
   %tmp = bitcast %swift_error* %error_from_foo to i8*
@@ -387,8 +384,9 @@ define swiftcc float @foo_swiftcc(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo_swiftcc:
 ; CHECK-O0: movl $16
 ; CHECK-O0: malloc
-; CHECK-O0: movb $1, 8(%rax)
 ; CHECK-O0: movq %{{.*}}, %r12
+; CHECK-O0: movb $1, 8(%rax)
+
 entry:
   %call = call i8* @malloc(i64 16)
   %call.0 = bitcast i8* %call to %swift_error*
@@ -421,33 +419,30 @@ entry:
 
 define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-APPLE-LABEL: conditionally_forward_swifterror:
-; CHECK-APPLE:  pushq %rax
 ; CHECK-APPLE:	testl %edi, %edi
 ; CHECK-APPLE:  je
 
+; CHECK-APPLE:  pushq %rax
 ; CHECK-APPLE:  callq _moo
 ; CHECK-APPLE:  popq %rax
 ; CHECK-APPLE:  retq
 
 ; CHECK-APPLE:  xorps %xmm0, %xmm0
-; CHECK-APPLE:  popq %rax
 ; CHECK-APPLE:  retq
 
 ; CHECK-O0-LABEL: conditionally_forward_swifterror:
 ; CHECK-O0: pushq [[REG1:%[a-z0-9]+]]
-; CHECK-O0:  cmpl $0, %edi
 ; CHECK-O0-DAG:  movq %r12, (%rsp)
+; CHECK-O0:  cmpl $0, %edi
 ; CHECK-O0:  je
 
-; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
-; CHECK-O0:  movq [[REG]], %r12
+; CHECK-O0:  movq (%rsp), %r12
 ; CHECK-O0:  callq _moo
 ; CHECK-O0:  popq [[REG1]]
 ; CHECK-O0:  retq
 
-; CHECK-O0:  movq (%rsp), [[REG:%[a-z0-9]+]]
+; CHECK-O0:  movq (%rsp), %r12
 ; CHECK-O0:  xorps %xmm0, %xmm0
-; CHECK-O0:  movq [[REG]], %r12
 ; CHECK-O0:  popq [[REG1]]
 ; CHECK-O0:  retq
 entry:
@@ -492,13 +487,14 @@ entry:
 
 ; Make sure we can handle the case when isel generates new machine basic blocks.
 ; CHECK-APPLE-LABEL: dont_crash_on_new_isel_blocks:
-; CHECK-APPLE: pushq   %rax
 ; CHECK-APPLE: xorl    %eax, %eax
 ; CHECK-APPLE: testb   %al, %al
 ; CHECK-APPLE: jne
-; CHECK-APPLE: callq   *%rax
-; CHECK-APPLE: popq    %rax
-; CHECK-APPLE: ret
+; CHECK-APPLE:         pushq   %rax
+; CHECK-APPLE-NEXT:  .cfi_def_cfa_offset 16
+; CHECK-APPLE-NEXT:    callq   *%rax
+; CHECK-APPLE-NEXT:    popq    %rax
+; CHECK-APPLE-NEXT:    ret
 
 define swiftcc void @dont_crash_on_new_isel_blocks(%swift_error** nocapture swifterror, i1, i8**) {
 entry:
@@ -745,10 +741,9 @@ a:
 ; CHECK-O0-LABEL: testAssign2
 ; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
 ; CHECK-O0:        jmp
-; CHECK-O0:        movq    [[SLOT]], %rax
-; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
-; CHECK-O0:        movq    [[SLOT2]], %r12
-; CHECK-O0:        retq
+; CHECK-O0:        movq    [[SLOT]], %r12
+; CHECK-O0-NEXT:   movq    %r12, %rax
+; CHECK-O0-NEXT:   retq
 
 ; CHECK-APPLE-LABEL: testAssign2
 ; CHECK-APPLE:        movq    %r12, %rax
@@ -765,11 +760,10 @@ a:
 ; CHECK-O0-LABEL: testAssign3
 ; CHECK-O0:        callq   _foo2
 ; CHECK-O0:        movq    %r12, [[SLOT:[-a-z0-9\(\)\%]*]]
-; CHECK-O0:        movq    [[SLOT]], %rax
-; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
-; CHECK-O0:        movq    [[SLOT2]], %r12
-; CHECK-O0:        addq    $24, %rsp
-; CHECK-O0:        retq
+; CHECK-O0:        movq    [[SLOT]], %r12
+; CHECK-O0-NEXT:   movq    %r12, %rax
+; CHECK-O0-NEXT:   popq    %rcx
+; CHECK-O0-NEXT:   retq
 
 ; CHECK-APPLE-LABEL: testAssign3
 ; CHECK-APPLE:         callq   _foo2
@@ -792,10 +786,10 @@ a:
 ; CHECK-O0:        xorl    %eax, %eax
 ; CHECK-O0: ## kill: def $rax killed $eax
 ; CHECK-O0:        movq    %rax, [[SLOT:[-a-z0-9\(\)\%]*]]
-; CHECK-O0:        movq    [[SLOT]], %rax
-; CHECK-O0:        movq    %rax, [[SLOT2:[-a-z0-9\(\)\%]*]]
-; CHECK-O0:        movq    [[SLOT2]], %r12
-; CHECK-O0:        retq
+; CHECK-O0:        movq    [[SLOT]], %r12
+; CHECK-O0-NEXT:   movq    %r12, %rax
+; CHECK-O0-NEXT:   popq    %rcx
+; CHECK-O0-NEXT:   retq
 
 ; CHECK-APPLE-LABEL: testAssign4
 ; CHECK-APPLE:        callq   _foo2

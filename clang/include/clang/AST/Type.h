@@ -61,6 +61,7 @@ class ExtQuals;
 class QualType;
 class ConceptDecl;
 class TagDecl;
+class TemplateParameterList;
 class Type;
 
 enum {
@@ -485,9 +486,21 @@ public:
            // allocated on device, which are a subset of __global.
            (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
                                            B == LangAS::opencl_global_host)) ||
+           (A == LangAS::sycl_global && (B == LangAS::sycl_global_device ||
+                                         B == LangAS::sycl_global_host)) ||
            // Consider pointer size address spaces to be equivalent to default.
            ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
-            (isPtrSizeAddressSpace(B) || B == LangAS::Default));
+            (isPtrSizeAddressSpace(B) || B == LangAS::Default)) ||
+           // Default is a superset of SYCL address spaces.
+           (A == LangAS::Default &&
+            (B == LangAS::sycl_private || B == LangAS::sycl_local ||
+             B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
+             B == LangAS::sycl_global_host)) ||
+           // In HIP device compilation, any cuda address space is allowed
+           // to implicitly cast into the default address space.
+           (A == LangAS::Default &&
+            (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
+             B == LangAS::cuda_shared));
   }
 
   /// Returns true if the address space in these qualifiers is equal to or
@@ -1927,6 +1940,9 @@ public:
   /// (C++11 [basic.types]p10)
   bool isLiteralType(const ASTContext &Ctx) const;
 
+  /// Determine if this type is a structural type, per C++20 [temp.param]p7.
+  bool isStructuralType() const;
+
   /// Test if this type is a standard-layout type.
   /// (C++0x [basic.type]p9)
   bool isStandardLayoutType() const;
@@ -1987,6 +2003,7 @@ public:
   bool isFloat16Type() const;      // C11 extension ISO/IEC TS 18661
   bool isBFloat16Type() const;
   bool isFloat128Type() const;
+  bool isIbm128Type() const;
   bool isRealType() const;         // C99 6.2.5p17 (real floating + integer)
   bool isArithmeticType() const;   // C99 6.2.5p18 (integer + floating)
   bool isVoidType() const;         // C99 6.2.5p19
@@ -2089,6 +2106,7 @@ public:
   bool isAtomicType() const;                    // C11 _Atomic()
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)
+  bool isTypedefNameType() const;               // typedef or alias template
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -2484,6 +2502,12 @@ public:
 // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/AArch64SVEACLETypes.def"
+// PPC MMA Types
+#define PPC_VECTOR_TYPE(Name, Id, Size) Id,
+#include "clang/Basic/PPCTypes.def"
+// RVV Types
+#define RVV_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/RISCVVTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -2527,7 +2551,7 @@ public:
   }
 
   bool isFloatingPoint() const {
-    return getKind() >= Half && getKind() <= Float128;
+    return getKind() >= Half && getKind() <= Ibm128;
   }
 
   /// Determines whether the given kind corresponds to a placeholder type.
@@ -3432,10 +3456,6 @@ class ConstantMatrixType final : public MatrixType {
 protected:
   friend class ASTContext;
 
-  /// The element type of the matrix.
-  // FIXME: Appears to be unused? There is also MatrixType::ElementType...
-  QualType ElementType;
-
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;
@@ -3505,13 +3525,9 @@ class DependentSizedMatrixType final : public MatrixType {
                            Expr *ColumnExpr, SourceLocation loc);
 
 public:
-  QualType getElementType() const { return ElementType; }
   Expr *getRowExpr() const { return RowExpr; }
   Expr *getColumnExpr() const { return ColumnExpr; }
   SourceLocation getAttributeLoc() const { return loc; }
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentSizedMatrix;
@@ -4355,10 +4371,11 @@ public:
 class TypedefType : public Type {
   TypedefNameDecl *Decl;
 
-protected:
+private:
   friend class ASTContext; // ASTContext creates these.
 
-  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can);
+  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType underlying,
+              QualType can);
 
 public:
   TypedefNameDecl *getDecl() const { return Decl; }
@@ -4708,6 +4725,9 @@ public:
 
     case NullabilityKind::Nullable:
       return attr::TypeNullable;
+
+    case NullabilityKind::NullableResult:
+      return attr::TypeNullableResult;
 
     case NullabilityKind::Unspecified:
       return attr::TypeNullUnspecified;
@@ -5101,11 +5121,24 @@ class alignas(8) TemplateSpecializationType
 
 public:
   /// Determine whether any of the given template arguments are dependent.
-  static bool anyDependentTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
-                                            bool &InstantiationDependent);
-
-  static bool anyDependentTemplateArguments(const TemplateArgumentListInfo &,
-                                            bool &InstantiationDependent);
+  ///
+  /// The converted arguments should be supplied when known; whether an
+  /// argument is dependent can depend on the conversions performed on it
+  /// (for example, a 'const int' passed as a template argument might be
+  /// dependent if the parameter is a reference but non-dependent if the
+  /// parameter is an int).
+  ///
+  /// Note that the \p Args parameter is unused: this is intentional, to remind
+  /// the caller that they need to pass in the converted arguments, not the
+  /// specified arguments.
+  static bool
+  anyDependentTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
+                                ArrayRef<TemplateArgument> Converted);
+  static bool
+  anyDependentTemplateArguments(const TemplateArgumentListInfo &,
+                                ArrayRef<TemplateArgument> Converted);
+  static bool anyInstantiationDependentTemplateArguments(
+      ArrayRef<TemplateArgumentLoc> Args);
 
   /// True if this template specialization type matches a current
   /// instantiation in the context in which it is found.
@@ -5190,15 +5223,18 @@ public:
 /// enclosing the template arguments.
 void printTemplateArgumentList(raw_ostream &OS,
                                ArrayRef<TemplateArgument> Args,
-                               const PrintingPolicy &Policy);
+                               const PrintingPolicy &Policy,
+                               const TemplateParameterList *TPL = nullptr);
 
 void printTemplateArgumentList(raw_ostream &OS,
                                ArrayRef<TemplateArgumentLoc> Args,
-                               const PrintingPolicy &Policy);
+                               const PrintingPolicy &Policy,
+                               const TemplateParameterList *TPL = nullptr);
 
 void printTemplateArgumentList(raw_ostream &OS,
                                const TemplateArgumentListInfo &Args,
-                               const PrintingPolicy &Policy);
+                               const PrintingPolicy &Policy,
+                               const TemplateParameterList *TPL = nullptr);
 
 /// The injected class name of a C++ class template or class
 /// template partial specialization.  Used to record that a type was
@@ -5384,7 +5420,14 @@ class ElaboratedType final
   ElaboratedType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
                  QualType NamedType, QualType CanonType, TagDecl *OwnedTagDecl)
       : TypeWithKeyword(Keyword, Elaborated, CanonType,
-                        NamedType->getDependence()),
+                        // Any semantic dependence on the qualifier will have
+                        // been incorporated into NamedType. We still need to
+                        // track syntactic (instantiation / error / pack)
+                        // dependence on the qualifier.
+                        NamedType->getDependence() |
+                            (NNS ? toSyntacticDependence(
+                                       toTypeDependence(NNS->getDependence()))
+                                 : TypeDependence::None)),
         NNS(NNS), NamedType(NamedType) {
     ElaboratedTypeBits.HasOwnedTagDecl = false;
     if (OwnedTagDecl) {
@@ -6931,6 +6974,10 @@ inline bool Type::isFloat128Type() const {
   return isSpecificBuiltinType(BuiltinType::Float128);
 }
 
+inline bool Type::isIbm128Type() const {
+  return isSpecificBuiltinType(BuiltinType::Ibm128);
+}
+
 inline bool Type::isNullPtrType() const {
   return isSpecificBuiltinType(BuiltinType::NullPtr);
 }
@@ -7039,6 +7086,15 @@ inline bool Type::isOverloadableType() const {
   return isDependentType() || isRecordType() || isEnumeralType();
 }
 
+/// Determines whether this type is written as a typedef-name.
+inline bool Type::isTypedefNameType() const {
+  if (getAs<TypedefType>())
+    return true;
+  if (auto *TST = getAs<TemplateSpecializationType>())
+    return TST->isTypeAlias();
+  return false;
+}
+
 /// Determines whether this type can decay to a pointer type.
 inline bool Type::canDecayToPointerType() const {
   return isFunctionType() || isArrayType();
@@ -7068,56 +7124,29 @@ inline const Type *Type::getPointeeOrArrayElementType() const {
     return type->getBaseElementTypeUnsafe();
   return type;
 }
-/// Insertion operator for diagnostics. This allows sending address spaces into
-/// a diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           LangAS AS) {
-  DB.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
-                  DiagnosticsEngine::ArgumentKind::ak_addrspace);
-  return DB;
-}
-
 /// Insertion operator for partial diagnostics. This allows sending adress
 /// spaces into a diagnostic with <<.
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           LangAS AS) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
+                                             LangAS AS) {
   PD.AddTaggedVal(static_cast<std::underlying_type_t<LangAS>>(AS),
                   DiagnosticsEngine::ArgumentKind::ak_addrspace);
   return PD;
 }
 
-/// Insertion operator for diagnostics. This allows sending Qualifiers into a
-/// diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           Qualifiers Q) {
-  DB.AddTaggedVal(Q.getAsOpaqueValue(),
-                  DiagnosticsEngine::ArgumentKind::ak_qual);
-  return DB;
-}
-
 /// Insertion operator for partial diagnostics. This allows sending Qualifiers
 /// into a diagnostic with <<.
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           Qualifiers Q) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
+                                             Qualifiers Q) {
   PD.AddTaggedVal(Q.getAsOpaqueValue(),
                   DiagnosticsEngine::ArgumentKind::ak_qual);
   return PD;
 }
 
-/// Insertion operator for diagnostics.  This allows sending QualType's into a
-/// diagnostic with <<.
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           QualType T) {
-  DB.AddTaggedVal(reinterpret_cast<intptr_t>(T.getAsOpaquePtr()),
-                  DiagnosticsEngine::ak_qualtype);
-  return DB;
-}
-
 /// Insertion operator for partial diagnostics.  This allows sending QualType's
 /// into a diagnostic with <<.
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           QualType T) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(T.getAsOpaquePtr()),
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
+                                             QualType T) {
+  PD.AddTaggedVal(reinterpret_cast<uint64_t>(T.getAsOpaquePtr()),
                   DiagnosticsEngine::ak_qualtype);
   return PD;
 }

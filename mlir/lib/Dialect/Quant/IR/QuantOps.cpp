@@ -10,10 +10,10 @@
 #include "TypeDetail.h"
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/MathExtras.h"
@@ -23,8 +23,10 @@ using namespace mlir;
 using namespace mlir::quant;
 using namespace mlir::quant::detail;
 
+#include "mlir/Dialect/Quant/QuantOpsDialect.cpp.inc"
+
 void QuantizationDialect::initialize() {
-  addTypes<AnyQuantizedType, UniformQuantizedType,
+  addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
            UniformQuantizedPerAxisType>();
   addOperations<
 #define GET_OP_LIST

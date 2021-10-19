@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wsign-conversion %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++17 -Wsign-conversion %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx11 -std=c++11 -Wsign-conversion %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,expected-cxx17 -std=c++17 -Wsign-conversion %s
 
 // C++ rules for ?: are a lot stricter than C rules, and have to take into
 // account more conversion options.
@@ -406,7 +406,8 @@ namespace lifetime_extension {
 
   struct D { A &&a; };
   void f_indirect(bool b) {
-    D d = b ? D{B()} : D{C()};
+    D d = b ? D{B()} // expected-cxx11-warning {{temporary whose address is used as value of local variable 'd' will be destroyed at the end of the full-expression}}
+            : D{C()}; // expected-cxx11-warning {{temporary whose address is used as value of local variable 'd' will be destroyed at the end of the full-expression}}
   }
 }
 

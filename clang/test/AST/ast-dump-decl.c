@@ -53,7 +53,7 @@ typedef int TestTypedefDecl;
 // CHECK:      TypedefDecl{{.*}} TestTypedefDecl 'int'
 
 __module_private__ typedef int TestTypedefDeclPrivate;
-// CHECK-MODULE:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
+// CHECK-MODULES:      TypedefDecl{{.*}} TestTypedefDeclPrivate 'int' __module_private__
 
 enum TestEnumDecl {
   testEnumDecl
@@ -112,7 +112,8 @@ enum testEnumConstantDecl {
 // CHECK:      EnumConstantDecl{{.*}} TestEnumConstantDecl 'int'
 // CHECK:      EnumConstantDecl{{.*}} TestEnumConstantDeclInit 'int'
 // CHECK-NEXT:   ConstantExpr
-// CHECK-NEXT:     IntegerLiteral
+// CHECK-NEXT:     value: Int 1
+// CHECK-NEXT:       IntegerLiteral
 
 struct testIndirectFieldDecl {
   struct {
@@ -160,7 +161,8 @@ struct testFieldDecl {
 // CHECK:      FieldDecl{{.*}} TestFieldDecl 'int'
 // CHECK:      FieldDecl{{.*}} TestFieldDeclWidth 'int'
 // CHECK-NEXT:   ConstantExpr
-// CHECK-NEXT:     IntegerLiteral
+// CHECK-NEXT:     value: Int 1
+// CHECK-NEXT:       IntegerLiteral
 // CHECK-MODULE:      FieldDecl{{.*}} TestFieldDeclPrivate 'int' __module_private__
 
 int TestVarDecl;

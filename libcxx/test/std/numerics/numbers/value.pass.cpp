@@ -83,4 +83,7 @@ constexpr bool tests() {
 
 static_assert(tests());
 
-int main() { tests(); }
+int main(int, char**) {
+  tests();
+  return 0;
+}

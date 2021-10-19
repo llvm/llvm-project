@@ -66,6 +66,7 @@ class MCSymbol;
 class MCTargetOptions;
 class MDNode;
 class Module;
+class PseudoProbeHandler;
 class raw_ostream;
 class StackMaps;
 class StringRef;
@@ -139,9 +140,37 @@ public:
   using GOTEquivUsePair = std::pair<const GlobalVariable *, unsigned>;
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
+  /// struct HandlerInfo and Handlers permit users or target extended
+  /// AsmPrinter to add their own handlers.
+  struct HandlerInfo {
+    std::unique_ptr<AsmPrinterHandler> Handler;
+    StringRef TimerName;
+    StringRef TimerDescription;
+    StringRef TimerGroupName;
+    StringRef TimerGroupDescription;
+
+    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler, StringRef TimerName,
+                StringRef TimerDescription, StringRef TimerGroupName,
+                StringRef TimerGroupDescription)
+        : Handler(std::move(Handler)), TimerName(TimerName),
+          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
+          TimerGroupDescription(TimerGroupDescription) {}
+  };
+
+  // Flags representing which CFI section is required for a function/module.
+  enum class CFISection : unsigned {
+    None = 0, ///< Do not emit either .eh_frame or .debug_frame
+    EH = 1,   ///< Emit .eh_frame
+    Debug = 2 ///< Emit .debug_frame
+  };
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
-  MCSymbol *CurExceptionSym = nullptr;
+
+  /// Map a basic block section ID to the exception symbol associated with that
+  /// section. Map entries are assigned and looked up via
+  /// AsmPrinter::getMBBExceptionSym.
+  DenseMap<unsigned, MCSymbol *> MBBSectionExceptionSyms;
 
   // The symbol used to represent the start of the current BB section of the
   // function. This is used to calculate the size of the BB section.
@@ -153,39 +182,18 @@ private:
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
 
+  /// Output stream for the stack usage file (i.e., .su file).
+  std::unique_ptr<raw_fd_ostream> StackUsageStream;
+
   static char ID;
 
 protected:
   MCSymbol *CurrentFnBegin = nullptr;
 
-  /// Protected struct HandlerInfo and Handlers permit target extended
-  /// AsmPrinter adds their own handlers.
-  struct HandlerInfo {
-    std::unique_ptr<AsmPrinterHandler> Handler;
-    const char *TimerName;
-    const char *TimerDescription;
-    const char *TimerGroupName;
-    const char *TimerGroupDescription;
-
-    HandlerInfo(std::unique_ptr<AsmPrinterHandler> Handler,
-                const char *TimerName, const char *TimerDescription,
-                const char *TimerGroupName, const char *TimerGroupDescription)
-        : Handler(std::move(Handler)), TimerName(TimerName),
-          TimerDescription(TimerDescription), TimerGroupName(TimerGroupName),
-          TimerGroupDescription(TimerGroupDescription) {}
-  };
-
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
-  SmallVector<HandlerInfo, 1> Handlers;
-
-public:
-  struct SrcMgrDiagInfo {
-    SourceMgr SrcMgr;
-    std::vector<const MDNode *> LocInfos;
-    LLVMContext::InlineAsmDiagHandlerTy DiagHandler;
-    void *DiagContext;
-  };
+  std::vector<HandlerInfo> Handlers;
+  size_t NumUserHandlers = 0;
 
 private:
   /// If generated on the fly this own the instance.
@@ -194,15 +202,15 @@ private:
   /// If generated on the fly this own the instance.
   std::unique_ptr<MachineLoopInfo> OwnedMLI;
 
-  /// Structure for generating diagnostics for inline assembly. Only initialised
-  /// when necessary.
-  mutable std::unique_ptr<SrcMgrDiagInfo> DiagInfo;
-
   /// If the target supports dwarf debug info, this pointer is non-null.
   DwarfDebug *DD = nullptr;
 
-  /// If the current module uses dwarf CFI annotations strictly for debugging.
-  bool isCFIMoveForDebugging = false;
+  /// A handler that supports pseudo probe emission with embedded inline
+  /// context.
+  PseudoProbeHandler *PP = nullptr;
+
+  /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
+  CFISection ModuleCFISection = CFISection::None;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -215,6 +223,14 @@ public:
 
   uint16_t getDwarfVersion() const;
   void setDwarfVersion(uint16_t Version);
+
+  bool isDwarf64() const;
+
+  /// Returns 4 for DWARF32 and 8 for DWARF64.
+  unsigned int getDwarfOffsetByteSize() const;
+
+  /// Returns 4 for DWARF32 and 12 for DWARF64.
+  unsigned int getUnitLengthFieldByteSize() const;
 
   bool isPositionIndependent() const;
 
@@ -230,7 +246,10 @@ public:
 
   MCSymbol *getFunctionBegin() const { return CurrentFnBegin; }
   MCSymbol *getFunctionEnd() const { return CurrentFnEnd; }
-  MCSymbol *getCurExceptionSym();
+
+  // Return the exception symbol associated with the MBB section containing a
+  // given basic block.
+  MCSymbol *getMBBExceptionSym(const MachineBasicBlock &MBB);
 
   /// Return information about object file lowering.
   const TargetLoweringObjectFile &getObjFileLowering() const;
@@ -342,16 +361,30 @@ public:
 
   void emitStackSizeSection(const MachineFunction &MF);
 
+  void emitStackUsage(const MachineFunction &MF);
+
+  void emitBBAddrMapSection(const MachineFunction &MF);
+
+  void emitPseudoProbe(const MachineInstr &MI);
+
   void emitRemarksSection(remarks::RemarkStreamer &RS);
 
-  enum CFIMoveType { CFI_M_None, CFI_M_EH, CFI_M_Debug };
-  CFIMoveType needsCFIMoves() const;
+  /// Get the CFISection type for a function.
+  CFISection getFunctionCFISectionType(const Function &F) const;
 
-  /// Returns false if needsCFIMoves() == CFI_M_EH for any function
-  /// in the module.
-  bool needsOnlyDebugCFIMoves() const { return isCFIMoveForDebugging; }
+  /// Get the CFISection type for a function.
+  CFISection getFunctionCFISectionType(const MachineFunction &MF) const;
+
+  /// Get the CFISection type for the module.
+  CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
   bool needsSEHMoves();
+
+  /// Since emitting CFI unwind information is entangled with supporting the
+  /// exceptions, this returns true for platforms which use CFI unwind
+  /// information for debugging purpose when
+  /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
+  bool needsCFIForDebug() const;
 
   /// Print to the current output stream assembly representations of the
   /// constants in the constant pool MCP. This is used to print out constants
@@ -428,6 +461,11 @@ public:
   //===------------------------------------------------------------------===//
   // Overridable Hooks
   //===------------------------------------------------------------------===//
+
+  void addAsmPrinterHandler(HandlerInfo Handler) {
+    Handlers.insert(Handlers.begin(), std::move(Handler));
+    NumUserHandlers++;
+  }
 
   // Targets can, or in the case of EmitInstruction, must implement these to
   // customize output.
@@ -560,9 +598,6 @@ public:
     emitLabelPlusOffset(Label, 0, Size, IsSectionRelative);
   }
 
-  /// Emit something like ".long Label + Offset".
-  void emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
-
   //===------------------------------------------------------------------===//
   // Dwarf Emission Helper Routines
   //===------------------------------------------------------------------===//
@@ -583,7 +618,7 @@ public:
   unsigned GetSizeOfEncodedValue(unsigned Encoding) const;
 
   /// Emit reference to a ttype global with a specified encoding.
-  void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) const;
+  virtual void emitTTypeReference(const GlobalValue *GV, unsigned Encoding);
 
   /// Emit a reference to a symbol for use in dwarf. Different object formats
   /// represent this in different ways. Some use a relocation others encode
@@ -591,17 +626,36 @@ public:
   void emitDwarfSymbolReference(const MCSymbol *Label,
                                 bool ForceOffset = false) const;
 
-  /// Emit the 4-byte offset of a string from the start of its section.
+  /// Emit the 4- or 8-byte offset of a string from the start of its section.
   ///
   /// When possible, emit a DwarfStringPool section offset without any
   /// relocations, and without using the symbol.  Otherwise, defers to \a
   /// emitDwarfSymbolReference().
+  ///
+  /// The length of the emitted value depends on the DWARF format.
   void emitDwarfStringOffset(DwarfStringPoolEntry S) const;
 
-  /// Emit the 4-byte offset of a string from the start of its section.
+  /// Emit the 4-or 8-byte offset of a string from the start of its section.
   void emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
     emitDwarfStringOffset(S.getEntry());
   }
+
+  /// Emit something like ".long Label + Offset" or ".quad Label + Offset"
+  /// depending on the DWARF format.
+  void emitDwarfOffset(const MCSymbol *Label, uint64_t Offset) const;
+
+  /// Emit 32- or 64-bit value depending on the DWARF format.
+  void emitDwarfLengthOrOffset(uint64_t Value) const;
+
+  /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
+  /// according to the settings.
+  void emitDwarfUnitLength(uint64_t Length, const Twine &Comment) const;
+
+  /// Emit a unit length field. The actual format, DWARF32 or DWARF64, is chosen
+  /// according to the settings.
+  /// Return the end symbol generated inside, the caller needs to emit it.
+  MCSymbol *emitDwarfUnitLength(const Twine &Prefix,
+                                const Twine &Comment) const;
 
   /// Emit reference to a call site with a specified encoding
   void emitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
@@ -743,6 +797,9 @@ private:
   GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
   /// Emit GlobalAlias or GlobalIFunc.
   void emitGlobalIndirectSymbol(Module &M, const GlobalIndirectSymbol &GIS);
+
+  /// This method decides whether the specified basic block requires a label.
+  bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;
 };
 
 } // end namespace llvm

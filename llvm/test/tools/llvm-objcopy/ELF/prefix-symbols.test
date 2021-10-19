@@ -4,6 +4,15 @@
 # RUN: llvm-objcopy --redefine-sym bar=baz --prefix-symbols prefix %t %t3
 # RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefixes=COMMON,REDEF
 
+## Show that an empty string is permitted as the argument to
+## --prefix-symbols.
+# RUN: llvm-objcopy --prefix-symbols= %t2 %t4
+# RUN: cmp %t2 %t4
+
+## Show that the last prefix wins.
+# RUN: llvm-objcopy --prefix-symbols foo --prefix-symbols prefix %t %t5
+# RUN: cmp %t2 %t5
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64
@@ -27,6 +36,8 @@ Symbols:
   - Name:     foobar
     Type:     STT_FUNC
     Section:  .text
+    Binding:  STB_GLOBAL
+  - Name:     undef
     Binding:  STB_GLOBAL
 
 # COMMON: Symbols [
@@ -66,5 +77,14 @@ Symbols:
 # COMMON-NEXT:    Type: Function
 # COMMON-NEXT:    Other: 0
 # COMMON-NEXT:    Section: .text
+# COMMON-NEXT:  }
+# COMMON-NEXT:  Symbol {
+# COMMON-NEXT:    Name: prefixundef
+# COMMON-NEXT:    Value: 0x0
+# COMMON-NEXT:    Size: 0
+# COMMON-NEXT:    Binding: Global
+# COMMON-NEXT:    Type: None
+# COMMON-NEXT:    Other: 0
+# COMMON-NEXT:    Section: Undefined
 # COMMON-NEXT:  }
 # COMMON-NEXT:]

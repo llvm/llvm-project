@@ -55,6 +55,7 @@ void InitializeFlags(Flags *f, const char *env, const char *env_option_name) {
     // Override some common flags defaults.
     CommonFlags cf;
     cf.CopyFrom(*common_flags());
+    cf.external_symbolizer_path = GetEnv("TSAN_SYMBOLIZER_PATH");
     cf.allow_addr2line = true;
     if (SANITIZER_GO) {
       // Does not work as expected for Go: runtime handles SIGABRT and crashes.
@@ -87,7 +88,7 @@ void InitializeFlags(Flags *f, const char *env, const char *env_option_name) {
   // Let a frontend override.
   parser.ParseString(__tsan_default_options());
 #if TSAN_CONTAINS_UBSAN
-  const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
+  const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
   // Override from command line.

@@ -20,7 +20,7 @@
 
 # CHECK: ********** MI Scheduling **********
 # CHECK: ScheduleDAGMILive::schedule starting
-# CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0:gpr, 8, 14, $noreg :: (load 32 from %ir.A, align 8)
+# CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0:gpr, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
 # CHECK: Latency            : 8
 # CHECK: Single Issue       : true;
 # CHECK: SU(2):   %4:dpr = VADDv8i8 %1.dsub_0:qqpr, %1.dsub_1:qqpr, 14, $noreg
@@ -76,7 +76,7 @@ body:             |
     liveins: $r0
 
     %0 = COPY $r0
-    %1 = VLD4d8Pseudo %0, 8, 14, $noreg :: (load 32 from %ir.A, align 8)
+    %1 = VLD4d8Pseudo %0, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
     %4 = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, $noreg
     %5, %6 = VMOVRRD %4, 14, $noreg
     $r0 = COPY %5

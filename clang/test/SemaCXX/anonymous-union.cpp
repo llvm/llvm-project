@@ -209,9 +209,9 @@ namespace PR8326 {
 
 namespace PR16630 {
   struct A { union { int x; float y; }; }; // expected-note {{member is declared here}}
-  struct B : private A { using A::x; } b; // expected-note 2 {{private}}
+  struct B : private A { using A::x; } b; // expected-note {{private}}
   void foo () {
     b.x = 10;
-    b.y = 0; // expected-error {{cannot cast 'struct B' to its private base class 'PR16630::A'}} expected-error {{'y' is a private member of 'PR16630::A'}}
+    b.y = 0; // expected-error {{'y' is a private member of 'PR16630::A'}}
   }
 }

@@ -328,8 +328,9 @@ one list by the parser.
 Miscellaneous Attributes
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The attributes ``IsAddressTaken``, ``IsLandingPad`` and ``Alignment`` can be
-specified in brackets after the block's definition:
+The attributes ``IsAddressTaken``, ``IsLandingPad``,
+``IsInlineAsmBrIndirectTarget`` and ``Alignment`` can be specified in brackets
+after the block's definition:
 
 .. code-block:: text
 
@@ -338,6 +339,8 @@ specified in brackets after the block's definition:
     bb.2.else (align 4):
       <instructions>
     bb.3(landing-pad, align 4):
+      <instructions>
+    bb.4 (inlineasm-br-indirect-target):
       <instructions>
 
 .. TODO: Describe the way the reference to an unnamed LLVM IR block can be
@@ -790,3 +793,123 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
    instructions debug location attribute.
 .. TODO: Describe the syntax of the register live out machine operands.
 .. TODO: Describe the syntax of the machine memory operands.
+
+Comments
+^^^^^^^^
+
+Machine operands can have C/C++ style comments, which are annotations enclosed
+between ``/*`` and ``*/`` to improve readability of e.g. immediate operands.
+In the example below, ARM instructions EOR and BCC and immediate operands
+``14`` and ``0`` have been annotated with their condition codes (CC)
+definitions, i.e. the ``always`` and ``eq`` condition codes:
+
+.. code-block:: text
+
+  dead renamable $r2, $cpsr = tEOR killed renamable $r2, renamable $r1, 14 /* CC::always */, $noreg
+  t2Bcc %bb.4, 0 /* CC:eq */, killed $cpsr
+
+As these annotations are comments, they are ignored by the MI parser.
+Comments can be added or customized by overriding InstrInfo's hook
+``createMIROperandComment()``.
+
+Debug-Info constructs
+---------------------
+
+Most of the debugging information in a MIR file is to be found in the metadata
+of the embedded module. Within a machine function, that metadata is referred to
+by various constructs to describe source locations and variable locations.
+
+Source locations
+^^^^^^^^^^^^^^^^
+
+Every MIR instruction may optionally have a trailing reference to a
+``DILocation`` metadata node, after all operands and symbols, but before
+memory operands:
+
+.. code-block:: text
+
+   $rbp = MOV64rr $rdi, debug-location !12
+
+The source location attachment is synonymous with the ``!dbg`` metadata
+attachment in LLVM-IR. The absence of a source location attachment will be
+represented by an empty ``DebugLoc`` object in the machine instruction.
+
+Fixed variable locations
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are several ways of specifying variable locations. The simplest is
+describing a variable that is permanently located on the stack. In the stack
+or fixedStack attribute of the machine function, the variable, scope, and
+any qualifying location modifier are provided:
+
+.. code-block:: text
+
+    - { id: 0, name: offset.addr, offset: -24, size: 8, alignment: 8, stack-id: default,
+     4  debug-info-variable: '!1', debug-info-expression: '!DIExpression()',
+        debug-info-location: '!2' }
+
+Where:
+
+- ``debug-info-variable`` identifies a DILocalVariable metadata node,
+
+- ``debug-info-expression`` adds qualifiers to the variable location,
+
+- ``debug-info-location`` identifies a DILocation metadata node.
+
+These metadata attributes correspond to the operands of a ``llvm.dbg.declare``
+IR intrinsic, see the :ref:`source level debugging<format_common_intrinsics>`
+documentation.
+
+Varying variable locations
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Variables that are not always on the stack or change location are specified
+with the ``DBG_VALUE``  meta machine instruction. It is synonymous with the
+``llvm.dbg.value`` IR intrinsic, and is written:
+
+.. code-block:: text
+
+    DBG_VALUE $rax, $noreg, !123, !DIExpression(), debug-location !456
+
+The operands to which respectively:
+
+1. Identifies a machine location such as a register, immediate, or frame index,
+
+2. Is either $noreg, or immediate value zero if an extra level of indirection is to be added to the first operand,
+
+3. Identifies a ``DILocalVariable`` metadata node,
+
+4. Specifies an expression qualifying the variable location, either inline or as a metadata node reference,
+
+While the source location identifies the ``DILocation`` for the scope of the
+variable. The second operand (``IsIndirect``) is deprecated and to be deleted.
+All additional qualifiers for the variable location should be made through the
+expression metadata.
+
+Instruction referencing locations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This experimental feature aims to separate the specification of variable
+*values* from the program point where a variable takes on that value. Changes
+in variable value occur in the same manner as ``DBG_VALUE`` meta instructions
+but using ``DBG_INSTR_REF``. Variable values are identified by a pair of
+instruction number and operand number. Consider the example below:
+
+.. code-block:: text
+
+    $rbp = MOV64ri 0, debug-instr-number 1, debug-location !12
+    DBG_INSTR_REF 1, 0, !123, !DIExpression(), debug-location !456
+
+Instruction numbers are directly attached to machine instructions with an
+optional ``debug-instr-number`` attachment, before the optional
+``debug-location`` attachment. The value defined in ``$rbp`` in the code
+above would be identified by the pair ``<1, 0>``.
+
+The first two operands of the ``DBG_INSTR_REF`` above record the instruction
+and operand number ``<1, 0>``, identifying the value defined by the ``MOV64ri``.
+The additional operands to ``DBG_INSTR_REF`` are identical to ``DBG_VALUE``,
+and the ``DBG_INSTR_REF`` s position records where the variable takes on the
+designated value in the same way.
+
+More information about how these constructs are used will appear on the source
+level debugging page in due course, see also :doc:`SourceLevelDebugging` and :doc:`HowToUpdateDebugInfo`.

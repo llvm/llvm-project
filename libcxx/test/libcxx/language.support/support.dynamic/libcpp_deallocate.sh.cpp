@@ -16,19 +16,11 @@
 // The dylibs shipped before macosx10.13 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
-// The test will fail on deployment targets that do not support sized deallocation.
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-
-// AppleClang < 10 incorrectly warns that aligned allocation is not supported
-// even when it is supported.
-// UNSUPPORTED: apple-clang-9
+// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
 
 // XFAIL: sanitizer-new-delete, ubsan
 

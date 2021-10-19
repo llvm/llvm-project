@@ -13,11 +13,13 @@
 #include "gwp_asan/definitions.h"
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
-#include "gwp_asan/random.h"
-#include "gwp_asan/stack_trace_compressor.h"
+#include "gwp_asan/platform_specific/guarded_pool_allocator_fuchsia.h" // IWYU pragma: keep
+#include "gwp_asan/platform_specific/guarded_pool_allocator_posix.h" // IWYU pragma: keep
+#include "gwp_asan/platform_specific/guarded_pool_allocator_tls.h"
 
 #include <stddef.h>
 #include <stdint.h>
+// IWYU pragma: no_include <__stddef_max_align_t.h>
 
 namespace gwp_asan {
 // This class is the primary implementation of the allocator portion of GWP-
@@ -37,7 +39,7 @@ public:
   // GWP-ASan. The constructor value-initialises the class such that if no
   // further initialisation takes place, calls to shouldSample() and
   // pointerIsMine() will return false.
-  constexpr GuardedPoolAllocator(){};
+  constexpr GuardedPoolAllocator() {}
   GuardedPoolAllocator(const GuardedPoolAllocator &) = delete;
   GuardedPoolAllocator &operator=(const GuardedPoolAllocator &) = delete;
 
@@ -78,11 +80,12 @@ public:
     // class must be valid when zero-initialised, and we wish to sample as
     // infrequently as possible when this is the case, hence we underflow to
     // UINT32_MAX.
-    if (GWP_ASAN_UNLIKELY(ThreadLocals.NextSampleCounter == 0))
-      ThreadLocals.NextSampleCounter =
-          (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
+    if (GWP_ASAN_UNLIKELY(getThreadLocals()->NextSampleCounter == 0))
+      getThreadLocals()->NextSampleCounter =
+          ((getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1) &
+          ThreadLocalPackedVariables::NextSampleCounterMask;
 
-    return GWP_ASAN_UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
+    return GWP_ASAN_UNLIKELY(--getThreadLocals()->NextSampleCounter == 0);
   }
 
   // Returns whether the provided pointer is a current sampled allocation that
@@ -91,10 +94,13 @@ public:
     return State.pointerIsMine(Ptr);
   }
 
-  // Allocate memory in a guarded slot, and return a pointer to the new
-  // allocation. Returns nullptr if the pool is empty, the requested size is too
-  // large for this pool to handle, or the requested size is zero.
-  void *allocate(size_t Size);
+  // Allocate memory in a guarded slot, with the specified `Alignment`. Returns
+  // nullptr if the pool is empty, if the alignnment is not a power of two, or
+  // if the size/alignment makes the allocation too large for this pool to
+  // handle. By default, uses strong alignment (i.e. `max_align_t`), see
+  // http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2293.htm for discussion of
+  // alignment issues in the standard.
+  void *allocate(size_t Size, size_t Alignment = alignof(max_align_t));
 
   // Deallocate memory in a guarded slot. The provided pointer must have been
   // allocated using this pool. This will set the guarded slot as inaccessible.
@@ -108,6 +114,18 @@ public:
 
   // Returns a pointer to the AllocatorState region.
   const AllocatorState *getAllocatorState() const { return &State; }
+
+  // Exposed as protected for testing.
+protected:
+  // Returns the actual allocation size required to service an allocation with
+  // the provided Size and Alignment.
+  static size_t getRequiredBackingSize(size_t Size, size_t Alignment,
+                                       size_t PageSize);
+
+  // Returns the provided pointer that meets the specified alignment, depending
+  // on whether it's left or right aligned.
+  static uintptr_t alignUp(uintptr_t Ptr, size_t Alignment);
+  static uintptr_t alignDown(uintptr_t Ptr, size_t Alignment);
 
 private:
   // Name of actively-occupied slot mappings.
@@ -124,15 +142,30 @@ private:
   // memory into this process in a platform-specific way. Pointer and size
   // arguments are expected to be page-aligned. These functions will never
   // return on error, instead electing to kill the calling process on failure.
-  // Note that memory is initially mapped inaccessible. In order for RW
-  // mappings, call mapMemory() followed by markReadWrite() on the returned
-  // pointer. Each mapping is named on platforms that support it, primarily
-  // Android. This name must be a statically allocated string, as the Android
-  // kernel uses the string pointer directly.
-  void *mapMemory(size_t Size, const char *Name) const;
-  void unmapMemory(void *Ptr, size_t Size, const char *Name) const;
-  void markReadWrite(void *Ptr, size_t Size, const char *Name) const;
-  void markInaccessible(void *Ptr, size_t Size, const char *Name) const;
+  // The pool memory is initially reserved and inaccessible, and RW mappings are
+  // subsequently created and destroyed via allocateInGuardedPool() and
+  // deallocateInGuardedPool(). Each mapping is named on platforms that support
+  // it, primarily Android. This name must be a statically allocated string, as
+  // the Android kernel uses the string pointer directly.
+  void *map(size_t Size, const char *Name) const;
+  void unmap(void *Ptr, size_t Size) const;
+
+  // The pool is managed separately, as some platforms (particularly Fuchsia)
+  // manage virtual memory regions as a chunk where individual pages can still
+  // have separate permissions. These platforms maintain metadata about the
+  // region in order to perform operations. The pool is unique as it's the only
+  // thing in GWP-ASan that treats pages in a single VM region on an individual
+  // basis for page protection.
+  // The pointer returned by reserveGuardedPool() is the reserved address range
+  // of (at least) Size bytes.
+  void *reserveGuardedPool(size_t Size);
+  // allocateInGuardedPool() Ptr and Size must be a subrange of the previously
+  // reserved pool range.
+  void allocateInGuardedPool(void *Ptr, size_t Size) const;
+  // deallocateInGuardedPool() Ptr and Size must be an exact pair previously
+  // passed to allocateInGuardedPool().
+  void deallocateInGuardedPool(void *Ptr, size_t Size) const;
+  void unreserveGuardedPool();
 
   // Get the page size from the platform-specific implementation. Only needs to
   // be called once, and the result should be cached in PageSize in this class.
@@ -163,6 +196,10 @@ private:
 
   // A mutex to protect the guarded slot and metadata pool for this class.
   Mutex PoolMutex;
+  // Some unwinders can grab the libdl lock. In order to provide atfork
+  // protection, we need to ensure that we allow an unwinding thread to release
+  // the libdl lock before forking.
+  Mutex BacktraceMutex;
   // Record the number allocations that we've sampled. We store this amount so
   // that we don't randomly choose to recycle a slot that previously had an
   // allocation before all the slots have been utilised.
@@ -191,22 +228,21 @@ private:
   // the sample rate.
   uint32_t AdjustedSampleRatePlusOne = 0;
 
-  // Pack the thread local variables into a struct to ensure that they're in
-  // the same cache line for performance reasons. These are the most touched
-  // variables in GWP-ASan.
-  struct alignas(8) ThreadLocalPackedVariables {
-    constexpr ThreadLocalPackedVariables() {}
-    // Thread-local decrementing counter that indicates that a given allocation
-    // should be sampled when it reaches zero.
-    uint32_t NextSampleCounter = 0;
-    // Guard against recursivity. Unwinders often contain complex behaviour that
-    // may not be safe for the allocator (i.e. the unwinder calls dlopen(),
-    // which calls malloc()). When recursive behaviour is detected, we will
-    // automatically fall back to the supporting allocator to supply the
-    // allocation.
-    bool RecursiveGuard = false;
+  // Additional platform specific data structure for the guarded pool mapping.
+  PlatformSpecificMapData GuardedPagePoolPlatformData = {};
+
+  class ScopedRecursiveGuard {
+  public:
+    ScopedRecursiveGuard() { getThreadLocals()->RecursiveGuard = true; }
+    ~ScopedRecursiveGuard() { getThreadLocals()->RecursiveGuard = false; }
   };
-  static GWP_ASAN_TLS_INITIAL_EXEC ThreadLocalPackedVariables ThreadLocals;
+
+  // Initialise the PRNG, platform-specific.
+  void initPRNG();
+
+  // xorshift (32-bit output), extremely fast PRNG that uses arithmetic
+  // operations only. Seeded using platform-specific mechanisms by initPRNG().
+  uint32_t getRandomUnsigned32();
 };
 } // namespace gwp_asan
 

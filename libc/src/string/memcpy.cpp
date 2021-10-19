@@ -8,7 +8,7 @@
 
 #include "src/string/memcpy.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memcpy_utils.h"
+#include "src/string/memory_utils/elements.h"
 
 namespace __llvm_libc {
 
@@ -32,35 +32,35 @@ namespace __llvm_libc {
 //   with little change on the code side.
 static void memcpy_impl(char *__restrict dst, const char *__restrict src,
                         size_t count) {
+  // Use scalar strategies (_1, _2, _3 ...)
+  using namespace __llvm_libc::scalar;
+
   if (count == 0)
     return;
   if (count == 1)
-    return CopyBlock<1>(dst, src);
+    return Copy<_1>(dst, src);
   if (count == 2)
-    return CopyBlock<2>(dst, src);
+    return Copy<_2>(dst, src);
   if (count == 3)
-    return CopyBlock<3>(dst, src);
+    return Copy<_3>(dst, src);
   if (count == 4)
-    return CopyBlock<4>(dst, src);
+    return Copy<_4>(dst, src);
   if (count < 8)
-    return CopyBlockOverlap<4>(dst, src, count);
-  if (count == 8)
-    return CopyBlock<8>(dst, src);
+    return Copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return CopyBlockOverlap<8>(dst, src, count);
-  if (count == 16)
-    return CopyBlock<16>(dst, src);
+    return Copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return CopyBlockOverlap<16>(dst, src, count);
+    return Copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return CopyBlockOverlap<32>(dst, src, count);
+    return Copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return CopyBlockOverlap<64>(dst, src, count);
-  return CopyAlignedBlocks<32>(dst, src, count);
+    return Copy<HeadTail<_64>>(dst, src, count);
+  return Copy<Align<_32, Arg::Src>::Then<Loop<_32>>>(dst, src, count);
 }
 
-void *LLVM_LIBC_ENTRYPOINT(memcpy)(void *__restrict dst,
-                                   const void *__restrict src, size_t size) {
+LLVM_LIBC_FUNCTION(void *, memcpy,
+                   (void *__restrict dst, const void *__restrict src,
+                    size_t size)) {
   memcpy_impl(reinterpret_cast<char *>(dst),
               reinterpret_cast<const char *>(src), size);
   return dst;

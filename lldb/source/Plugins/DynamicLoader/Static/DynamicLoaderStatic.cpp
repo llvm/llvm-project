@@ -10,6 +10,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 
 #include "DynamicLoaderStatic.h"
@@ -63,9 +64,6 @@ DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
 DynamicLoaderStatic::DynamicLoaderStatic(Process *process)
     : DynamicLoader(process) {}
 
-// Destructor
-DynamicLoaderStatic::~DynamicLoaderStatic() {}
-
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after
@@ -86,11 +84,7 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
   // Disable JIT for static dynamic loader targets
   m_process->SetCanJIT(false);
 
-  std::lock_guard<std::recursive_mutex> guard(module_list.GetMutex());
-
-  const size_t num_modules = module_list.GetSize();
-  for (uint32_t idx = 0; idx < num_modules; ++idx) {
-    ModuleSP module_sp(module_list.GetModuleAtIndexUnlocked(idx));
+  for (ModuleSP module_sp : module_list.Modules()) {
     if (module_sp) {
       bool changed = false;
       ObjectFile *image_object_file = module_sp->GetObjectFile();
@@ -112,6 +106,15 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
             // the file...
             SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
             if (section_sp) {
+              // If this section already has a load address set in the target,
+              // don't re-set it to the file address.  Something may have
+              // set it to a more correct value already.
+              if (m_process->GetTarget()
+                      .GetSectionLoadList()
+                      .GetSectionLoadAddress(section_sp) !=
+                  LLDB_INVALID_ADDRESS) {
+                continue;
+              }
               if (m_process->GetTarget().SetSectionLoadAddress(
                       section_sp, section_sp->GetFileAddress()))
                 changed = true;
@@ -158,10 +161,3 @@ const char *DynamicLoaderStatic::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that will load any images at the static "
          "addresses contained in each image.";
 }
-
-// PluginInterface protocol
-lldb_private::ConstString DynamicLoaderStatic::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t DynamicLoaderStatic::GetPluginVersion() { return 1; }

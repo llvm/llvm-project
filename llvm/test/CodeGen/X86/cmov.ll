@@ -47,7 +47,7 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    cmovel %esi, %edi
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %c = trunc i64 %a to i32
@@ -70,26 +70,26 @@ define void @test3(i64 %a, i64 %b, i1 %p) nounwind {
 ; PR4814
 
 
-@g_3 = external global i8
-@g_96 = external global i8
-@g_100 = external global i8
-@_2E_str = external constant [15 x i8], align 1
+@g_3 = external dso_local global i8
+@g_96 = external dso_local global i8
+@g_100 = external dso_local global i8
+@_2E_str = external dso_local constant [15 x i8], align 1
 
 define i1 @test4() nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movsbl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movsbl g_3(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %ecx
 ; CHECK-NEXT:    shrl $7, %ecx
 ; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %edx
-; CHECK-NEXT:    movb {{.*}}(%rip), %al
+; CHECK-NEXT:    movb g_96(%rip), %al
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %bb.i.i.i
-; CHECK-NEXT:    movb {{.*}}(%rip), %cl
+; CHECK-NEXT:    movb g_100(%rip), %cl
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
@@ -102,15 +102,15 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB3_5
 ; CHECK-NEXT:  # %bb.4: # %bb.i.i
-; CHECK-NEXT:    movb {{.*}}(%rip), %cl
+; CHECK-NEXT:    movb g_100(%rip), %cl
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:  .LBB3_5: # %func_1.exit
-; CHECK-NEXT:    movb %cl, {{.*}}(%rip)
+; CHECK-NEXT:    movb %cl, g_96(%rip)
 ; CHECK-NEXT:    movzbl %cl, %esi
 ; CHECK-NEXT:    movl $_2E_str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
@@ -159,8 +159,8 @@ define i32 @test5(i32* nocapture %P) nounwind readonly {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $41, (%rdi)
-; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    cmpl $42, (%rdi)
+; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    orl $-2, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -198,6 +198,18 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
   ret i8 %d
 }
 
+define i64 @test8(i64 %0, i64 %1, i64 %2) {
+; CHECK-LABEL: test8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    cmpq $-2147483648, %rdi # imm = 0x80000000
+; CHECK-NEXT:    cmovlq %rdx, %rax
+; CHECK-NEXT:    retq
+  %4 = icmp sgt i64 %0, -2147483649
+  %5 = select i1 %4, i64 %1, i64 %2
+  ret i64 %5
+}
+
 define i32 @smin(i32 %x) {
 ; CHECK-LABEL: smin:
 ; CHECK:       # %bb.0:
@@ -233,5 +245,29 @@ define i32 @pr47049_2(i32 %0) {
 ; CHECK-NEXT:    retq
   %2 = icmp sgt i32 %0, -1
   %3 = select i1 %2, i32 %0, i32 -1
+  ret i32 %3
+}
+
+define i32 @pr47049_3(i32 %0) {
+; CHECK-LABEL: pr47049_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp sgt i32 %0, 1
+  %3 = select i1 %2, i32 %0, i32 1
+  ret i32 %3
+}
+
+define i32 @pr47049_4(i32 %0) {
+; CHECK-LABEL: pr47049_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp ugt i32 %0, 1
+  %3 = select i1 %2, i32 %0, i32 1
   ret i32 %3
 }

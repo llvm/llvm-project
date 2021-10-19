@@ -1,0 +1,143 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 \
+# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P8
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
+# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P9
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 \
+# RUN:     -start-before=prologepilog -debug-only=reginfo \
+# RUN:     --filetype=null -ppc-enable-pe-vector-spills \
+# RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s --check-prefix=P9-REGSPILL
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
+# RUN:     -start-before=prologepilog -debug-only=reginfo --filetype=null \
+# RUN:     -verify-machineinstrs %s 2>&1 >/dev/null | FileCheck %s -check-prefix=P10
+
+---
+name:            SpillGPR
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $r14 = IMPLICIT_DEF
+    $r15 = IMPLICIT_DEF
+    $r16 = IMPLICIT_DEF
+    $r17 = IMPLICIT_DEF
+    $lr8 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+## TODO: Calling requiresFrameIndexScavenging from PEI::runOnMachineFunction
+##       always returns TRUE because MFI.isCalleeSavedInfoValid() always
+##       indicates that the callee saved info is invalid at that point. The
+##       info becomes valid for later calls. Can we do better?
+# P8: requiresFrameIndexScavenging for SpillGPR.
+# P8: TRUE - Invalid callee saved info.
+# P8: requiresFrameIndexScavenging for SpillGPR.
+# P8: FALSE - Scavenging is not required.
+# P9: requiresFrameIndexScavenging for SpillGPR.
+# P9: TRUE - Invalid callee saved info.
+# P9: requiresFrameIndexScavenging for SpillGPR.
+# P9: FALSE - Scavenging is not required.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillGPR.
+# P9-REGSPILL: TRUE - Invalid callee saved info.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillGPR.
+# P9-REGSPILL: FALSE - Scavenging is not required.
+# P10: requiresFrameIndexScavenging for SpillGPR.
+# P10: TRUE - Invalid callee saved info.
+# P10: requiresFrameIndexScavenging for SpillGPR.
+# P10: FALSE - Scavenging is not required.
+...
+
+---
+name:            SpillFPR
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $f14 = IMPLICIT_DEF
+    $f15 = IMPLICIT_DEF
+    $f16 = IMPLICIT_DEF
+    $f17 = IMPLICIT_DEF
+    $lr8 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# P8: requiresFrameIndexScavenging for SpillFPR.
+# P8: TRUE - Invalid callee saved info.
+# P8: requiresFrameIndexScavenging for SpillFPR.
+# P8: FALSE - Scavenging is not required.
+# P9: requiresFrameIndexScavenging for SpillFPR.
+# P9: TRUE - Invalid callee saved info.
+# P9: requiresFrameIndexScavenging for SpillFPR.
+# P9: FALSE - Scavenging is not required.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillFPR.
+# P9-REGSPILL: TRUE - Invalid callee saved info.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillFPR.
+# P9-REGSPILL: FALSE - Scavenging is not required.
+# P10: requiresFrameIndexScavenging for SpillFPR.
+# P10: TRUE - Invalid callee saved info.
+# P10: requiresFrameIndexScavenging for SpillFPR.
+# P10: FALSE - Scavenging is not required.
+...
+
+---
+name:            SpillVR
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $v22 = IMPLICIT_DEF
+    $v23 = IMPLICIT_DEF
+    $lr8 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# P8: requiresFrameIndexScavenging for SpillVR.
+# P8: TRUE - Invalid callee saved info.
+# P8: requiresFrameIndexScavenging for SpillVR.
+# P8: Memory Operand: STVX for register $v20.
+# P8: TRUE - Memory operand is X-Form.
+# P9: requiresFrameIndexScavenging for SpillVR.
+# P9: TRUE - Invalid callee saved info.
+# P9: requiresFrameIndexScavenging for SpillVR.
+# P9: Memory Operand: STVX for register $v20.
+# P9: TRUE - Memory operand is X-Form.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillVR.
+# P9-REGSPILL: TRUE - Invalid callee saved info.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillVR.
+# P9-REGSPILL: Memory Operand: STVX for register $v20.
+# P9-REGSPILL: TRUE - Memory operand is X-Form.
+# P10: requiresFrameIndexScavenging for SpillVR.
+# P10: TRUE - Invalid callee saved info.
+# P10: requiresFrameIndexScavenging for SpillVR.
+# P10: Memory Operand: STVX for register $v20.
+# P10: TRUE - Memory operand is X-Form.
+...
+
+---
+name:            SpillMixed
+alignment:       16
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $r14 = IMPLICIT_DEF
+    $r15 = IMPLICIT_DEF
+    $f16 = IMPLICIT_DEF
+    $f17 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    $v21 = IMPLICIT_DEF
+    $lr8 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# P8: requiresFrameIndexScavenging for SpillMixed.
+# P8: TRUE - Invalid callee saved info.
+# P9: requiresFrameIndexScavenging for SpillMixed.
+# P9: TRUE - Invalid callee saved info.
+# P9-REGSPILL: requiresFrameIndexScavenging for SpillMixed.
+# P9-REGSPILL: TRUE - Invalid callee saved info.
+# P10: requiresFrameIndexScavenging for SpillMixed.
+# P10: TRUE - Invalid callee saved info.
+...

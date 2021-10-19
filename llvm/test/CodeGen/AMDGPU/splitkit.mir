@@ -39,11 +39,11 @@ body: |
 # CHECK: S_NOP 0
 # CHECK: S_NOP 0, implicit renamable [[REG0]]
 # CHECK: S_NOP 0, implicit renamable [[REG1]]
-# CHECK: $sgpr0 = COPY renamable [[REG0]]
+# CHECK: $sgpr0 = COPY killed renamable [[REG0]]
 # CHECK: $sgpr2 = COPY renamable [[REG1]]
 # CHECK: S_NOP
 # CHECK: S_NOP 0, implicit renamable $sgpr0
-# CHECK: S_NOP 0, implicit renamable $sgpr2
+# CHECK: S_NOP 0, implicit killed renamable $sgpr2
 name: func1
 tracksRegLiveness: true
 body: |

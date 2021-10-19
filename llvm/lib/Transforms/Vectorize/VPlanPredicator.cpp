@@ -191,7 +191,7 @@ void VPlanPredicator::predicateRegionRec(VPRegionBlock *Region) {
   // Generate edge predicates and append them to the block predicate. RPO is
   // necessary since the predecessor blocks' block predicate needs to be set
   // before the current block's block predicate can be computed.
-  for (VPBlockBase *Block : make_range(RPOT.begin(), RPOT.end())) {
+  for (VPBlockBase *Block : RPOT) {
     // TODO: Handle nested regions once we start generating the same.
     assert(!isa<VPRegionBlock>(Block) && "Nested region not expected");
     createOrPropagatePredicates(Block, Region);
@@ -208,7 +208,7 @@ void VPlanPredicator::linearizeRegionRec(VPRegionBlock *Region) {
   ReversePostOrderTraversal<VPBlockBase *> RPOT(Region->getEntry());
   VPBlockBase *PrevBlock = nullptr;
 
-  for (VPBlockBase *CurrBlock : make_range(RPOT.begin(), RPOT.end())) {
+  for (VPBlockBase *CurrBlock : RPOT) {
     // TODO: Handle nested regions once we start generating the same.
     assert(!isa<VPRegionBlock>(CurrBlock) && "Nested region not expected");
 

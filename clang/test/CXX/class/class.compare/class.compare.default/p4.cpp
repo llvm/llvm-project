@@ -99,7 +99,7 @@ namespace DeleteAfterFirstDecl {
   struct Q {
     struct X {
       friend std::strong_ordering operator<=>(const X&, const X&);
-    } x; // expected-note {{no viable comparison}}
+    } x; // expected-note {{no viable three-way comparison}}
     // expected-error@+1 {{defaulting the corresponding implicit 'operator==' for this defaulted 'operator<=>' would delete it after its first declaration}}
     friend std::strong_ordering operator<=>(const Q&, const Q&) = default;
   };

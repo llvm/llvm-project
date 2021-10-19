@@ -3,9 +3,9 @@
 // RUN: ld.lld %t --shared -o %t.so
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t.so --start-address=16777220 --stop-address=16777244 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t.so --start-address=17825800 --stop-address=17825826 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t.so --start-address=17825824 --stop-address=17825892 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x1000004 --stop-address=0x100001c | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x1100008 --stop-address=0x1100022 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x1100020 --stop-address=0x1100064 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
 
 /// A branch to a Thunk that we create on pass N, can drift out of range if
 /// other Thunks are added in between. In this case we must create a new Thunk
@@ -94,9 +94,9 @@ callers:
 // CHECK2-NEXT:  1100010:       fc 44   add     r12, pc
 // CHECK2-NEXT:  1100012:       60 47   bx      r12
 // CHECK2: <callers>:
-// CHECK2-NEXT:  1100014:       ff f6 f6 bf     b.w     #-1048596 <__ThumbV7PILongThunk_imported>
-// CHECK2-NEXT:  1100018:       3f f4 f6 af     beq.w   #-20 <__ThumbV7PILongThunk_imported>
-// CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     #-1048592 <__ThumbV7PILongThunk_imported2>
+// CHECK2-NEXT:  1100014:       ff f6 f6 bf     b.w     0x1000004 <__ThumbV7PILongThunk_imported>
+// CHECK2-NEXT:  1100018:       3f f4 f6 af     beq.w   0x1100008 <__ThumbV7PILongThunk_imported>
+// CHECK2-NEXT:  110001c:       ff f6 f8 bf     b.w     0x1000010 <__ThumbV7PILongThunk_imported2>
 
 // CHECK3: Disassembly of section .plt:
 // CHECK3-EMPTY:

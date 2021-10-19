@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
+#include <string>
 
 using namespace llvm;
 using namespace llvm::msf;
@@ -27,6 +28,8 @@ public:
     case msf_error_code::insufficient_buffer:
       return "The buffer is not large enough to read the requested number of "
              "bytes.";
+    case msf_error_code::size_overflow:
+      return "Output data is larger than 4 GiB.";
     case msf_error_code::not_writable:
       return "The specified stream is not writable.";
     case msf_error_code::no_stream:

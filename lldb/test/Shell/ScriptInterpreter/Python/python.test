@@ -1,0 +1,12 @@
+# RUN: %lldb --script-language python -o 'script print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language python -o 'script -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language python -o 'script --language default -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script -l python -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script -lpython -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script --language python -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script --language=python -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# CHECK: 1111
+
+# RUN: %lldb -o 'script --language invalid -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s --check-prefix INVALID
+# INVALID: error: unrecognized value for language 'invalid'
+# INVALID-NOT: 1111

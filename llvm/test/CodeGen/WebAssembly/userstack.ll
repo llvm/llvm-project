@@ -4,6 +4,8 @@
 declare void @ext_func(i64* %ptr)
 declare void @ext_func_i32(i32* %ptr)
 
+; CHECK: .globaltype	__stack_pointer, i[[PTR]]{{$}}
+
 ; CHECK-LABEL: alloca32:
 ; Check that there is an extra local for the stack pointer.
 ; CHECK: .local i[[PTR]]{{$}}
@@ -328,6 +330,20 @@ define void @inline_asm() {
   ret void
 }
 
-; CHECK: .globaltype	__stack_pointer, i[[PTR]]{{$}}
+; We optimize the format of "frame offset + operand" by folding it, but this is
+; only possible when that operand is an immediate. In this example it is a
+; global address, so we should not fold it.
+; CHECK-LABEL: frame_offset_with_global_address
+; CHECK: i[[PTR]].const ${{.*}}=, str
+@str = local_unnamed_addr global [3 x i8] c"abc", align 16
+define i8 @frame_offset_with_global_address() {
+  %1 = alloca i8, align 4
+  %2 = ptrtoint i8* %1 to i32
+  ;; Here @str is a global address and not an immediate, so cannot be folded
+  %3 = getelementptr [3 x i8], [3 x i8]* @str, i32 0, i32 %2
+  %4 = load i8, i8* %3, align 8
+  %5 = and i8 %4, 67
+  ret i8 %5
+}
 
 ; TODO: test over-aligned alloca

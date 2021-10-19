@@ -200,16 +200,16 @@ body:             |
     %32:gr64bit = COPY $r3d
     %0:gr64bit = COPY $r2d
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @sre_malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %1:addr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @sre_malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %2:addr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     %3:gr32bit = AHIMuxK %0.subreg_l32, -1, implicit-def dead $cc
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     %55:gr32bit = AHIMuxK %0.subreg_l32, 3, implicit-def dead $cc
     %56:addr64bit = LGHI 0
@@ -229,13 +229,13 @@ body:             |
     %63:addr64bit = LCGR %43, implicit-def dead $cc
     %45:addr64bit = SLLG %10, $noreg, 3
     %64:addr64bit = SLLG %10, $noreg, 2
-    %64:addr64bit = AG %64, %1, 0, %45, implicit-def dead $cc :: (load 8 from %ir.tmp21)
+    %64:addr64bit = AG %64, %1, 0, %45, implicit-def dead $cc :: (load (s64) from %ir.tmp21)
     %65:grx32bit = COPY %59
   
   bb.3.bb25:
     successors: %bb.4(0x04000000), %bb.3(0x7c000000)
   
-    %47:fp32bit = VL32 %64, 4, $noreg :: (load 4 from %ir.scevgep5)
+    %47:fp32bit = VL32 %64, 4, $noreg :: (load (s32) from %ir.scevgep5)
     %25:gr64bit = LA %64, 4, $noreg
     CEBR %47, undef %48:fp32bit, implicit-def $cc, implicit $fpc
     %62:grx32bit = LOCRMux %62, %65, 15, 4, implicit $cc
@@ -259,11 +259,11 @@ body:             |
   bb.5.bb42:
     successors: %bb.6(0x30000000), %bb.7(0x50000000)
   
-    %50:gr32bit = LMux %2, 0, $noreg :: (load 4 from %ir.tmp43)
+    %50:gr32bit = LMux %2, 0, $noreg :: (load (s32) from %ir.tmp43)
     %50:gr32bit = nsw SR %50, %0.subreg_l32, implicit-def dead $cc
     %52:addr64bit = LGFR %50
     %52:addr64bit = MGHI %52, 40
-    MVC undef %53:addr64bit, 0, 4, %52, 32 :: (store 4 into `i32* undef`), (load 4 from %ir.tmp47)
+    MVC undef %53:addr64bit, 0, 4, %52, 32 :: (store (s32) into `i32* undef`), (load (s32) from %ir.tmp47)
     CHIMux %32.subreg_l32, 0, implicit-def $cc
     BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.6
@@ -271,7 +271,7 @@ body:             |
   bb.6.bb52:
   
   bb.7.bb54:
-    STMux %0.subreg_l32, %2, 0, $noreg :: (store 4 into %ir.tmp56)
+    STMux %0.subreg_l32, %2, 0, $noreg :: (store (s32) into %ir.tmp56)
     %56:addr64bit = LA %56, 1, $noreg
     %55:gr32bit = AHIMux %55, 3, implicit-def dead $cc
     %57:gr64bit = LGHI 0

@@ -13,67 +13,67 @@ unsigned long long ull;
 __int128 s128;
 unsigned  __int128 u128;
 
-void test_op_ignore (void) // CHECK-LABEL: define void @test_op_ignore
+void test_op_ignore (void) // CHECK-LABEL: define{{.*}} void @test_op_ignore
 {
-  (void) __sync_fetch_and_add (&sc, 1); // CHECK: atomicrmw add i8
-  (void) __sync_fetch_and_add (&uc, 1); // CHECK: atomicrmw add i8
-  (void) __sync_fetch_and_add (&ss, 1); // CHECK: atomicrmw add i16
-  (void) __sync_fetch_and_add (&us, 1); // CHECK: atomicrmw add i16
-  (void) __sync_fetch_and_add (&si, 1); // CHECK: atomicrmw add i32
-  (void) __sync_fetch_and_add (&ui, 1); // CHECK: atomicrmw add i32
-  (void) __sync_fetch_and_add (&sll, 1); // CHECK: atomicrmw add i64
-  (void) __sync_fetch_and_add (&ull, 1); // CHECK: atomicrmw add i64
+  (void) __sync_fetch_and_add (&sc, 1); // CHECK: atomicrmw add i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_add (&uc, 1); // CHECK: atomicrmw add i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_add (&ss, 1); // CHECK: atomicrmw add i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_add (&us, 1); // CHECK: atomicrmw add i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_add (&si, 1); // CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_add (&ui, 1); // CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_add (&sll, 1); // CHECK: atomicrmw add i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_add (&ull, 1); // CHECK: atomicrmw add i64* {{.*}} seq_cst, align 8
 
-  (void) __sync_fetch_and_sub (&sc, 1); // CHECK: atomicrmw sub i8
-  (void) __sync_fetch_and_sub (&uc, 1); // CHECK: atomicrmw sub i8
-  (void) __sync_fetch_and_sub (&ss, 1); // CHECK: atomicrmw sub i16
-  (void) __sync_fetch_and_sub (&us, 1); // CHECK: atomicrmw sub i16
-  (void) __sync_fetch_and_sub (&si, 1); // CHECK: atomicrmw sub i32
-  (void) __sync_fetch_and_sub (&ui, 1); // CHECK: atomicrmw sub i32
-  (void) __sync_fetch_and_sub (&sll, 1); // CHECK: atomicrmw sub i64
-  (void) __sync_fetch_and_sub (&ull, 1); // CHECK: atomicrmw sub i64
+  (void) __sync_fetch_and_sub (&sc, 1); // CHECK: atomicrmw sub i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_sub (&uc, 1); // CHECK: atomicrmw sub i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_sub (&ss, 1); // CHECK: atomicrmw sub i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_sub (&us, 1); // CHECK: atomicrmw sub i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_sub (&si, 1); // CHECK: atomicrmw sub i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_sub (&ui, 1); // CHECK: atomicrmw sub i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_sub (&sll, 1); // CHECK: atomicrmw sub i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_sub (&ull, 1); // CHECK: atomicrmw sub i64* {{.*}} seq_cst, align 8
 
-  (void) __sync_fetch_and_or (&sc, 1); // CHECK: atomicrmw or i8
-  (void) __sync_fetch_and_or (&uc, 1); // CHECK: atomicrmw or i8
-  (void) __sync_fetch_and_or (&ss, 1); // CHECK: atomicrmw or i16
-  (void) __sync_fetch_and_or (&us, 1); // CHECK: atomicrmw or i16
-  (void) __sync_fetch_and_or (&si, 1); // CHECK: atomicrmw or i32
-  (void) __sync_fetch_and_or (&ui, 1); // CHECK: atomicrmw or i32
-  (void) __sync_fetch_and_or (&sll, 1); // CHECK: atomicrmw or i64
-  (void) __sync_fetch_and_or (&ull, 1); // CHECK: atomicrmw or i64
+  (void) __sync_fetch_and_or (&sc, 1); // CHECK: atomicrmw or i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_or (&uc, 1); // CHECK: atomicrmw or i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_or (&ss, 1); // CHECK: atomicrmw or i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_or (&us, 1); // CHECK: atomicrmw or i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_or (&si, 1); // CHECK: atomicrmw or i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_or (&ui, 1); // CHECK: atomicrmw or i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_or (&sll, 1); // CHECK: atomicrmw or i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_or (&ull, 1); // CHECK: atomicrmw or i64* {{.*}} seq_cst, align 8
 
-  (void) __sync_fetch_and_xor (&sc, 1); // CHECK: atomicrmw xor i8
-  (void) __sync_fetch_and_xor (&uc, 1); // CHECK: atomicrmw xor i8
-  (void) __sync_fetch_and_xor (&ss, 1); // CHECK: atomicrmw xor i16
-  (void) __sync_fetch_and_xor (&us, 1); // CHECK: atomicrmw xor i16
-  (void) __sync_fetch_and_xor (&si, 1); // CHECK: atomicrmw xor i32
-  (void) __sync_fetch_and_xor (&ui, 1); // CHECK: atomicrmw xor i32
-  (void) __sync_fetch_and_xor (&sll, 1); // CHECK: atomicrmw xor i64
-  (void) __sync_fetch_and_xor (&ull, 1); // CHECK: atomicrmw xor i64
-  (void) __sync_fetch_and_xor (&u128, 1); // CHECK: atomicrmw xor i128
-  (void) __sync_fetch_and_xor (&s128, 1); // CHECK: atomicrmw xor i128
+  (void) __sync_fetch_and_xor (&sc, 1); // CHECK: atomicrmw xor i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_xor (&uc, 1); // CHECK: atomicrmw xor i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_xor (&ss, 1); // CHECK: atomicrmw xor i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_xor (&us, 1); // CHECK: atomicrmw xor i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_xor (&si, 1); // CHECK: atomicrmw xor i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_xor (&ui, 1); // CHECK: atomicrmw xor i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_xor (&sll, 1); // CHECK: atomicrmw xor i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_xor (&ull, 1); // CHECK: atomicrmw xor i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_xor (&u128, 1); // CHECK: atomicrmw xor i128* {{.*}} seq_cst, align 16
+  (void) __sync_fetch_and_xor (&s128, 1); // CHECK: atomicrmw xor i128* {{.*}} seq_cst, align 16
 
-  (void) __sync_fetch_and_nand (&sc, 1); // CHECK: atomicrmw nand i8
-  (void) __sync_fetch_and_nand (&uc, 1); // CHECK: atomicrmw nand i8
-  (void) __sync_fetch_and_nand (&ss, 1); // CHECK: atomicrmw nand i16
-  (void) __sync_fetch_and_nand (&us, 1); // CHECK: atomicrmw nand i16
-  (void) __sync_fetch_and_nand (&si, 1); // CHECK: atomicrmw nand i32
-  (void) __sync_fetch_and_nand (&ui, 1); // CHECK: atomicrmw nand i32
-  (void) __sync_fetch_and_nand (&sll, 1); // CHECK: atomicrmw nand i64
-  (void) __sync_fetch_and_nand (&ull, 1); // CHECK: atomicrmw nand i64
+  (void) __sync_fetch_and_nand (&sc, 1); // CHECK: atomicrmw nand i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_nand (&uc, 1); // CHECK: atomicrmw nand i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_nand (&ss, 1); // CHECK: atomicrmw nand i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_nand (&us, 1); // CHECK: atomicrmw nand i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_nand (&si, 1); // CHECK: atomicrmw nand i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_nand (&ui, 1); // CHECK: atomicrmw nand i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_nand (&sll, 1); // CHECK: atomicrmw nand i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_nand (&ull, 1); // CHECK: atomicrmw nand i64* {{.*}} seq_cst, align 8
 
-  (void) __sync_fetch_and_and (&sc, 1); // CHECK: atomicrmw and i8
-  (void) __sync_fetch_and_and (&uc, 1); // CHECK: atomicrmw and i8
-  (void) __sync_fetch_and_and (&ss, 1); // CHECK: atomicrmw and i16
-  (void) __sync_fetch_and_and (&us, 1); // CHECK: atomicrmw and i16
-  (void) __sync_fetch_and_and (&si, 1); // CHECK: atomicrmw and i32
-  (void) __sync_fetch_and_and (&ui, 1); // CHECK: atomicrmw and i32
-  (void) __sync_fetch_and_and (&sll, 1); // CHECK: atomicrmw and i64
-  (void) __sync_fetch_and_and (&ull, 1); // CHECK: atomicrmw and i64
+  (void) __sync_fetch_and_and (&sc, 1); // CHECK: atomicrmw and i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_and (&uc, 1); // CHECK: atomicrmw and i8* {{.*}} seq_cst, align 1
+  (void) __sync_fetch_and_and (&ss, 1); // CHECK: atomicrmw and i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_and (&us, 1); // CHECK: atomicrmw and i16* {{.*}} seq_cst, align 2
+  (void) __sync_fetch_and_and (&si, 1); // CHECK: atomicrmw and i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_and (&ui, 1); // CHECK: atomicrmw and i32* {{.*}} seq_cst, align 4
+  (void) __sync_fetch_and_and (&sll, 1); // CHECK: atomicrmw and i64* {{.*}} seq_cst, align 8
+  (void) __sync_fetch_and_and (&ull, 1); // CHECK: atomicrmw and i64* {{.*}} seq_cst, align 8
 
 }
 
-void test_fetch_and_op (void) // CHECK-LABEL: define void @test_fetch_and_op
+void test_fetch_and_op (void) // CHECK-LABEL: define{{.*}} void @test_fetch_and_op
 {
   sc = __sync_fetch_and_add (&sc, 11); // CHECK: atomicrmw add
   uc = __sync_fetch_and_add (&uc, 11); // CHECK: atomicrmw add
@@ -224,81 +224,81 @@ void test_op_and_fetch (void)
 void test_compare_and_swap (void)
 {
   sc = __sync_val_compare_and_swap (&sc, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8* {{.*}} seq_cst, align 1
   // CHECK: extractvalue { i8, i1 } [[PAIR]], 0
 
   uc = __sync_val_compare_and_swap (&uc, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8* {{.*}} seq_cst, align 1
   // CHECK: extractvalue { i8, i1 } [[PAIR]], 0
 
   ss = __sync_val_compare_and_swap (&ss, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16* {{.*}} seq_cst, align 2
   // CHECK: extractvalue { i16, i1 } [[PAIR]], 0
 
   us = __sync_val_compare_and_swap (&us, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16* {{.*}} seq_cst, align 2
   // CHECK: extractvalue { i16, i1 } [[PAIR]], 0
 
   si = __sync_val_compare_and_swap (&si, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32* {{.*}} seq_cst, align 4
   // CHECK: extractvalue { i32, i1 } [[PAIR]], 0
 
   ui = __sync_val_compare_and_swap (&ui, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32* {{.*}} seq_cst, align 4
   // CHECK: extractvalue { i32, i1 } [[PAIR]], 0
 
   sll = __sync_val_compare_and_swap (&sll, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64* {{.*}} seq_cst, align 8
   // CHECK: extractvalue { i64, i1 } [[PAIR]], 0
 
   ull = __sync_val_compare_and_swap (&ull, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64* {{.*}} seq_cst, align 8
   // CHECK: extractvalue { i64, i1 } [[PAIR]], 0
 
 
   ui = __sync_bool_compare_and_swap (&sc, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8* {{.*}} seq_cst, align 1
   // CHECK: extractvalue { i8, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&uc, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i8* {{.*}} seq_cst, align 1
   // CHECK: extractvalue { i8, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&ss, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16* {{.*}} seq_cst, align 2
   // CHECK: extractvalue { i16, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&us, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i16* {{.*}} seq_cst, align 2
   // CHECK: extractvalue { i16, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&si, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32* {{.*}} seq_cst, align 4
   // CHECK: extractvalue { i32, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&ui, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i32* {{.*}} seq_cst, align 4
   // CHECK: extractvalue { i32, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&sll, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64* {{.*}} seq_cst, align 8
   // CHECK: extractvalue { i64, i1 } [[PAIR]], 1
 
   ui = __sync_bool_compare_and_swap (&ull, uc, sc);
-  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64
+  // CHECK: [[PAIR:%[a-z0-9._]+]] = cmpxchg i64* {{.*}} seq_cst, align 8
   // CHECK: extractvalue { i64, i1 } [[PAIR]], 1
 }
 
 void test_lock (void)
 {
-  sc = __sync_lock_test_and_set (&sc, 1); // CHECK: atomicrmw xchg i8
-  uc = __sync_lock_test_and_set (&uc, 1); // CHECK: atomicrmw xchg i8
-  ss = __sync_lock_test_and_set (&ss, 1); // CHECK: atomicrmw xchg i16
-  us = __sync_lock_test_and_set (&us, 1); // CHECK: atomicrmw xchg i16
-  si = __sync_lock_test_and_set (&si, 1); // CHECK: atomicrmw xchg i32
-  ui = __sync_lock_test_and_set (&ui, 1); // CHECK: atomicrmw xchg i32
-  sll = __sync_lock_test_and_set (&sll, 1); // CHECK: atomicrmw xchg i64
-  ull = __sync_lock_test_and_set (&ull, 1); // CHECK: atomicrmw xchg i64
+  sc = __sync_lock_test_and_set (&sc, 1); // CHECK: atomicrmw xchg i8* {{.*}} seq_cst, align 1
+  uc = __sync_lock_test_and_set (&uc, 1); // CHECK: atomicrmw xchg i8* {{.*}} seq_cst, align 1
+  ss = __sync_lock_test_and_set (&ss, 1); // CHECK: atomicrmw xchg i16* {{.*}} seq_cst, align 2
+  us = __sync_lock_test_and_set (&us, 1); // CHECK: atomicrmw xchg i16* {{.*}} seq_cst, align 2
+  si = __sync_lock_test_and_set (&si, 1); // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
+  ui = __sync_lock_test_and_set (&ui, 1); // CHECK: atomicrmw xchg i32* {{.*}} seq_cst, align 4
+  sll = __sync_lock_test_and_set (&sll, 1); // CHECK: atomicrmw xchg i64* {{.*}} seq_cst, align 8
+  ull = __sync_lock_test_and_set (&ull, 1); // CHECK: atomicrmw xchg i64* {{.*}} seq_cst, align 8
 
   __sync_synchronize (); // CHECK: fence seq_cst
 
@@ -313,8 +313,8 @@ void test_lock (void)
 }
 
 void test_atomic(void) {
-  ui = __atomic_fetch_min(&ui, 5, __ATOMIC_RELAXED); // CHECK: atomicrmw umin {{.*}} monotonic
-  si = __atomic_fetch_min(&si, 5, __ATOMIC_SEQ_CST); // CHECK: atomicrmw min {{.*}} seq_cst
-  ui = __atomic_fetch_max(&ui, 5, __ATOMIC_ACQUIRE); // CHECK: atomicrmw umax {{.*}} acquire
-  si = __atomic_fetch_max(&si, 5, __ATOMIC_RELEASE); // CHECK: atomicrmw max {{.*}} release
+  ui = __atomic_fetch_min(&ui, 5, __ATOMIC_RELAXED); // CHECK: atomicrmw umin {{.*}} monotonic, align 4
+  si = __atomic_fetch_min(&si, 5, __ATOMIC_SEQ_CST); // CHECK: atomicrmw min {{.*}} seq_cst, align 4
+  ui = __atomic_fetch_max(&ui, 5, __ATOMIC_ACQUIRE); // CHECK: atomicrmw umax {{.*}} acquire, align 4
+  si = __atomic_fetch_max(&si, 5, __ATOMIC_RELEASE); // CHECK: atomicrmw max {{.*}} release, align 4
 }

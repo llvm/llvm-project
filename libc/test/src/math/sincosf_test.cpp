@@ -6,86 +6,62 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
-#include "include/math.h"
-#include "src/errno/llvmlibc_errno.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/TestHelpers.h"
 #include "src/math/sincosf.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/ClassificationFunctions.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
+#include <math.h>
 
+#include <errno.h>
 #include <stdint.h>
 
-using __llvm_libc::fputil::isNegativeQuietNaN;
-using __llvm_libc::fputil::isQuietNaN;
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
-
-using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
-
 using __llvm_libc::testing::sdcomp26094Values;
+using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(SinCosfTest, SpecialNumbers) {
-  llvmlibc_errno = 0;
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
+  errno = 0;
   float sin, cos;
 
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::aQuietNaN), &sin, &cos);
-  EXPECT_TRUE(isQuietNaN(cos));
-  EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  __llvm_libc::sincosf(aNaN, &sin, &cos);
+  EXPECT_FP_EQ(aNaN, cos);
+  EXPECT_FP_EQ(aNaN, sin);
+  EXPECT_EQ(errno, 0);
 
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::aNegativeQuietNaN), &sin,
-                       &cos);
-  EXPECT_TRUE(isNegativeQuietNaN(cos));
-  EXPECT_TRUE(isNegativeQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  __llvm_libc::sincosf(0.0f, &sin, &cos);
+  EXPECT_FP_EQ(1.0f, cos);
+  EXPECT_FP_EQ(0.0f, sin);
+  EXPECT_EQ(errno, 0);
 
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::aSignallingNaN), &sin, &cos);
-  EXPECT_TRUE(isQuietNaN(cos));
-  EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  __llvm_libc::sincosf(-0.0f, &sin, &cos);
+  EXPECT_FP_EQ(1.0f, cos);
+  EXPECT_FP_EQ(-0.0f, sin);
+  EXPECT_EQ(errno, 0);
 
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::aNegativeSignallingNaN), &sin,
-                       &cos);
-  EXPECT_TRUE(isNegativeQuietNaN(cos));
-  EXPECT_TRUE(isNegativeQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  errno = 0;
+  __llvm_libc::sincosf(inf, &sin, &cos);
+  EXPECT_FP_EQ(aNaN, cos);
+  EXPECT_FP_EQ(aNaN, sin);
+  EXPECT_EQ(errno, EDOM);
 
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::zero), &sin, &cos);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(cos));
-  EXPECT_EQ(BitPatterns::zero, valueAsBits(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
-
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::negZero), &sin, &cos);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(cos));
-  EXPECT_EQ(BitPatterns::negZero, valueAsBits(sin));
-  EXPECT_EQ(llvmlibc_errno, 0);
-
-  llvmlibc_errno = 0;
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::inf), &sin, &cos);
-  EXPECT_TRUE(isQuietNaN(cos));
-  EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
-
-  llvmlibc_errno = 0;
-  __llvm_libc::sincosf(valueFromBits(BitPatterns::negInf), &sin, &cos);
-  EXPECT_TRUE(isQuietNaN(cos));
-  EXPECT_TRUE(isQuietNaN(sin));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  errno = 0;
+  __llvm_libc::sincosf(negInf, &sin, &cos);
+  EXPECT_FP_EQ(aNaN, cos);
+  EXPECT_FP_EQ(aNaN, sin);
+  EXPECT_EQ(errno, EDOM);
 }
 
-TEST(SinCosfTest, InFloatRange) {
+TEST(LlvmLibcSinCosfTest, InFloatRange) {
   constexpr uint32_t count = 1000000;
   constexpr uint32_t step = UINT32_MAX / count;
   for (uint32_t i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = valueFromBits(v);
+    float x = float(FPBits((v)));
     if (isnan(x) || isinf(x))
       continue;
 
@@ -97,30 +73,30 @@ TEST(SinCosfTest, InFloatRange) {
 }
 
 // For small values, cos(x) is 1 and sin(x) is x.
-TEST(SinCosfTest, SmallValues) {
+TEST(LlvmLibcSinCosfTest, SmallValues) {
   uint32_t bits = 0x17800000;
-  float x = valueFromBits(bits);
+  float x = float(FPBits((bits)));
   float result_cos, result_sin;
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result_cos, 1.0);
   EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result_sin, 1.0);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(result_cos));
-  EXPECT_EQ(bits, valueAsBits(result_sin));
+  EXPECT_FP_EQ(1.0f, result_cos);
+  EXPECT_FP_EQ(x, result_sin);
 
   bits = 0x00400000;
-  x = valueFromBits(bits);
+  x = float(FPBits((bits)));
   __llvm_libc::sincosf(x, &result_sin, &result_cos);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, result_cos, 1.0);
   EXPECT_MPFR_MATCH(mpfr::Operation::Sin, x, result_sin, 1.0);
-  EXPECT_EQ(BitPatterns::one, valueAsBits(result_cos));
-  EXPECT_EQ(bits, valueAsBits(result_sin));
+  EXPECT_FP_EQ(1.0f, result_cos);
+  EXPECT_FP_EQ(x, result_sin);
 }
 
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(SinCosfTest, SDCOMP_26094) {
+TEST(LlvmLibcSinCosfTest, SDCOMP_26094) {
   for (uint32_t v : sdcomp26094Values) {
-    float x = valueFromBits(v);
+    float x = float(FPBits((v)));
     float sin, cos;
     __llvm_libc::sincosf(x, &sin, &cos);
     EXPECT_MPFR_MATCH(mpfr::Operation::Cos, x, cos, 1.0);

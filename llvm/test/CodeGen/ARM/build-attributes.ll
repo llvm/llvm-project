@@ -206,10 +206,10 @@
 ; RUN: llc < %s -mtriple=armv6-none-linux-gnueabi -mcpu=arm1136j-s -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=armv6-none-linux-gnueabi -mcpu=arm1136j-s | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv6k
-; RUN: llc < %s -mtriple=armv6k-none-netbsd-gnueabi -mcpu=arm1176j-s 2> %t | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=armv6k-none-netbsd-gnueabi -mcpu=mpcore 2> %t | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; RUN: FileCheck %s < %t --allow-empty --check-prefix=CPU-SUPPORTED
-; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=arm1176j-s -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
-; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=arm1176j-s | FileCheck %s --check-prefix=NO-STRICT-ALIGN
+; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=mpcore -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
+; RUN: llc < %s -mtriple=armv6k-none-linux-gnueabi -mcpu=mpcore | FileCheck %s --check-prefix=NO-STRICT-ALIGN
 ; ARMv6m
 ; RUN: llc < %s -mtriple=thumb-none-linux-gnueabi -mcpu=cortex-m0 -mattr=+strict-align | FileCheck %s --check-prefix=STRICT-ALIGN
 ; RUN: llc < %s -mtriple=thumb-none-linux-gnueabi -mattr=+strict-align -mcpu=cortex-m0 | FileCheck %s --check-prefix=STRICT-ALIGN

@@ -14,10 +14,14 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterNSException(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_nsexception_with_run_command(self):
         """Test formatters for NSException."""
-        self.appkit_tester_impl(self.nsexception_data_formatter_commands)
+        self.appkit_tester_impl(self.nsexception_data_formatter_commands, True)
+
+    @skipUnlessDarwin
+    def test_nsexception_with_run_command_no_const(self):
+        """Test formatters for NSException."""
+        self.appkit_tester_impl(self.nsexception_data_formatter_commands, False)
 
     def nsexception_data_formatter_commands(self):
         self.expect(

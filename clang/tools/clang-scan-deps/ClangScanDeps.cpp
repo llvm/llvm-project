@@ -12,6 +12,8 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
@@ -49,7 +51,8 @@ public:
   /// option and cache the results for reuse. \returns resource directory path
   /// associated with the given invocation command or empty string if the
   /// compiler path is NOT an absolute path.
-  StringRef findResourceDir(const tooling::CommandLineArguments &Args) {
+  StringRef findResourceDir(const tooling::CommandLineArguments &Args,
+                            bool ClangCLMode) {
     if (Args.size() < 1)
       return "";
 
@@ -65,8 +68,12 @@ public:
     if (CachedResourceDir != Cache.end())
       return CachedResourceDir->second;
 
-    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName,
-                                                "-print-resource-dir"};
+    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName};
+    if (ClangCLMode)
+      PrintResourceDirArgs.push_back("/clang:-print-resource-dir");
+    else
+      PrintResourceDirArgs.push_back("-print-resource-dir");
+
     llvm::SmallString<64> OutputFile, ErrorFile;
     llvm::sys::fs::createTemporaryFile("print-resource-dir-output",
                                        "" /*no-suffix*/, OutputFile);
@@ -76,8 +83,8 @@ public:
     llvm::FileRemover ErrorRemover(ErrorFile.c_str());
     llvm::Optional<StringRef> Redirects[] = {
         {""}, // Stdin
-        StringRef(OutputFile),
-        StringRef(ErrorFile),
+        OutputFile.str(),
+        ErrorFile.str(),
     };
     if (const int RC = llvm::sys::ExecuteAndWait(
             ClangBinaryPath, PrintResourceDirArgs, {}, Redirects)) {
@@ -131,9 +138,41 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
-static llvm::cl::opt<bool> FullCommandLine(
-    "full-command-line",
-    llvm::cl::desc("Include the full command lines to use to build modules"),
+// This mode is mostly useful for development of explicitly built modules.
+// Command lines will contain arguments specifying modulemap file paths and
+// absolute paths to PCM files in the module cache directory.
+//
+// Build tools that want to put the PCM files in a different location should use
+// the C++ APIs instead, of which there are two flavors:
+//
+// 1. APIs that generate arguments with paths to modulemap and PCM files via
+//    callbacks provided by the client:
+//     * ModuleDeps::getCanonicalCommandLine(LookupPCMPath, LookupModuleDeps)
+//     * FullDependencies::getAdditionalArgs(LookupPCMPath, LookupModuleDeps)
+//
+// 2. APIs that don't generate arguments with paths to modulemap or PCM files
+//    and instead expect the client to append them manually after the fact:
+//     * ModuleDeps::getCanonicalCommandLineWithoutModulePaths()
+//     * FullDependencies::getAdditionalArgsWithoutModulePaths()
+//
+static llvm::cl::opt<bool> GenerateModulesPathArgs(
+    "generate-modules-path-args",
+    llvm::cl::desc(
+        "With '-format experimental-full', include arguments specifying "
+        "modules-related paths in the generated command lines: "
+        "'-fmodule-file=', '-o', '-fmodule-map-file='."),
+    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
+
+static llvm::cl::opt<std::string> ModuleFilesDir(
+    "module-files-dir",
+    llvm::cl::desc("With '-generate-modules-path-args', paths to module files "
+                   "in the generated command lines will begin with the "
+                   "specified directory instead the module cache directory."),
+    llvm::cl::cat(DependencyScannerCategory));
+
+static llvm::cl::opt<bool> OptimizeArgs(
+    "optimize-args",
+    llvm::cl::desc("Whether to optimize command-line arguments of modules."),
     llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
 
 llvm::cl::opt<unsigned>
@@ -160,37 +199,17 @@ llvm::cl::opt<bool> SkipExcludedPPRanges(
         "until reaching the end directive."),
     llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
 
+llvm::cl::opt<std::string> ModuleName(
+    "module-name", llvm::cl::Optional,
+    llvm::cl::desc("the module of which the dependencies are to be computed"),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
                             llvm::cl::desc("Use verbose output."),
                             llvm::cl::init(false),
                             llvm::cl::cat(DependencyScannerCategory));
 
 } // end anonymous namespace
-
-/// \returns object-file path derived from source-file path.
-static std::string getObjFilePath(StringRef SrcFile) {
-  SmallString<128> ObjFileName(SrcFile);
-  llvm::sys::path::replace_extension(ObjFileName, "o");
-  return std::string(ObjFileName.str());
-}
-
-class SingleCommandCompilationDatabase : public tooling::CompilationDatabase {
-public:
-  SingleCommandCompilationDatabase(tooling::CompileCommand Cmd)
-      : Command(std::move(Cmd)) {}
-
-  std::vector<tooling::CompileCommand>
-  getCompileCommands(StringRef FilePath) const override {
-    return {Command};
-  }
-
-  std::vector<tooling::CompileCommand> getAllCompileCommands() const override {
-    return {Command};
-  }
-
-private:
-  tooling::CompileCommand Command;
-};
 
 /// Takes the result of a dependency scan and prints error / dependency files
 /// based on the result.
@@ -222,16 +241,16 @@ static llvm::json::Array toJSONSorted(const llvm::StringSet<> &Set) {
   return llvm::json::Array(Strings);
 }
 
-static llvm::json::Array toJSONSorted(std::vector<ClangModuleDep> V) {
-  llvm::sort(V, [](const ClangModuleDep &A, const ClangModuleDep &B) {
+static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
+  llvm::sort(V, [](const ModuleID &A, const ModuleID &B) {
     return std::tie(A.ModuleName, A.ContextHash) <
            std::tie(B.ModuleName, B.ContextHash);
   });
 
   llvm::json::Array Ret;
-  for (const ClangModuleDep &CMD : V)
+  for (const ModuleID &MID : V)
     Ret.push_back(llvm::json::Object(
-        {{"module-name", CMD.ModuleName}, {"context-hash", CMD.ContextHash}}));
+        {{"module-name", MID.ModuleName}, {"context-hash", MID.ContextHash}}));
   return Ret;
 }
 
@@ -244,40 +263,41 @@ public:
 
     InputDeps ID;
     ID.FileName = std::string(Input);
-    ID.ContextHash = std::move(FD.ContextHash);
+    ID.ContextHash = std::move(FD.ID.ContextHash);
     ID.FileDeps = std::move(FD.FileDeps);
     ID.ModuleDeps = std::move(FD.ClangModuleDeps);
 
     std::unique_lock<std::mutex> ul(Lock);
     for (const ModuleDeps &MD : FDR.DiscoveredModules) {
-      auto I = Modules.find({MD.ContextHash, MD.ModuleName, 0});
+      auto I = Modules.find({MD.ID, 0});
       if (I != Modules.end()) {
         I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
         continue;
       }
-      Modules.insert(
-          I, {{MD.ContextHash, MD.ModuleName, InputIndex}, std::move(MD)});
+      Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    if (FullCommandLine)
-      ID.AdditonalCommandLine = FD.getAdditionalCommandLine(
-          [&](ClangModuleDep CMD) { return lookupPCMPath(CMD); },
-          [&](ClangModuleDep CMD) -> const ModuleDeps & {
-            return lookupModuleDeps(CMD);
-          });
+    ID.AdditionalCommandLine =
+        GenerateModulesPathArgs
+            ? FD.getAdditionalArgs(
+                  [&](ModuleID MID) { return lookupPCMPath(MID); },
+                  [&](ModuleID MID) -> const ModuleDeps & {
+                    return lookupModuleDeps(MID);
+                  })
+            : FD.getAdditionalArgsWithoutModulePaths();
 
     Inputs.push_back(std::move(ID));
   }
 
   void printFullOutput(raw_ostream &OS) {
     // Sort the modules by name to get a deterministic order.
-    std::vector<ContextModulePair> ModuleNames;
+    std::vector<IndexedModuleID> ModuleIDs;
     for (auto &&M : Modules)
-      ModuleNames.push_back(M.first);
-    llvm::sort(ModuleNames,
-               [](const ContextModulePair &A, const ContextModulePair &B) {
-                 return std::tie(A.ModuleName, A.InputIndex) <
-                        std::tie(B.ModuleName, B.InputIndex);
+      ModuleIDs.push_back(M.first);
+    llvm::sort(ModuleIDs,
+               [](const IndexedModuleID &A, const IndexedModuleID &B) {
+                 return std::tie(A.ID.ModuleName, A.InputIndex) <
+                        std::tie(B.ID.ModuleName, B.InputIndex);
                });
 
     llvm::sort(Inputs, [](const InputDeps &A, const InputDeps &B) {
@@ -287,22 +307,22 @@ public:
     using namespace llvm::json;
 
     Array OutModules;
-    for (auto &&ModName : ModuleNames) {
-      auto &MD = Modules[ModName];
+    for (auto &&ModID : ModuleIDs) {
+      auto &MD = Modules[ModID];
       Object O{
-          {"name", MD.ModuleName},
-          {"context-hash", MD.ContextHash},
+          {"name", MD.ID.ModuleName},
+          {"context-hash", MD.ID.ContextHash},
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
           {"command-line",
-           FullCommandLine
-               ? MD.getFullCommandLine(
-                     [&](ClangModuleDep CMD) { return lookupPCMPath(CMD); },
-                     [&](ClangModuleDep CMD) -> const ModuleDeps & {
-                       return lookupModuleDeps(CMD);
+           GenerateModulesPathArgs
+               ? MD.getCanonicalCommandLine(
+                     [&](ModuleID MID) { return lookupPCMPath(MID); },
+                     [&](ModuleID MID) -> const ModuleDeps & {
+                       return lookupModuleDeps(MID);
                      })
-               : MD.NonPathCommandLine},
+               : MD.getCanonicalCommandLineWithoutModulePaths()},
       };
       OutModules.push_back(std::move(O));
     }
@@ -314,7 +334,7 @@ public:
           {"clang-context-hash", I.ContextHash},
           {"file-deps", I.FileDeps},
           {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
-          {"command-line", I.AdditonalCommandLine},
+          {"command-line", I.AdditionalCommandLine},
       };
       TUs.push_back(std::move(O));
     }
@@ -328,33 +348,46 @@ public:
   }
 
 private:
-  StringRef lookupPCMPath(ClangModuleDep CMD) {
-    return Modules[ContextModulePair{CMD.ContextHash, CMD.ModuleName, 0}]
-        .ImplicitModulePCMPath;
+  StringRef lookupPCMPath(ModuleID MID) {
+    auto PCMPath = PCMPaths.insert({MID, ""});
+    if (PCMPath.second)
+      PCMPath.first->second = constructPCMPath(lookupModuleDeps(MID));
+    return PCMPath.first->second;
   }
 
-  const ModuleDeps &lookupModuleDeps(ClangModuleDep CMD) {
-    auto I =
-        Modules.find(ContextModulePair{CMD.ContextHash, CMD.ModuleName, 0});
+  /// Construct a path for the explicitly built PCM.
+  std::string constructPCMPath(const ModuleDeps &MD) const {
+    StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
+
+    SmallString<256> ExplicitPCMPath(
+        !ModuleFilesDir.empty()
+            ? ModuleFilesDir
+            : MD.Invocation.getHeaderSearchOpts().ModuleCachePath);
+    llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
+    return std::string(ExplicitPCMPath);
+  }
+
+  const ModuleDeps &lookupModuleDeps(ModuleID MID) {
+    auto I = Modules.find(IndexedModuleID{MID, 0});
     assert(I != Modules.end());
     return I->second;
   };
 
-  struct ContextModulePair {
-    std::string ContextHash;
-    std::string ModuleName;
+  struct IndexedModuleID {
+    ModuleID ID;
     mutable size_t InputIndex;
 
-    bool operator==(const ContextModulePair &Other) const {
-      return ContextHash == Other.ContextHash && ModuleName == Other.ModuleName;
+    bool operator==(const IndexedModuleID &Other) const {
+      return ID.ModuleName == Other.ID.ModuleName &&
+             ID.ContextHash == Other.ID.ContextHash;
     }
   };
 
-  struct ContextModulePairHasher {
-    std::size_t operator()(const ContextModulePair &CMP) const {
+  struct IndexedModuleIDHasher {
+    std::size_t operator()(const IndexedModuleID &IMID) const {
       using llvm::hash_combine;
 
-      return hash_combine(CMP.ContextHash, CMP.ModuleName);
+      return hash_combine(IMID.ID.ModuleName, IMID.ID.ContextHash);
     }
   };
 
@@ -362,13 +395,14 @@ private:
     std::string FileName;
     std::string ContextHash;
     std::vector<std::string> FileDeps;
-    std::vector<ClangModuleDep> ModuleDeps;
-    std::vector<std::string> AdditonalCommandLine;
+    std::vector<ModuleID> ModuleDeps;
+    std::vector<std::string> AdditionalCommandLine;
   };
 
   std::mutex Lock;
-  std::unordered_map<ContextModulePair, ModuleDeps, ContextModulePairHasher>
+  std::unordered_map<IndexedModuleID, ModuleDeps, IndexedModuleIDHasher>
       Modules;
+  std::unordered_map<ModuleID, std::string, ModuleIDHasher> PCMPaths;
   std::vector<InputDeps> Inputs;
 };
 
@@ -413,85 +447,79 @@ int main(int argc, const char **argv) {
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
+
   AdjustingCompilations->appendArgumentsAdjuster(
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
         std::string LastO = "";
-        bool HasMT = false;
-        bool HasMQ = false;
-        bool HasMD = false;
         bool HasResourceDir = false;
-        // We need to find the last -o value.
-        if (!Args.empty()) {
-          std::size_t Idx = Args.size() - 1;
-          for (auto It = Args.rbegin(); It != Args.rend(); ++It) {
-            if (It != Args.rbegin()) {
-              if (Args[Idx] == "-o")
-                LastO = Args[Idx + 1];
-              if (Args[Idx] == "-MT")
-                HasMT = true;
-              if (Args[Idx] == "-MQ")
-                HasMQ = true;
-              if (Args[Idx] == "-MD")
-                HasMD = true;
-              if (Args[Idx] == "-resource-dir")
-                HasResourceDir = true;
+        bool ClangCLMode = false;
+        auto FlagsEnd = llvm::find(Args, "--");
+        if (FlagsEnd != Args.begin()) {
+          ClangCLMode =
+              llvm::sys::path::stem(Args[0]).contains_insensitive("clang-cl") ||
+              llvm::is_contained(Args, "--driver-mode=cl");
+
+          // Reverse scan, starting at the end or at the element before "--".
+          auto R = llvm::make_reverse_iterator(FlagsEnd);
+          for (auto I = R, E = Args.rend(); I != E; ++I) {
+            StringRef Arg = *I;
+            if (ClangCLMode) {
+              // Ignore arguments that are preceded by "-Xclang".
+              if ((I + 1) != E && I[1] == "-Xclang")
+                continue;
+              if (LastO.empty()) {
+                // With clang-cl, the output obj file can be specified with
+                // "/opath", "/o path", "/Fopath", and the dash counterparts.
+                // Also, clang-cl adds ".obj" extension if none is found.
+                if ((Arg == "-o" || Arg == "/o") && I != R)
+                  LastO = I[-1]; // Next argument (reverse iterator)
+                else if (Arg.startswith("/Fo") || Arg.startswith("-Fo"))
+                  LastO = Arg.drop_front(3).str();
+                else if (Arg.startswith("/o") || Arg.startswith("-o"))
+                  LastO = Arg.drop_front(2).str();
+
+                if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
+                  LastO.append(".obj");
+              }
             }
-            --Idx;
+            if (Arg == "-resource-dir")
+              HasResourceDir = true;
           }
         }
-        // If there's no -MT/-MQ Driver would add -MT with the value of the last
-        // -o option.
-        tooling::CommandLineArguments AdjustedArgs = Args;
-        AdjustedArgs.push_back("-o");
-        AdjustedArgs.push_back("/dev/null");
-        if (!HasMT && !HasMQ) {
-          AdjustedArgs.push_back("-M");
-          AdjustedArgs.push_back("-MT");
-          // We're interested in source dependencies of an object file.
-          if (!HasMD) {
-            // FIXME: We are missing the directory unless the -o value is an
-            // absolute path.
-            AdjustedArgs.push_back(!LastO.empty() ? LastO
-                                                  : getObjFilePath(FileName));
-          } else {
-            AdjustedArgs.push_back(std::string(FileName));
-          }
+        tooling::CommandLineArguments AdjustedArgs(Args.begin(), FlagsEnd);
+        // The clang-cl driver passes "-o -" to the frontend. Inject the real
+        // file here to ensure "-MT" can be deduced if need be.
+        if (ClangCLMode && !LastO.empty()) {
+          AdjustedArgs.push_back("/clang:-o");
+          AdjustedArgs.push_back("/clang:" + LastO);
         }
-        AdjustedArgs.push_back("-Xclang");
-        AdjustedArgs.push_back("-Eonly");
-        AdjustedArgs.push_back("-Xclang");
-        AdjustedArgs.push_back("-sys-header-deps");
-        AdjustedArgs.push_back("-Wno-error");
 
         if (!HasResourceDir) {
           StringRef ResourceDir =
-              ResourceDirCache.findResourceDir(Args);
+              ResourceDirCache.findResourceDir(Args, ClangCLMode);
           if (!ResourceDir.empty()) {
             AdjustedArgs.push_back("-resource-dir");
             AdjustedArgs.push_back(std::string(ResourceDir));
           }
         }
+        AdjustedArgs.insert(AdjustedArgs.end(), FlagsEnd, Args.end());
         return AdjustedArgs;
       });
-  AdjustingCompilations->appendArgumentsAdjuster(
-      tooling::getClangStripSerializeDiagnosticAdjuster());
 
   SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
   DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
-                                    SkipExcludedPPRanges);
+                                    SkipExcludedPPRanges, OptimizeArgs);
   llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
     WorkerTools.push_back(std::make_unique<DependencyScanningTool>(Service));
 
-  std::vector<SingleCommandCompilationDatabase> Inputs;
-  for (tooling::CompileCommand Cmd :
-       AdjustingCompilations->getAllCompileCommands())
-    Inputs.emplace_back(Cmd);
+  std::vector<tooling::CompileCommand> Inputs =
+      AdjustingCompilations->getAllCompileCommands();
 
   std::atomic<bool> HadErrors(false);
   FullDeps FD;
@@ -507,7 +535,7 @@ int main(int argc, const char **argv) {
                 &DependencyOS, &Errs]() {
       llvm::StringSet<> AlreadySeenModules;
       while (true) {
-        const SingleCommandCompilationDatabase *Input;
+        const tooling::CompileCommand *Input;
         std::string Filename;
         std::string CWD;
         size_t LocalIndex;
@@ -518,19 +546,22 @@ int main(int argc, const char **argv) {
             return;
           LocalIndex = Index;
           Input = &Inputs[Index++];
-          tooling::CompileCommand Cmd = Input->getAllCompileCommands()[0];
-          Filename = std::move(Cmd.Filename);
-          CWD = std::move(Cmd.Directory);
+          Filename = std::move(Input->Filename);
+          CWD = std::move(Input->Directory);
         }
+        Optional<StringRef> MaybeModuleName;
+        if (!ModuleName.empty())
+          MaybeModuleName = ModuleName;
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
-          auto MaybeFile = WorkerTools[I]->getDependencyFile(*Input, CWD);
+          auto MaybeFile = WorkerTools[I]->getDependencyFile(
+              Input->CommandLine, CWD, MaybeModuleName);
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              *Input, CWD, AlreadySeenModules);
+              Input->CommandLine, CWD, AlreadySeenModules, MaybeModuleName);
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;

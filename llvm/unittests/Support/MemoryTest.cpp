@@ -41,6 +41,8 @@ bool IsMPROTECT() {
     err(EXIT_FAILURE, "sysctl");
 
   return !!(paxflags & CTL_PROC_PAXFLAGS_MPROTECT);
+#elif defined(__APPLE__) && defined(__aarch64__)
+  return true;
 #else
   return false;
 #endif
@@ -426,8 +428,7 @@ unsigned MemoryFlags[] = {
                            Memory::MF_READ|Memory::MF_WRITE|Memory::MF_EXEC
                          };
 
-INSTANTIATE_TEST_CASE_P(AllocationTests,
-                        MappedMemoryTest,
-                        ::testing::ValuesIn(MemoryFlags),);
+INSTANTIATE_TEST_SUITE_P(AllocationTests, MappedMemoryTest,
+                         ::testing::ValuesIn(MemoryFlags));
 
 }  // anonymous namespace

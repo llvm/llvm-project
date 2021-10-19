@@ -34,10 +34,10 @@ stack:
 body: |
   bb.0.entry:
     %0 = ADRP @var
-    %1 = LDRXui killed %0, @var :: (load 8 from @var)
-    STRXui killed %1, %stack.0.local_var, 0 :: (store 8 into %ir.local_var)
+    %1 = LDRXui killed %0, @var :: (load (s64) from @var)
+    STRXui killed %1, %stack.0.local_var, 0 :: (store (s64) into %ir.local_var)
     %2 = ADRP @local_addr
     %3 = ADDXri %stack.0.local_var, 0, 0
-    STRXui killed %3, killed %2, @local_addr :: (store 8 into @local_addr)
+    STRXui killed %3, killed %2, @local_addr :: (store (s64) into @local_addr)
     RET_ReallyLR
 ...

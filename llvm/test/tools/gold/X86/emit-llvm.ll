@@ -54,6 +54,7 @@ define hidden void @f1() {
   ret void
 }
 
+;; f2 is not internalized because it is in the llvm.used list.
 ; CHECK-DAG: define hidden void @f2()
 ; OPT-DAG: define hidden void @f2()
 define hidden void @f2() {
@@ -97,6 +98,15 @@ define i32* @f8() {
   ret i32* @g8
 }
 
+;; f9 is not internalized because it is in the llvm.compiler.used list.
+; CHECK-DAG: define hidden void @f9()
+; OPT-DAG: define hidden void @f9()
+define hidden void @f9() {
+  ret void
+}
+
+@llvm.compiler.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f9 to i8*)]
+
 ; RES: .o,f1,pl{{$}}
 ; RES: .o,f2,pl{{$}}
 ; RES: .o,f3,px{{$}}
@@ -105,6 +115,7 @@ define i32* @f8() {
 ; RES: .o,f6,p{{$}}
 ; RES: .o,f7,px{{$}}
 ; RES: .o,f8,px{{$}}
+; RES: .o,f9,pl{{$}}
 ; RES: .o,g1,px{{$}}
 ; RES: .o,g2,p{{$}}
 ; RES: .o,g3,p{{$}}

@@ -27,5 +27,5 @@ Roundtrip test:
 
 RUN: llvm-profdata merge -o %t.0.profdata %S/Inputs/CSIR_profile.proftext
 RUN: llvm-profdata merge -text -o %t.0.proftext %t.0.profdata
-RUN: diff %t.0.proftext %S/Inputs/CSIR_profile.proftext
+RUN: diff -b %t.0.proftext %S/Inputs/CSIR_profile.proftext
 

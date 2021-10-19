@@ -105,9 +105,7 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
         if (!V || !LI.replacementPreservesLCSSAForm(&I, V))
           continue;
 
-        for (Value::use_iterator UI = I.use_begin(), UE = I.use_end();
-             UI != UE;) {
-          Use &U = *UI++;
+        for (Use &U : llvm::make_early_inc_range(I.uses())) {
           auto *UserI = cast<Instruction>(U.getUser());
           U.set(V);
 
@@ -195,15 +193,10 @@ public:
     const TargetLibraryInfo &TLI =
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
             *L->getHeader()->getParent());
-    MemorySSA *MSSA = nullptr;
-    Optional<MemorySSAUpdater> MSSAU;
-    if (EnableMSSALoopDependency) {
-      MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-      MSSAU = MemorySSAUpdater(MSSA);
-    }
+    MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+    MemorySSAUpdater MSSAU(MSSA);
 
-    return simplifyLoopInst(*L, DT, LI, AC, TLI,
-                            MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
+    return simplifyLoopInst(*L, DT, LI, AC, TLI, &MSSAU);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -211,10 +204,8 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.setPreservesCFG();
-    if (EnableMSSALoopDependency) {
-      AU.addRequired<MemorySSAWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
     getLoopAnalysisUsage(AU);
   }
 };

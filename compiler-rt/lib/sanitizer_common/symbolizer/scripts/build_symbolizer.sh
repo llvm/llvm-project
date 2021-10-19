@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/usr/bin/env bash
 #
 # Run as: CLANG=bin/clang ZLIB_SRC=src/zlib \
 #             build_symbolizer.sh runtime_build/lib/clang/4.0.0/lib/linux/
@@ -71,6 +71,7 @@ TBLGEN=$CLANG_DIR/llvm-tblgen
 OPT=$CLANG_DIR/opt
 export AR=$CLANG_DIR/llvm-ar
 export LINK=$CLANG_DIR/llvm-link
+TARGET_TRIPLE=$($CC -print-target-triple)
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   if [[ ! -x "$F" ]]; then
@@ -123,7 +124,7 @@ cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
-LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -I${LIBCXX_BUILD}/include/c++/v1"
+LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include/${TARGET_TRIPLE}/c++/v1 -isystem ${LIBCXX_BUILD}/include/c++/v1 -Wno-error=global-constructors"
 
 # Build LLVM.
 if [[ ! -d ${LLVM_BUILD} ]]; then
@@ -156,9 +157,11 @@ $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
 SYMBOLIZER_API_LIST=__sanitizer_symbolize_code,__sanitizer_symbolize_data,__sanitizer_symbolize_flush,__sanitizer_symbolize_demangle
 
+LIBCXX_ARCHIVE_DIR=$(dirname $(find $LIBCXX_BUILD -name libc++.a | head -n1))
+
 # Merge all the object files together and copy the resulting library back.
-$SCRIPT_DIR/ar_to_bc.sh $LIBCXX_BUILD/lib/libc++.a \
-                        $LIBCXX_BUILD/lib/libc++abi.a \
+$SCRIPT_DIR/ar_to_bc.sh $LIBCXX_ARCHIVE_DIR/libc++.a \
+                        $LIBCXX_ARCHIVE_DIR/libc++abi.a \
                         $LLVM_BUILD/lib/libLLVMSymbolize.a \
                         $LLVM_BUILD/lib/libLLVMObject.a \
                         $LLVM_BUILD/lib/libLLVMBinaryFormat.a \

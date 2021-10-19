@@ -7,9 +7,11 @@ bar:
   .globl  call_bar_indirect
 call_bar_indirect:
   .functype call_bar_indirect () -> ()
+  i32.const 0
   i32.load  indirect_bar
   call_indirect () -> (i64)
   drop
+  i32.const 0
   i32.load  indirect_foo
   call_indirect () -> (i32)
   drop

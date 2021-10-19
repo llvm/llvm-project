@@ -1,11 +1,5 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
-tablegen("WebAssemblyGenCallingConv") {
-  visibility = [ ":LLVMWebAssemblyCodeGen" ]
-  args = [ "-gen-callingconv" ]
-  td_file = "WebAssembly.td"
-}
-
 tablegen("WebAssemblyGenDAGISel") {
   visibility = [ ":LLVMWebAssemblyCodeGen" ]
   args = [ "-gen-dag-isel" ]
@@ -18,32 +12,10 @@ tablegen("WebAssemblyGenFastISel") {
   td_file = "WebAssembly.td"
 }
 
-tablegen("WebAssemblyGenGlobalISel") {
-  visibility = [ ":LLVMWebAssemblyCodeGen" ]
-  args = [ "-gen-global-isel" ]
-  td_file = "WebAssembly.td"
-}
-
-tablegen("WebAssemblyGenMCPseudoLowering") {
-  visibility = [ ":LLVMWebAssemblyCodeGen" ]
-  args = [ "-gen-pseudo-lowering" ]
-  td_file = "WebAssembly.td"
-}
-
-tablegen("WebAssemblyGenRegisterBank") {
-  visibility = [ ":LLVMWebAssemblyCodeGen" ]
-  args = [ "-gen-register-bank" ]
-  td_file = "WebAssembly.td"
-}
-
 static_library("LLVMWebAssemblyCodeGen") {
   deps = [
-    ":WebAssemblyGenCallingConv",
     ":WebAssemblyGenDAGISel",
     ":WebAssemblyGenFastISel",
-    ":WebAssemblyGenGlobalISel",
-    ":WebAssemblyGenMCPseudoLowering",
-    ":WebAssemblyGenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -80,9 +52,12 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyLowerBrUnless.cpp",
     "WebAssemblyLowerEmscriptenEHSjLj.cpp",
     "WebAssemblyLowerGlobalDtors.cpp",
+    "WebAssemblyLowerRefTypesIntPtrConv.cpp",
     "WebAssemblyMCInstLower.cpp",
+    "WebAssemblyMCLowerPrePass.cpp",
     "WebAssemblyMachineFunctionInfo.cpp",
     "WebAssemblyMemIntrinsicResults.cpp",
+    "WebAssemblyNullifyDebugValueLists.cpp",
     "WebAssemblyOptimizeLiveIntervals.cpp",
     "WebAssemblyOptimizeReturned.cpp",
     "WebAssemblyPeephole.cpp",
@@ -100,7 +75,6 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyTargetMachine.cpp",
     "WebAssemblyTargetObjectFile.cpp",
     "WebAssemblyTargetTransformInfo.cpp",
-    "WebAssemblyUtilities.cpp",
   ]
 }
 

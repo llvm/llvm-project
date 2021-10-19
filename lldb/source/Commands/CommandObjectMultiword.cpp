@@ -98,7 +98,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_lower("help")) {
+  if (sub_command.equals_insensitive("help")) {
     this->CommandObject::GenerateHelpText(result);
     return result.Succeeded();
   }
@@ -106,7 +106,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -144,7 +143,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
-  result.SetStatus(eReturnStatusFailed);
   return false;
 }
 
@@ -261,11 +259,32 @@ CommandObjectProxy::CommandObjectProxy(CommandInterpreter &interpreter,
 
 CommandObjectProxy::~CommandObjectProxy() = default;
 
+Options *CommandObjectProxy::GetOptions() {
+  CommandObject *proxy_command = GetProxyCommandObject();
+  if (proxy_command)
+    return proxy_command->GetOptions();
+  return CommandObject::GetOptions();
+}
+
+llvm::StringRef CommandObjectProxy::GetHelp() {
+  CommandObject *proxy_command = GetProxyCommandObject();
+  if (proxy_command)
+    return proxy_command->GetHelp();
+  return CommandObject::GetHelp();
+}
+
+llvm::StringRef CommandObjectProxy::GetSyntax() {
+  CommandObject *proxy_command = GetProxyCommandObject();
+  if (proxy_command)
+    return proxy_command->GetSyntax();
+  return CommandObject::GetSyntax();
+}
+
 llvm::StringRef CommandObjectProxy::GetHelpLong() {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetHelpLong();
-  return llvm::StringRef();
+  return CommandObject::GetHelpLong();
 }
 
 bool CommandObjectProxy::IsRemovable() const {
@@ -293,7 +312,9 @@ CommandObjectMultiword *CommandObjectProxy::GetAsMultiwordCommand() {
 void CommandObjectProxy::GenerateHelpText(Stream &result) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
-    return proxy_command->GenerateHelpText(result);
+    proxy_command->GenerateHelpText(result);
+  else
+    CommandObject::GenerateHelpText(result);
 }
 
 lldb::CommandObjectSP
@@ -345,13 +366,6 @@ bool CommandObjectProxy::WantsCompletion() {
   return false;
 }
 
-Options *CommandObjectProxy::GetOptions() {
-  CommandObject *proxy_command = GetProxyCommandObject();
-  if (proxy_command)
-    return proxy_command->GetOptions();
-  return nullptr;
-}
-
 void CommandObjectProxy::HandleCompletion(CompletionRequest &request) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
@@ -373,12 +387,15 @@ const char *CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
   return nullptr;
 }
 
+llvm::StringRef CommandObjectProxy::GetUnsupportedError() {
+  return "command is not implemented";
+}
+
 bool CommandObjectProxy::Execute(const char *args_string,
                                  CommandReturnObject &result) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->Execute(args_string, result);
-  result.AppendError("command is not implemented");
-  result.SetStatus(eReturnStatusFailed);
+  result.AppendError(GetUnsupportedError());
   return false;
 }

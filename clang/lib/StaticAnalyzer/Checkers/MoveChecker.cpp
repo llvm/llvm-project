@@ -202,7 +202,7 @@ public:
   };
 
 private:
-  mutable std::unique_ptr<BugType> BT;
+  BugType BT{this, "Use-after-move", categories::CXXMoveSemantics};
 
   // Check if the given form of potential misuse of a given object
   // should be reported. If so, get it reported. The callback from which
@@ -393,11 +393,6 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
                                      MisuseKind MK) const {
   if (ExplodedNode *N = misuseCausesCrash(MK) ? C.generateErrorNode()
                                               : C.generateNonFatalErrorNode()) {
-
-    if (!BT)
-      BT.reset(new BugType(this, "Use-after-move",
-                           "C++ move semantics"));
-
     // Uniqueing report to the same object.
     PathDiagnosticLocation LocUsedForUniqueing;
     const ExplodedNode *MoveNode = getMoveLocation(N, Region, C);
@@ -431,7 +426,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     }
 
     auto R = std::make_unique<PathSensitiveBugReport>(
-        *BT, OS.str(), N, LocUsedForUniqueing,
+        BT, OS.str(), N, LocUsedForUniqueing,
         MoveNode->getLocationContext()->getDecl());
     R->addVisitor(std::make_unique<MovedBugVisitor>(*this, Region, RD, MK));
     C.emitReport(std::move(R));
@@ -477,7 +472,7 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
   const MemRegion *BaseRegion = ArgRegion->getBaseRegion();
   // Skip temp objects because of their short lifetime.
   if (BaseRegion->getAs<CXXTempObjectRegion>() ||
-      AFC->getArgExpr(0)->isRValue())
+      AFC->getArgExpr(0)->isPRValue())
     return;
   // If it has already been reported do not need to modify the state.
 
@@ -717,12 +712,9 @@ ProgramStateRef MoveChecker::checkRegionChanges(
     // directly, but not all of them end up being invalidated.
     // But when they do, they appear in the InvalidatedRegions array as well.
     for (const auto *Region : RequestedRegions) {
-      if (ThisRegion != Region) {
-        if (llvm::find(InvalidatedRegions, Region) !=
-            std::end(InvalidatedRegions)) {
-          State = removeFromState(State, Region);
-        }
-      }
+      if (ThisRegion != Region &&
+          llvm::is_contained(InvalidatedRegions, Region))
+        State = removeFromState(State, Region);
     }
   } else {
     // For invalidations that aren't caused by calls, assume nothing. In

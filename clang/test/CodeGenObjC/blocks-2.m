@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -fobjc-gc -fblocks -fexceptions -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -x objective-c++ | FileCheck %s
 
 
-// CHECK: define i8* @{{.*}}test0
+// CHECK: define{{.*}} i8* @{{.*}}test0
 // CHECK: define internal void @{{.*}}_block_invoke(
 // CHECK:      call i8* @objc_assign_strongCast(
 // CHECK-NEXT: ret void
@@ -14,7 +14,7 @@ id test0(id x) {
 }
 
 // <rdar://problem/8224178>: cleanup __block variables on EH path
-// CHECK: define void @{{.*}}test1
+// CHECK: define{{.*}} void @{{.*}}test1
 void test1() {
   extern void test1_help(void (^x)(void));
 

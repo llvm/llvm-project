@@ -17,4 +17,7 @@ void test(void) {
 #else
 // expected-warning@-4 {{implicit conversion changes signedness: 'unsigned int' to 'long'}}
 #endif
+
+  unsigned m;
+  int n = -(m & 0xff); // no warning
 }

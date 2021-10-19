@@ -4,10 +4,10 @@
 define i8 @shl_and(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: shl_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlb $2, %sil
-; CHECK-NEXT:    shlb $5, %al
-; CHECK-NEXT:    andb %sil, %al
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    shlb $5, %dil
+; CHECK-NEXT:    andb %dil, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sh0 = shl i8 %x, 3
@@ -90,12 +90,12 @@ define <16 x i8> @ashr_and(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: ashr_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $2, %xmm1
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32]
 ; CHECK-NEXT:    pxor %xmm2, %xmm1
 ; CHECK-NEXT:    psubb %xmm2, %xmm1
 ; CHECK-NEXT:    psrlw $5, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NEXT:    psubb %xmm2, %xmm0

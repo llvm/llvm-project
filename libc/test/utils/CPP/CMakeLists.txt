@@ -9,3 +9,33 @@ add_libc_unittest(
   DEPENDS
     libc.utils.CPP.standalone_cpp
 )
+
+add_libc_unittest(
+  stringview_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    stringview_test.cpp
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)
+
+add_libc_unittest(
+  limits_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    limits_test.cpp
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)
+
+add_libc_unittest(
+  arrayref_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    arrayref_test.cpp
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s modernize-use-auto %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: '1'} , {key: modernize-use-auto.MinTypeNameLength, value: '0'}]}" \
+// RUN:   -config="{CheckOptions: [{key: modernize-use-auto.RemoveStars, value: 'true'} , {key: modernize-use-auto.MinTypeNameLength, value: '0'}]}" \
 // RUN:   -- -frtti
 
 struct A {

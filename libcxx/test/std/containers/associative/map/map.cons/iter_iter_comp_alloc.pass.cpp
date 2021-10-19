@@ -38,7 +38,7 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     typedef test_allocator<V> A;
     std::map<int, double, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
     assert(m.get_allocator() == A(7));
@@ -64,7 +64,7 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     typedef min_allocator<V> A;
     std::map<int, double, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A());
     assert(m.get_allocator() == A());
@@ -92,7 +92,7 @@ int main(int, char**)
     };
     {
     typedef min_allocator<V> A;
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     A a;
     std::map<int, double, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a );
 
@@ -105,7 +105,7 @@ int main(int, char**)
     }
     {
     typedef explicit_allocator<V> A;
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     A a;
     std::map<int, double, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a );
 

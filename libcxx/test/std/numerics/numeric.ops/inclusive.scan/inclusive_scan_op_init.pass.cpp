@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
+// <numeric>
+
+// Became constexpr in C++20
 // template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
 //     OutputIterator
 //     inclusive_scan(InputIterator first, InputIterator last,
@@ -17,37 +19,37 @@
 
 #include <numeric>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
-#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template <class Iter1, class T, class Op, class Iter2>
-void
-test(Iter1 first, Iter1 last, Op op, T init, Iter2 rFirst, Iter2 rLast)
+template <class Iter1, class T, class Op>
+TEST_CONSTEXPR_CXX20 void
+test(Iter1 first, Iter1 last, Op op, T init, const T *rFirst, const T *rLast)
 {
-    std::vector<typename std::iterator_traits<Iter1>::value_type> v;
+    assert((rLast - rFirst) <= 5);  // or else increase the size of "out"
+    T out[5];
 
-//  Not in place
-    std::inclusive_scan(first, last, std::back_inserter(v), op, init);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // Not in place
+    T *end = std::inclusive_scan(first, last, out, op, init);
+    assert(std::equal(out, end, rFirst, rLast));
 
-//  In place
-    v.clear();
-    v.assign(first, last);
-    std::inclusive_scan(v.begin(), v.end(), v.begin(), op, init);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // In place
+    std::copy(first, last, out);
+    end = std::inclusive_scan(out, end, out, op, init);
+    assert(std::equal(out, end, rFirst, rLast));
 }
 
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
-          int ia[]   = {1, 3,  5,   7,   9};
+    int ia[]         = {1, 3,  5,   7,   9};
     const int pRes[] = {1, 4,  9,  16,  25};
     const int mRes[] = {1, 3, 15, 105, 945};
     const unsigned sa = sizeof(ia) / sizeof(ia[0]);
@@ -57,16 +59,17 @@ test()
     for (unsigned int i = 0; i < sa; ++i ) {
         test(Iter(ia), Iter(ia + i), std::plus<>(),       0, pRes, pRes + i);
         test(Iter(ia), Iter(ia + i), std::multiplies<>(), 1, mRes, mRes + i);
-        }
+    }
 }
 
-size_t triangle(size_t n) { return n*(n+1)/2; }
+constexpr size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
-void basic_tests()
+TEST_CONSTEXPR_CXX20 void
+basic_tests()
 {
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::fill(v.begin(), v.end(), 3);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{50});
     for (size_t i = 0; i < v.size(); ++i)
@@ -74,7 +77,7 @@ void basic_tests()
     }
 
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::iota(v.begin(), v.end(), 0);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{40});
     for (size_t i = 0; i < v.size(); ++i)
@@ -82,7 +85,7 @@ void basic_tests()
     }
 
     {
-    std::vector<size_t> v(10);
+    std::array<size_t, 10> v;
     std::iota(v.begin(), v.end(), 1);
     std::inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), size_t{30});
     for (size_t i = 0; i < v.size(); ++i)
@@ -90,17 +93,17 @@ void basic_tests()
     }
 
     {
-    std::vector<size_t> v, res;
-    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::plus<>(), size_t{40});
+    std::array<size_t, 0> v, res;
+    std::inclusive_scan(v.begin(), v.end(), res.begin(), std::plus<>(), size_t{40});
     assert(res.empty());
     }
 
 //  Make sure that the calculations are done using the init typedef
     {
-    std::vector<unsigned char> v(10);
+    std::array<unsigned char, 10> v;
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::vector<size_t> res;
-    std::inclusive_scan(v.begin(), v.end(), std::back_inserter(res), std::multiplies<>(), size_t{1});
+    std::array<size_t, 10> res;
+    std::inclusive_scan(v.begin(), v.end(), res.begin(), std::multiplies<>(), size_t{1});
 
     assert(res.size() == 10);
     size_t j = 1;
@@ -113,20 +116,27 @@ void basic_tests()
     }
 }
 
-
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
-
     basic_tests();
 
 //  All the iterator categories
-    test<input_iterator        <const int*> >();
+    test<cpp17_input_iterator        <const int*> >();
     test<forward_iterator      <const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
     test<      int*>();
 
+    return true;
+}
 
-  return 0;
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

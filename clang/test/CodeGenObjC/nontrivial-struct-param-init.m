@@ -6,7 +6,7 @@ typedef struct {
   id x;
 } S;
 
-// CHECK: define void @test0(i8* %[[A_0:.*]])
+// CHECK: define{{.*}} void @test0(i8* %[[A_0:.*]])
 // CHECK: %[[A:.*]] = alloca %[[STRUCT_S]], align 4
 // CHECK: %[[X:.*]] = getelementptr inbounds %[[STRUCT_S]], %[[STRUCT_S]]* %[[A]], i32 0, i32 0
 // CHECK: store i8* %[[A_0]], i8** %[[X]], align 4

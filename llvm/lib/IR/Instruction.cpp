@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -55,9 +56,6 @@ Instruction::~Instruction() {
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
-
-  if (hasMetadataHashEntry())
-    clearMetadataHashEntries();
 }
 
 
@@ -119,6 +117,10 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   return Order < Other->Order;
 }
 
+bool Instruction::isOnlyUserOfAnyOperand() {
+  return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
+}
+
 void Instruction::setHasNoUnsignedWrap(bool b) {
   cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
 }
@@ -163,6 +165,23 @@ void Instruction::dropPoisonGeneratingFlags() {
   // TODO: FastMathFlags!
 }
 
+void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
+    ArrayRef<unsigned> KnownIDs) {
+  dropUnknownNonDebugMetadata(KnownIDs);
+  auto *CB = dyn_cast<CallBase>(this);
+  if (!CB)
+    return;
+  // For call instructions, we also need to drop parameter and return attributes
+  // that are can cause UB if the call is moved to a location where the
+  // attribute is not valid.
+  AttributeList AL = CB->getAttributes();
+  if (AL.isEmpty())
+    return;
+  AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
+  for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+    CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
+  CB->removeRetAttrs(UBImplyingAttributes);
+}
 
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
@@ -288,20 +307,20 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() | DestGEP->isInBounds());
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
 }
 
 void Instruction::andIRFlags(const Value *V) {
   if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
     if (isa<OverflowingBinaryOperator>(this)) {
-      setHasNoSignedWrap(hasNoSignedWrap() & OB->hasNoSignedWrap());
-      setHasNoUnsignedWrap(hasNoUnsignedWrap() & OB->hasNoUnsignedWrap());
+      setHasNoSignedWrap(hasNoSignedWrap() && OB->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() && OB->hasNoUnsignedWrap());
     }
   }
 
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
-      setIsExact(isExact() & PE->isExact());
+      setIsExact(isExact() && PE->isExact());
 
   if (auto *FP = dyn_cast<FPMathOperator>(V)) {
     if (isa<FPMathOperator>(this)) {
@@ -313,7 +332,7 @@ void Instruction::andIRFlags(const Value *V) {
 
   if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
     if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
-      DestGEP->setIsInBounds(SrcGEP->isInBounds() & DestGEP->isInBounds());
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
@@ -621,6 +640,36 @@ bool Instruction::hasAtomicStore() const {
   }
 }
 
+bool Instruction::isVolatile() const {
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicRMW:
+    return cast<AtomicRMWInst>(this)->isVolatile();
+  case Instruction::Store:
+    return cast<StoreInst>(this)->isVolatile();
+  case Instruction::Load:
+    return cast<LoadInst>(this)->isVolatile();
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(this)->isVolatile();
+  case Instruction::Call:
+  case Instruction::Invoke:
+    // There are a very limited number of intrinsics with volatile flags.
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      if (auto *MI = dyn_cast<MemIntrinsic>(II))
+        return MI->isVolatile();
+      switch (II->getIntrinsicID()) {
+      default: break;
+      case Intrinsic::matrix_column_major_load:
+        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
+      case Intrinsic::matrix_column_major_store:
+        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
+      }
+    }
+    return false;
+  }
+}
+
 bool Instruction::mayThrow() const {
   if (const CallInst *CI = dyn_cast<CallInst>(this))
     return !CI->doesNotThrow();
@@ -631,29 +680,62 @@ bool Instruction::mayThrow() const {
   return isa<ResumeInst>(this);
 }
 
+bool Instruction::mayHaveSideEffects() const {
+  return mayWriteToMemory() || mayThrow() || !willReturn();
+}
+
 bool Instruction::isSafeToRemove() const {
   return (!isa<CallInst>(this) || !this->mayHaveSideEffects()) &&
          !this->isTerminator();
 }
 
+bool Instruction::willReturn() const {
+  // Volatile store isn't guaranteed to return; see LangRef.
+  if (auto *SI = dyn_cast<StoreInst>(this))
+    return !SI->isVolatile();
+
+  if (const auto *CB = dyn_cast<CallBase>(this))
+    // FIXME: Temporarily assume that all side-effect free intrinsics will
+    // return. Remove this workaround once all intrinsics are appropriately
+    // annotated.
+    return CB->hasFnAttr(Attribute::WillReturn) ||
+           (isa<IntrinsicInst>(CB) && CB->onlyReadsMemory());
+  return true;
+}
+
 bool Instruction::isLifetimeStartOrEnd() const {
-  auto II = dyn_cast<IntrinsicInst>(this);
+  auto *II = dyn_cast<IntrinsicInst>(this);
   if (!II)
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
 }
 
-const Instruction *Instruction::getNextNonDebugInstruction() const {
+bool Instruction::isLaunderOrStripInvariantGroup() const {
+  auto *II = dyn_cast<IntrinsicInst>(this);
+  if (!II)
+    return false;
+  Intrinsic::ID ID = II->getIntrinsicID();
+  return ID == Intrinsic::launder_invariant_group ||
+         ID == Intrinsic::strip_invariant_group;
+}
+
+bool Instruction::isDebugOrPseudoInst() const {
+  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
+}
+
+const Instruction *
+Instruction::getNextNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getNextNode(); I; I = I->getNextNode())
-    if (!isa<DbgInfoIntrinsic>(I))
+    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
       return I;
   return nullptr;
 }
 
-const Instruction *Instruction::getPrevNonDebugInstruction() const {
+const Instruction *
+Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   for (const Instruction *I = getPrevNode(); I; I = I->getPrevNode())
-    if (!isa<DbgInfoIntrinsic>(I))
+    if (!isa<DbgInfoIntrinsic>(I) && !(SkipPseudoOp && isa<PseudoProbeInst>(I)))
       return I;
   return nullptr;
 }

@@ -438,7 +438,7 @@ optin.cplusplus.UninitializedObject (C++)
 
 This checker reports uninitialized fields in objects created after a constructor
 call. It doesn't only find direct uninitialized fields, but rather makes a deep
-inspection of the object, analyzing all of it's fields subfields.
+inspection of the object, analyzing all of its fields' subfields.
 The checker regards inherited fields as direct fields, so one will receive
 warnings for uninitialized inherited data members as well.
 
@@ -1476,6 +1476,9 @@ Reports similar pieces of code.
    return y;
  }
 
+alpha.core
+^^^^^^^^^^
+
 .. _alpha-core-BoolAssignment:
 
 alpha.core.BoolAssignment (ObjC)
@@ -1488,8 +1491,22 @@ Warn about assigning non-{0,1} values to boolean variables.
    BOOL b = -1; // warn
  }
 
-alpha.core
-^^^^^^^^^^
+.. _alpha-core-C11Lock:
+
+alpha.core.C11Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of ``mtx_t`` mutexes.
+
+.. code-block:: cpp
+
+ mtx_t mtx1;
+
+ void bad1(void)
+ {
+   mtx_lock(&mtx1);
+   mtx_lock(&mtx1); // warn: This lock has already been acquired
+ }
 
 .. _alpha-core-CallAndMessageUnInitRefArg:
 
@@ -1747,7 +1764,7 @@ Check for integer to enumeration casts that could result in undefined values.
  void foo() {
    TestEnum t = static_cast(-1);
        // warn: the value provided to the cast expression is not in
-                the valid range of values for the enum
+       //       the valid range of values for the enum
 
 .. _alpha-cplusplus-InvalidatedIterator:
 
@@ -1821,6 +1838,20 @@ Method calls on a moved-from object and copying a moved-from object will be repo
    a.foo();            // warn: method call on a 'moved-from' object 'a'
  }
 
+.. _alpha-cplusplus-SmartPtr:
+
+alpha.cplusplus.SmartPtr (C++)
+""""""""""""""""""""""""""""""
+Check for dereference of null smart pointers.
+
+.. code-block:: cpp
+
+ void deref_smart_ptr() {
+   std::unique_ptr<int> P;
+   *P; // warn: dereference of a default constructed smart unique_ptr
+ }
+
+
 alpha.deadcode
 ^^^^^^^^^^^^^^
 .. _alpha-deadcode-UnreachableCode:
@@ -1855,17 +1886,24 @@ Check unreachable code.
    [x retain]; // warn
  }
 
-.. _alpha-cplusplus-SmartPtr:
+alpha.fuchsia
+^^^^^^^^^^^^^
 
-alpha.cplusplus.SmartPtr (C++)
-""""""""""""""""""""""""""""""
-Check for dereference of null smart pointers.
+.. _alpha-fuchsia-lock:
+
+alpha.fuchsia.Lock
+""""""""""""""""""
+Similarly to :ref:`alpha.unix.PthreadLock <alpha-unix-PthreadLock>`, checks for
+the locking/unlocking of fuchsia mutexes.
 
 .. code-block:: cpp
 
- void deref_smart_ptr() {
-   std::unique_ptr<int> P;
-   *P; // warn: dereference of a default constructed smart unique_ptr
+ spin_lock_t mtx1;
+
+ void bad1(void)
+ {
+   spin_lock(&mtx1);
+   spin_lock(&mtx1);	// warn: This lock has already been acquired
  }
 
 alpha.llvm
@@ -2021,7 +2059,7 @@ SEI CERT checkers which tries to find errors based on their `C coding rules <htt
 alpha.security.cert.pos
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`__.
 
 .. _alpha-security-cert-pos-34c:
 
@@ -2037,10 +2075,63 @@ Finds calls to the ``putenv`` function which pass a pointer to an automatic vari
     if (retval < 0 || (size_t)retval >= sizeof(env)) {
         /* Handle error */
     }
- 
+
     return putenv(env); // putenv function should not be called with auto variables
   }
-  
+
+alpha.security.cert.env
+^^^^^^^^^^^^^^^^^^^^^^^
+
+SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`__.
+
+.. _alpha-security-cert-env-InvalidPtr:
+
+alpha.security.cert.env.InvalidPtr
+""""""""""""""""""""""""""""""""""
+
+Corresponds to SEI CERT Rules ENV31-C and ENV34-C.
+
+ENV31-C:
+Rule is about the possible problem with `main` function's third argument, environment pointer,
+"envp". When enviornment array is modified using some modification function
+such as putenv, setenv or others, It may happen that memory is reallocated,
+however "envp" is not updated to reflect the changes and points to old memory
+region.
+
+ENV34-C:
+Some functions return a pointer to a statically allocated buffer.
+Consequently, subsequent call of these functions will invalidate previous
+pointer. These functions include: getenv, localeconv, asctime, setlocale, strerror
+
+.. code-block:: c
+
+  int main(int argc, const char *argv[], const char *envp[]) {
+    if (setenv("MY_NEW_VAR", "new_value", 1) != 0) {
+      // setenv call may invalidate 'envp'
+      /* Handle error */
+    }
+    if (envp != NULL) {
+      for (size_t i = 0; envp[i] != NULL; ++i) {
+        puts(envp[i]);
+        // envp may no longer point to the current environment
+        // this program has unanticipated behavior, since envp
+        // does not reflect changes made by setenv function.
+      }
+    }
+    return 0;
+  }
+
+  void previous_call_invalidation() {
+    char *p, *pp;
+
+    p = getenv("VAR");
+    pp = getenv("VAR2");
+    // subsequent call to 'getenv' invalidated previous one
+
+    *p;
+    // dereferencing invalid pointer
+  }
+
 .. _alpha-security-ArrayBound:
 
 alpha.security.ArrayBound (C)
@@ -2117,7 +2208,15 @@ Warn about buffer overflows (newer checker).
 
 alpha.security.MallocOverflow (C)
 """""""""""""""""""""""""""""""""
-Check for overflows in the arguments to malloc().
+Check for overflows in the arguments to ``malloc()``.
+It tries to catch ``malloc(n * c)`` patterns, where:
+
+ - ``n``: a variable or member access of an object
+ - ``c``: a constant foldable integral
+
+This checker was designed for code audits, so expect false-positive reports.
+One is supposed to silence this checker by ensuring proper bounds checking on
+the variable in question using e.g. an ``assert()`` or a branch.
 
 .. code-block:: c
 
@@ -2130,6 +2229,23 @@ Check for overflows in the arguments to malloc().
      return;
    void *p = malloc(n * sizeof(int)); // no warning
  }
+
+ void test3(int n) {
+   assert(n <= 100 && "Contract violated.");
+   void *p = malloc(n * sizeof(int)); // no warning
+ }
+
+Limitations:
+
+ - The checker won't warn for variables involved in explicit casts,
+   since that might limit the variable's domain.
+   E.g.: ``(unsigned char)int x`` would limit the domain to ``[0,255]``.
+   The checker will miss the true-positive cases when the explicit cast would
+   not tighten the domain to prevent the overflow in the subsequent
+   multiplication operation.
+
+ - It is an AST-based checker, thus it does not make use of the
+   path-sensitive taint-analysis.
 
 .. _alpha-security-MmapWriteExec:
 
@@ -2501,6 +2617,54 @@ We also define a set of safe transformations which if passed a safe value as an 
 - casts
 - unary operators like ``&`` or ``*``
 
+alpha.webkit.UncountedLocalVarsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
+
+These are examples of cases that we consider safe:
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is EMBEDDED in the scope of counted.
+      {
+        RefCountable* uncounted = counted.get(); // ok
+      }
+    }
+
+    void foo2(RefPtr<RefCountable> counted_param) {
+      RefCountable* uncounted = counted_param.get(); // ok
+    }
+
+    void FooClass::foo_method() {
+      RefCountable* uncounted = this; // ok
+    }
+
+Here are some examples of situations that we warn about as they *might* be potentially unsafe. The logic is that either we're able to guarantee that an argument is safe or it's considered if not a bug then bug-prone.
+
+  .. code-block:: cpp
+
+    void foo1() {
+      RefCountable* uncounted = new RefCountable; // warn
+    }
+
+    RefCountable* global_uncounted;
+    void foo2() {
+      RefCountable* uncounted = global_uncounted; // warn
+    }
+
+    void foo3() {
+      RefPtr<RefCountable> counted;
+      // The scope of uncounted is not EMBEDDED in the scope of counted.
+      RefCountable* uncounted = counted.get(); // warn
+    }
+
+We don't warn about these cases - we don't consider them necessarily safe but since they are very common and usually safe we'd introduce a lot of false positives otherwise:
+- variable defined in condition part of an ```if``` statement
+- variable defined in init statement condition of a ```for``` statement
+
+For the time being we also don't warn about uninitialized uncounted local variables.
 
 Debug Checkers
 ---------------

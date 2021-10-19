@@ -748,7 +748,7 @@ static ExitOnError ExitOnErr;
 static void yamlToPdb(StringRef Path) {
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
 
   if (ErrorOrBuffer.getError()) {
@@ -868,7 +868,6 @@ static void pdb2Yaml(StringRef Path) {
   auto &File = loadPDB(Path, Session);
 
   auto O = std::make_unique<YAMLOutputStyle>(File);
-  O = std::make_unique<YAMLOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -892,9 +891,9 @@ static void dumpBytes(StringRef Path) {
 bool opts::pretty::shouldDumpSymLevel(SymLevel Search) {
   if (SymTypes.empty())
     return true;
-  if (llvm::find(SymTypes, Search) != SymTypes.end())
+  if (llvm::is_contained(SymTypes, Search))
     return true;
-  if (llvm::find(SymTypes, SymLevel::All) != SymTypes.end())
+  if (llvm::is_contained(SymTypes, SymLevel::All))
     return true;
   return false;
 }
@@ -1431,6 +1430,8 @@ int main(int Argc, const char **Argv) {
   InitLLVM X(Argc, Argv);
   ExitOnErr.setBanner("llvm-pdbutil: ");
 
+  cl::HideUnrelatedOptions(
+      {&opts::TypeCategory, &opts::FilterCategory, &opts::OtherOptions});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM PDB Dumper\n");
 
   if (opts::BytesSubcommand) {

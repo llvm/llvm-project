@@ -15,15 +15,14 @@
 #define LLVM_SUPPORT_ERRORHANDLING_H
 
 #include "llvm/Support/Compiler.h"
-#include <string>
 
 namespace llvm {
-class StringRef;
+  class StringRef;
   class Twine;
 
   /// An error handler callback.
   typedef void (*fatal_error_handler_t)(void *user_data,
-                                        const std::string& reason,
+                                        const char *reason,
                                         bool gen_crash_diag);
 
   /// install_fatal_error_handler - Installs a new error handler to be used
@@ -68,14 +67,13 @@ class StringRef;
 /// standard error, followed by a newline.
 /// After the error handler is called this function will call abort(), it
 /// does not return.
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const char *reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const std::string &reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(StringRef reason,
-                                                bool gen_crash_diag = true);
-LLVM_ATTRIBUTE_NORETURN void report_fatal_error(const Twine &reason,
-                                                bool gen_crash_diag = true);
+/// NOTE: The std::string variant was removed to avoid a <string> dependency.
+[[noreturn]] void report_fatal_error(const char *reason,
+                                     bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(StringRef reason,
+                                     bool gen_crash_diag = true);
+[[noreturn]] void report_fatal_error(const Twine &reason,
+                                     bool gen_crash_diag = true);
 
 /// Installs a new bad alloc error handler that should be used whenever a
 /// bad alloc error, e.g. failing malloc/calloc, is encountered by LLVM.
@@ -110,16 +108,16 @@ void install_out_of_memory_new_handler();
 /// the following unwind succeeds, e.g. do not trigger additional allocations
 /// in the unwind chain.
 ///
-/// If no error handler is installed (default), then a bad_alloc exception
-/// is thrown, if LLVM is compiled with exception support, otherwise an
-/// assertion is called.
-LLVM_ATTRIBUTE_NORETURN void report_bad_alloc_error(const char *Reason,
-                                                    bool GenCrashDiag = true);
+/// If no error handler is installed (default), throws a bad_alloc exception
+/// if LLVM is compiled with exception support. Otherwise prints the error
+/// to standard error and calls abort().
+[[noreturn]] void report_bad_alloc_error(const char *Reason,
+                                         bool GenCrashDiag = true);
 
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
-LLVM_ATTRIBUTE_NORETURN void
+[[noreturn]] void
 llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
                           unsigned line = 0);
 }

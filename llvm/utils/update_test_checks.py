@@ -54,12 +54,14 @@ def main():
                       help='Remove attribute annotations (#0) from the end of check line')
   parser.add_argument('--check-attributes', action='store_true',
                       help='Check "Function Attributes" for functions')
+  parser.add_argument('--check-globals', action='store_true',
+                      help='Check global entries (global variables, metadata, attribute sets, ...) for functions')
   parser.add_argument('tests', nargs='+')
   initial_args = common.parse_commandline_args(parser)
 
   script_name = os.path.basename(__file__)
   opt_basename = os.path.basename(initial_args.opt_binary)
-  if not re.match(r'^opt(-\d+)?$', opt_basename):
+  if not re.match(r'^opt(-\d+)?(\.exe)?$', opt_basename):
     common.error('Unexpected opt name: ' + opt_basename)
     sys.exit(1)
   opt_basename = 'opt'
@@ -78,7 +80,13 @@ def main():
         common.warn('Skipping unparseable RUN line: ' + l)
         continue
 
-      (tool_cmd, filecheck_cmd) = tuple([cmd.strip() for cmd in l.split('|', 1)])
+      commands = [cmd.strip() for cmd in l.split('|')]
+      assert len(commands) >= 2
+      preprocess_cmd = None
+      if len(commands) > 2:
+        preprocess_cmd = " | ".join(commands[:-2])
+      tool_cmd = commands[-2]
+      filecheck_cmd = commands[-1]
       common.verify_filecheck_prefixes(filecheck_cmd)
       if not tool_cmd.startswith(opt_basename + ' '):
         common.warn('Skipping non-%s RUN line: %s' % (opt_basename, l))
@@ -99,70 +107,109 @@ def main():
 
       # FIXME: We should use multiple check prefixes to common check lines. For
       # now, we just ignore all but the last.
-      prefix_list.append((check_prefixes, tool_cmd_args))
+      prefix_list.append((check_prefixes, tool_cmd_args, preprocess_cmd))
 
     global_vars_seen_dict = {}
-    func_dict = {}
-    for prefixes, _ in prefix_list:
-      for prefix in prefixes:
-        func_dict.update({prefix: dict()})
-    for prefixes, opt_args in prefix_list:
+    builder = common.FunctionTestBuilder(
+      run_list=prefix_list,
+      flags=ti.args,
+      scrubber_args=[],
+      path=ti.path)
+
+    for prefixes, opt_args, preprocess_cmd in prefix_list:
       common.debug('Extracted opt cmd: ' + opt_basename + ' ' + opt_args)
       common.debug('Extracted FileCheck prefixes: ' + str(prefixes))
 
-      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
-      common.build_function_body_dictionary(
-              common.OPT_FUNCTION_RE, common.scrub_body, [],
-              raw_tool_output, prefixes, func_dict, ti.args.verbose,
-              ti.args.function_signature, ti.args.check_attributes)
+      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args,
+                                           ti.path, preprocess_cmd=preprocess_cmd,
+                                           verbose=ti.args.verbose)
+      builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,
+              raw_tool_output, prefixes, False)
 
+    func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
-    prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
+    has_checked_pre_function_globals = False
+    prefix_set = set([prefix for prefixes, _, _ in prefix_list for prefix in prefixes])
     common.debug('Rewriting FileCheck prefixes:', str(prefix_set))
     output_lines = []
-    for input_line_info in ti.iterlines(output_lines):
-      input_line = input_line_info.line
-      args = input_line_info.args
-      if is_in_function_start:
-        if input_line == '':
-          continue
-        if input_line.lstrip().startswith(';'):
-          m = common.CHECK_RE.match(input_line)
-          if not m or m.group(1) not in prefix_set:
-            output_lines.append(input_line)
+
+    include_generated_funcs = common.find_arg_in_test(ti,
+                                                      lambda args: ti.args.include_generated_funcs,
+                                                      '--include-generated-funcs',
+                                                      True)
+
+    if include_generated_funcs:
+      # Generate the appropriate checks for each function.  We need to emit
+      # these in the order according to the generated output so that CHECK-LABEL
+      # works properly.  func_order provides that.
+
+      # We can't predict where various passes might insert functions so we can't
+      # be sure the input function order is maintained.  Therefore, first spit
+      # out all the source lines.
+      common.dump_input_lines(output_lines, ti, prefix_set, ';')
+
+      args = ti.args
+      if args.check_globals:
+          common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, True)
+
+      # Now generate all the checks.
+      common.add_checks_at_end(output_lines, prefix_list, builder.func_order(),
+                               ';', lambda my_output_lines, prefixes, func:
+                               common.add_ir_checks(my_output_lines, ';',
+                                                    prefixes,
+                                                    func_dict, func, False,
+                                                    args.function_signature,
+                                                    global_vars_seen_dict))
+    else:
+      # "Normal" mode.
+      for input_line_info in ti.iterlines(output_lines):
+        input_line = input_line_info.line
+        args = input_line_info.args
+        if is_in_function_start:
+          if input_line == '':
             continue
+          if input_line.lstrip().startswith(';'):
+            m = common.CHECK_RE.match(input_line)
+            if not m or m.group(1) not in prefix_set:
+              output_lines.append(input_line)
+              continue
 
-        # Print out the various check lines here.
-        common.add_ir_checks(output_lines, ';', prefix_list, func_dict,
-                             func_name, args.preserve_names, args.function_signature,
-                             global_vars_seen_dict)
-        is_in_function_start = False
+          # Print out the various check lines here.
+          common.add_ir_checks(output_lines, ';', prefix_list, func_dict,
+                               func_name, args.preserve_names, args.function_signature,
+                               global_vars_seen_dict)
+          is_in_function_start = False
 
-      if is_in_function:
-        if common.should_add_line_to_output(input_line, prefix_set):
-          # This input line of the function body will go as-is into the output.
-          # Except make leading whitespace uniform: 2 spaces.
-          input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(r'  ', input_line)
-          output_lines.append(input_line)
-        else:
+        m = common.IR_FUNCTION_RE.match(input_line)
+        if m and not has_checked_pre_function_globals:
+            if args.check_globals:
+                common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, True)
+            has_checked_pre_function_globals = True
+
+        if common.should_add_line_to_output(input_line, prefix_set, not is_in_function):
+            # This input line of the function body will go as-is into the output.
+            # Except make leading whitespace uniform: 2 spaces.
+            input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(r'  ', input_line)
+            output_lines.append(input_line)
+            if input_line.strip() == '}':
+                 is_in_function = False
+                 continue
+
+        if is_in_function:
+           continue
+
+        m = common.IR_FUNCTION_RE.match(input_line)
+        if not m:
           continue
-        if input_line.strip() == '}':
-          is_in_function = False
-        continue
+        func_name = m.group(1)
+        if args.function is not None and func_name != args.function:
+          # When filtering on a specific function, skip all others.
+          continue
+        is_in_function = is_in_function_start = True
 
-      # If it's outside a function, it just gets copied to the output.
-      output_lines.append(input_line)
-
-      m = common.IR_FUNCTION_RE.match(input_line)
-      if not m:
-        continue
-      func_name = m.group(1)
-      if args.function is not None and func_name != args.function:
-        # When filtering on a specific function, skip all others.
-        continue
-      is_in_function = is_in_function_start = True
-
+    if args.check_globals:
+        common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, False)
     common.debug('Writing %d lines to %s...' % (len(output_lines), ti.path))
 
     with open(ti.path, 'wb') as f:

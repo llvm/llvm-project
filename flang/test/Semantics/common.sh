@@ -1,7 +1,8 @@
 # Common functionality for test scripts
 # Process arguments, expecting source file as 1st; optional path to f18 as 2nd
-# Set: $F18 to the path to f18 with options; $temp to an empty temp directory;
-# and $src to the full path of the single source argument.
+# Set: $FLANG_FC1 to the path to the Flang frontend driver with options; $temp
+# to an empty temp directory; and $src to the full path of the single source
+# argument.
 
 function die {
   echo "$(basename $0): $*" >&2
@@ -22,4 +23,4 @@ mkdir -p $temp
 shift
 
 [[ ! -f $1 ]] && die "f18 executable not found: $1"
-F18="$*"
+FLANG_FC1="$*"

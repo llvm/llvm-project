@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -triple i386-linux-gnu -o %t %s
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_cc1 -emit-llvm -triple i386-linux-gnu -o - %s | FileCheck %s
 
 // CHECK: declare extern_weak void @test1_f()
 void test1_f(void);
@@ -8,7 +7,7 @@ void test1_h(void) {
   test1_g();
 }
 
-// CHECK-LABEL: define void @test2_f()
+// CHECK-LABEL: define dso_local void @test2_f()
 void test2_f(void) {}
 static void test2_g(void) __attribute__((weakref("test2_f")));
 void test2_h(void) {
@@ -25,7 +24,7 @@ void test3_h(void) {
   test3_g();
 }
 
-// CHECK-LABEL: define void @test4_f()
+// CHECK-LABEL: define dso_local void @test4_f()
 void test4_f(void);
 static void test4_g(void) __attribute__((weakref("test4_f")));
 void test4_h(void) {

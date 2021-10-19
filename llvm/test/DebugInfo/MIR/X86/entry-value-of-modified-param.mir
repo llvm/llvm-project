@@ -1,4 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
 #
 #extern void fn1 (int, int, int);
 #
@@ -19,8 +20,11 @@
 # CHECK: ![[ARG_A:.*]] = !DILocalVariable(name: "a"
 # CHECK: ![[ARG_B:.*]] = !DILocalVariable(name: "b"
 # CHECK: ![[ARG_C:.*]] = !DILocalVariable(name: "c"
+## TODO: Support KILL instruction, which doesn't clobber parameter value.
+# VARLOCLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression()
 # CHECK: DBG_VALUE $edx, $noreg, ![[ARG_C]], !DIExpression(DW_OP_LLVM_entry_value, 1)
-# CHECK: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# VARLOCLDV-NOT: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
+# INSTRREFLDV: DBG_VALUE $edi, $noreg, ![[ARG_A]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK-NOT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 #
 --- |

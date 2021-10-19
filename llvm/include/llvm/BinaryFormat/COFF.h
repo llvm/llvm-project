@@ -311,6 +311,7 @@ enum SectionCharacteristics : uint32_t {
   IMAGE_SCN_ALIGN_2048BYTES = 0x00C00000,
   IMAGE_SCN_ALIGN_4096BYTES = 0x00D00000,
   IMAGE_SCN_ALIGN_8192BYTES = 0x00E00000,
+  IMAGE_SCN_ALIGN_MASK = 0x00F00000,
   IMAGE_SCN_LNK_NRELOC_OVFL = 0x01000000,
   IMAGE_SCN_MEM_DISCARDABLE = 0x02000000,
   IMAGE_SCN_MEM_NOT_CACHED = 0x04000000,
@@ -438,7 +439,8 @@ struct AuxiliaryWeakExternal {
 enum WeakExternalCharacteristics : unsigned {
   IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
   IMAGE_WEAK_EXTERN_SEARCH_LIBRARY = 2,
-  IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3
+  IMAGE_WEAK_EXTERN_SEARCH_ALIAS = 3,
+  IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY = 4
 };
 
 struct AuxiliarySectionDefinition {
@@ -602,7 +604,7 @@ enum WindowsSubsystem : unsigned {
   IMAGE_SUBSYSTEM_NATIVE = 1,  ///< Device drivers and native Windows processes
   IMAGE_SUBSYSTEM_WINDOWS_GUI = 2,      ///< The Windows GUI subsystem.
   IMAGE_SUBSYSTEM_WINDOWS_CUI = 3,      ///< The Windows character subsystem.
-  IMAGE_SUBSYSTEM_OS2_CUI = 5,          ///< The OS/2 character subsytem.
+  IMAGE_SUBSYSTEM_OS2_CUI = 5,          ///< The OS/2 character subsystem.
   IMAGE_SUBSYSTEM_POSIX_CUI = 7,        ///< The POSIX character subsystem.
   IMAGE_SUBSYSTEM_NATIVE_WINDOWS = 8,   ///< Native Windows 9x driver.
   IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9,   ///< Windows CE.

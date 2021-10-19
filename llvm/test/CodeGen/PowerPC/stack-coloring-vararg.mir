@@ -129,34 +129,34 @@ body:             |
     %2:gprc = COPY $r5
     %1:gprc = COPY $r4
     %0:gprc = COPY $r3
-    STW %0, 0, %stack.2 :: (store 4 into %stack.2, align 8)
-    STW %1, 4, %stack.2 :: (store 4 into %stack.2 + 4)
-    STW %2, 8, %stack.2 :: (store 4 into %stack.2 + 8, align 8)
-    STW %3, 12, %stack.2 :: (store 4)
-    STW %4, 16, %stack.2 :: (store 4 into %stack.2 + 16, align 8)
-    STW %5, 20, %stack.2 :: (store 4)
-    STW %6, 24, %stack.2 :: (store 4 into %stack.2 + 24, align 8)
-    STW %7, 28, %stack.2 :: (store 4)
-    STFD %8, 32, %stack.2 :: (store 8)
-    STFD %9, 40, %stack.2 :: (store 8)
-    STFD %10, 48, %stack.2 :: (store 8)
-    STFD %11, 56, %stack.2 :: (store 8)
-    STFD %12, 64, %stack.2 :: (store 8)
-    STFD %13, 72, %stack.2 :: (store 8)
-    STFD %14, 80, %stack.2 :: (store 8)
-    STFD %15, 88, %stack.2 :: (store 8)
+    STW %0, 0, %stack.2 :: (store (s32) into %stack.2, align 8)
+    STW %1, 4, %stack.2 :: (store (s32) into %stack.2 + 4)
+    STW %2, 8, %stack.2 :: (store (s32) into %stack.2 + 8, align 8)
+    STW %3, 12, %stack.2 :: (store (s32))
+    STW %4, 16, %stack.2 :: (store (s32) into %stack.2 + 16, align 8)
+    STW %5, 20, %stack.2 :: (store (s32))
+    STW %6, 24, %stack.2 :: (store (s32) into %stack.2 + 24, align 8)
+    STW %7, 28, %stack.2 :: (store (s32))
+    STFD %8, 32, %stack.2 :: (store (s64))
+    STFD %9, 40, %stack.2 :: (store (s64))
+    STFD %10, 48, %stack.2 :: (store (s64))
+    STFD %11, 56, %stack.2 :: (store (s64))
+    STFD %12, 64, %stack.2 :: (store (s64))
+    STFD %13, 72, %stack.2 :: (store (s64))
+    STFD %14, 80, %stack.2 :: (store (s64))
+    STFD %15, 88, %stack.2 :: (store (s64))
     %16:crbitrc = IMPLICIT_DEF
     BC killed %16, %bb.2
     B %bb.1
 
   bb.1.if.then6.i.i:
     LIFETIME_START %stack.1.ap2.i.i
-    %17:gprc = LWZ 8, $zero :: (load 4, align 8)
-    STW killed %17, 8, %stack.1.ap2.i.i :: (store 4 into %stack.1.ap2.i.i + 8, align 8)
-    %18:gprc = LWZ 4, $zero :: (load 4)
-    STW killed %18, 4, %stack.1.ap2.i.i :: (store 4 into %stack.1.ap2.i.i + 4, align 8)
-    %19:gprc = LWZ 0, $zero :: (load 4, align 8)
-    STW killed %19, 0, %stack.1.ap2.i.i :: (store 4 into %stack.1.ap2.i.i, align 8)
+    %17:gprc = LWZ 8, $zero :: (load (s32), align 8)
+    STW killed %17, 8, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 8, align 8)
+    %18:gprc = LWZ 4, $zero :: (load (s32))
+    STW killed %18, 4, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i + 4, align 8)
+    %19:gprc = LWZ 0, $zero :: (load (s32), align 8)
+    STW killed %19, 0, %stack.1.ap2.i.i :: (store (s32) into %stack.1.ap2.i.i, align 8)
     BLR implicit $lr, implicit $rm
 
   bb.2.format_reason_ap.exit.i:

@@ -12,7 +12,6 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
@@ -30,7 +29,6 @@
 #include <cstdio>
 #include <iterator>
 #include <sys/stat.h>
-#include <system_error>
 
 // <fcntl.h> may provide O_BINARY.
 #if defined(HAVE_FCNTL_H)
@@ -187,7 +185,7 @@ raw_ostream &raw_ostream::write_escaped(StringRef Str,
       // Write out the escaped representation.
       if (UseHexEscapes) {
         *this << '\\' << 'x';
-        *this << hexdigit((c >> 4 & 0xF));
+        *this << hexdigit((c >> 4) & 0xF);
         *this << hexdigit((c >> 0) & 0xF);
       } else {
         // Always use a full 3-character octal escape.
@@ -576,10 +574,8 @@ static int getFD(StringRef Filename, std::error_code &EC,
   // the owner of stdout and may set the "binary" flag globally based on Flags.
   if (Filename == "-") {
     EC = std::error_code();
-    // If user requested binary then put stdout into binary mode if
-    // possible.
-    if (!(Flags & sys::fs::OF_Text))
-      sys::ChangeStdoutToBinary();
+    // Change stdout's text/binary mode based on the Flags.
+    sys::ChangeStdoutMode(Flags);
     return STDOUT_FILENO;
   }
 
@@ -620,8 +616,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 
 /// FD is the file descriptor that this writes to.  If ShouldClose is true, this
 /// closes the file when the stream is destroyed.
-raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered)
-    : raw_pwrite_stream(unbuffered), FD(fd), ShouldClose(shouldClose) {
+raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
+                               OStreamKind K)
+    : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
   if (FD < 0 ) {
     ShouldClose = false;
     return;
@@ -682,7 +679,8 @@ raw_fd_ostream::~raw_fd_ostream() {
   // has_error() and clear the error flag with clear_error() before
   // destructing raw_ostream objects which may have errors.
   if (has_error())
-    report_fatal_error("IO failure on output stream: " + error().message(),
+    report_fatal_error(Twine("IO failure on output stream: ") +
+                           error().message(),
                        /*gen_crash_diag=*/false);
 }
 
@@ -905,6 +903,37 @@ raw_ostream &llvm::nulls() {
 }
 
 //===----------------------------------------------------------------------===//
+// File Streams
+//===----------------------------------------------------------------------===//
+
+raw_fd_stream::raw_fd_stream(StringRef Filename, std::error_code &EC)
+    : raw_fd_ostream(getFD(Filename, EC, sys::fs::CD_CreateAlways,
+                           sys::fs::FA_Write | sys::fs::FA_Read,
+                           sys::fs::OF_None),
+                     true, false, OStreamKind::OK_FDStream) {
+  if (EC)
+    return;
+
+  // Do not support non-seekable files.
+  if (!supportsSeeking())
+    EC = std::make_error_code(std::errc::invalid_argument);
+}
+
+ssize_t raw_fd_stream::read(char *Ptr, size_t Size) {
+  assert(get_fd() >= 0 && "File already closed.");
+  ssize_t Ret = ::read(get_fd(), (void *)Ptr, Size);
+  if (Ret >= 0)
+    inc_pos(Ret);
+  else
+    error_detected(std::error_code(errno, std::generic_category()));
+  return Ret;
+}
+
+bool raw_fd_stream::classof(const raw_ostream *OS) {
+  return OS->get_kind() == OStreamKind::OK_FDStream;
+}
+
+//===----------------------------------------------------------------------===//
 //  raw_string_ostream
 //===----------------------------------------------------------------------===//
 
@@ -957,3 +986,33 @@ void raw_null_ostream::pwrite_impl(const char *Ptr, size_t Size,
 void raw_pwrite_stream::anchor() {}
 
 void buffer_ostream::anchor() {}
+
+void buffer_unique_ostream::anchor() {}
+
+Error llvm::writeToOutput(StringRef OutputFileName,
+                          std::function<Error(raw_ostream &)> Write) {
+  if (OutputFileName == "-")
+    return Write(outs());
+
+  if (OutputFileName == "/dev/null") {
+    raw_null_ostream Out;
+    return Write(Out);
+  }
+
+  unsigned Mode = sys::fs::all_read | sys::fs::all_write | sys::fs::all_exe;
+  Expected<sys::fs::TempFile> Temp =
+      sys::fs::TempFile::create(OutputFileName + ".temp-stream-%%%%%%", Mode);
+  if (!Temp)
+    return createFileError(OutputFileName, Temp.takeError());
+
+  raw_fd_ostream Out(Temp->FD, false);
+
+  if (Error E = Write(Out)) {
+    if (Error DiscardError = Temp->discard())
+      return joinErrors(std::move(E), std::move(DiscardError));
+    return E;
+  }
+  Out.flush();
+
+  return Temp->keep(OutputFileName);
+}

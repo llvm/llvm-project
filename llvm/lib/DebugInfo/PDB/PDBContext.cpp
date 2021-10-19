@@ -86,8 +86,43 @@ DIInliningInfo
 PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
                                       DILineInfoSpecifier Specifier) {
   DIInliningInfo InlineInfo;
-  DILineInfo Frame = getLineInfoForAddress(Address, Specifier);
-  InlineInfo.addFrame(Frame);
+  DILineInfo CurrentLine = getLineInfoForAddress(Address, Specifier);
+
+  // Find the function at this address.
+  std::unique_ptr<PDBSymbol> ParentFunc =
+      Session->findSymbolByAddress(Address.Address, PDB_SymType::Function);
+  if (!ParentFunc) {
+    InlineInfo.addFrame(CurrentLine);
+    return InlineInfo;
+  }
+
+  auto Frames = ParentFunc->findInlineFramesByVA(Address.Address);
+  if (!Frames || Frames->getChildCount() == 0) {
+    InlineInfo.addFrame(CurrentLine);
+    return InlineInfo;
+  }
+
+  while (auto Frame = Frames->getNext()) {
+    uint32_t Length = 1;
+    auto LineNumbers = Frame->findInlineeLinesByVA(Address.Address, Length);
+    if (!LineNumbers || LineNumbers->getChildCount() == 0)
+      break;
+
+    std::unique_ptr<IPDBLineNumber> Line = LineNumbers->getNext();
+    assert(Line);
+
+    DILineInfo LineInfo;
+    LineInfo.FunctionName = Frame->getName();
+    auto SourceFile = Session->getSourceFileById(Line->getSourceFileId());
+    if (SourceFile &&
+        Specifier.FLIKind != DILineInfoSpecifier::FileLineInfoKind::None)
+      LineInfo.FileName = SourceFile->getFileName();
+    LineInfo.Line = Line->getLineNumber();
+    LineInfo.Column = Line->getColumnNumber();
+    InlineInfo.addFrame(LineInfo);
+  }
+
+  InlineInfo.addFrame(CurrentLine);
   return InlineInfo;
 }
 

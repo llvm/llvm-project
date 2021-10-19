@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 
 namespace Fortran::evaluate {
 
@@ -26,11 +27,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       name == "bessel_y1" || name == "cos" || name == "cosh" || name == "erf" ||
       name == "erfc" || name == "erfc_scaled" || name == "exp" ||
       name == "gamma" || name == "log" || name == "log10" ||
-      name == "log_gamma" || name == "sin" || name == "sinh" ||
-      name == "sqrt" || name == "tan" || name == "tanh") {
+      name == "log_gamma" || name == "sin" || name == "sinh" || name == "tan" ||
+      name == "tanh") {
     CHECK(args.size() == 1);
-    if (auto callable{context.hostIntrinsicsLibrary()
-                          .GetHostProcedureWrapper<Scalar, T, T>(name)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
     } else {
@@ -40,13 +40,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "amax0" || name == "amin0" || name == "amin1" ||
       name == "amax1" || name == "dmin1" || name == "dmax1") {
     return RewriteSpecificMINorMAX(context, std::move(funcRef));
-  } else if (name == "atan" || name == "atan2" || name == "hypot" ||
-      name == "mod") {
+  } else if (name == "atan" || name == "atan2" || name == "mod") {
     std::string localName{name == "atan" ? "atan2" : name};
     CHECK(args.size() == 2);
-    if (auto callable{
-            context.hostIntrinsicsLibrary()
-                .GetHostProcedureWrapper<Scalar, T, T, T>(localName)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName)}) {
       return FoldElementalIntrinsic<T, T, T>(
           context, std::move(funcRef), *callable);
     } else {
@@ -58,9 +55,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
       using Int4 = Type<TypeCategory::Integer, 4>;
-      if (auto callable{
-              context.hostIntrinsicsLibrary()
-                  .GetHostProcedureWrapper<Scalar, T, Int4, T>(name)}) {
+      if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
       } else {
@@ -75,15 +70,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), &Scalar<T>::ABS);
     } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
-      if (auto callable{
-              context.hostIntrinsicsLibrary()
-                  .GetHostProcedureWrapper<Scalar, T, ComplexT>("abs")}) {
-        return FoldElementalIntrinsic<T, ComplexT>(
-            context, std::move(funcRef), *callable);
-      } else {
-        context.messages().Say(
-            "abs(complex(kind=%d)) cannot be folded on host"_en_US, KIND);
-      }
+      return FoldElementalIntrinsic<T, ComplexT>(context, std::move(funcRef),
+          ScalarFunc<T, ComplexT>([](const Scalar<ComplexT> &z) -> Scalar<T> {
+            return z.ABS().value;
+          }));
     } else {
       common::die(" unexpected argument type inside abs");
     }
@@ -114,12 +104,28 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::EPSILON()};
   } else if (name == "huge") {
     return Expr<T>{Scalar<T>::HUGE()};
+  } else if (name == "hypot") {
+    CHECK(args.size() == 2);
+    return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T, T>(
+            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              return x.HYPOT(y).value;
+            }));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
+  } else if (name == "maxval") {
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
+        RelationalOperator::GT, T::Scalar::HUGE().Negate());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
+  } else if (name == "minval") {
+    return FoldMaxvalMinval<T>(
+        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
+  } else if (name == "product") {
+    auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
+    return FoldProduct<T>(context, std::move(funcRef), one);
   } else if (name == "real") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
@@ -127,14 +133,20 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
+  } else if (name == "sqrt") {
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>(
+            [](const Scalar<T> &x) -> Scalar<T> { return x.SQRT().value; }));
+  } else if (name == "sum") {
+    return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
   }
-  // TODO: cshift, dim, dot_product, eoshift, fraction, matmul,
-  // maxval, minval, modulo, nearest, norm2, pack, product,
-  // reduce, rrspacing, scale, set_exponent, spacing, spread,
-  // sum, transfer, transpose, unpack, bessel_jn (transformational) and
-  // bessel_yn (transformational)
+  // TODO: dim, dot_product, fraction, matmul,
+  // modulo, nearest, norm2, rrspacing, scale,
+  // __builtin_next_after/down/up,
+  // set_exponent, spacing, transfer,
+  // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
 }
 

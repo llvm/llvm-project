@@ -1,6 +1,8 @@
 // This test checks that the implementation of use-after-return
 // is async-signal-safe.
 // RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread && %run %t
+// RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread -fsanitize-address-use-after-return=never && %run %t
+// RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread -fsanitize-address-use-after-return=always && %run %t
 // REQUIRES: stable-runtime
 #include <signal.h>
 #include <stdlib.h>
@@ -63,9 +65,9 @@ int main(int argc, char **argv) {
   EnableSigprof(SignalHandler);
 
   for (auto Thread : {&FastThread, &SlowThread}) {
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 100; i++) {
       fprintf(stderr, ".");
-      const int kNumThread = sizeof(void*) == 8 ? 32 : 8;
+      const int kNumThread = 8;
       pthread_t t[kNumThread];
       for (int i = 0; i < kNumThread; i++)
         pthread_create(&t[i], 0, Thread, 0);

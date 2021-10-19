@@ -139,7 +139,7 @@ struct is_execution_policy<__pstl::execution::unsequenced_policy> : std::true_ty
 {
 };
 
-#if _PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
+#if defined(_PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT)
 template <class T>
 constexpr bool is_execution_policy_v = __pstl::execution::is_execution_policy<T>::value;
 #endif

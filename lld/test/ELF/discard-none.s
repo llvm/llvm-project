@@ -20,8 +20,8 @@
 // CHECK-NEXT:     AddressAlignment:
 // CHECK-NEXT:     EntrySize:
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 002E4C6D 796F7468 65727661 72002E4C  |..Lmyothervar..L|
-// CHECK-NEXT:       0010: 6D797661 72005F44 594E414D 494300    |myvar._DYNAMIC.|
+// CHECK-NEXT:       0000: 002E4C6D 79766172 002E4C6D 796F7468  |..Lmyvar..Lmyoth|
+// CHECK-NEXT:       0010: 65727661 72005F44 594E414D 494300    |ervar._DYNAMIC.|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 
@@ -35,7 +35,7 @@
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: .Lmyothervar
+// CHECK-NEXT:     Name: .Lmyvar
 // CHECK-NEXT:     Value:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local
@@ -44,7 +44,7 @@
 // CHECK-NEXT:     Section: .text
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: .Lmyvar
+// CHECK-NEXT:     Name: .Lmyothervar
 // CHECK-NEXT:     Value:
 // CHECK-NEXT:     Size: 0
 // CHECK-NEXT:     Binding: Local

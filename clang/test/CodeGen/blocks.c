@@ -18,7 +18,7 @@ struct s0 {
   int a[64];
 };
 
-// CHECK: define internal void @__f2_block_invoke(%struct.s0* noalias sret align 4 {{%.*}}, i8* {{%.*}}, %struct.s0* byval(%struct.s0) align 4 {{.*}})
+// CHECK: define internal void @__f2_block_invoke(%struct.s0* noalias sret(%struct.s0) align 4 {{%.*}}, i8* {{%.*}}, %struct.s0* byval(%struct.s0) align 4 {{.*}})
 struct s0 f2(struct s0 a0) {
   return ^(struct s0 a1){ return a1; }(a0);
 }
@@ -77,7 +77,7 @@ void f3() {
 // The bool can fill in between the header and the long long.
 // Add the appropriate amount of padding between them.
 void f4_helper(long long (^)(void));
-// CHECK-LABEL: define void @f4()
+// CHECK-LABEL: define{{.*}} void @f4()
 void f4(void) {
   _Bool b = 0;
   long long ll = 0;
@@ -92,7 +92,7 @@ struct F5 {
   char buffer[32] __attribute((aligned));
 };
 void f5_helper(void (^)(struct F5 *));
-// CHECK-LABEL: define void @f5()
+// CHECK-LABEL: define{{.*}} void @f5()
 void f5(void) {
   struct F5 value;
   // CHECK: alloca <{ i8*, i32, i32, i8*, {{%.*}}*, [12 x i8], [[F5:%.*]] }>, align 16
@@ -117,7 +117,7 @@ void testConstCaptureInCopyAndDestroyHelpers() {
   __block int i;
   (^ { i = x; })();
 }
-// CHECK-LABEL: define void @testConstCaptureInCopyAndDestroyHelpers(
+// CHECK-LABEL: define{{.*}} void @testConstCaptureInCopyAndDestroyHelpers(
 // CHECK: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
 // CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i32, i32, i8*, i8*, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP21]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]], align 4
 

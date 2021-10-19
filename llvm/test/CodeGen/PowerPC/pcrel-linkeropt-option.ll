@@ -15,16 +15,16 @@ define dso_local i8 @Read8() local_unnamed_addr {
 ; DEFAULT-LABEL: Read8:
 ; DEFAULT:       # %bb.0: # %entry
 ; DEFAULT-NEXT:    pld r3, input8@got@pcrel(0), 1
-; DEFAULT-NEXT:  .Lpcrel:
-; DEFAULT-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; DEFAULT-NEXT:  .Lpcrel0:
+; DEFAULT-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; DEFAULT-NEXT:    lbz r3, 0(r3)
 ; DEFAULT-NEXT:    blr
 ;
 ; ON-LABEL: Read8:
 ; ON:       # %bb.0: # %entry
 ; ON-NEXT:    pld r3, input8@got@pcrel(0), 1
-; ON-NEXT:  .Lpcrel:
-; ON-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
+; ON-NEXT:  .Lpcrel0:
+; ON-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; ON-NEXT:    lbz r3, 0(r3)
 ; ON-NEXT:    blr
 ;

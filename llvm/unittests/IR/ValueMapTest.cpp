@@ -35,7 +35,7 @@ protected:
 // Run everything on Value*, a subtype to make sure that casting works as
 // expected, and a const subtype to make sure we cast const correctly.
 typedef ::testing::Types<Value, Instruction, const Instruction> KeyTypes;
-TYPED_TEST_CASE(ValueMapTest, KeyTypes);
+TYPED_TEST_SUITE(ValueMapTest, KeyTypes, );
 
 TYPED_TEST(ValueMapTest, Null) {
   ValueMap<TypeParam*, int> VM1;

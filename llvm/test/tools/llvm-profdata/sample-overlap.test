@@ -116,3 +116,25 @@
 
 ; RUN: llvm-profdata overlap --sample %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-5.proftext | FileCheck %s --check-prefix=OVERLAP5  --match-full-lines --strict-whitespace
 ; OVERLAP5:Sum of sample counts for profile {{.*}}/Inputs/sample-overlap-5.proftext is 0.
+
+
+; RUN: llvm-profdata overlap --sample %S/Inputs/cs-sample.proftext %S/Inputs/cs-sample.proftext | FileCheck %s --check-prefix=CS  --match-full-lines --strict-whitespace
+; CS:Program level:
+; CS:  Whole program profile similarity: 100.000%
+; CS:  Whole program sample overlap: 100.000%
+; CS:    percentage of samples unique in base profile: 0.000%
+; CS:    percentage of samples unique in test profile: 0.000%
+; CS:    total samples in base profile: 772562
+; CS:    total samples in test profile: 772562
+; CS:  Function overlap: 100.000%
+; CS:    overlap functions: 8
+; CS:    functions unique in base profile: 0
+; CS:    functions unique in test profile: 0
+; CS:  Hot-function overlap: 100.000%
+; CS:    overlap hot functions: 2
+; CS:    hot functions unique in base profile: 0
+; CS:    hot functions unique in test profile: 0
+; CS:  Hot-block overlap: 100.000%
+; CS:    overlap hot blocks: 6
+; CS:    hot blocks unique in base profile: 0
+; CS:    hot blocks unique in test profile: 0

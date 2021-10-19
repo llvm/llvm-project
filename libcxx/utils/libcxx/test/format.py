@@ -41,6 +41,11 @@ def _getTempPaths(test):
     tmpBase = os.path.join(tmpDir, 't')
     return tmpDir, tmpBase
 
+def _checkBaseSubstitutions(substitutions):
+    substitutions = [s for (s, _) in substitutions]
+    for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
+        assert s in substitutions, "Required substitution {} was not provided".format(s)
+
 def parseScript(test, preamble):
     """
     Extract the script from a test, with substitutions applied.
@@ -56,14 +61,12 @@ def parseScript(test, preamble):
         must not be of the form 'RUN:' -- they must be proper commands
         once substituted.
     """
-
     # Get the default substitutions
     tmpDir, tmpBase = _getTempPaths(test)
-    useExternalSh = True
-    substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase,
-                                                           normalize_slashes=useExternalSh)
+    substitutions = lit.TestRunner.getDefaultSubstitutions(test, tmpDir, tmpBase)
 
-    # Add the %{build} and %{run} convenience substitutions
+    # Check base substitutions and add the %{build} and %{run} convenience substitutions
+    _checkBaseSubstitutions(substitutions)
     substitutions.append(('%{build}', '%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe'))
     substitutions.append(('%{run}', '%{exec} %t.exe'))
 
@@ -116,7 +119,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
 
     FOO.pass.cpp            - Compiles, links and runs successfully
     FOO.pass.mm             - Same as .pass.cpp, but for Objective-C++
-    FOO.run.fail.cpp        - Compiles and links successfully, but fails at runtime
 
     FOO.compile.pass.cpp    - Compiles successfully, link and run not attempted
     FOO.compile.fail.cpp    - Does not compile successfully
@@ -190,7 +192,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             in conjunction with the %{build} substitution.
     """
     def getTestsInDirectory(self, testSuite, pathInSuite, litConfig, localConfig):
-        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$', '[.]run[.]fail[.]cpp$',
+        SUPPORTED_SUFFIXES = ['[.]pass[.]cpp$', '[.]pass[.]mm$',
                               '[.]compile[.]pass[.]cpp$', '[.]compile[.]fail[.]cpp$',
                               '[.]link[.]pass[.]cpp$', '[.]link[.]fail[.]cpp$',
                               '[.]sh[.][^.]+$',
@@ -207,18 +209,12 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
                 if any([re.search(ext, filename) for ext in SUPPORTED_SUFFIXES]):
                     yield lit.Test.Test(testSuite, pathInSuite + (filename,), localConfig)
 
-    def _checkBaseSubstitutions(self, substitutions):
-        substitutions = [s for (s, _) in substitutions]
-        for s in ['%{cxx}', '%{compile_flags}', '%{link_flags}', '%{flags}', '%{exec}']:
-            assert s in substitutions, "Required substitution {} was not provided".format(s)
-
     def _disableWithModules(self, test):
         with open(test.getSourcePath(), 'rb') as f:
             contents = f.read()
         return b'#define _LIBCPP_ASSERT' in contents
 
     def execute(self, test, litConfig):
-        self._checkBaseSubstitutions(test.config.substitutions)
         VERIFY_FLAGS = '-Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0'
         supportsVerify = _supportsVerify(test.config)
         filename = test.path_in_suite[-1]
@@ -228,7 +224,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         #                split the part that does a death test outside of the
         #                test, and only disable that part when modules are
         #                enabled.
-        if '-fmodules' in test.config.available_features and self._disableWithModules(test):
+        if 'modules-build' in test.config.available_features and self._disableWithModules(test):
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
         if re.search('[.]sh[.][^.]+$', filename):
@@ -253,12 +249,6 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             steps = [
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} -c -o %t.o",
                 "%dbg(LINKED WITH) ! %{cxx} %t.o %{flags} %{link_flags} -o %t.exe"
-            ]
-            return self._executeShTest(test, litConfig, steps)
-        elif filename.endswith('.run.fail.cpp'):
-            steps = [
-                "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
-                "%dbg(EXECUTED AS) %{exec} ! %t.exe"
             ]
             return self._executeShTest(test, litConfig, steps)
         elif filename.endswith('.verify.cpp'):
@@ -312,5 +302,5 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
             return lit.Test.Result(lit.Test.XFAIL if test.isExpectedToFail() else lit.Test.PASS)
         else:
             _, tmpBase = _getTempPaths(test)
-            useExternalSh = True
+            useExternalSh = False
             return lit.TestRunner._runShTest(test, litConfig, useExternalSh, script, tmpBase)

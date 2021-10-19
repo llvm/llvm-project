@@ -9,13 +9,13 @@
 // The LiveIntervalCalc class is an extension of LiveRangeCalc targeted to the
 // computation and modification of the LiveInterval variants of LiveRanges.
 // LiveIntervals are meant to track liveness of registers and stack slots and
-// LiveIntervalCalc adds to LiveRangeCalc all the machinery requied to
+// LiveIntervalCalc adds to LiveRangeCalc all the machinery required to
 // construct the liveness of virtual registers tracked by a LiveInterval.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
-#define LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
+#ifndef LLVM_CODEGEN_LIVEINTERVALCALC_H
+#define LLVM_CODEGEN_LIVEINTERVALCALC_H
 
 #include "llvm/CodeGen/LiveRangeCalc.h"
 
@@ -68,4 +68,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_LIVEINTERVALCALC_H
+#endif // LLVM_CODEGEN_LIVEINTERVALCALC_H

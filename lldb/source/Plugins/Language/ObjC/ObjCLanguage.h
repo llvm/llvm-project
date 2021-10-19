@@ -27,9 +27,7 @@ public:
   public:
     enum Type { eTypeUnspecified, eTypeClassMethod, eTypeInstanceMethod };
 
-    MethodName()
-        : m_full(), m_class(), m_category(), m_selector(),
-          m_type(eTypeUnspecified), m_category_is_valid(false) {}
+    MethodName() : m_full(), m_class(), m_category(), m_selector() {}
 
     MethodName(const char *name, bool strict)
         : m_full(), m_class(), m_category(), m_selector(),
@@ -81,8 +79,8 @@ public:
         m_class_category;   // Class with category: "NSString(my_additions)"
     ConstString m_category; // Category:    "my_additions"
     ConstString m_selector; // Selector:    "myStringWithCString:"
-    Type m_type;
-    bool m_category_is_valid;
+    Type m_type = eTypeUnspecified;
+    bool m_category_is_valid = false;
   };
 
   ObjCLanguage() = default;
@@ -102,8 +100,11 @@ public:
   //  variant_names[1] => "-[NSString(my_additions) myStringWithCString:]"
   //  variant_names[2] => "+[NSString myStringWithCString:]"
   //  variant_names[3] => "-[NSString myStringWithCString:]"
-  std::vector<ConstString>
+  // Also returns the FunctionNameType of each possible name.
+  std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
+
+  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
@@ -118,6 +119,8 @@ public:
                                 std::string &suffix) override;
 
   bool IsNilReference(ValueObject &valobj) override;
+
+  llvm::StringRef GetNilReferenceSummaryString() override { return "nil"; }
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
@@ -153,9 +156,9 @@ public:
   }
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 };
 
 } // namespace lldb_private

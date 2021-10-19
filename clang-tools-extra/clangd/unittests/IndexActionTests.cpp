@@ -281,6 +281,36 @@ TEST_F(IndexActionTest, SkipFiles) {
       EXPECT_THAT(Ref.Location.FileURI, EndsWith("good.h"));
 }
 
+TEST_F(IndexActionTest, SkipNestedSymbols) {
+  std::string MainFilePath = testPath("main.cpp");
+  addFile(MainFilePath, R"cpp(
+  namespace ns1 {
+  namespace ns2 {
+  namespace ns3 {
+  namespace ns4 {
+  namespace ns5 {
+  namespace ns6 {
+  namespace ns7 {
+  namespace ns8 {
+  namespace ns9 {
+  class Bar {};
+  void foo() {
+    class Baz {};
+  }
+  }
+  }
+  }
+  }
+  }
+  }
+  }
+  }
+  })cpp");
+  IndexFileIn IndexFile = runIndexingAction(MainFilePath, {"-std=c++14"});
+  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(HasName("foo")));
+  EXPECT_THAT(*IndexFile.Symbols, testing::Contains(HasName("Bar")));
+  EXPECT_THAT(*IndexFile.Symbols, Not(testing::Contains(HasName("Baz"))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

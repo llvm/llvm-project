@@ -97,28 +97,23 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    0x1000
-    Sections:
-      - Section: .note1
-      - Section: .note2
-      - Section: .text
+    FirstSec: .note1
+    LastSec:  .text
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
     Align:    0x1000
-    Sections:
-      - Section: .tdata
-      - Section: .bss
+    FirstSec: .tdata
+    LastSec:  .bss
   - Type:     PT_TLS
     Flags:    [ PF_R, PF_W ]
     VAddr:    0x1480    # Ensure Offset=VAddr (mod Align) if Offset changes
-    Sections:
-      - Section: .tdata
-      - Section: .tbss
+    FirstSec: .tdata
+    LastSec:  .tbss
   - Type:     PT_NOTE
     VAddr:    0x400
-    Sections:
-      - Section: .note1
-      - Section: .note2
+    FirstSec: .note1
+    LastSec:  .note2
 ...
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
@@ -134,11 +129,11 @@ ProgramHeaders:
 # CHECK2-NEXT: [ 4] .strtab     STRTAB   0000000000000000 000221 000001 00      0   0  1
 # CHECK2-NEXT: [ 5] .shstrtab   STRTAB   0000000000000000 000222 00002b 00      0   0  1
 
-## Check that p_offset or p_filesz of empty segments or PT_PHDR are not modified.
+## Check that p_offset or p_filesz of PT_PHDR are not modified.
 # CHECK2:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # CHECK2-NEXT: PHDR 0x000040 0x0000000000000040 0x0000000000000040 0x0000a8 0x0000a8 R   0x8
 # CHECK2-NEXT: LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x000202 0x000202 R E 0x1000
-# CHECK2-NEXT: LOAD 0x000202 0x0000000000000202 0x0000000000000202 0x00000e 0x00000e RW  0x1
+# CHECK2-NEXT: LOAD 0x000000 0x0000000000000202 0x0000000000000202 0x000000 0x00000e RW  0x1
 
 --- !ELF
 FileHeader:
@@ -175,9 +170,8 @@ ProgramHeaders:
     Flags:    [ PF_R, PF_X ]
     Offset:   0
     Align:    4096
-    Sections:
-      - Section: .text
-      - Section: .note
+    FirstSec: .text
+    LastSec:  .note
   - Type:     PT_LOAD
     Flags:    [ PF_R, PF_W ]
     Offset:   0x202
@@ -194,7 +188,7 @@ ProgramHeaders:
 # CHECK3:      [Nr] Name          Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK3:      [ 1] .dynsym       NOBITS   0000000000000000 000040 000018 18   A  2   1 1024
 # CHECK3-NEXT: [ 2] .dynstr       NOBITS   0000000000000018 000040 000001 00   A  0   0  0
-# CHECK3-NEXT: [ 3] .symtab       NOBITS   0000000000000019 000040 000018 18   A  4   1  0
+# CHECK3-NEXT: [ 3] .symtab       NOBITS   0000000000000019 000040 000018 00   A  4   1  0
 # CHECK3-NEXT: [ 4] .strtab       NOBITS   0000000000000031 000040 000001 00   A  0   0  0
 # CHECK3-NEXT: [ 5] .shstrtab     STRTAB   0000000000000000 000040 00002b 00      0   0  1
 
@@ -214,6 +208,8 @@ Sections:
     Type:  SHT_STRTAB
     Flags: [ SHF_ALLOC ]
   - Name:  .symtab
+## TODO: this should be SHT_SYMTAB, but currently llvm-objcopy reports an error:
+##       error: Symbol table has link index of 4 which is not a string table
     Type:  SHT_STRTAB
     Flags: [ SHF_ALLOC ]
     Link:  .strtab
@@ -222,3 +218,177 @@ Sections:
     Flags: [ SHF_ALLOC ]
 DynamicSymbols: []
 Symbols: []
+
+## PT_TLS and .tdata are empty. Test that we set its p_offset to the parent
+## segment's p_offset. If we don't rewrite the p_offset of PT_TLS and the deleted
+## bytes are large, p_offset can be larger than the file size, and trigger
+## validation errors with subsequent tools.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy --only-keep-debug %t4 %t4.dbg
+# RUN: llvm-readelf -S -l %t4.dbg | FileCheck --check-prefix=CHECK4 %s
+
+# CHECK4:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK4:      [ 1] .text       NOBITS   0000000000000200 000200 000001 00  AX  0   0  0
+# CHECK4-NEXT: [ 2] .tdata      NOBITS   0000000000001240 000240 000000 00 WAT  0   0 64
+# CHECK4-NEXT: [ 3] .got        NOBITS   0000000000001240 000240 000008 00  WA  0   0  0
+
+# CHECK4:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK4-NEXT: LOAD 0x000200 0x0000000000000200 0x0000000000000200 0x000000 0x000001 R E 0x1000
+# CHECK4-NEXT: LOAD 0x000240 0x0000000000001240 0x0000000000001240 0x000000 0x000008 RW  0x1000
+# CHECK4-NEXT: TLS  0x000240 0x0000000000001240 0x0000000000001240 0x000000 0x000000 R   0x40
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x200
+    Size:         1
+  - Name:         .tdata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE, SHF_TLS ]
+    Address:      0x1240   # Ensure Address=0x1000+Offset
+    AddressAlign: 0x40
+  - Name:         .got
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Size:         8
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x200
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  ## Add .got so that the PT_LOAD does not have zero p_memsz. We don't add
+  ## sections to zero-sized segments so zero-sized segments may have strange
+  ## offsets. In practice, the Linux kernel errors when mmapping a p_memsz
+  ## PT_LOAD,so for practical so this assumption can generally be made.
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x1240
+    Align:    0x1000
+    FirstSec: .tdata
+    LastSec:  .got
+  - Type:     PT_TLS
+    Flags:    [ PF_R ]
+    VAddr:    0x1240
+    FirstSec: .tdata
+    LastSec:  .tdata
+
+## The offset and size fields of segments which contain no section and have no
+## parent segment are set to zeros, so that we can decrease the file size. Such
+## segments are not useful for debugging.
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objcopy --only-keep-debug %t5 %t5.dbg
+# RUN: llvm-readelf -S -l %t5.dbg | FileCheck --check-prefix=CHECK5 %s
+# RUN: llvm-objcopy --strip-sections %t5 %t5s
+# RUN: llvm-objcopy --only-keep-debug %t5s %t5s.dbg
+# RUN: llvm-readelf -S -l %t5s.dbg | FileCheck --check-prefix=CHECK5S %s
+
+# CHECK5:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK5:      [ 1] .foo        NOBITS   0000000000000000 000078 001000 00   A  0   0  0
+# CHECK5-NEXT: [ 2] .strtab     STRTAB   0000000000000000 000078 000001 00      0   0  1
+# CHECK5-NEXT: [ 3] .shstrtab   STRTAB   0000000000000000 000079 000018 00      0   0  1
+
+# CHECK5:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK5-NEXT: NULL 0x000000 0x0000000000000000 0x0000000000000000 0x000078 0x001000     0x1
+# CHECK5-EMPTY:
+
+# CHECK5S:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK5S-NEXT: NULL 0x000000 0x0000000000000000 0x0000000000000000 0x000078 0x001000     0x1
+# CHECK5S-EMPTY:
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x01000
+ProgramHeaders:
+  - Type:     PT_NULL
+    Flags:    []
+    FileSize: 0x01000
+    MemSize:  0x01000
+
+## Check that sections are placed correctly in a case when their order in the
+## section header table is different from their layout.
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-objcopy --only-keep-debug %t6 %t6.dbg
+# RUN: llvm-readelf -S -l %t6.dbg | FileCheck --check-prefix=CHECK6 %s
+
+# CHECK6:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK6:      [ 1] foo         NOBITS   0000000000000008 001000 000008 00   A  0   0  4
+# CHECK6-NEXT: [ 2] bar         NOBITS   0000000000000000 001000 000008 00   A  0   0  4
+# CHECK6-NEXT: [ 3] baz         NOTE     0000000000000018 001008 000008 00   A  0   0  0
+# CHECK6-NEXT: [ 4] qux         NOTE     0000000000000010 001000 000008 00   A  0   0  0
+
+# CHECK6:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK6-NEXT: LOAD 0x001000 0x0000000000000000 0x0000000000000000 0x000000 0x000010 R   0x1000
+# CHECK6-NEXT: LOAD 0x001000 0x0000000000000010 0x0000000000000010 0x000010 0x000010 R   0x1
+# CHECK6-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x0
+    Align:    0x1000
+    FileSize: 0x10
+    MemSize:  0x10
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1010
+    VAddr:    0x10
+    FileSize: 0x10
+    MemSize:  0x10
+Sections:
+  - Name:            bar
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         0000000000000000
+  - Name:            foo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x8
+    AddressAlign:    0x4
+    Offset:          0x1008
+    Content:         0000000000000000
+  - Name:            qux
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x10
+    Offset:          0x1010
+    Content:         0000000000000000
+  - Name:            baz
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x18
+    Offset:          0x1018
+    Content:         0000000000000000
+  - Type:            SectionHeaderTable
+    Sections:
+## Note: the order of section headers differs from their layout.
+      - Name:            foo
+      - Name:            bar
+      - Name:            baz
+      - Name:            qux
+      - Name:            .shstrtab
+      - Name:            .strtab

@@ -21,6 +21,19 @@
 using namespace clang;
 using namespace clang::interp;
 
+template <typename T>
+inline std::enable_if_t<!std::is_pointer<T>::value, T> ReadArg(Program &P,
+                                                               CodePtr OpPC) {
+  return OpPC.read<T>();
+}
+
+template <typename T>
+inline std::enable_if_t<std::is_pointer<T>::value, T> ReadArg(Program &P,
+                                                              CodePtr OpPC) {
+  uint32_t ID = OpPC.read<uint32_t>();
+  return reinterpret_cast<T>(P.getNativePointer(ID));
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {

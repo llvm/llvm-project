@@ -62,6 +62,8 @@ public:
     return true;
   }
 
+  lldb::addr_t FixAddress(lldb::addr_t pc, lldb::addr_t mask) override;
+
   // Static Functions
 
   static void Initialize();
@@ -74,11 +76,9 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
-
-  uint32_t GetPluginVersion() override;
 
   lldb_private::Status
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,

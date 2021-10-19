@@ -230,16 +230,16 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
     TmpBB.push_back(Bucket.first);
     if (Bucket.second.size() > 2)
       GetOrder(*Bucket.first);
-    llvm::sort(Bucket.second.begin(), Bucket.second.end(), Precedes);
+    llvm::sort(Bucket.second, Precedes);
   }
 
   // Sort the blocks with respect to dominance.
-  llvm::sort(TmpBB.begin(), TmpBB.end(),
+  llvm::sort(TmpBB,
              [this](auto A, auto B) { return MDT.properlyDominates(A, B); });
 
   std::vector<NodeId> TmpInst;
-  for (auto I = TmpBB.rbegin(), E = TmpBB.rend(); I != E; ++I) {
-    auto &Bucket = Blocks[*I];
+  for (MachineBasicBlock *MBB : llvm::reverse(TmpBB)) {
+    auto &Bucket = Blocks[MBB];
     TmpInst.insert(TmpInst.end(), Bucket.rbegin(), Bucket.rend());
   }
 
@@ -286,7 +286,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       if (FullChain || IsPhi || !RRs.hasCoverOf(QR))
         Ds.push_back(DA);
     }
-    RDefs.insert(RDefs.end(), Ds.begin(), Ds.end());
+    llvm::append_range(RDefs, Ds);
     for (NodeAddr<DefNode*> DA : Ds) {
       // When collecting a full chain of definitions, do not consider phi
       // defs to actually define a register.
@@ -300,7 +300,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
   auto DeadP = [](const NodeAddr<DefNode*> DA) -> bool {
     return DA.Addr->getFlags() & NodeAttrs::Dead;
   };
-  RDefs.resize(std::distance(RDefs.begin(), llvm::remove_if(RDefs, DeadP)));
+  llvm::erase_if(RDefs, DeadP);
 
   return RDefs;
 }
@@ -470,7 +470,7 @@ void Liveness::computePhiInfo() {
   NodeList Blocks = FA.Addr->members(DFG);
   for (NodeAddr<BlockNode*> BA : Blocks) {
     auto Ps = BA.Addr->members_if(DFG.IsCode<NodeAttrs::Phi>, DFG);
-    Phis.insert(Phis.end(), Ps.begin(), Ps.end());
+    llvm::append_range(Phis, Ps);
   }
 
   // phi use -> (map: reaching phi -> set of registers defined in between)
@@ -866,8 +866,8 @@ void Liveness::computeLiveIns() {
     // Dump the liveness map
     for (MachineBasicBlock &B : MF) {
       std::vector<RegisterRef> LV;
-      for (auto I = B.livein_begin(), E = B.livein_end(); I != E; ++I)
-        LV.push_back(RegisterRef(I->PhysReg, I->LaneMask));
+      for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
+        LV.push_back(RegisterRef(LI.PhysReg, LI.LaneMask));
       llvm::sort(LV);
       dbgs() << printMBBReference(B) << "\t rec = {";
       for (auto I : LV)
@@ -893,16 +893,14 @@ void Liveness::resetLiveIns() {
   for (auto &B : DFG.getMF()) {
     // Remove all live-ins.
     std::vector<unsigned> T;
-    for (auto I = B.livein_begin(), E = B.livein_end(); I != E; ++I)
-      T.push_back(I->PhysReg);
+    for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
+      T.push_back(LI.PhysReg);
     for (auto I : T)
       B.removeLiveIn(I);
     // Add the newly computed live-ins.
     const RegisterAggr &LiveIns = LiveMap[&B];
-    for (auto I = LiveIns.rr_begin(), E = LiveIns.rr_end(); I != E; ++I) {
-      RegisterRef R = *I;
+    for (const RegisterRef R : make_range(LiveIns.rr_begin(), LiveIns.rr_end()))
       B.addLiveIn({MCPhysReg(R.Reg), R.Mask});
-    }
   }
 }
 
@@ -933,13 +931,12 @@ void Liveness::resetKills(MachineBasicBlock *B) {
   for (auto SI : B->successors())
     CopyLiveIns(SI, Live);
 
-  for (auto I = B->rbegin(), E = B->rend(); I != E; ++I) {
-    MachineInstr *MI = &*I;
-    if (MI->isDebugInstr())
+  for (MachineInstr &MI : llvm::reverse(*B)) {
+    if (MI.isDebugInstr())
       continue;
 
-    MI->clearKillInfo();
-    for (auto &Op : MI->operands()) {
+    MI.clearKillInfo();
+    for (auto &Op : MI.operands()) {
       // An implicit def of a super-register may not necessarily start a
       // live range of it, since an implicit use could be used to keep parts
       // of it live. Instead of analyzing the implicit operands, ignore
@@ -952,7 +949,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR)
         Live.reset(*SR);
     }
-    for (auto &Op : MI->operands()) {
+    for (auto &Op : MI.operands()) {
       if (!Op.isReg() || !Op.isUse() || Op.isUndef())
         continue;
       Register R = Op.getReg();

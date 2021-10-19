@@ -4,7 +4,7 @@ void test0(void) {
   extern id test0_helper(void);
   __attribute__((objc_precise_lifetime)) id x = test0_helper();
   test0_helper();
-  // CHECK-LABEL: define void @test0()
+  // CHECK-LABEL: define{{.*}} void @test0()
   // CHECK:      [[T0:%.*]] = call i8* @test0_helper()
   // CHECK-NEXT: store i8* [[T0]], i8** [[X:%.*]], align 8
   // CHECK-NEXT: call i8* @test0_helper()

@@ -50,7 +50,7 @@ define void @intarg(i8  %a0,   ; %i0
 ; CHECK-NOT: add %sp
 ; CHECK: restore
 define void @call_intarg(i32 %i0, i8* %i1) {
-  call void @intarg(i8 0, i8 1, i16 2, i32 3, i8* undef, i32 5, i32 %i0, i8* %i1)
+  call void @intarg(i8 0, i8 1, i16 2, i32 3, i8* undef, i32 5, i32 signext %i0, i8* %i1)
   ret void
 }
 
@@ -222,7 +222,7 @@ define i32 @inreg_fi(i32 inreg %a0,     ; high bits of %i0
 ; SOFT:  or %i1, %i0, %o0
 ; CHECK: call inreg_fi
 define void @call_inreg_fi(i32* %p, i32 %i1, float %f5) {
-  %x = call i32 @inreg_fi(i32 %i1, float %f5)
+  %x = call i32 @inreg_fi(i32 inreg %i1, float inreg %f5)
   ret void
 }
 
@@ -245,7 +245,7 @@ define float @inreg_ff(float inreg %a0,   ; %f0
 ; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_ff
 define void @call_inreg_ff(i32* %p, float %f3, float %f5) {
-  %x = call float @inreg_ff(float %f3, float %f5)
+  %x = call float @inreg_ff(float inreg %f3, float inreg %f5)
   ret void
 }
 
@@ -269,7 +269,7 @@ define i32 @inreg_if(float inreg %a0, ; %f0
 ; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_if
 define void @call_inreg_if(i32* %p, float %f3, i32 %i2) {
-  %x = call i32 @inreg_if(float %f3, i32 %i2)
+  %x = call i32 @inreg_if(float inreg %f3, i32 inreg %i2)
   ret void
 }
 
@@ -289,7 +289,7 @@ define i32 @inreg_ii(i32 inreg %a0,   ; high bits of %i0
 ; CHECK: or [[R1]], [[R2]], %o0
 ; CHECK: call inreg_ii
 define void @call_inreg_ii(i32* %p, i32 %i1, i32 %i2) {
-  %x = call i32 @inreg_ii(i32 %i1, i32 %i2)
+  %x = call i32 @inreg_ii(i32 inreg %i1, i32 inreg %i2)
   ret void
 }
 

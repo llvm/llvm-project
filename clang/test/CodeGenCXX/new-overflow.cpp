@@ -11,7 +11,7 @@ namespace test0 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test04testEs(i16 signext
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test04testEs(i16 signext
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 4)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -33,7 +33,7 @@ namespace test1 {
 
   typedef A elt[100];
 
-  // CHECK:    define [100 x [[A:%.*]]]* @_ZN5test14testEs(i16 signext
+  // CHECK:    define{{.*}} [100 x [[A:%.*]]]* @_ZN5test14testEs(i16 signext
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -57,7 +57,7 @@ namespace test2 {
 
   typedef A elt[100];
 
-  // CHECK:    define [100 x [[A:%.*]]]* @_ZN5test24testEs(i16 signext
+  // CHECK:    define{{.*}} [100 x [[A:%.*]]]* @_ZN5test24testEs(i16 signext
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -83,7 +83,7 @@ namespace test4 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test44testEs(i16 signext
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test44testEs(i16 signext
   // CHECK:      [[N:%.*]] = sext i16 {{%.*}} to i32
   // CHECK-NEXT: call noalias nonnull i8* @_Znaj(i32 [[N]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[N]]
@@ -100,7 +100,7 @@ namespace test5 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test54testEi(i32
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test54testEi(i32
   // CHECK:      [[N:%.*]] = load i32, i32*
   // CHECK-NEXT: call noalias nonnull i8* @_Znaj(i32 [[N]])
   // CHECK:      getelementptr inbounds {{.*}}, i32 [[N]]
@@ -118,7 +118,7 @@ namespace test6 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test64testEt(i16 zeroext
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test64testEt(i16 zeroext
   // CHECK:      [[N:%.*]] = zext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 4)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -140,7 +140,7 @@ namespace test7 {
 
   typedef A elt[100];
 
-  // CHECK:    define [100 x [[A:%.*]]]* @_ZN5test74testEt(i16 zeroext
+  // CHECK:    define{{.*}} [100 x [[A:%.*]]]* @_ZN5test74testEt(i16 zeroext
   // CHECK:      [[N:%.*]] = zext i16 {{%.*}} to i32
   // CHECK-NEXT: [[T0:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[N]], i32 400)
   // CHECK-NEXT: [[T1:%.*]] = extractvalue { i32, i1 } [[T0]], 1
@@ -163,7 +163,7 @@ namespace test8 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test84testEx(i64
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test84testEx(i64
   // CHECK:      [[N:%.*]] = load i64, i64*
   // CHECK-NEXT: [[T1:%.*]] = trunc i64 [[N]] to i32
   // CHECK-NEXT: [[T2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[T1]], i32 4)
@@ -186,7 +186,7 @@ namespace test9 {
 
   typedef A elt;
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test94testEy(i64
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test94testEy(i64
   // CHECK:      [[N:%.*]] = load i64, i64*
   // CHECK-NEXT: [[T1:%.*]] = trunc i64 [[N]] to i32
   // CHECK-NEXT: [[T2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[T1]], i32 4)

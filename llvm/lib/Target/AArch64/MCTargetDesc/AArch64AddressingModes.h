@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64ADDRESSINGMODES_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64ADDRESSINGMODES_H
 
+#include "AArch64ExpandImm.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/bit.h"
@@ -760,17 +761,24 @@ static inline bool isSVEMaskOfIdenticalElements(int64_t Imm) {
 /// Returns true if Imm is valid for CPY/DUP.
 template <typename T>
 static inline bool isSVECpyImm(int64_t Imm) {
-  bool IsImm8 = int8_t(Imm) == Imm;
-  bool IsImm16 = int16_t(Imm & ~0xff) == Imm;
+  // Imm is interpreted as a signed value, which means top bits must be all ones
+  // (sign bits if the immediate value is negative and passed in a larger
+  // container), or all zeroes.
+  int64_t Mask = ~int64_t(std::numeric_limits<std::make_unsigned_t<T>>::max());
+  if ((Imm & Mask) != 0 && (Imm & Mask) != Mask)
+    return false;
 
-  if (std::is_same<int8_t, std::make_signed_t<T>>::value ||
-      std::is_same<int8_t, T>::value)
-    return IsImm8 || uint8_t(Imm) == Imm;
+  // Imm is a signed 8-bit value.
+  // Top bits must be zeroes or sign bits.
+  if (Imm & 0xff)
+    return int8_t(Imm) == T(Imm);
 
-  if (std::is_same<int16_t, std::make_signed_t<T>>::value)
-    return IsImm8 || IsImm16 || uint16_t(Imm & ~0xff) == Imm;
+  // Imm is a signed 16-bit value and multiple of 256.
+  // Top bits must be zeroes or sign bits.
+  if (Imm & 0xff00)
+    return int16_t(Imm) == T(Imm);
 
-  return IsImm8 || IsImm16;
+  return Imm == 0;
 }
 
 /// Returns true if Imm is valid for ADD/SUB.

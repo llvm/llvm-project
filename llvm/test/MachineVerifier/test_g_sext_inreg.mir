@@ -36,11 +36,9 @@ body: |
 
    ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
    ; CHECK: instruction: %4:gpr(<2 x s32>) = G_SEXT_INREG
-   ; CHECK: *** Bad machine code: operand types must be all-vector or all-scalar ***
-   ; CHECK: instruction: %4:gpr(<2 x s32>) = G_SEXT_INREG
    %4(<2 x s32>) = G_SEXT_INREG %0, 8
 
-   ; CHECK: *** Bad machine code: operand types must preserve number of vector elements ***
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
    ; CHECK: instruction: %5:gpr(<2 x s32>) = G_SEXT_INREG
    %5(<2 x s32>) = G_SEXT_INREG %1, 8
 

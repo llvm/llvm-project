@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test specification expressions
 
 module m
@@ -15,6 +15,7 @@ module m
     pure integer function hasProcArg(p)
       import realfunc
       procedure(realfunc) :: p
+      optional :: p
     end function
   end interface
   integer :: coarray[*]
@@ -37,8 +38,8 @@ module m
     integer, intent(in), optional :: optional
     !ERROR: Invalid specification expression: reference to OPTIONAL dummy argument 'optional'
     type(t(optional)) :: x5
-    !ERROR: Invalid specification expression: dummy procedure argument
-    type(t(hasProcArg(realfunc))) :: x6
+    !ERROR: Invalid specification expression: reference to function 'hasprocarg' with dummy procedure argument 'p'
+    type(t(hasProcArg())) :: x6
     !ERROR: Invalid specification expression: coindexed reference
     type(t(coarray[1])) :: x7
     type(t(kind(foo()))) :: x101 ! ok

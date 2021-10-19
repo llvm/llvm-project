@@ -65,7 +65,7 @@ extern "C" void f0() {
   co_await suspend_always{};
   // See if we need to suspend:
   // --------------------------
-  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN14suspend_always11await_readyEv(%struct.suspend_always* %[[AWAITABLE:.+]])
+  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN14suspend_always11await_readyEv(%struct.suspend_always* {{[^,]*}} %[[AWAITABLE:.+]])
   // CHECK: br i1 %[[READY]], label %[[READY_BB:.+]], label %[[SUSPEND_BB:.+]]
 
   // If we are suspending:
@@ -78,7 +78,7 @@ extern "C" void f0() {
   // CHECK: call i8* @_ZNSt12experimental16coroutine_handleINS_16coroutine_traitsIJvEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an i8* scalar
   // CHECK: %[[CH:.+]] = load i8*, i8** %{{.+}}
-  // CHECK: call void @_ZN14suspend_always13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_always* %[[AWAITABLE]], i8* %[[CH]])
+  // CHECK: call void @_ZN14suspend_always13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_always* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
   // -------------------------
   // Generate a suspend point:
   // -------------------------
@@ -95,7 +95,7 @@ extern "C" void f0() {
   // When coroutine is resumed, call await_resume
   // --------------------------
   // CHECK: [[READY_BB]]:
-  // CHECK:  call void @_ZN14suspend_always12await_resumeEv(%struct.suspend_always* %[[AWAITABLE]])
+  // CHECK:  call void @_ZN14suspend_always12await_resumeEv(%struct.suspend_always* {{[^,]*}} %[[AWAITABLE]])
 
   // See if final_suspend was issued:
   // ----------------------------------
@@ -130,11 +130,11 @@ extern "C" void f1(int) {
   // CHECK: %[[PROMISE:.+]] = alloca %"struct.std::experimental::coroutine_traits<void, int>::promise_type"
   // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
   co_yield 42;
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret align 4 %[[AWAITER:.+]], %"struct.std::experimental::coroutine_traits<void, int>::promise_type"* %[[PROMISE]], i32 42)
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJviEE12promise_type11yield_valueEi(%struct.suspend_maybe* sret(%struct.suspend_maybe) align 4 %[[AWAITER:.+]], %"struct.std::experimental::coroutine_traits<void, int>::promise_type"* {{[^,]*}} %[[PROMISE]], i32 42)
 
   // See if we need to suspend:
   // --------------------------
-  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13suspend_maybe11await_readyEv(%struct.suspend_maybe* %[[AWAITABLE]])
+  // CHECK: %[[READY:.+]] = call zeroext i1 @_ZN13suspend_maybe11await_readyEv(%struct.suspend_maybe* {{[^,]*}} %[[AWAITABLE]])
   // CHECK: br i1 %[[READY]], label %[[READY_BB:.+]], label %[[SUSPEND_BB:.+]]
 
   // If we are suspending:
@@ -147,7 +147,7 @@ extern "C" void f1(int) {
   // CHECK: call i8* @_ZNSt12experimental16coroutine_handleINS_16coroutine_traitsIJviEE12promise_typeEE12from_addressEPv(i8* %[[FRAME]])
   //   ... many lines of code to coerce coroutine_handle into an i8* scalar
   // CHECK: %[[CH:.+]] = load i8*, i8** %{{.+}}
-  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_maybe* %[[AWAITABLE]], i8* %[[CH]])
+  // CHECK: %[[YES:.+]] = call zeroext i1 @_ZN13suspend_maybe13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.suspend_maybe* {{[^,]*}} %[[AWAITABLE]], i8* %[[CH]])
   // -------------------------------------------
   // See if await_suspend decided not to suspend
   // -------------------------------------------
@@ -157,7 +157,7 @@ extern "C" void f1(int) {
   // CHECK:    call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
 
   // CHECK: [[READY_BB]]:
-  // CHECK:     call void @_ZN13suspend_maybe12await_resumeEv(%struct.suspend_maybe* %[[AWAITABLE]])
+  // CHECK:     call void @_ZN13suspend_maybe12await_resumeEv(%struct.suspend_maybe* {{[^,]*}} %[[AWAITABLE]])
 }
 
 struct ComplexAwaiter {
@@ -197,22 +197,22 @@ extern "C" void UseAggr(Aggr&&);
 extern "C" void TestAggr() {
   UseAggr(co_await AggrAwaiter{});
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret(%struct.Aggr) align 4 %[[AwaitResume:.+]],
   // CHECK: call void @UseAggr(%struct.Aggr* nonnull align 4 dereferenceable(12) %[[AwaitResume]])
-  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume]])
+  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* {{[^,]*}} %[[AwaitResume]])
   // CHECK: call void @Whatever()
 
   co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume2:.+]],
-  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume2]])
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret(%struct.Aggr) align 4 %[[AwaitResume2:.+]],
+  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* {{[^,]*}} %[[AwaitResume2]])
   // CHECK: call void @Whatever()
 
   Aggr Val = co_await AggrAwaiter{};
   Whatever();
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %[[AwaitResume3:.+]],
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret(%struct.Aggr) align 4 %[[AwaitResume3:.+]],
   // CHECK: call void @Whatever()
-  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* %[[AwaitResume3]])
+  // CHECK: call void @_ZN4AggrD1Ev(%struct.Aggr* {{[^,]*}} %[[AwaitResume3]])
 }
 
 struct ScalarAwaiter {
@@ -231,7 +231,9 @@ extern "C" void TestScalar() {
 
   int Val = co_await ScalarAwaiter{};
   // CHECK: %[[Result2:.+]] = call i32 @_ZN13ScalarAwaiter12await_resumeEv(%struct.ScalarAwaiter*
-  // CHECK: store i32 %[[Result2]], i32* %Val
+  // CHECK: store i32 %[[Result2]], i32* %[[TMP_EXPRCLEANUP:.+]],
+  // CHECK: %[[TMP:.+]] = load i32, i32* %[[TMP_EXPRCLEANUP]],
+  // CHECK: store i32 %[[TMP]], i32* %Val,
 
   co_await ScalarAwaiter{};
   // CHECK: call i32 @_ZN13ScalarAwaiter12await_resumeEv(%struct.ScalarAwaiter*
@@ -249,11 +251,11 @@ struct MyAgg {
 extern "C" void TestOpAwait() {
   co_await MyInt(42);
   // CHECK: call void @_Zaw5MyInt(i32 42)
-  // CHECK: call i32 @_ZN13ScalarAwaiter12await_resumeEv(%struct.ScalarAwaiter* %
+  // CHECK: call i32 @_ZN13ScalarAwaiter12await_resumeEv(%struct.ScalarAwaiter* {{[^,]*}} %
 
   co_await MyAgg{};
-  // CHECK: call void @_ZN5MyAggawEv(%struct.MyAgg* %
-  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret align 4 %
+  // CHECK: call void @_ZN5MyAggawEv(%struct.MyAgg* {{[^,]*}} %
+  // CHECK: call void @_ZN11AggrAwaiter12await_resumeEv(%struct.Aggr* sret(%struct.Aggr) align 4 %
 }
 
 // CHECK-LABEL: EndlessLoop(
@@ -303,7 +305,7 @@ struct std::experimental::coroutine_traits<void,double> {
 
 // Verifies that we don't crash when returning an lvalue from an await_resume()
 // expression.
-// CHECK-LABEL:  define void @_Z18AwaitReturnsLValued(double %0)
+// CHECK-LABEL:  define{{.*}} void @_Z18AwaitReturnsLValued(double %0)
 void AwaitReturnsLValue(double) {
   AwaitResumeReturnsLValue a;
   // CHECK: %[[AVAR:.+]] = alloca %struct.AwaitResumeReturnsLValue,
@@ -312,19 +314,25 @@ void AwaitReturnsLValue(double) {
   // CHECK: %[[YVAR:.+]] = alloca %struct.RefTag*,
   // CHECK-NEXT: %[[TMP1:.+]] = alloca %struct.AwaitResumeReturnsLValue,
 
+  // CHECK: %[[TMP_EXPRCLEANUP1:.+]] = alloca %struct.RefTag*,
   // CHECK: %[[ZVAR:.+]] = alloca %struct.RefTag*,
   // CHECK-NEXT: %[[TMP2:.+]] = alloca %struct.AwaitResumeReturnsLValue,
+  // CHECK: %[[TMP_EXPRCLEANUP2:.+]] = alloca %struct.RefTag*,
 
-  // CHECK: %[[RES1:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[AVAR]])
+  // CHECK: %[[RES1:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* {{[^,]*}} %[[AVAR]])
   // CHECK-NEXT: store %struct.RefTag* %[[RES1]], %struct.RefTag** %[[XVAR]],
   RefTag& x = co_await a;
 
-  // CHECK: %[[RES2:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP1]])
-  // CHECK-NEXT: store %struct.RefTag* %[[RES2]], %struct.RefTag** %[[YVAR]],
+  // CHECK: %[[RES2:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* {{[^,]*}} %[[TMP1]])
+  // CHECK-NEXT: store %struct.RefTag* %[[RES2]], %struct.RefTag** %[[TMP_EXPRCLEANUP1]],
+  // CHECK: %[[LOAD_TMP1:.+]] = load %struct.RefTag*, %struct.RefTag** %[[TMP_EXPRCLEANUP1]],
+  // CHECK: store %struct.RefTag* %[[LOAD_TMP1]], %struct.RefTag** %[[YVAR]],
 
   RefTag& y = co_await AwaitResumeReturnsLValue{};
-  // CHECK: %[[RES3:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* %[[TMP2]])
-  // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[ZVAR]],
+  // CHECK: %[[RES3:.+]] = call nonnull align 1 dereferenceable({{.*}}) %struct.RefTag* @_ZN24AwaitResumeReturnsLValue12await_resumeEv(%struct.AwaitResumeReturnsLValue* {{[^,]*}} %[[TMP2]])
+  // CHECK-NEXT: store %struct.RefTag* %[[RES3]], %struct.RefTag** %[[TMP_EXPRCLEANUP2]],
+  // CHECK: %[[LOAD_TMP2:.+]] = load %struct.RefTag*, %struct.RefTag** %[[TMP_EXPRCLEANUP2]],
+  // CHECK: store %struct.RefTag* %[[LOAD_TMP2]], %struct.RefTag** %[[ZVAR]],
   RefTag& z = co_yield 42;
 }
 
@@ -341,6 +349,6 @@ extern "C" void TestTailcall() {
   // CHECK: %[[RESULT:.+]] = call i8* @_ZN13TailCallAwait13await_suspendENSt12experimental16coroutine_handleIvEE(%struct.TailCallAwait*
   // CHECK: %[[COERCE:.+]] = getelementptr inbounds %"struct.std::experimental::coroutine_handle", %"struct.std::experimental::coroutine_handle"* %[[TMP:.+]], i32 0, i32 0
   // CHECK: store i8* %[[RESULT]], i8** %[[COERCE]]
-  // CHECK: %[[ADDR:.+]] = call i8* @_ZNSt12experimental16coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutine_handle"* %[[TMP]])
+  // CHECK: %[[ADDR:.+]] = call i8* @_ZNSt12experimental16coroutine_handleIvE7addressEv(%"struct.std::experimental::coroutine_handle"* {{[^,]*}} %[[TMP]])
   // CHECK: call void @llvm.coro.resume(i8* %[[ADDR]])
 }

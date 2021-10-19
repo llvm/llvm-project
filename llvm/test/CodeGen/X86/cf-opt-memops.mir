@@ -79,9 +79,9 @@ body:             |
   bb.0.entry:
     ADJCALLSTACKDOWN64 24, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %0:gr64 = COPY $rsp
-    MOV64mi32 %0, 1, $noreg, 16, $noreg, @.str.16 :: (store 8 into stack + 16)
-    MOV64mi32 %0, 1, $noreg, 8, $noreg, @.str.15 :: (store 8 into stack + 8)
-    MOV64mi32 %0, 1, $noreg, 0, $noreg, @.str.14 :: (store 8 into stack)
+    MOV64mi32 %0, 1, $noreg, 16, $noreg, @.str.16 :: (store (s64) into stack + 16)
+    MOV64mi32 %0, 1, $noreg, 8, $noreg, @.str.15 :: (store (s64) into stack + 8)
+    MOV64mi32 %0, 1, $noreg, 0, $noreg, @.str.14 :: (store (s64) into stack)
     %1:gr64 = MOV32ri64 @.str.8
     %2:gr64 = MOV32ri64 @.str.9
     %3:gr64 = MOV32ri64 @.str.10
@@ -102,8 +102,8 @@ body:             |
     RET 0
 
 # Call frame optimization should propagate memory operands
-# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack + 16)
-# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack + 8)
-# CHECK: PUSH64i32 @{{.*}} :: (store 8 into stack)
+# CHECK: PUSH64i32 @{{.*}} :: (store (s64) into stack + 16)
+# CHECK: PUSH64i32 @{{.*}} :: (store (s64) into stack + 8)
+# CHECK: PUSH64i32 @{{.*}} :: (store (s64) into stack)
 
 ...

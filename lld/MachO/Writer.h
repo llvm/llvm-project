@@ -14,6 +14,10 @@
 namespace lld {
 namespace macho {
 
+class OutputSection;
+class InputSection;
+class Symbol;
+
 class LoadCommand {
 public:
   virtual ~LoadCommand() = default;
@@ -21,9 +25,15 @@ public:
   virtual void writeTo(uint8_t *buf) const = 0;
 };
 
-void writeResult();
+template <class LP> void writeResult();
 
 void createSyntheticSections();
+
+// Add bindings for symbols that need weak or non-lazy bindings.
+void addNonLazyBindingEntries(const Symbol *, const InputSection *,
+                              uint64_t offset, int64_t addend = 0);
+
+extern OutputSection *firstTLVDataSection;
 
 } // namespace macho
 } // namespace lld

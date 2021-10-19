@@ -46,7 +46,7 @@ define i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__g
 ; CHECK-NEXT:    movb $21, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $7308613581744070988, %rax # imm = 0x656D69547473614C
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movups {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    movups .L.str.1(%rip), %xmm1
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -70,9 +70,9 @@ define i8 @main() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__g
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize(%rip)
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, do_not_optimize{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, do_not_optimize(%rip)
 ; CHECK-NEXT:    cmpb $0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jns .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %_ZNSt3__312basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED2Ev.exit50

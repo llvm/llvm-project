@@ -4379,6 +4379,7 @@ static __isl_give isl_basic_map *align_context_divs(
 	}
 	other = bmap_n_div - common;
 	if (dom->n_div - common > 0) {
+		bmap = isl_basic_map_cow(bmap);
 		bmap = isl_basic_map_extend(bmap, dom->n_div - common, 0, 0);
 		if (!bmap)
 			return NULL;
@@ -5933,7 +5934,7 @@ static __isl_give isl_pw_multi_aff *split_domain_pma(
 			pma = isl_pw_multi_aff_free(pma);
 		} else if (subs) {
 			pma = isl_pw_multi_aff_substitute(pma,
-					isl_dim_in, n_in - 1, min_expr_pa);
+					n_in - 1, min_expr_pa);
 		} else {
 			isl_bool split;
 			split = need_split_set(opt->p[i].set, cst);

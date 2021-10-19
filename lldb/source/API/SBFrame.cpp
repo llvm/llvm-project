@@ -431,7 +431,7 @@ SBAddress SBFrame::GetPCAddress() const {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame)
-        sb_addr.SetAddress(&frame->GetFrameCodeAddress());
+        sb_addr.SetAddress(frame->GetFrameCodeAddress());
     }
   }
   return LLDB_RECORD_RESULT(sb_addr);
@@ -633,18 +633,10 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
         {
           RegisterContextSP reg_ctx(frame->GetRegisterContext());
           if (reg_ctx) {
-            const uint32_t num_regs = reg_ctx->GetRegisterCount();
-            for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-              const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoAtIndex(reg_idx);
-              if (reg_info &&
-                  ((reg_info->name && strcasecmp(reg_info->name, name) == 0) ||
-                   (reg_info->alt_name &&
-                    strcasecmp(reg_info->alt_name, name) == 0))) {
-                value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_idx);
-                sb_value.SetSP(value_sp);
-                break;
-              }
+            if (const RegisterInfo *reg_info =
+                    reg_ctx->GetRegisterInfoByName(name)) {
+              value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
+              sb_value.SetSP(value_sp);
             }
           }
         } break;
@@ -953,18 +945,10 @@ SBValue SBFrame::FindRegister(const char *name) {
       if (frame) {
         RegisterContextSP reg_ctx(frame->GetRegisterContext());
         if (reg_ctx) {
-          const uint32_t num_regs = reg_ctx->GetRegisterCount();
-          for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
-            const RegisterInfo *reg_info =
-                reg_ctx->GetRegisterInfoAtIndex(reg_idx);
-            if (reg_info &&
-                ((reg_info->name && strcasecmp(reg_info->name, name) == 0) ||
-                 (reg_info->alt_name &&
-                  strcasecmp(reg_info->alt_name, name) == 0))) {
-              value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_idx);
-              result.SetSP(value_sp);
-              break;
-            }
+          if (const RegisterInfo *reg_info =
+                  reg_ctx->GetRegisterInfoByName(name)) {
+            value_sp = ValueObjectRegister::Create(frame, reg_ctx, reg_info);
+            result.SetSP(value_sp);
           }
         }
       }

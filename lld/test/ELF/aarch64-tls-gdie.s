@@ -28,7 +28,7 @@ _start:
 
 // CHECK:      <_start>:
 // CHECK-NEXT: 210238: nop
-// CHECK-NEXT: 21023c: adrp    x0, #65536
+// CHECK-NEXT: 21023c: adrp    x0, 0x220000
 // CHECK-NEXT: 210240: ldr     x0, [x0, #768]
 // CHECK-NEXT: 210244: nop
 // CHECK-NEXT: 210248: nop

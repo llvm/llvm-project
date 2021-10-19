@@ -59,8 +59,8 @@ void EditedSource::finishedCommit() {
     SourceLocation ExpLoc;
     MacroArgUse ArgUse;
     std::tie(ExpLoc, ArgUse) = ExpArg;
-    auto &ArgUses = ExpansionToArgMap[ExpLoc.getRawEncoding()];
-    if (llvm::find(ArgUses, ArgUse) == ArgUses.end())
+    auto &ArgUses = ExpansionToArgMap[ExpLoc];
+    if (!llvm::is_contained(ArgUses, ArgUse))
       ArgUses.push_back(ArgUse);
   }
   CurrCommitMacroArgExps.clear();
@@ -82,7 +82,7 @@ bool EditedSource::canInsertInOffset(SourceLocation OrigLoc, FileOffset Offs) {
     SourceLocation ExpLoc;
     MacroArgUse ArgUse;
     deconstructMacroArgLoc(OrigLoc, ExpLoc, ArgUse);
-    auto I = ExpansionToArgMap.find(ExpLoc.getRawEncoding());
+    auto I = ExpansionToArgMap.find(ExpLoc);
     if (I != ExpansionToArgMap.end() &&
         find_if(I->second, [&](const MacroArgUse &U) {
           return ArgUse.Identifier == U.Identifier &&
@@ -314,8 +314,8 @@ bool EditedSource::commit(const Commit &commit) {
 static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
   // FIXME: Should use TokenConcatenation to make sure we don't allow stuff like
   // making two '<' adjacent.
-  return !(Lexer::isIdentifierBodyChar(left, LangOpts) &&
-           Lexer::isIdentifierBodyChar(right, LangOpts));
+  return !(Lexer::isAsciiIdentifierContinueChar(left, LangOpts) &&
+           Lexer::isAsciiIdentifierContinueChar(right, LangOpts));
 }
 
 /// Returns true if it is ok to eliminate the trailing whitespace between

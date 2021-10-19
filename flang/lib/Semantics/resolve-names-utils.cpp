@@ -29,6 +29,8 @@ using common::NumericOperator;
 using common::RelationalOperator;
 using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
 
+static constexpr const char *operatorPrefix{"operator("};
+
 static GenericKind MapIntrinsicOperator(IntrinsicOperator);
 
 Symbol *Resolve(const parser::Name &name, Symbol *symbol) {
@@ -45,12 +47,6 @@ parser::MessageFixedText WithIsFatal(
     const parser::MessageFixedText &msg, bool isFatal) {
   return parser::MessageFixedText{
       msg.text().begin(), msg.text().size(), isFatal};
-}
-
-bool IsDefinedOperator(const SourceName &name) {
-  const char *begin{name.begin()};
-  const char *end{name.end()};
-  return begin != end && begin[0] == '.' && end[-1] == '.';
 }
 
 bool IsIntrinsicOperator(
@@ -71,43 +67,43 @@ bool IsIntrinsicOperator(
   return false;
 }
 
+template <typename E>
+std::forward_list<std::string> GetOperatorNames(
+    const SemanticsContext &context, E opr) {
+  std::forward_list<std::string> result;
+  for (const char *name : context.languageFeatures().GetNames(opr)) {
+    result.emplace_front(std::string{operatorPrefix} + name + ')');
+  }
+  return result;
+}
+
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &context, const SourceName &name) {
+  std::string str{name.ToString()};
+  if (!name.empty() && name.end()[-1] == ')' &&
+      name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
+    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, LogicalOperator{i})};
+      if (std::find(names.begin(), names.end(), str) != names.end()) {
+        return names;
+      }
+    }
+    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, RelationalOperator{i})};
+      if (std::find(names.begin(), names.end(), str) != names.end()) {
+        return names;
+      }
+    }
+  }
+  return {str};
+}
+
 bool IsLogicalConstant(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
   return str == ".true." || str == ".false." ||
       (context.IsEnabled(LanguageFeature::LogicalAbbreviations) &&
           (str == ".t" || str == ".f."));
-}
-
-// The operators <, <=, >, >=, ==, and /= always have the same interpretations
-// as the operators .LT., .LE., .GT., .GE., .EQ., and .NE., respectively.
-std::forward_list<std::string> GenericSpecInfo::GetAllNames(
-    SemanticsContext &context) const {
-  auto getNames{[&](auto opr) {
-    std::forward_list<std::string> result;
-    for (const char *name : context.languageFeatures().GetNames(opr)) {
-      result.emplace_front("operator("s + name + ')');
-    }
-    return result;
-  }};
-  return std::visit(
-      common::visitors{[&](const LogicalOperator &x) { return getNames(x); },
-          [&](const RelationalOperator &x) { return getNames(x); },
-          [&](const auto &) -> std::forward_list<std::string> {
-            return {symbolName_.value().ToString()};
-          }},
-      kind_.u);
-}
-
-Symbol *GenericSpecInfo::FindInScope(
-    SemanticsContext &context, const Scope &scope) const {
-  for (const auto &name : GetAllNames(context)) {
-    auto iter{scope.find(SourceName{name})};
-    if (iter != scope.end()) {
-      return &*iter->second;
-    }
-  }
-  return nullptr;
 }
 
 void GenericSpecInfo::Resolve(Symbol *symbol) const {
@@ -168,6 +164,16 @@ void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
       x.u);
 }
 
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const GenericSpecInfo &info) {
+  os << "GenericSpecInfo: kind=" << info.kind_.ToString();
+  os << " parseName="
+     << (info.parseName_ ? info.parseName_->ToString() : "null");
+  os << " symbolName="
+     << (info.symbolName_ ? info.symbolName_->ToString() : "null");
+  return os;
+}
+
 // parser::DefinedOperator::IntrinsicOperator -> GenericKind
 static GenericKind MapIntrinsicOperator(IntrinsicOperator op) {
   switch (op) {
@@ -213,6 +219,7 @@ class ArraySpecAnalyzer {
 public:
   ArraySpecAnalyzer(SemanticsContext &context) : context_{context} {}
   ArraySpec Analyze(const parser::ArraySpec &);
+  ArraySpec AnalyzeDeferredShapeSpecList(const parser::DeferredShapeSpecList &);
   ArraySpec Analyze(const parser::ComponentArraySpec &);
   ArraySpec Analyze(const parser::CoarraySpec &);
 
@@ -246,6 +253,11 @@ ArraySpec AnalyzeArraySpec(
     SemanticsContext &context, const parser::ComponentArraySpec &arraySpec) {
   return ArraySpecAnalyzer{context}.Analyze(arraySpec);
 }
+ArraySpec AnalyzeDeferredShapeSpecList(SemanticsContext &context,
+    const parser::DeferredShapeSpecList &deferredShapeSpecs) {
+  return ArraySpecAnalyzer{context}.AnalyzeDeferredShapeSpecList(
+      deferredShapeSpecs);
+}
 ArraySpec AnalyzeCoarraySpec(
     SemanticsContext &context, const parser::CoarraySpec &coarraySpec) {
   return ArraySpecAnalyzer{context}.Analyze(coarraySpec);
@@ -266,6 +278,12 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
                  [&](const auto &y) { Analyze(y); },
              },
       x.u);
+  CHECK(!arraySpec_.empty());
+  return arraySpec_;
+}
+ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
+    const parser::DeferredShapeSpecList &x) {
+  Analyze(x);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }

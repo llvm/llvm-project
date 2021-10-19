@@ -14,12 +14,14 @@ std::string llvm::wasm::toString(wasm::WasmSymbolType Type) {
     return "WASM_SYMBOL_TYPE_FUNCTION";
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     return "WASM_SYMBOL_TYPE_GLOBAL";
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
+    return "WASM_SYMBOL_TYPE_TABLE";
   case wasm::WASM_SYMBOL_TYPE_DATA:
     return "WASM_SYMBOL_TYPE_DATA";
   case wasm::WASM_SYMBOL_TYPE_SECTION:
     return "WASM_SYMBOL_TYPE_SECTION";
-  case wasm::WASM_SYMBOL_TYPE_EVENT:
-    return "WASM_SYMBOL_TYPE_EVENT";
+  case wasm::WASM_SYMBOL_TYPE_TAG:
+    return "WASM_SYMBOL_TYPE_TAG";
   }
   llvm_unreachable("unknown symbol type");
 }
@@ -46,8 +48,12 @@ bool llvm::wasm::relocTypeHasAddend(uint32_t Type) {
   case R_WASM_MEMORY_ADDR_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
     return true;
   default:
     return false;

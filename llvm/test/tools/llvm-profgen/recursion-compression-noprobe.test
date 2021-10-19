@@ -1,0 +1,77 @@
+; Firstly test uncompression(--compress-recursion=0)
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-UNCOMPRESS
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-noprobe.perfscript --binary=%S/Inputs/recursion-compression-noprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-cold-count=0 --csprof-max-context-depth=2
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
+
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb]:37:0
+; CHECK-UNCOMPRESS: 1: 11
+; CHECK-UNCOMPRESS: 2: 1 fa:1
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa]:21:0
+; CHECK-UNCOMPRESS: 1: 1
+; CHECK-UNCOMPRESS: 2: 13 fb:11
+; CHECK-UNCOMPRESS:[main:1 @ foo]:7:0
+; CHECK-UNCOMPRESS: 2: 1
+; CHECK-UNCOMPRESS: 3: 2 fa:1
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:6:0
+; CHECK-UNCOMPRESS: 1: 1
+; CHECK-UNCOMPRESS: 2: 1
+; CHECK-UNCOMPRESS:[main:1 @ foo:3 @ fa:2 @ fb:2 @ fa:2 @ fb:2 @ fa]:2:0
+; CHECK-UNCOMPRESS: 4: 1
+
+; CHECK-MAX-CTX-DEPTH:[foo:3 @ fa:2 @ fb]:36:0
+; CHECK-MAX-CTX-DEPTH: 1: 11
+; CHECK-MAX-CTX-DEPTH:[main:1 @ foo:3 @ fa]:10:0
+; CHECK-MAX-CTX-DEPTH: 1: 1
+; CHECK-MAX-CTX-DEPTH: 2: 2
+; CHECK-MAX-CTX-DEPTH:[fa:2 @ fb:2 @ fa]:8:0
+; CHECK-MAX-CTX-DEPTH: 1: 1
+; CHECK-MAX-CTX-DEPTH: 2: 1
+; CHECK-MAX-CTX-DEPTH: 4: 1
+; CHECK-MAX-CTX-DEPTH:[main:1 @ foo]:7:0
+; CHECK-MAX-CTX-DEPTH: 2: 1
+; CHECK-MAX-CTX-DEPTH: 3: 2 fa:1
+
+
+; CHECK: [main:1 @ foo:3 @ fa:2 @ fb]:37:0
+; CHECK:  1: 11
+; CHECK:  2: 1 fa:1
+; CHECK: [main:1 @ foo:3 @ fa]:21:0
+; CHECK:  1: 1
+; CHECK:  2: 13 fb:11
+; CHECK: [main:1 @ foo:3 @ fa:2 @ fb:2 @ fa]:8:0
+; CHECK:  1: 1
+; CHECK:  2: 1
+; CHECK:  4: 1
+; CHECK: [main:1 @ foo]:7:0
+; CHECK:  2: 1
+; CHECK:  3: 2 fa:1
+
+; original code:
+; clang -O3 -g test.c -o a.out
+#include <stdio.h>
+
+int fb(int n) {
+  if(n > 10) return fb(n / 2);
+  return fa(n - 1);
+}
+
+int fa(int n) {
+  if(n < 2) return n;
+  if(n % 2) return fb(n - 1);
+  return fa(n - 1);
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 10000)
+    s += fa(i);
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

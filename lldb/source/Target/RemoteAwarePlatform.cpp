@@ -154,10 +154,10 @@ Status RemoteAwarePlatform::ResolveExecutable(
       if (error.Fail() || !exe_module_sp) {
         if (FileSystem::Instance().Readable(
                 resolved_module_spec.GetFileSpec())) {
-          error.SetErrorStringWithFormat(
-              "'%s' doesn't contain any '%s' platform architectures: %s",
-              resolved_module_spec.GetFileSpec().GetPath().c_str(),
-              GetPluginName().GetCString(), arch_names.GetData());
+          error.SetErrorStringWithFormatv(
+              "'{0}' doesn't contain any '{1}' platform architectures: {2}",
+              resolved_module_spec.GetFileSpec(), GetPluginName(),
+              arch_names.GetData());
         } else {
           error.SetErrorStringWithFormat(
               "'%s' is not readable",
@@ -171,15 +171,24 @@ Status RemoteAwarePlatform::ResolveExecutable(
 }
 
 Status RemoteAwarePlatform::RunShellCommand(
-    const char *command, const FileSpec &working_dir, int *status_ptr,
+    llvm::StringRef command, const FileSpec &working_dir, int *status_ptr,
     int *signo_ptr, std::string *command_output,
     const Timeout<std::micro> &timeout) {
+  return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
+                         signo_ptr, command_output, timeout);
+}
+
+Status RemoteAwarePlatform::RunShellCommand(
+    llvm::StringRef shell, llvm::StringRef command, const FileSpec &working_dir,
+    int *status_ptr, int *signo_ptr, std::string *command_output,
+    const Timeout<std::micro> &timeout) {
   if (IsHost())
-    return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout);
+    return Host::RunShellCommand(shell, command, working_dir, status_ptr,
+                                 signo_ptr, command_output, timeout);
   if (m_remote_platform_sp)
-    return m_remote_platform_sp->RunShellCommand(
-        command, working_dir, status_ptr, signo_ptr, command_output, timeout);
+    return m_remote_platform_sp->RunShellCommand(shell, command, working_dir,
+                                                 status_ptr, signo_ptr,
+                                                 command_output, timeout);
   return Status("unable to run a remote command without a platform");
 }
 
@@ -427,4 +436,11 @@ Status RemoteAwarePlatform::KillProcess(const lldb::pid_t pid) {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->KillProcess(pid);
   return Status("the platform is not currently connected");
+}
+
+size_t RemoteAwarePlatform::ConnectToWaitingProcesses(Debugger &debugger,
+                                                Status &error) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
+  return Platform::ConnectToWaitingProcesses(debugger, error);
 }

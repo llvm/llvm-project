@@ -35,16 +35,16 @@
 @FuncPtrOut = external local_unnamed_addr global void (...)*, align 8
 
 define dso_local void @ReadWrite8() local_unnamed_addr #0 {
-; CHECK-LABEL: ReadWrite8:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pld r3, input8@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel:
-; CHECK-NEXT:    pld r4, output8@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
-; CHECK-NEXT:    lbz r3, 0(r3)
 ; In this test the stb r3, 0(r4) cannot be optimized because it
 ; uses the register r3 and that register is defined by lbz r3, 0(r3)
 ; which is defined between the pld and the stb.
+; CHECK-LABEL: ReadWrite8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pld r3, input8@got@pcrel(0), 1
+; CHECK-NEXT:  .Lpcrel0:
+; CHECK-NEXT:    pld r4, output8@got@pcrel(0), 1
+; CHECK-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
+; CHECK-NEXT:    lbz r3, 0(r3)
 ; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
@@ -54,16 +54,16 @@ entry:
 }
 
 define dso_local void @ReadWrite16() local_unnamed_addr #0 {
-; CHECK-LABEL: ReadWrite16:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pld r3, input16@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel0:
-; CHECK-NEXT:    pld r4, output16@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
-; CHECK-NEXT:    lhz r3, 0(r3)
 ; In this test the sth r3, 0(r4) cannot be optimized because it
 ; uses the register r3 and that register is defined by lhz r3, 0(r3)
 ; which is defined between the pld and the sth.
+; CHECK-LABEL: ReadWrite16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pld r3, input16@got@pcrel(0), 1
+; CHECK-NEXT:  .Lpcrel1:
+; CHECK-NEXT:    pld r4, output16@got@pcrel(0), 1
+; CHECK-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
+; CHECK-NEXT:    lhz r3, 0(r3)
 ; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
@@ -76,9 +76,9 @@ define dso_local void @ReadWrite32() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWrite32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input32@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel1:
+; CHECK-NEXT:  .Lpcrel2:
 ; CHECK-NEXT:    pld r4, output32@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
+; CHECK-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
 ; CHECK-NEXT:    lwz r3, 0(r3)
 ; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
@@ -92,9 +92,9 @@ define dso_local void @ReadWrite64() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWrite64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input64@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel2:
+; CHECK-NEXT:  .Lpcrel3:
 ; CHECK-NEXT:    pld r4, output64@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
+; CHECK-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
@@ -110,9 +110,13 @@ define dso_local void @ReadWrite128() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWrite128:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input128@got@pcrel(0), 1
-; CHECK-NEXT:    lxvx vs0, 0, r3
+; CHECK-NEXT:  .Lpcrel4:
+; CHECK-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
+; CHECK-NEXT:    lxv vs0, 0(r3)
 ; CHECK-NEXT:    pld r3, output128@got@pcrel(0), 1
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:  .Lpcrel5:
+; CHECK-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i128, i128* @input128, align 16
@@ -124,9 +128,9 @@ define dso_local void @ReadWritef32() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWritef32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputf32@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel3:
+; CHECK-NEXT:  .Lpcrel6:
 ; CHECK-NEXT:    xxspltidp vs1, 1078103900
-; CHECK-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
+; CHECK-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
 ; CHECK-NEXT:    lfs f0, 0(r3)
 ; CHECK-NEXT:    pld r3, outputf32@got@pcrel(0), 1
 ; CHECK-NEXT:    xsaddsp f0, f0, f1
@@ -143,9 +147,10 @@ define dso_local void @ReadWritef64() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWritef64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputf64@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel4:
-; CHECK-NEXT:    plfd f1, .LCPI6_0@PCREL(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel4-8,R_PPC64_PCREL_OPT,.-(.Lpcrel4-8)
+; CHECK-NEXT:  .Lpcrel7:
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1075524403
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 858993459
+; CHECK-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    pld r3, outputf64@got@pcrel(0), 1
 ; CHECK-NEXT:    xsadddp f0, f0, f1
@@ -164,12 +169,13 @@ define dso_local void @ReadWriteVi32() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWriteVi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputVi32@got@pcrel(0), 1
+; CHECK-NEXT:  .Lpcrel8:
 ; CHECK-NEXT:    li r4, 45
-; CHECK-NEXT:    mtfprwz f1, r4
-; CHECK-NEXT:    lxvx vs0, 0, r3
+; CHECK-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
+; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    pld r3, outputVi32@got@pcrel(0), 1
-; CHECK-NEXT:    xxinsertw vs0, vs1, 8
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:    vinsw v2, r4, 8
+; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
@@ -182,9 +188,13 @@ define dso_local void @ReadWriteVi64() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWriteVi64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputVi64@got@pcrel(0), 1
-; CHECK-NEXT:    lxvx vs0, 0, r3
+; CHECK-NEXT:  .Lpcrel9:
+; CHECK-NEXT:    .reloc .Lpcrel9-8,R_PPC64_PCREL_OPT,.-(.Lpcrel9-8)
+; CHECK-NEXT:    lxv vs0, 0(r3)
 ; CHECK-NEXT:    pld r3, outputVi64@got@pcrel(0), 1
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:  .Lpcrel10:
+; CHECK-NEXT:    .reloc .Lpcrel10-8,R_PPC64_PCREL_OPT,.-(.Lpcrel10-8)
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load <2 x i64>, <2 x i64>* @inputVi64, align 16
@@ -196,9 +206,9 @@ define dso_local void @ReadWriteArray() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWriteArray:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, ArrayIn@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel5:
+; CHECK-NEXT:  .Lpcrel11:
 ; CHECK-NEXT:    pld r4, ArrayOut@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
+; CHECK-NEXT:    .reloc .Lpcrel11-8,R_PPC64_PCREL_OPT,.-(.Lpcrel11-8)
 ; CHECK-NEXT:    lwz r3, 28(r3)
 ; CHECK-NEXT:    addi r3, r3, 42
 ; CHECK-NEXT:    stw r3, 8(r4)
@@ -229,12 +239,12 @@ define dso_local void @ReadWriteIntPtr() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWriteIntPtr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, IntPtrIn@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel6:
+; CHECK-NEXT:  .Lpcrel12:
 ; CHECK-NEXT:    pld r4, IntPtrOut@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel7:
-; CHECK-NEXT:    .reloc .Lpcrel6-8,R_PPC64_PCREL_OPT,.-(.Lpcrel6-8)
+; CHECK-NEXT:  .Lpcrel13:
+; CHECK-NEXT:    .reloc .Lpcrel12-8,R_PPC64_PCREL_OPT,.-(.Lpcrel12-8)
 ; CHECK-NEXT:    ld r3, 0(r3)
-; CHECK-NEXT:    .reloc .Lpcrel7-8,R_PPC64_PCREL_OPT,.-(.Lpcrel7-8)
+; CHECK-NEXT:    .reloc .Lpcrel13-8,R_PPC64_PCREL_OPT,.-(.Lpcrel13-8)
 ; CHECK-NEXT:    ld r4, 0(r4)
 ; CHECK-NEXT:    lwz r5, 216(r3)
 ; CHECK-NEXT:    lwz r3, 48(r3)
@@ -258,9 +268,9 @@ define dso_local void @ReadWriteFuncPtr() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadWriteFuncPtr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, FuncPtrIn@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel8:
+; CHECK-NEXT:  .Lpcrel14:
 ; CHECK-NEXT:    pld r4, FuncPtrOut@got@pcrel(0), 1
-; CHECK-NEXT:    .reloc .Lpcrel8-8,R_PPC64_PCREL_OPT,.-(.Lpcrel8-8)
+; CHECK-NEXT:    .reloc .Lpcrel14-8,R_PPC64_PCREL_OPT,.-(.Lpcrel14-8)
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
@@ -286,11 +296,10 @@ declare void @Callee(...)
 
 define dso_local void @FuncPtrCall() local_unnamed_addr #0 {
 ; CHECK-LABEL: FuncPtrCall:
-; CHECK:         .localentry FuncPtrCall, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, FuncPtrIn@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel9:
-; CHECK-NEXT:    .reloc .Lpcrel9-8,R_PPC64_PCREL_OPT,.-(.Lpcrel9-8)
+; CHECK-NEXT:  .Lpcrel15:
+; CHECK-NEXT:    .reloc .Lpcrel15-8,R_PPC64_PCREL_OPT,.-(.Lpcrel15-8)
 ; CHECK-NEXT:    ld r12, 0(r3)
 ; CHECK-NEXT:    mtctr r12
 ; CHECK-NEXT:    bctr
@@ -305,8 +314,8 @@ define dso_local signext i32 @ReadVecElement() local_unnamed_addr #0 {
 ; CHECK-LABEL: ReadVecElement:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputVi32@got@pcrel(0), 1
-; CHECK-NEXT:  .Lpcrel10:
-; CHECK-NEXT:    .reloc .Lpcrel10-8,R_PPC64_PCREL_OPT,.-(.Lpcrel10-8)
+; CHECK-NEXT:  .Lpcrel16:
+; CHECK-NEXT:    .reloc .Lpcrel16-8,R_PPC64_PCREL_OPT,.-(.Lpcrel16-8)
 ; CHECK-NEXT:    lwa r3, 4(r3)
 ; CHECK-NEXT:    blr
 entry:
@@ -317,8 +326,7 @@ entry:
 
 define dso_local signext i32 @VecMultiUse() local_unnamed_addr #0 {
 ; CHECK-LABEL: VecMultiUse:
-; CHECK:         .localentry VecMultiUse, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
@@ -355,8 +363,7 @@ entry:
 
 define dso_local signext i32 @UseAddr(i32 signext %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: UseAddr:
-; CHECK:         .localentry UseAddr, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)

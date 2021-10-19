@@ -176,11 +176,17 @@ error:
 }
 
 /* Replace the constraints of type "type" in "sc" by "c".
+ *
+ * First detect any equality constraints that may be implicit in "c"
+ * in order to try and improve the accuracy of the input (and therefore
+ * also the output) of the isl_set_coefficients calls
+ * that are eventually performed on (some of) these constraints.
  */
 static __isl_give isl_schedule_constraints *isl_schedule_constraints_set(
 	__isl_take isl_schedule_constraints *sc, enum isl_edge_type type,
 	__isl_take isl_union_map *c)
 {
+	c = isl_union_map_detect_equalities(c);
 	if (!sc || !c)
 		goto error;
 

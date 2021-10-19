@@ -41,7 +41,8 @@ inline uint32_t Clzll(uint64_t X) {
 #if !defined(_M_ARM) && !defined(_M_X64)
   // Scan the high 32 bits.
   if (_BitScanReverse(&LeadZeroIdx, static_cast<unsigned long>(X >> 32)))
-    return static_cast<int>(63 - (LeadZeroIdx + 32)); // Create a bit offset from the MSB.
+    return static_cast<int>(
+        63 - (LeadZeroIdx + 32)); // Create a bit offset from the MSB.
   // Scan the low 32 bits.
   if (_BitScanReverse(&LeadZeroIdx, static_cast<unsigned long>(X)))
     return static_cast<int>(63 - LeadZeroIdx);
@@ -50,12 +51,6 @@ inline uint32_t Clzll(uint64_t X) {
   if (_BitScanReverse64(&LeadZeroIdx, X)) return 63 - LeadZeroIdx;
 #endif
   return 64;
-}
-
-inline uint32_t Clz(uint32_t X) {
-  unsigned long LeadZeroIdx = 0;
-  if (_BitScanReverse(&LeadZeroIdx, X)) return 31 - LeadZeroIdx;
-  return 32;
 }
 
 inline int Popcountll(unsigned long long X) {

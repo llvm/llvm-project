@@ -1,0 +1,77 @@
+Section,Description,Dependencies,Assignee,Complete
+| `[cmp.concept] <https://wg21.link/cmp.concept>`_,"| `three_way_comparable <https://reviews.llvm.org/D103478>`_
+| `three_way_comparable_with <https://reviews.llvm.org/D103478>`_",None,Ruslan Arutyunyan,|In Progress|
+| `[cmp.result] <https://wg21.link/cmp.result>`_,| `compare_three_way_result <https://reviews.llvm.org/D103581>`_,None,Arthur O'Dwyer,|Complete|
+| `[expos.only.func] <https://wg21.link/expos.only.func>`_,"| `synth-three-way <https://reviews.llvm.org/D107721>`_
+| `synth-three-way-result <https://reviews.llvm.org/D107721>`_",[cmp.concept],Kent Ross,|Complete|
+| `[comparisons.three.way] <https://wg21.link/comparisons.three.way>`_,| `compare_three_way <https://reviews.llvm.org/D80899>`_,[cmp.concept],Arthur O'Dwyer,|Complete|
+| `[cmp.alg] <https://wg21.link/cmp.alg>`_,"| `strong_order <https://reviews.llvm.org/D107036>`_
+| `weak_order <https://reviews.llvm.org/D107036>`_
+| `partial_order <https://reviews.llvm.org/D107036>`_",None,Arthur O'Dwyer,|In Progress|
+| `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D80902>`_,[comparisons.three.way],Christopher Di Bella,|In Progress|
+| `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| coroutine_handle,[comparisons.three.way],Unassigned,|Not Started|
+| `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|
+| `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| error_category,[comparisons.three.way],Unassigned,|Not Started|
+| `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| error_code
+| error_condition",None,Unassigned,|Not Started|
+| `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
+"| `[optional.relops] <https://wg21.link/optional.relops>`_
+| `[optional.nullops] <https://wg21.link/optional.nullops>`_
+| `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| optional
+| nullopt",None,Kent Ross,|In Progress|
+"| `[variant.relops] <https://wg21.link/variant.relops>`_
+| `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| monostate
+| variant",None,Kent Ross,|In Progress|
+| `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| unique_ptr,[comparisons.three.way],Unassigned,|Not Started|
+| `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| shared_ptr,[comparisons.three.way],Unassigned,|Not Started|
+| `[type.index.members] <https://wg21.link/type.index.members>`_,| type_index,None,Unassigned,|Not Started|
+| `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| stacktrace_entry,None,Unassigned,|Not Started|
+| `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
+| `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D80895>`_,None,Christopher Di Bella,|In Progress|
+| `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D80891>`_,None,Christopher Di Bella,|In Progress|
+| `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| array,[expos.only.func],Unassigned,|Not Started|
+| `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| deque,[expos.only.func],Unassigned,|Not Started|
+| `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| forward_list,[expos.only.func],Unassigned,|Not Started|
+| `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| list,[expos.only.func],Unassigned,|Not Started|
+| `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| vector,[expos.only.func],Unassigned,|Not Started|
+| `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),"| map
+| multimap",[expos.only.func],Unassigned,|Not Started|
+| `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),"| multiset
+| set",[expos.only.func],Unassigned,|Not Started|
+| `[queue.ops] <https://wg21.link/queue.ops>`_,| queue,None,Unassigned,|Not Started|
+| `[stack.ops] <https://wg21.link/stack.ops>`_,| stack,None,Unassigned,|Not Started|
+| `[reverse.iter.cmp] <https://wg21.link/reverse.iter.cmp>`_,| reverse_iterator,None,Unassigned,|Not Started|
+| `[move.iter.cmp] <https://wg21.link/move.iter.cmp>`_,| move_iterator,None,Unassigned,|Not Started|
+| `[counted.iter.cmp] <https://wg21.link/counted.iter.cmp>`_,| counted_iterator,None,Unassigned,|Not Started|
+| `[range.iota.iterator] <https://wg21.link/range.iota.iterator>`_,| ranges::iota_view::iterator,[concepts.cmp],Unassigned,|Not Started|
+| `[range.transform.iterator] <https://wg21.link/range.transform.iterator>`_,| ranges::transform_view::iterator,[concepts.cmp],Unassigned,|Not Started|
+| `[range.elements.iterator] <https://wg21.link/range.elements.iterator>`_,| ranges::elements_view::iterator,[concepts.cmp],Unassigned,|Not Started|
+"| `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_
+| `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_
+| `[time.cal.day.nonmembers] <https://wg21.link/time.cal.day.nonmembers>`_
+| `[time.cal.month.nonmembers] <https://wg21.link/time.cal.month.nonmembers>`_
+| `[time.cal.year.nonmembers] <https://wg21.link/time.cal.year.nonmembers>`_
+| `[time.cal.md.nonmembers] <https://wg21.link/time.cal.md.nonmembers>`_
+| `[time.cal.mdlast] <https://wg21.link/time.cal.mdlast>`_
+| `[time.cal.ym.nonmembers] <https://wg21.link/time.cal.ym.nonmembers>`_
+| `[time.cal.ymd.nonmembers] <https://wg21.link/time.cal.ymd.nonmembers>`_
+| `[time.cal.ymdlast.nonmembers] <https://wg21.link/time.cal.ymdlast.nonmembers>`_
+| `[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_
+| `[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_
+| `[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_","| chrono::duration
+| chrono::time_point
+| chrono::day
+| chrono::month
+| chrono::year
+| chrono::month_day
+| chrono::month_day_last
+| chrono::year_month
+| chrono::year_month_day
+| chrono::year_month_day_last
+| chrono::time_zone
+| chrono::leap_second
+| chrono::time_zone_link",None,Unassigned,|Not Started|
+| `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| filesystem::path,None,Unassigned,|Not Started|
+| `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| filesystem::directory_entry,None,Unassigned,|Not Started|
+| `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| sub_match,None,Unassigned,|Not Started|
+| `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| thread::id,None,Unassigned,|Not Started|

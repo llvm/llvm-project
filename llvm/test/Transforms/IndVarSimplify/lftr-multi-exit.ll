@@ -19,7 +19,7 @@ define void @analyzeable_early_exit(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[IV]], i32* @A
+; CHECK-NEXT:    store i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -49,12 +49,12 @@ define void @unanalyzeable_early_exit() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A, align 4
 ; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ne i32 [[VOL]], 0
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[IV]], i32* @A
+; CHECK-NEXT:    store i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -89,12 +89,12 @@ define void @multiple_early_exits(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[CONTINUE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[M:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LATCH]], label [[EXIT]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -128,8 +128,7 @@ exit:
 define void @compound_early_exit(i32 %n, i32 %m) {
 ; CHECK-LABEL: @compound_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[M:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
@@ -137,7 +136,7 @@ define void @compound_early_exit(i32 %n, i32 %m) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -174,8 +173,8 @@ define void @unanalyzeable_latch(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[IV]], i32* @A
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A
+; CHECK-NEXT:    store i32 [[IV]], i32* @A, align 4
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[VOL]], 1000
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -210,7 +209,7 @@ define void @single_exit_no_latch(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[IV]], i32* @A
+; CHECK-NEXT:    store i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -243,11 +242,11 @@ define void @no_latch_exit(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[CONTINUE:%.*]], label [[EXIT:%.*]]
 ; CHECK:       continue:
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV]], [[M:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LATCH]], label [[EXIT]]
 ; CHECK:       latch:
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
@@ -287,7 +286,7 @@ define void @combine_ivs(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV_NEXT]], 999
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -324,7 +323,7 @@ define void @combine_ivs2(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -362,7 +361,7 @@ define void @simplify_exit_test(i32 %n) {
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND1:%.*]] = icmp ne i32 [[IV_NEXT]], 65
 ; CHECK-NEXT:    br i1 [[EXITCOND1]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -396,13 +395,13 @@ define void @simplify_exit_test2(i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A
+; CHECK-NEXT:    [[VOL:%.*]] = load volatile i32, i32* @A, align 4
 ; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp ne i32 [[VOL]], 0
 ; CHECK-NEXT:    br i1 [[EARLYCND]], label [[LATCH]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[FX:%.*]] = udiv i32 [[IV]], 4
-; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[FX]], 1024
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
@@ -442,12 +441,12 @@ define void @nested(i32 %n) {
 ; CHECK-NEXT:    br label [[OUTER:%.*]]
 ; CHECK:       outer:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV1_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    store volatile i32 [[IV1]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV1]], i32* @A, align 4
 ; CHECK-NEXT:    [[IV1_NEXT]] = add nuw nsw i32 [[IV1]], 1
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[OUTER]] ], [ [[IV2_NEXT:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    store volatile i32 [[IV2]], i32* @A
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* @A, align 4
 ; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i32 [[IV2]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER_LATCH]], label [[EXIT_LOOPEXIT:%.*]]

@@ -15,7 +15,6 @@ define void @thread_selfcounts() noimplicitfloat noredzone nounwind {
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    ud2
-; X86-NEXT:    ## -- End function
 ;
 ; X64-LABEL: thread_selfcounts:
 ; X64:       ## %bb.0: ## %entry
@@ -25,7 +24,6 @@ define void @thread_selfcounts() noimplicitfloat noredzone nounwind {
 ; X64-NEXT:    movq %rax, (%rsp)
 ; X64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    ud2
-; X64-NEXT:    ## -- End function
 entry:
   %counts = alloca [2 x i64], align 16
   %thread_counts = alloca [3 x i64], align 16

@@ -112,3 +112,11 @@ define i1 @test_various_types(i256 %int, float %float, <2 x i64> %vec, {i32, i32
 
   ret i1 %res6
 }
+
+@real_mode_blob_end = external dso_local global [0 x i8], align 1
+define i1 @global_array() {
+; CHECK-LABEL: @global_array(
+; CHECK-NEXT: ret i1 false
+  %1 = call i1 @llvm.is.constant.i64(i64 ptrtoint ([0 x i8]* @real_mode_blob_end to i64))
+  ret i1 %1
+}

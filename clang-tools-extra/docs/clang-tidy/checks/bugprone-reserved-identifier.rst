@@ -48,8 +48,8 @@ Options
 
 .. option:: Invert
 
-   If non-zero, inverts the check, i.e. flags names that are not reserved. 
-   Default is `0`.
+   If `true`, inverts the check, i.e. flags names that are not reserved. 
+   Default is `false`.
 
 .. option:: AllowedIdentifiers
 

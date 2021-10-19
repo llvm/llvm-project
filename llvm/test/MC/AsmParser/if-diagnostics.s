@@ -10,7 +10,7 @@
 .ifeq 0, 3
 .endif
 
-// CHECK:error: unexpected token in '.if' directive
+// CHECK:error: expected newline
 // CHECK: .ifeq 0, 3
 // CHECK:        ^
 

@@ -17,14 +17,14 @@ target triple = "aarch64--linux-gnueabi"
 ; CHECK: mul nsw <4 x i32>
 ; CHECK: add <4 x i32>
 ; CHECK: add <4 x i32>
-; CHECK: %index.next = add i64 %index, 8
+; CHECK: %index.next = add nuw i64 %index, 8
 ; CHECK: icmp eq i64 %index.next, 512
 
 ; FORCE-VEC-LABEL: @ind_plus2(
 ; FORCE-VEC: %wide.load = load <2 x i32>, <2 x i32>*
 ; FORCE-VEC: mul nsw <2 x i32>
 ; FORCE-VEC: add <2 x i32>
-; FORCE-VEC: %index.next = add i64 %index, 2
+; FORCE-VEC: %index.next = add nuw i64 %index, 2
 ; FORCE-VEC: icmp eq i64 %index.next, 512
 define i32 @ind_plus2(i32* %A) {
 entry:
@@ -61,14 +61,14 @@ for.end:                                          ; preds = %for.body
 ; CHECK: mul nsw <4 x i32>
 ; CHECK: add <4 x i32>
 ; CHECK: add <4 x i32>
-; CHECK: %index.next = add i64 %index, 8
+; CHECK: %index.next = add nuw i64 %index, 8
 ; CHECK: icmp eq i64 %index.next, 512
 
 ; FORCE-VEC-LABEL: @ind_minus2(
 ; FORCE-VEC: %wide.load = load <2 x i32>, <2 x i32>*
 ; FORCE-VEC: mul nsw <2 x i32>
 ; FORCE-VEC: add <2 x i32>
-; FORCE-VEC: %index.next = add i64 %index, 2
+; FORCE-VEC: %index.next = add nuw i64 %index, 2
 ; FORCE-VEC: icmp eq i64 %index.next, 512
 define i32 @ind_minus2(i32* %A) {
 entry:
@@ -104,24 +104,24 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: @ptr_ind_plus2(
 ; CHECK: %[[V0:.*]] = load <8 x i32>
 ; CHECK: %[[V1:.*]] = load <8 x i32>
-; CHECK: shufflevector <8 x i32> %[[V0]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: shufflevector <8 x i32> %[[V1]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: shufflevector <8 x i32> %[[V0]], <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK: shufflevector <8 x i32> %[[V1]], <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: shufflevector <8 x i32> %[[V0]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: shufflevector <8 x i32> %[[V1]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK: shufflevector <8 x i32> %[[V0]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: shufflevector <8 x i32> %[[V1]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK: mul nsw <4 x i32>
 ; CHECK: mul nsw <4 x i32>
 ; CHECK: add <4 x i32>
 ; CHECK: add <4 x i32>
-; CHECK: %index.next = add i64 %index, 8
+; CHECK: %index.next = add nuw i64 %index, 8
 ; CHECK: icmp eq i64 %index.next, 1024
 
 ; FORCE-VEC-LABEL: @ptr_ind_plus2(
 ; FORCE-VEC: %[[V:.*]] = load <4 x i32>
-; FORCE-VEC: shufflevector <4 x i32> %[[V]], <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-; FORCE-VEC: shufflevector <4 x i32> %[[V]], <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+; FORCE-VEC: shufflevector <4 x i32> %[[V]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; FORCE-VEC: shufflevector <4 x i32> %[[V]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
 ; FORCE-VEC: mul nsw <2 x i32>
 ; FORCE-VEC: add <2 x i32>
-; FORCE-VEC: %index.next = add i64 %index, 2
+; FORCE-VEC: %index.next = add nuw i64 %index, 2
 ; FORCE-VEC: icmp eq i64 %index.next, 1024
 define i32 @ptr_ind_plus2(i32* %A) {
 entry:

@@ -1,7 +1,6 @@
 ; Check that we can handle the case when both alloc function and
 ; the user body consume the same argument.
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 ; using copy of this (as it would happen under -O0)
 define i8* @f_copy(i64 %this_arg) "coroutine.presplit"="1" {
@@ -34,15 +33,17 @@ suspend:
 
 ; See that %this is spilled into the frame
 ; CHECK-LABEL: define i8* @f_copy(i64 %this_arg)
+; CHECK:  %this.addr = alloca i64, align 8
+; CHECK:  store i64 %this_arg, i64* %this.addr, align 4
 ; CHECK:  %this.spill.addr = getelementptr inbounds %f_copy.Frame, %f_copy.Frame* %FramePtr, i32 0, i32 2
 ; CHECK:  store i64 %this_arg, i64* %this.spill.addr
-; CHECK: ret i8* %hdl
+; CHECK:  ret i8* %hdl
 
 ; See that %this was loaded from the frame
 ; CHECK-LABEL: @f_copy.resume(
 ; CHECK:  %this.reload = load i64, i64* %this.reload.addr
 ; CHECK:  call void @print2(i64 %this.reload)
-; CHECK: ret void
+; CHECK:  ret void
 
 declare i8* @llvm.coro.free(token, i8*)
 declare i32 @llvm.coro.size.i32()

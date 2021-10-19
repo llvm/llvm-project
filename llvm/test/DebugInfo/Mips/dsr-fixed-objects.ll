@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
 ; RUN:    llvm-dwarfdump -v -all - | FileCheck %s
 
 ; void foo(int *);

@@ -1782,10 +1782,10 @@ namespace yaml {
     static void mapping(IO &io, MyValidation &d) {
         io.mapRequired("value", d.value);
     }
-    static StringRef validate(IO &io, MyValidation &d) {
+    static std::string validate(IO &io, MyValidation &d) {
         if (d.value < 0)
           return "negative value";
-        return StringRef();
+        return {};
     }
   };
  }
@@ -2691,12 +2691,23 @@ TEST(YAMLIO, TestEmptyMapWrite) {
 }
 
 TEST(YAMLIO, TestEmptySequenceWrite) {
-  FooBarContainer cont;
-  std::string str;
-  llvm::raw_string_ostream OS(str);
-  Output yout(OS);
-  yout << cont;
-  EXPECT_EQ(OS.str(), "---\nfbs:             []\n...\n");
+  {
+    FooBarContainer cont;
+    std::string str;
+    llvm::raw_string_ostream OS(str);
+    Output yout(OS);
+    yout << cont;
+    EXPECT_EQ(OS.str(), "---\nfbs:             []\n...\n");
+  }
+
+  {
+    FooBarSequence seq;
+    std::string str;
+    llvm::raw_string_ostream OS(str);
+    Output yout(OS);
+    yout << seq;
+    EXPECT_EQ(OS.str(), "---\n[]\n...\n");
+  }
 }
 
 static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
@@ -3100,4 +3111,106 @@ TEST(YAMLIO, TestUnknownDirective) {
   Input yin2("%)");
   EXPECT_FALSE(yin2.setCurrentDocument());
   EXPECT_TRUE(yin2.error());
+}
+
+TEST(YAMLIO, TestEmptyAlias) {
+  Input yin("&");
+  EXPECT_FALSE(yin.setCurrentDocument());
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestEmptyAnchor) {
+  Input yin("*");
+  EXPECT_FALSE(yin.setCurrentDocument());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmpty) {
+  std::vector<char> str{};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullSequenceOfNull) {
+  std::vector<char> str{'-'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullSimpleSequence) {
+  std::vector<char> str{'-', ' ', 'a'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullUnbalancedMap) {
+  std::vector<char> str{'{'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyMap) {
+  std::vector<char> str{'{', '}'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullUnbalancedSequence) {
+  std::vector<char> str{'['};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptySequence) {
+  std::vector<char> str{'[', ']'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScalarUnbalancedDoubleQuote) {
+  std::vector<char> str{'"'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScalarUnbalancedSingleQuote) {
+  std::vector<char> str{'\''};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyAlias) {
+  std::vector<char> str{'&'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullEmptyAnchor) {
+  std::vector<char> str{'*'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullDecodeInvalidUTF8) {
+  std::vector<char> str{'\xef'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
+}
+
+TEST(YAMLIO, TestScannerNoNullScanPlainScalarInFlow) {
+  std::vector<char> str{'{', 'a', ':'};
+  Input yin(llvm::StringRef(str.data(), str.size()));
+  yin.setCurrentDocument();
+  EXPECT_TRUE(yin.error());
 }

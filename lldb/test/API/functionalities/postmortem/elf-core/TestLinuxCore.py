@@ -20,84 +20,48 @@ class LinuxCoreTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     _aarch64_pid = 37688
+    _aarch64_pac_pid = 387
     _i386_pid = 32306
     _x86_64_pid = 32259
     _s390x_pid = 1045
-    _mips64_n64_pid = 25619
-    _mips64_n32_pid = 3670
-    _mips_o32_pid = 3532
     _ppc64le_pid = 28147
 
     _aarch64_regions = 4
     _i386_regions = 4
     _x86_64_regions = 5
     _s390x_regions = 2
-    _mips_regions = 5
     _ppc64le_regions = 2
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_aarch64(self):
         """Test that lldb can read the process information from an aarch64 linux core file."""
         self.do_test("linux-aarch64", self._aarch64_pid,
                      self._aarch64_regions, "a.out")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("linux-i386", self._i386_pid, self._i386_regions, "a.out")
 
-    @skipIfLLVMTargetMissing("Mips")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
-    def test_mips_o32(self):
-        """Test that lldb can read the process information from an MIPS O32 linux core file."""
-        self.do_test("linux-mipsel-gnuabio32", self._mips_o32_pid,
-                     self._mips_regions, "linux-mipsel-gn")
-
-    @skipIfLLVMTargetMissing("Mips")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
-    def test_mips_n32(self):
-        """Test that lldb can read the process information from an MIPS N32 linux core file """
-        self.do_test("linux-mips64el-gnuabin32", self._mips64_n32_pid,
-                     self._mips_regions, "linux-mips64el-")
-
-    @skipIfLLVMTargetMissing("Mips")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
-    def test_mips_n64(self):
-        """Test that lldb can read the process information from an MIPS N64 linux core file """
-        self.do_test("linux-mips64el-gnuabi64", self._mips64_n64_pid,
-                     self._mips_regions, "linux-mips64el-")
-
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("PowerPC")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_ppc64le(self):
         """Test that lldb can read the process information from an ppc64le linux core file."""
         self.do_test("linux-ppc64le", self._ppc64le_pid, self._ppc64le_regions,
                      "linux-ppc64le.ou")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
                      "a.out")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("SystemZ")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("linux-s390x", self._s390x_pid, self._s390x_regions,
                      "a.out")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
@@ -124,9 +88,7 @@ class LinuxCoreTestCase(TestBase):
         self.do_test(self.getBuildArtifact("linux-x86_64-pid"), os.getpid(),
                      self._x86_64_regions, "a.out")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_two_cores_same_pid(self):
         """Test that we handle the situation if we have two core files with the same PID
         around"""
@@ -155,7 +117,22 @@ class LinuxCoreTestCase(TestBase):
         self.do_test("linux-x86_64", self._x86_64_pid, self._x86_64_regions,
                      "a.out")
 
-    @skipIf(triple='^mips')
+
+    @skipIfLLVMTargetMissing("X86")
+    @skipIfWindows
+    def test_read_memory(self):
+        """Test that we are able to read as many bytes as available"""
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        error = lldb.SBError()
+        bytesread = process.ReadMemory(0x400ff0, 20, error)
+        
+        # read only 16 bytes without zero bytes filling
+        self.assertEqual(len(bytesread), 16)
+        self.dbg.DeleteTarget(target)
+
     @skipIfLLVMTargetMissing("X86")
     def test_FPR_SSE(self):
         # check x86_64 core file
@@ -206,9 +183,7 @@ class LinuxCoreTestCase(TestBase):
             self.expect("register read {}".format(regname),
                         substrs=["{} = {}".format(regname, value)])
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_i386_sysroot(self):
         """Test that lldb can find the exe for an i386 linux core file using the sysroot."""
 
@@ -233,10 +208,8 @@ class LinuxCoreTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
-    @skipIfReproducer  # lldb::FileSP used in typemap cannot be instrumented.
     def test_x86_64_sysroot(self):
         """Test that sysroot has more priority then local filesystem."""
 
@@ -275,8 +248,21 @@ class LinuxCoreTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_pac(self):
+        """Test that lldb can unwind stack for AArch64 elf core file with PAC enabled."""
+
+        target = self.dbg.CreateTarget("linux-aarch64-pac.out")
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-aarch64-pac.core")
+
+        self.check_all(process, self._aarch64_pac_pid, self._aarch64_regions, "a.out")
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("AArch64")
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49415")
     def test_aarch64_regs(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -331,8 +317,9 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
+                        bugnumber="llvm.org/pr49415")
     def test_aarch64_sve_regs_fpsimd(self):
         # check 64 bit ARM core files
         target = self.dbg.CreateTarget(None)
@@ -418,7 +405,6 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
-    @skipIf(triple='^mips')
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_sve_regs_full(self):
         # check 64 bit ARM core files
@@ -460,7 +446,21 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
-    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_pac_regs(self):
+        # Test AArch64/Linux Pointer Authenication register read
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-aarch64-pac.core")
+
+        values = {"data_mask": "0x007f00000000000", "code_mask": "0x007f00000000000"}
+
+        for regname, value in values.items():
+            self.expect("register read {}".format(regname),
+                        substrs=["{} = {}".format(regname, value)])
+
+        self.expect("register read --all")
+
     @skipIfLLVMTargetMissing("ARM")
     def test_arm_core(self):
         # check 32 bit ARM core file

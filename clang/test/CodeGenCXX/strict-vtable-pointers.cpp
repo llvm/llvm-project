@@ -52,7 +52,7 @@ struct DynamicFrom2Virtuals : DynamicFromVirtualStatic1,
                               DynamicFromVirtualStatic2 {
 };
 
-// CHECK-NEW-LABEL: define void @_Z12LocalObjectsv()
+// CHECK-NEW-LABEL: define{{.*}} void @_Z12LocalObjectsv()
 // CHECK-NEW-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW-LABEL: {{^}}}
 void LocalObjects() {
@@ -89,13 +89,13 @@ struct DynamicFrom2Virtuals;
 // CHECK-CTORS: call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-CTORS-LABEL: {{^}}}
 
-// CHECK-NEW-LABEL: define void @_Z9Pointers1v()
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9Pointers1v()
 // CHECK-NEW-NOT: @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW-LABEL: call void @_ZN12DynamicBase1C1Ev(
 
 // CHECK-NEW: %[[THIS3:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS2:.*]])
 // CHECK-NEW: %[[THIS4:.*]] = bitcast i8* %[[THIS3]] to %[[DynamicDerived:.*]]*
-// CHECK-NEW: call void @_ZN14DynamicDerivedC1Ev(%[[DynamicDerived:.*]]* %[[THIS4]])
+// CHECK-NEW: call void @_ZN14DynamicDerivedC1Ev(%[[DynamicDerived:.*]]* {{[^,]*}} %[[THIS4]])
 // CHECK-NEW-LABEL: {{^}}}
 void Pointers1() {
   DynamicBase1 *DB = new DynamicBase1;
@@ -106,7 +106,7 @@ void Pointers1() {
   DD->~DynamicDerived();
 }
 
-// CHECK-NEW-LABEL: define void @_Z14HackingObjectsv()
+// CHECK-NEW-LABEL: define{{.*}} void @_Z14HackingObjectsv()
 // CHECK-NEW:  call void @_ZN12DynamicBase1C1Ev
 // CHECK-NEW:  call i8* @llvm.launder.invariant.group.p0i8(
 // CHECK-NEW:  call void @_ZN14DynamicDerivedC1Ev(
@@ -141,7 +141,7 @@ struct DynamicDerived;
 // CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1:.*]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[DynamicDerived]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[DynamicDerived]]* %[[THIS3]] to %[[DynamicBase:.*]]*
-// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[DynamicBase]]* %[[THIS4]])
+// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[DynamicBase]]* {{[^,]*}} %[[THIS4]])
 
 // CHECK-CTORS: %[[THIS5:.*]] = bitcast %struct.DynamicDerived* %[[THIS0]] to i32 (...)***
 // CHECK-CTORS: store {{.*}} %[[THIS5]]
@@ -155,7 +155,7 @@ struct DynamicDerivedMultiple;
 // CHECK-CTORS: %[[THIS2:.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* %[[THIS1]])
 // CHECK-CTORS: %[[THIS3:.*]] = bitcast i8* %[[THIS2]] to %[[CLASS]]*
 // CHECK-CTORS: %[[THIS4:.*]] = bitcast %[[CLASS]]* %[[THIS3]] to %[[BASE_CLASS:.*]]*
-// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[BASE_CLASS]]* %[[THIS4]])
+// CHECK-CTORS: call void @_ZN12DynamicBase1C2Ev(%[[BASE_CLASS]]* {{[^,]*}} %[[THIS4]])
 
 // CHECK-CTORS: call i8* @llvm.launder.invariant.group.p0i8(
 
@@ -199,7 +199,7 @@ void g2(A *a) {
 // it is very easy to skip the barrier with unions. In this example the inlined
 // g2 will produce loads with the same !invariant.group metadata, and
 // u->a and u->b would use the same pointer.
-// CHECK-NEW-LABEL: define void @_Z14UnionsBarriersP1U
+// CHECK-NEW-LABEL: define{{.*}} void @_Z14UnionsBarriersP1U
 void UnionsBarriers(U *u) {
   // CHECK-NEW: call void @_Z9changeToBP1U(
   changeToB(u);
@@ -244,7 +244,7 @@ union U2 {
 };
 void take(HoldingVirtuals &);
 
-// CHECK-NEW-LABEL: define void @_Z15UnionsBarriers2R2U2
+// CHECK-NEW-LABEL: define{{.*}} void @_Z15UnionsBarriers2R2U2
 void UnionsBarriers2(U2 &u) {
   // CHECK-NEW-NOT: call i8* @llvm.launder.invariant.group.p0i8(i8*
   // CHECK-NEW: 42
@@ -291,7 +291,7 @@ void UnionsBarrier3(U3 &u) {
   take(u.v3);
 }
 
-// CHECK-NEW-LABEL: define void @_Z7comparev()
+// CHECK-NEW-LABEL: define{{.*}} void @_Z7comparev()
 void compare() {
   A *a = new A;
   a->foo();
@@ -347,7 +347,7 @@ bool compareNull(A *a) {
 struct X;
 // We have to also introduce the barriers if comparing pointers to incomplete
 // objects
-// CHECK-NEW-LABEL: define zeroext i1 @_Z8compare4P1XS0_
+// CHECK-NEW-LABEL: define{{.*}} zeroext i1 @_Z8compare4P1XS0_
 bool compare4(X *x, X *x2) {
   // CHECK-NEW: %[[x:.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8*
   // CHECK-NEW: %[[xp:.*]] = bitcast i8* %[[x]] to %struct.X*
@@ -357,7 +357,7 @@ bool compare4(X *x, X *x2) {
   return x == x2;
 }
 
-// CHECK-NEW-LABEL: define void @_Z7member1P20HoldingOtherVirtuals(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z7member1P20HoldingOtherVirtuals(
 void member1(HoldingOtherVirtuals *p) {
 
   // CHECK-NEW-NOT: call i8* @llvm.strip.invariant.group.p0i8(
@@ -380,7 +380,7 @@ void testCompareMembers() {
   // CHECK-NEW:    [[BPM:%.*]] = alloca i32*
 
   A *ap = new A;
-  // CHECK-NEW:   call void %{{.*}}(%struct.A* %{{.*}})
+  // CHECK-NEW:   call void %{{.*}}(%struct.A* {{[^,]*}} %{{.*}})
   ap->foo();
   // CHECK-NEW:    [[TMP7:%.*]] = load %struct.A*, %struct.A** [[AP]]
   // CHECK-NEW:    [[TMP8:%.*]] = bitcast %struct.A* [[TMP7]] to i8*
@@ -411,7 +411,7 @@ void testCompareMembers() {
   }
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast1P1A(%struct.A*
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast1P1A(%struct.A*
 void testCast1(A *a) {
   // Here we get rid of dynamic info
   // CHECK-NEW: call i8* @llvm.strip.invariant.group
@@ -429,7 +429,7 @@ void testCast1(A *a) {
 }
 
 struct Incomplete;
-// CHECK-NEW-LABEL: define void @_Z9testCast2P10Incomplete(%struct.Incomplete*
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast2P10Incomplete(%struct.Incomplete*
 void testCast2(Incomplete *I) {
   // Here we get rid of potential dynamic info
   // CHECK-NEW: call i8* @llvm.strip.invariant.group
@@ -446,7 +446,7 @@ void testCast2(Incomplete *I) {
   auto i = (uintptr_t)v;
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast3y(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast3y(
 void testCast3(uintptr_t i) {
   // CHECK-NEW-NOT: @llvm.strip.invariant.group
   // CHECK-NEW: @llvm.launder.invariant.group
@@ -464,7 +464,7 @@ void testCast3(uintptr_t i) {
   (void)v3;
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast4y(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast4y(
 void testCast4(uintptr_t i) {
   // CHECK-NEW-NOT: @llvm.strip.invariant.group
   // CHECK-NEW: @llvm.launder.invariant.group
@@ -478,7 +478,7 @@ void testCast4(uintptr_t i) {
   (void)a2;
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast5P1B(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast5P1B(
 void testCast5(B *b) {
   // CHECK-NEW-NOT: @llvm.strip.invariant.group
   // CHECK-NEW-NOT: @llvm.launder.invariant.group
@@ -489,7 +489,7 @@ void testCast5(B *b) {
   (void)b2;
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast6P1A(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast6P1A(
 void testCast6(A *a) {
 
   // CHECK-NEW: @llvm.strip.invariant.group
@@ -513,7 +513,7 @@ void testCast6(A *a) {
 }
 
 class Incomplete2;
-// CHECK-NEW-LABEL: define void @_Z9testCast7P10Incomplete(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast7P10Incomplete(
 void testCast7(Incomplete *I) {
   // CHECK-NEW-NOT: @llvm.strip.invariant.group
 
@@ -530,7 +530,7 @@ template <typename Base>
 struct PossiblyDerivingFromDynamicBase : Base {
 };
 
-// CHECK-NEW-LABEL: define void @_Z9testCast8P10Incomplete(
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast8P10Incomplete(
 void testCast8(Incomplete *I) {
   // CHECK-NEW-NOT: @llvm.strip.invariant.group
   // CHECK-NEW: @llvm.launder.invariant.group
@@ -551,7 +551,7 @@ void testCast8(Incomplete *I) {
   // CHECK-NEW-LABEL: ret void
 }
 
-// CHECK-NEW-LABEL: define void @_Z9testCast9
+// CHECK-NEW-LABEL: define{{.*}} void @_Z9testCast9
 void testCast9(PossiblyDerivingFromDynamicBase<Incomplete> *P) {
   // CHECK-NEW: @llvm.strip.invariant.group
   auto *V = (void *)P;

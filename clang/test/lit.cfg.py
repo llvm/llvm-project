@@ -25,8 +25,8 @@ config.name = 'Clang'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.c', '.cpp', '.i', '.cppm', '.m', '.mm', '.cu',
-                   '.ll', '.cl', '.s', '.S', '.modulemap', '.test', '.rs', '.ifs']
+config.suffixes = ['.c', '.cpp', '.i', '.cppm', '.m', '.mm', '.cu', '.hip',
+                   '.ll', '.cl', '.clcpp', '.s', '.S', '.modulemap', '.test', '.rs', '.ifs', '.rc']
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -63,7 +63,8 @@ config.substitutions.append(('%PATH%', config.environment['PATH']))
 tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 
 tools = [
-    'c-index-test', 'clang-diff', 'clang-format', 'clang-tblgen', 'opt', 'llvm-ifs',
+    'apinotes-test', 'c-index-test', 'clang-diff', 'clang-format', 'clang-repl',
+    'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
 ]
@@ -71,6 +72,28 @@ tools = [
 if config.clang_examples:
     config.available_features.add('examples')
     tools.append('clang-interpreter')
+
+def have_host_jit_support():
+    clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        print('clang-repl not found')
+        return False
+
+    try:
+        clang_repl_cmd = subprocess.Popen(
+            [clang_repl_exe, '--host-supports-jit'], stdout=subprocess.PIPE)
+    except OSError:
+        print('could not exec clang-repl')
+        return False
+
+    clang_repl_out = clang_repl_cmd.stdout.read().decode('ascii')
+    clang_repl_cmd.wait()
+
+    return 'true' in clang_repl_out
+
+if have_host_jit_support():
+    config.available_features.add('host-supports-jit')
 
 if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
@@ -91,10 +114,9 @@ config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
                              os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
-# Strip C++ comments "//"" from tests
-config.substitutions.append(
-    ('%strip_comments', "sed 's/[ \t]*\/\/.*//' %s")
-)
+config.substitutions.append(('%host_cc', config.host_cc))
+config.substitutions.append(('%host_cxx', config.host_cxx))
+
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
@@ -170,6 +192,12 @@ if re.match(r'^arm64(e)?-apple-(macos|darwin)', config.target_triple):
 # only if all handles were closed.
 if platform.system() not in ['Windows']:
     config.available_features.add('can-remove-opened-file')
+
+# Features
+known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+if (any(config.target_triple.startswith(x) for x in known_arches)):
+  config.available_features.add("clang-target-64-bits")
+
 
 
 def calculate_arch_features(arch_string):

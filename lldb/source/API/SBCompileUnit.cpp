@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCompileUnit::SBCompileUnit() : m_opaque_ptr(nullptr) {
+SBCompileUnit::SBCompileUnit() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCompileUnit);
 }
 
@@ -108,9 +108,10 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
     else
       file_spec = m_opaque_ptr->GetPrimaryFile();
 
+    LineEntry line_entry;
     index = m_opaque_ptr->FindLineEntry(
         start_idx, line, inline_file_spec ? inline_file_spec->get() : nullptr,
-        exact, nullptr);
+        exact, &line_entry);
   }
 
   return index;

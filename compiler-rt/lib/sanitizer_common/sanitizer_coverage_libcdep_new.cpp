@@ -73,7 +73,7 @@ static void SanitizerDumpCoverage(const uptr* unsorted_pcs, uptr len) {
     if (!pc) continue;
 
     if (!__sanitizer_get_module_and_offset_for_pc(pc, nullptr, 0, &pcs[i])) {
-      Printf("ERROR: unknown pc 0x%x (may happen if dlclose is used)\n", pc);
+      Printf("ERROR: unknown pc 0x%zx (may happen if dlclose is used)\n", pc);
       continue;
     }
     uptr module_base = pc - pcs[i];
@@ -151,6 +151,55 @@ class TracePcGuardController {
 
 static TracePcGuardController pc_guard_controller;
 
+// A basic default implementation of callbacks for
+// -fsanitize-coverage=inline-8bit-counters,pc-table.
+// Use TOOL_OPTIONS (UBSAN_OPTIONS, etc) to dump the coverage data:
+// * cov_8bit_counters_out=PATH to dump the 8bit counters.
+// * cov_pcs_out=PATH to dump the pc table.
+//
+// Most users will still need to define their own callbacks for greater
+// flexibility.
+namespace SingletonCounterCoverage {
+
+static char *counters_beg, *counters_end;
+static const uptr *pcs_beg, *pcs_end;
+
+static void DumpCoverage() {
+  const char* file_path = common_flags()->cov_8bit_counters_out;
+  if (file_path && internal_strlen(file_path)) {
+    fd_t fd = OpenFile(file_path);
+    FileCloser file_closer(fd);
+    uptr size = counters_end - counters_beg;
+    WriteToFile(fd, counters_beg, size);
+    if (common_flags()->verbosity)
+      __sanitizer::Printf("cov_8bit_counters_out: written %zd bytes to %s\n",
+                          size, file_path);
+  }
+  file_path = common_flags()->cov_pcs_out;
+  if (file_path && internal_strlen(file_path)) {
+    fd_t fd = OpenFile(file_path);
+    FileCloser file_closer(fd);
+    uptr size = (pcs_end - pcs_beg) * sizeof(uptr);
+    WriteToFile(fd, pcs_beg, size);
+    if (common_flags()->verbosity)
+      __sanitizer::Printf("cov_pcs_out: written %zd bytes to %s\n", size,
+                          file_path);
+  }
+}
+
+static void Cov8bitCountersInit(char* beg, char* end) {
+  counters_beg = beg;
+  counters_end = end;
+  Atexit(DumpCoverage);
+}
+
+static void CovPcsInit(const uptr* beg, const uptr* end) {
+  pcs_beg = beg;
+  pcs_end = end;
+}
+
+}  // namespace SingletonCounterCoverage
+
 }  // namespace
 }  // namespace __sancov
 
@@ -191,7 +240,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump() {
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_reset() {
   __sancov::pc_guard_controller.Reset();
 }
-// Default empty implementations (weak). Users should redefine them.
+// Default implementations (weak).
+// Either empty or very simple.
+// Most users should redefine them.
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp1, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_cmp2, void) {}
@@ -206,9 +257,15 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_pc_indir, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_8bit_counters_init,
+                             char* start, char* end) {
+  __sancov::SingletonCounterCoverage::Cov8bitCountersInit(start, end);
+}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_bool_flag_init, void) {}
-SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr* beg,
+                             const uptr* end) {
+  __sancov::SingletonCounterCoverage::CovPcsInit(beg, end);
+}
 }  // extern "C"
 // Weak definition for code instrumented with -fsanitize-coverage=stack-depth
 // and later linked with code containing a strong definition.

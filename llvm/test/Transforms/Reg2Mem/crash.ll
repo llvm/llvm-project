@@ -1,4 +1,4 @@
-; RUN: opt -reg2mem -disable-output < %s
+; RUN: opt -passes=reg2mem -disable-output < %s
 ; PR14782
 
 declare void @f1()

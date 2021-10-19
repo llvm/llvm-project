@@ -1,6 +1,7 @@
-; RUN: opt < %s -disable-output -passes="print<da>"                            \
-; RUN: -da-disable-delinearization-checks 2>&1 | FileCheck %s
-; RUN: opt < %s -da -analyze -da-disable-delinearization-checks | FileCheck %s
+; RUN: opt < %s -disable-output -passes="print<da>" 2>&1 | FileCheck %s
+
+; Note: exact results can be achived even if
+; "-da-disable-delinearization-checks" is not used
 
 ; CHECK-LABEL: t1
 ; CHECK: da analyze - none!

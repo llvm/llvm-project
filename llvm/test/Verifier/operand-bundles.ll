@@ -1,9 +1,13 @@
 ; RUN: not opt -verify < %s 2>&1 | FileCheck %s
 
+%0 = type opaque
+declare void @g()
+declare %0* @foo0()
+declare i8 @foo1()
+declare void @noreturn_func()
+
 ; Operand bundles uses are like regular uses, and need to be dominated
 ; by their defs.
-
-declare void @g()
 
 define void @f0(i32* %ptr) {
 ; CHECK: Instruction does not dominate all uses!
@@ -60,3 +64,43 @@ define void @f_gc_transition(i32* %ptr) {
   %x = add i32 42, 1
   ret void
 }
+
+define void @f_clang_arc_attachedcall() {
+; CHECK: Multiple "clang.arc.attachedcall" operand bundles
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue), "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NEXT: must call a function returning a pointer
+; CHECK-NEXT: call i8 @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NEXT: or a non-returning function
+; CHECK-NEXT: call void @g() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-NEXT: can take either no arguments
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* null) ]
+; CHECK-NEXT: can take either no arguments
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i64 0) ]
+; CHECK-NEXT: invalid function argument
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(i8 ()* @foo1) ]
+; CHECK-NEXT: invalid function argument
+; CHECK-NEXT: call %0* @foo0() [ "clang.arc.attachedcall"(void (i1)* @llvm.assume) ]
+
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"() ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue), "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  call i8 @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  call void @noreturn_func() #0 [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  call void @g() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8* (i8*)* null) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i64 0) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(i8 ()* @foo1) ]
+  call %0* @foo0() [ "clang.arc.attachedcall"(void (i1)* @llvm.assume) ]
+  ret void
+}
+
+declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
+declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
+declare void @llvm.assume(i1)
+
+attributes #0 = { noreturn }

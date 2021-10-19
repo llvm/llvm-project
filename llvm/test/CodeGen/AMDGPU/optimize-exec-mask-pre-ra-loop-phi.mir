@@ -24,7 +24,7 @@ body:             |
   ; CHECK:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_MOV_B64_]], implicit $exec
   ; CHECK:   V_CMP_NE_U32_e32 1, [[V_CNDMASK_B32_e64_]], implicit-def $vcc, implicit $exec
   ; CHECK:   %1.sub1:vreg_64 = COPY %1.sub0
-  ; CHECK:   DS_WRITE_B64_gfx9 undef %3:vgpr_32, %1, 0, 0, implicit $exec :: (store 8, addrspace 3)
+  ; CHECK:   DS_WRITE_B64_gfx9 undef %3:vgpr_32, %1, 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK:   ATOMIC_FENCE 4, 2
   ; CHECK:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
   ; CHECK:   $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
@@ -46,7 +46,7 @@ body:             |
     %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %7, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
-    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store 8, addrspace 3)
+    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
     %7:sreg_64_xexec = S_MOV_B64 0
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
@@ -71,7 +71,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   %1.sub1:vreg_64 = COPY %1.sub0
-  ; CHECK:   DS_WRITE_B64_gfx9 undef %3:vgpr_32, %1, 0, 0, implicit $exec :: (store 8, addrspace 3)
+  ; CHECK:   DS_WRITE_B64_gfx9 undef %3:vgpr_32, %1, 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK:   ATOMIC_FENCE 4, 2
   ; CHECK:   $vcc = S_ANDN2_B64 $exec, [[S_MOV_B64_]], implicit-def dead $scc
   ; CHECK:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
@@ -93,7 +93,7 @@ body:             |
     %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %7, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
-    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store 8, addrspace 3)
+    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
     %7:sreg_64_xexec = S_MOV_B64 0
@@ -120,7 +120,7 @@ body:             |
   ; CHECK:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
   ; CHECK:   V_CMP_NE_U32_e32 1, [[V_CNDMASK_B32_e64_]], implicit-def $vcc, implicit $exec
   ; CHECK:   %0.sub1:vreg_64 = COPY %0.sub0
-  ; CHECK:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, %0, 0, 0, implicit $exec :: (store 8, addrspace 3)
+  ; CHECK:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, %0, 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK:   ATOMIC_FENCE 4, 2
   ; CHECK:   $sgpr4_sgpr5 = S_MOV_B64 0
   ; CHECK:   $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
@@ -143,7 +143,7 @@ body:             |
     %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
-    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store 8, addrspace 3)
+    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
     $sgpr4_sgpr5 = S_MOV_B64 0
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
@@ -168,7 +168,7 @@ body:             |
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $sgpr4_sgpr5
   ; CHECK:   %0.sub1:vreg_64 = COPY %0.sub0
-  ; CHECK:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, %0, 0, 0, implicit $exec :: (store 8, addrspace 3)
+  ; CHECK:   DS_WRITE_B64_gfx9 undef %2:vgpr_32, %0, 0, 0, implicit $exec :: (store (s64), addrspace 3)
   ; CHECK:   ATOMIC_FENCE 4, 2
   ; CHECK:   $vcc = S_ANDN2_B64 $exec, $sgpr4_sgpr5, implicit-def dead $scc
   ; CHECK:   $sgpr4_sgpr5 = S_MOV_B64 0
@@ -191,7 +191,7 @@ body:             |
     %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, $sgpr4_sgpr5, implicit $exec
     V_CMP_NE_U32_e32 1, %4, implicit-def $vcc, implicit $exec
     %5.sub1:vreg_64 = COPY %5.sub0
-    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store 8, addrspace 3)
+    DS_WRITE_B64_gfx9 undef %6:vgpr_32, %5, 0, 0, implicit $exec :: (store (s64), addrspace 3)
     ATOMIC_FENCE 4, 2
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc
     $sgpr4_sgpr5 = S_MOV_B64 0

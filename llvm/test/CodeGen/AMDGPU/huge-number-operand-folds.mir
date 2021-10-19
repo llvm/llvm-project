@@ -13,7 +13,6 @@ body:             |
     liveins: $sgpr12_sgpr13_sgpr14_sgpr15
 
     ; GCN-LABEL: name: op_idx_overflows_uchar
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
     %0:sreg_32 = S_MOV_B32 0

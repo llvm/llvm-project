@@ -11,7 +11,7 @@
 ; CHECK: stp     xzr, xzr, [x8] 
 ; CHECK: bl f
 
-@q = external unnamed_addr global i16*, align 8
+@q = external dso_local unnamed_addr global i16*, align 8
 
 ; Function Attrs: nounwind
 define void @test() local_unnamed_addr #0 {

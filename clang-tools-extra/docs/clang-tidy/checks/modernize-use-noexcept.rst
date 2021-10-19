@@ -15,25 +15,25 @@ Example
 .. code-block:: c++
 
   void foo() throw();
-	void bar() throw(int) {}
+  void bar() throw(int) {}
 
 transforms to:
 
 .. code-block:: c++
 
   void foo() noexcept;
-	void bar() noexcept(false) {}
+  void bar() noexcept(false) {}
 
 Options
 -------
 
 .. option:: ReplacementString
 
-Users can use :option:`ReplacementString` to specify a macro to use
-instead of ``noexcept``.  This is useful when maintaining source code
-that uses custom exception specification marking other than
-``noexcept``.  Fix-it hints will only be generated for non-throwing
-specifications.
+  Users can use :option:`ReplacementString` to specify a macro to use
+  instead of ``noexcept``.  This is useful when maintaining source code
+  that uses custom exception specification marking other than
+  ``noexcept``.  Fix-it hints will only be generated for non-throwing
+  specifications.
 
 Example
 ^^^^^^^
@@ -87,4 +87,4 @@ transforms to:
     ~bar() noexcept(false);
   }
 
-if the :option:`UseNoexceptFalse` option is set to `0`.
+if the :option:`UseNoexceptFalse` option is set to `false`.

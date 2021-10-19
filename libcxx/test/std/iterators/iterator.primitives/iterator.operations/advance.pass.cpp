@@ -20,7 +20,7 @@
 //   constexpr void advance(Iter& i, Distance n);
 
 // Make sure we catch forced conversions to the difference_type if they happen.
-// ADDITIONAL_COMPILER_FLAGS: -Wsign-conversion
+// ADDITIONAL_COMPILE_FLAGS: -Wsign-conversion
 
 #include <iterator>
 #include <cassert>
@@ -42,21 +42,37 @@ void check_advance(It it, Distance n, It result)
 TEST_CONSTEXPR_CXX17 bool tests()
 {
     const char* s = "1234567890";
-    typedef std::iterator_traits<const char*>::difference_type Distance;
-    check_advance<Distance>(input_iterator<const char*>(s), 10, input_iterator<const char*>(s+10));
-    check_advance<Distance>(forward_iterator<const char*>(s), 10, forward_iterator<const char*>(s+10));
-    check_advance<Distance>(bidirectional_iterator<const char*>(s+5), 5, bidirectional_iterator<const char*>(s+10));
-    check_advance<Distance>(bidirectional_iterator<const char*>(s+5), -5, bidirectional_iterator<const char*>(s));
-    check_advance<Distance>(random_access_iterator<const char*>(s+5), 5, random_access_iterator<const char*>(s+10));
-    check_advance<Distance>(random_access_iterator<const char*>(s+5), -5, random_access_iterator<const char*>(s));
-    check_advance<Distance>(s+5, 5, s+10);
-    check_advance<Distance>(s+5, -5, s);
+
+    // Check with iterator_traits::difference_type
+    {
+        typedef std::iterator_traits<const char*>::difference_type Distance;
+        check_advance<Distance>(cpp17_input_iterator<const char*>(s), 10, cpp17_input_iterator<const char*>(s+10));
+        check_advance<Distance>(forward_iterator<const char*>(s), 10, forward_iterator<const char*>(s+10));
+        check_advance<Distance>(bidirectional_iterator<const char*>(s+5), 5, bidirectional_iterator<const char*>(s+10));
+        check_advance<Distance>(bidirectional_iterator<const char*>(s+5), -5, bidirectional_iterator<const char*>(s));
+        check_advance<Distance>(random_access_iterator<const char*>(s+5), 5, random_access_iterator<const char*>(s+10));
+        check_advance<Distance>(random_access_iterator<const char*>(s+5), -5, random_access_iterator<const char*>(s));
+        check_advance<Distance>(s+5, 5, s+10);
+        check_advance<Distance>(s+5, -5, s);
+    }
 
     // Also check with other distance types
-    check_advance<std::size_t>(input_iterator<const char*>(s), 10u, input_iterator<const char*>(s+10));
-    check_advance<std::size_t>(forward_iterator<const char*>(s), 10u, forward_iterator<const char*>(s+10));
-    check_advance<std::size_t>(bidirectional_iterator<const char*>(s), 10u, bidirectional_iterator<const char*>(s+10));
-    check_advance<std::size_t>(random_access_iterator<const char*>(s), 10u, random_access_iterator<const char*>(s+10));
+    {
+        typedef int Distance;
+        check_advance<Distance>(cpp17_input_iterator<const char*>(s), 10, cpp17_input_iterator<const char*>(s+10));
+        check_advance<Distance>(forward_iterator<const char*>(s), 10, forward_iterator<const char*>(s+10));
+        check_advance<Distance>(bidirectional_iterator<const char*>(s), 10, bidirectional_iterator<const char*>(s+10));
+        check_advance<Distance>(random_access_iterator<const char*>(s), 10, random_access_iterator<const char*>(s+10));
+    }
+
+    // Check with unsigned distance types to catch signedness-change issues
+    {
+        typedef std::size_t Distance;
+        check_advance<Distance>(cpp17_input_iterator<const char*>(s), 10u, cpp17_input_iterator<const char*>(s+10));
+        check_advance<Distance>(forward_iterator<const char*>(s), 10u, forward_iterator<const char*>(s+10));
+        check_advance<Distance>(bidirectional_iterator<const char*>(s), 10u, bidirectional_iterator<const char*>(s+10));
+        check_advance<Distance>(random_access_iterator<const char*>(s), 10u, random_access_iterator<const char*>(s+10));
+    }
 
     return true;
 }

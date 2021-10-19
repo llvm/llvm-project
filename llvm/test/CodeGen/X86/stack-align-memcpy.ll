@@ -3,7 +3,7 @@
 
 %struct.foo = type { [88 x i8] }
 
-declare void @bar(i8* nocapture, %struct.foo* align 4 byval) nounwind
+declare void @bar(i8* nocapture, %struct.foo* align 4 byval(%struct.foo)) nounwind
 declare void @baz(i8*) nounwind
 
 ; PR15249
@@ -27,10 +27,10 @@ define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    subl %edx, %eax
 ; CHECK-NEXT:    movl %eax, %esp
 ; CHECK-NEXT:    subl $4, %esp
-; CHECK-NEXT:    movl 84(%ecx), %edx
+; CHECK-NEXT:    movl 84(%ecx), %edi
+; CHECK-NEXT:    movl 80(%ecx), %ebx
+; CHECK-NEXT:    movl 76(%ecx), %edx
 ; CHECK-NEXT:    movl %edx, 68(%esi) ## 4-byte Spill
-; CHECK-NEXT:    movl 80(%ecx), %edi
-; CHECK-NEXT:    movl 76(%ecx), %ebx
 ; CHECK-NEXT:    movl 72(%ecx), %edx
 ; CHECK-NEXT:    movl %edx, 64(%esi) ## 4-byte Spill
 ; CHECK-NEXT:    movl 68(%ecx), %edx
@@ -68,9 +68,9 @@ define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    movl (%ecx), %edx
 ; CHECK-NEXT:    movl %edx, 72(%esi) ## 4-byte Spill
 ; CHECK-NEXT:    movl 4(%ecx), %ecx
-; CHECK-NEXT:    pushl 68(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl 68(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 64(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 60(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 56(%esi) ## 4-byte Folded Reload
@@ -99,7 +99,7 @@ define void @test1(%struct.foo* nocapture %x, i32 %y) nounwind {
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
   %dynalloc = alloca i8, i32 %y, align 1
-  call void @bar(i8* %dynalloc, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %dynalloc, %struct.foo* align 4 byval(%struct.foo) %x)
   ret void
 }
 
@@ -119,10 +119,10 @@ define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    movl 12(%ebp), %edi
 ; CHECK-NEXT:    movl 8(%ebp), %eax
 ; CHECK-NEXT:    subl $4, %esp
-; CHECK-NEXT:    movl 84(%eax), %ecx
+; CHECK-NEXT:    movl 84(%eax), %edx
+; CHECK-NEXT:    movl 80(%eax), %ebx
+; CHECK-NEXT:    movl 76(%eax), %ecx
 ; CHECK-NEXT:    movl %ecx, 68(%esi) ## 4-byte Spill
-; CHECK-NEXT:    movl 80(%eax), %edx
-; CHECK-NEXT:    movl 76(%eax), %ebx
 ; CHECK-NEXT:    movl 72(%eax), %ecx
 ; CHECK-NEXT:    movl %ecx, 64(%esi) ## 4-byte Spill
 ; CHECK-NEXT:    movl 68(%eax), %ecx
@@ -160,9 +160,9 @@ define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    movl (%eax), %ecx
 ; CHECK-NEXT:    movl %ecx, 72(%esi) ## 4-byte Spill
 ; CHECK-NEXT:    movl 4(%eax), %eax
-; CHECK-NEXT:    pushl 68(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl %edx
 ; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl 68(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 64(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 60(%esi) ## 4-byte Folded Reload
 ; CHECK-NEXT:    pushl 56(%esi) ## 4-byte Folded Reload
@@ -199,7 +199,7 @@ define void @test2(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
   %dynalloc = alloca i8, i32 %y, align 1
   call void @baz(i8* %dynalloc)
   ret void
@@ -230,7 +230,7 @@ define void @test3(%struct.foo* nocapture %x, i32 %y, i8* %z) nounwind {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  call void @bar(i8* %z, %struct.foo* align 4 byval %x)
+  call void @bar(i8* %z, %struct.foo* align 4 byval(%struct.foo) %x)
   %statalloc = alloca i8, i32 8, align 1
   call void @baz(i8* %statalloc)
   ret void

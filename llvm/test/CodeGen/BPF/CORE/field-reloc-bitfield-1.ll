@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU64 %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EB,CHECK-ALU64 %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU32 %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EB,CHECK-ALU32 %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU64 %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU32 %s
 ; Source code:
 ;   struct s {
 ;     unsigned long long f1;
@@ -19,7 +18,9 @@
 ;            __builtin_preserve_field_info(arg->bf2, FIELD_TYPE_LSHIFT_U64);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpfel"
 
 %struct.s = type { i64, i32, i32, i32, i8, i8 }
 
@@ -27,7 +28,7 @@
 define dso_local i32 @test(%struct.s* %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !30, metadata !DIExpression()), !dbg !31
-  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.ss(%struct.s* %arg, i32 5, i32 6), !dbg !32, !llvm.preserve.access.index !18
+  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 5, i32 6), !dbg !32, !llvm.preserve.access.index !18
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %0, i64 0), !dbg !33
   %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %0, i64 1), !dbg !34
   %add = add i32 %2, %1, !dbg !35
@@ -36,12 +37,11 @@ entry:
   ret i32 %add1, !dbg !38
 }
 
-; CHECK:             r1 = 16
-; CHECK:             r0 = 8
+; CHECK:             r1 = 20
+; CHECK:             r0 = 4
 ; CHECK-ALU64:       r0 += r1
 ; CHECK-ALU32:       w0 += w1
-; CHECK-EL:          r1 = 18
-; CHECK-EB:          r1 = 45
+; CHECK-EL:          r1 = 50
 ; CHECK-ALU64:       r0 += r1
 ; CHECK-ALU32:       w0 += w1
 ; CHECK:             exit

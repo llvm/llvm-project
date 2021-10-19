@@ -19,13 +19,26 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
+std::optional<Expr<SomeType>> AsGenericExpr(DataRef &&ref) {
+  const Symbol &symbol{ref.GetLastSymbol()};
+  if (auto dyType{DynamicType::From(symbol)}) {
+    return TypedWrapper<Designator, DataRef>(*dyType, std::move(ref));
+  }
+  return std::nullopt;
+}
+
+std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &symbol) {
+  return AsGenericExpr(DataRef{symbol});
+}
+
 Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
   return std::visit(
       [&](auto &&x) {
         using T = std::decay_t<decltype(x)>;
-        if constexpr (common::HasMember<T, TypelessExpression> ||
-            std::is_same_v<T, Expr<SomeDerived>>) {
-          return expr; // no parentheses around typeless or derived type
+        if constexpr (common::HasMember<T, TypelessExpression>) {
+          return expr; // no parentheses around typeless
+        } else if constexpr (std::is_same_v<T, Expr<SomeDerived>>) {
+          return AsGenericExpr(Parentheses<SomeDerived>{std::move(x)});
         } else {
           return std::visit(
               [](auto &&y) {
@@ -36,6 +49,15 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
         }
       },
       std::move(expr.u));
+}
+
+std::optional<DataRef> ExtractDataRef(
+    const ActualArgument &arg, bool intoSubstring) {
+  if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
+    return ExtractDataRef(*expr, intoSubstring);
+  } else {
+    return std::nullopt;
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -52,10 +74,12 @@ std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
 // IsVariable()
 
 auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
-  return !symbol.attrs().test(semantics::Attr::PARAMETER);
+  const Symbol &root{GetAssociationRoot(symbol)};
+  return !IsNamedConstant(root) && root.has<semantics::ObjectEntityDetails>();
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
-  return (*this)(x.base());
+  const Symbol &comp{x.GetLastSymbol()};
+  return (*this)(comp) && (IsPointer(comp) || (*this)(x.base()));
 }
 auto IsVariableHelper::operator()(const ArrayRef &x) const -> Result {
   return (*this)(x.base());
@@ -65,11 +89,14 @@ auto IsVariableHelper::operator()(const Substring &x) const -> Result {
 }
 auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
     -> Result {
-  const Symbol *symbol{x.GetSymbol()};
-  return symbol && symbol->attrs().test(semantics::Attr::POINTER);
+  if (const Symbol * symbol{x.GetSymbol()}) {
+    const Symbol *result{FindFunctionResult(*symbol)};
+    return result && IsPointer(*result) && !IsProcedurePointer(*result);
+  }
+  return false;
 }
 
-// Conversions of complex component expressions to REAL.
+// Conversions of COMPLEX component expressions to REAL.
 ConvertRealOperandsResult ConvertRealOperands(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
     Expr<SomeType> &&y, int defaultRealKind) {
@@ -458,14 +485,6 @@ Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&x) {
       std::move(x.u));
 }
 
-template <typename T>
-Expr<LogicalResult> PackageRelation(
-    RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
-  static_assert(IsSpecificIntrinsicType<T>);
-  return Expr<LogicalResult>{
-      Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
-}
-
 template <TypeCategory CAT>
 Expr<LogicalResult> PromoteAndRelate(
     RelationalOperator opr, Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
@@ -498,31 +517,14 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
           },
           [&](Expr<SomeComplex> &&zx,
               Expr<SomeComplex> &&zy) -> std::optional<Expr<LogicalResult>> {
-            if (opr != RelationalOperator::EQ &&
-                opr != RelationalOperator::NE) {
+            if (opr == RelationalOperator::EQ ||
+                opr == RelationalOperator::NE) {
+              return PromoteAndRelate(opr, std::move(zx), std::move(zy));
+            } else {
               messages.Say(
                   "COMPLEX data may be compared only for equality"_err_en_US);
-            } else {
-              auto rr{Relate(messages, opr,
-                  AsGenericExpr(GetComplexPart(zx, false)),
-                  AsGenericExpr(GetComplexPart(zy, false)))};
-              auto ri{
-                  Relate(messages, opr, AsGenericExpr(GetComplexPart(zx, true)),
-                      AsGenericExpr(GetComplexPart(zy, true)))};
-              if (auto parts{
-                      common::AllPresent(std::move(rr), std::move(ri))}) {
-                // (a,b)==(c,d) -> (a==c) .AND. (b==d)
-                // (a,b)/=(c,d) -> (a/=c) .OR. (b/=d)
-                LogicalOperator combine{opr == RelationalOperator::EQ
-                        ? LogicalOperator::And
-                        : LogicalOperator::Or};
-                return Expr<LogicalResult>{
-                    LogicalOperation<LogicalResult::kind>{combine,
-                        std::get<0>(std::move(*parts)),
-                        std::get<1>(std::move(*parts))}};
-              }
+              return std::nullopt;
             }
-            return std::nullopt;
           },
           [&](Expr<SomeComplex> &&zx, Expr<SomeInteger> &&iy) {
             return Relate(messages, opr, std::move(x),
@@ -615,20 +617,16 @@ std::optional<Expr<SomeType>> ConvertToType(
     if (auto *cx{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
       auto converted{
           ConvertToKind<TypeCategory::Character>(type.kind(), std::move(*cx))};
-      if (type.charLength()) {
-        if (const auto &len{type.charLength()->GetExplicit()}) {
-          Expr<SomeInteger> lenParam{*len};
-          Expr<SubscriptInteger> length{Convert<SubscriptInteger>{lenParam}};
-          converted = std::visit(
-              [&](auto &&x) {
-                using Ty = std::decay_t<decltype(x)>;
-                using CharacterType = typename Ty::Result;
-                return Expr<SomeCharacter>{
-                    Expr<CharacterType>{SetLength<CharacterType::kind>{
-                        std::move(x), std::move(length)}}};
-              },
-              std::move(converted.u));
-        }
+      if (auto length{type.GetCharLength()}) {
+        converted = std::visit(
+            [&](auto &&x) {
+              using Ty = std::decay_t<decltype(x)>;
+              using CharacterType = typename Ty::Result;
+              return Expr<SomeCharacter>{
+                  Expr<CharacterType>{SetLength<CharacterType::kind>{
+                      std::move(x), std::move(*length)}}};
+            },
+            std::move(converted.u));
       }
       return Expr<SomeType>{std::move(converted)};
     }
@@ -676,8 +674,13 @@ std::optional<Expr<SomeType>> ConvertToType(
   }
 }
 
-bool IsAssumedRank(const Symbol &symbol0) {
-  const Symbol &symbol{ResolveAssociations(symbol0)};
+bool IsAssumedRank(const Symbol &original) {
+  if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
+    if (assoc->rank()) {
+      return false; // in SELECT RANK case
+    }
+  }
+  const Symbol &symbol{semantics::ResolveAssociations(original)};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     return details->IsAssumedRank();
   } else {
@@ -695,6 +698,13 @@ bool IsAssumedRank(const ActualArgument &arg) {
   }
 }
 
+bool IsCoarray(const ActualArgument &arg) {
+  if (const auto *expr{arg.UnwrapExpr()}) {
+    return IsCoarray(*expr);
+  }
+  return false;
+}
+
 bool IsProcedure(const Expr<SomeType> &expr) {
   return std::holds_alternative<ProcedureDesignator>(expr.u);
 }
@@ -703,29 +713,71 @@ bool IsFunction(const Expr<SomeType> &expr) {
   return designator && designator->GetType().has_value();
 }
 
-bool IsProcedurePointer(const Expr<SomeType> &expr) {
+bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
   return std::visit(common::visitors{
                         [](const NullPointer &) { return true; },
                         [](const ProcedureDesignator &) { return true; },
                         [](const ProcedureRef &) { return true; },
-                        [](const auto &) { return false; },
+                        [&](const auto &) {
+                          const Symbol *last{GetLastSymbol(expr)};
+                          return last && IsProcedurePointer(*last);
+                        },
                     },
       expr.u);
 }
 
+template <typename A> inline const ProcedureRef *UnwrapProcedureRef(const A &) {
+  return nullptr;
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const FunctionRef<T> &func) {
+  return &func;
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const Expr<T> &expr) {
+  return std::visit(
+      [](const auto &x) { return UnwrapProcedureRef(x); }, expr.u);
+}
+
+// IsObjectPointer()
+bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
+  if (IsNullPointer(expr)) {
+    return true;
+  } else if (IsProcedurePointerTarget(expr)) {
+    return false;
+  } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
+    return IsVariable(*funcRef);
+  } else if (const Symbol * symbol{GetLastSymbol(expr)}) {
+    return IsPointer(symbol->GetUltimate());
+  } else {
+    return false;
+  }
+}
+
+bool IsBareNullPointer(const Expr<SomeType> *expr) {
+  return expr && std::holds_alternative<NullPointer>(expr->u);
+}
+
 // IsNullPointer()
-struct IsNullPointerHelper : public AllTraverse<IsNullPointerHelper, false> {
-  using Base = AllTraverse<IsNullPointerHelper, false>;
-  IsNullPointerHelper() : Base(*this) {}
-  using Base::operator();
-  bool operator()(const ProcedureRef &call) const {
-    auto *intrinsic{call.proc().GetSpecificIntrinsic()};
+struct IsNullPointerHelper {
+  template <typename A> bool operator()(const A &) const { return false; }
+  template <typename T> bool operator()(const FunctionRef<T> &call) const {
+    const auto *intrinsic{call.proc().GetSpecificIntrinsic()};
     return intrinsic &&
         intrinsic->characteristics.value().attrs.test(
             characteristics::Procedure::Attr::NullPointer);
   }
   bool operator()(const NullPointer &) const { return true; }
+  template <typename T> bool operator()(const Parentheses<T> &x) const {
+    return (*this)(x.left());
+  }
+  template <typename T> bool operator()(const Expr<T> &x) const {
+    return std::visit(*this, x.u);
+  }
 };
+
 bool IsNullPointer(const Expr<SomeType> &expr) {
   return IsNullPointerHelper{}(expr);
 }
@@ -760,30 +812,23 @@ const Symbol *GetLastTarget(const SymbolVector &symbols) {
   return iter == end ? nullptr : &**iter;
 }
 
-const Symbol &ResolveAssociations(const Symbol &symbol) {
-  if (const auto *details{symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
-      return ResolveAssociations(*nested);
-    }
-  }
-  return symbol.GetUltimate();
-}
-
 struct CollectSymbolsHelper
-    : public SetTraverse<CollectSymbolsHelper, semantics::SymbolSet> {
-  using Base = SetTraverse<CollectSymbolsHelper, semantics::SymbolSet>;
+    : public SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet>;
   CollectSymbolsHelper() : Base{*this} {}
   using Base::operator();
-  semantics::SymbolSet operator()(const Symbol &symbol) const {
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
     return {symbol};
   }
 };
-template <typename A> semantics::SymbolSet CollectSymbols(const A &x) {
+template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &x) {
   return CollectSymbolsHelper{}(x);
 }
-template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
-template semantics::SymbolSet CollectSymbols(const Expr<SomeInteger> &);
-template semantics::SymbolSet CollectSymbols(const Expr<SubscriptInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SubscriptInteger> &);
 
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper : public AnyTraverse<HasVectorSubscriptHelper> {
@@ -813,8 +858,8 @@ parser::Message *AttachDeclaration(
           unhosted->detailsIf<semantics::ProcBindingDetails>()}) {
     if (binding->symbol().name() != symbol.name()) {
       message.Attach(binding->symbol().name(),
-          "Procedure '%s' is bound to '%s'"_en_US, symbol.name(),
-          binding->symbol().name());
+          "Procedure '%s' of type '%s' is bound to '%s'"_en_US, symbol.name(),
+          symbol.owner().GetName().value(), binding->symbol().name());
       return &message;
     }
     unhosted = &binding->symbol();
@@ -832,10 +877,7 @@ parser::Message *AttachDeclaration(
 
 parser::Message *AttachDeclaration(
     parser::Message *message, const Symbol &symbol) {
-  if (message) {
-    AttachDeclaration(*message, symbol);
-  }
-  return message;
+  return message ? AttachDeclaration(*message, symbol) : nullptr;
 }
 
 class FindImpureCallHelper
@@ -844,12 +886,11 @@ class FindImpureCallHelper
   using Base = AnyTraverse<FindImpureCallHelper, Result>;
 
 public:
-  explicit FindImpureCallHelper(const IntrinsicProcTable &intrinsics)
-      : Base{*this}, intrinsics_{intrinsics} {}
+  explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{characteristics::Procedure::Characterize(
-            call.proc(), intrinsics_)}) {
+    if (auto chars{
+            characteristics::Procedure::Characterize(call.proc(), context_)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }
@@ -858,50 +899,152 @@ public:
   }
 
 private:
-  const IntrinsicProcTable &intrinsics_;
+  FoldingContext &context_;
 };
 
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const Expr<SomeType> &expr) {
-  return FindImpureCallHelper{intrinsics}(expr);
+    FoldingContext &context, const Expr<SomeType> &expr) {
+  return FindImpureCallHelper{context}(expr);
 }
 std::optional<std::string> FindImpureCall(
-    const IntrinsicProcTable &intrinsics, const ProcedureRef &proc) {
-  return FindImpureCallHelper{intrinsics}(proc);
+    FoldingContext &context, const ProcedureRef &proc) {
+  return FindImpureCallHelper{context}(proc);
+}
+
+// Compare procedure characteristics for equality except that lhs may be
+// Pure or Elemental when rhs is not.
+static bool CharacteristicsMatch(const characteristics::Procedure &lhs,
+    const characteristics::Procedure &rhs) {
+  using Attr = characteristics::Procedure::Attr;
+  auto lhsAttrs{rhs.attrs};
+  lhsAttrs.set(
+      Attr::Pure, lhs.attrs.test(Attr::Pure) | rhs.attrs.test(Attr::Pure));
+  lhsAttrs.set(Attr::Elemental,
+      lhs.attrs.test(Attr::Elemental) | rhs.attrs.test(Attr::Elemental));
+  return lhsAttrs == rhs.attrs && lhs.functionResult == rhs.functionResult &&
+      lhs.dummyArguments == rhs.dummyArguments;
+}
+
+// Common handling for procedure pointer compatibility of left- and right-hand
+// sides.  Returns nullopt if they're compatible.  Otherwise, it returns a
+// message that needs to be augmented by the names of the left and right sides
+std::optional<parser::MessageFixedText> CheckProcCompatibility(bool isCall,
+    const std::optional<characteristics::Procedure> &lhsProcedure,
+    const characteristics::Procedure *rhsProcedure) {
+  std::optional<parser::MessageFixedText> msg;
+  if (!lhsProcedure) {
+    msg = "In assignment to object %s, the target '%s' is a procedure"
+          " designator"_err_en_US;
+  } else if (!rhsProcedure) {
+    msg = "In assignment to procedure %s, the characteristics of the target"
+          " procedure '%s' could not be determined"_err_en_US;
+  } else if (CharacteristicsMatch(*lhsProcedure, *rhsProcedure)) {
+    // OK
+  } else if (isCall) {
+    msg = "Procedure %s associated with result of reference to function '%s'"
+          " that is an incompatible procedure pointer"_err_en_US;
+  } else if (lhsProcedure->IsPure() && !rhsProcedure->IsPure()) {
+    msg = "PURE procedure %s may not be associated with non-PURE"
+          " procedure designator '%s'"_err_en_US;
+  } else if (lhsProcedure->IsFunction() && !rhsProcedure->IsFunction()) {
+    msg = "Function %s may not be associated with subroutine"
+          " designator '%s'"_err_en_US;
+  } else if (!lhsProcedure->IsFunction() && rhsProcedure->IsFunction()) {
+    msg = "Subroutine %s may not be associated with function"
+          " designator '%s'"_err_en_US;
+  } else if (lhsProcedure->HasExplicitInterface() &&
+      !rhsProcedure->HasExplicitInterface()) {
+    msg = "Procedure %s with explicit interface may not be associated with"
+          " procedure designator '%s' with implicit interface"_err_en_US;
+  } else if (!lhsProcedure->HasExplicitInterface() &&
+      rhsProcedure->HasExplicitInterface()) {
+    msg = "Procedure %s with implicit interface may not be associated with"
+          " procedure designator '%s' with explicit interface"_err_en_US;
+  } else {
+    msg = "Procedure %s associated with incompatible procedure"
+          " designator '%s'"_err_en_US;
+  }
+  return msg;
+}
+
+// GetLastPointerSymbol()
+static const Symbol *GetLastPointerSymbol(const Symbol &symbol) {
+  return IsPointer(GetAssociationRoot(symbol)) ? &symbol : nullptr;
+}
+static const Symbol *GetLastPointerSymbol(const SymbolRef &symbol) {
+  return GetLastPointerSymbol(*symbol);
+}
+static const Symbol *GetLastPointerSymbol(const Component &x) {
+  const Symbol &c{x.GetLastSymbol()};
+  return IsPointer(c) ? &c : GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const NamedEntity &x) {
+  const auto *c{x.UnwrapComponent()};
+  return c ? GetLastPointerSymbol(*c) : GetLastPointerSymbol(x.GetLastSymbol());
+}
+static const Symbol *GetLastPointerSymbol(const ArrayRef &x) {
+  return GetLastPointerSymbol(x.base());
+}
+static const Symbol *GetLastPointerSymbol(const CoarrayRef &x) {
+  return nullptr;
+}
+const Symbol *GetLastPointerSymbol(const DataRef &x) {
+  return std::visit([](const auto &y) { return GetLastPointerSymbol(y); }, x.u);
 }
 
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
 
+const Symbol &ResolveAssociations(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
+  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
+    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
+      return ResolveAssociations(*nested);
+    }
+  }
+  return symbol;
+}
+
 // When a construct association maps to a variable, and that variable
 // is not an array with a vector-valued subscript, return the base
 // Symbol of that variable, else nullptr.  Descends into other construct
 // associations when one associations maps to another.
-static const Symbol *GetAssociatedVariable(
-    const semantics::AssocEntityDetails &details) {
+static const Symbol *GetAssociatedVariable(const AssocEntityDetails &details) {
   if (const auto &expr{details.expr()}) {
     if (IsVariable(*expr) && !HasVectorSubscript(*expr)) {
       if (const Symbol * varSymbol{GetFirstSymbol(*expr)}) {
-        return GetAssociationRoot(*varSymbol);
+        return &GetAssociationRoot(*varSymbol);
       }
     }
   }
   return nullptr;
 }
 
-const Symbol *GetAssociationRoot(const Symbol &symbol) {
-  const Symbol &ultimate{symbol.GetUltimate()};
-  const auto *details{ultimate.detailsIf<semantics::AssocEntityDetails>()};
-  return details ? GetAssociatedVariable(*details) : &ultimate;
+const Symbol &GetAssociationRoot(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
+    if (const Symbol * root{GetAssociatedVariable(*details)}) {
+      return *root;
+    }
+  }
+  return symbol;
 }
 
-bool IsVariableName(const Symbol &symbol) {
-  const Symbol *root{GetAssociationRoot(symbol)};
-  return root && root->has<ObjectEntityDetails>() && !IsNamedConstant(*root);
+bool IsVariableName(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original)};
+  if (symbol.has<ObjectEntityDetails>()) {
+    return !IsNamedConstant(symbol);
+  } else if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
+    const auto &expr{assoc->expr()};
+    return expr && IsVariable(*expr) && !HasVectorSubscript(*expr);
+  } else {
+    return false;
+  }
 }
 
-bool IsPureProcedure(const Symbol &symbol) {
+bool IsPureProcedure(const Symbol &original) {
+  const Symbol &symbol{original.GetUltimate()};
   if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
     if (const Symbol * procInterface{procDetails->interface().symbol()}) {
       // procedure component with a pure interface
@@ -920,8 +1063,7 @@ bool IsPureProcedure(const Symbol &symbol) {
         if (IsFunction(*ref) && !IsPureProcedure(*ref)) {
           return false;
         }
-        const Symbol *root{GetAssociationRoot(*ref)};
-        if (root && root->attrs().test(Attr::VOLATILE)) {
+        if (ref->GetUltimate().attrs().test(Attr::VOLATILE)) {
           return false;
         }
       }
@@ -950,69 +1092,74 @@ bool IsFunction(const Symbol &symbol) {
             return ifc.type() || (ifc.symbol() && IsFunction(*ifc.symbol()));
           },
           [](const ProcBindingDetails &x) { return IsFunction(x.symbol()); },
-          [](const UseDetails &x) { return IsFunction(x.symbol()); },
           [](const auto &) { return false; },
       },
-      symbol.details());
+      symbol.GetUltimate().details());
+}
+
+bool IsFunction(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsFunction(*symbol);
 }
 
 bool IsProcedure(const Symbol &symbol) {
-  return std::visit(
-      common::visitors{
-          [](const SubprogramDetails &) { return true; },
-          [](const SubprogramNameDetails &) { return true; },
-          [](const ProcEntityDetails &) { return true; },
-          [](const GenericDetails &) { return true; },
-          [](const ProcBindingDetails &) { return true; },
-          [](const UseDetails &x) { return IsProcedure(x.symbol()); },
-          // TODO: FinalProcDetails?
-          [](const auto &) { return false; },
-      },
-      symbol.details());
+  return std::visit(common::visitors{
+                        [](const SubprogramDetails &) { return true; },
+                        [](const SubprogramNameDetails &) { return true; },
+                        [](const ProcEntityDetails &) { return true; },
+                        [](const GenericDetails &) { return true; },
+                        [](const ProcBindingDetails &) { return true; },
+                        [](const auto &) { return false; },
+                    },
+      symbol.GetUltimate().details());
 }
 
-const Symbol *FindCommonBlockContaining(const Symbol &object) {
-  const auto *details{object.detailsIf<ObjectEntityDetails>()};
+bool IsProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsProcedure(*symbol);
+}
+
+const Symbol *FindCommonBlockContaining(const Symbol &original) {
+  const Symbol &root{GetAssociationRoot(original)};
+  const auto *details{root.detailsIf<ObjectEntityDetails>()};
   return details ? details->commonBlock() : nullptr;
 }
 
-bool IsProcedurePointer(const Symbol &symbol) {
+bool IsProcedurePointer(const Symbol &original) {
+  const Symbol &symbol{GetAssociationRoot(original)};
   return symbol.has<ProcEntityDetails>() && IsPointer(symbol);
 }
 
 bool IsSaved(const Symbol &original) {
-  if (const Symbol * root{GetAssociationRoot(original)}) {
-    const Symbol &symbol{*root};
-    const Scope *scope{&symbol.owner()};
-    auto scopeKind{scope->kind()};
-    if (scopeKind == Scope::Kind::Module) {
-      return true; // BLOCK DATA entities must all be in COMMON, handled below
-    } else if (symbol.attrs().test(Attr::SAVE)) {
-      return true;
-    } else if (scopeKind == Scope::Kind::DerivedType) {
-      return false; // this is a component
-    } else if (IsNamedConstant(symbol)) {
-      return false;
-    } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-               object && object->init()) {
-      return true;
-    } else if (IsProcedurePointer(symbol) &&
-        symbol.get<ProcEntityDetails>().init()) {
-      return true;
-    } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-               block && block->attrs().test(Attr::SAVE)) {
-      return true;
-    } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
-      return false;
-    } else {
-      for (; !scope->IsGlobal(); scope = &scope->parent()) {
-        if (scope->hasSAVE()) {
-          return true;
-        }
-      }
-    }
+  const Symbol &symbol{GetAssociationRoot(original)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  if (symbol.has<AssocEntityDetails>()) {
+    return false; // ASSOCIATE(non-variable)
+  } else if (scopeKind == Scope::Kind::Module) {
+    return true; // BLOCK DATA entities must all be in COMMON, handled below
+  } else if (scopeKind == Scope::Kind::DerivedType) {
+    return false; // this is a component
+  } else if (symbol.attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (symbol.test(Symbol::Flag::InDataStmt)) {
+    return true;
+  } else if (IsNamedConstant(symbol)) {
+    return false;
+  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+             object && object->init()) {
+    return true;
+  } else if (IsProcedurePointer(symbol) &&
+      symbol.get<ProcEntityDetails>().init()) {
+    return true;
+  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
+             block && block->attrs().test(Attr::SAVE)) {
+    return true;
+  } else if (IsDummy(symbol) || IsFunctionResult(symbol)) {
+    return false;
+  } else {
+    return scope.hasSAVE();
   }
-  return false;
 }
 
 bool IsDummy(const Symbol &symbol) {
@@ -1020,16 +1167,61 @@ bool IsDummy(const Symbol &symbol) {
       common::visitors{[](const EntityDetails &x) { return x.isDummy(); },
           [](const ObjectEntityDetails &x) { return x.isDummy(); },
           [](const ProcEntityDetails &x) { return x.isDummy(); },
-          [](const HostAssocDetails &x) { return IsDummy(x.symbol()); },
+          [](const SubprogramDetails &x) { return x.isDummy(); },
           [](const auto &) { return false; }},
-      symbol.details());
+      ResolveAssociations(symbol).details());
 }
 
-bool IsFunctionResult(const Symbol &symbol) {
+bool IsFunctionResult(const Symbol &original) {
+  const Symbol &symbol{GetAssociationRoot(original)};
   return (symbol.has<ObjectEntityDetails>() &&
              symbol.get<ObjectEntityDetails>().isFuncResult()) ||
       (symbol.has<ProcEntityDetails>() &&
           symbol.get<ProcEntityDetails>().isFuncResult());
+}
+
+bool IsKindTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.GetUltimate().detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Kind;
+}
+
+bool IsLenTypeParameter(const Symbol &symbol) {
+  const auto *param{symbol.GetUltimate().detailsIf<TypeParamDetails>()};
+  return param && param->attr() == common::TypeParamAttr::Len;
+}
+
+bool IsExtensibleType(const DerivedTypeSpec *derived) {
+  return derived && !IsIsoCType(derived) &&
+      !derived->typeSymbol().attrs().test(Attr::BIND_C) &&
+      !derived->typeSymbol().get<DerivedTypeDetails>().sequence();
+}
+
+bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
+  if (!derived) {
+    return false;
+  } else {
+    const auto &symbol{derived->typeSymbol()};
+    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
+        symbol.name() == "__builtin_"s + name;
+  }
+}
+
+bool IsIsoCType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "c_ptr") ||
+      IsBuiltinDerivedType(derived, "c_funptr");
+}
+
+bool IsTeamType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "team_type");
+}
+
+bool IsBadCoarrayType(const DerivedTypeSpec *derived) {
+  return IsTeamType(derived) || IsIsoCType(derived);
+}
+
+bool IsEventTypeOrLockType(const DerivedTypeSpec *derivedTypeSpec) {
+  return IsBuiltinDerivedType(derivedTypeSpec, "event_type") ||
+      IsBuiltinDerivedType(derivedTypeSpec, "lock_type");
 }
 
 int CountLenParameters(const DerivedTypeSpec &type) {
@@ -1050,8 +1242,79 @@ int CountNonConstantLenParameters(const DerivedTypeSpec &type) {
       });
 }
 
+// Are the type parameters of type1 compile-time compatible with the
+// corresponding kind type parameters of type2?  Return true if all constant
+// valued parameters are equal.
+// Used to check assignment statements and argument passing.  See 15.5.2.4(4)
+bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &type1,
+    const semantics::DerivedTypeSpec &type2) {
+  for (const auto &[name, param1] : type1.parameters()) {
+    if (semantics::MaybeIntExpr paramExpr1{param1.GetExplicit()}) {
+      if (IsConstantExpr(*paramExpr1)) {
+        const semantics::ParamValue *param2{type2.FindParameter(name)};
+        if (param2) {
+          if (semantics::MaybeIntExpr paramExpr2{param2->GetExplicit()}) {
+            if (IsConstantExpr(*paramExpr2)) {
+              if (ToInt64(*paramExpr1) != ToInt64(*paramExpr2)) {
+                return false;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 const Symbol &GetUsedModule(const UseDetails &details) {
   return DEREF(details.symbol().owner().symbol());
+}
+
+static const Symbol *FindFunctionResult(
+    const Symbol &original, UnorderedSymbolSet &seen) {
+  const Symbol &root{GetAssociationRoot(original)};
+  ;
+  if (!seen.insert(root).second) {
+    return nullptr; // don't loop
+  }
+  return std::visit(
+      common::visitors{[](const SubprogramDetails &subp) {
+                         return subp.isFunction() ? &subp.result() : nullptr;
+                       },
+          [&](const ProcEntityDetails &proc) {
+            const Symbol *iface{proc.interface().symbol()};
+            return iface ? FindFunctionResult(*iface, seen) : nullptr;
+          },
+          [&](const ProcBindingDetails &binding) {
+            return FindFunctionResult(binding.symbol(), seen);
+          },
+          [](const auto &) -> const Symbol * { return nullptr; }},
+      root.details());
+}
+
+const Symbol *FindFunctionResult(const Symbol &symbol) {
+  UnorderedSymbolSet seen;
+  return FindFunctionResult(symbol, seen);
+}
+
+// These are here in Evaluate/tools.cpp so that Evaluate can use
+// them; they cannot be defined in symbol.h due to the dependence
+// on Scope.
+
+bool SymbolSourcePositionCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
+  return x->GetSemanticsContext().allCookedSources().Precedes(
+      x->name(), y->name());
+}
+bool SymbolSourcePositionCompare::operator()(
+    const MutableSymbolRef &x, const MutableSymbolRef &y) const {
+  return x->GetSemanticsContext().allCookedSources().Precedes(
+      x->name(), y->name());
+}
+
+SemanticsContext &Symbol::GetSemanticsContext() const {
+  return DEREF(owner_).context();
 }
 
 } // namespace Fortran::semantics

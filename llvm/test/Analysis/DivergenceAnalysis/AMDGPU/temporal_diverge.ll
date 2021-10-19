@@ -1,8 +1,8 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; temporal-divergent use of value carried by divergent loop
 define amdgpu_kernel void @temporal_diverge(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'temporal_diverge':
+; CHECK-LABEL: Divergence Analysis' for function 'temporal_diverge':
 ; CHECK-NOT: DIVERGENT: %uni.
 ; CHECK-NOT: DIVERGENT: br i1 %uni.
 
@@ -26,7 +26,7 @@ X:
 
 ; temporal-divergent use of value carried by divergent loop inside a top-level loop
 define amdgpu_kernel void @temporal_diverge_inloop(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'temporal_diverge_inloop':
+; CHECK-LABEL: Divergence Analysis' for function 'temporal_diverge_inloop':
 ; CHECK-NOT: DIVERGENT: %uni.
 ; CHECK-NOT: DIVERGENT: br i1 %uni.
 
@@ -58,7 +58,7 @@ Y:
 
 ; temporal-uniform use of a valud, definition and users are carried by a surrounding divergent loop
 define amdgpu_kernel void @temporal_uniform_indivloop(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'temporal_uniform_indivloop':
+; CHECK-LABEL: Divergence Analysis' for function 'temporal_uniform_indivloop':
 ; CHECK-NOT: DIVERGENT: %uni.
 ; CHECK-NOT: DIVERGENT: br i1 %uni.
 
@@ -90,7 +90,7 @@ Y:
 
 ; temporal-divergent use of value carried by divergent loop, user is inside sibling loop
 define amdgpu_kernel void @temporal_diverge_loopuser(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'temporal_diverge_loopuser':
+; CHECK-LABEL: Divergence Analysis' for function 'temporal_diverge_loopuser':
 ; CHECK-NOT: DIVERGENT: %uni.
 ; CHECK-NOT: DIVERGENT: br i1 %uni.
 
@@ -120,7 +120,7 @@ Y:
 
 ; temporal-divergent use of value carried by divergent loop, user is inside sibling loop, defs and use are carried by a uniform loop
 define amdgpu_kernel void @temporal_diverge_loopuser_nested(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'temporal_diverge_loopuser_nested':
+; CHECK-LABEL: Divergence Analysis' for function 'temporal_diverge_loopuser_nested':
 ; CHECK-NOT: DIVERGENT: %uni.
 ; CHECK-NOT: DIVERGENT: br i1 %uni.
 

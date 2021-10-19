@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols -fparse-only %s | FileCheck %s
+!RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
 
 ! Size and alignment of intrinsic types
 subroutine s1
@@ -47,8 +47,8 @@ subroutine s5(n)
     integer, len :: l2
     real :: b(l1, l2)
   end type
-  type(t1(n))   :: x1 !CHECK: x1 size=48 offset=
-  type(t2(n,n)) :: x2 !CHECK: x2 size=56 offset=
+  type(t1(n))   :: x1 !CHECK: x1 size=40 offset=
+  type(t2(n,n)) :: x2 !CHECK: x2 size=48 offset=
   !CHECK: a size=48 offset=0:
   !CHECK: b size=72 offset=0:
 end

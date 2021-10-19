@@ -35,7 +35,7 @@ for.body:
 
 ; CHECK-NEXT:    [[I8_IV_NEXT]] = add <4 x i8> [[I8_IV]], [[IV_FROM_TRUNC]]
 
-; CHECK-NEXT:    [[MAIN_IV_NEXT]] = add i32 [[MAIN_IV]], 4
+; CHECK-NEXT:    [[MAIN_IV_NEXT]] = add nuw i32 [[MAIN_IV]], 4
 ; CHECK-NEXT:    [[I32_IV_NEXT]] = add <4 x i32> [[I32_IV]], <i32 36, i32 36, i32 36, i32 36>
 ; CHECK-NEXT:    [[IV_FROM_TRUNC_NEXT]] = add <4 x i8> [[IV_FROM_TRUNC]], <i8 36, i8 36, i8 36, i8 36>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[MAIN_IV_NEXT]], 16

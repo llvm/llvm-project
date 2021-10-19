@@ -67,8 +67,8 @@ define double @foo_fmf(double %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmuldp 0, 0, 4
 ; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call arcp reassoc double @llvm.sqrt.f64(double %b)
-  %r = fdiv arcp reassoc double %a, %x
+  %x = call arcp contract reassoc double @llvm.sqrt.f64(double %b)
+  %r = fdiv arcp contract reassoc double %a, %x
   ret double %r
 }
 
@@ -136,14 +136,14 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P8-LABEL: foof_fmf:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 2
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI3_1@toc@ha
+; CHECK-P8-NEXT:    lfs 3, .LCPI3_1@toc@l(3)
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI3_1@toc@ha
-; CHECK-P8-NEXT:    lfs 3, .LCPI3_0@toc@l(3)
-; CHECK-P8-NEXT:    lfs 4, .LCPI3_1@toc@l(4)
+; CHECK-P8-NEXT:    lfs 4, .LCPI3_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsmulsp 2, 2, 0
-; CHECK-P8-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 4
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 3
+; CHECK-P8-NEXT:    xsmulsp 3, 0, 3
+; CHECK-P8-NEXT:    xsmaddasp 4, 2, 0
+; CHECK-P8-NEXT:    xsmulsp 0, 3, 4
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
@@ -160,9 +160,9 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
+  %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
   %y = fpext float %x to double
-  %r = fdiv reassoc arcp double %a, %y
+  %r = fdiv contract reassoc arcp double %a, %y
   ret double %r
 }
 
@@ -249,9 +249,9 @@ define float @food_fmf(float %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsrsp 0, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp double @llvm.sqrt.f64(double %b)
+  %x = call contract reassoc arcp double @llvm.sqrt.f64(double %b)
   %y = fptrunc double %x to float
-  %r = fdiv reassoc arcp float %a, %y
+  %r = fdiv contract reassoc arcp float %a, %y
   ret float %r
 }
 
@@ -300,14 +300,14 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-P8-LABEL: goo_fmf:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 2
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
+; CHECK-P8-NEXT:    lfs 3, .LCPI7_1@toc@l(3)
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI7_1@toc@ha
-; CHECK-P8-NEXT:    lfs 3, .LCPI7_0@toc@l(3)
-; CHECK-P8-NEXT:    lfs 4, .LCPI7_1@toc@l(4)
+; CHECK-P8-NEXT:    lfs 4, .LCPI7_0@toc@l(3)
 ; CHECK-P8-NEXT:    xsmulsp 2, 2, 0
-; CHECK-P8-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 4
-; CHECK-P8-NEXT:    xsmulsp 0, 0, 3
+; CHECK-P8-NEXT:    xsmulsp 3, 0, 3
+; CHECK-P8-NEXT:    xsmaddasp 4, 2, 0
+; CHECK-P8-NEXT:    xsmulsp 0, 3, 4
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
@@ -324,8 +324,8 @@ define float @goo_fmf(float %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmulsp 0, 0, 3
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
-  %r = fdiv reassoc arcp float %a, %x
+  %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
+  %r = fdiv contract reassoc arcp float %a, %x
   ret float %r
 }
 
@@ -398,9 +398,9 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI10_1@toc@ha
 ; CHECK-P8-NEXT:    lfs 4, .LCPI10_0@toc@l(3)
-; CHECK-P8-NEXT:    lfs 5, .LCPI10_1@toc@l(4)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI10_1@toc@ha
+; CHECK-P8-NEXT:    lfs 5, .LCPI10_1@toc@l(3)
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    xsmaddasp 4, 1, 0
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 5
@@ -429,9 +429,9 @@ define float @rsqrt_fmul_fmf(float %a, float %b, float %c) {
 ; CHECK-P9-NEXT:    xsmaddasp 4, 1, 0
 ; CHECK-P9-NEXT:    xsmulsp 1, 3, 4
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp nsz float @llvm.sqrt.f32(float %a)
-  %y = fmul reassoc nsz float %x, %b
-  %z = fdiv reassoc arcp nsz ninf float %c, %y
+  %x = call contract reassoc arcp nsz float @llvm.sqrt.f32(float %a)
+  %y = fmul contract reassoc nsz float %x, %b
+  %z = fdiv contract reassoc arcp nsz ninf float %c, %y
   ret float %z
 }
 
@@ -502,18 +502,18 @@ define <4 x float> @hoo_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvrsqrtesp 0, 35
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI12_0@toc@ha
 ; CHECK-P9-NEXT:    addi 3, 3, .LCPI12_0@toc@l
-; CHECK-P9-NEXT:    lxvx 2, 0, 3
+; CHECK-P9-NEXT:    lxv 2, 0(3)
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI12_1@toc@ha
 ; CHECK-P9-NEXT:    addi 3, 3, .LCPI12_1@toc@l
 ; CHECK-P9-NEXT:    xvmulsp 1, 35, 0
 ; CHECK-P9-NEXT:    xvmaddasp 2, 1, 0
-; CHECK-P9-NEXT:    lxvx 1, 0, 3
+; CHECK-P9-NEXT:    lxv 1, 0(3)
 ; CHECK-P9-NEXT:    xvmulsp 0, 0, 1
 ; CHECK-P9-NEXT:    xvmulsp 0, 0, 2
 ; CHECK-P9-NEXT:    xvmulsp 34, 34, 0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
-  %r = fdiv reassoc arcp <4 x float> %a, %x
+  %x = call contract reassoc arcp <4 x float> @llvm.sqrt.v4f32(<4 x float> %b)
+  %r = fdiv contract reassoc arcp <4 x float> %a, %x
   ret <4 x float> %r
 }
 
@@ -602,7 +602,7 @@ define double @foo2_fmf(double %a, double %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddadp 0, 3, 1
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf double %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf double %a, %b
   ret double %r
 }
 
@@ -651,7 +651,7 @@ define float @goo2_fmf(float %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmaddasp 0, 3, 1
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf float %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf float %a, %b
   ret float %r
 }
 
@@ -702,7 +702,7 @@ define <4 x float> @hoo2_fmf(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-P9-NEXT:    xvmaddasp 0, 1, 34
 ; CHECK-P9-NEXT:    xxlor 34, 0, 0
 ; CHECK-P9-NEXT:    blr
-  %r = fdiv reassoc arcp nsz ninf <4 x float> %a, %b
+  %r = fdiv contract reassoc arcp nsz ninf <4 x float> %a, %b
   ret <4 x float> %r
 }
 
@@ -749,11 +749,8 @@ define <4 x float> @hoo2_safe(<4 x float> %a, <4 x float> %b) nounwind {
 define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P7-LABEL: foo3_fmf:
 ; CHECK-P7:       # %bb.0:
-; CHECK-P7-NEXT:    fabs 0, 1
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI20_2@toc@ha
-; CHECK-P7-NEXT:    lfd 2, .LCPI20_2@toc@l(3)
-; CHECK-P7-NEXT:    fcmpu 0, 0, 2
-; CHECK-P7-NEXT:    blt 0, .LBB20_2
+; CHECK-P7-NEXT:    ftsqrt 0, 1
+; CHECK-P7-NEXT:    bc 12, 2, .LBB20_2
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrte 0, 1
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
@@ -770,18 +767,13 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P7-NEXT:    fmul 1, 1, 0
 ; CHECK-P7-NEXT:    blr
 ; CHECK-P7-NEXT:  .LBB20_2:
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI20_3@toc@ha
-; CHECK-P7-NEXT:    lfs 1, .LCPI20_3@toc@l(3)
+; CHECK-P7-NEXT:    fsqrt 1, 1
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: foo3_fmf:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    xsabsdp 0, 1
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI20_2@toc@ha
-; CHECK-P8-NEXT:    lfd 2, .LCPI20_2@toc@l(3)
-; CHECK-P8-NEXT:    xscmpudp 0, 0, 2
-; CHECK-P8-NEXT:    xxlxor 0, 0, 0
-; CHECK-P8-NEXT:    blt 0, .LBB20_2
+; CHECK-P8-NEXT:    xstsqrtdp 0, 1
+; CHECK-P8-NEXT:    bc 12, 2, .LBB20_2
 ; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-P8-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
@@ -796,19 +788,16 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P8-NEXT:    xsmaddadp 3, 1, 0
 ; CHECK-P8-NEXT:    xsmuldp 0, 1, 4
-; CHECK-P8-NEXT:    xsmuldp 0, 0, 3
+; CHECK-P8-NEXT:    xsmuldp 1, 0, 3
+; CHECK-P8-NEXT:    blr
 ; CHECK-P8-NEXT:  .LBB20_2:
-; CHECK-P8-NEXT:    fmr 1, 0
+; CHECK-P8-NEXT:    xssqrtdp 1, 1
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: foo3_fmf:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI20_2@toc@ha
-; CHECK-P9-NEXT:    xsabsdp 0, 1
-; CHECK-P9-NEXT:    lfd 2, .LCPI20_2@toc@l(3)
-; CHECK-P9-NEXT:    xscmpudp 0, 0, 2
-; CHECK-P9-NEXT:    xxlxor 0, 0, 0
-; CHECK-P9-NEXT:    blt 0, .LBB20_2
+; CHECK-P9-NEXT:    xstsqrtdp 0, 1
+; CHECK-P9-NEXT:    bc 12, 2, .LBB20_2
 ; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xsrsqrtedp 0, 1
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI20_0@toc@ha
@@ -823,11 +812,96 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
 ; CHECK-P9-NEXT:    xsmaddadp 3, 1, 0
 ; CHECK-P9-NEXT:    xsmuldp 0, 1, 2
-; CHECK-P9-NEXT:    xsmuldp 0, 0, 3
-; CHECK-P9-NEXT:  .LBB20_2:
-; CHECK-P9-NEXT:    fmr 1, 0
+; CHECK-P9-NEXT:    xsmuldp 1, 0, 3
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn double @llvm.sqrt.f64(double %a)
+; CHECK-P9-NEXT:  .LBB20_2:
+; CHECK-P9-NEXT:    xssqrtdp 1, 1
+; CHECK-P9-NEXT:    blr
+  %r = call contract reassoc ninf afn double @llvm.sqrt.f64(double %a)
+  ret double %r
+}
+
+define double @foo3_fmf_crbits_off(double %a) #2 {
+; CHECK-P7-LABEL: foo3_fmf_crbits_off:
+; CHECK-P7:       # %bb.0:
+; CHECK-P7-NEXT:    fabs 0, 1
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI21_2@toc@ha
+; CHECK-P7-NEXT:    lfd 2, .LCPI21_2@toc@l(3)
+; CHECK-P7-NEXT:    fcmpu 0, 0, 2
+; CHECK-P7-NEXT:    blt 0, .LBB21_2
+; CHECK-P7-NEXT:  # %bb.1:
+; CHECK-P7-NEXT:    frsqrte 0, 1
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
+; CHECK-P7-NEXT:    addis 4, 2, .LCPI21_1@toc@ha
+; CHECK-P7-NEXT:    lfs 3, .LCPI21_0@toc@l(3)
+; CHECK-P7-NEXT:    lfs 4, .LCPI21_1@toc@l(4)
+; CHECK-P7-NEXT:    fmul 2, 1, 0
+; CHECK-P7-NEXT:    fmadd 2, 2, 0, 3
+; CHECK-P7-NEXT:    fmul 0, 0, 4
+; CHECK-P7-NEXT:    fmul 0, 0, 2
+; CHECK-P7-NEXT:    fmul 1, 1, 0
+; CHECK-P7-NEXT:    fmadd 0, 1, 0, 3
+; CHECK-P7-NEXT:    fmul 1, 1, 4
+; CHECK-P7-NEXT:    fmul 1, 1, 0
+; CHECK-P7-NEXT:    blr
+; CHECK-P7-NEXT:  .LBB21_2:
+; CHECK-P7-NEXT:    fsqrt 1, 1
+; CHECK-P7-NEXT:    blr
+;
+; CHECK-P8-LABEL: foo3_fmf_crbits_off:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    xsabsdp 0, 1
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI21_2@toc@ha
+; CHECK-P8-NEXT:    lfd 2, .LCPI21_2@toc@l(3)
+; CHECK-P8-NEXT:    xscmpudp 0, 0, 2
+; CHECK-P8-NEXT:    blt 0, .LBB21_2
+; CHECK-P8-NEXT:  # %bb.1:
+; CHECK-P8-NEXT:    xsrsqrtedp 0, 1
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
+; CHECK-P8-NEXT:    lfs 3, .LCPI21_0@toc@l(3)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI21_1@toc@ha
+; CHECK-P8-NEXT:    lfs 4, .LCPI21_1@toc@l(3)
+; CHECK-P8-NEXT:    fmr 5, 3
+; CHECK-P8-NEXT:    xsmuldp 2, 1, 0
+; CHECK-P8-NEXT:    xsmaddadp 5, 2, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 4
+; CHECK-P8-NEXT:    xsmuldp 0, 0, 5
+; CHECK-P8-NEXT:    xsmuldp 1, 1, 0
+; CHECK-P8-NEXT:    xsmaddadp 3, 1, 0
+; CHECK-P8-NEXT:    xsmuldp 0, 1, 4
+; CHECK-P8-NEXT:    xsmuldp 1, 0, 3
+; CHECK-P8-NEXT:    blr
+; CHECK-P8-NEXT:  .LBB21_2:
+; CHECK-P8-NEXT:    xssqrtdp 1, 1
+; CHECK-P8-NEXT:    blr
+;
+; CHECK-P9-LABEL: foo3_fmf_crbits_off:
+; CHECK-P9:       # %bb.0:
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI21_2@toc@ha
+; CHECK-P9-NEXT:    xsabsdp 0, 1
+; CHECK-P9-NEXT:    lfd 2, .LCPI21_2@toc@l(3)
+; CHECK-P9-NEXT:    xscmpudp 0, 0, 2
+; CHECK-P9-NEXT:    blt 0, .LBB21_2
+; CHECK-P9-NEXT:  # %bb.1:
+; CHECK-P9-NEXT:    xsrsqrtedp 0, 1
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI21_0@toc@ha
+; CHECK-P9-NEXT:    lfs 3, .LCPI21_0@toc@l(3)
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI21_1@toc@ha
+; CHECK-P9-NEXT:    xsmuldp 2, 1, 0
+; CHECK-P9-NEXT:    fmr 4, 3
+; CHECK-P9-NEXT:    xsmaddadp 4, 2, 0
+; CHECK-P9-NEXT:    lfs 2, .LCPI21_1@toc@l(3)
+; CHECK-P9-NEXT:    xsmuldp 0, 0, 2
+; CHECK-P9-NEXT:    xsmuldp 0, 0, 4
+; CHECK-P9-NEXT:    xsmuldp 1, 1, 0
+; CHECK-P9-NEXT:    xsmaddadp 3, 1, 0
+; CHECK-P9-NEXT:    xsmuldp 0, 1, 2
+; CHECK-P9-NEXT:    xsmuldp 1, 0, 3
+; CHECK-P9-NEXT:    blr
+; CHECK-P9-NEXT:  .LBB21_2:
+; CHECK-P9-NEXT:    xssqrtdp 1, 1
+; CHECK-P9-NEXT:    blr
+  %r = call contract reassoc ninf afn double @llvm.sqrt.f64(double %a)
   ret double %r
 }
 
@@ -854,70 +928,70 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-P7-LABEL: goo3_fmf:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    fabs 0, 1
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI22_2@toc@ha
-; CHECK-P7-NEXT:    lfs 2, .LCPI22_2@toc@l(3)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI23_2@toc@ha
+; CHECK-P7-NEXT:    lfs 2, .LCPI23_2@toc@l(3)
 ; CHECK-P7-NEXT:    fcmpu 0, 0, 2
-; CHECK-P7-NEXT:    blt 0, .LBB22_2
+; CHECK-P7-NEXT:    blt 0, .LBB23_2
 ; CHECK-P7-NEXT:  # %bb.1:
 ; CHECK-P7-NEXT:    frsqrtes 0, 1
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI22_0@toc@ha
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI22_1@toc@ha
-; CHECK-P7-NEXT:    lfs 2, .LCPI22_0@toc@l(3)
-; CHECK-P7-NEXT:    lfs 3, .LCPI22_1@toc@l(4)
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
+; CHECK-P7-NEXT:    addis 4, 2, .LCPI23_1@toc@ha
+; CHECK-P7-NEXT:    lfs 2, .LCPI23_0@toc@l(3)
+; CHECK-P7-NEXT:    lfs 3, .LCPI23_1@toc@l(4)
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    fmadds 0, 1, 0, 2
 ; CHECK-P7-NEXT:    fmuls 1, 1, 3
 ; CHECK-P7-NEXT:    fmuls 1, 1, 0
 ; CHECK-P7-NEXT:    blr
-; CHECK-P7-NEXT:  .LBB22_2:
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI22_3@toc@ha
-; CHECK-P7-NEXT:    lfs 1, .LCPI22_3@toc@l(3)
+; CHECK-P7-NEXT:  .LBB23_2:
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI23_3@toc@ha
+; CHECK-P7-NEXT:    lfs 1, .LCPI23_3@toc@l(3)
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: goo3_fmf:
 ; CHECK-P8:       # %bb.0:
 ; CHECK-P8-NEXT:    xsabsdp 0, 1
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI22_2@toc@ha
-; CHECK-P8-NEXT:    lfs 2, .LCPI22_2@toc@l(3)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_2@toc@ha
+; CHECK-P8-NEXT:    lfs 2, .LCPI23_2@toc@l(3)
 ; CHECK-P8-NEXT:    fcmpu 0, 0, 2
 ; CHECK-P8-NEXT:    xxlxor 0, 0, 0
-; CHECK-P8-NEXT:    blt 0, .LBB22_2
+; CHECK-P8-NEXT:    blt 0, .LBB23_2
 ; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xsrsqrtesp 0, 1
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI22_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI22_1@toc@ha
-; CHECK-P8-NEXT:    lfs 2, .LCPI22_0@toc@l(3)
-; CHECK-P8-NEXT:    lfs 3, .LCPI22_1@toc@l(4)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
+; CHECK-P8-NEXT:    lfs 2, .LCPI23_0@toc@l(3)
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
+; CHECK-P8-NEXT:    lfs 3, .LCPI23_1@toc@l(3)
 ; CHECK-P8-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P8-NEXT:    xsmaddasp 2, 1, 0
 ; CHECK-P8-NEXT:    xsmulsp 0, 1, 3
 ; CHECK-P8-NEXT:    xsmulsp 0, 0, 2
-; CHECK-P8-NEXT:  .LBB22_2:
+; CHECK-P8-NEXT:  .LBB23_2:
 ; CHECK-P8-NEXT:    fmr 1, 0
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: goo3_fmf:
 ; CHECK-P9:       # %bb.0:
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI22_2@toc@ha
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_2@toc@ha
 ; CHECK-P9-NEXT:    xsabsdp 0, 1
-; CHECK-P9-NEXT:    lfs 2, .LCPI22_2@toc@l(3)
+; CHECK-P9-NEXT:    lfs 2, .LCPI23_2@toc@l(3)
 ; CHECK-P9-NEXT:    fcmpu 0, 0, 2
 ; CHECK-P9-NEXT:    xxlxor 0, 0, 0
-; CHECK-P9-NEXT:    blt 0, .LBB22_2
+; CHECK-P9-NEXT:    blt 0, .LBB23_2
 ; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xsrsqrtesp 0, 1
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI22_0@toc@ha
-; CHECK-P9-NEXT:    lfs 2, .LCPI22_0@toc@l(3)
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI22_1@toc@ha
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_0@toc@ha
+; CHECK-P9-NEXT:    lfs 2, .LCPI23_0@toc@l(3)
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI23_1@toc@ha
 ; CHECK-P9-NEXT:    xsmulsp 1, 1, 0
 ; CHECK-P9-NEXT:    xsmaddasp 2, 1, 0
-; CHECK-P9-NEXT:    lfs 0, .LCPI22_1@toc@l(3)
+; CHECK-P9-NEXT:    lfs 0, .LCPI23_1@toc@l(3)
 ; CHECK-P9-NEXT:    xsmulsp 0, 1, 0
 ; CHECK-P9-NEXT:    xsmulsp 0, 0, 2
-; CHECK-P9-NEXT:  .LBB22_2:
+; CHECK-P9-NEXT:  .LBB23_2:
 ; CHECK-P9-NEXT:    fmr 1, 0
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn float @llvm.sqrt.f32(float %a)
+  %r = call contract reassoc ninf afn float @llvm.sqrt.f32(float %a)
   ret float %r
 }
 
@@ -944,12 +1018,12 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P7-LABEL: hoo3_fmf:
 ; CHECK-P7:       # %bb.0:
 ; CHECK-P7-NEXT:    vspltisw 3, -1
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI24_0@toc@ha
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
 ; CHECK-P7-NEXT:    vrsqrtefp 4, 2
-; CHECK-P7-NEXT:    addi 3, 3, .LCPI24_0@toc@l
+; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_0@toc@l
 ; CHECK-P7-NEXT:    lvx 0, 0, 3
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI24_1@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .LCPI24_1@toc@l
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI25_1@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_1@toc@l
 ; CHECK-P7-NEXT:    lvx 1, 0, 3
 ; CHECK-P7-NEXT:    vslw 3, 3, 3
 ; CHECK-P7-NEXT:    vmaddfp 5, 2, 4, 3
@@ -963,40 +1037,46 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ;
 ; CHECK-P8-LABEL: hoo3_fmf:
 ; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    xvtsqrtsp 0, 34
+; CHECK-P8-NEXT:    bc 12, 2, .LBB25_2
+; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xvrsqrtesp 0, 34
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI24_0@toc@ha
-; CHECK-P8-NEXT:    addis 4, 2, .LCPI24_1@toc@ha
-; CHECK-P8-NEXT:    addi 3, 3, .LCPI24_0@toc@l
-; CHECK-P8-NEXT:    lvx 3, 0, 3
-; CHECK-P8-NEXT:    addi 3, 4, .LCPI24_1@toc@l
-; CHECK-P8-NEXT:    lvx 4, 0, 3
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
+; CHECK-P8-NEXT:    addis 4, 2, .LCPI25_1@toc@ha
+; CHECK-P8-NEXT:    addi 3, 3, .LCPI25_0@toc@l
 ; CHECK-P8-NEXT:    xvmulsp 1, 34, 0
-; CHECK-P8-NEXT:    xvmaddasp 35, 1, 0
-; CHECK-P8-NEXT:    xvmulsp 0, 1, 36
-; CHECK-P8-NEXT:    xxlxor 1, 1, 1
-; CHECK-P8-NEXT:    xvcmpeqsp 2, 34, 1
-; CHECK-P8-NEXT:    xvmulsp 0, 0, 35
-; CHECK-P8-NEXT:    xxsel 34, 0, 1, 2
+; CHECK-P8-NEXT:    lvx 2, 0, 3
+; CHECK-P8-NEXT:    addi 3, 4, .LCPI25_1@toc@l
+; CHECK-P8-NEXT:    lvx 3, 0, 3
+; CHECK-P8-NEXT:    xvmaddasp 34, 1, 0
+; CHECK-P8-NEXT:    xvmulsp 0, 1, 35
+; CHECK-P8-NEXT:    xvmulsp 34, 0, 34
+; CHECK-P8-NEXT:    blr
+; CHECK-P8-NEXT:  .LBB25_2:
+; CHECK-P8-NEXT:    xvsqrtsp 34, 34
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: hoo3_fmf:
 ; CHECK-P9:       # %bb.0:
+; CHECK-P9-NEXT:    xvtsqrtsp 0, 34
+; CHECK-P9-NEXT:    bc 12, 2, .LBB25_2
+; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xvrsqrtesp 0, 34
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI24_0@toc@ha
-; CHECK-P9-NEXT:    addi 3, 3, .LCPI24_0@toc@l
-; CHECK-P9-NEXT:    lxvx 2, 0, 3
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI24_1@toc@ha
-; CHECK-P9-NEXT:    addi 3, 3, .LCPI24_1@toc@l
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI25_0@toc@ha
+; CHECK-P9-NEXT:    addi 3, 3, .LCPI25_0@toc@l
+; CHECK-P9-NEXT:    lxv 2, 0(3)
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI25_1@toc@ha
+; CHECK-P9-NEXT:    addi 3, 3, .LCPI25_1@toc@l
 ; CHECK-P9-NEXT:    xvmulsp 1, 34, 0
 ; CHECK-P9-NEXT:    xvmaddasp 2, 1, 0
-; CHECK-P9-NEXT:    lxvx 0, 0, 3
+; CHECK-P9-NEXT:    lxv 0, 0(3)
 ; CHECK-P9-NEXT:    xvmulsp 0, 1, 0
-; CHECK-P9-NEXT:    xxlxor 1, 1, 1
-; CHECK-P9-NEXT:    xvmulsp 0, 0, 2
-; CHECK-P9-NEXT:    xvcmpeqsp 2, 34, 1
-; CHECK-P9-NEXT:    xxsel 34, 0, 1, 2
+; CHECK-P9-NEXT:    xvmulsp 34, 0, 2
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
+; CHECK-P9-NEXT:  .LBB25_2:
+; CHECK-P9-NEXT:    xvsqrtsp 34, 34
+; CHECK-P9-NEXT:    blr
+  %r = call contract reassoc ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %a)
   ret <4 x float> %r
 }
 
@@ -1037,55 +1117,54 @@ define <4 x float> @hoo3_safe(<4 x float> %a) nounwind {
 define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P7-LABEL: hoo4_fmf:
 ; CHECK-P7:       # %bb.0:
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI26_2@toc@ha
-; CHECK-P7-NEXT:    fmr 3, 1
-; CHECK-P7-NEXT:    addis 4, 2, .LCPI26_1@toc@ha
-; CHECK-P7-NEXT:    lfs 0, .LCPI26_2@toc@l(3)
-; CHECK-P7-NEXT:    addis 3, 2, .LCPI26_0@toc@ha
-; CHECK-P7-NEXT:    lfs 4, .LCPI26_1@toc@l(4)
-; CHECK-P7-NEXT:    lfs 5, .LCPI26_0@toc@l(3)
-; CHECK-P7-NEXT:    fcmpu 0, 1, 0
-; CHECK-P7-NEXT:    fmr 1, 0
-; CHECK-P7-NEXT:    bne 0, .LBB26_3
+; CHECK-P7-NEXT:    ftsqrt 0, 1
+; CHECK-P7-NEXT:    addis 3, 2, .LCPI27_0@toc@ha
+; CHECK-P7-NEXT:    addis 4, 2, .LCPI27_1@toc@ha
+; CHECK-P7-NEXT:    lfs 3, .LCPI27_0@toc@l(3)
+; CHECK-P7-NEXT:    lfs 0, .LCPI27_1@toc@l(4)
+; CHECK-P7-NEXT:    bc 12, 2, .LBB27_3
 ; CHECK-P7-NEXT:  # %bb.1:
-; CHECK-P7-NEXT:    fcmpu 0, 2, 0
-; CHECK-P7-NEXT:    bne 0, .LBB26_4
-; CHECK-P7-NEXT:  .LBB26_2:
-; CHECK-P7-NEXT:    fmr 2, 0
-; CHECK-P7-NEXT:    blr
-; CHECK-P7-NEXT:  .LBB26_3:
-; CHECK-P7-NEXT:    frsqrte 1, 3
-; CHECK-P7-NEXT:    fmul 6, 3, 1
-; CHECK-P7-NEXT:    fmadd 6, 6, 1, 5
+; CHECK-P7-NEXT:    frsqrte 4, 1
+; CHECK-P7-NEXT:    fmul 5, 1, 4
+; CHECK-P7-NEXT:    fmadd 5, 5, 4, 3
+; CHECK-P7-NEXT:    fmul 4, 4, 0
+; CHECK-P7-NEXT:    fmul 4, 4, 5
 ; CHECK-P7-NEXT:    fmul 1, 1, 4
-; CHECK-P7-NEXT:    fmul 1, 1, 6
-; CHECK-P7-NEXT:    fmul 3, 3, 1
-; CHECK-P7-NEXT:    fmadd 1, 3, 1, 5
-; CHECK-P7-NEXT:    fmul 3, 3, 4
-; CHECK-P7-NEXT:    fmul 1, 3, 1
-; CHECK-P7-NEXT:    fcmpu 0, 2, 0
-; CHECK-P7-NEXT:    beq 0, .LBB26_2
-; CHECK-P7-NEXT:  .LBB26_4:
-; CHECK-P7-NEXT:    frsqrte 0, 2
-; CHECK-P7-NEXT:    fmul 3, 2, 0
-; CHECK-P7-NEXT:    fmadd 3, 3, 0, 5
-; CHECK-P7-NEXT:    fmul 0, 0, 4
-; CHECK-P7-NEXT:    fmul 0, 0, 3
-; CHECK-P7-NEXT:    fmul 2, 2, 0
-; CHECK-P7-NEXT:    fmadd 0, 2, 0, 5
+; CHECK-P7-NEXT:    fmadd 4, 1, 4, 3
+; CHECK-P7-NEXT:    fmul 1, 1, 0
+; CHECK-P7-NEXT:    fmul 1, 1, 4
+; CHECK-P7-NEXT:    ftsqrt 0, 2
+; CHECK-P7-NEXT:    bc 4, 2, .LBB27_4
+; CHECK-P7-NEXT:  .LBB27_2:
+; CHECK-P7-NEXT:    fsqrt 2, 2
+; CHECK-P7-NEXT:    blr
+; CHECK-P7-NEXT:  .LBB27_3:
+; CHECK-P7-NEXT:    fsqrt 1, 1
+; CHECK-P7-NEXT:    ftsqrt 0, 2
+; CHECK-P7-NEXT:    bc 12, 2, .LBB27_2
+; CHECK-P7-NEXT:  .LBB27_4:
+; CHECK-P7-NEXT:    frsqrte 4, 2
+; CHECK-P7-NEXT:    fmul 5, 2, 4
+; CHECK-P7-NEXT:    fmadd 5, 5, 4, 3
+; CHECK-P7-NEXT:    fmul 4, 4, 0
+; CHECK-P7-NEXT:    fmul 4, 4, 5
 ; CHECK-P7-NEXT:    fmul 2, 2, 4
+; CHECK-P7-NEXT:    fmadd 3, 2, 4, 3
 ; CHECK-P7-NEXT:    fmul 0, 2, 0
-; CHECK-P7-NEXT:    fmr 2, 0
+; CHECK-P7-NEXT:    fmul 2, 0, 3
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: hoo4_fmf:
 ; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    xvtsqrtdp 0, 34
+; CHECK-P8-NEXT:    bc 12, 2, .LBB27_2
+; CHECK-P8-NEXT:  # %bb.1:
 ; CHECK-P8-NEXT:    xvrsqrtedp 0, 34
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI26_0@toc@ha
-; CHECK-P8-NEXT:    addi 3, 3, .LCPI26_0@toc@l
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI27_0@toc@ha
+; CHECK-P8-NEXT:    addi 3, 3, .LCPI27_0@toc@l
 ; CHECK-P8-NEXT:    lxvd2x 1, 0, 3
-; CHECK-P8-NEXT:    addis 3, 2, .LCPI26_1@toc@ha
-; CHECK-P8-NEXT:    addi 3, 3, .LCPI26_1@toc@l
+; CHECK-P8-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
+; CHECK-P8-NEXT:    addi 3, 3, .LCPI27_1@toc@l
 ; CHECK-P8-NEXT:    lxvd2x 3, 0, 3
 ; CHECK-P8-NEXT:    xxswapd 1, 1
 ; CHECK-P8-NEXT:    xvmuldp 2, 34, 0
@@ -1097,35 +1176,38 @@ define <2 x double> @hoo4_fmf(<2 x double> %a) #1 {
 ; CHECK-P8-NEXT:    xvmuldp 2, 34, 0
 ; CHECK-P8-NEXT:    xvmaddadp 1, 2, 0
 ; CHECK-P8-NEXT:    xvmuldp 0, 2, 3
-; CHECK-P8-NEXT:    xxlxor 2, 2, 2
-; CHECK-P8-NEXT:    xvcmpeqdp 34, 34, 2
-; CHECK-P8-NEXT:    xvmuldp 0, 0, 1
-; CHECK-P8-NEXT:    xxsel 34, 0, 2, 34
+; CHECK-P8-NEXT:    xvmuldp 34, 0, 1
+; CHECK-P8-NEXT:    blr
+; CHECK-P8-NEXT:  .LBB27_2:
+; CHECK-P8-NEXT:    xvsqrtdp 34, 34
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: hoo4_fmf:
 ; CHECK-P9:       # %bb.0:
+; CHECK-P9-NEXT:    xvtsqrtdp 0, 34
+; CHECK-P9-NEXT:    bc 12, 2, .LBB27_2
+; CHECK-P9-NEXT:  # %bb.1:
 ; CHECK-P9-NEXT:    xvrsqrtedp 0, 34
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI26_0@toc@ha
-; CHECK-P9-NEXT:    addi 3, 3, .LCPI26_0@toc@l
-; CHECK-P9-NEXT:    lxvx 2, 0, 3
-; CHECK-P9-NEXT:    addis 3, 2, .LCPI26_1@toc@ha
-; CHECK-P9-NEXT:    addi 3, 3, .LCPI26_1@toc@l
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI27_0@toc@ha
+; CHECK-P9-NEXT:    addi 3, 3, .LCPI27_0@toc@l
+; CHECK-P9-NEXT:    lxv 2, 0(3)
+; CHECK-P9-NEXT:    addis 3, 2, .LCPI27_1@toc@ha
+; CHECK-P9-NEXT:    addi 3, 3, .LCPI27_1@toc@l
 ; CHECK-P9-NEXT:    xvmuldp 1, 34, 0
 ; CHECK-P9-NEXT:    xxlor 3, 2, 2
 ; CHECK-P9-NEXT:    xvmaddadp 3, 1, 0
-; CHECK-P9-NEXT:    lxvx 1, 0, 3
+; CHECK-P9-NEXT:    lxv 1, 0(3)
 ; CHECK-P9-NEXT:    xvmuldp 0, 0, 1
 ; CHECK-P9-NEXT:    xvmuldp 0, 0, 3
 ; CHECK-P9-NEXT:    xvmuldp 3, 34, 0
 ; CHECK-P9-NEXT:    xvmaddadp 2, 3, 0
 ; CHECK-P9-NEXT:    xvmuldp 0, 3, 1
-; CHECK-P9-NEXT:    xxlxor 1, 1, 1
-; CHECK-P9-NEXT:    xvcmpeqdp 34, 34, 1
-; CHECK-P9-NEXT:    xvmuldp 0, 0, 2
-; CHECK-P9-NEXT:    xxsel 34, 0, 1, 34
+; CHECK-P9-NEXT:    xvmuldp 34, 0, 2
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
+; CHECK-P9-NEXT:  .LBB27_2:
+; CHECK-P9-NEXT:    xvsqrtdp 34, 34
+; CHECK-P9-NEXT:    blr
+  %r = call contract reassoc ninf afn <2 x double> @llvm.sqrt.v2f64(<2 x double> %a)
   ret <2 x double> %r
 }
 
@@ -1155,7 +1237,7 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -112(1)
-; CHECK-P7-NEXT:    bl sqrtl
+; CHECK-P7-NEXT:    bl sqrtf128
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    addi 1, 1, 112
 ; CHECK-P7-NEXT:    ld 0, 16(1)
@@ -1167,7 +1249,7 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P8-NEXT:    mflr 0
 ; CHECK-P8-NEXT:    std 0, 16(1)
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
-; CHECK-P8-NEXT:    bl sqrtl
+; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi 1, 1, 32
 ; CHECK-P8-NEXT:    ld 0, 16(1)
@@ -1178,7 +1260,7 @@ define fp128 @hoo5_fmf(fp128 %a) #1 {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    xssqrtqp 2, 2
 ; CHECK-P9-NEXT:    blr
-  %r = call reassoc ninf afn fp128 @llvm.sqrt.f128(fp128 %a)
+  %r = call contract reassoc ninf afn fp128 @llvm.sqrt.f128(fp128 %a)
   ret fp128 %r
 }
 
@@ -1188,7 +1270,7 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    std 0, 16(1)
 ; CHECK-P7-NEXT:    stdu 1, -112(1)
-; CHECK-P7-NEXT:    bl sqrtl
+; CHECK-P7-NEXT:    bl sqrtf128
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    addi 1, 1, 112
 ; CHECK-P7-NEXT:    ld 0, 16(1)
@@ -1200,7 +1282,7 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 ; CHECK-P8-NEXT:    mflr 0
 ; CHECK-P8-NEXT:    std 0, 16(1)
 ; CHECK-P8-NEXT:    stdu 1, -32(1)
-; CHECK-P8-NEXT:    bl sqrtl
+; CHECK-P8-NEXT:    bl sqrtf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi 1, 1, 32
 ; CHECK-P8-NEXT:    ld 0, 16(1)
@@ -1217,3 +1299,4 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 
 attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
 attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind readnone "target-features"="-crbits" }

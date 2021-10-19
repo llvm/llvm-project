@@ -1,5 +1,3 @@
-; RUN: opt < %s -analyze -branch-prob | FileCheck %s
-; RUN: opt < %s -analyze -lazy-branch-prob | FileCheck %s
 ; RUN: opt < %s -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 declare void @g(i32)

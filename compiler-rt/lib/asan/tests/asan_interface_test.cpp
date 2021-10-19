@@ -90,7 +90,7 @@ TEST(AddressSanitizerInterface, GetCurrentAllocatedBytesTest) {
 TEST(AddressSanitizerInterface, GetHeapSizeTest) {
   // ASan allocator does not keep huge chunks in free list, but unmaps them.
   // The chunk should be greater than the quarantine size,
-  // otherwise it will be stuck in quarantine instead of being unmaped.
+  // otherwise it will be stuck in quarantine instead of being unmapped.
   static const size_t kLargeMallocSize = (1 << 28) + 1;  // 256M
   free(Ident(malloc(kLargeMallocSize)));  // Drain quarantine.
   size_t old_heap_size = __sanitizer_get_heap_size();
@@ -172,8 +172,7 @@ TEST(AddressSanitizerInterface, SimplePoisonMemoryRegionTest) {
   BAD_ACCESS(array, 40);
   BAD_ACCESS(array, 60);
   BAD_ACCESS(array, 79);
-  char value;
-  EXPECT_DEATH(value = Ident(array[40]), kUseAfterPoisonErrorMessage);
+  EXPECT_DEATH(Ident(array[40]), kUseAfterPoisonErrorMessage);
   __asan_unpoison_memory_region(array + 40, 40);
   // access previously poisoned memory.
   GOOD_ACCESS(array, 40);

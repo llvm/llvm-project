@@ -46,13 +46,14 @@ struct FileHeader {
 
 struct Limits {
   LimitFlags Flags;
-  yaml::Hex32 Initial;
+  yaml::Hex32 Minimum;
   yaml::Hex32 Maximum;
 };
 
 struct Table {
   TableType ElemType;
   Limits TableLimits;
+  uint32_t Index;
 };
 
 struct Export {
@@ -62,7 +63,9 @@ struct Export {
 };
 
 struct ElemSegment {
-  uint32_t TableIndex;
+  uint32_t Flags;
+  uint32_t TableNumber;
+  ValueType ElemKind;
   wasm::WasmInitExpr Offset;
   std::vector<uint32_t> Functions;
 };
@@ -74,12 +77,6 @@ struct Global {
   wasm::WasmInitExpr InitExpr;
 };
 
-struct Event {
-  uint32_t Index;
-  uint32_t Attribute;
-  uint32_t SigIndex;
-};
-
 struct Import {
   StringRef Module;
   StringRef Field;
@@ -89,7 +86,7 @@ struct Import {
     Global GlobalImport;
     Table TableImport;
     Limits Memory;
-    Event EventImport;
+    uint32_t TagIndex;
   };
 };
 
@@ -196,12 +193,23 @@ struct CustomSection : Section {
   yaml::BinaryRef Payload;
 };
 
+struct DylinkImportInfo {
+  StringRef Module;
+  StringRef Field;
+  SymbolFlags Flags;
+};
+
+struct DylinkExportInfo {
+  StringRef Name;
+  SymbolFlags Flags;
+};
+
 struct DylinkSection : CustomSection {
-  DylinkSection() : CustomSection("dylink") {}
+  DylinkSection() : CustomSection("dylink.0") {}
 
   static bool classof(const Section *S) {
     auto C = dyn_cast<CustomSection>(S);
-    return C && C->Name == "dylink";
+    return C && C->Name == "dylink.0";
   }
 
   uint32_t MemorySize;
@@ -209,6 +217,8 @@ struct DylinkSection : CustomSection {
   uint32_t TableSize;
   uint32_t TableAlignment;
   std::vector<StringRef> Needed;
+  std::vector<DylinkImportInfo> ImportInfo;
+  std::vector<DylinkExportInfo> ExportInfo;
 };
 
 struct NameSection : CustomSection {
@@ -220,6 +230,8 @@ struct NameSection : CustomSection {
   }
 
   std::vector<NameEntry> FunctionNames;
+  std::vector<NameEntry> GlobalNames;
+  std::vector<NameEntry> DataSegmentNames;
 };
 
 struct LinkingSection : CustomSection {
@@ -311,14 +323,14 @@ struct MemorySection : Section {
   std::vector<Limits> Memories;
 };
 
-struct EventSection : Section {
-  EventSection() : Section(wasm::WASM_SEC_EVENT) {}
+struct TagSection : Section {
+  TagSection() : Section(wasm::WASM_SEC_TAG) {}
 
   static bool classof(const Section *S) {
-    return S->Type == wasm::WASM_SEC_EVENT;
+    return S->Type == wasm::WASM_SEC_TAG;
   }
 
-  std::vector<Event> Events;
+  std::vector<uint32_t> TagTypes;
 };
 
 struct GlobalSection : Section {
@@ -420,7 +432,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Event)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkImportInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkExportInfo)
 
 namespace llvm {
 namespace yaml {
@@ -565,8 +578,12 @@ template <> struct ScalarEnumerationTraits<WasmYAML::RelocType> {
   static void enumeration(IO &IO, WasmYAML::RelocType &Kind);
 };
 
-template <> struct MappingTraits<WasmYAML::Event> {
-  static void mapping(IO &IO, WasmYAML::Event &Event);
+template <> struct MappingTraits<WasmYAML::DylinkImportInfo> {
+  static void mapping(IO &IO, WasmYAML::DylinkImportInfo &Info);
+};
+
+template <> struct MappingTraits<WasmYAML::DylinkExportInfo> {
+  static void mapping(IO &IO, WasmYAML::DylinkExportInfo &Info);
 };
 
 } // end namespace yaml

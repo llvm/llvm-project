@@ -1,4 +1,12 @@
-#import <Foundation/Foundation.h>
+#import <objc/NSObject.h>
+
+typedef struct {
+    unsigned char fieldOne : 1;
+    unsigned char fieldTwo : 1;
+    unsigned char fieldThree : 1;
+    unsigned char fieldFour : 1;
+    unsigned char fieldFive : 1;
+} UCBitFields;
 
 @interface HasBitfield : NSObject {
 @public
@@ -58,6 +66,10 @@ int main(int argc, const char * argv[]) {
     hb2->field1 = 10;
     hb2->field2 = 3;
     hb2->field3 = 4;
+
+    UCBitFields myField = {0};
+    myField.fieldTwo = 1;
+    myField.fieldFive = 1;
 
     return 0; // break here
 }

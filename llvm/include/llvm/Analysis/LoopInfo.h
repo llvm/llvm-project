@@ -155,7 +155,17 @@ public:
   iterator end() const { return getSubLoops().end(); }
   reverse_iterator rbegin() const { return getSubLoops().rbegin(); }
   reverse_iterator rend() const { return getSubLoops().rend(); }
-  bool empty() const { return getSubLoops().empty(); }
+
+  // LoopInfo does not detect irreducible control flow, just natural
+  // loops. That is, it is possible that there is cyclic control
+  // flow within the "innermost loop" or around the "outermost
+  // loop".
+
+  /// Return true if the loop does not contain any (natural) loops.
+  bool isInnermost() const { return getSubLoops().empty(); }
+  /// Return true if the loop does not have a parent (natural) loop
+  // (i.e. it is outermost, which is the same as top-level).
+  bool isOutermost() const { return getParentLoop() == nullptr; }
 
   /// Get a list of the basic blocks which make up this loop.
   ArrayRef<BlockT *> getBlocks() const {
@@ -291,6 +301,9 @@ public:
   /// If getUniqueExitBlocks would return exactly one block, return that block.
   /// Otherwise return null.
   BlockT *getUniqueExitBlock() const;
+
+  /// Return true if this loop does not have any exit blocks.
+  bool hasNoExitBlocks() const;
 
   /// Edge type.
   typedef std::pair<BlockT *, BlockT *> Edge;
@@ -466,7 +479,8 @@ public:
   bool isAnnotatedParallel() const { return false; }
 
   /// Print loop with all the BBs inside it.
-  void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
+  void print(raw_ostream &OS, bool Verbose = false, bool PrintNested = true,
+             unsigned Depth = 0) const;
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
@@ -513,7 +527,7 @@ extern template class LoopBase<BasicBlock, Loop>;
 
 /// Represents a single loop in the control flow graph.  Note that not all SCCs
 /// in the CFG are necessarily loops.
-class Loop : public LoopBase<BasicBlock, Loop> {
+class LLVM_EXTERNAL_VISIBILITY Loop : public LoopBase<BasicBlock, Loop> {
 public:
   /// A range representing the start and end location of a loop.
   class LocRange {
@@ -574,6 +588,9 @@ public:
   /// variable.
   ///
   PHINode *getCanonicalInductionVariable() const;
+
+  /// Get the latch condition instruction.
+  ICmpInst *getLatchCmpInst() const;
 
   /// Obtain the unique incoming and back edge. Return false if they are
   /// non-unique or the loop is dead; otherwise, return true.
@@ -830,6 +847,9 @@ public:
   /// unrolling pass is run more than once (which it generally is).
   void setLoopAlreadyUnrolled();
 
+  /// Add llvm.loop.mustprogress to this loop's loop id metadata.
+  void setLoopMustProgress();
+
   void dump() const;
   void dumpVerbose() const;
 
@@ -930,7 +950,7 @@ public:
   ///
   /// Note that because loops form a forest of trees, preorder is equivalent to
   /// reverse postorder.
-  SmallVector<LoopT *, 4> getLoopsInPreorder();
+  SmallVector<LoopT *, 4> getLoopsInPreorder() const;
 
   /// Return all of the loops in the function in preorder across the loop
   /// nests, with siblings in *reverse* program order.
@@ -940,7 +960,7 @@ public:
   ///
   /// Also note that this is *not* a reverse preorder. Only the siblings are in
   /// reverse program order.
-  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder();
+  SmallVector<LoopT *, 4> getLoopsInReverseSiblingPreorder() const;
 
   /// Return the inner most loop that BB lives in. If a basic block is in no
   /// loop (for example the entry node), null is returned.
@@ -974,7 +994,7 @@ public:
   LoopT *removeLoop(iterator I) {
     assert(I != end() && "Cannot remove end iterator!");
     LoopT *L = *I;
-    assert(!L->getParentLoop() && "Not a top-level loop!");
+    assert(L->isOutermost() && "Not a top-level loop!");
     TopLevelLoops.erase(TopLevelLoops.begin() + (I - begin()));
     return L;
   }
@@ -1002,7 +1022,7 @@ public:
 
   /// This adds the specified loop to the collection of top-level loops.
   void addTopLevelLoop(LoopT *New) {
-    assert(!New->getParentLoop() && "Loop already in subloop!");
+    assert(New->isOutermost() && "Loop already in subloop!");
     TopLevelLoops.push_back(New);
   }
 
@@ -1183,7 +1203,22 @@ public:
 
     return true;
   }
+
+  // Return true if a new use of V added in ExitBB would require an LCSSA PHI
+  // to be inserted at the begining of the block.  Note that V is assumed to
+  // dominate ExitBB, and ExitBB must be the exit block of some loop.  The
+  // IR is assumed to be in LCSSA form before the planned insertion.
+  bool wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                         const BasicBlock *ExitBB) const;
+
 };
+
+/// Enable verification of loop info.
+///
+/// The flag enables checks which are expensive and are disabled by default
+/// unless the `EXPENSIVE_CHECKS` macro is defined.  The `-verify-loop-info`
+/// flag allows the checks to be enabled selectively without re-compilation.
+extern bool VerifyLoopInfo;
 
 // Allow clients to walk the list of nested loops...
 template <> struct GraphTraits<const Loop *> {
@@ -1266,6 +1301,37 @@ MDNode *findOptionMDForLoopID(MDNode *LoopID, StringRef Name);
 /// following operands are the metadata's values. If no metadata with @p Name is
 /// found, return nullptr.
 MDNode *findOptionMDForLoop(const Loop *TheLoop, StringRef Name);
+
+Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                            StringRef Name);
+  
+/// Returns true if Name is applied to TheLoop and enabled.
+bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
+
+/// Find named metadata for a loop with an integer value.
+llvm::Optional<int>
+getOptionalIntLoopAttribute(const Loop *TheLoop, StringRef Name);
+
+/// Find named metadata for a loop with an integer value. Return \p Default if
+/// not set.
+int getIntLoopAttribute(const Loop *TheLoop, StringRef Name, int Default = 0);
+
+/// Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
+                                                      StringRef Name);
+
+/// Look for the loop attribute that requires progress within the loop.
+/// Note: Most consumers probably want "isMustProgress" which checks
+/// the containing function attribute too.
+bool hasMustProgress(const Loop *L);
+
+/// Return true if this loop can be assumed to make progress.  (i.e. can't
+/// be infinite without side effects without also being undefined)
+bool isMustProgress(const Loop *L);
 
 /// Return whether an MDNode might represent an access group.
 ///

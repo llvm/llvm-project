@@ -28,6 +28,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
+#include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -35,8 +36,6 @@
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
-
-class ClangModulesDeclVendor;
 
 OptionEnumValues GetDynamicValueTypes();
 
@@ -62,6 +61,12 @@ enum LoadDependentFiles {
   eLoadDependentsDefault,
   eLoadDependentsYes,
   eLoadDependentsNo,
+};
+
+enum ImportStdModule {
+  eImportStdModuleFalse,
+  eImportStdModuleFallback,
+  eImportStdModuleTrue,
 };
 
 class TargetExperimentalProperties : public Properties {
@@ -117,7 +122,16 @@ public:
 
   void SetRunArguments(const Args &args);
 
+  // Get the whole environment including the platform inherited environment and
+  // the target specific environment, excluding the unset environment variables.
   Environment GetEnvironment() const;
+  // Get the platform inherited environment, excluding the unset environment
+  // variables.
+  Environment GetInheritedEnvironment() const;
+  // Get the target specific environment only, without the platform inherited
+  // environment.
+  Environment GetTargetEnvironment() const;
+  // Set the target specific environment.
   void SetEnvironment(Environment env);
 
   bool GetSkipPrologue() const;
@@ -134,7 +148,7 @@ public:
 
   bool GetEnableAutoImportClangModules() const;
 
-  bool GetEnableImportStdModule() const;
+  ImportStdModule GetImportStdModule() const;
 
   bool GetEnableAutoApplyFixIts() const;
 
@@ -172,6 +186,8 @@ public:
 
   llvm::StringRef GetExpressionPrefixContents();
 
+  uint64_t GetExprErrorLimit() const;
+
   bool GetUseHexImmediates() const;
 
   bool GetUseFastStepping() const;
@@ -190,10 +206,6 @@ public:
 
   void SetUserSpecifiedTrapHandlerNames(const Args &args);
 
-  bool GetNonStopModeEnabled() const;
-
-  void SetNonStopModeEnabled(bool b);
-
   bool GetDisplayRuntimeSupportValues() const;
 
   void SetDisplayRuntimeSupportValues(bool b);
@@ -202,14 +214,14 @@ public:
 
   void SetDisplayRecognizedArguments(bool b);
 
-  const ProcessLaunchInfo &GetProcessLaunchInfo();
+  const ProcessLaunchInfo &GetProcessLaunchInfo() const;
 
   void SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
   void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
-  
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -218,6 +230,9 @@ public:
 
   void UpdateLaunchInfoFromProperties();
 
+  void SetDebugUtilityExpression(bool debug);
+
+  bool GetDebugUtilityExpression() const;
 
 private:
   // Callbacks for m_launch_info.
@@ -439,6 +454,7 @@ class Target : public std::enable_shared_from_this<Target>,
                public ModuleList::Notifier {
 public:
   friend class TargetList;
+  friend class Debugger;
 
   /// Broadcaster event bits definitions.
   enum {
@@ -508,6 +524,8 @@ public:
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
+  bool IsDummyTarget() const { return m_is_dummy_target; }
+
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
   ///
@@ -544,7 +562,7 @@ public:
 
   // Settings accessors
 
-  static const lldb::TargetPropertiesSP &GetGlobalProperties();
+  static TargetProperties &GetGlobalProperties();
 
   std::recursive_mutex &GetAPIMutex();
 
@@ -568,7 +586,8 @@ public:
   // used.
   const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener_sp,
                                        llvm::StringRef plugin_name,
-                                       const FileSpec *crash_file);
+                                       const FileSpec *crash_file,
+                                       bool can_connect);
 
   const lldb::ProcessSP &GetProcessSP() const;
 
@@ -989,11 +1008,12 @@ public:
   // read from const sections in object files, read from the target. This
   // version of ReadMemory will try and read memory from the process if the
   // process is alive. The order is:
-  // 1 - if (prefer_file_cache == true) then read from object file cache
-  // 2 - if there is a valid process, try and read from its memory
-  // 3 - if (prefer_file_cache == false) then read from object file cache
-  size_t ReadMemory(const Address &addr, bool prefer_file_cache, void *dst,
-                    size_t dst_len, Status &error,
+  // 1 - if (force_live_memory == false) and the address falls in a read-only
+  // section, then read from the file cache
+  // 2 - if there is a process, then read from memory
+  // 3 - if there is no process, then read from the file cache
+  size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                    Status &error, bool force_live_memory = false,
                     lldb::addr_t *load_addr_ptr = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
@@ -1002,18 +1022,19 @@ public:
   size_t ReadCStringFromMemory(const Address &addr, char *dst,
                                size_t dst_max_len, Status &result_error);
 
-  size_t ReadScalarIntegerFromMemory(const Address &addr,
-                                     bool prefer_file_cache, uint32_t byte_size,
+  size_t ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
                                      bool is_signed, Scalar &scalar,
-                                     Status &error);
+                                     Status &error,
+                                     bool force_live_memory = false);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
-                                         bool prefer_file_cache,
                                          size_t integer_byte_size,
-                                         uint64_t fail_value, Status &error);
+                                         uint64_t fail_value, Status &error,
+                                         bool force_live_memory = false);
 
-  bool ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
-                             Status &error, Address &pointer_addr);
+  bool ReadPointerFromMemory(const Address &addr, Status &error,
+                             Address &pointer_addr,
+                             bool force_live_memory = false);
 
   SectionLoadList &GetSectionLoadList() {
     return m_section_load_history.GetCurrentSectionLoadList();
@@ -1069,14 +1090,10 @@ public:
                                                const ValueList &arg_value_list,
                                                const char *name, Status &error);
 
-  // Creates a UtilityFunction for the given language, the rest of the
-  // parameters have the same meaning as for the UtilityFunction constructor.
-  // Returns a new-ed object which the caller owns.
-
-  UtilityFunction *GetUtilityFunctionForLanguage(const char *expr,
-                                                 lldb::LanguageType language,
-                                                 const char *name,
-                                                 Status &error);
+  /// Creates and installs a UtilityFunction for the given language.
+  llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateUtilityFunction(std::string expression, std::string name,
+                        lldb::LanguageType language, ExecutionContext &exe_ctx);
 
   // Install any files through the platform that need be to installed prior to
   // launching or attaching.
@@ -1101,6 +1118,32 @@ public:
                           lldb::addr_t load_addr);
 
   void ClearAllLoadedSections();
+
+  /// Set the \a Trace object containing processor trace information of this
+  /// target.
+  ///
+  /// \param[in] trace_sp
+  ///   The trace object.
+  void SetTrace(const lldb::TraceSP &trace_sp);
+
+  /// Get the \a Trace object containing processor trace information of this
+  /// target.
+  ///
+  /// \return
+  ///   The trace object. It might be undefined.
+  lldb::TraceSP GetTrace();
+
+  /// Create a \a Trace object for the current target using the using the
+  /// default supported tracing technology for this process.
+  ///
+  /// \return
+  ///     The new \a Trace or an \a llvm::Error if a \a Trace already exists or
+  ///     the trace couldn't be created.
+  llvm::Expected<lldb::TraceSP> CreateTrace();
+
+  /// If a \a Trace object is present, this returns it, otherwise a new Trace is
+  /// created with \a Trace::CreateTrace.
+  llvm::Expected<lldb::TraceSP> GetTraceOrCreate();
 
   // Since expressions results can persist beyond the lifetime of a process,
   // and the const expression results are available after a process is gone, we
@@ -1139,22 +1182,31 @@ public:
   class StopHook : public UserID {
   public:
     StopHook(const StopHook &rhs);
+    virtual ~StopHook() = default;
 
-    ~StopHook();
-
-    StringList *GetCommandPointer() { return &m_commands; }
-
-    const StringList &GetCommands() { return m_commands; }
+    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookResult : uint32_t {
+      KeepStopped = 0,
+      RequestContinue,
+      AlreadyContinued
+    };
 
     lldb::TargetSP &GetTarget() { return m_target_sp; }
-
-    void SetCommands(StringList &in_commands) { m_commands = in_commands; }
 
     // Set the specifier.  The stop hook will own the specifier, and is
     // responsible for deleting it when we're done.
     void SetSpecifier(SymbolContextSpecifier *specifier);
 
     SymbolContextSpecifier *GetSpecifier() { return m_specifier_sp.get(); }
+
+    bool ExecutionContextPasses(const ExecutionContext &exe_ctx);
+
+    // Called on stop, this gets passed the ExecutionContext for each "stop
+    // with a reason" thread.  It should add to the stream whatever text it
+    // wants to show the user, and return False to indicate it wants the target
+    // not to stop.
+    virtual StopHookResult HandleStop(ExecutionContext &exe_ctx,
+                                      lldb::StreamSP output) = 0;
 
     // Set the Thread Specifier.  The stop hook will own the thread specifier,
     // and is responsible for deleting it when we're done.
@@ -1173,28 +1225,84 @@ public:
     bool GetAutoContinue() const { return m_auto_continue; }
 
     void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
+    virtual void GetSubclassDescription(Stream *s,
+                                        lldb::DescriptionLevel level) const = 0;
 
-  private:
+  protected:
     lldb::TargetSP m_target_sp;
-    StringList m_commands;
     lldb::SymbolContextSpecifierSP m_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
 
+    StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
+  };
+
+  class StopHookCommandLine : public StopHook {
+  public:
+    virtual ~StopHookCommandLine() = default;
+
+    StringList &GetCommands() { return m_commands; }
+    void SetActionFromString(const std::string &strings);
+    void SetActionFromStrings(const std::vector<std::string> &strings);
+
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output_sp) override;
+    void GetSubclassDescription(Stream *s,
+                                lldb::DescriptionLevel level) const override;
+
+  private:
+    StringList m_commands;
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     // and fill it with commands, and SetSpecifier to set the specifier shared
     // pointer (can be null, that will match anything.)
-    StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
+    StopHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : StopHook(target_sp, uid) {}
     friend class Target;
   };
+
+  class StopHookScripted : public StopHook {
+  public:
+    virtual ~StopHookScripted() = default;
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output) override;
+
+    Status SetScriptCallback(std::string class_name,
+                             StructuredData::ObjectSP extra_args_sp);
+
+    void GetSubclassDescription(Stream *s,
+                                lldb::DescriptionLevel level) const override;
+
+  private:
+    std::string m_class_name;
+    /// This holds the dictionary of keys & values that can be used to
+    /// parametrize any given callback's behavior.
+    StructuredDataImpl *m_extra_args; // We own this structured data,
+                                      // but the SD itself manages the UP.
+    /// This holds the python callback object.
+    StructuredData::GenericSP m_implementation_sp;
+
+    /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
+    /// and fill it with commands, and SetSpecifier to set the specifier shared
+    /// pointer (can be null, that will match anything.)
+    StopHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : StopHook(target_sp, uid) {}
+    friend class Target;
+  };
+
   typedef std::shared_ptr<StopHook> StopHookSP;
 
-  // Add an empty stop hook to the Target's stop hook list, and returns a
-  // shared pointer to it in new_hook. Returns the id of the new hook.
-  StopHookSP CreateStopHook();
+  /// Add an empty stop hook to the Target's stop hook list, and returns a
+  /// shared pointer to it in new_hook. Returns the id of the new hook.
+  StopHookSP CreateStopHook(StopHook::StopHookKind kind);
 
-  void RunStopHooks();
+  /// If you tried to create a stop hook, and that failed, call this to
+  /// remove the stop hook, as it will also reset the stop hook counter.
+  void UndoCreateStopHook(lldb::user_id_t uid);
+
+  // Runs the stop hooks that have been registered for this target.
+  // Returns true if the stop hooks cause the target to resume.
+  bool RunStopHooks();
 
   size_t GetStopHookSize();
 
@@ -1237,8 +1345,6 @@ public:
   }
 
   SourceManager &GetSourceManager();
-
-  ClangModulesDeclVendor *GetClangModulesDeclVendor();
 
   // Methods.
   lldb::SearchFilterSP
@@ -1294,12 +1400,12 @@ protected:
   lldb::PlatformSP m_platform_sp; ///< The platform for this target.
   std::recursive_mutex m_mutex; ///< An API mutex that is used by the lldb::SB*
                                 /// classes make the SB interface thread safe
-  /// When the private state thread calls SB API's - usually because it is 
+  /// When the private state thread calls SB API's - usually because it is
   /// running OS plugin or Python ThreadPlan code - it should not block on the
   /// API mutex that is held by the code that kicked off the sequence of events
-  /// that led us to run the code.  We hand out this mutex instead when we 
+  /// that led us to run the code.  We hand out this mutex instead when we
   /// detect that code is running on the private state thread.
-  std::recursive_mutex m_private_mutex; 
+  std::recursive_mutex m_private_mutex;
   Arch m_arch;
   ModuleList m_images; ///< The list of images for this process (shared
                        /// libraries and anything dynamically loaded).
@@ -1323,17 +1429,20 @@ protected:
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
 
-  std::unique_ptr<ClangModulesDeclVendor> m_clang_modules_decl_vendor_up;
-
   lldb::SourceManagerUP m_source_manager_up;
 
   typedef std::map<lldb::user_id_t, StopHookSP> StopHookCollection;
   StopHookCollection m_stop_hooks;
   lldb::user_id_t m_stop_hook_next_id;
+  uint32_t m_latest_stop_hook_id; /// This records the last natural stop at
+                                  /// which we ran a stop-hook.
   bool m_valid;
-  bool m_suppress_stop_hooks;
+  bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
+  /// An optional \a lldb_private::Trace object containing processor trace
+  /// information of this target.
+  lldb::TraceSP m_trace_sp;
   /// Stores the frame recognizers of this target.
   lldb::StackFrameRecognizerManagerUP m_frame_recognizer_manager_up;
 
@@ -1375,7 +1484,7 @@ private:
   bool ProcessIsValid();
 
   // Copy breakpoints, stop hooks and so forth from the dummy target:
-  void PrimeFromDummyTarget(Target *dummy_target);
+  void PrimeFromDummyTarget(Target &target);
 
   void AddBreakpoint(lldb::BreakpointSP breakpoint_sp, bool internal);
 

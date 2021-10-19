@@ -6,9 +6,9 @@ struct S {
   short s;
 };
 
-// CHECK-LABEL: define void @_Z1fv(%struct.S* noalias sret align 2 %
+// CHECK-LABEL: define{{.*}} void @_Z1fv(%struct.S* noalias sret(%struct.S) align 2 %
 S f() { return S(); }
-// CHECK-LABEL: define void @_Z1f1S(%struct.S* %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1S(%struct.S* %0)
 void f(S) { }
 
 // Non-trivial dtors, should both be passed indirectly.
@@ -18,10 +18,10 @@ public:
   double c;
 };
 
-// CHECK-LABEL: define void @_Z1gv(%class.C* noalias sret align 4 %
+// CHECK-LABEL: define{{.*}} void @_Z1gv(%class.C* noalias sret(%class.C) align 4 %
 C g() { return C(); }
 
-// CHECK-LABEL: define void @_Z1f1C(%class.C* %0) 
+// CHECK-LABEL: define{{.*}} void @_Z1f1C(%class.C* %0)
 void f(C) { }
 
 
@@ -29,7 +29,7 @@ void f(C) { }
 
 // PR7058 - Missing byval on MI thunk definition.
 
-// CHECK-LABEL: define void @_ZThn4_N18BasicAliasAnalysis13getModRefInfoE8CallSite
+// CHECK-LABEL: define{{.*}} void @_ZThn4_N18BasicAliasAnalysis13getModRefInfoE8CallSite
 // ...
 // CHECK: %struct.CallSite* byval(%struct.CallSite) align 4 %CS)
 struct CallSite {
@@ -57,39 +57,39 @@ void BasicAliasAnalysis::getModRefInfo(CallSite CS) {
 //
 // PR7098.
 
-// CHECK-LABEL: define i64 @_Z2f0v()
+// CHECK-LABEL: define{{.*}} i64 @_Z2f0v()
 struct s0_0 { int x; };
 struct s0_1 : s0_0 { int* y; };
 s0_1 f0() { return s0_1(); }
 
-// CHECK-LABEL: define i32 @_Z2f1v()
+// CHECK-LABEL: define{{.*}} i32 @_Z2f1v()
 struct s1_0 { int x; };
 struct s1_1 : s1_0 { };
 s1_1 f1() { return s1_1(); }
 
-// CHECK-LABEL: define double @_Z2f2v()
+// CHECK-LABEL: define{{.*}} double @_Z2f2v()
 struct s2_0 { double x; };
 struct s2_1 : s2_0 { };
 s2_1 f2() { return s2_1(); }
 
-// CHECK-LABEL: define double @_Z2f3v()
+// CHECK-LABEL: define{{.*}} double @_Z2f3v()
 struct s3_0 { };
 struct s3_1 { double x; };
 struct s3_2 : s3_0, s3_1 { };
 s3_2 f3() { return s3_2(); }
 
-// CHECK-LABEL: define i64 @_Z2f4v()
+// CHECK-LABEL: define{{.*}} i64 @_Z2f4v()
 struct s4_0 { float x; };
 struct s4_1 { float x; };
 struct s4_2 : s4_0, s4_1 { };
 s4_2 f4() { return s4_2(); }
 
-// CHECK-LABEL: define i32* @_Z2f5v()
+// CHECK-LABEL: define{{.*}} i32* @_Z2f5v()
 struct s5 { s5(); int &x; };
 s5 f5() { return s5(); }
 
-// CHECK-LABEL: define i32 @_Z4f6_0M2s6i(i32 %a)
-// CHECK: define i64 @_Z4f6_1M2s6FivE({ i32, i32 }* byval({ i32, i32 }) align 4 %0)
+// CHECK-LABEL: define{{.*}} i32 @_Z4f6_0M2s6i(i32 %a)
+// CHECK: define{{.*}} i64 @_Z4f6_1M2s6FivE({ i32, i32 }* byval({ i32, i32 }) align 4 %0)
 // FIXME: It would be nice to avoid byval on the previous case.
 struct s6 {};
 typedef int s6::* s6_mdp;
@@ -97,19 +97,19 @@ typedef int (s6::*s6_mfp)();
 s6_mdp f6_0(s6_mdp a) { return a; }
 s6_mfp f6_1(s6_mfp a) { return a; }
 
-// CHECK-LABEL: define double @_Z2f7v()
+// CHECK-LABEL: define{{.*}} double @_Z2f7v()
 struct s7_0 { unsigned : 0; };
 struct s7_1 { double x; };
 struct s7 : s7_0, s7_1 { };
 s7 f7() { return s7(); }
 
-// CHECK-LABEL: define void @_Z2f8v(%struct.s8* noalias sret align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @_Z2f8v(%struct.s8* noalias sret(%struct.s8) align 4 %agg.result)
 struct s8_0 { };
 struct s8_1 { double x; };
 struct s8 { s8_0 a; s8_1 b; };
 s8 f8() { return s8(); }
 
-// CHECK-LABEL: define void @_Z2f9v(%struct.s9* noalias sret align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @_Z2f9v(%struct.s9* noalias sret(%struct.s9) align 4 %agg.result)
 struct s9_0 { unsigned : 0; };
 struct s9_1 { double x; };
 struct s9 { s9_0 a; s9_1 b; };

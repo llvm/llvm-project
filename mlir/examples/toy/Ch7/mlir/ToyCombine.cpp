@@ -23,11 +23,6 @@ namespace {
 #include "ToyCombine.inc"
 } // end anonymous namespace
 
-/// Fold simple cast operations that return the same type as the input.
-OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  return mlir::impl::foldCastOp(*this);
-}
-
 /// Fold constants.
 OpFoldResult ConstantOp::fold(ArrayRef<Attribute> operands) { return value(); }
 
@@ -42,7 +37,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
   if (!structAttr)
     return nullptr;
 
-  size_t elementIndex = index().getZExtValue();
+  size_t elementIndex = index();
   return structAttr[elementIndex];
 }
 
@@ -77,15 +72,15 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
 
 /// Register our patterns as "canonicalization" patterns on the TransposeOp so
 /// that they can be picked up by the Canonicalization framework.
-void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<SimplifyRedundantTranspose>(context);
+  results.add<SimplifyRedundantTranspose>(context);
 }
 
 /// Register our patterns as "canonicalization" patterns on the ReshapeOp so
 /// that they can be picked up by the Canonicalization framework.
-void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<ReshapeReshapeOptPattern, RedundantReshapeOptPattern,
-                 FoldConstantReshapeOptPattern>(context);
+  results.add<ReshapeReshapeOptPattern, RedundantReshapeOptPattern,
+              FoldConstantReshapeOptPattern>(context);
 }

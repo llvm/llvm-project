@@ -205,8 +205,7 @@ entry:
 
 ; FIXME: Should not have intermediate sgprs
 ; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
-; CHECK-DAG: s_mov_b32 s1, 0
-; CHECK-DAG: s_mov_b32 s0, 0x1e240
+; CHECK: s_mov_b64 s[0:1], 0x1e240
 ; CHECK: v_mov_b32_e32 v0, s0
 ; CHECK: v_mov_b32_e32 v1, s1
 ; CHECK: use v[0:1]
@@ -245,6 +244,7 @@ entry:
 ; FIXME: Should prodbably be masking high bits of load.
 ; CHECK-LABEL: {{^}}i1_input_phys_vgpr_x2:
 ; CHECK: buffer_load_ubyte v0
+; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: buffer_load_ubyte v1
 ; CHECK-NEXT: s_waitcnt
 ; CHECK-NEXT: ASMSTART

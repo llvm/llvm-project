@@ -20,13 +20,13 @@ namespace {
 
 // Determine if the given QualType is a nullary function or pointer to same.
 bool protoTypeHasNoParms(QualType QT) {
-  if (auto PT = QT->getAs<PointerType>()) {
+  if (const auto *PT = QT->getAs<PointerType>()) {
     QT = PT->getPointeeType();
   }
   if (auto *MPT = QT->getAs<MemberPointerType>()) {
     QT = MPT->getPointeeType();
   }
-  if (auto FP = QT->getAs<FunctionProtoType>()) {
+  if (const auto *FP = QT->getAs<FunctionProtoType>()) {
     return FP->getNumParams() == 0;
   }
   return false;

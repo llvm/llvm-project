@@ -53,8 +53,8 @@ class TestWithGmodulesDebugInfo(TestBase):
             testValue.GetError().Success(),
             "Test expression value invalid: %s" %
             (testValue.GetError().GetCString()))
-        self.assertTrue(
-            testValue.GetTypeName() == "IntContainer",
+        self.assertEqual(
+            testValue.GetTypeName(), "IntContainer",
             "Test expression type incorrect")
 
         memberValue = testValue.GetChildMemberWithName("storage")
@@ -62,8 +62,8 @@ class TestWithGmodulesDebugInfo(TestBase):
             memberValue.GetError().Success(),
             "Member value missing or invalid: %s" %
             (testValue.GetError().GetCString()))
-        self.assertTrue(
-            memberValue.GetTypeName() == "int",
+        self.assertEqual(
+            memberValue.GetTypeName(), "int",
             "Member type incorrect")
         self.assertEqual(
             42,
@@ -75,8 +75,8 @@ class TestWithGmodulesDebugInfo(TestBase):
             testValue.GetError().Success(),
             "Test expression value invalid: %s" %
             (testValue.GetError().GetCString()))
-        self.assertTrue(
-            testValue.GetTypeName() == "Foo::Bar",
+        self.assertEqual(
+            testValue.GetTypeName(), "Foo::Bar",
             "Test expression type incorrect")
 
         memberValue = testValue.GetChildMemberWithName("i")
@@ -84,8 +84,8 @@ class TestWithGmodulesDebugInfo(TestBase):
             memberValue.GetError().Success(),
             "Member value missing or invalid: %s" %
             (testValue.GetError().GetCString()))
-        self.assertTrue(
-            memberValue.GetTypeName() == "int",
+        self.assertEqual(
+            memberValue.GetTypeName(), "int",
             "Member type incorrect")
         self.assertEqual(
             123,

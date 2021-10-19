@@ -120,6 +120,11 @@ public:
   DIEInfo &getInfo(unsigned Idx) { return Info[Idx]; }
   const DIEInfo &getInfo(unsigned Idx) const { return Info[Idx]; }
 
+  DIEInfo &getInfo(const DWARFDie &Die) {
+    unsigned Idx = getOrigUnit().getDIEIndex(Die);
+    return Info[Idx];
+  }
+
   uint64_t getStartOffset() const { return StartOffset; }
   uint64_t getNextUnitOffset() const { return NextUnitOffset; }
   void setStartOffset(uint64_t DebugInfoSize) { StartOffset = DebugInfoSize; }
@@ -154,7 +159,7 @@ public:
   /// Compute the end offset for this unit. Must be called after the CU's DIEs
   /// have been cloned.  \returns the next unit offset (which is also the
   /// current debug_info section size).
-  uint64_t computeNextUnitOffset();
+  uint64_t computeNextUnitOffset(uint16_t DwarfVersion);
 
   /// Keep track of a forward reference to DIE \p Die in \p RefUnit by \p
   /// Attr. The attribute should be fixed up later to point to the absolute
@@ -232,21 +237,6 @@ public:
   const std::vector<AccelInfo> &getNamespaces() const { return Namespaces; }
   const std::vector<AccelInfo> &getObjC() const { return ObjC; }
 
-  /// Get the full path for file \a FileNum in the line table
-  StringRef getResolvedPath(unsigned FileNum) {
-    if (FileNum >= ResolvedPaths.size())
-      return StringRef();
-    return ResolvedPaths[FileNum];
-  }
-
-  /// Set the fully resolved path for the line-table's file \a FileNum
-  /// to \a Path.
-  void setResolvedPath(unsigned FileNum, StringRef Path) {
-    if (ResolvedPaths.size() <= FileNum)
-      ResolvedPaths.resize(FileNum + 1);
-    ResolvedPaths[FileNum] = Path;
-  }
-
   MCSymbol *getLabelBegin() { return LabelBegin; }
   void setLabelBegin(MCSymbol *S) { LabelBegin = S; }
 
@@ -304,12 +294,6 @@ private:
   std::vector<AccelInfo> Namespaces;
   std::vector<AccelInfo> ObjC;
   /// @}
-
-  /// Cached resolved paths from the line table.
-  /// Note, the StringRefs here point in to the intern (uniquing) string pool.
-  /// This means that a StringRef returned here doesn't need to then be uniqued
-  /// for the purposes of getting a unique address for each string.
-  std::vector<StringRef> ResolvedPaths;
 
   /// Is this unit subject to the ODR rule?
   bool HasODR;

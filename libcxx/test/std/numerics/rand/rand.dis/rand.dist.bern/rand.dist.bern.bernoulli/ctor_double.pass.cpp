@@ -10,12 +10,18 @@
 
 // class bernoulli_distribution
 
-// explicit bernoulli_distribution(double p = 0.5);
+// explicit bernoulli_distribution(double p = 0.5);          // before C++20
+// bernoulli_distribution() : bernoulli_distribution(0.5) {} // C++20
+// explicit bernoulli_distribution(double p);                // C++20
 
 #include <random>
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 11
+#include "make_implicit.h"
+#include "test_convertible.h"
+#endif
 
 int main(int, char**)
 {
@@ -35,5 +41,14 @@ int main(int, char**)
         assert(d.p() == 0.75);
     }
 
-  return 0;
+#if TEST_STD_VER >= 11
+    {
+      typedef std::bernoulli_distribution D;
+      static_assert(test_convertible<D>(), "");
+      assert(D(0.5) == make_implicit<D>());
+      static_assert(!test_convertible<D, double>(), "");
+    }
+#endif
+
+    return 0;
 }

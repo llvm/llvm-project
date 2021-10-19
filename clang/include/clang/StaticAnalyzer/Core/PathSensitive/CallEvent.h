@@ -225,7 +225,7 @@ public:
 
   /// Returns the expression whose value will be the result of this call.
   /// May be null.
-  const Expr *getOriginExpr() const {
+  virtual const Expr *getOriginExpr() const {
     return Origin.dyn_cast<const Expr *>();
   }
 
@@ -530,7 +530,7 @@ protected:
   }
 
 public:
-  virtual const CallExpr *getOriginExpr() const {
+  const CallExpr *getOriginExpr() const override {
     return cast<CallExpr>(AnyFunctionCall::getOriginExpr());
   }
 
@@ -543,9 +543,7 @@ public:
   }
 
   Kind getKind() const override { return CE_Function; }
-  virtual StringRef getKindAsString() const override {
-    return "SimpleFunctionCall";
-  }
+  StringRef getKindAsString() const override { return "SimpleFunctionCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_Function;
@@ -570,7 +568,7 @@ protected:
          RegionAndSymbolInvalidationTraits *ETraits) const override;
 
 public:
-  virtual const CallExpr *getOriginExpr() const {
+  const CallExpr *getOriginExpr() const override {
     return cast<CallExpr>(CallEvent::getOriginExpr());
   }
 
@@ -653,7 +651,7 @@ public:
   ArrayRef<ParmVarDecl *> parameters() const override;
 
   Kind getKind() const override { return CE_Block; }
-  virtual StringRef getKindAsString() const override { return "BlockCall"; }
+  StringRef getKindAsString() const override { return "BlockCall"; }
 
   static bool classof(const CallEvent *CA) { return CA->getKind() == CE_Block; }
 };
@@ -708,7 +706,7 @@ protected:
   void cloneTo(void *Dest) const override { new (Dest) CXXMemberCall(*this); }
 
 public:
-  virtual const CXXMemberCallExpr *getOriginExpr() const {
+  const CXXMemberCallExpr *getOriginExpr() const override {
     return cast<CXXMemberCallExpr>(CXXInstanceCall::getOriginExpr());
   }
 
@@ -727,7 +725,7 @@ public:
   RuntimeDefinition getRuntimeDefinition() const override;
 
   Kind getKind() const override { return CE_CXXMember; }
-  virtual StringRef getKindAsString() const override { return "CXXMemberCall"; }
+  StringRef getKindAsString() const override { return "CXXMemberCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMember;
@@ -752,7 +750,7 @@ protected:
   }
 
 public:
-  virtual const CXXOperatorCallExpr *getOriginExpr() const {
+  const CXXOperatorCallExpr *getOriginExpr() const override {
     return cast<CXXOperatorCallExpr>(CXXInstanceCall::getOriginExpr());
   }
 
@@ -767,9 +765,7 @@ public:
   const Expr *getCXXThisExpr() const override;
 
   Kind getKind() const override { return CE_CXXMemberOperator; }
-  virtual StringRef getKindAsString() const override {
-    return "CXXMemberOperatorCall";
-  }
+  StringRef getKindAsString() const override { return "CXXMemberOperatorCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXMemberOperator;
@@ -838,9 +834,7 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXDestructor; }
-  virtual StringRef getKindAsString() const override {
-    return "CXXDestructorCall";
-  }
+  StringRef getKindAsString() const override { return "CXXDestructorCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXDestructor;
@@ -898,7 +892,7 @@ protected:
   void cloneTo(void *Dest) const override { new (Dest) CXXConstructorCall(*this); }
 
 public:
-  virtual const CXXConstructExpr *getOriginExpr() const {
+  const CXXConstructExpr *getOriginExpr() const override {
     return cast<CXXConstructExpr>(AnyFunctionCall::getOriginExpr());
   }
 
@@ -913,9 +907,7 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXConstructor; }
-  virtual StringRef getKindAsString() const override {
-    return "CXXConstructorCall";
-  }
+  StringRef getKindAsString() const override { return "CXXConstructorCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_CXXConstructor;
@@ -959,7 +951,7 @@ protected:
   }
 
 public:
-  virtual const CXXInheritedCtorInitExpr *getOriginExpr() const {
+  const CXXInheritedCtorInitExpr *getOriginExpr() const override {
     return cast<CXXInheritedCtorInitExpr>(AnyFunctionCall::getOriginExpr());
   }
 
@@ -986,14 +978,14 @@ public:
     return getInheritingConstructor()->getArg(Index);
   }
 
-  virtual SVal getArgSVal(unsigned Index) const override {
+  SVal getArgSVal(unsigned Index) const override {
     return getState()->getSVal(
         getArgExpr(Index),
         getInheritingStackFrame()->getParent()->getStackFrame());
   }
 
   Kind getKind() const override { return CE_CXXInheritedConstructor; }
-  virtual StringRef getKindAsString() const override {
+  StringRef getKindAsString() const override {
     return "CXXInheritedConstructorCall";
   }
 
@@ -1017,7 +1009,7 @@ protected:
   void cloneTo(void *Dest) const override { new (Dest) CXXAllocatorCall(*this); }
 
 public:
-  virtual const CXXNewExpr *getOriginExpr() const {
+  const CXXNewExpr *getOriginExpr() const override {
     return cast<CXXNewExpr>(AnyFunctionCall::getOriginExpr());
   }
 
@@ -1058,9 +1050,7 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXAllocator; }
-  virtual StringRef getKindAsString() const override {
-    return "CXXAllocatorCall";
-  }
+  StringRef getKindAsString() const override { return "CXXAllocatorCall"; }
 
   static bool classof(const CallEvent *CE) {
     return CE->getKind() == CE_CXXAllocator;
@@ -1091,7 +1081,7 @@ protected:
   }
 
 public:
-  virtual const CXXDeleteExpr *getOriginExpr() const {
+  const CXXDeleteExpr *getOriginExpr() const override {
     return cast<CXXDeleteExpr>(AnyFunctionCall::getOriginExpr());
   }
 
@@ -1107,9 +1097,7 @@ public:
   }
 
   Kind getKind() const override { return CE_CXXDeallocator; }
-  virtual StringRef getKindAsString() const override {
-    return "CXXDeallocatorCall";
-  }
+  StringRef getKindAsString() const override { return "CXXDeallocatorCall"; }
 
   static bool classof(const CallEvent *CE) {
     return CE->getKind() == CE_CXXDeallocator;
@@ -1153,7 +1141,7 @@ protected:
                                         Selector Sel) const;
 
 public:
-  virtual const ObjCMessageExpr *getOriginExpr() const {
+  const ObjCMessageExpr *getOriginExpr() const override {
     return cast<ObjCMessageExpr>(CallEvent::getOriginExpr());
   }
 
@@ -1230,9 +1218,7 @@ public:
   ArrayRef<ParmVarDecl*> parameters() const override;
 
   Kind getKind() const override { return CE_ObjCMessage; }
-  virtual StringRef getKindAsString() const override {
-    return "ObjCMethodCall";
-  }
+  StringRef getKindAsString() const override { return "ObjCMethodCall"; }
 
   static bool classof(const CallEvent *CA) {
     return CA->getKind() == CE_ObjCMessage;
@@ -1251,9 +1237,7 @@ enum CallDescriptionFlags : int {
 /// arguments and the name of the function.
 class CallDescription {
   friend CallEvent;
-
-  mutable IdentifierInfo *II = nullptr;
-  mutable bool IsLookupDone = false;
+  mutable Optional<const IdentifierInfo *> II;
   // The list of the qualified names used to identify the specified CallEvent,
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<const char *> QualifiedName;
@@ -1287,7 +1271,9 @@ public:
                   Optional<size_t> RequiredParams = None)
       : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs),
         RequiredParams(readRequiredParams(RequiredArgs, RequiredParams)),
-        Flags(Flags) {}
+        Flags(Flags) {
+    assert(!QualifiedName.empty());
+  }
 
   /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
@@ -1297,6 +1283,17 @@ public:
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }
+
+  /// Get the qualified name parts in reversed order.
+  /// E.g. { "std", "vector", "data" } -> "vector", "std"
+  auto begin_qualified_name_parts() const {
+    return std::next(QualifiedName.rbegin());
+  }
+  auto end_qualified_name_parts() const { return QualifiedName.rend(); }
+
+  /// It's false, if and only if we expect a single identifier, such as
+  /// `getenv`. It's true for `std::swap`, or `my::detail::container::data`.
+  bool hasQualifiedNameParts() const { return QualifiedName.size() > 1; }
 };
 
 /// An immutable map from CallDescriptions to arbitrary data. Provides a unified

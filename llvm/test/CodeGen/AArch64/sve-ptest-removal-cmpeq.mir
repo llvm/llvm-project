@@ -1,0 +1,534 @@
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+
+# Test instruction sequences where PTEST is redundant and thus gets removed.
+---
+name:            cmpeq_nxv16i8
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; Here we check the expected sequence with subsequent tests
+    ; just asserting there is no PTEST instruction.
+    ;
+    ; CHECK-LABEL: name: cmpeq_nxv16i8
+    ; CHECK: %3:ppr = CMPEQ_PPzZZ_B %0, %1, %2, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %3:ppr = CMPEQ_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_nxv8i16
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_nxv8i16
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %4:ppr = CMPEQ_PPzZZ_H %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_nxv4i32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_nxv4i32
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %4:ppr = CMPEQ_PPzZZ_S %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_nxv2i64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_nxv2i64
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %4:ppr = CMPEQ_PPzZZ_D %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv16i8
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv16i8
+    ; CHECK-NOT: PTEST
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    %3:ppr = PTRUE_B 31
+    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv8i16
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv8i16
+    ; CHECK-NOT: PTEST
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_H %0, %1, 0, implicit-def dead $nzcv
+    PTEST_PP %0, %2, implicit-def $nzcv
+    %5:gpr32 = COPY $wzr
+    %6:gpr32 = CSINCWr %5, $wzr, 0, implicit $nzcv
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv4i32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv4i32
+    ; CHECK-NOT: PTEST
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_S %0, %1, 0, implicit-def dead $nzcv
+    PTEST_PP %0, %2, implicit-def $nzcv
+    %5:gpr32 = COPY $wzr
+    %6:gpr32 = CSINCWr %5, $wzr, 0, implicit $nzcv
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv2i64
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: ppr }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv2i64
+    ; CHECK-NOT: PTEST
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_D %0, %1, 0, implicit-def dead $nzcv
+    PTEST_PP %0, %2, implicit-def $nzcv
+    %5:gpr32 = COPY $wzr
+    %6:gpr32 = CSINCWr %5, $wzr, 0, implicit $nzcv
+    $w0 = COPY %6
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_wide_nxv16i8
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_wide_nxv16i8
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %3:ppr = CMPEQ_WIDE_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_wide_nxv8i16
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_wide_nxv8i16
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %4:ppr = CMPEQ_WIDE_PPzZZ_H %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_wide_nxv4i32
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr_3b }
+  - { id: 4, class: ppr }
+  - { id: 5, class: ppr }
+  - { id: 6, class: gpr32 }
+  - { id: 7, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_wide_nxv4i32
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %4:ppr = CMPEQ_WIDE_PPzZZ_S %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %0, %4, implicit-def $nzcv
+    %6:gpr32 = COPY $wzr
+    %7:gpr32 = CSINCWr %6, $wzr, 0, implicit $nzcv
+    $w0 = COPY %7
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv16i8_ptest_not_all_active
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv16i8_ptest_not_all_active
+    ; CHECK: %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    ; CHECK-NEXT: %3:ppr = PTRUE_B 0
+    ; CHECK-NEXT: PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    %3:ppr = PTRUE_B 0
+    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv16i8_ptest_of_halfs
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv16i8_ptest_of_halfs
+    ; CHECK: %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    ; CHECK-NEXT: %3:ppr = PTRUE_H 31
+    ; CHECK-NEXT: PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    %3:ppr = PTRUE_H 31
+    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_imm_nxv16i8_ptest_with_unique_pg
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: ppr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$p1', virtual-reg: '%3' }
+  - { reg: '$z0', virtual-reg: '%1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $p1, $z0
+
+    ; CHECK-LABEL: name: cmpeq_imm_nxv16i8_ptest_with_unique_pg
+    ; CHECK: %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    ; CHECK-NEXT: %3:ppr = COPY $p1
+    ; CHECK-NEXT: PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    ; CHECK-NEXT: %4:gpr32 = COPY $wzr
+    ; CHECK-NEXT: %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
+    %3:ppr = COPY $p1
+    PTEST_PP killed %3, killed %2, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmpeq_nxv16i8_ptest_with_matching_operands
+alignment:       2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr_3b }
+  - { id: 1, class: zpr }
+  - { id: 2, class: zpr }
+  - { id: 3, class: ppr }
+  - { id: 4, class: gpr32 }
+  - { id: 5, class: gpr32 }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$z0', virtual-reg: '%1' }
+  - { reg: '$z1', virtual-reg: '%2' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $p0, $z0, $z1
+
+    ; CHECK-LABEL: name: cmpeq_nxv16i8_ptest_with_matching_operands
+    ; CHECK-NOT: PTEST
+    %2:zpr = COPY $z1
+    %1:zpr = COPY $z0
+    %0:ppr_3b = COPY $p0
+    %3:ppr = CMPEQ_PPzZZ_B %0, %1, %2, implicit-def dead $nzcv
+    PTEST_PP %3, killed %3, implicit-def $nzcv
+    %4:gpr32 = COPY $wzr
+    %5:gpr32 = CSINCWr %4, $wzr, 0, implicit $nzcv
+    $w0 = COPY %5
+    RET_ReallyLR implicit $w0
+
+...

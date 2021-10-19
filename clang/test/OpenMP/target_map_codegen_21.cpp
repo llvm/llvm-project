@@ -120,7 +120,7 @@ STT<int> *std;
 // CK22-LABEL: explicit_maps_globals{{.*}}(
 int explicit_maps_globals(void){
   // Region 00
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -136,7 +136,7 @@ int explicit_maps_globals(void){
   { a+=1; }
 
   // Region 01
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -152,7 +152,7 @@ int explicit_maps_globals(void){
   { c[3]+=1; }
 
   // Region 02
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE02]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -168,7 +168,7 @@ int explicit_maps_globals(void){
   { d[3]+=1; }
 
   // Region 03
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE03]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE03]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -184,7 +184,7 @@ int explicit_maps_globals(void){
   { c[3]+=1; }
 
   // Region 04
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE04]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -202,7 +202,7 @@ int explicit_maps_globals(void){
   { d[3]+=1; }
 
   // Region 05
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE05]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE05]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE05]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE05]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -218,7 +218,7 @@ int explicit_maps_globals(void){
   { sa.fa+=1; }
 
   // Region 06
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE06]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE06]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE06]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE06]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -234,7 +234,7 @@ int explicit_maps_globals(void){
   { sc[3].fa+=1; }
 
   // Region 07
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE07]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE07]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE07]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE07]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -250,7 +250,7 @@ int explicit_maps_globals(void){
   { sd[3].fa+=1; }
 
   // Region 08
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE08]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE08]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE08]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE08]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -266,7 +266,7 @@ int explicit_maps_globals(void){
   { sc[3].fa+=1; }
 
   // Region 09
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE09]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE09]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE09]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE09]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -284,7 +284,7 @@ int explicit_maps_globals(void){
   { sd[3].fa+=1; }
 
   // Region 10
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE10]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE10]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE10]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE10]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -300,7 +300,7 @@ int explicit_maps_globals(void){
   { sta.fa+=1; }
 
   // Region 11
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE11]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE11]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE11]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE11]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -316,7 +316,7 @@ int explicit_maps_globals(void){
   { stc[3].fa+=1; }
 
   // Region 12
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE12]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE12]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE12]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE12]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -332,7 +332,7 @@ int explicit_maps_globals(void){
   { std[3].fa+=1; }
 
   // Region 13
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE13]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE13]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE13]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE13]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -348,7 +348,7 @@ int explicit_maps_globals(void){
   { stc[3].fa+=1; }
 
   // Region 14
-  // CK22-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE14]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE14]]{{.+}}, i8** null)
+  // CK22-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE14]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE14]]{{.+}}, i8** null, i8** null)
   // CK22-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK22-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 

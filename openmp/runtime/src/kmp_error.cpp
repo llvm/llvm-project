@@ -20,17 +20,23 @@
 #define MIN_STACK 100
 
 static char const *cons_text_c[] = {
-    "(none)", "\"parallel\"", "work-sharing", /* this is not called "for"
-                                                 because of lowering of
-                                                 "sections" pragmas */
+    "(none)",
+    "\"parallel\"",
+    "work-sharing", /* this is not called "for"
+                       because of lowering of
+                       "sections" pragmas */
     "\"ordered\" work-sharing", /* this is not called "for ordered" because of
                                    lowering of "sections" pragmas */
     "\"sections\"",
     "work-sharing", /* this is not called "single" because of lowering of
                        "sections" pragmas */
-    "\"critical\"", "\"ordered\"", /* in PARALLEL */
+    "\"critical\"",
+    "\"ordered\"", /* in PARALLEL */
     "\"ordered\"", /* in PDO */
-    "\"master\"", "\"reduce\"", "\"barrier\""};
+    "\"master\"",
+    "\"reduce\"",
+    "\"barrier\"",
+    "\"masked\""};
 
 #define get_src(ident) ((ident) == NULL ? NULL : (ident)->psource)
 
@@ -106,7 +112,7 @@ static char *__kmp_pragma(int ct, ident_t const *ident) {
 void __kmp_error_construct(kmp_i18n_id_t id, // Message identifier.
                            enum cons_type ct, // Construct type.
                            ident_t const *ident // Construct ident.
-                           ) {
+) {
   char *construct = __kmp_pragma(ct, ident);
   __kmp_fatal(__kmp_msg_format(id, construct), __kmp_msg_null);
   KMP_INTERNAL_FREE(construct);
@@ -116,7 +122,7 @@ void __kmp_error_construct2(kmp_i18n_id_t id, // Message identifier.
                             enum cons_type ct, // First construct type.
                             ident_t const *ident, // First construct ident.
                             struct cons_data const *cons // Second construct.
-                            ) {
+) {
   char *construct1 = __kmp_pragma(ct, ident);
   char *construct2 = __kmp_pragma(cons->type, cons->ident);
   __kmp_fatal(__kmp_msg_format(id, construct1, construct2), __kmp_msg_null);
@@ -311,7 +317,7 @@ __kmp_check_sync( int gtid, enum cons_type ct, ident_t const * ident, kmp_user_l
       /* we are in CRITICAL which is inside a CRITICAL construct of same name */
       __kmp_error_construct2(kmp_i18n_msg_CnsNestingSameName, ct, ident, &cons);
     }
-  } else if (ct == ct_master || ct == ct_reduce) {
+  } else if (ct == ct_master || ct == ct_masked || ct == ct_reduce) {
     if (p->w_top > p->p_top) {
       /* inside a WORKSHARING construct for this PARALLEL region */
       __kmp_error_construct2(kmp_i18n_msg_CnsInvalidNesting, ct, ident,

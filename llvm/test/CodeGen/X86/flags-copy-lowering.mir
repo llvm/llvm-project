@@ -250,10 +250,10 @@ body:             |
     MOV8mr $rsp, 1, $noreg, -16, $noreg, killed %5
   ; CHECK-NOT:     $eflags =
   ; CHECK-NOT:             = SET{{.*}}
-  ; CHECK:         MOV8mr {{.*}}, killed %[[A_REG]]
-  ; CHECK-NEXT:    MOV8mr {{.*}}, killed %[[B_REG]]
-  ; CHECK-NEXT:    MOV8mr {{.*}}, killed %[[E_REG]]
-  ; CHECK-NOT:     MOV8mr {{.*}}, killed %[[NE_REG]]
+  ; CHECK:         MOV8mr {{.*}}, %[[A_REG]]
+  ; CHECK-NEXT:    MOV8mr {{.*}}, %[[B_REG]]
+  ; CHECK-NEXT:    MOV8mr {{.*}}, %[[E_REG]]
+  ; CHECK-NOT:     MOV8mr {{.*}}, %[[NE_REG]]
 
     RET 0
 

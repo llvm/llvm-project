@@ -389,6 +389,7 @@ bool ABIMacOSX_i386::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
   row->SetOffset(0);
+  row->SetUnspecifiedRegistersAreUndefined(true);
 
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
@@ -464,11 +465,3 @@ lldb_private::ConstString ABIMacOSX_i386::GetPluginNameStatic() {
   static ConstString g_short_name("abi.macosx-i386");
   return g_short_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABIMacOSX_i386::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABIMacOSX_i386::GetPluginVersion() { return 1; }

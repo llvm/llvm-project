@@ -576,9 +576,11 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
     }
   } else if (MO.isImm()) {
     return static_cast<unsigned>(MO.getImm());
-  } else if (MO.isFPImm()) {
-    return static_cast<unsigned>(APFloat(MO.getFPImm())
-                     .bitcastToAPInt().getHiBits(32).getLimitedValue());
+  } else if (MO.isDFPImm()) {
+    return static_cast<unsigned>(APFloat(bit_cast<double>(MO.getDFPImm()))
+                                     .bitcastToAPInt()
+                                     .getHiBits(32)
+                                     .getLimitedValue());
   }
 
   llvm_unreachable("Unable to encode MCOperand!");
@@ -975,41 +977,45 @@ getAddrModeImm12OpValue(const MCInst &MI, unsigned OpIdx,
   // {17-13} = reg
   // {12}    = (U)nsigned (add == '1', sub == '0')
   // {11-0}  = imm12
-  unsigned Reg, Imm12;
+  unsigned Reg = 0, Imm12 = 0;
   bool isAdd = true;
   // If The first operand isn't a register, we have a label reference.
   const MCOperand &MO = MI.getOperand(OpIdx);
-  if (!MO.isReg()) {
-    Reg = CTX.getRegisterInfo()->getEncodingValue(ARM::PC);   // Rn is PC.
-    Imm12 = 0;
-
-    if (MO.isExpr()) {
-      const MCExpr *Expr = MO.getExpr();
-      isAdd = false ; // 'U' bit is set as part of the fixup.
-
-      MCFixupKind Kind;
-      if (isThumb2(STI))
-        Kind = MCFixupKind(ARM::fixup_t2_ldst_pcrel_12);
-      else
-        Kind = MCFixupKind(ARM::fixup_arm_ldst_pcrel_12);
-      Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
-
-      ++MCNumCPRelocations;
-    } else {
-      Reg = ARM::PC;
-      int32_t Offset = MO.getImm();
-      if (Offset == INT32_MIN) {
-        Offset = 0;
-        isAdd = false;
-      } else if (Offset < 0) {
-        Offset *= -1;
-        isAdd = false;
-      }
-      Imm12 = Offset;
+  if (MO.isReg()) {
+    const MCOperand &MO1 = MI.getOperand(OpIdx + 1);
+    if (MO1.isImm()) {
+      isAdd = EncodeAddrModeOpValues(MI, OpIdx, Reg, Imm12, Fixups, STI);
+    } else if (MO1.isExpr()) {
+      assert(!isThumb(STI) && !isThumb2(STI) &&
+             "Thumb mode requires different encoding");
+      Reg = CTX.getRegisterInfo()->getEncodingValue(MO.getReg());
+      isAdd = false; // 'U' bit is set as part of the fixup.
+      MCFixupKind Kind = MCFixupKind(ARM::fixup_arm_ldst_abs_12);
+      Fixups.push_back(MCFixup::create(0, MO1.getExpr(), Kind, MI.getLoc()));
     }
-  } else
-    isAdd = EncodeAddrModeOpValues(MI, OpIdx, Reg, Imm12, Fixups, STI);
+  } else if (MO.isExpr()) {
+    Reg = CTX.getRegisterInfo()->getEncodingValue(ARM::PC); // Rn is PC.
+    isAdd = false; // 'U' bit is set as part of the fixup.
+    MCFixupKind Kind;
+    if (isThumb2(STI))
+      Kind = MCFixupKind(ARM::fixup_t2_ldst_pcrel_12);
+    else
+      Kind = MCFixupKind(ARM::fixup_arm_ldst_pcrel_12);
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
 
+    ++MCNumCPRelocations;
+  } else {
+    Reg = ARM::PC;
+    int32_t Offset = MO.getImm();
+    if (Offset == INT32_MIN) {
+      Offset = 0;
+      isAdd = false;
+    } else if (Offset < 0) {
+      Offset *= -1;
+      isAdd = false;
+    }
+    Imm12 = Offset;
+  }
   uint32_t Binary = Imm12 & 0xfff;
   // Immediate is always encoded as positive. The 'U' bit controls add vs sub.
   if (isAdd)
@@ -1132,6 +1138,7 @@ getT2AddrModeImm8s4OpValue(const MCInst &MI, unsigned OpIdx,
   // representation for the complex operand in the .td file. This isn't just
   // style, unfortunately. As-is, we can't represent the distinct encoding
   // for #-0.
+  assert(((Imm8 & 0x3) == 0) && "Not a valid immediate!");
   uint32_t Binary = (Imm8 >> 2) & 0xff;
   // Immediate is always encoded as positive. The 'U' bit controls add vs sub.
   if (isAdd)
@@ -1730,11 +1737,11 @@ getRegisterListOpValue(const MCInst &MI, unsigned Op,
       Binary |= NumRegs * 2;
   } else {
     const MCRegisterInfo &MRI = *CTX.getRegisterInfo();
-    assert(std::is_sorted(MI.begin() + Op, MI.end(),
-                          [&](const MCOperand &LHS, const MCOperand &RHS) {
-                            return MRI.getEncodingValue(LHS.getReg()) <
+    assert(is_sorted(drop_begin(MI, Op),
+                     [&](const MCOperand &LHS, const MCOperand &RHS) {
+                       return MRI.getEncodingValue(LHS.getReg()) <
                               MRI.getEncodingValue(RHS.getReg());
-                          }));
+                     }));
     for (unsigned I = Op, E = MI.getNumOperands(); I < E; ++I) {
       unsigned RegNo = MRI.getEncodingValue(MI.getOperand(I).getReg());
       Binary |= 1 << RegNo;

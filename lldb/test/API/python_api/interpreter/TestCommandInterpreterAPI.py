@@ -20,7 +20,6 @@ class CommandInterpreterAPICase(TestBase):
         # Find the line number to break on inside main.cpp.
         self.line = line_number('main.c', 'Hello world.')
 
-    @add_test_categories(['pyapi'])
     def test_with_process_launch_api(self):
         """Test the SBCommandInterpreter APIs."""
         self.build()
@@ -74,7 +73,6 @@ class CommandInterpreterAPICase(TestBase):
         if self.TraceOn():
             lldbutil.print_stacktraces(process)
 
-    @add_test_categories(['pyapi'])
     def test_command_output(self):
         """Test command output handling."""
         ci = self.dbg.GetCommandInterpreter()

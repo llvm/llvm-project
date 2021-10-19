@@ -7,4 +7,4 @@
 int __attribute((annotate("foo"))) foo(void) { return 0; }
 
 // CHECK: private unnamed_addr constant [4 x i8] c"t.c\00"
-// CHECK: @llvm.global.annotations = {{.*}}, i32 1 }
+// CHECK: @llvm.global.annotations = {{.*}}, i32 1, i8* null }

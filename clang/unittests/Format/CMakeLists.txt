@@ -9,24 +9,27 @@ add_clang_unittest(FormatTests
   FormatTestCSharp.cpp
   FormatTestJS.cpp
   FormatTestJava.cpp
+  FormatTestJson.cpp
   FormatTestObjC.cpp
   FormatTestProto.cpp
   FormatTestRawStrings.cpp
   FormatTestSelective.cpp
   FormatTestTableGen.cpp
   FormatTestTextProto.cpp
+  MacroExpanderTest.cpp
   NamespaceEndCommentsFixerTest.cpp
+  QualifierFixerTest.cpp
   SortImportsTestJS.cpp
   SortImportsTestJava.cpp
   SortIncludesTest.cpp
   UsingDeclarationsSorterTest.cpp
+  TokenAnnotatorTest.cpp
   )
 
 clang_target_link_libraries(FormatTests
   PRIVATE
   clangBasic
   clangFormat
-  clangFrontend
   clangRewrite
   clangToolingCore
   )

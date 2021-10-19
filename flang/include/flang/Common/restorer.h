@@ -22,8 +22,15 @@
 namespace Fortran::common {
 template <typename A> class Restorer {
 public:
-  explicit Restorer(A &p) : p_{p}, original_{std::move(p)} {}
+  explicit Restorer(A &p, A original) : p_{p}, original_{std::move(original)} {}
   ~Restorer() { p_ = std::move(original_); }
+
+  // Inhibit any recreation of this restorer that would result in two restorers
+  // trying to restore the same reference.
+  Restorer(const Restorer &) = delete;
+  Restorer(Restorer &&that) = delete;
+  const Restorer &operator=(const Restorer &) = delete;
+  const Restorer &operator=(Restorer &&that) = delete;
 
 private:
   A &p_;
@@ -32,15 +39,15 @@ private:
 
 template <typename A, typename B>
 common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, B &&from) {
-  Restorer<A> result{to};
+  A original{std::move(to)};
   to = std::move(from);
-  return result;
+  return Restorer<A>{to, std::move(original)};
 }
 template <typename A, typename B>
 common::IfNoLvalue<Restorer<A>, B> ScopedSet(A &to, const B &from) {
-  Restorer<A> result{to};
+  A original{std::move(to)};
   to = from;
-  return result;
+  return Restorer<A>{to, std::move(original)};
 }
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_RESTORER_H_

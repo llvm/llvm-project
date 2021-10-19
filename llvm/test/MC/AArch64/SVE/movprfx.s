@@ -1,5 +1,7 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sve < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+streaming-sve < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
@@ -38,7 +40,7 @@
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 hlt #1
@@ -48,7 +50,7 @@ hlt #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 20 d0 04 <unknown>
 
 hlt #1
@@ -58,7 +60,7 @@ hlt #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 brk #1
@@ -68,7 +70,7 @@ brk #1
 movprfx z0.d, p0/z, z1.d
 // CHECK-INST: movprfx  z0.d, p0/z, z1.d
 // CHECK-ENCODING: [0x20,0x20,0xd0,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 20 d0 04 <unknown>
 
 brk #1
@@ -81,17 +83,17 @@ brk #1
 movprfx z0, z1
 // CHECK-INST: movprfx  z0, z1
 // CHECK-ENCODING: [0x20,0xbc,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 bc 20 04 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 00 c0 04 <unknown>
 
 add z0.d, p0/m, z0.d, z1.d
 // CHECK-INST: add      z0.d, p0/m, z0.d, z1.d
 // CHECK-ENCODING: [0x20,0x00,0xc0,0x04]
-// CHECK-ERROR: instruction requires: sve
+// CHECK-ERROR: instruction requires: streaming-sve or sve
 // CHECK-UNKNOWN: 20 00 c0 04 <unknown>

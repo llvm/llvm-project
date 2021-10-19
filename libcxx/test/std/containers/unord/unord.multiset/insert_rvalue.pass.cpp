@@ -110,7 +110,7 @@ int main(int, char**)
         assert(c.size() == 4);
         assert(*r == 5);
     }
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }

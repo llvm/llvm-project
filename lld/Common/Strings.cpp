@@ -21,12 +21,11 @@ using namespace lld;
 
 // Returns the demangled C++ symbol name for name.
 std::string lld::demangleItanium(StringRef name) {
-  // itaniumDemangle can be used to demangle strings other than symbol
-  // names which do not necessarily start with "_Z". Name can be
-  // either a C or C++ symbol. Don't call demangle if the name
-  // does not look like a C++ symbol name to avoid getting unexpected
-  // result for a C symbol that happens to match a mangled type name.
-  if (!name.startswith("_Z"))
+  // demangleItanium() can be called for all symbols. Only demangle C++ symbols,
+  // to avoid getting unexpected result for a C symbol that happens to match a
+  // mangled type name such as "Pi" (which would demangle to "int*").
+  if (!name.startswith("_Z") && !name.startswith("__Z") &&
+      !name.startswith("___Z") && !name.startswith("____Z"))
     return std::string(name);
 
   return demangle(std::string(name));
@@ -77,9 +76,8 @@ std::vector<uint8_t> lld::parseHex(StringRef s) {
 
 // Returns true if S is valid as a C language identifier.
 bool lld::isValidCIdentifier(StringRef s) {
-  return !s.empty() && (isAlpha(s[0]) || s[0] == '_') &&
-         std::all_of(s.begin() + 1, s.end(),
-                     [](char c) { return c == '_' || isAlnum(c); });
+  return !s.empty() && !isDigit(s[0]) &&
+         llvm::all_of(s, [](char c) { return isAlnum(c) || c == '_'; });
 }
 
 // Write the contents of the a buffer to a file

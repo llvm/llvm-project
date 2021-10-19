@@ -96,11 +96,11 @@ OPTIONS:
 OPERATIONS:
   d - delete [files] from the archive
   m - move [files] in the archive
-  p - print [files] found in the archive
+  p - print contents of [files] found in the archive
   q - quick append [files] to the archive
   r - replace or insert [files] into the archive
   s - act as ranlib
-  t - display contents of archive
+  t - display list of files in archive
   x - extract [files] from the archive
 
 MODIFIERS:
@@ -125,10 +125,10 @@ MODIFIERS:
   [V] - display the version and exit
 )";
 
-void printHelpMessage() {
-  if (Stem.contains_lower("ranlib"))
+static void printHelpMessage() {
+  if (Stem.contains_insensitive("ranlib"))
     outs() << RanlibHelp;
-  else if (Stem.contains_lower("ar"))
+  else if (Stem.contains_insensitive("ar"))
     outs() << ArHelp;
 }
 
@@ -136,14 +136,14 @@ static unsigned MRILineNumber;
 static bool ParsingMRIScript;
 
 // Show the error plus the usage message, and exit.
-LLVM_ATTRIBUTE_NORETURN static void badUsage(Twine Error) {
+[[noreturn]] static void badUsage(Twine Error) {
   WithColor::error(errs(), ToolName) << Error << "\n";
   printHelpMessage();
   exit(1);
 }
 
 // Show the error message and exit.
-LLVM_ATTRIBUTE_NORETURN static void fail(Twine Error) {
+[[noreturn]] static void fail(Twine Error) {
   if (ParsingMRIScript) {
     WithColor::error(errs(), ToolName)
         << "script line " << MRILineNumber << ": " << Error << "\n";
@@ -270,7 +270,8 @@ static void getArchive() {
 }
 
 static object::Archive &readLibrary(const Twine &Library) {
-  auto BufOrErr = MemoryBuffer::getFile(Library, -1, false);
+  auto BufOrErr = MemoryBuffer::getFile(Library, /*IsText=*/false,
+                                        /*RequiresNullTerminator=*/false);
   failIfError(BufOrErr.getError(), "could not open library " + Library);
   ArchiveBuffers.push_back(std::move(*BufOrErr));
   auto LibOrErr =
@@ -995,8 +996,8 @@ static void performOperation(ArchiveOperation Operation,
 static int performOperation(ArchiveOperation Operation,
                             std::vector<NewArchiveMember> *NewMembers) {
   // Create or open the archive object.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFile(ArchiveName, -1, false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
+      ArchiveName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   std::error_code EC = Buf.getError();
   if (EC && EC != errc::no_such_file_or_directory)
     fail("unable to open '" + ArchiveName + "': " + EC.message());
@@ -1275,7 +1276,7 @@ int main(int argc, char **argv) {
     // Lib.exe -> lib (see D44808, MSBuild runs Lib.exe)
     // dlltool.exe -> dlltool
     // arm-pokymllib32-linux-gnueabi-llvm-ar-10 -> ar
-    auto I = Stem.rfind_lower(Tool);
+    auto I = Stem.rfind_insensitive(Tool);
     return I != StringRef::npos &&
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };

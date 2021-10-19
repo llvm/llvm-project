@@ -41,9 +41,9 @@ AST_MATCHER(QualType, isEnableIf) {
   }
   if (!BaseType)
     return false;
-  if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>())) {
+  if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>()))
     return true; // Case: enable_if_t< >.
-  } else if (const auto *Elaborated = BaseType->getAs<ElaboratedType>()) {
+  if (const auto *Elaborated = BaseType->getAs<ElaboratedType>()) {
     if (const auto *Qualifier = Elaborated->getQualifier()->getAsType()) {
       if (CheckTemplate(Qualifier->getAs<TemplateSpecializationType>())) {
         return true; // Case: enable_if< >::type.
@@ -68,17 +68,23 @@ void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
                            unless(references(isConstQualified())))))
           .bind("parm-var");
 
-  DeclarationMatcher findOverload =
+  DeclarationMatcher FindOverload =
       cxxConstructorDecl(
           hasParameter(0, ForwardingRefParm),
           unless(hasAnyParameter(
               // No warning: enable_if as constructor parameter.
               parmVarDecl(hasType(isEnableIf())))),
-          unless(hasParent(functionTemplateDecl(has(templateTypeParmDecl(
+          unless(hasParent(functionTemplateDecl(anyOf(
               // No warning: enable_if as type parameter.
-              hasDefaultArgument(isEnableIf())))))))
+              has(templateTypeParmDecl(hasDefaultArgument(isEnableIf()))),
+              // No warning: enable_if as non-type template parameter.
+              has(nonTypeTemplateParmDecl(
+                  hasType(isEnableIf()),
+                  anyOf(hasDescendant(cxxBoolLiteral()),
+                        hasDescendant(cxxNullPtrLiteralExpr()),
+                        hasDescendant(integerLiteral())))))))))
           .bind("ctor");
-  Finder->addMatcher(findOverload, this);
+  Finder->addMatcher(FindOverload, this);
 }
 
 void ForwardingReferenceOverloadCheck::check(

@@ -1,0 +1,177 @@
+# RUN: mlir-linalg-ods-yaml-gen %s --o-ods-decl=- | FileCheck %s --check-prefix=ODS
+# RUN: mlir-linalg-ods-yaml-gen %s --o-impl=- | FileCheck %s --check-prefix=IMPL
+
+# @linalg_structured_op
+# def test1(O=TensorDef(T, S.M, S.N, output=True)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[D.m, D.n] = cast(T, const(42)) + cast(T, index(D.n))
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test1
+  cpp_class_name: Test1Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: O
+    usage: OutputOperand
+    type_var: T
+    shape_map: affine_map<()[s0, s1] -> (s0, s1)>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          symbolic_cast:
+            type_var: T
+            operands:
+            - !ScalarExpression
+              scalar_const: '42 : i64'
+            is_unsigned_cast: false
+        - !ScalarExpression
+          symbolic_cast:
+            type_var: T
+            operands:
+            - !ScalarExpression
+              scalar_index: 1
+            is_unsigned_cast: true
+
+# ODS-LABEL:  def Test1Op : LinalgStructuredBase_Op<"test1"
+
+#       ODS:  let summary = [{ Title. }];
+#  ODS-NEXT:  let description = [{
+#  ODS-NEXT:    Detailed description.
+#  ODS-NEXT:  }];
+
+#       ODS:  let arguments =
+#  ODS-NEXT:    Variadic<AnyType>:$inputs,
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs
+
+#       ODS:  let builders =
+#       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+#  ODS-NEXT:       "ValueRange":$outputs,
+#  ODS-NEXT:       CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+
+#       ODS:    $_state.addOperands(inputs);
+#  ODS-NEXT:    $_state.addOperands(outputs);
+#  ODS-NEXT:    $_state.addTypes(resultTensorTypes);
+#  ODS-NEXT:    $_state.addAttributes(attributes);
+#  ODS-NEXT:    $_state.addAttribute(
+#  ODS-NEXT:      "operand_segment_sizes",
+#  ODS-NEXT:      $_builder.getI32VectorAttr({
+#  ODS-NEXT:        static_cast<int32_t>(inputs.size()),
+#  ODS-NEXT:        static_cast<int32_t>(outputs.size())}));
+#  ODS-NEXT:    createAndFillStructuredOpRegion<Test1Op>(
+#  ODS-NEXT:      $_builder,
+#  ODS-NEXT:      $_state,
+#  ODS-NEXT:      TypeRange(inputs),
+#  ODS-NEXT:      TypeRange(outputs)
+
+# IMPL-LABEL:  void Test1Op::regionBuilder(
+#       IMPL:    ImplicitLocOpBuilder &b, Block &block)
+#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
+#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL0]], false);
+#   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
+#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.cast(block.getArgument(0).getType(), [[VAL2]], true);
+#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.applyfn__add([[VAL1]], [[VAL3]]);
+
+
+# @linalg_structured_op
+# def test2(I=TensorDef(T, S.M, S.N),
+#           O=TensorDef(T, S.M, S.N, output=True),
+#           strides=AttributeDef(S.SM, S.SN)):
+#   """Title.
+
+#   Detailed description.
+#   """
+#   O[D.m, D.n] = I[D.n * S.SM, D.m * S.SN]
+
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: test2
+  cpp_class_name: Test2Op
+  doc: |-
+    Title.
+
+    Detailed description.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    usage: InputOperand
+    type_var: T
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
+  - !LinalgOperandDefConfig
+    name: O
+    usage: OutputOperand
+    type_var: T
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
+  - !LinalgOperandDefConfig
+    name: strides
+    usage: IndexAttribute
+    type_var: I64
+    attribute_map: affine_map<()[s0, s1, s2, s3] -> (s2, s3)>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>
+    - affine_map<(d0, d1)[s0, s1, s2, s3] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_arg: I
+
+# ODS-LABEL:  def Test2Op : LinalgStructuredBase_Op<"test2"
+
+#       ODS:  let arguments =
+#  ODS-NEXT:    Variadic<AnyType>:$inputs,
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
+#  ODS-NEXT:    RankedI64ElementsAttr<[2]>:$strides
+
+#       ODS:  "Attribute":$strides
+#       ODS:  $_state.addAttribute("strides", strides);
+
+#       ODS:  bool hasDynamicIndexingMaps();
+#  ODS-NEXT:  LogicalResult verifyIndexingMapRequiredAttributes();
+
+#       IMPL:  getSymbolBindings(Test2Op self)
+#       IMPL:  cst2 = self.strides().getValue<int64_t>({ 0 });
+#  IMPL-NEXT:  getAffineConstantExpr(cst2, context)
+#       IMPL:  cst3 = self.strides().getValue<int64_t>({ 1 });
+#  IMPL-NEXT:  getAffineConstantExpr(cst3, context)
+
+#       IMPL:  Test2Op::indexing_maps()
+#       IMPL:  = getSymbolBindings(*this);
+#       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>"
+#       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d0, d1)>"
+
+#       IMPL:  Test2Op::getNumRegionArgs() { return 2; }
+
+#       IMPL:  Test2Op::hasDynamicIndexingMaps() { return true; }
+#       IMPL:  Test2Op::verifyIndexingMapRequiredAttributes()
+#       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
+#       IMPL:  "missing indexing map required attribute 'strides'"
+
+#       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b, Block &block)
+#  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
+
+#       IMPL:   yields.push_back(block.getArgument(0));

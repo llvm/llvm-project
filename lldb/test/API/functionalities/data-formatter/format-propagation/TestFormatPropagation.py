@@ -58,11 +58,11 @@ class FormatPropagationTestCase(TestBase):
         self.assertEquals(Y.GetValue(), "2", "Y has an invalid value")
         # set the format on the parent
         parent.SetFormat(lldb.eFormatHex)
-        self.assertTrue(
-            X.GetValue() == "0x00000001",
+        self.assertEqual(
+            X.GetValue(), "0x00000001",
             "X has not changed format")
-        self.assertTrue(
-            Y.GetValue() == "0x00000002",
+        self.assertEqual(
+            Y.GetValue(), "0x00000002",
             "Y has not changed format")
         # Step and check if the values make sense still
         self.runCmd("next")
@@ -76,7 +76,7 @@ class FormatPropagationTestCase(TestBase):
         parent.SetFormat(lldb.eFormatDefault)
         X.SetFormat(lldb.eFormatHex)
         Y.SetFormat(lldb.eFormatDefault)
-        self.assertTrue(
-            X.GetValue() == "0x00000004",
+        self.assertEqual(
+            X.GetValue(), "0x00000004",
             "X is not hex as it asked")
         self.assertEquals(Y.GetValue(), "2", "Y is not defaulted")

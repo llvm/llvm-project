@@ -14,7 +14,6 @@
 #ifndef LLVM_MC_MCSCHEDULE_H
 #define LLVM_MC_MCSCHEDULE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
@@ -108,15 +107,16 @@ struct MCReadAdvanceEntry {
 ///
 /// Defined as an aggregate struct for creating tables with initializer lists.
 struct MCSchedClassDesc {
-  static const unsigned short InvalidNumMicroOps = (1U << 14) - 1;
+  static const unsigned short InvalidNumMicroOps = (1U << 13) - 1;
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   const char* Name;
 #endif
-  uint16_t NumMicroOps : 14;
-  bool     BeginGroup : 1;
-  bool     EndGroup : 1;
+  uint16_t NumMicroOps : 13;
+  uint16_t BeginGroup : 1;
+  uint16_t EndGroup : 1;
+  uint16_t RetireOOO : 1;
   uint16_t WriteProcResIdx; // First index into WriteProcResTable.
   uint16_t NumWriteProcResEntries;
   uint16_t WriteLatencyIdx; // First index into WriteLatencyTable.

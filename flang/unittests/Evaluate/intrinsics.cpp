@@ -22,22 +22,23 @@ public:
   }
   void Save(const std::string &s) {
     offsets_[s] = cooked_.Put(s);
-    cooked_.PutProvenance(cooked_.allSources().AddCompilerInsertion(s));
+    cooked_.PutProvenance(allSources_.AddCompilerInsertion(s));
   }
-  void Marshal() { cooked_.Marshal(); }
+  void Marshal() { cooked_.Marshal(allCookedSources_); }
   parser::CharBlock operator()(const std::string &s) {
-    return {cooked_.data().data() + offsets_[s], s.size()};
+    return {cooked_.AsCharBlock().begin() + offsets_[s], s.size()};
   }
   parser::ContextualMessages Messages(parser::Messages &buffer) {
-    return parser::ContextualMessages{cooked_.data(), &buffer};
+    return parser::ContextualMessages{cooked_.AsCharBlock(), &buffer};
   }
   void Emit(llvm::raw_ostream &o, const parser::Messages &messages) {
-    messages.Emit(o, cooked_);
+    messages.Emit(o, allCookedSources_);
   }
 
 private:
   parser::AllSources allSources_;
-  parser::CookedSource cooked_{allSources_};
+  parser::AllCookedSources allCookedSources_{allSources_};
+  parser::CookedSource &cooked_{allCookedSources_.NewCookedSource()};
   std::map<std::string, std::size_t> offsets_;
 };
 
@@ -236,7 +237,9 @@ void TestIntrinsics() {
   TestCall{defaults, table, "conjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
-  TestCall{defaults, table, "dconjg"}.Push(Const(Scalar<Complex4>{})).DoCall();
+  TestCall{defaults, table, "dconjg"}
+      .Push(Const(Scalar<Complex4>{}))
+      .DoCall(Complex8::GetType());
   TestCall{defaults, table, "dconjg"}
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
@@ -288,6 +291,34 @@ void TestIntrinsics() {
       .Push(Const(Scalar<Complex8>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
+      .Push(Const(Scalar<Real4>{}))
+      .DoCall(); // bad type
+
+  // This test temporarily removed because it requires access to
+  // the ISO_FORTRAN_ENV intrinsic module. This module should to
+  // be loaded (somehow) and the following test reinstated.
+  // TestCall{defaults, table, "team_number"}.DoCall(Int4::GetType());
+
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // too many args
+  TestCall{defaults, table, "team_number"}
+      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .DoCall(); // bad keyword
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Int4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Char>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Log4>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
+      .Push(Const(Scalar<Complex8>{}))
+      .DoCall(); // bad type
+  TestCall{defaults, table, "team_number"}
       .Push(Const(Scalar<Real4>{}))
       .DoCall(); // bad type
 

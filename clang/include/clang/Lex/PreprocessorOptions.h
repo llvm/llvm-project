@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LEX_PREPROCESSOROPTIONS_H_
 #define LLVM_CLANG_LEX_PREPROCESSOROPTIONS_H_
 
+#include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,6 +39,24 @@ enum ObjCXXARCStandardLibraryKind {
 
   /// libstdc++
   ARCXX_libstdcxx
+};
+
+/// Whether to disable the normal validation performed on precompiled
+/// headers and module files when they are loaded.
+enum class DisableValidationForModuleKind {
+  /// Perform validation, don't disable it.
+  None = 0,
+
+  /// Disable validation for a precompiled header and the modules it depends on.
+  PCH = 0x1,
+
+  /// Disable validation for module files.
+  Module = 0x2,
+
+  /// Disable validation for all kinds.
+  All = PCH | Module,
+
+  LLVM_MARK_AS_BITMASK_ENUM(Module)
 };
 
 /// PreprocessorOptions - This class is used for passing the various options
@@ -79,12 +98,17 @@ public:
   /// Headers that will be converted to chained PCHs in memory.
   std::vector<std::string> ChainedIncludes;
 
-  /// When true, disables most of the normal validation performed on
-  /// precompiled headers.
-  bool DisablePCHValidation = false;
+  /// Whether to disable most of the normal validation performed on
+  /// precompiled headers and module files.
+  DisableValidationForModuleKind DisablePCHOrModuleValidation =
+      DisableValidationForModuleKind::None;
 
   /// When true, a PCH with compiler errors will not be rejected.
   bool AllowPCHWithCompilerErrors = false;
+
+  /// When true, a PCH with modules cache path different to the current
+  /// compilation will not be rejected.
+  bool AllowPCHWithDifferentModulesCachePath = false;
 
   /// Dump declarations that are deserialized from PCH, for testing.
   bool DumpDeserializedPCHDecls = false;
@@ -174,9 +198,6 @@ public:
   /// other instances will see that the module has failed and won't try to
   /// build it again.
   std::shared_ptr<FailedModulesSet> FailedModules;
-
-  /// A prefix map for __FILE__ and __BASE_FILE__.
-  std::map<std::string, std::string, std::greater<std::string>> MacroPrefixMap;
 
   /// Contains the currently active skipped range mappings for skipping excluded
   /// conditional directives.

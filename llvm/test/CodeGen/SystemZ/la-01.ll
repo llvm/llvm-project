@@ -3,22 +3,22 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@e4 = external global i32
-@d4 = global i32 1
-@e2 = external global i32, align 2
-@d2 = global i32 1, align 2
-@e1 = external global i32, align 1
-@d1 = global i32 1, align 1
+@e4 = external dso_local global i32
+@d4 = dso_local global i32 1
+@e2 = external dso_local global i32, align 2
+@d2 = dso_local global i32 1, align 2
+@e1 = external dso_local global i32, align 1
+@d1 = dso_local global i32 1, align 1
 
-declare void @ef()
-define void @df() {
+declare dso_local void @ef()
+define dso_local void @df() {
   ret void
 }
 
-declare void @foo(i32 *)
+declare dso_local void @foo(i32 *)
 
 ; Test a load of a fully-aligned external variable.
-define i32 *@f1() {
+define dso_local i32 *@f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: larl %r2, e4
 ; CHECK-NEXT: br %r14
@@ -26,7 +26,7 @@ define i32 *@f1() {
 }
 
 ; Test a load of a fully-aligned local variable.
-define i32 *@f2() {
+define dso_local i32 *@f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: larl %r2, d4
 ; CHECK-NEXT: br %r14
@@ -34,7 +34,7 @@ define i32 *@f2() {
 }
 
 ; Test a load of a 2-byte-aligned external variable.
-define i32 *@f3() {
+define dso_local i32 *@f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: larl %r2, e2
 ; CHECK-NEXT: br %r14
@@ -42,7 +42,7 @@ define i32 *@f3() {
 }
 
 ; Test a load of a 2-byte-aligned local variable.
-define i32 *@f4() {
+define dso_local i32 *@f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: larl %r2, d2
 ; CHECK-NEXT: br %r14
@@ -50,7 +50,7 @@ define i32 *@f4() {
 }
 
 ; Test a load of an unaligned external variable, which must go via the GOT.
-define i32 *@f5() {
+define dso_local i32 *@f5() {
 ; CHECK-LABEL: f5:
 ; CHECK: lgrl %r2, e1@GOT
 ; CHECK-NEXT: br %r14
@@ -58,7 +58,7 @@ define i32 *@f5() {
 }
 
 ; Test a load of an unaligned local variable, which must go via the GOT.
-define i32 *@f6() {
+define dso_local i32 *@f6() {
 ; CHECK-LABEL: f6:
 ; CHECK: lgrl %r2, d1@GOT
 ; CHECK-NEXT: br %r14
@@ -66,7 +66,7 @@ define i32 *@f6() {
 }
 
 ; Test a load of an external function.
-define void() *@f7() {
+define dso_local void() *@f7() {
 ; CHECK-LABEL: f7:
 ; CHECK: larl %r2, ef
 ; CHECK-NEXT: br %r14
@@ -74,7 +74,7 @@ define void() *@f7() {
 }
 
 ; Test a load of a local function.
-define void() *@f8() {
+define dso_local void() *@f8() {
 ; CHECK-LABEL: f8:
 ; CHECK: larl %r2, df
 ; CHECK-NEXT: br %r14
@@ -82,7 +82,7 @@ define void() *@f8() {
 }
 
 ; Test that LARL can be rematerialized.
-define i32 @f9() {
+define dso_local i32 @f9() {
 ; CHECK-LABEL: f9:
 ; CHECK: larl %r2, d2
 ; CHECK: brasl %r14, foo@PLT

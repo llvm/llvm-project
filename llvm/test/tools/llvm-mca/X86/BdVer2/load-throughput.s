@@ -83,6 +83,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -197,6 +198,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -311,6 +313,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -425,6 +428,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           354  (87.2%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -539,6 +543,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           533  (88.1%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -654,6 +659,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           533  (88.1%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
@@ -769,6 +775,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: LQ      - Load queue full:                           345  (57.0%)
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
+# CHECK-NEXT: USH     - Uncategorised Structural Hazard:           0
 
 # CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]

@@ -8,6 +8,48 @@
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
 #endif
 
+namespace dr2100 { // dr2100: 12
+  template<const int *P, bool = true> struct X {};
+  template<typename T> struct A {
+    static const int n = 1;
+    int f() {
+      return X<&n>::n; // ok, value-dependent
+    }
+    int g() {
+      static const int n = 2;
+      return X<&n>::n; // ok, value-dependent
+#if __cplusplus < 201702L
+      // expected-error@-2 {{does not have linkage}} expected-note@-3 {{here}}
+#endif
+    }
+  };
+  template<const int *P> struct X<P> {
+#if __cplusplus < 201103L
+    static const int n = 0;
+#else
+    static const int n = *P;
+#endif
+  };
+  int q = A<int>().f() + A<int>().g();
+
+  // Corresponding constructs where the address is not taken are not
+  // value-dependent.
+  template<int N, bool = true> struct Y {};
+  template<typename T> struct B {
+    static const int n = 1;
+    int f() {
+      return Y<n>::declared_later; // expected-error {{no member named 'declared_later'}}
+    }
+    int g() {
+      static const int n = 2;
+      return Y<n>::declared_later; // expected-error {{no member named 'declared_later'}}
+    }
+  };
+  template<int N> struct Y<N> {
+    static const int declared_later = 0;
+  };
+}
+
 namespace dr2103 { // dr2103: yes
   void f() {
     int a;
@@ -30,6 +72,40 @@ namespace dr2120 { // dr2120: 7
   static_assert(__is_standard_layout(B), "");
   static_assert(__is_standard_layout(D), "");
   static_assert(!__is_standard_layout(E), "");
+}
+
+namespace dr2126 { // dr2126: 12
+#if __cplusplus >= 201103L
+  struct A { int n; };
+
+  const A &a = {1};              // const temporary
+  A &b = (A &)(const A &)A{1};   // const temporary
+  A &&c = (A &&)(const A &)A{1}; // const temporary
+
+  A &&d = {1};                   // non-const temporary expected-note {{here}}
+  const A &e = (A &)(A &&) A{1}; // non-const temporary expected-note {{here}}
+  A &&f = (A &&)(A &&) A{1};     // non-const temporary expected-note {{here}}
+
+  constexpr const A &g = {1};    // const temporary
+  constexpr A &&h = {1};         // non-const temporary expected-note {{here}}
+
+  struct B { const A &a; };
+  B i = {{1}};           // extending decl not usable in constant expr expected-note {{here}}
+  const B j = {{1}};     // extending decl not usable in constant expr expected-note {{here}}
+  constexpr B k = {{1}}; // extending decl usable in constant expr
+
+  static_assert(a.n == 1, "");
+  static_assert(b.n == 1, "");
+  static_assert(c.n == 1, "");
+  static_assert(d.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(e.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(f.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(g.n == 1, "");
+  static_assert(h.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(i.a.n == 1, ""); // expected-error {{constant}} expected-note {{read of non-constexpr variable}}
+  static_assert(j.a.n == 1, ""); // expected-error {{constant}} expected-note {{read of temporary}}
+  static_assert(k.a.n == 1, "");
+#endif
 }
 
 namespace dr2140 { // dr2140: 9

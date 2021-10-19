@@ -11,15 +11,29 @@
 ///
 //===----------------------------------------------------------------------===//
 
-defm SELECT_EXNREF : I<(outs EXNREF:$dst),
-                       (ins EXNREF:$lhs, EXNREF:$rhs, I32:$cond),
-                       (outs), (ins),
-                       [(set EXNREF:$dst,
-                         (select I32:$cond, EXNREF:$lhs, EXNREF:$rhs))],
-                       "exnref.select\t$dst, $lhs, $rhs, $cond",
-                       "exnref.select", 0x1b>;
+multiclass REF_I<WebAssemblyRegClass rc, ValueType vt> {
+  defm REF_NULL_#rc : I<(outs rc:$res), (ins HeapType:$heaptype),
+                        (outs), (ins HeapType:$heaptype),
+                        [],
+                        "ref.null\t$res, $heaptype",
+                        "ref.null\t$heaptype",
+                        0xd0>,
+                      Requires<[HasReferenceTypes]>;
+  defm SELECT_#rc: I<(outs rc:$dst), (ins rc:$lhs, rc:$rhs, I32:$cond),
+                     (outs), (ins),
+                     [(set rc:$dst,
+                       (select I32:$cond, rc:$lhs, rc:$rhs))],
+                     vt#".select\t$dst, $lhs, $rhs, $cond",
+                     vt#".select", 0x1b>,
+                   Requires<[HasReferenceTypes]>;
+}
 
-def : Pat<(select (i32 (setne I32:$cond, 0)), EXNREF:$lhs, EXNREF:$rhs),
-          (SELECT_EXNREF EXNREF:$lhs, EXNREF:$rhs, I32:$cond)>;
-def : Pat<(select (i32 (seteq I32:$cond, 0)), EXNREF:$lhs, EXNREF:$rhs),
-          (SELECT_EXNREF EXNREF:$rhs, EXNREF:$lhs, I32:$cond)>;
+defm "" : REF_I<FUNCREF, funcref>;
+defm "" : REF_I<EXTERNREF, externref>;
+
+foreach rc = [FUNCREF, EXTERNREF] in {
+def : Pat<(select (i32 (setne I32:$cond, 0)), rc:$lhs, rc:$rhs),
+          (!cast<Instruction>("SELECT_"#rc) rc:$lhs, rc:$rhs, I32:$cond)>;
+def : Pat<(select (i32 (seteq I32:$cond, 0)), rc:$lhs, rc:$rhs),
+          (!cast<Instruction>("SELECT_"#rc) rc:$rhs, rc:$lhs, I32:$cond)>;
+}

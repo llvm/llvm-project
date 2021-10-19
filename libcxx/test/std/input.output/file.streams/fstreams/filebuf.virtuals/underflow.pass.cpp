@@ -9,6 +9,8 @@
 // REQUIRES: locale.en_US.UTF-8
 // FILE_DEPENDENCIES: underflow.dat, underflow_utf8.dat
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <fstream>
 
 // int_type underflow();
@@ -76,6 +78,7 @@ int main(int, char**)
         assert(*f.gptr() == '9');
         assert(f.egptr() - f.gptr() == 1);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         test_buf<wchar_t> f;
         assert(f.open("underflow.dat", std::ios_base::in) != 0);
@@ -123,6 +126,7 @@ int main(int, char**)
         assert(f.sbumpc() == 0x4E53);
         assert(f.sbumpc() == static_cast<Traits::int_type>(-1));
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

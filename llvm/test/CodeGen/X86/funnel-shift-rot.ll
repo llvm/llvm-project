@@ -130,9 +130,9 @@ define i32 @rotl_i32(i32 %x, i32 %z) nounwind {
 define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X32-SSE2-LABEL: rotl_v4i32:
 ; X32-SSE2:       # %bb.0:
-; X32-SSE2-NEXT:    pand {{\.LCPI.*}}, %xmm1
+; X32-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE2-NEXT:    pslld $23, %xmm1
-; X32-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X32-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X32-SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -281,25 +281,25 @@ define i64 @rotr_i64(i64 %x, i64 %z) nounwind {
 ; X32-SSE2-NEXT:    pushl %edi
 ; X32-SSE2-NEXT:    pushl %esi
 ; X32-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-SSE2-NEXT:    movl %edx, %edi
-; X32-SSE2-NEXT:    shrl %cl, %edi
-; X32-SSE2-NEXT:    movl %esi, %ebx
-; X32-SSE2-NEXT:    shrdl %cl, %edx, %ebx
+; X32-SSE2-NEXT:    movl %edx, %esi
+; X32-SSE2-NEXT:    shrl %cl, %esi
+; X32-SSE2-NEXT:    movl %ebx, %edi
+; X32-SSE2-NEXT:    shrdl %cl, %edx, %edi
 ; X32-SSE2-NEXT:    xorl %ebp, %ebp
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %edi, %ebx
-; X32-SSE2-NEXT:    cmovnel %ebp, %edi
+; X32-SSE2-NEXT:    cmovnel %esi, %edi
+; X32-SSE2-NEXT:    cmovnel %ebp, %esi
 ; X32-SSE2-NEXT:    negb %cl
-; X32-SSE2-NEXT:    movl %esi, %eax
+; X32-SSE2-NEXT:    movl %ebx, %eax
 ; X32-SSE2-NEXT:    shll %cl, %eax
-; X32-SSE2-NEXT:    shldl %cl, %esi, %edx
+; X32-SSE2-NEXT:    shldl %cl, %ebx, %edx
 ; X32-SSE2-NEXT:    testb $32, %cl
 ; X32-SSE2-NEXT:    cmovnel %eax, %edx
 ; X32-SSE2-NEXT:    cmovnel %ebp, %eax
-; X32-SSE2-NEXT:    orl %ebx, %eax
-; X32-SSE2-NEXT:    orl %edi, %edx
+; X32-SSE2-NEXT:    orl %edi, %eax
+; X32-SSE2-NEXT:    orl %esi, %edx
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
 ; X32-SSE2-NEXT:    popl %ebx
@@ -324,9 +324,9 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) nounwind {
 ; X32-SSE2:       # %bb.0:
 ; X32-SSE2-NEXT:    pxor %xmm2, %xmm2
 ; X32-SSE2-NEXT:    psubd %xmm1, %xmm2
-; X32-SSE2-NEXT:    pand {{\.LCPI.*}}, %xmm2
+; X32-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X32-SSE2-NEXT:    pslld $23, %xmm2
-; X32-SSE2-NEXT:    paddd {{\.LCPI.*}}, %xmm2
+; X32-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X32-SSE2-NEXT:    cvttps2dq %xmm2, %xmm1
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; X32-SSE2-NEXT:    pmuludq %xmm1, %xmm0

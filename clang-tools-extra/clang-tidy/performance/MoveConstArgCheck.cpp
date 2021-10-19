@@ -16,7 +16,7 @@ namespace clang {
 namespace tidy {
 namespace performance {
 
-static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
+static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);
@@ -47,13 +47,11 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(MoveCallMatcher, this);
 
-  auto ConstParamMatcher = forEachArgumentWithParam(
-      MoveCallMatcher, parmVarDecl(hasType(references(isConstQualified()))));
-
-  Finder->addMatcher(callExpr(ConstParamMatcher).bind("receiving-expr"), this);
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               cxxConstructExpr(ConstParamMatcher).bind("receiving-expr")),
+      invocation(forEachArgumentWithParam(
+                     MoveCallMatcher,
+                     parmVarDecl(hasType(references(isConstQualified())))))
+          .bind("receiving-expr"),
       this);
 }
 
@@ -104,13 +102,13 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
                 << (IsConstArg && IsVariable && !IsTriviallyCopyable) << Var
                 << Arg->getType();
 
-    ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+    replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
   } else if (ReceivingExpr) {
     auto Diag = diag(FileMoveRange.getBegin(),
                      "passing result of std::move() as a const reference "
                      "argument; no move will actually happen");
 
-    ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+    replaceCallWithArg(CallMove, Diag, SM, getLangOpts());
   }
 }
 

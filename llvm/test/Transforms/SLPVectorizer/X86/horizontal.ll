@@ -37,7 +37,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -70,7 +70,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; STORE-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; STORE-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; STORE-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
 ; STORE-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -164,7 +164,7 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -202,7 +202,7 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -326,7 +326,7 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
 ; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
 ; CHECK-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
@@ -383,7 +383,7 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; STORE-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
 ; STORE-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
-; STORE-NEXT:    [[TMP8:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
+; STORE-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP6]])
 ; STORE-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
 ; STORE-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
@@ -520,7 +520,7 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -558,7 +558,7 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -1015,7 +1015,7 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    store float [[TMP6]], float* [[C_ADDR_038]], align 4
 ; STORE-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[C_ADDR_038]], i64 1
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
@@ -1090,7 +1090,7 @@ define void @float_red_example4(float* %res) {
 ; STORE-LABEL: @float_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([32 x float]* @arr_float to <4 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1130,7 +1130,7 @@ define void @float_red_example8(float* %res) {
 ; STORE-LABEL: @float_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr_float to <8 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1194,7 +1194,7 @@ define void @float_red_example16(float* %res) {
 ; STORE-LABEL: @float_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr_float to <16 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float -0.000000e+00, <16 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1250,7 +1250,7 @@ define void @i32_red_example4(i32* %res) {
 ; STORE-LABEL: @i32_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1290,7 +1290,7 @@ define void @i32_red_example8(i32* %res) {
 ; STORE-LABEL: @i32_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1354,7 +1354,7 @@ define void @i32_red_example16(i32* %res) {
 ; STORE-LABEL: @i32_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr_i32 to <16 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1466,7 +1466,7 @@ define void @i32_red_example32(i32* %res) {
 ; STORE-LABEL: @i32_red_example32(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr_i32 to <32 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v32i32(<32 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1544,14 +1544,14 @@ define void @i32_red_call(i32 %val) {
 ; CHECK-LABEL: @i32_red_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ; STORE-LABEL: @i32_red_call(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    ret void
 ;
@@ -1579,7 +1579,7 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; CHECK-LABEL: @i32_red_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
@@ -1592,7 +1592,7 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; STORE-LABEL: @i32_red_invoke(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; STORE:       exception:
@@ -1624,6 +1624,216 @@ exception:
   br label %normal
 normal:
   ret void
+}
+
+; Test case from PR47670. Reduction result is used as incoming value in phi.
+define i32 @reduction_result_used_in_phi(i32* nocapture readonly %data, i1 zeroext %b) {
+; CHECK-LABEL: @reduction_result_used_in_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
+; CHECK-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; CHECK-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; CHECK-NEXT:    ret i32 [[SUM_1]]
+;
+; STORE-LABEL: @reduction_result_used_in_phi(
+; STORE-NEXT:  entry:
+; STORE-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; STORE:       bb:
+; STORE-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
+; STORE-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; STORE-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; STORE-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; STORE-NEXT:    br label [[EXIT]]
+; STORE:       exit:
+; STORE-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; STORE-NEXT:    ret i32 [[SUM_1]]
+;
+entry:
+  br i1 %b, label %bb, label %exit
+
+bb:
+  %l.0 = load i32, i32* %data, align 4
+  %idx.1 = getelementptr inbounds i32, i32* %data, i64 1
+  %l.1 = load i32, i32* %idx.1, align 4
+  %add.1 = add i32 %l.1, %l.0
+  %idx.2 = getelementptr inbounds i32, i32* %data, i64 2
+  %l.2 = load i32, i32* %idx.2, align 4
+  %add.2 = add i32 %l.2, %add.1
+  %idx.3 = getelementptr inbounds i32, i32* %data, i64 3
+  %l.3 = load i32, i32* %idx.3, align 4
+  %add.3 = add i32 %l.3, %add.2
+  br label %exit
+
+exit:
+  %sum.1 = phi i32 [ 0, %entry ], [ %add.3, %bb]
+  ret i32 %sum.1
+}
+
+define i32 @reduction_result_used_in_phi_loop(i32* nocapture readonly %data, i1 zeroext %b) {
+; CHECK-LABEL: @reduction_result_used_in_phi_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
+; CHECK-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; CHECK-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; CHECK-NEXT:    ret i32 [[SUM_1]]
+;
+; STORE-LABEL: @reduction_result_used_in_phi_loop(
+; STORE-NEXT:  entry:
+; STORE-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
+; STORE:       bb:
+; STORE-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
+; STORE-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
+; STORE-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
+; STORE-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; STORE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
+; STORE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; STORE-NEXT:    br label [[EXIT]]
+; STORE:       exit:
+; STORE-NEXT:    [[SUM_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[BB]] ]
+; STORE-NEXT:    ret i32 [[SUM_1]]
+;
+entry:
+  br i1 %b, label %bb, label %exit
+
+bb:
+  %l.0 = load i32, i32* %data, align 4
+  %idx.1 = getelementptr inbounds i32, i32* %data, i64 1
+  %l.1 = load i32, i32* %idx.1, align 4
+  %add.1 = add i32 %l.1, %l.0
+  %idx.2 = getelementptr inbounds i32, i32* %data, i64 2
+  %l.2 = load i32, i32* %idx.2, align 4
+  %add.2 = add i32 %l.2, %add.1
+  %idx.3 = getelementptr inbounds i32, i32* %data, i64 3
+  %l.3 = load i32, i32* %idx.3, align 4
+  %add.3 = add i32 %l.3, %add.2
+  br label %exit
+
+exit:
+  %sum.1 = phi i32 [ 0, %entry ], [ %add.3, %bb]
+  ret i32 %sum.1
+}
+
+; Make sure we do not crash or infinite loop on ill-formed IR.
+
+define void @unreachable_block() {
+; CHECK-LABEL: @unreachable_block(
+; CHECK-NEXT:  bb.0:
+; CHECK-NEXT:    br label [[BB_1:%.*]]
+; CHECK:       dead:
+; CHECK-NEXT:    [[T0:%.*]] = add i16 [[T0]], undef
+; CHECK-NEXT:    br label [[BB_1]]
+; CHECK:       bb.1:
+; CHECK-NEXT:    [[T1:%.*]] = phi i16 [ undef, [[BB_0:%.*]] ], [ [[T0]], [[DEAD:%.*]] ]
+; CHECK-NEXT:    ret void
+;
+; STORE-LABEL: @unreachable_block(
+; STORE-NEXT:  bb.0:
+; STORE-NEXT:    br label [[BB_1:%.*]]
+; STORE:       dead:
+; STORE-NEXT:    [[T0:%.*]] = add i16 [[T0]], undef
+; STORE-NEXT:    br label [[BB_1]]
+; STORE:       bb.1:
+; STORE-NEXT:    [[T1:%.*]] = phi i16 [ undef, [[BB_0:%.*]] ], [ [[T0]], [[DEAD:%.*]] ]
+; STORE-NEXT:    ret void
+;
+bb.0:
+  br label %bb.1
+
+dead:
+  %t0 = add i16 %t0, undef ; unreachable IR may depend on itself
+  br label %bb.1
+
+bb.1:
+  %t1 = phi i16 [ undef, %bb.0 ], [ %t0, %dead ]
+  ret void
+}
+
+; The FMF on the reduction should match the incoming insts.
+
+define float @fadd_v4f32_fmf(float* %p) {
+; CHECK-LABEL: @fadd_v4f32_fmf(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
+;
+; STORE-LABEL: @fadd_v4f32_fmf(
+; STORE-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; STORE-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; STORE-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; STORE-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; STORE-NEXT:    ret float [[TMP3]]
+;
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  %p3 = getelementptr inbounds float, float* %p, i64 3
+  %t0 = load float, float* %p, align 4
+  %t1 = load float, float* %p1, align 4
+  %t2 = load float, float* %p2, align 4
+  %t3 = load float, float* %p3, align 4
+  %add1 = fadd reassoc nsz float %t1, %t0
+  %add2 = fadd reassoc nsz float %t2, %add1
+  %add3 = fadd reassoc nsz float %t3, %add2
+  ret float %add3
+}
+
+; The minimal FMF for fadd reduction are "reassoc nsz".
+; Only the common FMF of all operations in the reduction propagate to the result.
+; In this example, "contract nnan arcp" are dropped, but "ninf" transfers with the required flags.
+
+define float @fadd_v4f32_fmf_intersect(float* %p) {
+; CHECK-LABEL: @fadd_v4f32_fmf_intersect(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    ret float [[TMP3]]
+;
+; STORE-LABEL: @fadd_v4f32_fmf_intersect(
+; STORE-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
+; STORE-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
+; STORE-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
+; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; STORE-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; STORE-NEXT:    ret float [[TMP3]]
+;
+  %p1 = getelementptr inbounds float, float* %p, i64 1
+  %p2 = getelementptr inbounds float, float* %p, i64 2
+  %p3 = getelementptr inbounds float, float* %p, i64 3
+  %t0 = load float, float* %p, align 4
+  %t1 = load float, float* %p1, align 4
+  %t2 = load float, float* %p2, align 4
+  %t3 = load float, float* %p3, align 4
+  %add1 = fadd ninf reassoc nsz nnan float %t1, %t0
+  %add2 = fadd ninf reassoc nsz nnan arcp float %t2, %add1
+  %add3 = fadd ninf reassoc nsz contract float %t3, %add2
+  ret float %add3
 }
 
 declare i32 @__gxx_personality_v0(...)

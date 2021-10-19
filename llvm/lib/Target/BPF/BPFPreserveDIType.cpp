@@ -17,6 +17,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -33,58 +34,32 @@ using namespace llvm;
 
 namespace {
 
-class BPFPreserveDIType final : public ModulePass {
-  StringRef getPassName() const override {
-    return "BPF Preserve DebugInfo Type";
-  }
-
-  bool runOnModule(Module &M) override;
-
-public:
-  static char ID;
-  BPFPreserveDIType() : ModulePass(ID) {}
-
-private:
-  bool doTransformation(Module &M);
-};
-} // End anonymous namespace
-
-char BPFPreserveDIType::ID = 0;
-INITIALIZE_PASS(BPFPreserveDIType, DEBUG_TYPE, "preserve debuginfo type", false,
-                false)
-
-ModulePass *llvm::createBPFPreserveDIType() { return new BPFPreserveDIType(); }
-
-bool BPFPreserveDIType::runOnModule(Module &M) {
+static bool BPFPreserveDITypeImpl(Function &F) {
   LLVM_DEBUG(dbgs() << "********** preserve debuginfo type **********\n");
 
+  Module *M = F.getParent();
+
   // Bail out if no debug info.
-  if (M.debug_compile_units().empty())
+  if (M->debug_compile_units().empty())
     return false;
 
-  return doTransformation(M);
-}
-
-bool BPFPreserveDIType::doTransformation(Module &M) {
   std::vector<CallInst *> PreserveDITypeCalls;
 
-  for (auto &F : M) {
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        auto *Call = dyn_cast<CallInst>(&I);
-        if (!Call)
-          continue;
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      auto *Call = dyn_cast<CallInst>(&I);
+      if (!Call)
+        continue;
 
-        const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
-        if (!GV)
-          continue;
+      const auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
+      if (!GV)
+        continue;
 
-        if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
-          if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
-            report_fatal_error(
-                "Missing metadata for llvm.bpf.btf.type.id intrinsic");
-          PreserveDITypeCalls.push_back(Call);
-        }
+      if (GV->getName().startswith("llvm.bpf.btf.type.id")) {
+        if (!Call->getMetadata(LLVMContext::MD_preserve_access_index))
+          report_fatal_error(
+              "Missing metadata for llvm.bpf.btf.type.id intrinsic");
+        PreserveDITypeCalls.push_back(Call);
       }
     }
   }
@@ -93,7 +68,7 @@ bool BPFPreserveDIType::doTransformation(Module &M) {
     return false;
 
   std::string BaseName = "llvm.btf_type_id.";
-  int Count = 0;
+  static int Count = 0;
   for (auto Call : PreserveDITypeCalls) {
     const ConstantInt *Flag = dyn_cast<ConstantInt>(Call->getArgOperand(1));
     assert(Flag);
@@ -110,27 +85,64 @@ bool BPFPreserveDIType::doTransformation(Module &M) {
     } else {
       Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
       DIType *Ty = cast<DIType>(MD);
+      while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+        unsigned Tag = DTy->getTag();
+        if (Tag != dwarf::DW_TAG_const_type &&
+            Tag != dwarf::DW_TAG_volatile_type)
+          break;
+        Ty = DTy->getBaseType();
+      }
+
       if (Ty->getName().empty())
         report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+      MD = Ty;
     }
 
     BasicBlock *BB = Call->getParent();
-    IntegerType *VarType = Type::getInt32Ty(BB->getContext());
+    IntegerType *VarType = Type::getInt64Ty(BB->getContext());
     std::string GVName = BaseName + std::to_string(Count) + "$" +
         std::to_string(Reloc);
-    GlobalVariable *GV =
-        new GlobalVariable(M, VarType, false, GlobalVariable::ExternalLinkage,
-                           NULL, GVName);
+    GlobalVariable *GV = new GlobalVariable(
+        *M, VarType, false, GlobalVariable::ExternalLinkage, NULL, GVName);
     GV->addAttribute(BPFCoreSharedInfo::TypeIdAttr);
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.
-    auto *LDInst = new LoadInst(Type::getInt32Ty(BB->getContext()), GV, "",
-                                Call);
-    Call->replaceAllUsesWith(LDInst);
+    auto *LDInst =
+        new LoadInst(Type::getInt64Ty(BB->getContext()), GV, "", Call);
+    Instruction *PassThroughInst =
+        BPFCoreSharedInfo::insertPassThrough(M, BB, LDInst, Call);
+    Call->replaceAllUsesWith(PassThroughInst);
     Call->eraseFromParent();
     Count++;
   }
 
   return true;
+}
+
+class BPFPreserveDIType final : public FunctionPass {
+  bool runOnFunction(Function &F) override;
+
+public:
+  static char ID;
+  BPFPreserveDIType() : FunctionPass(ID) {}
+};
+} // End anonymous namespace
+
+char BPFPreserveDIType::ID = 0;
+INITIALIZE_PASS(BPFPreserveDIType, DEBUG_TYPE, "BPF Preserve Debuginfo Type",
+                false, false)
+
+FunctionPass *llvm::createBPFPreserveDIType() {
+  return new BPFPreserveDIType();
+}
+
+bool BPFPreserveDIType::runOnFunction(Function &F) {
+  return BPFPreserveDITypeImpl(F);
+}
+
+PreservedAnalyses BPFPreserveDITypePass::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
+  return BPFPreserveDITypeImpl(F) ? PreservedAnalyses::none()
+                                  : PreservedAnalyses::all();
 }

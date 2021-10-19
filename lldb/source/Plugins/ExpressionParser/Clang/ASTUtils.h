@@ -359,15 +359,12 @@ public:
   }
 
   void CompleteType(clang::TagDecl *Tag) override {
-    while (!Tag->isCompleteDefinition())
-      for (size_t i = 0; i < Sources.size(); ++i) {
-        // FIXME: We are technically supposed to loop here too until
-        // Tag->isCompleteDefinition() is true, but if our low quality source
-        // is failing to complete the tag this code will deadlock.
-        Sources[i]->CompleteType(Tag);
-        if (Tag->isCompleteDefinition())
-          break;
-      }
+    for (clang::ExternalSemaSource *S : Sources) {
+      S->CompleteType(Tag);
+      // Stop after the first source completed the type.
+      if (Tag->isCompleteDefinition())
+        break;
+    }
   }
 
   void CompleteType(clang::ObjCInterfaceDecl *Class) override {

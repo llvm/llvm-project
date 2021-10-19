@@ -298,8 +298,7 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
     }
 
     if (IsInInstantiation) {
-      if (MatchedTemplateLocations.count(
-              ReplacementRange.getBegin().getRawEncoding()) == 0) {
+      if (MatchedTemplateLocations.count(ReplacementRange.getBegin()) == 0) {
         // For each location matched in a template instantiation, we check if
         // the location can also be found in `MatchedTemplateLocations`. If it
         // is not found, that means the expression did not create a match
@@ -313,8 +312,7 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
     if (IsInTemplate) {
       // We gather source locations from template matches not in template
       // instantiations for future matches.
-      MatchedTemplateLocations.insert(
-          ReplacementRange.getBegin().getRawEncoding());
+      MatchedTemplateLocations.insert(ReplacementRange.getBegin());
     }
 
     if (!AddFix) {

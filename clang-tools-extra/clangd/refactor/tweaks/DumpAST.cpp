@@ -45,17 +45,17 @@ public:
     return std::string(
         llvm::formatv("Dump {0} AST", Node->getNodeKind().asStringRef()));
   }
-  Intent intent() const override { return Info; }
+  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 
 private:
-  static bool dumpable(const ast_type_traits::DynTypedNode &N) {
+  static bool dumpable(const DynTypedNode &N) {
     // Sadly not all node types can be dumped, and there's no API to check.
     // See DynTypedNode::dump().
     return N.get<Decl>() || N.get<Stmt>() || N.get<Type>();
   }
 
-  llvm::Optional<ast_type_traits::DynTypedNode> Node;
+  llvm::Optional<DynTypedNode> Node;
 };
 REGISTER_TWEAK(DumpAST)
 
@@ -91,7 +91,7 @@ public:
     return Effect::showMessage(llvm::to_string(Inputs.ASTSelection));
   }
   std::string title() const override { return "Show selection tree"; }
-  Intent intent() const override { return Info; }
+  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 };
 REGISTER_TWEAK(ShowSelectionTree)
@@ -117,7 +117,7 @@ class DumpSymbol : public Tweak {
     return Effect::showMessage(Out.str());
   }
   std::string title() const override { return "Dump symbol under the cursor"; }
-  Intent intent() const override { return Info; }
+  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
   bool hidden() const override { return true; }
 };
 REGISTER_TWEAK(DumpSymbol)
@@ -153,7 +153,7 @@ public:
         "Show {0} layout",
         TypeWithKeyword::getTagTypeKindName(Record->getTagKind())));
   }
-  Intent intent() const override { return Info; }
+  llvm::StringLiteral kind() const override { return CodeAction::INFO_KIND; }
   // FIXME: this is interesting to most users. However:
   //  - triggering is too broad (e.g. triggers on comments within a class)
   //  - showMessage has inconsistent UX (e.g. newlines are stripped in VSCode)

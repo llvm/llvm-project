@@ -10,9 +10,10 @@ from lldbsuite.test import lldbutil
 class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
 
-    def attach_commandline_kill_after_initial_stop(self):
+    def test_attach_commandline_kill_after_initial_stop(self):
+        self.build()
+        self.set_inferior_startup_attach()
         reg_expr = r"^\$[XW][0-9a-fA-F]+([^#]*)#[0-9A-Fa-f]{2}"
         procs = self.prep_debug_monitor_and_inferior()
         self.test_sequence.add_log_lines([
@@ -43,18 +44,3 @@ class TestGdbRemoteKill(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertFalse(
             lldbgdbserverutils.process_is_running(
                 procs["inferior"].pid, False))
-
-    @debugserver_test
-    def test_attach_commandline_kill_after_initial_stop_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_attach()
-        self.attach_commandline_kill_after_initial_stop()
-
-    @expectedFailureNetBSD
-    @llgs_test
-    def test_attach_commandline_kill_after_initial_stop_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_attach()
-        self.attach_commandline_kill_after_initial_stop()

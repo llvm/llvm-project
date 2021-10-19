@@ -35,8 +35,8 @@ define signext i32 @zeroEqualityTest02(i8* %x, i8* %y) {
 define signext i32 @zeroEqualityTest01(i8* %x, i8* %y) {
 ; CHECK-LABEL: zeroEqualityTest01:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ldx 5, 0, 3
-; CHECK-NEXT:    ldx 6, 0, 4
+; CHECK-NEXT:    ld 5, 0(3)
+; CHECK-NEXT:    ld 6, 0(4)
 ; CHECK-NEXT:    cmpld 5, 6
 ; CHECK-NEXT:    bne 0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %loadbb1
@@ -125,16 +125,16 @@ define signext i32 @equalityFoldTwoConstants() {
 define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-LABEL: equalityFoldOneConstant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ldx 4, 0, 3
+; CHECK-NEXT:    ld 4, 0(3)
 ; CHECK-NEXT:    li 5, 1
-; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    rldic 5, 5, 32, 31
 ; CHECK-NEXT:    cmpld 4, 5
 ; CHECK-NEXT:    bne 0, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %loadbb1
-; CHECK-NEXT:    li 4, 3
+; CHECK-NEXT:    lis 4, -32768
 ; CHECK-NEXT:    ld 3, 8(3)
-; CHECK-NEXT:    sldi 4, 4, 32
-; CHECK-NEXT:    ori 4, 4, 2
+; CHECK-NEXT:    ori 4, 4, 1
+; CHECK-NEXT:    rldic 4, 4, 1, 30
 ; CHECK-NEXT:    cmpld 3, 4
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    beq 0, .LBB6_3

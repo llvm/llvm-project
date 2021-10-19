@@ -16,6 +16,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/Sequence.h"
 
 namespace mlir {
 class OperandRange;
@@ -34,11 +35,11 @@ class ValueTypeRange;
 /// a SmallVector/std::vector. This class should be used in places that are not
 /// suitable for a more derived type (e.g. ArrayRef) or a template range
 /// parameter.
-class TypeRange
-    : public llvm::detail::indexed_accessor_range_base<
-          TypeRange,
-          llvm::PointerUnion<const Value *, const Type *, OpOperand *>, Type,
-          Type, Type> {
+class TypeRange : public llvm::detail::indexed_accessor_range_base<
+                      TypeRange,
+                      llvm::PointerUnion<const Value *, const Type *,
+                                         OpOperand *, detail::OpResultImpl *>,
+                      Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
   TypeRange(ArrayRef<Type> types = llvm::None);
@@ -64,7 +65,9 @@ private:
   /// * A pointer to the first element of an array of values.
   /// * A pointer to the first element of an array of types.
   /// * A pointer to the first element of an array of operands.
-  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *>;
+  /// * A pointer to the first element of an array of results.
+  using OwnerT = llvm::PointerUnion<const Value *, const Type *, OpOperand *,
+                                    detail::OpResultImpl *>;
 
   /// See `llvm::detail::indexed_accessor_range_base` for details.
   static OwnerT offset_base(OwnerT object, ptrdiff_t index);
@@ -80,6 +83,41 @@ inline ::llvm::hash_code hash_value(TypeRange arg) {
   return ::llvm::hash_combine_range(arg.begin(), arg.end());
 }
 
+/// Emit a type range to the given output stream.
+inline raw_ostream &operator<<(raw_ostream &os, const TypeRange &types) {
+  llvm::interleaveComma(types, os);
+  return os;
+}
+
+//===----------------------------------------------------------------------===//
+// TypeRangeRange
+
+using TypeRangeRangeIterator =
+    llvm::mapped_iterator<llvm::iota_range<unsigned>::iterator,
+                          std::function<TypeRange(unsigned)>>;
+
+/// This class provides an abstraction for a range of TypeRange. This is useful
+/// when accessing the types of a range of ranges, such as when using
+/// OperandRangeRange.
+class TypeRangeRange : public llvm::iterator_range<TypeRangeRangeIterator> {
+public:
+  template <typename RangeT>
+  TypeRangeRange(const RangeT &range)
+      : TypeRangeRange(llvm::seq<unsigned>(0, range.size()), range) {}
+
+private:
+  template <typename RangeT>
+  TypeRangeRange(llvm::iota_range<unsigned> sizeRange, const RangeT &range)
+      : llvm::iterator_range<TypeRangeRangeIterator>(
+            {sizeRange.begin(), getRangeFn(range)},
+            {sizeRange.end(), nullptr}) {}
+
+  template <typename RangeT>
+  static std::function<TypeRange(unsigned)> getRangeFn(const RangeT &range) {
+    return [=](unsigned index) -> TypeRange { return TypeRange(range[index]); };
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // ValueTypeRange
 
@@ -90,8 +128,6 @@ class ValueTypeIterator final
   static Type unwrap(Value value) { return value.getType(); }
 
 public:
-  using reference = Type;
-
   /// Provide a const dereference method.
   Type operator*() const { return unwrap(*this->I); }
 
@@ -110,6 +146,18 @@ public:
       ValueTypeIterator<typename ValueRangeT::iterator>>::iterator_range;
   template <typename Container>
   ValueTypeRange(Container &&c) : ValueTypeRange(c.begin(), c.end()) {}
+
+  /// Return the type at the given index.
+  Type operator[](size_t index) const {
+    assert(index < size() && "invalid index into type range");
+    return *(this->begin() + index);
+  }
+
+  /// Return the size of this range.
+  size_t size() const { return llvm::size(*this); }
+
+  /// Return first type in the range.
+  Type front() { return (*this)[0]; }
 
   /// Compare this range with another.
   template <typename OtherT>

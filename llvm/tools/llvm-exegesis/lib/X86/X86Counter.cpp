@@ -8,19 +8,21 @@
 
 #include "X86Counter.h"
 
+#if defined(__linux__) && defined(HAVE_LIBPFM) &&                              \
+    defined(LIBPFM_HAS_FIELD_CYCLES)
+
 // FIXME: Use appropriate wrappers for poll.h and mman.h
 // to support Windows and remove this linux-only guard.
-#ifdef __linux__
+
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 
-#ifdef HAVE_LIBPFM
-#include "perfmon/perf_event.h"
-#include "perfmon/pfmlib.h"
-#include "perfmon/pfmlib_perf_event.h"
-#endif // HAVE_LIBPFM
+#include <perfmon/perf_event.h>
+#include <perfmon/pfmlib.h>
+#include <perfmon/pfmlib_perf_event.h>
 
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -31,12 +33,17 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#if defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
 namespace llvm {
 namespace exegesis {
 
+// Number of entries in the LBR.
+static constexpr int kLbrEntries = 16;
 static constexpr size_t kBufferPages = 8;
 static const size_t kDataBufferSize = kBufferPages * getpagesize();
+
+// First page is reserved for perf_event_mmap_page. Data buffer starts on
+// the next page, so we allocate one more page.
+static const size_t kMappedBufferSize = (kBufferPages + 1) * getpagesize();
 
 // Waits for the LBR perf events.
 static int pollLbrPerfEvent(const int FileDescriptor) {
@@ -70,7 +77,6 @@ static void copyDataBuffer(void *MMappedBuffer, char *Buf, uint64_t Tail,
 static llvm::Error parseDataBuffer(const char *DataBuf, size_t DataSize,
                                    const void *From, const void *To,
                                    llvm::SmallVector<int64_t, 4> *CycleArray) {
-  assert(From != nullptr && To != nullptr);
   const char *DataPtr = DataBuf;
   while (DataPtr < DataBuf + DataSize) {
     struct perf_event_header Header;
@@ -135,34 +141,62 @@ X86LbrPerfEvent::X86LbrPerfEvent(unsigned SamplingPeriod) {
 
 X86LbrCounter::X86LbrCounter(pfm::PerfEvent &&NewEvent)
     : Counter(std::move(NewEvent)) {
-  // First page is reserved for perf_event_mmap_page. Data buffer starts on
-  // the next page, so we allocate one more page.
-  MMappedBuffer = mmap(nullptr, (kBufferPages + 1) * getpagesize(),
-                       PROT_READ | PROT_WRITE, MAP_SHARED, FileDescriptor, 0);
+  MMappedBuffer = mmap(nullptr, kMappedBufferSize, PROT_READ | PROT_WRITE,
+                       MAP_SHARED, FileDescriptor, 0);
   if (MMappedBuffer == MAP_FAILED)
     llvm::errs() << "Failed to mmap buffer.";
 }
 
-X86LbrCounter::~X86LbrCounter() { close(FileDescriptor); }
+X86LbrCounter::~X86LbrCounter() {
+  if (0 != munmap(MMappedBuffer, kMappedBufferSize))
+    llvm::errs() << "Failed to munmap buffer.";
+}
 
 void X86LbrCounter::start() {
   ioctl(FileDescriptor, PERF_EVENT_IOC_REFRESH, 1024 /* kMaxPollsPerFd */);
 }
 
+llvm::Error X86LbrCounter::checkLbrSupport() {
+  // Do a sample read and check if the results contain non-zero values.
+
+  X86LbrCounter counter(X86LbrPerfEvent(123));
+  counter.start();
+
+  // Prevent the compiler from unrolling the loop and get rid of all the
+  // branches. We need at least 16 iterations.
+  int Sum = 0;
+  int V = 1;
+
+  volatile int *P = &V;
+  auto TimeLimit =
+      std::chrono::high_resolution_clock::now() + std::chrono::microseconds(5);
+
+  for (int I = 0;
+       I < kLbrEntries || std::chrono::high_resolution_clock::now() < TimeLimit;
+       ++I) {
+    Sum += *P;
+  }
+
+  counter.stop();
+  (void)Sum;
+
+  auto ResultOrError = counter.doReadCounter(nullptr, nullptr);
+  if (ResultOrError)
+    if (!ResultOrError.get().empty())
+      // If there is at least one non-zero entry, then LBR is supported.
+      for (const int64_t &Value : ResultOrError.get())
+        if (Value != 0)
+          return Error::success();
+
+  return llvm::make_error<llvm::StringError>(
+      "LBR format with cycles is not suppported on the host.",
+      llvm::errc::not_supported);
+}
+
 llvm::Expected<llvm::SmallVector<int64_t, 4>>
 X86LbrCounter::readOrError(StringRef FunctionBytes) const {
-  // The max number of time-outs/retries before we give up.
-  static constexpr int kMaxTimeouts = 160;
-
   // Disable the event before reading
   ioctl(FileDescriptor, PERF_EVENT_IOC_DISABLE, 0);
-
-  // Parses the LBR buffer and fills CycleArray with the sequence of cycle
-  // counts from the buffer.
-  llvm::SmallVector<int64_t, 4> CycleArray;
-  std::unique_ptr<char[]> DataBuf(new char[kDataBufferSize]);
-  int NumTimeouts = 0;
-  int PollResult = 0;
 
   // Find the boundary of the function so that we could filter the LBRs
   // to keep only the relevant records.
@@ -172,6 +206,21 @@ X86LbrCounter::readOrError(StringRef FunctionBytes) const {
   const void *From = reinterpret_cast<const void *>(FunctionBytes.data());
   const void *To = reinterpret_cast<const void *>(FunctionBytes.data() +
                                                   FunctionBytes.size());
+  return doReadCounter(From, To);
+}
+
+llvm::Expected<llvm::SmallVector<int64_t, 4>>
+X86LbrCounter::doReadCounter(const void *From, const void *To) const {
+  // The max number of time-outs/retries before we give up.
+  static constexpr int kMaxTimeouts = 160;
+
+  // Parses the LBR buffer and fills CycleArray with the sequence of cycle
+  // counts from the buffer.
+  llvm::SmallVector<int64_t, 4> CycleArray;
+  auto DataBuf = std::make_unique<char[]>(kDataBufferSize);
+  int NumTimeouts = 0;
+  int PollResult = 0;
+
   while (PollResult <= 0) {
     PollResult = pollLbrPerfEvent(FileDescriptor);
     if (PollResult > 0)
@@ -208,5 +257,5 @@ X86LbrCounter::readOrError(StringRef FunctionBytes) const {
 } // namespace exegesis
 } // namespace llvm
 
-#endif //  defined(HAVE_LIBPFM) && defined(LIBPFM_HAS_FIELD_CYCLES)
-#endif // __linux__
+#endif // defined(__linux__) && defined(HAVE_LIBPFM) &&
+       // defined(LIBPFM_HAS_FIELD_CYCLES)

@@ -113,11 +113,10 @@ public:
       // The MemoryManager can make sure this is always true by forcing the
       // memory layout to be: CodeSection < ReadOnlySection < ReadWriteSection.
       const uint64_t ImageBase = getImageBase();
-      if (Value < ImageBase || ((Value - ImageBase) > UINT32_MAX)) {
-        llvm::errs() << "IMAGE_REL_AMD64_ADDR32NB relocation requires an"
-                     << "ordered section layout.\n";
-        write32BitOffset(Target, 0, 0);
-      } else {
+      if (Value < ImageBase || ((Value - ImageBase) > UINT32_MAX))
+        report_fatal_error("IMAGE_REL_AMD64_ADDR32NB relocation requires an "
+                           "ordered section layout");
+      else {
         write32BitOffset(Target, RE.Addend, Value - ImageBase);
       }
       break;

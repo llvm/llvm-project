@@ -18,31 +18,31 @@ int bar() {
 
 // LINUX: @_ZN1S3fooEi.ifunc = weak_odr ifunc i32 (%struct.S*, i32), i32 (%struct.S*, i32)* ()* @_ZN1S3fooEi.resolver
 
-// LINUX: define i32 @_ZN1S3fooEi(%struct.S* %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN1S3fooEi(%struct.S* {{[^,]*}} %this, i32 %0)
 // LINUX: ret i32 2
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z"(%struct.S* %this, i32 %0)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z"(%struct.S* {{[^,]*}} %this, i32 %0)
 // WINDOWS: ret i32 2
 
-// LINUX: define i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN1S3fooEi.sse4.2(%struct.S* {{[^,]*}} %this, i32 %0)
 // LINUX: ret i32 0
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %this, i32 %0)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* {{[^,]*}} %this, i32 %0)
 // WINDOWS: ret i32 0
 
-// LINUX: define i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32 %0)
+// LINUX: define{{.*}} i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* {{[^,]*}} %this, i32 %0)
 // LINUX: ret i32 1
 
-// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* %this, i32 %0)
+// WINDOWS: define dso_local i32 @"?foo@S@@QEAAHH@Z.arch_ivybridge"(%struct.S* {{[^,]*}} %this, i32 %0)
 // WINDOWS: ret i32 1
 
-// LINUX: define i32 @_Z3barv()
+// LINUX: define{{.*}} i32 @_Z3barv()
 // LINUX: %s = alloca %struct.S, align 1
-// LINUX: %call = call i32 @_ZN1S3fooEi.ifunc(%struct.S* %s, i32 0)
+// LINUX: %call = call i32 @_ZN1S3fooEi.ifunc(%struct.S* {{[^,]*}} %s, i32 0)
 
 // WINDOWS: define dso_local i32 @"?bar@@YAHXZ"()
 // WINDOWS: %s = alloca %struct.S, align 1
-// WINDOWS: %call = call i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* %s, i32 0)
+// WINDOWS: %call = call i32 @"?foo@S@@QEAAHH@Z.resolver"(%struct.S* {{[^,]*}} %s, i32 0)
 
 // LINUX: define weak_odr i32 (%struct.S*, i32)* @_ZN1S3fooEi.resolver() comdat
 // LINUX: ret i32 (%struct.S*, i32)* @_ZN1S3fooEi.arch_sandybridge
@@ -56,6 +56,6 @@ int bar() {
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z.sse4.2"(%struct.S* %0, i32 %1)
 // WINDOWS: call i32 @"?foo@S@@QEAAHH@Z"(%struct.S* %0, i32 %1)
 
-// LINUX: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S*, i32)
+// LINUX: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S* {{[^,]*}}, i32)
 
-// WINDOWS: declare dso_local i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"(%struct.S*, i32)
+// WINDOWS: declare dso_local i32 @"?foo@S@@QEAAHH@Z.arch_sandybridge"(%struct.S* {{[^,]*}}, i32)

@@ -298,7 +298,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   // Some tests use typeof, which is a gnu extension.  Using an explicit
   // unknown-unknown triple is good for a large speedup, because it lets us
   // avoid constructing a full system triple.
-  std::vector<std::string> Args = {"-std=gnu++98", "-target",
+  std::vector<std::string> Args = {"-std=gnu++11", "-target",
                                    "i386-unknown-unknown"};
   if (!runToolOnCodeWithArgs(Factory->create(), Code, Args)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";

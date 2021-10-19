@@ -107,8 +107,8 @@ define i16 @test_urem_even(i16 %X) nounwind {
 ; X86-NEXT:    rorw %ax
 ; X86-NEXT:    movzwl %ax, %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $4681, %ecx # imm = 0x1249
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpl $4682, %ecx # imm = 0x124A
+; X86-NEXT:    setae %al
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -118,8 +118,8 @@ define i16 @test_urem_even(i16 %X) nounwind {
 ; X64-NEXT:    rorw %ax
 ; X64-NEXT:    movzwl %ax, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $4681, %ecx # imm = 0x1249
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpl $4682, %ecx # imm = 0x124A
+; X64-NEXT:    setae %al
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %urem = urem i16 %X, 14
@@ -212,16 +212,16 @@ define i32 @test_urem_odd_setne(i32 %X) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    imull $-858993459, {{[0-9]+}}(%esp), %ecx # imm = 0xCCCCCCCD
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $858993459, %ecx # imm = 0x33333333
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpl $858993460, %ecx # imm = 0x33333334
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_odd_setne:
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull $-858993459, %edi, %ecx # imm = 0xCCCCCCCD
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $858993459, %ecx # imm = 0x33333333
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpl $858993460, %ecx # imm = 0x33333334
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i32 %X, 5
   %cmp = icmp ne i32 %urem, 0
@@ -235,16 +235,16 @@ define i32 @test_urem_negative_odd(i32 %X) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    imull $858993459, {{[0-9]+}}(%esp), %ecx # imm = 0x33333333
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $1, %ecx
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpl $2, %ecx
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_negative_odd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    imull $858993459, %edi, %ecx # imm = 0x33333333
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $1, %ecx
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpl $2, %ecx
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i32 %X, -5
   %cmp = icmp ne i32 %urem, 0
@@ -257,8 +257,8 @@ define i32 @test_urem_negative_even(i32 %X) nounwind {
 ; X86-NEXT:    imull $-920350135, {{[0-9]+}}(%esp), %ecx # imm = 0xC9249249
 ; X86-NEXT:    rorl %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $1, %ecx
-; X86-NEXT:    seta %al
+; X86-NEXT:    cmpl $2, %ecx
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_urem_negative_even:
@@ -266,8 +266,8 @@ define i32 @test_urem_negative_even(i32 %X) nounwind {
 ; X64-NEXT:    imull $-920350135, %edi, %ecx # imm = 0xC9249249
 ; X64-NEXT:    rorl %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $1, %ecx
-; X64-NEXT:    seta %al
+; X64-NEXT:    cmpl $2, %ecx
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %urem = urem i32 %X, -14
   %cmp = icmp ne i32 %urem, 0
@@ -355,4 +355,37 @@ define i32 @test_urem_allones(i32 %X) nounwind {
   %cmp = icmp eq i32 %urem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret
+}
+
+; Check illegal types.
+
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=34366
+define void @ossfuzz34366() {
+; X86-LABEL: ossfuzz34366:
+; X86:       # %bb.0:
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    sete (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: ossfuzz34366:
+; X64:       # %bb.0:
+; X64-NEXT:    movq (%rax), %rax
+; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    andq %rax, %rcx
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    sete (%rax)
+; X64-NEXT:    retq
+  %L10 = load i448, i448* undef, align 4
+  %B18 = urem i448 %L10, -363419362147803445274661903944002267176820680343659030140745099590319644056698961663095525356881782780381260803133088966767300814307328
+  %C13 = icmp ule i448 %B18, 0
+  store i1 %C13, i1* undef, align 1
+  ret void
 }

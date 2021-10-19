@@ -307,6 +307,141 @@ TEST_F(SortImportsTestJS, SortDefaultImports) {
              "import {A} from 'a';\n");
 }
 
+TEST_F(SortImportsTestJS, MergeImports) {
+  // basic operation
+  verifySort("import {X, Y} from 'a';\n"
+             "import {Z} from 'z';\n"
+             "\n"
+             "X + Y + Z;\n",
+             "import {X} from 'a';\n"
+             "import {Z} from 'z';\n"
+             "import {Y} from 'a';\n"
+             "\n"
+             "X + Y + Z;\n");
+
+  // merge only, no resorting.
+  verifySort("import {A, B} from 'foo';\n", "import {A} from 'foo';\n"
+                                            "import {B} from 'foo';");
+
+  // empty imports
+  verifySort("import {A} from 'foo';\n", "import {} from 'foo';\n"
+                                         "import {A} from 'foo';");
+
+  // ignores import *
+  verifySort("import * as foo from 'foo';\n"
+             "import {A} from 'foo';\n",
+             "import   * as foo from 'foo';\n"
+             "import {A} from 'foo';\n");
+
+  // ignores default import
+  verifySort("import X from 'foo';\n"
+             "import {A} from 'foo';\n",
+             "import    X from 'foo';\n"
+             "import {A} from 'foo';\n");
+
+  // keeps comments
+  // known issue: loses the 'also a' comment.
+  verifySort("// a\n"
+             "import {/* x */ X, /* y */ Y} from 'a';\n"
+             "// z\n"
+             "import {Z} from 'z';\n"
+             "\n"
+             "X + Y + Z;\n",
+             "// a\n"
+             "import {/* y */ Y} from 'a';\n"
+             "// z\n"
+             "import {Z} from 'z';\n"
+             "// also a\n"
+             "import {/* x */ X} from 'a';\n"
+             "\n"
+             "X + Y + Z;\n");
+
+  // do not merge imports and exports
+  verifySort("import {A} from 'foo';\n"
+             "\n"
+             "export {B} from 'foo';\n",
+             "import {A} from 'foo';\n"
+             "export   {B} from 'foo';");
+  // do merge exports
+  verifySort("export {A, B} from 'foo';\n", "export {A} from 'foo';\n"
+                                            "export   {B} from 'foo';");
+
+  // do not merge side effect imports with named ones
+  verifySort("import './a';\n"
+             "\n"
+             "import {bar} from './a';\n",
+             "import {bar} from './a';\n"
+             "import './a';\n");
+}
+
+TEST_F(SortImportsTestJS, RespectsClangFormatOff) {
+  verifySort("// clang-format off\n"
+             "import {B} from './b';\n"
+             "import {A} from './a';\n"
+             "// clang-format on\n",
+             "// clang-format off\n"
+             "import {B} from './b';\n"
+             "import {A} from './a';\n"
+             "// clang-format on\n");
+
+  verifySort("import {A} from './sorted1_a';\n"
+             "import {B} from './sorted1_b';\n"
+             "// clang-format off\n"
+             "import {B} from './unsorted_b';\n"
+             "import {A} from './unsorted_a';\n"
+             "// clang-format on\n"
+             "import {A} from './sorted2_a';\n"
+             "import {B} from './sorted2_b';\n",
+             "import {B} from './sorted1_b';\n"
+             "import {A} from './sorted1_a';\n"
+             "// clang-format off\n"
+             "import {B} from './unsorted_b';\n"
+             "import {A} from './unsorted_a';\n"
+             "// clang-format on\n"
+             "import {B} from './sorted2_b';\n"
+             "import {A} from './sorted2_a';\n");
+
+  // Boundary cases
+  verifySort("// clang-format on\n", "// clang-format on\n");
+  verifySort("// clang-format off\n", "// clang-format off\n");
+  verifySort("// clang-format on\n"
+             "// clang-format off\n",
+             "// clang-format on\n"
+             "// clang-format off\n");
+  verifySort("// clang-format off\n"
+             "// clang-format on\n"
+             "import {A} from './a';\n"
+             "import {B} from './b';\n",
+             "// clang-format off\n"
+             "// clang-format on\n"
+             "import {B} from './b';\n"
+             "import {A} from './a';\n");
+  // section ends with comment
+  verifySort("// clang-format on\n"
+             "import {A} from './a';\n"
+             "import {B} from './b';\n"
+             "import {C} from './c';\n"
+             "\n" // inserted empty line is working as intended: splits imports
+                  // section from main code body
+             "// clang-format off\n",
+             "// clang-format on\n"
+             "import {C} from './c';\n"
+             "import {B} from './b';\n"
+             "import {A} from './a';\n"
+             "// clang-format off\n");
+}
+
+TEST_F(SortImportsTestJS, RespectsClangFormatOffInNamedImports) {
+  verifySort("// clang-format off\n"
+             "import {B, A} from './b';\n"
+             "// clang-format on\n"
+             "const x = 1;",
+             "// clang-format off\n"
+             "import {B, A} from './b';\n"
+             "// clang-format on\n"
+             "const x =   1;");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

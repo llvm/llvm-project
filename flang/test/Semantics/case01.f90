@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test SELECT CASE Constraints: C1145, C1146, C1147, C1148, C1149
 program selectCaseProg
    implicit none
@@ -135,11 +135,11 @@ program selectCaseProg
      case (40)
      case (90)
      case (91:99)
-     !ERROR: CASE (81_16:90_16) conflicts with previous cases
+     !ERROR: CASE (81_4:90_4) conflicts with previous cases
      case (81:90)
-     !ERROR: CASE (:80_16) conflicts with previous cases
+     !ERROR: CASE (:80_4) conflicts with previous cases
      case (:80)
-     !ERROR: CASE (200_16) conflicts with previous cases
+     !ERROR: CASE (200_4) conflicts with previous cases
      case (200)
      case default
   end select
@@ -163,3 +163,17 @@ program selectCaseProg
    end select
 
 end program
+
+program test_overlap
+  integer :: i
+  !OK: these cases do not overlap
+  select case(i)
+    case(0:)
+    case(:-1)
+  end select
+  select case(i)
+    case(-1:)
+    !ERROR: CASE (:0_4) conflicts with previous cases
+    case(:0)
+  end select
+end

@@ -51,11 +51,11 @@ func @func_condBranch(%cond : i1) {
 func @func_loop(%arg0 : i32, %arg1 : i32) {
   br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi "slt", %counter, %arg1 : i32
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
   cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
   br ^loopHeader(%inc : i32)
 ^exit:
   return
@@ -155,11 +155,11 @@ func @func_loop_nested_region(
   %arg4 : index) {
   br ^loopHeader(%arg0 : i32)
 ^loopHeader(%counter : i32):
-  %lessThan = cmpi "slt", %counter, %arg1 : i32
+  %lessThan = arith.cmpi slt, %counter, %arg1 : i32
   cond_br %lessThan, ^loopBody, ^exit
 ^loopBody:
-  %const0 = constant 1 : i32
-  %inc = addi %counter, %const0 : i32
+  %const0 = arith.constant 1 : i32
+  %inc = arith.addi %counter, %const0 : i32
   scf.for %arg5 = %arg2 to %arg3 step %arg4 {
     scf.for %arg6 = %arg2 to %arg3 step %arg4 { }
   }
@@ -205,3 +205,103 @@ func @func_loop_nested_region(
 // CHECK-NEXT: Nearest(4, 3) = 4
 // CHECK-NEXT: Nearest(4, 4) = 4
 // CHECK-NEXT: Nearest(4, 5) = 5
+// CHECK-LABEL: --- Block Dominance relationship ---
+// CHECK-NEXT: dominates(0, 0) = true
+// CHECK-NEXT: dominates(0, 1) = true
+// CHECK-NEXT: dominates(0, 2) = true
+// CHECK-NEXT: dominates(0, 3) = true
+// CHECK-NEXT: dominates(0, 4) = true
+// CHECK-NEXT: dominates(0, 5) = true
+// CHECK-NEXT: dominates(0, 6) = false
+// CHECK-NEXT: dominates(1, 0) = false
+// CHECK-NEXT: dominates(1, 1) = true
+// CHECK-NEXT: dominates(1, 2) = true
+// CHECK-NEXT: dominates(1, 3) = true
+// CHECK-NEXT: dominates(1, 4) = true
+// CHECK-NEXT: dominates(1, 5) = true
+// CHECK-NEXT: dominates(1, 6) = false
+// CHECK-NEXT: dominates(2, 0) = false
+// CHECK-NEXT: dominates(2, 1) = false
+// CHECK-NEXT: dominates(2, 2) = true
+// CHECK-NEXT: dominates(2, 3) = true
+// CHECK-NEXT: dominates(2, 4) = true
+// CHECK-NEXT: dominates(2, 5) = false
+// CHECK-NEXT: dominates(2, 6) = false
+// CHECK-NEXT: dominates(3, 0) = false
+// CHECK-NEXT: dominates(3, 1) = false
+// CHECK-NEXT: dominates(3, 2) = false
+// CHECK-NEXT: dominates(3, 3) = true
+// CHECK-NEXT: dominates(3, 4) = false
+// CHECK-NEXT: dominates(3, 5) = false
+// CHECK-NEXT: dominates(3, 6) = false
+// CHECK-NEXT: dominates(4, 0) = false
+// CHECK-NEXT: dominates(4, 1) = false
+// CHECK-NEXT: dominates(4, 2) = false
+// CHECK-NEXT: dominates(4, 3) = true
+// CHECK-NEXT: dominates(4, 4) = true
+// CHECK-NEXT: dominates(4, 5) = false
+// CHECK-NEXT: dominates(4, 6) = false
+// CHECK-NEXT: dominates(5, 0) = false
+// CHECK-NEXT: dominates(5, 1) = false
+// CHECK-NEXT: dominates(5, 2) = false
+// CHECK-NEXT: dominates(5, 3) = false
+// CHECK-NEXT: dominates(5, 4) = false
+// CHECK-NEXT: dominates(5, 5) = true
+// CHECK-NEXT: dominates(5, 6) = false
+// CHECK-NEXT: dominates(6, 0) = true
+// CHECK-NEXT: dominates(6, 1) = true
+// CHECK-NEXT: dominates(6, 2) = true
+// CHECK-NEXT: dominates(6, 3) = true
+// CHECK-NEXT: dominates(6, 4) = true
+// CHECK-NEXT: dominates(6, 5) = true
+// CHECK-NEXT: dominates(6, 6) = true
+// CHECK-LABEL: --- Block PostDominance relationship ---
+// CHECK-NEXT: postdominates(0, 0) = true
+// CHECK-NEXT: postdominates(0, 1) = false
+// CHECK-NEXT: postdominates(0, 2) = false
+// CHECK-NEXT: postdominates(0, 3) = false
+// CHECK-NEXT: postdominates(0, 4) = false
+// CHECK-NEXT: postdominates(0, 5) = false
+// CHECK-NEXT: postdominates(0, 6) = false
+// CHECK-NEXT: postdominates(1, 0) = true
+// CHECK-NEXT: postdominates(1, 1) = true
+// CHECK-NEXT: postdominates(1, 2) = true
+// CHECK-NEXT: postdominates(1, 3) = true
+// CHECK-NEXT: postdominates(1, 4) = true
+// CHECK-NEXT: postdominates(1, 5) = false
+// CHECK-NEXT: postdominates(1, 6) = false
+// CHECK-NEXT: postdominates(2, 0) = false
+// CHECK-NEXT: postdominates(2, 1) = false
+// CHECK-NEXT: postdominates(2, 2) = true
+// CHECK-NEXT: postdominates(2, 3) = true
+// CHECK-NEXT: postdominates(2, 4) = true
+// CHECK-NEXT: postdominates(2, 5) = false
+// CHECK-NEXT: postdominates(2, 6) = false
+// CHECK-NEXT: postdominates(3, 0) = false
+// CHECK-NEXT: postdominates(3, 1) = false
+// CHECK-NEXT: postdominates(3, 2) = false
+// CHECK-NEXT: postdominates(3, 3) = true
+// CHECK-NEXT: postdominates(3, 4) = false
+// CHECK-NEXT: postdominates(3, 5) = false
+// CHECK-NEXT: postdominates(3, 6) = false
+// CHECK-NEXT: postdominates(4, 0) = false
+// CHECK-NEXT: postdominates(4, 1) = false
+// CHECK-NEXT: postdominates(4, 2) = false
+// CHECK-NEXT: postdominates(4, 3) = true
+// CHECK-NEXT: postdominates(4, 4) = true
+// CHECK-NEXT: postdominates(4, 5) = false
+// CHECK-NEXT: postdominates(4, 6) = false
+// CHECK-NEXT: postdominates(5, 0) = true
+// CHECK-NEXT: postdominates(5, 1) = true
+// CHECK-NEXT: postdominates(5, 2) = true
+// CHECK-NEXT: postdominates(5, 3) = true
+// CHECK-NEXT: postdominates(5, 4) = true
+// CHECK-NEXT: postdominates(5, 5) = true
+// CHECK-NEXT: postdominates(5, 6) = false
+// CHECK-NEXT: postdominates(6, 0) = true
+// CHECK-NEXT: postdominates(6, 1) = true
+// CHECK-NEXT: postdominates(6, 2) = true
+// CHECK-NEXT: postdominates(6, 3) = true
+// CHECK-NEXT: postdominates(6, 4) = true
+// CHECK-NEXT: postdominates(6, 5) = true
+// CHECK-NEXT: postdominates(6, 6) = true

@@ -20,6 +20,6 @@
 namespace lldb_private {
 void lldb_assert(bool expression, const char *expr_text, const char *func,
                  const char *file, unsigned int line);
-}
+} // namespace lldb_private
 
 #endif // LLDB_UTILITY_LLDBASSERT_H

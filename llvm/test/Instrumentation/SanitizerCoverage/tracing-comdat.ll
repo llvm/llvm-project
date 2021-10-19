@@ -1,7 +1,5 @@
 ; Test that the coverage guards have proper comdat
-; RUN: opt < %s -sancov                    -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S  -enable-new-pm=0 | FileCheck %s
 ; Make sure asan does not instrument __sancov_gen_
-; RUN: opt < %s -sancov -asan -asan-module -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S  -enable-new-pm=0 | FileCheck %s
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S  | FileCheck %s
 ; RUN: opt < %s -passes='module(require<asan-globals-md>,sancov-module,asan-module),function(asan)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard  -S  | FileCheck %s

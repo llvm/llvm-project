@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
 // RUN: -config="{CheckOptions: [ \
-// RUN:   {key: "cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion", value: 0}, \
+// RUN:   {key: "cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion", value: false}, \
 // RUN: ]}" \
 // RUN: -- -target x86_64-unknown-linux -fsigned-char
 
@@ -341,6 +341,19 @@ void macro_context() {
   DERP(i, .5f);
   DERP(i, .5);
   DERP(i, .5l);
+}
+
+// We understand typedefs.
+void typedef_context() {
+  typedef long long myint64_t;
+  int i;
+  myint64_t i64;
+
+  i64 = i64; // Okay, no conversion.
+  i64 = i;   // Okay, no narrowing.
+
+  i = i64;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: narrowing conversion from 'myint64_t' (aka 'long long') to signed type 'int' is implementation-defined [cppcoreguidelines-narrowing-conversions]
 }
 
 } // namespace floats

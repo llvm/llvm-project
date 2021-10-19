@@ -9,11 +9,11 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-// Define LIBCXXABI_NO_TIMER to disable testing with a timer.
-#ifndef LIBCXXABI_NO_TIMER
+// Define LIBCXXABI_USE_TIMER to enable testing with a timer.
+#if defined(LIBCXXABI_USE_TIMER)
 
 #include <chrono>
-#include <iostream>
+#include <cstdio>
 
 class timer
 {
@@ -31,14 +31,14 @@ public:
         using std::chrono::duration_cast;
         TimePoint end = Clock::now();
         MicroSeconds us = duration_cast<MicroSeconds>(end - m_start);
-        std::cout << us.count() << " microseconds\n";
+        std::printf("%d microseconds\n", us.count());
     }
 
 private:
     TimePoint m_start;
 };
 
-#else /* LIBCXXABI_NO_TIMER */
+#else /* LIBCXXABI_USE_TIMER */
 
 class timer
 {
@@ -49,6 +49,6 @@ public:
     ~timer() {}
 };
 
-#endif /* LIBCXXABI_NO_TIMER */
+#endif /* LIBCXXABI_USE_TIMER */
 
 #endif /* TIMER_H */

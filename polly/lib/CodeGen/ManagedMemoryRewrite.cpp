@@ -26,6 +26,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+using namespace llvm;
 using namespace polly;
 
 static cl::opt<bool> RewriteAllocas(
@@ -255,7 +256,8 @@ replaceGlobalArray(Module &M, const DataLayout &DL, GlobalVariable &Array,
 
     Builder.SetInsertPoint(UserOfArrayInst);
     // <ty>** -> <ty>*
-    Value *ArrPtrLoaded = Builder.CreateLoad(ReplacementToArr, "arrptr.load");
+    Value *ArrPtrLoaded =
+        Builder.CreateLoad(ElemPtrTy, ReplacementToArr, "arrptr.load");
     // <ty>* -> [ty]*
     Value *ArrPtrLoadedBitcasted = Builder.CreateBitCast(
         ArrPtrLoaded, ArrayTy->getPointerTo(), "arrptr.bitcast");
@@ -354,7 +356,7 @@ public:
   GPURuntime Runtime;
 
   ManagedMemoryRewritePass() : ModulePass(ID) {}
-  virtual bool runOnModule(Module &M) {
+  bool runOnModule(Module &M) override {
     const DataLayout &DL = M.getDataLayout();
 
     Function *Malloc = M.getFunction("malloc");

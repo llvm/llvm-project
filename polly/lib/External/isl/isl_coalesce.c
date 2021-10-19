@@ -498,7 +498,7 @@ static int number_of_constraints_increases(int i, int j,
  * replaced if the total number of constraints does not increase.
  * While the number of integer divisions in the two basic maps
  * is assumed to be the same, the actual definitions may be different.
- * We only copy the definition from one of the basic map if it is
+ * We only copy the definition from one of the basic maps if it is
  * the same as that of the other basic map.  Otherwise, we mark
  * the integer division as unknown and simplify the basic map
  * in an attempt to recover the integer division definition.
@@ -1526,6 +1526,9 @@ static isl_bool has_redundant_cuts(struct isl_coalesce_info *info)
  * If "add_valid" is set, then the offending constraints are
  * simply removed.
  *
+ * If the facet turns out to be empty, then no wrapping can be performed.
+ * This is considered a failure, unless "add_valid" is set.
+ *
  * If any of the cut constraints of info->bmap turn out
  * to be redundant with respect to other constraints
  * then these will neither be wrapped nor added directly to the result.
@@ -1550,6 +1553,11 @@ static isl_stat add_selected_wraps_around_facet(struct isl_wraps *wraps,
 		return isl_stat_error;
 	if (isl_tab_detect_redundant(info->tab) < 0)
 		return isl_stat_error;
+	if (info->tab->empty) {
+		if (!add_valid)
+			return wraps_mark_failed(wraps);
+		return isl_stat_ok;
+	}
 	nowrap = has_redundant_cuts(info);
 	if (nowrap < 0)
 		return isl_stat_error;
@@ -3533,7 +3541,7 @@ static enum isl_change coalesce_subset_with_equalities(int i, int j,
 	return change;
 }
 
-/* Check if the union of and the basic maps represented by info[i] and info[j]
+/* Check if the union of the basic maps represented by info[i] and info[j]
  * can be represented by a single basic map, by aligning or equating
  * their integer divisions.
  * If so, replace the pair by the single basic map and return
@@ -3606,6 +3614,8 @@ static isl_bool has_nested_div(__isl_keep isl_basic_map *bmap)
  * If no such list can be constructed, then the number of elements
  * in the returned list is smaller than the number of integer divisions
  * in "bmap_i".
+ * The integer division of "bmap_i" and "bmap_j" are assumed to be known and
+ * not contain any nested divs.
  */
 static __isl_give isl_aff_list *set_up_substitutions(
 	__isl_keep isl_basic_map *bmap_i, __isl_keep isl_basic_map *bmap_j,

@@ -1,0 +1,53 @@
+# RUN: llc -verify-machineinstrs -run-pass=machine-outliner -mtriple=thumbv7m-none-eabi %s -o - | FileCheck %s
+
+# Check the outlined function does not contain debug instructions
+# CHECK-LABEL: name: f
+# CHECK:       tBL {{.*}}  @OUTLINED_FUNCTION_0,
+
+# CHECK-LABEL: name: g
+# CHECK:       tBL {{.*}}  @OUTLINED_FUNCTION_0,
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK-NOT:   DBG_VALUE
+# CHECK:       tTAILJMPdND @h
+--- |
+  define void @f() { entry: ret void }
+
+  define void @g() { entry: ret void }
+
+  declare void @h()
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+
+    $r4 = tMOVr $r1, 14, $noreg
+    DBG_VALUE $r4, $noreg
+    renamable $r0, dead $cpsr = nsw tMUL renamable $r1, killed renamable $r0, 14, $noreg
+    renamable $r0, dead $cpsr = nsw tSUBrr killed renamable $r0, renamable $r1, 14, $noreg
+    tBL 14, $noreg, @h, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def $r0
+
+    frame-destroy tPOP_RET 14, $noreg, def $r4, def $pc, implicit killed $r0
+...
+---
+name:            g
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $r0, $r1, $r2, $r3, $r4, $lr
+
+    frame-setup tPUSH 14, $noreg, killed $r4, killed $lr, implicit-def $sp, implicit $sp
+
+    $r4 = tMOVr $r1, 14, $noreg
+    DBG_VALUE $r4, $noreg
+    renamable $r0, dead $cpsr = nsw tMUL renamable $r1, killed renamable $r0, 14, $noreg
+    renamable $r0, dead $cpsr = nsw tSUBrr killed renamable $r0, renamable $r1, 14, $noreg
+    tBL 14, $noreg, @h, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit killed $r1, implicit-def $sp, implicit-def $r0
+
+    frame-destroy tPOP_RET 14, $noreg, def $r4, def $pc, implicit killed $r0
+...

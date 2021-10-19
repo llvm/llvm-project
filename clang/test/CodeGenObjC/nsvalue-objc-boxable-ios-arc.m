@@ -12,7 +12,7 @@
 // CHECK:      [[RECT_STR:.*]]      = {{.*}}CGRect={CGPoint=dd}{CGSize=dd}}{{.*}}
 // CHECK:      [[EDGE_STR:.*]]      = {{.*}}NSEdgeInsets=dddd{{.*}}
 
-// CHECK-LABEL: define void @doRange()
+// CHECK-LABEL: define{{.*}} void @doRange()
 void doRange() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct._NSRange{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct._NSRange{{.*}}
@@ -31,7 +31,7 @@ void doRange() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doPoint()
+// CHECK-LABEL: define{{.*}} void @doPoint()
 void doPoint() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGPoint{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGPoint{{.*}}
@@ -50,7 +50,7 @@ void doPoint() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doSize()
+// CHECK-LABEL: define{{.*}} void @doSize()
 void doSize() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGSize{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGSize{{.*}}
@@ -69,7 +69,7 @@ void doSize() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doRect()
+// CHECK-LABEL: define{{.*}} void @doRect()
 void doRect() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.CGRect{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.CGRect{{.*}}
@@ -90,7 +90,7 @@ void doRect() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doNSEdgeInsets()
+// CHECK-LABEL: define{{.*}} void @doNSEdgeInsets()
 void doNSEdgeInsets() {
   // CHECK:      [[LOCAL_VAR:%.*]]  = alloca %struct.NSEdgeInsets{{.*}}
   // CHECK:      [[TEMP_VAR:%.*]]   = alloca %struct.NSEdgeInsets{{.*}}
@@ -109,7 +109,7 @@ void doNSEdgeInsets() {
   // CHECK:      ret void
 }
 
-// CHECK-LABEL: define void @doRangeRValue() 
+// CHECK-LABEL: define{{.*}} void @doRangeRValue() 
 void doRangeRValue() {
   // CHECK:     [[COERCE:%.*]]          = alloca %struct._NSRange{{.*}}
   // CHECK:     [[RECV_PTR:%.*]]        = load {{.*}} [[NSVALUE]]

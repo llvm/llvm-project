@@ -30,9 +30,28 @@ Opcode Mnemonic
 
 Opcode mnemonic describes opcode semantics and may include one or more suffices in this order:
 
+* :ref:`Packing suffix<amdgpu_syn_instruction_pk>`.
 * :ref:`Destination operand type suffix<amdgpu_syn_instruction_type>`.
 * :ref:`Source operand type suffix<amdgpu_syn_instruction_type>`.
 * :ref:`Encoding suffix<amdgpu_syn_instruction_enc>`.
+
+.. _amdgpu_syn_instruction_pk:
+
+Packing Suffix
+~~~~~~~~~~~~~~
+
+Most instructions which operate on packed data have a *_pk* suffix.
+Unless otherwise :ref:`noted<amdgpu_syn_instruction_operand_tags>`,
+these instructions operate on and produce packed data composed of
+two values. The type of values is indicated by
+:ref:`type suffices<amdgpu_syn_instruction_type>`.
+
+For example, the following instruction sums up two pairs of f16 values
+and produces a pair of f16 values:
+
+.. parsed-literal::
+
+    v_pk_add_f16 v1, v2, v3     // Each operand has f16x2 type
 
 .. _amdgpu_syn_instruction_type:
 
@@ -51,15 +70,15 @@ to other kinds of operands such as *addresses*, *offsets* and so on.
 
 The following table enumerates the most frequently used type suffices.
 
-    ============================================ ======================= =================
+    ============================================ ======================= ============================
     Type Suffices                                Packed instruction?     Data Type
-    ============================================ ======================= =================
+    ============================================ ======================= ============================
     _b512, _b256, _b128, _b64, _b32, _b16, _b8   No                      Bits.
     _u64, _u32, _u16, _u8                        No                      Unsigned integer.
     _i64, _i32, _i16, _i8                        No                      Signed integer.
     _f64, _f32, _f16                             No                      Floating-point.
-    _b16, _u16, _i16, _f16                       Yes                     Packed.
-    ============================================ ======================= =================
+    _b16, _u16, _i16, _f16                       Yes                     Packed (b16x2, u16x2, etc).
+    ============================================ ======================= ============================
 
 Instructions which have no type suffices are assumed to operate with typeless data.
 The size of data is specified by size suffices:
@@ -131,14 +150,14 @@ To force specific encoding, one can add a suffix to the opcode of the instructio
     =================================================== =================
     Encoding                                            Encoding Suffix
     =================================================== =================
-    Native 32-bit encoding (*VOP1*, *VOP2* or *VOPC*)   _e32
+    *VOP1*, *VOP2* and *VOPC* (32-bit) encoding         _e32
     *VOP3* (64-bit) encoding                            _e64
     *DPP* encoding                                      _dpp
     *SDWA* encoding                                     _sdwa
     =================================================== =================
 
 These suffices are used in this reference to indicate the assumed encoding.
-When no suffix is specified, a native encoding is implied.
+When no suffix is specified, native instruction encoding is implied.
 
 Operands
 ========
@@ -146,7 +165,7 @@ Operands
 Syntax
 ~~~~~~
 
-Syntax of most operands is described :doc:`in this document<AMDGPUOperandSyntax>`.
+Syntax of generic operands is described :doc:`in this document<AMDGPUOperandSyntax>`.
 
 For detailed information about operands follow *operand links* in GPU-specific documents:
 

@@ -8,17 +8,15 @@
 
 #include <stdio.h>
 
-#include "utils.h"
-
 int main(int argc, char **argv) {
   // With asan allocator this makes sure we get memory from mmap.
   static const int kSize = 1 << 25;
   unsigned char *x = new unsigned char[kSize];
-  untag_printf("-");
+  printf("-");
   for (int i = 0; i <= 32; i++) {
-    untag_printf("%02x", x[i]);
+    printf("%02x", x[i]);
   }
-  untag_printf("-\n");
+  printf("-\n");
   delete [] x;
 }
 

@@ -39,8 +39,8 @@ int main(int, char**)
 
     for (int i = 0; i <= 2550; i += 7)
     {
-        year year(i);
-        assert(static_cast<int>(year) == i);
+        year yr(i);
+        assert(static_cast<int>(yr) == i);
     }
 
   return 0;

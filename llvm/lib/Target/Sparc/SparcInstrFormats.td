@@ -224,20 +224,20 @@ class F3_Si<bits<2> opVal, bits<6> op3val, bit xVal, dag outs, dag ins,
 
 // Define rr and ri shift instructions with patterns.
 multiclass F3_S<string OpcStr, bits<6> Op3Val, bit XVal, SDNode OpNode,
-                ValueType VT, RegisterClass RC,
+                ValueType VT, Operand SIT, RegisterClass RC,
                 InstrItinClass itin = IIC_iu_instr> {
   def rr : F3_Sr<2, Op3Val, XVal, (outs RC:$rd), (ins RC:$rs1, IntRegs:$rs2),
                  !strconcat(OpcStr, " $rs1, $rs2, $rd"),
                  [(set VT:$rd, (OpNode VT:$rs1, i32:$rs2))],
                  itin>;
-  def ri : F3_Si<2, Op3Val, XVal, (outs RC:$rd), (ins RC:$rs1, i32imm:$shcnt),
+  def ri : F3_Si<2, Op3Val, XVal, (outs RC:$rd), (ins RC:$rs1, SIT:$shcnt),
                  !strconcat(OpcStr, " $rs1, $shcnt, $rd"),
                  [(set VT:$rd, (OpNode VT:$rs1, (i32 imm:$shcnt)))],
                  itin>;
 }
 
 class F4<bits<6> op3, dag outs, dag ins, string asmstr, list<dag> pattern,
-           InstrItinClass itin = NoItinerary>
+         InstrItinClass itin = NoItinerary>
    : InstSP<outs, ins, asmstr, pattern, itin> {
   bits<5> rd;
 

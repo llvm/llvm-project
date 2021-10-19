@@ -297,3 +297,34 @@ define void @alloca(i32 %n) nounwind {
   call void @llvm.stackrestore(i8* %sp)
   ret void
 }
+
+; Check that functions with interrupt attribute do not use save/restore code
+
+declare i32 @foo(...)
+define void @interrupt() nounwind "interrupt"="user" {
+; RV32I-LABEL: interrupt:
+; RV32I-NOT:     call t0, __riscv_save
+; RV32I-NOT:     tail __riscv_restore
+;
+; RV64I-LABEL: interrupt:
+; RV64I-NOT:     call t0, __riscv_save
+; RV64I-NOT:     tail __riscv_restore
+;
+; RV32I-SR-LABEL: interrupt:
+; RV32I-SR-NOT:     call t0, __riscv_save
+; RV32I-SR-NOT:     tail __riscv_restore
+;
+; RV64I-SR-LABEL: interrupt:
+; RV64I-SR-NOT:     call t0, __riscv_save
+; RV64I-SR-NOT:     tail __riscv_restore
+;
+; RV32I-FP-SR-LABEL: interrupt:
+; RV32I-FP-SR-NOT:     call t0, __riscv_save
+; RV32I-FP-SR-NOT:     tail __riscv_restore
+;
+; RV64I-FP-SR-LABEL: interrupt:
+; RV64I-FP-SR-NOT:     call t0, __riscv_save
+; RV64I-FP-SR-NOT:     tail __riscv_restore
+  %call = call i32 bitcast (i32 (...)* @foo to i32 ()*)()
+  ret void
+}

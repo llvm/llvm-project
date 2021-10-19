@@ -30,14 +30,14 @@
 
 # And -analysis-clustering=naive every opcode goes into separate cluster.
 
-# CHECK-CLUSTERS-NAIVE-049-NEXT: {{^}}0,
-# CHECK-CLUSTERS-NAIVE-049-SAME: ,1.50{{$}}
-# CHECK-CLUSTERS-NAIVE-049: {{^}}1,
-# CHECK-CLUSTERS-NAIVE-049-SAME: ,2.00{{$}}
-# CHECK-CLUSTERS-NAIVE-049: {{^}}2,
-# CHECK-CLUSTERS-NAIVE-049-SAME: ,2.50{{$}}
-# CHECK-CLUSTERS-NAIVE-049: {{^}}3,
-# CHECK-CLUSTERS-NAIVE-049-SAME: ,1.00{{$}}
+# CHECK-CLUSTERS-NAIVE-NEXT: {{^}}0,
+# CHECK-CLUSTERS-NAIVE-SAME: ,1.50{{$}}
+# CHECK-CLUSTERS-NAIVE: {{^}}1,
+# CHECK-CLUSTERS-NAIVE-SAME: ,2.00{{$}}
+# CHECK-CLUSTERS-NAIVE: {{^}}2,
+# CHECK-CLUSTERS-NAIVE-SAME: ,2.50{{$}}
+# CHECK-CLUSTERS-NAIVE: {{^}}3,
+# CHECK-CLUSTERS-NAIVE-SAME: ,1.00{{$}}
 
 # The "value" is manually specified, not measured.
 

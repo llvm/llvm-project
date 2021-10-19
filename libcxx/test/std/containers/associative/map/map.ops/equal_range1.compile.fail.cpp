@@ -10,8 +10,8 @@
 
 // class map
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+// pair<iterator,iterator>             equal_range(const key_type& k);
+// pair<const_iterator,const_iterator> equal_range(const key_type& k) const;
 //
 //   The member function templates find, count, lower_bound, upper_bound, and
 // equal_range shall not participate in overload resolution unless the

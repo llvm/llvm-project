@@ -14,11 +14,11 @@
     br i1 %cmp9, label %exit, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %tmp5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %tmp5, %vector.ph ]
+    %lsr.iv1 = phi i32 [ %lsr.iv.next, %vector.body ], [ %start, %vector.ph ]
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %lsr.iv.2 = phi i16* [ %scevgep.2, %vector.body ], [ %c, %vector.ph ]
     %tmp7 = phi i32 [ %N, %vector.ph ], [ %tmp9, %vector.body ]
@@ -26,7 +26,7 @@
     %tmp8 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 8
     %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %lsr.iv17, i32 2, <8 x i1> %tmp8, <8 x i16> undef)
-    %min = tail call i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16> %wide.masked.load)
+    %min = tail call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %wide.masked.load)
     store i16 %min, i16* %lsr.iv.2
     %scevgep = getelementptr i16, i16* %lsr.iv, i32 8
     %scevgep.2 = getelementptr i16, i16* %lsr.iv.2, i32 1
@@ -40,10 +40,10 @@
   }
 
   declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <8 x i1> @llvm.arm.mve.vctp16(i32)
-  declare i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16>)
+  declare i16 @llvm.vector.reduce.smax.v8i16(<8 x i16>)
 
 ...
 ---
@@ -98,12 +98,12 @@ body:             |
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $r0, $r1, $r2, $r5, $r12
   ; CHECK:   $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg, $noreg
   ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv17, align 2)
+  ; CHECK:   renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   $lr = tMOVr $r5, 14 /* CC::al */, $noreg
-  ; CHECK:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.lsr.iv.2)
+  ; CHECK:   early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
   ; CHECK:   renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14 /* CC::al */, $noreg
   ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
@@ -132,7 +132,7 @@ body:             |
     renamable $r3 = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
     $r12 = t2MOVi16 32768, 14 /* CC::al */, $noreg
     $r12 = t2MOVTi16 killed $r12, 65535, 14 /* CC::al */, $noreg
-    t2DoLoopStart renamable $r3
+    $lr = t2DoLoopStart renamable $r3
     $r5 = tMOVr killed $r3, 14 /* CC::al */, $noreg
 
   bb.2.vector.body:
@@ -140,12 +140,12 @@ body:             |
     liveins: $r0, $r1, $r2, $r5, $r12
 
     $r3 = tMOVr $r12, 14 /* CC::al */, $noreg
-    renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP16 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 8, implicit $vpr
-    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv17, align 2)
-    renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg
+    renamable $r0, renamable $q0 = MVE_VLDRHU16_post killed renamable $r0, 16, 1, killed renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv17, align 2)
+    renamable $r3 = MVE_VMAXVs16 killed renamable $r3, killed renamable $q0, 0, $noreg, $noreg
     $lr = tMOVr $r5, 14 /* CC::al */, $noreg
-    early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.lsr.iv.2)
+    early-clobber renamable $r1 = t2STRH_POST killed renamable $r3, killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.lsr.iv.2)
     renamable $r5, dead $cpsr = nsw tSUBi8 killed $r5, 1, 14 /* CC::al */, $noreg
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 8, 14 /* CC::al */, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1

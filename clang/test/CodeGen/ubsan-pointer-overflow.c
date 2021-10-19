@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-// CHECK-LABEL: define void @fixed_len_array
+// CHECK-LABEL: define{{.*}} void @fixed_len_array
 void fixed_len_array(int k) {
   // CHECK: getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* [[ARR:%.*]], i64 0, i64 [[IDXPROM:%.*]]
   // CHECK-NEXT: [[SMUL:%.*]] = call { i64, i1 } @llvm.smul.with.overflow.i64(i64 40, i64 [[IDXPROM]]), !nosanitize
@@ -23,7 +23,7 @@ void fixed_len_array(int k) {
   arr[k][k];
 }
 
-// CHECK-LABEL: define void @variable_len_array
+// CHECK-LABEL: define{{.*}} void @variable_len_array
 void variable_len_array(int n, int k) {
   // CHECK: getelementptr inbounds i32, i32* {{.*}}, i64 [[IDXPROM:%.*]]
   // CHECK-NEXT: @llvm.smul.with.overflow.i64(i64 4, i64 [[IDXPROM]]), !nosanitize
@@ -37,7 +37,7 @@ void variable_len_array(int n, int k) {
   arr[k][k];
 }
 
-// CHECK-LABEL: define void @pointer_array
+// CHECK-LABEL: define{{.*}} void @pointer_array
 void pointer_array(int **arr, int k) {
   // CHECK: @llvm.smul.with.overflow.i64(i64 8, i64 {{.*}}), !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
@@ -48,7 +48,7 @@ void pointer_array(int **arr, int k) {
   arr[k][k];
 }
 
-// CHECK-LABEL: define void @pointer_array_unsigned_indices
+// CHECK-LABEL: define{{.*}} void @pointer_array_unsigned_indices
 void pointer_array_unsigned_indices(int **arr, unsigned k) {
   // CHECK: icmp uge
   // CHECK-NOT: select
@@ -59,7 +59,7 @@ void pointer_array_unsigned_indices(int **arr, unsigned k) {
   arr[k][k];
 }
 
-// CHECK-LABEL: define void @pointer_array_mixed_indices
+// CHECK-LABEL: define{{.*}} void @pointer_array_mixed_indices
 void pointer_array_mixed_indices(int **arr, int i, unsigned j) {
   // CHECK: select
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}
@@ -80,7 +80,7 @@ struct S1 {
 // TODO: Currently, structure GEPs are not checked, so there are several
 // potentially unsafe GEPs here which we don't instrument.
 //
-// CHECK-LABEL: define void @struct_index
+// CHECK-LABEL: define{{.*}} void @struct_index
 void struct_index(struct S1 *p) {
   // CHECK: getelementptr inbounds %struct.S1, %struct.S1* [[P:%.*]], i64 10
   // CHECK-NEXT: [[BASE:%.*]] = ptrtoint %struct.S1* [[P]] to i64, !nosanitize
@@ -95,7 +95,7 @@ void struct_index(struct S1 *p) {
 
 typedef void (*funcptr_t)(void);
 
-// CHECK-LABEL: define void @function_pointer_arith
+// CHECK-LABEL: define{{.*}} void @function_pointer_arith
 void function_pointer_arith(funcptr_t *p, int k) {
   // CHECK: add i64 {{.*}}, 8, !nosanitize
   // CHECK-NOT: select
@@ -108,7 +108,7 @@ void function_pointer_arith(funcptr_t *p, int k) {
   p + k;
 }
 
-// CHECK-LABEL: define void @dont_emit_checks_for_no_op_GEPs
+// CHECK-LABEL: define{{.*}} void @dont_emit_checks_for_no_op_GEPs
 // CHECK-C: __ubsan_handle_pointer_overflow
 // CHECK-CPP-NOT: __ubsan_handle_pointer_overflow
 void dont_emit_checks_for_no_op_GEPs(char *p) {

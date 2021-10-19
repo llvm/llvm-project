@@ -2,17 +2,18 @@
 // RUN: %clang_cc1 -triple powerpc64le-gnu-linux -target-feature +vsx \
 // RUN: -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple powerpc64le-gnu-linux -target-feature +vsx \
-// RUN: -fexperimental-strict-floating-point \
 // RUN:  -ffp-exception-behavior=strict -emit-llvm %s -o - | FileCheck \
 // RUN: --check-prefix=CHECK-CONSTRAINED -vv %s
 // RUN: %clang_cc1 -triple powerpc64le-gnu-linux -target-feature +vsx \
 // RUN: -fallow-half-arguments-and-returns -S -o - %s | \
 // RUN: FileCheck --check-prefix=CHECK-ASM --check-prefix=NOT-FIXME-CHECK  %s
 // RUN: %clang_cc1 -triple powerpc64le-gnu-linux -target-feature +vsx \
-// RUN: -fexperimental-strict-floating-point \
 // RUN: -fallow-half-arguments-and-returns -S -ffp-exception-behavior=strict \
 // RUN: -o - %s | FileCheck --check-prefix=CHECK-ASM \
 // RUN: --check-prefix=FIXME-CHECK  %s
+// RUN: %clang_cc1 -triple powerpcspe -S -ffp-exception-behavior=strict \
+// RUN: -target-feature +spe -fexperimental-strict-floating-point -emit-llvm \
+// RUN: %s -o - | FileCheck --check-prefix=CHECK-CONSTRAINED %s
 
 typedef __attribute__((vector_size(4 * sizeof(float)))) float vec_float;
 typedef __attribute__((vector_size(2 * sizeof(double)))) double vec_double;
@@ -59,14 +60,14 @@ void test_float(void) {
 
   vf = __builtin_vsx_xvrspic(vf);
   // CHECK-LABEL: try-xvrspic
-  // CHECK-UNCONSTRAINED: @llvm.nearbyint.v4f32(<4 x float> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.nearbyint.v4f32(<4 x float> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK-UNCONSTRAINED: @llvm.rint.v4f32(<4 x float> %{{.*}})
+  // CHECK-CONSTRAINED: @llvm.experimental.constrained.rint.v4f32(<4 x float> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvrspic
 
   vd = __builtin_vsx_xvrdpic(vd);
   // CHECK-LABEL: try-xvrdpic
-  // CHECK-UNCONSTRAINED: @llvm.nearbyint.v2f64(<2 x double> %{{.*}})
-  // CHECK-CONSTRAINED: @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK-UNCONSTRAINED: @llvm.rint.v2f64(<2 x double> %{{.*}})
+  // CHECK-CONSTRAINED: @llvm.experimental.constrained.rint.v2f64(<2 x double> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvrdpic
 
   vf = __builtin_vsx_xvrspip(vf);

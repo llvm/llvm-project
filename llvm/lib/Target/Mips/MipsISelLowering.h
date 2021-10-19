@@ -40,8 +40,6 @@
 namespace llvm {
 
 class Argument;
-class CCState;
-class CCValAssign;
 class FastISel;
 class FunctionLoweringInfo;
 class MachineBasicBlock;
@@ -305,7 +303,7 @@ class TargetRegisterClass;
 
     /// Return the correct alignment for the current calling convention.
     Align getABIAlignmentForCallingConv(Type *ArgTy,
-                                        DataLayout DL) const override {
+                                        const DataLayout &DL) const override {
       const Align ABIAlign = DL.getABITypeAlign(ArgTy);
       if (ArgTy->isVectorTy())
         return std::min(ABIAlign, Align(8));
@@ -315,10 +313,6 @@ class TargetRegisterClass;
     ISD::NodeType getExtendForAtomicOps() const override {
       return ISD::SIGN_EXTEND;
     }
-
-    void LowerOperationWrapper(SDNode *N,
-                               SmallVectorImpl<SDValue> &Results,
-                               SelectionDAG &DAG) const override;
 
     /// LowerOperation - Provide custom lowering hooks for some operations.
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

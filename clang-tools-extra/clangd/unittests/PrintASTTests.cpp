@@ -53,15 +53,15 @@ TEST_P(ASTUtils, PrintTemplateArgs) {
   EXPECT_THAT(V.TemplateArgsAtPoints, ElementsAreArray(Pair.Expected));
 }
 
-INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
-                        ::testing::ValuesIn(std::vector<Case>({
-                            {
-                                R"cpp(
+INSTANTIATE_TEST_SUITE_P(ASTUtilsTests, ASTUtils,
+                         ::testing::ValuesIn(std::vector<Case>({
+                             {
+                                 R"cpp(
                                   template <class X> class Bar {};
                                   template <> class ^Bar<double> {};)cpp",
-                                {"<double>"}},
-                            {
-                                R"cpp(
+                                 {"<double>"}},
+                             {
+                                 R"cpp(
                                   template <class X> class Bar {};
                                   template <class T, class U,
                                   template<typename> class Z, int Q>
@@ -69,42 +69,42 @@ INSTANTIATE_TEST_CASE_P(ASTUtilsTests, ASTUtils,
                                   template struct ^Foo<int, bool, Bar, 8>;
                                   template <typename T>
                                   struct ^Foo<T *, T, Bar, 3> {};)cpp",
-                                {"<int, bool, Bar, 8>", "<T *, T, Bar, 3>"}},
-                            {
-                                R"cpp(
+                                 {"<int, bool, Bar, 8>", "<T *, T, Bar, 3>"}},
+                             {
+                                 R"cpp(
                                   template <int ...> void Foz() {};
                                   template <> void ^Foz<3, 5, 8>() {};)cpp",
-                                {"<3, 5, 8>"}},
-                            {
-                                R"cpp(
+                                 {"<3, 5, 8>"}},
+                             {
+                                 R"cpp(
                                   template <class X> class Bar {};
                                   template <template <class> class ...>
                                   class Aux {};
                                   template <> class ^Aux<Bar, Bar> {};
                                   template <template <class> class T>
                                   class ^Aux<T, T> {};)cpp",
-                                {"<Bar, Bar>", "<T, T>"}},
-                            {
-                                R"cpp(
+                                 {"<Bar, Bar>", "<T, T>"}},
+                             {
+                                 R"cpp(
                                   template <typename T> T var = 1234;
                                   template <> int ^var<int> = 1;)cpp",
-                                {"<int>"}},
-                            {
-                                R"cpp(
+                                 {"<int>"}},
+                             {
+                                 R"cpp(
                                   template <typename T> struct Foo;
                                   struct Bar { friend class Foo<int>; };
                                   template <> struct ^Foo<int> {};)cpp",
-                                {"<int>"}},
-                            {
-                                R"cpp(
+                                 {"<int>"}},
+                             {
+                                 R"cpp(
                                   template<class T>
                                   T S = T(10);
                                   template <class T>
                                   int ^S<T*> = 0;
                                   template <>
                                   int ^S<double> = 0;)cpp",
-                                {"<T *>", "<double>"}},
-                        })), );
+                                 {"<T *>", "<double>"}},
+                         })));
 } // namespace
 } // namespace clangd
 } // namespace clang

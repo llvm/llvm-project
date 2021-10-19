@@ -15,7 +15,7 @@
 --- |
   @g = hidden local_unnamed_addr global i32 0, align 4
 
-  define hidden void @bar(void ()* nocapture %f) "branch-target-enforcement" {
+  define hidden void @bar(void ()* nocapture %f) "branch-target-enforcement"="true" {
   entry:
     ret void
   }
@@ -31,13 +31,13 @@ body:             |
 
     HINT 34
 
-    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store 4 into @g)
+    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
     BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
-    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store 4 into @g)
+    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
     BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
-    STRWui killed renamable $w21, killed renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store 4 into @g)
+    STRWui killed renamable $w21, killed renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
     BLR killed renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
     TCRETURNdi @foo, 0, csr_aarch64_aapcs, implicit $sp

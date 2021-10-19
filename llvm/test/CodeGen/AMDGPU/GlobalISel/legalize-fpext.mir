@@ -69,18 +69,14 @@ body: |
     liveins: $vgpr0_vgpr1_vgpr2
     ; CHECK-LABEL: name: test_fpext_v3f16_to_v3f32
     ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
-    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[UV]](<3 x s16>), 0
-    ; CHECK: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV2]](<2 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
     ; CHECK: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)

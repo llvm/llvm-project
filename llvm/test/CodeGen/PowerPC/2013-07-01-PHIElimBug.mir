@@ -27,7 +27,7 @@ body:             |
     liveins: $x2
 
     %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
-    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load 8)
+    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load (s64))
     %2:gprc = LI 0
     %3:crrc = CMPLWI killed %2, 0
     BCC 76, killed %3, %bb.2
@@ -50,7 +50,7 @@ body:             |
   bb.4:
     %12:g8rc_and_g8rc_nox0 = PHI %4, %bb.1, %9, %bb.3
     %13:g8rc = LI8 0
-    STW8 killed %13, 0, killed %12 :: (store 4)
+    STW8 killed %13, 0, killed %12 :: (store (s32))
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -63,7 +63,7 @@ body:             |
 #
 # CHECK:       bb.0:
 # CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
-# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit killed $x2 :: (load 8)
+# CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit killed $x2 :: (load (s64))
 # CHECK-NEXT:    %2:gprc = LI 0
 # CHECK-NEXT:    %3:crrc = CMPLWI killed %2, 0
 # CHECK-NEXT:    BCC 76, killed %3, %bb.2
@@ -88,5 +88,5 @@ body:             |
 # CHECK:       bb.4:
 # CHECK:         %12:g8rc_and_g8rc_nox0 = COPY killed %16
 # CHECK-NEXT:    %13:g8rc = LI8 0
-# CHECK-NEXT:    STW8 killed %13, 0, killed %12 :: (store 4)
+# CHECK-NEXT:    STW8 killed %13, 0, killed %12 :: (store (s32))
 # CHECK-NEXT:    BLR8 implicit $lr8, implicit $rm

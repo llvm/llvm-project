@@ -13,7 +13,7 @@ typedef struct {
   __weak id f1;
 } Weak;
 
-// CHECK: define void @testStrongException()
+// CHECK: define{{.*}} void @testStrongException()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_STRONG]], align 8
 // CHECK: %[[CALL:.*]] = call [2 x i64] @genStrong()
@@ -38,11 +38,11 @@ void testStrongException(void) {
   calleeStrong(genStrong(), genStrong());
 }
 
-// CHECK: define void @testWeakException()
+// CHECK: define{{.*}} void @testWeakException()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_WEAK]], align 8
-// CHECK: call void @genWeak(%[[STRUCT_WEAK]]* sret align 8 %[[AGG_TMP]])
-// CHECK: invoke void @genWeak(%[[STRUCT_WEAK]]* sret align 8 %[[AGG_TMP1]])
+// CHECK: call void @genWeak(%[[STRUCT_WEAK]]* sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])
+// CHECK: invoke void @genWeak(%[[STRUCT_WEAK]]* sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP1]])
 
 // CHECK: call void @calleeWeak(%[[STRUCT_WEAK]]* %[[AGG_TMP]], %[[STRUCT_WEAK]]* %[[AGG_TMP1]])
 // CHECK: ret void
@@ -54,6 +54,9 @@ void testStrongException(void) {
 
 // CHECK: resume
 
+// CHECK: define{{.*}} void @__destructor_8_w8({{.*}} !dbg ![[DTOR_SP:.*]] {
+// CHECK: load i8**, i8*** {{.*}}, !dbg ![[DTOR_LOC:.*]]
+
 Weak genWeak(void);
 void calleeWeak(Weak, Weak);
 
@@ -63,3 +66,5 @@ void testWeakException(void) {
 
 // CHECK-DAG: [[ARTIFICIAL_LOC_1]] = !DILocation(line: 0
 // CHECK-DAG: [[ARTIFICIAL_LOC_2]] = !DILocation(line: 0
+// CHECK: ![[DTOR_SP]] = distinct !DISubprogram(linkageName: "__destructor_8_w8",
+// CHECK: ![[DTOR_LOC]] = !DILocation(line: 0, scope: ![[DTOR_SP]])

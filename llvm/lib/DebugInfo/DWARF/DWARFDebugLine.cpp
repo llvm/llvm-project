@@ -783,6 +783,18 @@ Error DWARFDebugLine::LineTable::parse(
     *OS << '\n';
     Row::dumpTableHeader(*OS, /*Indent=*/Verbose ? 12 : 0);
   }
+  bool TombstonedAddress = false;
+  auto EmitRow = [&] {
+    if (!TombstonedAddress) {
+      if (Verbose) {
+        *OS << "\n";
+        OS->indent(12);
+      }
+      if (OS)
+        State.Row.dump(*OS);
+      State.appendRowToMatrix();
+    }
+  };
   while (*OffsetPtr < EndOffset) {
     DataExtractor::Cursor Cursor(*OffsetPtr);
 
@@ -834,13 +846,7 @@ Error DWARFDebugLine::LineTable::parse(
         // No need to test the Cursor is valid here, since it must be to get
         // into this code path - if it were invalid, the default case would be
         // followed.
-        if (Verbose) {
-          *OS << "\n";
-          OS->indent(12);
-        }
-        if (OS)
-          State.Row.dump(*OS);
-        State.appendRowToMatrix();
+        EmitRow();
         State.resetRowAndSequence();
         break;
 
@@ -882,13 +888,20 @@ Error DWARFDebugLine::LineTable::parse(
             State.Row.Address.Address = TableData.getRelocatedAddress(
                 Cursor, &State.Row.Address.SectionIndex);
 
+            uint64_t Tombstone =
+                dwarf::computeTombstoneAddress(OpcodeAddressSize);
+            TombstonedAddress = State.Row.Address.Address == Tombstone;
+
             // Restore the address size if the extractor already had it.
             if (ExtractorAddressSize != 0)
               TableData.setAddressSize(ExtractorAddressSize);
           }
 
-          if (Cursor && Verbose)
-            *OS << format(" (0x%16.16" PRIx64 ")", State.Row.Address.Address);
+          if (Cursor && Verbose) {
+            *OS << " (";
+            DWARFFormValue::dumpAddress(*OS, OpcodeAddressSize, State.Row.Address.Address);
+            *OS << ')';
+          }
         }
         break;
 
@@ -981,13 +994,7 @@ Error DWARFDebugLine::LineTable::parse(
       case DW_LNS_copy:
         // Takes no arguments. Append a row to the matrix using the
         // current values of the state-machine registers.
-        if (Verbose) {
-          *OS << "\n";
-          OS->indent(12);
-        }
-        if (OS)
-          State.Row.dump(*OS);
-        State.appendRowToMatrix();
+        EmitRow();
         break;
 
       case DW_LNS_advance_pc:
@@ -1152,15 +1159,9 @@ Error DWARFDebugLine::LineTable::parse(
       ParsingState::AddrAndLineDelta Delta =
           State.handleSpecialOpcode(Opcode, OpcodeOffset);
 
-      if (Verbose) {
-        *OS << "address += " << Delta.Address << ",  line += " << Delta.Line
-            << "\n";
-        OS->indent(12);
-      }
-      if (OS)
-        State.Row.dump(*OS);
-
-      State.appendRowToMatrix();
+      if (Verbose)
+        *OS << "address += " << Delta.Address << ",  line += " << Delta.Line;
+      EmitRow();
       *OffsetPtr = Cursor.tell();
     }
 
@@ -1418,25 +1419,20 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
 // Therefore, collect up handles on all the Units that point into the
 // line-table section.
 static DWARFDebugLine::SectionParser::LineToUnitMap
-buildLineToUnitMap(DWARFDebugLine::SectionParser::cu_range CUs,
-                   DWARFDebugLine::SectionParser::tu_range TUs) {
+buildLineToUnitMap(DWARFUnitVector::iterator_range Units) {
   DWARFDebugLine::SectionParser::LineToUnitMap LineToUnit;
-  for (const auto &CU : CUs)
-    if (auto CUDIE = CU->getUnitDIE())
+  for (const auto &U : Units)
+    if (auto CUDIE = U->getUnitDIE())
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list)))
-        LineToUnit.insert(std::make_pair(*StmtOffset, &*CU));
-  for (const auto &TU : TUs)
-    if (auto TUDIE = TU->getUnitDIE())
-      if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
-        LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
+        LineToUnit.insert(std::make_pair(*StmtOffset, &*U));
   return LineToUnit;
 }
 
-DWARFDebugLine::SectionParser::SectionParser(DWARFDataExtractor &Data,
-                                             const DWARFContext &C,
-                                             cu_range CUs, tu_range TUs)
+DWARFDebugLine::SectionParser::SectionParser(
+    DWARFDataExtractor &Data, const DWARFContext &C,
+    DWARFUnitVector::iterator_range Units)
     : DebugLineData(Data), Context(C) {
-  LineToUnit = buildLineToUnitMap(CUs, TUs);
+  LineToUnit = buildLineToUnitMap(Units);
   if (!DebugLineData.isValidOffset(Offset))
     Done = true;
 }

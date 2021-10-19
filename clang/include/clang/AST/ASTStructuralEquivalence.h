@@ -97,6 +97,13 @@ struct StructuralEquivalenceContext {
   /// \c VisitedDecls members) and can cause faulty equivalent results.
   bool IsEquivalent(QualType T1, QualType T2);
 
+  /// Determine whether the two statements are structurally equivalent.
+  /// Implementation functions (all static functions in
+  /// ASTStructuralEquivalence.cpp) must never call this function because that
+  /// will wreak havoc the internal state (\c DeclsToCheck and
+  /// \c VisitedDecls members) and can cause faulty equivalent results.
+  bool IsEquivalent(Stmt *S1, Stmt *S2);
+
   /// Find the index of the given anonymous struct/union within its
   /// context.
   ///
@@ -110,7 +117,7 @@ struct StructuralEquivalenceContext {
   static llvm::Optional<unsigned>
   findUntaggedStructOrUnionIndex(RecordDecl *Anon);
 
-  // If ErrorOnTagTypeMismatch is set, return the the error, otherwise get the
+  // If ErrorOnTagTypeMismatch is set, return the error, otherwise get the
   // relevant warning for the input error diagnostic.
   unsigned getApplicableDiagnostic(unsigned ErrorDiagnostic);
 

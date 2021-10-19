@@ -14,14 +14,13 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_nscontainers_with_run_command(self):
         """Test formatters for  NS container classes."""
-        self.appkit_tester_impl(self.nscontainers_data_formatter_commands)
+        self.appkit_tester_impl(self.nscontainers_data_formatter_commands, False)
 
     def nscontainers_data_formatter_commands(self):
         self.expect(
-            'frame variable newArray nsDictionary newDictionary nscfDictionary cfDictionaryRef newMutableDictionary cfarray_ref mutable_array_ref',
+            'frame variable newArray nsDictionary newDictionary nscfDictionary cfDictionaryRef newMutableDictionary copyDictionary newMutableDictionaryRef cfarray_ref mutable_array_ref',
             substrs=[
                 '(NSArray *) newArray = ',
                 ' @"50 elements"',
@@ -35,12 +34,19 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
                 ' 2 key/value pairs',
                 '(NSDictionary *) newMutableDictionary = ',
                 ' 21 key/value pairs',
+                '(NSMutableDictionary *) copyDictionary = ',
+                ' 21 key/value pairs',
+                '(CFMutableDictionaryRef) newMutableDictionaryRef = ',
+                ' 21 key/value pairs',
                 '(CFArrayRef) cfarray_ref = ',
                 ' @"3 elements"',
                 '(CFMutableArrayRef) mutable_array_ref = ',
                 ' @"11 elements"',
             ])
 
+        self.expect('frame var -d run-target copyDictionary[10]',
+                    substrs=['@"bar9"', '@"foo"'])
+        
         self.expect(
             'frame variable -d run-target *nscfDictionary',
             patterns=[

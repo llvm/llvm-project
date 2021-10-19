@@ -89,7 +89,7 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq leak
+; X64-NEXT:    callq leak@PLT
 ; X64-NEXT:  .Lslh_ret_addr0:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -138,7 +138,7 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %ptr
 ; X64-LFENCE-NEXT:    movq (%r9), %r14
 ; X64-LFENCE-NEXT:    addl (%r14), %esi
 ; X64-LFENCE-NEXT:    # kill: def $edi killed $edi killed $rdi
-; X64-LFENCE-NEXT:    callq leak
+; X64-LFENCE-NEXT:    callq leak@PLT
 ; X64-LFENCE-NEXT:  .LBB1_5: # %merge
 ; X64-LFENCE-NEXT:    movslq (%r14), %rax
 ; X64-LFENCE-NEXT:    movl $0, (%rbx,%rax,4)
@@ -225,7 +225,7 @@ define void @test_basic_loop(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) nounwind sp
 ; X64-NEXT:    movl (%rdx,%rcx,4), %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr1:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -271,7 +271,7 @@ define void @test_basic_loop(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2) nounwind sp
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    movslq (%r15), %rax
 ; X64-LFENCE-NEXT:    movl (%r14,%rax,4), %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    incl %ebx
 ; X64-LFENCE-NEXT:    cmpl %ebp, %ebx
 ; X64-LFENCE-NEXT:    jl .LBB2_2
@@ -343,7 +343,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %pt
 ; X64-NEXT:    movl (%rdx,%rcx,4), %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr2:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -372,7 +372,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %pt
 ; X64-NEXT:    movl (%rdx,%rcx,4), %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr3:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -436,7 +436,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %pt
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    movslq (%rbx), %rax
 ; X64-LFENCE-NEXT:    movl (%r14,%rax,4), %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    incl %r12d
 ; X64-LFENCE-NEXT:    cmpl %r15d, %r12d
 ; X64-LFENCE-NEXT:    jge .LBB3_6
@@ -457,7 +457,7 @@ define void @test_basic_nested_loop(i32 %a, i32 %b, i32 %c, i32* %ptr1, i32* %pt
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    movslq (%rbx), %rax
 ; X64-LFENCE-NEXT:    movl (%r14,%rax,4), %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    incl %ebp
 ; X64-LFENCE-NEXT:    cmpl %r13d, %ebp
 ; X64-LFENCE-NEXT:    jl .LBB3_4
@@ -501,142 +501,6 @@ declare i8* @__cxa_allocate_exception(i64) local_unnamed_addr
 declare void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
 define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) speculative_load_hardening personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-; X64-LABEL: test_basic_eh:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    pushq %r15
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 40
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:    .cfi_offset %rbx, -40
-; X64-NEXT:    .cfi_offset %r14, -32
-; X64-NEXT:    .cfi_offset %r15, -24
-; X64-NEXT:    .cfi_offset %rbp, -16
-; X64-NEXT:    movq %rsp, %rax
-; X64-NEXT:    movq $-1, %r15
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    cmpl $41, %edi
-; X64-NEXT:    jg .LBB4_1
-; X64-NEXT:  # %bb.2: # %thrower
-; X64-NEXT:    movq %rdx, %r14
-; X64-NEXT:    movq %rsi, %rbx
-; X64-NEXT:    cmovgq %r15, %rax
-; X64-NEXT:    movslq %edi, %rcx
-; X64-NEXT:    movl (%rsi,%rcx,4), %ebp
-; X64-NEXT:    orl %eax, %ebp
-; X64-NEXT:    movl $4, %edi
-; X64-NEXT:    shlq $47, %rax
-; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq __cxa_allocate_exception
-; X64-NEXT:  .Lslh_ret_addr4:
-; X64-NEXT:    movq %rsp, %rcx
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    sarq $63, %rcx
-; X64-NEXT:    cmpq $.Lslh_ret_addr4, %rdx
-; X64-NEXT:    cmovneq %r15, %rcx
-; X64-NEXT:    movl %ebp, (%rax)
-; X64-NEXT:  .Ltmp0:
-; X64-NEXT:    shlq $47, %rcx
-; X64-NEXT:    movq %rax, %rdi
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    orq %rcx, %rsp
-; X64-NEXT:    callq __cxa_throw
-; X64-NEXT:  .Lslh_ret_addr5:
-; X64-NEXT:    movq %rsp, %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    cmpq $.Lslh_ret_addr5, %rcx
-; X64-NEXT:    cmovneq %r15, %rax
-; X64-NEXT:  .Ltmp1:
-; X64-NEXT:    jmp .LBB4_3
-; X64-NEXT:  .LBB4_1:
-; X64-NEXT:    cmovleq %r15, %rax
-; X64-NEXT:  .LBB4_3: # %exit
-; X64-NEXT:    shlq $47, %rax
-; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 40
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    popq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    popq %r15
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    popq %rbp
-; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB4_4: # %lpad
-; X64-NEXT:    .cfi_def_cfa_offset 48
-; X64-NEXT:  .Ltmp2:
-; X64-NEXT:    movq %rsp, %rcx
-; X64-NEXT:    sarq $63, %rcx
-; X64-NEXT:    movl (%rax), %eax
-; X64-NEXT:    addl (%rbx), %eax
-; X64-NEXT:    cltq
-; X64-NEXT:    orq %rcx, %rax
-; X64-NEXT:    movl (%r14,%rax,4), %edi
-; X64-NEXT:    orl %ecx, %edi
-; X64-NEXT:    shlq $47, %rcx
-; X64-NEXT:    orq %rcx, %rsp
-; X64-NEXT:    callq sink
-; X64-NEXT:  .Lslh_ret_addr6:
-; X64-NEXT:    movq %rsp, %rax
-; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; X64-NEXT:    sarq $63, %rax
-; X64-NEXT:    cmpq $.Lslh_ret_addr6, %rcx
-; X64-NEXT:    cmovneq %r15, %rax
-;
-; X64-LFENCE-LABEL: test_basic_eh:
-; X64-LFENCE:       # %bb.0: # %entry
-; X64-LFENCE-NEXT:    pushq %rbp
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
-; X64-LFENCE-NEXT:    pushq %r14
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
-; X64-LFENCE-NEXT:    pushq %rbx
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
-; X64-LFENCE-NEXT:    .cfi_offset %rbx, -32
-; X64-LFENCE-NEXT:    .cfi_offset %r14, -24
-; X64-LFENCE-NEXT:    .cfi_offset %rbp, -16
-; X64-LFENCE-NEXT:    cmpl $41, %edi
-; X64-LFENCE-NEXT:    jg .LBB4_2
-; X64-LFENCE-NEXT:  # %bb.1: # %thrower
-; X64-LFENCE-NEXT:    movq %rdx, %r14
-; X64-LFENCE-NEXT:    movq %rsi, %rbx
-; X64-LFENCE-NEXT:    lfence
-; X64-LFENCE-NEXT:    movslq %edi, %rax
-; X64-LFENCE-NEXT:    movl (%rsi,%rax,4), %ebp
-; X64-LFENCE-NEXT:    movl $4, %edi
-; X64-LFENCE-NEXT:    callq __cxa_allocate_exception
-; X64-LFENCE-NEXT:    movl %ebp, (%rax)
-; X64-LFENCE-NEXT:  .Ltmp0:
-; X64-LFENCE-NEXT:    movq %rax, %rdi
-; X64-LFENCE-NEXT:    xorl %esi, %esi
-; X64-LFENCE-NEXT:    xorl %edx, %edx
-; X64-LFENCE-NEXT:    callq __cxa_throw
-; X64-LFENCE-NEXT:  .Ltmp1:
-; X64-LFENCE-NEXT:  .LBB4_2: # %exit
-; X64-LFENCE-NEXT:    lfence
-; X64-LFENCE-NEXT:    popq %rbx
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 24
-; X64-LFENCE-NEXT:    popq %r14
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 16
-; X64-LFENCE-NEXT:    popq %rbp
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 8
-; X64-LFENCE-NEXT:    retq
-; X64-LFENCE-NEXT:  .LBB4_3: # %lpad
-; X64-LFENCE-NEXT:    .cfi_def_cfa_offset 32
-; X64-LFENCE-NEXT:  .Ltmp2:
-; X64-LFENCE-NEXT:    movl (%rax), %eax
-; X64-LFENCE-NEXT:    addl (%rbx), %eax
-; X64-LFENCE-NEXT:    cltq
-; X64-LFENCE-NEXT:    movl (%r14,%rax,4), %edi
-; X64-LFENCE-NEXT:    callq sink
 entry:
   %a.cmp = icmp slt i32 %a, 42
   br i1 %a.cmp, label %thrower, label %exit
@@ -690,7 +554,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_float
+; X64-NEXT:    callq sink_float@PLT
 ; X64-NEXT:  .Lslh_ret_addr7:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -701,7 +565,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_double
+; X64-NEXT:    callq sink_double@PLT
 ; X64-NEXT:  .Lslh_ret_addr8:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -712,7 +576,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_float
+; X64-NEXT:    callq sink_float@PLT
 ; X64-NEXT:  .Lslh_ret_addr9:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -723,7 +587,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_double
+; X64-NEXT:    callq sink_double@PLT
 ; X64-NEXT:  .Lslh_ret_addr10:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -735,7 +599,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtsi2ssl (%r14), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_float
+; X64-NEXT:    callq sink_float@PLT
 ; X64-NEXT:  .Lslh_ret_addr11:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -747,7 +611,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtsi2sdq (%r15), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_double
+; X64-NEXT:    callq sink_double@PLT
 ; X64-NEXT:  .Lslh_ret_addr12:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -758,7 +622,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtsi2ssq (%r15), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_float
+; X64-NEXT:    callq sink_float@PLT
 ; X64-NEXT:  .Lslh_ret_addr13:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -769,7 +633,7 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-NEXT:    cvtsi2sdl (%r14), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_double
+; X64-NEXT:    callq sink_double@PLT
 ; X64-NEXT:  .Lslh_ret_addr14:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -797,27 +661,27 @@ define void @test_fp_loads(float* %fptr, double* %dptr, i32* %i32ptr, i64* %i64p
 ; X64-LFENCE-NEXT:    movq %rsi, %rbx
 ; X64-LFENCE-NEXT:    movq %rdi, %r12
 ; X64-LFENCE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-LFENCE-NEXT:    callq sink_float
+; X64-LFENCE-NEXT:    callq sink_float@PLT
 ; X64-LFENCE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X64-LFENCE-NEXT:    callq sink_double
+; X64-LFENCE-NEXT:    callq sink_double@PLT
 ; X64-LFENCE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-LFENCE-NEXT:    cvtsd2ss %xmm0, %xmm0
-; X64-LFENCE-NEXT:    callq sink_float
+; X64-LFENCE-NEXT:    callq sink_float@PLT
 ; X64-LFENCE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-LFENCE-NEXT:    cvtss2sd %xmm0, %xmm0
-; X64-LFENCE-NEXT:    callq sink_double
+; X64-LFENCE-NEXT:    callq sink_double@PLT
 ; X64-LFENCE-NEXT:    xorps %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    cvtsi2ssl (%r14), %xmm0
-; X64-LFENCE-NEXT:    callq sink_float
+; X64-LFENCE-NEXT:    callq sink_float@PLT
 ; X64-LFENCE-NEXT:    xorps %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    cvtsi2sdq (%r15), %xmm0
-; X64-LFENCE-NEXT:    callq sink_double
+; X64-LFENCE-NEXT:    callq sink_double@PLT
 ; X64-LFENCE-NEXT:    xorps %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    cvtsi2ssq (%r15), %xmm0
-; X64-LFENCE-NEXT:    callq sink_float
+; X64-LFENCE-NEXT:    callq sink_float@PLT
 ; X64-LFENCE-NEXT:    xorps %xmm0, %xmm0
 ; X64-LFENCE-NEXT:    cvtsi2sdl (%r14), %xmm0
-; X64-LFENCE-NEXT:    callq sink_double
+; X64-LFENCE-NEXT:    callq sink_double@PLT
 ; X64-LFENCE-NEXT:    addq $8, %rsp
 ; X64-LFENCE-NEXT:    popq %rbx
 ; X64-LFENCE-NEXT:    popq %r12
@@ -880,7 +744,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%rdi), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v4f32
+; X64-NEXT:    callq sink_v4f32@PLT
 ; X64-NEXT:  .Lslh_ret_addr15:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -891,7 +755,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%rbx), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v2f64
+; X64-NEXT:    callq sink_v2f64@PLT
 ; X64-NEXT:  .Lslh_ret_addr16:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -902,7 +766,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%r13), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v16i8
+; X64-NEXT:    callq sink_v16i8@PLT
 ; X64-NEXT:  .Lslh_ret_addr17:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -913,7 +777,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%r12), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v8i16
+; X64-NEXT:    callq sink_v8i16@PLT
 ; X64-NEXT:  .Lslh_ret_addr18:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -924,7 +788,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%r15), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v4i32
+; X64-NEXT:    callq sink_v4i32@PLT
 ; X64-NEXT:  .Lslh_ret_addr19:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -935,7 +799,7 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-NEXT:    movaps (%r14), %xmm0
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink_v2i64
+; X64-NEXT:    callq sink_v2i64@PLT
 ; X64-NEXT:  .Lslh_ret_addr20:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -966,17 +830,17 @@ define void @test_vec_loads(<4 x float>* %v4f32ptr, <2 x double>* %v2f64ptr, <16
 ; X64-LFENCE-NEXT:    movq %rdx, %r13
 ; X64-LFENCE-NEXT:    movq %rsi, %rbx
 ; X64-LFENCE-NEXT:    movaps (%rdi), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v4f32
+; X64-LFENCE-NEXT:    callq sink_v4f32@PLT
 ; X64-LFENCE-NEXT:    movaps (%rbx), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v2f64
+; X64-LFENCE-NEXT:    callq sink_v2f64@PLT
 ; X64-LFENCE-NEXT:    movaps (%r13), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v16i8
+; X64-LFENCE-NEXT:    callq sink_v16i8@PLT
 ; X64-LFENCE-NEXT:    movaps (%r12), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v8i16
+; X64-LFENCE-NEXT:    callq sink_v8i16@PLT
 ; X64-LFENCE-NEXT:    movaps (%r15), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v4i32
+; X64-LFENCE-NEXT:    callq sink_v4i32@PLT
 ; X64-LFENCE-NEXT:    movaps (%r14), %xmm0
-; X64-LFENCE-NEXT:    callq sink_v2i64
+; X64-LFENCE-NEXT:    callq sink_v2i64@PLT
 ; X64-LFENCE-NEXT:    popq %rbx
 ; X64-LFENCE-NEXT:    popq %r12
 ; X64-LFENCE-NEXT:    popq %r13
@@ -1016,7 +880,7 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr21:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -1029,7 +893,7 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr22:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -1041,7 +905,7 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr23:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -1055,7 +919,7 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr24:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -1069,7 +933,7 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-NEXT:    orl %eax, %edi
 ; X64-NEXT:    shlq $47, %rax
 ; X64-NEXT:    orq %rax, %rsp
-; X64-NEXT:    callq sink
+; X64-NEXT:    callq sink@PLT
 ; X64-NEXT:  .Lslh_ret_addr25:
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -1093,24 +957,24 @@ define void @test_deferred_hardening(i32* %ptr1, i32* %ptr2, i32 %x) nounwind sp
 ; X64-LFENCE-NEXT:    movl (%rdi), %edi
 ; X64-LFENCE-NEXT:    incl %edi
 ; X64-LFENCE-NEXT:    imull %edx, %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movl (%rbx), %eax
 ; X64-LFENCE-NEXT:    movl (%r14), %ecx
 ; X64-LFENCE-NEXT:    leal 1(%rax,%rcx), %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movl (%rbx), %edi
 ; X64-LFENCE-NEXT:    shll $7, %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movswl (%rbx), %edi
 ; X64-LFENCE-NEXT:    shrl $7, %edi
 ; X64-LFENCE-NEXT:    notl %edi
 ; X64-LFENCE-NEXT:    orl $-65536, %edi # imm = 0xFFFF0000
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    movzwl (%rbx), %eax
 ; X64-LFENCE-NEXT:    rolw $9, %ax
 ; X64-LFENCE-NEXT:    movswl %ax, %edi
 ; X64-LFENCE-NEXT:    negl %edi
-; X64-LFENCE-NEXT:    callq sink
+; X64-LFENCE-NEXT:    callq sink@PLT
 ; X64-LFENCE-NEXT:    addq $8, %rsp
 ; X64-LFENCE-NEXT:    popq %rbx
 ; X64-LFENCE-NEXT:    popq %r14

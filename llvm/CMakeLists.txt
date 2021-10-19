@@ -2,21 +2,16 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
-  set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+# CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
+# New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
+if(POLICY CMP0116)
+  cmake_policy(SET CMP0116 OLD)
 endif()
 
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)
-endif()
+set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 12)
+  set(LLVM_VERSION_MAJOR 14)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -52,7 +47,13 @@ project(LLVM
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-set(CMAKE_CXX_EXTENSIONS NO)
+if (CYGWIN)
+  # Cygwin is a bit stricter and lack things like 'strdup', 'stricmp', etc in
+  # c++xx mode.
+  set(CMAKE_CXX_EXTENSIONS YES)
+else()
+  set(CMAKE_CXX_EXTENSIONS NO)
+endif()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to Debug")
@@ -63,19 +64,32 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;debuginfo-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;parallel-libs;polly;pstl")
+set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;libcxx;libcxxabi;libunwind;lld;lldb;mlir;openmp;parallel-libs;polly;pstl")
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 	"Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+foreach(proj ${LLVM_ENABLE_PROJECTS})
+  if (NOT proj STREQUAL "all" AND NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
+     MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}")
+  endif()
+endforeach()
+
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
-if ("flang" IN_LIST LLVM_ENABLE_PROJECTS AND NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(STATUS "Enabling MLIR as a dependency to flang")
-  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+
+if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(STATUS "Enabling MLIR as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  endif()
+
+  if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
+  endif()
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -287,8 +301,8 @@ set(LLVM_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  ) # --src-root
 set(LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/include ) # --includedir
 set(LLVM_BINARY_DIR       ${CMAKE_CURRENT_BINARY_DIR}  ) # --prefix
 
-# Note: LLVM_CMAKE_PATH does not include generated files
-set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
+# Note: LLVM_CMAKE_DIR does not include generated files
+set(LLVM_CMAKE_DIR ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 set(LLVM_EXAMPLES_BINARY_DIR ${LLVM_BINARY_DIR}/examples)
 set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -372,13 +386,13 @@ option(LLVM_ENABLE_Z3_SOLVER
 
 if (LLVM_ENABLE_Z3_SOLVER)
   find_package(Z3 4.7.1)
-  
+
   if (LLVM_Z3_INSTALL_DIR)
     if (NOT Z3_FOUND)
       message(FATAL_ERROR "Z3 >= 4.7.1 has not been found in LLVM_Z3_INSTALL_DIR: ${LLVM_Z3_INSTALL_DIR}.")
     endif()
   endif()
-  
+
   if (NOT Z3_FOUND)
     message(FATAL_ERROR "LLVM_ENABLE_Z3_SOLVER cannot be enabled when Z3 is not available.")
   endif()
@@ -399,7 +413,6 @@ set(LLVM_TARGETS_TO_BUILD
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
 option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
-option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   option(LLVM_ENABLE_MODULE_DEBUGGING "Compile with -gmodules." ON)
@@ -488,11 +501,15 @@ endif( LLVM_USE_PERF )
 set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
 option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
+set(LLVM_UBSAN_FLAGS
+    "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all"
+    CACHE STRING
+    "Compile flags set to enable UBSan. Only used if LLVM_USE_SANITIZER contains 'Undefined'.")
 set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
   "Path to fuzzing library for linking with fuzz targets")
 
 option(LLVM_USE_SPLIT_DWARF
-  "Use -gsplit-dwarf when compiling llvm." OFF)
+  "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
 
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
@@ -512,6 +529,19 @@ set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
 # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
 if( WIN32 AND NOT CYGWIN )
   set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+endif()
+
+set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with /MT enabled.")
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if(NOT WIN32)
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
+  endif()
+  if(LLVM_USE_SANITIZER)
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC cannot be used along with LLVM_USE_SANITIZER!")
+  endif()
+  if(CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message(FATAL_ERROR "The Debug target isn't supported along with LLVM_INTEGRATED_CRT_ALLOC!")
+  endif()
 endif()
 
 # Define options to control the inclusion and default build behavior for
@@ -566,19 +596,6 @@ option (LLVM_BUILD_EXTERNAL_COMPILER_RT
 
 option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
   "Show target and host info when tools are invoked with --version." ON)
-
-option(LLVM_INTEGRATED_CRT_ALLOC "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with /MT enabled." OFF)
-if(LLVM_INTEGRATED_CRT_ALLOC)
-  if(NOT WIN32)
-    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
-  endif()
-  if(LLVM_USE_SANITIZER)
-    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC cannot be used along with LLVM_USE_SANITIZER!")
-  endif()
-  if(CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-    message(FATAL_ERROR "The Debug target isn't supported along with LLVM_INTEGRATED_CRT_ALLOC!")
-  endif()
-endif()
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
@@ -671,10 +688,6 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 # first cmake run
 include(config-ix)
 
-string(REPLACE "Native" ${LLVM_NATIVE_ARCH}
-  LLVM_TARGETS_TO_BUILD "${LLVM_TARGETS_TO_BUILD}")
-list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
-
 # By default, we target the host, but this can be overridden at CMake
 # invocation time.
 set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING
@@ -694,102 +707,18 @@ else()
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
+set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
+  "Enable the new pass manager by default.")
+if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
+  message(WARNING "Using the legacy pass manager for the optimization pipeline"
+                  " is deprecated. The functionality will degrade over time and"
+                  " be removed in a future release.")
+endif()
+
 include(HandleLLVMOptions)
 
-if(CMAKE_VERSION VERSION_LESS 3.12)
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(FATAL_ERROR
-  "Unable to find Python interpreter, required for builds and testing.
-
-  Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-  endif()
-
-  if( ${PYTHON_VERSION_STRING} VERSION_LESS 2.7 )
-    message(FATAL_ERROR "Python 2.7 or newer is required")
-  endif()
-
-  add_executable(Python3::Interpreter IMPORTED)
-  set_target_properties(Python3::Interpreter PROPERTIES
-    IMPORTED_LOCATION ${PYTHON_EXECUTABLE})
-  set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
-else()
-  find_package(Python3 COMPONENTS Interpreter)
-  if(NOT Python3_Interpreter_FOUND)
-    message(WARNING "Python3 not found, using python2 as a fallback")
-    find_package(Python2 COMPONENTS Interpreter REQUIRED)
-    if(Python2_VERSION VERSION_LESS 2.7)
-      message(SEND_ERROR "Python 2.7 or newer is required")
-    endif()
-
-    # Treat python2 as python3
-    add_executable(Python3::Interpreter IMPORTED)
-    set_target_properties(Python3::Interpreter PROPERTIES
-      IMPORTED_LOCATION ${Python2_EXECUTABLE})
-    set(Python3_EXECUTABLE ${Python2_EXECUTABLE})
-  endif()
-endif()
-
-######
-# LLVMBuild Integration
-#
-# We use llvm-build to generate all the data required by the CMake based
-# build system in one swoop:
-#
-#  - We generate a file (a CMake fragment) in the object root which contains
-#    all the definitions that are required by CMake.
-#
-#  - We generate the library table used by llvm-config.
-#
-#  - We generate the dependencies for the CMake fragment, so that we will
-#    automatically reconfigure ourselves.
-
-set(LLVMBUILDTOOL "${LLVM_MAIN_SRC_DIR}/utils/llvm-build/llvm-build")
-set(LLVMCONFIGLIBRARYDEPENDENCIESINC
-  "${LLVM_BINARY_DIR}/tools/llvm-config/LibraryDependencies.inc")
-set(LLVMBUILDCMAKEFRAG
-  "${LLVM_BINARY_DIR}/LLVMBuild.cmake")
-
-# Create the list of optional components that are enabled
-if (LLVM_USE_INTEL_JITEVENTS)
-  set(LLVMOPTIONALCOMPONENTS IntelJITEvents)
-endif (LLVM_USE_INTEL_JITEVENTS)
-if (LLVM_USE_OPROFILE)
-  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} OProfileJIT)
-endif (LLVM_USE_OPROFILE)
-if (LLVM_USE_PERF)
-  set(LLVMOPTIONALCOMPONENTS ${LLVMOPTIONALCOMPONENTS} PerfJITEvents)
-endif (LLVM_USE_PERF)
-
-message(STATUS "Constructing LLVMBuild project information")
-execute_process(
-  COMMAND "${Python3_EXECUTABLE}" -B ${LLVMBUILDTOOL}
-            --native-target "${LLVM_NATIVE_ARCH}"
-            --enable-targets "${LLVM_TARGETS_TO_BUILD}"
-            --enable-optional-components "${LLVMOPTIONALCOMPONENTS}"
-            --write-library-table ${LLVMCONFIGLIBRARYDEPENDENCIESINC}
-            --write-cmake-fragment ${LLVMBUILDCMAKEFRAG}
-            OUTPUT_VARIABLE LLVMBUILDOUTPUT
-            ERROR_VARIABLE LLVMBUILDERRORS
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_STRIP_TRAILING_WHITESPACE
-  RESULT_VARIABLE LLVMBUILDRESULT)
-
-# On Win32, CMake doesn't properly handle piping the default output/error
-# streams into the GUI console. So, we explicitly catch and report them.
-if( NOT "${LLVMBUILDOUTPUT}" STREQUAL "")
-  message(STATUS "llvm-build output: ${LLVMBUILDOUTPUT}")
-endif()
-if( NOT "${LLVMBUILDRESULT}" STREQUAL "0" )
-  message(FATAL_ERROR
-    "Unexpected failure executing llvm-build: ${LLVMBUILDERRORS}")
-endif()
-
-# Include the generated CMake fragment. This will define properties from the
-# LLVMBuild files in a format which is easy to consume from CMake, and will add
-# the dependencies so that CMake will reconfigure properly when the LLVMBuild
-# files change.
-include(${LLVMBUILDCMAKEFRAG})
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
 
 ######
 
@@ -799,6 +728,7 @@ set(LLVM_ENUM_TARGETS "")
 set(LLVM_ENUM_ASM_PRINTERS "")
 set(LLVM_ENUM_ASM_PARSERS "")
 set(LLVM_ENUM_DISASSEMBLERS "")
+set(LLVM_ENUM_TARGETMCAS "")
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   set( td ${LLVM_MAIN_SRC_DIR}/lib/Target/${t} )
 
@@ -828,6 +758,10 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     set(LLVM_ENUM_DISASSEMBLERS
       "${LLVM_ENUM_DISASSEMBLERS}LLVM_DISASSEMBLER(${t})\n")
   endif()
+    if( EXISTS ${td}/MCA/CMakeLists.txt )
+    set(LLVM_ENUM_TARGETMCAS
+      "${LLVM_ENUM_TARGETMCAS}LLVM_TARGETMCA(${t})\n")
+  endif()
 endforeach(t)
 
 # Produce the target definition files, which provide a way for clients to easily
@@ -848,6 +782,20 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/Targets.def.in
   ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.def
   )
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/TargetMCAs.def.in
+  ${LLVM_INCLUDE_DIR}/llvm/Config/TargetMCAs.def
+  )
+
+# They are not referenced. See set_output_directory().
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+
+if(LLVM_INCLUDE_TESTS)
+  include(GetErrcMessages)
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
@@ -857,17 +805,31 @@ configure_file(
 # LLVM_HAVE_TF_API, through llvm-config.h, so that a user of the LLVM library may
 # also leverage the dependency.
 set(TENSORFLOW_C_LIB_PATH "" CACHE PATH "Path to TensorFlow C library install")
-find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib)
-
-if (tensorflow_c_api)
+if (TENSORFLOW_C_LIB_PATH)
+  find_library(tensorflow_c_api tensorflow PATHS ${TENSORFLOW_C_LIB_PATH}/lib NO_DEFAULT_PATH REQUIRED)
+  # Currently, the protobuf headers are distributed with the pip package that corresponds to the version
+  # of the C API library.
+  find_library(tensorflow_fx tensorflow_framework PATHS ${TENSORFLOW_C_LIB_PATH}/lib NO_DEFAULT_PATH REQUIRED)
   set(LLVM_HAVE_TF_API "ON" CACHE BOOL "Full Tensorflow API available")
   include_directories(${TENSORFLOW_C_LIB_PATH}/include)
+  if (NOT TF_PROTO_HEADERS)
+    message(STATUS "TF_PROTO_HEADERS not defined. Looking for tensorflow pip package.")
+    execute_process(COMMAND
+      ${Python3_EXECUTABLE} "-m" "pip" "show" "tensorflow"
+      OUTPUT_VARIABLE TF_PIP_OUT)
+    if ("${TF_PIP_OUT}" STREQUAL "")
+      message(FATAL ERROR "Tensorflow pip package is also required for 'development' mode (protobuf headers)")
+    endif()
+    string(REGEX MATCH "Location: ([^\n]*\n)" TF_PIP_LOC "${TF_PIP_OUT}")
+    string(REPLACE "Location: " "" TF_PIP ${TF_PIP_LOC})
+    string(STRIP ${TF_PIP} TF_PIP)
+    set(TF_PROTO_HEADERS "${TF_PIP}/tensorflow/include")
+  endif()
+  message(STATUS "Using Tensorflow headers under: ${TF_PROTO_HEADERS}")
+  include_directories(${TF_PROTO_HEADERS})
+  add_definitions("-DGOOGLE_PROTOBUF_NO_RTTI")
+  add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
-
-# They are not referenced. See set_output_directory().
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh
@@ -885,6 +847,16 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
+  install(TARGETS tf_xla_runtime EXPORT LLVMExports
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS tf_xla_runtime)
+  # Once we add more modules, we should handle this more automatically.
+  if (NOT DEFINED LLVM_INLINER_MODEL_PATH
+      OR "${LLVM_INLINER_MODEL_PATH}" STREQUAL ""
+      OR "${LLVM_INLINER_MODEL_PATH}" STREQUAL "autogenerate")
+    set(LLVM_INLINER_MODEL_PATH "autogenerate")
+    set(LLVM_INLINER_MODEL_AUTOGENERATED 1)
+  endif()
 endif()
 
 # Configure the three LLVM configuration header files.
@@ -938,20 +910,26 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # configuration, it is still possible the user may force it as part of a
   # compound option.
   if(CMAKE_VERSION VERSION_LESS 3.16)
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
   endif()
 
-  # Modules should be built with -G, so we can use runtime linking with
-  # plugins.
-  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -G")
+  # Modules should be built with -shared -Wl,-G, so we can use runtime linking
+  # with plugins.
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -shared -Wl,-G")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
@@ -969,16 +947,6 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
           add_definitions("-D_FILE_OFFSET_BITS=64")
 endif()
 
-# Work around a broken bfd ld behavior. When linking a binary with a
-# foo.so library, it will try to find any library that foo.so uses and
-# check its symbols. This is wasteful (the check was done when foo.so
-# was created) and can fail since it is not the dynamic linker and
-# doesn't know how to handle search paths correctly.
-if (UNIX AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "SunOS|AIX|OS390")
-  set(CMAKE_EXE_LINKER_FLAGS
-      "${CMAKE_EXE_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
-endif()
-
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})
@@ -993,13 +961,6 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # (this is a variable that CrossCompile sets on recursive invocations)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
-  # On FreeBSD, /usr/local/* is not used by default. In order to build LLVM
-  # with libxml2, iconv.h, etc., we must add /usr/local paths.
-  include_directories(SYSTEM "/usr/local/include")
-  link_directories("/usr/local/lib")
-endif(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
-
 if( ${CMAKE_SYSTEM_NAME} MATCHES SunOS )
    # special hack for Solaris to handle crazy system sys/regset.h
    include_directories("${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/Solaris")
@@ -1011,6 +972,8 @@ set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 
 include(AddLLVM)
 include(TableGen)
+
+include(LLVMDistributionSupport)
 
 if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
   # People report that -O3 is unreliable on MinGW. The traditional
@@ -1135,7 +1098,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.td"
     PATTERN "*.inc"
     PATTERN "LICENSE.TXT"
-    PATTERN ".svn" EXCLUDE
     )
 
   install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
@@ -1149,7 +1111,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     # Exclude include/llvm/CMakeFiles/intrinsics_gen.dir, matched by "*.def"
     PATTERN "CMakeFiles" EXCLUDE
     PATTERN "config.h" EXCLUDE
-    PATTERN ".svn" EXCLUDE
     )
 
   if (LLVM_INSTALL_MODULEMAPS)
@@ -1202,9 +1163,9 @@ endif()
 
 # This must be at the end of the LLVM root CMakeLists file because it must run
 # after all targets are created.
-include(LLVMDistributionSupport)
 llvm_distribution_add_targets()
 process_llvm_pass_plugins(GEN_CONFIG)
+include(CoverageReport)
 
 # This allows us to deploy the Universal CRT DLLs by passing -DCMAKE_INSTALL_UCRT_LIBRARIES=ON to CMake
 if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_INSTALL_UCRT_LIBRARIES)

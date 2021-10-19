@@ -56,7 +56,7 @@ void UndelegatedConstructorCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           compoundStmt(hasParent(cxxConstructorDecl(
                            ofClass(cxxRecordDecl().bind("parent")))),
                        forEach(ignoringTemporaryExpr(

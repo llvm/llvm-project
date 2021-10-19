@@ -51,8 +51,10 @@ def cimm8_xform : SDNodeXForm<imm, [{
 
 def cimm8 : Operand<i32>, ImmLeaf<i32, [{return isInt<8>(Imm);}], cimm8_xform>;
 
-def gi_cimm8 : GICustomOperandRenderer<"renderImm8">,
+def gi_cimm8 : GICustomOperandRenderer<"renderImm">,
                 GISDNodeXFormEquiv<cimm8_xform>;
+
+def gi_cimm9 : GICustomOperandRenderer<"renderImm">;
 
 def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def Z : OperandWithDefaultOps <i32, (ops R0)>;
@@ -70,7 +72,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 // CHECK-NEXT:    mutable MatcherState State;
 // CHECK-NEXT:    typedef ComplexRendererFns(MyTargetInstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;
-// CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr&, int) const;
+// CHECK-NEXT:    typedef void(MyTargetInstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const MachineInstr &, int) const;
 // CHECK-NEXT:    const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn> ISelInfo;
 // CHECK-NEXT:    static MyTargetInstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];
 // CHECK-NEXT:    static MyTargetInstructionSelector::CustomRendererFn CustomRenderers[];
@@ -78,7 +80,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) const override;
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const int64_t *getMatchTable() const override;
-// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI) const override;
+// CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const std::array<const MachineOperand *, 3> &Operands) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -206,12 +208,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: // Custom renderers.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICR_Invalid,
-// CHECK-NEXT:   GICR_renderImm8,
+// CHECK-NEXT:   GICR_renderImm,
 // CHECK-NEXT: };
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
 // CHECK-NEXT:   nullptr, // GICR_Invalid
-// CHECK-NEXT:   &MyTargetInstructionSelector::renderImm8, // gi_cimm8
+// CHECK-NEXT:   &MyTargetInstructionSelector::renderImm,
 // CHECK-NEXT: };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
@@ -255,7 +257,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19N-NEXT:    // MIs[0] src1
 // R19N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
-// R19N-NEXT:    // MIs[0] Operand 2
+// R19N-NEXT:    // MIs[0] complex_rr:src2a:src2b
 // R19N-NEXT:    GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 //
 // R19N-NEXT:    GIM_CheckComplexPattern, /*MI*/0, /*Op*/2, /*Renderer*/0, GICP_gi_complex_rr,
@@ -274,7 +276,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19N-NEXT:    // MIs[1] src4
 // R19N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckComplexPattern, /*MI*/1, /*Op*/2, /*Renderer*/1, GICP_gi_complex,
-// R19N-NEXT:    // MIs[1] Operand 3
+// R19N-NEXT:    // MIs[1] complex:src5a:src5b
 // R19N-NEXT:    GIM_CheckType, /*MI*/1, /*Op*/3, /*Type*/GILLT_s32,
 // R19N-NEXT:    GIM_CheckComplexPattern, /*MI*/1, /*Op*/3, /*Renderer*/2, GICP_gi_complex,
 // R19O-NEXT:    GIM_CheckRegBankForClass, /*MI*/1, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
@@ -906,7 +908,7 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVcimm8,
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm8, // imm
+// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm, // imm
 // NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // NOOPT-NEXT:    // GIR_Coverage, 10,

@@ -283,6 +283,20 @@ TEST(FuzzedDataProvider, ConsumeBool) {
   EXPECT_EQ(false, DataProv.ConsumeBool());
 }
 
+TEST(FuzzedDataProvider, PickValueInStdArray) {
+  FuzzedDataProvider DataProv(Data, sizeof(Data));
+  const std::array<int, 5> Array = {1, 2, 3, 4, 5};
+  EXPECT_EQ(5, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(2, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(2, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(3, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(3, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(3, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(1, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(3, DataProv.PickValueInArray(Array));
+  EXPECT_EQ(2, DataProv.PickValueInArray(Array));
+}
+
 TEST(FuzzedDataProvider, PickValueInArray) {
   FuzzedDataProvider DataProv(Data, sizeof(Data));
   const int Array[] = {1, 2, 3, 4, 5};

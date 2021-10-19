@@ -36,12 +36,25 @@ struct WasmObjectHeader {
   uint32_t Version;
 };
 
+struct WasmDylinkImportInfo {
+  StringRef Module;
+  StringRef Field;
+  uint32_t Flags;
+};
+
+struct WasmDylinkExportInfo {
+  StringRef Name;
+  uint32_t Flags;
+};
+
 struct WasmDylinkInfo {
   uint32_t MemorySize; // Memory size in bytes
   uint32_t MemoryAlignment;  // P2 alignment of memory
   uint32_t TableSize;  // Table size in elements
   uint32_t TableAlignment;  // P2 alignment of table
-  std::vector<StringRef> Needed; // Shared library depenedencies
+  std::vector<StringRef> Needed; // Shared library dependencies
+  std::vector<WasmDylinkImportInfo> ImportInfo;
+  std::vector<WasmDylinkExportInfo> ExportInfo;
 };
 
 struct WasmProducerInfo {
@@ -63,13 +76,19 @@ struct WasmExport {
 
 struct WasmLimits {
   uint8_t Flags;
-  uint64_t Initial;
+  uint64_t Minimum;
   uint64_t Maximum;
 };
 
-struct WasmTable {
+struct WasmTableType {
   uint8_t ElemType;
   WasmLimits Limits;
+};
+
+struct WasmTable {
+  uint32_t Index;
+  WasmTableType Type;
+  StringRef SymbolName; // from the "linking" section
 };
 
 struct WasmInitExpr {
@@ -95,15 +114,9 @@ struct WasmGlobal {
   StringRef SymbolName; // from the "linking" section
 };
 
-struct WasmEventType {
-  // Kind of event. Currently only WASM_EVENT_ATTRIBUTE_EXCEPTION is possible.
-  uint32_t Attribute;
-  uint32_t SigIndex;
-};
-
-struct WasmEvent {
+struct WasmTag {
   uint32_t Index;
-  WasmEventType Type;
+  uint32_t SigIndex;
   StringRef SymbolName; // from the "linking" section
 };
 
@@ -114,9 +127,8 @@ struct WasmImport {
   union {
     uint32_t SigIndex;
     WasmGlobalType Global;
-    WasmTable Table;
+    WasmTableType Table;
     WasmLimits Memory;
-    WasmEventType Event;
   };
 };
 
@@ -127,6 +139,7 @@ struct WasmLocalDecl {
 
 struct WasmFunction {
   uint32_t Index;
+  uint32_t SigIndex;
   std::vector<WasmLocalDecl> Locals;
   ArrayRef<uint8_t> Body;
   uint32_t CodeSectionOffset;
@@ -140,17 +153,22 @@ struct WasmFunction {
 
 struct WasmDataSegment {
   uint32_t InitFlags;
-  uint32_t MemoryIndex; // present if InitFlags & WASM_SEGMENT_HAS_MEMINDEX
-  WasmInitExpr Offset; // present if InitFlags & WASM_SEGMENT_IS_PASSIVE == 0
+  // Present if InitFlags & WASM_DATA_SEGMENT_HAS_MEMINDEX.
+  uint32_t MemoryIndex;
+  // Present if InitFlags & WASM_DATA_SEGMENT_IS_PASSIVE == 0.
+  WasmInitExpr Offset;
+
   ArrayRef<uint8_t> Content;
   StringRef Name; // from the "segment info" section
   uint32_t Alignment;
-  uint32_t LinkerFlags;
+  uint32_t LinkingFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
 
 struct WasmElemSegment {
-  uint32_t TableIndex;
+  uint32_t Flags;
+  uint32_t TableNumber;
+  uint8_t ElemKind;
   WasmInitExpr Offset;
   std::vector<uint32_t> Functions;
 };
@@ -186,15 +204,22 @@ struct WasmSymbolInfo {
   // For symbols to be exported from the final module
   Optional<StringRef> ExportName;
   union {
-    // For function or global symbols, the index in function or global index
-    // space.
+    // For function, table, or global symbols, the index in function, table, or
+    // global index space.
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
   };
 };
 
-struct WasmFunctionName {
+enum class NameType {
+  FUNCTION,
+  GLOBAL,
+  DATA_SEGMENT,
+};
+
+struct WasmDebugName {
+  NameType Type;
   uint32_t Index;
   StringRef Name;
 };
@@ -220,7 +245,7 @@ enum : unsigned {
   WASM_SEC_CODE = 10,      // Function bodies (code)
   WASM_SEC_DATA = 11,      // Data segments
   WASM_SEC_DATACOUNT = 12, // Data segment count
-  WASM_SEC_EVENT = 13      // Event declarations
+  WASM_SEC_TAG = 13        // Tag declarations
 };
 
 // Type immediate encodings used in various contexts.
@@ -231,7 +256,6 @@ enum : unsigned {
   WASM_TYPE_F64 = 0x7C,
   WASM_TYPE_V128 = 0x7B,
   WASM_TYPE_FUNCREF = 0x70,
-  WASM_TYPE_EXNREF = 0x68,
   WASM_TYPE_EXTERNREF = 0x6F,
   WASM_TYPE_FUNC = 0x60,
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
@@ -243,7 +267,7 @@ enum : unsigned {
   WASM_EXTERNAL_TABLE = 0x1,
   WASM_EXTERNAL_MEMORY = 0x2,
   WASM_EXTERNAL_GLOBAL = 0x3,
-  WASM_EXTERNAL_EVENT = 0x4,
+  WASM_EXTERNAL_TAG = 0x4,
 };
 
 // Opcodes used in initializer expressions.
@@ -251,6 +275,7 @@ enum : unsigned {
   WASM_OPCODE_END = 0x0b,
   WASM_OPCODE_CALL = 0x10,
   WASM_OPCODE_LOCAL_GET = 0x20,
+  WASM_OPCODE_LOCAL_SET = 0x21,
   WASM_OPCODE_GLOBAL_GET = 0x23,
   WASM_OPCODE_GLOBAL_SET = 0x24,
   WASM_OPCODE_I32_STORE = 0x36,
@@ -266,8 +291,10 @@ enum : unsigned {
 
 // Opcodes used in synthetic functions.
 enum : unsigned {
-  WASM_OPCODE_IF = 0x04,
-  WASM_OPCODE_ELSE = 0x05,
+  WASM_OPCODE_BLOCK = 0x02,
+  WASM_OPCODE_BR = 0x0c,
+  WASM_OPCODE_BR_TABLE = 0x0e,
+  WASM_OPCODE_RETURN = 0x0f,
   WASM_OPCODE_DROP = 0x1a,
   WASM_OPCODE_MISC_PREFIX = 0xfc,
   WASM_OPCODE_MEMORY_INIT = 0x08,
@@ -287,9 +314,16 @@ enum : unsigned {
 };
 
 enum : unsigned {
-  WASM_SEGMENT_IS_PASSIVE = 0x01,
-  WASM_SEGMENT_HAS_MEMINDEX = 0x02,
+  WASM_DATA_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_DATA_SEGMENT_HAS_MEMINDEX = 0x02,
 };
+
+enum : unsigned {
+  WASM_ELEM_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02,
+  WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
+};
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
@@ -300,8 +334,10 @@ enum : uint8_t {
 
 // Kind codes used in the custom "name" section
 enum : unsigned {
-  WASM_NAMES_FUNCTION = 0x1,
-  WASM_NAMES_LOCAL = 0x2,
+  WASM_NAMES_FUNCTION = 1,
+  WASM_NAMES_LOCAL = 2,
+  WASM_NAMES_GLOBAL = 7,
+  WASM_NAMES_DATA_SEGMENT = 9,
 };
 
 // Kind codes used in the custom "linking" section
@@ -312,10 +348,20 @@ enum : unsigned {
   WASM_SYMBOL_TABLE = 0x8,
 };
 
+// Kind codes used in the custom "dylink" section
+enum : unsigned {
+  WASM_DYLINK_MEM_INFO = 0x1,
+  WASM_DYLINK_NEEDED = 0x2,
+  WASM_DYLINK_EXPORT_INFO = 0x3,
+  WASM_DYLINK_IMPORT_INFO = 0x4,
+};
+
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
 enum : unsigned {
   WASM_COMDAT_DATA = 0x0,
   WASM_COMDAT_FUNCTION = 0x1,
+  // GLOBAL, TAG, and TABLE are in here but LLVM doesn't use them yet.
+  WASM_COMDAT_SECTION = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_SYMBOL_TABLE
@@ -324,12 +370,18 @@ enum WasmSymbolType : unsigned {
   WASM_SYMBOL_TYPE_DATA = 0x1,
   WASM_SYMBOL_TYPE_GLOBAL = 0x2,
   WASM_SYMBOL_TYPE_SECTION = 0x3,
-  WASM_SYMBOL_TYPE_EVENT = 0x4,
+  WASM_SYMBOL_TYPE_TAG = 0x4,
+  WASM_SYMBOL_TYPE_TABLE = 0x5,
 };
 
-// Kinds of event attributes.
-enum WasmEventAttribute : unsigned {
-  WASM_EVENT_ATTRIBUTE_EXCEPTION = 0x0,
+enum WasmSegmentFlag : unsigned {
+  WASM_SEG_FLAG_STRINGS = 0x1,
+  WASM_SEG_FLAG_TLS = 0x2,
+};
+
+// Kinds of tag attributes.
+enum WasmTagAttribute : uint8_t {
+  WASM_TAG_ATTRIBUTE_EXCEPTION = 0x0,
 };
 
 const unsigned WASM_SYMBOL_BINDING_MASK = 0x3;
@@ -344,6 +396,7 @@ const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
 const unsigned WASM_SYMBOL_EXPORTED = 0x20;
 const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 const unsigned WASM_SYMBOL_NO_STRIP = 0x80;
+const unsigned WASM_SYMBOL_TLS = 0x100;
 
 #define WASM_RELOC(name, value) name = value,
 
@@ -360,7 +413,7 @@ enum class ValType {
   F32 = WASM_TYPE_F32,
   F64 = WASM_TYPE_F64,
   V128 = WASM_TYPE_V128,
-  EXNREF = WASM_TYPE_EXNREF,
+  FUNCREF = WASM_TYPE_FUNCREF,
   EXTERNREF = WASM_TYPE_EXTERNREF,
 };
 
@@ -392,6 +445,16 @@ inline bool operator==(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 
 inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
+}
+
+inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
+  return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
+                                               : true);
+}
+
+inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {
+  return LHS.ElemType == RHS.ElemType && LHS.Limits == RHS.Limits;
 }
 
 std::string toString(WasmSymbolType type);

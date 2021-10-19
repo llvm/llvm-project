@@ -13,7 +13,7 @@ struct __attribute((visibility("default"))) x2 {
   static int y;
 };
 int x2::y = 10;
-// CHECK: @_ZN2x21yE = global
+// CHECK: @_ZN2x21yE ={{.*}} global
 #pragma GCC visibility pop
 
 #pragma GCC visibility push(hidden)
@@ -42,7 +42,7 @@ template<> void x5<int>::y() {}
 #pragma GCC visibility push(hidden)
 namespace n __attribute((visibility("default"))) {
   void f() {}
-  // CHECK-LABEL: define void @_ZN1n1fEv
+  // CHECK-LABEL: define{{.*}} void @_ZN1n1fEv
 }
 #pragma GCC visibility pop
 

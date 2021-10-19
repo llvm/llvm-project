@@ -45,13 +45,13 @@ entry:
 $source_comdat_variable = comdat largest
 @source_comdat_variable = global i32 32, comdat($source_comdat_variable)
 
-$source_comdat_variable_1 = comdat noduplicates
+$source_comdat_variable_1 = comdat nodeduplicate
 @source_comdat_variable_1 = global i32 64, comdat($source_comdat_variable_1)
 
 ; CHECK: $target_comdat_function = comdat any
 ; CHECK: $target_comdat_function_1 = comdat exactmatch
 ; CHECK: $target_comdat_variable = comdat largest
-; CHECK: $target_comdat_variable_1 = comdat noduplicates
+; CHECK: $target_comdat_variable_1 = comdat nodeduplicate
 
 ; CHECK: @target_variable = external global i32
 ; CHECK-NOT: @source_variable = external global i32

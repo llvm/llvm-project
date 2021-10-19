@@ -424,13 +424,13 @@ define <32 x i8> @shl9(<32 x i8> %A) nounwind {
 ; X32-LABEL: shl9:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsllw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shl9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsllw $3, %ymm0, %ymm0
-; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %B = shl <32 x i8> %A, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <32 x i8> %B
@@ -440,13 +440,13 @@ define <32 x i8> @shr9(<32 x i8> %A) nounwind {
 ; X32-LABEL: shr9:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shr9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
   %B = lshr <32 x i8> %A, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <32 x i8> %B
@@ -472,7 +472,7 @@ define <32 x i8> @sra_v32i8(<32 x i8> %A) nounwind {
 ; X32-LABEL: sra_v32i8:
 ; X32:       # %bb.0:
 ; X32-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    vmovdqa {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X32-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    vpsubb %ymm1, %ymm0, %ymm0
@@ -481,7 +481,7 @@ define <32 x i8> @sra_v32i8(<32 x i8> %A) nounwind {
 ; X64-LABEL: sra_v32i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpsrlw $3, %ymm0, %ymm0
-; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovdqa {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
 ; X64-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vpsubb %ymm1, %ymm0, %ymm0

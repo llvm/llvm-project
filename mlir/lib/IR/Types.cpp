@@ -6,11 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Types.h"
-#include "TypeDetail.h"
-#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "llvm/ADT/Twine.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -19,60 +16,81 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-Dialect &Type::getDialect() const {
-  return impl->getAbstractType().getDialect();
-}
-
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
-//===----------------------------------------------------------------------===//
-// FunctionType
-//===----------------------------------------------------------------------===//
+bool Type::isBF16() const { return isa<BFloat16Type>(); }
+bool Type::isF16() const { return isa<Float16Type>(); }
+bool Type::isF32() const { return isa<Float32Type>(); }
+bool Type::isF64() const { return isa<Float64Type>(); }
+bool Type::isF80() const { return isa<Float80Type>(); }
+bool Type::isF128() const { return isa<Float128Type>(); }
 
-FunctionType FunctionType::get(TypeRange inputs, TypeRange results,
-                               MLIRContext *context) {
-  return Base::get(context, inputs, results);
+bool Type::isIndex() const { return isa<IndexType>(); }
+
+/// Return true if this is an integer type with the specified width.
+bool Type::isInteger(unsigned width) const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.getWidth() == width;
+  return false;
 }
 
-unsigned FunctionType::getNumInputs() const { return getImpl()->numInputs; }
-
-ArrayRef<Type> FunctionType::getInputs() const {
-  return getImpl()->getInputs();
+bool Type::isSignlessInteger() const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSignless();
+  return false;
 }
 
-unsigned FunctionType::getNumResults() const { return getImpl()->numResults; }
-
-ArrayRef<Type> FunctionType::getResults() const {
-  return getImpl()->getResults();
+bool Type::isSignlessInteger(unsigned width) const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSignless() && intTy.getWidth() == width;
+  return false;
 }
 
-//===----------------------------------------------------------------------===//
-// OpaqueType
-//===----------------------------------------------------------------------===//
-
-OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
-                           MLIRContext *context) {
-  return Base::get(context, dialect, typeData);
+bool Type::isSignedInteger() const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSigned();
+  return false;
 }
 
-OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
-                                  MLIRContext *context, Location location) {
-  return Base::getChecked(location, dialect, typeData);
+bool Type::isSignedInteger(unsigned width) const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isSigned() && intTy.getWidth() == width;
+  return false;
 }
 
-/// Returns the dialect namespace of the opaque type.
-Identifier OpaqueType::getDialectNamespace() const {
-  return getImpl()->dialectNamespace;
+bool Type::isUnsignedInteger() const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isUnsigned();
+  return false;
 }
 
-/// Returns the raw type data of the opaque type.
-StringRef OpaqueType::getTypeData() const { return getImpl()->typeData; }
+bool Type::isUnsignedInteger(unsigned width) const {
+  if (auto intTy = dyn_cast<IntegerType>())
+    return intTy.isUnsigned() && intTy.getWidth() == width;
+  return false;
+}
 
-/// Verify the construction of an opaque type.
-LogicalResult OpaqueType::verifyConstructionInvariants(Location loc,
-                                                       Identifier dialect,
-                                                       StringRef typeData) {
-  if (!Dialect::isValidNamespace(dialect.strref()))
-    return emitError(loc, "invalid dialect namespace '") << dialect << "'";
-  return success();
+bool Type::isSignlessIntOrIndex() const {
+  return isSignlessInteger() || isa<IndexType>();
+}
+
+bool Type::isSignlessIntOrIndexOrFloat() const {
+  return isSignlessInteger() || isa<IndexType, FloatType>();
+}
+
+bool Type::isSignlessIntOrFloat() const {
+  return isSignlessInteger() || isa<FloatType>();
+}
+
+bool Type::isIntOrIndex() const { return isa<IntegerType>() || isIndex(); }
+
+bool Type::isIntOrFloat() const { return isa<IntegerType, FloatType>(); }
+
+bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
+
+unsigned Type::getIntOrFloatBitWidth() const {
+  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
+  if (auto intType = dyn_cast<IntegerType>())
+    return intType.getWidth();
+  return cast<FloatType>().getWidth();
 }

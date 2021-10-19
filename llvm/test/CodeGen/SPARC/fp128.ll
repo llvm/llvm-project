@@ -23,7 +23,7 @@
 ; CHECK:      std
 ; CHECK:      std
 
-define void @f128_ops(fp128* noalias sret %scalar.result, fp128* byval %a, fp128* byval %b, fp128* byval %c, fp128* byval %d) {
+define void @f128_ops(fp128* noalias sret(fp128) %scalar.result, fp128* byval(fp128) %a, fp128* byval(fp128) %b, fp128* byval(fp128) %c, fp128* byval(fp128) %d) {
 entry:
   %0 = load fp128, fp128* %a, align 8
   %1 = load fp128, fp128* %b, align 8
@@ -44,7 +44,7 @@ entry:
 ; CHECK-DAG:   ldd [%[[S1]]], %f{{.+}}
 ; CHECK:       jmp {{%[oi]7}}+12
 
-define void @f128_spill(fp128* noalias sret %scalar.result, fp128* byval %a) {
+define void @f128_spill(fp128* noalias sret(fp128) %scalar.result, fp128* byval(fp128) %a) {
 entry:
   %0 = load fp128, fp128* %a, align 8
   call void asm sideeffect "", "~{f0},~{f1},~{f2},~{f3},~{f4},~{f5},~{f6},~{f7},~{f8},~{f9},~{f10},~{f11},~{f12},~{f13},~{f14},~{f15},~{f16},~{f17},~{f18},~{f19},~{f20},~{f21},~{f22},~{f23},~{f24},~{f25},~{f26},~{f27},~{f28},~{f29},~{f30},~{f31}"()
@@ -67,7 +67,7 @@ entry:
 ; CHECK-NEXT:  add %g1, %sp, %g1
 ; CHECK-NEXT:  ldd [%g1+8], %f{{.+}}
 
-define void @f128_spill_large(<251 x fp128>* noalias sret %scalar.result, <251 x fp128>* byval %a) {
+define void @f128_spill_large(<251 x fp128>* noalias sret(<251 x fp128>) %scalar.result, <251 x fp128>* byval(<251 x fp128>) %a) {
 entry:
   %0 = load <251 x fp128>, <251 x fp128>* %a, align 8
   call void asm sideeffect "", "~{f0},~{f1},~{f2},~{f3},~{f4},~{f5},~{f6},~{f7},~{f8},~{f9},~{f10},~{f11},~{f12},~{f13},~{f14},~{f15},~{f16},~{f17},~{f18},~{f19},~{f20},~{f21},~{f22},~{f23},~{f24},~{f25},~{f26},~{f27},~{f28},~{f29},~{f30},~{f31}"()
@@ -80,7 +80,7 @@ entry:
 ; HARD-NEXT:  nop
 ; SOFT:       _Q_cmp
 
-define i32 @f128_compare(fp128* byval %f0, fp128* byval %f1, i32 %a, i32 %b) {
+define i32 @f128_compare(fp128* byval(fp128) %f0, fp128* byval(fp128) %f1, i32 %a, i32 %b) {
 entry:
    %0 = load fp128, fp128* %f0, align 8
    %1 = load fp128, fp128* %f1, align 8
@@ -95,7 +95,7 @@ entry:
 ; SOFT:       _Q_cmp
 ; SOFT:       cmp
 
-define i32 @f128_compare2(fp128* byval %f0) {
+define i32 @f128_compare2(fp128* byval(fp128) %f0) {
 entry:
   %0 = load fp128, fp128* %f0, align 8
   %1 = fcmp ogt fp128 %0, 0xL00000000000000000000000000000000
@@ -115,7 +115,7 @@ entry:
 ; BE:          fabss %f0, %f0
 ; EL:          fabss %f3, %f3
 
-define void @f128_abs(fp128* noalias sret %scalar.result, fp128* byval %a) {
+define void @f128_abs(fp128* noalias sret(fp128) %scalar.result, fp128* byval(fp128) %a) {
 entry:
   %0 = load fp128, fp128* %a, align 8
   %1 = tail call fp128 @llvm.fabs.f128(fp128 %0)
@@ -130,7 +130,7 @@ declare fp128 @llvm.fabs.f128(fp128) nounwind readonly
 ; SOFT:       _Q_itoq
 ; SOFT:       unimp 16
 
-define void @int_to_f128(fp128* noalias sret %scalar.result, i32 %i) {
+define void @int_to_f128(fp128* noalias sret(fp128) %scalar.result, i32 %i) {
 entry:
   %0 = sitofp i32 %i to fp128
   store fp128 %0, fp128* %scalar.result, align 8
@@ -159,7 +159,7 @@ entry:
 ; SOFT:       _Q_utoq
 ; SOFT:       unimp 16
 
-define void @uint_to_f128(fp128* noalias sret %scalar.result, i32 %i) {
+define void @uint_to_f128(fp128* noalias sret(fp128) %scalar.result, i32 %i) {
 entry:
   %0 = uitofp i32 %i to fp128
   store fp128 %0, fp128* %scalar.result, align 8
@@ -242,7 +242,7 @@ entry:
 ; BE:          fnegs %f0, %f0
 ; EL:          fnegs %f3, %f3
 
-define void @f128_neg(fp128* noalias sret %scalar.result, fp128* byval %a) {
+define void @f128_neg(fp128* noalias sret(fp128) %scalar.result, fp128* byval(fp128) %a) {
 entry:
   %0 = load fp128, fp128* %a, align 8
   %1 = fsub fp128 0xL00000000000000008000000000000000, %0

@@ -33,7 +33,10 @@ static int64_t getInteger(opt::InputArgList &args, unsigned key,
     return Default;
 
   int64_t v;
-  if (to_integer(a->getValue(), v, base))
+  StringRef s = a->getValue();
+  if (base == 16 && (s.startswith("0x") || s.startswith("0X")))
+    s = s.drop_front(2);
+  if (to_integer(s, v, base))
     return v;
 
   StringRef spelling = args.getArgString(a->getIndex());
@@ -86,7 +89,7 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef mb) {
 }
 
 StringRef lld::args::getFilenameWithoutExe(StringRef path) {
-  if (path.endswith_lower(".exe"))
+  if (path.endswith_insensitive(".exe"))
     return sys::path::stem(path);
   return sys::path::filename(path);
 }

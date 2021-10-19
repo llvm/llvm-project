@@ -221,6 +221,21 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
         FunctionSpec<
+            "memccpy",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<VoidRestrictedPtr>,
+             ArgSpec<ConstVoidRestrictedPtr>,
+             ArgSpec<IntType>,
+             ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+            "mempcpy",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<VoidRestrictedPtr>,
+             ArgSpec<ConstVoidRestrictedPtr>,
+             ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
             "strnlen",
              RetValSpec<SizeTType>,
              [ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
@@ -228,12 +243,29 @@ def POSIX : StandardSpec<"POSIX"> {
         FunctionSpec<
             "strtok_r",
             RetValSpec<CharPtr>,
-            [ArgSpec<ConstRestrictedCharPtr>, ArgSpec<CharRestrictedDoublePtr>]
+            [ArgSpec<RestrictedCharPtr>,
+             ArgSpec<ConstRestrictedCharPtr>,
+             ArgSpec<CharRestrictedDoublePtr>]
+        >,
+    ]
+  >;
+
+  HeaderSpec CType = HeaderSpec<
+    "ctype.h",
+    [], // Macros
+    [], // Types
+    [], // Enumerations
+    [
+        FunctionSpec<
+            "isascii",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
         >,
     ]
   >;
 
   let Headers = [
+    CType,
     Errno,
     SysMMan,
     Signal,

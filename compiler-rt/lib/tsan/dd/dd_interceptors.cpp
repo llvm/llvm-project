@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <pthread.h>
+
 #include "dd_rtl.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
-#include <pthread.h>
-#include <stdlib.h>
 
 using namespace __dsan;
 
@@ -163,12 +164,12 @@ static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
   uptr cond = atomic_load(p, memory_order_acquire);
   if (!force && cond != 0)
     return (pthread_cond_t*)cond;
-  void *newcond = malloc(sizeof(pthread_cond_t));
+  void *newcond = InternalAlloc(sizeof(pthread_cond_t));
   internal_memset(newcond, 0, sizeof(pthread_cond_t));
   if (atomic_compare_exchange_strong(p, &cond, (uptr)newcond,
       memory_order_acq_rel))
     return (pthread_cond_t*)newcond;
-  free(newcond);
+  InternalFree(newcond);
   return (pthread_cond_t*)cond;
 }
 
@@ -216,7 +217,7 @@ INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *c) {
   InitThread();
   pthread_cond_t *cond = init_cond(c);
   int res = REAL(pthread_cond_destroy)(cond);
-  free(cond);
+  InternalFree(cond);
   atomic_store((atomic_uintptr_t*)c, 0, memory_order_relaxed);
   return res;
 }
@@ -284,7 +285,8 @@ static void InitDataSeg() {
     if (is_bss) g_data_end = segment.end;
     prev_is_data = is_data;
   }
-  VPrintf(1, "guessed data_start=%p data_end=%p\n",  g_data_start, g_data_end);
+  VPrintf(1, "guessed data_start=0x%zx data_end=0x%zx\n", g_data_start,
+          g_data_end);
   CHECK_LT(g_data_start, g_data_end);
   CHECK_GE((uptr)&g_data_start, g_data_start);
   CHECK_LT((uptr)&g_data_start, g_data_end);

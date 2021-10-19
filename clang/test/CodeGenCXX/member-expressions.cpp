@@ -58,7 +58,7 @@ namespace test4 {
 
   extern C *c_ptr;
 
-  // CHECK-LABEL: define i32 @_ZN5test44testEv()
+  // CHECK-LABEL: define{{.*}} i32 @_ZN5test44testEv()
   int test() {
     // CHECK: load {{.*}} @_ZN5test45c_ptrE
     // CHECK-NEXT: bitcast

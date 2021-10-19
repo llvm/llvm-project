@@ -29,7 +29,9 @@
 #hello_world = affine_map<(i, j) [s0] -> (((s0 + (i + j) + 5), j)> // expected-error {{expected ')'}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0] -> i + s0, j)> // expected-error {{expected '(' at start of affine map range}}
+ 
+// expected-error @+1 {{expected '(' in affine map range}}
+#hello_world = affine_map<(i, j) [s0] -> i + s0, j)>
 
 // -----
 #hello_world = affine_map<(i, j) [s0] -> (x)> // expected-error {{use of undeclared identifier}}
@@ -47,6 +49,8 @@
 #hello_world = affine_map<(i, j) [s0, s1] -> (+i, j)> // expected-error {{missing left operand of binary op}}
 
 // -----
+
+
 #hello_world = affine_map<(i, j) [s0, s1] -> (i, *j)> // expected-error {{missing left operand of binary op}}
 
 // -----
@@ -91,7 +95,8 @@
 #hello_world = affine_map<(i, j) [s0, s1] -> (i, i mod (2+i))> // expected-error {{non-affine expression: right operand of mod has to be either a constant or symbolic}}
 
 // -----
-#hello_world = affine_map<(i, j) [s0, s1] -> (-1*i j, j)> // expected-error {{expected ',' or ')'}}
+// expected-error @+1 {{expected ')' in affine map range}}
+#hello_world = affine_map<(i, j) [s0, s1] -> (-1*i j, j)>
 
 // -----
 #hello_world = affine_map<(i, j) -> (i, 3*d0 + )> // expected-error {{use of undeclared identifier}}

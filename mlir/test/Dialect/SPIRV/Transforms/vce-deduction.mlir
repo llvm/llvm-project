@@ -10,9 +10,7 @@
 // CHECK: requires #spv.vce<v1.0, [Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.5, [Shader], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.5, [Shader], []>, {}>
 } {
   spv.func @iadd(%val : i32) -> i32 "None" {
     %0 = spv.IAdd %val, %val: i32
@@ -26,12 +24,10 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.3, [GroupNonUniformBallot, Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.5, [Shader, GroupNonUniformBallot], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, {}>
 } {
   spv.func @group_non_uniform_ballot(%predicate : i1) -> vector<4xi32> "None" {
-    %0 = spv.GroupNonUniformBallot "Workgroup" %predicate : vector<4xi32>
+    %0 = spv.GroupNonUniformBallot Workgroup %predicate : vector<4xi32>
     spv.ReturnValue %0: vector<4xi32>
   }
 }
@@ -45,9 +41,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.0, [Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Shader, Float16, Float64, Int16, Int64, VariablePointers], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [Shader, Float16, Float64, Int16, Int64, VariablePointers], []>, {}>
 } {
   spv.func @iadd(%val : i32) -> i32 "None" {
     %0 = spv.IAdd %val, %val: i32
@@ -61,9 +55,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.0, [Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [AtomicStorage], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.0, [AtomicStorage], []>, {}>
 } {
   spv.func @iadd(%val : i32) -> i32 "None" {
     %0 = spv.IAdd %val, %val: i32
@@ -84,9 +76,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.3, [GroupNonUniformArithmetic, Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, {}>
 } {
   spv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
     %0 = spv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
@@ -97,9 +87,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.3, [GroupNonUniformClustered, GroupNonUniformBallot, Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>, {}>
 } {
   spv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
     %0 = spv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
@@ -113,9 +101,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.0, [Int8, Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, Int8], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.3, [Shader, Int8], []>, {}>
 } {
   spv.func @iadd_function(%val : i8) -> i8 "None" {
     %0 = spv.IAdd %val, %val : i8
@@ -127,13 +113,23 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.0, [Float16, Shader], []>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, Float16], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.3, [Shader, Float16], []>, {}>
 } {
   spv.func @fadd_function(%val : f16) -> f16 "None" {
     %0 = spv.FAdd %val, %val : f16
     spv.ReturnValue %0: f16
+  }
+}
+
+// Using 16-element vectors requires Vector16.
+// CHECK: requires #spv.vce<v1.0, [Vector16, Shader], []>
+spv.module Logical GLSL450 attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.3, [Shader, Vector16], []>, {}>
+} {
+  spv.func @iadd_v16_function(%val : vector<16xi32>) -> vector<16xi32> "None" {
+    %0 = spv.IAdd %val, %val : vector<16xi32>
+    spv.ReturnValue %0: vector<16xi32>
   }
 }
 
@@ -148,9 +144,7 @@ spv.module Logical GLSL450 attributes {
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader, SubgroupBallotKHR],
-             [SPV_KHR_shader_ballot, SPV_KHR_shader_clock, SPV_KHR_variable_pointers]>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+             [SPV_KHR_shader_ballot, SPV_KHR_shader_clock, SPV_KHR_variable_pointers]>, {}>
 } {
   spv.func @subgroup_ballot(%predicate : i1) -> vector<4xi32> "None" {
     %0 = spv.SubgroupBallotKHR %predicate: vector<4xi32>
@@ -165,9 +159,7 @@ spv.module Logical GLSL450 attributes {
 // CHECK: requires #spv.vce<v1.0, [VulkanMemoryModel], [SPV_KHR_vulkan_memory_model]>
 spv.module Logical Vulkan attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.5, [Shader, VulkanMemoryModel], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.5, [Shader, VulkanMemoryModel], []>, {}>
 } {
   spv.func @iadd(%val : i32) -> i32 "None" {
     %0 = spv.IAdd %val, %val: i32
@@ -182,9 +174,7 @@ spv.module Logical Vulkan attributes {
 // CHECK: requires #spv.vce<v1.0, [StorageBuffer16BitAccess, Shader, Int16], [SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, StorageBuffer16BitAccess, Int16], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    #spv.vce<v1.3, [Shader, StorageBuffer16BitAccess, Int16], []>, {}>
 } {
   spv.func @iadd_storage_buffer(%ptr : !spv.ptr<i16, StorageBuffer>) -> i16 "None" {
     %0 = spv.Load "StorageBuffer" %ptr : i16
@@ -200,9 +190,8 @@ spv.module Logical GLSL450 attributes {
 spv.module Logical GLSL450 attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.5, [Shader, UniformAndStorageBuffer8BitAccess, StorageBuffer16BitAccess, StorageUniform16, Int16, ImageBuffer, StorageImageExtendedFormats], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+    {}>
 } {
-  spv.globalVariable @data : !spv.ptr<!spv.struct<i8 [0], f16 [2], i64 [4]>, Uniform>
-  spv.globalVariable @img  : !spv.ptr<!spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
+  spv.GlobalVariable @data : !spv.ptr<!spv.struct<(i8 [0], f16 [2], i64 [4])>, Uniform>
+  spv.GlobalVariable @img  : !spv.ptr<!spv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Rg32f>, UniformConstant>
 }

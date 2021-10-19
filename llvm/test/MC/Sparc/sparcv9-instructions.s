@@ -293,3 +293,11 @@
         ! V8-NEXT: rdpr %wstate,%i5
         ! V9: rdpr %wstate, %i5         ! encoding: [0xbb,0x53,0x80,0x00]
         rdpr %wstate,%i5
+
+        ! V8:      error: instruction requires a CPU feature not currently enabled
+        ! V8-NEXT: rd %pc, %o7
+        ! V9: rd %pc, %o7               ! encoding: [0x9f,0x41,0x40,0x00]
+        rd %pc, %o7
+
+        ! V9: st %o1, [%o0]             ! encoding: [0xd2,0x22,0x00,0x00]
+        stw %o1, [%o0]

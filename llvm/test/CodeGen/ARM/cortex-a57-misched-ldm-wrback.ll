@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; 
 
-@a = global i32 0, align 4
-@b = global i32 0, align 4
-@c = global i32 0, align 4
+@a = dso_local global i32 0, align 4
+@b = dso_local global i32 0, align 4
+@c = dso_local global i32 0, align 4
 
 ; CHECK:       ********** MI Scheduling **********
 ; We need second, post-ra scheduling to have LDM instruction combined from single-loads
@@ -21,7 +21,7 @@
 ; CHECK-SAME:  Latency=0
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0
-define i32 @bar(i32 %a1, i32 %b1, i32 %c1) minsize optsize {
+define dso_local i32 @bar(i32 %a1, i32 %b1, i32 %c1) minsize optsize {
   %1 = load i32, i32* @a, align 4
   %2 = load i32, i32* @b, align 4
   %3 = load i32, i32* @c, align 4

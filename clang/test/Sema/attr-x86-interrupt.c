@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-win32  -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple i386-pc-win32  -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnux32  -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu  -fsyntax-only -verify %s -DNOCALLERSAVE=1
 
 struct a {
   int b;
@@ -39,6 +40,23 @@ __attribute__((interrupt)) void foo6(float *a, int b) {}
 __attribute__((interrupt)) void foo7(int *a, unsigned b) {}
 __attribute__((interrupt)) void foo8(int *a) {}
 
+#ifdef _LP64
+typedef unsigned long Arg2Type;
+#elif defined(__x86_64__)
+typedef unsigned long long Arg2Type;
+#else
+typedef unsigned int Arg2Type;
+#endif
+#ifndef NOCALLERSAVE
+__attribute__((no_caller_saved_registers))
+#else
+// expected-note@+3 {{'foo9' declared here}}
+// expected-warning@+4 {{interrupt service routine should only call a function with attribute 'no_caller_saved_registers'}}
+#endif
+void foo9(int *a, Arg2Type b) {}
+__attribute__((interrupt)) void fooA(int *a, Arg2Type b) {
+  foo9(a, b);
+}
 void g(void (*fp)(int *));
 int main(int argc, char **argv) {
   void *ptr = (void *)&foo7;

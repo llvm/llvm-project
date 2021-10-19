@@ -74,6 +74,7 @@ function(add_libc_unittest target_name)
     "" # No optional arguments
     "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "NO_LIBC_UNITTEST_TEST_MAIN"
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -111,14 +112,6 @@ function(add_libc_unittest target_name)
     set(msg "Skipping unittest ${fq_target_name} as it has missing deps: "
             "${skipped_entrypoints_list}.")
     message(STATUS ${msg})
-    add_custom_target(${fq_target_name})
-
-    # A post build custom command is used to avoid running the command always.
-    add_custom_command(
-      TARGET ${fq_target_name}
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E echo ${msg}
-    )
     return()
   endif()
 
@@ -135,9 +128,13 @@ function(add_libc_unittest target_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
+  target_compile_options(
+    ${fq_target_name}
+    PRIVATE ${LIBC_COMPILE_OPTIONS_DEFAULT}
+  )
   if(LIBC_UNITTEST_COMPILE_OPTIONS)
     target_compile_options(
-      ${target_name}
+      ${fq_target_name}
       PRIVATE ${LIBC_UNITTEST_COMPILE_OPTIONS}
     )
   endif()
@@ -152,7 +149,11 @@ function(add_libc_unittest target_name)
     ${fq_deps_list}
   )
 
-  target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest libc_test_utils)
+  if(NO_LIBC_UNITTEST_TEST_MAIN)
+    target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest libc_test_utils)
+  else()
+    target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest LibcUnitTestMain libc_test_utils)
+  endif()
 
   add_custom_command(
     TARGET ${fq_target_name}
@@ -169,8 +170,18 @@ endfunction(add_libc_unittest)
 
 function(add_libc_testsuite suite_name)
   add_custom_target(${suite_name})
-  add_dependencies(check-libc ${suite_name})
+  add_dependencies(check-llvmlibc ${suite_name})
 endfunction(add_libc_testsuite)
+
+function(add_libc_exhaustive_testsuite suite_name)
+  add_custom_target(${suite_name})
+  add_dependencies(exhaustive-check-libc ${suite_name})
+endfunction(add_libc_exhaustive_testsuite)
+
+function(add_libc_long_running_testsuite suite_name)
+  add_custom_target(${suite_name})
+  add_dependencies(libc-long-running-tests ${suite_name})
+endfunction(add_libc_long_running_testsuite)
 
 # Rule to add a fuzzer test.
 # Usage

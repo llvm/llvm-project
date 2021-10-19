@@ -66,8 +66,8 @@ Aggregates
   worked much in this part of the codebase and it should have attention from
   someone more knowledgeable about it.
 
-Aggregates are lowered to a single scalar vreg.
-This differs from SelectionDAG's multiple vregs via ``GetValueVTs``.
+Aggregates are lowered into multiple virtual registers, similar to
+SelectionDAG's multiple vregs via ``GetValueVTs``.
 
 ``TODO``:
 As some of the bits are undef (padding), we should consider augmenting the
@@ -91,5 +91,5 @@ This is beneficial as it allows us to fold constants into immediate operands
 during :ref:`instructionselect`, while still avoiding redundant materializations
 for expensive non-foldable constants. However, this can lead to unnecessary
 spills and reloads in an -O0 pipeline, as these virtual registers can have long
-live ranges. This can be mitigated by running a `localizer <https://github.com/llvm/llvm-project/blob/master/llvm/lib/CodeGen/GlobalISel/Localizer.cpp>`_
+live ranges. This can be mitigated by running a `localizer <https://github.com/llvm/llvm-project/blob/main/llvm/lib/CodeGen/GlobalISel/Localizer.cpp>`_
 after the translator.

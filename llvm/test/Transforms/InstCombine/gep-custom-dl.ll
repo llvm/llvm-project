@@ -52,7 +52,7 @@ define void @test3(i8 %B) {
 ; This should be turned into a constexpr instead of being an instruction
 define void @test_evaluate_gep_nested_as_ptrs(i32 addrspace(2)* %B) {
 ; CHECK-LABEL: @test_evaluate_gep_nested_as_ptrs(
-; CHECK-NEXT:    store i32 addrspace(2)* [[B:%.*]], i32 addrspace(2)* addrspace(1)* getelementptr inbounds (%as2_ptr_struct, [[AS2_PTR_STRUCT:%.*]] addrspace(1)* @global_as1_as2_ptr, i32 0, i32 0), align 8
+; CHECK-NEXT:    store i32 addrspace(2)* [[B:%.*]], i32 addrspace(2)* addrspace(1)* getelementptr inbounds ([[AS2_PTR_STRUCT:%.*]], [[AS2_PTR_STRUCT]] addrspace(1)* @global_as1_as2_ptr, i32 0, i32 0), align 8
 ; CHECK-NEXT:    ret void
 ;
   %A = getelementptr %as2_ptr_struct, %as2_ptr_struct addrspace(1)* @global_as1_as2_ptr, i32 0, i32 0
@@ -101,7 +101,7 @@ define i1 @test5({ i32, i32 }* %x, { i32, i32 }* %y) {
 
 define <2 x i1> @test6(<2 x i32> %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> %X, <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, <2 x i32> zeroinitializer, <2 x i32> <i32 1, i32 1>, <2 x i32> %X
@@ -113,7 +113,7 @@ define <2 x i1> @test6(<2 x i32> %X, <2 x %S*> %P) nounwind {
 ; Same as above, but indices scalarized.
 define <2 x i1> @test6b(<2 x i32> %X, <2 x %S*> %P) nounwind {
 ; CHECK-LABEL: @test6b(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> %X, <i32 -1, i32 -1>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds %S, <2 x %S*> %P, i32 0, i32 1, <2 x i32> %X
@@ -169,7 +169,9 @@ define i32 @test10() {
 
 define i16 @constant_fold_custom_dl() {
 ; CHECK-LABEL: @constant_fold_custom_dl(
-  ; CHECK: ret i16 ptrtoint
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i16 ptrtoint (i8 addrspace(1)* getelementptr (i8, i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i32 1, i32 0), i32 sext (i16 sub (i16 0, i16 ptrtoint ([1000 x i8] addrspace(1)* @X_as1 to i16)) to i32)) to i16)
+;
 
 entry:
   %A = bitcast i8 addrspace(1)* getelementptr inbounds ([1000 x i8], [1000 x i8] addrspace(1)* @X_as1, i64 1, i64 0) to i8 addrspace(1)*

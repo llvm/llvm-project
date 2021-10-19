@@ -67,8 +67,10 @@ TEST_CASE(test_error_reporting)
     scoped_test_env env;
     const path file = env.create_file("file1", 42);
     const path dir = env.create_dir("dir");
+#ifndef _WIN32
     const path fifo = env.create_fifo("fifo");
     TEST_REQUIRE(is_other(fifo));
+#endif
 
     const auto test_ec = GetTestEC();
 
@@ -96,6 +98,7 @@ TEST_CASE(test_error_reporting)
         TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(dir, file, ec));
     }
+#ifndef _WIN32
     { // is_other(from)
         std::error_code ec = test_ec;
         fs::copy(fifo, dir, ec);
@@ -110,6 +113,7 @@ TEST_CASE(test_error_reporting)
         TEST_REQUIRE(ec != test_ec);
         TEST_CHECK(checkThrow(file, fifo, ec));
     }
+#endif
 }
 
 TEST_CASE(from_is_symlink)
@@ -265,7 +269,7 @@ TEST_CASE(test_copy_symlinks_to_symlink_dir)
     const path file2 = env.create_file("file2", 101);
     const path file2_sym = env.create_symlink(file2, "file2_sym");
     const path dir = env.create_dir("dir");
-    const path dir_sym = env.create_symlink(dir, "dir_sym");
+    const path dir_sym = env.create_directory_symlink(dir, "dir_sym");
     {
         std::error_code ec = GetTestEC();
         fs::copy(file1, dir_sym, copy_options::copy_symlinks, ec);
@@ -286,14 +290,14 @@ TEST_CASE(test_dir_create_symlink)
     {
         std::error_code ec = GetTestEC();
         fs::copy(dir, dest, copy_options::create_symlinks, ec);
-        TEST_CHECK(ec == std::make_error_code(std::errc::is_a_directory));
+        TEST_CHECK(ErrorIs(ec, std::errc::is_a_directory));
         TEST_CHECK(!exists(dest));
         TEST_CHECK(!is_symlink(dest));
     }
     {
         std::error_code ec = GetTestEC();
         fs::copy(dir, dest, copy_options::create_symlinks|copy_options::recursive, ec);
-        TEST_CHECK(ec == std::make_error_code(std::errc::is_a_directory));
+        TEST_CHECK(ErrorIs(ec, std::errc::is_a_directory));
         TEST_CHECK(!exists(dest));
         TEST_CHECK(!is_symlink(dest));
     }

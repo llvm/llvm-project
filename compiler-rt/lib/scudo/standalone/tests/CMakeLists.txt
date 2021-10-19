@@ -12,17 +12,22 @@ set(SCUDO_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone/include
   -DGTEST_HAS_RTTI=0
-  -DSCUDO_DEBUG=1
+  -g
   # Extra flags for the C++ tests
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)
+
+if(COMPILER_RT_DEBUG)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_DEBUG=1)
+endif()
 
 if(ANDROID)
   list(APPEND SCUDO_UNITTEST_CFLAGS -fno-emulated-tls)
 endif()
 
 if (COMPILER_RT_HAS_GWP_ASAN)
-  list(APPEND SCUDO_UNITTEST_CFLAGS -DGWP_ASAN_HOOKS)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -DGWP_ASAN_HOOKS -fno-omit-frame-pointer
+       -mno-omit-leaf-frame-pointer)
 endif()
 
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
@@ -34,9 +39,14 @@ foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
 endforeach()
 list(APPEND LINK_FLAGS -pthread)
 # Linking against libatomic is required with some compilers
-list(APPEND LINK_FLAGS -latomic)
+check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
+if (COMPILER_RT_HAS_LIBATOMIC)
+  list(APPEND LINK_FLAGS -latomic)
+endif()
 
-set(SCUDO_TEST_HEADERS)
+set(SCUDO_TEST_HEADERS
+  scudo_unit_test.h
+  )
 foreach (header ${SCUDO_HEADERS})
   list(APPEND SCUDO_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
@@ -77,9 +87,11 @@ set(SCUDO_UNIT_TEST_SOURCES
   checksum_test.cpp
   chunk_test.cpp
   combined_test.cpp
+  common_test.cpp
   flags_test.cpp
   list_test.cpp
   map_test.cpp
+  memtag_test.cpp
   mutex_test.cpp
   primary_test.cpp
   quarantine_test.cpp

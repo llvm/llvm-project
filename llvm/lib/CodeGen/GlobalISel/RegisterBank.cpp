@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
@@ -98,17 +99,12 @@ void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
     return;
   assert(ContainedRegClasses.size() == TRI->getNumRegClasses() &&
          "TRI does not match the initialization process?");
-  bool IsFirst = true;
   OS << "Covered register classes:\n";
+  ListSeparator LS;
   for (unsigned RCId = 0, End = TRI->getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI->getRegClass(RCId);
 
-    if (!covers(RC))
-      continue;
-
-    if (!IsFirst)
-      OS << ", ";
-    OS << TRI->getRegClassName(&RC);
-    IsFirst = false;
+    if (covers(RC))
+      OS << LS << TRI->getRegClassName(&RC);
   }
 }

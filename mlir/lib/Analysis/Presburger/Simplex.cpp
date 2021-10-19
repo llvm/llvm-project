@@ -9,6 +9,7 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/Optional.h"
 
 namespace mlir {
 using Direction = Simplex::Direction;
@@ -271,7 +272,7 @@ LogicalResult Simplex::restoreRow(Unknown &u) {
 
     pivot(*maybePivot);
     if (u.orientation == Orientation::Column)
-      return LogicalResult::Success; // the unknown is unbounded above.
+      return success(); // the unknown is unbounded above.
   }
   return success(tableau(u.pos, 1) >= 0);
 }
@@ -344,6 +345,16 @@ void Simplex::swapRows(unsigned i, unsigned j) {
   unknownFromRow(j).pos = j;
 }
 
+void Simplex::swapColumns(unsigned i, unsigned j) {
+  assert(i < nCol && j < nCol && "Invalid columns provided!");
+  if (i == j)
+    return;
+  tableau.swapColumns(i, j);
+  std::swap(colUnknown[i], colUnknown[j]);
+  unknownFromColumn(i).pos = i;
+  unknownFromColumn(j).pos = j;
+}
+
 /// Mark this tableau empty and push an entry to the undo stack.
 void Simplex::markEmpty() {
   undoLog.push_back(UndoLogEntry::UnmarkEmpty);
@@ -351,7 +362,7 @@ void Simplex::markEmpty() {
 }
 
 /// Add an inequality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-/// is the curent number of variables, then the corresponding inequality is
+/// is the current number of variables, then the corresponding inequality is
 /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} >= 0.
 ///
 /// We add the inequality and mark it as restricted. We then try to make its
@@ -367,7 +378,7 @@ void Simplex::addInequality(ArrayRef<int64_t> coeffs) {
 }
 
 /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
-/// is the curent number of variables, then the corresponding equality is
+/// is the current number of variables, then the corresponding equality is
 /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
 ///
 /// We simply add two opposing inequalities, which force the expression to
@@ -380,10 +391,10 @@ void Simplex::addEquality(ArrayRef<int64_t> coeffs) {
   addInequality(negatedCoeffs);
 }
 
-unsigned Simplex::numVariables() const { return var.size(); }
-unsigned Simplex::numConstraints() const { return con.size(); }
+unsigned Simplex::getNumVariables() const { return var.size(); }
+unsigned Simplex::getNumConstraints() const { return con.size(); }
 
-/// Return a snapshot of the curent state. This is just the current size of the
+/// Return a snapshot of the current state. This is just the current size of the
 /// undo log.
 unsigned Simplex::getSnapshot() const { return undoLog.size(); }
 
@@ -433,6 +444,26 @@ void Simplex::undo(UndoLogEntry entry) {
     nRow--;
     rowUnknown.pop_back();
     con.pop_back();
+  } else if (entry == UndoLogEntry::RemoveLastVariable) {
+    // Whenever we are rolling back the addition of a variable, it is guaranteed
+    // that the variable will be in column position.
+    //
+    // We can see this as follows: any constraint that depends on this variable
+    // was added after this variable was added, so the addition of such
+    // constraints should already have been rolled back by the time we get to
+    // rolling back the addition of the variable. Therefore, no constraint
+    // currently has a component along the variable, so the variable itself must
+    // be part of the basis.
+    assert(var.back().orientation == Orientation::Column &&
+           "Variable to be removed must be in column orientation!");
+
+    // Move this variable to the last column and remove the column from the
+    // tableau.
+    swapColumns(var.back().pos, nCol - 1);
+    tableau.resizeHorizontally(nCol - 1);
+    var.pop_back();
+    colUnknown.pop_back();
+    nCol--;
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
     empty = false;
   } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
@@ -449,6 +480,31 @@ void Simplex::rollback(unsigned snapshot) {
     undo(undoLog.back());
     undoLog.pop_back();
   }
+}
+
+void Simplex::appendVariable(unsigned count) {
+  if (count == 0)
+    return;
+  var.reserve(var.size() + count);
+  colUnknown.reserve(colUnknown.size() + count);
+  for (unsigned i = 0; i < count; ++i) {
+    nCol++;
+    var.emplace_back(Orientation::Column, /*restricted=*/false,
+                     /*pos=*/nCol - 1);
+    colUnknown.push_back(var.size() - 1);
+  }
+  tableau.resizeHorizontally(nCol);
+  undoLog.insert(undoLog.end(), count, UndoLogEntry::RemoveLastVariable);
+}
+
+/// Add all the constraints from the given FlatAffineConstraints.
+void Simplex::intersectFlatAffineConstraints(const FlatAffineConstraints &fac) {
+  assert(fac.getNumIds() == getNumVariables() &&
+         "FlatAffineConstraints must have same dimensionality as simplex");
+  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
+    addInequality(fac.getInequality(i));
+  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
+    addEquality(fac.getEquality(i));
 }
 
 Optional<Fraction> Simplex::computeRowOptimum(Direction direction,
@@ -472,7 +528,7 @@ Optional<Fraction> Simplex::computeRowOptimum(Direction direction,
 /// or None if it is unbounded.
 Optional<Fraction> Simplex::computeOptimum(Direction direction,
                                            ArrayRef<int64_t> coeffs) {
-  assert(!empty && "Tableau should not be empty");
+  assert(!empty && "Simplex should not be empty");
 
   unsigned snapshot = getSnapshot();
   unsigned conIndex = addRow(coeffs);
@@ -480,6 +536,34 @@ Optional<Fraction> Simplex::computeOptimum(Direction direction,
   Optional<Fraction> optimum = computeRowOptimum(direction, row);
   rollback(snapshot);
   return optimum;
+}
+
+Optional<Fraction> Simplex::computeOptimum(Direction direction, Unknown &u) {
+  assert(!empty && "Simplex should not be empty!");
+  if (u.orientation == Orientation::Column) {
+    unsigned column = u.pos;
+    Optional<unsigned> pivotRow = findPivotRow({}, direction, column);
+    // If no pivot is returned, the constraint is unbounded in the specified
+    // direction.
+    if (!pivotRow)
+      return {};
+    pivot(*pivotRow, column);
+  }
+
+  unsigned row = u.pos;
+  Optional<Fraction> optimum = computeRowOptimum(direction, row);
+  if (u.restricted && direction == Direction::Down &&
+      (!optimum || *optimum < Fraction(0, 1)))
+    (void)restoreRow(u);
+  return optimum;
+}
+
+bool Simplex::isBoundedAlongConstraint(unsigned constraintIndex) {
+  assert(!empty && "It is not meaningful to ask whether a direction is bounded "
+                   "in an empty set.");
+  // The constraint's perpendicular is already bounded below, since it is a
+  // constraint. If it is also bounded above, we can return true.
+  return computeOptimum(Direction::Up, con[constraintIndex]).hasValue();
 }
 
 /// Redundant constraints are those that are in row orientation and lie in
@@ -533,7 +617,7 @@ void Simplex::detectRedundant() {
     if (!minimum || *minimum < Fraction(0, 1)) {
       // Constraint is unbounded below or can attain negative sample values and
       // hence is not redundant.
-      restoreRow(u);
+      (void)restoreRow(u);
       continue;
     }
 
@@ -572,8 +656,8 @@ bool Simplex::isUnbounded() {
 /// It has column layout:
 ///   denominator, constant, A's columns, B's columns.
 Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
-  unsigned numVar = a.numVariables() + b.numVariables();
-  unsigned numCon = a.numConstraints() + b.numConstraints();
+  unsigned numVar = a.getNumVariables() + b.getNumVariables();
+  unsigned numCon = a.getNumConstraints() + b.getNumConstraints();
   Simplex result(numVar);
 
   result.tableau.resizeVertically(numCon);
@@ -590,8 +674,8 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   result.var = concat(a.var, b.var);
 
   auto indexFromBIndex = [&](int index) {
-    return index >= 0 ? a.numVariables() + index
-                      : ~(a.numConstraints() + ~index);
+    return index >= 0 ? a.getNumVariables() + index
+                      : ~(a.getNumConstraints() + ~index);
   };
 
   result.colUnknown.assign(2, nullIndex);
@@ -643,28 +727,40 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   return result;
 }
 
-Optional<SmallVector<int64_t, 8>> Simplex::getSamplePointIfIntegral() const {
-  // The tableau is empty, so no sample point exists.
-  if (empty)
-    return {};
+SmallVector<Fraction, 8> Simplex::getRationalSample() const {
+  assert(!empty && "This should not be called when Simplex is empty.");
 
-  SmallVector<int64_t, 8> sample;
+  SmallVector<Fraction, 8> sample;
+  sample.reserve(var.size());
   // Push the sample value for each variable into the vector.
   for (const Unknown &u : var) {
     if (u.orientation == Orientation::Column) {
       // If the variable is in column position, its sample value is zero.
-      sample.push_back(0);
+      sample.emplace_back(0, 1);
     } else {
       // If the variable is in row position, its sample value is the entry in
       // the constant column divided by the entry in the common denominator
-      // column. If this is not an integer, then the sample point is not
-      // integral so we return None.
-      if (tableau(u.pos, 1) % tableau(u.pos, 0) != 0)
-        return {};
-      sample.push_back(tableau(u.pos, 1) / tableau(u.pos, 0));
+      // column.
+      sample.emplace_back(tableau(u.pos, 1), tableau(u.pos, 0));
     }
   }
   return sample;
+}
+
+Optional<SmallVector<int64_t, 8>> Simplex::getSamplePointIfIntegral() const {
+  // If the tableau is empty, no sample point exists.
+  if (empty)
+    return {};
+  SmallVector<Fraction, 8> rationalSample = getRationalSample();
+  SmallVector<int64_t, 8> integerSample;
+  integerSample.reserve(var.size());
+  for (const Fraction &coord : rationalSample) {
+    // If the sample is non-integral, return None.
+    if (coord.num % coord.den != 0)
+      return {};
+    integerSample.push_back(coord.num / coord.den);
+  }
+  return integerSample;
 }
 
 /// Given a simplex for a polytope, construct a new simplex whose variables are
@@ -683,7 +779,7 @@ class GBRSimplex {
 public:
   GBRSimplex(const Simplex &originalSimplex)
       : simplex(Simplex::makeProduct(originalSimplex, originalSimplex)),
-        simplexConstraintOffset(simplex.numConstraints()) {}
+        simplexConstraintOffset(simplex.getNumConstraints()) {}
 
   /// Add an equality dotProduct(dir, x - y) == 0.
   /// First pushes a snapshot for the current simplex state to the stack so
@@ -775,7 +871,7 @@ private:
   ///       - dir_1 * y_1 - dir_2 * y_2 - ... - dir_n * y_n,
   /// where n is the dimension of the original polytope.
   SmallVector<int64_t, 8> getCoeffsForDirection(ArrayRef<int64_t> dir) {
-    assert(2 * dir.size() == simplex.numVariables() &&
+    assert(2 * dir.size() == simplex.getNumVariables() &&
            "Direction vector has wrong dimensionality");
     SmallVector<int64_t, 8> coeffs(dir.begin(), dir.end());
     coeffs.reserve(2 * dir.size());

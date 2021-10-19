@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; This test is reduced from the matrix multiplication benchmark in the test-suite:
-; https://github.com/llvm/llvm-test-suite/tree/master/SingleSource/Benchmarks/Misc/matmul_f64_4x4.c
+; https://github.com/llvm/llvm-test-suite/tree/main/SingleSource/Benchmarks/Misc/matmul_f64_4x4.c
 ; The operations here are expected to be vectorized to <2 x double>.
 ; Otherwise, performance will suffer on Cortex-A53.
 
@@ -19,13 +19,13 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[ARRAYIDX3_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[TEMP]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TEMP]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[TEMP]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX18_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX7_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> undef, double [[TEMP2]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[TEMP2]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[TEMP2]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP5]], [[TMP10]]
@@ -44,10 +44,10 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[TEMP10:%.*]] = load double, double* [[ARRAYIDX47_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 1
 ; CHECK-NEXT:    [[TEMP11:%.*]] = load double, double* [[ARRAYIDX52_I]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> undef, double [[TEMP10]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP19]], double [[TEMP10]], i32 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <2 x double> [[TMP2]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> undef, double [[TEMP11]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TEMP11]], i32 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x double> [[TMP22]], double [[TEMP11]], i32 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <2 x double> [[TMP7]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fadd <2 x double> [[TMP21]], [[TMP24]]

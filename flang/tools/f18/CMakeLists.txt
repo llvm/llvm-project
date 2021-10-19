@@ -3,21 +3,10 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
   )
-add_flang_tool(f18
-  dump.cpp
-  f18.cpp
-  )
-
-target_link_libraries(f18
-  PRIVATE
-  FortranCommon
-  FortranParser
-  FortranEvaluate
-  FortranSemantics
-  FortranLower
-)
 
 set(MODULES
+  "__fortran_builtins"
+  "__fortran_type_info"
   "ieee_arithmetic"
   "ieee_exceptions"
   "ieee_features"
@@ -25,60 +14,39 @@ set(MODULES
   "iso_fortran_env"
   "omp_lib"
   "__fortran_builtins"
+  "__fortran_type_info"
 )
-
-set(include ${FLANG_BINARY_DIR}/include/flang)
-
-set(include ${FLANG_BINARY_DIR}/include/flang)
 
 # Create module files directly from the top-level module source directory
 foreach(filename ${MODULES})
+  set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
   if(${filename} MATCHES "__fortran_builtins")
     set(depends "")
   else()
-    set(depends ${include}/__fortran_builtins.mod)
+    set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
+    if(NOT ${filename} MATCHES "__fortran_type_info")
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
+    endif()
   endif()
-  add_custom_command(OUTPUT ${include}/${filename}.mod
-    COMMAND f18 -fparse-only -I${include}
+  add_custom_command(OUTPUT ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
+    COMMAND flang-new -fc1 -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
       ${FLANG_SOURCE_DIR}/module/${filename}.f90
-    WORKING_DIRECTORY ${include}
-    DEPENDS f18 ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
+    DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${depends}
   )
-  add_custom_command(OUTPUT ${include}/${filename}.f18.mod
-    DEPENDS ${include}/${filename}.mod
-    COMMAND ${CMAKE_COMMAND} -E
-      copy ${include}/${filename}.mod ${include}/${filename}.f18.mod)
-  list(APPEND MODULE_FILES ${include}/${filename}.mod)
-  list(APPEND MODULE_FILES ${include}/${filename}.f18.mod)
-  install(FILES ${include}/${filename}.mod DESTINATION include/flang)
-  install(FILES ${include}/${filename}.f18.mod DESTINATION include/flang)
+  add_custom_command(OUTPUT ${base}.f18.mod
+    DEPENDS ${base}.mod
+    COMMAND ${CMAKE_COMMAND} -E copy ${base}.mod ${base}.f18.mod)
+  list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod)
+  install(FILES ${base}.mod ${base}.f18.mod DESTINATION include/flang)
 endforeach()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
-install(TARGETS f18 DESTINATION bin)
-
-set(FLANG_INTRINSIC_MODULES_DIR ${FLANG_BINARY_DIR}/include/flang)
-
 # This flang shell script will only work in a POSIX shell.
 if (NOT WIN32)
-  if (FLANG_STANDALONE_BUILD)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${CMAKE_BINARY_DIR}/tools/flang/bin/flang @ONLY)
-    file(COPY ${CMAKE_BINARY_DIR}/tools/flang/bin/flang DESTINATION ${CMAKE_BINARY_DIR}/bin FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
-  else()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in
-      ${CMAKE_CURRENT_BINARY_DIR}/tools/flang/bin/flang @ONLY)
-    add_custom_command(TARGET f18
-        POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy
-          ${CMAKE_CURRENT_BINARY_DIR}/tools/flang/bin/flang
-          ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang
-            COMMAND chmod +x ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
-  endif()
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/flang
+    DESTINATION ${CMAKE_BINARY_DIR}/bin
+    FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION bin)
 endif()
-
-# The flang script to be installed needs a different path to the headers.
-set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_INSTALL_PREFIX}/include/flang)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${FLANG_BINARY_DIR}/bin/flang-install.sh @ONLY)
-
-install(PROGRAMS ${FLANG_BINARY_DIR}/bin/flang-install.sh DESTINATION bin RENAME flang PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)

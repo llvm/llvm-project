@@ -21,15 +21,7 @@ namespace clangd {
 class ParsedAST;
 class SymbolIndex;
 
-/// Gets dirty buffer for a given file \p AbsPath.
-/// Returns None if there is no dirty buffer for the given file.
-using DirtyBufferGetter =
-    llvm::function_ref<llvm::Optional<std::string>(PathRef AbsPath)>;
-
 struct RenameOptions {
-  /// If true, enable cross-file rename; otherwise, only allows to rename a
-  /// symbol that's only used in the current file.
-  bool AllowCrossFile = false;
   /// The maximum number of affected files (0 means no limit), only meaningful
   /// when AllowCrossFile = true.
   /// If the actual number exceeds the limit, rename is forbidden.
@@ -45,20 +37,30 @@ struct RenameInputs {
   ParsedAST &AST;
   llvm::StringRef MainFilePath;
 
+  // The filesystem to query when performing cross file renames.
+  // If this is set, Index must also be set, likewise if this is nullptr, Index
+  // must also be nullptr.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
+
   const SymbolIndex *Index = nullptr;
 
   RenameOptions Opts = {};
-  // When set, used by the rename to get file content for all rename-related
-  // files.
-  // If there is no corresponding dirty buffer, we will use the file content
-  // from disk.
-  DirtyBufferGetter GetDirtyBuffer = nullptr;
+};
+
+struct RenameResult {
+  // The range of the symbol that the user can attempt to rename.
+  Range Target;
+  // Rename occurrences for the current main file.
+  std::vector<Range> LocalChanges;
+  // Complete edits for the rename, including LocalChanges.
+  // If the full set of changes is unknown, this field is empty.
+  FileEdits GlobalChanges;
 };
 
 /// Renames all occurrences of the symbol. The result edits are unformatted.
 /// If AllowCrossFile is false, returns an error if rename a symbol that's used
 /// in another file (per the index).
-llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);
+llvm::Expected<RenameResult> rename(const RenameInputs &RInputs);
 
 /// Generates rename edits that replaces all given occurrences with the
 /// NewName.

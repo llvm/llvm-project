@@ -18,12 +18,11 @@ namespace clangd {
 /// Given a header file, returns the best matching source file, and vice visa.
 /// It only uses the filename heuristics to do the inference.
 llvm::Optional<Path> getCorrespondingHeaderOrSource(
-    const Path &OriginalFile,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
+    PathRef OriginalFile, llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
 
 /// Given a header file, returns the best matching source file, and vice visa.
 /// The heuristics incorporate with the AST and the index (if provided).
-llvm::Optional<Path> getCorrespondingHeaderOrSource(const Path &OriginalFile,
+llvm::Optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
                                                     ParsedAST &AST,
                                                     const SymbolIndex *Index);
 

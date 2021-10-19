@@ -158,9 +158,7 @@ public:
         writeNode(Node);
   }
 
-  bool isNodeHidden(NodeRef Node) {
-    return DTraits.isNodeHidden(Node);
-  }
+  bool isNodeHidden(NodeRef Node) { return DTraits.isNodeHidden(Node, G); }
 
   void writeNode(NodeRef Node) {
     std::string NodeAttributes = DTraits.getNodeAttributes(Node, G);
@@ -228,10 +226,10 @@ public:
     child_iterator EI = GTraits::child_begin(Node);
     child_iterator EE = GTraits::child_end(Node);
     for (unsigned i = 0; EI != EE && i != 64; ++EI, ++i)
-      if (!DTraits.isNodeHidden(*EI))
+      if (!DTraits.isNodeHidden(*EI, G))
         writeEdge(Node, i, EI);
     for (; EI != EE; ++EI)
-      if (!DTraits.isNodeHidden(*EI))
+      if (!DTraits.isNodeHidden(*EI, G))
         writeEdge(Node, 64, EI);
   }
 
@@ -320,8 +318,8 @@ raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
 
 std::string createGraphFilename(const Twine &Name, int &FD);
 
-/// Writes graph into a provided {@code Filename}.
-/// If {@code Filename} is empty, generates a random one.
+/// Writes graph into a provided @c Filename.
+/// If @c Filename is empty, generates a random one.
 /// \return The resulting filename, or an empty string if writing
 /// failed.
 template <typename GraphType>
@@ -333,7 +331,8 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
   if (Filename.empty()) {
     Filename = createGraphFilename(Name.str(), FD);
   } else {
-    std::error_code EC = sys::fs::openFileForWrite(Filename, FD);
+    std::error_code EC = sys::fs::openFileForWrite(
+        Filename, FD, sys::fs::CD_CreateAlways, sys::fs::OF_Text);
 
     // Writing over an existing file is not considered an error.
     if (EC == std::errc::file_exists) {

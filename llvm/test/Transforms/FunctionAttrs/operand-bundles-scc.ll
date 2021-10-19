@@ -14,4 +14,4 @@ define void @g() {
 }
 
 
-; CHECK: attributes #0 = { nofree nounwind }
+; CHECK: attributes #0 = { nofree nosync nounwind }

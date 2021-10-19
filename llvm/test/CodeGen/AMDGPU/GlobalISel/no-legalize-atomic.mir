@@ -1,9 +1,9 @@
 # RUN: llc -amdgpu-global-isel-new-legality -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -O0 -run-pass=legalizer -global-isel-abort=0 -o - %s | FileCheck %s
 
-# CHECK: %1:_(<8 x s32>) = G_LOAD %0(p1) :: (load monotonic 32, addrspace 1)
-# CHECK:  G_STORE %1(<8 x s32>), %0(p1) :: (store monotonic 32, addrspace 1)
-# CHECK: %1:_(s256) = G_LOAD %0(p1) :: (load monotonic 32, addrspace 1)
-# CHECK:  G_STORE %1(s256), %0(p1) :: (store monotonic 32, addrspace 1)
+# CHECK: %1:_(<8 x s32>) = G_LOAD %0(p1) :: (load monotonic (<8 x s32>), addrspace 1)
+# CHECK:  G_STORE %1(<8 x s32>), %0(p1) :: (store monotonic (<8 x s32>), addrspace 1)
+# CHECK: %1:_(s256) = G_LOAD %0(p1) :: (load monotonic (s256), addrspace 1)
+# CHECK:  G_STORE %1(s256), %0(p1) :: (store monotonic (s256), addrspace 1)
 
 ---
 name: test_atomic_load_global_v8s32
@@ -11,7 +11,7 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (load monotonic  32, addrspace 1, align 32)
+    %1:_(<8 x s32>) = G_LOAD %0 :: (load monotonic (<8 x s32>), addrspace 1, align 32)
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
 ...
 
@@ -22,7 +22,7 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(<8 x s32>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-    G_STORE %1, %0 :: (store monotonic  32, addrspace 1, align 32)
+    G_STORE %1, %0 :: (store monotonic (<8 x s32>), addrspace 1, align 32)
 ...
 
 ---
@@ -31,7 +31,7 @@ body: |
   bb.0:
     liveins: $vgpr0_vgpr1
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s256) = G_LOAD %0 :: (load monotonic  32, addrspace 1, align 32)
+    %1:_(s256) = G_LOAD %0 :: (load monotonic (s256), addrspace 1, align 32)
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
 ...
 
@@ -42,5 +42,5 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s256) = COPY $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-    G_STORE %1, %0 :: (store monotonic  32, addrspace 1, align 32)
+    G_STORE %1, %0 :: (store monotonic (s256), addrspace 1, align 32)
 ...

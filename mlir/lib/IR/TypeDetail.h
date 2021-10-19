@@ -13,44 +13,17 @@
 #define TYPEDETAIL_H_
 
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace mlir {
 
-class MLIRContext;
-
 namespace detail {
-
-/// Opaque Type Storage and Uniquing.
-struct OpaqueTypeStorage : public TypeStorage {
-  OpaqueTypeStorage(Identifier dialectNamespace, StringRef typeData)
-      : dialectNamespace(dialectNamespace), typeData(typeData) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = std::pair<Identifier, StringRef>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(dialectNamespace, typeData);
-  }
-
-  static OpaqueTypeStorage *construct(TypeStorageAllocator &allocator,
-                                      const KeyTy &key) {
-    StringRef tyData = allocator.copyInto(key.second);
-    return new (allocator.allocate<OpaqueTypeStorage>())
-        OpaqueTypeStorage(key.first, tyData);
-  }
-
-  // The dialect namespace.
-  Identifier dialectNamespace;
-
-  // The parser type data for this opaque type.
-  StringRef typeData;
-};
 
 /// Integer Type Storage and Uniquing.
 struct IntegerTypeStorage : public TypeStorage {
@@ -89,7 +62,9 @@ struct FunctionTypeStorage : public TypeStorage {
   /// The hash key used for uniquing.
   using KeyTy = std::pair<TypeRange, TypeRange>;
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getInputs(), getResults());
+    if (std::get<0>(key) == getInputs())
+      return std::get<1>(key) == getResults();
+    return false;
   }
 
   /// Construction.
@@ -119,189 +94,6 @@ struct FunctionTypeStorage : public TypeStorage {
   unsigned numInputs;
   unsigned numResults;
   Type const *inputsAndResults;
-};
-
-/// Shaped Type Storage.
-struct ShapedTypeStorage : public TypeStorage {
-  ShapedTypeStorage(Type elementTy) : elementType(elementTy) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = Type;
-  bool operator==(const KeyTy &key) const { return key == elementType; }
-
-  Type elementType;
-};
-
-/// Vector Type Storage and Uniquing.
-struct VectorTypeStorage : public ShapedTypeStorage {
-  VectorTypeStorage(unsigned shapeSize, Type elementTy,
-                    const int64_t *shapeElements)
-      : ShapedTypeStorage(elementTy), shapeElements(shapeElements),
-        shapeSize(shapeSize) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = std::pair<ArrayRef<int64_t>, Type>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getShape(), elementType);
-  }
-
-  /// Construction.
-  static VectorTypeStorage *construct(TypeStorageAllocator &allocator,
-                                      const KeyTy &key) {
-    // Copy the shape into the bump pointer.
-    ArrayRef<int64_t> shape = allocator.copyInto(key.first);
-
-    // Initialize the memory using placement new.
-    return new (allocator.allocate<VectorTypeStorage>())
-        VectorTypeStorage(shape.size(), key.second, shape.data());
-  }
-
-  ArrayRef<int64_t> getShape() const {
-    return ArrayRef<int64_t>(shapeElements, shapeSize);
-  }
-
-  const int64_t *shapeElements;
-  unsigned shapeSize;
-};
-
-struct RankedTensorTypeStorage : public ShapedTypeStorage {
-  RankedTensorTypeStorage(unsigned shapeSize, Type elementTy,
-                          const int64_t *shapeElements)
-      : ShapedTypeStorage(elementTy), shapeElements(shapeElements),
-        shapeSize(shapeSize) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = std::pair<ArrayRef<int64_t>, Type>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getShape(), elementType);
-  }
-
-  /// Construction.
-  static RankedTensorTypeStorage *construct(TypeStorageAllocator &allocator,
-                                            const KeyTy &key) {
-    // Copy the shape into the bump pointer.
-    ArrayRef<int64_t> shape = allocator.copyInto(key.first);
-
-    // Initialize the memory using placement new.
-    return new (allocator.allocate<RankedTensorTypeStorage>())
-        RankedTensorTypeStorage(shape.size(), key.second, shape.data());
-  }
-
-  ArrayRef<int64_t> getShape() const {
-    return ArrayRef<int64_t>(shapeElements, shapeSize);
-  }
-
-  const int64_t *shapeElements;
-  unsigned shapeSize;
-};
-
-struct UnrankedTensorTypeStorage : public ShapedTypeStorage {
-  using ShapedTypeStorage::KeyTy;
-  using ShapedTypeStorage::ShapedTypeStorage;
-
-  /// Construction.
-  static UnrankedTensorTypeStorage *construct(TypeStorageAllocator &allocator,
-                                              Type elementTy) {
-    return new (allocator.allocate<UnrankedTensorTypeStorage>())
-        UnrankedTensorTypeStorage(elementTy);
-  }
-};
-
-struct MemRefTypeStorage : public ShapedTypeStorage {
-  MemRefTypeStorage(unsigned shapeSize, Type elementType,
-                    const int64_t *shapeElements, const unsigned numAffineMaps,
-                    AffineMap const *affineMapList, const unsigned memorySpace)
-      : ShapedTypeStorage(elementType), shapeElements(shapeElements),
-        shapeSize(shapeSize), numAffineMaps(numAffineMaps),
-        affineMapList(affineMapList), memorySpace(memorySpace) {}
-
-  /// The hash key used for uniquing.
-  // MemRefs are uniqued based on their shape, element type, affine map
-  // composition, and memory space.
-  using KeyTy =
-      std::tuple<ArrayRef<int64_t>, Type, ArrayRef<AffineMap>, unsigned>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getShape(), elementType, getAffineMaps(), memorySpace);
-  }
-
-  /// Construction.
-  static MemRefTypeStorage *construct(TypeStorageAllocator &allocator,
-                                      const KeyTy &key) {
-    // Copy the shape into the bump pointer.
-    ArrayRef<int64_t> shape = allocator.copyInto(std::get<0>(key));
-
-    // Copy the affine map composition into the bump pointer.
-    ArrayRef<AffineMap> affineMapComposition =
-        allocator.copyInto(std::get<2>(key));
-
-    // Initialize the memory using placement new.
-    return new (allocator.allocate<MemRefTypeStorage>())
-        MemRefTypeStorage(shape.size(), std::get<1>(key), shape.data(),
-                          affineMapComposition.size(),
-                          affineMapComposition.data(), std::get<3>(key));
-  }
-
-  ArrayRef<int64_t> getShape() const {
-    return ArrayRef<int64_t>(shapeElements, shapeSize);
-  }
-
-  ArrayRef<AffineMap> getAffineMaps() const {
-    return ArrayRef<AffineMap>(affineMapList, numAffineMaps);
-  }
-
-  /// An array of integers which stores the shape dimension sizes.
-  const int64_t *shapeElements;
-  /// The number of shape elements.
-  unsigned shapeSize;
-  /// The number of affine maps in the 'affineMapList' array.
-  const unsigned numAffineMaps;
-  /// List of affine maps in the memref's layout/index map composition.
-  AffineMap const *affineMapList;
-  /// Memory space in which data referenced by memref resides.
-  const unsigned memorySpace;
-};
-
-/// Unranked MemRef is a MemRef with unknown rank.
-/// Only element type and memory space are known
-struct UnrankedMemRefTypeStorage : public ShapedTypeStorage {
-
-  UnrankedMemRefTypeStorage(Type elementTy, const unsigned memorySpace)
-      : ShapedTypeStorage(elementTy), memorySpace(memorySpace) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = std::tuple<Type, unsigned>;
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(elementType, memorySpace);
-  }
-
-  /// Construction.
-  static UnrankedMemRefTypeStorage *construct(TypeStorageAllocator &allocator,
-                                              const KeyTy &key) {
-
-    // Initialize the memory using placement new.
-    return new (allocator.allocate<UnrankedMemRefTypeStorage>())
-        UnrankedMemRefTypeStorage(std::get<0>(key), std::get<1>(key));
-  }
-  /// Memory space in which data referenced by memref resides.
-  const unsigned memorySpace;
-};
-
-/// Complex Type Storage.
-struct ComplexTypeStorage : public TypeStorage {
-  ComplexTypeStorage(Type elementType) : elementType(elementType) {}
-
-  /// The hash key used for uniquing.
-  using KeyTy = Type;
-  bool operator==(const KeyTy &key) const { return key == elementType; }
-
-  /// Construction.
-  static ComplexTypeStorage *construct(TypeStorageAllocator &allocator,
-                                       Type elementType) {
-    return new (allocator.allocate<ComplexTypeStorage>())
-        ComplexTypeStorage(elementType);
-  }
-
-  Type elementType;
 };
 
 /// A type representing a collection of other types.
@@ -339,6 +131,19 @@ struct TupleTypeStorage final
   /// The number of tuple elements.
   unsigned numElements;
 };
+
+/// Checks if the memorySpace has supported Attribute type.
+bool isSupportedMemorySpace(Attribute memorySpace);
+
+/// Wraps deprecated integer memory space to the new Attribute form.
+Attribute wrapIntegerMemorySpace(unsigned memorySpace, MLIRContext *ctx);
+
+/// Replaces default memorySpace (integer == `0`) with empty Attribute.
+Attribute skipDefaultMemorySpace(Attribute memorySpace);
+
+/// [deprecated] Returns the memory space in old raw integer representation.
+/// New `Attribute getMemorySpace()` method should be used instead.
+unsigned getMemorySpaceAsInt(Attribute memorySpace);
 
 } // namespace detail
 } // namespace mlir

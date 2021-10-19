@@ -3,23 +3,23 @@
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t1
 # RUN: llvm-strip -x -T %t1
-# RUN: llvm-readobj -symbols %t1 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t1 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
 
 # RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA_CONST \
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t2
 # RUN: llvm-strip -x -T %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t2 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
 
 # RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__DATA_DIRTY \
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t3
 # RUN: llvm-strip -x -T %t3
-# RUN: llvm-readobj -symbols %t3 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t3 | FileCheck --check-prefix=NO-SWIFT-SYMBOLS %s
 
 # NO-SWIFT-SYMBOLS:      Symbols [
 # NO-SWIFT-SYMBOLS-NEXT:  Symbol {
-# NO-SWIFT-SYMBOLS-NEXT:    Name: _main (1)
+# NO-SWIFT-SYMBOLS-NEXT:    Name: _main (2)
 # NO-SWIFT-SYMBOLS-NEXT:    Extern
 # NO-SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # NO-SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -37,13 +37,13 @@
 # RUN:  -D SECTION_NAME=__not_objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t4
 # RUN: llvm-strip -x -T %t4
-# RUN: llvm-readobj -symbols %t4 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t4 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
 
 # RUN: yaml2obj -D FLAGS=0x00200085 -D SEGMENT_NAME=__NOT_DATA \
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t5
 # RUN: llvm-strip -x -T %t5
-# RUN: llvm-readobj -symbols %t5 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t5 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
 
 ## Verify that -T does not remove (public) Swift symbols when swift_version is zero.
 
@@ -51,7 +51,7 @@
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000000000000 %s -o %t6
 # RUN: llvm-strip -x -T %t6
-# RUN: llvm-readobj -symbols %t6 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t6 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
 
 ## Verify that -T does not remove (public) Swift symbols when the binary
 ## contains invalid (too small) __objc_imageinfo.
@@ -60,7 +60,7 @@
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=4 \
 # RUN:  -D SECTION_CONTENT=00000000 %s -o %t7
 # RUN: llvm-strip -x -T %t7
-# RUN: llvm-readobj -symbols %t7 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t7 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
 
 ## Verify that -T does not remove (public) Swift symbols
 ## when the flag MH_DYLDLINK is not set.
@@ -69,11 +69,11 @@
 # RUN:  -D SECTION_NAME=__objc_imageinfo -D SECTION_SIZE=8 \
 # RUN:  -D SECTION_CONTENT=0000000040070105 %s -o %t8
 # RUN: llvm-strip -x -T %t8
-# RUN: llvm-readobj -symbols %t8 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
+# RUN: llvm-readobj -s %t8 | FileCheck --check-prefix=SWIFT-SYMBOLS %s
 
 # SWIFT-SYMBOLS:      Symbols [
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _$S1a13PublicSymbol1Sivp (26)
+# SWIFT-SYMBOLS-NEXT:    Name: _$S1a13PublicSymbol1Sivp (27)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -83,7 +83,7 @@
 # SWIFT-SYMBOLS-NEXT:    Value: 0x100001160
 # SWIFT-SYMBOLS-NEXT:  }
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _$s1a13PublicSymbol2Sivp (1)
+# SWIFT-SYMBOLS-NEXT:    Name: _$s1a13PublicSymbol2Sivp (2)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -93,7 +93,7 @@
 # SWIFT-SYMBOLS-NEXT:    Value: 0x100001168
 # SWIFT-SYMBOLS-NEXT:  }
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _main (51)
+# SWIFT-SYMBOLS-NEXT:    Name: _main (52)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)

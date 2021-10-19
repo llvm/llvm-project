@@ -4,7 +4,6 @@
 
 ; Test that the tail calls lower correctly
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %fn = type <{i32 (%fn, i32, i32)*}>
@@ -166,9 +165,9 @@ define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: mismatched_byval:
 ; CHECK: i32.store
 ; CHECK: return_call quux, $pop{{[0-9]+}}{{$}}
-declare i32 @quux(i32* byval)
+declare i32 @quux(i32* byval(i32))
 define i32 @mismatched_byval(i32* %x) {
-  %v = tail call i32 @quux(i32* byval %x)
+  %v = tail call i32 @quux(i32* byval(i32) %x)
   ret i32 %v
 }
 

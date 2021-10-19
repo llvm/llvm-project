@@ -84,7 +84,7 @@ define void @cond_ae_to_cond_ne(i32* %p) nounwind {
 ; INCDEC-NEXT:    incl (%eax)
 ; INCDEC-NEXT:    jne .LBB6_1
 ; INCDEC-NEXT:  # %bb.2: # %if.end4
-; INCDEC-NEXT:    jmp other # TAILCALL
+; INCDEC-NEXT:    jmp other@PLT # TAILCALL
 ; INCDEC-NEXT:  .LBB6_1: # %return
 ; INCDEC-NEXT:    retl
 ;
@@ -94,7 +94,7 @@ define void @cond_ae_to_cond_ne(i32* %p) nounwind {
 ; ADD-NEXT:    addl $1, (%eax)
 ; ADD-NEXT:    jne .LBB6_1
 ; ADD-NEXT:  # %bb.2: # %if.end4
-; ADD-NEXT:    jmp other # TAILCALL
+; ADD-NEXT:    jmp other@PLT # TAILCALL
 ; ADD-NEXT:  .LBB6_1: # %return
 ; ADD-NEXT:    retl
 entry:
@@ -131,9 +131,9 @@ define void @test_tail_call(i32* %ptr) nounwind {
 ; INCDEC-NEXT:    testb %al, %al
 ; INCDEC-NEXT:    jne .LBB7_2
 ; INCDEC-NEXT:  # %bb.1: # %then
-; INCDEC-NEXT:    jmp external_a # TAILCALL
+; INCDEC-NEXT:    jmp external_a@PLT # TAILCALL
 ; INCDEC-NEXT:  .LBB7_2: # %else
-; INCDEC-NEXT:    jmp external_b # TAILCALL
+; INCDEC-NEXT:    jmp external_b@PLT # TAILCALL
 ;
 ; ADD-LABEL: test_tail_call:
 ; ADD:       # %bb.0: # %entry
@@ -145,9 +145,9 @@ define void @test_tail_call(i32* %ptr) nounwind {
 ; ADD-NEXT:    testb %al, %al
 ; ADD-NEXT:    jne .LBB7_2
 ; ADD-NEXT:  # %bb.1: # %then
-; ADD-NEXT:    jmp external_a # TAILCALL
+; ADD-NEXT:    jmp external_a@PLT # TAILCALL
 ; ADD-NEXT:  .LBB7_2: # %else
-; ADD-NEXT:    jmp external_b # TAILCALL
+; ADD-NEXT:    jmp external_b@PLT # TAILCALL
 entry:
   %val = load i32, i32* %ptr
   %add_ov = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %val, i32 1)

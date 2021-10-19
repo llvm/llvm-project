@@ -23,7 +23,7 @@ class PExpectTest(TestBase):
     def expect_prompt(self):
         self.child.expect_exact(self.PROMPT)
 
-    def launch(self, executable=None, extra_args=None, timeout=30, dimensions=None):
+    def launch(self, executable=None, extra_args=None, timeout=60, dimensions=None):
         logfile = getattr(sys.stdout, 'buffer',
                             sys.stdout) if self.TraceOn() else None
 
@@ -36,7 +36,8 @@ class PExpectTest(TestBase):
             args.extend(extra_args)
 
         env = dict(os.environ)
-        env["TERM"]="vt100"
+        env["TERM"] = "vt100"
+        env["HOME"] = self.getBuildDir()
 
         import pexpect
         self.child = pexpect.spawn(
@@ -53,6 +54,11 @@ class PExpectTest(TestBase):
 
     def expect(self, cmd, substrs=None):
         self.assertNotIn('\n', cmd)
+        # If 'substrs' is a string then this code would just check that every
+        # character of the string is in the output.
+        assert not isinstance(substrs, six.string_types), \
+            "substrs must be a collection of strings"
+
         self.child.sendline(cmd)
         if substrs is not None:
             for s in substrs:

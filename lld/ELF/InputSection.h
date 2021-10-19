@@ -52,15 +52,15 @@ public:
   // this but instead this->Repl.
   SectionBase *repl;
 
-  unsigned sectionKind : 3;
+  uint8_t sectionKind : 3;
 
   // The next two bit fields are only used by InputSectionBase, but we
   // put them here so the struct packs better.
 
-  unsigned bss : 1;
+  uint8_t bss : 1;
 
   // Set for sections that should not be folded by ICF.
-  unsigned keepUnique : 1;
+  uint8_t keepUnique : 1;
 
   // The 1-indexed partition that this section is assigned to by the garbage
   // collector, or 0 if this section is dead. Normally there is only one
@@ -133,6 +133,10 @@ public:
   // instruction. The members below help trimming the trailing jump instruction
   // and shrinking a section.
   unsigned bytesDropped = 0;
+
+  // Whether the section needs to be padded with a NOP filler due to
+  // deleteFallThruJmpInsn.
+  bool nopFiller = false;
 
   void drop_back(uint64_t num) { bytesDropped += num; }
 
@@ -210,17 +214,13 @@ public:
   // The native ELF reloc data type is not very convenient to handle.
   // So we convert ELF reloc records to our own records in Relocations.cpp.
   // This vector contains such "cooked" relocations.
-  std::vector<Relocation> relocations;
-
-  // Indicates that this section needs to be padded with a NOP filler if set to
-  // true.
-  bool nopFiller = false;
+  SmallVector<Relocation, 0> relocations;
 
   // These are modifiers to jump instructions that are necessary when basic
   // block sections are enabled.  Basic block sections creates opportunities to
   // relax jump instructions at basic block boundaries after reordering the
   // basic blocks.
-  std::vector<JumpInstrMod> jumpInstrMods;
+  SmallVector<JumpInstrMod, 0> jumpInstrMods;
 
   // A function compiled with -fsplit-stack calling a function
   // compiled without -fsplit-stack needs its prologue adjusted. Find
@@ -238,6 +238,7 @@ public:
   }
 
 protected:
+  template <typename ELFT>
   void parseCompressedHeader();
   void uncompress() const;
 
@@ -390,8 +391,15 @@ private:
   template <class ELFT> void copyShtGroup(uint8_t *buf);
 };
 
+#ifdef _WIN32
+static_assert(sizeof(InputSection) <= 192, "InputSection is too big");
+#else
+static_assert(sizeof(InputSection) <= 184, "InputSection is too big");
+#endif
+
 inline bool isDebugSection(const InputSectionBase &sec) {
-  return sec.name.startswith(".debug") || sec.name.startswith(".zdebug");
+  return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
+         (sec.name.startswith(".debug") || sec.name.startswith(".zdebug"));
 }
 
 // The list of all input sections.

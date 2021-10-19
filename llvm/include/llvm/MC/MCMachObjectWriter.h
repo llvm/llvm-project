@@ -114,7 +114,7 @@ class MachObjectWriter : public MCObjectWriter {
   /// \name Symbol Table Data
   /// @{
 
-  StringTableBuilder StringTable{StringTableBuilder::MachO};
+  StringTableBuilder StringTable;
   std::vector<MachSymbolData> LocalSymbolData;
   std::vector<MachSymbolData> ExternalSymbolData;
   std::vector<MachSymbolData> UndefinedSymbolData;
@@ -129,6 +129,8 @@ public:
   MachObjectWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS, bool IsLittleEndian)
       : TargetObjectWriter(std::move(MOTW)),
+        StringTable(TargetObjectWriter->is64Bit() ? StringTableBuilder::MachO64
+                                                  : StringTableBuilder::MachO),
         W(OS, IsLittleEndian ? support::little : support::big) {}
 
   support::endian::Writer W;
@@ -232,16 +234,6 @@ public:
     RelAndSymbol P(RelSymbol, MRE);
     Relocations[Sec].push_back(P);
   }
-
-  void recordScatteredRelocation(const MCAssembler &Asm,
-                                 const MCAsmLayout &Layout,
-                                 const MCFragment *Fragment,
-                                 const MCFixup &Fixup, MCValue Target,
-                                 unsigned Log2Size, uint64_t &FixedValue);
-
-  void recordTLVPRelocation(const MCAssembler &Asm, const MCAsmLayout &Layout,
-                            const MCFragment *Fragment, const MCFixup &Fixup,
-                            MCValue Target, uint64_t &FixedValue);
 
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,

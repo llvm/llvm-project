@@ -150,4 +150,28 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
       &File->getFileEntry()));
 }
 
+TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
+  EXPECT_FALSE(
+      llvm::sys::fs::createTemporaryFile("ast-unit", "c", FD, InputFileName));
+  input_file = std::make_unique<ToolOutputFile>(InputFileName, FD);
+  input_file->os() << "";
+
+  const char *Args[] = {"clang", "-target", "foobar", InputFileName.c_str()};
+
+  auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
+  auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
+  std::unique_ptr<clang::ASTUnit> ErrUnit;
+
+  ASTUnit *AST = ASTUnit::LoadFromCommandLine(
+      &Args[0], &Args[4], PCHContainerOps, Diags, "", false,
+      CaptureDiagsKind::All, None, true, 0, TU_Complete, false, false, false,
+      SkipFunctionBodiesScope::None, false, true, false, false, None, &ErrUnit,
+      nullptr);
+
+  ASSERT_EQ(AST, nullptr);
+  ASSERT_NE(ErrUnit, nullptr);
+  ASSERT_TRUE(Diags->hasErrorOccurred());
+  ASSERT_NE(ErrUnit->stored_diag_size(), 0U);
+}
+
 } // anonymous namespace

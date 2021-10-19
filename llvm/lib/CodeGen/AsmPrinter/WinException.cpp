@@ -43,6 +43,7 @@ WinException::WinException(AsmPrinter *A) : EHStreamer(A) {
   // platforms use an imagerel32 relocation to refer to symbols.
   useImageRel32 = (A->getDataLayout().getPointerSizeInBits() == 64);
   isAArch64 = Asm->TM.getTargetTriple().isAArch64();
+  isThumb = Asm->TM.getTargetTriple().isThumb();
 }
 
 WinException::~WinException() {}
@@ -55,6 +56,14 @@ void WinException::endModule() {
   for (const Function &F : *M)
     if (F.hasFnAttribute("safeseh"))
       OS.EmitCOFFSafeSEH(Asm->getSymbol(&F));
+
+  if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
+    // Emit the symbol index of each ehcont target.
+    OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
+    for (const MCSymbol *S : EHContTargets) {
+      OS.EmitCOFFSymbolIndex(S);
+    }
+  }
 }
 
 void WinException::beginFunction(const MachineFunction *MF) {
@@ -137,8 +146,8 @@ void WinException::endFunction(const MachineFunction *MF) {
 
   endFuncletImpl();
 
-  // endFunclet will emit the necessary .xdata tables for x64 SEH.
-  if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets())
+  // endFunclet will emit the necessary .xdata tables for table-based SEH.
+  if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets())
     return;
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
@@ -151,7 +160,7 @@ void WinException::endFunction(const MachineFunction *MF) {
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
-    if (Per == EHPersonality::MSVC_Win64SEH)
+    if (Per == EHPersonality::MSVC_TableSEH)
       emitCSpecificHandlerTable(MF);
     else if (Per == EHPersonality::MSVC_X86SEH)
       emitExceptHandlerTable(MF);
@@ -163,6 +172,12 @@ void WinException::endFunction(const MachineFunction *MF) {
       emitExceptionTable();
 
     Asm->OutStreamer->PopSection();
+  }
+
+  if (!MF->getCatchretTargets().empty()) {
+    // Copy the function's catchret targets to a module-level list.
+    EHContTargets.insert(EHContTargets.end(), MF->getCatchretTargets().begin(),
+                         MF->getCatchretTargets().end());
   }
 }
 
@@ -258,31 +273,35 @@ void WinException::endFuncletImpl() {
     if (F.hasPersonalityFn())
       Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
-    // On funclet exit, we emit a fake "function" end marker, so that the call
-    // to EmitWinEHHandlerData below can calculate the size of the funclet or
-    // function.
-    if (isAArch64) {
-      MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
-          Asm->OutStreamer->getCurrentSectionOnly());
-      Asm->OutStreamer->SwitchSection(XData);
-    }
-
-    // Emit an UNWIND_INFO struct describing the prologue.
-    Asm->OutStreamer->EmitWinEHHandlerData();
-
     if (Per == EHPersonality::MSVC_CXX && shouldEmitPersonality &&
         !CurrentFuncletEntry->isCleanupFuncletEntry()) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
       StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
       Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
-    } else if (Per == EHPersonality::MSVC_Win64SEH && MF->hasEHFunclets() &&
+    } else if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets() &&
                !CurrentFuncletEntry->isEHFuncletEntry()) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+
       // If this is the parent function in Win64 SEH, emit the LSDA immediately
       // following .seh_handlerdata.
       emitCSpecificHandlerTable(MF);
+    } else if (shouldEmitPersonality || shouldEmitLSDA) {
+      // Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->EmitWinEHHandlerData();
+      // In these cases, no further info is written to the .xdata section
+      // right here, but is written by e.g. emitExceptionTable in endFunction()
+      // above.
+    } else {
+      // No need to emit the EH handler data right here if nothing needs
+      // writing to the .xdata section; it will be emitted for all
+      // functions that need it in the end anyway.
     }
 
     // Switch back to the funclet start .text section now that we are done
@@ -312,10 +331,12 @@ const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
 }
 
 const MCExpr *WinException::getLabel(const MCSymbol *Label) {
-  if (isAArch64)
-    return MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                   Asm->OutContext);
-  return MCBinaryExpr::createAdd(create32bitRef(Label),
+  return MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_COFF_IMGREL32,
+                                 Asm->OutContext);
+}
+
+const MCExpr *WinException::getLabelPlusOne(const MCSymbol *Label) {
+  return MCBinaryExpr::createAdd(getLabel(Label),
                                  MCConstantExpr::create(1, Asm->OutContext),
                                  Asm->OutContext);
 }
@@ -339,22 +360,24 @@ int WinException::getFrameIndexOffset(int FrameIndex,
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   Register UnusedReg;
   if (Asm->MAI->usesWindowsCFI()) {
-    int Offset =
+    StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
     assert(UnusedReg ==
            Asm->MF->getSubtarget()
                .getTargetLowering()
                ->getStackPointerRegisterToSaveRestore());
-    return Offset;
+    return Offset.getFixed();
   }
 
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);
-  int Offset = TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
-  Offset += FuncInfo.EHRegNodeEndOffset;
-  return Offset;
+  StackOffset Offset = TFI.getFrameIndexReference(*Asm->MF, FrameIndex, UnusedReg);
+  Offset += StackOffset::getFixed(FuncInfo.EHRegNodeEndOffset);
+  assert(!Offset.getScalable() &&
+         "Frame offsets with a scalable component are not supported");
+  return Offset.getFixed();
 }
 
 namespace {
@@ -541,8 +564,8 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
 ///   struct Table {
 ///     int NumEntries;
 ///     struct Entry {
-///       imagerel32 LabelStart;
-///       imagerel32 LabelEnd;
+///       imagerel32 LabelStart;       // Inclusive
+///       imagerel32 LabelEnd;         // Exclusive
 ///       imagerel32 FilterOrFinally;  // One means catch-all.
 ///       imagerel32 LabelLPad;        // Zero means __finally.
 ///     } Entries[NumEntries];
@@ -644,7 +667,7 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     AddComment("LabelStart");
     OS.emitValue(getLabel(BeginLabel), 4);
     AddComment("LabelEnd");
-    OS.emitValue(getLabel(EndLabel), 4);
+    OS.emitValue(getLabelPlusOne(EndLabel), 4);
     AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
                                                              : "CatchAll");
     OS.emitValue(FilterOrFinally, 4);
@@ -929,8 +952,15 @@ void WinException::computeIP2StateTable(
       if (!ChangeLabel)
         ChangeLabel = StateChange.PreviousEndLabel;
       // Emit an entry indicating that PCs after 'Label' have this EH state.
+      // NOTE: On ARM architectures, the StateFromIp automatically takes into
+      // account that the return address is after the call instruction (whose EH
+      // state we should be using), but on other platforms we need to +1 to the
+      // label so that we are using the correct EH state.
+      const MCExpr *LabelExpression = (isAArch64 || isThumb)
+                                          ? getLabel(ChangeLabel)
+                                          : getLabelPlusOne(ChangeLabel);
       IPToStateTable.push_back(
-          std::make_pair(getLabel(ChangeLabel), StateChange.NewState));
+          std::make_pair(LabelExpression, StateChange.NewState));
       // FIXME: assert that NewState is between CatchLow and CatchHigh.
     }
   }
@@ -951,7 +981,7 @@ void WinException::emitEHRegistrationOffsetLabel(const WinEHFuncInfo &FuncInfo,
   int FI = FuncInfo.EHRegNodeFrameIndex;
   if (FI != INT_MAX) {
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI);
+    Offset = TFI->getNonLocalFrameIndexReference(*Asm->MF, FI).getFixed();
   }
 
   MCContext &Ctx = Asm->OutContext;
@@ -1015,7 +1045,8 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
       Register UnusedReg;
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
       int SSPIdx = MFI.getStackProtectorIndex();
-      GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
+      GSCookieOffset =
+          TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg).getFixed();
     }
 
     // Retrieve the EH Guard slot.
@@ -1025,7 +1056,8 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
       Register UnusedReg;
       const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
       int EHGuardIdx = FuncInfo.EHGuardFrameIndex;
-      EHCookieOffset = TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg);
+      EHCookieOffset =
+          TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg).getFixed();
     }
 
     AddComment("GSCookieOffset");

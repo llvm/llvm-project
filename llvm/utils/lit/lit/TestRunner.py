@@ -191,7 +191,13 @@ def quote_windows_command(seq):
 
     We use the same algorithm from MSDN as CPython
     (http://msdn.microsoft.com/en-us/library/17w5ykft.aspx), but we treat more
-    characters as needing quoting, such as double quotes themselves.
+    characters as needing quoting, such as double quotes themselves, and square
+    brackets.
+
+    For MSys based tools, this is very brittle though, because quoting an
+    argument makes the MSys based tool unescape backslashes where it shouldn't
+    (e.g. "a\b\\c\\\\d" becomes "a\b\c\\d" where it should stay as it was,
+    according to regular win32 command line parsing rules).
     """
     result = []
     needquote = False
@@ -203,7 +209,7 @@ def quote_windows_command(seq):
             result.append(' ')
 
         # This logic differs from upstream list2cmdline.
-        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or not arg
+        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or ("[" in arg) or (";" in arg) or not arg
         if needquote:
             result.append('"')
 
@@ -608,6 +614,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     assert isinstance(cmd, ShUtil.Pipeline)
 
     procs = []
+    proc_not_counts = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
     opened_files = []
@@ -652,6 +659,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     not_crash = True
                 if not args:
                     raise InternalShellError(j, "Error: 'not' requires a"
+                                                " subcommand")
+            elif args[0] == '!':
+                not_args.append(args.pop(0))
+                not_count += 1
+                if not args:
+                    raise InternalShellError(j, "Error: '!' requires a"
                                                 " subcommand")
             else:
                 break
@@ -699,7 +712,15 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # the assumptions that (1) environment variables are not intended to be
         # relevant to 'not' commands and (2) the 'env' command should always
         # blindly pass along the status it receives from any command it calls.
-        args = not_args + args
+
+        # For plain negations, either 'not' without '--crash', or the shell
+        # operator '!', leave them out from the command to execute and
+        # invert the result code afterwards.
+        if not_crash:
+            args = not_args + args
+            not_count = 0
+        else:
+            not_args = []
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)
@@ -763,6 +784,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                                           stderr = stderr,
                                           env = cmd_shenv.env,
                                           close_fds = kUseCloseFDs))
+            proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
         except OSError as e:
@@ -815,6 +837,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
+        if proc_not_counts[i] % 2:
+            res = not res
+        elif proc_not_counts[i] > 1:
+            res = 1 if res != 0 else 0
 
         # Ensure the resulting output is always of string type.
         try:
@@ -1105,8 +1131,8 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
     # also in a regex replacement context of a s@@@ regex.
     def regex_escape(s):
-        s = s.replace('@', '\@')
-        s = s.replace('&', '\&')
+        s = s.replace('@', r'\@')
+        s = s.replace('&', r'\&')
         return s
     substitutions.extend([
             ('%{/s:regex_replacement}',

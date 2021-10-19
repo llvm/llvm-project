@@ -97,10 +97,8 @@ static const uint32_t g_vsx_regnums_ppc64le[] = {
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-namespace {
 // Number of register sets provided by this context.
-enum { k_num_register_sets = 4 };
-}
+static constexpr int k_num_register_sets = 4;
 
 static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
     {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64le,
@@ -115,7 +113,7 @@ static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc64le:
     return std::make_unique<NativeRegisterContextLinux_ppc64le>(target_arch,
@@ -127,8 +125,9 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextLinux(native_thread,
-                                 new RegisterInfoPOSIX_ppc64le(target_arch)) {
+    : NativeRegisterContextRegisterInfo(
+          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   if (target_arch.GetMachine() != llvm::Triple::ppc64le) {
     llvm_unreachable("Unhandled target architecture.");
   }

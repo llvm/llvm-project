@@ -14,101 +14,74 @@
 #ifndef DFSAN_PLATFORM_H
 #define DFSAN_PLATFORM_H
 
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_platform.h"
+
 namespace __dfsan {
 
-#if defined(__x86_64__)
-struct Mapping {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x200000000000;
-  static const uptr kAppAddr = 0x700000008000;
-  static const uptr kShadowMask = ~0x700000000000;
-};
-#elif defined(__mips64)
-struct Mapping {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x2000000000;
-  static const uptr kAppAddr = 0xF000008000;
-  static const uptr kShadowMask = ~0xF000000000;
-};
-#elif defined(__aarch64__)
-struct Mapping39 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x1000000000;
-  static const uptr kAppAddr = 0x7000008000;
-  static const uptr kShadowMask = ~0x7800000000;
+using __sanitizer::uptr;
+
+// TODO: The memory mapping code to setup a 1:1 shadow is based on msan.
+// Consider refactoring these into a shared implementation.
+
+struct MappingDesc {
+  uptr start;
+  uptr end;
+  enum Type { INVALID, APP, SHADOW, ORIGIN } type;
+  const char *name;
 };
 
-struct Mapping42 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x8000000000;
-  static const uptr kAppAddr = 0x3ff00008000;
-  static const uptr kShadowMask = ~0x3c000000000;
-};
+#if SANITIZER_LINUX && SANITIZER_WORDSIZE == 64
 
-struct Mapping48 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x8000000000;
-  static const uptr kAppAddr = 0xffff00008000;
-  static const uptr kShadowMask = ~0xfffff0000000;
-};
+// All of the following configurations are supported.
+// ASLR disabled: main executable and DSOs at 0x555550000000
+// PIE and ASLR: main executable and DSOs at 0x7f0000000000
+// non-PIE: main executable below 0x100000000, DSOs at 0x7f0000000000
+// Heap at 0x700000000000.
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x010000000000ULL, MappingDesc::APP, "app-1"},
+    {0x010000000000ULL, 0x100000000000ULL, MappingDesc::SHADOW, "shadow-2"},
+    {0x100000000000ULL, 0x110000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x110000000000ULL, 0x200000000000ULL, MappingDesc::ORIGIN, "origin-2"},
+    {0x200000000000ULL, 0x300000000000ULL, MappingDesc::SHADOW, "shadow-3"},
+    {0x300000000000ULL, 0x400000000000ULL, MappingDesc::ORIGIN, "origin-3"},
+    {0x400000000000ULL, 0x500000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x500000000000ULL, 0x510000000000ULL, MappingDesc::SHADOW, "shadow-1"},
+    {0x510000000000ULL, 0x600000000000ULL, MappingDesc::APP, "app-2"},
+    {0x600000000000ULL, 0x610000000000ULL, MappingDesc::ORIGIN, "origin-1"},
+    {0x610000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x700000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
+#  define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
+#  define SHADOW_TO_ORIGIN(mem) (((uptr)(mem)) + 0x100000000000ULL)
 
-extern int vmaSize;
-# define DFSAN_RUNTIME_VMA 1
 #else
-# error "DFSan not supported for this platform!"
+#  error "Unsupported platform"
 #endif
 
-enum MappingType {
-  MAPPING_SHADOW_ADDR,
-  MAPPING_UNION_TABLE_ADDR,
-  MAPPING_APP_ADDR,
-  MAPPING_SHADOW_MASK
-};
+const uptr kMemoryLayoutSize = sizeof(kMemoryLayout) / sizeof(kMemoryLayout[0]);
 
-template<typename Mapping, int Type>
-uptr MappingImpl(void) {
-  switch (Type) {
-    case MAPPING_SHADOW_ADDR: return Mapping::kShadowAddr;
-    case MAPPING_UNION_TABLE_ADDR: return Mapping::kUnionTableAddr;
-    case MAPPING_APP_ADDR: return Mapping::kAppAddr;
-    case MAPPING_SHADOW_MASK: return Mapping::kShadowMask;
-  }
-}
+#define MEM_TO_ORIGIN(mem) (SHADOW_TO_ORIGIN(MEM_TO_SHADOW((mem))))
 
-template<int Type>
-uptr MappingArchImpl(void) {
-#ifdef __aarch64__
-  switch (vmaSize) {
-    case 39: return MappingImpl<Mapping39, Type>();
-    case 42: return MappingImpl<Mapping42, Type>();
-    case 48: return MappingImpl<Mapping48, Type>();
-  }
-  DCHECK(0);
-  return 0;
-#else
-  return MappingImpl<Mapping, Type>();
+#ifndef __clang__
+__attribute__((optimize("unroll-loops")))
 #endif
+inline bool
+addr_is_type(uptr addr, MappingDesc::Type mapping_type) {
+// It is critical for performance that this loop is unrolled (because then it is
+// simplified into just a few constant comparisons).
+#ifdef __clang__
+#  pragma unroll
+#endif
+  for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
+    if (kMemoryLayout[i].type == mapping_type &&
+        addr >= kMemoryLayout[i].start && addr < kMemoryLayout[i].end)
+      return true;
+  return false;
 }
 
-ALWAYS_INLINE
-uptr ShadowAddr() {
-  return MappingArchImpl<MAPPING_SHADOW_ADDR>();
-}
-
-ALWAYS_INLINE
-uptr UnionTableAddr() {
-  return MappingArchImpl<MAPPING_UNION_TABLE_ADDR>();
-}
-
-ALWAYS_INLINE
-uptr AppAddr() {
-  return MappingArchImpl<MAPPING_APP_ADDR>();
-}
-
-ALWAYS_INLINE
-uptr ShadowMask() {
-  return MappingArchImpl<MAPPING_SHADOW_MASK>();
-}
+#define MEM_IS_APP(mem) addr_is_type((uptr)(mem), MappingDesc::APP)
+#define MEM_IS_SHADOW(mem) addr_is_type((uptr)(mem), MappingDesc::SHADOW)
+#define MEM_IS_ORIGIN(mem) addr_is_type((uptr)(mem), MappingDesc::ORIGIN)
 
 }  // namespace __dfsan
 

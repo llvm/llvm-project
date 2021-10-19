@@ -138,6 +138,13 @@ inline bool operator>(const char *left, const CharBlock &right) {
   return right < left;
 }
 
+// An alternative comparator based on pointer values; use with care!
+struct CharBlockPointerComparator {
+  bool operator()(CharBlock x, CharBlock y) const {
+    return x.end() < y.begin();
+  }
+};
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const CharBlock &x);
 
 } // namespace Fortran::parser

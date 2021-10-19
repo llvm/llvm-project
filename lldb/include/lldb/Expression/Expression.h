@@ -39,7 +39,7 @@ public:
   Expression(ExecutionContextScope &exe_scope);
 
   /// Destructor
-  virtual ~Expression() {}
+  virtual ~Expression() = default;
 
   /// Return the string that the parser should parse.  Must be a full
   /// translation unit.

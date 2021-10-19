@@ -62,7 +62,7 @@ void BM_PathConstructIter(benchmark::State &st, GenInputs gen) {
 }
 template <class GenInputs>
 void BM_PathConstructInputIter(benchmark::State &st, GenInputs gen) {
-  BM_PathConstructIter<input_iterator>(st, gen);
+  BM_PathConstructIter<cpp17_input_iterator>(st, gen);
 }
 template <class GenInputs>
 void BM_PathConstructForwardIter(benchmark::State &st, GenInputs gen) {

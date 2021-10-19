@@ -3,6 +3,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
@@ -54,8 +55,7 @@ llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerVectorizerStartEPCallback(
-                [](llvm::FunctionPassManager &PM,
-                   llvm::PassBuilder::OptimizationLevel Level) {
+                [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
                   PM.addPass(Bye());
                 });
             PB.registerPipelineParsingCallback(

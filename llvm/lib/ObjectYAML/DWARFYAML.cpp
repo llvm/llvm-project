@@ -28,11 +28,11 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_str");
   if (DebugAranges)
     SecNames.insert("debug_aranges");
-  if (!DebugRanges.empty())
+  if (DebugRanges)
     SecNames.insert("debug_ranges");
   if (!DebugLines.empty())
     SecNames.insert("debug_line");
-  if (!DebugAddr.empty())
+  if (DebugAddr)
     SecNames.insert("debug_addr");
   if (!DebugAbbrev.empty())
     SecNames.insert("debug_abbrev");
@@ -95,8 +95,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_str", DWARF.DebugStrings);
   IO.mapOptional("debug_abbrev", DWARF.DebugAbbrev);
   IO.mapOptional("debug_aranges", DWARF.DebugAranges);
-  if (!DWARF.DebugRanges.empty() || !IO.outputting())
-    IO.mapOptional("debug_ranges", DWARF.DebugRanges);
+  IO.mapOptional("debug_ranges", DWARF.DebugRanges);
   IO.mapOptional("debug_pubnames", DWARF.PubNames);
   IO.mapOptional("debug_pubtypes", DWARF.PubTypes);
   DWARFCtx.IsGNUPubSec = true;
@@ -218,7 +217,7 @@ void MappingTraits<DWARFYAML::LineTableOpcode>::mapping(
     IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode) {
   IO.mapRequired("Opcode", LineTableOpcode.Opcode);
   if (LineTableOpcode.Opcode == dwarf::DW_LNS_extended_op) {
-    IO.mapRequired("ExtLen", LineTableOpcode.ExtLen);
+    IO.mapOptional("ExtLen", LineTableOpcode.ExtLen);
     IO.mapRequired("SubOpcode", LineTableOpcode.SubOpcode);
   }
 
@@ -245,11 +244,11 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("DefaultIsStmt", LineTable.DefaultIsStmt);
   IO.mapRequired("LineBase", LineTable.LineBase);
   IO.mapRequired("LineRange", LineTable.LineRange);
-  IO.mapRequired("OpcodeBase", LineTable.OpcodeBase);
-  IO.mapRequired("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
-  IO.mapRequired("IncludeDirs", LineTable.IncludeDirs);
-  IO.mapRequired("Files", LineTable.Files);
-  IO.mapRequired("Opcodes", LineTable.Opcodes);
+  IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
+  IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
+  IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
+  IO.mapOptional("Files", LineTable.Files);
+  IO.mapOptional("Opcodes", LineTable.Opcodes);
 }
 
 void MappingTraits<DWARFYAML::SegAddrPair>::mapping(
@@ -305,11 +304,11 @@ void MappingTraits<DWARFYAML::ListEntries<EntryType>>::mapping(
 }
 
 template <typename EntryType>
-StringRef MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
+std::string MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
     IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
   if (ListEntries.Entries && ListEntries.Content)
     return "Entries and Content can't be used together";
-  return StringRef();
+  return "";
 }
 
 template <typename EntryType>

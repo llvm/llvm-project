@@ -13,7 +13,7 @@
 ; is callee-cleanup. However, in MSVC's cdecl calling convention, sret pointer
 ; arguments are caller-cleanup like normal arguments.
 
-define void @sret1(i8* sret %x) nounwind {
+define void @sret1(i8* sret(i8) %x) nounwind {
 entry:
 ; WIN32-LABEL:      _sret1:
 ; WIN32:      movb $42, ({{%e[abcd]x}})
@@ -33,7 +33,7 @@ entry:
   ret void
 }
 
-define void @sret2(i8* sret %x, i8 %y) nounwind {
+define void @sret2(i8* sret(i8) %x, i8 %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret2:
 ; WIN32:      movb {{.*}}, ({{%e[abcd]x}})
@@ -53,7 +53,7 @@ entry:
   ret void
 }
 
-define void @sret3(i8* sret %x, i8* %y) nounwind {
+define void @sret3(i8* sret(i8) %x, i8* %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret3:
 ; WIN32:      movb $42, ([[REG1:%e[abcd]x]])
@@ -78,7 +78,7 @@ entry:
 ; PR15556
 %struct.S4 = type { i32, i32, i32 }
 
-define void @sret4(%struct.S4* noalias sret %agg.result) {
+define void @sret4(%struct.S4* noalias sret(%struct.S4) %agg.result) {
 entry:
 ; WIN32-LABEL:     _sret4:
 ; WIN32:     movl $42, ({{%e[abcd]x}})
@@ -102,7 +102,7 @@ entry:
 %struct.S5 = type { i32 }
 %class.C5 = type { i8 }
 
-define x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* noalias sret %agg.result, %class.C5* %this) {
+define x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* noalias sret(%struct.S5) %agg.result, %class.C5* %this) {
 entry:
   %this.addr = alloca %class.C5*, align 4
   store %class.C5* %this, %class.C5** %this.addr, align 4
@@ -127,7 +127,7 @@ define void @call_foo5() {
 entry:
   %c = alloca %class.C5, align 1
   %s = alloca %struct.S5, align 4
-  call x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* sret %s, %class.C5* %c)
+  call x86_thiscallcc void @"\01?foo@C5@@QAE?AUS5@@XZ"(%struct.S5* sret(%struct.S5) %s, %class.C5* %c)
 ; WIN32-LABEL:      {{^}}_call_foo5:
 ; MINGW_X86-LABEL:  {{^}}_call_foo5:
 ; CYGWIN-LABEL:     {{^}}_call_foo5:
@@ -172,10 +172,10 @@ define void @test6_f(%struct.test6* %x) nounwind {
 ; CYGWIN-NEXT: calll   _test6_g
 
   %tmp = alloca %struct.test6, align 4
-  call x86_thiscallcc void @test6_g(%struct.test6* sret %tmp, %struct.test6* %x)
+  call x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6) %tmp, %struct.test6* %x)
   ret void
 }
-declare x86_thiscallcc void @test6_g(%struct.test6* sret, %struct.test6*)
+declare x86_thiscallcc void @test6_g(%struct.test6* sret(%struct.test6), %struct.test6*)
 
 ; Flipping the parameters at the IR level generates the same code.
 %struct.test7 = type { i32, i32, i32 }
@@ -199,11 +199,11 @@ define void @test7_f(%struct.test7* %x) nounwind {
 ; CYGWIN-NEXT: {{pushl   %eax|movl %eax, \(%esp\)}}
 
   %tmp = alloca %struct.test7, align 4
-  call x86_thiscallcc void @test7_g(%struct.test7* %x, %struct.test7* sret %tmp)
+  call x86_thiscallcc void @test7_g(%struct.test7* %x, %struct.test7* sret(%struct.test7) %tmp)
   ret void
 }
 
-define x86_thiscallcc void @test7_g(%struct.test7* %in, %struct.test7* sret %out) {
+define x86_thiscallcc void @test7_g(%struct.test7* %in, %struct.test7* sret(%struct.test7) %out) {
   %s = getelementptr %struct.test7, %struct.test7* %in, i32 0, i32 0
   %d = getelementptr %struct.test7, %struct.test7* %out, i32 0, i32 0
   %v = load i32, i32* %s
@@ -223,7 +223,7 @@ declare void @clobber_eax()
 ; Test what happens if the first parameter has to be split by codegen.
 ; Realistically, no frontend will generate code like this, but here it is for
 ; completeness.
-define void @test8_f(i64 inreg %a, i64* sret %out) {
+define void @test8_f(i64 inreg %a, i64* sret(i64) %out) {
   store i64 %a, i64* %out
   call void @clobber_eax()
   ret void

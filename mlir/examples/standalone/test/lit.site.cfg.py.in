@@ -7,7 +7,7 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_lib_dir = "@LLVM_LIBRARY_DIR@"
+config.llvm_lib_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_exe_ext = "@EXEEXT@"
@@ -23,6 +23,7 @@ config.llvm_bindings = "@LLVM_BINDINGS@".split(' ')
 config.host_os = "@HOST_OS@"
 config.host_cc = "@HOST_CC@"
 config.host_cxx = "@HOST_CXX@"
+config.enable_libcxx = "@LLVM_ENABLE_LIBCXX@"
 # Note: ldflags can contain double-quoted paths, so must use single quotes here.
 config.host_ldflags = '@HOST_LDFLAGS@'
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
@@ -35,6 +36,7 @@ config.standalone_obj_root = "@CMAKE_BINARY_DIR@"
 # used when we can't determine the tool dir at configuration time.
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
+    config.llvm_lib_dir = config.llvm_lib_dir % lit_config.params
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
 except KeyError:
     e = sys.exc_info()[1]

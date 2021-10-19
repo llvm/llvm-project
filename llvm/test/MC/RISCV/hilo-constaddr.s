@@ -1,8 +1,8 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:  | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
+# RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 %s \
-# RUN:  | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
+# RUN:   | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 # Check the assembler can handle hi and lo expressions with a constant
 # address. Test case derived from test/MC/Mips/hilo-addressing.s

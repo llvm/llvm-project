@@ -13,11 +13,12 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtCXX.h"
@@ -41,8 +42,8 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 using namespace clang;
 
@@ -127,6 +128,66 @@ void Stmt::addStmtClass(StmtClass s) {
 bool Stmt::StatisticsEnabled = false;
 void Stmt::EnableStatistics() {
   StatisticsEnabled = true;
+}
+
+static std::pair<Stmt::Likelihood, const Attr *>
+getLikelihood(ArrayRef<const Attr *> Attrs) {
+  for (const auto *A : Attrs) {
+    if (isa<LikelyAttr>(A))
+      return std::make_pair(Stmt::LH_Likely, A);
+
+    if (isa<UnlikelyAttr>(A))
+      return std::make_pair(Stmt::LH_Unlikely, A);
+  }
+
+  return std::make_pair(Stmt::LH_None, nullptr);
+}
+
+static std::pair<Stmt::Likelihood, const Attr *> getLikelihood(const Stmt *S) {
+  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+    return getLikelihood(AS->getAttrs());
+
+  return std::make_pair(Stmt::LH_None, nullptr);
+}
+
+Stmt::Likelihood Stmt::getLikelihood(ArrayRef<const Attr *> Attrs) {
+  return ::getLikelihood(Attrs).first;
+}
+
+Stmt::Likelihood Stmt::getLikelihood(const Stmt *S) {
+  return ::getLikelihood(S).first;
+}
+
+const Attr *Stmt::getLikelihoodAttr(const Stmt *S) {
+  return ::getLikelihood(S).second;
+}
+
+Stmt::Likelihood Stmt::getLikelihood(const Stmt *Then, const Stmt *Else) {
+  Likelihood LHT = ::getLikelihood(Then).first;
+  Likelihood LHE = ::getLikelihood(Else).first;
+  if (LHE == LH_None)
+    return LHT;
+
+  // If the same attribute is used on both branches there's a conflict.
+  if (LHT == LHE)
+    return LH_None;
+
+  if (LHT != LH_None)
+    return LHT;
+
+  // Invert the value of Else to get the value for Then.
+  return LHE == LH_Likely ? LH_Unlikely : LH_Likely;
+}
+
+std::tuple<bool, const Attr *, const Attr *>
+Stmt::determineLikelihoodConflict(const Stmt *Then, const Stmt *Else) {
+  std::pair<Likelihood, const Attr *> LHT = ::getLikelihood(Then);
+  std::pair<Likelihood, const Attr *> LHE = ::getLikelihood(Else);
+  // If the same attribute is used on both branches there's a conflict.
+  if (LHT.first != LH_None && LHT.first == LHE.first)
+    return std::make_tuple(true, LHT.second, LHE.second);
+
+  return std::make_tuple(false, nullptr, nullptr);
 }
 
 /// Skip no-op (attributed, compound) container stmts and skip captured
@@ -482,7 +543,6 @@ void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
   this->NumInputs = NumInputs;
   this->NumClobbers = NumClobbers;
   this->NumLabels = NumLabels;
-  assert(!(NumOutputs && NumLabels) && "asm goto cannot have outputs");
 
   unsigned NumExprs = NumOutputs + NumInputs + NumLabels;
 
@@ -586,6 +646,8 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       continue;
     }
 
+    const TargetInfo &TI = C.getTargetInfo();
+
     // Escaped "%" character in asm string.
     if (CurPtr == StrEnd) {
       // % at end of string is invalid (no escape).
@@ -596,6 +658,11 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
     char EscapedChar = *CurPtr++;
     switch (EscapedChar) {
     default:
+      // Handle target-specific escaped characters.
+      if (auto MaybeReplaceStr = TI.handleAsmEscapedChar(EscapedChar)) {
+        CurStringPiece += *MaybeReplaceStr;
+        continue;
+      }
       break;
     case '%': // %% -> %
     case '{': // %{ -> {
@@ -628,7 +695,6 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       EscapedChar = *CurPtr++;
     }
 
-    const TargetInfo &TI = C.getTargetInfo();
     const SourceManager &SM = C.getSourceManager();
     const LangOptions &LO = C.getLangOpts();
 
@@ -731,7 +797,27 @@ std::string GCCAsmStmt::generateAsmString(const ASTContext &C) const {
 /// Assemble final IR asm string (MS-style).
 std::string MSAsmStmt::generateAsmString(const ASTContext &C) const {
   // FIXME: This needs to be translated into the IR string representation.
-  return std::string(AsmStr);
+  SmallVector<StringRef, 8> Pieces;
+  AsmStr.split(Pieces, "\n\t");
+  std::string MSAsmString;
+  for (size_t I = 0, E = Pieces.size(); I < E; ++I) {
+    StringRef Instruction = Pieces[I];
+    // For vex/vex2/vex3/evex masm style prefix, convert it to att style
+    // since we don't support masm style prefix in backend.
+    if (Instruction.startswith("vex "))
+      MSAsmString += '{' + Instruction.substr(0, 3).str() + '}' +
+                     Instruction.substr(3).str();
+    else if (Instruction.startswith("vex2 ") ||
+             Instruction.startswith("vex3 ") || Instruction.startswith("evex "))
+      MSAsmString += '{' + Instruction.substr(0, 4).str() + '}' +
+                     Instruction.substr(4).str();
+    else
+      MSAsmString += Instruction.str();
+    // If this is not the last instruction, adding back the '\n\t'.
+    if (I < E - 1)
+      MSAsmString += "\n\t";
+  }
+  return MSAsmString;
 }
 
 Expr *MSAsmStmt::getOutputExpr(unsigned i) {
@@ -826,7 +912,7 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
                  });
 }
 
-IfStmt::IfStmt(const ASTContext &Ctx, SourceLocation IL, bool IsConstexpr,
+IfStmt::IfStmt(const ASTContext &Ctx, SourceLocation IL, IfStatementKind Kind,
                Stmt *Init, VarDecl *Var, Expr *Cond, SourceLocation LPL,
                SourceLocation RPL, Stmt *Then, SourceLocation EL, Stmt *Else)
     : Stmt(IfStmtClass), LParenLoc(LPL), RParenLoc(RPL) {
@@ -837,7 +923,7 @@ IfStmt::IfStmt(const ASTContext &Ctx, SourceLocation IL, bool IsConstexpr,
   IfStmtBits.HasVar = HasVar;
   IfStmtBits.HasInit = HasInit;
 
-  setConstexpr(IsConstexpr);
+  setStatementKind(Kind);
 
   setCond(Cond);
   setThen(Then);
@@ -861,9 +947,9 @@ IfStmt::IfStmt(EmptyShell Empty, bool HasElse, bool HasVar, bool HasInit)
 }
 
 IfStmt *IfStmt::Create(const ASTContext &Ctx, SourceLocation IL,
-                       bool IsConstexpr, Stmt *Init, VarDecl *Var, Expr *Cond,
-                       SourceLocation LPL, SourceLocation RPL, Stmt *Then,
-                       SourceLocation EL, Stmt *Else) {
+                       IfStatementKind Kind, Stmt *Init, VarDecl *Var,
+                       Expr *Cond, SourceLocation LPL, SourceLocation RPL,
+                       Stmt *Then, SourceLocation EL, Stmt *Else) {
   bool HasElse = Else != nullptr;
   bool HasVar = Var != nullptr;
   bool HasInit = Init != nullptr;
@@ -872,7 +958,7 @@ IfStmt *IfStmt::Create(const ASTContext &Ctx, SourceLocation IL,
           NumMandatoryStmtPtr + HasElse + HasVar + HasInit, HasElse),
       alignof(IfStmt));
   return new (Mem)
-      IfStmt(Ctx, IL, IsConstexpr, Init, Var, Cond, LPL, RPL, Then, EL, Else);
+      IfStmt(Ctx, IL, Kind, Init, Var, Cond, LPL, RPL, Then, EL, Else);
 }
 
 IfStmt *IfStmt::CreateEmpty(const ASTContext &Ctx, bool HasElse, bool HasVar,
@@ -909,10 +995,18 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
-Optional<const Stmt*> IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+Optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
     return None;
   return !getCond()->EvaluateKnownConstInt(Ctx) ? getElse() : getThen();
+}
+
+Optional<const Stmt *>
+IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
+  if (Optional<Stmt *> Result =
+          const_cast<IfStmt *>(this)->getNondiscardedCase(Ctx))
+    return *Result;
+  return None;
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
@@ -1186,13 +1280,6 @@ CapturedStmt::Capture::Capture(SourceLocation Loc, VariableCaptureKind Kind,
     break;
   case VCK_ByCopy:
     assert(Var && "capturing by copy must have a variable!");
-    assert(
-        (Var->getType()->isScalarType() || (Var->getType()->isReferenceType() &&
-                                            Var->getType()
-                                                ->castAs<ReferenceType>()
-                                                ->getPointeeType()
-                                                ->isScalarType())) &&
-        "captures by copy are expected to have a scalar type!");
     break;
   case VCK_VLAType:
     assert(!Var &&

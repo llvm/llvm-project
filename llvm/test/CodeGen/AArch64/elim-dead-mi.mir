@@ -1,0 +1,61 @@
+# RUN: llc -mtriple=aarch64-arm-none-eabi -o - %s \
+# RUN: -run-pass dead-mi-elimination | FileCheck %s
+--- |
+  @c = internal unnamed_addr global [3 x i8] zeroinitializer, align 4
+  @d = common dso_local local_unnamed_addr global i32 0, align 4
+
+  define dso_local i32 @main() local_unnamed_addr {
+  %scevgep = getelementptr i8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @c, i64 0, i64 1), i64 0
+  ret i32 0
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common, preferred-register: '' }
+  - { id: 1, class: gpr64common, preferred-register: '' }
+  - { id: 2, class: gpr64, preferred-register: '' }
+  - { id: 3, class: gpr64common, preferred-register: '' }
+  - { id: 4, class: gpr32, preferred-register: '' }
+  - { id: 5, class: gpr32all, preferred-register: '' }
+  - { id: 6, class: gpr64common, preferred-register: '' }
+body:             |
+  bb.0:
+    successors: %bb.4(0x30000000), %bb.5(0x50000000)
+
+    %0:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    CBZX killed %0, %bb.4
+    B %bb.5
+
+  bb.1:
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+
+    %1:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %2:gpr64 = SUBSXri %1, 2, 0, implicit-def $nzcv
+    Bcc 0, %bb.3, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    successors: %bb.1(0x80000000)
+    %3:gpr64common = ADDXrr %6, %2
+    %4:gpr32 = LDRBBui killed %3, 1 :: (load (s8) from %ir.scevgep)
+    %5:gpr32all = COPY %4
+    B %bb.1
+
+  bb.3:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $x0 = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    RET_ReallyLR implicit $w0
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+
+  bb.5:
+    successors: %bb.1(0x80000000)
+    ; CHECK: bb.5
+    ; CHECK-NOT: %6:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    %6:gpr64common = MOVaddr target-flags(aarch64-page) @c, target-flags(aarch64-pageoff, aarch64-nc) @c
+    B %bb.1
+...

@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-//  ... fails assertion line 31
+// XFAIL: !non-lockfree-atomics
 
 // <atomic>
 
 // template <class T>
 //     T
-//     atomic_exchange(volatile atomic<T>* obj, T desr);
+//     atomic_exchange(volatile atomic<T>*, atomic<T>::value_type) noexcept;
 //
 // template <class T>
 //     T
-//     atomic_exchange(atomic<T>* obj, T desr);
+//     atomic_exchange(atomic<T>*, atomic<T>::value_type) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -30,14 +30,15 @@ template <class T>
 struct TestFn {
   void operator()() const {
     typedef std::atomic<T> A;
-    A t;
-    std::atomic_init(&t, T(1));
+    A t(T(1));
     assert(std::atomic_exchange(&t, T(2)) == T(1));
     assert(t == T(2));
-    volatile A vt;
-    std::atomic_init(&vt, T(3));
+    volatile A vt(T(3));
     assert(std::atomic_exchange(&vt, T(4)) == T(3));
     assert(vt == T(4));
+
+    ASSERT_NOEXCEPT(std::atomic_exchange(&t, T(2)));
+    ASSERT_NOEXCEPT(std::atomic_exchange(&vt, T(4)));
   }
 };
 

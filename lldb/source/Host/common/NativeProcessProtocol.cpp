@@ -25,10 +25,8 @@ using namespace lldb_private;
 
 NativeProcessProtocol::NativeProcessProtocol(lldb::pid_t pid, int terminal_fd,
                                              NativeDelegate &delegate)
-    : m_pid(pid), m_terminal_fd(terminal_fd) {
-  bool registered = RegisterNativeDelegate(delegate);
-  assert(registered);
-  (void)registered;
+    : m_pid(pid), m_delegate(delegate), m_terminal_fd(terminal_fd) {
+  delegate.InitializeDelegate(this);
 }
 
 lldb_private::Status NativeProcessProtocol::Interrupt() {
@@ -51,6 +49,19 @@ lldb_private::Status
 NativeProcessProtocol::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                            MemoryRegionInfo &range_info) {
   // Default: not implemented.
+  return Status("not implemented");
+}
+
+lldb_private::Status
+NativeProcessProtocol::ReadMemoryTags(int32_t type, lldb::addr_t addr,
+                                      size_t len, std::vector<uint8_t> &tags) {
+  return Status("not implemented");
+}
+
+lldb_private::Status
+NativeProcessProtocol::WriteMemoryTags(int32_t type, lldb::addr_t addr,
+                                       size_t len,
+                                       const std::vector<uint8_t> &tags) {
   return Status("not implemented");
 }
 
@@ -295,64 +306,21 @@ Status NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
   return error;
 }
 
-bool NativeProcessProtocol::RegisterNativeDelegate(
-    NativeDelegate &native_delegate) {
-  std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
-  if (llvm::is_contained(m_delegates, &native_delegate))
-    return false;
-
-  m_delegates.push_back(&native_delegate);
-  native_delegate.InitializeDelegate(this);
-  return true;
-}
-
-bool NativeProcessProtocol::UnregisterNativeDelegate(
-    NativeDelegate &native_delegate) {
-  std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
-
-  const auto initial_size = m_delegates.size();
-  m_delegates.erase(
-      remove(m_delegates.begin(), m_delegates.end(), &native_delegate),
-      m_delegates.end());
-
-  // We removed the delegate if the count of delegates shrank after removing
-  // all copies of the given native_delegate from the vector.
-  return m_delegates.size() < initial_size;
-}
-
 void NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged(
     lldb::StateType state) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
 
-  std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
-  for (auto native_delegate : m_delegates)
-    native_delegate->ProcessStateChanged(this, state);
+  m_delegate.ProcessStateChanged(this, state);
 
-  if (log) {
-    if (!m_delegates.empty()) {
-      LLDB_LOGF(log,
-                "NativeProcessProtocol::%s: sent state notification [%s] "
-                "from process %" PRIu64,
-                __FUNCTION__, lldb_private::StateAsCString(state), GetID());
-    } else {
-      LLDB_LOGF(log,
-                "NativeProcessProtocol::%s: would send state notification "
-                "[%s] from process %" PRIu64 ", but no delegates",
-                __FUNCTION__, lldb_private::StateAsCString(state), GetID());
-    }
-  }
+  LLDB_LOG(log, "sent state notification [{0}] from process {1}", state,
+           GetID());
 }
 
 void NativeProcessProtocol::NotifyDidExec() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  LLDB_LOGF(log, "NativeProcessProtocol::%s - preparing to call delegates",
-            __FUNCTION__);
+  LLDB_LOG(log, "process {0} exec()ed", GetID());
 
-  {
-    std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
-    for (auto native_delegate : m_delegates)
-      native_delegate->DidExec(this);
-  }
+  m_delegate.DidExec(this);
 }
 
 Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
@@ -522,7 +490,8 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
   static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08}; // trap
+  static const uint8_t g_ppcle_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
@@ -544,8 +513,12 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   case llvm::Triple::systemz:
     return llvm::makeArrayRef(g_s390x_opcode);
 
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    return llvm::makeArrayRef(g_ppc_opcode);
+
   case llvm::Triple::ppc64le:
-    return llvm::makeArrayRef(g_ppc64le_opcode);
+    return llvm::makeArrayRef(g_ppcle_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -568,6 +541,8 @@ size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
   case llvm::Triple::mips64el:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     // On these architectures the PC doesn't get updated for breakpoint hits.
     return 0;

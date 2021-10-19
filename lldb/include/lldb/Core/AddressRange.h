@@ -13,7 +13,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class SectionList;
@@ -94,8 +94,7 @@ public:
   /// \return
   ///     Returns \b true if \a so_addr is contained in this range,
   ///     \b false otherwise.
-  //    bool
-  //    Contains (const Address &so_addr) const;
+  bool Contains(const Address &so_addr) const;
 
   /// Check if a section offset address is contained in this range.
   ///
@@ -240,7 +239,7 @@ public:
 protected:
   // Member variables
   Address m_base_addr;      ///< The section offset base address of this range.
-  lldb::addr_t m_byte_size; ///< The size in bytes of this address range.
+  lldb::addr_t m_byte_size = 0; ///< The size in bytes of this address range.
 };
 
 // bool operator== (const AddressRange& lhs, const AddressRange& rhs);

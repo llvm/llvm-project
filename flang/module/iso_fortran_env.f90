@@ -9,7 +9,7 @@
 ! See Fortran 2018, clause 16.10.2
 ! TODO: These are placeholder values so that some tests can be run.
 
-include '../runtime/magic-numbers.h' ! for IOSTAT= error/end code values
+include '../include/flang/Runtime/magic-numbers.h' ! for IOSTAT= error/end code values
 
 module iso_fortran_env
 
@@ -86,7 +86,7 @@ module iso_fortran_env
     selectedReal64 = selected_real_kind(15, 307), &   ! IEEE double
     selectedReal80 = selected_real_kind(18, 4931), &  ! 80x87 extended
     selectedReal64x2 = selected_real_kind(31, 307), & ! "double-double"
-    selectedReal128 = selected_real_kind(33, 9863), & ! IEEE quad
+    selectedReal128 = selected_real_kind(33, 4931), & ! IEEE quad
     safeReal16 = merge(selectedReal16, selected_real_kind(0,0), &
                        selectedReal16 >= 0), &
     safeBfloat16 = merge(selectedBfloat16, selected_real_kind(0,0), &
@@ -115,7 +115,7 @@ module iso_fortran_env
     real64x2 = merge(selectedReal64x2, merge(-2, -1, selectedReal64x2 >= 0), &
                      digits(real(0,kind=safeReal64x2)) == 106), &
     real128 = merge(selectedReal128, merge(-2, -1, selectedReal128 >= 0), &
-                    digits(real(0,kind=safeReal128)) == 112)
+                    digits(real(0,kind=safeReal128)) == 113)
 
   integer, parameter :: real_kinds(*) = [ &
     [(real16, integer :: j=1, count([real16 >= 0]))], &

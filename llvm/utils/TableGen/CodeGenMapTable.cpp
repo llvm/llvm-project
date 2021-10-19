@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// CodeGenMapTable provides functionality for the TabelGen to create
+// CodeGenMapTable provides functionality for the TableGen to create
 // relation mapping between instructions. Relation models are defined using
 // InstrMapping as a base class. This file implements the functionality which
 // parses these definitions and generates relation maps using the information
@@ -144,25 +144,15 @@ public:
     }
   }
 
-  std::string getName() const {
-    return Name;
-  }
+  const std::string &getName() const { return Name; }
 
-  std::string getFilterClass() {
-    return FilterClass;
-  }
+  const std::string &getFilterClass() const { return FilterClass; }
 
-  ListInit *getRowFields() const {
-    return RowFields;
-  }
+  ListInit *getRowFields() const { return RowFields; }
 
-  ListInit *getColFields() const {
-    return ColFields;
-  }
+  ListInit *getColFields() const { return ColFields; }
 
-  ListInit *getKeyCol() const {
-    return KeyCol;
-  }
+  ListInit *getKeyCol() const { return KeyCol; }
 
   const std::vector<ListInit*> &getValueCols() const {
     return ValueCols;
@@ -200,7 +190,7 @@ private:
 public:
   MapTableEmitter(CodeGenTarget &Target, RecordKeeper &Records, Record *IMRec):
                   Target(Target), InstrMapDesc(IMRec) {
-    const std::string FilterClass = InstrMapDesc.getFilterClass();
+    const std::string &FilterClass = InstrMapDesc.getFilterClass();
     InstrDefs = Records.getAllDerivedDefinitions(FilterClass);
   }
 
@@ -328,11 +318,10 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
   ListInit *ColFields = InstrMapDesc.getColFields();
   Record *MatchInstr = nullptr;
 
-  for (unsigned i = 0, e = RelatedInstrVec.size(); i < e; i++) {
+  for (llvm::Record *CurInstr : RelatedInstrVec) {
     bool MatchFound = true;
-    Record *CurInstr = RelatedInstrVec[i];
     for (unsigned j = 0, endCF = ColFields->size();
-        (j < endCF) && MatchFound; j++) {
+         (j < endCF) && MatchFound; j++) {
       Init *ColFieldJ = ColFields->getElement(j);
       Init *CurInstrInit = CurInstr->getValue(ColFieldJ)->getValue();
       std::string CurInstrVal = CurInstrInit->getAsUnquotedString();
@@ -352,8 +341,9 @@ Record *MapTableEmitter::getInstrForColumn(Record *KeyInstr,
         }
 
         PrintFatalError("Multiple matches found for `" + KeyInstr->getName() +
-              "', for the relation `" + InstrMapDesc.getName() + "', row fields [" +
-              KeyValueStr + "], column `" + CurValueCol->getAsString() + "'");
+                        "', for the relation `" + InstrMapDesc.getName() +
+                        "', row fields [" + KeyValueStr + "], column `" +
+                        CurValueCol->getAsString() + "'");
       }
       MatchInstr = CurInstr;
     }
@@ -384,7 +374,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
   for (unsigned i = 0; i < TotalNumInstr; i++) {
     Record *CurInstr = NumberedInstructions[i]->TheDef;
     std::vector<Record*> ColInstrs = MapTable[CurInstr];
-    std::string OutStr("");
+    std::string OutStr;
     unsigned RelExists = 0;
     if (!ColInstrs.empty()) {
       for (unsigned j = 0; j < NumCol; j++) {
@@ -422,7 +412,7 @@ void MapTableEmitter::emitBinSearch(raw_ostream &OS, unsigned TableSize) {
   OS << "  unsigned start = 0;\n";
   OS << "  unsigned end = " << TableSize << ";\n";
   OS << "  while (start < end) {\n";
-  OS << "    mid = start + (end - start)/2;\n";
+  OS << "    mid = start + (end - start) / 2;\n";
   OS << "    if (Opcode == " << InstrMapDesc.getName() << "Table[mid][0]) {\n";
   OS << "      break;\n";
   OS << "    }\n";

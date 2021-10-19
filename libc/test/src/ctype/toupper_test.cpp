@@ -9,7 +9,7 @@
 #include "src/ctype/toupper.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(ToUpper, DefaultLocale) {
+TEST(LlvmLibcToUpper, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {
     // This follows pattern 'a' - 32 = 'A'.
     if ('a' <= ch && ch <= 'z')

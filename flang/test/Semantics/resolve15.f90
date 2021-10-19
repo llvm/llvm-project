@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
   real :: var
   interface i
@@ -9,7 +9,9 @@ module m
   end interface
   interface operator(.foo.)
     !ERROR: 'var' is not a subprogram
-    procedure :: sub, var
+    procedure :: var
+    !ERROR: OPERATOR(.foo.) procedure 'sub' must be a function
+    procedure :: sub
     !ERROR: Procedure 'bad' not found
     procedure :: bad
   end interface

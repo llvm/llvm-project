@@ -145,7 +145,7 @@ public:
     assert(!CurrentInput.isEmpty() && "No current file!");
     return CurrentInput.isFile()
                ? CurrentInput.getFile()
-               : CurrentInput.getBuffer()->getBufferIdentifier();
+               : CurrentInput.getBuffer().getBufferIdentifier();
   }
 
   InputKind getCurrentFileKind() const {
@@ -234,7 +234,7 @@ public:
 
   /// Perform any per-file post processing, deallocate per-file
   /// objects, and run statistics and output file cleanup code.
-  void EndSourceFile();
+  virtual void EndSourceFile();
 
   /// @}
 };
@@ -302,15 +302,16 @@ public:
 /// some existing action's behavior. It implements every virtual method in
 /// the FrontendAction interface by forwarding to the wrapped action.
 class WrapperFrontendAction : public FrontendAction {
+protected:
   std::unique_ptr<FrontendAction> WrappedAction;
 
-protected:
   bool PrepareToExecuteAction(CompilerInstance &CI) override;
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
   bool BeginInvocation(CompilerInstance &CI) override;
   bool BeginSourceFileAction(CompilerInstance &CI) override;
   void ExecuteAction() override;
+  void EndSourceFile() override;
   void EndSourceFileAction() override;
   bool shouldEraseOutputFiles() override;
 

@@ -48,7 +48,6 @@ module lldb_Host {
   module SafeMachO { header "Host/SafeMachO.h" export * }
   module SocketAddress { header "Host/SocketAddress.h" export * }
   module Socket { header "Host/Socket.h" export * }
-  module StringConvert { textual header "Host/StringConvert.h" export * }
   module Terminal { header "Host/Terminal.h" export * }
   module ThreadLauncher { header "Host/ThreadLauncher.h" export * }
   module Time { header "Host/Time.h" export * }
@@ -119,6 +118,7 @@ module lldb_Wrapper {
     requires cplusplus
 
     umbrella "Target"
+    textual header "Target/AppleArm64ExceptionClass.def"
     module * { export * }
   }
 }

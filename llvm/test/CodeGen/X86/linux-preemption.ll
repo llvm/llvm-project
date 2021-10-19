@@ -17,7 +17,7 @@ define i32* @get_strong_default_global() {
   ret i32* @strong_default_global
 }
 ; CHECK: movq strong_default_global@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_default_global, %eax
+; STATIC: movq strong_default_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_default_global@GOT(%eax), %eax
 
 @strong_hidden_global = hidden global i32 42
@@ -33,7 +33,7 @@ define i32* @get_weak_default_global() {
   ret i32* @weak_default_global
 }
 ; CHECK: movq weak_default_global@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_default_global, %eax
+; STATIC: movq weak_default_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_default_global@GOT(%eax), %eax
 
 @external_default_global = external global i32
@@ -41,7 +41,7 @@ define i32* @get_external_default_global() {
   ret i32* @external_default_global
 }
 ; CHECK: movq external_default_global@GOTPCREL(%rip), %rax
-; STATIC: movl $external_default_global, %eax
+; STATIC: movq external_default_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_default_global@GOT(%eax), %eax
 
 @strong_local_global = dso_local global i32 42
@@ -74,7 +74,7 @@ define i32* @get_strong_preemptable_global() {
   ret i32* @strong_preemptable_global
 }
 ; CHECK: movq strong_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_preemptable_global, %eax
+; STATIC: movq strong_preemptable_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_preemptable_global@GOT(%eax), %eax
 
 @weak_preemptable_global = weak dso_preemptable global i32 42
@@ -82,7 +82,7 @@ define i32* @get_weak_preemptable_global() {
   ret i32* @weak_preemptable_global
 }
 ; CHECK: movq weak_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_preemptable_global, %eax
+; STATIC: movq weak_preemptable_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_preemptable_global@GOT(%eax), %eax
 
 @external_preemptable_global = external dso_preemptable global i32
@@ -90,7 +90,7 @@ define i32* @get_external_preemptable_global() {
   ret i32* @external_preemptable_global
 }
 ; CHECK: movq external_preemptable_global@GOTPCREL(%rip), %rax
-; STATIC: movl $external_preemptable_global, %eax
+; STATIC: movq external_preemptable_global@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_preemptable_global@GOT(%eax), %eax
 
 ; aliases
@@ -101,7 +101,7 @@ define i32* @get_strong_default_alias() {
   ret i32* @strong_default_alias
 }
 ; CHECK: movq strong_default_alias@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_default_alias, %eax
+; STATIC: movq strong_default_alias@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_default_alias@GOT(%eax), %eax
 
 @strong_hidden_alias = hidden alias i32, i32* @aliasee
@@ -117,7 +117,7 @@ define i32* @get_weak_default_alias() {
   ret i32* @weak_default_alias
 }
 ; CHECK: movq weak_default_alias@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_default_alias, %eax
+; STATIC: movq weak_default_alias@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_default_alias@GOT(%eax), %eax
 
 @strong_local_alias = dso_local alias i32, i32* @aliasee
@@ -142,7 +142,7 @@ define i32* @get_strong_preemptable_alias() {
   ret i32* @strong_preemptable_alias
 }
 ; CHECK: movq strong_preemptable_alias@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_preemptable_alias, %eax
+; STATIC: movq strong_preemptable_alias@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_preemptable_alias@GOT(%eax), %eax
 
 @weak_preemptable_alias = weak dso_preemptable alias i32, i32* @aliasee
@@ -150,7 +150,7 @@ define i32* @get_weak_preemptable_alias() {
   ret i32* @weak_preemptable_alias
 }
 ; CHECK: movq weak_preemptable_alias@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_preemptable_alias, %eax
+; STATIC: movq weak_preemptable_alias@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_preemptable_alias@GOT(%eax), %eax
 
 ; functions
@@ -162,7 +162,7 @@ define void()* @get_strong_default_function() {
   ret void()* @strong_default_function
 }
 ; CHECK: movq strong_default_function@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_default_function, %eax
+; STATIC: movq strong_default_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_default_function@GOT(%eax), %eax
 
 define hidden void @strong_hidden_function() {
@@ -182,7 +182,7 @@ define void()* @get_weak_default_function() {
   ret void()* @weak_default_function
 }
 ; CHECK: movq weak_default_function@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_default_function, %eax
+; STATIC: movq weak_default_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_default_function@GOT(%eax), %eax
 
 declare void @external_default_function()
@@ -190,7 +190,7 @@ define void()* @get_external_default_function() {
   ret void()* @external_default_function
 }
 ; CHECK: movq external_default_function@GOTPCREL(%rip), %rax
-; STATIC: movl $external_default_function, %eax
+; STATIC: movq external_default_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_default_function@GOT(%eax), %eax
 
 define dso_local void @strong_local_function() {
@@ -231,7 +231,7 @@ define void()* @get_strong_preemptable_function() {
   ret void()* @strong_preemptable_function
 }
 ; CHECK: movq strong_preemptable_function@GOTPCREL(%rip), %rax
-; STATIC: movl $strong_preemptable_function, %eax
+; STATIC: movq strong_preemptable_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl strong_preemptable_function@GOT(%eax), %eax
 
 define weak dso_preemptable void @weak_preemptable_function() {
@@ -241,7 +241,7 @@ define void()* @get_weak_preemptable_function() {
   ret void()* @weak_preemptable_function
 }
 ; CHECK: movq weak_preemptable_function@GOTPCREL(%rip), %rax
-; STATIC: movl $weak_preemptable_function, %eax
+; STATIC: movq weak_preemptable_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl weak_preemptable_function@GOT(%eax), %eax
 
 declare dso_preemptable void @external_preemptable_function()
@@ -249,7 +249,7 @@ define void()* @get_external_preemptable_function() {
   ret void()* @external_preemptable_function
 }
 ; CHECK: movq external_preemptable_function@GOTPCREL(%rip), %rax
-; STATIC: movl $external_preemptable_function, %eax
+; STATIC: movq external_preemptable_function@GOTPCREL(%rip), %rax
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
 
 !llvm.module.flags = !{!0}

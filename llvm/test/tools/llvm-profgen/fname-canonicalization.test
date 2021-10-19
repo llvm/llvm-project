@@ -1,0 +1,52 @@
+; Test unique linkage name decoding and canonicalization from dwarf debug info
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-dwarf.perfscript --binary=%S/Inputs/unique-linkage-name-dwarf.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DWARF-FNAME
+
+; CHECK-DWARF-FNAME:[main:1 @ foo]:225:0
+; CHECK-DWARF-FNAME: 2: 14
+; CHECK-DWARF-FNAME: 3: 29 bar.__uniq.26267048767521081047744692097241227776:14
+; CHECK-DWARF-FNAME:[main:1 @ foo:3 @ bar.__uniq.26267048767521081047744692097241227776]:84:0
+; CHECK-DWARF-FNAME: 1: 14
+
+
+; Test unique linkage name decoding and canonicalization from pseudo probe info
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/unique-linkage-name-probe.perfscript --binary=%S/Inputs/unique-linkage-name-probe.perfbin --output=%t --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-PROBE-FNAME
+
+; CHECK-PROBE-FNAME:[main:2 @ foo]:75:0
+; CHECK-PROBE-FNAME: 2: 15
+; CHECK-PROBE-FNAME: 3: 15
+; CHECK-PROBE-FNAME: 4: 15
+; CHECK-PROBE-FNAME: 6: 15
+; CHECK-PROBE-FNAME: 8: 15 _ZL3barii.__uniq.276699478366846449772231447066107882794:15
+; CHECK-PROBE-FNAME: !CFGChecksum: 563088904013236
+; CHECK-PROBE-FNAME:[main:2 @ foo:8 @ _ZL3barii.__uniq.276699478366846449772231447066107882794]:30:15
+; CHECK-PROBE-FNAME: 1: 15
+; CHECK-PROBE-FNAME: 4: 15
+; CHECK-PROBE-FNAME: !CFGChecksum: 72617220756
+
+
+; Original code:
+; Dwarf:  clang -O3 -funique-internal-linkage-names -g test.c -o a.out
+; Probe:  clang -O3 -funique-internal-linkage-names  -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Xclang -mdisable-tail-calls  -g test.c  -o a.out
+
+#include <stdio.h>
+
+static int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

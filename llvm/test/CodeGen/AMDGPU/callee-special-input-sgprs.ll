@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-code-object-v3 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5]
@@ -196,10 +196,10 @@ define hidden void @use_workgroup_id_yz() #1 {
 
 ; GCN-NOT: s6
 ; GCN: s_mov_b32 s4, s6
-; GCN-NEXT: s_getpc_b64 s[6:7]
-; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+4
 ; GCN: s_mov_b32 s32, 0
+; GCN: s_getpc_b64 s[6:7]
+; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
+; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+12
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
@@ -254,8 +254,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 1
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
-; GCN: s_mov_b32 s4, s6
 ; GCN: s_mov_b32 s5, s7
+; GCN: s_mov_b32 s4, s6
 ; GCN: s_mov_b32 s6, s8
 
 ; GCN: s_mov_b32 s32, 0
@@ -285,8 +285,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 1
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
-; GCN: s_mov_b32 s4, s7
 ; GCN: s_mov_b32 s5, s8
+; GCN: s_mov_b32 s4, s7
 
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -449,12 +449,36 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: enable_sgpr_dispatch_id = 1
 ; GCN: enable_sgpr_flat_scratch_init = 1
 
-; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s13, s15
+; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s14, s16
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
-define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
+  call void @use_every_sgpr_input()
+  ret void
+}
+
+; We have to pass the kernarg segment, but there are no kernel
+; arguments so null is passed.
+; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
+; GCN: enable_sgpr_workgroup_id_x = 1
+; GCN: enable_sgpr_workgroup_id_y = 1
+; GCN: enable_sgpr_workgroup_id_z = 1
+; GCN: enable_sgpr_workgroup_info = 0
+
+; GCN: enable_sgpr_private_segment_buffer = 1
+; GCN: enable_sgpr_dispatch_ptr = 1
+; GCN: enable_sgpr_queue_ptr = 1
+; GCN: enable_sgpr_kernarg_segment_ptr = 0
+; GCN: enable_sgpr_dispatch_id = 1
+; GCN: enable_sgpr_flat_scratch_init = 1
+
+; GCN: s_mov_b64 s[10:11], s[8:9]
+; GCN: s_mov_b64 s[8:9], 0{{$}}
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #1 {
   call void @use_every_sgpr_input()
   ret void
 }
@@ -522,22 +546,18 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
 ; GCN-DAG: s_mov_b32 s33, s32
-; GCN-DAG: s_add_u32 s32, s32, 0x400
+; GCN-DAG: s_addk_i32 s32, 0x400
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[4:5]
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[6:7]
-
 
 ; GCN: s_mov_b32 s4, s12
 ; GCN: s_mov_b32 s5, s13
 ; GCN: s_mov_b32 s6, s14
 
-; GCN: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[8:9]
-
-; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s12
-; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-57-9][0-9]*]], s13
 ; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-68-9][0-9]*]], s14
-
-
+; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-57-9][0-9]*]], s13
+; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s12
+; GCN: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[8:9]
 
 ; GCN: s_swappc_b64
 

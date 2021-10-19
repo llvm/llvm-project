@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ICF.h"
+#include "COFFLinkerContext.h"
 #include "Chunks.h"
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
@@ -36,11 +37,10 @@ using namespace llvm;
 namespace lld {
 namespace coff {
 
-static Timer icfTimer("ICF", Timer::root());
-
 class ICF {
 public:
-  void run(ArrayRef<Chunk *> v);
+  ICF(COFFLinkerContext &c, ICFLevel icfLevel) : icfLevel(icfLevel), ctx(c){};
+  void run();
 
 private:
   void segregate(size_t begin, size_t end, bool constant);
@@ -62,6 +62,9 @@ private:
   std::vector<SectionChunk *> chunks;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
+  ICFLevel icfLevel = ICFLevel::All;
+
+  COFFLinkerContext &ctx;
 };
 
 // Returns true if section S is subject of ICF.
@@ -81,8 +84,9 @@ bool ICF::isEligible(SectionChunk *c) {
   if (!c->isCOMDAT() || !c->live || writable)
     return false;
 
-  // Code sections are eligible.
-  if (c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
+  // Under regular (not safe) ICF, all code sections are eligible.
+  if ((icfLevel == ICFLevel::All) &&
+      c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
   // .pdata and .xdata unwind info sections are eligible.
@@ -131,7 +135,7 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
   auto considerForICF = [](const SectionChunk &assoc) {
     StringRef Name = assoc.getSectionName();
     return !(Name.startswith(".debug") || Name == ".gfids$y" ||
-             Name == ".gljmp$y");
+             Name == ".giats$y" || Name == ".gljmp$y");
   };
   auto ra = make_filter_range(a->children(), considerForICF);
   auto rb = make_filter_range(b->children(), considerForICF);
@@ -243,12 +247,12 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
 // Merge identical COMDAT sections.
 // Two sections are considered the same if their section headers,
 // contents and relocations are all the same.
-void ICF::run(ArrayRef<Chunk *> vec) {
-  ScopedTimer t(icfTimer);
+void ICF::run() {
+  ScopedTimer t(ctx.icfTimer);
 
   // Collect only mergeable sections and group by hash value.
   uint32_t nextId = 1;
-  for (Chunk *c : vec) {
+  for (Chunk *c : ctx.symtab.getChunks()) {
     if (auto *sc = dyn_cast<SectionChunk>(c)) {
       if (isEligible(sc))
         chunks.push_back(sc);
@@ -259,7 +263,7 @@ void ICF::run(ArrayRef<Chunk *> vec) {
 
   // Make sure that ICF doesn't merge sections that are being handled by string
   // tail merging.
-  for (MergeChunk *mc : MergeChunk::instances)
+  for (MergeChunk *mc : ctx.mergeChunkInstances)
     if (mc)
       for (SectionChunk *sc : mc->sections)
         sc->eqClass[0] = nextId++;
@@ -314,7 +318,9 @@ void ICF::run(ArrayRef<Chunk *> vec) {
 }
 
 // Entry point to ICF.
-void doICF(ArrayRef<Chunk *> chunks) { ICF().run(chunks); }
+void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
+  ICF(ctx, icfLevel).run();
+}
 
 } // namespace coff
 } // namespace lld

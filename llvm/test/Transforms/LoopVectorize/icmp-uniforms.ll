@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -instcombine -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
@@ -35,12 +36,13 @@ for.end:
 }
 
 ; Check for crash exposed by D76992.
-; CHECK:       N0 [label =
-; CHECK-NEXT:    "loop:\n" +
-; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi 0, %iv.next\l" +
-; CHECK-NEXT:      "WIDEN\l""  %cond0 = icmp %iv, 13\l" +
-; CHECK-NEXT:      "WIDEN-SELECT%s = select %cond0, 10, 20\l"
-; CHECK-NEXT:  ]
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
+; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
+; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
+; CHECK-NEXT: No successor
+; CHECK-NEXT: }
 define void @test() {
 entry:
   br label %loop

@@ -19,6 +19,7 @@
 
 #include "lsan_allocator.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_stoptheworld_fuchsia.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
 
 // Ensure that the Zircon system ABI is linked in.
@@ -106,9 +107,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
     auto params = static_cast<const Params *>(data);
     uptr begin = reinterpret_cast<uptr>(chunk);
     uptr end = begin + size;
-    auto i = __sanitizer::InternalLowerBound(params->allocator_caches, 0,
-                                             params->allocator_caches.size(),
-                                             begin, CompareLess<uptr>());
+    auto i = __sanitizer::InternalLowerBound(params->allocator_caches, begin);
     if (i < params->allocator_caches.size() &&
         params->allocator_caches[i] >= begin &&
         end - params->allocator_caches[i] <= sizeof(AllocatorCache)) {
@@ -147,7 +146,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
               &params->argument->frontier);
         }
 
-        params->callback({}, params->argument);
+        params->callback(SuspendedThreadsListFuchsia(), params->argument);
       },
       &params);
 

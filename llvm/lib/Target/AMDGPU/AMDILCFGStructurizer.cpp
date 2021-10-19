@@ -6,43 +6,18 @@
 //
 //==-----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "R600InstrInfo.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
 #include "R600RegisterInfo.h"
-#include "llvm/ADT/DepthFirstIterator.h"
+#include "R600Subtarget.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstddef>
-#include <deque>
-#include <iterator>
-#include <map>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -152,6 +127,10 @@ public:
   bool prepare();
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    // FIXME: This pass causes verification failures.
+    MF.getProperties().set(
+        MachineFunctionProperties::Property::FailsVerification);
+
     TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();
     LLVM_DEBUG(MF.dump(););
@@ -196,7 +175,7 @@ protected:
   static void PrintLoopinfo(const MachineLoopInfo &LoopInfo) {
     for (MachineLoop::iterator iter = LoopInfo.begin(),
          iterEnd = LoopInfo.end(); iter != iterEnd; ++iter) {
-      (*iter)->print(dbgs(), 0);
+      (*iter)->print(dbgs());
     }
   }
 
@@ -270,7 +249,7 @@ protected:
   int loopendPatternMatch();
   int mergeLoop(MachineLoop *LoopRep);
 
-  /// return true iff src1Blk->succ_size() == 0 && src1Blk and src2Blk are in
+  /// return true iff src1Blk->succ_empty() && src1Blk and src2Blk are in
   /// the same loop with LoopLandInfo without explicitly keeping track of
   /// loopContBlks and loopBreakBlks, this is a method to get the information.
   bool isSameloopDetachedContbreak(MachineBasicBlock *Src1MBB,
@@ -467,7 +446,7 @@ MachineInstr *AMDGPUCFGStructurizer::insertInstrBefore(MachineBasicBlock *MBB,
                                                        const DebugLoc &DL) {
   MachineInstr *MI =
       MBB->getParent()->CreateMachineInstr(TII->get(NewOpcode), DL);
-  if (MBB->begin() != MBB->end())
+  if (!MBB->empty())
     MBB->insert(MBB->begin(), MI);
   else
     MBB->push_back(MI);
@@ -642,7 +621,7 @@ MachineInstr *AMDGPUCFGStructurizer::getReturnInstr(MachineBasicBlock *MBB) {
 
 bool AMDGPUCFGStructurizer::isReturnBlock(MachineBasicBlock *MBB) {
   MachineInstr *MI = getReturnInstr(MBB);
-  bool IsReturn = (MBB->succ_size() == 0);
+  bool IsReturn = MBB->succ_empty();
   if (MI)
     assert(IsReturn);
   else if (IsReturn)
@@ -833,7 +812,7 @@ bool AMDGPUCFGStructurizer::run() {
 
     MachineBasicBlock *EntryMBB =
         *GraphTraits<MachineFunction *>::nodes_begin(FuncRep);
-    if (EntryMBB->succ_size() == 0) {
+    if (EntryMBB->succ_empty()) {
       Finish = true;
       LLVM_DEBUG(dbgs() << "Reduce to one block\n";);
     } else {
@@ -1079,7 +1058,7 @@ int AMDGPUCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
 
 bool AMDGPUCFGStructurizer::isSameloopDetachedContbreak(
     MachineBasicBlock *Src1MBB, MachineBasicBlock *Src2MBB) {
-  if (Src1MBB->succ_size() == 0) {
+  if (Src1MBB->succ_empty()) {
     MachineLoop *LoopRep = MLI->getLoopFor(Src1MBB);
     if (LoopRep&& LoopRep == MLI->getLoopFor(Src2MBB)) {
       MachineBasicBlock *&TheEntry = LLInfoMap[LoopRep];
@@ -1418,7 +1397,7 @@ void AMDGPUCFGStructurizer::mergeIfthenelseBlock(MachineInstr *BranchMI,
     MBB->splice(I, FalseMBB, FalseMBB->begin(),
                    FalseMBB->end());
     MBB->removeSuccessor(FalseMBB, true);
-    if (LandMBB && FalseMBB->succ_size() != 0)
+    if (LandMBB && !FalseMBB->succ_empty())
       FalseMBB->removeSuccessor(LandMBB, true);
     retireBlock(FalseMBB);
     MLI->removeBlock(FalseMBB);
@@ -1664,8 +1643,7 @@ void AMDGPUCFGStructurizer::retireBlock(MachineBasicBlock *MBB) {
     SrcBlkInfo = new BlockInformation();
 
   SrcBlkInfo->IsRetired = true;
-  assert(MBB->succ_size() == 0 && MBB->pred_size() == 0
-         && "can't retire block yet");
+  assert(MBB->succ_empty() && MBB->pred_empty() && "can't retire block yet");
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPUCFGStructurizer, "amdgpustructurizer",

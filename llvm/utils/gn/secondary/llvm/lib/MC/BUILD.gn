@@ -2,7 +2,9 @@ static_library("MC") {
   output_name = "LLVMMC"
   deps = [
     "//llvm/include/llvm/Config:config",
+    "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
   ]
   public_deps = [
@@ -17,6 +19,7 @@ static_library("MC") {
     "MCAsmInfoCOFF.cpp",
     "MCAsmInfoDarwin.cpp",
     "MCAsmInfoELF.cpp",
+    "MCAsmInfoGOFF.cpp",
     "MCAsmInfoWasm.cpp",
     "MCAsmInfoXCOFF.cpp",
     "MCAsmMacro.cpp",
@@ -43,6 +46,7 @@ static_library("MC") {
     "MCObjectFileInfo.cpp",
     "MCObjectStreamer.cpp",
     "MCObjectWriter.cpp",
+    "MCPseudoProbe.cpp",
     "MCRegisterInfo.cpp",
     "MCSchedule.cpp",
     "MCSection.cpp",
@@ -69,6 +73,7 @@ static_library("MC") {
     "MachObjectWriter.cpp",
     "StringTableBuilder.cpp",
     "SubtargetFeature.cpp",
+    "TargetRegistry.cpp",
     "WasmObjectWriter.cpp",
     "WinCOFFObjectWriter.cpp",
     "XCOFFObjectWriter.cpp",

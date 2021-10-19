@@ -41,6 +41,9 @@ struct CodeGenTypeCache {
   /// int
   llvm::IntegerType *IntTy;
 
+  /// char
+  llvm::IntegerType *CharTy;
+
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
     llvm::IntegerType *IntPtrTy;
@@ -64,6 +67,12 @@ struct CodeGenTypeCache {
   union {
     llvm::PointerType *AllocaVoidPtrTy;
     llvm::PointerType *AllocaInt8PtrTy;
+  };
+
+  /// void* in default globals address space
+  union {
+    llvm::PointerType *GlobalsVoidPtrTy;
+    llvm::PointerType *GlobalsInt8PtrTy;
   };
 
   /// The size and alignment of the builtin C type 'int'.  This comes

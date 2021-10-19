@@ -160,7 +160,7 @@ void Scalar::GetValue(Stream *s, bool show_type) const {
   case e_void:
     break;
   case e_int:
-    s->PutCString(m_integer.toString(10));
+    s->PutCString(llvm::toString(m_integer, 10));
     break;
   case e_float:
     llvm::SmallString<24> string;
@@ -714,7 +714,7 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
       return Status("insufficient data");
     m_type = e_int;
     m_integer =
-        APSInt(APInt::getNullValue(8 * byte_size), encoding == eEncodingUint);
+        APSInt(APInt::getZero(8 * byte_size), encoding == eEncodingUint);
     if (data.GetByteOrder() == endian::InlHostByteOrder()) {
       llvm::LoadIntFromMemory(m_integer, data.GetDataStart(), byte_size);
     } else {

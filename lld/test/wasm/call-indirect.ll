@@ -35,7 +35,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 
 ; CHECK:      !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -63,14 +63,15 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 3, 1, 3, 4 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
-; CHECK-NEXT:       - ElemType:        FUNCREF
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Minimum:         0x3
+; CHECK-NEXT:           Maximum:         0x3
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Minimum:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -121,7 +122,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Body:            42010B
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Locals:
-; CHECK-NEXT:         Body:            28028088808000118080808000001A28028488808000118180808000001A0B
+; CHECK-NEXT:         Body:            410028028088808000118080808000001A410028028488808000118180808000001A0B
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            41020B
@@ -152,4 +153,10 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           4
 ; CHECK-NEXT:         Name:            call_ptr
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
+; CHECK-NEXT:     DataSegmentNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            .data
 ; CHECK-NEXT: ...

@@ -61,7 +61,7 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     S << ++LastUnique;
 
     // Try insert the vmap entry with this suffix.
-    auto IterBool = vmap.insert(std::make_pair(UniqueName, V));
+    auto IterBool = vmap.insert(std::make_pair(UniqueName.str(), V));
     if (IterBool.second)
       return &*IterBool.first;
   }
@@ -100,6 +100,9 @@ void ValueSymbolTable::removeValueName(ValueName *V) {
 /// it into the symbol table with the specified name.  If it conflicts, it
 /// auto-renames the name and returns that instead.
 ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
+  if (MaxNameSize > -1 && Name.size() > (unsigned)MaxNameSize)
+    Name = Name.substr(0, std::max(1u, (unsigned)MaxNameSize));
+
   // In the common case, the name is not already in the symbol table.
   auto IterBool = vmap.insert(std::make_pair(Name, V));
   if (IterBool.second) {

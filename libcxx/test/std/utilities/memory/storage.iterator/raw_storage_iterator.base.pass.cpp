@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // raw_storage_iterator
 
 #include <memory>
@@ -13,13 +17,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 11
-#define DELETE_FUNCTION = delete
-#else
-#define DELETE_FUNCTION
-#endif
-
 
 int A_constructed = 0;
 
@@ -33,12 +30,11 @@ public:
     ~A() {--A_constructed; data_ = 0;}
 
     bool operator==(int i) const {return data_ == i;}
-    A* operator& () DELETE_FUNCTION;
+    A* operator& () = delete;
 };
 
 int main(int, char**)
 {
-#if TEST_STD_VER >= 14
     typedef std::aligned_storage<3*sizeof(A), std::alignment_of<A>::value>::type
             Storage;
     Storage buffer;
@@ -53,7 +49,6 @@ int main(int, char**)
         assert(A_constructed == i+1);
         assert(it.base() == ap + 1);  // next place to write
     }
-#endif
 
-  return 0;
+    return 0;
 }

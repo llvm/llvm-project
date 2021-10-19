@@ -4,24 +4,24 @@
 
 define void @lame_encode_buffer_interleaved() local_unnamed_addr {
 ; CHECK-LABEL: lame_encode_buffer_interleaved:
-; CHECK:      # %bb.0:
-; CHECK-NEXT:   lha 3, 0(3)
-; CHECK-NEXT:   li 5, 1
-; CHECK-NEXT:   lhz 4, 0(0)
-; CHECK-NEXT:   sldi 5, 5, 62
-; CHECK-NEXT:   mtctr 5
-; CHECK-NEXT:   srawi 3, 3, 1
-; CHECK-NEXT:   addze 3, 3
-; CHECK-NEXT:   .p2align 4
-; CHECK-NEXT: .LBB0_1:
-; CHECK-NEXT:   extsh 4, 4
-; CHECK-NEXT:   srawi 4, 4, 1
-; CHECK-NEXT:   addze 4, 4
-; CHECK-NEXT:   bdnz .LBB0_1
-; CHECK-NEXT: # %bb.2:
-; CHECK-NEXT:   sth 4, 0(0)
-; CHECK-NEXT:   sth 3, 0(3)
-; CHECK-NEXT:   blr
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lha 3, 0(3)
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    lhz 4, 0(0)
+; CHECK-NEXT:    rldic 5, 5, 62, 1
+; CHECK-NEXT:    mtctr 5
+; CHECK-NEXT:    srawi 3, 3, 1
+; CHECK-NEXT:    addze 3, 3
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    extsh 4, 4
+; CHECK-NEXT:    srawi 4, 4, 1
+; CHECK-NEXT:    addze 4, 4
+; CHECK-NEXT:    bdnz .LBB0_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    sth 4, 0(0)
+; CHECK-NEXT:    sth 3, 0(3)
+; CHECK-NEXT:    blr
   br label %1
 
 1:                                                ; preds = %1, %0

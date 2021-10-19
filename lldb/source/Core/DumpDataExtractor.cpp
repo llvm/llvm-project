@@ -14,8 +14,10 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -32,10 +34,10 @@
 #include <memory>
 #include <string>
 
-#include <assert.h>
-#include <ctype.h>
-#include <inttypes.h>
-#include <math.h>
+#include <cassert>
+#include <cctype>
+#include <cinttypes>
+#include <cmath>
 
 #include <bitset>
 #include <sstream>
@@ -50,7 +52,9 @@ static float half2float(uint16_t half) {
     float f;
     uint32_t u;
   } u;
-  int32_t v = (int16_t)half;
+  // Sign extend to 4 byte.
+  int32_t sign_extended = static_cast<int16_t>(half);
+  uint32_t v = static_cast<uint32_t>(sign_extended);
 
   if (0 == (v & 0x7c00)) {
     u.u = v & 0x80007FFFU;
@@ -112,7 +116,7 @@ static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 bool is_signed, unsigned radix) {
   llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
   if (apint.hasValue()) {
-    std::string apint_str(apint.getValue().toString(radix, is_signed));
+    std::string apint_str = toString(apint.getValue(), radix, is_signed);
     switch (radix) {
     case 2:
       s->Write("0b", 2);
@@ -224,6 +228,29 @@ static void DumpCharacter(Stream &s, const char c) {
     return;
   }
   s.Printf("\\x%2.2x", c);
+}
+
+/// Dump a floating point type.
+template <typename FloatT>
+void DumpFloatingPoint(std::ostringstream &ss, FloatT f) {
+  static_assert(std::is_floating_point<FloatT>::value,
+                "Only floating point types can be dumped.");
+  // NaN and Inf are potentially implementation defined and on Darwin it
+  // seems NaNs are printed without their sign. Manually implement dumping them
+  // here to avoid having to deal with platform differences.
+  if (std::isnan(f)) {
+    if (std::signbit(f))
+      ss << '-';
+    ss << "nan";
+    return;
+  }
+  if (std::isinf(f)) {
+    if (std::signbit(f))
+      ss << '-';
+    ss << "inf";
+    return;
+  }
+  ss << f;
 }
 
 lldb::offset_t lldb_private::DumpDataExtractor(
@@ -566,14 +593,14 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             f = DE.GetFloat(&offset);
           }
           ss.precision(std::numeric_limits<float>::digits10);
-          ss << f;
+          DumpFloatingPoint(ss, f);
         } else if (item_byte_size == sizeof(double)) {
           ss.precision(std::numeric_limits<double>::digits10);
-          ss << DE.GetDouble(&offset);
+          DumpFloatingPoint(ss, DE.GetDouble(&offset));
         } else if (item_byte_size == sizeof(long double) ||
                    item_byte_size == 10) {
           ss.precision(std::numeric_limits<long double>::digits10);
-          ss << DE.GetLongDouble(&offset);
+          DumpFloatingPoint(ss, DE.GetLongDouble(&offset));
         } else {
           s->Printf("error: unsupported byte size (%" PRIu64
                     ") for float format",
@@ -611,6 +638,21 @@ lldb::offset_t lldb_private::DumpDataExtractor(
             so_addr.SetOffset(addr);
             so_addr.Dump(s, exe_scope,
                          Address::DumpStyleResolvedPointerDescription);
+            if (ProcessSP process_sp = exe_scope->CalculateProcess()) {
+              if (ABISP abi_sp = process_sp->GetABI()) {
+                addr_t addr_fixed = abi_sp->FixCodeAddress(addr);
+                if (target_sp->GetSectionLoadList().ResolveLoadAddress(
+                        addr_fixed, so_addr)) {
+                  s->PutChar(' ');
+                  s->Printf("(0x%*.*" PRIx64 ")", (int)(2 * item_byte_size),
+                            (int)(2 * item_byte_size), addr_fixed);
+                  s->PutChar(' ');
+                  so_addr.Dump(s, exe_scope,
+                               Address::DumpStyleResolvedDescription,
+                               Address::DumpStyleModuleWithFileAddress);
+                }
+              }
+            }
           }
         }
       }

@@ -148,6 +148,24 @@ TEST_CASE(path_ctor_dne) {
 
 TEST_CASE(path_ctor_cannot_resolve) {
   using namespace fs;
+#ifdef _WIN32
+  // Windows doesn't support setting perms::none to trigger failures
+  // reading directories; test using a special inaccessible directory
+  // instead.
+  const path dir = GetWindowsInaccessibleDir();
+  if (dir.empty())
+    TEST_UNSUPPORTED();
+  const path file = dir / "file";
+  {
+    std::error_code ec = GetTestEC();
+    directory_entry ent(file, ec);
+    TEST_CHECK(ErrorIs(ec, std::errc::no_such_file_or_directory));
+    TEST_CHECK(ent.path() == file);
+  }
+  {
+    TEST_CHECK_NO_THROW(directory_entry(file));
+  }
+#else
   scoped_test_env env;
   const path dir = env.create_dir("dir");
   const path file = env.create_file("dir/file", 42);
@@ -179,6 +197,7 @@ TEST_CASE(path_ctor_cannot_resolve) {
     TEST_CHECK_NO_THROW(directory_entry(sym_in_dir));
     TEST_CHECK_NO_THROW(directory_entry(sym_out_of_dir));
   }
+#endif
 }
 
 TEST_SUITE_END()

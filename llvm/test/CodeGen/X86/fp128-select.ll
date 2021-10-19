@@ -14,7 +14,7 @@ define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
 ; SSE-NEXT:    testl %edx, %edx
 ; SSE-NEXT:    jne .LBB0_1
 ; SSE-NEXT:  # %bb.2:
-; SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq
 ; SSE-NEXT:  .LBB0_1:
@@ -50,18 +50,18 @@ define fp128 @test_select_cc(fp128, fp128) {
 ; SSE-NEXT:    .cfi_offset %rbx, -16
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE-NEXT:    callq __netf2
+; SSE-NEXT:    callq __netf2@PLT
 ; SSE-NEXT:    movl %eax, %ebx
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    callq __eqtf2
+; SSE-NEXT:    callq __eqtf2@PLT
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    je .LBB1_1
 ; SSE-NEXT:  # %bb.2: # %BB0
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    jmp .LBB1_3
 ; SSE-NEXT:  .LBB1_1:
-; SSE-NEXT:    movaps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:  .LBB1_3: # %BB0
 ; SSE-NEXT:    testl %ebx, %ebx
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
@@ -96,13 +96,13 @@ define fp128 @test_select_cc(fp128, fp128) {
 ; NOSSE-NEXT:    movq %rdx, %rbx
 ; NOSSE-NEXT:    movq %rsi, %r14
 ; NOSSE-NEXT:    movq %rdi, %r15
-; NOSSE-NEXT:    callq __netf2
+; NOSSE-NEXT:    callq __netf2@PLT
 ; NOSSE-NEXT:    movl %eax, %ebp
 ; NOSSE-NEXT:    movq %r15, %rdi
 ; NOSSE-NEXT:    movq %r14, %rsi
 ; NOSSE-NEXT:    movq %rbx, %rdx
 ; NOSSE-NEXT:    movq %r12, %rcx
-; NOSSE-NEXT:    callq __eqtf2
+; NOSSE-NEXT:    callq __eqtf2@PLT
 ; NOSSE-NEXT:    movl %eax, %ecx
 ; NOSSE-NEXT:    xorl %eax, %eax
 ; NOSSE-NEXT:    testl %ecx, %ecx

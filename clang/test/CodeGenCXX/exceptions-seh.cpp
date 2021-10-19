@@ -23,26 +23,26 @@ extern "C" void use_cxx() {
 
 // CXXEH-LABEL: define dso_local void @use_cxx()
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*)
-// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // CXXEH: invoke void @might_throw()
 // CXXEH:       to label %[[cont:[^ ]*]] unwind label %[[lpad:[^ ]*]]
 //
 // CXXEH: [[cont]]
-// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // CXXEH: ret void
 //
 // CXXEH: [[lpad]]
 // CXXEH: cleanuppad
-// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// CXXEH: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // CXXEH: cleanupret
 
 // NOCXX-LABEL: define dso_local void @use_cxx()
 // NOCXX-NOT: invoke
-// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// NOCXX: call %struct.HasCleanup* @"??0HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: call void @might_throw()
 // NOCXX-NOT: invoke
-// NOCXX: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* %{{.*}})
+// NOCXX: call void @"??1HasCleanup@@QEAA@XZ"(%struct.HasCleanup* {{[^,]*}} %{{.*}})
 // NOCXX-NOT: invoke
 // NOCXX: ret void
 
@@ -116,7 +116,7 @@ void use_seh_in_lambda() {
 // NOCXX-NOT: invoke
 // NOCXX: ret void
 
-// CHECK-LABEL: define internal void @"??R<lambda_0>@?0??use_seh_in_lambda@@YAXXZ@QEBA@XZ"(%class.anon* %this)
+// CHECK-LABEL: define internal void @"??R<lambda_0>@?0??use_seh_in_lambda@@YAXXZ@QEBA@XZ"(%class.anon* {{[^,]*}} %this)
 // CXXEH-SAME:  personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*)
 // CHECK: invoke void @might_throw() #[[NOINLINE]]
 // CHECK: catchpad
@@ -164,3 +164,5 @@ void use_inline() {
 // CHECK: store i32 1234, i32* @my_unique_global
 
 // CHECK: attributes #[[NOINLINE]] = { {{.*noinline.*}} }
+
+void seh_in_noexcept() noexcept { __try {} __finally {} }

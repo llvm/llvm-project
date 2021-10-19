@@ -192,3 +192,29 @@ namespace std_example {
   using c3 = C2_check<has_inner>; // expected-error{{constraints not satisfied for class template 'C2_check' [with T = std_example::has_inner]}}
   using c4 = C3_check<void>; // expected-error{{constraints not satisfied for class template 'C3_check' [with T = void]}}
 }
+
+namespace PR48656 {
+
+template <typename T> concept C = requires { requires requires { T::a; }; };
+// expected-note@-1 {{because 'T::a' would be invalid: no member named 'a' in 'PR48656::T1'}}
+
+template <C...> struct A {};
+// expected-note@-1 {{because 'PR48656::T1' does not satisfy 'C'}}
+
+struct T1 {};
+template struct A<T1>; // expected-error {{constraints not satisfied for class template 'A' [with $0 = <PR48656::T1>]}}
+
+struct T2 { static constexpr bool a = false; };
+template struct A<T2>;
+
+template <typename T> struct T3 {
+  static void m(auto) requires requires { T::fail; } {}
+  // expected-note@-1 {{constraints not satisfied}}
+  // expected-note@-2 {{type 'int' cannot be used prior to '::'}}
+};
+template <typename... Args> void t3(Args... args) { (..., T3<int>::m(args)); }
+// expected-error@-1 {{no matching function for call to 'm'}}
+
+template void t3<int>(int); // expected-note {{requested here}}
+
+} // namespace PR48656

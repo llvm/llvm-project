@@ -22,6 +22,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -68,13 +69,15 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
-
   unsigned getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
   unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+  unsigned getSImm13OpValue(const MCInst &MI, unsigned OpNo,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
   unsigned getBranchPredTargetOpValue(const MCInst &MI, unsigned OpNo,
                                       SmallVectorImpl<MCFixup> &Fixups,
                                       const MCSubtargetInfo &STI) const;
@@ -146,20 +149,50 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   return 0;
 }
 
+unsigned
+SparcMCCodeEmitter::getSImm13OpValue(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isImm())
+    return MO.getImm();
+
+  assert(MO.isExpr() &&
+         "getSImm13OpValue expects only expressions or an immediate");
+
+  const MCExpr *Expr = MO.getExpr();
+
+  // Constant value, no fixup is needed
+  if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
+    return CE->getValue();
+
+  MCFixupKind Kind;
+  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr)) {
+    Kind = MCFixupKind(SExpr->getFixupKind());
+  } else {
+    bool IsPic = Ctx.getObjectFileInfo()->isPositionIndependent();
+    Kind = IsPic ? MCFixupKind(Sparc::fixup_sparc_got13)
+                 : MCFixupKind(Sparc::fixup_sparc_13);
+  }
+
+  Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  return 0;
+}
+
 unsigned SparcMCCodeEmitter::
 getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
                      SmallVectorImpl<MCFixup> &Fixups,
                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm())
-    return getMachineOpValue(MI, MO, Fixups, STI);
+  const MCExpr *Expr = MO.getExpr();
+  const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Expr);
 
   if (MI.getOpcode() == SP::TLS_CALL) {
     // No fixups for __tls_get_addr. Will emit for fixups for tls_symbol in
     // encodeInstruction.
 #ifndef NDEBUG
     // Verify that the callee is actually __tls_get_addr.
-    const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(MO.getExpr());
     assert(SExpr && SExpr->getSubExpr()->getKind() == MCExpr::SymbolRef &&
            "Unexpected expression in TLS_CALL");
     const MCSymbolRefExpr *SymExpr = cast<MCSymbolRefExpr>(SExpr->getSubExpr());
@@ -169,15 +202,8 @@ getCallTargetOpValue(const MCInst &MI, unsigned OpNo,
     return 0;
   }
 
-  MCFixupKind fixupKind = (MCFixupKind)Sparc::fixup_sparc_call30;
-
-  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(MO.getExpr())) {
-    if (SExpr->getKind() == SparcMCExpr::VK_Sparc_WPLT30)
-      fixupKind = (MCFixupKind)Sparc::fixup_sparc_wplt30;
-  }
-
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(), fixupKind));
-
+  MCFixupKind Kind = MCFixupKind(SExpr->getFixupKind());
+  Fixups.push_back(MCFixup::create(0, Expr, Kind));
   return 0;
 }
 

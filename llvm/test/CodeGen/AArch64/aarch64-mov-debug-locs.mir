@@ -189,9 +189,9 @@ body:             |
     DBG_VALUE $w0, $noreg, !15, !DIExpression(), debug-location !19
     DBG_VALUE $w0, $noreg, !15, !DIExpression(), debug-location !19
     DBG_VALUE $x1, $noreg, !16, !DIExpression(), debug-location !19
-    early-clobber $sp = frame-setup STPXpre killed $x22, killed $x21, $sp, -6 :: (store 8 into %stack.5), (store 8 into %stack.4)
-    frame-setup STPXi killed $x20, killed $x19, $sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.2)
-    frame-setup STPXi $fp, killed $lr, $sp, 4 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre killed $x22, killed $x21, $sp, -6 :: (store (s64) into %stack.5), (store (s64) into %stack.4)
+    frame-setup STPXi killed $x20, killed $x19, $sp, 2 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
+    frame-setup STPXi $fp, killed $lr, $sp, 4 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 32, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !23
@@ -220,7 +220,7 @@ body:             |
     liveins: $x19, $x20, $x21, $x22
   
     DBG_VALUE $x20, $noreg, !17, !DIExpression(), debug-location !20
-    renamable $x2 = LDRXroX renamable $x19, renamable $x20, 0, 1, debug-location !25 :: (load 8 from %ir.scevgep, !tbaa !28)
+    renamable $x2 = LDRXroX renamable $x19, renamable $x20, 0, 1, debug-location !25 :: (load (s64) from %ir.scevgep, !tbaa !28)
     $x0 = ORRXrs $xzr, $x21, 0, debug-location !32
     $w1 = ORRWrs $wzr, $w20, 0, debug-location !32
     BL @printf, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $w1, implicit killed $x2, implicit-def $sp, implicit-def dead $w0, debug-location !32
@@ -230,10 +230,10 @@ body:             |
     Bcc 1, %bb.2, implicit killed $nzcv, debug-location !23
   
   bb.3.for.cond.cleanup:
-    $fp, $lr = frame-destroy LDPXi $sp, 4, debug-location !27 :: (load 8 from %stack.1), (load 8 from %stack.0)
-    $x20, $x19 = frame-destroy LDPXi $sp, 2, debug-location !27 :: (load 8 from %stack.3), (load 8 from %stack.2)
+    $fp, $lr = frame-destroy LDPXi $sp, 4, debug-location !27 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
+    $x20, $x19 = frame-destroy LDPXi $sp, 2, debug-location !27 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
     $w0 = ORRWrs $wzr, $wzr, 0, debug-location !27
-    early-clobber $sp, $x22, $x21 = frame-destroy LDPXpost $sp, 6, debug-location !27 :: (load 8 from %stack.5), (load 8 from %stack.4)
+    early-clobber $sp, $x22, $x21 = frame-destroy LDPXpost $sp, 6, debug-location !27 :: (load (s64) from %stack.5), (load (s64) from %stack.4)
     RET undef $lr, implicit killed $w0, debug-location !27
 
 ...

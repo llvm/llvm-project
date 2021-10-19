@@ -17,6 +17,7 @@ setup(
     author_email = lit.__email__,
     url = 'http://llvm.org',
     license = 'Apache-2.0 with LLVM exception',
+    license_files = ['LICENSE.TXT'],
 
     description = "A Software Testing Tool",
     keywords = 'test C++ automatic discovery',
@@ -53,7 +54,7 @@ Source
 ======
 
 The *lit* source is available as part of LLVM, in the LLVM source repository:
-https://github.com/llvm/llvm-project/tree/master/llvm/utils/lit
+https://github.com/llvm/llvm-project/tree/main/llvm/utils/lit
 """,
 
     classifiers=[

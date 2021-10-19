@@ -12,13 +12,13 @@
 void foo();
 void __cdecl foo();
 void __cdecl foo() {}
-// GCABI-LABEL: define void @_Z3foov()
+// GCABI-LABEL: define{{.*}} void @_Z3foov()
 // MSABI: define dso_local void @"?foo@@YAXXZ"
 
 void __cdecl bar();
 void bar();
 void bar() {}
-// GCABI-LABEL: define void @_Z3barv()
+// GCABI-LABEL: define{{.*}} void @_Z3barv()
 // MSABI: define dso_local void @"?bar@@YAXXZ"
 
 // Test that it's OK to mark either the method declaration or method definition
@@ -33,17 +33,17 @@ public:
 };
 
 void METHOD_CC A::baz() {}
-// GCABI-LABEL: define void @_ZN1A3bazEv
+// GCABI-LABEL: define{{.*}} void @_ZN1A3bazEv
 // MSABI: define dso_local x86_thiscallcc void @"?baz@A@@QAEXXZ"
 void A::qux() {}
-// GCABI-LABEL: define void @_ZN1A3quxEv
+// GCABI-LABEL: define{{.*}} void @_ZN1A3quxEv
 // MSABI: define dso_local x86_thiscallcc void @"?qux@A@@QAEXXZ"
 
 void __cdecl static_baz() {}
-// GCABI-LABEL: define void @_Z10static_bazv
+// GCABI-LABEL: define{{.*}} void @_Z10static_bazv
 // MSABI: define dso_local void @"?static_baz@@YAXXZ"
 void static_qux() {}
-// GCABI-LABEL: define void @_Z10static_quxv
+// GCABI-LABEL: define{{.*}} void @_Z10static_quxv
 // MSABI: define dso_local void @"?static_qux@@YAXXZ"
 
 namespace PR31656 {

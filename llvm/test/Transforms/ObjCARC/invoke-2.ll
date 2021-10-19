@@ -4,7 +4,7 @@ target triple = "x86_64-unknown-windows-msvc"
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare dllimport i8* @llvm.objc.msgSend(i8*, i8*, ...) local_unnamed_addr
+declare dllimport i8* @objc_msgSend(i8*, i8*, ...) local_unnamed_addr
 
 declare dllimport i8* @llvm.objc.retain(i8* returned) local_unnamed_addr
 declare dllimport void @llvm.objc.release(i8*) local_unnamed_addr
@@ -20,7 +20,7 @@ define void @f(i8* %i) local_unnamed_addr personality i8* bitcast (i32 (...)* @_
 entry:
   %0 = tail call i8* @llvm.objc.retain(i8* %i)
   %1 = load i8*, i8** @llvm.objc.SELECTOR_REFERENCES_, align 8, !invariant.load !0
-  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i8* (i8*, i8*)*)(i8* %0, i8* %1)
+  %call = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %0, i8* %1)
           to label %invoke.cont unwind label %catch.dispatch, !clang.arc.no_objc_arc_exceptions !0
 
 catch.dispatch:                                   ; preds = %entry

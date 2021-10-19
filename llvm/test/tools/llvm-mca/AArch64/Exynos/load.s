@@ -20,7 +20,7 @@ ldpsw	x0, x1, [sp, #8]!
 
 # ALL:      Iterations:        100
 # ALL-NEXT: Instructions:      1200
-# ALL-NEXT: Total Cycles:      1904
+# ALL-NEXT: Total Cycles:      1304
 
 # M3-NEXT:  Total uOps:        1600
 # M4-NEXT:  Total uOps:        1400
@@ -28,11 +28,11 @@ ldpsw	x0, x1, [sp, #8]!
 
 # ALL:      Dispatch Width:    6
 
-# M3-NEXT:  uOps Per Cycle:    0.84
-# M4-NEXT:  uOps Per Cycle:    0.74
-# M5-NEXT:  uOps Per Cycle:    0.74
+# M3-NEXT:  uOps Per Cycle:    1.23
+# M4-NEXT:  uOps Per Cycle:    1.07
+# M5-NEXT:  uOps Per Cycle:    1.07
 
-# ALL-NEXT: IPC:               0.63
+# ALL-NEXT: IPC:               0.92
 # ALL-NEXT: Block RThroughput: 6.0
 
 # ALL:      Instruction Info:

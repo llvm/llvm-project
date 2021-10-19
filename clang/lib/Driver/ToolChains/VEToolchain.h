@@ -26,6 +26,7 @@ protected:
   Tool *buildLinker() const override;
 
 public:
+  bool IsIntegratedAssemblerDefault() const override { return true; }
   bool isPICDefault() const override;
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;

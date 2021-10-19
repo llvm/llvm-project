@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mattr=-code-object-v3 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,MESA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-unknown -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,MESA,ALL %s
 
@@ -75,13 +75,18 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(i32 addrspace(1)* %out
   ret void
 }
 
+; Mesa implies 16-bytes are always allocated, hsa requires the
+; attribute for the additional space.
 ; ALL-LABEL: {{^}}test_no_kernargs:
-; CO-V2: enable_sgpr_kernarg_segment_ptr = 1
+; HSA: enable_sgpr_kernarg_segment_ptr = 0
 ; HSA: kernarg_segment_byte_size = 0
+
+; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
 ; OS-MESA3D: kernarg_segment_byte_size = 16
 ; CO-V2: kernarg_segment_alignment = 4
 
-; HSA: s_load_dword s{{[0-9]+}}, s[4:5]
+; HSA: s_mov_b64 [[NULL:s\[[0-9]+:[0-9]+\]]], 0{{$}}
+; HSA: s_load_dword s{{[0-9]+}}, [[NULL]], 0xa{{$}}
 define amdgpu_kernel void @test_no_kernargs() #1 {
   %kernarg.segment.ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
   %header.ptr = bitcast i8 addrspace(4)* %kernarg.segment.ptr to i32 addrspace(4)*
@@ -91,7 +96,7 @@ define amdgpu_kernel void @test_no_kernargs() #1 {
   ret void
 }
 
-; GCN-LABEL: {{^}}opencl_test_implicit_alignment_no_explicit_kernargs:
+; ALL-LABEL: {{^}}opencl_test_implicit_alignment_no_explicit_kernargs:
 ; HSA: kernarg_segment_byte_size = 48
 ; OS-MESA3d: kernarg_segment_byte_size = 16
 ; CO-V2: kernarg_segment_alignment = 4
@@ -103,7 +108,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs()
   ret void
 }
 
-; GCN-LABEL: {{^}}opencl_test_implicit_alignment_no_explicit_kernargs_round_up:
+; ALL-LABEL: {{^}}opencl_test_implicit_alignment_no_explicit_kernargs_round_up:
 ; HSA: kernarg_segment_byte_size = 40
 ; OS-MESA3D: kernarg_segment_byte_size = 16
 ; CO-V2: kernarg_segment_alignment = 4

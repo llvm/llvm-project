@@ -1,0 +1,127 @@
+# RUN: llc -run-pass=early-tailduplication -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s
+
+# Tail Duplication may update SSA values and invalidate any DBG_VALUEs that
+# use those values; those DBG_VALUEs should be deleted. This behaviour is tested
+# for DBG_VALUE users, and DBG_VALUE_LISTs that use the value multiple times.
+
+# CHECK-NOT: DBG_VALUE
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local void @main() local_unnamed_addr #0 !dbg !15 {
+  entry:
+    br label %L.outer
+  
+  L:                                                ; preds = %L, %L.outer
+    %tobool2.not = icmp eq i32 undef, 0
+    br i1 %tobool2.not, label %if.end4, label %L
+  
+  if.end4:                                          ; preds = %L
+    call void @llvm.dbg.value(metadata !DIArgList(i32 %f.0.ph, i32 1, i32 %f.0.ph), metadata !19, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 2, DW_OP_and, DW_OP_or, DW_OP_stack_value)), !dbg !21
+    %cmp = icmp slt i32 %f.0.ph, undef
+    br i1 %cmp, label %if.then5, label %if.end6
+  
+  if.then5:                                         ; preds = %if.end4
+    call void @h() #2
+    br label %L.outer
+  
+  L.outer:                                          ; preds = %if.then5, %entry
+    %f.0.ph = phi i32 [ 0, %if.then5 ], [ 1, %entry ]
+    br label %L
+  
+  if.end6:                                          ; preds = %if.end4
+    ret void
+  }
+  
+  declare dso_local void @h() local_unnamed_addr
+  
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!13, !14}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "tail-dup-debugvalue.c", directory: "/tmp")
+  !2 = !{}
+  !3 = !{!4, !7, !9, !11}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !DIGlobalVariableExpression(var: !8, expr: !DIExpression())
+  !8 = distinct !DIGlobalVariable(name: "b", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true)
+  !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
+  !10 = distinct !DIGlobalVariable(name: "c", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true)
+  !11 = !DIGlobalVariableExpression(var: !12, expr: !DIExpression())
+  !12 = distinct !DIGlobalVariable(name: "d", scope: !0, file: !1, line: 2, type: !6, isLocal: false, isDefinition: true)
+  !13 = !{i32 2, !"Debug Info Version", i32 3}
+  !14 = !{i32 7, !"uwtable", i32 1}
+  !15 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 3, type: !16, scopeLine: 3, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !18)
+  !16 = !DISubroutineType(types: !17)
+  !17 = !{!6}
+  !18 = !{!19, !20}
+  !19 = !DILocalVariable(name: "j", scope: !15, file: !1, line: 14, type: !6)
+  !20 = !DILocalVariable(name: "k", scope: !15, file: !1, line: 14, type: !6)
+  !21 = !DILocation(line: 0, scope: !15)
+
+...
+---
+name:            main
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr8 }
+  - { id: 4, class: gr32 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr32 }
+frameInfo:
+  maxAlignment:    1
+  hasCalls:        true
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x80000000)
+  
+    %1:gr32 = MOV32ri 1
+    JMP_1 %bb.4
+  
+  bb.1.L:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %2:gr32 = MOV32r0 implicit-def dead $eflags
+    %3:gr8 = COPY %2.sub_8bit
+    TEST8rr %3, %3, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
+    JMP_1 %bb.2
+  
+  bb.2.if.end4:
+    successors: %bb.3(0x783e0f0f), %bb.5(0x07c1f0f1)
+  
+    DBG_VALUE_LIST !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 2, DW_OP_and, DW_OP_or, DW_OP_stack_value), %0, 1, %0, debug-location !21
+    DBG_VALUE %0, $noreg, !20, !DIExpression(), debug-location !21
+    %5:gr32 = IMPLICIT_DEF
+    %4:gr32 = SUB32rr %0, killed %5, implicit-def $eflags
+    JCC_1 %bb.5, 13, implicit $eflags
+    JMP_1 %bb.3
+  
+  bb.3.if.then5:
+    successors: %bb.4(0x80000000)
+  
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    CALL64pcrel32 @h, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %6:gr32 = MOV32r0 implicit-def dead $eflags
+  
+  bb.4.L.outer:
+    successors: %bb.1(0x80000000)
+  
+    %0:gr32 = PHI %1, %bb.0, %6, %bb.3
+    JMP_1 %bb.1
+  
+  bb.5.if.end6:
+    RET 0
+
+...

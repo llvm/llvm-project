@@ -48,8 +48,8 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    leal 257(%ecx,%edx), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds {{\.LCPI.*}}
-; CHECK-NEXT:    fmuls {{\.LCPI.*}}
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -58,26 +58,26 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movb $1, 36(%ebx)
-; CHECK-NEXT:    imull $3600000, 20(%ebx), %eax # imm = 0x36EE80
-; CHECK-NEXT:    imull $60000, 24(%ebx), %ecx # imm = 0xEA60
-; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    imull $3600000, 20(%ebx), %ecx # imm = 0x36EE80
+; CHECK-NEXT:    imull $60000, 24(%ebx), %eax # imm = 0xEA60
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    fldl 28(%ebx)
-; CHECK-NEXT:    fmuls {{\.LCPI.*}}
+; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
+; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    sarl $31, %ecx
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %ecx, (%ebx)
-; CHECK-NEXT:    movl %eax, 4(%ebx)
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl %eax, (%ebx)
+; CHECK-NEXT:    movl %ecx, 4(%ebx)
 ; CHECK-NEXT:    leal -12(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

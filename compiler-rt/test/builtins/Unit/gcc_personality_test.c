@@ -1,5 +1,5 @@
-// FIXME: XFAIL as currently it cannot be built by lit properly.
-// XFAIL: *
+// FIXME: UNSUPPORTED as currently it cannot be built by lit properly.
+// UNSUPPORTED: true
 // RUN: %clangxx_builtins %s %librt -o %t && %run %t
 
 #include <stdlib.h>

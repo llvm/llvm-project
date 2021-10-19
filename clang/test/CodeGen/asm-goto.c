@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
 
 int test1(int cond) {
-  // CHECK-LABEL: define i32 @test1(
+  // CHECK-LABEL: define{{.*}} i32 @test1(
   // CHECK: callbr void asm sideeffect
   // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough:
@@ -20,7 +20,7 @@ label_true:
 }
 
 int test2(int cond) {
-  // CHECK-LABEL: define i32 @test2(
+  // CHECK-LABEL: define{{.*}} i32 @test2(
   // CHECK: callbr i32 asm sideeffect
   // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough:
@@ -37,7 +37,7 @@ label_true:
 }
 
 int test3(int out1, int out2) {
-  // CHECK-LABEL: define i32 @test3(
+  // CHECK-LABEL: define{{.*}} i32 @test3(
   // CHECK: callbr { i32, i32 } asm sideeffect
   // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough:
@@ -54,7 +54,7 @@ label_true:
 }
 
 int test4(int out1, int out2) {
-  // CHECK-LABEL: define i32 @test4(
+  // CHECK-LABEL: define{{.*}} i32 @test4(
   // CHECK: callbr { i32, i32 } asm sideeffect "jne ${3:l}", "={si},={di},r,X,X,0,1
   // CHECK: to label %asm.fallthrough [label %label_true, label %loop]
   // CHECK-LABEL: asm.fallthrough:
@@ -73,7 +73,7 @@ label_true:
 }
 
 int test5(int addr, int size, int limit) {
-  // CHECK-LABEL: define i32 @test5(
+  // CHECK-LABEL: define{{.*}} i32 @test5(
   // CHECK: callbr i32 asm "add $1,$0 ; jc ${3:l} ; cmp $2,$0 ; ja ${3:l} ; ", "=r,imr,imr,X,0
   // CHECK: to label %asm.fallthrough [label %t_err]
   // CHECK-LABEL: asm.fallthrough:
@@ -91,7 +91,7 @@ t_err:
 }
 
 int test6(int out1) {
-  // CHECK-LABEL: define i32 @test6(
+  // CHECK-LABEL: define{{.*}} i32 @test6(
   // CHECK: callbr i32 asm sideeffect "testl $0, $0; testl $1, $1; jne ${2:l}", "={si},r,X,X,0,{{.*}} i8* blockaddress(@test6, %label_true), i8* blockaddress(@test6, %landing)
   // CHECK: to label %asm.fallthrough [label %label_true, label %landing]
   // CHECK-LABEL: asm.fallthrough:

@@ -7,6 +7,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "InstrProfiling.h"
+#include "InstrProfilingInternal.h"
 
 #if defined(_WIN32)
 
@@ -64,5 +65,9 @@ ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
 
 ValueProfNode *CurrentVNode = &VNodesStart + 1;
 ValueProfNode *EndVNode = &VNodesEnd;
+
+COMPILER_RT_VISIBILITY int __llvm_write_binary_ids(ProfDataWriter *Writer) {
+  return 0;
+}
 
 #endif

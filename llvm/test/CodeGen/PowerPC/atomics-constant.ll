@@ -3,7 +3,7 @@
 
 target triple = "powerpc64le-unknown-linux-gnu"
 
-@a = constant i64 zeroinitializer
+@a = dso_local constant i64 zeroinitializer
 
 define i64 @foo() {
 ; CHECK-LABEL: foo:

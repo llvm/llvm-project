@@ -24,7 +24,7 @@ Data getData(ArrayRef<char> filler) {
   return out;
 }
 
-TEST(MemsetTest, Thorough) {
+TEST(LlvmLibcMemsetTest, Thorough) {
   const Data dirty = getData(kDeadcode);
   for (int value = -1; value <= 1; ++value) {
     for (size_t count = 0; count < 1024; ++count) {

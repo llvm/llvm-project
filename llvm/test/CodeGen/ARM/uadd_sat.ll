@@ -106,21 +106,25 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; CHECK-T1-NEXT:  .LCPI2_0:
 ; CHECK-T1-NEXT:    .long 65535 @ 0xffff
 ;
-; CHECK-T2-LABEL: func16:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    add r1, r0
-; CHECK-T2-NEXT:    movw r0, #65535
-; CHECK-T2-NEXT:    cmp r1, r0
-; CHECK-T2-NEXT:    it lo
-; CHECK-T2-NEXT:    movlo r0, r1
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func16:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    add r1, r0
+; CHECK-T2NODSP-NEXT:    movw r0, #65535
+; CHECK-T2NODSP-NEXT:    cmp r1, r0
+; CHECK-T2NODSP-NEXT:    it lo
+; CHECK-T2NODSP-NEXT:    movlo r0, r1
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func16:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    uqadd16 r0, r0, r1
+; CHECK-T2DSP-NEXT:    uxth r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    add r1, r0, r1
-; CHECK-ARM-NEXT:    movw r0, #65535
-; CHECK-ARM-NEXT:    cmp r1, r0
-; CHECK-ARM-NEXT:    movlo r0, r1
+; CHECK-ARM-NEXT:    uqadd16 r0, r0, r1
+; CHECK-ARM-NEXT:    uxth r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i16 @llvm.uadd.sat.i16(i16 %x, i16 %y)
   ret i16 %tmp
@@ -137,19 +141,24 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; CHECK-T1-NEXT:  .LBB3_2:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func8:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    add r0, r1
-; CHECK-T2-NEXT:    cmp r0, #255
-; CHECK-T2-NEXT:    it hs
-; CHECK-T2-NEXT:    movhs r0, #255
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func8:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    add r0, r1
+; CHECK-T2NODSP-NEXT:    cmp r0, #255
+; CHECK-T2NODSP-NEXT:    it hs
+; CHECK-T2NODSP-NEXT:    movhs r0, #255
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func8:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    uqadd8 r0, r0, r1
+; CHECK-T2DSP-NEXT:    uxtb r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    add r0, r0, r1
-; CHECK-ARM-NEXT:    cmp r0, #255
-; CHECK-ARM-NEXT:    movhs r0, #255
+; CHECK-ARM-NEXT:    uqadd8 r0, r0, r1
+; CHECK-ARM-NEXT:    uxtb r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %tmp = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
   ret i8 %tmp

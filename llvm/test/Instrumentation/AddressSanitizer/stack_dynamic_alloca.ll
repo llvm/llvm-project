@@ -1,11 +1,17 @@
-; RUN: opt < %s -asan -asan-module -asan-stack-dynamic-alloca \
-; RUN:       -asan-use-after-return -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-stack-dynamic-alloca \
-; RUN:       -asan-use-after-return -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-stack-dynamic-alloca -asan-mapping-scale=5 \
-; RUN:       -asan-use-after-return -S -enable-new-pm=0 | FileCheck %s
+; RUN:       -asan-use-after-return=runtime -S | FileCheck %s \
+; RUN:       --check-prefixes=CHECK,CHECK-RUNTIME
 ; RUN: opt < %s -passes='asan-pipeline' -asan-stack-dynamic-alloca -asan-mapping-scale=5 \
-; RUN:       -asan-use-after-return -S | FileCheck %s
+; RUN:       -asan-use-after-return=runtime -S | FileCheck %s \
+; RUN:       --check-prefixes=CHECK,CHECK-RUNTIME
+; RUN: opt < %s -passes='asan-pipeline'  -asan-stack-dynamic-alloca \
+; RUN:       -asan-use-after-return=always -S | FileCheck %s \
+; RUN:       --check-prefixes=CHECK,CHECK-ALWAYS \
+; RUN:       --implicit-check-not=__asan_option_detect_stack_use_after_return
+; RUN: opt < %s -passes='asan-pipeline' -asan-stack-dynamic-alloca \
+; RUN:       -asan-use-after-return=always -S | FileCheck %s \
+; RUN:       --check-prefixes=CHECK,CHECK-ALWAYS \
+; RUN:       --implicit-check-not=__asan_option_detect_stack_use_after_return
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -14,20 +20,24 @@ entry:
 ; CHECK-LABEL: Func1
 
 ; CHECK: entry:
-; CHECK: load i32, i32* @__asan_option_detect_stack_use_after_return
+; CHECK-RUNTIME: load i32, i32* @__asan_option_detect_stack_use_after_return
+; COM: CHECK-NORUNTIME-NOT: load i32, i32* @__asan_option_detect_stack_use_after_return
 
-; CHECK: [[UAR_ENABLED_BB:^[0-9]+]]:
-; CHECK: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
+; CHECK-RUNTIME: [[UAR_ENABLED_BB:^[0-9]+]]:
+; CHECK-RUNTIME: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
+; CHECK-ALWAYS: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_always_
 
-; CHECK: [[FAKE_STACK_BB:^[0-9]+]]:
-; CHECK: [[FAKE_STACK:%[0-9]+]] = phi i64 [ 0, %entry ], [ [[FAKE_STACK_RT]], %[[UAR_ENABLED_BB]] ]
-; CHECK: icmp eq i64 [[FAKE_STACK]], 0
+; CHECK-RUNTIME: [[FAKE_STACK_BB:^[0-9]+]]:
+; CHECK-RUNTIME: [[FAKE_STACK:%[0-9]+]] = phi i64 [ 0, %entry ], [ [[FAKE_STACK_RT]], %[[UAR_ENABLED_BB]] ]
+; CHECK-RUNTIME: icmp eq i64 [[FAKE_STACK]], 0
+; CHECK-ALWAYS: icmp eq i64 [[FAKE_STACK_RT]], 0
 
 ; CHECK: [[NO_FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK: %MyAlloca = alloca i8, i64
 ; CHECK: [[ALLOCA:%[0-9]+]] = ptrtoint i8* %MyAlloca
 
-; CHECK: phi i64 [ [[FAKE_STACK]], %[[FAKE_STACK_BB]] ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
+; CHECK-RUNTIME: phi i64 [ [[FAKE_STACK]], %[[FAKE_STACK_BB]] ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
+; CHECK-ALWAYS: phi i64 [ [[FAKE_STACK_RT]], %entry ], [ [[ALLOCA]], %[[NO_FAKE_STACK_BB]] ]
 
 ; CHECK: ret void
 

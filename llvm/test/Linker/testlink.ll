@@ -1,7 +1,7 @@
 ; RUN: llvm-link %s %S/Inputs/testlink.ll -S | FileCheck %s
 
-; CHECK: %Ty2 = type { %Ty1* }
 ; CHECK: %Ty1 = type { %Ty2* }
+; CHECK: %Ty2 = type { %Ty1* }
 %Ty1 = type opaque
 %Ty2 = type { %Ty1* }
 

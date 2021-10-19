@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Parser.h"
+#include "AsmParserImpl.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -27,300 +27,20 @@ namespace {
 /// This class provides the main implementation of the DialectAsmParser that
 /// allows for dialects to parse attributes and types. This allows for dialect
 /// hooking into the main MLIR parsing logic.
-class CustomDialectAsmParser : public DialectAsmParser {
+class CustomDialectAsmParser : public AsmParserImpl<DialectAsmParser> {
 public:
   CustomDialectAsmParser(StringRef fullSpec, Parser &parser)
-      : fullSpec(fullSpec), nameLoc(parser.getToken().getLoc()),
-        parser(parser) {}
+      : AsmParserImpl<DialectAsmParser>(parser.getToken().getLoc(), parser),
+        fullSpec(fullSpec) {}
   ~CustomDialectAsmParser() override {}
-
-  /// Emit a diagnostic at the specified location and return failure.
-  InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
-    return parser.emitError(loc, message);
-  }
-
-  /// Return a builder which provides useful access to MLIRContext, global
-  /// objects like types and attributes.
-  Builder &getBuilder() const override { return parser.builder; }
-
-  /// Get the location of the next token and store it into the argument.  This
-  /// always succeeds.
-  llvm::SMLoc getCurrentLocation() override {
-    return parser.getToken().getLoc();
-  }
-
-  /// Return the location of the original name token.
-  llvm::SMLoc getNameLoc() const override { return nameLoc; }
-
-  /// Re-encode the given source location as an MLIR location and return it.
-  Location getEncodedSourceLoc(llvm::SMLoc loc) override {
-    return parser.getEncodedSourceLocation(loc);
-  }
 
   /// Returns the full specification of the symbol being parsed. This allows
   /// for using a separate parser if necessary.
   StringRef getFullSymbolSpec() const override { return fullSpec; }
 
-  /// Parse a floating point value from the stream.
-  ParseResult parseFloat(double &result) override {
-    bool negative = parser.consumeIf(Token::minus);
-    Token curTok = parser.getToken();
-
-    // Check for a floating point value.
-    if (curTok.is(Token::floatliteral)) {
-      auto val = curTok.getFloatingPointValue();
-      if (!val.hasValue())
-        return emitError(curTok.getLoc(), "floating point value too large");
-      parser.consumeToken(Token::floatliteral);
-      result = negative ? -*val : *val;
-      return success();
-    }
-
-    // TODO: support hex floating point values.
-    return emitError(getCurrentLocation(), "expected floating point literal");
-  }
-
-  /// Parse an optional integer value from the stream.
-  OptionalParseResult parseOptionalInteger(uint64_t &result) override {
-    Token curToken = parser.getToken();
-    if (curToken.isNot(Token::integer, Token::minus))
-      return llvm::None;
-
-    bool negative = parser.consumeIf(Token::minus);
-    Token curTok = parser.getToken();
-    if (parser.parseToken(Token::integer, "expected integer value"))
-      return failure();
-
-    auto val = curTok.getUInt64IntegerValue();
-    if (!val)
-      return emitError(curTok.getLoc(), "integer value too large");
-    result = negative ? -*val : *val;
-    return success();
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Token Parsing
-  //===--------------------------------------------------------------------===//
-
-  /// Parse a `->` token.
-  ParseResult parseArrow() override {
-    return parser.parseToken(Token::arrow, "expected '->'");
-  }
-
-  /// Parses a `->` if present.
-  ParseResult parseOptionalArrow() override {
-    return success(parser.consumeIf(Token::arrow));
-  }
-
-  /// Parse a '{' token.
-  ParseResult parseLBrace() override {
-    return parser.parseToken(Token::l_brace, "expected '{'");
-  }
-
-  /// Parse a '{' token if present
-  ParseResult parseOptionalLBrace() override {
-    return success(parser.consumeIf(Token::l_brace));
-  }
-
-  /// Parse a `}` token.
-  ParseResult parseRBrace() override {
-    return parser.parseToken(Token::r_brace, "expected '}'");
-  }
-
-  /// Parse a `}` token if present
-  ParseResult parseOptionalRBrace() override {
-    return success(parser.consumeIf(Token::r_brace));
-  }
-
-  /// Parse a `:` token.
-  ParseResult parseColon() override {
-    return parser.parseToken(Token::colon, "expected ':'");
-  }
-
-  /// Parse a `:` token if present.
-  ParseResult parseOptionalColon() override {
-    return success(parser.consumeIf(Token::colon));
-  }
-
-  /// Parse a `,` token.
-  ParseResult parseComma() override {
-    return parser.parseToken(Token::comma, "expected ','");
-  }
-
-  /// Parse a `,` token if present.
-  ParseResult parseOptionalComma() override {
-    return success(parser.consumeIf(Token::comma));
-  }
-
-  /// Parses a `...` if present.
-  ParseResult parseOptionalEllipsis() override {
-    return success(parser.consumeIf(Token::ellipsis));
-  }
-
-  /// Parse a `=` token.
-  ParseResult parseEqual() override {
-    return parser.parseToken(Token::equal, "expected '='");
-  }
-
-  /// Parse a `=` token if present.
-  ParseResult parseOptionalEqual() override {
-    return success(parser.consumeIf(Token::equal));
-  }
-
-  /// Parse a '<' token.
-  ParseResult parseLess() override {
-    return parser.parseToken(Token::less, "expected '<'");
-  }
-
-  /// Parse a `<` token if present.
-  ParseResult parseOptionalLess() override {
-    return success(parser.consumeIf(Token::less));
-  }
-
-  /// Parse a '>' token.
-  ParseResult parseGreater() override {
-    return parser.parseToken(Token::greater, "expected '>'");
-  }
-
-  /// Parse a `>` token if present.
-  ParseResult parseOptionalGreater() override {
-    return success(parser.consumeIf(Token::greater));
-  }
-
-  /// Parse a `(` token.
-  ParseResult parseLParen() override {
-    return parser.parseToken(Token::l_paren, "expected '('");
-  }
-
-  /// Parses a '(' if present.
-  ParseResult parseOptionalLParen() override {
-    return success(parser.consumeIf(Token::l_paren));
-  }
-
-  /// Parse a `)` token.
-  ParseResult parseRParen() override {
-    return parser.parseToken(Token::r_paren, "expected ')'");
-  }
-
-  /// Parses a ')' if present.
-  ParseResult parseOptionalRParen() override {
-    return success(parser.consumeIf(Token::r_paren));
-  }
-
-  /// Parse a `[` token.
-  ParseResult parseLSquare() override {
-    return parser.parseToken(Token::l_square, "expected '['");
-  }
-
-  /// Parses a '[' if present.
-  ParseResult parseOptionalLSquare() override {
-    return success(parser.consumeIf(Token::l_square));
-  }
-
-  /// Parse a `]` token.
-  ParseResult parseRSquare() override {
-    return parser.parseToken(Token::r_square, "expected ']'");
-  }
-
-  /// Parses a ']' if present.
-  ParseResult parseOptionalRSquare() override {
-    return success(parser.consumeIf(Token::r_square));
-  }
-
-  /// Parses a '?' if present.
-  ParseResult parseOptionalQuestion() override {
-    return success(parser.consumeIf(Token::question));
-  }
-
-  /// Parses a '*' if present.
-  ParseResult parseOptionalStar() override {
-    return success(parser.consumeIf(Token::star));
-  }
-
-  /// Parses a quoted string token if present.
-  ParseResult parseOptionalString(StringRef *string) override {
-    if (!parser.getToken().is(Token::string))
-      return failure();
-
-    if (string)
-      *string = parser.getTokenSpelling().drop_front().drop_back();
-    parser.consumeToken();
-    return success();
-  }
-
-  /// Returns true if the current token corresponds to a keyword.
-  bool isCurrentTokenAKeyword() const {
-    return parser.getToken().is(Token::bare_identifier) ||
-           parser.getToken().isKeyword();
-  }
-
-  /// Parse the given keyword if present.
-  ParseResult parseOptionalKeyword(StringRef keyword) override {
-    // Check that the current token has the same spelling.
-    if (!isCurrentTokenAKeyword() || parser.getTokenSpelling() != keyword)
-      return failure();
-    parser.consumeToken();
-    return success();
-  }
-
-  /// Parse a keyword, if present, into 'keyword'.
-  ParseResult parseOptionalKeyword(StringRef *keyword) override {
-    // Check that the current token is a keyword.
-    if (!isCurrentTokenAKeyword())
-      return failure();
-
-    *keyword = parser.getTokenSpelling();
-    parser.consumeToken();
-    return success();
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Attribute Parsing
-  //===--------------------------------------------------------------------===//
-
-  /// Parse an arbitrary attribute and return it in result.
-  ParseResult parseAttribute(Attribute &result, Type type) override {
-    result = parser.parseAttribute(type);
-    return success(static_cast<bool>(result));
-  }
-
-  /// Parse an affine map instance into 'map'.
-  ParseResult parseAffineMap(AffineMap &map) override {
-    return parser.parseAffineMapReference(map);
-  }
-
-  /// Parse an integer set instance into 'set'.
-  ParseResult printIntegerSet(IntegerSet &set) override {
-    return parser.parseIntegerSetReference(set);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Type Parsing
-  //===--------------------------------------------------------------------===//
-
-  ParseResult parseType(Type &result) override {
-    result = parser.parseType();
-    return success(static_cast<bool>(result));
-  }
-
-  ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                 bool allowDynamic) override {
-    return parser.parseDimensionListRanked(dimensions, allowDynamic);
-  }
-
-  OptionalParseResult parseOptionalType(Type &result) override {
-    return parser.parseOptionalType(result);
-  }
-
 private:
   /// The full symbol specification.
   StringRef fullSpec;
-
-  /// The source location of the dialect symbol.
-  SMLoc nameLoc;
-
-  /// The main parser.
-  Parser &parser;
 };
 } // namespace
 
@@ -486,7 +206,7 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
       inputStr, /*BufferName=*/"<mlir_parser_buffer>",
       /*RequiresNullTerminator=*/false);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  ParserState state(sourceMgr, context, symbolState);
+  ParserState state(sourceMgr, context, symbolState, /*asmState=*/nullptr);
   Parser parser(state);
 
   Token startTok = parser.getToken();
@@ -537,9 +257,9 @@ Attribute Parser::parseExtendedAttr(Type type) {
 
         // Otherwise, form a new opaque attribute.
         return OpaqueAttr::getChecked(
+            [&] { return emitError(loc); },
             Identifier::get(dialectName, state.context), symbolData,
-            attrType ? attrType : NoneType::get(state.context),
-            getEncodedSourceLocation(loc));
+            attrType ? attrType : NoneType::get(state.context));
       });
 
   // Ensure that the attribute has the same type as requested.
@@ -576,8 +296,8 @@ Type Parser::parseExtendedType() {
 
         // Otherwise, form a new opaque type.
         return OpaqueType::getChecked(
-            Identifier::get(dialectName, state.context), symbolData,
-            state.context, getEncodedSourceLocation(loc));
+            [&] { return emitError(loc); },
+            Identifier::get(dialectName, state.context), symbolData);
       });
 }
 

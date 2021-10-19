@@ -16,7 +16,7 @@
 mlir::Type
 Fortran::lower::ComplexExprHelper::getComplexPartType(mlir::Type complexType) {
   return Fortran::lower::convertReal(
-      builder.getContext(), complexType.cast<fir::CplxType>().getFKind());
+      builder.getContext(), complexType.cast<fir::ComplexType>().getFKind());
 }
 
 mlir::Type
@@ -27,7 +27,7 @@ Fortran::lower::ComplexExprHelper::getComplexPartType(mlir::Value cplx) {
 mlir::Value Fortran::lower::ComplexExprHelper::createComplex(fir::KindTy kind,
                                                              mlir::Value real,
                                                              mlir::Value imag) {
-  auto complexTy = fir::CplxType::get(builder.getContext(), kind);
+  auto complexTy = fir::ComplexType::get(builder.getContext(), kind);
   mlir::Value und = builder.create<fir::UndefOp>(loc, complexTy);
   return insert<Part::Imag>(insert<Part::Real>(und, real), imag);
 }
@@ -46,13 +46,15 @@ mlir::Value Fortran::lower::ComplexExprHelper::createComplexCompare(
   auto imag1 = extract<Part::Imag>(cplx1);
   auto imag2 = extract<Part::Imag>(cplx2);
 
-  mlir::CmpFPredicate predicate =
-      eq ? mlir::CmpFPredicate::UEQ : mlir::CmpFPredicate::UNE;
+  mlir::arith::CmpFPredicate predicate =
+      eq ? mlir::arith::CmpFPredicate::UEQ : mlir::arith::CmpFPredicate::UNE;
   mlir::Value realCmp =
-      builder.create<mlir::CmpFOp>(loc, predicate, real1, real2);
+      builder.create<mlir::arith::CmpFOp>(loc, predicate, real1, real2);
   mlir::Value imagCmp =
-      builder.create<mlir::CmpFOp>(loc, predicate, imag1, imag2);
+      builder.create<mlir::arith::CmpFOp>(loc, predicate, imag1, imag2);
 
-  return eq ? builder.create<mlir::AndOp>(loc, realCmp, imagCmp).getResult()
-            : builder.create<mlir::OrOp>(loc, realCmp, imagCmp).getResult();
+  return eq ? builder.create<mlir::arith::AndIOp>(loc, realCmp, imagCmp)
+                  .getResult()
+            : builder.create<mlir::arith::OrIOp>(loc, realCmp, imagCmp)
+                  .getResult();
 }

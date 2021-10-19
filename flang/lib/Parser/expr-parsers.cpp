@@ -379,8 +379,8 @@ template <> std::optional<Expr> Parser<Expr>::Parse(ParseState &state) {
           return Expr{Expr::DefinedBinary(
               std::move(op), std::move(result).value(), std::move(right))};
         }};
-    auto more{
-        attempt(sourced(applyLambda(defBinOp, definedOpName, level5Expr)))};
+    auto more{attempt(
+        sourced(applyLambda<Expr>(defBinOp, definedOpName, level5Expr)))};
     while (std::optional<Expr> next{more.Parse(state)}) {
       result = std::move(next);
       result->source.ExtendToCover(source);

@@ -29,25 +29,23 @@
 #ifndef USE_PCH
 // expected-warning@extension-begin.h:4 {{expected 'disable' - ignoring}}
 // expected-warning@extension-begin.h:5 {{expected 'disable' - ignoring}}
-// expected-warning@extension-begin.h:21 {{OpenCL extension end directive mismatches begin directive - ignoring}}
 #endif // USE_PCH
 
+#if defined(IMPLICIT_INCLUDE) && defined(USE_PCH)
+//expected-no-diagnostics
+#endif
+
+// Tests that the pragmas are accepted for backward compatibility.
 #pragma OPENCL EXTENSION my_ext : enable
-void test_f1(void) {
+#pragma OPENCL EXTENSION my_ext : disable 
+
+#ifndef my_ext
+#error "Missing my_ext macro"
+#endif
+ 
+// When extension is supported its functionality can be used freely.
+void test(void) {
   struct A test_A1;
   f();
   g(0);
 }
-
-#pragma OPENCL EXTENSION my_ext : disable 
-void test_f2(void) {
-  struct A test_A2; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
-  const struct A test_A_local; // expected-error {{use of type 'struct A' requires my_ext extension to be enabled}}
-  TypedefOfA test_typedef_A; // expected-error {{use of type 'TypedefOfA' (aka 'struct A') requires my_ext extension to be enabled}}
-  PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const __private struct A *') requires my_ext extension to be enabled}}
-  f(); // expected-error {{use of declaration 'f' requires my_ext extension to be enabled}}
-  g(0); // expected-error {{no matching function for call to 'g'}}
-        // expected-note@extension-begin.h:18 {{candidate unavailable as it requires OpenCL extension 'my_ext' to be enabled}}
-        // expected-note@extension-begin.h:23 {{candidate function not viable: requires 0 arguments, but 1 was provided}}
-}
-

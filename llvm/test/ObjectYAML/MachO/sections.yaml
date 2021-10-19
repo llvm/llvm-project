@@ -256,16 +256,16 @@ LoadCommands:
 #CHECK:     Sections:        
 #CHECK:       - sectname:        __text
 #CHECK:         segname:         __TEXT
-#CHECK:         addr:            0x0000000100001160
+#CHECK:         addr:            0x100001160
 #CHECK:         size:            3099
-#CHECK:         offset:          0x00001160
+#CHECK:         offset:          0x1160
 #CHECK:         align:           4
-#CHECK:         reloff:          0x00000000
+#CHECK:         reloff:          0x0
 #CHECK:         nreloc:          0
 #CHECK:         flags:           0x80000400
-#CHECK:         reserved1:       0x00000000
-#CHECK:         reserved2:       0x00000000
-#CHECK:         reserved3:       0x00000000
+#CHECK:         reserved1:       0x0
+#CHECK:         reserved2:       0x0
+#CHECK:         reserved3:       0x0
 #CHECK:       - sectname:        __stubs
 #CHECK:         segname:         __TEXT
 #CHECK:       - sectname:        __stub_helper

@@ -26,7 +26,7 @@
 // mmmm mmmm mmmm
 
 #if defined(_MSC_VER) && !defined(__clang__)
-// MSVC throws a warning about 'unitialized variable use' here,
+// MSVC throws a warning about 'uninitialized variable use' here,
 // disable it for builds that warn-as-error
 #pragma warning(push)
 #pragma warning(disable : 4700)

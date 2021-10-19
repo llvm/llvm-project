@@ -1,0 +1,55 @@
+#RUN: not --crash llc -o - -march=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+---
+name:            test_memmove
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+
+    %0:_(p0) = G_CONSTANT i64 0
+    %1:_(p0) = G_CONSTANT i64 4
+    %2:_(s64) = G_CONSTANT i64 4
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMMOVE %0, %1, %2, 0
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMMOVE %0, %1, %2, 0 :: (load 4)
+
+    ; CHECK: *** Bad machine code: memcpy/memmove must have 2 memory operands ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store 4)
+
+    ; CHECK: *** Bad machine code: wrong memory operand types ***
+    G_MEMMOVE %0, %1, %2, 0 :: (load 4), (store 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store 8), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store unknown-size), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent memory operand sizes ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store 8), (load unknown-size)
+
+    ; CHECK: *** Bad machine code: inconsistent store address space ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store 4, addrspace 1), (load 4)
+
+    ; CHECK: *** Bad machine code: inconsistent load address space ***
+    G_MEMMOVE %0, %1, %2, 0 :: (store 4), (load 4, addrspace 1)
+
+    ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
+    G_MEMMOVE %2, %0, %2, 0 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: memory instruction operand must be a pointer ***
+    G_MEMMOVE %0, %2, %2, 0 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMMOVE %0, %0, %2, %0 :: (store 4), (load 4)
+
+    ; CHECK: *** Bad machine code: 'tail' flag (operand 3) must be an immediate 0 or 1 ***
+    G_MEMMOVE %0, %0, %2, 2 :: (store 4), (load 4)
+...

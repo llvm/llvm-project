@@ -9,15 +9,15 @@
 define dso_local i32* @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, x@toc@ha
-; CHECK-NEXT:    addis r6, r2, y@toc@ha
+; CHECK-NEXT:    addis r5, r2, y@toc@ha
 ; CHECK-NEXT:    li r7, 340
-; CHECK-NEXT:    addi r5, r5, x@toc@l
-; CHECK-NEXT:    addi r5, r5, -8
-; CHECK-NEXT:    addi r3, r6, y@toc@l
-; CHECK-NEXT:    lwz r6, y@toc@l(r6)
+; CHECK-NEXT:    addi r3, r5, y@toc@l
+; CHECK-NEXT:    lwz r6, y@toc@l(r5)
+; CHECK-NEXT:    addis r5, r2, x@toc@ha
 ; CHECK-NEXT:    mtctr r7
+; CHECK-NEXT:    addi r5, r5, x@toc@l
 ; CHECK-NEXT:    addi r4, r3, -8
+; CHECK-NEXT:    addi r5, r5, -8
 ; CHECK-NEXT:    lwzu r7, 12(r5)
 ; CHECK-NEXT:    maddld r6, r7, r7, r6
 ; CHECK-NEXT:    lwz r7, 4(r5)

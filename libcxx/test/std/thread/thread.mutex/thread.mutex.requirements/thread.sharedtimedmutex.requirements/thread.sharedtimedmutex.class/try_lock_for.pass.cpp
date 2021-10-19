@@ -12,9 +12,7 @@
 // ALLOW_RETRIES: 2
 
 // shared_timed_mutex was introduced in macosx10.12
-// UNSUPPORTED: with_system_cxx_lib=macosx10.11
-// UNSUPPORTED: with_system_cxx_lib=macosx10.10
-// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // <shared_mutex>
 
@@ -28,6 +26,7 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::shared_timed_mutex m;
@@ -73,14 +72,14 @@ int main(int, char**)
 {
     {
         m.lock();
-        std::thread t(f1);
+        std::thread t = support::make_test_thread(f1);
         std::this_thread::sleep_for(WaitTime);
         m.unlock();
         t.join();
     }
     {
         m.lock();
-        std::thread t(f2);
+        std::thread t = support::make_test_thread(f2);
         std::this_thread::sleep_for(WaitTime + Tolerance);
         m.unlock();
         t.join();

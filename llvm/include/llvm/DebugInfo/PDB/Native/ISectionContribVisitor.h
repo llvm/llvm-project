@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_ISECTIONCONTRIBVISITOR_H
-#define LLVM_DEBUGINFO_PDB_RAW_ISECTIONCONTRIBVISITOR_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_ISECTIONCONTRIBVISITOR_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_ISECTIONCONTRIBVISITOR_H
 
 namespace llvm {
 namespace pdb {
@@ -26,4 +26,4 @@ public:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_ISECTIONCONTRIBVISITOR_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_ISECTIONCONTRIBVISITOR_H

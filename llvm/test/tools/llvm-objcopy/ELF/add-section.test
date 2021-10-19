@@ -26,20 +26,32 @@ Sections:
 
 # CHECK: SectionHeaderCount: 6
 
-# CHECK: Name: .test1
-# CHECK: Name: .test3
-# CHECK: Name: .strtab
-# CHECK: Name: .shstrtab
-# CHECK: Name: .test2
-# CHECK: SectionData (
+# CHECK:      Name: .test1
+# CHECK:      Name: .test3
+# CHECK:      Name: .strtab
+# CHECK:      Name: .shstrtab
+# CHECK:      Offset: 0x[[#%x,OFFSET:]]
+# CHECK:      Size: [[#%u,SIZE:]]
+# CHECK:      Name: .test2
+# CHECK-NEXT: Type: SHT_PROGBITS
+# CHECK-NEXT: Flags [ (0x0)
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address: 0x0
+# CHECK-NEXT: Offset: 0x[[#%x,OFFSET+SIZE]]
+# CHECK-NEXT: Size: 4
+# CHECK-NEXT: Link: 0
+# CHECK-NEXT: Info: 0
+# CHECK-NEXT: AddressAlignment: 1
+# CHECK-NEXT: EntrySize: 0
+# CHECK-NEXT: SectionData (
 # CHECK-NEXT:   0000: DEADBEEF
 # CHECK-NEXT: )
 
 ## Test that llvm-objcopy produces an error if the file with section contents
 ## to be added does not exist.
-# RUN: not llvm-objcopy --add-section=.section.name=%t.missing %t %t.out 2>&1 | FileCheck -DFILE1=%t -DFILE2=%t.missing %s --check-prefixes=ERR1
+# RUN: not llvm-objcopy --add-section=.section.name=%t.missing %t %t.out 2>&1 | FileCheck -DFILE1=%t -DFILE2=%t.missing -DMSG=%errc_ENOENT %s --check-prefixes=ERR1
 
-# ERR1: error: '[[FILE1]]': '[[FILE2]]': {{[Nn]}}o such file or directory
+# ERR1: error: '[[FILE1]]': '[[FILE2]]': [[MSG]]
 
 ## Negative test for invalid --add-sections argument - missing '='.
 # RUN: not llvm-objcopy --add-section=.section.name %t %t.out 2>&1 | FileCheck %s --check-prefixes=ERR2

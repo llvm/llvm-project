@@ -1,6 +1,6 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: 100format(3hKWM)
-! CHECK: if(ch.eq.'KWM')then
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: 100   format(3HKWM)
+! CHECK: if (ch .eq. 'KWM') then
 * KWM NOT expanded in Hollerith in FORMAT
 #define KWM 666
 #define HKWM 667

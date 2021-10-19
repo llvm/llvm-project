@@ -16,7 +16,7 @@ namespace test0 {
     foo();
   }
 }
-// CHECK-LABEL:    define void @_ZN5test04testEv()
+// CHECK-LABEL:    define{{.*}} void @_ZN5test04testEv()
 // CHECK:      [[EXN:%.*]] = alloca i8*
 //   This goes to the terminate lpad.
 // CHECK:      invoke void @_ZN5test01AC1Ev(

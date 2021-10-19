@@ -2,29 +2,29 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; PR7814
 
-@g_16 = global i64 -3738643449681751625, align 8
-@g_38 = global i32 0, align 4
+@g_16 = dso_local global i64 -3738643449681751625, align 8
+@g_38 = dso_local global i32 0, align 4
 @.str = private constant [4 x i8] c"%d\0A\00"
 
-define i32 @main() nounwind {
+define dso_local i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq {{.*}}(%rip), %rax
+; CHECK-NEXT:    cmpq g_16(%rip), %rax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    testb $-106, %al
 ; CHECK-NEXT:    jle .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $1, g_38(%rip)
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: # %entry.if.end_crit_edge
-; CHECK-NEXT:    movl {{.*}}(%rip), %esi
+; CHECK-NEXT:    movl g_38(%rip), %esi
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

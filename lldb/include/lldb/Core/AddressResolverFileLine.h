@@ -11,10 +11,10 @@
 
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/SearchFilter.h"
-#include "lldb/Utility/FileSpec.h"
+#include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/lldb-defines.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 class Address;
@@ -28,8 +28,7 @@ class SymbolContext;
 
 class AddressResolverFileLine : public AddressResolver {
 public:
-  AddressResolverFileLine(const FileSpec &resolver, uint32_t line_no,
-                          bool check_inlines);
+  AddressResolverFileLine(SourceLocationSpec location_spec);
 
   ~AddressResolverFileLine() override;
 
@@ -42,10 +41,7 @@ public:
   void GetDescription(Stream *s) override;
 
 protected:
-  FileSpec m_file_spec;   // This is the file spec we are looking for.
-  uint32_t m_line_number; // This is the line number that we are looking for.
-  bool m_inlines; // This determines whether the resolver looks for inlined
-                  // functions or not.
+  SourceLocationSpec m_src_location_spec;
 
 private:
   AddressResolverFileLine(const AddressResolverFileLine &) = delete;

@@ -19,7 +19,7 @@ struct __attribute__((device_builtin_surface_type)) surface<void, dim> : public 
 };
 
 // On the device side, surface references are represented as `i64` handles.
-// DEVICE: @surf = addrspace(1) global i64 undef, align 4
+// DEVICE: @surf ={{.*}} addrspace(1) externally_initialized global i64 undef, align 4
 // On the host side, they remain in the original type.
 // HOST: @surf = internal global %struct.surface
 // HOST: @0 = private unnamed_addr constant [5 x i8] c"surf\00"

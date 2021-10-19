@@ -10,11 +10,12 @@ list(APPEND PLUGIN_PLATFORM_MACOSX_SOURCES
   PlatformDarwin.cpp
   PlatformDarwinKernel.cpp
   PlatformMacOSX.cpp
-  PlatformRemoteiOS.cpp
+  PlatformRemoteAppleBridge.cpp
   PlatformRemoteAppleTV.cpp
   PlatformRemoteAppleWatch.cpp
   PlatformRemoteDarwinDevice.cpp
-  PlatformRemoteAppleBridge.cpp
+  PlatformRemoteMacOSX.cpp
+  PlatformRemoteiOS.cpp
   )
 
 list(APPEND PLUGIN_PLATFORM_MACOSX_DARWIN_ONLY_SOURCES

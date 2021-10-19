@@ -1,12 +1,12 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
+// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=GCN,SICI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefixes=GCN,VI
 
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s -check-prefix=NOVI
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s -check-prefix=NOVI --implicit-check-not=error:
 
 v_mov_b32 [v1], [v2]
 // GCN:  v_mov_b32_e32 v1, v2 ; encoding: [0x02,0x03,0x02,0x7e]
@@ -49,7 +49,7 @@ v_ffbh_i32_e32 v1, v2
 v_frexp_exp_i32_f64 v1, v[2:3]
 
 // SICI: v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x7b,0x02,0x7e]
-// VI;   v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x63,0x02,0x7e]
+// VI:   v_frexp_mant_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x63,0x02,0x7e]
 v_frexp_mant_f64 v[1:2], v[2:3]
 
 // SICI: v_fract_f64_e32 v[1:2], v[2:3] ; encoding: [0x02,0x7d,0x02,0x7e]

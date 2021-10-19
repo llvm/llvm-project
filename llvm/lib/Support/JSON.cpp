@@ -7,8 +7,11 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/Support/JSON.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cctype>
 
 namespace llvm {
@@ -106,7 +109,8 @@ void Value::copyFrom(const Value &M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
-    memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
+  case T_UINT64:
+    memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
     create<StringRef>(M.as<StringRef>());
@@ -130,7 +134,8 @@ void Value::moveFrom(const Value &&M) {
   case T_Boolean:
   case T_Double:
   case T_Integer:
-    memcpy(Union.buffer, M.Union.buffer, sizeof(Union.buffer));
+  case T_UINT64:
+    memcpy(&Union, &M.Union, sizeof(Union));
     break;
   case T_StringRef:
     create<StringRef>(M.as<StringRef>());
@@ -156,6 +161,7 @@ void Value::destroy() {
   case T_Boolean:
   case T_Double:
   case T_Integer:
+  case T_UINT64:
     break;
   case T_StringRef:
     as<StringRef>().~StringRef();
@@ -196,6 +202,160 @@ bool operator==(const Value &L, const Value &R) {
     return *L.getAsObject() == *R.getAsObject();
   }
   llvm_unreachable("Unknown value kind");
+}
+
+void Path::report(llvm::StringLiteral Msg) {
+  // Walk up to the root context, and count the number of segments.
+  unsigned Count = 0;
+  const Path *P;
+  for (P = this; P->Parent != nullptr; P = P->Parent)
+    ++Count;
+  Path::Root *R = P->Seg.root();
+  // Fill in the error message and copy the path (in reverse order).
+  R->ErrorMessage = Msg;
+  R->ErrorPath.resize(Count);
+  auto It = R->ErrorPath.begin();
+  for (P = this; P->Parent != nullptr; P = P->Parent)
+    *It++ = P->Seg;
+}
+
+Error Path::Root::getError() const {
+  std::string S;
+  raw_string_ostream OS(S);
+  OS << (ErrorMessage.empty() ? "invalid JSON contents" : ErrorMessage);
+  if (ErrorPath.empty()) {
+    if (!Name.empty())
+      OS << " when parsing " << Name;
+  } else {
+    OS << " at " << (Name.empty() ? "(root)" : Name);
+    for (const Path::Segment &S : llvm::reverse(ErrorPath)) {
+      if (S.isField())
+        OS << '.' << S.field();
+      else
+        OS << '[' << S.index() << ']';
+    }
+  }
+  return createStringError(llvm::inconvertibleErrorCode(), OS.str());
+}
+
+namespace {
+
+std::vector<const Object::value_type *> sortedElements(const Object &O) {
+  std::vector<const Object::value_type *> Elements;
+  for (const auto &E : O)
+    Elements.push_back(&E);
+  llvm::sort(Elements,
+             [](const Object::value_type *L, const Object::value_type *R) {
+               return L->first < R->first;
+             });
+  return Elements;
+}
+
+// Prints a one-line version of a value that isn't our main focus.
+// We interleave writes to OS and JOS, exploiting the lack of extra buffering.
+// This is OK as we own the implementation.
+void abbreviate(const Value &V, OStream &JOS) {
+  switch (V.kind()) {
+  case Value::Array:
+    JOS.rawValue(V.getAsArray()->empty() ? "[]" : "[ ... ]");
+    break;
+  case Value::Object:
+    JOS.rawValue(V.getAsObject()->empty() ? "{}" : "{ ... }");
+    break;
+  case Value::String: {
+    llvm::StringRef S = *V.getAsString();
+    if (S.size() < 40) {
+      JOS.value(V);
+    } else {
+      std::string Truncated = fixUTF8(S.take_front(37));
+      Truncated.append("...");
+      JOS.value(Truncated);
+    }
+    break;
+  }
+  default:
+    JOS.value(V);
+  }
+}
+
+// Prints a semi-expanded version of a value that is our main focus.
+// Array/Object entries are printed, but not recursively as they may be huge.
+void abbreviateChildren(const Value &V, OStream &JOS) {
+  switch (V.kind()) {
+  case Value::Array:
+    JOS.array([&] {
+      for (const auto &I : *V.getAsArray())
+        abbreviate(I, JOS);
+    });
+    break;
+  case Value::Object:
+    JOS.object([&] {
+      for (const auto *KV : sortedElements(*V.getAsObject())) {
+        JOS.attributeBegin(KV->first);
+        abbreviate(KV->second, JOS);
+        JOS.attributeEnd();
+      }
+    });
+    break;
+  default:
+    JOS.value(V);
+  }
+}
+
+} // namespace
+
+void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
+  OStream JOS(OS, /*IndentSize=*/2);
+  // PrintValue recurses down the path, printing the ancestors of our target.
+  // Siblings of nodes along the path are printed with abbreviate(), and the
+  // target itself is printed with the somewhat richer abbreviateChildren().
+  // 'Recurse' is the lambda itself, to allow recursive calls.
+  auto PrintValue = [&](const Value &V, ArrayRef<Segment> Path, auto &Recurse) {
+    // Print the target node itself, with the error as a comment.
+    // Also used if we can't follow our path, e.g. it names a field that
+    // *should* exist but doesn't.
+    auto HighlightCurrent = [&] {
+      std::string Comment = "error: ";
+      Comment.append(ErrorMessage.data(), ErrorMessage.size());
+      JOS.comment(Comment);
+      abbreviateChildren(V, JOS);
+    };
+    if (Path.empty()) // We reached our target.
+      return HighlightCurrent();
+    const Segment &S = Path.back(); // Path is in reverse order.
+    if (S.isField()) {
+      // Current node is an object, path names a field.
+      llvm::StringRef FieldName = S.field();
+      const Object *O = V.getAsObject();
+      if (!O || !O->get(FieldName))
+        return HighlightCurrent();
+      JOS.object([&] {
+        for (const auto *KV : sortedElements(*O)) {
+          JOS.attributeBegin(KV->first);
+          if (FieldName.equals(KV->first))
+            Recurse(KV->second, Path.drop_back(), Recurse);
+          else
+            abbreviate(KV->second, JOS);
+          JOS.attributeEnd();
+        }
+      });
+    } else {
+      // Current node is an array, path names an element.
+      const Array *A = V.getAsArray();
+      if (!A || S.index() >= A->size())
+        return HighlightCurrent();
+      JOS.array([&] {
+        unsigned Current = 0;
+        for (const auto &V : *A) {
+          if (Current++ == S.index())
+            Recurse(V, Path.drop_back(), Recurse);
+          else
+            abbreviate(V, JOS);
+        }
+      });
+    }
+  };
+  PrintValue(R, ErrorPath, PrintValue);
 }
 
 namespace {
@@ -518,17 +678,6 @@ Expected<Value> parse(StringRef JSON) {
 }
 char ParseError::ID = 0;
 
-static std::vector<const Object::value_type *> sortedElements(const Object &O) {
-  std::vector<const Object::value_type *> Elements;
-  for (const auto &E : O)
-    Elements.push_back(&E);
-  llvm::sort(Elements,
-             [](const Object::value_type *L, const Object::value_type *R) {
-               return L->first < R->first;
-             });
-  return Elements;
-}
-
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.
   if (LLVM_LIKELY(isASCII(S)))
@@ -604,6 +753,8 @@ void llvm::json::OStream::value(const Value &V) {
     valueBegin();
     if (V.Type == Value::T_Integer)
       OS << *V.getAsInteger();
+    else if (V.Type == Value::T_UINT64)
+      OS << *V.getAsUINT64();
     else
       OS << format("%.*g", std::numeric_limits<double>::max_digits10,
                    *V.getAsNumber());
@@ -633,7 +784,38 @@ void llvm::json::OStream::valueBegin() {
   }
   if (Stack.back().Ctx == Array)
     newline();
+  flushComment();
   Stack.back().HasValue = true;
+}
+
+void OStream::comment(llvm::StringRef Comment) {
+  assert(PendingComment.empty() && "Only one comment per value!");
+  PendingComment = Comment;
+}
+
+void OStream::flushComment() {
+  if (PendingComment.empty())
+    return;
+  OS << (IndentSize ? "/* " : "/*");
+  // Be sure not to accidentally emit "*/". Transform to "* /".
+  while (!PendingComment.empty()) {
+    auto Pos = PendingComment.find("*/");
+    if (Pos == StringRef::npos) {
+      OS << PendingComment;
+      PendingComment = "";
+    } else {
+      OS << PendingComment.take_front(Pos) << "* /";
+      PendingComment = PendingComment.drop_front(Pos + 2);
+    }
+  }
+  OS << (IndentSize ? " */" : "*/");
+  // Comments are on their own line unless attached to an attribute value.
+  if (Stack.size() > 1 && Stack.back().Ctx == Singleton) {
+    if (IndentSize)
+      OS << ' ';
+  } else {
+    newline();
+  }
 }
 
 void llvm::json::OStream::newline() {
@@ -657,6 +839,7 @@ void llvm::json::OStream::arrayEnd() {
   if (Stack.back().HasValue)
     newline();
   OS << ']';
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(!Stack.empty());
 }
@@ -675,6 +858,7 @@ void llvm::json::OStream::objectEnd() {
   if (Stack.back().HasValue)
     newline();
   OS << '}';
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(!Stack.empty());
 }
@@ -684,6 +868,7 @@ void llvm::json::OStream::attributeBegin(llvm::StringRef Key) {
   if (Stack.back().HasValue)
     OS << ',';
   newline();
+  flushComment();
   Stack.back().HasValue = true;
   Stack.emplace_back();
   Stack.back().Ctx = Singleton;
@@ -701,8 +886,21 @@ void llvm::json::OStream::attributeBegin(llvm::StringRef Key) {
 void llvm::json::OStream::attributeEnd() {
   assert(Stack.back().Ctx == Singleton);
   assert(Stack.back().HasValue && "Attribute must have a value");
+  assert(PendingComment.empty());
   Stack.pop_back();
   assert(Stack.back().Ctx == Object);
+}
+
+raw_ostream &llvm::json::OStream::rawValueBegin() {
+  valueBegin();
+  Stack.emplace_back();
+  Stack.back().Ctx = RawValue;
+  return OS;
+}
+
+void llvm::json::OStream::rawValueEnd() {
+  assert(Stack.back().Ctx == RawValue);
+  Stack.pop_back();
 }
 
 } // namespace json

@@ -17,8 +17,11 @@ class IOHandlerCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_completion(self):
-        self.launch(dimensions=(100,500))
+        self.build()
+        self.launch(dimensions=(100,500), executable=self.getBuildArtifact("a.out"))
 
         # Start tab completion, go to the next page and then display all with 'a'.
         self.child.send("\t\ta")
@@ -46,6 +49,13 @@ class IOHandlerCompletionTest(PExpectTest):
         # that this is completing a partial completion, so skip the exact cursor
         # position calculation.
         self.child.expect(re.compile(b"TestIOHandler(\r" + self.cursor_forward_escape_seq("\d+") + b")?Completion.py"))
+        self.child.send("\n")
+        self.expect_prompt()
+
+        # Complete a file path.
+        # FIXME: This should complete to './main.c' and not 'main.c'
+        self.child.send("breakpoint set --file ./main\t")
+        self.child.expect_exact("main.c")
         self.child.send("\n")
         self.expect_prompt()
 

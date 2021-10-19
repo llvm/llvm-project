@@ -399,7 +399,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo();
   if (type_flags & eTypeIsScalar) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger) {
@@ -487,7 +487,7 @@ ValueObjectSP ABISysV_x86_64::GetReturnValueObjectSimple(
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(rax_id,
                                                                       0);
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
     return_valobj_sp = ValueObjectConstResult::Create(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
@@ -887,6 +887,7 @@ bool ABISysV_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   const int32_t ptr_size = 8;
   row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
   row->SetOffset(0);
+  row->SetUnspecifiedRegistersAreUndefined(true);
 
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
@@ -932,6 +933,8 @@ uint32_t ABISysV_x86_64::GetGenericNum(llvm::StringRef name) {
       .Case("rsp", LLDB_REGNUM_GENERIC_SP)
       .Case("rbp", LLDB_REGNUM_GENERIC_FP)
       .Case("rflags", LLDB_REGNUM_GENERIC_FLAGS)
+      // gdbserver uses eflags
+      .Case("eflags", LLDB_REGNUM_GENERIC_FLAGS)
       .Case("rdi", LLDB_REGNUM_GENERIC_ARG1)
       .Case("rsi", LLDB_REGNUM_GENERIC_ARG2)
       .Case("rdx", LLDB_REGNUM_GENERIC_ARG3)
@@ -954,11 +957,3 @@ lldb_private::ConstString ABISysV_x86_64::GetPluginNameStatic() {
   static ConstString g_name("sysv-x86_64");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_x86_64::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABISysV_x86_64::GetPluginVersion() { return 1; }

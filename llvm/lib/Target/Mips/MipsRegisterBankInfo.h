@@ -150,7 +150,7 @@ private:
 
   class TypeInfoForMF {
     /// MachineFunction name is used to recognise when MF changes.
-    std::string MFName = "";
+    std::string MFName;
     /// <key, value> : value is vector of all MachineInstrs that are waiting for
     /// key to figure out type of some of its ambiguous operands.
     DenseMap<const MachineInstr *, SmallVector<const MachineInstr *, 2>>

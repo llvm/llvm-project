@@ -77,21 +77,10 @@ bool isPotentiallyReachable(
 /// Determine whether there is a path from From to To within a single function.
 /// Returns false only if we can prove that once 'From' has been reached then
 /// 'To' can not be executed. Conservatively returns true.
-bool isPotentiallyReachable(const BasicBlock *From, const BasicBlock *To,
-                            const DominatorTree *DT = nullptr,
-                            const LoopInfo *LI = nullptr);
-
-/// Determine whether there is at least one path from a block in
-/// 'Worklist' to 'StopBB', returning true if uncertain.
-///
-/// Determine whether there is a path from at least one block in Worklist to
-/// StopBB within a single function. Returns false only if we can prove that
-/// once any block in 'Worklist' has been reached then 'StopBB' can not be
-/// executed. Conservatively returns true.
-bool isPotentiallyReachableFromMany(SmallVectorImpl<BasicBlock *> &Worklist,
-                                    BasicBlock *StopBB,
-                                    const DominatorTree *DT = nullptr,
-                                    const LoopInfo *LI = nullptr);
+bool isPotentiallyReachable(
+    const BasicBlock *From, const BasicBlock *To,
+    const SmallPtrSetImpl<BasicBlock *> *ExclusionSet = nullptr,
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
 
 /// Determine whether there is at least one path from a block in
 /// 'Worklist' to 'StopBB' without passing through any blocks in

@@ -22,50 +22,50 @@ define void @multiply_noalias_4x4(<16 x double>* noalias %A, <16 x double>* noal
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INNER_IV]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x double>, <16 x double>* [[A:%.*]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP4]] to <2 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <16 x double>, <16 x double>* [[A:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP2]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP4]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP2]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x double>, <16 x double>* [[B:%.*]], i64 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[TMP7]] to <2 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x double>, <16 x double>* [[B:%.*]], i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[TMP5]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP7]], i64 4
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, double* [[TMP5]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP9]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[TMP8]])
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD8]], <2 x double> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP7]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[TMP6]])
+; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD8]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[RESULT_VEC_1]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x double> [[COL_LOAD8]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP11]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT19]], <2 x double> [[TMP10]])
+; CHECK-NEXT:    [[TMP9]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT19]], <2 x double> [[TMP8]])
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_STEP]], 4
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr <16 x double>, <16 x double>* [[C:%.*]], i64 0, i64 [[TMP13]]
-; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast double* [[TMP14]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[VEC_CAST21]], align 8
-; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr double, double* [[TMP14]], i64 4
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[COLS_IV]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr <16 x double>, <16 x double>* [[C:%.*]], i64 0, i64 [[TMP11]]
+; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast double* [[TMP12]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP7]], <2 x double>* [[VEC_CAST21]], align 8
+; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr double, double* [[TMP12]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST23:%.*]] = bitcast double* [[VEC_GEP22]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[VEC_CAST23]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[VEC_CAST23]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -104,54 +104,54 @@ define void @multiply_noalias_2x4(<8 x i64>* noalias %A, <8 x i64>* noalias %B, 
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP13:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[A:%.*]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast i64* [[TMP4]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[A:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast i64* [[TMP2]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, i64* [[TMP4]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, i64* [[TMP2]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast i64* [[VEC_GEP]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[B:%.*]], i64 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast i64* [[TMP7]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[B:%.*]], i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr i64, i64* [[TMP7]], i64 4
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr i64, i64* [[TMP5]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast i64* [[VEC_GEP6]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST7]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP0]], [[TMP8]]
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP6]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT12]]
-; CHECK-NEXT:    [[TMP11]] = add <2 x i64> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT16]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <2 x i64> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT16]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP10]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP14:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT19]]
-; CHECK-NEXT:    [[TMP15]] = add <2 x i64> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT19]]
+; CHECK-NEXT:    [[TMP13]] = add <2 x i64> [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_STEP]], 4
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr <4 x i64>, <4 x i64>* [[C:%.*]], i64 0, i64 [[TMP17]]
-; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast i64* [[TMP18]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* [[VEC_CAST21]], align 8
-; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr i64, i64* [[TMP18]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[COLS_IV]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <4 x i64>, <4 x i64>* [[C:%.*]], i64 0, i64 [[TMP15]]
+; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast i64* [[TMP16]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[VEC_CAST21]], align 8
+; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr i64, i64* [[TMP16]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST23:%.*]] = bitcast i64* [[VEC_GEP22]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP15]], <2 x i64>* [[VEC_CAST23]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP13]], <2 x i64>* [[VEC_CAST23]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -196,54 +196,54 @@ define void @multiply_noalias_4x2_2x8(<8 x i64>* noalias %A, <16 x i64>* noalias
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP9:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x i64> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP13:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INNER_IV]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[A:%.*]], i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast i64* [[TMP4]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INNER_IV]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <8 x i64>, <8 x i64>* [[A:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast i64* [[TMP2]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, i64* [[TMP4]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i64, i64* [[TMP2]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast i64* [[VEC_GEP]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i64>, <16 x i64>* [[B:%.*]], i64 0, i64 [[TMP6]]
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast i64* [[TMP7]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[COLS_IV]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i64>, <16 x i64>* [[B:%.*]], i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr i64, i64* [[TMP7]], i64 2
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr i64, i64* [[TMP5]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast i64* [[VEC_GEP6]] to <2 x i64>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x i64>, <2 x i64>* [[VEC_CAST7]], align 8
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP0]], [[TMP8]]
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[RESULT_VEC_0]], [[TMP6]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x i64> [[COL_LOAD5]], <2 x i64> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT12]]
-; CHECK-NEXT:    [[TMP11]] = add <2 x i64> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT16]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add <2 x i64> [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[COL_LOAD]], [[SPLAT_SPLAT16]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i64> [[RESULT_VEC_1]], [[TMP10]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x i64> [[COL_LOAD8]], <2 x i64> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP14:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT19]]
-; CHECK-NEXT:    [[TMP15]] = add <2 x i64> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[COL_LOAD2]], [[SPLAT_SPLAT19]]
+; CHECK-NEXT:    [[TMP13]] = add <2 x i64> [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_IV]], 0
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop !3
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[COLS_IV]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr <32 x i64>, <32 x i64>* [[C:%.*]], i64 0, i64 [[TMP17]]
-; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast i64* [[TMP18]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* [[VEC_CAST21]], align 8
-; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr i64, i64* [[TMP18]], i64 4
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[COLS_IV]], 2
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <32 x i64>, <32 x i64>* [[C:%.*]], i64 0, i64 [[TMP15]]
+; CHECK-NEXT:    [[VEC_CAST21:%.*]] = bitcast i64* [[TMP16]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[VEC_CAST21]], align 8
+; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr i64, i64* [[TMP16]], i64 4
 ; CHECK-NEXT:    [[VEC_CAST23:%.*]] = bitcast i64* [[VEC_GEP22]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP15]], <2 x i64>* [[VEC_CAST23]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP13]], <2 x i64>* [[VEC_CAST23]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
@@ -289,7 +289,7 @@ define void @multiply_alias_2x2(<4 x float>* %A, <4 x float>* %B, <4 x float>* %
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x float>, align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x float>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(16) [[TMP3]], i8* nonnull align 8 dereferenceable(16) [[TMP4]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(16) [[TMP4]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x float>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -306,7 +306,7 @@ define void @multiply_alias_2x2(<4 x float>* %A, <4 x float>* %B, <4 x float>* %
 ; CHECK-NEXT:    [[TMP8:%.*]] = alloca <4 x float>, align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x float>* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x float>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(16) [[TMP9]], i8* nonnull align 8 dereferenceable(16) [[TMP10]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(16) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(16) [[TMP10]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x float>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP8]], [[COPY2]] ]
@@ -323,50 +323,50 @@ define void @multiply_alias_2x2(<4 x float>* %A, <4 x float>* %B, <4 x float>* %
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP21:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP23:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP19:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP21:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 [[INNER_IV]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr <4 x float>, <4 x float>* [[TMP5]], i64 0, i64 [[TMP15]]
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast float* [[TMP16]] to <2 x float>*
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr <4 x float>, <4 x float>* [[TMP5]], i64 0, i64 [[TMP13]]
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast float* [[TMP14]] to <2 x float>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, <2 x float>* [[VEC_CAST]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, float* [[TMP16]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, float* [[TMP14]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST8:%.*]] = bitcast float* [[VEC_GEP]] to <2 x float>*
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x float>, <2 x float>* [[VEC_CAST8]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr <4 x float>, <4 x float>* [[TMP11]], i64 0, i64 [[TMP18]]
-; CHECK-NEXT:    [[VEC_CAST11:%.*]] = bitcast float* [[TMP19]] to <2 x float>*
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[COLS_IV]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP15]], [[INNER_IV]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr <4 x float>, <4 x float>* [[TMP11]], i64 0, i64 [[TMP16]]
+; CHECK-NEXT:    [[VEC_CAST11:%.*]] = bitcast float* [[TMP17]] to <2 x float>*
 ; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <2 x float>, <2 x float>* [[VEC_CAST11]], align 4
-; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr float, float* [[TMP19]], i64 2
+; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr float, float* [[TMP17]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST14:%.*]] = bitcast float* [[VEC_GEP13]] to <2 x float>*
 ; CHECK-NEXT:    [[COL_LOAD15:%.*]] = load <2 x float>, <2 x float>* [[VEC_CAST14]], align 4
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[COL_LOAD12]], <2 x float> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[TMP12]])
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[COL_LOAD12]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[RESULT_VEC_0]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x float> [[COL_LOAD12]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP21]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT19]], <2 x float> [[TMP20]])
-; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <2 x float> [[COL_LOAD15]], <2 x float> undef, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT23]], <2 x float> [[TMP13]])
+; CHECK-NEXT:    [[TMP19]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT19]], <2 x float> [[TMP18]])
+; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <2 x float> [[COL_LOAD15]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT23]], <2 x float> [[RESULT_VEC_1]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT26:%.*]] = shufflevector <2 x float> [[COL_LOAD15]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP23]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT26]], <2 x float> [[TMP22]])
+; CHECK-NEXT:    [[TMP21]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT26]], <2 x float> [[TMP20]])
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_IV]], 0
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop !5
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = shl i64 [[COLS_IV]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP24]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr <4 x float>, <4 x float>* [[C]], i64 0, i64 [[TMP25]]
-; CHECK-NEXT:    [[VEC_CAST28:%.*]] = bitcast float* [[TMP26]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP21]], <2 x float>* [[VEC_CAST28]], align 8
-; CHECK-NEXT:    [[VEC_GEP29:%.*]] = getelementptr float, float* [[TMP26]], i64 2
+; CHECK-NEXT:    [[TMP22:%.*]] = shl i64 [[COLS_IV]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[TMP22]], [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr <4 x float>, <4 x float>* [[C]], i64 0, i64 [[TMP23]]
+; CHECK-NEXT:    [[VEC_CAST28:%.*]] = bitcast float* [[TMP24]] to <2 x float>*
+; CHECK-NEXT:    store <2 x float> [[TMP19]], <2 x float>* [[VEC_CAST28]], align 8
+; CHECK-NEXT:    [[VEC_GEP29:%.*]] = getelementptr float, float* [[TMP24]], i64 2
 ; CHECK-NEXT:    [[VEC_CAST30:%.*]] = bitcast float* [[VEC_GEP29]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> [[TMP23]], <2 x float>* [[VEC_CAST30]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP21]], <2 x float>* [[VEC_CAST30]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND_NOT]], label [[COLS_LATCH]], label [[ROWS_HEADER]]
 ; CHECK:       cols.latch:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2

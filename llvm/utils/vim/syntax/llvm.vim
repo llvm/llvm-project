@@ -15,8 +15,8 @@ syn case match
 " Types also include struct, array, vector, etc. but these don't
 " benefit as much from having dedicated highlighting rules.
 syn keyword llvmType void half bfloat float double x86_fp80 fp128 ppc_fp128
-syn keyword llvmType label metadata x86_mmx
-syn keyword llvmType type label opaque token
+syn keyword llvmType label metadata x86_mmx x86_amx
+syn keyword llvmType type label opaque token ptr
 syn match   llvmType /\<i\d\+\>/
 
 " Instructions.
@@ -25,16 +25,16 @@ syn match   llvmType /\<i\d\+\>/
 syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
 syn keyword llvmStatement bitcast br catchpad catchswitch catchret call callbr
 syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
-syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fpext
-syn keyword llvmStatement fptosi fptoui fptrunc free frem fsub fneg getelementptr
-syn keyword llvmStatement icmp inbounds indirectbr insertelement insertvalue
-syn keyword llvmStatement inttoptr invoke landingpad load lshr malloc max min
-syn keyword llvmStatement mul nand ne ninf nnan nsw nsz nuw oeq oge ogt ole
-syn keyword llvmStatement olt one or ord phi ptrtoint resume ret sdiv select
-syn keyword llvmStatement sext sge sgt shl shufflevector sitofp sle slt srem
-syn keyword llvmStatement store sub switch trunc udiv ueq uge ugt uitofp ule ult
-syn keyword llvmStatement umax umin une uno unreachable unwind urem va_arg
-syn keyword llvmStatement xchg xor zext
+syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fneg fpext
+syn keyword llvmStatement fptosi fptoui fptrunc free freeze frem fsub
+syn keyword llvmStatement getelementptr icmp inbounds indirectbr insertelement
+syn keyword llvmStatement insertvalue inttoptr invoke landingpad load lshr
+syn keyword llvmStatement malloc max min mul nand ne ninf nnan nsw nsz nuw oeq
+syn keyword llvmStatement oge ogt ole olt one or ord phi ptrtoint resume ret
+syn keyword llvmStatement sdiv select sext sge sgt shl shufflevector sitofp
+syn keyword llvmStatement sle slt srem store sub switch trunc udiv ueq uge ugt
+syn keyword llvmStatement uitofp ule ult umax umin une uno unreachable unwind
+syn keyword llvmStatement urem va_arg xchg xor zext
 
 " Keywords.
 syn keyword llvmKeyword
@@ -44,11 +44,12 @@ syn keyword llvmKeyword
       \ alias
       \ align
       \ alignstack
+      \ allocsize
       \ alwaysinline
       \ appending
       \ argmemonly
-      \ arm_aapcscc
       \ arm_aapcs_vfpcc
+      \ arm_aapcscc
       \ arm_apcscc
       \ asm
       \ atomic
@@ -58,73 +59,92 @@ syn keyword llvmKeyword
       \ byref
       \ byval
       \ c
-      \ catch
       \ caller
+      \ catch
       \ cc
       \ ccc
       \ cleanup
+      \ cold
       \ coldcc
       \ comdat
       \ common
       \ constant
+      \ convergent
       \ datalayout
       \ declare
       \ default
       \ define
       \ deplibs
       \ dereferenceable
+      \ dereferenceable_or_null
       \ distinct
       \ dllexport
       \ dllimport
       \ dso_local
       \ dso_preemptable
       \ except
+      \ extern_weak
       \ external
       \ externally_initialized
-      \ extern_weak
       \ fastcc
-      \ tailcc
       \ filter
       \ from
       \ gc
       \ global
-      \ hhvmcc
       \ hhvm_ccc
+      \ hhvmcc
       \ hidden
+      \ hot
       \ immarg
+      \ inaccessiblemem_or_argmemonly
+      \ inaccessiblememonly
+      \ inalloca
       \ initialexec
       \ inlinehint
       \ inreg
-      \ inteldialect
       \ intel_ocl_bicc
+      \ inteldialect
       \ internal
+      \ jumptable
       \ linkonce
       \ linkonce_odr
+      \ local_unnamed_addr
       \ localdynamic
       \ localexec
-      \ local_unnamed_addr
       \ minsize
       \ module
       \ monotonic
       \ msp430_intrcc
+      \ mustprogress
       \ musttail
       \ naked
       \ nest
       \ noalias
       \ nobuiltin
+      \ nocallback
       \ nocapture
+      \ nocf_check
+      \ noduplicate
+      \ nofree
       \ noimplicitfloat
       \ noinline
+      \ nomerge
       \ nonlazybind
       \ nonnull
+      \ noprofile
       \ norecurse
       \ noredzone
       \ noreturn
+      \ nosync
       \ noundef
       \ nounwind
+      \ nosanitize_coverage
+      \ null_pointer_is_valid
+      \ optforfuzzing
       \ optnone
       \ optsize
       \ personality
+      \ preallocated
       \ private
       \ protected
       \ ptx_device
@@ -134,16 +154,20 @@ syn keyword llvmKeyword
       \ release
       \ returned
       \ returns_twice
+      \ safestack
       \ sanitize_address
+      \ sanitize_hwaddress
       \ sanitize_memory
+      \ sanitize_memtag
       \ sanitize_thread
       \ section
       \ seq_cst
+      \ shadowcallstack
       \ sideeffect
       \ signext
-      \ syncscope
       \ source_filename
       \ speculatable
+      \ speculative_load_hardening
       \ spir_func
       \ spir_kernel
       \ sret
@@ -152,8 +176,12 @@ syn keyword llvmKeyword
       \ sspstrong
       \ strictfp
       \ swiftcc
+      \ swifterror
+      \ swifttailcc
       \ swiftself
+      \ syncscope
       \ tail
+      \ tailcc
       \ target
       \ thread_local
       \ to
@@ -166,10 +194,11 @@ syn keyword llvmKeyword
       \ volatile
       \ weak
       \ weak_odr
+      \ willreturn
+      \ win64cc
       \ within
       \ writeonly
       \ x86_64_sysvcc
-      \ win64cc
       \ x86_fastcallcc
       \ x86_stdcallcc
       \ x86_thiscallcc
@@ -184,7 +213,7 @@ syn match   llvmNumber /-\?\<\d\+\>/
 syn match   llvmFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
 syn match   llvmFloat  /\<0x\x\+\>/
 syn keyword llvmBoolean true false
-syn keyword llvmConstant zeroinitializer undef null none
+syn keyword llvmConstant zeroinitializer undef null none poison vscale
 syn match   llvmComment /;.*$/
 syn region  llvmString start=/"/ skip=/\\"/ end=/"/
 syn match   llvmLabel /[-a-zA-Z$._][-a-zA-Z$._0-9]*:/
@@ -207,7 +236,8 @@ syn match  llvmSpecialComment /;\s*REQUIRES:.*$/
 syn match  llvmSpecialComment /;\s*RUN:.*$/
 syn match  llvmSpecialComment /;\s*ALLOW_RETRIES:.*$/
 syn match  llvmSpecialComment /;\s*CHECK:.*$/
-syn match  llvmSpecialComment "\v;\s*CHECK-(NEXT|NOT|DAG|SAME|LABEL):.*$"
+syn match  llvmSpecialComment /;\s*CHECK-EMPTY:\s*$/
+syn match  llvmSpecialComment /\v;\s*CHECK-(NEXT|NOT|DAG|SAME|LABEL|COUNT-\d+):.*$/
 syn match  llvmSpecialComment /;\s*XFAIL:.*$/
 
 if version >= 508 || !exists("did_c_syn_inits")

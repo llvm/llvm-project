@@ -10,7 +10,7 @@ a & foo(a &x, a & y) {
   return x;
 }
 
-// CHECK: define align 4 dereferenceable(4) i32 addrspace(1)* @_Z3fooRU3AS1iS0_(i32 addrspace(1)* align 4 dereferenceable(4) %x, i32 addrspace(1)* align 4 dereferenceable(4) %y)
+// CHECK: define{{.*}} align 4 dereferenceable(4) i32 addrspace(1)* @_Z3fooRU3AS1iS0_(i32 addrspace(1)* align 4 dereferenceable(4) %x, i32 addrspace(1)* align 4 dereferenceable(4) %y)
 
 // For a reference to an incomplete type in an alternate address space, output
 // neither dereferenceable nor nonnull.
@@ -22,7 +22,7 @@ b & bar(b &x, b & y) {
   return x;
 }
 
-// CHECK: define align 1 %class.bc addrspace(1)* @_Z3barRU3AS12bcS1_(%class.bc addrspace(1)* align 1 %x, %class.bc addrspace(1)* align 1 %y)
+// CHECK: define{{.*}} align 1 %class.bc addrspace(1)* @_Z3barRU3AS12bcS1_(%class.bc addrspace(1)* align 1 %x, %class.bc addrspace(1)* align 1 %y)
 
 // For a reference to an incomplete type in addrspace(0), output nonnull.
 
@@ -30,7 +30,7 @@ bc & bar2(bc &x, bc & y) {
   return x;
 }
 
-// NULL-INVALID: define nonnull align 1 %class.bc* @_Z4bar2R2bcS0_(%class.bc* nonnull align 1 %x, %class.bc* nonnull align 1 %y)
-// NULL-VALID: define align 1 %class.bc* @_Z4bar2R2bcS0_(%class.bc* align 1 %x, %class.bc* align 1 %y)
+// NULL-INVALID: define{{.*}} nonnull align 1 %class.bc* @_Z4bar2R2bcS0_(%class.bc* nonnull align 1 %x, %class.bc* nonnull align 1 %y)
+// NULL-VALID: define{{.*}} align 1 %class.bc* @_Z4bar2R2bcS0_(%class.bc* align 1 %x, %class.bc* align 1 %y)
 
 

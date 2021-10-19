@@ -5,9 +5,9 @@
 ; Memset is interesting because it is an ExternalSymbol reference instead of a
 ; GlobalValue. Make sure we do the right GOT load for 64-bit large.
 
-; RUN: llc < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=CHECK --check-prefix=SMALL-PIC
-; RUN: llc < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
-; RUN: llc < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=small  | FileCheck %s --check-prefix=SMALL-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=MEDIUM-PIC
+; RUN: llc < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=LARGE-PIC
 
 ; Generated from this C source:
 ;
@@ -57,7 +57,7 @@ define i32 @main() #0 {
 ; LARGE-PIC-NEXT:    subq $424, %rsp # imm = 0x1A8
 ; LARGE-PIC-NEXT:    .cfi_def_cfa_offset 432
 ; LARGE-PIC-NEXT:  .L0$pb:
-; LARGE-PIC-NEXT:    leaq .L0${{.*}}(%rip), %rax
+; LARGE-PIC-NEXT:    leaq .L0$pb(%rip), %rax
 ; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movl $0, {{[0-9]+}}(%rsp)

@@ -43,8 +43,6 @@ public:
   DWARFUnit *GetUnit(const DIERef &die_ref);
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
-  DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
-                              dw_offset_t die_offset);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
   enum {
@@ -54,7 +52,7 @@ public:
         (1 << 2) // Show all parent DIEs when dumping single DIEs
   };
 
-  llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
+  const DWARFDebugAranges &GetCompileUnitAranges();
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;

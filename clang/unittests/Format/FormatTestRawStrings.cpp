@@ -11,7 +11,6 @@
 #include "../Tooling/ReplacementTest.h"
 #include "FormatTestUtils.h"
 
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
@@ -783,10 +782,15 @@ a = ParseTextProto<ProtoType>(R"(key:value)");)test",
 }
 
 TEST_F(FormatTestRawStrings, UpdatesToCanonicalDelimiters) {
-  FormatStyle Style = getRawStringPbStyleWithColumns(25);
+  FormatStyle Style = getRawStringPbStyleWithColumns(35);
   Style.RawStringFormats[0].CanonicalDelimiter = "proto";
+  Style.RawStringFormats[0].EnclosingFunctions.push_back("PARSE_TEXT_PROTO");
+
   expect_eq(R"test(a = R"proto(key: value)proto";)test",
             format(R"test(a = R"pb(key:value)pb";)test", Style));
+
+  expect_eq(R"test(PARSE_TEXT_PROTO(R"proto(key: value)proto");)test",
+            format(R"test(PARSE_TEXT_PROTO(R"(key:value)");)test", Style));
 
   // Don't update to canonical delimiter if it occurs as a raw string suffix in
   // the raw string content.

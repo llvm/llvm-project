@@ -3,14 +3,15 @@
 ## name, we print it. Test for both static and dynamic relocation printing.
 
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-readelf --relocations --dyn-relocations %t | FileCheck %s
+# RUN: llvm-readelf --relocations --dyn-relocations %t 2>&1 | FileCheck %s -DFILE=%t
 
 # CHECK:      Relocation section '.rela.text' at offset {{.*}} contains 5 entries:
 # CHECK-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
-# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 678
+# CHECK-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 <?> + 678
 # CHECK-NEXT: 0000000000000000  0000000400000000 R_X86_64_NONE          0000000000000000 2
 
 # CHECK:      Relocation section '.rela.dyn' at offset {{.*}} contains 5 entries:
@@ -18,7 +19,7 @@
 # CHECK-NEXT: 0000000000000000  0000000000000000 R_X86_64_NONE                           1
 # CHECK-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 sym + 1
 # CHECK-NEXT: 0000000000000000  0000000200000000 R_X86_64_NONE          0000000000000123 456
-# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 678
+# CHECK-NEXT: 0000000000000000  0000000300000000 R_X86_64_NONE          0000000000000000 <?> + 678
 # CHECK-NEXT: 0000000000000000  0000000400000000 R_X86_64_NONE          0000000000000000 2
 
 # CHECK:      'RELA' relocation section at offset {{.*}} contains 120 bytes:
@@ -132,12 +133,11 @@ DynamicSymbols:
     Section: .text
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
-      - Section: .rela.dyn
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .rela.dyn
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic

@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#include <stdio.h>
-#if HAVE_SYS_TYPES_H
+#include <cstdio>
 #include <sys/types.h>
-#endif
 
 #include <cstdlib>
 #include <map>
@@ -90,7 +86,7 @@ ClangUserExpression::ClangUserExpression(
   }
 }
 
-ClangUserExpression::~ClangUserExpression() {}
+ClangUserExpression::~ClangUserExpression() = default;
 
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -349,16 +345,17 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
 
 static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
                             DiagnosticManager &diagnostic_manager) {
-  ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
-  if (!decl_vendor)
-    return;
-
   if (!target->GetEnableAutoImportClangModules())
     return;
 
   auto *persistent_state = llvm::cast<ClangPersistentVariables>(
       target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
   if (!persistent_state)
+    return;
+
+  std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+      persistent_state->GetClangModulesDeclVendor();
+  if (!decl_vendor)
     return;
 
   StackFrame *frame = exe_ctx.GetFramePtr();
@@ -417,7 +414,6 @@ void ClangUserExpression::CreateSourceCode(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     std::vector<std::string> modules_to_import, bool for_completion) {
 
-  m_filename = m_clang_state->GetNextExprFileName();
   std::string prefix = m_expr_prefix;
 
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
@@ -477,9 +473,6 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
   if (!target)
     return LogConfigError("No target");
 
-  if (!target->GetEnableImportStdModule())
-    return LogConfigError("Importing std module not enabled in settings");
-
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (!frame)
     return LogConfigError("No frame");
@@ -529,8 +522,6 @@ CppModuleConfiguration GetModuleConfig(lldb::LanguageType language,
 bool ClangUserExpression::PrepareForParsing(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
     bool for_completion) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
   InstallContext(exe_ctx);
 
   if (!SetupPersistentState(diagnostic_manager, exe_ctx))
@@ -551,21 +542,104 @@ bool ClangUserExpression::PrepareForParsing(
 
   SetupDeclVendor(exe_ctx, m_target, diagnostic_manager);
 
+  m_filename = m_clang_state->GetNextExprFileName();
+
+  if (m_target->GetImportStdModule() == eImportStdModuleTrue)
+    SetupCppModuleImports(exe_ctx);
+
+  CreateSourceCode(diagnostic_manager, exe_ctx, m_imported_cpp_modules,
+                   for_completion);
+  return true;
+}
+
+bool ClangUserExpression::TryParse(
+    DiagnosticManager &diagnostic_manager, ExecutionContextScope *exe_scope,
+    ExecutionContext &exe_ctx, lldb_private::ExecutionPolicy execution_policy,
+    bool keep_result_in_memory, bool generate_debug_info) {
+  m_materializer_up = std::make_unique<Materializer>();
+
+  ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
+
+  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
+
+  if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
+    diagnostic_manager.PutString(
+        eDiagnosticSeverityError,
+        "current process state is unsuitable for expression parsing");
+    return false;
+  }
+
+  if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
+    DeclMap()->SetLookupsEnabled(true);
+  }
+
+  m_parser = std::make_unique<ClangExpressionParser>(
+      exe_scope, *this, generate_debug_info, m_include_directories, m_filename);
+
+  unsigned num_errors = m_parser->Parse(diagnostic_manager);
+
+  // Check here for FixItHints.  If there are any try to apply the fixits and
+  // set the fixed text in m_fixed_text before returning an error.
+  if (num_errors) {
+    if (diagnostic_manager.HasFixIts()) {
+      if (m_parser->RewriteExpression(diagnostic_manager)) {
+        size_t fixed_start;
+        size_t fixed_end;
+        m_fixed_text = diagnostic_manager.GetFixedExpression();
+        // Retrieve the original expression in case we don't have a top level
+        // expression (which has no surrounding source code).
+        if (m_source_code && m_source_code->GetOriginalBodyBounds(
+                                 m_fixed_text, fixed_start, fixed_end))
+          m_fixed_text =
+              m_fixed_text.substr(fixed_start, fixed_end - fixed_start);
+      }
+    }
+    return false;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Prepare the output of the parser for execution, evaluating it statically
+  // if possible
+  //
+
+  {
+    Status jit_error = m_parser->PrepareForExecution(
+        m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
+        m_can_interpret, execution_policy);
+
+    if (!jit_error.Success()) {
+      const char *error_cstr = jit_error.AsCString();
+      if (error_cstr && error_cstr[0])
+        diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
+      else
+        diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                     "expression can't be interpreted or run");
+      return false;
+    }
+  }
+  return true;
+}
+
+void ClangUserExpression::SetupCppModuleImports(ExecutionContext &exe_ctx) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
   CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
-  llvm::ArrayRef<std::string> imported_modules =
-      module_config.GetImportedModules();
-  m_imported_cpp_modules = !imported_modules.empty();
+  m_imported_cpp_modules = module_config.GetImportedModules();
   m_include_directories = module_config.GetIncludeDirs();
 
   LLDB_LOG(log, "List of imported modules in expression: {0}",
-           llvm::make_range(imported_modules.begin(), imported_modules.end()));
+           llvm::make_range(m_imported_cpp_modules.begin(),
+                            m_imported_cpp_modules.end()));
   LLDB_LOG(log, "List of include directories gathered for modules: {0}",
            llvm::make_range(m_include_directories.begin(),
                             m_include_directories.end()));
+}
 
-  CreateSourceCode(diagnostic_manager, exe_ctx, imported_modules,
-                   for_completion);
-  return true;
+static bool shouldRetryWithCppModule(Target &target, ExecutionPolicy exe_policy) {
+  // Top-level expression don't yet support importing C++ modules.
+  if (exe_policy == ExecutionPolicy::eExecutionPolicyTopLevel)
+    return false;
+  return target.GetImportStdModule() == eImportStdModuleFallback;
 }
 
 bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
@@ -595,81 +669,46 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // Parse the expression
   //
 
-  m_materializer_up = std::make_unique<Materializer>();
-
-  ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
-
-  auto on_exit = llvm::make_scope_exit([this]() { ResetDeclMap(); });
-
-  if (!DeclMap()->WillParse(exe_ctx, GetMaterializer())) {
-    diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
-        "current process state is unsuitable for expression parsing");
-    return false;
-  }
-
-  if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
-    DeclMap()->SetLookupsEnabled(true);
-  }
-
   Process *process = exe_ctx.GetProcessPtr();
   ExecutionContextScope *exe_scope = process;
 
   if (!exe_scope)
     exe_scope = exe_ctx.GetTargetPtr();
 
-  // We use a shared pointer here so we can use the original parser - if it
-  // succeeds or the rewrite parser we might make if it fails.  But the
-  // parser_sp will never be empty.
-
-  ClangExpressionParser parser(exe_scope, *this, generate_debug_info,
-                               m_include_directories, m_filename);
-
-  unsigned num_errors = parser.Parse(diagnostic_manager);
-
-  // Check here for FixItHints.  If there are any try to apply the fixits and
-  // set the fixed text in m_fixed_text before returning an error.
-  if (num_errors) {
-    if (diagnostic_manager.HasFixIts()) {
-      if (parser.RewriteExpression(diagnostic_manager)) {
-        size_t fixed_start;
-        size_t fixed_end;
-        m_fixed_text = diagnostic_manager.GetFixedExpression();
-        // Retrieve the original expression in case we don't have a top level
-        // expression (which has no surrounding source code).
-        if (m_source_code && m_source_code->GetOriginalBodyBounds(
-                                 m_fixed_text, fixed_start, fixed_end))
-          m_fixed_text =
-              m_fixed_text.substr(fixed_start, fixed_end - fixed_start);
-      }
+  bool parse_success = TryParse(diagnostic_manager, exe_scope, exe_ctx,
+                                execution_policy, keep_result_in_memory,
+                                generate_debug_info);
+  // If the expression failed to parse, check if retrying parsing with a loaded
+  // C++ module is possible.
+  if (!parse_success && shouldRetryWithCppModule(*target, execution_policy)) {
+    // Load the loaded C++ modules.
+    SetupCppModuleImports(exe_ctx);
+    // If we did load any modules, then retry parsing.
+    if (!m_imported_cpp_modules.empty()) {
+      // Create a dedicated diagnostic manager for the second parse attempt.
+      // These diagnostics are only returned to the caller if using the fallback
+      // actually succeeded in getting the expression to parse. This prevents
+      // that module-specific issues regress diagnostic quality with the
+      // fallback mode.
+      DiagnosticManager retry_manager;
+      // The module imports are injected into the source code wrapper,
+      // so recreate those.
+      CreateSourceCode(retry_manager, exe_ctx, m_imported_cpp_modules,
+                       /*for_completion*/ false);
+      parse_success = TryParse(retry_manager, exe_scope, exe_ctx,
+                               execution_policy, keep_result_in_memory,
+                               generate_debug_info);
+      // Return the parse diagnostics if we were successful.
+      if (parse_success)
+        diagnostic_manager = std::move(retry_manager);
     }
+  }
+  if (!parse_success)
     return false;
-  }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Prepare the output of the parser for execution, evaluating it statically
-  // if possible
-  //
-
-  {
-    Status jit_error = parser.PrepareForExecution(
-        m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
-        m_can_interpret, execution_policy);
-
-    if (!jit_error.Success()) {
-      const char *error_cstr = jit_error.AsCString();
-      if (error_cstr && error_cstr[0])
-        diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
-      else
-        diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                     "expression can't be interpreted or run");
-      return false;
-    }
-  }
 
   if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel) {
     Status static_init_error =
-        parser.RunStaticInitializers(m_execution_unit_sp, exe_ctx);
+        m_parser->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
 
     if (!static_init_error.Success()) {
       const char *error_cstr = static_init_error.AsCString();
@@ -871,8 +910,8 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (!object_ptr_error.Success()) {
       exe_ctx.GetTargetRef().GetDebugger().GetAsyncOutputStream()->Printf(
-          "warning: `%s' is not accessible (substituting 0)\n",
-          object_name.AsCString());
+          "warning: `%s' is not accessible (substituting 0). %s\n",
+          object_name.AsCString(), object_ptr_error.AsCString());
       object_ptr = 0;
     }
 

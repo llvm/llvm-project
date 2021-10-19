@@ -17,8 +17,8 @@ entry:
   ret i64 %v
 }
 
-@gv1 = external global i8, align 16
-@gv2 = external global i8, align 16
+@gv1 = external dso_local global i8, align 16
+@gv2 = external dso_local global i8, align 16
 
 ; Select when both GV and base reg are present.
 define i8 @test2(i1 %c, i64 %b) {

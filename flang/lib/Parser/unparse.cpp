@@ -16,6 +16,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -48,6 +49,14 @@ public:
       Unparse(x);
       Post(x);
       return false; // Walk() does not visit descendents
+    } else if constexpr (HasTypedExpr<T>::value) {
+      // Format the expression representation from semantics
+      if (asFortran_ && x.typedExpr) {
+        asFortran_->expr(out_, *x.typedExpr);
+        return false;
+      } else {
+        return true;
+      }
     } else {
       Before(x);
       return true; // there's no Unparse() defined here, Walk() the descendents
@@ -816,15 +825,6 @@ public:
   }
 
   // R1001 - R1022
-  bool Pre(const Expr &x) {
-    if (asFortran_ && x.typedExpr) {
-      // Format the expression representation from semantics
-      asFortran_->expr(out_, *x.typedExpr);
-      return false;
-    } else {
-      return true;
-    }
-  }
   void Unparse(const Expr::Parentheses &x) { Put('('), Walk(x.v), Put(')'); }
   void Before(const Expr::UnaryPlus &) { Put("+"); }
   void Before(const Expr::Negate &) { Put("-"); }
@@ -1831,7 +1831,7 @@ public:
     Word(llvm::acc::getOpenACCDirectiveName(x).str());
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+#include "llvm/Frontend/OpenACC/ACC.inc"
   void Unparse(const AccObjectListWithModifier &x) {
     Walk(std::get<std::optional<AccDataModifier>>(x.t), ":");
     Walk(std::get<AccObjectList>(x.t));
@@ -1839,12 +1839,21 @@ public:
   void Unparse(const AccDataModifier::Modifier &x) {
     Word(AccDataModifier::EnumToString(x));
   }
+  void Unparse(const AccBindClause &x) {
+    std::visit(common::visitors{
+                   [&](const Name &y) { Put('('), Walk(y), Put(')'); },
+                   [&](const ScalarDefaultCharExpr &y) {
+                     Put('('), Walk(y), Put(')');
+                   },
+               },
+        x.u);
+  }
   void Unparse(const AccDefaultClause &x) {
     switch (x.v) {
-    case AccDefaultClause::Arg::None:
+    case llvm::acc::DefaultValue::ACC_Default_none:
       Put("NONE");
       break;
-    case AccDefaultClause::Arg::Present:
+    case llvm::acc::DefaultValue::ACC_Default_present:
       Put("PRESENT");
       break;
     }
@@ -1903,8 +1912,8 @@ public:
     EndOpenACC();
     Walk(std::get<std::optional<DoConstruct>>(x.t));
     BeginOpenACC();
-    Walk("!$ACC END ", std::get<std::optional<DoConstruct>>(x.t));
-    Put("\n");
+    Walk("!$ACC END ", std::get<std::optional<AccEndCombinedDirective>>(x.t),
+        "\n");
     EndOpenACC();
   }
   void Unparse(const OpenACCRoutineConstruct &x) {
@@ -1965,56 +1974,43 @@ public:
   }
   void Unparse(const OmpMapType::Always &) { Word("ALWAYS,"); }
   void Unparse(const OmpMapClause &x) {
-    Word("MAP(");
     Walk(std::get<std::optional<OmpMapType>>(x.t), ":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpScheduleModifier &x) {
     Walk(std::get<OmpScheduleModifier::Modifier1>(x.t));
     Walk(",", std::get<std::optional<OmpScheduleModifier::Modifier2>>(x.t));
   }
   void Unparse(const OmpScheduleClause &x) {
-    Word("SCHEDULE(");
     Walk(std::get<std::optional<OmpScheduleModifier>>(x.t), ":");
     Walk(std::get<OmpScheduleClause::ScheduleType>(x.t));
     Walk(",", std::get<std::optional<ScalarIntExpr>>(x.t));
-    Put(")");
   }
   void Unparse(const OmpAlignedClause &x) {
-    Word("ALIGNED("), Walk(std::get<std::list<Name>>(x.t), ",");
+    Walk(std::get<std::list<Name>>(x.t), ",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpIfClause &x) {
-    Word("IF("),
-        Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t),
-            ":");
+    Walk(std::get<std::optional<OmpIfClause::DirectiveNameModifier>>(x.t), ":");
     Walk(std::get<ScalarLogicalExpr>(x.t));
-    Put(") ");
   }
   void Unparse(const OmpLinearClause::WithoutModifier &x) {
-    Word("LINEAR("), Walk(x.names, ", ");
+    Walk(x.names, ", ");
     Walk(":", x.step);
-    Put(")");
   }
   void Unparse(const OmpLinearClause::WithModifier &x) {
-    Word("LINEAR("), Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
+    Walk(x.modifier), Put("("), Walk(x.names, ","), Put(")");
     Walk(":", x.step);
-    Put(")");
   }
   void Unparse(const OmpReductionClause &x) {
-    Word("REDUCTION(");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
-    Walk(std::get<std::list<Designator>>(x.t), ",");
-    Put(")");
+    Walk(std::get<OmpObjectList>(x.t));
   }
   void Unparse(const OmpAllocateClause &x) {
-    Word("ALLOCATE(");
-    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
+    Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
@@ -2034,47 +2030,26 @@ public:
   bool Pre(const OmpDependClause &x) {
     return std::visit(common::visitors{
                           [&](const OmpDependClause::Source &) {
-                            Word("DEPEND(SOURCE)");
+                            Word("SOURCE");
                             return false;
                           },
                           [&](const OmpDependClause::Sink &y) {
-                            Word("DEPEND(SINK:");
+                            Word("SINK:");
                             Walk(y.v);
                             Put(")");
                             return false;
                           },
-                          [&](const OmpDependClause::InOut &) {
-                            Word("DEPEND");
-                            return true;
-                          },
+                          [&](const OmpDependClause::InOut &) { return true; },
                       },
         x.u);
   }
-  bool Pre(const OmpDefaultClause &) {
-    Word("DEFAULT(");
-    return true;
-  }
-  void Post(const OmpDefaultClause &) { Put(")"); }
-  bool Pre(const OmpProcBindClause &) {
-    Word("PROC_BIND(");
-    return true;
-  }
-  void Post(const OmpProcBindClause &) { Put(")"); }
   void Unparse(const OmpDefaultmapClause &x) {
-    Word("DEFAULTMAP(");
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":",
         std::get<std::optional<OmpDefaultmapClause::VariableCategory>>(x.t));
-    Word(")");
-  }
-  void Unparse(const OmpNowait &) { Word("NOWAIT"); }
-  void Unparse(const OmpDistScheduleClause &x) {
-    Word("DIST_SCHEDULE(STATIC");
-    Walk(", ", x.v);
-    Put(")");
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void Unparse(const OmpLoopDirective &x) {
     switch (x.v) {
     case llvm::omp::Directive::OMPD_distribute:
@@ -2222,19 +2197,12 @@ public:
       break;
     }
   }
-  void Unparse(const OmpMemoryClause &x) {
-    switch (x.v) {
-    case OmpMemoryClause::MemoryOrder::SeqCst:
-      Word("SEQ_CST");
-      break;
-    }
-  }
-  void Unparse(const OmpMemoryClauseList &x) { Walk(" ", x.v, " "); }
-  void Unparse(const OmpMemoryClausePostList &x) { Walk(" ", x.v, " "); }
+  void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
+
   void Unparse(const OmpAtomic &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpMemoryClauseList>(x.t));
+    Walk(std::get<OmpAtomicClauseList>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<Statement<AssignmentStmt>>(x.t));
@@ -2245,9 +2213,9 @@ public:
   void Unparse(const OmpAtomicCapture &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpMemoryClauseList>(x.t));
+    Walk(std::get<0>(x.t));
     Word(" CAPTURE");
-    Walk(std::get<OmpMemoryClausePostList>(x.t));
+    Walk(std::get<2>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<OmpAtomicCapture::Stmt1>(x.t));
@@ -2260,9 +2228,9 @@ public:
   void Unparse(const OmpAtomicRead &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpMemoryClauseList>(x.t));
+    Walk(std::get<0>(x.t));
     Word(" READ");
-    Walk(std::get<OmpMemoryClausePostList>(x.t));
+    Walk(std::get<2>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<Statement<AssignmentStmt>>(x.t));
@@ -2273,9 +2241,9 @@ public:
   void Unparse(const OmpAtomicUpdate &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpMemoryClauseList>(x.t));
+    Walk(std::get<0>(x.t));
     Word(" UPDATE");
-    Walk(std::get<OmpMemoryClausePostList>(x.t));
+    Walk(std::get<2>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<Statement<AssignmentStmt>>(x.t));
@@ -2286,9 +2254,9 @@ public:
   void Unparse(const OmpAtomicWrite &x) {
     BeginOpenMP();
     Word("!$OMP ATOMIC");
-    Walk(std::get<OmpMemoryClauseList>(x.t));
+    Walk(std::get<0>(x.t));
     Word(" WRITE");
-    Walk(std::get<OmpMemoryClausePostList>(x.t));
+    Walk(std::get<2>(x.t));
     Put("\n");
     EndOpenMP();
     Walk(std::get<Statement<AssignmentStmt>>(x.t));
@@ -2296,12 +2264,30 @@ public:
     Walk(std::get<std::optional<OmpEndAtomic>>(x.t), "!$OMP END ATOMIC\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPExecutableAllocate &x) {
+    BeginOpenMP();
+    Word("!$OMP ALLOCATE");
+    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+    Walk(std::get<Statement<AllocateStmt>>(x.t));
+  }
+  void Unparse(const OpenMPDeclarativeAllocate &x) {
+    BeginOpenMP();
+    Word("!$OMP ALLOCATE");
+    Put(" (");
+    Walk(std::get<OmpObjectList>(x.t));
+    Put(")");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();
     Word("!$OMP CRITICAL");
     Walk(" (", std::get<std::optional<Name>>(x.t), ")");
-    Walk(" HINT(", std::get<std::optional<OmpCriticalDirective::Hint>>(x.t),
-        ")");
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
@@ -2349,6 +2335,15 @@ public:
     BeginOpenMP();
     Word("!$OMP ");
     return std::visit(common::visitors{
+                          [&](const OpenMPDeclarativeAllocate &z) {
+                            Word("ALLOCATE (");
+                            Walk(std::get<OmpObjectList>(z.t));
+                            Put(")");
+                            Walk(std::get<OmpClauseList>(z.t));
+                            Put("\n");
+                            EndOpenMP();
+                            return false;
+                          },
                           [&](const OpenMPDeclareReductionConstruct &) {
                             Word("DECLARE REDUCTION ");
                             return true;
@@ -2429,23 +2424,18 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpFlushMemoryClause &x) {
-    switch (x.v) {
-    case OmpFlushMemoryClause::FlushMemoryOrder::AcqRel:
-      Word("ACQ_REL ");
-      break;
-    case OmpFlushMemoryClause::FlushMemoryOrder::Release:
-      Word("RELEASE ");
-      break;
-    case OmpFlushMemoryClause::FlushMemoryOrder::Acquire:
-      Word("ACQUIRE ");
-      break;
-    }
+  void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
+  void Unparse(const OmpAtomicClause &x) {
+    std::visit(common::visitors{
+                   [&](const OmpMemoryOrderClause &y) { Walk(y); },
+                   [&](const OmpClause &z) { Walk(z); },
+               },
+        x.u);
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
     Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<OmpFlushMemoryClause>>(x.t));
+    Walk(std::get<std::optional<std::list<OmpMemoryOrderClause>>>(x.t));
     Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
     Put("\n");
     EndOpenMP();

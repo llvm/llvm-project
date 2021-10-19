@@ -1840,7 +1840,7 @@ current definition always folds to a constant. We also should make sure that
 we remove checking in code like
 
   char *p = malloc(strlen(s)+1);
-  __strcpy_chk(p, s, __builtin_objectsize(p, 0));
+  __strcpy_chk(p, s, __builtin_object_size(p, 0));
 
 //===---------------------------------------------------------------------===//
 

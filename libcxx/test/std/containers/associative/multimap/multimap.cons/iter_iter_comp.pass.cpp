@@ -37,7 +37,7 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     std::multimap<int, double, C> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5));
     assert(m.key_comp() == C(5));
     assert(m.size() == 9);
@@ -67,7 +67,7 @@ int main(int, char**)
         V(3, 1.5),
         V(3, 2),
     };
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     std::multimap<int, double, C, min_allocator<V>> m(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5));
     assert(m.key_comp() == C(5));
     assert(m.size() == 9);

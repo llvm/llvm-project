@@ -91,12 +91,14 @@ int main(int, char**)
         assert(is.sync() == 0);
         assert(sync_called == 1);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb(L" 123456789");
         std::wistream is(&sb);
         assert(is.sync() == 0);
         assert(sync_called == 2);
     }
+#endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
     {
         throwing_testbuf<char> sb(" 123456789");
@@ -111,7 +113,9 @@ int main(int, char**)
         assert( is.bad());
         assert(!is.eof());
         assert( is.fail());
+        assert(threw);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         throwing_testbuf<wchar_t> sb(L" 123456789");
         std::basic_istream<wchar_t> is(&sb);
@@ -125,8 +129,10 @@ int main(int, char**)
         assert( is.bad());
         assert(!is.eof());
         assert( is.fail());
+        assert(threw);
     }
 #endif
+#endif // TEST_HAS_NO_EXCEPTIONS
 
     return 0;
 }

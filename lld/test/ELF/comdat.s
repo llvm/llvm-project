@@ -3,7 +3,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/comdat.s -o %t2.o
 // RUN: ld.lld -shared %t.o %t2.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
-// RUN: llvm-readobj -S --symbols %t | FileCheck --check-prefix=READ %s
+// RUN: llvm-readelf -S -s %t | FileCheck --check-prefix=READ %s
 
 // Check that we don't crash with --gc-section and that we print a list of
 // reclaimed sections on stderr.
@@ -14,6 +14,7 @@
 // GC: removing unused section {{.*}}.o:(.text)
 // GC: removing unused section {{.*}}.o:(.text)
 
+.globl foo
         .section	.text2,"axG",@progbits,foo,comdat,unique,0
 foo:
         nop
@@ -21,7 +22,7 @@ foo:
 // CHECK: Disassembly of section .text2:
 // CHECK-EMPTY:
 // CHECK-NEXT: <foo>:
-// CHECK-NEXT:   1234: {{.*}}  nop
+// CHECK-NEXT:   nop
 // CHECK-NOT: nop
 
         .section bar, "ax"
@@ -30,63 +31,17 @@ foo:
 // CHECK: Disassembly of section bar:
 // CHECK-EMPTY:
 // CHECK-NEXT: <bar>:
-// 0x1234 - 0x1235 - 5 = -6
-// CHECK-NEXT:   1235:	{{.*}}  callq  0x1234
+// CHECK-NEXT:   callq  {{.*}} <foo@plt>
 
+.weak zed
+zed:
         .section .text3,"axG",@progbits,zed,comdat,unique,0
 
+# READ: .text2 PROGBITS {{.*}} AX
+# READ: .text3 PROGBITS {{.*}} AX
 
-// READ:      Name: .text2
-// READ-NEXT: Type: SHT_PROGBITS
-// READ-NEXT: Flags [
-// READ-NEXT:   SHF_ALLOC
-// READ-NEXT:   SHF_EXECINSTR
-// READ-NEXT: ]
-
-// READ:      Name: .text3
-// READ-NEXT: Type: SHT_PROGBITS
-// READ-NEXT: Flags [
-// READ-NEXT:   SHF_ALLOC
-// READ-NEXT:   SHF_EXECINSTR
-// READ-NEXT: ]
-
-// READ:      Symbols [
-// READ-NEXT:   Symbol {
-// READ-NEXT:     Name:  (0)
-// READ-NEXT:     Value: 0x0
-// READ-NEXT:     Size: 0
-// READ-NEXT:     Binding: Local
-// READ-NEXT:     Type: None
-// READ-NEXT:     Other: 0
-// READ-NEXT:     Section: Undefined
-// READ-NEXT:   }
-// READ-NEXT:   Symbol {
-// READ-NEXT:     Name: foo
-// READ-NEXT:     Value
-// READ-NEXT:     Size: 0
-// READ-NEXT:     Binding: Local
-// READ-NEXT:     Type: None
-// READ-NEXT:     Other: 0
-// READ-NEXT:     Section: .text
-// READ-NEXT:   }
-// READ-NEXT:   Symbol {
-// READ-NEXT:     Name: _DYNAMIC
-// READ-NEXT:     Value: 0x2240
-// READ-NEXT:     Size: 0
-// READ-NEXT:     Binding: Local
-// READ-NEXT:     Type: None
-// READ-NEXT:     Other [ (0x2)
-// READ-NEXT:       STV_HIDDEN
-// READ-NEXT:     ]
-// READ-NEXT:     Section: .dynamic
-// READ-NEXT:   }
-// READ-NEXT:   Symbol {
-// READ-NEXT:     Name: abc
-// READ-NEXT:     Value: 0x0
-// READ-NEXT:     Size: 0
-// READ-NEXT:     Binding: Global
-// READ-NEXT:     Type: None
-// READ-NEXT:     Other: 0
-// READ-NEXT:     Section: Undefined
-// READ-NEXT:   }
-// READ-NEXT: ]
+# SYM:  NOTYPE LOCAL  DEFAULT UND
+# SYM:  NOTYPE LOCAL  HIDDEN  [[#]] _DYNAMIC
+# SYM:  NOTYPE GLOBAL DEFAULT [[#]] foo
+# SYM:  NOTYPE GLOBAL DEFAULT [[#]] zed
+# SYM:  NOTYPE GLOBAL DEFAULT UND   abc

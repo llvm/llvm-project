@@ -35,7 +35,7 @@ int main(int, char**)
             3,
             3
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef test_allocator<V> A;
         std::multiset<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
         std::multiset<int, C, A> m = mo;
@@ -82,7 +82,7 @@ int main(int, char**)
             3,
             3
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef other_allocator<V> A;
         std::multiset<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
         std::multiset<int, C, A> m = mo;

@@ -55,6 +55,7 @@ extern Elf_Dyn _DYNAMIC;
 #else
 #include <sys/ucontext.h>
 #include <link.h>
+extern ElfW(Dyn) _DYNAMIC[];
 #endif
 
 // x86-64 FreeBSD 9.2 and older define 'ucontext_t' incorrectly in
@@ -84,7 +85,7 @@ bool IsSystemHeapAddress (uptr addr) { return false; }
 
 void *AsanDoesNotSupportStaticLinkage() {
   // This will fail to link with -static.
-  return &_DYNAMIC;  // defined in link.h
+  return &_DYNAMIC;
 }
 
 #if ASAN_PREMAP_SHADOW

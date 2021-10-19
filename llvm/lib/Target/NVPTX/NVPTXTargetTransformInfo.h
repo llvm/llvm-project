@@ -48,6 +48,11 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  bool canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
+    return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
+           AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
+  }
+
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
 
@@ -71,7 +76,9 @@ public:
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
 
   // We don't want to prevent inlining because of target-cpu and -features
@@ -86,9 +93,8 @@ public:
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() { return 5; }
 
-  int getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -97,7 +103,8 @@ public:
       const Instruction *CxtI = nullptr);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);

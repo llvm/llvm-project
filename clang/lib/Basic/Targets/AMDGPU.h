@@ -41,9 +41,10 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
+  unsigned WavefrontSize;
 
   /// Target ID is device name followed by optional feature name postfixed
-  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
+  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
   /// If the target ID contains feature+, map it to true.
   /// If the target ID contains feature-, map it to false.
   /// If the target ID does not contain a feature (default), do not map it.
@@ -92,7 +93,7 @@ public:
 
   void setAddressSpaceMap(bool DefaultIsPrivate);
 
-  void adjust(LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
 
   uint64_t getPointerWidthV(unsigned AddrSpace) const override {
     if (isR600(getTriple()))
@@ -283,32 +284,38 @@ public:
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
-    Opts.support("cl_clang_storage_class_specifiers");
-    Opts.support("cl_khr_icd");
+    Opts["cl_clang_storage_class_specifiers"] = true;
+    Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 
-    if (hasFP64())
-      Opts.support("cl_khr_fp64");
+    Opts["cl_khr_fp64"] = hasFP64();
+    Opts["__opencl_c_fp64"] = hasFP64();
 
     if (IsAMDGCN || GPUKind >= llvm::AMDGPU::GK_CEDAR) {
-      Opts.support("cl_khr_byte_addressable_store");
-      Opts.support("cl_khr_global_int32_base_atomics");
-      Opts.support("cl_khr_global_int32_extended_atomics");
-      Opts.support("cl_khr_local_int32_base_atomics");
-      Opts.support("cl_khr_local_int32_extended_atomics");
+      Opts["cl_khr_byte_addressable_store"] = true;
+      Opts["cl_khr_global_int32_base_atomics"] = true;
+      Opts["cl_khr_global_int32_extended_atomics"] = true;
+      Opts["cl_khr_local_int32_base_atomics"] = true;
+      Opts["cl_khr_local_int32_extended_atomics"] = true;
     }
 
     if (IsAMDGCN) {
-      Opts.support("cl_khr_fp16");
-      Opts.support("cl_khr_int64_base_atomics");
-      Opts.support("cl_khr_int64_extended_atomics");
-      Opts.support("cl_khr_mipmap_image");
-      Opts.support("cl_khr_mipmap_image_writes");
-      Opts.support("cl_khr_subgroups");
-      Opts.support("cl_khr_3d_image_writes");
-      Opts.support("cl_amd_media_ops");
-      Opts.support("cl_amd_media_ops2");
+      Opts["cl_khr_fp16"] = true;
+      Opts["cl_khr_int64_base_atomics"] = true;
+      Opts["cl_khr_int64_extended_atomics"] = true;
+      Opts["cl_khr_mipmap_image"] = true;
+      Opts["cl_khr_mipmap_image_writes"] = true;
+      Opts["cl_khr_subgroups"] = true;
+      Opts["cl_amd_media_ops"] = true;
+      Opts["cl_amd_media_ops2"] = true;
+
+      Opts["__opencl_c_images"] = true;
+      Opts["__opencl_c_3d_image_writes"] = true;
+      Opts["cl_khr_3d_image_writes"] = true;
     }
   }
 
@@ -345,11 +352,33 @@ public:
   }
 
   LangAS getCUDABuiltinAddressSpace(unsigned AS) const override {
-    return LangAS::Default;
+    switch (AS) {
+    case 0:
+      return LangAS::Default;
+    case 1:
+      return LangAS::cuda_device;
+    case 3:
+      return LangAS::cuda_shared;
+    case 4:
+      return LangAS::cuda_constant;
+    default:
+      return getLangASFromTargetAS(AS);
+    }
   }
 
   llvm::Optional<LangAS> getConstantAddressSpace() const override {
     return getLangASFromTargetAS(Constant);
+  }
+
+  const llvm::omp::GV &getGridValue() const override {
+    switch (WavefrontSize) {
+    case 32:
+      return llvm::omp::getAMDGPUGridValues<32>();
+    case 64:
+      return llvm::omp::getAMDGPUGridValues<64>();
+    default:
+      llvm_unreachable("getGridValue not implemented for this wavesize");
+    }
   }
 
   /// \returns Target specific vtbl ptr address space.
@@ -407,9 +436,11 @@ public:
         getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
     llvm::for_each(Features, [&](const auto &F) {
       assert(F.front() == '+' || F.front() == '-');
+      if (F == "+wavefrontsize64")
+        WavefrontSize = 64;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
-      if (llvm::find(TargetIDFeatures, Name) == TargetIDFeatures.end())
+      if (!llvm::is_contained(TargetIDFeatures, Name))
         return;
       assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
       OffloadArchFeatures[Name] = IsOn;

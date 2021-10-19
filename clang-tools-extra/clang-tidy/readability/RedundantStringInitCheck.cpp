@@ -18,7 +18,8 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
-const char DefaultStringNames[] = "::std::basic_string";
+const char DefaultStringNames[] =
+    "::std::basic_string_view;::std::basic_string";
 
 static ast_matchers::internal::Matcher<NamedDecl>
 hasAnyNameStdString(std::vector<std::string> Names) {
@@ -71,18 +72,18 @@ void RedundantStringInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
-  const auto hasStringTypeName = hasAnyNameStdString(StringNames);
-  const auto hasStringCtorName =
+  const auto HasStringTypeName = hasAnyNameStdString(StringNames);
+  const auto HasStringCtorName =
       hasAnyNameStdString(removeNamespaces(StringNames));
 
   // Match string constructor.
   const auto StringConstructorExpr = expr(
       anyOf(cxxConstructExpr(argumentCountIs(1),
-                             hasDeclaration(cxxMethodDecl(hasStringCtorName))),
+                             hasDeclaration(cxxMethodDecl(HasStringCtorName))),
             // If present, the second argument is the alloc object which must
             // not be present explicitly.
             cxxConstructExpr(argumentCountIs(2),
-                             hasDeclaration(cxxMethodDecl(hasStringCtorName)),
+                             hasDeclaration(cxxMethodDecl(HasStringCtorName)),
                              hasArgument(1, cxxDefaultArgExpr()))));
 
   // Match a string constructor expression with an empty string literal.
@@ -95,17 +96,17 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
                        hasArgument(0, ignoringImplicit(EmptyStringCtorExpr)));
 
   const auto StringType = hasType(hasUnqualifiedDesugaredType(
-      recordType(hasDeclaration(cxxRecordDecl(hasStringTypeName)))));
-  const auto EmptyStringInit =
-      traverse(ast_type_traits::TK_AsIs, expr(ignoringImplicit(
-      anyOf(EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries))));
+      recordType(hasDeclaration(cxxRecordDecl(HasStringTypeName)))));
+  const auto EmptyStringInit = traverse(
+      TK_AsIs, expr(ignoringImplicit(anyOf(
+                   EmptyStringCtorExpr, EmptyStringCtorExprWithTemporaries))));
 
   // Match a variable declaration with an empty string literal as initializer.
   // Examples:
   //     string foo = "";
   //     string bar("");
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                namedDecl(varDecl(StringType, hasInitializer(EmptyStringInit))
                              .bind("vardecl"),
                          unless(parmVarDecl()))),

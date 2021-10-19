@@ -6,11 +6,9 @@ define <2 x i64> @t1(i64 %s, <2 x i64> %tmp) nounwind {
 ; X32-LABEL: t1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    movaps %xmm0, %xmm2
-; X32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[0,2]
-; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm2[2,0]
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; X32-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X32-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t1:

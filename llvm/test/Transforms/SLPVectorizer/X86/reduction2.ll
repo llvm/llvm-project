@@ -88,12 +88,12 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[FNEG]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[C]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[FNEG]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[MUL]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
@@ -137,12 +137,12 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-LABEL: @fcmp_lt(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[FNEG]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[C]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[C:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[FNEG]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[B]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[MUL]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <2 x double> [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uge <2 x double> [[TMP8]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>

@@ -32,19 +32,16 @@ RUN:   %p/Inputs/dyn-rel.so.elf-mips | FileCheck %s
 // CHECK-NEXT:       Offset: 0x0
 // CHECK-NEXT:       Type: R_MIPS_NONE (0)
 // CHECK-NEXT:       Symbol: - (0)
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset: 0x102F8
 // CHECK-NEXT:       Type: R_MIPS_REL32 (3)
 // CHECK-NEXT:       Symbol: - (0)
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset: 0x102F4
 // CHECK-NEXT:       Type: R_MIPS_REL32 (3)
 // CHECK-NEXT:       Symbol: v2 (9)
-// CHECK-NEXT:       Addend: 0x0
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
@@ -54,18 +51,15 @@ RUN:   %p/Inputs/dyn-rel.so.elf-mips | FileCheck %s
 // CHECK-NEXT:     Offset: 0x0
 // CHECK-NEXT:     Type: R_MIPS_NONE (0)
 // CHECK-NEXT:     Symbol: -
-// CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
 // CHECK-NEXT:     Offset: 0x102F8
 // CHECK-NEXT:     Type: R_MIPS_REL32 (3)
 // CHECK-NEXT:     Symbol: -
-// CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Relocation {
 // CHECK-NEXT:     Offset: 0x102F4
 // CHECK-NEXT:     Type: R_MIPS_REL32 (3)
 // CHECK-NEXT:     Symbol: v2
-// CHECK-NEXT:     Addend: 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: }

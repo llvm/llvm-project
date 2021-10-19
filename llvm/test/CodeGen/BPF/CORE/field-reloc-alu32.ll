@@ -1,12 +1,14 @@
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;   struct b { int d; int e; } c;
 ;   int f() {
 ;     return __builtin_preserve_field_info(c.e, 0);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.b = type { i32, i32 }
 
@@ -15,7 +17,7 @@
 ; Function Attrs: nounwind readnone
 define dso_local i32 @f() local_unnamed_addr #0 !dbg !15 {
 entry:
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.bs(%struct.b* nonnull @c, i32 1, i32 1), !dbg !18, !llvm.preserve.access.index !6
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.bs(%struct.b* elementtype(%struct.b) nonnull @c, i32 1, i32 1), !dbg !18, !llvm.preserve.access.index !6
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %0, i64 0), !dbg !19
   ret i32 %1, !dbg !20
 }

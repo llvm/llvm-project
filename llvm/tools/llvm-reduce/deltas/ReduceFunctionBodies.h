@@ -11,8 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEFUNCTIONBODIES_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEFUNCTIONBODIES_H
+
 #include "Delta.h"
 
 namespace llvm {
 void reduceFunctionBodiesDeltaPass(TestRunner &Test);
 } // namespace llvm
+
+#endif

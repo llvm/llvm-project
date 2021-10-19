@@ -42,4 +42,12 @@ void test(void) {
 
   float m[4][4];
   int d1 = sizeof(m) / sizeof(**m);
+
+  int array[10];
+  int narray = sizeof(array) / sizeof(int &);
+  int narray2 = sizeof(array) / sizeof(decltype(array[0]));
+
+  int *arrptrs[10];                                          // expected-note {{array 'arrptrs' declared here}}
+  int len = sizeof(arrptrs) / sizeof(decltype(*arrptrs[0])); // expected-warning {{expression does not compute the number of elements in this array; element type is 'int *', not 'int'}}
+  // expected-note@-1 {{place parentheses around the 'sizeof(decltype(*arrptrs[0]))' expression to silence this warning}}
 }

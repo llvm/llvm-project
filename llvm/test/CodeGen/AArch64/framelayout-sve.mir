@@ -40,6 +40,7 @@
   define aarch64_sve_vector_pcs void @save_restore_sve() { entry: unreachable }
   define aarch64_sve_vector_pcs void @save_restore_sve_realign() { entry: unreachable }
   define aarch64_sve_vector_pcs void @frame_layout() { entry: unreachable }
+  define void @fp_relative_index_with_float_save() { entry: unreachable }
 
 ...
 # +----------+
@@ -73,7 +74,7 @@
 # UNWINDINFO-NEXT:  DW_CFA_offset: reg29 -16
 name:            test_allocate_sve
 stack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2 }
+  - { id: 0, stack-id: scalable-vector, size: 18, alignment: 2 }
   - { id: 1, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
@@ -119,7 +120,7 @@ body:             |
 # UNWINDINFO-NEXT:  DW_CFA_offset: reg29 -32
 name:            test_allocate_sve_gpr_callee_saves
 stack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2 }
+  - { id: 0, stack-id: scalable-vector, size: 18, alignment: 2 }
   - { id: 1, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
@@ -161,7 +162,7 @@ body:             |
 
 name:            test_allocate_sve_gpr_realigned
 stack:
-  - { id: 0, stack-id: sve-vec, size: 18, alignment: 2  }
+  - { id: 0, stack-id: scalable-vector, size: 18, alignment: 2  }
   - { id: 1, stack-id: default, size: 16, alignment: 32 }
 body:             |
   bb.0.entry:
@@ -210,9 +211,9 @@ name:            test_address_sve
 frameInfo:
   maxAlignment:  16
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8 }
-  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 1, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 2, stack-id: scalable-vector, size:  2, alignment: 2 }
   - { id: 3, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
@@ -268,9 +269,9 @@ frameInfo:
   maxAlignment:  16
   isFrameAddressTaken: true
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
-  - { id: 1, stack-id: sve-vec, size: 16, alignment: 8 }
-  - { id: 2, stack-id: sve-vec, size:  2, alignment: 2 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 1, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 2, stack-id: scalable-vector, size:  2, alignment: 2 }
   - { id: 3, stack-id: default, size: 16, alignment: 8 }
 body:             |
   bb.0.entry:
@@ -320,7 +321,7 @@ name:             test_stack_arg_sve
 fixedStack:
   - { id: 0, stack-id: default, size: 16, alignment: 16, offset: 0 }
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
   - { id: 1, stack-id: default, size: 16, alignment: 16 }
 body:             |
   bb.0.entry:
@@ -386,9 +387,9 @@ name:            test_address_sve_out_of_range
 frameInfo:
   maxAlignment:  16
 stack:
-  - { id: 0, stack-id: sve-vec, size:   16, alignment: 16 }
-  - { id: 1, stack-id: sve-vec, size: 3584, alignment: 16 }
-  - { id: 2, stack-id: sve-vec, size:  512, alignment: 16 }
+  - { id: 0, stack-id: scalable-vector, size:   16, alignment: 16 }
+  - { id: 1, stack-id: scalable-vector, size: 3584, alignment: 16 }
+  - { id: 2, stack-id: scalable-vector, size:  512, alignment: 16 }
 
 body:             |
   bb.0.entry:
@@ -431,7 +432,7 @@ name:            test_address_gpr_vla
 frameInfo:
   maxAlignment:  16
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 8 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 8 }
   - { id: 1, stack-id: default, size: 16, alignment: 8 }
   - { id: 2, stack-id: default, type: variable-sized }
 body:             |
@@ -587,7 +588,7 @@ body:             |
 
 name: save_restore_sve
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
   - { id: 1, stack-id: default, size: 32, alignment: 16 }
 body:             |
   bb.0.entry:
@@ -678,7 +679,7 @@ body:             |
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
 name: save_restore_sve_realign
 stack:
-  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
   - { id: 1, stack-id: default, size: 16, alignment: 32 }
 body:             |
   bb.0.entry:
@@ -720,25 +721,25 @@ body:             |
 # CHECK-LABEL: name: frame_layout
 # CHECK:       stack:
 # CHECK:        - { id: 0, name: '', type: default, offset: -80, size: 32, alignment: 16,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 1, name: '', type: default, offset: -84, size: 4, alignment: 2,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 2, name: '', type: default, offset: -112, size: 16, alignment: 16,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 3, name: '', type: default, offset: -114, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 4, name: '', type: spill-slot, offset: -144, size: 16, alignment: 16,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 5, name: '', type: spill-slot, offset: -146, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: sve-vec,
+# CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 6, name: '', type: spill-slot, offset: -16, size: 16, alignment: 16,
-# CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$z8',
+# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z8',
 # CHECK:        - { id: 7, name: '', type: spill-slot, offset: -32, size: 16, alignment: 16,
-# CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$z23',
+# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z23',
 # CHECK:        - { id: 8, name: '', type: spill-slot, offset: -34, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p4',
+# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p4',
 # CHECK:        - { id: 9, name: '', type: spill-slot, offset: -36, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p15',
+# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p15',
 # CHECK:        - { id: 10, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',
 #
@@ -761,12 +762,12 @@ body:             |
 # UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
 name: frame_layout
 stack:
-  - { id: 0, type: default,    size:  32, alignment: 16, stack-id: sve-vec }
-  - { id: 1, type: default,    size:   4, alignment:  2, stack-id: sve-vec }
-  - { id: 2, type: default,    size:  16, alignment: 16, stack-id: sve-vec }
-  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: sve-vec }
-  - { id: 4, type: spill-slot, size:  16, alignment: 16, stack-id: sve-vec }
-  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: sve-vec }
+  - { id: 0, type: default,    size:  32, alignment: 16, stack-id: scalable-vector }
+  - { id: 1, type: default,    size:   4, alignment:  2, stack-id: scalable-vector }
+  - { id: 2, type: default,    size:  16, alignment: 16, stack-id: scalable-vector }
+  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: scalable-vector }
+  - { id: 4, type: spill-slot, size:  16, alignment: 16, stack-id: scalable-vector }
+  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: scalable-vector }
 body:             |
   bb.0.entry:
 
@@ -778,4 +779,38 @@ body:             |
 
     RET_ReallyLR
 
+---
+# Make sure we account for the offset between the fp and the sve area, if it exists.
+# FIXME: Should there be an offset?
+# CHECK-LABEL: name: fp_relative_index_with_float_save
+# CHECK:        - { id: 0, name: '', type: default, offset: -16, size: 16, alignment: 16,
+# CHECK-NEXT:       stack-id: scalable-vector
+# CHECK:        - { id: 1, name: '', type: default, offset: -64, size: 16, alignment: 32,
+# CHECK-NEXT:      stack-id: default
+# CHECK:        - { id: 2, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$lr'
+# CHECK:        - { id: 3, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$fp'
+# CHECK:        - { id: 4, name: '', type: spill-slot, offset: -32, size: 8, alignment: 16,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$d8'
+
+# CHECK: $x8 = SUBXri $fp, 16, 0
+# CHECK: STR_ZXI $z0, killed $x8, -1
+
+name: fp_relative_index_with_float_save
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
+  - { id: 1, stack-id: default, size: 16, alignment: 32 }
+frameInfo:
+  maxAlignment:  16
+  isFrameAddressTaken: true
+body:             |
+  bb.0.entry:
+    liveins: $z0
+
+    $d8 = IMPLICIT_DEF
+
+    STR_ZXI $z0, %stack.0, 0
+
+    RET_ReallyLR
 ---

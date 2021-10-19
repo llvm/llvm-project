@@ -1,5 +1,5 @@
-; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmpopt -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmpopt)' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -pass-remarks=openmp-opt -attributor -openmp-opt-cgscc -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -pass-remarks=openmp-opt -passes='attributor,cgscc(openmp-opt-cgscc)' -disable-output < %s 2>&1 | FileCheck %s
 ; ModuleID = 'parallel_deletion_remarks.ll'
 source_filename = "parallel_deletion_remarks.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -23,9 +23,9 @@ target triple = "x86_64-pc-linux-gnu"
 ;
 ; This will delete all but the first parallel region
 
-; CHECK: remark: parallel_deletion_remarks.c:14:1: Parallel region in delete_parallel deleted
-; CHECK: remark: parallel_deletion_remarks.c:12:1: Parallel region in delete_parallel deleted
-; CHECK: remark: parallel_deletion_remarks.c:10:1: Parallel region in delete_parallel deleted
+; CHECK: remark: parallel_deletion_remarks.c:10:1: Removing parallel region with no side-effects.
+; CHECK: remark: parallel_deletion_remarks.c:12:1: Removing parallel region with no side-effects.
+; CHECK: remark: parallel_deletion_remarks.c:14:1: Removing parallel region with no side-effects.
 define dso_local void @delete_parallel() local_unnamed_addr !dbg !15 {
   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)), !dbg !18
   call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..2 to void (i32*, i32*, ...)*)), !dbg !19
@@ -69,7 +69,7 @@ attributes #1 = { readonly willreturn }
 attributes #2 = { readnone willreturn }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!9, !10, !11, !12, !13}
+!llvm.module.flags = !{!9, !10, !11, !12, !13, !52}
 !llvm.ident = !{!14}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 10.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, splitDebugInlining: false, nameTableKind: None)
@@ -124,3 +124,4 @@ attributes #2 = { readnone willreturn }
 !49 = !DILocalVariable(name: ".global_tid.", arg: 1, scope: !47, type: !28, flags: DIFlagArtificial)
 !50 = !DILocalVariable(name: ".bound_tid.", arg: 2, scope: !47, type: !28, flags: DIFlagArtificial)
 !51 = !DILocation(line: 15, column: 2, scope: !47)
+!52 = !{i32 7, !"openmp", i32 50}

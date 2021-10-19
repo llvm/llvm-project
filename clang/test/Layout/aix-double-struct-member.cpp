@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -fdump-record-layouts \
-// RUN:     -fsyntax-only  %s | \
+// RUN:     -fsyntax-only -fxl-pragma-pack %s | \
 // RUN:   FileCheck %s
 
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -fdump-record-layouts \
-// RUN:     -fsyntax-only %s | \
+// RUN:     -fsyntax-only -fxl-pragma-pack %s | \
 // RUN:   FileCheck %s
 
 namespace test1 {
@@ -335,6 +335,7 @@ struct C {
   short j;
   double k;
 };
+#pragma pack(pop)
 
 #pragma pack(2)
 struct D {
@@ -342,22 +343,26 @@ struct D {
   short j;
   int i;
 };
+#pragma pack(pop)
 
 #pragma pack(8)
 struct E {
   double __attribute__((aligned(4))) d;
   short s;
 };
+#pragma pack(pop)
 
 #pragma pack(4)
 struct F : public D {
   double d;
 };
+#pragma pack(pop)
 
 #pragma pack(2)
 struct G : public E {
   int i;
 };
+#pragma pack(pop)
 
 int a = sizeof(A);
 int b = sizeof(B);

@@ -2,7 +2,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-// CHECK-LABEL: define void @test_half_builtins
+// CHECK-LABEL: define{{.*}} void @test_half_builtins
 void test_half_builtins(half h0, half h1, half h2) {
   volatile half res;
 

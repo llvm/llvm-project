@@ -188,21 +188,10 @@ TEST_F(FormatTestJS, JSDocComments) {
 
   // Break a single line long jsdoc comment pragma.
   EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
-            " */",
-            format("/** @returns {string} jsdoc line 12 */",
-                   getGoogleJSStyleWithColumns(20)));
-  EXPECT_EQ("/**\n"
             " * @returns {string}\n"
             " *     jsdoc line 12\n"
             " */",
             format("/** @returns {string} jsdoc line 12 */",
-                   getGoogleJSStyleWithColumns(25)));
-
-  EXPECT_EQ("/**\n"
-            " * @returns {string} jsdoc line 12\n"
-            " */",
-            format("/** @returns {string} jsdoc line 12  */",
                    getGoogleJSStyleWithColumns(20)));
 
   // FIXME: this overcounts the */ as a continuation of the 12 when breaking.
@@ -287,6 +276,12 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   // ES6 spread operator.
   verifyFormat("someFunction(...a);");
   verifyFormat("var x = [1, ...a, 2];");
+
+  // "- -1" is legal JS syntax, but must not collapse into "--".
+  verifyFormat("- -1;", " - -1;");
+  verifyFormat("-- -1;", " -- -1;");
+  verifyFormat("+ +1;", " + +1;");
+  verifyFormat("++ +1;", " ++ +1;");
 }
 
 TEST_F(FormatTestJS, UnderstandsAmpAmp) {
@@ -697,6 +692,74 @@ TEST_F(FormatTestJS, FormatsFreestandingFunctions) {
                "  let x = 1;\n"
                "  console.log(x);\n"
                "}\n");
+  EXPECT_EQ("a = function(x) {}\n"
+            "\n"
+            "function f(x) {}",
+            format("a = function(x) {}\n"
+                   "\n"
+                   "function f(x) {}",
+                   getGoogleJSStyleWithColumns(20)));
+}
+
+TEST_F(FormatTestJS, FormatsDecorators) {
+  // No line break after argument decorators.
+  verifyFormat("class A {\n"
+               "  constructor(@arg(DECOR) private arg: Type) {}\n"
+               "}");
+  // Ensure that there is a break before functions, getters and setters.
+  EXPECT_EQ("class A {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  get f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}\n"
+            "\n"
+            "class B {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  set f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}\n"
+            "\n"
+            "class C {\n"
+            "  private p = () => {}\n"
+            "\n"
+            "  @decorated('a')\n"
+            "  function f() {\n"
+            "    return result;\n"
+            "  }\n"
+            "}",
+            format("class A {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  get f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}\n"
+                   "\n"
+                   "class B {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  set f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}\n"
+                   "\n"
+                   "class C {\n"
+                   "  private p = () => {}\n"
+                   "\n"
+                   "  @decorated('a')\n"
+                   "  function f() {\n"
+                   "    return result;\n"
+                   "  }\n"
+                   "}",
+                   getGoogleJSStyleWithColumns(50)));
 }
 
 TEST_F(FormatTestJS, GeneratorFunctions) {
@@ -788,6 +851,26 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  for await (const x of y) {\n"
                "    console.log(x);\n"
                "  }\n"
+               "}\n");
+}
+
+TEST_F(FormatTestJS, OverriddenMembers) {
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongPropertyNameSoLongItHasToGoInASeparateLineWhenOverriden:\n"
+      "      undefined;\n"
+      "}\n");
+  verifyFormat(
+      "class C extends P {\n"
+      "  protected override "
+      "anOverlyLongMethodNameSoLongItHasToGoInASeparateLineWhenOverriden() {\n"
+      "  }\n"
+      "}\n");
+  verifyFormat("class C extends P {\n"
+               "  protected override aMethodName<ATypeParam extends {},\n"
+               "                                                    BTypeParam "
+               "extends {}>() {}\n"
                "}\n");
 }
 
@@ -2184,6 +2267,26 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                " * @lala {lala {lalala\n"
                " */\n",
                getGoogleJSStyleWithColumns(20));
+  // cases where '{' is around the column limit
+  for (int ColumnLimit = 6; ColumnLimit < 13; ++ColumnLimit) {
+    verifyFormat("/**\n"
+                 " * @param {type}\n"
+                 " */",
+                 "/**\n"
+                 " * @param {type}\n"
+                 " */",
+                 getGoogleJSStyleWithColumns(ColumnLimit));
+  }
+  // don't break before @tags
+  verifyFormat("/**\n"
+               " * This\n"
+               " * tag @param\n"
+               " * stays.\n"
+               " */",
+               "/**\n"
+               " * This tag @param stays.\n"
+               " */",
+               getGoogleJSStyleWithColumns(13));
   verifyFormat("/**\n"
                " * @see http://very/very/long/url/is/long\n"
                " */",
@@ -2414,6 +2517,15 @@ TEST_F(FormatTestJS, NullishCoalescingOperator) {
       getGoogleJSStyleWithColumns(40));
 }
 
+TEST_F(FormatTestJS, AssignmentOperators) {
+  verifyFormat("a &&= b;\n");
+  verifyFormat("a ||= b;\n");
+  // NB: need to split ? ?= to avoid it being interpreted by C++ as a trigraph
+  // for #.
+  verifyFormat("a ?"
+               "?= b;\n");
+}
+
 TEST_F(FormatTestJS, Conditional) {
   verifyFormat("y = x ? 1 : 2;");
   verifyFormat("x ? 1 : 2;");
@@ -2563,6 +2675,21 @@ TEST_F(FormatTestJS, DeclaredFields) {
                "  declare pub: string;\n"
                "  declare private priv: string;\n"
                "}\n");
+}
+
+TEST_F(FormatTestJS, NoBreakAfterAsserts) {
+  verifyFormat(
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(\n"
+      "      callback: Callback<ExportedState, DependencyState>):\n"
+      "      asserts this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n",
+      "interface Assertable<State extends {}> {\n"
+      "  assert<ExportedState extends {}, DependencyState extends State = "
+      "State>(callback: Callback<ExportedState, DependencyState>): asserts "
+      "this is ExtendedState<DependencyState&ExportedState>;\n"
+      "}\n");
 }
 
 } // namespace format

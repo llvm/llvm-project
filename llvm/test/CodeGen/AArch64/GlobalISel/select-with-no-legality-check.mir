@@ -21,10 +21,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (s128))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(s128) = G_LOAD %1(p0) :: (load 16)
+    %0:fpr(s128) = G_LOAD %1(p0) :: (load (s128))
     $noreg = PATCHABLE_RET %0(s128)
 
 ...
@@ -49,11 +49,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRDui [[COPY1]], [[COPY2]], 0 :: (store 8)
+    ; CHECK: STRDui [[COPY1]], [[COPY2]], 0 :: (store (<8 x s8>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d1
     %0:fpr(<8 x s8>) = COPY $d0
-    G_STORE %0(<8 x s8>), %1(p0) :: (store 8)
+    G_STORE %0(<8 x s8>), %1(p0) :: (store (<8 x s8>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -78,11 +78,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRDui [[COPY1]], [[COPY2]], 0 :: (store 8)
+    ; CHECK: STRDui [[COPY1]], [[COPY2]], 0 :: (store (<4 x s16>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d1
     %0:fpr(<4 x s16>) = COPY $d0
-    G_STORE %0(<4 x s16>), %1(p0) :: (store 8)
+    G_STORE %0(<4 x s16>), %1(p0) :: (store (<4 x s16>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -107,11 +107,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store 16)
+    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store (<4 x s32>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
     %0:fpr(<4 x s32>) = COPY $q0
-    G_STORE %0(<4 x s32>), %1(p0) :: (store 16)
+    G_STORE %0(<4 x s32>), %1(p0) :: (store (<4 x s32>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -136,11 +136,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store 16)
+    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store (<2 x s64>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
     %0:fpr(<2 x s64>) = COPY $q0
-    G_STORE %0(<2 x s64>), %1(p0) :: (store 16)
+    G_STORE %0(<2 x s64>), %1(p0) :: (store (<2 x s64>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -165,11 +165,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store 16)
+    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store (<16 x s8>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
     %0:fpr(<16 x s8>) = COPY $q0
-    G_STORE %0(<16 x s8>), %1(p0) :: (store 16)
+    G_STORE %0(<16 x s8>), %1(p0) :: (store (<16 x s8>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -194,11 +194,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store 16)
+    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store (<8 x s16>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
     %0:fpr(<8 x s16>) = COPY $q0
-    G_STORE %0(<8 x s16>), %1(p0) :: (store 16)
+    G_STORE %0(<8 x s16>), %1(p0) :: (store (<8 x s16>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -223,11 +223,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store 16)
+    ; CHECK: STRQui [[COPY1]], [[COPY2]], 0 :: (store (s128))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:fpr(p0) = COPY $d0
     %0:fpr(s128) = COPY $q0
-    G_STORE %0(s128), %1(p0) :: (store 16)
+    G_STORE %0(s128), %1(p0) :: (store (s128))
     $noreg = PATCHABLE_RET
 
 ...
@@ -251,10 +251,10 @@ body:             |
     ; CHECK-LABEL: name: test_rule92_id2150_at_idx7770
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load 1)
+    ; CHECK: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[COPY]], 0 :: (load (s8))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRBBui]]
     %2:gpr(p0) = COPY $x0
-    %0:gpr(s32) = G_LOAD %2(p0) :: (load 1)
+    %0:gpr(s32) = G_LOAD %2(p0) :: (load (s8))
     $noreg = PATCHABLE_RET %0(s32)
 
 ...
@@ -278,13 +278,13 @@ body:             |
     ; CHECK-LABEL: name: test_rule96_id2146_at_idx8070
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load 1)
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY2]], 0, 0
+    ; CHECK: [[LDRBui:%[0-9]+]]:fpr8 = LDRBui [[COPY]], 0 :: (load (s8))
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[LDRBui]]
+    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY1]], 0, 7
     ; CHECK: $noreg = PATCHABLE_RET [[UBFMWri]]
     %2:gpr(p0) = COPY $x0
-    %0:fpr(s1) = G_LOAD %2(p0) :: (load 1)
-    %1:gpr(s32) = G_ZEXT %0(s1)
+    %0:fpr(s8) = G_LOAD %2(p0) :: (load (s8))
+    %1:gpr(s32) = G_ZEXT %0(s8)
     $noreg = PATCHABLE_RET %1(s32)
 
 ...
@@ -307,10 +307,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load 8)
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (<8 x s8>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRDui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<8 x s8>) = G_LOAD %1(p0) :: (load 8)
+    %0:fpr(<8 x s8>) = G_LOAD %1(p0) :: (load (<8 x s8>))
     $noreg = PATCHABLE_RET %0(<8 x s8>)
 
 ...
@@ -333,10 +333,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load 8)
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (<4 x s16>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRDui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<4 x s16>) = G_LOAD %1(p0) :: (load 8)
+    %0:fpr(<4 x s16>) = G_LOAD %1(p0) :: (load (<4 x s16>))
     $noreg = PATCHABLE_RET %0(<4 x s16>)
 
 ...
@@ -359,10 +359,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (<4 x s32>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<4 x s32>) = G_LOAD %1(p0) :: (load 16)
+    %0:fpr(<4 x s32>) = G_LOAD %1(p0) :: (load (<4 x s32>))
     $noreg = PATCHABLE_RET %0(<4 x s32>)
 
 ...
@@ -385,10 +385,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (<2 x s64>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<2 x s64>) = G_LOAD %1(p0) :: (load 16)
+    %0:fpr(<2 x s64>) = G_LOAD %1(p0) :: (load (<2 x s64>))
     $noreg = PATCHABLE_RET %0(<2 x s64>)
 
 ...
@@ -411,10 +411,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (<16 x s8>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<16 x s8>) = G_LOAD %1(p0) :: (load 16)
+    %0:fpr(<16 x s8>) = G_LOAD %1(p0) :: (load (<16 x s8>))
     $noreg = PATCHABLE_RET %0(<16 x s8>)
 
 ...
@@ -437,10 +437,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[COPY]]
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load 16)
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY1]], 0 :: (load (<8 x s16>))
     ; CHECK: $noreg = PATCHABLE_RET [[LDRQui]]
     %1:fpr(p0) = COPY $d0
-    %0:fpr(<8 x s16>) = G_LOAD %1(p0) :: (load 16)
+    %0:fpr(<8 x s16>) = G_LOAD %1(p0) :: (load (<8 x s16>))
     $noreg = PATCHABLE_RET %0(<8 x s16>)
 
 ...
@@ -544,7 +544,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK: [[FNMADDSrrr:%[0-9]+]]:fpr32 = FNMADDSrrr [[COPY2]], [[COPY1]], [[COPY]]
+    ; CHECK: [[FNMADDSrrr:%[0-9]+]]:fpr32 = FNMADDSrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FNMADDSrrr]]
     %5:fpr(s32) = COPY $s2
     %4:fpr(s32) = COPY $s1
@@ -581,7 +581,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FNMADDDrrr:%[0-9]+]]:fpr64 = FNMADDDrrr [[COPY2]], [[COPY1]], [[COPY]]
+    ; CHECK: [[FNMADDDrrr:%[0-9]+]]:fpr64 = FNMADDDrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FNMADDDrrr]]
     %5:fpr(s64) = COPY $d2
     %4:fpr(s64) = COPY $d1
@@ -1083,7 +1083,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[FMLSv2f32_:%[0-9]+]]:fpr64 = FMLSv2f32 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv2f32_:%[0-9]+]]:fpr64 = FMLSv2f32 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv2f32_]]
     %4:fpr(<2 x s32>) = COPY $d2
     %3:fpr(<2 x s32>) = COPY $d1
@@ -1118,7 +1118,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FMLSv4f32_:%[0-9]+]]:fpr128 = FMLSv4f32 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv4f32_:%[0-9]+]]:fpr128 = FMLSv4f32 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv4f32_]]
     %4:fpr(<4 x s32>) = COPY $q2
     %3:fpr(<4 x s32>) = COPY $q1
@@ -1153,7 +1153,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q2
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
     ; CHECK: [[COPY2:%[0-9]+]]:fpr128 = COPY $q0
-    ; CHECK: [[FMLSv2f64_:%[0-9]+]]:fpr128 = FMLSv2f64 [[COPY1]], [[COPY]], [[COPY2]]
+    ; CHECK: [[FMLSv2f64_:%[0-9]+]]:fpr128 = FMLSv2f64 [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK: $noreg = PATCHABLE_RET [[FMLSv2f64_]]
     %4:fpr(<2 x s64>) = COPY $q2
     %3:fpr(<2 x s64>) = COPY $q1
@@ -2551,11 +2551,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[COPY1]]
-    ; CHECK: ST1Onev8b [[COPY2]], [[COPY]] :: (store 8)
+    ; CHECK: ST1Onev8b [[COPY2]], [[COPY]] :: (store (<8 x s8>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:gpr(p0) = COPY $x1
     %0:gpr(<8 x s8>) = COPY $x0
-    G_STORE %0(<8 x s8>), %1(p0) :: (store 8)
+    G_STORE %0(<8 x s8>), %1(p0) :: (store (<8 x s8>))
     $noreg = PATCHABLE_RET
 
 ...
@@ -2580,11 +2580,11 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x1
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64all = COPY $x0
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY [[COPY1]]
-    ; CHECK: ST1Onev4h [[COPY2]], [[COPY]] :: (store 8)
+    ; CHECK: ST1Onev4h [[COPY2]], [[COPY]] :: (store (<4 x s16>))
     ; CHECK: $noreg = PATCHABLE_RET
     %1:gpr(p0) = COPY $x1
     %0:gpr(<4 x s16>) = COPY $x0
-    G_STORE %0(<4 x s16>), %1(p0) :: (store 8)
+    G_STORE %0(<4 x s16>), %1(p0) :: (store (<4 x s16>))
     $noreg = PATCHABLE_RET
 
 ...

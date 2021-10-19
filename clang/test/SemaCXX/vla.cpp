@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -verify %s
 
 // PR11925
 int n;
@@ -19,4 +19,10 @@ namespace PR18581 {
 }
 
 void pr23151(int (&)[*]) { // expected-error {{variable length array must be bound in function definition}}
+}
+
+void test_fold() {
+  char a1[(unsigned long)(int *)0+1]{}; // expected-warning{{variable length array folded to constant array as an extension}}
+  char a2[(unsigned long)(int *)0+1] = {}; // expected-warning{{variable length array folded to constant array as an extension}}
+  char a3[(unsigned long)(int *)0+1];
 }

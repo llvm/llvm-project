@@ -275,7 +275,7 @@ entry:
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="63,63" }
 attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,3" "amdgpu-flat-work-group-size"="256,256" }
-attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1024,1024" }
+attributes #2 = { nounwind "amdgpu-waves-per-eu"="1,9" "amdgpu-flat-work-group-size"="1024,1024" }
 attributes #3 = { nounwind "amdgpu-waves-per-eu"="1,10" }
 attributes #4 = { nounwind "amdgpu-waves-per-eu"="1,10" }
 attributes #5 = { nounwind "amdgpu-waves-per-eu"="1,6" "amdgpu-flat-work-group-size"="64,64" }

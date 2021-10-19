@@ -19,12 +19,12 @@
 
 namespace __sanitizer {
 
-static BlockingMutex tctx_allocator_lock(LINKER_INITIALIZED);
+static Mutex tctx_allocator_lock;
 static LowLevelAllocator tctx_allocator;
 
 template<typename TCTX>
 static ThreadContextBase *GetThreadContext(u32 tid) {
-  BlockingMutexLock l(&tctx_allocator_lock);
+  Lock l(&tctx_allocator_lock);
   return new(tctx_allocator) TCTX(tid);
 }
 
@@ -98,12 +98,10 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
   registry->SetThreadName(6, "six");
   registry->SetThreadName(7, "seven");
   EXPECT_EQ(7U, registry->FindThread(HasName, (void*)"seven"));
-  EXPECT_EQ(ThreadRegistry::kUnknownTid,
-            registry->FindThread(HasName, (void*)"none"));
+  EXPECT_EQ(kInvalidTid, registry->FindThread(HasName, (void *)"none"));
   EXPECT_EQ(0U, registry->FindThread(HasUid, (void*)get_uid(0)));
   EXPECT_EQ(10U, registry->FindThread(HasUid, (void*)get_uid(10)));
-  EXPECT_EQ(ThreadRegistry::kUnknownTid,
-            registry->FindThread(HasUid, (void*)0x1234));
+  EXPECT_EQ(kInvalidTid, registry->FindThread(HasUid, (void *)0x1234));
   // Detach and finish and join remaining threads.
   for (u32 i = 6; i <= 10; i++) {
     registry->DetachThread(i, 0);
@@ -138,13 +136,13 @@ static void TestRegistry(ThreadRegistry *registry, bool has_quarantine) {
 
 TEST(SanitizerCommon, ThreadRegistryTest) {
   ThreadRegistry quarantine_registry(GetThreadContext<ThreadContextBase>,
-                                     kMaxRegistryThreads,
-                                     kRegistryQuarantine);
+                                     kMaxRegistryThreads, kRegistryQuarantine,
+                                     0);
   TestRegistry(&quarantine_registry, true);
 
   ThreadRegistry no_quarantine_registry(GetThreadContext<ThreadContextBase>,
                                         kMaxRegistryThreads,
-                                        kMaxRegistryThreads);
+                                        kMaxRegistryThreads, 0);
   TestRegistry(&no_quarantine_registry, false);
 }
 
@@ -162,7 +160,7 @@ struct RunThreadArgs {
   uptr shard;  // started from 1.
 };
 
-class TestThreadContext : public ThreadContextBase {
+class TestThreadContext final : public ThreadContextBase {
  public:
   explicit TestThreadContext(int tid) : ThreadContextBase(tid) {}
   void OnJoined(void *arg) {
@@ -229,7 +227,7 @@ TEST(SanitizerCommon, ThreadRegistryThreadedTest) {
   memset(&num_joined, 0, sizeof(num_created));
 
   ThreadRegistry registry(GetThreadContext<TestThreadContext>,
-                          kThreadsPerShard * kNumShards + 1, 10);
+                          kThreadsPerShard * kNumShards + 1, 10, 0);
   ThreadedTestRegistry(&registry);
 }
 

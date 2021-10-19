@@ -7,7 +7,12 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define %struct.A* @test1(%struct.A* %b, %struct.A* %e) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret %struct.A* [[E:%.*]]
+; CHECK-NEXT:    [[E_PTR:%.*]] = ptrtoint %struct.A* [[E:%.*]] to i64
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint %struct.A* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[E_PTR]], [[B_PTR]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[B]], i64 [[SDIV]]
+; CHECK-NEXT:    ret %struct.A* [[GEP]]
 ;
   %e_ptr = ptrtoint %struct.A* %e to i64
   %b_ptr = ptrtoint %struct.A* %b to i64
@@ -19,7 +24,11 @@ define %struct.A* @test1(%struct.A* %b, %struct.A* %e) {
 
 define i8* @test2(i8* %b, i8* %e) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i8* [[E:%.*]]
+; CHECK-NEXT:    [[E_PTR:%.*]] = ptrtoint i8* [[E:%.*]] to i64
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i8* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[E_PTR]], [[B_PTR]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[B]], i64 [[SUB]]
+; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %e_ptr = ptrtoint i8* %e to i64
   %b_ptr = ptrtoint i8* %b to i64
@@ -30,7 +39,12 @@ define i8* @test2(i8* %b, i8* %e) {
 
 define i64* @test3(i64* %b, i64* %e) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i64* [[E:%.*]]
+; CHECK-NEXT:    [[E_PTR:%.*]] = ptrtoint i64* [[E:%.*]] to i64
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i64* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[E_PTR]], [[B_PTR]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[SUB]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 [[ASHR]]
+; CHECK-NEXT:    ret i64* [[GEP]]
 ;
   %e_ptr = ptrtoint i64* %e to i64
   %b_ptr = ptrtoint i64* %b to i64
@@ -40,9 +54,31 @@ define i64* @test3(i64* %b, i64* %e) {
   ret i64* %gep
 }
 
+; The following tests should not be folded to null, because this would
+; lose provenance of the base pointer %b.
+
 define %struct.A* @test4(%struct.A* %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    ret %struct.A* null
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint %struct.A* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [[STRUCT_A:%.*]], %struct.A* [[B]], i64 [[SDIV]]
+; CHECK-NEXT:    ret %struct.A* [[GEP]]
+;
+  %b_ptr = ptrtoint %struct.A* %b to i64
+  %sub = sub i64 0, %b_ptr
+  %sdiv = sdiv exact i64 %sub, 7
+  %gep = getelementptr %struct.A, %struct.A* %b, i64 %sdiv
+  ret %struct.A* %gep
+}
+
+define %struct.A* @test4_inbounds(%struct.A* %b) {
+; CHECK-LABEL: @test4_inbounds(
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint %struct.A* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv exact i64 [[SUB]], 7
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[B]], i64 [[SDIV]]
+; CHECK-NEXT:    ret %struct.A* [[GEP]]
 ;
   %b_ptr = ptrtoint %struct.A* %b to i64
   %sub = sub i64 0, %b_ptr
@@ -53,7 +89,23 @@ define %struct.A* @test4(%struct.A* %b) {
 
 define i8* @test5(i8* %b) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i8* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[B]], i64 [[SUB]]
+; CHECK-NEXT:    ret i8* [[GEP]]
+;
+  %b_ptr = ptrtoint i8* %b to i64
+  %sub = sub i64 0, %b_ptr
+  %gep = getelementptr i8, i8* %b, i64 %sub
+  ret i8* %gep
+}
+
+define i8* @test5_inbounds(i8* %b) {
+; CHECK-LABEL: @test5_inbounds(
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i8* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[B]], i64 [[SUB]]
+; CHECK-NEXT:    ret i8* [[GEP]]
 ;
   %b_ptr = ptrtoint i8* %b to i64
   %sub = sub i64 0, %b_ptr
@@ -63,7 +115,26 @@ define i8* @test5(i8* %b) {
 
 define i64* @test6(i64* %b) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    ret i64* null
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i64* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[SUB]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, i64* [[B]], i64 [[ASHR]]
+; CHECK-NEXT:    ret i64* [[GEP]]
+;
+  %b_ptr = ptrtoint i64* %b to i64
+  %sub = sub i64 0, %b_ptr
+  %ashr = ashr exact i64 %sub, 3
+  %gep = getelementptr i64, i64* %b, i64 %ashr
+  ret i64* %gep
+}
+
+define i64* @test6_inbounds(i64* %b) {
+; CHECK-LABEL: @test6_inbounds(
+; CHECK-NEXT:    [[B_PTR:%.*]] = ptrtoint i64* [[B:%.*]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[B_PTR]]
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr exact i64 [[SUB]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 [[ASHR]]
+; CHECK-NEXT:    ret i64* [[GEP]]
 ;
   %b_ptr = ptrtoint i64* %b to i64
   %sub = sub i64 0, %b_ptr
@@ -152,7 +223,7 @@ define <4 x i32*> @vector_idx_vector() {
 %struct = type { double, float }
 define <4 x float*> @vector_idx_mix_scalar_vector() {
 ; CHECK-LABEL: @vector_idx_mix_scalar_vector(
-; CHECK-NEXT:    ret <4 x float*> getelementptr (%struct, <4 x %struct*> zeroinitializer, <4 x i64> zeroinitializer, i32 1)
+; CHECK-NEXT:    ret <4 x float*> getelementptr ([[STRUCT:%.*]], <4 x %struct*> zeroinitializer, <4 x i64> zeroinitializer, i32 1)
 ;
   %gep = getelementptr %struct, <4 x %struct*> zeroinitializer, i32 0, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x float*> %gep
@@ -162,7 +233,7 @@ define <4 x float*> @vector_idx_mix_scalar_vector() {
 
 define <vscale x 4 x i32*> @scalable_idx_scalar() {
 ; CHECK-LABEL: @scalable_idx_scalar(
-; CHECK-NEXT:    ret <vscale x 4 x i32*> getelementptr (i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> undef, i64 1, i32 0), <vscale x 4 x i64> undef, <vscale x 4 x i32> zeroinitializer))
+; CHECK-NEXT:    ret <vscale x 4 x i32*> getelementptr (i32, <vscale x 4 x i32*> zeroinitializer, <vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i32 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer))
 ;
   %gep = getelementptr i32, <vscale x 4 x i32*> zeroinitializer, i64 1
   ret <vscale x 4 x i32*> %gep
@@ -170,7 +241,7 @@ define <vscale x 4 x i32*> @scalable_idx_scalar() {
 
 define <vscale x 4 x float*> @scalable_vector_idx_mix_scalar_vector() {
 ; CHECK-LABEL: @scalable_vector_idx_mix_scalar_vector(
-; CHECK-NEXT:    ret <vscale x 4 x float*> getelementptr (%struct, <vscale x 4 x %struct*> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1)
+; CHECK-NEXT:    ret <vscale x 4 x float*> getelementptr ([[STRUCT:%.*]], <vscale x 4 x %struct*> zeroinitializer, <vscale x 4 x i64> zeroinitializer, i32 1)
 ;
   %gep = getelementptr %struct, <vscale x 4 x %struct*> zeroinitializer, i32 0, i32 1
   ret <vscale x 4 x float*> %gep
@@ -185,3 +256,91 @@ define <vscale x 2 x i64*> @ptr_idx_mix_scalar_scalable_vector() {
 }
 
 ; Check ConstantExpr::getGetElementPtr() using ElementCount for size queries - end.
+
+; TODO: these should return poison
+
+define i8* @poison() {
+; CHECK-LABEL: @poison(
+; CHECK-NEXT:    ret i8* poison
+;
+  %v = getelementptr i8, i8* poison, i64 1
+  ret i8* %v
+}
+
+define i8* @poison2(i8* %baseptr) {
+; CHECK-LABEL: @poison2(
+; CHECK-NEXT:    ret i8* poison
+;
+  %v = getelementptr i8, i8* %baseptr, i64 poison
+  ret i8* %v
+}
+
+define i8* @D98611_1(i8* %c1, i64 %offset) {
+; CHECK-LABEL: @D98611_1(
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i8, i8* [[C1:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    ret i8* [[C2]]
+;
+  %c2 = getelementptr inbounds i8, i8* %c1, i64 %offset
+  %ptrtoint1 = ptrtoint i8* %c1 to i64
+  %ptrtoint2 = ptrtoint i8* %c2 to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1
+  %gep = getelementptr inbounds i8, i8* %c1, i64 %sub
+  ret i8* %gep
+}
+
+define %struct.A* @D98611_2(%struct.A* %c1, i64 %offset) {
+; CHECK-LABEL: @D98611_2(
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], %struct.A* [[C1:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    ret %struct.A* [[C2]]
+;
+  %c2 = getelementptr inbounds %struct.A, %struct.A* %c1, i64 %offset
+  %ptrtoint1 = ptrtoint %struct.A* %c1 to i64
+  %ptrtoint2 = ptrtoint %struct.A* %c2 to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1
+  %sdiv = sdiv exact i64 %sub, 7
+  %gep = getelementptr inbounds %struct.A, %struct.A* %c1, i64 %sdiv
+  ret %struct.A* %gep
+}
+
+define i32* @D98611_3(i32* %c1, i64 %offset) {
+; CHECK-LABEL: @D98611_3(
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i32, i32* [[C1:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    ret i32* [[C2]]
+;
+  %c2 = getelementptr inbounds i32, i32* %c1, i64 %offset
+  %ptrtoint1 = ptrtoint i32* %c1 to i64
+  %ptrtoint2 = ptrtoint i32* %c2 to i64
+  %sub = sub i64 %ptrtoint2, %ptrtoint1
+  %ashr = ashr exact i64 %sub, 2
+  %gep = getelementptr inbounds i32, i32* %c1, i64 %ashr
+  ret i32* %gep
+}
+
+define <8 x i32*> @gep_vector_index_op2_poison([144 x i32]* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op2_poison(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds [144 x i32], [144 x i32]* %ptr, i64 0, <8 x i64> poison
+  ret <8 x i32*> %res
+}
+
+%t.1 = type { i32, [144 x i32] }
+
+define <8 x i32*> @gep_vector_index_op3_poison(%t.1* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op3_poison(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds %t.1, %t.1* %ptr, i64 0, i32 1, <8 x i64> poison
+  ret <8 x i32*> %res
+}
+
+%t.2 = type { i32, i32 }
+%t.3 = type { i32, [144 x %t.2 ] }
+
+define <8 x i32*> @gep_vector_index_op3_poison_constant_index_afterwards(%t.3* %ptr) {
+; CHECK-LABEL: @gep_vector_index_op3_poison_constant_index_afterwards(
+; CHECK-NEXT:    ret <8 x i32*> poison
+;
+  %res = getelementptr inbounds %t.3, %t.3* %ptr, i64 0, i32 1, <8 x i64> poison, i32 1
+  ret <8 x i32*> %res
+}

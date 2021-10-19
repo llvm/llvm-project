@@ -58,7 +58,7 @@ machineFunctionInfo:
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM 0
 ...
 ---
@@ -76,7 +76,7 @@ machineFunctionInfo:
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_DCACHE_WB
     S_ENDPGM 0
 ...
@@ -97,7 +97,7 @@ machineFunctionInfo:
 body: |
   bb.0:
     S_DCACHE_WB
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM 0
 ...
 ---
@@ -132,11 +132,11 @@ machineFunctionInfo:
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     S_ENDPGM 0
 
   bb.1:
-    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
     S_ENDPGM 0
 ...
 ...
@@ -164,7 +164,7 @@ body: |
     S_ENDPGM 0
 
   bb.1:
-    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr4, undef $sgpr6_sgpr7, undef $m0, 0
     S_ENDPGM 0
 ...
 ---
@@ -182,6 +182,6 @@ machineFunctionInfo:
 
 body: |
   bb.0:
-    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0, 0
+    S_STORE_DWORD_SGPR undef $sgpr2, undef $sgpr0_sgpr1, undef $m0, 0
     SI_RETURN_TO_EPILOG undef $vgpr0
 ...

@@ -3,7 +3,7 @@
 !llvm.module.flags = !{!6}
 !llvm.dbg.cu = !{!5}
 
-!0 = !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", line: 3, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagProtected | DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !4, scope: !1, type: !2)
+!0 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", line: 3, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagProtected | DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !4, scope: !1, type: !2)
 !1 = !DIFile(filename: "/foo", directory: "bar.cpp")
 !2 = !DISubroutineType(types: !3)
 !3 = !{null}

@@ -13,13 +13,31 @@
 //           UIntType b, size_t t, UIntType c, size_t l, UIntType f>
 // class mersenne_twister_engine;
 
-// explicit mersenne_twister_engine(result_type s = default_seed);
+// explicit mersenne_twister_engine(result_type s = default_seed);      // before C++20
+// mersenne_twister_engine() : mersenne_twister_engine(default_seed) {} // C++20
+// explicit mersenne_twister_engine(result_type s);                     // C++20
+
+// Serializing/deserializing the state of the RNG requires iostreams
+// UNSUPPORTED: libcpp-has-no-localization
 
 #include <random>
 #include <sstream>
 #include <cassert>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 11
+#include "make_implicit.h"
+#include "test_convertible.h"
+#endif
+
+template <class T>
+std::string
+to_string(T const &e)
+{
+    std::ostringstream os;
+    os << e;
+    return os.str();
+}
 
 void
 test1()
@@ -121,9 +139,7 @@ test1()
     "3668048733 2030009470 1910839172 1234925283 3575831445 123595418 "
     "2362440495 3048484911 1796872496";
     std::mt19937 e1(0);
-    std::ostringstream os;
-    os << e1;
-    assert(os.str() == a);
+    assert(to_string(e1) == a);
 }
 
 void
@@ -234,9 +250,16 @@ test2()
     "15150289760867914983 4931341382074091848 12635920082410445322 "
     "8498109357807439006 14836776625250834986";
     std::mt19937_64 e1(0);
-    std::ostringstream os;
-    os << e1;
-    assert(os.str() == a);
+    assert(to_string(e1) == a);
+}
+
+template <class E, typename Arg>
+void test_implicit() {
+#if TEST_STD_VER >= 11
+  static_assert(test_convertible<E>(), "");
+  assert(E(E::default_seed) == make_implicit<E>());
+  static_assert(!test_convertible<E, Arg>(), "");
+#endif
 }
 
 int main(int, char**)
@@ -244,5 +267,8 @@ int main(int, char**)
     test1();
     test2();
 
-  return 0;
+    test_implicit<std::mt19937, uint_fast32_t>();
+    test_implicit<std::mt19937_64, uint_fast64_t>();
+
+    return 0;
 }

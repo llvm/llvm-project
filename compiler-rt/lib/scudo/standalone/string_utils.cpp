@@ -78,10 +78,11 @@ static int appendUnsigned(char **Buffer, const char *BufferEnd, u64 Num,
 static int appendSignedDecimal(char **Buffer, const char *BufferEnd, s64 Num,
                                u8 MinNumberLength, bool PadWithZero) {
   const bool Negative = (Num < 0);
-  return appendNumber(Buffer, BufferEnd,
-                      static_cast<u64>(Negative ? -Num : Num), 10,
-                      MinNumberLength, PadWithZero, Negative,
-                      /*Upper=*/false);
+  const u64 UnsignedNum = (Num == INT64_MIN)
+                              ? static_cast<u64>(INT64_MAX) + 1
+                              : static_cast<u64>(Negative ? -Num : Num);
+  return appendNumber(Buffer, BufferEnd, UnsignedNum, 10, MinNumberLength,
+                      PadWithZero, Negative, /*Upper=*/false);
 }
 
 // Use the fact that explicitly requesting 0 Width (%0s) results in UB and
@@ -114,8 +115,8 @@ static int appendPointer(char **Buffer, const char *BufferEnd, u64 ptr_value) {
   return Res;
 }
 
-int formatString(char *Buffer, uptr BufferLength, const char *Format,
-                 va_list Args) {
+static int formatString(char *Buffer, uptr BufferLength, const char *Format,
+                        va_list Args) {
   static const char *PrintfFormatsHelp =
       "Supported formatString formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
@@ -158,16 +159,18 @@ int formatString(char *Buffer, uptr BufferLength, const char *Format,
     CHECK(!((Precision >= 0 || LeftJustified) && *Cur != 's'));
     switch (*Cur) {
     case 'd': {
-      DVal = HaveLL ? va_arg(Args, s64)
-                    : HaveZ ? va_arg(Args, sptr) : va_arg(Args, int);
+      DVal = HaveLL  ? va_arg(Args, s64)
+             : HaveZ ? va_arg(Args, sptr)
+                     : va_arg(Args, int);
       Res += appendSignedDecimal(&Buffer, BufferEnd, DVal, Width, PadWithZero);
       break;
     }
     case 'u':
     case 'x':
     case 'X': {
-      UVal = HaveLL ? va_arg(Args, u64)
-                    : HaveZ ? va_arg(Args, uptr) : va_arg(Args, unsigned);
+      UVal = HaveLL  ? va_arg(Args, u64)
+             : HaveZ ? va_arg(Args, uptr)
+                     : va_arg(Args, unsigned);
       const bool Upper = (*Cur == 'X');
       Res += appendUnsigned(&Buffer, BufferEnd, UVal, (*Cur == 'u') ? 10 : 16,
                             Width, PadWithZero, Upper);
@@ -207,8 +210,15 @@ int formatString(char *Buffer, uptr BufferLength, const char *Format,
   return Res;
 }
 
+int formatString(char *Buffer, uptr BufferLength, const char *Format, ...) {
+  va_list Args;
+  va_start(Args, Format);
+  int Res = formatString(Buffer, BufferLength, Format, Args);
+  va_end(Args);
+  return Res;
+}
+
 void ScopedString::append(const char *Format, va_list Args) {
-  DCHECK_LT(Length, String.size());
   va_list ArgsCopy;
   va_copy(ArgsCopy, Args);
   // formatString doesn't currently support a null buffer or zero buffer length,
@@ -217,13 +227,15 @@ void ScopedString::append(const char *Format, va_list Args) {
   char C[1];
   const uptr AdditionalLength =
       static_cast<uptr>(formatString(C, sizeof(C), Format, Args)) + 1;
+  const uptr Length = length();
   String.resize(Length + AdditionalLength);
-  formatString(String.data() + Length, AdditionalLength, Format, ArgsCopy);
-  Length = strlen(String.data());
-  CHECK_LT(Length, String.size());
+  const uptr FormattedLength = static_cast<uptr>(formatString(
+      String.data() + Length, String.size() - Length, Format, ArgsCopy));
+  RAW_CHECK(data()[length()] == '\0');
+  RAW_CHECK(FormattedLength + 1 == AdditionalLength);
+  va_end(ArgsCopy);
 }
 
-FORMAT(2, 3)
 void ScopedString::append(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);
@@ -231,11 +243,10 @@ void ScopedString::append(const char *Format, ...) {
   va_end(Args);
 }
 
-FORMAT(1, 2)
 void Printf(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);
-  ScopedString Msg(1024);
+  ScopedString Msg;
   Msg.append(Format, Args);
   outputRaw(Msg.data());
   va_end(Args);

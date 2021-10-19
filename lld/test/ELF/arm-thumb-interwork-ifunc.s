@@ -42,13 +42,13 @@ thumb_caller:
  bl foo
 
 // CHECK:      00021004 <_start>:
-// CHECK-NEXT: b       #36 <$a>
-// CHECK-NEXT: bl      #32 <$a>
+// CHECK-NEXT: b       0x21030
+// CHECK-NEXT: bl      0x21030
 
 // CHECK:      0002100c <thumb_caller>:
-// CHECK-NEXT: b.w     #8
-// CHECK-NEXT: b.w     #4
-// CHECK-NEXT: blx     #24
+// CHECK-NEXT: b.w     0x21018 <__Thumbv7ABSLongThunk_foo>
+// CHECK-NEXT: b.w     0x21018 <__Thumbv7ABSLongThunk_foo>
+// CHECK-NEXT: blx     0x21030
 
 // CHECK:      00021018 <__Thumbv7ABSLongThunk_foo>:
 // CHECK-NEXT: movw    r12, #4144

@@ -17,11 +17,13 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -67,6 +69,7 @@ public:
   ShadowStackGCLowering();
 
   bool doInitialization(Module &M) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 
 private:
@@ -86,10 +89,12 @@ private:
 } // end anonymous namespace
 
 char ShadowStackGCLowering::ID = 0;
+char &llvm::ShadowStackGCLoweringID = ShadowStackGCLowering::ID;
 
 INITIALIZE_PASS_BEGIN(ShadowStackGCLowering, DEBUG_TYPE,
                       "Shadow Stack GC Lowering", false, false)
 INITIALIZE_PASS_DEPENDENCY(GCModuleInfo)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ShadowStackGCLowering, DEBUG_TYPE,
                     "Shadow Stack GC Lowering", false, false)
 
@@ -234,8 +239,8 @@ void ShadowStackGCLowering::CollectRoots(Function &F) {
 
   SmallVector<std::pair<CallInst *, AllocaInst *>, 16> MetaRoots;
 
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;)
+  for (BasicBlock &BB : F)
+    for (BasicBlock::iterator II = BB.begin(), E = BB.end(); II != E;)
       if (IntrinsicInst *CI = dyn_cast<IntrinsicInst>(II++))
         if (Function *F = CI->getCalledFunction())
           if (F->getIntrinsicID() == Intrinsic::gcroot) {
@@ -280,6 +285,10 @@ GetElementPtrInst *ShadowStackGCLowering::CreateGEP(LLVMContext &Context,
   return dyn_cast<GetElementPtrInst>(Val);
 }
 
+void ShadowStackGCLowering::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addPreserved<DominatorTreeWrapperPass>();
+}
+
 /// runOnFunction - Insert code to maintain the shadow stack.
 bool ShadowStackGCLowering::runOnFunction(Function &F) {
   // Quick exit for functions that do not use the shadow stack GC.
@@ -296,6 +305,10 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   // stack map entry for it.
   if (Roots.empty())
     return false;
+
+  Optional<DomTreeUpdater> DTU;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DTU.emplace(DTWP->getDomTree(), DomTreeUpdater::UpdateStrategy::Lazy);
 
   // Build the constant map and figure the type of the shadow stack entry.
   Value *FrameMap = GetFrameMap(F);
@@ -348,7 +361,8 @@ bool ShadowStackGCLowering::runOnFunction(Function &F) {
   AtEntry.CreateStore(NewHeadVal, Head);
 
   // For each instruction that escapes...
-  EscapeEnumerator EE(F, "gc_cleanup");
+  EscapeEnumerator EE(F, "gc_cleanup", /*HandleExceptions=*/true,
+                      DTU.hasValue() ? DTU.getPointer() : nullptr);
   while (IRBuilder<> *AtExit = EE.Next()) {
     // Pop the entry from the shadow stack. Don't reuse CurrentHead from
     // AtEntry, since that would make the value live for the entire function.

@@ -17,6 +17,7 @@
 #define LLVM_ADT_STLEXTRAS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -60,15 +61,6 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //     Extra additions to <type_traits>
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-struct negation : std::integral_constant<bool, !bool(T::value)> {};
-
-template <typename...> struct conjunction : std::true_type {};
-template <typename B1> struct conjunction<B1> : B1 {};
-template <typename B1, typename... Bn>
-struct conjunction<B1, Bn...>
-    : std::conditional<bool(B1::value), conjunction<Bn...>, B1>::type {};
-
 template <typename T> struct make_const_ptr {
   using type =
       typename std::add_pointer<typename std::add_const<T>::type>::type;
@@ -79,13 +71,6 @@ template <typename T> struct make_const_ref {
       typename std::add_const<T>::type>::type;
 };
 
-/// Utilities for detecting if a given trait holds for some set of arguments
-/// 'Args'. For example, the given trait could be used to detect if a given type
-/// has a copy assignment operator:
-///   template<class T>
-///   using has_copy_assign_t = decltype(std::declval<T&>()
-///                                                 = std::declval<const T&>());
-///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
 namespace detail {
 template <typename...> using void_t = void;
 template <class, template <class...> class Op, class... Args> struct detector {
@@ -97,16 +82,23 @@ struct detector<void_t<Op<Args...>>, Op, Args...> {
 };
 } // end namespace detail
 
+/// Detects if a given trait holds for some set of arguments 'Args'.
+/// For example, the given trait could be used to detect if a given type
+/// has a copy assignment operator:
+///   template<class T>
+///   using has_copy_assign_t = decltype(std::declval<T&>()
+///                                                 = std::declval<const T&>());
+///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
-/// Check if a Callable type can be invoked with the given set of arg types.
 namespace detail {
 template <typename Callable, typename... Args>
 using is_invocable =
     decltype(std::declval<Callable &>()(std::declval<Args>()...));
 } // namespace detail
 
+/// Check if a Callable type can be invoked with the given set of arg types.
 template <typename Callable, typename... Args>
 using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
 
@@ -193,9 +185,14 @@ public:
   template <typename Callable>
   function_ref(
       Callable &&callable,
-      std::enable_if_t<
-          !std::is_same<std::remove_cv_t<std::remove_reference_t<Callable>>,
-                        function_ref>::value> * = nullptr)
+      // This is not the copy-constructor.
+      std::enable_if_t<!std::is_same<remove_cvref_t<Callable>,
+                                     function_ref>::value> * = nullptr,
+      // Functor must be callable and return a suitable type.
+      std::enable_if_t<std::is_void<Ret>::value ||
+                       std::is_convertible<decltype(std::declval<Callable>()(
+                                               std::declval<Params>()...)),
+                                           Ret>::value> * = nullptr)
       : callback(callback_fn<typename std::remove_reference<Callable>::type>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
@@ -266,7 +263,7 @@ template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
 
 /// Return a range covering \p RangeOrContainer with the first N elements
 /// excluded.
-template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N) {
+template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N = 1) {
   return make_range(std::next(adl_begin(RangeOrContainer), N),
                     adl_end(RangeOrContainer));
 }
@@ -275,20 +272,24 @@ template <typename T> auto drop_begin(T &&RangeOrContainer, size_t N) {
 // be applied whenever operator* is invoked on the iterator.
 
 template <typename ItTy, typename FuncTy,
-          typename FuncReturnTy =
-            decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+          typename ReferenceTy =
+              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
 class mapped_iterator
     : public iterator_adaptor_base<
-             mapped_iterator<ItTy, FuncTy>, ItTy,
-             typename std::iterator_traits<ItTy>::iterator_category,
-             typename std::remove_reference<FuncReturnTy>::type> {
+          mapped_iterator<ItTy, FuncTy>, ItTy,
+          typename std::iterator_traits<ItTy>::iterator_category,
+          std::remove_reference_t<ReferenceTy>,
+          typename std::iterator_traits<ItTy>::difference_type,
+          std::remove_reference_t<ReferenceTy> *, ReferenceTy> {
 public:
   mapped_iterator(ItTy U, FuncTy F)
     : mapped_iterator::iterator_adaptor_base(std::move(U)), F(std::move(F)) {}
 
   ItTy getCurrent() { return this->I; }
 
-  FuncReturnTy operator*() const { return F(*this->I); }
+  const FuncTy &getFunction() const { return F; }
+
+  ReferenceTy operator*() const { return F(*this->I); }
 
 private:
   FuncTy F;
@@ -532,7 +533,7 @@ public:
   early_inc_iterator_impl(WrappedIteratorT I) : BaseT(I) {}
 
   using BaseT::operator*;
-  typename BaseT::reference operator*() {
+  decltype(*std::declval<WrappedIteratorT>()) operator*() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(!IsEarlyIncremented && "Cannot dereference twice!");
     IsEarlyIncremented = true;
@@ -549,12 +550,12 @@ public:
     return *this;
   }
 
-  using BaseT::operator==;
-  bool operator==(const early_inc_iterator_impl &RHS) const {
+  friend bool operator==(const early_inc_iterator_impl &LHS,
+                         const early_inc_iterator_impl &RHS) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(!IsEarlyIncremented && "Cannot compare after dereferencing!");
+    assert(!LHS.IsEarlyIncremented && "Cannot compare after dereferencing!");
 #endif
-    return BaseT::operator==(RHS);
+    return (const BaseT &)LHS == (const BaseT &)RHS;
   }
 };
 
@@ -633,6 +634,14 @@ protected:
     return std::tuple<Iters...>(std::prev(std::get<Ns>(iterators))...);
   }
 
+  template <size_t... Ns>
+  bool test_all_equals(const zip_common &other,
+            std::index_sequence<Ns...>) const {
+    return all_of(std::initializer_list<bool>{std::get<Ns>(this->iterators) ==
+                                              std::get<Ns>(other.iterators)...},
+                  identity<bool>{});
+  }
+
 public:
   zip_common(Iters &&... ts) : iterators(std::forward<Iters>(ts)...) {}
 
@@ -652,6 +661,11 @@ public:
                   "All inner iterators must be at least bidirectional.");
     iterators = tup_dec(std::index_sequence_for<Iters...>{});
     return *reinterpret_cast<ZipType *>(this);
+  }
+
+  /// Return true if all the iterator are matching `other`'s iterators.
+  bool all_equals(zip_common &other) {
+    return test_all_equals(other, std::index_sequence_for<Iters...>{});
   }
 };
 
@@ -1108,9 +1122,9 @@ public:
 
   iterator begin() const { return iterator(base, 0); }
   iterator end() const { return iterator(base, count); }
-  ReferenceT operator[](unsigned index) const {
-    assert(index < size() && "invalid index for value range");
-    return DerivedT::dereference_iterator(base, index);
+  ReferenceT operator[](size_t Index) const {
+    assert(Index < size() && "invalid index for value range");
+    return DerivedT::dereference_iterator(base, static_cast<ptrdiff_t>(Index));
   }
   ReferenceT front() const {
     assert(!empty() && "expected non-empty range");
@@ -1263,7 +1277,7 @@ template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
 /// compares less than the first component of another std::pair.
 struct less_first {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return lhs.first < rhs.first;
+    return std::less<>()(lhs.first, rhs.first);
   }
 };
 
@@ -1271,7 +1285,7 @@ struct less_first {
 /// compares less than the second component of another std::pair.
 struct less_second {
   template <typename T> bool operator()(const T &lhs, const T &rhs) const {
-    return lhs.second < rhs.second;
+    return std::less<>()(lhs.second, rhs.second);
   }
 };
 
@@ -1294,27 +1308,65 @@ template <> struct rank<0> {};
 
 /// traits class for checking whether type T is one of any of the given
 /// types in the variadic list.
-template <typename T, typename... Ts> struct is_one_of {
-  static const bool value = false;
-};
-
-template <typename T, typename U, typename... Ts>
-struct is_one_of<T, U, Ts...> {
-  static const bool value =
-      std::is_same<T, U>::value || is_one_of<T, Ts...>::value;
-};
+template <typename T, typename... Ts>
+using is_one_of = disjunction<std::is_same<T, Ts>...>;
 
 /// traits class for checking whether type T is a base class for all
 ///  the given types in the variadic list.
-template <typename T, typename... Ts> struct are_base_of {
-  static const bool value = true;
+template <typename T, typename... Ts>
+using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
+
+namespace detail {
+template <typename... Ts> struct Visitor;
+
+template <typename HeadT, typename... TailTs>
+struct Visitor<HeadT, TailTs...> : remove_cvref_t<HeadT>, Visitor<TailTs...> {
+  explicit constexpr Visitor(HeadT &&Head, TailTs &&...Tail)
+      : remove_cvref_t<HeadT>(std::forward<HeadT>(Head)),
+        Visitor<TailTs...>(std::forward<TailTs>(Tail)...) {}
+  using remove_cvref_t<HeadT>::operator();
+  using Visitor<TailTs...>::operator();
 };
 
-template <typename T, typename U, typename... Ts>
-struct are_base_of<T, U, Ts...> {
-  static const bool value =
-      std::is_base_of<T, U>::value && are_base_of<T, Ts...>::value;
+template <typename HeadT> struct Visitor<HeadT> : remove_cvref_t<HeadT> {
+  explicit constexpr Visitor(HeadT &&Head)
+      : remove_cvref_t<HeadT>(std::forward<HeadT>(Head)) {}
+  using remove_cvref_t<HeadT>::operator();
 };
+} // namespace detail
+
+/// Returns an opaquely-typed Callable object whose operator() overload set is
+/// the sum of the operator() overload sets of each CallableT in CallableTs.
+///
+/// The type of the returned object derives from each CallableT in CallableTs.
+/// The returned object is constructed by invoking the appropriate copy or move
+/// constructor of each CallableT, as selected by overload resolution on the
+/// corresponding argument to makeVisitor.
+///
+/// Example:
+///
+/// \code
+/// auto visitor = makeVisitor([](auto) { return "unhandled type"; },
+///                            [](int i) { return "int"; },
+///                            [](std::string s) { return "str"; });
+/// auto a = visitor(42);    // `a` is now "int".
+/// auto b = visitor("foo"); // `b` is now "str".
+/// auto c = visitor(3.14f); // `c` is now "unhandled type".
+/// \endcode
+///
+/// Example of making a visitor with a lambda which captures a move-only type:
+///
+/// \code
+/// std::unique_ptr<FooHandler> FH = /* ... */;
+/// auto visitor = makeVisitor(
+///     [FH{std::move(FH)}](Foo F) { return FH->handle(F); },
+///     [](int i) { return i; },
+///     [](std::string s) { return atoi(s); });
+/// \endcode
+template <typename... CallableTs>
+constexpr decltype(auto) makeVisitor(CallableTs &&...Callables) {
+  return detail::Visitor<CallableTs...>(std::forward<CallableTs>(Callables)...);
+}
 
 //===----------------------------------------------------------------------===//
 //     Extra additions for arrays
@@ -1326,8 +1378,15 @@ template <class Iterator, class RNG>
 void shuffle(Iterator first, Iterator last, RNG &&g) {
   // It would be better to use a std::uniform_int_distribution,
   // but that would be stdlib dependent.
-  for (auto size = last - first; size > 1; ++first, (void)--size)
-    std::iter_swap(first, first + g() % size);
+  typedef
+      typename std::iterator_traits<Iterator>::difference_type difference_type;
+  for (auto size = last - first; size > 1; ++first, (void)--size) {
+    difference_type offset = g() % size;
+    // Avoid self-assignment due to incorrect assertions in libstdc++
+    // containers (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85828).
+    if (offset != difference_type(0))
+      std::iter_swap(first, first + offset);
+  }
 }
 
 /// Find the length of an array.
@@ -1367,7 +1426,7 @@ inline unsigned presortShuffleEntropy() {
 template <class IteratorTy>
 inline void presortShuffle(IteratorTy Start, IteratorTy End) {
   std::mt19937 Generator(presortShuffleEntropy());
-  std::shuffle(Start, End, Generator);
+  llvm::shuffle(Start, End, Generator);
 }
 
 } // end namespace detail
@@ -1422,7 +1481,7 @@ template <typename T>
 // is trivially copyable.
 using sort_trivially_copyable = conjunction<
     std::is_pointer<T>,
-    is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
+    std::is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
 } // namespace detail
 
 // Provide wrappers to std::sort which shuffle the elements before sorting
@@ -1641,6 +1700,18 @@ auto partition_point(R &&Range, Predicate P) {
   return std::partition_point(adl_begin(Range), adl_end(Range), P);
 }
 
+template<typename Range, typename Predicate>
+auto unique(Range &&R, Predicate P) {
+  return std::unique(adl_begin(R), adl_end(R), P);
+}
+
+/// Wrapper function around std::equal to detect if pair-wise elements between
+/// two ranges are the same.
+template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
+  return std::equal(adl_begin(LRange), adl_end(LRange), adl_begin(RRange),
+                    adl_end(RRange));
+}
+
 /// Wrapper function around std::equal to detect if all elements
 /// in a container are same.
 template <typename R>
@@ -1668,6 +1739,14 @@ void erase_if(Container &C, UnaryPredicate P) {
 template <typename Container, typename ValueType>
 void erase_value(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
+}
+
+/// Wrapper function to append a range to a container.
+///
+/// C.insert(C.end(), R.begin(), R.end());
+template <typename Container, typename Range>
+inline void append_range(Container &C, Range &&R) {
+  C.insert(C.end(), R.begin(), R.end());
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
@@ -1806,9 +1885,9 @@ template <typename R> struct result_pair {
   result_pair(std::size_t Index, IterOfRange<R> Iter)
       : Index(Index), Iter(Iter) {}
 
-  result_pair<R>(const result_pair<R> &Other)
+  result_pair(const result_pair<R> &Other)
       : Index(Other.Index), Iter(Other.Iter) {}
-  result_pair<R> &operator=(const result_pair<R> &Other) {
+  result_pair &operator=(const result_pair &Other) {
     Index = Other.Index;
     Iter = Other.Iter;
     return *this;
@@ -1842,22 +1921,22 @@ public:
   result_type &operator*() { return Result; }
   const result_type &operator*() const { return Result; }
 
-  enumerator_iter<R> &operator++() {
+  enumerator_iter &operator++() {
     assert(Result.Index != std::numeric_limits<size_t>::max());
     ++Result.Iter;
     ++Result.Index;
     return *this;
   }
 
-  bool operator==(const enumerator_iter<R> &RHS) const {
+  bool operator==(const enumerator_iter &RHS) const {
     // Don't compare indices here, only iterators.  It's possible for an end
     // iterator to have different indices depending on whether it was created
     // by calling std::end() versus incrementing a valid iterator.
     return Result.Iter == RHS.Result.Iter;
   }
 
-  enumerator_iter<R>(const enumerator_iter<R> &Other) : Result(Other.Result) {}
-  enumerator_iter<R> &operator=(const enumerator_iter<R> &Other) {
+  enumerator_iter(const enumerator_iter &Other) : Result(Other.Result) {}
+  enumerator_iter &operator=(const enumerator_iter &Other) {
     Result = Other.Result;
     return *this;
   }
@@ -1922,6 +2001,45 @@ decltype(auto) apply_tuple(F &&f, Tuple &&t) {
 
   return detail::apply_tuple_impl(std::forward<F>(f), std::forward<Tuple>(t),
                                   Indices{});
+}
+
+namespace detail {
+
+template <typename Predicate, typename... Args>
+bool all_of_zip_predicate_first(Predicate &&P, Args &&...args) {
+  auto z = zip(args...);
+  auto it = z.begin();
+  auto end = z.end();
+  while (it != end) {
+    if (!apply_tuple([&](auto &&...args) { return P(args...); }, *it))
+      return false;
+    ++it;
+  }
+  return it.all_equals(end);
+}
+
+// Just an adaptor to switch the order of argument and have the predicate before
+// the zipped inputs.
+template <typename... ArgsThenPredicate, size_t... InputIndexes>
+bool all_of_zip_predicate_last(
+    std::tuple<ArgsThenPredicate...> argsThenPredicate,
+    std::index_sequence<InputIndexes...>) {
+  auto constexpr OutputIndex =
+      std::tuple_size<decltype(argsThenPredicate)>::value - 1;
+  return all_of_zip_predicate_first(std::get<OutputIndex>(argsThenPredicate),
+                             std::get<InputIndexes>(argsThenPredicate)...);
+}
+
+} // end namespace detail
+
+/// Compare two zipped ranges using the provided predicate (as last argument).
+/// Return true if all elements satisfy the predicate and false otherwise.
+//  Return false if the zipped iterator aren't all at end (size mismatch).
+template <typename... ArgsAndPredicate>
+bool all_of_zip(ArgsAndPredicate &&...argsAndPredicate) {
+  return detail::all_of_zip_predicate_last(
+      std::forward_as_tuple(argsAndPredicate...),
+      std::make_index_sequence<sizeof...(argsAndPredicate) - 1>{});
 }
 
 /// Return true if the sequence [Begin, End) has exactly N items. Runs in O(N)

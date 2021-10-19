@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX89 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tahiti < %s | FileCheck --check-prefixes=GCN,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GFX89,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GFX89,GFX9,FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=R600,FUNC %s
 
 ; FUNC-LABEL: {{^}}round_f32:
 ; GCN-DAG: s_load_dword [[SX:s[0-9]+]]
@@ -87,8 +87,7 @@ define amdgpu_kernel void @round_f16(half addrspace(1)* %out, i32 %x.arg) #0 {
 ; GFX89: v_bfi_b32 [[COPYSIGN0:v[0-9]+]], [[K]], [[BFI_K]],
 ; GFX89: v_bfi_b32 [[COPYSIGN1:v[0-9]+]], [[K]], [[BFI_K]],
 
-; GFX9: v_and_b32_e32
-; GFX9: v_lshl_or_b32
+; GFX9: v_pack_b32_f16
 define amdgpu_kernel void @round_v2f16(<2 x half> addrspace(1)* %out, i32 %in.arg) #0 {
   %in = bitcast i32 %in.arg to <2 x half>
   %result = call <2 x half> @llvm.round.v2f16(<2 x half> %in)

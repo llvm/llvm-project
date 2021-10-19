@@ -50,18 +50,20 @@ coro_t f() {
 // CHECK: [[TRYCONT]]:
 // CHECK-NEXT: br label %[[COROFIN:.+]]
 // CHECK: [[COROFIN]]:
+// CHECK-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
 // CHECK-NEXT: call void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
 
 // CHECK-LPAD: @_Z1fv(
 // CHECK-LPAD:   invoke void @_Z9may_throwv()
 // CHECK-LPAD:       to label %[[CONT:.+]] unwind label %[[CLEANUP:.+]]
 // CHECK-LPAD: [[CLEANUP]]:
-// CHECK-LPAD:   call void @_ZN7CleanupD1Ev(%struct.Cleanup* %x) #2
+// CHECK-LPAD:   call void @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %x) #2
 // CHECK-LPAD:   br label %[[CATCH:.+]]
 
 // CHECK-LPAD: [[CATCH]]:
 // CHECK-LPAD:    call i8* @__cxa_begin_catch
-// CHECK-LPAD:    call void @_ZN6coro_t12promise_type19unhandled_exceptionEv(%"struct.coro_t::promise_type"* %__promise) #2
+// CHECK-LPAD:    call void @_ZN6coro_t12promise_type19unhandled_exceptionEv(%"struct.coro_t::promise_type"* {{[^,]*}} %__promise) #2
 // CHECK-LPAD:    invoke void @__cxa_end_catch()
 // CHECK-LPAD-NEXT:  to label %[[CATCHRETDEST:.+]] unwind label
 // CHECK-LPAD: [[CATCHRETDEST]]:
@@ -69,4 +71,6 @@ coro_t f() {
 // CHECK-LPAD: [[TRYCONT]]:
 // CHECK-LPAD: br label %[[COROFIN:.+]]
 // CHECK-LPAD: [[COROFIN]]:
+// CHECK-LPAD-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-LPAD-NEXT: call void @llvm.lifetime.start.p0i8(
 // CHECK-LPAD-NEXT: call void @_ZN6coro_t12promise_type13final_suspendEv(

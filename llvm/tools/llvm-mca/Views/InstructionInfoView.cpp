@@ -13,6 +13,7 @@
 
 #include "Views/InstructionInfoView.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/JSON.h"
 
 namespace llvm {
 namespace mca {
@@ -39,7 +40,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    Instructions:\n";
   }
 
-  for (auto I : enumerate(zip(IIVD, Source))) {
+  for (const auto &I : enumerate(zip(IIVD, Source))) {
     const InstructionInfoViewData &IIVDEntry = std::get<0>(I.value());
 
     TempStream << ' ' << IIVDEntry.NumMicroOpcodes << "    ";
@@ -92,7 +93,7 @@ void InstructionInfoView::collectData(
     MutableArrayRef<InstructionInfoViewData> IIVD) const {
   const llvm::MCSubtargetInfo &STI = getSubTargetInfo();
   const MCSchedModel &SM = STI.getSchedModel();
-  for (auto I : zip(getSource(), IIVD)) {
+  for (const auto I : zip(getSource(), IIVD)) {
     const MCInst &Inst = std::get<0>(I);
     InstructionInfoViewData &IIVDEntry = std::get<1>(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
@@ -103,7 +104,8 @@ void InstructionInfoView::collectData(
 
     // Try to solve variant scheduling classes.
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &Inst, CPUID);
+      SchedClassID =
+          STI.resolveVariantSchedClass(SchedClassID, &Inst, &MCII, CPUID);
 
     const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
     IIVDEntry.NumMicroOpcodes = SCDesc.NumMicroOps;
@@ -116,6 +118,36 @@ void InstructionInfoView::collectData(
     IIVDEntry.mayStore = MCDesc.mayStore();
     IIVDEntry.hasUnmodeledSideEffects = MCDesc.hasUnmodeledSideEffects();
   }
+}
+
+// Construct a JSON object from a single InstructionInfoViewData object.
+json::Object
+InstructionInfoView::toJSON(const InstructionInfoViewData &IIVD) const {
+  json::Object JO({{"NumMicroOpcodes", IIVD.NumMicroOpcodes},
+                   {"Latency", IIVD.Latency},
+                   {"mayLoad", IIVD.mayLoad},
+                   {"mayStore", IIVD.mayStore},
+                   {"hasUnmodeledSideEffects", IIVD.hasUnmodeledSideEffects}});
+  JO.try_emplace("RThroughput", IIVD.RThroughput.getValueOr(0.0));
+  return JO;
+}
+
+json::Value InstructionInfoView::toJSON() const {
+  ArrayRef<llvm::MCInst> Source = getSource();
+  if (!Source.size())
+    return json::Value(0);
+
+  IIVDVec IIVD(Source.size());
+  collectData(IIVD);
+
+  json::Array InstInfo;
+  for (const auto &I : enumerate(IIVD)) {
+    const InstructionInfoViewData &IIVDEntry = I.value();
+    json::Object JO = toJSON(IIVDEntry);
+    JO.try_emplace("Instruction", (unsigned)I.index());
+    InstInfo.push_back(std::move(JO));
+  }
+  return json::Object({{"InstructionList", json::Value(std::move(InstInfo))}});
 }
 } // namespace mca.
 } // namespace llvm

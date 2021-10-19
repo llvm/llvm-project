@@ -1,0 +1,13 @@
+# REQUIRES: native && (system-linux || system-netbsd)
+# clone() tests fails on arm64 Linux, PR #49899
+# UNSUPPORTED: system-linux && target-aarch64
+# RUN: %clangxx_host %p/Inputs/fork.cpp -DTEST_CLONE -o %t
+# RUN: %lldb -b -s %s %t | FileCheck %s
+b parent_func
+b child_func
+process launch
+# CHECK-NOT: function run in parent
+# CHECK: stop reason = breakpoint
+continue
+# CHECK: function run in parent
+# CHECK: function run in exec'd child

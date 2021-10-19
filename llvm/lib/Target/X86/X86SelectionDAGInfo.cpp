@@ -24,6 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-selectiondag-info"
 
+static cl::opt<bool>
+    UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
+                     cl::desc("Use fast short rep mov in memcpy lowering"));
+
 bool X86SelectionDAGInfo::isBaseRegConflictPossible(
     SelectionDAG &DAG, ArrayRef<MCPhysReg> ClobberSet) const {
   // We cannot use TRI->hasBasePointer() until *after* we select all basic
@@ -37,11 +41,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 
   const X86RegisterInfo *TRI = static_cast<const X86RegisterInfo *>(
       DAG.getSubtarget().getRegisterInfo());
-  Register BaseReg = TRI->getBaseRegister();
-  for (unsigned R : ClobberSet)
-    if (BaseReg == R)
-      return true;
-  return false;
+  return llvm::is_contained(ClobberSet, TRI->getBaseRegister());
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
@@ -71,9 +71,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     // Check to see if there is a specialized entry-point for memory zeroing.
     ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
 
-    if (const char *bzeroName = (ValC && ValC->isNullValue())
-        ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO)
-        : nullptr) {
+    if (const char *bzeroName =
+            (ValC && ValC->isZero())
+                ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO)
+                : nullptr) {
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
       Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
@@ -305,6 +306,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
+
+  // If enabled and available, use fast short rep mov.
+  if (UseFSRMForMemcpy && Subtarget.hasFSRM())
+    return emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src, Size, MVT::i8);
 
   /// Handle constant sizes,
   if (ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size))

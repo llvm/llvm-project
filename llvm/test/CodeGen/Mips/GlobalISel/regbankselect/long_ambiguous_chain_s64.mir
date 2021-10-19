@@ -258,11 +258,11 @@ body:             |
   ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; MIPS32:   [[FRAME_INDEX1:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.1)
   ; MIPS32:   [[FRAME_INDEX2:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 8)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %fixed-stack.2, align 8)
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
   ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY4]], [[C]]
@@ -281,15 +281,15 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND2]](s32), %bb.5
   ; MIPS32: bb.3.b.PHI.1.0:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.4.b.PHI.1.1:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.5.b.PHI.1.2:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load 8 from %ir.c)
+  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load (s64) from %ir.c)
   ; MIPS32: bb.6.b.PHI.1:
   ; MIPS32:   successors: %bb.7(0x40000000), %bb.13(0x40000000)
   ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD3]](s64), %bb.3, [[LOAD4]](s64), %bb.4, [[LOAD5]](s64), %bb.5
@@ -299,7 +299,7 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND3]](s32), %bb.7
   ; MIPS32:   G_BR %bb.13
   ; MIPS32: bb.7.b.PHI.1.end:
-  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.8.pre.PHI.2:
   ; MIPS32:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
@@ -310,11 +310,11 @@ body:             |
   ; MIPS32:   G_BR %bb.10
   ; MIPS32: bb.9.b.PHI.2.0:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.11
   ; MIPS32: bb.10.b.PHI.2.1:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32: bb.11.b.PHI.2:
   ; MIPS32:   successors: %bb.13(0x40000000), %bb.12(0x40000000)
   ; MIPS32:   [[PHI1:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD6]](s64), %bb.9, [[LOAD7]](s64), %bb.10
@@ -323,7 +323,7 @@ body:             |
   ; MIPS32:   [[AND5:%[0-9]+]]:gprb(s32) = G_AND [[COPY9]], [[C5]]
   ; MIPS32:   G_BRCOND [[AND5]](s32), %bb.13
   ; MIPS32: bb.12.b.PHI.2.end:
-  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.13.b.PHI.3:
   ; MIPS32:   [[PHI2:%[0-9]+]]:fprb(s64) = G_PHI [[PHI1]](s64), %bb.11, [[PHI]](s64), %bb.6
@@ -335,8 +335,8 @@ body:             |
   ; MIPS32:   [[COPY11:%[0-9]+]]:gprb(s32) = COPY [[COPY1]](s32)
   ; MIPS32:   [[AND7:%[0-9]+]]:gprb(s32) = G_AND [[COPY11]], [[C6]]
   ; MIPS32:   [[SELECT1:%[0-9]+]]:fprb(s64) = G_SELECT [[AND7]](s32), [[SELECT]], [[PHI2]]
-  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
-  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
+  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
@@ -346,11 +346,11 @@ body:             |
     %9:_(s32) = COPY $a2
     %3:_(p0) = COPY $a3
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %4:_(p0) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.2, align 8)
+    %4:_(p0) = G_LOAD %10(p0) :: (load (p0) from %fixed-stack.2, align 8)
     %11:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %5:_(p0) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.1)
+    %5:_(p0) = G_LOAD %11(p0) :: (load (p0) from %fixed-stack.1)
     %12:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %6:_(p0) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %6:_(p0) = G_LOAD %12(p0) :: (load (p0) from %fixed-stack.0, align 8)
     %32:_(s32) = G_CONSTANT i32 1
     %33:_(s32) = COPY %7(s32)
     %31:_(s32) = G_AND %33, %32
@@ -369,15 +369,15 @@ body:             |
     G_BRCOND %29(s32), %bb.6
 
   bb.4.b.PHI.1.0:
-    %13:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %13:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.7
 
   bb.5.b.PHI.1.1:
-    %15:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %15:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
     G_BR %bb.7
 
   bb.6.b.PHI.1.2:
-    %14:_(s64) = G_LOAD %5(p0) :: (load 8 from %ir.c)
+    %14:_(s64) = G_LOAD %5(p0) :: (load (s64) from %ir.c)
 
   bb.7.b.PHI.1:
     %16:_(s64) = G_PHI %13(s64), %bb.4, %15(s64), %bb.5, %14(s64), %bb.6
@@ -388,7 +388,7 @@ body:             |
     G_BR %bb.14
 
   bb.8.b.PHI.1.end:
-    G_STORE %16(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %16(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.9.pre.PHI.2:
@@ -399,11 +399,11 @@ body:             |
     G_BR %bb.11
 
   bb.10.b.PHI.2.0:
-    %18:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %18:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.12
 
   bb.11.b.PHI.2.1:
-    %17:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %17:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
 
   bb.12.b.PHI.2:
     %19:_(s64) = G_PHI %18(s64), %bb.10, %17(s64), %bb.11
@@ -413,7 +413,7 @@ body:             |
     G_BRCOND %26(s32), %bb.14
 
   bb.13.b.PHI.2.end:
-    G_STORE %19(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %19(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.14.b.PHI.3:
@@ -426,8 +426,8 @@ body:             |
     %46:_(s32) = COPY %8(s32)
     %24:_(s32) = G_AND %46, %44
     %23:_(s64) = G_SELECT %24(s32), %22, %20
-    G_STORE %23(s64), %6(p0) :: (store 8 into %ir.result)
-    G_STORE %20(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %23(s64), %6(p0) :: (store (s64) into %ir.result)
+    G_STORE %20(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
 ...
@@ -450,11 +450,11 @@ body:             |
   ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; MIPS32:   [[FRAME_INDEX1:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.1)
   ; MIPS32:   [[FRAME_INDEX2:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 8)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %fixed-stack.2, align 8)
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 0
   ; MIPS32:   [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
@@ -474,24 +474,24 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND2]](s32), %bb.5
   ; MIPS32: bb.3.b.PHI.1.0:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load 4 from %ir.a, align 8)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir.a, align 8)
   ; MIPS32:   [[C4:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY3]], [[C4]](s32)
-  ; MIPS32:   [[LOAD4:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP]](p0) :: (load 4 from %ir.a + 4, align 8)
+  ; MIPS32:   [[PTR_ADD:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY3]], [[C4]](s32)
+  ; MIPS32:   [[LOAD4:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.4.b.PHI.1.1:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD5:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.b, align 8)
+  ; MIPS32:   [[LOAD5:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.b, align 8)
   ; MIPS32:   [[C5:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP1:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD]], [[C5]](s32)
-  ; MIPS32:   [[LOAD6:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir.b + 4, align 8)
+  ; MIPS32:   [[PTR_ADD1:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD]], [[C5]](s32)
+  ; MIPS32:   [[LOAD6:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.b + 4, basealign 8)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.5.b.PHI.1.2:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD7:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD1]](p0) :: (load 4 from %ir.c, align 8)
+  ; MIPS32:   [[LOAD7:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD1]](p0) :: (load (s32) from %ir.c, align 8)
   ; MIPS32:   [[C6:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP2:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD1]], [[C6]](s32)
-  ; MIPS32:   [[LOAD8:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP2]](p0) :: (load 4 from %ir.c + 4, align 8)
+  ; MIPS32:   [[PTR_ADD2:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD1]], [[C6]](s32)
+  ; MIPS32:   [[LOAD8:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.c + 4, basealign 8)
   ; MIPS32: bb.6.b.PHI.1:
   ; MIPS32:   successors: %bb.7(0x40000000), %bb.13(0x40000000)
   ; MIPS32:   [[PHI:%[0-9]+]]:gprb(s32) = G_PHI [[LOAD3]](s32), %bb.3, [[LOAD5]](s32), %bb.4, [[LOAD7]](s32), %bb.5
@@ -502,10 +502,10 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND3]](s32), %bb.7
   ; MIPS32:   G_BR %bb.13
   ; MIPS32: bb.7.b.PHI.1.end:
-  ; MIPS32:   G_STORE [[PHI]](s32), [[LOAD2]](p0) :: (store 4 into %ir.result, align 8)
+  ; MIPS32:   G_STORE [[PHI]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32:   [[C8:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP3:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C8]](s32)
-  ; MIPS32:   G_STORE [[PHI1]](s32), [[GEP3]](p0) :: (store 4 into %ir.result + 4, align 8)
+  ; MIPS32:   [[PTR_ADD3:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C8]](s32)
+  ; MIPS32:   G_STORE [[PHI1]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32:   RetRA
   ; MIPS32: bb.8.pre.PHI.2:
   ; MIPS32:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
@@ -516,17 +516,17 @@ body:             |
   ; MIPS32:   G_BR %bb.10
   ; MIPS32: bb.9.b.PHI.2.0:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD9:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load 4 from %ir.a, align 8)
+  ; MIPS32:   [[LOAD9:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir.a, align 8)
   ; MIPS32:   [[C10:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP4:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY3]], [[C10]](s32)
-  ; MIPS32:   [[LOAD10:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP4]](p0) :: (load 4 from %ir.a + 4, align 8)
+  ; MIPS32:   [[PTR_ADD4:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY3]], [[C10]](s32)
+  ; MIPS32:   [[LOAD10:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
   ; MIPS32:   G_BR %bb.11
   ; MIPS32: bb.10.b.PHI.2.1:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD11:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load 4 from %ir.b, align 8)
+  ; MIPS32:   [[LOAD11:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.b, align 8)
   ; MIPS32:   [[C11:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP5:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD]], [[C11]](s32)
-  ; MIPS32:   [[LOAD12:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP5]](p0) :: (load 4 from %ir.b + 4, align 8)
+  ; MIPS32:   [[PTR_ADD5:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD]], [[C11]](s32)
+  ; MIPS32:   [[LOAD12:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32) from %ir.b + 4, basealign 8)
   ; MIPS32: bb.11.b.PHI.2:
   ; MIPS32:   successors: %bb.13(0x40000000), %bb.12(0x40000000)
   ; MIPS32:   [[PHI2:%[0-9]+]]:gprb(s32) = G_PHI [[LOAD9]](s32), %bb.9, [[LOAD11]](s32), %bb.10
@@ -536,10 +536,10 @@ body:             |
   ; MIPS32:   [[AND5:%[0-9]+]]:gprb(s32) = G_AND [[COPY9]], [[C12]]
   ; MIPS32:   G_BRCOND [[AND5]](s32), %bb.13
   ; MIPS32: bb.12.b.PHI.2.end:
-  ; MIPS32:   G_STORE [[PHI2]](s32), [[LOAD2]](p0) :: (store 4 into %ir.result, align 8)
+  ; MIPS32:   G_STORE [[PHI2]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32:   [[C13:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP6:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C13]](s32)
-  ; MIPS32:   G_STORE [[PHI3]](s32), [[GEP6]](p0) :: (store 4 into %ir.result + 4, align 8)
+  ; MIPS32:   [[PTR_ADD6:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C13]](s32)
+  ; MIPS32:   G_STORE [[PHI3]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32:   RetRA
   ; MIPS32: bb.13.b.PHI.3:
   ; MIPS32:   [[PHI4:%[0-9]+]]:gprb(s32) = G_PHI [[PHI2]](s32), %bb.11, [[PHI]](s32), %bb.6
@@ -555,14 +555,14 @@ body:             |
   ; MIPS32:   [[AND7:%[0-9]+]]:gprb(s32) = G_AND [[COPY11]], [[C14]]
   ; MIPS32:   [[SELECT2:%[0-9]+]]:gprb(s32) = G_SELECT [[AND7]](s32), [[SELECT]], [[PHI4]]
   ; MIPS32:   [[SELECT3:%[0-9]+]]:gprb(s32) = G_SELECT [[AND7]](s32), [[SELECT1]], [[PHI5]]
-  ; MIPS32:   G_STORE [[SELECT2]](s32), [[LOAD2]](p0) :: (store 4 into %ir.result, align 8)
+  ; MIPS32:   G_STORE [[SELECT2]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32:   [[C15:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP7:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C15]](s32)
-  ; MIPS32:   G_STORE [[SELECT3]](s32), [[GEP7]](p0) :: (store 4 into %ir.result + 4, align 8)
-  ; MIPS32:   G_STORE [[PHI4]](s32), [[LOAD2]](p0) :: (store 4 into %ir.result, align 8)
+  ; MIPS32:   [[PTR_ADD7:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C15]](s32)
+  ; MIPS32:   G_STORE [[SELECT3]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
+  ; MIPS32:   G_STORE [[PHI4]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32:   [[C16:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32:   [[GEP8:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C16]](s32)
-  ; MIPS32:   G_STORE [[PHI5]](s32), [[GEP8]](p0) :: (store 4 into %ir.result + 4, align 8)
+  ; MIPS32:   [[PTR_ADD8:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[LOAD2]], [[C16]](s32)
+  ; MIPS32:   G_STORE [[PHI5]](s32), [[PTR_ADD8]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32:   RetRA
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
@@ -572,11 +572,11 @@ body:             |
     %9:_(s32) = COPY $a2
     %3:_(p0) = COPY $a3
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %4:_(p0) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.2, align 8)
+    %4:_(p0) = G_LOAD %10(p0) :: (load (p0) from %fixed-stack.2, align 8)
     %11:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %5:_(p0) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.1)
+    %5:_(p0) = G_LOAD %11(p0) :: (load (p0) from %fixed-stack.1)
     %12:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %6:_(p0) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %6:_(p0) = G_LOAD %12(p0) :: (load (p0) from %fixed-stack.0, align 8)
     %33:_(s32) = G_CONSTANT i32 0
     %24:_(s64) = G_MERGE_VALUES %33(s32), %33(s32)
     %34:_(s32) = G_CONSTANT i32 1
@@ -597,15 +597,15 @@ body:             |
     G_BRCOND %30(s32), %bb.6
 
   bb.4.b.PHI.1.0:
-    %13:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %13:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.7
 
   bb.5.b.PHI.1.1:
-    %15:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %15:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
     G_BR %bb.7
 
   bb.6.b.PHI.1.2:
-    %14:_(s64) = G_LOAD %5(p0) :: (load 8 from %ir.c)
+    %14:_(s64) = G_LOAD %5(p0) :: (load (s64) from %ir.c)
 
   bb.7.b.PHI.1:
     %16:_(s64) = G_PHI %13(s64), %bb.4, %15(s64), %bb.5, %14(s64), %bb.6
@@ -616,7 +616,7 @@ body:             |
     G_BR %bb.14
 
   bb.8.b.PHI.1.end:
-    G_STORE %16(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %16(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.9.pre.PHI.2:
@@ -627,11 +627,11 @@ body:             |
     G_BR %bb.11
 
   bb.10.b.PHI.2.0:
-    %18:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %18:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.12
 
   bb.11.b.PHI.2.1:
-    %17:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %17:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
 
   bb.12.b.PHI.2:
     %19:_(s64) = G_PHI %18(s64), %bb.10, %17(s64), %bb.11
@@ -641,7 +641,7 @@ body:             |
     G_BRCOND %27(s32), %bb.14
 
   bb.13.b.PHI.2.end:
-    G_STORE %19(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %19(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.14.b.PHI.3:
@@ -654,8 +654,8 @@ body:             |
     %48:_(s32) = COPY %8(s32)
     %25:_(s32) = G_AND %48, %46
     %23:_(s64) = G_SELECT %25(s32), %22, %20
-    G_STORE %23(s64), %6(p0) :: (store 8 into %ir.result)
-    G_STORE %20(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %23(s64), %6(p0) :: (store (s64) into %ir.result)
+    G_STORE %20(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
 ...
@@ -678,11 +678,11 @@ body:             |
   ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; MIPS32:   [[FRAME_INDEX1:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.1)
   ; MIPS32:   [[FRAME_INDEX2:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 8)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %fixed-stack.2, align 8)
   ; MIPS32:   [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
   ; MIPS32:   [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY4]], [[C]]
@@ -701,15 +701,15 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND2]](s32), %bb.5
   ; MIPS32: bb.3.b.PHI.1.0:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.4.b.PHI.1.1:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.5.b.PHI.1.2:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load 8 from %ir.c)
+  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load (s64) from %ir.c)
   ; MIPS32: bb.6.b.PHI.1:
   ; MIPS32:   successors: %bb.7(0x40000000), %bb.13(0x40000000)
   ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD3]](s64), %bb.3, [[LOAD4]](s64), %bb.4, [[LOAD5]](s64), %bb.5
@@ -719,7 +719,7 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND3]](s32), %bb.7
   ; MIPS32:   G_BR %bb.13
   ; MIPS32: bb.7.b.PHI.1.end:
-  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.8.pre.PHI.2:
   ; MIPS32:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
@@ -730,11 +730,11 @@ body:             |
   ; MIPS32:   G_BR %bb.10
   ; MIPS32: bb.9.b.PHI.2.0:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.11
   ; MIPS32: bb.10.b.PHI.2.1:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32: bb.11.b.PHI.2:
   ; MIPS32:   successors: %bb.13(0x40000000), %bb.12(0x40000000)
   ; MIPS32:   [[PHI1:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD6]](s64), %bb.9, [[LOAD7]](s64), %bb.10
@@ -743,7 +743,7 @@ body:             |
   ; MIPS32:   [[AND5:%[0-9]+]]:gprb(s32) = G_AND [[COPY9]], [[C5]]
   ; MIPS32:   G_BRCOND [[AND5]](s32), %bb.13
   ; MIPS32: bb.12.b.PHI.2.end:
-  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.13.b.PHI.3:
   ; MIPS32:   [[PHI2:%[0-9]+]]:fprb(s64) = G_PHI [[PHI1]](s64), %bb.11, [[PHI]](s64), %bb.6
@@ -755,8 +755,8 @@ body:             |
   ; MIPS32:   [[COPY11:%[0-9]+]]:gprb(s32) = COPY [[COPY1]](s32)
   ; MIPS32:   [[AND7:%[0-9]+]]:gprb(s32) = G_AND [[COPY11]], [[C6]]
   ; MIPS32:   [[SELECT1:%[0-9]+]]:fprb(s64) = G_SELECT [[AND7]](s32), [[SELECT]], [[PHI2]]
-  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
-  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
+  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
@@ -766,11 +766,11 @@ body:             |
     %9:_(s32) = COPY $a2
     %3:_(p0) = COPY $a3
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %4:_(p0) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.2, align 8)
+    %4:_(p0) = G_LOAD %10(p0) :: (load (p0) from %fixed-stack.2, align 8)
     %11:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %5:_(p0) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.1)
+    %5:_(p0) = G_LOAD %11(p0) :: (load (p0) from %fixed-stack.1)
     %12:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %6:_(p0) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %6:_(p0) = G_LOAD %12(p0) :: (load (p0) from %fixed-stack.0, align 8)
     %32:_(s32) = G_CONSTANT i32 1
     %33:_(s32) = COPY %7(s32)
     %31:_(s32) = G_AND %33, %32
@@ -789,15 +789,15 @@ body:             |
     G_BRCOND %29(s32), %bb.6
 
   bb.4.b.PHI.1.0:
-    %13:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %13:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.7
 
   bb.5.b.PHI.1.1:
-    %15:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %15:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
     G_BR %bb.7
 
   bb.6.b.PHI.1.2:
-    %14:_(s64) = G_LOAD %5(p0) :: (load 8 from %ir.c)
+    %14:_(s64) = G_LOAD %5(p0) :: (load (s64) from %ir.c)
 
   bb.7.b.PHI.1:
     %16:_(s64) = G_PHI %13(s64), %bb.4, %15(s64), %bb.5, %14(s64), %bb.6
@@ -808,7 +808,7 @@ body:             |
     G_BR %bb.14
 
   bb.8.b.PHI.1.end:
-    G_STORE %16(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %16(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.9.pre.PHI.2:
@@ -819,11 +819,11 @@ body:             |
     G_BR %bb.11
 
   bb.10.b.PHI.2.0:
-    %18:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %18:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.12
 
   bb.11.b.PHI.2.1:
-    %17:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %17:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
 
   bb.12.b.PHI.2:
     %19:_(s64) = G_PHI %18(s64), %bb.10, %17(s64), %bb.11
@@ -833,7 +833,7 @@ body:             |
     G_BRCOND %26(s32), %bb.14
 
   bb.13.b.PHI.2.end:
-    G_STORE %19(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %19(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.14.b.PHI.3:
@@ -846,8 +846,8 @@ body:             |
     %46:_(s32) = COPY %8(s32)
     %24:_(s32) = G_AND %46, %44
     %23:_(s64) = G_SELECT %24(s32), %22, %20
-    G_STORE %23(s64), %6(p0) :: (store 8 into %ir.result)
-    G_STORE %20(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %23(s64), %6(p0) :: (store (s64) into %ir.result)
+    G_STORE %20(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
 ...
@@ -870,11 +870,11 @@ body:             |
   ; MIPS32:   [[COPY2:%[0-9]+]]:gprb(s32) = COPY $a2
   ; MIPS32:   [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
   ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[LOAD:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; MIPS32:   [[FRAME_INDEX1:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.1)
   ; MIPS32:   [[FRAME_INDEX2:%[0-9]+]]:gprb(p0) = G_FRAME_INDEX %fixed-stack.2
-  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 8)
+  ; MIPS32:   [[LOAD2:%[0-9]+]]:gprb(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %fixed-stack.2, align 8)
   ; MIPS32:   [[C:%[0-9]+]]:fprb(s64) = G_FCONSTANT double 0.000000e+00
   ; MIPS32:   [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
   ; MIPS32:   [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY]](s32)
@@ -894,15 +894,15 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND2]](s32), %bb.5
   ; MIPS32: bb.3.b.PHI.1.0:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD3:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.4.b.PHI.1.1:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD4:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32:   G_BR %bb.6
   ; MIPS32: bb.5.b.PHI.1.2:
   ; MIPS32:   successors: %bb.6(0x80000000)
-  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load 8 from %ir.c)
+  ; MIPS32:   [[LOAD5:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD1]](p0) :: (load (s64) from %ir.c)
   ; MIPS32: bb.6.b.PHI.1:
   ; MIPS32:   successors: %bb.7(0x40000000), %bb.13(0x40000000)
   ; MIPS32:   [[PHI:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD3]](s64), %bb.3, [[LOAD4]](s64), %bb.4, [[LOAD5]](s64), %bb.5
@@ -912,7 +912,7 @@ body:             |
   ; MIPS32:   G_BRCOND [[AND3]](s32), %bb.7
   ; MIPS32:   G_BR %bb.13
   ; MIPS32: bb.7.b.PHI.1.end:
-  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.8.pre.PHI.2:
   ; MIPS32:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
@@ -923,11 +923,11 @@ body:             |
   ; MIPS32:   G_BR %bb.10
   ; MIPS32: bb.9.b.PHI.2.0:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load 8 from %ir.a)
+  ; MIPS32:   [[LOAD6:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir.a)
   ; MIPS32:   G_BR %bb.11
   ; MIPS32: bb.10.b.PHI.2.1:
   ; MIPS32:   successors: %bb.11(0x80000000)
-  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load 8 from %ir.b)
+  ; MIPS32:   [[LOAD7:%[0-9]+]]:fprb(s64) = G_LOAD [[LOAD]](p0) :: (load (s64) from %ir.b)
   ; MIPS32: bb.11.b.PHI.2:
   ; MIPS32:   successors: %bb.13(0x40000000), %bb.12(0x40000000)
   ; MIPS32:   [[PHI1:%[0-9]+]]:fprb(s64) = G_PHI [[LOAD6]](s64), %bb.9, [[LOAD7]](s64), %bb.10
@@ -936,7 +936,7 @@ body:             |
   ; MIPS32:   [[AND5:%[0-9]+]]:gprb(s32) = G_AND [[COPY9]], [[C6]]
   ; MIPS32:   G_BRCOND [[AND5]](s32), %bb.13
   ; MIPS32: bb.12.b.PHI.2.end:
-  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[PHI1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   ; MIPS32: bb.13.b.PHI.3:
   ; MIPS32:   [[PHI2:%[0-9]+]]:fprb(s64) = G_PHI [[PHI1]](s64), %bb.11, [[PHI]](s64), %bb.6
@@ -948,8 +948,8 @@ body:             |
   ; MIPS32:   [[COPY11:%[0-9]+]]:gprb(s32) = COPY [[COPY1]](s32)
   ; MIPS32:   [[AND7:%[0-9]+]]:gprb(s32) = G_AND [[COPY11]], [[C7]]
   ; MIPS32:   [[SELECT1:%[0-9]+]]:fprb(s64) = G_SELECT [[AND7]](s32), [[SELECT]], [[PHI2]]
-  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
-  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store 8 into %ir.result)
+  ; MIPS32:   G_STORE [[SELECT1]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
+  ; MIPS32:   G_STORE [[PHI2]](s64), [[LOAD2]](p0) :: (store (s64) into %ir.result)
   ; MIPS32:   RetRA
   bb.1.entry:
     liveins: $a0, $a1, $a2, $a3
@@ -959,11 +959,11 @@ body:             |
     %9:_(s32) = COPY $a2
     %3:_(p0) = COPY $a3
     %10:_(p0) = G_FRAME_INDEX %fixed-stack.2
-    %4:_(p0) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.2, align 8)
+    %4:_(p0) = G_LOAD %10(p0) :: (load (p0) from %fixed-stack.2, align 8)
     %11:_(p0) = G_FRAME_INDEX %fixed-stack.1
-    %5:_(p0) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.1)
+    %5:_(p0) = G_LOAD %11(p0) :: (load (p0) from %fixed-stack.1)
     %12:_(p0) = G_FRAME_INDEX %fixed-stack.0
-    %6:_(p0) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %6:_(p0) = G_LOAD %12(p0) :: (load (p0) from %fixed-stack.0, align 8)
     %24:_(s64) = G_FCONSTANT double 0.000000e+00
     %33:_(s32) = G_CONSTANT i32 1
     %34:_(s32) = COPY %7(s32)
@@ -983,15 +983,15 @@ body:             |
     G_BRCOND %30(s32), %bb.6
 
   bb.4.b.PHI.1.0:
-    %13:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %13:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.7
 
   bb.5.b.PHI.1.1:
-    %15:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %15:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
     G_BR %bb.7
 
   bb.6.b.PHI.1.2:
-    %14:_(s64) = G_LOAD %5(p0) :: (load 8 from %ir.c)
+    %14:_(s64) = G_LOAD %5(p0) :: (load (s64) from %ir.c)
 
   bb.7.b.PHI.1:
     %16:_(s64) = G_PHI %13(s64), %bb.4, %15(s64), %bb.5, %14(s64), %bb.6
@@ -1002,7 +1002,7 @@ body:             |
     G_BR %bb.14
 
   bb.8.b.PHI.1.end:
-    G_STORE %16(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %16(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.9.pre.PHI.2:
@@ -1013,11 +1013,11 @@ body:             |
     G_BR %bb.11
 
   bb.10.b.PHI.2.0:
-    %18:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.a)
+    %18:_(s64) = G_LOAD %3(p0) :: (load (s64) from %ir.a)
     G_BR %bb.12
 
   bb.11.b.PHI.2.1:
-    %17:_(s64) = G_LOAD %4(p0) :: (load 8 from %ir.b)
+    %17:_(s64) = G_LOAD %4(p0) :: (load (s64) from %ir.b)
 
   bb.12.b.PHI.2:
     %19:_(s64) = G_PHI %18(s64), %bb.10, %17(s64), %bb.11
@@ -1027,7 +1027,7 @@ body:             |
     G_BRCOND %27(s32), %bb.14
 
   bb.13.b.PHI.2.end:
-    G_STORE %19(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %19(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
   bb.14.b.PHI.3:
@@ -1040,8 +1040,8 @@ body:             |
     %47:_(s32) = COPY %8(s32)
     %25:_(s32) = G_AND %47, %45
     %23:_(s64) = G_SELECT %25(s32), %22, %20
-    G_STORE %23(s64), %6(p0) :: (store 8 into %ir.result)
-    G_STORE %20(s64), %6(p0) :: (store 8 into %ir.result)
+    G_STORE %23(s64), %6(p0) :: (store (s64) into %ir.result)
+    G_STORE %20(s64), %6(p0) :: (store (s64) into %ir.result)
     RetRA
 
 ...

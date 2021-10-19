@@ -40,7 +40,7 @@ define void @test2(i32 %x) nounwind {
 ; LNX-NEXT:    jne .LBB1_2
 ; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
-; LNX-NEXT:    callq foo
+; LNX-NEXT:    callq foo@PLT
 ; LNX-NEXT:    popq %rax
 ; LNX-NEXT:  .LBB1_2: # %false
 ; LNX-NEXT:    retq
@@ -74,7 +74,7 @@ define void @test3(i32 %x) nounwind {
 ; LNX-NEXT:    jne .LBB2_2
 ; LNX-NEXT:  # %bb.1: # %true
 ; LNX-NEXT:    pushq %rax
-; LNX-NEXT:    callq foo
+; LNX-NEXT:    callq foo@PLT
 ; LNX-NEXT:    popq %rax
 ; LNX-NEXT:  .LBB2_2: # %false
 ; LNX-NEXT:    retq

@@ -127,6 +127,9 @@ entry:
 ; CHECK-NEXT:         Name:            .Lcall_dtors.2002
 ; CHECK-NEXT:       - Index:           22
 ; CHECK-NEXT:         Name:            .Lregister_call_dtors.2002
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...
 
 ; RUN: wasm-ld -r %t.o %t.global-ctor-dtor.o -o %t.reloc.wasm
@@ -136,15 +139,15 @@ entry:
 ; RELOC-NEXT:  InitFunctions [
 ; RELOC-NEXT:    0 (priority=101)
 ; RELOC-NEXT:    1 (priority=101)
-; RELOC-NEXT:    14 (priority=101)
-; RELOC-NEXT:    10 (priority=101)
-; RELOC-NEXT:    20 (priority=101)
-; RELOC-NEXT:    10 (priority=202)
-; RELOC-NEXT:    22 (priority=202)
+; RELOC-NEXT:    15 (priority=101)
+; RELOC-NEXT:    11 (priority=101)
+; RELOC-NEXT:    21 (priority=101)
+; RELOC-NEXT:    11 (priority=202)
+; RELOC-NEXT:    23 (priority=202)
 ; RELOC-NEXT:    0 (priority=1001)
-; RELOC-NEXT:    16 (priority=1001)
-; RELOC-NEXT:    10 (priority=2002)
-; RELOC-NEXT:    24 (priority=2002)
+; RELOC-NEXT:    17 (priority=1001)
+; RELOC-NEXT:    11 (priority=2002)
+; RELOC-NEXT:    25 (priority=2002)
 ; RELOC-NEXT:    9 (priority=4000)
-; RELOC-NEXT:    18 (priority=4000)
+; RELOC-NEXT:    19 (priority=4000)
 ; RELOC-NEXT:  ]

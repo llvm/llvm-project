@@ -53,7 +53,8 @@ Annotations::Annotations(llvm::StringRef Text) {
       continue;
     }
     if (Text.consume_front("$")) {
-      Name = Text.take_while(llvm::isAlnum);
+      Name =
+          Text.take_while([](char C) { return llvm::isAlnum(C) || C == '_'; });
       Text = Text.drop_front(Name->size());
       continue;
     }
@@ -72,8 +73,10 @@ size_t Annotations::point(llvm::StringRef Name) const {
 }
 
 std::vector<size_t> Annotations::points(llvm::StringRef Name) const {
-  auto P = Points.lookup(Name);
-  return {P.begin(), P.end()};
+  auto I = Points.find(Name);
+  if (I == Points.end())
+    return {};
+  return {I->getValue().begin(), I->getValue().end()};
 }
 
 Annotations::Range Annotations::range(llvm::StringRef Name) const {
@@ -85,8 +88,10 @@ Annotations::Range Annotations::range(llvm::StringRef Name) const {
 
 std::vector<Annotations::Range>
 Annotations::ranges(llvm::StringRef Name) const {
-  auto R = Ranges.lookup(Name);
-  return {R.begin(), R.end()};
+  auto I = Ranges.find(Name);
+  if (I == Ranges.end())
+    return {};
+  return {I->getValue().begin(), I->getValue().end()};
 }
 
 llvm::raw_ostream &llvm::operator<<(llvm::raw_ostream &O,

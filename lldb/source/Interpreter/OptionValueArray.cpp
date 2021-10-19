@@ -8,7 +8,6 @@
 
 #include "lldb/Interpreter/OptionValueArray.h"
 
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
 
@@ -167,13 +166,12 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
   case eVarSetOperationInsertBefore:
   case eVarSetOperationInsertAfter:
     if (argc > 1) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid insert array index %u, index must be 0 through %u", idx,
-            count);
+            "invalid insert array index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         if (op == eVarSetOperationInsertAfter)
           ++idx;
@@ -207,9 +205,8 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
       bool all_indexes_valid = true;
       size_t i;
       for (i = 0; i < argc; ++i) {
-        const size_t idx =
-            StringConvert::ToSInt32(args.GetArgumentAtIndex(i), INT32_MAX);
-        if (idx >= size) {
+        size_t idx;
+        if (!llvm::to_integer(args.GetArgumentAtIndex(i), idx) || idx >= size) {
           all_indexes_valid = false;
           break;
         } else
@@ -249,13 +246,12 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
 
   case eVarSetOperationReplace:
     if (argc > 1) {
-      uint32_t idx =
-          StringConvert::ToUInt32(args.GetArgumentAtIndex(0), UINT32_MAX);
+      uint32_t idx;
       const uint32_t count = GetSize();
-      if (idx > count) {
+      if (!llvm::to_integer(args.GetArgumentAtIndex(0), idx) || idx > count) {
         error.SetErrorStringWithFormat(
-            "invalid replace array index %u, index must be 0 through %u", idx,
-            count);
+            "invalid replace array index %s, index must be 0 through %u",
+            args.GetArgumentAtIndex(0), count);
       } else {
         for (size_t i = 1; i < argc; ++i, ++idx) {
           lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(
@@ -303,15 +299,16 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
   return error;
 }
 
-lldb::OptionValueSP OptionValueArray::DeepCopy() const {
-  OptionValueArray *copied_array =
-      new OptionValueArray(m_type_mask, m_raw_value_dump);
-  lldb::OptionValueSP copied_value_sp(copied_array);
-  *static_cast<OptionValue *>(copied_array) = *this;
-  copied_array->m_callback = m_callback;
-  const uint32_t size = m_values.size();
-  for (uint32_t i = 0; i < size; ++i) {
-    copied_array->AppendValue(m_values[i]->DeepCopy());
-  }
-  return copied_value_sp;
+OptionValueSP
+OptionValueArray::DeepCopy(const OptionValueSP &new_parent) const {
+  auto copy_sp = OptionValue::DeepCopy(new_parent);
+  // copy_sp->GetAsArray cannot be used here as it doesn't work for derived
+  // types that override GetType returning a different value.
+  auto *array_value_ptr = static_cast<OptionValueArray *>(copy_sp.get());
+  lldbassert(array_value_ptr);
+
+  for (auto &value : array_value_ptr->m_values)
+    value = value->DeepCopy(copy_sp);
+
+  return copy_sp;
 }

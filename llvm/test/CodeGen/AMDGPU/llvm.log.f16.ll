@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SIVI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=SIVI -check-prefix=VIGFX9 -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 -check-prefix=VIGFX9 -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,VIGFX9,FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX9,VIGFX9,FUNC %s
 
 declare half @llvm.log.f16(half %a)
 declare <2 x half> @llvm.log.v2f16(<2 x half> %a)
@@ -55,8 +55,7 @@ entry:
 ; SI:     v_or_b32_e32 v[[R_F32_5:[0-9]+]], v[[R_F16_1]], v[[R_F16_0]]
 ; VI-NOT: v_and_b32_e32
 ; VI:     v_or_b32_e32 v[[R_F32_5:[0-9]+]], v[[R_F16_0]], v[[R_F16_2]]
-; GFX9:   v_and_b32_e32 v[[R_F32_4:[0-9]+]], 0xffff, v[[R_F32_3]]
-; GFX9:   v_lshl_or_b32 v[[R_F32_5:[0-9]+]], v[[R_F32_2]], 16, v[[R_F32_4]]
+; GFX9:   v_pack_b32_f16 v[[R_F32_5:[0-9]+]], v[[R_F32_3]], v[[R_F32_2]]
 ; SI:     buffer_store_dword v[[R_F32_5]]
 ; VI:     flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[R_F32_5]]
 ; GFX9:   global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v[[R_F32_5]]

@@ -7,7 +7,7 @@
 ; X64_DARWIN: orq
 ; X64_DARWIN-NEXT: ud2
 
-; X64_LINUX: orq %rax, %rcx
+; X64_LINUX: orq _ZN11xercesc_2_56XMLUni16fgNotationStringE@GOTPCREL(%rip), %rax
 ; X64_LINUX-NEXT: jne
 ; X64_LINUX-NEXT: %bb8.i329
 
@@ -18,7 +18,7 @@
 ; X64_WINDOWS_GNU: orq .refptr._ZN11xercesc_2_56XMLUni16fgNotationStringE(%rip), %rax
 ; X64_WINDOWS_GNU-NEXT: jne
 
-; PS4: orq %rax, %rcx
+; PS4: orq _ZN11xercesc_2_56XMLUni16fgNotationStringE@GOTPCREL(%rip), %rax
 ; PS4-NEXT: ud2
 
 @_ZN11xercesc_2_513SchemaSymbols21fgURI_SCHEMAFORSCHEMAE = external constant [33 x i16], align 32 ; <[33 x i16]*> [#uses=1]

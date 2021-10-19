@@ -25,8 +25,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MSGPACKPARSER_H
-#define LLVM_SUPPORT_MSGPACKPARSER_H
+#ifndef LLVM_BINARYFORMAT_MSGPACKWRITER_H
+#define LLVM_BINARYFORMAT_MSGPACKWRITER_H
 
 #include "llvm/BinaryFormat/MsgPack.h"
 #include "llvm/Support/EndianStream.h"
@@ -127,4 +127,4 @@ private:
 } // end namespace msgpack
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_MSGPACKPARSER_H
+#endif // LLVM_BINARYFORMAT_MSGPACKWRITER_H

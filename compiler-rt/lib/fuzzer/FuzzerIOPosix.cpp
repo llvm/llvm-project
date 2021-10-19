@@ -53,7 +53,7 @@ std::string Basename(const std::string &Path) {
 }
 
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
-                             Vector<std::string> *V, bool TopDir) {
+                             std::vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);
   if (Epoch)
     if (E && *Epoch >= E) return;
@@ -77,7 +77,6 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
   if (Epoch && TopDir)
     *Epoch = E;
 }
-
 
 void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
@@ -159,7 +158,7 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
 }
 
 void RawPrint(const char *Str) {
-  write(2, Str, strlen(Str));
+  (void)write(2, Str, strlen(Str));
 }
 
 void MkDir(const std::string &Path) {

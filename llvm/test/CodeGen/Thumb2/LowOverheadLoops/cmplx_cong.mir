@@ -46,14 +46,14 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   $r4 = t2MOVi16 target-flags(arm-lo16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
   ; CHECK:   $r4 = t2MOVTi16 killed $r4, target-flags(arm-hi16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg
+  ; CHECK:   renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg, $noreg
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
   ; CHECK: bb.1 (align 4):
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, undef renamable $q1
-  ; CHECK:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg
+  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg, $noreg
+  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
@@ -77,19 +77,19 @@ body:             |
     renamable $r2, dead $cpsr = tADDi8 killed renamable $r2, 3, 14 /* CC::al */, $noreg
     renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
     $r4 = t2MOVTi16 killed $r4, target-flags(arm-hi16) @arm_cmplx_conj_f32_mve.cmplx_conj_sign, 14 /* CC::al */, $noreg
-    renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg
+    renamable $q0 = nnan ninf nsz MVE_VLDRWU32 killed renamable $r4, 0, 0, $noreg, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r2, 19, 14 /* CC::al */, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.1 (align 4):
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r3
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $noreg
     MVE_VPST 2, implicit $vpr
-    renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 1, renamable $vpr
-    renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 1, renamable $vpr, undef renamable $q1
-    MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 1, killed renamable $vpr
+    renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 1, renamable $vpr, $noreg
+    renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 1, renamable $vpr, $noreg, undef renamable $q1
+    MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 1, killed renamable $vpr, $noreg
     renamable $r3, dead $cpsr = nsw tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
     renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14 /* CC::al */, $noreg
     renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14 /* CC::al */, $noreg

@@ -85,9 +85,10 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
 template <typename ISLTy, typename ISL_CTX_GETTER, typename ISL_PRINTER>
 static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
                                                    ISL_CTX_GETTER ctx_getter_fn,
-                                                   ISL_PRINTER printer_fn) {
+                                                   ISL_PRINTER printer_fn,
+                                                   std::string DefaultValue) {
   if (!isl_obj)
-    return "null";
+    return DefaultValue;
   isl_ctx *ctx = ctx_getter_fn(isl_obj);
   isl_printer *p = isl_printer_to_str(ctx);
   p = printer_fn(p, isl_obj);
@@ -96,68 +97,42 @@ static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
   if (char_str)
     string = char_str;
   else
-    string = "null";
+    string = DefaultValue;
   free(char_str);
   isl_printer_free(p);
   return string;
 }
 
-std::string polly::stringFromIslObj(__isl_keep isl_map *map) {
-  return stringFromIslObjInternal(map, isl_map_get_ctx, isl_printer_print_map);
-}
+#define ISL_C_OBJECT_TO_STRING(name)                                           \
+  std::string polly::stringFromIslObj(__isl_keep isl_##name *Obj,              \
+                                      std::string DefaultValue) {              \
+    return stringFromIslObjInternal(Obj, isl_##name##_get_ctx,                 \
+                                    isl_printer_print_##name, DefaultValue);   \
+  }
 
-std::string polly::stringFromIslObj(__isl_keep isl_set *set) {
-  return stringFromIslObjInternal(set, isl_set_get_ctx, isl_printer_print_set);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_map *umap) {
-  return stringFromIslObjInternal(umap, isl_union_map_get_ctx,
-                                  isl_printer_print_union_map);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_set *uset) {
-  return stringFromIslObjInternal(uset, isl_union_set_get_ctx,
-                                  isl_printer_print_union_set);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_schedule *schedule) {
-  return stringFromIslObjInternal(schedule, isl_schedule_get_ctx,
-                                  isl_printer_print_schedule);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_multi_aff *maff) {
-  return stringFromIslObjInternal(maff, isl_multi_aff_get_ctx,
-                                  isl_printer_print_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_pw_multi_aff *pma) {
-  return stringFromIslObjInternal(pma, isl_pw_multi_aff_get_ctx,
-                                  isl_printer_print_pw_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_multi_pw_aff *mpa) {
-  return stringFromIslObjInternal(mpa, isl_multi_pw_aff_get_ctx,
-                                  isl_printer_print_multi_pw_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma) {
-  return stringFromIslObjInternal(upma, isl_union_pw_multi_aff_get_ctx,
-                                  isl_printer_print_union_pw_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_aff *aff) {
-  return stringFromIslObjInternal(aff, isl_aff_get_ctx, isl_printer_print_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_pw_aff *pwaff) {
-  return stringFromIslObjInternal(pwaff, isl_pw_aff_get_ctx,
-                                  isl_printer_print_pw_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_space *space) {
-  return stringFromIslObjInternal(space, isl_space_get_ctx,
-                                  isl_printer_print_space);
-}
+ISL_C_OBJECT_TO_STRING(aff)
+ISL_C_OBJECT_TO_STRING(ast_expr)
+ISL_C_OBJECT_TO_STRING(ast_node)
+ISL_C_OBJECT_TO_STRING(basic_map)
+ISL_C_OBJECT_TO_STRING(basic_set)
+ISL_C_OBJECT_TO_STRING(map)
+ISL_C_OBJECT_TO_STRING(set)
+ISL_C_OBJECT_TO_STRING(id)
+ISL_C_OBJECT_TO_STRING(multi_aff)
+ISL_C_OBJECT_TO_STRING(multi_pw_aff)
+ISL_C_OBJECT_TO_STRING(multi_union_pw_aff)
+ISL_C_OBJECT_TO_STRING(point)
+ISL_C_OBJECT_TO_STRING(pw_aff)
+ISL_C_OBJECT_TO_STRING(pw_multi_aff)
+ISL_C_OBJECT_TO_STRING(schedule)
+ISL_C_OBJECT_TO_STRING(schedule_node)
+ISL_C_OBJECT_TO_STRING(space)
+ISL_C_OBJECT_TO_STRING(union_access_info)
+ISL_C_OBJECT_TO_STRING(union_flow)
+ISL_C_OBJECT_TO_STRING(union_set)
+ISL_C_OBJECT_TO_STRING(union_map)
+ISL_C_OBJECT_TO_STRING(union_pw_aff)
+ISL_C_OBJECT_TO_STRING(union_pw_multi_aff)
 
 static void replace(std::string &str, const std::string &find,
                     const std::string &replace) {
@@ -216,57 +191,69 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-/// To call a inline dump() method in a debugger, at it must have been
-/// instantiated in at least one translation unit. Because isl's dump() method
-/// are meant to be called from a debugger only, but not from code, no such
-/// instantiation would exist. We use this method to force an instantiation in
-/// this translation unit. Because it has non-static linking, the compiler does
-/// not know that it is never called, and therefore must ensure the existence of
-/// the dump functions.
-void neverCalled() {
-  isl::aff().dump();
-  isl::aff_list().dump();
-  isl::ast_expr().dump();
-  isl::ast_expr_list().dump();
-  isl::ast_node().dump();
-  isl::ast_node_list().dump();
-  isl::basic_map().dump();
-  isl::basic_map_list().dump();
-  isl::basic_set().dump();
-  isl::basic_set_list().dump();
-  isl::constraint().dump();
-  isl::constraint_list().dump();
-  isl::id().dump();
-  isl::id_list().dump();
-  isl::id_to_ast_expr().dump();
-  isl::local_space().dump();
-  isl::map().dump();
-  isl::map_list().dump();
-  isl::multi_aff().dump();
-  isl::multi_pw_aff().dump();
-  isl::multi_union_pw_aff().dump();
-  isl::multi_val().dump();
-  isl::point().dump();
-  isl::pw_aff().dump();
-  isl::pw_aff_list().dump();
-  isl::pw_multi_aff().dump();
-  isl::pw_qpolynomial().dump();
-  isl::qpolynomial().dump();
-  isl::schedule().dump();
-  isl::schedule_constraints().dump();
-  isl::schedule_node().dump();
-  isl::set().dump();
-  isl::set_list().dump();
-  isl::space().dump();
-  isl::union_map().dump();
-  isl::union_map_list().dump();
-  isl::union_pw_aff().dump();
-  isl::union_pw_aff_list().dump();
-  isl::union_pw_multi_aff().dump();
-  isl::union_pw_multi_aff_list().dump();
-  isl::union_set().dump();
-  isl::union_set_list().dump();
-  isl::val().dump();
-  isl::val_list().dump();
+#define ISL_DUMP_OBJECT_IMPL(NAME)                                             \
+  void polly::dumpIslObj(const isl::NAME &Obj) {                               \
+    isl_##NAME##_dump(Obj.get());                                              \
+  }                                                                            \
+  void polly::dumpIslObj(isl_##NAME *Obj) { isl_##NAME##_dump(Obj); }
+
+ISL_DUMP_OBJECT_IMPL(aff)
+ISL_DUMP_OBJECT_IMPL(aff_list)
+ISL_DUMP_OBJECT_IMPL(ast_expr)
+ISL_DUMP_OBJECT_IMPL(ast_node)
+ISL_DUMP_OBJECT_IMPL(ast_node_list)
+ISL_DUMP_OBJECT_IMPL(basic_map)
+ISL_DUMP_OBJECT_IMPL(basic_map_list)
+ISL_DUMP_OBJECT_IMPL(basic_set)
+ISL_DUMP_OBJECT_IMPL(basic_set_list)
+ISL_DUMP_OBJECT_IMPL(constraint)
+ISL_DUMP_OBJECT_IMPL(id)
+ISL_DUMP_OBJECT_IMPL(id_list)
+ISL_DUMP_OBJECT_IMPL(id_to_ast_expr)
+ISL_DUMP_OBJECT_IMPL(local_space)
+ISL_DUMP_OBJECT_IMPL(map)
+ISL_DUMP_OBJECT_IMPL(map_list)
+ISL_DUMP_OBJECT_IMPL(multi_aff)
+ISL_DUMP_OBJECT_IMPL(multi_pw_aff)
+ISL_DUMP_OBJECT_IMPL(multi_union_pw_aff)
+ISL_DUMP_OBJECT_IMPL(multi_val)
+ISL_DUMP_OBJECT_IMPL(point)
+ISL_DUMP_OBJECT_IMPL(pw_aff)
+ISL_DUMP_OBJECT_IMPL(pw_aff_list)
+ISL_DUMP_OBJECT_IMPL(pw_multi_aff)
+ISL_DUMP_OBJECT_IMPL(schedule)
+ISL_DUMP_OBJECT_IMPL(schedule_constraints)
+ISL_DUMP_OBJECT_IMPL(schedule_node)
+ISL_DUMP_OBJECT_IMPL(set)
+ISL_DUMP_OBJECT_IMPL(set_list)
+ISL_DUMP_OBJECT_IMPL(space)
+ISL_DUMP_OBJECT_IMPL(union_map)
+ISL_DUMP_OBJECT_IMPL(union_pw_aff)
+ISL_DUMP_OBJECT_IMPL(union_pw_aff_list)
+ISL_DUMP_OBJECT_IMPL(union_pw_multi_aff)
+ISL_DUMP_OBJECT_IMPL(union_set)
+ISL_DUMP_OBJECT_IMPL(union_set_list)
+ISL_DUMP_OBJECT_IMPL(val)
+ISL_DUMP_OBJECT_IMPL(val_list)
+
+void polly::dumpIslObj(__isl_keep isl_schedule_node *node, raw_ostream &OS) {
+  if (!node)
+    return;
+
+  isl_ctx *ctx = isl_schedule_node_get_ctx(node);
+  isl_printer *p = isl_printer_to_str(ctx);
+  p = isl_printer_set_yaml_style(p, ISL_YAML_STYLE_BLOCK);
+  p = isl_printer_print_schedule_node(p, node);
+
+  char *char_str = isl_printer_get_str(p);
+  OS << char_str;
+
+  free(char_str);
+  isl_printer_free(p);
 }
+
+void polly::dumpIslObj(const isl::schedule_node &Node, raw_ostream &OS) {
+  dumpIslObj(Node.get(), OS);
+}
+
 #endif

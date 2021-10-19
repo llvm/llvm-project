@@ -1,8 +1,8 @@
 ## Test case where input file does not exit.
-RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj %s
-RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf %s
+RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readobj -DMSG=%errc_ENOENT %s
+RUN: not llvm-readelf %t.blah 2>&1 | FileCheck --check-prefix=ENOENT -DTOOL=readelf -DMSG=%errc_ENOENT %s
 
-ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': {{[Nn]}}o such file or directory
+ENOENT: llvm-[[TOOL]]{{(\.exe)?}}: error: '{{.*}}.blah': [[MSG]]
 
 # Test case with no input file.
 RUN: not llvm-readobj 2>&1 | FileCheck %s --check-prefix=NO-FILE
@@ -20,9 +20,25 @@ RUN: llvm-ar rc %t.a %t.empty
 RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
 NO-OUTPUT-NOT: {{.}}
 
+## Test we report a meaningful warning for bitcode files.
+## Check we try to continue dumping other files.
+
+## Note: 'echo -e -n "\x42\x43\xc0\xde" > %t.bc.1' simply doesn't work properly on windows.
+## It has an issue with writing of the 2 last bytes and emits different data instead.
+## echo.exe from GnuWin32 works properly though, but using of python is a more stable way.
+RUN: %python -c "import os; open(r'%t.bc.1', 'wb').write(b'\x42\x43\xC0\xDE')"
+RUN: %python -c "import os; open(r'%t.bc.2', 'wb').write(b'\xDE\xC0\x17\x0B')"
+RUN: llvm-readelf %t.bc.1 %t.bc.2 2>&1 | \
+RUN:   FileCheck --check-prefix=BITCODE -DFILE1=%t.bc.1 -DFILE2=%t.bc.2 %s
+RUN: llvm-readobj %t.bc.1 %t.bc.2 2>&1 | \
+RUN:   FileCheck --check-prefix=BITCODE -DFILE1=%t.bc.1 -DFILE2=%t.bc.2 %s
+
+# BITCODE: warning: '[[FILE1]]': bitcode files are not supported{{$}}
+# BITCODE: warning: '[[FILE2]]': bitcode files are not supported{{$}}
+
 # Test case where switch it not recognised.
 RUN: not llvm-readobj --unknown-switch 2>&1 | FileCheck --check-prefix=UNKNOWN %s
-UNKNOWN: Unknown command line argument '--unknown-switch'
+UNKNOWN: error: unknown argument '--unknown-switch'
 
 # Test version switch.
 RUN: llvm-readobj --version | FileCheck %s --check-prefix=VERSION
@@ -38,8 +54,12 @@ HELP: OVERVIEW: LLVM Object Reader
 OBJ: llvm-readobj{{.*}} [options] <input object files>
 ELF: llvm-readelf{{.*}} [options] <input object files>
 HELP: OPTIONS:
-OBJ: -s - Alias for --section-headers
-OBJ: -t - Alias for --symbols
-ELF: -s - Alias for --symbols
-ELF-NOT: {{ }}-t{{ }}
+HELP: -s   Alias for --symbols
+HELP: -t   Alias for --section-details
+HELP: OPTIONS (ELF specific):
+HELP: --dynamic-table
+HELP: OPTIONS (Mach-O specific):
+HELP: --macho-data-in-code
+HELP: OPTIONS (PE/COFF specific):
+HELP: --codeview-ghash
 HELP: @FILE

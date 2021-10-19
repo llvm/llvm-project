@@ -17,12 +17,12 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movq (%rsp), %rdi
 ; CHECK-NEXT:    movq %rdi, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq use
+; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -41,12 +41,12 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    movq (%rsp), %rdi
 ; CHECK-NEXT:    movq %rdi, %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq use
+; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -67,7 +67,7 @@ define void @test_deopt_use(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -83,7 +83,7 @@ define void @test_dse(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

@@ -44,6 +44,9 @@ def BPF_MOV  : BPFArithOp<0xb>;
 def BPF_ARSH : BPFArithOp<0xc>;
 def BPF_END  : BPFArithOp<0xd>;
 
+def BPF_XCHG    : BPFArithOp<0xe>;
+def BPF_CMPXCHG : BPFArithOp<0xf>;
+
 class BPFEndDir<bits<1> val> {
   bits<1> Value = val;
 }
@@ -86,7 +89,13 @@ def BPF_IMM  : BPFModeModifer<0x0>;
 def BPF_ABS  : BPFModeModifer<0x1>;
 def BPF_IND  : BPFModeModifer<0x2>;
 def BPF_MEM  : BPFModeModifer<0x3>;
-def BPF_XADD : BPFModeModifer<0x6>;
+def BPF_ATOMIC : BPFModeModifer<0x6>;
+
+class BPFAtomicFlag<bits<4> val> {
+  bits<4> Value = val;
+}
+
+def BPF_FETCH : BPFAtomicFlag<0x1>;
 
 class InstBPF<dag outs, dag ins, string asmstr, list<dag> pattern>
   : Instruction {

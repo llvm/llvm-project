@@ -33,7 +33,7 @@ define i1 @foo(i8* %p) {
   ; WASM32: icmp eq i64 {{.*}}, ptrtoint (i8* getelementptr (i8, i8* null, i64 1) to i64)
   %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
   ; X64: icmp eq i64 {{.*}}, ptrtoint (void ()* @[[JT1]] to i64)
-  ; WASM32: icmp eq i64 {{.*}}, mul (i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64), i64 2)
+  ; WASM32: icmp eq i64 {{.*}}, ptrtoint (i8* getelementptr (i8, i8* null, i64 2) to i64)
   %y = call i1 @llvm.type.test(i8* %p, metadata !"typeid2")
   %z = add i1 %x, %y
   ret i1 %z

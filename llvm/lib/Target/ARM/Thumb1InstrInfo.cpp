@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 
 using namespace llvm;
 
@@ -23,12 +24,12 @@ Thumb1InstrInfo::Thumb1InstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI), RI() {}
 
 /// Return the noop instruction to use for a noop.
-void Thumb1InstrInfo::getNoop(MCInst &NopInst) const {
-  NopInst.setOpcode(ARM::tMOVr);
-  NopInst.addOperand(MCOperand::createReg(ARM::R8));
-  NopInst.addOperand(MCOperand::createReg(ARM::R8));
-  NopInst.addOperand(MCOperand::createImm(ARMCC::AL));
-  NopInst.addOperand(MCOperand::createReg(0));
+MCInst Thumb1InstrInfo::getNop() const {
+  return MCInstBuilder(ARM::tMOVr)
+      .addReg(ARM::R8)
+      .addReg(ARM::R8)
+      .addImm(ARMCC::AL)
+      .addReg(0);
 }
 
 unsigned Thumb1InstrInfo::getUnindexedOpcode(unsigned Opc) const {
@@ -151,38 +152,4 @@ bool Thumb1InstrInfo::canCopyGluedNodeDuringSchedule(SDNode *N) const {
     return true;
 
   return false;
-}
-
-MachineInstr *Thumb1InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
-  // Replace:
-  // ldr Rd, func address
-  // blx Rd
-  // with:
-  // bl func
-
-  if (MI.getOpcode() == ARM::tBLXr && LoadMI.getOpcode() == ARM::tLDRpci &&
-      MI.getParent() == LoadMI.getParent()) {
-    unsigned CPI = LoadMI.getOperand(1).getIndex();
-    const MachineConstantPool *MCP = MF.getConstantPool();
-    if (CPI >= MCP->getConstants().size())
-      return nullptr;
-    const MachineConstantPoolEntry &CPE = MCP->getConstants()[CPI];
-    assert(!CPE.isMachineConstantPoolEntry() && "Invalid constpool entry");
-    const Function *Callee = dyn_cast<Function>(CPE.Val.ConstVal);
-    if (!Callee)
-      return nullptr;
-    const char *FuncName = MF.createExternalSymbolName(Callee->getName());
-    MachineInstrBuilder MIB =
-        BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(), get(ARM::tBL))
-            .add(predOps(ARMCC::AL))
-            .addExternalSymbol(FuncName);
-    for (auto &MO : MI.implicit_operands())
-      MIB.add(MO);
-    return MIB.getInstr();
-  }
-
-  return nullptr;
 }

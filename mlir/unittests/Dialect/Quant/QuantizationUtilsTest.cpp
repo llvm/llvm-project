@@ -10,7 +10,7 @@
 #include "mlir/Dialect/Quant/QuantizeUtils.h"
 #include "mlir/Dialect/Quant/UniformSupport.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -59,7 +59,7 @@ ElementsAttr getTestSparseElementsAttr(MLIRContext *ctx,
   } else {
     tensorType = RankedTensorType::get(shape, eleType);
   }
-  auto indicesType = RankedTensorType::get({1, 2}, IntegerType::get(64, ctx));
+  auto indicesType = RankedTensorType::get({1, 2}, IntegerType::get(ctx, 64));
   auto indices =
       DenseIntElementsAttr::get(indicesType, {APInt(64, 0), APInt(64, 0)});
   auto valuesType = RankedTensorType::get({1}, eleType);
@@ -75,9 +75,9 @@ UniformQuantizedType getTestQuantizedType(Type storageType, MLIRContext *ctx) {
 }
 
 TEST(QuantizationUtilsTest, convertFloatAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
-  IntegerType convertedType = IntegerType::get(8, &ctx);
+  IntegerType convertedType = IntegerType::get(&ctx, 8);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
   TestUniformQuantizedValueConverter converter(quantizedType);
 
@@ -93,9 +93,9 @@ TEST(QuantizationUtilsTest, convertFloatAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedDenseAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
-  IntegerType convertedType = IntegerType::get(8, &ctx);
+  IntegerType convertedType = IntegerType::get(&ctx, 8);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
   TestUniformQuantizedValueConverter converter(quantizedType);
   auto realValue = getTestElementsAttr<DenseElementsAttr, ArrayRef<Attribute>>(
@@ -118,9 +118,9 @@ TEST(QuantizationUtilsTest, convertRankedDenseAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedSplatAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
-  IntegerType convertedType = IntegerType::get(8, &ctx);
+  IntegerType convertedType = IntegerType::get(&ctx, 8);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
   TestUniformQuantizedValueConverter converter(quantizedType);
   auto realValue = getTestElementsAttr<DenseElementsAttr, Attribute>(
@@ -143,9 +143,9 @@ TEST(QuantizationUtilsTest, convertRankedSplatAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedSparseAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
-  IntegerType convertedType = IntegerType::get(8, &ctx);
+  IntegerType convertedType = IntegerType::get(&ctx, 8);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
   TestUniformQuantizedValueConverter converter(quantizedType);
   auto realValue = getTestSparseElementsAttr(&ctx, {1, 2});

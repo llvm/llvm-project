@@ -15,12 +15,37 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ReductionTree : Pass<"reduction-tree", "ModuleOp"> {
-  let summary = "A general reduction tree pass for the MLIR Reduce Tool";
+def CommonReductionPassOptions {
+  list<Option> options = [
+    Option<"testerName", "test", "std::string", /* default */"",
+           "The location of the tester which tests the file interestingness">,
+    ListOption<"testerArgs", "test-arg", "std::string",
+               "arguments of the tester",
+               "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">,
+  ];
+}
+
+def ReductionTree : Pass<"reduction-tree"> {
+  let summary = "Reduce the input with reduction-tree algorithm";
+
+  let constructor = "mlir::createReductionTreePass()";
+
+  let options = [
+    Option<"traversalModeId", "traversal-mode", "unsigned",
+           /* default */"0",
+           "The graph traversal mode, the default is single-path mode">,
+  ] # CommonReductionPassOptions.options;
 }
 
 def OptReduction : Pass<"opt-reduction-pass", "ModuleOp"> {
-  let summary = "A reduction pass wrapper for optimization passes";
+  let summary = "A wrapper pass that reduces the file with optimization passes";
+
+  let constructor = "mlir::createOptReductionPass()";
+
+  let options = [
+    Option<"optPass", "opt-pass", "std::string", /* default */"",
+           "The optimization passes used for reduction, e.g., symbol-dce">,
+  ] # CommonReductionPassOptions.options;
 }
 
 #endif // MLIR_REDUCER_PASSES

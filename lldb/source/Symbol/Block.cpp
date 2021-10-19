@@ -25,7 +25,7 @@ Block::Block(lldb::user_id_t uid)
       m_inlineInfoSP(), m_variable_list_sp(), m_parsed_block_info(false),
       m_parsed_block_variables(false), m_parsed_child_blocks(false) {}
 
-Block::~Block() {}
+Block::~Block() = default;
 
 void Block::GetDescription(Stream *s, Function *function,
                            lldb::DescriptionLevel level, Target *target) const {

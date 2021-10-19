@@ -53,7 +53,8 @@ private:
   void WriteOne(const Scope &);
   void Write(const Symbol &);
   std::string GetAsString(const Symbol &);
-  void PutSymbols(const Scope &);
+  // Returns true if a derived type with bindings and "contains" was emitted
+  bool PutSymbols(const Scope &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &);
   void PutSubprogram(const Symbol &);
@@ -69,7 +70,8 @@ public:
   // Find and read the module file for a module or submodule.
   // If ancestor is specified, look for a submodule of that module.
   // Return the Scope for that module/submodule or nullptr on error.
-  Scope *Read(const SourceName &, Scope *ancestor = nullptr);
+  Scope *Read(
+      const SourceName &, Scope *ancestor = nullptr, bool silent = false);
 
 private:
   SemanticsContext &context_;

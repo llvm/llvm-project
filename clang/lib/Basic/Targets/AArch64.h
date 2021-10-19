@@ -30,12 +30,19 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   unsigned FPU;
   bool HasCRC;
   bool HasCrypto;
+  bool HasAES;
+  bool HasSHA2;
+  bool HasSHA3;
+  bool HasSM4;
   bool HasUnaligned;
   bool HasFullFP16;
   bool HasDotProd;
   bool HasFP16FML;
   bool HasMTE;
   bool HasTME;
+  bool HasPAuth;
+  bool HasLS64;
+  bool HasRandGen;
   bool HasMatMul;
   bool HasSVE2;
   bool HasSVE2AES;
@@ -44,6 +51,8 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSVE2BitPerm;
   bool HasMatmulFP64;
   bool HasMatmulFP32;
+  bool HasLSE;
+  bool HasFlagM;
 
   llvm::AArch64::ArchKind ArchKind;
 
@@ -80,10 +89,21 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV86A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV87A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV9A(const LangOptions &Opts,
+                              MacroBuilder &Builder) const;
+  void getTargetDefinesARMV91A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
+  void getTargetDefinesARMV92A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+
+  Optional<std::pair<unsigned, unsigned>>
+  getVScaleRange(const LangOptions &LangOpts) const override;
 
   bool hasFeature(StringRef Feature) const override;
   bool handleTargetFeatures(std::vector<std::string> &Features,

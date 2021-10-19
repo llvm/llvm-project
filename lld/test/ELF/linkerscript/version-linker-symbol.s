@@ -5,14 +5,6 @@
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck %s
 
-# CHECK:      Name: _end@@VER1
-# CHECK-NEXT: Value: 0
-# CHECK-NEXT: Size: 0
-# CHECK-NEXT: Binding: Global
-# CHECK-NEXT: Type: None
-# CHECK-NEXT: Other: 0
-# CHECK-NEXT: Section: .data
-
 # CHECK:      Name: foo@@VER1
 # CHECK-NEXT: Value: 0
 # CHECK-NEXT: Size: 0
@@ -20,6 +12,14 @@
 # CHECK-NEXT: Type: None
 # CHECK-NEXT: Other: 0
 # CHECK-NEXT: Section: .text
+
+# CHECK:      Name: _end@@VER1
+# CHECK-NEXT: Value: 0
+# CHECK-NEXT: Size: 0
+# CHECK-NEXT: Binding: Global
+# CHECK-NEXT: Type: None
+# CHECK-NEXT: Other: 0
+# CHECK-NEXT: Section: .data
 
 .global foo
 foo:

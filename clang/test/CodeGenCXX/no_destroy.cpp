@@ -19,7 +19,7 @@ NonTrivial2 nt21;
 // CHECK: _tlv_atexit{{.*}}_ZN11NonTrivial2D1Ev{{.*}}nt22
 thread_local NonTrivial2 nt22;
 
-// CHECK-LABEL: define void @_Z1fv
+// CHECK-LABEL: define{{.*}} void @_Z1fv
 void f() {
   // CHECK: __cxa_atexit{{.*}}_ZN11NonTrivial2D1Ev
   static NonTrivial2 nt21;
@@ -27,7 +27,7 @@ void f() {
   thread_local NonTrivial2 nt22;
 }
 
-// CHECK-LABEL: define void @_Z1gv
+// CHECK-LABEL: define{{.*}} void @_Z1gv
 void g() {
   // CHECK-NOT: __cxa_atexit
   [[clang::no_destroy]] static NonTrivial2 nt21;
@@ -60,7 +60,7 @@ void h() {
   [[clang::no_destroy]] static NonTrivial3 slarr[10];
 }
 
-// CHECK-LABEL: define void @_Z1hv
+// CHECK-LABEL: define{{.*}} void @_Z1hv
 // CHECK: {{invoke|call}} void @_ZN11NonTrivial3C1Ev
 // EXCEPTIONS: call void @_ZN11NonTrivial3D1Ev
 // NO_EXCEPTIONS-NOT: call void @_ZN11NonTrivial3D1Ev
@@ -70,7 +70,7 @@ void i() {
   [[clang::no_destroy]] thread_local NonTrivial3 tlarr[10];
 }
 
-// CHECK-LABEL: define void @_Z1iv
+// CHECK-LABEL: define{{.*}} void @_Z1iv
 // CHECK: {{invoke|call}} void @_ZN11NonTrivial3C1Ev
 // EXCEPTIONS: call void @_ZN11NonTrivial3D1Ev
 // NO_EXCEPTIONS-NOT: call void @_ZN11NonTrivial3D1Ev

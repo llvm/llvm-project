@@ -1,4 +1,4 @@
-# Usage of 'Const' in MLIR, for core IR types
+# Usage of 'const' in MLIR, for core IR types
 
 aka, where'd `const` go?
 
@@ -200,7 +200,7 @@ for.
 ### The `OpPointer` and `ConstOpPointer` Classes
 
 The "typed operation" classes for registered operations (e.g. like `DimOp` for
-the "std.dim" operation in standard ops) contain a pointer to an operation and
+the "memref.dim" operation in memref ops) contain a pointer to an operation and
 provide typed APIs for processing it.
 
 However, this is a problem for our current `const` design - `const DimOp` means

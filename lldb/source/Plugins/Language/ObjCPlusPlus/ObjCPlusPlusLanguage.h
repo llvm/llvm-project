@@ -27,6 +27,8 @@ public:
     return lldb::eLanguageTypeObjC_plus_plus;
   }
 
+  llvm::StringRef GetNilReferenceSummaryString() override { return "nil"; }
+
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
   const Highlighter *GetHighlighter() const override { return &m_highlighter; }
@@ -41,9 +43,9 @@ public:
   static lldb_private::ConstString GetPluginNameStatic();
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 };
 
 } // namespace lldb_private

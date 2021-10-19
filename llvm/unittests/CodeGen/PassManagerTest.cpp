@@ -14,10 +14,10 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -203,15 +203,15 @@ public:
 
 TEST_F(PassManagerTest, Basic) {
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  LoopAnalysisManager LAM(/*DebugLogging=*/true);
-  FunctionAnalysisManager FAM(/*DebugLogging=*/true);
-  CGSCCAnalysisManager CGAM(/*DebugLogging=*/true);
-  ModuleAnalysisManager MAM(/*DebugLogging=*/true);
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
   PassBuilder PB(TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerFunctionAnalyses(FAM);
@@ -225,8 +225,7 @@ TEST_F(PassManagerTest, Basic) {
   MachineFunctionAnalysisManager MFAM;
   {
     // Test move assignment.
-    MachineFunctionAnalysisManager NestedMFAM(FAM, MAM,
-                                              /*DebugLogging*/ true);
+    MachineFunctionAnalysisManager NestedMFAM(FAM, MAM);
     NestedMFAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     NestedMFAM.registerPass([&] { return TestMachineFunctionAnalysis(); });
     MFAM = std::move(NestedMFAM);
@@ -241,7 +240,7 @@ TEST_F(PassManagerTest, Basic) {
   MachineFunctionPassManager MFPM;
   {
     // Test move assignment.
-    MachineFunctionPassManager NestedMFPM(/*DebugLogging*/ true);
+    MachineFunctionPassManager NestedMFPM;
     NestedMFPM.addPass(TestMachineModulePass(Count, TestMachineModuleCount[0]));
     NestedMFPM.addPass(TestMachineFunctionPass(Count, BeforeInitialization[0],
                                                BeforeFinalization[0],

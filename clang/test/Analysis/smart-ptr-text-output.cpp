@@ -1,9 +1,16 @@
 // RUN: %clang_analyze_cc1\
-// RUN:  -analyzer-checker=core,cplusplus.Move,alpha.cplusplus.SmartPtr\
+// RUN:  -analyzer-checker=core,cplusplus.Move,alpha.cplusplus.SmartPtr,debug.ExprInspection\
+// RUN:  -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
+// RUN:  -analyzer-output=text -std=c++20 %s -verify=expected
+
+// RUN: %clang_analyze_cc1\
+// RUN:  -analyzer-checker=core,cplusplus.Move,alpha.cplusplus.SmartPtr,debug.ExprInspection\
 // RUN:  -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true\
 // RUN:  -analyzer-output=text -std=c++11 %s -verify=expected
 
 #include "Inputs/system-header-simulator-cxx.h"
+
+void clang_analyzer_eval(bool);
 
 class A {
 public:
@@ -69,20 +76,17 @@ void derefOnReleasedNullRawPtr() {
 
 void derefOnSwappedNullPtr() {
   std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
-  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
-  P.swap(PNull); // expected-note {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
+  std::unique_ptr<A> PNull;
+  P.swap(PNull);
   PNull->foo(); // No warning.
   (*P).foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
 }
 
-// FIXME: Fix this test when "std::swap" is modeled seperately.
 void derefOnStdSwappedNullPtr() {
   std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
-  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
-  std::swap(P, PNull); // expected-note@Inputs/system-header-simulator-cxx.h:979 {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
-  // expected-note@-1 {{Calling 'swap<A>'}}
-  // expected-note@-2 {{Returning from 'swap<A>'}}
+  std::unique_ptr<A> PNull;
+  std::swap(P, PNull);
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
 }
@@ -304,3 +308,70 @@ struct S {
     // expected-note@-1 {{Division by zero}}
   }
 };
+
+void derefAfterBranchingOnUnknownInnerPtr(std::unique_ptr<A> P) {
+  A *RP = P.get();
+  if (!RP) { // expected-note {{Assuming 'RP' is null}}
+    // expected-note@-1 {{Taking true branch}}
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}
+
+void makeUniqueReturnsNonNullUniquePtr() {
+  auto P = std::make_unique<A>();
+  if (!P) {   // expected-note {{Taking false branch}}
+    P->foo(); // should have no warning here, path is impossible
+  }
+  P.reset(); // expected-note {{Smart pointer 'P' reset using a null value}}
+  // Now P is null
+  if (!P) {
+    // expected-note@-1 {{Taking true branch}}
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}
+
+#if __cplusplus >= 202002L
+
+void makeUniqueForOverwriteReturnsNullUniquePtr() {
+  auto P = std::make_unique_for_overwrite<A>();
+  if (!P) {   // expected-note {{Taking false branch}}
+    P->foo(); // should have no warning here, path is impossible
+  }
+  P.reset(); // expected-note {{Smart pointer 'P' reset using a null value}}
+  // Now P is null
+  if (!P) {
+    // expected-note@-1 {{Taking true branch}}
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}
+
+#endif
+
+struct G {
+  int *p;
+  G(int *p): p(p) {}
+  ~G() { *p = 0; }
+};
+
+void foo() {
+  int x = 1;
+  {
+    auto P = std::make_unique<G>(&x);
+    // FIXME: There should not be a state split here, it should take the true path.
+    clang_analyzer_eval(*P->p == 1); // expected-warning {{TRUE}}
+    // expected-warning@-1 {{FALSE}}
+    // expected-note@-2 {{Assuming the condition is true}}
+    // expected-note@-3 {{Assuming the condition is false}}
+    // expected-note@-4 {{TRUE}}
+    // expected-note@-5 {{FALSE}}
+    // expected-note@-6 {{Assuming the condition is false}}
+  }
+  // FIXME: Should be fixed when unique_ptr desctructors are
+  // properly modelled. This includes modelling the call to
+  // the destructor of the inner pointer type.
+  clang_analyzer_eval(x == 0); // expected-warning {{FALSE}}
+  // expected-note@-1 {{FALSE}}
+}

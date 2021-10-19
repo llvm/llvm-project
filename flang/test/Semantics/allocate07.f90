@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C936(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)

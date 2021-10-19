@@ -38,10 +38,10 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   ProcessSP process_sp(thread.GetProcess());
   if (process_sp) {
     Status error;
-    const bool prefer_file_cache = true;
+    const bool force_live_memory = true;
     if (process_sp->GetTarget().ReadMemory(
-            range.GetBaseAddress(), prefer_file_cache, function_text.data(),
-            range.GetByteSize(), error) != range.GetByteSize()) {
+            range.GetBaseAddress(), function_text.data(), range.GetByteSize(),
+            error, force_live_memory) != range.GetByteSize()) {
       return false;
     }
   }
@@ -332,13 +332,6 @@ UnwindAssemblyInstEmulation::CreateInstance(const ArchSpec &arch) {
     return new UnwindAssemblyInstEmulation(arch, inst_emulator_up.release());
   return nullptr;
 }
-
-// PluginInterface protocol in UnwindAssemblyParser_x86
-ConstString UnwindAssemblyInstEmulation::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t UnwindAssemblyInstEmulation::GetPluginVersion() { return 1; }
 
 void UnwindAssemblyInstEmulation::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

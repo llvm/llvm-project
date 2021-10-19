@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_ANTIDEPBREAKER_H
-#define LLVM_LIB_CODEGEN_ANTIDEPBREAKER_H
+#ifndef LLVM_CODEGEN_ANTIDEPBREAKER_H
+#define LLVM_CODEGEN_ANTIDEPBREAKER_H
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -56,13 +55,20 @@ public:
   /// Finish anti-dep breaking for a basic block.
   virtual void FinishBlock() = 0;
 
-  /// Update DBG_VALUE if dependency breaker is updating
+  /// Update DBG_VALUE or DBG_PHI if dependency breaker is updating
   /// other machine instruction to use NewReg.
   void UpdateDbgValue(MachineInstr &MI, unsigned OldReg, unsigned NewReg) {
-    assert(MI.isDebugValue() && "MI is not DBG_VALUE!");
-    if (MI.getDebugOperand(0).isReg() &&
-        MI.getDebugOperand(0).getReg() == OldReg)
-      MI.getDebugOperand(0).setReg(NewReg);
+    if (MI.isDebugValue()) {
+      if (MI.getDebugOperand(0).isReg() &&
+          MI.getDebugOperand(0).getReg() == OldReg)
+        MI.getDebugOperand(0).setReg(NewReg);
+    } else if (MI.isDebugPHI()) {
+      if (MI.getOperand(0).isReg() &&
+          MI.getOperand(0).getReg() == OldReg)
+        MI.getOperand(0).setReg(NewReg);
+    } else {
+      llvm_unreachable("MI is not DBG_VALUE / DBG_PHI!");
+    }
   }
 
   /// Update all DBG_VALUE instructions that may be affected by the dependency
@@ -94,4 +100,4 @@ AntiDepBreaker *createCriticalAntiDepBreaker(MachineFunction &MFi,
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_ANTIDEPBREAKER_H
+#endif // LLVM_CODEGEN_ANTIDEPBREAKER_H

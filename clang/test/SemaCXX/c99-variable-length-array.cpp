@@ -13,6 +13,7 @@ struct POD {
 };
 
 // expected-note@* 1+{{read of non-const variable}}
+// expected-note@* 1+{{function parameter}}
 // expected-note@* 1+{{declared here}}
 
 // We allow VLAs of POD types, only.

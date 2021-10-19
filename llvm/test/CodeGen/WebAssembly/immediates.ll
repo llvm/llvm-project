@@ -7,7 +7,6 @@
 
 ; Test that basic immediates assemble as expected.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: zero_i32:
@@ -146,12 +145,9 @@ define float @custom_nan_f32() {
   ret float 0xFFFD79BDE0000000
 }
 
-; TODO: LLVM's MC layer stores f32 operands as host doubles, requiring a
-; conversion, so the bits of the NaN are not fully preserved.
-
 ; CHECK-LABEL: custom_nans_f32:
 ; CHECK-NEXT: .functype custom_nans_f32 () -> (f32){{$}}
-; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, -nan:0x6bcdef{{$}}
+; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, -nan:0x2bcdef{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @custom_nans_f32() {
   ret float 0xFFF579BDE0000000

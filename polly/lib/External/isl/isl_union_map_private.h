@@ -10,6 +10,10 @@ struct isl_union_map {
 	struct isl_hash_table	table;
 };
 
+struct isl_hash_table_entry *isl_union_set_find_entry(
+	__isl_keep isl_union_set *uset, __isl_keep isl_space *space,
+	int reserve);
+
 __isl_keep isl_space *isl_union_map_peek_space(__isl_keep isl_union_map *umap);
 __isl_keep isl_space *isl_union_set_peek_space(__isl_keep isl_union_set *uset);
 isl_bool isl_union_map_is_params(__isl_keep isl_union_map *umap);

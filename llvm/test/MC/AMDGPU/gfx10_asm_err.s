@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx601 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx701 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX6-9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx701 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9,GFX8-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=GFX6-9,GFX8-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_DS.
@@ -124,6 +124,7 @@ s_bitreplicate_b64_b32 s[0:1], s2
 
 s_set_gpr_idx_idx s0
 // GFX10: error: instruction not supported on this GPU
+// GFX6-7: error: instruction not supported on this GPU
 
 // GFX6, GFX7, GFX8, GFX9.
 
@@ -167,6 +168,7 @@ s_pack_hh_b32_b16 s0, s1, s2
 
 s_rfe_restore_b64 s[0:1], s2
 // GFX10: error: instruction not supported on this GPU
+// GFX6-7: error: instruction not supported on this GPU
 
 // GFX6, GFX7, GFX8, GFX9.
 
@@ -269,4 +271,49 @@ s_endpgm_saved
 //===----------------------------------------------------------------------===//
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7]
-// GFX6-9: error: not a valid operand
+// GFX6-7: error: dpp variant of this instruction is not supported
+// GFX8-9: error: not a valid operand
+
+//===----------------------------------------------------------------------===//
+// VOP2
+//===----------------------------------------------------------------------===//
+
+v_fmaak_f32 v0, 0xff32ff, v0, 0x11213141
+// GFX6-9: error: instruction not supported on this GPU
+// GFX10: error: only one literal operand is allowed
+
+v_fmamk_f32 v0, 0xff32ff, 0x11213141, v0
+// GFX6-9: error: instruction not supported on this GPU
+// GFX10: error: only one literal operand is allowed
+
+v_fmaak_f32 v0, 0xff32, v0, 0x1122
+// GFX6-9: error: instruction not supported on this GPU
+// GFX10: error: only one literal operand is allowed
+
+v_fmamk_f32 v0, 0xff32, 0x1122, v0
+// GFX6-9: error: instruction not supported on this GPU
+// GFX10: error: only one literal operand is allowed
+
+//===----------------------------------------------------------------------===//
+// VOP2 E64.
+//===----------------------------------------------------------------------===//
+
+v_add_co_ci_u32 v5, 0, v1, v2, vcc
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, vcc, v1, v2, 0
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, 0, v1, v2, vcc_lo
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction
+
+v_add_co_ci_u32 v5, vcc_lo, v1, v2, 0
+// GFX6-7: error: instruction not supported on this GPU
+// GFX8-9: error: instruction not supported on this GPU
+// GFX10: error: invalid operand for instruction

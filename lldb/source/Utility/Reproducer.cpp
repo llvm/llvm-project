@@ -9,6 +9,7 @@
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/ReproducerProvider.h"
+#include "lldb/Utility/Timer.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -19,31 +20,12 @@ using namespace lldb_private::repro;
 using namespace llvm;
 using namespace llvm::yaml;
 
-static llvm::Optional<bool> GetEnv(const char *var) {
-  std::string val = llvm::StringRef(getenv(var)).lower();
-  if (val == "0" || val == "off")
-    return false;
-  if (val == "1" || val == "on")
-    return true;
-  return {};
-}
-
 Reproducer &Reproducer::Instance() { return *InstanceImpl(); }
 
 llvm::Error Reproducer::Initialize(ReproducerMode mode,
                                    llvm::Optional<FileSpec> root) {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
-
-  // The environment can override the capture mode.
-  if (mode != ReproducerMode::Replay) {
-    if (llvm::Optional<bool> override = GetEnv("LLDB_CAPTURE_REPRODUCER")) {
-      if (*override)
-        mode = ReproducerMode::Capture;
-      else
-        mode = ReproducerMode::Off;
-    }
-  }
 
   switch (mode) {
   case ReproducerMode::Capture: {
@@ -176,10 +158,12 @@ Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
 
 Generator::~Generator() {
   if (!m_done) {
-    if (m_auto_generate)
+    if (m_auto_generate) {
       Keep();
-    else
+      llvm::cantFail(Finalize(GetRoot()));
+    } else {
       Discard();
+    }
   }
 }
 
@@ -192,6 +176,7 @@ ProviderBase *Generator::Register(std::unique_ptr<ProviderBase> provider) {
 }
 
 void Generator::Keep() {
+  LLDB_SCOPED_TIMER();
   assert(!m_done);
   m_done = true;
 
@@ -202,6 +187,7 @@ void Generator::Keep() {
 }
 
 void Generator::Discard() {
+  LLDB_SCOPED_TIMER();
   assert(!m_done);
   m_done = true;
 
@@ -358,4 +344,59 @@ void Verifier::Verify(
                      "': " + status.getError().message());
     }
   }
+}
+
+static llvm::Error addPaths(StringRef path,
+                            function_ref<void(StringRef)> callback) {
+  auto buffer = llvm::MemoryBuffer::getFile(path);
+  if (!buffer)
+    return errorCodeToError(buffer.getError());
+
+  SmallVector<StringRef, 0> paths;
+  (*buffer)->getBuffer().split(paths, '\0');
+  for (StringRef p : paths) {
+    if (!p.empty() && llvm::sys::fs::exists(p))
+      callback(p);
+  }
+
+  return errorCodeToError(llvm::sys::fs::remove(path));
+}
+
+llvm::Error repro::Finalize(Loader *loader) {
+  if (!loader)
+    return make_error<StringError>("invalid loader",
+                                   llvm::inconvertibleErrorCode());
+
+  FileSpec reproducer_root = loader->GetRoot();
+  std::string files_path =
+      reproducer_root.CopyByAppendingPathComponent("files.txt").GetPath();
+  std::string dirs_path =
+      reproducer_root.CopyByAppendingPathComponent("dirs.txt").GetPath();
+
+  FileCollector collector(
+      reproducer_root.CopyByAppendingPathComponent("root").GetPath(),
+      reproducer_root.GetPath());
+
+  if (Error e =
+          addPaths(files_path, [&](StringRef p) { collector.addFile(p); }))
+    return e;
+
+  if (Error e =
+          addPaths(dirs_path, [&](StringRef p) { collector.addDirectory(p); }))
+    return e;
+
+  FileSpec mapping =
+      reproducer_root.CopyByAppendingPathComponent(FileProvider::Info::file);
+  if (auto ec = collector.copyFiles(/*stop_on_error=*/false))
+    return errorCodeToError(ec);
+  collector.writeMapping(mapping.GetPath());
+
+  return llvm::Error::success();
+}
+
+llvm::Error repro::Finalize(const FileSpec &root) {
+  Loader loader(root);
+  if (Error e = loader.LoadIndex())
+    return e;
+  return Finalize(&loader);
 }

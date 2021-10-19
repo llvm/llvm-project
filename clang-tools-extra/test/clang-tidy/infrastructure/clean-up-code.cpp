@@ -1,6 +1,6 @@
-// RUN: %check_clang_tidy %s misc-unused-using-decls %t
-// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- -format-style=none --
-// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- -format-style=llvm --
+// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- --fix-notes
+// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- --fix-notes -format-style=none --
+// RUN: %check_clang_tidy %s misc-unused-using-decls %t -- --fix-notes -format-style=llvm --
 namespace a { class A {}; }
 namespace b {
 using a::A;

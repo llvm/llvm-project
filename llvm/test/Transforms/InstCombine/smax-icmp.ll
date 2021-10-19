@@ -12,7 +12,7 @@
 
 define i1 @eq_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -25,7 +25,7 @@ define i1 @eq_smax1(i32 %x, i32 %y) {
 
 define i1 @eq_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_smax2(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -38,8 +38,8 @@ define i1 @eq_smax2(i32 %x, i32 %y) {
 
 define i1 @eq_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @eq_smax3(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -53,8 +53,8 @@ define i1 @eq_smax3(i32 %a, i32 %y) {
 
 define i1 @eq_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @eq_smax4(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -68,7 +68,7 @@ define i1 @eq_smax4(i32 %a, i32 %y) {
 
 define i1 @sle_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sle_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -81,7 +81,7 @@ define i1 @sle_smax1(i32 %x, i32 %y) {
 
 define i1 @sle_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sle_smax2(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -94,8 +94,8 @@ define i1 @sle_smax2(i32 %x, i32 %y) {
 
 define i1 @sle_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sle_smax3(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -109,8 +109,8 @@ define i1 @sle_smax3(i32 %a, i32 %y) {
 
 define i1 @sle_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sle_smax4(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -124,7 +124,7 @@ define i1 @sle_smax4(i32 %a, i32 %y) {
 
 define i1 @ne_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -137,7 +137,7 @@ define i1 @ne_smax1(i32 %x, i32 %y) {
 
 define i1 @ne_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_smax2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 %y, %x
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -150,8 +150,8 @@ define i1 @ne_smax2(i32 %x, i32 %y) {
 
 define i1 @ne_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ne_smax3(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -165,8 +165,8 @@ define i1 @ne_smax3(i32 %a, i32 %y) {
 
 define i1 @ne_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @ne_smax4(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -180,7 +180,7 @@ define i1 @ne_smax4(i32 %a, i32 %y) {
 
 define i1 @sgt_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sgt_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 %x, %y
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -193,7 +193,7 @@ define i1 @sgt_smax1(i32 %x, i32 %y) {
 
 define i1 @sgt_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sgt_smax2(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 %y, %x
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -206,8 +206,8 @@ define i1 @sgt_smax2(i32 %x, i32 %y) {
 
 define i1 @sgt_smax3(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sgt_smax3(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization
@@ -221,8 +221,8 @@ define i1 @sgt_smax3(i32 %a, i32 %y) {
 
 define i1 @sgt_smax4(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sgt_smax4(
-; CHECK-NEXT:    [[X:%.*]] = add i32 %a, 3
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], %y
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %x = add i32 %a, 3 ; thwart complexity-based canonicalization

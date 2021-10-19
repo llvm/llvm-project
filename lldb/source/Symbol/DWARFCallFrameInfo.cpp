@@ -419,8 +419,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
   if (m_fde_index_initialized) // if two threads hit the locker
     return;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%s - %s", LLVM_PRETTY_FUNCTION,
+  LLDB_SCOPED_TIMERF("%s - %s", LLVM_PRETTY_FUNCTION,
                      m_objfile.GetFileSpec().GetFilename().AsCString(""));
 
   bool clear_address_zeroth_bit = false;

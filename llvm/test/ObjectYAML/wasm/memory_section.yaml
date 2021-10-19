@@ -6,18 +6,18 @@ Sections:
   - Type:            MEMORY
     Memories:         
       - Flags:           [ HAS_MAX ]
-        Initial:         0x00000002
+        Minimum:         0x00000002
         Maximum:         0x000000FF
-      - Initial:         0x00000003
+      - Minimum:         0x00000003
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:   - Type:            MEMORY
 # CHECK:     Memories:         
 # CHECK:       - Flags:            [ HAS_MAX ]
-# CHECK:         Initial:          0x00000002
-# CHECK:         Maximum:          0x000000FF
-# CHECK:       - Initial:          0x00000003
+# CHECK:         Minimum:          0x2
+# CHECK:         Maximum:          0xFF
+# CHECK:       - Minimum:          0x3
 # CHECK: ...

@@ -20,14 +20,16 @@ using namespace llvm;
 using namespace clang::tooling;
 using clang::tooling::Diagnostic;
 
-static DiagnosticMessage makeMessage(const std::string &Message, int FileOffset,
-                                     const std::string &FilePath,
-                                     const StringMap<Replacements> &Fix) {
+static DiagnosticMessage
+makeMessage(const std::string &Message, int FileOffset,
+            const std::string &FilePath, const StringMap<Replacements> &Fix,
+            const SmallVector<FileByteRange, 1> &Ranges) {
   DiagnosticMessage DiagMessage;
   DiagMessage.Message = Message;
   DiagMessage.FileOffset = FileOffset;
   DiagMessage.FilePath = FilePath;
   DiagMessage.Fix = Fix;
+  DiagMessage.Ranges = Ranges;
   return DiagMessage;
 }
 
@@ -45,10 +47,11 @@ static Diagnostic makeDiagnostic(StringRef DiagnosticName,
                                  const std::string &Message, int FileOffset,
                                  const std::string &FilePath,
                                  const StringMap<Replacements> &Fix,
-                                 const SmallVector<FileByteRange, 1> &Ranges) {
+                                 const SmallVector<FileByteRange, 1> &Ranges,
+                                 Diagnostic::Level DiagnosticLevel) {
   return Diagnostic(DiagnosticName,
-                    makeMessage(Message, FileOffset, FilePath, Fix), {},
-                    Diagnostic::Warning, "path/to/build/directory", Ranges);
+                    makeMessage(Message, FileOffset, FilePath, Fix, Ranges), {},
+                    DiagnosticLevel, "path/to/build/directory");
 }
 
 static const char *YAMLContent =
@@ -77,12 +80,12 @@ static const char *YAMLContent =
     "          Offset:          62\n"
     "          Length:          2\n"
     "          ReplacementText: 'replacement #2'\n"
+    "      Ranges:\n"
+    "        - FilePath:        'path/to/source.cpp'\n"
+    "          FileOffset:      10\n"
+    "          Length:          10\n"
     "    Level:           Warning\n"
     "    BuildDirectory:  'path/to/build/directory'\n"
-    "    Ranges:\n"
-    "      - FilePath:        'path/to/source.cpp'\n"
-    "        FileOffset:      10\n"
-    "        Length:          10\n"
     "  - DiagnosticName:  'diagnostic#3'\n"
     "    DiagnosticMessage:\n"
     "      Message:         'message #3'\n"
@@ -100,6 +103,14 @@ static const char *YAMLContent =
     "        Replacements:    []\n"
     "    Level:           Warning\n"
     "    BuildDirectory:  'path/to/build/directory'\n"
+    "  - DiagnosticName:  'diagnostic#4'\n"
+    "    DiagnosticMessage:\n"
+    "      Message:         'message #4'\n"
+    "      FilePath:        'path/to/source3.cpp'\n"
+    "      FileOffset:      72\n"
+    "      Replacements:    []\n"
+    "    Level:           Remark\n"
+    "    BuildDirectory:  'path/to/build/directory'\n"
     "...\n";
 
 TEST(DiagnosticsYamlTest, serializesDiagnostics) {
@@ -110,7 +121,8 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
       {"path/to/source.cpp",
        Replacements({"path/to/source.cpp", 100, 12, "replacement #1"})}};
   TUD.Diagnostics.push_back(makeDiagnostic("diagnostic#1", "message #1", 55,
-                                           "path/to/source.cpp", Fix1, {}));
+                                           "path/to/source.cpp", Fix1, {},
+                                           Diagnostic::Warning));
 
   StringMap<Replacements> Fix2 = {
       {"path/to/header.h",
@@ -118,14 +130,20 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
   SmallVector<FileByteRange, 1> Ranges2 =
       {makeByteRange(10, 10, "path/to/source.cpp")};
   TUD.Diagnostics.push_back(makeDiagnostic("diagnostic#2", "message #2", 60,
-                                           "path/to/header.h", Fix2, Ranges2));
+                                           "path/to/header.h", Fix2, Ranges2,
+                                           Diagnostic::Warning));
 
   TUD.Diagnostics.push_back(makeDiagnostic("diagnostic#3", "message #3", 72,
-                                           "path/to/source2.cpp", {}, {}));
+                                           "path/to/source2.cpp", {}, {},
+                                           Diagnostic::Warning));
   TUD.Diagnostics.back().Notes.push_back(
-      makeMessage("Note1", 88, "path/to/note1.cpp", {}));
+      makeMessage("Note1", 88, "path/to/note1.cpp", {}, {}));
   TUD.Diagnostics.back().Notes.push_back(
-      makeMessage("Note2", 99, "path/to/note2.cpp", {}));
+      makeMessage("Note2", 99, "path/to/note2.cpp", {}, {}));
+
+  TUD.Diagnostics.push_back(makeDiagnostic("diagnostic#4", "message #4", 72,
+                                           "path/to/source3.cpp", {}, {},
+                                           Diagnostic::Remark));
 
   std::string YamlContent;
   raw_string_ostream YamlContentStream(YamlContent);
@@ -142,7 +160,7 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   YAML >> TUDActual;
 
   ASSERT_FALSE(YAML.error());
-  ASSERT_EQ(3u, TUDActual.Diagnostics.size());
+  ASSERT_EQ(4u, TUDActual.Diagnostics.size());
   EXPECT_EQ("path/to/source.cpp", TUDActual.MainSourceFile);
 
   auto getFixes = [](const StringMap<Replacements> &Fix) {
@@ -166,7 +184,7 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   EXPECT_EQ(100u, Fixes1[0].getOffset());
   EXPECT_EQ(12u, Fixes1[0].getLength());
   EXPECT_EQ("replacement #1", Fixes1[0].getReplacementText());
-  EXPECT_TRUE(D1.Ranges.empty());
+  EXPECT_TRUE(D1.Message.Ranges.empty());
 
   Diagnostic D2 = TUDActual.Diagnostics[1];
   EXPECT_EQ("diagnostic#2", D2.DiagnosticName);
@@ -179,10 +197,10 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   EXPECT_EQ(62u, Fixes2[0].getOffset());
   EXPECT_EQ(2u, Fixes2[0].getLength());
   EXPECT_EQ("replacement #2", Fixes2[0].getReplacementText());
-  EXPECT_EQ(1u, D2.Ranges.size());
-  EXPECT_EQ("path/to/source.cpp", D2.Ranges[0].FilePath);
-  EXPECT_EQ(10u, D2.Ranges[0].FileOffset);
-  EXPECT_EQ(10u, D2.Ranges[0].Length);
+  EXPECT_EQ(1u, D2.Message.Ranges.size());
+  EXPECT_EQ("path/to/source.cpp", D2.Message.Ranges[0].FilePath);
+  EXPECT_EQ(10u, D2.Message.Ranges[0].FileOffset);
+  EXPECT_EQ(10u, D2.Message.Ranges[0].Length);
 
   Diagnostic D3 = TUDActual.Diagnostics[2];
   EXPECT_EQ("diagnostic#3", D3.DiagnosticName);
@@ -198,5 +216,5 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
   EXPECT_EQ("path/to/note2.cpp", D3.Notes[1].FilePath);
   std::vector<Replacement> Fixes3 = getFixes(D3.Message.Fix);
   EXPECT_TRUE(Fixes3.empty());
-  EXPECT_TRUE(D3.Ranges.empty());
+  EXPECT_TRUE(D3.Message.Ranges.empty());
 }

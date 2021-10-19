@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Target.h"
-#include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
@@ -27,9 +26,11 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
+#include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -40,6 +41,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -93,6 +95,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_watchpoint_list(), m_process_sp(), m_search_filter_sp(),
       m_image_search_paths(ImageSearchPathsChanged, this),
       m_source_manager_up(), m_stop_hooks(), m_stop_hook_next_id(0),
+      m_latest_stop_hook_id(0),
       m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
       m_frame_recognizer_manager_up(
@@ -126,13 +129,10 @@ Target::~Target() {
   DeleteCurrentProcess();
 }
 
-void Target::PrimeFromDummyTarget(Target *target) {
-  if (!target)
-    return;
+void Target::PrimeFromDummyTarget(Target &target) {
+  m_stop_hooks = target.m_stop_hooks;
 
-  m_stop_hooks = target->m_stop_hooks;
-
-  for (const auto &breakpoint_sp : target->m_breakpoint_list.Breakpoints()) {
+  for (const auto &breakpoint_sp : target.m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
       continue;
 
@@ -141,14 +141,14 @@ void Target::PrimeFromDummyTarget(Target *target) {
     AddBreakpoint(std::move(new_bp), false);
   }
 
-  for (auto bp_name_entry : target->m_breakpoint_names) {
+  for (auto bp_name_entry : target.m_breakpoint_names) {
 
     BreakpointName *new_bp_name = new BreakpointName(*bp_name_entry.second);
     AddBreakpointName(new_bp_name);
   }
 
   m_frame_recognizer_manager_up = std::make_unique<StackFrameRecognizerManager>(
-      *target->m_frame_recognizer_manager_up);
+      *target.m_frame_recognizer_manager_up);
 }
 
 void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
@@ -182,6 +182,7 @@ void Target::CleanupProcess() {
   DisableAllWatchpoints(false);
   ClearAllWatchpointHitCounts();
   ClearAllWatchpointHistoricValues();
+  m_latest_stop_hook_id = 0;
 }
 
 void Target::DeleteCurrentProcess() {
@@ -200,12 +201,13 @@ void Target::DeleteCurrentProcess() {
 
 const lldb::ProcessSP &Target::CreateProcess(ListenerSP listener_sp,
                                              llvm::StringRef plugin_name,
-                                             const FileSpec *crash_file) {
+                                             const FileSpec *crash_file,
+                                             bool can_connect) {
   if (!listener_sp)
     listener_sp = GetDebugger().GetListener();
   DeleteCurrentProcess();
   m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name,
-                                     listener_sp, crash_file);
+                                     listener_sp, crash_file, can_connect);
   return m_process_sp;
 }
 
@@ -371,9 +373,14 @@ BreakpointSP Target::CreateBreakpoint(const FileSpecList *containingModules,
   if (move_to_nearest_code == eLazyBoolCalculate)
     move_to_nearest_code = GetMoveToNearestCode() ? eLazyBoolYes : eLazyBoolNo;
 
+  SourceLocationSpec location_spec(remapped_file, line_no, column,
+                                   check_inlines,
+                                   !static_cast<bool>(move_to_nearest_code));
+  if (!location_spec)
+    return nullptr;
+
   BreakpointResolverSP resolver_sp(new BreakpointResolverFileLine(
-      nullptr, remapped_file, line_no, column, offset, check_inlines,
-      skip_prologue, !static_cast<bool>(move_to_nearest_code)));
+      nullptr, offset, skip_prologue, location_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
 }
 
@@ -819,6 +826,11 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   // Grab the list mutex while doing operations.
   const bool notify = false; // Don't notify about all the state changes we do
                              // on creating the watchpoint.
+
+  // Mask off ignored bits from watchpoint address.
+  if (ABISP abi = m_process_sp->GetABI())
+    addr = abi->FixDataAddress(addr);
+
   std::unique_lock<std::recursive_mutex> lock;
   this->GetWatchpointList().GetListMutex(lock);
   WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
@@ -1010,7 +1022,7 @@ Status Target::SerializeBreakpointsToFile(const FileSpec &file,
   }
 
   StreamFile out_file(path.c_str(),
-                      File::eOpenOptionTruncate | File::eOpenOptionWrite |
+                      File::eOpenOptionTruncate | File::eOpenOptionWriteOnly |
                           File::eOpenOptionCanCreate |
                           File::eOpenOptionCloseOnExec,
                       lldb::eFilePermissionsFileDefault);
@@ -1149,9 +1161,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
   if (!ProcessIsValid())
     return false;
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1180,9 +1190,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
   if (!ProcessIsValid())
     return false;
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1209,9 +1217,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
   if (!ProcessIsValid())
     return false;
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1227,9 +1233,7 @@ bool Target::ClearAllWatchpointHitCounts() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1243,9 +1247,7 @@ bool Target::ClearAllWatchpointHistoricValues() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
   LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1263,9 +1265,7 @@ bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
   if (!ProcessIsValid())
     return false;
 
-  size_t num_watchpoints = m_watchpoint_list.GetSize();
-  for (size_t i = 0; i < num_watchpoints; ++i) {
-    WatchpointSP wp_sp = m_watchpoint_list.GetByIndex(i);
+  for (WatchpointSP wp_sp : m_watchpoint_list.Watchpoints()) {
     if (!wp_sp)
       return false;
 
@@ -1400,9 +1400,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
-    static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-    Timer scoped_timer(func_cat,
-                       "Target::SetExecutableModule (executable = '%s')",
+    LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
 
     const bool notify = true;
@@ -1689,6 +1687,7 @@ bool Target::ModuleIsExcludedForUnconstrainedSearches(
 
 size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
                                        size_t dst_len, Status &error) {
+  LLDB_SCOPED_TIMER();
   SectionSP section_sp(addr.GetSection());
   if (section_sp) {
     // If the contents of this section are encrypted, the on-disk file is
@@ -1719,8 +1718,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
   return 0;
 }
 
-size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
-                          void *dst, size_t dst_len, Status &error,
+size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
+                          Status &error, bool force_live_memory,
                           lldb::addr_t *load_addr_ptr) {
   error.Clear();
 
@@ -1755,10 +1754,31 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
   if (!resolved_addr.IsValid())
     resolved_addr = addr;
 
-  if (prefer_file_cache) {
-    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-    if (bytes_read > 0)
-      return bytes_read;
+  // If we read from the file cache but can't get as many bytes as requested,
+  // we keep the result around in this buffer, in case this result is the
+  // best we can do.
+  std::unique_ptr<uint8_t[]> file_cache_read_buffer;
+  size_t file_cache_bytes_read = 0;
+
+  // Read from file cache if read-only section.
+  if (!force_live_memory && resolved_addr.IsSectionOffset()) {
+    SectionSP section_sp(resolved_addr.GetSection());
+    if (section_sp) {
+      auto permissions = Flags(section_sp->GetPermissions());
+      bool is_readonly = !permissions.Test(ePermissionsWritable) &&
+                         permissions.Test(ePermissionsReadable);
+      if (is_readonly) {
+        file_cache_bytes_read =
+            ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+        if (file_cache_bytes_read == dst_len)
+          return file_cache_bytes_read;
+        else if (file_cache_bytes_read > 0) {
+          file_cache_read_buffer =
+              std::make_unique<uint8_t[]>(file_cache_bytes_read);
+          std::memcpy(file_cache_read_buffer.get(), dst, file_cache_bytes_read);
+        }
+      }
+    }
   }
 
   if (ProcessIsValid()) {
@@ -1793,17 +1813,17 @@ size_t Target::ReadMemory(const Address &addr, bool prefer_file_cache,
           *load_addr_ptr = load_addr;
         return bytes_read;
       }
-      // If the address is not section offset we have an address that doesn't
-      // resolve to any address in any currently loaded shared libraries and we
-      // failed to read memory so there isn't anything more we can do. If it is
-      // section offset, we might be able to read cached memory from the object
-      // file.
-      if (!resolved_addr.IsSectionOffset())
-        return 0;
     }
   }
 
-  if (!prefer_file_cache && resolved_addr.IsSectionOffset()) {
+  if (file_cache_read_buffer && file_cache_bytes_read > 0) {
+    // Reading from the process failed. If we've previously succeeded in reading
+    // something from the file cache, then copy that over and return that.
+    std::memcpy(dst, file_cache_read_buffer.get(), file_cache_bytes_read);
+    return file_cache_bytes_read;
+  }
+
+  if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
     return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
@@ -1858,7 +1878,7 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
       addr_t bytes_to_read =
           std::min<addr_t>(bytes_left, cache_line_bytes_left);
       size_t bytes_read =
-          ReadMemory(address, false, curr_dst, bytes_to_read, error);
+          ReadMemory(address, curr_dst, bytes_to_read, error, true);
 
       if (bytes_read == 0) {
         result_error = error;
@@ -1886,15 +1906,15 @@ size_t Target::ReadCStringFromMemory(const Address &addr, char *dst,
   return total_cstr_len;
 }
 
-size_t Target::ReadScalarIntegerFromMemory(const Address &addr,
-                                           bool prefer_file_cache,
-                                           uint32_t byte_size, bool is_signed,
-                                           Scalar &scalar, Status &error) {
+size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_size,
+                                           bool is_signed, Scalar &scalar,
+                                           Status &error,
+                                           bool force_live_memory) {
   uint64_t uval;
 
   if (byte_size <= sizeof(uval)) {
     size_t bytes_read =
-        ReadMemory(addr, prefer_file_cache, &uval, byte_size, error);
+        ReadMemory(addr, &uval, byte_size, error, force_live_memory);
     if (bytes_read == byte_size) {
       DataExtractor data(&uval, sizeof(uval), m_arch.GetSpec().GetByteOrder(),
                          m_arch.GetSpec().GetAddressByteSize());
@@ -1916,23 +1936,22 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr,
 }
 
 uint64_t Target::ReadUnsignedIntegerFromMemory(const Address &addr,
-                                               bool prefer_file_cache,
                                                size_t integer_byte_size,
-                                               uint64_t fail_value,
-                                               Status &error) {
+                                               uint64_t fail_value, Status &error,
+                                               bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, prefer_file_cache, integer_byte_size,
-                                  false, scalar, error))
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+                                  force_live_memory))
     return scalar.ULongLong(fail_value);
   return fail_value;
 }
 
-bool Target::ReadPointerFromMemory(const Address &addr, bool prefer_file_cache,
-                                   Status &error, Address &pointer_addr) {
+bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
+                                   Address &pointer_addr,
+                                   bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, prefer_file_cache,
-                                  m_arch.GetSpec().GetAddressByteSize(), false,
-                                  scalar, error)) {
+  if (ReadScalarIntegerFromMemory(addr, m_arch.GetSpec().GetAddressByteSize(),
+                                  false, scalar, error, force_live_memory)) {
     addr_t pointer_vm_addr = scalar.ULongLong(LLDB_INVALID_ADDRESS);
     if (pointer_vm_addr != LLDB_INVALID_ADDRESS) {
       SectionLoadList &section_load_list = GetSectionLoadList();
@@ -1971,8 +1990,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
     module_sp = m_images.FindFirstModule(module_spec);
 
   if (!module_sp) {
-    ModuleSP old_module_sp; // This will get filled in if we have a new version
-                            // of the library
+    llvm::SmallVector<ModuleSP, 1>
+        old_modules; // This will get filled in if we have a new version
+                     // of the library
     bool did_create_module = false;
     FileSpecList search_paths = GetExecutableSearchPaths();
     // If there are image search path entries, try to use them first to acquire
@@ -1985,7 +2005,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         transformed_spec.GetFileSpec().GetFilename() =
             module_spec.GetFileSpec().GetFilename();
         error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &search_paths, &old_module_sp,
+                                            &search_paths, &old_modules,
                                             &did_create_module);
       }
     }
@@ -2003,7 +2023,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         // We have a UUID, it is OK to check the global module list...
         error =
             ModuleList::GetSharedModule(module_spec, module_sp, &search_paths,
-                                        &old_module_sp, &did_create_module);
+                                        &old_modules, &did_create_module);
       }
 
       if (!module_sp) {
@@ -2012,7 +2032,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
               module_spec, m_process_sp.get(), module_sp, &search_paths,
-              &old_module_sp, &did_create_module);
+              &old_modules, &did_create_module);
         } else {
           error.SetErrorString("no platform is currently set");
         }
@@ -2063,18 +2083,18 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         // this target. So let's remove the UUID from the module list, and look
         // in the target's module list. Only do this if there is SOMETHING else
         // in the module spec...
-        if (!old_module_sp) {
-          if (module_spec.GetUUID().IsValid() &&
-              !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
-              !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
-            ModuleSpec module_spec_copy(module_spec.GetFileSpec());
-            module_spec_copy.GetUUID().Clear();
+        if (module_spec.GetUUID().IsValid() &&
+            !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
+            !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
+          ModuleSpec module_spec_copy(module_spec.GetFileSpec());
+          module_spec_copy.GetUUID().Clear();
 
-            ModuleList found_modules;
-            m_images.FindModules(module_spec_copy, found_modules);
-            if (found_modules.GetSize() == 1)
-              old_module_sp = found_modules.GetModuleAtIndex(0);
-          }
+          ModuleList found_modules;
+          m_images.FindModules(module_spec_copy, found_modules);
+          found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
+            old_modules.push_back(found_module);
+            return true;
+          });
         }
 
         // Preload symbols outside of any lock, so hopefully we can do this for
@@ -2082,14 +2102,67 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         if (GetPreloadSymbols())
           module_sp->PreloadSymbols();
 
-        if (old_module_sp && m_images.GetIndexForModule(old_module_sp.get()) !=
-                                 LLDB_INVALID_INDEX32) {
-          m_images.ReplaceModule(old_module_sp, module_sp);
+        llvm::SmallVector<ModuleSP, 1> replaced_modules;
+        for (ModuleSP &old_module_sp : old_modules) {
+          if (m_images.GetIndexForModule(old_module_sp.get()) !=
+              LLDB_INVALID_INDEX32) {
+            if (replaced_modules.empty())
+              m_images.ReplaceModule(old_module_sp, module_sp);
+            else
+              m_images.Remove(old_module_sp);
+
+            replaced_modules.push_back(std::move(old_module_sp));
+          }
+        }
+
+        if (replaced_modules.size() > 1) {
+          // The same new module replaced multiple old modules
+          // simultaneously.  It's not clear this should ever
+          // happen (if we always replace old modules as we add
+          // new ones, presumably we should never have more than
+          // one old one).  If there are legitimate cases where
+          // this happens, then the ModuleList::Notifier interface
+          // may need to be adjusted to allow reporting this.
+          // In the meantime, just log that this has happened; just
+          // above we called ReplaceModule on the first one, and Remove
+          // on the rest.
+          if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET |
+                                                  LIBLLDB_LOG_MODULES)) {
+            StreamString message;
+            auto dump = [&message](Module &dump_module) -> void {
+              UUID dump_uuid = dump_module.GetUUID();
+
+              message << '[';
+              dump_module.GetDescription(message.AsRawOstream());
+              message << " (uuid ";
+
+              if (dump_uuid.IsValid())
+                dump_uuid.Dump(&message);
+              else
+                message << "not specified";
+
+              message << ")]";
+            };
+
+            message << "New module ";
+            dump(*module_sp);
+            message.AsRawOstream()
+                << llvm::formatv(" simultaneously replaced {0} old modules: ",
+                                 replaced_modules.size());
+            for (ModuleSP &replaced_module_sp : replaced_modules)
+              dump(*replaced_module_sp);
+
+            log->PutString(message.GetString());
+          }
+        }
+
+        if (replaced_modules.empty())
+          m_images.Append(module_sp, notify);
+
+        for (ModuleSP &old_module_sp : replaced_modules) {
           Module *old_module_ptr = old_module_sp.get();
           old_module_sp.reset();
           ModuleList::RemoveSharedModuleIfOrphaned(old_module_ptr);
-        } else {
-          m_images.Append(module_sp, notify);
         }
       } else
         module_sp.reset();
@@ -2242,27 +2315,29 @@ FunctionCaller *Target::GetFunctionCallerForLanguage(
   return persistent_fn;
 }
 
-UtilityFunction *
-Target::GetUtilityFunctionForLanguage(const char *text,
-                                      lldb::LanguageType language,
-                                      const char *name, Status &error) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+Target::CreateUtilityFunction(std::string expression, std::string name,
+                              lldb::LanguageType language,
+                              ExecutionContext &exe_ctx) {
   auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  if (!type_system_or_err)
+    return type_system_or_err.takeError();
 
-  if (auto err = type_system_or_err.takeError()) {
-    error.SetErrorStringWithFormat(
-        "Could not find type system for language %s: %s",
-        Language::GetNameForLanguageType(language),
-        llvm::toString(std::move(err)).c_str());
-    return nullptr;
-  }
-
-  auto *utility_fn = type_system_or_err->GetUtilityFunction(text, name);
+  std::unique_ptr<UtilityFunction> utility_fn =
+      type_system_or_err->CreateUtilityFunction(std::move(expression),
+                                                std::move(name));
   if (!utility_fn)
-    error.SetErrorStringWithFormat(
-        "Could not create an expression for language %s",
-        Language::GetNameForLanguageType(language));
+    return llvm::make_error<llvm::StringError>(
+        llvm::StringRef("Could not create an expression for language") +
+            Language::GetNameForLanguageType(language),
+        llvm::inconvertibleErrorCode());
 
-  return utility_fn;
+  DiagnosticManager diagnostics;
+  if (!utility_fn->Install(diagnostics, exe_ctx))
+    return llvm::make_error<llvm::StringError>(diagnostics.GetString(),
+                                               llvm::inconvertibleErrorCode());
+
+  return std::move(utility_fn);
 }
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
@@ -2270,35 +2345,22 @@ void Target::SettingsInitialize() { Process::SettingsInitialize(); }
 void Target::SettingsTerminate() { Process::SettingsTerminate(); }
 
 FileSpecList Target::GetDefaultExecutableSearchPaths() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetExecutableSearchPaths();
-  return FileSpecList();
+  return Target::GetGlobalProperties().GetExecutableSearchPaths();
 }
 
 FileSpecList Target::GetDefaultDebugFileSearchPaths() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetDebugFileSearchPaths();
-  return FileSpecList();
+  return Target::GetGlobalProperties().GetDebugFileSearchPaths();
 }
 
 ArchSpec Target::GetDefaultArchitecture() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetDefaultArchitecture();
-  return ArchSpec();
+  return Target::GetGlobalProperties().GetDefaultArchitecture();
 }
 
 void Target::SetDefaultArchitecture(const ArchSpec &arch) {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp) {
-    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
-             "Target::SetDefaultArchitecture setting target's "
-             "default architecture to  {0} ({1})",
-             arch.GetArchitectureName(), arch.GetTriple().getTriple());
-    return properties_sp->SetDefaultArchitecture(arch);
-  }
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+           "setting target's default architecture to  {0} ({1})",
+           arch.GetArchitectureName(), arch.GetTriple().getTriple());
+  Target::GetGlobalProperties().SetDefaultArchitecture(arch);
 }
 
 Target *Target::GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
@@ -2467,28 +2529,26 @@ SourceManager &Target::GetSourceManager() {
   return *m_source_manager_up;
 }
 
-ClangModulesDeclVendor *Target::GetClangModulesDeclVendor() {
-  static std::mutex s_clang_modules_decl_vendor_mutex; // If this is contended
-                                                       // we can make it
-                                                       // per-target
-
-  {
-    std::lock_guard<std::mutex> guard(s_clang_modules_decl_vendor_mutex);
-
-    if (!m_clang_modules_decl_vendor_up) {
-      m_clang_modules_decl_vendor_up.reset(
-          ClangModulesDeclVendor::Create(*this));
-    }
-  }
-
-  return m_clang_modules_decl_vendor_up.get();
-}
-
-Target::StopHookSP Target::CreateStopHook() {
+Target::StopHookSP Target::CreateStopHook(StopHook::StopHookKind kind) {
   lldb::user_id_t new_uid = ++m_stop_hook_next_id;
-  Target::StopHookSP stop_hook_sp(new StopHook(shared_from_this(), new_uid));
+  Target::StopHookSP stop_hook_sp;
+  switch (kind) {
+  case StopHook::StopHookKind::CommandBased:
+    stop_hook_sp.reset(new StopHookCommandLine(shared_from_this(), new_uid));
+    break;
+  case StopHook::StopHookKind::ScriptBased:
+    stop_hook_sp.reset(new StopHookScripted(shared_from_this(), new_uid));
+    break;
+  }
   m_stop_hooks[new_uid] = stop_hook_sp;
   return stop_hook_sp;
+}
+
+void Target::UndoCreateStopHook(lldb::user_id_t user_id) {
+  if (!RemoveStopHookByID(user_id))
+    return;
+  if (user_id == m_stop_hook_next_id)
+    m_stop_hook_next_id--;
 }
 
 bool Target::RemoveStopHookByID(lldb::user_id_t user_id) {
@@ -2526,45 +2586,45 @@ void Target::SetAllStopHooksActiveState(bool active_state) {
   }
 }
 
-void Target::RunStopHooks() {
+bool Target::RunStopHooks() {
   if (m_suppress_stop_hooks)
-    return;
+    return false;
 
   if (!m_process_sp)
-    return;
+    return false;
 
   // Somebody might have restarted the process:
+  // Still return false, the return value is about US restarting the target.
   if (m_process_sp->GetState() != eStateStopped)
-    return;
-
-  // <rdar://problem/12027563> make sure we check that we are not stopped
-  // because of us running a user expression since in that case we do not want
-  // to run the stop-hooks
-  if (m_process_sp->GetModIDRef().IsLastResumeForUserExpression())
-    return;
+    return false;
 
   if (m_stop_hooks.empty())
-    return;
-
-  StopHookCollection::iterator pos, end = m_stop_hooks.end();
+    return false;
 
   // If there aren't any active stop hooks, don't bother either.
-  // Also see if any of the active hooks want to auto-continue.
   bool any_active_hooks = false;
-  bool auto_continue = false;
   for (auto hook : m_stop_hooks) {
     if (hook.second->IsActive()) {
       any_active_hooks = true;
-      auto_continue |= hook.second->GetAutoContinue();
+      break;
     }
   }
   if (!any_active_hooks)
-    return;
+    return false;
 
-  CommandReturnObject result(m_debugger.GetUseColor());
+  // <rdar://problem/12027563> make sure we check that we are not stopped
+  // because of us running a user expression since in that case we do not want
+  // to run the stop-hooks.  Note, you can't just check whether the last stop
+  // was for a User Expression, because breakpoint commands get run before
+  // stop hooks, and one of them might have run an expression.  You have
+  // to ensure you run the stop hooks once per natural stop.
+  uint32_t last_natural_stop = m_process_sp->GetModIDRef().GetLastNaturalStopID();
+  if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
+    return false;
+
+  m_latest_stop_hook_id = last_natural_stop;
 
   std::vector<ExecutionContext> exc_ctx_with_reasons;
-  std::vector<SymbolContext> sym_ctx_with_reasons;
 
   ThreadList &cur_threadlist = m_process_sp->GetThreadList();
   size_t num_threads = cur_threadlist.GetSize();
@@ -2572,111 +2632,135 @@ void Target::RunStopHooks() {
     lldb::ThreadSP cur_thread_sp = cur_threadlist.GetThreadAtIndex(i);
     if (cur_thread_sp->ThreadStoppedForAReason()) {
       lldb::StackFrameSP cur_frame_sp = cur_thread_sp->GetStackFrameAtIndex(0);
-      exc_ctx_with_reasons.push_back(ExecutionContext(
-          m_process_sp.get(), cur_thread_sp.get(), cur_frame_sp.get()));
-      sym_ctx_with_reasons.push_back(
-          cur_frame_sp->GetSymbolContext(eSymbolContextEverything));
+      exc_ctx_with_reasons.emplace_back(m_process_sp.get(), cur_thread_sp.get(),
+                                        cur_frame_sp.get());
     }
   }
 
   // If no threads stopped for a reason, don't run the stop-hooks.
   size_t num_exe_ctx = exc_ctx_with_reasons.size();
   if (num_exe_ctx == 0)
-    return;
+    return false;
 
-  result.SetImmediateOutputStream(m_debugger.GetAsyncOutputStream());
-  result.SetImmediateErrorStream(m_debugger.GetAsyncErrorStream());
+  StreamSP output_sp = m_debugger.GetAsyncOutputStream();
 
-  bool keep_going = true;
+  bool auto_continue = false;
   bool hooks_ran = false;
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
-  bool did_restart = false;
+  bool should_stop = false;
+  bool somebody_restarted = false;
 
-  for (pos = m_stop_hooks.begin(); keep_going && pos != end; pos++) {
-    // result.Clear();
-    StopHookSP cur_hook_sp = (*pos).second;
+  for (auto stop_entry : m_stop_hooks) {
+    StopHookSP cur_hook_sp = stop_entry.second;
     if (!cur_hook_sp->IsActive())
       continue;
 
     bool any_thread_matched = false;
-    for (size_t i = 0; keep_going && i < num_exe_ctx; i++) {
-      if ((cur_hook_sp->GetSpecifier() == nullptr ||
-           cur_hook_sp->GetSpecifier()->SymbolContextMatches(
-               sym_ctx_with_reasons[i])) &&
-          (cur_hook_sp->GetThreadSpecifier() == nullptr ||
-           cur_hook_sp->GetThreadSpecifier()->ThreadPassesBasicTests(
-               exc_ctx_with_reasons[i].GetThreadRef()))) {
-        if (!hooks_ran) {
-          hooks_ran = true;
-        }
-        if (print_hook_header && !any_thread_matched) {
-          const char *cmd =
-              (cur_hook_sp->GetCommands().GetSize() == 1
-                   ? cur_hook_sp->GetCommands().GetStringAtIndex(0)
-                   : nullptr);
-          if (cmd)
-            result.AppendMessageWithFormat("\n- Hook %" PRIu64 " (%s)\n",
-                                           cur_hook_sp->GetID(), cmd);
-          else
-            result.AppendMessageWithFormat("\n- Hook %" PRIu64 "\n",
-                                           cur_hook_sp->GetID());
-          any_thread_matched = true;
-        }
+    for (auto exc_ctx : exc_ctx_with_reasons) {
+      // We detect somebody restarted in the stop-hook loop, and broke out of
+      // that loop back to here.  So break out of here too.
+      if (somebody_restarted)
+        break;
 
-        if (print_thread_header)
-          result.AppendMessageWithFormat(
-              "-- Thread %d\n",
-              exc_ctx_with_reasons[i].GetThreadPtr()->GetIndexID());
+      if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
+        continue;
 
-        CommandInterpreterRunOptions options;
-        options.SetStopOnContinue(true);
-        options.SetStopOnError(true);
-        options.SetEchoCommands(false);
-        options.SetPrintResults(true);
-        options.SetPrintErrors(true);
-        options.SetAddToHistory(false);
+      // We only consult the auto-continue for a stop hook if it matched the
+      // specifier.
+      auto_continue |= cur_hook_sp->GetAutoContinue();
 
-        // Force Async:
-        bool old_async = GetDebugger().GetAsyncExecution();
-        GetDebugger().SetAsyncExecution(true);
-        GetDebugger().GetCommandInterpreter().HandleCommands(
-            cur_hook_sp->GetCommands(), &exc_ctx_with_reasons[i], options,
-            result);
-        GetDebugger().SetAsyncExecution(old_async);
-        // If the command started the target going again, we should bag out of
-        // running the stop hooks.
-        if ((result.GetStatus() == eReturnStatusSuccessContinuingNoResult) ||
-            (result.GetStatus() == eReturnStatusSuccessContinuingResult)) {
-          // But only complain if there were more stop hooks to do:
-          StopHookCollection::iterator tmp = pos;
-          if (++tmp != end)
-            result.AppendMessageWithFormat(
-                "\nAborting stop hooks, hook %" PRIu64
-                " set the program running.\n"
-                "  Consider using '-G true' to make "
-                "stop hooks auto-continue.\n",
-                cur_hook_sp->GetID());
-          keep_going = false;
-          did_restart = true;
-        }
+      if (!hooks_ran)
+        hooks_ran = true;
+
+      if (print_hook_header && !any_thread_matched) {
+        StreamString s;
+        cur_hook_sp->GetDescription(&s, eDescriptionLevelBrief);
+        if (s.GetSize() != 0)
+          output_sp->Printf("\n- Hook %" PRIu64 " (%s)\n", cur_hook_sp->GetID(),
+                            s.GetData());
+        else
+          output_sp->Printf("\n- Hook %" PRIu64 "\n", cur_hook_sp->GetID());
+        any_thread_matched = true;
       }
+
+      if (print_thread_header)
+        output_sp->Printf("-- Thread %d\n",
+                          exc_ctx.GetThreadPtr()->GetIndexID());
+
+      StopHook::StopHookResult this_result =
+          cur_hook_sp->HandleStop(exc_ctx, output_sp);
+      bool this_should_stop = true;
+
+      switch (this_result) {
+      case StopHook::StopHookResult::KeepStopped:
+        // If this hook is set to auto-continue that should override the
+        // HandleStop result...
+        if (cur_hook_sp->GetAutoContinue())
+          this_should_stop = false;
+        else
+          this_should_stop = true;
+
+        break;
+      case StopHook::StopHookResult::RequestContinue:
+        this_should_stop = false;
+        break;
+      case StopHook::StopHookResult::AlreadyContinued:
+        // We don't have a good way to prohibit people from restarting the
+        // target willy nilly in a stop hook.  If the hook did so, give a
+        // gentle suggestion here and bag out if the hook processing.
+        output_sp->Printf("\nAborting stop hooks, hook %" PRIu64
+                          " set the program running.\n"
+                          "  Consider using '-G true' to make "
+                          "stop hooks auto-continue.\n",
+                          cur_hook_sp->GetID());
+        somebody_restarted = true;
+        break;
+      }
+      // If we're already restarted, stop processing stop hooks.
+      // FIXME: if we are doing non-stop mode for real, we would have to
+      // check that OUR thread was restarted, otherwise we should keep
+      // processing stop hooks.
+      if (somebody_restarted)
+        break;
+
+      // If anybody wanted to stop, we should all stop.
+      if (!should_stop)
+        should_stop = this_should_stop;
     }
   }
-  // Finally, if auto-continue was requested, do it now:
-  if (!did_restart && auto_continue)
-    m_process_sp->PrivateResume();
 
-  result.GetImmediateOutputStream()->Flush();
-  result.GetImmediateErrorStream()->Flush();
+  output_sp->Flush();
+
+  // If one of the commands in the stop hook already restarted the target,
+  // report that fact.
+  if (somebody_restarted)
+    return true;
+
+  // Finally, if auto-continue was requested, do it now:
+  // We only compute should_stop against the hook results if a hook got to run
+  // which is why we have to do this conjoint test.
+  if ((hooks_ran && !should_stop) || auto_continue) {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    Status error = m_process_sp->PrivateResume();
+    if (error.Success()) {
+      LLDB_LOG(log, "Resuming from RunStopHooks");
+      return true;
+    } else {
+      LLDB_LOG(log, "Resuming from RunStopHooks failed: {0}", error);
+      return false;
+    }
+  }
+
+  return false;
 }
 
-const TargetPropertiesSP &Target::GetGlobalProperties() {
+TargetProperties &Target::GetGlobalProperties() {
   // NOTE: intentional leak so we don't crash if global destructor chain gets
   // called as other threads still use the result of this function
-  static TargetPropertiesSP *g_settings_sp_ptr =
-      new TargetPropertiesSP(new TargetProperties(nullptr));
-  return *g_settings_sp_ptr;
+  static TargetProperties *g_settings_ptr =
+      new TargetProperties(nullptr);
+  return *g_settings_ptr;
 }
 
 Status Target::Install(ProcessLaunchInfo *launch_info) {
@@ -2838,6 +2922,20 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
   launch_info.GetFlags().Set(eLaunchFlagDebug);
 
+  if (launch_info.IsScriptedProcess()) {
+    // Only copy scripted process launch options.
+    ProcessLaunchInfo &default_launch_info = const_cast<ProcessLaunchInfo &>(
+        GetGlobalProperties().GetProcessLaunchInfo());
+
+    default_launch_info.SetProcessPluginName("ScriptedProcess");
+    default_launch_info.SetScriptedProcessClassName(
+        launch_info.GetScriptedProcessClassName());
+    default_launch_info.SetScriptedProcessDictionarySP(
+        launch_info.GetScriptedProcessDictionarySP());
+
+    SetProcessLaunchInfo(launch_info);
+  }
+
   // Get the value of synchronous execution here.  If you wait till after you
   // have started to run, then you could have hit a breakpoint, whose command
   // might switch the value, and then you'll pick up that incorrect value.
@@ -2863,7 +2961,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   // If we're not already connected to the process, and if we have a platform
   // that can launch a process for debugging, go ahead and do that here.
   if (state != eStateConnected && platform_sp &&
-      platform_sp->CanDebugProcess()) {
+      platform_sp->CanDebugProcess() && !launch_info.IsScriptedProcess()) {
     LLDB_LOGF(log, "Target::%s asking the platform to debug the process",
               __FUNCTION__);
 
@@ -2874,7 +2972,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     DeleteCurrentProcess();
 
     m_process_sp =
-        GetPlatform()->DebugProcess(launch_info, debugger, this, error);
+        GetPlatform()->DebugProcess(launch_info, debugger, *this, error);
 
   } else {
     LLDB_LOGF(log,
@@ -2887,7 +2985,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     } else {
       // Use a Process plugin to construct the process.
       const char *plugin_name = launch_info.GetProcessPluginName();
-      CreateProcess(launch_info.GetListener(), plugin_name, nullptr);
+      CreateProcess(launch_info.GetListener(), plugin_name, nullptr, false);
     }
 
     // Since we didn't have a platform launch the process, launch it here.
@@ -2964,6 +3062,41 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   return error;
 }
 
+void Target::SetTrace(const TraceSP &trace_sp) { m_trace_sp = trace_sp; }
+
+TraceSP Target::GetTrace() { return m_trace_sp; }
+
+llvm::Expected<TraceSP> Target::CreateTrace() {
+  if (!m_process_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "A process is required for tracing");
+  if (m_trace_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "A trace already exists for the target");
+
+  llvm::Expected<TraceSupportedResponse> trace_type =
+      m_process_sp->TraceSupported();
+  if (!trace_type)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(), "Tracing is not supported. %s",
+        llvm::toString(trace_type.takeError()).c_str());
+  if (llvm::Expected<TraceSP> trace_sp =
+          Trace::FindPluginForLiveProcess(trace_type->name, *m_process_sp))
+    m_trace_sp = *trace_sp;
+  else
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Couldn't create a Trace object for the process. %s",
+        llvm::toString(trace_sp.takeError()).c_str());
+  return m_trace_sp;
+}
+
+llvm::Expected<TraceSP> Target::GetTraceOrCreate() {
+  if (m_trace_sp)
+    return m_trace_sp;
+  return CreateTrace();
+}
+
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   auto state = eStateInvalid;
   auto process_sp = GetProcessSP();
@@ -3011,7 +3144,7 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
       const char *plugin_name = attach_info.GetProcessPluginName();
       process_sp =
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
-                        plugin_name, nullptr);
+                        plugin_name, nullptr, false);
       if (process_sp == nullptr) {
         error.SetErrorStringWithFormat(
             "failed to create process using plugin %s",
@@ -3128,19 +3261,16 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 
 // Target::StopHook
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
-    : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
+    : UserID(uid), m_target_sp(target_sp), m_specifier_sp(),
       m_thread_spec_up() {}
 
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
-      m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
-      m_thread_spec_up(), m_active(rhs.m_active),
-      m_auto_continue(rhs.m_auto_continue) {
+      m_specifier_sp(rhs.m_specifier_sp), m_thread_spec_up(),
+      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
 }
-
-Target::StopHook::~StopHook() = default;
 
 void Target::StopHook::SetSpecifier(SymbolContextSpecifier *specifier) {
   m_specifier_sp.reset(specifier);
@@ -3150,8 +3280,31 @@ void Target::StopHook::SetThreadSpecifier(ThreadSpec *specifier) {
   m_thread_spec_up.reset(specifier);
 }
 
+bool Target::StopHook::ExecutionContextPasses(const ExecutionContext &exc_ctx) {
+  SymbolContextSpecifier *specifier = GetSpecifier();
+  if (!specifier)
+    return true;
+
+  bool will_run = true;
+  if (exc_ctx.GetFramePtr())
+    will_run = GetSpecifier()->SymbolContextMatches(
+        exc_ctx.GetFramePtr()->GetSymbolContext(eSymbolContextEverything));
+  if (will_run && GetThreadSpecifier() != nullptr)
+    will_run =
+        GetThreadSpecifier()->ThreadPassesBasicTests(exc_ctx.GetThreadRef());
+
+  return will_run;
+}
+
 void Target::StopHook::GetDescription(Stream *s,
                                       lldb::DescriptionLevel level) const {
+
+  // For brief descriptions, only print the subclass description:
+  if (level == eDescriptionLevelBrief) {
+    GetSubclassDescription(s, level);
+    return;
+  }
+
   unsigned indent_level = s->GetIndentLevel();
 
   s->SetIndentLevel(indent_level + 2);
@@ -3182,15 +3335,155 @@ void Target::StopHook::GetDescription(Stream *s,
     s->PutCString("\n");
     s->SetIndentLevel(indent_level + 2);
   }
+  GetSubclassDescription(s, level);
+}
 
+void Target::StopHookCommandLine::GetSubclassDescription(
+    Stream *s, lldb::DescriptionLevel level) const {
+  // The brief description just prints the first command.
+  if (level == eDescriptionLevelBrief) {
+    if (m_commands.GetSize() == 1)
+      s->PutCString(m_commands.GetStringAtIndex(0));
+    return;
+  }
   s->Indent("Commands: \n");
-  s->SetIndentLevel(indent_level + 4);
+  s->SetIndentLevel(s->GetIndentLevel() + 4);
   uint32_t num_commands = m_commands.GetSize();
   for (uint32_t i = 0; i < num_commands; i++) {
     s->Indent(m_commands.GetStringAtIndex(i));
     s->PutCString("\n");
   }
-  s->SetIndentLevel(indent_level);
+  s->SetIndentLevel(s->GetIndentLevel() - 4);
+}
+
+// Target::StopHookCommandLine
+void Target::StopHookCommandLine::SetActionFromString(const std::string &string) {
+  GetCommands().SplitIntoLines(string);
+}
+
+void Target::StopHookCommandLine::SetActionFromStrings(
+    const std::vector<std::string> &strings) {
+  for (auto string : strings)
+    GetCommands().AppendString(string.c_str());
+}
+
+Target::StopHook::StopHookResult
+Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
+                                        StreamSP output_sp) {
+  assert(exc_ctx.GetTargetPtr() && "Can't call PerformAction on a context "
+                                   "with no target");
+
+  if (!m_commands.GetSize())
+    return StopHookResult::KeepStopped;
+
+  CommandReturnObject result(false);
+  result.SetImmediateOutputStream(output_sp);
+  result.SetInteractive(false);
+  Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
+  CommandInterpreterRunOptions options;
+  options.SetStopOnContinue(true);
+  options.SetStopOnError(true);
+  options.SetEchoCommands(false);
+  options.SetPrintResults(true);
+  options.SetPrintErrors(true);
+  options.SetAddToHistory(false);
+
+  // Force Async:
+  bool old_async = debugger.GetAsyncExecution();
+  debugger.SetAsyncExecution(true);
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exc_ctx,
+                                                  options, result);
+  debugger.SetAsyncExecution(old_async);
+  lldb::ReturnStatus status = result.GetStatus();
+  if (status == eReturnStatusSuccessContinuingNoResult ||
+      status == eReturnStatusSuccessContinuingResult)
+    return StopHookResult::AlreadyContinued;
+  return StopHookResult::KeepStopped;
+}
+
+// Target::StopHookScripted
+Status Target::StopHookScripted::SetScriptCallback(
+    std::string class_name, StructuredData::ObjectSP extra_args_sp) {
+  Status error;
+
+  ScriptInterpreter *script_interp =
+      GetTarget()->GetDebugger().GetScriptInterpreter();
+  if (!script_interp) {
+    error.SetErrorString("No script interpreter installed.");
+    return error;
+  }
+
+  m_class_name = class_name;
+
+  m_extra_args = new StructuredDataImpl();
+
+  if (extra_args_sp)
+    m_extra_args->SetObjectSP(extra_args_sp);
+
+  m_implementation_sp = script_interp->CreateScriptedStopHook(
+      GetTarget(), m_class_name.c_str(), m_extra_args, error);
+
+  return error;
+}
+
+Target::StopHook::StopHookResult
+Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
+                                     StreamSP output_sp) {
+  assert(exc_ctx.GetTargetPtr() && "Can't call HandleStop on a context "
+                                   "with no target");
+
+  ScriptInterpreter *script_interp =
+      GetTarget()->GetDebugger().GetScriptInterpreter();
+  if (!script_interp)
+    return StopHookResult::KeepStopped;
+
+  bool should_stop = script_interp->ScriptedStopHookHandleStop(
+      m_implementation_sp, exc_ctx, output_sp);
+
+  return should_stop ? StopHookResult::KeepStopped
+                     : StopHookResult::RequestContinue;
+}
+
+void Target::StopHookScripted::GetSubclassDescription(
+    Stream *s, lldb::DescriptionLevel level) const {
+  if (level == eDescriptionLevelBrief) {
+    s->PutCString(m_class_name);
+    return;
+  }
+  s->Indent("Class:");
+  s->Printf("%s\n", m_class_name.c_str());
+
+  // Now print the extra args:
+  // FIXME: We should use StructuredData.GetDescription on the m_extra_args
+  // but that seems to rely on some printing plugin that doesn't exist.
+  if (!m_extra_args->IsValid())
+    return;
+  StructuredData::ObjectSP object_sp = m_extra_args->GetObjectSP();
+  if (!object_sp || !object_sp->IsValid())
+    return;
+
+  StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
+  if (!as_dict || !as_dict->IsValid())
+    return;
+
+  uint32_t num_keys = as_dict->GetSize();
+  if (num_keys == 0)
+    return;
+
+  s->Indent("Args:\n");
+  s->SetIndentLevel(s->GetIndentLevel() + 4);
+
+  auto print_one_element = [&s](ConstString key,
+                                StructuredData::Object *object) {
+    s->Indent();
+    s->Printf("%s : %s\n", key.GetCString(),
+              object->GetStringValue().str().c_str());
+    return true;
+  };
+
+  as_dict->ForEach(print_one_element);
+
+  s->SetIndentLevel(s->GetIndentLevel() - 4);
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
@@ -3260,6 +3553,28 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
         eX86DisFlavorATT,
         "att",
         "AT&T disassembler flavor.",
+    },
+};
+
+static constexpr OptionEnumValueElement g_import_std_module_value_types[] = {
+    {
+        eImportStdModuleFalse,
+        "false",
+        "Never import the 'std' C++ module in the expression parser.",
+    },
+    {
+        eImportStdModuleFallback,
+        "fallback",
+        "Retry evaluating expressions with an imported 'std' C++ module if they"
+        " failed to parse without the module. This allows evaluating more "
+        "complex expressions involving C++ standard library types."
+    },
+    {
+        eImportStdModuleTrue,
+        "true",
+        "Always import the 'std' C++ module. This allows evaluating more "
+        "complex expressions involving C++ standard library types. This feature"
+        " is experimental."
     },
 };
 
@@ -3342,15 +3657,10 @@ enum {
   ePropertyExperimental,
 };
 
-class TargetOptionValueProperties : public OptionValueProperties {
+class TargetOptionValueProperties
+    : public Cloneable<TargetOptionValueProperties, OptionValueProperties> {
 public:
-  TargetOptionValueProperties(ConstString name) : OptionValueProperties(name) {}
-
-  // This constructor is used when creating TargetOptionValueProperties when it
-  // is part of a new lldb_private::Target instance. It will copy all current
-  // global property values as needed
-  TargetOptionValueProperties(const TargetPropertiesSP &target_properties_sp)
-      : OptionValueProperties(*target_properties_sp->GetValueProperties()) {}
+  TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -3381,11 +3691,12 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class TargetExperimentalOptionValueProperties : public OptionValueProperties {
+class TargetExperimentalOptionValueProperties
+    : public Cloneable<TargetExperimentalOptionValueProperties,
+                       OptionValueProperties> {
 public:
   TargetExperimentalOptionValueProperties()
-      : OptionValueProperties(
-            ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(ConstString(Properties::GetExperimentalSettingsName())) {}
 };
 
 TargetExperimentalProperties::TargetExperimentalProperties()
@@ -3398,8 +3709,8 @@ TargetExperimentalProperties::TargetExperimentalProperties()
 TargetProperties::TargetProperties(Target *target)
     : Properties(), m_launch_info(), m_target(target) {
   if (target) {
-    m_collection_sp = std::make_shared<TargetOptionValueProperties>(
-        Target::GetGlobalProperties());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(Target::GetGlobalProperties());
 
     // Set callbacks to update launch_info whenever "settins set" updated any
     // of these properties
@@ -3449,7 +3760,7 @@ TargetProperties::TargetProperties(Target *target)
         true, m_experimental_properties_up->GetValueProperties());
     m_collection_sp->AppendProperty(
         ConstString("process"), ConstString("Settings specific to processes."),
-        true, Process::GetGlobalProperties()->GetValueProperties());
+        true, Process::GetGlobalProperties().GetValueProperties());
   }
 }
 
@@ -3653,6 +3964,45 @@ Environment TargetProperties::GetEnvironment() const {
   return ComputeEnvironment();
 }
 
+Environment TargetProperties::GetInheritedEnvironment() const {
+  Environment environment;
+
+  if (m_target == nullptr)
+    return environment;
+
+  if (!m_collection_sp->GetPropertyAtIndexAsBoolean(
+          nullptr, ePropertyInheritEnv,
+          g_target_properties[ePropertyInheritEnv].default_uint_value != 0))
+    return environment;
+
+  PlatformSP platform_sp = m_target->GetPlatform();
+  if (platform_sp == nullptr)
+    return environment;
+
+  Environment platform_environment = platform_sp->GetEnvironment();
+  for (const auto &KV : platform_environment)
+    environment[KV.first()] = KV.second;
+
+  Args property_unset_environment;
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyUnsetEnvVars,
+                                            property_unset_environment);
+  for (const auto &var : property_unset_environment)
+    environment.erase(var.ref());
+
+  return environment;
+}
+
+Environment TargetProperties::GetTargetEnvironment() const {
+  Args property_environment;
+  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEnvVars,
+                                            property_environment);
+  Environment environment;
+  for (const auto &KV : Environment(property_environment))
+    environment[KV.first()] = KV.second;
+
+  return environment;
+}
+
 void TargetProperties::SetEnvironment(Environment env) {
   // TODO: Get rid of the Args intermediate step
   const uint32_t idx = ePropertyEnvVars;
@@ -3716,10 +4066,10 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
       nullptr, idx, g_target_properties[idx].default_uint_value != 0);
 }
 
-bool TargetProperties::GetEnableImportStdModule() const {
+ImportStdModule TargetProperties::GetImportStdModule() const {
   const uint32_t idx = ePropertyImportStdModule;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+  return (ImportStdModule)m_collection_sp->GetPropertyAtIndexAsEnumeration(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetEnableAutoApplyFixIts() const {
@@ -3830,6 +4180,12 @@ llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
   return "";
 }
 
+uint64_t TargetProperties::GetExprErrorLimit() const {
+  const uint32_t idx = ePropertyExprErrorLimit;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
@@ -3911,18 +4267,7 @@ void TargetProperties::SetDisplayRecognizedArguments(bool b) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
-bool TargetProperties::GetNonStopModeEnabled() const {
-  const uint32_t idx = ePropertyNonStopModeEnabled;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, false);
-}
-
-void TargetProperties::SetNonStopModeEnabled(bool b) {
-  const uint32_t idx = ePropertyNonStopModeEnabled;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
-}
-
-const ProcessLaunchInfo &TargetProperties::GetProcessLaunchInfo() {
-  m_launch_info.SetArg0(GetArg0()); // FIXME: Arg0 callback doesn't work
+const ProcessLaunchInfo &TargetProperties::GetProcessLaunchInfo() const {
   return m_launch_info;
 }
 
@@ -4026,6 +4371,17 @@ void TargetProperties::DisableSTDIOValueChangedCallback() {
     m_launch_info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
   else
     m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableSTDIO);
+}
+
+bool TargetProperties::GetDebugUtilityExpression() const {
+  const uint32_t idx = ePropertyDebugUtilityExpression;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetDebugUtilityExpression(bool debug) {
+  const uint32_t idx = ePropertyDebugUtilityExpression;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, debug);
 }
 
 // Target::TargetEventData

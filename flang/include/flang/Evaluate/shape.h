@@ -13,6 +13,7 @@
 #define FORTRAN_EVALUATE_SHAPE_H_
 
 #include "expression.h"
+#include "fold.h"
 #include "traverse.h"
 #include "variable.h"
 #include "flang/Common/indirection.h"
@@ -38,9 +39,6 @@ bool IsImpliedShape(const Symbol &);
 bool IsExplicitShape(const Symbol &);
 
 // Conversions between various representations of shapes.
-Shape AsShape(const Constant<ExtentType> &);
-std::optional<Shape> AsShape(FoldingContext &, ExtentExpr &&);
-
 std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &);
 
 std::optional<Constant<ExtentType>> AsConstantShape(
@@ -50,35 +48,50 @@ Constant<ExtentType> AsConstantShape(const ConstantSubscripts &);
 ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &);
 std::optional<ConstantSubscripts> AsConstantExtents(
     FoldingContext &, const Shape &);
+Shape AsShape(const ConstantSubscripts &);
+std::optional<Shape> AsShape(const std::optional<ConstantSubscripts> &);
 
 inline int GetRank(const Shape &s) { return static_cast<int>(s.size()); }
 
+Shape Fold(FoldingContext &, Shape &&);
+std::optional<Shape> Fold(FoldingContext &, std::optional<Shape> &&);
+
 template <typename A>
 std::optional<Shape> GetShape(FoldingContext &, const A &);
+template <typename A> std::optional<Shape> GetShape(const A &);
 
 // The dimension argument to these inquiries is zero-based,
 // unlike the DIM= arguments to many intrinsics.
+ExtentExpr GetLowerBound(const NamedEntity &, int dimension);
 ExtentExpr GetLowerBound(FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetUpperBound(const NamedEntity &, int dimension);
 MaybeExtentExpr GetUpperBound(
     FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr ComputeUpperBound(ExtentExpr &&lower, MaybeExtentExpr &&extent);
 MaybeExtentExpr ComputeUpperBound(
     FoldingContext &, ExtentExpr &&lower, MaybeExtentExpr &&extent);
+Shape GetLowerBounds(const NamedEntity &);
 Shape GetLowerBounds(FoldingContext &, const NamedEntity &);
+Shape GetUpperBounds(const NamedEntity &);
 Shape GetUpperBounds(FoldingContext &, const NamedEntity &);
+MaybeExtentExpr GetExtent(const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetExtent(
+    const Subscript &, const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(
     FoldingContext &, const Subscript &, const NamedEntity &, int dimension);
 
 // Compute an element count for a triplet or trip count for a DO.
-ExtentExpr CountTrips(FoldingContext &, ExtentExpr &&lower, ExtentExpr &&upper,
-    ExtentExpr &&stride);
-ExtentExpr CountTrips(FoldingContext &, const ExtentExpr &lower,
-    const ExtentExpr &upper, const ExtentExpr &stride);
-MaybeExtentExpr CountTrips(FoldingContext &, MaybeExtentExpr &&lower,
-    MaybeExtentExpr &&upper, MaybeExtentExpr &&stride);
+ExtentExpr CountTrips(
+    ExtentExpr &&lower, ExtentExpr &&upper, ExtentExpr &&stride);
+ExtentExpr CountTrips(
+    const ExtentExpr &lower, const ExtentExpr &upper, const ExtentExpr &stride);
+MaybeExtentExpr CountTrips(
+    MaybeExtentExpr &&lower, MaybeExtentExpr &&upper, MaybeExtentExpr &&stride);
 
 // Computes SIZE() == PRODUCT(shape)
 MaybeExtentExpr GetSize(Shape &&);
+ConstantSubscript GetSize(const ConstantSubscripts &);
 
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);
@@ -89,19 +102,22 @@ public:
   using Result = std::optional<Shape>;
   using Base = AnyTraverse<GetShapeHelper, Result>;
   using Base::operator();
-  explicit GetShapeHelper(FoldingContext &c) : Base{*this}, context_{c} {}
+  GetShapeHelper() : Base{*this} {}
+  explicit GetShapeHelper(FoldingContext &c) : Base{*this}, context_{&c} {}
 
-  Result operator()(const ImpliedDoIndex &) const { return Scalar(); }
-  Result operator()(const DescriptorInquiry &) const { return Scalar(); }
-  Result operator()(const TypeParamInquiry &) const { return Scalar(); }
-  Result operator()(const BOZLiteralConstant &) const { return Scalar(); }
+  Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
+  Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
+  Result operator()(const TypeParamInquiry &) const { return ScalarShape(); }
+  Result operator()(const BOZLiteralConstant &) const { return ScalarShape(); }
   Result operator()(const StaticDataObject::Pointer &) const {
-    return Scalar();
+    return ScalarShape();
   }
-  Result operator()(const StructureConstructor &) const { return Scalar(); }
+  Result operator()(const StructureConstructor &) const {
+    return ScalarShape();
+  }
 
   template <typename T> Result operator()(const Constant<T> &c) const {
-    return AsShape(c.SHAPE());
+    return ConstantShape(c.SHAPE());
   }
 
   Result operator()(const Symbol &) const;
@@ -125,21 +141,19 @@ public:
   }
 
 private:
-  static Result Scalar() { return Shape{}; }
-  Shape CreateShape(int rank, NamedEntity &base) const {
-    Shape shape;
-    for (int dimension{0}; dimension < rank; ++dimension) {
-      shape.emplace_back(GetExtent(context_, base, dimension));
-    }
-    return shape;
-  }
+  static Result ScalarShape() { return Shape{}; }
+  static Shape ConstantShape(const Constant<ExtentType> &);
+  Result AsShape(ExtentExpr &&) const;
+  static Shape CreateShape(int rank, NamedEntity &);
+
   template <typename T>
   MaybeExtentExpr GetArrayConstructorValueExtent(
       const ArrayConstructorValue<T> &value) const {
     return std::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
-              if (std::optional<Shape> xShape{GetShape(context_, x)}) {
+              if (auto xShape{
+                      context_ ? GetShape(*context_, x) : GetShape(x)}) {
                 // Array values in array constructors get linearized.
                 return GetSize(std::move(*xShape));
               } else {
@@ -154,8 +168,7 @@ private:
                   !ContainsAnyImpliedDoIndex(ido.stride())) {
                 if (auto nValues{GetArrayConstructorExtent(ido.values())}) {
                   return std::move(*nValues) *
-                      CountTrips(
-                          context_, ido.lower(), ido.upper(), ido.stride());
+                      CountTrips(ido.lower(), ido.upper(), ido.stride());
                 }
               }
               return std::nullopt;
@@ -171,6 +184,11 @@ private:
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
         result = std::move(result) + std::move(*n);
+        if (context_) {
+          // Fold during expression creation to avoid creating an expression so
+          // large we can't evalute it without overflowing the stack.
+          result = Fold(*context_, std::move(result));
+        }
       } else {
         return std::nullopt;
       }
@@ -178,12 +196,29 @@ private:
     return result;
   }
 
-  FoldingContext &context_;
+  FoldingContext *context_{nullptr};
 };
 
 template <typename A>
 std::optional<Shape> GetShape(FoldingContext &context, const A &x) {
-  return GetShapeHelper{context}(x);
+  if (auto shape{GetShapeHelper{context}(x)}) {
+    return Fold(context, std::move(shape));
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <typename A> std::optional<Shape> GetShape(const A &x) {
+  return GetShapeHelper{}(x);
+}
+
+template <typename A>
+std::optional<Shape> GetShape(FoldingContext *context, const A &x) {
+  if (context) {
+    return GetShape(*context, x);
+  } else {
+    return GetShapeHelper{}(x);
+  }
 }
 
 template <typename A>
@@ -207,10 +242,30 @@ std::optional<ConstantSubscripts> GetConstantExtents(
 }
 
 // Compilation-time shape conformance checking, when corresponding extents
-// are known.
-bool CheckConformance(parser::ContextualMessages &, const Shape &left,
-    const Shape &right, const char *leftIs = "left operand",
-    const char *rightIs = "right operand");
+// are or should be known.  The result is an optional Boolean:
+//  - nullopt: no error found or reported, but conformance cannot
+//    be guaranteed during compilation; this result is possible only
+//    when one or both arrays are allowed to have deferred shape
+//  - true: no error found or reported, arrays conform
+//  - false: errors found and reported
+// Use "CheckConformance(...).value_or()" to specify a default result
+// when you don't care whether messages have been emitted.
+struct CheckConformanceFlags {
+  enum Flags {
+    None = 0,
+    LeftScalarExpandable = 1,
+    RightScalarExpandable = 2,
+    LeftIsDeferredShape = 4,
+    RightIsDeferredShape = 8,
+    EitherScalarExpandable = LeftScalarExpandable | RightScalarExpandable,
+    BothDeferredShape = LeftIsDeferredShape | RightIsDeferredShape,
+    RightIsExpandableDeferred = RightScalarExpandable | RightIsDeferredShape,
+  };
+};
+std::optional<bool> CheckConformance(parser::ContextualMessages &,
+    const Shape &left, const Shape &right,
+    CheckConformanceFlags::Flags flags = CheckConformanceFlags::None,
+    const char *leftIs = "left operand", const char *rightIs = "right operand");
 
 // Increments one-based subscripts in element order (first varies fastest)
 // and returns true when they remain in range; resets them all to one and

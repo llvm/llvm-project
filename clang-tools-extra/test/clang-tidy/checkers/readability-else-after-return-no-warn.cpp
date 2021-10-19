@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-else-after-return %t -- \
 // RUN:     -config='{CheckOptions: [ \
-// RUN:         {key: readability-else-after-return.WarnOnUnfixable, value: 0}, \
+// RUN:         {key: readability-else-after-return.WarnOnUnfixable, value: false}, \
 // RUN:     ]}'
 
 int h(int);

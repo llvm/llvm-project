@@ -9,19 +9,19 @@
 #ifndef LLD_MACHO_SYMBOLS_H
 #define LLD_MACHO_SYMBOLS_H
 
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace lld {
 namespace macho {
 
 class InputSection;
 class MachHeaderSection;
-class DylibFile;
-class ArchiveFile;
 
 struct StringRefZ {
   StringRefZ(const char *s) : data(s), size(-1) {}
@@ -36,24 +36,31 @@ public:
   enum Kind {
     DefinedKind,
     UndefinedKind,
+    CommonKind,
     DylibKind,
     LazyKind,
-    DSOHandleKind,
   };
 
   virtual ~Symbol() {}
 
-  Kind kind() const { return static_cast<Kind>(symbolKind); }
+  Kind kind() const { return symbolKind; }
 
-  StringRef getName() const { return {name.data, name.size}; }
+  StringRef getName() const {
+    if (nameSize == (uint32_t)-1)
+      nameSize = strlen(nameData);
+    return {nameData, nameSize};
+  }
+
+  bool isLive() const;
 
   virtual uint64_t getVA() const { return 0; }
 
-  virtual uint64_t getFileOffset() const {
-    llvm_unreachable("attempt to get an offset from a non-defined symbol");
-  }
+  virtual bool isWeakDef() const { llvm_unreachable("cannot be weak def"); }
 
-  virtual bool isWeakDef() const { llvm_unreachable("cannot be weak"); }
+  // Only undefined or dylib symbols can be weak references. A weak reference
+  // need not be satisfied at runtime, e.g. due to the symbol not being
+  // available on a given target platform.
+  virtual bool isWeakRef() const { llvm_unreachable("cannot be a weak ref"); }
 
   virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
 
@@ -63,6 +70,16 @@ public:
   // Whether this symbol is in the StubsSection.
   bool isInStubs() const { return stubsIndex != UINT32_MAX; }
 
+  uint64_t getStubVA() const;
+  uint64_t getGotVA() const;
+  uint64_t getTlvVA() const;
+  uint64_t resolveBranchVA() const {
+    assert(isa<Defined>(this) || isa<DylibSymbol>(this));
+    return isInStubs() ? getStubVA() : getVA();
+  }
+  uint64_t resolveGotVA() const { return isInGot() ? getGotVA() : getVA(); }
+  uint64_t resolveTlvVA() const { return isInGot() ? getTlvVA() : getVA(); }
+
   // The index of this symbol in the GOT or the TLVPointer section, depending
   // on whether it is a thread-local. A given symbol cannot be referenced by
   // both these sections at once.
@@ -70,137 +87,237 @@ public:
 
   uint32_t stubsIndex = UINT32_MAX;
 
+  uint32_t symtabIndex = UINT32_MAX;
+
+  InputFile *getFile() const { return file; }
+
 protected:
-  Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
+  Symbol(Kind k, StringRefZ name, InputFile *file)
+      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file),
+        isUsedInRegularObj(!file || isa<ObjFile>(file)),
+        used(!config->deadStrip) {}
 
   Kind symbolKind;
-  StringRefZ name;
+  const char *nameData;
+  mutable uint32_t nameSize;
+  InputFile *file;
+
+public:
+  // True if this symbol was referenced by a regular (non-bitcode) object.
+  bool isUsedInRegularObj : 1;
+
+  // True if an undefined or dylib symbol is used from a live section.
+  bool used : 1;
 };
 
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef,
-          bool isExternal)
-      : Symbol(DefinedKind, name), isec(isec), value(value),
-        overridesWeakDef(false), weakDef(isWeakDef), external(isExternal) {}
+  Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
+          uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
+          bool isThumb, bool isReferencedDynamically, bool noDeadStrip)
+      : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
+        overridesWeakDef(false), privateExtern(isPrivateExtern),
+        includeInSymtab(true), thumb(isThumb),
+        referencedDynamically(isReferencedDynamically),
+        noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
+    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+      concatIsec->numRefs++;
+  }
 
   bool isWeakDef() const override { return weakDef; }
-
-  bool isTlv() const override { return isThreadLocalVariables(isec->flags); }
+  bool isExternalWeakDef() const {
+    return isWeakDef() && isExternal() && !privateExtern;
+  }
+  bool isTlv() const override {
+    return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
+  }
 
   bool isExternal() const { return external; }
+  bool isAbsolute() const { return isec == nullptr; }
+
+  uint64_t getVA() const override;
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
-  uint64_t getVA() const override { return isec->getVA() + value; }
-
-  uint64_t getFileOffset() const override {
-    return isec->getFileOffset() + value;
-  }
-
   InputSection *isec;
-  uint32_t value;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
+  uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
+  uint64_t size;
 
   bool overridesWeakDef : 1;
+  // Whether this symbol should appear in the output binary's export trie.
+  bool privateExtern : 1;
+  // Whether this symbol should appear in the output symbol table.
+  bool includeInSymtab : 1;
+  // Only relevant when compiling for Thumb-supporting arm32 archs.
+  bool thumb : 1;
+  // Symbols marked referencedDynamically won't be removed from the output's
+  // symbol table by tools like strip. In theory, this could be set on arbitrary
+  // symbols in input object files. In practice, it's used solely for the
+  // synthetic __mh_execute_header symbol.
+  // This is information for the static linker, and it's also written to the
+  // output file's symbol table for tools running later (such as `strip`).
+  bool referencedDynamically : 1;
+  // Set on symbols that should not be removed by dead code stripping.
+  // Set for example on `__attribute__((used))` globals, or on some Objective-C
+  // metadata. This is information only for the static linker and not written
+  // to the output.
+  bool noDeadStrip : 1;
 
 private:
   const bool weakDef : 1;
   const bool external : 1;
 };
 
+// This enum does double-duty: as a symbol property, it indicates whether & how
+// a dylib symbol is referenced. As a DylibFile property, it indicates the kind
+// of referenced symbols contained within the file. If there are both weak
+// and strong references to the same file, we will count the file as
+// strongly-referenced.
+enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
+
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name) : Symbol(UndefinedKind, name) {}
+  Undefined(StringRefZ name, InputFile *file, RefState refState)
+      : Symbol(UndefinedKind, name, file), refState(refState) {
+    assert(refState != RefState::Unreferenced);
+  }
+
+  bool isWeakRef() const override { return refState == RefState::Weak; }
 
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
+
+  RefState refState : 2;
+};
+
+// On Unix, it is traditionally allowed to write variable definitions without
+// initialization expressions (such as "int foo;") to header files. These are
+// called tentative definitions.
+//
+// Using tentative definitions is usually considered a bad practice; you should
+// write only declarations (such as "extern int foo;") to header files.
+// Nevertheless, the linker and the compiler have to do something to support
+// bad code by allowing duplicate definitions for this particular case.
+//
+// The compiler creates common symbols when it sees tentative definitions.
+// (You can suppress this behavior and let the compiler create a regular
+// defined symbol by passing -fno-common. -fno-common is the default in clang
+// as of LLVM 11.0.) When linking the final binary, if there are remaining
+// common symbols after name resolution is complete, the linker converts them
+// to regular defined symbols in a __common section.
+class CommonSymbol : public Symbol {
+public:
+  CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align,
+               bool isPrivateExtern)
+      : Symbol(CommonKind, name, file), size(size),
+        align(align != 1 ? align : llvm::PowerOf2Ceil(size)),
+        privateExtern(isPrivateExtern) {
+    // TODO: cap maximum alignment
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
+
+  const uint64_t size;
+  const uint32_t align;
+  const bool privateExtern;
 };
 
 class DylibSymbol : public Symbol {
 public:
-  DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef, bool isTlv)
-      : Symbol(DylibKind, name), file(file), weakDef(isWeakDef), tlv(isTlv) {}
+  DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef,
+              RefState refState, bool isTlv)
+      : Symbol(DylibKind, name, file), refState(refState), weakDef(isWeakDef),
+        tlv(isTlv) {
+    if (file && refState > RefState::Unreferenced)
+      file->numReferencedSymbols++;
+  }
 
+  uint64_t getVA() const override;
   bool isWeakDef() const override { return weakDef; }
+  bool isWeakRef() const override { return refState == RefState::Weak; }
+  bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
+  bool isDynamicLookup() const { return file == nullptr; }
   bool hasStubsHelper() const { return stubsHelperIndex != UINT32_MAX; }
+
+  DylibFile *getFile() const {
+    assert(!isDynamicLookup());
+    return cast<DylibFile>(file);
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 
-  DylibFile *file;
   uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 
+  RefState getRefState() const { return refState; }
+
+  void reference(RefState newState) {
+    assert(newState > RefState::Unreferenced);
+    if (refState == RefState::Unreferenced && file)
+      getFile()->numReferencedSymbols++;
+    refState = std::max(refState, newState);
+  }
+
+  void unreference() {
+    // dynamic_lookup symbols have no file.
+    if (refState > RefState::Unreferenced && file) {
+      assert(getFile()->numReferencedSymbols > 0);
+      getFile()->numReferencedSymbols--;
+    }
+  }
+
 private:
-  const bool weakDef;
-  const bool tlv;
+  RefState refState : 2;
+  const bool weakDef : 1;
+  const bool tlv : 1;
 };
 
 class LazySymbol : public Symbol {
 public:
   LazySymbol(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
-      : Symbol(LazyKind, sym.getName()), file(file), sym(sym) {}
+      : Symbol(LazyKind, sym.getName(), file), sym(sym) {}
+
+  ArchiveFile *getFile() const { return cast<ArchiveFile>(file); }
+  void fetchArchiveMember();
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 
-  void fetchArchiveMember();
-
 private:
-  ArchiveFile *file;
   const llvm::object::Archive::Symbol sym;
-};
-
-// The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit which
-// does e.g. cleanup of static global variables. The ABI document says that the
-// pointer can point to any address in one of the dylib's segments, but in
-// practice ld64 seems to set it to point to the header, so that's what's
-// implemented here.
-//
-// The ARM C++ ABI uses __dso_handle similarly, but I (int3) have not yet
-// tested this on an ARM platform.
-//
-// DSOHandle effectively functions like a Defined symbol, but it doesn't belong
-// to an InputSection.
-class DSOHandle : public Symbol {
-public:
-  DSOHandle(const MachHeaderSection *header)
-      : Symbol(DSOHandleKind, name), header(header) {}
-
-  const MachHeaderSection *header;
-
-  uint64_t getVA() const override;
-
-  uint64_t getFileOffset() const override;
-
-  bool isWeakDef() const override { return false; }
-
-  bool isTlv() const override { return false; }
-
-  static constexpr StringRef name = "___dso_handle";
-
-  static bool classof(const Symbol *s) { return s->kind() == DSOHandleKind; }
 };
 
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
-  alignas(DylibSymbol) char c[sizeof(DylibSymbol)];
-  alignas(LazySymbol) char d[sizeof(LazySymbol)];
+  alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
+  alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
+  alignas(LazySymbol) char e[sizeof(LazySymbol)];
 };
 
 template <typename T, typename... ArgT>
-T *replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
 
-  return new (s) T(std::forward<ArgT>(arg)...);
+  bool isUsedInRegularObj = s->isUsedInRegularObj;
+  bool used = s->used;
+  T *sym = new (s) T(std::forward<ArgT>(arg)...);
+  sym->isUsedInRegularObj |= isUsedInRegularObj;
+  sym->used |= used;
+  return sym;
 }
 
 } // namespace macho
 
 std::string toString(const macho::Symbol &);
+std::string toMachOString(const llvm::object::Archive::Symbol &);
+
 } // namespace lld
 
 #endif

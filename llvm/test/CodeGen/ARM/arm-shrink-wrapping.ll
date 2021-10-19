@@ -1760,102 +1760,199 @@ declare double @llvm.pow.f64(double, double)
 ;
 ; bl
 define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "frame-pointer"="all" {
-; ARM-LABEL: debug_info:
-; ARM:       @ %bb.0: @ %bb
-; ARM-NEXT:    push {r4, r7, lr}
-; ARM-NEXT:    add r7, sp, #4
-; ARM-NEXT:    sub r4, sp, #16
-; ARM-NEXT:    bfc r4, #0, #4
-; ARM-NEXT:    mov sp, r4
-; ARM-NEXT:    tst r2, #1
-; ARM-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; ARM-NEXT:    beq LBB12_2
-; ARM-NEXT:  @ %bb.1: @ %bb3
-; ARM-NEXT:    ldr r1, [r7, #8]
-; ARM-NEXT:    vmov s16, r0
-; ARM-NEXT:    mov r0, r3
-; ARM-NEXT:    mov r2, r3
-; ARM-NEXT:    vmov d9, r3, r1
-; ARM-NEXT:    mov r3, r1
-; ARM-NEXT:    bl _pow
-; ARM-NEXT:    vmov.f32 s0, #1.000000e+00
-; ARM-NEXT:    vmov.f64 d16, #1.000000e+00
-; ARM-NEXT:    vadd.f64 d16, d9, d16
-; ARM-NEXT:    vcmp.f32 s16, s0
-; ARM-NEXT:    vmrs APSR_nzcv, fpscr
-; ARM-NEXT:    vmov d17, r0, r1
-; ARM-NEXT:    vmov.f64 d18, d9
-; ARM-NEXT:    vadd.f64 d17, d17, d17
-; ARM-NEXT:    vmovgt.f64 d18, d16
-; ARM-NEXT:    vcmp.f64 d18, d9
-; ARM-NEXT:    vmrs APSR_nzcv, fpscr
-; ARM-NEXT:    vmovne.f64 d9, d17
-; ARM-NEXT:    vcvt.f32.f64 s0, d9
-; ARM-NEXT:    b LBB12_3
-; ARM-NEXT:  LBB12_2:
-; ARM-NEXT:    vldr s0, LCPI12_0
-; ARM-NEXT:  LBB12_3: @ %bb13
-; ARM-NEXT:    mov r4, sp
-; ARM-NEXT:    vld1.64 {d8, d9}, [r4:128]
-; ARM-NEXT:    vmov r0, s0
-; ARM-NEXT:    sub sp, r7, #4
-; ARM-NEXT:    pop {r4, r7, pc}
-; ARM-NEXT:    .p2align 2
-; ARM-NEXT:  @ %bb.4:
-; ARM-NEXT:    .data_region
-; ARM-NEXT:  LCPI12_0:
-; ARM-NEXT:    .long 0 @ float 0
-; ARM-NEXT:    .end_data_region
+; ARM-ENABLE-LABEL: debug_info:
+; ARM-ENABLE:       @ %bb.0: @ %bb
+; ARM-ENABLE-NEXT:    push {r4, r7, lr}
+; ARM-ENABLE-NEXT:    add r7, sp, #4
+; ARM-ENABLE-NEXT:    sub r4, sp, #16
+; ARM-ENABLE-NEXT:    bfc r4, #0, #4
+; ARM-ENABLE-NEXT:    mov sp, r4
+; ARM-ENABLE-NEXT:    tst r2, #1
+; ARM-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; ARM-ENABLE-NEXT:    beq LBB12_2
+; ARM-ENABLE-NEXT:  @ %bb.1: @ %bb3
+; ARM-ENABLE-NEXT:    ldr r1, [r7, #8]
+; ARM-ENABLE-NEXT:    vmov s16, r0
+; ARM-ENABLE-NEXT:    mov r0, r3
+; ARM-ENABLE-NEXT:    mov r2, r3
+; ARM-ENABLE-NEXT:    vmov d9, r3, r1
+; ARM-ENABLE-NEXT:    mov r3, r1
+; ARM-ENABLE-NEXT:    bl _pow
+; ARM-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; ARM-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
+; ARM-ENABLE-NEXT:    vadd.f64 d16, d9, d16
+; ARM-ENABLE-NEXT:    vcmp.f32 s16, s0
+; ARM-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; ARM-ENABLE-NEXT:    vmov d17, r0, r1
+; ARM-ENABLE-NEXT:    vmov.f64 d18, d9
+; ARM-ENABLE-NEXT:    vadd.f64 d17, d17, d17
+; ARM-ENABLE-NEXT:    vmovgt.f64 d18, d16
+; ARM-ENABLE-NEXT:    vcmp.f64 d18, d9
+; ARM-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; ARM-ENABLE-NEXT:    vmovne.f64 d9, d17
+; ARM-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
+; ARM-ENABLE-NEXT:    b LBB12_3
+; ARM-ENABLE-NEXT:  LBB12_2:
+; ARM-ENABLE-NEXT:    vldr s0, LCPI12_0
+; ARM-ENABLE-NEXT:  LBB12_3: @ %bb13
+; ARM-ENABLE-NEXT:    mov r4, sp
+; ARM-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; ARM-ENABLE-NEXT:    vmov r0, s0
+; ARM-ENABLE-NEXT:    sub sp, r7, #4
+; ARM-ENABLE-NEXT:    pop {r4, r7, pc}
+; ARM-ENABLE-NEXT:    .p2align 2
+; ARM-ENABLE-NEXT:  @ %bb.4:
+; ARM-ENABLE-NEXT:    .data_region
+; ARM-ENABLE-NEXT:  LCPI12_0:
+; ARM-ENABLE-NEXT:    .long 0x00000000 @ float 0
+; ARM-ENABLE-NEXT:    .end_data_region
 ;
-; THUMB-LABEL: debug_info:
-; THUMB:       @ %bb.0: @ %bb
-; THUMB-NEXT:    push {r4, r7, lr}
-; THUMB-NEXT:    add r7, sp, #4
-; THUMB-NEXT:    sub.w r4, sp, #16
-; THUMB-NEXT:    bfc r4, #0, #4
-; THUMB-NEXT:    mov sp, r4
-; THUMB-NEXT:    lsls r1, r2, #31
-; THUMB-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; THUMB-NEXT:    beq LBB12_2
-; THUMB-NEXT:  @ %bb.1: @ %bb3
-; THUMB-NEXT:    ldr r1, [r7, #8]
-; THUMB-NEXT:    vmov s16, r0
-; THUMB-NEXT:    mov r0, r3
-; THUMB-NEXT:    mov r2, r3
-; THUMB-NEXT:    vmov d9, r3, r1
-; THUMB-NEXT:    mov r3, r1
-; THUMB-NEXT:    bl _pow
-; THUMB-NEXT:    vmov.f32 s0, #1.000000e+00
-; THUMB-NEXT:    vmov.f64 d16, #1.000000e+00
-; THUMB-NEXT:    vmov.f64 d18, d9
-; THUMB-NEXT:    vcmp.f32 s16, s0
-; THUMB-NEXT:    vadd.f64 d16, d9, d16
-; THUMB-NEXT:    vmrs APSR_nzcv, fpscr
-; THUMB-NEXT:    it gt
-; THUMB-NEXT:    vmovgt.f64 d18, d16
-; THUMB-NEXT:    vcmp.f64 d18, d9
-; THUMB-NEXT:    vmov d17, r0, r1
-; THUMB-NEXT:    vmrs APSR_nzcv, fpscr
-; THUMB-NEXT:    vadd.f64 d17, d17, d17
-; THUMB-NEXT:    it ne
-; THUMB-NEXT:    vmovne.f64 d9, d17
-; THUMB-NEXT:    vcvt.f32.f64 s0, d9
-; THUMB-NEXT:    b LBB12_3
-; THUMB-NEXT:  LBB12_2:
-; THUMB-NEXT:    vldr s0, LCPI12_0
-; THUMB-NEXT:  LBB12_3: @ %bb13
-; THUMB-NEXT:    mov r4, sp
-; THUMB-NEXT:    vld1.64 {d8, d9}, [r4:128]
-; THUMB-NEXT:    subs r4, r7, #4
-; THUMB-NEXT:    vmov r0, s0
-; THUMB-NEXT:    mov sp, r4
-; THUMB-NEXT:    pop {r4, r7, pc}
-; THUMB-NEXT:    .p2align 2
-; THUMB-NEXT:  @ %bb.4:
-; THUMB-NEXT:    .data_region
-; THUMB-NEXT:  LCPI12_0:
-; THUMB-NEXT:    .long 0 @ float 0
-; THUMB-NEXT:    .end_data_region
+; ARM-DISABLE-LABEL: debug_info:
+; ARM-DISABLE:       @ %bb.0: @ %bb
+; ARM-DISABLE-NEXT:    push {r4, r7, lr}
+; ARM-DISABLE-NEXT:    add r7, sp, #4
+; ARM-DISABLE-NEXT:    sub r4, sp, #16
+; ARM-DISABLE-NEXT:    bfc r4, #0, #4
+; ARM-DISABLE-NEXT:    mov sp, r4
+; ARM-DISABLE-NEXT:    tst r2, #1
+; ARM-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; ARM-DISABLE-NEXT:    beq LBB12_2
+; ARM-DISABLE-NEXT:  @ %bb.1: @ %bb3
+; ARM-DISABLE-NEXT:    ldr r1, [r7, #8]
+; ARM-DISABLE-NEXT:    vmov s16, r0
+; ARM-DISABLE-NEXT:    mov r0, r3
+; ARM-DISABLE-NEXT:    mov r2, r3
+; ARM-DISABLE-NEXT:    vmov d9, r3, r1
+; ARM-DISABLE-NEXT:    mov r3, r1
+; ARM-DISABLE-NEXT:    bl _pow
+; ARM-DISABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; ARM-DISABLE-NEXT:    vmov.f64 d16, #1.000000e+00
+; ARM-DISABLE-NEXT:    vadd.f64 d16, d9, d16
+; ARM-DISABLE-NEXT:    vcmp.f32 s16, s0
+; ARM-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; ARM-DISABLE-NEXT:    vmov d17, r0, r1
+; ARM-DISABLE-NEXT:    vmov.f64 d18, d9
+; ARM-DISABLE-NEXT:    vadd.f64 d17, d17, d17
+; ARM-DISABLE-NEXT:    vmovgt.f64 d18, d16
+; ARM-DISABLE-NEXT:    vcmp.f64 d18, d9
+; ARM-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; ARM-DISABLE-NEXT:    vmovne.f64 d9, d17
+; ARM-DISABLE-NEXT:    vcvt.f32.f64 s0, d9
+; ARM-DISABLE-NEXT:    b LBB12_3
+; ARM-DISABLE-NEXT:  LBB12_2:
+; ARM-DISABLE-NEXT:    vldr s0, LCPI12_0
+; ARM-DISABLE-NEXT:  LBB12_3: @ %bb13
+; ARM-DISABLE-NEXT:    mov r4, sp
+; ARM-DISABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; ARM-DISABLE-NEXT:    vmov r0, s0
+; ARM-DISABLE-NEXT:    sub sp, r7, #4
+; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:    .p2align 2
+; ARM-DISABLE-NEXT:  @ %bb.4:
+; ARM-DISABLE-NEXT:    .data_region
+; ARM-DISABLE-NEXT:  LCPI12_0:
+; ARM-DISABLE-NEXT:    .long 0x00000000 @ float 0
+; ARM-DISABLE-NEXT:    .end_data_region
+;
+; THUMB-ENABLE-LABEL: debug_info:
+; THUMB-ENABLE:       @ %bb.0: @ %bb
+; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
+; THUMB-ENABLE-NEXT:    add r7, sp, #4
+; THUMB-ENABLE-NEXT:    sub.w r4, sp, #16
+; THUMB-ENABLE-NEXT:    bfc r4, #0, #4
+; THUMB-ENABLE-NEXT:    mov sp, r4
+; THUMB-ENABLE-NEXT:    lsls r1, r2, #31
+; THUMB-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; THUMB-ENABLE-NEXT:    beq LBB12_2
+; THUMB-ENABLE-NEXT:  @ %bb.1: @ %bb3
+; THUMB-ENABLE-NEXT:    ldr r1, [r7, #8]
+; THUMB-ENABLE-NEXT:    vmov s16, r0
+; THUMB-ENABLE-NEXT:    mov r0, r3
+; THUMB-ENABLE-NEXT:    mov r2, r3
+; THUMB-ENABLE-NEXT:    vmov d9, r3, r1
+; THUMB-ENABLE-NEXT:    mov r3, r1
+; THUMB-ENABLE-NEXT:    bl _pow
+; THUMB-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; THUMB-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
+; THUMB-ENABLE-NEXT:    vmov.f64 d18, d9
+; THUMB-ENABLE-NEXT:    vcmp.f32 s16, s0
+; THUMB-ENABLE-NEXT:    vadd.f64 d16, d9, d16
+; THUMB-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; THUMB-ENABLE-NEXT:    it gt
+; THUMB-ENABLE-NEXT:    vmovgt.f64 d18, d16
+; THUMB-ENABLE-NEXT:    vcmp.f64 d18, d9
+; THUMB-ENABLE-NEXT:    vmov d17, r0, r1
+; THUMB-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; THUMB-ENABLE-NEXT:    vadd.f64 d17, d17, d17
+; THUMB-ENABLE-NEXT:    it ne
+; THUMB-ENABLE-NEXT:    vmovne.f64 d9, d17
+; THUMB-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
+; THUMB-ENABLE-NEXT:    b LBB12_3
+; THUMB-ENABLE-NEXT:  LBB12_2:
+; THUMB-ENABLE-NEXT:    vldr s0, LCPI12_0
+; THUMB-ENABLE-NEXT:  LBB12_3: @ %bb13
+; THUMB-ENABLE-NEXT:    mov r4, sp
+; THUMB-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; THUMB-ENABLE-NEXT:    subs r4, r7, #4
+; THUMB-ENABLE-NEXT:    vmov r0, s0
+; THUMB-ENABLE-NEXT:    mov sp, r4
+; THUMB-ENABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-ENABLE-NEXT:    .p2align 2
+; THUMB-ENABLE-NEXT:  @ %bb.4:
+; THUMB-ENABLE-NEXT:    .data_region
+; THUMB-ENABLE-NEXT:  LCPI12_0:
+; THUMB-ENABLE-NEXT:    .long 0x00000000 @ float 0
+; THUMB-ENABLE-NEXT:    .end_data_region
+;
+; THUMB-DISABLE-LABEL: debug_info:
+; THUMB-DISABLE:       @ %bb.0: @ %bb
+; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
+; THUMB-DISABLE-NEXT:    add r7, sp, #4
+; THUMB-DISABLE-NEXT:    sub.w r4, sp, #16
+; THUMB-DISABLE-NEXT:    bfc r4, #0, #4
+; THUMB-DISABLE-NEXT:    mov sp, r4
+; THUMB-DISABLE-NEXT:    lsls r1, r2, #31
+; THUMB-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; THUMB-DISABLE-NEXT:    beq LBB12_2
+; THUMB-DISABLE-NEXT:  @ %bb.1: @ %bb3
+; THUMB-DISABLE-NEXT:    ldr r1, [r7, #8]
+; THUMB-DISABLE-NEXT:    vmov s16, r0
+; THUMB-DISABLE-NEXT:    mov r0, r3
+; THUMB-DISABLE-NEXT:    mov r2, r3
+; THUMB-DISABLE-NEXT:    vmov d9, r3, r1
+; THUMB-DISABLE-NEXT:    mov r3, r1
+; THUMB-DISABLE-NEXT:    bl _pow
+; THUMB-DISABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; THUMB-DISABLE-NEXT:    vmov.f64 d16, #1.000000e+00
+; THUMB-DISABLE-NEXT:    vmov.f64 d18, d9
+; THUMB-DISABLE-NEXT:    vcmp.f32 s16, s0
+; THUMB-DISABLE-NEXT:    vadd.f64 d16, d9, d16
+; THUMB-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; THUMB-DISABLE-NEXT:    it gt
+; THUMB-DISABLE-NEXT:    vmovgt.f64 d18, d16
+; THUMB-DISABLE-NEXT:    vcmp.f64 d18, d9
+; THUMB-DISABLE-NEXT:    vmov d17, r0, r1
+; THUMB-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
+; THUMB-DISABLE-NEXT:    vadd.f64 d17, d17, d17
+; THUMB-DISABLE-NEXT:    it ne
+; THUMB-DISABLE-NEXT:    vmovne.f64 d9, d17
+; THUMB-DISABLE-NEXT:    vcvt.f32.f64 s0, d9
+; THUMB-DISABLE-NEXT:    b LBB12_3
+; THUMB-DISABLE-NEXT:  LBB12_2:
+; THUMB-DISABLE-NEXT:    vldr s0, LCPI12_0
+; THUMB-DISABLE-NEXT:  LBB12_3: @ %bb13
+; THUMB-DISABLE-NEXT:    mov r4, sp
+; THUMB-DISABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; THUMB-DISABLE-NEXT:    subs r4, r7, #4
+; THUMB-DISABLE-NEXT:    vmov r0, s0
+; THUMB-DISABLE-NEXT:    mov sp, r4
+; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:    .p2align 2
+; THUMB-DISABLE-NEXT:  @ %bb.4:
+; THUMB-DISABLE-NEXT:    .data_region
+; THUMB-DISABLE-NEXT:  LCPI12_0:
+; THUMB-DISABLE-NEXT:    .long 0x00000000 @ float 0
+; THUMB-DISABLE-NEXT:    .end_data_region
 bb:
   br i1 %or.cond, label %bb3, label %bb13
 

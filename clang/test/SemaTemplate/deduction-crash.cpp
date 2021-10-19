@@ -161,3 +161,13 @@ evaluateSelectionRequirement<void>(InputT &&Value) { // expected-error {{cannot 
 }
 
 }
+
+namespace PR51872_part1 {
+  template<int> class T1 { template <struct U1> T1(); };
+  // expected-error@-1 {{non-type template parameter has incomplete type 'struct U1'}}
+  // expected-note@-2  {{forward declaration of 'PR51872_part1::U1'}}
+
+  T1 t1 = 0;
+  // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'T1'}}
+  // expected-note@-6  {{candidate template ignored: could not match 'T1<>' against 'int'}}
+}

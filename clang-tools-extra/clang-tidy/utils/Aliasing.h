@@ -27,7 +27,7 @@ namespace utils {
 /// For `f()` and `n` the function returns ``true`` because `p` is a
 /// pointer to `n` created in `f()`.
 
-bool hasPtrOrReferenceInFunc(const FunctionDecl *Func, const VarDecl *Var);
+bool hasPtrOrReferenceInFunc(const Decl *Func, const VarDecl *Var);
 
 } // namespace utils
 } // namespace tidy

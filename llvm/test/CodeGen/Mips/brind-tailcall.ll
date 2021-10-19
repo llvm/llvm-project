@@ -1,22 +1,22 @@
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static < %s 2>&1 | FileCheck --check-prefix=STATIC %s
-; RUN: llc -march=mips64 -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips64 -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic < %s 2>&1 | FileCheck --check-prefix=PIC64 %s
-; RUN: llc -march=mips64 -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips64 -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static < %s 2>&1 | FileCheck --check-prefix=STATIC64 %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=STATIC-MM %s
-; RUN: llc -march=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1 \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1 \
 ; RUN:   -relocation-model=pic -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=PIC %s
-; RUN: llc -march=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+micromips < %s 2>&1 | FileCheck --check-prefix=STATIC-MM %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=pic    -mattr=+mips16 < %s 2>&1 | FileCheck --check-prefix=MIPS16 %s
-; RUN: llc -march=mips -debug-only=isel -mips-tail-calls=1  \
+; RUN: llc -mtriple=mips -debug-only=isel -mips-tail-calls=1  \
 ; RUN:   -relocation-model=static -mattr=+mips16 < %s 2>&1 | FileCheck --check-prefix=MIPS16 %s
 
 ; REQUIRES: asserts

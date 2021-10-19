@@ -44,6 +44,13 @@ bool MCAsmParser::parseTokenLoc(SMLoc &Loc) {
   return false;
 }
 
+bool MCAsmParser::parseEOL() {
+  if (getTok().getKind() != AsmToken::EndOfStatement)
+    return Error(getTok().getLoc(), "expected newline");
+  Lex();
+  return false;
+}
+
 bool MCAsmParser::parseEOL(const Twine &Msg) {
   if (getTok().getKind() != AsmToken::EndOfStatement)
     return Error(getTok().getLoc(), Msg);
@@ -131,6 +138,25 @@ bool MCAsmParser::parseMany(function_ref<bool()> parseOne, bool hasComma) {
 bool MCAsmParser::parseExpression(const MCExpr *&Res) {
   SMLoc L;
   return parseExpression(Res, L);
+}
+
+bool MCAsmParser::parseGNUAttribute(SMLoc L, int64_t &Tag,
+                                    int64_t &IntegerValue) {
+  // Parse a .gnu_attribute with numerical tag and value.
+  StringRef S(L.getPointer());
+  SMLoc TagLoc;
+  TagLoc = getTok().getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Integer))
+    return false;
+  Tag = Tok.getIntVal();
+  Lex(); // Eat the Tag
+  Lex(); // Eat the comma
+  if (Tok.isNot(AsmToken::Integer))
+    return false;
+  IntegerValue = Tok.getIntVal();
+  Lex(); // Eat the IntegerValue
+  return true;
 }
 
 void MCParsedAsmOperand::dump() const {

@@ -6,6 +6,8 @@
 // be able to handle this case somehow (e.g. by using a different register for
 // DW_AT_frame_base) but at least we shouldn't get confused by it.
 
+// REQUIRES: pointer-tagging
+
 __attribute((noinline))
 char *buggy() {
   _Alignas(64) char c[64];

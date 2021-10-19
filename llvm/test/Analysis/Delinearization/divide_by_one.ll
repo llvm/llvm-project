@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -delinearize | FileCheck %s
+; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-n32"
 

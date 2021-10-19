@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Disassembler.h"
-
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -26,144 +25,80 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include <ctime>
 
 using namespace llvm;
+using namespace llvm::opt;
 
-static mc::RegisterMCTargetOptionsFlags MOF;
+namespace {
 
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
-
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Output filename"), cl::value_desc("filename"),
-               cl::init("-"));
-
-static cl::opt<bool>
-ShowEncoding("show-encoding", cl::desc("Show instruction encodings"));
-
-static cl::opt<bool>
-ShowInst("show-inst", cl::desc("Show internal instruction representation"));
-
-static cl::opt<bool>
-ShowInstOperands("show-inst-operands",
-                 cl::desc("Show instructions operands as parsed"));
-
-static cl::opt<bool>
-OutputATTAsm("output-att-asm", cl::desc("Use ATT syntax for output printing"));
-
-static cl::opt<bool>
-PrintImmHex("print-imm-hex", cl::init(false),
-            cl::desc("Prefer hex format for immediate values"));
-
-static cl::opt<bool>
-PreserveComments("preserve-comments",
-                 cl::desc("Preserve Comments in outputted assembly"));
-
-enum OutputFileType {
-  OFT_Null,
-  OFT_AssemblyFile,
-  OFT_ObjectFile
-};
-static cl::opt<OutputFileType>
-FileType("filetype", cl::init(OFT_ObjectFile),
-  cl::desc("Choose an output file type:"),
-  cl::values(
-       clEnumValN(OFT_AssemblyFile, "asm",
-                  "Emit an assembly ('.s') file"),
-       clEnumValN(OFT_Null, "null",
-                  "Don't emit anything (for timing purposes)"),
-       clEnumValN(OFT_ObjectFile, "obj",
-                  "Emit a native object ('.o') file")));
-
-static cl::list<std::string>
-IncludeDirs("I", cl::desc("Directory of include files"),
-            cl::value_desc("directory"), cl::Prefix);
-
-enum BitnessType {
-  m32,
-  m64,
-};
-cl::opt<BitnessType> Bitness(cl::desc("Choose bitness:"), cl::init(m64),
-                             cl::values(clEnumVal(m32, "32-bit"),
-                                        clEnumVal(m64, "64-bit (default)")));
-
-static cl::opt<std::string>
-TripleName("triple", cl::desc("Target triple to assemble for, "
-                              "see -version for available targets"));
-
-static cl::opt<std::string>
-DebugCompilationDir("fdebug-compilation-dir",
-                    cl::desc("Specifies the debug info's compilation dir"));
-
-static cl::list<std::string>
-DebugPrefixMap("fdebug-prefix-map",
-               cl::desc("Map file source paths in debug info"),
-               cl::value_desc("= separated key-value pairs"));
-
-static cl::opt<std::string>
-MainFileName("main-file-name",
-             cl::desc("Specifies the name we should consider the input file"));
-
-static cl::opt<bool> SaveTempLabels("save-temp-labels",
-                                    cl::desc("Don't discard temporary labels"));
-
-enum ActionType {
-  AC_AsLex,
-  AC_Assemble,
-  AC_Disassemble,
-  AC_MDisassemble,
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Opts.inc"
+#undef OPTION
 };
 
-static cl::opt<ActionType>
-Action(cl::desc("Action to perform:"),
-       cl::init(AC_Assemble),
-       cl::values(clEnumValN(AC_AsLex, "as-lex",
-                             "Lex tokens from a .asm file"),
-                  clEnumValN(AC_Assemble, "assemble",
-                             "Assemble a .asm file (default)"),
-                  clEnumValN(AC_Disassemble, "disassemble",
-                             "Disassemble strings of hex bytes"),
-                  clEnumValN(AC_MDisassemble, "mdis",
-                             "Marked up disassembly of strings of hex bytes")));
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Opts.inc"
+#undef PREFIX
 
-static const Target *GetTarget(const char *ProgName) {
+static const opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {                                                                            \
+      PREFIX,      NAME,      HELPTEXT,                                        \
+      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
+      PARAM,       FLAGS,     OPT_##GROUP,                                     \
+      OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Opts.inc"
+#undef OPTION
+};
+
+class MLOptTable : public opt::OptTable {
+public:
+  MLOptTable() : OptTable(InfoTable, /*IgnoreCase=*/false) {}
+};
+} // namespace
+
+static Triple GetTriple(StringRef ProgName, opt::InputArgList &Args) {
   // Figure out the target triple.
-  if (TripleName.empty()) {
-    if (Bitness == m32)
-      TripleName = "i386-pc-windows";
-    else if (Bitness == m64)
-      TripleName = "x86_64-pc-windows";
-  }
-  Triple TheTriple(Triple::normalize(TripleName));
+  StringRef DefaultBitness = "32";
+  SmallString<255> Program = ProgName;
+  sys::path::replace_extension(Program, "");
+  if (Program.endswith("ml64"))
+    DefaultBitness = "64";
 
-  // Get the target specific parser.
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget("", TheTriple, Error);
-  if (!TheTarget) {
-    WithColor::error(errs(), ProgName) << Error;
-    return nullptr;
-  }
-
-  // Update the triple name and return the found target.
-  TripleName = TheTriple.getTriple();
-  return TheTarget;
+  StringRef TripleName =
+      StringSwitch<StringRef>(Args.getLastArgValue(OPT_bitness, DefaultBitness))
+          .Case("32", "i386-pc-windows")
+          .Case("64", "x86_64-pc-windows")
+          .Default("");
+  return Triple(Triple::normalize(TripleName));
 }
 
 static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
   std::error_code EC;
-  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::F_None);
+  auto Out = std::make_unique<ToolOutputFile>(Path, EC, sys::fs::OF_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return nullptr;
@@ -175,6 +110,10 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path) {
 static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
+  Lexer.setLexMasmIntegers(true);
+  Lexer.useMasmDefaultRadix(true);
+  Lexer.setLexMasmHexFloats(true);
+  Lexer.setLexMasmStrings(true);
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
@@ -187,12 +126,36 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
   return Error;
 }
 
-static int AssembleInput(const char *ProgName, const Target *TheTarget,
+static int AssembleInput(StringRef ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
-                         MCInstrInfo &MCII, MCTargetOptions &MCOptions) {
+                         MCInstrInfo &MCII, MCTargetOptions &MCOptions,
+                         const opt::ArgList &InputArgs) {
+  struct tm TM;
+  time_t Timestamp;
+  if (InputArgs.hasArg(OPT_timestamp)) {
+    StringRef TimestampStr = InputArgs.getLastArgValue(OPT_timestamp);
+    int64_t IntTimestamp;
+    if (TimestampStr.getAsInteger(10, IntTimestamp)) {
+      WithColor::error(errs(), ProgName)
+          << "invalid timestamp '" << TimestampStr
+          << "'; must be expressed in seconds since the UNIX epoch.\n";
+      return 1;
+    }
+    Timestamp = IntTimestamp;
+  } else {
+    Timestamp = time(nullptr);
+  }
+  if (InputArgs.hasArg(OPT_utc)) {
+    // Not thread-safe.
+    TM = *gmtime(&Timestamp);
+  } else {
+    // Not thread-safe.
+    TM = *localtime(&Timestamp);
+  }
+
   std::unique_ptr<MCAsmParser> Parser(
-      createMCMasmParser(SrcMgr, Ctx, Str, MAI));
+      createMCMasmParser(SrcMgr, Ctx, Str, MAI, TM, 0));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
@@ -202,17 +165,32 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
     return 1;
   }
 
-  Parser->setShowParsedOperands(ShowInstOperands);
+  Parser->setShowParsedOperands(InputArgs.hasArg(OPT_show_inst_operands));
   Parser->setTargetParser(*TAP);
   Parser->getLexer().setLexMasmIntegers(true);
+  Parser->getLexer().useMasmDefaultRadix(true);
+  Parser->getLexer().setLexMasmHexFloats(true);
+  Parser->getLexer().setLexMasmStrings(true);
+
+  auto Defines = InputArgs.getAllArgValues(OPT_define);
+  for (StringRef Define : Defines) {
+    const auto NameValue = Define.split('=');
+    StringRef Name = NameValue.first, Value = NameValue.second;
+    if (Parser->defineMacro(Name, Value)) {
+      WithColor::error(errs(), ProgName)
+          << "can't define macro '" << Name << "' = '" << Value << "'\n";
+      return 1;
+    }
+  }
 
   int Res = Parser->Run(/*NoInitialTextSection=*/true);
 
   return Res;
 }
 
-int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+int main(int Argc, char **Argv) {
+  InitLLVM X(Argc, Argv);
+  StringRef ProgName = sys::path::filename(Argv[0]);
 
   // Initialize targets and assembly printers/parsers.
   llvm::InitializeAllTargetInfos();
@@ -220,20 +198,81 @@ int main(int argc, char **argv) {
   llvm::InitializeAllAsmParsers();
   llvm::InitializeAllDisassemblers();
 
-  // Register the target printer for --version.
-  cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
+  MLOptTable T;
+  unsigned MissingArgIndex, MissingArgCount;
+  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgIndex, MissingArgCount);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  std::string InputFilename;
+  for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
+    std::string ArgString = Arg->getAsString(InputArgs);
+    if (ArgString == "-" || StringRef(ArgString).endswith(".asm")) {
+      if (!InputFilename.empty()) {
+        WithColor::warning(errs(), ProgName)
+            << "does not support multiple assembly files in one command; "
+            << "ignoring '" << InputFilename << "'\n";
+      }
+      InputFilename = ArgString;
+    } else {
+      std::string Diag;
+      raw_string_ostream OS(Diag);
+      OS << "invalid option '" << ArgString << "'";
+
+      std::string Nearest;
+      if (T.findNearest(ArgString, Nearest) < 2)
+        OS << ", did you mean '" << Nearest << "'?";
+
+      WithColor::error(errs(), ProgName) << OS.str() << '\n';
+      exit(1);
+    }
+  }
+  for (auto *Arg : InputArgs.filtered(OPT_assembly_file)) {
+    if (!InputFilename.empty()) {
+      WithColor::warning(errs(), ProgName)
+          << "does not support multiple assembly files in one command; "
+          << "ignoring '" << InputFilename << "'\n";
+    }
+    InputFilename = Arg->getAsString(InputArgs);
+  }
+
+  for (auto *Arg : InputArgs.filtered(OPT_unsupported_Group)) {
+    WithColor::warning(errs(), ProgName)
+        << "ignoring unsupported '" << Arg->getOption().getName()
+        << "' option\n";
+  }
+
+  if (InputArgs.hasArg(OPT_help)) {
+    std::string Usage = llvm::formatv("{0} [ /options ] file", ProgName).str();
+    T.printHelp(outs(), Usage.c_str(), "LLVM MASM Assembler",
+                /*ShowHidden=*/false);
+    return 0;
+  } else if (InputFilename.empty()) {
+    outs() << "USAGE: " << ProgName << " [ /options ] file\n"
+           << "Run \"" << ProgName << " /?\" or \"" << ProgName
+           << " /help\" for more info.\n";
+    return 0;
+  }
+
+  MCTargetOptions MCOptions;
   MCOptions.AssemblyLanguage = "masm";
+  MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
 
-  const char *ProgName = argv[0];
-  const Target *TheTarget = GetTarget(ProgName);
-  if (!TheTarget)
+  Triple TheTriple = GetTriple(ProgName, InputArgs);
+  std::string Error;
+  const Target *TheTarget = TargetRegistry::lookupTarget("", TheTriple, Error);
+  if (!TheTarget) {
+    WithColor::error(errs(), ProgName) << Error;
     return 1;
-  // Now that GetTarget() has (potentially) replaced TripleName, it's safe to
-  // construct the Triple object.
-  Triple TheTriple(TripleName);
+  }
+  const std::string &TripleName = TheTriple.getTriple();
+
+  bool SafeSEH = InputArgs.hasArg(OPT_safeseh);
+  if (SafeSEH && !(TheTriple.isArch32Bit() && TheTriple.isX86())) {
+    WithColor::warning()
+        << "/safeseh applies only to 32-bit X86 platforms; ignoring.\n";
+    SafeSEH = false;
+  }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferPtr =
       MemoryBuffer::getFileOrSTDIN(InputFilename);
@@ -242,7 +281,6 @@ int main(int argc, char **argv) {
         << InputFilename << ": " << EC.message() << '\n';
     return 1;
   }
-  MemoryBuffer *Buffer = BufferPtr->get();
 
   SourceMgr SrcMgr;
 
@@ -250,7 +288,20 @@ int main(int argc, char **argv) {
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
   // Record the location of the include directories so that the lexer can find
-  // it later.
+  // included files later.
+  std::vector<std::string> IncludeDirs =
+      InputArgs.getAllArgValues(OPT_include_path);
+  if (!InputArgs.hasArg(OPT_ignore_include_envvar)) {
+    if (llvm::Optional<std::string> IncludeEnvVar =
+            llvm::sys::Process::GetEnv("INCLUDE")) {
+      SmallVector<StringRef, 8> Dirs;
+      StringRef(*IncludeEnvVar)
+          .split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+      IncludeDirs.reserve(IncludeDirs.size() + Dirs.size());
+      for (StringRef Dir : Dirs)
+        IncludeDirs.push_back(Dir.str());
+    }
+  }
   SrcMgr.setIncludeDirs(IncludeDirs);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
@@ -260,33 +311,38 @@ int main(int argc, char **argv) {
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI && "Unable to create target asm info!");
 
-  MAI->setPreserveAsmComments(PreserveComments);
+  MAI->setPreserveAsmComments(InputArgs.hasArg(OPT_preserve_comments));
+
+  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
+      TripleName, /*CPU=*/"", /*Features=*/""));
+  assert(STI && "Unable to create subtarget info!");
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
-  MOFI.InitMCObjectFileInfo(TheTriple, /*PIC=*/false, Ctx,
-                            /*LargeCodeModel=*/true);
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> MOFI(TheTarget->createMCObjectFileInfo(
+      Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
+  Ctx.setObjectFileInfo(MOFI.get());
 
-  if (SaveTempLabels)
+  if (InputArgs.hasArg(OPT_save_temp_labels))
     Ctx.setAllowTemporaryLabels(false);
 
-  if (!DebugCompilationDir.empty()) {
-    Ctx.setCompilationDir(DebugCompilationDir);
-  } else {
-    // If no compilation dir is set, try to use the current directory.
-    SmallString<128> CWD;
-    if (!sys::fs::current_path(CWD))
-      Ctx.setCompilationDir(CWD);
-  }
-  for (const auto &Arg : DebugPrefixMap) {
-    const auto &KV = StringRef(Arg).split('=');
-    Ctx.addDebugPrefixMapEntry(std::string(KV.first), std::string(KV.second));
-  }
-  if (!MainFileName.empty())
-    Ctx.setMainFileName(MainFileName);
+  // Set compilation information.
+  SmallString<128> CWD;
+  if (!sys::fs::current_path(CWD))
+    Ctx.setCompilationDir(CWD);
+  Ctx.setMainFileName(InputFilename);
 
+  StringRef FileType = InputArgs.getLastArgValue(OPT_filetype, "obj");
+  SmallString<255> DefaultOutputFilename;
+  if (InputArgs.hasArg(OPT_as_lex)) {
+    DefaultOutputFilename = "-";
+  } else {
+    DefaultOutputFilename = InputFilename;
+    sys::path::replace_extension(DefaultOutputFilename, FileType);
+  }
+  const StringRef OutputFilename =
+      InputArgs.getLastArgValue(OPT_output_file, DefaultOutputFilename);
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename);
   if (!Out)
     return 1;
@@ -296,15 +352,15 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCStreamer> Str;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
-      TripleName, /*CPU=*/"", /*Features=*/""));
+  assert(MCII && "Unable to create instruction info!");
 
   MCInstPrinter *IP = nullptr;
-  if (FileType == OFT_AssemblyFile) {
+  if (FileType == "s") {
+    const bool OutputATTAsm = InputArgs.hasArg(OPT_output_att_asm);
     const unsigned OutputAsmVariant = OutputATTAsm ? 0U   // ATT dialect
                                                    : 1U;  // Intel dialect
-    IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-                                        *MAI, *MCII, *MRI);
+    IP = TheTarget->createMCInstPrinter(TheTriple, OutputAsmVariant, *MAI,
+                                        *MCII, *MRI);
 
     if (!IP) {
       WithColor::error()
@@ -315,26 +371,24 @@ int main(int argc, char **argv) {
     }
 
     // Set the display preference for hex vs. decimal immediates.
-    IP->setPrintImmHex(PrintImmHex);
+    IP->setPrintImmHex(InputArgs.hasArg(OPT_print_imm_hex));
 
     // Set up the AsmStreamer.
     std::unique_ptr<MCCodeEmitter> CE;
-    if (ShowEncoding)
+    if (InputArgs.hasArg(OPT_show_encoding))
       CE.reset(TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx));
 
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(
-        TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
-                                     /*useDwarfDirectory*/ true, IP,
-                                     std::move(CE), std::move(MAB), ShowInst));
+    Str.reset(TheTarget->createAsmStreamer(
+        Ctx, std::move(FOut), /*asmverbose*/ true,
+        /*useDwarfDirectory*/ true, IP, std::move(CE), std::move(MAB),
+        InputArgs.hasArg(OPT_show_inst)));
 
-  } else if (FileType == OFT_Null) {
+  } else if (FileType == "null") {
     Str.reset(TheTarget->createNullStreamer(Ctx));
-  } else {
-    assert(FileType == OFT_ObjectFile && "Invalid file type!");
-
+  } else if (FileType == "obj") {
     if (!Out->os().supportsSeeking()) {
       BOS = std::make_unique<buffer_ostream>(Out->os());
       OS = BOS.get();
@@ -347,33 +401,38 @@ int main(int argc, char **argv) {
         MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(CE), *STI,
         MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
         /*DWARFMustBeAtTheEnd*/ false));
+  } else {
+    llvm_unreachable("Invalid file type!");
+  }
+
+  if (TheTriple.isOSBinFormatCOFF()) {
+    // Emit an absolute @feat.00 symbol. This is a features bitfield read by
+    // link.exe.
+    int64_t Feat00Flags = 0x2;
+    if (SafeSEH) {
+      // According to the PE-COFF spec, the LSB of this value marks the object
+      // for "registered SEH".  This means that all SEH handler entry points
+      // must be registered in .sxdata.  Use of any unregistered handlers will
+      // cause the process to terminate immediately.
+      Feat00Flags |= 0x1;
+    }
+    MCSymbol *Feat00Sym = Ctx.getOrCreateSymbol("@feat.00");
+    Feat00Sym->setRedefinable(true);
+    Str->emitSymbolAttribute(Feat00Sym, MCSA_Global);
+    Str->emitAssignment(Feat00Sym, MCConstantExpr::create(Feat00Flags, Ctx));
   }
 
   // Use Assembler information for parsing.
   Str->setUseAssemblerInfoForParsing(true);
 
   int Res = 1;
-  bool disassemble = false;
-  switch (Action) {
-  case AC_AsLex:
+  if (InputArgs.hasArg(OPT_as_lex)) {
+    // -as-lex; Lex only, and output a stream of tokens
     Res = AsLexInput(SrcMgr, *MAI, Out->os());
-    break;
-  case AC_Assemble:
+  } else {
     Res = AssembleInput(ProgName, TheTarget, SrcMgr, Ctx, *Str, *MAI, *STI,
-                        *MCII, MCOptions);
-    break;
-  case AC_MDisassemble:
-    assert(IP && "Expected assembly output");
-    IP->setUseMarkup(1);
-    disassemble = true;
-    break;
-  case AC_Disassemble:
-    disassemble = true;
-    break;
+                        *MCII, MCOptions, InputArgs);
   }
-  if (disassemble)
-    Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Out->os());
 
   // Keep output if no errors.
   if (Res == 0)

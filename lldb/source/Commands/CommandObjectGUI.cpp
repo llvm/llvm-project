@@ -22,7 +22,7 @@ CommandObjectGUI::CommandObjectGUI(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "gui",
                           "Switch into the curses based GUI mode.", "gui") {}
 
-CommandObjectGUI::~CommandObjectGUI() {}
+CommandObjectGUI::~CommandObjectGUI() = default;
 
 bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
 #if LLDB_ENABLE_CURSES
@@ -39,11 +39,9 @@ bool CommandObjectGUI::DoExecute(Args &args, CommandReturnObject &result) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("the gui command requires an interactive terminal.");
-      result.SetStatus(eReturnStatusFailed);
     }
   } else {
     result.AppendError("the gui command takes no arguments.");
-    result.SetStatus(eReturnStatusFailed);
   }
   return true;
 #else

@@ -27,106 +27,107 @@ define zeroext i32 @test1(i64 %0, i64* %1) {
 ; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    .cfi_offset r31, -8
 ; CHECK-NEXT:    .cfi_offset r2, -152
-; CHECK-NEXT:    lis 5, 4
+; CHECK-NEXT:    lis 5, 1
 ; CHECK-NEXT:    std 30, 704(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 29, 696(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ori 6, 5, 6292
+; CHECK-NEXT:    ori 5, 5, 1573
 ; CHECK-NEXT:    std 28, 688(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 27, 680(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, 672(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 25, 664(1) # 8-byte Folded Spill
-; CHECK-NEXT:    ori 5, 5, 6291
 ; CHECK-NEXT:    std 14, 576(1) # 8-byte Folded Spill
+; CHECK-NEXT:    rldic 5, 5, 34, 13
 ; CHECK-NEXT:    std 15, 584(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 16, 592(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 17, 600(1) # 8-byte Folded Spill
+; CHECK-NEXT:    oris 6, 5, 13030
+; CHECK-NEXT:    oris 7, 5, 13066
+; CHECK-NEXT:    oris 8, 5, 13054
+; CHECK-NEXT:    oris 9, 5, 13042
+; CHECK-NEXT:    oris 10, 5, 13078
+; CHECK-NEXT:    oris 11, 5, 13115
+; CHECK-NEXT:    oris 12, 5, 13103
+; CHECK-NEXT:    oris 0, 5, 13091
+; CHECK-NEXT:    oris 30, 5, 13127
+; CHECK-NEXT:    oris 29, 5, 13164
+; CHECK-NEXT:    oris 28, 5, 13152
+; CHECK-NEXT:    oris 27, 5, 13139
+; CHECK-NEXT:    oris 26, 5, 13176
+; CHECK-NEXT:    ori 6, 6, 3704
+; CHECK-NEXT:    ori 7, 7, 44408
+; CHECK-NEXT:    ori 8, 8, 30840
+; CHECK-NEXT:    ori 9, 9, 17272
+; CHECK-NEXT:    ori 10, 10, 57976
+; CHECK-NEXT:    ori 11, 11, 33144
+; CHECK-NEXT:    ori 12, 12, 19576
+; CHECK-NEXT:    ori 0, 0, 6008
+; CHECK-NEXT:    ori 30, 30, 46712
+; CHECK-NEXT:    ori 29, 29, 21880
+; CHECK-NEXT:    ori 28, 28, 8312
+; CHECK-NEXT:    ori 27, 27, 60280
+; CHECK-NEXT:    ori 26, 26, 35448
 ; CHECK-NEXT:    std 18, 608(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 6
 ; CHECK-NEXT:    std 19, 616(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 20, 624(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 21, 632(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 22, 640(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, 648(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 24, 656(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 25, 664(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 31, 712(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 2, 568(1) # 8-byte Folded Spill
-; CHECK-NEXT:    sldi 6, 6, 32
-; CHECK-NEXT:    oris 7, 6, 13030
-; CHECK-NEXT:    oris 8, 6, 13066
-; CHECK-NEXT:    oris 9, 6, 13054
-; CHECK-NEXT:    oris 10, 6, 13042
-; CHECK-NEXT:    oris 11, 6, 13078
-; CHECK-NEXT:    oris 12, 6, 13115
-; CHECK-NEXT:    oris 0, 6, 13103
-; CHECK-NEXT:    oris 30, 6, 13091
-; CHECK-NEXT:    oris 29, 6, 13127
-; CHECK-NEXT:    oris 28, 6, 13164
-; CHECK-NEXT:    oris 27, 6, 13152
-; CHECK-NEXT:    oris 26, 6, 13139
-; CHECK-NEXT:    oris 25, 6, 13176
-; CHECK-NEXT:    ori 7, 7, 3704
-; CHECK-NEXT:    ori 8, 8, 44408
-; CHECK-NEXT:    ori 9, 9, 30840
-; CHECK-NEXT:    ori 10, 10, 17272
-; CHECK-NEXT:    ori 11, 11, 57976
-; CHECK-NEXT:    ori 12, 12, 33144
-; CHECK-NEXT:    ori 0, 0, 19576
-; CHECK-NEXT:    ori 30, 30, 6008
-; CHECK-NEXT:    ori 29, 29, 46712
-; CHECK-NEXT:    ori 28, 28, 21880
-; CHECK-NEXT:    ori 27, 27, 8312
-; CHECK-NEXT:    ori 26, 26, 60280
-; CHECK-NEXT:    ori 25, 25, 35448
-; CHECK-NEXT:    add 7, 4, 7
-; CHECK-NEXT:    sldi 5, 5, 32
+; CHECK-NEXT:    std 6, 384(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 7
+; CHECK-NEXT:    lis 7, 354
+; CHECK-NEXT:    std 6, 376(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 8
+; CHECK-NEXT:    lis 8, 402
+; CHECK-NEXT:    std 6, 368(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 9
+; CHECK-NEXT:    lis 9, 451
+; CHECK-NEXT:    std 6, 360(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 10
+; CHECK-NEXT:    lis 10, 500
+; CHECK-NEXT:    std 6, 352(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 11
+; CHECK-NEXT:    lis 11, 549
+; CHECK-NEXT:    std 6, 344(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 12
+; CHECK-NEXT:    std 6, 336(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 0
+; CHECK-NEXT:    std 6, 328(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 30
+; CHECK-NEXT:    std 6, 320(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 29
+; CHECK-NEXT:    std 6, 312(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 28
+; CHECK-NEXT:    std 6, 304(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 27
+; CHECK-NEXT:    std 6, 296(1) # 8-byte Folded Spill
+; CHECK-NEXT:    add 6, 4, 26
+; CHECK-NEXT:    std 6, 288(1) # 8-byte Folded Spill
+; CHECK-NEXT:    oris 6, 5, 13213
+; CHECK-NEXT:    ori 6, 6, 10616
+; CHECK-NEXT:    add 6, 4, 6
+; CHECK-NEXT:    std 6, 280(1) # 8-byte Folded Spill
+; CHECK-NEXT:    oris 6, 5, 13200
+; CHECK-NEXT:    oris 5, 5, 13188
+; CHECK-NEXT:    ori 5, 5, 49016
+; CHECK-NEXT:    ori 6, 6, 62584
+; CHECK-NEXT:    add 5, 4, 5
+; CHECK-NEXT:    add 6, 4, 6
+; CHECK-NEXT:    std 5, 264(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lis 5, 4
+; CHECK-NEXT:    std 6, 272(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lis 6, 305
+; CHECK-NEXT:    ori 5, 5, 6291
+; CHECK-NEXT:    rldic 5, 5, 32, 13
 ; CHECK-NEXT:    oris 5, 5, 29347
 ; CHECK-NEXT:    ori 5, 5, 20088
-; CHECK-NEXT:    std 7, 384(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 8
-; CHECK-NEXT:    lis 8, 402
-; CHECK-NEXT:    std 7, 376(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 9
-; CHECK-NEXT:    lis 9, 451
-; CHECK-NEXT:    std 7, 368(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 10
-; CHECK-NEXT:    lis 10, 500
-; CHECK-NEXT:    std 7, 360(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 11
-; CHECK-NEXT:    lis 11, 549
-; CHECK-NEXT:    std 7, 352(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 12
-; CHECK-NEXT:    std 7, 344(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 0
-; CHECK-NEXT:    std 7, 336(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 30
-; CHECK-NEXT:    std 7, 328(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 29
-; CHECK-NEXT:    std 7, 320(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 28
-; CHECK-NEXT:    std 7, 312(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 27
-; CHECK-NEXT:    std 7, 304(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 26
-; CHECK-NEXT:    std 7, 296(1) # 8-byte Folded Spill
-; CHECK-NEXT:    add 7, 4, 25
-; CHECK-NEXT:    std 7, 288(1) # 8-byte Folded Spill
-; CHECK-NEXT:    oris 7, 6, 13213
-; CHECK-NEXT:    ori 7, 7, 10616
-; CHECK-NEXT:    add 7, 4, 7
-; CHECK-NEXT:    std 7, 280(1) # 8-byte Folded Spill
-; CHECK-NEXT:    oris 7, 6, 13200
-; CHECK-NEXT:    oris 6, 6, 13188
-; CHECK-NEXT:    ori 7, 7, 62584
-; CHECK-NEXT:    ori 6, 6, 49016
-; CHECK-NEXT:    add 7, 4, 7
-; CHECK-NEXT:    add 6, 4, 6
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    lis 5, 268
 ; CHECK-NEXT:    std 4, 256(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lis 4, 585
-; CHECK-NEXT:    std 6, 264(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lis 6, 305
-; CHECK-NEXT:    std 7, 272(1) # 8-byte Folded Spill
-; CHECK-NEXT:    lis 7, 354
 ; CHECK-NEXT:    ori 4, 4, 61440
 ; CHECK-NEXT:    std 4, 560(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lis 4, 48
@@ -374,9 +375,9 @@ define zeroext i32 @test1(i64 %0, i64* %1) {
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    ld 12, 384(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    lwz 4, 396(1) # 4-byte Folded Reload
-; CHECK-NEXT:    addi 4, 4, 1
 ; CHECK-NEXT:    std 3, 0(12)
 ; CHECK-NEXT:    ld 12, 376(1) # 8-byte Folded Reload
+; CHECK-NEXT:    addi 4, 4, 1
 ; CHECK-NEXT:    std 3, 0(12)
 ; CHECK-NEXT:    ld 12, 368(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    std 3, 0(12)

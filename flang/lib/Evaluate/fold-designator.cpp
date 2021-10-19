@@ -27,8 +27,9 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
   } else if (symbol.has<semantics::ObjectEntityDetails>() &&
       !IsNamedConstant(symbol)) {
     if (auto type{DynamicType::From(symbol)}) {
-      if (auto bytes{ToInt64(type->MeasureSizeInBytes(&context_))}) {
-        if (auto extents{GetConstantExtents(context_, symbol)}) {
+      if (auto extents{GetConstantExtents(context_, symbol)}) {
+        if (auto bytes{ToInt64(
+                type->MeasureSizeInBytes(context_, GetRank(*extents) > 0))}) {
           OffsetSymbol result{symbol, static_cast<std::size_t>(*bytes)};
           auto stride{*bytes};
           for (auto extent : *extents) {
@@ -57,8 +58,8 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const ArrayRef &x, ConstantSubscript which) {
   const Symbol &array{x.base().GetLastSymbol()};
   if (auto type{DynamicType::From(array)}) {
-    if (auto bytes{ToInt64(type->MeasureSizeInBytes(&context_))}) {
-      if (auto extents{GetConstantExtents(context_, array)}) {
+    if (auto extents{GetConstantExtents(context_, array)}) {
+      if (auto bytes{ToInt64(type->MeasureSizeInBytes(context_, true))}) {
         Shape lbs{GetLowerBounds(context_, x.base())};
         if (auto lowerBounds{AsConstantExtents(context_, lbs)}) {
           std::optional<OffsetSymbol> result;
@@ -217,7 +218,7 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
   auto extents{AsConstantExtents(context, shape)};
   Shape lbs{GetLowerBounds(context, entity)};
   auto lower{AsConstantExtents(context, lbs)};
-  auto elementBytes{ToInt64(elementType.MeasureSizeInBytes(&context))};
+  auto elementBytes{ToInt64(elementType.MeasureSizeInBytes(context, true))};
   if (!extents || !lower || !elementBytes || *elementBytes <= 0) {
     return std::nullopt;
   }
@@ -311,12 +312,12 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
   if (std::optional<DataRef> dataRef{
           OffsetToDataRef(context, NamedEntity{baseSymbol}, offset, size)}) {
     const Symbol &symbol{dataRef->GetLastSymbol()};
-    if (auto type{DynamicType::From(symbol)}) {
-      if (std::optional<Expr<SomeType>> result{
-              TypedWrapper<Designator>(*type, std::move(*dataRef))}) {
-        if (IsAllocatableOrPointer(symbol)) {
-        } else if (auto elementBytes{
-                       ToInt64(type->MeasureSizeInBytes(&context))}) {
+    if (std::optional<Expr<SomeType>> result{
+            AsGenericExpr(std::move(*dataRef))}) {
+      if (IsAllocatableOrPointer(symbol)) {
+      } else if (auto type{DynamicType::From(symbol)}) {
+        if (auto elementBytes{
+                ToInt64(type->MeasureSizeInBytes(context, true))}) {
           if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&result->u)}) {
             if (size * 2 > static_cast<std::size_t>(*elementBytes)) {
               return result;
@@ -350,9 +351,9 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
             }
           }
         }
-        if (offset == 0) {
-          return result;
-        }
+      }
+      if (offset == 0) {
+        return result;
       }
     }
   }

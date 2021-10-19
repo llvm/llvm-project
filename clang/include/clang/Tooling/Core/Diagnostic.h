@@ -26,6 +26,17 @@
 namespace clang {
 namespace tooling {
 
+/// Represents a range within a specific source file.
+struct FileByteRange {
+  FileByteRange() = default;
+
+  FileByteRange(const SourceManager &Sources, CharSourceRange Range);
+
+  std::string FilePath;
+  unsigned FileOffset;
+  unsigned Length;
+};
+
 /// Represents the diagnostic message with the error message associated
 /// and the information on the location of the problem.
 struct DiagnosticMessage {
@@ -39,29 +50,24 @@ struct DiagnosticMessage {
   ///
   DiagnosticMessage(llvm::StringRef Message, const SourceManager &Sources,
                     SourceLocation Loc);
+
   std::string Message;
   std::string FilePath;
   unsigned FileOffset;
 
   /// Fixes for this diagnostic, grouped by file path.
   llvm::StringMap<Replacements> Fix;
-};
 
-/// Represents a range within a specific source file.
-struct FileByteRange {
-  FileByteRange() = default;
-
-  FileByteRange(const SourceManager &Sources, CharSourceRange Range);
-
-  std::string FilePath;
-  unsigned FileOffset;
-  unsigned Length;
+  /// Extra source ranges associated with the note, in addition to the location
+  /// of the Message itself.
+  llvm::SmallVector<FileByteRange, 1> Ranges;
 };
 
 /// Represents the diagnostic with the level of severity and possible
 /// fixes to be applied.
 struct Diagnostic {
   enum Level {
+    Remark = DiagnosticsEngine::Remark,
     Warning = DiagnosticsEngine::Warning,
     Error = DiagnosticsEngine::Error
   };
@@ -73,8 +79,7 @@ struct Diagnostic {
 
   Diagnostic(llvm::StringRef DiagnosticName, const DiagnosticMessage &Message,
              const SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
-             llvm::StringRef BuildDirectory,
-             const SmallVector<FileByteRange, 1> &Ranges);
+             llvm::StringRef BuildDirectory);
 
   /// Name identifying the Diagnostic.
   std::string DiagnosticName;
@@ -96,10 +101,6 @@ struct Diagnostic {
   ///
   /// Note: it is empty in unittest.
   std::string BuildDirectory;
-
-  /// Extra source ranges associated with the diagnostic (in addition to the
-  /// location of the Message above).
-  SmallVector<FileByteRange, 1> Ranges;
 };
 
 /// Collection of Diagnostics generated from a single translation unit.

@@ -77,9 +77,6 @@ define void @test(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-
-; Re-materialization happened.
-
 ; CHECK-NEXT:    movabsq $_bar, %r13
 ; CHECK-NEXT:    callq *%r13 ## 96-byte Folded Reload
 ; CHECK-NEXT:  Ltmp0:
@@ -91,6 +88,9 @@ define void @test(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
+
+; Re-materialization happened.
+
 
 ; This is a call to hoist the loading of the target of the call for statepoint.
   call void @bar()

@@ -6,6 +6,9 @@ config.target_cflags = "@HWASAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@HWASAN_TEST_TARGET_ARCH@"
 config.android_files_to_push = @HWASAN_ANDROID_FILES_TO_PUSH@
 
+# Whether to use -mlam or not.
+config.enable_aliases = lit_config.params.get("HWASAN_ENABLE_ALIASES", "@HWASAN_ENABLE_ALIASES@")
+
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 

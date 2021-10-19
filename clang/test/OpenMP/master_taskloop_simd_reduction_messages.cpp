@@ -312,7 +312,7 @@ int main(int argc, char **argv) {
 #pragma omp master taskloop simd reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp master taskloop simd reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{invalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
+#pragma omp master taskloop simd reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp master taskloop simd reduction(+ : h, k, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be reduction}}

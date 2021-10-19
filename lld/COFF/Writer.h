@@ -19,8 +19,9 @@
 namespace lld {
 namespace coff {
 static const int pageSize = 4096;
+class COFFLinkerContext;
 
-void writeResult();
+void writeResult(COFFLinkerContext &ctx);
 
 class PartialSection {
 public:

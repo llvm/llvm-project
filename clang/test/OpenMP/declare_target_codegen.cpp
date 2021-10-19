@@ -26,6 +26,7 @@
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}
 // CHECK-DAG: Bake
 // CHECK-NOT: @{{hhh|ggg|fff|eee}} =
+// CHECK-DAG: @flag = hidden global i8 undef,
 // CHECK-DAG: @aaa = external global i32,
 // CHECK-DAG: @bbb ={{ hidden | }}global i32 0,
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { i8* bitcast (i32* @bbb to i8*),
@@ -36,6 +37,7 @@
 // CHECK-DAG: @fff_decl_tgt_ref_ptr = weak global i32* null
 // CHECK-DAG: @eee_decl_tgt_ref_ptr = weak global i32* null
 // CHECK-DAG: @{{.*}}maini1{{.*}}aaa = internal global i64 23,
+// CHECK-DAG: @pair = {{.*}}addrspace(3) global %struct.PAIR undef
 // CHECK-DAG: @b ={{ hidden | }}global i32 15,
 // CHECK-DAG: @d ={{ hidden | }}global i32 0,
 // CHECK-DAG: @c = external global i32,
@@ -47,14 +49,14 @@
 // CHECK-DAG: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (%struct.S** [[STAT_REF]] to i8*)],
 
 // CHECK-DAG: define {{.*}}i32 @{{.*}}{{foo|bar|baz2|baz3|FA|f_method}}{{.*}}()
-// CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(%class.TemplateClass* %{{.*}})
-// CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(%class.TemplateClass* %{{.*}})
+// CHECK-DAG: define {{.*}}void @{{.*}}TemplateClass{{.*}}(%class.TemplateClass* {{[^,]*}} %{{.*}})
+// CHECK-DAG: define {{.*}}i32 @{{.*}}TemplateClass{{.*}}f_method{{.*}}(%class.TemplateClass* {{[^,]*}} %{{.*}})
 // CHECK-DAG: define {{.*}}void @__omp_offloading__{{.*}}_globals_l[[@LINE+78]]_ctor()
 
 #ifndef HEADER
 #define HEADER
-
 #pragma omp declare target
+bool flag [[clang::loader_uninitialized]];
 extern int bbb;
 #pragma omp end declare target
 #pragma omp declare target
@@ -262,6 +264,15 @@ void device_fun() {}
 // DEV5: define {{.*}}void {{.*}}device_fun{{.*}}
 // DEV5-NOT: define {{.*}}void {{.*}}host_fun{{.*}}
 #endif // OMP5
+
+struct PAIR {
+  int a;
+  int b;
+};
+
+#pragma omp declare target
+PAIR pair __attribute__((address_space(3), loader_uninitialized));
+#pragma omp end declare target
 
 #endif // HEADER
 

@@ -68,7 +68,7 @@ public:
                           FixedValue);
   }
 };
-}
+} // namespace
 
 static bool isFixupKindRIPRel(unsigned Kind) {
   return Kind == X86::reloc_riprel_4byte ||
@@ -537,6 +537,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   uint32_t Offset = Target.getConstant();
   if (IsPCRel)
     Offset += 1 << Log2Size;
+
   // Try to record the scattered relocation if needed. Fall back to non
   // scattered if necessary (see comments in recordScatteredRelocation()
   // for details).
@@ -558,6 +559,8 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
     // find a case where they are actually emitted.
     Type = MachO::GENERIC_RELOC_VANILLA;
   } else {
+    assert(A && "Unknown symbol data");
+
     // Resolve constant variables.
     if (A->isVariable()) {
       int64_t Res;

@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %python %S/test_symbols.py %s %flang_fc1 -fopenmp
 
 ! 2.15.1.1 Predetermined rules for associated do-loops index variable
 !   a) The loop iteration variable(s) in the associated do-loop(s) of a do,
@@ -139,11 +139,11 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp parallel do  reduction(+:sum)
   !DEF: /dotprod/Block1/Block1/Block1/Block1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   !REF: /dotprod/Block1/Block1/Block1/i0
-  !DEF: /dotprod/min INTRINSIC (Function) ProcEntity
+  !DEF: /dotprod/min ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
   !REF: /dotprod/block_size
   !REF: /dotprod/n
   do i=i0,min(i0+block_size, n)
-   !REF: /dotprod/sum
+   !DEF: /dotprod/Block1/Block1/Block1/Block1/sum (OmpReduction) HostAssoc REAL(4)
    !REF: /dotprod/b
    !REF: /dotprod/Block1/Block1/Block1/Block1/i
    !REF: /dotprod/c

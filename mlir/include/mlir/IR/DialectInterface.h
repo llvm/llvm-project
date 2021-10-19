@@ -11,6 +11,7 @@
 
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 class Dialect;

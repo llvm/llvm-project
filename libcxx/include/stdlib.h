@@ -96,25 +96,27 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 extern "C++" {
 // abs
 
-#undef abs
-#undef labs
-#ifndef _LIBCPP_HAS_NO_LONG_LONG
-#undef llabs
+#ifdef abs
+# undef abs
+#endif
+#ifdef labs
+# undef labs
+#endif
+#ifdef llabs
+# undef llabs
 #endif
 
 // MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
-#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__)
 inline _LIBCPP_INLINE_VISIBILITY long abs(long __x) _NOEXCEPT {
   return __builtin_labs(__x);
 }
-#ifndef _LIBCPP_HAS_NO_LONG_LONG
 inline _LIBCPP_INLINE_VISIBILITY long long abs(long long __x) _NOEXCEPT {
   return __builtin_llabs(__x);
 }
-#endif // _LIBCPP_HAS_NO_LONG_LONG
-#endif // !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+#endif // !defined(_LIBCPP_MSVCRT) && !defined(__sun__)
 
-#if !(defined(_AIX) || defined(__sun__))
+#if !defined(__sun__)
 inline _LIBCPP_INLINE_VISIBILITY float abs(float __lcpp_x) _NOEXCEPT {
   return __builtin_fabsf(__lcpp_x); // Use builtins to prevent needing math.h
 }
@@ -127,29 +129,33 @@ inline _LIBCPP_INLINE_VISIBILITY long double
 abs(long double __lcpp_x) _NOEXCEPT {
   return __builtin_fabsl(__lcpp_x);
 }
-#endif // !(defined(_AIX) || defined(__sun__))
+#endif // !defined(__sun__)
 
 // div
 
-#undef div
-#undef ldiv
-#ifndef _LIBCPP_HAS_NO_LONG_LONG
-#undef lldiv
+#ifdef div
+# undef div
+#endif
+#ifdef ldiv
+# undef ldiv
+#endif
+#ifdef lldiv
+# undef lldiv
 #endif
 
 // MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
-#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__) && !defined(_AIX)
+#if !defined(_LIBCPP_MSVCRT) && !defined(__sun__)
 inline _LIBCPP_INLINE_VISIBILITY ldiv_t div(long __x, long __y) _NOEXCEPT {
   return ::ldiv(__x, __y);
 }
-#ifndef _LIBCPP_HAS_NO_LONG_LONG
+#if !(defined(__FreeBSD__) && !defined(__LONG_LONG_SUPPORTED))
 inline _LIBCPP_INLINE_VISIBILITY lldiv_t div(long long __x,
                                              long long __y) _NOEXCEPT {
   return ::lldiv(__x, __y);
 }
-#endif // _LIBCPP_HAS_NO_LONG_LONG
-#endif // _LIBCPP_MSVCRT / __sun__ / _AIX
+#endif
+#endif // _LIBCPP_MSVCRT / __sun__
 } // extern "C++"
-#endif  // __cplusplus
+#endif // __cplusplus
 
-#endif  // _LIBCPP_STDLIB_H
+#endif // _LIBCPP_STDLIB_H

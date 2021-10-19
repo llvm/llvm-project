@@ -3,6 +3,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/thread.h"
 #include <atomic>
 #include <thread>
 #ifdef __USE_POSIX
@@ -95,8 +96,10 @@ void AsyncTaskRunner::runAsync(const llvm::Twine &Name,
   };
 
   // Ensure our worker threads have big enough stacks to run clang.
-  llvm::llvm_execute_on_thread_async(std::move(Task),
-                                     /*clang::DesiredStackSize*/ 8 << 20);
+  llvm::thread Thread(
+      /*clang::DesiredStackSize*/ llvm::Optional<unsigned>(8 << 20),
+      std::move(Task));
+  Thread.detach();
 }
 
 Deadline timeoutSeconds(llvm::Optional<double> Seconds) {
@@ -114,6 +117,18 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
   if (D == Deadline::infinity())
     return CV.wait(Lock);
   CV.wait_until(Lock, D.time());
+}
+
+bool PeriodicThrottler::operator()() {
+  Rep Now = Stopwatch::now().time_since_epoch().count();
+  Rep OldNext = Next.load(std::memory_order_acquire);
+  if (Now < OldNext)
+    return false;
+  // We're ready to run (but may be racing other threads).
+  // Work out the updated target time, and run if we successfully bump it.
+  Rep NewNext = Now + Period;
+  return Next.compare_exchange_strong(OldNext, NewNext,
+                                      std::memory_order_acq_rel);
 }
 
 } // namespace clangd

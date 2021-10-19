@@ -350,6 +350,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
                                    Optional<uint64_t> EndOffset) -> bool {
     assert(Queue->Head);
     assert(StartOffset == alignTo(LastEnd, Queue->Alignment));
+    assert(!EndOffset || StartOffset < *EndOffset);
 
     // Figure out the maximum size that a field can be, and ignore this
     // queue if there's nothing in it that small.
@@ -372,6 +373,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Helper function to find the "best" flexible-offset field according
   // to the criteria described above.
   auto tryAddBestField = [&](Optional<uint64_t> BeforeOffset) -> bool {
+    assert(!BeforeOffset || LastEnd < *BeforeOffset);
     auto QueueB = FlexibleFieldsByAlignment.begin();
     auto QueueE = FlexibleFieldsByAlignment.end();
 
@@ -403,9 +405,12 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
         return false;
 
       // Otherwise, scan backwards to find the most-aligned queue that
-      // still has minimal leading padding after LastEnd.
+      // still has minimal leading padding after LastEnd.  If that
+      // minimal padding is already at or past the end point, we're done.
       --FirstQueueToSearch;
       Offset = alignTo(LastEnd, FirstQueueToSearch->Alignment);
+      if (BeforeOffset && Offset >= *BeforeOffset)
+        return false;
       while (FirstQueueToSearch != QueueB &&
              Offset == alignTo(LastEnd, FirstQueueToSearch[-1].Alignment))
         --FirstQueueToSearch;
@@ -415,6 +420,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Phase 1: fill the gaps between fixed-offset fields with the best
   // flexible-offset field that fits.
   for (auto I = Fields.begin(); I != FirstFlexible; ++I) {
+    assert(LastEnd <= I->Offset);
     while (LastEnd != I->Offset) {
       if (!tryAddBestField(I->Offset))
         break;

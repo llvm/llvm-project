@@ -13,7 +13,7 @@ int f(int x, int y) {
   // ; <label>:14
   // But avoids false matches inside other numbers such as [114 x i8].
   // CHECK: {{^|:}}[[L2]]
-  // CHECK-NEXT: call void @llvm.trap()
+  // CHECK-NEXT: call void @llvm.ubsantrap(i8 3)
   // CHECK-NEXT: unreachable
 
   // CHECK: {{^|:}}[[L1]]

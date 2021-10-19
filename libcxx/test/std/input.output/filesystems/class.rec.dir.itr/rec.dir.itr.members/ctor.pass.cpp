@@ -88,6 +88,14 @@ TEST_CASE(test_construction_from_bad_path)
 TEST_CASE(access_denied_test_case)
 {
     using namespace fs;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path testDir = GetWindowsInaccessibleDir();
+    if (testDir.empty())
+        TEST_UNSUPPORTED();
+#else
     scoped_test_env env;
     path const testDir = env.make_env_path("dir1");
     path const testFile = testDir / "testFile";
@@ -102,6 +110,7 @@ TEST_CASE(access_denied_test_case)
 
     // Change the permissions so we can no longer iterate
     permissions(testDir, perms::none);
+#endif
 
     // Check that the construction fails when skip_permissions_denied is
     // not given.
@@ -125,12 +134,22 @@ TEST_CASE(access_denied_test_case)
 TEST_CASE(access_denied_to_file_test_case)
 {
     using namespace fs;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path testDir = GetWindowsInaccessibleDir();
+    if (testDir.empty())
+        TEST_UNSUPPORTED();
+    path const testFile = testDir / "inaccessible_file";
+#else
     scoped_test_env env;
     path const testFile = env.make_env_path("file1");
     env.create_file(testFile, 42);
 
     // Change the permissions so we can no longer iterate
     permissions(testFile, perms::none);
+#endif
 
     // Check that the construction fails when skip_permissions_denied is
     // not given.

@@ -26,21 +26,22 @@ Sections:
         Kind:            MEMORY
         Memory:
           Flags:           [ HAS_MAX ]
-          Initial:         0x00000010
+          Minimum:         0x00000010
           Maximum:         0x00000011
       - Module:          foo
         Field:           imported_table
         Kind:            TABLE
         Table:
+          Index:         0
           ElemType:      FUNCREF
           Limits:
             Flags:           [ HAS_MAX ]
-            Initial:         0x00000020
+            Minimum:         0x00000020
             Maximum:         0x00000022
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:   - Type:            IMPORT
 # CHECK:     Imports:
@@ -58,8 +59,8 @@ Sections:
 # CHECK:         Kind:            MEMORY
 # CHECK:         Memory:
 # CHECK:           Flags:           [ HAS_MAX ]
-# CHECK:           Initial:         0x00000010
-# CHECK:           Maximum:         0x00000011
+# CHECK:           Minimum:         0x10
+# CHECK:           Maximum:         0x11
 # CHECK:       - Module:          foo
 # CHECK:         Field:           imported_table
 # CHECK:         Kind:            TABLE
@@ -67,6 +68,6 @@ Sections:
 # CHECK:           ElemType:      FUNCREF
 # CHECK:           Limits:
 # CHECK:             Flags:           [ HAS_MAX ]
-# CHECK:             Initial:         0x00000020
-# CHECK:             Maximum:         0x00000022
+# CHECK:             Minimum:         0x20
+# CHECK:             Maximum:         0x22
 # CHECK: ...

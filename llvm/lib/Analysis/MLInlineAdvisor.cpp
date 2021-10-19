@@ -43,11 +43,19 @@ static cl::opt<float> SizeIncreaseThreshold(
              "blocking any further inlining."),
     cl::init(2.0));
 
+// clang-format off
 const std::array<std::string, NumberOfFeatures> llvm::FeatureNameMap{
+// InlineCost features - these must come first
+#define POPULATE_NAMES(INDEX_NAME, NAME) NAME,
+  INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
+#undef POPULATE_NAMES
+
+// Non-cost features
 #define POPULATE_NAMES(INDEX_NAME, NAME, COMMENT) NAME,
-    INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
+  INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 };
+// clang-format on
 
 const char *const llvm::DecisionName = "inlining_decision";
 const char *const llvm::DefaultDecisionName = "inlining_default";
@@ -66,8 +74,8 @@ CallBase *getInlinableCS(Instruction &I) {
 MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
                                  std::unique_ptr<MLModelRunner> Runner)
     : InlineAdvisor(
-          MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      M(M), ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
+          M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
+      ModelRunner(std::move(Runner)), CG(new CallGraph(M)),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize) {
   assert(ModelRunner);
 
@@ -134,7 +142,11 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   Function *Callee = Advice.getCallee();
 
   // The caller features aren't valid anymore.
-  FAM.invalidate<FunctionPropertiesAnalysis>(*Caller);
+  {
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<FunctionPropertiesAnalysis>();
+    FAM.invalidate(*Caller, PA);
+  }
   int64_t IRSizeAfter =
       getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
   CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
@@ -168,32 +180,27 @@ int64_t MLInlineAdvisor::getModuleIRSize() const {
   return Ret;
 }
 
-std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
+std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
 
   auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
-    return FAM.getResult<TargetLibraryAnalysis>(F);
-  };
-
   auto &TIR = FAM.getResult<TargetIRAnalysis>(Callee);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  auto TrivialDecision =
-      llvm::getAttributeBasedInliningDecision(CB, &Callee, TIR, GetTLI);
-
+  auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal
   // state we need to track, so we can just return the base InlineAdvice, which
   // will do nothing interesting.
   // Same thing if this is a recursive case.
-  if ((TrivialDecision.hasValue() && !TrivialDecision->isSuccess()) ||
+  if (MandatoryKind == InlineAdvisor::MandatoryInliningKind::Never ||
       &Caller == &Callee)
-    return std::make_unique<InlineAdvice>(this, CB, ORE, false);
+    return getMandatoryAdvice(CB, false);
 
-  bool Mandatory = TrivialDecision.hasValue() && TrivialDecision->isSuccess();
+  bool Mandatory =
+      MandatoryKind == InlineAdvisor::MandatoryInliningKind::Always;
 
   // If we need to stop, we won't want to track anymore any state changes, so
   // we just return the base InlineAdvice, which acts as a noop.
@@ -218,8 +225,14 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
     CostEstimate = *IsCallSiteInlinable;
   }
 
+  const auto CostFeatures =
+      llvm::getInliningCostFeatures(CB, TIR, GetAssumptionCache);
+  if (!CostFeatures) {
+    return std::make_unique<InlineAdvice>(this, CB, ORE, false);
+  }
+
   if (Mandatory)
-    return getMandatoryAdvice(CB, ORE);
+    return getMandatoryAdvice(CB, true);
 
   auto NrCtantParams = 0;
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
@@ -235,7 +248,6 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
                           FunctionLevels[&Caller]);
   ModelRunner->setFeature(FeatureIndex::NodeCount, NodeCount);
   ModelRunner->setFeature(FeatureIndex::NrCtantParams, NrCtantParams);
-  ModelRunner->setFeature(FeatureIndex::CostEstimate, CostEstimate);
   ModelRunner->setFeature(FeatureIndex::EdgeCount, EdgeCount);
   ModelRunner->setFeature(FeatureIndex::CallerUsers, CallerBefore.Uses);
   ModelRunner->setFeature(FeatureIndex::CallerConditionallyExecutedBlocks,
@@ -245,6 +257,16 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdvice(CallBase &CB) {
   ModelRunner->setFeature(FeatureIndex::CalleeConditionallyExecutedBlocks,
                           CalleeBefore.BlocksReachedFromConditionalInstruction);
   ModelRunner->setFeature(FeatureIndex::CalleeUsers, CalleeBefore.Uses);
+  ModelRunner->setFeature(FeatureIndex::CostEstimate, CostEstimate);
+
+  // Add the cost features
+  for (size_t I = 0;
+       I < static_cast<size_t>(InlineCostFeatureIndex::NumberOfFeatures); ++I) {
+    ModelRunner->setFeature(
+        inlineCostFeatureToMlFeature(static_cast<InlineCostFeatureIndex>(I)),
+        CostFeatures->at(I));
+  }
+
   return getAdviceFromModel(CB, ORE);
 }
 
@@ -254,10 +276,22 @@ MLInlineAdvisor::getAdviceFromModel(CallBase &CB,
   return std::make_unique<MLInlineAdvice>(this, CB, ORE, ModelRunner->run());
 }
 
+std::unique_ptr<InlineAdvice> MLInlineAdvisor::getMandatoryAdvice(CallBase &CB,
+                                                                  bool Advice) {
+  // Make sure we track inlinings in all cases - mandatory or not.
+  if (Advice && !ForceStop)
+    return getMandatoryAdviceImpl(CB);
+
+  // If this is a "never inline" case, there won't be any changes to internal
+  // state we need to track, so we can just return the base InlineAdvice, which
+  // will do nothing interesting.
+  // Same if we are forced to stop - we don't track anymore.
+  return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), Advice);
+}
+
 std::unique_ptr<MLInlineAdvice>
-MLInlineAdvisor::getMandatoryAdvice(CallBase &CB,
-                                    OptimizationRemarkEmitter &ORE) {
-  return std::make_unique<MLInlineAdvice>(this, CB, ORE, true);
+MLInlineAdvisor::getMandatoryAdviceImpl(CallBase &CB) {
+  return std::make_unique<MLInlineAdvice>(this, CB, getCallerORE(CB), true);
 }
 
 void MLInlineAdvice::reportContextForRemark(

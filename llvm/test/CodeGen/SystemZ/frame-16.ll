@@ -311,13 +311,13 @@ define void @f11(i32 *%vptr, i8 %byte) {
 define void @f12(i8 %byte, i64 %index) {
 ; CHECK-NOFP-LABEL: f12:
 ; CHECK-NOFP: llilh %r1, 8
-; CHECK-NOFP: agr %r1, %r15
+; CHECK-NOFP: la %r1, 0(%r1,%r15)
 ; CHECK-NOFP: stc %r2, 0(%r3,%r1)
 ; CHECK-NOFP: br %r14
 ;
 ; CHECK-FP-LABEL: f12:
 ; CHECK-FP: llilh %r1, 8
-; CHECK-FP: agr %r1, %r11
+; CHECK-FP: la %r1, 0(%r1,%r11)
 ; CHECK-FP: stc %r2, 0(%r3,%r1)
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8

@@ -19,12 +19,16 @@ The redzones, the quarantine, and, to a less extent, the shadow, are the
 sources of AddressSanitizer's memory overhead.
 See the `AddressSanitizer paper`_ for details.
 
-AArch64 has the `Address Tagging`_ (or top-byte-ignore, TBI), a hardware feature that allows
-software to use 8 most significant bits of a 64-bit pointer as
+AArch64 has `Address Tagging`_ (or top-byte-ignore, TBI), a hardware feature that allows
+software to use the 8 most significant bits of a 64-bit pointer as
 a tag. HWASAN uses `Address Tagging`_
 to implement a memory safety tool, similar to :doc:`AddressSanitizer`,
 but with smaller memory overhead and slightly different (mostly better)
 accuracy guarantees.
+
+Intel's `Linear Address Masking`_ (LAM) also provides address tagging for
+x86_64, though it is not widely available in hardware yet.  For x86_64, HWASAN
+has a limited implementation using page aliasing instead.
 
 Algorithm
 =========
@@ -84,20 +88,20 @@ Currently, the following sequence is used:
   // clang -O2 --target=aarch64-linux-android30 -fsanitize=hwaddress -S -o - load.c
   [...]
   foo:
-        str     x30, [sp, #-16]!
-        adrp    x9, :got:__hwasan_shadow                // load shadow address from GOT into x9
-        ldr     x9, [x9, :got_lo12:__hwasan_shadow]
-        bl      __hwasan_check_x0_2_short               // call outlined tag check
-                                                        // (arguments: x0 = address, x9 = shadow base;
+        stp     x30, x20, [sp, #-16]!
+        adrp    x20, :got:__hwasan_shadow               // load shadow address from GOT into x20
+        ldr     x20, [x20, :got_lo12:__hwasan_shadow]
+        bl      __hwasan_check_x0_2_short_v2            // call outlined tag check
+                                                        // (arguments: x0 = address, x20 = shadow base;
                                                         // "2" encodes the access type and size)
         ldr     w0, [x0]                                // inline load
-        ldr     x30, [sp], #16
+        ldp     x30, x20, [sp], #16
         ret
 
   [...]
-  __hwasan_check_x0_2_short:
-        ubfx    x16, x0, #4, #52                        // shadow offset
-        ldrb    w16, [x9, x16]                          // load shadow tag
+  __hwasan_check_x0_2_short_v2:
+        sbfx    x16, x0, #4, #52                        // shadow offset
+        ldrb    w16, [x20, x16]                         // load shadow tag
         cmp     x16, x0, lsr #56                        // extract address tag, compare with shadow tag
         b.ne    .Ltmp0                                  // jump to short tag handler on mismatch
   .Ltmp1:
@@ -266,7 +270,15 @@ before every load and store by compiler instrumentation, but this variant
 will have limited deployability since not all of the code is
 typically instrumented.
 
-The HWASAN's approach is not applicable to 32-bit architectures.
+On x86_64, HWASAN utilizes page aliasing to place tags in userspace address
+bits.  Currently only heap tagging is supported.  The page aliases rely on
+shared memory, which will cause heap memory to be shared between processes if
+the application calls ``fork()``.  Therefore x86_64 is really only safe for
+applications that do not fork.
+
+HWASAN does not currently support 32-bit architectures since they do not
+support `Address Tagging`_ and the address space is too constrained to easily
+implement page aliasing.
 
 
 Related Work
@@ -284,4 +296,4 @@ Related Work
 .. _SPARC ADI: https://lazytyped.blogspot.com/2017/09/getting-started-with-adi.html
 .. _AddressSanitizer paper: https://www.usenix.org/system/files/conference/atc12/atc12-final39.pdf
 .. _Address Tagging: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/ch12s05s01.html
-
+.. _Linear Address Masking: https://software.intel.com/content/www/us/en/develop/download/intel-architecture-instruction-set-extensions-programming-reference.html

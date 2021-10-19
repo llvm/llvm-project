@@ -12,7 +12,6 @@
 
 #include "OperatingSystemPython.h"
 
-#include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "Plugins/Process/Utility/ThreadMemory.h"
@@ -91,13 +90,13 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
     std::string os_plugin_class_name(
         python_module_path.GetFilename().AsCString(""));
     if (!os_plugin_class_name.empty()) {
-      const bool init_session = false;
+      LoadScriptOptions options;
       char python_module_path_cstr[PATH_MAX];
       python_module_path.GetPath(python_module_path_cstr,
                                  sizeof(python_module_path_cstr));
       Status error;
-      if (m_interpreter->LoadScriptingModule(python_module_path_cstr,
-                                             init_session, error)) {
+      if (m_interpreter->LoadScriptingModule(python_module_path_cstr, options,
+                                             error)) {
         // Strip the ".py" extension if there is one
         size_t py_extension_pos = os_plugin_class_name.rfind(".py");
         if (py_extension_pos != std::string::npos)
@@ -115,7 +114,7 @@ OperatingSystemPython::OperatingSystemPython(lldb_private::Process *process,
   }
 }
 
-OperatingSystemPython::~OperatingSystemPython() {}
+OperatingSystemPython::~OperatingSystemPython() = default;
 
 DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   if (m_register_info_up == nullptr) {
@@ -140,13 +139,6 @@ DynamicRegisterInfo *OperatingSystemPython::GetDynamicRegisterInfo() {
   }
   return m_register_info_up.get();
 }
-
-// PluginInterface protocol
-ConstString OperatingSystemPython::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t OperatingSystemPython::GetPluginVersion() { return 1; }
 
 bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
                                              ThreadList &core_thread_list,

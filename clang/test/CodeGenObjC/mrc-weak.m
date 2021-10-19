@@ -12,8 +12,8 @@
   __attribute__((aligned(32))) void *array[2];
 }
 @end
-// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar2" = global i64 24,
-// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar" = global i64 16,
+// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar2" ={{.*}} global i64 24,
+// CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar" ={{.*}} global i64 16,
 // CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
 // CHECK-MODERN: @"_OBJC_CLASS_RO_$_HighlyAlignedSubclass" = {{.*}} {
 // CHECK-FRAGILE: @OBJC_INSTANCE_VARIABLES_HighlyAlignedSubclass = {{.*}}, i32 8 }, {{.*}}, i32 12 }]
@@ -51,7 +51,7 @@
 
 
 void test1(__weak id x) {}
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 // CHECK:      [[X:%.*]] = alloca i8*,
 // CHECK-NEXT: @llvm.objc.initWeak
 // CHECK-NEXT: @llvm.objc.destroyWeak
@@ -60,7 +60,7 @@ void test1(__weak id x) {}
 void test2(id y) {
   __weak id z = y;
 }
-// CHECK-LABEL: define void @test2
+// CHECK-LABEL: define{{.*}} void @test2
 // CHECK:      [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: [[Z:%.*]] = alloca i8*,
 // CHECK-NEXT: store
@@ -73,7 +73,7 @@ void test3(id y) {
   __weak id z;
   z = y;
 }
-// CHECK-LABEL: define void @test3
+// CHECK-LABEL: define{{.*}} void @test3
 // CHECK:      [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: [[Z:%.*]] = alloca i8*,
 // CHECK-NEXT: store
@@ -86,7 +86,7 @@ void test3(id y) {
 void test4(__weak id *p) {
   id y = *p;
 }
-// CHECK-LABEL: define void @test4
+// CHECK-LABEL: define{{.*}} void @test4
 // CHECK:      [[P:%.*]] = alloca i8**,
 // CHECK-NEXT: [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: store
@@ -98,7 +98,7 @@ void test4(__weak id *p) {
 void test5(__weak id *p) {
   id y = [*p retain];
 }
-// CHECK-LABEL: define void @test5
+// CHECK-LABEL: define{{.*}} void @test5
 // CHECK:      [[P:%.*]] = alloca i8**,
 // CHECK-NEXT: [[Y:%.*]] = alloca i8*,
 // CHECK-NEXT: store
@@ -110,7 +110,7 @@ void test5(__weak id *p) {
 void test6(__weak Foo **p) {
   Foo *y = [*p retain];
 }
-// CHECK-LABEL: define void @test6
+// CHECK-LABEL: define{{.*}} void @test6
 // CHECK:      [[P:%.*]] = alloca [[FOO:%.*]]**,
 // CHECK-NEXT: [[Y:%.*]] = alloca [[FOO]]*,
 // CHECK-NEXT: store
@@ -128,7 +128,7 @@ void test7(void) {
   __weak Foo *p = get_object();
   use_block(^{ [p run ]; });
 }
-// CHECK-LABEL: define void @test7
+// CHECK-LABEL: define{{.*}} void @test7
 // CHECK:       [[P:%.*]] = alloca [[FOO]]*,
 // CHECK:       [[T0:%.*]] = call i8* @get_object()
 // CHECK-NEXT:  [[T1:%.*]] = bitcast i8* [[T0]] to [[FOO]]*
@@ -149,7 +149,7 @@ void test8(void) {
   __block __weak Foo *p = get_object();
   use_block(^{ [p run ]; });
 }
-// CHECK-LABEL: define void @test8
+// CHECK-LABEL: define{{.*}} void @test8
 // CHECK:       call i8* @llvm.objc.initWeak
 // CHECK-NOT:   call void @llvm.objc.copyWeak
 // CHECK:       call void @use_block
@@ -161,7 +161,7 @@ void test8(void) {
 // CHECK-LABEL: define internal void @__Block_byref_object_dispose
 // CHECK:       call void @llvm.objc.destroyWeak
 
-// CHECK-LABEL: define void @test9_baseline()
+// CHECK-LABEL: define{{.*}} void @test9_baseline()
 // CHECK:       define linkonce_odr hidden void @__copy_helper
 // CHECK:       define linkonce_odr hidden void @__destroy_helper
 void test9_baseline(void) {
@@ -169,20 +169,20 @@ void test9_baseline(void) {
   use_block(^{ [p run]; });
 }
 
-// CHECK-LABEL: define void @test9()
+// CHECK-LABEL: define{{.*}} void @test9()
 // CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
 // CHECK-NOT:   define linkonce_odr hidden void @__destroy_helper
-// CHECK:       define void @test9_fin()
+// CHECK:       define{{.*}} void @test9_fin()
 void test9(void) {
   __unsafe_unretained Foo *p = get_object();
   use_block(^{ [p run]; });
 }
 void test9_fin() {}
 
-// CHECK-LABEL: define void @test10()
+// CHECK-LABEL: define{{.*}} void @test10()
 // CHECK-NOT:   define linkonce_odr hidden void @__copy_helper
 // CHECK-NOT:   define linkonce_odr hidden void @__destroy_helper
-// CHECK:       define void @test10_fin()
+// CHECK:       define{{.*}} void @test10_fin()
 void test10(void) {
   typedef __unsafe_unretained Foo *UnsafeFooPtr;
   UnsafeFooPtr p = get_object();

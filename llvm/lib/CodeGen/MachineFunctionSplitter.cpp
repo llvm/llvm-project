@@ -23,6 +23,7 @@
 // https://groups.google.com/d/msg/llvm-dev/RUegaMg-iqc/wFAVxa6fCgAJ
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -39,11 +40,18 @@
 
 using namespace llvm;
 
+// FIXME: This cutoff value is CPU dependent and should be moved to
+// TargetTransformInfo once we consider enabling this on other platforms.
+// The value is expressed as a ProfileSummaryInfo integer percentile cutoff.
+// Defaults to 999950, i.e. all blocks colder than 99.995 percentile are split.
+// The default was empirically determined to be optimal when considering cutoff
+// values between 99%-ile to 100%-ile with respect to iTLB and icache metrics on
+// Intel CPUs.
 static cl::opt<unsigned>
     PercentileCutoff("mfs-psi-cutoff",
                      cl::desc("Percentile profile summary cutoff used to "
                               "determine cold blocks. Unused if set to zero."),
-                     cl::init(0), cl::Hidden);
+                     cl::init(999950), cl::Hidden);
 
 static cl::opt<unsigned> ColdCountThreshold(
     "mfs-count-threshold",
@@ -70,7 +78,7 @@ public:
 };
 } // end anonymous namespace
 
-static bool isColdBlock(MachineBasicBlock &MBB,
+static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
   Optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
@@ -93,15 +101,16 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   // since the split part may not be placed in a contiguous region. It may also
   // be more beneficial to augment the linker to ensure contiguous layout of
   // split functions within the same section as specified by the attribute.
-  if (!MF.getFunction().getSection().empty())
+  if (MF.getFunction().hasSection() ||
+      MF.getFunction().hasFnAttribute("implicit-section-name"))
     return false;
 
   // We don't want to proceed further for cold functions
   // or functions of unknown hotness. Lukewarm functions have no prefix.
   Optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
   if (SectionPrefix.hasValue() &&
-      (SectionPrefix.getValue().equals(".unlikely") ||
-       SectionPrefix.getValue().equals(".unknown"))) {
+      (SectionPrefix.getValue().equals("unlikely") ||
+       SectionPrefix.getValue().equals("unknown"))) {
     return false;
   }
 
@@ -114,14 +123,26 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
+  SmallVector<MachineBasicBlock *, 2> LandingPads;
   for (auto &MBB : MF) {
-    // FIXME: We retain the entry block and conservatively keep all landing pad
-    // blocks as part of the original function. Once D73739 is submitted, we can
-    // improve the handling of ehpads.
-    if ((MBB.pred_empty() || MBB.isEHPad()))
+    if (MBB.isEntryBlock())
       continue;
-    if (isColdBlock(MBB, MBFI, PSI))
+
+    if (MBB.isEHPad())
+      LandingPads.push_back(&MBB);
+    else if (isColdBlock(MBB, MBFI, PSI))
       MBB.setSectionID(MBBSectionID::ColdSectionID);
+  }
+
+  // We only split out eh pads if all of them are cold.
+  bool HasHotLandingPads = false;
+  for (const MachineBasicBlock *LP : LandingPads) {
+    if (!isColdBlock(*LP, MBFI, PSI))
+      HasHotLandingPads = true;
+  }
+  if (!HasHotLandingPads) {
+    for (MachineBasicBlock *LP : LandingPads)
+      LP->setSectionID(MBBSectionID::ColdSectionID);
   }
 
   auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {

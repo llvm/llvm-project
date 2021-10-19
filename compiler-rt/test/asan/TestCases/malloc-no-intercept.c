@@ -7,8 +7,11 @@
 // RUN: not %clang_asan -Dtestfunc=pvalloc  %s -o %t
 // RUN: not %clang_asan -Dtestfunc=cfree    %s -o %t
 
+// REQUIRES: glibc-2.27
 // Conflicts with BIONIC declarations.
-// UNSUPPORTED: android
+// Lacks mallinfo, mallopt except in libmalloc.  cfree with different
+// signature in libc.
+// UNSUPPORTED: solaris
 
 // Inhibit conflicting declaration of memalign on Solaris.
 #if defined(__sun__) && defined(__svr4__)

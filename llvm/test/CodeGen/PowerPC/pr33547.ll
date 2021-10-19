@@ -8,6 +8,24 @@
 
 ; Function Attrs: noinline norecurse nounwind
 define void @main() {
+; CHECK-LABEL: main:
+; CHECK:       # %bb.0: # %L.entry
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    std 0, 16(1)
+; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
+; CHECK-NEXT:    addi 3, 3, 124
+; CHECK-NEXT:    bl testFunc
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    ld 0, 16(1)
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
 L.entry:
   tail call void @testFunc(i64* bitcast (i8* getelementptr inbounds (%struct.STATICS1, %struct.STATICS1* @.STATICS1, i64 0, i32 0, i64 124) to i64*), i64* bitcast (i32* @.C302_MAIN_ to i64*))
   ret void
@@ -27,11 +45,46 @@ L.entry:
 
 ; Function Attrs: noinline norecurse nounwind
 define void @testFunc(i64* nocapture %r, i64* nocapture readonly %k) {
-; CHECK-LABEL: testFunc
-; CHECK: mflr 0
-; CHECK: std 0, 16(1)
-; CHECK: bl .[[BRANCHNEXT:[L0-9\$a-z]+]]
-; CHECK-NEXT: [[BRANCHNEXT]]
+; CHECK-LABEL: testFunc:
+; CHECK:       # %bb.0: # %L.entry
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    std 0, 16(1)
+; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl .L2$pb
+; CHECK-NEXT:  .L2$pb:
+; CHECK-NEXT:    lwz 4, 0(4)
+; CHECK-NEXT:    mflr 5
+; CHECK-NEXT:    addi 4, 4, -1
+; CHECK-NEXT:    cmplwi 4, 5
+; CHECK-NEXT:    bgt 0, .LBB2_6
+; CHECK-NEXT:  # %bb.1: # %L.entry
+; CHECK-NEXT:    addis 6, 2, .LC2@toc@ha
+; CHECK-NEXT:    rldic 4, 4, 2, 30
+; CHECK-NEXT:    ld 6, .LC2@toc@l(6)
+; CHECK-NEXT:    lwax 4, 4, 6
+; CHECK-NEXT:    add 4, 4, 5
+; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    li 4, -3
+; CHECK-NEXT:    bctr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_2: # %infloop11
+; CHECK-NEXT:    #
+; CHECK-NEXT:    b .LBB2_2
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB2_3: # %infloop
+; CHECK-NEXT:    #
+; CHECK-NEXT:    b .LBB2_3
+; CHECK-NEXT:  .LBB2_4: # %L.LB3_321.split
+; CHECK-NEXT:    li 4, 5
+; CHECK-NEXT:  .LBB2_5: # %L.LB3_307.sink.split
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:  .LBB2_6: # %L.LB3_307
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    ld 0, 16(1)
+; CHECK-NEXT:    mtlr 0
+; CHECK-NEXT:    blr
 L.entry:
   %0 = bitcast i64* %k to i32*
   %1 = load i32, i32* %0, align 4

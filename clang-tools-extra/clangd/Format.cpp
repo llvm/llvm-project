@@ -23,10 +23,11 @@ namespace {
 /// as it isn't sure where the errors are and so can't correct.
 /// When editing, it's reasonable to assume code before the cursor is complete.
 void closeBrackets(std::string &Code, const format::FormatStyle &Style) {
-  SourceManagerForFile FileSM("dummy.cpp", Code);
+  SourceManagerForFile FileSM("mock_file.cpp", Code);
   auto &SM = FileSM.get();
   FileID FID = SM.getMainFileID();
-  Lexer Lex(FID, SM.getBuffer(FID), SM, format::getFormattingLangOpts(Style));
+  Lexer Lex(FID, SM.getBufferOrFake(FID), SM,
+            format::getFormattingLangOpts(Style));
   Token Tok;
   std::vector<char> Brackets;
   while (!Lex.LexFromRawLexer(Tok)) {

@@ -32,12 +32,12 @@ func @replace_non_root_illegal_op() {
 // Test that children of recursively legal operations are ignored.
 func @recursively_legal_invalid_op() {
   /// Operation that is statically legal.
-  module attributes {test.recursively_legal} {
+  builtin.module attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
   }
   /// Operation that is dynamically legal, i.e. the function has a pattern
   /// applied to legalize the argument type before it becomes recursively legal.
-  func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
+  builtin.func @dynamic_func(%arg: i64) attributes {test.recursively_legal} {
     %ignored = "test.illegal_op_f"() : () -> (i32)
     "test.return"() : () -> ()
   }
@@ -47,25 +47,88 @@ func @recursively_legal_invalid_op() {
 
 // -----
 
-// Test that region cloning can be properly undone.
-func @test_undo_region_clone() {
-  "test.region"() ({
-    ^bb1(%i0: i64):
-      "test.invalid"(%i0) : (i64) -> ()
-  }) {legalizer.should_clone} : () -> ()
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
 
-  // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
-  %ignored = "test.illegal_op_f"() : () -> (i32)
-  "test.return"() : () -> ()
+  // Test that region cloning can be properly undone.
+  func @test_undo_region_clone() {
+    "test.region"() ({
+      ^bb1(%i0: i64):
+        "test.invalid"(%i0) : (i64) -> ()
+    }) {legalizer.should_clone} : () -> ()
+
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    %ignored = "test.illegal_op_f"() : () -> (i32)
+    "test.return"() : () -> ()
+  }
+
 }
 
 // -----
 
-// Test that unknown operations can be dynamically legal.
-func @test_unknown_dynamically_legal() {
-  "foo.unknown_op"() {test.dynamically_legal} : () -> ()
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
 
-  // expected-error@+1 {{failed to legalize operation 'foo.unknown_op'}}
-  "foo.unknown_op"() {} : () -> ()
-  "test.return"() : () -> ()
+  // Test that unknown operations can be dynamically legal.
+  func @test_unknown_dynamically_legal() {
+    "foo.unknown_op"() {test.dynamically_legal} : () -> ()
+
+    // expected-error@+1 {{failed to legalize operation 'foo.unknown_op'}}
+    "foo.unknown_op"() {} : () -> ()
+    "test.return"() : () -> ()
+  }
+
+}
+
+// -----
+
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
+
+  // Test that region inlining can be properly undone.
+  func @test_undo_region_inline() {
+    "test.region"() ({
+      ^bb1(%i0: i64):
+        // expected-error@+1 {{failed to legalize operation 'std.br'}}
+        br ^bb2(%i0 : i64)
+      ^bb2(%i1: i64):
+        "test.invalid"(%i1) : (i64) -> ()
+    }) {} : () -> ()
+
+    "test.return"() : () -> ()
+  }
+
+}
+
+// -----
+
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
+
+  // Test that multiple block erases can be properly undone.
+  func @test_undo_block_erase() {
+    // expected-error@+1 {{failed to legalize operation 'test.region'}}
+    "test.region"() ({
+      ^bb1(%i0: i64):
+        br ^bb2(%i0 : i64)
+      ^bb2(%i1: i64):
+        "test.invalid"(%i1) : (i64) -> ()
+    }) {legalizer.should_clone, legalizer.erase_old_blocks} : () -> ()
+
+    "test.return"() : () -> ()
+  }
+
+}
+
+// -----
+
+// expected-remark@+1 {{applyFullConversion failed}}
+builtin.module {
+
+  func @create_unregistered_op_in_pattern() -> i32 {
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
+    %0 = "test.illegal_op_g"() : () -> (i32)
+    "test.return"(%0) : (i32) -> ()
+  }
+
 }

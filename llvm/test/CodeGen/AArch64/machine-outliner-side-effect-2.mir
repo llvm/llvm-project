@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
+
+# The test checks whether the compiler updates the side effect of function @OUTLINED_FUNCTION_0 by adding the use of register x0.
+
+--- |
+  declare void @spam() local_unnamed_addr
+  define void @bax() optsize minsize noredzone { ret void }
+  define void @bay() optsize minsize noredzone { ret void }
+  define void @baz() optsize minsize noredzone { ret void }
+...
+---
+name:            bax
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $lr
+
+    $x1 = ADDXri $sp, 16, 0
+    BL @spam, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit killed $x1, implicit-def $sp, implicit-def dead $x0
+
+    RET_ReallyLR
+
+...
+---
+name:            bay
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $lr
+
+    $x1 = ADDXri $sp, 16, 0
+    BL @spam, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit killed $x1, implicit-def $sp, implicit-def dead $x0
+
+    RET_ReallyLR
+
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $lr
+
+    $x1 = ADDXri $sp, 16, 0
+    BL @spam, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit killed $x1, implicit-def $sp, implicit-def dead $x0
+
+    RET_ReallyLR
+
+...
+
+# CHECK: BL @OUTLINED_FUNCTION_0, {{.*}}, implicit $x0

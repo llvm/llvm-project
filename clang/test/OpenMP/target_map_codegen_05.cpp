@@ -32,9 +32,9 @@
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-targets=i386-pc-linux-gnu -x c++ -triple i386-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck -allow-deprecated-dag-overlap  --check-prefix SIMD-ONLY5 %s
 // SIMD-ONLY5-NOT: {{__kmpc|__tgt}}
 #ifdef CK6
-// CK6-DAG: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
+// CK6-DAG: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l{{[0-9]+}}.region_id = weak{{.*}} constant i8 0
 
-// CK6-DAG: [[GBL:@Gi]] = global i32 0
+// CK6-DAG: [[GBL:@Gi]] ={{.*}} global i32 0
 // CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
 // CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]
@@ -42,7 +42,7 @@
 // CK6-LABEL: implicit_maps_host_global{{.*}}(
 int Gi;
 void implicit_maps_host_global (int a){
-  // CK6-DAG: call i32 @__tgt_target_mapper(i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null)
+  // CK6-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{.+}}, i8* {{.+}}, i32 1, i8** [[BPGEP:%[0-9]+]], i8** [[PGEP:%[0-9]+]], {{.+}}[[SIZES]]{{.+}}, {{.+}}[[TYPES]]{{.+}}, i8** null, i8** null)
   // CK6-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BPS:%[^,]+]], i32 0, i32 0
   // CK6-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[PS:%[^,]+]], i32 0, i32 0
   // CK6-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BPS]], i32 0, i32 0

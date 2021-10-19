@@ -7,7 +7,7 @@
 #===------------------------------------------------------------------------===#
 
 add_subdirectory(f18)
-if(LINK_WITH_FIR)
-  add_subdirectory(tco)
-endif()
+add_subdirectory(flang-driver)
+add_subdirectory(tco)
 add_subdirectory(f18-parse-demo)
+add_subdirectory(fir-opt)

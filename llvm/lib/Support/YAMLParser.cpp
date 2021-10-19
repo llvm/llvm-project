@@ -200,13 +200,12 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   StringRef::iterator End = Range.end();
   // 1 byte: [0x00, 0x7f]
   // Bit pattern: 0xxxxxxx
-  if ((*Position & 0x80) == 0) {
-     return std::make_pair(*Position, 1);
+  if (Position < End && (*Position & 0x80) == 0) {
+    return std::make_pair(*Position, 1);
   }
   // 2 bytes: [0x80, 0x7ff]
   // Bit pattern: 110xxxxx 10xxxxxx
-  if (Position + 1 != End &&
-      ((*Position & 0xE0) == 0xC0) &&
+  if (Position + 1 < End && ((*Position & 0xE0) == 0xC0) &&
       ((*(Position + 1) & 0xC0) == 0x80)) {
     uint32_t codepoint = ((*Position & 0x1F) << 6) |
                           (*(Position + 1) & 0x3F);
@@ -215,8 +214,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   }
   // 3 bytes: [0x8000, 0xffff]
   // Bit pattern: 1110xxxx 10xxxxxx 10xxxxxx
-  if (Position + 2 != End &&
-      ((*Position & 0xF0) == 0xE0) &&
+  if (Position + 2 < End && ((*Position & 0xF0) == 0xE0) &&
       ((*(Position + 1) & 0xC0) == 0x80) &&
       ((*(Position + 2) & 0xC0) == 0x80)) {
     uint32_t codepoint = ((*Position & 0x0F) << 12) |
@@ -230,8 +228,7 @@ static UTF8Decoded decodeUTF8(StringRef Range) {
   }
   // 4 bytes: [0x10000, 0x10FFFF]
   // Bit pattern: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-  if (Position + 3 != End &&
-      ((*Position & 0xF8) == 0xF0) &&
+  if (Position + 3 < End && ((*Position & 0xF8) == 0xF0) &&
       ((*(Position + 1) & 0xC0) == 0x80) &&
       ((*(Position + 2) & 0xC0) == 0x80) &&
       ((*(Position + 3) & 0xC0) == 0x80)) {
@@ -718,7 +715,7 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
         // Found invalid char.
         SmallString<4> Val;
         encodeUTF8(0xFFFD, Val);
-        EscapedInput.insert(EscapedInput.end(), Val.begin(), Val.end());
+        llvm::append_range(EscapedInput, Val);
         // FIXME: Error reporting.
         return EscapedInput;
       }
@@ -749,6 +746,92 @@ std::string yaml::escape(StringRef Input, bool EscapePrintable) {
   return EscapedInput;
 }
 
+llvm::Optional<bool> yaml::parseBool(StringRef S) {
+  switch (S.size()) {
+  case 1:
+    switch (S.front()) {
+    case 'y':
+    case 'Y':
+      return true;
+    case 'n':
+    case 'N':
+      return false;
+    default:
+      return None;
+    }
+  case 2:
+    switch (S.front()) {
+    case 'O':
+      if (S[1] == 'N') // ON
+        return true;
+      LLVM_FALLTHROUGH;
+    case 'o':
+      if (S[1] == 'n') //[Oo]n
+        return true;
+      return None;
+    case 'N':
+      if (S[1] == 'O') // NO
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'n':
+      if (S[1] == 'o') //[Nn]o
+        return false;
+      return None;
+    default:
+      return None;
+    }
+  case 3:
+    switch (S.front()) {
+    case 'O':
+      if (S.drop_front() == "FF") // OFF
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'o':
+      if (S.drop_front() == "ff") //[Oo]ff
+        return false;
+      return None;
+    case 'Y':
+      if (S.drop_front() == "ES") // YES
+        return true;
+      LLVM_FALLTHROUGH;
+    case 'y':
+      if (S.drop_front() == "es") //[Yy]es
+        return true;
+      return None;
+    default:
+      return None;
+    }
+  case 4:
+    switch (S.front()) {
+    case 'T':
+      if (S.drop_front() == "RUE") // TRUE
+        return true;
+      LLVM_FALLTHROUGH;
+    case 't':
+      if (S.drop_front() == "rue") //[Tt]rue
+        return true;
+      return None;
+    default:
+      return None;
+    }
+  case 5:
+    switch (S.front()) {
+    case 'F':
+      if (S.drop_front() == "ALSE") // FALSE
+        return false;
+      LLVM_FALLTHROUGH;
+    case 'f':
+      if (S.drop_front() == "alse") //[Ff]alse
+        return false;
+      return None;
+    default:
+      return None;
+    }
+  default:
+    return None;
+  }
+}
+
 Scanner::Scanner(StringRef Input, SourceMgr &sm, bool ShowColors,
                  std::error_code *EC)
     : SM(sm), ShowColors(ShowColors), EC(EC) {
@@ -773,7 +856,7 @@ void Scanner::init(MemoryBufferRef Buffer) {
   IsSimpleKeyAllowed = true;
   Failed = false;
   std::unique_ptr<MemoryBuffer> InputBufferOwner =
-      MemoryBuffer::getMemBuffer(Buffer);
+      MemoryBuffer::getMemBuffer(Buffer, /*RequiresNullTerminator=*/false);
   SM.AddNewSourceBuffer(std::move(InputBufferOwner), SMLoc());
 }
 
@@ -898,17 +981,9 @@ void Scanner::advanceWhile(SkipWhileFunc Func) {
   Current = Final;
 }
 
-static bool is_ns_hex_digit(const char C) {
-  return    (C >= '0' && C <= '9')
-         || (C >= 'a' && C <= 'z')
-         || (C >= 'A' && C <= 'Z');
-}
+static bool is_ns_hex_digit(const char C) { return isAlnum(C); }
 
-static bool is_ns_word_char(const char C) {
-  return    C == '-'
-         || (C >= 'a' && C <= 'z')
-         || (C >= 'A' && C <= 'Z');
-}
+static bool is_ns_word_char(const char C) { return C == '-' || isAlpha(C); }
 
 void Scanner::scan_ns_uri_char() {
   while (true) {
@@ -1036,7 +1111,7 @@ bool Scanner::rollIndent( int ToColumn
 }
 
 void Scanner::skipComment() {
-  if (*Current != '#')
+  if (Current == End || *Current != '#')
     return;
   while (true) {
     // This may skip more than one byte, thus Column is only incremented
@@ -1051,7 +1126,7 @@ void Scanner::skipComment() {
 
 void Scanner::scanToNextToken() {
   while (true) {
-    while (*Current == ' ' || *Current == '\t') {
+    while (Current != End && (*Current == ' ' || *Current == '\t')) {
       skip(1);
     }
 
@@ -1286,7 +1361,7 @@ bool Scanner::scanFlowScalar(bool IsDoubleQuoted) {
              && wasEscaped(Start + 1, Current));
   } else {
     skip(1);
-    while (true) {
+    while (Current != End) {
       // Skip a ' followed by another '.
       if (Current + 1 < End && *Current == '\'' && *(Current + 1) == '\'') {
         skip(2);
@@ -1334,13 +1409,14 @@ bool Scanner::scanPlainScalar() {
   unsigned LeadingBlanks = 0;
   assert(Indent >= -1 && "Indent must be >= -1 !");
   unsigned indent = static_cast<unsigned>(Indent + 1);
-  while (true) {
+  while (Current != End) {
     if (*Current == '#')
       break;
 
-    while (!isBlankOrBreak(Current)) {
-      if (  FlowLevel && *Current == ':'
-          && !(isBlankOrBreak(Current + 1) || *(Current + 1) == ',')) {
+    while (Current != End && !isBlankOrBreak(Current)) {
+      if (FlowLevel && *Current == ':' &&
+          (Current + 1 == End ||
+           !(isBlankOrBreak(Current + 1) || *(Current + 1) == ','))) {
         setError("Found unexpected ':' while scanning a plain scalar", Current);
         return false;
       }
@@ -1410,7 +1486,7 @@ bool Scanner::scanAliasOrAnchor(bool IsAlias) {
   StringRef::iterator Start = Current;
   unsigned ColStart = Column;
   skip(1);
-  while(true) {
+  while (Current != End) {
     if (   *Current == '[' || *Current == ']'
         || *Current == '{' || *Current == '}'
         || *Current == ','
@@ -1423,7 +1499,7 @@ bool Scanner::scanAliasOrAnchor(bool IsAlias) {
     ++Column;
   }
 
-  if (Start == Current) {
+  if (Start + 1 == Current) {
     setError("Got empty alias or anchor", Start);
     return false;
   }
@@ -1775,12 +1851,13 @@ Stream::~Stream() = default;
 
 bool Stream::failed() { return scanner->failed(); }
 
-void Stream::printError(Node *N, const Twine &Msg) {
-  SMRange Range = N ? N->getSourceRange() : SMRange();
-  scanner->printError( Range.Start
-                     , SourceMgr::DK_Error
-                     , Msg
-                     , Range);
+void Stream::printError(Node *N, const Twine &Msg, SourceMgr::DiagKind Kind) {
+  printError(N ? N->getSourceRange() : SMRange(), Msg, Kind);
+}
+
+void Stream::printError(const SMRange &Range, const Twine &Msg,
+                        SourceMgr::DiagKind Kind) {
+  scanner->printError(Range.Start, Kind, Msg, Range);
 }
 
 document_iterator Stream::begin() {
@@ -1899,11 +1976,11 @@ StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
       Storage.reserve(UnquotedValue.size());
       for (; i != StringRef::npos; i = UnquotedValue.find('\'')) {
         StringRef Valid(UnquotedValue.begin(), i);
-        Storage.insert(Storage.end(), Valid.begin(), Valid.end());
+        llvm::append_range(Storage, Valid);
         Storage.push_back('\'');
         UnquotedValue = UnquotedValue.substr(i + 2);
       }
-      Storage.insert(Storage.end(), UnquotedValue.begin(), UnquotedValue.end());
+      llvm::append_range(Storage, UnquotedValue);
       return StringRef(Storage.begin(), Storage.size());
     }
     return UnquotedValue;
@@ -1922,7 +1999,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
   for (; i != StringRef::npos; i = UnquotedValue.find_first_of("\\\r\n")) {
     // Insert all previous chars into Storage.
     StringRef Valid(UnquotedValue.begin(), i);
-    Storage.insert(Storage.end(), Valid.begin(), Valid.end());
+    llvm::append_range(Storage, Valid);
     // Chop off inserted chars.
     UnquotedValue = UnquotedValue.substr(i);
 
@@ -2054,7 +2131,7 @@ StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue
       UnquotedValue = UnquotedValue.substr(1);
     }
   }
-  Storage.insert(Storage.end(), UnquotedValue.begin(), UnquotedValue.end());
+  llvm::append_range(Storage, UnquotedValue);
   return StringRef(Storage.begin(), Storage.size());
 }
 

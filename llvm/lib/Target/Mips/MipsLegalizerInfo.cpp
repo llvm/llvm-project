@@ -37,7 +37,7 @@ static bool isUnalignedMemmoryAccess(uint64_t MemSize, uint64_t AlignInBits) {
 static bool
 CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
                         std::initializer_list<TypesAndMemOps> SupportedValues) {
-  unsigned QueryMemSize = Query.MMODescrs[0].SizeInBits;
+  unsigned QueryMemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
 
   // Non power of two memory access is never legal.
   if (!isPowerOf2_64(QueryMemSize))
@@ -60,22 +60,21 @@ CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
 
 static bool CheckTyN(unsigned N, const LegalityQuery &Query,
                      std::initializer_list<LLT> SupportedValues) {
-  for (auto &Val : SupportedValues)
-    if (Val == Query.Types[N])
-      return true;
-  return false;
+  return llvm::is_contained(SupportedValues, Query.Types[N]);
 }
 
 MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   using namespace TargetOpcode;
 
   const LLT s1 = LLT::scalar(1);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
-  const LLT v16s8 = LLT::vector(16, 8);
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
   const LLT p0 = LLT::pointer(0, 32);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL})
@@ -128,13 +127,13 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
           return false;
 
         unsigned Size = Query.Types[0].getSizeInBits();
-        unsigned QueryMemSize = Query.MMODescrs[0].SizeInBits;
+        unsigned QueryMemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
         assert(QueryMemSize <= Size && "Scalar can't hold MemSize");
 
         if (Size > 64 || QueryMemSize > 64)
           return false;
 
-        if (!isPowerOf2_64(Query.MMODescrs[0].SizeInBits))
+        if (!isPowerOf2_64(Query.MMODescrs[0].MemoryTy.getSizeInBits()))
           return true;
 
         if (!ST.systemSupportsUnalignedAccess() &&
@@ -146,7 +145,8 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
         return false;
       })
-      .minScalar(0, s32);
+      .minScalar(0, s32)
+      .lower();
 
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({s32, s64});
@@ -158,8 +158,8 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
      .legalFor({{s64, s32}});
 
   getActionDefinitionsBuilder({G_ZEXTLOAD, G_SEXTLOAD})
-      .legalForTypesWithMemDesc({{s32, p0, 8, 8},
-                                 {s32, p0, 16, 8}})
+      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                 {s32, p0, s16, 8}})
       .clampScalar(0, s32, s32);
 
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
@@ -324,7 +324,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  computeTables();
+  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -516,13 +516,14 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
+    LLT PtrTy = LLT::pointer(0, 32);
     auto Tmp =
-        MIRBuilder.buildLoad(LLT::pointer(0, 32), MI.getOperand(2),
+        MIRBuilder.buildLoad(PtrTy, MI.getOperand(2),
                              *MI.getMF()->getMachineMemOperand(
-                                 MPO, MachineMemOperand::MOLoad, 4, Align(4)));
+                                 MPO, MachineMemOperand::MOLoad, PtrTy, Align(4)));
     MIRBuilder.buildStore(Tmp, MI.getOperand(1),
                           *MI.getMF()->getMachineMemOperand(
-                              MPO, MachineMemOperand::MOStore, 4, Align(4)));
+                              MPO, MachineMemOperand::MOStore, PtrTy, Align(4)));
     MI.eraseFromParent();
     return true;
   }

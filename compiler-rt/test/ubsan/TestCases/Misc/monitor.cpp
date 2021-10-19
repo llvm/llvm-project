@@ -29,6 +29,7 @@ void __ubsan_on_report(void) {
   printf("Issue: %s\n", IssueKind);
   printf("Location: %s:%u:%u\n", Filename, Line, Col);
   printf("Message: %s\n", Message);
+  fflush(stdout);
 
   (void)Addr;
 }

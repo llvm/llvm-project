@@ -32,7 +32,7 @@ define void @foo(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8* %maxarray)
 ; CHECK-NEXT:    [[TMPV:%.*]] = xor i8 [[V1]], [[V2]]
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, i8* [[LSR_IV3]], i64 [[LSR_IV1]]
 ; CHECK-NEXT:    store i8 [[TMPV]], i8* [[SCEVGEP4]], align 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV3]], i64 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY2]], label [[FOR_INC_LOOPEXIT:%.*]]

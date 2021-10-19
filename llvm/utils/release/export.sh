@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #===-- tag.sh - Tag the LLVM release candidates ----------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -13,22 +13,80 @@
 
 set -e
 
-projects="llvm clang test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind flang"
+projects="llvm clang compiler-rt libcxx libcxxabi libclc clang-tools-extra polly lldb lld openmp libunwind flang"
 
 release=""
 rc=""
+yyyymmdd=$(date +'%Y%m%d')
+snapshot=""
+template='${PROJECT}-${RELEASE}${RC}.src.tar.xz'
 
 usage() {
-    echo "Export the Git sources and build tarballs from them"
-    echo "usage: `basename $0`"
-    echo " "
-    echo "  -release <num> The version number of the release"
-    echo "  -rc <num>      The release candidate number"
-    echo "  -final         The final tag"
+cat <<EOF
+Export the Git sources and build tarballs from them.
+
+Usage: $(basename $0) [-release|--release <major>.<minor>.<patch>]
+                      [-rc|--rc <num>]
+                      [-final|--final]
+                      [-git-ref|--git-ref <git-ref>]
+                      [-template|--template <template>]
+
+Flags:
+
+  -release  | --release <major>.<minor>.<patch>    The version number of the release
+  -rc       | --rc <num>                           The release candidate number
+  -final    | --final                              When provided, this option will disable the rc flag
+  -git-ref  | --git-ref <git-ref>                  (optional) Use <git-ref> to determine the release and don't export the test-suite files
+  -template | --template <template>                (optional) Possible placeholders: \$PROJECT \$YYYYMMDD \$GIT_REF \$RELEASE \$RC.
+                                                   Defaults to '${template}'.
+
+The following list shows the filenames (with <placeholders>) for the artifacts
+that are being generated (given that you don't touch --template).
+
+$(echo "$projects "| sed 's/\([a-z-]\+\) /  * \1-<RELEASE><RC>.src.tar.xz \n/g')
+
+Additional files being generated:
+
+  * llvm-project-<RELEASE><RC>.src.tar.xz    (the complete LLVM source project)
+  * test-suite-<RELEASE><RC>.src.tar.xz      (only when not using --git-ref)
+
+To ease the creation of snapshot builds, we also provide these files
+
+  * llvm-release-<YYYYMMDD>.txt        (contains the <RELEASE> as a text)
+  * llvm-rc-<YYYYMMDD>.txt             (contains the rc version passed to the invocation of $(basename $0))
+  * llvm-git-revision-<YYYYMMDD>.txt   (contains the current git revision sha1)
+
+Example values for the placeholders:
+
+  * <RELEASE>  -> 13.0.0
+  * <YYYYMMDD> -> 20210414   (the date when executing this script)
+  * <RC>       -> rc4        (will be empty when using --git-ref)
+
+In order to generate snapshots of the upstream main branch you could do this for example:
+
+  $(basename $0) --git-ref upstream/main --template '\${PROJECT}-\${YYYYMMDD}.src.tar.xz'
+
+EOF
+}
+
+template_file() {
+    export PROJECT=$1 YYYYMMDD=$yyyymmdd RC=$rc RELEASE=$release GIT_REF=$git_rev
+    basename $(echo $template | envsubst '$PROJECT $RELEASE $RC $YYYYMMDD $GIT_REF')
+    unset PROJECT YYYYMMDD RC RELEASE GIT_REF
 }
 
 export_sources() {
-    release_no_dot=`echo $release | sed -e 's,\.,,g'`
+    local tag="llvmorg-$release"
+
+    llvm_src_dir=$(readlink -f $(dirname "$(readlink -f "$0")")/../../..)
+    [ -d $llvm_src_dir/.git ] || ( echo "No git repository at $llvm_src_dir" ; exit 1 )
+
+    # Determine the release by fetching the version from LLVM's CMakeLists.txt
+    # in the specified git ref.
+    if [ -n "$snapshot" ]; then
+        release=$(git -C $llvm_src_dir show $snapshot:llvm/CMakeLists.txt | grep -ioP 'set\(\s*LLVM_VERSION_(MAJOR|MINOR|PATCH)\s\K[0-9]+' | paste -sd '.')
+    fi
+    
     tag="llvmorg-$release"
 
     if [ "$rc" = "final" ]; then
@@ -37,26 +95,44 @@ export_sources() {
         tag="$tag-$rc"
     fi
 
-    llvm_src_dir=llvm-project-$release$rc
-    mkdir -p $llvm_src_dir
-
-    echo $tag
-    echo "Fetching LLVM project source ..."
-    curl -L https://github.com/llvm/llvm-project/archive/$tag.tar.gz | \
-        tar -C $llvm_src_dir --strip-components=1 -xzf -
+    target_dir=$(pwd)
 
     echo "Creating tarball for llvm-project ..."
-    tar -cJf llvm-project-$release$rc.tar.xz $llvm_src_dir
+    pushd $llvm_src_dir/
+    tree_id=$tag
+    [ -n "$snapshot" ] && tree_id="$snapshot"
+    echo "Tree ID to archive: $tree_id"
 
-    echo "Fetching LLVM test-suite source ..."
-    mkdir -p $llvm_src_dir/test-suite
-    curl -L https://github.com/llvm/test-suite/archive/$tag.tar.gz | \
-        tar -C $llvm_src_dir/test-suite --strip-components=1 -xzf -
+    # This might be a surprise but a package like clang or compiler-rt don't
+    # know about the LLVM version itself. That's why we also export a the
+    # llvm-version*-<YYYYMMDD> and llvm-git*-<YYYYMMDD> files.
+    git_rev=$(git rev-parse $tree_id)
+    echo "git revision: $git_rev"
+    echo "$release" > $target_dir/llvm-release-$yyyymmdd.txt
+    echo "$rc" > $target_dir/llvm-rc-$yyyymmdd.txt
+    echo "$git_rev" > $target_dir/llvm-git-revision-$yyyymmdd.txt
+    
+    git archive --prefix=llvm-project-$release$rc.src/ $tree_id . | xz >$target_dir/$(template_file llvm-project)
+    popd
+
+    if [ -z "$snapshot" ]; then
+        if [ ! -d test-suite-$release$rc.src ]; then
+            echo "Fetching LLVM test-suite source ..."
+            mkdir -p test-suite-$release$rc.src
+            curl -L https://github.com/llvm/test-suite/archive/$tag.tar.gz | \
+                tar -C test-suite-$release$rc.src --strip-components=1 -xzf -
+        fi
+        echo "Creating tarball for test-suite ..."
+        tar --sort=name --owner=0 --group=0 \
+            --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime \
+            -cJf test-suite-$release$rc.src.tar.xz test-suite-$release$rc.src
+    fi
 
     for proj in $projects; do
         echo "Creating tarball for $proj ..."
-        mv $llvm_src_dir/$proj $llvm_src_dir/$proj-$release$rc.src
-        tar -C $llvm_src_dir -cJf $proj-$release$rc.src.tar.xz $proj-$release$rc.src
+        pushd $llvm_src_dir/$proj
+        git archive --prefix=$proj-$release$rc.src/ $tree_id . | xz >$target_dir/$(template_file $proj)
+        popd
     done
 }
 
@@ -73,6 +149,14 @@ while [ $# -gt 0 ]; do
         -final | --final )
             rc="final"
             ;;
+        -git-ref | --git-ref )
+            shift
+            snapshot="$1"
+            ;;
+        -template | --template )
+            shift
+            template="$1"
+            ;;
         -h | -help | --help )
             usage
             exit 0
@@ -86,7 +170,12 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ "x$release" = "x" ]; then
+if [ -n "$snapshot" ]; then 
+    if [[ "$rc" != "" || "$release" != "" ]]; then
+        echo "error: must not specify -rc or -release when creating a snapshot"
+        exit 1
+    fi
+elif [ -z "$release" ]; then
     echo "error: need to specify a release version"
     exit 1
 fi

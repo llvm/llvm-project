@@ -6,25 +6,19 @@
 # CHECK-NEXT:      FunctionLength: 92
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
-# CHECK-NEXT:      EpiloguePacked: No
-# CHECK-NEXT:      EpilogueScopes: 1
-# CHECK-NEXT:      ByteCodeLength: 8
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 1
+# CHECK-NEXT:      ByteCodeLength: 4
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0x02                ; sub sp, #32
 # CHECK-NEXT:        0xe1                ; mov fp, sp
 # CHECK-NEXT:        0x81                ; stp x29, x30, [sp, #-16]!
 # CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
-# CHECK-NEXT:      EpilogueScopes [
-# CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 20
-# CHECK-NEXT:          EpilogueStartIndex: 4
-# CHECK-NEXT:          Opcodes [
-# CHECK-NEXT:            0xe1                ; mov fp, sp
-# CHECK-NEXT:            0x81                ; ldp x29, x30, [sp], #16
-# CHECK-NEXT:            0xe4                ; end
-# CHECK-NEXT:          ]
-# CHECK-NEXT:        }
+# CHECK-NEXT:      Epilogue [
+# CHECK-NEXT:        0xe1                ; mov sp, fp
+# CHECK-NEXT:        0x81                ; ldp x29, x30, [sp], #16
+# CHECK-NEXT:        0xe4                ; end
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 ...
@@ -102,7 +96,7 @@ body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $w3, $lr
 
-    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store 8 into %stack.7), (store 8 into %stack.8)
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.7), (store (s64) into %stack.8)
     frame-setup SEH_SaveFPLR_X -16
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup SEH_SetFP
@@ -117,10 +111,10 @@ body:             |
     renamable $x8 = ADDXri killed renamable $x8, 15, 0
     renamable $x8 = UBFMXri killed renamable $x8, 4, 63
     $x15 = COPY renamable $x8
-    STURXi killed $x8, $fp, -32 :: (store 8 into %stack.6)
+    STURXi killed $x8, $fp, -32 :: (store (s64) into %stack.6)
     BL &__chkstk, csr_aarch64_stackprobe_windows, implicit-def dead $lr, implicit $sp, implicit killed $x15
     renamable $x8 = COPY $sp
-    $x15 = LDURXi $fp, -32 :: (load 8 from %stack.6)
+    $x15 = LDURXi $fp, -32 :: (load (s64) from %stack.6)
     renamable $x8 = SUBSXrs killed renamable $x8, killed renamable $x15, 4, implicit-def dead $nzcv
     $sp = COPY renamable $x8
     STURXi killed renamable $x8, $fp, -24

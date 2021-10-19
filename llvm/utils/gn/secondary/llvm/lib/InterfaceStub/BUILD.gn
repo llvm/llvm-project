@@ -7,7 +7,7 @@ static_library("InterfaceStub") {
 
   sources = [
     "ELFObjHandler.cpp",
-    "ELFStub.cpp",
-    "TBEHandler.cpp",
+    "IFSHandler.cpp",
+    "IFSStub.cpp",
   ]
 }

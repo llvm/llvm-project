@@ -6,17 +6,17 @@ patterns, as well as defining the rewrite using a graph walker (note: using
 patterns and the rewrite engine is preferred, showing the walker is for
 demonstration purposes).
 
-See [MLIR specification](LangRef.md) for more information about MLIR, the
+See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc. See
-[Table-driven Operation Definition](OpDefinitions.md) and
-[Declarative Rewrite Rule](DeclarativeRewrites.md) for the detailed explanation
+[Table-driven Operation Definition](../OpDefinitions.md) and
+[Declarative Rewrite Rule](../DeclarativeRewrites.md) for the detailed explanation
 of all available mechanisms for defining operations and rewrites in a
 table-driven manner.
 
 ## Adding operation
 
 An operation in MLIR is specified using a definition in
-[TableGen](https://llvm.org/docs/TableGen/LangIntro.html) file. TableGen is a
+[TableGen](https://llvm.org/docs/TableGen/index.html) file. TableGen is a
 modeling tool to specify the ops and the C++ code to interact with these
 operations are generated from. To define an operation one needs to specify:
 
@@ -155,14 +155,65 @@ add_public_tablegen_target(<name-of-the-cmake-target>)
 Then you can `#include` the generated file in any C++ implementation file you
 like. (You will also need to make sure the library depends on the CMake target
 defined in the above.) The generated file will have a `populateWithGenerated(
-MLIRContext *context, OwningRewritePatternList *patterns)` function that you can
+RewritePatternSet &patterns)` function that you can
 use to collect all the generated patterns inside `patterns` and then use
 `patterns` in any pass you would like.
 
-### C++ rewrite specification
+### Simple C++ `matchAndRewrite` style specifications
 
-In case patterns are not sufficient there is also the fully C++ way of
-expressing a rewrite:
+Many simple rewrites can be expressed with a `matchAndRewrite` style  of
+pattern, e.g. when converting a multiply by a power of two into a shift.  For
+these cases, the you can define the pattern as a simple function:
+
+```c++
+static LogicalResult
+convertTFLeakyRelu(TFLeakyReluOp op, PatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
+      op, op->getResult(0).getType(), op->getOperand(0),
+      /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
+  return success();
+}
+
+void populateRewrites(RewritePatternSet &patternSet) {
+  // Add it to a pattern set.
+  patternSet.add(convertTFLeakyRelu);
+}
+```
+
+ODS provides a simple way to define a function-style canonicalization for your
+operation.  In the TableGen definition of the op, specify
+`let hasCanonicalizeMethod = 1;` and then implement the `canonicalize` method in
+your .cpp file:
+
+```c++
+// Example from the CIRCT project which has a variadic integer multiply.
+LogicalResult circt::MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
+  auto inputs = op.inputs();
+  APInt value;
+
+  // mul(x, c) -> shl(x, log2(c)), where c is a power of two.
+  if (inputs.size() == 2 && matchPattern(inputs.back(), m_RConstant(value)) &&
+      value.isPowerOf2()) {
+    auto shift = rewriter.create<rtl::ConstantOp>(op.getLoc(), op.getType(),
+                                                  value.exactLogBase2());
+    auto shlOp =
+        rewriter.create<comb::ShlOp>(op.getLoc(), inputs[0], shift);
+    rewriter.replaceOpWithNewOp<MulOp>(op, op.getType(),
+                                       ArrayRef<Value>(shlOp));
+    return success();
+  }
+
+  return failure();
+}
+```
+
+However, you may want the full generality of canonicalization patterns, for that
+you can specify an arbitrary list of `RewritePattern`s.
+
+### Fully general C++ `RewritePattern` specifications
+
+In case ODS patterns and `matchAndRewrite`-style functions are not sufficient
+you can also specify rewrites as a general set of `RewritePattern`s:
 
 ```c++
 /// Multi-step rewrite using "match" and "rewrite". This allows for separating
@@ -189,7 +240,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
       : RewritePattern("tf.LeakyRelu", 1, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+                                PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
         op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));

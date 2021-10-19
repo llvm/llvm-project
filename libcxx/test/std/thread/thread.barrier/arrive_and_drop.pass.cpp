@@ -9,14 +9,9 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03, c++11
 
-// This test requires the dylib support introduced in D68480
-// XFAIL: with_system_cxx_lib=macosx10.15
-// XFAIL: with_system_cxx_lib=macosx10.14
-// XFAIL: with_system_cxx_lib=macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// This test requires the dylib support introduced in D68480, which shipped in
+// macOS 11.0.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
 
 // <barrier>
 
@@ -24,13 +19,14 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**)
 {
   std::barrier<> b(2);
 
-  std::thread t([&](){
+  std::thread t = support::make_test_thread([&](){
     b.arrive_and_drop();
   });
 

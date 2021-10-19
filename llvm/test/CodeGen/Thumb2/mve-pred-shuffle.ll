@@ -79,9 +79,9 @@ entry:
 define <4 x i32> @shuffle2_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shuffle2_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -100,9 +100,9 @@ entry:
 define <8 x i16> @shuffle2_v8i16(<8 x i16> %src, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: shuffle2_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i16 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -121,9 +121,9 @@ entry:
 define <16 x i8> @shuffle2_v16i8(<16 x i8> %src, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: shuffle2_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vmov d0, r0, r1
 ; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    vcmp.i8 eq, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -223,9 +223,9 @@ entry:
 define <4 x i32> @shuffle4_v4i32(<4 x i32> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shuffle4_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vmov.i8 q1, #0xff
 ; CHECK-NEXT:    vmov d0, r0, r1
+; CHECK-NEXT:    vmov.i8 q1, #0xff
+; CHECK-NEXT:    vmov d1, r2, r3
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0
@@ -315,14 +315,12 @@ define <4 x i32> @shuffle5_b_v4i32(<8 x i16> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vcmp.i16 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0
 ; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[1]
-; CHECK-NEXT:    vmov.32 q1[1], r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-NEXT:    vmov.32 q1[2], r0
+; CHECK-NEXT:    vmov.u16 r1, q0[0]
+; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[3]
-; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    vmov.u16 r1, q0[1]
+; CHECK-NEXT:    vmov q1[3], q1[1], r1, r0
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -348,14 +346,12 @@ define <4 x i32> @shuffle5_t_v4i32(<8 x i16> %src, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    vcmp.i16 eq, q0, zr
 ; CHECK-NEXT:    vmov.i8 q0, #0x0
 ; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-NEXT:    vmov.32 q1[0], r0
-; CHECK-NEXT:    vmov.u16 r0, q0[5]
-; CHECK-NEXT:    vmov.32 q1[1], r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-NEXT:    vmov.32 q1[2], r0
+; CHECK-NEXT:    vmov.u16 r1, q0[4]
+; CHECK-NEXT:    vmov q1[2], q1[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    vmov.u16 r1, q0[5]
+; CHECK-NEXT:    vmov q1[3], q1[1], r1, r0
 ; CHECK-NEXT:    add r0, sp, #16
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    mov r0, sp
@@ -463,27 +459,23 @@ define <8 x i16> @shuffle6_v4i32(<4 x i32> %src1, <4 x i32> %src2, <8 x i16> %a,
 ; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vpsel q3, q2, q1
-; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov r0, r1, d6
 ; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov r0, s13
-; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    vmov.16 q0[1], r1
+; CHECK-NEXT:    vmov r0, r1, d7
 ; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov r0, s15
-; CHECK-NEXT:    vmov.16 q0[3], r0
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov.16 q0[3], r1
 ; CHECK-NEXT:    vcmp.i32 eq, q3, zr
 ; CHECK-NEXT:    vpsel q1, q2, q1
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, r1, d2
 ; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov.16 q0[5], r1
+; CHECK-NEXT:    vmov r0, r1, d3
 ; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov.16 q0[7], r0
 ; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmov.16 q0[7], r1
 ; CHECK-NEXT:    vcmp.i16 ne, q0, zr
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    add r0, sp, #16

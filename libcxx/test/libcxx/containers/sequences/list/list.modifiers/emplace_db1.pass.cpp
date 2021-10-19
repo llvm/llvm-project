@@ -6,45 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // <list>
 
 // template <class... Args> void emplace(const_iterator p, Args&&... args);
 
-#define _LIBCPP_DEBUG 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+// UNSUPPORTED: c++03
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <list>
-#include <cstdlib>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
-class A
-{
-    int i_;
-    double d_;
-
-    A(const A&);
-    A& operator=(const A&);
-public:
-    A(int i, double d)
-        : i_(i), d_(d) {}
-
-    int geti() const {return i_;}
-    double getd() const {return d_;}
+struct A {
+  explicit A(int i, double d) {
+    (void)i;
+    (void)d;
+  }
 };
 
 int main(int, char**)
 {
     std::list<A> c1;
     std::list<A> c2;
-    std::list<A>::iterator i = c1.emplace(c2.cbegin(), 2, 3.5);
-    assert(false);
+    TEST_LIBCPP_ASSERT_FAILURE(c1.emplace(c2.cbegin(), 2, 3.5),
+                               "list::emplace(iterator, args...) called with an iterator not referring to this list");
 
-  return 0;
+    return 0;
 }

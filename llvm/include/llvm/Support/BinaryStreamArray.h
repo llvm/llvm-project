@@ -5,6 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Lightweight arrays that are backed by an arbitrary BinaryStream.  This file
+/// provides two different array implementations.
+///
+///     VarStreamArray - Arrays of variable length records.  The user specifies
+///       an Extractor type that can extract a record from a given offset and
+///       return the number of bytes consumed by the record.
+///
+///     FixedStreamArray - Arrays of fixed length records.  This is similar in
+///       spirit to ArrayRef<T>, but since it is backed by a BinaryStream, the
+///       elements of the array need not be laid out in contiguous memory.
+///
 
 #ifndef LLVM_SUPPORT_BINARYSTREAMARRAY_H
 #define LLVM_SUPPORT_BINARYSTREAMARRAY_H
@@ -17,16 +30,6 @@
 #include <cassert>
 #include <cstdint>
 
-/// Lightweight arrays that are backed by an arbitrary BinaryStream.  This file
-/// provides two different array implementations.
-///
-///     VarStreamArray - Arrays of variable length records.  The user specifies
-///       an Extractor type that can extract a record from a given offset and
-///       return the number of bytes consumed by the record.
-///
-///     FixedStreamArray - Arrays of fixed length records.  This is similar in
-///       spirit to ArrayRef<T>, but since it is backed by a BinaryStream, the
-///       elements of the array need not be laid out in contiguous memory.
 namespace llvm {
 
 /// VarStreamArrayExtractor is intended to be specialized to provide customized

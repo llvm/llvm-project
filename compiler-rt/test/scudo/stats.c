@@ -11,8 +11,7 @@
 
 #include <sanitizer/scudo_interface.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   free(malloc(1U));
   __scudo_print_stats();
   return 0;

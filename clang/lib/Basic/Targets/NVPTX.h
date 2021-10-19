@@ -35,6 +35,11 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     1, // cuda_device
     4, // cuda_constant
     3, // cuda_shared
+    1, // sycl_global
+    1, // sycl_global_device
+    1, // sycl_global_host
+    3, // sycl_local
+    0, // sycl_private
     0, // ptr32_sptr
     0, // ptr32_uptr
     0  // ptr64
@@ -127,16 +132,23 @@ public:
 
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();
-    Opts.support("cl_clang_storage_class_specifiers");
-    Opts.support("cl_khr_gl_sharing");
-    Opts.support("cl_khr_icd");
+    Opts["cl_clang_storage_class_specifiers"] = true;
+    Opts["__cl_clang_function_pointers"] = true;
+    Opts["__cl_clang_variadic_functions"] = true;
+    Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
-    Opts.support("cl_khr_fp64");
-    Opts.support("cl_khr_byte_addressable_store");
-    Opts.support("cl_khr_global_int32_base_atomics");
-    Opts.support("cl_khr_global_int32_extended_atomics");
-    Opts.support("cl_khr_local_int32_base_atomics");
-    Opts.support("cl_khr_local_int32_extended_atomics");
+    Opts["cl_khr_fp64"] = true;
+    Opts["__opencl_c_fp64"] = true;
+    Opts["cl_khr_byte_addressable_store"] = true;
+    Opts["cl_khr_global_int32_base_atomics"] = true;
+    Opts["cl_khr_global_int32_extended_atomics"] = true;
+    Opts["cl_khr_local_int32_base_atomics"] = true;
+    Opts["cl_khr_local_int32_extended_atomics"] = true;
+  }
+
+  const llvm::omp::GV &getGridValue() const override {
+    return llvm::omp::NVPTXGridValues;
   }
 
   /// \returns If a target requires an address within a target specific address

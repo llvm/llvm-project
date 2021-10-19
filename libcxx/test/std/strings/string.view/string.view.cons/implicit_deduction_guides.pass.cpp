@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // <string_view>
 
@@ -37,29 +36,35 @@ int main(int, char**)
     ASSERT_SAME_TYPE(decltype(s), std::string_view);
     assert(s == "abc");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     using WSV = std::basic_string_view<wchar_t, constexpr_char_traits<wchar_t>>;
     const WSV win(L"abcdef");
     std::basic_string_view w(win);
     ASSERT_SAME_TYPE(decltype(w), WSV);
     assert(w == L"abcdef");
+#endif
   }
   { // Testing (3)
     std::basic_string_view s("abc", 2);
     ASSERT_SAME_TYPE(decltype(s), std::string_view);
     assert(s == "ab");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     std::basic_string_view w(L"abcdef", 4);
     ASSERT_SAME_TYPE(decltype(w), std::wstring_view);
     assert(w == L"abcd");
+#endif
   }
   { // Testing (4)
     std::basic_string_view s("abc");
     ASSERT_SAME_TYPE(decltype(s), std::string_view);
     assert(s == "abc");
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     std::basic_string_view w(L"abcdef");
     ASSERT_SAME_TYPE(decltype(w), std::wstring_view);
     assert(w == L"abcdef");
+#endif
   }
 
   return 0;

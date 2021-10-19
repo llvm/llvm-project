@@ -1,0 +1,59 @@
+Test DWARF5 support in dsymutil. Currently this still generates an empty dSYM.
+
+$ cat dwarf5.c
+__attribute__ ((optnone))
+int foo() {
+  volatile i;
+  return i;
+}
+
+int main(int argc, char** argv) {
+  return foo();
+}
+
+$ clang -gdwarf-5 dwarf5.c -c -o dwarf5.o
+$ clang dwarf5.o -o dwarf5.out
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/dwarf5/dwarf5.out -o %t.dSYM 2>&1 | FileCheck %s --allow-empty
+RUN: llvm-dwarfdump --verify %t.dSYM 2>&1 | FileCheck %s
+CHECK-NOT: error:
+
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s --check-prefix DWARF
+DWARF: DW_TAG_compile_unit
+DWARF:   DW_AT_producer    ("clang version 12.0.0
+DWARF:   DW_AT_language    (DW_LANG_C99)
+DWARF:   DW_AT_name        ("dwarf5.c")
+DWARF:   DW_AT_LLVM_sysroot        ("/")
+DWARF:   DW_AT_stmt_list   (0x00000000)
+DWARF:   DW_AT_comp_dir    ("/private/tmp/dwarf5")
+DWARF:   DW_AT_low_pc      (0x0000000100003f80)
+DWARF:   DW_AT_high_pc     (0x0000000100003fb1)
+DWARF:   DW_AT_addr_base   (0x00000008)
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_name      ("foo")
+DWARF:     DW_AT_decl_file (0x00)
+DWARF:     DW_AT_decl_line (2)
+DWARF:     DW_AT_type      (0x00000091 "int")
+DWARF:     DW_AT_external  (true)
+DWARF:     DW_TAG_variable
+DWARF:       DW_AT_name    ("i")
+DWARF:       DW_AT_decl_file       (0x00)
+DWARF:       DW_AT_decl_line       (3)
+DWARF:       DW_AT_type    (0x00000098 "volatile int")
+DWARF:   DW_TAG_subprogram
+DWARF:     DW_AT_name      ("main")
+DWARF:     DW_AT_decl_file (0x00)
+DWARF:     DW_AT_decl_line (7)
+DWARF:     DW_AT_prototyped        (true)
+DWARF:     DW_AT_type      (0x00000091 "int")
+DWARF:     DW_AT_external  (true)
+DWARF:     DW_TAG_formal_parameter
+DWARF:       DW_AT_name    ("argc")
+DWARF:       DW_AT_decl_file       (0x00)
+DWARF:       DW_AT_decl_line       (7)
+DWARF:       DW_AT_type    (0x00000091 "int")
+DWARF:     DW_TAG_formal_parameter
+DWARF:       DW_AT_name    ("argv")
+DWARF:       DW_AT_decl_file       (0x00)
+DWARF:       DW_AT_decl_line       (7)
+DWARF:       DW_AT_type    (0x0000009d "char **")

@@ -50,19 +50,19 @@
 # Check that the appropriate relocations were created.
 #------------------------------------------------------------------------------
 # CHECK-ELF: Relocations [
-# CHECK-ELF:     0x0 R_MIPS_PC19_S2 bar 0x0
-# CHECK-ELF:     0x4 R_MIPS_PC16 bar 0x0
-# CHECK-ELF:     0x8 R_MIPS_PC16 bar 0x0
-# CHECK-ELF:     0xC R_MIPS_PC21_S2 bar 0x0
-# CHECK-ELF:     0x10 R_MIPS_PC21_S2 bar 0x0
-# CHECK-ELF:     0x14 R_MIPS_PC26_S2 bar 0x0
-# CHECK-ELF:     0x18 R_MIPS_PC26_S2 bar 0x0
-# CHECK-ELF:     0x1C R_MIPS_PCHI16 bar 0x0
-# CHECK-ELF:     0x20 R_MIPS_PCLO16 bar 0x0
-# CHECK-ELF:     0x24 R_MIPS_PC19_S2 bar 0x0
-# CHECK-ELF:     0x28 R_MIPS_PC19_S2 bar 0x0
-# CHECK-ELF:     0x2C R_MIPS_LO16 bar 0x0
-# CHECK-ELF:     0x30 R_MIPS_LO16 bar 0x0
+# CHECK-ELF:     0x0 R_MIPS_PC19_S2 bar
+# CHECK-ELF:     0x4 R_MIPS_PC16 bar
+# CHECK-ELF:     0x8 R_MIPS_PC16 bar
+# CHECK-ELF:     0xC R_MIPS_PC21_S2 bar
+# CHECK-ELF:     0x10 R_MIPS_PC21_S2 bar
+# CHECK-ELF:     0x14 R_MIPS_PC26_S2 bar
+# CHECK-ELF:     0x18 R_MIPS_PC26_S2 bar
+# CHECK-ELF:     0x1C R_MIPS_PCHI16 bar
+# CHECK-ELF:     0x20 R_MIPS_PCLO16 bar
+# CHECK-ELF:     0x24 R_MIPS_PC19_S2 bar
+# CHECK-ELF:     0x28 R_MIPS_PC19_S2 bar
+# CHECK-ELF:     0x2C R_MIPS_LO16 bar
+# CHECK-ELF:     0x30 R_MIPS_LO16 bar
 # CHECK-ELF: ]
 
   addiupc   $2,bar

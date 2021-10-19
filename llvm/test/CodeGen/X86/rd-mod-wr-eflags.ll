@@ -3,7 +3,7 @@
 
 %struct.obj = type { i64 }
 
-define void @_Z7releaseP3obj(%struct.obj* nocapture %o) nounwind uwtable ssp {
+define dso_local void @_Z7releaseP3obj(%struct.obj* nocapture %o) nounwind uwtable ssp {
 ; CHECK-LABEL: _Z7releaseP3obj:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    decq (%rdi)
@@ -29,25 +29,25 @@ return:                                           ; preds = %entry, %if.end
   ret void
 }
 
-@c = common global i64 0, align 8
-@a = common global i32 0, align 4
+@c = common dso_local global i64 0, align 8
+@a = common dso_local global i32 0, align 4
 @.str = private unnamed_addr constant [5 x i8] c"%ld\0A\00", align 1
-@b = common global i32 0, align 4
+@b = common dso_local global i32 0, align 4
 
-define i32 @test() nounwind uwtable ssp {
+define dso_local i32 @test() nounwind uwtable ssp {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq c(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    decq %rsi
-; CHECK-NEXT:    movq %rsi, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rsi, c(%rip)
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -63,20 +63,20 @@ store i32 %lor.ext.i, i32* @a, align 4
 ret i32 0
 }
 
-define i32 @test2() nounwind uwtable ssp {
+define dso_local i32 @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq c(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $-1, %rsi
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %rsi, {{.*}}(%rip)
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rsi, c(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -94,13 +94,13 @@ ret i32 0
 
 declare i32 @printf(i8* nocapture, ...) nounwind
 
-declare void @free(i8* nocapture) nounwind
+declare dso_local void @free(i8* nocapture) nounwind
 
 %struct.obj2 = type { i64, i32, i16, i8 }
 
-declare void @other(%struct.obj2* ) nounwind;
+declare dso_local void @other(%struct.obj2* ) nounwind;
 
-define void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
+define dso_local void @example_dec(%struct.obj2* %o) nounwind uwtable ssp {
 ; 64 bit dec
 ; CHECK-LABEL: example_dec:
 ; CHECK:       # %bb.0: # %entry
@@ -162,7 +162,7 @@ return:                                           ; preds = %if.end4, %if.end, %
   ret void
 }
 
-define void @example_inc(%struct.obj2* %o) nounwind uwtable ssp {
+define dso_local void @example_inc(%struct.obj2* %o) nounwind uwtable ssp {
 ; 64 bit inc
 ; CHECK-LABEL: example_inc:
 ; CHECK:       # %bb.0: # %entry
@@ -226,12 +226,12 @@ return:
 
 ; Deal with TokenFactor chain
 ; rdar://11236106
-@foo = external global i64*, align 8
+@foo = external dso_local global i64*, align 8
 
-define void @test3() nounwind ssp {
+define dso_local void @test3() nounwind ssp {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq foo(%rip), %rax
 ; CHECK-NEXT:    decq 16(%rax)
 ; CHECK-NEXT:    je .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
@@ -255,26 +255,26 @@ if.end:
   ret void
 }
 
-declare void @baz()
+declare dso_local void @baz()
 
 ; Avoid creating a cycle in the DAG which would trigger an assert in the
 ; scheduler.
 ; PR12565
 ; rdar://11451474
-@x = external global i32, align 4
-@y = external global i32, align 4
-@z = external global i32, align 4
+@x = external dso_local global i32, align 4
+@y = external dso_local global i32, align 4
+@z = external dso_local global i32, align 4
 
-define void @test4() nounwind uwtable ssp {
+define dso_local void @test4() nounwind uwtable ssp {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    decl {{.*}}(%rip)
+; CHECK-NEXT:    decl y(%rip)
 ; CHECK-NEXT:    je .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl x(%rip), %eax
 ; CHECK-NEXT:  .LBB6_2: # %entry
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, z(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, i32* @x, align 4

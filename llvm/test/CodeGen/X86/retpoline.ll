@@ -58,7 +58,7 @@ entry:
 ; X86FAST:       calll __llvm_retpoline_eax
 
 
-@global_fp = external global void (i32)*
+@global_fp = external dso_local global void (i32)*
 
 ; Test an indirect call through a global variable.
 define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
@@ -147,13 +147,13 @@ define void @direct_tail() #0 {
 }
 
 ; X64-LABEL: direct_tail:
-; X64:       jmp direct_callee # TAILCALL
+; X64:       jmp direct_callee@PLT # TAILCALL
 ; X64FAST-LABEL: direct_tail:
-; X64FAST:   jmp direct_callee # TAILCALL
+; X64FAST:   jmp direct_callee@PLT # TAILCALL
 ; X86-LABEL: direct_tail:
-; X86:       jmp direct_callee # TAILCALL
+; X86:       jmp direct_callee@PLT # TAILCALL
 ; X86FAST-LABEL: direct_tail:
-; X86FAST:   jmp direct_callee # TAILCALL
+; X86FAST:   jmp direct_callee@PLT # TAILCALL
 
 
 declare void @nonlazybind_callee() #2

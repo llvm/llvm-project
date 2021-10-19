@@ -45,9 +45,22 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     HasVectorEnhancements2 = false;
     HasVectorPackedDecimal = false;
     HasVectorPackedDecimalEnhancement = false;
+    HasVectorPackedDecimalEnhancement2 = false;
   }
 
   return *this;
+}
+
+SystemZCallingConventionRegisters *
+SystemZSubtarget::initializeSpecialRegisters() {
+  if (isTargetXPLINK64())
+    return new SystemZXPLINK64Registers;
+  else if (isTargetELF())
+    return new SystemZELFRegisters;
+  else {
+    llvm_unreachable("Invalid Calling Convention. Cannot initialize Special "
+                     "Call Registers!");
+  }
 }
 
 SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
@@ -61,20 +74,22 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       HasInterlockedAccess1(false), HasMiscellaneousExtensions(false),
       HasExecutionHint(false), HasLoadAndTrap(false),
       HasTransactionalExecution(false), HasProcessorAssist(false),
-      HasDFPZonedConversion(false), HasEnhancedDAT2(false),
-      HasVector(false), HasLoadStoreOnCond2(false),
-      HasLoadAndZeroRightmostByte(false), HasMessageSecurityAssist5(false),
-      HasDFPPackedConversion(false),
+      HasDFPZonedConversion(false), HasEnhancedDAT2(false), HasVector(false),
+      HasLoadStoreOnCond2(false), HasLoadAndZeroRightmostByte(false),
+      HasMessageSecurityAssist5(false), HasDFPPackedConversion(false),
       HasMiscellaneousExtensions2(false), HasGuardedStorage(false),
       HasMessageSecurityAssist7(false), HasMessageSecurityAssist8(false),
       HasVectorEnhancements1(false), HasVectorPackedDecimal(false),
-      HasInsertReferenceBitsMultiple(false),
-      HasMiscellaneousExtensions3(false), HasMessageSecurityAssist9(false),
-      HasVectorEnhancements2(false), HasVectorPackedDecimalEnhancement(false),
-      HasEnhancedSort(false), HasDeflateConversion(false), HasSoftFloat(false),
-      TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this), TSInfo(), FrameLowering() {}
-
+      HasInsertReferenceBitsMultiple(false), HasMiscellaneousExtensions3(false),
+      HasMessageSecurityAssist9(false), HasVectorEnhancements2(false),
+      HasVectorPackedDecimalEnhancement(false), HasEnhancedSort(false),
+      HasDeflateConversion(false), HasVectorPackedDecimalEnhancement2(false),
+      HasNNPAssist(false), HasBEAREnhancement(false),
+      HasResetDATProtection(false), HasProcessorActivityInstrumentation(false),
+      HasSoftFloat(false), TargetTriple(TT),
+      SpecialRegisters(initializeSpecialRegisters()),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      TSInfo(), FrameLowering(SystemZFrameLowering::create(*this)) {}
 
 bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;

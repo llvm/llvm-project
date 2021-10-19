@@ -14,17 +14,17 @@ define void @main() nounwind #0 {
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    bl calloc
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    clrldi 4, 30, 32
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    addi 3, 3, -4
-; CHECK-NEXT:    li 6, 1
-; CHECK-NEXT:    clrldi 4, 30, 32
 ; CHECK-NEXT:    mtctr 4
 ; CHECK-NEXT:    mullw 4, 5, 5
+; CHECK-NEXT:    li 6, 1
 ; CHECK-NEXT:    bdz .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    addi 5, 6, 1
 ; CHECK-NEXT:    stwu 4, 4(3)
 ; CHECK-NEXT:    mullw 4, 6, 6
+; CHECK-NEXT:    addi 5, 6, 1
 ; CHECK-NEXT:    bdz .LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2:

@@ -12,19 +12,19 @@ define void @f(%big_struct0* %p0, %big_struct1* %p1) {
 ;CHECK: sub sp, sp, #8
 ;CHECK: sub sp, sp, #2048
 ;CHECK: bl callme0
-  call void @callme0(%big_struct0* byval %p0)
+  call void @callme0(%big_struct0* byval(%big_struct0) %p0)
 
 ;CHECK: add sp, sp, #8
 ;CHECK: add sp, sp, #2048
 ;CHECK: sub sp, sp, #2048
 ;CHECK: bl callme1
-  call void @callme1(%big_struct1* byval %p1)
+  call void @callme1(%big_struct1* byval(%big_struct1) %p1)
 
 ;CHECK: add sp, sp, #2048
 
   ret void
 }
 
-declare void @callme0(%big_struct0* byval)
-declare void @callme1(%big_struct1* byval)
+declare void @callme0(%big_struct0* byval(%big_struct0))
+declare void @callme1(%big_struct1* byval(%big_struct1))
 

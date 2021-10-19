@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   JITLink
   OrcJIT
+  OrcTargetProcess
   Support
   nativecodegen
   )

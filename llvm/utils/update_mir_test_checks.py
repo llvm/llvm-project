@@ -220,10 +220,13 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
     check = '{:>{}}; {}'.format('', indent, prefix)
 
     output_lines.append('{}-LABEL: name: {}'.format(check, func_name))
+    first_check = True
 
     vreg_map = {}
     for func_line in func_body:
         if not func_line.strip():
+            # The mir printer prints leading whitespace so we can't use CHECK-EMPTY:
+            output_lines.append(check + '-NEXT: {{' + func_line + '$}}')
             continue
         m = VREG_DEF_RE.match(func_line)
         if m:
@@ -235,7 +238,9 @@ def add_check_lines(test, output_lines, prefix, func_name, single_bb,
         for number, name in vreg_map.items():
             func_line = re.sub(r'{}\b'.format(number), '[[{}]]'.format(name),
                                func_line)
-        check_line = '{}: {}'.format(check, func_line[indent:]).rstrip()
+        filecheck_directive = check if first_check else check + '-NEXT'
+        first_check = False
+        check_line = '{}: {}'.format(filecheck_directive, func_line[indent:]).rstrip()
         output_lines.append(check_line)
 
 

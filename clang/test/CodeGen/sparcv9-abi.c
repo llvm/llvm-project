@@ -1,24 +1,24 @@
 // RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 #include <stdarg.h>
 
-// CHECK-LABEL: define void @f_void()
+// CHECK-LABEL: define{{.*}} void @f_void()
 void f_void(void) {}
 
 // Arguments and return values smaller than the word size are extended.
 
-// CHECK-LABEL: define signext i32 @f_int_1(i32 signext %x)
+// CHECK-LABEL: define{{.*}} signext i32 @f_int_1(i32 signext %x)
 int f_int_1(int x) { return x; }
 
-// CHECK-LABEL: define zeroext i32 @f_int_2(i32 zeroext %x)
+// CHECK-LABEL: define{{.*}} zeroext i32 @f_int_2(i32 zeroext %x)
 unsigned f_int_2(unsigned x) { return x; }
 
-// CHECK-LABEL: define i64 @f_int_3(i64 %x)
+// CHECK-LABEL: define{{.*}} i64 @f_int_3(i64 %x)
 long long f_int_3(long long x) { return x; }
 
-// CHECK-LABEL: define signext i8 @f_int_4(i8 signext %x)
+// CHECK-LABEL: define{{.*}} signext i8 @f_int_4(i8 signext %x)
 char f_int_4(char x) { return x; }
 
-// CHECK-LABEL: define fp128 @f_ld(fp128 %x)
+// CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 %x)
 long double f_ld(long double x) { return x; }
 
 // Small structs are passed in registers.
@@ -26,7 +26,7 @@ struct small {
   int *a, *b;
 };
 
-// CHECK-LABEL: define %struct.small @f_small(i32* %x.coerce0, i32* %x.coerce1)
+// CHECK-LABEL: define{{.*}} %struct.small @f_small(i32* %x.coerce0, i32* %x.coerce1)
 struct small f_small(struct small x) {
   x.a += *x.b;
   x.b = 0;
@@ -39,7 +39,7 @@ struct medium {
   int *c, *d;
 };
 
-// CHECK-LABEL: define %struct.medium @f_medium(%struct.medium* %x)
+// CHECK-LABEL: define{{.*}} %struct.medium @f_medium(%struct.medium* %x)
 struct medium f_medium(struct medium x) {
   x.a += *x.b;
   x.b = 0;
@@ -53,7 +53,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define void @f_large(%struct.large* noalias sret align 8 %agg.result, %struct.large* %x)
+// CHECK-LABEL: define{{.*}} void @f_large(%struct.large* noalias sret(%struct.large) align 8 %agg.result, %struct.large* %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;
@@ -65,7 +65,7 @@ struct reg {
   int a, b;
 };
 
-// CHECK-LABEL: define i64 @f_reg(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} i64 @f_reg(i64 %x.coerce)
 struct reg f_reg(struct reg x) {
   x.a += x.b;
   return x;
@@ -77,7 +77,7 @@ struct mixed {
   float b;
 };
 
-// CHECK-LABEL: define inreg %struct.mixed @f_mixed(i32 inreg %x.coerce0, float inreg %x.coerce1)
+// CHECK-LABEL: define{{.*}} inreg %struct.mixed @f_mixed(i32 inreg %x.coerce0, float inreg %x.coerce1)
 struct mixed f_mixed(struct mixed x) {
   x.a += 1;
   return x;
@@ -89,7 +89,7 @@ struct mixed2 {
   double b;
 };
 
-// CHECK: define { i64, double } @f_mixed2(i64 %x.coerce0, double %x.coerce1)
+// CHECK: define{{.*}} { i64, double } @f_mixed2(i64 %x.coerce0, double %x.coerce1)
 // CHECK: store i64 %x.coerce0
 // CHECK: store double %x.coerce1
 struct mixed2 f_mixed2(struct mixed2 x) {
@@ -103,7 +103,7 @@ struct tiny {
   char a;
 };
 
-// CHECK-LABEL: define i64 @f_tiny(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} i64 @f_tiny(i64 %x.coerce)
 // CHECK: %[[HB:[^ ]+]] = lshr i64 %x.coerce, 56
 // CHECK: = trunc i64 %[[HB]] to i8
 struct tiny f_tiny(struct tiny x) {
@@ -111,7 +111,7 @@ struct tiny f_tiny(struct tiny x) {
   return x;
 }
 
-// CHECK-LABEL: define void @call_tiny()
+// CHECK-LABEL: define{{.*}} void @call_tiny()
 // CHECK: %[[XV:[^ ]+]] = zext i8 %{{[^ ]+}} to i64
 // CHECK: %[[HB:[^ ]+]] = shl i64 %[[XV]], 56
 // CHECK: = call i64 @f_tiny(i64 %[[HB]])
@@ -120,7 +120,7 @@ void call_tiny() {
   f_tiny(x);
 }
 
-// CHECK-LABEL: define signext i32 @f_variable(i8* %f, ...)
+// CHECK-LABEL: define{{.*}} signext i32 @f_variable(i8* %f, ...)
 // CHECK: %ap = alloca i8*
 // CHECK: call void @llvm.va_start
 //

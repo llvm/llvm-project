@@ -18,16 +18,17 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
+  Class:   ELFCLASS[[BITS=64]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: [[MACHINE]]
 Sections:
-  - Name:   .hash
-    Type:   SHT_HASH
-    Flags:  [ SHF_ALLOC ]
-    Bucket: [ 1, 2 ]
-    Chain:  [ 3, 4, 5 ]
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 1, 2 ]
+    Chain:   [ 3, 4, 5 ]
+    EntSize: [[ENTSIZE=4]]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
     Flags: [ SHF_ALLOC ]
@@ -37,17 +38,53 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
+
+## Document that we ignore the sh_entsize value when dumping the hash section.
+## Implementation assumes that the size of entries is 4, matching the ELF specification.
+
+# RUN: yaml2obj --docnum=1 -DENTSIZE=8 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t.x64.ent8
+# RUN: yaml2obj --docnum=1 -DENTSIZE=8 -DBITS=32 -DMACHINE=EM_386 %s -o %t.x32.ent8
+
+# RUN: llvm-readobj --hash-table %t.x64.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x64.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readobj --hash-table %t.x32.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x32.ent8 | FileCheck %s --check-prefix=HASH
+
+## We don't support dumping hash tables on EM_S390 and EM_ALPHA platforms and report a warning.
+## On these platforms the size of entries is 8, which violates the ELF specification, which says that the size
+## of hash entries in the hash table must be 4.
+
+# RUN: yaml2obj --docnum=1 -DMACHINE=EM_S390 %s -o %t.s390
+# RUN: llvm-readobj --hash-table %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --check-prefixes=WARN-HASH -DNAME="IBM S/390"
+# RUN: llvm-readelf --hash-table %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --check-prefixes=WARN-HASH -DNAME="IBM S/390"
+
+# WARN-HASH:      HashTable {
+# WARN-HASH-NEXT: warning: '[[FILE]]': the hash table at 0x78 is not supported: it contains non-standard 8 byte entries on [[NAME]] platform
+# WARN-HASH-NEXT: }
+
+# RUN: yaml2obj --docnum=1 -DMACHINE=EM_ALPHA %s -o %t.alpha
+# RUN: llvm-readobj --hash-table %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --check-prefixes=WARN-HASH -DNAME="EM_ALPHA"
+# RUN: llvm-readelf --hash-table %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --check-prefixes=WARN-HASH -DNAME="EM_ALPHA"
+
+## We don't report warnings about the unsupported hash table on EM_S390 and EM_ALPHA platforms
+## when --hash-table is not requested.
+
+# RUN: llvm-readobj %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readelf %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readobj %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readelf %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --allow-empty --implicit-check-not="warning:"
 
 ## Check we can dump the SHT_HASH section even when an object
 ## does not have the section header table.
 
-# RUN: yaml2obj --docnum=2 %s -o %t.noshdr
-# RUN: llvm-readobj --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
-# RUN: llvm-readelf --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
+# RUN: yaml2obj --docnum=2 -DNOHEADERS=true %s -o %t.noshdr
+# RUN: llvm-readobj --hash-table %t.noshdr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.noshdr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
 
 # NOSHDR:      HashTable {
 # NOSHDR-NEXT:   Num Buckets: 1
@@ -58,36 +95,53 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:  ELFCLASS64
-  Data:   ELFDATA2LSB
-  Type:   ET_DYN
-## We simulate no section header table by
-## overriding the ELF header properties.
-  EShOff: 0x0
-  EShNum: 0x0
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:   .hash
     Type:   SHT_HASH
     Flags:  [ SHF_ALLOC ]
     Bucket: [ 0 ]
     Chain:  [ 1 ]
+    EntSize: [[ENTSIZE=4]]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
     Flags: [ SHF_ALLOC ]
     Entries:
-      - Tag:   DT_HASH
+      - Tag:   [[DYNTAG=DT_HASH]]
         Value: 0x0
       - Tag:   DT_NULL
         Value: 0x0
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADERS=false]]
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x10
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Document we don't report a warning when the value of the sh_entsize field of the SHT_HASH section is not 4.
+
+# RUN: yaml2obj --docnum=2 -DENTSIZE=0xff %s -o %t.ent.size
+# RUN: llvm-readobj --hash-table %t.ent.size 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.ent.size --check-prefix=NOSHDR --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.ent.size 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.ent.size --check-prefix=NOSHDR --implicit-check-not=warning:
+
+## Document we need the DT_HASH dynamic tag to locate the hash table.
+
+# RUN: yaml2obj --docnum=2 -DDYNTAG=DT_NULL %s -o %t.no.dyntag
+# RUN: llvm-readobj --hash-table %t.no.dyntag 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
+# RUN: llvm-readelf --hash-table %t.no.dyntag 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
+
+# NODYNTAG:      HashTable {
+# NODYNTAG-NEXT: }
 
 ## Each SHT_HASH section starts with two 32-bit fields: nbucket and nchain.
 ## Check we report an error when a DT_HASH value points to data that has size less than 8 bytes.
@@ -123,9 +177,8 @@ DynamicSymbols: []
 ProgramHeaders:
   - Type:     PT_LOAD
     FileSize: 0x23a
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+    FirstSec: .hash
+    LastSec:  .dynamic
 
 ## Check we report a warning when the hash table goes past the end of the file.
 
@@ -169,6 +222,7 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=NOERR2 -DFILE=%t5.3.o --implicit-check-not="warning:"
 
 # NOERR2:      warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1)
+# NOERR2:      warning: '[[FILE]]': the size (0x5d0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # NOERR2:      HashTable {
 # NOERR2-NEXT:   Num Buckets: 1
 # NOERR2-NEXT:   Num Chains: 93
@@ -187,6 +241,7 @@ ProgramHeaders:
 # RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t5.4.o --implicit-check-not="warning:"
 
 # ERR3:      warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1)
+# ERR3:      warning: '[[FILE]]': the size (0x5e0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # ERR3:      HashTable {
 # ERR3-NEXT:  Num Buckets: 1
 # ERR3-NEXT:  Num Chains: 94
@@ -216,10 +271,9 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    FirstSec: .hash
+    LastSec: .dynamic
 
 ## Show we do not duplicate warnings when printing both the hash table and the hash histogram.
 ## Note that --elf-hash-histogram is only implemented for llvm-readelf currently.

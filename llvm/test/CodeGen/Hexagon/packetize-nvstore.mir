@@ -19,7 +19,7 @@ body: |
   bb.0:
     liveins: $r0
     renamable $r1 = A2_tfrsi 0
-    renamable $r0 = S2_storeri_pi renamable $r0, 4, killed renamable $r1 :: (store 4 into %stack.0)
-    S4_storeiri_io renamable $r0, 0, 0 :: (store 4 into %stack.0 + 4)
+    renamable $r0 = S2_storeri_pi renamable $r0, 4, killed renamable $r1 :: (store (s32) into %stack.0)
+    S4_storeiri_io renamable $r0, 0, 0 :: (store (s32) into %stack.0 + 4)
     J2_jumpr $r31, implicit-def $pc
 ...

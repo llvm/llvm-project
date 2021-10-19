@@ -1,6 +1,12 @@
-; RUN: llvm-rc /l 40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-rc -no-preprocess /l 40A /FO %t.res -- %p/Inputs/language.rc
 ; RUN: llvm-readobj %t.res | FileCheck %s
-; RUN: llvm-rc /l40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-rc -no-preprocess /l40A /FO %t.res -- %p/Inputs/language.rc
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess -l 40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess --language 40A %p/Inputs/language.rc %t.res
+; RUN: llvm-readobj %t.res | FileCheck %s
+; RUN: llvm-windres --no-preprocess -l 0x40A %p/Inputs/language.rc %t.res
 ; RUN: llvm-readobj %t.res | FileCheck %s
 
 ; CHECK:      Resource name (int): 1

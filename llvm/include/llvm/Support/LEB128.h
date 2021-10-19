@@ -142,14 +142,14 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
       return 0;
     }
     uint64_t Slice = *p & 0x7f;
-    if (Shift >= 64 || Slice << Shift >> Shift != Slice) {
+    if ((Shift >= 64 && Slice != 0) || Slice << Shift >> Shift != Slice) {
       if (error)
         *error = "uleb128 too big for uint64";
       if (n)
         *n = (unsigned)(p - orig_p);
       return 0;
     }
-    Value += uint64_t(*p & 0x7f) << Shift;
+    Value += Slice << Shift;
     Shift += 7;
   } while (*p++ >= 128);
   if (n)
@@ -175,9 +175,19 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
         *n = (unsigned)(p - orig_p);
       return 0;
     }
-    Byte = *p++;
-    Value |= (uint64_t(Byte & 0x7f) << Shift);
+    Byte = *p;
+    uint64_t Slice = Byte & 0x7f;
+    if ((Shift >= 64 && Slice != (Value < 0 ? 0x7f : 0x00)) ||
+        (Shift == 63 && Slice != 0 && Slice != 0x7f)) {
+      if (error)
+        *error = "sleb128 too big for int64";
+      if (n)
+        *n = (unsigned)(p - orig_p);
+      return 0;
+    }
+    Value |= Slice << Shift;
     Shift += 7;
+    ++p;
   } while (Byte >= 128);
   // Sign extend negative numbers if needed.
   if (Shift < 64 && (Byte & 0x40))
@@ -195,4 +205,4 @@ extern unsigned getSLEB128Size(int64_t Value);
 
 } // namespace llvm
 
-#endif // LLVM_SYSTEM_LEB128_H
+#endif // LLVM_SUPPORT_LEB128_H

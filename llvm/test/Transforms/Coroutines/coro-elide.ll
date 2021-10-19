@@ -1,6 +1,5 @@
 ; Tests that the coro.destroy and coro.resume are devirtualized where possible,
 ; SCC pipeline restarts and inlines the direct calls.
-; RUN: opt < %s -S -inline -coro-elide -dce | FileCheck %s
 ; RUN: opt < %s -S \
 ; RUN:   -passes='cgscc(repeat<2>(inline,function(coro-elide,dce)))' \
 ; RUN:   | FileCheck %s
@@ -19,15 +18,23 @@ define fastcc void @f.destroy(i8*) {
   ret void
 }
 
-@f.resumers = internal constant [2 x void (i8*)*] [void (i8*)* @f.resume,
-                                                   void (i8*)* @f.destroy]
+; cleanup part of the coroutine
+define fastcc void @f.cleanup(i8*) {
+  tail call void @print(i32 2)
+  ret void
+}
+
+@f.resumers = internal constant [3 x void (i8*)*] [void (i8*)* @f.resume,
+                                                   void (i8*)* @f.destroy,
+                                                   void (i8*)* @f.cleanup]
 
 ; a coroutine start function
 define i8* @f() {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null,
                           i8* bitcast (i8*()* @f to i8*),
-                          i8* bitcast ([2 x void (i8*)*]* @f.resumers to i8*))
+                          i8* bitcast ([3 x void (i8*)*]* @f.resumers to i8*))
+  %alloc = call i1 @llvm.coro.alloc(token %id)
   %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
   ret i8* %hdl
 }
@@ -42,12 +49,56 @@ entry:
   %1 = bitcast i8* %0 to void (i8*)*
   call fastcc void %1(i8* %hdl)
 
-; CHECK-NEXT: call void @print(i32 1)
+; CHECK-NEXT: call void @print(i32 2)
   %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
   %3 = bitcast i8* %2 to void (i8*)*
   call fastcc void %3(i8* %hdl)
 
 ; CHECK-NEXT: ret void
+  ret void
+}
+
+; CHECK-LABEL: @callResumeMultiRet(
+define void @callResumeMultiRet(i1 %b) {
+entry:
+  %hdl = call i8* @f()
+; CHECK: %alloc.i = call i1 @llvm.coro.alloc
+; CHECK: call void @print(i32 0)
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+  br i1 %b, label %destroy, label %ret
+
+destroy:
+; CHECK: call void @print(i32 1)
+  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %3 = bitcast i8* %2 to void (i8*)*
+  call fastcc void %3(i8* %hdl)
+  ret void
+
+ret:
+  ret void
+}
+
+; CHECK-LABEL: @callResumeMultiRetDommmed(
+define void @callResumeMultiRetDommmed(i1 %b) {
+entry:
+  %hdl = call i8* @f()
+; CHECK-NOT: %alloc.i = call i1 @llvm.coro.alloc
+; CHECK: call void @print(i32 0)
+  %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
+  %1 = bitcast i8* %0 to void (i8*)*
+  call fastcc void %1(i8* %hdl)
+; CHECK: call void @print(i32 2)
+  %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
+  %3 = bitcast i8* %2 to void (i8*)*
+  call fastcc void %3(i8* %hdl)
+  br i1 %b, label %destroy, label %ret
+
+destroy:
+  ret void
+
+ret:
   ret void
 }
 
@@ -113,3 +164,4 @@ declare token @llvm.coro.id(i32, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i8* @llvm.coro.frame()
 declare i8* @llvm.coro.subfn.addr(i8*, i8)
+declare i1 @llvm.coro.alloc(token)

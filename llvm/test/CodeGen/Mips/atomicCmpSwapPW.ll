@@ -2,7 +2,7 @@
 ; RUN: llc -O0 -mtriple=mipsel-unknown-linux-gnu -mcpu=mips32r2 -target-abi=o32 < %s -filetype=asm -o - \
 ; RUN:   | FileCheck -check-prefixes=O32 %s
 ; RUN: llc -O0 -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n32 < %s -filetype=asm -o - \
-; RUN:   | FileCheck  -check-prefixes=N32,ALL %s
+; RUN:   | FileCheck  -check-prefixes=N32 %s
 ; RUN: llc -O0 -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n64 < %s -filetype=asm -o - \
 ; RUN:   | FileCheck -check-prefixes=N64 %s
 
@@ -12,18 +12,18 @@ define void @foo(i32 %new, i32 %old) {
 ; O32-LABEL: foo:
 ; O32:       # %bb.0: # %entry
 ; O32-NEXT:    lui $1, %hi(sym)
-; O32-NEXT:    lw $1, %lo(sym)($1)
+; O32-NEXT:    lw $3, %lo(sym)($1)
 ; O32-NEXT:    sync
 ; O32-NEXT:  $BB0_1: # %entry
 ; O32-NEXT:    # =>This Inner Loop Header: Depth=1
-; O32-NEXT:    ll $2, 0($1)
-; O32-NEXT:    bne $2, $4, $BB0_3
+; O32-NEXT:    ll $1, 0($3)
+; O32-NEXT:    bne $1, $4, $BB0_3
 ; O32-NEXT:    nop
 ; O32-NEXT:  # %bb.2: # %entry
 ; O32-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; O32-NEXT:    move $3, $5
-; O32-NEXT:    sc $3, 0($1)
-; O32-NEXT:    beqz $3, $BB0_1
+; O32-NEXT:    move $2, $5
+; O32-NEXT:    sc $2, 0($3)
+; O32-NEXT:    beqz $2, $BB0_1
 ; O32-NEXT:    nop
 ; O32-NEXT:  $BB0_3: # %entry
 ; O32-NEXT:    sync
@@ -32,23 +32,23 @@ define void @foo(i32 %new, i32 %old) {
 ;
 ; N32-LABEL: foo:
 ; N32:       # %bb.0: # %entry
-; N32-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
-; N32-NEXT:    sll $1, $5, 0
-; N32-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
-; N32-NEXT:    sll $2, $4, 0
-; N32-NEXT:    lui $3, %hi(sym)
-; N32-NEXT:    lw $3, %lo(sym)($3)
+; N32-NEXT:    move $1, $5
+; N32-NEXT:    sll $5, $1, 0
+; N32-NEXT:    move $1, $4
+; N32-NEXT:    sll $4, $1, 0
+; N32-NEXT:    lui $1, %hi(sym)
+; N32-NEXT:    lw $3, %lo(sym)($1)
 ; N32-NEXT:    sync
 ; N32-NEXT:  .LBB0_1: # %entry
 ; N32-NEXT:    # =>This Inner Loop Header: Depth=1
-; N32-NEXT:    ll $4, 0($3)
-; N32-NEXT:    bne $4, $2, .LBB0_3
+; N32-NEXT:    ll $1, 0($3)
+; N32-NEXT:    bne $1, $4, .LBB0_3
 ; N32-NEXT:    nop
 ; N32-NEXT:  # %bb.2: # %entry
 ; N32-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; N32-NEXT:    move $5, $1
-; N32-NEXT:    sc $5, 0($3)
-; N32-NEXT:    beqz $5, .LBB0_1
+; N32-NEXT:    move $2, $5
+; N32-NEXT:    sc $2, 0($3)
+; N32-NEXT:    beqz $2, .LBB0_1
 ; N32-NEXT:    nop
 ; N32-NEXT:  .LBB0_3: # %entry
 ; N32-NEXT:    sync
@@ -57,27 +57,27 @@ define void @foo(i32 %new, i32 %old) {
 ;
 ; N64-LABEL: foo:
 ; N64:       # %bb.0: # %entry
-; N64-NEXT:    # kill: def $a1 killed $a1 killed $a1_64
-; N64-NEXT:    sll $1, $5, 0
-; N64-NEXT:    # kill: def $a0 killed $a0 killed $a0_64
-; N64-NEXT:    sll $2, $4, 0
-; N64-NEXT:    lui $3, %highest(sym)
-; N64-NEXT:    daddiu $3, $3, %higher(sym)
-; N64-NEXT:    dsll $3, $3, 16
-; N64-NEXT:    daddiu $3, $3, %hi(sym)
-; N64-NEXT:    dsll $3, $3, 16
-; N64-NEXT:    ld $3, %lo(sym)($3)
+; N64-NEXT:    move $1, $5
+; N64-NEXT:    sll $5, $1, 0
+; N64-NEXT:    move $1, $4
+; N64-NEXT:    sll $4, $1, 0
+; N64-NEXT:    lui $1, %highest(sym)
+; N64-NEXT:    daddiu $1, $1, %higher(sym)
+; N64-NEXT:    dsll $1, $1, 16
+; N64-NEXT:    daddiu $1, $1, %hi(sym)
+; N64-NEXT:    dsll $1, $1, 16
+; N64-NEXT:    ld $3, %lo(sym)($1)
 ; N64-NEXT:    sync
 ; N64-NEXT:  .LBB0_1: # %entry
 ; N64-NEXT:    # =>This Inner Loop Header: Depth=1
-; N64-NEXT:    ll $4, 0($3)
-; N64-NEXT:    bne $4, $2, .LBB0_3
+; N64-NEXT:    ll $1, 0($3)
+; N64-NEXT:    bne $1, $4, .LBB0_3
 ; N64-NEXT:    nop
 ; N64-NEXT:  # %bb.2: # %entry
 ; N64-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; N64-NEXT:    move $5, $1
-; N64-NEXT:    sc $5, 0($3)
-; N64-NEXT:    beqz $5, .LBB0_1
+; N64-NEXT:    move $2, $5
+; N64-NEXT:    sc $2, 0($3)
+; N64-NEXT:    beqz $2, .LBB0_1
 ; N64-NEXT:    nop
 ; N64-NEXT:  .LBB0_3: # %entry
 ; N64-NEXT:    sync

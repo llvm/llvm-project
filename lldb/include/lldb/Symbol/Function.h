@@ -10,10 +10,10 @@
 #define LLDB_SYMBOL_FUNCTION_H
 
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/UserID.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -271,7 +271,7 @@ using CallSiteParameterArray = llvm::SmallVector<CallSiteParameter, 0>;
 class CallEdge {
 public:
   enum class AddrType : uint8_t { Call, AfterCall };
-  virtual ~CallEdge() {}
+  virtual ~CallEdge() = default;
 
   /// Get the callee's definition.
   ///
@@ -631,10 +631,10 @@ public:
 
   lldb::DisassemblerSP GetInstructions(const ExecutionContext &exe_ctx,
                                        const char *flavor,
-                                       bool prefer_file_cache);
+                                       bool force_live_memory = false);
 
   bool GetDisassembly(const ExecutionContext &exe_ctx, const char *flavor,
-                      bool prefer_file_cache, Stream &strm);
+                      Stream &strm, bool force_live_memory = false);
 
 protected:
   enum {

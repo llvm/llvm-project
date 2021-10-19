@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
-declare win64cc void @win64_callee(i32)
-declare win64cc void (i32)* @win64_indirect()
-declare win64cc void @win64_other(i32)
-declare void @sysv_callee(i32)
-declare void (i32)* @sysv_indirect()
-declare void @sysv_other(i32)
+declare dso_local win64cc void @win64_callee(i32)
+declare dso_local win64cc void (i32)* @win64_indirect()
+declare dso_local win64cc void @win64_other(i32)
+declare dso_local void @sysv_callee(i32)
+declare dso_local void (i32)* @sysv_indirect()
+declare dso_local void @sysv_other(i32)
 
 define void @sysv_caller(i32 %p1) {
 entry:

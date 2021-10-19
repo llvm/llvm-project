@@ -65,7 +65,7 @@ IMAGE_WRITE_TYPE(image2d_msaa, OCLImage2dMSAA, "cl_khr_gl_msaa_sharing")
 IMAGE_WRITE_TYPE(image2d_array_msaa, OCLImage2dArrayMSAA, "cl_khr_gl_msaa_sharing")
 IMAGE_WRITE_TYPE(image2d_msaa_depth, OCLImage2dMSAADepth, "cl_khr_gl_msaa_sharing")
 IMAGE_WRITE_TYPE(image2d_array_msaa_depth, OCLImage2dArrayMSAADepth, "cl_khr_gl_msaa_sharing")
-IMAGE_WRITE_TYPE(image3d, OCLImage3d, "cl_khr_3d_image_writes")
+IMAGE_WRITE_TYPE(image3d, OCLImage3d, "")
 
 IMAGE_READ_WRITE_TYPE(image1d, OCLImage1d, "")
 IMAGE_READ_WRITE_TYPE(image1d_array, OCLImage1dArray, "")

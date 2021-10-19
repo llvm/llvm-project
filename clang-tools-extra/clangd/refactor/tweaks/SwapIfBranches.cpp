@@ -39,7 +39,9 @@ public:
   bool prepare(const Selection &Inputs) override;
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override { return "Swap if branches"; }
-  Intent intent() const override { return Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
   bool hidden() const override { return true; }
 
 private:
@@ -52,14 +54,14 @@ bool SwapIfBranches::prepare(const Selection &Inputs) {
   for (const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
        N && !If; N = N->Parent) {
     // Stop once we hit a block, e.g. a lambda in the if condition.
-    if (dyn_cast_or_null<CompoundStmt>(N->ASTNode.get<Stmt>()))
+    if (llvm::isa_and_nonnull<CompoundStmt>(N->ASTNode.get<Stmt>()))
       return false;
     If = dyn_cast_or_null<IfStmt>(N->ASTNode.get<Stmt>());
   }
   // avoid dealing with single-statement brances, they require careful handling
   // to avoid changing semantics of the code (i.e. dangling else).
-  return If && dyn_cast_or_null<CompoundStmt>(If->getThen()) &&
-         dyn_cast_or_null<CompoundStmt>(If->getElse());
+  return If && isa_and_nonnull<CompoundStmt>(If->getThen()) &&
+         isa_and_nonnull<CompoundStmt>(If->getElse());
 }
 
 Expected<Tweak::Effect> SwapIfBranches::apply(const Selection &Inputs) {
@@ -69,15 +71,11 @@ Expected<Tweak::Effect> SwapIfBranches::apply(const Selection &Inputs) {
   auto ThenRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
                                      If->getThen()->getSourceRange());
   if (!ThenRng)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Could not obtain range of the 'then' branch. Macros?");
+    return error("Could not obtain range of the 'then' branch. Macros?");
   auto ElseRng = toHalfOpenFileRange(SrcMgr, Ctx.getLangOpts(),
                                      If->getElse()->getSourceRange());
   if (!ElseRng)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Could not obtain range of the 'else' branch. Macros?");
+    return error("Could not obtain range of the 'else' branch. Macros?");
 
   auto ThenCode = toSourceCode(SrcMgr, *ThenRng);
   auto ElseCode = toSourceCode(SrcMgr, *ElseRng);

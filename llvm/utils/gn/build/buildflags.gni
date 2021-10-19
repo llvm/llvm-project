@@ -1,6 +1,27 @@
 declare_args() {
   # Whether to build with debug information.
   is_debug = false
+
+  # Whether to build with tsan.
+  use_tsan = false
+
+  # Whether to build with ubsan.
+  use_ubsan = false
+
+  # Whether to build with asan.
+  use_asan = false
+
+  # Whether to enable assertions.
+  llvm_enable_assertions = true
+
+  # Whether to enable expensive checks.
+  llvm_enable_expensive_checks = false
+
+  # Whether to build with ThinLTO.
+  use_thinlto = false
+
+  # Max jobs per ThinLTO link.
+  max_jobs_per_lto_link = 8
 }
 
 # args that depend on other args must live in a later declare_args() block.
@@ -8,9 +29,10 @@ declare_args() {
   # Whether to build with optimizations.
   is_optimized = !is_debug
 
-  # Whether to enable assertions.
-  llvm_enable_assertions = true
-
-  # Whether to enable expensive checks.
-  llvm_enable_expensive_checks = false
+  # Debug info symbol level.
+  if (is_debug) {
+    symbol_level = 2
+  } else {
+    symbol_level = 0
+  }
 }

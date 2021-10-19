@@ -107,9 +107,9 @@ void html::HighlightRange(RewriteBuffer &RB, unsigned B, unsigned E,
 void html::EscapeText(Rewriter &R, FileID FID,
                       bool EscapeSpaces, bool ReplaceTabs) {
 
-  const llvm::MemoryBuffer *Buf = R.getSourceMgr().getBuffer(FID);
-  const char* C = Buf->getBufferStart();
-  const char* FileEnd = Buf->getBufferEnd();
+  llvm::MemoryBufferRef Buf = R.getSourceMgr().getBufferOrFake(FID);
+  const char* C = Buf.getBufferStart();
+  const char* FileEnd = Buf.getBufferEnd();
 
   assert (C <= FileEnd);
 
@@ -226,9 +226,9 @@ static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,
 
 void html::AddLineNumbers(Rewriter& R, FileID FID) {
 
-  const llvm::MemoryBuffer *Buf = R.getSourceMgr().getBuffer(FID);
-  const char* FileBeg = Buf->getBufferStart();
-  const char* FileEnd = Buf->getBufferEnd();
+  llvm::MemoryBufferRef Buf = R.getSourceMgr().getBufferOrFake(FID);
+  const char* FileBeg = Buf.getBufferStart();
+  const char* FileEnd = Buf.getBufferEnd();
   const char* C = FileBeg;
   RewriteBuffer &RB = R.getEditBuffer(FID);
 
@@ -274,9 +274,9 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
 void html::AddHeaderFooterInternalBuiltinCSS(Rewriter &R, FileID FID,
                                              StringRef title) {
 
-  const llvm::MemoryBuffer *Buf = R.getSourceMgr().getBuffer(FID);
-  const char* FileStart = Buf->getBufferStart();
-  const char* FileEnd = Buf->getBufferEnd();
+  llvm::MemoryBufferRef Buf = R.getSourceMgr().getBufferOrFake(FID);
+  const char* FileStart = Buf.getBufferStart();
+  const char* FileEnd = Buf.getBufferEnd();
 
   SourceLocation StartLoc = R.getSourceMgr().getLocForStartOfFile(FID);
   SourceLocation EndLoc = StartLoc.getLocWithOffset(FileEnd-FileStart);
@@ -371,6 +371,7 @@ h1 { font-size:14pt }
 .msg { border-radius:5px }
 .msg { font-family:Helvetica, sans-serif; font-size:8pt }
 .msg { float:left }
+.msg { position:relative }
 .msg { padding:0.25em 1ex 0.25em 1ex }
 .msg { margin-top:10px; margin-bottom:10px }
 .msg { font-weight:bold }
@@ -391,7 +392,7 @@ h1 { font-size:14pt }
 .CodeInsertionHint { font-weight: bold; background-color: #10dd10 }
 .CodeRemovalHint { background-color:#de1010 }
 .CodeRemovalHint { border-bottom:1px solid #6F9DBE }
-.selected{ background-color:orange !important; }
+.msg.selected{ background-color:orange !important; }
 
 table.simpletable {
   padding: 5px;
@@ -445,7 +446,7 @@ void html::SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP) {
   RewriteBuffer &RB = R.getEditBuffer(FID);
 
   const SourceManager &SM = PP.getSourceManager();
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(FID);
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(FID);
   Lexer L(FID, FromFile, SM, PP.getLangOpts());
   const char *BufferStart = L.getBuffer().data();
 
@@ -536,7 +537,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
   const SourceManager &SM = PP.getSourceManager();
   std::vector<Token> TokenStream;
 
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(FID);
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(FID);
   Lexer L(FID, FromFile, SM, PP.getLangOpts());
 
   // Lex all the tokens in raw mode, to avoid entering #includes or expanding

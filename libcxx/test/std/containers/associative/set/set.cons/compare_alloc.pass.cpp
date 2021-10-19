@@ -21,7 +21,7 @@
 
 int main(int, char**)
 {
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     typedef test_allocator<int> A;
     std::set<int, C, A> m(C(4), A(5));
     assert(m.empty());

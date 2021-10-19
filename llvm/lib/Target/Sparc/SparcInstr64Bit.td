@@ -42,9 +42,9 @@ def : Pat<(i64 (sext i32:$val)), (SRAri $val, 0)>;
 def : Pat<(i64 (and i64:$val, 0xffffffff)), (SRLri $val, 0)>;
 def : Pat<(i64 (sext_inreg i64:$val, i32)), (SRAri $val, 0)>;
 
-defm SLLX : F3_S<"sllx", 0b100101, 1, shl, i64, I64Regs>;
-defm SRLX : F3_S<"srlx", 0b100110, 1, srl, i64, I64Regs>;
-defm SRAX : F3_S<"srax", 0b100111, 1, sra, i64, I64Regs>;
+defm SLLX : F3_S<"sllx", 0b100101, 1, shl, i64, shift_imm6, I64Regs>;
+defm SRLX : F3_S<"srlx", 0b100110, 1, srl, i64, shift_imm6, I64Regs>;
+defm SRAX : F3_S<"srax", 0b100111, 1, sra, i64, shift_imm6, I64Regs>;
 
 } // Predicates = [Is64Bit]
 

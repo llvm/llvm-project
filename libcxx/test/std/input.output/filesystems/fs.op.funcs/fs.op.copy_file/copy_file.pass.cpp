@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03
 
+// The string reported on errors changed, which makes those tests fail when run
+// against already-released libc++'s.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
+
 // <filesystem>
 
 // bool copy_file(const path& from, const path& to);
@@ -24,8 +28,6 @@
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
-
-#include <iostream>
 
 using namespace fs;
 
@@ -55,8 +57,6 @@ TEST_CASE(test_error_reporting) {
   scoped_test_env env;
   const path file = env.create_file("file1", 42);
   const path file2 = env.create_file("file2", 55);
-  const path non_regular_file = env.create_fifo("non_reg");
-  const path dne = env.make_env_path("dne");
 
   { // exists(to) && equivalent(to, from)
     std::error_code ec;
@@ -77,6 +77,7 @@ TEST_CASE(test_error_reporting) {
   }
 }
 
+#ifndef _WIN32
 TEST_CASE(non_regular_file_test) {
   scoped_test_env env;
   const path fifo = env.create_fifo("fifo");
@@ -98,19 +99,20 @@ TEST_CASE(non_regular_file_test) {
   }
 
 }
+#endif
 
 TEST_CASE(test_attributes_get_copied) {
   scoped_test_env env;
   const path file = env.create_file("file1", 42);
   const path dest = env.make_env_path("file2");
-  auto st = status(file);
+  (void)status(file);
   perms new_perms = perms::owner_read;
   permissions(file, new_perms);
   std::error_code ec = GetTestEC();
   TEST_REQUIRE(fs::copy_file(file, dest, ec) == true);
   TEST_CHECK(!ec);
   auto new_st = status(dest);
-  TEST_CHECK(new_st.permissions() == new_perms);
+  TEST_CHECK(new_st.permissions() == NormalizeExpectedPerms(new_perms));
 }
 
 TEST_CASE(copy_dir_test) {

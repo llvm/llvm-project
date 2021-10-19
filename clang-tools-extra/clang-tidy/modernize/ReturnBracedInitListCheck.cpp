@@ -23,21 +23,14 @@ void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
   auto ConstructExpr =
       cxxConstructExpr(
           unless(anyOf(hasDeclaration(cxxConstructorDecl(isExplicit())),
-                       isListInitialization(), hasDescendant(initListExpr()),
-                       isInTemplateInstantiation())))
+                       isListInitialization(), hasDescendant(initListExpr()))))
           .bind("ctor");
 
-  auto CtorAsArgument = materializeTemporaryExpr(anyOf(
-      has(ConstructExpr), has(cxxFunctionalCastExpr(has(ConstructExpr)))));
-
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               functionDecl(
-                   isDefinition(), // Declarations don't have return statements.
-                   returns(unless(anyOf(builtinType(), autoType()))),
-                   hasDescendant(returnStmt(hasReturnValue(
-                       has(cxxConstructExpr(has(CtorAsArgument)))))))
-                   .bind("fn")),
+      returnStmt(hasReturnValue(ConstructExpr),
+                 forFunction(functionDecl(returns(unless(anyOf(builtinType(),
+                                                               autoType()))))
+                                 .bind("fn"))),
       this);
 }
 

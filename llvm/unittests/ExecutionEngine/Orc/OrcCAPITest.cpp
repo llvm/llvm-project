@@ -1,4 +1,4 @@
-//===--------------- OrcCAPITest.cpp - Unit tests Orc C API ---------------===//
+//===--- OrcCAPITest.cpp - Unit tests for the OrcJIT v2 C API ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,214 +6,513 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcTestCommon.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm-c/Core.h"
-#include "llvm-c/OrcBindings.h"
-#include "llvm-c/Target.h"
-#include "llvm-c/TargetMachine.h"
+#include "llvm-c/Error.h"
+#include "llvm-c/LLJIT.h"
+#include "llvm-c/Orc.h"
 #include "gtest/gtest.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "llvm/ADT/Triple.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/SourceMgr.h"
+#include <string>
 
-namespace llvm {
+using namespace llvm;
+using namespace llvm::orc;
 
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 
-class OrcCAPIExecutionTest : public testing::Test, public OrcExecutionTest {
+// OrcCAPITestBase contains several helper methods and pointers for unit tests
+// written for the LLVM-C API. It provides the following helpers:
+//
+// 1. Jit: an LLVMOrcLLJIT instance which is freed upon test exit
+// 2. ExecutionSession: the LLVMOrcExecutionSession for the JIT
+// 3. MainDylib: the main JITDylib for the LLJIT instance
+// 4. materializationUnitFn: function pointer to an empty function, used for
+//                           materialization unit testing
+// 5. definitionGeneratorFn: function pointer for a basic
+//                           LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction
+// 6. createTestModule: helper method for creating a basic thread-safe-module
+class OrcCAPITestBase : public testing::Test {
 protected:
-  std::unique_ptr<Module> createTestModule(const Triple &TT) {
-    ModuleBuilder MB(Context, TT.str(), "");
-    Type *IntTy = Type::getScalarTy<int>(Context);
-    Function *TestFunc =
-        MB.createFunctionDecl(FunctionType::get(IntTy, {}, false), "testFunc");
-    Function *Main = MB.createFunctionDecl(
-        FunctionType::get(
-            IntTy,
-            {IntTy, Type::getInt8PtrTy(Context)->getPointerTo()},
-            false),
-        "main");
+  LLVMOrcLLJITRef Jit = nullptr;
+  LLVMOrcExecutionSessionRef ExecutionSession = nullptr;
+  LLVMOrcJITDylibRef MainDylib = nullptr;
 
-    Main->getBasicBlockList().push_back(BasicBlock::Create(Context));
-    IRBuilder<> B(&Main->back());
-    Value* Result = B.CreateCall(TestFunc);
-    B.CreateRet(Result);
+public:
+  static void SetUpTestCase() {
+    LLVMInitializeNativeTarget();
+    LLVMInitializeNativeAsmParser();
+    LLVMInitializeNativeAsmPrinter();
 
-    return MB.takeModule();
+    // Attempt to set up a JIT instance once to verify that we can.
+    LLVMOrcJITTargetMachineBuilderRef JTMB = nullptr;
+    if (LLVMErrorRef E = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB)) {
+      // If setup fails then disable these tests.
+      LLVMConsumeError(E);
+      TargetSupported = false;
+      return;
+    }
+
+    // Capture the target triple. We'll use it for both verification that
+    // this target is *supposed* to be supported, and error messages in
+    // the case that it fails anyway.
+    char *TT = LLVMOrcJITTargetMachineBuilderGetTargetTriple(JTMB);
+    TargetTriple = TT;
+    LLVMDisposeMessage(TT);
+
+    if (!isSupported(TargetTriple)) {
+      // If this triple isn't supported then bail out.
+      TargetSupported = false;
+      LLVMOrcDisposeJITTargetMachineBuilder(JTMB);
+      return;
+    }
+
+    LLVMOrcLLJITBuilderRef Builder = LLVMOrcCreateLLJITBuilder();
+    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
+    LLVMOrcLLJITRef J;
+    if (LLVMErrorRef E = LLVMOrcCreateLLJIT(&J, Builder)) {
+      // If setup fails then disable these tests.
+      TargetSupported = false;
+      LLVMConsumeError(E);
+      return;
+    }
+
+    LLVMOrcDisposeLLJIT(J);
+    TargetSupported = true;
   }
 
-  Expected<std::unique_ptr<MemoryBuffer>> createTestObject() {
-    orc::SimpleCompiler IRCompiler(*TM);
-    auto M = createTestModule(TM->getTargetTriple());
-    M->setDataLayout(TM->createDataLayout());
-    return IRCompiler(*M);
+  void SetUp() override {
+    if (!TargetSupported)
+      GTEST_SKIP();
+
+    LLVMOrcJITTargetMachineBuilderRef JTMB = nullptr;
+    LLVMErrorRef E1 = LLVMOrcJITTargetMachineBuilderDetectHost(&JTMB);
+    assert(E1 == LLVMErrorSuccess && "Expected call to detect host to succeed");
+    (void)E1;
+
+    LLVMOrcLLJITBuilderRef Builder = LLVMOrcCreateLLJITBuilder();
+    LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(Builder, JTMB);
+    LLVMErrorRef E2 = LLVMOrcCreateLLJIT(&Jit, Builder);
+    assert(E2 == LLVMErrorSuccess &&
+           "Expected call to create LLJIT to succeed");
+    (void)E2;
+    ExecutionSession = LLVMOrcLLJITGetExecutionSession(Jit);
+    MainDylib = LLVMOrcLLJITGetMainJITDylib(Jit);
+  }
+  void TearDown() override {
+    LLVMOrcDisposeLLJIT(Jit);
+    Jit = nullptr;
   }
 
-  typedef int (*MainFnTy)();
-
-  static int myTestFuncImpl() {
-    return 42;
+protected:
+  static bool isSupported(StringRef Triple) {
+    // TODO: Print error messages in failure logs, use them to audit this list.
+    // Some architectures may be unsupportable or missing key components, but
+    // some may just be failing due to bugs in this testcase.
+    if (Triple.startswith("armv7") || Triple.startswith("armv8l"))
+      return false;
+    llvm::Triple T(Triple);
+    if (T.isOSAIX() && T.isPPC64())
+      return false;
+    return true;
   }
 
-  static char *testFuncName;
+  static void materializationUnitFn() {}
 
-  static uint64_t myResolver(const char *Name, void *Ctx) {
-    if (!strncmp(Name, testFuncName, 8))
-      return (uint64_t)&myTestFuncImpl;
-    return 0;
+  // Stub definition generator, where all Names are materialized from the
+  // materializationUnitFn() test function and defined into the JIT Dylib
+  static LLVMErrorRef
+  definitionGeneratorFn(LLVMOrcDefinitionGeneratorRef G, void *Ctx,
+                        LLVMOrcLookupStateRef *LS, LLVMOrcLookupKind K,
+                        LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags F,
+                        LLVMOrcCLookupSet Names, size_t NamesCount) {
+    for (size_t I = 0; I < NamesCount; I++) {
+      LLVMOrcCLookupSetElement Element = Names[I];
+      LLVMOrcJITTargetAddress Addr =
+          (LLVMOrcJITTargetAddress)(&materializationUnitFn);
+      LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
+      LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
+      LLVMOrcRetainSymbolStringPoolEntry(Element.Name);
+      LLVMJITCSymbolMapPair Pair = {Element.Name, Sym};
+      LLVMJITCSymbolMapPair Pairs[] = {Pair};
+      LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
+      LLVMErrorRef Err = LLVMOrcJITDylibDefine(JD, MU);
+      if (Err)
+        return Err;
+    }
+    return LLVMErrorSuccess;
   }
 
-  struct CompileContext {
-    CompileContext() : Compiled(false) { }
-
-    OrcCAPIExecutionTest* APIExecTest;
-    std::unique_ptr<Module> M;
-    LLVMOrcModuleHandle H;
-    bool Compiled;
-  };
-
-  static LLVMOrcTargetAddress myCompileCallback(LLVMOrcJITStackRef JITStack,
-                                                void *Ctx) {
-    CompileContext *CCtx = static_cast<CompileContext*>(Ctx);
-    auto *ET = CCtx->APIExecTest;
-    CCtx->M = ET->createTestModule(ET->TM->getTargetTriple());
-    LLVMOrcAddEagerlyCompiledIR(JITStack, &CCtx->H, wrap(CCtx->M.release()),
-                                myResolver, nullptr);
-    CCtx->Compiled = true;
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddress(JITStack, &MainAddr, "main");
-    LLVMOrcSetIndirectStubPointer(JITStack, "foo", MainAddr);
-    return MainAddr;
+  static Error createSMDiagnosticError(llvm::SMDiagnostic &Diag) {
+    std::string Msg;
+    {
+      raw_string_ostream OS(Msg);
+      Diag.print("", OS);
+    }
+    return make_error<StringError>(std::move(Msg), inconvertibleErrorCode());
   }
+
+  // Create an LLVM IR module from the given StringRef.
+  static Expected<std::unique_ptr<Module>>
+  parseTestModule(LLVMContext &Ctx, StringRef Source, StringRef Name) {
+    assert(TargetSupported &&
+           "Attempted to create module for unsupported target");
+    SMDiagnostic Err;
+    if (auto M = parseIR(MemoryBufferRef(Source, Name), Err, Ctx))
+      return std::move(M);
+    return createSMDiagnosticError(Err);
+  }
+
+  // returns the sum of its two parameters
+  static LLVMOrcThreadSafeModuleRef createTestModule(StringRef Source,
+                                                     StringRef Name) {
+    auto Ctx = std::make_unique<LLVMContext>();
+    auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+    return wrap(new ThreadSafeModule(std::move(M), std::move(Ctx)));
+  }
+
+  static LLVMMemoryBufferRef createTestObject(StringRef Source,
+                                              StringRef Name) {
+    auto Ctx = std::make_unique<LLVMContext>();
+    auto M = cantFail(parseTestModule(*Ctx, Source, Name));
+
+    auto JTMB = cantFail(JITTargetMachineBuilder::detectHost());
+    M->setDataLayout(cantFail(JTMB.getDefaultDataLayoutForTarget()));
+    auto TM = cantFail(JTMB.createTargetMachine());
+
+    SimpleCompiler SC(*TM);
+    auto ObjBuffer = cantFail(SC(*M));
+    return wrap(ObjBuffer.release());
+  }
+
+  static std::string TargetTriple;
+  static bool TargetSupported;
 };
 
-char *OrcCAPIExecutionTest::testFuncName = nullptr;
+std::string OrcCAPITestBase::TargetTriple;
+bool OrcCAPITestBase::TargetSupported = false;
 
-TEST_F(OrcCAPIExecutionTest, TestEagerIRCompilation) {
-  if (!SupportsJIT)
-    return;
+namespace {
 
-  LLVMOrcJITStackRef JIT =
-    LLVMOrcCreateInstance(wrap(TM.get()));
+constexpr StringRef SumExample =
+    R"(
+    define i32 @sum(i32 %x, i32 %y) {
+    entry:
+      %r = add nsw i32 %x, %y
+      ret i32 %r
+    }
+  )";
 
-  std::unique_ptr<Module> M = createTestModule(TM->getTargetTriple());
+} // end anonymous namespace.
 
-  LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
+// Consumes the given error ref and returns the string error message.
+static std::string toString(LLVMErrorRef E) {
+  char *ErrMsg = LLVMGetErrorMessage(E);
+  std::string Result(ErrMsg);
+  LLVMDisposeErrorMessage(ErrMsg);
+  return Result;
+}
 
-  LLVMOrcModuleHandle H;
-  LLVMOrcAddEagerlyCompiledIR(JIT, &H, wrap(M.release()), myResolver, nullptr);
+TEST_F(OrcCAPITestBase, SymbolStringPoolUniquing) {
+  LLVMOrcSymbolStringPoolEntryRef E1 =
+      LLVMOrcExecutionSessionIntern(ExecutionSession, "aaa");
+  LLVMOrcSymbolStringPoolEntryRef E2 =
+      LLVMOrcExecutionSessionIntern(ExecutionSession, "aaa");
+  LLVMOrcSymbolStringPoolEntryRef E3 =
+      LLVMOrcExecutionSessionIntern(ExecutionSession, "bbb");
+  const char *SymbolName = LLVMOrcSymbolStringPoolEntryStr(E1);
+  ASSERT_EQ(E1, E2) << "String pool entries are not unique";
+  ASSERT_NE(E1, E3) << "Unique symbol pool entries are equal";
+  ASSERT_STREQ("aaa", SymbolName) << "String value of symbol is not equal";
+  LLVMOrcReleaseSymbolStringPoolEntry(E1);
+  LLVMOrcReleaseSymbolStringPoolEntry(E2);
+  LLVMOrcReleaseSymbolStringPoolEntry(E3);
+}
 
-  // get symbol address searching the entire stack
+TEST_F(OrcCAPITestBase, JITDylibLookup) {
+  LLVMOrcJITDylibRef DoesNotExist =
+      LLVMOrcExecutionSessionGetJITDylibByName(ExecutionSession, "test");
+  ASSERT_FALSE(!!DoesNotExist);
+  LLVMOrcJITDylibRef L1 =
+      LLVMOrcExecutionSessionCreateBareJITDylib(ExecutionSession, "test");
+  LLVMOrcJITDylibRef L2 =
+      LLVMOrcExecutionSessionGetJITDylibByName(ExecutionSession, "test");
+  ASSERT_EQ(L1, L2) << "Located JIT Dylib is not equal to original";
+}
+
+TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
+  LLVMOrcSymbolStringPoolEntryRef Name =
+      LLVMOrcLLJITMangleAndIntern(Jit, "test");
+  LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
+  LLVMOrcJITTargetAddress Addr =
+      (LLVMOrcJITTargetAddress)(&materializationUnitFn);
+  LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
+  LLVMJITCSymbolMapPair Pair = {Name, Sym};
+  LLVMJITCSymbolMapPair Pairs[] = {Pair};
+  LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
+  LLVMOrcJITDylibDefine(MainDylib, MU);
+  LLVMOrcJITTargetAddress OutAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test"))
+    FAIL() << "Failed to look up \"test\" symbol (triple = " << TargetTriple
+           << "): " << toString(E);
+  ASSERT_EQ(Addr, OutAddr);
+}
+
+TEST_F(OrcCAPITestBase, DefinitionGenerators) {
+  LLVMOrcDefinitionGeneratorRef Gen =
+      LLVMOrcCreateCustomCAPIDefinitionGenerator(&definitionGeneratorFn,
+                                                 nullptr);
+  LLVMOrcJITDylibAddGenerator(MainDylib, Gen);
+  LLVMOrcJITTargetAddress OutAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test"))
+    FAIL() << "The DefinitionGenerator did not create symbol \"test\" "
+           << "(triple = " << TargetTriple << "): " << toString(E);
+  LLVMOrcJITTargetAddress ExpectedAddr =
+      (LLVMOrcJITTargetAddress)(&materializationUnitFn);
+  ASSERT_EQ(ExpectedAddr, OutAddr);
+}
+
+TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
+  // This test case ensures that all symbols loaded into a JITDylib with a
+  // ResourceTracker attached are cleared from the JITDylib once the RT is
+  // removed.
+  LLVMOrcResourceTrackerRef RT =
+      LLVMOrcJITDylibCreateResourceTracker(MainDylib);
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
+  if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, RT, TSM))
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  LLVMOrcJITTargetAddress TestFnAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  ASSERT_TRUE(!!TestFnAddr);
+  LLVMOrcResourceTrackerRemove(RT);
+  LLVMOrcJITTargetAddress OutAddr;
+  LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &OutAddr, "sum");
+  ASSERT_TRUE(Err);
+  LLVMConsumeError(Err);
+
+  ASSERT_FALSE(OutAddr);
+  LLVMOrcReleaseResourceTracker(RT);
+}
+
+TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
+  LLVMOrcResourceTrackerRef DefaultRT =
+      LLVMOrcJITDylibGetDefaultResourceTracker(MainDylib);
+  LLVMOrcResourceTrackerRef RT2 =
+      LLVMOrcJITDylibCreateResourceTracker(MainDylib);
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
+  if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModuleWithRT(Jit, DefaultRT, TSM))
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  LLVMOrcJITTargetAddress Addr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &Addr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  LLVMOrcResourceTrackerTransferTo(DefaultRT, RT2);
+  LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "sum");
+  ASSERT_FALSE(Err);
+  LLVMOrcReleaseResourceTracker(RT2);
+}
+
+TEST_F(OrcCAPITestBase, AddObjectBuffer) {
+  LLVMOrcObjectLayerRef ObjLinkingLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
+  LLVMMemoryBufferRef ObjBuffer = createTestObject(SumExample, "sum.ll");
+
+  if (LLVMErrorRef E = LLVMOrcObjectLayerAddObjectFile(ObjLinkingLayer,
+                                                       MainDylib, ObjBuffer))
+    FAIL() << "Failed to add object file to ObjLinkingLayer (triple = "
+           << TargetTriple << "): " << toString(E);
+
+  LLVMOrcJITTargetAddress SumAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &SumAddr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  ASSERT_TRUE(!!SumAddr);
+}
+
+TEST_F(OrcCAPITestBase, ExecutionTest) {
+  using SumFunctionType = int32_t (*)(int32_t, int32_t);
+
+  // This test performs OrcJIT compilation of a simple sum module
+  LLVMInitializeNativeAsmPrinter();
+  LLVMOrcThreadSafeModuleRef TSM = createTestModule(SumExample, "sum.ll");
+  if (LLVMErrorRef E = LLVMOrcLLJITAddLLVMIRModule(Jit, MainDylib, TSM))
+    FAIL() << "Failed to add LLVM IR module to LLJIT (triple = " << TargetTriple
+           << ")" << toString(E);
+  LLVMOrcJITTargetAddress TestFnAddr;
+  if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &TestFnAddr, "sum"))
+    FAIL() << "Symbol \"sum\" was not added into JIT (triple = " << TargetTriple
+           << "): " << toString(E);
+  auto *SumFn = (SumFunctionType)(TestFnAddr);
+  int32_t Result = SumFn(1, 1);
+  ASSERT_EQ(2, Result);
+}
+
+void Destroy(void *Ctx) {}
+
+void TargetFn() {}
+
+void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
+  LLVMOrcJITDylibRef JD =
+      LLVMOrcMaterializationResponsibilityGetTargetDylib(MR);
+  ASSERT_TRUE(!!JD);
+
+  LLVMOrcExecutionSessionRef ES =
+      LLVMOrcMaterializationResponsibilityGetExecutionSession(MR);
+  ASSERT_TRUE(!!ES);
+
+  LLVMOrcSymbolStringPoolEntryRef InitSym =
+      LLVMOrcMaterializationResponsibilityGetInitializerSymbol(MR);
+  ASSERT_TRUE(!InitSym);
+
+  size_t NumSymbols;
+  LLVMOrcCSymbolFlagsMapPairs Symbols =
+      LLVMOrcMaterializationResponsibilityGetSymbols(MR, &NumSymbols);
+
+  ASSERT_TRUE(!!Symbols);
+  ASSERT_EQ(NumSymbols, (size_t)1);
+
+  LLVMOrcSymbolStringPoolEntryRef *RequestedSymbols =
+      LLVMOrcMaterializationResponsibilityGetRequestedSymbols(MR, &NumSymbols);
+
+  ASSERT_TRUE(!!RequestedSymbols);
+  ASSERT_EQ(NumSymbols, (size_t)1);
+
+  LLVMOrcCSymbolFlagsMapPair TargetSym = Symbols[0];
+
+  ASSERT_EQ(RequestedSymbols[0], TargetSym.Name);
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+
+  LLVMOrcDisposeCSymbolFlagsMap(Symbols);
+  LLVMOrcDisposeSymbols(RequestedSymbols);
+
+  LLVMOrcJITTargetAddress Addr = (LLVMOrcJITTargetAddress)(&TargetFn);
+
+  LLVMJITSymbolFlags Flags = {
+      LLVMJITSymbolGenericFlagsExported | LLVMJITSymbolGenericFlagsCallable, 0};
+  ASSERT_EQ(TargetSym.Flags.GenericFlags, Flags.GenericFlags);
+  ASSERT_EQ(TargetSym.Flags.TargetFlags, Flags.TargetFlags);
+
+  LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
+
+  LLVMOrcLLJITRef J = (LLVMOrcLLJITRef)Ctx;
+
+  LLVMOrcSymbolStringPoolEntryRef OtherSymbol =
+      LLVMOrcLLJITMangleAndIntern(J, "other");
+  LLVMOrcSymbolStringPoolEntryRef DependencySymbol =
+      LLVMOrcLLJITMangleAndIntern(J, "dependency");
+
+  LLVMOrcRetainSymbolStringPoolEntry(OtherSymbol);
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcCSymbolFlagsMapPair NewSymbols[] = {
+      {OtherSymbol, Flags},
+      {DependencySymbol, Flags},
+  };
+  LLVMOrcMaterializationResponsibilityDefineMaterializing(MR, NewSymbols, 2);
+
+  LLVMOrcRetainSymbolStringPoolEntry(OtherSymbol);
+  LLVMOrcMaterializationResponsibilityRef OtherMR = NULL;
   {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
+    LLVMErrorRef Err = LLVMOrcMaterializationResponsibilityDelegate(
+        MR, &OtherSymbol, 1, &OtherMR);
+    if (Err) {
+      char *ErrMsg = LLVMGetErrorMessage(Err);
+      fprintf(stderr, "Error: %s\n", ErrMsg);
+      LLVMDisposeErrorMessage(ErrMsg);
+      LLVMOrcMaterializationResponsibilityFailMaterialization(MR);
+      LLVMOrcDisposeMaterializationResponsibility(MR);
+      return;
+    }
   }
+  assert(OtherMR);
 
-  // and then just searching a single handle
+  LLVMJITCSymbolMapPair OtherPair = {OtherSymbol, Sym};
+  LLVMOrcMaterializationUnitRef OtherMU = LLVMOrcAbsoluteSymbols(&OtherPair, 1);
+  // OtherSymbol is no longer owned by us
   {
-    LLVMOrcTargetAddress MainAddr;
-    LLVMOrcGetSymbolAddressIn(JIT, &MainAddr, H, "main");
-    MainFnTy MainFn = (MainFnTy)MainAddr;
-    int Result = MainFn();
-    EXPECT_EQ(Result, 42)
-      << "Eagerly JIT'd code did not return expected result";
+    LLVMErrorRef Err =
+        LLVMOrcMaterializationResponsibilityReplace(OtherMR, OtherMU);
+    if (Err) {
+      char *ErrMsg = LLVMGetErrorMessage(Err);
+      fprintf(stderr, "Error: %s\n", ErrMsg);
+      LLVMDisposeErrorMessage(ErrMsg);
+
+      LLVMOrcMaterializationResponsibilityFailMaterialization(OtherMR);
+      LLVMOrcMaterializationResponsibilityFailMaterialization(MR);
+
+      LLVMOrcDisposeMaterializationResponsibility(OtherMR);
+      LLVMOrcDisposeMaterializationResponsibility(MR);
+      LLVMOrcDisposeMaterializationUnit(OtherMU);
+      return;
+    }
   }
+  LLVMOrcDisposeMaterializationResponsibility(OtherMR);
 
-  LLVMOrcRemoveModule(JIT, H);
+  // FIXME: Implement async lookup
+  // A real test of the dependence tracking in the success case would require
+  // async lookups. You could:
+  // 1. Materialize foo, making foo depend on other.
+  // 2. In the caller, verify that the lookup callback for foo has not run (due
+  // to the dependence)
+  // 3. Materialize other by looking it up.
+  // 4. In the caller, verify that the lookup callback for foo has now run.
 
-  LLVMOrcDisposeMangledSymbol(testFuncName);
-  LLVMOrcDisposeInstance(JIT);
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
+  LLVMOrcMaterializationResponsibilityAddDependencies(MR, TargetSym.Name,
+                                                      &Dependency, 1);
+
+  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
+  LLVMOrcMaterializationResponsibilityAddDependenciesForAll(MR, &Dependency, 1);
+
+  // See FIXME above
+  LLVMJITCSymbolMapPair Pair = {DependencySymbol, Sym};
+  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+  // DependencySymbol no longer owned by us
+
+  Pair = {TargetSym.Name, Sym};
+  LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
+
+  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
+  LLVMOrcDisposeMaterializationResponsibility(MR);
+  return;
 }
 
-TEST_F(OrcCAPIExecutionTest, TestLazyIRCompilation) {
-  if (!SupportsIndirection)
-    return;
+TEST_F(OrcCAPITestBase, MaterializationResponsibility) {
+  LLVMJITSymbolFlags Flags = {
+      LLVMJITSymbolGenericFlagsExported | LLVMJITSymbolGenericFlagsCallable, 0};
+  LLVMOrcCSymbolFlagsMapPair Sym = {LLVMOrcLLJITMangleAndIntern(Jit, "foo"),
+                                    Flags};
 
-  LLVMOrcJITStackRef JIT =
-    LLVMOrcCreateInstance(wrap(TM.get()));
+  LLVMOrcMaterializationUnitRef MU = LLVMOrcCreateCustomMaterializationUnit(
+      "MU", (void *)Jit, &Sym, 1, NULL, &Materialize, NULL, &Destroy);
+  LLVMOrcJITDylibRef JD = LLVMOrcLLJITGetMainJITDylib(Jit);
+  LLVMOrcJITDylibDefine(JD, MU);
 
-  std::unique_ptr<Module> M = createTestModule(TM->getTargetTriple());
+  LLVMOrcJITTargetAddress Addr;
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "foo")) {
+    FAIL() << "foo was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
 
-  LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "other")) {
+    FAIL() << "other was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
 
-  LLVMOrcModuleHandle H;
-  LLVMOrcAddLazilyCompiledIR(JIT, &H, wrap(M.release()), myResolver, nullptr);
-  LLVMOrcTargetAddress MainAddr;
-  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
-  MainFnTy MainFn = (MainFnTy)MainAddr;
-  int Result = MainFn();
-  EXPECT_EQ(Result, 42)
-    << "Lazily JIT'd code did not return expected result";
-
-  LLVMOrcRemoveModule(JIT, H);
-
-  LLVMOrcDisposeMangledSymbol(testFuncName);
-  LLVMOrcDisposeInstance(JIT);
+  if (LLVMErrorRef Err = LLVMOrcLLJITLookup(Jit, &Addr, "dependency")) {
+    FAIL() << "dependency was not materialized " << toString(Err);
+  }
+  ASSERT_TRUE(!!Addr);
+  ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
 }
-
-TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
-  if (!SupportsJIT)
-    return;
-
-  auto ObjBuffer = cantFail(createTestObject());
-
-  LLVMOrcJITStackRef JIT =
-    LLVMOrcCreateInstance(wrap(TM.get()));
-  LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
-
-  LLVMOrcModuleHandle H;
-  LLVMOrcAddObjectFile(JIT, &H, wrap(ObjBuffer.release()), myResolver, nullptr);
-  LLVMOrcTargetAddress MainAddr;
-  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "main");
-  MainFnTy MainFn = (MainFnTy)MainAddr;
-  int Result = MainFn();
-  EXPECT_EQ(Result, 42)
-    << "Lazily JIT'd code did not return expected result";
-
-  LLVMOrcRemoveModule(JIT, H);
-
-  LLVMOrcDisposeMangledSymbol(testFuncName);
-  LLVMOrcDisposeInstance(JIT);
-}
-
-TEST_F(OrcCAPIExecutionTest, TestDirectCallbacksAPI) {
-  if (!SupportsIndirection)
-    return;
-
-  LLVMOrcJITStackRef JIT =
-    LLVMOrcCreateInstance(wrap(TM.get()));
-
-  LLVMOrcGetMangledSymbol(JIT, &testFuncName, "testFunc");
-
-  CompileContext C;
-  C.APIExecTest = this;
-  LLVMOrcTargetAddress CCAddr;
-  LLVMOrcCreateLazyCompileCallback(JIT, &CCAddr, myCompileCallback, &C);
-  LLVMOrcCreateIndirectStub(JIT, "foo", CCAddr);
-  LLVMOrcTargetAddress MainAddr;
-  LLVMOrcGetSymbolAddress(JIT, &MainAddr, "foo");
-  MainFnTy FooFn = (MainFnTy)MainAddr;
-  int Result = FooFn();
-  EXPECT_TRUE(C.Compiled)
-    << "Function wasn't lazily compiled";
-  EXPECT_EQ(Result, 42)
-    << "Direct-callback JIT'd code did not return expected result";
-
-  C.Compiled = false;
-  FooFn();
-  EXPECT_FALSE(C.Compiled)
-    << "Direct-callback JIT'd code was JIT'd twice";
-
-  LLVMOrcRemoveModule(JIT, C.H);
-
-  LLVMOrcDisposeMangledSymbol(testFuncName);
-  LLVMOrcDisposeInstance(JIT);
-}
-
-} // namespace llvm

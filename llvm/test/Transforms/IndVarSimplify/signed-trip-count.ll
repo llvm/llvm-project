@@ -1,7 +1,7 @@
 ; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; Provide legal integer types.
-target datalayout = "n8:16:32:64"
+target datalayout = "e-p:32:32:32-n8:16:32:64"
 
 
 define void @foo(i64* nocapture %x, i32 %n) nounwind {

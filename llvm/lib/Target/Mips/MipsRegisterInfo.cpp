@@ -198,8 +198,7 @@ getReservedRegs(const MachineFunction &MF) const {
       // Reserve the base register if we need to both realign the stack and
       // allocate variable-sized objects at runtime. This should test the
       // same conditions as MipsFrameLowering::hasBP().
-      if (needsStackRealignment(MF) &&
-          MF.getFrameInfo().hasVarSizedObjects()) {
+      if (hasStackRealignment(MF) && MF.getFrameInfo().hasVarSizedObjects()) {
         Reserved.set(Mips::S7);
         Reserved.set(Mips::S7_64);
       }

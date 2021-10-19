@@ -103,9 +103,6 @@ def AMDGPUconstdata_ptr : SDNode<
 // This argument to this node is a dword address.
 def AMDGPUdwordaddr : SDNode<"AMDGPUISD::DWORDADDR", SDTIntUnaryOp>;
 
-// Force dependencies for vector trunc stores
-def R600dummy_chain : SDNode<"AMDGPUISD::DUMMY_CHAIN", SDTNone, [SDNPHasChain]>;
-
 def AMDGPUcos_impl : SDNode<"AMDGPUISD::COS_HW", SDTFPUnaryOp>;
 def AMDGPUsin_impl : SDNode<"AMDGPUISD::SIN_HW", SDTFPUnaryOp>;
 // out = a - floor(a)
@@ -132,7 +129,6 @@ def AMDGPUpknorm_u16_f32_impl : SDNode<"AMDGPUISD::CVT_PKNORM_U16_F32", AMDGPUFP
 def AMDGPUpk_i16_i32_impl : SDNode<"AMDGPUISD::CVT_PK_I16_I32", AMDGPUIntPackOp>;
 def AMDGPUpk_u16_u32_impl : SDNode<"AMDGPUISD::CVT_PK_U16_U32", AMDGPUIntPackOp>;
 def AMDGPUfp_to_f16 : SDNode<"AMDGPUISD::FP_TO_FP16" , SDTFPToIntOp>;
-def AMDGPUfp16_zext : SDNode<"AMDGPUISD::FP16_ZEXT" , SDTFPToIntOp>;
 
 
 def AMDGPUfp_class_impl : SDNode<"AMDGPUISD::FP_CLASS", AMDGPUFPClassOp>;
@@ -213,6 +209,8 @@ def AMDGPUcvt_f32_ubyte2 : SDNode<"AMDGPUISD::CVT_F32_UBYTE2",
 def AMDGPUcvt_f32_ubyte3 : SDNode<"AMDGPUISD::CVT_F32_UBYTE3",
   SDTIntToFPOp, []>;
 
+def AMDGPUcvt_pk_i16_i32 : SDNode<"AMDGPUISD::CVT_PK_I16_I32",
+  AMDGPUIntPackOp, []>;
 
 // urecip - This operation is a helper for integer division, it returns the
 // result of 1 / a as a fractional unsigned integer.
@@ -311,7 +309,7 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
                                        SDTCisInt<4>]>,
                   []>;
 
-def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
+def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
@@ -327,11 +325,6 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 
 ]>;
 
-
-def R600ExportOp : SDTypeProfile<0, 7, [SDTCisFP<0>, SDTCisInt<1>]>;
-
-def R600_EXPORT: SDNode<"AMDGPUISD::R600_EXPORT", R600ExportOp,
-  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Flow Control Profile Types
@@ -461,3 +454,7 @@ def AMDGPUfdot2 : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$clamp)
 def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc),
   [(int_amdgcn_div_fmas node:$src0, node:$src1, node:$src2, node:$vcc),
    (AMDGPUdiv_fmas_impl node:$src0, node:$src1, node:$src2, node:$vcc)]>;
+
+def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
+  [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
+   (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;

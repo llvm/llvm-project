@@ -1,4 +1,5 @@
 # RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s| FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s| FileCheck %s
 ## Test case:
 ## int global;
 ## int foo(int p, int q, int r) {
@@ -10,8 +11,10 @@
 ##  Verify that DW_OP_LLVM_entry_values are generated for parameters with multiple
 ##  DBG_VALUEs at entry block.
 # CHECK: DBG_VALUE $edi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $esi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
-# CHECK: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK: INLINEASM
+# CHECK-DAG: DBG_VALUE $esi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK-DAG: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
+# CHECK $eax = MOV32ri 123
 
 --- |
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'
@@ -71,11 +74,10 @@ body:             |
     liveins: $edi
 
     DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
-    DBG_VALUE $edi, $noreg, !15, !DIExpression(), debug-location !18
     DBG_VALUE $esi, $noreg, !16, !DIExpression(), debug-location !18
     DBG_VALUE $edx, $noreg, !17, !DIExpression(), debug-location !18
     renamable $edi = nsw INC32r killed renamable $edi, implicit-def dead $eflags, debug-location !18
-    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store 4 into @global)
+    MOV32mr $rip, 1, $noreg, @global, $noreg, killed renamable $edi, debug-location !18 :: (store (s32) into @global)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $edi, 12, implicit-def dead early-clobber $esi, 12, implicit-def dead early-clobber $edx, 12, implicit-def dead early-clobber $df, 12, implicit-def dead early-clobber $fpsw, 12, implicit-def dead early-clobber $eflags, !19, debug-location !18
     $eax = MOV32ri 123, debug-location !18
     RETQ killed $eax, debug-location !18

@@ -29,7 +29,7 @@ test(U u)
 {
     const std::move_iterator<U> r2(u);
     std::move_iterator<It> r1;
-    std::move_iterator<It>& rr = r1 = r2;
+    std::move_iterator<It>& rr = (r1 = r2);
     assert(r1.base() == u);
     assert(&rr == &r1);
 }
@@ -41,7 +41,7 @@ int main(int, char**)
 {
     Derived d;
 
-    test<input_iterator<Base*> >(input_iterator<Derived*>(&d));
+    test<cpp17_input_iterator<Base*> >(cpp17_input_iterator<Derived*>(&d));
     test<forward_iterator<Base*> >(forward_iterator<Derived*>(&d));
     test<bidirectional_iterator<Base*> >(bidirectional_iterator<Derived*>(&d));
     test<random_access_iterator<const Base*> >(random_access_iterator<Derived*>(&d));

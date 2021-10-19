@@ -19,8 +19,8 @@ struct __attribute__((device_builtin_texture_type)) texture : public textureRefe
 };
 
 // On the device side, texture references are represented as `i64` handles.
-// DEVICE: @tex = addrspace(1) global i64 undef, align 4
-// DEVICE: @norm = addrspace(1) global i64 undef, align 4
+// DEVICE: @tex ={{.*}} addrspace(1) externally_initialized global i64 undef, align 4
+// DEVICE: @norm ={{.*}} addrspace(1) externally_initialized global i64 undef, align 4
 // On the host side, they remain in the original type.
 // HOST: @tex = internal global %struct.texture
 // HOST: @norm = internal global %struct.texture

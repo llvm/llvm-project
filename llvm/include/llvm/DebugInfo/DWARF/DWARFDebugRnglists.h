@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
-#define LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
 #include <cstdint>
-#include <map>
-#include <vector>
 
 namespace llvm {
 
@@ -34,7 +33,7 @@ struct RangeListEntry : public DWARFListEntryBase {
   uint64_t Value0;
   uint64_t Value1;
 
-  Error extract(DWARFDataExtractor Data, uint64_t End, uint64_t *OffsetPtr);
+  Error extract(DWARFDataExtractor Data, uint64_t *OffsetPtr);
   void dump(raw_ostream &OS, uint8_t AddrSize, uint8_t MaxEncodingStringLength,
             uint64_t &CurrentBase, DIDumpOptions DumpOpts,
             llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>
@@ -48,6 +47,7 @@ public:
   /// Build a DWARFAddressRangesVector from a rangelist.
   DWARFAddressRangesVector
   getAbsoluteRanges(Optional<object::SectionedAddress> BaseAddr,
+                    uint8_t AddressByteSize,
                     function_ref<Optional<object::SectionedAddress>(uint32_t)>
                         LookupPooledAddress) const;
 
@@ -67,4 +67,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGRNGLISTS_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGRNGLISTS_H

@@ -6,10 +6,10 @@ target triple = "x86_64-apple-darwin"
 %"class.std::auto_ptr" = type { i32* }
 
 ; CHECK-LABEL: @_Z3foov(
-define void @_Z3foov(%"class.std::auto_ptr"* noalias nocapture sret %agg.result) uwtable ssp {
+define void @_Z3foov(%"class.std::auto_ptr"* noalias nocapture sret(%"class.std::auto_ptr") %agg.result) uwtable ssp {
 _ZNSt8auto_ptrIiED1Ev.exit:
   %temp.lvalue = alloca %"class.std::auto_ptr", align 8
-  call void @_Z3barv(%"class.std::auto_ptr"* sret %temp.lvalue)
+  call void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr") %temp.lvalue)
   %_M_ptr.i.i = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* %temp.lvalue, i64 0, i32 0
   %tmp.i.i = load i32*, i32** %_M_ptr.i.i, align 8
 ; CHECK-NOT: store i32* null
@@ -20,4 +20,4 @@ _ZNSt8auto_ptrIiED1Ev.exit:
   ret void
 }
 
-declare void @_Z3barv(%"class.std::auto_ptr"* sret)
+declare void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr"))

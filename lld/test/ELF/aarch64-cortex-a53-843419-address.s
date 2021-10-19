@@ -38,7 +38,7 @@
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at FF8 in unpatched output.
 // CHECK: <t3_ff8_ldr>:
-// CHECK-NEXT:      ff8:        20 00 00 d0     adrp    x0, #24576
+// CHECK-NEXT:      ff8:        20 00 00 d0     adrp    x0, 0x6000
 // CHECK-NEXT:      ffc:        21 00 40 f9     ldr             x1, [x1]
 // CHECK-NEXT:     1000:        f9 0f 00 14     b       0x4fe4
 // CHECK-NEXT:     1004:        c0 03 5f d6     ret
@@ -60,7 +60,7 @@ t3_ff8_ldr:
 $x.999:
 // CHECK-PRINT-NEXT: detected cortex-a53-843419 erratum sequence starting at 1FFC in unpatched output.
 // CHECK: <t3_ffc_ldrsimd>:
-// CHECK-NEXT:     1ffc:        20 00 00 b0     adrp    x0, #20480
+// CHECK-NEXT:     1ffc:        20 00 00 b0     adrp    x0, 0x6000
 // CHECK-NEXT:     2000:        21 00 40 bd     ldr             s1, [x1]
 // CHECK-NEXT:     2004:        fa 0b 00 14     b       0x4fec
 // CHECK-NEXT:     2008:        c0 03 5f d6     ret
@@ -97,7 +97,7 @@ t3_ff8_ldralldata:
 
 // CHECK-PRINT-NEXT: detected cortex-a53-843419 erratum sequence starting at 3FF8 in unpatched output.
 // CHECK: <t3_ffc_ldr>:
-// CHECK-NEXT:     3ff8:        00 00 00 f0     adrp    x0, #12288
+// CHECK-NEXT:     3ff8:        00 00 00 f0     adrp    x0, 0x6000
 // CHECK-NEXT:     3ffc:        21 00 40 f9     ldr             x1, [x1]
 // CHECK-NEXT:     4000:        fd 03 00 14     b       0x4ff4
 // CHECK-NEXT:     4004:        c0 03 5f d6     ret
@@ -129,7 +129,7 @@ t3_ff8_ldralldata:
 
 // CHECK-PRINT-NEXT: detected cortex-a53-843419 erratum sequence starting at 4FFC in unpatched output
 // CHECK: <t3_ffc_str>:
-// CHECK-NEXT:     4ffc:        00 00 00 d0     adrp    x0, #8192
+// CHECK-NEXT:     4ffc:        00 00 00 d0     adrp    x0, 0x6000
 // CHECK-NEXT:     5000:        21 00 00 f9     str             x1, [x1]
 // CHECK-NEXT:     5004:        fb 03 00 14     b       0x5ff0
 // CHECK-NEXT:     5008:        c0 03 5f d6     ret
@@ -154,7 +154,7 @@ t3_ffc_str:
 
 //CHECK-PRINT-NEXT: detected cortex-a53-843419 erratum sequence starting at 5FF8 in unpatched output
 // CHECK: <t3_ff8_str>:
-// CHECK-NEXT:     5ff8:        00 00 00 b0     adrp    x0, #4096
+// CHECK-NEXT:     5ff8:        00 00 00 b0     adrp    x0, 0x6000
 // CHECK-NEXT:     5ffc:        21 00 00 f9     str             x1, [x1]
 // CHECK-NEXT:     6000:        03 00 00 14     b       0x600c
 // CHECK-NEXT:     6004:        c0 03 5f d6     ret

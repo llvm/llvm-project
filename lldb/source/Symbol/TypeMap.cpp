@@ -22,7 +22,7 @@ using namespace lldb_private;
 TypeMap::TypeMap() : m_types() {}
 
 // Destructor
-TypeMap::~TypeMap() {}
+TypeMap::~TypeMap() = default;
 
 void TypeMap::Insert(const TypeSP &type_sp) {
   // Just push each type on the back for now. We will worry about uniquing

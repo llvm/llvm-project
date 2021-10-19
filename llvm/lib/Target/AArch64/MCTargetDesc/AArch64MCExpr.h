@@ -46,6 +46,7 @@ public:
     VK_G1       = 0x050,
     VK_G2       = 0x060,
     VK_G3       = 0x070,
+    VK_LO15     = 0x080,
     VK_AddressFragBits = 0x0f0,
 
     // Whether the final relocation is a checked one (where a linker should
@@ -82,6 +83,7 @@ public:
     VK_PREL_G0_NC        = VK_PREL     | VK_G0      | VK_NC,
     VK_GOT_LO12          = VK_GOT      | VK_PAGEOFF | VK_NC,
     VK_GOT_PAGE          = VK_GOT      | VK_PAGE,
+    VK_GOT_PAGE_LO15     = VK_GOT      | VK_LO15    | VK_NC,
     VK_DTPREL_G2         = VK_DTPREL   | VK_G2,
     VK_DTPREL_G1         = VK_DTPREL   | VK_G1,
     VK_DTPREL_G1_NC      = VK_DTPREL   | VK_G1      | VK_NC,

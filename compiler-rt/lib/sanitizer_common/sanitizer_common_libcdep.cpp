@@ -26,9 +26,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
 
 #if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
-SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
-  return nullptr;
-}
+SANITIZER_WEAK_ATTRIBUTE StackDepotStats StackDepotGetStats() { return {}; }
 
 void *BackgroundThread(void *arg) {
   const uptr hard_rss_limit_mb = common_flags()->hard_rss_limit_mb;
@@ -48,16 +46,12 @@ void *BackgroundThread(void *arg) {
         prev_reported_rss = current_rss_mb;
       }
       // If stack depot has grown 10% since last time, print it too.
-      StackDepotStats *stack_depot_stats = StackDepotGetStats();
-      if (stack_depot_stats) {
-        if (prev_reported_stack_depot_size * 11 / 10 <
-            stack_depot_stats->allocated) {
-          Printf("%s: StackDepot: %zd ids; %zdM allocated\n",
-                 SanitizerToolName,
-                 stack_depot_stats->n_uniq_ids,
-                 stack_depot_stats->allocated >> 20);
-          prev_reported_stack_depot_size = stack_depot_stats->allocated;
-        }
+      StackDepotStats stack_depot_stats = StackDepotGetStats();
+      if (prev_reported_stack_depot_size * 11 / 10 <
+          stack_depot_stats.allocated) {
+        Printf("%s: StackDepot: %zd ids; %zdM allocated\n", SanitizerToolName,
+               stack_depot_stats.n_uniq_ids, stack_depot_stats.allocated >> 20);
+        prev_reported_stack_depot_size = stack_depot_stats.allocated;
       }
     }
     // Check RSS against the limit.
@@ -92,14 +86,13 @@ void *BackgroundThread(void *arg) {
 #endif
 
 void WriteToSyslog(const char *msg) {
-  InternalScopedString msg_copy(kErrorMessageBufferSize);
+  InternalScopedString msg_copy;
   msg_copy.append("%s", msg);
-  char *p = msg_copy.data();
-  char *q;
+  const char *p = msg_copy.data();
 
   // Print one line at a time.
   // syslog, at least on Android, has an implicit message length limit.
-  while ((q = internal_strchr(p, '\n'))) {
+  while (char* q = internal_strchr(p, '\n')) {
     *q = '\0';
     WriteOneLineToSyslog(p);
     p = q + 1;
@@ -139,7 +132,7 @@ uptr ReservedAddressRange::InitAligned(uptr size, uptr align,
   return start;
 }
 
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#if !SANITIZER_FUCHSIA
 
 // Reserve memory range [beg, end].
 // We need to use inclusive range because end+1 may not be representable.
@@ -190,7 +183,7 @@ void ProtectGap(uptr addr, uptr size, uptr zero_base_shadow_start,
   Die();
 }
 
-#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#endif  // !SANITIZER_FUCHSIA
 
 }  // namespace __sanitizer
 

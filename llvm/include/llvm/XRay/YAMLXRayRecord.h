@@ -9,8 +9,8 @@
 // Types and traits specialisations for YAML I/O of XRay log entries.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_XRAY_YAML_XRAY_RECORD_H
-#define LLVM_XRAY_YAML_XRAY_RECORD_H
+#ifndef LLVM_XRAY_YAMLXRAYRECORD_H
+#define LLVM_XRAY_YAMLXRAYRECORD_H
 
 #include <type_traits>
 
@@ -104,4 +104,4 @@ template <> struct MappingTraits<xray::YAMLXRayTrace> {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(xray::YAMLXRayRecord)
 
-#endif // LLVM_XRAY_YAML_XRAY_RECORD_H
+#endif // LLVM_XRAY_YAMLXRAYRECORD_H

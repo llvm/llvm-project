@@ -25,7 +25,7 @@ define i16 @W(i16 %A) {
         ret i16 %Z
 }
 
-define i32 @X(i32 %A) {
+define dso_local i32 @X(i32 %A) {
 ; CHECK-LABEL: X:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -66,7 +66,7 @@ define i64 @Y(i64 %A) {
 ; when the other ops have other uses (and it might not be safe
 ; either due to unconstrained instruction count growth).
 
-define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
+define dso_local i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
 ; CHECK-LABEL: bswap_multiuse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -100,7 +100,7 @@ define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
 }
 
 ; rdar://9164521
-define i32 @test1(i32 %a) nounwind readnone {
+define dso_local i32 @test1(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -122,7 +122,7 @@ define i32 @test1(i32 %a) nounwind readnone {
   ret i32 %or
 }
 
-define i32 @test2(i32 %a) nounwind readnone {
+define dso_local i32 @test2(i32 %a) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -145,8 +145,8 @@ define i32 @test2(i32 %a) nounwind readnone {
   ret i32 %conv3
 }
 
-@var8 = global i8 0
-@var16 = global i16 0
+@var8 = dso_local global i8 0
+@var16 = dso_local global i16 0
 
 ; The "shl" below can move bits into the high parts of the value, so the
 ; operation is not a "bswap, shr" pair.
@@ -165,7 +165,7 @@ define i64 @not_bswap() {
 ;
 ; CHECK64-LABEL: not_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK64-NEXT:    movzwl var16(%rip), %eax
 ; CHECK64-NEXT:    movq %rax, %rcx
 ; CHECK64-NEXT:    shrq $8, %rcx
 ; CHECK64-NEXT:    shlq $8, %rax
@@ -196,7 +196,7 @@ define i64 @not_useful_bswap() {
 ;
 ; CHECK64-LABEL: not_useful_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzbl {{.*}}(%rip), %eax
+; CHECK64-NEXT:    movzbl var8(%rip), %eax
 ; CHECK64-NEXT:    shlq $8, %rax
 ; CHECK64-NEXT:    retq
   %init = load i8, i8* @var8
@@ -224,7 +224,7 @@ define i64 @finally_useful_bswap() {
 ;
 ; CHECK64-LABEL: finally_useful_bswap:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK64-NEXT:    movzwl var16(%rip), %eax
 ; CHECK64-NEXT:    bswapq %rax
 ; CHECK64-NEXT:    shrq $48, %rax
 ; CHECK64-NEXT:    retq
@@ -277,14 +277,10 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %ebp
 ; CHECK-NEXT:    shrdl $16, %ebp, %ebx
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    bswapl %ecx
-; CHECK-NEXT:    shrdl $16, %ecx, %ebp
-; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrdl $16, %eax, %ecx
-; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %eax, %ebp
+; CHECK-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    bswapl %ecx
 ; CHECK-NEXT:    shrdl $16, %ecx, %eax
@@ -293,10 +289,14 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    shrdl $16, %eax, %ecx
 ; CHECK-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    bswapl %ecx
+; CHECK-NEXT:    shrdl $16, %ecx, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    bswapl %ebp
-; CHECK-NEXT:    shrdl $16, %ebp, %eax
-; CHECK-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; CHECK-NEXT:    shrdl $16, %ebp, %ecx
+; CHECK-NEXT:    movl %ecx, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    bswapl %ebx
 ; CHECK-NEXT:    shrdl $16, %ebx, %ebp

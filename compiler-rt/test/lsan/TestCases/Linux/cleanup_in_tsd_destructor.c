@@ -3,10 +3,13 @@
 // user-installed TSD destructors have finished running (since they may contain
 // additional cleanup tasks). LSan doesn't actually meet that goal 100%, but it
 // makes its best effort.
-// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_globals=0"
+// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0"
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE:use_tls=1 %run %t
 // RUN: %env_lsan_opts=$LSAN_BASE:use_tls=0 not %run %t 2>&1 | FileCheck %s
+
+// Investigate why it does not fail with use_stack=0
+// UNSUPPORTED: arm-linux || armhf-linux
 
 #include <assert.h>
 #include <pthread.h>

@@ -188,9 +188,9 @@ bool DeadArgumentEliminationPass::DeleteDeadVarargs(Function &Fn) {
     if (!PAL.isEmpty()) {
       SmallVector<AttributeSet, 8> ArgAttrs;
       for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo)
-        ArgAttrs.push_back(PAL.getParamAttributes(ArgNo));
-      PAL = AttributeList::get(Fn.getContext(), PAL.getFnAttributes(),
-                               PAL.getRetAttributes(), ArgAttrs);
+        ArgAttrs.push_back(PAL.getParamAttrs(ArgNo));
+      PAL = AttributeList::get(Fn.getContext(), PAL.getFnAttrs(),
+                               PAL.getRetAttrs(), ArgAttrs);
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;
@@ -287,6 +287,7 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
   SmallVector<unsigned, 8> UnusedArgs;
   bool Changed = false;
 
+  AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
   for (Argument &Arg : Fn.args()) {
     if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() &&
         !Arg.hasPassPointeeByValueCopyAttr()) {
@@ -295,6 +296,7 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
         Changed = true;
       }
       UnusedArgs.push_back(Arg.getArgNo());
+      Fn.removeParamAttrs(Arg.getArgNo(), UBImplyingAttributes);
     }
   }
 
@@ -312,6 +314,8 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
 
       Value *Arg = CB->getArgOperand(ArgNo);
       CB->setArgOperand(ArgNo, UndefValue::get(Arg->getType()));
+      CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
+
       ++NumArgumentsReplacedWithUndef;
       Changed = true;
     }
@@ -357,7 +361,7 @@ DeadArgumentEliminationPass::Liveness
 DeadArgumentEliminationPass::MarkIfNotLive(RetOrArg Use,
                                            UseVector &MaybeLiveUses) {
   // We're live if our use or its Function is already marked as live.
-  if (LiveFunctions.count(Use.F) || LiveValues.count(Use))
+  if (IsLive(Use))
     return Live;
 
   // We're maybe live otherwise, but remember that we must become live if
@@ -657,10 +661,18 @@ void DeadArgumentEliminationPass::MarkValue(const RetOrArg &RA, Liveness L,
       MarkLive(RA);
       break;
     case MaybeLive:
-      // Note any uses of this value, so this return value can be
-      // marked live whenever one of the uses becomes live.
-      for (const auto &MaybeLiveUse : MaybeLiveUses)
-        Uses.insert(std::make_pair(MaybeLiveUse, RA));
+      assert(!IsLive(RA) && "Use is already live!");
+      for (const auto &MaybeLiveUse : MaybeLiveUses) {
+        if (IsLive(MaybeLiveUse)) {
+          // A use is live, so this value is live.
+          MarkLive(RA);
+          break;
+        } else {
+          // Note any uses of this value, so this value can be
+          // marked live whenever one of the uses becomes live.
+          Uses.insert(std::make_pair(MaybeLiveUse, RA));
+        }
+      }
       break;
   }
 }
@@ -686,15 +698,18 @@ void DeadArgumentEliminationPass::MarkLive(const Function &F) {
 /// mark any values that are used by this value (according to Uses) live as
 /// well.
 void DeadArgumentEliminationPass::MarkLive(const RetOrArg &RA) {
-  if (LiveFunctions.count(RA.F))
-    return; // Function was already marked Live.
+  if (IsLive(RA))
+    return; // Already marked Live.
 
-  if (!LiveValues.insert(RA).second)
-    return; // We were already marked Live.
+  LiveValues.insert(RA);
 
   LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Marking "
                     << RA.getDescription() << " live\n");
   PropagateLiveness(RA);
+}
+
+bool DeadArgumentEliminationPass::IsLive(const RetOrArg &RA) {
+  return LiveFunctions.count(RA.F) || LiveValues.count(RA);
 }
 
 /// PropagateLiveness - Given that RA is a live value, propagate it's liveness
@@ -747,8 +762,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     if (LiveValues.erase(Arg)) {
       Params.push_back(I->getType());
       ArgAlive[ArgI] = true;
-      ArgAttrVec.push_back(PAL.getParamAttributes(ArgI));
-      HasLiveReturnedArg |= PAL.hasParamAttribute(ArgI, Attribute::Returned);
+      ArgAttrVec.push_back(PAL.getParamAttrs(ArgI));
+      HasLiveReturnedArg |= PAL.hasParamAttr(ArgI, Attribute::Returned);
     } else {
       ++NumArgumentsEliminated;
       LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Removing argument "
@@ -823,7 +838,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   assert(NRetTy && "No new return type found?");
 
   // The existing function return attributes.
-  AttrBuilder RAttrs(PAL.getRetAttributes());
+  AttrBuilder RAttrs(PAL.getRetAttrs());
 
   // Remove any incompatible attributes, but only if we removed all return
   // values. Otherwise, ensure that we don't have any conflicting attributes
@@ -838,8 +853,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
   // Strip allocsize attributes. They might refer to the deleted arguments.
-  AttributeSet FnAttrs = PAL.getFnAttributes().removeAttribute(
-      F->getContext(), Attribute::AllocSize);
+  AttributeSet FnAttrs =
+      PAL.getFnAttrs().removeAttribute(F->getContext(), Attribute::AllocSize);
 
   // Reconstruct the AttributesList based on the vector we constructed.
   assert(ArgAttrVec.size() == Params.size());
@@ -874,7 +889,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
     // Adjust the call return attributes in case the function was changed to
     // return void.
-    AttrBuilder RAttrs(CallPAL.getRetAttributes());
+    AttrBuilder RAttrs(CallPAL.getRetAttrs());
     RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy));
     AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
@@ -888,7 +903,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
       if (ArgAlive[Pi]) {
         Args.push_back(*I);
         // Get original parameter attributes, but skip return attributes.
-        AttributeSet Attrs = CallPAL.getParamAttributes(Pi);
+        AttributeSet Attrs = CallPAL.getParamAttrs(Pi);
         if (NRetTy != RetTy && Attrs.hasAttribute(Attribute::Returned)) {
           // If the return type has changed, then get rid of 'returned' on the
           // call site. The alternative is to make all 'returned' attributes on
@@ -907,7 +922,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
     // Push any varargs arguments on the list. Don't forget their attributes.
     for (auto E = CB.arg_end(); I != E; ++I, ++Pi) {
       Args.push_back(*I);
-      ArgAttrVec.push_back(CallPAL.getParamAttributes(Pi));
+      ArgAttrVec.push_back(CallPAL.getParamAttrs(Pi));
     }
 
     // Reconstruct the AttributesList based on the vector we constructed.
@@ -915,7 +930,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
     // Again, be sure to remove any allocsize attributes, since their indices
     // may now be incorrect.
-    AttributeSet FnAttrs = CallPAL.getFnAttributes().removeAttribute(
+    AttributeSet FnAttrs = CallPAL.getFnAttrs().removeAttribute(
         F->getContext(), Attribute::AllocSize);
 
     AttributeList NewCallPAL = AttributeList::get(
@@ -1079,11 +1094,9 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
   // fused with the next loop, because deleting a function invalidates
   // information computed while surveying other functions.
   LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Deleting dead varargs\n");
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ) {
-    Function &F = *I++;
+  for (Function &F : llvm::make_early_inc_range(M))
     if (F.getFunctionType()->isVarArg())
       Changed |= DeleteDeadVarargs(F);
-  }
 
   // Second phase:loop through the module, determining which arguments are live.
   // We assume all arguments are dead unless proven otherwise (allowing us to
@@ -1094,13 +1107,10 @@ PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
     SurveyFunction(F);
 
   // Now, remove all dead arguments and return values from each function in
-  // turn.
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ) {
-    // Increment now, because the function will probably get removed (ie.
-    // replaced by a new one).
-    Function *F = &*I++;
-    Changed |= RemoveDeadStuffFromFunction(F);
-  }
+  // turn.  We use make_early_inc_range here because functions will probably get
+  // removed (i.e. replaced by new ones).
+  for (Function &F : llvm::make_early_inc_range(M))
+    Changed |= RemoveDeadStuffFromFunction(&F);
 
   // Finally, look for any unused parameters in functions with non-local
   // linkage and replace the passed in parameters with undef.

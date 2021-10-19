@@ -47,20 +47,20 @@ define void @based_on_pr18068(i32 %loaded, i8* %mem) {
 ; CHECK: MayAlias: i8* %a, i8* %b
 ; CHECK: MustAlias: i8* %a, i8* %c
 ; CHECK: MayAlias: i8* %a, i8* %d
-define void @test_path_dependence(i32 %p, i8* %mem) {
-  %p.minus1 = add i32 %p, -1 ; this will always unsigned-wrap, unless %p == 0
-  %p.minus1.64 = zext i32 %p.minus1 to i64
-  %p.64.again = add i64 %p.minus1.64, 1 ; either %p (if we wrapped) or 4294967296 (if we didn't)
+define void @test_path_dependence(i16 %p, i8* %mem) {
+  %p.minus1 = add i16 %p, -1 ; this will always unsigned-wrap, unless %p == 0
+  %p.minus1.64 = zext i16 %p.minus1 to i64
+  %p.64.again = add i64 %p.minus1.64, 1 ; either %p (if we wrapped) or 65536 (if we didn't)
 
-  %p.nsw.nuw.minus1 = sub nsw nuw i32 %p, 1 ; as nuw we know %p >= 1, and as nsw %p <=   2147483647
-  %p.nsw.nuw.minus1.64 = zext i32 %p.nsw.nuw.minus1 to i64
+  %p.nsw.nuw.minus1 = sub nsw nuw i16 %p, 1 ; as nuw we know %p >= 1, and as nsw %p <= 32767
+  %p.nsw.nuw.minus1.64 = zext i16 %p.nsw.nuw.minus1 to i64
   %p.nsw.nuw.64.again = add nsw nuw i64 %p.nsw.nuw.minus1.64, 1 ; ...so always exactly %p
 
-  %p.nsw.minus1 = sub nsw i32 %p, 1 ; only nsw, so can only guarantee %p != 0x10000000
-  %p.nsw.minus1.64 = zext i32 %p.nsw.minus1 to i64 ; when %p > 0x10000000 (ie <= 0 as a signed number) then the zext will make this a huge positive number
+  %p.nsw.minus1 = sub nsw i16 %p, 1 ; only nsw, so can only guarantee %p != 0x1000
+  %p.nsw.minus1.64 = zext i16 %p.nsw.minus1 to i64 ; when %p > 0x1000 (ie <= 0 as a signed number) then the zext will make this a huge positive number
   %p.nsw.64.again = add nsw i64 %p.nsw.minus1.64, 1 ; ...and so this is very much != %p
 
-  %p.64 = zext i32 %p to i64
+  %p.64 = zext i16 %p to i64
   %a = getelementptr inbounds i8, i8* %mem, i64 %p.64
   %b = getelementptr inbounds i8, i8* %mem, i64 %p.64.again
   %c = getelementptr inbounds i8, i8* %mem, i64 %p.nsw.nuw.64.again
@@ -176,5 +176,13 @@ define void @constantOffsetHeuristic_i8_i8(i8* %mem, i8 %val) {
   %a = bitcast i8* %a.8 to i32*
   %b = bitcast i8* %b.8 to i32*
   %c = bitcast i8* %c.8 to i32*
+  ret void
+}
+
+; CHECK-LABEL: different_large_bitwidths
+; MayAlias: i64* %p1, i64* %p2
+define void @different_large_bitwidths(i8* %a, i64 %i, i128 %j) {
+  %p1 = getelementptr i8, i8* %a, i64 %i
+  %p2 = getelementptr i8, i8* %a, i128 %j
   ret void
 }

@@ -29,8 +29,8 @@ int main(int, char**) {
   const path p(s);
   path p2;
   path& pref = (p2 = p);
-  assert(p.native() == s);
-  assert(p2.native() == s);
+  assert(p.string() == s);
+  assert(p2.string() == s);
   assert(&pref == &p2);
 
   return 0;

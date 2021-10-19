@@ -1,0 +1,67 @@
+[
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -o a.o",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -ob.o",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang -E DIR/target-filename_input.cpp -o first.o -o last.o",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E -o clangcl-a.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E -oclangcl-b.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /o clangcl-c.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /oclangcl-d.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /Foclangcl-e.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E -o clangcl-firstf.o -o clangcl-lastf.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /oclangcl-firstg.o /Foclangcl-lastg.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /Foclangcl-firsth.o -o clangcl-midh.o /oclangcl-lasth.o -- DIR/target-filename_input.cpp",
+  "file": "DIR/target-filename_input.cpp"
+}
+]

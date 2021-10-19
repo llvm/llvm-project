@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -instcombine -S -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=loop-vectorize,instcombine -S -debug-only=loop-vectorize -disable-output -print-after=instcombine 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -instcombine -S -debug-only=loop-vectorize -disable-output -print-after=instcombine -enable-new-pm=0 2>&1 | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -force-vector-width=2 -S | FileCheck %s -check-prefix=FORCE
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -19,8 +20,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOT:   LV: Found uniform instruction: %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
 ; CHECK-NOT:   LV: Found uniform instruction: %i.next = add nuw nsw i64 %i, 5
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> undef, float %x, i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x float> poison, float %x, i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x float> [[BROADCAST_SPLATINSERT]], <16 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %vector.body
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
@@ -29,16 +30,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds %data, %data* %d, i64 0, i32 3, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[TMP0]] to <80 x float>*
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <80 x float>, <80 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> undef, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <80 x float> [[WIDE_VEC]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <16 x float> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds %data, %data* %d, i64 0, i32 0, <16 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <16 x float*> [[TMP3]] to <16 x <80 x float>*>
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x <80 x float>*> [[BC]], i32 0
 ; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <80 x float>, <80 x float>* [[TMP4]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> undef, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <80 x float> [[WIDE_VEC1]], <80 x float> poison, <16 x i32> <i32 0, i32 5, i32 10, i32 15, i32 20, i32 25, i32 30, i32 35, i32 40, i32 45, i32 50, i32 55, i32 60, i32 65, i32 70, i32 75>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0f32(<16 x float> [[TMP5]], <16 x float*> [[TMP3]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], <i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80, i64 80>
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
@@ -88,38 +89,28 @@ attributes #0 = { "target-cpu"="knl" }
 ; FORCE:       vector.body:
 ; FORCE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE4:%.*]] ]
 ; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE4]] ]
-; FORCE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
-; FORCE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; FORCE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; FORCE-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
-; FORCE:       pred.store.if:
-; FORCE-NEXT:    store i32 [[TMP0]], i32* @b, align 1
-; FORCE-NEXT:    br label [[PRED_STORE_CONTINUE]]
-; FORCE:       pred.store.continue:
-; FORCE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; FORCE-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
-; FORCE:       pred.store.if1:
-; FORCE-NEXT:    store i32 [[TMP1]], i32* @b, align 1
-; FORCE-NEXT:    br label [[PRED_STORE_CONTINUE2]]
-; FORCE:       pred.store.continue2:
-; FORCE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; FORCE-NEXT:    br i1 [[TMP5]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
+; FORCE-NEXT:    br i1 [[TMP3]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; FORCE:       pred.load.if:
+; FORCE-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
+; FORCE-NEXT:    store i32 [[TMP0]], i32* @b, align 1
 ; FORCE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i32 0, i32 [[TMP0]]
 ; FORCE-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 1
-; FORCE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> undef, i32 [[TMP7]], i32 0
+; FORCE-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i32 0
 ; FORCE-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; FORCE:       pred.load.continue:
-; FORCE-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ undef, [[PRED_STORE_CONTINUE2]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
+; FORCE-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_LOAD_IF]] ]
 ; FORCE-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; FORCE-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4]]
-; FORCE:       pred.load.if3:
+; FORCE:       pred.load.if1:
+; FORCE-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
+; FORCE-NEXT:    store i32 [[TMP1]], i32* @b, align 1
 ; FORCE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* @a, i32 0, i32 [[TMP1]]
 ; FORCE-NEXT:    [[TMP12:%.*]] = load i32, i32* [[TMP11]], align 1
 ; FORCE-NEXT:    [[TMP13:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP12]], i32 1
 ; FORCE-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
-; FORCE:       pred.load.continue4:
+; FORCE:       pred.load.continue2:
 ; FORCE-NEXT:    [[TMP14:%.*]] = phi <2 x i32> [ [[TMP9]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP13]], [[PRED_LOAD_IF3]] ]
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>

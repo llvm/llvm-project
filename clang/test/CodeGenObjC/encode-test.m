@@ -92,22 +92,22 @@ int main()
         const char *ee = @encode(MyObj *const);
 }
 
-// CHECK: @g0 = constant [15 x i8] c"{Innermost=CC}\00"
+// CHECK: @g0 ={{.*}} constant [15 x i8] c"{Innermost=CC}\00"
 const char g0[] = @encode(struct Innermost);
 
-// CHECK: @g1 = constant [38 x i8] c"{Derived=#ib32b8b3b8sb16b8b8b2b8ccb6}\00"
+// CHECK: @g1 ={{.*}} constant [38 x i8] c"{Derived=#ib32b8b3b8sb16b8b8b2b8ccb6}\00"
 const char g1[] = @encode(Derived);
 
-// CHECK: @g2 = constant [9 x i8] c"{B1=#@c}\00"
+// CHECK: @g2 ={{.*}} constant [9 x i8] c"{B1=#@c}\00"
 const char g2[] = @encode(B1);
 
-// CHECK: @g3 = constant [8 x i8] c"r^{S=i}\00"
+// CHECK: @g3 ={{.*}} constant [8 x i8] c"r^{S=i}\00"
 const char g3[] = @encode(const struct S *);
 
-// CHECK: @g4 = constant [6 x i8] c"{S=i}\00"
+// CHECK: @g4 ={{.*}} constant [6 x i8] c"{S=i}\00"
 const char g4[] = @encode(const struct S);
 
-// CHECK: @g5 = constant [2 x i8] c"@\00"
+// CHECK: @g5 ={{.*}} constant [2 x i8] c"@\00"
 const char g5[] = @encode(MyObj * const);
 
 ////
@@ -133,19 +133,19 @@ enum Enum1X { one, two, three, four };
 
 @implementation Derived1X @end
 
-// CHECK: @g6 = constant [18 x i8] c"{Base1X=b2b3b4b5}\00"
+// CHECK: @g6 ={{.*}} constant [18 x i8] c"{Base1X=b2b3b4b5}\00"
 const char g6[] = @encode(Base1X);
 
-// CHECK: @g7 = constant [27 x i8] c"{Derived1X=b2b3b4b5b5b4b3}\00"
+// CHECK: @g7 ={{.*}} constant [27 x i8] c"{Derived1X=b2b3b4b5b5b4b3}\00"
 const char g7[] = @encode(Derived1X);
 
-// CHECK: @g8 = constant [7 x i8] c"{s8=D}\00"
+// CHECK: @g8 ={{.*}} constant [7 x i8] c"{s8=D}\00"
 struct s8 {
   long double x;
 };
 const char g8[] = @encode(struct s8);
 
-// CHECK: @g9 = constant [11 x i8] c"{S9=i[0i]}\00"
+// CHECK: @g9 ={{.*}} constant [11 x i8] c"{S9=i[0i]}\00"
 struct S9 {
   int x;
   int flex[];
@@ -159,15 +159,15 @@ struct f
   int tt;
 };
 
-// CHECK: @g10 = constant [14 x i8] c"{f=i[4{?=}]i}\00"
+// CHECK: @g10 ={{.*}} constant [14 x i8] c"{f=i[4{?=}]i}\00"
 const char g10[] = @encode(struct f);
 
 // rdar://9622422
-// CHECK: @g11 = constant [2 x i8] c"v\00"
+// CHECK: @g11 ={{.*}} constant [2 x i8] c"v\00"
 const char g11[] = @encode(void);
 
 // PR14628
-// CHECK: @g12 = constant [3 x i8] c"Ai\00"
+// CHECK: @g12 ={{.*}} constant [3 x i8] c"Ai\00"
 const char g12[] = @encode(_Atomic(int));
 
 // rdar://15824769
@@ -178,7 +178,7 @@ const char g14[] = @encode(__typeof__(*test_id));
 // CHECK: constant [14 x i8] c"{objc_class=}\00"
 // CHECK: constant [15 x i8] c"{objc_object=}\00"
 
-// CHECK: @g15 = constant [2 x i8] c":\00"
+// CHECK: @g15 ={{.*}} constant [2 x i8] c":\00"
 const char g15[] = @encode(SEL);
 
 typedef typeof(sizeof(int)) size_t;

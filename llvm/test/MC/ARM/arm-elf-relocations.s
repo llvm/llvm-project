@@ -11,8 +11,8 @@
 	.byte abs8_1 +255
 
 @ CHECK: Section {{.*}} .rel.text.r_arm_abs8 {
-@ CHECK:   0x0 R_ARM_ABS8 abs8_0 0x0
-@ CHECK:   0x1 R_ARM_ABS8 abs8_1 0x0
+@ CHECK:   0x0 R_ARM_ABS8 abs8_0
+@ CHECK:   0x1 R_ARM_ABS8 abs8_1
 @ CHECK: }
 
 	.section .text.r_arm_abs16
@@ -21,8 +21,8 @@
 	.short abs16_1 +65535
 
 @ CHECK: Section {{.*}} .rel.text.r_arm_abs16 {
-@ CHECK:   0x0 R_ARM_ABS16 abs16_0 0x0
-@ CHECK:   0x2 R_ARM_ABS16 abs16_1 0x0
+@ CHECK:   0x0 R_ARM_ABS16 abs16_0
+@ CHECK:   0x2 R_ARM_ABS16 abs16_1
 @ CHECK: }
 
 	.section .text.r_arm_sbrel32
@@ -31,7 +31,7 @@
 	.word target(SBREL)
 
 @ CHECK: Section {{.*}} .rel.text.r_arm_sbrel32 {
-@ CHECK:   0x0 R_ARM_SBREL32 target 0x0
-@ CHECK:   0x4 R_ARM_SBREL32 target 0x0
+@ CHECK:   0x0 R_ARM_SBREL32 target
+@ CHECK:   0x4 R_ARM_SBREL32 target
 @ CHECK: }
 

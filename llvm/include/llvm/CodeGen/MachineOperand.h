@@ -33,7 +33,6 @@ class MachineRegisterInfo;
 class MCCFIInstruction;
 class MDNode;
 class ModuleSlotTracker;
-class TargetMachine;
 class TargetIntrinsicInfo;
 class TargetRegisterInfo;
 class hash_code;
@@ -100,8 +99,11 @@ private:
   unsigned IsImp : 1;
 
   /// IsDeadOrKill
-  /// For uses: IsKill - True if this instruction is the last use of the
-  /// register on this path through the function.
+  /// For uses: IsKill - Conservatively indicates the last use of a register
+  /// on this path through the function. A register operand with true value of
+  /// this flag must be the last use of the register, a register operand with
+  /// false value may or may not be the last use of the register. After regalloc
+  /// we can use recomputeLivenessFlags to get precise kill flags.
   /// For defs: IsDead - True if this register is never used by a subsequent
   /// instruction.
   /// This is only valid on register operands.
@@ -728,12 +730,12 @@ public:
   /// ChangeToImmediate - Replace this operand with a new immediate operand of
   /// the specified value.  If an operand is known to be an immediate already,
   /// the setImm method should be used.
-  void ChangeToImmediate(int64_t ImmVal);
+  void ChangeToImmediate(int64_t ImmVal, unsigned TargetFlags = 0);
 
   /// ChangeToFPImmediate - Replace this operand with a new FP immediate operand
   /// of the specified value.  If an operand is known to be an FP immediate
   /// already, the setFPImm method should be used.
-  void ChangeToFPImmediate(const ConstantFP *FPImm);
+  void ChangeToFPImmediate(const ConstantFP *FPImm, unsigned TargetFlags = 0);
 
   /// ChangeToES - Replace this operand with a new external symbol operand.
   void ChangeToES(const char *SymName, unsigned TargetFlags = 0);
@@ -743,10 +745,10 @@ public:
                   unsigned TargetFlags = 0);
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
-  void ChangeToMCSymbol(MCSymbol *Sym);
+  void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
 
   /// Replace this operand with a frame index.
-  void ChangeToFrameIndex(int Idx);
+  void ChangeToFrameIndex(int Idx, unsigned TargetFlags = 0);
 
   /// Replace this operand with a target index.
   void ChangeToTargetIndex(unsigned Idx, int64_t Offset,
@@ -758,6 +760,11 @@ public:
   void ChangeToRegister(Register Reg, bool isDef, bool isImp = false,
                         bool isKill = false, bool isDead = false,
                         bool isUndef = false, bool isDebug = false);
+
+  /// getTargetIndexName - If this MachineOperand is a TargetIndex that has a
+  /// name, attempt to get the name. Returns nullptr if the TargetIndex does not
+  /// have a name. Asserts if MO is not a TargetIndex.
+  const char *getTargetIndexName() const;
 
   //===--------------------------------------------------------------------===//
   // Construction methods.

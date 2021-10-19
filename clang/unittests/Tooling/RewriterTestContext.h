@@ -18,13 +18,28 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+
+/// \brief A very simple diagnostic consumer that prints to stderr and keeps
+/// track of the number of diagnostics.
+///
+/// This avoids a dependency on clangFrontend for FormatTests.
+struct RewriterDiagnosticConsumer : public DiagnosticConsumer {
+  RewriterDiagnosticConsumer() : NumDiagnosticsSeen(0) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    ++NumDiagnosticsSeen;
+    SmallString<100> OutStr;
+    Info.FormatDiagnostic(OutStr);
+    llvm::errs() << OutStr;
+  }
+  unsigned NumDiagnosticsSeen;
+};
 
 /// \brief A class that sets up a ready to use Rewriter.
 ///
@@ -37,7 +52,6 @@ class RewriterTestContext {
        : DiagOpts(new DiagnosticOptions()),
          Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
                      &*DiagOpts),
-         DiagnosticPrinter(llvm::outs(), &*DiagOpts),
          InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
          OverlayFileSystem(
              new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem())),
@@ -56,7 +70,7 @@ class RewriterTestContext {
         llvm::MemoryBuffer::getMemBuffer(Content);
     InMemoryFileSystem->addFile(Name, 0, std::move(Source));
 
-    auto Entry = Files.getFile(Name);
+    auto Entry = Files.getOptionalFileRef(Name);
     assert(Entry);
     return Sources.createFileID(*Entry, SourceLocation(), SrcMgr::C_User);
   }
@@ -73,7 +87,7 @@ class RewriterTestContext {
     llvm::raw_fd_ostream OutStream(FD, true);
     OutStream << Content;
     OutStream.close();
-    auto File = Files.getFile(Path);
+    auto File = Files.getOptionalFileRef(Path);
     assert(File);
 
     StringRef Found =
@@ -113,7 +127,7 @@ class RewriterTestContext {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticsEngine Diagnostics;
-  TextDiagnosticPrinter DiagnosticPrinter;
+  RewriterDiagnosticConsumer DiagnosticPrinter;
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem;
   FileManager Files;

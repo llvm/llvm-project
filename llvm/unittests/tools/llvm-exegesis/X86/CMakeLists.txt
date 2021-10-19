@@ -1,19 +1,10 @@
-include_directories(
+add_llvm_exegesis_unittest_includes(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
   ${LLVM_BINARY_DIR}/lib/Target/X86
   ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib
   )
 
-set(LLVM_LINK_COMPONENTS
-  MC
-  MCParser
-  Object
-  Support
-  Symbolize
-  X86
-  )
-
-add_llvm_target_unittest(LLVMExegesisX86Tests
+add_llvm_exegesis_unittest_sources(
   AssemblerTest.cpp
   BenchmarkResultTest.cpp
   RegisterAliasingTest.cpp
@@ -23,6 +14,18 @@ add_llvm_target_unittest(LLVMExegesisX86Tests
   SnippetRepetitorTest.cpp
   TargetTest.cpp
   )
-target_link_libraries(LLVMExegesisX86Tests PRIVATE
-  LLVMExegesis
-  LLVMExegesisX86)
+
+add_llvm_exegesis_unittest_link_components(
+  Core
+  Codegen
+  MC
+  MCParser
+  Object
+  Support
+  Symbolize
+  X86
+  )
+
+add_llvm_exegesis_unittest_link_libraries(
+  LLVMExegesisX86
+  )

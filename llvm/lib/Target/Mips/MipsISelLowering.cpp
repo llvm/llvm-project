@@ -122,9 +122,7 @@ unsigned MipsTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
                                                            CallingConv::ID CC,
                                                            EVT VT) const {
   if (VT.isVector())
-    return std::max(((unsigned)VT.getSizeInBits() /
-                     (Subtarget.isABI_O32() ? 32 : 64)),
-                    1U);
+    return divideCeil(VT.getSizeInBits(), Subtarget.isABI_O32() ? 32 : 64);
   return MipsTargetLowering::getNumRegisters(Context, VT);
 }
 
@@ -134,10 +132,10 @@ unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
   // Break down vector types to either 2 i64s or 4 i32s.
   RegisterVT = getRegisterTypeForCallingConv(Context, CC, VT);
   IntermediateVT = RegisterVT;
-  NumIntermediates = VT.getSizeInBits() < RegisterVT.getSizeInBits()
-                         ? VT.getVectorNumElements()
-                         : VT.getSizeInBits() / RegisterVT.getSizeInBits();
-
+  NumIntermediates =
+      VT.getFixedSizeInBits() < RegisterVT.getFixedSizeInBits()
+          ? VT.getVectorNumElements()
+          : divideCeil(VT.getSizeInBits(), RegisterVT.getSizeInBits());
   return NumIntermediates;
 }
 
@@ -511,6 +509,9 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setLibcallName(RTLIB::SHL_I128, nullptr);
     setLibcallName(RTLIB::SRL_I128, nullptr);
     setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MULO_I128, nullptr);
   }
 
   setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
@@ -1195,17 +1196,6 @@ bool MipsTargetLowering::shouldFoldConstantShiftPairToMask(
   if (N->getOperand(0).getValueType().isVector())
     return false;
   return true;
-}
-
-void
-MipsTargetLowering::LowerOperationWrapper(SDNode *N,
-                                          SmallVectorImpl<SDValue> &Results,
-                                          SelectionDAG &DAG) const {
-  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
-
-  if (Res)
-    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
-      Results.push_back(Res.getValue(I));
 }
 
 void
@@ -2086,7 +2076,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
     const MipsTargetObjectFile *TLOF =
         static_cast<const MipsTargetObjectFile *>(
             getTargetMachine().getObjFileLowering());
-    const GlobalObject *GO = GV->getBaseObject();
+    const GlobalObject *GO = GV->getAliaseeObject();
     if (GO && TLOF->IsGlobalInSmallSection(GO, getTargetMachine()))
       // %gp_rel relocation
       return getAddrGPRel(N, SDLoc(N), Ty, DAG, ABI.IsN64());
@@ -2939,13 +2929,23 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
       Reg = State.AllocateReg(IntRegs);
     LocVT = MVT::i32;
   } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
+    LocVT = MVT::i32;
+
     // Allocate int register and shadow next int register. If first
     // available register is Mips::A1 or Mips::A3, shadow it too.
     Reg = State.AllocateReg(IntRegs);
     if (Reg == Mips::A1 || Reg == Mips::A3)
       Reg = State.AllocateReg(IntRegs);
-    State.AllocateReg(IntRegs);
-    LocVT = MVT::i32;
+
+    if (Reg) {
+      State.addLoc(
+          CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      MCRegister HiReg = State.AllocateReg(IntRegs);
+      assert(HiReg);
+      State.addLoc(
+          CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
+      return false;
+    }
   } else if (ValVT.isFloatingPoint() && !AllocateFloatsInIntReg) {
     // we are guaranteed to find an available float register
     if (ValVT == MVT::f32) {
@@ -3005,12 +3005,6 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
 //                  Call Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
-// Return next O32 integer argument register.
-static unsigned getNextIntArgReg(unsigned Reg) {
-  assert((Reg == Mips::A0) || (Reg == Mips::A2));
-  return (Reg == Mips::A0) ? Mips::A1 : Mips::A3;
-}
-
 SDValue MipsTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
                                            SDValue Chain, SDValue Arg,
                                            const SDLoc &DL, bool IsTailCall,
@@ -3025,8 +3019,8 @@ SDValue MipsTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   int FI = MFI.CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
   SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
-  return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(),
-                      /* Alignment = */ 0, MachineMemOperand::MOVolatile);
+  return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(), MaybeAlign(),
+                      MachineMemOperand::MOVolatile);
 }
 
 void MipsTargetLowering::
@@ -3262,11 +3256,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCInfo.rewindByValRegsInfo();
 
   // Walk the register/memloc assignments, inserting copies/loads.
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    SDValue Arg = OutVals[i];
+  for (unsigned i = 0, e = ArgLocs.size(), OutIdx = 0; i != e; ++i, ++OutIdx) {
+    SDValue Arg = OutVals[OutIdx];
     CCValAssign &VA = ArgLocs[i];
     MVT ValVT = VA.getValVT(), LocVT = VA.getLocVT();
-    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    ISD::ArgFlagsTy Flags = Outs[OutIdx].Flags;
     bool UseUpperBits = false;
 
     // ByVal Arg.
@@ -3304,8 +3298,11 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                    Arg, DAG.getConstant(1, DL, MVT::i32));
           if (!Subtarget.isLittle())
             std::swap(Lo, Hi);
+
+          assert(VA.needsCustom());
+
           Register LocRegLo = VA.getLocReg();
-          unsigned LocRegHigh = getNextIntArgReg(LocRegLo);
+          Register LocRegHigh = ArgLocs[++i].getLocReg();
           RegsToPass.push_back(std::make_pair(LocRegLo, Lo));
           RegsToPass.push_back(std::make_pair(LocRegHigh, Hi));
           continue;
@@ -3336,7 +3333,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
 
     if (UseUpperBits) {
-      unsigned ValSizeInBits = Outs[i].ArgVT.getSizeInBits();
+      unsigned ValSizeInBits = Outs[OutIdx].ArgVT.getSizeInBits();
       unsigned LocSizeInBits = VA.getLocVT().getSizeInBits();
       Arg = DAG.getNode(
           ISD::SHL, DL, VA.getLocVT(), Arg,
@@ -3647,18 +3644,18 @@ SDValue MipsTargetLowering::LowerFormalArguments(
   unsigned CurArgIdx = 0;
   CCInfo.rewindByValRegsInfo();
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
-    if (Ins[i].isOrigArg()) {
-      std::advance(FuncArg, Ins[i].getOrigArgIndex() - CurArgIdx);
-      CurArgIdx = Ins[i].getOrigArgIndex();
+    if (Ins[InsIdx].isOrigArg()) {
+      std::advance(FuncArg, Ins[InsIdx].getOrigArgIndex() - CurArgIdx);
+      CurArgIdx = Ins[InsIdx].getOrigArgIndex();
     }
     EVT ValVT = VA.getValVT();
-    ISD::ArgFlagsTy Flags = Ins[i].Flags;
+    ISD::ArgFlagsTy Flags = Ins[InsIdx].Flags;
     bool IsRegLoc = VA.isRegLoc();
 
     if (Flags.isByVal()) {
-      assert(Ins[i].isOrigArg() && "Byval arguments cannot be implicit");
+      assert(Ins[InsIdx].isOrigArg() && "Byval arguments cannot be implicit");
       unsigned FirstByValReg, LastByValReg;
       unsigned ByValIdx = CCInfo.getInRegsParamsProcessed();
       CCInfo.getInRegsParamInfo(ByValIdx, FirstByValReg, LastByValReg);
@@ -3683,7 +3680,8 @@ SDValue MipsTargetLowering::LowerFormalArguments(
       unsigned Reg = addLiveIn(DAG.getMachineFunction(), ArgReg, RC);
       SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
-      ArgValue = UnpackFromArgumentSlot(ArgValue, VA, Ins[i].ArgVT, DL, DAG);
+      ArgValue =
+          UnpackFromArgumentSlot(ArgValue, VA, Ins[InsIdx].ArgVT, DL, DAG);
 
       // Handle floating point arguments passed in integer registers and
       // long double arguments passed in floating point registers.
@@ -3693,8 +3691,10 @@ SDValue MipsTargetLowering::LowerFormalArguments(
         ArgValue = DAG.getNode(ISD::BITCAST, DL, ValVT, ArgValue);
       else if (ABI.IsO32() && RegVT == MVT::i32 &&
                ValVT == MVT::f64) {
-        unsigned Reg2 = addLiveIn(DAG.getMachineFunction(),
-                                  getNextIntArgReg(ArgReg), RC);
+        assert(VA.needsCustom() && "Expected custom argument for f64 split");
+        CCValAssign &NextVA = ArgLocs[++i];
+        unsigned Reg2 =
+            addLiveIn(DAG.getMachineFunction(), NextVA.getLocReg(), RC);
         SDValue ArgValue2 = DAG.getCopyFromReg(Chain, DL, Reg2, RegVT);
         if (!Subtarget.isLittle())
           std::swap(ArgValue, ArgValue2);
@@ -3705,6 +3705,8 @@ SDValue MipsTargetLowering::LowerFormalArguments(
       InVals.push_back(ArgValue);
     } else { // VA.isRegLoc()
       MVT LocVT = VA.getLocVT();
+
+      assert(!VA.needsCustom() && "unexpected custom memory argument");
 
       if (ABI.IsO32()) {
         // We ought to be able to use LocVT directly but O32 sets it to i32
@@ -3729,17 +3731,24 @@ SDValue MipsTargetLowering::LowerFormalArguments(
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
       OutChains.push_back(ArgValue.getValue(1));
 
-      ArgValue = UnpackFromArgumentSlot(ArgValue, VA, Ins[i].ArgVT, DL, DAG);
+      ArgValue =
+          UnpackFromArgumentSlot(ArgValue, VA, Ins[InsIdx].ArgVT, DL, DAG);
 
       InVals.push_back(ArgValue);
     }
   }
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
+
+    if (ArgLocs[i].needsCustom()) {
+      ++i;
+      continue;
+    }
+
     // The mips ABIs for returning structs by value requires that we copy
     // the sret argument into $v0 for the return. Save the argument into
     // a virtual register so that we can access it from the return points.
-    if (Ins[i].Flags.isSRet()) {
+    if (Ins[InsIdx].Flags.isSRet()) {
       unsigned Reg = MipsFI->getSRetReturnReg();
       if (!Reg) {
         Reg = MF.getRegInfo().createVirtualRegister(
@@ -4404,7 +4413,7 @@ void MipsTargetLowering::passByValArg(
       SDValue LoadPtr = DAG.getNode(ISD::ADD, DL, PtrTy, Arg,
                                     DAG.getConstant(OffsetInBytes, DL, PtrTy));
       SDValue LoadVal = DAG.getLoad(RegTy, DL, Chain, LoadPtr,
-                                    MachinePointerInfo(), Alignment.value());
+                                    MachinePointerInfo(), Alignment);
       MemOpChains.push_back(LoadVal.getValue(1));
       unsigned ArgReg = ArgRegs[FirstReg + I];
       RegsToPass.push_back(std::make_pair(ArgReg, LoadVal));
@@ -4431,7 +4440,7 @@ void MipsTargetLowering::passByValArg(
                                                       PtrTy));
         SDValue LoadVal = DAG.getExtLoad(
             ISD::ZEXTLOAD, DL, RegTy, Chain, LoadPtr, MachinePointerInfo(),
-            MVT::getIntegerVT(LoadSizeInBytes * 8), Alignment.value());
+            MVT::getIntegerVT(LoadSizeInBytes * 8), Alignment);
         MemOpChains.push_back(LoadVal.getValue(1));
 
         // Shift the loaded value.

@@ -112,8 +112,8 @@ static void doList(opt::InputArgList& Args) {
   std::unique_ptr<MemoryBuffer> B;
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
     // Create or open the archive object.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
-        MemoryBuffer::getFile(Arg->getValue(), -1, false);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf = MemoryBuffer::getFile(
+        Arg->getValue(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MaybeBuf.getError()), Arg->getValue());
 
     if (identify_magic(MaybeBuf.get()->getBuffer()) == file_magic::archive) {
@@ -139,35 +139,28 @@ static void doList(opt::InputArgList& Args) {
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
 }
 
-static COFF::MachineTypes getCOFFFileMachine(MemoryBufferRef MB) {
+static Expected<COFF::MachineTypes> getCOFFFileMachine(MemoryBufferRef MB) {
   std::error_code EC;
   auto Obj = object::COFFObjectFile::create(MB);
-  if (!Obj) {
-    llvm::errs() << MB.getBufferIdentifier()
-                 << ": failed to open: " << Obj.takeError() << '\n';
-    exit(1);
-  }
+  if (!Obj)
+    return Obj.takeError();
 
   uint16_t Machine = (*Obj)->getMachine();
   if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
       Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
       Machine != COFF::IMAGE_FILE_MACHINE_ARMNT &&
       Machine != COFF::IMAGE_FILE_MACHINE_ARM64) {
-    llvm::errs() << MB.getBufferIdentifier() << ": unknown machine: " << Machine
-                 << '\n';
-    exit(1);
+    return createStringError(inconvertibleErrorCode(),
+                             "unknown machine: " + std::to_string(Machine));
   }
 
   return static_cast<COFF::MachineTypes>(Machine);
 }
 
-static COFF::MachineTypes getBitcodeFileMachine(MemoryBufferRef MB) {
+static Expected<COFF::MachineTypes> getBitcodeFileMachine(MemoryBufferRef MB) {
   Expected<std::string> TripleStr = getBitcodeTargetTriple(MB);
-  if (!TripleStr) {
-    llvm::errs() << MB.getBufferIdentifier()
-                 << ": failed to get target triple from bitcode\n";
-    exit(1);
-  }
+  if (!TripleStr)
+    return TripleStr.takeError();
 
   switch (Triple(*TripleStr).getArch()) {
   case Triple::x86:
@@ -179,9 +172,8 @@ static COFF::MachineTypes getBitcodeFileMachine(MemoryBufferRef MB) {
   case Triple::aarch64:
     return COFF::IMAGE_FILE_MACHINE_ARM64;
   default:
-    llvm::errs() << MB.getBufferIdentifier()
-                 << ": unknown arch in target triple " << *TripleStr << '\n';
-    exit(1);
+    return createStringError(inconvertibleErrorCode(),
+                             "unknown arch in target triple: " + *TripleStr);
   }
 }
 
@@ -201,7 +193,7 @@ static void appendFile(std::vector<NewArchiveMember> &Members,
 
   // If a user attempts to add an archive to another archive, llvm-lib doesn't
   // handle the first archive file as a single file. Instead, it extracts all
-  // members from the archive and add them to the second archive. This beahvior
+  // members from the archive and add them to the second archive. This behavior
   // is for compatibility with Microsoft's lib command.
   if (Magic == file_magic::archive) {
     Error Err = Error::success();
@@ -233,9 +225,17 @@ static void appendFile(std::vector<NewArchiveMember> &Members,
   // in writeArchive() which needs to support many tools, can't assume the
   // input is COFF, and doesn't have a good way to report errors.
   if (Magic == file_magic::coff_object || Magic == file_magic::bitcode) {
-    COFF::MachineTypes FileMachine = (Magic == file_magic::coff_object)
-                                         ? getCOFFFileMachine(MB)
-                                         : getBitcodeFileMachine(MB);
+    Expected<COFF::MachineTypes> MaybeFileMachine =
+        (Magic == file_magic::coff_object) ? getCOFFFileMachine(MB)
+                                           : getBitcodeFileMachine(MB);
+    if (!MaybeFileMachine) {
+      handleAllErrors(MaybeFileMachine.takeError(), [&](const ErrorInfoBase &EIB) {
+        llvm::errs() << MB.getBufferIdentifier() << ": " << EIB.message()
+                     << "\n";
+      });
+      exit(1);
+    }
+    COFF::MachineTypes FileMachine = *MaybeFileMachine;
 
     // FIXME: Once lld-link rejects multiple resource .obj files:
     // Call convertResToCOFF() on .res files and add the resulting
@@ -287,7 +287,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
   // Handle /help
   if (Args.hasArg(OPT_help)) {
-    Table.PrintHelp(outs(), "llvm-lib [options] file...", "LLVM Lib");
+    Table.printHelp(outs(), "llvm-lib [options] file...", "LLVM Lib");
     return 0;
   }
 
@@ -339,8 +339,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       continue;
 
     // Open a file.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MOrErr =
-        MemoryBuffer::getFile(Path, -1, false);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MOrErr = MemoryBuffer::getFile(
+        Path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MOrErr.getError()), Path);
     MemoryBufferRef MBRef = (*MOrErr)->getMemBufferRef();
 

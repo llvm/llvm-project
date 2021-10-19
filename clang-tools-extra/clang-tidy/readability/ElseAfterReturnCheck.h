@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_ELSEAFTERRETURNCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 namespace tidy {
@@ -23,12 +24,21 @@ public:
   ElseAfterReturnCheck(StringRef Name, ClangTidyContext *Context);
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+
+  using ConditionalBranchMap =
+      llvm::DenseMap<FileID, SmallVector<SourceRange, 1>>;
 
 private:
   const bool WarnOnUnfixable;
   const bool WarnOnConditionVariables;
+  ConditionalBranchMap PPConditionals;
 };
 
 } // namespace readability

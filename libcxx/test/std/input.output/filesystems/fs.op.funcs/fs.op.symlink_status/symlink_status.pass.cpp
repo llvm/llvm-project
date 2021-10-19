@@ -34,8 +34,7 @@ TEST_CASE(signature_test)
 TEST_CASE(test_symlink_status_not_found)
 {
     static_test_env static_env;
-    const std::error_code expect_ec =
-        std::make_error_code(std::errc::no_such_file_or_directory);
+    const std::errc expect_errc = std::errc::no_such_file_or_directory;
     const path cases[] {
         static_env.DNE
     };
@@ -43,7 +42,7 @@ TEST_CASE(test_symlink_status_not_found)
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
         // test non-throwing overload.
         file_status st = symlink_status(p, ec);
-        TEST_CHECK(ec == expect_ec);
+        TEST_CHECK(ErrorIs(ec, expect_errc));
         TEST_CHECK(st.type() == file_type::not_found);
         TEST_CHECK(st.permissions() == perms::unknown);
         // test throwing overload. It should not throw even though it reports
@@ -54,6 +53,12 @@ TEST_CASE(test_symlink_status_not_found)
     }
 }
 
+// Windows doesn't support setting perms::none to trigger failures
+// reading directories. Imaginary files under GetWindowsInaccessibleDir()
+// produce no_such_file_or_directory, not the error codes this test checks
+// for. Finally, status() for a too long file name doesn't return errors
+// on windows.
+#ifndef TEST_WIN_NO_FILESYSTEM_PERMS_NONE
 TEST_CASE(test_symlink_status_cannot_resolve)
 {
     scoped_test_env env;
@@ -63,10 +68,8 @@ TEST_CASE(test_symlink_status_cannot_resolve)
     const path sym_points_in_dir = env.create_symlink("dir/file", "sym");
     permissions(dir, perms::none);
 
-    const std::error_code set_ec =
-        std::make_error_code(std::errc::address_in_use);
-    const std::error_code expect_ec =
-        std::make_error_code(std::errc::permission_denied);
+    const std::errc set_errc = std::errc::address_in_use;
+    const std::errc expect_errc = std::errc::permission_denied;
 
     const path fail_cases[] = {
         file_in_dir, sym_in_dir
@@ -74,20 +77,20 @@ TEST_CASE(test_symlink_status_cannot_resolve)
     for (auto& p : fail_cases)
     {
         { // test non-throwing case
-            std::error_code ec = set_ec;
+            std::error_code ec = std::make_error_code(set_errc);
             file_status st = symlink_status(p, ec);
-            TEST_CHECK(ec == expect_ec);
+            TEST_CHECK(ErrorIs(ec, expect_errc));
             TEST_CHECK(st.type() == file_type::none);
             TEST_CHECK(st.permissions() == perms::unknown);
         }
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                symlink_status(p);
+                (void)symlink_status(p);
             } catch (filesystem_error const& err) {
                 TEST_CHECK(err.path1() == p);
                 TEST_CHECK(err.path2() == "");
-                TEST_CHECK(err.code() == expect_ec);
+                TEST_CHECK(ErrorIs(err.code(), expect_errc));
             }
         }
 #endif
@@ -95,7 +98,7 @@ TEST_CASE(test_symlink_status_cannot_resolve)
     // Test that a symlink that points into a directory without read perms
     // can be stat-ed using symlink_status
     {
-        std::error_code ec = set_ec;
+        std::error_code ec = std::make_error_code(set_errc);
         file_status st = symlink_status(sym_points_in_dir, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(st.type() == file_type::symlink);
@@ -106,6 +109,7 @@ TEST_CASE(test_symlink_status_cannot_resolve)
         TEST_CHECK(st.permissions() != perms::unknown);
     }
 }
+#endif
 
 
 TEST_CASE(symlink_status_file_types_test)
@@ -121,12 +125,16 @@ TEST_CASE(symlink_status_file_types_test)
         {static_env.SymlinkToFile, file_type::symlink},
         {static_env.Dir, file_type::directory},
         {static_env.SymlinkToDir, file_type::symlink},
-        // Block files tested elsewhere
+        // file_type::block files tested elsewhere
+#ifndef _WIN32
         {static_env.CharFile, file_type::character},
-#if !defined(__APPLE__) && !defined(__FreeBSD__) // No support for domain sockets
+#endif
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
+#ifndef _WIN32
         {env.create_fifo("fifo"), file_type::fifo}
+#endif
     };
     for (const auto& TC : cases) {
         // test non-throwing case

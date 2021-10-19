@@ -23,7 +23,11 @@ namespace llvm {
 class GCNTargetMachine;
 class LLVMContext;
 class GCNSubtarget;
+class MachineIRBuilder;
 
+namespace AMDGPU {
+struct ImageDimIntrinsicInfo;
+}
 /// This class provides the information for the target register banks.
 class AMDGPULegalizerInfo final : public LegalizerInfo {
   const GCNSubtarget &ST;
@@ -85,6 +89,8 @@ public:
 
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
+  bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B) const;
 
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg,
@@ -95,25 +101,19 @@ public:
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
-  bool legalizeUDIV_UREM(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &B) const;
+  bool legalizeUnsignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
 
-  void legalizeUDIV_UREM32Impl(MachineIRBuilder &B,
-                               Register DstReg, Register Num, Register Den,
-                               bool IsRem) const;
-  bool legalizeUDIV_UREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-  bool legalizeSDIV_SREM32(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
+  void legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B, Register DstDivReg,
+                                     Register DstRemReg, Register Num,
+                                     Register Den) const;
 
-  void legalizeUDIV_UREM64Impl(MachineIRBuilder &B,
-                               Register DstReg, Register Numer, Register Denom,
-                               bool IsDiv) const;
+  void legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B, Register DstDivReg,
+                                     Register DstRemReg, Register Numer,
+                                     Register Denom) const;
 
-  bool legalizeUDIV_UREM64(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-  bool legalizeSDIV_SREM(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &B) const;
+  bool legalizeSignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B) const;
 
   bool legalizeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
@@ -125,6 +125,8 @@ public:
                       MachineIRBuilder &B) const;
   bool legalizeFastUnsafeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
+  bool legalizeFastUnsafeFDIV64(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B) const;
   bool legalizeFDIVFastIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
@@ -142,11 +144,14 @@ public:
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
-  std::tuple<Register, unsigned, unsigned>
-  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
+  std::pair<Register, unsigned> splitBufferOffsets(MachineIRBuilder &B,
+                                                   Register OrigOffset) const;
+  void updateBufferMMO(MachineMemOperand *MMO, Register VOffset,
+                       Register SOffset, unsigned ImmOffset, Register VIndex,
+                       MachineRegisterInfo &MRI) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                          Register Reg) const;
+                          Register Reg, bool ImageStore = false) const;
   bool legalizeRawBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B, bool IsFormat) const;
   bool legalizeRawBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -158,10 +163,12 @@ public:
                            MachineIRBuilder &B, bool IsTyped,
                            bool IsFormat) const;
   bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, bool IsTyped,
-                          bool IsFormat) const;
+                          MachineIRBuilder &B, bool IsFormat,
+                          bool IsTyped) const;
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
+
+  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
       MachineInstr &MI, MachineIRBuilder &B,
@@ -175,6 +182,12 @@ public:
 
   bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
+  bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
+  bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B) const;
   bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &B) const;
 

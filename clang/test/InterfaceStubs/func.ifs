@@ -7,10 +7,9 @@
 # RUN: %clang -emit-interface-stubs -o - %s %s -emit-merged-ifs | \
 # RUN: FileCheck %s --check-prefixes=CHECK-MERGE-IFS
 
-# CHECK-IFS: --- !experimental-ifs-v2
-# CHECK-IFS-NEXT: IfsVersion: 2.0
-# CHECK-IFS-NEXT: Triple:          x86_64-linux-gnu
-# CHECK-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-IFS: --- !ifs-v1
+# CHECK-IFS-NEXT: IfsVersion: 3.0
+# CHECK-IFS-NEXT: Target:          x86_64-linux-gnu
 # CHECK-IFS-NEXT: Symbols:
 # CHECK-IFS-DAG:   - { Name: a, Type: Func }
 # CHECK-IFS-DAG:   - { Name: b, Type: Object, Size: 4 }
@@ -23,18 +22,16 @@
 # CHECK-ELF:   OBJECT  GLOBAL DEFAULT  1 b
 
 # Here we are testing to see if two identical symbols will merge.
-# CHECK-MERGE-IFS: --- !experimental-ifs-v2
-# CHECK-MERGE-IFS-NEXT: IfsVersion: 2.0
-# CHECK-MERGE-IFS-NEXT: Triple:          x86_64-linux-gnu
-# CHECK-MERGE-IFS-NEXT: ObjectFileFormat: ELF
+# CHECK-MERGE-IFS: --- !ifs-v1
+# CHECK-MERGE-IFS-NEXT: IfsVersion: 3.0
+# CHECK-MERGE-IFS-NEXT: Target:          x86_64-linux-gnu
 # CHECK-MERGE-IFS-NEXT: Symbols:
 # CHECK-MERGE-IFS-NEXT:   - { Name: a, Type: Func }
 # CHECK-MERGE-IFS-NEXT: ...
 
---- !experimental-ifs-v2
-IfsVersion: 2.0
-Triple: x86_64-linux-gnu
-ObjectFileFormat: ELF
+--- !ifs-v1
+IfsVersion: 3.0
+Target: x86_64-linux-gnu
 Symbols:
   - { Name: a, Type: Func }
 ...

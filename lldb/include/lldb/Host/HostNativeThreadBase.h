@@ -27,9 +27,9 @@ class HostNativeThreadBase {
   const HostNativeThreadBase &operator=(const HostNativeThreadBase &) = delete;
 
 public:
-  HostNativeThreadBase();
+  HostNativeThreadBase() = default;
   explicit HostNativeThreadBase(lldb::thread_t thread);
-  virtual ~HostNativeThreadBase() {}
+  virtual ~HostNativeThreadBase() = default;
 
   virtual Status Join(lldb::thread_result_t *result) = 0;
   virtual Status Cancel() = 0;
@@ -45,8 +45,8 @@ protected:
   static lldb::thread_result_t THREAD_ROUTINE
   ThreadCreateTrampoline(lldb::thread_arg_t arg);
 
-  lldb::thread_t m_thread;
-  lldb::thread_result_t m_result;
+  lldb::thread_t m_thread = LLDB_INVALID_HOST_THREAD;
+  lldb::thread_result_t m_result = 0;
 };
 }
 

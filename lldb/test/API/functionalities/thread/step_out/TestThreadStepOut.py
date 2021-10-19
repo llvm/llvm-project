@@ -62,54 +62,58 @@ class ThreadStepOutTestCase(TestBase):
         """Test thread step out on one thread via Python API (dwarf)."""
         self.build(dictionary=self.getBuildFlags())
         self.step_out_test(self.step_out_with_python)
-
+        
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number for our breakpoint.
         self.bkpt_string = '// Set breakpoint here'
         self.breakpoint = line_number('main.cpp', self.bkpt_string)       
+        self.step_in_line = line_number('main.cpp', '// But we might still be here')
+        self.step_out_dest = line_number('main.cpp', '// Expect to stop here after step-out.')
 
-        if "gcc" in self.getCompiler() or self.isIntelCompiler():
-            self.step_out_destination = line_number(
-                'main.cpp', '// Expect to stop here after step-out (icc and gcc)')
-        else:
-            self.step_out_destination = line_number(
-                'main.cpp', '// Expect to stop here after step-out (clang)')
-
+    def check_stepping_thread(self):
+        zeroth_frame = self.step_out_thread.frames[0]
+        line_entry = zeroth_frame.line_entry
+        self.assertTrue(line_entry.IsValid(), "Stopped at a valid line entry")
+        self.assertEqual("main.cpp", line_entry.file.basename, "Still in main.cpp")
+        # We can't really tell whether we stay on our line
+        # or get to the next line, it depends on whether there are any
+        # instructions between the call and the return.
+        line = line_entry.line
+        self.assertTrue(line == self.step_out_dest or line == self.step_in_line, "Stepped to the wrong line: {0}".format(line))
+        
     def step_out_single_thread_with_cmd(self):
+        other_threads = {}
+        for thread in self.process.threads:
+            if thread.GetIndexID() == self.step_out_thread.GetIndexID():
+                continue
+            other_threads[thread.GetIndexID()] = thread.frames[0].line_entry
+
+        # There should be other threads...
+        self.assertNotEqual(len(other_threads), 0)
         self.step_out_with_cmd("this-thread")
-        self.expect(
-            "thread backtrace all",
-            "Thread location after step out is correct",
-            substrs=[
-                "main.cpp:%d" %
-                self.step_out_destination,
-                "main.cpp:%d" %
-                self.breakpoint])
+        # The other threads should not have made progress:
+        for thread in self.process.threads:
+            index_id = thread.GetIndexID()
+            line_entry = other_threads.get(index_id)
+            if line_entry:
+                self.assertEqual(thread.frames[0].line_entry.file.basename, line_entry.file.basename, "Thread {0} moved by file".format(index_id))
+                self.assertEqual(thread.frames[0].line_entry.line, line_entry.line, "Thread {0} moved by line".format(index_id))
 
     def step_out_all_threads_with_cmd(self):
         self.step_out_with_cmd("all-threads")
-        self.expect(
-            "thread backtrace all",
-            "Thread location after step out is correct",
-            substrs=[
-                "main.cpp:%d" %
-                self.step_out_destination])
-
+                                        
     def step_out_with_cmd(self, run_mode):
         self.runCmd("thread select %d" % self.step_out_thread.GetIndexID())
         self.runCmd("thread step-out -m %s" % run_mode)
         self.expect("process status", "Expected stop reason to be step-out",
                     substrs=["stop reason = step out"])
 
-        self.expect(
-            "thread list",
-            "Selected thread did not change during step-out",
-            substrs=[
-                "* thread #%d" %
-                self.step_out_thread.GetIndexID()])
-
+        selected_thread = self.process.GetSelectedThread()
+        self.assertEqual(selected_thread.GetIndexID(), self.step_out_thread.GetIndexID(), "Step out changed selected thread.")
+        self.check_stepping_thread()
+                                        
     def step_out_with_python(self):
         self.step_out_thread.StepOut()
 
@@ -119,18 +123,12 @@ class ThreadStepOutTestCase(TestBase):
             reason,
             "Expected thread stop reason 'plancomplete', but got '%s'" %
             lldbutil.stop_reason_to_str(reason))
-
-        # Verify location after stepping out
-        frame = self.step_out_thread.GetFrameAtIndex(0)
-        desc = lldbutil.get_description(frame.GetLineEntry())
-        expect = "main.cpp:%d" % self.step_out_destination
-        self.assertTrue(
-            expect in desc, "Expected %s but thread stopped at %s" %
-            (expect, desc))
+        self.check_stepping_thread()
+                            
 
     def step_out_test(self, step_out_func):
         """Test single thread step out of a function."""
-        (self.inferior_target, self.inferior_process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+        (self.inferior_target, self.process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, self.bkpt_string, lldb.SBFileSpec('main.cpp'), only_one_thread = False)
 
         # We hit the breakpoint on at least one thread.  If we hit it on both threads
@@ -139,13 +137,14 @@ class ThreadStepOutTestCase(TestBase):
         # the breakpoint:
 
         (breakpoint_threads, other_threads) = ([], [])
-        lldbutil.sort_stopped_threads(self.inferior_process,
+        lldbutil.sort_stopped_threads(self.process,
                                       breakpoint_threads=breakpoint_threads,
                                       other_threads=other_threads)
         if len(breakpoint_threads) == 1:
             success = thread.Suspend()
             self.assertTrue(success, "Couldn't suspend a thread")
-            bkpt_threads = lldbutil.continue_to_breakpoint(bkpt)
+            bkpt_threads = lldbutil.continue_to_breakpoint(self.process,
+                                                           bkpt)
             self.assertEqual(len(bkpt_threads), 1, "Second thread stopped")
             success = thread.Resume()
             self.assertTrue(success, "Couldn't resume a thread")

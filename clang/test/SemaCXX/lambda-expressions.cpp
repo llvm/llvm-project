@@ -12,17 +12,17 @@ namespace ExplicitCapture {
     virtual C& Overload(float);
 
     void ImplicitThisCapture() {
-      [](){(void)Member;}; // expected-error {{'this' cannot be implicitly captured in this context}}
-      const int var = [](){(void)Member; return 0;}(); // expected-error {{'this' cannot be implicitly captured in this context}}
+      []() { (void)Member; };     // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
+      const int var = []() {(void)Member; return 0; }(); // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
       [&](){(void)Member;};
 
       [this](){(void)Member;};
       [this]{[this]{};};
       []{[this]{};};// expected-error {{'this' cannot be implicitly captured in this context}}
       []{Overload(3);};
-      []{Overload();}; // expected-error {{'this' cannot be implicitly captured in this context}}
+      [] { Overload(); }; // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
       []{(void)typeid(Overload());};
-      []{(void)typeid(Overload(.5f));};// expected-error {{'this' cannot be implicitly captured in this context}}
+      [] { (void)typeid(Overload(.5f)); }; // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
     }
   };
 
@@ -47,14 +47,14 @@ namespace ReturnDeduction {
 namespace ImplicitCapture {
   void test() {
     int a = 0; // expected-note 5 {{declared}}
-    []() { return a; }; // expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{begins here}}
+    []() { return a; }; // expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{begins here}} expected-note 2 {{capture 'a' by}} expected-note 2 {{default capture by}}
     [&]() { return a; };
     [=]() { return a; };
     [=]() { int* b = &a; }; // expected-error {{cannot initialize a variable of type 'int *' with an rvalue of type 'const int *'}}
     [=]() { return [&]() { return a; }; };
-    []() { return [&]() { return a; }; }; // expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}}
-    []() { return ^{ return a; }; };// expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}}
-    []() { return [&a] { return a; }; }; // expected-error 2 {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note 2 {{lambda expression begins here}}
+    []() { return [&]() { return a; }; }; // expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}} expected-note 2 {{capture 'a' by}} expected-note 2 {{default capture by}}
+    []() { return ^{ return a; }; };// expected-error {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}} expected-note 2 {{capture 'a' by}} expected-note 2 {{default capture by}}
+    []() { return [&a] { return a; }; }; // expected-error 2 {{variable 'a' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note 2 {{lambda expression begins here}}  expected-note 4 {{capture 'a' by}} expected-note 4 {{default capture by}}
     [=]() { return [&a] { return a; }; }; //
 
     const int b = 2;
@@ -74,7 +74,7 @@ namespace ImplicitCapture {
     int f[10]; // expected-note {{declared}}
     [&]() { return f[2]; };
     (void) ^{ return []() { return f[2]; }; }; // expected-error {{variable 'f' cannot be implicitly captured in a lambda with no capture-default specified}} \
-    // expected-note{{lambda expression begins here}}
+    // expected-note{{lambda expression begins here}} expected-note 2 {{capture 'f' by}} expected-note 2 {{default capture by}}
 
     struct G { G(); G(G&); int a; }; // expected-note 6 {{not viable}}
     G g;
@@ -83,13 +83,13 @@ namespace ImplicitCapture {
     (void)^{ return [=]{ const G* gg = &g; return gg->a; }(); }; // expected-error 2 {{no matching constructor for initialization of 'const G'}}
 
     const int h = a; // expected-note {{declared}}
-    []() { return h; }; // expected-error {{variable 'h' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}}
+    []() { return h; }; // expected-error {{variable 'h' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}} expected-note 2 {{capture 'h' by}} expected-note 2 {{default capture by}}
 
     // References can appear in constant expressions if they are initialized by
     // reference constant expressions.
     int i;
     int &ref_i = i; // expected-note {{declared}}
-    [] { return ref_i; }; // expected-error {{variable 'ref_i' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}}
+    [] { return ref_i; }; // expected-error {{variable 'ref_i' cannot be implicitly captured in a lambda with no capture-default specified}} expected-note {{lambda expression begins here}} expected-note 2 {{capture 'ref_i' by}} expected-note 2 {{default capture by}}
 
     static int j;
     int &ref_j = j;
@@ -259,7 +259,8 @@ namespace VariadicPackExpansion {
     // instantiation backtrace.
     f([&ts] { return (int)f(ts...); } ()...); // \
     // expected-error 2{{'ts' cannot be implicitly captured}} \
-    // expected-note 2{{lambda expression begins here}}
+    // expected-note 2{{lambda expression begins here}} \
+    // expected-note 4 {{capture 'ts' by}}
   }
   template void nested2(int); // ok
   template void nested2(int, int); // expected-note {{in instantiation of}}
@@ -375,7 +376,7 @@ namespace PR18128 {
     int a = [=]{ return n; }(); // ok
     int b = [=]{ return [=]{ return n; }(); }(); // ok
     int c = []{ int k = 0; return [=]{ return k; }(); }(); // ok
-    int d = []{ return [=]{ return n; }(); }(); // expected-error {{'this' cannot be implicitly captured in this context}}
+    int d = [] { return [=] { return n; }(); }();          // expected-error {{'this' cannot be implicitly captured in this context}} expected-note {{explicitly capture 'this'}}
   };
 }
 
@@ -521,6 +522,10 @@ void foo() {
       return undeclared_error; // expected-error {{use of undeclared identifier}}
     return 0;
   };
+  auto bar = []() {
+    return undef(); // expected-error {{use of undeclared identifier}}
+    return 0; // verify no init_conversion_failed diagnostic emitted.
+  };
 }
 }
 
@@ -657,6 +662,6 @@ void Test() {
   };
   [] { return i; }; // expected-error {{variable '' cannot be implicitly captured in a lambda with no capture-default specified}}
                     // expected-note@-1 {{lambda expression begins here}}
-
+                    // expected-note@-2 2 {{default capture by}}
 }
 };

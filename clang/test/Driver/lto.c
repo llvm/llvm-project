@@ -77,3 +77,31 @@
 //
 // CHECK-TUNING-LLDB:   "-plugin-opt=-debugger-tune=lldb"
 // CHECK-NO-TUNING-NOT: "-plugin-opt=-debugger-tune
+//
+// -flto=auto and -flto=jobserver pass along -flto=full
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto=auto 2>&1 | FileCheck --check-prefix=FLTO-AUTO %s
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto=jobserver 2>&1 | FileCheck --check-prefix=FLTO-JOBSERVER %s
+//
+// FLTO-AUTO: -flto=full
+// FLTO-JOBSERVER: -flto=full
+//
+
+// Pass the last -flto argument.
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto=thin -flto 2>&1 | \
+// RUN: FileCheck --check-prefix=FLTO-FULL %s
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto=thin -flto=full \
+// RUN: 2>&1 | FileCheck --check-prefix=FLTO-FULL %s
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto=full -flto=thin  \
+// RUN: 2>&1 | FileCheck --check-prefix=FLTO-THIN %s
+// RUN: %clang -target x86_64-unknown-linux -### %s -flto -flto=thin 2>&1 | \
+// RUN: FileCheck --check-prefix=FLTO-THIN %s
+//
+// FLTO-FULL-NOT: -flto=thin
+// FLTO-FULL: -flto=full
+// FLTO-FULL-NOT: -flto=thin
+//
+// FLTO-THIN-NOT: -flto=full
+// FLTO-THIN-NOT: "-flto"
+// FLTO-THIN: -flto=thin
+// FLTO-THIN-NOT: "-flto"
+// FLTO-THIN-NOT: -flto=full

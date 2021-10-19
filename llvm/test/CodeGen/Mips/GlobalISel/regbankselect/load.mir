@@ -22,11 +22,11 @@ body:             |
     ; MIPS32-LABEL: name: load_i32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
-    %1:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.ptr)
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
     $v0 = COPY %1(s32)
     RetRA implicit $v0
 
@@ -43,15 +43,15 @@ body:             |
     ; MIPS32-LABEL: name: load_i64
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.ptr, align 8)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr, align 8)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-    ; MIPS32: [[GEP:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[GEP]](p0) :: (load 4 from %ir.ptr + 4, align 8)
+    ; MIPS32: [[PTR_ADD:%[0-9]+]]:gprb(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
+    ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir.ptr + 4, basealign 8)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: $v1 = COPY [[LOAD1]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %0:_(p0) = COPY $a0
-    %1:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.ptr)
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %1(s64)
     $v0 = COPY %2(s32)
     $v1 = COPY %3(s32)
@@ -71,13 +71,13 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.i64_ptr_a)
-    ; MIPS32: G_STORE [[LOAD]](s64), [[COPY1]](p0) :: (store 8 into %ir.i64_ptr_b)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.i64_ptr_a)
+    ; MIPS32: G_STORE [[LOAD]](s64), [[COPY1]](p0) :: (store (s64) into %ir.i64_ptr_b)
     ; MIPS32: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.i64_ptr_a)
-    G_STORE %2(s64), %1(p0) :: (store 8 into %ir.i64_ptr_b)
+    %2:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.i64_ptr_a)
+    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.i64_ptr_b)
     RetRA
 
 ...
@@ -93,11 +93,11 @@ body:             |
     ; MIPS32-LABEL: name: load_float
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.ptr)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     %0:_(p0) = COPY $a0
-    %1:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.ptr)
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.ptr)
     $f0 = COPY %1(s32)
     RetRA implicit $f0
 
@@ -115,13 +115,13 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.float_ptr_a)
-    ; MIPS32: G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store 4 into %ir.float_ptr_b)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.float_ptr_a)
+    ; MIPS32: G_STORE [[LOAD]](s32), [[COPY1]](p0) :: (store (s32) into %ir.float_ptr_b)
     ; MIPS32: RetRA
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.float_ptr_a)
-    G_STORE %2(s32), %1(p0) :: (store 4 into %ir.float_ptr_b)
+    %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.float_ptr_a)
+    G_STORE %2(s32), %1(p0) :: (store (s32) into %ir.float_ptr_b)
     RetRA
 
 ...
@@ -137,11 +137,11 @@ body:             |
     ; MIPS32-LABEL: name: load_double
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load 8 from %ir.ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.ptr)
     ; MIPS32: $d0 = COPY [[LOAD]](s64)
     ; MIPS32: RetRA implicit $d0
     %0:_(p0) = COPY $a0
-    %1:_(s64) = G_LOAD %0(p0) :: (load 8 from %ir.ptr)
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
     $d0 = COPY %1(s64)
     RetRA implicit $d0
 

@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "DIR",
+    "command": "clang -fsyntax-only DIR/tu_with_common.c -fmodules -gmodules -fimplicit-module-maps -fmodules-cache-path=DIR/cache -include DIR/pch.h -o DIR/tu_with_common.o",
+    "file": "DIR/tu_with_common.c"
+  }
+]

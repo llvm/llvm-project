@@ -29,14 +29,13 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
                                                    ASTContext *Context) {
   SmallVector<const Stmt *, 1> Result;
 
-  TraversalKindScope RAII(*Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Context, TK_AsIs);
   DynTypedNodeList Parents = Context->getParents(*S);
 
-  SmallVector<ast_type_traits::DynTypedNode, 1> NodesToProcess(Parents.begin(),
-                                                               Parents.end());
+  SmallVector<DynTypedNode, 1> NodesToProcess(Parents.begin(), Parents.end());
 
   while (!NodesToProcess.empty()) {
-    ast_type_traits::DynTypedNode Node = NodesToProcess.back();
+    DynTypedNode Node = NodesToProcess.back();
     NodesToProcess.pop_back();
 
     if (const auto *S = Node.get<Stmt>()) {
@@ -62,7 +61,7 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
 
   return false;
 }
-}
+} // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)

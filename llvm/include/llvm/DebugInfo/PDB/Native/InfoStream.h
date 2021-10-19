@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAM_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringMap.h"

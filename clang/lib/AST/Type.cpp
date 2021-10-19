@@ -1801,6 +1801,9 @@ namespace {
     }
 
     // Only these types can contain the desired 'auto' type.
+    Type *VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
+      return Visit(T->getReplacementType());
+    }
 
     Type *VisitElaboratedType(const ElaboratedType *T) {
       return Visit(T->getNamedType());
@@ -2086,14 +2089,15 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
 bool Type::hasUnsignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
-  else
-    return isUnsignedIntegerOrEnumerationType();
+  if (const auto *VT = dyn_cast<MatrixType>(CanonicalType))
+    return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+  return isUnsignedIntegerOrEnumerationType();
 }
 
 bool Type::isFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Half &&
-           BT->getKind() <= BuiltinType::Float128;
+           BT->getKind() <= BuiltinType::Ibm128;
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
     return CT->getElementType()->isFloatingType();
   return false;
@@ -2115,7 +2119,7 @@ bool Type::isRealFloatingType() const {
 bool Type::isRealType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Float128;
+           BT->getKind() <= BuiltinType::Ibm128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
   return isExtIntType();
@@ -2124,7 +2128,7 @@ bool Type::isRealType() const {
 bool Type::isArithmeticType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->getKind() >= BuiltinType::Bool &&
-           BT->getKind() <= BuiltinType::Float128 &&
+           BT->getKind() <= BuiltinType::Ibm128 &&
            BT->getKind() != BuiltinType::BFloat16;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     // GCC allows forward declaration of enum types (forbid by C99 6.7.2.3p2).
@@ -2228,10 +2232,11 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     return !Rec->isCompleteDefinition();
   }
   case ConstantArray:
+  case VariableArray:
     // An array is incomplete if its element type is incomplete
     // (C++ [dcl.array]p1).
-    // We don't handle variable arrays (they're not allowed in C++) or
-    // dependent-sized arrays (dependent types are never treated as incomplete).
+    // We don't handle dependent-sized arrays (dependent types are never treated
+    // as incomplete).
     return cast<ArrayType>(CanonicalType)->getElementType()
              ->isIncompleteType(Def);
   case IncompleteArray:
@@ -2279,6 +2284,8 @@ bool Type::isSizelessBuiltinType() const {
       // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
       return true;
     default:
       return false;
@@ -2317,38 +2324,13 @@ QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isVLSTBuiltinType() && "unsupported type!");
 
   const BuiltinType *BTy = getAs<BuiltinType>();
-  switch (BTy->getKind()) {
-  default:
-    llvm_unreachable("Unknown builtin SVE type!");
-  case BuiltinType::SveInt8:
-    return Ctx.SignedCharTy;
-  case BuiltinType::SveUint8:
-  case BuiltinType::SveBool:
+  if (BTy->getKind() == BuiltinType::SveBool)
     // Represent predicates as i8 rather than i1 to avoid any layout issues.
     // The type is bitcasted to a scalable predicate type when casting between
     // scalable and fixed-length vectors.
     return Ctx.UnsignedCharTy;
-  case BuiltinType::SveInt16:
-    return Ctx.ShortTy;
-  case BuiltinType::SveUint16:
-    return Ctx.UnsignedShortTy;
-  case BuiltinType::SveInt32:
-    return Ctx.IntTy;
-  case BuiltinType::SveUint32:
-    return Ctx.UnsignedIntTy;
-  case BuiltinType::SveInt64:
-    return Ctx.LongTy;
-  case BuiltinType::SveUint64:
-    return Ctx.UnsignedLongTy;
-  case BuiltinType::SveFloat16:
-    return Ctx.Float16Ty;
-  case BuiltinType::SveBFloat16:
-    return Ctx.BFloat16Ty;
-  case BuiltinType::SveFloat32:
-    return Ctx.FloatTy;
-  case BuiltinType::SveFloat64:
-    return Ctx.DoubleTy;
-  }
+  else
+    return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
@@ -2618,6 +2600,22 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (isa<AutoType>(BaseTy->getCanonicalTypeInternal()))
     return true;
 
+  return false;
+}
+
+bool Type::isStructuralType() const {
+  // C++20 [temp.param]p6:
+  //   A structural type is one of the following:
+  //   -- a scalar type; or
+  //   -- a vector type [Clang extension]; or
+  if (isScalarType() || isVectorType())
+    return true;
+  //   -- an lvalue reference type; or
+  if (isLValueReferenceType())
+    return true;
+  //  -- a literal class type [...under some conditions]
+  if (const CXXRecordDecl *RD = getAsCXXRecordDecl())
+    return RD->isStructural();
   return false;
 }
 
@@ -3032,6 +3030,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "_Float16";
   case Float128:
     return "__float128";
+  case Ibm128:
+    return "__ibm128";
   case WChar_S:
   case WChar_U:
     return Policy.MSWChar ? "__wchar_t" : "wchar_t";
@@ -3042,7 +3042,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Char32:
     return "char32_t";
   case NullPtr:
-    return "nullptr_t";
+    return "std::nullptr_t";
   case Overload:
     return "<overloaded function type>";
   case BoundMember:
@@ -3093,6 +3093,14 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+  case Id: \
+    return #Name;
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId)                                        \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/RISCVVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3139,6 +3147,7 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_SpirFunction: return "spir_function";
   case CC_OpenCLKernel: return "opencl_kernel";
   case CC_Swift: return "swiftcall";
+  case CC_SwiftAsync: return "swiftasynccall";
   case CC_PreserveMost: return "preserve_most";
   case CC_PreserveAll: return "preserve_all";
   }
@@ -3374,8 +3383,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
 }
 
-TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can)
-    : Type(tc, can, D->getUnderlyingType()->getDependence()),
+TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
+                         QualType underlying, QualType can)
+    : Type(tc, can, underlying->getDependence()),
       Decl(const_cast<TypedefNameDecl *>(D)) {
   assert(!isa<TypedefType>(can) && "Invalid canonical type");
 }
@@ -3497,7 +3507,7 @@ bool RecordType::hasConstFields() const {
         return true;
       FieldTy = FieldTy.getCanonicalType();
       if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
-        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+        if (!llvm::is_contained(RecordTypeList, FieldRecTy))
           RecordTypeList.push_back(FieldRecTy);
       }
     }
@@ -3517,6 +3527,7 @@ bool AttributedType::isQualifier() const {
   case attr::ObjCInertUnsafeUnretained:
   case attr::TypeNonNull:
   case attr::TypeNullable:
+  case attr::TypeNullableResult:
   case attr::TypeNullUnspecified:
   case attr::LifetimeBound:
   case attr::AddressSpace:
@@ -3553,6 +3564,7 @@ bool AttributedType::isCallingConv() const {
   case attr::ThisCall:
   case attr::RegCall:
   case attr::SwiftCall:
+  case attr::SwiftAsyncCall:
   case attr::VectorCall:
   case attr::AArch64VectorPcs:
   case attr::Pascal:
@@ -3601,24 +3613,24 @@ void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID,
     ID.AddPointer(P.getAsType().getAsOpaquePtr());
 }
 
-bool TemplateSpecializationType::
-anyDependentTemplateArguments(const TemplateArgumentListInfo &Args,
-                              bool &InstantiationDependent) {
-  return anyDependentTemplateArguments(Args.arguments(),
-                                       InstantiationDependent);
+bool TemplateSpecializationType::anyDependentTemplateArguments(
+    const TemplateArgumentListInfo &Args, ArrayRef<TemplateArgument> Converted) {
+  return anyDependentTemplateArguments(Args.arguments(), Converted);
 }
 
-bool TemplateSpecializationType::
-anyDependentTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
-                              bool &InstantiationDependent) {
-  for (const TemplateArgumentLoc &ArgLoc : Args) {
-    if (ArgLoc.getArgument().isDependent()) {
-      InstantiationDependent = true;
+bool TemplateSpecializationType::anyDependentTemplateArguments(
+    ArrayRef<TemplateArgumentLoc> Args, ArrayRef<TemplateArgument> Converted) {
+  for (const TemplateArgument &Arg : Converted)
+    if (Arg.isDependent())
       return true;
-    }
+  return false;
+}
 
+bool TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
+      ArrayRef<TemplateArgumentLoc> Args) {
+  for (const TemplateArgumentLoc &ArgLoc : Args) {
     if (ArgLoc.getArgument().isInstantiationDependent())
-      InstantiationDependent = true;
+      return true;
   }
   return false;
 }
@@ -3747,8 +3759,8 @@ public:
 
   friend CachedProperties merge(CachedProperties L, CachedProperties R) {
     Linkage MergedLinkage = minLinkage(L.L, R.L);
-    return CachedProperties(MergedLinkage,
-                         L.hasLocalOrUnnamedType() | R.hasLocalOrUnnamedType());
+    return CachedProperties(MergedLinkage, L.hasLocalOrUnnamedType() ||
+                                               R.hasLocalOrUnnamedType());
   }
 };
 
@@ -4110,6 +4122,11 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_VECTOR_TYPE(Name, Id, Size) \
+    case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
@@ -4161,6 +4178,8 @@ AttributedType::getImmediateNullability() const {
     return NullabilityKind::Nullable;
   if (getAttrKind() == attr::TypeNullUnspecified)
     return NullabilityKind::Unspecified;
+  if (getAttrKind() == attr::TypeNullableResult)
+    return NullabilityKind::NullableResult;
   return None;
 }
 
@@ -4385,8 +4404,8 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
   if (TypeConstraintConcept) {
     TemplateArgument *ArgBuffer = getArgBuffer();
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
-      addDependence(toTypeDependence(
-          Arg.getDependence() & TemplateArgumentDependence::UnexpandedPack));
+      addDependence(
+          toSyntacticDependence(toTypeDependence(Arg.getDependence())));
 
       new (ArgBuffer++) TemplateArgument(Arg);
     }

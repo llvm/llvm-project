@@ -24,9 +24,9 @@
 #include <tuple>
 #include <vector>
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdio.h>
+#include <cassert>
+#include <cinttypes>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -138,36 +138,10 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
   case eTypeInvalid:
     break;
   case eTypeBytes: {
-    switch (buffer.length) {
-    default:
-      break;
-    case 1:
-      scalar = *(const uint8_t *)buffer.bytes;
+    DataExtractor data(buffer.bytes, buffer.length, buffer.byte_order, 1);
+    if (scalar.SetValueFromData(data, lldb::eEncodingUint,
+	  buffer.length).Success())
       return true;
-    case 2:
-      scalar = *reinterpret_cast<const uint16_t *>(buffer.bytes);
-      return true;
-    case 4:
-      scalar = *reinterpret_cast<const uint32_t *>(buffer.bytes);
-      return true;
-    case 8:
-      scalar = *reinterpret_cast<const uint64_t *>(buffer.bytes);
-      return true;
-    case 16:
-    case 32:
-    case 64:
-      if (buffer.length % sizeof(uint64_t) == 0) {
-        const auto length_in_bits = buffer.length * 8;
-        const auto length_in_uint64 = buffer.length / sizeof(uint64_t);
-        scalar =
-            llvm::APInt(length_in_bits,
-                        llvm::ArrayRef<uint64_t>(
-                            reinterpret_cast<const uint64_t *>(buffer.bytes),
-                            length_in_uint64));
-        return true;
-      }
-      break;
-    }
   } break;
   case eTypeUInt8:
   case eTypeUInt16:

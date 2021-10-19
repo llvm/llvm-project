@@ -430,10 +430,10 @@ double fixed_5i(__int5 *in) {
 }
 
 __attribute__((noinline)) double args_vec_3d(int fixed, __double3 c3) {
-// CHECK: args_vec_3d
-// CHECK: [[CAST:%.*]] = bitcast <3 x double>* {{%.*}} to <4 x double>*
-// CHECK: [[LOAD:%.*]] = load <4 x double>, <4 x double>* [[CAST]]
-// CHECK: shufflevector <4 x double> [[LOAD]], <4 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  // CHECK: args_vec_3d
+  // CHECK: [[CAST:%.*]] = bitcast <3 x double>* {{%.*}} to <4 x double>*
+  // CHECK: [[LOAD:%.*]] = load <4 x double>, <4 x double>* [[CAST]]
+  // CHECK: shufflevector <4 x double> [[LOAD]], <4 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
   double sum = fixed;
   sum = sum + c3.x + c3.y;
   return sum;

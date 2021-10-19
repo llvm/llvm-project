@@ -6,6 +6,7 @@
 # RUN: %clang_host %S/Inputs/stepping.c -g -o %t.out
 
 # RUN: rm -rf %t.txt
+# RUN: rm -rf %t.repro
 
 # RUN: echo "CAPTURE" >> %t.txt
 # RUN: %lldb -x -b  --capture --capture-path %t.repro \

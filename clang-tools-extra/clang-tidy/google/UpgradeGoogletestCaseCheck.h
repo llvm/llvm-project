@@ -33,7 +33,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  llvm::DenseSet<unsigned> MatchedTemplateLocations;
+  llvm::DenseSet<SourceLocation> MatchedTemplateLocations;
 };
 
 } // namespace google

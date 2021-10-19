@@ -17,8 +17,10 @@
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -30,6 +32,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -40,6 +43,15 @@
 #include "HexagonGenRegisterInfo.inc"
 
 using namespace llvm;
+
+static cl::opt<unsigned> FrameIndexSearchRange(
+    "hexagon-frame-index-search-range", cl::init(32), cl::Hidden,
+    cl::desc("Limit on instruction search range in frame index elimination"));
+
+static cl::opt<unsigned> FrameIndexReuseLimit(
+    "hexagon-frame-index-reuse-limit", cl::init(~0), cl::Hidden,
+    cl::desc("Limit on the number of reused registers in frame index "
+    "elimination"));
 
 HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
@@ -133,7 +145,7 @@ const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
 
 
 BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
-  const {
+      const {
   BitVector Reserved(getNumRegs());
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
@@ -188,10 +200,10 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   return Reserved;
 }
 
-
 void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                               int SPAdj, unsigned FIOp,
                                               RegScavenger *RS) const {
+  static unsigned ReuseCount = 0;
   //
   // Hexagon_TODO: Do we need to enforce this for Hexagon?
   assert(SPAdj == 0 && "Unexpected");
@@ -207,10 +219,9 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FI = MI.getOperand(FIOp).getIndex();
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.
-  int Offset = HFI.getFrameIndexReference(MF, FI, BP);
+  int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
   // Add the offset from the instruction.
   int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
-  bool IsKill = false;
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -228,18 +239,107 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!HII.isValidOffset(Opc, RealOffset, this)) {
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
+    int InstOffset = 0;
+    // The actual base register (BP) is typically shared between many
+    // instructions where frame indices are being replaced. In scalar
+    // instructions the offset range is large, and the need for an extra
+    // add instruction is infrequent. Vector loads/stores, however, have
+    // a much smaller offset range: [-8, 7), or #s4. In those cases it
+    // makes sense to "standardize" the immediate in the "addi" instruction
+    // so that multiple loads/stores could be based on it.
+    bool IsPair = false;
+    switch (MI.getOpcode()) {
+      // All of these instructions have the same format: base+#s4.
+      case Hexagon::PS_vloadrw_ai:
+      case Hexagon::PS_vloadrw_nt_ai:
+      case Hexagon::PS_vstorerw_ai:
+      case Hexagon::PS_vstorerw_nt_ai:
+        IsPair = true;
+        LLVM_FALLTHROUGH;
+      case Hexagon::PS_vloadrv_ai:
+      case Hexagon::PS_vloadrv_nt_ai:
+      case Hexagon::PS_vstorerv_ai:
+      case Hexagon::PS_vstorerv_nt_ai:
+      case Hexagon::V6_vL32b_ai:
+      case Hexagon::V6_vS32b_ai: {
+        unsigned HwLen = HST.getVectorLength();
+        if (RealOffset % HwLen == 0) {
+          int VecOffset = RealOffset / HwLen;
+          // Rewrite the offset as "base + [-8, 7)".
+          VecOffset += 8;
+          // Pairs are expanded into two instructions: make sure that both
+          // can use the same base (i.e. VecOffset+1 is not a different
+          // multiple of 16 than VecOffset).
+          if (!IsPair || (VecOffset + 1) % 16 != 0) {
+            RealOffset = (VecOffset & -16) * HwLen;
+            InstOffset = (VecOffset % 16 - 8) * HwLen;
+          }
+        }
+      }
+    }
+
+    // Search backwards in the block for "Reg = A2_addi BP, RealOffset".
+    // This will give us a chance to avoid creating a new register.
+    Register ReuseBP;
+
+    if (ReuseCount < FrameIndexReuseLimit) {
+      unsigned SearchCount = 0, SearchRange = FrameIndexSearchRange;
+      SmallSet<Register,2> SeenVRegs;
+      bool PassedCall = false;
+      LiveRegUnits Defs(*this), Uses(*this);
+
+      for (auto I = std::next(II.getReverse()), E = MB.rend(); I != E; ++I) {
+        if (SearchCount == SearchRange)
+          break;
+        ++SearchCount;
+        const MachineInstr &BI = *I;
+        LiveRegUnits::accumulateUsedDefed(BI, Defs, Uses, this);
+        PassedCall |= BI.isCall();
+        for (const MachineOperand &Op : BI.operands()) {
+          if (SeenVRegs.size() > 1)
+            break;
+          if (Op.isReg() && Op.getReg().isVirtual())
+            SeenVRegs.insert(Op.getReg());
+        }
+        if (BI.getOpcode() != Hexagon::A2_addi)
+          continue;
+        if (BI.getOperand(1).getReg() != BP)
+          continue;
+        const auto &Op2 = BI.getOperand(2);
+        if (!Op2.isImm() || Op2.getImm() != RealOffset)
+          continue;
+
+        Register R = BI.getOperand(0).getReg();
+        if (R.isPhysical()) {
+          if (Defs.available(R))
+            ReuseBP = R;
+        } else if (R.isVirtual()) {
+          // Extending a range of a virtual register can be dangerous,
+          // since the scavenger will need to find a physical register
+          // for it. Avoid extending the range past a function call,
+          // and avoid overlapping it with another virtual register.
+          if (!PassedCall && SeenVRegs.size() <= 1)
+            ReuseBP = R;
+        }
+        break;
+      }
+      if (ReuseBP)
+        ++ReuseCount;
+    }
+
     auto &MRI = MF.getRegInfo();
-    Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
-    const DebugLoc &DL = MI.getDebugLoc();
-    BuildMI(MB, II, DL, HII.get(Hexagon::A2_addi), TmpR)
-      .addReg(BP)
-      .addImm(RealOffset);
-    BP = TmpR;
-    RealOffset = 0;
-    IsKill = true;
+    if (!ReuseBP) {
+      ReuseBP = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const DebugLoc &DL = MI.getDebugLoc();
+      BuildMI(MB, II, DL, HII.get(Hexagon::A2_addi), ReuseBP)
+        .addReg(BP)
+        .addImm(RealOffset);
+    }
+    BP = ReuseBP;
+    RealOffset = InstOffset;
   }
 
-  MI.getOperand(FIOp).ChangeToRegister(BP, false, false, IsKill);
+  MI.getOperand(FIOp).ChangeToRegister(BP, false, false, false);
   MI.getOperand(FIOp+1).ChangeToImmediate(RealOffset);
 }
 

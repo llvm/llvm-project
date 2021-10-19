@@ -26,11 +26,11 @@ class X
     int i_;
     int j_ = 0;
 public:
-    X() : i_(0) {}
-    X(int i) : i_(i) {}
-    X(int i, int j) : i_(i), j_(j) {}
+    constexpr X() : i_(0) {}
+    constexpr X(int i) : i_(i) {}
+    constexpr X(int i, int j) : i_(i), j_(j) {}
 
-    friend bool operator==(const X& x, const X& y)
+    friend constexpr bool operator==(const X& x, const X& y)
         {return x.i_ == y.i_ && x.j_ == y.j_;}
 };
 
@@ -46,7 +46,7 @@ public:
 bool Y::dtor_called = false;
 
 template <class T>
-void test_one_arg() {
+constexpr bool test_one_arg() {
     using Opt = std::optional<T>;
     {
         Opt opt;
@@ -80,11 +80,12 @@ void test_one_arg() {
         assert(*opt == T(1));
         assert(&v == &*opt);
     }
+    return true;
 }
 
 
 template <class T>
-void test_multi_arg()
+constexpr bool test_multi_arg()
 {
     test_one_arg<T>();
     using Opt = std::optional<T>;
@@ -112,6 +113,7 @@ void test_multi_arg()
         assert(  v == T(5)); // T sets its value to the size of the init list
         assert(*opt == T(5)); // T sets its value to the size of the init list
     }
+    return true;
 }
 
 template <class T>
@@ -206,7 +208,17 @@ void test_on_test_type() {
     }
 }
 
-
+constexpr bool test_empty_emplace()
+{
+    optional<const int> opt;
+    auto &v = opt.emplace(42);
+    static_assert( std::is_same_v<const int&, decltype(v)>, "" );
+    assert(*opt == 42);
+    assert(   v == 42);
+    opt.emplace();
+    assert(*opt == 0);
+    return true;
+}
 
 int main(int, char**)
 {
@@ -218,31 +230,44 @@ int main(int, char**)
         using T = int;
         test_one_arg<T>();
         test_one_arg<const T>();
+#if TEST_STD_VER > 17
+        static_assert(test_one_arg<T>());
+        static_assert(test_one_arg<const T>());
+#endif
     }
     {
         using T = ConstexprTestTypes::TestType;
         test_multi_arg<T>();
+#if TEST_STD_VER > 17
+        static_assert(test_multi_arg<T>());
+#endif
     }
     {
         using T = ExplicitConstexprTestTypes::TestType;
         test_multi_arg<T>();
+#if TEST_STD_VER > 17
+        static_assert(test_multi_arg<T>());
+#endif
     }
     {
         using T = TrivialTestTypes::TestType;
         test_multi_arg<T>();
+#if TEST_STD_VER > 17
+        static_assert(test_multi_arg<T>());
+#endif
     }
     {
         using T = ExplicitTrivialTestTypes::TestType;
         test_multi_arg<T>();
+#if TEST_STD_VER > 17
+        static_assert(test_multi_arg<T>());
+#endif
     }
     {
-        optional<const int> opt;
-        auto &v = opt.emplace(42);
-        static_assert( std::is_same_v<const int&, decltype(v)>, "" );
-        assert(*opt == 42);
-        assert(   v == 42);
-        opt.emplace();
-        assert(*opt == 0);
+        test_empty_emplace();
+#if TEST_STD_VER > 17
+        static_assert(test_empty_emplace());
+#endif
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     Y::dtor_called = false;

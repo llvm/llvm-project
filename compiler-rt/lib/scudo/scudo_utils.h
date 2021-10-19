@@ -20,14 +20,14 @@
 namespace __scudo {
 
 template <class Dest, class Source>
-INLINE Dest bit_cast(const Source& source) {
+inline Dest bit_cast(const Source& source) {
   static_assert(sizeof(Dest) == sizeof(Source), "Sizes are not equal!");
   Dest dest;
   memcpy(&dest, &source, sizeof(dest));
   return dest;
 }
 
-void NORETURN dieWithMessage(const char *Format, ...);
+void dieWithMessage(const char *Format, ...) NORETURN FORMAT(1, 2);
 
 bool hasHardwareCRC32();
 

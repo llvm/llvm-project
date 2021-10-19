@@ -59,7 +59,8 @@ public:
       if (C.capturesVariable()) {
         VarDecl *CapturedVar = C.getCapturedVar();
         if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
-          if (isUncountedPtr(CapturedVarType)) {
+          Optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
+          if (IsUncountedPtr && *IsUncountedPtr) {
             reportBug(C, CapturedVar, CapturedVarType);
           }
         }

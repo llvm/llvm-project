@@ -1,11 +1,11 @@
-; RUN: opt %s -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
+; RUN: opt %s -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 ; return (n < 0 ? a + threadIdx.x : b + threadIdx.x)
 define i32 @no_diverge(i32 %n, i32 %a, i32 %b) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'no_diverge'
+; CHECK-LABEL: Divergence Analysis' for function 'no_diverge'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %cond = icmp slt i32 %n, 0
@@ -27,7 +27,7 @@ merge:
 ;   c = b;
 ; return c;               // c is divergent: sync dependent
 define i32 @sync(i32 %a, i32 %b) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'sync'
+; CHECK-LABEL: Divergence Analysis' for function 'sync'
 bb1:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.y()
   %cond = icmp slt i32 %tid, 5
@@ -48,7 +48,7 @@ bb3:
 ; // c here is divergent because it is sync dependent on threadIdx.x >= 5
 ; return c;
 define i32 @mixed(i32 %n, i32 %a, i32 %b) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'mixed'
+; CHECK-LABEL: Divergence Analysis' for function 'mixed'
 bb1:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.z()
   %cond = icmp slt i32 %tid, 5
@@ -73,7 +73,7 @@ bb6:
 
 ; We conservatively treats all parameters of a __device__ function as divergent.
 define i32 @device(i32 %n, i32 %a, i32 %b) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'device'
+; CHECK-LABEL: Divergence Analysis' for function 'device'
 ; CHECK: DIVERGENT: i32 %n
 ; CHECK: DIVERGENT: i32 %a
 ; CHECK: DIVERGENT: i32 %b
@@ -98,7 +98,7 @@ merge:
 ;
 ; The i defined in the loop is used outside.
 define i32 @loop() {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'loop'
+; CHECK-LABEL: Divergence Analysis' for function 'loop'
 entry:
   %laneid = call i32 @llvm.nvvm.read.ptx.sreg.laneid()
   br label %loop
@@ -120,7 +120,7 @@ else:
 
 ; Same as @loop, but the loop is in the LCSSA form.
 define i32 @lcssa() {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'lcssa'
+; CHECK-LABEL: Divergence Analysis' for function 'lcssa'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   br label %loop

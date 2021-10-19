@@ -15,12 +15,14 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -43,20 +45,27 @@ STATISTIC(ObjectSizeIntrinsicsHandled,
           "Number of 'objectsize' intrinsic calls handled");
 
 static Value *lowerIsConstantIntrinsic(IntrinsicInst *II) {
-  Value *Op = II->getOperand(0);
-
-  return isa<Constant>(Op) ? ConstantInt::getTrue(II->getType())
-                           : ConstantInt::getFalse(II->getType());
+  if (auto *C = dyn_cast<Constant>(II->getOperand(0)))
+    if (C->isManifestConstant())
+      return ConstantInt::getTrue(II->getType());
+  return ConstantInt::getFalse(II->getType());
 }
 
 static bool replaceConditionalBranchesOnConstant(Instruction *II,
-                                                 Value *NewValue) {
+                                                 Value *NewValue,
+                                                 DomTreeUpdater *DTU) {
   bool HasDeadBlocks = false;
-  SmallSetVector<Instruction *, 8> Worklist;
+  SmallSetVector<Instruction *, 8> UnsimplifiedUsers;
   replaceAndRecursivelySimplify(II, NewValue, nullptr, nullptr, nullptr,
-                                &Worklist);
-  for (auto I : Worklist) {
-    BranchInst *BI = dyn_cast<BranchInst>(I);
+                                &UnsimplifiedUsers);
+  // UnsimplifiedUsers can contain PHI nodes that may be removed when
+  // replacing the branch instructions, so use a value handle worklist
+  // to handle those possibly removed instructions.
+  SmallVector<WeakVH, 8> Worklist(UnsimplifiedUsers.begin(),
+                                  UnsimplifiedUsers.end());
+
+  for (auto &VH : Worklist) {
+    BranchInst *BI = dyn_cast_or_null<BranchInst>(VH);
     if (!BI)
       continue;
     if (BI->isUnconditional())
@@ -78,14 +87,21 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
       Other->removePredecessor(Source);
       BI->eraseFromParent();
       BranchInst::Create(Target, Source);
-      if (pred_begin(Other) == pred_end(Other))
+      if (DTU)
+        DTU->applyUpdates({{DominatorTree::Delete, Source, Other}});
+      if (pred_empty(Other))
         HasDeadBlocks = true;
     }
   }
   return HasDeadBlocks;
 }
 
-static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI) {
+static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI,
+                                    DominatorTree *DT) {
+  Optional<DomTreeUpdater> DTU;
+  if (DT)
+    DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
   bool HasDeadBlocks = false;
   const auto &DL = F.getParent()->getDataLayout();
   SmallVector<WeakTrackingVH, 8> Worklist;
@@ -128,19 +144,20 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI) {
       ObjectSizeIntrinsicsHandled++;
       break;
     }
-    HasDeadBlocks |= replaceConditionalBranchesOnConstant(II, NewValue);
+    HasDeadBlocks |= replaceConditionalBranchesOnConstant(
+        II, NewValue, DTU.hasValue() ? DTU.getPointer() : nullptr);
   }
   if (HasDeadBlocks)
-    removeUnreachableBlocks(F);
+    removeUnreachableBlocks(F, DTU.hasValue() ? DTU.getPointer() : nullptr);
   return !Worklist.empty();
 }
 
 PreservedAnalyses
 LowerConstantIntrinsicsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (lowerConstantIntrinsics(F,
-                              AM.getCachedResult<TargetLibraryAnalysis>(F))) {
+  if (lowerConstantIntrinsics(F, AM.getCachedResult<TargetLibraryAnalysis>(F),
+                              AM.getCachedResult<DominatorTreeAnalysis>(F))) {
     PreservedAnalyses PA;
-    PA.preserve<GlobalsAA>();
+    PA.preserve<DominatorTreeAnalysis>();
     return PA;
   }
 
@@ -163,18 +180,25 @@ public:
   bool runOnFunction(Function &F) override {
     auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
     const TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
-    return lowerConstantIntrinsics(F, TLI);
+    DominatorTree *DT = nullptr;
+    if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+      DT = &DTWP->getDomTree();
+    return lowerConstantIntrinsics(F, TLI, DT);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
 } // namespace
 
 char LowerConstantIntrinsics::ID = 0;
-INITIALIZE_PASS(LowerConstantIntrinsics, "lower-constant-intrinsics",
-                "Lower constant intrinsics", false, false)
+INITIALIZE_PASS_BEGIN(LowerConstantIntrinsics, "lower-constant-intrinsics",
+                      "Lower constant intrinsics", false, false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(LowerConstantIntrinsics, "lower-constant-intrinsics",
+                    "Lower constant intrinsics", false, false)
 
 FunctionPass *llvm::createLowerConstantIntrinsicsPass() {
   return new LowerConstantIntrinsics();

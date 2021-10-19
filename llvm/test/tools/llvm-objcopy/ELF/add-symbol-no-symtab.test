@@ -105,3 +105,26 @@ DynamicSymbols:
     Binding: STB_GLOBAL
 Symbols: []
 ...
+
+## Check the created .symtab is correct when there are program headers.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objcopy %t4 %t4.add --add-symbol foo=1234
+# RUN: llvm-readelf -s %t4.add | FileCheck --check-prefix=SEC4 %s
+
+# SEC4:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# SEC4-NEXT: 1: 00000000000004d2     0 NOTYPE  GLOBAL DEFAULT   ABS foo
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .foo
+    Type:    SHT_PROGBITS
+ProgramHeaders:
+  - Type:     PT_LOAD
+    FirstSec: .foo
+    LastSec:  .foo
+...

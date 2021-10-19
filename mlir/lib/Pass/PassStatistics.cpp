@@ -64,6 +64,7 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
 
     // If this is not an adaptor, add the stats to the list if there are any.
     if (!adaptor) {
+#if LLVM_ENABLE_STATS
       auto statistics = pass->getStatistics();
       if (statistics.empty())
         return;
@@ -76,6 +77,7 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
         for (auto &it : llvm::enumerate(pass->getStatistics()))
           passEntry[it.index()].value += it.value()->getValue();
       }
+#endif
       return;
     }
 
@@ -103,6 +105,7 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
 /// Print the results in pipeline mode that mirrors the internal pass manager
 /// structure.
 static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
+#if LLVM_ENABLE_STATS
   std::function<void(unsigned, Pass *)> printPass = [&](unsigned indent,
                                                         Pass *pass) {
     if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass)) {
@@ -116,7 +119,7 @@ static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
 
       // Print each of the children passes.
       for (OpPassManager &mgr : mgrs) {
-        auto name = ("'" + mgr.getOpName().getStringRef() + "' Pipeline").str();
+        auto name = ("'" + mgr.getOpName() + "' Pipeline").str();
         printPassEntry(os, indent, name);
         for (Pass &pass : mgr.getPasses())
           printPass(indent + 2, &pass);
@@ -132,6 +135,7 @@ static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
   };
   for (Pass &pass : pm.getPasses())
     printPass(/*indent=*/0, &pass);
+#endif
 }
 
 static void printStatistics(OpPassManager &pm, PassDisplayMode displayMode) {

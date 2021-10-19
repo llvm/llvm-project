@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Use-association with VOLATILE or ASYNCHRONOUS
 
 module m1

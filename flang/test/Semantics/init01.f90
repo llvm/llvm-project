@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Initializer error tests
 
 subroutine objectpointers(j)
@@ -28,21 +28,21 @@ end subroutine
 subroutine dataobjects(j)
   integer, intent(in) :: j
   real, parameter :: x1(*) = [1., 2.]
-!ERROR: Implied-shape array 'x2' has rank 2, but its initializer has rank 1
+!ERROR: Implied-shape parameter 'x2' has rank 2 but its initializer has rank 1
   real, parameter :: x2(*,*) = [1., 2.]
-!ERROR: Shape of 'x3' is not implied, deferred, nor constant
+!ERROR: Named constant 'x3' array must have constant shape
   real, parameter :: x3(j) = [1., 2.]
-!ERROR: An automatic variable must not be initialized
+!ERROR: Shape of initialized object 'x4' must be constant
   real :: x4(j) = [1., 2.]
-!ERROR: 'x5' has rank 2, but its initializer has rank 1
+!ERROR: Rank of initialized object is 2, but initialization expression has rank 1
   real :: x5(2,2) = [1., 2., 3., 4.]
   real :: x6(2,2) = 5.
-!ERROR: 'x7' has rank 0, but its initializer has rank 1
+!ERROR: Rank of initialized object is 0, but initialization expression has rank 1
   real :: x7 = [1.]
   real :: x8(2,2) = reshape([1., 2., 3., 4.], [2, 2])
-!ERROR: Dimension 1 of object has extent 3, but initializer has extent 2
+!ERROR: Dimension 1 of initialized object has extent 3, but initialization expression has extent 2
   real :: x9(3) = [1., 2.]
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
   real :: x10(2,3) = reshape([real::(k,k=1,6)], [3, 2])
 end subroutine
 
@@ -52,29 +52,45 @@ subroutine components
   real, save :: a3
   real, target, save :: a4
   type :: t1
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
     real :: x1(2) = [1., 2., 3.]
   end type
   type :: t2(kind, len)
     integer, kind :: kind
     integer, len :: len
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
     real :: x1(2) = [1., 2., 3.]
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
     real :: x2(kind) = [1., 2., 3.]
+!ERROR: Dimension 1 of initialized object has extent 2, but initialization expression has extent 3
+!ERROR: An automatic variable or component must not be initialized
     real :: x3(len) = [1., 2., 3.]
     real, pointer :: p1(:) => a1
 !ERROR: An initial data target may not be a reference to an object 'a2' that lacks the SAVE attribute
+!ERROR: An initial data target may not be a reference to an object 'a2' that lacks the SAVE attribute
     real, pointer :: p2 => a2
+!ERROR: An initial data target may not be a reference to an object 'a3' that lacks the TARGET attribute
 !ERROR: An initial data target may not be a reference to an object 'a3' that lacks the TARGET attribute
     real, pointer :: p3 => a3
 !ERROR: Pointer has rank 0 but target has rank 1
+!ERROR: Pointer has rank 0 but target has rank 1
     real, pointer :: p4 => a1
+!ERROR: Pointer has rank 1 but target has rank 0
 !ERROR: Pointer has rank 1 but target has rank 0
     real, pointer :: p5(:) => a4
   end type
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
   type(t2(3,3)) :: o1
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
-!ERROR: Dimension 1 of object has extent 2, but initializer has extent 3
   type(t2(2,2)) :: o2
+  type :: t3
+    real :: x
+  end type
+  type(t3), save, target :: o3
+  real, pointer :: p10 => o3%x
+  associate (a1 => o3, a2 => o3%x)
+    block
+      real, pointer :: p11 => a1
+      real, pointer :: p12 => a2
+    end block
+  end associate
 end subroutine

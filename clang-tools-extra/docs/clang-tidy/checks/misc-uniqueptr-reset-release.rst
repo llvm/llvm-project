@@ -14,3 +14,11 @@ Example:
 
 If ``y`` is already rvalue, ``std::move()`` is not added. ``x`` and ``y`` can
 also be ``std::unique_ptr<Foo>*``.
+
+Options
+-------
+
+.. option:: IncludeStyle
+
+   A string specifying which include-style is used, `llvm` or `google`. Default
+   is `llvm`.

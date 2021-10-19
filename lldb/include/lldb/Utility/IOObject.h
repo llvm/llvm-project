@@ -9,8 +9,8 @@
 #ifndef LLDB_UTILITY_IOOBJECT_H
 #define LLDB_UTILITY_IOOBJECT_H
 
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 #include <sys/types.h>
 
 #include "lldb/lldb-private.h"

@@ -23,6 +23,19 @@ main_body:
   ret half %elt
 }
 
+; GCN-LABEL: {{^}}buffer_load_format_d16_xyz:
+; UNPACKED: buffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+
+; PACKED: buffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
+; PACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+define amdgpu_ps half @buffer_load_format_d16_xyz(<4 x i32> inreg %rsrc) {
+main_body:
+  %data = call <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %elt = extractelement <3 x half> %data, i32 2
+  ret half %elt
+}
+
 ; GCN-LABEL: {{^}}buffer_load_format_d16_xyzw:
 ; UNPACKED: buffer_load_format_d16_xyzw v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, {{v[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 idxen
 ; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
@@ -47,5 +60,6 @@ main_body:
 
 declare half @llvm.amdgcn.struct.buffer.load.format.f16(<4 x i32>, i32, i32, i32, i32)
 declare <2 x half> @llvm.amdgcn.struct.buffer.load.format.v2f16(<4 x i32>, i32, i32, i32, i32)
+declare <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32>, i32, i32, i32, i32)
 declare <4 x half> @llvm.amdgcn.struct.buffer.load.format.v4f16(<4 x i32>, i32, i32, i32, i32)
 declare i16 @llvm.amdgcn.struct.buffer.load.format.i16(<4 x i32>, i32, i32, i32, i32)

@@ -1,3 +1,5 @@
+add_llvm_component_group(WebAssembly)
+
 set(LLVM_TARGET_DEFINITIONS WebAssembly.td)
 
 tablegen(LLVM WebAssemblyGenAsmMatcher.inc -gen-asm-matcher)
@@ -34,8 +36,11 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyLowerBrUnless.cpp
   WebAssemblyLowerEmscriptenEHSjLj.cpp
   WebAssemblyLowerGlobalDtors.cpp
+  WebAssemblyLowerRefTypesIntPtrConv.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
+  WebAssemblyMCLowerPrePass.cpp
+  WebAssemblyNullifyDebugValueLists.cpp
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
@@ -54,13 +59,32 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyTargetMachine.cpp
   WebAssemblyTargetObjectFile.cpp
   WebAssemblyTargetTransformInfo.cpp
-  WebAssemblyUtilities.cpp
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  Analysis
+  AsmPrinter
+  BinaryFormat
+  CodeGen
+  Core
+  MC
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
+  WebAssemblyDesc
+  WebAssemblyInfo
+  WebAssemblyUtils
+
+  ADD_TO_COMPONENT
+  WebAssembly
 )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(Utils)

@@ -78,10 +78,6 @@ void DynamicLoaderHexagonDYLD::Initialize() {
 
 void DynamicLoaderHexagonDYLD::Terminate() {}
 
-lldb_private::ConstString DynamicLoaderHexagonDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 lldb_private::ConstString DynamicLoaderHexagonDYLD::GetPluginNameStatic() {
   static ConstString g_name("hexagon-dyld");
   return g_name;
@@ -91,8 +87,6 @@ const char *DynamicLoaderHexagonDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
          "loads/unloads in Hexagon processes.";
 }
-
-uint32_t DynamicLoaderHexagonDYLD::GetPluginVersion() { return 1; }
 
 DynamicLoader *DynamicLoaderHexagonDYLD::CreateInstance(Process *process,
                                                         bool force) {

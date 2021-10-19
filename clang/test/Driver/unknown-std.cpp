@@ -17,6 +17,8 @@
 // CHECK-NEXT: note: use 'gnu++17' for 'ISO C++ 2017 with amendments and GNU extensions' standard
 // CHECK-NEXT: note: use 'c++20' for 'ISO C++ 2020 DIS' standard
 // CHECK-NEXT: note: use 'gnu++20' for 'ISO C++ 2020 DIS with GNU extensions' standard
+// CHECK-NEXT: note: use 'c++2b' for 'Working draft for ISO C++ 2023 DIS' standard
+// CHECK-NEXT: note: use 'gnu++2b' for 'Working draft for ISO C++ 2023 DIS with GNU extensions' standard
 // CUDA-NEXT: note: use 'cuda' for 'NVIDIA CUDA(tm)' standard
 
 // Make sure that no other output is present.

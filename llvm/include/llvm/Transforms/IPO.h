@@ -31,6 +31,13 @@ class raw_ostream;
 
 //===----------------------------------------------------------------------===//
 //
+// This pass adds !annotation metadata to entries in the
+// @llvm.global.annotations global constant.
+//
+ModulePass *createAnnotation2MetadataLegacyPass();
+
+//===----------------------------------------------------------------------===//
+//
 // These functions removes symbols from functions and modules.  If OnlyDebugInfo
 // is true, only debugging information is removed from the module.
 //
@@ -153,7 +160,7 @@ Pass *createArgumentPromotionPass(unsigned maxElements = 3);
 
 //===----------------------------------------------------------------------===//
 /// createOpenMPOptLegacyPass - OpenMP specific optimizations.
-Pass *createOpenMPOptLegacyPass();
+Pass *createOpenMPOptCGSCCLegacyPass();
 
 //===----------------------------------------------------------------------===//
 /// createIPSCCPPass - This pass propagates constants from call sites into the
@@ -161,6 +168,11 @@ Pass *createOpenMPOptLegacyPass();
 /// in the process.
 ///
 ModulePass *createIPSCCPPass();
+
+//===----------------------------------------------------------------------===//
+/// createFunctionSpecializationPass - This pass propagates constants from call
+/// sites to the specialized version of the callee function.
+ModulePass *createFunctionSpecializationPass();
 
 //===----------------------------------------------------------------------===//
 //
@@ -207,6 +219,11 @@ ModulePass *createMergeFunctionsPass();
 /// createHotColdSplittingPass - This pass outlines cold blocks into a separate
 /// function(s).
 ModulePass *createHotColdSplittingPass();
+
+//===----------------------------------------------------------------------===//
+/// createIROutlinerPass - This pass finds similar code regions and factors
+/// those regions out into functions.
+ModulePass *createIROutlinerPass();
 
 //===----------------------------------------------------------------------===//
 /// createPartialInliningPass - This pass inlines parts of functions.

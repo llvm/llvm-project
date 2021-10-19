@@ -120,8 +120,7 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
@@ -130,6 +129,10 @@ public:
   ScheduleHazardRecognizer *
   CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
                                const ScheduleDAG *DAG) const override;
+
+  ScheduleHazardRecognizer *
+  CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
+                                 const ScheduleDAGMI *DAG) const override;
 
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
@@ -171,28 +174,13 @@ public:
   bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
                          ArrayRef<MachineOperand> Pred2) const override;
 
-  bool DefinesPredicate(MachineInstr &MI,
-                        std::vector<MachineOperand> &Pred) const override;
+  bool ClobbersPredicate(MachineInstr &MI, std::vector<MachineOperand> &Pred,
+                         bool SkipDead) const override;
 
   bool isPredicable(const MachineInstr &MI) const override;
 
   // CPSR defined in instruction
   static bool isCPSRDefined(const MachineInstr &MI);
-  bool isAddrMode3OpImm(const MachineInstr &MI, unsigned Op) const;
-  bool isAddrMode3OpMinusReg(const MachineInstr &MI, unsigned Op) const;
-
-  // Load, scaled register offset
-  bool isLdstScaledReg(const MachineInstr &MI, unsigned Op) const;
-  // Load, scaled register offset, not plus LSL2
-  bool isLdstScaledRegNotPlusLsl2(const MachineInstr &MI, unsigned Op) const;
-  // Minus reg for ldstso addr mode
-  bool isLdstSoMinusReg(const MachineInstr &MI, unsigned Op) const;
-  // Scaled register offset in address mode 2
-  bool isAm2ScaledReg(const MachineInstr &MI, unsigned Op) const;
-  // Load multiple, base reg in list
-  bool isLDMBaseRegInList(const MachineInstr &MI) const;
-  // get LDM variable defs size
-  unsigned getLDMVariableDefsSize(const MachineInstr &MI) const;
 
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
@@ -300,15 +288,15 @@ public:
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &CmpMask,
-                      int &CmpValue) const override;
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
 
   /// optimizeCompareInstr - Convert the instruction to set the zero flag so
   /// that we can remove a "comparison with zero"; Remove a redundant CMP
   /// instruction if the flags can be updated in the same way by an earlier
   /// instruction such as SUB.
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                            Register SrcReg2, int CmpMask, int CmpValue,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   bool analyzeSelect(const MachineInstr &MI,
@@ -375,6 +363,13 @@ public:
   /// Enable outlining by default at -Oz.
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool isUnspillableTerminatorImpl(const MachineInstr *MI) const override {
+    return MI->getOpcode() == ARM::t2LoopEndDec ||
+           MI->getOpcode() == ARM::t2DoLoopStartTP ||
+           MI->getOpcode() == ARM::t2WhileLoopStartLR ||
+           MI->getOpcode() == ARM::t2WhileLoopStartTP;
+  }
+
 private:
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.
@@ -383,12 +378,43 @@ private:
   // Adds an instruction which saves the link register on top of the stack into
   /// the MachineBasicBlock \p MBB at position \p It.
   void saveLROnStack(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator &It) const;
+                     MachineBasicBlock::iterator It) const;
 
   /// Adds an instruction which restores the link register from the top the
   /// stack into the MachineBasicBlock \p MBB at position \p It.
   void restoreLRFromStack(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &It) const;
+                          MachineBasicBlock::iterator It) const;
+
+  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
+  /// for the case when the LR is saved on the stack.
+  void emitCFIForLRSaveOnStack(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator It) const;
+
+  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
+  /// for the case when the LR is saved in the register \p Reg.
+  void emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator It,
+                             Register Reg) const;
+
+  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
+  /// after the LR is was restored from the stack.
+  void emitCFIForLRRestoreFromStack(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator It) const;
+
+  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
+  /// after the LR is was restored from a register.
+  void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator It) const;
+  /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
+  /// so that they will be valid post-outlining.
+  ///
+  /// \param MBB A \p MachineBasicBlock in an outlined function.
+  void fixupPostOutline(MachineBasicBlock &MBB) const;
+
+  /// Returns true if the machine instruction offset can handle the stack fixup
+  /// and updates it if requested.
+  bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
+                                 bool Updt) const;
 
   unsigned getInstBundleLength(const MachineInstr &MI) const;
 
@@ -451,6 +477,9 @@ private:
   /// return the defining instruction.
   MachineInstr *canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetInstrInfo *TII) const;
+
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
+                                         AAResults *AA) const override;
 
 private:
   /// Modeling special VFP / NEON fp MLA / MLS hazards.
@@ -606,56 +635,6 @@ unsigned VCMPOpcodeToVPT(unsigned Opcode) {
 }
 
 static inline
-unsigned VCTPOpcodeToLSTP(unsigned Opcode, bool IsDoLoop) {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unhandled vctp opcode");
-    break;
-  case ARM::MVE_VCTP8:
-    return IsDoLoop ? ARM::MVE_DLSTP_8 : ARM::MVE_WLSTP_8;
-  case ARM::MVE_VCTP16:
-    return IsDoLoop ? ARM::MVE_DLSTP_16 : ARM::MVE_WLSTP_16;
-  case ARM::MVE_VCTP32:
-    return IsDoLoop ? ARM::MVE_DLSTP_32 : ARM::MVE_WLSTP_32;
-  case ARM::MVE_VCTP64:
-    return IsDoLoop ? ARM::MVE_DLSTP_64 : ARM::MVE_WLSTP_64;
-  }
-  return 0;
-}
-
-static inline unsigned getTailPredVectorWidth(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unhandled vctp opcode");
-  case ARM::MVE_VCTP8:  return 16;
-  case ARM::MVE_VCTP16: return 8;
-  case ARM::MVE_VCTP32: return 4;
-  case ARM::MVE_VCTP64: return 2;
-  }
-  return 0;
-}
-
-static inline
-bool isVCTP(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
-  default:
-    break;
-  case ARM::MVE_VCTP8:
-  case ARM::MVE_VCTP16:
-  case ARM::MVE_VCTP32:
-  case ARM::MVE_VCTP64:
-    return true;
-  }
-  return false;
-}
-
-static inline
-bool isLoopStart(MachineInstr &MI) {
-  return MI.getOpcode() == ARM::t2DoLoopStart ||
-         MI.getOpcode() == ARM::t2WhileLoopStart;
-}
-
-static inline
 bool isCondBranchOpcode(int Opc) {
   return Opc == ARM::Bcc || Opc == ARM::tBcc || Opc == ARM::t2Bcc;
 }
@@ -669,6 +648,67 @@ static inline bool isJumpTableBranchOpcode(int Opc) {
 static inline
 bool isIndirectBranchOpcode(int Opc) {
   return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND;
+}
+
+static inline bool isIndirectCall(const MachineInstr &MI) {
+  int Opc = MI.getOpcode();
+  switch (Opc) {
+    // indirect calls:
+  case ARM::BLX:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+  case ARM::BMOVPCRX_CALL:
+  case ARM::TCRETURNri:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+  case ARM::tBLXr:
+  case ARM::tBLXr_noip:
+  case ARM::tBLXNSr:
+  case ARM::tBLXNS_CALL:
+  case ARM::tBX_CALL:
+  case ARM::tTAILJMPr:
+    assert(MI.isCall(MachineInstr::IgnoreBundle));
+    return true;
+    // direct calls:
+  case ARM::BL:
+  case ARM::BL_pred:
+  case ARM::BMOVPCB_CALL:
+  case ARM::BL_PUSHLR:
+  case ARM::BLXi:
+  case ARM::TCRETURNdi:
+  case ARM::TAILJMPd:
+  case ARM::SVC:
+  case ARM::HVC:
+  case ARM::TPsoft:
+  case ARM::tTAILJMPd:
+  case ARM::t2SMC:
+  case ARM::t2HVC:
+  case ARM::tBL:
+  case ARM::tBLXi:
+  case ARM::tBL_PUSHLR:
+  case ARM::tTAILJMPdND:
+  case ARM::tSVC:
+  case ARM::tTPsoft:
+    assert(MI.isCall(MachineInstr::IgnoreBundle));
+    return false;
+  }
+  assert(!MI.isCall(MachineInstr::IgnoreBundle));
+  return false;
+}
+
+static inline bool isIndirectControlFlowNotComingBack(const MachineInstr &MI) {
+  int opc = MI.getOpcode();
+  return MI.isReturn() || isIndirectBranchOpcode(MI.getOpcode()) ||
+         isJumpTableBranchOpcode(opc);
+}
+
+static inline bool isSpeculationBarrierEndBBOpcode(int Opc) {
+  return Opc == ARM::SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::SpeculationBarrierSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierISBDSBEndBB ||
+         Opc == ARM::t2SpeculationBarrierSBEndBB;
 }
 
 static inline bool isPopOpcode(int Opc) {
@@ -844,8 +884,12 @@ inline bool isLegalAddressImm(unsigned Opcode, int Imm,
     return std::abs(Imm) < (((1 << 7) * 4) - 1) && Imm % 4 == 0;
   case ARMII::AddrModeT2_i8:
     return std::abs(Imm) < (((1 << 8) * 1) - 1);
+  case ARMII::AddrMode2:
+    return std::abs(Imm) < (((1 << 12) * 1) - 1);
   case ARMII::AddrModeT2_i12:
     return Imm >= 0 && Imm < (((1 << 12) * 1) - 1);
+  case ARMII::AddrModeT2_i8s4:
+    return std::abs(Imm) < (((1 << 8) * 4) - 1) && Imm % 4 == 0;
   default:
     llvm_unreachable("Unhandled Addressing mode");
   }
@@ -885,6 +929,10 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
     return false;
   return isGather(IntInst) || isScatter(IntInst);
 }
+
+unsigned getBLXOpcode(const MachineFunction &MF);
+unsigned gettBLXrOpcode(const MachineFunction &MF);
+unsigned getBLXpredOpcode(const MachineFunction &MF);
 
 } // end namespace llvm
 

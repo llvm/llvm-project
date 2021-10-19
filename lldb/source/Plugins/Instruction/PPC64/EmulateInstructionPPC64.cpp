@@ -8,7 +8,7 @@
 
 #include "EmulateInstructionPPC64.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -41,11 +41,6 @@ void EmulateInstructionPPC64::Terminate() {
 
 ConstString EmulateInstructionPPC64::GetPluginNameStatic() {
   ConstString g_plugin_name("lldb.emulate-instruction.ppc64");
-  return g_plugin_name;
-}
-
-ConstString EmulateInstructionPPC64::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionPPC64");
   return g_plugin_name;
 }
 

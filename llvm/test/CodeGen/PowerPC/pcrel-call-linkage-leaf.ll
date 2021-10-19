@@ -45,12 +45,12 @@ define dso_local signext i32 @AsmClobberX2WithTOC(i32 signext %a, i32 signext %b
 ; CHECK-LARGE:     ld r2, .Lfunc_toc2-.Lfunc_gep2(r12)
 ; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S:         .localentry     AsmClobberX2WithTOC
-; CHECK-S:         #APP
+; CHECK-S:         add r3, r4, r3
+; CHECK-S-NEXT:    #APP
 ; CHECK-S-NEXT:    li r2, 0
 ; CHECK-S-NEXT:    #NO_APP
-; CHECK-S-NEXT:    plwz r5, global_int@PCREL(0), 1
-; CHECK-S-NEXT:    add r3, r4, r3
-; CHECK-S-NEXT:    add r3, r3, r5
+; CHECK-S-NEXT:    plwz r4, global_int@PCREL(0), 1
+; CHECK-S-NEXT:    add r3, r3, r4
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    blr
 entry:
@@ -67,10 +67,10 @@ define dso_local signext i32 @AsmClobberX5(i32 signext %a, i32 signext %b) local
 ; CHECK-P9-NOT:    .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    add r3, r4, r3
-; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    #APP
 ; CHECK-S-NEXT:    nop
 ; CHECK-S-NEXT:    #NO_APP
+; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    blr
 entry:
   %add = add nsw i32 %b, %a
@@ -104,29 +104,29 @@ define dso_local signext i32 @X2IsCallerSaved(i32 signext %a, i32 signext %b, i3
 ; CHECK-P9-NOT:    .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
+; CHECK-S-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-S-NEXT:    add r11, r4, r3
 ; CHECK-S-NEXT:    sub r29, r8, r9
 ; CHECK-S-NEXT:    add r9, r10, r9
 ; CHECK-S-NEXT:    sub r10, r10, r3
 ; CHECK-S-NEXT:    mullw r3, r4, r3
+; CHECK-S-NEXT:    sub r12, r4, r5
+; CHECK-S-NEXT:    add r0, r6, r5
+; CHECK-S-NEXT:    sub r2, r6, r7
+; CHECK-S-NEXT:    add r30, r8, r7
 ; CHECK-S-NEXT:    mullw r3, r3, r11
 ; CHECK-S-NEXT:    mullw r3, r3, r5
-; CHECK-S-NEXT:    sub r12, r4, r5
 ; CHECK-S-NEXT:    mullw r3, r3, r6
-; CHECK-S-NEXT:    add r0, r6, r5
 ; CHECK-S-NEXT:    mullw r3, r3, r12
 ; CHECK-S-NEXT:    mullw r3, r3, r0
 ; CHECK-S-NEXT:    mullw r3, r3, r7
-; CHECK-S-NEXT:    sub r2, r6, r7
 ; CHECK-S-NEXT:    mullw r3, r3, r8
-; CHECK-S-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-S-NEXT:    add r30, r8, r7
 ; CHECK-S-NEXT:    mullw r3, r3, r2
 ; CHECK-S-NEXT:    mullw r3, r3, r30
-; CHECK-S-NEXT:    mullw r3, r3, r29
-; CHECK-S-NEXT:    mullw r3, r3, r9
 ; CHECK-S-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-S-NEXT:    mullw r3, r3, r29
 ; CHECK-S-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-S-NEXT:    mullw r3, r3, r9
 ; CHECK-S-NEXT:    mullw r3, r3, r10
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    blr
@@ -173,7 +173,9 @@ define dso_local double @UsesX2AsConstPoolTOC() local_unnamed_addr {
 ; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S-NOT:       .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
-; CHECK-S-NEXT:    plfd f1, .LCPI7_0@PCREL(0), 1
+; CHECK-S-NEXT:    xxsplti32dx vs1, 0, 1078011044
+; CHECK-S-NEXT:    xxsplti32dx vs1, 1, -337824948
+; CHECK-S-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-S-NEXT:    blr
 entry:
   ret double 0x404124A4EBDD334C

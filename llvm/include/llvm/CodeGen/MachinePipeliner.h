@@ -37,10 +37,8 @@
 // 3) Attempt to schedule the nodes in the specified order using the MII.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
-#define LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
-
-#include "llvm/Analysis/AliasAnalysis.h"
+#ifndef LLVM_CODEGEN_MACHINEPIPELINER_H
+#define LLVM_CODEGEN_MACHINEPIPELINER_H
 
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -51,6 +49,7 @@
 
 namespace llvm {
 
+class AAResults;
 class NodeSet;
 class SMSchedule;
 
@@ -92,15 +91,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<LiveIntervals>();
-    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
   void preprocessPhiNodes(MachineBasicBlock &B);
@@ -285,7 +276,7 @@ public:
   static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
 private:
-  void addLoopCarriedDependences(AliasAnalysis *AA);
+  void addLoopCarriedDependences(AAResults *AA);
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();
@@ -304,7 +295,7 @@ private:
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
   bool computeDelta(MachineInstr &MI, unsigned &Delta);
-  MachineInstr *findDefInLoop(unsigned Reg);
+  MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);
@@ -535,6 +526,9 @@ public:
   /// Set the initiation interval for this schedule.
   void setInitiationInterval(int ii) { InitiationInterval = ii; }
 
+  /// Return the initiation interval for this schedule.
+  int getInitiationInterval() const { return InitiationInterval; }
+
   /// Return the first cycle in the completed schedule.  This
   /// can be a negative value.
   int getFirstCycle() const { return FirstCycle; }
@@ -604,4 +598,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_MACHINEPIPELINER_H
+#endif // LLVM_CODEGEN_MACHINEPIPELINER_H

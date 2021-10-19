@@ -43,12 +43,13 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_SecRel_8:
+    // LD_imm64 instruction.
     return ELF::R_BPF_64_64;
   case FK_PCRel_4:
-  case FK_SecRel_4:
+    // CALL instruction.
     return ELF::R_BPF_64_32;
   case FK_Data_8:
-    return ELF::R_BPF_64_64;
+    return ELF::R_BPF_64_ABS64;
   case FK_Data_4:
     if (const MCSymbolRefExpr *A = Target.getSymA()) {
       const MCSymbol &Sym = A->getSymbol();
@@ -63,23 +64,22 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         if (Sym.isTemporary()) {
           // .BTF.ext generates FK_Data_4 relocations for
           // insn offset by creating temporary labels.
-          // The insn offset is within the code section and
-          // already been fulfilled by applyFixup(). No
-          // further relocation is needed.
           // The reloc symbol should be in text section.
+          // Use a different relocation to instruct ExecutionEngine
+          // RuntimeDyld not to do relocation for it, yet still to
+          // allow lld to do proper adjustment when merging sections.
           if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_EXECINSTR))
-            return ELF::R_BPF_NONE;
+            return ELF::R_BPF_64_NODYLD32;
         } else {
           // .BTF generates FK_Data_4 relocations for variable
-          // offset in DataSec kind. Similar to the above .BTF.ext
-          // insn offset, no further relocation is needed.
+          // offset in DataSec kind.
           // The reloc symbol should be in data section.
           if ((Flags & ELF::SHF_ALLOC) && (Flags & ELF::SHF_WRITE))
-            return ELF::R_BPF_NONE;
+            return ELF::R_BPF_64_NODYLD32;
         }
       }
     }
-    return ELF::R_BPF_64_32;
+    return ELF::R_BPF_64_ABS32;
   }
 }
 

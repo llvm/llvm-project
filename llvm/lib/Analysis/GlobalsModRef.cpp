@@ -44,7 +44,7 @@ STATISTIC(NumIndirectGlobalVars, "Number of indirect global objects");
 // An option to enable unsafe alias results from the GlobalsModRef analysis.
 // When enabled, GlobalsModRef will provide no-alias results which in extremely
 // rare cases may not be conservatively correct. In particular, in the face of
-// transforms which cause assymetry between how effective getUnderlyingObject
+// transforms which cause asymmetry between how effective getUnderlyingObject
 // is for two pointers, it may produce incorrect results.
 //
 // These unsafe results have been returned by GMR for many years without
@@ -367,7 +367,8 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
     } else if (Operator::getOpcode(I) == Instruction::GetElementPtr) {
       if (AnalyzeUsesOfPointer(I, Readers, Writers))
         return true;
-    } else if (Operator::getOpcode(I) == Instruction::BitCast) {
+    } else if (Operator::getOpcode(I) == Instruction::BitCast ||
+               Operator::getOpcode(I) == Instruction::AddrSpaceCast) {
       if (AnalyzeUsesOfPointer(I, Readers, Writers, OkayStoreDest))
         return true;
     } else if (auto *Call = dyn_cast<CallBase>(I)) {
@@ -826,8 +827,10 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
                                    const MemoryLocation &LocB,
                                    AAQueryInfo &AAQI) {
   // Get the base object these pointers point to.
-  const Value *UV1 = getUnderlyingObject(LocA.Ptr);
-  const Value *UV2 = getUnderlyingObject(LocB.Ptr);
+  const Value *UV1 =
+      getUnderlyingObject(LocA.Ptr->stripPointerCastsForAliasAnalysis());
+  const Value *UV2 =
+      getUnderlyingObject(LocB.Ptr->stripPointerCastsForAliasAnalysis());
 
   // If either of the underlying values is a global, they may be non-addr-taken
   // globals, which we can answer queries about.
@@ -844,14 +847,14 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
     // If the two pointers are derived from two different non-addr-taken
     // globals we know these can't alias.
     if (GV1 && GV2 && GV1 != GV2)
-      return NoAlias;
+      return AliasResult::NoAlias;
 
     // If one is and the other isn't, it isn't strictly safe but we can fake
     // this result if necessary for performance. This does not appear to be
     // a common problem in practice.
     if (EnableUnsafeGlobalsModRefAliasResults)
       if ((GV1 || GV2) && GV1 != GV2)
-        return NoAlias;
+        return AliasResult::NoAlias;
 
     // Check for a special case where a non-escaping global can be used to
     // conclude no-alias.
@@ -859,7 +862,7 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
       const GlobalValue *GV = GV1 ? GV1 : GV2;
       const Value *UV = GV1 ? UV2 : UV1;
       if (isNonEscapingGlobalNoAlias(GV, UV))
-        return NoAlias;
+        return AliasResult::NoAlias;
     }
 
     // Otherwise if they are both derived from the same addr-taken global, we
@@ -890,14 +893,14 @@ AliasResult GlobalsAAResult::alias(const MemoryLocation &LocA,
   // use this to disambiguate the pointers. If the pointers are based on
   // different indirect globals they cannot alias.
   if (GV1 && GV2 && GV1 != GV2)
-    return NoAlias;
+    return AliasResult::NoAlias;
 
   // If one is based on an indirect global and the other isn't, it isn't
   // strictly safe but we can fake this result if necessary for performance.
   // This does not appear to be a common problem in practice.
   if (EnableUnsafeGlobalsModRefAliasResults)
     if ((GV1 || GV2) && GV1 != GV2)
-      return NoAlias;
+      return AliasResult::NoAlias;
 
   return AAResultBase::alias(LocA, LocB, AAQI);
 }
@@ -920,8 +923,9 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(const CallBase *Call,
     if (!all_of(Objects, isIdentifiedObject) &&
         // Try ::alias to see if all objects are known not to alias GV.
         !all_of(Objects, [&](const Value *V) {
-          return this->alias(MemoryLocation(V), MemoryLocation(GV), AAQI) ==
-                 NoAlias;
+          return this->alias(MemoryLocation::getBeforeOrAfter(V),
+                             MemoryLocation::getBeforeOrAfter(GV),
+                             AAQI) == AliasResult::NoAlias;
         }))
       return ConservativeResult;
 

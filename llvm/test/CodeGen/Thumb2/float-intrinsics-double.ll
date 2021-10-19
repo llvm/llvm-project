@@ -14,12 +14,12 @@ define double @sqrt_d(double %a) {
   ret double %1
 }
 
-declare double     @llvm.powi.f64(double %Val, i32 %power)
+declare double     @llvm.powi.f64.i32(double %Val, i32 %power)
 define double @powi_d(double %a, i32 %b) {
 ; CHECK-LABEL: powi_d:
 ; SOFT: {{(bl|b)}} __powidf2
 ; HARD: b __powidf2
-  %1 = call double @llvm.powi.f64(double %a, i32 %b)
+  %1 = call double @llvm.powi.f64.i32(double %a, i32 %b)
   ret double %1
 }
 
@@ -109,12 +109,12 @@ declare double     @llvm.fabs.f64(double %Val)
 define double @abs_d(double %a) {
 ; CHECK-LABEL: abs_d:
 ; NONE: bic r1, r1, #-2147483648
-; SP: vldr d1, .LCPI{{.*}}
-; SP: vmov r0, r1, d0
-; SP: vmov r2, r3, d1
-; SP: lsrs r2, r3, #31
-; SP: bfi r1, r2, #31, #1
-; SP: vmov d0, r0, r1
+; SP: vldr [[D1:d[0-9]+]], .LCPI{{.*}}
+; SP-DAG: vmov [[R2:r[0-9]+]], [[R3:r[0-9]+]], [[D1]]
+; SP-DAG: vmov [[R0:r[0-9]+]], [[R1:r[0-9]+]], [[D0:d[0-9]+]]
+; SP: lsrs [[R4:r[0-9]+]], [[R3]], #31
+; SP: bfi [[R5:r[0-9]+]], [[R4]], #31, #1
+; SP: vmov [[D0]], [[R0]], [[R5]]
 ; DP: vabs.f64 d0, d0
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
@@ -123,10 +123,10 @@ define double @abs_d(double %a) {
 declare double     @llvm.copysign.f64(double  %Mag, double  %Sgn)
 define double @copysign_d(double %a, double %b) {
 ; CHECK-LABEL: copysign_d:
-; SOFT: lsrs [[REG:r[0-9]+]], r3, #31
-; SOFT: bfi r1, [[REG]], #31, #1
-; VFP: lsrs [[REG:r[0-9]+]], r3, #31
-; VFP: bfi r1, [[REG]], #31, #1
+; SOFT: lsrs [[REG:r[0-9]+]], {{r[0-9]+}}, #31
+; SOFT: bfi {{r[0-9]+}}, [[REG]], #31, #1
+; VFP: lsrs [[REG:r[0-9]+]], {{r[0-9]+}}, #31
+; VFP: bfi {{r[0-9]+}}, [[REG]], #31, #1
 ; NEON:         vmov.i32 d16, #0x80000000
 ; NEON-NEXT:    vshl.i64 d16, d16, #32
 ; NEON-NEXT:    vbit d0, d1, d16

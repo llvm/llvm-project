@@ -376,18 +376,19 @@ Streams:
 
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(testing::ElementsAre(
-                        MemoryRegionInfo({0x0, 0x10000}, no, no, no, no,
-                                         ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no, yes,
-                                         ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x40000, 0x1000}, yes, no, no, yes,
-                                         ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no, yes,
-                                         ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no, yes,
-                                         ConstString(), unknown, 0)),
-                    true));
+      testing::Pair(
+          testing::ElementsAre(
+              MemoryRegionInfo({0x0, 0x10000}, no, no, no, no, ConstString(),
+                               unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x40000, 0x1000}, yes, no, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown)),
+          true));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
@@ -409,12 +410,13 @@ Streams:
 
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(testing::ElementsAre(
-                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
-                                         yes, ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
-                                         yes, ConstString(), unknown, 0)),
-                    false));
+      testing::Pair(
+          testing::ElementsAre(
+              MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, yes,
+                               ConstString(), unknown, 0, unknown, unknown)),
+          false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
@@ -424,12 +426,13 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
   // we don't have a MemoryInfoListStream.
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(testing::ElementsAre(
-                        MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
-                                         yes, ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
-                                         yes, ConstString(), unknown, 0)),
-                    false));
+      testing::Pair(
+          testing::ElementsAre(
+              MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown, yes,
+                               ConstString(), unknown, 0, unknown, unknown)),
+          false));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
@@ -455,19 +458,41 @@ Streams:
   ConstString liblog("/system/lib/liblog.so");
   EXPECT_THAT(
       parser->BuildMemoryRegions(),
-      testing::Pair(testing::ElementsAre(
-                        MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes,
-                                         yes, app_process, unknown, 0),
-                        MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, yes,
-                                         app_process, unknown, 0),
-                        MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no,
-                                         yes, ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, yes,
-                                         ConstString(), unknown, 0),
-                        MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no,
-                                         yes, linker, unknown, 0),
-                        MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes,
-                                         yes, liblog, unknown, 0)),
+      testing::Pair(
+          testing::ElementsAre(
+              MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes, yes,
+                               app_process, unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, yes,
+                               app_process, unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, yes,
+                               ConstString(), unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, yes, linker,
+                               unknown, 0, unknown, unknown),
+              MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes, yes, liblog,
+                               unknown, 0, unknown, unknown)),
+          true));
+}
+
+TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMapsError) {
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:
+  - Type:            LinuxMaps
+    Text:             |
+      400d9000-400db000 r?xp 00000000 b3:04 227
+      400fc000-400fd000 rwxp 00001000 b3:04 1096
+...
+)"),
+                    llvm::Succeeded());
+  // Test that when a /proc/maps region fails to parse
+  // we handle the error and continue with the rest.
+  EXPECT_THAT(
+      parser->BuildMemoryRegions(),
+      testing::Pair(testing::ElementsAre(MemoryRegionInfo(
+                        {0x400fc000, 0x1000}, yes, yes, yes, yes,
+                        ConstString(nullptr), unknown, 0, unknown, unknown)),
                     true));
 }
 
@@ -768,6 +793,47 @@ Streams:
       parser->GetFilteredModuleList();
   ASSERT_EQ(1u, filtered_modules.size());
   EXPECT_EQ(0x400d0000u, filtered_modules[0]->BaseOfImage);
+}
+
+TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMappedSecondHigh) {
+  ASSERT_THAT_ERROR(SetUpFromYaml(R"(
+--- !minidump
+Streams:
+  - Type:            ModuleList
+    Modules:
+      - Base of Image:   0x400d3000
+        Size of Image:   0x00002000
+        Module Name:     '/usr/lib/libc.so'
+        CodeView Record: ''
+      - Base of Image:   0x400d0000
+        Size of Image:   0x00001000
+        Module Name:     '/usr/lib/libc.so'
+        CodeView Record: ''
+  - Type:            LinuxMaps
+    Text:             |
+      400d0000-400d2000 r--p 00000000 b3:04 227        /usr/lib/libc.so
+      400d2000-400d3000 rw-p 00000000 00:00 0
+      400d3000-400d4000 r-xp 00010000 b3:04 227        /usr/lib/libc.so
+      400d4000-400d5000 rwxp 00001000 b3:04 227        /usr/lib/libc.so
+...
+)"),
+                    llvm::Succeeded());
+  // If we have a module mentioned twice in the module list, and we have full
+  // linux maps for all of the memory regions, make sure we pick the one that
+  // has a consecutive region with a matching path that has executable
+  // permissions. If clients open an object file with mmap, breakpad can create
+  // multiple mappings for a library errnoneously and the lowest address isn't
+  // always the right address. In this case we check the consective memory
+  // regions whose path matches starting at the base of image address and make
+  // sure one of the regions is executable and prefer that one.
+  //
+  // This test will make sure that if the executable is first in the module
+  // list, that it will remain the correctly selected module in the filtered
+  // list, even if the non-executable module was loaded at a lower base address.
+  std::vector<const minidump::Module *> filtered_modules =
+      parser->GetFilteredModuleList();
+  ASSERT_EQ(1u, filtered_modules.size());
+  EXPECT_EQ(0x400d3000u, filtered_modules[0]->BaseOfImage);
 }
 
 TEST_F(MinidumpParserTest, MinidumpDuplicateModuleSeparateCode) {

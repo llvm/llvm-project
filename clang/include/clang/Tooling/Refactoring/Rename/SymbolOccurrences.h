@@ -69,17 +69,18 @@ public:
   OccurrenceKind getKind() const { return Kind; }
 
   ArrayRef<SourceRange> getNameRanges() const {
-    if (MultipleRanges) {
-      return llvm::makeArrayRef(MultipleRanges.get(),
-                                RangeOrNumRanges.getBegin().getRawEncoding());
-    }
-    return RangeOrNumRanges;
+    if (MultipleRanges)
+      return llvm::makeArrayRef(MultipleRanges.get(), NumRanges);
+    return SingleRange;
   }
 
 private:
   OccurrenceKind Kind;
   std::unique_ptr<SourceRange[]> MultipleRanges;
-  SourceRange RangeOrNumRanges;
+  union {
+    SourceRange SingleRange;
+    unsigned NumRanges;
+  };
 };
 
 using SymbolOccurrences = std::vector<SymbolOccurrence>;

@@ -1,9 +1,3 @@
-add_header_library(
-  ctype_utils
-  HDRS
-    ctype_utils.h
-)
-
 add_entrypoint_object(
   isalnum
   SRCS
@@ -11,7 +5,7 @@ add_entrypoint_object(
   HDRS
     isalnum.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -21,7 +15,15 @@ add_entrypoint_object(
   HDRS
     isalpha.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  isascii
+  SRCS
+    isascii.cpp
+  HDRS
+    isascii.h
 )
 
 add_entrypoint_object(
@@ -47,7 +49,7 @@ add_entrypoint_object(
   HDRS
     isdigit.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -57,7 +59,7 @@ add_entrypoint_object(
   HDRS
     isgraph.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -67,7 +69,7 @@ add_entrypoint_object(
   HDRS
     islower.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -85,7 +87,7 @@ add_entrypoint_object(
   HDRS
     ispunct.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -103,7 +105,7 @@ add_entrypoint_object(
   HDRS
     isupper.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -113,7 +115,7 @@ add_entrypoint_object(
   HDRS
     isxdigit.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )
 
 add_entrypoint_object(
@@ -123,7 +125,15 @@ add_entrypoint_object(
   HDRS
     tolower.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
+  toascii
+  SRCS
+    toascii.cpp
+  HDRS
+    toascii.h
 )
 
 add_entrypoint_object(
@@ -133,5 +143,5 @@ add_entrypoint_object(
   HDRS
     toupper.h
   DEPENDS
-    .ctype_utils
+    libc.src.__support.ctype_utils
 )

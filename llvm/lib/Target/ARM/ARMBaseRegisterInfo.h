@@ -32,8 +32,11 @@ class LiveIntervals;
 namespace ARMRI {
 
   enum {
+    // Used for LDRD register pairs
     RegPairOdd  = 1,
-    RegPairEven = 2
+    RegPairEven = 2,
+    // Used to hint for lr in t2DoLoopStart
+    RegLR = 3
   };
 
 } // end namespace ARMRI
@@ -165,9 +168,8 @@ public:
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
-                                    int FrameIdx,
-                                    int64_t Offset) const override;
+  Register materializeFrameBaseRegister(MachineBasicBlock *MBB, int FrameIdx,
+                                        int64_t Offset) const override;
   void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
@@ -207,6 +209,11 @@ public:
                       unsigned DstSubReg,
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
+
+  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                            unsigned DefSubReg,
+                            const TargetRegisterClass *SrcRC,
+                            unsigned SrcSubReg) const override;
 };
 
 } // end namespace llvm

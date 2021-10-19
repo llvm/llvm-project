@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple armv7-apple-ios -target-feature +neon  %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-AARCH64
+// RUN: %clang_cc1 -triple arm64-linux-gnu -target-feature +neon -target-feature +bf16 %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-AARCH64-BF16
 
 typedef float float32_t;
 typedef double float64_t;
@@ -13,6 +14,10 @@ typedef signed char poly8_t;
 typedef short poly16_t;
 #endif
 typedef unsigned __INT64_TYPE__ uint64_t;
+
+#if defined(__ARM_FEATURE_BF16)
+typedef __bf16 bfloat16_t;
+#endif
 
 typedef __attribute__((neon_vector_type(2))) int int32x2_t;
 typedef __attribute__((neon_vector_type(4))) int int32x4_t;
@@ -27,6 +32,10 @@ typedef __attribute__((neon_vector_type(2))) float64_t float64x2_t;
 #endif
 typedef __attribute__((neon_polyvector_type(16))) poly8_t  poly8x16_t;
 typedef __attribute__((neon_polyvector_type(8)))  poly16_t poly16x8_t;
+
+#if defined(__ARM_FEATURE_BF16)
+typedef __attribute__((neon_vector_type(4))) __bf16 bfloat16x4_t;
+#endif
 
 // CHECK: 16__simd64_int32_t
 // CHECK-AARCH64: 11__Int32x2_t
@@ -71,4 +80,9 @@ void f10(poly16x8_t v) {}
 #ifdef __aarch64__
 // CHECK-AARCH64: 13__Float64x2_t
 void f11(float64x2_t v) { }
+#endif
+
+#if defined(__ARM_FEATURE_BF16)
+// CHECK-AARCH64-BF16: 14__Bfloat16x4_t
+void f12(bfloat16x4_t v) {}
 #endif

@@ -11,40 +11,40 @@ namespace lldb {
 %feature("docstring",
 "Represents the target program running under the debugger.
 
-SBTarget supports module, breakpoint, and watchpoint iterations. For example,
+SBTarget supports module, breakpoint, and watchpoint iterations. For example, ::
 
     for m in target.module_iter():
         print m
 
-produces:
+produces: ::
 
-(x86_64) /Volumes/data/lldb/svn/trunk/test/python_api/lldbutil/iter/a.out
-(x86_64) /usr/lib/dyld
-(x86_64) /usr/lib/libstdc++.6.dylib
-(x86_64) /usr/lib/libSystem.B.dylib
-(x86_64) /usr/lib/system/libmathCommon.A.dylib
-(x86_64) /usr/lib/libSystem.B.dylib(__commpage)
+    (x86_64) /Volumes/data/lldb/svn/trunk/test/python_api/lldbutil/iter/a.out
+    (x86_64) /usr/lib/dyld
+    (x86_64) /usr/lib/libstdc++.6.dylib
+    (x86_64) /usr/lib/libSystem.B.dylib
+    (x86_64) /usr/lib/system/libmathCommon.A.dylib
+    (x86_64) /usr/lib/libSystem.B.dylib(__commpage)
 
-and,
+and, ::
 
     for b in target.breakpoint_iter():
         print b
 
-produces:
+produces: ::
 
-SBBreakpoint: id = 1, file ='main.cpp', line = 66, locations = 1
-SBBreakpoint: id = 2, file ='main.cpp', line = 85, locations = 1
+    SBBreakpoint: id = 1, file ='main.cpp', line = 66, locations = 1
+    SBBreakpoint: id = 2, file ='main.cpp', line = 85, locations = 1
 
-and,
+and, ::
 
     for wp_loc in target.watchpoint_iter():
         print wp_loc
 
-produces:
+produces: ::
 
-Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
-    declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
-    hw_index = 0  hit_count = 2     ignore_count = 0"
+    Watchpoint 1: addr = 0x1034ca048 size = 4 state = enabled type = rw
+        declare @ '/Volumes/data/lldb/svn/trunk/test/python_api/watchpoint/main.c:12'
+        hw_index = 0  hit_count = 2     ignore_count = 0"
 ) SBTarget;
 class SBTarget
 {
@@ -208,30 +208,16 @@ public:
     %feature("docstring", "
     Launch a new process with sensible defaults.
 
-    @param[in] argv
-        The argument array.
+    :param argv: The argument array.
+    :param envp: The environment array.
+    :param working_directory: The working directory to have the child process run in
+    :return: The newly created process.
+    :rtype: SBProcess
 
-    @param[in] envp
-        The environment array.
+    A pseudo terminal will be used as stdin/stdout/stderr.
+    No launch flags are passed and the target's debuger is used as a listener.
 
-    @param[in] working_directory
-        The working directory to have the child process run in
-
-    Default: listener
-        Set to the target's debugger (SBTarget::GetDebugger())
-
-    Default: launch_flags
-        Empty launch flags
-
-    Default: stdin_path
-    Default: stdout_path
-    Default: stderr_path
-        A pseudo terminal will be used.
-
-    @return
-         A process object for the newly created process.
-
-    For example,
+    For example, ::
 
         process = target.LaunchSimple(['X', 'Y', 'Z'], None, os.getcwd())
 
@@ -389,16 +375,13 @@ public:
     FindModule (const lldb::SBFileSpec &file_spec);
 
     %feature("docstring", "
-    Find compile units related to *this target and passed source
+    Find compile units related to this target and passed source
     file.
 
-    @param[in] sb_file_spec
-        A lldb::SBFileSpec object that contains source file
+    :param sb_file_spec: A :py:class:`lldb::SBFileSpec` object that contains source file
         specification.
-
-    @return
-        A lldb::SBSymbolContextList that gets filled in with all of
-        the symbol contexts for all the matches.") FindCompileUnits;
+    :return: The symbol contexts for all the matches.
+    :rtype: SBSymbolContextList") FindCompileUnits;
     lldb::SBSymbolContextList
     FindCompileUnits (const lldb::SBFileSpec &sb_file_spec);
 
@@ -414,18 +397,18 @@ public:
     %feature("docstring", "
     Architecture data byte width accessor
 
-    @return
-    The size in 8-bit (host) bytes of a minimum addressable
-    unit from the Architecture's data bus") GetDataByteSize;
+    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.
+
+    ") GetDataByteSize;
     uint32_t
     GetDataByteSize ();
 
     %feature("docstring", "
-    Architecture code byte width accessor
+    Architecture code byte width accessor.
 
-    @return
-    The size in 8-bit (host) bytes of a minimum addressable
-    unit from the Architecture's code bus") GetCodeByteSize;
+    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.
+
+    ") GetCodeByteSize;
     uint32_t
     GetCodeByteSize ();
 
@@ -446,17 +429,16 @@ public:
     %feature("docstring", "
     Find functions by name.
 
-    @param[in] name
-        The name of the function we are looking for.
+    :param name: The name of the function we are looking for.
 
-    @param[in] name_type_mask
+    :param name_type_mask:
         A logical OR of one or more FunctionNameType enum bits that
         indicate what kind of names should be used when doing the
         lookup. Bits include fully qualified names, base names,
         C++ methods, or ObjC selectors.
         See FunctionNameType for more details.
 
-    @return
+    :return:
         A lldb::SBSymbolContextList that gets filled in with all of
         the symbol contexts for all the matches.") FindFunctions;
     lldb::SBSymbolContextList
@@ -580,6 +562,12 @@ public:
                                 SBFileSpecList &module_list);
 
     lldb::SBBreakpoint
+    BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line,
+                                uint32_t column, lldb::addr_t offset,
+                                SBFileSpecList &module_list,
+                                bool move_to_nearest_code);
+
+    lldb::SBBreakpoint
     BreakpointCreateByName (const char *symbol_name, const char *module_name = NULL);
 
     lldb::SBBreakpoint
@@ -688,41 +676,42 @@ public:
 
     @param[in] class_name
        This is the name of the class that implements a scripted resolver.
-       The class should have the following signature:
-       class Resolver:
-           def __init__(self, bkpt, extra_args):
-               # bkpt - the breakpoint for which this is the resolver.  When
-               # the resolver finds an interesting address, call AddLocation
-               # on this breakpoint to add it.
-               #
-               # extra_args - an SBStructuredData that can be used to
-               # parametrize this instance.  Same as the extra_args passed
-               # to BreakpointCreateFromScript.
+       The class should have the following signature: ::
 
-           def __get_depth__ (self):
-               # This is optional, but if defined, you should return the
-               # depth at which you want the callback to be called.  The
-               # available options are:
-               #    lldb.eSearchDepthModule
-               #    lldb.eSearchDepthCompUnit
-               # The default if you don't implement this method is
-               # eSearchDepthModule.
+           class Resolver:
+               def __init__(self, bkpt, extra_args):
+                   # bkpt - the breakpoint for which this is the resolver.  When
+                   # the resolver finds an interesting address, call AddLocation
+                   # on this breakpoint to add it.
+                   #
+                   # extra_args - an SBStructuredData that can be used to
+                   # parametrize this instance.  Same as the extra_args passed
+                   # to BreakpointCreateFromScript.
 
-           def __callback__(self, sym_ctx):
-               # sym_ctx - an SBSymbolContext that is the cursor in the
-               # search through the program to resolve breakpoints.
-               # The sym_ctx will be filled out to the depth requested in
-               # __get_depth__.
-               # Look in this sym_ctx for new breakpoint locations,
-               # and if found use bkpt.AddLocation to add them.
-               # Note, you will only get called for modules/compile_units that
-               # pass the SearchFilter provided by the module_list & file_list
-               # passed into BreakpointCreateFromScript.
+               def __get_depth__ (self):
+                   # This is optional, but if defined, you should return the
+                   # depth at which you want the callback to be called.  The
+                   # available options are:
+                   #    lldb.eSearchDepthModule
+                   #    lldb.eSearchDepthCompUnit
+                   # The default if you don't implement this method is
+                   # eSearchDepthModule.
 
-           def get_short_help(self):
-               # Optional, but if implemented return a short string that will
-               # be printed at the beginning of the break list output for the
-               # breakpoint.
+               def __callback__(self, sym_ctx):
+                   # sym_ctx - an SBSymbolContext that is the cursor in the
+                   # search through the program to resolve breakpoints.
+                   # The sym_ctx will be filled out to the depth requested in
+                   # __get_depth__.
+                   # Look in this sym_ctx for new breakpoint locations,
+                   # and if found use bkpt.AddLocation to add them.
+                   # Note, you will only get called for modules/compile_units that
+                   # pass the SearchFilter provided by the module_list & file_list
+                   # passed into BreakpointCreateFromScript.
+
+               def get_short_help(self):
+                   # Optional, but if implemented return a short string that will
+                   # be printed at the beginning of the break list output for the
+                   # breakpoint.
 
     @param[in] extra_args
        This is an SBStructuredData object that will get passed to the
@@ -902,11 +891,12 @@ public:
 
     %feature("docstring", "
     Disassemble a specified number of instructions starting at an address.
-    Parameters:
-       base_addr       -- the address to start disassembly from
-       count           -- the number of instructions to disassemble
-       flavor_string   -- may be 'intel' or 'att' on x86 targets to specify that style of disassembly
-    Returns an SBInstructionList.")
+
+    :param base_addr: the address to start disassembly from.
+    :param count: the number of instructions to disassemble.
+    :param flavor_string: may be 'intel' or 'att' on x86 targets to specify that style of disassembly.
+    :rtype: SBInstructionList
+    ")
     ReadInstructions;
     lldb::SBInstructionList
     ReadInstructions (lldb::SBAddress base_addr, uint32_t count);
@@ -916,23 +906,25 @@ public:
 
     %feature("docstring", "
     Disassemble the bytes in a buffer and return them in an SBInstructionList.
-    Parameters:
-       base_addr -- used for symbolicating the offsets in the byte stream when disassembling
-       buf       -- bytes to be disassembled
-       size      -- (C++) size of the buffer
-    Returns an SBInstructionList.")
+
+    :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.
+    :param buf: bytes to be disassembled.
+    :param size: (C++) size of the buffer.
+    :rtype: SBInstructionList
+    ")
     GetInstructions;
     lldb::SBInstructionList
     GetInstructions (lldb::SBAddress base_addr, const void *buf, size_t size);
 
     %feature("docstring", "
     Disassemble the bytes in a buffer and return them in an SBInstructionList, with a supplied flavor.
-    Parameters:
-       base_addr -- used for symbolicating the offsets in the byte stream when disassembling
-       flavor    -- may be 'intel' or 'att' on x86 targets to specify that style of disassembly
-       buf       -- bytes to be disassembled
-       size      -- (C++) size of the buffer
-    Returns an SBInstructionList.")
+
+    :param base_addr: used for symbolicating the offsets in the byte stream when disassembling.
+    :param flavor:  may be 'intel' or 'att' on x86 targets to specify that style of disassembly.
+    :param buf: bytes to be disassembled.
+    :param size: (C++) size of the buffer.
+    :rtype: SBInstructionList
+    ")
     GetInstructionsWithFlavor;
     lldb::SBInstructionList
     GetInstructionsWithFlavor (lldb::SBAddress base_addr, const char *flavor_string, const void *buf, size_t size);
@@ -945,6 +937,16 @@ public:
 
     lldb::addr_t
     GetStackRedZoneSize();
+
+    %feature("docstring", "
+    Returns true if the module has been loaded in this `SBTarget`.
+    A module can be loaded either by the dynamic loader or by being manually
+    added to the target (see `SBTarget.AddModule` and the `target module add` command).
+
+    :rtype: bool
+    ") IsLoaded;
+    bool
+    IsLoaded (const lldb::SBModule &module) const;
 
     lldb::SBLaunchInfo
     GetLaunchInfo () const;
@@ -971,6 +973,12 @@ public:
     EvaluateExpression (const char *expr, const lldb::SBExpressionOptions &options);
 
     STRING_EXTENSION_LEVEL(SBTarget, lldb::eDescriptionLevelBrief)
+
+    lldb::SBTrace
+    GetTrace ();
+
+    lldb::SBTrace
+    CreateTrace (lldb::SBError &error);
 
 #ifdef SWIGPYTHON
     %pythoncode %{

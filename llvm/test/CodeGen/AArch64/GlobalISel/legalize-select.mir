@@ -16,15 +16,17 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[COPY]](<2 x s64>), [[BUILD_VECTOR]]
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ICMP]](<2 x s64>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s64)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC]](s1), [[UV2]], [[UV4]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[TRUNC1]](s1), [[UV3]], [[UV5]]
-    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT]](s64), [[SELECT1]](s64)
-    ; CHECK: $q0 = COPY [[BUILD_VECTOR1]](<2 x s64>)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ICMP]], [[BUILD_VECTOR1]](<2 x s64>)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR1]](<2 x s64>)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C2]](s64), [[C2]](s64)
+    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[ASHR]], [[BUILD_VECTOR2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(<2 x s64>) = G_AND [[COPY1]], [[ASHR]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s64>) = G_AND [[COPY]], [[XOR]]
+    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[AND]], [[AND1]]
+    ; CHECK: $q0 = COPY [[OR]](<2 x s64>)
     ; CHECK: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
@@ -51,15 +53,17 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
     ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sgt), [[COPY]](<2 x s32>), [[BUILD_VECTOR]]
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ICMP]](<2 x s32>)
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[UV]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[UV1]](s32)
-    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV2]], [[UV4]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC1]](s1), [[UV3]], [[UV5]]
-    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
-    ; CHECK: $d0 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<2 x s32>) = G_SHL [[ICMP]], [[BUILD_VECTOR1]](<2 x s32>)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<2 x s32>) = G_ASHR [[SHL]], [[BUILD_VECTOR1]](<2 x s32>)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C2]](s32), [[C2]](s32)
+    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s32>) = G_XOR [[ASHR]], [[BUILD_VECTOR2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY1]], [[ASHR]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY]], [[XOR]]
+    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s32>) = G_OR [[AND]], [[AND1]]
+    ; CHECK: $d0 = COPY [[OR]](<2 x s32>)
     ; CHECK: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
@@ -71,3 +75,108 @@ body:             |
     RET_ReallyLR implicit $d0
 
 ...
+---
+name:            v16s8
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: v16s8
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8), [[C]](s8)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sgt), [[COPY]](<16 x s8>), [[BUILD_VECTOR]]
+    ; CHECK: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 7
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8), [[C1]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(<16 x s8>) = G_SHL [[ICMP]], [[BUILD_VECTOR1]](<16 x s8>)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(<16 x s8>) = G_ASHR [[SHL]], [[BUILD_VECTOR1]](<16 x s8>)
+    ; CHECK: [[C2:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
+    ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8), [[C2]](s8)
+    ; CHECK: [[XOR:%[0-9]+]]:_(<16 x s8>) = G_XOR [[ASHR]], [[BUILD_VECTOR2]]
+    ; CHECK: [[AND:%[0-9]+]]:_(<16 x s8>) = G_AND [[COPY1]], [[ASHR]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(<16 x s8>) = G_AND [[COPY]], [[XOR]]
+    ; CHECK: [[OR:%[0-9]+]]:_(<16 x s8>) = G_OR [[AND]], [[AND1]]
+    ; CHECK: $q0 = COPY [[OR]](<16 x s8>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(<16 x s8>) = COPY $q0
+    %1:_(<16 x s8>) = COPY $q1
+    %3:_(s8) = G_CONSTANT i8 0
+    %2:_(<16 x s8>) = G_BUILD_VECTOR %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8), %3(s8)
+    %4:_(<16 x s1>) = G_ICMP intpred(sgt), %0(<16 x s8>), %2
+    %5:_(<16 x s8>) = G_SELECT %4(<16 x s1>), %1, %0
+    $q0 = COPY %5(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            scalar_mask
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$q0' }
+body:             |
+  bb.1:
+    liveins: $q0, $w0
+
+    ; CHECK-LABEL: name: scalar_mask
+    ; CHECK: liveins: $q0, $w0
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4100
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[C]]
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ICMP]], 1
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[DEF]], [[SEXT_INREG]](s32), [[C2]](s64)
+    ; CHECK: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[IVEC]](<4 x s32>), [[DEF]], shufflemask(0, 0, 0, 0)
+    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C3]](s32), [[C3]](s32), [[C3]](s32), [[C3]](s32)
+    ; CHECK: [[XOR:%[0-9]+]]:_(<4 x s32>) = G_XOR [[SHUF]], [[BUILD_VECTOR1]]
+    ; CHECK: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[COPY1]], [[SHUF]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[BUILD_VECTOR]], [[XOR]]
+    ; CHECK: [[OR:%[0-9]+]]:_(<4 x s32>) = G_OR [[AND]], [[AND1]]
+    ; CHECK: $q0 = COPY [[OR]](<4 x s32>)
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:_(s32) = COPY $w0
+    %1:_(<4 x s32>) = COPY $q0
+    %2:_(s32) = G_CONSTANT i32 4100
+    %6:_(s32) = G_FCONSTANT float 0.000000e+00
+    %5:_(<4 x s32>) = G_BUILD_VECTOR %6(s32), %6(s32), %6(s32), %6(s32)
+    %3:_(s1) = G_ICMP intpred(eq), %0(s32), %2
+    %4:_(<4 x s32>) = G_SELECT %3(s1), %1, %5
+    $q0 = COPY %4(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            s88
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $x0
+
+    ; CHECK-LABEL: name: s88
+    ; CHECK: liveins: $w0, $w1, $x0
+    ; CHECK: %a:_(s32) = COPY $w0
+    ; CHECK: %b:_(s32) = COPY $w1
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), %a(s32), %b
+    ; CHECK: %cmp:_(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT %cmp(s1), [[DEF]], [[DEF]]
+    ; CHECK: $x0 = COPY [[SELECT]](s64)
+    ; CHECK: RET_ReallyLR implicit $x0
+    %a:_(s32) = COPY $w0
+    %b:_(s32) = COPY $w1
+    %cmp:_(s1) = G_ICMP intpred(sgt), %a(s32), %b
+    %sel_a:_(s88) = G_IMPLICIT_DEF
+    %sel_b:_(s88) = G_IMPLICIT_DEF
+    %select:_(s88) = G_SELECT %cmp(s1), %sel_a, %sel_b
+    %trunc:_(s64) = G_TRUNC %select
+    $x0 = COPY %trunc
+    RET_ReallyLR implicit $x0

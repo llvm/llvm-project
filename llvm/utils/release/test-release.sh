@@ -19,9 +19,6 @@ else
 fi
 generator="Unix Makefiles"
 
-# Base SVN URL for the sources.
-Base_url="http://llvm.org/svn/llvm-project"
-
 Release=""
 Release_no_dot=""
 RC=""
@@ -38,10 +35,10 @@ do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="yes"
 do_lld="yes"
-do_lldb="no"
+do_lldb="yes"
 do_polly="yes"
 do_mlir="yes"
-do_flang="no"
+do_flang="yes"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -75,6 +72,7 @@ function usage() {
     echo " -no-lldb             Disable check-out & build lldb (default)"
     echo " -no-polly            Disable check-out & build Polly"
     echo " -no-mlir             Disable check-out & build MLIR"
+    echo " -no-flang            Disable check-out & build Flang"
 }
 
 while [ $# -gt 0 ]; do
@@ -173,8 +171,8 @@ while [ $# -gt 0 ]; do
         -no-mlir )
             do_mlir="no"
             ;;
-        -flang )
-            do_flang="yes"
+        -no-flang )
+            do_flang="no"
             ;;
         -help | --help | -h | --h | -\? )
             usage
@@ -188,6 +186,11 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ $do_mlir = "no" ] && [ $do_flang = "yes" ]; then
+  echo "error: cannot build Flang without MLIR"
+  exit 1
+fi
 
 # Check required arguments.
 if [ -z "$Release" ]; then
@@ -502,11 +505,8 @@ fi
 # Setup the test-suite.  Do this early so we can catch failures before
 # we do the full 3 stage build.
 if [ $do_test_suite = "yes" ]; then
-  venv=virtualenv
-  if ! type -P 'virtualenv' > /dev/null 2>&1 ; then
-    check_program_exists 'python3'
-    venv="python3 -m venv"
-  fi
+  check_program_exists 'python3'
+  venv="python3 -m venv"
 
   SandboxDir="$BuildDir/sandbox"
   Lit=$SandboxDir/bin/lit

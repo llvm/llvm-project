@@ -20,7 +20,7 @@
 # CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]	(0x01)
 # CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]	(1)
 # CHECK-NEXT: DW_AT_prototyped [DW_FORM_flag_present]	(true)
-# CHECK-NEXT: DW_AT_type [DW_FORM_ref4]	(cu + 0x0052 => {0x00000052} "")
+# CHECK-NEXT: DW_AT_type [DW_FORM_ref4]	(cu + 0x0052 => {0x00000052})
 # CHECK-NEXT: DW_AT_external [DW_FORM_flag_present]	(true){{[[:space:]]}}
 # CHECK-NEXT: error: DIE has DW_AT_type with incompatible tag DW_TAG_null{{[[:space:]]}}
 # CHECK-NEXT: 0x0000002b: DW_TAG_subprogram [2] *
@@ -31,7 +31,7 @@
 # CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]   (0x01)
 # CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]   (1)
 # CHECK-NEXT: DW_AT_prototyped [DW_FORM_flag_present]   (true)
-# CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0052 => {0x00000052} "")
+# CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0052 => {0x00000052})
 # CHECK-NEXT: DW_AT_external [DW_FORM_flag_present]     (true){{[[:space:]]}}
 # CHECK-NEXT: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table{{[[:space:]]}}
 # CHECK-NEXT: 0x00000044: DW_TAG_variable [3]

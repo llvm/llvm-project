@@ -24,6 +24,9 @@ type llcontext
     objects. See the [llvm::Module] class. *)
 type llmodule
 
+(** Opaque representation of Metadata nodes. See the [llvm::Metadata] class. *)
+type llmetadata
+
 (** Each value in the LLVM IR has a type, an instance of [lltype]. See the
     [llvm::Type] class. *)
 type lltype
@@ -77,6 +80,9 @@ module TypeKind : sig
   | Metadata
   | X86_mmx
   | Token
+  | ScalableVector
+  | BFloat
+  | X86_amx
 end
 
 (** The linkage of a global value, accessed with {!linkage} and
@@ -268,6 +274,7 @@ module Opcode : sig
   | CatchSwitch
   | FNeg
   | CallBr
+  | Freeze
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -319,6 +326,8 @@ module AtomicRMWBinOp : sig
   | Min
   | UMax
   | UMin
+  | FAdd
+  | FSub
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].
@@ -347,6 +356,7 @@ module ValueKind : sig
   | GlobalIFunc
   | GlobalVariable
   | UndefValue
+  | PoisonValue
   | Instruction of Opcode.t
 end
 
@@ -360,6 +370,15 @@ module DiagnosticSeverity : sig
   | Note
 end
 
+module ModuleFlagBehavior :sig
+  type t =
+  | Error
+  | Warning
+  | Require
+  | Override
+  | Append
+  | AppendUnique
+end
 
 (** {6 Iteration} *)
 
@@ -524,7 +543,24 @@ val set_module_inline_asm : llmodule -> string -> unit
     See the method [llvm::Module::getContext] *)
 val module_context : llmodule -> llcontext
 
+(** [get_module_identifier m] returns the module identifier of the
+    specified module. See the method [llvm::Module::getModuleIdentifier] *)
+val get_module_identifier : llmodule -> string
 
+(** [set_module_identifier m id] sets the module identifier of [m]
+    to [id]. See the method [llvm::Module::setModuleIdentifier] *)
+val set_module_identifer : llmodule -> string -> unit
+
+(** [get_module_flag m k] Return the corresponding value if key [k] appears in
+    the module flags of [m], otherwise return None
+    See the method [llvm::Module::getModuleFlag] *)
+val get_module_flag : llmodule -> string -> llmetadata option
+
+(** [add_module_flag m b k v] Add a module-level flag b, with key [k] and
+    value [v] to the flags metadata of module [m]. It will create the 
+    module-level flags named metadata if it doesn't already exist. *)
+val add_module_flag : llmodule -> ModuleFlagBehavior.t ->
+                        string -> llmetadata -> unit
 (** {6 Types} *)
 
 (** [classify_type ty] returns the {!TypeKind.t} corresponding to the type [ty].
@@ -842,6 +878,10 @@ val const_pointer_null : lltype -> llvalue
     See the method [llvm::UndefValue::get]. *)
 val undef : lltype -> llvalue
 
+(** [poison ty] returns the poison value of the type [ty].
+    See the method [llvm::PoisonValue::get]. *)
+val poison : lltype -> llvalue
+
 (** [is_null v] returns [true] if the value [v] is the null (zero) value.
     See the method [llvm::Constant::isNullValue]. *)
 val is_null : llvalue -> bool
@@ -849,6 +889,10 @@ val is_null : llvalue -> bool
 (** [is_undef v] returns [true] if the value [v] is an undefined value, [false]
     otherwise. Similar to [llvm::isa<UndefValue>]. *)
 val is_undef : llvalue -> bool
+
+(** [is_poison v] returns [true] if the value [v] is a poison value, [false]
+    otherwise. Similar to [llvm::isa<PoisonValue>]. *)
+val is_poison : llvalue -> bool
 
 (** [constexpr_opcode v] returns an [Opcode.t] corresponding to constexpr
     value [v], or [Opcode.Invalid] if [v] is not a constexpr. *)
@@ -910,6 +954,13 @@ val get_named_metadata : llmodule -> string -> llvalue array
     [llvm::MDNode::addOperand()]. *)
 val add_named_metadata_operand : llmodule -> string -> llvalue -> unit
 
+(** Obtain a Metadata as a Value.
+    See the method [llvm::ValueAsMetadata::get()]. *)
+val value_as_metadata : llvalue -> llmetadata
+
+(** Obtain a Value as a Metadata.
+    See the method [llvm::MetadataAsValue::get()]. *)
+val metadata_as_value : llcontext -> llmetadata -> llvalue
 
 (** {7 Operations on scalar constants} *)
 
@@ -917,8 +968,9 @@ val add_named_metadata_operand : llmodule -> string -> llvalue -> unit
     See the method [llvm::ConstantInt::get]. *)
 val const_int : lltype -> int -> llvalue
 
-(** [const_of_int64 ty i] returns the integer constant of type [ty] and value
-    [i]. See the method [llvm::ConstantInt::get]. *)
+(** [const_of_int64 ty i s] returns the integer constant of type [ty] and value
+    [i]. [s] indicates whether the integer is signed or not.
+    See the method [llvm::ConstantInt::get]. *)
 val const_of_int64 : lltype -> Int64.t -> bool -> llvalue
 
 (** [int64_of_const c] returns the int64 value of the [c] constant integer.
@@ -1369,6 +1421,12 @@ val alignment : llvalue -> int
     [n] bytes. See the method [llvm::GlobalValue::setAlignment]. *)
 val set_alignment : int -> llvalue -> unit
 
+(** [global_copy_all_metadata g] returns all the metadata associated with [g],
+    which must be an [Instruction] or [GlobalObject].
+    See the [llvm::Instruction::getAllMetadata()] and
+    [llvm::GlobalObject::getAllMetadata()] methods. *)
+val global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
+
 
 (** {7 Operations on global variables} *)
 
@@ -1454,9 +1512,9 @@ val is_global_constant : llvalue -> bool
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
 
-(** [global_initializer gv] returns the initializer for the global variable
-    [gv]. See the method [llvm::GlobalVariable::getInitializer]. *)
-val global_initializer : llvalue -> llvalue
+(** [global_initializer gv] If global variable [gv] has an initializer it is returned,
+    otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
+val global_initializer : llvalue -> llvalue option
 
 (** [set_initializer c gv] sets the initializer for the global variable
     [gv] to the constant [c].

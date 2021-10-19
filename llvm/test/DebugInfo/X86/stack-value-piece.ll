@@ -26,15 +26,15 @@
 ; CHECK:   DW_AT_name ("f")
 ; CHECK:   DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_location ([[F:0x[0-9a-f]+]]
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4
-; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_piece 0x4, DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, {{(DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4|DW_OP_implicit_value 0x4 0x00 0x00 0x00 0x00)}}
+; CHECK-NEXT:     [{{.*}}, {{.*}}): DW_OP_piece 0x4, {{(DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4|DW_OP_implicit_value 0x4 0x00 0x00 0x00 0x00)}})
 ; CHECK-NEXT:   DW_AT_name ("r")
 ;
 ; CHECK: .debug_loc contents:
 ; CHECK:      [[I]]:
 ; CHECK-NEXT:   ({{.*}}, {{.*}}): DW_OP_reg5 RDI, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4
 ; CHECK:      [[F]]:
-; CHECK-NEXT:   ({{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4
+; CHECK-NEXT:   ({{.*}}, {{.*}}): DW_OP_reg17 XMM0, DW_OP_piece 0x4, {{DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4|DW_OP_implicit_value 0x4 0x00 0x00 0x00 0x00}}
 
 source_filename = "stack-value-piece.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

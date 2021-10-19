@@ -14,7 +14,7 @@ def OpA : NS_Op<"one_normal_result_op", []> {
 }
 
 // CHECK-LABEL: void OpA::build
-// CHECK:         ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange operands
+// CHECK:         ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands
 // CHECK:         assert(resultTypes.size() == 1u && "mismatched number of return types");
 // CHECK-NEXT:    odsState.addTypes(resultTypes);
 
@@ -39,7 +39,7 @@ def OpC : NS_Op<"three_normal_result_op", []> {
 // CHECK-NEXT:   odsState.addTypes(resultType1)
 // CHECK-NEXT:   odsState.addTypes(z)
 
-// CHECK:      void OpC::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::llvm::ArrayRef<::mlir::Type> resultTypes) {
+// CHECK:      void OpC::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes) {
 // CHECK-NEXT:   assert(resultTypes.size() == 3u && "mismatched number of results");
 // CHECK-NEXT:   odsState.addTypes(resultTypes);
 
@@ -67,7 +67,7 @@ def OpF : NS_Op<"one_variadic_result_op", []> {
 }
 
 // CHECK-LABEL: void OpF::build
-// CHECK-SAME:    ::llvm::ArrayRef<::mlir::Type> x
+// CHECK-SAME:    ::mlir::TypeRange x
 // CHECK-NOT:     assert
 // CHECK:         odsState.addTypes(x);
 
@@ -78,12 +78,12 @@ def OpG : NS_Op<"one_normal_and_one_variadic_result_op", []> {
 
 // CHECK-LABEL: OpG definitions
 
-// CHECK:      void OpG::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type x, ::llvm::ArrayRef<::mlir::Type> y)
+// CHECK:      void OpG::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type x, ::mlir::TypeRange y)
 // CHECK-NEXT:   odsState.addTypes(x);
 // CHECK-NEXT:   odsState.addTypes(y);
 
 // CHECK:       void OpG::build
-// CHECK:         ::llvm::ArrayRef<::mlir::Type> resultTypes
+// CHECK:         ::mlir::TypeRange resultTypes
 // CHECK:         assert(resultTypes.size() >= 1u && "mismatched number of return types");
 // CHECK-NEXT:    odsState.addTypes(resultTypes);
 
@@ -110,17 +110,28 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
   let results = (outs AnyTensor:$result);
 }
 
-// CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes )
+// CHECK-LABEL: OpK::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
 // CHECK: odsState.addTypes({operands[0].getType()});
 
 // Test with inferred shapes and interleaved with operands/attributes.
 //
-def OpL : NS_Op<"op_with_all_types_constraint",
+def OpL1 : NS_Op<"op_with_all_types_constraint",
     [AllTypesMatch<["a", "b"]>]> {
   let arguments = (ins I32Attr:$attr1, AnyType:$a);
   let results = (outs Res<AnyType, "output b", []>:$b);
 }
 
-// CHECK-LABEL: LogicalResult OpL::inferReturnTypes
+// CHECK-LABEL: LogicalResult OpL1::inferReturnTypes
 // CHECK-NOT: }
 // CHECK: inferredReturnTypes[0] = operands[0].getType();
+
+def OpL2 : NS_Op<"op_with_all_types_constraint",
+    [AllTypesMatch<["c", "b"]>, AllTypesMatch<["a", "d"]>]> {
+  let arguments = (ins I32Attr:$attr1, AnyType:$a, AnyType:$a2, AnyType:$c);
+  let results = (outs Res<AnyType, "output b", []>:$b, AnyType:$d);
+}
+
+// CHECK-LABEL: LogicalResult OpL2::inferReturnTypes
+// CHECK-NOT: }
+// CHECK: inferredReturnTypes[0] = operands[2].getType();
+// CHECK: inferredReturnTypes[1] = operands[0].getType();

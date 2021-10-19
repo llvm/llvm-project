@@ -24,10 +24,10 @@ namespace llvm {
   extern bool TimePassesIsEnabled;
 }
 
-static const char *const TimeIRParsingGroupName = "irparse";
-static const char *const TimeIRParsingGroupDescription = "LLVM IR Parsing";
-static const char *const TimeIRParsingName = "parse";
-static const char *const TimeIRParsingDescription = "Parse IR";
+const char TimeIRParsingGroupName[] = "irparse";
+const char TimeIRParsingGroupDescription[] = "LLVM IR Parsing";
+const char TimeIRParsingName[] = "parse";
+const char TimeIRParsingDescription[] = "Parse IR";
 
 std::unique_ptr<Module>
 llvm::getLazyIRModule(std::unique_ptr<MemoryBuffer> Buffer, SMDiagnostic &Err,
@@ -92,7 +92,7 @@ std::unique_ptr<Module>
 llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
                   DataLayoutCallbackTy DataLayoutCallback) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Err = SMDiagnostic(Filename, SourceMgr::DK_Error,
                        "Could not open input file: " + EC.message());

@@ -37,7 +37,7 @@ define void @basic_loop(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], <4 x i8>* [[TMP6]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
@@ -105,7 +105,7 @@ define void @metadata(i8* nocapture readonly %ptr, i32 %size, i8** %pos) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, i8* [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> [[WIDE_LOAD]], <4 x i8>* [[TMP6]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !4
 ; CHECK:       middle.block:

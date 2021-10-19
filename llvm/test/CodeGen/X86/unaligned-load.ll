@@ -42,8 +42,8 @@ define void @func() nounwind ssp {
 ;
 ; COREI7-LABEL: func:
 ; COREI7:       ## %bb.0: ## %entry
-; COREI7-NEXT:    movups _.str3+{{.*}}(%rip), %xmm0
-; COREI7-NEXT:    movups {{.*}}(%rip), %xmm1
+; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
+; COREI7-NEXT:    movups _.str3(%rip), %xmm1
 ; COREI7-NEXT:    .p2align 4, 0x90
 ; COREI7-NEXT:  LBB0_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -95,8 +95,8 @@ define void @func_aligned() nounwind ssp {
 ;
 ; COREI7-LABEL: func_aligned:
 ; COREI7:       ## %bb.0: ## %entry
-; COREI7-NEXT:    movups _.str3+{{.*}}(%rip), %xmm0
-; COREI7-NEXT:    movups {{.*}}(%rip), %xmm1
+; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
+; COREI7-NEXT:    movups _.str3(%rip), %xmm1
 ; COREI7-NEXT:    .p2align 4, 0x90
 ; COREI7-NEXT:  LBB1_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1

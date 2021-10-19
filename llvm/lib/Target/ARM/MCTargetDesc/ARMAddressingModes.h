@@ -687,6 +687,18 @@ namespace ARM_AM {
     return getFP16Imm(FPImm.bitcastToAPInt());
   }
 
+  /// If this is a FP16Imm encoded as a fp32 value, return the 8-bit encoding
+  /// for it. Otherwise return -1 like getFP16Imm.
+  inline int getFP32FP16Imm(const APInt &Imm) {
+    if (Imm.getActiveBits() > 16)
+      return -1;
+    return ARM_AM::getFP16Imm(Imm.trunc(16));
+  }
+
+  inline int getFP32FP16Imm(const APFloat &FPImm) {
+    return getFP32FP16Imm(FPImm.bitcastToAPInt());
+  }
+
   /// getFP32Imm - Return an 8-bit floating-point version of the 32-bit
   /// floating-point value. If the value cannot be represented as an 8-bit
   /// floating-point value, then return -1.

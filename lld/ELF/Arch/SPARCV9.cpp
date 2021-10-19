@@ -35,7 +35,6 @@ public:
 SPARCV9::SPARCV9() {
   copyRel = R_SPARC_COPY;
   gotRel = R_SPARC_GLOB_DAT;
-  noneRel = R_SPARC_NONE;
   pltRel = R_SPARC_JMP_SLOT;
   relativeRel = R_SPARC_RELATIVE;
   symbolicRel = R_SPARC_64;
@@ -78,7 +77,7 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
     return R_NONE;
   case R_SPARC_TLS_LE_HIX22:
   case R_SPARC_TLS_LE_LOX10:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));

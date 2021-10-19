@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10 %s
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
@@ -546,8 +546,8 @@ end:
 ; GCN-DAG: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
 ; GCN-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
 ; GCN-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
-; GCN-DAG: v_add_f32_e32 [[Z0:v[0-9]+]]
-; GCN-DAG: v_sub_f32_e32 [[Z1:v[0-9]+]]
+; GCN-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
+; GCN-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
 ; GCN: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}
 ; GCN-NEXT: exp param1 [[X]], [[Y]], [[Z1]], [[W1]] done{{$}}
 define amdgpu_kernel void @test_export_clustering(float %x, float %y) #0 {
@@ -567,6 +567,18 @@ define amdgpu_kernel void @test_export_pos_before_param(float %x, float %y) #0 {
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
   %z1 = fsub float %y, %x
   call void @llvm.amdgcn.exp.f32(i32 12, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_export_pos4_before_param:
+; GFX10: exp pos4
+; GFX10-NOT: s_waitcnt
+; GFX10: exp param0
+define amdgpu_kernel void @test_export_pos4_before_param(float %x, float %y) #0 {
+  %z0 = fadd float %x, %y
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float 1.0, float 1.0, float 1.0, float %z0, i1 false, i1 false)
+  %z1 = fsub float %y, %x
+  call void @llvm.amdgcn.exp.f32(i32 16, i32 15, float 0.0, float 0.0, float 0.0, float %z1, i1 true, i1 false)
   ret void
 }
 

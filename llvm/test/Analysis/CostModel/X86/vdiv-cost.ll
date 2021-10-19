@@ -2,15 +2,15 @@
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE2
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+ssse3 | FileCheck %s --check-prefixes=CHECK,SSE,SSSE3
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+sse4.2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE42
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX,AVX1
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512F
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512BW
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=CHECK,AVX512,AVX512DQ
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx | FileCheck %s --check-prefixes=CHECK,AVX1
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX2
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,AVX512
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=CHECK,AVX512
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -cost-model -analyze -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=CHECK,AVX512
 
 define <4 x i32> @test1(<4 x i32> %a) {
 ; CHECK-LABEL: 'test1'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = udiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %div = udiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
 ;
   %div = udiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
@@ -19,19 +19,19 @@ define <4 x i32> @test1(<4 x i32> %a) {
 
 define <8 x i32> @test2(<8 x i32> %a) {
 ; SSE-LABEL: 'test2'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX1-LABEL: 'test2'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX2-LABEL: 'test2'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX512-LABEL: 'test2'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
   %div = udiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7,i32 7, i32 7, i32 7, i32 7>
@@ -108,53 +108,29 @@ define <16 x i8> @test7(<16 x i8> %a) {
 }
 
 define <4 x i32> @test8(<4 x i32> %a) {
-; SSE2-LABEL: 'test8'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
-;
-; SSSE3-LABEL: 'test8'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
-;
-; SSE42-LABEL: 'test8'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
-;
-; AVX-LABEL: 'test8'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
-;
-; AVX512-LABEL: 'test8'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
+; CHECK-LABEL: 'test8'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %div
 ;
   %div = sdiv <4 x i32> %a, <i32 7, i32 7, i32 7, i32 7>
   ret <4 x i32> %div
 }
 
 define <8 x i32> @test9(<8 x i32> %a) {
-; SSE2-LABEL: 'test9'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
-;
-; SSSE3-LABEL: 'test9'
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
-;
-; SSE42-LABEL: 'test9'
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
+; SSE-LABEL: 'test9'
+; SSE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX1-LABEL: 'test9'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX2-LABEL: 'test9'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
 ; AVX512-LABEL: 'test9'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %div
 ;
   %div = sdiv <8 x i32> %a, <i32 7, i32 7, i32 7, i32 7,i32 7, i32 7, i32 7, i32 7>

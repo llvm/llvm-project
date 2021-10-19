@@ -13,6 +13,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -88,11 +89,15 @@ TEST_F(ModuleWithFunctionTest, CallInst) {
 
   // Make sure iteration over a call's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Call->arg_operands()) {
+  for (Value *Arg : Call->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Call->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
   }
+
+  Call->addRetAttr(Attribute::get(Call->getContext(), "test-str-attr"));
+  EXPECT_TRUE(Call->hasRetAttr("test-str-attr"));
+  EXPECT_FALSE(Call->hasRetAttr("not-on-call"));
 }
 
 TEST_F(ModuleWithFunctionTest, InvokeInst) {
@@ -106,7 +111,7 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
 
   // Make sure iteration over invoke's arguments works as expected.
   unsigned Idx = 0;
-  for (Value *Arg : Invoke->arg_operands()) {
+  for (Value *Arg : Invoke->args()) {
     EXPECT_EQ(FArgTypes[Idx], Arg->getType());
     EXPECT_EQ(Invoke->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
@@ -199,10 +204,10 @@ TEST(InstructionsTest, CastInst) {
   Type *V4Int16Ty = FixedVectorType::get(Int16Ty, 4);
   Type *V1Int16Ty = FixedVectorType::get(Int16Ty, 1);
 
-  Type *VScaleV2Int32Ty = VectorType::get(Int32Ty, 2, true);
-  Type *VScaleV2Int64Ty = VectorType::get(Int64Ty, 2, true);
-  Type *VScaleV4Int16Ty = VectorType::get(Int16Ty, 4, true);
-  Type *VScaleV1Int16Ty = VectorType::get(Int16Ty, 1, true);
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  Type *VScaleV2Int64Ty = ScalableVectorType::get(Int64Ty, 2);
+  Type *VScaleV4Int16Ty = ScalableVectorType::get(Int16Ty, 4);
+  Type *VScaleV1Int16Ty = ScalableVectorType::get(Int16Ty, 1);
 
   Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
   Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
@@ -213,26 +218,21 @@ TEST(InstructionsTest, CastInst) {
   Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
   Type *V4Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 4);
-  Type *VScaleV4Int32PtrAS1Ty = VectorType::get(Int32PtrAS1Ty, 4, true);
+  Type *VScaleV4Int32PtrAS1Ty = ScalableVectorType::get(Int32PtrAS1Ty, 4);
   Type *V4Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 4);
 
   Type *V2Int64PtrTy = FixedVectorType::get(Int64PtrTy, 2);
   Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
-  Type *VScaleV2Int32PtrTy = VectorType::get(Int32PtrTy, 2, true);
+  Type *VScaleV2Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 2);
   Type *V4Int32PtrTy = FixedVectorType::get(Int32PtrTy, 4);
-  Type *VScaleV4Int32PtrTy = VectorType::get(Int32PtrTy, 4, true);
-  Type *VScaleV4Int64PtrTy = VectorType::get(Int64PtrTy, 4, true);
+  Type *VScaleV4Int32PtrTy = ScalableVectorType::get(Int32PtrTy, 4);
+  Type *VScaleV4Int64PtrTy = ScalableVectorType::get(Int64PtrTy, 4);
 
   const Constant* c8 = Constant::getNullValue(V8x8Ty);
   const Constant* c64 = Constant::getNullValue(V8x64Ty);
 
   const Constant *v2ptr32 = Constant::getNullValue(V2Int32PtrTy);
 
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(X86MMXTy, V8x8Ty));
-  EXPECT_FALSE(CastInst::isCastable(Int64Ty, X86MMXTy));
-  EXPECT_TRUE(CastInst::isCastable(V8x64Ty, V8x8Ty));
-  EXPECT_TRUE(CastInst::isCastable(V8x8Ty, V8x64Ty));
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
 
@@ -248,7 +248,6 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrTy, V2Int32PtrAS1Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_TRUE(CastInst::isBitCastable(V2Int32PtrAS1Ty, V2Int64PtrAS1Ty));
-  EXPECT_TRUE(CastInst::isCastable(V2Int32PtrAS1Ty, V2Int32PtrTy));
   EXPECT_EQ(CastInst::AddrSpaceCast, CastInst::getCastOpcode(v2ptr32, true,
                                                              V2Int32PtrAS1Ty,
                                                              true));
@@ -373,11 +372,19 @@ TEST(InstructionsTest, CastInst) {
   Constant *NullV2I32Ptr = Constant::getNullValue(V2Int32PtrTy);
   auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
+  Constant *NullVScaleV2I32Ptr = Constant::getNullValue(VScaleV2Int32PtrTy);
+  auto Inst1VScale = CastInst::CreatePointerCast(
+      NullVScaleV2I32Ptr, VScaleV2Int32Ty, "foo.vscale", BB);
+
   // Second form
   auto Inst2 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty);
+  auto Inst2VScale =
+      CastInst::CreatePointerCast(NullVScaleV2I32Ptr, VScaleV2Int32Ty);
 
   delete Inst2;
+  delete Inst2VScale;
   Inst1->eraseFromParent();
+  Inst1VScale->eraseFromParent();
   delete BB;
 }
 
@@ -631,7 +638,7 @@ TEST(InstructionsTest, AlterCallBundles) {
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
-  EXPECT_EQ(Call->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Call->arg_size(), Clone->arg_size());
   EXPECT_EQ(Call->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Call->getCallingConv(), Clone->getCallingConv());
   EXPECT_EQ(Call->getTailCallKind(), Clone->getTailCallKind());
@@ -664,7 +671,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
       InvokeInst::Create(Invoke.get(), NewBundle));
   EXPECT_EQ(Invoke->getNormalDest(), Clone->getNormalDest());
   EXPECT_EQ(Invoke->getUnwindDest(), Clone->getUnwindDest());
-  EXPECT_EQ(Invoke->getNumArgOperands(), Clone->getNumArgOperands());
+  EXPECT_EQ(Invoke->arg_size(), Clone->arg_size());
   EXPECT_EQ(Invoke->getArgOperand(0), Clone->getArgOperand(0));
   EXPECT_EQ(Invoke->getCallingConv(), Clone->getCallingConv());
   EXPECT_TRUE(Clone->hasFnAttr(Attribute::AttrKind::Cold));
@@ -1072,6 +1079,40 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   EXPECT_FALSE(Id12->isIdentityWithExtract());
   EXPECT_FALSE(Id12->isConcat());
   delete Id12;
+
+  // Not possible to express shuffle mask for scalable vector for extract
+  // subvector.
+  Type *VScaleV4Int32Ty = ScalableVectorType::get(Int32Ty, 4);
+  ShuffleVectorInst *Id13 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV4Int32Ty),
+                            UndefValue::get(VScaleV4Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  int Index = 0;
+  EXPECT_FALSE(Id13->isExtractSubvectorMask(Index));
+  EXPECT_FALSE(Id13->changesLength());
+  EXPECT_FALSE(Id13->increasesLength());
+  delete Id13;
+
+  // Result has twice as many operands.
+  Type *VScaleV2Int32Ty = ScalableVectorType::get(Int32Ty, 2);
+  ShuffleVectorInst *Id14 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            UndefValue::get(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV4Int32Ty));
+  EXPECT_TRUE(Id14->changesLength());
+  EXPECT_TRUE(Id14->increasesLength());
+  delete Id14;
+
+  // Not possible to express these masks for scalable vectors, make sure we
+  // don't crash.
+  ShuffleVectorInst *Id15 =
+      new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty),
+                            Constant::getNullValue(VScaleV2Int32Ty));
+  EXPECT_FALSE(Id15->isIdentityWithPadding());
+  EXPECT_FALSE(Id15->isIdentityWithExtract());
+  EXPECT_FALSE(Id15->isConcat());
+  delete Id15;
 }
 
 TEST(InstructionsTest, GetSplat) {
@@ -1302,6 +1343,141 @@ TEST(InstructionsTest, UnaryOperator) {
 
   F->deleteValue();
   I->deleteValue();
+}
+
+TEST(InstructionsTest, DropLocation) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @no_parent_scope() {
+        call void @callee()           ; I1: Call with no location.
+        call void @callee(), !dbg !11 ; I2: Call with location.
+        ret void, !dbg !11            ; I3: Non-call with location.
+      }
+
+      define void @with_parent_scope() !dbg !8 {
+        call void @callee()           ; I1: Call with no location.
+        call void @callee(), !dbg !11 ; I2: Call with location.
+        ret void, !dbg !11            ; I3: Non-call with location.
+      }
+
+      !llvm.dbg.cu = !{!0}
+      !llvm.module.flags = !{!3, !4}
+      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+      !1 = !DIFile(filename: "t2.c", directory: "foo")
+      !2 = !{}
+      !3 = !{i32 2, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !10)
+      !10 = !{null}
+      !11 = !DILocation(line: 2, column: 7, scope: !8, inlinedAt: !12)
+      !12 = !DILocation(line: 3, column: 8, scope: !8)
+  )");
+  ASSERT_TRUE(M);
+
+  {
+    Function *NoParentScopeF =
+        cast<Function>(M->getNamedValue("no_parent_scope"));
+    BasicBlock &BB = NoParentScopeF->front();
+
+    auto *I1 = BB.getFirstNonPHI();
+    auto *I2 = I1->getNextNode();
+    auto *I3 = BB.getTerminator();
+
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+    I1->dropLocation();
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);
+    I2->dropLocation();
+    EXPECT_EQ(I1->getDebugLoc(), DebugLoc());
+
+    EXPECT_EQ(I3->getDebugLoc().getLine(), 2U);
+    I3->dropLocation();
+    EXPECT_EQ(I3->getDebugLoc(), DebugLoc());
+  }
+
+  {
+    Function *WithParentScopeF =
+        cast<Function>(M->getNamedValue("with_parent_scope"));
+    BasicBlock &BB = WithParentScopeF->front();
+
+    auto *I2 = BB.getFirstNonPHI()->getNextNode();
+
+    MDNode *Scope = cast<MDNode>(WithParentScopeF->getSubprogram());
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);
+    I2->dropLocation();
+    EXPECT_EQ(I2->getDebugLoc().getLine(), 0U);
+    EXPECT_EQ(I2->getDebugLoc().getScope(), Scope);
+    EXPECT_EQ(I2->getDebugLoc().getInlinedAt(), nullptr);
+  }
+}
+
+TEST(InstructionsTest, BranchWeightOverflow) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C,
+                                      R"(
+      declare void @callee()
+
+      define void @caller() {
+        call void @callee(), !prof !1
+        ret void
+      }
+
+      !1 = !{!"branch_weights", i32 20000}
+  )");
+  ASSERT_TRUE(M);
+  CallInst *CI =
+      cast<CallInst>(&M->getFunction("caller")->getEntryBlock().front());
+  uint64_t ProfWeight;
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, 20000U);
+  CI->updateProfWeight(10000000, 1);
+  CI->extractProfTotalWeight(ProfWeight);
+  ASSERT_EQ(ProfWeight, UINT32_MAX);
+}
+
+TEST(InstructionsTest, AllocaInst) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      %T = type { i64, [3 x i32]}
+      define void @f(i32 %n) {
+      entry:
+        %A = alloca i32, i32 1
+        %B = alloca i32, i32 4
+        %C = alloca i32, i32 %n
+        %D = alloca <8 x double>
+        %E = alloca <vscale x 8 x double>
+        %F = alloca [2 x half]
+        %G = alloca [2 x [3 x i128]]
+        %H = alloca %T
+        ret void
+      }
+    )");
+  const DataLayout &DL = M->getDataLayout();
+  ASSERT_TRUE(M);
+  Function *Fun = cast<Function>(M->getNamedValue("f"));
+  BasicBlock &BB = Fun->front();
+  auto It = BB.begin();
+  AllocaInst &A = cast<AllocaInst>(*It++);
+  AllocaInst &B = cast<AllocaInst>(*It++);
+  AllocaInst &C = cast<AllocaInst>(*It++);
+  AllocaInst &D = cast<AllocaInst>(*It++);
+  AllocaInst &E = cast<AllocaInst>(*It++);
+  AllocaInst &F = cast<AllocaInst>(*It++);
+  AllocaInst &G = cast<AllocaInst>(*It++);
+  AllocaInst &H = cast<AllocaInst>(*It++);
+  EXPECT_EQ(A.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(B.getAllocationSizeInBits(DL), TypeSize::getFixed(128));
+  EXPECT_FALSE(C.getAllocationSizeInBits(DL));
+  EXPECT_EQ(D.getAllocationSizeInBits(DL), TypeSize::getFixed(512));
+  EXPECT_EQ(E.getAllocationSizeInBits(DL), TypeSize::getScalable(512));
+  EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
+  EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
+  EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
 }
 
 } // end anonymous namespace

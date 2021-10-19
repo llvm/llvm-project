@@ -30,7 +30,7 @@ namespace test1 {
   int test() {
     return sizeof(B);
   }
-  // CHECK: define i32 @_ZN5test14testEv()
+  // CHECK: define{{.*}} i32 @_ZN5test14testEv()
   // CHECK: ret i32 12
 }
 
@@ -45,8 +45,8 @@ namespace test2 {
     virtual void foo();
   };
   void A::foo() {}
-  // CHECK-GLOBALS-DAG: @_ZTSN5test21AE = constant [11 x i8]
-  // CHECK-GLOBALS-DAG: @_ZTIN5test21AE = constant { {{.*}}, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @_ZTSN5test21AE, i32 0, i32 0) }
+  // CHECK-GLOBALS-DAG: @_ZTSN5test21AE ={{.*}} constant [11 x i8]
+  // CHECK-GLOBALS-DAG: @_ZTIN5test21AE ={{.*}} constant { {{.*}}, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @_ZTSN5test21AE, i32 0, i32 0) }
 
   struct __attribute__((visibility("hidden"))) B {};
   const std::type_info &b0 = typeid(B);
@@ -94,10 +94,10 @@ namespace test3 {
   };
 
   // The offset half of the pointer is still initialized to zero.
-  // CHECK-GLOBALS-DAG: @_ZN5test34mptrE = global { i64, i64 } { i64 0, i64 1 }
+  // CHECK-GLOBALS-DAG: @_ZN5test34mptrE ={{.*}} global { i64, i64 } { i64 0, i64 1 }
   void (A::*mptr)() = &A::foo;
 
-  // CHECK-LABEL: define void @_ZN5test34testEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN5test34testEv()
   // CHECK:       [[TEMP:%.*]] = alloca [[A:.*]], align 8
   // CHECK:       [[MEMPTR:%.*]] = load { i64, i64 }, { i64, i64 }* @_ZN5test34mptrE, align 8
   // CHECK:       [[ADJUST_AND_IS_VIRTUAL:%.*]] = extractvalue { i64, i64 } [[MEMPTR]], 1

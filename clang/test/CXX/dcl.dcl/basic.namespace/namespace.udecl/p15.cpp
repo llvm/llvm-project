@@ -36,7 +36,7 @@ namespace default_ctor {
   };
 
   struct A {
-    A(); // expected-note {{candidate}}
+    A();
 
     A(C &&);
     C &operator=(C&&);
@@ -48,7 +48,7 @@ namespace default_ctor {
   };
 
   struct B {
-    B(); // expected-note {{candidate}}
+    B();
 
     B(C &&);
     C &operator=(C&&);
@@ -66,9 +66,9 @@ namespace default_ctor {
     using B::operator=;
   };
   struct D : A, B {
-    using A::A; // expected-note 2{{inherited here}}
+    using A::A; // expected-note {{inherited here}}
     using A::operator=;
-    using B::B; // expected-note 2{{inherited here}}
+    using B::B; // expected-note {{inherited here}}
     using B::operator=;
 
     D(int);
@@ -84,7 +84,9 @@ namespace default_ctor {
 
   // D does not declare D(), D(D&&), nor operator=(D&&), so the base class
   // versions are inherited.
-  D d; // expected-error {{ambiguous}}
+  // Exception: we implicitly declare a default constructor so that we can
+  // reason about its properties.
+  D d; // ok, implicitly declared
   void f(D d) {
     D d2(static_cast<D&&>(d)); // ok, ignores inherited constructors
     D d3(convert_to_D1{}); // ok, ignores inherited constructors

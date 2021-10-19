@@ -28,7 +28,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 6, 7};
     int ib[] = {1, 3};
     int ic[] = {1, 3, 5, 7};
-    typedef input_iterator<int*>         II;
+    typedef cpp17_input_iterator<int*>         II;
     typedef bidirectional_iterator<int*> BI;
 
     auto p1 = std::mismatch(std::begin(ia), std::end(ia), std::begin(ic));
@@ -65,7 +65,7 @@ int main(int, char**)
     int ib[] = {0, 1, 2, 3, 0, 1, 2, 3};
     const unsigned sb = sizeof(ib)/sizeof(ib[0]); ((void)sb); // unused in C++11
 
-    typedef input_iterator<const int*> II;
+    typedef cpp17_input_iterator<const int*> II;
     typedef random_access_iterator<const int*>  RAI;
 
     assert(std::mismatch(II(ia), II(ia + sa), II(ib))

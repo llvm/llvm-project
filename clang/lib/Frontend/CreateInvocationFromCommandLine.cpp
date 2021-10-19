@@ -10,15 +10,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/Utils.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Host.h"
 using namespace clang;
@@ -28,6 +30,7 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
     ArrayRef<const char *> ArgList, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool ShouldRecoverOnErorrs,
     std::vector<std::string> *CC1Args) {
+  assert(!ArgList.empty());
   if (!Diags.get()) {
     // No diagnostics engine was provided, so create our own diagnostics object
     // with the default options.
@@ -37,11 +40,14 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   SmallVector<const char *, 16> Args(ArgList.begin(), ArgList.end());
 
   // FIXME: Find a cleaner way to force the driver into restricted modes.
-  Args.push_back("-fsyntax-only");
+  Args.insert(
+      llvm::find_if(
+          Args, [](const char *Elem) { return llvm::StringRef(Elem) == "--"; }),
+      "-fsyntax-only");
 
   // FIXME: We shouldn't have to pass in the path info.
-  driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(),
-                           *Diags, VFS);
+  driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(), *Diags,
+                           "clang LLVM compiler", VFS);
 
   // Don't check that inputs exist, they may have been remapped.
   TheDriver.setCheckInputsExist(false);
@@ -74,22 +80,24 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
       }
     }
   }
-  if (Jobs.size() == 0 || !isa<driver::Command>(*Jobs.begin()) ||
-      (Jobs.size() > 1 && !OffloadCompilation)) {
+
+  bool PickFirstOfMany = OffloadCompilation || ShouldRecoverOnErorrs;
+  if (Jobs.size() == 0 || (Jobs.size() > 1 && !PickFirstOfMany)) {
     SmallString<256> Msg;
     llvm::raw_svector_ostream OS(Msg);
     Jobs.Print(OS, "; ", true);
     Diags->Report(diag::err_fe_expected_compiler_job) << OS.str();
     return nullptr;
   }
-
-  const driver::Command &Cmd = cast<driver::Command>(*Jobs.begin());
-  if (StringRef(Cmd.getCreator().getName()) != "clang") {
+  auto Cmd = llvm::find_if(Jobs, [](const driver::Command &Cmd) {
+    return StringRef(Cmd.getCreator().getName()) == "clang";
+  });
+  if (Cmd == Jobs.end()) {
     Diags->Report(diag::err_fe_expected_clang_command);
     return nullptr;
   }
 
-  const ArgStringList &CCArgs = Cmd.getArguments();
+  const ArgStringList &CCArgs = Cmd->getArguments();
   if (CC1Args)
     *CC1Args = {CCArgs.begin(), CCArgs.end()};
   auto CI = std::make_unique<CompilerInvocation>();

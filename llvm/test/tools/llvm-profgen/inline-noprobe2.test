@@ -1,0 +1,152 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/artificial-branch.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t  --skip-symbolization --use-offset=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-ARTIFICIAL-BRANCH
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t  --skip-symbolization --use-offset=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/inline-noprobe2.perfscript --binary=%S/Inputs/inline-noprobe2.perfbin --output=%t
+; RUN: llvm-profdata show -show-prof-sym-list -sample %t | FileCheck %s --check-prefix=CHECK-SYM-LIST
+
+; CHECK-ARTIFICIAL-BRANCH: 3
+; CHECK-ARTIFICIAL-BRANCH: 400540-400540:1
+; CHECK-ARTIFICIAL-BRANCH: 400870-400870:2
+; CHECK-ARTIFICIAL-BRANCH: 400875-4008bf:1
+; CHECK-ARTIFICIAL-BRANCH: 2
+; CHECK-ARTIFICIAL-BRANCH: 400870->400540:2
+; CHECK-ARTIFICIAL-BRANCH: 4008bf->400870:2
+
+; CHECK-SYM-LIST: Dump profile symbol list
+; CHECK-SYM-LIST: main
+; CHECK-SYM-LIST: partition_pivot_first
+; CHECK-SYM-LIST: partition_pivot_last
+; CHECK-SYM-LIST: quick_sort
+
+
+;CHECK-RAW-PROFILE-NOT: 7f7448e889e4
+;CHECK-RAW-PROFILE-NOT: 7f7448e88826
+
+;CHECK:       partition_pivot_first:1045:5
+;CHECK-NEXT:  0: 5
+;CHECK-NEXT:  1: 5
+;CHECK-NEXT:  2: 5
+;CHECK-NEXT:  3: 5
+;CHECK-NEXT:  3.1: 83
+;CHECK-NEXT:  4: 82
+;CHECK-NEXT:  4.1: 26
+;CHECK-NEXT:  4.2: 25
+;CHECK-NEXT:  4.3: 26
+;CHECK-NEXT:  5: 6
+;CHECK-NEXT:  6: 6
+;CHECK-NEXT:  4.2: swap:100
+;CHECK-NEXT:   1: 25
+;CHECK-NEXT:   2: 25
+;CHECK-NEXT:   3: 25
+;CHECK-NEXT:  5: swap:24
+;CHECK-NEXT:   1: 6
+;CHECK-NEXT:   2: 6
+;CHECK-NEXT:   3: 6
+;CHECK-NEXT: partition_pivot_last:647:7
+;CHECK-NEXT:  1: 6
+;CHECK-NEXT:  2: 6
+;CHECK-NEXT:  3: 6
+
+;w/o duplication factor :  3.1: 18
+;w/o duplication factor :  3.3: 18
+;w/o duplication factor :  4: 19
+;w/o duplication factor :  5: 9
+;CHECK-NEXT:  3.1: 36
+;CHECK-NEXT:  3.3: 36
+;CHECK-NEXT:  4: 38
+;CHECK-NEXT:  5: 18
+
+;CHECK-NEXT:  6: 5
+;CHECK-NEXT:  7: 5
+;CHECK-NEXT:  5: swap:116
+
+;w/o duplication factor :  1: 9
+;w/o duplication factor :  2: 9
+;w/o duplication factor :  3: 9
+;CHECK-NEXT:   1: 18
+;CHECK-NEXT:   2: 18
+;CHECK-NEXT:   3: 18
+
+;CHECK-NEXT:  6: swap:20
+;CHECK-NEXT:   1: 5
+;CHECK-NEXT:   2: 5
+;CHECK-NEXT:   3: 5
+;CHECK-NEXT: quick_sort:318:25
+;CHECK-NEXT:  1: 24
+;CHECK-NEXT:  2: 12 partition_pivot_last:7 partition_pivot_first:5
+;CHECK-NEXT:  3: 11 quick_sort:12
+;CHECK-NEXT:  4: 12 quick_sort:12
+;CHECK-NEXT:  6: 24
+;CHECK-NEXT: main:213:0
+;CHECK-NEXT:  0: 0
+;CHECK-NEXT:  3: 0
+;CHECK-NEXT:  4.1: 0
+;CHECK-NEXT:  4.3: 0
+;CHECK-NEXT:  5.1: 10
+;CHECK-NEXT:  5.3: 10
+;CHECK-NEXT:  6: 10
+;CHECK-NEXT:  6.1: 12
+;CHECK-NEXT:  6.3: 10
+;CHECK-NEXT:  7: 0
+;CHECK-NEXT:  8: 0 quick_sort:1
+;CHECK-NEXT:  9: 0
+;CHECK-NEXT:  11: 0
+;CHECK-NEXT:  14: 0
+
+; original code:
+; clang -O3 -g -fno-optimize-sibling-calls -fdebug-info-for-profiling qsort.c -o a.out
+#include <stdio.h>
+#include <stdlib.h>
+
+void swap(int *a, int *b) {
+	int t = *a;
+	*a = *b;
+	*b = t;
+}
+
+int partition_pivot_last(int* array, int low, int high) {
+	int pivot = array[high];
+	int i = low - 1;
+	for (int j = low; j < high; j++)
+		if (array[j] < pivot)
+			swap(&array[++i], &array[j]);
+	swap(&array[i + 1], &array[high]);
+	return (i + 1);
+}
+
+int partition_pivot_first(int* array, int low, int high) {
+	int pivot = array[low];
+	int i = low + 1;
+	for (int j = low + 1; j <= high; j++)
+		if (array[j] < pivot) { if (j != i) swap(&array[i], &array[j]); i++;}
+	swap(&array[i - 1], &array[low]);
+	return i - 1;
+}
+
+void quick_sort(int* array, int low, int high, int (*partition_func)(int *, int, int)) {
+	if (low < high) {
+		int pi = (*partition_func)(array, low, high);
+		quick_sort(array, low, pi - 1, partition_func);
+		quick_sort(array, pi + 1, high, partition_func);
+	}
+}
+
+int main() {
+	const int size = 200;
+	int sum = 0;
+	int *array = malloc(size * sizeof(int));
+	for(int i = 0; i < 100 * 1000; i++) {
+		for(int j = 0; j < size; j++)
+			array[j] = j % 10 ? rand() % size: j;
+		int (*fptr)(int *, int, int) = i % 3 ? partition_pivot_last : partition_pivot_first;
+		quick_sort(array, 0, size - 1, fptr);
+		sum += array[i % size];
+	}
+	printf("sum=%d\n", sum);
+
+	return 0;
+}

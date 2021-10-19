@@ -9,8 +9,6 @@
 // Ensure we don't emit definitions for the global variables
 // since the builtins shouldn't ODR use them.
 // CHECK-NOT: constant %[[SO]]
-// CHECK-NOT: constant %[[SE]]
-// CHECK-NOT: constant %[[WE]]
 // CHECK-NOT: constant %[[PO]]
 
 // CHECK-LABEL: @_Z11test_signedii

@@ -248,7 +248,7 @@ def quant_StatisticsOp : quant_Op<"stats", [SameOperandsAndResultType]> {
 
       auto shape = tensorArg.getShape();
       auto argSliceSize = std::accumulate(std::next(shape.begin(),
-        axis()->getSExtValue()), shape.end(), 1, std::multiplies<int64_t>());
+        *axis()), shape.end(), 1, std::multiplies<int64_t>());
 
       auto axisStatsType = axisStats()->getType();
       if (!axisStatsType.getElementType().isa<FloatType>()) {

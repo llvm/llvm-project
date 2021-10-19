@@ -12,8 +12,8 @@ target triple = "x86_64-unknown-unknown"
 define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: stack_fold_valignd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -22,7 +22,7 @@ define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -33,8 +33,8 @@ define <16 x i32> @stack_fold_valignd(<16 x i32> %a, <16 x i32> %b) {
 define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i32>* %passthru, i16 %mask) {
 ; CHECK-LABEL: stack_fold_valignd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -46,7 +46,7 @@ define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -60,8 +60,8 @@ define <16 x i32> @stack_fold_valignd_mask(<16 x i32> %a, <16 x i32> %b, <16 x i
 define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: stack_fold_valignd_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -71,7 +71,7 @@ define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %m
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignd $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -84,8 +84,8 @@ define <16 x i32> @stack_fold_valignd_maskz(<16 x i32> %a, <16 x i32> %b, i16 %m
 define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: stack_fold_valignq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -94,7 +94,7 @@ define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -105,8 +105,8 @@ define <8 x i64> @stack_fold_valignq(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>* %passthru, i8 %mask) {
 ; CHECK-LABEL: stack_fold_valignq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -118,7 +118,7 @@ define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>*
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7],zmm0[0]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -132,8 +132,8 @@ define <8 x i64> @stack_fold_valignq_mask(<8 x i64> %a, <8 x i64> %b, <8 x i64>*
 define <8 x i64> @stack_fold_valignq_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
 ; CHECK-LABEL: stack_fold_valignq_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -143,7 +143,7 @@ define <8 x i64> @stack_fold_valignq_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask)
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    valignq $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7],zmm0[0]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -490,8 +490,8 @@ define <64 x i8> @stack_fold_pabsb(<64 x i8> %a0) {
 define <64 x i8> @stack_fold_pabsb_mask(<64 x i8> %passthru, <64 x i8> %a0, i64 %mask) {
 ; CHECK-LABEL: stack_fold_pabsb_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -500,7 +500,7 @@ define <64 x i8> @stack_fold_pabsb_mask(<64 x i8> %passthru, <64 x i8> %a0, i64 
 ; CHECK-NEXT:    kmovq %rdi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsb {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -550,8 +550,8 @@ define <16 x i32> @stack_fold_pabsd(<16 x i32> %a0) {
 define <16 x i32> @stack_fold_pabsd_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pabsd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -560,7 +560,7 @@ define <16 x i32> @stack_fold_pabsd_mask(<16 x i32> %passthru, <16 x i32> %a0, i
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -610,8 +610,8 @@ define <8 x i64> @stack_fold_pabsq(<8 x i64> %a0) {
 define <8 x i64> @stack_fold_pabsq_mask(<8 x i64> %passthru, <8 x i64> %a0, i8 %mask) {
 ; CHECK-LABEL: stack_fold_pabsq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -620,7 +620,7 @@ define <8 x i64> @stack_fold_pabsq_mask(<8 x i64> %passthru, <8 x i64> %a0, i8 %
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsq {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -670,8 +670,8 @@ define <32 x i16> @stack_fold_pabsw(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pabsw_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pabsw_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -680,7 +680,7 @@ define <32 x i16> @stack_fold_pabsw_mask(<32 x i16> %passthru, <32 x i16> %a0, i
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpabsw {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1643,8 +1643,8 @@ define <32 x i16> @stack_fold_paddw_maskz_commuted(<32 x i16> %a0, <32 x i16> %a
 define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_palignr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1653,7 +1653,7 @@ define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1664,8 +1664,8 @@ define <64 x i8> @stack_fold_palignr(<64 x i8> %a0, <64 x i8> %a1) {
 define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8>* %passthru, i64 %mask) {
 ; CHECK-LABEL: stack_fold_palignr_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1677,7 +1677,7 @@ define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1691,8 +1691,8 @@ define <64 x i8> @stack_fold_palignr_mask(<64 x i8> %a0, <64 x i8> %a1, <64 x i8
 define <64 x i8> @stack_fold_palignr_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %mask) {
 ; CHECK-LABEL: stack_fold_palignr_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -1702,7 +1702,7 @@ define <64 x i8> @stack_fold_palignr_maskz(<64 x i8> %a0, <64 x i8> %a1, i64 %ma
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpalignr $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = mem[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],zmm0[0],mem[17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],zmm0[16],mem[33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],zmm0[32],mem[49,50,51,52,53,54,55,56,57,58,59,60,61,62,63],zmm0[48]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2023,8 +2023,8 @@ define i32 @stack_fold_pcmpeqw(<32 x i16> %a0, <32 x i16> %a1) {
 define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpeqd_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2037,8 +2037,9 @@ define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2055,8 +2056,8 @@ define <16 x i32> @stack_fold_pcmpeqd_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpeqd_mask_commuted:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2069,8 +2070,9 @@ define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2087,8 +2089,8 @@ define <16 x i32> @stack_fold_pcmpeqd_mask_commuted(<16 x i32> %a0, <16 x i32> %
 define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask, <16 x i32> %b0, <16 x i32> %b1) {
 ; CHECK-LABEL: stack_fold_pcmpled_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $184, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $136, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm2, (%rsp) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -2101,8 +2103,9 @@ define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vpcmpled {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vpblendmd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
-; CHECK-NEXT:    addq $184, %rsp
+; CHECK-NEXT:    vmovdqu64 (%rsp), %zmm1 # 64-byte Reload
+; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -2119,8 +2122,8 @@ define <16 x i32> @stack_fold_pcmpled_mask(<16 x i32> %a0, <16 x i32> %a1, <16 x
 define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pcmpleud:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -2132,7 +2135,7 @@ define i16 @stack_fold_pcmpleud(<16 x i32> %a0, <16 x i32> %a1, <16 x i32>* %a2,
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -6100,8 +6103,8 @@ define <16 x i32> @stack_fold_pshufd_zmm(<16 x i32> %a0) {
 define <16 x i32> @stack_fold_pshufd_zmm_mask(<16 x i32> %passthru, <16 x i32> %a0, i16 %mask) {
 ; CHECK-LABEL: stack_fold_pshufd_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6111,7 +6114,7 @@ define <16 x i32> @stack_fold_pshufd_zmm_mask(<16 x i32> %passthru, <16 x i32> %
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshufd $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6157,8 +6160,8 @@ define <32 x i16> @stack_fold_pshufhw_zmm(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pshufhw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pshufhw_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6168,7 +6171,7 @@ define <32 x i16> @stack_fold_pshufhw_zmm_mask(<32 x i16> %passthru, <32 x i16> 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshufhw $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[0,1,2,3,7,6,5,4,8,9,10,11,15,14,13,12,16,17,18,19,23,22,21,20,24,25,26,27,31,30,29,28]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6214,8 +6217,8 @@ define <32 x i16> @stack_fold_pshuflw_zmm(<32 x i16> %a0) {
 define <32 x i16> @stack_fold_pshuflw_zmm_mask(<32 x i16> %passthru, <32 x i16> %a0, i32 %mask) {
 ; CHECK-LABEL: stack_fold_pshuflw_zmm_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6225,7 +6228,7 @@ define <32 x i16> @stack_fold_pshuflw_zmm_mask(<32 x i16> %passthru, <32 x i16> 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vpshuflw $27, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} = mem[3,2,1,0,4,5,6,7,11,10,9,8,12,13,14,15,19,18,17,16,20,21,22,23,27,26,25,24,28,29,30,31]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6914,8 +6917,8 @@ define <32 x i16> @stack_fold_psubw(<32 x i16> %a0, <32 x i16> %a1) {
 define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-LABEL: stack_fold_shufi64x2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6924,7 +6927,7 @@ define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 = zmm0[0,1,4,5],mem[2,3,0,1]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6935,8 +6938,8 @@ define <8 x i64> @stack_fold_shufi64x2(<8 x i64> %a, <8 x i64> %b) {
 define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask, <8 x i64>* %passthru) {
 ; CHECK-LABEL: stack_fold_shufi64x2_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6948,7 +6951,7 @@ define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = zmm0[0,1,4,5],mem[2,3,0,1]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6963,8 +6966,8 @@ define <8 x i64> @stack_fold_shufi64x2_mask(<8 x i64> %a, <8 x i64> %b, i8 %mask
 define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mask, <8 x i64>* %passthru) {
 ; CHECK-LABEL: stack_fold_shufi64x2_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -6974,7 +6977,7 @@ define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mas
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi64x2 $24, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = zmm0[0,1,4,5],mem[2,3,0,1]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -6987,8 +6990,8 @@ define <8 x i64> @stack_fold_shufi64x2_maskz(<8 x i64> %a, <8 x i64> %b, i8 %mas
 define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %mask, <16 x i32>* %passthru) {
 ; CHECK-LABEL: stack_fold_shufi32x4_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -7000,7 +7003,7 @@ define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %
 ; CHECK-NEXT:    vshufi32x4 $20, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm1 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm1 {%k1} = zmm0[0,1,2,3,4,5,6,7],mem[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -7015,8 +7018,8 @@ define <16 x i32> @stack_fold_shufi32x4_mask(<16 x i32> %a, <16 x i32> %b, i16 %
 define <16 x i32> @stack_fold_shufi32x4_maskz(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
 ; CHECK-LABEL: stack_fold_shufi32x4_maskz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    #APP
@@ -7026,7 +7029,7 @@ define <16 x i32> @stack_fold_shufi32x4_maskz(<16 x i32> %a, <16 x i32> %b, i16 
 ; CHECK-NEXT:    vmovdqu64 {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vshufi32x4 $20, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 {%k1} {z} # 64-byte Folded Reload
 ; CHECK-NEXT:    # zmm0 {%k1} {z} = zmm0[0,1,2,3,4,5,6,7],mem[4,5,6,7,0,1,2,3]
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()

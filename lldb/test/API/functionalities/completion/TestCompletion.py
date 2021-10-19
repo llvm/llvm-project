@@ -163,6 +163,8 @@ class CommandLineCompletionTestCase(TestBase):
 
         self.complete_from_to('process signal ',
                               'process signal SIG')
+        self.complete_from_to('process signal SIGPIP',
+                              'process signal SIGPIPE')
         self.complete_from_to('process signal SIGA',
                               ['SIGABRT',
                                'SIGALRM'])
@@ -231,7 +233,7 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_log_file(self):
         # Complete in our source directory which contains a 'main.cpp' file.
-        src_dir =  os.path.dirname(os.path.realpath(__file__)) + '/'
+        src_dir =  self.getSourceDir() + '/'
         self.complete_from_to('log enable lldb expr -f ' + src_dir,
                               ['main.cpp'])
 
@@ -290,6 +292,7 @@ class CommandLineCompletionTestCase(TestBase):
         """Test that 'help watchpoint s' completes to 'help watchpoint set '."""
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
+    @expectedFailureNetBSD
     def test_common_complete_watchpoint_ids(self):
         subcommands = ['enable', 'disable', 'delete', 'modify', 'ignore']
 
@@ -393,7 +396,7 @@ class CommandLineCompletionTestCase(TestBase):
     def test_settings_set_target_process_dot(self):
         """Test that 'settings set target.process.t' completes to 'settings set target.process.thread.'."""
         self.complete_from_to(
-            'settings set target.process.t',
+            'settings set target.process.thr',
             'settings set target.process.thread.')
 
     def test_settings_set_target_process_thread_dot(self):

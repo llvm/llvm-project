@@ -21,6 +21,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <algorithm>
 #include <utility>
@@ -144,7 +145,7 @@ void TextNodeDumper::Visit(const Stmt *Node) {
     {
       ColorScope Color(OS, ShowColors, ValueKindColor);
       switch (E->getValueKind()) {
-      case VK_RValue:
+      case VK_PRValue:
         break;
       case VK_LValue:
         OS << " lvalue";
@@ -353,6 +354,46 @@ void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
 
   if (A.isSelected())
     OS << " selected";
+}
+
+void TextNodeDumper::Visit(const concepts::Requirement *R) {
+  if (!R) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> Requirement";
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, StmtColor);
+    switch (R->getKind()) {
+    case concepts::Requirement::RK_Type:
+      OS << "TypeRequirement";
+      break;
+    case concepts::Requirement::RK_Simple:
+      OS << "SimpleRequirement";
+      break;
+    case concepts::Requirement::RK_Compound:
+      OS << "CompoundRequirement";
+      break;
+    case concepts::Requirement::RK_Nested:
+      OS << "NestedRequirement";
+      break;
+    }
+  }
+
+  dumpPointer(R);
+
+  if (auto *ER = dyn_cast<concepts::ExprRequirement>(R)) {
+    if (ER->hasNoexceptRequirement())
+      OS << " noexcept";
+  }
+
+  if (R->isDependent())
+    OS << " dependent";
+  else
+    OS << (R->isSatisfied() ? " satisfied" : " unsatisfied");
+  if (R->containsUnexpandedParameterPack())
+    OS << " contains_unexpanded_pack";
 }
 
 static double GetApproxValue(const llvm::APFloat &F) {
@@ -907,6 +948,14 @@ void TextNodeDumper::VisitIfStmt(const IfStmt *Node) {
     OS << " has_var";
   if (Node->hasElseStorage())
     OS << " has_else";
+  if (Node->isConstexpr())
+    OS << " constexpr";
+  if (Node->isConsteval()) {
+    OS << " ";
+    if (Node->isNegatedConsteval())
+      OS << "!";
+    OS << "consteval";
+  }
 }
 
 void TextNodeDumper::VisitSwitchStmt(const SwitchStmt *Node) {
@@ -923,6 +972,8 @@ void TextNodeDumper::VisitWhileStmt(const WhileStmt *Node) {
 
 void TextNodeDumper::VisitLabelStmt(const LabelStmt *Node) {
   OS << " '" << Node->getName() << "'";
+  if (Node->isSideEntry())
+    OS << " side_entry";
 }
 
 void TextNodeDumper::VisitGotoStmt(const GotoStmt *Node) {
@@ -964,6 +1015,8 @@ void TextNodeDumper::VisitCastExpr(const CastExpr *Node) {
   }
   dumpBasePath(OS, Node);
   OS << ">";
+  if (Node->hasStoredFPFeatures())
+    printFPOptions(Node->getFPFeatures());
 }
 
 void TextNodeDumper::VisitImplicitCastExpr(const ImplicitCastExpr *Node) {
@@ -1014,6 +1067,11 @@ void TextNodeDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node) {
     OS << " isFreeIvar";
 }
 
+void TextNodeDumper::VisitSYCLUniqueStableNameExpr(
+    const SYCLUniqueStableNameExpr *Node) {
+  dumpType(Node->getTypeSourceInfo()->getType());
+}
+
 void TextNodeDumper::VisitPredefinedExpr(const PredefinedExpr *Node) {
   OS << " " << PredefinedExpr::getIdentKindName(Node->getIdentKind());
 }
@@ -1026,7 +1084,7 @@ void TextNodeDumper::VisitCharacterLiteral(const CharacterLiteral *Node) {
 void TextNodeDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
   bool isSigned = Node->getType()->isSignedIntegerType();
   ColorScope Color(OS, ShowColors, ValueColor);
-  OS << " " << Node->getValue().toString(10, isSigned);
+  OS << " " << toString(Node->getValue(), 10, isSigned);
 }
 
 void TextNodeDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
@@ -1103,6 +1161,8 @@ void TextNodeDumper::VisitCompoundAssignOperator(
   dumpBareType(Node->getComputationLHSType());
   OS << " ComputeResultTy=";
   dumpBareType(Node->getComputationResultType());
+  if (Node->hasStoredFPFeatures())
+    printFPOptions(Node->getStoredFPFeatures());
 }
 
 void TextNodeDumper::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
@@ -1132,6 +1192,14 @@ void TextNodeDumper::VisitCXXFunctionalCastExpr(
     const CXXFunctionalCastExpr *Node) {
   OS << " functional cast to " << Node->getTypeAsWritten().getAsString() << " <"
      << Node->getCastKindName() << ">";
+  if (Node->hasStoredFPFeatures())
+    printFPOptions(Node->getFPFeatures());
+}
+
+void TextNodeDumper::VisitCXXStaticCastExpr(const CXXStaticCastExpr *Node) {
+  VisitCXXNamedCastExpr(Node);
+  if (Node->hasStoredFPFeatures())
+    printFPOptions(Node->getFPFeatures());
 }
 
 void TextNodeDumper::VisitCXXUnresolvedConstructExpr(
@@ -1344,6 +1412,12 @@ void TextNodeDumper::VisitConceptSpecializationExpr(
     const ConceptSpecializationExpr *Node) {
   OS << " ";
   dumpBareDeclRef(Node->getFoundDecl());
+}
+
+void TextNodeDumper::VisitRequiresExpr(
+    const RequiresExpr *Node) {
+  if (!Node->isValueDependent())
+    OS << (Node->isSatisfied() ? " satisfied" : " unsatisfied");
 }
 
 void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
@@ -2037,6 +2111,11 @@ void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   if (D->getQualifier())
     D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
+}
+
+void TextNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *D) {
+  OS << ' ';
+  dumpBareDeclRef(D->getEnumDecl());
 }
 
 void TextNodeDumper::VisitUnresolvedUsingTypenameDecl(

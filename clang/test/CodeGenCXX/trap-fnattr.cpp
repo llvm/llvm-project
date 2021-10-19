@@ -21,10 +21,10 @@ int test_noreturn(void) {
 }
 
 // TRAPFUNC-LABEL: define {{.*}}i32 @{{_Z17test_add_overflowii|\"\?test_add_overflow@@YAHHH@Z\"}}
-// TRAPFUNC: call void @llvm.trap() [[ATTR1:#[0-9]+]]
+// TRAPFUNC: call void @llvm.ubsantrap({{.*}}) [[ATTR1:#[0-9]+]]
 
 // NOOPTION-LABEL: define {{.*}}i32 @{{_Z17test_add_overflowii|\"\?test_add_overflow@@YAHHH@Z\"}}
-// NOOPTION: call void @llvm.trap() [[ATTR2:#[0-9]+]]
+// NOOPTION: call void @llvm.ubsantrap({{.*}}) [[ATTR2:#[0-9]+]]
 
 int test_add_overflow(int a, int b) {
   return a + b;

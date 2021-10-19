@@ -163,12 +163,12 @@ body:             |
     DBG_VALUE $a1_64, $noreg, !15, !DIExpression(), debug-location !19
     $sp_64 = DADDiu $sp_64, -48
     CFI_INSTRUCTION def_cfa_offset 48
-    SDC164 killed $d26_64, $sp_64, 40 :: (store 8 into %stack.0)
-    SDC164 killed $d25_64, $sp_64, 32 :: (store 8 into %stack.1)
-    SDC164 killed $d24_64, $sp_64, 24 :: (store 8 into %stack.2)
-    SD killed $ra_64, $sp_64, 16 :: (store 8 into %stack.3)
-    SD killed $s1_64, $sp_64, 8 :: (store 8 into %stack.4)
-    SD killed $s0_64, $sp_64, 0 :: (store 8 into %stack.5)
+    SDC164 killed $d26_64, $sp_64, 40 :: (store (s64) into %stack.0)
+    SDC164 killed $d25_64, $sp_64, 32 :: (store (s64) into %stack.1)
+    SDC164 killed $d24_64, $sp_64, 24 :: (store (s64) into %stack.2)
+    SD killed $ra_64, $sp_64, 16 :: (store (s64) into %stack.3)
+    SD killed $s1_64, $sp_64, 8 :: (store (s64) into %stack.4)
+    SD killed $s0_64, $sp_64, 0 :: (store (s64) into %stack.5)
     CFI_INSTRUCTION offset $d27_64, -8
     CFI_INSTRUCTION offset $d26_64, -4
     CFI_INSTRUCTION offset $d26_64, -16
@@ -188,7 +188,7 @@ body:             |
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.0
     renamable $at_64 = DSLL killed renamable $at_64, 16
-    renamable $d1_64 = LDC164 killed renamable $at_64, target-flags(mips-abs-lo) %const.0 :: (load 8 from constant-pool)
+    renamable $d1_64 = LDC164 killed renamable $at_64, target-flags(mips-abs-lo) %const.0 :: (load (s64) from constant-pool)
     FCMP_D64 killed renamable $d0_64, killed renamable $d1_64, 7, implicit-def $fcc0, debug-location !19
     BC1T killed $fcc0, %bb.2, implicit-def dead $at, debug-location !19
     J %bb.1, implicit-def dead $at, debug-location !19
@@ -208,7 +208,7 @@ body:             |
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.2
     renamable $at_64 = DSLL killed renamable $at_64, 16
-    renamable $f1 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.2 :: (load 4 from constant-pool)
+    renamable $f1 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.2 :: (load (s32) from constant-pool)
     renamable $f0 = FADD_S killed renamable $f0, killed renamable $f1, debug-location !19
     J %bb.3, implicit-def dead $at, debug-location !19
 
@@ -221,7 +221,7 @@ body:             |
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-abs-hi) %const.1
     renamable $at_64 = DSLL killed renamable $at_64, 16
-    renamable $f0 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.1 :: (load 4 from constant-pool)
+    renamable $f0 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.1 :: (load (s32) from constant-pool)
     renamable $f24 = FADD_S killed renamable $f12, killed renamable $f0, debug-location !19
     DBG_VALUE $f24, $noreg, !14, !DIExpression(), debug-location !19
     $f12 = COPY renamable $f24, debug-location !19
@@ -240,12 +240,12 @@ body:             |
   bb.3.if.end:
     liveins: $f0
 
-    $s0_64 = LD $sp_64, 0, debug-location !19 :: (load 8 from %stack.5)
-    $s1_64 = LD $sp_64, 8, debug-location !19 :: (load 8 from %stack.4)
-    $ra_64 = LD $sp_64, 16, debug-location !19 :: (load 8 from %stack.3)
-    $d24_64 = LDC164 $sp_64, 24, debug-location !19 :: (load 8 from %stack.2)
-    $d25_64 = LDC164 $sp_64, 32, debug-location !19 :: (load 8 from %stack.1)
-    $d26_64 = LDC164 $sp_64, 40, debug-location !19 :: (load 8 from %stack.0)
+    $s0_64 = LD $sp_64, 0, debug-location !19 :: (load (s64) from %stack.5)
+    $s1_64 = LD $sp_64, 8, debug-location !19 :: (load (s64) from %stack.4)
+    $ra_64 = LD $sp_64, 16, debug-location !19 :: (load (s64) from %stack.3)
+    $d24_64 = LDC164 $sp_64, 24, debug-location !19 :: (load (s64) from %stack.2)
+    $d25_64 = LDC164 $sp_64, 32, debug-location !19 :: (load (s64) from %stack.1)
+    $d26_64 = LDC164 $sp_64, 40, debug-location !19 :: (load (s64) from %stack.0)
     $sp_64 = DADDiu $sp_64, 48
     RetRA implicit $f0, debug-location !19
 

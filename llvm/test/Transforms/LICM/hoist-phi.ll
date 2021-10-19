@@ -1,9 +1,7 @@
 ; RUN: opt -S -licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 ; RUN: opt -S -licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
 ; RUN: opt -S -licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=1 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=0 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
+; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 
 ; RUN: opt -passes='require<opt-remark-emit>,loop-mssa(licm)' -licm-control-flow-hoisting=1 -verify-memoryssa -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
 ; Enable run below when adding promotion. e.g. "store i32 %phi, i32* %p" is promoted to phi.lcssa.

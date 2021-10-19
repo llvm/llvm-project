@@ -18,6 +18,7 @@ struct FuzzingOptions {
   int Verbosity = 1;
   size_t MaxLen = 0;
   size_t LenControl = 1000;
+  bool KeepSeed = false;
   int UnitTimeoutSec = 300;
   int TimeoutExitCode = 70;
   int OOMExitCode = 71;
@@ -30,6 +31,7 @@ struct FuzzingOptions {
   int RssLimitMb = 0;
   int MallocLimitMb = 0;
   bool DoCrossOver = true;
+  bool CrossOverUniformDist = false;
   int MutateDepth = 5;
   bool ReduceDepth = false;
   bool UseCounters = false;
@@ -44,9 +46,11 @@ struct FuzzingOptions {
   size_t MaxNumberOfRuns = -1L;
   int ReportSlowUnits = 10;
   bool OnlyASCII = false;
-  bool Entropic = false;
+  bool Entropic = true;
+  bool ForkCorpusGroups = false;
   size_t EntropicFeatureFrequencyThreshold = 0xFF;
   size_t EntropicNumberOfRarestFeatures = 100;
+  bool EntropicScalePerExecTime = false;
   std::string OutputCorpus;
   std::string ArtifactPrefix = "./";
   std::string ExactArtifactPath;
@@ -56,6 +60,7 @@ struct FuzzingOptions {
   std::string DataFlowTrace;
   std::string CollectDataFlow;
   std::string FeaturesDir;
+  std::string MutationGraphFile;
   std::string StopFile;
   bool SaveArtifacts = true;
   bool PrintNEW = true; // Print a status line when new units are found;
@@ -64,6 +69,7 @@ struct FuzzingOptions {
   bool PrintFinalStats = false;
   bool PrintCorpusStats = false;
   bool PrintCoverage = false;
+  bool PrintFullCoverage = false;
   bool DumpCoverage = false;
   bool DetectLeaks = true;
   int PurgeAllocatorIntervalSec = 1;
@@ -79,6 +85,7 @@ struct FuzzingOptions {
   bool HandleXfsz = false;
   bool HandleUsr1 = false;
   bool HandleUsr2 = false;
+  bool HandleWinExcept = false;
 };
 
 }  // namespace fuzzer

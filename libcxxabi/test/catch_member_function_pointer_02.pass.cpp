@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can a noexcept member function pointer be caught by a non-noexcept catch
-// clause?
-// UNSUPPORTED: no-exceptions, libcxxabi-no-noexcept-function-type
+// Can a noexcept member function pointer be caught by a non-noexcept catch clause?
+// UNSUPPORTED: no-exceptions, no-noexcept-function-type
 
-// GCC 7 and 8 support noexcept function types but this test still fails.
+// Support for catching a function pointer including noexcept was shipped in macOS 10.13
+// XFAIL: use_system_cxx_lib && {{.+}}-apple-macosx10.{{9|10|11|12}}
+
+// GCC supports noexcept function types but this test still fails.
 // This is likely a bug in their implementation. Investigation needed.
-// XFAIL: gcc-7, gcc-8, gcc-9, gcc-10
+// XFAIL: gcc-11
 
 #include <cassert>
 
@@ -60,11 +62,13 @@ void check_deep() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     check<false, false>();
     check<false, true>();
     check<true, false>();
     check<true, true>();
     check_deep();
+
+    return 0;
 }

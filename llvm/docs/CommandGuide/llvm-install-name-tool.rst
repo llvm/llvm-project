@@ -35,7 +35,7 @@ the same `<rpath>` value.
  Change an install name ``<old_install_name>`` to ``<new_install_name>`` in the
  specified binary. Can be specified multiple times to change multiple dependent shared
  library install names. Option is ignored if ``<old_install_name>`` is not listed
- in the specfied binary.
+ in the specified binary.
 
 .. option:: -delete_rpath <rpath>
 
@@ -43,10 +43,18 @@ the same `<rpath>` value.
  times to delete multiple rpaths. Throws an error if ``<rpath>`` is not listed in
  the binary.
 
+.. option:: -delete_all_rpaths
+
+  Deletes all rpaths from the binary.
+
+.. option:: --help, -h
+
+ Print a summary of command line options.
+
 .. option:: -id <name>
 
  Change shared library's identification name under LC_ID_DYLIB to ``<name>`` in the
- specfied binary. If specified multiple times, only the last :option:`-id` option is
+ specified binary. If specified multiple times, only the last :option:`-id` option is
  selected. Option is ignored if the specified Mach-O binary is not a dynamic shared library.
 
 .. option:: -rpath <old_rpath> <new_rpath>
@@ -54,6 +62,10 @@ the same `<rpath>` value.
  Change an rpath named ``<old_rpath>`` to ``<new_rpath>`` in the specified binary. Can be specified
  multiple times to change multiple rpaths. Throws an error if ``<old_rpath>`` is not listed
  in the binary or ``<new_rpath>`` is already listed in the binary.
+
+.. option:: --version, -V
+
+ Display the version of the :program:`llvm-install-name-tool` executable.
 
 EXIT STATUS
 -----------

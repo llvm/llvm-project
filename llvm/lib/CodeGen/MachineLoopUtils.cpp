@@ -130,14 +130,3 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
 
   return NewBB;
 }
-
-bool llvm::isRegLiveInExitBlocks(MachineLoop *Loop, int PhysReg) {
-  SmallVector<MachineBasicBlock *, 4> ExitBlocks;
-  Loop->getExitBlocks(ExitBlocks);
-
-  for (auto *MBB : ExitBlocks)
-    if (MBB->isLiveIn(PhysReg))
-      return true;
-
-  return false;
-}

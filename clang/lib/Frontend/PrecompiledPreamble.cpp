@@ -303,9 +303,9 @@ template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {
 } // namespace
 
 PreambleBounds clang::ComputePreambleBounds(const LangOptions &LangOpts,
-                                            const llvm::MemoryBuffer *Buffer,
+                                            const llvm::MemoryBufferRef &Buffer,
                                             unsigned MaxLines) {
-  return Lexer::ComputePreamble(Buffer->getBuffer(), LangOpts, MaxLines);
+  return Lexer::ComputePreamble(Buffer.getBuffer(), LangOpts, MaxLines);
 }
 
 llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
@@ -365,16 +365,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   Clang->setDiagnostics(&Diagnostics);
 
   // Create the target instance.
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return BuildPreambleError::CouldntCreateTargetInfo;
-
-  // Inform the target of the language options.
-  //
-  // FIXME: We shouldn't need to do this, the target should be immutable once
-  // created. This complexity should be lifted elsewhere.
-  Clang->getTarget().adjust(Clang->getLangOpts());
 
   if (Clang->getFrontendOpts().Inputs.size() != 1 ||
       Clang->getFrontendOpts().Inputs[0].getKind().getFormat() !=
@@ -463,7 +455,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
           PrecompiledPreamble::PreambleFileHash::createForFile(File->getSize(),
                                                                ModTime);
     } else {
-      const llvm::MemoryBuffer *Buffer = SourceMgr.getMemoryBufferForFile(File);
+      llvm::MemoryBufferRef Buffer =
+          SourceMgr.getMemoryBufferForFileOrFake(File);
       FilesInPreamble[File->getName()] =
           PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(Buffer);
     }
@@ -500,12 +493,12 @@ std::size_t PrecompiledPreamble::getSize() const {
 }
 
 bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
-                                   const llvm::MemoryBuffer *MainFileBuffer,
+                                   const llvm::MemoryBufferRef &MainFileBuffer,
                                    PreambleBounds Bounds,
-                                   llvm::vfs::FileSystem *VFS) const {
+                                   llvm::vfs::FileSystem &VFS) const {
 
   assert(
-      Bounds.Size <= MainFileBuffer->getBufferSize() &&
+      Bounds.Size <= MainFileBuffer.getBufferSize() &&
       "Buffer is too large. Bounds were calculated from a different buffer?");
 
   auto PreambleInvocation = std::make_shared<CompilerInvocation>(Invocation);
@@ -519,7 +512,7 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   if (PreambleBytes.size() != Bounds.Size ||
       PreambleEndsAtStartOfLine != Bounds.PreambleEndsAtStartOfLine ||
       !std::equal(PreambleBytes.begin(), PreambleBytes.end(),
-                  MainFileBuffer->getBuffer().begin()))
+                  MainFileBuffer.getBuffer().begin()))
     return false;
   // The preamble has not changed. We may be able to re-use the precompiled
   // preamble.
@@ -531,14 +524,14 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   llvm::StringSet<> OverriddenAbsPaths; // Either by buffers or files.
   for (const auto &R : PreprocessorOpts.RemappedFiles) {
     llvm::vfs::Status Status;
-    if (!moveOnNoError(VFS->status(R.second), Status)) {
+    if (!moveOnNoError(VFS.status(R.second), Status)) {
       // If we can't stat the file we're remapping to, assume that something
       // horrible happened.
       return false;
     }
     // If a mapped file was previously missing, then it has changed.
     llvm::SmallString<128> MappedPath(R.first);
-    if (!VFS->makeAbsolute(MappedPath))
+    if (!VFS.makeAbsolute(MappedPath))
       OverriddenAbsPaths.insert(MappedPath);
 
     OverriddenFiles[Status.getUniqueID()] = PreambleFileHash::createForFile(
@@ -549,15 +542,15 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
   llvm::StringMap<PreambleFileHash> OverridenFileBuffers;
   for (const auto &RB : PreprocessorOpts.RemappedFileBuffers) {
     const PrecompiledPreamble::PreambleFileHash PreambleHash =
-        PreambleFileHash::createForMemoryBuffer(RB.second);
+        PreambleFileHash::createForMemoryBuffer(RB.second->getMemBufferRef());
     llvm::vfs::Status Status;
-    if (moveOnNoError(VFS->status(RB.first), Status))
+    if (moveOnNoError(VFS.status(RB.first), Status))
       OverriddenFiles[Status.getUniqueID()] = PreambleHash;
     else
       OverridenFileBuffers[RB.first] = PreambleHash;
 
     llvm::SmallString<128> MappedPath(RB.first);
-    if (!VFS->makeAbsolute(MappedPath))
+    if (!VFS.makeAbsolute(MappedPath))
       OverriddenAbsPaths.insert(MappedPath);
   }
 
@@ -573,7 +566,7 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
     }
 
     llvm::vfs::Status Status;
-    if (!moveOnNoError(VFS->status(F.first()), Status)) {
+    if (!moveOnNoError(VFS.status(F.first()), Status)) {
       // If the file's buffer is not remapped and we can't stat it,
       // assume that something horrible happened.
       return false;
@@ -602,7 +595,7 @@ bool PrecompiledPreamble::CanReuse(const CompilerInvocation &Invocation,
       return false;
     // If a file previously recorded as missing exists as a regular file, then
     // consider the preamble out-of-date.
-    if (auto Status = VFS->status(F.getKey())) {
+    if (auto Status = VFS.status(F.getKey())) {
       if (Status->isRegularFile())
         return false;
     }
@@ -620,7 +613,7 @@ void PrecompiledPreamble::AddImplicitPreamble(
 void PrecompiledPreamble::OverridePreamble(
     CompilerInvocation &CI, IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS,
     llvm::MemoryBuffer *MainFileBuffer) const {
-  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), MainFileBuffer, 0);
+  auto Bounds = ComputePreambleBounds(*CI.getLangOpts(), *MainFileBuffer, 0);
   configurePreamble(Bounds, CI, VFS, MainFileBuffer);
 }
 
@@ -734,7 +727,7 @@ PrecompiledPreamble::PCHStorage::getKind() const {
 
 PrecompiledPreamble::TempPCHFile &PrecompiledPreamble::PCHStorage::asFile() {
   assert(getKind() == Kind::TempFile);
-  return *reinterpret_cast<TempPCHFile *>(Storage.buffer);
+  return *reinterpret_cast<TempPCHFile *>(&Storage);
 }
 
 const PrecompiledPreamble::TempPCHFile &
@@ -745,7 +738,7 @@ PrecompiledPreamble::PCHStorage::asFile() const {
 PrecompiledPreamble::InMemoryPreamble &
 PrecompiledPreamble::PCHStorage::asMemory() {
   assert(getKind() == Kind::InMemory);
-  return *reinterpret_cast<InMemoryPreamble *>(Storage.buffer);
+  return *reinterpret_cast<InMemoryPreamble *>(&Storage);
 }
 
 const PrecompiledPreamble::InMemoryPreamble &
@@ -783,13 +776,13 @@ PrecompiledPreamble::PreambleFileHash::createForFile(off_t Size,
 
 PrecompiledPreamble::PreambleFileHash
 PrecompiledPreamble::PreambleFileHash::createForMemoryBuffer(
-    const llvm::MemoryBuffer *Buffer) {
+    const llvm::MemoryBufferRef &Buffer) {
   PreambleFileHash Result;
-  Result.Size = Buffer->getBufferSize();
+  Result.Size = Buffer.getBufferSize();
   Result.ModTime = 0;
 
   llvm::MD5 MD5Ctx;
-  MD5Ctx.update(Buffer->getBuffer().data());
+  MD5Ctx.update(Buffer.getBuffer().data());
   MD5Ctx.final(Result.MD5);
 
   return Result;
@@ -811,7 +804,8 @@ void PrecompiledPreamble::configurePreamble(
   PreprocessorOpts.PrecompiledPreambleBytes.first = Bounds.Size;
   PreprocessorOpts.PrecompiledPreambleBytes.second =
       Bounds.PreambleEndsAtStartOfLine;
-  PreprocessorOpts.DisablePCHValidation = true;
+  PreprocessorOpts.DisablePCHOrModuleValidation =
+      DisableValidationForModuleKind::PCH;
 
   setupPreambleStorage(Storage, PreprocessorOpts, VFS);
 }

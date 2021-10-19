@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=GCN -check-prefix=CIVI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=GFX89 -check-prefix=GCN -check-prefix=CIVI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX89 -check-prefix=GFX9 -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck --check-prefixes=CI,GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,GFX89,GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX89,GFX9,GCN %s
 
 ; GCN-LABEL: {{^}}fneg_fabs_fadd_f16:
 ; CI-DAG: v_cvt_f32_f16_e32
@@ -26,7 +26,7 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(half addrspace(1)* %out, half %x, 
 ; GFX89-NOT: _and
 ; GFX89: v_mul_f16_e64 [[MUL:v[0-9]+]], {{s[0-9]+}}, -|{{v[0-9]+}}|
 ; GFX89-NOT: [[MUL]]
-; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[MUL]]
+; GFX89: {{flat|global}}_store_short v{{.+}}, [[MUL]]
 define amdgpu_kernel void @fneg_fabs_fmul_f16(half addrspace(1)* %out, half %x, half %y) {
   %fabs = call half @llvm.fabs.f16(half %x)
   %fsub = fsub half -0.0, %fabs
@@ -131,11 +131,11 @@ define amdgpu_kernel void @fold_user_fneg_fabs_v2f16(<2 x half> addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}s_fneg_multi_use_fabs_v2f16:
 ; GFX9: s_and_b32 [[ABS:s[0-9]+]], s{{[0-9]+}}, 0x7fff7fff
-; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
 ; GFX9: s_xor_b32 [[NEG:s[0-9]+]], [[ABS]], 0x80008000
+; GFX9: v_mov_b32_e32 [[V_ABS:v[0-9]+]], [[ABS]]
 ; GFX9-DAG: v_mov_b32_e32 [[V_NEG:v[0-9]+]], [[NEG]]
-; GFX9-DAG: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_ABS]]
-; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[V_NEG]]
+; GFX9-DAG: global_store_dword v{{[0-9]+}}, [[V_ABS]], s{{\[[0-9]+:[0-9]+\]}}
+; GFX9: global_store_dword v{{[0-9]+}}, [[V_NEG]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @s_fneg_multi_use_fabs_v2f16(<2 x half> addrspace(1)* %out0, <2 x half> addrspace(1)* %out1, <2 x half> %in) {
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %fabs

@@ -47,11 +47,7 @@ namespace clangd {
 /// As we must avoid re-parsing the preamble, any information that can only
 /// be obtained during parsing must be eagerly captured and stored here.
 struct PreambleData {
-  PreambleData(const ParseInputs &Inputs, PrecompiledPreamble Preamble,
-               std::vector<Diag> Diags, IncludeStructure Includes,
-               MainFileMacros Macros,
-               std::unique_ptr<PreambleFileStatusCache> StatCache,
-               CanonicalIncludes CanonIncludes);
+  PreambleData(PrecompiledPreamble Preamble) : Preamble(std::move(Preamble)) {}
 
   // Version of the ParseInputs this preamble was built from.
   std::string Version;
@@ -65,10 +61,15 @@ struct PreambleData {
   // Users care about headers vs main-file, not preamble vs non-preamble.
   // These should be treated as main-file entities e.g. for code completion.
   MainFileMacros Macros;
+  // Pragma marks defined in the preamble section of the main file.
+  std::vector<PragmaMark> Marks;
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::unique_ptr<PreambleFileStatusCache> StatCache;
   CanonicalIncludes CanonIncludes;
+  // Whether there was a (possibly-incomplete) include-guard on the main file.
+  // We need to propagate this information "by hand" to subsequent parses.
+  bool MainIsIncludeGuarded = false;
 };
 
 using PreambleParsedCallback =
@@ -98,15 +99,20 @@ bool isPreambleCompatible(const PreambleData &Preamble,
 /// new include directives.
 class PreamblePatch {
 public:
+  enum class PatchType { MacroDirectives, All };
   /// \p Preamble is used verbatim.
   static PreamblePatch unmodified(const PreambleData &Preamble);
   /// Builds a patch that contains new PP directives introduced to the preamble
   /// section of \p Modified compared to \p Baseline.
   /// FIXME: This only handles include directives, we should at least handle
   /// define/undef.
-  static PreamblePatch create(llvm::StringRef FileName,
-                              const ParseInputs &Modified,
-                              const PreambleData &Baseline);
+  static PreamblePatch createFullPatch(llvm::StringRef FileName,
+                                       const ParseInputs &Modified,
+                                       const PreambleData &Baseline);
+  static PreamblePatch createMacroPatch(llvm::StringRef FileName,
+                                        const ParseInputs &Modified,
+                                        const PreambleData &Baseline);
+
   /// Adjusts CI (which compiles the modified inputs) to be used with the
   /// baseline preamble. This is done by inserting an artifical include to the
   /// \p CI that contains new directives calculated in create.
@@ -126,7 +132,15 @@ public:
   /// Returns textual patch contents.
   llvm::StringRef text() const { return PatchContents; }
 
+  /// Whether diagnostics generated using this patch are trustable.
+  bool preserveDiagnostics() const { return PatchContents.empty(); }
+
 private:
+  static PreamblePatch create(llvm::StringRef FileName,
+                              const ParseInputs &Modified,
+                              const PreambleData &Baseline,
+                              PatchType PatchType);
+
   PreamblePatch() = default;
   std::string PatchContents;
   std::string PatchFileName;

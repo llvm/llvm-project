@@ -1,6 +1,6 @@
 ; RUN: opt < %s -O1 -S | FileCheck %s
 
-; The attribute nomerge prevents the 3 bar() calls from being sunk/hoisted into 
+; The attribute nomerge prevents the 3 bar() calls from being sunk/hoisted into
 ; one inside a function. Check that there are still 3 tail calls.
 
 ; Test case for preventing sinking

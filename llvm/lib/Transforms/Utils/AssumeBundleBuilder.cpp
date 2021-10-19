@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "assume-builder"
-
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
@@ -27,6 +25,7 @@
 
 using namespace llvm;
 
+namespace llvm {
 cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
     cl::desc("enable preservation of all attrbitues. even those that are "
@@ -36,6 +35,9 @@ cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
     cl::desc(
         "enable preservation of attributes throughout code transformation"));
+} // namespace llvm
+
+#define DEBUG_TYPE "assume-builder"
 
 STATISTIC(NumAssumeBuilt, "Number of assume built by the assume builder");
 STATISTIC(NumBundlesInAssumes, "Total number of Bundles in the assume built");
@@ -52,6 +54,7 @@ namespace {
 bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   switch (Kind) {
     case Attribute::NonNull:
+    case Attribute::NoUndef:
     case Attribute::Alignment:
     case Attribute::Dereferenceable:
     case Attribute::DereferenceableOrNull:
@@ -64,7 +67,8 @@ bool isUsefullToPreserve(Attribute::AttrKind Kind) {
 
 /// This function will try to transform the given knowledge into a more
 /// canonical one. the canonical knowledge maybe the given one.
-RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK, Module *M) {
+RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
+                                         const DataLayout &DL) {
   switch (RK.AttrKind) {
   default:
     return RK;
@@ -75,8 +79,7 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK, Module *M) {
     Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {
       if (auto *GEP = dyn_cast<GEPOperator>(Strip))
         RK.ArgValue =
-            MinAlign(RK.ArgValue,
-                     GEP->getMaxPreservedAlignment(M->getDataLayout()).value());
+            MinAlign(RK.ArgValue, GEP->getMaxPreservedAlignment(DL).value());
     });
     RK.WasOn = V;
     return RK;
@@ -84,8 +87,8 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK, Module *M) {
   case Attribute::Dereferenceable:
   case Attribute::DereferenceableOrNull: {
     int64_t Offset = 0;
-    Value *V = GetPointerBaseWithConstantOffset(
-        RK.WasOn, Offset, M->getDataLayout(), /*AllowNonInBounds*/ false);
+    Value *V = GetPointerBaseWithConstantOffset(RK.WasOn, Offset, DL,
+                                                /*AllowNonInBounds*/ false);
     if (Offset < 0)
       return RK;
     RK.ArgValue = RK.ArgValue + Offset;
@@ -101,17 +104,17 @@ struct AssumeBuilderState {
   Module *M;
 
   using MapKey = std::pair<Value *, Attribute::AttrKind>;
-  SmallMapVector<MapKey, unsigned, 8> AssumedKnowledgeMap;
-  Instruction *InstBeingRemoved = nullptr;
+  SmallMapVector<MapKey, uint64_t, 8> AssumedKnowledgeMap;
+  Instruction *InstBeingModified = nullptr;
   AssumptionCache* AC = nullptr;
   DominatorTree* DT = nullptr;
 
   AssumeBuilderState(Module *M, Instruction *I = nullptr,
                      AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr)
-      : M(M), InstBeingRemoved(I), AC(AC), DT(DT) {}
+      : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingRemoved || !RK.WasOn)
+    if (!InstBeingModified || !RK.WasOn)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
@@ -119,13 +122,12 @@ struct AssumeBuilderState {
         RK.WasOn, {RK.AttrKind}, AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
-          if (!isValidAssumeForContext(Assume, InstBeingRemoved, DT))
+          if (!isValidAssumeForContext(Assume, InstBeingModified, DT))
             return false;
           if (RKOther.ArgValue >= RK.ArgValue) {
             HasBeenPreserved = true;
             return true;
-          } else if (isValidAssumeForContext(InstBeingRemoved, Assume,
-                                             DT)) {
+          } else if (isValidAssumeForContext(InstBeingModified, Assume, DT)) {
             HasBeenPreserved = true;
             IntrinsicInst *Intr = cast<IntrinsicInst>(Assume);
             ToUpdate = &Intr->op_begin()[Bundle->Begin + ABA_Argument];
@@ -151,7 +153,7 @@ struct AssumeBuilderState {
     }
     if (auto *Arg = dyn_cast<Argument>(RK.WasOn)) {
       if (Arg->hasAttribute(RK.AttrKind) &&
-          (!Attribute::doesAttrKindHaveArgument(RK.AttrKind) ||
+          (!Attribute::isIntAttrKind(RK.AttrKind) ||
            Arg->getAttribute(RK.AttrKind).getValueAsInt() >= RK.ArgValue))
         return false;
       return true;
@@ -161,14 +163,14 @@ struct AssumeBuilderState {
         if (RK.WasOn->use_empty())
           return false;
         Use *SingleUse = RK.WasOn->getSingleUndroppableUse();
-        if (SingleUse && SingleUse->getUser() == InstBeingRemoved)
+        if (SingleUse && SingleUse->getUser() == InstBeingModified)
           return false;
       }
     return true;
   }
 
   void addKnowledge(RetainedKnowledge RK) {
-    RK = canonicalizedKnowledge(RK, M);
+    RK = canonicalizedKnowledge(RK, M->getDataLayout());
 
     if (!isKnowledgeWorthPreserving(RK))
       return;
@@ -195,27 +197,30 @@ struct AssumeBuilderState {
         (!ShouldPreserveAllAttributes &&
          !isUsefullToPreserve(Attr.getKindAsEnum())))
       return;
-    unsigned AttrArg = 0;
+    uint64_t AttrArg = 0;
     if (Attr.isIntAttribute())
       AttrArg = Attr.getValueAsInt();
     addKnowledge({Attr.getKindAsEnum(), AttrArg, WasOn});
   }
 
   void addCall(const CallBase *Call) {
-    auto addAttrList = [&](AttributeList AttrList) {
-      for (unsigned Idx = AttributeList::FirstArgIndex;
-           Idx < AttrList.getNumAttrSets(); Idx++)
-        for (Attribute Attr : AttrList.getAttributes(Idx))
-          addAttribute(Attr, Call->getArgOperand(Idx - 1));
-      for (Attribute Attr : AttrList.getFnAttributes())
+    auto addAttrList = [&](AttributeList AttrList, unsigned NumArgs) {
+      for (unsigned Idx = 0; Idx < NumArgs; Idx++)
+        for (Attribute Attr : AttrList.getParamAttrs(Idx)) {
+          bool IsPoisonAttr = Attr.hasAttribute(Attribute::NonNull) ||
+                              Attr.hasAttribute(Attribute::Alignment);
+          if (!IsPoisonAttr || Call->isPassingUndefUB(Idx))
+            addAttribute(Attr, Call->getArgOperand(Idx));
+        }
+      for (Attribute Attr : AttrList.getFnAttrs())
         addAttribute(Attr, nullptr);
     };
-    addAttrList(Call->getAttributes());
+    addAttrList(Call->getAttributes(), Call->arg_size());
     if (Function *Fn = Call->getCalledFunction())
-      addAttrList(Fn->getAttributes());
+      addAttrList(Fn->getAttributes(), Fn->arg_size());
   }
 
-  IntrinsicInst *build() {
+  AssumeInst *build() {
     if (AssumedKnowledgeMap.empty())
       return nullptr;
     if (!DebugCounter::shouldExecute(BuildAssumeCounter))
@@ -239,7 +244,7 @@ struct AssumeBuilderState {
       NumBundlesInAssumes++;
     }
     NumAssumeBuilt++;
-    return cast<IntrinsicInst>(CallInst::Create(
+    return cast<AssumeInst>(CallInst::Create(
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
 
@@ -256,8 +261,7 @@ struct AssumeBuilderState {
         addKnowledge({Attribute::NonNull, 0u, Pointer});
     }
     if (MA.valueOrOne() > 1)
-      addKnowledge(
-          {Attribute::Alignment, unsigned(MA.valueOrOne().value()), Pointer});
+      addKnowledge({Attribute::Alignment, MA.valueOrOne().value(), Pointer});
   }
 
   void addInstruction(Instruction *I) {
@@ -277,7 +281,7 @@ struct AssumeBuilderState {
 
 } // namespace
 
-IntrinsicInst *llvm::buildAssumeFromInst(Instruction *I) {
+AssumeInst *llvm::buildAssumeFromInst(Instruction *I) {
   if (!EnableKnowledgeRetention)
     return nullptr;
   AssumeBuilderState Builder(I->getModule());
@@ -291,11 +295,36 @@ void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
     return;
   AssumeBuilderState Builder(I->getModule(), I, AC, DT);
   Builder.addInstruction(I);
-  if (IntrinsicInst *Intr = Builder.build()) {
+  if (auto *Intr = Builder.build()) {
     Intr->insertBefore(I);
     if (AC)
       AC->registerAssumption(Intr);
   }
+}
+
+AssumeInst *
+llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
+                               Instruction *CtxI, AssumptionCache *AC,
+                               DominatorTree *DT) {
+  AssumeBuilderState Builder(CtxI->getModule(), CtxI, AC, DT);
+  for (const RetainedKnowledge &RK : Knowledge)
+    Builder.addKnowledge(RK);
+  return Builder.build();
+}
+
+RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
+                                                  RetainedKnowledge RK,
+                                                  AssumptionCache *AC,
+                                                  DominatorTree *DT) {
+  AssumeBuilderState Builder(Assume->getModule(), Assume, AC, DT);
+  RK = canonicalizedKnowledge(RK, Assume->getModule()->getDataLayout());
+
+  if (!Builder.isKnowledgeWorthPreserving(RK))
+    return RetainedKnowledge::none();
+
+  if (Builder.tryToPreserveWithoutAddingAssume(RK))
+    return RetainedKnowledge::none();
+  return RK;
 }
 
 namespace {
@@ -343,7 +372,8 @@ struct AssumeSimplify {
     for (IntrinsicInst *Assume : CleanupToDo) {
       auto *Arg = dyn_cast<ConstantInt>(Assume->getOperand(0));
       if (!Arg || Arg->isZero() ||
-          (!ForceCleanup && !isAssumeWithEmptyBundle(*Assume)))
+          (!ForceCleanup &&
+           !isAssumeWithEmptyBundle(cast<AssumeInst>(*Assume))))
         continue;
       MadeChange = true;
       if (ForceCleanup)
@@ -361,7 +391,7 @@ struct AssumeSimplify {
   void dropRedundantKnowledge() {
     struct MapValue {
       IntrinsicInst *Assume;
-      unsigned ArgValue;
+      uint64_t ArgValue;
       CallInst::BundleOpInfo *BOI;
     };
     buildMapping(false);
@@ -386,11 +416,12 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             continue;
           }
-          RetainedKnowledge RK = getKnowledgeFromBundle(*Assume, BOI);
+          RetainedKnowledge RK =
+            getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
           if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
             bool HasSameKindAttr = Arg->hasAttribute(RK.AttrKind);
             if (HasSameKindAttr)
-              if (!Attribute::doesAttrKindHaveArgument(RK.AttrKind) ||
+              if (!Attribute::isIntAttrKind(RK.AttrKind) ||
                   Arg->getAttribute(RK.AttrKind).getValueAsInt() >=
                       RK.ArgValue) {
                 RemoveFromAssume();
@@ -445,7 +476,8 @@ struct AssumeSimplify {
     for (IntrinsicInst *I : make_range(Begin, End)) {
       CleanupToDo.insert(I);
       for (CallInst::BundleOpInfo &BOI : I->bundle_op_infos()) {
-        RetainedKnowledge RK = getKnowledgeFromBundle(*I, BOI);
+        RetainedKnowledge RK =
+          getKnowledgeFromBundle(cast<AssumeInst>(*I), BOI);
         if (!RK)
           continue;
         Builder.addKnowledge(RK);
@@ -465,7 +497,7 @@ struct AssumeSimplify {
           InsertPt = It->getNextNode();
           break;
         }
-    IntrinsicInst *MergedAssume = Builder.build();
+    auto *MergedAssume = Builder.build();
     if (!MergedAssume)
       return;
     MadeChange = true;

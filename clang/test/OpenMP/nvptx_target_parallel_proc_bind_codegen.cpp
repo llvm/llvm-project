@@ -16,9 +16,9 @@
 #define HEADER
 
 // Check that the execution mode of all 3 target regions on the gpu is set to SPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l29}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l33}}_exec_mode = weak constant i8 0
-// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 0
+// CHECK-DAG: {{@__omp_offloading_.+l29}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l33}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l38}}_exec_mode = weak constant i8 2
 
 template<typename tx>
 tx ftemplate(int n) {
@@ -53,57 +53,5 @@ int bar(int n){
   return a;
 }
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l29}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
-// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
 // CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
-
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l33}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
-// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
-// CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
-
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
-// CHECK: call void @__kmpc_data_sharing_init_stack_spmd
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
-// CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
 #endif

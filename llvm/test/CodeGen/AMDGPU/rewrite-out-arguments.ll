@@ -56,7 +56,7 @@ define void @void_one_out_arg_i32_no_use(i32* %val) #0 {
 ; CHECK-LABEL: define void @skip_byval_arg(
 ; CHECK-NEXT: store i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_byval_arg(i32* byval %val) #0 {
+define void @skip_byval_arg(i32* byval(i32) %val) #0 {
   store i32 0, i32* %val
   ret void
 }
@@ -65,7 +65,7 @@ define void @skip_byval_arg(i32* byval %val) #0 {
 ; CHECK-LABEL: define void @skip_optnone(
 ; CHECK-NEXT: store i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_optnone(i32* byval %val) #1 {
+define void @skip_optnone(i32* byval(i32) %val) #1 {
   store i32 0, i32* %val
   ret void
 }
@@ -74,7 +74,7 @@ define void @skip_optnone(i32* byval %val) #1 {
 ; CHECK-LABEL: define void @skip_volatile(
 ; CHECK-NEXT: store volatile i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_volatile(i32* byval %val) #0 {
+define void @skip_volatile(i32* byval(i32) %val) #0 {
   store volatile i32 0, i32* %val
   ret void
 }
@@ -83,7 +83,7 @@ define void @skip_volatile(i32* byval %val) #0 {
 ; CHECK-LABEL: define void @skip_atomic(
 ; CHECK-NEXT: store atomic i32 0, i32* %val
 ; CHECK-NEXT: ret void
-define void @skip_atomic(i32* byval %val) #0 {
+define void @skip_atomic(i32* byval(i32) %val) #0 {
   store atomic i32 0, i32* %val seq_cst, align 4
   ret void
 }
@@ -108,11 +108,11 @@ define void @skip_store_gep(i32* %val) #0 {
   ret void
 }
 
-; CHECK-LABEL: define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+; CHECK-LABEL: define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
 ; CHECK-NEXT: store
 ; CHECK-NEXT: store
 ; CHECK-NEXT: ret void
-define void @skip_sret(i32* sret %sret, i32* %out) #0 {
+define void @skip_sret(i32* sret(i32) %sret, i32* %out) #0 {
   store i32 1, i32* %sret
   store i32 0, i32* %out
   ret void
@@ -568,7 +568,7 @@ define void @preserve_metadata(i32 %arg0, i32* %val) #0 !kernel_arg_access_qual 
 ; CHECK-LABEL: define private %bitcast_pointer_v4i32_v3i32 @bitcast_pointer_v4i32_v3i32.body(<3 x i32>* %out) #0 {
 ; CHECK-NEXT: %load = load volatile <4 x i32>, <4 x i32> addrspace(1)* undef
 ; CHECK-NEXT: %bitcast = bitcast <3 x i32>* %out to <4 x i32>*
-; CHECK-NEXT: %1 = shufflevector <4 x i32> %load, <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT: %1 = shufflevector <4 x i32> %load, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT: %2 = insertvalue %bitcast_pointer_v4i32_v3i32 undef, <3 x i32> %1, 0
 ; CHECK-NEXT: ret %bitcast_pointer_v4i32_v3i32 %2
 
@@ -587,7 +587,7 @@ define void @bitcast_pointer_v4i32_v3i32(<3 x i32>* %out) #0 {
 ; CHECK-LABEL: define private %bitcast_pointer_v4i32_v3f32 @bitcast_pointer_v4i32_v3f32.body(<3 x float>* %out) #0 {
 ; CHECK-NEXT: %load = load volatile <4 x i32>, <4 x i32> addrspace(1)* undef
 ; CHECK-NEXT: %bitcast = bitcast <3 x float>* %out to <4 x i32>*
-; CHECK-NEXT: %1 = shufflevector <4 x i32> %load, <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT: %1 = shufflevector <4 x i32> %load, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT: %2 = bitcast <3 x i32> %1 to <3 x float>
 ; CHECK-NEXT: %3 = insertvalue %bitcast_pointer_v4i32_v3f32 undef, <3 x float> %2, 0
 ; CHECK-NEXT: ret %bitcast_pointer_v4i32_v3f32 %3
@@ -645,9 +645,9 @@ define void @bitcast_pointer_f16_i32(i32* %out) #0 {
 %struct.v4f32 = type { <4 x float> }
 
 ; CHECK-LABEL: define private %bitcast_struct_v3f32_v3f32 @bitcast_struct_v3f32_v3f32.body(%struct.v3f32* %out, <3 x float> %value) #0 {
-; CHECK-NEXT: %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT: %extractVec = shufflevector <3 x float> %value, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT: %cast = bitcast %struct.v3f32* %out to <4 x float>*
-; CHECK-NEXT: %1 = shufflevector <4 x float> %extractVec, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT: %1 = shufflevector <4 x float> %extractVec, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT: %2 = insertvalue %struct.v3f32 undef, <3 x float> %1, 0
 ; CHECK-NEXT: %3 = insertvalue %bitcast_struct_v3f32_v3f32 undef, %struct.v3f32 %2, 0
 ; CHECK-NEXT: ret %bitcast_struct_v3f32_v3f32 %3
@@ -658,16 +658,16 @@ define void @bitcast_pointer_f16_i32(i32* %out) #0 {
 ; CHECK-NEXT: store %struct.v3f32 %4, %struct.v3f32* %0, align 16
 ; CHECK-NEXT: ret void
 define void @bitcast_struct_v3f32_v3f32(%struct.v3f32* %out, <3 x float> %value) #0 {
-  %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec = shufflevector <3 x float> %value, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast = bitcast %struct.v3f32* %out to <4 x float>*
   store <4 x float> %extractVec, <4 x float>* %cast, align 16
   ret void
 }
 
 ; CHECK-LABEL: define private %bitcast_struct_v3f32_v3i32 @bitcast_struct_v3f32_v3i32.body(%struct.v3f32* %out, <3 x i32> %value) #0 {
-; CHECK-NEXT: %extractVec = shufflevector <3 x i32> %value, <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT: %extractVec = shufflevector <3 x i32> %value, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT: %cast = bitcast %struct.v3f32* %out to <4 x i32>*
-; CHECK-NEXT: %1 = shufflevector <4 x i32> %extractVec, <4 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT: %1 = shufflevector <4 x i32> %extractVec, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT: %2 = bitcast <3 x i32> %1 to <3 x float>
 ; CHECK-NEXT: %3 = insertvalue %struct.v3f32 undef, <3 x float> %2, 0
 ; CHECK-NEXT: %4 = insertvalue %bitcast_struct_v3f32_v3i32 undef, %struct.v3f32 %3, 0
@@ -678,7 +678,7 @@ define void @bitcast_struct_v3f32_v3f32(%struct.v3f32* %out, <3 x float> %value)
 ; CHECK-NEXT: %4 = extractvalue %bitcast_struct_v3f32_v3i32 %3, 0
 ; CHECK-NEXT: store %struct.v3f32 %4, %struct.v3f32* %0, align 16
 define void @bitcast_struct_v3f32_v3i32(%struct.v3f32* %out, <3 x i32> %value) #0 {
-  %extractVec = shufflevector <3 x i32> %value, <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec = shufflevector <3 x i32> %value, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast = bitcast %struct.v3f32* %out to <4 x i32>*
   store <4 x i32> %extractVec, <4 x i32>* %cast, align 16
   ret void
@@ -709,7 +709,7 @@ define void @bitcast_struct_v3f32_v4i32(%struct.v3f32* %out, <4 x i32> %value) #
 ; CHECK-LABEL: define private %bitcast_struct_v4f32_v3f32 @bitcast_struct_v4f32_v3f32.body(%struct.v4f32* %out, <3 x float> %value) #0 {
 ; CHECK-LABEL: define void @bitcast_struct_v4f32_v3f32(%struct.v4f32* %0, <3 x float> %1) #2 {
 define void @bitcast_struct_v4f32_v3f32(%struct.v4f32* %out, <3 x float> %value) #0 {
-  %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec = shufflevector <3 x float> %value, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast = bitcast %struct.v4f32* %out to <4 x float>*
   store <4 x float> %extractVec, <4 x float>* %cast, align 16
   ret void
@@ -728,7 +728,7 @@ define void @bitcast_struct_v3f32_v2f32(%struct.v3f32* %out, <2 x float> %value)
 ; CHECK-LABEL: define void @bitcast_struct_v3f32_f32_v3f32(%struct.v3f32.f32* %out, <3 x float> %value) #0 {
 ; CHECK-NOT: call
 define void @bitcast_struct_v3f32_f32_v3f32(%struct.v3f32.f32* %out, <3 x float> %value) #0 {
-  %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec = shufflevector <3 x float> %value, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast = bitcast %struct.v3f32.f32* %out to <4 x float>*
   store <4 x float> %extractVec, <4 x float>* %cast, align 16
   ret void
@@ -766,7 +766,7 @@ define void @bitcast_array_v4i32_v4f32([4 x i32]* %out, [4 x float] %value) #0 {
 ; CHECK-LABEL: define private %multi_return_bitcast_struct_v3f32_v3f32 @multi_return_bitcast_struct_v3f32_v3f32.body(i1 %cond, %struct.v3f32* %out, <3 x float> %value) #0 {
 ; CHECK: ret0:
 ; CHECK: %cast0 = bitcast %struct.v3f32* %out to <4 x float>*
-; CHECK: %0 = shufflevector <4 x float> %extractVec, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK: %0 = shufflevector <4 x float> %extractVec, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK: %1 = insertvalue %struct.v3f32 undef, <3 x float> %0, 0
 ; CHECK: %2 = insertvalue %multi_return_bitcast_struct_v3f32_v3f32 undef, %struct.v3f32 %1, 0
 ; CHECK: ret %multi_return_bitcast_struct_v3f32_v3f32 %2
@@ -780,7 +780,7 @@ entry:
   br i1 %cond, label %ret0, label %ret1
 
 ret0:
-  %extractVec = shufflevector <3 x float> %value, <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  %extractVec = shufflevector <3 x float> %value, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   %cast0 = bitcast %struct.v3f32* %out to <4 x float>*
   store <4 x float> %extractVec, <4 x float>* %cast0, align 16
   ret void

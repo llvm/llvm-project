@@ -18,8 +18,56 @@
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+cl::opt<bool> UseContextLessSummary(
+    "profile-summary-contextless", cl::Hidden, cl::init(false), cl::ZeroOrMore,
+    cl::desc("Merge context profiles before calculating thresholds."));
+
+// The following two parameters determine the threshold for a count to be
+// considered hot/cold. These two parameters are percentile values (multiplied
+// by 10000). If the counts are sorted in descending order, the minimum count to
+// reach ProfileSummaryCutoffHot gives the threshold to determine a hot count.
+// Similarly, the minimum count to reach ProfileSummaryCutoffCold gives the
+// threshold for determining cold count (everything <= this threshold is
+// considered cold).
+cl::opt<int> ProfileSummaryCutoffHot(
+    "profile-summary-cutoff-hot", cl::Hidden, cl::init(990000), cl::ZeroOrMore,
+    cl::desc("A count is hot if it exceeds the minimum count to"
+             " reach this percentile of total counts."));
+
+cl::opt<int> ProfileSummaryCutoffCold(
+    "profile-summary-cutoff-cold", cl::Hidden, cl::init(999999), cl::ZeroOrMore,
+    cl::desc("A count is cold if it is below the minimum count"
+             " to reach this percentile of total counts."));
+
+cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
+    "profile-summary-huge-working-set-size-threshold", cl::Hidden,
+    cl::init(15000), cl::ZeroOrMore,
+    cl::desc("The code working set size is considered huge if the number of"
+             " blocks required to reach the -profile-summary-cutoff-hot"
+             " percentile exceeds this count."));
+
+cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold(
+    "profile-summary-large-working-set-size-threshold", cl::Hidden,
+    cl::init(12500), cl::ZeroOrMore,
+    cl::desc("The code working set size is considered large if the number of"
+             " blocks required to reach the -profile-summary-cutoff-hot"
+             " percentile exceeds this count."));
+
+// The next two options override the counts derived from summary computation and
+// are useful for debugging purposes.
+cl::opt<int> ProfileSummaryHotCount(
+    "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
+    cl::desc("A fixed hot count that overrides the count derived from"
+             " profile-summary-cutoff-hot"));
+
+cl::opt<int> ProfileSummaryColdCount(
+    "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
+    cl::desc("A fixed cold count that overrides the count derived from"
+             " profile-summary-cutoff-cold"));
 
 // A set of cutoff values. Each value, when divided by ProfileSummary::Scale
 // (which is 1000000) is a desired percentile of total counts.
@@ -63,8 +111,10 @@ void SampleProfileSummaryBuilder::addRecord(
     if (FS.getHeadSamples() > MaxFunctionCount)
       MaxFunctionCount = FS.getHeadSamples();
   }
-  for (const auto &I : FS.getBodySamples())
-    addCount(I.second.getSamples());
+  for (const auto &I : FS.getBodySamples()) {
+    uint64_t Count = I.second.getSamples();
+      addCount(Count);
+  }
   for (const auto &I : FS.getCallsiteSamples())
     for (const auto &CS : I.second)
       addRecord(CS.second, true);
@@ -104,11 +154,58 @@ void ProfileSummaryBuilder::computeDetailedSummary() {
   }
 }
 
+uint64_t ProfileSummaryBuilder::getHotCountThreshold(SummaryEntryVector &DS) {
+  auto &HotEntry =
+      ProfileSummaryBuilder::getEntryForPercentile(DS, ProfileSummaryCutoffHot);
+  uint64_t HotCountThreshold = HotEntry.MinCount;
+  if (ProfileSummaryHotCount.getNumOccurrences() > 0)
+    HotCountThreshold = ProfileSummaryHotCount;
+  return HotCountThreshold;
+}
+
+uint64_t ProfileSummaryBuilder::getColdCountThreshold(SummaryEntryVector &DS) {
+  auto &ColdEntry = ProfileSummaryBuilder::getEntryForPercentile(
+      DS, ProfileSummaryCutoffCold);
+  uint64_t ColdCountThreshold = ColdEntry.MinCount;
+  if (ProfileSummaryColdCount.getNumOccurrences() > 0)
+    ColdCountThreshold = ProfileSummaryColdCount;
+  return ColdCountThreshold;
+}
+
 std::unique_ptr<ProfileSummary> SampleProfileSummaryBuilder::getSummary() {
   computeDetailedSummary();
   return std::make_unique<ProfileSummary>(
       ProfileSummary::PSK_Sample, DetailedSummary, TotalCount, MaxCount, 0,
       MaxFunctionCount, NumCounts, NumFunctions);
+}
+
+std::unique_ptr<ProfileSummary>
+SampleProfileSummaryBuilder::computeSummaryForProfiles(
+    const SampleProfileMap &Profiles) {
+  assert(NumFunctions == 0 &&
+         "This can only be called on an empty summary builder");
+  sampleprof::SampleProfileMap ContextLessProfiles;
+  const sampleprof::SampleProfileMap *ProfilesToUse = &Profiles;
+  // For CSSPGO, context-sensitive profile effectively split a function profile
+  // into many copies each representing the CFG profile of a particular calling
+  // context. That makes the count distribution looks more flat as we now have
+  // more function profiles each with lower counts, which in turn leads to lower
+  // hot thresholds. To compensate for that, by defauly we merge context
+  // profiles before computing profile summary.
+  if (UseContextLessSummary || (sampleprof::FunctionSamples::ProfileIsCS &&
+                                !UseContextLessSummary.getNumOccurrences())) {
+    for (const auto &I : Profiles) {
+      ContextLessProfiles[I.second.getName()].merge(I.second);
+    }
+    ProfilesToUse = &ContextLessProfiles;
+  }
+
+  for (const auto &I : *ProfilesToUse) {
+    const sampleprof::FunctionSamples &Profile = I.second;
+    addRecord(Profile);
+  }
+
+  return getSummary();
 }
 
 std::unique_ptr<ProfileSummary> InstrProfSummaryBuilder::getSummary() {

@@ -17,15 +17,15 @@
 #endif
 
 #include "lldb/Host/SocketAddress.h"
-#include <stddef.h>
-#include <stdio.h>
+#include <cstddef>
+#include <cstdio>
 
 #if !defined(_WIN32)
 #include <arpa/inet.h>
 #endif
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
 #include "lldb/Host/PosixApi.h"
 
@@ -93,7 +93,7 @@ SocketAddress::SocketAddress(const struct addrinfo *addr_info) {
 }
 
 // Destructor
-SocketAddress::~SocketAddress() {}
+SocketAddress::~SocketAddress() = default;
 
 void SocketAddress::Clear() {
   memset(&m_socket_addr, 0, sizeof(m_socket_addr));

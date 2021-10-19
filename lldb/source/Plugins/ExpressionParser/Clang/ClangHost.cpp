@@ -137,14 +137,12 @@ bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
         FileSystem::Instance().Resolve(file_spec);
         return true;
       }
-      raw_path = lldb_shlib_spec.GetPath();
     }
-    raw_path.resize(rev_it - r_end);
-  } else {
-    raw_path.resize(rev_it - r_end);
   }
 
   // Fall back to the Clang resource directory inside the framework.
+  raw_path = lldb_shlib_spec.GetPath();
+  raw_path.resize(rev_it - r_end);
   raw_path.append("LLDB.framework/Resources/Clang");
   file_spec.GetDirectory().SetString(raw_path.c_str());
   FileSystem::Instance().Resolve(file_spec);

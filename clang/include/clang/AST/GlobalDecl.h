@@ -32,6 +32,7 @@ enum class DynamicInitKind : unsigned {
   NoStub = 0,
   Initializer,
   AtExit,
+  GlobalArrayDestructor
 };
 
 enum class KernelReferenceKind : unsigned {

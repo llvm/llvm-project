@@ -170,11 +170,12 @@ int Compilation::ExecuteCommand(const Command &C,
 
     // Follow gcc implementation of CC_PRINT_OPTIONS; we could also cache the
     // output stream.
-    if (getDriver().CCPrintOptions && getDriver().CCPrintOptionsFilename) {
+    if (getDriver().CCPrintOptions &&
+        !getDriver().CCPrintOptionsFilename.empty()) {
       std::error_code EC;
       OwnedStream.reset(new llvm::raw_fd_ostream(
           getDriver().CCPrintOptionsFilename, EC,
-          llvm::sys::fs::OF_Append | llvm::sys::fs::OF_Text));
+          llvm::sys::fs::OF_Append | llvm::sys::fs::OF_TextWithCRLF));
       if (EC) {
         getDriver().Diag(diag::err_drv_cc_print_options_failure)
             << EC.message();
@@ -193,6 +194,8 @@ int Compilation::ExecuteCommand(const Command &C,
   std::string Error;
   bool ExecutionFailed;
   int Res = C.Execute(Redirects, &Error, &ExecutionFailed);
+  if (PostCallback)
+    PostCallback(C, Res);
   if (!Error.empty()) {
     assert(Res && "Error string set with 0 result code!");
     getDriver().Diag(diag::err_drv_command_failure) << Error;

@@ -11,14 +11,14 @@
     %2 = sub i32 %0, %smin
     %3 = lshr i32 %2, 2
     %4 = add nuw nsw i32 %3, 1
-    call void @llvm.set.loop.iterations.i32(i32 %4)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %4)
     br label %do.body
 
   do.body:                                          ; preds = %do.body, %entry
     %blkCnt.0 = phi i32 [ %mul, %entry ], [ %sub, %do.body ]
     %pDst.addr.0 = phi float* [ %pDst, %entry ], [ %add.ptr4, %do.body ]
     %pSrc.addr.0 = phi float* [ %pSrc, %entry ], [ %add.ptr, %do.body ]
-    %5 = phi i32 [ %4, %entry ], [ %9, %do.body ]
+    %5 = phi i32 [ %start, %entry ], [ %9, %do.body ]
     %6 = tail call <4 x i1> @llvm.arm.mve.vctp32(i32 %blkCnt.0)
     %input_cast = bitcast float* %pSrc.addr.0 to <4 x float>*
     %7 = tail call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %input_cast, i32 4, <4 x i1> %6, <4 x float> undef)
@@ -38,7 +38,7 @@
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #1
   declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4 x i1>, <4 x float>)
   declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 immarg, <4 x i1>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 
 ...
@@ -102,14 +102,14 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   renamable $r3, dead $cpsr = tLSLri killed renamable $r2, 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2 = tLEApcrel %const.0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
+  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg, $noreg :: (load (s128) from constant-pool)
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r3
   ; CHECK: bb.1.do.body (align 4):
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg
-  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, undef renamable $q1
-  ; CHECK:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg
+  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 0, $noreg, $lr
+  ; CHECK:   renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 0, $noreg, $lr, undef renamable $q1
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 0, killed $noreg, $lr
   ; CHECK:   renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.1
@@ -135,18 +135,18 @@ body:             |
     renamable $r2, dead $cpsr = tMOVi8 1, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r2, killed renamable $r12, 19, 14, $noreg, $noreg
     renamable $r2 = tLEApcrel %const.0, 14, $noreg
-    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg :: (load 16 from constant-pool)
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VLDRWU32 killed renamable $r2, 0, 0, $noreg, $noreg :: (load (s128) from constant-pool)
+    $lr = t2DoLoopStart renamable $lr
 
   bb.1.do.body (align 4):
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r3
 
-    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg, $lr
     MVE_VPST 2, implicit $vpr
-    renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 1, renamable $vpr
-    renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 1, renamable $vpr, undef renamable $q1
-    MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 1, killed renamable $vpr
+    renamable $q1 = nnan ninf nsz MVE_VLDRWU32 renamable $r0, 0, 1, renamable $vpr, $lr
+    renamable $q1 = nnan ninf nsz MVE_VMULf32 killed renamable $q1, renamable $q0, 1, renamable $vpr, $lr, undef renamable $q1
+    MVE_VSTRWU32 killed renamable $q1, renamable $r1, 0, 1, killed renamable $vpr, $lr
     renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 16, 14, $noreg
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r1, dead $cpsr = nuw tADDi8 killed renamable $r1, 16, 14, $noreg

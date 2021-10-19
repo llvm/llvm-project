@@ -8,14 +8,11 @@
 
 // <list>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-
 
 // template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
 //    list(InputIterator, InputIterator, Allocator = Allocator())
 //    -> list<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
-
 
 #include <list>
 #include <iterator>
@@ -100,5 +97,34 @@ int main(int, char**)
     assert(lst.size() == 0);
     }
 
-  return 0;
+    {
+        typedef test_allocator<short> Alloc;
+        typedef test_allocator<int> ConvertibleToAlloc;
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+    }
+
+    return 0;
 }

@@ -23,10 +23,9 @@ using namespace mlir;
 using namespace mlir::gpu;
 using namespace mlir::scf;
 
+#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
 #include "mlir/Dialect/GPU/ParallelLoopMapperEnums.cpp.inc"
 namespace mlir {
-
-#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
 namespace gpu {
 
 StringRef getMappingAttrName() { return "mapping"; }
@@ -37,7 +36,7 @@ ParallelLoopDimMapping getParallelLoopDimMappingAttr(Processor processor,
   MLIRContext *context = map.getContext();
   OpBuilder builder(context);
   return ParallelLoopDimMapping::get(
-      builder.getI64IntegerAttr(static_cast<int32_t>(processor)),
+      ProcessorAttr::get(builder.getContext(), processor),
       AffineMapAttr::get(map), AffineMapAttr::get(bound), context);
 }
 
@@ -53,8 +52,8 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
           "invalid mapping multiple loops to same processor");
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
-  ploopOp.setAttr(getMappingAttrName(),
-                  ArrayAttr::get(mappingAsAttrs, ploopOp.getContext()));
+  ploopOp->setAttr(getMappingAttrName(),
+                   ArrayAttr::get(ploopOp.getContext(), mappingAsAttrs));
   return success();
 }
 } // namespace gpu
@@ -123,8 +122,8 @@ static gpu::Processor getHardwareIdForMapping(MappingLevel level,
 static void mapParallelOp(ParallelOp parallelOp,
                           MappingLevel mappingLevel = MapGrid) {
   // Do not try to add a mapping to already mapped loops or nested loops.
-  if (parallelOp.getAttr(getMappingAttrName()) ||
-      ((mappingLevel == MapGrid) && parallelOp.getParentOfType<ParallelOp>()))
+  if (parallelOp->getAttr(getMappingAttrName()) ||
+      ((mappingLevel == MapGrid) && parallelOp->getParentOfType<ParallelOp>()))
     return;
 
   MLIRContext *ctx = parallelOp.getContext();
@@ -136,7 +135,7 @@ static void mapParallelOp(ParallelOp parallelOp,
         getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
         b.getDimIdentityMap()));
   }
-  setMappingAttr(parallelOp, attrs);
+  (void)setMappingAttr(parallelOp, attrs);
   ++mappingLevel;
   // Parallel loop operations are immediately nested, so do not use
   // walk but just iterate over the operations.

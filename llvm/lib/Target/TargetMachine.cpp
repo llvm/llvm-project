@@ -56,7 +56,7 @@ bool TargetMachine::isPositionIndependent() const {
 void TargetMachine::resetTargetOptions(const Function &F) const {
 #define RESET_OPTION(X, Y)                                              \
   do {                                                                  \
-    Options.X = (F.getFnAttribute(Y).getValueAsString() == "true");     \
+    Options.X = F.getFnAttribute(Y).getValueAsBool();     \
   } while (0)
 
   RESET_OPTION(UnsafeFPMath, "unsafe-fp-math");
@@ -93,117 +93,56 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
 
 bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
                                          const GlobalValue *GV) const {
-  // If the IR producer requested that this GV be treated as dso local, obey.
-  if (GV && GV->isDSOLocal())
-    return true;
-
-  // If we are not supossed to use a PLT, we cannot assume that intrinsics are
-  // local since the linker can convert some direct access to access via plt.
-  if (M.getRtLibUseGOT() && !GV)
-    return false;
+  const Triple &TT = getTargetTriple();
+  Reloc::Model RM = getRelocationModel();
 
   // According to the llvm language reference, we should be able to
   // just return false in here if we have a GV, as we know it is
   // dso_preemptable.  At this point in time, the various IR producers
   // have not been transitioned to always produce a dso_local when it
   // is possible to do so.
-  // In the case of intrinsics, GV is null and there is nowhere to put
-  // dso_local. Returning false for those will produce worse code in some
-  // architectures. For example, on x86 the caller has to set ebx before calling
-  // a plt.
+  //
   // As a result we still have some logic in here to improve the quality of the
   // generated code.
-  // FIXME: Add a module level metadata for whether intrinsics should be assumed
-  // local.
-
-  Reloc::Model RM = getRelocationModel();
-  const Triple &TT = getTargetTriple();
-
-  // DLLImport explicitly marks the GV as external.
-  if (GV && GV->hasDLLImportStorageClass())
+  if (!GV)
     return false;
 
-  // On MinGW, variables that haven't been declared with DLLImport may still
-  // end up automatically imported by the linker. To make this feasible,
-  // don't assume the variables to be DSO local unless we actually know
-  // that for sure. This only has to be done for variables; for functions
-  // the linker can insert thunks for calling functions from another DLL.
-  if (TT.isWindowsGNUEnvironment() && TT.isOSBinFormatCOFF() && GV &&
-      GV->isDeclarationForLinker() && isa<GlobalVariable>(GV))
-    return false;
-
-  // On COFF, don't mark 'extern_weak' symbols as DSO local. If these symbols
-  // remain unresolved in the link, they can be resolved to zero, which is
-  // outside the current DSO.
-  if (TT.isOSBinFormatCOFF() && GV && GV->hasExternalWeakLinkage())
-    return false;
-
-  // Every other GV is local on COFF.
-  // Make an exception for windows OS in the triple: Some firmware builds use
-  // *-win32-macho triples. This (accidentally?) produced windows relocations
-  // without GOT tables in older clang versions; Keep this behaviour.
-  // Some JIT users use *-win32-elf triples; these shouldn't use GOT tables
-  // either.
-  if (TT.isOSBinFormatCOFF() || TT.isOSWindows())
+  // If the IR producer requested that this GV be treated as dso local, obey.
+  if (GV->isDSOLocal())
     return true;
 
-  // Most PIC code sequences that assume that a symbol is local cannot
-  // produce a 0 if it turns out the symbol is undefined. While this
-  // is ABI and relocation depended, it seems worth it to handle it
-  // here.
-  if (GV && isPositionIndependent() && GV->hasExternalWeakLinkage())
-    return false;
+  if (TT.isOSBinFormatCOFF()) {
+    // DLLImport explicitly marks the GV as external.
+    if (GV->hasDLLImportStorageClass())
+      return false;
 
-  if (GV && !GV->hasDefaultVisibility())
+    // On MinGW, variables that haven't been declared with DLLImport may still
+    // end up automatically imported by the linker. To make this feasible,
+    // don't assume the variables to be DSO local unless we actually know
+    // that for sure. This only has to be done for variables; for functions
+    // the linker can insert thunks for calling functions from another DLL.
+    if (TT.isWindowsGNUEnvironment() && GV->isDeclarationForLinker() &&
+        isa<GlobalVariable>(GV))
+      return false;
+
+    // Don't mark 'extern_weak' symbols as DSO local. If these symbols remain
+    // unresolved in the link, they can be resolved to zero, which is outside
+    // the current DSO.
+    if (GV->hasExternalWeakLinkage())
+      return false;
+
+    // Every other GV is local on COFF.
     return true;
+  }
 
   if (TT.isOSBinFormatMachO()) {
     if (RM == Reloc::Static)
       return true;
-    return GV && GV->isStrongDefinitionForLinker();
+    return GV->isStrongDefinitionForLinker();
   }
 
-  // Due to the AIX linkage model, any global with default visibility is
-  // considered non-local.
-  if (TT.isOSBinFormatXCOFF())
-    return false;
-
-  assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm());
-  assert(RM != Reloc::DynamicNoPIC);
-
-  bool IsExecutable =
-      RM == Reloc::Static || M.getPIELevel() != PIELevel::Default;
-  if (IsExecutable) {
-    // If the symbol is defined, it cannot be preempted.
-    if (GV && !GV->isDeclarationForLinker())
-      return true;
-
-    // A symbol marked nonlazybind should not be accessed with a plt. If the
-    // symbol turns out to be external, the linker will convert a direct
-    // access to an access via the plt, so don't assume it is local.
-    const Function *F = dyn_cast_or_null<Function>(GV);
-    if (F && F->hasFnAttribute(Attribute::NonLazyBind))
-      return false;
-    Triple::ArchType Arch = TT.getArch();
-
-    // PowerPC prefers avoiding copy relocations.
-    if (Arch == Triple::ppc || TT.isPPC64())
-      return false;
-
-    // Check if we can use copy relocations.
-    if (!(GV && GV->isThreadLocal()) && RM == Reloc::Static)
-      return true;
-  } else if (TT.isOSBinFormatELF()) {
-    // If dso_local allows AsmPrinter::getSymbolPreferLocal to use a local
-    // alias, set the flag. We cannot set dso_local for other global values,
-    // because otherwise direct accesses to a probably interposable symbol (even
-    // if the codegen assumes not) will be rejected by the linker.
-    if (!GV || !GV->canBenefitFromLocalAlias())
-      return false;
-    return TT.isX86() && M.noSemanticInterposition();
-  }
-
-  // ELF & wasm support preemption of other symbols.
+  assert(TT.isOSBinFormatELF() || TT.isOSBinFormatWasm() ||
+         TT.isOSBinFormatXCOFF());
   return false;
 }
 
@@ -280,4 +219,13 @@ TargetIRAnalysis TargetMachine::getTargetIRAnalysis() {
   // dependency.
   return TargetIRAnalysis(
       [this](const Function &F) { return this->getTargetTransformInfo(F); });
+}
+
+std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
+  if (Version == "none")
+    return {INT_MAX, INT_MAX}; // Make binutilsIsAtLeast() return true.
+  std::pair<int, int> Ret;
+  if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
+    Version.consumeInteger(10, Ret.second);
+  return Ret;
 }

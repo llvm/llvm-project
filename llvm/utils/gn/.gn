@@ -8,6 +8,9 @@ buildconfig = "//llvm/utils/gn/build/BUILDCONFIG.gn"
 # whitelisting things here.
 exec_script_whitelist = []
 
+# Execute action() targets using Python 3.
+script_executable = "python3"
+
 # The normal GN setup is to have BUILD.gn files in-tree and a root BUILD.gn
 # file.  Since LLVM's GN build is unofficial, set secondary_source to tell GN
 # that e.g. llvm/lib/Demangle/BUILD.gn is found at

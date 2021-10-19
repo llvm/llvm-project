@@ -290,7 +290,7 @@ const (
 	AnyComdatSelectionKind          ComdatSelectionKind = C.LLVMAnyComdatSelectionKind
 	ExactMatchComdatSelectionKind   ComdatSelectionKind = C.LLVMExactMatchComdatSelectionKind
 	LargestComdatSelectionKind      ComdatSelectionKind = C.LLVMLargestComdatSelectionKind
-	NoDuplicatesComdatSelectionKind ComdatSelectionKind = C.LLVMNoDuplicatesComdatSelectionKind
+	NoDeduplicateComdatSelectionKind ComdatSelectionKind = C.LLVMNoDeduplicateComdatSelectionKind
 	SameSizeComdatSelectionKind     ComdatSelectionKind = C.LLVMSameSizeComdatSelectionKind
 )
 
@@ -1277,7 +1277,7 @@ func (v Value) AddCallSiteAttribute(i int, a Attribute) {
 	C.LLVMAddCallSiteAttribute(v.C, C.LLVMAttributeIndex(i), a.C)
 }
 func (v Value) SetInstrParamAlignment(i int, align int) {
-	C.LLVMSetInstrParamAlignment(v.C, C.unsigned(i), C.unsigned(align))
+	C.LLVMSetInstrParamAlignment(v.C, C.LLVMAttributeIndex(i), C.unsigned(align))
 }
 func (v Value) CalledValue() (rv Value) {
 	rv.C = C.LLVMGetCalledValue(v.C)
@@ -1304,12 +1304,12 @@ func (v Value) IncomingBlock(i int) (bb BasicBlock) {
 }
 
 // Operations on inline assembly
-func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect) (rv Value) {
+func InlineAsm(t Type, asmString, constraints string, hasSideEffects, isAlignStack bool, dialect InlineAsmDialect, canThrow bool) (rv Value) {
 	casm := C.CString(asmString)
 	defer C.free(unsafe.Pointer(casm))
 	cconstraints := C.CString(constraints)
 	defer C.free(unsafe.Pointer(cconstraints))
-	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect))
+	rv.C = C.LLVMGetInlineAsm(t.C, casm, C.size_t(len(asmString)), cconstraints, C.size_t(len(constraints)), boolToLLVMBool(hasSideEffects), boolToLLVMBool(isAlignStack), C.LLVMInlineAsmDialect(dialect), boolToLLVMBool(canThrow))
 	return
 }
 

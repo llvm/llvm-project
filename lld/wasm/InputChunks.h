@@ -24,6 +24,8 @@
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Wasm.h"
 
 namespace lld {
@@ -35,29 +37,68 @@ class OutputSection;
 
 class InputChunk {
 public:
-  enum Kind { DataSegment, Function, SyntheticFunction, Section };
+  enum Kind {
+    DataSegment,
+    Merge,
+    MergedChunk,
+    Function,
+    SyntheticFunction,
+    Section,
+  };
 
-  Kind kind() const { return sectionKind; }
+  StringRef name;
+  StringRef debugName;
 
-  virtual uint32_t getSize() const { return data().size(); }
-  virtual uint32_t getInputSize() const { return getSize(); };
+  StringRef getName() const { return name; }
+  StringRef getDebugName() const { return debugName; }
+  Kind kind() const { return (Kind)sectionKind; }
 
-  virtual void writeTo(uint8_t *sectionStart) const;
+  uint32_t getSize() const;
+  uint32_t getInputSize() const;
+
+  void writeTo(uint8_t *buf) const;
+  void relocate(uint8_t *buf) const;
 
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
 
-  virtual StringRef getName() const = 0;
-  virtual StringRef getDebugName() const = 0;
-  virtual uint32_t getComdat() const = 0;
+  // Translate an offset into the input chunk to an offset in the output
+  // section.
+  uint64_t getOffset(uint64_t offset) const;
+  // Translate an offset into the input chunk into an offset into the output
+  // chunk.  For data segments (InputSegment) this will return and offset into
+  // the output segment.  For MergeInputChunk, this will return an offset into
+  // the parent merged chunk.  For other chunk types this is no-op and we just
+  // return unmodified offset.
+  uint64_t getChunkOffset(uint64_t offset) const;
+  uint64_t getVA(uint64_t offset = 0) const;
+
+  uint32_t getComdat() const { return comdat; }
   StringRef getComdatName() const;
-  virtual uint32_t getInputSectionOffset() const = 0;
+  uint32_t getInputSectionOffset() const { return inputSectionOffset; }
 
   size_t getNumRelocations() const { return relocations.size(); }
   void writeRelocations(llvm::raw_ostream &os) const;
+  void generateRelocationCode(raw_ostream &os) const;
+
+  bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
 
   ObjFile *file;
-  int32_t outputOffset = 0;
+  OutputSection *outputSec = nullptr;
+  uint32_t comdat = UINT32_MAX;
+  uint32_t inputSectionOffset = 0;
+  uint32_t alignment;
+  uint32_t flags;
+
+  // Only applies to data segments.
+  uint32_t outputSegmentOffset = 0;
+  const OutputSegment *outputSeg = nullptr;
+
+  // After assignAddresses is called, this represents the offset from
+  // the beginning of the output section this chunk was assigned to.
+  int32_t outSecOff = 0;
+
+  uint8_t sectionKind : 3;
 
   // Signals that the section is part of the output.  The garbage collector,
   // and COMDAT handling can set a sections' Live bit.
@@ -67,18 +108,20 @@ public:
   // Signals the chunk was discarded by COMDAT handling.
   unsigned discarded : 1;
 
-protected:
-  InputChunk(ObjFile *f, Kind k)
-      : file(f), live(!config->gcSections), discarded(false), sectionKind(k) {}
-  virtual ~InputChunk() = default;
-  virtual ArrayRef<uint8_t> data() const = 0;
+  // Signals that the chuck was implicitly marked as TLS based on its name
+  // alone. This is a compatibility mechanism to support older object files.
+  unsigned implicitTLS : 1;
 
-  // Verifies the existing data at relocation targets matches our expectations.
-  // This is performed only debug builds as an extra sanity check.
-  void verifyRelocTargets() const;
+protected:
+  InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
+             uint32_t flags = 0)
+      : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
+        live(!config->gcSections), discarded(false), implicitTLS(false) {}
+  ArrayRef<uint8_t> data() const { return rawData; }
+  uint64_t getTombstone() const;
 
   ArrayRef<WasmRelocation> relocations;
-  Kind sectionKind;
+  ArrayRef<uint8_t> rawData;
 };
 
 // Represents a WebAssembly data segment which can be included as part of
@@ -92,27 +135,118 @@ protected:
 class InputSegment : public InputChunk {
 public:
   InputSegment(const WasmSegment &seg, ObjFile *f)
-      : InputChunk(f, InputChunk::DataSegment), segment(seg) {}
+      : InputChunk(f, InputChunk::DataSegment, seg.Data.Name,
+                   seg.Data.Alignment, seg.Data.LinkingFlags),
+        segment(seg) {
+    rawData = segment.Data.Content;
+    comdat = segment.Data.Comdat;
+    inputSectionOffset = segment.SectionOffset;
+  }
 
   static bool classof(const InputChunk *c) { return c->kind() == DataSegment; }
 
-  void generateRelocationCode(raw_ostream &os) const;
+protected:
+  const WasmSegment &segment;
+};
 
-  uint32_t getAlignment() const { return segment.Data.Alignment; }
-  StringRef getName() const override { return segment.Data.Name; }
-  StringRef getDebugName() const override { return StringRef(); }
-  uint32_t getComdat() const override { return segment.Data.Comdat; }
-  uint32_t getInputSectionOffset() const override {
-    return segment.SectionOffset;
+class SyntheticMergedChunk;
+
+// Merge segment handling copied from lld/ELF/InputSection.h.  Keep in sync
+// where possible.
+
+// SectionPiece represents a piece of splittable segment contents.
+// We allocate a lot of these and binary search on them. This means that they
+// have to be as compact as possible, which is why we don't store the size (can
+// be found by looking at the next one).
+struct SectionPiece {
+  SectionPiece(size_t off, uint32_t hash, bool live)
+      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+
+  uint32_t inputOff;
+  uint32_t live : 1;
+  uint32_t hash : 31;
+  uint64_t outputOff = 0;
+};
+
+static_assert(sizeof(SectionPiece) == 16, "SectionPiece is too big");
+
+// This corresponds segments marked as WASM_SEG_FLAG_STRINGS.
+class MergeInputChunk : public InputChunk {
+public:
+  MergeInputChunk(const WasmSegment &seg, ObjFile *f)
+      : InputChunk(f, Merge, seg.Data.Name, seg.Data.Alignment,
+                   seg.Data.LinkingFlags) {
+    rawData = seg.Data.Content;
+    comdat = seg.Data.Comdat;
+    inputSectionOffset = seg.SectionOffset;
   }
 
-  const OutputSegment *outputSeg = nullptr;
-  int32_t outputSegmentOffset = 0;
+  MergeInputChunk(const WasmSection &s, ObjFile *f)
+      : InputChunk(f, Merge, s.Name, 0, llvm::wasm::WASM_SEG_FLAG_STRINGS) {
+    assert(s.Type == llvm::wasm::WASM_SEC_CUSTOM);
+    comdat = s.Comdat;
+    rawData = s.Content;
+  }
+
+  static bool classof(const InputChunk *s) { return s->kind() == Merge; }
+  void splitIntoPieces();
+
+  // Translate an offset in the input section to an offset in the parent
+  // MergeSyntheticSection.
+  uint64_t getParentOffset(uint64_t offset) const;
+
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SectionPiece> pieces;
+
+  // Returns I'th piece's data. This function is very hot when
+  // string merging is enabled, so we want to inline.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  llvm::CachedHashStringRef getData(size_t i) const {
+    size_t begin = pieces[i].inputOff;
+    size_t end =
+        (pieces.size() - 1 == i) ? data().size() : pieces[i + 1].inputOff;
+    return {toStringRef(data().slice(begin, end - begin)), pieces[i].hash};
+  }
+
+  // Returns the SectionPiece at a given input section offset.
+  SectionPiece *getSectionPiece(uint64_t offset);
+  const SectionPiece *getSectionPiece(uint64_t offset) const {
+    return const_cast<MergeInputChunk *>(this)->getSectionPiece(offset);
+  }
+
+  SyntheticMergedChunk *parent = nullptr;
+
+private:
+  void splitStrings(ArrayRef<uint8_t> a);
+};
+
+// SyntheticMergedChunk is a class that allows us to put mergeable
+// sections with different attributes in a single output sections. To do that we
+// put them into SyntheticMergedChunk synthetic input sections which are
+// attached to regular output sections.
+class SyntheticMergedChunk : public InputChunk {
+public:
+  SyntheticMergedChunk(StringRef name, uint32_t alignment, uint32_t flags)
+      : InputChunk(nullptr, InputChunk::MergedChunk, name, alignment, flags),
+        builder(llvm::StringTableBuilder::RAW, 1ULL << alignment) {}
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == InputChunk::MergedChunk;
+  }
+
+  void addMergeChunk(MergeInputChunk *ms) {
+    comdat = ms->getComdat();
+    ms->parent = this;
+    chunks.push_back(ms);
+  }
+
+  void finalizeContents();
+
+  llvm::StringTableBuilder builder;
 
 protected:
-  ArrayRef<uint8_t> data() const override { return segment.Data.Content; }
-
-  const WasmSegment &segment;
+  std::vector<MergeInputChunk *> chunks;
 };
 
 // Represents a single wasm function within and input file.  These are
@@ -120,39 +254,39 @@ protected:
 class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &s, const WasmFunction *func, ObjFile *f)
-      : InputChunk(f, InputChunk::Function), signature(s), function(func) {}
+      : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
+        function(func), exportName(func && func->ExportName.hasValue()
+                                       ? (*func->ExportName).str()
+                                       : llvm::Optional<std::string>()) {
+    inputSectionOffset = function->CodeSectionOffset;
+    rawData =
+        file->codeSection->Content.slice(inputSectionOffset, function->Size);
+    debugName = function->DebugName;
+    comdat = function->Comdat;
+  }
+
+  InputFunction(StringRef name, const WasmSignature &s)
+      : InputChunk(nullptr, InputChunk::Function, name), signature(s) {}
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::Function ||
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  void writeTo(uint8_t *sectionStart) const override;
-  StringRef getName() const override { return function->SymbolName; }
-  StringRef getDebugName() const override { return function->DebugName; }
   llvm::Optional<StringRef> getExportName() const {
-    return function ? function->ExportName : llvm::Optional<StringRef>();
+    return exportName.hasValue() ? llvm::Optional<StringRef>(*exportName)
+                                 : llvm::Optional<StringRef>();
   }
-  uint32_t getComdat() const override { return function->Comdat; }
+  void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
-  uint32_t getSize() const override {
-    if (config->compressRelocations && file) {
-      assert(compressedSize);
-      return compressedSize;
-    }
-    return data().size();
-  }
-  uint32_t getInputSize() const override { return function->Size; }
   uint32_t getFunctionIndex() const { return functionIndex.getValue(); }
   bool hasFunctionIndex() const { return functionIndex.hasValue(); }
   void setFunctionIndex(uint32_t index);
-  uint32_t getInputSectionOffset() const override {
-    return function->CodeSectionOffset;
-  }
   uint32_t getTableIndex() const { return tableIndex.getValue(); }
   bool hasTableIndex() const { return tableIndex.hasValue(); }
   void setTableIndex(uint32_t index);
+  void writeCompressed(uint8_t *buf) const;
 
   // The size of a given input function can depend on the values of the
   // LEB relocations within it.  This finalizeContents method is called after
@@ -162,14 +296,15 @@ public:
 
   const WasmSignature &signature;
 
-protected:
-  ArrayRef<uint8_t> data() const override {
-    assert(!config->compressRelocations);
-    return file->codeSection->Content.slice(getInputSectionOffset(),
-                                            function->Size);
+  uint32_t getCompressedSize() const {
+    assert(compressedSize);
+    return compressedSize;
   }
 
   const WasmFunction *function;
+
+protected:
+  llvm::Optional<std::string> exportName;
   llvm::Optional<uint32_t> functionIndex;
   llvm::Optional<uint32_t> tableIndex;
   uint32_t compressedFuncSize = 0;
@@ -180,49 +315,37 @@ class SyntheticFunction : public InputFunction {
 public:
   SyntheticFunction(const WasmSignature &s, StringRef name,
                     StringRef debugName = {})
-      : InputFunction(s, nullptr, nullptr), name(name), debugName(debugName) {
+      : InputFunction(name, s) {
     sectionKind = InputChunk::SyntheticFunction;
+    this->debugName = debugName;
   }
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::SyntheticFunction;
   }
 
-  StringRef getName() const override { return name; }
-  StringRef getDebugName() const override { return debugName; }
-  uint32_t getComdat() const override { return UINT32_MAX; }
-
-  void setBody(ArrayRef<uint8_t> body_) { body = body_; }
-
-protected:
-  ArrayRef<uint8_t> data() const override { return body; }
-
-  StringRef name;
-  StringRef debugName;
-  ArrayRef<uint8_t> body;
+  void setBody(ArrayRef<uint8_t> body) { rawData = body; }
 };
 
 // Represents a single Wasm Section within an input file.
 class InputSection : public InputChunk {
 public:
   InputSection(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, InputChunk::Section), section(s) {
+      : InputChunk(f, InputChunk::Section, s.Name),
+        tombstoneValue(getTombstoneForSection(s.Name)), section(s) {
     assert(section.Type == llvm::wasm::WASM_SEC_CUSTOM);
+    comdat = section.Comdat;
+    rawData = section.Content;
   }
 
-  StringRef getName() const override { return section.Name; }
-  StringRef getDebugName() const override { return StringRef(); }
-  uint32_t getComdat() const override { return UINT32_MAX; }
+  static bool classof(const InputChunk *c) {
+    return c->kind() == InputChunk::Section;
+  }
 
-  OutputSection *outputSec = nullptr;
+  const uint64_t tombstoneValue;
 
 protected:
-  ArrayRef<uint8_t> data() const override { return section.Content; }
-
-  // Offset within the input section.  This is only zero since this chunk
-  // type represents an entire input section, not part of one.
-  uint32_t getInputSectionOffset() const override { return 0; }
-
+  static uint64_t getTombstoneForSection(StringRef name);
   const WasmSection &section;
 };
 

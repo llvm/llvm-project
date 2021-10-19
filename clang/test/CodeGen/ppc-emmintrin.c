@@ -1361,7 +1361,7 @@ test_load() {
 // CHECK: store double* [[REG917]], double** [[REG918:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: [[REG919:[0-9a-zA-Z_%.]+]] = load double*, double** [[REG918]], align 8
 // CHECK-NEXT: [[REG920:[0-9a-zA-Z_%.]+]] = bitcast double* [[REG919]] to <16 x i8>*
-// CHECK-NEXT: [[REG921:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_ld(int, unsigned char vector[16] const*)(i32 signext 0, <16 x i8>* [[REG920]])
+// CHECK-NEXT: [[REG921:[0-9a-zA-Z_%.]+]] = call <16 x i8> @vec_ld(long, unsigned char vector[16] const*)(i64 0, <16 x i8>* [[REG920]])
 // CHECK-NEXT: [[REG922:[0-9a-zA-Z_%.]+]] = bitcast <16 x i8> [[REG921]] to <2 x double>
 // CHECK-NEXT: ret <2 x double> [[REG922]]
 
@@ -2915,7 +2915,7 @@ test_store() {
 // CHECK-NEXT: [[REG1925:[0-9a-zA-Z_%.]+]] = bitcast <2 x double> [[REG1924]] to <16 x i8>
 // CHECK-NEXT: [[REG1926:[0-9a-zA-Z_%.]+]] = load double*, double** [[REG1922]], align 8
 // CHECK-NEXT: [[REG1927:[0-9a-zA-Z_%.]+]] = bitcast double* [[REG1926]] to <16 x i8>*
-// CHECK-NEXT: call void @vec_st(unsigned char vector[16], int, unsigned char vector[16]*)(<16 x i8> [[REG1925]], i32 signext 0, <16 x i8>* [[REG1927]])
+// CHECK-NEXT: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> [[REG1925]], i64 0, <16 x i8>* [[REG1927]])
 // CHECK-NEXT: ret void
 
 // CHECK: define available_externally void @_mm_store_pd1(double* [[REG1928:[0-9a-zA-Z_%.]+]], <2 x double> [[REG1929:[0-9a-zA-Z_%.]+]])
@@ -2942,7 +2942,7 @@ test_store() {
 // CHECK-NEXT: [[REG1946:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64> [[REG1945]] to <16 x i8>
 // CHECK-NEXT: [[REG1947:[0-9a-zA-Z_%.]+]] = load <2 x i64>*, <2 x i64>** [[REG1943]], align 8
 // CHECK-NEXT: [[REG1948:[0-9a-zA-Z_%.]+]] = bitcast <2 x i64>* [[REG1947]] to <16 x i8>*
-// CHECK-NEXT: call void @vec_st(unsigned char vector[16], int, unsigned char vector[16]*)(<16 x i8> [[REG1946]], i32 signext 0, <16 x i8>* [[REG1948]])
+// CHECK-NEXT: call void @vec_st(unsigned char vector[16], long, unsigned char vector[16]*)(<16 x i8> [[REG1946]], i64 0, <16 x i8>* [[REG1948]])
 // CHECK-NEXT: ret void
 
 // CHECK: define available_externally void @_mm_store1_pd(double* [[REG1949:[0-9a-zA-Z_%.]+]], <2 x double> [[REG1950:[0-9a-zA-Z_%.]+]])

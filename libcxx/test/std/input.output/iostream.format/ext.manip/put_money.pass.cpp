@@ -12,6 +12,8 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <iomanip>
 #include <ostream>
 #include <cassert>
@@ -71,6 +73,7 @@ int main(int, char**)
         os << std::put_money(x, true);
         assert(sb.str() == "-USD 1,234,567.89");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb;
         std::wostream os(&sb);
@@ -89,6 +92,7 @@ int main(int, char**)
         os << std::put_money(x, true);
         assert(sb.str() == L"-USD 1,234,567.89");
     }
+#endif
 
   return 0;
 }

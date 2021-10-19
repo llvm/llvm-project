@@ -1,4 +1,5 @@
 # RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+tail-call < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types,+tail-call < %s | FileCheck --check-prefix=REF %s
 
 bar1:
     .functype bar1 () -> ()
@@ -14,8 +15,11 @@ foo1:
     end_function
 
 foo2:
-    .functype foo2 () -> ()
+    .functype foo2 () -> (i32)
 
+    i32.const 0
+    i32.const 0
+    # REF: return_call_indirect __indirect_function_table, (i32) -> (i32) # encoding: [0x13,
     # CHECK: return_call_indirect (i32) -> (i32) # encoding: [0x13,
     # CHECK-NEXT: fixup A - offset: 1, value: .Ltypeindex0@TYPEINDEX, kind: fixup_uleb128_i32
     return_call_indirect (i32) -> (i32)

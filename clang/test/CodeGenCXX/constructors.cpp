@@ -22,20 +22,20 @@ struct A {
 A::A(struct Undeclared &ref) : mem(0) {}
 
 // Check that delegation works.
-// NULL-INVALID-LABEL: define void @_ZN1AC2ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1AC2ER10Undeclared(%struct.A* %this, %struct.Undeclared* align 1 %ref) unnamed_addr
+// NULL-INVALID-LABEL: define{{.*}} void @_ZN1AC2ER10Undeclared(%struct.A* {{[^,]*}} %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
+// NULL-VALID-LABEL: define{{.*}} void @_ZN1AC2ER10Undeclared(%struct.A* {{[^,]*}} %this, %struct.Undeclared* align 1 %ref) unnamed_addr
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// NULL-INVALID-LABEL: define void @_ZN1AC1ER10Undeclared(%struct.A* %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1AC1ER10Undeclared(%struct.A* %this, %struct.Undeclared* align 1 %ref) unnamed_addr
+// NULL-INVALID-LABEL: define{{.*}} void @_ZN1AC1ER10Undeclared(%struct.A* {{[^,]*}} %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
+// NULL-VALID-LABEL: define{{.*}} void @_ZN1AC1ER10Undeclared(%struct.A* {{[^,]*}} %this, %struct.Undeclared* align 1 %ref) unnamed_addr
 // CHECK: call void @_ZN1AC2ER10Undeclared(
 
 A::A(ValueClass v) : mem(v.y - v.x) {}
 
-// CHECK-LABEL: define void @_ZN1AC2E10ValueClass(%struct.A* %this, i64 %v.coerce) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1AC2E10ValueClass(%struct.A* {{[^,]*}} %this, i64 %v.coerce) unnamed_addr
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// CHECK-LABEL: define void @_ZN1AC1E10ValueClass(%struct.A* %this, i64 %v.coerce) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1AC1E10ValueClass(%struct.A* {{[^,]*}} %this, i64 %v.coerce) unnamed_addr
 // CHECK: call void @_ZN1AC2E10ValueClass(
 
 /* Test that things work for inheritance. */
@@ -46,13 +46,13 @@ struct B : A {
 
 B::B(struct Undeclared &ref) : A(ref), mem(1) {}
 
-// NULL-INVALID-LABEL: define void @_ZN1BC2ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1BC2ER10Undeclared(%struct.B* %this, %struct.Undeclared* align 1 %ref) unnamed_addr
+// NULL-INVALID-LABEL: define{{.*}} void @_ZN1BC2ER10Undeclared(%struct.B* {{[^,]*}} %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
+// NULL-VALID-LABEL: define{{.*}} void @_ZN1BC2ER10Undeclared(%struct.B* {{[^,]*}} %this, %struct.Undeclared* align 1 %ref) unnamed_addr
 // CHECK: call void @_ZN1AC2ER10Undeclared(
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// NULL-INVALID-LABEL: define void @_ZN1BC1ER10Undeclared(%struct.B* %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
-// NULL-VALID-LABEL: define void @_ZN1BC1ER10Undeclared(%struct.B* %this, %struct.Undeclared* align 1 %ref) unnamed_addr
+// NULL-INVALID-LABEL: define{{.*}} void @_ZN1BC1ER10Undeclared(%struct.B* {{[^,]*}} %this, %struct.Undeclared* nonnull align 1 %ref) unnamed_addr
+// NULL-VALID-LABEL: define{{.*}} void @_ZN1BC1ER10Undeclared(%struct.B* {{[^,]*}} %this, %struct.Undeclared* align 1 %ref) unnamed_addr
 // CHECK: call void @_ZN1BC2ER10Undeclared(
 
 
@@ -67,10 +67,10 @@ struct C : virtual A {
 };
 C::C(int x) : A(ValueClass(x, x+1)), mem(x * x) {}
 
-// CHECK-LABEL: define void @_ZN1CC2Ei(%struct.C* %this, i8** %vtt, i32 %x) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC2Ei(%struct.C* {{[^,]*}} %this, i8** %vtt, i32 %x) unnamed_addr
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// CHECK-LABEL: define void @_ZN1CC1Ei(%struct.C* %this, i32 %x) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1CC1Ei(%struct.C* {{[^,]*}} %this, i32 %x) unnamed_addr
 // CHECK: call void @_ZN10ValueClassC1Eii(
 // CHECK: call void @_ZN1AC2E10ValueClass(
 // CHECK: call void @_ZN6MemberC1Ei(
@@ -85,12 +85,12 @@ struct D : A {
 
 D::D(int x, ...) : A(ValueClass(x, x+1)), mem(x*x) {}
 
-// CHECK-LABEL: define void @_ZN1DC2Eiz(%struct.D* %this, i32 %x, ...) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1DC2Eiz(%struct.D* {{[^,]*}} %this, i32 %x, ...) unnamed_addr
 // CHECK: call void @_ZN10ValueClassC1Eii(
 // CHECK: call void @_ZN1AC2E10ValueClass(
 // CHECK: call void @_ZN6MemberC1Ei(
 
-// CHECK-LABEL: define void @_ZN1DC1Eiz(%struct.D* %this, i32 %x, ...) unnamed_addr
+// CHECK-LABEL: define{{.*}} void @_ZN1DC1Eiz(%struct.D* {{[^,]*}} %this, i32 %x, ...) unnamed_addr
 // CHECK: call void @_ZN10ValueClassC1Eii(
 // CHECK: call void @_ZN1AC2E10ValueClass(
 // CHECK: call void @_ZN6MemberC1Ei(
@@ -110,7 +110,7 @@ namespace test1 {
   struct A { A(); void *ptr; };
   struct B { B(); int x; A a[0]; };
   B::B() {}
-  // CHECK-LABEL:    define void @_ZN5test11BC2Ev(
+  // CHECK-LABEL:    define{{.*}} void @_ZN5test11BC2Ev(
   // CHECK:      [[THIS:%.*]] = load [[B:%.*]]*, [[B:%.*]]**
   // CHECK-NEXT: ret void
 }
@@ -139,15 +139,15 @@ namespace abstract {
     virtual ~A() = 0;
   };
 
-  // CHECK-LABEL: define void @_ZN8abstract1AD2Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN8abstract1AD2Ev(
   // CHECK: call {{.*}}@_ZN8abstract1XD2Ev(
   // CHECK: ret
 
-  // CHECK-LABEL: define void @_ZN8abstract1AD1Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN8abstract1AD1Ev(
   // CHECK: call {{.*}}@llvm.trap(
   // CHECK: unreachable
 
-  // CHECK-LABEL: define void @_ZN8abstract1AD0Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN8abstract1AD0Ev(
   // CHECK: call {{.*}}@llvm.trap(
   // CHECK: unreachable
   A::~A() {}
@@ -157,11 +157,11 @@ namespace abstract {
     ~B();
   };
 
-  // CHECK-LABEL: define void @_ZN8abstract1BD2Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN8abstract1BD2Ev(
   // CHECK: call {{.*}}@_ZN8abstract1XD2Ev(
   // CHECK: ret
 
-  // CHECK-LABEL: define void @_ZN8abstract1BD1Ev(
+  // CHECK-LABEL: define{{.*}} void @_ZN8abstract1BD1Ev(
   // CHECK: call {{.*}}@llvm.trap(
   // CHECK: unreachable
 

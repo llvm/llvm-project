@@ -1,0 +1,24 @@
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-ios-simulator, arm64-ios ]
+uuids:
+  - target:          arm64-ios-simulator
+    value:           00000000-0000-0000-0000-000000000002
+  - target:          arm64-ios
+    value:           00000000-0000-0000-0000-000000000003
+install-name:    '/usr/lib/libStubLink.dylib'
+current-version: 1.0.0
+reexported-libraries:
+  - targets:         [ arm64-ios-simulator ]
+    libraries:       [ '/usr/lib/libArm64Sim.dylib' ]
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ arm64-ios-simulator ]
+uuids:
+  - target:          arm64-ios-simulator
+    value:           00000000-0000-0000-0000-000000000001
+install-name:    '/usr/lib/libArm64Sim.dylib'
+current-version: 1.0.0
+exports:
+  - targets:         [ arm64-ios-simulator ]
+    symbols:         [ _arm64_sim_only ]

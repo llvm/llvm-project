@@ -9,6 +9,8 @@ executable("lli") {
     "//llvm/lib/ExecutionEngine/Interpreter",
     "//llvm/lib/ExecutionEngine/MCJIT",
     "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/ExecutionEngine/Orc/Shared",
+    "//llvm/lib/ExecutionEngine/Orc/TargetProcess",
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
@@ -19,7 +21,10 @@ executable("lli") {
     "//llvm/lib/Transforms/Instrumentation",
     "//llvm/lib/Transforms/Utils",
   ]
-  sources = [ "lli.cpp" ]
+  sources = [
+    "ExecutionUtils.cpp",
+    "lli.cpp",
+  ]
   if (host_os != "mac" && host_os != "win") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]

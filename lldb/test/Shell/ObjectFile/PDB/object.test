@@ -1,0 +1,280 @@
+# RUN: llvm-pdbutil yaml2pdb %s -pdb=%t.pdb
+# RUN: lldb-test object-file %t.pdb | FileCheck %s
+
+# CHECK: Plugin name: pdb
+# CHECK: Architecture: x86_64-pc-windows-msvc
+# CHECK: UUID: 61AF583F-29A8-7A6C-4C4C-44205044422E-00000001
+# CHECK: Executable: false
+# CHECK: Stripped: false
+# CHECK: Type: debug info
+# CHECK: Strata: user
+# CHECK: Base VM address: 0xffffffffffffffff
+# CHECK: There are no sections
+
+---
+MSF:
+  SuperBlock:
+    BlockSize:       4096
+    FreeBlockMap:    2
+    NumBlocks:       18
+    NumDirectoryBytes: 116
+    Unknown1:        0
+    BlockMapAddr:    3
+  NumDirectoryBlocks: 1
+  DirectoryBlocks: [ 17 ]
+  NumStreams:      15
+  FileSize:        73728
+StreamSizes:     [ 0, 93, 100, 550, 136, 0, 544, 576, 40, 20, 120, 368, 
+                   336, 49, 24 ]
+StreamMap:
+  - Stream:          [  ]
+  - Stream:          [ 16 ]
+  - Stream:          [ 7 ]
+  - Stream:          [ 12 ]
+  - Stream:          [ 14 ]
+  - Stream:          [  ]
+  - Stream:          [ 4 ]
+  - Stream:          [ 5 ]
+  - Stream:          [ 6 ]
+  - Stream:          [ 8 ]
+  - Stream:          [ 9 ]
+  - Stream:          [ 10 ]
+  - Stream:          [ 11 ]
+  - Stream:          [ 13 ]
+  - Stream:          [ 15 ]
+StringTable:
+  - '/tmp/a.cpp'
+PdbStream:
+  Age:             1
+  Guid:            '{61AF583F-29A8-7A6C-4C4C-44205044422E}'
+  Signature:       1062776673
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/pdb.obj'
+      ObjFile:         '/tmp/pdb.obj'
+      SourceFiles:
+        - '/tmp/a.cpp'
+      Subsections:
+        - !Lines
+          CodeSize:        28
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        '/tmp/a.cpp'
+              Lines:
+                - Offset:          0
+                  LineStart:       1
+                  IsStatement:     false
+                  EndDelta:        0
+                - Offset:          23
+                  LineStart:       2
+                  IsStatement:     false
+                  EndDelta:        0
+              Columns:         []
+        - !FileChecksums
+          Checksums:
+            - FileName:        '/tmp/a.cpp'
+              Kind:            MD5
+              Checksum:        DA1F9D293B90B487ADB2C711137770D3
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   12
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    12000
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 12.0.0 (git@github.com:llvm/llvm-project.git 8a08e08db6c2e4a5db485253f3186b0f9e739e15)'
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent:       0
+              PtrEnd:          272
+              PtrNext:         0
+              CodeSize:        28
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4098
+              Offset:          0
+              Segment:         1
+              Flags:           [  ]
+              DisplayName:     main
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 24
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [  ]
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         argc
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          4
+              Range:
+                OffsetStart:     23
+                ISectStart:      1
+                Range:           5
+              Gaps:            []
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            4096
+              Flags:           [ IsParameter ]
+              VarName:         argv
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          8
+              Range:
+                OffsetStart:     23
+                ISectStart:      1
+                Range:           5
+              Gaps:            []
+          - Kind:            S_END
+            ScopeEndSym:     {}
+          - Kind:            S_BUILDINFO
+            BuildInfoSym:
+              BuildId:         4099
+    - Module:          '* Linker *'
+      ObjFile:         ''
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      '* Linker *'
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Machine:         X64
+              FrontendMajor:   0
+              FrontendMinor:   0
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    14
+              BackendMinor:    10
+              BackendBuild:    25019
+              BackendQFE:      0
+              Version:         LLVM Linker
+          - Kind:            S_ENVBLOCK
+            EnvBlockSym:
+              Entries:
+                - cwd
+                - '/tmp'
+                - exe
+                - '/tmp/lld-link'
+                - pdb
+                - '/tmp/a.pdb'
+                - cmd
+                - '/out:a.exe -debug pdb.obj /nodefaultlib /entry:main'
+          - Kind:            S_SECTION
+            SectionSym:
+              SectionNumber:   1
+              Alignment:       12
+              Rva:             4096
+              Length:          28
+              Characteristics: 1610612768
+              Name:            .text
+          - Kind:            S_COFFGROUP
+            CoffGroupSym:
+              Size:            28
+              Characteristics: 1610612768
+              Offset:          0
+              Segment:         1
+              Name:            .text
+          - Kind:            S_SECTION
+            SectionSym:
+              SectionNumber:   2
+              Alignment:       12
+              Rva:             8192
+              Length:          72
+              Characteristics: 1073741888
+              Name:            .rdata
+          - Kind:            S_COFFGROUP
+            CoffGroupSym:
+              Size:            8
+              Characteristics: 1073741888
+              Offset:          64
+              Segment:         2
+              Name:            .xdata
+          - Kind:            S_SECTION
+            SectionSym:
+              SectionNumber:   3
+              Alignment:       12
+              Rva:             12288
+              Length:          12
+              Characteristics: 1073741888
+              Name:            .pdata
+          - Kind:            S_COFFGROUP
+            CoffGroupSym:
+              Size:            12
+              Characteristics: 1073741888
+              Offset:          0
+              Segment:         3
+              Name:            .pdata
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    1648
+        Attrs:           65548
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 116, 4096 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  2
+        ArgumentList:    4097
+IpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    4098
+        Name:            main
+    - Kind:            LF_STRING_ID
+      StringId:
+        Id:              0
+        String:          '/tmp'
+    - Kind:            LF_STRING_ID
+      StringId:
+        Id:              0
+        String:          a.cpp
+    - Kind:            LF_BUILDINFO
+      BuildInfo:
+        ArgIndices:      [ 4097, 0, 4098, 0, 0 ]
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            main
+...

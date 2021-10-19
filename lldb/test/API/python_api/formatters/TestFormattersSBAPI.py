@@ -19,7 +19,6 @@ class SBFormattersAPITestCase(TestBase):
         TestBase.setUp(self)
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     def test_formatters_api(self):
         """Test Python APIs for working with formatters"""
         self.build()
@@ -128,8 +127,8 @@ class SBFormattersAPITestCase(TestBase):
         filter = lldb.SBTypeFilter(0)
         filter.AppendExpressionPath("A")
         filter.AppendExpressionPath("D")
-        self.assertTrue(
-            filter.GetNumberOfExpressionPaths() == 2,
+        self.assertEqual(
+            filter.GetNumberOfExpressionPaths(), 2,
             "filter with two items does not have two items")
 
         category.AddTypeFilter(lldb.SBTypeNameSpecifier("JustAStruct"), filter)
@@ -180,11 +179,11 @@ class SBFormattersAPITestCase(TestBase):
             foo_var.GetDeclaration().IsValid(),
             'foo declaration is invalid')
 
-        self.assertTrue(
-            foo_var.GetNumChildren() == 2,
+        self.assertEqual(
+            foo_var.GetNumChildren(), 2,
             'synthetic value has wrong number of child items (synth)')
-        self.assertTrue(
-            foo_var.GetChildMemberWithName('X').GetValueAsUnsigned() == 1,
+        self.assertEqual(
+            foo_var.GetChildMemberWithName('X').GetValueAsUnsigned(), 1,
             'foo_synth.X has wrong value (synth)')
         self.assertFalse(
             foo_var.GetChildMemberWithName('B').IsValid(),
@@ -210,14 +209,14 @@ class SBFormattersAPITestCase(TestBase):
         ).GetSelectedThread().GetSelectedFrame().FindVariable('foo')
         self.assertTrue(foo_var.IsValid(), 'could not find foo')
 
-        self.assertTrue(
-            foo_var.GetNumChildren() == 2,
+        self.assertEqual(
+            foo_var.GetNumChildren(), 2,
             'synthetic value has wrong number of child items (filter)')
-        self.assertTrue(
-            foo_var.GetChildMemberWithName('X').GetValueAsUnsigned() == 0,
+        self.assertEqual(
+            foo_var.GetChildMemberWithName('X').GetValueAsUnsigned(), 0,
             'foo_synth.X has wrong value (filter)')
-        self.assertTrue(
-            foo_var.GetChildMemberWithName('A').GetValueAsUnsigned() == 1,
+        self.assertEqual(
+            foo_var.GetChildMemberWithName('A').GetValueAsUnsigned(), 1,
             'foo_synth.A has wrong value (filter)')
 
         self.assertTrue(filter.ReplaceExpressionPathAtIndex(
@@ -240,20 +239,20 @@ class SBFormattersAPITestCase(TestBase):
         foo_var = self.dbg.GetSelectedTarget().GetProcess(
         ).GetSelectedThread().GetSelectedFrame().FindVariable('foo')
         self.assertTrue(foo_var.IsValid(), 'could not find foo')
-        self.assertTrue(
-            foo_var.GetChildMemberWithName('C').GetValueAsUnsigned() == ord('e'),
+        self.assertEqual(
+            foo_var.GetChildMemberWithName('C').GetValueAsUnsigned(), ord('e'),
             'foo_synth.C has wrong value (filter)')
 
         chosen = self.dbg.GetFilterForType(
             lldb.SBTypeNameSpecifier("JustAStruct"))
-        self.assertTrue(
-            chosen.count == 2,
+        self.assertEqual(
+            chosen.count, 2,
             "wrong filter found for JustAStruct")
-        self.assertTrue(
-            chosen.GetExpressionPathAtIndex(0) == 'C',
+        self.assertEqual(
+            chosen.GetExpressionPathAtIndex(0), 'C',
             "wrong item at index 0 for JustAStruct")
-        self.assertTrue(
-            chosen.GetExpressionPathAtIndex(1) == 'F',
+        self.assertEqual(
+            chosen.GetExpressionPathAtIndex(1), 'F',
             "wrong item at index 1 for JustAStruct")
 
         self.assertFalse(
@@ -420,8 +419,8 @@ class SBFormattersAPITestCase(TestBase):
         self.assertTrue(
             summary.IsValid(),
             "no summary found for foo* when one was in place")
-        self.assertTrue(
-            summary.GetData() == "hello static world",
+        self.assertEqual(
+            summary.GetData(), "hello static world",
             "wrong summary found for foo*")
 
         self.expect("frame variable e1", substrs=["I am an empty Empty1 {}"])
@@ -436,7 +435,6 @@ class SBFormattersAPITestCase(TestBase):
                 lldb.eLanguageTypeObjC) is not None,
             "ObjC category is None")
 
-    @add_test_categories(['pyapi'])
     def test_force_synth_off(self):
         """Test that one can have the public API return non-synthetic SBValues if desired"""
         self.build(dictionary={'EXE': 'no_synth'})
@@ -475,8 +473,8 @@ class SBFormattersAPITestCase(TestBase):
         int_vector = frame.FindVariable("int_vector")
         if self.TraceOn():
             print(int_vector)
-        self.assertTrue(
-            int_vector.GetNumChildren() == 0,
+        self.assertEqual(
+            int_vector.GetNumChildren(), 0,
             'synthetic vector is empty')
 
         self.runCmd('settings set target.enable-synthetic-value false')
@@ -495,6 +493,6 @@ class SBFormattersAPITestCase(TestBase):
         int_vector = frame.FindVariable("int_vector")
         if self.TraceOn():
             print(int_vector)
-        self.assertTrue(
-            int_vector.GetNumChildren() == 0,
+        self.assertEqual(
+            int_vector.GetNumChildren(), 0,
             'synthetic vector is still empty')

@@ -15,6 +15,7 @@
 
 #include "llvm-c/Types.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Use.h"
 #include "llvm/Support/Alignment.h"
@@ -43,11 +44,11 @@ class GlobalVariable;
 class InlineAsm;
 class Instruction;
 class LLVMContext;
+class MDNode;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
 template<typename ValueTy> class StringMapEntry;
-class StringRef;
 class Twine;
 class Type;
 class User;
@@ -110,19 +111,19 @@ protected:
   ///
   /// Note, this should *NOT* be used directly by any class other than User.
   /// User uses this value to find the Use list.
-  enum : unsigned { NumUserOperandsBits = 28 };
+  enum : unsigned { NumUserOperandsBits = 27 };
   unsigned NumUserOperands : NumUserOperandsBits;
 
   // Use the same type as the bitfield above so that MSVC will pack them.
   unsigned IsUsedByMD : 1;
   unsigned HasName : 1;
+  unsigned HasMetadata : 1; // Has metadata attached to this?
   unsigned HasHungOffUses : 1;
   unsigned HasDescriptor : 1;
 
 private:
   template <typename UseT> // UseT == 'Use' or 'const Use'
-  class use_iterator_impl
-      : public std::iterator<std::forward_iterator_tag, UseT *> {
+  class use_iterator_impl {
     friend class Value;
 
     UseT *U;
@@ -130,6 +131,12 @@ private:
     explicit use_iterator_impl(UseT *u) : U(u) {}
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = UseT *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     use_iterator_impl() : U() {}
 
     bool operator==(const use_iterator_impl &x) const { return U == x.U; }
@@ -160,13 +167,18 @@ private:
   };
 
   template <typename UserTy> // UserTy == 'User' or 'const User'
-  class user_iterator_impl
-      : public std::iterator<std::forward_iterator_tag, UserTy *> {
+  class user_iterator_impl {
     use_iterator_impl<Use> UI;
     explicit user_iterator_impl(Use *U) : UI(U) {}
     friend class Value;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = UserTy *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     user_iterator_impl() = default;
 
     bool operator==(const user_iterator_impl &x) const { return UI == x.UI; }
@@ -279,6 +291,10 @@ public:
   /// \note It is an error to call V->takeName(V).
   void takeName(Value *V);
 
+#ifndef NDEBUG
+  std::string getNameOrAsOperand() const;
+#endif
+
   /// Change all uses of this to point to a new Value.
   ///
   /// Go through the uses list for this definition and make each use point to
@@ -295,27 +311,15 @@ public:
   /// Go through the uses list for this definition and make each use point
   /// to "V" if the callback ShouldReplace returns true for the given Use.
   /// Unlike replaceAllUsesWith() this function does not support basic block
-  /// values or constant users.
+  /// values.
   void replaceUsesWithIf(Value *New,
-                         llvm::function_ref<bool(Use &U)> ShouldReplace) {
-    assert(New && "Value::replaceUsesWithIf(<null>) is invalid!");
-    assert(New->getType() == getType() &&
-           "replaceUses of value with new value of different type!");
-
-    for (use_iterator UI = use_begin(), E = use_end(); UI != E;) {
-      Use &U = *UI;
-      ++UI;
-      if (!ShouldReplace(U))
-        continue;
-      U.set(New);
-    }
-  }
+                         llvm::function_ref<bool(Use &U)> ShouldReplace);
 
   /// replaceUsesOutsideBlock - Go through the uses list for this definition and
   /// make each use point to "V" instead of "this" when the use is outside the
   /// block. 'This's use list is expected to have at least one element.
   /// Unlike replaceAllUsesWith() this function does not support basic block
-  /// values or constant users.
+  /// values.
   void replaceUsesOutsideBlock(Value *V, BasicBlock *BB);
 
   //----------------------------------------------------------------------
@@ -428,11 +432,7 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasOneUse() const {
-    const_use_iterator I = use_begin(), E = use_end();
-    if (I == E) return false;
-    return ++I == E;
-  }
+  bool hasOneUse() const { return hasSingleElement(uses()); }
 
   /// Return true if this Value has exactly N uses.
   bool hasNUses(unsigned N) const;
@@ -454,10 +454,17 @@ public:
 
   /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
-  ///
-  /// This is specialized because it is a common request and does not require
-  /// traversing the whole use list.
   Use *getSingleUndroppableUse();
+  const Use *getSingleUndroppableUse() const {
+    return const_cast<Value *>(this)->getSingleUndroppableUse();
+  }
+
+  /// Return true if there is exactly one unique user of this value that cannot be
+  /// dropped (that user can have multiple uses of this value).
+  User *getUniqueUndroppableUser();
+  const User *getUniqueUndroppableUser() const {
+    return const_cast<Value *>(this)->getUniqueUndroppableUser();
+  }
 
   /// Return true if there this value.
   ///
@@ -550,6 +557,71 @@ public:
   /// Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
+  // Return true if this value is only transitively referenced by metadata.
+  bool isTransitiveUsedByMetadataOnly() const;
+
+protected:
+  /// Get the current metadata attachments for the given kind, if any.
+  ///
+  /// These functions require that the value have at most a single attachment
+  /// of the given kind, and return \c nullptr if such an attachment is missing.
+  /// @{
+  MDNode *getMetadata(unsigned KindID) const;
+  MDNode *getMetadata(StringRef Kind) const;
+  /// @}
+
+  /// Appends all attachments with the given ID to \c MDs in insertion order.
+  /// If the Value has no attachments with the given ID, or if ID is invalid,
+  /// leaves MDs unchanged.
+  /// @{
+  void getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const;
+  void getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const;
+  /// @}
+
+  /// Appends all metadata attached to this value to \c MDs, sorting by
+  /// KindID. The first element of each pair returned is the KindID, the second
+  /// element is the metadata value. Attachments with the same ID appear in
+  /// insertion order.
+  void
+  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
+
+  /// Return true if this value has any metadata attached to it.
+  bool hasMetadata() const { return (bool)HasMetadata; }
+
+  /// Return true if this value has the given type of metadata attached.
+  /// @{
+  bool hasMetadata(unsigned KindID) const {
+    return getMetadata(KindID) != nullptr;
+  }
+  bool hasMetadata(StringRef Kind) const {
+    return getMetadata(Kind) != nullptr;
+  }
+  /// @}
+
+  /// Set a particular kind of metadata attachment.
+  ///
+  /// Sets the given attachment to \c MD, erasing it if \c MD is \c nullptr or
+  /// replacing it if it already exists.
+  /// @{
+  void setMetadata(unsigned KindID, MDNode *Node);
+  void setMetadata(StringRef Kind, MDNode *Node);
+  /// @}
+
+  /// Add a metadata attachment.
+  /// @{
+  void addMetadata(unsigned KindID, MDNode &MD);
+  void addMetadata(StringRef Kind, MDNode &MD);
+  /// @}
+
+  /// Erase all metadata attachments with the given kind.
+  ///
+  /// \returns true if any metadata was removed.
+  bool eraseMetadata(unsigned KindID);
+
+  /// Erase all metadata attached to this Value.
+  void clearMetadata();
+
+public:
   /// Return true if this value is a swifterror value.
   ///
   /// swifterror values can be either a function argument or an alloca with a
@@ -587,15 +659,16 @@ public:
                                    ->stripPointerCastsSameRepresentation());
   }
 
-  /// Strip off pointer casts, all-zero GEPs and invariant group info.
+  /// Strip off pointer casts, all-zero GEPs, single-argument phi nodes and
+  /// invariant group info.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
   /// Alias analysis.
-  const Value *stripPointerCastsAndInvariantGroups() const;
-  Value *stripPointerCastsAndInvariantGroups() {
+  const Value *stripPointerCastsForAliasAnalysis() const;
+  Value *stripPointerCastsForAliasAnalysis() {
     return const_cast<Value *>(static_cast<const Value *>(this)
-                                   ->stripPointerCastsAndInvariantGroups());
+                                   ->stripPointerCastsForAliasAnalysis());
   }
 
   /// Strip off pointer casts and all-constant inbounds GEPs.
@@ -670,13 +743,24 @@ public:
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
 
+  /// Return true if the memory object referred to by V can by freed in the
+  /// scope for which the SSA value defining the allocation is statically
+  /// defined.  E.g.  deallocation after the static scope of a value does not
+  /// count, but a deallocation before that does.
+  bool canBeFreed() const;
+
   /// Returns the number of bytes known to be dereferenceable for the
   /// pointer value.
   ///
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
+  ///
+  /// IF CanBeFreed is true, the pointer is known to be dereferenceable at
+  /// point of definition only.  Caller must prove that allocation is not
+  /// deallocated between point of definition and use.
   uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
-                                          bool &CanBeNull) const;
+                                          bool &CanBeNull,
+                                          bool &CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///
@@ -701,8 +785,8 @@ public:
   ///
   /// This is the greatest alignment value supported by load, store, and alloca
   /// instructions, and global values.
-  static const unsigned MaxAlignmentExponent = 29;
-  static const unsigned MaximumAlignment = 1u << MaxAlignmentExponent;
+  static constexpr unsigned MaxAlignmentExponent = 32;
+  static constexpr uint64_t MaximumAlignment = 1ULL << MaxAlignmentExponent;
 
   /// Mutate the type of this Value to be of the specified type.
   ///

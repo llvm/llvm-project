@@ -1,5 +1,5 @@
-; RUN: opt < %s -adce -simplifycfg -S | grep call
-; RUN: opt < %s -adce -adce-remove-loops -simplifycfg -S | grep call
+; RUN: opt < %s -adce -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | grep call
+; RUN: opt < %s -adce -adce-remove-loops -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | grep call
 
 declare void @exit(i32)
 

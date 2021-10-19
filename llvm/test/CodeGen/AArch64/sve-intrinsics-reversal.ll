@@ -1,8 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ;
 ; RBIT
@@ -83,37 +79,6 @@ define <vscale x 2 x i64> @revb_i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %pg
 }
 
 ;
-; REVB (bswap)
-;
-
-define <vscale x 8 x i16> @revb_i16_bswap(<vscale x 8 x i16> %a) {
-; CHECK-LABEL: revb_i16_bswap:
-; CHECK: ptrue [[PG:p[0-9]+]].h
-; CHECK-NEXT: revb z0.h, [[PG]]/m, z0.h
-; CHECK-NEXT: ret
-  %res = call <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16> %a)
-  ret <vscale x 8 x i16> %res
-}
-
-define <vscale x 4 x i32> @revb_i32_bswap(<vscale x 4 x i32> %a) {
-; CHECK-LABEL: revb_i32_bswap:
-; CHECK: ptrue [[PG:p[0-9]+]].s
-; CHECK-NEXT: revb z0.s, [[PG]]/m, z0.s
-; CHECK-NEXT: ret
-  %res = call <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32> %a)
-  ret <vscale x 4 x i32> %res
-}
-
-define <vscale x 2 x i64> @revb_i64_bswap(<vscale x 2 x i64> %a) {
-; CHECK-LABEL: revb_i64_bswap:
-; CHECK: ptrue [[PG:p[0-9]+]].d
-; CHECK-NEXT: revb z0.d, [[PG]]/m, z0.d
-; CHECK-NEXT: ret
-  %res = call <vscale x 2 x i64> @llvm.bswap.nxv2i64(<vscale x 2 x i64> %a)
-  ret <vscale x 2 x i64> %res
-}
-
-;
 ; REVH
 ;
 
@@ -159,10 +124,6 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.rbit.nxv2i64(<vscale x 2 x i64>, <v
 declare <vscale x 8 x i16> @llvm.aarch64.sve.revb.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.revb.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)
-
-declare <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16>)
-declare <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32>)
-declare <vscale x 2 x i64> @llvm.bswap.nxv2i64(<vscale x 2 x i64>)
 
 declare <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.revh.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, <vscale x 2 x i64>)

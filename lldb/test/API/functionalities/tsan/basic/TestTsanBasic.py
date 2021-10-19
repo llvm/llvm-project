@@ -63,7 +63,7 @@ class TsanBasicTestCase(TestBase):
         process = self.dbg.GetSelectedTarget().process
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
-        self.assertTrue("__tsan_on_report" in frame.GetFunctionName())
+        self.assertIn("__tsan_on_report", frame.GetFunctionName())
 
         # The stopped thread backtrace should contain either line1 or line2
         # from main.c.

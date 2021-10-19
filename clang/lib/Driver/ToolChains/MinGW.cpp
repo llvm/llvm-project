@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
-#include "InputInfo.h"
 #include "CommonArgs.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
@@ -51,11 +51,11 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
-                   SplitDebugName(Args, Inputs[0], Output));
+                   SplitDebugName(JA, Args, Inputs[0], Output));
 }
 
 void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
@@ -136,10 +136,13 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     llvm_unreachable("Unsupported target architecture.");
   }
 
-  if (Args.hasArg(options::OPT_mwindows)) {
+  Arg *SubsysArg =
+      Args.getLastArg(options::OPT_mwindows, options::OPT_mconsole);
+  if (SubsysArg && SubsysArg->getOption().matches(options::OPT_mwindows)) {
     CmdArgs.push_back("--subsystem");
     CmdArgs.push_back("windows");
-  } else if (Args.hasArg(options::OPT_mconsole)) {
+  } else if (SubsysArg &&
+             SubsysArg->getOption().matches(options::OPT_mconsole)) {
     CmdArgs.push_back("--subsystem");
     CmdArgs.push_back("console");
   }
@@ -164,17 +167,14 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
   // GCC implicitly adds an .exe extension if it is given an output file name
-  // that lacks an extension. However, GCC only does this when actually
-  // running on windows, not when operating as a cross compiler. As some users
-  // have come to rely on this behaviour, try to replicate it.
-#ifdef _WIN32
-  if (!llvm::sys::path::has_extension(OutputFile))
+  // that lacks an extension.
+  // GCC used to do this only when the compiler itself runs on windows, but
+  // since GCC 8 it does the same when cross compiling as well.
+  if (!llvm::sys::path::has_extension(OutputFile)) {
     CmdArgs.push_back(Args.MakeArgString(Twine(OutputFile) + ".exe"));
-  else
+    OutputFile = CmdArgs.back();
+  } else
     CmdArgs.push_back(OutputFile);
-#else
-  CmdArgs.push_back(OutputFile);
-#endif
 
   Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
@@ -322,8 +322,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
   const char *Exec = Args.MakeArgString(TC.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 // Simplified from Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple.
@@ -340,6 +341,7 @@ static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
       continue;
     if (CandidateVersion <= Version)
       continue;
+    Version = CandidateVersion;
     Ver = std::string(VersionText);
     GccLibDir = LI->path();
   }
@@ -428,7 +430,7 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
 
   NativeLLVMSupport =
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
-          .equals_lower("lld");
+          .equals_insensitive("lld");
 }
 
 bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
@@ -472,13 +474,15 @@ bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
 }
 
 bool toolchains::MinGW::isPICDefault() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 bool toolchains::MinGW::isPIEDefault() const { return false; }
 
 bool toolchains::MinGW::isPICDefaultForced() const {
-  return getArch() == llvm::Triple::x86_64;
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 llvm::ExceptionHandling
@@ -493,6 +497,7 @@ SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Vptr;
   return Res;
 }
 
@@ -585,12 +590,18 @@ void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(
   StringRef Slash = llvm::sys::path::get_separator();
 
   switch (GetCXXStdlibType(DriverArgs)) {
-  case ToolChain::CST_Libcxx:
+  case ToolChain::CST_Libcxx: {
+    std::string TargetDir = (Base + "include" + Slash + getTripleString() +
+                             Slash + "c++" + Slash + "v1")
+                                .str();
+    if (getDriver().getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
     addSystemInclude(DriverArgs, CC1Args, Base + Arch + Slash + "include" +
                                               Slash + "c++" + Slash + "v1");
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "include" + Slash + "c++" + Slash + "v1");
     break;
+  }
 
   case ToolChain::CST_Libstdcxx:
     llvm::SmallVector<llvm::SmallString<1024>, 4> CppIncludeBases;

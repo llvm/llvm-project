@@ -71,9 +71,9 @@ class ARMAttributeParser : public ELFAttributeParser {
 
 public:
   ARMAttributeParser(ScopedPrinter *sw)
-      : ELFAttributeParser(sw, ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
+      : ELFAttributeParser(sw, ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
   ARMAttributeParser()
-      : ELFAttributeParser(ARMBuildAttrs::ARMAttributeTags, "aeabi") {}
+      : ELFAttributeParser(ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
 };
 }
 

@@ -11,12 +11,16 @@ int main() {
   char * volatile x = (char*)malloc(40);
   free(x);
   free(x);
-// CHECK: ERROR: HWAddressSanitizer: invalid-free on address
-// CHECK: tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
-// CHECK: freed by thread {{.*}} here:
-// CHECK: previously allocated here:
-// CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
-// CHECK: =>{{.*}}[[MEM_TAG]]
+  // CHECK: ERROR: HWAddressSanitizer: invalid-free on address {{.*}} at pc {{[0x]+}}[[PC:.*]] on thread T{{[0-9]+}}
+  // CHECK: tags: [[PTR_TAG:..]]/[[MEM_TAG:..]] (ptr/mem)
+  // CHECK: #0 {{[0x]+}}{{.*}}[[PC]]
+  // If we instrument using calls (default on x86), free is not the top frame
+  // of the fault. With TCO the free frame can be replaced with the interceptor.
+  // CHECK: in {{.*}}free
+  // CHECK: freed by thread {{.*}} here:
+  // CHECK: previously allocated here:
+  // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):
+  // CHECK: =>{{.*}}[[MEM_TAG]]
   fprintf(stderr, "DONE\n");
   __hwasan_disable_allocator_tagging();
 // CHECK-NOT: DONE

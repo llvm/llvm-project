@@ -1,7 +1,11 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_32 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_64 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_32 %s
+; RUN: split-file %s %t
+; RUN: cat %t/main.ll %t/_align32.ll > %t/align32.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_64 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true -stackrealign %t/align32.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE_32 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_64 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -mattr=+mwaitx -x86-use-base-pointer=true %t/main.ll -o - | FileCheck --check-prefix=CHECK --check-prefix=NO_BASE_32 %s
+
+;--- main.ll
 
 ; This test checks that we save and restore the base pointer (ebx or rbx) in the
 ; presence of the mwaitx intrinsic which requires to use ebx for one of its
@@ -42,12 +46,12 @@ entry:
 ; USE_BASE_32: movl %ecx, %eax
 ; USE_BASE_32: movl %edx, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %r8d, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %r8d, %ebx
@@ -111,12 +115,12 @@ if.end:
 ; USE_BASE_32: movl %esi, %eax
 ; USE_BASE_32: movl %edi, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %edx, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %edx, %ebx
@@ -179,12 +183,12 @@ if.end:
 ; USE_BASE_32: movl %esi, %eax
 ; USE_BASE_32: movl %edi, %ecx
 ; Save base pointer.
-; USE_BASE_32: movl %ebx, [[SAVE_ebx:%e(di|si)]]
+; USE_BASE_32: movq %rbx, [[SAVE_rbx:%r(di|si)]]
 ; Set mwaitx ebx argument.
 ; USE_BASE_32: movl %edx, %ebx
 ; USE_BASE_32-NEXT: mwaitx
 ; Restore base pointer.
-; USE_BASE_32-NEXT: movl [[SAVE_ebx]], %ebx
+; USE_BASE_32-NEXT: movq [[SAVE_rbx]], %rbx
 
 ; Pass mwaitx 3 arguments in eax, ecx, ebx
 ; NO_BASE_64: movl %edx, %ebx
@@ -208,3 +212,6 @@ if.end:
 ; NO_BASE_32-NEXT: {{.+$}}
 
 declare void @llvm.x86.mwaitx(i32, i32, i32) nounwind
+;--- _align32.ll
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"override-stack-alignment", i32 32}

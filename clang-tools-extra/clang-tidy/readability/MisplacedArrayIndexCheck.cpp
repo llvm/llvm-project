@@ -20,10 +20,9 @@ namespace readability {
 
 void MisplacedArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               arraySubscriptExpr(hasLHS(hasType(isInteger())),
-                                  hasRHS(hasType(isAnyPointer())))
-                   .bind("expr")),
+      traverse(TK_AsIs, arraySubscriptExpr(hasLHS(hasType(isInteger())),
+                                           hasRHS(hasType(isAnyPointer())))
+                            .bind("expr")),
       this);
 }
 

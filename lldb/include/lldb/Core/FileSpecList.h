@@ -14,7 +14,7 @@
 
 #include <vector>
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Stream;

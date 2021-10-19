@@ -16,11 +16,10 @@
 namespace Fortran::semantics {
 
 static const Scope *FindContainingSubprogram(const Scope &start) {
-  const Scope *scope{FindProgramUnitContaining(start)};
-  return scope &&
-          (scope->kind() == Scope::Kind::MainProgram ||
-              scope->kind() == Scope::Kind::Subprogram)
-      ? scope
+  const Scope &scope{GetProgramUnitContaining(start)};
+  return scope.kind() == Scope::Kind::MainProgram ||
+          scope.kind() == Scope::Kind::Subprogram
+      ? &scope
       : nullptr;
 }
 

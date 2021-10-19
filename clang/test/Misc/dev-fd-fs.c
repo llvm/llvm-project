@@ -8,7 +8,13 @@
 // RUN: cat %s | %clang -x c /dev/fd/0 -E > %t
 // RUN: FileCheck --check-prefix DEV-FD-INPUT < %t %s
 //
+// RUN: cat %s | %clang -x c %s -E -DINCLUDE_FROM_STDIN > %t
+// RUN: FileCheck --check-prefix DEV-FD-INPUT \
+// RUN:           --check-prefix DEV-FD-INPUT-INCLUDE < %t %s
+//
+// DEV-FD-INPUT-INCLUDE: int w;
 // DEV-FD-INPUT: int x;
+// DEV-FD-INPUT-INCLUDE: int y;
 
 
 // Check writing to /dev/fd named pipes. We use cat here as before to ensure we
@@ -27,4 +33,11 @@
 //
 // DEV-FD-REG-OUTPUT: int x;
 
+#ifdef INCLUDE_FROM_STDIN
+#undef INCLUDE_FROM_STDIN
+int w;
+#include "/dev/fd/0"
+int y;
+#else
 int x;
+#endif

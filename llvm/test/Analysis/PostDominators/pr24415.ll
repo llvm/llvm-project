@@ -1,4 +1,3 @@
-; RUN: opt < %s -postdomtree -analyze | FileCheck %s
 ; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck %s
 
 ; Function Attrs: nounwind ssp uwtable

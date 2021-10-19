@@ -20,6 +20,6 @@ declare i8 @strlen(i8*) noinline optnone
 ; CHECK: (i8*) #1
 
 ; CHECK-LABEL: attributes #0
-; CHECK: = { norecurse nounwind readnone }
+; CHECK: = { mustprogress nofree norecurse nosync nounwind readnone willreturn }
 ; CHECK-LABEL: attributes #1
 ; CHECK: = { noinline optnone }

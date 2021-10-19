@@ -10,7 +10,6 @@ define amdgpu_ps void @store_f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ;
 ; GFX10-LABEL: store_f32_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -27,7 +26,6 @@ define amdgpu_ps void @store_v2f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v2f32_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -44,7 +42,6 @@ define amdgpu_ps void @store_v3f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v3f32_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -61,7 +58,6 @@ define amdgpu_ps void @store_v4f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v4f32_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -78,7 +74,6 @@ define amdgpu_ps void @store_f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ;
 ; GFX10-LABEL: store_f32_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -96,7 +91,6 @@ define amdgpu_ps void @store_v2f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v2f32_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -114,7 +108,6 @@ define amdgpu_ps void @store_v3f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v3f32_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -132,7 +125,6 @@ define amdgpu_ps void @store_v4f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ;
 ; GFX10-LABEL: store_v4f32_2d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -150,7 +142,6 @@ define amdgpu_ps void @store_f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo,
 ;
 ; GFX10-LABEL: store_f32_3d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -169,7 +160,6 @@ define amdgpu_ps void @store_v2f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ;
 ; GFX10-LABEL: store_v2f32_3d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -188,7 +178,6 @@ define amdgpu_ps void @store_v3f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ;
 ; GFX10-LABEL: store_v3f32_3d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:
@@ -207,7 +196,6 @@ define amdgpu_ps void @store_v4f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ;
 ; GFX10-LABEL: store_v4f32_3d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
 ; GFX10-NEXT:    s_endpgm
 main_body:

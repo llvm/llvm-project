@@ -9,6 +9,8 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
+// XFAIL: libcpp-has-no-wide-characters
+
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
@@ -17,6 +19,8 @@
 // GLIBC Expects "10/06/2009" for fr_FR as opposed to "10.06.2009"
 // GLIBC also fails on the zh_CN test.
 // XFAIL: linux
+
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // <locale>
 
@@ -33,7 +37,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef input_iterator<const wchar_t*> I;
+typedef cpp17_input_iterator<const wchar_t*> I;
 
 typedef std::time_get_byname<wchar_t, I> F;
 

@@ -54,15 +54,15 @@ struct HD  {
 // CHECK-DEVICE-NOT: @_ZTI2HD
 
 void H::method() {}
-//CHECK-HOST: define void @_ZN1H6methodEv
+//CHECK-HOST: define{{.*}} void @_ZN1H6methodEv
 
 void __device__ D::method() {}
-//CHECK-DEVICE: define void @_ZN1D6methodEv
+//CHECK-DEVICE: define{{.*}} void @_ZN1D6methodEv
 
 void __device__ HD::d_method() {}
-// CHECK-DEVICE: define void @_ZN2HD8d_methodEv
-// CHECK-HOST-NOT: define void @_ZN2HD8d_methodEv
+// CHECK-DEVICE: define{{.*}} void @_ZN2HD8d_methodEv
+// CHECK-HOST-NOT: define{{.*}} void @_ZN2HD8d_methodEv
 void HD::h_method() {}
-// CHECK-HOST: define void @_ZN2HD8h_methodEv
-// CHECK-DEVICE-NOT: define void @_ZN2HD8h_methodEv
+// CHECK-HOST: define{{.*}} void @_ZN2HD8h_methodEv
+// CHECK-DEVICE-NOT: define{{.*}} void @_ZN2HD8h_methodEv
 

@@ -25,19 +25,19 @@ Modifiers
 DS Modifiers
 ------------
 
-.. _amdgpu_synid_ds_offset8:
+.. _amdgpu_synid_ds_offset80:
 
-offset8
+offset0
 ~~~~~~~
 
-Specifies an immediate unsigned 8-bit offset, in bytes. The default value is 0.
+Specifies first 8-bit offset, in bytes. The default value is 0.
 
-Used with DS instructions which have 2 addresses.
+Used with DS instructions that expect two addresses.
 
     =================== ====================================================================
     Syntax              Description
     =================== ====================================================================
-    offset:{0..0xFF}    Specifies an unsigned 8-bit offset as a positive
+    offset0:{0..0xFF}   Specifies an unsigned 8-bit offset as a positive
                         :ref:`integer number <amdgpu_synid_integer_number>`
                         or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
     =================== ====================================================================
@@ -46,18 +46,43 @@ Examples:
 
 .. parsed-literal::
 
-  offset:0xff
-  offset:2-x
-  offset:-x-y
+  offset0:0xff
+  offset0:2-x
+  offset0:-x-y
+
+.. _amdgpu_synid_ds_offset81:
+
+offset1
+~~~~~~~
+
+Specifies second 8-bit offset, in bytes. The default value is 0.
+
+Used with DS instructions that expect two addresses.
+
+    =================== ====================================================================
+    Syntax              Description
+    =================== ====================================================================
+    offset1:{0..0xFF}   Specifies an unsigned 8-bit offset as a positive
+                        :ref:`integer number <amdgpu_synid_integer_number>`
+                        or an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
+    =================== ====================================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset1:0xff
+  offset1:2-x
+  offset1:-x-y
 
 .. _amdgpu_synid_ds_offset16:
 
-offset16
-~~~~~~~~
+offset
+~~~~~~
 
-Specifies an immediate unsigned 16-bit offset, in bytes. The default value is 0.
+Specifies a 16-bit offset, in bytes. The default value is 0.
 
-Used with DS instructions which have 1 address.
+Used with DS instructions that expect a single address.
 
     ==================== ====================================================================
     Syntax               Description
@@ -422,7 +447,7 @@ GFX7, GFX8 and GFX10 only.
     r128                Specifies 128 bits texture resource size.
     =================== ================================================
 
-.. WARNING:: Using this modifier should descrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
+.. WARNING:: Using this modifier should decrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
 
 tfe
 ~~~
@@ -831,7 +856,7 @@ GFX10 only.
 
 Unified format is a replacement for :ref:`data<amdgpu_synid_format_data>`
 and :ref:`numeric<amdgpu_synid_format_num>` formats. For compatibility with older ISA,
-:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepthed
+:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepted
 provided that the combination of formats can be mapped to a unified format.
 
 Supported unified formats and equivalent combinations of data and numeric formats
@@ -1032,8 +1057,8 @@ GFX10 only.
 Note: numeric values may be specified as either :ref:`integer numbers<amdgpu_synid_integer_number>` or
 :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
 
-DPP/DPP16 Modifiers
--------------------
+DPP Modifiers
+-------------
 
 GFX8, GFX9 and GFX10 only.
 
@@ -1115,6 +1140,77 @@ Examples:
   quad_perm:[0, 1, 2, 3]
   row_shl:3
 
+.. _amdgpu_synid_dpp32_ctrl:
+
+dpp32_ctrl
+~~~~~~~~~~
+
+Specifies how data are shared between threads. This is a mandatory modifier.
+There is no default value.
+
+May be used only with GFX90A 32-bit instructions.
+
+Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
+
+    ======================================== ==================================================
+    Syntax                                   Description
+    ======================================== ==================================================
+    quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
+    row_mirror                               Mirror threads within row.
+    row_half_mirror                          Mirror threads within 1/2 row (8 threads).
+    row_bcast:15                             Broadcast 15th thread of each row to next row.
+    row_bcast:31                             Broadcast thread 31 to rows 2 and 3.
+    wave_shl:1                               Wavefront left shift by 1 thread.
+    wave_rol:1                               Wavefront left rotate by 1 thread.
+    wave_shr:1                               Wavefront right shift by 1 thread.
+    wave_ror:1                               Wavefront right rotate by 1 thread.
+    row_shl:{1..15}                          Row shift left by 1-15 threads.
+    row_shr:{1..15}                          Row shift right by 1-15 threads.
+    row_ror:{1..15}                          Row rotate right by 1-15 threads.
+    row_newbcast:{1..15}                     Broadcast a thread within a row to the whole row.
+    ======================================== ==================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  quad_perm:[0, 1, 2, 3]
+  row_shl:3
+
+
+.. _amdgpu_synid_dpp64_ctrl:
+
+dpp64_ctrl
+~~~~~~~~~~
+
+Specifies how data are shared between threads. This is a mandatory modifier.
+There is no default value.
+
+May be used only with GFX90A 64-bit instructions.
+
+Note: the lanes of a wavefront are organized in four *rows* and four *banks*.
+
+    ======================================== ==================================================
+    Syntax                                   Description
+    ======================================== ==================================================
+    row_newbcast:{1..15}                     Broadcast a thread within a row to the whole row.
+    ======================================== ==================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  row_newbcast:3
+
+
 .. _amdgpu_synid_row_mask:
 
 row_mask
@@ -1186,7 +1282,7 @@ invalid lanes is disabled.
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    bound_ctrl:0                             Enables data sharing with invalid lanes.
+    bound_ctrl:1                             Enables data sharing with invalid lanes.
 
                                              Accessing data from an invalid lane will
                                              return zero.
@@ -1387,6 +1483,34 @@ Examples:
 
   op_sel:[0,0]
   op_sel:[0,1]
+
+.. _amdgpu_synid_dpp_op_sel:
+
+dpp_op_sel
+~~~~~~~~~~
+
+Special version of *op_sel* used for *permlane* opcodes to specify
+dpp-like mode bits - :ref:`fi<amdgpu_synid_fi16>` and
+:ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
+
+GFX10 only.
+
+    ======================================== ============================================================
+    Syntax                                   Description
+    ======================================== ============================================================
+    op_sel:[{0..1},{0..1}]                   First bit specifies :ref:`fi<amdgpu_synid_fi16>`, second
+                                             bit specifies :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
+    ======================================== ============================================================
+
+Note: numeric values may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  op_sel:[0,0]
 
 .. _amdgpu_synid_clamp:
 
@@ -1778,15 +1902,19 @@ See a description :ref:`here<amdgpu_synid_clamp>`.
 VOP3P MFMA Modifiers
 --------------------
 
+These modifiers may only be used with GFX908 and GFX90A.
+
 .. _amdgpu_synid_cbsz:
 
 cbsz
 ~~~~
 
+Specifies a broadcast mode.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    cbsz:[{0..7}]                   TBD
+    cbsz:[{0..7}]                   A broadcast mode.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either
@@ -1798,10 +1926,12 @@ an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 abid
 ~~~~
 
+Specifies matrix A group select.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    abid:[{0..15}]                  TBD
+    abid:[{0..15}]                  Matrix A group select id.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either
@@ -1813,10 +1943,12 @@ an :ref:`absolute expression<amdgpu_synid_absolute_expression>`.
 blgp
 ~~~~
 
+Specifies matrix B lane group pattern.
+
     =============================== ==================================================================
     Syntax                          Description
     =============================== ==================================================================
-    blgp:[{0..7}]                   TBD
+    blgp:[{0..7}]                   Matrix B lane group pattern.
     =============================== ==================================================================
 
 Note: numeric value may be specified as either

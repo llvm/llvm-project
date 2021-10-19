@@ -19,14 +19,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
-
-class MemoryBufferRef;
-
 namespace sys {
 namespace fs {
 // Duplicated from FileSystem.h to avoid a dependency.
@@ -77,15 +75,16 @@ public:
   virtual StringRef getBufferIdentifier() const { return "Unknown buffer"; }
 
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
-  /// if successful, otherwise returning null. If FileSize is specified, this
-  /// means that the client knows that the file exists and that it has the
-  /// specified size.
+  /// if successful, otherwise returning null.
+  ///
+  /// \param IsText Set to true to indicate that the file should be read in
+  /// text mode.
   ///
   /// \param IsVolatile Set to true to indicate that the contents of the file
   /// can change outside the user's control, e.g. when libclang tries to parse
   /// while the user is editing/updating the file or if the file is on an NFS.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFile(const Twine &Filename, int64_t FileSize = -1,
+  getFile(const Twine &Filename, bool IsText = false,
           bool RequiresNullTerminator = true, bool IsVolatile = false);
 
   /// Read all of the specified file into a MemoryBuffer as a stream
@@ -131,7 +130,7 @@ public:
   /// Open the specified file as a MemoryBuffer, or open stdin if the Filename
   /// is "-".
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getFileOrSTDIN(const Twine &Filename, int64_t FileSize = -1,
+  getFileOrSTDIN(const Twine &Filename, bool IsText = false,
                  bool RequiresNullTerminator = true);
 
   /// Map a subrange of the specified file as a MemoryBuffer.
@@ -182,8 +181,7 @@ public:
   }
 
   static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
-  getFile(const Twine &Filename, int64_t FileSize = -1,
-          bool IsVolatile = false);
+  getFile(const Twine &Filename, bool IsVolatile = false);
 
   /// Map a subrange of the specified file as a WritableMemoryBuffer.
   static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
@@ -258,26 +256,6 @@ private:
   using MemoryBuffer::getOpenFile;
   using MemoryBuffer::getOpenFileSlice;
   using MemoryBuffer::getSTDIN;
-};
-
-class MemoryBufferRef {
-  StringRef Buffer;
-  StringRef Identifier;
-
-public:
-  MemoryBufferRef() = default;
-  MemoryBufferRef(const MemoryBuffer& Buffer)
-      : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
-  MemoryBufferRef(StringRef Buffer, StringRef Identifier)
-      : Buffer(Buffer), Identifier(Identifier) {}
-
-  StringRef getBuffer() const { return Buffer; }
-
-  StringRef getBufferIdentifier() const { return Identifier; }
-
-  const char *getBufferStart() const { return Buffer.begin(); }
-  const char *getBufferEnd() const { return Buffer.end(); }
-  size_t getBufferSize() const { return Buffer.size(); }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

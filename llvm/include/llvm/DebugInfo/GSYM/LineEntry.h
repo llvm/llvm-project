@@ -44,4 +44,4 @@ inline bool operator<(const LineEntry &LHS, const LineEntry &RHS) {
 }
 } // namespace gsym
 } // namespace llvm
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_LINEENTRY_H
+#endif // LLVM_DEBUGINFO_GSYM_LINEENTRY_H

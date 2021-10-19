@@ -1,6 +1,6 @@
 # Test 32-bit BRANCH RELATIVE ON COUNT in cases where some branches are out
 # of range.
-# RUN: python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
+# RUN: %python %s | llc -mtriple=s390x-linux-gnu | FileCheck %s
 
 # Construct:
 #

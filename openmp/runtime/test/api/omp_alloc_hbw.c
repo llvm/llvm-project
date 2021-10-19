@@ -12,8 +12,8 @@ int main() {
   at[1].key = omp_atk_fallback;
   at[1].value = omp_atv_null_fb;
   a = omp_init_allocator(omp_high_bw_mem_space, 2, at);
-  printf("allocator hbw created: %p\n", a);
-  #pragma omp parallel num_threads(2)
+  printf("allocator hbw created: %p\n", (void *)a);
+#pragma omp parallel num_threads(2)
   {
     int i = omp_get_thread_num();
     p[i] = omp_alloc(1024 * 1024, a);

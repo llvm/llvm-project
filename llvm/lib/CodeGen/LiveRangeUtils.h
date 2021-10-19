@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// This file contains helper functions to modify live ranges.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_CODEGEN_LIVERANGEUTILS_H

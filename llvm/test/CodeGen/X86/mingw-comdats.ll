@@ -74,14 +74,26 @@ entry:
 ; GNU32: .long 42
 
 
+define linkonce_odr dso_local i32 @_Z3fooj(i32 %x) !section_prefix !0 {
+entry:
+  %call = tail call i32 @_Z3bari(i32 %x)
+  %0 = load i32, i32* @gv, align 4
+  %add = add nsw i32 %0, %call
+  ret i32 %add
+}
+
 ; Make sure the assembler puts the .xdata and .pdata in sections with the right
 ; names.
 ; GNUOBJ: .text$_Z3fooi
 ; GNUOBJ: .xdata$_Z3fooi
+; GNUOBJ: .text$unlikely$_Z3fooj
+; GNUOBJ: .xdata$unlikely$_Z3fooj
 ; GNUOBJ: .data$gv
 ; GNUOBJ: .pdata$_Z3fooi
+; GNUOBJ: .pdata$unlikely$_Z3fooj
 
 declare dso_local i32 @_Z3bari(i32)
 
 attributes #0 = { norecurse uwtable }
 attributes #1 = { inlinehint uwtable }
+!0 = !{!"function_section_prefix", !"unlikely"}

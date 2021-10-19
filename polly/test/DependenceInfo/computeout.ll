@@ -57,14 +57,14 @@ exit.3:
 ; VALUE-NEXT: WAR dependences:
 ; VALUE-NEXT:     {  }
 ; VALUE-NEXT: WAW dependences:
-; VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+; VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9 }
 
 ; FUNC-VALUE:      RAW dependences:
 ; FUNC-VALUE-NEXT:     {  }
 ; FUNC-VALUE-NEXT: WAR dependences:
 ; FUNC-VALUE-NEXT:     {  }
 ; FUNC-VALUE-NEXT: WAW dependences:
-; FUNC-VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] ->  Stmt_S3_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] ->  [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99 }
+; FUNC-VALUE-NEXT:     { Stmt_S1[i0] -> Stmt_S3[i0] : 10 <= i0 <= 99; Stmt_S1[i0] -> Stmt_S2[i0] : 0 <= i0 <= 9; [Stmt_S2[i0] -> Stmt_S2_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 0 <= i0 <= 9; Stmt_S2[i0] -> Stmt_S3[i0] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S2[i0] -> Stmt_S2_Write0[]] : 0 <= i0 <= 9; [Stmt_S1[i0] -> Stmt_S1_Write0[]] -> [Stmt_S3[i0] -> Stmt_S3_Write0[]] : 10 <= i0 <= 99 }
 
 ; TIMEOUT:      RAW dependences:
 ; TIMEOUT-NEXT:     n/a

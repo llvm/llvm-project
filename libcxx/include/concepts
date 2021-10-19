@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-------------------------- concepts ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,9 +67,9 @@ namespace std {
   template<class T, class... Args>
     concept constructible_from = see below;
 
-  // [concept.defaultconstructible], concept default_constructible
+  // [concept.default.init], concept default_initializable
   template<class T>
-    concept default_constructible = see below;
+    concept default_initializable = see below;
 
   // [concept.moveconstructible], concept move_constructible
   template<class T>
@@ -78,11 +78,6 @@ namespace std {
   // [concept.copyconstructible], concept copy_constructible
   template<class T>
     concept copy_constructible = see below;
-
-  // [concepts.compare], comparison concepts
-  // [concept.boolean], concept boolean
-  template<class B>
-    concept boolean = see below;
 
   // [concept.equalitycomparable], concept equality_comparable
   template<class T>
@@ -134,33 +129,33 @@ namespace std {
 
 */
 
+#include <__concepts/arithmetic.h>
+#include <__concepts/assignable.h>
+#include <__concepts/boolean_testable.h>
+#include <__concepts/class_or_enum.h>
+#include <__concepts/common_reference_with.h>
+#include <__concepts/common_with.h>
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/destructible.h>
+#include <__concepts/different_from.h>
+#include <__concepts/equality_comparable.h>
+#include <__concepts/invocable.h>
+#include <__concepts/movable.h>
+#include <__concepts/predicate.h>
+#include <__concepts/regular.h>
+#include <__concepts/relation.h>
+#include <__concepts/same_as.h>
+#include <__concepts/semiregular.h>
+#include <__concepts/swappable.h>
+#include <__concepts/totally_ordered.h>
 #include <__config>
-#include <type_traits>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
-
-// [concept.same]
-
-template<class _Tp, class _Up>
-concept __same_as_impl = _VSTD::_IsSame<_Tp, _Up>::value;
-
-template<class _Tp, class _Up>
-concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
-
-#endif //_LIBCPP_STD_VER > 17 && defined(__cpp_concepts) && __cpp_concepts >= 201811L
-
-_LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_CONCEPTS

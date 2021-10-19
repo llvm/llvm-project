@@ -32,7 +32,7 @@ void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
 
   // First and second case: cast str.compare(str) to boolean.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                implicitCastExpr(hasImplicitDestinationType(booleanType()),
                                 has(StrCompare))
                    .bind("match1")),

@@ -108,14 +108,14 @@ The implementation of this rewriter is in `ToyCombine.cpp`. The
 [canonicalization pass](../../Canonicalization.md) applies transformations
 defined by operations in a greedy, iterative manner. To ensure that the
 canonicalization pass applies our new transform, we set
-[hasCanonicalizer = 1](../../OpDefinitions.md#hascanonicalizer) and register the
+[hasCanonicalizer = 1](../../OpDefinitions.md/#hascanonicalizer) and register the
 pattern with the canonicalization framework.
 
 ```c++
 // Register our patterns for rewrite by the Canonicalization framework.
 void TransposeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyRedundantTranspose>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<SimplifyRedundantTranspose>(context);
 }
 ```
 

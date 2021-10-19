@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1131 -- check valid and invalid DO loop naming
 
 PROGRAM C1131

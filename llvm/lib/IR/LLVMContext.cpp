@@ -78,6 +78,12 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "gc-transition operand bundle id drifted!");
   (void)GCLiveEntry;
 
+  auto *ClangAttachedCall =
+      pImpl->getOrInsertBundleTag("clang.arc.attachedcall");
+  assert(ClangAttachedCall->second == LLVMContext::OB_clang_arc_attachedcall &&
+         "clang.arc.attachedcall operand bundle id drifted!");
+  (void)ClangAttachedCall;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&
@@ -105,26 +111,6 @@ void LLVMContext::removeModule(Module *M) {
 // Recoverable Backend Errors
 //===----------------------------------------------------------------------===//
 
-void LLVMContext::
-setInlineAsmDiagnosticHandler(InlineAsmDiagHandlerTy DiagHandler,
-                              void *DiagContext) {
-  pImpl->InlineAsmDiagHandler = DiagHandler;
-  pImpl->InlineAsmDiagContext = DiagContext;
-}
-
-/// getInlineAsmDiagnosticHandler - Return the diagnostic handler set by
-/// setInlineAsmDiagnosticHandler.
-LLVMContext::InlineAsmDiagHandlerTy
-LLVMContext::getInlineAsmDiagnosticHandler() const {
-  return pImpl->InlineAsmDiagHandler;
-}
-
-/// getInlineAsmDiagnosticContext - Return the diagnostic context set by
-/// setInlineAsmDiagnosticHandler.
-void *LLVMContext::getInlineAsmDiagnosticContext() const {
-  return pImpl->InlineAsmDiagContext;
-}
-
 void LLVMContext::setDiagnosticHandlerCallBack(
     DiagnosticHandler::DiagnosticHandlerTy DiagnosticHandler,
     void *DiagnosticContext, bool RespectFilters) {
@@ -146,11 +132,16 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
-void LLVMContext::setDiagnosticsHotnessThreshold(uint64_t Threshold) {
+void LLVMContext::setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
+
 uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
-  return pImpl->DiagnosticsHotnessThreshold;
+  return pImpl->DiagnosticsHotnessThreshold.getValueOr(UINT64_MAX);
+}
+
+bool LLVMContext::isDiagnosticsHotnessThresholdSetFromPSI() const {
+  return !pImpl->DiagnosticsHotnessThreshold.hasValue();
 }
 
 remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {
@@ -257,7 +248,7 @@ void LLVMContext::diagnose(const DiagnosticInfo &DI) {
     exit(1);
 }
 
-void LLVMContext::emitError(unsigned LocCookie, const Twine &ErrorStr) {
+void LLVMContext::emitError(uint64_t LocCookie, const Twine &ErrorStr) {
   diagnose(DiagnosticInfoInlineAsm(LocCookie, ErrorStr));
 }
 
@@ -355,4 +346,14 @@ const DiagnosticHandler *LLVMContext::getDiagHandlerPtr() const {
 
 std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
+}
+
+void LLVMContext::enableOpaquePointers() const {
+  assert(pImpl->PointerTypes.empty() && pImpl->ASPointerTypes.empty() &&
+         "Must be called before creating any pointer types");
+  pImpl->OpaquePointers = true;
+}
+
+bool LLVMContext::supportsTypedPointers() const {
+  return !pImpl->OpaquePointers;
 }

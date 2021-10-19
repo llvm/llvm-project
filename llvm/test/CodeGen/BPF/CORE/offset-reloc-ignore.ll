@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;   #define _(x) (__builtin_preserve_access_index(x))
 ;   int get_value(const int *arg);
@@ -9,13 +8,15 @@
 ;     return get_value(_(&arg[4]));
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 ; Function Attrs: nounwind
 define dso_local i32 @test(i32* %arg) local_unnamed_addr #0 !dbg !10 {
 entry:
   call void @llvm.dbg.value(metadata i32* %arg, metadata !14, metadata !DIExpression()), !dbg !15
-  %0 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* %arg, i32 0, i32 4), !dbg !16, !llvm.preserve.access.index !4
+  %0 = tail call i32* @llvm.preserve.array.access.index.p0i32.p0i32(i32* elementtype(i32) %arg, i32 0, i32 4), !dbg !16, !llvm.preserve.access.index !4
   %call = tail call i32 @get_value(i32* %0) #4, !dbg !17
   ret i32 %call, !dbg !18
 }

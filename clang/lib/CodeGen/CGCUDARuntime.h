@@ -15,7 +15,9 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCUDARUNTIME_H
 
+#include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalValue.h"
 
 namespace llvm {
 class Function;
@@ -54,16 +56,19 @@ public:
     unsigned Kind : 2;
     unsigned Extern : 1;
     unsigned Constant : 1;   // Constant variable.
+    unsigned Managed : 1;    // Managed variable.
     unsigned Normalized : 1; // Normalized texture.
     int SurfTexType;         // Type of surface/texutre.
 
   public:
-    DeviceVarFlags(DeviceVarKind K, bool E, bool C, bool N, int T)
-        : Kind(K), Extern(E), Constant(C), Normalized(N), SurfTexType(T) {}
+    DeviceVarFlags(DeviceVarKind K, bool E, bool C, bool M, bool N, int T)
+        : Kind(K), Extern(E), Constant(C), Managed(M), Normalized(N),
+          SurfTexType(T) {}
 
     DeviceVarKind getKind() const { return static_cast<DeviceVarKind>(Kind); }
     bool isExtern() const { return Extern; }
     bool isConstant() const { return Constant; }
+    bool isManaged() const { return Managed; }
     bool isNormalized() const { return Normalized; }
     int getSurfTexType() const { return SurfTexType; }
   };
@@ -77,24 +82,30 @@ public:
 
   /// Emits a kernel launch stub.
   virtual void emitDeviceStub(CodeGenFunction &CGF, FunctionArgList &Args) = 0;
-  virtual void registerDeviceVar(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                 bool Extern, bool Constant) = 0;
-  virtual void registerDeviceSurf(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                  bool Extern, int Type) = 0;
-  virtual void registerDeviceTex(const VarDecl *VD, llvm::GlobalVariable &Var,
-                                 bool Extern, int Type, bool Normalized) = 0;
 
-  /// Constructs and returns a module initialization function or nullptr if it's
-  /// not needed. Must be called after all kernels have been emitted.
-  virtual llvm::Function *makeModuleCtorFunction() = 0;
+  /// Check whether a variable is a device variable and register it if true.
+  virtual void handleVarRegistration(const VarDecl *VD,
+                                     llvm::GlobalVariable &Var) = 0;
 
-  /// Returns a module cleanup function or nullptr if it's not needed.
-  /// Must be called after ModuleCtorFunction
-  virtual llvm::Function *makeModuleDtorFunction() = 0;
+  /// Finalize generated LLVM module. Returns a module constructor function
+  /// to be added or a null pointer.
+  virtual llvm::Function *finalizeModule() = 0;
 
   /// Returns function or variable name on device side even if the current
   /// compilation is for host.
   virtual std::string getDeviceSideName(const NamedDecl *ND) = 0;
+
+  /// Get kernel handle by stub function.
+  virtual llvm::GlobalValue *getKernelHandle(llvm::Function *Stub,
+                                             GlobalDecl GD) = 0;
+
+  /// Get kernel stub by kernel handle.
+  virtual llvm::Function *getKernelStub(llvm::GlobalValue *Handle) = 0;
+
+  /// Adjust linkage of shadow variables in host compilation.
+  virtual void
+  internalizeDeviceSideVar(const VarDecl *D,
+                           llvm::GlobalValue::LinkageTypes &Linkage) = 0;
 };
 
 /// Creates an instance of a CUDA runtime class.

@@ -63,13 +63,11 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = fpext <2 x float> [[WIDE_LOAD2]] to <2 x double>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16]] = fsub fast <2 x double> [[VEC_PHI]], [[TMP15]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x double> [[TMP16]], <2 x double> undef, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP16]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[BIN_RDX]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP16]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[T]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUTEREND]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -93,7 +91,7 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[SUB127]] = fsub fast double [[DVAL1_4131]], [[MUL126]]
 ; CHECK-NEXT:    [[INC129]] = add nuw nsw i32 [[I_2132]], 1
 ; CHECK-NEXT:    [[EXITCOND143:%.*]] = icmp eq i32 [[INC129]], [[T]]
-; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[EXITCOND143]], label [[OUTEREND]], label [[INNERLOOP]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       outerend:
 ; CHECK-NEXT:    [[SUB127_LCSSA:%.*]] = phi double [ [[SUB127]], [[INNERLOOP]] ], [ [[TMP18]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[CONV138:%.*]] = fptosi double [[SUB127_LCSSA]] to i32

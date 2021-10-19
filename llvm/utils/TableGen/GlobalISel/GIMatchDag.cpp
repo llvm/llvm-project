@@ -41,7 +41,7 @@ void GIMatchDag::writeDOTGraph(raw_ostream &OS, StringRef ID) const {
     SmallVector<std::pair<unsigned, StringRef>, 8> ToPrint;
     for (const auto &Assignment : N->user_assigned_operand_names())
       ToPrint.emplace_back(Assignment.first, Assignment.second);
-    llvm::sort(ToPrint.begin(), ToPrint.end());
+    llvm::sort(ToPrint);
     StringRef Separator = "";
     for (const auto &Assignment : ToPrint) {
       OS << Separator << "$" << Assignment.second << "=getOperand("

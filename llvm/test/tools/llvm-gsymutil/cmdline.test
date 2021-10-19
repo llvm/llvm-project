@@ -8,14 +8,20 @@ HELP: --arch=<arch>
 HELP: --convert=<path>
 HELP: --num-threads=<n>
 HELP: --out-file=<path>
+HELP: --quiet
 HELP: --verify
 HELP: Generic Options:
 HELP: --help
 HELP: --version
 HELP: Lookup Options:
 HELP: --address=<addr>
+HELP: --addresses-from-stdin
 HELP: Options:
 HELP: --verbose
 
 RUN: llvm-gsymutil --version 2>&1 | FileCheck --check-prefix=VERSION %s
 VERSION: {{ version }}
+
+RUN: not llvm-gsymutil --addresses-from-stdin --address 0x12345678 | FileCheck --check-prefix=INCOMPATIBLE %s
+RUN: not llvm-gsymutil --addresses-from-stdin llvm-gsymutil | FileCheck --check-prefix=INCOMPATIBLE %s
+INCOMPATIBLE: error: no input files or addresses can be specified when using the --addresses-from-stdin option.

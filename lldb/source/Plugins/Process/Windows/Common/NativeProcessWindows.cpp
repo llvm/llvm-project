@@ -217,13 +217,17 @@ Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 
-Status NativeProcessWindows::AllocateMemory(size_t size, uint32_t permissions,
-                                            lldb::addr_t &addr) {
-  return ProcessDebugger::AllocateMemory(size, permissions, addr);
+llvm::Expected<lldb::addr_t>
+NativeProcessWindows::AllocateMemory(size_t size, uint32_t permissions) {
+  lldb::addr_t addr;
+  Status ST = ProcessDebugger::AllocateMemory(size, permissions, addr);
+  if (ST.Success())
+    return addr;
+  return ST.ToError();
 }
 
-Status NativeProcessWindows::DeallocateMemory(lldb::addr_t addr) {
-  return ProcessDebugger::DeallocateMemory(addr);
+llvm::Error NativeProcessWindows::DeallocateMemory(lldb::addr_t addr) {
+  return ProcessDebugger::DeallocateMemory(addr).ToError();
 }
 
 lldb::addr_t NativeProcessWindows::GetSharedLibraryInfoAddress() { return 0; }
@@ -283,6 +287,30 @@ llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 NativeProcessWindows::GetAuxvData() const {
   // Not available on this target.
   return llvm::errc::not_supported;
+}
+
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
+  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x3e, 0xd4}; // brk #0xf000
+  static const uint8_t g_thumb_opcode[] = {0xfe, 0xde}; // udf #0xfe
+
+  switch (GetArchitecture().GetMachine()) {
+  case llvm::Triple::aarch64:
+    return llvm::makeArrayRef(g_aarch64_opcode);
+
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+    return llvm::makeArrayRef(g_thumb_opcode);
+
+  default:
+    return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);
+  }
+}
+
+size_t NativeProcessWindows::GetSoftwareBreakpointPCOffset() {
+    // Windows always reports an incremented PC after a breakpoint is hit,
+    // even on ARM.
+    return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
 }
 
 bool NativeProcessWindows::FindSoftwareBreakpoint(lldb::addr_t addr) {
@@ -470,8 +498,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       if (NativeThreadWindows *stop_thread =
               GetThreadByID(record.GetThreadID())) {
         auto &register_context = stop_thread->GetRegisterContext();
-        // The current EIP is AFTER the BP opcode, which is one byte '0xCC'
-        uint64_t pc = register_context.GetPC() - 1;
+        uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
+        // The current PC is AFTER the BP opcode, on all architectures.
+        uint64_t pc = register_context.GetPC() - breakpoint_size;
         register_context.SetPC(pc);
       }
 

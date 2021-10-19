@@ -12,14 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include <algorithm>
-#include <cassert>
 
 using namespace llvm;
 
@@ -45,6 +41,7 @@ namespace {
 
   private:
     bool runOnModule(Module &M) override;
+  };
 
     /// Unify version metadata.
     /// \return true if changes are made.
@@ -106,41 +103,42 @@ namespace {
 
     return true;
   }
-};
 
-} // end anonymous namespace
+  bool unifyMetadataImpl(Module &M) {
+    const char *Vers[] = {kOCLMD::SpirVer, kOCLMD::OCLVer};
+    const char *Exts[] = {kOCLMD::UsedExt, kOCLMD::UsedOptCoreFeat,
+                          kOCLMD::CompilerOptions, kOCLMD::LLVMIdent};
 
-char AMDGPUUnifyMetadata::ID = 0;
+    bool Changed = false;
 
-char &llvm::AMDGPUUnifyMetadataID = AMDGPUUnifyMetadata::ID;
+    for (auto &I : Vers)
+      Changed |= unifyVersionMD(M, I, true);
 
-INITIALIZE_PASS(AMDGPUUnifyMetadata, "amdgpu-unify-metadata",
-                "Unify multiple OpenCL metadata due to linking",
-                false, false)
+    for (auto &I : Exts)
+      Changed |= unifyExtensionMD(M, I);
 
-ModulePass* llvm::createAMDGPUUnifyMetadataPass() {
-  return new AMDGPUUnifyMetadata();
-}
+    return Changed;
+  }
 
-bool AMDGPUUnifyMetadata::runOnModule(Module &M) {
-  const char* Vers[] = {
-      kOCLMD::SpirVer,
-      kOCLMD::OCLVer
-  };
-  const char* Exts[] = {
-      kOCLMD::UsedExt,
-      kOCLMD::UsedOptCoreFeat,
-      kOCLMD::CompilerOptions,
-      kOCLMD::LLVMIdent
-  };
+  } // end anonymous namespace
 
-  bool Changed = false;
+  char AMDGPUUnifyMetadata::ID = 0;
 
-  for (auto &I : Vers)
-    Changed |= unifyVersionMD(M, I, true);
+  char &llvm::AMDGPUUnifyMetadataID = AMDGPUUnifyMetadata::ID;
 
-  for (auto &I : Exts)
-    Changed |= unifyExtensionMD(M, I);
+  INITIALIZE_PASS(AMDGPUUnifyMetadata, "amdgpu-unify-metadata",
+                  "Unify multiple OpenCL metadata due to linking", false, false)
 
-  return Changed;
-}
+  ModulePass *llvm::createAMDGPUUnifyMetadataPass() {
+    return new AMDGPUUnifyMetadata();
+  }
+
+  bool AMDGPUUnifyMetadata::runOnModule(Module &M) {
+    return unifyMetadataImpl(M);
+  }
+
+  PreservedAnalyses AMDGPUUnifyMetadataPass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
+    return unifyMetadataImpl(M) ? PreservedAnalyses::none()
+                                : PreservedAnalyses::all();
+  }

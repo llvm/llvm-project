@@ -215,7 +215,7 @@ Expected<IntWithNotMask> RCParser::parseIntExpr2() {
   }
 
   case Kind::Identifier: {
-    if (!read().value().equals_lower("not"))
+    if (!read().value().equals_insensitive("not"))
       return getExpectedError(ErrorMsg, true);
     ASSIGN_OR_RETURN(Result, parseIntExpr2());
     return IntWithNotMask(0, (*Result).getValue());
@@ -330,7 +330,7 @@ Expected<uint32_t> RCParser::parseFlags(ArrayRef<StringRef> FlagDesc,
     bool FoundFlag = false;
 
     for (size_t FlagId = 0; FlagId < FlagDesc.size(); ++FlagId) {
-      if (!FlagResult->equals_lower(FlagDesc[FlagId]))
+      if (!FlagResult->equals_insensitive(FlagDesc[FlagId]))
         continue;
 
       Result |= FlagValues[FlagId];
@@ -351,23 +351,23 @@ uint16_t RCParser::parseMemoryFlags(uint16_t Flags) {
     if (Token.kind() != Kind::Identifier)
       return Flags;
     const StringRef Ident = Token.value();
-    if (Ident.equals_lower("PRELOAD"))
+    if (Ident.equals_insensitive("PRELOAD"))
       Flags |= MfPreload;
-    else if (Ident.equals_lower("LOADONCALL"))
+    else if (Ident.equals_insensitive("LOADONCALL"))
       Flags &= ~MfPreload;
-    else if (Ident.equals_lower("FIXED"))
+    else if (Ident.equals_insensitive("FIXED"))
       Flags &= ~(MfMoveable | MfDiscardable);
-    else if (Ident.equals_lower("MOVEABLE"))
+    else if (Ident.equals_insensitive("MOVEABLE"))
       Flags |= MfMoveable;
-    else if (Ident.equals_lower("DISCARDABLE"))
+    else if (Ident.equals_insensitive("DISCARDABLE"))
       Flags |= MfDiscardable | MfMoveable | MfPure;
-    else if (Ident.equals_lower("PURE"))
+    else if (Ident.equals_insensitive("PURE"))
       Flags |= MfPure;
-    else if (Ident.equals_lower("IMPURE"))
+    else if (Ident.equals_insensitive("IMPURE"))
       Flags &= ~(MfPure | MfDiscardable);
-    else if (Ident.equals_lower("SHARED"))
+    else if (Ident.equals_insensitive("SHARED"))
       Flags |= MfPure;
-    else if (Ident.equals_lower("NONSHARED"))
+    else if (Ident.equals_insensitive("NONSHARED"))
       Flags &= ~(MfPure | MfDiscardable);
     else
       return Flags;
@@ -392,23 +392,23 @@ RCParser::parseOptionalStatements(OptStmtType StmtsType) {
 Expected<std::unique_ptr<OptionalStmt>>
 RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
   ASSIGN_OR_RETURN(TypeToken, readIdentifier());
-  if (TypeToken->equals_lower("CHARACTERISTICS"))
+  if (TypeToken->equals_insensitive("CHARACTERISTICS"))
     return parseCharacteristicsStmt();
-  if (TypeToken->equals_lower("LANGUAGE"))
+  if (TypeToken->equals_insensitive("LANGUAGE"))
     return parseLanguageStmt();
-  if (TypeToken->equals_lower("VERSION"))
+  if (TypeToken->equals_insensitive("VERSION"))
     return parseVersionStmt();
 
   if (StmtsType != OptStmtType::BasicStmt) {
-    if (TypeToken->equals_lower("CAPTION"))
+    if (TypeToken->equals_insensitive("CAPTION"))
       return parseCaptionStmt();
-    if (TypeToken->equals_lower("CLASS"))
+    if (TypeToken->equals_insensitive("CLASS"))
       return parseClassStmt();
-    if (TypeToken->equals_lower("EXSTYLE"))
+    if (TypeToken->equals_insensitive("EXSTYLE"))
       return parseExStyleStmt();
-    if (TypeToken->equals_lower("FONT"))
+    if (TypeToken->equals_insensitive("FONT"))
       return parseFontStmt(StmtsType);
-    if (TypeToken->equals_lower("STYLE"))
+    if (TypeToken->equals_insensitive("STYLE"))
       return parseStyleStmt();
   }
 
@@ -506,15 +506,14 @@ RCParser::ParseType RCParser::parseUserDefinedResource(IntOrString Type) {
   RETURN_IF_ERROR(consumeType(Kind::BlockBegin));
   std::vector<IntOrString> Data;
 
-  // Consume comma before each consecutive token except the first one.
-  bool ConsumeComma = false;
   while (!consumeOptionalType(Kind::BlockEnd)) {
-    if (ConsumeComma)
-      RETURN_IF_ERROR(consumeType(Kind::Comma));
-    ConsumeComma = true;
-
     ASSIGN_OR_RETURN(Item, readIntOrString());
     Data.push_back(*Item);
+
+    // There can be zero or more commas after each token (but not before
+    // the first one).
+    while (consumeOptionalType(Kind::Comma)) {
+    }
   }
 
   return std::make_unique<UserDefinedResource>(Type, std::move(Data),
@@ -635,15 +634,15 @@ Expected<MenuDefinitionList> RCParser::parseMenuItemsList() {
   while (!consumeOptionalType(Kind::BlockEnd)) {
     ASSIGN_OR_RETURN(ItemTypeResult, readIdentifier());
 
-    bool IsMenuItem = ItemTypeResult->equals_lower("MENUITEM");
-    bool IsPopup = ItemTypeResult->equals_lower("POPUP");
+    bool IsMenuItem = ItemTypeResult->equals_insensitive("MENUITEM");
+    bool IsPopup = ItemTypeResult->equals_insensitive("POPUP");
     if (!IsMenuItem && !IsPopup)
       return getExpectedError("MENUITEM, POPUP, END or '}'", true);
 
     if (IsMenuItem && isNextTokenKind(Kind::Identifier)) {
       // Now, expecting SEPARATOR.
       ASSIGN_OR_RETURN(SeparatorResult, readIdentifier());
-      if (SeparatorResult->equals_lower("SEPARATOR")) {
+      if (SeparatorResult->equals_insensitive("SEPARATOR")) {
         List.addDefinition(std::make_unique<MenuSeparator>());
         continue;
       }
@@ -731,12 +730,12 @@ Expected<std::unique_ptr<VersionInfoStmt>> RCParser::parseVersionInfoStmt() {
   // Expect either BLOCK or VALUE, then a name or a key (a string).
   ASSIGN_OR_RETURN(TypeResult, readIdentifier());
 
-  if (TypeResult->equals_lower("BLOCK")) {
+  if (TypeResult->equals_insensitive("BLOCK")) {
     ASSIGN_OR_RETURN(NameResult, readString());
     return parseVersionInfoBlockContents(*NameResult);
   }
 
-  if (TypeResult->equals_lower("VALUE")) {
+  if (TypeResult->equals_insensitive("VALUE")) {
     ASSIGN_OR_RETURN(KeyResult, readString());
     // Read a non-empty list of strings and/or ints, each
     // possibly preceded by a comma. Unfortunately, the tool behavior depends
@@ -777,8 +776,10 @@ RCParser::parseVersionInfoFixed() {
 
     // VERSION variations take multiple integers.
     size_t NumInts = RetType::isVersionType(FixedType) ? 4 : 1;
-    ASSIGN_OR_RETURN(ArgsResult, readIntsWithCommas(NumInts, NumInts));
+    ASSIGN_OR_RETURN(ArgsResult, readIntsWithCommas(1, NumInts));
     SmallVector<uint32_t, 4> ArgInts(ArgsResult->begin(), ArgsResult->end());
+    while (ArgInts.size() < NumInts)
+      ArgInts.push_back(0);
     Result.setValue(FixedType, ArgInts);
   }
 

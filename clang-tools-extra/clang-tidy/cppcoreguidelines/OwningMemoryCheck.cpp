@@ -69,7 +69,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Find delete expressions that delete non-owners.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                cxxDeleteExpr(hasDescendant(declRefExpr(unless(ConsideredOwner))
                                                .bind("deleted_variable")))
                    .bind("delete_expr")),
@@ -83,18 +83,17 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // resources. This check assumes that all pointer arguments of a legacy
   // functions shall be 'gsl::owner<>'.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               callExpr(callee(LegacyOwnerConsumers),
-                        hasAnyArgument(
-                            expr(unless(ignoringImpCasts(ConsideredOwner)),
-                                 hasType(pointerType()))))
-                   .bind("legacy_consumer")),
+      traverse(TK_AsIs, callExpr(callee(LegacyOwnerConsumers),
+                                 hasAnyArgument(expr(
+                                     unless(ignoringImpCasts(ConsideredOwner)),
+                                     hasType(pointerType()))))
+                            .bind("legacy_consumer")),
       this);
 
   // Matching assignment to owners, with the rhs not being an owner nor creating
   // one.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                binaryOperator(isAssignmentOperator(), hasLHS(IsOwnerType),
                               hasRHS(unless(ConsideredOwner)))
                    .bind("owner_assignment")),
@@ -102,7 +101,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Matching initialization of owners with non-owners, nor creating owners.
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                namedDecl(
                    varDecl(hasInitializer(unless(ConsideredOwner)), IsOwnerType)
                        .bind("owner_initialization"))),
@@ -120,9 +119,9 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
 
   // Match class member initialization that expects owners, but does not get
   // them.
-  Finder->addMatcher(traverse(ast_type_traits::TK_AsIs,
-                              cxxRecordDecl(HasConstructorInitializerForOwner)),
-                     this);
+  Finder->addMatcher(
+      traverse(TK_AsIs, cxxRecordDecl(HasConstructorInitializerForOwner)),
+      this);
 
   // Matching on assignment operations where the RHS is a newly created owner,
   // but the LHS is not an owner.
@@ -136,7 +135,7 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           namedDecl(
               varDecl(eachOf(allOf(hasInitializer(CreatesOwner),
                                    unless(IsOwnerType)),
@@ -193,6 +192,7 @@ void OwningMemoryCheck::check(const MatchFinder::MatchResult &Result) {
   CheckExecuted |= handleReturnValues(Nodes);
   CheckExecuted |= handleOwnerMembers(Nodes);
 
+  (void)CheckExecuted;
   assert(CheckExecuted &&
          "None of the subroutines executed, logic error in matcher!");
 }

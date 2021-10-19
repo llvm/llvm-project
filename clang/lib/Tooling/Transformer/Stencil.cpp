@@ -27,14 +27,15 @@
 using namespace clang;
 using namespace transformer;
 
+using ast_matchers::BoundNodes;
 using ast_matchers::MatchFinder;
 using llvm::errc;
 using llvm::Error;
 using llvm::Expected;
 using llvm::StringError;
 
-static llvm::Expected<DynTypedNode>
-getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
+static llvm::Expected<DynTypedNode> getNode(const BoundNodes &Nodes,
+                                            StringRef Id) {
   auto &NodesMap = Nodes.getMap();
   auto It = NodesMap.find(Id);
   if (It == NodesMap.end())
@@ -43,17 +44,91 @@ getNode(const ast_matchers::BoundNodes &Nodes, StringRef Id) {
   return It->second;
 }
 
+static Error printNode(StringRef Id, const MatchFinder::MatchResult &Match,
+                       std::string *Result) {
+  std::string Output;
+  llvm::raw_string_ostream Os(Output);
+  auto NodeOrErr = getNode(Match.Nodes, Id);
+  if (auto Err = NodeOrErr.takeError())
+    return Err;
+  NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
+  *Result += Os.str();
+  return Error::success();
+}
+
+// FIXME: Consider memoizing this function using the `ASTContext`.
+static bool isSmartPointerType(QualType Ty, ASTContext &Context) {
+  using namespace ::clang::ast_matchers;
+
+  // Optimization: hard-code common smart-pointer types. This can/should be
+  // removed if we start caching the results of this function.
+  auto KnownSmartPointer =
+      cxxRecordDecl(hasAnyName("::std::unique_ptr", "::std::shared_ptr"));
+  const auto QuacksLikeASmartPointer = cxxRecordDecl(
+      hasMethod(cxxMethodDecl(hasOverloadedOperatorName("->"),
+                              returns(qualType(pointsTo(type()))))),
+      hasMethod(cxxMethodDecl(hasOverloadedOperatorName("*"),
+                              returns(qualType(references(type()))))));
+  const auto SmartPointer = qualType(hasDeclaration(
+      cxxRecordDecl(anyOf(KnownSmartPointer, QuacksLikeASmartPointer))));
+  return match(SmartPointer, Ty, Context).size() > 0;
+}
+
+// Identifies use of `operator*` on smart pointers, and returns the underlying
+// smart-pointer expression; otherwise, returns null.
+static const Expr *isSmartDereference(const Expr &E, ASTContext &Context) {
+  using namespace ::clang::ast_matchers;
+
+  const auto HasOverloadedArrow = cxxRecordDecl(hasMethod(cxxMethodDecl(
+      hasOverloadedOperatorName("->"), returns(qualType(pointsTo(type()))))));
+  // Verify it is a smart pointer by finding `operator->` in the class
+  // declaration.
+  auto Deref = cxxOperatorCallExpr(
+      hasOverloadedOperatorName("*"), hasUnaryOperand(expr().bind("arg")),
+      callee(cxxMethodDecl(ofClass(HasOverloadedArrow))));
+  return selectFirst<Expr>("arg", match(Deref, E, Context));
+}
+
 namespace {
 // An arbitrary fragment of code within a stencil.
-struct RawTextData {
-  explicit RawTextData(std::string T) : Text(std::move(T)) {}
+class RawTextStencil : public StencilInterface {
   std::string Text;
+
+public:
+  explicit RawTextStencil(std::string T) : Text(std::move(T)) {}
+
+  std::string toString() const override {
+    std::string Result;
+    llvm::raw_string_ostream OS(Result);
+    OS << "\"";
+    OS.write_escaped(Text);
+    OS << "\"";
+    OS.flush();
+    return Result;
+  }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    Result->append(Text);
+    return Error::success();
+  }
 };
 
 // A debugging operation to dump the AST for a particular (bound) AST node.
-struct DebugPrintNodeData {
-  explicit DebugPrintNodeData(std::string S) : Id(std::move(S)) {}
+class DebugPrintNodeStencil : public StencilInterface {
   std::string Id;
+
+public:
+  explicit DebugPrintNodeStencil(std::string S) : Id(std::move(S)) {}
+
+  std::string toString() const override {
+    return (llvm::Twine("dPrint(\"") + Id + "\")").str();
+  }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    return printNode(Id, Match, Result);
+  }
 };
 
 // Operators that take a single node Id as an argument.
@@ -63,320 +138,412 @@ enum class UnaryNodeOperator {
   MaybeDeref,
   AddressOf,
   MaybeAddressOf,
+  Describe,
 };
 
 // Generic container for stencil operations with a (single) node-id argument.
-struct UnaryOperationData {
-  UnaryOperationData(UnaryNodeOperator Op, std::string Id)
-      : Op(Op), Id(std::move(Id)) {}
+class UnaryOperationStencil : public StencilInterface {
   UnaryNodeOperator Op;
   std::string Id;
-};
-
-// The fragment of code corresponding to the selected range.
-struct SelectorData {
-  explicit SelectorData(RangeSelector S) : Selector(std::move(S)) {}
-  RangeSelector Selector;
-};
-
-// A stencil operation to build a member access `e.m` or `e->m`, as appropriate.
-struct AccessData {
-  AccessData(StringRef BaseId, Stencil Member)
-      : BaseId(std::string(BaseId)), Member(std::move(Member)) {}
-  std::string BaseId;
-  Stencil Member;
-};
-
-struct IfBoundData {
-  IfBoundData(StringRef Id, Stencil TrueStencil, Stencil FalseStencil)
-      : Id(std::string(Id)), TrueStencil(std::move(TrueStencil)),
-        FalseStencil(std::move(FalseStencil)) {}
-  std::string Id;
-  Stencil TrueStencil;
-  Stencil FalseStencil;
-};
-
-struct SequenceData {
-  SequenceData(std::vector<Stencil> Stencils) : Stencils(std::move(Stencils)) {}
-  std::vector<Stencil> Stencils;
-};
-
-std::string toStringData(const RawTextData &Data) {
-  std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  OS << "\"";
-  OS.write_escaped(Data.Text);
-  OS << "\"";
-  OS.flush();
-  return Result;
-}
-
-std::string toStringData(const DebugPrintNodeData &Data) {
-  return (llvm::Twine("dPrint(\"") + Data.Id + "\")").str();
-}
-
-std::string toStringData(const UnaryOperationData &Data) {
-  StringRef OpName;
-  switch (Data.Op) {
-  case UnaryNodeOperator::Parens:
-    OpName = "expression";
-    break;
-  case UnaryNodeOperator::Deref:
-    OpName = "deref";
-    break;
-  case UnaryNodeOperator::MaybeDeref:
-    OpName = "maybeDeref";
-    break;
-  case UnaryNodeOperator::AddressOf:
-    OpName = "addressOf";
-    break;
-  case UnaryNodeOperator::MaybeAddressOf:
-    OpName = "maybeAddressOf";
-    break;
-  }
-  return (OpName + "(\"" + Data.Id + "\")").str();
-}
-
-std::string toStringData(const SelectorData &) { return "selection(...)"; }
-
-std::string toStringData(const AccessData &Data) {
-  return (llvm::Twine("access(\"") + Data.BaseId + "\", " +
-          Data.Member->toString() + ")")
-      .str();
-}
-
-std::string toStringData(const IfBoundData &Data) {
-  return (llvm::Twine("ifBound(\"") + Data.Id + "\", " +
-          Data.TrueStencil->toString() + ", " + Data.FalseStencil->toString() +
-          ")")
-      .str();
-}
-
-std::string toStringData(const MatchConsumer<std::string> &) {
-  return "run(...)";
-}
-
-std::string toStringData(const SequenceData &Data) {
-  llvm::SmallVector<std::string, 2> Parts;
-  Parts.reserve(Data.Stencils.size());
-  for (const auto &S : Data.Stencils)
-    Parts.push_back(S->toString());
-  return (llvm::Twine("seq(") + llvm::join(Parts, ", ") + ")").str();
-}
-
-// The `evalData()` overloads evaluate the given stencil data to a string, given
-// the match result, and append it to `Result`. We define an overload for each
-// type of stencil data.
-
-Error evalData(const RawTextData &Data, const MatchFinder::MatchResult &,
-               std::string *Result) {
-  Result->append(Data.Text);
-  return Error::success();
-}
-
-Error evalData(const DebugPrintNodeData &Data,
-               const MatchFinder::MatchResult &Match, std::string *Result) {
-  std::string Output;
-  llvm::raw_string_ostream Os(Output);
-  auto NodeOrErr = getNode(Match.Nodes, Data.Id);
-  if (auto Err = NodeOrErr.takeError())
-    return Err;
-  NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
-  *Result += Os.str();
-  return Error::success();
-}
-
-Error evalData(const UnaryOperationData &Data,
-               const MatchFinder::MatchResult &Match, std::string *Result) {
-  const auto *E = Match.Nodes.getNodeAs<Expr>(Data.Id);
-  if (E == nullptr)
-    return llvm::make_error<StringError>(
-        errc::invalid_argument, "Id not bound or not Expr: " + Data.Id);
-  llvm::Optional<std::string> Source;
-  switch (Data.Op) {
-  case UnaryNodeOperator::Parens:
-    Source = tooling::buildParens(*E, *Match.Context);
-    break;
-  case UnaryNodeOperator::Deref:
-    Source = tooling::buildDereference(*E, *Match.Context);
-    break;
-  case UnaryNodeOperator::MaybeDeref:
-    if (!E->getType()->isAnyPointerType()) {
-      *Result += tooling::getText(*E, *Match.Context);
-      return Error::success();
-    }
-    Source = tooling::buildDereference(*E, *Match.Context);
-    break;
-  case UnaryNodeOperator::AddressOf:
-    Source = tooling::buildAddressOf(*E, *Match.Context);
-    break;
-  case UnaryNodeOperator::MaybeAddressOf:
-    if (E->getType()->isAnyPointerType()) {
-      *Result += tooling::getText(*E, *Match.Context);
-      return Error::success();
-    }
-    Source = tooling::buildAddressOf(*E, *Match.Context);
-    break;
-  }
-  if (!Source)
-    return llvm::make_error<StringError>(
-        errc::invalid_argument,
-        "Could not construct expression source from ID: " + Data.Id);
-  *Result += *Source;
-  return Error::success();
-}
-
-Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
-               std::string *Result) {
-  auto RawRange = Data.Selector(Match);
-  if (!RawRange)
-    return RawRange.takeError();
-  CharSourceRange Range = Lexer::makeFileCharRange(
-      *RawRange, *Match.SourceManager, Match.Context->getLangOpts());
-  if (Range.isInvalid()) {
-    // Validate the original range to attempt to get a meaningful error message.
-    // If it's valid, then something else is the cause and we just return the
-    // generic failure message.
-    if (auto Err = tooling::validateEditRange(*RawRange, *Match.SourceManager))
-      return handleErrors(std::move(Err), [](std::unique_ptr<StringError> E) {
-        assert(E->convertToErrorCode() ==
-                   llvm::make_error_code(errc::invalid_argument) &&
-               "Validation errors must carry the invalid_argument code");
-        return llvm::createStringError(
-            errc::invalid_argument,
-            "selected range could not be resolved to a valid source range; " +
-                E->getMessage());
-      });
-    return llvm::createStringError(
-        errc::invalid_argument,
-        "selected range could not be resolved to a valid source range");
-  }
-  // Validate `Range`, because `makeFileCharRange` accepts some ranges that
-  // `validateEditRange` rejects.
-  if (auto Err = tooling::validateEditRange(Range, *Match.SourceManager))
-    return joinErrors(
-        llvm::createStringError(errc::invalid_argument,
-                                "selected range is not valid for editing"),
-        std::move(Err));
-  *Result += tooling::getText(Range, *Match.Context);
-  return Error::success();
-}
-
-Error evalData(const AccessData &Data, const MatchFinder::MatchResult &Match,
-               std::string *Result) {
-  const auto *E = Match.Nodes.getNodeAs<Expr>(Data.BaseId);
-  if (E == nullptr)
-    return llvm::make_error<StringError>(errc::invalid_argument,
-                                         "Id not bound: " + Data.BaseId);
-  if (!E->isImplicitCXXThis()) {
-    if (llvm::Optional<std::string> S =
-            E->getType()->isAnyPointerType()
-                ? tooling::buildArrow(*E, *Match.Context)
-                : tooling::buildDot(*E, *Match.Context))
-      *Result += *S;
-    else
-      return llvm::make_error<StringError>(
-          errc::invalid_argument,
-          "Could not construct object text from ID: " + Data.BaseId);
-  }
-  return Data.Member->eval(Match, Result);
-}
-
-Error evalData(const IfBoundData &Data, const MatchFinder::MatchResult &Match,
-               std::string *Result) {
-  auto &M = Match.Nodes.getMap();
-  return (M.find(Data.Id) != M.end() ? Data.TrueStencil : Data.FalseStencil)
-      ->eval(Match, Result);
-}
-
-Error evalData(const MatchConsumer<std::string> &Fn,
-               const MatchFinder::MatchResult &Match, std::string *Result) {
-  Expected<std::string> Value = Fn(Match);
-  if (!Value)
-    return Value.takeError();
-  *Result += *Value;
-  return Error::success();
-}
-
-Error evalData(const SequenceData &Data, const MatchFinder::MatchResult &Match,
-               std::string *Result) {
-  for (const auto &S : Data.Stencils)
-    if (auto Err = S->eval(Match, Result))
-      return Err;
-  return Error::success();
-}
-
-template <typename T> class StencilImpl : public StencilInterface {
-  T Data;
 
 public:
-  template <typename... Ps>
-  explicit StencilImpl(Ps &&... Args) : Data(std::forward<Ps>(Args)...) {}
+  UnaryOperationStencil(UnaryNodeOperator Op, std::string Id)
+      : Op(Op), Id(std::move(Id)) {}
+
+  std::string toString() const override {
+    StringRef OpName;
+    switch (Op) {
+    case UnaryNodeOperator::Parens:
+      OpName = "expression";
+      break;
+    case UnaryNodeOperator::Deref:
+      OpName = "deref";
+      break;
+    case UnaryNodeOperator::MaybeDeref:
+      OpName = "maybeDeref";
+      break;
+    case UnaryNodeOperator::AddressOf:
+      OpName = "addressOf";
+      break;
+    case UnaryNodeOperator::MaybeAddressOf:
+      OpName = "maybeAddressOf";
+      break;
+    case UnaryNodeOperator::Describe:
+      OpName = "describe";
+      break;
+    }
+    return (OpName + "(\"" + Id + "\")").str();
+  }
 
   Error eval(const MatchFinder::MatchResult &Match,
              std::string *Result) const override {
-    return evalData(Data, Match, Result);
+    // The `Describe` operation can be applied to any node, not just
+    // expressions, so it is handled here, separately.
+    if (Op == UnaryNodeOperator::Describe)
+      return printNode(Id, Match, Result);
+
+    const auto *E = Match.Nodes.getNodeAs<Expr>(Id);
+    if (E == nullptr)
+      return llvm::make_error<StringError>(errc::invalid_argument,
+                                           "Id not bound or not Expr: " + Id);
+    llvm::Optional<std::string> Source;
+    switch (Op) {
+    case UnaryNodeOperator::Parens:
+      Source = tooling::buildParens(*E, *Match.Context);
+      break;
+    case UnaryNodeOperator::Deref:
+      Source = tooling::buildDereference(*E, *Match.Context);
+      break;
+    case UnaryNodeOperator::MaybeDeref:
+      if (E->getType()->isAnyPointerType() ||
+          isSmartPointerType(E->getType(), *Match.Context)) {
+        // Strip off any operator->. This can only occur inside an actual arrow
+        // member access, so we treat it as equivalent to an actual object
+        // expression.
+        if (const auto *OpCall = dyn_cast<clang::CXXOperatorCallExpr>(E)) {
+          if (OpCall->getOperator() == clang::OO_Arrow &&
+              OpCall->getNumArgs() == 1) {
+            E = OpCall->getArg(0);
+          }
+        }
+        Source = tooling::buildDereference(*E, *Match.Context);
+        break;
+      }
+      *Result += tooling::getText(*E, *Match.Context);
+      return Error::success();
+    case UnaryNodeOperator::AddressOf:
+      Source = tooling::buildAddressOf(*E, *Match.Context);
+      break;
+    case UnaryNodeOperator::MaybeAddressOf:
+      if (E->getType()->isAnyPointerType() ||
+          isSmartPointerType(E->getType(), *Match.Context)) {
+        // Strip off any operator->. This can only occur inside an actual arrow
+        // member access, so we treat it as equivalent to an actual object
+        // expression.
+        if (const auto *OpCall = dyn_cast<clang::CXXOperatorCallExpr>(E)) {
+          if (OpCall->getOperator() == clang::OO_Arrow &&
+              OpCall->getNumArgs() == 1) {
+            E = OpCall->getArg(0);
+          }
+        }
+        *Result += tooling::getText(*E, *Match.Context);
+        return Error::success();
+      }
+      Source = tooling::buildAddressOf(*E, *Match.Context);
+      break;
+    case UnaryNodeOperator::Describe:
+      llvm_unreachable("This case is handled at the start of the function");
+    }
+    if (!Source)
+      return llvm::make_error<StringError>(
+          errc::invalid_argument,
+          "Could not construct expression source from ID: " + Id);
+    *Result += *Source;
+    return Error::success();
+  }
+};
+
+// The fragment of code corresponding to the selected range.
+class SelectorStencil : public StencilInterface {
+  RangeSelector Selector;
+
+public:
+  explicit SelectorStencil(RangeSelector S) : Selector(std::move(S)) {}
+
+  std::string toString() const override { return "selection(...)"; }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    auto RawRange = Selector(Match);
+    if (!RawRange)
+      return RawRange.takeError();
+    CharSourceRange Range = Lexer::makeFileCharRange(
+        *RawRange, *Match.SourceManager, Match.Context->getLangOpts());
+    if (Range.isInvalid()) {
+      // Validate the original range to attempt to get a meaningful error
+      // message. If it's valid, then something else is the cause and we just
+      // return the generic failure message.
+      if (auto Err =
+              tooling::validateEditRange(*RawRange, *Match.SourceManager))
+        return handleErrors(std::move(Err), [](std::unique_ptr<StringError> E) {
+          assert(E->convertToErrorCode() ==
+                     llvm::make_error_code(errc::invalid_argument) &&
+                 "Validation errors must carry the invalid_argument code");
+          return llvm::createStringError(
+              errc::invalid_argument,
+              "selected range could not be resolved to a valid source range; " +
+                  E->getMessage());
+        });
+      return llvm::createStringError(
+          errc::invalid_argument,
+          "selected range could not be resolved to a valid source range");
+    }
+    // Validate `Range`, because `makeFileCharRange` accepts some ranges that
+    // `validateEditRange` rejects.
+    if (auto Err = tooling::validateEditRange(Range, *Match.SourceManager))
+      return joinErrors(
+          llvm::createStringError(errc::invalid_argument,
+                                  "selected range is not valid for editing"),
+          std::move(Err));
+    *Result += tooling::getText(Range, *Match.Context);
+    return Error::success();
+  }
+};
+
+// A stencil operation to build a member access `e.m` or `e->m`, as appropriate.
+class AccessStencil : public StencilInterface {
+  std::string BaseId;
+  Stencil Member;
+
+public:
+  AccessStencil(StringRef BaseId, Stencil Member)
+      : BaseId(std::string(BaseId)), Member(std::move(Member)) {}
+
+  std::string toString() const override {
+    return (llvm::Twine("access(\"") + BaseId + "\", " + Member->toString() +
+            ")")
+        .str();
   }
 
-  std::string toString() const override { return toStringData(Data); }
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    const auto *E = Match.Nodes.getNodeAs<Expr>(BaseId);
+    if (E == nullptr)
+      return llvm::make_error<StringError>(errc::invalid_argument,
+                                           "Id not bound: " + BaseId);
+    if (!E->isImplicitCXXThis()) {
+      llvm::Optional<std::string> S;
+      if (E->getType()->isAnyPointerType() ||
+          isSmartPointerType(E->getType(), *Match.Context)) {
+        // Strip off any operator->. This can only occur inside an actual arrow
+        // member access, so we treat it as equivalent to an actual object
+        // expression.
+        if (const auto *OpCall = dyn_cast<clang::CXXOperatorCallExpr>(E)) {
+          if (OpCall->getOperator() == clang::OO_Arrow &&
+              OpCall->getNumArgs() == 1) {
+            E = OpCall->getArg(0);
+          }
+        }
+        S = tooling::buildArrow(*E, *Match.Context);
+      } else if (const auto *Operand = isSmartDereference(*E, *Match.Context)) {
+        // `buildDot` already handles the built-in dereference operator, so we
+        // only need to catch overloaded `operator*`.
+        S = tooling::buildArrow(*Operand, *Match.Context);
+      } else {
+        S = tooling::buildDot(*E, *Match.Context);
+      }
+      if (S.hasValue())
+        *Result += *S;
+      else
+        return llvm::make_error<StringError>(
+            errc::invalid_argument,
+            "Could not construct object text from ID: " + BaseId);
+    }
+    return Member->eval(Match, Result);
+  }
+};
+
+class IfBoundStencil : public StencilInterface {
+  std::string Id;
+  Stencil TrueStencil;
+  Stencil FalseStencil;
+
+public:
+  IfBoundStencil(StringRef Id, Stencil TrueStencil, Stencil FalseStencil)
+      : Id(std::string(Id)), TrueStencil(std::move(TrueStencil)),
+        FalseStencil(std::move(FalseStencil)) {}
+
+  std::string toString() const override {
+    return (llvm::Twine("ifBound(\"") + Id + "\", " + TrueStencil->toString() +
+            ", " + FalseStencil->toString() + ")")
+        .str();
+  }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    auto &M = Match.Nodes.getMap();
+    return (M.find(Id) != M.end() ? TrueStencil : FalseStencil)
+        ->eval(Match, Result);
+  }
+};
+
+class SelectBoundStencil : public clang::transformer::StencilInterface {
+  static bool containsNoNullStencils(
+      const std::vector<std::pair<std::string, Stencil>> &Cases) {
+    for (const auto &S : Cases)
+      if (S.second == nullptr)
+        return false;
+    return true;
+  }
+
+public:
+  SelectBoundStencil(std::vector<std::pair<std::string, Stencil>> Cases,
+                     Stencil Default)
+      : CaseStencils(std::move(Cases)), DefaultStencil(std::move(Default)) {
+    assert(containsNoNullStencils(CaseStencils) &&
+           "cases of selectBound may not be null");
+  }
+  ~SelectBoundStencil() override{};
+
+  llvm::Error eval(const MatchFinder::MatchResult &match,
+                   std::string *result) const override {
+    const BoundNodes::IDToNodeMap &NodeMap = match.Nodes.getMap();
+    for (const auto &S : CaseStencils) {
+      if (NodeMap.count(S.first) > 0) {
+        return S.second->eval(match, result);
+      }
+    }
+
+    if (DefaultStencil != nullptr) {
+      return DefaultStencil->eval(match, result);
+    }
+
+    llvm::SmallVector<llvm::StringRef, 2> CaseIDs;
+    CaseIDs.reserve(CaseStencils.size());
+    for (const auto &S : CaseStencils)
+      CaseIDs.emplace_back(S.first);
+
+    return llvm::createStringError(
+        errc::result_out_of_range,
+        llvm::Twine("selectBound failed: no cases bound and no default: {") +
+            llvm::join(CaseIDs, ", ") + "}");
+  }
+
+  std::string toString() const override {
+    std::string Buffer;
+    llvm::raw_string_ostream Stream(Buffer);
+    Stream << "selectBound({";
+    bool First = true;
+    for (const auto &S : CaseStencils) {
+      if (First)
+        First = false;
+      else
+        Stream << "}, ";
+      Stream << "{\"" << S.first << "\", " << S.second->toString();
+    }
+    Stream << "}}";
+    if (DefaultStencil != nullptr) {
+      Stream << ", " << DefaultStencil->toString();
+    }
+    Stream << ")";
+    return Stream.str();
+  }
+
+private:
+  std::vector<std::pair<std::string, Stencil>> CaseStencils;
+  Stencil DefaultStencil;
+};
+
+class SequenceStencil : public StencilInterface {
+  std::vector<Stencil> Stencils;
+
+public:
+  SequenceStencil(std::vector<Stencil> Stencils)
+      : Stencils(std::move(Stencils)) {}
+
+  std::string toString() const override {
+    llvm::SmallVector<std::string, 2> Parts;
+    Parts.reserve(Stencils.size());
+    for (const auto &S : Stencils)
+      Parts.push_back(S->toString());
+    return (llvm::Twine("seq(") + llvm::join(Parts, ", ") + ")").str();
+  }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+    for (const auto &S : Stencils)
+      if (auto Err = S->eval(Match, Result))
+        return Err;
+    return Error::success();
+  }
+};
+
+class RunStencil : public StencilInterface {
+  MatchConsumer<std::string> Consumer;
+
+public:
+  explicit RunStencil(MatchConsumer<std::string> C) : Consumer(std::move(C)) {}
+
+  std::string toString() const override { return "run(...)"; }
+
+  Error eval(const MatchFinder::MatchResult &Match,
+             std::string *Result) const override {
+
+    Expected<std::string> Value = Consumer(Match);
+    if (!Value)
+      return Value.takeError();
+    *Result += *Value;
+    return Error::success();
+  }
 };
 } // namespace
 
 Stencil transformer::detail::makeStencil(StringRef Text) {
-  return std::make_shared<StencilImpl<RawTextData>>(std::string(Text));
+  return std::make_shared<RawTextStencil>(std::string(Text));
 }
 
 Stencil transformer::detail::makeStencil(RangeSelector Selector) {
-  return std::make_shared<StencilImpl<SelectorData>>(std::move(Selector));
+  return std::make_shared<SelectorStencil>(std::move(Selector));
 }
 
 Stencil transformer::dPrint(StringRef Id) {
-  return std::make_shared<StencilImpl<DebugPrintNodeData>>(std::string(Id));
+  return std::make_shared<DebugPrintNodeStencil>(std::string(Id));
 }
 
 Stencil transformer::expression(llvm::StringRef Id) {
-  return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Parens, std::string(Id));
+  return std::make_shared<UnaryOperationStencil>(UnaryNodeOperator::Parens,
+                                                 std::string(Id));
 }
 
 Stencil transformer::deref(llvm::StringRef ExprId) {
-  return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Deref, std::string(ExprId));
+  return std::make_shared<UnaryOperationStencil>(UnaryNodeOperator::Deref,
+                                                 std::string(ExprId));
 }
 
 Stencil transformer::maybeDeref(llvm::StringRef ExprId) {
-  return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::MaybeDeref, std::string(ExprId));
+  return std::make_shared<UnaryOperationStencil>(UnaryNodeOperator::MaybeDeref,
+                                                 std::string(ExprId));
 }
 
 Stencil transformer::addressOf(llvm::StringRef ExprId) {
-  return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::AddressOf, std::string(ExprId));
+  return std::make_shared<UnaryOperationStencil>(UnaryNodeOperator::AddressOf,
+                                                 std::string(ExprId));
 }
 
 Stencil transformer::maybeAddressOf(llvm::StringRef ExprId) {
-  return std::make_shared<StencilImpl<UnaryOperationData>>(
+  return std::make_shared<UnaryOperationStencil>(
       UnaryNodeOperator::MaybeAddressOf, std::string(ExprId));
 }
 
+Stencil transformer::describe(StringRef Id) {
+  return std::make_shared<UnaryOperationStencil>(UnaryNodeOperator::Describe,
+                                                 std::string(Id));
+}
+
 Stencil transformer::access(StringRef BaseId, Stencil Member) {
-  return std::make_shared<StencilImpl<AccessData>>(BaseId, std::move(Member));
+  return std::make_shared<AccessStencil>(BaseId, std::move(Member));
 }
 
 Stencil transformer::ifBound(StringRef Id, Stencil TrueStencil,
                              Stencil FalseStencil) {
-  return std::make_shared<StencilImpl<IfBoundData>>(Id, std::move(TrueStencil),
-                                                    std::move(FalseStencil));
+  return std::make_shared<IfBoundStencil>(Id, std::move(TrueStencil),
+                                          std::move(FalseStencil));
+}
+
+Stencil transformer::selectBound(
+    std::vector<std::pair<std::string, Stencil>> CaseStencils,
+    Stencil DefaultStencil) {
+  return std::make_shared<SelectBoundStencil>(std::move(CaseStencils),
+                                              std::move(DefaultStencil));
 }
 
 Stencil transformer::run(MatchConsumer<std::string> Fn) {
-  return std::make_shared<StencilImpl<MatchConsumer<std::string>>>(
-      std::move(Fn));
+  return std::make_shared<RunStencil>(std::move(Fn));
 }
 
 Stencil transformer::catVector(std::vector<Stencil> Parts) {
   // Only one argument, so don't wrap in sequence.
   if (Parts.size() == 1)
     return std::move(Parts[0]);
-  return std::make_shared<StencilImpl<SequenceData>>(std::move(Parts));
+  return std::make_shared<SequenceStencil>(std::move(Parts));
 }

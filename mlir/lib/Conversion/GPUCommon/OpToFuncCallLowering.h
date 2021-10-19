@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_GPUCOMMON_OPTOFUNCCALLLOWERING_H_
 #define MLIR_CONVERSION_GPUCOMMON_OPTOFUNCCALLLOWERING_H_
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -27,21 +27,19 @@ namespace mlir {
 ///   %exp_f32 = std.exp %arg_f32 : f32
 ///
 /// will be transformed into
-///   llvm.call @__nv_expf(%arg_f32) : (!llvm.float) -> !llvm.float
+///   llvm.call @__nv_expf(%arg_f32) : (f32) -> f32
 template <typename SourceOp>
-struct OpToFuncCallLowering : public ConvertToLLVMPattern {
+struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
   explicit OpToFuncCallLowering(LLVMTypeConverter &lowering_, StringRef f32Func,
                                 StringRef f64Func)
-      : ConvertToLLVMPattern(SourceOp::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_),
-        f32Func(f32Func), f64Func(f64Func) {}
+      : ConvertOpToLLVMPattern<SourceOp>(lowering_), f32Func(f32Func),
+        f64Func(f64Func) {}
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     using LLVM::LLVMFuncOp;
-    using LLVM::LLVMType;
 
     static_assert(
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
@@ -52,68 +50,61 @@ public:
                   "expected op with same operand and result types");
 
     SmallVector<Value, 1> castedOperands;
-    for (Value operand : operands)
+    for (Value operand : adaptor.getOperands())
       castedOperands.push_back(maybeCast(operand, rewriter));
 
-    LLVMType resultType =
-        castedOperands.front().getType().cast<LLVM::LLVMType>();
-    LLVMType funcType = getFunctionType(resultType, castedOperands);
-    StringRef funcName = getFunctionName(funcType.getFunctionResultType());
+    Type resultType = castedOperands.front().getType();
+    Type funcType = getFunctionType(resultType, castedOperands);
+    StringRef funcName = getFunctionName(
+        funcType.cast<LLVM::LLVMFunctionType>().getReturnType());
     if (funcName.empty())
       return failure();
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp = rewriter.create<LLVM::CallOp>(
-        op->getLoc(), resultType, rewriter.getSymbolRefAttr(funcOp),
-        castedOperands);
+        op->getLoc(), resultType, SymbolRefAttr::get(funcOp), castedOperands);
 
-    if (resultType == operands.front().getType()) {
+    if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult(0)});
       return success();
     }
 
     Value truncated = rewriter.create<LLVM::FPTruncOp>(
-        op->getLoc(), operands.front().getType(), callOp.getResult(0));
+        op->getLoc(), adaptor.getOperands().front().getType(),
+        callOp.getResult(0));
     rewriter.replaceOp(op, {truncated});
     return success();
   }
 
 private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
-    LLVM::LLVMType type = operand.getType().cast<LLVM::LLVMType>();
-    if (!type.isHalfTy())
+    Type type = operand.getType();
+    if (!type.isa<Float16Type>())
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), LLVM::LLVMType::getFloatTy(rewriter.getContext()),
-        operand);
+        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
   }
 
-  LLVM::LLVMType getFunctionType(LLVM::LLVMType resultType,
-                                 ArrayRef<Value> operands) const {
-    using LLVM::LLVMType;
-    SmallVector<LLVMType, 1> operandTypes;
-    for (Value operand : operands) {
-      operandTypes.push_back(operand.getType().cast<LLVMType>());
-    }
-    return LLVMType::getFunctionTy(resultType, operandTypes,
-                                   /*isVarArg=*/false);
+  Type getFunctionType(Type resultType, ValueRange operands) const {
+    SmallVector<Type> operandTypes(operands.getTypes());
+    return LLVM::LLVMFunctionType::get(resultType, operandTypes);
   }
 
-  StringRef getFunctionName(LLVM::LLVMType type) const {
-    if (type.isFloatTy())
+  StringRef getFunctionName(Type type) const {
+    if (type.isa<Float32Type>())
       return f32Func;
-    if (type.isDoubleTy())
+    if (type.isa<Float64Type>())
       return f64Func;
     return "";
   }
 
-  LLVM::LLVMFuncOp appendOrGetFuncOp(StringRef funcName,
-                                     LLVM::LLVMType funcType,
+  LLVM::LLVMFuncOp appendOrGetFuncOp(StringRef funcName, Type funcType,
                                      Operation *op) const {
     using LLVM::LLVMFuncOp;
 
-    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcName);
+    auto funcAttr = StringAttr::get(op->getContext(), funcName);
+    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcAttr);
     if (funcOp)
       return cast<LLVMFuncOp>(*funcOp);
 

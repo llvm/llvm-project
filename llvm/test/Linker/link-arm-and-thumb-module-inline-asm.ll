@@ -9,12 +9,11 @@ target triple = "armv7-linux-gnueabihf"
 
 module asm "add r1, r2, r2"
 
-; CHECK: .text
-; CHECK-NEXT: .balign 4
-; CHECK-NEXT: .arm
-; CHECK-NEXT: add r1, r2, r2
-; CHECK-NEXT: module asm
-; CHECK-NEXT: .text
-; CHECK-NEXT: .balign 2
-; CHECK-NEXT: .thumb
-; CHECK-NEXT: orn r1, r2, r2
+; CHECK:      module asm ".text"
+; CHECK-NEXT: module asm ".balign 4"
+; CHECK-NEXT: module asm ".arm"
+; CHECK-NEXT: module asm "add r1, r2, r2"
+; CHECK-NEXT: module asm ".text"
+; CHECK-NEXT: module asm ".balign 2"
+; CHECK-NEXT: module asm ".thumb"
+; CHECK-NEXT: module asm "orn r1, r2, r2"

@@ -73,7 +73,7 @@ protected:
   HostThread m_async_thread;
   std::recursive_mutex m_async_thread_state_mutex;
 
-  bool m_skip_acks;
+  bool m_skip_acks = false;
 
 private:
   GDBRemoteCommunicationReplayServer(

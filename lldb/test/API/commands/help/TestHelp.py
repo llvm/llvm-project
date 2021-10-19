@@ -37,44 +37,6 @@ class HelpCommandTestCase(TestBase):
                              '--hide-user-commands'])
 
     @no_debug_info_test
-    def version_number_string(self):
-        """Helper function to find the version number string of lldb."""
-        plist = os.path.join(
-            os.environ["LLDB_SRC"],
-            "resources",
-            "LLDB-Info.plist")
-        try:
-            CFBundleVersionSegFound = False
-            with open(plist, 'r') as f:
-                for line in f:
-                    if CFBundleVersionSegFound:
-                        version_line = line.strip()
-                        import re
-                        m = re.match("<string>(.*)</string>", version_line)
-                        if m:
-                            version = m.group(1)
-                            return version
-                        else:
-                            # Unsuccessful, let's juts break out of the for
-                            # loop.
-                            break
-
-                    if line.find("<key>CFBundleVersion</key>") != -1:
-                        # Found our match.  The next line contains our version
-                        # string, for example:
-                        #
-                        #     <string>38</string>
-                        CFBundleVersionSegFound = True
-
-        except:
-            # Just fallthrough...
-            import traceback
-            traceback.print_exc()
-
-        # Use None to signify that we are not able to grok the version number.
-        return None
-
-    @no_debug_info_test
     def test_help_arch(self):
         """Test 'help arch' which should list of supported architectures."""
         self.expect("help arch",
@@ -85,19 +47,19 @@ class HelpCommandTestCase(TestBase):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
                     substrs=['Show the LLDB debugger version.'])
-        import re
-        version_str = self.version_number_string()
-        match = re.match('[0-9]+', version_str)
-        search_regexp = ['lldb( version|-' + (version_str if match else '[0-9]+') + ').*\n']
-
         self.expect("version",
-                    patterns=search_regexp)
+                    patterns=['lldb( version|-[0-9]+).*\n'])
 
     @no_debug_info_test
     def test_help_should_not_crash_lldb(self):
         """Command 'help disasm' should not crash lldb."""
         self.runCmd("help disasm", check=False)
         self.runCmd("help unsigned-integer")
+
+    @no_debug_info_test
+    def test_help_memory_read_should_not_crash_lldb(self):
+        """Command 'help memory read' should not crash lldb."""
+        self.runCmd("help memory read", check=False)
 
     @no_debug_info_test
     def test_help_should_not_hang_emacsshell(self):

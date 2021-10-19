@@ -1,7 +1,7 @@
 ## Check we are able to produce a valid SHT_LLVM_LINKER_OPTIONS
 ## section from its description.
 
-## Check we can use either "Options" or "Content" to describe the data.
+## Check we can use "Options", "Size" and "Content" alone to describe the data.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --string-dump .linker-options1 --sections --section-data %t1 \
@@ -23,6 +23,12 @@
 # OPTIONS-NEXT: Type: SHT_LLVM_LINKER_OPTIONS
 # OPTIONS:      SectionData (
 # OPTIONS-NEXT:   0000: 00112233 |
+# OPTIONS-NEXT: )
+
+# OPTIONS:      Name: .linker-options3
+# OPTIONS-NEXT: Type: SHT_LLVM_LINKER_OPTIONS
+# OPTIONS:      SectionData (
+# OPTIONS-NEXT:   0000: 00000000 |
 # OPTIONS-NEXT: )
 
 # OPTIONS:      String dump of section '.linker-options1':
@@ -47,6 +53,9 @@ Sections:
   - Name: .linker-options2
     Type: SHT_LLVM_LINKER_OPTIONS
     Content: "00112233"
+  - Name: .linker-options3
+    Type: SHT_LLVM_LINKER_OPTIONS
+    Size: 4
 
 ## Check that "Value" and "Name" fields are mandatory when using "Options" key.
 
@@ -78,11 +87,15 @@ Sections:
     Options:
       - Value: value
 
-## Check we can't use both "Options" and "Content" together.
+## Check we can't use "Options" or "Size" keys together with the "Content" key.
 
-# RUN: not yaml2obj %s --docnum=4 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: not yaml2obj %s -DOPTIONS="[]" -DCONTENT="''" --docnum=4 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TOGETHER
 
-# BOTH: error: "Options" and "Content" can't be used together
+# RUN: not yaml2obj %s -DOPTIONS="[]" -DSIZE="0" --docnum=4 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=TOGETHER
+
+# TOGETHER: error: "Options" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -90,26 +103,37 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
-  - Name: .linker-options
-    Type: SHT_LLVM_LINKER_OPTIONS
-    Options:
-      - Name:  name
-        Value: value
-    Content: "00112233"
+  - Name:    .linker-options
+    Type:    SHT_LLVM_LINKER_OPTIONS
+    Options: [[OPTIONS=<none>]]
+    Content: [[CONTENT=<none>]]
+    Size:    [[SIZE=<none>]]
 
-## Check we can omit both "Options" and "Content". This produces an empty section.
+## Check we can omit "Options", "Content" and "Size" keys. This produces an empty section.
 
-# RUN: yaml2obj %s --docnum=5 2>&1 -o %t5
+# RUN: yaml2obj %s --docnum=4 2>&1 -o %t5
 # RUN: llvm-readelf --sections %t5 | FileCheck %s --check-prefix=NONE
 
 # NONE: [Nr] Name            Type                Address          Off    Size
 # NONE: [ 1] .linker-options LLVM_LINKER_OPTIONS 0000000000000000 000040 000000
 
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-Sections:
-  - Name: .linker-options
-    Type: SHT_LLVM_LINKER_OPTIONS
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=4 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+# RUN: yaml2obj --docnum=4 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# CHECK-CONTENT:      Name: .linker-options (1)
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+# RUN: yaml2obj --docnum=4 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"

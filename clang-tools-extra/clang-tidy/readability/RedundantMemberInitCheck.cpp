@@ -26,26 +26,21 @@ void RedundantMemberInitCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RedundantMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto Construct =
-      cxxConstructExpr(
-          hasDeclaration(cxxConstructorDecl(hasParent(
-              cxxRecordDecl(unless(isTriviallyDefaultConstructible()))))))
-          .bind("construct");
-
   Finder->addMatcher(
-      traverse(
-          ast_type_traits::TK_AsIs,
-          cxxConstructorDecl(
-              unless(isDelegatingConstructor()),
-              ofClass(unless(
-                  anyOf(isUnion(), ast_matchers::isTemplateInstantiation()))),
-              forEachConstructorInitializer(
-                  cxxCtorInitializer(
-                      isWritten(), withInitializer(ignoringImplicit(Construct)),
-                      unless(forField(hasType(isConstQualified()))),
-                      unless(forField(hasParent(recordDecl(isUnion())))))
-                      .bind("init")))
-              .bind("constructor")),
+      cxxConstructorDecl(
+          unless(isDelegatingConstructor()), ofClass(unless(isUnion())),
+          forEachConstructorInitializer(
+              cxxCtorInitializer(
+                  withInitializer(
+                      cxxConstructExpr(
+                          hasDeclaration(
+                              cxxConstructorDecl(ofClass(cxxRecordDecl(
+                                  unless(isTriviallyDefaultConstructible()))))))
+                          .bind("construct")),
+                  unless(forField(hasType(isConstQualified()))),
+                  unless(forField(hasParent(recordDecl(isUnion())))))
+                  .bind("init")))
+          .bind("constructor"),
       this);
 }
 

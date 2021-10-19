@@ -77,6 +77,18 @@ HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 /// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
 HANDLE_TARGET_OPCODE(DBG_VALUE)
 
+/// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic with a variadic
+/// list of locations
+HANDLE_TARGET_OPCODE(DBG_VALUE_LIST)
+
+/// DBG_INSTR_REF - A mapping of llvm.dbg.value referring to the instruction
+/// that defines the value, rather than a virtual register.
+HANDLE_TARGET_OPCODE(DBG_INSTR_REF)
+
+/// DBG_PHI - remainder of a PHI, identifies a program point where values
+/// merge under control flow.
+HANDLE_TARGET_OPCODE(DBG_PHI)
+
 /// DBG_LABEL - a mapping of the llvm.dbg.label intrinsic
 HANDLE_TARGET_OPCODE(DBG_LABEL)
 
@@ -105,6 +117,12 @@ HANDLE_TARGET_OPCODE(BUNDLE)
 /// Lifetime markers.
 HANDLE_TARGET_OPCODE(LIFETIME_START)
 HANDLE_TARGET_OPCODE(LIFETIME_END)
+
+/// Pseudo probe
+HANDLE_TARGET_OPCODE(PSEUDO_PROBE)
+
+/// Arithmetic fence.
+HANDLE_TARGET_OPCODE(ARITH_FENCE)
 
 /// A Stackmap instruction captures the location of live variables at its
 /// position in the instruction stream. It is followed by a shadow of bytes
@@ -206,6 +224,15 @@ HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
 
+/// Instructions which should not exist past instruction selection, but do not
+/// generate code. These instructions only act as optimization hints.
+HANDLE_TARGET_OPCODE(G_ASSERT_SEXT)
+HANDLE_TARGET_OPCODE(G_ASSERT_ZEXT)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPTIMIZATION_HINT_START,
+                            G_ASSERT_SEXT)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPTIMIZATION_HINT_END,
+                            G_ASSERT_ZEXT)
+
 /// Generic ADD instruction. This is an integer add.
 HANDLE_TARGET_OPCODE(G_ADD)
 HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)
@@ -227,6 +254,12 @@ HANDLE_TARGET_OPCODE(G_SREM)
 
 // Generic unsigned remainder instruction.
 HANDLE_TARGET_OPCODE(G_UREM)
+
+// Generic signed divrem instruction.
+HANDLE_TARGET_OPCODE(G_SDIVREM)
+
+// Generic unsigned divrem instruction.
+HANDLE_TARGET_OPCODE(G_UDIVREM)
 
 /// Generic bitwise and instruction.
 HANDLE_TARGET_OPCODE(G_AND)
@@ -405,6 +438,12 @@ HANDLE_TARGET_OPCODE(G_FSHL)
 
 // Generic funnel right shift
 HANDLE_TARGET_OPCODE(G_FSHR)
+
+// Generic right rotate
+HANDLE_TARGET_OPCODE(G_ROTR)
+
+// Generic left rotate
+HANDLE_TARGET_OPCODE(G_ROTL)
 
 /// Generic integer-base comparison, also applicable to vectors of integers.
 HANDLE_TARGET_OPCODE(G_ICMP)
@@ -613,6 +652,9 @@ HANDLE_TARGET_OPCODE(G_UMAX)
 /// Generic integer absolute value.
 HANDLE_TARGET_OPCODE(G_ABS)
 
+HANDLE_TARGET_OPCODE(G_LROUND)
+HANDLE_TARGET_OPCODE(G_LLROUND)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 
@@ -700,16 +742,40 @@ HANDLE_TARGET_OPCODE(G_WRITE_REGISTER)
 /// llvm.memcpy intrinsic
 HANDLE_TARGET_OPCODE(G_MEMCPY)
 
+/// llvm.memcpy.inline intrinsic
+HANDLE_TARGET_OPCODE(G_MEMCPY_INLINE)
+
 /// llvm.memmove intrinsic
 HANDLE_TARGET_OPCODE(G_MEMMOVE)
 
 /// llvm.memset intrinsic
 HANDLE_TARGET_OPCODE(G_MEMSET)
+HANDLE_TARGET_OPCODE(G_BZERO)
+
+/// Vector reductions
+HANDLE_TARGET_OPCODE(G_VECREDUCE_SEQ_FADD)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_SEQ_FMUL)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FADD)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMUL)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAX)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMIN)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_ADD)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_MUL)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_AND)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_OR)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_XOR)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_SMAX)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_SMIN)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_UMAX)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_UMIN)
+
+HANDLE_TARGET_OPCODE(G_SBFX)
+HANDLE_TARGET_OPCODE(G_UBFX)
 
 /// Marker for the end of the generic opcode.
 /// This is used to check if an opcode is in the range of the
 /// generic opcodes.
-HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_MEMSET)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_UBFX)
 
 /// BUILTIN_OP_END - This must be the last enum value in this list.
 /// The target-specific post-isel opcode values start here.

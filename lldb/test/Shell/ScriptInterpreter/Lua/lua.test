@@ -1,3 +1,6 @@
-# REQUIRES: lua
-# RUN: %lldb --script-language lua -o 'script print(1000+100+10+1)' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language lua -o 'script io.stdout:write(1000+100+10+1, "\n")' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language lua -o 'script -- io.stdout:write(1000+100+10+1, "\n")' 2>&1 | FileCheck %s
+# RUN: %lldb --script-language lua -o 'script --language default -- io.stdout:write(1000+100+10+1, "\n")' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script -l lua -- io.stdout:write(1000+100+10+1, "\n")' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script --language lua -- io.stdout:write(1000+100+10+1, "\n")' 2>&1 | FileCheck %s
 # CHECK: 1111

@@ -6,7 +6,7 @@
 void test0(Test0 *val) {
   Test0 *x = [val self];
 
-// CHECK-LABEL:    define void @test0(
+// CHECK-LABEL:    define{{.*}} void @test0(
 // CHECK:      [[VAL:%.*]] = alloca [[TEST0:%.*]]*
 // CHECK-NEXT: [[X:%.*]] = alloca [[TEST0]]*
 // CHECK-NEXT: store [[TEST0]]* null

@@ -1,6 +1,6 @@
 ; RUN: llc -O0 %s -o /dev/null
 
-define void @CGRectStandardize(i32* sret %agg.result, i32* byval %rect) nounwind ssp !dbg !0 {
+define void @CGRectStandardize(i32* sret(i32) %agg.result, i32* byval(i32) %rect) nounwind ssp !dbg !0 {
 entry:
   call void @llvm.dbg.declare(metadata i32* %rect, metadata !23, metadata !DIExpression()), !dbg !24
   ret void

@@ -40,14 +40,12 @@ PassRegistry::~PassRegistry() = default;
 
 const PassInfo *PassRegistry::getPassInfo(const void *TI) const {
   sys::SmartScopedReader<true> Guard(Lock);
-  MapType::const_iterator I = PassInfoMap.find(TI);
-  return I != PassInfoMap.end() ? I->second : nullptr;
+  return PassInfoMap.lookup(TI);
 }
 
 const PassInfo *PassRegistry::getPassInfo(StringRef Arg) const {
   sys::SmartScopedReader<true> Guard(Lock);
-  StringMapType::const_iterator I = PassInfoStringMap.find(Arg);
-  return I != PassInfoStringMap.end() ? I->second : nullptr;
+  return PassInfoStringMap.lookup(Arg);
 }
 
 //===----------------------------------------------------------------------===//

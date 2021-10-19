@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 "-triple" "nvptx-nvidia-cuda" -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "nvptx-nvidia-cuda" -fcuda-is-device -fsyntax-only -verify \
+// RUN:   -verify-ignore-unexpected=note %s
 
 #include "__clang_cuda_builtin_vars.h"
 __attribute__((global))
@@ -37,17 +38,13 @@ void kernel(int *out) {
   // expected-note@__clang_cuda_builtin_vars.h:* {{variable 'warpSize' declared const here}}
 
   // Make sure we can't construct or assign to the special variables.
-  __cuda_builtin_threadIdx_t x; // expected-error {{calling a private constructor of class '__cuda_builtin_threadIdx_t'}}
-  // expected-note@__clang_cuda_builtin_vars.h:* {{declared private here}}
+  __cuda_builtin_threadIdx_t x; // expected-error {{call to deleted constructor of '__cuda_builtin_threadIdx_t'}}
 
-  __cuda_builtin_threadIdx_t y = threadIdx; // expected-error {{calling a private constructor of class '__cuda_builtin_threadIdx_t'}}
-  // expected-note@__clang_cuda_builtin_vars.h:* {{declared private here}}
+  __cuda_builtin_threadIdx_t y = threadIdx; // expected-error {{call to deleted constructor of '__cuda_builtin_threadIdx_t'}}
 
-  threadIdx = threadIdx; // expected-error {{'operator=' is a private member of '__cuda_builtin_threadIdx_t'}}
-  // expected-note@__clang_cuda_builtin_vars.h:* {{declared private here}}
+  threadIdx = threadIdx; // expected-error {{overload resolution selected deleted operator '='}}
 
-  void *ptr = &threadIdx; // expected-error {{'operator&' is a private member of '__cuda_builtin_threadIdx_t'}}
-  // expected-note@__clang_cuda_builtin_vars.h:* {{declared private here}}
+  void *ptr = &threadIdx; // expected-error {{overload resolution selected deleted operator '&'}}
 
   // Following line should've caused an error as one is not allowed to
   // take address of a built-in variable in CUDA. Alas there's no way

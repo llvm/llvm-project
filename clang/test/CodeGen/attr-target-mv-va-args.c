@@ -10,13 +10,13 @@ int bar() {
 }
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (i32, ...), i32 (i32, ...)* ()* @foo.resolver
-// LINUX: define i32 @foo.sse4.2(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo.sse4.2(i32 %i, ...)
 // LINUX: ret i32 0
-// LINUX: define i32 @foo.arch_ivybridge(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo.arch_ivybridge(i32 %i, ...)
 // LINUX: ret i32 1
-// LINUX: define i32 @foo(i32 %i, ...)
+// LINUX: define{{.*}} i32 @foo(i32 %i, ...)
 // LINUX: ret i32 2
-// LINUX: define i32 @bar()
+// LINUX: define{{.*}} i32 @bar()
 // LINUX: call i32 (i32, ...) @foo.ifunc(i32 1, i32 97, double
 // LINUX: call i32 (i32, ...) @foo.ifunc(i32 2, double 2.2{{[0-9Ee+]+}}, i8* getelementptr inbounds
 

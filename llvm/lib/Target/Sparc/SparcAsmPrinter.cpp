@@ -29,7 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -80,7 +80,7 @@ static MCOperand createSparcMCOperand(SparcMCExpr::VariantKind Kind,
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
                                  MCContext &OutContext) {
-  return createSparcMCOperand(SparcMCExpr::VK_Sparc_None, Label, OutContext);
+  return createSparcMCOperand(SparcMCExpr::VK_Sparc_WDISP30, Label, OutContext);
 }
 
 static MCOperand createPCXRelExprOp(SparcMCExpr::VariantKind Kind,
@@ -303,6 +303,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
       assert((TF == SparcMCExpr::VK_Sparc_HI
               || TF == SparcMCExpr::VK_Sparc_H44
               || TF == SparcMCExpr::VK_Sparc_HH
+              || TF == SparcMCExpr::VK_Sparc_LM
               || TF == SparcMCExpr::VK_Sparc_TLS_GD_HI22
               || TF == SparcMCExpr::VK_Sparc_TLS_LDM_HI22
               || TF == SparcMCExpr::VK_Sparc_TLS_LDO_HIX22
@@ -351,7 +352,7 @@ void SparcAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
     break;
 
   case MachineOperand::MO_Immediate:
-    O << (int)MO.getImm();
+    O << MO.getImm();
     break;
   case MachineOperand::MO_MachineBasicBlock:
     MO.getMBB()->getSymbol()->print(O, MAI);

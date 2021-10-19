@@ -5,30 +5,30 @@
 
 declare void @foo()
 
-@g0 = global i32 0
-@g1 = global i32 1
-@g2 = global i32 2
-@g3 = global i32 3
-@g4 = global i32 4
-@g5 = global i32 5
-@g6 = global i32 6
-@g7 = global i32 7
-@g8 = global i32 8
-@g9 = global i32 9
+@g0 = dso_local global i32 0
+@g1 = dso_local global i32 1
+@g2 = dso_local global i32 2
+@g3 = dso_local global i32 3
+@g4 = dso_local global i32 4
+@g5 = dso_local global i32 5
+@g6 = dso_local global i32 6
+@g7 = dso_local global i32 7
+@g8 = dso_local global i32 8
+@g9 = dso_local global i32 9
 
-@h0 = global i64 0
-@h1 = global i64 1
-@h2 = global i64 2
-@h3 = global i64 3
-@h4 = global i64 4
-@h5 = global i64 5
-@h6 = global i64 6
-@h7 = global i64 7
-@h8 = global i64 8
-@h9 = global i64 9
+@h0 = dso_local global i64 0
+@h1 = dso_local global i64 1
+@h2 = dso_local global i64 2
+@h3 = dso_local global i64 3
+@h4 = dso_local global i64 4
+@h5 = dso_local global i64 5
+@h6 = dso_local global i64 6
+@h7 = dso_local global i64 7
+@h8 = dso_local global i64 8
+@h9 = dso_local global i64 9
 
 ; This function shouldn't spill anything
-define void @f1(i32 *%ptr0) {
+define dso_local void @f1(i32 *%ptr0) {
 ; CHECK-LABEL: f1:
 ; CHECK: stmg
 ; CHECK: aghi %r15, -160
@@ -67,7 +67,7 @@ define void @f1(i32 *%ptr0) {
 
 ; Test a case where at least one i32 load and at least one i32 store
 ; need spills.
-define void @f2(i32 *%ptr0) {
+define dso_local void @f2(i32 *%ptr0) {
 ; CHECK-LABEL: f2:
 ; CHECK: mvc [[OFFSET1:16[04]]](4,%r15), [[OFFSET2:[0-9]+]]({{%r[0-9]+}})
 ; CHECK: brasl %r14, foo@PLT
@@ -109,7 +109,7 @@ define void @f2(i32 *%ptr0) {
 
 ; Test a case where at least one i64 load and at least one i64 store
 ; need spills.
-define void @f3(i64 *%ptr0) {
+define dso_local void @f3(i64 *%ptr0) {
 ; CHECK-LABEL: f3:
 ; CHECK: mvc 160(8,%r15), [[OFFSET:[0-9]+]]({{%r[0-9]+}})
 ; CHECK: brasl %r14, foo@PLT
@@ -154,7 +154,7 @@ define void @f3(i64 *%ptr0) {
 ; need spills.  The 8 call-saved FPRs could be used for 8 of the %vals
 ; (and are at the time of writing), but it would really be better to use
 ; MVC for all 10.
-define void @f4(float *%ptr0) {
+define dso_local void @f4(float *%ptr0) {
 ; CHECK-LABEL: f4:
 ; CHECK: mvc [[OFFSET1:16[04]]](4,%r15), [[OFFSET2:[0-9]+]]({{%r[0-9]+}})
 ; CHECK: brasl %r14, foo@PLT
@@ -198,7 +198,7 @@ define void @f4(float *%ptr0) {
 }
 
 ; Similarly for f64.
-define void @f5(double *%ptr0) {
+define dso_local void @f5(double *%ptr0) {
 ; CHECK-LABEL: f5:
 ; CHECK: mvc 160(8,%r15), [[OFFSET:[0-9]+]]({{%r[0-9]+}})
 ; CHECK: brasl %r14, foo@PLT
@@ -242,7 +242,7 @@ define void @f5(double *%ptr0) {
 }
 
 ; Repeat f2 with atomic accesses.  We shouldn't use MVC here.
-define void @f6(i32 *%ptr0) {
+define dso_local void @f6(i32 *%ptr0) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -281,7 +281,7 @@ define void @f6(i32 *%ptr0) {
 }
 
 ; ...likewise volatile accesses.
-define void @f7(i32 *%ptr0) {
+define dso_local void @f7(i32 *%ptr0) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -320,7 +320,7 @@ define void @f7(i32 *%ptr0) {
 }
 
 ; Check that LRL and STRL are not converted.
-define void @f8() {
+define dso_local void @f8() {
 ; CHECK-LABEL: f8:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -352,7 +352,7 @@ define void @f8() {
 }
 
 ; Likewise LGRL and STGRL.
-define void @f9() {
+define dso_local void @f9() {
 ; CHECK-LABEL: f9:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -388,7 +388,7 @@ define void @f9() {
 ; has two frame index operands.  Stack coloring chose a valid renumbering
 ; [FI0, FI1] -> [FI1, FI2], but applied it in the form FI0 -> FI1 -> FI2,
 ; so that both operands ended up being the same.
-define void @f10() {
+define dso_local void @f10() {
 ; CHECK-LABEL: f10:
 ; CHECK: lgrl [[REG:%r[0-9]+]], h9
 ; CHECK: stg [[REG]], [[VAL9:[0-9]+]](%r15)
@@ -459,7 +459,7 @@ skip:
 }
 
 ; This used to generate a no-op MVC.  It is very sensitive to spill heuristics.
-define void @f11() {
+define dso_local void @f11() {
 ; CHECK-LABEL: f11:
 ; CHECK-NOT: mvc [[OFFSET:[0-9]+]](8,%r15), [[OFFSET]](%r15)
 ; CHECK: br %r14

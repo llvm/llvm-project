@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LexerUtils.h"
+#include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 
 namespace clang {
@@ -148,6 +149,70 @@ llvm::Optional<Token> getQualifyingToken(tok::TokenKind TK,
   return LastMatchAfterTemplate != None ? LastMatchAfterTemplate
                                         : LastMatchBeforeTemplate;
 }
+
+static bool breakAndReturnEnd(const Stmt &S) {
+  return isa<CompoundStmt, DeclStmt, NullStmt>(S);
+}
+
+static bool breakAndReturnEndPlus1Token(const Stmt &S) {
+  return isa<Expr, DoStmt, ReturnStmt, BreakStmt, ContinueStmt, GotoStmt, SEHLeaveStmt>(S);
+}
+
+// Given a Stmt which does not include it's semicolon this method returns the
+// SourceLocation of the semicolon.
+static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
+                                                  const SourceManager &SM,
+                                                  const LangOptions &LangOpts) {
+
+  if (EndLoc.isMacroID()) {
+    // Assuming EndLoc points to a function call foo within macro F.
+    // This method is supposed to return location of the semicolon within
+    // those macro arguments:
+    //  F     (      foo()               ;   )
+    //  ^ EndLoc         ^ SpellingLoc   ^ next token of SpellingLoc
+    const SourceLocation SpellingLoc = SM.getSpellingLoc(EndLoc);
+    Optional<Token> NextTok =
+        findNextTokenSkippingComments(SpellingLoc, SM, LangOpts);
+
+    // Was the next token found successfully?
+    // All macro issues are simply resolved by ensuring it's a semicolon.
+    if (NextTok && NextTok->is(tok::TokenKind::semi)) {
+      // Ideally this would return `F` with spelling location `;` (NextTok)
+      // following the examle above. For now simply return NextTok location.
+      return NextTok->getLocation();
+    }
+
+    // Fallthrough to 'normal handling'.
+    //  F     (      foo()              ) ;
+    //  ^ EndLoc         ^ SpellingLoc  ) ^ next token of EndLoc
+  }
+
+  Optional<Token> NextTok = findNextTokenSkippingComments(EndLoc, SM, LangOpts);
+
+  // Testing for semicolon again avoids some issues with macros.
+  if (NextTok && NextTok->is(tok::TokenKind::semi))
+    return NextTok->getLocation();
+
+  return SourceLocation();
+}
+
+SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
+                                const LangOptions &LangOpts) {
+
+  const Stmt *LastChild = &S;
+  while (!LastChild->children().empty() && !breakAndReturnEnd(*LastChild) &&
+         !breakAndReturnEndPlus1Token(*LastChild)) {
+    for (const Stmt *Child : LastChild->children())
+      LastChild = Child;
+  }
+
+  if (!breakAndReturnEnd(*LastChild) &&
+      breakAndReturnEndPlus1Token(*LastChild))
+    return getSemicolonAfterStmtEndLoc(S.getEndLoc(), SM, LangOpts);
+
+  return S.getEndLoc();
+}
+
 } // namespace lexer
 } // namespace utils
 } // namespace tidy

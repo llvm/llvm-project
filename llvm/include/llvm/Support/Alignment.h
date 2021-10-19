@@ -84,16 +84,6 @@ public:
   /// Needed to interact with C for instance.
   uint64_t value() const { return uint64_t(1) << ShiftValue; }
 
-  /// Returns a default constructed Align which corresponds to no alignment.
-  /// It was decided to deprecate Align::None because it's too close to
-  /// llvm::None which can be used to initialize `MaybeAlign`.
-  /// MaybeAlign = llvm::None means unspecified alignment,
-  /// Align = Align::None() means alignment of one byte.
-  LLVM_ATTRIBUTE_DEPRECATED(constexpr static const Align None(),
-                            "Use Align() or Align(1) instead") {
-    return Align();
-  }
-
   /// Allow constructions of constexpr Align.
   template <size_t kValue> constexpr static LogValue Constant() {
     return LogValue{static_cast<uint8_t>(CTLog2<kValue>())};

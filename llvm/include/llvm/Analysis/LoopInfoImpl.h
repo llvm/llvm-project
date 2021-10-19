@@ -17,6 +17,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 
@@ -66,6 +67,13 @@ void LoopBase<BlockT, LoopT>::getExitBlocks(
       if (!contains(Succ))
         // Not in current loop? It must be an exit block.
         ExitBlocks.push_back(Succ);
+}
+
+template <class BlockT, class LoopT>
+bool LoopBase<BlockT, LoopT>::hasNoExitBlocks() const {
+  SmallVector<BlockT *, 8> ExitBlocks;
+  getExitBlocks(ExitBlocks);
+  return ExitBlocks.empty();
 }
 
 /// getExitBlock - If getExitBlocks would return exactly one block,
@@ -373,8 +381,8 @@ void LoopBase<BlockT, LoopT>::verifyLoopNest(
 }
 
 template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
-                                    bool Verbose) const {
+void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
+                                    bool PrintNested, unsigned Depth) const {
   OS.indent(Depth * 2);
   if (static_cast<const LoopT *>(this)->isAnnotatedParallel())
     OS << "Parallel ";
@@ -399,10 +407,13 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
     if (Verbose)
       BB->print(OS);
   }
-  OS << "\n";
 
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    (*I)->print(OS, Depth + 2);
+  if (PrintNested) {
+    OS << "\n";
+
+    for (iterator I = begin(), E = end(); I != E; ++I)
+      (*I)->print(OS, /*Verbose*/ false, PrintNested, Depth + 2);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -502,7 +513,7 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
   if (Subloop && Block == Subloop->getHeader()) {
     // We reach this point once per subloop after processing all the blocks in
     // the subloop.
-    if (Subloop->getParentLoop())
+    if (!Subloop->isOutermost())
       Subloop->getParentLoop()->getSubLoopsVector().push_back(Subloop);
     else
       LI->addTopLevelLoop(Subloop);
@@ -563,7 +574,8 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
 }
 
 template <class BlockT, class LoopT>
-SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
+SmallVector<LoopT *, 4>
+LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. But LoopInfo stores the top level loops in reverse
@@ -581,7 +593,7 @@ SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
 
 template <class BlockT, class LoopT>
 SmallVector<LoopT *, 4>
-LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() {
+LoopInfoBase<BlockT, LoopT>::getLoopsInReverseSiblingPreorder() const {
   SmallVector<LoopT *, 4> PreOrderLoops, PreOrderWorklist;
   // The outer-most loop actually goes into the result in the same relative
   // order as we walk it. LoopInfo stores the top level loops in reverse
@@ -666,12 +678,10 @@ static void compareLoops(const LoopT *L, const LoopT *OtherL,
          "Mismatched basic blocks in the loops!");
 
   const SmallPtrSetImpl<const BlockT *> &BlocksSet = L->getBlocksSet();
-  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet = L->getBlocksSet();
+  const SmallPtrSetImpl<const BlockT *> &OtherBlocksSet =
+      OtherL->getBlocksSet();
   assert(BlocksSet.size() == OtherBlocksSet.size() &&
-         std::all_of(BlocksSet.begin(), BlocksSet.end(),
-                     [&OtherBlocksSet](const BlockT *BB) {
-                       return OtherBlocksSet.count(BB);
-                     }) &&
+         llvm::set_is_subset(BlocksSet, OtherBlocksSet) &&
          "Mismatched basic blocks in BlocksSets!");
 }
 #endif
@@ -681,7 +691,7 @@ void LoopInfoBase<BlockT, LoopT>::verify(
     const DomTreeBase<BlockT> &DomTree) const {
   DenseSet<const LoopT *> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
-    assert(!(*I)->getParentLoop() && "Top-level loop has a parent!");
+    assert((*I)->isOutermost() && "Top-level loop has a parent!");
     (*I)->verifyLoopNest(&Loops);
   }
 

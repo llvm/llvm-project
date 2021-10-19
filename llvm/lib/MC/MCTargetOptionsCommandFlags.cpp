@@ -43,6 +43,7 @@ MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
+MCOPT(bool, NoTypeCheck)
 MCOPT(std::string, ABIName)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
@@ -90,6 +91,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "no-deprecated-warn", cl::desc("Suppress all deprecated warnings"));
   MCBINDOPT(NoDeprecatedWarn);
 
+  static cl::opt<bool> NoTypeCheck(
+      "no-type-check", cl::desc("Suppress type errors (Wasm)"));
+  MCBINDOPT(NoTypeCheck);
+
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -110,5 +115,6 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
+  Options.MCNoTypeCheck = getNoTypeCheck();
   return Options;
 }

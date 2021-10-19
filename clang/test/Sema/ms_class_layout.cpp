@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm-only -triple i686-pc-win32 -fdump-record-layouts %s 2>/dev/null \
-// RUN:            | FileCheck %s
+// RUN:            | FileCheck %s --strict-whitespace
 
 #pragma pack(push, 8)
 
@@ -160,25 +160,14 @@ int main() {
   return 0;
 }
 
-// CHECK:       0 | class D
-// CHECK-NEXT:  0 |   (D vftable pointer)
-// CHECK-NEXT:  8 |   double a
-
-// CHECK-NEXT: sizeof=16, align=8
-// CHECK-NEXT: nvsize=16, nvalign=8
-
-// CHECK: %class.D = type { i32 (...)**, double }
-
-// CHECK:       0 | class B
+// CHECK-LABEL: 0 | class B{{$}}
 // CHECK-NEXT:  0 |   (B vftable pointer)
 // CHECK-NEXT:  4 |   int b_field
 
 // CHECK-NEXT: sizeof=8, align=4
 // CHECK-NEXT: nvsize=8, nvalign=4
 
-// CHECK: %class.B = type { i32 (...)**, i32 }
-
-// CHECK:       0 | class A
+// CHECK-LABEL: 0 | class A{{$}}
 // CHECK-NEXT:  0 |   class B (primary base)
 // CHECK-NEXT:  0 |     (B vftable pointer)
 // CHECK-NEXT:  4 |     int b_field
@@ -188,7 +177,14 @@ int main() {
 // CHECK-NEXT: sizeof=16, align=4
 // CHECK-NEXT: nvsize=16, nvalign=4
 
-// CHECK:       0 | class C
+// CHECK-LABEL: 0 | class D{{$}}
+// CHECK-NEXT:  0 |   (D vftable pointer)
+// CHECK-NEXT:  8 |   double a
+
+// CHECK-NEXT: sizeof=16, align=8
+// CHECK-NEXT: nvsize=16, nvalign=8
+
+// CHECK-LABEL: 0 | class C{{$}}
 // CHECK-NEXT:  0 |   class D (primary base)
 // CHECK-NEXT:  0 |     (D vftable pointer)
 // CHECK-NEXT:  8 |     double a
@@ -210,12 +206,16 @@ int main() {
 // CHECK-NEXT: sizeof=80, align=8
 // CHECK-NEXT: nvsize=64, nvalign=8
 
+// CHECK: %class.D = type { i32 (...)**, double }
+
+// CHECK: %class.B = type { i32 (...)**, i32 }
+
 // CHECK: %class.A = type { %class.B, i32, i8 }
 
 // CHECK: %class.C = type { %class.D, %class.B, i32*, double, i32, double, i32, [4 x i8], %class.A }
 // CHECK: %class.C.base = type { %class.D, %class.B, i32*, double, i32, double, i32 }
 
-// CHECK:       0 | struct BaseStruct
+// CHECK-LABEL: 0 | struct BaseStruct{{$}}
 // CHECK-NEXT:  0 |   double v0
 // CHECK-NEXT:  8 |   float v1
 // CHECK-NEXT: 16 |   class C fg
@@ -241,7 +241,7 @@ int main() {
 
 // CHECK: %struct.BaseStruct = type { double, float, %class.C }
 
-// CHECK:       0 | struct DerivedStruct
+// CHECK-LABEL: 0 | struct DerivedStruct{{$}}
 // CHECK-NEXT:  0 |   struct BaseStruct (base)
 // CHECK-NEXT:  0 |     double v0
 // CHECK-NEXT:  8 |     float v1
@@ -269,12 +269,12 @@ int main() {
 
 // CHECK: %struct.DerivedStruct = type { %struct.BaseStruct, i32 }
 
-// CHECK:      0 | struct G
+// CHECK-LABEL:0 | struct G
 // CHECK-NEXT: 0 |   int g_field
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-// CHECK:       0 | struct H
+// CHECK-LABEL: 0 | struct H{{$}}
 // CHECK-NEXT:  0 |   struct G (base)
 // CHECK-NEXT:  0 |     int g_field
 // CHECK-NEXT:  4 |   (H vbtable pointer)
@@ -286,7 +286,7 @@ int main() {
 
 // CHECK: %struct.H = type { %struct.G, i32*, %class.D }
 
-// CHECK:       0 | struct I
+// CHECK-LABEL: 0 | struct I{{$}}
 // CHECK-NEXT:  0 |   (I vftable pointer)
 // CHECK-NEXT:  8 |   (I vbtable pointer)
 // CHECK-NEXT: 16 |   double q
@@ -299,17 +299,17 @@ int main() {
 // CHECK: %struct.I = type { i32 (...)**, [4 x i8], i32*, double, %class.D }
 // CHECK: %struct.I.base = type { i32 (...)**, [4 x i8], i32*, double }
 
-// CHECK:       0 | struct L
+// CHECK-LABEL: 0 | struct L{{$}}
 // CHECK-NEXT:  0 |   int l
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-// CHECK:       0 | struct K
+// CHECK-LABEL: 0 | struct K{{$}}
 // CHECK-NEXT:  0 |   int k
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-// CHECK:       0 | struct M
+// CHECK-LABEL: 0 | struct M{{$}}
 // CHECK-NEXT:  0 |   (M vbtable pointer)
 // CHECK-NEXT:  4 |   int m
 // CHECK-NEXT:  8 |   struct K (virtual base)
@@ -319,7 +319,7 @@ int main() {
 //CHECK: %struct.M = type { i32*, i32, %struct.K }
 //CHECK: %struct.M.base = type { i32*, i32 }
 
-// CHECK:       0 | struct N
+// CHECK-LABEL: 0 | struct N{{$}}
 // CHECK-NEXT:  0 |   (N vftable pointer)
 // CHECK-NEXT:  4 |   struct L (base)
 // CHECK-NEXT:  4 |     int l
@@ -333,7 +333,7 @@ int main() {
 
 //CHECK: %struct.N = type { i32 (...)**, %struct.L, %struct.M.base, %struct.K }
 
-// CHECK:       0 | struct O
+// CHECK-LABEL: 0 | struct O{{$}}
 // CHECK-NEXT:  0 |   (O vftable pointer)
 // CHECK-NEXT:  8 |   struct H (base)
 // CHECK-NEXT:  8 |     struct G (base)
@@ -350,8 +350,7 @@ int main() {
 // CHECK: struct.O = type { i32 (...)**, [4 x i8], %struct.H.base, %struct.G, %class.D }
 // CHECK: struct.O.base = type { i32 (...)**, [4 x i8], %struct.H.base, %struct.G, [4 x i8] }
 
-
-// CHECK:       0 | struct P
+// CHECK-LABEL: 0 | struct P{{$}}
 // CHECK-NEXT:  0 |   struct M (base)
 // CHECK-NEXT:  0 |     (M vbtable pointer)
 // CHECK-NEXT:  4 |     int m
@@ -365,18 +364,18 @@ int main() {
 
 //CHECK: %struct.P = type { %struct.M.base, i32, %struct.K, %struct.L }
 
-// CHECK:       0 | struct R (empty)
+// CHECK-LABEL: 0 | struct R (empty){{$}}
 // CHECK-NEXT:  sizeof=1, align=1
 // CHECK-NEXT:  nvsize=0, nvalign=1
 
 //CHECK: %struct.R = type { i8 }
 
-// CHECK:       0 | struct f
+// CHECK-LABEL: 0 | struct f{{$}}
 // CHECK-NEXT:  0 |   (f vftable pointer)
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-// CHECK:       0 | struct s
+// CHECK-LABEL: 0 | struct s{{$}}
 // CHECK-NEXT:  0 |   (s vftable pointer)
 // CHECK-NEXT:  4 |   (s vbtable pointer)
 // CHECK-NEXT:  8 |   int r
@@ -386,12 +385,12 @@ int main() {
 // CHECK-NEXT: sizeof=20, align=4
 // CHECK-NEXT: nvsize=12, nvalign=4
 
-// CHECK:       0 | class IA
+// CHECK-LABEL: 0 | class IA{{$}}
 // CHECK-NEXT:  0 |   (IA vftable pointer)
 // CHECK-NEXT:  sizeof=4, align=4
 // CHECK-NEXT:  nvsize=4, nvalign=4
-	
-// CHECK:       0 | class ICh
+
+// CHECK-LABEL: 0 | class ICh{{$}}
 // CHECK-NEXT:  0 |   (ICh vftable pointer)
 // CHECK-NEXT:  4 |   (ICh vbtable pointer)
 // CHECK-NEXT:  8 |   (vtordisp for vbase IA)
@@ -400,7 +399,7 @@ int main() {
 // CHECK-NEXT: sizeof=16, align=4
 // CHECK-NEXT: nvsize=8, nvalign=4
 
-// CHECK:       0 | struct sd
+// CHECK-LABEL: 0 | struct sd{{$}}
 // CHECK-NEXT:  0 |   (sd vbtable pointer)
 // CHECK-NEXT:  4 |   int q
 // CHECK-NEXT:  8 |   char y
@@ -426,20 +425,18 @@ int main() {
 // CHECK: %class.ICh = type { i32 (...)**, i32*, i32, %class.IA }
 // CHECK: %struct.sd = type { i32*, i32, i8, i32, %struct.f, %struct.s.base, i32, %class.IA, %class.ICh.base }
 
-// CHECK:       0 | struct AV
+// CHECK-LABEL: 0 | struct AV{{$}}
 // CHECK-NEXT:  0 |   (AV vftable pointer)
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-
-// CHECK:       0 | struct BV
+// CHECK-LABEL: 0 | struct BV{{$}}
 // CHECK-NEXT:  0 |   struct AV (primary base)
 // CHECK-NEXT:  0 |     (AV vftable pointer)
 // CHECK-NEXT: sizeof=4, align=4
 // CHECK-NEXT: nvsize=4, nvalign=4
 
-
-// CHECK:       0 | struct CV
+// CHECK-LABEL: 0 | struct CV{{$}}
 // CHECK-NEXT:  0 |   (CV vbtable pointer)
 // CHECK-NEXT:  4 |   (vtordisp for vbase BV)
 // CHECK-NEXT:  8 |   struct BV (virtual base)
@@ -453,7 +450,7 @@ int main() {
 // CHECK: %struct.CV = type { i32*, i32, %struct.BV }
 // CHECK: %struct.CV.base = type { i32* }
 
-// CHECK:       0 | struct DV
+// CHECK-LABEL: 0 | struct DV{{$}}
 // CHECK-NEXT:  0 |   struct BV (primary base)
 // CHECK-NEXT:  0 |     struct AV (primary base)
 // CHECK-NEXT:  0 |       (AV vftable pointer)
@@ -462,7 +459,7 @@ int main() {
 
 // CHECK: %struct.DV = type { %struct.BV }
 
-// CHECK:       0 | struct EV
+// CHECK-LABEL: 0 | struct EV{{$}}
 // CHECK-NEXT:  0 |   struct DV (primary base)
 // CHECK-NEXT:  0 |     struct BV (primary base)
 // CHECK-NEXT:  0 |       struct AV (primary base)
@@ -487,15 +484,15 @@ namespace test1 {
   struct C : virtual A, virtual B { C(); virtual void foo(); };
   void test() { C *c; }
 
-// CHECK:        0 | struct test1::C
-// CHECK-NEXT:   0 |   (C vbtable pointer)
-// CHECK-NEXT:   4 |   (vtordisp for vbase A)
-// CHECK-NEXT:   8 |   struct test1::A (virtual base)
-// CHECK-NEXT:   8 |     (A vftable pointer)
-// CHECK-NEXT:  12 |   (vtordisp for vbase B)
-// CHECK-NEXT:  16 |   struct test1::B (virtual base)
-// CHECK-NEXT:  16 |     struct test1::A (primary base)
-// CHECK-NEXT:  16 |       (A vftable pointer)
-// CHECK-NEXT:  sizeof=20, align=4
-// CHECK-NEXT:  nvsize=4, nvalign=4
+  // CHECK-LABEL:  0 | struct test1::C{{$}}
+  // CHECK-NEXT:   0 |   (C vbtable pointer)
+  // CHECK-NEXT:   4 |   (vtordisp for vbase A)
+  // CHECK-NEXT:   8 |   struct test1::A (virtual base)
+  // CHECK-NEXT:   8 |     (A vftable pointer)
+  // CHECK-NEXT:  12 |   (vtordisp for vbase B)
+  // CHECK-NEXT:  16 |   struct test1::B (virtual base)
+  // CHECK-NEXT:  16 |     struct test1::A (primary base)
+  // CHECK-NEXT:  16 |       (A vftable pointer)
+  // CHECK-NEXT:  sizeof=20, align=4
+  // CHECK-NEXT:  nvsize=4, nvalign=4
 }

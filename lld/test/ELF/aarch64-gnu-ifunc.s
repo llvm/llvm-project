@@ -11,6 +11,7 @@
 // CHECK-NEXT:  Type: SHT_RELA
 // CHECK-NEXT:  Flags [
 // CHECK-NEXT:    SHF_ALLOC
+// CHECK-NEXT:    SHF_INFO_LINK
 // CHECK-NEXT:  ]
 // CHECK-NEXT:  Address: [[RELA:.*]]
 // CHECK-NEXT:  Offset: 0x158
@@ -46,17 +47,6 @@
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: __rela_iplt_end
-// CHECK-NEXT:    Value: 0x200188
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Local
-// CHECK-NEXT:    Type: None
-// CHECK-NEXT:    Other [
-// CHECK-NEXT:      STV_HIDDEN
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: .rela.dyn
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: __rela_iplt_start
 // CHECK-NEXT:    Value: 0x200158
 // CHECK-NEXT:    Size: 0
@@ -68,11 +58,22 @@
 // CHECK-NEXT:    Section: .rela.dyn
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x210190
+// CHECK-NEXT:    Name: __rela_iplt_end
+// CHECK-NEXT:    Value: 0x200188
+// CHECK-NEXT:    Size: 0
+// CHECK-NEXT:    Binding: Local
+// CHECK-NEXT:    Type: None
+// CHECK-NEXT:    Other [
+// CHECK-NEXT:      STV_HIDDEN
+// CHECK-NEXT:    ]
+// CHECK-NEXT:    Section: .rela.dyn
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Name: foo
+// CHECK-NEXT:    Value: 0x210188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: None
+// CHECK-NEXT:    Type: GNU_IFunc
 // CHECK-NEXT:    Other: 0
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
@@ -86,11 +87,11 @@
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x210188
+// CHECK-NEXT:    Name: _start
+// CHECK-NEXT:    Value: 0x210190
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: GNU_IFunc
+// CHECK-NEXT:    Type: None
 // CHECK-NEXT:    Other: 0
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
@@ -114,11 +115,11 @@
 // DISASM-NEXT: Disassembly of section .iplt:
 // DISASM-EMPTY:
 // DISASM-NEXT: <.iplt>:
-// DISASM-NEXT:  2101a0: adrp x16, #65536
+// DISASM-NEXT:  2101a0: adrp x16, 0x220000
 // DISASM-NEXT:  2101a4: ldr x17, [x16, #448]
 // DISASM-NEXT:  2101a8: add x16, x16, #448
 // DISASM-NEXT:  2101ac: br x17
-// DISASM-NEXT:  2101b0: adrp x16, #65536
+// DISASM-NEXT:  2101b0: adrp x16, 0x220000
 // DISASM-NEXT:  2101b4: ldr x17, [x16, #456]
 // DISASM-NEXT:  2101b8: add x16, x16, #456
 // DISASM-NEXT:  2101bc: br x17

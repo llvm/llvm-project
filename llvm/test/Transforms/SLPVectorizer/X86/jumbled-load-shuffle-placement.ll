@@ -27,8 +27,8 @@ define void @jumble1(i32* noalias nocapture readonly %A, i32* noalias nocapture 
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP1]], [[REORDER_SHUFFLE]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[TMP1]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
@@ -83,8 +83,8 @@ define void @jumble2(i32* noalias nocapture readonly %A, i32* noalias nocapture 
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[REORDER_SHUFFLE]], [[TMP1]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <4 x i32> [[SHUFFLE]], [[TMP1]]
 ; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3

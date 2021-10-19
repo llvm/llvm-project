@@ -25,8 +25,8 @@
 using namespace llvm;
 namespace {
 
-static const char *const FeedPrefix = "feed_";
-static const char *const FetchPrefix = "fetch_";
+const char FeedPrefix[] = "feed_";
+const char FetchPrefix[] = "fetch_";
 
 /// MLModelRunner - production mode implementation. It uses a AOT-compiled
 /// SavedModel for efficient execution.
@@ -52,7 +52,7 @@ ReleaseModeModelRunner::ReleaseModeModelRunner(LLVMContext &Ctx)
       CompiledModel(std::make_unique<llvm::InlinerSizeModel>()) {
   assert(CompiledModel && "The CompiledModel should be valid");
 
-  FeatureIndices.reserve(NumberOfFeatures);
+  FeatureIndices.resize(NumberOfFeatures);
 
   for (size_t I = 0; I < NumberOfFeatures; ++I) {
     const int Index =

@@ -7,10 +7,10 @@
 ; RUN:  --implicit-check-not cmpw --implicit-check-not cmpd --implicit-check-not cmpl
 ; ModuleID = 'ComparisonTestCases/testComparesieqss.c'
 
-@glob = local_unnamed_addr global i16 0, align 2
+@glob = dso_local local_unnamed_addr global i16 0, align 2
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_ieqss(i16 signext %a, i16 signext %b) {
+define dso_local signext i32 @test_ieqss(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_ieqss:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
@@ -37,7 +37,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_ieqss_sext(i16 signext %a, i16 signext %b) {
+define dso_local signext i32 @test_ieqss_sext(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_ieqss_sext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
@@ -67,7 +67,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_ieqss_z(i16 signext %a) {
+define dso_local signext i32 @test_ieqss_z(i16 signext %a) {
 ; CHECK-LABEL: test_ieqss_z:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -91,7 +91,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @test_ieqss_sext_z(i16 signext %a) {
+define dso_local signext i32 @test_ieqss_sext_z(i16 signext %a) {
 ; CHECK-LABEL: test_ieqss_sext_z:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -118,7 +118,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_ieqss_store(i16 signext %a, i16 signext %b) {
+define dso_local void @test_ieqss_store(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_ieqss_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
@@ -129,12 +129,11 @@ define void @test_ieqss_store(i16 signext %a, i16 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ieqss_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ieqss_store:
@@ -153,7 +152,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_ieqss_sext_store(i16 signext %a, i16 signext %b) {
+define dso_local void @test_ieqss_sext_store(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_ieqss_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xor r3, r3, r4
@@ -165,13 +164,12 @@ define void @test_ieqss_sext_store(i16 signext %a, i16 signext %b) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ieqss_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    xor r3, r3, r4
+; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r5)
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ieqss_sext_store:
@@ -191,7 +189,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_ieqss_z_store(i16 signext %a) {
+define dso_local void @test_ieqss_z_store(i16 signext %a) {
 ; CHECK-LABEL: test_ieqss_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -201,11 +199,10 @@ define void @test_ieqss_z_store(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ieqss_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ieqss_z_store:
@@ -223,7 +220,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @test_ieqss_sext_z_store(i16 signext %a) {
+define dso_local void @test_ieqss_sext_z_store(i16 signext %a) {
 ; CHECK-LABEL: test_ieqss_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cntlzw r3, r3
@@ -234,12 +231,11 @@ define void @test_ieqss_sext_z_store(i16 signext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_ieqss_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    addis r4, r2, .LC0@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
-; CHECK-BE-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    sth r3, 0(r4)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_ieqss_sext_z_store:

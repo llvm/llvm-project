@@ -12,7 +12,7 @@ target triple = "armv8-arm-none-eabi"
 define <8 x i8> @tbl1_8x8(<8 x i8> %vec) {
 ; CHECK-LABEL: @tbl1_8x8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC:%.*]], <8 x i8> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC:%.*]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    ret <8 x i8> [[TMP0]]
 ;
 entry:

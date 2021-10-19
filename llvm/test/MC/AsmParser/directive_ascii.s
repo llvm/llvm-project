@@ -48,3 +48,11 @@ TEST6:
 TEST7:
         .ascii "\x64\Xa6B"
         .ascii "\xface\x0Fe"
+
+# CHECK-LABEL: TEST8:
+# CHECK-NEXT: .byte 65
+# CHECK-NEXT: .byte 66
+# CHECK-NEXT: .byte 67
+# CHECK-NEXT: .byte 68
+TEST8:
+        .ascii "A", "B" "C", "D"

@@ -1,5 +1,6 @@
 ; RUN: llc --mtriple x86_64-apple-darwin -filetype=obj -O0 %s -o %t.o
 ; RUN: llvm-objdump --macho -d --no-show-raw-insn %t.o | FileCheck %s
+; RUN: llvm-otool -tv %t.o | FileCheck %s
 
 ; CHECK: .long {{[0-9]+}}	@ KIND_JUMP_TABLE32
 ; CHECK: .long {{[0-9]+}}	@ KIND_JUMP_TABLE32

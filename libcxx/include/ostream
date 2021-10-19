@@ -126,20 +126,19 @@ template <class charT, class traits>
   basic_ostream<charT,traits>& flush(basic_ostream<charT,traits>& os);
 
 // rvalue stream insertion
-template <class charT, class traits, class T>
-  basic_ostream<charT, traits>&
-  operator<<(basic_ostream<charT, traits>&& os, const T& x);
+template <class Stream, class T>
+  Stream&& operator<<(Stream&& os, const T& x);
 
 }  // std
 
 */
 
 #include <__config>
-#include <ios>
-#include <streambuf>
-#include <locale>
-#include <iterator>
 #include <bitset>
+#include <ios>
+#include <iterator>
+#include <locale>
+#include <streambuf>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -166,27 +165,21 @@ public:
     { this->init(__sb); }
     virtual ~basic_ostream();
 protected:
-#ifndef _LIBCPP_CXX03_LANG
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream(basic_ostream&& __rhs);
 
     // 27.7.2.3 Assign/swap
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream& operator=(basic_ostream&& __rhs);
-#endif
+
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     void swap(basic_ostream& __rhs)
     { basic_ios<char_type, traits_type>::swap(__rhs); }
 
-#ifndef _LIBCPP_CXX03_LANG
     basic_ostream           (const basic_ostream& __rhs) = delete;
     basic_ostream& operator=(const basic_ostream& __rhs) = delete;
-#else
-    basic_ostream           (const basic_ostream& __rhs); // not defined
-    basic_ostream& operator=(const basic_ostream& __rhs); // not defined
-#endif
-public:
 
+public:
     // 27.7.2.4 Prefix/suffix:
     class _LIBCPP_TEMPLATE_VIS sentry;
 
@@ -255,8 +248,7 @@ public:
     ~sentry();
 
     _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_EXPLICIT
-        operator bool() const {return __ok_;}
+    explicit operator bool() const {return __ok_;}
 };
 
 template <class _CharT, class _Traits>
@@ -281,7 +273,7 @@ basic_ostream<_CharT, _Traits>::sentry::~sentry()
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             if (__os_.rdbuf()->pubsync() == -1)
                 __os_.setstate(ios_base::badbit);
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -289,11 +281,9 @@ basic_ostream<_CharT, _Traits>::sentry::~sentry()
         catch (...)
         {
         }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     }
 }
-
-#ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::basic_ostream(basic_ostream&& __rhs)
@@ -309,8 +299,6 @@ basic_ostream<_CharT, _Traits>::operator=(basic_ostream&& __rhs)
     return *this;
 }
 
-#endif  // _LIBCPP_CXX03_LANG
-
 template <class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>::~basic_ostream()
 {
@@ -323,7 +311,7 @@ basic_ostream<_CharT, _Traits>::operator<<(basic_streambuf<char_type, traits_typ
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -332,7 +320,7 @@ basic_ostream<_CharT, _Traits>::operator<<(basic_streambuf<char_type, traits_typ
 #ifndef _LIBCPP_NO_EXCEPTIONS
                 try
                 {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
                     typedef istreambuf_iterator<_CharT, _Traits> _Ip;
                     typedef ostreambuf_iterator<_CharT, _Traits> _Op;
                     _Ip __i(__sb);
@@ -353,7 +341,7 @@ basic_ostream<_CharT, _Traits>::operator<<(basic_streambuf<char_type, traits_typ
                 {
                     this->__set_failbit_and_consider_rethrow();
                 }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
             }
             else
                 this->setstate(ios_base::badbit);
@@ -364,7 +352,7 @@ basic_ostream<_CharT, _Traits>::operator<<(basic_streambuf<char_type, traits_typ
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -375,7 +363,7 @@ basic_ostream<_CharT, _Traits>::operator<<(bool __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -390,7 +378,7 @@ basic_ostream<_CharT, _Traits>::operator<<(bool __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -401,7 +389,7 @@ basic_ostream<_CharT, _Traits>::operator<<(short __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -420,7 +408,7 @@ basic_ostream<_CharT, _Traits>::operator<<(short __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -431,7 +419,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned short __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -446,7 +434,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned short __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -457,7 +445,7 @@ basic_ostream<_CharT, _Traits>::operator<<(int __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -476,7 +464,7 @@ basic_ostream<_CharT, _Traits>::operator<<(int __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -487,7 +475,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned int __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -502,7 +490,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned int __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -513,7 +501,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -528,7 +516,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -539,7 +527,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned long __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -554,7 +542,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned long __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -565,7 +553,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long long __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -580,7 +568,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long long __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -591,7 +579,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned long long __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -606,7 +594,7 @@ basic_ostream<_CharT, _Traits>::operator<<(unsigned long long __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -617,7 +605,7 @@ basic_ostream<_CharT, _Traits>::operator<<(float __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -632,7 +620,7 @@ basic_ostream<_CharT, _Traits>::operator<<(float __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -643,7 +631,7 @@ basic_ostream<_CharT, _Traits>::operator<<(double __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -658,7 +646,7 @@ basic_ostream<_CharT, _Traits>::operator<<(double __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -669,7 +657,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long double __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -684,7 +672,7 @@ basic_ostream<_CharT, _Traits>::operator<<(long double __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -695,7 +683,7 @@ basic_ostream<_CharT, _Traits>::operator<<(const void* __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -710,7 +698,7 @@ basic_ostream<_CharT, _Traits>::operator<<(const void* __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -722,7 +710,7 @@ __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
         if (__s)
         {
@@ -743,7 +731,7 @@ __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
     {
         __os.__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return __os;
 }
 
@@ -762,7 +750,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, char __cn)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
         if (__s)
         {
@@ -784,7 +772,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, char __cn)
     {
         __os.__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return __os;
 }
 
@@ -823,7 +811,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         typename basic_ostream<_CharT, _Traits>::sentry __s(__os);
         if (__s)
         {
@@ -858,7 +846,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn)
     {
         __os.__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return __os;
 }
 
@@ -892,7 +880,7 @@ basic_ostream<_CharT, _Traits>::put(char_type __c)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __s(*this);
         if (__s)
         {
@@ -908,7 +896,7 @@ basic_ostream<_CharT, _Traits>::put(char_type __c)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -919,7 +907,7 @@ basic_ostream<_CharT, _Traits>::write(const char_type* __s, streamsize __n)
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         sentry __sen(*this);
         if (__sen && __n)
         {
@@ -932,7 +920,7 @@ basic_ostream<_CharT, _Traits>::write(const char_type* __s, streamsize __n)
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -943,7 +931,7 @@ basic_ostream<_CharT, _Traits>::flush()
 #ifndef _LIBCPP_NO_EXCEPTIONS
     try
     {
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
         if (this->rdbuf())
         {
             sentry __s(*this);
@@ -959,7 +947,7 @@ basic_ostream<_CharT, _Traits>::flush()
     {
         this->__set_badbit_and_consider_rethrow();
     }
-#endif  // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_NO_EXCEPTIONS
     return *this;
 }
 
@@ -1026,23 +1014,24 @@ flush(basic_ostream<_CharT, _Traits>& __os)
     return __os;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
+template <class _Stream, class _Tp, class = void>
+struct __is_ostreamable : false_type { };
 
 template <class _Stream, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    !is_lvalue_reference<_Stream>::value &&
-    is_base_of<ios_base, _Stream>::value,
-    _Stream&&
->::type
-operator<<(_Stream&& __os, const _Tp& __x)
+struct __is_ostreamable<_Stream, _Tp, decltype(
+    declval<_Stream>() << declval<_Tp>(), void()
+)> : true_type { };
+
+template <class _Stream, class _Tp, class = typename enable_if<
+    _And<is_base_of<ios_base, _Stream>,
+         __is_ostreamable<_Stream&, const _Tp&> >::value
+>::type>
+_LIBCPP_INLINE_VISIBILITY
+_Stream&& operator<<(_Stream&& __os, const _Tp& __x)
 {
     __os << __x;
     return _VSTD::move(__os);
 }
-
-#endif  // _LIBCPP_CXX03_LANG
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_ostream<_CharT, _Traits>&
@@ -1097,11 +1086,11 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x)
                          use_facet<ctype<_CharT> >(__os.getloc()).widen('1'));
 }
 
-#ifndef _LIBCPP_DO_NOT_ASSUME_STREAMS_EXPLICIT_INSTANTIATION_IN_DYLIB
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>)
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>)
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_OSTREAM
+#endif // _LIBCPP_OSTREAM

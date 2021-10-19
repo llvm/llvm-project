@@ -11,8 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/TypeUtilities.h"
+
+#include <numeric>
+
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 
@@ -84,6 +87,68 @@ LogicalResult mlir::verifyCompatibleShape(Type type1, Type type2) {
     return success();
 
   return verifyCompatibleShape(sType1.getShape(), sType2.getShape());
+}
+
+/// Returns success if the given two arrays have the same number of elements and
+/// each pair wise entries have compatible shape.
+LogicalResult mlir::verifyCompatibleShapes(TypeRange types1, TypeRange types2) {
+  if (types1.size() != types2.size())
+    return failure();
+  for (auto it : llvm::zip_first(types1, types2))
+    if (failed(verifyCompatibleShape(std::get<0>(it), std::get<1>(it))))
+      return failure();
+  return success();
+}
+
+LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
+  if (dims.empty())
+    return success();
+  auto staticDim = std::accumulate(
+      dims.begin(), dims.end(), dims.front(), [](auto fold, auto dim) {
+        return ShapedType::isDynamic(dim) ? fold : dim;
+      });
+  return success(llvm::all_of(dims, [&](auto dim) {
+    return ShapedType::isDynamic(dim) || dim == staticDim;
+  }));
+}
+
+/// Returns success if all given types have compatible shapes. That is, they are
+/// all scalars (not shaped), or they are all shaped types and any ranked shapes
+/// have compatible dimensions. Dimensions are compatible if all non-dynamic
+/// dims are equal. The element type does not matter.
+LogicalResult mlir::verifyCompatibleShapes(TypeRange types) {
+  auto shapedTypes = llvm::to_vector<8>(llvm::map_range(
+      types, [](auto type) { return type.template dyn_cast<ShapedType>(); }));
+  // Return failure if some, but not all are not shaped. Return early if none
+  // are shaped also.
+  if (llvm::none_of(shapedTypes, [](auto t) { return t; }))
+    return success();
+  if (!llvm::all_of(shapedTypes, [](auto t) { return t; }))
+    return failure();
+
+  // Remove all unranked shapes
+  auto shapes = llvm::to_vector<8>(llvm::make_filter_range(
+      shapedTypes, [](auto shapedType) { return shapedType.hasRank(); }));
+  if (shapes.empty())
+    return success();
+
+  // All ranks should be equal
+  auto firstRank = shapes.front().getRank();
+  if (llvm::any_of(shapes,
+                   [&](auto shape) { return firstRank != shape.getRank(); }))
+    return failure();
+
+  for (unsigned i = 0; i < firstRank; ++i) {
+    // Retrieve all ranked dimensions
+    auto dims = llvm::to_vector<8>(llvm::map_range(
+        llvm::make_filter_range(
+            shapes, [&](auto shape) { return shape.getRank() >= i; }),
+        [&](auto shape) { return shape.getDimSize(i); }));
+    if (verifyCompatibleDims(dims).failed())
+      return failure();
+  }
+
+  return success();
 }
 
 OperandElementTypeIterator::OperandElementTypeIterator(

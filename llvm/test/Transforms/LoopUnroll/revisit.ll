@@ -140,9 +140,9 @@ l0.0.latch:
 ;
 ; Revisit the children of the outer loop that are part of the epilogue.
 ; 
-; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.0.epil<header>
-; CHECK-NOT: LoopFullUnrollPass
 ; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.1.epil<header>
+; CHECK-NOT: LoopFullUnrollPass
+; CHECK: LoopFullUnrollPass on Loop at depth 2 containing: %l0.0.0.epil<header>
 ; CHECK-NOT: LoopFullUnrollPass
 l0.latch:
   br label %l0

@@ -1,7 +1,9 @@
 ;; Test mips64:
 ; RUN: llc -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips64-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK64
+; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips64-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK64
 ;; Test mips64el:
 ; RUN: llc -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips64el-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK64el
+; RUN: llc -force-instr-ref-livedebugvalues=1 -emit-call-site-info -stop-after=livedebugvalues -mtriple=mips64el-linux-gnu -o - %s | FileCheck %s --check-prefix=CHECK64el
 
 ;; Built from source:
 ;; extern long fn1(long,long,long);

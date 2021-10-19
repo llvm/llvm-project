@@ -194,10 +194,10 @@ private:
   void determineKillsAndDefs();
 
   /// Add all Reg Units that Reg contains to BV.
-  void addRegUnits(BitVector &BV, Register Reg);
+  void addRegUnits(BitVector &BV, MCRegister Reg);
 
   /// Remove all Reg Units that \p Reg contains from \p BV.
-  void removeRegUnits(BitVector &BV, Register Reg);
+  void removeRegUnits(BitVector &BV, MCRegister Reg);
 
   /// Return the candidate register that is unused for the longest after
   /// StartMI. UseMI is set to the instruction where the search stopped.
@@ -210,9 +210,6 @@ private:
 
   /// Initialize RegisterScavenger.
   void init(MachineBasicBlock &MBB);
-
-  /// Mark live-in registers of basic block as used.
-  void setLiveInsUsed(const MachineBasicBlock &MBB);
 
   /// Spill a register after position \p After and reload it before position
   /// \p UseMI.

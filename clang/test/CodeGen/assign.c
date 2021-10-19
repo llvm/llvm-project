@@ -2,7 +2,7 @@
 
 // Check that we don't generate unnecessary reloads.
 //
-// CHECK-LABEL: define void @f0()
+// CHECK-LABEL: define{{.*}} void @f0()
 // CHECK:      [[x_0:%.*]] = alloca i32, align 4
 // CHECK-NEXT: [[y_0:%.*]] = alloca i32, align 4
 // CHECK-NEXT: store i32 1, i32* [[x_0]]
@@ -18,7 +18,7 @@ void f0() {
 // This used to test that we generate reloads for volatile access,
 // but that does not appear to be correct behavior for C.
 //
-// CHECK-LABEL: define void @f1()
+// CHECK-LABEL: define{{.*}} void @f1()
 // CHECK:      [[x_1:%.*]] = alloca i32, align 4
 // CHECK-NEXT: [[y_1:%.*]] = alloca i32, align 4
 // CHECK-NEXT: store volatile i32 1, i32* [[x_1]]

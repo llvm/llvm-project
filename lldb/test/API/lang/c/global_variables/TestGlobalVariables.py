@@ -37,7 +37,6 @@ class GlobalVariablesTestCase(TestBase):
                     substrs=['42'])
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    @expectedFailureNetBSD
     def test_c_global_variables(self):
         """Test 'frame variable --scope --no-args' which omits args and shows scopes."""
         self.build()

@@ -1,4 +1,4 @@
-; RUN: opt %s -debugify -simplifycfg -S | FileCheck %s
+; RUN: opt %s -debugify -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 ; Tests Bug 37966
 
 define void @bar(i32 %aa) {

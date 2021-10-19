@@ -91,11 +91,15 @@ int main() {
   char s0[10], s1[] = "Hello";
   V(strcat, (s0, s1));
   V(strcmp, (s0, s1));
+  V(strdup, (s0));
   V(strncat, (s0, s1, n));
+  V(strndup, (s0, n));
   V(strchr, (s0, s1[0]));
   V(strrchr, (s0, s1[0]));
   V(strcpy, (s0, s1));
   V(strncpy, (s0, s1, n));
+  V(sprintf, (s0, "%s", s1));
+  V(snprintf, (s0, n, "%s", s1));
   
   // Object size checking
   V(__memset_chk, (s0, 0, sizeof s0, n));
@@ -143,7 +147,7 @@ void foo() {
  __builtin_strcat(0, 0);
 }
 
-// CHECK-LABEL: define void @bar(
+// CHECK-LABEL: define{{.*}} void @bar(
 void bar() {
   float f;
   double d;
@@ -178,7 +182,7 @@ void bar() {
 }
 // CHECK: }
 
-// CHECK-LABEL: define void @test_conditional_bzero
+// CHECK-LABEL: define{{.*}} void @test_conditional_bzero
 void test_conditional_bzero() {
   char dst[20];
   int _sz = 20, len = 20;
@@ -192,7 +196,7 @@ void test_conditional_bzero() {
   // CHECK-NOT: phi
 }
 
-// CHECK-LABEL: define void @test_float_builtins
+// CHECK-LABEL: define{{.*}} void @test_float_builtins
 void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   volatile int res;
   res = __builtin_isinf(*H);
@@ -275,7 +279,7 @@ void test_float_builtins(__fp16 *H, float F, double D, long double LD) {
   // CHECK: call i32 @llvm.flt.rounds(
 }
 
-// CHECK-LABEL: define void @test_float_builtin_ops
+// CHECK-LABEL: define{{.*}} void @test_float_builtin_ops
 void test_float_builtin_ops(float F, double D, long double LD) {
   volatile float resf;
   volatile double resd;
@@ -428,7 +432,7 @@ void test_float_builtin_ops(float F, double D, long double LD) {
 // __builtin_longjmp isn't supported on all platforms, so only test it on X86.
 #ifdef __x86_64__
 
-// CHECK-LABEL: define void @test_builtin_longjmp
+// CHECK-LABEL: define{{.*}} void @test_builtin_longjmp
 void test_builtin_longjmp(void **buffer) {
   // CHECK: [[BITCAST:%.*]] = bitcast
   // CHECK-NEXT: call void @llvm.eh.sjlj.longjmp(i8* [[BITCAST]])
@@ -438,14 +442,28 @@ void test_builtin_longjmp(void **buffer) {
 
 #endif
 
-// CHECK-LABEL: define i64 @test_builtin_readcyclecounter
+// CHECK-LABEL: define{{.*}} void @test_memory_builtins
+void test_memory_builtins(int n) {
+  // CHECK: call i8* @malloc
+  void * p = __builtin_malloc(n);
+  // CHECK: call void @free
+  __builtin_free(p);
+  // CHECK: call i8* @calloc
+  p = __builtin_calloc(1, n);
+  // CHECK: call i8* @realloc
+  p = __builtin_realloc(p, n);
+  // CHECK: call void @free
+  __builtin_free(p);
+}
+
+// CHECK-LABEL: define{{.*}} i64 @test_builtin_readcyclecounter
 long long test_builtin_readcyclecounter() {
   // CHECK: call i64 @llvm.readcyclecounter()
   return __builtin_readcyclecounter();
 }
 
 /// __builtin_launder should be a NOP in C since there are no vtables.
-// CHECK-LABEL: define void @test_builtin_launder
+// CHECK-LABEL: define{{.*}} void @test_builtin_launder
 void test_builtin_launder(int *p) {
   // CHECK: [[TMP:%.*]] = load i32*,
   // CHECK-NOT: @llvm.launder
@@ -454,7 +472,7 @@ void test_builtin_launder(int *p) {
 }
 
 // __warn_memset_zero_len should be NOP, see https://sourceware.org/bugzilla/show_bug.cgi?id=25399
-// CHECK-LABEL: define void @test___warn_memset_zero_len
+// CHECK-LABEL: define{{.*}} void @test___warn_memset_zero_len
 void test___warn_memset_zero_len() {
   // CHECK-NOT: @__warn_memset_zero_len
   __warn_memset_zero_len();
@@ -463,7 +481,7 @@ void test___warn_memset_zero_len() {
 // Behavior of __builtin_os_log differs between platforms, so only test on X86
 #ifdef __x86_64__
 
-// CHECK-LABEL: define void @test_builtin_os_log
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log
 // CHECK: (i8* %[[BUF:.*]], i32 %[[I:.*]], i8* %[[DATA:.*]])
 void test_builtin_os_log(void *buf, int i, const char *data) {
   volatile int len;
@@ -587,7 +605,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
 // CHECK: %[[V3:.*]] = load i64, i64* %[[ARG3_ADDR]], align 8
 // CHECK: store i64 %[[V3]], i64* %[[ARGDATACAST12]], align 1
 
-// CHECK-LABEL: define void @test_builtin_os_log_wide
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_wide
 // CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32* %[[STR:.*]])
 typedef int wchar_t;
 void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
@@ -633,7 +651,7 @@ void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
 // CHECK: %[[V0:.*]] = load i64, i64* %[[ARG0_ADDR]], align 8
 // CHECK: store i64 %[[V0]], i64* %[[ARGDATACAST]], align 1
 
-// CHECK-LABEL: define void @test_builtin_os_log_precision_width
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_precision_width
 // CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32 %[[PRECISION:.*]], i32 %[[WIDTH:.*]])
 void test_builtin_os_log_precision_width(void *buf, const char *data,
                                          int precision, int width) {
@@ -701,7 +719,7 @@ void test_builtin_os_log_precision_width(void *buf, const char *data,
 // CHECK: %[[V2:.*]] = load i64, i64* %[[ARG2_ADDR]], align 8
 // CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST8]], align 1
 
-// CHECK-LABEL: define void @test_builtin_os_log_invalid
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_invalid
 // CHECK: (i8* %[[BUF:.*]], i32 %[[DATA:.*]])
 void test_builtin_os_log_invalid(void *buf, int data) {
   volatile int len;
@@ -742,7 +760,7 @@ void test_builtin_os_log_invalid(void *buf, int data) {
 // CHECK: %[[V0:.*]] = load i32, i32* %[[ARG0_ADDR]], align 4
 // CHECK: store i32 %[[V0]], i32* %[[ARGDATACAST]], align 1
 
-// CHECK-LABEL: define void @test_builtin_os_log_percent
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_percent
 // CHECK: (i8* %[[BUF:.*]], i8* %[[DATA1:.*]], i8* %[[DATA2:.*]])
 // Check that the %% which does not consume any argument is correctly handled
 void test_builtin_os_log_percent(void *buf, const char *data1, const char *data2) {
@@ -801,7 +819,7 @@ void test_builtin_os_log_percent(void *buf, const char *data1, const char *data2
 
 // Check that the following two functions call the same helper function.
 
-// CHECK-LABEL: define void @test_builtin_os_log_merge_helper0
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_merge_helper0
 // CHECK: call void @__os_log_helper_1_0_2_4_0_8_0(
 void test_builtin_os_log_merge_helper0(void *buf, int i, double d) {
   __builtin_os_log_format(buf, "%d %f", i, d);
@@ -809,7 +827,7 @@ void test_builtin_os_log_merge_helper0(void *buf, int i, double d) {
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_2_4_0_8_0(
 
-// CHECK-LABEL: define void @test_builtin_os_log_merge_helper1
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_merge_helper1
 // CHECK: call void @__os_log_helper_1_0_2_4_0_8_0(
 void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
   __builtin_os_log_format(buf, "%u %lld", u, ll);
@@ -817,7 +835,7 @@ void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
 
 // Check that this function doesn't write past the end of array 'buf'.
 
-// CHECK-LABEL: define void @test_builtin_os_log_errno
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_errno
 void test_builtin_os_log_errno() {
   // CHECK-NOT: @stacksave
   // CHECK: %[[BUF:.*]] = alloca [4 x i8], align 1
@@ -845,7 +863,7 @@ void test_builtin_os_log_errno() {
 // CHECK: store i8 0, i8* %[[ARGSIZE]], align 1
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define void @test_builtin_os_log_long_double
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log_long_double
 // CHECK: (i8* %[[BUF:.*]], x86_fp80 %[[LD:.*]])
 void test_builtin_os_log_long_double(void *buf, long double ld) {
   // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8

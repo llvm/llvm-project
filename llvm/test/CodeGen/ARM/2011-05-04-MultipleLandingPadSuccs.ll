@@ -1,4 +1,5 @@
-; RUN: llc < %s -verify-machineinstrs
+; RUN: llc -simplifycfg-require-and-preserve-domtree=1 < %s -verify-machineinstrs
+
 ; <rdar://problem/9187612>
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:32-n32"
 target triple = "thumbv7-apple-darwin"

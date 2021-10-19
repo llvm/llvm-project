@@ -33,7 +33,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
-#include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -109,7 +108,7 @@ void CanonicalizeFreezeInLoopsImpl::InsertFreezeAndForgetFromSCEV(Use &U) {
   auto *ValueToFr = U.get();
   assert(L->contains(UserI->getParent()) &&
          "Should not process an instruction that isn't inside the loop");
-  if (isGuaranteedNotToBeUndefOrPoison(ValueToFr, UserI, &DT))
+  if (isGuaranteedNotToBeUndefOrPoison(ValueToFr, nullptr, UserI, &DT))
     return;
 
   LLVM_DEBUG(dbgs() << "canonfr: inserting freeze:\n");
@@ -176,7 +175,7 @@ bool CanonicalizeFreezeInLoopsImpl::run() {
     assert(StepI && "Step instruction should have been found");
 
     // Drop flags from the step instruction.
-    if (!isGuaranteedNotToBeUndefOrPoison(StepI, StepI, &DT)) {
+    if (!isGuaranteedNotToBeUndefOrPoison(StepI, nullptr, StepI, &DT)) {
       LLVM_DEBUG(dbgs() << "canonfr: drop flags: " << *StepI << "\n");
       StepI->dropPoisonGeneratingFlags();
       SE.forgetValue(StepI);

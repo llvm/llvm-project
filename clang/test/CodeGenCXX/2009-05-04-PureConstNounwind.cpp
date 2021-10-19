@@ -3,7 +3,7 @@ int c(void) __attribute__((const));
 int p(void) __attribute__((pure));
 int t(void);
 
-// CHECK: define i32 @_Z1fv() [[TF:#[0-9]+]] {
+// CHECK: define{{.*}} i32 @_Z1fv() [[TF:#[0-9]+]] {
 int f(void) {
   // CHECK: call i32 @_Z1cv() [[NUW_RN_CALL:#[0-9]+]]
   // CHECK: call i32 @_Z1pv() [[NUW_RO_CALL:#[0-9]+]]
@@ -15,8 +15,8 @@ int f(void) {
 // CHECK: declare i32 @_Z1tv() [[TF2:#[0-9]+]]
 
 // CHECK: attributes [[TF]] = { {{.*}} }
-// CHECK: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
-// CHECK: attributes [[NUW_RO]] = { nounwind readonly{{.*}} }
+// CHECK: attributes [[NUW_RN]] = { nounwind readnone willreturn{{.*}} }
+// CHECK: attributes [[NUW_RO]] = { nounwind readonly willreturn{{.*}} }
 // CHECK: attributes [[TF2]] = { {{.*}} }
-// CHECK: attributes [[NUW_RN_CALL]] = { nounwind readnone }
-// CHECK: attributes [[NUW_RO_CALL]] = { nounwind readonly }
+// CHECK: attributes [[NUW_RN_CALL]] = { nounwind readnone willreturn }
+// CHECK: attributes [[NUW_RO_CALL]] = { nounwind readonly willreturn }

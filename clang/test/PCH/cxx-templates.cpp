@@ -180,3 +180,8 @@ namespace DependentTemplateName {
     getWithIdentifier<HasMember>();
   }
 }
+
+namespace ClassTemplateCycle {
+  extern T t;
+  int k = M;
+}

@@ -257,9 +257,8 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
 		printf("cb_arg%d", i);
 	}
 	printf(")\n");
-	printf("            except:\n");
-	printf("                import sys\n");
-	printf("                exc_info[0] = sys.exc_info()\n");
+	printf("            except BaseException as e:\n");
+	printf("                exc_info[0] = e\n");
 	if (is_isl_stat(return_type) || is_isl_bool(return_type))
 		printf("                return -1\n");
 	else
@@ -325,9 +324,8 @@ void python_generator::print_arg_in_call(FunctionDecl *fd, const char *fmt,
  */
 static void print_rethrow(int indent, const char *exc_info)
 {
-	print_indent(indent, "if %s != None:\n", exc_info);
-	print_indent(indent, "    raise (%s[0], %s[1], %s[2])\n",
-		exc_info, exc_info, exc_info);
+	print_indent(indent, "if %s is not None:\n", exc_info);
+	print_indent(indent, "    raise %s\n", exc_info);
 }
 
 /* Print code with the given indentation that checks

@@ -34,8 +34,8 @@ int main(int, char**)
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -50,14 +50,14 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
-            test_compare<std::equal_to<int> >(3),
+            test_hash<int>(2),
+            test_equal_to<int>(3),
             A(4)
            );
         c = std::move(c0);
@@ -67,8 +67,8 @@ int main(int, char**)
         CheckConsecutiveValues<C::const_iterator>(c.find(2), c.end(), 2, 2);
         CheckConsecutiveValues<C::const_iterator>(c.find(3), c.end(), 3, 1);
         CheckConsecutiveValues<C::const_iterator>(c.find(4), c.end(), 4, 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(4));
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
@@ -79,8 +79,8 @@ int main(int, char**)
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -95,16 +95,17 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
-            test_compare<std::equal_to<int> >(3),
+            test_hash<int>(2),
+            test_equal_to<int>(3),
             A(10)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
@@ -112,20 +113,21 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
     {
         typedef other_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -140,16 +142,17 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             A(10)
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
-            test_compare<std::equal_to<int> >(3),
+            test_hash<int>(2),
+            test_equal_to<int>(3),
             A(4)
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
@@ -157,20 +160,21 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
     {
         typedef test_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -185,16 +189,17 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             A()
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
-            test_compare<std::equal_to<int> >(3),
+            test_hash<int>(2),
+            test_equal_to<int>(3),
             A()
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
@@ -202,20 +207,21 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
     {
         typedef min_allocator<int> A;
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -230,16 +236,17 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             A()
            );
         C c(a, a + 2,
             7,
-            test_hash<std::hash<int> >(2),
-            test_compare<std::equal_to<int> >(3),
+            test_hash<int>(2),
+            test_equal_to<int>(3),
             A()
            );
+        C::iterator it0 = c0.begin();
         c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
@@ -247,14 +254,15 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
+        assert(it0 == c.begin()); // Iterators remain valid
     }
 
   return 0;

@@ -16,6 +16,7 @@
 #include <chrono>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace lld {
 
@@ -37,7 +38,8 @@ class Timer {
 public:
   Timer(llvm::StringRef name, Timer &parent);
 
-  static Timer &root();
+  // Creates the root timer.
+  explicit Timer(llvm::StringRef name);
 
   void addToTotal(std::chrono::nanoseconds time) { total += time.count(); }
   void print();
@@ -45,7 +47,6 @@ public:
   double millis() const;
 
 private:
-  explicit Timer(llvm::StringRef name);
   void print(int depth, double totalDuration, bool recurse = true) const;
 
   std::atomic<std::chrono::nanoseconds::rep> total;

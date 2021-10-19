@@ -18,13 +18,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_GCNITERATIVESCHEDULER_H
 
 #include "GCNRegPressure.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/Support/Allocator.h"
-#include <limits>
-#include <memory>
-#include <vector>
 
 namespace llvm {
 

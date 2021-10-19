@@ -20,11 +20,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h" // for WebAssembly::ARGUMENT_*
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyDebugValueManager.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -121,14 +121,9 @@ static void convertImplicitDefToConstZero(MachineInstr *MI,
         Type::getDoubleTy(MF.getFunction().getContext())));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
   } else if (RegClass == &WebAssembly::V128RegClass) {
-    // TODO: Replace this with v128.const 0 once that is supported in V8
-    Register TempReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    MI->setDesc(TII->get(WebAssembly::SPLAT_v4i32));
-    MI->addOperand(MachineOperand::CreateReg(TempReg, false));
-    MachineInstr *Const = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                                  TII->get(WebAssembly::CONST_I32), TempReg)
-                              .addImm(0);
-    LIS.InsertMachineInstrInMaps(*Const);
+    MI->setDesc(TII->get(WebAssembly::CONST_V128_I64x2));
+    MI->addOperand(MachineOperand::CreateImm(0));
+    MI->addOperand(MachineOperand::CreateImm(0));
   } else {
     llvm_unreachable("Unexpected reg class");
   }
@@ -342,7 +337,7 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
   // current def in the stack, which cannot be achieved, even with locals.
-  for (const auto &SubsequentDef : drop_begin(DefI->defs(), 1)) {
+  for (const auto &SubsequentDef : drop_begin(DefI->defs())) {
     for (const auto &PriorUse : UseI->uses()) {
       if (&PriorUse == Use)
         break;
@@ -359,10 +354,9 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   if (NextI == Insert)
     return true;
 
-  // 'catch' and 'extract_exception' should be the first instruction of a BB and
-  // cannot move.
-  if (DefI->getOpcode() == WebAssembly::CATCH ||
-      DefI->getOpcode() == WebAssembly::EXTRACT_EXCEPTION_I32)
+  // 'catch' and 'catch_all' should be the first instruction of a BB and cannot
+  // move.
+  if (WebAssembly::isCatch(DefI->getOpcode()))
     return false;
 
   // Check for register dependencies.
@@ -595,7 +589,7 @@ static MachineInstr *rematerializeCheapDef(
   if (IsDead) {
     LLVM_DEBUG(dbgs() << " - Deleting original\n");
     SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
-    LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
+    LIS.removePhysRegDefAt(MCRegister::from(WebAssembly::ARGUMENTS), Idx);
     LIS.removeInterval(Reg);
     LIS.RemoveMachineInstrFromMaps(Def);
     Def.eraseFromParent();
@@ -693,7 +687,7 @@ class TreeWalkerState {
 public:
   explicit TreeWalkerState(MachineInstr *Insert) {
     const iterator_range<mop_iterator> &Range = Insert->explicit_uses();
-    if (Range.begin() != Range.end())
+    if (!Range.empty())
       Worklist.push_back(reverse(Range));
   }
 
@@ -702,11 +696,10 @@ public:
   MachineOperand &pop() {
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
-    Range = drop_begin(Range, 1);
-    if (Range.begin() == Range.end())
+    Range = drop_begin(Range);
+    if (Range.empty())
       Worklist.pop_back();
-    assert((Worklist.empty() ||
-            Worklist.back().begin() != Worklist.back().end()) &&
+    assert((Worklist.empty() || !Worklist.back().empty()) &&
            "Empty ranges shouldn't remain in the worklist");
     return Op;
   }
@@ -714,7 +707,7 @@ public:
   /// Push Instr's operands onto the stack to be visited.
   void pushOperands(MachineInstr *Instr) {
     const iterator_range<mop_iterator> &Range(Instr->explicit_uses());
-    if (Range.begin() != Range.end())
+    if (!Range.empty())
       Worklist.push_back(reverse(Range));
   }
 
@@ -733,7 +726,7 @@ public:
     if (Worklist.empty())
       return false;
     const RangeTy &Range = Worklist.back();
-    return Range.begin() != Range.end() && Range.begin()->getParent() == Instr;
+    return !Range.empty() && Range.begin()->getParent() == Instr;
   }
 
   /// Test whether the given register is present on the stack, indicating an
@@ -863,24 +856,6 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // Argument instructions represent live-in registers and not real
         // instructions.
         if (WebAssembly::isArgument(DefI->getOpcode()))
-          continue;
-
-        // Currently catch's return value register cannot be stackified, because
-        // the wasm LLVM backend currently does not support live-in values
-        // entering blocks, which is a part of multi-value proposal.
-        //
-        // Once we support live-in values of wasm blocks, this can be:
-        // catch                           ; push exnref value onto stack
-        // block exnref -> i32
-        // br_on_exn $__cpp_exception      ; pop the exnref value
-        // end_block
-        //
-        // But because we don't support it yet, the catch instruction's dst
-        // register should be assigned to a local to be propagated across
-        // 'block' boundary now.
-        //
-        // TODO: Fix this once we support the multivalue blocks
-        if (DefI->getOpcode() == WebAssembly::CATCH)
           continue;
 
         MachineOperand *Def = DefI->findRegisterDefOperand(Reg);

@@ -102,8 +102,8 @@ body:             |
   bb.2.if.then:
     liveins: $rdi
 
-    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load 2 from %ir.p)
-    ; CHECK: $eax = MOVZX32rm16 killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load 2 from %ir.p)
+    $ax = MOV16rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load (s16) from %ir.p)
+    ; CHECK: $eax = MOVZX32rm16 killed $rdi, 1, $noreg, 0, $noreg, implicit-def $eax :: (load (s16) from %ir.p)
     $ax = KILL $ax, implicit killed $eax
     RETQ $ax
 

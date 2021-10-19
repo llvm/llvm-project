@@ -13,10 +13,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupOutputFile::OptionGroupOutputFile()
-    : m_file(), m_append(false, false) {}
-
-OptionGroupOutputFile::~OptionGroupOutputFile() {}
+OptionGroupOutputFile::OptionGroupOutputFile() : m_append(false, false) {}
 
 static const uint32_t SHORT_OPTION_APND = 0x61706e64; // 'apnd'
 

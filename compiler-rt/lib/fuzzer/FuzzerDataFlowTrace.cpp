@@ -37,7 +37,7 @@ bool BlockCoverage::AppendCoverage(const std::string &S) {
 // Coverage lines have this form:
 // CN X Y Z T
 // where N is the number of the function, T is the total number of instrumented
-// BBs, and X,Y,Z, if present, are the indecies of covered BB.
+// BBs, and X,Y,Z, if present, are the indices of covered BB.
 // BB #0, which is the entry block, is not explicitly listed.
 bool BlockCoverage::AppendCoverage(std::istream &IN) {
   std::string L;
@@ -52,7 +52,7 @@ bool BlockCoverage::AppendCoverage(std::istream &IN) {
       continue;
     }
     if (L[0] != 'C') continue;
-    Vector<uint32_t> CoveredBlocks;
+    std::vector<uint32_t> CoveredBlocks;
     while (true) {
       uint32_t BB = 0;
       SS >> BB;
@@ -60,6 +60,7 @@ bool BlockCoverage::AppendCoverage(std::istream &IN) {
       CoveredBlocks.push_back(BB);
     }
     if (CoveredBlocks.empty()) return false;
+    // Ensures no CoverageVector is longer than UINT32_MAX.
     uint32_t NumBlocks = CoveredBlocks.back();
     CoveredBlocks.pop_back();
     for (auto BB : CoveredBlocks)
@@ -67,7 +68,7 @@ bool BlockCoverage::AppendCoverage(std::istream &IN) {
     auto It = Functions.find(FunctionId);
     auto &Counters =
         It == Functions.end()
-            ? Functions.insert({FunctionId, Vector<uint32_t>(NumBlocks)})
+            ? Functions.insert({FunctionId, std::vector<uint32_t>(NumBlocks)})
                   .first->second
             : It->second;
 
@@ -85,8 +86,8 @@ bool BlockCoverage::AppendCoverage(std::istream &IN) {
 //   * any uncovered function gets weight 0.
 //   * a function with lots of uncovered blocks gets bigger weight.
 //   * a function with a less frequently executed code gets bigger weight.
-Vector<double> BlockCoverage::FunctionWeights(size_t NumFunctions) const {
-  Vector<double> Res(NumFunctions);
+std::vector<double> BlockCoverage::FunctionWeights(size_t NumFunctions) const {
+  std::vector<double> Res(NumFunctions);
   for (auto It : Functions) {
     auto FunctionID = It.first;
     auto Counters = It.second;
@@ -103,7 +104,7 @@ Vector<double> BlockCoverage::FunctionWeights(size_t NumFunctions) const {
 }
 
 void DataFlowTrace::ReadCoverage(const std::string &DirPath) {
-  Vector<SizedFile> Files;
+  std::vector<SizedFile> Files;
   GetSizedFilesFromDir(DirPath, &Files);
   for (auto &SF : Files) {
     auto Name = Basename(SF.File);
@@ -114,16 +115,16 @@ void DataFlowTrace::ReadCoverage(const std::string &DirPath) {
   }
 }
 
-static void DFTStringAppendToVector(Vector<uint8_t> *DFT,
+static void DFTStringAppendToVector(std::vector<uint8_t> *DFT,
                                     const std::string &DFTString) {
   assert(DFT->size() == DFTString.size());
   for (size_t I = 0, Len = DFT->size(); I < Len; I++)
     (*DFT)[I] = DFTString[I] == '1';
 }
 
-// converts a string of '0' and '1' into a Vector<uint8_t>
-static Vector<uint8_t> DFTStringToVector(const std::string &DFTString) {
-  Vector<uint8_t> DFT(DFTString.size());
+// converts a string of '0' and '1' into a std::vector<uint8_t>
+static std::vector<uint8_t> DFTStringToVector(const std::string &DFTString) {
+  std::vector<uint8_t> DFT(DFTString.size());
   DFTStringAppendToVector(&DFT, DFTString);
   return DFT;
 }
@@ -158,14 +159,14 @@ static bool ParseDFTLine(const std::string &Line, size_t *FunctionNum,
 }
 
 bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
-                         Vector<SizedFile> &CorporaFiles, Random &Rand) {
+                         std::vector<SizedFile> &CorporaFiles, Random &Rand) {
   if (DirPath.empty()) return false;
   Printf("INFO: DataFlowTrace: reading from '%s'\n", DirPath.c_str());
-  Vector<SizedFile> Files;
+  std::vector<SizedFile> Files;
   GetSizedFilesFromDir(DirPath, &Files);
   std::string L;
   size_t FocusFuncIdx = SIZE_MAX;
-  Vector<std::string> FunctionNames;
+  std::vector<std::string> FunctionNames;
 
   // Collect the hashes of the corpus files.
   for (auto &SF : CorporaFiles)
@@ -190,7 +191,7 @@ bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
     // * chooses a random function according to the weights.
     ReadCoverage(DirPath);
     auto Weights = Coverage.FunctionWeights(NumFunctions);
-    Vector<double> Intervals(NumFunctions + 1);
+    std::vector<double> Intervals(NumFunctions + 1);
     std::iota(Intervals.begin(), Intervals.end(), 0);
     auto Distribution = std::piecewise_constant_distribution<double>(
         Intervals.begin(), Intervals.end(), Weights.begin());
@@ -200,7 +201,8 @@ bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
     Printf("INFO: AUTOFOCUS: %zd %s\n", FocusFuncIdx,
            FunctionNames[FocusFuncIdx].c_str());
     for (size_t i = 0; i < NumFunctions; i++) {
-      if (!Weights[i]) continue;
+      if (Weights[i] == 0.0)
+        continue;
       Printf("  [%zd] W %g\tBB-tot %u\tBB-cov %u\tEntryFreq %u:\t%s\n", i,
              Weights[i], Coverage.GetNumberOfBlocks(i),
              Coverage.GetNumberOfCoveredBlocks(i), Coverage.GetCounter(i, 0),
@@ -245,7 +247,7 @@ bool DataFlowTrace::Init(const std::string &DirPath, std::string *FocusFunction,
 }
 
 int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
-                    const Vector<SizedFile> &CorporaFiles) {
+                    const std::vector<SizedFile> &CorporaFiles) {
   Printf("INFO: collecting data flow: bin: %s dir: %s files: %zd\n",
          DFTBinary.c_str(), DirPath.c_str(), CorporaFiles.size());
   if (CorporaFiles.empty()) {
@@ -263,7 +265,7 @@ int CollectDataFlow(const std::string &DFTBinary, const std::string &DirPath,
     // we then request tags in [0,Size/2) and [Size/2, Size), and so on.
     // Function number => DFT.
     auto OutPath = DirPlusFile(DirPath, Hash(FileToVector(F.File)));
-    std::unordered_map<size_t, Vector<uint8_t>> DFTMap;
+    std::unordered_map<size_t, std::vector<uint8_t>> DFTMap;
     std::unordered_set<std::string> Cov;
     Command Cmd;
     Cmd.addArgument(DFTBinary);

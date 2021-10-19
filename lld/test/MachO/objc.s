@@ -1,31 +1,36 @@
-# REQUIRES: x86
-# RUN: split-file %s %t
+# REQUIRES: x86, arm
+# RUN: rm -rf %t; split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-symbol.s -o %t/has-objc-symbol.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-category.s -o %t/has-objc-category.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-objc-symbol-and-category.s -o %t/has-objc-symbol-and-category.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-swift.s -o %t/has-swift.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-objc.s -o %t/no-objc.o
-
-# RUN: rm -f %t/libHasSomeObjC.a
-# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/no-objc.o
+## Make sure we don't mis-parse a 32-bit file as 64-bit
+# RUN: llvm-mc -filetype=obj -triple=armv7-apple-watchos %t/no-objc.s -o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC2.a %t/no-objc.o %t/has-objc-symbol-and-category.o %t/has-swift.o %t/wrong-arch.o
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem %t/test.o -o %t/test \
-# RUN:   -L%t -lHasSomeObjC -ObjC
+
+# RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC -ObjC
+# RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
+
+# RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC2 -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
 # OBJC:       Sections:
-# OBJC-NEXT:  Idx Name           Size   VMA  Type
-# OBJC-NEXT:    0 __text         {{.*}}      TEXT
-# OBJC-NEXT:    1 __swift        {{.*}}      DATA
-# OBJC-NEXT:    2 __objc_catlist {{.*}}      DATA
+# OBJC-NEXT:  Idx Name            Size   VMA  Type
+# OBJC-NEXT:    0 __text          {{.*}}      TEXT
+# OBJC-NEXT:    1 __swift         {{.*}}      DATA
+# OBJC-NEXT:    2 __objc_catlist  {{.*}}      DATA
+# OBJC-NEXT:    3 has_objc_symbol {{.*}}      DATA
 # OBJC-EMPTY:
 # OBJC-NEXT:  SYMBOL TABLE:
 # OBJC-NEXT:  g     F __TEXT,__text _main
 # OBJC-NEXT:  g     F __TEXT,__text _OBJC_CLASS_$_MyObject
 
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem %t/test.o -o %t/test \
-# RUN:   -L%t -lHasSomeObjC
+# RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=NO-OBJC
 
 # NO-OBJC:       Sections:
@@ -34,30 +39,70 @@
 # NO-OBJC-EMPTY:
 # NO-OBJC-NEXT:  SYMBOL TABLE:
 # NO-OBJC-NEXT:  g     F __TEXT,__text _main
+# NO-OBJC-NEXT:  g     F __TEXT,__text __mh_execute_header
+# NO-OBJC-NEXT:          *UND* dyld_stub_binder
 # NO-OBJC-EMPTY:
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/refs-dup.s -o %t/refs-dup.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/refs-objc.s -o %t/refs-objc.o
+
+## Check that -ObjC causes has-objc-symbol.o to be loaded first, prior to symbol
+## resolution. This matches ld64's behavior.
+# RUN: %lld -dylib %t/refs-dup.o %t/refs-objc.o -o %t/refs-dup -L%t -lHasSomeObjC -ObjC
+# RUN: llvm-objdump --macho --syms %t/refs-dup | FileCheck %s --check-prefix=DUP-FROM-OBJC
+# DUP-FROM-OBJC: g     O __DATA,has_objc_symbol _has_dup
+
+## Without -ObjC, no-objc.o gets loaded first during symbol resolution, causing
+## a duplicate symbol error.
+# RUN: not %lld -dylib %t/refs-dup.o %t/refs-objc.o -o %t/refs-dup -L%t \
+# RUN:   -lHasSomeObjC 2>&1 | FileCheck %s --check-prefix=DUP-ERROR
+# DUP-ERROR: error: duplicate symbol: _has_dup
+
 #--- has-objc-symbol.s
-.globl _OBJC_CLASS_$_MyObject
+.globl _OBJC_CLASS_$_MyObject, _has_dup
 _OBJC_CLASS_$_MyObject:
 
+.section __DATA,has_objc_symbol
+_has_dup:
+
 #--- has-objc-category.s
-.section	__DATA,__objc_catlist
+.section __DATA,__objc_catlist
+.quad 0x1234
+
+#--- has-objc-symbol-and-category.s
+## Make sure we load this archive member exactly once (i.e. no duplicate symbol
+## error).
+.globl _OBJC_CLASS_$_MyObject, _has_dup
+_OBJC_CLASS_$_MyObject:
+
+.section __DATA,has_objc_symbol
+_has_dup:
+
+.section __DATA,__objc_catlist
 .quad 0x1234
 
 #--- has-swift.s
-.section	__TEXT,__swift
+.section __TEXT,__swift
 .quad 0x1234
 
 #--- no-objc.s
-## This archive member should not be pulled in since it does not contain any
-## ObjC-related data.
-.globl _foo
+## This archive member should not be pulled in by -ObjC since it does not
+## contain any ObjC-related data.
+.globl _has_dup
 .section __DATA,foo
-
-foo:
-  .quad 0x1234
+.section __DATA,bar
+.section __DATA,no_objc
+_has_dup:
 
 #--- test.s
 .globl _main
 _main:
   ret
+
+#--- refs-dup.s
+.data
+.quad _has_dup
+
+#--- refs-objc.s
+.data
+.quad _OBJC_CLASS_$_MyObject

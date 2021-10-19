@@ -67,5 +67,15 @@ SymbolSlab SymbolSlab::Builder::build() && {
   return SymbolSlab(std::move(NewArena), std::move(SortedSymbols));
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolSlab &Slab) {
+  OS << "{";
+  llvm::StringRef Sep = "";
+  for (const auto &S : Slab) {
+    OS << Sep << S;
+    Sep = ", ";
+  }
+  OS << "}";
+  return OS;
+}
 } // namespace clangd
 } // namespace clang

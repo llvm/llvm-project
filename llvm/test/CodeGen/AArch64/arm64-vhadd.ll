@@ -701,6 +701,122 @@ define void @testLowerToUHADD4s(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %de
   ret void
 }
 
+
+define <4 x i32> @hadd16_sext_asr(<4 x i16> %src1, <4 x i16> %src2) nounwind {
+; CHECK-LABEL: hadd16_sext_asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saddl.4s v0, v0, v1
+; CHECK-NEXT:    sshr.4s v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = sext <4 x i16> %src1 to <4 x i32>
+  %zextsrc2 = sext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = ashr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %resulti16
+}
+
+define <4 x i32> @hadd16_zext_asr(<4 x i16> %src1, <4 x i16> %src2) nounwind {
+; CHECK-LABEL: hadd16_zext_asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddl.4s v0, v0, v1
+; CHECK-NEXT:    ushr.4s v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i16> %src1 to <4 x i32>
+  %zextsrc2 = zext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = ashr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %resulti16
+}
+
+define <4 x i32> @hadd16_sext_lsr(<4 x i16> %src1, <4 x i16> %src2) nounwind {
+; CHECK-LABEL: hadd16_sext_lsr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saddl.4s v0, v0, v1
+; CHECK-NEXT:    ushr.4s v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = sext <4 x i16> %src1 to <4 x i32>
+  %zextsrc2 = sext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %resulti16
+}
+
+define <4 x i32> @hadd16_zext_lsr(<4 x i16> %src1, <4 x i16> %src2) nounwind {
+; CHECK-LABEL: hadd16_zext_lsr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddl.4s v0, v0, v1
+; CHECK-NEXT:    ushr.4s v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i16> %src1 to <4 x i32>
+  %zextsrc2 = zext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  ret <4 x i32> %resulti16
+}
+
+
+
+define <4 x i64> @hadd32_sext_asr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
+; CHECK-LABEL: hadd32_sext_asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saddl2.2d v2, v0, v1
+; CHECK-NEXT:    saddl.2d v0, v0, v1
+; CHECK-NEXT:    sshr.2d v1, v2, #1
+; CHECK-NEXT:    sshr.2d v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = sext <4 x i32> %src1 to <4 x i64>
+  %zextsrc2 = sext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %zextsrc1, %zextsrc2
+  %resulti32 = ashr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i64> %resulti32
+}
+
+define <4 x i64> @hadd32_zext_asr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
+; CHECK-LABEL: hadd32_zext_asr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddl2.2d v2, v0, v1
+; CHECK-NEXT:    uaddl.2d v0, v0, v1
+; CHECK-NEXT:    ushr.2d v1, v2, #1
+; CHECK-NEXT:    ushr.2d v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i32> %src1 to <4 x i64>
+  %zextsrc2 = zext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %zextsrc1, %zextsrc2
+  %resulti32 = ashr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i64> %resulti32
+}
+
+define <4 x i64> @hadd32_sext_lsr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
+; CHECK-LABEL: hadd32_sext_lsr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    saddl2.2d v2, v0, v1
+; CHECK-NEXT:    saddl.2d v0, v0, v1
+; CHECK-NEXT:    ushr.2d v1, v2, #1
+; CHECK-NEXT:    ushr.2d v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = sext <4 x i32> %src1 to <4 x i64>
+  %zextsrc2 = sext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %zextsrc1, %zextsrc2
+  %resulti32 = lshr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i64> %resulti32
+}
+
+define <4 x i64> @hadd32_zext_lsr(<4 x i32> %src1, <4 x i32> %src2) nounwind {
+; CHECK-LABEL: hadd32_zext_lsr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddl2.2d v2, v0, v1
+; CHECK-NEXT:    uaddl.2d v0, v0, v1
+; CHECK-NEXT:    ushr.2d v1, v2, #1
+; CHECK-NEXT:    ushr.2d v0, v0, #1
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i32> %src1 to <4 x i64>
+  %zextsrc2 = zext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %zextsrc1, %zextsrc2
+  %resulti32 = lshr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
+  ret <4 x i64> %resulti32
+}
+
+
 declare <8 x i8>  @llvm.aarch64.neon.srhadd.v8i8(<8 x i8>, <8 x i8>) nounwind readnone
 declare <4 x i16> @llvm.aarch64.neon.srhadd.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
 declare <2 x i32> @llvm.aarch64.neon.srhadd.v2i32(<2 x i32>, <2 x i32>) nounwind readnone

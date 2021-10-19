@@ -1,5 +1,9 @@
-set(PUBLIC_HEADERS
+set(TARGET_PUBLIC_HEADERS
+    libc.include.ctype
     libc.include.errno
+    libc.include.fenv
+    libc.include.inttypes
     libc.include.math
-    libc.include.sys_syscall
+    libc.include.stdlib
+    libc.include.string
 )

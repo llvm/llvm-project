@@ -39,9 +39,8 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
     // Create and set diagnostics engine
-    auto ExternalDiagEngine = &Compiler.getDiagnostics();
-    auto DiagConsumer =
-        new ClangTidyDiagnosticConsumer(*Context, ExternalDiagEngine);
+    auto *DiagConsumer =
+        new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
         new DiagnosticIDs, new DiagnosticOptions, DiagConsumer);
     Context->setDiagnosticsEngine(DiagEngine.get());

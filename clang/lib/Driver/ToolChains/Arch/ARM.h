@@ -24,7 +24,7 @@ namespace arm {
 
 std::string getARMTargetCPU(StringRef CPU, llvm::StringRef Arch,
                             const llvm::Triple &Triple);
-const std::string getARMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
+std::string getARMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 StringRef getARMCPUForMArch(llvm::StringRef Arch, const llvm::Triple &Triple);
 llvm::ARM::ArchKind getLLVMArchKindForARM(StringRef CPU, StringRef Arch,
                                           const llvm::Triple &Triple);
@@ -47,10 +47,15 @@ enum class FloatABI {
   Hard,
 };
 
+FloatABI getDefaultFloatABI(const llvm::Triple &Triple);
 FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
 FloatABI getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
                         const llvm::opt::ArgList &Args);
+void setFloatABIInTriple(const Driver &D, const llvm::opt::ArgList &Args,
+                         llvm::Triple &triple);
 ReadTPMode getReadTPMode(const Driver &D, const llvm::opt::ArgList &Args);
+void setArchNameInTriple(const Driver &D, const llvm::opt::ArgList &Args,
+                         types::ID InputType, llvm::Triple &Triple);
 
 bool useAAPCSForMachO(const llvm::Triple &T);
 void getARMArchCPUFromArgs(const llvm::opt::ArgList &Args,
@@ -62,6 +67,7 @@ void getARMTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                           std::vector<llvm::StringRef> &Features, bool ForAS);
 int getARMSubArchVersionNumber(const llvm::Triple &Triple);
 bool isARMMProfile(const llvm::Triple &Triple);
+bool isARMAProfile(const llvm::Triple &Triple);
 
 } // end namespace arm
 } // end namespace tools

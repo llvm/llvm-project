@@ -26,8 +26,12 @@
 //   - "FNH:<number of functions hit>"
 //   - for each instrumented line:
 //     - "DA:<line number>,<execution count>[,<checksum>]
+//   - for each branch:
+//     - "BRDA:<line number>,<branch pair id>,<branch id>,<count>"
+//   - "BRF:<number of branches found>"
+//   - "BRH:<number of branches hit>"
 //   - "LH:<number of lines with non-zero execution count>"
-//   - "LF:<nubmer of instrumented lines>"
+//   - "LF:<number of instrumented lines>"
 //   - "end_of_record"
 //
 // If the user is exporting summary information only, then the FN, FNDA, and DA
@@ -71,9 +75,99 @@ void renderLineExecutionCounts(raw_ostream &OS,
   }
 }
 
+std::vector<llvm::coverage::CountedRegion>
+collectNestedBranches(const coverage::CoverageMapping &Coverage,
+                      ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
+                      int ViewDepth = 0, int SrcLine = 0) {
+  std::vector<llvm::coverage::CountedRegion> Branches;
+  for (const auto &Expansion : Expansions) {
+    auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
+
+    // If we're at the top level, set the corresponding source line.
+    if (ViewDepth == 0)
+      SrcLine = Expansion.Region.LineStart;
+
+    // Recursively collect branches from nested expansions.
+    auto NestedExpansions = ExpansionCoverage.getExpansions();
+    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
+                                                  ViewDepth + 1, SrcLine);
+    append_range(Branches, NestedExBranches);
+
+    // Add branches from this level of expansion.
+    auto ExBranches = ExpansionCoverage.getBranches();
+    for (auto B : ExBranches)
+      if (B.FileID == Expansion.FileID) {
+        B.LineStart = SrcLine;
+        Branches.push_back(B);
+      }
+  }
+
+  return Branches;
+}
+
+bool sortLine(llvm::coverage::CountedRegion I,
+              llvm::coverage::CountedRegion J) {
+  return (I.LineStart < J.LineStart) ||
+         ((I.LineStart == J.LineStart) && (I.ColumnStart < J.ColumnStart));
+}
+
+void renderBranchExecutionCounts(raw_ostream &OS,
+                                 const coverage::CoverageMapping &Coverage,
+                                 const coverage::CoverageData &FileCoverage) {
+  std::vector<llvm::coverage::CountedRegion> Branches =
+      FileCoverage.getBranches();
+
+  // Recursively collect branches for all file expansions.
+  std::vector<llvm::coverage::CountedRegion> ExBranches =
+      collectNestedBranches(Coverage, FileCoverage.getExpansions());
+
+  // Append Expansion Branches to Source Branches.
+  append_range(Branches, ExBranches);
+
+  // Sort branches based on line number to ensure branches corresponding to the
+  // same source line are counted together.
+  llvm::sort(Branches, sortLine);
+
+  auto NextBranch = Branches.begin();
+  auto EndBranch = Branches.end();
+
+  // Branches with the same source line are enumerated individually
+  // (BranchIndex) as well as based on True/False pairs (PairIndex).
+  while (NextBranch != EndBranch) {
+    unsigned CurrentLine = NextBranch->LineStart;
+    unsigned PairIndex = 0;
+    unsigned BranchIndex = 0;
+
+    while (NextBranch != EndBranch && CurrentLine == NextBranch->LineStart) {
+      if (!NextBranch->Folded) {
+        unsigned BC1 = NextBranch->ExecutionCount;
+        unsigned BC2 = NextBranch->FalseExecutionCount;
+        bool BranchNotExecuted = (BC1 == 0 && BC2 == 0);
+
+        for (int I = 0; I < 2; I++, BranchIndex++) {
+          OS << "BRDA:" << CurrentLine << ',' << PairIndex << ','
+             << BranchIndex;
+          if (BranchNotExecuted)
+            OS << ',' << '-' << '\n';
+          else
+            OS << ',' << (I == 0 ? BC1 : BC2) << '\n';
+        }
+
+        PairIndex++;
+      }
+      NextBranch++;
+    }
+  }
+}
+
 void renderLineSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
   OS << "LF:" << Summary.LineCoverage.getNumLines() << '\n'
      << "LH:" << Summary.LineCoverage.getCovered() << '\n';
+}
+
+void renderBranchSummary(raw_ostream &OS, const FileCoverageSummary &Summary) {
+  OS << "BRF:" << Summary.BranchCoverage.getNumBranches() << '\n'
+     << "BRH:" << Summary.BranchCoverage.getCovered() << '\n';
 }
 
 void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
@@ -91,7 +185,9 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
     // Calculate and render detailed coverage information for given file.
     auto FileCoverage = Coverage.getCoverageForFile(Filename);
     renderLineExecutionCounts(OS, FileCoverage);
+    renderBranchExecutionCounts(OS, Coverage, FileCoverage);
   }
+  renderBranchSummary(OS, FileReport);
   renderLineSummary(OS, FileReport);
 
   OS << "end_of_record\n";

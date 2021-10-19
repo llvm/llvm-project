@@ -26,8 +26,8 @@
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include <set>
 using namespace llvm;
@@ -38,7 +38,6 @@ namespace {
 
 struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   static char ID;
-  const MachineFunction *MF;
   bool runOnMachineFunction(MachineFunction &Fn) override;
   bool detectLuiAddiGlobal(MachineInstr &LUI, MachineInstr *&ADDI);
 
@@ -53,6 +52,11 @@ struct RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
         MachineFunctionProperties::Property::IsSSA);
   }
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
   StringRef getPassName() const override {
     return RISCV_MERGE_BASE_OFFSET_NAME;
   }
@@ -64,7 +68,7 @@ private:
 } // end anonymous namespace
 
 char RISCVMergeBaseOffsetOpt::ID = 0;
-INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, "riscv-merge-base-offset",
+INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
                 RISCV_MERGE_BASE_OFFSET_NAME, false, false)
 
 // Detect the pattern:
@@ -193,7 +197,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
     foldOffset(HiLUI, LoADDI, Tail, Offset);
     return true;
-  } break;
+  }
   case RISCV::ADD: {
     // The offset is too large to fit in the immediate field of ADDI.
     // This can be in two forms:
@@ -208,7 +212,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
       return false;
     foldOffset(HiLUI, LoADDI, Tail, Offset);
     return true;
-  } break;
+  }
   case RISCV::LB:
   case RISCV::LH:
   case RISCV::LW:
@@ -216,12 +220,14 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
   case RISCV::LHU:
   case RISCV::LWU:
   case RISCV::LD:
+  case RISCV::FLH:
   case RISCV::FLW:
   case RISCV::FLD:
   case RISCV::SB:
   case RISCV::SH:
   case RISCV::SW:
   case RISCV::SD:
+  case RISCV::FSH:
   case RISCV::FSW:
   case RISCV::FSD: {
     // Transforms the sequence:            Into:
@@ -250,7 +256,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     Tail.getOperand(1).setReg(HiLUI.getOperand(0).getReg());
     DeadInstrs.insert(&LoADDI);
     return true;
-  } break;
+  }
   }
   return false;
 }
@@ -259,6 +265,7 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
 
+  bool MadeChange = false;
   DeadInstrs.clear();
   MRI = &Fn.getRegInfo();
   for (MachineBasicBlock &MBB : Fn) {
@@ -270,13 +277,13 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       LLVM_DEBUG(dbgs() << "  Found lowered global address with one use: "
                         << *LoADDI->getOperand(2).getGlobal() << "\n");
       // If the use count is only one, merge the offset
-      detectAndFoldOffset(HiLUI, *LoADDI);
+      MadeChange |= detectAndFoldOffset(HiLUI, *LoADDI);
     }
   }
   // Delete dead instructions.
   for (auto *MI : DeadInstrs)
     MI->eraseFromParent();
-  return true;
+  return MadeChange;
 }
 
 /// Returns an instance of the Merge Base Offset Optimization pass.

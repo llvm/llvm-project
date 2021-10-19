@@ -35,7 +35,8 @@ Optional<DbgVariableLocation>
 DbgVariableLocation::extractFromMachineInstruction(
     const MachineInstr &Instruction) {
   DbgVariableLocation Location;
-  if (!Instruction.isDebugValue())
+  // Variables calculated from multiple locations can't be represented here.
+  if (Instruction.getNumDebugOperands() != 1)
     return None;
   if (!Instruction.getDebugOperand(0).isReg())
     return None;
@@ -46,6 +47,15 @@ DbgVariableLocation::extractFromMachineInstruction(
   int64_t Offset = 0;
   const DIExpression *DIExpr = Instruction.getDebugExpression();
   auto Op = DIExpr->expr_op_begin();
+  // We can handle a DBG_VALUE_LIST iff it has exactly one location operand that
+  // appears exactly once at the start of the expression.
+  if (Instruction.isDebugValueList()) {
+    if (Instruction.getNumDebugOperands() == 1 &&
+        Op->getOp() == dwarf::DW_OP_LLVM_arg)
+      ++Op;
+    else
+      return None;
+  }
   while (Op != DIExpr->expr_op_end()) {
     switch (Op->getOp()) {
     case dwarf::DW_OP_constu: {
@@ -90,6 +100,11 @@ DbgVariableLocation::extractFromMachineInstruction(
 }
 
 DebugHandlerBase::DebugHandlerBase(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
+
+void DebugHandlerBase::beginModule(Module *M) {
+  if (M->debug_compile_units().empty())
+    Asm = nullptr;
+}
 
 // Each LexicalScope has first instruction and last instruction to mark
 // beginning and end of a scope respectively. Create an inverse map that list
@@ -158,6 +173,65 @@ uint64_t DebugHandlerBase::getBaseTypeSize(const DIType *Ty) {
   return getBaseTypeSize(BaseType);
 }
 
+bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
+  if (isa<DIStringType>(Ty)) {
+    // Some transformations (e.g. instcombine) may decide to turn a Fortran
+    // character object into an integer, and later ones (e.g. SROA) may
+    // further inject a constant integer in a llvm.dbg.value call to track
+    // the object's value. Here we trust the transformations are doing the
+    // right thing, and treat the constant as unsigned to preserve that value
+    // (i.e. avoid sign extension).
+    return true;
+  }
+
+  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type) {
+      if (!(Ty = CTy->getBaseType()))
+        // FIXME: Enums without a fixed underlying type have unknown signedness
+        // here, leading to incorrectly emitted constants.
+        return false;
+    } else
+      // (Pieces of) aggregate types that get hacked apart by SROA may be
+      // represented by a constant. Encode them as unsigned bytes.
+      return true;
+  }
+
+  if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    dwarf::Tag T = (dwarf::Tag)Ty->getTag();
+    // Encode pointer constants as unsigned bytes. This is used at least for
+    // null pointer constant emission.
+    // FIXME: reference and rvalue_reference /probably/ shouldn't be allowed
+    // here, but accept them for now due to a bug in SROA producing bogus
+    // dbg.values.
+    if (T == dwarf::DW_TAG_pointer_type ||
+        T == dwarf::DW_TAG_ptr_to_member_type ||
+        T == dwarf::DW_TAG_reference_type ||
+        T == dwarf::DW_TAG_rvalue_reference_type)
+      return true;
+    assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
+           T == dwarf::DW_TAG_volatile_type ||
+           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isUnsignedDIType(DTy->getBaseType());
+  }
+
+  auto *BTy = cast<DIBasicType>(Ty);
+  unsigned Encoding = BTy->getEncoding();
+  assert((Encoding == dwarf::DW_ATE_unsigned ||
+          Encoding == dwarf::DW_ATE_unsigned_char ||
+          Encoding == dwarf::DW_ATE_signed ||
+          Encoding == dwarf::DW_ATE_signed_char ||
+          Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
+          Encoding == dwarf::DW_ATE_boolean ||
+          (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
+           Ty->getName() == "decltype(nullptr)")) &&
+         "Unsupported encoding");
+  return Encoding == dwarf::DW_ATE_unsigned ||
+         Encoding == dwarf::DW_ATE_unsigned_char ||
+         Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
+         Ty->getTag() == dwarf::DW_TAG_unspecified_type;
+}
+
 static bool hasDebugInfo(const MachineModuleInfo *MMI,
                          const MachineFunction *MF) {
   if (!MMI->hasDebugInfo())
@@ -208,7 +282,8 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
       continue;
 
     auto IsDescribedByReg = [](const MachineInstr *MI) {
-      return MI->getDebugOperand(0).isReg() && MI->getDebugOperand(0).getReg();
+      return any_of(MI->debug_operands(),
+                    [](auto &MO) { return MO.isReg() && MO.getReg(); });
     };
 
     // The first mention of a function argument gets the CurrentFnBegin label,
@@ -270,7 +345,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 }
 
 void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
-  if (!MMI->hasDebugInfo())
+  if (!Asm || !MMI->hasDebugInfo())
     return;
 
   assert(CurMI == nullptr);
@@ -296,7 +371,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
 }
 
 void DebugHandlerBase::endInstruction() {
-  if (!MMI->hasDebugInfo())
+  if (!Asm || !MMI->hasDebugInfo())
     return;
 
   assert(CurMI != nullptr);
@@ -309,26 +384,29 @@ void DebugHandlerBase::endInstruction() {
 
   DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
       LabelsAfterInsn.find(CurMI);
-  CurMI = nullptr;
 
-  // No label needed.
-  if (I == LabelsAfterInsn.end())
+  // No label needed or label already assigned.
+  if (I == LabelsAfterInsn.end() || I->second) {
+    CurMI = nullptr;
     return;
+  }
 
-  // Label already assigned.
-  if (I->second)
-    return;
-
-  // We need a label after this instruction.
-  if (!PrevLabel) {
+  // We need a label after this instruction.  With basic block sections, just
+  // use the end symbol of the section if this is the last instruction of the
+  // section.  This reduces the need for an additional label and also helps
+  // merging ranges.
+  if (CurMI->getParent()->isEndSection() && CurMI->getNextNode() == nullptr) {
+    PrevLabel = CurMI->getParent()->getEndSymbol();
+  } else if (!PrevLabel) {
     PrevLabel = MMI->getContext().createTempSymbol();
     Asm->OutStreamer->emitLabel(PrevLabel);
   }
   I->second = PrevLabel;
+  CurMI = nullptr;
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
-  if (hasDebugInfo(MMI, MF))
+  if (Asm && hasDebugInfo(MMI, MF))
     endFunctionImpl(MF);
   DbgValues.clear();
   DbgLabels.clear();

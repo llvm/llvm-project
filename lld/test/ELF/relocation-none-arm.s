@@ -14,7 +14,7 @@
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 
 # RELOC:      Section ({{.*}}) .rel.text {
-# RELOC-NEXT:   0x0 R_ARM_NONE .data 0x0
+# RELOC-NEXT:   0x0 R_ARM_NONE .data
 # RELOC-NEXT: }
 
 .globl _start

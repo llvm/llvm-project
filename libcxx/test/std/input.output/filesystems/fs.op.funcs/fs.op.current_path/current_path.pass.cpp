@@ -51,8 +51,8 @@ TEST_CASE(current_path_test)
 
 TEST_CASE(current_path_after_change_test)
 {
-    CWDGuard guard;
     static_test_env static_env;
+    CWDGuard guard;
     const path new_path = static_env.Dir;
     current_path(new_path);
     TEST_CHECK(current_path() == new_path);
@@ -60,8 +60,8 @@ TEST_CASE(current_path_after_change_test)
 
 TEST_CASE(current_path_is_file_test)
 {
-    CWDGuard guard;
     static_test_env static_env;
+    CWDGuard guard;
     const path p = static_env.File;
     std::error_code ec;
     const path old_p = current_path();
@@ -72,8 +72,8 @@ TEST_CASE(current_path_is_file_test)
 
 TEST_CASE(set_to_non_absolute_path)
 {
-    CWDGuard guard;
     static_test_env static_env;
+    CWDGuard guard;
     const path base = static_env.Dir;
     current_path(base);
     const path p = static_env.Dir2.filename();

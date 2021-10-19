@@ -1,8 +1,32 @@
-# REQUIRES: lua
-# RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t
+# XFAIL: system-netbsd
+# RUN: echo "int main() { int val = 1; val++; return 0; }" | %clang_host -x c - -g -o %t
 # RUN: %lldb -s %s --script-language lua %t 2>&1 | FileCheck %s
 b main
 r
-watchpoint set expr 0x0
+watchpoint set variable val
 watchpoint command add -s lua
-# CHECK: error: This script interpreter does not support watchpoint callbacks
+print("val=" .. tostring(frame:FindVariable("val"):GetValue()))
+quit
+c
+# CHECK: val=1
+# CHECK: val=2
+# CHECK: Process {{[0-9]+}} exited
+r
+watchpoint set variable val
+watchpoint modify 1 -c "(val == 1)"
+watchpoint command add -s lua
+print("conditional watchpoint")
+wp:SetEnabled(false)
+quit
+c
+# CHECK-COUNT-1: conditional watchpoint
+# CHECK-NOT: conditional watchpoint
+# CHECK: Process {{[0-9]+}} exited
+r
+watchpoint set expr 0x00
+watchpoint command add -s lua
+print("never triggers")
+quit
+c
+# CHECK-NOT: never triggers
+# CHECK: Process {{[0-9]+}} exited

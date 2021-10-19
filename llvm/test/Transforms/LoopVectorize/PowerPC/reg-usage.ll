@@ -234,7 +234,7 @@ for.body:                                         ; preds = %for.body, %entry
   %x.05 = phi ppc_fp128 [ %d, %entry ], [ %sub, %for.body ]
   %arrayidx = getelementptr inbounds ppc_fp128, ppc_fp128* %n, i32 %i.06
   %0 = load ppc_fp128, ppc_fp128* %arrayidx, align 8
-  %sub = fsub ppc_fp128 %x.05, %0
+  %sub = fsub fast ppc_fp128 %x.05, %0
   %inc = add nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 2048
   br i1 %exitcond, label %for.end, label %for.body

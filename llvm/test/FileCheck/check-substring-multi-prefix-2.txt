@@ -1,6 +1,6 @@
-; RUN: FileCheck -check-prefix=FOO -check-prefix=FOOBAR -check-prefix=BARFOO -input-file %s %s
-; RUN: FileCheck -check-prefix=FOOBAR -check-prefix=FOO -check-prefix=BARFOO -input-file %s %s
-; RUN: FileCheck -check-prefix=FOOBAR -check-prefix=BARFOO -check-prefix=FOO -input-file %s %s
+; RUN: FileCheck -check-prefix=FOO -check-prefix=FOOBAR -check-prefix=BARFOO -input-file %s %s -allow-unused-prefixes
+; RUN: FileCheck -check-prefix=FOOBAR -check-prefix=FOO -check-prefix=BARFOO -input-file %s %s -allow-unused-prefixes
+; RUN: FileCheck -check-prefix=FOOBAR -check-prefix=BARFOO -check-prefix=FOO -input-file %s %s -allow-unused-prefixes
 
 this is the match
 this is another

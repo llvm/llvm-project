@@ -1,6 +1,6 @@
 # Check the env command
-#
-# RUN: not %{lit} -j 1 -a -v %{inputs}/shtest-env \
+
+# RUN: not %{lit} -a -v %{inputs}/shtest-env \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.

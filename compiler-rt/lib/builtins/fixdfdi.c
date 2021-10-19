@@ -9,7 +9,7 @@
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
 
-#ifndef __SOFT_FP__
+#ifndef __SOFTFP__
 // Support for systems that have hardware floating-point; can set the invalid
 // flag as a side-effect of computation.
 
@@ -41,4 +41,8 @@ AEABI_RTABI di_int __aeabi_d2lz(fp_t a) { return __fixdfdi(a); }
 #else
 COMPILER_RT_ALIAS(__fixdfdi, __aeabi_d2lz)
 #endif
+#endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__fixdfdi, __dtoi64)
 #endif

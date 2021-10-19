@@ -24,24 +24,32 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
-InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
-    cl::init("-"), cl::value_desc("filename"));
+static cl::OptionCategory SplitCategory("Split Options");
 
-static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"));
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<input bitcode file>"),
+                                          cl::init("-"),
+                                          cl::value_desc("filename"),
+                                          cl::cat(SplitCategory));
+
+static cl::opt<std::string> OutputFilename("o",
+                                           cl::desc("Override output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::cat(SplitCategory));
 
 static cl::opt<unsigned> NumOutputs("j", cl::Prefix, cl::init(2),
-                                    cl::desc("Number of output files"));
+                                    cl::desc("Number of output files"),
+                                    cl::cat(SplitCategory));
 
 static cl::opt<bool>
     PreserveLocals("preserve-locals", cl::Prefix, cl::init(false),
-                   cl::desc("Split without externalizing locals"));
+                   cl::desc("Split without externalizing locals"),
+                   cl::cat(SplitCategory));
 
 int main(int argc, char **argv) {
   LLVMContext Context;
   SMDiagnostic Err;
+  cl::HideUnrelatedOptions({&SplitCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "LLVM module splitter\n");
 
   std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
@@ -52,25 +60,28 @@ int main(int argc, char **argv) {
   }
 
   unsigned I = 0;
-  SplitModule(std::move(M), NumOutputs, [&](std::unique_ptr<Module> MPart) {
-    std::error_code EC;
-    std::unique_ptr<ToolOutputFile> Out(
-        new ToolOutputFile(OutputFilename + utostr(I++), EC, sys::fs::OF_None));
-    if (EC) {
-      errs() << EC.message() << '\n';
-      exit(1);
-    }
+  SplitModule(
+      *M, NumOutputs,
+      [&](std::unique_ptr<Module> MPart) {
+        std::error_code EC;
+        std::unique_ptr<ToolOutputFile> Out(new ToolOutputFile(
+            OutputFilename + utostr(I++), EC, sys::fs::OF_None));
+        if (EC) {
+          errs() << EC.message() << '\n';
+          exit(1);
+        }
 
-    if (verifyModule(*MPart, &errs())) {
-      errs() << "Broken module!\n";
-      exit(1);
-    }
+        if (verifyModule(*MPart, &errs())) {
+          errs() << "Broken module!\n";
+          exit(1);
+        }
 
-    WriteBitcodeToFile(*MPart, Out->os());
+        WriteBitcodeToFile(*MPart, Out->os());
 
-    // Declare success.
-    Out->keep();
-  }, PreserveLocals);
+        // Declare success.
+        Out->keep();
+      },
+      PreserveLocals);
 
   return 0;
 }

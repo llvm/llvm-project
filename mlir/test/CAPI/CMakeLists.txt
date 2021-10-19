@@ -1,16 +1,55 @@
-set(LLVM_LINK_COMPONENTS
-  Core
-  Support
-  )
+function(_add_capi_test_executable name)
+  cmake_parse_arguments(ARG
+    ""
+    ""
+    "LINK_LIBS"
+    ${ARGN})
+  set(LLVM_LINK_COMPONENTS
+    )
+  add_llvm_executable(${name}
+    PARTIAL_SOURCES_INTENDED
+    ${ARG_UNPARSED_ARGUMENTS})
+  llvm_update_compile_flags(${name})
+  target_link_libraries(${name}
+    ${ARG_LINK_LIBS})
+endfunction(_add_capi_test_executable)
 
-add_llvm_executable(mlir-capi-ir-test
-  ir.c
-  )
-llvm_update_compile_flags(mlir-capi-ir-test)
-
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-target_link_libraries(mlir-capi-ir-test
-  PRIVATE
-  MLIRCAPIIR
+_add_capi_test_executable(mlir-capi-execution-engine-test
+  execution_engine.c
+LINK_LIBS PRIVATE
+  MLIRCAPIConversion
+  MLIRCEXECUTIONENGINE
   MLIRCAPIRegistration
-  ${dialect_libs})
+)
+
+_add_capi_test_executable(mlir-capi-ir-test
+  ir.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIStandard
+    MLIRCAPIRegistration
+)
+
+_add_capi_test_executable(mlir-capi-llvm-test
+  llvm.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPILLVM
+    MLIRCAPIRegistration
+)
+
+_add_capi_test_executable(mlir-capi-pass-test
+  pass.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPITransforms
+)
+
+_add_capi_test_executable(mlir-capi-sparse-tensor-test
+  sparse_tensor.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPISparseTensor
+)

@@ -36,13 +36,16 @@ def A57Write_19cyc_1M : SchedWriteRes<[A57UnitM]> { let Latency = 19;
 def A57Write_20cyc_1M : SchedWriteRes<[A57UnitM]> { let Latency = 20;
                                                     let ResourceCycles = [20]; }
 def A57Write_1cyc_1B  : SchedWriteRes<[A57UnitB]> { let Latency = 1;  }
-def A57Write_1cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 1;  }
-def A57Write_2cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 2;  }
+def A57Write_1cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 1;
+                                                    let ResourceCycles = [1]; }
+def A57Write_2cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 2;
+                                                    let ResourceCycles = [1]; }
 def A57Write_3cyc_1I  : SchedWriteRes<[A57UnitI]> { let Latency = 3;  }
 def A57Write_1cyc_1S  : SchedWriteRes<[A57UnitS]> { let Latency = 1;  }
 def A57Write_2cyc_1S  : SchedWriteRes<[A57UnitS]> { let Latency = 2;  }
 def A57Write_3cyc_1S  : SchedWriteRes<[A57UnitS]> { let Latency = 3;  }
-def A57Write_2cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 2;  }
+def A57Write_2cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 2;
+                                                    let ResourceCycles = [1]; }
 def A57Write_32cyc_1W : SchedWriteRes<[A57UnitW]> { let Latency = 32;
                                                     let ResourceCycles = [32]; }
 def A57Write_32cyc_1X : SchedWriteRes<[A57UnitX]> { let Latency = 32;
@@ -68,7 +71,7 @@ foreach Lat = 4-16 in {
   }
 }
 
-def A57Write_4cyc_1M  : SchedWriteRes<[A57UnitL]> { let Latency = 4;  }
+def A57Write_4cyc_1M  : SchedWriteRes<[A57UnitM]> { let Latency = 4;  }
 def A57Write_4cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 4;  }
 def A57Write_4cyc_1W  : SchedWriteRes<[A57UnitW]> { let Latency = 4;  }
 def A57Write_5cyc_1X  : SchedWriteRes<[A57UnitX]> { let Latency = 5;  }

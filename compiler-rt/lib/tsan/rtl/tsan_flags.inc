@@ -43,7 +43,6 @@ TSAN_FLAG(
     bool, force_seq_cst_atomics, false,
     "If set, all atomics are effectively sequentially consistent (seq_cst), "
     "regardless of what user actually specified.")
-TSAN_FLAG(bool, print_benign, false, "Print matched \"benign\" races at exit.")
 TSAN_FLAG(bool, halt_on_error, false, "Exit after first reported error.")
 TSAN_FLAG(int, atexit_sleep_ms, 1000,
           "Sleep in main thread before exiting for that many ms "

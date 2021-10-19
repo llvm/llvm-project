@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -DEXCEPT=1 -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NS %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple %itanium_abi_triple -O3 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-O3 %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -DEXCEPT=1 -fcxx-exceptions -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-NS %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-FENV %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple %itanium_abi_triple -O3 -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-O3 %s
 
 // Verify float_control(precise, off) enables fast math flags on fp operations.
 float fp_precise_1(float a, float b, float c) {
@@ -65,7 +65,7 @@ float fp_precise_5(float a, float b, float c) {
 #pragma float_control(pop)
 
 float fff(float x, float y) {
-// CHECK-LABEL: define float @_Z3fffff{{.*}}
+// CHECK-LABEL: define{{.*}} float @_Z3fffff{{.*}}
 // CHECK: entry
 #pragma float_control(except, on)
   float z;
@@ -87,7 +87,7 @@ float fff(float x, float y) {
   return z;
 }
 float check_precise(float x, float y) {
-  // CHECK-LABEL: define float @_Z13check_preciseff{{.*}}
+  // CHECK-LABEL: define{{.*}} float @_Z13check_preciseff{{.*}}
   float z;
   {
 #pragma float_control(precise, on)
@@ -104,7 +104,7 @@ float check_precise(float x, float y) {
 }
 
 float fma_test2(float a, float b, float c) {
-// CHECK-LABEL define float @_Z9fma_test2fff{{.*}}
+// CHECK-LABEL define{{.*}} float @_Z9fma_test2fff{{.*}}
 #pragma float_control(precise, off)
   float x = a * b + c;
   //CHECK: fmuladd
@@ -112,7 +112,7 @@ float fma_test2(float a, float b, float c) {
 }
 
 float fma_test1(float a, float b, float c) {
-// CHECK-LABEL define float @_Z9fma_test1fff{{.*}}
+// CHECK-LABEL define{{.*}} float @_Z9fma_test1fff{{.*}}
 #pragma float_control(precise, on)
   float x = a * b + c;
   //CHECK: fmuladd
@@ -135,10 +135,9 @@ float test_OperatorCall() {
   return add(1.0f, 2.0f);
   //CHECK: llvm.experimental.constrained.fadd{{.*}}fpexcept.strict
 }
-// CHECK-LABEL define float  {{.*}}test_OperatorCall{{.*}}
+// CHECK-LABEL define{{.*}} float  {{.*}}test_OperatorCall{{.*}}
 
 #if FENV_ON
-// expected-warning@+1{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
 #pragma STDC FENV_ACCESS ON
 #endif
 // CHECK-LABEL: define {{.*}}callt{{.*}}
@@ -146,7 +145,21 @@ float test_OperatorCall() {
 void callt() {
   volatile float z;
   z = z * z;
-//CHECK: = fmul float
+  //CHECK-FENV: llvm.experimental.constrained.fmul{{.*}}
+}
+
+// CHECK-LABEL: define {{.*}}myAdd{{.*}}
+float myAdd(int i, float f) {
+  if (i<0)
+  return 1.0 + 2.0;
+  // Check that floating point constant folding doesn't occur if
+  // #pragma STC FENV_ACCESS is enabled.
+  //CHECK-FENV: llvm.experimental.constrained.fadd{{.*}}double 1.0{{.*}}double 2.0{{.*}}
+  //CHECK: store float 3.0{{.*}}retval{{.*}}
+  static double v = 1.0 / 3.0;
+  //CHECK-FENV: llvm.experimental.constrained.fptrunc.f32.f64{{.*}}
+  //CHECK-NOT: fdiv
+  return v;
 }
 
 #if EXCEPT
@@ -201,3 +214,18 @@ float xx(double x, float z) {
   return fc_template_namespace::exc_on<float>(x, z);
 }
 #endif // EXCEPT
+
+float try_lam(float x, unsigned n) {
+// CHECK: define {{.*}}try_lam{{.*}}class.anon{{.*}}
+  float result;
+  auto t =
+        // Lambda expression begins
+        [](float a, float b) {
+#pragma float_control( except, on)
+            return a * b;
+//CHECK: llvm.experimental.constrained.fmul{{.*}}fpexcept.strict
+        } // end of lambda expression
+  (1.0f,2.0f);
+  result = x + t;
+  return result;
+}

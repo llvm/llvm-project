@@ -107,7 +107,7 @@ struct ASTEdit {
   TextGenerator Replacement;
   TextGenerator Note;
   // Not all transformations will want or need to attach metadata and therefore
-  // should not be requierd to do so.
+  // should not be required to do so.
   AnyGenerator Metadata = [](const ast_matchers::MatchFinder::MatchResult &)
       -> llvm::Expected<llvm::Any> {
     return llvm::Expected<llvm::Any>(llvm::Any());
@@ -130,6 +130,11 @@ EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
 
 /// Generates no edits.
 inline EditGenerator noEdits() { return editList({}); }
+
+/// Generates a single, no-op edit anchored at the start location of the
+/// specified range. A `noopEdit` may be preferred over `noEdits` to associate a
+/// diagnostic `Explanation` with the rule.
+EditGenerator noopEdit(RangeSelector Anchor);
 
 /// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
@@ -208,10 +213,12 @@ ASTEdit addInclude(RangeSelector Target, StringRef Header,
                    IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Adds an include directive for the given header to the file associated with
-/// `RootID`.
+/// `RootID`. If `RootID` matches inside a macro expansion, will add the
+/// directive to the file in which the macro was expanded (as opposed to the
+/// file in which the macro is defined).
 inline ASTEdit addInclude(StringRef Header,
                           IncludeFormat Format = IncludeFormat::Quoted) {
-  return addInclude(node(RootID), Header, Format);
+  return addInclude(expansion(node(RootID)), Header, Format);
 }
 
 // FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
@@ -307,8 +314,8 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
 /// \code
 ///   auto R = makeRule(callExpr(callee(functionDecl(hasName("foo")))),
 ///            changeTo(cat("bar()")));
-///   AddInclude(R, "path/to/bar_header.h");
-///   AddInclude(R, "vector", IncludeFormat::Angled);
+///   addInclude(R, "path/to/bar_header.h");
+///   addInclude(R, "vector", IncludeFormat::Angled);
 /// \endcode
 void addInclude(RewriteRule &Rule, llvm::StringRef Header,
                 IncludeFormat Format = IncludeFormat::Quoted);
@@ -380,6 +387,38 @@ EditGenerator rewriteDescendants(std::string NodeId, RewriteRule Rule);
 // RewriteRule API.  Recast them as such.  Or, just declare these functions
 // public and well-supported and move them out of `detail`.
 namespace detail {
+/// The following overload set is a version of `rewriteDescendants` that
+/// operates directly on the AST, rather than generating a Transformer
+/// combinator. It applies `Rule` to all descendants of `Node`, although not
+/// `Node` itself. `Rule` can refer to nodes bound in `Result`.
+///
+/// For example, assuming that "body" is bound to a function body in MatchResult
+/// `Results`, this will produce edits to change all appearances of `x` in that
+/// body to `3`.
+/// ```
+/// auto InlineX =
+///     makeRule(declRefExpr(to(varDecl(hasName("x")))), changeTo(cat("3")));
+/// const auto *Node = Results.Nodes.getNodeAs<Stmt>("body");
+/// auto Edits = rewriteDescendants(*Node, InlineX, Results);
+/// ```
+/// @{
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const Decl &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const Stmt &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const TypeLoc &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+
+llvm::Expected<SmallVector<Edit, 1>>
+rewriteDescendants(const DynTypedNode &Node, RewriteRule Rule,
+                   const ast_matchers::MatchFinder::MatchResult &Result);
+/// @}
+
 /// Builds a single matcher for the rule, covering all of the rule's cases.
 /// Only supports Rules whose cases' matchers share the same base "kind"
 /// (`Stmt`, `Decl`, etc.)  Deprecated: use `buildMatchers` instead, which
@@ -409,28 +448,6 @@ findSelectedCase(const ast_matchers::MatchFinder::MatchResult &Result,
                  const RewriteRule &Rule);
 } // namespace detail
 } // namespace transformer
-
-namespace tooling {
-// DEPRECATED: These are temporary aliases supporting client migration to the
-// `transformer` namespace.
-/// Wraps a string as a TextGenerator.
-using TextGenerator = transformer::TextGenerator;
-
-TextGenerator text(std::string M);
-
-using transformer::addInclude;
-using transformer::applyFirst;
-using transformer::change;
-using transformer::insertAfter;
-using transformer::insertBefore;
-using transformer::makeRule;
-using transformer::remove;
-using transformer::RewriteRule;
-using transformer::IncludeFormat;
-namespace detail {
-using namespace transformer::detail;
-} // namespace detail
-} // namespace tooling
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_TRANSFORMER_REWRITE_RULE_H_

@@ -13,7 +13,7 @@ entry:
 ; TLS32: %[[StackGuard:.*]] = load i8*, i8* addrspace(256)* inttoptr (i32 20 to i8* addrspace(256)*)
 ; TLS64: %[[StackGuard:.*]] = load i8*, i8* addrspace(257)* inttoptr (i32 40 to i8* addrspace(257)*)
 ; FUCHSIA64: %[[StackGuard:.*]] = load i8*, i8* addrspace(257)* inttoptr (i32 16 to i8* addrspace(257)*)
-; GLOBAL32: %[[StackGuard:.*]] = load i8*, i8** @__stack_chk_guard
+; GLOBAL32: %[[StackGuard:.*]] = call i8* @llvm.stackguard()
 ; COMMON:   store i8* %[[StackGuard]], i8** %[[StackGuardSlot:.*]]
   %a = alloca i8, align 1
   call void @Capture(i8* %a)

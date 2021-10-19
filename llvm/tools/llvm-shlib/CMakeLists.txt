@@ -50,6 +50,13 @@ if(LLVM_BUILD_LLVM_DYLIB)
       # Solaris ld does not accept global: *; so there is no way to version *all* global symbols
       set(LIB_NAMES -Wl,--version-script,${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map ${LIB_NAMES})
     endif()
+    if (NOT MINGW)
+      # Optimize function calls for default visibility definitions to avoid PLT and
+      # reduce dynamic relocations.
+      # Note: for -fno-pic default, the address of a function may be different from
+      # inside and outside libLLVM.so.
+      target_link_options(LLVM PRIVATE LINKER:-Bsymbolic-functions)
+    endif()
   elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
   endif()
@@ -117,7 +124,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   list(REMOVE_DUPLICATES LIB_NAMES)
 
   # The python script needs to know whether symbols are prefixed with underscores or not.
-  if(LLVM_HOST_TRIPLE STREQUAL "i686-pc-win32")
+  if(LLVM_HOST_TRIPLE MATCHES "i?86-.*win.*")
     set(GEN_UNDERSCORE "--underscore")
   else()
     set(GEN_UNDERSCORE "")

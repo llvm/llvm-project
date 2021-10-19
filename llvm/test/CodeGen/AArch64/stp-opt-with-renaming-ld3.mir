@@ -11,11 +11,11 @@
 # CHECK-LABEL: name: test_ld3
 # CHECK: bb.0.entry:
 # CHECK:       renamable $x0, renamable $d0_d1_d2 = LD3Threev8b_POST killed renamable $x0, $xzr
-# CHECK-NEXT:  STPDi renamable $d0, renamable $d1, $fp, -6 :: (store 8)
-# CHECK-NEXT:  STURDi renamable $d2, $fp, -32, implicit killed $d0_d1_d2 :: (store 8 into %ir.s1)
-# CHECK-NEXT:  renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load 24 from %ir.a1, align 32)
-# CHECK-NEXT:  STPDi renamable $d0, renamable $d1, $fp, -3 :: (store 8)
-# CHECK-NEXT:  STURDi renamable $d2, $fp, -8, implicit killed $d0_d1_d2 :: (store 8)
+# CHECK-NEXT:  STPDi renamable $d0, renamable $d1, $fp, -6 :: (store (s64))
+# CHECK-NEXT:  STURDi renamable $d2, $fp, -32, implicit killed $d0_d1_d2 :: (store (s64) into %ir.s1)
+# CHECK-NEXT:  renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load (s192) from %ir.a1, align 32)
+# CHECK-NEXT:  STPDi renamable $d0, renamable $d1, $fp, -3 :: (store (s64))
+# CHECK-NEXT:  STURDi renamable $d2, $fp, -8, implicit killed $d0_d1_d2 :: (store (s64))
 # CHECK-NEXT:  RET undef $lr
 #
 name:            test_ld3
@@ -28,13 +28,13 @@ body:             |
     liveins: $x0, $x1, $lr, $fp
 
     renamable $x0, renamable $d0_d1_d2 = LD3Threev8b_POST killed renamable $x0, $xzr
-    STURDi renamable $d0, $fp, -48 :: (store 8)
-    STURDi renamable $d1, $fp, -40 :: (store 8)
-    STURDi renamable $d2, $fp, -32, implicit killed $d0_d1_d2 :: (store 8 into %ir.s1)
-    renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load 24 from %ir.a1, align 32)
-    STURDi renamable $d0, $fp, -24 :: (store 8)
-    STURDi renamable $d1, $fp, -16 :: (store 8)
-    STURDi renamable $d2, $fp, -8, implicit killed $d0_d1_d2 :: (store 8)
+    STURDi renamable $d0, $fp, -48 :: (store (s64))
+    STURDi renamable $d1, $fp, -40 :: (store (s64))
+    STURDi renamable $d2, $fp, -32, implicit killed $d0_d1_d2 :: (store (s64) into %ir.s1)
+    renamable $d0_d1_d2 = LD3Threev8b killed renamable $x0 :: (load (s192) from %ir.a1, align 32)
+    STURDi renamable $d0, $fp, -24 :: (store (s64))
+    STURDi renamable $d1, $fp, -16 :: (store (s64))
+    STURDi renamable $d2, $fp, -8, implicit killed $d0_d1_d2 :: (store (s64))
     RET undef $lr
 
 ...

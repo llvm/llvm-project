@@ -257,8 +257,8 @@ define arm_aapcs_vfpcc void @fms1(half *%a1, half *%a2, half *%a3) {
 define arm_aapcs_vfpcc void @fms2(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fms2:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s0, [r0]
-; CHECK-NEXT:    vldr.16 s2, [r1]
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vldr.16 s4, [r2]
 ; CHECK-NEXT:    vfms.f16 s4, s2, s0
 ; CHECK-NEXT:    vstr.16 s4, [r0]
@@ -266,8 +266,8 @@ define arm_aapcs_vfpcc void @fms2(half *%a1, half *%a2, half *%a3) {
 ;
 ; DONT-FUSE-LABEL: fms2:
 ; DONT-FUSE:       @ %bb.0:
-; DONT-FUSE-NEXT:    vldr.16 s0, [r0]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r1]
+; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
 ; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
 ; DONT-FUSE-NEXT:    vfms.f16 s4, s2, s0
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]
@@ -399,8 +399,8 @@ define arm_aapcs_vfpcc void @fnms2(half *%a1, half *%a2, half *%a3) {
 define arm_aapcs_vfpcc void @fnms3(half *%a1, half *%a2, half *%a3) {
 ; CHECK-LABEL: fnms3:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vldr.16 s2, [r1]
 ; CHECK-NEXT:    vldr.16 s4, [r2]
 ; CHECK-NEXT:    vfnms.f16 s4, s2, s0
 ; CHECK-NEXT:    vstr.16 s4, [r0]
@@ -408,8 +408,8 @@ define arm_aapcs_vfpcc void @fnms3(half *%a1, half *%a2, half *%a3) {
 ;
 ; DONT-FUSE-LABEL: fnms3:
 ; DONT-FUSE:       @ %bb.0:
-; DONT-FUSE-NEXT:    vldr.16 s0, [r1]
-; DONT-FUSE-NEXT:    vldr.16 s2, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s0, [r0]
+; DONT-FUSE-NEXT:    vldr.16 s2, [r1]
 ; DONT-FUSE-NEXT:    vldr.16 s4, [r2]
 ; DONT-FUSE-NEXT:    vfnms.f16 s4, s2, s0
 ; DONT-FUSE-NEXT:    vstr.16 s4, [r0]

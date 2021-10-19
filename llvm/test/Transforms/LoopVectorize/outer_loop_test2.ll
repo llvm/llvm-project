@@ -16,18 +16,15 @@
 ; RUN: opt -S -loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK: %[[ZeroTripChk:.*]] = icmp sgt i32 %jCount, 0
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
-; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK: %[[ZVal0:.*]] = insertelement <4 x i1> undef, i1 %[[ZeroTripChk]], i32 0
-; CHECK-NEXT: %[[ZSplat:.*]] = shufflevector <4 x i1> %[[ZVal0]], <4 x i1> undef, <4 x i32> zeroinitializer
+; CHECK: %[[CVal0:.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
+; CHECK-NEXT: %[[CSplat:.*]] = shufflevector <4 x i32> %[[CVal0]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
 ; CHECK: %[[VecInd:.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %[[VecIndNext:.*]], %[[ForInc]] ]
 ; CHECK: %[[AAddr:.*]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @A, i64 0, <4 x i64> %[[VecInd]]
 ; CHECK: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %[[CSplat]], <4 x i32*> %[[AAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
-; CHECK: %[[ZCmpExtr:.*]] = extractelement <4 x i1> %[[ZSplat]], i32 0
-; CHECK: br i1 %[[ZCmpExtr]], label %[[InnerForPh:.*]], label %[[OuterInc:.*]]
+; CHECK: br i1 %[[ZeroTripChk]], label %[[InnerForPh:.*]], label %[[OuterInc:.*]]
 
 ; CHECK: [[InnerForPh]]:
 ; CHECK: %[[WideAVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[AAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
@@ -35,8 +32,8 @@
 ; CHECK: br label %[[InnerForBody:.*]]
 
 ; CHECK: [[InnerForBody]]:
-; CHECK: %[[InnerInd:.*]] = phi <4 x i64> [ %[[InnerIndNext:.*]], %[[InnerForBody]] ], [ zeroinitializer, %[[InnerForPh]] ]
-; CHECK: %[[AccumPhi:.*]] = phi <4 x i32> [ %[[AccumPhiNext:.*]], %[[InnerForBody]] ], [ %[[WideAVal]], %[[InnerForPh]] ]
+; CHECK: %[[InnerInd:.*]] = phi <4 x i64> [ zeroinitializer, %[[InnerForPh]] ], [ %[[InnerIndNext:.*]], %[[InnerForBody]] ]
+; CHECK: %[[AccumPhi:.*]] = phi <4 x i32> [ %[[WideAVal]], %[[InnerForPh]] ], [ %[[AccumPhiNext:.*]], %[[InnerForBody]] ]
 ; CHECK: %[[BAddr:.*]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, <4 x i64> %[[InnerInd]]
 ; CHECK: %[[WideBVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[BAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
 ; CHECK: %[[Add1:.*]] = add nsw <4 x i32> %[[WideBVal]], %[[VecIndTr]]
@@ -52,7 +49,7 @@
 ; CHECK:  br label %[[ForInc]]
 
 ; CHECK: [[ForInc]]:
-; CHECK: %[[IndNext]] = add i64 %[[Ind]], 4
+; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
 ; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], {{.*}}
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body

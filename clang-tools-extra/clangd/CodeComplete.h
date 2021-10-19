@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
+#include "ASTSignals.h"
 #include "Compiler.h"
 #include "Headers.h"
 #include "Protocol.h"
@@ -50,17 +51,6 @@ struct CodeCompleteOptions {
   /// b})).
   bool EnableSnippets = false;
 
-  /// Add code patterns to completion results.
-  /// If EnableSnippets is false, this options is ignored and code patterns will
-  /// always be omitted.
-  bool IncludeCodePatterns = true;
-
-  /// Add macros to code completion results.
-  bool IncludeMacros = true;
-
-  /// Add comments to code completion results, if available.
-  bool IncludeComments = true;
-
   /// Include results that are not legal completions in the current context.
   /// For example, private members are usually inaccessible.
   bool IncludeIneligibleResults = false;
@@ -93,16 +83,6 @@ struct CodeCompleteOptions {
   /// Expose origins of completion items in the label (for debugging).
   bool ShowOrigins = false;
 
-  /// If set to true, this will send an asynchronous speculative index request,
-  /// based on the index request for the last code completion on the same file
-  /// and the filter text typed before the cursor, before sema code completion
-  /// is invoked. This can reduce the code completion latency (by roughly
-  /// latency of sema code completion) if the speculative request is the same as
-  /// the one generated for the ongoing code completion from sema. As a sequence
-  /// of code completions often have the same scopes and proximity paths etc,
-  /// this should be effective for a number of code completions.
-  bool SpeculativeIndexRequest = false;
-
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
   /// results.
@@ -110,6 +90,7 @@ struct CodeCompleteOptions {
   /// clangd.
   const SymbolIndex *Index = nullptr;
 
+  const ASTSignals *MainFileSignals = nullptr;
   /// Include completions that require small corrections, e.g. change '.' to
   /// '->' on member access etc.
   bool IncludeFixIts = false;
@@ -147,6 +128,29 @@ struct CodeCompleteOptions {
   std::function<void(const CodeCompletion &, const SymbolQualitySignals &,
                      const SymbolRelevanceSignals &, float Score)>
       RecordCCResult;
+
+  /// Model to use for ranking code completion candidates.
+  enum CodeCompletionRankingModel {
+    Heuristics,
+    DecisionForest,
+  } RankingModel = DecisionForest;
+
+  /// Callback used to score a CompletionCandidate if DecisionForest ranking
+  /// model is enabled.
+  /// This allows us to inject experimental models and compare them with
+  /// baseline model using A/B testing.
+  std::function<DecisionForestScores(
+      const SymbolQualitySignals &, const SymbolRelevanceSignals &, float Base)>
+      DecisionForestScorer = &evaluateDecisionForest;
+  /// Weight for combining NameMatch and Prediction of DecisionForest.
+  /// CompletionScore is NameMatch * pow(Base, Prediction).
+  /// The optimal value of Base largely depends on the semantics of the model
+  /// and prediction score (e.g. algorithm used during training, number of
+  /// trees, etc.). Usually if the range of Prediciton is [-20, 20] then a Base
+  /// in [1.2, 1.7] works fine.
+  /// Semantics: E.g. For Base = 1.3, if the Prediciton score reduces by 2.6
+  /// points then completion score reduces by 50% or 1.3^(-2.6).
+  float DecisionForestBase = 1.3f;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.

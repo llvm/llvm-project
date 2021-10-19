@@ -35,7 +35,7 @@ int bar() {
 // LINUX: @_Z3fooi.ifunc
 // LINUX: @_ZN1S3fooEi.ifunc
 
-// LINUX: define i32 @_Z3barv()
+// LINUX: define{{.*}} i32 @_Z3barv()
 // Store to Free of ifunc
 // LINUX: store i32 (i32)* @_Z3fooi.ifunc
 // Store to Member of ifunc

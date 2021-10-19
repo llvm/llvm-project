@@ -42,6 +42,14 @@ constexpr llvm::StringLiteral GtestMockDecls = R"cc(
 #define EXPECT_PRED_FORMAT2(pred_format, v1, v2) \
     GTEST_PRED_FORMAT2_(pred_format, v1, v2, GTEST_NONFATAL_FAILURE_)
 
+#define GTEST_PRED_FORMAT1_(pred_format, v1, on_failure) \
+  GTEST_ASSERT_(pred_format(#v1, v1), on_failure)
+
+#define EXPECT_PRED_FORMAT1(pred_format, v1) \
+  GTEST_PRED_FORMAT1_(pred_format, v1, GTEST_NONFATAL_FAILURE_)
+#define ASSERT_PRED_FORMAT1(pred_format, v1) \
+  GTEST_PRED_FORMAT1_(pred_format, v1, GTEST_FATAL_FAILURE_)
+
 #define EXPECT_EQ(val1, val2) \
     EXPECT_PRED_FORMAT2(::testing::internal::EqHelper::Compare, val1, val2)
 #define EXPECT_NE(val1, val2) \
@@ -55,10 +63,28 @@ constexpr llvm::StringLiteral GtestMockDecls = R"cc(
 #define EXPECT_LT(val1, val2) \
     EXPECT_PRED_FORMAT2(::testing::internal::CmpHelperLT, val1, val2)
 
+#define ASSERT_THAT(value, matcher) \
+  ASSERT_PRED_FORMAT1(              \
+      ::testing::internal::MakePredicateFormatterFromMatcher(matcher), value)
+#define EXPECT_THAT(value, matcher) \
+  EXPECT_PRED_FORMAT1(              \
+      ::testing::internal::MakePredicateFormatterFromMatcher(matcher), value)
+
 #define ASSERT_EQ(val1, val2) \
     ASSERT_PRED_FORMAT2(::testing::internal::EqHelper::Compare, val1, val2)
 #define ASSERT_NE(val1, val2) \
     ASSERT_PRED_FORMAT2(::testing::internal::CmpHelperNE, val1, val2)
+
+#define GMOCK_ON_CALL_IMPL_(mock_expr, Setter, call)                    \
+  ((mock_expr).gmock_##call)(::testing::internal::GetWithoutMatchers(), \
+                             nullptr)                                   \
+      .Setter(nullptr, 0, #mock_expr, #call)
+
+#define ON_CALL(obj, call) \
+  GMOCK_ON_CALL_IMPL_(obj, InternalDefaultActionSetAt, call)
+
+#define EXPECT_CALL(obj, call) \
+  GMOCK_ON_CALL_IMPL_(obj, InternalExpectedAt, call)
 
   namespace testing {
   namespace internal {
@@ -96,8 +122,77 @@ constexpr llvm::StringLiteral GtestMockDecls = R"cc(
                   const T2& val2) {
     return 0;
   }
+
+  // For implementing ASSERT_THAT() and EXPECT_THAT().  The template
+  // argument M must be a type that can be converted to a matcher.
+  template <typename M>
+  class PredicateFormatterFromMatcher {
+   public:
+    explicit PredicateFormatterFromMatcher(M m) : matcher_(m) {}
+
+    // This template () operator allows a PredicateFormatterFromMatcher
+    // object to act as a predicate-formatter suitable for using with
+    // Google Test's EXPECT_PRED_FORMAT1() macro.
+    template <typename T>
+    int operator()(const char* value_text, const T& x) const {
+      return 0;
+    }
+
+   private:
+    const M matcher_;
+  };
+
+  template <typename M>
+  inline PredicateFormatterFromMatcher<M> MakePredicateFormatterFromMatcher(
+      M matcher) {
+    return PredicateFormatterFromMatcher<M>(matcher);
+  }
+
+  bool GetWithoutMatchers() { return false; }
+
+  template <typename F>
+  class MockSpec {
+   public:
+    MockSpec<F>() {}
+
+    bool InternalDefaultActionSetAt(
+        const char* file, int line, const char* obj, const char* call) {
+      return false;
+    }
+
+    bool InternalExpectedAt(
+        const char* file, int line, const char* obj, const char* call) {
+      return false;
+    }
+
+    MockSpec<F> operator()(bool, void*) {
+      return *this;
+    }
+  };  // class MockSpec
+
   }  // namespace internal
+
+  template <typename T>
+  int StrEq(T val) {
+    return 0;
+  }
+  template <typename T>
+  int Eq(T val) {
+    return 0;
+  }
+
   }  // namespace testing
+
+  class Mock {
+    public:
+    Mock() {}
+    testing::internal::MockSpec<int> gmock_TwoArgsMethod(int, int) {
+      return testing::internal::MockSpec<int>();
+    }
+    testing::internal::MockSpec<int> gmock_TwoArgsMethod(bool, void*) {
+      return testing::internal::MockSpec<int>();
+    }
+  };  // class Mock
 )cc";
 
 static std::string wrapGtest(llvm::StringRef Input) {
@@ -185,6 +280,138 @@ TEST(GtestExpectTest, GtShouldMatchExpectGt) {
   )cc";
   EXPECT_TRUE(
       matches(wrapGtest(Input), gtestExpect(GtestCmp::Gt, expr(), expr())));
+}
+
+TEST(GtestExpectTest, ThatShouldMatchAssertThat) {
+  std::string Input = R"cc(
+    using ::testing::Eq;
+    void Test() { ASSERT_THAT(2, Eq(2)); }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestAssertThat(
+          expr(), callExpr(callee(functionDecl(hasName("::testing::Eq")))))));
+}
+
+TEST(GtestExpectTest, ThatShouldMatchExpectThat) {
+  std::string Input = R"cc(
+    using ::testing::Eq;
+    void Test() { EXPECT_THAT(2, Eq(2)); }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestExpectThat(
+          expr(), callExpr(callee(functionDecl(hasName("::testing::Eq")))))));
+}
+
+TEST(GtestOnCallTest, CallShouldMatchOnCallWithoutParams1) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      ON_CALL(mock, TwoArgsMethod);
+    }
+  )cc";
+  EXPECT_TRUE(matches(wrapGtest(Input),
+                      gtestOnCall(expr(hasType(cxxRecordDecl(hasName("Mock")))),
+                                  "TwoArgsMethod", MockArgs::None)));
+}
+
+TEST(GtestOnCallTest, CallShouldMatchOnCallWithoutParams2) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      ON_CALL(mock, TwoArgsMethod);
+    }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestOnCall(cxxMemberCallExpr(
+                      callee(functionDecl(hasName("gmock_TwoArgsMethod"))))
+                      .bind("mock_call"),
+                  MockArgs::None)));
+}
+
+TEST(GtestOnCallTest, CallShouldMatchOnCallWithParams1) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      ON_CALL(mock, TwoArgsMethod(1, 2));
+    }
+  )cc";
+  EXPECT_TRUE(matches(wrapGtest(Input),
+                      gtestOnCall(expr(hasType(cxxRecordDecl(hasName("Mock")))),
+                                  "TwoArgsMethod", MockArgs::Some)));
+}
+
+TEST(GtestOnCallTest, CallShouldMatchOnCallWithParams2) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      ON_CALL(mock, TwoArgsMethod(1, 2));
+    }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestOnCall(cxxMemberCallExpr(
+                      callee(functionDecl(hasName("gmock_TwoArgsMethod"))))
+                      .bind("mock_call"),
+                  MockArgs::Some)));
+}
+
+TEST(GtestExpectCallTest, CallShouldMatchExpectCallWithoutParams1) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      EXPECT_CALL(mock, TwoArgsMethod);
+    }
+  )cc";
+  EXPECT_TRUE(
+      matches(wrapGtest(Input),
+              gtestExpectCall(expr(hasType(cxxRecordDecl(hasName("Mock")))),
+                              "TwoArgsMethod", MockArgs::None)));
+}
+
+TEST(GtestExpectCallTest, CallShouldMatchExpectCallWithoutParams2) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      EXPECT_CALL(mock, TwoArgsMethod);
+    }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestExpectCall(cxxMemberCallExpr(
+                          callee(functionDecl(hasName("gmock_TwoArgsMethod"))))
+                          .bind("mock_call"),
+                      MockArgs::None)));
+}
+
+TEST(GtestExpectCallTest, CallShouldMatchExpectCallWithParams1) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      EXPECT_CALL(mock, TwoArgsMethod(1, 2));
+    }
+  )cc";
+  EXPECT_TRUE(
+      matches(wrapGtest(Input),
+              gtestExpectCall(expr(hasType(cxxRecordDecl(hasName("Mock")))),
+                              "TwoArgsMethod", MockArgs::Some)));
+}
+
+TEST(GtestExpectCallTest, CallShouldMatchExpectCallWithParams2) {
+  std::string Input = R"cc(
+    void Test() {
+      Mock mock;
+      EXPECT_CALL(mock, TwoArgsMethod(1, 2));
+    }
+  )cc";
+  EXPECT_TRUE(matches(
+      wrapGtest(Input),
+      gtestExpectCall(cxxMemberCallExpr(
+                          callee(functionDecl(hasName("gmock_TwoArgsMethod"))))
+                          .bind("mock_call"),
+                      MockArgs::Some)));
 }
 
 } // end namespace ast_matchers

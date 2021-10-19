@@ -22,7 +22,7 @@ define void @call(i32) {
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -42,8 +42,6 @@ define void @call(i32) {
 ; CHECK:            - Module:          env
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK:            - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK:            - Module:          env
 ; CHECK-NEXT:         Field:           varargs
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
@@ -53,6 +51,8 @@ define void @call(i32) {
 ; CHECK-NEXT:         Field:           f1
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        0
+; CHECK:            - Module:          env
+; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK:        - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
@@ -63,4 +63,4 @@ define void @call(i32) {
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_I32
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:         Offset:          0x00000006
+; CHECK-NEXT:         Offset:          0x6

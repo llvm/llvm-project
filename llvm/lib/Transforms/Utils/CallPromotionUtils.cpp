@@ -112,9 +112,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
 
   Builder.SetInsertPoint(&MergeBlock->front());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
-  SmallVector<User *, 16> UsersToUpdate;
-  for (User *U : OrigInst->users())
-    UsersToUpdate.push_back(U);
+  SmallVector<User *, 16> UsersToUpdate(OrigInst->users());
   for (User *U : UsersToUpdate)
     U->replaceUsesOfWith(OrigInst, Phi);
   Phi->addIncoming(OrigInst, OrigInst->getParent());
@@ -165,9 +163,7 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 
   // Save the users of the calling instruction. These uses will be changed to
   // use the bitcast after we create it.
-  SmallVector<User *, 16> UsersToUpdate;
-  for (User *U : CB.users())
-    UsersToUpdate.push_back(U);
+  SmallVector<User *, 16> UsersToUpdate(CB.users());
 
   // Determine an appropriate location to create the bitcast for the return
   // value. The location depends on if we have a call or invoke instruction.
@@ -428,12 +424,28 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
         *FailureReason = "Argument type mismatch";
       return false;
     }
+    // Make sure that the callee and call agree on byval/inalloca. The types do
+    // not have to match.
+
+    if (Callee->hasParamAttribute(I, Attribute::ByVal) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::ByVal)) {
+      if (FailureReason)
+        *FailureReason = "byval mismatch";
+      return false;
+    }
+    if (Callee->hasParamAttribute(I, Attribute::InAlloca) !=
+        CB.getAttributes().hasParamAttr(I, Attribute::InAlloca)) {
+      if (FailureReason)
+        *FailureReason = "inalloca mismatch";
+      return false;
+    }
   }
   for (; I < NumArgs; I++) {
-    // Vararg functions can have more arguments than paramters.
+    // Vararg functions can have more arguments than parameters.
     assert(Callee->isVarArg());
     if (CB.paramHasAttr(I, Attribute::StructRet)) {
-      *FailureReason = "SRet arg to vararg function";
+      if (FailureReason)
+        *FailureReason = "SRet arg to vararg function";
       return false;
     }
   }
@@ -488,21 +500,19 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
-      AttrBuilder ArgAttrs(CallerPAL.getParamAttributes(ArgNo));
+      AttrBuilder ArgAttrs(CallerPAL.getParamAttrs(ArgNo));
       ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
 
-      // If byval is used, this must be a pointer type, and the byval type must
-      // match the element type. Update it if present.
-      if (ArgAttrs.getByValType()) {
-        Type *NewTy = Callee->getParamByValType(ArgNo);
-        ArgAttrs.addByValAttr(
-            NewTy ? NewTy : cast<PointerType>(FormalTy)->getElementType());
-      }
+      // We may have a different byval/inalloca type.
+      if (ArgAttrs.getByValType())
+        ArgAttrs.addByValAttr(Callee->getParamByValType(ArgNo));
+      if (ArgAttrs.getInAllocaType())
+        ArgAttrs.addInAllocaAttr(Callee->getParamInAllocaType(ArgNo));
 
       NewArgAttrs.push_back(AttributeSet::get(Ctx, ArgAttrs));
       AttributeChanged = true;
     } else
-      NewArgAttrs.push_back(CallerPAL.getParamAttributes(ArgNo));
+      NewArgAttrs.push_back(CallerPAL.getParamAttrs(ArgNo));
   }
 
   // If the return type of the call site doesn't match that of the callee, cast
@@ -517,7 +527,7 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
 
   // Set the new callsite attribute.
   if (AttributeChanged)
-    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttributes(),
+    CB.setAttributes(AttributeList::get(Ctx, CallerPAL.getFnAttrs(),
                                         AttributeSet::get(Ctx, RAttrs),
                                         NewArgAttrs));
 

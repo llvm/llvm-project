@@ -82,7 +82,6 @@ static void *tryThread(void *Param) {
 
 TEST(ScudoMutexTest, Mutex) {
   scudo::HybridMutex M;
-  M.init();
   TestData Data(M);
   pthread_t Threads[NumberOfThreads];
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
@@ -93,7 +92,6 @@ TEST(ScudoMutexTest, Mutex) {
 
 TEST(ScudoMutexTest, MutexTry) {
   scudo::HybridMutex M;
-  M.init();
   TestData Data(M);
   pthread_t Threads[NumberOfThreads];
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)

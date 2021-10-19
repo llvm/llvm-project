@@ -37,11 +37,11 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %12 = S_MOV_B32 123
     %10 = V_LSHRREV_B32_e64 16, %3, implicit $exec
     %11 = V_ADD_CO_U32_e32 %12, killed %10, implicit-def $vcc, implicit $exec
-    FLAT_STORE_DWORD %0, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %11, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31
 
@@ -80,9 +80,9 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %10 = V_LSHRREV_B32_e64 16, %3, implicit $exec
     %11 = V_TRUNC_F32_e64 0, killed %10, 1, 2, implicit $mode, implicit $exec, implicit-def $vcc
-    FLAT_STORE_DWORD %0, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %11, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31

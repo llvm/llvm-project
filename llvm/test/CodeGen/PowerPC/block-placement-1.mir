@@ -209,8 +209,8 @@ body:             |
     CFI_INSTRUCTION offset $lr8, 16
     CFI_INSTRUCTION offset $x29, -24
     CFI_INSTRUCTION offset $x30, -16
-    STD killed $x29, -24, $x1 :: (store 8 into %fixed-stack.1)
-    STD killed $x30, -16, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    STD killed $x29, -24, $x1 :: (store (s64) into %fixed-stack.1)
+    STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.0, align 16)
     STD killed $x0, 16, $x1
     $x1 = STDU $x1, -64, $x1
     renamable $r29 = LI 10
@@ -284,8 +284,8 @@ body:             |
     $x1 = ADDI8 $x1, 64
     $x0 = LD 16, $x1
     MTLR8 killed $x0, implicit-def $lr8
-    $x30 = LD -16, $x1 :: (load 8 from %fixed-stack.0, align 16)
-    $x29 = LD -24, $x1 :: (load 8 from %fixed-stack.1)
+    $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.0, align 16)
+    $x29 = LD -24, $x1 :: (load (s64) from %fixed-stack.1)
     BLR8 implicit $lr8, implicit $rm
   
   bb.10.ehcleanup:

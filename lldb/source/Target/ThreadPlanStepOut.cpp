@@ -33,11 +33,11 @@ uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
 // ThreadPlanStepOut: Step out of the current frame
 ThreadPlanStepOut::ThreadPlanStepOut(
     Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
-    Vote stop_vote, Vote run_vote, uint32_t frame_idx,
+    Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
     bool continue_to_next_branch, bool gather_return_value)
-    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, stop_vote,
-                 run_vote),
+    : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
+                 report_run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
       m_return_bp_id(LLDB_INVALID_BREAK_ID),
       m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),

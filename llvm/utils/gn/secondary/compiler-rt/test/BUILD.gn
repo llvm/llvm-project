@@ -49,11 +49,16 @@ write_cmake_config("lit_common_configured") {
         rebase_path(crt_current_out_dir),
     "COMPILER_RT_EMULATOR=",
     "COMPILER_RT_ASAN_SHADOW_SCALE=",
+    "COMPILER_RT_MEMPROF_SHADOW_SCALE=",
+    "COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL=False",
+    "COMPILER_RT_TEST_USE_LLD_PYBOOL=False",  # FIXME: base off use_lld?
     "SANITIZER_CAN_USE_CXXABI_PYBOOL=True",
+    "SANITIZER_USE_STATIC_CXX_ABI_PYBOOL=False",
+    "SANITIZER_USE_STATIC_LLVM_UNWINDER_PYBOOL=False",
     "COMPILER_RT_HAS_LLD_PYBOOL=True",
     "COMPILER_RT_HAS_GWP_ASAN_PYBOOL=False",
     "HAVE_RPC_XDR_H=0",
-    "ANDROID_NDK_VERSION=19",
+    "ANDROID_API_LEVEL=$android_api_level",
     "ANDROID_SERIAL_FOR_TESTING=$android_serial_for_testing",
   ]
 

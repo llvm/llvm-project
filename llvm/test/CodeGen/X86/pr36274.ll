@@ -6,7 +6,7 @@
 ; to the load causing a cycle. Here the dependence in question comes
 ; from the carry in input of the adcl.
 
-@vx = external local_unnamed_addr global <2 x i32>, align 8
+@vx = external dso_local local_unnamed_addr global <2 x i32>, align 8
 
 define void @pr36274(i32* %somewhere) {
 ; CHECK-LABEL: pr36274:

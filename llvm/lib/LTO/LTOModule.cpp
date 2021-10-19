@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -35,7 +36,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
@@ -46,6 +46,7 @@ using namespace llvm::object;
 LTOModule::LTOModule(std::unique_ptr<Module> M, MemoryBufferRef MBRef,
                      llvm::TargetMachine *TM)
     : Mod(std::move(M)), MBRef(MBRef), _target(TM) {
+  assert(_target && "target machine is null");
   SymTab.addModule(Mod.get());
 }
 
@@ -221,6 +222,8 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
       CPU = "core2";
     else if (Triple.getArch() == llvm::Triple::x86)
       CPU = "yonah";
+    else if (Triple.isArm64e())
+      CPU = "apple-a12";
     else if (Triple.getArch() == llvm::Triple::aarch64 ||
              Triple.getArch() == llvm::Triple::aarch64_32)
       CPU = "cyclone";
@@ -542,7 +545,8 @@ void LTOModule::addPotentialUndefinedSymbol(ModuleSymbolTable::Symbol Sym,
     name.c_str();
   }
 
-  auto IterBool = _undefines.insert(std::make_pair(name, NameAndAttributes()));
+  auto IterBool =
+      _undefines.insert(std::make_pair(name.str(), NameAndAttributes()));
 
   // we already have the symbol
   if (!IterBool.second)
@@ -579,7 +583,7 @@ void LTOModule::parseSymbols() {
         SymTab.printSymbolName(OS, Sym);
         Buffer.c_str();
       }
-      StringRef Name(Buffer);
+      StringRef Name = Buffer;
 
       if (IsUndefined)
         addAsmGlobalSymbolUndef(Name);
@@ -683,4 +687,17 @@ Expected<uint32_t> LTOModule::getMachOCPUType() const {
 
 Expected<uint32_t> LTOModule::getMachOCPUSubType() const {
   return MachO::getCPUSubType(Triple(Mod->getTargetTriple()));
+}
+
+bool LTOModule::hasCtorDtor() const {
+  for (auto Sym : SymTab.symbols()) {
+    if (auto *GV = Sym.dyn_cast<GlobalValue *>()) {
+      StringRef Name = GV->getName();
+      if (Name.consume_front("llvm.global_")) {
+        if (Name.equals("ctors") || Name.equals("dtors"))
+          return true;
+      }
+    }
+  }
+  return false;
 }

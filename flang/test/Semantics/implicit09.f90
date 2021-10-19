@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fimplicit-none-type-never
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fimplicit-none-type-never
 subroutine s1
   implicit none
   i = j + k  ! would be error without -fimplicit-none-type-never

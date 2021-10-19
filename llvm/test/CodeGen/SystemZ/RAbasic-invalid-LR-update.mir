@@ -149,13 +149,13 @@ body:             |
     %11 = VGBM 0
     %43 = LHIMux 0
     %44 = LARL %const.0
-    %45 = VL64 %44, 0, $noreg :: (load 8 from constant-pool)
+    %45 = VL64 %44, 0, $noreg :: (load (s64) from constant-pool)
   
   bb.1:
     ADJCALLSTACKDOWN 0, 0
     %12 = LZDR
     $f0d = COPY %12
-    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
+    CallBRASL &fmod, killed $f0d, undef $f2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $f0d
     ADJCALLSTACKUP 0, 0
     KILL killed $f0d
   
@@ -194,7 +194,7 @@ body:             |
     %36 = VLVGH %36, %20.subreg_l32, $noreg, 0
     %36 = VLVGH %36, %34.subreg_l32, $noreg, 1
     dead %36 = VLVGH %36, %40.subreg_l32, $noreg, 2
-    %4 = LG undef %42, 0, $noreg :: (load 8 from `i64* undef`)
+    %4 = LG undef %42, 0, $noreg :: (load (s64) from `i64* undef`)
     undef %57.subreg_h64 = LLILL 0
     undef %66.subreg_h64 = LLILL 0
     undef %79.subreg_h64 = LLILL 0

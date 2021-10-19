@@ -3,67 +3,24 @@
 
 from __future__ import division, print_function
 
-
+import binascii
 import os
 import os.path
 import platform
 import re
 import six
-import socket_packet_pump
+import socket
 import subprocess
+from lldbsuite.support import seven
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
+from textwrap import dedent
+import shutil
 
-from six.moves import queue
+def _get_support_exe(basename):
+    support_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeSupportExecutableDir)
 
-
-def _get_debug_monitor_from_lldb(lldb_exe, debug_monitor_basename):
-    """Return the debug monitor exe path given the lldb exe path.
-
-    This method attempts to construct a valid debug monitor exe name
-    from a given lldb exe name.  It will return None if the synthesized
-    debug monitor name is not found to exist.
-
-    The debug monitor exe path is synthesized by taking the directory
-    of the lldb exe, and replacing the portion of the base name that
-    matches "lldb" (case insensitive) and replacing with the value of
-    debug_monitor_basename.
-
-    Args:
-        lldb_exe: the path to an lldb executable.
-
-        debug_monitor_basename: the base name portion of the debug monitor
-            that will replace 'lldb'.
-
-    Returns:
-        A path to the debug monitor exe if it is found to exist; otherwise,
-        returns None.
-
-    """
-    if not lldb_exe:
-        return None
-
-    exe_dir = os.path.dirname(lldb_exe)
-    exe_base = os.path.basename(lldb_exe)
-
-    # we'll rebuild the filename by replacing lldb with
-    # the debug monitor basename, keeping any prefix or suffix in place.
-    regex = re.compile(r"lldb", re.IGNORECASE)
-    new_base = regex.sub(debug_monitor_basename, exe_base)
-
-    debug_monitor_exe = os.path.join(exe_dir, new_base)
-    if os.path.exists(debug_monitor_exe):
-        return debug_monitor_exe
-
-    new_base = regex.sub(
-        'LLDB.framework/Versions/A/Resources/' +
-        debug_monitor_basename,
-        exe_base)
-    debug_monitor_exe = os.path.join(exe_dir, new_base)
-    if os.path.exists(debug_monitor_exe):
-        return debug_monitor_exe
-
-    return None
+    return shutil.which(basename, path=support_dir.GetDirectory())
 
 
 def get_lldb_server_exe():
@@ -73,11 +30,8 @@ def get_lldb_server_exe():
         A path to the lldb-server exe if it is found to exist; otherwise,
         returns None.
     """
-    if "LLDB_DEBUGSERVER_PATH" in os.environ:
-        return os.environ["LLDB_DEBUGSERVER_PATH"]
 
-    return _get_debug_monitor_from_lldb(
-        lldbtest_config.lldbExec, "lldb-server")
+    return _get_support_exe("lldb-server")
 
 
 def get_debugserver_exe():
@@ -87,15 +41,11 @@ def get_debugserver_exe():
         A path to the debugserver exe if it is found to exist; otherwise,
         returns None.
     """
-    if "LLDB_DEBUGSERVER_PATH" in os.environ:
-        return os.environ["LLDB_DEBUGSERVER_PATH"]
-
     if configuration.arch and configuration.arch == "x86_64" and \
        platform.machine().startswith("arm64"):
         return '/Library/Apple/usr/libexec/oah/debugserver'
 
-    return _get_debug_monitor_from_lldb(
-        lldbtest_config.lldbExec, "debugserver")
+    return _get_support_exe("debugserver")
 
 _LOG_LINE_REGEX = re.compile(r'^(lldb-server|debugserver)\s+<\s*(\d+)>' +
                              '\s+(read|send)\s+packet:\s+(.+)$')
@@ -165,17 +115,14 @@ def assert_packets_equal(asserter, actual_packet, expected_packet):
 
 def expect_lldb_gdbserver_replay(
         asserter,
-        sock,
+        server,
         test_sequence,
-        pump_queues,
         timeout_seconds,
         logger=None):
     """Replay socket communication with lldb-gdbserver and verify responses.
 
     Args:
         asserter: the object providing assertEqual(first, second, msg=None), e.g. TestCase instance.
-
-        sock: the TCP socket connected to the lldb-gdbserver exe.
 
         test_sequence: a GdbRemoteTestSequence instance that describes
             the messages sent to the gdb remote and the responses
@@ -207,75 +154,62 @@ def expect_lldb_gdbserver_replay(
         return {}
 
     context = {"O_count": 0, "O_content": ""}
-    with socket_packet_pump.SocketPacketPump(sock, pump_queues, logger) as pump:
-        # Grab the first sequence entry.
-        sequence_entry = test_sequence.entries.pop(0)
 
-        # While we have an active sequence entry, send messages
-        # destined for the stub and collect/match/process responses
-        # expected from the stub.
-        while sequence_entry:
-            if sequence_entry.is_send_to_remote():
-                # This is an entry to send to the remote debug monitor.
-                send_packet = sequence_entry.get_send_packet()
-                if logger:
-                    if len(send_packet) == 1 and send_packet[0] == chr(3):
-                        packet_desc = "^C"
-                    else:
-                        packet_desc = send_packet
-                    logger.info(
-                        "sending packet to remote: {}".format(packet_desc))
-                sock.sendall(send_packet.encode())
-            else:
-                # This is an entry expecting to receive content from the remote
-                # debug monitor.
+    # Grab the first sequence entry.
+    sequence_entry = test_sequence.entries.pop(0)
 
-                # We'll pull from (and wait on) the queue appropriate for the type of matcher.
-                # We keep separate queues for process output (coming from non-deterministic
-                # $O packet division) and for all other packets.
+    # While we have an active sequence entry, send messages
+    # destined for the stub and collect/match/process responses
+    # expected from the stub.
+    while sequence_entry:
+        if sequence_entry.is_send_to_remote():
+            # This is an entry to send to the remote debug monitor.
+            send_packet = sequence_entry.get_send_packet()
+            if logger:
+                if len(send_packet) == 1 and send_packet[0] == chr(3):
+                    packet_desc = "^C"
+                else:
+                    packet_desc = send_packet
+                logger.info(
+                    "sending packet to remote: {}".format(packet_desc))
+            server.send_raw(send_packet.encode())
+        else:
+            # This is an entry expecting to receive content from the remote
+            # debug monitor.
+
+            # We'll pull from (and wait on) the queue appropriate for the type of matcher.
+            # We keep separate queues for process output (coming from non-deterministic
+            # $O packet division) and for all other packets.
+            try:
                 if sequence_entry.is_output_matcher():
-                    try:
-                        # Grab next entry from the output queue.
-                        content = pump_queues.output_queue().get(True, timeout_seconds)
-                    except queue.Empty:
-                        if logger:
-                            logger.warning(
-                                "timeout waiting for stub output (accumulated output:{})".format(
-                                    pump.get_accumulated_output()))
-                        raise Exception(
-                            "timed out while waiting for output match (accumulated output: {})".format(
-                                pump.get_accumulated_output()))
+                    # Grab next entry from the output queue.
+                    content = server.get_raw_output_packet()
                 else:
-                    try:
-                        content = pump_queues.packet_queue().get(True, timeout_seconds)
-                    except queue.Empty:
-                        if logger:
-                            logger.warning(
-                                "timeout waiting for packet match (receive buffer: {})".format(
-                                    pump.get_receive_buffer()))
-                        raise Exception(
-                            "timed out while waiting for packet match (receive buffer: {})".format(
-                                pump.get_receive_buffer()))
+                    content = server.get_raw_normal_packet()
+                content = seven.bitcast_to_string(content)
+            except socket.timeout:
+                asserter.fail(
+                        "timed out while waiting for '{}':\n{}".format(sequence_entry, server))
 
-                # Give the sequence entry the opportunity to match the content.
-                # Output matchers might match or pass after more output accumulates.
-                # Other packet types generally must match.
-                asserter.assertIsNotNone(content)
-                context = sequence_entry.assert_match(
-                    asserter, content, context=context)
+            # Give the sequence entry the opportunity to match the content.
+            # Output matchers might match or pass after more output accumulates.
+            # Other packet types generally must match.
+            asserter.assertIsNotNone(content)
+            context = sequence_entry.assert_match(
+                asserter, content, context=context)
 
-            # Move on to next sequence entry as needed.  Some sequence entries support executing multiple
-            # times in different states (for looping over query/response
-            # packets).
-            if sequence_entry.is_consumed():
-                if len(test_sequence.entries) > 0:
-                    sequence_entry = test_sequence.entries.pop(0)
-                else:
-                    sequence_entry = None
+        # Move on to next sequence entry as needed.  Some sequence entries support executing multiple
+        # times in different states (for looping over query/response
+        # packets).
+        if sequence_entry.is_consumed():
+            if len(test_sequence.entries) > 0:
+                sequence_entry = test_sequence.entries.pop(0)
+            else:
+                sequence_entry = None
 
-        # Fill in the O_content entries.
-        context["O_count"] = 1
-        context["O_content"] = pump.get_accumulated_output()
+    # Fill in the O_content entries.
+    context["O_count"] = 1
+    context["O_content"] = server.consume_accumulated_output()
 
     return context
 
@@ -447,8 +381,7 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
             is_send_to_remote=True,
             exact_payload=None,
             regex=None,
-            capture=None,
-            expect_captures=None):
+            capture=None):
         """Create an entry representing one piece of the I/O to/from a gdb remote debug monitor.
 
         Args:
@@ -465,16 +398,12 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
                 no-ack makes the checksum content essentially
                 undefined.
 
-            regex: currently only valid for receives from gdbremote.
-                When specified (and only if exact_payload is None),
-                indicates the gdbremote response must match the given
-                regex. Match groups in the regex can be used for two
-                different purposes: saving the match (see capture
-                arg), or validating that a match group matches a
-                previously established value (see expect_captures). It
-                is perfectly valid to have just a regex arg and to
-                specify neither capture or expect_captures args. This
-                arg only makes sense if exact_payload is not
+            regex: currently only valid for receives from gdbremote.  When
+                specified (and only if exact_payload is None), indicates the
+                gdbremote response must match the given regex. Match groups in
+                the regex can be used for the matching portion (see capture
+                arg). It is perfectly valid to have just a regex arg without a
+                capture arg. This arg only makes sense if exact_payload is not
                 specified.
 
             capture: if specified, is a dictionary of regex match
@@ -483,24 +412,12 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
                 index. For example, {1:"thread_id"} will store capture
                 group 1's content in the context dictionary where
                 "thread_id" is the key and the match group value is
-                the value. The value stored off can be used later in a
-                expect_captures expression. This arg only makes sense
-                when regex is specified.
-
-            expect_captures: if specified, is a dictionary of regex
-                match group indices (should start with 1) to variable
-                names, where the match group should match the value
-                existing in the context at the given variable name.
-                For example, {2:"thread_id"} indicates that the second
-                match group must match the value stored under the
-                context's previously stored "thread_id" key. This arg
-                only makes sense when regex is specified.
+                the value. This arg only makes sense when regex is specified.
         """
         self._is_send_to_remote = is_send_to_remote
         self.exact_payload = exact_payload
         self.regex = regex
         self.capture = capture
-        self.expect_captures = expect_captures
 
     def is_send_to_remote(self):
         return self._is_send_to_remote
@@ -538,15 +455,6 @@ class GdbRemoteEntry(GdbRemoteEntryBase):
                 # The user must be okay with it since the regex itself matched
                 # above.
                 context[var_name] = capture_text
-
-        if self.expect_captures:
-            # Handle comparing matched groups to context dictionary entries.
-            for group_index, var_name in list(self.expect_captures.items()):
-                capture_text = match.group(group_index)
-                if not capture_text:
-                    raise Exception(
-                        "No content to expect for group index {}".format(group_index))
-                asserter.assertEqual(capture_text, context[var_name])
 
         return context
 
@@ -724,8 +632,7 @@ class MatchRemoteOutputEntry(GdbRemoteEntryBase):
             with 1) to variable names that will store the capture group indicated by the
             index. For example, {1:"thread_id"} will store capture group 1's content in the
             context dictionary where "thread_id" is the key and the match group value is
-            the value. The value stored off can be used later in a expect_captures expression.
-            This arg only makes sense when regex is specified.
+            the value. This arg only makes sense when regex is specified.
     """
 
     def __init__(self, regex=None, regex_mode="match", capture=None):
@@ -849,11 +756,10 @@ class GdbRemoteTestSequence(object):
                     direction = line.get("direction", None)
                     regex = line.get("regex", None)
                     capture = line.get("capture", None)
-                    expect_captures = line.get("expect_captures", None)
 
                     # Compile the regex.
                     if regex and (isinstance(regex, str)):
-                        regex = re.compile(regex)
+                        regex = re.compile(regex, re.DOTALL)
 
                     if _is_packet_lldb_gdbserver_input(
                             direction, remote_input_is_read):
@@ -864,8 +770,7 @@ class GdbRemoteTestSequence(object):
                             GdbRemoteEntry(
                                 is_send_to_remote=True,
                                 regex=regex,
-                                capture=capture,
-                                expect_captures=expect_captures))
+                                capture=capture))
                     else:
                         # Log line represents content to be expected from the remote debug monitor.
                         # if self.logger:
@@ -874,8 +779,7 @@ class GdbRemoteTestSequence(object):
                             GdbRemoteEntry(
                                 is_send_to_remote=False,
                                 regex=regex,
-                                capture=capture,
-                                expect_captures=expect_captures))
+                                capture=capture))
                 elif entry_type == "multi_response":
                     self.entries.append(MultiResponseGdbRemoteEntry(line))
                 elif entry_type == "output_match":
@@ -950,9 +854,125 @@ def process_is_running(pid, unknown_value=True):
     # Check if the pid is in the process_ids
     return pid in process_ids
 
-if __name__ == '__main__':
-    EXE_PATH = get_lldb_server_exe()
-    if EXE_PATH:
-        print("lldb-server path detected: {}".format(EXE_PATH))
+def _handle_output_packet_string(packet_contents):
+    if (not packet_contents) or (len(packet_contents) < 1):
+        return None
+    elif packet_contents[0:1] != b"O":
+        return None
+    elif packet_contents == b"OK":
+        return None
     else:
-        print("lldb-server could not be found")
+        return binascii.unhexlify(packet_contents[1:])
+
+class Server(object):
+
+    _GDB_REMOTE_PACKET_REGEX = re.compile(br'^\$([^\#]*)#[0-9a-fA-F]{2}')
+
+    class ChecksumMismatch(Exception):
+        pass
+
+    def __init__(self, sock, proc = None):
+        self._accumulated_output = b""
+        self._receive_buffer = b""
+        self._normal_queue = []
+        self._output_queue = []
+        self._sock = sock
+        self._proc = proc
+
+    def send_raw(self, frame):
+        self._sock.sendall(frame)
+
+    def send_ack(self):
+        self.send_raw(b"+")
+
+    def send_packet(self, packet):
+        self.send_raw(b'$%s#%02x'%(packet, self._checksum(packet)))
+
+    @staticmethod
+    def _checksum(packet):
+        checksum = 0
+        for c in six.iterbytes(packet):
+            checksum += c
+        return checksum % 256
+
+    def _read(self, q):
+        while not q:
+            new_bytes = self._sock.recv(4096)
+            self._process_new_bytes(new_bytes)
+        return q.pop(0)
+
+    def _process_new_bytes(self, new_bytes):
+        # Add new bytes to our accumulated unprocessed packet bytes.
+        self._receive_buffer += new_bytes
+
+        # Parse fully-formed packets into individual packets.
+        has_more = len(self._receive_buffer) > 0
+        while has_more:
+            if len(self._receive_buffer) <= 0:
+                has_more = False
+            # handle '+' ack
+            elif self._receive_buffer[0:1] == b"+":
+                self._normal_queue += [b"+"]
+                self._receive_buffer = self._receive_buffer[1:]
+            else:
+                packet_match = self._GDB_REMOTE_PACKET_REGEX.match(
+                    self._receive_buffer)
+                if packet_match:
+                    # Our receive buffer matches a packet at the
+                    # start of the receive buffer.
+                    new_output_content = _handle_output_packet_string(
+                        packet_match.group(1))
+                    if new_output_content:
+                        # This was an $O packet with new content.
+                        self._accumulated_output += new_output_content
+                        self._output_queue += [self._accumulated_output]
+                    else:
+                        # Any packet other than $O.
+                        self._normal_queue += [packet_match.group(0)]
+
+                    # Remove the parsed packet from the receive
+                    # buffer.
+                    self._receive_buffer = self._receive_buffer[
+                        len(packet_match.group(0)):]
+                else:
+                    # We don't have enough in the receive bufferto make a full
+                    # packet. Stop trying until we read more.
+                    has_more = False
+
+    def get_raw_output_packet(self):
+        return self._read(self._output_queue)
+
+    def get_raw_normal_packet(self):
+        return self._read(self._normal_queue)
+
+    @staticmethod
+    def _get_payload(frame):
+        payload = frame[1:-3]
+        checksum = int(frame[-2:], 16)
+        if checksum != Server._checksum(payload):
+            raise ChecksumMismatch
+        return payload
+
+    def get_normal_packet(self):
+        frame = self.get_raw_normal_packet()
+        if frame == b"+": return frame
+        return self._get_payload(frame)
+
+    def get_accumulated_output(self):
+        return self._accumulated_output
+
+    def consume_accumulated_output(self):
+        output = self._accumulated_output
+        self._accumulated_output = b""
+        return output
+
+    def __str__(self):
+        return dedent("""\
+            server '{}' on '{}'
+            _receive_buffer: {}
+            _normal_queue: {}
+            _output_queue: {}
+            _accumulated_output: {}
+            """).format(self._proc, self._sock, self._receive_buffer,
+                    self._normal_queue, self._output_queue,
+                    self._accumulated_output)

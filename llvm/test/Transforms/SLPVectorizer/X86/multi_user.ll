@@ -15,21 +15,19 @@ target triple = "x86_64-apple-macosx10.7.0"
 define i32 @foo(i32* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[N:%.*]], 5
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 7, i32 8, i32 9, i32 10>
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[A]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP1]], 11
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 4
-; CHECK-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw i32 [[TMP11]], [[TMP13]]
-; CHECK-NEXT:    store i32 [[TMP14]], i32* [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[SHUFFLE]], <i32 7, i32 8, i32 9, i32 10>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP1]], 11
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, i32* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    store i32 [[TMP11]], i32* [[TMP9]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %1 = mul nsw i32 %n, 5

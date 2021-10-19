@@ -52,7 +52,7 @@ entry:
 define <4 x float> @test_mm_fmsub_ps(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test_mm_fmsub_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm2, %xmm2
+; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; CHECK-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    retq
 entry:
@@ -64,7 +64,7 @@ entry:
 define <2 x double> @test_mm_fmsub_pd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test_mm_fmsub_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm2, %xmm2
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; CHECK-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    retq
 entry:
@@ -106,7 +106,7 @@ entry:
 define <4 x float> @test_mm_fnmadd_ps(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LABEL: test_mm_fnmadd_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    retq
 entry:
@@ -118,7 +118,7 @@ entry:
 define <2 x double> @test_mm_fnmadd_pd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: test_mm_fnmadd_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    retq
 entry:
@@ -294,7 +294,7 @@ entry:
 define <8 x float> @test_mm256_fmsub_ps(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test_mm256_fmsub_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %ymm2, %ymm2
+; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; CHECK-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
 entry:
@@ -306,7 +306,7 @@ entry:
 define <4 x double> @test_mm256_fmsub_pd(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: test_mm256_fmsub_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorpd {{.*}}(%rip), %ymm2, %ymm2
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
 ; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
 entry:
@@ -318,7 +318,7 @@ entry:
 define <8 x float> @test_mm256_fnmadd_ps(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
 ; CHECK-LABEL: test_mm256_fnmadd_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
 entry:
@@ -330,7 +330,7 @@ entry:
 define <4 x double> @test_mm256_fnmadd_pd(<4 x double> %a, <4 x double> %b, <4 x double> %c) {
 ; CHECK-LABEL: test_mm256_fnmadd_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
 ; CHECK-NEXT:    retq
 entry:

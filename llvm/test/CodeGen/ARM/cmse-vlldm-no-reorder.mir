@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 --float-abi=hard --run-pass=arm-pseudo %s -o - | \
+# RUN: llc -mtriple=thumbv8m.main -mcpu=cortex-m33 -mattr=-fix-cmse-cve-2021-35465 --float-abi=hard --run-pass=arm-pseudo %s -o - | \
 # RUN: FileCheck %s
 --- |
   ; ModuleID = 'cmse-vlldm-no-reorder.ll'
@@ -77,10 +77,10 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
     renamable $r0 = t2MOVi32imm @g
-    renamable $r0 = t2LDRi12 killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load 4 from `float ()** bitcast (float (...)** @g to float ()**)`)
+    renamable $r0 = t2LDRi12 killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (dereferenceable load (s32) from `float ()** bitcast (float (...)** @g to float ()**)`)
     tBLXNS_CALL killed renamable $r0, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $s0
     renamable $r0 = t2MOVi32imm @a
-    VSTRS killed renamable $s0, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store 4 into @a)
+    VSTRS killed renamable $s0, killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (store (s32) into @a)
     $sp = frame-destroy t2LDMIA_RET $sp, 14 /* CC::al */, $noreg, def $r7, def $pc
 
 ...

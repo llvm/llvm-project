@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-unknown %s -emit-llvm -O1 -o - | FileCheck %s
 
 // CHECK-LABEL: define {{[^@]+}}@align_up
-// CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 64 dereferenceable(16) {{%.+}}, i8* nonnull align 1 dereferenceable(16) {{%.+}}, i64 16, i1 false)
+// CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(16) {{%.+}}, i8* noundef nonnull align 1 dereferenceable(16) {{%.+}}, i64 16, i1 false)
 // CHECK-NEXT:    ret void
 //
 void align_up(void* data, int* ptr) {

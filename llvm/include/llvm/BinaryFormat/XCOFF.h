@@ -18,6 +18,8 @@
 
 namespace llvm {
 class StringRef;
+template <unsigned> class SmallString;
+template <typename T> class Expected;
 
 namespace XCOFF {
 
@@ -25,11 +27,19 @@ namespace XCOFF {
 
 constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
+constexpr size_t FileHeaderSize32 = 20;
+constexpr size_t FileHeaderSize64 = 24;
+constexpr size_t SectionHeaderSize32 = 40;
+constexpr size_t SectionHeaderSize64 = 72;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
+constexpr size_t RelocationSerializationSize64 = 14;
 constexpr uint16_t RelocOverflow = 65535;
+constexpr uint8_t AllocRegNo = 31;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
+
+enum MagicNumber : uint16_t { XCOFF32 = 0x01DF, XCOFF64 = 0x01F7 };
 
 // x_smclas field of x_csect from system header: /usr/include/syms.h
 /// Storage Mapping Class definitions.
@@ -251,29 +261,6 @@ enum RelocationType : uint8_t {
                 ///< large code model TOC-relative relocation.
 };
 
-struct FileHeader32 {
-  uint16_t Magic;
-  uint16_t NumberOfSections;
-  int32_t TimeStamp;
-  uint32_t SymbolTableFileOffset;
-  int32_t NumberOfSymbolTableEntries;
-  uint16_t AuxiliaryHeaderSize;
-  uint16_t Flags;
-};
-
-struct SectionHeader32 {
-  char Name[XCOFF::NameSize];
-  uint32_t PhysicalAddress;
-  uint32_t VirtualAddress;
-  uint32_t Size;
-  uint32_t FileOffsetToData;
-  uint32_t FileOffsetToRelocations;
-  uint32_t FileOffsetToLineNumbers;
-  uint16_t NumberOfRelocations;
-  uint16_t NumberOfLineNumbers;
-  int32_t Flags;
-};
-
 enum CFileStringType : uint8_t {
   XFT_FN = 0,  ///< Specifies the source-file name.
   XFT_CT = 1,  ///< Specifies the compiler time stamp.
@@ -292,10 +279,45 @@ enum CFileCpuId : uint8_t {
   TCPU_970 = 19   ///< PPC970 - PowerPC 64-bit architecture.
 };
 
+enum SymbolAuxType : uint8_t {
+  AUX_EXCEPT = 255, ///< Identifies an exception auxiliary entry.
+  AUX_FCN = 254,    ///< Identifies a function auxiliary entry.
+  AUX_SYM = 253,    ///< Identifies a symbol auxiliary entry.
+  AUX_FILE = 252,   ///< Identifies a file auxiliary entry.
+  AUX_CSECT = 251,  ///< Identifies a csect auxiliary entry.
+  AUX_SECT = 250    ///< Identifies a SECT auxiliary entry.
+};                  // 64-bit XCOFF file only.
+
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 StringRef getRelocationTypeString(XCOFF::RelocationType Type);
+Expected<SmallString<32>> parseParmsType(uint32_t Value, unsigned FixedParmsNum,
+                                         unsigned FloatingParmsNum);
+Expected<SmallString<32>> parseParmsTypeWithVecInfo(uint32_t Value,
+                                                    unsigned FixedParmsNum,
+                                                    unsigned FloatingParmsNum,
+                                                    unsigned VectorParmsNum);
+Expected<SmallString<32>> parseVectorParmsType(uint32_t Value,
+                                               unsigned ParmsNum);
 
 struct TracebackTable {
+  enum LanguageID : uint8_t {
+    C,
+    Fortran,
+    Pascal,
+    Ada,
+    PL1,
+    Basic,
+    Lisp,
+    Cobol,
+    Modula2,
+    CPlusPlus,
+    Rpg,
+    PL8,
+    PLIX = PL8,
+    Assembly,
+    Java,
+    ObjectiveC
+  };
   // Byte 1
   static constexpr uint32_t VersionMask = 0xFF00'0000;
   static constexpr uint8_t VersionShift = 24;
@@ -346,8 +368,52 @@ struct TracebackTable {
   static constexpr uint8_t NumberOfFloatingPointParmsShift = 1;
 
   // Masks to select leftmost bits for decoding parameter type information.
+  // Bit to use when vector info is not presented.
   static constexpr uint32_t ParmTypeIsFloatingBit = 0x8000'0000;
   static constexpr uint32_t ParmTypeFloatingIsDoubleBit = 0x4000'0000;
+  // Bits to use when vector info is presented.
+  static constexpr uint32_t ParmTypeIsFixedBits = 0x0000'0000;
+  static constexpr uint32_t ParmTypeIsVectorBits = 0x4000'0000;
+  static constexpr uint32_t ParmTypeIsFloatingBits = 0x8000'0000;
+  static constexpr uint32_t ParmTypeIsDoubleBits = 0xC000'0000;
+  static constexpr uint32_t ParmTypeMask = 0xC000'0000;
+
+  // Vector extension
+  static constexpr uint16_t NumberOfVRSavedMask = 0xFC00;
+  static constexpr uint16_t IsVRSavedOnStackMask = 0x0200;
+  static constexpr uint16_t HasVarArgsMask = 0x0100;
+  static constexpr uint8_t NumberOfVRSavedShift = 10;
+
+  static constexpr uint16_t NumberOfVectorParmsMask = 0x00FE;
+  static constexpr uint16_t HasVMXInstructionMask = 0x0001;
+  static constexpr uint8_t NumberOfVectorParmsShift = 1;
+
+  static constexpr uint32_t ParmTypeIsVectorCharBit = 0x0000'0000;
+  static constexpr uint32_t ParmTypeIsVectorShortBit = 0x4000'0000;
+  static constexpr uint32_t ParmTypeIsVectorIntBit = 0x8000'0000;
+  static constexpr uint32_t ParmTypeIsVectorFloatBit = 0xC000'0000;
+
+  static constexpr uint8_t WidthOfParamType = 2;
+};
+
+// Extended Traceback table flags.
+enum ExtendedTBTableFlag : uint8_t {
+  TB_OS1 = 0x80,         ///< Reserved for OS use.
+  TB_RESERVED = 0x40,    ///< Reserved for compiler.
+  TB_SSP_CANARY = 0x20,  ///< stack smasher canary present on stack.
+  TB_OS2 = 0x10,         ///< Reserved for OS use.
+  TB_EH_INFO = 0x08,     ///< Exception handling info present.
+  TB_LONGTBTABLE2 = 0x01 ///< Additional tbtable extension exists.
+};
+
+StringRef getNameForTracebackTableLanguageId(TracebackTable::LanguageID LangId);
+SmallString<32> getExtendedTBTableFlagString(uint8_t Flag);
+
+struct CsectProperties {
+  CsectProperties(StorageMappingClass SMC, SymbolType ST)
+      : MappingClass(SMC), Type(ST) {}
+  StorageMappingClass MappingClass;
+  SymbolType Type;
 };
 
 } // end namespace XCOFF

@@ -9,7 +9,7 @@
 #define SINGLE_PRECISION
 #include "fp_lib.h"
 
-#ifndef __SOFT_FP__
+#ifndef __SOFTFP__
 // Support for systems that have hardware floating-point; can set the invalid
 // flag as a side-effect of computation.
 
@@ -40,4 +40,8 @@ AEABI_RTABI du_int __aeabi_f2ulz(fp_t a) { return __fixunssfdi(a); }
 #else
 COMPILER_RT_ALIAS(__fixunssfdi, __aeabi_f2ulz)
 #endif
+#endif
+
+#if defined(__MINGW32__) && defined(__arm__)
+COMPILER_RT_ALIAS(__fixunssfdi, __stou64)
 #endif

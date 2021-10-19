@@ -44,11 +44,11 @@ stack:
   - { id: 3, name: d, size: 16, alignment: 16 }
 body:             |
   bb.0.entry:
-    STGOffset $sp, %stack.0.a, 0 :: (store 16 into %ir.a)
-    STGOffset $sp, %stack.1.b, 0 :: (store 16 into %ir.b)
-    STGOffset $sp, %stack.2.c, 0 :: (store 16 into %ir.c)
+    STGOffset $sp, %stack.0.a, 0 :: (store (s128) into %ir.a)
+    STGOffset $sp, %stack.1.b, 0 :: (store (s128) into %ir.b)
+    STGOffset $sp, %stack.2.c, 0 :: (store (s128) into %ir.c)
     $w0 = COPY $wzr
-    STGOffset $sp, %stack.3.d, 0 :: (store 16 into %ir.d)
+    STGOffset $sp, %stack.3.d, 0 :: (store (s128) into %ir.d)
     RET_ReallyLR implicit killed $w0
 
 ...
@@ -61,7 +61,7 @@ body:             |
 # CHECK: ST2GOffset $sp, $sp, 6
 # CHECK: STGOffset  $sp, $sp, 8
 # CHECK: STRBBui
-# CHECK: ST2GOffset $sp, $sp, 0 
+# CHECK: ST2GOffset $sp, $sp, 0
 # CHECK: RET_ReallyLR
 
 name:            stg16_store_128
@@ -71,13 +71,13 @@ stack:
   - { id: 1, name: b, size: 128, alignment: 16 }
 body:             |
   bb.0.entry:
-    STGOffset $sp, %stack.0.a, 0 :: (store 16 into %ir.a)
+    STGOffset $sp, %stack.0.a, 0 :: (store (s128) into %ir.a)
     renamable $w8 = MOVi32imm 42
-    ST2GOffset $sp, %stack.1.b, 6 :: (store 32 into %ir.b + 96, align 16)
-    ST2GOffset $sp, %stack.1.b, 4 :: (store 32 into %ir.b + 64, align 16)
-    ST2GOffset $sp, %stack.1.b, 2 :: (store 32 into %ir.b + 32, align 16)
-    STRBBui killed renamable $w8, %stack.0.a, 0 :: (store 1 into %ir.a, align 16)
-    ST2GOffset $sp, %stack.1.b, 0 :: (store 32 into %ir.b, align 16)
+    ST2GOffset $sp, %stack.1.b, 6 :: (store (s256) into %ir.b + 96, align 16)
+    ST2GOffset $sp, %stack.1.b, 4 :: (store (s256) into %ir.b + 64, align 16)
+    ST2GOffset $sp, %stack.1.b, 2 :: (store (s256) into %ir.b + 32, align 16)
+    STRBBui killed renamable $w8, %stack.0.a, 0 :: (store (s8) into %ir.a, align 16)
+    ST2GOffset $sp, %stack.1.b, 0 :: (store (s256) into %ir.b, align 16)
     RET_ReallyLR
 
 ...

@@ -1,11 +1,11 @@
 # Defining Dialect Attributes and Types
 
 This document is a quickstart to defining dialect specific extensions to the
-[attribute](LangRef.md#attributes) and [type](LangRef.md#type-system) systems in
+[attribute](../LangRef.md/#attributes) and [type](../LangRef.md/#type-system) systems in
 MLIR. The main part of this tutorial focuses on defining types, but the
 instructions are nearly identical for defining attributes.
 
-See [MLIR specification](LangRef.md) for more information about MLIR, the
+See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc.
 
 ## Types
@@ -25,13 +25,13 @@ So before defining the derived `Type`, it's important to know which of the two
 classes of `Type` we are defining:
 
 Some types are _singleton_ in nature, meaning they have no parameters and only
-ever have one instance, like the [`index` type](LangRef.md#index-type).
+ever have one instance, like the [`index` type](../Dialects/Builtin.md/#indextype).
 
 Other types are _parametric_, and contain additional information that
 differentiates different instances of the same `Type`. For example the
-[`integer` type](LangRef.md#integer-type) contains a bitwidth, with `i8` and
+[`integer` type](../Dialects/Builtin.md/#integertype) contains a bitwidth, with `i8` and
 `i16` representing different instances of
-[`integer` type](LangRef.md#integer-type). _Parametric_ may also contain a
+[`integer` type](../Dialects/Builtin.md/#integertype). _Parametric_ may also contain a
 mutable component, which can be used, for example, to construct self-referring
 recursive types. The mutable component _cannot_ be used to differentiate
 instances of a type class, so usually such types contain other parametric
@@ -161,27 +161,28 @@ public:
     return Base::get(type.getContext(), param, type);
   }
 
-  /// This method is used to get an instance of the 'ComplexType', defined at
-  /// the given location. If any of the construction invariants are invalid,
-  /// errors are emitted with the provided location and a null type is returned.
+  /// This method is used to get an instance of the 'ComplexType'. If any of the
+  /// construction invariants are invalid, errors are emitted with the provided
+  /// `emitError` function and a null type is returned.
   /// Note: This method is completely optional.
-  static ComplexType getChecked(unsigned param, Type type, Location location) {
+  static ComplexType getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                unsigned param, Type type) {
     // Call into a helper 'getChecked' method in 'TypeBase' to get a uniqued
     // instance of this type. All parameters to the storage class are passed
-    // after the location.
-    return Base::getChecked(location, param, type);
+    // after the context.
+    return Base::getChecked(emitError, type.getContext(), param, type);
   }
 
   /// This method is used to verify the construction invariants passed into the
   /// 'get' and 'getChecked' methods. Note: This method is completely optional.
-  static LogicalResult verifyConstructionInvariants(
-      Location loc, unsigned param, Type type) {
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              unsigned param, Type type) {
     // Our type only allows non-zero parameters.
     if (param == 0)
-      return emitError(loc) << "non-zero parameter passed to 'ComplexType'";
+      return emitError() << "non-zero parameter passed to 'ComplexType'";
     // Our type also expects an integer type.
     if (!type.isa<IntegerType>())
-      return emitError(loc) << "non integer-type passed to 'ComplexType'";
+      return emitError() << "non integer-type passed to 'ComplexType'";
     return success();
   }
 
@@ -318,7 +319,9 @@ public:
 
 Once the dialect types have been defined, they must then be registered with a
 `Dialect`. This is done via a similar mechanism to
-[operations](LangRef.md#operations), with the `addTypes` method.
+[operations](../LangRef.md/#operations), with the `addTypes` method. The one
+distinct difference with operations, is that when a type is registered the
+definition of its storage class must be visible.
 
 ```c++
 struct MyDialect : public Dialect {
@@ -348,7 +351,7 @@ public:
 
 These methods take an instance of a high-level parser or printer that allows for
 easily implementing the necessary functionality. As described in the
-[MLIR language reference](../../LangRef.md#dialect-types), dialect types are
+[MLIR language reference](../LangRef.md/#dialect-types), dialect types are
 generally represented as: `! dialect-namespace < type-data >`, with a pretty
 form available under certain circumstances. The responsibility of our parser and
 printer is to provide the `type-data` bits.

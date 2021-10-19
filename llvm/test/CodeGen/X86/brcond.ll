@@ -64,7 +64,7 @@ define float @test4(float %x, float %y) nounwind readnone optsize ssp {
 ; CHECK-NEXT:    jne LBB1_1
 ; CHECK-NEXT:    jnp LBB1_2
 ; CHECK-NEXT:  LBB1_1: ## %bb1
-; CHECK-NEXT:    addsd LCPI1_0, %xmm0
+; CHECK-NEXT:    addsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:  LBB1_2: ## %bb2
 ; CHECK-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp)
@@ -98,11 +98,11 @@ define <4 x float> @test5(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jne LBB2_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI2_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB2_2: ## %bb2
-; CHECK-NEXT:    divps LCPI2_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -130,11 +130,11 @@ define <4 x float> @test7(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jne LBB3_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI3_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB3_2: ## %bb2
-; CHECK-NEXT:    divps LCPI3_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -162,11 +162,11 @@ define <4 x float> @test8(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jae LBB4_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI4_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB4_2: ## %bb2
-; CHECK-NEXT:    divps LCPI4_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -194,11 +194,11 @@ define <4 x float> @test10(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jae LBB5_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI5_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB5_2: ## %bb2
-; CHECK-NEXT:    divps LCPI5_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -226,11 +226,11 @@ define <4 x float> @test11(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    jne LBB6_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI6_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB6_2: ## %bb2
-; CHECK-NEXT:    divps LCPI6_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -258,11 +258,11 @@ define <4 x float> @test12(<4 x float> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
 ; CHECK-NEXT:    je LBB7_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    addps LCPI7_0, %xmm1
+; CHECK-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB7_2: ## %bb2
-; CHECK-NEXT:    divps LCPI7_0, %xmm1
+; CHECK-NEXT:    divps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:

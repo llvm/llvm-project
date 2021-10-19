@@ -1,16 +1,17 @@
-
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class TestGdbRemoteAbort(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def inferior_abort_received(self):
+    @skipIfWindows # No signal is sent on Windows.
+    # std::abort() on <= API 16 raises SIGSEGV - b.android.com/179836
+    @expectedFailureAndroid(api_levels=list(range(16 + 1)))
+    def test_inferior_abort_received_llgs(self):
+        self.build()
+
         procs = self.prep_debug_monitor_and_inferior(inferior_args=["abort"])
         self.assertIsNotNone(procs)
 
@@ -28,18 +29,3 @@ class TestGdbRemoteAbort(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(hex_exit_code)
         self.assertEqual(int(hex_exit_code, 16),
                          lldbutil.get_signal_number('SIGABRT'))
-
-    @debugserver_test
-    def test_inferior_abort_received_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.inferior_abort_received()
-
-    @skipIfWindows # No signal is sent on Windows.
-    @llgs_test
-    # std::abort() on <= API 16 raises SIGSEGV - b.android.com/179836
-    @expectedFailureAndroid(api_levels=list(range(16 + 1)))
-    def test_inferior_abort_received_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.inferior_abort_received()

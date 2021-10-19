@@ -3,7 +3,7 @@
 // PR6024
 extern int i;
 
-// CHECK: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z16lvalue_noop_castv() [[NUW:#[0-9]+]]
+// CHECK: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i32* @_Z16lvalue_noop_castv() [[NUW:#[0-9]+]]
 const int &lvalue_noop_cast() {
   if (i == 0)
     // CHECK: store i32 17, i32*
@@ -15,7 +15,7 @@ const int &lvalue_noop_cast() {
   return 17;
 }
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i16* @_Z20lvalue_integral_castv() 
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i16* @_Z20lvalue_integral_castv() 
 const short &lvalue_integral_cast() {
   if (i == 0)
     // CHECK: store i16 17, i16*
@@ -27,7 +27,7 @@ const short &lvalue_integral_cast() {
   return 17;
 }
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i16* @_Z29lvalue_floating_integral_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i16* @_Z29lvalue_floating_integral_castv()
 const short &lvalue_floating_integral_cast() {
   if (i == 0)
     // CHECK: store i16 17, i16*
@@ -39,7 +39,7 @@ const short &lvalue_floating_integral_cast() {
   return 17.5;
 }
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) float* @_Z29lvalue_integral_floating_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) float* @_Z29lvalue_integral_floating_castv()
 const float &lvalue_integral_floating_cast() {
   if (i == 0)
     // CHECK: store float 1.700000e+{{0*}}1, float*
@@ -51,7 +51,7 @@ const float &lvalue_integral_floating_cast() {
   return 17;
 }
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) float* @_Z20lvalue_floating_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) float* @_Z20lvalue_floating_castv()
 const float &lvalue_floating_cast() {
   if (i == 0)
     // CHECK: store float 1.700000e+{{0*}}1, float*
@@ -65,7 +65,7 @@ const float &lvalue_floating_cast() {
 
 int get_int();
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z24lvalue_integer_bool_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z24lvalue_integer_bool_castv()
 const bool &lvalue_integer_bool_cast() {
   if (i == 0)
     // CHECK: call i32 @_Z7get_intv()
@@ -82,7 +82,7 @@ const bool &lvalue_integer_bool_cast() {
 
 float get_float();
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z25lvalue_floating_bool_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z25lvalue_floating_bool_castv()
 const bool &lvalue_floating_bool_cast() {
   if (i == 0)
     // CHECK: call float @_Z9get_floatv()
@@ -107,7 +107,7 @@ typedef int (X::*pmf)(int);
 pm get_pointer_to_member_data();
 pmf get_pointer_to_member_function();
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z26lvalue_ptrmem_to_bool_castv()
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z26lvalue_ptrmem_to_bool_castv()
 const bool &lvalue_ptrmem_to_bool_cast() {
   if (i == 0)
     // CHECK: call i64 @_Z26get_pointer_to_member_datav()
@@ -125,7 +125,7 @@ const bool &lvalue_ptrmem_to_bool_cast() {
   return get_pointer_to_member_data();
 }
 
-// CHECK-LABEL: define nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z27lvalue_ptrmem_to_bool_cast2v
+// CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_Z27lvalue_ptrmem_to_bool_cast2v
 const bool &lvalue_ptrmem_to_bool_cast2() {
   if (i == 0)
     // CHECK: {{call.*_Z30get_pointer_to_member_functionv}}
@@ -169,7 +169,7 @@ const _Complex float &f1() {
   return get_complex_double();
 }
 
-// CHECK-LABEL: define i32 @_Z7pr10592RKi(i32*
+// CHECK-LABEL: define{{.*}} i32 @_Z7pr10592RKi(i32*
 unsigned pr10592(const int &v) {
   // CHECK: [[VADDR:%[a-zA-Z0-9.]+]] = alloca i32*
   // CHECK-NEXT: [[REFTMP:%[a-zA-Z0-9.]+]] = alloca i32
@@ -189,8 +189,8 @@ namespace PR10650 {
   unsigned long long test(Helper *obj) {
     return static_cast<const unsigned long long&>(obj->id());
   }
-  // CHECK-LABEL: define i64 @_ZN7PR106504testEPNS_6HelperE
+  // CHECK-LABEL: define{{.*}} i64 @_ZN7PR106504testEPNS_6HelperE
   // CHECK: store i64
 }
 
-// CHECK: attributes [[NUW]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }

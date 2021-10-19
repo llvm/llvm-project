@@ -35,21 +35,20 @@ public:
   typedef collection::const_iterator const_iterator;
 
   DWARFDebugInfoEntry()
-      : m_offset(DW_INVALID_OFFSET), m_parent_idx(0), m_sibling_idx(0),
-        m_has_children(false), m_abbr_idx(0), m_tag(llvm::dwarf::DW_TAG_null) {}
+      : m_offset(DW_INVALID_OFFSET), m_sibling_idx(0), m_has_children(false) {}
 
   explicit operator bool() const { return m_offset != DW_INVALID_OFFSET; }
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
   bool operator!=(const DWARFDebugInfoEntry &rhs) const;
 
-  void BuildFunctionAddressRangeTable(const DWARFUnit *cu,
+  void BuildFunctionAddressRangeTable(DWARFUnit *cu,
                                       DWARFDebugAranges *debug_aranges) const;
 
   bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
   using Recurse = DWARFBaseDIE::Recurse;
-  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
+  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs,
                        Recurse recurse = Recurse::yes) const {
     return GetAttributes(cu, attrs, recurse, 0 /* curr_depth */);
   }
@@ -167,21 +166,21 @@ protected:
   GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
 
   dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
-  uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
-                         // If zero this die has no parent
+  uint32_t m_parent_idx = 0;   // How many to subtract from "this" to get the
+                               // parent. If zero this die has no parent
   uint32_t m_sibling_idx : 31, // How many to add to "this" to get the sibling.
       // If it is zero, then the DIE doesn't have children, or the
       // DWARF claimed it had children but the DIE only contained
       // a single NULL terminating child.
       m_has_children : 1;
-  uint16_t m_abbr_idx;
+  uint16_t m_abbr_idx = 0;
   /// A copy of the DW_TAG value so we don't have to go through the compile
   /// unit abbrev table
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 
 private:
-  size_t GetAttributes(const DWARFUnit *cu, DWARFAttributes &attrs,
-                       Recurse recurse, uint32_t curr_depth) const;
+  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
+                       uint32_t curr_depth) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H

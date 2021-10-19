@@ -35,7 +35,6 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "verbose_assert.h"
 
 struct PathCompareTest {
   const char* LHS;
@@ -86,8 +85,10 @@ void test_compare_basic()
   for (auto const & TC : CompareTestCases) {
     const path p1(TC.LHS);
     const path p2(TC.RHS);
-    const std::string R(TC.RHS);
-    const std::string_view RV(TC.RHS);
+    std::string RHS(TC.RHS);
+    const path::string_type R(RHS.begin(), RHS.end());
+    const std::basic_string_view<path::value_type> RV(R);
+    const path::value_type *Ptr = R.c_str();
     const int E = TC.expect;
     { // compare(...) functions
       DisableAllocationGuard g; // none of these operations should allocate
@@ -95,15 +96,14 @@ void test_compare_basic()
       // check runtime results
       int ret1 = normalize_ret(p1.compare(p2));
       int ret2 = normalize_ret(p1.compare(R));
-      int ret3 = normalize_ret(p1.compare(TC.RHS));
+      int ret3 = normalize_ret(p1.compare(Ptr));
       int ret4 = normalize_ret(p1.compare(RV));
 
       g.release();
-      ASSERT_EQ(ret1, ret2);
-      ASSERT_EQ(ret1, ret3);
-      ASSERT_EQ(ret1, ret4);
-      ASSERT_EQ(ret1, E)
-          << DISPLAY(TC.LHS) << DISPLAY(TC.RHS);
+      assert(ret1 == ret2);
+      assert(ret1 == ret3);
+      assert(ret1 == ret4);
+      assert(ret1 == E);
 
       // check signatures
       ASSERT_NOEXCEPT(p1.compare(p2));

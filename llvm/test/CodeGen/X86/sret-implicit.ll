@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin8 -terminal-rule < %s | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=x86_64-pc-linux -terminal-rule < %s | FileCheck %s --check-prefix=X64
 
-define void @sret_void(i32* sret %p) {
+define void @sret_void(i32* sret(i32) %p) {
   store i32 0, i32* %p
   ret void
 }

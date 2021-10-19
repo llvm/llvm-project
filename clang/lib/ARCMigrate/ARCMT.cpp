@@ -65,7 +65,7 @@ bool CapturedDiagList::hasDiagnostic(ArrayRef<unsigned> IDs,
   while (I != List.end()) {
     FullSourceLoc diagLoc = I->getLocation();
     if ((IDs.empty() || // empty means any diagnostic in the range.
-         llvm::find(IDs, I->getID()) != IDs.end()) &&
+         llvm::is_contained(IDs, I->getID())) &&
         !diagLoc.isBeforeInTranslationUnitThan(range.getBegin()) &&
         (diagLoc == range.getEnd() ||
          diagLoc.isBeforeInTranslationUnitThan(range.getEnd()))) {
@@ -416,9 +416,11 @@ bool arcmt::getFileRemappings(std::vector<std::pair<std::string,std::string> > &
   if (err)
     return true;
 
-  PreprocessorOptions PPOpts;
-  remapper.applyMappings(PPOpts);
-  remap = PPOpts.RemappedFiles;
+  remapper.forEachMapping(
+      [&](StringRef From, StringRef To) {
+        remap.push_back(std::make_pair(From.str(), To.str()));
+      },
+      [](StringRef, const llvm::MemoryBufferRef &) {});
 
   return false;
 }

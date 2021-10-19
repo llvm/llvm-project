@@ -1,4 +1,6 @@
 // RUN:  %clang_cc1 -std=c++2a -verify %s
+template<typename T, typename U> constexpr bool is_same_v = false;
+template<typename T> constexpr bool is_same_v<T, T> = true;
 
 template<typename T, unsigned size>
 concept LargerThan = sizeof(T) > size;
@@ -42,3 +44,57 @@ auto test6() -> Large auto { return 1; }
 
 X::Small auto test7() { return 'a'; }
 X::SmallerThan<5> auto test8() { return 10; }
+
+namespace PR48384 {
+  int a = 0;
+  int &b = a;
+  template <class T> concept True = true;
+
+  True auto c = a;
+  static_assert(is_same_v<decltype(c), int>);
+
+  True auto d = b;
+  static_assert(is_same_v<decltype(d), int>);
+
+  True decltype(auto) e = a;
+  static_assert(is_same_v<decltype(e), int>);
+
+  True decltype(auto) f = b;
+  static_assert(is_same_v<decltype(f), int&>);
+
+  True decltype(auto) g = (a);
+  static_assert(is_same_v<decltype(g), int&>);
+
+  True decltype(auto) h = (b);
+  static_assert(is_same_v<decltype(h), int&>);
+}
+
+namespace PR48593 {
+  template <class T, class U> concept a = true;
+  a<B> auto c = 0; // expected-error{{use of undeclared identifier 'B'}}
+
+  template<class> concept d = true;
+  d<,> auto e = 0; // expected-error{{expected expression}}
+}
+
+namespace PR48617 {
+  template <typename...> concept C = true;
+  template <typename...> class A {};
+
+  template <typename... Ts> C<Ts...> auto e(A<Ts...>) { return 0; }
+
+  // FIXME: The error here does not make sense.
+  template auto e<>(A<>);
+  // expected-error@-1 {{explicit instantiation of 'e' does not refer to a function template}}
+  // expected-note@-5  {{candidate template ignored: failed template argument deduction}}
+
+  // FIXME: Should be able to instantiate this with no errors.
+  template C<int> auto e<int>(A<int>);
+  // expected-error@-1 {{explicit instantiation of 'e' does not refer to a function template}}
+  // expected-note@-10 {{candidate template ignored: could not match 'C<int, Ts...> auto' against 'C<int> auto'}}
+  
+  template C<> auto e<>(A<>);
+
+  template <typename... Ts> A<Ts...> c(Ts...);
+  int f = e(c(1, 2));
+}

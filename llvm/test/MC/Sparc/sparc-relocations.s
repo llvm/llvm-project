@@ -11,6 +11,7 @@
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_L44 sym
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_HH22 sym
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_HM10 sym
+        ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_LM22 sym
         ! CHECK-OBJ: 0x{{[0-9,A-F]+}} R_SPARC_13 sym
         ! CHECK-ELF: ]
 
@@ -46,9 +47,17 @@
         ! CHECK-NEXT:                  !   fixup A - offset: 0, value: %hm(sym), kind: fixup_sparc_hm
         or %g1, %hm(sym), %g3
 
+        ! CHECK: sethi %lm(sym), %l0  ! encoding: [0x21,0b00AAAAAA,A,A]
+        ! CHECK-NEXT:                 !   fixup A - offset: 0, value: %lm(sym), kind: fixup_sparc_lm
+        sethi %lm(sym), %l0
+
         ! CHECK: or %g1, sym, %g3 ! encoding: [0x86,0x10,0b011AAAAA,A]
         ! CHECK-NEXT:                  !   fixup A - offset: 0, value: sym, kind: fixup_sparc_13
         or %g1, sym, %g3
+
+        ! CHECK: or %g1, sym+4, %g3 ! encoding: [0x86,0x10,0b011AAAAA,A]
+        ! CHECK-NEXT:                  ! fixup A - offset: 0, value: sym+4, kind: fixup_sparc_13
+        or %g1, (sym+4), %g3
 
         ! This test needs to placed last in the file
         ! CHECK: .half	a-.Ltmp0

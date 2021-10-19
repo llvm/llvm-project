@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit -O0 %s
 ; RUN: %lli -O0 %s
 
 @.str = private unnamed_addr constant [6 x i8] c"data1\00", align 1

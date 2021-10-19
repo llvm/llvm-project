@@ -18,8 +18,6 @@ class PlatformOpenBSD : public PlatformPOSIX {
 public:
   PlatformOpenBSD(bool is_host);
 
-  ~PlatformOpenBSD() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -31,9 +29,9 @@ public:
 
   static const char *GetPluginDescriptionStatic(bool is_host);
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost()).GetStringRef();
+  }
 
   // lldb_private::Platform functions
   const char *GetDescription() override {
@@ -52,10 +50,6 @@ public:
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
-
-private:
-  PlatformOpenBSD(const PlatformOpenBSD &) = delete;
-  const PlatformOpenBSD &operator=(const PlatformOpenBSD &) = delete;
 };
 
 } // namespace platform_openbsd

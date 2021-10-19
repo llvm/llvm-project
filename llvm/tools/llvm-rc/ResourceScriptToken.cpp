@@ -288,7 +288,7 @@ bool Tokenizer::canContinueIdentifier() const {
   assert(!streamEof());
   const char CurChar = Data[Pos];
   return std::isalnum(CurChar) || CurChar == '_' || CurChar == '.' ||
-         CurChar == '/' || CurChar == '\\';
+         CurChar == '/' || CurChar == '\\' || CurChar == '-';
 }
 
 bool Tokenizer::canStartInt() const {
@@ -350,9 +350,9 @@ void Tokenizer::processIdentifier(RCToken &Token) const {
   assert(Token.kind() == Kind::Identifier);
   StringRef Name = Token.value();
 
-  if (Name.equals_lower("begin"))
+  if (Name.equals_insensitive("begin"))
     Token = RCToken(Kind::BlockBegin, Name);
-  else if (Name.equals_lower("end"))
+  else if (Name.equals_insensitive("end"))
     Token = RCToken(Kind::BlockEnd, Name);
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -O3 -ppc-late-peephole=false -o - %s | FileCheck %s
+; RUN: llc -O3 -ppc-late-peephole=false -ppc-convert-rr-to-ri=false -o - %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 

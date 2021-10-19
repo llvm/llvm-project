@@ -19,11 +19,6 @@
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
 
-NativeRegisterContextLinux::NativeRegisterContextLinux(
-    NativeThreadProtocol &native_thread,
-    RegisterInfoInterface *reg_info_interface_p)
-    : NativeRegisterContextRegisterInfo(native_thread, reg_info_interface_p) {}
-
 lldb::ByteOrder NativeRegisterContextLinux::GetByteOrder() const {
   return m_thread.GetProcess().GetByteOrder();
 }

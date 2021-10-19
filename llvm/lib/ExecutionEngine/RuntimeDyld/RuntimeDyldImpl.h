@@ -462,16 +462,26 @@ public:
   loadObject(const object::ObjectFile &Obj) = 0;
 
   uint64_t getSectionLoadAddress(unsigned SectionID) const {
-    return Sections[SectionID].getLoadAddress();
+    if (SectionID == AbsoluteSymbolSection)
+      return 0;
+    else
+      return Sections[SectionID].getLoadAddress();
   }
 
   uint8_t *getSectionAddress(unsigned SectionID) const {
-    return Sections[SectionID].getAddress();
+    if (SectionID == AbsoluteSymbolSection)
+      return nullptr;
+    else
+      return Sections[SectionID].getAddress();
   }
 
   StringRef getSectionContent(unsigned SectionID) const {
-    return StringRef(reinterpret_cast<char *>(Sections[SectionID].getAddress()),
-                     Sections[SectionID].getStubOffset() + getMaxStubSize());
+    if (SectionID == AbsoluteSymbolSection)
+      return {};
+    else
+      return StringRef(
+          reinterpret_cast<char *>(Sections[SectionID].getAddress()),
+          Sections[SectionID].getStubOffset() + getMaxStubSize());
   }
 
   uint8_t* getSymbolLocalAddress(StringRef Name) const {
@@ -519,9 +529,7 @@ public:
 
     for (auto &KV : GlobalSymbolTable) {
       auto SectionID = KV.second.getSectionID();
-      uint64_t SectionAddr = 0;
-      if (SectionID != AbsoluteSymbolSection)
-        SectionAddr = getSectionLoadAddress(SectionID);
+      uint64_t SectionAddr = getSectionLoadAddress(SectionID);
       Result[KV.first()] =
         JITEvaluatedSymbol(SectionAddr + KV.second.getOffset(), KV.second.getFlags());
     }
@@ -535,9 +543,12 @@ public:
 
   static void finalizeAsync(
       std::unique_ptr<RuntimeDyldImpl> This,
-      unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+      unique_function<void(object::OwningBinary<object::ObjectFile>,
+                           std::unique_ptr<RuntimeDyld::LoadedObjectInfo>,
+                           Error)>
           OnEmitted,
-      object::OwningBinary<object::ObjectFile> O);
+      object::OwningBinary<object::ObjectFile> O,
+      std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 

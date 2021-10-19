@@ -10,36 +10,36 @@
 // All of these instructions are rejected if no VFP or MVE features are
 // present.
 // RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding 2>%t < %s
-// RUN: FileCheck %s < %t --check-prefix=NOFP16 --check-prefix=NOFP32 --check-prefix=NOFP64
+// RUN: FileCheck %s < %t --check-prefixes=NOFP16,NOFP32,NOFP64
 
 // VFP and NEON implementations by default have FP32 and FP64, but not FP16.
 // The VFPv3 FP16 extension just added conversion instructions, which we don't
 // care about here.
-// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp2 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP32 --check-prefix=FP64
+// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp2 2>%t < %s | FileCheck %s --check-prefixes=FP32,FP64
 // RUN: FileCheck %s < %t --check-prefix=NOFP16
-// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+fp-armv8,+neon 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP32 --check-prefix=FP64
+// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+fp-armv8,+neon 2>%t < %s | FileCheck %s --check-prefixes=FP32,FP64
 // RUN: FileCheck %s < %t --check-prefix=NOFP16
 
 // The v8.2A FP16 extension added loads, stores and moves for FP16.
-// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+fp-armv8,+fullfp16 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16 --check-prefix=FP32 --check-prefix=FP64
+// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+fp-armv8,+fullfp16 < %s | FileCheck %s --check-prefixes=FP16,FP32,FP64
 
 // M-profile FPUs (e.g. Cortex-M4/M7/M33) do not have FP16 instructions, and
 // the FP64 instructions are optional. They are also limited to 16 D registers,
 // but we don't test that here.
-// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp4d16sp 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP32
-// RUN: FileCheck %s < %t --check-prefix=NOFP16 --check-prefix=NOFP64
-// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp4,-d32 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP32 --check-prefix=FP64
+// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp4d16sp 2>%t < %s | FileCheck %s --check-prefix=FP32
+// RUN: FileCheck %s < %t --check-prefixes=NOFP16,NOFP64
+// RUN: not llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+vfp4,-d32 2>%t < %s | FileCheck %s --check-prefixes=FP32,FP64
 // RUN: FileCheck %s < %t --check-prefix=NOFP16
 
 // Integer-only MVE, which can be combined with different options for scalar
 // FPU (or lack thereof), and has all of the move and store instructions
 // regardless of the scalar FPU.
-// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16 --check-prefix=FP32 --check-prefix=FP64
-// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve,+fp-armv8-sp,+fullfp16 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16 --check-prefix=FP32 --check-prefix=FP64
-// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve,+fp-armv8,+fullfp16 2>%t < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16 --check-prefix=FP32 --check-prefix=FP64
+// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve 2>%t < %s | FileCheck %s --check-prefixes=FP16,FP32,FP64
+// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve,+fp-armv8-sp,+fullfp16 2>%t < %s | FileCheck %s --check-prefixes=FP16,FP32,FP64
+// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve,+fp-armv8,+fullfp16 2>%t < %s | FileCheck %s --check-prefixes=FP16,FP32,FP64
 
 // Maximal v8.1M target: MVE with FP, and scalar FP with double-precision.
-// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve.fp < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FP16 --check-prefix=FP32 --check-prefix=FP64
+// RUN: llvm-mc -triple=thumbv8.1m.main -show-encoding -mattr=+mve.fp < %s | FileCheck %s --check-prefixes=FP16,FP32,FP64
 
 vldmia  r0, {d0}
 # FP32: vldmia  r0, {d0}               @ encoding: [0x90,0xec,0x02,0x0b]

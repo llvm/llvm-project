@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
   interface a
     subroutine s(x)
@@ -22,3 +22,14 @@ module m2
     end subroutine
   end interface
 end module
+
+module m3
+  interface s
+    subroutine s
+    end
+  end interface
+contains
+  !ERROR: 's' is already declared in this scoping unit
+  subroutine s
+  end subroutine
+end

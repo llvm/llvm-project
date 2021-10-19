@@ -50,9 +50,9 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 "stack-probe-size"="32768" nounwin
 ; CHECK-P9-LE-NEXT:    std r31, -8(r1)
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r3, r3, 2, 30
-; CHECK-P9-LE-NEXT:    addi r3, r3, 15
 ; CHECK-P9-LE-NEXT:    li r6, -32768
 ; CHECK-P9-LE-NEXT:    mr r31, r1
+; CHECK-P9-LE-NEXT:    addi r3, r3, 15
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 4, 29
 ; CHECK-P9-LE-NEXT:    neg r5, r3
@@ -189,9 +189,9 @@ define i32 @bar(i32 %n) local_unnamed_addr #0 nounwind {
 ; CHECK-P9-LE-NEXT:    std r31, -8(r1)
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r4, r3, 2, 30
-; CHECK-P9-LE-NEXT:    addi r4, r4, 15
 ; CHECK-P9-LE-NEXT:    li r7, -4096
 ; CHECK-P9-LE-NEXT:    mr r31, r1
+; CHECK-P9-LE-NEXT:    addi r4, r4, 15
 ; CHECK-P9-LE-NEXT:    rldicl r4, r4, 60, 4
 ; CHECK-P9-LE-NEXT:    rldicl r4, r4, 4, 29
 ; CHECK-P9-LE-NEXT:    neg r6, r4
@@ -333,10 +333,10 @@ define i32 @f(i32 %n) local_unnamed_addr #0 "stack-probe-size"="65536" nounwind 
 ; CHECK-P9-LE-NEXT:    std r31, -8(r1)
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r3, r3, 2, 30
-; CHECK-P9-LE-NEXT:    addi r3, r3, 15
 ; CHECK-P9-LE-NEXT:    lis r5, -1
-; CHECK-P9-LE-NEXT:    ori r5, r5, 0
 ; CHECK-P9-LE-NEXT:    mr r31, r1
+; CHECK-P9-LE-NEXT:    addi r3, r3, 15
+; CHECK-P9-LE-NEXT:    ori r5, r5, 0
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 4, 29
 ; CHECK-P9-LE-NEXT:    neg r6, r3

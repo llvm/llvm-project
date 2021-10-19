@@ -1,4 +1,3 @@
-; RUN: opt -loop-accesses -analyze < %s | FileCheck %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
@@ -97,11 +96,11 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:    Group {{.*}}[[ZERO]]:
 ; CHECK-NEXT:       (Low: %c High: (80 + %c))
-; CHECK-NEXT:         Member: {(2 + %c)<nsw>,+,4}
+; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (42 + %a))
-; CHECK-NEXT:         Member: {(2 + %a)<nsw>,+,2}
+; CHECK-NEXT:         Member: {(2 + %a)<nuw>,+,2}
 ; CHECK-NEXT:         Member: {%a,+,2}
 ; CHECK-NEXT:     Group {{.*}}[[TWO]]:
 ; CHECK-NEXT:       (Low: %b High: (40 + %b))
@@ -169,7 +168,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
 ; CHECK-NEXT:       (Low: %c High: (80 + %c))
-; CHECK-NEXT:         Member: {(2 + %c)<nsw>,+,4}
+; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (42 + %a))
@@ -247,8 +246,8 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:       %arrayidxA2 = getelementptr i16, i16* %a, i64 %ind2
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
-; CHECK-NEXT:       (Low: ((2 * %offset) + %a)<nsw> High: (10000 + (2 * %offset) + %a))
-; CHECK-NEXT:         Member: {((2 * %offset) + %a)<nsw>,+,2}<nsw><%for.body>
+; CHECK-NEXT:       (Low: ((2 * %offset) + %a) High: (10000 + (2 * %offset) + %a))
+; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<nw><%for.body>
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
 ; CHECK-NEXT:       (Low: %a High: (10000 + %a))
 ; CHECK-NEXT:         Member: {%a,+,2}<nw><%for.body>

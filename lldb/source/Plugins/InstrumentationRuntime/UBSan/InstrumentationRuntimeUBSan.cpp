@@ -29,7 +29,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include <ctype.h>
+#include <cctype>
 
 #include <memory>
 
@@ -150,8 +150,8 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
   StructuredData::Array *trace = new StructuredData::Array();
   auto trace_sp = StructuredData::ObjectSP(trace);
   for (unsigned I = 0; I < thread_sp->GetStackFrameCount(); ++I) {
-    const Address FCA =
-        thread_sp->GetStackFrameAtIndex(I)->GetFrameCodeAddress();
+    const Address FCA = thread_sp->GetStackFrameAtIndex(I)
+                            ->GetFrameCodeAddressForSymbolication();
     if (FCA.GetModule() == runtime_module_sp) // Skip PCs from the runtime.
       continue;
 
@@ -324,8 +324,11 @@ InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
       info->GetObjectForDotSeparatedPath("tid");
   tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
 
-  HistoryThread *history_thread = new HistoryThread(*process_sp, tid, PCs);
-  ThreadSP new_thread_sp(history_thread);
+  // We gather symbolication addresses above, so no need for HistoryThread to
+  // try to infer the call addresses.
+  bool pcs_are_call_addresses = true;
+  ThreadSP new_thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, tid, PCs, pcs_are_call_addresses);
   std::string stop_reason_description = GetStopReasonDescription(info);
   new_thread_sp->SetName(stop_reason_description.c_str());
 

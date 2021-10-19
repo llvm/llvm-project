@@ -23,7 +23,7 @@ bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   // String literals surrounded by parentheses are assumed to be on purpose.
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
-  TraversalKindScope RAII(*Ctx, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Ctx, TK_AsIs);
   auto Parents = Ctx->getParents(*Lit);
   if (Parents.size() == 1 && Parents[0].get<ParenExpr>() != nullptr)
     return true;
@@ -108,8 +108,8 @@ void SuspiciousMissingCommaCheck::check(
 
   // Count the number of occurrence of concatenated string literal.
   unsigned int Count = 0;
-  for (unsigned int i = 0; i < Size; ++i) {
-    const Expr *Child = InitializerList->getInit(i)->IgnoreImpCasts();
+  for (unsigned int I = 0; I < Size; ++I) {
+    const Expr *Child = InitializerList->getInit(I)->IgnoreImpCasts();
     if (const auto *Literal = dyn_cast<StringLiteral>(Child)) {
       if (Literal->getNumConcatenated() > 1)
         ++Count;

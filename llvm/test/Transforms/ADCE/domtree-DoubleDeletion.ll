@@ -1,5 +1,5 @@
-; RUN: opt < %s -gvn -simplifycfg -adce | llvm-dis
-; RUN: opt < %s -gvn -simplifycfg -adce -verify-dom-info | llvm-dis
+; RUN: opt < %s -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -adce | llvm-dis
+; RUN: opt < %s -gvn -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -adce -verify-dom-info | llvm-dis
 
 ; This test makes sure that the DominatorTree properly handles
 ; deletion of edges that go to forward-unreachable regions.

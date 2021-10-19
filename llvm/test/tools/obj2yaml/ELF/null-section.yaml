@@ -6,19 +6,18 @@
 
 # FIRST-SEC:      --- !ELF
 # FIRST-SEC-NEXT: FileHeader:
-# FIRST-SEC-NEXT:   Class:   ELFCLASS64
-# FIRST-SEC-NEXT:   Data:    ELFDATA2LSB
-# FIRST-SEC-NEXT:   Type:    ET_REL
-# FIRST-SEC-NEXT:   Machine: EM_NONE
+# FIRST-SEC-NEXT:   Class: ELFCLASS64
+# FIRST-SEC-NEXT:   Data:  ELFDATA2LSB
+# FIRST-SEC-NEXT:   Type:  ET_REL
 # FIRST-SEC-NEXT: Sections:
 # FIRST-SEC-NEXT:   - Type:         SHT_NULL
 # FIRST-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
-# FIRST-SEC-NEXT:     Address:      0x0000000000000006
+# FIRST-SEC-NEXT:     Address:      0x6
 # FIRST-SEC-NEXT:     Link:         .foo
-# FIRST-SEC-NEXT:     AddressAlign: 0x0000000000000003
-# FIRST-SEC-NEXT:     EntSize:      0x0000000000000005
-# FIRST-SEC-NEXT:     Size:         0x0000000000000004
-# FIRST-SEC-NEXT:     Info:         0x0000000000000002
+# FIRST-SEC-NEXT:     AddressAlign: 0x3
+# FIRST-SEC-NEXT:     EntSize:      0x5
+# FIRST-SEC-NEXT:     Size:         0x4
+# FIRST-SEC-NEXT:     Info:         0x2
 # FIRST-SEC-NEXT:   - Name:         .foo
 # FIRST-SEC-NEXT:     Type:         SHT_PROGBITS
 # FIRST-SEC-NEXT: ...
@@ -48,21 +47,20 @@ Sections:
 
 # SECOND-SEC:      --- !ELF
 # SECOND-SEC-NEXT: FileHeader:
-# SECOND-SEC-NEXT:   Class:   ELFCLASS64
-# SECOND-SEC-NEXT:   Data:    ELFDATA2LSB
-# SECOND-SEC-NEXT:   Type:    ET_REL
-# SECOND-SEC-NEXT:   Machine: EM_NONE
+# SECOND-SEC-NEXT:   Class: ELFCLASS64
+# SECOND-SEC-NEXT:   Data:  ELFDATA2LSB
+# SECOND-SEC-NEXT:   Type:  ET_REL
 # SECOND-SEC-NEXT: Sections:
 # SECOND-SEC-NEXT:   - Name:         .foo
 # SECOND-SEC-NEXT:     Type:         SHT_PROGBITS
 # SECOND-SEC-NEXT:   - Type:         SHT_NULL
 # SECOND-SEC-NEXT:     Flags:        [ SHF_ALLOC ]
-# SECOND-SEC-NEXT:     Address:      0x0000000000000006
+# SECOND-SEC-NEXT:     Address:      0x6
 # SECOND-SEC-NEXT:     Link:         .foo
-# SECOND-SEC-NEXT:     AddressAlign: 0x0000000000000003
-# SECOND-SEC-NEXT:     EntSize:      0x0000000000000005
+# SECOND-SEC-NEXT:     AddressAlign: 0x3
+# SECOND-SEC-NEXT:     EntSize:      0x5
 # SECOND-SEC-NEXT:     Content:      '00000000'
-# SECOND-SEC-NEXT:     Info:         0x0000000000000002
+# SECOND-SEC-NEXT:     Info:         0x2
 # SECOND-SEC-NEXT: ...
 
 --- !ELF
@@ -91,10 +89,9 @@ Sections:
 
 # NULL-SEC:      --- !ELF
 # NULL-SEC-NEXT: FileHeader:
-# NULL-SEC-NEXT:   Class:   ELFCLASS64
-# NULL-SEC-NEXT:   Data:    ELFDATA2LSB
-# NULL-SEC-NEXT:   Type:    ET_REL
-# NULL-SEC-NEXT:   Machine: EM_NONE
+# NULL-SEC-NEXT:   Class: ELFCLASS64
+# NULL-SEC-NEXT:   Data:  ELFDATA2LSB
+# NULL-SEC-NEXT:   Type:  ET_REL
 # NULL-SEC-NEXT: Sections:
 # NULL-SEC-NEXT:   - Name: .foo
 # NULL-SEC-NEXT:     Type: SHT_PROGBITS
@@ -118,10 +115,9 @@ Sections:
 
 # NULL-SEC-MIDDLE:      --- !ELF
 # NULL-SEC-MIDDLE-NEXT: FileHeader:
-# NULL-SEC-MIDDLE-NEXT:   Class:   ELFCLASS64
-# NULL-SEC-MIDDLE-NEXT:   Data:    ELFDATA2LSB
-# NULL-SEC-MIDDLE-NEXT:   Type:    ET_REL
-# NULL-SEC-MIDDLE-NEXT:   Machine: EM_NONE
+# NULL-SEC-MIDDLE-NEXT:   Class: ELFCLASS64
+# NULL-SEC-MIDDLE-NEXT:   Data:  ELFDATA2LSB
+# NULL-SEC-MIDDLE-NEXT:   Type:  ET_REL
 # NULL-SEC-MIDDLE-NEXT: Sections:
 # NULL-SEC-MIDDLE-NEXT:   - Name: .foo
 # NULL-SEC-MIDDLE-NEXT:     Type: SHT_PROGBITS

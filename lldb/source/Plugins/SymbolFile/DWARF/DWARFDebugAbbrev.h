@@ -26,8 +26,7 @@ typedef DWARFAbbreviationDeclarationColl::const_iterator
 
 class DWARFAbbreviationDeclarationSet {
 public:
-  DWARFAbbreviationDeclarationSet()
-      : m_offset(DW_INVALID_OFFSET), m_idx_offset(0), m_decls() {}
+  DWARFAbbreviationDeclarationSet() : m_offset(DW_INVALID_OFFSET), m_decls() {}
 
   DWARFAbbreviationDeclarationSet(dw_offset_t offset, uint32_t idx_offset)
       : m_offset(offset), m_idx_offset(idx_offset), m_decls() {}
@@ -51,7 +50,7 @@ public:
   /// @}
 private:
   dw_offset_t m_offset;
-  uint32_t m_idx_offset;
+  uint32_t m_idx_offset = 0;
   std::vector<DWARFAbbreviationDeclaration> m_decls;
 };
 

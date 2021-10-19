@@ -41,6 +41,14 @@ define <vscale x 4 x i32> @sub() {
   ret <vscale x 4 x i32> %r
 }
 
+define <vscale x 4 x i32> @sub_splat() {
+; CHECK-LABEL: @sub_splat(
+; CHECK-NEXT:    ret <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -16, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+;
+  %r = sub <vscale x 4 x i32> zeroinitializer, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 16, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
+  ret <vscale x 4 x i32> %r
+}
+
 define <vscale x 4 x float> @fsub() {
 ; CHECK-LABEL: @fsub(
 ; CHECK-NEXT:    ret <vscale x 4 x float> undef
@@ -67,15 +75,23 @@ define <vscale x 4 x float> @fmul() {
 
 define <vscale x 4 x i32> @udiv() {
 ; CHECK-LABEL: @udiv(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = udiv <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
 }
 
+define <vscale x 4 x i32> @udiv_splat_zero() {
+; CHECK-LABEL: @udiv_splat_zero(
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
+;
+  %r = udiv <vscale x 4 x i32> zeroinitializer, zeroinitializer
+  ret <vscale x 4 x i32> %r
+}
+
 define <vscale x 4 x i32> @sdiv() {
 ; CHECK-LABEL: @sdiv(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = sdiv <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -91,7 +107,7 @@ define <vscale x 4 x float> @fdiv() {
 
 define <vscale x 4 x i32> @urem() {
 ; CHECK-LABEL: @urem(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = urem <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -99,7 +115,7 @@ define <vscale x 4 x i32> @urem() {
 
 define <vscale x 4 x i32> @srem() {
 ; CHECK-LABEL: @srem(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = srem <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -119,7 +135,7 @@ define <vscale x 4 x float> @frem() {
 
 define <vscale x 4 x i32> @shl() {
 ; CHECK-LABEL: @shl(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = shl <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -127,7 +143,7 @@ define <vscale x 4 x i32> @shl() {
 
 define <vscale x 4 x i32> @lshr() {
 ; CHECK-LABEL: @lshr(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = lshr <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -135,7 +151,7 @@ define <vscale x 4 x i32> @lshr() {
 
 define <vscale x 4 x i32> @ashr() {
 ; CHECK-LABEL: @ashr(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = ashr <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
@@ -192,7 +208,7 @@ define <vscale x 4 x i32> @shufflevector() {
 
 define <vscale x 2 x double> @load() {
 ; CHECK-LABEL: @load(
-; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
+; CHECK-NEXT:    [[R:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1), align 16
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[R]]
 ;
   %r = load <vscale x 2 x double>, <vscale x 2 x double>* getelementptr (<vscale x 2 x double>, <vscale x 2 x double>* null, i64 1)
@@ -246,7 +262,7 @@ define <vscale x 4 x i1> @icmp_undef() {
 
 define <vscale x 4 x i1> @icmp_zero() {
 ; CHECK-LABEL: @icmp_zero(
-; CHECK-NEXT:    ret <vscale x 4 x i1> icmp eq (<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ;
   %r = icmp eq <vscale x 4 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 4 x i1> %r
@@ -254,7 +270,7 @@ define <vscale x 4 x i1> @icmp_zero() {
 
 define <vscale x 4 x i1> @fcmp_true() {
 ; CHECK-LABEL: @fcmp_true(
-; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> undef, i1 true, i32 0), <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ;
   %r = fcmp true <vscale x 4 x float> undef, undef
   ret <vscale x 4 x i1> %r
@@ -278,7 +294,7 @@ define <vscale x 4 x i1> @fcmp_undef() {
 
 define <vscale x 4 x i1> @fcmp_not_equality() {
 ; CHECK-LABEL: @fcmp_not_equality(
-; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> undef, i1 true, i32 0), <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ;
   %r = icmp ule <vscale x 4 x i32> undef, zeroinitializer
   ret <vscale x 4 x i1> %r

@@ -22,7 +22,6 @@ static_library("Index") {
     "IndexingAction.cpp",
     "IndexingContext.cpp",
     "IndexingContext.h",
-    "SimpleFormatContext.h",
     "USRGeneration.cpp",
   ]
 }

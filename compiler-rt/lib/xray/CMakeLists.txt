@@ -132,8 +132,11 @@ endforeach()
 include_directories(..)
 include_directories(../../include)
 
-set(XRAY_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(XRAY_CFLAGS ${COMPILER_RT_COMMON_CFLAGS})
 set(XRAY_COMMON_DEFINITIONS XRAY_HAS_EXCEPTIONS=1)
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format XRAY_CFLAGS)
 
 # We don't need RTTI in XRay, so turn that off.
 append_rtti_flag(OFF XRAY_CFLAGS)
@@ -149,6 +152,7 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+# XRay uses C++ standard library headers.
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()

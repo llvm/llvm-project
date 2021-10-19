@@ -25,20 +25,21 @@ class QuerySession {
 public:
   QuerySession(llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs)
       : ASTs(ASTs), PrintOutput(false), DiagOutput(true),
-        DetailedASTOutput(false), BindRoot(true), PrintMatcher(false),
-        Terminate(false), TK(ast_type_traits::TK_AsIs) {}
+        DetailedASTOutput(false), SrcLocOutput(false), BindRoot(true),
+        PrintMatcher(false), Terminate(false), TK(TK_AsIs) {}
 
   llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs;
 
   bool PrintOutput;
   bool DiagOutput;
   bool DetailedASTOutput;
+  bool SrcLocOutput;
 
   bool BindRoot;
   bool PrintMatcher;
   bool Terminate;
 
-  ast_type_traits::TraversalKind TK;
+  TraversalKind TK;
   llvm::StringMap<ast_matchers::dynamic::VariantValue> NamedValues;
 };
 

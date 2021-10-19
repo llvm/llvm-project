@@ -10,7 +10,7 @@ define signext i16 @f() nounwind {
 ; CHECK-NEXT:    callq h@PLT
 ; CHECK-NEXT:    movswl %ax, %edi
 ; CHECK-NEXT:    callq g@PLT
-; CHECK-NEXT:    movq x@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq x@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movzwl (%rax), %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

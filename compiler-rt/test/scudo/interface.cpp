@@ -7,8 +7,8 @@
 
 // Tests that the sanitizer interface functions behave appropriately.
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -17,8 +17,7 @@
 #include <sanitizer/allocator_interface.h>
 #include <sanitizer/scudo_interface.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   assert(argc == 2);
 
   if (!strcmp(argv[1], "ownership")) {
@@ -32,7 +31,7 @@ int main(int argc, char **argv)
     // behave properly on chunks allocated by the Primary and Secondary.
     void *p;
     std::vector<ssize_t> sizes{1, 8, 16, 32, 1024, 32768,
-      1 << 16, 1 << 17, 1 << 20, 1 << 24};
+                               1 << 16, 1 << 17, 1 << 20, 1 << 24};
     for (size_t size : sizes) {
       p = malloc(size);
       assert(p);
@@ -49,7 +48,7 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "soft-limit")) {
     // Verifies that setting the soft RSS limit at runtime works as expected.
     std::vector<void *> pointers;
-    size_t size = 1 << 19;  // 512Kb
+    size_t size = 1 << 19; // 512Kb
     for (int i = 0; i < 5; i++) {
       void *p = malloc(size);
       memset(p, 0, size);
@@ -75,7 +74,7 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "hard-limit")) {
     // Verifies that setting the hard RSS limit at runtime works as expected.
     std::vector<void *> pointers;
-    size_t size = 1 << 19;  // 512Kb
+    size_t size = 1 << 19; // 512Kb
     for (int i = 0; i < 5; i++) {
       void *p = malloc(size);
       memset(p, 0, size);

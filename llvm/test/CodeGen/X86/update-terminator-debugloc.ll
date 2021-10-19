@@ -27,7 +27,7 @@
 ; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK: [[VREG3:%[^ ]+]]:gr64 = PHI [[VREG2]]
 ; CHECK: [[VREG4:%[^ ]+]]:gr64 = nuw ADD64ri8 [[VREG3]], 4
-; CHECK: SUB64rr [[VREG1]], [[VREG4]]
+; CHECK: SUB64rr [[VREG4]], [[VREG1]]
 ; CHECK-NEXT: JCC_1 {{.*}}, debug-location [[DLOC]]{{$}}
 ; CHECK-NEXT: JMP_1 {{.*}}, debug-location [[DLOC]]{{$}}
 

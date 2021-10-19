@@ -4,8 +4,10 @@ include_directories(..)
 set(HWASAN_RTL_SOURCES
   hwasan.cpp
   hwasan_allocator.cpp
+  hwasan_allocation_functions.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_exceptions.cpp
+  hwasan_fuchsia.cpp
   hwasan_globals.cpp
   hwasan_interceptors.cpp
   hwasan_interceptors_vfork.S
@@ -13,7 +15,8 @@ set(HWASAN_RTL_SOURCES
   hwasan_memintrinsics.cpp
   hwasan_poisoning.cpp
   hwasan_report.cpp
-  hwasan_setjmp.S
+  hwasan_setjmp_aarch64.S
+  hwasan_setjmp_x86_64.S
   hwasan_tag_mismatch_aarch64.S
   hwasan_thread.cpp
   hwasan_thread_list.cpp
@@ -43,11 +46,19 @@ set(HWASAN_RTL_HEADERS
 set(HWASAN_DEFINITIONS)
 append_list_if(COMPILER_RT_HWASAN_WITH_INTERCEPTORS HWASAN_WITH_INTERCEPTORS=1 HWASAN_DEFINITIONS)
 
+if(FUCHSIA)
+  # Set this explicitly on Fuchsia, otherwise the default value is set to HWASAN_WITH_INTERCEPTORS.
+  list(APPEND HWASAN_DEFINITIONS HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE=1)
+endif()
+
 set(HWASAN_RTL_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 append_rtti_flag(OFF HWASAN_RTL_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC HWASAN_RTL_CFLAGS)
 # Prevent clang from generating libc calls.
 append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding HWASAN_RTL_CFLAGS)
+
+# Too many existing bugs, needs cleanup.
+append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format HWASAN_RTL_CFLAGS)
 
 set(HWASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
@@ -71,10 +82,6 @@ append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBM m HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread HWASAN_DYNAMIC_LIBS)
 
-if (TARGET cxx-headers OR HAVE_LIBCXX)
-  set(HWASAN_DEPS cxx-headers)
-endif()
-
 # Static runtime library.
 add_compiler_rt_component(hwasan)
 
@@ -83,72 +90,95 @@ add_compiler_rt_object_libraries(RTHwasan
   SOURCES ${HWASAN_RTL_SOURCES}
   ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
   CFLAGS ${HWASAN_RTL_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS}
-  DEPS ${HWASAN_DEPS})
+  DEFS ${HWASAN_DEFINITIONS})
 add_compiler_rt_object_libraries(RTHwasan_cxx
   ARCHS ${HWASAN_SUPPORTED_ARCH}
   SOURCES ${HWASAN_RTL_CXX_SOURCES}
   ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
   CFLAGS ${HWASAN_RTL_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS}
-  DEPS ${HWASAN_DEPS})
+  DEFS ${HWASAN_DEFINITIONS})
 add_compiler_rt_object_libraries(RTHwasan_dynamic
   ARCHS ${HWASAN_SUPPORTED_ARCH}
   SOURCES ${HWASAN_RTL_SOURCES} ${HWASAN_RTL_CXX_SOURCES}
   ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS}
-  DEPS ${HWASAN_DEPS})
+  DEFS ${HWASAN_DEFINITIONS})
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp "")
 add_compiler_rt_object_libraries(RTHwasan_dynamic_version_script_dummy
   ARCHS ${HWASAN_SUPPORTED_ARCH}
   SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
   CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
-  DEFS ${HWASAN_DEFINITIONS}
-  DEPS ${HWASAN_DEPS})
+  DEFS ${HWASAN_DEFINITIONS})
 
-foreach(arch ${HWASAN_SUPPORTED_ARCH})
-  add_compiler_rt_runtime(clang_rt.hwasan
+# If use_aliases is TRUE, adds the HWASan runtime built with alias support.
+# Otherwise adds the runtime without alias support.
+function(add_hwasan_runtimes arch use_aliases)
+  set(hwasan_object_lib RTHwasan)
+  set(hwasan_object_dyn_lib RTHwasan_dynamic)
+  set(hwasan_runtime clang_rt.hwasan)
+  set(hwasan_rtl_flags ${HWASAN_RTL_CFLAGS})
+  set(hwasan_dyn_flags ${HWASAN_DYNAMIC_CFLAGS})
+  if(use_aliases)
+    list(APPEND hwasan_rtl_flags -DHWASAN_ALIASING_MODE)
+    list(APPEND hwasan_dyn_flags -DHWASAN_ALIASING_MODE)
+    add_compiler_rt_object_libraries(RTHwasanAliases
+      ARCHS ${arch}
+      SOURCES ${HWASAN_RTL_SOURCES}
+      ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+      CFLAGS ${hwasan_rtl_flags}
+      DEFS ${HWASAN_DEFINITIONS})
+    add_compiler_rt_object_libraries(RTHwasanAliases_dynamic
+      ARCHS ${arch}
+      SOURCES ${HWASAN_RTL_SOURCES} ${HWASAN_RTL_CXX_SOURCES}
+      ADDITIONAL_HEADERS ${HWASAN_RTL_HEADERS}
+      CFLAGS ${hwasan_dyn_flags}
+      DEFS ${HWASAN_DEFINITIONS})
+
+    set(hwasan_object_lib RTHwasanAliases)
+    set(hwasan_object_dyn_lib RTHwasanAliases_dynamic)
+    set(hwasan_runtime clang_rt.hwasan_aliases)
+  endif()
+  add_compiler_rt_runtime(${hwasan_runtime}
     STATIC
     ARCHS ${arch}
-    OBJECT_LIBS RTHwasan
+    OBJECT_LIBS ${hwasan_object_lib}
                 RTInterception
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
                 RTUbsan
-    CFLAGS ${HWASAN_RTL_CFLAGS}
+    CFLAGS ${hwasan_rtl_flags}
     PARENT_TARGET hwasan)
-  add_compiler_rt_runtime(clang_rt.hwasan_cxx
+  add_compiler_rt_runtime(${hwasan_runtime}_cxx
     STATIC
     ARCHS ${arch}
     OBJECT_LIBS RTHwasan_cxx
                 RTUbsan_cxx
-    CFLAGS ${HWASAN_RTL_CFLAGS}
+    CFLAGS ${hwasan_rtl_flags}
     PARENT_TARGET hwasan)
 
   if (UNIX)
-    add_sanitizer_rt_version_list(clang_rt.hwasan-dynamic-${arch}
-                                  LIBS clang_rt.hwasan-${arch} clang_rt.hwasan_cxx-${arch}
+    add_sanitizer_rt_version_list(${hwasan_runtime}-dynamic-${arch}
+                                  LIBS ${hwasan_runtime}-${arch} ${hwasan_runtime}_cxx-${arch}
                                   EXTRA hwasan.syms.extra)
     set(VERSION_SCRIPT_FLAG
-         -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.hwasan-dynamic-${arch}.vers)
+         -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/${hwasan_runtime}-dynamic-${arch}.vers)
     set_property(SOURCE
       ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
       APPEND PROPERTY
-      OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.hwasan-dynamic-${arch}.vers)
+      OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${hwasan_runtime}-dynamic-${arch}.vers)
   else()
     set(VERSION_SCRIPT_FLAG)
   endif()
 
 
-  add_compiler_rt_runtime(clang_rt.hwasan
+  add_compiler_rt_runtime(${hwasan_runtime}
     SHARED
     ARCHS ${arch}
     OBJECT_LIBS
-            RTHwasan_dynamic
+            ${hwasan_object_dyn_lib}
             RTInterception
             RTSanitizerCommon
             RTSanitizerCommonLibc
@@ -162,7 +192,7 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
             # add_dependencies(clang_rt.asan-dynamic-${arch} clang_rt.asan-dynamic-${arch}-version-list)
             # generates an order-only dependency in ninja.
             RTHwasan_dynamic_version_script_dummy
-    CFLAGS ${HWASAN_DYNAMIC_CFLAGS}
+    CFLAGS ${hwasan_dyn_flags}
     LINK_FLAGS ${HWASAN_DYNAMIC_LINK_FLAGS}
               ${VERSION_SCRIPT_FLAG}
     LINK_LIBS ${HWASAN_DYNAMIC_LIBS}
@@ -170,18 +200,25 @@ foreach(arch ${HWASAN_SUPPORTED_ARCH})
     PARENT_TARGET hwasan)
 
   if(SANITIZER_USE_SYMBOLS)
-    add_sanitizer_rt_symbols(clang_rt.hwasan
+    add_sanitizer_rt_symbols(${hwasan_runtime}
       ARCHS ${arch}
       EXTRA hwasan.syms.extra)
-    add_sanitizer_rt_symbols(clang_rt.hwasan_cxx
+    add_sanitizer_rt_symbols(${hwasan_runtime}_cxx
       ARCHS ${arch}
       EXTRA hwasan.syms.extra)
-    add_dependencies(hwasan clang_rt.hwasan-${arch}-symbols
-                          clang_rt.hwasan_cxx-${arch}-symbols)
+    add_dependencies(hwasan ${hwasan_runtime}-${arch}-symbols
+                          ${hwasan_runtime}_cxx-${arch}-symbols)
+  endif()
+endfunction()
+
+foreach(arch ${HWASAN_SUPPORTED_ARCH})
+  add_hwasan_runtimes(${arch} FALSE)
+  if(${arch} MATCHES "x86_64")
+    add_hwasan_runtimes(${arch} TRUE)
   endif()
 endforeach()
 
-add_compiler_rt_resource_file(hwasan_blacklist hwasan_blacklist.txt hwasan)
+add_compiler_rt_resource_file(hwasan_ignorelist hwasan_ignorelist.txt hwasan)
 
 add_subdirectory("scripts")
 

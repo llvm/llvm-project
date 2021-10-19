@@ -17,6 +17,7 @@
 #include "lldb/API/SBTypeSynthetic.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
@@ -25,7 +26,6 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
@@ -1356,7 +1356,7 @@ lldb::SBAddress SBValue::GetAddress() {
     }
   }
 
-  return LLDB_RECORD_RESULT(SBAddress(new Address(addr)));
+  return LLDB_RECORD_RESULT(SBAddress(addr));
 }
 
 lldb::SBData SBValue::GetPointeeData(uint32_t item_idx, uint32_t item_count) {

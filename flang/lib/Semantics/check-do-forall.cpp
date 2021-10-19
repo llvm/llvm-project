@@ -72,21 +72,8 @@ static const parser::Name &GetDoVariable(
   return bounds.name.thing;
 }
 
-// Return the (possibly null)  name of the construct
-template <typename A>
-static const parser::Name *MaybeGetConstructName(const A &a) {
-  return common::GetPtrFromOptional(std::get<0>(std::get<0>(a.t).statement.t));
-}
-
 static parser::MessageFixedText GetEnclosingDoMsg() {
   return "Enclosing DO CONCURRENT statement"_en_US;
-}
-
-static const parser::Name *MaybeGetConstructName(
-    const parser::BlockConstruct &blockConstruct) {
-  return common::GetPtrFromOptional(
-      std::get<parser::Statement<parser::BlockStmt>>(blockConstruct.t)
-          .statement.v);
 }
 
 static void SayWithDo(SemanticsContext &context, parser::CharBlock stmtLocation,
@@ -128,10 +115,10 @@ public:
   //
 
   // Only to be called for symbols with ObjectEntityDetails
-  static bool HasImpureFinal(const Symbol &symbol) {
-    if (const Symbol * root{GetAssociationRoot(symbol)}) {
-      CHECK(root->has<ObjectEntityDetails>());
-      if (const DeclTypeSpec * symType{root->GetType()}) {
+  static bool HasImpureFinal(const Symbol &original) {
+    const Symbol &symbol{ResolveAssociations(original)};
+    if (symbol.has<ObjectEntityDetails>()) {
+      if (const DeclTypeSpec * symType{symbol.GetType()}) {
         if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
           return semantics::HasImpureFinal(*derived);
         }
@@ -155,22 +142,21 @@ public:
 
   // Is it possible that we will we deallocate a polymorphic entity or one
   // of its components?
-  static bool MightDeallocatePolymorphic(const Symbol &entity,
+  static bool MightDeallocatePolymorphic(const Symbol &original,
       const std::function<bool(const Symbol &)> &WillDeallocate) {
-    if (const Symbol * root{GetAssociationRoot(entity)}) {
-      // Check the entity itself, no coarray exception here
-      if (IsPolymorphicAllocatable(*root)) {
-        return true;
-      }
-      // Check the components
-      if (const auto *details{root->detailsIf<ObjectEntityDetails>()}) {
-        if (const DeclTypeSpec * entityType{details->type()}) {
-          if (const DerivedTypeSpec * derivedType{entityType->AsDerived()}) {
-            UltimateComponentIterator ultimates{*derivedType};
-            for (const auto &ultimate : ultimates) {
-              if (WillDeallocatePolymorphic(ultimate, WillDeallocate)) {
-                return true;
-              }
+    const Symbol &symbol{ResolveAssociations(original)};
+    // Check the entity itself, no coarray exception here
+    if (IsPolymorphicAllocatable(symbol)) {
+      return true;
+    }
+    // Check the components
+    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec * entityType{details->type()}) {
+        if (const DerivedTypeSpec * derivedType{entityType->AsDerived()}) {
+          UltimateComponentIterator ultimates{*derivedType};
+          for (const auto &ultimate : ultimates) {
+            if (WillDeallocatePolymorphic(ultimate, WillDeallocate)) {
+              return true;
             }
           }
         }
@@ -329,12 +315,6 @@ public:
   }
 
 private:
-  // Return the (possibly null) name of the statement
-  template <typename A>
-  static const parser::Name *MaybeGetStmtName(const A &a) {
-    return common::GetPtrFromOptional(std::get<0>(a.t));
-  }
-
   bool fromScope(const Symbol &symbol, const std::string &moduleName) {
     if (symbol.GetUltimate().owner().IsModule() &&
         symbol.GetUltimate().owner().GetName().value().ToString() ==
@@ -568,9 +548,9 @@ private:
   // the names up in the scope that encloses the DO construct to avoid getting
   // the local versions of them.  Then follow the host-, use-, and
   // construct-associations to get the root symbols
-  SymbolSet GatherLocals(
+  UnorderedSymbolSet GatherLocals(
       const std::list<parser::LocalitySpec> &localitySpecs) const {
-    SymbolSet symbols;
+    UnorderedSymbolSet symbols;
     const Scope &parentScope{
         context_.FindScope(currentStatementSourcePosition_).parent()};
     // Loop through the LocalitySpec::Local locality-specs
@@ -580,9 +560,7 @@ private:
         // symbols
         for (const parser::Name &name : names->v) {
           if (const Symbol * symbol{parentScope.FindSymbol(name.source)}) {
-            if (const Symbol * root{GetAssociationRoot(*symbol)}) {
-              symbols.insert(*root);
-            }
+            symbols.insert(ResolveAssociations(*symbol));
           }
         }
       }
@@ -590,13 +568,12 @@ private:
     return symbols;
   }
 
-  static SymbolSet GatherSymbolsFromExpression(const parser::Expr &expression) {
-    SymbolSet result;
+  static UnorderedSymbolSet GatherSymbolsFromExpression(
+      const parser::Expr &expression) {
+    UnorderedSymbolSet result;
     if (const auto *expr{GetExpr(expression)}) {
       for (const Symbol &symbol : evaluate::CollectSymbols(*expr)) {
-        if (const Symbol * root{GetAssociationRoot(symbol)}) {
-          result.insert(*root);
-        }
+        result.insert(ResolveAssociations(symbol));
       }
     }
     return result;
@@ -604,8 +581,9 @@ private:
 
   // C1121 - procedures in mask must be pure
   void CheckMaskIsPure(const parser::ScalarLogicalExpr &mask) const {
-    SymbolSet references{GatherSymbolsFromExpression(mask.thing.thing.value())};
-    for (const Symbol &ref : references) {
+    UnorderedSymbolSet references{
+        GatherSymbolsFromExpression(mask.thing.thing.value())};
+    for (const Symbol &ref : OrderBySourcePosition(references)) {
       if (IsProcedure(ref) && !IsPureProcedure(ref)) {
         context_.SayWithDecl(ref, parser::Unwrap<parser::Expr>(mask)->source,
             "%s mask expression may not reference impure procedure '%s'"_err_en_US,
@@ -615,10 +593,10 @@ private:
     }
   }
 
-  void CheckNoCollisions(const SymbolSet &refs, const SymbolSet &uses,
-      parser::MessageFixedText &&errorMessage,
+  void CheckNoCollisions(const UnorderedSymbolSet &refs,
+      const UnorderedSymbolSet &uses, parser::MessageFixedText &&errorMessage,
       const parser::CharBlock &refPosition) const {
-    for (const Symbol &ref : refs) {
+    for (const Symbol &ref : OrderBySourcePosition(refs)) {
       if (uses.find(ref) != uses.end()) {
         context_.SayWithDecl(ref, refPosition, std::move(errorMessage),
             LoopKindName(), ref.name());
@@ -627,8 +605,8 @@ private:
     }
   }
 
-  void HasNoReferences(
-      const SymbolSet &indexNames, const parser::ScalarIntExpr &expr) const {
+  void HasNoReferences(const UnorderedSymbolSet &indexNames,
+      const parser::ScalarIntExpr &expr) const {
     CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
         indexNames,
         "%s limit expression may not reference index variable '%s'"_err_en_US,
@@ -636,8 +614,8 @@ private:
   }
 
   // C1129, names in local locality-specs can't be in mask expressions
-  void CheckMaskDoesNotReferenceLocal(
-      const parser::ScalarLogicalExpr &mask, const SymbolSet &localVars) const {
+  void CheckMaskDoesNotReferenceLocal(const parser::ScalarLogicalExpr &mask,
+      const UnorderedSymbolSet &localVars) const {
     CheckNoCollisions(GatherSymbolsFromExpression(mask.thing.thing.value()),
         localVars,
         "%s mask expression references variable '%s'"
@@ -647,8 +625,8 @@ private:
 
   // C1129, names in local locality-specs can't be in limit or step
   // expressions
-  void CheckExprDoesNotReferenceLocal(
-      const parser::ScalarIntExpr &expr, const SymbolSet &localVars) const {
+  void CheckExprDoesNotReferenceLocal(const parser::ScalarIntExpr &expr,
+      const UnorderedSymbolSet &localVars) const {
     CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
         localVars,
         "%s expression references variable '%s'"
@@ -687,7 +665,7 @@ private:
       CheckMaskIsPure(*mask);
     }
     auto &controls{std::get<std::list<parser::ConcurrentControl>>(header.t)};
-    SymbolSet indexNames;
+    UnorderedSymbolSet indexNames;
     for (const parser::ConcurrentControl &control : controls) {
       const auto &indexName{std::get<parser::Name>(control.t)};
       if (indexName.symbol) {
@@ -721,7 +699,7 @@ private:
     const auto &localitySpecs{
         std::get<std::list<parser::LocalitySpec>>(concurrent.t)};
     if (!localitySpecs.empty()) {
-      const SymbolSet &localVars{GatherLocals(localitySpecs)};
+      const UnorderedSymbolSet &localVars{GatherLocals(localitySpecs)};
       for (const auto &c : GetControls(control)) {
         CheckExprDoesNotReferenceLocal(std::get<1>(c.t), localVars);
         CheckExprDoesNotReferenceLocal(std::get<2>(c.t), localVars);
@@ -746,8 +724,7 @@ private:
   }
 
   template <typename T> void CheckForImpureCall(const T &x) {
-    const auto &intrinsics{context_.foldingContext().intrinsics()};
-    if (auto bad{FindImpureCall(intrinsics, x)}) {
+    if (auto bad{FindImpureCall(context_.foldingContext(), x)}) {
       context_.Say(
           "Impure procedure '%s' may not be referenced in a %s"_err_en_US, *bad,
           LoopKindName());
@@ -758,7 +735,7 @@ private:
   void CheckForallIndexesUsed(const evaluate::Assignment &assignment) {
     SymbolVector indexVars{context_.GetIndexVars(IndexVarKind::FORALL)};
     if (!indexVars.empty()) {
-      SymbolSet symbols{evaluate::CollectSymbols(assignment.lhs)};
+      UnorderedSymbolSet symbols{evaluate::CollectSymbols(assignment.lhs)};
       std::visit(
           common::visitors{
               [&](const evaluate::Assignment::BoundsSpec &spec) {
@@ -845,12 +822,6 @@ void DoForallChecker::Leave(const parser::ForallAssignmentStmt &stmt) {
   doContext.Check(stmt);
 }
 
-// Return the (possibly null) name of the ConstructNode
-static const parser::Name *MaybeGetNodeName(const ConstructNode &construct) {
-  return std::visit(
-      [&](const auto &x) { return MaybeGetConstructName(*x); }, construct);
-}
-
 template <typename A>
 static parser::CharBlock GetConstructPosition(const A &a) {
   return std::get<0>(a.t).source;
@@ -910,7 +881,7 @@ void DoForallChecker::CheckForBadLeave(
 }
 
 static bool StmtMatchesConstruct(const parser::Name *stmtName,
-    StmtType stmtType, const parser::Name *constructName,
+    StmtType stmtType, const std::optional<parser::Name> &constructName,
     const ConstructNode &construct) {
   bool inDoConstruct{MaybeGetDoConstruct(construct) != nullptr};
   if (!stmtName) {
@@ -939,7 +910,8 @@ void DoForallChecker::CheckNesting(
   const ConstructStack &stack{context_.constructStack()};
   for (auto iter{stack.cend()}; iter-- != stack.cbegin();) {
     const ConstructNode &construct{*iter};
-    const parser::Name *constructName{MaybeGetNodeName(construct)};
+    const std::optional<parser::Name> &constructName{
+        MaybeGetNodeName(construct)};
     if (StmtMatchesConstruct(stmtName, stmtType, constructName, construct)) {
       CheckDoConcurrentExit(stmtType, construct);
       return; // We got a match, so we're finished checking

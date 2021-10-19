@@ -18,8 +18,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class DataExtractor;
@@ -28,8 +28,8 @@ class Status;
 class ExecutionContextScope;
 class SymbolContextScope;
 
-// A ValueObject that contains a root variable that may or may not
-// have children.
+/// A ValueObject that contains a root variable that may or may not
+/// have children.
 class ValueObjectVariable : public ValueObject {
 public:
   ~ValueObjectVariable() override;
@@ -72,10 +72,11 @@ protected:
 
   CompilerType GetCompilerTypeImpl() override;
 
-  lldb::VariableSP
-      m_variable_sp;      ///< The variable that this value object is based upon
-  Value m_resolved_value; ///< The value that DWARFExpression resolves this
-                          ///variable to before we patch it up
+  /// The variable that this value object is based upon.
+  lldb::VariableSP m_variable_sp;
+  ///< The value that DWARFExpression resolves this variable to before we patch
+  ///< it up.
+  Value m_resolved_value;
 
 private:
   ValueObjectVariable(ExecutionContextScope *exe_scope,

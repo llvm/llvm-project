@@ -24,6 +24,7 @@
 #include "real.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/real.h"
 #include "flang/Common/template.h"
 #include <cinttypes>
 #include <optional>
@@ -51,6 +52,7 @@ using SubscriptInteger = Type<TypeCategory::Integer, 8>;
 using CInteger = Type<TypeCategory::Integer, 4>;
 using LogicalResult = Type<TypeCategory::Logical, 4>;
 using LargestReal = Type<TypeCategory::Real, 16>;
+using Ascii = Type<TypeCategory::Character, 1>;
 
 // A predicate that is true when a kind value is a kind that could possibly
 // be supported for an intrinsic type category on some target instruction
@@ -80,15 +82,16 @@ static constexpr bool IsValidKindOfIntrinsicType(
 // directly hold anything requiring a destructor, such as an arbitrary
 // CHARACTER length type parameter expression.  Those must be derived
 // via LEN() member functions, packaged elsewhere (e.g. as in
-// ArrayConstructor), or copied from a parameter spec in the symbol table
-// if one is supplied.
+// ArrayConstructor), copied from a parameter spec in the symbol table
+// if one is supplied, or a known integer value.
 class DynamicType {
 public:
   constexpr DynamicType(TypeCategory cat, int k) : category_{cat}, kind_{k} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
-  constexpr DynamicType(int k, const semantics::ParamValue &pv)
-      : category_{TypeCategory::Character}, kind_{k}, charLength_{&pv} {
+  DynamicType(int charKind, const semantics::ParamValue &len);
+  constexpr DynamicType(int k, std::int64_t len)
+      : category_{TypeCategory::Character}, kind_{k}, knownLength_{len} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
@@ -102,7 +105,8 @@ public:
 
   // A rare use case used for representing the characteristics of an
   // intrinsic function like REAL() that accepts a typeless BOZ literal
-  // argument, which is something that real user Fortran can't do.
+  // argument and for typeless pointers -- things that real user Fortran can't
+  // do.
   static constexpr DynamicType TypelessIntrinsicArgument() {
     DynamicType result;
     result.category_ = TypeCategory::Integer;
@@ -135,12 +139,22 @@ public:
     CHECK(kind_ > 0);
     return kind_;
   }
-  constexpr const semantics::ParamValue *charLength() const {
-    return charLength_;
+  constexpr const semantics::ParamValue *charLengthParamValue() const {
+    return charLengthParamValue_;
+  }
+  constexpr std::optional<std::int64_t> knownLength() const {
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE == 7
+    if (knownLength_ < 0) {
+      return std::nullopt;
+    }
+#endif
+    return knownLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
+
+  std::size_t GetAlignment(const FoldingContext &) const;
   std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
-      FoldingContext * = nullptr) const;
+      FoldingContext &, bool aligned) const;
 
   std::string AsFortran() const;
   std::string AsFortran(std::string &&charLenExpr) const;
@@ -166,11 +180,9 @@ public:
   bool HasDeferredTypeParameter() const;
 
   // 7.3.2.3 & 15.5.2.4 type compatibility.
-  // x.IsTypeCompatibleWith(y) is true if "x => y" or passing actual y to
+  // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
   // dummy argument x would be valid.  Be advised, this is not a reflexive
-  // relation.
-  bool IsTypeCompatibleWith(const DynamicType &) const;
-  // Type compatible and kind type parameters match
+  // relation.  Kind type parameters must match.
   bool IsTkCompatibleWith(const DynamicType &) const;
 
   // Result will be missing when a symbol is absent or
@@ -200,7 +212,8 @@ public:
 private:
   // Special kind codes are used to distinguish the following Fortran types.
   enum SpecialKind {
-    TypelessKind = -1, // BOZ actual argument to intrinsic function
+    TypelessKind = -1, // BOZ actual argument to intrinsic function or pointer
+                       // argument to ASSOCIATED
     ClassKind = -2, // CLASS(T) or CLASS(*)
     AssumedTypeKind = -3, // TYPE(*)
   };
@@ -209,7 +222,13 @@ private:
 
   TypeCategory category_{TypeCategory::Derived}; // overridable default
   int kind_{0};
-  const semantics::ParamValue *charLength_{nullptr};
+  const semantics::ParamValue *charLengthParamValue_{nullptr};
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE == 7
+  // GCC 7's optional<> lacks a constexpr operator=
+  std::int64_t knownLength_{-1};
+#else
+  std::optional<std::int64_t> knownLength_;
+#endif
   const semantics::DerivedTypeSpec *derived_{nullptr}; // TYPE(T), CLASS(T)
 };
 
@@ -217,6 +236,8 @@ private:
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &);
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &);
+const semantics::DerivedTypeSpec *GetParentTypeSpec(
+    const semantics::DerivedTypeSpec &);
 
 std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
 
@@ -235,51 +256,13 @@ public:
   using Scalar = value::Integer<8 * KIND>;
 };
 
-// REAL(KIND=2) is IEEE half-precision (16 bits)
-template <>
-class Type<TypeCategory::Real, 2> : public TypeBase<TypeCategory::Real, 2> {
+template <int KIND>
+class Type<TypeCategory::Real, KIND>
+    : public TypeBase<TypeCategory::Real, KIND> {
 public:
-  using Scalar =
-      value::Real<typename Type<TypeCategory::Integer, 2>::Scalar, 11>;
-};
-
-// REAL(KIND=3) identifies the "other" half-precision format, which is
-// basically REAL(4) without its least-order 16 fraction bits.
-template <>
-class Type<TypeCategory::Real, 3> : public TypeBase<TypeCategory::Real, 3> {
-public:
-  using Scalar =
-      value::Real<typename Type<TypeCategory::Integer, 2>::Scalar, 8>;
-};
-
-// REAL(KIND=4) is IEEE-754 single precision (32 bits)
-template <>
-class Type<TypeCategory::Real, 4> : public TypeBase<TypeCategory::Real, 4> {
-public:
-  using Scalar =
-      value::Real<typename Type<TypeCategory::Integer, 4>::Scalar, 24>;
-};
-
-// REAL(KIND=8) is IEEE double precision (64 bits)
-template <>
-class Type<TypeCategory::Real, 8> : public TypeBase<TypeCategory::Real, 8> {
-public:
-  using Scalar =
-      value::Real<typename Type<TypeCategory::Integer, 8>::Scalar, 53>;
-};
-
-// REAL(KIND=10) is x87 FPU extended precision (80 bits, all explicit)
-template <>
-class Type<TypeCategory::Real, 10> : public TypeBase<TypeCategory::Real, 10> {
-public:
-  using Scalar = value::Real<value::Integer<80>, 64>;
-};
-
-// REAL(KIND=16) is IEEE quad precision (128 bits)
-template <>
-class Type<TypeCategory::Real, 16> : public TypeBase<TypeCategory::Real, 16> {
-public:
-  using Scalar = value::Real<value::Integer<128>, 113>;
+  static constexpr int precision{common::PrecisionOfRealKind(KIND)};
+  static constexpr int bits{common::BitsForBinaryPrecision(precision)};
+  using Scalar = value::Real<value::Integer<bits>, precision>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
@@ -353,8 +336,10 @@ using LogicalTypes = CategoryTypes<TypeCategory::Logical>;
 
 using FloatingTypes = common::CombineTuples<RealTypes, ComplexTypes>;
 using NumericTypes = common::CombineTuples<IntegerTypes, FloatingTypes>;
-using RelationalTypes = common::CombineTuples<NumericTypes, CharacterTypes>;
-using AllIntrinsicTypes = common::CombineTuples<RelationalTypes, LogicalTypes>;
+using RelationalTypes =
+    common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+using AllIntrinsicTypes =
+    common::CombineTuples<NumericTypes, CharacterTypes, LogicalTypes>;
 using LengthlessIntrinsicTypes =
     common::CombineTuples<NumericTypes, LogicalTypes>;
 
@@ -373,6 +358,9 @@ constexpr bool IsLengthlessIntrinsicType{
 template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
+  static std::string AsFortran() {
+    return "Some"s + common::EnumToString(category);
+  }
 };
 
 using NumericCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
@@ -383,7 +371,9 @@ using AllIntrinsicCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
 
 // Represents a completely generic type (or, for Expr<SomeType>, a typeless
 // value like a BOZ literal or NULL() pointer).
-struct SomeType {};
+struct SomeType {
+  static std::string AsFortran() { return "SomeType"s; }
+};
 
 class StructureConstructor;
 
@@ -455,9 +445,6 @@ int SelectedCharKind(const std::string &, int defaultKind);
 int SelectedIntKind(std::int64_t precision = 0);
 int SelectedRealKind(
     std::int64_t precision = 0, std::int64_t range = 0, std::int64_t radix = 2);
-
-// Utilities
-bool IsKindTypeParameter(const semantics::Symbol &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \

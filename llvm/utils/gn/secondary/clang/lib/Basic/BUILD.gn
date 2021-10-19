@@ -3,7 +3,7 @@ import("//llvm/utils/gn/build/write_vcsrevision.gni")
 config("write_vcsrevision_config") {
   # To pick up the generated inc file.
   include_dirs = [ target_gen_dir ]
-  visibility = [ ":write_vcsrevision" ]
+  visibility = [ ":write_vcsversion" ]
 }
 
 write_vcsrevision("write_vcsversion") {
@@ -29,7 +29,16 @@ static_library("Basic") {
     "//clang/include/clang/Basic:arm_sve_builtins",
     "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",
+    "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
+
+    # public_dep because public header AttributeCommonInfo.h includes generated
+    # AttrParsedAttrList.inc.
+    "//clang/include/clang/Sema:AttrParsedAttrList",
+
+    # public_dep because public header OpenMPKinds.h includes generated
+    # OMP.h.inc.
+    "//llvm/include/llvm/Frontend/OpenMP:public_tablegen",
   ]
   deps = [
     ":write_vcsversion",
@@ -37,32 +46,37 @@ static_library("Basic") {
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
     "//clang/include/clang/Config",
+    "//clang/include/clang/Sema:AttrParsedAttrKinds",
+    "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
-    "//llvm/lib/IR",
-    "//llvm/lib/MC",
     "//llvm/lib/Support",
   ]
   include_dirs = [ "." ]
   sources = [
     "Attributes.cpp",
     "Builtins.cpp",
+    "CLWarnings.cpp",
     "CharInfo.cpp",
     "CodeGenOptions.cpp",
     "Cuda.cpp",
+    "DarwinSDKInfo.cpp",
     "Diagnostic.cpp",
     "DiagnosticIDs.cpp",
     "DiagnosticOptions.cpp",
     "ExpressionTraits.cpp",
+    "FileEntry.cpp",
     "FileManager.cpp",
     "FileSystemStatCache.cpp",
     "IdentifierTable.cpp",
     "LangOptions.cpp",
     "LangStandards.cpp",
     "Module.cpp",
+    "NoSanitizeList.cpp",
     "ObjCRuntime.cpp",
+    "OpenCLOptions.cpp",
     "OpenMPKinds.cpp",
     "OperatorPrecedence.cpp",
-    "SanitizerBlacklist.cpp",
+    "ProfileList.cpp",
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",
     "SourceLocation.cpp",
@@ -80,6 +94,7 @@ static_library("Basic") {
     "Targets/Hexagon.cpp",
     "Targets/Lanai.cpp",
     "Targets/Le64.cpp",
+    "Targets/M68k.cpp",
     "Targets/MSP430.cpp",
     "Targets/Mips.cpp",
     "Targets/NVPTX.cpp",
@@ -102,5 +117,4 @@ static_library("Basic") {
     "XRayInstr.cpp",
     "XRayLists.cpp",
   ]
-  defines = [ "HAVE_VCS_VERSION_INC" ]  # For Version.cpp
 }

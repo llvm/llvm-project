@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=i686--
-@str = external global [18 x i8]		; <[18 x i8]*> [#uses=1]
+@str = external dso_local global [18 x i8]		; <[18 x i8]*> [#uses=1]
 
 define void @test() {
 bb.i:

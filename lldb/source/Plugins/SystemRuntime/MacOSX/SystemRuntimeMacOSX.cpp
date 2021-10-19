@@ -414,7 +414,7 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
 #endif
 
     TypeSystemClang *ast_ctx =
-        TypeSystemClang::GetScratch(m_process->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
     if (m_dispatch_tsd_indexes_addr != LLDB_INVALID_ADDRESS) {
       CompilerType uint16 =
           ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
@@ -992,10 +992,3 @@ lldb_private::ConstString SystemRuntimeMacOSX::GetPluginNameStatic() {
 const char *SystemRuntimeMacOSX::GetPluginDescriptionStatic() {
   return "System runtime plugin for Mac OS X native libraries.";
 }
-
-// PluginInterface protocol
-lldb_private::ConstString SystemRuntimeMacOSX::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t SystemRuntimeMacOSX::GetPluginVersion() { return 1; }

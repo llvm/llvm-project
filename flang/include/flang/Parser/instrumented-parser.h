@@ -31,7 +31,7 @@ public:
   bool Fails(const char *at, const MessageFixedText &tag, ParseState &);
   void Note(const char *at, const MessageFixedText &tag, bool pass,
       const ParseState &);
-  void Dump(llvm::raw_ostream &, const CookedSource &) const;
+  void Dump(llvm::raw_ostream &, const AllCookedSources &) const;
 
 private:
   struct LogForPosition {
@@ -63,7 +63,7 @@ public:
         Messages messages{std::move(state.messages())};
         std::optional<resultType> result{parser_.Parse(state)};
         log->Note(at, tag_, result.has_value(), state);
-        state.messages().Restore(std::move(messages));
+        state.messages().Annex(std::move(messages));
         return result;
       }
     }

@@ -1073,4 +1073,128 @@ int main (int argc, char **argv) {
 }
 
 #endif //OMP5
+
+#ifdef OMP51
+
+///==========================================================================///
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck %s --check-prefix OMP51
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix OMP51
+
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s | FileCheck %s --check-prefix OMP51
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix OMP51
+
+void foo() {}
+
+template <typename T, int C>
+T tmain(T argc, T *argv) {
+  #pragma omp target defaultmap(present: scalar)
+  foo();
+  #pragma omp target defaultmap(present: aggregate)
+  foo();
+  #pragma omp target defaultmap(present: pointer)
+  foo();
+
+  return 0;
+}
+
+// OMP51: template <typename T, int C> T tmain(T argc, T *argv) {
+// OMP51-NEXT: #pragma omp target defaultmap(present: scalar)
+// OMP51-NEXT: foo()
+// OMP51-NEXT: #pragma omp target defaultmap(present: aggregate)
+// OMP51-NEXT: foo()
+// OMP51-NEXT: #pragma omp target defaultmap(present: pointer)
+// OMP51-NEXT: foo()
+
+// OMP51-LABEL: int main(int argc, char **argv) {
+int main (int argc, char **argv) {
+#pragma omp target defaultmap(present: scalar)
+// OMP51-NEXT: #pragma omp target defaultmap(present: scalar)
+  foo();
+// OMP51-NEXT: foo();
+#pragma omp target defaultmap(present: aggregate)
+// OMP51-NEXT: #pragma omp target defaultmap(present: aggregate)
+  foo();
+// OMP51-NEXT: foo();
+#pragma omp target defaultmap(present: pointer)
+// OMP51-NEXT: #pragma omp target defaultmap(present: pointer)
+  foo();
+// OMP51-NEXT: foo();
+
+  return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
+}
+#endif // OMP51
+
+#ifdef OMPX
+
+// RUN: %clang_cc1 -DOMPX -verify -fopenmp -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX
+// RUN: %clang_cc1 -DOMPX -fopenmp -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMPX -fopenmp -fopenmp-extensions -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix=OMPX
+
+// RUN: %clang_cc1 -DOMPX -verify -fopenmp-simd -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX
+// RUN: %clang_cc1 -DOMPX -fopenmp-simd -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMPX -fopenmp-simd -fopenmp-extensions -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s --check-prefix=OMPX
+
+void foo() {}
+
+template <typename T, int C>
+T tmain(T argc, T *argv) {
+  T i, ompx_hold;
+#pragma omp target map(ompx_hold,alloc: i)
+  foo();
+#pragma omp target map(ompx_hold from: i)
+  foo();
+#pragma omp target map(ompx_hold)
+  {ompx_hold++;}
+#pragma omp target map(ompx_hold,i)
+  {ompx_hold++;i++;}
+  return 0;
+}
+
+//      OMPX: template <typename T, int C> T tmain(T argc, T *argv) {
+// OMPX-NEXT:   T i, ompx_hold;
+// OMPX-NEXT:   #pragma omp target map(ompx_hold,alloc: i)
+// OMPX-NEXT:   foo()
+// OMPX-NEXT:   #pragma omp target map(ompx_hold,from: i)
+// OMPX-NEXT:   foo()
+// OMPX-NEXT:   #pragma omp target map(tofrom: ompx_hold)
+// OMPX-NEXT:   {
+// OMPX-NEXT:     ompx_hold++;
+// OMPX-NEXT:   }
+// OMPX-NEXT:   #pragma omp target map(tofrom: ompx_hold,i)
+// OMPX-NEXT:   {
+// OMPX-NEXT:     ompx_hold++;
+// OMPX-NEXT:     i++;
+// OMPX-NEXT:   }
+
+// OMPX-LABEL: int main(int argc, char **argv) {
+//  OMPX-NEXT:   int i, ompx_hold;
+//  OMPX-NEXT:   #pragma omp target map(ompx_hold,alloc: i)
+//  OMPX-NEXT:   foo();
+//  OMPX-NEXT:   #pragma omp target map(ompx_hold,from: i)
+//  OMPX-NEXT:   foo();
+//  OMPX-NEXT:   #pragma omp target map(tofrom: ompx_hold)
+//  OMPX-NEXT:   {
+//  OMPX-NEXT:     ompx_hold++;
+//  OMPX-NEXT:   }
+//  OMPX-NEXT:   #pragma omp target map(tofrom: ompx_hold,i)
+//  OMPX-NEXT:   {
+//  OMPX-NEXT:     ompx_hold++;
+//  OMPX-NEXT:     i++;
+//  OMPX-NEXT:   }
+int main (int argc, char **argv) {
+  int i, ompx_hold;
+  #pragma omp target map(ompx_hold,alloc: i)
+  foo();
+  #pragma omp target map(ompx_hold from: i)
+  foo();
+  #pragma omp target map(ompx_hold)
+  {ompx_hold++;}
+  #pragma omp target map(ompx_hold,i)
+  {ompx_hold++;i++;}
+  return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
+}
+
+#endif
 #endif

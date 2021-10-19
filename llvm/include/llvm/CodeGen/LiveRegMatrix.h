@@ -104,19 +104,19 @@ public:
   /// If this function returns IK_Free, it is legal to assign(VirtReg, PhysReg).
   /// When there is more than one kind of interference, the InterferenceKind
   /// with the highest enum value is returned.
-  InterferenceKind checkInterference(LiveInterval &VirtReg, unsigned PhysReg);
+  InterferenceKind checkInterference(LiveInterval &VirtReg, MCRegister PhysReg);
 
   /// Check for interference in the segment [Start, End) that may prevent
   /// assignment to PhysReg. If this function returns true, there is
   /// interference in the segment [Start, End) of some other interval already
   /// assigned to PhysReg. If this function returns false, PhysReg is free at
   /// the segment [Start, End).
-  bool checkInterference(SlotIndex Start, SlotIndex End, unsigned PhysReg);
+  bool checkInterference(SlotIndex Start, SlotIndex End, MCRegister PhysReg);
 
   /// Assign VirtReg to PhysReg.
   /// This will mark VirtReg's live range as occupied in the LiveRegMatrix and
   /// update VirtRegMap. The live range is expected to be available in PhysReg.
-  void assign(LiveInterval &VirtReg, unsigned PhysReg);
+  void assign(LiveInterval &VirtReg, MCRegister PhysReg);
 
   /// Unassign VirtReg from its PhysReg.
   /// Assuming that VirtReg was previously assigned to a PhysReg, this undoes
@@ -124,7 +124,7 @@ public:
   void unassign(LiveInterval &VirtReg);
 
   /// Returns true if the given \p PhysReg has any live intervals assigned.
-  bool isPhysRegUsed(unsigned PhysReg) const;
+  bool isPhysRegUsed(MCRegister PhysReg) const;
 
   //===--------------------------------------------------------------------===//
   // Low-level interface.
@@ -136,22 +136,25 @@ public:
   /// Check for regmask interference only.
   /// Return true if VirtReg crosses a regmask operand that clobbers PhysReg.
   /// If PhysReg is null, check if VirtReg crosses any regmask operands.
-  bool checkRegMaskInterference(LiveInterval &VirtReg, unsigned PhysReg = 0);
+  bool checkRegMaskInterference(LiveInterval &VirtReg,
+                                MCRegister PhysReg = MCRegister::NoRegister);
 
   /// Check for regunit interference only.
   /// Return true if VirtReg overlaps a fixed assignment of one of PhysRegs's
   /// register units.
-  bool checkRegUnitInterference(LiveInterval &VirtReg, unsigned PhysReg);
+  bool checkRegUnitInterference(LiveInterval &VirtReg, MCRegister PhysReg);
 
   /// Query a line of the assigned virtual register matrix directly.
   /// Use MCRegUnitIterator to enumerate all regunits in the desired PhysReg.
   /// This returns a reference to an internal Query data structure that is only
   /// valid until the next query() call.
-  LiveIntervalUnion::Query &query(const LiveRange &LR, unsigned RegUnit);
+  LiveIntervalUnion::Query &query(const LiveRange &LR, MCRegister RegUnit);
 
   /// Directly access the live interval unions per regunit.
   /// This returns an array indexed by the regunit number.
   LiveIntervalUnion *getLiveUnions() { return &Matrix[0]; }
+
+  Register getOneVReg(unsigned PhysReg) const;
 };
 
 } // end namespace llvm

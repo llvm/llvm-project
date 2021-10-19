@@ -15,8 +15,8 @@
 #ifndef MLIR_DIALECT_COMMONFOLDERS_H
 #define MLIR_DIALECT_COMMONFOLDERS_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -58,8 +58,8 @@ Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
     auto lhs = operands[0].cast<ElementsAttr>();
     auto rhs = operands[1].cast<ElementsAttr>();
 
-    auto lhsIt = lhs.getValues<ElementValueT>().begin();
-    auto rhsIt = rhs.getValues<ElementValueT>().begin();
+    auto lhsIt = lhs.value_begin<ElementValueT>();
+    auto rhsIt = rhs.value_begin<ElementValueT>();
     SmallVector<ElementValueT, 4> elementResults;
     elementResults.reserve(lhs.getNumElements());
     for (size_t i = 0, e = lhs.getNumElements(); i < e; ++i, ++lhsIt, ++rhsIt)

@@ -19,10 +19,12 @@
 #include "clang/Basic/Version.h"
 #include "clang/Format/Format.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include <fstream>
 
 using namespace llvm;
 using clang::tooling::Replacements;
@@ -104,6 +106,17 @@ static cl::opt<bool> SortIncludes(
              "SortIncludes style flag"),
     cl::cat(ClangFormatCategory));
 
+static cl::opt<std::string> QualifierAlignment(
+    "qualifier-alignment",
+    cl::desc(
+        "If set, overrides the qualifier alignment style determined by the "
+        "QualifierAlignment style flag"),
+    cl::init(""), cl::cat(ClangFormatCategory));
+
+static cl::opt<std::string>
+    Files("files", cl::desc("Provide a list of files to run clang-format"),
+          cl::init(""), cl::cat(ClangFormatCategory));
+
 static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),
             cl::cat(ClangFormatCategory));
@@ -144,6 +157,23 @@ static cl::opt<bool>
                      cl::desc("If set, changes formatting warnings to errors"),
                      cl::cat(ClangFormatCategory));
 
+namespace {
+enum class WNoError { Unknown };
+}
+
+static cl::bits<WNoError> WNoErrorList(
+    "Wno-error",
+    cl::desc("If set don't error out on the specified warning type."),
+    cl::values(
+        clEnumValN(WNoError::Unknown, "unknown",
+                   "If set, unknown format options are only warned about.\n"
+                   "This can be used to enable formatting, even if the\n"
+                   "configuration contains unknown (newer) options.\n"
+                   "Use with caution, as this might lead to dramatically\n"
+                   "differing format depending on an option being\n"
+                   "supported or not.")),
+    cl::cat(ClangFormatCategory));
+
 static cl::opt<bool>
     ShowColors("fcolor-diagnostics",
                cl::desc("If set, and on a color-capable terminal controls "
@@ -162,13 +192,13 @@ static cl::list<std::string> FileNames(cl::Positional, cl::desc("[<file> ...]"),
 namespace clang {
 namespace format {
 
-static FileID createInMemoryFile(StringRef FileName, MemoryBuffer *Source,
+static FileID createInMemoryFile(StringRef FileName, MemoryBufferRef Source,
                                  SourceManager &Sources, FileManager &Files,
                                  llvm::vfs::InMemoryFileSystem *MemFS) {
   MemFS->addFileNoOwn(FileName, 0, Source);
-  auto File = Files.getFile(FileName);
-  return Sources.createFileID(File ? *File : nullptr, SourceLocation(),
-                              SrcMgr::C_User);
+  auto File = Files.getOptionalFileRef(FileName);
+  assert(File && "File not added to MemFS?");
+  return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
 }
 
 // Parses <start line>:<end line> input to a pair of line numbers.
@@ -189,7 +219,7 @@ static bool fillRanges(MemoryBuffer *Code,
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
       new DiagnosticOptions);
   SourceManager Sources(Diagnostics, Files);
-  FileID ID = createInMemoryFile("<irrelevant>", Code, Sources, Files,
+  FileID ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
                                  InMemoryFileSystem.get());
   if (!LineRanges.empty()) {
     if (!Offsets.empty() || !Lengths.empty()) {
@@ -336,6 +366,18 @@ static void outputXML(const Replacements &Replaces,
   outs() << "</replacements>\n";
 }
 
+class ClangFormatDiagConsumer : public DiagnosticConsumer {
+  virtual void anchor() {}
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+
+    SmallVector<char, 16> vec;
+    Info.FormatDiagnostic(vec);
+    errs() << "clang-format error:" << vec << "\n";
+  }
+};
+
 // Returns true on error.
 static bool format(StringRef FileName) {
   if (!OutputXML && Inplace && FileName == "-") {
@@ -378,17 +420,54 @@ static bool format(StringRef FileName) {
   }
 
   llvm::Expected<FormatStyle> FormatStyle =
-      getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer());
+      getStyle(Style, AssumedFileName, FallbackStyle, Code->getBuffer(),
+               nullptr, WNoErrorList.isSet(WNoError::Unknown));
   if (!FormatStyle) {
     llvm::errs() << llvm::toString(FormatStyle.takeError()) << "\n";
     return true;
   }
 
-  if (SortIncludes.getNumOccurrences() != 0)
-    FormatStyle->SortIncludes = SortIncludes;
+  StringRef QualifierAlignmentOrder = QualifierAlignment;
+
+  FormatStyle->QualifierAlignment =
+      StringSwitch<FormatStyle::QualifierAlignmentStyle>(
+          QualifierAlignmentOrder.lower())
+          .Case("right", FormatStyle::QAS_Right)
+          .Case("left", FormatStyle::QAS_Left)
+          .Default(FormatStyle->QualifierAlignment);
+
+  if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Left)
+    FormatStyle->QualifierOrder = {"const", "volatile", "type"};
+  else if (FormatStyle->QualifierAlignment == FormatStyle::QAS_Right)
+    FormatStyle->QualifierOrder = {"type", "const", "volatile"};
+  else if (QualifierAlignmentOrder.contains("type")) {
+    FormatStyle->QualifierAlignment = FormatStyle::QAS_Custom;
+    SmallVector<StringRef> Qualifiers;
+    QualifierAlignmentOrder.split(Qualifiers, " ", /*MaxSplit=*/-1,
+                                  /*KeepEmpty=*/false);
+    FormatStyle->QualifierOrder = {Qualifiers.begin(), Qualifiers.end()};
+  }
+
+  if (SortIncludes.getNumOccurrences() != 0) {
+    if (SortIncludes)
+      FormatStyle->SortIncludes = FormatStyle::SI_CaseSensitive;
+    else
+      FormatStyle->SortIncludes = FormatStyle::SI_Never;
+  }
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(*FormatStyle, Code->getBuffer(), Ranges,
                                        AssumedFileName, &CursorPosition);
+
+  // To format JSON insert a variable to trick the code into thinking its
+  // JavaScript.
+  if (FormatStyle->isJson()) {
+    auto Err = Replaces.add(tooling::Replacement(
+        tooling::Replacement(AssumedFileName, 0, 0, "x = ")));
+    if (Err) {
+      llvm::errs() << "Bad Json variable insertion\n";
+    }
+  }
+
   auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
   if (!ChangedCode) {
     llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
@@ -410,11 +489,14 @@ static bool format(StringRef FileName) {
     IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
         new llvm::vfs::InMemoryFileSystem);
     FileManager Files(FileSystemOptions(), InMemoryFileSystem);
+
+    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions());
+    ClangFormatDiagConsumer IgnoreDiagnostics;
     DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-        new DiagnosticOptions);
+        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
+        &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
-    FileID ID = createInMemoryFile(AssumedFileName, Code.get(), Sources, Files,
+    FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,
                                    InMemoryFileSystem.get());
     Rewriter Rewrite(Sources, LangOptions());
     tooling::applyAllReplacements(Replaces, Rewrite);
@@ -484,7 +566,8 @@ int main(int argc, const char **argv) {
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
       argc, argv,
-      "A tool to format C/C++/Java/JavaScript/Objective-C/Protobuf/C# code.\n\n"
+      "A tool to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# "
+      "code.\n\n"
       "If no arguments are specified, it formats the code from standard input\n"
       "and writes the result to the standard output.\n"
       "If <file>s are given, it reformats the files. If -i is specified\n"
@@ -500,6 +583,17 @@ int main(int argc, const char **argv) {
     return dumpConfig();
   }
 
+  if (!Files.empty()) {
+    std::ifstream ExternalFileOfFiles{std::string(Files)};
+    std::string Line;
+    unsigned LineNo = 1;
+    while (std::getline(ExternalFileOfFiles, Line)) {
+      FileNames.push_back(Line);
+      LineNo++;
+    }
+    errs() << "Clang-formating " << LineNo << " files\n";
+  }
+
   bool Error = false;
   if (FileNames.empty()) {
     Error = clang::format::format("-");
@@ -511,9 +605,12 @@ int main(int argc, const char **argv) {
               "single file.\n";
     return 1;
   }
+
+  unsigned FileNo = 1;
   for (const auto &FileName : FileNames) {
     if (Verbose)
-      errs() << "Formatting " << FileName << "\n";
+      errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
+             << FileName << "\n";
     Error |= clang::format::format(FileName);
   }
   return Error ? 1 : 0;

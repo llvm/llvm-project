@@ -1,8 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s --check-prefix=CHECK-GENERIC
 
 // CHECK-LABEL: func @wrapping_op
-// CHECK-GENERIC: "func"
+// CHECK-GENERIC: "builtin.func"
 func @wrapping_op(%arg0 : i32, %arg1 : f32) -> (i3, i2, i1) {
 // CHECK: %0:3 = test.wrapping_region wraps "some.op"(%arg1, %arg0) {test.attr = "attr"} : (f32, i32) -> (i1, i2, i3)
 // CHECK-GENERIC: "test.wrapping_region"() ( {

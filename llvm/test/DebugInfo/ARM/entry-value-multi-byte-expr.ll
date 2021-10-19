@@ -1,4 +1,5 @@
 ; RUN: llc -debug-entry-values -filetype=asm -o - %s | FileCheck %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -debug-entry-values -filetype=asm -o - %s | FileCheck %s
 
 ; Verify that the size operands of the DW_OP_GNU_entry_value operations are
 ; correct for the multi-byte DW_OP_regx expressions.

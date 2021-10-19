@@ -1,4 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-inline --inline-threshold=1 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -inline --inline-threshold=1 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -passes=inline --inline-threshold=1 < %s | FileCheck %s
 
 define hidden <16 x i32> @div_vecbonus(<16 x i32> %x, <16 x i32> %y) {
 entry:

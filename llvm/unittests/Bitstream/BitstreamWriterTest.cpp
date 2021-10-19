@@ -38,7 +38,7 @@ TEST(BitstreamWriterTest, emitBlobWithSize) {
     W.Emit('r', 8);
     W.Emit(0, 8);
   }
-  EXPECT_EQ(StringRef(Expected), Buffer);
+  EXPECT_EQ(Expected.str(), Buffer);
 }
 
 TEST(BitstreamWriterTest, emitBlobEmpty) {

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 !C1132
 ! If the do-stmt is a nonlabel-do-stmt, the corresponding end-do shall be an
 ! end-do-stmt.

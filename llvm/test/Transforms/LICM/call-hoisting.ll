@@ -1,5 +1,5 @@
 ; RUN: opt -S -basic-aa -licm %s | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 declare i32 @load(i32* %p) argmemonly readonly nounwind
 
@@ -23,6 +23,44 @@ exit:
   ret void
 }
 
+declare i32 @spec(i32* %p, i32* %q) readonly argmemonly nounwind speculatable
+
+; We should strip the dereferenceable callsite attribute on spec call's argument since it is
+; can cause UB in the speculatable call when hoisted to preheader.
+; However, we need not strip the nonnull attribute since it just propagates
+; poison if the parameter was indeed null.
+define void @test_strip_attribute(i32* noalias %loc, i32* noalias %sink, i32* %q) {
+; CHECK-LABEL: @test_strip_attribute(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @load(i32* [[LOC:%.*]])
+; CHECK-NEXT:    [[NULLCHK:%.*]] = icmp eq i32* [[Q:%.*]], null
+; CHECK-NEXT:    [[RET2:%.*]] = call i32 @spec(i32* nonnull [[Q]], i32* [[LOC]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[ISNULL:%.*]] ]
+; CHECK-NEXT:    br i1 [[NULLCHK]], label [[ISNULL]], label [[NONNULLBB:%.*]]
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %isnull ]
+  %ret = call i32 @load(i32* %loc)
+  %nullchk = icmp eq i32* %q, null
+  br i1 %nullchk, label %isnull, label %nonnullbb
+
+nonnullbb:
+  %ret2 = call i32 @spec(i32* nonnull %q, i32* dereferenceable(12) %loc)
+  br label %isnull
+
+isnull:
+  store volatile i32 %ret, i32* %sink
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
 
 declare void @store(i32 %val, i32* %p) argmemonly writeonly nounwind
 
@@ -58,7 +96,7 @@ loop:
   call void @store(i32 0, i32* %loc)
   %iv.next = add i32 %iv, 1
   br i1 %earlycnd, label %exit1, label %backedge
-  
+
 backedge:
   %cmp = icmp slt i32 %iv, 200
   br i1 %cmp, label %loop, label %exit2
@@ -142,7 +180,7 @@ loop:
   %v = load i32, i32* %loc
   %earlycnd = icmp eq i32 %v, 198
   br i1 %earlycnd, label %exit1, label %backedge
-  
+
 backedge:
   %iv.next = add i32 %iv, 1
   %cmp = icmp slt i32 %iv, 200

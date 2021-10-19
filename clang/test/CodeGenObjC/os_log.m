@@ -19,7 +19,7 @@ C *c;
 extern __attribute__((visibility("default"))) NSString *GenString();
 void os_log_pack_send(void *);
 
-// CHECK-LABEL: define void @test_builtin_os_log1(
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log1(
 // CHECK: alloca i8*, align 8
 // CHECK: %[[A_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[OS_LOG_ARG:.*]] = alloca %{{.*}}*, align 8
@@ -51,7 +51,7 @@ void os_log_pack_send(void *);
 // CHECK-O0: call void @llvm.objc.storeStrong(i8** %[[V12]], i8* null)
 // CHECK-O0: call void @llvm.objc.storeStrong(i8** %[[A_ADDR]], i8* null)
 
-// CHECK-MRR-LABEL: define void @test_builtin_os_log1(
+// CHECK-MRR-LABEL: define{{.*}} void @test_builtin_os_log1(
 // CHECK-MRR-NOT: call {{.*}} @llvm.objc
 // CHECK-MRR: ret void
 
@@ -60,7 +60,7 @@ void test_builtin_os_log1(void *buf, id a) {
   os_log_pack_send(buf);
 }
 
-// CHECK: define void @test_builtin_os_log2(
+// CHECK: define{{.*}} void @test_builtin_os_log2(
 // CHECK-NOT: @llvm.objc.retain(
 
 void test_builtin_os_log2(void *buf, id __unsafe_unretained a) {
@@ -68,7 +68,7 @@ void test_builtin_os_log2(void *buf, id __unsafe_unretained a) {
   os_log_pack_send(buf);
 }
 
-// CHECK-LABEL: define void @test_builtin_os_log3(
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log3(
 // CHECK: alloca i8*, align 8
 // CHECK: %[[OS_LOG_ARG:.*]] = alloca i8*, align 8
 // CHECK: %[[CALL:.*]] = call %{{.*}}* (...) @GenString()
@@ -93,7 +93,7 @@ void test_builtin_os_log3(void *buf) {
   os_log_pack_send(buf);
 }
 
-// CHECK-LABEL: define void @test_builtin_os_log4(
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log4(
 // CHECK: alloca i8*, align 8
 // CHECK: %[[OS_LOG_ARG:.*]] = alloca i8*, align 8
 // CHECK: %[[OS_LOG_ARG2:.*]] = alloca i8*, align 8
@@ -124,7 +124,7 @@ void test_builtin_os_log4(void *buf) {
 }
 
 // FIXME: Lifetime of GenString's return should be extended in this case too.
-// CHECK-LABEL: define void @test_builtin_os_log5(
+// CHECK-LABEL: define{{.*}} void @test_builtin_os_log5(
 // CHECK: call void @os_log_pack_send(
 // CHECK-NOT: call void @llvm.objc.release(
 

@@ -172,6 +172,12 @@ enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelComplete, // Load sections and all symbols
 };
 
+// Behavior on fork/vfork
+enum FollowForkMode {
+  eFollowParent, // Follow parent process
+  eFollowChild,  // Follow child process
+};
+
 // Result enums for when reading multiple lines from IOHandlers
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the

@@ -15,7 +15,7 @@ class TestCrossDSOTailCalls(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @skipIf(dwarf_version=['<', '4'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     @expectedFailureAll(archs=['arm', 'aarch64'], bugnumber="llvm.org/PR44561")
@@ -61,5 +61,5 @@ class TestCrossDSOTailCalls(TestBase):
         ]
         for idx, (name, is_artificial) in enumerate(expected_frames):
             frame = thread.GetFrameAtIndex(idx)
-            self.assertTrue(name in frame.GetDisplayFunctionName())
+            self.assertIn(name, frame.GetDisplayFunctionName())
             self.assertEqual(frame.IsArtificial(), is_artificial)

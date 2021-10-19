@@ -18,6 +18,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ValueHandle.h"
 #include <vector>
 
 namespace llvm {
@@ -77,8 +78,8 @@ class SROA : public PassInfoMixin<SROA> {
 
   /// A collection of instructions to delete.
   /// We try to batch deletions to simplify code and make things a bit more
-  /// efficient.
-  SetVector<Instruction *, SmallVector<Instruction *, 8>> DeadInsts;
+  /// efficient. We also make sure there is no dangling pointers.
+  SmallVector<WeakVH, 8> DeadInsts;
 
   /// Post-promotion worklist.
   ///

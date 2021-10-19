@@ -11,7 +11,7 @@
 @h = common dso_local global float 0.000000e+00, align 4
 
 define dso_local void @j() local_unnamed_addr {
-; CHECK-LABEL: define {{[^@]+}}@j(
+; CHECK-LABEL: @j(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @b, align 8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 4
@@ -19,16 +19,14 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[ARRAYIDX]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP1]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 13
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[ARRAYIDX1]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[REORDER_SHUFFLE]], [[REORDER_SHUFFLE1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x float>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], <float 1.000000e+01, float 1.000000e+01>
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[TMP7]]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub <2 x float> <float 1.000000e+00, float 0.000000e+00>, [[TMP7]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 1
 ; CHECK-NEXT:    store float [[TMP9]], float* @g, align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[SHUFFLE]], <float -1.000000e+00, float -1.000000e+00, float 1.000000e+00, float 1.000000e+00>
@@ -44,17 +42,15 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 15
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    [[CONV19:%.*]] = sitofp i32 [[TMP15]] to float
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> undef, float [[CONV19]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> [[TMP16]], float -1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP17]], float [[TMP18]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float -1.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP21:%.*]] = fsub <4 x float> [[TMP10]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd <4 x float> [[TMP10]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x float> [[TMP21]], <4 x float> [[TMP22]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP24:%.*]] = fptosi <4 x float> [[TMP23]] to <4 x i32>
-; CHECK-NEXT:    [[TMP25:%.*]] = bitcast i32* [[ARRAYIDX1]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP24]], <4 x i32>* [[TMP25]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> <float poison, float -1.000000e+00, float poison, float -1.000000e+00>, float [[CONV19]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> [[TMP16]], float [[TMP17]], i32 2
+; CHECK-NEXT:    [[TMP19:%.*]] = fsub <4 x float> [[TMP10]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd <4 x float> [[TMP10]], [[TMP18]]
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP19]], <4 x float> [[TMP20]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP22:%.*]] = fptosi <4 x float> [[TMP21]] to <4 x i32>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast i32* [[ARRAYIDX1]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP22]], <4 x i32>* [[TMP23]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

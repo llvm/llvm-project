@@ -49,6 +49,12 @@
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V8: invalid instruction
 
+        @ Out of range immediate for ROR.
+        @ (Assembling this instruction to "mov r1, r1" might also be OK.)
+        ror r1, r1, #0
+@ CHECK-ERRORS: invalid instruction
+@ CHECK-ERRORS: operand must be an immediate in the range [1,31]
+
         isb  #-1
         isb  #16
 @ CHECK-ERRORS: error: immediate value out of range

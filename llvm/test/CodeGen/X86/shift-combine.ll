@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=i686-unknown < %s | FileCheck %s --check-prefix=X32
 ; RUN: llc -mtriple=x86_64-unknown < %s | FileCheck %s --check-prefix=X64
 
-@array = weak global [4 x i32] zeroinitializer
+@array = weak dso_local global [4 x i32] zeroinitializer
 
-define i32 @test_lshr_and(i32 %x) {
+define dso_local i32 @test_lshr_and(i32 %x) {
 ; X32-LABEL: test_lshr_and:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -26,7 +26,7 @@ define i32 @test_lshr_and(i32 %x) {
   ret i32 %tmp5
 }
 
-define i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,7 +48,7 @@ define i32* @test_exact1(i32 %a, i32 %b, i32* %x)  {
   ret i32* %gep
 }
 
-define i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -70,7 +70,7 @@ define i32* @test_exact2(i32 %a, i32 %b, i32* %x)  {
   ret i32* %gep
 }
 
-define i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact3:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -91,7 +91,7 @@ define i32* @test_exact3(i32 %a, i32 %b, i32* %x)  {
   ret i32* %gep
 }
 
-define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact4:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -113,7 +113,7 @@ define i32* @test_exact4(i32 %a, i32 %b, i32* %x)  {
   ret i32* %gep
 }
 
-define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact5:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -135,7 +135,7 @@ define i32* @test_exact5(i32 %a, i32 %b, i32* %x)  {
   ret i32* %gep
 }
 
-define i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
+define dso_local i32* @test_exact6(i32 %a, i32 %b, i32* %x)  {
 ; X32-LABEL: test_exact6:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -227,7 +227,7 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ; X64-LABEL: ashr_add_shl_v4i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pslld $24, %xmm0
-; X64-NEXT:    paddd {{.*}}(%rip), %xmm0
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    psrad $24, %xmm0
 ; X64-NEXT:    retq
   %conv = shl <4 x i32> %r, <i32 24, i32 24, i32 24, i32 24>
@@ -304,7 +304,7 @@ define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) nounwind {
   ret i64 %conv1
 }
 
-define i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -330,7 +330,7 @@ define i32 @ashr_add_shl_i32_i8_extra_use1(i32 %r, i32* %p) nounwind {
   ret i32 %conv1
 }
 
-define i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -356,7 +356,7 @@ define i32 @ashr_add_shl_i32_i8_extra_use2(i32 %r, i32* %p) nounwind {
   ret i32 %conv1
 }
 
-define i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2) nounwind {
+define dso_local i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2) nounwind {
 ; X32-LABEL: ashr_add_shl_i32_i8_extra_use3:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -388,7 +388,7 @@ define i32 @ashr_add_shl_i32_i8_extra_use3(i32 %r, i32* %p1, i32* %p2) nounwind 
 
 %"class.QPainterPath" = type { double, double, i32 }
 
-define void @PR42880(i32 %t0) {
+define dso_local void @PR42880(i32 %t0) {
 ; X32-LABEL: PR42880:
 ; X32:       # %bb.0:
 ; X32-NEXT:    xorl %eax, %eax

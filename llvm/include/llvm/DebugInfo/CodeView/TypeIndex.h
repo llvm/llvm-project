@@ -18,6 +18,7 @@
 namespace llvm {
 
 class ScopedPrinter;
+class StringRef;
 
 namespace codeview {
 
@@ -116,11 +117,20 @@ public:
 
   uint32_t toArrayIndex() const {
     assert(!isSimple());
-    return getIndex() - FirstNonSimpleIndex;
+    return (getIndex() & ~DecoratedItemIdMask) - FirstNonSimpleIndex;
   }
 
   static TypeIndex fromArrayIndex(uint32_t Index) {
     return TypeIndex(Index + FirstNonSimpleIndex);
+  }
+
+  static TypeIndex fromDecoratedArrayIndex(bool IsItem, uint32_t Index) {
+    return TypeIndex((Index + FirstNonSimpleIndex) |
+                     (IsItem ? DecoratedItemIdMask : 0));
+  }
+
+  TypeIndex removeDecoration() {
+    return TypeIndex(Index & ~DecoratedItemIdMask);
   }
 
   SimpleTypeKind getSimpleKind() const {

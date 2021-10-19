@@ -1,4 +1,4 @@
-; RUN: %lli -force-interpreter=true %s | FileCheck %s
+; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s | FileCheck %s
 ; CHECK: int test passed
 ; CHECK: double test passed
 ; CHECK: float test passed

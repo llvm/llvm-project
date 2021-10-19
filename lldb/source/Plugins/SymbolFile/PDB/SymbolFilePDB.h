@@ -104,11 +104,10 @@ public:
                                 lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
-  uint32_t
-  ResolveSymbolContext(const lldb_private::FileSpec &file_spec, uint32_t line,
-                       bool check_inlines,
-                       lldb::SymbolContextItem resolve_scope,
-                       lldb_private::SymbolContextList &sc_list) override;
+  uint32_t ResolveSymbolContext(
+      const lldb_private::SourceLocationSpec &src_location_spec,
+      lldb::SymbolContextItem resolve_scope,
+      lldb_private::SymbolContextList &sc_list) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
@@ -162,9 +161,9 @@ public:
       lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   llvm::pdb::IPDBSession &GetPDBSession();
 

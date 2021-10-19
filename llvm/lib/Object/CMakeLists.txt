@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMObject
   ELF.cpp
   ELFObjectFile.cpp
   Error.cpp
+  FaultMapParser.cpp
   IRObjectFile.cpp
   IRSymtab.cpp
   MachOObjectFile.cpp
@@ -35,4 +36,13 @@ add_llvm_component_library(LLVMObject
   DEPENDS
   intrinsics_gen
   llvm_vcsrevision_h
+
+  LINK_COMPONENTS
+  BitReader
+  Core
+  MC
+  BinaryFormat
+  MCParser
+  Support
+  TextAPI
   )

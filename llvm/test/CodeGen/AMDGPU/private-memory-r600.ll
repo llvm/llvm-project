@@ -168,9 +168,6 @@ entry:
 ; Test that two stack objects are not stored in the same register
 ; The second stack object should be in T3.X
 ; FUNC-LABEL: {{^}}no_overlap:
-; R600_CHECK: MOV
-; R600_CHECK: [[CHAN:[XYZW]]]+
-; R600-NOT: [[CHAN]]+
 define amdgpu_kernel void @no_overlap(i32 addrspace(1)* %out, i32 %in) #0 {
 entry:
   %0 = alloca [3 x i8], align 1, addrspace(5)

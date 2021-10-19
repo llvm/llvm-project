@@ -10,9 +10,9 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/ClangTestUtils.h"
+#include "lldb/Core/Declaration.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -60,11 +60,11 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeDouble),
                                   context.DoubleTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeDoubleComplex),
-                                  context.DoubleComplexTy));
+                                  context.getComplexType(context.DoubleTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeFloat), context.FloatTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeFloatComplex),
-                                  context.FloatComplexTy));
+                                  context.getComplexType(context.FloatTy)));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeHalf), context.HalfTy));
   EXPECT_TRUE(
@@ -75,8 +75,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
       context.hasSameType(GetBasicQualType(eBasicTypeLong), context.LongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongDouble),
                                   context.LongDoubleTy));
-  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongDoubleComplex),
-                                  context.LongDoubleComplexTy));
+  EXPECT_TRUE(
+      context.hasSameType(GetBasicQualType(eBasicTypeLongDoubleComplex),
+                          context.getComplexType(context.LongDoubleTy)));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongLong),
                                   context.LongLongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeNullPtr),
@@ -482,9 +483,8 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   m_ast->CompleteTagDeclarationDefinition(type);
 
   // typedef foo<int, 47> foo_def;
-  CompilerType typedef_type = m_ast->CreateTypedefType(
-      type, "foo_def",
-      m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()), 0);
+  CompilerType typedef_type = type.CreateTypedef(
+      "foo_def", m_ast->CreateDeclContext(m_ast->GetTranslationUnitDecl()), 0);
 
   CompilerType auto_type(
       m_ast.get(),
@@ -514,6 +514,193 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
     EXPECT_EQ(arg, result->value);
     EXPECT_EQ(int_type, result->type);
   }
+}
+
+class TestCreateClassTemplateDecl : public TestTypeSystemClang {
+protected:
+  /// The class templates created so far by the Expect* functions below.
+  llvm::DenseSet<ClassTemplateDecl *> m_created_templates;
+
+  /// Utility function for creating a class template.
+  ClassTemplateDecl *
+  CreateClassTemplate(const TypeSystemClang::TemplateParameterInfos &infos) {
+    ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
+        m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
+        "foo", TTK_Struct, infos);
+    return decl;
+  }
+
+  /// Creates a new class template with the given template parameters.
+  /// Asserts that a new ClassTemplateDecl is created.
+  /// \param description The gtest scope string that should describe the input.
+  /// \param infos The template parameters that the class template should have.
+  /// \returns The created ClassTemplateDecl.
+  ClassTemplateDecl *
+  ExpectNewTemplate(std::string description,
+                    const TypeSystemClang::TemplateParameterInfos &infos) {
+    SCOPED_TRACE(description);
+    ClassTemplateDecl *first_template = CreateClassTemplate(infos);
+    // A new template should have been created.
+    EXPECT_FALSE(m_created_templates.contains(first_template))
+        << "Didn't create new class template but reused this existing decl:\n"
+        << ClangUtil::DumpDecl(first_template);
+    m_created_templates.insert(first_template);
+
+    // Creating a new template with the same arguments should always return
+    // the template created above.
+    ClassTemplateDecl *second_template = CreateClassTemplate(infos);
+    EXPECT_EQ(first_template, second_template)
+        << "Second attempt to create class template didn't reuse first decl:\n"
+        << ClangUtil::DumpDecl(first_template) << "\nInstead created/reused:\n"
+        << ClangUtil::DumpDecl(second_template);
+    return first_template;
+  }
+
+  /// Tries to create a new class template but asserts that an existing class
+  /// template in the current AST is reused (in contract so a new class
+  /// template being created).
+  /// \param description The gtest scope string that should describe the input.
+  /// \param infos The template parameters that the class template should have.
+  void
+  ExpectReusedTemplate(std::string description,
+                       const TypeSystemClang::TemplateParameterInfos &infos,
+                       ClassTemplateDecl *expected) {
+    SCOPED_TRACE(description);
+    ClassTemplateDecl *td = CreateClassTemplate(infos);
+    EXPECT_EQ(td, expected)
+        << "Created/reused class template is:\n"
+        << ClangUtil::DumpDecl(td) << "\nExpected to reuse:\n"
+        << ClangUtil::DumpDecl(expected);
+  }
+};
+
+TEST_F(TestCreateClassTemplateDecl, FindExistingTemplates) {
+  // This tests the logic in TypeSystemClang::CreateClassTemplateDecl that
+  // decides whether an existing ClassTemplateDecl in the AST can be reused.
+  // The behaviour should follow the C++ rules for redeclaring templates
+  // (e.g., parameter names can be changed/omitted.)
+
+  // This describes a class template *instantiation* from which we will infer
+  // the structure of the class template.
+  TypeSystemClang::TemplateParameterInfos infos;
+
+  // Test an empty template parameter list: <>
+  ExpectNewTemplate("<>", infos);
+
+  // Test that <typename T> with T = int creates a new template.
+  infos.names = {"T"};
+  infos.args = {TemplateArgument(m_ast->getASTContext().IntTy)};
+  ClassTemplateDecl *single_type_arg = ExpectNewTemplate("<typename T>", infos);
+
+  // Test that changing the parameter name doesn't create a new class template.
+  infos.names = {"A"};
+  ExpectReusedTemplate("<typename A> (A = int)", infos, single_type_arg);
+
+  // Test that changing the used type doesn't create a new class template.
+  infos.args = {TemplateArgument(m_ast->getASTContext().FloatTy)};
+  ExpectReusedTemplate("<typename A> (A = float)", infos, single_type_arg);
+
+  // Test that <typename A, signed char I> creates a new template with A = int
+  // and I = 47;
+  infos.names.push_back("I");
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
+                                        llvm::APSInt(llvm::APInt(8, 47)),
+                                        m_ast->getASTContext().SignedCharTy));
+  ClassTemplateDecl *type_and_char_value =
+      ExpectNewTemplate("<typename A, signed char I> (I = 47)", infos);
+
+  // Change the value of the I parameter to 123. The previously created
+  // class template should still be reused.
+  infos.args.pop_back();
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
+                                        llvm::APSInt(llvm::APInt(8, 123)),
+                                        m_ast->getASTContext().SignedCharTy));
+  ExpectReusedTemplate("<typename A, signed char I> (I = 123)", infos,
+                       type_and_char_value);
+
+  // Change the type of the I parameter to int so we have <typename A, int I>.
+  // The class template from above can't be reused.
+  infos.args.pop_back();
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext(),
+                                        llvm::APSInt(llvm::APInt(32, 47)),
+                                        m_ast->getASTContext().IntTy));
+  ExpectNewTemplate("<typename A, int I> (I = 123)", infos);
+
+  // Test a second type parameter will also cause a new template to be created.
+  // We now have <typename A, int I, typename B>.
+  infos.names.push_back("B");
+  infos.args.push_back(TemplateArgument(m_ast->getASTContext().IntTy));
+  ClassTemplateDecl *type_and_char_value_and_type =
+      ExpectNewTemplate("<typename A, int I, typename B>", infos);
+
+  // Remove all the names from the parameters which shouldn't influence the
+  // way the templates get merged.
+  infos.names = {"", "", ""};
+  ExpectReusedTemplate("<typename, int, typename>", infos,
+                       type_and_char_value_and_type);
+}
+
+TEST_F(TestCreateClassTemplateDecl, FindExistingTemplatesWithParameterPack) {
+  // The same as FindExistingTemplates but for templates with parameter packs.
+
+  TypeSystemClang::TemplateParameterInfos infos;
+  infos.packed_args =
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>();
+  infos.packed_args->names = {"", ""};
+  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy),
+                             TemplateArgument(m_ast->getASTContext().IntTy)};
+  ClassTemplateDecl *type_pack =
+      ExpectNewTemplate("<typename ...> (int, int)", infos);
+
+  // Special case: An instantiation for a parameter pack with no values fits
+  // to whatever class template we find. There isn't enough information to
+  // do an actual comparison here.
+  infos.packed_args =
+      std::make_unique<TypeSystemClang::TemplateParameterInfos>();
+  ExpectReusedTemplate("<...> (no values in pack)", infos, type_pack);
+
+  // Change the type content of pack type values.
+  infos.packed_args->names = {"", ""};
+  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy),
+                             TemplateArgument(m_ast->getASTContext().LongTy)};
+  ExpectReusedTemplate("<typename ...> (int, long)", infos, type_pack);
+
+  // Change the number of pack values.
+  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext().IntTy)};
+  ExpectReusedTemplate("<typename ...> (int)", infos, type_pack);
+
+  // The names of the pack values shouldn't matter.
+  infos.packed_args->names = {"A", "B"};
+  ExpectReusedTemplate("<typename ...> (int)", infos, type_pack);
+
+  // Changing the kind of template argument will create a new template.
+  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext(),
+                                              llvm::APSInt(llvm::APInt(32, 1)),
+                                              m_ast->getASTContext().IntTy)};
+  ClassTemplateDecl *int_pack = ExpectNewTemplate("<int ...> (int = 1)", infos);
+
+  // Changing the value of integral parameters will not create a new template.
+  infos.packed_args->args = {TemplateArgument(
+      m_ast->getASTContext(), llvm::APSInt(llvm::APInt(32, 123)),
+      m_ast->getASTContext().IntTy)};
+  ExpectReusedTemplate("<int ...> (int = 123)", infos, int_pack);
+
+  // Changing the integral type will create a new template.
+  infos.packed_args->args = {TemplateArgument(m_ast->getASTContext(),
+                                              llvm::APSInt(llvm::APInt(64, 1)),
+                                              m_ast->getASTContext().LongTy)};
+  ExpectNewTemplate("<long ...> (long = 1)", infos);
+
+  // Prependinding a non-pack parameter will create a new template.
+  infos.names = {"T"};
+  infos.args = {TemplateArgument(m_ast->getASTContext().IntTy)};
+  ExpectNewTemplate("<typename T, long...> (T = int, long = 1)", infos);
+}
+
+TEST_F(TestTypeSystemClang, OnlyPackName) {
+  TypeSystemClang::TemplateParameterInfos infos;
+  infos.pack_name = "A";
+  EXPECT_FALSE(infos.IsValid());
 }
 
 static QualType makeConstInt(clang::ASTContext &ctxt) {
@@ -724,3 +911,27 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
   EXPECT_FALSE(method->isDirectMethod());
   EXPECT_EQ(method->getDeclName().getObjCSelector().getAsString(), "foo");
 }
+
+TEST(TestScratchTypeSystemClang, InferSubASTFromLangOpts) {
+  LangOptions lang_opts;
+  EXPECT_EQ(
+      ScratchTypeSystemClang::DefaultAST,
+      ScratchTypeSystemClang::InferIsolatedASTKindFromLangOpts(lang_opts));
+
+  lang_opts.Modules = true;
+  EXPECT_EQ(
+      ScratchTypeSystemClang::IsolatedASTKind::CppModules,
+      ScratchTypeSystemClang::InferIsolatedASTKindFromLangOpts(lang_opts));
+}
+
+TEST_F(TestTypeSystemClang, GetExeModuleWhenMissingSymbolFile) {
+  CompilerType compiler_type = m_ast->GetBasicTypeFromAST(lldb::eBasicTypeInt);
+  lldb_private::Type t(0, nullptr, ConstString("MyType"), llvm::None, nullptr,
+                       0, {}, {}, compiler_type,
+                       lldb_private::Type::ResolveState::Full);
+  // Test that getting the execution module when no type system is present
+  // is handled gracefully.
+  ModuleSP module = t.GetExeModule();
+  EXPECT_EQ(module.get(), nullptr);
+}
+

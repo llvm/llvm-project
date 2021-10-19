@@ -1,0 +1,42 @@
+# REQUIRES: aarch64-registered-target
+# RUN: not --crash llc -verify-machineinstrs -mtriple aarch64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+name:            test
+body: |
+  bb.0:
+   liveins: $x0, $w0
+   %0:_(s64) = COPY $x0
+   %1:_(<4 x s16>) = COPY $x0
+   %2:_(s32) = COPY $w0
+
+   ; CHECK: *** Bad machine code: G_ASSERT_SEXT expects an immediate operand #2 ***
+   ; CHECK: instruction: %assert_sext_1:_(s64) = G_ASSERT_SEXT
+   %assert_sext_1:_(s64) = G_ASSERT_SEXT %0, %0
+
+   ; CHECK: *** Bad machine code: G_ASSERT_SEXT expects an immediate operand #2 ***
+   ; CHECK: instruction: %assert_sext_2:_(s64) = G_ASSERT_SEXT
+   %assert_sext_2:_(s64) = G_ASSERT_SEXT %0, i8 8
+
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
+   ; CHECK: instruction: %assert_sext_3:_(<2 x s32>) = G_ASSERT_SEXT
+   %assert_sext_3:_(<2 x s32>) = G_ASSERT_SEXT %0, 8
+
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
+   ; CHECK: instruction: %assert_sext_4:_(<2 x s32>) = G_ASSERT_SEXT
+   %assert_sext_4:_(<2 x s32>) = G_ASSERT_SEXT %1, 8
+
+   ; CHECK: *** Bad machine code: G_ASSERT_SEXT size must be >= 1 ***
+   ; CHECK: instruction: %assert_sext_5:_(s64) = G_ASSERT_SEXT
+   %assert_sext_5:_(s64) = G_ASSERT_SEXT %0, 0
+
+   ; CHECK: *** Bad machine code: G_ASSERT_SEXT size must be less than source bit width ***
+   ; CHECK: instruction: %assert_sext_6:_(s64) = G_ASSERT_SEXT
+   %assert_sext_6:_(s64) = G_ASSERT_SEXT %0, 128
+
+   ; CHECK: *** Bad machine code: Type mismatch in generic instruction ***
+   ; CHECK: instruction: %assert_sext_7:_(s64) = G_ASSERT_SEXT %2:_, 8
+   %assert_sext_7:_(s64) = G_ASSERT_SEXT %2, 8
+
+   ; CHECK: *** Bad machine code: Generic instruction cannot have physical register ***
+   ; CHECK: instruction: %assert_sext_8:_(s64) = G_ASSERT_SEXT $x0, 8
+   %assert_sext_8:_(s64) = G_ASSERT_SEXT $x0, 8

@@ -4,11 +4,11 @@
 define <8 x i8> @foo(<8 x float> %arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    vcmpgtps {{.*}}(%rip){1to8}, %ymm0, %k0
+; CHECK-NEXT:    vcmpgtps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpltps %ymm2, %ymm0, %k1
-; CHECK-NEXT:    vmovdqu8 {{.*}}(%rip), %xmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
 ; CHECK-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

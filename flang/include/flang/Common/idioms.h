@@ -26,6 +26,7 @@
 #include "llvm/Support/Compiler.h"
 #include <functional>
 #include <list>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -136,6 +137,14 @@ template <typename A> struct ListItemCount {
 #define DEREF(p) Fortran::common::Deref(p, __FILE__, __LINE__)
 
 template <typename T> constexpr T &Deref(T *p, const char *file, int line) {
+  if (!p) {
+    Fortran::common::die("nullptr dereference at %s(%d)", file, line);
+  }
+  return *p;
+}
+
+template <typename T>
+constexpr T &Deref(const std::unique_ptr<T> &p, const char *file, int line) {
   if (!p) {
     Fortran::common::die("nullptr dereference at %s(%d)", file, line);
   }

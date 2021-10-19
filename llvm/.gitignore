@@ -44,16 +44,6 @@ projects/*
 !projects/Makefile
 runtimes/*
 !runtimes/*.*
-# Clang, which is tracked independently.
-tools/clang
-# LLDB, which is tracked independently.
-tools/lldb
-# lld, which is tracked independently.
-tools/lld
-# Polly, which is tracked independently.
-tools/polly
-# avrlit, which is tracked independently.
-tools/avrlit
 # Sphinx build tree, if building in-source dir.
 docs/_build
 # VS2017 and VSCode config files.

@@ -20,9 +20,9 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include <memory>
 
 namespace llvm {
@@ -37,9 +37,10 @@ protected:
   CodeRegionGenerator &operator=(const CodeRegionGenerator &) = delete;
 
 public:
-  CodeRegionGenerator(SourceMgr &SM) : Regions(SM) {}
+  CodeRegionGenerator(llvm::SourceMgr &SM) : Regions(SM) {}
   virtual ~CodeRegionGenerator();
-  virtual Expected<const CodeRegions &> parseCodeRegions() = 0;
+  virtual Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) = 0;
 };
 
 /// This class is responsible for parsing input ASM and generating
@@ -53,14 +54,15 @@ class AsmCodeRegionGenerator final : public CodeRegionGenerator {
   unsigned AssemblerDialect; // This is set during parsing.
 
 public:
-  AsmCodeRegionGenerator(const Target &T, SourceMgr &SM, MCContext &C,
+  AsmCodeRegionGenerator(const Target &T, llvm::SourceMgr &SM, MCContext &C,
                          const MCAsmInfo &A, const MCSubtargetInfo &S,
                          const MCInstrInfo &I)
       : CodeRegionGenerator(SM), TheTarget(T), Ctx(C), MAI(A), STI(S), MCII(I),
         AssemblerDialect(0) {}
 
   unsigned getAssemblerDialect() const { return AssemblerDialect; }
-  Expected<const CodeRegions &> parseCodeRegions() override;
+  Expected<const CodeRegions &>
+  parseCodeRegions(const std::unique_ptr<MCInstPrinter> &IP) override;
 };
 
 } // namespace mca

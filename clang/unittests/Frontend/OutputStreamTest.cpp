@@ -100,4 +100,13 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
   EXPECT_TRUE(!VerboseBuffer.empty());
   EXPECT_TRUE(StringRef(VerboseBuffer.data()).contains("errors generated"));
 }
+
+TEST(FrontendOutputTests, TestVerboseOutputStreamOwnedNotLeaked) {
+  CompilerInstance Compiler;
+  Compiler.setVerboseOutputStream(std::make_unique<raw_null_ostream>());
+
+  // Trust leak sanitizer bots to catch a leak here.
+  Compiler.setVerboseOutputStream(llvm::nulls());
 }
+
+} // anonymous namespace

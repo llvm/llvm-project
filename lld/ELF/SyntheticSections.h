@@ -425,48 +425,73 @@ private:
 
 class DynamicReloc {
 public:
+  enum Kind {
+    /// The resulting dynamic relocation does not reference a symbol (#sym must
+    /// be nullptr) and uses #addend as the result of computeAddend().
+    AddendOnly,
+    /// The resulting dynamic relocation will not reference a symbol: #sym is
+    /// only used to compute the addend with InputSection::getRelocTargetVA().
+    /// Useful for various relative and TLS relocations (e.g. R_X86_64_TPOFF64).
+    AddendOnlyWithTargetVA,
+    /// The resulting dynamic relocation references symbol #sym from the dynamic
+    /// symbol table and uses #addend as the value of computeAddend().
+    AgainstSymbol,
+    /// The resulting dynamic relocation references symbol #sym from the dynamic
+    /// symbol table and uses InputSection::getRelocTargetVA() + #addend for the
+    /// final addend. It can be used for relocations that write the symbol VA as
+    // the addend (e.g. R_MIPS_TLS_TPREL64) but still reference the symbol.
+    AgainstSymbolWithTargetVA,
+    /// This is used by the MIPS multi-GOT implementation. It relocates
+    /// addresses of 64kb pages that lie inside the output section.
+    MipsMultiGotPage,
+  };
+  /// This constructor records a relocation against a symbol.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
-               uint64_t offsetInSec, bool useSymVA, Symbol *sym, int64_t addend)
-      : type(type), sym(sym), inputSec(inputSec), offsetInSec(offsetInSec),
-        useSymVA(useSymVA), addend(addend), outputSec(nullptr) {}
-  // This constructor records dynamic relocation settings used by MIPS
-  // multi-GOT implementation. It's to relocate addresses of 64kb pages
-  // lie inside the output section.
+               uint64_t offsetInSec, Kind kind, Symbol &sym, int64_t addend,
+               RelExpr expr)
+      : type(type), sym(&sym), inputSec(inputSec), offsetInSec(offsetInSec),
+        kind(kind), expr(expr), addend(addend) {}
+  /// This constructor records a relative relocation with no symbol.
+  DynamicReloc(RelType type, const InputSectionBase *inputSec,
+               uint64_t offsetInSec, int64_t addend = 0)
+      : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
+        kind(AddendOnly), expr(R_ADDEND), addend(addend) {}
+  /// This constructor records dynamic relocation settings used by the MIPS
+  /// multi-GOT implementation.
   DynamicReloc(RelType type, const InputSectionBase *inputSec,
                uint64_t offsetInSec, const OutputSection *outputSec,
                int64_t addend)
       : type(type), sym(nullptr), inputSec(inputSec), offsetInSec(offsetInSec),
-        useSymVA(false), addend(addend), outputSec(outputSec) {}
+        kind(MipsMultiGotPage), expr(R_ADDEND), addend(addend),
+        outputSec(outputSec) {}
 
   uint64_t getOffset() const;
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
+  bool needsDynSymIndex() const {
+    return kind == AgainstSymbol || kind == AgainstSymbolWithTargetVA;
+  }
 
-  // Computes the addend of the dynamic relocation. Note that this is not the
-  // same as the addend member variable as it also includes the symbol address
-  // if useSymVA is true.
+  /// Computes the addend of the dynamic relocation. Note that this is not the
+  /// same as the #addend member variable as it may also include the symbol
+  /// address/the address of the corresponding GOT entry/etc.
   int64_t computeAddend() const;
 
   RelType type;
-
   Symbol *sym;
-  const InputSectionBase *inputSec = nullptr;
+  const InputSectionBase *inputSec;
   uint64_t offsetInSec;
-  // If this member is true, the dynamic relocation will not be against the
-  // symbol but will instead be a relative relocation that simply adds the
-  // load address. This means we need to write the symbol virtual address
-  // plus the original addend as the final relocation addend.
-  bool useSymVA;
+
+private:
+  Kind kind;
+  // The kind of expression used to calculate the added (required e.g. for
+  // relative GOT relocations).
+  RelExpr expr;
   int64_t addend;
-  const OutputSection *outputSec;
+  const OutputSection *outputSec = nullptr;
 };
 
 template <class ELFT> class DynamicSection final : public SyntheticSection {
-  using Elf_Dyn = typename ELFT::Dyn;
-  using Elf_Rel = typename ELFT::Rel;
-  using Elf_Rela = typename ELFT::Rela;
-  using Elf_Relr = typename ELFT::Relr;
-  using Elf_Shdr = typename ELFT::Shdr;
-  using Elf_Sym = typename ELFT::Sym;
+  LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
 
   // finalizeContents() fills this vector with the section contents.
   std::vector<std::pair<int32_t, std::function<uint64_t()>>> entries;
@@ -493,18 +518,37 @@ class RelocationBaseSection : public SyntheticSection {
 public:
   RelocationBaseSection(StringRef name, uint32_t type, int32_t dynamicTag,
                         int32_t sizeDynamicTag);
-  void addReloc(RelType dynType, InputSectionBase *isec, uint64_t offsetInSec,
-                Symbol *sym);
-  // Add a dynamic relocation that might need an addend. This takes care of
-  // writing the addend to the output section if needed.
-  void addReloc(RelType dynType, InputSectionBase *inputSec,
-                uint64_t offsetInSec, Symbol *sym, int64_t addend, RelExpr expr,
-                RelType type);
+  /// Add a dynamic relocation without writing an addend to the output section.
+  /// This overload can be used if the addends are written directly instead of
+  /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   void addReloc(const DynamicReloc &reloc);
+  /// Add a dynamic relocation against \p sym with an optional addend.
+  void addSymbolReloc(RelType dynType, InputSectionBase *isec,
+                      uint64_t offsetInSec, Symbol &sym, int64_t addend = 0,
+                      llvm::Optional<RelType> addendRelType = llvm::None);
+  /// Add a relative dynamic relocation that uses the target address of \p sym
+  /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  void addRelativeReloc(RelType dynType, InputSectionBase *isec,
+                        uint64_t offsetInSec, Symbol &sym, int64_t addend,
+                        RelType addendRelType, RelExpr expr);
+  /// Add a dynamic relocation using the target address of \p sym as the addend
+  /// if \p sym is non-preemptible. Otherwise add a relocation against \p sym.
+  void addAddendOnlyRelocIfNonPreemptible(RelType dynType,
+                                          InputSectionBase *isec,
+                                          uint64_t offsetInSec, Symbol &sym,
+                                          RelType addendRelType);
+  void addReloc(DynamicReloc::Kind kind, RelType dynType,
+                InputSectionBase *inputSec, uint64_t offsetInSec, Symbol &sym,
+                int64_t addend, RelExpr expr, RelType addendRelType);
   bool isNeeded() const override { return !relocs.empty(); }
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
   void finalizeContents() override;
+  static bool classof(const SectionBase *d) {
+    return SyntheticSection::classof(d) &&
+           (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
+            d->type == llvm::ELF::SHT_RELR);
+  }
   int32_t dynamicTag, sizeDynamicTag;
   std::vector<DynamicReloc> relocs;
 
@@ -1200,7 +1244,7 @@ inline Partition &SectionBase::getPartition() const {
 // Linker generated sections which can be used as inputs and are not specific to
 // a partition.
 struct InStruct {
-  InputSection *armAttributes;
+  InputSection *attributes;
   BssSection *bss;
   BssSection *bssRelRo;
   GotSection *got;

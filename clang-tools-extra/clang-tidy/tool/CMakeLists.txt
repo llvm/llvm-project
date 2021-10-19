@@ -55,5 +55,6 @@ install(PROGRAMS clang-tidy-diff.py
   DESTINATION share/clang
   COMPONENT clang-tidy)
 install(PROGRAMS run-clang-tidy.py
-  DESTINATION share/clang
-  COMPONENT clang-tidy)
+  DESTINATION bin
+  COMPONENT clang-tidy
+  RENAME run-clang-tidy)

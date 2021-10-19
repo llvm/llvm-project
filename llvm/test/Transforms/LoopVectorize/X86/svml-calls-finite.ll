@@ -243,3 +243,174 @@ for.end:
 !71 = distinct !{!71, !72, !73}
 !72 = !{!"llvm.loop.vectorize.width", i32 4}
 !73 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare float @__log2f_finite(float) #0
+
+; CHECK-LABEL: @log2_f32
+; CHECK: <4 x float> @__svml_log2f4
+; CHECK: ret
+define void @log2_f32(float* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__log2f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %indvars.iv
+  store float %call, float* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!81 = distinct !{!21, !22, !23}
+!82 = !{!"llvm.loop.vectorize.width", i32 4}
+!83 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+
+declare double @__log2_finite(double) #0
+
+; CHECK-LABEL: @log2_f64
+; CHECK: <4 x double> @__svml_log24
+; CHECK: ret
+define void @log2_f64(double* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @__log2_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %indvars.iv
+  store double %call, double* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!91 = distinct !{!31, !32, !33}
+!92 = !{!"llvm.loop.vectorize.width", i32 4}
+!93 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare float @__log10f_finite(float) #0
+
+; CHECK-LABEL: @log10_f32
+; CHECK: <4 x float> @__svml_log10f4
+; CHECK: ret
+define void @log10_f32(float* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__log10f_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %indvars.iv
+  store float %call, float* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!101 = distinct !{!21, !22, !23}
+!102 = !{!"llvm.loop.vectorize.width", i32 4}
+!103 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+
+declare double @__log10_finite(double) #0
+
+; CHECK-LABEL: @log10_f64
+; CHECK: <4 x double> @__svml_log104
+; CHECK: ret
+define void @log10_f64(double* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @__log10_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %indvars.iv
+  store double %call, double* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!111 = distinct !{!31, !32, !33}
+!112 = !{!"llvm.loop.vectorize.width", i32 4}
+!113 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+declare float @__sqrtf_finite(float) #0
+
+; CHECK-LABEL: @sqrt_f32
+; CHECK: <4 x float> @__svml_sqrtf4
+; CHECK: ret
+define void @sqrt_f32(float* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @__sqrtf_finite(float %conv)
+  %arrayidx = getelementptr inbounds float, float* %varray, i64 %indvars.iv
+  store float %call, float* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !21
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!121 = distinct !{!21, !22, !23}
+!122 = !{!"llvm.loop.vectorize.width", i32 4}
+!123 = !{!"llvm.loop.vectorize.enable", i1 true}
+
+
+declare double @__sqrt_finite(double) #0
+
+; CHECK-LABEL: @sqrt_f64
+; CHECK: <4 x double> @__svml_sqrt4
+; CHECK: ret
+define void @sqrt_f64(double* nocapture %varray) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @__sqrt_finite(double %conv)
+  %arrayidx = getelementptr inbounds double, double* %varray, i64 %indvars.iv
+  store double %call, double* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !31
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
+!131 = distinct !{!31, !32, !33}
+!132 = !{!"llvm.loop.vectorize.width", i32 4}
+!133 = !{!"llvm.loop.vectorize.enable", i1 true}

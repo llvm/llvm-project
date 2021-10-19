@@ -113,7 +113,7 @@ struct CommonType {
   /// "Size" tells the size of the type it is describing.
   ///
   /// "Type" is used by PTR, TYPEDEF, VOLATILE, CONST, RESTRICT,
-  /// FUNC, FUNC_PROTO and VAR.
+  /// FUNC, FUNC_PROTO, VAR and DECL_TAG.
   /// "Type" is a type_id referring to another type.
   union {
     uint32_t Size;

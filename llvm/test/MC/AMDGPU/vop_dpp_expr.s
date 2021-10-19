@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI --check-prefix=VI9
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GFX9 --check-prefix=VI9
+// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI9
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=VI9
 
 zero = 0
 two = 2
@@ -33,4 +33,4 @@ v_mov_b32 v0, v0 row_bcast:150/(two*2+zero/one+two*3)
 // VI9: v_mov_b32_dpp v0, v0 row_bcast:15 row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x42,0x01,0xff]
 
 v_mov_b32 v0, v0 quad_perm:[one,two+one,zero,2-one] row_mask:2*5 bank_mask:0x2-one bound_ctrl:1-1
-// VI9: v_mov_b32_dpp v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x4d,0x08,0xa1]
+// VI9: v_mov_b32_dpp v0, v0 quad_perm:[1,3,0,1] row_mask:0xa bank_mask:0x1 bound_ctrl:1 ; encoding: [0xfa,0x02,0x00,0x7e,0x00,0x4d,0x08,0xa1]

@@ -3,10 +3,10 @@
 --- |
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-  @foo1 = common global [1073741824 x i32] zeroinitializer, align 4
-  @foo2 = common global [1073741824 x i32] zeroinitializer, align 4
+  @foo1 = common dso_local global [1073741824 x i32] zeroinitializer, align 4
+  @foo2 = common dso_local global [1073741824 x i32] zeroinitializer, align 4
 
-  define i32 @gv_large() {
+  define dso_local i32 @gv_large() {
   entry:
     %retval = alloca i32, align 4
     store i32 0, i32* %retval, align 4
@@ -40,9 +40,9 @@ body:             |
     ; CHECK: [[MOVKXi4:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi3]], target-flags(aarch64-g2, aarch64-nc) @foo2, 32
     ; CHECK: [[MOVKXi5:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi4]], target-flags(aarch64-g3) @foo2, 48
     ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[MOVKXi5]]
-    ; CHECK: STRWui $wzr, %stack.0.retval, 0 :: (store 4 into %ir.retval)
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
-    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
+    ; CHECK: STRWui $wzr, %stack.0.retval, 0 :: (store (s32) into %ir.retval)
+    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
+    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load (s32) from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
     ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRWui]], [[LDRWui1]]
     ; CHECK: $w0 = COPY [[ADDWrr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -52,9 +52,9 @@ body:             |
     %7:gpr(p0) = G_GLOBAL_VALUE @foo2
     %6:gpr(p0) = COPY %7(p0)
     %0:gpr(p0) = G_FRAME_INDEX %stack.0.retval
-    G_STORE %1(s32), %0(p0) :: (store 4 into %ir.retval)
-    %2:gpr(s32) = G_LOAD %3(p0) :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
-    %5:gpr(s32) = G_LOAD %6(p0) :: (load 4 from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
+    G_STORE %1(s32), %0(p0) :: (store (s32) into %ir.retval)
+    %2:gpr(s32) = G_LOAD %3(p0) :: (load (s32) from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo1, i64 0, i64 0)`)
+    %5:gpr(s32) = G_LOAD %6(p0) :: (load (s32) from `i32* getelementptr inbounds ([1073741824 x i32], [1073741824 x i32]* @foo2, i64 0, i64 0)`)
     %8:gpr(s32) = G_ADD %2, %5
     $w0 = COPY %8(s32)
     RET_ReallyLR implicit $w0

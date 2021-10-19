@@ -9,7 +9,7 @@
 #include "PlatformFreeBSD.h"
 #include "lldb/Host/Config.h"
 
-#include <stdio.h>
+#include <cstdio>
 #if LLDB_ENABLE_POSIX
 #include <sys/utsname.h>
 #endif
@@ -26,6 +26,9 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Host.h"
 
 // Define these constants from FreeBSD mman.h for use when targeting remote
 // FreeBSD systems even when host has different values.
@@ -90,10 +93,6 @@ const char *PlatformFreeBSD::GetPluginDescriptionStatic(bool is_host) {
     return "Remote FreeBSD user platform plug-in.";
 }
 
-ConstString PlatformFreeBSD::GetPluginName() {
-  return GetPluginNameStatic(IsHost());
-}
-
 void PlatformFreeBSD::Initialize() {
   Platform::Initialize();
 
@@ -124,8 +123,6 @@ void PlatformFreeBSD::Terminate() {
 PlatformFreeBSD::PlatformFreeBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
-
-PlatformFreeBSD::~PlatformFreeBSD() = default;
 
 bool PlatformFreeBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {
@@ -213,92 +210,13 @@ void PlatformFreeBSD::GetStatus(Stream &strm) {
 #endif
 }
 
-size_t
-PlatformFreeBSD::GetSoftwareBreakpointTrapOpcode(Target &target,
-                                                 BreakpointSite *bp_site) {
-  switch (target.GetArchitecture().GetMachine()) {
-  case llvm::Triple::arm: {
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
-    AddressClass addr_class = AddressClass::eUnknown;
-
-    if (bp_loc_sp) {
-      addr_class = bp_loc_sp->GetAddress().GetAddressClass();
-      if (addr_class == AddressClass::eUnknown &&
-          (bp_loc_sp->GetAddress().GetFileAddress() & 1))
-        addr_class = AddressClass::eCodeAlternateISA;
-    }
-
-    if (addr_class == AddressClass::eCodeAlternateISA) {
-      // TODO: Enable when FreeBSD supports thumb breakpoints.
-      // FreeBSD kernel as of 10.x, does not support thumb breakpoints
-      return 0;
-    }
-
-    static const uint8_t g_arm_breakpoint_opcode[] = {0xFE, 0xDE, 0xFF, 0xE7};
-    size_t trap_opcode_size = sizeof(g_arm_breakpoint_opcode);
-    assert(bp_site);
-    if (bp_site->SetTrapOpcode(g_arm_breakpoint_opcode, trap_opcode_size))
-      return trap_opcode_size;
-  }
-    LLVM_FALLTHROUGH;
-  default:
-    return Platform::GetSoftwareBreakpointTrapOpcode(target, bp_site);
-  }
-}
-
-Status PlatformFreeBSD::LaunchProcess(ProcessLaunchInfo &launch_info) {
-  Status error;
-  if (IsHost()) {
-    error = Platform::LaunchProcess(launch_info);
-  } else {
-    if (m_remote_platform_sp)
-      error = m_remote_platform_sp->LaunchProcess(launch_info);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return error;
-}
-
-lldb::ProcessSP PlatformFreeBSD::Attach(ProcessAttachInfo &attach_info,
-                                        Debugger &debugger, Target *target,
-                                        Status &error) {
-  lldb::ProcessSP process_sp;
-  if (IsHost()) {
-    if (target == nullptr) {
-      TargetSP new_target_sp;
-      ArchSpec emptyArchSpec;
-
-      error = debugger.GetTargetList().CreateTarget(
-          debugger, "", emptyArchSpec, eLoadDependentsNo, m_remote_platform_sp,
-          new_target_sp);
-      target = new_target_sp.get();
-    } else
-      error.Clear();
-
-    if (target && error.Success()) {
-      debugger.GetTargetList().SetSelectedTarget(target);
-      // The freebsd always currently uses the GDB remote debugger plug-in so
-      // even when debugging locally we are debugging remotely! Just like the
-      // darwin plugin.
-      process_sp = target->CreateProcess(
-          attach_info.GetListenerForProcess(debugger), "gdb-remote", nullptr);
-
-      if (process_sp)
-        error = process_sp->Attach(attach_info);
-    }
-  } else {
-    if (m_remote_platform_sp)
-      process_sp =
-          m_remote_platform_sp->Attach(attach_info, debugger, target, error);
-    else
-      error.SetErrorString("the platform is not currently connected");
-  }
-  return process_sp;
-}
-
-// FreeBSD processes cannot yet be launched by spawning and attaching.
 bool PlatformFreeBSD::CanDebugProcess() {
-  return false;
+  if (IsHost()) {
+    return true;
+  } else {
+    // If we're connected, we can debug.
+    return IsConnected();
+  }
 }
 
 void PlatformFreeBSD::CalculateTrapHandlerSymbolNames() {

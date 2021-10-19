@@ -25,7 +25,7 @@ define <4 x i64> @insertelement() {
 
 define <4 x i64> @insertelement_undef() {
 ; CHECK-LABEL: @insertelement_undef(
-; CHECK-NEXT:    ret <4 x i64> undef
+; CHECK-NEXT:    ret <4 x i64> poison
 ;
   %vec1 = insertelement <4 x i64> undef, i64 -1, i32 0
   %vec2 = insertelement <4 x i64> %vec1, i64 -2, i32 1
@@ -37,7 +37,7 @@ define <4 x i64> @insertelement_undef() {
 
 define i64 @extract_undef_index_from_zero_vec() {
 ; CHECK-LABEL: @extract_undef_index_from_zero_vec(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %E = extractelement <2 x i64> zeroinitializer, i64 undef
   ret i64 %E
@@ -45,7 +45,7 @@ define i64 @extract_undef_index_from_zero_vec() {
 
 define i64 @extract_undef_index_from_nonzero_vec() {
 ; CHECK-LABEL: @extract_undef_index_from_nonzero_vec(
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
   %E = extractelement <2 x i64> <i64 -1, i64 -1>, i64 undef
   ret i64 %E

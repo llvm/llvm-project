@@ -560,6 +560,12 @@ public:
                              uint32_t column, lldb::addr_t offset,
                              SBFileSpecList &module_list);
 
+  lldb::SBBreakpoint
+  BreakpointCreateByLocation(const lldb::SBFileSpec &file_spec, uint32_t line,
+                             uint32_t column, lldb::addr_t offset,
+                             SBFileSpecList &module_list,
+                             bool move_to_nearest_code);
+
   lldb::SBBreakpoint BreakpointCreateByName(const char *symbol_name,
                                             const char *module_name = nullptr);
 
@@ -637,7 +643,7 @@ public:
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
-  
+
   /// Create a breakpoint using a scripted resolver.
   ///
   /// \param[in] class_name
@@ -645,16 +651,16 @@ public:
   ///
   /// \param[in] extra_args
   ///    This is an SBStructuredData object that will get passed to the
-  ///    constructor of the class in class_name.  You can use this to 
-  ///    reuse the same class, parametrizing with entries from this 
+  ///    constructor of the class in class_name.  You can use this to
+  ///    reuse the same class, parametrizing with entries from this
   ///    dictionary.
   ///
   /// \param module_list
-  ///    If this is non-empty, this will be used as the module filter in the 
+  ///    If this is non-empty, this will be used as the module filter in the
   ///    SearchFilter created for this breakpoint.
   ///
   /// \param file_list
-  ///    If this is non-empty, this will be used as the comp unit filter in the 
+  ///    If this is non-empty, this will be used as the comp unit filter in the
   ///    SearchFilter created for this breakpoint.
   ///
   /// \return
@@ -828,9 +834,26 @@ public:
 
   lldb::addr_t GetStackRedZoneSize();
 
+  bool IsLoaded(const lldb::SBModule &module) const;
+
   lldb::SBLaunchInfo GetLaunchInfo() const;
 
   void SetLaunchInfo(const lldb::SBLaunchInfo &launch_info);
+
+  /// Get a \a SBTrace object the can manage the processor trace information of
+  /// this target.
+  ///
+  /// \return
+  ///   The trace object. The returned SBTrace object might not be valid, so it
+  ///   should be checked with a call to "bool SBTrace::IsValid()".
+  lldb::SBTrace GetTrace();
+
+  /// Create a \a Trace object for the current target using the using the
+  /// default supported tracing technology for this process.
+  ///
+  /// \param[out] error
+  ///     An error if a Trace already exists or the trace couldn't be created.
+  lldb::SBTrace CreateTrace(SBError &error);
 
 protected:
   friend class SBAddress;

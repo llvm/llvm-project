@@ -1,0 +1,14 @@
+:# RUN: not llc -run-pass=none %s -o - 2>&1 | FileCheck %s
+
+# The : before the run comment is syntactically invalid. This used to
+# crash in the SourceMgr diagnostic printer because it was called
+# before the LLVMContext was initialized.
+
+# CHECK: error: YAML:1:1: Unrecognized character while tokenizing.
+
+---
+name: foo
+body: |
+  bb.0:
+
+...

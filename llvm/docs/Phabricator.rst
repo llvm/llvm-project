@@ -39,6 +39,33 @@ the command line. To get you set up, follow the
 
 You can learn more about how to use arc to interact with
 Phabricator in the `Arcanist User Guide`_.
+The basic way of creating a revision for the current commit in your local
+repository is to run:
+
+::
+
+  arc diff HEAD~
+
+
+Sometime you may want to create a draft revision to show the proof of concept
+or for experimental purposes, In that case you can use the `--draft` option. It
+will either create a new draft revisoin or convert the original revision to a
+draft revision depending on your local branch status. The good part is: it will not
+send mail to llvm-commit mailing list, patch reviewers, and all other subscribers,
+buildbot will also run on every patch update:
+
+::
+
+  arc diff --draft HEAD~
+
+
+If you later update your commit message, you need to add the `--verbatim`
+option to have `arc` update the description on Phabricator:
+
+::
+
+  arc diff --edit --verbatim
+
 
 .. _phabricator-request-review-web:
 
@@ -143,6 +170,77 @@ when a review changes state, for example by clicking "Accept Revision" in
 the web interface. Thus, please type LGTM into the comment box to accept
 a change from Phabricator.
 
+.. _pre-merge-testing:
+
+Pre-merge testing
+-----------------
+
+The pre-merge tests are a continuous integration (CI) workflow. The workflow 
+checks the patches uploaded to Phabricator before a user merges them to the main 
+branch - thus the term *pre-merge testing*. 
+
+When a user uploads a patch to Phabricator, Phabricator triggers the checks and
+then displays the results. This way bugs in a patch are contained during the 
+code review stage and do not pollute the main branch.
+
+Our goal with pre-merge testing is to report most true problems while strongly
+minimizing the number of false positive reports.  Our goal is that problems
+reported are always actionable.  If you notice a false positive, please report
+it so that we can identify the cause.
+
+If you notice issues or have an idea on how to improve pre-merge checks, please 
+`create a new issue <https://github.com/google/llvm-premerge-checks/issues/new>`_ 
+or give a ❤️ to an existing one.
+
+Requirements
+^^^^^^^^^^^^
+
+To get a patch on Phabricator tested, the build server must be able to apply the
+patch to the checked out git repository. Please make sure that either:
+
+* You set a git hash as ``sourceControlBaseRevision`` in Phabricator which is
+  available on the GitHub repository, 
+* **or** you define the dependencies of your patch in Phabricator, 
+* **or** your patch can be applied to the main branch.
+
+Only then can the build server apply the patch locally and run the builds and
+tests.
+
+Accessing build results
+^^^^^^^^^^^^^^^^^^^^^^^
+Phabricator will automatically trigger a build for every new patch you upload or
+modify. Phabricator shows the build results at the top of the entry. Clicking on 
+the links (in the red box) will show more details:
+
+  .. image:: Phabricator_premerge_results.png
+
+The CI will compile and run tests, run clang-format and clang-tidy on lines
+changed.
+
+If a unit test failed, this is shown below the build status. You can also expand
+the unit test to see the details:
+
+  .. image:: Phabricator_premerge_unit_tests.png
+
+Opting Out
+^^^^^^^^^^
+
+In case you want to opt-out entirely of pre-merge testing, add yourself to the
+`OPT OUT project <https://reviews.llvm.org/project/view/83/>`_.  If you decide
+to opt-out, please let us know why, so we might be able to improve in the future.
+
+Operational Details
+^^^^^^^^^^^^^^^^^^^
+
+The code responsible for running the pre-merge flow can be found in the `external
+repository <https://github.com/google/llvm-premerge-checks>`_.  For enhancement
+ideas and most bugs, please file an issue on said repository.  For immediate
+operational problems, the point of contact is
+`Mikhail Goncharov <mailto:goncharo@google.com>`_.
+
+Background on the pre-merge infrastructure can be found in `this 2020 DevMeeting
+talk <https://llvm.org/devmtg/2020-09/slides/Goncharov-Pre-merge_checks.pdf>`_
+
 Committing a change
 -------------------
 
@@ -182,18 +280,10 @@ that you close the review manually. In the web UI, under "Leap Into Action" put
 the git revision number in the Comment, set the Action to "Close Revision" and
 click Submit.  Note the review must have been Accepted first.
 
-Arcanist also adds extra tags that are mostly noise in the commit message, for
-this reason avoid using `arc land` and push commits to master directly with git
-after removing tags other than "Reviewed by" and "Differential Revision".
-You can run `llvm/utils/git/arcfilter.sh` to clean the commit message of the
-current "HEAD" commit automatically. You can also setup a git hook to catch this
-for you (see `Getting Started <GettingStarted.html#git-pre-push-hook>`).
-
-
 Committing someone's change from Phabricator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-On a clean Git repository on an up to date ``master`` branch run the
+On a clean Git repository on an up to date ``main`` branch run the
 following (where ``<Revision>`` is the Phabricator review number):
 
 ::
@@ -202,7 +292,7 @@ following (where ``<Revision>`` is the Phabricator review number):
 
 
 This will create a new branch called ``arcpatch-D<Revision>`` based on the
-current ``master`` and will create a commit corresponding to ``D<Revision>`` with a
+current ``main`` and will create a commit corresponding to ``D<Revision>`` with a
 commit message derived from information in the Phabricator review.
 
 Check you are happy with the commit message and amend it if necessary.
@@ -218,10 +308,10 @@ the following:
 
 ::
 
-  git pull --rebase https://github.com/llvm/llvm-project.git master
+  git pull --rebase https://github.com/llvm/llvm-project.git main
   git show # Ensure the patch looks correct.
   ninja check-$whatever # Rerun the appropriate tests if needed.
-  git push https://github.com/llvm/llvm-project.git HEAD:master
+  git push https://github.com/llvm/llvm-project.git HEAD:main
 
 
 Abandoning a change

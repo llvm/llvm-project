@@ -32,10 +32,10 @@
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <mutex>
-#include <stddef.h>
-#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -56,6 +56,15 @@ class Target;
 class TypeList;
 class TypeMap;
 class VariableList;
+
+/// Options used by Module::FindFunctions. This cannot be a nested class
+/// because it must be forward-declared in ModuleList.h.
+struct ModuleFunctionSearchOptions {
+  /// Include the symbol table.
+  bool include_symbols = false;
+  /// Include inlined functions.
+  bool include_inlines = false;
+};
 
 /// \class Module Module.h "lldb/Core/Module.h"
 /// A class that describes an executable image and its associated
@@ -304,8 +313,9 @@ public:
   ///     matches.
   void FindFunctions(ConstString name,
                      const CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask, bool symbols_ok,
-                     bool inlines_ok, SymbolContextList &sc_list);
+                     lldb::FunctionNameType name_type_mask,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find functions by name.
   ///
@@ -319,8 +329,9 @@ public:
   /// \param[out] sc_list
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
-  void FindFunctions(const RegularExpression &regex, bool symbols_ok,
-                     bool inlines_ok, SymbolContextList &sc_list);
+  void FindFunctions(const RegularExpression &regex,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find addresses by file/line
   ///
@@ -850,13 +861,10 @@ public:
   /// \param[in] path
   ///     The original source file path to try and remap.
   ///
-  /// \param[out] new_path
-  ///     The newly remapped filespec that is may or may not exist.
-  ///
   /// \return
-  ///     /b true if \a path was successfully located and \a new_path
-  ///     is filled in with a new source path, \b false otherwise.
-  bool RemapSourceFile(llvm::StringRef path, std::string &new_path) const;
+  ///     The newly remapped filespec that is may or may not exist if
+  ///     \a path was successfully located.
+  llvm::Optional<std::string> RemapSourceFile(llvm::StringRef path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
   /// Update the ArchSpec to a more specific variant.
@@ -885,10 +893,7 @@ public:
   /// correctly.
   class LookupInfo {
   public:
-    LookupInfo()
-        : m_name(), m_lookup_name(), m_language(lldb::eLanguageTypeUnknown),
-          m_name_type_mask(lldb::eFunctionNameTypeNone),
-          m_match_name_after_lookup(false) {}
+    LookupInfo() : m_name(), m_lookup_name() {}
 
     LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
@@ -917,15 +922,15 @@ public:
     ConstString m_lookup_name;
 
     /// Limit matches to only be for this language
-    lldb::LanguageType m_language;
+    lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
 
     /// One or more bits from lldb::FunctionNameType that indicate what kind of
     /// names we are looking for
-    lldb::FunctionNameType m_name_type_mask;
+    lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
     ///< If \b true, then demangled names that match will need to contain
     ///< "m_name" in order to be considered a match
-    bool m_match_name_after_lookup;
+    bool m_match_name_after_lookup = false;
   };
 
 protected:
@@ -952,7 +957,7 @@ protected:
   ConstString m_object_name; ///< The name an object within this module that is
                              ///selected, or empty of the module is represented
                              ///by \a m_file.
-  uint64_t m_object_offset;
+  uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 
   /// DataBuffer containing the module image, if it was provided at

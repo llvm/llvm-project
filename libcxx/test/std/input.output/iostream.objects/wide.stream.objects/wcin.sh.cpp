@@ -6,32 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: libcpp-has-no-stdin
-
 // <iostream>
 
 // istream wcin;
 
+// XFAIL: libcpp-has-no-wide-characters
+
+// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} echo "123" \| %t.exe > %t.out
-// RUN: grep -e 'The number is 123!' %t.out
+// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
 
 #include <iostream>
 #include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+int main(int, char**) {
     int i;
     std::wcin >> i;
-    std::wcout << L"The number is " << i << L"!";
-
-#ifdef _LIBCPP_HAS_NO_STDOUT
-    assert(std::wcin.tie() == NULL);
-#else
-    assert(std::wcin.tie() == &std::wcout);
-#endif
-
+    assert(i == 1234);
     return 0;
 }

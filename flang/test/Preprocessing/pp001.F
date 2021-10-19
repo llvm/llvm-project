@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: if(777.eq.777)then
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: if (777 .eq. 777) then
 * keyword macros
       integer, parameter :: KWM = 666
 #define KWM 777

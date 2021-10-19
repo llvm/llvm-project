@@ -8,6 +8,7 @@
 
 // <numeric>
 
+// Became constexpr in C++20
 // template <InputIterator InIter, OutputIterator<auto, const InIter::value_type&> OutIter>
 //   requires HasPlus<InIter::value_type, InIter::reference>
 //         && HasAssign<InIter::value_type,
@@ -23,7 +24,7 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {1, 2, 3, 4, 5};
@@ -36,13 +37,14 @@ test()
         assert(ib[i] == ir[i]);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
-    test<input_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, int*>();
+    test<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, int*>();
 
     test<forward_iterator<const int*>, output_iterator<int*> >();
     test<forward_iterator<const int*>, forward_iterator<int*> >();
@@ -68,5 +70,14 @@ int main(int, char**)
     test<const int*, random_access_iterator<int*> >();
     test<const int*, int*>();
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

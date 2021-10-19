@@ -11,7 +11,7 @@ void test0(void) {
   } @catch (Ety *e) {
   }
 }
-// CHECK-LABEL: define void @test0()
+// CHECK-LABEL: define{{.*}} void @test0()
 // CHECK:      [[E:%.*]] = alloca [[ETY:%.*]]*, align 8
 // CHECK-NEXT: invoke void @test0_helper()
 // CHECK:      [[T0:%.*]] = call i8* @objc_begin_catch(
@@ -31,7 +31,7 @@ void test1(void) {
   } @catch (__weak Ety *e) {
   }
 }
-// CHECK-LABEL: define void @test1()
+// CHECK-LABEL: define{{.*}} void @test1()
 // CHECK:      [[E:%.*]] = alloca [[ETY:%.*]]*, align 8
 // CHECK-NEXT: invoke void @test1_helper()
 // CHECK:      [[T0:%.*]] = call i8* @objc_begin_catch(

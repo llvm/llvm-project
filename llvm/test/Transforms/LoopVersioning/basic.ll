@@ -15,14 +15,18 @@ entry:
 ; CHECK:   icmp
 ; CHECK:   icmp
 ; CHECK-NOT: icmp
-; CHECK:   br i1 %memcheck.conflict, label %for.body.ph.lver.orig, label %for.body.ph
+; CHECK:   br i1 %conflict.rdx, label %for.body.ph.lver.orig, label %for.body.ph
 
 ; CHECK: for.body.ph.lver.orig:
 ; CHECK: for.body.lver.orig:
-; CHECK:   br i1 %exitcond.lver.orig, label %for.end, label %for.body.lver.orig
+; CHECK:   br i1 %exitcond.lver.orig, label %for.end.loopexit, label %for.body.lver.orig
 ; CHECK: for.body.ph:
 ; CHECK: for.body:
-; CHECK:   br i1 %exitcond, label %for.end, label %for.body
+; CHECK:   br i1 %exitcond, label %for.end.loopexit12, label %for.body
+; CHECK: for.end.loopexit:
+; CHECK:   br label %for.end
+; CHECK: for.end.loopexit12:
+; CHECK:   br label %for.end
 ; CHECK: for.end:
 
 for.body:                                         ; preds = %for.body, %entry

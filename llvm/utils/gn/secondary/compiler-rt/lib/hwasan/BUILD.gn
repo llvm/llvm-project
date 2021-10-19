@@ -1,5 +1,11 @@
 import("//compiler-rt/target.gni")
 
+if (current_cpu == "x64") {
+  hwasan_name = "hwasan_aliases"
+} else {
+  hwasan_name = "hwasan"
+}
+
 action("version_script") {
   script = "//compiler-rt/lib/sanitizer_common/scripts/gen_dynamic_list.py"
   sources = [ "hwasan.syms.extra" ]
@@ -13,10 +19,10 @@ action("version_script") {
     "--extra",
     rebase_path(sources[0], root_build_dir),
     rebase_path(
-        "$crt_current_out_dir/libclang_rt.hwasan$crt_current_target_suffix.a",
+        "$crt_current_out_dir/libclang_rt.$hwasan_name$crt_current_target_suffix.a",
         root_build_dir),
     rebase_path(
-        "$crt_current_out_dir/libclang_rt.hwasan_cxx$crt_current_target_suffix.a",
+        "$crt_current_out_dir/libclang_rt.${hwasan_name}_cxx$crt_current_target_suffix.a",
         root_build_dir),
     "--nm-executable",
     "nm",
@@ -29,6 +35,9 @@ source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   defines = [ "HWASAN_WITH_INTERCEPTORS=1" ]
+  if (current_cpu == "x64") {
+    defines += [ "HWASAN_ALIASING_MODE" ]
+  }
   deps = [
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/sanitizer_common:sources",
@@ -37,12 +46,14 @@ source_set("sources") {
   sources = [
     "hwasan.cpp",
     "hwasan.h",
+    "hwasan_allocation_functions.cpp",
     "hwasan_allocator.cpp",
     "hwasan_allocator.h",
     "hwasan_dynamic_shadow.cpp",
     "hwasan_dynamic_shadow.h",
     "hwasan_exceptions.cpp",
     "hwasan_flags.h",
+    "hwasan_fuchsia.cpp",
     "hwasan_globals.cpp",
     "hwasan_globals.h",
     "hwasan_interceptors.cpp",
@@ -56,7 +67,8 @@ source_set("sources") {
     "hwasan_poisoning.h",
     "hwasan_report.cpp",
     "hwasan_report.h",
-    "hwasan_setjmp.S",
+    "hwasan_setjmp_aarch64.S",
+    "hwasan_setjmp_x86_64.S",
     "hwasan_tag_mismatch_aarch64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
@@ -69,13 +81,14 @@ source_set("sources") {
 source_set("cxx_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
+  defines = [ "HWASAN_WITH_INTERCEPTORS=1" ]
   deps = [ "//compiler-rt/lib/ubsan:cxx_sources" ]
   sources = [ "hwasan_new_delete.cpp" ]
 }
 
 static_library("hwasan") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan$crt_current_target_suffix"
+  output_name = "clang_rt.$hwasan_name$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
@@ -87,7 +100,7 @@ static_library("hwasan") {
 
 static_library("hwasan_cxx") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan_cxx$crt_current_target_suffix"
+  output_name = "clang_rt.${hwasan_name}_cxx$crt_current_target_suffix"
   complete_static_lib = true
   configs -= [
     "//llvm/utils/gn/build:llvm_code",
@@ -99,7 +112,7 @@ static_library("hwasan_cxx") {
 
 shared_library("hwasan_shared") {
   output_dir = crt_current_out_dir
-  output_name = "clang_rt.hwasan$crt_current_target_suffix"
+  output_name = "clang_rt.$hwasan_name$crt_current_target_suffix"
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
   deps = [

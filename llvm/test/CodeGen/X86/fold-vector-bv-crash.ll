@@ -6,7 +6,7 @@
 ; truncation bug from constant folding after legalization.
 ;
 
-@G = external global i32
+@G = external dso_local global i32
 
 define void @bv_crash_test() {
   %I = insertelement <4 x i64> zeroinitializer, i64 15910, i32 0

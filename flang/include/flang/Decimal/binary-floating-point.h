@@ -48,6 +48,7 @@ public:
       const BinaryFloatingPointNumber &that) = default;
   constexpr BinaryFloatingPointNumber &operator=(
       BinaryFloatingPointNumber &&that) = default;
+  constexpr explicit BinaryFloatingPointNumber(RawType raw) : raw_{raw} {}
 
   RawType raw() const { return raw_; }
 

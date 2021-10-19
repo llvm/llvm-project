@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: no-exceptions
 
+// __cxa_uncaught_exceptions is not re-exported from libc++ until macOS 10.15.
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+
 #include <cxxabi.h>
 #include <cassert>
 

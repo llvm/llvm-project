@@ -445,146 +445,125 @@ Sections:
     Size:    0x1
 ProgramHeaders:
 ## Case 1: an arbitrary segment with sections.
-  - Type:  PT_PHDR
-    Flags: [ PF_W ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_PHDR
+    Flags:    [ PF_W ]
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 2: another segment with different sections.
-  - Type:  PT_PHDR
-    Flags: [ PF_X ]
-    VAddr: 0x2000
-    Sections:
-      - Section: .bar.begin
-      - Section: .bar.end
+  - Type:     PT_PHDR
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
 ## Case 3: the PT_NULL segment.
-  - Type:  PT_NULL
-    Flags: [ PF_X ]
-    VAddr: 0x2000
-    Sections:
-      - Section: .bar.begin
-      - Section: .bar.end
+  - Type:     PT_NULL
+    Flags:    [ PF_X ]
+    VAddr:    0x2000
+    FirstSec: .bar.begin
+    LastSec:  .bar.end
 ## Case 4: the PT_DYNAMIC segment.
-  - Type:  PT_DYNAMIC
-    Flags: [ PF_R, PF_W, PF_X ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R, PF_W, PF_X ]
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 5: the PT_INTERP segment.
-  - Type:  PT_INTERP
-    Flags: [ PF_R, PF_W ]
-    VAddr: 0x3000
-    Sections:
-      - Section: .interp
+  - Type:     PT_INTERP
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x3000
+    FirstSec: .interp
+    LastSec:  .interp
 ## Case 6: the PT_NOTE segment.
-  - Type: PT_NOTE
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_NOTE
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 7: the PT_SHLIB segment.
-  - Type: PT_SHLIB
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
+  - Type:     PT_SHLIB
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.begin
 ## Case 8: the PT_TLS segment.
-  - Type: PT_TLS
-    VAddr: 0x4000
-    Sections:
-      - Section: .tls
+  - Type:     PT_TLS
+    VAddr:    0x4000
+    FirstSec: .tls
+    LastSec:  .tls
 ## Case 9: the PT_LOOS segment.
-  - Type:  0x60000000 ## PT_LOOS
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x60000000 ## PT_LOOS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 10: the PT_GNU_EH_FRAME segment.
-  - Type: PT_GNU_EH_FRAME
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_GNU_EH_FRAME
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 11: the PT_SUNW_UNWIND segment.
-  - Type: 0x6464e550 ## PT_SUNW_UNWIND
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x6464e550 ## PT_SUNW_UNWIND
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 12: the PT_GNU_STACK segment.
-  - Type: PT_GNU_STACK
-    Sections:
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_GNU_STACK
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 13: the PT_GNU_RELRO segment.
-  - Type: PT_GNU_RELRO
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_GNU_RELRO
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 14: the PT_GNU_PROPERTY segment.
-  - Type: PT_GNU_PROPERTY
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     PT_GNU_PROPERTY
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 15: the PT_OPENBSD_RANDOMIZE segment.
-  - Type: 0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 16: the PT_OPENBSD_WXNEEDED segment.
-  - Type: 0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 17: the PT_OPENBSD_BOOTDATA segment.
-  - Type: 0x65a41be6 ## PT_OPENBSD_BOOTDATA
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x65a41be6 ## PT_OPENBSD_BOOTDATA
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 18: the PT_HIOS segment.
-  - Type: 0x6fffffff ## PT_HIOS
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x6fffffff ## PT_HIOS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 19: the PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO segment.
-  - Type: 0x70000000 ## PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x70000000 ## PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 20: the PT_ARM_EXIDX/PT_MIPS_RTPROC segment.
-  - Type: 0x70000001 ## PT_ARM_EXIDX, PT_MIPS_RTPROC
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x70000001 ## PT_ARM_EXIDX, PT_MIPS_RTPROC
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 20: the PT_MIPS_OPTIONS segment.
-  - Type: 0x70000002 ## PT_MIPS_OPTIONS
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x70000002 ## PT_MIPS_OPTIONS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 21: the PT_MIPS_ABIFLAGS segment.
-  - Type: 0x70000003 ## PT_MIPS_ABIFLAGS
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x70000003 ## PT_MIPS_ABIFLAGS
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec:  .foo.end
 ## Case 22: the PT_HIPROC segment.
-  - Type: 0x7fffffff ## PT_HIPROC
-    VAddr: 0x1000
-    Sections:
-      - Section: .foo.begin
-      - Section: .foo.end
+  - Type:     0x7fffffff ## PT_HIPROC
+    VAddr:    0x1000
+    FirstSec: .foo.begin
+    LastSec: .foo.end
 
 ## Check how we dump ARM specific program headers.
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_ARM %s -o %tarm.elf
@@ -628,16 +607,16 @@ ProgramHeaders:
 
 ## Show the size of the output produced. It is used in the YAML below.
 # RUN: wc -c < %t.err | FileCheck %s --check-prefix=SIZE
-# SIZE: 560
+# SIZE: 616
 
 ## Write the additional 'C', '\0, 'C' bytes to the end.
 # RUN: echo -n -e "C\x00C" >> %t.err
 
 # RUN: llvm-readelf --program-headers %t.err 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=ERROR-INTERP
+# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=ERROR-INTERP --implicit-check-not=warning:
 
 # ERROR-INTERP:      Type           Offset
-# ERROR-INTERP-NEXT: INTERP         0x000[[#%x,OFFSET:0x230]]
+# ERROR-INTERP-NEXT: INTERP         0x000[[#%x,OFFSET:0x268]]
 # ERROR-INTERP-NEXT:     [Requesting program interpreter: C]
 # ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 1]]
 # ERROR-INTERP-NEXT:     [Requesting program interpreter: ]
@@ -647,6 +626,7 @@ ProgramHeaders:
 # ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0x[[#OFFSET+3]]: it goes past the end of the file (0x[[#OFFSET + 3]])
 # ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
 # ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0xaabbccddeeff1122: it goes past the end of the file (0x[[#OFFSET + 3]])
+# ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
 
 --- !ELF
 FileHeader:
@@ -656,19 +636,23 @@ FileHeader:
 ProgramHeaders:
 ## Case 1: the offset points to the first additional byte.
   - Type:   PT_INTERP
-    Offset: 560
+    Offset: 616
 ## Case 1: the offset points to the second additional byte,
 ##         which is a null byte.
   - Type:   PT_INTERP
-    Offset: 561
+    Offset: 617
 ## Case 3: the offset points to the third additional
 ##         byte, which is the last byte in the file.
   - Type:   PT_INTERP
-    Offset: 562
+    Offset: 618
 ## Case 4: the offset goes 1 byte past the end of the file.
   - Type:   PT_INTERP
-    Offset: 563
+    Offset: 619
 ## Case 5: an arbitrary large offset that goes past the end of the file.
+  - Type:   PT_INTERP
+    Offset: 0xAABBCCDDEEFF1122
+## Case 6: the same as case 5. Used to demonstrate that we don't report
+##         the same warning twice.
   - Type:   PT_INTERP
     Offset: 0xAABBCCDDEEFF1122
 
@@ -702,9 +686,9 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
 ProgramHeaders:
-  - Type: PT_PHDR
-    Sections:
-      - Section: .foo
+  - Type:     PT_PHDR
+    FirstSec: .foo
+    LastSec:  .foo
 
 ## Case B: the value of the e_phoff field is invalid.
 

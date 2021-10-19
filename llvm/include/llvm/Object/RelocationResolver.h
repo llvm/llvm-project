@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_RELOCVISITOR_H
-#define LLVM_OBJECT_RELOCVISITOR_H
+#ifndef LLVM_OBJECT_RELOCATIONRESOLVER_H
+#define LLVM_OBJECT_RELOCATIONRESOLVER_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -31,12 +31,18 @@
 namespace llvm {
 namespace object {
 
-using RelocationResolver = uint64_t (*)(RelocationRef R, uint64_t S, uint64_t A);
+using SupportsRelocation = bool (*)(uint64_t);
+using RelocationResolver = uint64_t (*)(uint64_t Type, uint64_t Offset,
+                                        uint64_t S, uint64_t LocData,
+                                        int64_t Addend);
 
-std::pair<bool (*)(uint64_t), RelocationResolver>
+std::pair<SupportsRelocation, RelocationResolver>
 getRelocationResolver(const ObjectFile &Obj);
+
+uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
+                           uint64_t S, uint64_t LocData);
 
 } // end namespace object
 } // end namespace llvm
 
-#endif // LLVM_OBJECT_RELOCVISITOR_H
+#endif // LLVM_OBJECT_RELOCATIONRESOLVER_H

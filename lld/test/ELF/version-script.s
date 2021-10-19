@@ -64,11 +64,11 @@
 # RUN: ld.lld --hash-style=sysv --version-script %t2.script -shared %t.o %t2.so -o %t.so
 # RUN: llvm-readelf --dyn-syms %t.so | FileCheck --check-prefix=ALL %s
 
-# ALL:      _start{{$}}
+# ALL:      foo1{{$}}
 # ALL-NEXT: bar{{$}}
-# ALL-NEXT: foo1{{$}}
 # ALL-NEXT: foo2{{$}}
 # ALL-NEXT: foo3{{$}}
+# ALL-NEXT: _start{{$}}
 # ALL-NOT:  {{.}}
 
 # RUN: echo "VERSION_1.0 { global: foo1; foo1; local: *; };" > %t8.script

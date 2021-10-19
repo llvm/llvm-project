@@ -417,17 +417,11 @@ MachineInstr *MachineRegisterInfo::getUniqueVRegDef(Register Reg) const {
 }
 
 bool MachineRegisterInfo::hasOneNonDBGUse(Register RegNo) const {
-  use_nodbg_iterator UI = use_nodbg_begin(RegNo);
-  if (UI == use_nodbg_end())
-    return false;
-  return ++UI == use_nodbg_end();
+  return hasSingleElement(use_nodbg_operands(RegNo));
 }
 
 bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
-  use_instr_nodbg_iterator UI = use_instr_nodbg_begin(RegNo);
-  if (UI == use_instr_nodbg_end())
-    return false;
-  return ++UI == use_instr_nodbg_end();
+  return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
 /// clearKillFlags - Iterate over all the uses of the given register and
@@ -440,8 +434,8 @@ void MachineRegisterInfo::clearKillFlags(Register Reg) const {
 }
 
 bool MachineRegisterInfo::isLiveIn(Register Reg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if ((Register)I->first == Reg || I->second == Reg)
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if ((Register)LI.first == Reg || LI.second == Reg)
       return true;
   return false;
 }
@@ -449,18 +443,18 @@ bool MachineRegisterInfo::isLiveIn(Register Reg) const {
 /// getLiveInPhysReg - If VReg is a live-in virtual register, return the
 /// corresponding live-in physical register.
 MCRegister MachineRegisterInfo::getLiveInPhysReg(Register VReg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if (I->second == VReg)
-      return I->first;
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if (LI.second == VReg)
+      return LI.first;
   return MCRegister();
 }
 
 /// getLiveInVirtReg - If PReg is a live-in physical register, return the
 /// corresponding live-in physical register.
 Register MachineRegisterInfo::getLiveInVirtReg(MCRegister PReg) const {
-  for (livein_iterator I = livein_begin(), E = livein_end(); I != E; ++I)
-    if (I->first == PReg)
-      return I->second;
+  for (const std::pair<MCRegister, Register> &LI : liveins())
+    if (LI.first == PReg)
+      return LI.second;
   return Register();
 }
 
@@ -532,25 +526,15 @@ bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
   return true;
 }
 
-bool
-MachineRegisterInfo::isCallerPreservedOrConstPhysReg(MCRegister PhysReg) const {
-  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
-  return isConstantPhysReg(PhysReg) ||
-      TRI->isCallerPreservedPhysReg(PhysReg, *MF);
-}
-
 /// markUsesInDebugValueAsUndef - Mark every DBG_VALUE referencing the
 /// specified register as undefined which causes the DBG_VALUE to be
 /// deleted during LiveDebugVariables analysis.
 void MachineRegisterInfo::markUsesInDebugValueAsUndef(Register Reg) const {
-  // Mark any DBG_VALUE that uses Reg as undef (but don't delete it.)
-  MachineRegisterInfo::use_instr_iterator nextI;
-  for (use_instr_iterator I = use_instr_begin(Reg), E = use_instr_end();
-       I != E; I = nextI) {
-    nextI = std::next(I);  // I is invalidated by the setReg
-    MachineInstr *UseMI = &*I;
-    if (UseMI->isDebugValue())
-      UseMI->getDebugOperandForReg(Reg)->setReg(0U);
+  // Mark any DBG_VALUE* that uses Reg as undef (but don't delete it.)
+  // We use make_early_inc_range because setReg invalidates the iterator.
+  for (MachineInstr &UseMI : llvm::make_early_inc_range(use_instructions(Reg))) {
+    if (UseMI.isDebugValue() && UseMI.hasDebugOperandForReg(Reg))
+      UseMI.setDebugValueUndef();
   }
 }
 
@@ -598,8 +582,9 @@ bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
   return false;
 }
 
-bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg) const {
-  if (UsedPhysRegMask.test(PhysReg))
+bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg,
+                                        bool SkipRegMaskTest) const {
+  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();
@@ -630,8 +615,7 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
 
   // Remove the register (and its aliases from the list).
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
-    UpdatedCSRs.erase(std::remove(UpdatedCSRs.begin(), UpdatedCSRs.end(), *AI),
-                      UpdatedCSRs.end());
+    llvm::erase_value(UpdatedCSRs, *AI);
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
@@ -645,8 +629,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   if (IsUpdatedCSRsInitialized)
     UpdatedCSRs.clear();
 
-  for (MCPhysReg Reg : CSRs)
-    UpdatedCSRs.push_back(Reg);
+  append_range(UpdatedCSRs, CSRs);
 
   // Zero value represents the end of the register list
   // (no more registers should be pushed).
@@ -660,7 +643,7 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
     bool IsRootReserved = true;
     for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
          Super.isValid(); ++Super) {
-      unsigned Reg = *Super;
+      MCRegister Reg = *Super;
       if (!isReserved(Reg)) {
         IsRootReserved = false;
         break;

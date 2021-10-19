@@ -15,8 +15,6 @@ class CPPAcceleratorTableTestCase(TestBase):
         self.build()
 
         logfile = self.getBuildArtifact('dwarf.log')
-        if configuration.is_reproducer_replay():
-            logfile = self.getReproducerRemappedPath(logfile)
 
         self.expect('log enable dwarf lookups -f' + logfile)
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -29,7 +27,7 @@ class CPPAcceleratorTableTestCase(TestBase):
         n = 0
         for line in log:
             if re.findall(r'[abcdefg]\.o: FindByNameAndTag\(\)', line):
-                self.assertTrue("d.o" in line)
+                self.assertIn("d.o", line)
                 n += 1
 
         self.assertEqual(n, 1, log)

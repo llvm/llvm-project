@@ -1,5 +1,4 @@
-; RUN: opt -simple-loop-unswitch -loop-deletion -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -loop-deletion -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -verify-memoryssa -loop-deletion -S < %s | FileCheck %s
 ;
 ; Check that when we do unswitching where we re-enqueue the loop to be processed
 ; again, but manage to delete the loop before ever getting to iterate on it, it

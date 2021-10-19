@@ -35,7 +35,12 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
-
+struct NothrowMoveAssignable {
+  NothrowMoveAssignable& operator=(NothrowMoveAssignable&&) noexcept { return *this; }
+};
+struct PotentiallyThrowingMoveAssignable {
+  PotentiallyThrowingMoveAssignable& operator=(PotentiallyThrowingMoveAssignable&&) { return *this; }
+};
 
 struct CountAssign {
   static int copied;
@@ -48,8 +53,8 @@ struct CountAssign {
 int CountAssign::copied = 0;
 int CountAssign::moved = 0;
 
-
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<> T;
@@ -96,13 +101,22 @@ int main(int, char**)
         assert(std::get<1>(t) == y2);
         assert(&std::get<1>(t) == &y);
     }
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
     {
         // test that the implicitly generated move assignment operator
         // is properly deleted
         using T = std::tuple<std::unique_ptr<int>>;
         static_assert(std::is_move_assignable<T>::value, "");
         static_assert(!std::is_copy_assignable<T>::value, "");
-
     }
     {
         using T = std::tuple<int, NonAssignable>;
@@ -123,6 +137,46 @@ int main(int, char**)
         assert(CountAssign::copied == 1);
         assert(CountAssign::moved == 0);
     }
+    {
+        using T = std::tuple<int, NonAssignable>;
+        static_assert(!std::is_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<int, MoveAssignable>;
+        static_assert(std::is_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<NothrowMoveAssignable, int>;
+        static_assert(std::is_nothrow_move_assignable<T>::value, "");
+    }
+    {
+        using T = std::tuple<PotentiallyThrowingMoveAssignable, int>;
+        static_assert(!std::is_nothrow_move_assignable<T>::value, "");
+    }
+    {
+        // We assign through the reference and don't move out of the incoming ref,
+        // so this doesn't work (but would if the type were CopyAssignable).
+        using T1 = std::tuple<MoveAssignable&, int>;
+        static_assert(!std::is_move_assignable<T1>::value, "");
 
-  return 0;
+        // ... works if it's CopyAssignable
+        using T2 = std::tuple<CopyAssignable&, int>;
+        static_assert(std::is_move_assignable<T2>::value, "");
+
+        // For rvalue-references, we can move-assign if the type is MoveAssignable
+        // or CopyAssignable (since in the worst case the move will decay into a copy).
+        using T3 = std::tuple<MoveAssignable&&, int>;
+        using T4 = std::tuple<CopyAssignable&&, int>;
+        static_assert(std::is_move_assignable<T3>::value, "");
+        static_assert(std::is_move_assignable<T4>::value, "");
+
+        // In all cases, we can't move-assign if the types are not assignable,
+        // since we assign through the reference.
+        using T5 = std::tuple<NonAssignable&, int>;
+        using T6 = std::tuple<NonAssignable&&, int>;
+        static_assert(!std::is_move_assignable<T5>::value, "");
+        static_assert(!std::is_move_assignable<T6>::value, "");
+    }
+
+    return 0;
 }

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
-#define LLVM_SUPPORT_AARCH64TARGETPARSERCOMMON_H
+#ifndef LLVM_SUPPORT_AARCH64TARGETPARSER_H
+#define LLVM_SUPPORT_AARCH64TARGETPARSER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -62,6 +62,13 @@ enum ArchExtKind : uint64_t {
   AEK_I8MM =        1 << 30,
   AEK_F32MM =       1ULL << 31,
   AEK_F64MM =       1ULL << 32,
+  AEK_LS64 =        1ULL << 33,
+  AEK_BRBE =        1ULL << 34,
+  AEK_PAUTH =       1ULL << 35,
+  AEK_FLAGM =       1ULL << 36,
+  AEK_SME =         1ULL << 37,
+  AEK_SMEF64 =      1ULL << 38,
+  AEK_SMEI64 =      1ULL << 39,
 };
 
 enum class ArchKind {
@@ -104,7 +111,7 @@ const ArchKind ArchKinds[] = {
 };
 
 // FIXME: These should be moved to TargetTuple once it exists
-bool getExtensionFeatures(unsigned Extensions,
+bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
 bool getArchFeatures(ArchKind AK, std::vector<StringRef> &Features);
 
@@ -117,7 +124,7 @@ StringRef getArchExtFeature(StringRef ArchExt);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
-unsigned getDefaultExtensions(StringRef CPU, ArchKind AK);
+uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 ArchKind getCPUArchKind(StringRef CPU);
 

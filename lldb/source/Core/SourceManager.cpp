@@ -35,8 +35,8 @@
 #include <memory>
 #include <utility>
 
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
 
 namespace lldb_private {
 class ExecutionContext;
@@ -61,7 +61,7 @@ SourceManager::SourceManager(const DebuggerSP &debugger_sp)
       m_debugger_wp(debugger_sp) {}
 
 // Destructor
-SourceManager::~SourceManager() {}
+SourceManager::~SourceManager() = default;
 
 SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   if (!file_spec)
@@ -339,11 +339,14 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
       if (executable_ptr) {
         SymbolContextList sc_list;
         ConstString main_name("main");
-        bool symbols_okay = false; // Force it to be a debug symbol.
-        bool inlines_okay = true;
+
+        ModuleFunctionSearchOptions function_options;
+        function_options.include_symbols =
+            false; // Force it to be a debug symbol.
+        function_options.include_inlines = true;
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
-                                      lldb::eFunctionNameTypeBase, inlines_okay,
-                                      symbols_okay, sc_list);
+                                      lldb::eFunctionNameTypeBase,
+                                      function_options, sc_list);
         size_t num_matches = sc_list.GetSize();
         for (size_t idx = 0; idx < num_matches; idx++) {
           SymbolContext sc;
@@ -441,13 +444,17 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
       }
       // Try remapping if m_file_spec does not correspond to an existing file.
       if (!FileSystem::Instance().Exists(m_file_spec)) {
-        FileSpec new_file_spec;
-        // Check target specific source remappings first, then fall back to
-        // modules objects can have individual path remappings that were
-        // detected when the debug info for a module was found. then
-        if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
-            target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
-          m_file_spec = new_file_spec;
+        // Check target specific source remappings (i.e., the
+        // target.source-map setting), then fall back to the module
+        // specific remapping (i.e., the .dSYM remapping dictionary).
+        auto remapped = target->GetSourcePathMap().FindFile(m_file_spec);
+        if (!remapped) {
+          FileSpec new_spec;
+          if (target->GetImages().FindSourceFile(m_file_spec, new_spec))
+            remapped = new_spec;
+        }
+        if (remapped) {
+          m_file_spec = *remapped;
           m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
         }
       }

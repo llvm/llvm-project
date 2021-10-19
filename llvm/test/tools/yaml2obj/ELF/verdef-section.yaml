@@ -1,9 +1,29 @@
-## Check we are able to handle SHT_GNU_verdef sections.
+## Test how we create SHT_GNU_verdef sections.
+
+## Check that we link the SHT_GNU_verdef section to
+## the `.dynstr` section by default.
+## Check that we set the value of `sh_info` field to the
+## number of version definitions by default.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s
+# RUN: llvm-readelf --sections %t1 | \
+# RUN:   FileCheck %s -DLINK=3 -DINFO=4 --check-prefix=FIELDS
+
+# FIELDS: [Nr] Name              Type   {{.*}} Flg Lk       Inf
+# FIELDS: [ 1] .gnu.version_d    VERDEF {{.*}}   A [[LINK]] [[INFO]]
+# FIELDS: [ 3] .dynstr
 
 # CHECK:      VersionDefinitions [
+# CHECK-NEXT:   Definition {
+# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Index: 0
+# CHECK-NEXT:     Hash: 0
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:     Predecessors: []
+# CHECK-NEXT:   }
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
 # CHECK-NEXT:     Flags [ (0x1)
@@ -26,14 +46,15 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Definition {
 # CHECK-NEXT:     Version: 1
-# CHECK-NEXT:     Flags [ (0x3)
+# CHECK-NEXT:     Flags [ (0xFFFF)
 # CHECK-NEXT:       Base (0x1)
+# CHECK-NEXT:       Info (0x4)
 # CHECK-NEXT:       Weak (0x2)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Index: 3
 # CHECK-NEXT:     Hash: 108387922
 # CHECK-NEXT:     Name: VERSION_2
-# CHECK-NEXT:     Predecessors: [VERSION_3]
+# CHECK-NEXT:     Predecessors: [VERSION_3, VERSION_4]
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
@@ -42,40 +63,62 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_DYN
-  Entry: 0x0000000000001000
 Sections:
-  - Name:            .gnu.version_d
-    Type:            SHT_GNU_verdef
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000000230
-    Link:            .dynstr
-    AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000003
+  - Name:  .gnu.version_d
+    Type:  SHT_GNU_verdef
+    Flags: [ SHF_ALLOC ]
+    Info:  [[INFO=<none>]]
+    Link:  [[LINK=<none>]]
     Entries:
-      - Version:         1
-        Flags:           1
-        VersionNdx:      1
-        Hash:            170240160
+## Case 1: an entry that has no Version, Flags, VersionNdx or Hash fields set.
+##         Used to check values that are written by default. Also shows
+##         that we are able to use the "=<none>" syntax for these fields.
+      - Version:    [[VERSION=<none>]]
+        Flags:      [[FLAGS=<none>]]
+        VersionNdx: [[VERNDX=<none>]]
+        Hash:       [[HASH=<none>]]
+        Names: []
+## Case 2: an arbitrary entry.
+      - Flags:      1
+        VersionNdx: 1
+        Hash:       170240160
         Names:
           - dso.so.0
-      - Version:         1
-        Flags:           2
-        VersionNdx:      2
-        Hash:            108387921
+## Case 3: one more arbitrary entry with different values.
+      - Flags:      2
+        VersionNdx: 2
+        Hash:       108387921
         Names:
           - VERSION_1
-      - Version:         1
-        Flags:           3
-        VersionNdx:      3
-        Hash:            108387922
+## Case 4: an entry that has version predecessors. Also, it sets
+##         all known flags as well as few unknown.
+      - Flags:      0xffff
+        VersionNdx: 3
+        Hash:       108387922
         Names:
           - VERSION_2
           - VERSION_3
+          - VERSION_4
 DynamicSymbols:
   - Name:    foo
     Binding: STB_GLOBAL
 
+## Check that we are able to set sh_info and sh_link fields to arbitrary values.
+
+# RUN: yaml2obj --docnum=1 -DINFO=123 -DLINK=234 %s -o %t1.fields
+# RUN: llvm-readelf --sections %t1.fields | \
+# RUN:   FileCheck %s -DINFO=123 -DLINK=234 --check-prefix=FIELDS
+
+## Check we are able to emit a version definition which has a version revision
+## (vd_version) field value that is not equal to 1.
+
+# RUN: yaml2obj --docnum=1 -DVERSION=2 %s -o %t.version
+# RUN: llvm-readobj -V %t.version 2>&1 | FileCheck %s --check-prefix=VERSION-ERR
+
+# VERSION-ERR: unable to dump SHT_GNU_verdef section with index 1: version 2 is not yet supported
+
 ## Check we can use "Content" to describe the content.
+## Check we set the sh_link field to 0 when there is no .dynstr section.
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CONTENT
@@ -89,7 +132,7 @@ DynamicSymbols:
 # CONTENT-NEXT: Offset: 0x40
 # CONTENT-NEXT: Size: 3
 # CONTENT-NEXT: Link: 0
-# CONTENT-NEXT: Info: 1
+# CONTENT-NEXT: Info: 0
 # CONTENT-NEXT: AddressAlignment:
 # CONTENT-NEXT: EntrySize:
 # CONTENT-NEXT: SectionData (
@@ -105,7 +148,6 @@ Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
     Flags:   [ SHF_ALLOC ]
-    Info:    0x0000000000000001
     Content: "112233"
 
 ## Check we can omit "Content" and "Entries" fields to produce an empty SHT_GNU_verdef section.
@@ -114,7 +156,7 @@ Sections:
 # RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NO-PROPS
 
 # NO-PROPS: [Nr] Name           Type   Address          Off    Size   ES Flg Lk Inf Al
-# NO-PROPS: [ 1] .gnu.version_d VERDEF 0000000000000000 000040 000000 00   A 0   1  0
+# NO-PROPS: [ 1] .gnu.version_d VERDEF 0000000000000000 000040 000000 00   A 0   0  0
 
 --- !ELF
 FileHeader:
@@ -125,13 +167,14 @@ Sections:
   - Name:  .gnu.version_d
     Type:  SHT_GNU_verdef
     Flags: [ SHF_ALLOC ]
-    Info:  0x0000000000000001
 
-## Check we can't use both "Entries" and "Content" together.
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
 
-# RUN: not yaml2obj --docnum=4 %s -o %t4 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: not yaml2obj --docnum=4 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
 
-# BOTH: error: SHT_GNU_verdef: "Entries" and "Content" can't be used together
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
 
 --- !ELF
 FileHeader:
@@ -141,13 +184,67 @@ FileHeader:
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
-    Flags:   [ SHF_ALLOC ]
-    Info:    0x0000000000000001
-    Content: "112233"
-    Entries:
-      - Version:    0
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
-          - foo
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+    Entries: [[ENTRIES=<none>]]
+
+# RUN: yaml2obj --docnum=4 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=4 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:      Name: .gnu.version_d
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=4 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=4 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"
+
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=4 -DSIZE=0 -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+# RUN: not yaml2obj --docnum=4 -DCONTENT="'00'" -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+
+# ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"
+
+## Check we set the sh_link field to 0 when the .dynstr section is excluded
+## from the section header table.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-readelf --sections %t5 | FileCheck %s --check-prefix=EXCLUDED
+
+# EXCLUDED: [Nr] Name           {{.*}} ES Flg Lk Inf
+# EXCLUDED: [ 1] .gnu.version_d {{.*}} 00     0   0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+  - Name: .dynstr
+    Type: SHT_STRTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .gnu.version_d
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynstr

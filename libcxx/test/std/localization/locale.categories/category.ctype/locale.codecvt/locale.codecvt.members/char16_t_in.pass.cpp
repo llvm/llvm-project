@@ -14,6 +14,14 @@
 //           const externT* from, const externT* from_end, const externT*& from_next,
 //           internT* to, internT* to_end, internT*& to_next) const;
 
+// This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
+// Test is intended to convert between UTF8 and UTF16/32, it will fail on
+// z/OS since at default char type on z/OS is EBCDIC character which has
+// value different from ASCII character.
+// UNSUPPORTED: target={{.+}}-zos{{.*}}
+
 #include <locale>
 #include <string>
 #include <vector>

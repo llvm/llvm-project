@@ -99,7 +99,7 @@ AppleGetQueuesHandler::AppleGetQueuesHandler(Process *process)
       m_get_queues_return_buffer_addr(LLDB_INVALID_ADDRESS),
       m_get_queues_retbuffer_mutex() {}
 
-AppleGetQueuesHandler::~AppleGetQueuesHandler() {}
+AppleGetQueuesHandler::~AppleGetQueuesHandler() = default;
 
 void AppleGetQueuesHandler::Detach() {
 
@@ -159,27 +159,16 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     if (!m_get_queues_impl_code_up) {
       if (g_get_current_queues_function_code != nullptr) {
-        Status error;
-        m_get_queues_impl_code_up.reset(
-            exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-                g_get_current_queues_function_code, eLanguageTypeC,
-                g_get_current_queues_function_name, error));
-        if (error.Fail()) {
-          LLDB_LOGF(
-              log,
-              "Failed to get UtilityFunction for queues introspection: %s.",
-              error.AsCString());
+        auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+            g_get_current_queues_function_code,
+            g_get_current_queues_function_name, eLanguageTypeC, exe_ctx);
+        if (!utility_fn_or_error) {
+          LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                         "Failed to create UtilityFunction for queues "
+                         "introspection: {0}.");
           return args_addr;
         }
-
-        if (!m_get_queues_impl_code_up->Install(diagnostics, exe_ctx)) {
-          if (log) {
-            LLDB_LOGF(log, "Failed to install queues introspection");
-            diagnostics.Dump(log);
-          }
-          m_get_queues_impl_code_up.reset();
-          return args_addr;
-        }
+        m_get_queues_impl_code_up = std::move(*utility_fn_or_error);
       } else {
         if (log) {
           LLDB_LOGF(log, "No queues introspection code found.");
@@ -191,7 +180,7 @@ AppleGetQueuesHandler::SetupGetQueuesFunction(Thread &thread,
 
     // Next make the runner function for our implementation utility function.
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(thread.GetProcess()->GetTarget());
     CompilerType get_queues_return_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
     Status error;
@@ -231,7 +220,8 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  TypeSystemClang *clang_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target_sp);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYSTEM_RUNTIME));
 
   GetQueuesReturnInfo return_value;
@@ -274,22 +264,22 @@ AppleGetQueuesHandler::GetCurrentQueues(Thread &thread, addr_t page_to_free,
   CompilerType clang_void_ptr_type =
       clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
   Value return_buffer_ptr_value;
-  return_buffer_ptr_value.SetValueType(Value::eValueTypeScalar);
+  return_buffer_ptr_value.SetValueType(Value::ValueType::Scalar);
   return_buffer_ptr_value.SetCompilerType(clang_void_ptr_type);
 
   CompilerType clang_int_type = clang_ast_context->GetBasicType(eBasicTypeInt);
   Value debug_value;
-  debug_value.SetValueType(Value::eValueTypeScalar);
+  debug_value.SetValueType(Value::ValueType::Scalar);
   debug_value.SetCompilerType(clang_int_type);
 
   Value page_to_free_value;
-  page_to_free_value.SetValueType(Value::eValueTypeScalar);
+  page_to_free_value.SetValueType(Value::ValueType::Scalar);
   page_to_free_value.SetCompilerType(clang_void_ptr_type);
 
   CompilerType clang_uint64_type =
       clang_ast_context->GetBasicType(eBasicTypeUnsignedLongLong);
   Value page_to_free_size_value;
-  page_to_free_size_value.SetValueType(Value::eValueTypeScalar);
+  page_to_free_size_value.SetValueType(Value::ValueType::Scalar);
   page_to_free_size_value.SetCompilerType(clang_uint64_type);
 
   std::lock_guard<std::mutex> guard(m_get_queues_retbuffer_mutex);

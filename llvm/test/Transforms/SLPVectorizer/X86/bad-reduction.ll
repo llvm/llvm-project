@@ -15,14 +15,14 @@ define i64 @load_bswap(%v8i8* %p) {
 ; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 5
 ; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 6
 ; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 7
-; CHECK-NEXT:    [[T0:%.*]] = load i8, i8* [[G0]]
-; CHECK-NEXT:    [[T1:%.*]] = load i8, i8* [[G1]]
-; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[G2]]
-; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[G3]]
-; CHECK-NEXT:    [[T4:%.*]] = load i8, i8* [[G4]]
-; CHECK-NEXT:    [[T5:%.*]] = load i8, i8* [[G5]]
-; CHECK-NEXT:    [[T6:%.*]] = load i8, i8* [[G6]]
-; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[G7]]
+; CHECK-NEXT:    [[T0:%.*]] = load i8, i8* [[G0]], align 1
+; CHECK-NEXT:    [[T1:%.*]] = load i8, i8* [[G1]], align 1
+; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[G2]], align 1
+; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[G3]], align 1
+; CHECK-NEXT:    [[T4:%.*]] = load i8, i8* [[G4]], align 1
+; CHECK-NEXT:    [[T5:%.*]] = load i8, i8* [[G5]], align 1
+; CHECK-NEXT:    [[T6:%.*]] = load i8, i8* [[G6]], align 1
+; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[G7]], align 1
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[T0]] to i64
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[T1]] to i64
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[T2]] to i64
@@ -103,14 +103,14 @@ define i64 @load_bswap_nop_shift(%v8i8* %p) {
 ; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 5
 ; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 6
 ; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds [[V8I8]], %v8i8* [[P]], i64 0, i32 7
-; CHECK-NEXT:    [[T0:%.*]] = load i8, i8* [[G0]]
-; CHECK-NEXT:    [[T1:%.*]] = load i8, i8* [[G1]]
-; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[G2]]
-; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[G3]]
-; CHECK-NEXT:    [[T4:%.*]] = load i8, i8* [[G4]]
-; CHECK-NEXT:    [[T5:%.*]] = load i8, i8* [[G5]]
-; CHECK-NEXT:    [[T6:%.*]] = load i8, i8* [[G6]]
-; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[G7]]
+; CHECK-NEXT:    [[T0:%.*]] = load i8, i8* [[G0]], align 1
+; CHECK-NEXT:    [[T1:%.*]] = load i8, i8* [[G1]], align 1
+; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[G2]], align 1
+; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[G3]], align 1
+; CHECK-NEXT:    [[T4:%.*]] = load i8, i8* [[G4]], align 1
+; CHECK-NEXT:    [[T5:%.*]] = load i8, i8* [[G5]], align 1
+; CHECK-NEXT:    [[T6:%.*]] = load i8, i8* [[G6]], align 1
+; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[G7]], align 1
 ; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[T0]] to i64
 ; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[T1]] to i64
 ; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[T2]] to i64
@@ -535,5 +535,27 @@ define void @load_combine_constant_expression(i64* %t1) {
   store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t1, align 4
   %t3 = getelementptr i64, i64* %t1, i64 1
   store i64 or (i64 shl (i64 zext (i32 ptrtoint ([8 x i8]* @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint ([5 x i8]* @g2 to i32) to i64)), i64* %t3, align 4
+  ret void
+}
+
+@output = dso_local local_unnamed_addr global [8 x i32] zeroinitializer, align 16
+
+define void @PR47450(i16* nocapture readonly %p) {
+; CHECK-LABEL: @PR47450(
+; CHECK-NEXT:    [[X:%.*]] = load i16, i16* [[P:%.*]], align 2
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X]] to i32
+; CHECK-NEXT:    [[S:%.*]] = shl nuw nsw i32 [[Z]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[S]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    store <4 x i32> [[SHUFFLE]], <4 x i32>* bitcast ([8 x i32]* @output to <4 x i32>*), align 16
+; CHECK-NEXT:    ret void
+;
+  %x = load i16, i16* %p, align 2
+  %z = zext i16 %x to i32
+  %s = shl nuw nsw i32 %z, 1
+  store i32 %s, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @output, i64 0, i64 0), align 16
+  store i32 %s, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @output, i64 0, i64 1), align 4
+  store i32 %s, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @output, i64 0, i64 2), align 8
+  store i32 %s, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @output, i64 0, i64 3), align 4
   ret void
 }

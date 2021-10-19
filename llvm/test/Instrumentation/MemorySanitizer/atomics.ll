@@ -51,7 +51,7 @@ entry:
 }
 
 ; CHECK-LABEL: @Cmpxchg
-; CHECK: store { i32, i1 } zeroinitializer,
+; CHECK: store i32 0,
 ; CHECK: icmp
 ; CHECK: br
 ; CHECK: @__msan_warning_with_origin
@@ -70,7 +70,7 @@ entry:
 }
 
 ; CHECK-LABEL: @CmpxchgMonotonic
-; CHECK: store { i32, i1 } zeroinitializer,
+; CHECK: store i32 0,
 ; CHECK: icmp
 ; CHECK: br
 ; CHECK: @__msan_warning_with_origin

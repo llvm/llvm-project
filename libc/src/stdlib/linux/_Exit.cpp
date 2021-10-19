@@ -14,7 +14,7 @@
 
 namespace __llvm_libc {
 
-void LLVM_LIBC_ENTRYPOINT(_Exit)(int status) {
+LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
   for (;;) {
     __llvm_libc::syscall(SYS_exit_group, status);
     __llvm_libc::syscall(SYS_exit, status);

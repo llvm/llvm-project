@@ -5,7 +5,12 @@
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "capabilities": {
+# CHECK-NEXT:      "astProvider": true,
+# CHECK-NEXT:      "callHierarchyProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
+# CHECK-NEXT:      "compilationDatabase": {
+# CHECK-NEXT:        "automaticReload": true
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "completionProvider": {
 # CHECK-NEXT:        "allCommitCharacters": [
 # CHECK-NEXT:          " ",
@@ -66,6 +71,8 @@
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "hoverProvider": true,
+# CHECK-NEXT:      "implementationProvider": true,
+# CHECK-NEXT:      "memoryUsageProvider": true,
 # CHECK-NEXT:      "referencesProvider": true,
 # CHECK-NEXT:      "renameProvider": true,
 # CHECK-NEXT:      "selectionRangeProvider": true,
@@ -74,7 +81,22 @@
 # CHECK-NEXT:          "delta": true
 # CHECK-NEXT:        },
 # CHECK-NEXT:        "legend": {
-# CHECK-NEXT:          "tokenModifiers": [],
+# CHECK-NEXT:          "tokenModifiers": [
+# CHECK-NEXT:            "declaration",
+# CHECK-NEXT:            "deprecated",
+# CHECK-NEXT:            "deduced",
+# CHECK-NEXT:            "readonly",
+# CHECK-NEXT:            "static",
+# CHECK-NEXT:            "abstract",
+# CHECK-NEXT:            "virtual",
+# CHECK-NEXT:            "dependentName",
+# CHECK-NEXT:            "defaultLibrary",
+# CHECK-NEXT:            "usedAsMutableReference",
+# CHECK-NEXT:            "functionScope",
+# CHECK-NEXT:            "classScope",
+# CHECK-NEXT:            "fileScope",
+# CHECK-NEXT:            "globalScope"
+# CHECK-NEXT:          ],
 # CHECK-NEXT:          "tokenTypes": [
 # CHECK-NEXT:            "variable",
 # CHECK:               ]

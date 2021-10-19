@@ -66,10 +66,13 @@ public:
                 : IsInBlankCommon(symbol)      ? "Blank COMMON object"
                 : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
                 // remaining checks don't apply to components
-                : !isFirstSymbol                  ? nullptr
-                : IsHostAssociated(symbol, scope) ? "Host-associated object"
-                : IsUseAssociated(symbol, scope)  ? "USE-associated object"
-                                                  : nullptr}) {
+                : !isFirstSymbol                   ? nullptr
+                : IsHostAssociated(symbol, scope)  ? "Host-associated object"
+                : IsUseAssociated(symbol, scope)   ? "USE-associated object"
+                : symbol.has<AssocEntityDetails>() ? "Construct association"
+                : IsPointer(symbol) && (hasComponent_ || hasSubscript_)
+                ? "Target of pointer"
+                : nullptr}) {
       context_.Say(source_,
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());

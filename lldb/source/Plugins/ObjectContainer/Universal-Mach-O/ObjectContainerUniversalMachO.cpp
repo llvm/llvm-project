@@ -79,7 +79,7 @@ ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
   memset(&m_header, 0, sizeof(m_header));
 }
 
-ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() {}
+ObjectContainerUniversalMachO::~ObjectContainerUniversalMachO() = default;
 
 bool ObjectContainerUniversalMachO::ParseHeader() {
   bool success = ParseHeader(m_data, m_header, m_fat_archs);
@@ -204,13 +204,6 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
   }
   return ObjectFileSP();
 }
-
-// PluginInterface protocol
-lldb_private::ConstString ObjectContainerUniversalMachO::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ObjectContainerUniversalMachO::GetPluginVersion() { return 1; }
 
 size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,

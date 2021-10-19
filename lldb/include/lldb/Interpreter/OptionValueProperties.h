@@ -18,17 +18,15 @@
 #include "lldb/Utility/ConstString.h"
 
 namespace lldb_private {
+class Properties;
 
 class OptionValueProperties
-    : public OptionValue,
+    : public Cloneable<OptionValueProperties, OptionValue>,
       public std::enable_shared_from_this<OptionValueProperties> {
 public:
-  OptionValueProperties()
-      : OptionValue(), m_name(), m_properties(), m_name_to_index() {}
+  OptionValueProperties() = default;
 
   OptionValueProperties(ConstString name);
-
-  OptionValueProperties(const OptionValueProperties &global_properties);
 
   ~OptionValueProperties() override = default;
 
@@ -36,7 +34,11 @@ public:
 
   void Clear() override;
 
-  lldb::OptionValueSP DeepCopy() const override;
+  static lldb::OptionValuePropertiesSP
+  CreateLocalCopy(const Properties &global_properties);
+
+  lldb::OptionValueSP
+  DeepCopy(const lldb::OptionValueSP &new_parent) const override;
 
   Status
   SetValueFromString(llvm::StringRef value,
@@ -103,11 +105,6 @@ public:
 
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                      llvm::StringRef path, llvm::StringRef value) override;
-
-  virtual bool PredicateMatches(const ExecutionContext *exe_ctx,
-    llvm::StringRef predicate) const {
-    return false;
-  }
 
   OptionValueArch *
   GetPropertyAtIndexAsOptionValueArch(const ExecutionContext *exe_ctx,

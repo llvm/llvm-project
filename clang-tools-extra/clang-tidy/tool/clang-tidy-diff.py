@@ -142,6 +142,8 @@ def main():
                       help='checks filter, when not specified, use clang-tidy '
                       'default',
                       default='')
+  parser.add_argument('-use-color', action='store_true',
+                      help='Use colors in output')
   parser.add_argument('-path', dest='build_path',
                       help='Path used to read a compile command database.')
   if yaml:
@@ -225,6 +227,8 @@ def main():
     common_clang_tidy_args.append('-quiet')
   if args.build_path is not None:
     common_clang_tidy_args.append('-p=%s' % args.build_path)
+  if args.use_color:
+    common_clang_tidy_args.append('--use-color')
   for arg in args.extra_arg:
     common_clang_tidy_args.append('-extra-arg=%s' % arg)
   for arg in args.extra_arg_before:

@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -S < %s | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -S < %s 2>&1 | FileCheck %s
 
 define i64 @test1(i32 %a, i32 %b) {
@@ -38,6 +37,6 @@ define i64 @test4(i32 %t) {
   %sub = sub i32 %a, %mul
   %zext = zext i32 %sub to i64
 ; CHECK: %zext
-; CHECK-NEXT: -->  ((-56 * ((zext i32 %t to i64) /u 112)) + ((zext i32 %t to i64) /u 2))
+; CHECK-NEXT: -->  ((-56 * ((zext i32 %t to i64) /u 112))<nsw> + ((zext i32 %t to i64) /u 2))
   ret i64 %zext
 }

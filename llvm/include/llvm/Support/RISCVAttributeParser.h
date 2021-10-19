@@ -27,9 +27,9 @@ class RISCVAttributeParser : public ELFAttributeParser {
 
 public:
   RISCVAttributeParser(ScopedPrinter *sw)
-      : ELFAttributeParser(sw, RISCVAttrs::RISCVAttributeTags, "riscv") {}
+      : ELFAttributeParser(sw, RISCVAttrs::getRISCVAttributeTags(), "riscv") {}
   RISCVAttributeParser()
-      : ELFAttributeParser(RISCVAttrs::RISCVAttributeTags, "riscv") {}
+      : ELFAttributeParser(RISCVAttrs::getRISCVAttributeTags(), "riscv") {}
 };
 
 } // namespace llvm

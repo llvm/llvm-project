@@ -1,0 +1,16 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("MIRTests") {
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/MIRParser",
+    "//llvm/lib/FileCheck",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [ "MachineMetadata.cpp" ]
+}

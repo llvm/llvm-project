@@ -7,7 +7,7 @@
 define <8 x i32> @vpandd256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandd256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -20,7 +20,7 @@ entry:
 define <8 x i32> @vpandnd256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandnd256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm1
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
 ; CHECK-NEXT:    vpandn %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -34,7 +34,7 @@ entry:
 define <8 x i32> @vpord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpord256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -47,7 +47,7 @@ entry:
 define <8 x i32> @vpxord256(<8 x i32> %a, <8 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpxord256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -60,7 +60,7 @@ entry:
 define <4 x i64> @vpandq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandq256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -73,7 +73,7 @@ entry:
 define <4 x i64> @vpandnq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandnq256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -87,7 +87,7 @@ entry:
 define <4 x i64> @vporq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vporq256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -100,7 +100,7 @@ entry:
 define <4 x i64> @vpxorq256(<4 x i64> %a, <4 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpxorq256:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; CHECK-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -115,7 +115,7 @@ entry:
 define <4 x i32> @vpandd128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandd128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -128,7 +128,7 @@ entry:
 define <4 x i32> @vpandnd128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandnd128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -142,7 +142,7 @@ entry:
 define <4 x i32> @vpord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpord128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -155,7 +155,7 @@ entry:
 define <4 x i32> @vpxord128(<4 x i32> %a, <4 x i32> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpxord128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -168,7 +168,7 @@ entry:
 define <2 x i64> @vpandq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -181,7 +181,7 @@ entry:
 define <2 x i64> @vpandnq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpandnq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -195,7 +195,7 @@ entry:
 define <2 x i64> @vporq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vporq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -208,7 +208,7 @@ entry:
 define <2 x i64> @vpxorq128(<2 x i64> %a, <2 x i64> %b) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: vpxorq128:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 entry:
@@ -977,6 +977,54 @@ define <4 x i32> @ternlog_or_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
   ret <4 x i32> %c
 }
 
+define <4 x i32> @ternlog_and_orn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_and_orn:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $176, %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = or <4 x i32> %a, %y
+  %c = and <4 x i32> %b, %x
+  ret <4 x i32> %c
+}
+
+define <4 x i32> @ternlog_and_orn_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_and_orn_2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $208, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %z, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = or <4 x i32> %y, %a
+  %c = and <4 x i32> %b, %x
+  ret <4 x i32> %c
+}
+
+; FIXME: This should be a single vpternlog, but we accidentally match the xor -1
+; as the second binary op instead of the and.
+define <4 x i32> @ternlog_orn_and(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_orn_and:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vpternlogd $222, %xmm3, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = and <4 x i32> %y, %z
+  %c = or <4 x i32> %b, %a
+  ret <4 x i32> %c
+}
+
+define <4 x i32> @ternlog_orn_and_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_orn_and_2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $143, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = and <4 x i32> %y, %z
+  %c = or <4 x i32> %a, %b
+  ret <4 x i32> %c
+}
+
 define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; CHECK-LABEL: ternlog_xor_andn:
 ; CHECK:       ## %bb.0:
@@ -991,7 +1039,7 @@ define <4 x i32> @ternlog_xor_andn(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $236, {{.*}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = and <4 x i32> %x, <i32 255, i32 255, i32 255, i32 255>
   %b = or <4 x i32> %a, %y
@@ -1001,7 +1049,7 @@ define <4 x i32> @ternlog_or_and_mask(<4 x i32> %x, <4 x i32> %y) {
 define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: ternlog_or_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogd $236, {{.*}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogd $236, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = and <8 x i32> %x, <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
   %b = or <8 x i32> %a, %y
@@ -1011,7 +1059,7 @@ define <8 x i32> @ternlog_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y) {
 define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $108, {{.*}}(%rip), %xmm1, %xmm0
+; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = and <2 x i64> %x, <i64 1099511627775, i64 1099511627775>
   %b = xor <2 x i64> %a, %y
@@ -1021,7 +1069,7 @@ define <2 x i64> @ternlog_xor_and_mask(<2 x i64> %x, <2 x i64> %y) {
 define <4 x i64> @ternlog_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y) {
 ; CHECK-LABEL: ternlog_xor_and_mask_ymm:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpternlogq $108, {{.*}}(%rip), %ymm1, %ymm0
+; CHECK-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = and <4 x i64> %x, <i64 72057594037927935, i64 72057594037927935, i64 72057594037927935, i64 72057594037927935>
   %b = xor <4 x i64> %a, %y
@@ -1033,14 +1081,14 @@ define <4 x i32> @ternlog_maskz_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpgtd %xmm3, %xmm2, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpord %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskz_or_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %xmm3, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    vorps %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %m = icmp slt <4 x i32> %mask, zeroinitializer
@@ -1055,14 +1103,14 @@ define <8 x i32> @ternlog_maskz_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtd %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpord %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskz_or_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %ymm2, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SKX-NEXT:    vorps %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
@@ -1077,14 +1125,14 @@ define <2 x i64> @ternlog_maskz_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %xmm2, %xmm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpxorq %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskz_xor_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %xmm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    vxorpd %xmm1, %xmm0, %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %m = icmp slt <2 x i64> %mask, zeroinitializer
@@ -1099,14 +1147,14 @@ define <4 x i64> @ternlog_maskz_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpxorq %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskz_xor_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %ymm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm0
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SKX-NEXT:    vxorpd %ymm1, %ymm0, %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %m = icmp slt <4 x i64> %mask, zeroinitializer
@@ -1121,14 +1169,14 @@ define <4 x i32> @ternlog_maskx_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpgtd %xmm3, %xmm2, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm2
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; KNL-NEXT:    vpord %xmm1, %xmm2, %xmm0 {%k1}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskx_or_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %xmm3, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm2
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; SKX-NEXT:    vorps %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %m = icmp slt <4 x i32> %mask, zeroinitializer
@@ -1143,14 +1191,14 @@ define <8 x i32> @ternlog_maskx_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtd %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm2
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; KNL-NEXT:    vpord %ymm1, %ymm2, %ymm0 {%k1}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskx_or_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %ymm2, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm2
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; SKX-NEXT:    vorps %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
@@ -1165,14 +1213,14 @@ define <2 x i64> @ternlog_maskx_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %xmm2, %xmm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm2
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; KNL-NEXT:    vpxorq %xmm1, %xmm2, %xmm0 {%k1}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskx_xor_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %xmm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm2
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; SKX-NEXT:    vxorpd %xmm1, %xmm2, %xmm0 {%k1}
 ; SKX-NEXT:    retq
   %m = icmp slt <2 x i64> %mask, zeroinitializer
@@ -1187,14 +1235,14 @@ define <4 x i64> @ternlog_maskx_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm2
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; KNL-NEXT:    vpxorq %ymm1, %ymm2, %ymm0 {%k1}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_maskx_xor_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %ymm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm2
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; SKX-NEXT:    vxorpd %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %m = icmp slt <4 x i64> %mask, zeroinitializer
@@ -1209,7 +1257,7 @@ define <4 x i32> @ternlog_masky_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; KNL-NEXT:    vpcmpgtd %xmm3, %xmm2, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpord %xmm1, %xmm0, %xmm1 {%k1}
 ; KNL-NEXT:    vmovdqa %xmm1, %xmm0
 ; KNL-NEXT:    retq
@@ -1217,7 +1265,7 @@ define <4 x i32> @ternlog_masky_or_and_mask(<4 x i32> %x, <4 x i32> %y, <4 x i32
 ; SKX-LABEL: ternlog_masky_or_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %xmm3, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    vorps %xmm1, %xmm0, %xmm1 {%k1}
 ; SKX-NEXT:    vmovaps %xmm1, %xmm0
 ; SKX-NEXT:    retq
@@ -1233,14 +1281,14 @@ define <8 x i32> @ternlog_masky_or_and_mask_ymm(<8 x i32> %x, <8 x i32> %y, <8 x
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtd %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm2
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; KNL-NEXT:    vpord %ymm1, %ymm2, %ymm0 {%k1}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: ternlog_masky_or_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovd2m %ymm2, %k1
-; SKX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm2
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm2
 ; SKX-NEXT:    vorps %ymm1, %ymm2, %ymm0 {%k1}
 ; SKX-NEXT:    retq
   %m = icmp slt <8 x i32> %mask, zeroinitializer
@@ -1255,7 +1303,7 @@ define <2 x i64> @ternlog_masky_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %xmm2, %xmm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    vpxorq %xmm1, %xmm0, %xmm1 {%k1}
 ; KNL-NEXT:    vmovdqa %xmm1, %xmm0
 ; KNL-NEXT:    retq
@@ -1263,7 +1311,7 @@ define <2 x i64> @ternlog_masky_xor_and_mask(<2 x i64> %x, <2 x i64> %y, <2 x i6
 ; SKX-LABEL: ternlog_masky_xor_and_mask:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %xmm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    vxorpd %xmm1, %xmm0, %xmm1 {%k1}
 ; SKX-NEXT:    vmovapd %xmm1, %xmm0
 ; SKX-NEXT:    retq
@@ -1279,7 +1327,7 @@ define <4 x i64> @ternlog_masky_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %ymm2, %ymm3, %k1
-; KNL-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpxorq %ymm1, %ymm0, %ymm1 {%k1}
 ; KNL-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL-NEXT:    retq
@@ -1287,7 +1335,7 @@ define <4 x i64> @ternlog_masky_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
 ; SKX-LABEL: ternlog_masky_xor_and_mask_ymm:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpmovq2m %ymm2, %k1
-; SKX-NEXT:    vandpd {{.*}}(%rip), %ymm0, %ymm0
+; SKX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SKX-NEXT:    vxorpd %ymm1, %ymm0, %ymm1 {%k1}
 ; SKX-NEXT:    vmovapd %ymm1, %ymm0
 ; SKX-NEXT:    retq

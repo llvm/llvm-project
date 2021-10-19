@@ -152,11 +152,11 @@ define dso_local void @g() #0 {
 ; N64-NEXT:    daddu $sp, $sp, $1
 entry:
   %a = alloca %struct.S1, align 4
-  call void @f2(%struct.S1* byval align 4 %a)
+  call void @f2(%struct.S1* byval(%struct.S1) align 4 %a)
   ret void
 }
 
-declare dso_local void @f2(%struct.S1* byval align 4) #1
+declare dso_local void @f2(%struct.S1* byval(%struct.S1) align 4) #1
 
 ; O32-SDAG-LABEL: Initial selection DAG: %bb.0 'g2:entry'
 ; O32-SDAG: t{{.*}}: ch,glue = callseq_start t{{.*}}, TargetConstant:i32<{{.*}}>
@@ -255,10 +255,9 @@ define dso_local void @g2(%struct.S1* %a) {
 ; N32-NEXT:    .cfi_offset 31, -8
 ; N32-NEXT:    .cfi_offset 16, -16
 ; N32-NEXT:    move $5, $4
-; N32-NEXT:    sll $1, $5, 0
-; N32-NEXT:    lui $2, 1
-; N32-NEXT:    addu $2, $sp, $2
-; N32-NEXT:    sw $1, -4($2)
+; N32-NEXT:    lui $1, 1
+; N32-NEXT:    addu $1, $sp, $1
+; N32-NEXT:    sw $4, -4($1)
 ; N32-NEXT:    addiu $16, $sp, 8
 ; N32-NEXT:    ori $6, $zero, 65520
 ; N32-NEXT:    jal memcpy
@@ -348,7 +347,7 @@ entry:
   %1 = bitcast %struct.S1* %byval-temp to i8*
   %2 = bitcast %struct.S1* %0 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 1 %2, i32 65520, i1 false)
-  call void @f2(%struct.S1* byval align 4 %byval-temp)
+  call void @f2(%struct.S1* byval(%struct.S1) align 4 %byval-temp)
   ret void
 }
 
@@ -389,10 +388,8 @@ define dso_local i32 @g3(%struct.S1* %a, %struct.S1* %b) #0 {
 ; N32-NEXT:    .cfi_def_cfa_offset 16
 ; N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; N32-NEXT:    .cfi_offset 31, -8
-; N32-NEXT:    sll $1, $5, 0
-; N32-NEXT:    sw $1, 0($sp)
-; N32-NEXT:    sll $1, $4, 0
-; N32-NEXT:    sw $1, 4($sp)
+; N32-NEXT:    sw $5, 0($sp)
+; N32-NEXT:    sw $4, 4($sp)
 ; N32-NEXT:    jal memcpy
 ; N32-NEXT:    ori $6, $zero, 65520
 ; N32-NEXT:    addiu $2, $zero, 4

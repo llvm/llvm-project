@@ -32,7 +32,7 @@ define amdgpu_kernel void @v_fneg_f16(half addrspace(1)* %out, half addrspace(1)
 ; GCN: s_load_dword [[NEG_VALUE:s[0-9]+]],
 ; GCN: s_xor_b32 [[XOR:s[0-9]+]], [[NEG_VALUE]], 0x8000{{$}}
 ; GCN: v_mov_b32_e32 [[V_XOR:v[0-9]+]], [[XOR]]
-; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[V_XOR]]
+; GCN: {{flat|global}}_store_short v{{.+}}, [[V_XOR]]
 define amdgpu_kernel void @s_fneg_free_f16(half addrspace(1)* %out, i16 %in) #0 {
   %bc = bitcast i16 %in to half
   %fsub = fsub half -0.0, %bc

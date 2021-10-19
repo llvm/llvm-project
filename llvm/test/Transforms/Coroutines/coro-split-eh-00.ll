@@ -1,7 +1,6 @@
 ; Tests that coro-split removes cleanup code after coro.end in resume functions
 ; and retains it in the start function.
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f(i1 %val) "coroutine.presplit"="1" personality i32 3 {
 entry:
@@ -10,15 +9,15 @@ entry:
   call void @print(i32 0)
   br i1 %val, label %resume, label %susp
 
-susp:  
+susp:
   %0 = call i8 @llvm.coro.suspend(token none, i1 false)
-  switch i8 %0, label %suspend [i8 0, label %resume 
+  switch i8 %0, label %suspend [i8 0, label %resume
                                 i8 1, label %suspend]
 resume:
   invoke void @print(i32 1) to label %suspend unwind label %lpad
 
 suspend:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)  
+  call i1 @llvm.coro.end(i8* %hdl, i1 0)
   call void @print(i32 0) ; should not be present in f.resume
   ret i8* %hdl
 
@@ -79,9 +78,8 @@ declare void @llvm.coro.destroy(i8*)
 declare token @llvm.coro.id(i32, i8*, i8*, i8*)
 declare i8* @llvm.coro.alloc(token)
 declare i8* @llvm.coro.begin(token, i8*)
-declare i1 @llvm.coro.end(i8*, i1) 
+declare i1 @llvm.coro.end(i8*, i1)
 
 declare noalias i8* @malloc(i32)
 declare void @print(i32)
 declare void @free(i8*)
-

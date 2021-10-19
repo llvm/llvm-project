@@ -3,18 +3,18 @@
 
 %structTy = type { i8, i32, i32 }
 
-@e = common global %structTy zeroinitializer, align 4
+@e = common dso_local global %structTy zeroinitializer, align 4
 
 ;; Ensure that MergeConsecutiveStores doesn't incorrectly reorder
 ;; store operations.  The first test stores in increasing address
 ;; order, the second in decreasing -- but in both cases should have
 ;; the same result in memory in the end.
 
-define void @redundant_stores_merging() {
+define dso_local void @redundant_stores_merging() {
 ; CHECK-LABEL: redundant_stores_merging:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
-; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, e+4(%rip)
 ; CHECK-NEXT:    retq
   store i32 1, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 1), align 4
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -23,12 +23,12 @@ define void @redundant_stores_merging() {
 }
 
 ;; This variant tests PR25154.
-define void @redundant_stores_merging_reverse() {
+define dso_local void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
-; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
-; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
+; CHECK-NEXT:    movq %rax, e+4(%rip)
+; CHECK-NEXT:    movl $456, e+8(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -36,18 +36,18 @@ define void @redundant_stores_merging_reverse() {
   ret void
 }
 
-@b = common global [8 x i8] zeroinitializer, align 2
+@b = common dso_local global [8 x i8] zeroinitializer, align 2
 
 ;; The 2-byte store to offset 3 overlaps the 2-byte store to offset 2;
 ;; these must not be reordered in MergeConsecutiveStores such that the
 ;; store to 3 comes first (e.g. by merging the stores to 0 and 2 into
 ;; a movl, after the store to 3).
 
-define void @overlapping_stores_merging() {
+define dso_local void @overlapping_stores_merging() {
 ; CHECK-LABEL: overlapping_stores_merging:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
-; CHECK-NEXT:    movw $2, b+{{.*}}(%rip)
+; CHECK-NEXT:    movl $1, b(%rip)
+; CHECK-NEXT:    movw $2, b+3(%rip)
 ; CHECK-NEXT:    retq
   store i16 0, i16* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @b, i64 0, i64 2) to i16*), align 2
   store i16 2, i16* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @b, i64 0, i64 3) to i16*), align 1
@@ -55,7 +55,7 @@ define void @overlapping_stores_merging() {
   ret void
 }
 
-define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #0 {
+define dso_local void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_16_consecutive_bytes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %xmm0, (%rdi)
@@ -114,7 +114,7 @@ define void @extract_vector_store_16_consecutive_bytes(<2 x i64> %v, i8* %ptr) #
 
 ; PR34217 - https://bugs.llvm.org/show_bug.cgi?id=34217
 
-define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #0 {
+define dso_local void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #0 {
 ; CHECK-LABEL: extract_vector_store_32_consecutive_bytes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm0, (%rdi)
@@ -221,7 +221,7 @@ define void @extract_vector_store_32_consecutive_bytes(<4 x i64> %v, i8* %ptr) #
 }
 
 ; https://bugs.llvm.org/show_bug.cgi?id=43446
-define void @pr43446_0(i64 %x) {
+define dso_local void @pr43446_0(i64 %x) {
 ; CHECK-LABEL: pr43446_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, (%rdi)
@@ -232,7 +232,7 @@ define void @pr43446_0(i64 %x) {
   store i1 true, i1* %b, align 1
   ret void
 }
-define void @pr43446_1(i8* %a) {
+define dso_local void @pr43446_1(i8* %a) {
 ; CHECK-LABEL: pr43446_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movb $1, (%rdi)
@@ -243,7 +243,7 @@ define void @pr43446_1(i8* %a) {
   ret void
 }
 
-define void @rotate16_in_place(i8* %p) {
+define dso_local void @rotate16_in_place(i8* %p) {
 ; CHECK-LABEL: rotate16_in_place:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rolw $8, (%rdi)
@@ -257,7 +257,7 @@ define void @rotate16_in_place(i8* %p) {
   ret void
 }
 
-define void @rotate16(i8* %p, i8* %q) {
+define dso_local void @rotate16(i8* %p, i8* %q) {
 ; CHECK-LABEL: rotate16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
@@ -275,7 +275,7 @@ define void @rotate16(i8* %p, i8* %q) {
   ret void
 }
 
-define void @rotate32_in_place(i16* %p) {
+define dso_local void @rotate32_in_place(i16* %p) {
 ; CHECK-LABEL: rotate32_in_place:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    roll $16, (%rdi)
@@ -289,7 +289,7 @@ define void @rotate32_in_place(i16* %p) {
   ret void
 }
 
-define void @rotate32(i16* %p) {
+define dso_local void @rotate32(i16* %p) {
 ; CHECK-LABEL: rotate32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %eax
@@ -307,7 +307,7 @@ define void @rotate32(i16* %p) {
   ret void
 }
 
-define void @rotate64_in_place(i32* %p) {
+define dso_local void @rotate64_in_place(i32* %p) {
 ; CHECK-LABEL: rotate64_in_place:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rolq $32, (%rdi)
@@ -321,7 +321,7 @@ define void @rotate64_in_place(i32* %p) {
   ret void
 }
 
-define void @rotate64(i32* %p) {
+define dso_local void @rotate64(i32* %p) {
 ; CHECK-LABEL: rotate64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -339,7 +339,7 @@ define void @rotate64(i32* %p) {
   ret void
 }
 
-define void @rotate64_iterate(i16* %p) {
+define dso_local void @rotate64_iterate(i16* %p) {
 ; CHECK-LABEL: rotate64_iterate:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -367,7 +367,7 @@ define void @rotate64_iterate(i16* %p) {
 
 ; TODO: recognize this as 2 rotates?
 
-define void @rotate32_consecutive(i16* %p) {
+define dso_local void @rotate32_consecutive(i16* %p) {
 ; CHECK-LABEL: rotate32_consecutive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
@@ -400,7 +400,7 @@ define void @rotate32_consecutive(i16* %p) {
 
 ; Same as above, but now the stores are not all consecutive.
 
-define void @rotate32_twice(i16* %p) {
+define dso_local void @rotate32_twice(i16* %p) {
 ; CHECK-LABEL: rotate32_twice:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl (%rdi), %eax
@@ -429,7 +429,7 @@ define void @rotate32_twice(i16* %p) {
   ret void
 }
 
-define void @trunc_i16_to_i8(i16 %x, i8* %p) {
+define dso_local void @trunc_i16_to_i8(i16 %x, i8* %p) {
 ; CHECK-LABEL: trunc_i16_to_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movw %di, (%rsi)
@@ -443,7 +443,7 @@ define void @trunc_i16_to_i8(i16 %x, i8* %p) {
   ret void
 }
 
-define void @trunc_i32_to_i8(i32 %x, i8* %p) {
+define dso_local void @trunc_i32_to_i8(i32 %x, i8* %p) {
 ; CHECK-LABEL: trunc_i32_to_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, (%rsi)
@@ -465,7 +465,7 @@ define void @trunc_i32_to_i8(i32 %x, i8* %p) {
   ret void
 }
 
-define void @trunc_i32_to_i16(i32 %x, i16* %p) {
+define dso_local void @trunc_i32_to_i16(i32 %x, i16* %p) {
 ; CHECK-LABEL: trunc_i32_to_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, (%rsi)
@@ -479,7 +479,37 @@ define void @trunc_i32_to_i16(i32 %x, i16* %p) {
   ret void
 }
 
-define void @trunc_i64_to_i8(i64 %x, i8* %p) {
+define dso_local void @be_i32_to_i16(i32 %x, i16* %p0) {
+; CHECK-LABEL: be_i32_to_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i32 %x, 16
+  %t0 = trunc i32 %x to i16
+  %t1 = trunc i32 %sh1 to i16
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  store i16 %t0, i16* %p1, align 2
+  store i16 %t1, i16* %p0, align 2
+  ret void
+}
+
+define dso_local void @be_i32_to_i16_order(i32 %x, i16* %p0) {
+; CHECK-LABEL: be_i32_to_i16_order:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i32 %x, 16
+  %t0 = trunc i32 %x to i16
+  %t1 = trunc i32 %sh1 to i16
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  store i16 %t1, i16* %p0, align 2
+  store i16 %t0, i16* %p1, align 2
+  ret void
+}
+
+define dso_local void @trunc_i64_to_i8(i64 %x, i8* %p) {
 ; CHECK-LABEL: trunc_i64_to_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rsi)
@@ -517,7 +547,7 @@ define void @trunc_i64_to_i8(i64 %x, i8* %p) {
   ret void
 }
 
-define void @trunc_i64_to_i16(i64 %x, i16* %p) {
+define dso_local void @trunc_i64_to_i16(i64 %x, i16* %p) {
 ; CHECK-LABEL: trunc_i64_to_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rsi)
@@ -539,7 +569,7 @@ define void @trunc_i64_to_i16(i64 %x, i16* %p) {
   ret void
 }
 
-define void @trunc_i64_to_i32(i64 %x, i32* %p) {
+define dso_local void @trunc_i64_to_i32(i64 %x, i32* %p) {
 ; CHECK-LABEL: trunc_i64_to_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rsi)
@@ -550,5 +580,121 @@ define void @trunc_i64_to_i32(i64 %x, i32* %p) {
   store i32 %t1, i32* %p, align 4
   %p1 = getelementptr inbounds i32, i32* %p, i64 1
   store i32 %t2, i32* %p1, align 4
+  ret void
+}
+
+define dso_local void @be_i64_to_i32(i64 %x, i32* %p0) {
+; CHECK-LABEL: be_i64_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i64 %x, 32
+  %t0 = trunc i64 %x to i32
+  %t1 = trunc i64 %sh1 to i32
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  store i32 %t0, i32* %p1, align 4
+  store i32 %t1, i32* %p0, align 4
+  ret void
+}
+
+define dso_local void @be_i64_to_i32_order(i64 %x, i32* %p0) {
+; CHECK-LABEL: be_i64_to_i32_order:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i64 %x, 32
+  %t0 = trunc i64 %x to i32
+  %t1 = trunc i64 %sh1 to i32
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  store i32 %t1, i32* %p0, align 4
+  store i32 %t0, i32* %p1, align 4
+  ret void
+}
+
+; https://llvm.org/PR50623
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  ret void
+}
+
+; Change the order of the stores.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole2(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    movw %ax, 2(%rsi)
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p, align 1
+  ret void
+}
+
+; Change offset.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole3(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, 1(%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
+; CHECK-NEXT:    retq
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p1, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  ret void
+}
+
+; Change offset.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole4(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, 2(%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i8, i8* %p, i64 2
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p2, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %pcast, align 1
   ret void
 }

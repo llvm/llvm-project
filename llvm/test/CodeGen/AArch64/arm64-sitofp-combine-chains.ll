@@ -5,9 +5,9 @@
 ; operations in this function both ended up direct successors to the EntryToken
 ; and could be reordered.
 
-@var = global i32 0, align 4
+@var = dso_local global i32 0, align 4
 
-define float @foo() {
+define dso_local float @foo() {
 ; CHECK-LABEL: foo:
   ; Load must come before we clobber @var
 ; CHECK: adrp x[[VARBASE:[0-9]+]], {{_?var}}

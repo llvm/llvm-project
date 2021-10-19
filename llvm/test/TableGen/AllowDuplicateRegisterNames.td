@@ -27,7 +27,7 @@ class ArchReg<string n, list <string> alt, list <RegAltNameIndex> altidx>
 
 def ABIRegAltName : RegAltNameIndex;
 
-foreach i = 0-3 in {
+foreach i = 0...3 in {
   def R#i#_32 : ArchReg<"r"#i, ["x"#i], [ABIRegAltName]>;
   def R#i#_64 : ArchReg<"r"#i, ["x"#i], [ABIRegAltName]>;
 }

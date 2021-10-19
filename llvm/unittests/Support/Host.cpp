@@ -39,7 +39,7 @@ protected:
     // physical cores, which is currently only supported/tested on
     // some systems.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
-           (Host.isX86() && (Host.isOSDarwin() || Host.isOSLinux())) ||
+           Host.isOSDarwin() || (Host.isX86() && Host.isOSLinux()) ||
            (Host.isPPC64() && Host.isOSLinux()) ||
            (Host.isSystemZ() && (Host.isOSLinux() || Host.isOSzOS()));
   }
@@ -282,6 +282,88 @@ CPU revision    : 0
 )";
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CarmelProcCpuInfo), "carmel");
+
+  // Snapdragon mixed implementer quirk
+  const std::string Snapdragon865ProcCPUInfo = R"(
+processor       : 0
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x51
+CPU architecture: 8
+CPU variant     : 0xd
+CPU part        : 0x805
+CPU revision    : 14
+processor       : 1
+processor       : 2
+processor       : 3
+processor       : 4
+processor       : 5
+processor       : 6
+BogoMIPS        : 38.40
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+CPU implementer : 0x41
+CPU architecture: 8
+CPU variant     : 0x1
+CPU part        : 0xd0d
+CPU revision    : 0
+)";
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(Snapdragon865ProcCPUInfo), "cortex-a77");
+}
+
+TEST(getLinuxHostCPUName, s390x) {
+  SmallVector<std::string> ModelIDs(
+      {"3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});
+  SmallVector<std::string> VectorSupport({"", "vx"});
+  SmallVector<StringRef> ExpectedCPUs;
+
+  // Model Id: 3931
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("arch14");
+
+  // Model Id: 8561
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("z15");
+
+  // Model Id: 3906
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("z14");
+
+  // Model Id: 2964
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("z13");
+
+  // Model Id: 2827
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("zEC12");
+
+  // Model Id: 2817
+  ExpectedCPUs.push_back("z196");
+  ExpectedCPUs.push_back("z196");
+
+  // Model Id: 2097
+  ExpectedCPUs.push_back("z10");
+  ExpectedCPUs.push_back("z10");
+
+  // Model Id: 2064
+  ExpectedCPUs.push_back("generic");
+  ExpectedCPUs.push_back("generic");
+
+  const std::string DummyBaseVectorInfo =
+      "features : esan3 zarch stfle msa ldisp eimm dfp edat etf3eh highgprs "
+      "te ";
+  const std::string DummyBaseMachineInfo =
+      "processor 0: version = FF,  identification = 059C88,  machine = ";
+
+  int CheckIndex = 0;
+  for (size_t I = 0; I < ModelIDs.size(); I++) {
+    for (size_t J = 0; J < VectorSupport.size(); J++) {
+      const std::string DummyCPUInfo = DummyBaseVectorInfo + VectorSupport[J] +
+                                       "\n" + DummyBaseMachineInfo +
+                                       ModelIDs[I];
+      EXPECT_EQ(sys::detail::getHostCPUNameForS390x(DummyCPUInfo),
+                ExpectedCPUs[CheckIndex++]);
+    }
+  }
 }
 
 #if defined(__APPLE__) || defined(_AIX)
@@ -348,9 +430,15 @@ TEST_F(HostTest, getMacOSHostVersion) {
   unsigned HostMajor, HostMinor, HostMicro;
   ASSERT_EQ(HostTriple.getMacOSXVersion(HostMajor, HostMinor, HostMicro), true);
 
-  // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
-  // triples.
-  ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+  if (SystemMajor > 10) {
+    // Don't compare the 'Minor' and 'Micro' versions, as they're always '0' for
+    // the 'Darwin' triples on 11.x.
+    ASSERT_EQ(SystemMajor, HostMajor);
+  } else {
+    // Don't compare the 'Micro' version, as it's always '0' for the 'Darwin'
+    // triples.
+    ASSERT_EQ(std::tie(SystemMajor, SystemMinor), std::tie(HostMajor, HostMinor));
+  }
 }
 #endif
 
@@ -398,5 +486,34 @@ TEST_F(HostTest, AIXVersionDetect) {
   TargetTriple.getOSVersion(TargetMajor, TargetMinor, TargetMicro);
   ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
             std::tie(TargetMajor, TargetMinor));
+}
+
+TEST_F(HostTest, AIXHostCPUDetect) {
+  // Return a value based on the current processor implementation mode.
+  const char *ExePath = "/usr/sbin/getsystype";
+  StringRef argv[] = {ExePath, "-i"};
+  std::unique_ptr<char[]> Buffer;
+  off_t Size;
+  ASSERT_EQ(runAndGetCommandOutput(ExePath, argv, Buffer, Size), true);
+  StringRef CPU(Buffer.get(), Size);
+  StringRef MCPU = StringSwitch<const char *>(CPU)
+                       .Case("POWER 4\n", "pwr4")
+                       .Case("POWER 5\n", "pwr5")
+                       .Case("POWER 6\n", "pwr6")
+                       .Case("POWER 7\n", "pwr7")
+                       .Case("POWER 8\n", "pwr8")
+                       .Case("POWER 9\n", "pwr9")
+                       .Case("POWER 10\n", "pwr10")
+                       .Default("unknown");
+
+  StringRef HostCPU = sys::getHostCPUName();
+
+  // Just do the comparison on the base implementation mode.
+  if (HostCPU == "970")
+    HostCPU = StringRef("pwr4");
+  else
+    HostCPU = HostCPU.rtrim('x');
+
+  EXPECT_EQ(HostCPU, MCPU);
 }
 #endif

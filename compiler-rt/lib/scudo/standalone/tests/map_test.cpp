@@ -20,7 +20,7 @@ TEST(ScudoMapTest, PageSize) {
             static_cast<scudo::uptr>(getpagesize()));
 }
 
-TEST(ScudoMapTest, MapNoAccessUnmap) {
+TEST(ScudoMapDeathTest, MapNoAccessUnmap) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
   scudo::MapPlatformData Data = {};
   void *P = scudo::map(nullptr, Size, MappingName, MAP_NOACCESS, &Data);
@@ -29,16 +29,24 @@ TEST(ScudoMapTest, MapNoAccessUnmap) {
   scudo::unmap(P, Size, UNMAP_ALL, &Data);
 }
 
-TEST(ScudoMapTest, MapUnmap) {
+TEST(ScudoMapDeathTest, MapUnmap) {
   const scudo::uptr Size = 4 * scudo::getPageSizeCached();
-  void *P = scudo::map(nullptr, Size, MappingName, 0, nullptr);
-  EXPECT_NE(P, nullptr);
-  memset(P, 0xaa, Size);
-  scudo::unmap(P, Size, 0, nullptr);
-  EXPECT_DEATH(memset(P, 0xbb, Size), "");
+  EXPECT_DEATH(
+      {
+        // Repeat few time to avoid missing crash if it's mmaped by unrelated
+        // code.
+        for (int i = 0; i < 10; ++i) {
+          void *P = scudo::map(nullptr, Size, MappingName, 0, nullptr);
+          if (!P)
+            continue;
+          scudo::unmap(P, Size, 0, nullptr);
+          memset(P, 0xbb, Size);
+        }
+      },
+      "");
 }
 
-TEST(ScudoMapTest, MapWithGuardUnmap) {
+TEST(ScudoMapDeathTest, MapWithGuardUnmap) {
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   const scudo::uptr Size = 4 * PageSize;
   scudo::MapPlatformData Data = {};

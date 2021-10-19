@@ -50,7 +50,6 @@ static_library("LLVMRISCVCodeGen") {
     "AsmParser:RISCVGenAsmMatcher",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
@@ -67,8 +66,10 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",
+    "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
+    "RISCVInsertVSETVLI.cpp",
     "RISCVInstrInfo.cpp",
     "RISCVInstructionSelector.cpp",
     "RISCVLegalizerInfo.cpp",
@@ -96,6 +97,5 @@ group("RISCV") {
     "Disassembler",
     "MCTargetDesc",
     "TargetInfo",
-    "Utils",
   ]
 }

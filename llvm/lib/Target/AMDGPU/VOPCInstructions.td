@@ -27,10 +27,6 @@ class VOPC_SDWAe <bits<8> op, VOPProfile P> : VOP_SDWAe <P> {
   let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
   let Inst{24-17} = op;
   let Inst{31-25} = 0x3e; // encoding
-
-  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
-  let Inst{42-40} = 0;
-  let Inst{44-43} = 0;
 }
 
 class VOPC_SDWA9e <bits<8> op, VOPProfile P> : VOP_SDWA9Be <P> {
@@ -56,6 +52,8 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let Asm32 = "$src0, $src1";
   // The destination for 32-bit encoding is implicit.
   let HasDst32 = 0;
+  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
+  let EmitDstSel = 0;
   let Outs64 = (outs VOPDstS64orS32:$sdst);
   list<SchedReadWrite> Schedule = sched;
 }
@@ -106,6 +104,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.PseudoInstr # " " # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let VOPC = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -121,6 +121,9 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -229,7 +232,7 @@ multiclass VOPC_Pseudos <string opName,
 
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
-    let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
+    let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
     let isConvergent = DefExec;
     let isCompare = 1;
@@ -760,7 +763,7 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 
 // We need to use COPY_TO_REGCLASS to w/a the problem when ReplaceAllUsesWith()
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
-multiclass ICMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
@@ -807,7 +810,7 @@ defm : ICMP_Pattern <COND_SGE, V_CMP_GE_I16_e64, i16>;
 defm : ICMP_Pattern <COND_SLT, V_CMP_LT_I16_e64, i16>;
 defm : ICMP_Pattern <COND_SLE, V_CMP_LE_I16_e64, i16>;
 
-multiclass FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),

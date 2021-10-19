@@ -57,11 +57,10 @@ DynamicSymbols:
   - Name:    ddd
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check we report a warning if there is no dynamic symbol section in the object.
 
@@ -103,11 +102,10 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check what we do when the index of the first symbol in the dynamic symbol table
 ## included in the hash table is larger than the number of dynamic symbols.
@@ -125,7 +123,7 @@ ProgramHeaders:
 # SYMNDX-NEXT:   Shift Count: 0
 # SYMNDX-NEXT:   Bloom Filter: [0x1]
 # SYMNDX-NEXT:   Buckets: [2]
-# SYMNDX-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: the first hashed symbol index (2) is larger than the number of dynamic symbols (2)
+# SYMNDX-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: the first hashed symbol index (2) is greater than or equal to the number of dynamic symbols (2)
 # SYMNDX-NEXT: }
 
 --- !ELF
@@ -156,11 +154,10 @@ DynamicSymbols:
   - Name:    aaa
     Binding: STB_GLOBAL
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check we emit a warning when the dynamic symbol table is empty.
 ## A valid dynamic symbol table should have at least one symbol: the symbol with index 0.
@@ -209,11 +206,10 @@ Sections:
     Type: SHT_DYNSYM
     Size: 0
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Linkers might produce an empty no-op SHT_GNU_HASH section when
 ## there are no dynamic symbols or when all dynamic symbols are undefined.
@@ -277,11 +273,10 @@ Sections:
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R, PF_X ]
-    Sections:
-      - Section: .gnu.hash
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    FirstSec: .gnu.hash
+    LastSec:  .dynamic
 
 ## Check we report a proper warning when a hash table goes past the end of the file.
 

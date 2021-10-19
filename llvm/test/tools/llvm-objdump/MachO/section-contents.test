@@ -1,16 +1,16 @@
 RUN: llvm-objdump --macho -s %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
-CHECK: Contents of section __text:
+CHECK: Contents of section __TEXT,__text:
 CHECK:  0000 554889e5 4883ec20 488d0500 000000c7  UH..H.. H.......
 CHECK:  0010 45fc0000 0000897d f8488975 f0488955  E......}.H.u.H.U
 CHECK:  0020 e84889c7 b000e800 000000b9 00000000  .H..............
 CHECK:  0030 8945e489 c84883c4 205dc3             .E...H.. ].
-CHECK: Contents of section __cstring:
+CHECK: Contents of section __TEXT,__cstring:
 CHECK:  003b 48656c6c 6f20776f 726c640a 00        Hello world..
-CHECK: Contents of section __compact_unwind:
+CHECK: Contents of section __LD,__compact_unwind:
 CHECK:  0048 00000000 00000000 3b000000 00000001  ........;.......
 CHECK:  0058 00000000 00000000 00000000 00000000  ................
-CHECK: Contents of section __eh_frame:
+CHECK: Contents of section __TEXT,__eh_frame:
 CHECK:  0068 14000000 00000000 017a5200 01781001  .........zR..x..
 CHECK:  0078 100c0708 90010000 24000000 1c000000  ........$.......
 CHECK:  0088 78ffffff ffffffff 3b000000 00000000  x.......;.......

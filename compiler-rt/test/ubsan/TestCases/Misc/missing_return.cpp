@@ -5,7 +5,7 @@
 // XFAIL: openbsd
 
 // CHECK: missing_return.cpp:[[@LINE+1]]:5: runtime error: execution reached the end of a value-returning function without returning a value
-int f() {
+int f() __attribute__((noinline)) {
 // CHECK-STACKTRACE: #0 {{.*}}f{{.*}}missing_return.cpp:[[@LINE-1]]
 }
 

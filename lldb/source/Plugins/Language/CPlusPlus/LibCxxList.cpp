@@ -27,8 +27,7 @@ namespace {
 class ListEntry {
 public:
   ListEntry() = default;
-  ListEntry(ValueObjectSP entry_sp) : m_entry_sp(entry_sp) {}
-  ListEntry(const ListEntry &rhs) = default;
+  ListEntry(ValueObjectSP entry_sp) : m_entry_sp(std::move(entry_sp)) {}
   ListEntry(ValueObject *entry)
       : m_entry_sp(entry ? entry->GetSP() : ValueObjectSP()) {}
 
@@ -73,9 +72,8 @@ private:
 class ListIterator {
 public:
   ListIterator() = default;
-  ListIterator(ListEntry entry) : m_entry(entry) {}
-  ListIterator(ValueObjectSP entry) : m_entry(entry) {}
-  ListIterator(const ListIterator &rhs) = default;
+  ListIterator(ListEntry entry) : m_entry(std::move(entry)) {}
+  ListIterator(ValueObjectSP entry) : m_entry(std::move(entry)) {}
   ListIterator(ValueObject *entry) : m_entry(entry) {}
 
   ValueObjectSP value() { return m_entry.GetEntry(); }

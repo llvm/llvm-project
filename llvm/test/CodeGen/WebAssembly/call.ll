@@ -1,11 +1,10 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL,SLOW-NO-TAIL %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL,FAST,FAST-NO-TAIL %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,TAIL,SLOW-TAIL %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,TAIL,FAST-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,SLOW-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,FAST-TAIL %s
 
 ; Test that basic call operations assemble as expected.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare i32 @i32_nullary()

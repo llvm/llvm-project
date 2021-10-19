@@ -37,7 +37,6 @@
 ;	   C[i][j] += A[i][k] * B[k][j];
 ;
 ; CHECK:          if (ni >= 1) {
-; CHECK-NEXT:            // Inter iteration alias-free
 ; CHECK-NEXT:            // 1st level tiling - Tiles
 ; CHECK-NEXT:            for (int c0 = 0; c0 <= floord(nj - 1, 2048); c0 += 1)
 ; CHECK-NEXT:              for (int c1 = 0; c1 <= floord(nk - 1, 256); c1 += 1) {
@@ -45,10 +44,9 @@
 ; CHECK-NEXT:                  for (int c4 = 256 * c1; c4 <= min(nk - 1, 256 * c1 + 255); c4 += 1)
 ; CHECK-NEXT:                    CopyStmt_0(0, c3, c4);
 ; CHECK-NEXT:                for (int c2 = 0; c2 <= floord(ni - 1, 96); c2 += 1) {
-; CHECK-NEXT:                  if (c0 == 0)
-; CHECK-NEXT:                    for (int c3 = 96 * c2; c3 <= min(ni - 1, 96 * c2 + 95); c3 += 1)
-; CHECK-NEXT:                      for (int c5 = 256 * c1; c5 <= min(nk - 1, 256 * c1 + 255); c5 += 1)
-; CHECK-NEXT:                        CopyStmt_1(c3, 0, c5);
+; CHECK-NEXT:                    for (int c6 = 96 * c2; c6 <= min(ni - 1, 96 * c2 + 95); c6 += 1)
+; CHECK-NEXT:                      for (int c7 = 256 * c1; c7 <= min(nk - 1, 256 * c1 + 255); c7 += 1)
+; CHECK-NEXT:                        CopyStmt_1(c0, c1, c2, c6, c7);
 ; CHECK-NEXT:                  // 1st level tiling - Points
 ; CHECK-NEXT:                  // Register tiling - Tiles
 ; CHECK-NEXT:                  {

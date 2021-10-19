@@ -15,7 +15,7 @@ A breakpoint location is defined by the breakpoint that produces it,
 and the address that resulted in this particular instantiation.
 Each breakpoint location has its settable options.
 
-SBBreakpoint contains SBBreakpointLocation(s). See docstring of SBBreakpoint
+:py:class:`SBBreakpoint` contains SBBreakpointLocation(s). See docstring of SBBreakpoint
 for retrieval of an SBBreakpointLocation from an SBBreakpoint."
 ) SBBreakpointLocation;
 class SBBreakpointLocation
@@ -74,13 +74,13 @@ public:
 
     %feature("docstring", "
     Set the callback to the given Python function name.
-    The function takes three arguments (frame, bp_loc, dict).") SetScriptCallbackFunction;
+    The function takes three arguments (frame, bp_loc, internal_dict).") SetScriptCallbackFunction;
     void
     SetScriptCallbackFunction (const char *callback_function_name);
 
     %feature("docstring", "
     Set the name of the script function to be called when the breakpoint is hit.
-    To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+    To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and
     when the breakpoint is hit the extra_args will be passed to the callback function.") SetScriptCallbackFunction;
     SBError
     SetScriptCallbackFunction (const char *callback_function_name,

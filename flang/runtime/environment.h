@@ -14,9 +14,9 @@
 
 namespace Fortran::runtime {
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif FLANG_LITTLE_ENDIAN
 constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
@@ -29,6 +29,7 @@ std::optional<Convert> GetConvertFromString(const char *, std::size_t);
 
 struct ExecutionEnvironment {
   void Configure(int argc, const char *argv[], const char *envp[]);
+  const char *GetEnv(const char *name, std::size_t name_length);
 
   int argc;
   const char **argv;

@@ -1,5 +1,5 @@
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -O2 -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
-; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -O2 -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
+; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize -loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
 ; REQUIRES: asserts
 
 @a = global [1024 x i8] zeroinitializer, align 16

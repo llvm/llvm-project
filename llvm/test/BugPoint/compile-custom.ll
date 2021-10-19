@@ -1,4 +1,4 @@
-; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%shlibext --compile-custom --compile-command="%python %/s.py arg1 arg2" --output-prefix %t %s | FileCheck %s
+; RUN: bugpoint -load %llvmshlibdir/BugpointPasses%pluginext --compile-custom --compile-command="%python %/s.py arg1 arg2" --output-prefix %t %s | FileCheck %s
 ; REQUIRES: plugins
 
 ; Test that arguments are correctly passed in --compile-command.  The output

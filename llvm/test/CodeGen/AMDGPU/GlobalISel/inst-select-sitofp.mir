@@ -18,17 +18,16 @@ body: |
     ; WAVE64: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; WAVE64: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; WAVE64: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; WAVE64: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; WAVE32-LABEL: name: sitofp
-    ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
     ; WAVE32: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; WAVE32: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
-    ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, 0, 0, implicit $exec :: (store 4, addrspace 1)
+    ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; WAVE32: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     %0:sgpr(s32) = COPY $sgpr0
 
     %1:vgpr(s32) = COPY $vgpr0
@@ -41,8 +40,8 @@ body: |
     ; sitofp v
     %4:vgpr(s32) = G_SITOFP %1
 
-    G_STORE %3, %2 :: (store 4, addrspace 1)
-    G_STORE %4, %2 :: (store 4, addrspace 1)
+    G_STORE %3, %2 :: (store (s32), addrspace 1)
+    G_STORE %4, %2 :: (store (s32), addrspace 1)
 ...
 
 ---
@@ -63,7 +62,6 @@ body: |
     ; WAVE64: $vgpr0 = COPY %1
     ; WAVE32-LABEL: name: sitofp_s32_to_s16_vv
     ; WAVE32: liveins: $vgpr0
-    ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
     ; WAVE32: %1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec
@@ -92,7 +90,6 @@ body: |
     ; WAVE64: $vgpr0 = COPY %1
     ; WAVE32-LABEL: name: sitofp_s32_to_s16_vs
     ; WAVE32: liveins: $sgpr0
-    ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32: [[V_CVT_F32_I32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e32 [[COPY]], implicit $mode, implicit $exec
     ; WAVE32: %1:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 [[V_CVT_F32_I32_e32_]], implicit $mode, implicit $exec

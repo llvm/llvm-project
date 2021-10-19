@@ -8,6 +8,7 @@
 
 // <numeric>
 
+// Became constexpr in C++20
 // template <InputIterator InIter,
 //           OutputIterator<auto, const InIter::value_type&> OutIter,
 //           Callable<auto, const InIter::value_type&, const InIter::value_type&> BinaryOperation>
@@ -20,13 +21,71 @@
 
 #include <numeric>
 #include <functional>
+#include <string>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template <class InIter, class OutIter>
+#if TEST_STD_VER > 17
+struct rvalue_subtractable
+{
+    bool correctOperatorUsed = false;
+
+    // make sure the predicate is passed an rvalue and an lvalue (so check that the first argument was moved)
+    constexpr rvalue_subtractable operator()(rvalue_subtractable const&, rvalue_subtractable&& r) {
+        r.correctOperatorUsed = true;
+        return std::move(r);
+    }
+};
+
+constexpr rvalue_subtractable operator-(rvalue_subtractable const&, rvalue_subtractable& rhs)
+{
+    rhs.correctOperatorUsed = false;
+    return rhs;
+}
+
+constexpr rvalue_subtractable operator-(rvalue_subtractable const&, rvalue_subtractable&& rhs)
+{
+    rhs.correctOperatorUsed = true;
+    return std::move(rhs);
+}
+
+constexpr void
+test_use_move()
+{
+    const std::size_t size = 100;
+    rvalue_subtractable arr[size];
+    rvalue_subtractable res1[size];
+    rvalue_subtractable res2[size];
+    std::adjacent_difference(arr, arr + size, res1);
+    std::adjacent_difference(arr, arr + size, res2, /*predicate=*/rvalue_subtractable());
+    // start at 1 because the first element is not moved
+    for (unsigned i = 1; i < size; ++i) assert(res1[i].correctOperatorUsed);
+    for (unsigned i = 1; i < size; ++i) assert(res2[i].correctOperatorUsed);
+}
+#endif // TEST_STD_VER > 17
+
+// C++20 can use string in constexpr evaluation, but both libc++ and MSVC
+// don't have the support yet. In these cases omit the constexpr test.
+// FIXME Remove constexpr string workaround introduced in D90569
+#if TEST_STD_VER > 17 && \
+	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
 void
+#else
+TEST_CONSTEXPR_CXX20 void
+#endif
+test_string()
+{
+    std::string sa[] = {"a", "b", "c"};
+    std::string sr[] = {"a", "ba", "cb"};
+    std::string output[3];
+    std::adjacent_difference(sa, sa + 3, output, std::plus<std::string>());
+    for (unsigned i = 0; i < 3; ++i) assert(output[i] == sr[i]);
+}
+
+template <class InIter, class OutIter>
+TEST_CONSTEXPR_CXX20 void
 test()
 {
     int ia[] = {15, 10, 6, 3, 1};
@@ -48,18 +107,18 @@ class X
 {
     int i_;
 
-    X& operator=(const X&);
+    TEST_CONSTEXPR_CXX20 X& operator=(const X&);
 public:
-    explicit X(int i) : i_(i) {}
-    X(const X& x) : i_(x.i_) {}
-    X& operator=(X&& x)
+    TEST_CONSTEXPR_CXX20 explicit X(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 X(const X& x) : i_(x.i_) {}
+    TEST_CONSTEXPR_CXX20 X& operator=(X&& x)
     {
         i_ = x.i_;
         x.i_ = -1;
         return *this;
     }
 
-    friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
+    TEST_CONSTEXPR_CXX20 friend X operator-(const X& x, const X& y) {return X(x.i_ - y.i_);}
 
     friend class Y;
 };
@@ -68,23 +127,24 @@ class Y
 {
     int i_;
 
-    Y& operator=(const Y&);
+    TEST_CONSTEXPR_CXX20 Y& operator=(const Y&);
 public:
-    explicit Y(int i) : i_(i) {}
-    Y(const Y& y) : i_(y.i_) {}
-    void operator=(const X& x) {i_ = x.i_;}
+    TEST_CONSTEXPR_CXX20 explicit Y(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 Y(const Y& y) : i_(y.i_) {}
+    TEST_CONSTEXPR_CXX20 void operator=(const X& x) {i_ = x.i_;}
 };
 
 #endif
 
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
-    test<input_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, int*>();
+    test<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
+    test<cpp17_input_iterator<const int*>, int*>();
 
     test<forward_iterator<const int*>, output_iterator<int*> >();
     test<forward_iterator<const int*>, forward_iterator<int*> >();
@@ -116,5 +176,26 @@ int main(int, char**)
     std::adjacent_difference(x, x+3, y, std::minus<X>());
 #endif
 
-  return 0;
+#if TEST_STD_VER > 17
+    test_use_move();
+#endif // TEST_STD_VER > 17
+    // C++20 can use string in constexpr evaluation, but both libc++ and MSVC
+    // don't have the support yet. In these cases omit the constexpr test.
+    // FIXME Remove constexpr string workaround introduced in D90569
+#if TEST_STD_VER > 17 && \
+	(!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
+	if (!std::is_constant_evaluated())
+#endif
+    test_string();
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

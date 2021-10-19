@@ -110,12 +110,12 @@ define void @local_load_v3i1(i32 addrspace(1)* %out, i32 addrspace(1)* %in, <3 x
 ; CHECK-NEXT:    movl %ebp, %esi
 ; CHECK-NEXT:    movl %ebx, %edx
 ; CHECK-NEXT:    movl %r15d, %ecx
-; CHECK-NEXT:    callq masked_load_v3
+; CHECK-NEXT:    callq masked_load_v3@PLT
 ; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    movl %ebp, %esi
 ; CHECK-NEXT:    movl %ebx, %edx
 ; CHECK-NEXT:    movl %r15d, %ecx
-; CHECK-NEXT:    callq masked_store4_v3
+; CHECK-NEXT:    callq masked_store4_v3@PLT
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

@@ -20,6 +20,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 using namespace clang;
@@ -35,7 +36,7 @@ CGOpenMPRuntimeAMDGCN::CGOpenMPRuntimeAMDGCN(CodeGenModule &CGM)
 llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUWarpSize(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   // return constant compile-time target-specific warp size
-  unsigned WarpSize = CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size);
+  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   return Bld.getInt32(WarpSize);
 }
 
@@ -44,18 +45,4 @@ llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUThreadID(CodeGenFunction &CGF) {
   llvm::Function *F =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workitem_id_x);
   return Bld.CreateCall(F, llvm::None, "nvptx_tid");
-}
-
-llvm::Value *CGOpenMPRuntimeAMDGCN::getGPUNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Module *M = &CGF.CGM.getModule();
-  const char *LocSize = "__ockl_get_local_size";
-  llvm::Function *F = M->getFunction(LocSize);
-  if (!F) {
-    F = llvm::Function::Create(
-        llvm::FunctionType::get(CGF.Int64Ty, {CGF.Int32Ty}, false),
-        llvm::GlobalVariable::ExternalLinkage, LocSize, &CGF.CGM.getModule());
-  }
-  return Bld.CreateTrunc(
-      Bld.CreateCall(F, {Bld.getInt32(0)}, "nvptx_num_threads"), CGF.Int32Ty);
 }

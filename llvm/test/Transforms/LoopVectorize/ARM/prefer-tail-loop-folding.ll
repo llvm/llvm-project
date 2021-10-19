@@ -48,7 +48,7 @@
 ; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
-; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT
+; RUN:   FileCheck %s -check-prefixes=CHECK
 
 define void @prefer_folding(i32* noalias nocapture %A, i32* noalias nocapture readonly %B, i32* noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    prefer_folding(

@@ -8,4 +8,4 @@ struct et7 {
   52, 
 };
 
-// CHECK: @yv7 = global %struct.et7 { [0 x float] zeroinitializer, i8 52 }
+// CHECK: @yv7 ={{.*}} global %struct.et7 { [0 x float] zeroinitializer, i8 52 }

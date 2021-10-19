@@ -87,6 +87,14 @@ TEST_CASE(test_construction_from_bad_path)
 TEST_CASE(access_denied_test_case)
 {
     using namespace fs;
+#ifdef _WIN32
+    // Windows doesn't support setting perms::none to trigger failures
+    // reading directories; test using a special inaccessible directory
+    // instead.
+    const path testDir = GetWindowsInaccessibleDir();
+    if (testDir.empty())
+        TEST_UNSUPPORTED();
+#else
     scoped_test_env env;
     path const testDir = env.make_env_path("dir1");
     path const testFile = testDir / "testFile";
@@ -100,6 +108,7 @@ TEST_CASE(access_denied_test_case)
     }
     // Change the permissions so we can no longer iterate
     permissions(testDir, perms::none);
+#endif
 
     // Check that the construction fails when skip_permissions_denied is
     // not given.

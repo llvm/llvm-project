@@ -8,6 +8,7 @@
 
 #include "include/threads.h"
 #include "src/threads/call_once.h"
+#include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
@@ -32,7 +33,7 @@ static int func(void *) {
   return 0;
 }
 
-TEST(CallOnceTest, CallFrom5Threads) {
+TEST(LlvmLibcCallOnceTest, CallFrom5Threads) {
   // Ensure the call count and thread count are 0 to begin with.
   call_count = 0;
   thread_count = 0;
@@ -73,7 +74,7 @@ static int once_func_caller(void *) {
 // Test the synchronization aspect of the call_once function.
 // This is not a fool proof test, but something which might be
 // useful when we add a flakiness detection scheme to UnitTest.
-TEST(CallOnceTest, TestSynchronization) {
+TEST(LlvmLibcCallOnceTest, TestSynchronization) {
   start_count = 0;
   done_count = 0;
 
@@ -108,4 +109,6 @@ TEST(CallOnceTest, TestSynchronization) {
   ASSERT_EQ(retval, 0);
 
   ASSERT_EQ(static_cast<unsigned int>(done_count), 2U);
+
+  __llvm_libc::mtx_destroy(&once_func_blocker);
 }

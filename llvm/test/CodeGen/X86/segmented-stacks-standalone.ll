@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=generic -mtriple=i686-linux -verify-machineinstrs | FileCheck %s -check-prefix=X32-Linux
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux  -verify-machineinstrs | FileCheck %s -check-prefix=X64-Linux
+; RUN: llc < %s -mcpu=generic -mtriple=i686-linux -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux  -verify-machineinstrs | FileCheck %s
 
 ; This test is standalone because segmented-stacks.ll generates
 ; object-files with both .note.GNU-split-stack (for the split-stack
@@ -14,17 +14,5 @@ define void @test_nostack() #0 {
 
 attributes #0 = { "split-stack" }
 
-; X32-Linux: .section ".note.GNU-split-stack","",@progbits
-; X32-Linux: .section ".note.GNU-no-split-stack","",@progbits
-
-; X64-Linux: .section ".note.GNU-split-stack","",@progbits
-; X64-Linux: .section ".note.GNU-no-split-stack","",@progbits
-
-; X64-FreeBSD: .section ".note.GNU-split-stack","",@progbits
-; X64-FreeBSD: .section ".note.GNU-no-split-stack","",@progbits
-
-; X32-DFlyBSD: .section ".note.GNU-split-stack","",@progbits
-; X32-DFlyBSD: .section ".note.GNU-no-split-stack","",@progbits
-
-; X64-DFlyBSD: .section ".note.GNU-split-stack","",@progbits
-; X64-DFlyBSD: .section ".note.GNU-no-split-stack","",@progbits
+; CHECK: .section ".note.GNU-split-stack","",@progbits
+; CHECK: .section ".note.GNU-no-split-stack","",@progbits

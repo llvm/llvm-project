@@ -56,13 +56,13 @@ attributes #0 = { "target-features"="+thumb-mode" }
 attributes #1 = { "target-features"="-thumb-mode" }
 
 ; LINUX: Section (3) .rel.text {
-; LINUX-NEXT: 0x2 R_ARM_THM_CALL internal_arm_fn 0x0
-; LINUX-NEXT: 0x6 R_ARM_THM_CALL global_arm_fn 0x0
-; LINUX-NEXT: 0xE R_ARM_THM_CALL global_thumb_fn 0x0
-; LINUX-NEXT: 0x1C R_ARM_CALL internal_arm_fn 0x0
-; LINUX-NEXT: 0x20 R_ARM_CALL global_arm_fn 0x0
-; LINUX-NEXT: 0x24 R_ARM_CALL internal_thumb_fn 0x0
-; LINUX-NEXT: 0x28 R_ARM_CALL global_thumb_fn 0x0
+; LINUX-NEXT: 0x2 R_ARM_THM_CALL internal_arm_fn
+; LINUX-NEXT: 0x6 R_ARM_THM_CALL global_arm_fn
+; LINUX-NEXT: 0xE R_ARM_THM_CALL global_thumb_fn
+; LINUX-NEXT: 0x1C R_ARM_CALL internal_arm_fn
+; LINUX-NEXT: 0x20 R_ARM_CALL global_arm_fn
+; LINUX-NEXT: 0x24 R_ARM_CALL internal_thumb_fn
+; LINUX-NEXT: 0x28 R_ARM_CALL global_thumb_fn
 ; LINUX-NEXT: }
 
 ; IOS:   Section __text {

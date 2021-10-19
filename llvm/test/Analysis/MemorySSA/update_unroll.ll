@@ -1,4 +1,3 @@
-; RUN: opt -enable-new-pm=0 -enable-mssa-loop-dependency -verify-memoryssa  -loop-rotate -S %s | FileCheck %s
 ; RUN: opt -verify-memoryssa -passes='loop-mssa(loop-rotate)' -S %s | FileCheck %s
 ; REQUIRES: asserts
 

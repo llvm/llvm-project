@@ -71,7 +71,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r3, $r4, $r5, $r6
-  
+
     %3:gprc_and_gprc_nor0 = COPY killed $r6
     %2:gprc = COPY killed $r5
     %1:gprc = COPY killed $r4
@@ -84,7 +84,7 @@ body:             |
     %9:gprc = ISEL killed %8, killed %7, killed %6
     %10:gprc = RLWIMI killed %9, killed %0, 1, 0, 30
     %11:gprc = XORI killed %10, 1
-    STH killed %11, 0, killed %3 :: (store 2 into %ir.P)
+    STH killed %11, 0, killed %3 :: (store (s16) into %ir.P)
     BLR implicit $lr, implicit $rm
 
 ...

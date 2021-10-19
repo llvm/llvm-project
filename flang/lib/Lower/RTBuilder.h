@@ -19,13 +19,20 @@
 
 #include "flang/Lower/ConvertType.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <functional>
 
 // List the runtime headers we want to be able to dissect
-#include "../../runtime/io-api.h"
+#include "flang/Runtime/io-api.h"
+
+// Incomplete type indicating C99 complex ABI in interfaces. Beware, _Complex
+// and std::complex are layout compatible, but not compatible in all ABI call
+// interface (e.g. X86 32 bits). _Complex is not standard C++, so do not use
+// it here.
+struct c_float_complex_t;
+struct c_double_complex_t;
 
 namespace Fortran::lower {
 
@@ -48,7 +55,7 @@ static constexpr TypeBuilderFunc getModel();
 template <>
 constexpr TypeBuilderFunc getModel<int>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(8 * sizeof(int), context);
+    return mlir::IntegerType::get(context, 8 * sizeof(int));
   };
 }
 template <>
@@ -61,14 +68,14 @@ constexpr TypeBuilderFunc getModel<int &>() {
 template <>
 constexpr TypeBuilderFunc getModel<Fortran::runtime::io::Iostat>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(8 * sizeof(Fortran::runtime::io::Iostat),
-                                  context);
+    return mlir::IntegerType::get(context,
+                                  8 * sizeof(Fortran::runtime::io::Iostat));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<char *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ReferenceType::get(mlir::IntegerType::get(8, context));
+    return fir::ReferenceType::get(mlir::IntegerType::get(context, 8));
   };
 }
 template <>
@@ -78,26 +85,26 @@ constexpr TypeBuilderFunc getModel<const char *>() {
 template <>
 constexpr TypeBuilderFunc getModel<const char16_t *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ReferenceType::get(mlir::IntegerType::get(16, context));
+    return fir::ReferenceType::get(mlir::IntegerType::get(context, 16));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<const char32_t *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::ReferenceType::get(mlir::IntegerType::get(32, context));
+    return fir::ReferenceType::get(mlir::IntegerType::get(context, 32));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<void **>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::ReferenceType::get(
-        fir::PointerType::get(mlir::IntegerType::get(8, context)));
+        fir::PointerType::get(mlir::IntegerType::get(context, 8)));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<std::int64_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(64, context);
+    return mlir::IntegerType::get(context, 64);
   };
 }
 template <>
@@ -110,7 +117,7 @@ constexpr TypeBuilderFunc getModel<std::int64_t &>() {
 template <>
 constexpr TypeBuilderFunc getModel<std::size_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(8 * sizeof(std::size_t), context);
+    return mlir::IntegerType::get(context, 8 * sizeof(std::size_t));
   };
 }
 template <>
@@ -146,7 +153,7 @@ constexpr TypeBuilderFunc getModel<float &>() {
 template <>
 constexpr TypeBuilderFunc getModel<bool>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(1, context);
+    return mlir::IntegerType::get(context, 1);
   };
 }
 template <>
@@ -156,7 +163,18 @@ constexpr TypeBuilderFunc getModel<bool &>() {
     return fir::ReferenceType::get(f(context));
   };
 }
-
+template <>
+constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ComplexType::get(context, sizeof(float));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<c_double_complex_t>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ComplexType::get(context, sizeof(double));
+  };
+}
 template <>
 constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
@@ -164,7 +182,8 @@ constexpr TypeBuilderFunc getModel<const Fortran::runtime::Descriptor &>() {
   };
 }
 template <>
-constexpr TypeBuilderFunc getModel<const Fortran::runtime::NamelistGroup &>() {
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::io::NamelistGroup &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     // FIXME: a namelist group must be some well-defined data structure, use a
     // tuple as a proxy for the moment
@@ -190,7 +209,7 @@ struct RuntimeTableKey<RT(ATs...)> {
       llvm::SmallVector<mlir::Type, sizeof...(ATs)> argTys;
       for (auto f : args)
         argTys.push_back(f(ctxt));
-      return mlir::FunctionType::get(argTys, {retTy}, ctxt);
+      return mlir::FunctionType::get(ctxt, argTys, {retTy});
     };
   }
 };

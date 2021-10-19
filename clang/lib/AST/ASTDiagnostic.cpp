@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -1087,6 +1088,9 @@ class TemplateDiff {
             Ty->getAs<TemplateSpecializationType>())
       return TST;
 
+    if (const auto* SubstType = Ty->getAs<SubstTemplateTypeParmType>())
+      Ty = SubstType->getReplacementType();
+
     const RecordType *RT = Ty->getAs<RecordType>();
 
     if (!RT)
@@ -1756,7 +1760,7 @@ class TemplateDiff {
       if (FromIntType->isBooleanType()) {
         OS << ((FromInt == 0) ? "false" : "true");
       } else {
-        OS << FromInt.toString(10);
+        OS << toString(FromInt, 10);
       }
       return;
     }
@@ -1800,7 +1804,7 @@ class TemplateDiff {
       if (IntType->isBooleanType()) {
         OS << ((Val == 0) ? "false" : "true");
       } else {
-        OS << Val.toString(10);
+        OS << toString(Val, 10);
       }
     } else if (E) {
       PrintExpr(E);
@@ -1834,7 +1838,14 @@ class TemplateDiff {
     if (VD) {
       if (AddressOf)
         OS << "&";
-      OS << VD->getName();
+      else if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
+        // FIXME: Diffing the APValue would be neat.
+        // FIXME: Suppress this and use the full name of the declaration if the
+        // parameter is a pointer or reference.
+        TPO->printAsInit(OS);
+        return;
+      }
+      VD->printName(OS);
       return;
     }
 

@@ -7,8 +7,10 @@ add_lld_library(lldWasm
   InputChunks.cpp
   InputFiles.cpp
   LTO.cpp
+  MapFile.cpp
   MarkLive.cpp
   OutputSections.cpp
+  OutputSegment.cpp
   Relocations.cpp
   SymbolTable.cpp
   Symbols.cpp

@@ -24,14 +24,10 @@ int postfix_inc = a++;
 int unary_address = &(a + 1);
 
 // CHECK:       VarDecl {{.*}} ternary 'int' cinit
-// CHECK-NEXT:  `-RecoveryExpr {{.*}}
+// CHECK-NEXT:  `-ConditionalOperator {{.*}}
 // CHECK-NEXT:    |-DeclRefExpr {{.*}} 'a'
-// CHECK-NEXT:    |-TypoExpr {{.*}}
+// CHECK-NEXT:    |-RecoveryExpr {{.*}}
 // CHECK-NEXT:    `-DeclRefExpr {{.*}} 'a'
-// FIXME: The TypoExpr should never be print, and should be downgraded to
-// RecoveryExpr -- typo correction is performed too early in C-only codepath,
-// which makes no correction when clang finishes the full expr (Sema::Sema::ActOnFinishFullExpr).
-// this will be fixed when we support dependent mechanism and delayed typo correction for C.
 int ternary = a ? undef : a;
 
 void test1() {
@@ -42,11 +38,63 @@ void test1() {
 
 void test2() {
   int* ptr;
-  // FIXME: the top-level expr should be a binary operator.
-  // CHECK:      ImplicitCastExpr {{.*}} contains-errors <LValueToRValue>
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors lvalue
-  // CHECK-NEXT:   |-DeclRefExpr {{.*}} 'ptr' 'int *'
-  // CHECK-NEXT:   `-RecoveryExpr {{.*}}
-  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK:     BinaryOperator {{.*}} 'int *' contains-errors '='
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'ptr' 'int *'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
   ptr = some_func(); // should not crash
+
+  int compoundOp;
+  // CHECK:     CompoundAssignOperator {{.*}} 'int' contains-errors '+='
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'compoundOp'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  compoundOp += some_func();
+
+  // CHECK:     BinaryOperator {{.*}} 'int' contains-errors '||'
+  // CHECK-NEXT: |-RecoveryExpr {{.*}}
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  some_func() || 1;
+
+  // CHECK:     BinaryOperator {{.*}} '<dependent type>' contains-errors ','
+  // CHECK-NEXT: |-IntegerLiteral {{.*}} 'int' 1
+  // CHECK-NEXT: `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  1, some_func();
+  // CHECK:     BinaryOperator {{.*}} 'int' contains-errors ','
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'some_func'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  some_func(), 1;
+
+  // conditional operator (comparison is invalid)
+  float f;
+  // CHECK:     ConditionalOperator {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: | |-DeclRefExpr {{.*}} 'int *' lvalue
+  // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'float' lvalue
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'int *' lvalue
+  // CHECK-NEXT: `-DeclRefExpr {{.*}} 'float' lvalue
+  (ptr > f ? ptr : f);
+
+  // CHECK:     CStyleCastExpr {{.*}} 'float' contains-errors <Dependent>
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
+  (float)some_func();
+}
+
+void test3() {
+  // CHECK:     CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-ParenExpr {{.*}} contains-errors lvalue
+  // CHECK-NEXT: | `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: |   `-DeclRefExpr {{.*}} '__builtin_classify_type'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  (*__builtin_classify_type)(1);
+
+  extern void ext();
+  // CHECK:     CallExpr {{.*}} 'void' contains-errors
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'ext'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  ext(undef_var);
 }

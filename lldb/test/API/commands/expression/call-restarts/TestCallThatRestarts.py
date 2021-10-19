@@ -22,11 +22,10 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.main_source = "lotta-signals.c"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @skipIfFreeBSD  # llvm.org/pr19246: intermittent failure
     @skipIfDarwin  # llvm.org/pr19246: intermittent failure
     @skipIfWindows  # Test relies on signals, unsupported on Windows
     @expectedFlakeyAndroid(bugnumber="llvm.org/pr19246")
-    @expectedFailureNetBSD
+    @expectedFlakeyNetBSD
     def test(self):
         """Test calling function that hits a signal and restarts."""
         self.build()
@@ -43,8 +42,8 @@ class ExprCommandThatRestartsTestCase(TestBase):
 
         # Check that we are back where we were before:
         frame = self.thread.GetFrameAtIndex(0)
-        self.assertTrue(
-            self.orig_frame_pc == frame.GetPC(),
+        self.assertEqual(
+            self.orig_frame_pc, frame.GetPC(),
             "Restored the zeroth frame correctly")
 
     def call_function(self):
@@ -148,6 +147,6 @@ class ExprCommandThatRestartsTestCase(TestBase):
             "Continuing after stopping for signal succeeds.")
 
         frame = self.thread.GetFrameAtIndex(0)
-        self.assertTrue(
-            frame.GetPC() == self.orig_frame_pc,
+        self.assertEqual(
+            frame.GetPC(), self.orig_frame_pc,
             "Continuing returned to the place we started.")

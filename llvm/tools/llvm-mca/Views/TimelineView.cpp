@@ -21,8 +21,8 @@ TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
                            llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
                            unsigned Cycles)
     : InstructionView(sti, Printer, S), CurrentCycle(0),
-      MaxCycle(Cycles == 0 ? 80 : Cycles), LastCycle(0), WaitTime(S.size()),
-      UsedBuffer(S.size()) {
+      MaxCycle(Cycles == 0 ? std::numeric_limits<unsigned>::max() : Cycles),
+      LastCycle(0), WaitTime(S.size()), UsedBuffer(S.size()) {
   unsigned NumInstructions = getSource().size();
   assert(Iterations && "Invalid number of iterations specified!");
   NumInstructions *= Iterations;
@@ -77,8 +77,10 @@ void TimelineView::onEvent(const HWInstructionEvent &Event) {
            "Instruction cannot be ready if it hasn't been dispatched yet!");
     WTEntry.CyclesSpentInSQWhileReady +=
         TVEntry.CycleIssued - TVEntry.CycleReady;
-    WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
-        (CurrentCycle - 1) - TVEntry.CycleExecuted;
+    if (CurrentCycle > TVEntry.CycleExecuted) {
+      WTEntry.CyclesSpentAfterWBAndBeforeRetire +=
+          (CurrentCycle - 1) - TVEntry.CycleExecuted;
+    }
     break;
   }
   case HWInstructionEvent::Ready:
@@ -143,10 +145,11 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
 
   double AverageTime1, AverageTime2, AverageTime3;
   AverageTime1 =
-      (double)Entry.CyclesSpentInSchedulerQueue / CumulativeExecutions;
-  AverageTime2 = (double)Entry.CyclesSpentInSQWhileReady / CumulativeExecutions;
-  AverageTime3 =
-      (double)Entry.CyclesSpentAfterWBAndBeforeRetire / CumulativeExecutions;
+      (double)(Entry.CyclesSpentInSchedulerQueue * 10) / CumulativeExecutions;
+  AverageTime2 =
+      (double)(Entry.CyclesSpentInSQWhileReady * 10) / CumulativeExecutions;
+  AverageTime3 = (double)(Entry.CyclesSpentAfterWBAndBeforeRetire * 10) /
+                 CumulativeExecutions;
 
   OS << Executions;
   OS.PadToColumn(13);
@@ -155,18 +158,18 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentInSchedulerQueue, CumulativeExecutions,
                    BufferSize);
-  OS << format("%.1f", floor((AverageTime1 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime1 + 0.5) / 10);
   OS.PadToColumn(20);
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentInSQWhileReady, CumulativeExecutions,
                    BufferSize);
-  OS << format("%.1f", floor((AverageTime2 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime2 + 0.5) / 10);
   OS.PadToColumn(27);
   if (!PrintingTotals)
     tryChangeColor(OS, Entry.CyclesSpentAfterWBAndBeforeRetire,
                    CumulativeExecutions,
                    getSubTargetInfo().getSchedModel().MicroOpBufferSize);
-  OS << format("%.1f", floor((AverageTime3 * 10) + 0.5) / 10);
+  OS << format("%.1f", floor(AverageTime3 + 0.5) / 10);
 
   if (OS.has_colors())
     OS.resetColor();
@@ -243,7 +246,8 @@ void TimelineView::printTimelineViewEntry(formatted_raw_ostream &OS,
 
   for (unsigned I = Entry.CycleExecuted + 1, E = Entry.CycleRetired; I < E; ++I)
     OS << TimelineView::DisplayChar::RetireLag;
-  OS << TimelineView::DisplayChar::Retired;
+  if (Entry.CycleExecuted < Entry.CycleRetired)
+    OS << TimelineView::DisplayChar::Retired;
 
   // Skip other columns.
   for (unsigned I = Entry.CycleRetired + 1, E = LastCycle; I <= E; ++I)
@@ -285,8 +289,17 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
   for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
     for (const MCInst &Inst : Source) {
       const TimelineViewEntry &Entry = Timeline[IID];
-      if (Entry.CycleRetired == 0)
+      // When an instruction is retired after timeline-max-cycles,
+      // its CycleRetired is left at 0. However, it's possible for
+      // a 0 latency instruction to be retired during cycle 0 and we
+      // don't want to early exit in that case. The CycleExecuted
+      // attribute is set correctly whether or not it is greater
+      // than timeline-max-cycles so we can use that to ensure
+      // we don't early exit because of a 0 latency instruction.
+      if (Entry.CycleRetired == 0 && Entry.CycleExecuted != 0) {
+        FOS << "Truncated display due to cycle limit\n";
         return;
+      }
 
       unsigned SourceIndex = IID % Source.size();
       printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
@@ -296,6 +309,20 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
       ++IID;
     }
   }
+}
+
+json::Value TimelineView::toJSON() const {
+  json::Array TimelineInfo;
+
+  for (const TimelineViewEntry &TLE : Timeline) {
+    TimelineInfo.push_back(
+        json::Object({{"CycleDispatched", TLE.CycleDispatched},
+                      {"CycleReady", TLE.CycleReady},
+                      {"CycleIssued", TLE.CycleIssued},
+                      {"CycleExecuted", TLE.CycleExecuted},
+                      {"CycleRetired", TLE.CycleRetired}}));
+  }
+  return json::Object({{"TimelineInfo", std::move(TimelineInfo)}});
 }
 } // namespace mca
 } // namespace llvm

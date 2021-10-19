@@ -49,7 +49,7 @@ define void @test_simplify3() {
 
 define void @test_simplify4(i32 %chr) {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call i8* @memchr(i8* nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
 ; CHECK-NEXT:    store i8* [[MEMCHR]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -75,7 +75,7 @@ define void @test_simplify5() {
 ; Check transformation strchr(p, 0) -> p + strlen(p)
 define void @test_simplify6(i8* %str) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-NEXT:    [[STRCHR:%.*]] = getelementptr i8, i8* [[STR]], i32 [[STRLEN]]
 ; CHECK-NEXT:    store i8* [[STRCHR]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
@@ -95,7 +95,7 @@ define i1 @test_simplify7(i32 %C) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9217
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
-; CHECK-NEXT:    [[MEMCHR1:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR1:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR1]]
 ;
 
@@ -106,7 +106,7 @@ define i1 @test_simplify7(i32 %C) {
 
 define i8* @test1(i8* %str, i32 %c) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -116,7 +116,7 @@ define i8* @test1(i8* %str, i32 %c) {
 
 define i8* @test2(i8* %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* noundef [[STR:%.*]], i32 [[C:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 

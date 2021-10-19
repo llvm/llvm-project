@@ -23,6 +23,10 @@ public:
 
   bool HasNativeLLVMSupport() const override;
 
+  std::string getMultiarchTriple(const Driver &D,
+                                 const llvm::Triple &TargetTriple,
+                                 StringRef SysRoot) const override;
+
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -35,7 +39,10 @@ public:
                          llvm::opt::ArgStringList &CC1Args) const override;
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
+  bool
+  IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault() const override;
   bool isNoExecStackDefault() const override;
   bool IsMathErrnoDefault() const override;
@@ -58,10 +65,6 @@ protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;
   Tool *buildStaticLibTool() const override;
-
-  std::string getMultiarchTriple(const Driver &D,
-                                 const llvm::Triple &TargetTriple,
-                                 StringRef SysRoot) const override;
 };
 
 } // end namespace toolchains

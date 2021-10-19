@@ -142,7 +142,7 @@ static void MarkBlocksLiveIn(BasicBlock *BB,
 /// instruction with those returned by the personality function.
 void SjLjEHPrepare::substituteLPadValues(LandingPadInst *LPI, Value *ExnVal,
                                          Value *SelVal) {
-  SmallVector<Value *, 8> UseWorkList(LPI->user_begin(), LPI->user_end());
+  SmallVector<Value *, 8> UseWorkList(LPI->users());
   while (!UseWorkList.empty()) {
     Value *Val = UseWorkList.pop_back_val();
     auto *EVI = dyn_cast<ExtractValueInst>(Val);
@@ -472,8 +472,12 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
 
   // Finally, for any returns from this function, if this function contains an
   // invoke, add a call to unregister the function context.
-  for (ReturnInst *Return : Returns)
-    CallInst::Create(UnregisterFn, FuncCtx, "", Return);
+  for (ReturnInst *Return : Returns) {
+    Instruction *InsertPoint = Return;
+    if (CallInst *CI = Return->getParent()->getTerminatingMustTailCall())
+      InsertPoint = CI;
+    CallInst::Create(UnregisterFn, FuncCtx, "", InsertPoint);
+  }
 
   return true;
 }

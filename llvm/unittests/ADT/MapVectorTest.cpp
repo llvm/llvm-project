@@ -162,7 +162,7 @@ template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {
 
 using MapIntTypes = ::testing::Types<int, long, long long, unsigned,
                                      unsigned long, unsigned long long>;
-TYPED_TEST_CASE(MapVectorMappedTypeTest, MapIntTypes);
+TYPED_TEST_SUITE(MapVectorMappedTypeTest, MapIntTypes, );
 
 TYPED_TEST(MapVectorMappedTypeTest, DifferentDenseMap) {
   // Test that using a map with a mapped type other than 'unsigned' compiles

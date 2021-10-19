@@ -11,7 +11,12 @@ class TEST_Op<string mnemonic, list<OpTrait> traits = []> :
 def CustomResource : Resource<"CustomResource">;
 
 def SideEffectOpA : TEST_Op<"side_effect_op_a"> {
-  let arguments = (ins Arg<Variadic<AnyMemRef>, "", [MemRead]>);
+  let arguments = (ins
+    Arg<Variadic<AnyMemRef>, "", [MemRead]>,
+    Arg<SymbolRefAttr, "", [MemRead]>:$symbol,
+    Arg<FlatSymbolRefAttr, "", [MemWrite]>:$flat_symbol,
+    Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
+  );
   let results = (outs Res<AnyMemRef, "", [MemAlloc<CustomResource>]>);
 }
 
@@ -20,9 +25,13 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
 
 // CHECK: void SideEffectOpA::getEffects
 // CHECK:   for (::mlir::Value value : getODSOperands(0))
-// CHECK:     effects.emplace_back(MemoryEffects::Read::get(), value, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), value, ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbol(), ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), flat_symbol(), ::mlir::SideEffects::DefaultResource::get());
+// CHECK:   if (auto symbolRef = optional_symbolAttr())
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbolRef, ::mlir::SideEffects::DefaultResource::get());
 // CHECK:   for (::mlir::Value value : getODSResults(0))
-// CHECK:     effects.emplace_back(MemoryEffects::Allocate::get(), value, CustomResource::get());
+// CHECK:     effects.emplace_back(::mlir::MemoryEffects::Allocate::get(), value, CustomResource::get());
 
 // CHECK: void SideEffectOpB::getEffects
-// CHECK:   effects.emplace_back(MemoryEffects::Write::get(), CustomResource::get());
+// CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), CustomResource::get());

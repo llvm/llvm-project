@@ -24,13 +24,12 @@ body:             |
     ; CHECK-LABEL: name: test
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.ptr)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[LOAD]](s1)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ZEXT]](s8)
-    ; CHECK: $w0 = COPY [[ANYEXT]](s32)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[COPY]](p0) :: (load (s1) from %ir.ptr)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s1)
+    ; CHECK: $w0 = COPY [[ZEXT]](s32)
     ; CHECK: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
-    %1:_(s1) = G_LOAD %0(p0) :: (load 1 from %ir.ptr)
+    %1:_(s1) = G_LOAD %0(p0) :: (load (s1) from %ir.ptr)
     %2:_(s8) = G_ZEXT %1(s1)
     %3:_(s32) = G_ANYEXT %2(s8)
     $w0 = COPY %3(s32)

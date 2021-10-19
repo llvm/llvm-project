@@ -14,7 +14,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_coreframeworks_and_run_command(self):
         """Test formatters for Core OSX frameworks."""
         self.build()
@@ -46,7 +45,6 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
             '(Point) point = (v=7, h=12)', '(Point *) point_ptr = (v=7, h=12)',
             '(SEL) foo_selector = "foo_selector_impl"'
         ]
-
         self.expect("frame variable", substrs=expect_strings)
 
         if self.getArchitecture() in ['i386', 'x86_64']:
@@ -57,3 +55,28 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
                 '(HIRect) hi_rect = origin=(x = 3, y = 5) size=(width = 4, height = 6)',
             ]
             self.expect("frame variable", substrs=extra_string)
+
+        # The original tests left out testing the NSNumber values, so do that here.
+        # This set is all pointers, with summaries, so we only check the summary.
+        var_list_pointer = [
+            ['NSNumber *', 'num1',    '(int)5'],
+            ['NSNumber *', 'num2',    '(float)3.140000'],
+            ['NSNumber *', 'num3',    '(double)3.14'],
+            ['NSNumber *', 'num4',    '(int128_t)18446744073709551614'],
+            ['NSNumber *', 'num5',    '(char)65'],
+            ['NSNumber *', 'num6',    '(long)255'],
+            ['NSNumber *', 'num7',    '(long)2000000'],
+            ['NSNumber *', 'num8_Y',  'YES'],
+            ['NSNumber *', 'num8_N',  'NO'],
+            ['NSNumber *', 'num9',    '(short)-31616'],
+            ['NSNumber *', 'num_at1', '(int)12'],
+            ['NSNumber *', 'num_at2', '(int)-12'],
+            ['NSNumber *', 'num_at3', '(double)12.5'],
+            ['NSNumber *', 'num_at4', '(double)-12.5'],
+            ['NSDecimalNumber *', 'decimal_number', '123456 x 10^-10'],
+            ['NSDecimalNumber *', 'decimal_number_neg', '-123456 x 10^10']
+        ]
+        for type, var_path, summary in var_list_pointer:
+            self.expect_var_path(var_path, summary, None, type)
+
+            

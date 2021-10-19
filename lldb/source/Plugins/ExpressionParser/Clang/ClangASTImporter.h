@@ -23,6 +23,7 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-types.h"
 
 #include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
@@ -34,6 +35,32 @@ namespace lldb_private {
 class ClangASTMetadata;
 class TypeSystemClang;
 
+/// Manages and observes all Clang AST node importing in LLDB.
+///
+/// The ClangASTImporter takes care of two things:
+///
+/// 1. Keeps track of all ASTImporter instances in LLDB.
+///
+/// Clang's ASTImporter takes care of importing types from one ASTContext to
+/// another. This class expands this concept by allowing copying from several
+/// ASTContext instances to several other ASTContext instances. Instead of
+/// constructing a new ASTImporter manually to copy over a type/decl, this class
+/// can be asked to do this. It will construct a ASTImporter for the caller (and
+/// will cache the ASTImporter instance for later use) and then perform the
+/// import.
+///
+/// This mainly prevents that a caller might construct several ASTImporter
+/// instances for the same source/target ASTContext combination. As the
+/// ASTImporter has an internal state that keeps track of already imported
+/// declarations and so on, using only one ASTImporter instance is more
+/// efficient and less error-prone than using multiple.
+///
+/// 2. Keeps track of from where declarations were imported (origin-tracking).
+/// The ASTImporter instances in this class usually only performa a minimal
+/// import, i.e., only a shallow copy is made that is filled out on demand
+/// when more information is requested later on. This requires record-keeping
+/// of where any shallow clone originally came from so that the right original
+/// declaration can be found and used as the source of any missing information.
 class ClangASTImporter {
 public:
   struct LayoutInfo {
@@ -52,12 +79,34 @@ public:
       : m_file_manager(clang::FileSystemOptions(),
                        FileSystem::Instance().GetVirtualFileSystem()) {}
 
+  /// Copies the given type and the respective declarations to the destination
+  /// type system.
+  ///
+  /// This function does a shallow copy and requires that the target AST
+  /// has an ExternalASTSource which queries this ClangASTImporter instance
+  /// for any additional information that is maybe lacking in the shallow copy.
+  /// This also means that the type system of src_type can *not* be deleted
+  /// after this function has been called. If you need to delete the source
+  /// type system you either need to delete the destination type system first
+  /// or use \ref ClangASTImporter::DeportType.
+  ///
+  /// \see ClangASTImporter::DeportType
   CompilerType CopyType(TypeSystemClang &dst, const CompilerType &src_type);
 
+  /// \see ClangASTImporter::CopyType
   clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
+  /// Copies the given type and the respective declarations to the destination
+  /// type system.
+  ///
+  /// Unlike CopyType this function ensures that types/declarations which are
+  /// originally from the AST of src_type are fully copied over. The type
+  /// system of src_type can safely be deleted after calling this function.
+  /// \see ClangASTImporter::CopyType
   CompilerType DeportType(TypeSystemClang &dst, const CompilerType &src_type);
 
+  /// Copies the given decl to the destination type system.
+  /// \see ClangASTImporter::DeportType
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
   /// Sets the layout for the given RecordDecl. The layout will later be
@@ -78,8 +127,22 @@ public:
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &vbase_offsets);
 
+  /// Returns true iff the given type was copied from another TypeSystemClang
+  /// and the original type in this other TypeSystemClang might contain
+  /// additional information (e.g., the definition of a 'class' type) that could
+  /// be imported.
+  ///
+  /// \see ClangASTImporter::Import
   bool CanImport(const CompilerType &type);
 
+  /// If the given type was copied from another TypeSystemClang then copy over
+  /// all missing information (e.g., the definition of a 'class' type).
+  ///
+  /// \return True iff an original type in another TypeSystemClang was found.
+  ///         Note: Does *not* return false if an original type was found but
+  ///               no information was imported over.
+  ///
+  /// \see ClangASTImporter::Import
   bool Import(const CompilerType &type);
 
   bool CompleteType(const CompilerType &compiler_type);
@@ -94,6 +157,14 @@ public:
 
   bool RequireCompleteType(clang::QualType type);
 
+  /// Updates the internal origin-tracking information so that the given
+  /// 'original' decl is from now on used to import additional information
+  /// into the given decl.
+  ///
+  /// Usually the origin-tracking in the ClangASTImporter is automatically
+  /// updated when a declaration is imported, so the only valid reason to ever
+  /// call this is if there is a 'better' original decl and the target decl
+  /// is only a shallow clone that lacks any contents.
   void SetDeclOrigin(const clang::Decl *decl, clang::Decl *original_decl);
 
   ClangASTMetadata *GetDeclMetadata(const clang::Decl *decl);
@@ -145,10 +216,13 @@ public:
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
   struct DeclOrigin {
-    DeclOrigin() : ctx(nullptr), decl(nullptr) {}
+    DeclOrigin() = default;
 
     DeclOrigin(clang::ASTContext *_ctx, clang::Decl *_decl)
-        : ctx(_ctx), decl(_decl) {}
+        : ctx(_ctx), decl(_decl) {
+      // The decl has to be in its associated ASTContext.
+      assert(_decl == nullptr || &_decl->getASTContext() == _ctx);
+    }
 
     DeclOrigin(const DeclOrigin &rhs) {
       ctx = rhs.ctx;
@@ -160,10 +234,10 @@ public:
       decl = rhs.decl;
     }
 
-    bool Valid() { return (ctx != nullptr || decl != nullptr); }
+    bool Valid() const { return (ctx != nullptr || decl != nullptr); }
 
-    clang::ASTContext *ctx;
-    clang::Decl *decl;
+    clang::ASTContext *ctx = nullptr;
+    clang::Decl *decl = nullptr;
   };
 
   /// Listener interface used by the ASTImporterDelegate to inform other code
@@ -190,6 +264,16 @@ public:
         : clang::ASTImporter(*target_ctx, master.m_file_manager, *source_ctx,
                              master.m_file_manager, true /*minimal*/),
           m_master(master), m_source_ctx(source_ctx) {
+      // Target and source ASTContext shouldn't be identical. Importing AST
+      // nodes within the same AST doesn't make any sense as the whole idea
+      // is to import them to a different AST.
+      lldbassert(target_ctx != source_ctx && "Can't import into itself");
+      // This is always doing a minimal import of any declarations. This means
+      // that there has to be an ExternalASTSource in the target ASTContext
+      // (that should implement the callbacks that complete any declarations
+      // on demand). Without an ExternalASTSource, this ASTImporter will just
+      // do a minimal import and the imported declarations won't be completed.
+      assert(target_ctx->getExternalSource() && "Missing ExternalSource");
       setODRHandling(clang::ASTImporter::ODRHandlingType::Liberal);
     }
 
@@ -272,6 +356,13 @@ public:
     /// Sets the DeclOrigin for the given Decl and overwrites any existing
     /// DeclOrigin.
     void setOrigin(const clang::Decl *decl, DeclOrigin origin) {
+      // Setting the origin of any decl to itself (or to a different decl
+      // in the same ASTContext) doesn't make any sense. It will also cause
+      // ASTImporterDelegate::ImportImpl to infinite recurse when trying to find
+      // the 'original' Decl when importing code.
+      assert(&decl->getASTContext() != origin.ctx &&
+             "Trying to set decl origin to its own ASTContext?");
+      assert(decl != origin.decl && "Trying to set decl origin to itself?");
       m_origins[decl] = origin;
     }
 

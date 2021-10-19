@@ -60,18 +60,21 @@ void RegisterFileStatistics::updateMoveElimInfo(const Instruction &Inst) {
   if (!Inst.isOptimizableMove())
     return;
 
-  assert(Inst.getDefs().size() == 1 && "Expected a single definition!");
-  assert(Inst.getUses().size() == 1 && "Expected a single register use!");
-  const WriteState &WS = Inst.getDefs()[0];
-  const ReadState &RS = Inst.getUses()[0];
+  if (Inst.getDefs().size() != Inst.getUses().size())
+    return;
 
-  MoveEliminationInfo &Info =
-      MoveElimInfo[Inst.getDefs()[0].getRegisterFileID()];
-  Info.TotalMoveEliminationCandidates++;
-  if (WS.isEliminated())
-    Info.CurrentMovesEliminated++;
-  if (WS.isWriteZero() && RS.isReadZero())
-    Info.TotalMovesThatPropagateZero++;
+  for (size_t I = 0, E = Inst.getDefs().size(); I < E; ++I) {
+    const WriteState &WS = Inst.getDefs()[I];
+    const ReadState &RS = Inst.getUses()[E - (I + 1)];
+
+    MoveEliminationInfo &Info =
+        MoveElimInfo[Inst.getDefs()[0].getRegisterFileID()];
+    Info.TotalMoveEliminationCandidates++;
+    if (WS.isEliminated())
+      Info.CurrentMovesEliminated++;
+    if (WS.isWriteZero() && RS.isReadZero())
+      Info.TotalMovesThatPropagateZero++;
+  }
 }
 
 void RegisterFileStatistics::onEvent(const HWInstructionEvent &Event) {

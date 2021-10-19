@@ -24,7 +24,7 @@ namespace Fortran::parser {
 // R905 char-variable -> variable
 // "char-variable" is attempted first since it's not type constrained but
 // syntactically ambiguous with "file-unit-number", which is constrained.
-TYPE_PARSER(construct<IoUnit>(variable / !"="_tok) ||
+TYPE_PARSER(construct<IoUnit>(variable / lookAhead(space / ",);\n"_ch)) ||
     construct<IoUnit>(fileUnitNumber) || construct<IoUnit>(star))
 
 // R1202 file-unit-number -> scalar-int-expr
@@ -54,8 +54,9 @@ constexpr auto fileNameExpr{scalarDefaultCharExpr};
 //         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
 //         STATUS = scalar-default-char-expr
-//         @ | CONVERT = scalar-default-char-variable
-//         @ | DISPOSE = scalar-default-char-variable
+//         @ | CARRIAGECONTROL = scalar-default-char-variable
+//           | CONVERT = scalar-default-char-variable
+//           | DISPOSE = scalar-default-char-variable
 constexpr auto statusExpr{construct<StatusExpr>(scalarDefaultCharExpr)};
 constexpr auto errLabel{construct<ErrLabel>(label)};
 
@@ -107,6 +108,10 @@ TYPE_PARSER(first(construct<ConnectSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
         "SIGN =" >> pure(ConnectSpec::CharExpr::Kind::Sign),
         scalarDefaultCharExpr)),
     construct<ConnectSpec>("STATUS =" >> statusExpr),
+    extension<LanguageFeature::Carriagecontrol>(construct<ConnectSpec>(
+        construct<ConnectSpec::CharExpr>("CARRIAGECONTROL =" >>
+                pure(ConnectSpec::CharExpr::Kind::Carriagecontrol),
+            scalarDefaultCharExpr))),
     extension<LanguageFeature::Convert>(
         construct<ConnectSpec>(construct<ConnectSpec::CharExpr>(
             "CONVERT =" >> pure(ConnectSpec::CharExpr::Kind::Convert),
@@ -134,6 +139,10 @@ TYPE_CONTEXT_PARSER("CLOSE statement"_en_US,
 // R1210 read-stmt ->
 //         READ ( io-control-spec-list ) [input-item-list] |
 //         READ format [, input-item-list]
+// The ambiguous READ(CVAR) is parsed as if CVAR were the unit.
+// As Fortran doesn't have internal unformatted I/O, it should
+// be parsed as if (CVAR) were a format; this is corrected by
+// rewriting in semantics when we know that CVAR is character.
 constexpr auto inputItemList{
     extension<LanguageFeature::IOListLeadingComma>(
         some("," >> inputItem)) || // legacy extension: leading comma
@@ -305,7 +314,7 @@ TYPE_CONTEXT_PARSER("BACKSPACE statement"_en_US,
 // R1225 endfile-stmt ->
 //         ENDFILE file-unit-number | ENDFILE ( position-spec-list )
 TYPE_CONTEXT_PARSER("ENDFILE statement"_en_US,
-    construct<EndfileStmt>("ENDFILE" >> positionOrFlushSpecList))
+    construct<EndfileStmt>("END FILE" >> positionOrFlushSpecList))
 
 // R1226 rewind-stmt -> REWIND file-unit-number | REWIND ( position-spec-list )
 TYPE_CONTEXT_PARSER("REWIND statement"_en_US,
@@ -357,7 +366,8 @@ TYPE_CONTEXT_PARSER("FLUSH statement"_en_US,
 //         STREAM = scalar-default-char-variable |
 //         STATUS = scalar-default-char-variable |
 //         WRITE = scalar-default-char-variable
-//         @ | CONVERT = scalar-default-char-variable
+//         @ | CARRIAGECONTROL = scalar-default-char-variable
+//           | CONVERT = scalar-default-char-variable
 //           | DISPOSE = scalar-default-char-variable
 TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("FILE =" >> fileNameExpr),
@@ -475,6 +485,11 @@ TYPE_PARSER(first(construct<InquireSpec>(maybe("UNIT ="_tok) >> fileUnitNumber),
     construct<InquireSpec>("WRITE =" >>
         construct<InquireSpec::CharVar>(pure(InquireSpec::CharVar::Kind::Write),
             scalarDefaultCharVariable)),
+    extension<LanguageFeature::Carriagecontrol>(
+        construct<InquireSpec>("CARRIAGECONTROL =" >>
+            construct<InquireSpec::CharVar>(
+                pure(InquireSpec::CharVar::Kind::Carriagecontrol),
+                scalarDefaultCharVariable))),
     extension<LanguageFeature::Convert>(construct<InquireSpec>(
         "CONVERT =" >> construct<InquireSpec::CharVar>(
                            pure(InquireSpec::CharVar::Kind::Convert),

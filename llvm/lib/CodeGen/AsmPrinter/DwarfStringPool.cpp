@@ -8,7 +8,6 @@
 
 #include "DwarfStringPool.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -33,7 +32,6 @@ DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
     Entry.Symbol = ShouldCreateSymbols ? Asm.createTempSymbol(Prefix) : nullptr;
 
     NumBytes += Str.size() + 1;
-    assert(NumBytes > Entry.Offset && "Unexpected overflow");
   }
   return *I.first;
 }
@@ -58,13 +56,13 @@ void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
   if (getNumIndexedStrings() == 0)
     return;
   Asm.OutStreamer->SwitchSection(Section);
-  unsigned EntrySize = 4;
-  // FIXME: DWARF64
+  unsigned EntrySize = Asm.getDwarfOffsetByteSize();
   // We are emitting the header for a contribution to the string offsets
   // table. The header consists of an entry with the contribution's
   // size (not including the size of the length field), the DWARF version and
   // 2 bytes of padding.
-  Asm.emitInt32(getNumIndexedStrings() * EntrySize + 4);
+  Asm.emitDwarfUnitLength(getNumIndexedStrings() * EntrySize + 4,
+                          "Length of String Offsets Set");
   Asm.emitInt16(Asm.getDwarfVersion());
   Asm.emitInt16(0);
   // Define the symbol that marks the start of the contribution. It is
@@ -120,7 +118,7 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     }
 
     Asm.OutStreamer->SwitchSection(OffsetSection);
-    unsigned size = 4; // FIXME: DWARF64 is 8.
+    unsigned size = Asm.getDwarfOffsetByteSize();
     for (const auto &Entry : Entries)
       if (UseRelativeOffsets)
         Asm.emitDwarfStringOffset(Entry->getValue());

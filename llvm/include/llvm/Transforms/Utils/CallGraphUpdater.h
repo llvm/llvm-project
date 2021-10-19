@@ -87,7 +87,7 @@ public:
   /// If a new function was created by outlining, this method can be called
   /// to update the call graph for the new function. Note that the old one
   /// still needs to be re-analyzed or manually updated.
-  void registerOutlinedFunction(Function &NewFn);
+  void registerOutlinedFunction(Function &OriginalFn, Function &NewFn);
 
   /// Replace \p OldFn in the call graph (and SCC) with \p NewFn. The uses
   /// outside the call graph and the function \p OldFn are not modified.

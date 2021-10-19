@@ -1,8 +1,6 @@
-; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
-; This test checks a number of things:
-; First, the lifetime markers should not clobber any uses of Q or P.
-; Second, the loads of P are MemoryUse(LiveOnEntry) due to the placement of the markers vs the loads.
+; This test checks that lifetime markers are considered clobbers of %P,
+; and due to lack of noalias information, of %Q as well.
 
 define i8 @test(i8* %P, i8* %Q) {
 entry:
@@ -18,10 +16,10 @@ entry:
 ; CHECK:  3 = MemoryDef(2)
 ; CHECK-NEXT:   call void @llvm.lifetime.end.p0i8(i64 32, i8* %P)
   call void @llvm.lifetime.end.p0i8(i64 32, i8* %P)
-; CHECK:  MemoryUse(liveOnEntry)
+; CHECK:  MemoryUse(3)
 ; CHECK-NEXT:   %1 = load i8, i8* %P
   %1 = load i8, i8* %P
-; CHECK:  MemoryUse(2)
+; CHECK:  MemoryUse(3)
 ; CHECK-NEXT:   %2 = load i8, i8* %Q
   %2 = load i8, i8* %Q
   ret i8 %1

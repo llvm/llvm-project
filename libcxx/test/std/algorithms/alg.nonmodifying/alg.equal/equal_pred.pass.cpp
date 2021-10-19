@@ -36,7 +36,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     int ia[] = {1, 3, 6, 7};
     int ib[] = {1, 3};
     int ic[] = {1, 3, 5, 7};
-    typedef input_iterator<int*>         II;
+    typedef cpp17_input_iterator<int*>         II;
     typedef bidirectional_iterator<int*> BI;
 
     return !std::equal(std::begin(ia), std::end(ia), std::begin(ic)              , eq)
@@ -63,15 +63,15 @@ int main(int, char**)
     int ia[] = {0, 1, 2, 3, 4, 5};
     const unsigned s = sizeof(ia)/sizeof(ia[0]);
     int ib[s] = {0, 1, 2, 5, 4, 5};
-    assert(std::equal(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia+s),
-                      input_iterator<const int*>(ia),
+    assert(std::equal(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia+s),
+                      cpp17_input_iterator<const int*>(ia),
                       std::equal_to<int>()));
 #if TEST_STD_VER >= 14
-    assert(std::equal(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia+s),
-                      input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia+s),
+    assert(std::equal(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia+s),
+                      cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia+s),
                       std::equal_to<int>()));
     assert(std::equal(random_access_iterator<const int*>(ia),
                       random_access_iterator<const int*>(ia+s),
@@ -80,10 +80,10 @@ int main(int, char**)
                       std::equal_to<int>()));
 
     comparison_count = 0;
-    assert(!std::equal(input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia+s),
-                      input_iterator<const int*>(ia),
-                      input_iterator<const int*>(ia+s-1),
+    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia+s),
+                      cpp17_input_iterator<const int*>(ia),
+                      cpp17_input_iterator<const int*>(ia+s-1),
                       counting_equals<int>));
     assert(comparison_count > 0);
     comparison_count = 0;
@@ -94,15 +94,15 @@ int main(int, char**)
                       counting_equals<int>));
     assert(comparison_count == 0);
 #endif
-    assert(!std::equal(input_iterator<const int*>(ia),
-                       input_iterator<const int*>(ia+s),
-                       input_iterator<const int*>(ib),
+    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
+                       cpp17_input_iterator<const int*>(ia+s),
+                       cpp17_input_iterator<const int*>(ib),
                        std::equal_to<int>()));
 #if TEST_STD_VER >= 14
-    assert(!std::equal(input_iterator<const int*>(ia),
-                       input_iterator<const int*>(ia+s),
-                       input_iterator<const int*>(ib),
-                       input_iterator<const int*>(ib+s),
+    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
+                       cpp17_input_iterator<const int*>(ia+s),
+                       cpp17_input_iterator<const int*>(ib),
+                       cpp17_input_iterator<const int*>(ib+s),
                        std::equal_to<int>()));
     assert(!std::equal(random_access_iterator<const int*>(ia),
                        random_access_iterator<const int*>(ia+s),

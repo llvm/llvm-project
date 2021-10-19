@@ -12,6 +12,8 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <iomanip>
 #include <istream>
 #include <cassert>
@@ -57,6 +59,7 @@ int main(int, char**)
         is >> std::get_money(x, true);
         assert(x == -123456789);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb(L"  -$1,234,567.89");
         std::wistream is(&sb);
@@ -73,6 +76,7 @@ int main(int, char**)
         is >> std::get_money(x, true);
         assert(x == -123456789);
     }
+#endif
 
   return 0;
 }

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
+; RUN: llc -mtriple=x86_64-unknown-unknown-gnux32 < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86_64
 ; RUN: llc -mtriple=i386-unknown-unknown < %s | FileCheck %s --check-prefix=ALL --check-prefix=X86
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39439.
 ; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=SJLJ

@@ -20,7 +20,7 @@ user interface as possible.
 command line.  Tests can be either individual test files or directories to
 search for tests (see :ref:`test-discovery`).
 
-Each specified test will be executed (potentially in parallel) and once all
+Each specified test will be executed (potentially concurrently) and once all
 tests have been run :program:`lit` will print summary information on the number
 of tests which passed or failed (see :ref:`test-status-results`).  The
 :program:`lit` program will execute with a non-zero exit code if any tests
@@ -151,13 +151,34 @@ EXECUTION OPTIONS
 
  Track the wall time individual tests take to execute and includes the results
  in the summary output.  This is useful for determining which tests in a test
- suite take the most time to execute.  Note that this option is most useful
- with ``-j 1``.
+ suite take the most time to execute.
+
+.. option:: --ignore-fail
+
+ Exit with status zero even if some tests fail.
+
+.. option:: --no-indirectly-run-check
+
+ Do not error if a test would not be run if the user had specified the
+ containing directory instead of naming the test directly.
 
 .. _selection-options:
 
 SELECTION OPTIONS
 -----------------
+
+By default, `lit` will run failing tests first, then run tests in descending
+execution time order to optimize concurrency.  The execution order can be
+changed using the :option:`--order` option.
+
+The timing data is stored in the `test_exec_root` in a file named
+`.lit_test_times.txt`. If this file does not exist, then `lit` checks the
+`test_source_root` for the file to optionally accelerate clean builds.
+
+.. option:: --shuffle
+
+ Run the tests in a random order, not failing/slowest first. Deprecated,
+ use :option:`--order` instead.
 
 .. option:: --max-failures N
 
@@ -185,16 +206,25 @@ SELECTION OPTIONS
  testsuites, for parallel execution on separate machines (say in a large
  testing farm).
 
+.. option:: --order={lexical,random,smart}
+
+ Define the order in which tests are run. The supported values are:
+
+ - lexical - tests will be run in lexical order according to the test file
+   path. This option is useful when predictable test order is desired.
+
+ - random - tests will be run in random order.
+
+ - smart - tests that failed previously will be run first, then the remaining
+   tests, all in descending execution time order. This is the default as it
+   optimizes concurrency.
+
 .. option:: --run-shard=N
 
  Select which shard to run, assuming the ``--num-shards=M`` option was
  provided. The two options must be used together, and the value of ``N``
  must be in the range ``1..M``. The environment variable
  ``LIT_RUN_SHARD`` can also be used in place of this option.
-
-.. option:: --shuffle
-
- Run the tests in a random order.
 
 .. option:: --timeout=N
 
@@ -208,6 +238,55 @@ SELECTION OPTIONS
   ``REGEXP``. The environment variable ``LIT_FILTER`` can be also used in place
   of this option, which is especially useful in environments where the call
   to ``lit`` is issued indirectly.
+
+.. option:: --filter-out=REGEXP
+
+  Filter out those tests whose name matches the regular expression specified in
+  ``REGEXP``. The environment variable ``LIT_FILTER_OUT`` can be also used in
+  place of this option, which is especially useful in environments where the
+  call to ``lit`` is issued indirectly.
+
+.. option:: --xfail=LIST
+
+  Treat those tests whose name is in the semicolon separated list ``LIST`` as
+  ``XFAIL``. This can be helpful when one does not want to modify the test
+  suite. The environment variable ``LIT_XFAIL`` can be also used in place of
+  this option, which is especially useful in environments where the call to
+  ``lit`` is issued indirectly.
+
+  A test name can specified as a file name relative to the test suite directory.
+  For example:
+
+  .. code-block:: none
+
+    LIT_XFAIL="affinity/kmp-hw-subset.c;offloading/memory_manager.cpp"
+
+  In this case, all of the following tests are treated as ``XFAIL``:
+
+  .. code-block:: none
+
+    libomp :: affinity/kmp-hw-subset.c
+    libomptarget :: nvptx64-nvidia-cuda :: offloading/memory_manager.cpp
+    libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp
+
+  Alternatively, a test name can be specified as the full test name
+  reported in LIT output.  For example, we can adjust the previous
+  example not to treat the ``nvptx64-nvidia-cuda`` version of
+  ``offloading/memory_manager.cpp`` as XFAIL:
+
+  .. code-block:: none
+
+    LIT_XFAIL="affinity/kmp-hw-subset.c;libomptarget :: x86_64-pc-linux-gnu :: offloading/memory_manager.cpp"
+
+.. option:: --xfail-not=LIST
+
+  Do not treat the specified tests as ``XFAIL``.  The environment variable
+  ``LIT_XFAIL_NOT`` can also be used in place of this option.  The syntax is the
+  same as for :option:`--xfail` and ``LIT_XFAIL``.  :option:`--xfail-not` and
+  ``LIT_XFAIL_NOT`` always override all other ``XFAIL`` specifications,
+  including an :option:`--xfail` appearing later on the command line.  The
+  primary purpose is to suppress an ``XPASS`` result without modifying a test
+  case that uses the ``XFAIL`` directive.
 
 ADDITIONAL OPTIONS
 ------------------
@@ -371,6 +450,11 @@ executed, two important global variables are predefined:
 
  **environment** A dictionary representing the environment to use when executing
  tests in the suite.
+
+ **standalone_tests** When true, mark a directory with tests expected to be run
+ standalone. Test discovery is disabled for that directory and
+ *--no-indirectly-run-check* is in effect. *lit.suffixes* and *lit.excludes*
+ must be empty when this variable is true.
 
  **suffixes** For **lit** test formats which scan directories for tests, this
  variable is a list of suffixes to identify test files.  Used by: *ShTest*.

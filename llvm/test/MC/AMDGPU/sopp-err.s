@@ -1,14 +1,14 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=SICI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN --check-prefix=VI --check-prefix=SICIVI %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck --check-prefix=GCN %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck --check-prefixes=GCN,SICI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,SICI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,VI --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // sendmsg
 //===----------------------------------------------------------------------===//
 
 s_sendmsg sendmsg(MSG_INTERRUPTX)
-// GCN: error: expected absolute expression
+// GCN: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(1 -)
 // GCN: error: unknown token in expression
@@ -26,7 +26,7 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_NOP)
 // GCN: error: invalid operation id
 
 s_sendmsg sendmsg(MSG_GS, SYSMSG_OP_ECC_ERR_INTERRUPT)
-// GCN: error: expected absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 0)
 // GCN: error: invalid operation id
@@ -50,10 +50,10 @@ s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0, 0)
 // GCN: error: expected a closing parenthesis
 
 s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
-// GCN: error: expected absolute expression
+// GCN: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// GCN: error: expected absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 1 -)
 // GCN: error: unknown token in expression
@@ -82,17 +82,52 @@ s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 s_sendmsg sendmsg(MSG_GS_DONE, 0, 0)
 // GCN: error: message operation does not support streams
 
+s_sendmsg sendmsg(MSG_SAVEWAVE)
+// SICI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_STALL_WAVE_GEN)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_HALT_WAVES)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_ORDERED_PS_DONE)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_EARLY_PRIM_DEALLOC)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+// GFX10: error: invalid message id
+
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
-// SICIVI: error: invalid message id
+// VI: error: invalid message id
+// SICI: error: invalid message id
 
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
-// SICIVI: error: invalid message id
+// VI: error: invalid message id
+// SICI: error: invalid message id
+// GFX10: error: message does not support operations
+
+s_sendmsg sendmsg(MSG_GET_DOORBELL)
+// SICI: error: invalid message id
+// VI: error: invalid message id
+
+s_sendmsg sendmsg(MSG_GET_DDID)
+// SICI: error: invalid message id
+// VI: error: invalid message id
 
 s_sendmsg sendmsg(-1)
-// SICIVI: error: invalid message id
+// VI: error: invalid message id
+// SICI: error: invalid message id
+// GFX10: error: invalid message id
 
 s_sendmsg sendmsg(16)
-// SICIVI: error: invalid message id
+// VI: error: invalid message id
+// SICI: error: invalid message id
+// GFX10: error: invalid message id
 
 s_sendmsg sendmsg(MSG_SYSMSG)
 // GCN: error: missing message operation
@@ -111,7 +146,8 @@ s_sendmsg sendmsg(MSG_SYSMSG, 5)
 //===----------------------------------------------------------------------===//
 
 s_waitcnt lgkmcnt(16)
-// SICIVI: error: too large value for lgkmcnt
+// VI: error: too large value for lgkmcnt
+// SICI: error: too large value for lgkmcnt
 
 s_waitcnt lgkmcnt(64)
 // GCN: error: too large value for lgkmcnt
@@ -120,10 +156,13 @@ s_waitcnt expcnt(8)
 // GCN: error: too large value for expcnt
 
 s_waitcnt vmcnt(16)
-// SICIVI: error: too large value for vmcnt
+// VI: error: too large value for vmcnt
+// SICI: error: too large value for vmcnt
 
 s_waitcnt vmcnt(64)
 // GFX10: error: too large value for vmcnt
+// SICI: error: too large value for vmcnt
+// VI: error: too large value for vmcnt
 
 s_waitcnt vmcnt(0xFFFFFFFFFFFF0000)
 // GCN: error: too large value for vmcnt

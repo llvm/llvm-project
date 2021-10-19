@@ -21,7 +21,7 @@ entry:
 
 ; CHECK:      --- !WASM
 ; CHECK-NEXT: FileHeader:
-; CHECK-NEXT:   Version:         0x00000001
+; CHECK-NEXT:   Version:         0x1
 ; CHECK-NEXT: Sections:
 ; CHECK-NEXT:   - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
@@ -36,14 +36,15 @@ entry:
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 0, 0, 0, 0 ]
 ; CHECK-NEXT:   - Type:            TABLE
 ; CHECK-NEXT:     Tables:
-; CHECK-NEXT:       - ElemType:        FUNCREF
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x00000003
-; CHECK-NEXT:           Maximum:         0x00000003
+; CHECK-NEXT:           Minimum:         0x3
+; CHECK-NEXT:           Maximum:         0x3
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x00000002
+; CHECK-NEXT:       - Minimum:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -128,4 +129,7 @@ entry:
 ; CHECK-NEXT:         Name:            call_alias_ptr
 ; CHECK-NEXT:       - Index:           6
 ; CHECK-NEXT:         Name:            call_direct_ptr
+; CHECK-NEXT:     GlobalNames:
+; CHECK-NEXT:       - Index:           0
+; CHECK-NEXT:         Name:            __stack_pointer
 ; CHECK-NEXT: ...

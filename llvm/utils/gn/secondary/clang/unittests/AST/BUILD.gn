@@ -18,11 +18,13 @@ unittest("ASTTests") {
     "ASTImporterFixtures.cpp",
     "ASTImporterGenericRedeclTest.cpp",
     "ASTImporterODRStrategiesTest.cpp",
+    "ASTImporterObjCTest.cpp",
     "ASTImporterTest.cpp",
     "ASTImporterVisibilityTest.cpp",
     "ASTTraverserTest.cpp",
     "ASTTypeTraitsTest.cpp",
     "ASTVectorTest.cpp",
+    "AttrTest.cpp",
     "CommentLexer.cpp",
     "CommentParser.cpp",
     "CommentTextTest.cpp",
@@ -37,5 +39,6 @@ unittest("ASTTests") {
     "SourceLocationTest.cpp",
     "StmtPrinterTest.cpp",
     "StructuralEquivalenceTest.cpp",
+    "TypePrinterTest.cpp",
   ]
 }

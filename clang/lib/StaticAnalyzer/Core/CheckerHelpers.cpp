@@ -148,5 +148,39 @@ llvm::Optional<int> tryExpandAsInteger(StringRef Macro,
   return IntValue.getSExtValue();
 }
 
+OperatorKind operationKindFromOverloadedOperator(OverloadedOperatorKind OOK,
+                                                 bool IsBinary) {
+  llvm::StringMap<BinaryOperatorKind> BinOps{
+#define BINARY_OPERATION(Name, Spelling) {Spelling, BO_##Name},
+#include "clang/AST/OperationKinds.def"
+  };
+  llvm::StringMap<UnaryOperatorKind> UnOps{
+#define UNARY_OPERATION(Name, Spelling) {Spelling, UO_##Name},
+#include "clang/AST/OperationKinds.def"
+  };
+
+  switch (OOK) {
+#define OVERLOADED_OPERATOR(Name, Spelling, Token, Unary, Binary, MemberOnly)  \
+  case OO_##Name:                                                              \
+    if (IsBinary) {                                                            \
+      auto BinOpIt = BinOps.find(Spelling);                                    \
+      if (BinOpIt != BinOps.end())                                             \
+        return OperatorKind(BinOpIt->second);                                  \
+      else                                                                     \
+        llvm_unreachable("operator was expected to be binary but is not");     \
+    } else {                                                                   \
+      auto UnOpIt = UnOps.find(Spelling);                                      \
+      if (UnOpIt != UnOps.end())                                               \
+        return OperatorKind(UnOpIt->second);                                   \
+      else                                                                     \
+        llvm_unreachable("operator was expected to be unary but is not");      \
+    }                                                                          \
+    break;
+#include "clang/Basic/OperatorKinds.def"
+  default:
+    llvm_unreachable("unexpected operator kind");
+  }
+}
+
 } // namespace ento
 } // namespace clang

@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;   struct data_t {
 ;     int d1;
@@ -20,7 +20,9 @@
 ;     output(&data);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.info_t = type { i32, i32 }
 %struct.data_t = type { i32, i32 }
@@ -31,7 +33,7 @@ entry:
   %data = alloca i64, align 8
   %tmpcast = bitcast i64* %data to %struct.data_t*
   call void @llvm.dbg.value(metadata %struct.info_t* %args, metadata !22, metadata !DIExpression()), !dbg !29
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* %args, i32 1, i32 1), !dbg !30, !llvm.preserve.access.index !16
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* elementtype(%struct.info_t) %args, i32 1, i32 1), !dbg !30, !llvm.preserve.access.index !16
   %1 = load i32, i32* %0, align 4, !dbg !30, !tbaa !31
   %and = and i32 %1, 65536, !dbg !36
   call void @llvm.dbg.value(metadata i32 %and, metadata !23, metadata !DIExpression()), !dbg !29
@@ -43,7 +45,7 @@ entry:
   br i1 %tobool, label %cond.false, label %lor.end.critedge, !dbg !39
 
 cond.false:                                       ; preds = %entry
-  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* %args, i32 0, i32 0), !dbg !40, !llvm.preserve.access.index !16
+  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.info_ts(%struct.info_t* elementtype(%struct.info_t) %args, i32 0, i32 0), !dbg !40, !llvm.preserve.access.index !16
   %4 = load i32, i32* %3, align 4, !dbg !40, !tbaa !41
   %d1 = bitcast i64* %data to i32*, !dbg !42
   store i32 %4, i32* %d1, align 8, !dbg !43, !tbaa !44

@@ -3,14 +3,14 @@
 // This file tests the callgraph dead code elimination performed by the inliner.
 
 // Function is already dead.
-// CHECK-NOT: func @dead_function
-func @dead_function() attributes {sym_visibility = "private"} {
+// CHECK-NOT: func private @dead_function
+func private @dead_function() {
   return
 }
 
 // Function becomes dead after inlining.
-// CHECK-NOT: func @dead_function_b
-func @dead_function_b() attributes {sym_visibility = "private"} {
+// CHECK-NOT: func private @dead_function_b
+func @dead_function_b() {
   return
 }
 
@@ -26,13 +26,13 @@ func @live_function() {
 func @live_function_b() {
   return
 }
-// CHECK-NOT: func @dead_function_c
-func @dead_function_c() attributes {sym_visibility = "private"} {
+// CHECK-NOT: func private @dead_function_c
+func private @dead_function_c() {
   call @live_function_b() : () -> ()
   return
 }
-// CHECK-NOT: func @dead_function_d
-func @dead_function_d() attributes {sym_visibility = "private"} {
+// CHECK-NOT: func private @dead_function_d
+func private @dead_function_d() {
   call @dead_function_c() : () -> ()
   call @dead_function_c() : () -> ()
   return
@@ -45,8 +45,8 @@ func @live_function_c() {
 }
 
 // Function is referenced by non-callable top-level user.
-// CHECK: func @live_function_d
-func @live_function_d() attributes {sym_visibility = "private"} {
+// CHECK: func private @live_function_d
+func private @live_function_d() {
   return
 }
 
@@ -63,11 +63,11 @@ func @live_function_e() {
   return
 }
 // CHECK-NOT: func @dead_function_e
-func @dead_function_e() -> () attributes {sym_visibility = "private"} {
+func private @dead_function_e() -> () {
   "test.fold_to_call_op"() {callee=@dead_function_f} : () -> ()
   return
 }
-// CHECK-NOT: func @dead_function_f
-func @dead_function_f() attributes {sym_visibility = "private"} {
+// CHECK-NOT: func private @dead_function_f
+func private @dead_function_f() {
   return
 }

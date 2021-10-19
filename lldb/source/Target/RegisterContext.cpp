@@ -54,53 +54,27 @@ RegisterContext::GetRegisterInfoByName(llvm::StringRef reg_name,
   if (reg_name.empty())
     return nullptr;
 
+  // Generic register names take precedence over specific register names.
+  // For example, on x86 we want "sp" to refer to the complete RSP/ESP register
+  // rather than the 16-bit SP pseudo-register.
+  uint32_t generic_reg = Args::StringToGenericRegister(reg_name);
+  if (generic_reg != LLDB_INVALID_REGNUM) {
+    const RegisterInfo *reg_info =
+        GetRegisterInfo(eRegisterKindGeneric, generic_reg);
+    if (reg_info)
+      return reg_info;
+  }
+
   const uint32_t num_registers = GetRegisterCount();
   for (uint32_t reg = start_idx; reg < num_registers; ++reg) {
     const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg);
 
-    if (reg_name.equals_lower(reg_info->name) ||
-        reg_name.equals_lower(reg_info->alt_name))
+    if (reg_name.equals_insensitive(reg_info->name) ||
+        reg_name.equals_insensitive(reg_info->alt_name))
       return reg_info;
   }
+
   return nullptr;
-}
-
-uint32_t
-RegisterContext::UpdateDynamicRegisterSize(const lldb_private::ArchSpec &arch,
-                                           RegisterInfo *reg_info) {
-  ExecutionContext exe_ctx(CalculateThread());
-
-  // In MIPS, the floating point registers size is depends on FR bit of SR
-  // register. if SR.FR  == 1 then all floating point registers are 64 bits.
-  // else they are all 32 bits.
-
-  int expr_result;
-  uint32_t addr_size = arch.GetAddressByteSize();
-  const uint8_t *dwarf_opcode_ptr = reg_info->dynamic_size_dwarf_expr_bytes;
-  const size_t dwarf_opcode_len = reg_info->dynamic_size_dwarf_len;
-
-  DataExtractor dwarf_data(dwarf_opcode_ptr, dwarf_opcode_len,
-                           arch.GetByteOrder(), addr_size);
-  ModuleSP opcode_ctx;
-  DWARFExpression dwarf_expr(opcode_ctx, dwarf_data, nullptr);
-  Value result;
-  Status error;
-  if (dwarf_expr.Evaluate(&exe_ctx, this, opcode_ctx, dwarf_data, nullptr,
-                          eRegisterKindDWARF, nullptr, nullptr, result,
-                          &error)) {
-    expr_result = result.GetScalar().SInt(-1);
-    switch (expr_result) {
-    case 0:
-      return 4;
-    case 1:
-      return 8;
-    default:
-      return reg_info->byte_size;
-    }
-  } else {
-    printf("Error executing DwarfExpression::Evaluate %s\n", error.AsCString());
-    return reg_info->byte_size;
-  }
 }
 
 const RegisterInfo *RegisterContext::GetRegisterInfo(lldb::RegisterKind kind,
@@ -148,6 +122,20 @@ bool RegisterContext::SetPC(uint64_t pc) {
       m_thread.ClearStackFrames();
   }
   return success;
+}
+
+bool RegisterContext::GetPCForSymbolication(Address &address) {
+  addr_t pc = GetPC(LLDB_INVALID_ADDRESS);
+  if (pc == LLDB_INVALID_ADDRESS)
+    return false;
+  TargetSP target_sp = m_thread.CalculateTarget();
+  if (!target_sp.get())
+    return false;
+
+  if (!BehavesLikeZerothFrame() && pc != 0)
+    pc--;
+  address.SetLoadAddress(pc, target_sp.get());
+  return true;
 }
 
 bool RegisterContext::SetPC(Address addr) {

@@ -25,7 +25,7 @@ def Standalone_FooOp : Standalone_Op<"foo", [NoSideEffect,
         Example:
 
         ```mlir
-        %0 = constant 2 : i32
+        %0 = arith.constant 2 : i32
         // Apply the foo operation to %0
         %1 = standalone.foo %0 : i32
         ```

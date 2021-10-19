@@ -1,5 +1,6 @@
 // RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s --check-prefix=MATCHER
 // RUN: llvm-tblgen -gen-asm-writer -I %p/../../include %s | FileCheck %s --check-prefix=WRITER
+// RUN: llvm-tblgen -gen-asm-matcher -I %p/../../include %s | FileCheck %s --check-prefix=ALIAS
 
 // Check that an instruction that uses mixed upper/lower case in its mnemonic
 // is printed as-is, and is parsed in its "canonicalized" lowercase form.
@@ -35,6 +36,9 @@ def AlphabeticallyFirstInst : Instruction {
   let AsmString = "aInst";
 }
 
+def :MnemonicAlias<"Insta", "aInst">;
+def :MnemonicAlias<"InstB", "BInst">;
+
 // Check that the matcher lower()s the mnemonics it matches.
 // MATCHER: static const char *const MnemonicTable =
 // MATCHER-NEXT: "\005ainst\005binst";
@@ -52,4 +56,21 @@ def AlphabeticallyFirstInst : Instruction {
 // WRITER:        "BInst\0"
 // WRITER-NEXT:   "aInst\0"
 // WRITER-NEXT: };
+
+// ALIAS: static void applyMnemonicAliases(StringRef &Mnemonic, const FeatureBitset &Features, unsigned VariantID) {
+// ALIAS-NEXT  switch (VariantID) {
+// ALIAS-NEXT  case 0:
+// ALIAS-NEXT      switch (Mnemonic.size()) {
+// ALIAS-NEXT      default: break;
+// ALIAS-NEXT      case 5:	 // 2 strings to match.
+// ALIAS-NEXT        if (memcmp(Mnemonic.data()+0, "inst", 4) != 0)
+// ALIAS-NEXT          break;
+// ALIAS-NEXT        switch (Mnemonic[4]) {
+// ALIAS-NEXT        default: break;
+// ALIAS-NEXT        case 'a':	 // 1 string to match.
+// ALIAS-NEXT          Mnemonic = "ainst";	 // "insta"
+// ALIAS-NEXT          return;
+// ALIAS-NEXT        case 'b':	 // 1 string to match.
+// ALIAS-NEXT          Mnemonic = "binst";	 // "instb"
+// ALIAS-NEXT          return;
 

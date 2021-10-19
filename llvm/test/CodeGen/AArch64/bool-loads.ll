@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -o - %s | FileCheck %s
 
-@var = global i1 0
+@var = dso_local global i1 0
 
-define i32 @test_sextloadi32() {
+define dso_local i32 @test_sextloadi32() {
 ; CHECK-LABEL: test_sextloadi32
 
   %val = load i1, i1* @var
@@ -14,7 +14,7 @@ define i32 @test_sextloadi32() {
 ; CHECK: ret
 }
 
-define i64 @test_sextloadi64() {
+define dso_local i64 @test_sextloadi64() {
 ; CHECK-LABEL: test_sextloadi64
 
   %val = load i1, i1* @var
@@ -26,7 +26,7 @@ define i64 @test_sextloadi64() {
 ; CHECK: ret
 }
 
-define i32 @test_zextloadi32() {
+define dso_local i32 @test_zextloadi32() {
 ; CHECK-LABEL: test_zextloadi32
 
 ; It's not actually necessary that "ret" is next, but as far as LLVM
@@ -40,7 +40,7 @@ define i32 @test_zextloadi32() {
 ; CHECK-NEXT: ret
 }
 
-define i64 @test_zextloadi64() {
+define dso_local i64 @test_zextloadi64() {
 ; CHECK-LABEL: test_zextloadi64
 
 ; It's not actually necessary that "ret" is next, but as far as LLVM

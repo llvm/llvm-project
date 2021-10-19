@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include "java.h"
 
 jptr varaddr;
@@ -31,5 +31,7 @@ int main() {
   return __tsan_java_fini();
 }
 
-// CHECK: WARNING: ThreadSanitizer: data race
+// Note: there is a race on the moved object (which we used to detect),
+// but now __tsan_java_move resets the object shadow, so we don't detect it anymore.
+// CHECK-NOT: WARNING: ThreadSanitizer: data race
 // CHECK: DONE

@@ -22,8 +22,8 @@ define void @test() {
 ; RV32I-WITHFP:       # %bb.0:
 ; RV32I-WITHFP-NEXT:    addi sp, sp, -2032
 ; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
-; RV32I-WITHFP-NEXT:    sw ra, 2028(sp)
-; RV32I-WITHFP-NEXT:    sw s0, 2024(sp)
+; RV32I-WITHFP-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    .cfi_offset ra, -4
 ; RV32I-WITHFP-NEXT:    .cfi_offset s0, -8
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 2032
@@ -34,8 +34,8 @@ define void @test() {
 ; RV32I-WITHFP-NEXT:    lui a0, 74565
 ; RV32I-WITHFP-NEXT:    addi a0, a0, -352
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
-; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 2032
 ; RV32I-WITHFP-NEXT:    ret
   %tmp = alloca [ 305419896 x i8 ] , align 4
@@ -50,8 +50,8 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -2032
 ; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 2032
-; RV32I-FPELIM-NEXT:    sw s0, 2028(sp)
-; RV32I-FPELIM-NEXT:    sw s1, 2024(sp)
+; RV32I-FPELIM-NEXT:    sw s0, 2028(sp) # 4-byte Folded Spill
+; RV32I-FPELIM-NEXT:    sw s1, 2024(sp) # 4-byte Folded Spill
 ; RV32I-FPELIM-NEXT:    .cfi_offset s0, -4
 ; RV32I-FPELIM-NEXT:    .cfi_offset s1, -8
 ; RV32I-FPELIM-NEXT:    lui a1, 97
@@ -74,8 +74,8 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-FPELIM-NEXT:    lui a0, 97
 ; RV32I-FPELIM-NEXT:    addi a0, a0, 672
 ; RV32I-FPELIM-NEXT:    add sp, sp, a0
-; RV32I-FPELIM-NEXT:    lw s1, 2024(sp)
-; RV32I-FPELIM-NEXT:    lw s0, 2028(sp)
+; RV32I-FPELIM-NEXT:    lw s1, 2024(sp) # 4-byte Folded Reload
+; RV32I-FPELIM-NEXT:    lw s0, 2028(sp) # 4-byte Folded Reload
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 2032
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -83,10 +83,10 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP:       # %bb.0:
 ; RV32I-WITHFP-NEXT:    addi sp, sp, -2032
 ; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 2032
-; RV32I-WITHFP-NEXT:    sw ra, 2028(sp)
-; RV32I-WITHFP-NEXT:    sw s0, 2024(sp)
-; RV32I-WITHFP-NEXT:    sw s1, 2020(sp)
-; RV32I-WITHFP-NEXT:    sw s2, 2016(sp)
+; RV32I-WITHFP-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s1, 2020(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s2, 2016(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    .cfi_offset ra, -4
 ; RV32I-WITHFP-NEXT:    .cfi_offset s0, -8
 ; RV32I-WITHFP-NEXT:    .cfi_offset s1, -12
@@ -101,7 +101,6 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    lui a2, 1048478
 ; RV32I-WITHFP-NEXT:    addi a2, a2, 1388
 ; RV32I-WITHFP-NEXT:    add a2, s0, a2
-; RV32I-WITHFP-NEXT:    mv a2, a2
 ; RV32I-WITHFP-NEXT:    add a1, a2, a1
 ; RV32I-WITHFP-NEXT:    #APP
 ; RV32I-WITHFP-NEXT:    nop
@@ -115,10 +114,10 @@ define void @test_emergency_spill_slot(i32 %a) {
 ; RV32I-WITHFP-NEXT:    lui a0, 97
 ; RV32I-WITHFP-NEXT:    addi a0, a0, 688
 ; RV32I-WITHFP-NEXT:    add sp, sp, a0
-; RV32I-WITHFP-NEXT:    lw s2, 2016(sp)
-; RV32I-WITHFP-NEXT:    lw s1, 2020(sp)
-; RV32I-WITHFP-NEXT:    lw s0, 2024(sp)
-; RV32I-WITHFP-NEXT:    lw ra, 2028(sp)
+; RV32I-WITHFP-NEXT:    lw s2, 2016(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s1, 2020(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 2032
 ; RV32I-WITHFP-NEXT:    ret
   %data = alloca [ 100000 x i32 ] , align 4

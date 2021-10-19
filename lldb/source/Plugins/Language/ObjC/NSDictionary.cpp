@@ -66,7 +66,8 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
 static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
 
-  TypeSystemClang *target_ast_context = TypeSystemClang::GetScratch(*target_sp);
+  TypeSystemClang *target_ast_context =
+      ScratchTypeSystemClang::GetForTarget(*target_sp);
 
   if (target_ast_context) {
     ConstString g___lldb_autogen_nspair("__lldb_autogen_nspair");
@@ -138,6 +139,38 @@ private:
   DataDescriptor_64 *m_data_64;
   lldb::addr_t m_data_ptr;
   CompilerType m_pair_type;
+  std::vector<DictionaryItemDescriptor> m_children;
+};
+
+class NSConstantDictionarySyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  NSConstantDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  size_t CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+
+  bool Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+
+private:
+  ExecutionContextRef m_exe_ctx_ref;
+  CompilerType m_pair_type;
+  uint8_t m_ptr_size = 8;
+  lldb::ByteOrder m_order = lldb::eByteOrderInvalid;
+  unsigned int m_size = 0;
+  lldb::addr_t m_keys_ptr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t m_objects_ptr = LLDB_INVALID_ADDRESS;
+
+  struct DictionaryItemDescriptor {
+    lldb::addr_t key_ptr;
+    lldb::addr_t val_ptr;
+    lldb::ValueObjectSP valobj_sp;
+  };
+
   std::vector<DictionaryItemDescriptor> m_children;
 };
 
@@ -301,7 +334,6 @@ namespace Foundation1428 {
 }
   
 namespace Foundation1437 {
-  namespace {
     static const uint64_t NSDictionaryCapacities[] = {
         0, 3, 7, 13, 23, 41, 71, 127, 191, 251, 383, 631, 1087, 1723,
         2803, 4523, 7351, 11959, 19447, 31231, 50683, 81919, 132607,
@@ -312,7 +344,8 @@ namespace Foundation1437 {
     
     static const size_t NSDictionaryNumSizeBuckets =
         sizeof(NSDictionaryCapacities) / sizeof(uint64_t);
-    
+
+    namespace {
     struct DataDescriptor_32 {
       uint32_t _buffer;
       uint32_t _muts;
@@ -338,8 +371,8 @@ namespace Foundation1437 {
             0 : NSDictionaryCapacities[_szidx];
       }
     };
-  }
-  
+    } // namespace
+
   using NSDictionaryMSyntheticFrontEnd =
     GenericNSDictionaryMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
   
@@ -388,7 +421,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     return false;
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
-      runtime->GetClassDescriptor(valobj));
+      runtime->GetNonKVOClassDescriptor(valobj));
 
   if (!descriptor || !descriptor->IsValid())
     return false;
@@ -409,11 +442,13 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static const ConstString g_DictionaryM("__NSDictionaryM");
   static const ConstString g_DictionaryMLegacy("__NSDictionaryM_Legacy");
   static const ConstString g_DictionaryMImmutable("__NSDictionaryM_Immutable");
+  static const ConstString g_DictionaryMFrozen("__NSFrozenDictionaryM");
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
   static const ConstString g_Dictionary0("__NSDictionary0");
   static const ConstString g_DictionaryCF("__CFDictionary");
   static const ConstString g_DictionaryNSCF("__NSCFDictionary");
   static const ConstString g_DictionaryCFRef("CFDictionaryRef");
+  static const ConstString g_ConstantDictionary("NSConstantDictionary");
 
   if (class_name.IsEmpty())
     return false;
@@ -426,7 +461,14 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
       return false;
 
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy) {
+  } else if (class_name == g_ConstantDictionary) {
+    Status error;
+    value = process_sp->ReadUnsignedIntegerFromMemory(
+        valobj_addr + 2 * ptr_size, ptr_size, 0, error);
+    if (error.Fail())
+      return false;
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy ||
+             class_name == g_DictionaryMFrozen) {
     AppleObjCRuntime *apple_runtime =
     llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -444,8 +486,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     value = 1;
   } else if (class_name == g_Dictionary0) {
     value = 0;
-  } else if (class_name == g_DictionaryCF ||
-             class_name == g_DictionaryNSCF ||
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
              class_name == g_DictionaryCFRef) {
     ExecutionContext exe_ctx(process_sp);
     CFBasicHash cfbh;
@@ -508,18 +549,22 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   static const ConstString g_DictionaryM("__NSDictionaryM");
   static const ConstString g_Dictionary1("__NSSingleEntryDictionaryI");
   static const ConstString g_DictionaryImmutable("__NSDictionaryM_Immutable");
+  static const ConstString g_DictionaryMFrozen("__NSFrozenDictionaryM");
   static const ConstString g_DictionaryMLegacy("__NSDictionaryM_Legacy");
   static const ConstString g_Dictionary0("__NSDictionary0");
   static const ConstString g_DictionaryCF("__CFDictionary");
   static const ConstString g_DictionaryNSCF("__NSCFDictionary");
   static const ConstString g_DictionaryCFRef("CFDictionaryRef");
+  static const ConstString g_ConstantDictionary("NSConstantDictionary");
 
   if (class_name.IsEmpty())
     return nullptr;
 
   if (class_name == g_DictionaryI) {
     return (new NSDictionaryISyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_DictionaryM) {
+  } else if (class_name == g_ConstantDictionary) {
+    return (new NSConstantDictionarySyntheticFrontEnd(valobj_sp));
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMFrozen) {
     if (runtime->GetFoundationVersion() >= 1437) {
       return (new Foundation1437::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     } else if (runtime->GetFoundationVersion() >= 1428) {
@@ -528,11 +573,10 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
       return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     }
   } else if (class_name == g_DictionaryMLegacy) {
-      return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
+    return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_Dictionary1) {
     return (new NSDictionary1SyntheticFrontEnd(valobj_sp));
-  } else if (class_name == g_DictionaryCF ||
-             class_name == g_DictionaryNSCF ||
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
              class_name == g_DictionaryCFRef) {
     return (new NSCFDictionarySyntheticFrontEnd(valobj_sp));
   } else {
@@ -815,6 +859,120 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
     } break;
     default:
       lldbassert(false && "pointer size is not 4 nor 8");
+    }
+
+    StreamString idx_name;
+    idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+    DataExtractor data(buffer_sp, m_order, m_ptr_size);
+    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
+                                                    m_exe_ctx_ref, m_pair_type);
+  }
+  return dict_item.valobj_sp;
+}
+
+lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
+    NSConstantDictionarySyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
+    : SyntheticChildrenFrontEnd(*valobj_sp) {}
+
+size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
+    GetIndexOfChildWithName(ConstString name) {
+  const char *item_name = name.GetCString();
+  uint32_t idx = ExtractIndexFromString(item_name);
+  if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    return UINT32_MAX;
+  return idx;
+}
+
+size_t lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
+    CalculateNumChildren() {
+  return m_size;
+}
+
+bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::Update() {
+  ValueObjectSP valobj_sp = m_backend.GetSP();
+  if (!valobj_sp)
+    return false;
+  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  Status error;
+  error.Clear();
+  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
+  if (!process_sp)
+    return false;
+  m_ptr_size = process_sp->GetAddressByteSize();
+  m_order = process_sp->GetByteOrder();
+  uint64_t valobj_addr = valobj_sp->GetValueAsUnsigned(0);
+  m_size = process_sp->ReadUnsignedIntegerFromMemory(
+      valobj_addr + 2 * m_ptr_size, m_ptr_size, 0, error);
+  if (error.Fail())
+    return false;
+  m_keys_ptr =
+      process_sp->ReadPointerFromMemory(valobj_addr + 3 * m_ptr_size, error);
+  if (error.Fail())
+    return false;
+  m_objects_ptr =
+      process_sp->ReadPointerFromMemory(valobj_addr + 4 * m_ptr_size, error);
+  return !error.Fail();
+}
+
+bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
+}
+
+lldb::ValueObjectSP lldb_private::formatters::
+    NSConstantDictionarySyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+  uint32_t num_children = CalculateNumChildren();
+
+  if (idx >= num_children)
+    return lldb::ValueObjectSP();
+
+  if (m_children.empty()) {
+    // do the scan phase
+    lldb::addr_t key_at_idx = 0, val_at_idx = 0;
+    ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
+    if (!process_sp)
+      return lldb::ValueObjectSP();
+
+    for (unsigned int child = 0; child < num_children; ++child) {
+      Status error;
+      key_at_idx = process_sp->ReadPointerFromMemory(
+          m_keys_ptr + child * m_ptr_size, error);
+      if (error.Fail())
+        return lldb::ValueObjectSP();
+      val_at_idx = process_sp->ReadPointerFromMemory(
+          m_objects_ptr + child * m_ptr_size, error);
+      if (error.Fail())
+        return lldb::ValueObjectSP();
+      DictionaryItemDescriptor descriptor = {key_at_idx, val_at_idx,
+                                             lldb::ValueObjectSP()};
+      m_children.push_back(descriptor);
+    }
+  }
+
+  if (idx >= m_children.size()) // should never happen
+    return lldb::ValueObjectSP();
+
+  DictionaryItemDescriptor &dict_item = m_children[idx];
+  if (!dict_item.valobj_sp) {
+    if (!m_pair_type.IsValid()) {
+      TargetSP target_sp(m_backend.GetTargetSP());
+      if (!target_sp)
+        return ValueObjectSP();
+      m_pair_type = GetLLDBNSPairType(target_sp);
+    }
+    if (!m_pair_type.IsValid())
+      return ValueObjectSP();
+
+    DataBufferSP buffer_sp(new DataBufferHeap(2 * m_ptr_size, 0));
+
+    if (m_ptr_size == 8) {
+      uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
+      *data_ptr = dict_item.key_ptr;
+      *(data_ptr + 1) = dict_item.val_ptr;
+    } else {
+      uint32_t *data_ptr = (uint32_t *)buffer_sp->GetBytes();
+      *data_ptr = dict_item.key_ptr;
+      *(data_ptr + 1) = dict_item.val_ptr;
     }
 
     StreamString idx_name;

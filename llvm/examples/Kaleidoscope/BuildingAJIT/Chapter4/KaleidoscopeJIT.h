@@ -13,34 +13,26 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/EPCIndirectionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
+#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdlib>
-#include <map>
 #include <memory>
-#include <string>
-#include <vector>
 
 class PrototypeAST;
 class ExprAST;
@@ -64,164 +56,188 @@ public:
 /// suffix (needed to prevent a name-clash with the function's stub),
 /// and then take ownership of the module that the function was compiled
 /// into.
-std::unique_ptr<llvm::Module>
-irgenAndTakeOwnership(FunctionAST &FnAST, const std::string &Suffix);
+llvm::orc::ThreadSafeModule irgenAndTakeOwnership(FunctionAST &FnAST,
+                                                  const std::string &Suffix);
 
 namespace llvm {
 namespace orc {
 
+class KaleidoscopeASTLayer;
+class KaleidoscopeJIT;
+
+class KaleidoscopeASTMaterializationUnit : public MaterializationUnit {
+public:
+  KaleidoscopeASTMaterializationUnit(KaleidoscopeASTLayer &L,
+                                     std::unique_ptr<FunctionAST> F);
+
+  StringRef getName() const override {
+    return "KaleidoscopeASTMaterializationUnit";
+  }
+
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
+
+private:
+  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override {
+    llvm_unreachable("Kaleidoscope functions are not overridable");
+  }
+
+  KaleidoscopeASTLayer &L;
+  std::unique_ptr<FunctionAST> F;
+};
+
+class KaleidoscopeASTLayer {
+public:
+  KaleidoscopeASTLayer(IRLayer &BaseLayer, const DataLayout &DL)
+      : BaseLayer(BaseLayer), DL(DL) {}
+
+  Error add(ResourceTrackerSP RT, std::unique_ptr<FunctionAST> F) {
+    return RT->getJITDylib().define(
+        std::make_unique<KaleidoscopeASTMaterializationUnit>(*this,
+                                                             std::move(F)),
+        RT);
+  }
+
+  void emit(std::unique_ptr<MaterializationResponsibility> MR,
+            std::unique_ptr<FunctionAST> F) {
+    BaseLayer.emit(std::move(MR), irgenAndTakeOwnership(*F, ""));
+  }
+
+  SymbolFlagsMap getInterface(FunctionAST &F) {
+    MangleAndInterner Mangle(BaseLayer.getExecutionSession(), DL);
+    SymbolFlagsMap Symbols;
+    Symbols[Mangle(F.getName())] =
+        JITSymbolFlags(JITSymbolFlags::Exported | JITSymbolFlags::Callable);
+    return Symbols;
+  }
+
+private:
+  IRLayer &BaseLayer;
+  const DataLayout &DL;
+};
+
+KaleidoscopeASTMaterializationUnit::KaleidoscopeASTMaterializationUnit(
+    KaleidoscopeASTLayer &L, std::unique_ptr<FunctionAST> F)
+    : MaterializationUnit(L.getInterface(*F), nullptr), L(L), F(std::move(F)) {}
+
+void KaleidoscopeASTMaterializationUnit::materialize(
+    std::unique_ptr<MaterializationResponsibility> R) {
+  L.emit(std::move(R), std::move(F));
+}
+
 class KaleidoscopeJIT {
 private:
-  ExecutionSession ES;
-  std::shared_ptr<SymbolResolver> Resolver;
-  std::unique_ptr<TargetMachine> TM;
-  const DataLayout DL;
-  LegacyRTDyldObjectLinkingLayer ObjectLayer;
-  LegacyIRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+  std::unique_ptr<ExecutionSession> ES;
+  std::unique_ptr<EPCIndirectionUtils> EPCIU;
 
-  using OptimizeFunction =
-      std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
+  DataLayout DL;
+  MangleAndInterner Mangle;
 
-  LegacyIRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer CompileLayer;
+  IRTransformLayer OptimizeLayer;
+  KaleidoscopeASTLayer ASTLayer;
 
-  std::unique_ptr<JITCompileCallbackManager> CompileCallbackMgr;
-  std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
+  JITDylib &MainJD;
+
+  static void handleLazyCallThroughError() {
+    errs() << "LazyCallThrough error: Could not find function body";
+    exit(1);
+  }
 
 public:
-  KaleidoscopeJIT()
-      : Resolver(createLegacyLookupResolver(
-            ES,
-            [this](StringRef Name) -> JITSymbol {
-              if (auto Sym = IndirectStubsMgr->findStub(Name, false))
-                return Sym;
-              if (auto Sym = OptimizeLayer.findSymbol(std::string(Name), false))
-                return Sym;
-              else if (auto Err = Sym.takeError())
-                return std::move(Err);
-              if (auto SymAddr = RTDyldMemoryManager::getSymbolAddressInProcess(
-                      std::string(Name)))
-                return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-              return nullptr;
-            },
-            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
-        TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(AcknowledgeORCv1Deprecation, ES,
-                    [this](VModuleKey K) {
-                      return LegacyRTDyldObjectLinkingLayer::Resources{
-                          std::make_shared<SectionMemoryManager>(), Resolver};
-                    }),
-        CompileLayer(AcknowledgeORCv1Deprecation, ObjectLayer,
-                     SimpleCompiler(*TM)),
-        OptimizeLayer(AcknowledgeORCv1Deprecation, CompileLayer,
-                      [this](std::unique_ptr<Module> M) {
-                        return optimizeModule(std::move(M));
-                      }),
-        CompileCallbackMgr(cantFail(orc::createLocalCompileCallbackManager(
-            TM->getTargetTriple(), ES, 0))) {
-    auto IndirectStubsMgrBuilder =
-      orc::createLocalIndirectStubsManagerBuilder(TM->getTargetTriple());
-    IndirectStubsMgr = IndirectStubsMgrBuilder();
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+  KaleidoscopeJIT(std::unique_ptr<ExecutionSession> ES,
+                  std::unique_ptr<EPCIndirectionUtils> EPCIU,
+                  JITTargetMachineBuilder JTMB, DataLayout DL)
+      : ES(std::move(ES)), EPCIU(std::move(EPCIU)), DL(std::move(DL)),
+        Mangle(*this->ES, this->DL),
+        ObjectLayer(*this->ES,
+                    []() { return std::make_unique<SectionMemoryManager>(); }),
+        CompileLayer(*this->ES, ObjectLayer,
+                     std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
+        OptimizeLayer(*this->ES, CompileLayer, optimizeModule),
+        ASTLayer(OptimizeLayer, this->DL),
+        MainJD(this->ES->createBareJITDylib("<main>")) {
+    MainJD.addGenerator(
+        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            DL.getGlobalPrefix())));
   }
 
-  TargetMachine &getTargetMachine() { return *TM; }
-
-  VModuleKey addModule(std::unique_ptr<Module> M) {
-    // Add the module to the JIT with a new VModuleKey.
-    auto K = ES.allocateVModule();
-    cantFail(OptimizeLayer.addModule(K, std::move(M)));
-    return K;
+  ~KaleidoscopeJIT() {
+    if (auto Err = ES->endSession())
+      ES->reportError(std::move(Err));
+    if (auto Err = EPCIU->cleanup())
+      ES->reportError(std::move(Err));
   }
 
-  Error addFunctionAST(std::unique_ptr<FunctionAST> FnAST) {
-    // Move ownership of FnAST to a shared pointer - C++11 lambdas don't support
-    // capture-by-move, which is be required for unique_ptr.
-    auto SharedFnAST = std::shared_ptr<FunctionAST>(std::move(FnAST));
+  static Expected<std::unique_ptr<KaleidoscopeJIT>> Create() {
+    auto EPC = SelfExecutorProcessControl::Create();
+    if (!EPC)
+      return EPC.takeError();
 
-    // Set the action to compile our AST. This lambda will be run if/when
-    // execution hits the compile callback (via the stub).
-    //
-    // The steps to compile are:
-    // (1) IRGen the function.
-    // (2) Add the IR module to the JIT to make it executable like any other
-    //     module.
-    // (3) Use findSymbol to get the address of the compiled function.
-    // (4) Update the stub pointer to point at the implementation so that
-    ///    subsequent calls go directly to it and bypass the compiler.
-    // (5) Return the address of the implementation: this lambda will actually
-    //     be run inside an attempted call to the function, and we need to
-    //     continue on to the implementation to complete the attempted call.
-    //     The JIT runtime (the resolver block) will use the return address of
-    //     this function as the address to continue at once it has reset the
-    //     CPU state to what it was immediately before the call.
-    auto CompileAction = [this, SharedFnAST]() {
-      auto M = irgenAndTakeOwnership(*SharedFnAST, "$impl");
-      addModule(std::move(M));
-      auto Sym = findSymbol(SharedFnAST->getName() + "$impl");
-      assert(Sym && "Couldn't find compiled function?");
-      JITTargetAddress SymAddr = cantFail(Sym.getAddress());
-      if (auto Err = IndirectStubsMgr->updatePointer(
-              mangle(SharedFnAST->getName()), SymAddr)) {
-        logAllUnhandledErrors(std::move(Err), errs(),
-                              "Error updating function pointer: ");
-        exit(1);
-      }
+    auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
 
-      return SymAddr;
-    };
+    auto EPCIU = EPCIndirectionUtils::Create(ES->getExecutorProcessControl());
+    if (!EPCIU)
+      return EPCIU.takeError();
 
-    // Create a CompileCallback using the CompileAction - this is the re-entry
-    // point into the compiler for functions that haven't been compiled yet.
-    auto CCAddr = cantFail(
-        CompileCallbackMgr->getCompileCallback(std::move(CompileAction)));
+    (*EPCIU)->createLazyCallThroughManager(
+        *ES, pointerToJITTargetAddress(&handleLazyCallThroughError));
 
-    // Create an indirect stub. This serves as the functions "canonical
-    // definition" - an unchanging (constant address) entry point to the
-    // function implementation.
-    // Initially we point the stub's function-pointer at the compile callback
-    // that we just created. When the compile action for the callback is run we
-    // will update the stub's function pointer to point at the function
-    // implementation that we just implemented.
-    if (auto Err = IndirectStubsMgr->createStub(
-            mangle(SharedFnAST->getName()), CCAddr, JITSymbolFlags::Exported))
-      return Err;
+    if (auto Err = setUpInProcessLCTMReentryViaEPCIU(**EPCIU))
+      return std::move(Err);
 
-    return Error::success();
+    JITTargetMachineBuilder JTMB((*EPC)->getTargetTriple());
+
+    auto DL = JTMB.getDefaultDataLayoutForTarget();
+    if (!DL)
+      return DL.takeError();
+
+    return std::make_unique<KaleidoscopeJIT>(std::move(ES), std::move(*EPCIU),
+                                             std::move(JTMB), std::move(*DL));
   }
 
-  JITSymbol findSymbol(const std::string Name) {
-    return OptimizeLayer.findSymbol(mangle(Name), true);
+  const DataLayout &getDataLayout() const { return DL; }
+
+  JITDylib &getMainJITDylib() { return MainJD; }
+
+  Error addModule(ThreadSafeModule TSM, ResourceTrackerSP RT = nullptr) {
+    if (!RT)
+      RT = MainJD.getDefaultResourceTracker();
+
+    return OptimizeLayer.add(RT, std::move(TSM));
   }
 
-  void removeModule(VModuleKey K) {
-    cantFail(OptimizeLayer.removeModule(K));
+  Error addAST(std::unique_ptr<FunctionAST> F, ResourceTrackerSP RT = nullptr) {
+    if (!RT)
+      RT = MainJD.getDefaultResourceTracker();
+    return ASTLayer.add(RT, std::move(F));
+  }
+
+  Expected<JITEvaluatedSymbol> lookup(StringRef Name) {
+    return ES->lookup({&MainJD}, Mangle(Name.str()));
   }
 
 private:
-  std::string mangle(const std::string &Name) {
-    std::string MangledName;
-    raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-    return MangledNameStream.str();
-  }
+  static Expected<ThreadSafeModule>
+  optimizeModule(ThreadSafeModule TSM, const MaterializationResponsibility &R) {
+    TSM.withModuleDo([](Module &M) {
+      // Create a function pass manager.
+      auto FPM = std::make_unique<legacy::FunctionPassManager>(&M);
 
-  std::unique_ptr<Module> optimizeModule(std::unique_ptr<Module> M) {
-    // Create a function pass manager.
-    auto FPM = std::make_unique<legacy::FunctionPassManager>(M.get());
+      // Add some optimizations.
+      FPM->add(createInstructionCombiningPass());
+      FPM->add(createReassociatePass());
+      FPM->add(createGVNPass());
+      FPM->add(createCFGSimplificationPass());
+      FPM->doInitialization();
 
-    // Add some optimizations.
-    FPM->add(createInstructionCombiningPass());
-    FPM->add(createReassociatePass());
-    FPM->add(createGVNPass());
-    FPM->add(createCFGSimplificationPass());
-    FPM->doInitialization();
+      // Run the optimizations over all functions in the module being added to
+      // the JIT.
+      for (auto &F : M)
+        FPM->run(F);
+    });
 
-    // Run the optimizations over all functions in the module being added to
-    // the JIT.
-    for (auto &F : *M)
-      FPM->run(F);
-
-    return M;
+    return std::move(TSM);
   }
 };
 

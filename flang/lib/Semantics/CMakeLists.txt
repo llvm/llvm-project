@@ -1,4 +1,3 @@
-
 add_flang_library(FortranSemantics
   assignment.cpp
   attr.cpp
@@ -36,6 +35,7 @@ add_flang_library(FortranSemantics
   resolve-names-utils.cpp
   resolve-names.cpp
   rewrite-parse-tree.cpp
+  runtime-type-info.cpp
   scope.cpp
   semantics.cpp
   symbol.cpp

@@ -112,8 +112,8 @@ body:             |
     liveins: $lc0:0x00000004, $r2:0x00000001, $r3:0x00000001, $r4:0x00000001, $sa0:0x00000004
 
     $r5 = M2_mpysip $r3, 1824
-    $r7 = L2_loadrigp @g2, implicit $gp :: (dereferenceable load 4 from @g2)
-    $r8 = L2_loadrigp @g3, implicit killed $gp :: (dereferenceable load 4 from @g3, align 8)
+    $r7 = L2_loadrigp @g2, implicit $gp :: (dereferenceable load (s32) from @g2)
+    $r8 = L2_loadrigp @g3, implicit killed $gp :: (dereferenceable load (s32) from @g3, align 8)
     $r6 = A2_tfr $r5
     $r7 = A2_and killed $r8, killed $r7
     $r5 = M2_accii killed $r5, $r2, 1248
@@ -125,17 +125,17 @@ body:             |
     liveins: $lc0:0x00000004, $r0:0x00000001, $r1:0x00000001, $r2:0x00000001, $r3:0x00000001, $r4:0x00000001, $r5:0x00000001, $r6:0x00000001, $r7:0x00000001, $sa0:0x00000004
 
     $r8 = S2_cl0 $r7
-    $r12 = L2_loadrubgp @g4, implicit $gp :: (dereferenceable load 1 from @g4)
+    $r12 = L2_loadrubgp @g4, implicit $gp :: (dereferenceable load (s8) from @g4)
     $r7 = S2_setbit_r killed $r7, $r8
-    $r9 = L4_loadri_rr $r6, $r8, 2 :: (load 4 from %ir.v14)
-    $r13 = L4_loadri_rr $r5, killed $r8, 2 :: (load 4 from %ir.v17)
+    $r9 = L4_loadri_rr $r6, $r8, 2 :: (load (s32) from %ir.v14)
+    $r13 = L4_loadri_rr $r5, killed $r8, 2 :: (load (s32) from %ir.v17)
     $d4 = M2_vmpy2s_s0 killed $r9, $r9, implicit-def dead $usr_ovf
     $p0 = S2_tstbit_i killed $r12, 0
     $d4 = M2_vmac2s_s0 killed $d4, killed $r13, $r13, implicit-def dead $usr_ovf
     $p1 = C2_cmpeqi $r7, 0
     $d6 = A2_vaddws $d0, $d4, implicit-def dead $usr_ovf
     $d0 = A2_tfrpt $p0, killed $d0, implicit $d0
-    S4_pstorerdf_abs $p0, @g0, $d6, implicit killed $gp :: (store 8 into @g0)
+    S4_pstorerdf_abs $p0, @g0, $d6, implicit killed $gp :: (store (s64) into @g0)
     $d0 = A2_tfrpf killed $p0, killed $d6, implicit killed $d0
     J2_jumpf killed $p1, %bb.2, implicit-def dead $pc
 
@@ -150,7 +150,7 @@ body:             |
   bb.4:
     liveins: $r8:0x00000001, $r9:0x00000001
 
-    S2_storerdgp @g1, killed $d4, implicit killed $gp :: (store 8 into @g1)
+    S2_storerdgp @g1, killed $d4, implicit killed $gp :: (store (s64) into @g1)
     PS_jmpret killed $r31, implicit-def dead $pc
 ...
 

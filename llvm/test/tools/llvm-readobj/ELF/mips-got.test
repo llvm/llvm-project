@@ -1,506 +1,380 @@
-# RUN: llvm-readobj -A %p/Inputs/dynamic-table-exe.mips | \
-# RUN:   FileCheck %s -check-prefix GOT-EXE
-# RUN: llvm-readobj -A %p/Inputs/dynamic-table-so.mips | \
-# RUN:   FileCheck %s -check-prefix GOT-SO
-# RUN: llvm-readobj -A %p/Inputs/got-tls.so.elf-mips64el | \
-# RUN:   FileCheck %s -check-prefix GOT-TLS
-# RUN: llvm-readobj -A %p/Inputs/got-empty.exe.mipsel | \
-# RUN:   FileCheck %s -check-prefix GOT-EMPTY
-# RUN: llvm-readobj -A %p/Inputs/got-static.exe.mips | \
-# RUN:   FileCheck %s -check-prefix GOT-STATIC
+## Check that we are able to dump MIPS GOT entries using -A properly.
 
-# RUN: llvm-readelf -A %p/Inputs/dynamic-table-exe.mips | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EXE
-# RUN: llvm-readelf -A %p/Inputs/dynamic-table-so.mips | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-SO
-# RUN: llvm-readelf -A %p/Inputs/got-tls.so.elf-mips64el | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-TLS
-# RUN: llvm-readelf -A %p/Inputs/got-empty.exe.mipsel | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EMPTY
-# RUN: llvm-readelf -A %p/Inputs/got-static.exe.mips | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-STATIC
+## Check how we dump 64-bit inputs.
 
-# GOT-EXE:      Primary GOT {
-# GOT-EXE-NEXT:   Canonical gp value: 0x418880
-# GOT-EXE-NEXT:   Reserved entries [
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x410890
-# GOT-EXE-NEXT:       Access: -32752
-# GOT-EXE-NEXT:       Initial: 0x0
-# GOT-EXE-NEXT:       Purpose: Lazy resolver
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x410894
-# GOT-EXE-NEXT:       Access: -32748
-# GOT-EXE-NEXT:       Initial: 0x80000000
-# GOT-EXE-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:   ]
-# GOT-EXE-NEXT:   Local entries [
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x410898
-# GOT-EXE-NEXT:       Access: -32744
-# GOT-EXE-NEXT:       Initial: 0x400418
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x41089C
-# GOT-EXE-NEXT:       Access: -32740
-# GOT-EXE-NEXT:       Initial: 0x410840
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x4108A0
-# GOT-EXE-NEXT:       Access: -32736
-# GOT-EXE-NEXT:       Initial: 0x0
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:   ]
-# GOT-EXE-NEXT:   Global entries [
-# GOT-EXE-NEXT:     Entry {
-# GOT-EXE-NEXT:       Address: 0x4108A4
-# GOT-EXE-NEXT:       Access: -32732
-# GOT-EXE-NEXT:       Initial: 0x0
-# GOT-EXE-NEXT:       Value: 0x0
-# GOT-EXE-NEXT:       Type: Function (0x2)
-# GOT-EXE-NEXT:       Section: Undefined (0x0)
-# GOT-EXE-NEXT:       Name: __gmon_start__ (1)
-# GOT-EXE-NEXT:     }
-# GOT-EXE-NEXT:   ]
-# GOT-EXE-NEXT:   Number of TLS and multi-GOT entries: 0
-# GOT-EXE-NEXT: }
+# RUN: yaml2obj --docnum=1 -DTYPE=ET_REL %s -o %t.got.o
+# RUN: yaml2obj --docnum=1 -DTYPE=ET_DYN %s -o %t.got.so
+# RUN: yaml2obj --docnum=1 -DTYPE=ET_EXEC %s -o %t.got.exe
 
-# GOT-SO:      Primary GOT {
-# GOT-SO-NEXT:   Canonical gp value: 0x188D0
-# GOT-SO-NEXT:   Reserved entries [
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108E0
-# GOT-SO-NEXT:       Access: -32752
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Purpose: Lazy resolver
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108E4
-# GOT-SO-NEXT:       Access: -32748
-# GOT-SO-NEXT:       Initial: 0x80000000
-# GOT-SO-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:   ]
-# GOT-SO-NEXT:   Local entries [
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108E8
-# GOT-SO-NEXT:       Access: -32744
-# GOT-SO-NEXT:       Initial: 0x108E0
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108EC
-# GOT-SO-NEXT:       Access: -32740
-# GOT-SO-NEXT:       Initial: 0x10000
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108F0
-# GOT-SO-NEXT:       Access: -32736
-# GOT-SO-NEXT:       Initial: 0x10920
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108F4
-# GOT-SO-NEXT:       Access: -32732
-# GOT-SO-NEXT:       Initial: 0x108CC
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108F8
-# GOT-SO-NEXT:       Access: -32728
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x108FC
-# GOT-SO-NEXT:       Access: -32724
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10900
-# GOT-SO-NEXT:       Access: -32720
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10904
-# GOT-SO-NEXT:       Access: -32716
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:   ]
-# GOT-SO-NEXT:   Global entries [
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10908
-# GOT-SO-NEXT:       Access: -32712
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Value: 0x0
-# GOT-SO-NEXT:       Type: None (0x0)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: _ITM_registerTMCloneTable (87)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x1090C
-# GOT-SO-NEXT:       Access: -32708
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Value: 0x0
-# GOT-SO-NEXT:       Type: None (0x0)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: _Jv_RegisterClasses (128)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10910
-# GOT-SO-NEXT:       Access: -32704
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Value: 0x0
-# GOT-SO-NEXT:       Type: Function (0x2)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: __gmon_start__ (23)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10914
-# GOT-SO-NEXT:       Access: -32700
-# GOT-SO-NEXT:       Initial: 0x840
-# GOT-SO-NEXT:       Value: 0x840
-# GOT-SO-NEXT:       Type: Function (0x2)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: puts@GLIBC_2.0 (162)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x10918
-# GOT-SO-NEXT:       Access: -32696
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Value: 0x0
-# GOT-SO-NEXT:       Type: None (0x0)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: _ITM_deregisterTMCloneTable (59)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:     Entry {
-# GOT-SO-NEXT:       Address: 0x1091C
-# GOT-SO-NEXT:       Access: -32692
-# GOT-SO-NEXT:       Initial: 0x0
-# GOT-SO-NEXT:       Value: 0x0
-# GOT-SO-NEXT:       Type: Function (0x2)
-# GOT-SO-NEXT:       Section: Undefined (0x0)
-# GOT-SO-NEXT:       Name: __cxa_finalize@GLIBC_2.2 (113)
-# GOT-SO-NEXT:     }
-# GOT-SO-NEXT:   ]
-# GOT-SO-NEXT:   Number of TLS and multi-GOT entries: 0
-# GOT-SO-NEXT: }
+# RUN: llvm-readobj -A %t.got.o 2>&1 | FileCheck %s -DOTHERNUM=0 -check-prefix=BASIC-LLVM
+# RUN: llvm-readobj -A %t.got.so 2>&1 | FileCheck %s -DOTHERNUM=0 -check-prefix=BASIC-LLVM
+# RUN: llvm-readobj -A %t.got.exe 2>&1 | FileCheck %s -DOTHERNUM=0 -check-prefix=BASIC-LLVM
+# RUN: llvm-readelf -A %t.got.o 2>&1 | FileCheck %s -check-prefix=BASIC-GNU \
+# RUN:   --implicit-check-not="Number of" --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -A %t.got.so 2>&1 | FileCheck %s -check-prefix=BASIC-GNU \
+# RUN:   --implicit-check-not="Number of" --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -A %t.got.exe 2>&1 | FileCheck %s -check-prefix=BASIC-GNU \
+# RUN:   --implicit-check-not="Number of" --strict-whitespace --match-full-lines
 
-# GOT-TLS:      Primary GOT {
-# GOT-TLS-NEXT:   Canonical gp value: 0x18BF0
-# GOT-TLS-NEXT:   Reserved entries [
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C00
-# GOT-TLS-NEXT:       Access: -32752
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Purpose: Lazy resolver
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C08
-# GOT-TLS-NEXT:       Access: -32744
-# GOT-TLS-NEXT:       Initial: 0x8000000000000000
-# GOT-TLS-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:   ]
-# GOT-TLS-NEXT:   Local entries [
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C10
-# GOT-TLS-NEXT:       Access: -32736
-# GOT-TLS-NEXT:       Initial: 0x10000
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C18
-# GOT-TLS-NEXT:       Access: -32728
-# GOT-TLS-NEXT:       Initial: 0x10C00
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C20
-# GOT-TLS-NEXT:       Access: -32720
-# GOT-TLS-NEXT:       Initial: 0x10CB8
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C28
-# GOT-TLS-NEXT:       Access: -32712
-# GOT-TLS-NEXT:       Initial: 0x10BF0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C30
-# GOT-TLS-NEXT:       Access: -32704
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C38
-# GOT-TLS-NEXT:       Access: -32696
-# GOT-TLS-NEXT:       Initial: 0x948
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C40
-# GOT-TLS-NEXT:       Access: -32688
-# GOT-TLS-NEXT:       Initial: 0xA20
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C48
-# GOT-TLS-NEXT:       Access: -32680
-# GOT-TLS-NEXT:       Initial: 0xAF0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C50
-# GOT-TLS-NEXT:       Access: -32672
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C58
-# GOT-TLS-NEXT:       Access: -32664
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C60
-# GOT-TLS-NEXT:       Access: -32656
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:   ]
-# GOT-TLS-NEXT:   Global entries [
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C68
-# GOT-TLS-NEXT:       Access: -32648
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Value: 0x0
-# GOT-TLS-NEXT:       Type: None (0x0)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: _ITM_registerTMCloneTable (78)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C70
-# GOT-TLS-NEXT:       Access: -32640
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Value: 0x0
-# GOT-TLS-NEXT:       Type: None (0x0)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: _Jv_RegisterClasses (119)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C78
-# GOT-TLS-NEXT:       Access: -32632
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Value: 0x0
-# GOT-TLS-NEXT:       Type: Function (0x2)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: __gmon_start__ (23)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C80
-# GOT-TLS-NEXT:       Access: -32624
-# GOT-TLS-NEXT:       Initial: 0xB60
-# GOT-TLS-NEXT:       Value: 0xB60
-# GOT-TLS-NEXT:       Type: Function (0x2)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: __tls_get_addr@GLIBC_2.3 (150)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C88
-# GOT-TLS-NEXT:       Access: -32616
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Value: 0x0
-# GOT-TLS-NEXT:       Type: None (0x0)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: _ITM_deregisterTMCloneTable (50)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:     Entry {
-# GOT-TLS-NEXT:       Address: 0x10C90
-# GOT-TLS-NEXT:       Access: -32608
-# GOT-TLS-NEXT:       Initial: 0x0
-# GOT-TLS-NEXT:       Value: 0x0
-# GOT-TLS-NEXT:       Type: Function (0x2)
-# GOT-TLS-NEXT:       Section: Undefined (0x0)
-# GOT-TLS-NEXT:       Name: __cxa_finalize@GLIBC_2.2 (104)
-# GOT-TLS-NEXT:     }
-# GOT-TLS-NEXT:   ]
-# GOT-TLS-NEXT:   Number of TLS and multi-GOT entries: 4
-# GOT-TLS-NEXT: }
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    [[TYPE=ET_EXEC]]
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    ContentArray: [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  ## Lazy resolver.
+                    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  ## Module pointer (GNU extension)
+                    0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,  ## Local entry 1
+                    0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,  ## Local entry 2
+                    0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,  ## Global entry 1
+                    0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB ] ## Global entry 2
+    Size: [[SIZE=<none>]]
+  - Name:   .dynamic
+    Type:   SHT_DYNAMIC
+    ShType: [[DYNAMICTYPE=<none>]]
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 4
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols:
+  - Name: foo
+  - Name: bar
+    Type: STT_FUNC
 
-# GOT-EMPTY:      Primary GOT {
-# GOT-EMPTY-NEXT:   Canonical gp value: 0x409FF0
-# GOT-EMPTY-NEXT:   Reserved entries [
-# GOT-EMPTY-NEXT:     Entry {
-# GOT-EMPTY-NEXT:       Address: 0x402000
-# GOT-EMPTY-NEXT:       Access: -32752
-# GOT-EMPTY-NEXT:       Initial: 0x0
-# GOT-EMPTY-NEXT:       Purpose: Lazy resolver
-# GOT-EMPTY-NEXT:     }
-# GOT-EMPTY-NEXT:     Entry {
-# GOT-EMPTY-NEXT:       Address: 0x402004
-# GOT-EMPTY-NEXT:       Access: -32748
-# GOT-EMPTY-NEXT:       Initial: 0x80000000
-# GOT-EMPTY-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-EMPTY-NEXT:     }
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Local entries [
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Global entries [
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Number of TLS and multi-GOT entries: 2
-# GOT-EMPTY-NEXT: }
+# BASIC-LLVM:      Primary GOT {
+# BASIC-LLVM-NEXT:   Canonical gp value: 0x9112
+# BASIC-LLVM-NEXT:   Reserved entries [
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x1122
+# BASIC-LLVM-NEXT:       Access: -32752
+# BASIC-LLVM-NEXT:       Initial: 0x0
+# BASIC-LLVM-NEXT:       Purpose: Lazy resolver
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x112A
+# BASIC-LLVM-NEXT:       Access: -32744
+# BASIC-LLVM-NEXT:       Initial: 0xFFFFFFFFFFFFFFFF
+# BASIC-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:   ]
+# BASIC-LLVM-NEXT:   Local entries [
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x1132
+# BASIC-LLVM-NEXT:       Access: -32736
+# BASIC-LLVM-NEXT:       Initial: 0x1111111111111111
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x113A
+# BASIC-LLVM-NEXT:       Access: -32728
+# BASIC-LLVM-NEXT:       Initial: 0x2222222222222222
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:   ]
+# BASIC-LLVM-NEXT:   Global entries [
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x1142
+# BASIC-LLVM-NEXT:       Access: -32720
+# BASIC-LLVM-NEXT:       Initial: 0xAAAAAAAAAAAAAAAA
+# BASIC-LLVM-NEXT:       Value: 0x0
+# BASIC-LLVM-NEXT:       Type: None (0x0)
+# BASIC-LLVM-NEXT:       Section: Undefined (0x0)
+# BASIC-LLVM-NEXT:       Name: foo (5)
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:     Entry {
+# BASIC-LLVM-NEXT:       Address: 0x114A
+# BASIC-LLVM-NEXT:       Access: -32712
+# BASIC-LLVM-NEXT:       Initial: 0xBBBBBBBBBBBBBBBB
+# BASIC-LLVM-NEXT:       Value: 0x0
+# BASIC-LLVM-NEXT:       Type: Function (0x2)
+# BASIC-LLVM-NEXT:       Section: Undefined (0x0)
+# BASIC-LLVM-NEXT:       Name: bar (1)
+# BASIC-LLVM-NEXT:     }
+# BASIC-LLVM-NEXT:   ]
+# BASIC-LLVM-NEXT:   Number of TLS and multi-GOT entries: [[OTHERNUM]]
+# BASIC-LLVM-NEXT: }
 
-# GOT-STATIC:      Static GOT {
-# GOT-STATIC-NEXT:   Canonical gp value: 0x418100
-# GOT-STATIC-NEXT:   Reserved entries [
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410110
-# GOT-STATIC-NEXT:       Access: -32752
-# GOT-STATIC-NEXT:       Initial: 0x0
-# GOT-STATIC-NEXT:       Purpose: Lazy resolver
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410114
-# GOT-STATIC-NEXT:       Access: -32748
-# GOT-STATIC-NEXT:       Initial: 0x80000000
-# GOT-STATIC-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:   ]
-# GOT-STATIC-NEXT:   Local entries [
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410118
-# GOT-STATIC-NEXT:       Access: -32744
-# GOT-STATIC-NEXT:       Initial: 0x400000
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x41011C
-# GOT-STATIC-NEXT:       Access: -32740
-# GOT-STATIC-NEXT:       Initial: 0x400100
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410120
-# GOT-STATIC-NEXT:       Access: -32736
-# GOT-STATIC-NEXT:       Initial: 0x400104
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:   ]
-# GOT-STATIC-NEXT: }
+#            BASIC-GNU:Primary GOT:
+#       BASIC-GNU-NEXT: Canonical gp value: 0000000000009112
+#      BASIC-GNU-EMPTY:
+#       BASIC-GNU-NEXT: Reserved entries:
+#       BASIC-GNU-NEXT:           Address     Access          Initial Purpose
+#       BASIC-GNU-NEXT:  0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+#       BASIC-GNU-NEXT:  000000000000112a -32744(gp) ffffffffffffffff Module pointer (GNU extension)
+#      BASIC-GNU-EMPTY:
+#       BASIC-GNU-NEXT: Local entries:
+#       BASIC-GNU-NEXT:           Address     Access          Initial
+#       BASIC-GNU-NEXT:  0000000000001132 -32736(gp) 1111111111111111 {{$}}
+#       BASIC-GNU-NEXT:  000000000000113a -32728(gp) 2222222222222222 {{$}}
+#      BASIC-GNU-EMPTY:
+#       BASIC-GNU-NEXT: Global entries:
+#       BASIC-GNU-NEXT:           Address     Access          Initial         Sym.Val. Type    Ndx Name
+#       BASIC-GNU-NEXT:  0000000000001142 -32720(gp) aaaaaaaaaaaaaaaa 0000000000000000 NOTYPE  UND foo
+#       BASIC-GNU-NEXT:  000000000000114a -32712(gp) bbbbbbbbbbbbbbbb 0000000000000000 FUNC    UND bar
+#      BASIC-GNU-EMPTY:
+# BASIC-GNU-OTHER-NEXT: Number of TLS and multi-GOT entries [[OTHERNUM]]
 
-# GNU-GOT-EXE:      Primary GOT:
-# GNU-GOT-EXE-NEXT:  Canonical gp value: 00418880
+## Check we are able to print the number of TLS and multi-GOT entries properly.
 
-# GNU-GOT-EXE:       Reserved entries:
-# GNU-GOT-EXE-NEXT:    Address     Access  Initial Purpose
-# GNU-GOT-EXE-NEXT:   00410890 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-EXE-NEXT:   00410894 -32748(gp) 80000000 Module pointer (GNU extension)
+# RUN: yaml2obj --docnum=1 %s -DSIZE=56 -o %t.other.entries1.exe
+# RUN: yaml2obj --docnum=1 %s -DSIZE=64 -o %t.other.entries2.exe
+# RUN: llvm-readobj -A %t.other.entries1.exe 2>&1 | FileCheck %s -DOTHERNUM=1 --check-prefix=BASIC-LLVM
+# RUN: llvm-readobj -A %t.other.entries2.exe 2>&1 | FileCheck %s -DOTHERNUM=2 -check-prefix=BASIC-LLVM
+# RUN: llvm-readelf -A %t.other.entries1.exe 2>&1 | FileCheck %s -DOTHERNUM=1 \
+# RUN:   --check-prefixes=BASIC-GNU,BASIC-GNU-OTHER --strict-whitespace --match-full-lines
+# RUN: llvm-readelf -A %t.other.entries2.exe 2>&1 | FileCheck %s -DOTHERNUM=2 \
+# RUN:   --check-prefixes=BASIC-GNU,BASIC-GNU-OTHER --strict-whitespace --match-full-lines
 
-# GNU-GOT-EXE:       Local entries:
-# GNU-GOT-EXE-NEXT:    Address     Access  Initial
-# GNU-GOT-EXE-NEXT:   00410898 -32744(gp) 00400418
-# GNU-GOT-EXE-NEXT:   0041089c -32740(gp) 00410840
-# GNU-GOT-EXE-NEXT:   004108a0 -32736(gp) 00000000
+## Check how we print static GOT. Our code assumes that the GOT is static when there
+## is no .dynamic section, so we change its type to hide it.
 
-# GNU-GOT-EXE:       Global entries:
-# GNU-GOT-EXE-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-# GNU-GOT-EXE-NEXT:   004108a4 -32732(gp) 00000000 00000000 FUNC    UND __gmon_start__
+# RUN: yaml2obj --docnum=1 -DDYNAMICTYPE=SHT_PROGBITS %s -o %t.got-static.exe
+# RUN: llvm-readobj -A %t.got-static.exe | FileCheck %s --check-prefix=STATIC-GOT-LLVM
+# RUN: llvm-readelf -A %t.got-static.exe | FileCheck %s --check-prefix=STATIC-GOT-GNU
 
-# GNU-GOT-EXE:      PLT GOT:
+# STATIC-GOT-LLVM:      Static GOT {
+# STATIC-GOT-LLVM-NEXT:   Canonical gp value: 0x9112
+# STATIC-GOT-LLVM-NEXT:   Reserved entries [
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1122
+# STATIC-GOT-LLVM-NEXT:       Access: -32752
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x0
+# STATIC-GOT-LLVM-NEXT:       Purpose: Lazy resolver
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x112A
+# STATIC-GOT-LLVM-NEXT:       Access: -32744
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xFFFFFFFFFFFFFFFF
+# STATIC-GOT-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:   ]
+# STATIC-GOT-LLVM-NEXT:   Local entries [
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1132
+# STATIC-GOT-LLVM-NEXT:       Access: -32736
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x1111111111111111
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x113A
+# STATIC-GOT-LLVM-NEXT:       Access: -32728
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x2222222222222222
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1142
+# STATIC-GOT-LLVM-NEXT:       Access: -32720
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xAAAAAAAAAAAAAAAA
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x114A
+# STATIC-GOT-LLVM-NEXT:       Access: -32712
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xBBBBBBBBBBBBBBBB
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:   ]
+# STATIC-GOT-LLVM-NEXT: }
 
-# GNU-GOT-EXE:       Reserved entries:
-# GNU-GOT-EXE-NEXT:    Address  Initial Purpose
-# GNU-GOT-EXE-NEXT:   00410854 00000000 PLT lazy resolver
-# GNU-GOT-EXE-NEXT:   00410858 00000000 Module pointer
+# STATIC-GOT-GNU:       Static GOT:
+# STATIC-GOT-GNU-NEXT:   Canonical gp value: 0000000000009112
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NEXT:   Reserved entries:
+# STATIC-GOT-GNU-NEXT:             Address     Access          Initial Purpose
+# STATIC-GOT-GNU-NEXT:    0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+# STATIC-GOT-GNU-NEXT:    000000000000112a -32744(gp) ffffffffffffffff Module pointer (GNU extension)
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NEXT:   Local entries:
+# STATIC-GOT-GNU-NEXT:             Address     Access          Initial
+# STATIC-GOT-GNU-NEXT:    0000000000001132 -32736(gp) 1111111111111111
+# STATIC-GOT-GNU-NEXT:    000000000000113a -32728(gp) 2222222222222222
+# STATIC-GOT-GNU-NEXT:    0000000000001142 -32720(gp) aaaaaaaaaaaaaaaa
+# STATIC-GOT-GNU-NEXT:    000000000000114a -32712(gp) bbbbbbbbbbbbbbbb
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NOT:   {{.}}
 
-# GNU-GOT-EXE:       Entries:
-# GNU-GOT-EXE-NEXT:    Address  Initial Sym.Val. Type    Ndx Name
-# GNU-GOT-EXE-NEXT:   0041085c 00400800 00000000 FUNC    UND puts
-# GNU-GOT-EXE-NEXT:   00410860 00400800 00000000 FUNC    UND __libc_start_main
+## Check how we dump 32-bit inputs.
 
-# GNU-GOT-SO:      Primary GOT:
-# GNU-GOT-SO-NEXT:  Canonical gp value: 000188d0
+# RUN: yaml2obj --docnum=2 %s -o %t.got32.exe
+# RUN: llvm-readobj -A %t.got32.exe 2>&1 | FileCheck %s -check-prefix=BASIC32-LLVM
+# RUN: llvm-readelf -A %t.got32.exe 2>&1 | FileCheck %s -check-prefix=BASIC32-GNU \
+# RUN:   --strict-whitespace --match-full-lines
 
-# GNU-GOT-SO:       Reserved entries:
-# GNU-GOT-SO-NEXT:    Address     Access  Initial Purpose
-# GNU-GOT-SO-NEXT:   000108e0 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-SO-NEXT:   000108e4 -32748(gp) 80000000 Module pointer (GNU extension)
+# BASIC32-LLVM:      Primary GOT {
+# BASIC32-LLVM-NEXT:   Canonical gp value: 0x9112
+# BASIC32-LLVM-NEXT:   Reserved entries [
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x1122
+# BASIC32-LLVM-NEXT:       Access: -32752
+# BASIC32-LLVM-NEXT:       Initial: 0x0
+# BASIC32-LLVM-NEXT:       Purpose: Lazy resolver
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x1126
+# BASIC32-LLVM-NEXT:       Access: -32748
+# BASIC32-LLVM-NEXT:       Initial: 0xFFFFFFFF
+# BASIC32-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:   ]
+# BASIC32-LLVM-NEXT:   Local entries [
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x112A
+# BASIC32-LLVM-NEXT:       Access: -32744
+# BASIC32-LLVM-NEXT:       Initial: 0x11111111
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x112E
+# BASIC32-LLVM-NEXT:       Access: -32740
+# BASIC32-LLVM-NEXT:       Initial: 0x22222222
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:   ]
+# BASIC32-LLVM-NEXT:   Global entries [
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x1132
+# BASIC32-LLVM-NEXT:       Access: -32736
+# BASIC32-LLVM-NEXT:       Initial: 0xAAAAAAAA
+# BASIC32-LLVM-NEXT:       Value: 0x0
+# BASIC32-LLVM-NEXT:       Type: None (0x0)
+# BASIC32-LLVM-NEXT:       Section: Undefined (0x0)
+# BASIC32-LLVM-NEXT:       Name: foo (5)
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:     Entry {
+# BASIC32-LLVM-NEXT:       Address: 0x1136
+# BASIC32-LLVM-NEXT:       Access: -32732
+# BASIC32-LLVM-NEXT:       Initial: 0xBBBBBBBB
+# BASIC32-LLVM-NEXT:       Value: 0x0
+# BASIC32-LLVM-NEXT:       Type: Function (0x2)
+# BASIC32-LLVM-NEXT:       Section: Undefined (0x0)
+# BASIC32-LLVM-NEXT:       Name: bar (1)
+# BASIC32-LLVM-NEXT:     }
+# BASIC32-LLVM-NEXT:   ]
+# BASIC32-LLVM-NEXT:   Number of TLS and multi-GOT entries: 1
+# BASIC32-LLVM-NEXT: }
 
-# GNU-GOT-SO:       Local entries:
-# GNU-GOT-SO-NEXT:    Address     Access  Initial
-# GNU-GOT-SO-NEXT:   000108e8 -32744(gp) 000108e0
-# GNU-GOT-SO-NEXT:   000108ec -32740(gp) 00010000
-# GNU-GOT-SO-NEXT:   000108f0 -32736(gp) 00010920
-# GNU-GOT-SO-NEXT:   000108f4 -32732(gp) 000108cc
-# GNU-GOT-SO-NEXT:   000108f8 -32728(gp) 00000000
-# GNU-GOT-SO-NEXT:   000108fc -32724(gp) 00000000
-# GNU-GOT-SO-NEXT:   00010900 -32720(gp) 00000000
-# GNU-GOT-SO-NEXT:   00010904 -32716(gp) 00000000
+#       BASIC32-GNU:Primary GOT:
+#  BASIC32-GNU-NEXT: Canonical gp value: 00009112
+# BASIC32-GNU-EMPTY:
+#  BASIC32-GNU-NEXT: Reserved entries:
+#  BASIC32-GNU-NEXT:   Address     Access  Initial Purpose
+#  BASIC32-GNU-NEXT:  00001122 -32752(gp) 00000000 Lazy resolver
+#  BASIC32-GNU-NEXT:  00001126 -32748(gp) ffffffff Module pointer (GNU extension)
+# BASIC32-GNU-EMPTY:
+#  BASIC32-GNU-NEXT: Local entries:
+#  BASIC32-GNU-NEXT:   Address     Access  Initial
+#  BASIC32-GNU-NEXT:  0000112a -32744(gp) 11111111 {{$}}
+#  BASIC32-GNU-NEXT:  0000112e -32740(gp) 22222222 {{$}}
+# BASIC32-GNU-EMPTY:
+#  BASIC32-GNU-NEXT: Global entries:
+#  BASIC32-GNU-NEXT:   Address     Access  Initial Sym.Val. Type    Ndx Name
+#  BASIC32-GNU-NEXT:  00001132 -32736(gp) aaaaaaaa 00000000 NOTYPE  UND foo
+#  BASIC32-GNU-NEXT:  00001136 -32732(gp) bbbbbbbb 00000000 FUNC    UND bar
+# BASIC32-GNU-EMPTY:
+#  BASIC32-GNU-NEXT: Number of TLS and multi-GOT entries 1
 
-# GNU-GOT-SO:       Global entries:
-# GNU-GOT-SO-NEXT:    Address     Access  Initial Sym.Val. Type    Ndx Name
-# GNU-GOT-SO-NEXT:   00010908 -32712(gp) 00000000 00000000 NOTYPE  UND _ITM_registerTMCloneTable
-# GNU-GOT-SO-NEXT:   0001090c -32708(gp) 00000000 00000000 NOTYPE  UND _Jv_RegisterClasses
-# GNU-GOT-SO-NEXT:   00010910 -32704(gp) 00000000 00000000 FUNC    UND __gmon_start__
-# GNU-GOT-SO-NEXT:   00010914 -32700(gp) 00000840 00000840 FUNC    UND puts
-# GNU-GOT-SO-NEXT:   00010918 -32696(gp) 00000000 00000000 NOTYPE  UND _ITM_deregisterTMCloneTable
-# GNU-GOT-SO-NEXT:   0001091c -32692(gp) 00000000 00000000 FUNC    UND __cxa_finalize
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    ContentArray: [ 0x00, 0x00, 0x00, 0x00,  ## Lazy resolver.
+                    0xFF, 0xFF, 0xFF, 0xFF,  ## Module pointer (GNU extension).
+                    0x11, 0x11, 0x11, 0x11,  ## Local entry 1.
+                    0x22, 0x22, 0x22, 0x22,  ## Local entry 2.
+                    0xAA, 0xAA, 0xAA, 0xAA,  ## Global entry 1.
+                    0xBB, 0xBB, 0xBB, 0xBB,  ## Global entry 2.
+                    0x00, 0x00, 0x00, 0x00 ] ## Other entry.
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 4
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols:
+  - Name: foo
+  - Name: bar
+    Type: STT_FUNC
 
-# GNU-GOT-TLS:      Primary GOT:
-# GNU-GOT-TLS-NEXT:  Canonical gp value: 0000000000018bf0
+## Check what we print when there are no local nor global GOT entries.
 
-# GNU-GOT-TLS:       Reserved entries:
-# GNU-GOT-TLS-NEXT:            Address     Access          Initial Purpose
-# GNU-GOT-TLS-NEXT:   0000000000010c00 -32752(gp) 0000000000000000 Lazy resolver
-# GNU-GOT-TLS-NEXT:   0000000000010c08 -32744(gp) 8000000000000000 Module pointer (GNU extension)
+# RUN: yaml2obj --docnum=3 %s -o %t.got-noentries.exe
+# RUN: llvm-readobj -A %t.got-noentries.exe | FileCheck %s --check-prefix=GOT-EMPTY-LLVM
+# RUN: llvm-readelf -A %t.got-noentries.exe | FileCheck %s --check-prefix=GOT-EMPTY-GNU
 
-# GNU-GOT-TLS:       Local entries:
-# GNU-GOT-TLS-NEXT:            Address     Access          Initial
-# GNU-GOT-TLS-NEXT:   0000000000010c10 -32736(gp) 0000000000010000
-# GNU-GOT-TLS-NEXT:   0000000000010c18 -32728(gp) 0000000000010c00
-# GNU-GOT-TLS-NEXT:   0000000000010c20 -32720(gp) 0000000000010cb8
-# GNU-GOT-TLS-NEXT:   0000000000010c28 -32712(gp) 0000000000010bf0
-# GNU-GOT-TLS-NEXT:   0000000000010c30 -32704(gp) 0000000000000000
-# GNU-GOT-TLS-NEXT:   0000000000010c38 -32696(gp) 0000000000000948
-# GNU-GOT-TLS-NEXT:   0000000000010c40 -32688(gp) 0000000000000a20
-# GNU-GOT-TLS-NEXT:   0000000000010c48 -32680(gp) 0000000000000af0
-# GNU-GOT-TLS-NEXT:   0000000000010c50 -32672(gp) 0000000000000000
-# GNU-GOT-TLS-NEXT:   0000000000010c58 -32664(gp) 0000000000000000
-# GNU-GOT-TLS-NEXT:   0000000000010c60 -32656(gp) 0000000000000000
+# GOT-EMPTY-LLVM:      Primary GOT {
+# GOT-EMPTY-LLVM-NEXT:   Canonical gp value: 0x9112
+# GOT-EMPTY-LLVM-NEXT:   Reserved entries [
+# GOT-EMPTY-LLVM-NEXT:     Entry {
+# GOT-EMPTY-LLVM-NEXT:       Address: 0x1122
+# GOT-EMPTY-LLVM-NEXT:       Access: -32752
+# GOT-EMPTY-LLVM-NEXT:       Initial: 0x0
+# GOT-EMPTY-LLVM-NEXT:       Purpose: Lazy resolver
+# GOT-EMPTY-LLVM-NEXT:     }
+# GOT-EMPTY-LLVM-NEXT:     Entry {
+# GOT-EMPTY-LLVM-NEXT:       Address: 0x112A
+# GOT-EMPTY-LLVM-NEXT:       Access: -32744
+# GOT-EMPTY-LLVM-NEXT:       Initial: 0xFFFFFFFFFFFFFFFF
+# GOT-EMPTY-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# GOT-EMPTY-LLVM-NEXT:     }
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Local entries [
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Global entries [
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Number of TLS and multi-GOT entries: 0
+# GOT-EMPTY-LLVM-NEXT: }
 
-# GNU-GOT-TLS:       Global entries:
-# GNU-GOT-TLS-NEXT:            Address     Access          Initial         Sym.Val. Type    Ndx Name
-# GNU-GOT-TLS-NEXT:   0000000000010c68 -32648(gp) 0000000000000000 0000000000000000 NOTYPE  UND _ITM_registerTMCloneTable
-# GNU-GOT-TLS-NEXT:   0000000000010c70 -32640(gp) 0000000000000000 0000000000000000 NOTYPE  UND _Jv_RegisterClasses
-# GNU-GOT-TLS-NEXT:   0000000000010c78 -32632(gp) 0000000000000000 0000000000000000 FUNC    UND __gmon_start__
-# GNU-GOT-TLS-NEXT:   0000000000010c80 -32624(gp) 0000000000000b60 0000000000000b60 FUNC    UND __tls_get_addr
-# GNU-GOT-TLS-NEXT:   0000000000010c88 -32616(gp) 0000000000000000 0000000000000000 NOTYPE  UND _ITM_deregisterTMCloneTable
-# GNU-GOT-TLS-NEXT:   0000000000010c90 -32608(gp) 0000000000000000 0000000000000000 FUNC    UND __cxa_finalize
+# GOT-EMPTY-GNU:      Primary GOT:
+# GOT-EMPTY-GNU-NEXT:  Canonical gp value: 0000000000009112
+# GOT-EMPTY-GNU-EMPTY:
+# GOT-EMPTY-GNU-NEXT:  Reserved entries:
+# GOT-EMPTY-GNU-NEXT:            Address     Access          Initial Purpose
+# GOT-EMPTY-GNU-NEXT:   0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+# GOT-EMPTY-GNU-NEXT:   000000000000112a -32744(gp) ffffffffffffffff Module pointer (GNU extension)
+# GOT-EMPTY-GNU-NOT:  {{.}}
 
-# GNU-GOTY     : Primary GOT:
-# GNU-GOT-EMPTY:  Canonical gp value: 00409ff0
-
-# GNU-GOTY     :  Reserved entries:
-# GNU-GOT-EMPTY:    Address     Access  Initial Purpose
-# GNU-GOT-EMPTY:   00402000 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-EMPTY:   00402004 -32748(gp) 80000000 Module pointer (GNU extension)
-
-# GNU-GOT-STATIC:      Static GOT:
-# GNU-GOT-STATIC-NEXT:  Canonical gp value: 00418100
-
-# GNU-GOT-STATIC:       Reserved entries:
-# GNU-GOT-STATIC-NEXT:    Address     Access  Initial Purpose
-# GNU-GOT-STATIC-NEXT:   00410110 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-STATIC-NEXT:   00410114 -32748(gp) 80000000 Module pointer (GNU extension)
-
-# GNU-GOT-STATIC:       Local entries:
-# GNU-GOT-STATIC-NEXT:    Address     Access  Initial
-# GNU-GOT-STATIC-NEXT:   00410118 -32744(gp) 00400000
-# GNU-GOT-STATIC-NEXT:   0041011c -32740(gp) 00400100
-# GNU-GOT-STATIC-NEXT:   00410120 -32736(gp) 00400104
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    ContentArray: [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  ## Lazy resolver.
+                    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF ] ## Module pointer (GNU extension)
+    Size: [[SIZE=<none>]]
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 2
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols: []
 
 ## Check we report errors when dynamic tags, needed for dumping GOT, are missing.
 
-# RUN: yaml2obj --docnum=1 -DTAG1=DT_MIPS_LOCAL_GOTNO -DTAG2=DT_MIPS_GOTSYM %s -o %t.err1.o
-# RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o -check-prefix ERR1
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_MIPS_LOCAL_GOTNO -DTAG2=DT_MIPS_GOTSYM %s -o %t.err1.o
+# RUN: llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o -check-prefixes=NO-OUTPUT,ERR1
 
-# ERR1: error: '[[FILE]]': cannot find PLTGOT dynamic tag
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_GOTSYM %s -o %t.err2.o
+# RUN: llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o -check-prefixes=NO-OUTPUT,ERR2
 
-# RUN: yaml2obj --docnum=1 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_GOTSYM %s -o %t.err2.o
-# RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o -check-prefix ERR2
-
-# ERR2: error: '[[FILE]]': cannot find MIPS_LOCAL_GOTNO dynamic tag
-
-# RUN: yaml2obj --docnum=1 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_LOCAL_GOTNO %s -o %t.err3.o
-# RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
-
-# ERR3: error: '[[FILE]]': cannot find MIPS_GOTSYM dynamic tag
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_LOCAL_GOTNO %s -o %t.err3.o
+# RUN: llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefixes=NO-OUTPUT,ERR3
 
 --- !ELF
 FileHeader:
@@ -520,15 +394,11 @@ Sections:
         Value: 0
 DynamicSymbols: []
 
-# RUN: yaml2obj --docnum=2 -DVAL1=0xffff %s -o %t.err4.o
-# RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix=ERR4
+# RUN: yaml2obj --docnum=5 -DVAL1=0xffff %s -o %t.err4.o
+# RUN: llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefixes=NO-OUTPUT,ERR4
 
-# ERR4: error: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
-
-# RUN: yaml2obj --docnum=2 -DVAL2=0xffff %s -o %t.err5.o
-# RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix=ERR5
-
-# ERR5: error: '[[FILE]]': there is no non-empty GOT section at 0xffff
+# RUN: yaml2obj --docnum=5 -DVAL2=0xffff %s -o %t.err5.o
+# RUN: llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefixes=NO-OUTPUT,ERR5
 
 --- !ELF
 FileHeader:
@@ -548,8 +418,22 @@ Sections:
         Value: [[VAL2=0]]
 DynamicSymbols: []
 
+# NO-OUTPUT:      LoadName: <Not found>
+# NO-OUTPUT-NEXT: There is no .MIPS.abiflags section in the file.
+# NO-OUTPUT-NEXT: There is no .MIPS.options section in the file.
+# NO-OUTPUT-NEXT: There is no .reginfo section in the file.
+
+# ERR1-NEXT: warning: '[[FILE]]': cannot find PLTGOT dynamic tag
+# ERR2-NEXT: warning: '[[FILE]]': cannot find MIPS_LOCAL_GOTNO dynamic tag
+# ERR3-NEXT: warning: '[[FILE]]': cannot find MIPS_GOTSYM dynamic tag
+# ERR4-NEXT: warning: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
+# ERR5-NEXT: warning: '[[FILE]]': there is no non-empty GOT section at 0xffff
+
+# NO-OUTPUT-EMPTY:
+# NO-OUTPUT-NOT: {{.}}
+
 ## Check that we do not report a warning about the .got section when we are able to locate it by name.
-# RUN: yaml2obj --docnum=3 -DNAME=0xffff %s -o %t.err6.o
+# RUN: yaml2obj --docnum=6 -DNAME=0xffff %s -o %t.err6.o
 # RUN: llvm-readobj -A %t.err6.o 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err6.o -check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
 # RUN: llvm-readelf -A %t.err6.o 2>&1 | \
@@ -574,7 +458,7 @@ Sections:
     ShName: [[NAME=<none>]]
 
 ## Check we report a warning when we are unable to find the .got section due to an error.
-# RUN: yaml2obj --docnum=3 -DGOTNAME=0xffff %s -o %t.err7.o
+# RUN: yaml2obj --docnum=6 -DGOTNAME=0xffff %s -o %t.err7.o
 # RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
 # RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
 
@@ -584,7 +468,7 @@ Sections:
 ## sections with the same address as the .got section.
 ## In this test the empty .data section has the same address as the .got section.
 
-# RUN: yaml2obj --docnum=4 %s -o %t.err7.o
+# RUN: yaml2obj --docnum=7 %s -o %t.err7.o
 # RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-LLVM
 # RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-GNU
 
@@ -651,3 +535,71 @@ Sections:
         Value: 0x1122
 DynamicSymbols:
   - Name: foo
+
+## Check how we print global GOT entries when they are unnamed section symbols.
+# RUN: yaml2obj --docnum=8 %s -o %t.err8.o
+# RUN: llvm-readobj -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-LLVM
+# RUN: llvm-readelf -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-GNU
+
+# SEC-SYMS-LLVM:      Global entries [
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: Absolute (0xFFF1)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-LLVM-NEXT:     Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: .got (0x1)
+# SEC-SYMS-LLVM-NEXT:     Name: .got (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT:   Entry {
+# SEC-SYMS-LLVM:          Section: Common (0xFFF2)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-LLVM-NEXT:     Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT: Entry {
+# SEC-SYMS-LLVM:          Type: Section (0x3)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
+# SEC-SYMS-LLVM-NEXT:     Section: Reserved (0xFFFF)
+# SEC-SYMS-LLVM-NEXT:     Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:   }
+# SEC-SYMS-LLVM-NEXT: ]
+
+# SEC-SYMS-GNU:      Global entries:
+# SEC-SYMS-GNU-NEXT:  {{.*}} Ndx Name
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-GNU-NEXT:  {{.*}} ABS <?>
+# SEC-SYMS-GNU-NEXT:  {{.*}}   1 .got
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-GNU-NEXT:  {{.*}} COM <?>
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
+# SEC-SYMS-GNU-NEXT:  {{.*}} RSV[0xffff] <?>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    Size:    48
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 1
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols:
+  - Type:    STT_SECTION
+    Index:   SHN_ABS
+  - Type:    STT_SECTION
+    Section: .got
+  - Type:    STT_SECTION
+    Index:   SHN_COMMON
+  - Type:    STT_SECTION
+    Index:   SHN_XINDEX

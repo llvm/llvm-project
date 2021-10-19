@@ -88,23 +88,6 @@ protected:
   template <typename T> struct OverloadToken {};
 };
 
-template <int Align>
-class TrailingObjectsAligner : public TrailingObjectsBase {};
-template <>
-class alignas(1) TrailingObjectsAligner<1> : public TrailingObjectsBase {};
-template <>
-class alignas(2) TrailingObjectsAligner<2> : public TrailingObjectsBase {};
-template <>
-class alignas(4) TrailingObjectsAligner<4> : public TrailingObjectsBase {};
-template <>
-class alignas(8) TrailingObjectsAligner<8> : public TrailingObjectsBase {};
-template <>
-class alignas(16) TrailingObjectsAligner<16> : public TrailingObjectsBase {
-};
-template <>
-class alignas(32) TrailingObjectsAligner<32> : public TrailingObjectsBase {
-};
-
 // Just a little helper for transforming a type pack into the same
 // number of a different type. e.g.:
 //   ExtractSecondType<Foo..., int>::type
@@ -204,8 +187,8 @@ protected:
 // The base case of the TrailingObjectsImpl inheritance recursion,
 // when there's no more trailing types.
 template <int Align, typename BaseTy, typename TopTrailingObj, typename PrevTy>
-class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy>
-    : public TrailingObjectsAligner<Align> {
+class alignas(Align) TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy>
+    : public TrailingObjectsBase {
 protected:
   // This is a dummy method, only here so the "using" doesn't fail --
   // it will never be called, because this function recurses backwards
@@ -290,8 +273,8 @@ public:
 #ifndef _MSC_VER
   using ParentType::OverloadToken;
 #else
-  // MSVC bug prevents the above from working, at least up through CL
-  // 19.10.24629.
+  // An MSVC bug prevents the above from working, (last tested at CL version
+  // 19.28). "Class5" in TrailingObjectsTest.cpp tests the problematic case.
   template <typename T>
   using OverloadToken = typename ParentType::template OverloadToken<T>;
 #endif
@@ -344,6 +327,12 @@ public:
                    TrailingTys, size_t>::type... Counts) {
     return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(0, Counts...);
   }
+
+  TrailingObjects() = default;
+  TrailingObjects(const TrailingObjects &) = delete;
+  TrailingObjects(TrailingObjects &&) = delete;
+  TrailingObjects &operator=(const TrailingObjects &) = delete;
+  TrailingObjects &operator=(TrailingObjects &&) = delete;
 
   /// A type where its ::with_counts template member has a ::type member
   /// suitable for use as uninitialized storage for an object with the given

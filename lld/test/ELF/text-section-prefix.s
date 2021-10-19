@@ -15,9 +15,10 @@
 # KEEP:      [ 1] .text
 # KEEP-NEXT: [ 2] .text.hot
 # KEEP-NEXT: [ 3] .text.unknown
-# KEEP-NEXT: [ 4] .text.startup
-# KEEP-NEXT: [ 5] .text.exit
-# KEEP-NEXT: [ 6] .text.unlikely
+# KEEP-NEXT: [ 4] .text.split
+# KEEP-NEXT: [ 5] .text.startup
+# KEEP-NEXT: [ 6] .text.exit
+# KEEP-NEXT: [ 7] .text.unlikely
 
 # NOKEEP:    [ 1] .text
 # NOKEEP-NOT:     .text
@@ -32,6 +33,7 @@
 # SCRIPT-NEXT: .text.f
 # SCRIPT-NEXT: .text.hot.f_hot
 # SCRIPT-NEXT: .text.unknown.f_unknown
+# SCRIPT-NEXT: .text.split.f_split
 # SCRIPT-NEXT: .text.startup.f_startup
 # SCRIPT-NEXT: .text.exit.f_exit
 # SCRIPT-NEXT: .text.unlikely.f_unlikely
@@ -47,6 +49,9 @@ _start:
   nop
 
 .section .text.unknown.f_unknown,"ax"
+  nop
+
+.section .text.split.f_split,"ax"
   nop
 
 .section .text.startup.f_startup,"ax"

@@ -58,7 +58,7 @@ class ForwardDeclarationTestCase(TestBase):
     @no_debug_info_test
     @skipIfDarwin
     @skipIf(compiler=no_match("clang"))
-    @skipIf(compiler_version=["<", "7.0"])
+    @skipIf(compiler_version=["<", "8.0"])
     @expectedFailureAll(oslist=["windows"])
     def test_debug_names(self):
         """Test that we are able to find complete types when using DWARF v5

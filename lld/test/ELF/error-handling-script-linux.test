@@ -1,0 +1,46 @@
+#!/bin/sh
+# REQUIRES: x86
+# UNSUPPORTED: system-windows
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t0.o
+# RUN: not ld.lld -o /dev/null -lidontexist --error-handling-script=%s %t0.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-LIB %s
+# RUN: not ld.lld -o /dev/null -lidontexist --error-handling-script=%s.nope %t0.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SCRIPT-DOES-NOT-EXIST -DFILE=%s.nope %s
+
+# RUN: echo 'bar: movl a(%rip), %eax' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
+# RUN: not ld.lld -o /dev/null --error-handling-script=%s %t1.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-C %s
+
+# RUN: echo 'bar: movl _Z1av(%rip), %eax' | llvm-mc -filetype=obj -triple=x86_64 - -o %t2.o
+# RUN: not ld.lld -o /dev/null --demangle --error-handling-script=%s %t2.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-CXX-DEMANGLE %s
+# RUN: not ld.lld -o /dev/null --no-demangle --error-handling-script=%s %t2.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-CXX-NO-DEMANGLE %s
+
+# RUN: { echo 'a_: ret'; echo 'bar: movl a(%rip), %eax' ; } | llvm-mc -filetype=obj -triple=x86_64 - -o %t3.o
+# RUN: not ld.lld -o /dev/null --error-handling-script=%s %t3.o 2>&1 |\
+# RUN:   FileCheck --check-prefix=CHECK-SYM-C-CORRECTION -DOBJ=%t3.o %s
+
+# CHECK-LIB:      script: info: called with missing-lib idontexist
+# CHECK-LIB-NEXT: ld.lld: error: unable to find library -lidontexist
+
+# CHECK-SCRIPT-DOES-NOT-EXIST:      ld.lld: error: unable to find library -lidontexist
+# CHECK-SCRIPT-DOES-NOT-EXIST-NEXT: ld.lld: error: error handling script '[[FILE]]' failed to execute
+
+# CHECK-SYM-C:      script: info: called with undefined-symbol a
+# CHECK-SYM-C-NEXT: ld.lld: error: undefined symbol: a
+
+# CHECK-SYM-CXX-DEMANGLE:      script: info: called with undefined-symbol _Z1av
+# CHECK-SYM-CXX-DEMANGLE-NEXT: ld.lld: error: undefined symbol: a()
+
+# CHECK-SYM-CXX-NO-DEMANGLE:      script: info: called with undefined-symbol _Z1av
+# CHECK-SYM-CXX-NO-DEMANGLE-NEXT: ld.lld: error: undefined symbol: _Z1av
+
+# CHECK-SYM-C-CORRECTION:      script: info: called with undefined-symbol a
+# CHECK-SYM-C-CORRECTION-NEXT: ld.lld: error: undefined symbol: a
+# CHECK-SYM-C-CORRECTION-NEXT: >>> referenced by [[OBJ]]:
+# CHECK-SYM-C-CORRECTION-NEXT: >>> did you mean: a_
+
+
+echo "script: info: called with $*"

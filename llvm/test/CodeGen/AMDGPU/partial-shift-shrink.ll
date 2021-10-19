@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 ; Test combine to reduce the width of a 64-bit shift to 32-bit if
 ; truncated to 16-bit.

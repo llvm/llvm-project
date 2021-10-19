@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 @X = global i32 7		; <i32*> [#uses=0]

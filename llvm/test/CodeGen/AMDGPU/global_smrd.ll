@@ -54,8 +54,8 @@ bb:
 
 ; uniform load dominated by no-alias store - scalarize
 ; CHECK-LABEL: @no_memdep_alias_arg
-; CHECK: flat_store_dword
-; CHECK: s_load_dword [[SVAL:s[0-9]+]]
+; CHECK: s_load_dwordx2 s{{\[}}[[IN_LO:[0-9]+]]:[[IN_HI:[0-9]+]]], s[4:5], 0x0
+; CHECK: s_load_dword [[SVAL:s[0-9]+]], s{{\[}}[[IN_LO]]:[[IN_HI]]], 0x0
 ; CHECK: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
 ; CHECK: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[VVAL]]
 

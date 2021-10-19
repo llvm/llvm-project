@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S -mtriple=sparc-unknown-unknown | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -mtriple=sparc-unknown-unknown | FileCheck %s
 
 ; Check that switches are not turned into lookup tables, as this is not
 ; considered profitable on the target.

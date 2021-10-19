@@ -17,29 +17,37 @@
 
 #include <memory>
 #include <cassert>
+
 #include "test_macros.h"
 
-#if TEST_STD_VER > 17
-constexpr
-#endif
-bool check() {
+TEST_CONSTEXPR_CXX20 bool test()
+{
     {
         int i = 0;
-        static_assert((std::is_same<int *, decltype(std::pointer_traits<int*>::pointer_to(i))>::value), "");
-        int* a = std::pointer_traits<int*>::pointer_to(i);
-        assert(a == &i);
+        static_assert(std::is_same<decltype(std::pointer_traits<int*>::pointer_to(i)), int*>::value, "");
+        assert(std::pointer_traits<int*>::pointer_to(i) == &i);
     }
     {
-        (std::pointer_traits<void*>::element_type)0;
+        int i = 0;
+        static_assert(std::is_same<decltype(std::pointer_traits<const int*>::pointer_to(i)), const int*>::value, "");
+        assert(std::pointer_traits<const int*>::pointer_to(i) == &i);
     }
     return true;
 }
 
-int main(int, char**) {
-    check();
+int main(int, char**)
+{
+    test();
 #if TEST_STD_VER > 17
-    static_assert(check(), "");
+    static_assert(test());
 #endif
 
-  return 0;
+    {
+        // Check that pointer_traits<void*> is still well-formed, even though it has no pointer_to.
+        static_assert(std::is_same<std::pointer_traits<void*>::element_type, void>::value, "");
+        static_assert(std::is_same<std::pointer_traits<const void*>::element_type, const void>::value, "");
+        static_assert(std::is_same<std::pointer_traits<volatile void*>::element_type, volatile void>::value, "");
+    }
+
+    return 0;
 }

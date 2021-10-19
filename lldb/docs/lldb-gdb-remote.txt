@@ -235,162 +235,273 @@ send packet: QListThreadsInStopReply
 read packet: OK
 
 //----------------------------------------------------------------------
-// jTraceStart:
+// jLLDBTraceSupported
 //
 // BRIEF
-//  Packet for starting trace of type lldb::TraceType. The following
-//  parameters should be appended to the packet formatted as a JSON
-//  dictionary, where the schematic for the JSON dictionary in terms of
-//  the recognized Keys is given below in the table.
-//  Different tracing types could require different custom parameters.
-//  Such custom tracing parameters if needed should be collectively
-//  specified in a JSON dictionary and the dictionary can be appended
-//  to this packet (as Value corresponding to "params"). Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Get the processor tracing type supported by the gdb-server for the current
+//  inferior. Responses might be different depending on the architecture and
+//  capabilities of the underlying OS.
 //
-//  Following is the list of parameters -
+//  OUTPUT SCHEMA
+//   {
+//     "name": <string>,
+//         Tracing technology name, e.g. intel-pt, arm-coresight.
+//     "description": <string>,
+//         Description for this technology.
+//   }
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                  (except params which should be a        (M)Mandatory
-//                  JSON dictionary)
-//  ==========      ====================================================
+//   If no tracing technology is supported for the inferior, or no process is
+//   running, then an error message is returned.
 //
-//  type            The type of trace to start (see          M
-//                  lldb-enumerations for TraceType)
-//
-//  buffersize      The size of the buffer to allocate       M
-//                  for trace gathering.
-//
-//  threadid        The id of the thread to start tracing    O
-//                  on.
-//
-//  metabuffersize  The size of buffer to hold meta data     O
-//                  used for decoding the trace data.
-//
-//  params          Any parameters that are specific to      O
-//                  certain trace technologies should be
-//                  collectively specified as a JSON
-//                  dictionary
-//  ==========      ====================================================
-//
-//  Each tracing instance is identified by a trace id which is returned
-//  as the reply to this packet. In case the tracing failed to begin an
-//  error code along with a hex encoded ASCII message is returned
-//  instead.
+// NOTE
+//  This packet is used by Trace plug-ins (see lldb_private::Trace.h) to
+//  do live tracing. Specifically, the name of the plug-in should match the name
+//  of the tracing technology returned by this packet.
 //----------------------------------------------------------------------
 
-send packet: jTraceStart:{"type":<type>,"buffersize":<buffersize>}]
-read packet: <trace id>/E<error code>;AAAAAAAAA
+send packet: jLLDBTraceSupported
+read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceStop:
+// jLLDBTraceStart
 //
 // BRIEF
-//  Stop tracing instance with trace id <trace id>, of course trace
-//  needs to be started before. The following parameters should be
-//  formatted as a JSON dictionary to the packet. Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Start tracing a process or its threads using a provided tracing technology.
+//  The input and output are specified as JSON objects. In case of success, an OK
+//  response is returned, or an error otherwise.
 //
-//  Following is the list of parameters -
+// PROCESS TRACING
+//  This traces existing and future threads of the current process. An error is
+//  returned if the process is already being traced.
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
+// THREAD TRACING
+//  This traces specific threads.
 //
-//  traceid         The trace id of the tracing instance    M
+// INPUT SCHEMA
+//  {
+//    "type": <string>,
+//        Tracing technology name, e.g. intel-pt, arm-coresight.
 //
-//  threadid        The id of the thread to stop tracing    O
-//                  on. Since <trace id> could map to
-//                  multiple trace instances (in case it
-//                  maps to the complete process), the
-//                  threadid of a particular thread could
-//                  be appended as "threadid:<thread id>;"
-//                  to stop tracing on that thread.
-//  ==========      ====================================================
+//    /* thread tracing only */
+//    "tids": [<decimal integer>],
+//        Individual threads to trace.
 //
-//  An OK response is sent in case of success else an error code along
-//  with a hex encoded ASCII message is returned.
+//    ... other parameters specific to the provided tracing type
+//  }
+//
+// NOTES
+//  - If "tids" is not provided, then the operation is "process tracing",
+//    otherwise it's "thread tracing".
+//  - Each tracing technology can have different levels of support for "thread
+//    tracing" and "process tracing".
+//
+// INTEL-PT
+//  intel-pt supports both "thread tracing" and "process tracing".
+//
+//  "Process tracing" is implemented by tracing each thread individually, but
+//  managed by the same "process trace" instance.
+//  Each actual thread trace, either from "process tracing" or "thread tracing",
+//  is stored in an in-memory circular buffer, which keeps the most recent data.
+//
+//  Additional params in the input schema:
+//   {
+//     "threadBufferSize": <decimal integer>,
+//         Trace buffer size per thread in bytes. It must be a power of 2
+//         greater than or equal to 4096 (2^12) bytes.
+//
+//     "enableTsc": <boolean>,
+//         Whether to enable TSC timestamps or not. This is supported on
+//         all devices that support intel-pt. A TSC timestamp is generated along
+//         with PSB (synchronization) packets, whose frequency can be configured
+//         with the "psbPeriod" parameter.
+//
+//     "psbPeriod"?: <Optional decimal integer>,
+//         This value defines the period in which PSB packets will be generated.
+//         A PSB packet is a synchronization packet that contains a TSC
+//         timestamp and the current absolute instruction pointer.
+//
+//         This parameter can only be used if
+//
+//             /sys/bus/event_source/devices/intel_pt/caps/psb_cyc
+//
+//         is 1. Otherwise, the PSB period will be defined by the processor.
+//
+//         If supported, valid values for this period can be found in
+/
+//             /sys/bus/event_source/devices/intel_pt/caps/psb_periods
+//
+//         which contains a hexadecimal number, whose bits represent valid
+//         values e.g. if bit 2 is set, then value 2 is valid.
+//
+//         The psb_period value is converted to the approximate number of
+//         raw trace bytes between PSB packets as:
+//
+//             2 ^ (value + 11)
+//
+//          e.g. value 3 means 16KiB between PSB packets. Defaults to
+//          0 if supported.
+//
+//     /* process tracing only */
+//     "processBufferSizeLimit": <decimal integer>,
+//         Maximum total buffer size per process in bytes.
+//         This limit applies to the sum of the sizes of all trace buffers for
+//         the current process, excluding the ones started with "thread tracing".
+//
+//         Whenever a thread is attempted to be traced due to "process tracing"
+//         and the limit would be reached, the process is stopped with a
+//         "tracing" reason along with a meaningful description, so that the
+//         user can retrace the process if needed.
+//   }
+//
+//  Notes:
+//   - Modifying the parameters of an existing trace is not supported. The user
+//     needs to stop the trace and start a new one.
+//   - If "process tracing" is attempted and there are individual threads
+//     already being traced with "thread tracing", these traces are left
+//     unaffected and the threads not traced twice.
+//   - If "thread tracing" is attempted on a thread already being traced with
+//     either "thread tracing" or "process tracing", it fails.
 //----------------------------------------------------------------------
 
-send packet: jTraceStop:{"traceid":<trace id>}]
-read packet: <OK response>/E<error code>;AAAAAAAAA
+Process tracing:
+send packet: jLLDBTraceStart:{"type":<type>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+
+Thread tracing:
+send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceBufferRead:
+// jLLDBTraceStop
 //
 // BRIEF
-//  Packet for reading the trace for tracing instance <trace id>, i.e the
-//  id obtained from StartTrace API. The following parameters should be
-//  formatted as a JSON dictionary to the packet. Since sending
-//  JSON data over gdb-remote protocol has certain limitations, binary
-//  escaping convention should be used.
+//  Stop tracing a process or its threads using a provided tracing technology.
+//  The input and output are specified as JSON objects. In case of success, an OK
+//  response is returned, or an error otherwise.
 //
-//  Following is the list of parameters -
+// PROCESS TRACE STOPPING
+//  Stopping a process trace stops the active traces initiated with
+//  "thread tracing".
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
-//  traceid         The trace id of the tracing instance    M
+// THREAD TRACE STOPPING
+//  This is a best effort request, which tries to stop as many traces as
+//  possible.
 //
-//  offset          The offset to start reading the data    M
-//                  from.
+// INPUT SCHEMA
+//  The schema for the input is
 //
-//  buffersize      The size of the data intended to read.  M
+//  {
+//    "type": <string>
+//       Tracing technology name, e.g. intel-pt, arm-coresight.
 //
-//  threadid        The id of the thread to retrieve data   O
-//                  from.
-//  ==========      ====================================================
+//    /* thread trace stopping only */
+//    "tids":  [<decimal integer>]
+//       Individual thread traces to stop.
+//  }
 //
-//  The trace data is sent as raw binary data if the read was successful
-//  else an error code along with a hex encoded ASCII message is sent.
+// NOTES
+//  - If "tids" is not provided, then the operation is "process trace stopping".
+//
+// INTEL PT
+//  Stopping a specific thread trace started with "process tracing" is allowed.
 //----------------------------------------------------------------------
 
-send packet: jTraceBufferRead:{"traceid":<trace id>,"offset":<byteoffset>,"buffersize":<byte_count>}]
-read packet: <binary trace data>/E<error code>;AAAAAAAAA
+Process trace stopping:
+send packet: jLLDBTraceStop:{"type":<type>}]
+read packet: OK/E<error code>;AAAAAAAAA
+
+Thread trace stopping:
+send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
+read packet: OK/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
-// jTraceMetaRead:
+// jLLDBTraceGetState
 //
 // BRIEF
-//  Similar Packet as above except it reads meta data.
+//  Get the current state of the process and its threads being traced by
+//  a given trace technology. The response is a JSON object with custom
+//  information depending on the trace technology. In case of errors, an
+//  error message is returned.
+//
+// INPUT SCHEMA
+//  {
+//     "type": <string>
+//        Tracing technology name, e.g. intel-pt, arm-coresight.
+//  }
+//
+// OUTPUT SCHEMA
+//  {
+//    "tracedThreads": [{
+//      "tid": <decimal integer>,
+//      "binaryData": [
+//        {
+//          "kind": <string>,
+//              Identifier for some binary data related to this thread to
+//              fetch with the jLLDBTraceGetBinaryData packet.
+//          "size": <decimal integer>,
+//              Size in bytes of this thread data.
+//        },
+//      ]
+//    }],
+//    "processBinaryData": [
+//      {
+//        "kind": <string>,
+//            Identifier for some binary data related to this process to
+//            fetch with the jLLDBTraceGetBinaryData packet.
+//        "size": <decimal integer>,
+//            Size in bytes of this thread data.
+//      },
+//    }]
+//  }
+//
+// NOTES
+//   - "traceThreads" includes all thread traced by both "process tracing" and
+//     "thread tracing".
+//
+// INTEL PT
+//
+//  Binary data kinds:
+//    - threadTraceBuffer: trace buffer for a thread.
+//    - cpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
-/----------------------------------------------------------------------
-// jTraceConfigRead:
+send packet: jLLDBTraceGetState:{"type":<type>}]
+read packet: {...object}/E<error code>;AAAAAAAAA
+
+//----------------------------------------------------------------------
+// jLLDBTraceGetBinaryData
 //
 // BRIEF
-//  Request the trace configuration for the tracing instance with id
-//  <trace id>.
+//  Get binary data given a trace technology and a data identifier.
+//  The input is specified as a JSON object and the response has the same format
+//  as the "binary memory read" (aka "x") packet. In case of failures, an error
+//  message is returned.
 //
-//  Following is the list of parameters -
+// SCHEMA
+//  The schema for the input is
 //
-//  Key             Value (Integer)                         (O)Optional/
-//                                                          (M)Mandatory
-//  ==========      ====================================================
-//  traceid         The trace id of the tracing instance    M
+//  {
+//   "type": <string>,
+//       Tracing technology name, e.g. intel-pt, arm-coresight.
+//   "kind": <string>,
+//       Identifier for the data.
+//   "tid"?: <Optional decimal>,
+//       Tid in decimal if the data belongs to a thread.
+//   "offset": <decimal>,
+//       Offset of the data in bytes.
+//   "size": <decimal>,
+//      Number of bytes in to read starting from the offset.
+//  }
 //
-//  threadid        The id of the thread to obtain trace    O
-//                  configuration from. Since <trace id>
-//                  could map to multiple trace instances
-//                  (in case it maps to the complete
-//                  process), the threadid of a particular
-//                  thread could be appended as
-//                  "threadid:<thread id>;" to obtain the
-//                  trace configuration of that thread.
-//  ==========      ====================================================
+// INTEL PT
 //
-//  In the response packet the trace configuration is sent as text,
-//  formatted as a JSON dictionary. Since sending JSON data over
-//  gdb-remote protocol has certain limitations, binary escaping
-//  convention is used.
-//  In case the trace instance with the <trace id> was not found, an
-//  error code along with a hex encoded ASCII message is returned.
+//  Binary data kinds:
+//    - threadTraceBuffer: trace buffer for a thread.
+//    - cpuInfo: contents of the /proc/cpuinfo file.
 //----------------------------------------------------------------------
 
-send packet: jTraceConfigRead:{"traceid":<trace id>}
-read packet: {"conf1":<conf1>,"conf2":<conf2>,"params":{"paramName":paramValue}]}];/E<error code>;AAAAAAAAA
+send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
+read packet: <binary data>/E<error code>;AAAAAAAAA
 
 //----------------------------------------------------------------------
 // "qRegisterInfo<hex-reg-id>"
@@ -790,10 +901,14 @@ distribution_id: optional. For linux, specifies distribution id (e.g. ubuntu, fe
 osmajor: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 osminor: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
+vm-page-size: optional, specifies the target system VM page size, base 10.
+           Needed for the "dirty-pages:" list in the qMemoryRegionInfo
+           packet, where a list of dirty pages is sent from the remote
+           stub.  This page size tells lldb how large each dirty page is.
 addressing_bits: optional, specifies how many bits in addresses are
 		 significant for addressing, base 10.  If bits 38..0
 		 in a 64-bit pointer are significant for addressing,
-		 then the value is 39.  This is needed on e.g. Aarch64
+		 then the value is 39.  This is needed on e.g. AArch64
 		 v8.3 ABIs that use pointer authentication, so lldb
 		 knows which bits to clear/set to get the actual
 		 addresses.
@@ -1086,9 +1201,29 @@ tuples to return are:
                  // the file while for anonymous regions it have to be the name
                  // associated to the region if that is available.
 
+    flags:<flags-string>; // where <flags-string> is a space separated string
+                          // of flag names. Currently the only supported flag
+                          // is "mt" for AArch64 memory tagging. lldb will
+                          // ignore any other flags in this field.
+
+    type:[<type>][,<type>]; // memory types that apply to this region, e.g.
+                 // "stack" for stack memory.
+
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that
                                      // contains an error string
+
+    dirty-pages:[<hexaddr>][,<hexaddr]; // A list of memory pages within this
+                 // region that are "dirty" -- they have been modified.
+                 // Page addresses are in base16.  The size of a page can
+                 // be found from the qHostInfo's page-size key-value.
+                 //
+                 // If the stub supports identifying dirty pages within a
+                 // memory region, this key should always be present for all
+                 // qMemoryRegionInfo replies.  This key with no pages
+                 // listed ("dirty-pages:;") indicates no dirty pages in
+                 // this memory region.  The *absence* of this key means
+                 // that this stub cannot determine dirty pages.
 
 If the address requested is not in a mapped region (e.g. we've jumped through
 a NULL pointer and are at 0x0) currently lldb expects to get back the size

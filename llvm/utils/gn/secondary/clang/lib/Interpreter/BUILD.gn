@@ -1,0 +1,29 @@
+static_library("Interpreter") {
+  output_name = "clangInterpreter"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Analysis",
+    "//clang/lib/Basic",
+    "//clang/lib/CodeGen",
+    "//clang/lib/Driver",
+    "//clang/lib/Edit",
+    "//clang/lib/Frontend",
+    "//clang/lib/FrontendTool",
+    "//clang/lib/Lex",
+    "//clang/lib/Parse",
+    "//clang/lib/Sema",
+    "//clang/lib/Serialization",
+    "//llvm/lib/ExecutionEngine/Orc",
+    "//llvm/lib/IR",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:NativeTarget",
+  ]
+  sources = [
+    "IncrementalExecutor.cpp",
+    "IncrementalParser.cpp",
+    "Interpreter.cpp",
+  ]
+}

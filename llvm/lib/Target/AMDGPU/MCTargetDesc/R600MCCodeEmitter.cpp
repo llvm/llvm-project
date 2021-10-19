@@ -13,22 +13,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/AMDGPUFixupKinds.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
 
 using namespace llvm;
 

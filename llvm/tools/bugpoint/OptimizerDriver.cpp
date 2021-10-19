@@ -205,6 +205,9 @@ bool BugDriver::runPasses(Module &Program,
 
   for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
     Args.push_back(OptArgs[i]);
+  // Pin to legacy PM since bugpoint has lots of infra and hacks revolving
+  // around the legacy PM.
+  Args.push_back("-enable-new-pm=0");
   Args.push_back("-disable-symbolication");
   Args.push_back("-o");
   Args.push_back(OutputFilename);
@@ -220,8 +223,8 @@ bool BugDriver::runPasses(Module &Program,
   for (std::vector<std::string>::const_iterator I = pass_args.begin(),
                                                 E = pass_args.end();
        I != E; ++I)
-    Args.push_back(I->c_str());
-  Args.push_back(Temp->TmpName.c_str());
+    Args.push_back(*I);
+  Args.push_back(Temp->TmpName);
   Args.append(ExtraArgs.begin(), ExtraArgs.end());
 
   LLVM_DEBUG(errs() << "\nAbout to run:\t";

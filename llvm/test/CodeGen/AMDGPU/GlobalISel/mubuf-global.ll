@@ -336,34 +336,22 @@ define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset_offset256(i32 addrspace(
 define amdgpu_ps void @mubuf_store_vgpr_ptr_sgpr_offset256_offset(i32 addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_store_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s4, 0x400
-; GFX6-NEXT:    s_mov_b32 s5, 0
-; GFX6-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX6-NEXT:    v_mov_b32_e32 v3, s5
-; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_mov_b32 s2, s5
-; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:1024
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: mubuf_store_vgpr_ptr_sgpr_offset256_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_movk_i32 s4, 0x400
-; GFX7-NEXT:    s_mov_b32 s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX7-NEXT:    v_mov_b32_e32 v3, s5
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    s_mov_b32 s2, s5
-; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:1024
 ; GFX7-NEXT:    s_endpgm
   %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 256
   %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 %soffset
@@ -435,25 +423,27 @@ define amdgpu_ps void @mubuf_store_sgpr_ptr_offset4095_vgpr_offset(i32 addrspace
 ; GFX6-LABEL: mubuf_store_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX6-NEXT:    s_add_u32 s0, s2, 0x3ffc
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
-; GFX6-NEXT:    s_addc_u32 s1, s3, 0
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
+; GFX6-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: mubuf_store_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX7-NEXT:    s_add_u32 s0, s2, 0x3ffc
 ; GFX7-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
-; GFX7-NEXT:    s_addc_u32 s1, s3, 0
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
+; GFX7-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], s4 addr64
 ; GFX7-NEXT:    s_endpgm
   %gep0 = getelementptr i32, i32 addrspace(1)* %ptr, i32 4095
   %gep1 = getelementptr i32, i32 addrspace(1)* %gep0, i32 %voffset
@@ -468,7 +458,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr(float addrspace(1)* inreg %ptr) {
 ; GFX6-NEXT:    s_mov_b32 s1, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -478,7 +468,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr(float addrspace(1)* inreg %ptr) {
 ; GFX7-NEXT:    s_mov_b32 s1, s3
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %val = load volatile float, float addrspace(1)* %ptr
@@ -493,7 +483,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(float addrspace(1)* inreg
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], s4
+; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -504,7 +494,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095(float addrspace(1)* inreg
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4
+; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
@@ -523,7 +513,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -537,7 +527,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
@@ -556,7 +546,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -570,7 +560,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
@@ -586,7 +576,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(float addrspace(1)* inreg
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_movk_i32 s4, 0x4000
-; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], s4
+; GFX6-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -597,7 +587,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4096(float addrspace(1)* inreg
 ; GFX7-NEXT:    s_mov_b32 s2, -1
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_movk_i32 s4, 0x4000
-; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4
+; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s4 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
@@ -612,7 +602,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(float addrspace(1)* %ptr)
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -622,7 +612,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4095(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4095
@@ -637,7 +627,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX6-NEXT:    s_mov_b32 s1, 4
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, s0
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -647,7 +637,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967296(float addrspace(1)*
 ; GFX7-NEXT:    s_mov_b32 s1, 4
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, s0
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967296
@@ -662,7 +652,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX6-NEXT:    s_mov_b32 s1, s0
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -672,7 +662,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4294967297(float addrspace(1)*
 ; GFX7-NEXT:    s_mov_b32 s1, s0
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4294967297
@@ -687,7 +677,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr)
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX6-NEXT:    s_movk_i32 s4, 0x4000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -697,7 +687,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_offset4096(float addrspace(1)* %ptr)
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX7-NEXT:    s_movk_i32 s4, 0x4000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i64 4096
@@ -716,7 +706,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s5
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -730,7 +720,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_sgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
@@ -745,7 +735,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -755,7 +745,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset(float addrspace(1)* %ptr
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
@@ -770,7 +760,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -780,7 +770,7 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %soffset
@@ -792,33 +782,21 @@ define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset_offset256(float addrspac
 define amdgpu_ps float @mubuf_load_vgpr_ptr_sgpr_offset256_offset(float addrspace(1)* %ptr, i32 inreg %soffset) {
 ; GFX6-LABEL: mubuf_load_vgpr_ptr_sgpr_offset256_offset:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_movk_i32 s4, 0x400
-; GFX6-NEXT:    s_mov_b32 s5, 0
-; GFX6-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX6-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX6-NEXT:    v_mov_b32_e32 v3, s5
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX6-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    s_mov_b32 s2, s5
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: mubuf_load_vgpr_ptr_sgpr_offset256_offset:
 ; GFX7:       ; %bb.0:
-; GFX7-NEXT:    s_movk_i32 s4, 0x400
-; GFX7-NEXT:    s_mov_b32 s5, 0
-; GFX7-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX7-NEXT:    s_bfe_i64 s[0:1], s[2:3], 0x200000
-; GFX7-NEXT:    v_mov_b32_e32 v3, s5
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; GFX7-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
+; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    s_mov_b32 s2, s5
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 offset:1024 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 256
@@ -836,7 +814,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(float addrspace(1)* inre
 ; GFX6-NEXT:    s_mov_b32 s1, s3
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -848,7 +826,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset(float addrspace(1)* inre
 ; GFX7-NEXT:    s_mov_b32 s1, s3
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
@@ -866,7 +844,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(float addrspa
 ; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
@@ -879,7 +857,7 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_vgpr_offset_offset4095(float addrspa
 ; GFX7-NEXT:    s_mov_b32 s2, 0
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i32 %voffset
@@ -891,24 +869,26 @@ define amdgpu_ps float @mubuf_load_sgpr_ptr_offset4095_vgpr_offset(float addrspa
 ; GFX6-LABEL: mubuf_load_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX6-NEXT:    s_add_u32 s4, s2, 0x3ffc
 ; GFX6-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
-; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    s_addc_u32 s5, s3, 0
-; GFX6-NEXT:    s_mov_b32 s7, 0xf000
-; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, 0
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
+; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-LABEL: mubuf_load_sgpr_ptr_offset4095_vgpr_offset:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX7-NEXT:    s_add_u32 s4, s2, 0x3ffc
 ; GFX7-NEXT:    v_lshl_b64 v[0:1], v[0:1], 2
-; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    s_addc_u32 s5, s3, 0
-; GFX7-NEXT:    s_mov_b32 s7, 0xf000
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; GFX7-NEXT:    s_mov_b32 s0, s2
+; GFX7-NEXT:    s_mov_b32 s1, s3
+; GFX7-NEXT:    s_mov_b32 s2, 0
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
+; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], s4 addr64 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep0 = getelementptr float, float addrspace(1)* %ptr, i64 4095
@@ -928,7 +908,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(i32 addrspace(1)* in
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_add v0, off, s[0:3], s4 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -943,7 +923,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(i32 addrspace(1)* in
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_add v0, off, s[0:3], s4 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4095
@@ -966,7 +946,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_add v0, v[1:2], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -984,7 +964,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_add v0, v[1:2], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, i32 addrspace(1)* %ptr, i64 4294967296
@@ -1003,7 +983,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(i32 addrspace(1)* %p
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], s4 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1018,7 +998,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(i32 addrspace(1)* %p
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], s4 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1038,7 +1018,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX6-NEXT:    s_mov_b32 s2, s0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1053,7 +1033,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(i32 addrspace(
 ; GFX7-NEXT:    s_mov_b32 s2, s0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1075,7 +1055,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(i32 addrspace(1)* i
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1092,7 +1072,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(i32 addrspace(1)* i
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_add v2, v[0:1], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1113,7 +1093,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(i32 addrspace(1)* inre
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[1:2], off, s[0:3], s4 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1129,7 +1109,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(i32 addrspace(1)* inre
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_cmpswap v[1:2], off, s[0:3], s4 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1154,7 +1134,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX6-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[1:2], v[3:4], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1173,7 +1153,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s5
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_cmpswap v[1:2], v[3:4], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1194,7 +1174,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr
 ; GFX6-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[3:4], v[0:1], s[0:3], s4 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1209,7 +1189,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(i32 addrspace(1)* %ptr
 ; GFX7-NEXT:    s_movk_i32 s4, 0x3ffc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_cmpswap v[3:4], v[0:1], s[0:3], s4 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1230,7 +1210,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX6-NEXT:    s_mov_b32 s2, s0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[3:4], v[0:1], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1245,7 +1225,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(i32 addrspace(1)
 ; GFX7-NEXT:    s_mov_b32 s2, s0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_cmpswap v[3:4], v[0:1], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
@@ -1268,7 +1248,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inr
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_atomic_cmpswap v[2:3], v[0:1], s[0:3], 0 addr64 glc
-; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    buffer_wbinvl1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -1285,7 +1265,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(i32 addrspace(1)* inr
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_atomic_cmpswap v[2:3], v[0:1], s[0:3], 0 addr64 glc
-; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog

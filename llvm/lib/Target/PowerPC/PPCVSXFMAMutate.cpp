@@ -31,10 +31,10 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -315,9 +315,9 @@ protected:
         // Extend the live interval of the addend source (it might end at the
         // copy to be removed, or somewhere in between there and here). This
         // is necessary only if it is a physical register.
-        if (!Register::isVirtualRegister(AddendSrcReg))
-          for (MCRegUnitIterator Units(AddendSrcReg, TRI); Units.isValid();
-               ++Units) {
+        if (!AddendSrcReg.isVirtual())
+          for (MCRegUnitIterator Units(AddendSrcReg.asMCReg(), TRI);
+               Units.isValid(); ++Units) {
             unsigned Unit = *Units;
 
             LiveRange &AddendSrcRange = LIS->getRegUnit(Unit);

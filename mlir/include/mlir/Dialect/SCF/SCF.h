@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SCF_H_
 #define MLIR_DIALECT_SCF_H_
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
@@ -23,13 +24,17 @@
 
 namespace mlir {
 namespace scf {
-
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+} // namespace scf
+} // namespace mlir
 
 #include "mlir/Dialect/SCF/SCFOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SCF/SCFOps.h.inc"
+
+namespace mlir {
+namespace scf {
 
 // Insert `loop.yield` at the end of the only region's only block if it
 // does not have a terminator already.  If a new `loop.yield` is inserted,
@@ -47,6 +52,11 @@ ParallelOp getParallelForInductionVarOwner(Value val);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = std::vector<Value>;
+using LoopVector = std::vector<scf::ForOp>;
+struct LoopNest {
+  ResultRange getResults() { return loops.front().getResults(); }
+  LoopVector loops;
+};
 
 /// Creates a perfect nest of "for" loops, i.e. all loops but the innermost
 /// contain only another loop and a terminator. The lower, upper bounds and
@@ -61,11 +71,12 @@ using ValueVector = std::vector<Value>;
 /// yielded from the loop body and forwarded back through the loop nest. If the
 /// function is not provided, the loop nest is not expected to have iteration
 /// arguments, the body of the innermost loop will be left empty, containing
-/// only the zero-operand terminator. Returns the values yielded by the
-/// outermost loop. If bound arrays are empty, the body builder will be called
+/// only the zero-operand terminator. Returns the LoopNest containing the list
+/// of perfectly nest scf::ForOp build during the call.
+/// If bound arrays are empty, the body builder will be called
 /// once to construct the IR outside of the loop with an empty list of induction
 /// variables.
-ValueVector buildLoopNest(
+LoopNest buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
     function_ref<ValueVector(OpBuilder &, Location, ValueRange, ValueRange)>
@@ -74,10 +85,11 @@ ValueVector buildLoopNest(
 /// A convenience version for building loop nests without iteration arguments
 /// (like for reductions). Does not take the initial value of reductions or
 /// expect the body building functions to return their current value.
-ValueVector buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
-                          ValueRange ubs, ValueRange steps,
-                          function_ref<void(OpBuilder &, Location, ValueRange)>
-                              bodyBuilder = nullptr);
+/// The built nested scf::For are captured in `capturedLoops` when non-null.
+LoopNest buildLoopNest(OpBuilder &builder, Location loc, ValueRange lbs,
+                       ValueRange ubs, ValueRange steps,
+                       function_ref<void(OpBuilder &, Location, ValueRange)>
+                           bodyBuilder = nullptr);
 
 } // end namespace scf
 } // end namespace mlir

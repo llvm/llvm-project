@@ -487,7 +487,7 @@ static bool HasSameVirtualSignature(const CXXMethodDecl *LHS,
 bool VCallOffsetMap::MethodsCanShareVCallOffset(const CXXMethodDecl *LHS,
                                                 const CXXMethodDecl *RHS) {
   assert(VTableContextBase::hasVtableSlot(LHS) && "LHS must be virtual!");
-  assert(VTableContextBase::hasVtableSlot(RHS) && "LHS must be virtual!");
+  assert(VTableContextBase::hasVtableSlot(RHS) && "RHS must be virtual!");
 
   // A destructor can share a vcall offset with another destructor.
   if (isa<CXXDestructorDecl>(LHS))
@@ -1070,7 +1070,7 @@ void ItaniumVTableBuilder::AddThunk(const CXXMethodDecl *MD,
   SmallVectorImpl<ThunkInfo> &ThunksVector = Thunks[MD];
 
   // Check if we have this thunk already.
-  if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
+  if (llvm::is_contained(ThunksVector, Thunk))
     return;
 
   ThunksVector.push_back(Thunk);
@@ -2498,7 +2498,7 @@ private:
     SmallVector<ThunkInfo, 1> &ThunksVector = Thunks[MD];
 
     // Check if we have this thunk already.
-    if (llvm::find(ThunksVector, Thunk) != ThunksVector.end())
+    if (llvm::is_contained(ThunksVector, Thunk))
       return;
 
     ThunksVector.push_back(Thunk);

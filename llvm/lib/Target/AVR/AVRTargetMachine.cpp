@@ -16,7 +16,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 
 #include "AVR.h"
 #include "AVRTargetObjectFile.h"
@@ -25,7 +25,8 @@
 
 namespace llvm {
 
-static const char *AVRDataLayout = "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
+static const char *AVRDataLayout =
+    "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -37,7 +38,7 @@ static StringRef getCPU(StringRef CPU) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  return RM.hasValue() ? *RM : Reloc::Static;
+  return RM.getValueOr(Reloc::Static);
 }
 
 AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
@@ -65,6 +66,7 @@ public:
     return getTM<AVRTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -76,6 +78,15 @@ TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AVRPassConfig(*this, PM);
 }
 
+void AVRPassConfig::addIRPasses() {
+  // Expand instructions like
+  //   %result = shl i32 %n, %amount
+  // to a loop so that library calls are avoided.
+  addPass(createAVRShiftExpandPass());
+
+  TargetPassConfig::addIRPasses();
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
@@ -83,6 +94,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeAVRExpandPseudoPass(PR);
   initializeAVRRelaxMemPass(PR);
+  initializeAVRShiftExpandPass(PR);
 }
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {

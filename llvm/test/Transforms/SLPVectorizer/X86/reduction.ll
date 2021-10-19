@@ -68,7 +68,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret i32 %sum.0.lcssa
 }
 
-; FIXME: PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
+; PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
 ; The extra use of a non-vectorized element of a reduction must not be killed.
 
 define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
@@ -80,7 +80,7 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[X4]], align 4
 ; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[X5]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[T4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP3]], i32 [[T4]]
 ; CHECK-NEXT:    [[C012345:%.*]] = icmp sgt i32 [[TMP5]], [[T5]]
@@ -118,7 +118,7 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   ret i32 %t17
 }
 
-; FIXME: This is a miscompile (see the undef operand) and/or test for invalid IR.
+; This is a miscompile (see the undef operand) and/or test for invalid IR.
 
 define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
 ; CHECK-LABEL: @bad_insertpoint_rdx(

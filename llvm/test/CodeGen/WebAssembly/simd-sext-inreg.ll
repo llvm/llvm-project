@@ -1,9 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -wasm-keep-registers -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+unimplemented-simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -wasm-keep-registers -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -mattr=+simd128 | FileCheck %s --check-prefixes CHECK,SIMD128
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -wasm-keep-registers -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals | FileCheck %s --check-prefixes CHECK,NO-SIMD128
 
 ; Test that vector sign extensions lower to shifts
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: sext_v16i8:

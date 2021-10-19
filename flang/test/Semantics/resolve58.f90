@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1(x, y)
   !ERROR: Array pointer 'x' must have deferred shape or assumed rank
   real, pointer :: x(1:)  ! C832
@@ -27,10 +27,10 @@ end
 subroutine s3(a, b)
   real :: a(*)
   !ERROR: Dummy array argument 'b' may not have implied shape
-  real :: b(*,*)  ! C836
-  !ERROR: Implied-shape array 'c' must be a named constant
+  real :: b(*,*)  ! C835, C836
+  !ERROR: Implied-shape array 'c' must be a named constant or a dummy argument
   real :: c(*)  ! C836
-  !ERROR: Named constant 'd' array must have explicit or implied shape
+  !ERROR: Named constant 'd' array must have constant or implied shape
   integer, parameter :: d(:) = [1, 2, 3]
 end
 
@@ -55,4 +55,26 @@ subroutine s5()
   integer :: a(10), b(:)
   allocatable :: a
   allocatable :: b
+end subroutine
+
+subroutine s6()
+!C835   An object whose array bounds are specified by an 
+!  implied-shape-or-assumed-size-spec shall be a dummy data object or a named
+!  constant.
+!
+!C843   An entity with the INTENT attribute shall be a dummy data object or a 
+!  dummy procedure pointer.
+!
+!C849   An entity with the OPTIONAL attribute shall be a dummy argument.
+
+  !ERROR: Implied-shape array 'local1' must be a named constant or a dummy argument
+  real, dimension (*) :: local1
+  !ERROR: INTENT attributes may apply only to a dummy argument
+  real, intent(in) :: local2
+  !ERROR: INTENT attributes may apply only to a dummy argument
+  procedure(), intent(in) :: p1
+  !ERROR: OPTIONAL attribute may apply only to a dummy argument
+  real, optional :: local3
+  !ERROR: OPTIONAL attribute may apply only to a dummy argument
+  procedure(), optional :: p2
 end subroutine

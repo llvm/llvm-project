@@ -68,4 +68,35 @@ TEST(MD5HashTest, MD5) {
   EXPECT_EQ(0x3be167ca6c49fb7dULL, MD5Res.high());
   EXPECT_EQ(0x00e49261d7d3fcc3ULL, MD5Res.low());
 }
+
+TEST(MD5Test, FinalAndResultHelpers) {
+  MD5 Hash;
+
+  Hash.update("abcd");
+
+  {
+    MD5 ReferenceHash;
+    ReferenceHash.update("abcd");
+    MD5::MD5Result ReferenceResult;
+    ReferenceHash.final(ReferenceResult);
+    StringRef ExpectedResult =
+        StringRef(reinterpret_cast<char *>(ReferenceResult.Bytes.data()),
+                  ReferenceResult.Bytes.size());
+    EXPECT_EQ(Hash.result(), ExpectedResult);
+  }
+
+  Hash.update("xyz");
+
+  {
+    MD5 ReferenceHash;
+    ReferenceHash.update("abcd");
+    ReferenceHash.update("xyz");
+    MD5::MD5Result ReferenceResult;
+    ReferenceHash.final(ReferenceResult);
+    StringRef ExpectedResult =
+        StringRef(reinterpret_cast<char *>(ReferenceResult.Bytes.data()),
+                  ReferenceResult.Bytes.size());
+    EXPECT_EQ(Hash.final(), ExpectedResult);
+  }
 }
+} // namespace

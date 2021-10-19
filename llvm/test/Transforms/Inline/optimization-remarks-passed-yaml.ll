@@ -22,7 +22,7 @@
 ;  4       return foo();
 ;  5     }
 
-; CHECK: remark: /tmp/s.c:4:10: foo inlined into bar with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) at callsite bar:1 (hotness: 30)
+; CHECK: remark: /tmp/s.c:4:10: 'foo' inlined into 'bar' with (cost={{[0-9\-]+}}, threshold={{[0-9]+}}) at callsite bar:1:10; (hotness: 30)
 
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            inline
@@ -31,11 +31,13 @@
 ; YAML-NEXT: Function:        bar
 ; YAML-NEXT: Hotness:         30
 ; YAML-NEXT: Args:
+; YAML-NEXT:   - String: ''''
 ; YAML-NEXT:   - Callee: foo
 ; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 1, Column: 0 }
-; YAML-NEXT:   - String: ' inlined into '
+; YAML-NEXT:   - String: ''' inlined into '''
 ; YAML-NEXT:   - Caller: bar
 ; YAML-NEXT:     DebugLoc:        { File: '/tmp/s.c', Line: 3, Column: 0 }
+; YAML-NEXT:   - String: ''''
 ; YAML-NEXT:   - String: ' with '
 ; YAML-NEXT:   - String: '(cost='
 ; YAML-NEXT:   - Cost: '{{[0-9\-]+}}'
@@ -46,6 +48,9 @@
 ; YAML-NEXT:   - String:          bar
 ; YAML-NEXT:   - String:          ':'
 ; YAML-NEXT:   - Line:            '1'
+; YAML-NEXT:   - String:          ':'
+; YAML-NEXT:   - Column:          '10'
+; YAML-NEXT:   - String:          ';'
 ; YAML-NEXT: ...
 
 ; ModuleID = '/tmp/s.c'

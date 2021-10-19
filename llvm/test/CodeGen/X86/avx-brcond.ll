@@ -10,11 +10,11 @@ define <4 x float> @test1(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jne LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI0_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI0_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
@@ -42,11 +42,11 @@ define <4 x float> @test3(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jne LBB1_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI1_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB1_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI1_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
@@ -74,11 +74,11 @@ define <4 x float> @test4(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jae LBB2_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI2_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB2_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI2_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
@@ -106,11 +106,11 @@ define <4 x float> @test6(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jae LBB3_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI3_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB3_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI3_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
@@ -138,11 +138,11 @@ define <4 x float> @test7(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    jne LBB4_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI4_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB4_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI4_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:
@@ -170,11 +170,11 @@ define <4 x float> @test8(<4 x i64> %a, <4 x float> %b) nounwind {
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
 ; CHECK-NEXT:    je LBB5_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb1
-; CHECK-NEXT:    vaddps LCPI5_0, %xmm1, %xmm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB5_2: ## %bb2
-; CHECK-NEXT:    vdivps LCPI5_0, %xmm1, %xmm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
 entry:

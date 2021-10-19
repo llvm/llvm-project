@@ -2,6 +2,7 @@
 //
 // INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
 // INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
+// INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 // INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
 // INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
@@ -10,7 +11,8 @@
 // INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 
 RUN: printf '\201rforpl\377' > %t.profraw
-RUN: printf '\5\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t.profraw
@@ -51,4 +53,5 @@ RUN: printf '\101\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata merge -o /dev/null %t.profraw 2>&1 | FileCheck %s
-CHECK: Malformed instrumentation profile data
+CHECK: warning: {{.+}}: malformed instrumentation profile data
+CHECK: error: no profile can be merged

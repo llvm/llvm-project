@@ -1,11 +1,11 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; Defaults
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-INDICATOR,CHECK-NOALIAS
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-INDICATOR,CHECK-NOALIAS
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
+
+; {newPM,legacyPM} x {alias0,alias1} x {odr0,odr1}
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-INDICATOR
+; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -19,11 +19,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NOINDICATOR-NOT: __odr_asan_gen_a
 ; CHECK-NOALIAS-NOT: private alias
 ; CHECK-INDICATOR: @__odr_asan_gen_a = global i8 0, align 1
-; CHECK-ALIAS: @0 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
+; CHECK-ALIAS: @0 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @a
 
-; CHECK-ALIAS: @1 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @b
-; CHECK-ALIAS: @2 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @c
-; CHECK-ALIAS: @3 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @d
+; CHECK-ALIAS: @1 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @b
+; CHECK-ALIAS: @2 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @c
+; CHECK-ALIAS: @3 = private alias { [2 x i32], [24 x i8] }, { [2 x i32], [24 x i8] }* @d
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @foo(i32 %M) #0 {

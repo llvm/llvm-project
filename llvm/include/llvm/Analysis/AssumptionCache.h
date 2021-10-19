@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class CallInst;
+class AssumeInst;
 class Function;
 class raw_ostream;
 class Value;
@@ -45,7 +45,7 @@ public:
   enum : unsigned { ExprResultIdx = std::numeric_limits<unsigned>::max() };
 
   struct ResultElem {
-    WeakTrackingVH Assume;
+    WeakVH Assume;
 
     /// contains either ExprResultIdx or the index of the operand bundle
     /// containing the knowledge.
@@ -116,15 +116,15 @@ public:
   ///
   /// The call passed in must be an instruction within this function and must
   /// not already be in the cache.
-  void registerAssumption(CallInst *CI);
+  void registerAssumption(AssumeInst *CI);
 
   /// Remove an \@llvm.assume intrinsic from this function's cache if it has
   /// been added to the cache earlier.
-  void unregisterAssumption(CallInst *CI);
+  void unregisterAssumption(AssumeInst *CI);
 
   /// Update the cache of values being affected by this assumption (i.e.
   /// the values about which this assumption provides information).
-  void updateAffectedValues(CallInst *CI);
+  void updateAffectedValues(AssumeInst *CI);
 
   /// Clear the cache of \@llvm.assume intrinsics for a function.
   ///

@@ -1,0 +1,13 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+
+---
+name: invalid_scavenge_fi
+machineFunctionInfo:
+  # CHECK: [[@LINE+1]]:15: Invalid frame index, needs to start with %stack. or %fixed-stack
+  scavengeFI: 0
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

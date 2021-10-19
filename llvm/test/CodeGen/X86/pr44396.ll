@@ -21,7 +21,7 @@ define double @c() nounwind {
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    shrl $31, %edx
 ; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds LCPI0_0(,%edx,4)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%edx,4)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldz

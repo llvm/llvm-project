@@ -20,8 +20,8 @@ b:
 // DWARF: .debug_info contents:
 // DWARF: DW_TAG_compile_unit
 // DWARF-NOT:         DW_TAG_
-// DWARF:               DW_AT_low_pc (0x0000000000000000)
-// DWARF:               DW_AT_high_pc (0x0000000000000004)
+// DWARF:               DW_AT_low_pc (0x00000000)
+// DWARF:               DW_AT_high_pc (0x00000004)
 
 // DWARF: DW_TAG_label
 // DWARF-NEXT: DW_AT_name ("b")

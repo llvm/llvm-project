@@ -20,8 +20,7 @@
 // Sometimes the headers may not have this...
 void *aligned_alloc(size_t alignment, size_t size);
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   void *p = NULL;
   size_t alignment = 1U << 12;
   size_t size = 1U << 12;

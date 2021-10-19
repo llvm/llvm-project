@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -amdgpu-verify-hsa-metadata -filetype=obj -mattr=+code-object-v3 -o /dev/null < %s 2>&1 | FileCheck --check-prefix=PARSER %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=3 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=3 -amdgpu-verify-hsa-metadata -filetype=obj -o /dev/null < %s 2>&1 | FileCheck --check-prefix=PARSER %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0

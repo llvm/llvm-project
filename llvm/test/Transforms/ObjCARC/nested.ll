@@ -13,7 +13,7 @@ declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 declare i8* @llvm.objc.retain(i8*)
 declare void @llvm.objc.enumerationMutation(i8*)
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
-declare i8* @llvm.objc.msgSend(i8*, i8*, ...) nonlazybind
+declare i8* @objc_msgSend(i8*, i8*, ...) nonlazybind
 declare void @use(i8*)
 declare void @llvm.objc.release(i8*)
 declare i8* @def()
@@ -38,7 +38,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -77,7 +77,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp5 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call6 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp5, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call6 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp5, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call6, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -103,7 +103,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call3, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -142,7 +142,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call7, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -168,7 +168,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp2, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp4 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp4, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp4, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -207,7 +207,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp7 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call8 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp7, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call8 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp7, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call8, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -233,7 +233,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call3, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -272,7 +272,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call7, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -299,7 +299,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call3, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -338,7 +338,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call7, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -368,7 +368,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call3, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -407,7 +407,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call7, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -434,7 +434,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %1 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp2 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call3 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp2, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call3, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -480,7 +480,7 @@ forcoll.next:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %1, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %5 = icmp eq i64 %call7, 0
   br i1 %5, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -511,7 +511,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %2 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp3 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call4, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -548,7 +548,7 @@ forcoll.notmutated.forcoll.loopbody_crit_edge:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %4 = icmp eq i64 %call7, 0
   br i1 %4, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -578,7 +578,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %2 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp3 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call4, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -612,7 +612,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %4 = icmp eq i64 %call7, 0
   br i1 %4, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -645,7 +645,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %2 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp3 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call4, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -682,7 +682,7 @@ forcoll.notmutated.forcoll.loopbody_crit_edge:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %4 = icmp eq i64 %call7, 0
   br i1 %4, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -713,7 +713,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 8 %tmp, i8 0, i64 64, i1 false)
   %2 = call i8* @llvm.objc.retain(i8* %0) nounwind
   %tmp3 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call4 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp3, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %iszero = icmp eq i64 %call4, 0
   br i1 %iszero, label %forcoll.empty, label %forcoll.loopinit
 
@@ -747,7 +747,7 @@ forcoll.notmutated:
 
 forcoll.refetch:
   %tmp6 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_", align 8
-  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @llvm.objc.msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
+  %call7 = call i64 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i64 (i8*, i8*, %struct.__objcFastEnumerationState*, [16 x i8*]*, i64)*)(i8* %2, i8* %tmp6, %struct.__objcFastEnumerationState* %state.ptr, [16 x i8*]* %items.ptr, i64 16)
   %4 = icmp eq i64 %call7, 0
   br i1 %4, label %forcoll.empty, label %forcoll.loopbody.outer
 
@@ -821,5 +821,5 @@ entry:
 
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { argmemonly nounwind willreturn writeonly }
+; CHECK: attributes #1 = { argmemonly nofree nounwind willreturn writeonly }
 ; CHECK: attributes #2 = { nonlazybind }

@@ -41,12 +41,12 @@ union U3 foo3() { return u3; }
 struct S1 bar1() { return s1; }
 struct S2 bar2() { return s2; }
 struct S1 bar3(union U1 u) { return s1; }
-// CHECK: define void @foo1()
-// CHECK: define void @foo2([[UNION2_TYPE]]* noalias sret align 4 %{{.+}})
-// CHECK: define i32 @foo3()
-// CHECK: define void @bar1()
-// CHECK: define i32 @bar2()
-// CHECK: define void @bar3()
+// CHECK: define{{.*}} void @foo1()
+// CHECK: define{{.*}} void @foo2([[UNION2_TYPE]]* noalias sret([[UNION2_TYPE]]) align 4 %{{.+}})
+// CHECK: define{{.*}} i32 @foo3()
+// CHECK: define{{.*}} void @bar1()
+// CHECK: define{{.*}} i32 @bar2()
+// CHECK: define{{.*}} void @bar3()
 
 void run() {
   union U1 x1 = foo1();
@@ -62,7 +62,7 @@ void run() {
   // CHECK: [[Y1:%.+]] = alloca [[STRUCT1_TYPE]]
   // CHECK: [[Y2:%.+]] = alloca [[STRUCT2_TYPE]]
   // CHECK: call void @foo1()
-  // CHECK: call void @foo2([[UNION2_TYPE]]* sret align 4 [[X2]])
+  // CHECK: call void @foo2([[UNION2_TYPE]]* sret([[UNION2_TYPE]]) align 4 [[X2]])
   // CHECK: {{.+}} = call i32 @foo3()
   // CHECK: call void @bar1()
   // CHECK: {{.+}} = call i32 @bar2()

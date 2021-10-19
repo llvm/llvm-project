@@ -132,8 +132,8 @@ bool ConversionFixItGenerator::tryToFixConversion(const Expr *FullExpr,
     if (!Expr->isLValue() || Expr->getObjectKind() != OK_Ordinary)
       return false;
 
-    CanConvert = CompareTypes(S.Context.getPointerType(FromQTy), ToQTy,
-                              S, Begin, VK_RValue);
+    CanConvert = CompareTypes(S.Context.getPointerType(FromQTy), ToQTy, S,
+                              Begin, VK_PRValue);
     if (CanConvert) {
 
       if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(Expr)) {

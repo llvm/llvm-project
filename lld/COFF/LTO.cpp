@@ -62,6 +62,7 @@ static std::string getThinLTOOutputFile(StringRef path) {
 static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options.EmitAddrsig = true;
 
   // Always emit a section per function/datum with LTO. LLVM LTO should get most
   // of the benefit of linker GC, but there are still opportunities for ICF.
@@ -82,6 +83,11 @@ static lto::Config createConfig() {
   c.MAttrs = getMAttrs();
   c.CGOptLevel = args::getCGOptLevel(config->ltoo);
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
+  c.UseNewPM = config->ltoNewPassManager;
+  c.DebugPassManager = config->ltoDebugPassManager;
+  c.CSIRProfile = std::string(config->ltoCSProfileFile);
+  c.RunCSIRInstr = config->ltoCSProfileGenerate;
+  c.PGOWarnMismatch = config->ltoPGOWarnMismatch;
 
   if (config->saveTemps)
     checkError(c.addSaveTemps(std::string(config->outputFile) + ".",
@@ -139,13 +145,18 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = sym->isUsedInRegularObj;
     if (r.Prevailing)
       undefine(sym);
+
+    // We tell LTO to not apply interprocedural optimization for wrapped
+    // (with -wrap) symbols because otherwise LTO would inline them while
+    // their values are still not final.
+    r.LinkerRedefined = !sym->canInline;
   }
   checkError(ltoObj->add(std::move(f.obj), resols));
 }
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
-std::vector<InputFile *> BitcodeCompiler::compile() {
+std::vector<InputFile *> BitcodeCompiler::compile(COFFLinkerContext &ctx) {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
@@ -213,7 +224,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
 
     if (config->saveTemps)
       saveBuffer(buf[i], ltoObjName);
-    ret.push_back(make<ObjFile>(MemoryBufferRef(objBuf, ltoObjName)));
+    ret.push_back(make<ObjFile>(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
 
   return ret;

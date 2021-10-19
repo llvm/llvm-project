@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-objdump -h - | FileCheck %s
+; RUN: llc -split-dwarf-file=foo.dwo  %s -filetype=obj -o - | llvm-objdump -h - | FileCheck %s
 
 ; Created from:
 ;   void f1() {

@@ -21,8 +21,7 @@ using namespace lldb_private;
 
 class lldb_private::SBCommandReturnObjectImpl {
 public:
-  SBCommandReturnObjectImpl()
-      : m_ptr(new CommandReturnObject(false)), m_owned(true) {}
+  SBCommandReturnObjectImpl() : m_ptr(new CommandReturnObject(false)) {}
   SBCommandReturnObjectImpl(CommandReturnObject &ref)
       : m_ptr(&ref), m_owned(false) {}
   SBCommandReturnObjectImpl(const SBCommandReturnObjectImpl &rhs)
@@ -42,7 +41,7 @@ public:
 
 private:
   CommandReturnObject *m_ptr;
-  bool m_owned;
+  bool m_owned = true;
 };
 
 SBCommandReturnObject::SBCommandReturnObject()
@@ -364,7 +363,7 @@ void SBCommandReturnObject::SetError(const char *error_cstr) {
                      error_cstr);
 
   if (error_cstr)
-    ref().SetError(error_cstr);
+    ref().AppendError(error_cstr);
 }
 
 namespace lldb_private {

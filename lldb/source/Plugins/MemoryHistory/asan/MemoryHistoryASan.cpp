@@ -36,13 +36,8 @@ MemoryHistorySP MemoryHistoryASan::CreateInstance(const ProcessSP &process_sp) {
 
   Target &target = process_sp->GetTarget();
 
-  const ModuleList &target_modules = target.GetImages();
-  std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-  const size_t num_modules = target_modules.GetSize();
-  for (size_t i = 0; i < num_modules; ++i) {
-    Module *module_pointer = target_modules.GetModulePointerAtIndexUnlocked(i);
-
-    const Symbol *symbol = module_pointer->FindFirstSymbolWithNameAndType(
+  for (ModuleSP module_sp : target.GetImages().Modules()) {
+    const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
         ConstString("__asan_get_alloc_stack"), lldb::eSymbolTypeAny);
 
     if (symbol != nullptr)

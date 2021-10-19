@@ -32,16 +32,8 @@ void test_trivial_clock() {
   ((void)odr_use);
 }
 
-void test_time_point_resolution_and_range() {
-  using namespace fs;
-  using Dur = file_time_type::duration;
-  using Period = Dur::period;
-  ASSERT_SAME_TYPE(Period, std::nano);
-}
-
 int main(int, char**) {
   test_trivial_clock();
-  test_time_point_resolution_and_range();
 
   return 0;
 }

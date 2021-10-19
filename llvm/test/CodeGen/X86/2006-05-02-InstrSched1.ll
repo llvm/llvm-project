@@ -5,8 +5,8 @@
 ; It's possible to schedule this in 14 instructions by avoiding
 ; callee-save registers, but the scheduler isn't currently that
 ; conervative with registers.
-@size20 = external global i32		; <i32*> [#uses=1]
-@in5 = external global i8*		; <i8**> [#uses=1]
+@size20 = external dso_local global i32		; <i32*> [#uses=1]
+@in5 = external dso_local global i8*		; <i8**> [#uses=1]
 
 define i32 @compare(i8* %a, i8* %b) nounwind {
 	%tmp = bitcast i8* %a to i32*		; <i32*> [#uses=1]

@@ -1,4 +1,5 @@
 # RUN: llc -o - -run-pass mir-canonicalizer -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -o - -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs %s | FileCheck %s
 --- |
   target triple = "aarch64-unknown-unknown"
   define void @f() { unreachable }

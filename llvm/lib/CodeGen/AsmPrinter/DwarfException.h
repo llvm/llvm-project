@@ -44,9 +44,6 @@ class LLVM_LIBRARY_VISIBILITY DwarfCFIException : public DwarfCFIExceptionBase {
   /// Per-function flag to indicate if .cfi_lsda should be emitted.
   bool shouldEmitLSDA;
 
-  /// Per-function flag to indicate if frame moves info should be emitted.
-  bool shouldEmitMoves;
-
 public:
   //===--------------------------------------------------------------------===//
   // Main entry points.
@@ -91,6 +88,20 @@ public:
 
   /// Gather and emit post-function exception information.
   void endFunction(const MachineFunction *) override;
+};
+
+class LLVM_LIBRARY_VISIBILITY AIXException : public DwarfCFIExceptionBase {
+  /// This is AIX's compat unwind section, which unwinder would use
+  /// to find the location of LSDA area and personality rountine.
+  void emitExceptionInfoTable(const MCSymbol *LSDA, const MCSymbol *PerSym);
+
+public:
+  AIXException(AsmPrinter *A);
+
+  void endModule() override {}
+  void beginFunction(const MachineFunction *MF) override {}
+
+  void endFunction(const MachineFunction *MF) override;
 };
 } // End of namespace llvm
 

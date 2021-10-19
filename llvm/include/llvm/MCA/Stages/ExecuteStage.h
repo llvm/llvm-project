@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_EXECUTE_STAGE_H
-#define LLVM_MCA_EXECUTE_STAGE_H
+#ifndef LLVM_MCA_STAGES_EXECUTESTAGE_H
+#define LLVM_MCA_STAGES_EXECUTESTAGE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MCA/HardwareUnits/Scheduler.h"
@@ -72,9 +72,8 @@ public:
   Error cycleEnd() override;
   Error execute(InstRef &IR) override;
 
-  void notifyInstructionIssued(
-      const InstRef &IR,
-      MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
+  void notifyInstructionIssued(const InstRef &IR,
+                               MutableArrayRef<ResourceUse> Used) const;
   void notifyInstructionExecuted(const InstRef &IR) const;
   void notifyInstructionPending(const InstRef &IR) const;
   void notifyInstructionReady(const InstRef &IR) const;
@@ -87,4 +86,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_EXECUTE_STAGE_H
+#endif // LLVM_MCA_STAGES_EXECUTESTAGE_H

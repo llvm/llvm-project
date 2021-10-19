@@ -35,7 +35,8 @@ High Level
 ==========
 
 The ABI of ``Blocks`` consist of their layout and the runtime functions required
-by the compiler.  A ``Block`` consists of a structure of the following form:
+by the compiler.  A ``Block`` of type ``R (^)(P...)`` consists of a structure of
+the following form:
 
 .. code-block:: c
 
@@ -43,9 +44,9 @@ by the compiler.  A ``Block`` consists of a structure of the following form:
         void *isa; // initialized to &_NSConcreteStackBlock or &_NSConcreteGlobalBlock
         int flags;
         int reserved; 
-        void (*invoke)(void *, ...);
+        R (*invoke)(struct Block_literal_1 *, P...);
         struct Block_descriptor_1 {
-        unsigned long int reserved;         // NULL
+            unsigned long int reserved;     // NULL
             unsigned long int size;         // sizeof(struct Block_literal_1)
             // optional helper functions
             void (*copy_helper)(void *dst, void *src);     // IFF (1<<25)

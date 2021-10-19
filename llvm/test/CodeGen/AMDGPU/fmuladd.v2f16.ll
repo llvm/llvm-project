@@ -1,12 +1,12 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-FLUSH,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-FLUSH,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-FLUSH %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-FLUSH %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-FLUSH %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-FLUSH %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,GFX9-DENORM-STRICT,GFX9-DENORM,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,GFX9-DENORM-CONTRACT,GFX9-DENORM,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-STRICT,GFX9-DENORM %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-STRICT,GFX9-DENORM %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9-DENORM-CONTRACT,GFX9-DENORM %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare <2 x half> @llvm.fmuladd.v2f16(<2 x half>, <2 x half>, <2 x half>) #1
@@ -53,7 +53,7 @@ define amdgpu_kernel void @fmul_fadd_contract_v2f16(<2 x half> addrspace(1)* %ou
   %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1
   %r1 = load <2 x half>, <2 x half> addrspace(1)* %in2
   %r2 = load <2 x half>, <2 x half> addrspace(1)* %in3
-  %r3 = fmul <2 x half> %r0, %r1
+  %r3 = fmul contract <2 x half> %r0, %r1
   %r4 = fadd contract <2 x half> %r3, %r2
   store <2 x half> %r4, <2 x half> addrspace(1)* %out
   ret void

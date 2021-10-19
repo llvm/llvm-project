@@ -22,20 +22,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "si-i1-copies"
 
@@ -184,10 +177,8 @@ public:
         }
       }
 
-      if (Divergent && PDT.dominates(&DefBlock, MBB)) {
-        for (MachineBasicBlock *Succ : MBB->successors())
-          Stack.push_back(Succ);
-      }
+      if (Divergent && PDT.dominates(&DefBlock, MBB))
+        append_range(Stack, MBB->successors());
     }
 
     while (!Stack.empty()) {
@@ -196,8 +187,7 @@ public:
         continue;
       ReachableOrdered.push_back(MBB);
 
-      for (MachineBasicBlock *Succ : MBB->successors())
-        Stack.push_back(Succ);
+      append_range(Stack, MBB->successors());
     }
 
     for (MachineBasicBlock *MBB : ReachableOrdered) {
@@ -213,7 +203,7 @@ public:
         ReachableMap[MBB] = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
-          if (llvm::find(Predecessors, UnreachablePred) == Predecessors.end())
+          if (!llvm::is_contained(Predecessors, UnreachablePred))
             Predecessors.push_back(UnreachablePred);
         }
       }
@@ -347,7 +337,7 @@ private:
     if (DomIt != Visited.end() && DomIt->second <= LoopLevel)
       return true;
 
-    if (llvm::find(Blocks, &MBB) != Blocks.end())
+    if (llvm::is_contained(Blocks, &MBB))
       return true;
 
     return false;
@@ -608,6 +598,11 @@ void SILowerI1Copies::lowerPhis() {
 
     MachineBasicBlock *PostDomBound =
         PDT->findNearestCommonDominator(DomBlocks);
+
+    // FIXME: This fails to find irreducible cycles. If we have a def (other
+    // than a constant) in a pair of blocks that end up looping back to each
+    // other, it will be mishandle. Due to structurization this shouldn't occur
+    // in practice.
     unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
 
     SSAUpdater.Initialize(DstReg);
@@ -742,6 +737,9 @@ bool SILowerI1Copies::isConstantLaneMask(Register Reg, bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
     MI = MRI->getUniqueVRegDef(Reg);
+    if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
+      return true;
+
     if (MI->getOpcode() != AMDGPU::COPY)
       break;
 
@@ -818,9 +816,9 @@ void SILowerI1Copies::buildMergeLaneMasks(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
                                           const DebugLoc &DL, unsigned DstReg,
                                           unsigned PrevReg, unsigned CurReg) {
-  bool PrevVal;
+  bool PrevVal = false;
   bool PrevConstant = isConstantLaneMask(PrevReg, PrevVal);
-  bool CurVal;
+  bool CurVal = false;
   bool CurConstant = isConstantLaneMask(CurReg, CurVal);
 
   if (PrevConstant && CurConstant) {

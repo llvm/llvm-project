@@ -8,69 +8,72 @@
 // I386: Format: elf32-i386
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section {{.*}} .rel.text {
-// CHECK-NEXT:     0x2          R_386_GOTOFF     .Lfoo 0x0
-// CHECK-NEXT:     0x{{[^ ]+}}  R_386_PLT32      bar2 0x0
-// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOTPC      _GLOBAL_OFFSET_TABLE_ 0x0
+/// Do not use STT_SECTION symbol for R_386_GOTOFF to work around a gold<2.34 bug
+/// https://sourceware.org/bugzilla/show_bug.cgi?id=16794
+// I386-NEXT:      0x2          R_386_GOTOFF     .Lfoo
+// IAMCU-NEXT:     0x2          R_386_GOTOFF     .rodata.str1.1
+// CHECK-NEXT:     0x{{[^ ]+}}  R_386_PLT32      bar2
+// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOTPC      _GLOBAL_OFFSET_TABLE_
 // Relocation 3 (bar3@GOTOFF) is done with symbol 7 (bss)
-// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOTOFF     .bss 0x0
+// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOTOFF     .bss
 // Relocation 4 (bar2@GOT) is of type R_386_GOT32
-// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOT32      bar2j 0x0
+// CHECK-NEXT:     0x{{[^ ]+}}  R_386_GOT32      bar2j
 
 // Relocation 5 (foo@TLSGD) is of type R_386_TLS_GD
-// CHECK-NEXT:     0x20         R_386_TLS_GD     foo 0x0
+// CHECK-NEXT:     0x20         R_386_TLS_GD     foo
 // Relocation 6 ($foo@TPOFF) is of type R_386_TLS_LE_32
-// CHECK-NEXT:     0x25         R_386_TLS_LE_32  foo 0x0
+// CHECK-NEXT:     0x25         R_386_TLS_LE_32  foo
 // Relocation 7 (foo@INDNTPOFF) is of type R_386_TLS_IE
-// CHECK-NEXT:     0x2B         R_386_TLS_IE     foo 0x0
+// CHECK-NEXT:     0x2B         R_386_TLS_IE     foo
 // Relocation 8 (foo@NTPOFF) is of type R_386_TLS_LE
-// CHECK-NEXT:     0x31         R_386_TLS_LE     foo 0x0
+// CHECK-NEXT:     0x31         R_386_TLS_LE     foo
 // Relocation 9 (foo@GOTNTPOFF) is of type R_386_TLS_GOTIE
-// CHECK-NEXT:     0x37         R_386_TLS_GOTIE  foo 0x0
+// CHECK-NEXT:     0x37         R_386_TLS_GOTIE  foo
 // Relocation 10 (foo@TLSLDM) is of type R_386_TLS_LDM
-// CHECK-NEXT:     0x3D         R_386_TLS_LDM    foo 0x0
+// CHECK-NEXT:     0x3D         R_386_TLS_LDM    foo
 // Relocation 11 (foo@DTPOFF) is of type R_386_TLS_LDO_32
-// CHECK-NEXT:     0x43         R_386_TLS_LDO_32 foo 0x0
+// CHECK-NEXT:     0x43         R_386_TLS_LDO_32 foo
 // Relocation 12 (calll 4096) is of type R_386_PC32
-// CHECK-NEXT:     0x48         R_386_PC32       - 0x0
+// CHECK-NEXT:     0x48         R_386_PC32       -
 // Relocation 13 (zed@GOT) is of type R_386_GOT32 and uses the symbol
-// CHECK-NEXT:     0x4E         R_386_GOT32      zed 0x0
+// CHECK-NEXT:     0x4E         R_386_GOT32      zed
 // Relocation 14 (zed@GOTOFF) is of type R_386_GOTOFF and uses the symbol
-// CHECK-NEXT:     0x54         R_386_GOTOFF     zed 0x0
+// CHECK-NEXT:     0x54         R_386_GOTOFF     zed
 // Relocation 15 (zed@INDNTPOFF) is of type R_386_TLS_IE and uses the symbol
-// CHECK-NEXT:     0x5A         R_386_TLS_IE     zed 0x0
+// CHECK-NEXT:     0x5A         R_386_TLS_IE     zed
 // Relocation 16 (zed@NTPOFF) is of type R_386_TLS_LE and uses the symbol
-// CHECK-NEXT:     0x60         R_386_TLS_LE     zed 0x0
+// CHECK-NEXT:     0x60         R_386_TLS_LE     zed
 // Relocation 17 (zed@GOTNTPOFF) is of type R_386_TLS_GOTIE and uses the symbol
-// CHECK-NEXT:     0x66         R_386_TLS_GOTIE  zed 0x0
+// CHECK-NEXT:     0x66         R_386_TLS_GOTIE  zed
 // Relocation 18 (zed@PLT) is of type R_386_PLT32 and uses the symbol
-// CHECK-NEXT:     0x6B         R_386_PLT32      zed 0x0
+// CHECK-NEXT:     0x6B         R_386_PLT32      zed
 // Relocation 19 (zed@TLSGD) is of type R_386_TLS_GD and uses the symbol
-// CHECK-NEXT:     0x71         R_386_TLS_GD     zed 0x0
+// CHECK-NEXT:     0x71         R_386_TLS_GD     zed
 // Relocation 20 (zed@TLSLDM) is of type R_386_TLS_LDM and uses the symbol
-// CHECK-NEXT:     0x77         R_386_TLS_LDM    zed 0x0
+// CHECK-NEXT:     0x77         R_386_TLS_LDM    zed
 // Relocation 21 (zed@TPOFF) is of type R_386_TLS_LE_32 and uses the symbol
-// CHECK-NEXT:     0x7D         R_386_TLS_LE_32  zed 0x0
+// CHECK-NEXT:     0x7D         R_386_TLS_LE_32  zed
 // Relocation 22 (zed@DTPOFF) is of type R_386_TLS_LDO_32 and uses the symbol
-// CHECK-NEXT:     0x83         R_386_TLS_LDO_32 zed 0x0
+// CHECK-NEXT:     0x83         R_386_TLS_LDO_32 zed
 // Relocation 23 ($bar) is of type R_386_32 and uses the section
-// CHECK-NEXT:     0x{{[^ ]+}}  R_386_32         .text 0x0
+// CHECK-NEXT:     0x{{[^ ]+}}  R_386_32         .text
 // Relocation 24 (foo@GOTTPOFF(%edx)) is of type R_386_TLS_IE_32 and uses the
 // symbol
-// CHECK-NEXT:     0x8E         R_386_TLS_IE_32  foo 0x0
+// CHECK-NEXT:     0x8E         R_386_TLS_IE_32  foo
 // Relocation 25 (_GLOBAL_OFFSET_TABLE_-bar2) is of type R_386_GOTPC.
-// CHECK-NEXT:     0x94         R_386_GOTPC      _GLOBAL_OFFSET_TABLE_ 0x0
+// CHECK-NEXT:     0x94         R_386_GOTPC      _GLOBAL_OFFSET_TABLE_
 // Relocation 26 (und_symbol-bar2) is of type R_386_PC32
-// CHECK-NEXT:     0x9A         R_386_PC32       und_symbol 0x0
+// CHECK-NEXT:     0x9A         R_386_PC32       und_symbol
 // Relocation 27 (und_symbol-bar2) is of type R_386_PC16
-// CHECK-NEXT:     0x9E         R_386_PC16       und_symbol 0x0
+// CHECK-NEXT:     0x9E         R_386_PC16       und_symbol
 // Relocation 28 (und_symbol-bar2) is of type R_386_PC8
-// CHECK-NEXT:     0xA0         R_386_PC8        und_symbol 0x0
-// CHECK-NEXT:     0xA3         R_386_GOTOFF     und_symbol 0x0
+// CHECK-NEXT:     0xA0         R_386_PC8        und_symbol
+// CHECK-NEXT:     0xA3         R_386_GOTOFF     und_symbol
 // Relocation 29 (zed@PLT) is of type R_386_PLT32 and uses the symbol
-// CHECK-NEXT:     0xA9         R_386_PLT32      zed 0x0
-// CHECK-NEXT:     0xAF         R_386_PC32       tr_start 0x0
-// CHECK-NEXT:     0xB3         R_386_16         foo      0x0
-// CHECK-NEXT:     0xB5         R_386_8          foo      0x0
+// CHECK-NEXT:     0xA9         R_386_PLT32      zed
+// CHECK-NEXT:     0xAF         R_386_PC32       tr_start
+// CHECK-NEXT:     0xB3         R_386_16         foo
+// CHECK-NEXT:     0xB5         R_386_8          foo
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

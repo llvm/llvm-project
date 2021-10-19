@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Catching an exception thrown as nullptr was not properly handled before
+// 2f984cab4fa7, which landed in macOS 10.13
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+
 // UNSUPPORTED: no-exceptions
 
 #include <cassert>
@@ -67,8 +71,10 @@ void test2()
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
+
+    return 0;
 }

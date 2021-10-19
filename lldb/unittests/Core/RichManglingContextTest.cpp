@@ -20,7 +20,6 @@ TEST(RichManglingContextTest, Basic) {
   ConstString mangled("_ZN3foo3barEv");
   EXPECT_TRUE(RMC.FromItaniumName(mangled));
 
-  EXPECT_TRUE(RMC.IsFunction());
   EXPECT_FALSE(RMC.IsCtorOrDtor());
 
   RMC.ParseFunctionDeclContextName();
@@ -42,7 +41,6 @@ TEST(RichManglingContextTest, FromCxxMethodName) {
   ConstString demangled("foo::bar()");
   EXPECT_TRUE(CxxMethodRMC.FromCxxMethodName(demangled));
 
-  EXPECT_TRUE(ItaniumRMC.IsFunction() == CxxMethodRMC.IsFunction());
   EXPECT_TRUE(ItaniumRMC.IsCtorOrDtor() == CxxMethodRMC.IsCtorOrDtor());
 
   ItaniumRMC.ParseFunctionDeclContextName();
@@ -61,9 +59,6 @@ TEST(RichManglingContextTest, FromCxxMethodName) {
   {
     RichManglingContext CxxMethodRMC;
     EXPECT_TRUE(CxxMethodRMC.FromCxxMethodName(ConstString("X")));
-
-    // We expect it is not a function.
-    EXPECT_FALSE(CxxMethodRMC.IsFunction());
   }
 
   // Construct with a function without a context.
@@ -71,9 +66,6 @@ TEST(RichManglingContextTest, FromCxxMethodName) {
     RichManglingContext CxxMethodRMC;
     EXPECT_TRUE(CxxMethodRMC.FromCxxMethodName(
         ConstString("void * operator new(unsigned __int64)")));
-
-    // We expect it is a function.
-    EXPECT_TRUE(CxxMethodRMC.IsFunction());
 
     // We expect its context is empty.
     CxxMethodRMC.ParseFunctionDeclContextName();

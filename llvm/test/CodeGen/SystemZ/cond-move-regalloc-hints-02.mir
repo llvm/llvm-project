@@ -39,7 +39,7 @@ body:             |
     %9:grx32bit = LHIMux 66
   
   bb.1:
-    %6:grx32bit = LLCMux undef %7:addr64bit, 0, $noreg :: (load 1 from `i8* undef`)
+    %6:grx32bit = LLCMux undef %7:addr64bit, 0, $noreg :: (load (s8) from `i8* undef`)
     CHIMux %6, 1, implicit-def $cc
     %11:gr32bit = SELRMux %8, %9:grx32bit, 14, 6, implicit killed $cc
     CHIMux %6, 2, implicit-def $cc
@@ -47,7 +47,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0
     %10:gr64bit = LGFR %0
     $r2d = COPY %10
-    CallBRASL @foo, killed $r2d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
+    CallBRASL @foo, killed $r2d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc
     ADJCALLSTACKUP 0, 0
     J %bb.1
 

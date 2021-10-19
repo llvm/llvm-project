@@ -22,10 +22,17 @@ using namespace llvm;
 using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv,
-                   bool InstallPipeSignalExitHandler)
-    : StackPrinter(Argc, Argv) {
+                   bool InstallPipeSignalExitHandler) {
   if (InstallPipeSignalExitHandler)
+    // The pipe signal handler must be installed before any other handlers are
+    // registered. This is because the Unix \ref RegisterHandlers function does
+    // not perform a sigaction() for SIGPIPE unless a one-shot handler is
+    // present, to allow long-lived processes (like lldb) to fully opt-out of
+    // llvm's SIGPIPE handling and ignore the signal safely.
     sys::SetOneShotPipeSignalFunction(sys::DefaultOneShotPipeSignalHandler);
+  // Initialize the stack printer after installing the one-shot pipe signal
+  // handler, so we can perform a sigaction() for SIGPIPE on Unix if requested.
+  StackPrinter.emplace(Argc, Argv);
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
   install_out_of_memory_new_handler();
 

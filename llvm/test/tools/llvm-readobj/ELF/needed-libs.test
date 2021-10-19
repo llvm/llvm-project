@@ -51,19 +51,16 @@ Sections:
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Check what we print when the dynamic string table is empty.
 # RUN: yaml2obj %s --docnum=2 -o %t2
 # RUN: llvm-readobj --needed-libs %t2 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t2 --implicit-check-not=warning: --check-prefixes=EMPTY-DYNSTR,EMPTY-DYNSTR-LLVM
+# RUN:   FileCheck %s -DFILE=%t2 --implicit-check-not=warning: --check-prefix=EMPTY-DYNSTR
 # RUN: llvm-readelf --needed-libs %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --implicit-check-not=warning: --check-prefix=EMPTY-DYNSTR
 
-# EMPTY-DYNSTR:      warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x78: it goes past the end of the table (0x78)
-# EMPTY-DYNSTR-LLVM: LoadName: <?>
 # EMPTY-DYNSTR:      NeededLibraries [
 # EMPTY-DYNSTR-NEXT: warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x79: it goes past the end of the table (0x78)
 # EMPTY-DYNSTR-NEXT: warning: '[[FILE]]': string table at offset 0x78: unable to read the string at 0x7a: it goes past the end of the table (0x78)
@@ -96,8 +93,7 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x0
+    FirstSec: .dynstr
+    LastSec:  .dynamic

@@ -32,12 +32,12 @@ namespace __asan {
 static void (*error_report_callback)(const char*);
 static char *error_message_buffer = nullptr;
 static uptr error_message_buffer_pos = 0;
-static BlockingMutex error_message_buf_mutex(LINKER_INITIALIZED);
+static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
 
 void AppendToErrorMessageBuffer(const char *buffer) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
       (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
@@ -151,13 +151,14 @@ class ScopedInErrorReport {
     if (common_flags()->print_cmdline)
       PrintCmdline();
 
-    if (common_flags()->print_module_map == 2) PrintModuleMap();
+    if (common_flags()->print_module_map == 2)
+      DumpProcessMap();
 
     // Copy the message buffer so that we could start logging without holding a
-    // lock that gets aquired during printing.
+    // lock that gets acquired during printing.
     InternalMmapVector<char> buffer_copy(kErrorMessageBufferSize);
     {
-      BlockingMutexLock l(&error_message_buf_mutex);
+      Lock l(&error_message_buf_mutex);
       internal_memcpy(buffer_copy.data(),
                       error_message_buffer, kErrorMessageBufferSize);
       // Clear error_message_buffer so that if we find other errors
@@ -411,7 +412,7 @@ static bool IsInvalidPointerPair(uptr a1, uptr a2) {
   return false;
 }
 
-static INLINE void CheckForInvalidPointerPair(void *p1, void *p2) {
+static inline void CheckForInvalidPointerPair(void *p1, void *p2) {
   switch (flags()->detect_invalid_pointer_pairs) {
     case 0:
       return;
@@ -489,7 +490,7 @@ void __asan_report_error(uptr pc, uptr bp, uptr sp, uptr addr, int is_write,
 }
 
 void NOINLINE __asan_set_error_report_callback(void (*callback)(const char*)) {
-  BlockingMutexLock l(&error_message_buf_mutex);
+  Lock l(&error_message_buf_mutex);
   error_report_callback = callback;
 }
 

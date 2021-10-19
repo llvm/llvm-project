@@ -131,17 +131,17 @@ LLVM_NODISCARD static bool isRawStringLiteral(const char *First,
   --Current;
   if (*Current != 'R')
     return false;
-  if (First == Current || !isIdentifierBody(*--Current))
+  if (First == Current || !isAsciiIdentifierContinue(*--Current))
     return true;
 
   // Check for a prefix of "u", "U", or "L".
   if (*Current == 'u' || *Current == 'U' || *Current == 'L')
-    return First == Current || !isIdentifierBody(*--Current);
+    return First == Current || !isAsciiIdentifierContinue(*--Current);
 
   // Check for a prefix of "u8".
   if (*Current != '8' || First == Current || *Current-- != 'u')
     return false;
-  return First == Current || !isIdentifierBody(*--Current);
+  return First == Current || !isAsciiIdentifierContinue(*--Current);
 }
 
 static void skipRawString(const char *&First, const char *const End) {
@@ -319,7 +319,7 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
   if (!isPreprocessingNumberBody(Prev))
     return false;
   // The next character should be a valid identifier body character.
-  return (Cur + 1) < End && isIdentifierBody(*(Cur + 1));
+  return (Cur + 1) < End && isAsciiIdentifierContinue(*(Cur + 1));
 }
 
 static void skipLine(const char *&First, const char *const End) {
@@ -484,7 +484,7 @@ void Minimizer::printAdjacentModuleNameParts(const char *&First,
   const char *Last = First;
   do
     ++Last;
-  while (Last != End && (isIdentifierBody(*Last) || *Last == '.'));
+  while (Last != End && (isAsciiIdentifierContinue(*Last) || *Last == '.'));
   append(First, Last);
   First = Last;
 }
@@ -507,7 +507,7 @@ bool Minimizer::printAtImportBody(const char *&First, const char *const End) {
     }
 
     // Don't handle macro expansions inside @import for now.
-    if (!isIdentifierBody(*First) && *First != '.')
+    if (!isAsciiIdentifierContinue(*First) && *First != '.')
       return true;
 
     printAdjacentModuleNameParts(First, End);
@@ -524,9 +524,9 @@ void Minimizer::printDirectiveBody(const char *&First, const char *const End) {
 
 LLVM_NODISCARD static const char *lexRawIdentifier(const char *First,
                                                    const char *const End) {
-  assert(isIdentifierBody(*First) && "invalid identifer");
+  assert(isAsciiIdentifierContinue(*First) && "invalid identifer");
   const char *Last = First + 1;
-  while (Last != End && isIdentifierBody(*Last))
+  while (Last != End && isAsciiIdentifierContinue(*Last))
     ++Last;
   return Last;
 }
@@ -540,7 +540,7 @@ getIdentifierContinuation(const char *First, const char *const End) {
   skipNewline(First, End);
   if (First == End)
     return nullptr;
-  return isIdentifierBody(First[0]) ? First : nullptr;
+  return isAsciiIdentifierContinue(First[0]) ? First : nullptr;
 }
 
 Minimizer::IdInfo Minimizer::lexIdentifier(const char *First,
@@ -569,7 +569,7 @@ void Minimizer::printAdjacentMacroArgs(const char *&First,
   do
     ++Last;
   while (Last != End &&
-         (isIdentifierBody(*Last) || *Last == '.' || *Last == ','));
+         (isAsciiIdentifierContinue(*Last) || *Last == '.' || *Last == ','));
   append(First, Last);
   First = Last;
 }
@@ -588,7 +588,7 @@ bool Minimizer::printMacroArgs(const char *&First, const char *const End) {
     }
 
     // This is intentionally fairly liberal.
-    if (!(isIdentifierBody(*First) || *First == '.' || *First == ','))
+    if (!(isAsciiIdentifierContinue(*First) || *First == '.' || *First == ','))
       return true;
 
     printAdjacentMacroArgs(First, End);
@@ -602,7 +602,7 @@ bool Minimizer::printMacroArgs(const char *&First, const char *const End) {
 bool Minimizer::isNextIdentifier(StringRef Id, const char *&First,
                                  const char *const End) {
   skipWhitespace(First, End);
-  if (First == End || !isIdentifierHead(*First))
+  if (First == End || !isAsciiIdentifierStart(*First))
     return false;
 
   IdInfo FoundId = lexIdentifier(First, End);
@@ -639,7 +639,7 @@ bool Minimizer::lexModule(const char *&First, const char *const End) {
   if (Id.Name == "export") {
     Export = true;
     skipWhitespace(First, End);
-    if (!isIdentifierBody(*First)) {
+    if (!isAsciiIdentifierContinue(*First)) {
       skipLine(First, End);
       return false;
     }
@@ -663,7 +663,7 @@ bool Minimizer::lexModule(const char *&First, const char *const End) {
   case '"':
     break;
   default:
-    if (!isIdentifierBody(*First)) {
+    if (!isAsciiIdentifierContinue(*First)) {
       skipLine(First, End);
       return false;
     }
@@ -690,7 +690,7 @@ bool Minimizer::lexDefine(const char *&First, const char *const End) {
   append("#define ");
   skipWhitespace(First, End);
 
-  if (!isIdentifierHead(*First))
+  if (!isAsciiIdentifierStart(*First))
     return reportError(First, diag::err_pp_macro_not_identifier);
 
   IdInfo Id = lexIdentifier(First, End);
@@ -722,7 +722,7 @@ bool Minimizer::lexDefine(const char *&First, const char *const End) {
 bool Minimizer::lexPragma(const char *&First, const char *const End) {
   // #pragma.
   skipWhitespace(First, End);
-  if (First == End || !isIdentifierHead(*First))
+  if (First == End || !isAsciiIdentifierStart(*First))
     return false;
 
   IdInfo FoundId = lexIdentifier(First, End);
@@ -827,7 +827,7 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
   if (First == End)
     return reportError(First, diag::err_pp_expected_eol);
 
-  if (!isIdentifierHead(*First)) {
+  if (!isAsciiIdentifierStart(*First)) {
     skipLine(First, End);
     return false;
   }
@@ -846,6 +846,8 @@ bool Minimizer::lexPPLine(const char *&First, const char *const End) {
                   .Case("ifdef", pp_ifdef)
                   .Case("ifndef", pp_ifndef)
                   .Case("elif", pp_elif)
+                  .Case("elifdef", pp_elifdef)
+                  .Case("elifndef", pp_elifndef)
                   .Case("else", pp_else)
                   .Case("endif", pp_endif)
                   .Case("pragma", pp_pragma_import)
@@ -904,7 +906,7 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
   struct Directive {
     enum DirectiveKind {
       If,  // if/ifdef/ifndef
-      Else // elif,else
+      Else // elif/elifdef/elifndef, else
     };
     int Offset;
     DirectiveKind Kind;
@@ -919,6 +921,8 @@ bool clang::minimize_source_to_dependency_directives::computeSkippedRanges(
       break;
 
     case pp_elif:
+    case pp_elifdef:
+    case pp_elifndef:
     case pp_else: {
       if (Offsets.empty())
         return true;

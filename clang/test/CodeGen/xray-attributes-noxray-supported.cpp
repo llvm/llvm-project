@@ -18,11 +18,11 @@
 // RUN:     -triple powerpc64le-unknown-linux-gnu | FileCheck %s
 
 [[clang::xray_always_instrument]] void foo() {
-// CHECK: define void @_Z3foov() #0
+// CHECK: define{{.*}} void @_Z3foov() #0
 }
 
 [[clang::xray_never_instrument]] void bar() {
-// CHECK: define void @_Z3barv() #1
+// CHECK: define{{.*}} void @_Z3barv() #1
 }
 
 // CHECK-NOT: #0 = {{.*}}"function-instrument"="xray-always"

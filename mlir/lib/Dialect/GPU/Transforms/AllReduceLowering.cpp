@@ -11,8 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -31,7 +33,7 @@ struct GpuAllReduceRewriter {
       : funcOp(funcOp_), reduceOp(reduceOp_), rewriter(rewriter_),
         loc(reduceOp.getLoc()), valueType(reduceOp.value().getType()),
         indexType(IndexType::get(reduceOp.getContext())),
-        int32Type(IntegerType::get(/*width=*/32, reduceOp.getContext())) {}
+        int32Type(IntegerType::get(reduceOp.getContext(), /*width=*/32)) {}
 
   /// Creates an all_reduce across the workgroup.
   ///
@@ -48,7 +50,7 @@ struct GpuAllReduceRewriter {
   ///     br ^continue1
   ///   ^continue1:
   ///     gpu.barrier
-  ///     %is_valid_subgroup = cmpi "slt" %invocation_idx, %num_subgroups
+  ///     %is_valid_subgroup = arith.cmpi "slt" %invocation_idx, %num_subgroups
   ///     cond_br %is_valid_subgroup, ^then2, ^continue2
   ///   ^then2:
   ///     %partial_reduce = load %workgroup_buffer[%invocation_idx]
@@ -70,26 +72,28 @@ struct GpuAllReduceRewriter {
     Value tidX = getDimOp<gpu::ThreadIdOp>("x");
     Value tidY = getDimOp<gpu::ThreadIdOp>("y");
     Value tidZ = getDimOp<gpu::ThreadIdOp>("z");
-    Value tmp1 = create<MulIOp>(int32Type, tidZ, dimY);
-    Value tmp2 = create<AddIOp>(int32Type, tmp1, tidY);
-    Value tmp3 = create<MulIOp>(int32Type, tmp2, dimX);
-    Value tmp4 = create<MulIOp>(int32Type, dimX, dimY);
-    Value invocationIdx = create<AddIOp>(int32Type, tmp3, tidX);
-    Value workgroupSize = create<MulIOp>(int32Type, tmp4, dimZ);
+    Value tmp1 = create<arith::MulIOp>(int32Type, tidZ, dimY);
+    Value tmp2 = create<arith::AddIOp>(int32Type, tmp1, tidY);
+    Value tmp3 = create<arith::MulIOp>(int32Type, tmp2, dimX);
+    Value tmp4 = create<arith::MulIOp>(int32Type, dimX, dimY);
+    Value invocationIdx = create<arith::AddIOp>(int32Type, tmp3, tidX);
+    Value workgroupSize = create<arith::MulIOp>(int32Type, tmp4, dimZ);
 
     // Compute lane id (invocation id withing the subgroup).
-    Value subgroupMask = create<ConstantIntOp>(kSubgroupSize - 1, int32Type);
-    Value laneId = create<AndOp>(invocationIdx, subgroupMask);
-    Value isFirstLane = create<CmpIOp>(CmpIPredicate::eq, laneId,
-                                       create<ConstantIntOp>(0, int32Type));
+    Value subgroupMask =
+        create<arith::ConstantIntOp>(kSubgroupSize - 1, int32Type);
+    Value laneId = create<arith::AndIOp>(invocationIdx, subgroupMask);
+    Value isFirstLane =
+        create<arith::CmpIOp>(arith::CmpIPredicate::eq, laneId,
+                              create<arith::ConstantIntOp>(0, int32Type));
 
     Value numThreadsWithSmallerSubgroupId =
-        create<SubIOp>(invocationIdx, laneId);
+        create<arith::SubIOp>(invocationIdx, laneId);
     // The number of active invocations starting from the current subgroup.
     // The consumers do not require the value to be clamped to the size of the
     // subgroup.
     Value activeWidth =
-        create<SubIOp>(workgroupSize, numThreadsWithSmallerSubgroupId);
+        create<arith::SubIOp>(workgroupSize, numThreadsWithSmallerSubgroupId);
 
     // Create factory for op which accumulates to values.
     AccumulatorFactory accumFactory = getFactory();
@@ -106,47 +110,49 @@ struct GpuAllReduceRewriter {
     // of each subgroup.
     createPredicatedBlock(isFirstLane, [&] {
       Value subgroupId = getDivideBySubgroupSize(invocationIdx);
-      Value index = create<IndexCastOp>(indexType, subgroupId);
-      create<StoreOp>(subgroupReduce, buffer, index);
+      Value index = create<arith::IndexCastOp>(indexType, subgroupId);
+      create<memref::StoreOp>(subgroupReduce, buffer, index);
     });
     create<gpu::BarrierOp>();
 
     // Compute number of active subgroups.
     Value biasedBlockSize =
-        create<AddIOp>(int32Type, workgroupSize, subgroupMask);
+        create<arith::AddIOp>(int32Type, workgroupSize, subgroupMask);
     Value numSubgroups = getDivideBySubgroupSize(biasedBlockSize);
-    Value isValidSubgroup =
-        create<CmpIOp>(CmpIPredicate::slt, invocationIdx, numSubgroups);
+    Value isValidSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
+                                                  invocationIdx, numSubgroups);
 
     // Use the first numSubgroups invocations to reduce the intermediate results
     // from workgroup memory. The final result is written to workgroup memory
     // again.
-    Value zero = create<ConstantIndexOp>(0);
+    Value zero = create<arith::ConstantIndexOp>(0);
     createPredicatedBlock(isValidSubgroup, [&] {
-      Value index = create<IndexCastOp>(indexType, invocationIdx);
-      Value value = create<LoadOp>(valueType, buffer, index);
+      Value index = create<arith::IndexCastOp>(indexType, invocationIdx);
+      Value value = create<memref::LoadOp>(valueType, buffer, index);
       Value result =
           createSubgroupReduce(numSubgroups, laneId, value, accumFactory);
-      create<StoreOp>(result, buffer, zero);
+      create<memref::StoreOp>(result, buffer, zero);
     });
 
     // Synchronize workgroup and load result from workgroup memory.
     create<gpu::BarrierOp>();
-    Value result = create<LoadOp>(valueType, buffer, zero);
+    Value result = create<memref::LoadOp>(valueType, buffer, zero);
 
     rewriter.replaceOp(reduceOp, result);
   }
 
 private:
   // Shortcut to create an op from rewriter using loc as the first argument.
-  template <typename T, typename... Args> T create(Args... args) {
+  template <typename T, typename... Args>
+  T create(Args... args) {
     return rewriter.create<T>(loc, std::forward<Args>(args)...);
   }
 
   // Creates dimension op of type T, with the result casted to int32.
-  template <typename T> Value getDimOp(StringRef dimension) {
+  template <typename T>
+  Value getDimOp(StringRef dimension) {
     Value dim = create<T>(indexType, rewriter.getStringAttr(dimension));
-    return create<IndexCastOp>(int32Type, dim);
+    return create<arith::IndexCastOp>(int32Type, dim);
   }
 
   /// Adds type to funcOp's workgroup attributions.
@@ -210,33 +216,40 @@ private:
   AccumulatorFactory getFactory(StringRef opName) {
     bool isFloatingPoint = valueType.isa<FloatType>();
     if (opName == "add")
-      return isFloatingPoint ? getFactory<AddFOp>() : getFactory<AddIOp>();
+      return isFloatingPoint ? getFactory<arith::AddFOp>()
+                             : getFactory<arith::AddIOp>();
     if (opName == "mul")
-      return isFloatingPoint ? getFactory<MulFOp>() : getFactory<MulIOp>();
+      return isFloatingPoint ? getFactory<arith::MulFOp>()
+                             : getFactory<arith::MulIOp>();
     if (opName == "and") {
-      return getFactory<AndOp>();
+      return getFactory<arith::AndIOp>();
     }
     if (opName == "or") {
-      return getFactory<OrOp>();
+      return getFactory<arith::OrIOp>();
     }
     if (opName == "xor") {
-      return getFactory<XOrOp>();
+      return getFactory<arith::XOrIOp>();
     }
     if (opName == "max") {
       return isFloatingPoint
-                 ? getCmpFactory<CmpFOp, CmpFPredicate, CmpFPredicate::UGT>()
-                 : getCmpFactory<CmpIOp, CmpIPredicate, CmpIPredicate::ugt>();
+                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
+                                 arith::CmpFPredicate::UGT>()
+                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
+                                 arith::CmpIPredicate::ugt>();
     }
     if (opName == "min") {
       return isFloatingPoint
-                 ? getCmpFactory<CmpFOp, CmpFPredicate, CmpFPredicate::ULT>()
-                 : getCmpFactory<CmpIOp, CmpIPredicate, CmpIPredicate::ult>();
+                 ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
+                                 arith::CmpFPredicate::ULT>()
+                 : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
+                                 arith::CmpIPredicate::ult>();
     }
     return AccumulatorFactory();
   }
 
   /// Returns an accumulator factory that creates an op of type T.
-  template <typename T> AccumulatorFactory getFactory() {
+  template <typename T>
+  AccumulatorFactory getFactory() {
     return [&](Value lhs, Value rhs) {
       return create<T>(lhs.getType(), lhs, rhs);
     };
@@ -312,9 +325,9 @@ private:
   /// The first lane returns the result, all others return values are undefined.
   Value createSubgroupReduce(Value activeWidth, Value laneId, Value operand,
                              AccumulatorFactory &accumFactory) {
-    Value subgroupSize = create<ConstantIntOp>(kSubgroupSize, int32Type);
-    Value isPartialSubgroup =
-        create<CmpIOp>(CmpIPredicate::slt, activeWidth, subgroupSize);
+    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value isPartialSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
+                                                    activeWidth, subgroupSize);
     std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
     auto xorAttr = rewriter.getStringAttr("xor");
 
@@ -327,7 +340,7 @@ private:
           // lane is within the active range. The accumulated value is available
           // in the first lane.
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(i, int32Type);
             auto shuffleOp = create<gpu::ShuffleOp>(shuffleType, value, offset,
                                                     activeWidth, xorAttr);
             // Skip the accumulation if the shuffle op read from a lane outside
@@ -349,7 +362,7 @@ private:
         [&] {
           Value value = operand;
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(i, int32Type);
             auto shuffleOp = create<gpu::ShuffleOp>(shuffleType, value, offset,
                                                     subgroupSize, xorAttr);
             value = accumFactory(value, shuffleOp.getResult(0));
@@ -361,8 +374,8 @@ private:
 
   /// Returns value divided by the subgroup size (i.e. 32).
   Value getDivideBySubgroupSize(Value value) {
-    Value subgroupSize = create<ConstantIntOp>(kSubgroupSize, int32Type);
-    return create<SignedDivIOp>(int32Type, value, subgroupSize);
+    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    return create<arith::DivSIOp>(int32Type, value, subgroupSize);
   }
 
   gpu::GPUFuncOp funcOp;
@@ -372,7 +385,7 @@ private:
   Location loc;
   Type valueType;
   Type indexType;
-  Type int32Type;
+  IntegerType int32Type;
 
   static constexpr int kSubgroupSize = 32;
 };
@@ -397,7 +410,6 @@ struct GpuAllReduceConversion : public RewritePattern {
 };
 } // namespace
 
-void mlir::populateGpuRewritePatterns(MLIRContext *context,
-                                      OwningRewritePatternList &patterns) {
-  patterns.insert<GpuAllReduceConversion>(context);
+void mlir::populateGpuAllReducePatterns(RewritePatternSet &patterns) {
+  patterns.add<GpuAllReduceConversion>(patterns.getContext());
 }

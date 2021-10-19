@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=never -O %s -o %t && %run %t
 
 #include <assert.h>
 #include <stdio.h>
@@ -30,11 +30,7 @@ void TestThrow() {
   ThrowAndCatch();
   fprintf(stderr, "After:  %p poisoned: %d\n",  &x,
           __asan_address_is_poisoned(x + 32));
-  // FIXME: Invert this assertion once we fix
-  // https://code.google.com/p/address-sanitizer/issues/detail?id=258
-  // This assertion works only w/o UAR.
-  if (!__asan_get_current_fake_stack())
-    assert(!__asan_address_is_poisoned(x + 32));
+  assert(!__asan_address_is_poisoned(x + 32));
 }
 
 __attribute__((noinline))
@@ -50,11 +46,7 @@ void TestThrowInline() {
   }
   fprintf(stderr, "After:  %p poisoned: %d\n",  &x,
           __asan_address_is_poisoned(x + 32));
-  // FIXME: Invert this assertion once we fix
-  // https://code.google.com/p/address-sanitizer/issues/detail?id=258
-  // This assertion works only w/o UAR.
-  if (!__asan_get_current_fake_stack())
-    assert(!__asan_address_is_poisoned(x + 32));
+  assert(!__asan_address_is_poisoned(x + 32));
 }
 
 int main(int argc, char **argv) {

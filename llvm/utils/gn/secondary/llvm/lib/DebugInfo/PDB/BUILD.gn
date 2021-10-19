@@ -1,4 +1,5 @@
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 
 static_library("PDB") {
   output_name = "LLVMDebugInfoPDB"
@@ -32,9 +33,11 @@ static_library("PDB") {
     "Native/NativeEnumInjectedSources.cpp",
     "Native/NativeEnumLineNumbers.cpp",
     "Native/NativeEnumModules.cpp",
+    "Native/NativeEnumSymbols.cpp",
     "Native/NativeEnumTypes.cpp",
     "Native/NativeExeSymbol.cpp",
     "Native/NativeFunctionSymbol.cpp",
+    "Native/NativeInlineSiteSymbol.cpp",
     "Native/NativeLineNumber.cpp",
     "Native/NativePublicSymbol.cpp",
     "Native/NativeRawSymbol.cpp",
@@ -120,6 +123,20 @@ static_library("PDB") {
       "DIA/DIASourceFile.cpp",
       "DIA/DIATable.cpp",
     ]
+
+    dia_lib_path = ""
+    if (sysroot != "") {
+      include_dirs = [ "$sysroot/DIA SDK/include" ]
+      dia_lib_path = "$sysroot/DIA SDK/lib"  # x86 .lib file is here.
+      if (current_cpu == "/arm") {
+        dia_lib_path += "arm"
+      } else if (current_cpu == "arm64") {
+        dia_lib_path += "/arm64"
+      } else if (current_cpu == "x64") {
+        dia_lib_path += "/amd64"
+      }
+      lib_dirs = [ dia_lib_path ]
+    }
     libs = [ "diaguids.lib" ]
   }
 }

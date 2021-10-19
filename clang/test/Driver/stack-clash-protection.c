@@ -5,6 +5,7 @@
 // SCP-i386-NO-NOT: "-fstack-clash-protection"
 
 // RUN: %clang -target x86_64-scei-linux -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-x86
+// RUN: %clang -target x86_64-unknown-freebsd -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-x86
 // SCP-x86: "-fstack-clash-protection"
 
 // RUN: %clang -target armv7k-apple-linux -fstack-clash-protection -### %s 2>&1 | FileCheck %s -check-prefix=SCP-armv7

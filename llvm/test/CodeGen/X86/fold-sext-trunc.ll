@@ -5,7 +5,7 @@
 %0 = type { i64 }
 %struct.S1 = type { i16, i32 }
 
-@g_10 = external global %struct.S1
+@g_10 = external dso_local global %struct.S1
 
 declare void @func_28(i64, i64)
 
@@ -14,7 +14,7 @@ define void @int322(i32 %foo) !dbg !5 {
 entry:
   %val = load i64, i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0), !dbg !16
   %0 = load i32, i32* getelementptr inbounds (%struct.S1, %struct.S1* @g_10, i32 0, i32 1), align 4, !dbg !17
-; MIR: renamable {{\$r[a-z]+}} = MOVSX64rm32 {{.*}}, @g_10 + 4,{{.*}} debug-location !17 :: (dereferenceable load 4 from `i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0)` + 4)
+; MIR: renamable {{\$r[a-z]+}} = MOVSX64rm32 {{.*}}, @g_10 + 4,{{.*}} debug-location !17 :: (dereferenceable load (s32) from `i64* getelementptr (%0, %0* bitcast (%struct.S1* @g_10 to %0*), i32 0, i32 0)` + 4)
   %1 = sext i32 %0 to i64, !dbg !18
   %tmp4.i = lshr i64 %val, 32, !dbg !19
   %tmp5.i = trunc i64 %tmp4.i to i32, !dbg !20

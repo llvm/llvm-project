@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Provides information about the host system."
+) SBHostOS;
 class SBHostOS
 {
 public:

@@ -34,6 +34,7 @@ isl_bool isl_space_is_params(__isl_keep isl_space *space);
 isl_bool isl_space_is_set(__isl_keep isl_space *space);
 isl_bool isl_space_is_map(__isl_keep isl_space *space);
 
+__isl_overload
 __isl_give isl_space *isl_space_add_param_id(__isl_take isl_space *space,
 	__isl_take isl_id *id);
 
@@ -43,12 +44,28 @@ isl_bool isl_space_has_tuple_name(__isl_keep isl_space *space,
 	enum isl_dim_type type);
 __isl_keep const char *isl_space_get_tuple_name(__isl_keep isl_space *space,
 				 enum isl_dim_type type);
+__isl_overload
+__isl_give isl_space *isl_space_set_domain_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id);
+__isl_overload
+__isl_give isl_space *isl_space_set_range_tuple_id(
+	__isl_take isl_space *space, __isl_take isl_id *id);
 __isl_give isl_space *isl_space_set_tuple_id(__isl_take isl_space *space,
 	enum isl_dim_type type, __isl_take isl_id *id);
 __isl_give isl_space *isl_space_reset_tuple_id(__isl_take isl_space *space,
 	enum isl_dim_type type);
+__isl_export
+isl_bool isl_space_has_domain_tuple_id(__isl_keep isl_space *space);
+__isl_export
+isl_bool isl_space_has_range_tuple_id(__isl_keep isl_space *space);
 isl_bool isl_space_has_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type);
+__isl_export
+__isl_give isl_id *isl_space_get_domain_tuple_id(
+	__isl_keep isl_space *space);
+__isl_export
+__isl_give isl_id *isl_space_get_range_tuple_id(
+	__isl_keep isl_space *space);
 __isl_give isl_id *isl_space_get_tuple_id(__isl_keep isl_space *space,
 	enum isl_dim_type type);
 __isl_give isl_space *isl_space_reset_user(__isl_take isl_space *space);
@@ -85,6 +102,7 @@ __isl_give isl_space *isl_space_insert_dims(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned pos, unsigned n);
 __isl_give isl_space *isl_space_join(__isl_take isl_space *left,
 	__isl_take isl_space *right);
+__isl_export
 __isl_give isl_space *isl_space_product(__isl_take isl_space *left,
 	__isl_take isl_space *right);
 __isl_give isl_space *isl_space_domain_product(__isl_take isl_space *left,
@@ -105,7 +123,9 @@ __isl_export
 __isl_give isl_space *isl_space_map_from_set(__isl_take isl_space *space);
 __isl_give isl_space *isl_space_map_from_domain_and_range(
 	__isl_take isl_space *domain, __isl_take isl_space *range);
+__isl_export
 __isl_give isl_space *isl_space_reverse(__isl_take isl_space *space);
+__isl_export
 __isl_give isl_space *isl_space_range_reverse(__isl_take isl_space *space);
 __isl_give isl_space *isl_space_drop_dims(__isl_take isl_space *space,
 	enum isl_dim_type type, unsigned first, unsigned num);
@@ -151,12 +171,14 @@ isl_bool isl_space_can_zip(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_zip(__isl_take isl_space *space);
 
 isl_bool isl_space_can_curry(__isl_keep isl_space *space);
+__isl_export
 __isl_give isl_space *isl_space_curry(__isl_take isl_space *space);
 
 isl_bool isl_space_can_range_curry(__isl_keep isl_space *space);
 __isl_give isl_space *isl_space_range_curry(__isl_take isl_space *space);
 
 isl_bool isl_space_can_uncurry(__isl_keep isl_space *space);
+__isl_export
 __isl_give isl_space *isl_space_uncurry(__isl_take isl_space *space);
 
 isl_bool isl_space_is_domain(__isl_keep isl_space *space1,

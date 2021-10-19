@@ -9,6 +9,7 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.threads.call_once
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
@@ -16,18 +17,19 @@ add_libc_unittest(
     libc.src.threads.thrd_join
 )
 
-add_libc_unittest(
-  thrd_test
-  SUITE
-    libc_threads_unittests
-  SRCS
-    thrd_test.cpp
-  DEPENDS
-    libc.include.threads
-    libc.src.errno.__errno_location
-    libc.src.threads.thrd_create
-    libc.src.threads.thrd_join
-)
+# Disable thrd_test for now as it is flaky on the bots.
+# add_libc_unittest(
+#   thrd_test
+#   SUITE
+#     libc_threads_unittests
+#   SRCS
+#     thrd_test.cpp
+#   DEPENDS
+#     libc.include.threads
+#     libc.src.errno.__errno_location
+#     libc.src.threads.thrd_create
+#     libc.src.threads.thrd_join
+# )
 
 add_libc_unittest(
   mtx_test
@@ -38,9 +40,32 @@ add_libc_unittest(
   DEPENDS
     libc.include.threads
     libc.src.errno.__errno_location
+    libc.src.threads.mtx_destroy
     libc.src.threads.mtx_init
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
     libc.src.threads.thrd_join
+)
+
+add_libc_unittest(
+  cnd_test
+  SUITE
+    libc_threads_unittests
+  SRCS
+    cnd_test.cpp
+  DEPENDS
+    libc.include.threads
+    libc.src.threads.cnd_init
+    libc.src.threads.cnd_broadcast
+    libc.src.threads.cnd_signal
+    libc.src.threads.cnd_destroy
+    libc.src.threads.cnd_wait
+    libc.src.threads.mtx_destroy
+    libc.src.threads.mtx_init
+    libc.src.threads.mtx_lock
+    libc.src.threads.mtx_unlock
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.threads.linux.threads_utils
 )

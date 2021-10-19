@@ -312,6 +312,13 @@ namespace nullptr_deduction {
     f(X<nullptr_t, nullptr>()); // expected-note {{instantiation of}}
   }
 
+  template<template<typename T, T> class X, typename T, int *P>
+    void f0(X<T, P>) {} // expected-note {{deduced non-type template argument does not have the same type as the corresponding template parameter ('std::nullptr_t' vs 'int *')}}
+  void h0() {
+    f0(X<int*, nullptr>());
+    f0(X<nullptr_t, nullptr>()); // expected-error {{no matching function}}
+  }
+
   template<template<typename T, T> class X, typename T, typename U, int *P>
     void f1(X<T, P>, X<U, P>) {} // expected-note 2{{values of conflicting types}}
   void h() {
@@ -596,4 +603,15 @@ namespace merge_size_only_deductions {
   int a = f(X<char [1], char [2]>(), Y<(size_t)1, (size_t)2>(), X<id<size_t>, id<size_t>>());
   int b = f(X<char [1], char [2]>(), Y<1, 2>(), X<id<int>, id<int>>());
 #endif
+}
+
+namespace PR49724 {
+  struct A;
+  template<int A::*> class X {};
+  template<int A::*P> void f(X<P>);
+  void g(X<nullptr> x) { f(x); }
+
+  template<void (A::*)()> class Y {};
+  template<void (A::*P)()> void f(Y<P>);
+  void g(Y<nullptr> y) { f(y); }
 }

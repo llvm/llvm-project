@@ -11,8 +11,8 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#ifndef LLVM_C_EXTERN_C_H
-#define LLVM_C_EXTERN_C_H
+#ifndef LLVM_C_EXTERNC_H
+#define LLVM_C_EXTERNC_H
 
 #ifdef __clang__
 #define LLVM_C_STRICT_PROTOTYPES_BEGIN                                         \

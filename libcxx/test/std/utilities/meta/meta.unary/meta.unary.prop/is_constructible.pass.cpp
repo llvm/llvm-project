@@ -11,17 +11,8 @@
 // template <class T, class... Args>
 //   struct is_constructible;
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_TESTING_FALLBACK_IS_CONSTRUCTIBLE
-
 #include <type_traits>
 #include "test_macros.h"
-
-#if TEST_STD_VER >= 11 && defined(_LIBCPP_VERSION)
-#define LIBCPP11_STATIC_ASSERT(...) static_assert(__VA_ARGS__)
-#else
-#define LIBCPP11_STATIC_ASSERT(...) ((void)0)
-#endif
-
 
 struct A
 {
@@ -78,7 +69,6 @@ template <class T>
 void test_is_constructible()
 {
     static_assert( (std::is_constructible<T>::value), "");
-    LIBCPP11_STATIC_ASSERT((std::__libcpp_is_constructible<T>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert( std::is_constructible_v<T>, "");
 #endif
@@ -88,7 +78,6 @@ template <class T, class A0>
 void test_is_constructible()
 {
     static_assert(( std::is_constructible<T, A0>::value), "");
-    LIBCPP11_STATIC_ASSERT((std::__libcpp_is_constructible<T, A0>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert(( std::is_constructible_v<T, A0>), "");
 #endif
@@ -98,7 +87,6 @@ template <class T, class A0, class A1>
 void test_is_constructible()
 {
     static_assert(( std::is_constructible<T, A0, A1>::value), "");
-    LIBCPP11_STATIC_ASSERT((std::__libcpp_is_constructible<T, A0, A1>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert(( std::is_constructible_v<T, A0, A1>), "");
 #endif
@@ -108,7 +96,6 @@ template <class T, class A0, class A1, class A2>
 void test_is_constructible()
 {
     static_assert(( std::is_constructible<T, A0, A1, A2>::value), "");
-    LIBCPP11_STATIC_ASSERT((std::__libcpp_is_constructible<T, A0, A1, A2>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert(( std::is_constructible_v<T, A0, A1, A2>), "");
 #endif
@@ -118,7 +105,6 @@ template <class T>
 void test_is_not_constructible()
 {
     static_assert((!std::is_constructible<T>::value), "");
-    LIBCPP11_STATIC_ASSERT((!std::__libcpp_is_constructible<T>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert((!std::is_constructible_v<T>), "");
 #endif
@@ -128,22 +114,10 @@ template <class T, class A0>
 void test_is_not_constructible()
 {
     static_assert((!std::is_constructible<T, A0>::value), "");
-    LIBCPP11_STATIC_ASSERT((!std::__libcpp_is_constructible<T, A0>::type::value), "");
 #if TEST_STD_VER > 14
     static_assert((!std::is_constructible_v<T, A0>), "");
 #endif
 }
-
-#if TEST_STD_VER >= 11
-template <class T = int, class = decltype(static_cast<T&&>(std::declval<double&>()))>
-constexpr bool  clang_disallows_valid_static_cast_test(int) { return false; };
-
-constexpr bool clang_disallows_valid_static_cast_test(long) { return true; }
-
-static constexpr bool clang_disallows_valid_static_cast_bug =
-    clang_disallows_valid_static_cast_test(0);
-#endif
-
 
 int main(int, char**)
 {
@@ -210,13 +184,17 @@ int main(int, char**)
     test_is_constructible<Base&, Derived&>();
     test_is_not_constructible<Derived&, Base&>();
     test_is_constructible<Base const&, Derived const&>();
+#ifndef TEST_COMPILER_GCC
     test_is_not_constructible<Derived const&, Base const&>();
     test_is_not_constructible<Derived const&, Base>();
+#endif
 
     test_is_constructible<Base&&, Derived>();
     test_is_constructible<Base&&, Derived&&>();
+#ifndef TEST_COMPILER_GCC
     test_is_not_constructible<Derived&&, Base&&>();
     test_is_not_constructible<Derived&&, Base>();
+#endif
 
     // test that T must also be destructible
     test_is_constructible<PrivateDtor&, PrivateDtor&>();
@@ -255,28 +233,11 @@ int main(int, char**)
 #endif
 
     static_assert(std::is_constructible<int&&, ExplicitTo<int&&>>::value, "");
-#ifdef __clang__
-#if defined(CLANG_TEST_VER) && CLANG_TEST_VER < 400
-    static_assert(clang_disallows_valid_static_cast_bug, "bug still exists");
-#endif
-    // FIXME Clang disallows this construction because it thinks that
-    // 'static_cast<int&&>(declval<ExplicitTo<int&&>>())' is ill-formed.
-    LIBCPP_STATIC_ASSERT(
-        clang_disallows_valid_static_cast_bug !=
-        std::__libcpp_is_constructible<int&&, ExplicitTo<int&&>>::value, "");
-    ((void)clang_disallows_valid_static_cast_bug); // Prevent unused warning
-#else
-    static_assert(clang_disallows_valid_static_cast_bug == false, "");
-    LIBCPP_STATIC_ASSERT(std::__libcpp_is_constructible<int&&, ExplicitTo<int&&>>::value, "");
-#endif
 
 #ifdef __clang__
     // FIXME Clang and GCC disagree on the validity of this expression.
     test_is_constructible<const int&, ExplicitTo<int>>();
     static_assert(std::is_constructible<int&&, ExplicitTo<int>>::value, "");
-    LIBCPP_STATIC_ASSERT(
-        clang_disallows_valid_static_cast_bug !=
-        std::__libcpp_is_constructible<int&&, ExplicitTo<int>>::value, "");
 #else
     test_is_not_constructible<const int&, ExplicitTo<int>>();
     test_is_not_constructible<int&&, ExplicitTo<int>>();
@@ -287,21 +248,11 @@ int main(int, char**)
     test_is_not_constructible<const int&, ExplicitTo<double&&>>();
     test_is_not_constructible<int&&, ExplicitTo<double&&>>();
 
-
-// TODO: Remove this workaround once Clang <= 3.7 are no longer used regularly.
-// In those compiler versions the __is_constructible builtin gives the wrong
-// results for abominable function types.
-#if (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER < 703) \
- || (defined(TEST_CLANG_VER) && TEST_CLANG_VER < 308)
-#define WORKAROUND_CLANG_BUG
-#endif
-#if !defined(WORKAROUND_CLANG_BUG)
     test_is_not_constructible<void()>();
     test_is_not_constructible<void() const> ();
     test_is_not_constructible<void() volatile> ();
     test_is_not_constructible<void() &> ();
     test_is_not_constructible<void() &&> ();
-#endif
 #endif // TEST_STD_VER >= 11
 
   return 0;

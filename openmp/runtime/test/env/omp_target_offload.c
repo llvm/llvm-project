@@ -9,6 +9,7 @@ enum kmp_target_offload_kind {
 };
 
 extern int __kmpc_get_target_offload();
+extern void kmp_set_defaults(char const *str);
 
 const char *disabled_examples[] = {
     // Allowed inputs

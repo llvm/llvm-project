@@ -50,6 +50,53 @@
                 "path": "./syntaxes/disassembly.json"
             }
         ],
+        "breakpoints": [
+          {
+            "language": "ada"
+          },
+          {
+            "language": "arm"
+          },
+          {
+            "language": "asm"
+          },
+          {
+            "language": "c"
+          },
+          {
+            "language": "cpp"
+          },
+          {
+            "language": "crystal"
+          },
+          {
+            "language": "d"
+          },
+          {
+            "language": "fortan"
+          },
+          {
+            "language": "fortran-modern"
+          },
+          {
+            "language": "nim"
+          },
+          {
+            "language": "objective-c"
+          },
+          {
+            "language": "objectpascal"
+          },
+          {
+            "language": "pascal"
+          },
+          {
+            "language": "rust"
+          },
+          {
+            "language": "swift"
+          }
+        ],
 		"debuggers": [
 			{
 				"type": "lldb-vscode",
@@ -102,7 +149,7 @@
 							},
 							"env": {
 								"type": "array",
-								"description": "Additional environment variables.",
+								"description": "Additional environment variables to set when launching the program. This is an array of strings that contains the variable name followed by an optional '=' character and the environment variable's value. Example:  [\"FOO=BAR\", \"BAZ\"]",
 								"default": []
 							},
 							"stopOnEntry": {
@@ -161,6 +208,11 @@
 								"description": "Commands executed just before the program is launched.",
 								"default": []
 							},
+							"postRunCommands": {
+								"type": "array",
+								"description": "Commands executed just as soon as the program is successfully launched when it's in a stopped state prior to any automatic continuation.",
+								"default": []
+							},
 							"launchCommands": {
 								"type": "array",
 								"description": "Custom commands that are executed instead of launching a process. A target will be created with the launch arguments prior to executing these commands. The commands may optionally create a new target and must perform a launch. A valid process must exist after these commands complete or the \"launch\" will fail.",
@@ -175,6 +227,11 @@
 								"type": "array",
 								"description": "Commands executed at the end of debugging session.",
 								"default": []
+							},
+							"runInTerminal": {
+								"type": "boolean",
+								"description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
+								"default": false
 							}
 						}
 					},
@@ -230,6 +287,11 @@
 							"preRunCommands": {
 								"type": "array",
 								"description": "Commands executed just before the program is attached to.",
+								"default": []
+							},
+							"postRunCommands": {
+								"type": "array",
+								"description": "Commands executed just as soon as the program is successfully attached when it's in a stopped state prior to any automatic continuation.",
 								"default": []
 							},
 							"stopCommands": {

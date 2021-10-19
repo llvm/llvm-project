@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t --shared -o %t.so
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi %t.so | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
  .syntax unified
  .global sym1
  .global elsewhere
@@ -19,10 +19,10 @@ sym1:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <sym1>:
-// CHECK-NEXT:     101e0: b.w #12 <__ThumbV7PILongThunk_elsewhere>
-// CHECK-NEXT:           b.w #20 <__ThumbV7PILongThunk_weakref>
-// CHECK-NEXT:           blx #68
-// CHECK-NEXT:           blx #80
+// CHECK-NEXT:    101e0: b.w 0x101f0 <__ThumbV7PILongThunk_elsewhere>
+// CHECK-NEXT:           b.w 0x101fc <__ThumbV7PILongThunk_weakref>
+// CHECK-NEXT:           blx 0x10230
+// CHECK-NEXT:           blx 0x10240
 // CHECK: <__ThumbV7PILongThunk_elsewhere>:
 // CHECK-NEXT:     101f0: movw    r12, #52
 // CHECK-NEXT:           movt    r12, #0

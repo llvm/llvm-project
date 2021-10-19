@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;   typedef struct s1 { int a1; int a2:4; int a3;} __s1;
 ;   enum { FIELD_BYTE_SIZE = 1, };
@@ -9,7 +8,9 @@
 ;     return __builtin_preserve_field_info(arg->a2, FIELD_BYTE_SIZE);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.s1 = type { i32, i8, i32 }
 
@@ -17,7 +18,7 @@
 define dso_local i32 @test(%struct.s1* readnone %arg) local_unnamed_addr #0 !dbg !11 {
 entry:
   call void @llvm.dbg.value(metadata %struct.s1* %arg, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.s1s(%struct.s1* %arg, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !17
+  %0 = tail call i8* @llvm.preserve.struct.access.index.p0i8.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %arg, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !17
   %1 = tail call i32 @llvm.bpf.preserve.field.info.p0i8(i8* %0, i64 1), !dbg !26
   ret i32 %1, !dbg !27
 }

@@ -29,7 +29,6 @@ class TestObjCStepping(TestBase):
         self.stepped_past_nil_line = line_number(
             self.main_source, '// Step over nil should stop here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi', 'basic_process'])
     def test_with_python_api(self):
         """Test stepping through ObjC method dispatch in various forms."""
@@ -215,6 +214,6 @@ class TestObjCStepping(TestBase):
 
         thread.StepInto()
         line_number = thread.GetFrameAtIndex(0).GetLineEntry().GetLine()
-        self.assertTrue(
-            line_number == self.stepped_past_nil_line,
+        self.assertEqual(
+            line_number, self.stepped_past_nil_line,
             "Step in over dispatch to nil stepped over.")

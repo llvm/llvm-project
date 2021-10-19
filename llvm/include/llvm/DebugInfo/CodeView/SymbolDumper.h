@@ -11,8 +11,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 
 namespace llvm {

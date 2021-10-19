@@ -16,10 +16,10 @@
 #endif
 
 // va_start, va_end, etc macros.
-#include <stdarg.h>
+#include <cstdarg>
 
 // time_t, timespec, etc.
-#include <time.h>
+#include <ctime>
 
 #ifndef PATH_MAX
 #define PATH_MAX 32768
@@ -56,19 +56,17 @@
 #define S_IRWXO 0
 #endif
 
-#if HAVE_SYS_TYPES_H
 // pyconfig.h typedefs this.  We require python headers to be included before
 // any LLDB headers, but there's no way to prevent python's pid_t definition
 // from leaking, so this is the best option.
 #ifndef NO_PID_T
 #include <sys/types.h>
 #endif
-#endif // HAVE_SYS_TYPES_H
 
 #ifdef _MSC_VER
 
 // PRIxxx format macros for printf()
-#include <inttypes.h>
+#include <cinttypes>
 
 // open(), close(), creat(), etc.
 #include <io.h>

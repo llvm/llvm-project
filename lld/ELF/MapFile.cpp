@@ -29,6 +29,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -142,6 +143,8 @@ void elf::writeMapFile() {
   if (config->mapFile.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Write map file");
+
   // Open a map file for writing.
   std::error_code ec;
   raw_fd_ostream os(config->mapFile, ec, sys::fs::OF_None);
@@ -209,6 +212,25 @@ void elf::writeMapFile() {
         continue;
       }
     }
+  }
+}
+
+void elf::writeWhyExtract() {
+  if (config->whyExtract.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os(config->whyExtract, ec, sys::fs::OF_None);
+  if (ec) {
+    error("cannot open --why-extract= file " + config->whyExtract + ": " +
+          ec.message());
+    return;
+  }
+
+  os << "reference\textracted\tsymbol\n";
+  for (auto &entry : whyExtract) {
+    os << std::get<0>(entry) << '\t' << toString(std::get<1>(entry)) << '\t'
+       << toString(std::get<2>(entry)) << '\n';
   }
 }
 

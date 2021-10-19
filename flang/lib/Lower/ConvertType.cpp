@@ -13,7 +13,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #undef QUOTE
 #undef TODO
@@ -49,7 +49,7 @@ mlir::Type genFIRType(mlir::MLIRContext *context) {
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
     auto bits{Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
                                       KIND>::Scalar::bits};
-    return mlir::IntegerType::get(bits, context);
+    return mlir::IntegerType::get(context, bits);
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical ||
                        TC == Fortran::common::TypeCategory::Character ||
                        TC == Fortran::common::TypeCategory::Complex) {
@@ -157,7 +157,7 @@ genFIRType<Fortran::common::TypeCategory::Character>(mlir::MLIRContext *context,
                                                      int KIND) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
-    return fir::CharacterType::get(context, KIND);
+    return fir::CharacterType::get(context, KIND, 1);
   return {};
 }
 
@@ -167,7 +167,7 @@ genFIRType<Fortran::common::TypeCategory::Complex>(mlir::MLIRContext *context,
                                                    int KIND) {
   if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Complex, KIND))
-    return fir::CplxType::get(context, KIND);
+    return fir::ComplexType::get(context, KIND);
   return {};
 }
 
@@ -278,7 +278,7 @@ private:
 
   // some sequence of `n` bytes
   mlir::Type gen(const Fortran::evaluate::StaticDataObject::Pointer &ptr) {
-    mlir::Type byteTy{mlir::IntegerType::get(8, context)};
+    mlir::Type byteTy{mlir::IntegerType::get(context, 8)};
     return fir::SequenceType::get(trivialShape(ptr->itemBytes()), byteTy);
   }
 

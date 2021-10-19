@@ -35,6 +35,8 @@ FOO(in,t) value;
 // CHECK-CC2: NotImplemented:{TypedText define}{HorizontalSpace  }{Placeholder macro} (40)
 // CHECK-CC2-NEXT: NotImplemented:{TypedText define}{HorizontalSpace  }{Placeholder macro}{LeftParen (}{Placeholder args}{RightParen )} (40)
 // CHECK-CC2-NEXT: NotImplemented:{TypedText elif}{HorizontalSpace  }{Placeholder condition} (40)
+// CHECK-CC2-NEXT: NotImplemented:{TypedText elifdef}{HorizontalSpace  }{Placeholder macro} (40)
+// CHECK-CC2-NEXT: NotImplemented:{TypedText elifndef}{HorizontalSpace  }{Placeholder macro} (40)
 // CHECK-CC2-NEXT: NotImplemented:{TypedText else} (40)
 // CHECK-CC2-NEXT: NotImplemented:{TypedText endif} (40)
 // CHECK-CC2-NEXT: NotImplemented:{TypedText error}{HorizontalSpace  }{Placeholder message} (40)

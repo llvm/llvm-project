@@ -2,49 +2,20 @@
 // Check extends before
 // --------------------------------------------------
 
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu \
+// RUN: %libomptarget-compile-generic \
 // RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// XUN: %libomptarget-run-x86_64-pc-linux-gnu 2>&1 \
-// XUN: | %fcheck-x86_64-pc-linux-gnu
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic
 
 // --------------------------------------------------
 // Check extends after
 // --------------------------------------------------
 
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu \
+// RUN: %libomptarget-compile-generic \
 // RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic
 
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-x86_64-pc-linux-gnu 2>&1 \
-// RUN: | %fcheck-x86_64-pc-linux-gnu
 
 // END.
 

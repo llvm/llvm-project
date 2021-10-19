@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wall -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -Wno-unused-but-set-variable -fblocks %s
 
 // PR9463
 double *end;

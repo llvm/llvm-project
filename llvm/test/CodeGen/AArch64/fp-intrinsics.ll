@@ -266,6 +266,13 @@ define float @round_f32(float %x) #0 {
   ret float %val
 }
 
+; CHECK-LABEL: roundeven_f32:
+; CHECK: frintn s0, s0
+define float @roundeven_f32(float %x) #0 {
+  %val = call float @llvm.experimental.constrained.roundeven.f32(float %x, metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
 ; CHECK-LABEL: trunc_f32:
 ; CHECK: frintz s0, s0
 define float @trunc_f32(float %x) #0 {
@@ -726,6 +733,13 @@ define i64 @llround_f64(double %x) #0 {
 ; CHECK: frinta d0, d0
 define double @round_f64(double %x) #0 {
   %val = call double @llvm.experimental.constrained.round.f64(double %x, metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+; CHECK-LABEL: roundeven_f64:
+; CHECK: frintn d0, d0
+define double @roundeven_f64(double %x) #0 {
+  %val = call double @llvm.experimental.constrained.roundeven.f64(double %x, metadata !"fpexcept.strict") #0
   ret double %val
 }
 
@@ -1474,6 +1488,7 @@ declare float @llvm.experimental.constrained.floor.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.lround.f32(float, metadata)
 declare i64 @llvm.experimental.constrained.llround.f32(float, metadata)
 declare float @llvm.experimental.constrained.round.f32(float, metadata)
+declare float @llvm.experimental.constrained.roundeven.f32(float, metadata)
 declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
@@ -1515,6 +1530,7 @@ declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.lround.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.llround.f64(double, metadata)
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
+declare double @llvm.experimental.constrained.roundeven.f64(double, metadata)
 declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)

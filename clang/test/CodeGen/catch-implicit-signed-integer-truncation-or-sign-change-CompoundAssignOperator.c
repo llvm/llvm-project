@@ -123,7 +123,7 @@ void unsigned_char_add_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -156,7 +156,7 @@ void unsigned_char_add_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -194,7 +194,7 @@ void unsigned_char_add_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -227,7 +227,7 @@ void signed_char_add_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -260,7 +260,7 @@ void signed_char_add_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -295,7 +295,7 @@ void signed_char_add_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_700_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_700_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -327,7 +327,7 @@ void signed_char_add_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -364,7 +364,7 @@ void unsigned_char_sub_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -397,7 +397,7 @@ void unsigned_char_sub_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -435,7 +435,7 @@ void unsigned_char_sub_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -468,7 +468,7 @@ void signed_char_sub_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -501,7 +501,7 @@ void signed_char_sub_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -536,7 +536,7 @@ void signed_char_sub_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1500_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1500_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -568,7 +568,7 @@ void signed_char_sub_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -605,7 +605,7 @@ void unsigned_char_mul_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -638,7 +638,7 @@ void unsigned_char_mul_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_1800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -676,7 +676,7 @@ void unsigned_char_mul_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -709,7 +709,7 @@ void signed_char_mul_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -742,7 +742,7 @@ void signed_char_mul_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -777,7 +777,7 @@ void signed_char_mul_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2300_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2300_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -809,7 +809,7 @@ void signed_char_mul_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -846,7 +846,7 @@ void unsigned_char_div_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -879,7 +879,7 @@ void unsigned_char_div_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -917,7 +917,7 @@ void unsigned_char_div_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -950,7 +950,7 @@ void signed_char_div_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_2900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -983,7 +983,7 @@ void signed_char_div_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1018,7 +1018,7 @@ void signed_char_div_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1050,7 +1050,7 @@ void signed_char_div_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1087,7 +1087,7 @@ void unsigned_char_rem_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1120,7 +1120,7 @@ void unsigned_char_rem_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1158,7 +1158,7 @@ void unsigned_char_rem_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1191,7 +1191,7 @@ void signed_char_rem_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1224,7 +1224,7 @@ void signed_char_rem_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1259,7 +1259,7 @@ void signed_char_rem_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3900_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_3900_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1291,7 +1291,7 @@ void signed_char_rem_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1328,7 +1328,7 @@ void unsigned_char_shl_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1361,7 +1361,7 @@ void unsigned_char_shl_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1393,7 +1393,7 @@ void unsigned_char_shl_signed_char_unsigned_int(unsigned char *LHS, unsigned int
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1425,7 +1425,7 @@ void unsigned_char_shl_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1458,7 +1458,7 @@ void signed_char_shl_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1491,7 +1491,7 @@ void signed_char_shl_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1523,7 +1523,7 @@ void signed_char_shl_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1555,7 +1555,7 @@ void signed_char_shl_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1592,7 +1592,7 @@ void unsigned_char_shr_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_4900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1625,7 +1625,7 @@ void unsigned_char_shr_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1657,7 +1657,7 @@ void unsigned_char_shr_signed_char_unsigned_int(unsigned char *LHS, unsigned int
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1689,7 +1689,7 @@ void unsigned_char_shr_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1722,7 +1722,7 @@ void signed_char_shr_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1755,7 +1755,7 @@ void signed_char_shr_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1787,7 +1787,7 @@ void signed_char_shr_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1819,7 +1819,7 @@ void signed_char_shr_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1856,7 +1856,7 @@ void unsigned_char_and_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1889,7 +1889,7 @@ void unsigned_char_and_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_5800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1927,7 +1927,7 @@ void unsigned_char_and_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1960,7 +1960,7 @@ void signed_char_and_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6100_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -1993,7 +1993,7 @@ void signed_char_and_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2028,7 +2028,7 @@ void signed_char_and_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6300_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6300_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2060,7 +2060,7 @@ void signed_char_and_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2097,7 +2097,7 @@ void unsigned_char_or_signed_char_unsigned_char(unsigned char *LHS, unsigned cha
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6500_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2130,7 +2130,7 @@ void unsigned_char_or_signed_char_signed_char(unsigned char *LHS, signed char RH
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2168,7 +2168,7 @@ void unsigned_char_or_signed_char_signed_int(unsigned char *LHS, signed int RHS)
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2201,7 +2201,7 @@ void signed_char_or_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_6900_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2234,7 +2234,7 @@ void signed_char_or_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2269,7 +2269,7 @@ void signed_char_or_signed_char_unsigned_int(signed char *LHS, unsigned int RHS)
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7100_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2301,7 +2301,7 @@ void signed_char_or_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7200_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2338,7 +2338,7 @@ void unsigned_char_xor_signed_char_unsigned_char(unsigned char *LHS, unsigned ch
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7300_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2371,7 +2371,7 @@ void unsigned_char_xor_signed_char_signed_char(unsigned char *LHS, signed char R
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7400_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2409,7 +2409,7 @@ void unsigned_char_xor_signed_char_signed_int(unsigned char *LHS, signed int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7600_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2442,7 +2442,7 @@ void signed_char_xor_unsigned_char(signed char *LHS, unsigned char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7700_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2475,7 +2475,7 @@ void signed_char_xor_signed_char(signed char *LHS, signed char RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7800_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2510,7 +2510,7 @@ void signed_char_xor_signed_char_unsigned_int(signed char *LHS, unsigned int RHS
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7900_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_7900_SIGNED_TRUNCATION_OR_SIGN_CHANGE]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1
@@ -2542,7 +2542,7 @@ void signed_char_xor_signed_char_signed_int(signed char *LHS, signed int RHS) {
   // CHECK-SANITIZE-ANYRECOVER-NEXT: %[[EXTDST:.*]] = zext i8 %[[DST]] to i64, !nosanitize
   // CHECK-SANITIZE-NORECOVER-NEXT: call void @__ubsan_handle_implicit_conversion_abort(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_8000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
   // CHECK-SANITIZE-RECOVER-NEXT: call void @__ubsan_handle_implicit_conversion(i8* bitcast ({ {{{.*}}}, {{{.*}}}*, {{{.*}}}*, i8 }* @[[LINE_8000_SIGNED_TRUNCATION]] to i8*), i64 %[[EXTSRC]], i64 %[[EXTDST]]){{.*}}, !nosanitize
-  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT: call void @llvm.ubsantrap(i8 7){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT: unreachable, !nosanitize
   // CHECK-SANITIZE: [[CONT]]:
   // CHECK-NEXT: store i8 %[[DST]], i8* %[[LHSADDR]], align 1

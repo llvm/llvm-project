@@ -31,7 +31,7 @@
 ; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "_ZTS1B", summary: ((offset: 16, [[B]])))
 ; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "_ZTS1C", summary: ((offset: 16, [[C]])))
 ; Type Id on _ZTV1D should have been promoted
-; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "1${{.*}}", summary: ((offset: 16, [[D]])))
+; NOENABLESPLITFLAG-DAG: typeidCompatibleVTable: (name: "1.{{.*}}", summary: ((offset: 16, [[D]])))
 
 ; Legacy PM, Index based WPD
 ; RUN: llvm-lto2 run %t2.o -save-temps -pass-remarks=. \

@@ -15,18 +15,18 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)
 ; CHECK:    Size: 3
-; CHECK:    Offset: 72
+; CHECK:    Offset: 38
 ; CHECK:    Name: red
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)
 ; CHECK:    Size: 6
-; CHECK:    Offset: 85
+; CHECK:    Offset: 51
 ; CHECK:    Name: green
 ; CHECK:  }
 ; CHECK:  Section {
 ; CHECK:    Type: CUSTOM (0x0)
 ; CHECK:    Size: 25
-; CHECK:    Offset: 118
+; CHECK:    Offset: 84
 ; CHECK:    Name: producers
 ; CHECK:  }

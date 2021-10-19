@@ -1,4 +1,3 @@
-; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -S -debug-only=scalar-evolution,apint < %s 2>&1 | FileCheck %s
 ; RUN: opt -disable-output "-passes=print<scalar-evolution>" -S -debug-only=scalar-evolution,apint < %s 2>&1 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 

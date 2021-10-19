@@ -35,8 +35,8 @@ int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    test_allocator<std::pair<const int, std::string> >
                                    > C;
         typedef std::pair<int, std::string> P;
@@ -79,14 +79,14 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >());
-        assert(c.key_eq() == test_compare<std::equal_to<int> >());
+        assert(c.hash_function() == test_hash<int>());
+        assert(c.key_eq() == test_equal_to<int>());
         assert((c.get_allocator() == test_allocator<std::pair<const int, std::string> >()));
     }
     {
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    min_allocator<std::pair<const int, std::string> >
                                    > C;
         typedef std::pair<int, std::string> P;
@@ -129,8 +129,8 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >());
-        assert(c.key_eq() == test_compare<std::equal_to<int> >());
+        assert(c.hash_function() == test_hash<int>());
+        assert(c.key_eq() == test_equal_to<int>());
         assert((c.get_allocator() == min_allocator<std::pair<const int, std::string> >()));
     }
 

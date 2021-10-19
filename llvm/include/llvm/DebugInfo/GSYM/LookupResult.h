@@ -9,8 +9,8 @@
 #ifndef LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
 #define LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
 
-#include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/GSYM/Range.h"
 #include <inttypes.h>
 #include <vector>
 
@@ -20,27 +20,25 @@ namespace gsym {
 struct FileEntry;
 
 struct SourceLocation {
-  StringRef Name; ///< Function or symbol name.
-  StringRef Dir; ///< Line entry source file directory path.
-  StringRef Base; ///< Line entry source file basename.
-  uint32_t Line = 0; ///< Source file line number.
+  StringRef Name;      ///< Function or symbol name.
+  StringRef Dir;       ///< Line entry source file directory path.
+  StringRef Base;      ///< Line entry source file basename.
+  uint32_t Line = 0;   ///< Source file line number.
   uint32_t Offset = 0; ///< Byte size offset within the named function.
 };
 
 inline bool operator==(const SourceLocation &LHS, const SourceLocation &RHS) {
-  return LHS.Name == RHS.Name && LHS.Dir == RHS.Dir &&
-         LHS.Base == RHS.Base && LHS.Line == RHS.Line &&
-         LHS.Offset == RHS.Offset;
+  return LHS.Name == RHS.Name && LHS.Dir == RHS.Dir && LHS.Base == RHS.Base &&
+         LHS.Line == RHS.Line && LHS.Offset == RHS.Offset;
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SourceLocation &R);
 
 using SourceLocations = std::vector<SourceLocation>;
 
-
 struct LookupResult {
   uint64_t LookupAddr = 0; ///< The address that this lookup pertains to.
-  AddressRange FuncRange; ///< The concrete function address range.
+  AddressRange FuncRange;  ///< The concrete function address range.
   StringRef FuncName; ///< The concrete function name that contains LookupAddr.
   /// The source locations that match this address. This information will only
   /// be filled in if the FunctionInfo contains a line table. If an address is
@@ -60,4 +58,4 @@ raw_ostream &operator<<(raw_ostream &OS, const LookupResult &R);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H
+#endif // LLVM_DEBUGINFO_GSYM_LOOKUPRESULT_H

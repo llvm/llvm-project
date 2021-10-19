@@ -3,6 +3,7 @@ import os
 from json import JSONEncoder
 
 from lit.BooleanExpression import BooleanExpression
+from lit.TestTimes import read_test_times
 
 # Test result codes.
 
@@ -207,6 +208,8 @@ class TestSuite:
         # The test suite configuration.
         self.config = config
 
+        self.test_times = read_test_times(self)
+
     def getSourcePath(self, components):
         return os.path.join(self.source_root, *components)
 
@@ -228,6 +231,9 @@ class Test:
         # handlers, and will be honored when the test result is supplied.
         self.xfails = []
 
+        # If true, ignore all items in self.xfails.
+        self.xfail_not = False
+
         # A list of conditions that must be satisfied before running the test.
         # Each condition is a boolean expression of features. All of them
         # must be True for the test to run.
@@ -245,6 +251,18 @@ class Test:
 
         # The test result, once complete.
         self.result = None
+
+        # The previous test failure state, if applicable.
+        self.previous_failure = False
+
+        # The previous test elapsed time, if applicable.
+        self.previous_elapsed = 0.0
+
+        if '/'.join(path_in_suite) in suite.test_times:
+            time = suite.test_times['/'.join(path_in_suite)]
+            self.previous_elapsed = abs(time)
+            self.previous_failure = time < 0
+
 
     def setResult(self, result):
         assert self.result is None, "result already set"
@@ -293,6 +311,9 @@ class Test:
         executed.
         Throws ValueError if an XFAIL line has a syntax error.
         """
+
+        if self.xfail_not:
+          return False
 
         features = self.config.available_features
         triple = getattr(self.suite.config, 'target_triple', "")
@@ -393,15 +414,5 @@ class Test:
             BooleanExpression.tokenize(expr) for expr in
                 boolean_expressions if expr != '*'
         )
-        identifiers = set(filter(BooleanExpression.isIdentifier, tokens))
-        return identifiers
-
-    def isEarlyTest(self):
-        """
-        isEarlyTest() -> bool
-
-        Check whether this test should be executed early in a particular run.
-        This can be used for test suites with long running tests to maximize
-        parallelism or where it is desirable to surface their failures early.
-        """
-        return self.suite.config.is_early
+        matchExpressions = set(filter(BooleanExpression.isMatchExpression, tokens))
+        return matchExpressions

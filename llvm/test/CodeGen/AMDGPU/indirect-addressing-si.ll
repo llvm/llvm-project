@@ -1,7 +1,7 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL,PREGFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL,PREGFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE,PREGFX9 %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE,GFX9 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MOVREL %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-vgpr-index-mode -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,IDXMODE %s
 
 ; Tests for indirect addressing on SI, which is implemented using dynamic
 ; indexing of vectors.
@@ -99,8 +99,8 @@ entry:
 ; MOVREL: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
 ; MOVREL: v_movrels_b32_e32 v{{[0-9]}}, v0
 
-; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
-; IDXMODE: v_mov_b32_e32 v0,
+; IDXMODE-DAG: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
+; IDXMODE-DAG: v_mov_b32_e32 v0,
 ; IDXMODE: v_mov_b32_e32 v1,
 ; IDXMODE: v_mov_b32_e32 v2,
 ; IDXMODE: v_mov_b32_e32 v3,
@@ -273,8 +273,8 @@ entry:
 ; MOVREL: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
 ; MOVREL: v_movreld_b32_e32 v0, 5
 
-; IDXMODE: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0xfffffe00{{$}}
-; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
+; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
+; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], gpr_idx(DST)
 ; IDXMODE-NEXT: v_mov_b32_e32 v0, 5
 ; IDXMODE-NEXT: s_set_gpr_idx_off
 define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out, <16 x i32> %vec, i32 %offset) {

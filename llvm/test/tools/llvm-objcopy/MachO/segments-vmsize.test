@@ -169,7 +169,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   '/usr/lib/dyld'
+    Content:         '/usr/lib/dyld'
     ZeroPadBytes:    7
   - cmd:             LC_UUID
     cmdsize:         24
@@ -197,7 +197,7 @@ LoadCommands:
       timestamp:       2
       current_version: 82115073
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libSystem.B.dylib'
+    Content:         '/usr/lib/libSystem.B.dylib'
     ZeroPadBytes:    6
   - cmd:             LC_FUNCTION_STARTS
     cmdsize:         16
@@ -240,20 +240,19 @@ LinkEditData:
             Other:           0x0000000000000000
             ImportName:      ''
   NameList:
-    - n_strx:          18
+    - n_strx:          19
       n_type:          0x0F
       n_sect:          1
       n_desc:          16
       n_value:         4294967296
-    - n_strx:          1
+    - n_strx:          2
       n_type:          0x01
       n_sect:          0
       n_desc:          256
       n_value:         0
   StringTable:
-    - ''
+    - ' '
     - dyld_stub_binder
     - __mh_execute_header
-    - ''
     - ''
 ...

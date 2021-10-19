@@ -10,41 +10,20 @@
 
 // Call erase(const_iterator first, const_iterator last); with a bad range
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <string>
-#include <cassert>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
-#include "min_allocator.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
-    {
     std::string l1("123");
-    std::string::iterator i = l1.erase(l1.cbegin()+1, l1.cbegin());
-    assert(false);
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    S l1("123");
-    S::iterator i = l1.erase(l1.cbegin()+1, l1.cbegin());
-    assert(false);
-    }
-#endif
+    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(l1.cbegin() + 1, l1.cbegin()),
+                               "string::erase(first, last) called with invalid range");
+
+    return 0;
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

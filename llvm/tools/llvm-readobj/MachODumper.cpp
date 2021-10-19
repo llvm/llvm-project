@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
@@ -28,7 +27,7 @@ namespace {
 class MachODumper : public ObjDumper {
 public:
   MachODumper(const MachOObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj) {}
+      : ObjDumper(Writer, Obj->getFileName()), Obj(Obj) {}
 
   void printFileHeaders() override;
   void printSectionHeaders() override;
@@ -257,11 +256,14 @@ static const EnumEntry<unsigned> MachOSymbolRefTypes[] = {
 };
 
 static const EnumEntry<unsigned> MachOSymbolFlags[] = {
+  { "ThumbDef",               0x8 },
   { "ReferencedDynamically", 0x10 },
   { "NoDeadStrip",           0x20 },
   { "WeakRef",               0x40 },
   { "WeakDef",               0x80 },
+  { "SymbolResolver",       0x100 },
   { "AltEntry",             0x200 },
+  { "ColdFunc",             0x400 },
 };
 
 static const EnumEntry<unsigned> MachOSymbolTypes[] = {
@@ -624,13 +626,20 @@ void MachODumper::printSymbol(const SymbolRef &Symbol) {
   getSymbol(Obj, Symbol.getRawDataRefImpl(), MOSymbol);
 
   StringRef SectionName = "";
-  Expected<section_iterator> SecIOrErr = Symbol.getSection();
-  if (!SecIOrErr)
-    reportError(SecIOrErr.takeError(), Obj->getFileName());
+  // Don't ask a Mach-O STABS symbol for its section unless we know that
+  // STAB symbol's section field refers to a valid section index. Otherwise
+  // the symbol may error trying to load a section that does not exist.
+  // TODO: Add a whitelist of STABS symbol types that contain valid section
+  // indices.
+  if (!(MOSymbol.Type & MachO::N_STAB)) {
+    Expected<section_iterator> SecIOrErr = Symbol.getSection();
+    if (!SecIOrErr)
+      reportError(SecIOrErr.takeError(), Obj->getFileName());
 
-  section_iterator SecI = *SecIOrErr;
-  if (SecI != Obj->section_end())
-    SectionName = unwrapOrError(Obj->getFileName(), SecI->getName());
+    section_iterator SecI = *SecIOrErr;
+    if (SecI != Obj->section_end())
+      SectionName = unwrapOrError(Obj->getFileName(), SecI->getName());
+  }
 
   DictScope D(W, "Symbol");
   W.printNumber("Name", SymbolName, MOSymbol.StringIndex);
@@ -645,9 +654,9 @@ void MachODumper::printSymbol(const SymbolRef &Symbol) {
                 makeArrayRef(MachOSymbolTypes));
   }
   W.printHex("Section", SectionName, MOSymbol.SectionIndex);
-  W.printEnum("RefType", static_cast<uint16_t>(MOSymbol.Flags & 0xF),
+  W.printEnum("RefType", static_cast<uint16_t>(MOSymbol.Flags & 0x7),
               makeArrayRef(MachOSymbolRefTypes));
-  W.printFlags("Flags", static_cast<uint16_t>(MOSymbol.Flags & ~0xF),
+  W.printFlags("Flags", static_cast<uint16_t>(MOSymbol.Flags & ~0x7),
                makeArrayRef(MachOSymbolFlags));
   W.printHex("Value", MOSymbol.Value);
 }

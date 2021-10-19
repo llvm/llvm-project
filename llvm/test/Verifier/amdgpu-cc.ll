@@ -16,13 +16,13 @@ define amdgpu_kernel void @varargs_amdgpu_kernel(...) {
 
 ; CHECK: Calling convention does not allow sret
 ; CHECK-NEXT: void (i32*)* @sret_cc_amdgpu_kernel_as0
-define amdgpu_kernel void @sret_cc_amdgpu_kernel_as0(i32* sret %ptr) {
+define amdgpu_kernel void @sret_cc_amdgpu_kernel_as0(i32* sret(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention does not allow sret
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @sret_cc_amdgpu_kernel
-define amdgpu_kernel void @sret_cc_amdgpu_kernel(i32 addrspace(5)* sret %ptr) {
+define amdgpu_kernel void @sret_cc_amdgpu_kernel(i32 addrspace(5)* sret(i32) %ptr) {
   ret void
 }
 
@@ -64,49 +64,49 @@ define spir_kernel void @varargs_spir_kernel(...) {
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_kernel
-define amdgpu_kernel void @byval_cc_amdgpu_kernel(i32 addrspace(5)* byval %ptr) {
+define amdgpu_kernel void @byval_cc_amdgpu_kernel(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(1)*)* @byval_as1_cc_amdgpu_kernel
-define amdgpu_kernel void @byval_as1_cc_amdgpu_kernel(i32 addrspace(1)* byval %ptr) {
+define amdgpu_kernel void @byval_as1_cc_amdgpu_kernel(i32 addrspace(1)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32*)* @byval_as0_cc_amdgpu_kernel
-define amdgpu_kernel void @byval_as0_cc_amdgpu_kernel(i32* byval %ptr) {
+define amdgpu_kernel void @byval_as0_cc_amdgpu_kernel(i32* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_vs
-define amdgpu_vs void @byval_cc_amdgpu_vs(i32 addrspace(5)* byval %ptr) {
+define amdgpu_vs void @byval_cc_amdgpu_vs(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_hs
-define amdgpu_hs void @byval_cc_amdgpu_hs(i32 addrspace(5)* byval %ptr) {
+define amdgpu_hs void @byval_cc_amdgpu_hs(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_gs
-define amdgpu_gs void @byval_cc_amdgpu_gs(i32 addrspace(5)* byval %ptr) {
+define amdgpu_gs void @byval_cc_amdgpu_gs(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_ps
-define amdgpu_ps void @byval_cc_amdgpu_ps(i32 addrspace(5)* byval %ptr) {
+define amdgpu_ps void @byval_cc_amdgpu_ps(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
 ; CHECK: Calling convention disallows byval
 ; CHECK-NEXT: void (i32 addrspace(5)*)* @byval_cc_amdgpu_cs
-define amdgpu_cs void @byval_cc_amdgpu_cs(i32 addrspace(5)* byval %ptr) {
+define amdgpu_cs void @byval_cc_amdgpu_cs(i32 addrspace(5)* byval(i32) %ptr) {
   ret void
 }
 
@@ -118,7 +118,7 @@ define amdgpu_kernel void @preallocated_as0_cc_amdgpu_kernel(i32* preallocated(i
 
 ; CHECK: Calling convention disallows inalloca
 ; CHECK-NEXT: void (i32*)* @inalloca_as0_cc_amdgpu_kernel
-define amdgpu_kernel void @inalloca_as0_cc_amdgpu_kernel(i32* inalloca %ptr) {
+define amdgpu_kernel void @inalloca_as0_cc_amdgpu_kernel(i32* inalloca(i32) %ptr) {
   ret void
 }
 

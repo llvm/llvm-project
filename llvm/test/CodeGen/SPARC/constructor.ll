@@ -14,12 +14,12 @@ entry:
   ret void
 }
 
-; CTOR:    .section  .ctors.65520,#alloc,#write
-; CTOR-NEXT: .p2align      2
-; CTOR-NEXT: .word  g
-; CTOR-NEXT: .section      .ctors,#alloc,#write
+; CTOR:      .section      .ctors,#alloc,#write
 ; CTOR-NEXT: .p2align      2
 ; CTOR-NEXT: .word  f
+; CTOR-NEXT: .section      .ctors.65520,#alloc,#write
+; CTOR-NEXT: .p2align      2
+; CTOR-NEXT: .word  g
 
 ; INIT-ARRAY:    .section  .init_array.15,#alloc,#write
 ; INIT-ARRAY-NEXT: .p2align  2

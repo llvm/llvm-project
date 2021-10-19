@@ -61,7 +61,9 @@ if (target_os == "linux" || target_os == "fuchsia") {
 config("cxxabi_config") {
   include_dirs = [
     "//libcxxabi/include",
-    "//libcxx/include",
+
+    # Some files depend on libc++ internals.
+    "//libcxx/src",
   ]
   cflags_cc = [ "-nostdinc++" ]
   defines = [ "_LIBCXXABI_BUILDING_LIBRARY" ]
@@ -86,6 +88,7 @@ if (libcxxabi_enable_shared) {
     public = cxxabi_headers
     deps = [
       "//compiler-rt/lib/builtins",
+      "//libcxx/include",
       "//libunwind/src:unwind_shared",
     ]
     configs += [ ":cxxabi_config" ]
@@ -116,6 +119,7 @@ if (libcxxabi_enable_static) {
     }
     deps = [
       "//compiler-rt/lib/builtins",
+      "//libcxx/include",
       "//libunwind/src:unwind_static",
     ]
     configs += [ ":cxxabi_config" ]

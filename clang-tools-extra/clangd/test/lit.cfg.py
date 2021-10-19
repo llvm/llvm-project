@@ -1,7 +1,8 @@
 import lit.llvm
 
 lit.llvm.initialize(lit_config, config)
-lit.llvm.llvm_config.use_clang()
+lit.llvm.llvm_config.use_clang([], [], required=False)
+lit.llvm.llvm_config.use_default_substitutions()
 
 config.name = 'Clangd'
 config.suffixes = ['.test']
@@ -26,3 +27,12 @@ config.substitutions.append(('%clangd-benchmark-dir',
 
 if config.clangd_build_xpc:
   config.available_features.add('clangd-xpc-support')
+
+if config.clangd_enable_remote:
+  config.available_features.add('clangd-remote-index')
+
+if config.clangd_tidy_checks:
+  config.available_features.add('clangd-tidy-checks')
+
+if config.have_zlib:
+  config.available_features.add('zlib')

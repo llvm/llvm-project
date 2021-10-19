@@ -5,20 +5,18 @@
 
 # CHECK:      --- !ELF
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   Class:           ELFCLASS64
-# CHECK-NEXT:   Data:            ELFDATA2LSB
-# CHECK-NEXT:   Type:            ET_EXEC
-# CHECK-NEXT:   Machine:         EM_NONE
-# CHECK-NEXT:   Entry:           0x0000000000201000
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   Type:  ET_EXEC
+# CHECK-NEXT:   Entry: 0x201000
 # CHECK-NEXT: Sections:
-# CHECK-NEXT:   - Name:            .gnu.version
-# CHECK-NEXT:     Type:            SHT_GNU_versym
-# CHECK-NEXT:     Flags:           [ SHF_ALLOC ]
-# CHECK-NEXT:     Address:         0x0000000000200210
-# CHECK-NEXT:     Link:            .dynsym
-# CHECK-NEXT:     AddressAlign:    0x0000000000000002
-# CHECK-NEXT:     EntSize:         0x0000000000000002
-# CHECK-NEXT:     Entries:         [ 0, 3, 4 ]
+# CHECK-NEXT:   - Name:         .gnu.version
+# CHECK-NEXT:     Type:         SHT_GNU_versym
+# CHECK-NEXT:     Flags:        [ SHF_ALLOC ]
+# CHECK-NEXT:     Address:      0x200210
+# CHECK-NEXT:     Link:         .dynsym
+# CHECK-NEXT:     AddressAlign: 0x2
+# CHECK-NEXT:     Entries:      [ 0, 3, 4 ]
 # CHECK-NEXT:   - Name:
 # CHECK:      DynamicSymbols:
 # CHECK-NEXT:   - Name:    f1
@@ -31,15 +29,15 @@ FileHeader:
   Class: ELFCLASS64
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
-  Entry: 0x0000000000201000
+  Entry: 0x201000
 Sections:
   - Name:            .gnu.version
     Type:            SHT_GNU_versym
     Flags:           [ SHF_ALLOC ]
-    Address:         0x0000000000200210
+    Address:         0x200210
     Link:            .dynsym
-    AddressAlign:    0x0000000000000002
-    EntSize:         0x0000000000000002
+    AddressAlign:    0x2
+    EntSize:         0x2
     Entries:         [ 0, 3, 4 ]
 DynamicSymbols:
   - Name:    f1

@@ -104,13 +104,11 @@ if.end:
 
 define i1 @test1(i32* %p, i1 %unknown) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[UNKNOWN:%.*]], i32 [[PVAL]], i32 5
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -121,9 +119,6 @@ define i1 @test1(i32* %p, i1 %unknown) {
 
 next:
   %min = select i1 %unknown, i32 %pval, i32 5
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = icmp eq i32 %min, 255
   ret i1 %res
 
@@ -134,13 +129,11 @@ exit:
 ; Check that we take a conservative meet
 define i1 @test2(i32* %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[UNKNOWN:%.*]], i32 [[PVAL]], i32 [[QVAL:%.*]]
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 255
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       exit:
@@ -152,9 +145,6 @@ define i1 @test2(i32* %p, i32 %qval, i1 %unknown) {
 
 next:
   %min = select i1 %unknown, i32 %pval, i32 %qval
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = icmp eq i32 %min, 255
   ret i1 %res
 
@@ -165,13 +155,11 @@ exit:
 ; Same as @test2, but for the opposite select input
 define i1 @test3(i32* %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[UNKNOWN:%.*]], i32 [[QVAL:%.*]], i32 [[PVAL]]
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[MIN]], 255
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       exit:
@@ -183,9 +171,6 @@ define i1 @test3(i32* %p, i32 %qval, i1 %unknown) {
 
 next:
   %min = select i1 %unknown, i32 %qval, i32 %pval
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = icmp eq i32 %min, 255
   ret i1 %res
 
@@ -199,13 +184,11 @@ exit:
 ; and non-constants) are actually represented as constant-ranges.
 define i1 @test4(i32* %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[UNKNOWN:%.*]], double 1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    [[RES:%.*]] = fcmp oeq double [[MIN]], 3.000000e+02
 ; CHECK-NEXT:    ret i1 [[RES]]
 ; CHECK:       exit:
@@ -217,9 +200,6 @@ define i1 @test4(i32* %p, i32 %qval, i1 %unknown) {
 
 next:
   %min = select i1 %unknown, double 1.0, double 0.0
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = fcmp oeq double %min, 300.0
   ret i1 %res
 
@@ -232,14 +212,12 @@ exit:
 
 define i1 @test5(i32* %p, i1 %unknown) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[PVAL]], 0
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[COND]], i32 [[PVAL]], i32 5
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -251,9 +229,6 @@ define i1 @test5(i32* %p, i1 %unknown) {
 next:
   %cond = icmp sgt i32 %pval, 0
   %min = select i1 %cond, i32 %pval, i32 5
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = icmp eq i32 %min, -1
   ret i1 %res
 
@@ -263,14 +238,12 @@ exit:
 
 define i1 @test6(i32* %p, i1 %unknown) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[PVAL]], 254
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[PVAL]], i32 1
-; CHECK-NEXT:    br label [[NEXT2:%.*]]
-; CHECK:       next2:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
@@ -282,9 +255,6 @@ define i1 @test6(i32* %p, i1 %unknown) {
 next:
   %cond = icmp ne i32 %pval, 254
   %sel = select i1 %cond, i32 %pval, i32 1
-  ;; TODO: This pointless branch shouldn't be neccessary
-  br label %next2
-next2:
   %res = icmp slt i32 %sel, 254
   ret i1 %res
 

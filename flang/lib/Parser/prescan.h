@@ -37,7 +37,12 @@ public:
       common::LanguageFeatureControl);
   Prescanner(const Prescanner &);
 
-  Messages &messages() const { return messages_; }
+  const AllSources &allSources() const { return allSources_; }
+  AllSources &allSources() { return allSources_; }
+  const Messages &messages() const { return messages_; }
+  Messages &messages() { return messages_; }
+  const Preprocessor &preprocessor() const { return preprocessor_; }
+  Preprocessor &preprocessor() { return preprocessor_; }
 
   Prescanner &set_fixedForm(bool yes) {
     inFixedForm_ = yes;
@@ -65,10 +70,7 @@ public:
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
   template <typename... A> Message &Say(A &&...a) {
-    Message &m{messages_.Say(std::forward<A>(a)...)};
-    std::optional<ProvenanceRange> range{m.GetProvenanceRange(cooked_)};
-    CHECK(!range || cooked_.IsValid(*range));
-    return m;
+    return messages_.Say(std::forward<A>(a)...);
   }
 
 private:
@@ -124,7 +126,7 @@ private:
   }
 
   void EmitInsertedChar(TokenSequence &tokens, char ch) {
-    Provenance provenance{cooked_.allSources().CompilerInsertionProvenance(ch)};
+    Provenance provenance{allSources_.CompilerInsertionProvenance(ch)};
     tokens.PutNextTokenChar(ch, provenance);
   }
 
@@ -148,6 +150,7 @@ private:
   }
 
   void LabelField(TokenSequence &);
+  void EnforceStupidEndStatementRules(const TokenSequence &);
   void SkipToEndOfLine();
   bool MustSkipToEndOfLine() const;
   void NextChar();
@@ -185,6 +188,7 @@ private:
   Messages &messages_;
   CookedSource &cooked_;
   Preprocessor &preprocessor_;
+  AllSources &allSources_;
   common::LanguageFeatureControl features_;
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
@@ -222,9 +226,9 @@ private:
   bool skipLeadingAmpersand_{false};
 
   const Provenance spaceProvenance_{
-      cooked_.allSources().CompilerInsertionProvenance(' ')};
+      allSources_.CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
-      cooked_.allSources().CompilerInsertionProvenance('\\')};
+      allSources_.CompilerInsertionProvenance('\\')};
 
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.

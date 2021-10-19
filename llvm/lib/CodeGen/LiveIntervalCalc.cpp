@@ -60,7 +60,7 @@ void LiveIntervalCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
   // Visit all def operands. If the same instruction has multiple defs of Reg,
   // createDeadDef() will deduplicate.
   const TargetRegisterInfo &TRI = *MRI->getTargetRegisterInfo();
-  unsigned Reg = LI.reg;
+  unsigned Reg = LI.reg();
   for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
     if (!MO.isDef() && !MO.readsReg())
       continue;
@@ -127,7 +127,7 @@ void LiveIntervalCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
     }
   }
   resetLiveOutMap();
-  extendToUses(MainRange, LI.reg, LaneBitmask::getAll(), &LI);
+  extendToUses(MainRange, LI.reg(), LaneBitmask::getAll(), &LI);
 }
 
 void LiveIntervalCalc::createDeadDefs(LiveRange &LR, Register Reg) {

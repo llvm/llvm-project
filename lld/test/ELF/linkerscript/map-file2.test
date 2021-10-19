@@ -34,8 +34,8 @@ SECTIONS {
 # CHECK-NEXT:       1228             3218       30     1         {{.*}}{{/|\\}}map-file2.test.tmp.o:(.eh_frame+0x0)
 # CHECK-NEXT:       125c             324c        1     4 .text
 # CHECK-NEXT:       125c             324c        1     4         {{.*}}{{/|\\}}map-file2.test.tmp.o:(.text)
-# CHECK-NEXT:       125c             324c        0     1                 f(int)
 # CHECK-NEXT:       125c             324c        0     1                 _start
+# CHECK-NEXT:       125c             324c        0     1                 f(int)
 # CHECK-NEXT:          0                0        8     1 .comment
 # CHECK-NEXT:          0                0        8     1         <internal>:(.comment)
 # CHECK-NEXT:          0                0       48     8 .symtab

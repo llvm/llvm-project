@@ -11,7 +11,6 @@ define void @prologue_end_test() nounwind uwtable !dbg !4 {
   ; CHECK: prologue_end_test:
   ; CHECK: push {r7, lr}
   ; CHECK: {{mov r7, sp|add r7, sp}}
-  ; CHECK: sub sp
   ; CHECK: .loc 1 3 3 prologue_end
   ; CHECK: bl {{_func|Ltmp}}
   ; CHECK: bl {{_func|Ltmp}}

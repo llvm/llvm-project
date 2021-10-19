@@ -16,6 +16,7 @@
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "index/SymbolLocation.h"
+#include "index/SymbolOrigin.h"
 #include "index/remote/marshalling/Marshalling.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallString.h"
@@ -154,6 +155,8 @@ TEST(RemoteMarshallingTest, SymbolSerialization) {
   ASSERT_TRUE(bool(Serialized));
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
   ASSERT_TRUE(bool(Deserialized));
+  // Origin is overwritten when deserializing.
+  Sym.Origin = SymbolOrigin::Remote;
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
   // Serialized paths are relative and have UNIX slashes.
   EXPECT_EQ(convert_to_slash(Serialized->definition().file_path(),
@@ -239,8 +242,8 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
 
   clangd::Symbol::IncludeHeaderWithReferences Header;
   // Add only valid headers.
-  Header.IncludeHeader = Strings.save(
-      URI::createFile("/usr/local/user/home/project/Header.h").toString());
+  Header.IncludeHeader =
+      Strings.save(URI::createFile(testPath("project/Header.h")).toString());
   Header.References = 21;
   Sym.IncludeHeaders.push_back(Header);
   Header.IncludeHeader = Strings.save("<iostream>");
@@ -250,7 +253,7 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
   Header.References = 200;
   Sym.IncludeHeaders.push_back(Header);
 
-  Marshaller ProtobufMarshaller(convert_to_slash("/"), convert_to_slash("/"));
+  Marshaller ProtobufMarshaller(testPath(""), testPath(""));
 
   auto Serialized = ProtobufMarshaller.toProtobuf(Sym);
   ASSERT_TRUE(bool(Serialized));
@@ -258,6 +261,7 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
             Sym.IncludeHeaders.size());
   auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
   ASSERT_TRUE(bool(Deserialized));
+  Sym.Origin = SymbolOrigin::Remote;
   EXPECT_EQ(toYAML(Sym), toYAML(*Deserialized));
 
   // This is an absolute path to a header: can not be transmitted over the wire.

@@ -13,13 +13,11 @@
 // function(R(*)(Args...)) -> function<R(Args...)>;
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 #include <functional>
 #include <type_traits>
 
 #include "test_macros.h"
-
 
 struct R { };
 struct A1 { };
@@ -32,7 +30,7 @@ R f2(A1, A2) { return {}; }
 R f3(A1, A2, A3) { return {}; }
 R f4(A1 = {}) { return {}; }
 
-int main() {
+int main(int, char**) {
   {
     // implicit
     std::function a = f0;
@@ -109,4 +107,6 @@ int main() {
     std::function d{&f4};
     ASSERT_SAME_TYPE(decltype(d), std::function<R(A1)>);
   }
+
+  return 0;
 }

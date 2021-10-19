@@ -19,10 +19,10 @@ thread_func ()
     pseudo_barrier_wait(g_barrier);
 
     // Do something
-    step_out_of_here(); // Expect to stop here after step-out (clang)
+    step_out_of_here(); // But we might still be here 
 
     // Return
-    return NULL;  // Expect to stop here after step-out (icc and gcc)
+    return NULL;  // Expect to stop here after step-out.
 }
 
 int main ()

@@ -43,8 +43,8 @@
 ; CHECK:       DBG_VALUE [[QUUXLOC]], $noreg, ![[QUUXVARNUM]]
 ; CHECK-NOT:   DBG_VALUE $noreg
 
-declare i1 @booler()
-declare void @escape(i32)
+declare dso_local i1 @booler()
+declare dso_local void @escape(i32)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 @glob = global i32 0
 

@@ -35,9 +35,8 @@ public:
   GlobalIndirectSymbol &operator=(const GlobalIndirectSymbol &) = delete;
 
   // allocate space for exactly one operand
-  void *operator new(size_t s) {
-    return User::operator new(s, 1);
-  }
+  void *operator new(size_t S) { return User::operator new(S, 1); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr); }
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Constant);
@@ -58,21 +57,10 @@ public:
           static_cast<const GlobalIndirectSymbol *>(this)->getIndirectSymbol());
   }
 
-  const GlobalObject *getBaseObject() const;
-  GlobalObject *getBaseObject() {
+  const GlobalObject *getAliaseeObject() const;
+  GlobalObject *getAliaseeObject() {
     return const_cast<GlobalObject *>(
-              static_cast<const GlobalIndirectSymbol *>(this)->getBaseObject());
-  }
-
-  const GlobalObject *getBaseObject(const DataLayout &DL, APInt &Offset) const {
-    return dyn_cast<GlobalObject>(
-        getIndirectSymbol()->stripAndAccumulateInBoundsConstantOffsets(DL,
-                                                                       Offset));
-  }
-  GlobalObject *getBaseObject(const DataLayout &DL, APInt &Offset) {
-    return const_cast<GlobalObject *>(
-                                 static_cast<const GlobalIndirectSymbol *>(this)
-                                   ->getBaseObject(DL, Offset));
+        static_cast<const GlobalIndirectSymbol *>(this)->getAliaseeObject());
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:

@@ -136,7 +136,7 @@
         .type arm_func,%function
 arm_func:
         nop
-// CHECK: [[@LINE+1]]:45: error: unexpected token
+// CHECK: [[#@LINE+1]]:45: error: expected newline
         .thumb_set alias_arm_func, arm_func $
 // CHECK-NOT: [[@LINE+1]]:{{[0-9]+}}: error:	
         .thumb_set alias_arm_func, arm_func @ EOL COMMENT

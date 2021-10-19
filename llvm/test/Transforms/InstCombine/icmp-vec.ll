@@ -213,7 +213,7 @@ define <2 x i1> @PR27786(<2 x i8> %a) {
 define <4 x i1> @same_shuffle_inputs_icmp(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 2, i32 0>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %shufx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> < i32 3, i32 3, i32 2, i32 0 >
@@ -227,7 +227,7 @@ define <4 x i1> @same_shuffle_inputs_icmp(<4 x i8> %x, <4 x i8> %y) {
 define <5 x i1> @same_shuffle_inputs_fcmp(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_fcmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq <4 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <5 x i32> <i32 0, i32 1, i32 3, i32 2, i32 0>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <5 x i32> <i32 0, i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:    ret <5 x i1> [[CMP]]
 ;
   %shufx = shufflevector <4 x float> %x, <4 x float> undef, <5 x i32> < i32 0, i32 1, i32 3, i32 2, i32 0 >
@@ -242,7 +242,7 @@ define <4 x i1> @same_shuffle_inputs_icmp_extra_use1(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp_extra_use1(
 ; CHECK-NEXT:    [[SHUFX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i8> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    call void @use_v4i8(<4 x i8> [[SHUFX]])
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
@@ -259,7 +259,7 @@ define <2 x i1> @same_shuffle_inputs_icmp_extra_use2(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @same_shuffle_inputs_icmp_extra_use2(
 ; CHECK-NEXT:    [[SHUFY:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <2 x i32> <i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <2 x i32> <i32 3, i32 2>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <2 x i32> <i32 3, i32 2>
 ; CHECK-NEXT:    call void @use_v2i8(<2 x i8> [[SHUFY]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -292,7 +292,7 @@ define <2 x i1> @same_shuffle_inputs_icmp_extra_use3(<4 x i8> %x, <4 x i8> %y) {
 define <4 x i1> @splat_icmp(<4 x i8> %x) {
 ; CHECK-LABEL: @splat_icmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i8> [[X:%.*]], <i8 42, i8 42, i8 42, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
@@ -303,7 +303,7 @@ define <4 x i1> @splat_icmp(<4 x i8> %x) {
 define <4 x i1> @splat_icmp_undef(<4 x i8> %x) {
 ; CHECK-LABEL: @splat_icmp_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i8> [[X:%.*]], <i8 42, i8 42, i8 42, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 2, i32 undef, i32 undef, i32 2>
@@ -314,7 +314,7 @@ define <4 x i1> @splat_icmp_undef(<4 x i8> %x) {
 define <4 x i1> @splat_icmp_larger_size(<2 x i8> %x) {
 ; CHECK-LABEL: @splat_icmp_larger_size(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 42, i8 42>
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %splatx = shufflevector <2 x i8> %x, <2 x i8> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
@@ -325,7 +325,7 @@ define <4 x i1> @splat_icmp_larger_size(<2 x i8> %x) {
 define <4 x i1> @splat_fcmp_smaller_size(<5 x float> %x) {
 ; CHECK-LABEL: @splat_fcmp_smaller_size(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq <5 x float> [[X:%.*]], <float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01>
-; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <5 x i1> [[TMP1]], <5 x i1> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = shufflevector <5 x i1> [[TMP1]], <5 x i1> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
 ;
   %splatx = shufflevector <5 x float> %x, <5 x float> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
@@ -372,4 +372,328 @@ define <4 x i1> @not_splat_icmp2(<4 x i8> %x) {
   %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %cmp = icmp sgt <4 x i8> %splatx, <i8 43, i8 42, i8 42, i8 42>
   ret <4 x i1> %cmp
+}
+
+; Check that we don't absorb the compare into the select, which is in the
+; canonical form of logical or.
+define <2 x i1> @icmp_logical_or_vec(<2 x i64> %x, <2 x i64> %y, <2 x i1> %falseval) {
+; CHECK-LABEL: @icmp_logical_or_vec(
+; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP_NE]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[FALSEVAL:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
+;
+  %cmp.ne = icmp ne <2 x i64> %x, zeroinitializer
+  %sel = select <2 x i1> %cmp.ne, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), <2 x i1> %falseval
+  ret <2 x i1> %sel
+}
+
+; The above, but for scalable vectors. Absorbing the compare into the select
+; and breaking the canonical form led to an infinite loop.
+define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %falseval) {
+; CHECK-LABEL: @icmp_logical_or_scalablevec(
+; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne <vscale x 2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 2 x i1> [[CMP_NE]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> [[FALSEVAL:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[SEL]]
+;
+  %cmp.ne = icmp ne <vscale x 2 x i64> %x, zeroinitializer
+  %sel = select <vscale x 2 x i1> %cmp.ne, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %falseval
+  ret <vscale x 2 x i1> %sel
+}
+
+define i1 @eq_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @eq_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ne_cast_eq-1(<3 x i7> %x, <3 x i7> %y) {
+; CHECK-LABEL: @ne_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ne <3 x i7> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp eq i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @eq_cast_ne-1(<2 x i7> %x, <2 x i7> %y) {
+; CHECK-LABEL: @eq_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ne <2 x i7> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i7> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ne_cast_ne-1(<3 x i5> %x, <3 x i5> %y) {
+; CHECK-LABEL: @ne_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i5> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ne <3 x i5> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp ne i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @ugt_cast_eq-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @ugt_cast_eq-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp ule <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp ugt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @slt_cast_ne-1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @slt_cast_ne-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sge <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp slt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp ne i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ueq_cast_eq-1(<3 x float> %x, <3 x float> %y) {
+; CHECK-LABEL: @ueq_cast_eq-1(
+; CHECK-NEXT:    [[FC:%.*]] = fcmp one <3 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[FC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i3 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %fc = fcmp ueq <3 x float> %x, %y
+  %b = bitcast <3 x i1> %fc to i3
+  %r = icmp eq i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @not_cast_ne-1(<3 x i1> %x) {
+; CHECK-LABEL: @not_cast_ne-1(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[X:%.*]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %not = xor <3 x i1> %x, <i1 -1, i1 -1, i1 -1>
+  %b = bitcast <3 x i1> %not to i3
+  %r = icmp ne i3 %b, -1
+  ret i1 %r
+}
+
+define i1 @not_cast_ne-1_uses(<3 x i2> %x, <3 x i2>* %p) {
+; CHECK-LABEL: @not_cast_ne-1_uses(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i2> [[X:%.*]], <i2 -1, i2 -1, i2 -1>
+; CHECK-NEXT:    store <3 x i2> [[NOT]], <3 x i2>* [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i2> [[X]] to i6
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i6 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %not = xor <3 x i2> %x, <i2 -1, i2 -1, i2 -1>
+  store <3 x i2> %not, <3 x i2>* %p
+  %b = bitcast <3 x i2> %not to i6
+  %r = icmp ne i6 %b, -1
+  ret i1 %r
+}
+
+; negative test - need equality pred on 2nd cmp
+
+define i1 @eq_cast_sgt-1(<3 x i4> %x, <3 x i4> %y) {
+; CHECK-LABEL: @eq_cast_sgt-1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <3 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <3 x i1> [[IC]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i3 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <3 x i4> %x, %y
+  %b = bitcast <3 x i1> %ic to i3
+  %r = icmp sgt i3 %b, -1
+  ret i1 %r
+}
+
+; negative test - need all-ones constant on 2nd cmp
+
+define i1 @eq_cast_eq1(<2 x i4> %x, <2 x i4> %y) {
+; CHECK-LABEL: @eq_cast_eq1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp eq <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp eq <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, 1
+  ret i1 %r
+}
+
+; negative test - extra use
+
+define i1 @eq_cast_eq-1_use1(<2 x i4> %x, <2 x i4> %y, <2 x i1>* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use1(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[P:%.*]], align 1
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp sgt <2 x i4> %x, %y
+  store <2 x i1> %ic, <2 x i1>* %p
+  %b = bitcast <2 x i1> %ic to i2
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+; negative test - extra use
+
+define i1 @eq_cast_eq-1_use2(<2 x i4> %x, <2 x i4> %y, i2* %p) {
+; CHECK-LABEL: @eq_cast_eq-1_use2(
+; CHECK-NEXT:    [[IC:%.*]] = icmp sgt <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i1> [[IC]] to i2
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i2* [[P:%.*]] to <2 x i1>*
+; CHECK-NEXT:    store <2 x i1> [[IC]], <2 x i1>* [[TMP1]], align 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[B]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ic = icmp sgt <2 x i4> %x, %y
+  %b = bitcast <2 x i1> %ic to i2
+  store i2 %b, i2* %p
+  %r = icmp eq i2 %b, -1
+  ret i1 %r
+}
+
+define i1 @ne_cast_sext(<3 x i1> %b) {
+; CHECK-LABEL: @ne_cast_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <3 x i1> [[B:%.*]] to i3
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i3 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = sext <3 x i1> %b to <3 x i8>
+  %bc = bitcast <3 x i8> %e to i24
+  %r = icmp ne i24 %bc, 0
+  ret i1 %r
+}
+
+define i1 @eq_cast_sext(<8 x i3> %b) {
+; CHECK-LABEL: @eq_cast_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i3> [[B:%.*]] to i24
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i24 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = sext <8 x i3> %b to <8 x i8>
+  %bc = bitcast <8 x i8> %e to i64
+  %r = icmp eq i64 %bc, 0
+  ret i1 %r
+}
+
+define i1 @ne_cast_zext(<4 x i1> %b) {
+; CHECK-LABEL: @ne_cast_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[B:%.*]] to i4
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = zext <4 x i1> %b to <4 x i8>
+  %bc = bitcast <4 x i8> %e to i32
+  %r = icmp ne i32 %bc, 0
+  ret i1 %r
+}
+
+define i1 @eq_cast_zext(<5 x i3> %b) {
+; CHECK-LABEL: @eq_cast_zext(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i3> [[B:%.*]] to i15
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i15 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = zext <5 x i3> %b to <5 x i7>
+  %bc = bitcast <5 x i7> %e to i35
+  %r = icmp eq i35 %bc, 0
+  ret i1 %r
+}
+
+; negative test - valid for eq/ne only
+
+define i1 @sgt_cast_zext(<5 x i3> %b) {
+; CHECK-LABEL: @sgt_cast_zext(
+; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i35 [[BC]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = zext <5 x i3> %b to <5 x i7>
+  %bc = bitcast <5 x i7> %e to i35
+  %r = icmp sgt i35 %bc, 0
+  ret i1 %r
+}
+
+; negative test - not valid with non-zero constants
+; TODO: We could handle some non-zero constants by checking for bit-loss after casts.
+
+define i1 @eq7_cast_sext(<5 x i3> %b) {
+; CHECK-LABEL: @eq7_cast_sext(
+; CHECK-NEXT:    [[E:%.*]] = sext <5 x i3> [[B:%.*]] to <5 x i7>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i35 [[BC]], 7
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = sext <5 x i3> %b to <5 x i7>
+  %bc = bitcast <5 x i7> %e to i35
+  %r = icmp eq i35 %bc, 7
+  ret i1 %r
+}
+
+; extra use of extend is ok
+
+define i1 @eq_cast_zext_use1(<5 x i3> %b, <5 x i7>* %p) {
+; CHECK-LABEL: @eq_cast_zext_use1(
+; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
+; CHECK-NEXT:    store <5 x i7> [[E]], <5 x i7>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <5 x i3> [[B]] to i15
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i15 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = zext <5 x i3> %b to <5 x i7>
+  store <5 x i7> %e, <5 x i7>* %p
+  %bc = bitcast <5 x i7> %e to i35
+  %r = icmp eq i35 %bc, 0
+  ret i1 %r
+}
+
+; negative test - don't create an extra cast
+
+declare void @use35(i35)
+
+define i1 @eq_cast_zext_use2(<5 x i3> %b) {
+; CHECK-LABEL: @eq_cast_zext_use2(
+; CHECK-NEXT:    [[E:%.*]] = zext <5 x i3> [[B:%.*]] to <5 x i7>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <5 x i7> [[E]] to i35
+; CHECK-NEXT:    call void @use35(i35 [[BC]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i35 [[BC]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e = zext <5 x i3> %b to <5 x i7>
+  %bc = bitcast <5 x i7> %e to i35
+  call void @use35(i35 %bc)
+  %r = icmp eq i35 %bc, 0
+  ret i1 %r
 }

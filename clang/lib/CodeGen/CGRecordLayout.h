@@ -46,7 +46,7 @@ namespace CodeGen {
 ///   };
 ///
 /// This will end up as the following LLVM type. The first array is the
-/// bitfield, and the second is the padding out to a 4-byte alignmnet.
+/// bitfield, and the second is the padding out to a 4-byte alignment.
 ///
 ///   %t = type { i8, i8, i8, i8, i8, [3 x i8] }
 ///
@@ -80,8 +80,21 @@ struct CGBitFieldInfo {
   /// The offset of the bitfield storage from the start of the struct.
   CharUnits StorageOffset;
 
+  /// The offset within a contiguous run of bitfields that are represented as a
+  /// single "field" within the LLVM struct type, taking into account the AAPCS
+  /// rules for volatile bitfields. This offset is in bits.
+  unsigned VolatileOffset : 16;
+
+  /// The storage size in bits which should be used when accessing this
+  /// bitfield.
+  unsigned VolatileStorageSize;
+
+  /// The offset of the bitfield storage from the start of the struct.
+  CharUnits VolatileStorageOffset;
+
   CGBitFieldInfo()
-      : Offset(), Size(), IsSigned(), StorageSize(), StorageOffset() {}
+      : Offset(), Size(), IsSigned(), StorageSize(), StorageOffset(),
+        VolatileOffset(), VolatileStorageSize(), VolatileStorageOffset() {}
 
   CGBitFieldInfo(unsigned Offset, unsigned Size, bool IsSigned,
                  unsigned StorageSize, CharUnits StorageOffset)

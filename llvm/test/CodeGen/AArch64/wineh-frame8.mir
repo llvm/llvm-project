@@ -78,10 +78,10 @@ body:             |
     liveins: $w0
 
     renamable $w8 = MOVi32imm 2
-    STRWui killed renamable $w0, %stack.0.a.addr, 0 :: (store 4 into %ir.a.addr)
-    STRWui killed renamable $w8, %stack.1.b, 0 :: (store 4 into %ir.b)
-    renamable $w8 = LDRWui %stack.1.b, 0 :: (load 4 from %ir.b)
-    renamable $w0 = LDRWui %stack.0.a.addr, 0 :: (load 4 from %ir.a.addr)
+    STRWui killed renamable $w0, %stack.0.a.addr, 0 :: (store (s32) into %ir.a.addr)
+    STRWui killed renamable $w8, %stack.1.b, 0 :: (store (s32) into %ir.b)
+    renamable $w8 = LDRWui %stack.1.b, 0 :: (load (s32) from %ir.b)
+    renamable $w0 = LDRWui %stack.0.a.addr, 0 :: (load (s32) from %ir.a.addr)
     renamable $w0 = nsw ADDWrr killed renamable $w8, killed renamable $w0
     RET_ReallyLR implicit killed $w0
 

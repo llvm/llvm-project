@@ -1,0 +1,77 @@
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=corei7-avx -o - %s | FileCheck %s --check-prefix=COREI7
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-gnu-unknown -verify-machineinstrs -mcpu=haswell -o - %s | FileCheck %s --check-prefix=HASWELL
+# RUN: llc -run-pass x86-fixup-LEAs -mtriple=x86_64-unknown-unknown -verify-machineinstrs -mcpu=atom -o - %s | FileCheck %s --check-prefix=ATOM
+#
+# Test several LEA <=> ADD transformations that the fixup-leas pass performs,
+# and check that any debug-instr-number attached to the original instruction
+# is substituted onto the new instruction.
+# Some are only reachable under specific CPU modes it seems -- each function
+# in this file is only tested by one prefix / CPU mode. Some i386 specific
+# behaviours are in the -2 flavour of this file.
+---
+# COREI7-LABE: name: pr43758
+name:            pr43758
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rax' }
+  - { reg: '$rbp' }
+# COREI7:      debugValueSubstitutions:
+# COREI7-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $rax, $rbp
+
+    $ebp = LEA64_32r killed $rbp, 1, killed $rax, 0, $noreg, debug-instr-number 1
+    ; COREI7: ADD32rr {{.*}} debug-instr-number 2
+    RETQ $ebp
+
+...
+---
+name:            test_mul_spec
+# HASWELL-LABEL: name: test_mul_spec
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$edi' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+# HASWELL:      debugValueSubstitutions:
+# HASWELL-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: 0 }
+# HASWELL-NEXT:  - { srcinst: 2, srcop: 0, dstinst: 4, dstop: 0, subreg: 0 }
+body:             |
+  bb.0:
+    liveins: $edi
+  
+    renamable $edi = KILL $edi, implicit-def $rdi
+    renamable $ecx = nsw LEA64_32r renamable $rdi, 8, renamable $rdi, 42, $noreg, debug-instr-number 1
+    ; HASWELL: ADD32ri8 {{.*}} debug-instr-number 3
+    renamable $eax = nsw LEA64_32r killed renamable $rdi, 4, renamable $rdi, 2, $noreg, debug-instr-number 2
+    ; HASWELL: ADD32ri8 {{.*}} debug-instr-number 4
+    renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ecx, implicit-def dead $eflags
+    RETQ $eax
+
+...
+---
+name:            testthree
+# ATOM-LABEL: name: testthree
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+# ATOM:       debugValueSubstitutions:
+# ATOM-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+body:             |
+  bb.0.entry:
+    renamable $ecx = MOV32ri 0
+    renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    renamable $ecx = nsw ADD32rr renamable $ecx, renamable $eax, implicit-def dead $eflags, implicit killed $rax, implicit killed $rcx, implicit-def $rcx, debug-instr-number 1
+    ; ATOM: LEA64_32r {{.*}} debug-instr-number 2
+    renamable $eax = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from `i32 *undef`)
+    RETQ $eax
+
+...

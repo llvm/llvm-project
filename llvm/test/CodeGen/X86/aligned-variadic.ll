@@ -5,7 +5,7 @@
 %struct.__va_list_tag = type { i32, i32, i8*, i8* }
 
 ; Function Attrs: nounwind uwtable
-define void @bar(%struct.Baz* byval nocapture readnone align 8 %x, ...) {
+define void @bar(%struct.Baz* byval(%struct.Baz) nocapture readnone align 8 %x, ...) {
 entry:
   %va = alloca [1 x %struct.__va_list_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0

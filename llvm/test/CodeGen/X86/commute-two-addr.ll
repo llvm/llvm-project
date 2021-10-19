@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s -check-prefix=DARWIN
 
 
-@G = external global i32                ; <i32*> [#uses=2]
+@G = external dso_local global i32                ; <i32*> [#uses=2]
 
 declare void @ext(i32)
 

@@ -9,7 +9,7 @@ CHECK-NOT: pc
 RUN: llvm-dwarfdump %p/../../dsymutil/Inputs/basic1.macho.x86_64.o \
 RUN:   -eh-frame=0x00000018 | FileCheck %s --check-prefix=EH
 EH: .eh_frame contents:
-EH-NEXT: 00000018 00000024 0000001c FDE cie=00000000 pc=fffffffffffffd20...fffffffffffffd44
+EH-NEXT: 00000018 00000024 0000001c FDE cie=00000000 pc=00000000...00000024
 EH-NEXT:   Format:       DWARF32
 EH-NEXT:   DW_CFA_advance_loc: 1
 EH-NOT: pc

@@ -20,7 +20,7 @@
 #include "test_iterators.h"
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX17 bool
 test()
 {
     int ia[] = {0};
@@ -209,6 +209,8 @@ test()
     assert(ig[3] == 0);
     assert(ig[4] == 1);
     assert(ig[5] == 2);
+
+    return true;
 }
 
 #if TEST_STD_VER >= 11
@@ -417,7 +419,7 @@ test1()
     assert(*ig[5] == 2);
 }
 
-#endif  // TEST_STD_VER >= 11
+#endif // TEST_STD_VER >= 11
 
 int main(int, char**)
 {
@@ -434,6 +436,13 @@ int main(int, char**)
     test1<std::unique_ptr<int>*>();
 
 #endif
+
+#if TEST_STD_VER > 17
+    static_assert(test<forward_iterator<int*> >());
+    static_assert(test<bidirectional_iterator<int*> >());
+    static_assert(test<random_access_iterator<int*> >());
+    static_assert(test<int*>());
+#endif // TEST_STD_VER > 17
 
   return 0;
 }

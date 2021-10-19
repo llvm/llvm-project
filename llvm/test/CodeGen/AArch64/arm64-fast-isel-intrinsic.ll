@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel-sink-local-values -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -relocation-model=dynamic-no-pic -mtriple=arm64-apple-ios < %s | FileCheck %s --check-prefix=ARM64
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -verify-machineinstrs -relocation-model=dynamic-no-pic -mtriple=arm64-apple-ios < %s | FileCheck %s --check-prefix=ARM64
 
 @message = global [80 x i8] c"The LLVM Compiler Infrastructure\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 16
 @temp = common global [80 x i8] zeroinitializer, align 16
@@ -8,8 +8,8 @@ define void @t1() {
 ; ARM64: adrp x8, _message@PAGE
 ; ARM64: add x0, x8, _message@PAGEOFF
 ; ARM64: mov [[REG:w[0-9]+]], wzr
-; ARM64: uxtb w1, [[REG]]
 ; ARM64: mov x2, #80
+; ARM64: uxtb w1, [[REG]]
 ; ARM64: bl _memset
   call void @llvm.memset.p0i8.i64(i8* align 16 getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i8 0, i64 80, i1 false)
   ret void

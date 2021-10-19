@@ -617,9 +617,9 @@ let Predicates = [BPFNoALU32] in {
   def : Pat<(i64 (extloadi32 ADDRri:$src)), (i64 (LDW ADDRri:$src))>;
 }
 
-// Atomics
+// Atomic XADD for BPFNoALU32
 class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
-    : TYPE_LD_ST<BPF_XADD.Value, SizeOp.Value,
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
                  (outs GPR:$dst),
                  (ins MEMri:$addr, GPR:$val),
                  "lock *("#OpcodeStr#" *)($addr) += $val",
@@ -630,21 +630,7 @@ class XADD<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
   let Inst{51-48} = addr{19-16}; // base reg
   let Inst{55-52} = dst;
   let Inst{47-32} = addr{15-0}; // offset
-  let BPFClass = BPF_STX;
-}
-
-class XADD32<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
-    : TYPE_LD_ST<BPF_XADD.Value, SizeOp.Value,
-                 (outs GPR32:$dst),
-                 (ins MEMri:$addr, GPR32:$val),
-                 "lock *("#OpcodeStr#" *)($addr) += $val",
-                 [(set GPR32:$dst, (OpNode ADDRri:$addr, GPR32:$val))]> {
-  bits<4> dst;
-  bits<20> addr;
-
-  let Inst{51-48} = addr{19-16}; // base reg
-  let Inst{55-52} = dst;
-  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = BPF_ADD.Value;
   let BPFClass = BPF_STX;
 }
 
@@ -652,12 +638,198 @@ let Constraints = "$dst = $val" in {
   let Predicates = [BPFNoALU32] in {
     def XADDW : XADD<BPF_W, "u32", atomic_load_add_32>;
   }
+}
 
+// Atomic add, and, or, xor
+class ATOMIC_NOFETCH<BPFArithOp Opc, string Opstr>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, BPF_DW.Value,
+                 (outs GPR:$dst),
+                 (ins MEMri:$addr, GPR:$val),
+                 "lock *(u64 *)($addr) " #Opstr# "= $val",
+                 []> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = Opc.Value;
+  let BPFClass = BPF_STX;
+}
+
+class ATOMIC32_NOFETCH<BPFArithOp Opc, string Opstr>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, BPF_W.Value,
+                 (outs GPR32:$dst),
+                 (ins MEMri:$addr, GPR32:$val),
+                 "lock *(u32 *)($addr) " #Opstr# "= $val",
+                 []> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = Opc.Value;
+  let BPFClass = BPF_STX;
+}
+
+let Constraints = "$dst = $val" in {
   let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
-    def XADDW32 : XADD32<BPF_W, "u32", atomic_load_add_32>;
+    def XADDW32 : ATOMIC32_NOFETCH<BPF_ADD, "+">;
+    def XANDW32 : ATOMIC32_NOFETCH<BPF_AND, "&">;
+    def XORW32  : ATOMIC32_NOFETCH<BPF_OR, "|">;
+    def XXORW32 : ATOMIC32_NOFETCH<BPF_XOR, "^">;
   }
 
-  def XADDD : XADD<BPF_DW, "u64", atomic_load_add_64>;
+  def XADDD  : ATOMIC_NOFETCH<BPF_ADD, "+">;
+  def XANDD  : ATOMIC_NOFETCH<BPF_AND, "&">;
+  def XORD   : ATOMIC_NOFETCH<BPF_OR, "|">;
+  def XXORD  : ATOMIC_NOFETCH<BPF_XOR, "^">;
+}
+
+// Atomic Fetch-and-<add, and, or, xor> operations
+class XFALU64<BPFWidthModifer SizeOp, BPFArithOp Opc, string OpcodeStr,
+              string OpcStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs GPR:$dst),
+                 (ins MEMri:$addr, GPR:$val),
+                 "$dst = atomic_fetch_"#OpcStr#"(("#OpcodeStr#" *)($addr), $val)",
+                 [(set GPR:$dst, (OpNode ADDRri:$addr, GPR:$val))]> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = Opc.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+class XFALU32<BPFWidthModifer SizeOp, BPFArithOp Opc, string OpcodeStr,
+              string OpcStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs GPR32:$dst),
+                 (ins MEMri:$addr, GPR32:$val),
+                 "$dst = atomic_fetch_"#OpcStr#"(("#OpcodeStr#" *)($addr), $val)",
+                 [(set GPR32:$dst, (OpNode ADDRri:$addr, GPR32:$val))]> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = Opc.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+let Constraints = "$dst = $val" in {
+  let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
+    def XFADDW32 : XFALU32<BPF_W, BPF_ADD, "u32", "add", atomic_load_add_32>;
+    def XFANDW32 : XFALU32<BPF_W, BPF_AND, "u32", "and", atomic_load_and_32>;
+    def XFORW32  : XFALU32<BPF_W, BPF_OR,  "u32", "or",  atomic_load_or_32>;
+    def XFXORW32 : XFALU32<BPF_W, BPF_XOR, "u32", "xor", atomic_load_xor_32>;
+  }
+
+  def XFADDD : XFALU64<BPF_DW, BPF_ADD, "u64", "add", atomic_load_add_64>;
+  def XFANDD : XFALU64<BPF_DW, BPF_AND, "u64", "and", atomic_load_and_64>;
+  def XFORD  : XFALU64<BPF_DW, BPF_OR,  "u64", "or",  atomic_load_or_64>;
+  def XFXORD : XFALU64<BPF_DW, BPF_XOR, "u64", "xor", atomic_load_xor_64>;
+}
+
+// atomic_load_sub can be represented as a neg followed
+// by an atomic_load_add.
+def : Pat<(atomic_load_sub_32 ADDRri:$addr, GPR32:$val),
+          (XFADDW32 ADDRri:$addr, (NEG_32 GPR32:$val))>;
+def : Pat<(atomic_load_sub_64 ADDRri:$addr, GPR:$val),
+          (XFADDD ADDRri:$addr, (NEG_64 GPR:$val))>;
+
+// Atomic Exchange
+class XCHG<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs GPR:$dst),
+                 (ins MEMri:$addr, GPR:$val),
+                 "$dst = xchg_"#OpcodeStr#"($addr, $val)",
+                 [(set GPR:$dst, (OpNode ADDRri:$addr,GPR:$val))]> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = BPF_XCHG.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+class XCHG32<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs GPR32:$dst),
+                 (ins MEMri:$addr, GPR32:$val),
+                 "$dst = xchg32_"#OpcodeStr#"($addr, $val)",
+                 [(set GPR32:$dst, (OpNode ADDRri:$addr,GPR32:$val))]> {
+  bits<4> dst;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = dst;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = BPF_XCHG.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+let Constraints = "$dst = $val" in {
+  let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
+    def XCHGW32 : XCHG32<BPF_W, "32", atomic_swap_32>;
+  }
+
+  def XCHGD : XCHG<BPF_DW, "64", atomic_swap_64>;
+}
+
+// Compare-And-Exchange
+class CMPXCHG<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs),
+                 (ins MEMri:$addr, GPR:$new),
+                 "r0 = cmpxchg_"#OpcodeStr#"($addr, r0, $new)",
+                 [(set R0, (OpNode ADDRri:$addr, R0, GPR:$new))]> {
+  bits<4> new;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = new;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = BPF_CMPXCHG.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+class CMPXCHG32<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
+    : TYPE_LD_ST<BPF_ATOMIC.Value, SizeOp.Value,
+                 (outs),
+                 (ins MEMri:$addr, GPR32:$new),
+                 "w0 = cmpxchg32_"#OpcodeStr#"($addr, w0, $new)",
+                 [(set W0, (OpNode ADDRri:$addr, W0, GPR32:$new))]> {
+  bits<4> new;
+  bits<20> addr;
+
+  let Inst{51-48} = addr{19-16}; // base reg
+  let Inst{55-52} = new;
+  let Inst{47-32} = addr{15-0}; // offset
+  let Inst{7-4} = BPF_CMPXCHG.Value;
+  let Inst{3-0} = BPF_FETCH.Value;
+  let BPFClass = BPF_STX;
+}
+
+let Predicates = [BPFHasALU32], Defs = [W0], Uses = [W0],
+    DecoderNamespace = "BPFALU32" in {
+  def CMPXCHGW32 : CMPXCHG32<BPF_W, "32", atomic_cmp_swap_32>;
+}
+
+let Defs = [R0], Uses = [R0] in {
+  def CMPXCHGD : CMPXCHG<BPF_DW, "64", atomic_cmp_swap_64>;
 }
 
 // bswap16, bswap32, bswap64

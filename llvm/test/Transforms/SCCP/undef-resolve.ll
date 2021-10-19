@@ -254,7 +254,7 @@ entry:
   ret i64 %e
 }
 
-@GV = external global i32
+@GV = common global i32 0, align 4
 
 define i32 @test11(i1 %tobool) {
 ; CHECK-LABEL: @test11(

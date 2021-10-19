@@ -21,7 +21,6 @@ class TestObjCClassMethod(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test calling functions in class methods."""
@@ -48,7 +47,7 @@ class TestObjCClassMethod(TestBase):
         self.assertTrue(
             len(thread_list) != 0,
             "No thread stopped at our breakpoint.")
-        self.assertTrue(len(thread_list) == 1,
+        self.assertEqual(len(thread_list), 1,
                         "More than one thread stopped at our breakpoint.")
 
         # Now make sure we can call a function in the class method we've
@@ -63,4 +62,4 @@ class TestObjCClassMethod(TestBase):
                 print("cmd_value is valid")
                 print("cmd_value has the value %d" % cmd_value.GetValueAsUnsigned())
         self.assertTrue(cmd_value.IsValid())
-        self.assertTrue(cmd_value.GetValueAsUnsigned() == 5)
+        self.assertEqual(cmd_value.GetValueAsUnsigned(), 5)

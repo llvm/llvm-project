@@ -6,10 +6,11 @@
 # RUN: mkdir -p %t
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-ios %s -o %t/test.o
-# RUN: not lld -flavor darwinnew -o %t/test -Z -L%S/../Inputs/iPhoneSimulator.sdk/usr/lib -lSystem %t/test.o 2>&1 | FileCheck %s
+# RUN: not ld64.lld -arch x86_64 -platform_version ios 14.0 15.0 -o %t/test \
+# RUN:   -syslibroot %S/../Inputs/iPhoneSimulator.sdk -lSystem %t/test.o 2>&1 | FileCheck %s
 
-# CHECK-DAG: error: undefined symbol __cache_handle_memory_pressure_event
-# CHECK-DAG: error: undefined symbol _from_non_reexported_tapi_dylib
+# CHECK-DAG: error: undefined symbol: __cache_handle_memory_pressure_event
+# CHECK-DAG: error: undefined symbol: _from_non_reexported_tapi_dylib
 
 .section __TEXT,__text
 .global _main

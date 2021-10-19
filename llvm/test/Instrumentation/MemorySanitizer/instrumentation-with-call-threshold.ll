@@ -40,7 +40,7 @@ declare void @foo(...)
 ; CHECK: = load
 ; CHECK: = load
 ; CHECK: = zext i1 {{.*}} to i8
-; CHECK: call void @__msan_maybe_warning_1(
+; CHECK: call void @__msan_maybe_warning_1(i8 zeroext {{.*}}, i32 zeroext {{.*}})
 ; CHECK-NOT: unreachable
 ; CHECK: ret void
 
@@ -58,7 +58,7 @@ entry:
 ; CHECK-ORIGINS-NOT: __msan_chain_origin
 ; CHECK-ORIGINS: bitcast i64* {{.*}} to i8*
 ; CHECK-ORIGINS-NOT: __msan_chain_origin
-; CHECK-ORIGINS: call void @__msan_maybe_store_origin_8(
+; CHECK-ORIGINS: call void @__msan_maybe_store_origin_8(i64 zeroext {{.*}}, i8* {{.*}}, i32 zeroext {{.*}})
 ; CHECK-ORIGINS-NOT: __msan_chain_origin
 ; CHECK: store i64
 ; CHECK: ret void

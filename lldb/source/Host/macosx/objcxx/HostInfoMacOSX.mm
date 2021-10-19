@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timer.h"
 #include "Utility/UuidCompatibility.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -24,7 +25,7 @@
 #include <string>
 
 // C inclues
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/sysctl.h>
 #include <sys/syslimits.h>
 #include <sys/types.h>
@@ -138,7 +139,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos != std::string::npos) {
     framework_pos += strlen("LLDB.framework");
-#if TARGET_OS_EMBEDDED
+#if TARGET_OS_IPHONE
     // Shallow bundle
     raw_path.resize(framework_pos);
 #else
@@ -241,6 +242,12 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 
     len = sizeof(is_64_bit_capable);
     ::sysctlbyname("hw.cpu64bit_capable", &is_64_bit_capable, &len, NULL, 0);
+
+    if (cputype == CPU_TYPE_ARM64 && cpusubtype == CPU_SUBTYPE_ARM64E) {
+      // The arm64e architecture is a preview. Pretend the host architecture
+      // is arm64.
+      cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+    }
 
     if (is_64_bit_capable) {
       if (cputype & CPU_ARCH_ABI64) {
@@ -373,27 +380,25 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
 static std::string GetXcodeSDK(XcodeSDK sdk) {
   XcodeSDK::Info info = sdk.Parse();
   std::string sdk_name = XcodeSDK::GetCanonicalName(info);
-  auto find_sdk = [](std::string sdk_name) -> std::string {
-    std::string xcrun_cmd;
-    std::string developer_dir = GetEnvDeveloperDir();
-    if (developer_dir.empty())
-      if (FileSpec fspec = HostInfo::GetShlibDir())
-        if (FileSystem::Instance().Exists(fspec)) {
-          FileSpec path(
-              XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
-          if (path.RemoveLastPathComponent())
-            developer_dir = path.GetPath();
-        }
-    if (!developer_dir.empty())
-      xcrun_cmd = "/usr/bin/env DEVELOPER_DIR=\"" + developer_dir + "\" ";
-    xcrun_cmd += "xcrun --show-sdk-path --sdk " + sdk_name;
+
+  auto xcrun = [](const std::string &sdk,
+                  llvm::StringRef developer_dir = "") -> std::string {
+    Args args;
+    if (!developer_dir.empty()) {
+      args.AppendArgument("/usr/bin/env");
+      args.AppendArgument("DEVELOPER_DIR=" + developer_dir.str());
+    }
+    args.AppendArgument("/usr/bin/xcrun");
+    args.AppendArgument("--show-sdk-path");
+    args.AppendArgument("--sdk");
+    args.AppendArgument(sdk);
 
     int status = 0;
     int signo = 0;
     std::string output_str;
     lldb_private::Status error =
-        Host::RunShellCommand(xcrun_cmd.c_str(), FileSpec(), &status, &signo,
-                              &output_str, std::chrono::seconds(15));
+        Host::RunShellCommand(args, FileSpec(), &status, &signo, &output_str,
+                              std::chrono::seconds(15));
 
     // Check that xcrun return something useful.
     if (status != 0 || output_str.empty())
@@ -412,6 +417,33 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
       output = output.substr(last_newline + 1);
 
     return output.str();
+  };
+
+  auto find_sdk = [&xcrun](const std::string &sdk_name) -> std::string {
+    // Invoke xcrun with the developer dir specified in the environment.
+    std::string developer_dir = GetEnvDeveloperDir();
+    if (!developer_dir.empty()) {
+      // Don't fallback if DEVELOPER_DIR was set.
+      return xcrun(sdk_name, developer_dir);
+    }
+
+    // Invoke xcrun with the shlib dir.
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      if (FileSystem::Instance().Exists(fspec)) {
+        std::string contents_dir =
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
+        llvm::StringRef shlib_developer_dir =
+            llvm::sys::path::parent_path(contents_dir);
+        if (!shlib_developer_dir.empty()) {
+          std::string sdk = xcrun(sdk_name, std::move(shlib_developer_dir));
+          if (!sdk.empty())
+            return sdk;
+        }
+      }
+    }
+
+    // Invoke xcrun without a developer dir as a last resort.
+    return xcrun(sdk_name);
   };
 
   std::string path = find_sdk(sdk_name);
@@ -453,6 +485,8 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
   static std::mutex g_sdk_path_mutex;
 
   std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+  LLDB_SCOPED_TIMER();
+
   auto it = g_sdk_path.find(sdk.GetString());
   if (it != g_sdk_path.end())
     return it->second;
@@ -484,10 +518,10 @@ extern "C" bool _dyld_get_shared_cache_uuid(uuid_t uuid);
 namespace {
 class SharedCacheInfo {
 public:
-  const UUID &GetUUID() const { return m_uuid; };
+  const UUID &GetUUID() const { return m_uuid; }
   const llvm::StringMap<SharedCacheImageInfo> &GetImages() const {
     return m_images;
-  };
+  }
 
   SharedCacheInfo();
 

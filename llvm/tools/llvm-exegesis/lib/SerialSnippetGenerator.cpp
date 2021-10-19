@@ -42,7 +42,7 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
   std::vector<unsigned> Opcodes;
   Opcodes.resize(State.getInstrInfo().getNumOpcodes());
   std::iota(Opcodes.begin(), Opcodes.end(), 0U);
-  std::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
+  llvm::shuffle(Opcodes.begin(), Opcodes.end(), randomGenerator());
 
   std::vector<const Instruction *> AliasingInstructions;
   for (const unsigned OtherOpcode : Opcodes) {
@@ -51,7 +51,7 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     const Instruction &OtherInstr = State.getIC().getInstr(OtherOpcode);
     const MCInstrDesc &OtherInstrDesc = OtherInstr.Description;
     // Ignore instructions that we cannot run.
-    if (OtherInstrDesc.isPseudo() ||
+    if (OtherInstrDesc.isPseudo() || OtherInstrDesc.usesCustomInsertionHook() ||
         OtherInstrDesc.isBranch() || OtherInstrDesc.isIndirectBranch() ||
         OtherInstrDesc.isCall() || OtherInstrDesc.isReturn()) {
           continue;
@@ -140,7 +140,7 @@ static void appendCodeTemplates(const LLVMState &State,
       InstructionTemplate OtherIT(OtherInstr);
       if (!Forward.hasImplicitAliasing())
         setRandomAliasing(Forward, ThisIT, OtherIT);
-      if (!Back.hasImplicitAliasing())
+      else if (!Back.hasImplicitAliasing())
         setRandomAliasing(Back, OtherIT, ThisIT);
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;

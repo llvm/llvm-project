@@ -21,15 +21,15 @@
 // on other systems.
 #if defined(__APPLE__)
 
+#include <climits>
 #include <crt_externs.h>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <getopt.h>
-#include <limits.h>
 #include <mach/machine.h>
-#include <signal.h>
 #include <spawn.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -265,7 +265,7 @@ isl_size FN(FN(LIST(EL),n),EL_BASE)(__isl_keep LIST(EL) *list)
 
 /* Return the element at position "index" in "list".
  */
-static __isl_keep EL *FN(LIST(EL),peek)(__isl_keep LIST(EL) *list, int index)
+__isl_keep EL *FN(LIST(EL),peek)(__isl_keep LIST(EL) *list, int index)
 {
 	if (FN(LIST(EL),check_index)(list, index) < 0)
 		return NULL;
@@ -604,6 +604,14 @@ __isl_give LIST(EL) *FN(FN(LIST(EL),from),EL_BASE)(__isl_take EL *el)
 error:
 	FN(EL,free)(el);
 	return NULL;
+}
+
+/* This function performs the same operation as isl_*_list_from_*,
+ * but is considered as a function on the element when exported.
+ */
+__isl_give LIST(EL) *FN(EL,to_list)(__isl_take EL *el)
+{
+	return FN(FN(LIST(EL),from),EL_BASE)(el);
 }
 
 /* Append the elements of "list2" to "list1", where "list1" is known

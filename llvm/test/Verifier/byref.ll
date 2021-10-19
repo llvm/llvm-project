@@ -14,7 +14,7 @@ define void @byref_mismatched_pointee_type1(i8* byref(i32)) {
 
 %opaque.ty = type opaque
 
-; CHECK: Attributes 'byval', 'byref', 'inalloca', and 'preallocated' do not support unsized types!
+; CHECK: Attribute 'byref' does not support unsized types!
 ; CHECK-NEXT: void (%opaque.ty*)* @byref_unsized
 define void @byref_unsized(%opaque.ty* byref(%opaque.ty)) {
   ret void
@@ -28,7 +28,7 @@ define void @byref_byval(i32* byref(i32) byval(i32)) {
 
 ; CHECK: Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', 'byref', and 'sret' are incompatible!
 ; CHECK-NEXT: void (i32*)* @byref_inalloca
-define void @byref_inalloca(i32* byref(i32) inalloca) {
+define void @byref_inalloca(i32* byref(i32) inalloca(i32)) {
   ret void
 }
 
@@ -40,7 +40,7 @@ define void @byref_preallocated(i32* byref(i32) preallocated(i32)) {
 
 ; CHECK: Attributes 'byval', 'inalloca', 'preallocated', 'inreg', 'nest', 'byref', and 'sret' are incompatible!
 ; CHECK-NEXT: void (i32*)* @byref_sret
-define void @byref_sret(i32* byref(i32) sret) {
+define void @byref_sret(i32* byref(i32) sret(i32)) {
   ret void
 }
 
@@ -56,7 +56,7 @@ define void @byref_nest(i32* byref(i32) nest) {
   ret void
 }
 
-; CHECK: Wrong types for attribute: inalloca nest noalias nocapture nonnull readnone readonly sret byref(i32) byval(i32) preallocated(i32) dereferenceable(1) dereferenceable_or_null(1)
+; CHECK: Attribute 'byref(i32)' applied to incompatible type!
 ; CHECK-NEXT: void (i32)* @byref_non_pointer
 define void @byref_non_pointer(i32 byref(i32)) {
   ret void

@@ -110,7 +110,7 @@ class Run(object):
     # threads counts toward the current process limit. Try to raise the (soft)
     # process limit so that tests don't fail due to resource exhaustion.
     def _increase_process_limit(self):
-        ncpus = lit.util.detectCPUs()
+        ncpus = lit.util.usable_core_count()
         desired_limit = self.workers * ncpus * 2 # the 2 is a safety factor
 
         # Importing the resource module will likely fail on Windows.

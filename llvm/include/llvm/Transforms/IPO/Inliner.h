@@ -14,8 +14,9 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
+#include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 #include <utility>
 
 namespace llvm {
@@ -96,19 +97,20 @@ protected:
 /// passes be composed to achieve the same end result.
 class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
-  InlinerPass() = default;
-  ~InlinerPass();
-  InlinerPass(InlinerPass &&Arg)
-      : ImportedFunctionsStats(std::move(Arg.ImportedFunctionsStats)) {}
+  InlinerPass(bool OnlyMandatory = false) : OnlyMandatory(OnlyMandatory) {}
+  InlinerPass(InlinerPass &&Arg) = default;
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
 private:
   InlineAdvisor &getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
                             FunctionAnalysisManager &FAM, Module &M);
-  std::unique_ptr<ImportedFunctionsInliningStatistics> ImportedFunctionsStats;
-  Optional<DefaultInlineAdvisor> OwnedDefaultAdvisor;
+  std::unique_ptr<InlineAdvisor> OwnedAdvisor;
+  const bool OnlyMandatory;
 };
 
 /// Module pass, wrapping the inliner pass. This works in conjunction with the
@@ -120,7 +122,7 @@ class ModuleInlinerWrapperPass
     : public PassInfoMixin<ModuleInlinerWrapperPass> {
 public:
   ModuleInlinerWrapperPass(
-      InlineParams Params = getInlineParams(), bool Debugging = false,
+      InlineParams Params = getInlineParams(), bool MandatoryFirst = true,
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;
@@ -131,10 +133,13 @@ public:
   /// before run is called, as part of pass pipeline building.
   CGSCCPassManager &getPM() { return PM; }
 
-  /// Allow adding module-level analyses benefiting the contained CGSCC passes.
-  template <class T> void addRequiredModuleAnalysis() {
-    MPM.addPass(RequireAnalysisPass<T, Module>());
+  /// Allow adding module-level passes benefiting the contained CGSCC passes.
+  template <class T> void addModulePass(T Pass) {
+    MPM.addPass(std::move(Pass));
   }
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   const InlineParams Params;

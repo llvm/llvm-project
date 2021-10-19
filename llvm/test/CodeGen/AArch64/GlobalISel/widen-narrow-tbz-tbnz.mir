@@ -4,7 +4,7 @@
 # Test widening and narrowing on test bit operations using subregister copies
 # or SUBREG_TO_REG.
 --- |
- @glob = external unnamed_addr global i1, align 4
+ @glob = external dso_local unnamed_addr global i1, align 4
  define void @s1_no_copy() { ret void }
  define void @s16_no_copy() { ret void }
  define void @p0_no_copy() { ret void }
@@ -76,7 +76,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %glob:gpr64common = MOVaddr target-flags(aarch64-page) @glob, target-flags(aarch64-pageoff, aarch64-nc) @glob
-  ; CHECK:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load 1 from @glob, align 4)
+  ; CHECK:   %load:gpr32 = LDRBBui %glob, 0 :: (dereferenceable load (s8) from @glob, align 4)
   ; CHECK:   TBNZW %load, 0, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
@@ -84,7 +84,7 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     %glob:gpr(p0) = G_GLOBAL_VALUE @glob
-    %load:gpr(s8) = G_LOAD %glob(p0) :: (dereferenceable load 1 from @glob, align 4)
+    %load:gpr(s8) = G_LOAD %glob(p0) :: (dereferenceable load (s8) from @glob, align 4)
     %trunc:gpr(s1) = G_TRUNC %load(s8)
 
     ; Look through G_TRUNC to get the load. The load is into a s8, which will
@@ -106,8 +106,9 @@ body:             |
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $w0
   ; CHECK:   %reg:gpr32all = COPY $w0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK:   TBZX [[SUBREG_TO_REG]], 33, %bb.1
+  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
+  ; CHECK:   TBZX [[COPY]], 33, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -140,8 +141,9 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %reg:gpr32 = IMPLICIT_DEF
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK:   TBZX [[SUBREG_TO_REG]], 33, %bb.1
+  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
+  ; CHECK:   TBZX [[COPY]], 33, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -174,9 +176,10 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $x0
-  ; CHECK:   %wide:gpr64 = COPY $x0
-  ; CHECK:   %trunc:gpr32 = COPY %wide.sub_32
-  ; CHECK:   TBNZW %trunc, 0, %bb.1
+  ; CHECK:   %wide:gpr64all = COPY $x0
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr32all = COPY %wide.sub_32
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+  ; CHECK:   TBNZW [[COPY1]], 0, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR

@@ -6,7 +6,7 @@ set(CRT_TEST_DEPS)
 if(NOT COMPILER_RT_STANDALONE_BUILD)
   list(APPEND CRT_TEST_DEPS crt)
 endif()
-if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
+if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT LLVM_RUNTIMES_BUILD)
   # Use LLVM utils and Clang from the same build tree.
   list(APPEND CRT_TEST_DEPS
     clang clang-resource-headers FileCheck not llvm-config)

@@ -14,3 +14,9 @@
 	.machine "any"
 	.machine "pop"
 
+	.machine ppc64
+
+# Used in glibc.
+	.machine altivec
+	.machine power4
+	.machine power8

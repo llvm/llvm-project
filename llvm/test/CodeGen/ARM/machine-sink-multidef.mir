@@ -48,7 +48,7 @@ body:             |
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $r1
   ; CHECK:   [[COPY1:%[0-9]+]]:gprnopc = COPY $r0
-  ; CHECK:   [[LDR_PRE_REG:%[0-9]+]]:gpr, [[LDR_PRE_REG1:%[0-9]+]]:gpr = LDR_PRE_REG [[COPY]], killed [[COPY1]], 16387, 14 /* CC::al */, $noreg :: (load 4 from %ir.c)
+  ; CHECK:   [[LDR_PRE_REG:%[0-9]+]]:gpr, [[LDR_PRE_REG1:%[0-9]+]]:gpr = LDR_PRE_REG [[COPY]], killed [[COPY1]], 16387, 14 /* CC::al */, $noreg :: (load (s32) from %ir.c)
   ; CHECK:   [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   Bcc %bb.1, 0 /* CC::eq */, $cpsr
@@ -60,7 +60,7 @@ body:             |
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr = PHI [[LDR_PRE_REG]], %bb.3, [[MOVi]], %bb.1
   ; CHECK:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   [[LDRi12_:%[0-9]+]]:gpr = LDRi12 killed [[LDR_PRE_REG1]], 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.d)
+  ; CHECK:   [[LDRi12_:%[0-9]+]]:gpr = LDRi12 killed [[LDR_PRE_REG1]], 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.d)
   ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
   bb.0:
     liveins: $r0, $r1
@@ -68,7 +68,7 @@ body:             |
 
     %8:gpr = COPY $r1
     %9:gprnopc = COPY $r0
-    %0:gpr, %6:gpr = LDR_PRE_REG %8, killed %9, 16387, 14, $noreg :: (load 4 from %ir.c)
+    %0:gpr, %6:gpr = LDR_PRE_REG %8, killed %9, 16387, 14, $noreg :: (load (s32) from %ir.c)
     %7:gpr = MOVi 0, 14, $noreg, $noreg
     CMPri %7, 0, 14, $noreg, implicit-def $cpsr
     Bcc %bb.2, 1, $cpsr
@@ -81,7 +81,7 @@ body:             |
 
     %2:gpr = PHI %0, %bb.0, %7, %bb.1
     CMPri %7, 0, 14, $noreg, implicit-def $cpsr
-    %1:gpr = LDRi12 killed %6, 4, 14, $noreg :: (load 4 from %ir.d)
+    %1:gpr = LDRi12 killed %6, 4, 14, $noreg :: (load (s32) from %ir.d)
     MOVPCLR 14, $noreg
 
 ...

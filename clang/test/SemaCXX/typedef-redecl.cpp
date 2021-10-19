@@ -86,7 +86,7 @@ namespace PR11630 {
 
   void f() {
     S<int> a;
-    a.f(); // expected-note{{in instantiation of member function 'PR11630::S<int>::f' requested here}}
+    a.f();
     S2<1> b;
     b.f();
     S2<2> b2;

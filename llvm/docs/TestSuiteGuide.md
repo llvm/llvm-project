@@ -42,6 +42,10 @@ Quickstart
            ../test-suite
    ```
 
+**NOTE!** if you are using your built clang, and you want to build and run the
+MicroBenchmarks/XRay microbenchmarks, you need to add `compiler-rt` to your
+`LLVM_ENABLE_RUNTIMES` cmake flag.
+
 4. Build the benchmarks:
 
    ```text
@@ -158,12 +162,22 @@ benchmarks. CMake can print a list of them:
   automatically use `path/to/clang++` as the C++ compiler.  See
   [https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html)
 
+- `CMAKE_Fortran_COMPILER`
+
+  Select the Fortran compiler executable to be used. Not set by default and not
+  required unless running the Fortran Test Suite.
+
 - `CMAKE_BUILD_TYPE`
 
   Select a build type like `OPTIMIZE` or `DEBUG` selecting a set of predefined
   compiler flags. These flags are applied regardless of the `CMAKE_C_FLAGS`
   option and may be changed by modifying `CMAKE_C_FLAGS_OPTIMIZE` etc.  See
   [https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html)
+
+- `TEST_SUITE_FORTRAN`
+
+  Activate that Fortran tests. This is a work in progress. More information can be
+  found in the [Flang documentation](https://flang.llvm.org/docs/html/FortranLLVMTestSuite.html)
 
 - `TEST_SUITE_RUN_UNDER`
 

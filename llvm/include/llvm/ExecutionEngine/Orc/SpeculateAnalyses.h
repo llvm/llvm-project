@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// \file
+/// \file
 /// Contains the Analyses and Result Interpretation to select likely functions
 /// to Speculatively compile before they are called. [Purely Experimentation]
 //===----------------------------------------------------------------------===//

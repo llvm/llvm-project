@@ -3,7 +3,10 @@
 ; RUN: %llc_dwarf %s -o - -dwarf-version 4 -filetype=obj | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF4
 ; RUN: %llc_dwarf %s -o - -dwarf-version 5 -filetype=obj | llvm-dwarfdump -v - | FileCheck %s --check-prefix=DWARF4
 
-; .debug_frame is not emitted for targeting Windows x64.
+; PR46647
+; XFAIL: arm64-apple
+
+; .debug_frame is not emitted for targeting Windows x64 or arm64.
 ; REQUIRES: debug_frame
 ; REQUIRES: default_triple
 

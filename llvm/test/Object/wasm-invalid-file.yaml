@@ -13,10 +13,10 @@ FileHeader:
 # Append a section size that extends beyond the end of the file
 # RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s -check-prefix=CHECK-SECTION-SIZE
 
-# CHECK-SECTION-SIZE: '{{.*}}.wasm': Section too large
+# CHECK-SECTION-SIZE: '{{.*}}.wasm': section too large
 
 # RUN: yaml2obj %s -o %t.wasm
 # # Append an section with invalid type (type 0x20, size 0x1, content 0x0)
 # RUN: echo -e -n "\x20\x01\x00" >> %t.wasm
 # RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s -check-prefix=CHECK-SECTION-TYPE
-# CHECK-SECTION-TYPE: '{{.*}}.wasm': Invalid section type: 32
+# CHECK-SECTION-TYPE: '{{.*}}.wasm': invalid section type: 32

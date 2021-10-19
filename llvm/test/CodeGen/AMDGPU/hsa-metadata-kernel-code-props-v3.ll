@@ -1,7 +1,7 @@
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-misched=0 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX700 --check-prefix=WAVE64 --check-prefix=NOTES %s
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-misched=0 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX803 --check-prefix=WAVE64 --check-prefix=NOTES %s
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX900 --check-prefix=WAVE64 --check-prefix=NOTES %s
-; RUN: llc -mattr=+code-object-v3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-misched=0 -filetype=obj -o - < %s | llvm-readobj -elf-output-style=GNU -notes - | FileCheck --check-prefix=CHECK --check-prefix=GFX1010 --check-prefix=WAVE32 --check-prefix=NOTES %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=3 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx803 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx900 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1010 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
 
 @var = addrspace(1) global float 0.0
 
@@ -15,10 +15,9 @@
 ; CHECK:     .max_flat_workgroup_size: 1024
 ; CHECK:     .name:           test
 ; CHECK:     .private_segment_fixed_size: 0
-; WAVE64:    .sgpr_count:     8
-; WAVE32:    .sgpr_count:     10
+; CHECK:     .sgpr_count:     6
 ; CHECK:     .symbol:         test.kd
-; CHECK:     .vgpr_count:     6
+; CHECK:     .vgpr_count:     {{3|6}}
 ; WAVE64:    .wavefront_size: 64
 ; WAVE32:    .wavefront_size: 32
 define amdgpu_kernel void @test(
@@ -50,8 +49,8 @@ entry:
 ; CHECK:   .name:       num_spilled_sgprs
 ; GFX700:   .sgpr_spill_count: 38
 ; GFX803:   .sgpr_spill_count: 22
-; GFX900:   .sgpr_spill_count: 22
-; GFX1010:  .sgpr_spill_count: 22
+; GFX900:   .sgpr_spill_count: 48
+; GFX1010:  .sgpr_spill_count: 48
 ; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, [8 x i32],
@@ -88,7 +87,7 @@ entry:
 
 ; CHECK:   .name:       num_spilled_vgprs
 ; CHECK:   .symbol:     num_spilled_vgprs.kd
-; CHECK:   .vgpr_spill_count: 14
+; CHECK:   .vgpr_spill_count: {{13|14}}
 define amdgpu_kernel void @num_spilled_vgprs() #1 {
   %val0 = load volatile float, float addrspace(1)* @var
   %val1 = load volatile float, float addrspace(1)* @var

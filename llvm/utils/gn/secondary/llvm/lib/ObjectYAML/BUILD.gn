@@ -7,6 +7,8 @@ static_library("ObjectYAML") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "ArchiveEmitter.cpp",
+    "ArchiveYAML.cpp",
     "COFFEmitter.cpp",
     "COFFYAML.cpp",
     "CodeViewYAMLDebugSections.cpp",
@@ -24,6 +26,7 @@ static_library("ObjectYAML") {
     "ObjectYAML.cpp",
     "WasmEmitter.cpp",
     "WasmYAML.cpp",
+    "XCOFFEmitter.cpp",
     "XCOFFYAML.cpp",
     "YAML.cpp",
     "yaml2obj.cpp",

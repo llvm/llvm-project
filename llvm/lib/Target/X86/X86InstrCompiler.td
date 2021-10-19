@@ -69,29 +69,38 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
-let usesCustomInserter = 1, Defs = [EFLAGS] in {
+let hasSideEffects = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al,
-                                   i64imm:$regsavefi, i64imm:$offset,
+                                   i32imm:$regsavefi, i32imm:$offset,
                                    variable_ops),
                               "#VASTART_SAVE_XMM_REGS $al, $regsavefi, $offset",
                               [(X86vastart_save_xmm_regs GR8:$al,
-                                                         imm:$regsavefi,
-                                                         imm:$offset),
+                                                         timm:$regsavefi,
+                                                         timm:$offset),
                                (implicit EFLAGS)]>;
+}
 
-// The VAARG_64 pseudo-instruction takes the address of the va_list,
-// and places the address of the next argument into a register.
-let Defs = [EFLAGS] in
+let usesCustomInserter = 1, Defs = [EFLAGS] in {
+// The VAARG_64 and VAARG_X32 pseudo-instructions take the address of the
+// va_list, and place the address of the next argument into a register.
+let Defs = [EFLAGS] in {
 def VAARG_64 : I<0, Pseudo,
                  (outs GR64:$dst),
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_64 $dst, $ap, $size, $mode, $align",
                  [(set GR64:$dst,
-                    (X86vaarg64 addr:$ap, imm:$size, imm:$mode, imm:$align)),
-                  (implicit EFLAGS)]>;
-
+                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align)),
+                  (implicit EFLAGS)]>, Requires<[In64BitMode, IsLP64]>;
+def VAARG_X32 : I<0, Pseudo,
+                 (outs GR32:$dst),
+                 (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
+                 "#VAARG_X32 $dst, $ap, $size, $mode, $align",
+                 [(set GR32:$dst,
+                    (X86vaargx32 addr:$ap, timm:$size, timm:$mode, timm:$align)),
+                  (implicit EFLAGS)]>, Requires<[In64BitMode, NotLP64]>;
+}
 
 // When using segmented stacks these are lowered into instructions which first
 // check if the current stacklet has enough free memory. If it does, memory is
@@ -144,15 +153,15 @@ def STACKALLOC_W_PROBING : I<0, Pseudo, (outs), (ins i64imm:$stacksize),
 // (compared to ordinary calls) like stack pointer change.
 
 let Defs = [EAX, ESP, EFLAGS], Uses = [ESP] in
-def WIN_ALLOCA_32 : I<0, Pseudo, (outs), (ins GR32:$size),
+def DYN_ALLOCA_32 : I<0, Pseudo, (outs), (ins GR32:$size),
                      "# dynamic stack allocation",
-                     [(X86WinAlloca GR32:$size)]>,
+                     [(X86DynAlloca GR32:$size)]>,
                      Requires<[NotLP64]>;
 
 let Defs = [RAX, RSP, EFLAGS], Uses = [RSP] in
-def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
+def DYN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
                      "# dynamic stack allocation",
-                     [(X86WinAlloca GR64:$size)]>,
+                     [(X86DynAlloca GR64:$size)]>,
                      Requires<[In64BitMode]>;
 } // SchedRW
 
@@ -249,6 +258,17 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
                             "#SEH_EndPrologue", []>;
   def SEH_Epilogue : I<0, Pseudo, (outs), (ins),
                             "#SEH_Epilogue", []>;
+}
+
+//===----------------------------------------------------------------------===//
+// Pseudo instructions used by address sanitizer.
+//===----------------------------------------------------------------------===//
+let
+  Defs = [R8, EFLAGS] in {
+def ASAN_CHECK_MEMACCESS : PseudoI<
+  (outs), (ins GR64NoR8:$addr, i32imm:$accessinfo),
+  [(int_asan_check_memaccess GR64NoR8:$addr, (i32 timm:$accessinfo))]>,
+  Sched<[]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -467,11 +487,19 @@ let Defs = [RAX, RCX, RDX, RSI, RDI, R8, R9, R10, R11,
 def TLS_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_addr64",
                   [(X86tlsaddr tls64addr:$sym)]>,
-                  Requires<[In64BitMode]>;
+                  Requires<[In64BitMode, IsLP64]>;
 def TLS_base_addr64 : I<0, Pseudo, (outs), (ins i64mem:$sym),
                    "# TLS_base_addr64",
                   [(X86tlsbaseaddr tls64baseaddr:$sym)]>,
-                  Requires<[In64BitMode]>;
+                  Requires<[In64BitMode, IsLP64]>;
+def TLS_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_addrX32",
+                  [(X86tlsaddr tls32addr:$sym)]>,
+                  Requires<[In64BitMode, NotLP64]>;
+def TLS_base_addrX32 : I<0, Pseudo, (outs), (ins i32mem:$sym),
+                   "# TLS_base_addrX32",
+                  [(X86tlsbaseaddr tls32baseaddr:$sym)]>,
+                  Requires<[In64BitMode, NotLP64]>;
 }
 
 // Darwin TLS Support
@@ -538,6 +566,7 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
   let Predicates = [HasMMX] in
     defm _VR64   : CMOVrr_PSEUDO<VR64, x86mmx>;
 
+  defm _FR16X    : CMOVrr_PSEUDO<FR16X, f16>;
   let Predicates = [HasSSE1,NoAVX512] in
     defm _FR32   : CMOVrr_PSEUDO<FR32, f32>;
   let Predicates = [HasSSE2,NoAVX512] in
@@ -595,6 +624,8 @@ let Predicates = [HasVLX] in {
             (CMOV_VR128X VR128X:$t, VR128X:$f, timm:$cond)>;
   def : Pat<(v8i16 (X86cmov VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)),
             (CMOV_VR128X VR128X:$t, VR128X:$f, timm:$cond)>;
+  def : Pat<(v8f16 (X86cmov VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)),
+            (CMOV_VR128X VR128X:$t, VR128X:$f, timm:$cond)>;
   def : Pat<(v4i32 (X86cmov VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)),
             (CMOV_VR128X VR128X:$t, VR128X:$f, timm:$cond)>;
   def : Pat<(v4f32 (X86cmov VR128X:$t, VR128X:$f, timm:$cond, EFLAGS)),
@@ -605,6 +636,8 @@ let Predicates = [HasVLX] in {
   def : Pat<(v32i8 (X86cmov VR256X:$t, VR256X:$f, timm:$cond, EFLAGS)),
             (CMOV_VR256X VR256X:$t, VR256X:$f, timm:$cond)>;
   def : Pat<(v16i16 (X86cmov VR256X:$t, VR256X:$f, timm:$cond, EFLAGS)),
+            (CMOV_VR256X VR256X:$t, VR256X:$f, timm:$cond)>;
+  def : Pat<(v16f16 (X86cmov VR256X:$t, VR256X:$f, timm:$cond, EFLAGS)),
             (CMOV_VR256X VR256X:$t, VR256X:$f, timm:$cond)>;
   def : Pat<(v8i32 (X86cmov VR256X:$t, VR256X:$f, timm:$cond, EFLAGS)),
             (CMOV_VR256X VR256X:$t, VR256X:$f, timm:$cond)>;
@@ -617,6 +650,8 @@ let Predicates = [HasVLX] in {
 def : Pat<(v64i8 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
           (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
 def : Pat<(v32i16 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
+          (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
+def : Pat<(v32f16 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
           (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
 def : Pat<(v16i32 (X86cmov VR512:$t, VR512:$f, timm:$cond, EFLAGS)),
           (CMOV_VR512 VR512:$t, VR512:$f, timm:$cond)>;
@@ -809,15 +844,6 @@ let Predicates = [UseIncDec] in {
 }
 
 // Atomic compare and swap.
-multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
-                         SDPatternOperator frag, X86MemOperand x86memop> {
-let isCodeGenOnly = 1, usesCustomInserter = 1 in {
-  def NAME : I<Opc, Form, (outs), (ins x86memop:$ptr),
-               !strconcat(mnemonic, "\t$ptr"),
-               [(frag addr:$ptr)]>, TB, LOCK;
-}
-}
-
 multiclass LCMPXCHG_BinOp<bits<8> Opc8, bits<8> Opc, Format Form,
                           string mnemonic, SDPatternOperator frag> {
 let isCodeGenOnly = 1, SchedRW = [WriteCMPXCHGRMW] in {
@@ -841,8 +867,19 @@ let isCodeGenOnly = 1, SchedRW = [WriteCMPXCHGRMW] in {
 }
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX],
-    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW] in {
-defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
+    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, usesCustomInserter = 1 in {
+def LCMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$ptr),
+                   "cmpxchg8b\t$ptr",
+                   [(X86cas8 addr:$ptr)]>, TB, LOCK;
+}
+
+let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
+def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
+                     "cmpxchg16b\t$ptr",
+                     []>, TB, LOCK;
 }
 
 // This pseudo must be used when the frame uses RBX as
@@ -852,68 +889,46 @@ defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
 // RBX that will happen when setting the arguments for the instrucion.
 //
 // Unlike the actual related instruction, we mark that this one
-// defines EBX (instead of using EBX).
+// defines RBX (instead of using RBX).
 // The rationale is that we will define RBX during the expansion of
-// the pseudo. The argument feeding EBX is ebx_input.
+// the pseudo. The argument feeding RBX is rbx_input.
 //
-// The additional argument, $ebx_save, is a temporary register used to
+// The additional argument, $rbx_save, is a temporary register used to
 // save the value of RBX across the actual instruction.
 //
-// To make sure the register assigned to $ebx_save does not interfere with
+// To make sure the register assigned to $rbx_save does not interfere with
 // the definition of the actual instruction, we use a definition $dst which
 // is tied to $rbx_save. That way, the live-range of $rbx_save spans across
 // the instruction and we are sure we will have a valid register to restore
 // the value of RBX.
-let Defs = [EAX, EDX, EBX, EFLAGS], Uses = [EAX, ECX, EDX],
-    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$ebx_save = $dst",
-    usesCustomInserter = 1 in {
-def LCMPXCHG8B_SAVE_EBX :
-    I<0, Pseudo, (outs GR32:$dst),
-      (ins i64mem:$ptr, GR32:$ebx_input, GR32:$ebx_save),
-      !strconcat("cmpxchg8b", "\t$ptr"),
-      [(set GR32:$dst, (X86cas8save_ebx addr:$ptr, GR32:$ebx_input,
-                                        GR32:$ebx_save))]>;
-}
-
-
-let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW] in {
-defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
-                                 X86cas16, i128mem>, REX_W;
-}
-
-// Same as LCMPXCHG8B_SAVE_RBX but for the 16 Bytes variant.
 let Defs = [RAX, RDX, RBX, EFLAGS], Uses = [RAX, RCX, RDX],
     Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
-    usesCustomInserter = 1 in {
+    isCodeGenOnly = 1, isPseudo = 1,
+    mayLoad = 1, mayStore = 1, hasSideEffects = 0,
+    Constraints = "$rbx_save = $dst" in {
 def LCMPXCHG16B_SAVE_RBX :
     I<0, Pseudo, (outs GR64:$dst),
-      (ins i128mem:$ptr, GR64:$rbx_input, GR64:$rbx_save),
-      !strconcat("cmpxchg16b", "\t$ptr"),
-      [(set GR64:$dst, (X86cas16save_rbx addr:$ptr, GR64:$rbx_input,
-                                                    GR64:$rbx_save))]>;
+      (ins i128mem:$ptr, GR64:$rbx_input, GR64:$rbx_save), "", []>;
 }
 
-// This pseudo must be used when the frame uses RBX as
-// the base pointer.
-// cf comment for LCMPXCHG8B_SAVE_EBX.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
-    Predicates = [HasMWAITX], SchedRW = [WriteSystem],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$ebx_save = $dst",
+// Pseudo instruction that doesn't read/write RBX. Will be turned into either
+// LCMPXCHG16B_SAVE_RBX or LCMPXCHG16B via a custom inserter.
+let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RCX, RDX],
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, isPseudo = 1,
+    mayLoad = 1, mayStore = 1, hasSideEffects = 0,
     usesCustomInserter = 1 in {
-def MWAITX_SAVE_EBX :
-    I<0, Pseudo, (outs GR32:$dst),
-      (ins GR32:$ebx_input, GR32:$ebx_save),
-      "mwaitx",
-      []>;
+def LCMPXCHG16B_NO_RBX :
+    I<0, Pseudo, (outs), (ins i128mem:$ptr, GR64:$rbx_input), "",
+      [(X86cas16 addr:$ptr, GR64:$rbx_input)]>;
 }
-// Same as MWAITX_SAVE_EBX but for the case where RBX is the base pointer.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
+
+// This pseudo must be used when the frame uses RBX/EBX as
+// the base pointer.
+// cf comment for LCMPXCHG16B_SAVE_RBX.
+let Defs = [EBX], Uses = [ECX, EAX],
     Predicates = [HasMWAITX], SchedRW = [WriteSystem],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
-    usesCustomInserter = 1 in {
+    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst" in {
 def MWAITX_SAVE_RBX :
     I<0, Pseudo, (outs GR64:$dst),
       (ins GR32:$ebx_input, GR64:$rbx_save),
@@ -922,25 +937,23 @@ def MWAITX_SAVE_RBX :
 }
 
 // Pseudo mwaitx instruction to use for custom insertion.
-let Defs = [ECX, EAX, EBX, EFLAGS], Uses = [ECX, EAX, EBX],
-    Predicates = [HasMWAITX], SchedRW = [WriteSystem],
+let Predicates = [HasMWAITX], SchedRW = [WriteSystem],
     isCodeGenOnly = 1, isPseudo = 1,
     usesCustomInserter = 1 in {
 def MWAITX :
-    I<0, Pseudo, (outs),
-      (ins GR32:$ecx, GR32:$eax, GR32:$ebx),
+    I<0, Pseudo, (outs), (ins GR32:$ecx, GR32:$eax, GR32:$ebx),
       "mwaitx",
-      [(X86mwaitx GR32:$ecx, GR32:$eax, GR32:$ebx)]>;
+      [(int_x86_mwaitx GR32:$ecx, GR32:$eax, GR32:$ebx)]>;
 }
 
 
 defm LCMPXCHG : LCMPXCHG_BinOp<0xB0, 0xB1, MRMDestMem, "cmpxchg", X86cas>;
 
 // Atomic exchange and add
-multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
-                             string frag> {
-  let Constraints = "$val = $dst", Defs = [EFLAGS], isCodeGenOnly = 1,
-      SchedRW = [WriteALURMW] in {
+multiclass ATOMIC_RMW_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
+                            string frag> {
+  let Constraints = "$val = $dst", Defs = [EFLAGS], mayLoad = 1, mayStore = 1,
+      isCodeGenOnly = 1, SchedRW = [WriteALURMW] in {
     def NAME#8  : I<opc8, MRMSrcMem, (outs GR8:$dst),
                     (ins GR8:$val, i8mem:$ptr),
                     !strconcat(mnemonic, "{b}\t{$val, $ptr|$ptr, $val}"),
@@ -958,7 +971,7 @@ multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
                     !strconcat(mnemonic, "{l}\t{$val, $ptr|$ptr, $val}"),
                     [(set
                        GR32:$dst,
-                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>, 
+                       (!cast<PatFrag>(frag # "_32") addr:$ptr, GR32:$val))]>,
                     OpSize32;
     def NAME#64 : RI<opc, MRMSrcMem, (outs GR64:$dst),
                      (ins GR64:$val, i64mem:$ptr),
@@ -969,7 +982,7 @@ multiclass ATOMIC_LOAD_BINOP<bits<8> opc8, bits<8> opc, string mnemonic,
   }
 }
 
-defm LXADD : ATOMIC_LOAD_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
+defm LXADD : ATOMIC_RMW_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
 
 /* The following multiclass tries to make sure that in code like
  *    x.store (immediate op x.load(acquire), release)
@@ -1202,6 +1215,12 @@ def : Pat<(X86call (i64 tglobaladdr:$dst)),
 def : Pat<(X86call (i64 texternalsym:$dst)),
           (CALL64pcrel32 texternalsym:$dst)>;
 
+def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 texternalsym:$dst)),
+          (CALL64pcrel32_RVMARKER tglobaladdr:$rvfunc, texternalsym:$dst)>;
+def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 tglobaladdr:$dst)),
+          (CALL64pcrel32_RVMARKER tglobaladdr:$rvfunc, tglobaladdr:$dst)>;
+
+
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
 // register classes.
@@ -1220,49 +1239,49 @@ def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
   return true;
 }]>;
 
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
-          (TCRETURNri ptr_rc_tailcall:$dst, imm:$off)>,
+def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
+          (TCRETURNri ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[Not64BitMode, NotUseIndirectThunkCalls]>;
 
 // FIXME: This is disabled for 32-bit PIC mode because the global base
 // register which is part of the address mode may be assigned a
 // callee-saved register.
-def : Pat<(X86tcret (load addr:$dst), imm:$off),
-          (TCRETURNmi addr:$dst, imm:$off)>,
+def : Pat<(X86tcret (load addr:$dst), timm:$off),
+          (TCRETURNmi addr:$dst, timm:$off)>,
           Requires<[Not64BitMode, IsNotPIC, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret (i32 tglobaladdr:$dst), imm:$off),
-          (TCRETURNdi tglobaladdr:$dst, imm:$off)>,
+def : Pat<(X86tcret (i32 tglobaladdr:$dst), timm:$off),
+          (TCRETURNdi tglobaladdr:$dst, timm:$off)>,
           Requires<[NotLP64]>;
 
-def : Pat<(X86tcret (i32 texternalsym:$dst), imm:$off),
-          (TCRETURNdi texternalsym:$dst, imm:$off)>,
+def : Pat<(X86tcret (i32 texternalsym:$dst), timm:$off),
+          (TCRETURNdi texternalsym:$dst, timm:$off)>,
           Requires<[NotLP64]>;
 
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
-          (TCRETURNri64 ptr_rc_tailcall:$dst, imm:$off)>,
+def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
+          (TCRETURNri64 ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[In64BitMode, NotUseIndirectThunkCalls]>;
 
 // Don't fold loads into X86tcret requiring more than 6 regs.
 // There wouldn't be enough scratch registers for base+index.
-def : Pat<(X86tcret_6regs (load addr:$dst), imm:$off),
-          (TCRETURNmi64 addr:$dst, imm:$off)>,
+def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
+          (TCRETURNmi64 addr:$dst, timm:$off)>,
           Requires<[In64BitMode, NotUseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
-          (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, imm:$off)>,
+def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
+          (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[In64BitMode, UseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret ptr_rc_tailcall:$dst, imm:$off),
-          (INDIRECT_THUNK_TCRETURN32 ptr_rc_tailcall:$dst, imm:$off)>,
+def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
+          (INDIRECT_THUNK_TCRETURN32 ptr_rc_tailcall:$dst, timm:$off)>,
           Requires<[Not64BitMode, UseIndirectThunkCalls]>;
 
-def : Pat<(X86tcret (i64 tglobaladdr:$dst), imm:$off),
-          (TCRETURNdi64 tglobaladdr:$dst, imm:$off)>,
+def : Pat<(X86tcret (i64 tglobaladdr:$dst), timm:$off),
+          (TCRETURNdi64 tglobaladdr:$dst, timm:$off)>,
           Requires<[IsLP64]>;
 
-def : Pat<(X86tcret (i64 texternalsym:$dst), imm:$off),
-          (TCRETURNdi64 texternalsym:$dst, imm:$off)>,
+def : Pat<(X86tcret (i64 texternalsym:$dst), timm:$off),
+          (TCRETURNdi64 texternalsym:$dst, timm:$off)>,
           Requires<[IsLP64]>;
 
 // Normal calls, with various flavors of addresses.
@@ -1351,15 +1370,18 @@ def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
-// be copying from a truncate. Any other 32-bit operation will zero-extend
-// up to 64 bits. AssertSext/AssertZext aren't saying anything about the upper
-// 32 bits, they're probably just qualifying a CopyFromReg.
+// be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
+// anything about the upper 32 bits, they're probably just qualifying a
+// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
+// operation will zero-extend up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
          N->getOpcode() != ISD::CopyFromReg &&
          N->getOpcode() != ISD::AssertSext &&
-         N->getOpcode() != ISD::AssertZext;
+         N->getOpcode() != ISD::AssertZext &&
+         N->getOpcode() != ISD::AssertAlign &&
+         N->getOpcode() != ISD::FREEZE;
 }]>;
 
 // In the case of a 32-bit def that is known to implicitly zero-extend,

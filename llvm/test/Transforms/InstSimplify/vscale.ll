@@ -9,7 +9,7 @@
 
 define <vscale x 4 x i32> @insertelement_idx_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @insertelement_idx_undef(
-; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %r = insertelement <vscale x 4 x i32> %a, i32 5, i64 undef
   ret <vscale x 4 x i32> %r
@@ -72,7 +72,7 @@ define <vscale x 4 x i32> @insertelement_shufflevector_inline_to_ret() {
 
 define i32 @extractelement_idx_undef(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: @extractelement_idx_undef(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %r = extractelement <vscale x 4 x i32> %a, i64 undef
   ret i32 %r
@@ -128,13 +128,26 @@ define i32 @insert_extract_element_same_vec_idx_4() {
   ret i32 %r
 }
 
+; Known values of vscale intrinsic
+
+define i64 @vscale64_range4_4() vscale_range(4,4) {
+; CHECK-LABEL: @vscale64_range4_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %vscale = call i64 @llvm.vscale.i64()
+  ret i64 %vscale
+}
+
 ; more complicated expressions
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
 ; CHECK-LABEL: @cmp_le_smax_always_true(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer)
-   %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 9223372036854775807, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer)
-   ret <vscale x 2 x i1> %cmp
+; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+;
+  %cmp = icmp sle <vscale x 2 x i64> %x, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 9223372036854775807, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i1> %cmp
 }
 
 define <vscale x 4 x float> @bitcast() {
@@ -196,3 +209,26 @@ define i1 @getelementptr_check_non_null(<vscale x 16 x i8>* %ptr) {
   %cmp = icmp eq <vscale x 16 x i8>* %x, null
   ret i1 %cmp
 }
+
+define i32 @extractelement_splat_constant_index(i32 %v) {
+; CHECK-LABEL: @extractelement_splat_constant_index(
+; CHECK-NEXT:    ret i32 [[V:%.*]]
+;
+  %in = insertelement <vscale x 4 x i32> undef, i32 %v, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %r = extractelement <vscale x 4 x i32> %splat, i32 1
+  ret i32 %r
+}
+
+define i32 @extractelement_splat_variable_index(i32 %v, i32 %idx) {
+; CHECK-LABEL: @extractelement_splat_variable_index(
+; CHECK-NEXT:    ret i32 [[V:%.*]]
+;
+  %in = insertelement <vscale x 4 x i32> undef, i32 %v, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %r = extractelement <vscale x 4 x i32> %splat, i32 %idx
+  ret i32 %r
+}
+
+
+declare i64 @llvm.vscale.i64()

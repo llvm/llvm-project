@@ -1,22 +1,12 @@
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=inline -print-before-all -print-after-all | FileCheck %s -check-prefix=INL
+; RUN: 	   -passes=inline -print-before-all -print-after-all | FileCheck %s
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=inline -print-before-all -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD
+; RUN: 	   -passes=inline -print-before-all -print-after-all -print-module-scope | FileCheck %s
 
-; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=inliner-wrapper -print-before-all -print-after-all | FileCheck %s -check-prefix=INL
-; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes=inliner-wrapper -print-before-all -print-after-all -print-module-scope | FileCheck %s -check-prefix=INL-MOD
-
-; INL: IR Dump Before {{InlinerPass .*scc: .tester, foo}}
-; INL-NOT: IR Dump After {{InlinerPass}}
-; INL: IR Dump Before {{InlinerPass .*scc: .tester}}
-; INL: IR Dump After {{InlinerPass .*scc: .tester}}
-
-; INL-MOD: IR Dump Before {{InlinerPass .*scc: .tester, foo}}
-; INL-MOD: IR Dump After {{InlinerPass .*invalidated: .*scc: .tester, foo}}
-; INL-MOD: IR Dump Before {{InlinerPass .*scc: .tester}}
-; INL-MOD: IR Dump After {{InlinerPass .*scc: .tester}}
+; CHECK: IR Dump Before InlinerPass on (tester, foo)
+; CHECK: IR Dump After InlinerPass on (tester, foo) (invalidated)
+; CHECK: IR Dump Before InlinerPass on (tester)
+; CHECK: IR Dump After InlinerPass on (tester)
 
 
 define void @tester() noinline {

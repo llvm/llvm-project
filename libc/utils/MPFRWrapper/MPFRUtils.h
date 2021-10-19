@@ -28,10 +28,15 @@ enum class Operation : int {
   Cos,
   Exp,
   Exp2,
+  Expm1,
   Floor,
+  Mod2PI,
+  ModPIOver2,
+  ModPIOver4,
   Round,
   Sin,
   Sqrt,
+  Tan,
   Trunc,
   EndUnaryOperationsSingleOutput,
 
@@ -47,7 +52,7 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
-  // TODO: Add operations like hypot.
+  Hypot,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -57,8 +62,11 @@ enum class Operation : int {
   RemQuo, // The first output, the floating point output, is the remainder.
   EndBinaryOperationsTwoOutputs,
 
+  // Operations which take three floating point nubmers of the same type as
+  // input and produce a single floating point number of the same type as
+  // output.
   BeginTernaryOperationsSingleOuput,
-  // TODO: Add operations like fma.
+  Fma,
   EndTernaryOperationsSingleOutput,
 };
 
@@ -110,6 +118,15 @@ bool compareBinaryOperationTwoOutputs(Operation op, const BinaryInput<T> &input,
                                       double t);
 
 template <typename T>
+bool compareBinaryOperationOneOutput(Operation op, const BinaryInput<T> &input,
+                                     T libcOutput, double t);
+
+template <typename T>
+bool compareTernaryOperationOneOutput(Operation op,
+                                      const TernaryInput<T> &input,
+                                      T libcOutput, double t);
+
+template <typename T>
 void explainUnaryOperationSingleOutputError(Operation op, T input, T matchValue,
                                             testutils::StreamWrapper &OS);
 template <typename T>
@@ -120,6 +137,18 @@ template <typename T>
 void explainBinaryOperationTwoOutputsError(Operation op,
                                            const BinaryInput<T> &input,
                                            const BinaryOutput<T> &matchValue,
+                                           testutils::StreamWrapper &OS);
+
+template <typename T>
+void explainBinaryOperationOneOutputError(Operation op,
+                                          const BinaryInput<T> &input,
+                                          T matchValue,
+                                          testutils::StreamWrapper &OS);
+
+template <typename T>
+void explainTernaryOperationOneOutputError(Operation op,
+                                           const TernaryInput<T> &input,
+                                           T matchValue,
                                            testutils::StreamWrapper &OS);
 
 template <Operation op, typename InputType, typename OutputType>
@@ -153,7 +182,7 @@ private:
 
   template <typename T>
   static bool match(const BinaryInput<T> &in, T out, double tolerance) {
-    // TODO: Implement the comparision function and error reporter.
+    return compareBinaryOperationOneOutput(op, in, out, tolerance);
   }
 
   template <typename T>
@@ -164,7 +193,7 @@ private:
 
   template <typename T>
   static bool match(const TernaryInput<T> &in, T out, double tolerance) {
-    // TODO: Implement the comparision function and error reporter.
+    return compareTernaryOperationOneOutput(op, in, out, tolerance);
   }
 
   template <typename T>
@@ -182,6 +211,18 @@ private:
   static void explainError(const BinaryInput<T> &in, const BinaryOutput<T> &out,
                            testutils::StreamWrapper &OS) {
     explainBinaryOperationTwoOutputsError(op, in, out, OS);
+  }
+
+  template <typename T>
+  static void explainError(const BinaryInput<T> &in, T out,
+                           testutils::StreamWrapper &OS) {
+    explainBinaryOperationOneOutputError(op, in, out, OS);
+  }
+
+  template <typename T>
+  static void explainError(const TernaryInput<T> &in, T out,
+                           testutils::StreamWrapper &OS) {
+    explainTernaryOperationOneOutputError(op, in, out, OS);
   }
 };
 
@@ -220,6 +261,13 @@ cpp::EnableIfType<isValidOperation<op, InputType, OutputType>(),
 getMPFRMatcher(InputType input, OutputType outputUnused, double t) {
   return internal::MPFRMatcher<op, InputType, OutputType>(input, t);
 }
+
+enum class RoundingMode : uint8_t { Upward, Downward, TowardZero, Nearest };
+
+template <typename T> T Round(T x, RoundingMode mode);
+
+template <typename T> bool RoundToLong(T x, long &result);
+template <typename T> bool RoundToLong(T x, RoundingMode mode, long &result);
 
 } // namespace mpfr
 } // namespace testing

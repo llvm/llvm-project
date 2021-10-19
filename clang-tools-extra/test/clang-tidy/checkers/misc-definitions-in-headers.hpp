@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-definitions-in-headers %t
+// RUN: %check_clang_tidy %s misc-definitions-in-headers %t -- --fix-notes
 
 int f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f' defined in a header file; function definitions in header files can lead to ODR violations [misc-definitions-in-headers]
@@ -192,3 +192,7 @@ template <>
 const int f12() { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: full function template specialization 'f12<int>' defined in a header file;
 // CHECK-FIXES: inline const int f12() { return 0; }
+
+int main() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' defined in a header file;
+// CHECK-FIXES: {{^}}int main() {

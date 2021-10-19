@@ -1,4 +1,8 @@
 ; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=asm %s -asm-verbose=false -o -  | FileCheck --check-prefix=ASM %s
+; RUN: llc -filetype=asm %s -o - | llvm-mc -triple=wasm32 -filetype=obj  -o - | obj2yaml | FileCheck %s
+; These RUN lines verify the ll direct-to-object path, the ll->asm path, and the
+; object output via asm.
 
 target triple = "wasm32-unknown-unknown"
 
@@ -37,14 +41,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000000
+; CHECK-NEXT:           Minimum:         0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           funcImport
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -57,7 +54,7 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:    Relocations:
 ; CHECK-NEXT:      - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:        Index:           1
-; CHECK-NEXT:        Offset:          0x00000004
+; CHECK-NEXT:        Offset:          0x4
 ; CHECK-NEXT:    Functions:
 ; CHECK-NEXT:      - Index:           1
 ; CHECK-NEXT:        Locals:
@@ -123,3 +120,19 @@ define linkonce_odr i32 @sharedFn() #1 comdat($sharedComdat) {
 ; CHECK-NEXT:          - Kind:            DATA
 ; CHECK-NEXT:            Index:           0
 ; CHECK-NEXT: ...
+
+
+; ASM:        .section        .text.basicInlineFn,"G",@,basicInlineFn,comdat
+; ASM-NEXT:        .weak   basicInlineFn
+; ASM-NEXT:        .type   basicInlineFn,@function
+; ASM-NEXT: basicInlineFn:
+
+; ASM:        .section        .text.sharedFn,"G",@,sharedComdat,comdat
+; ASM-NEXT:        .weak   sharedFn
+; ASM-NEXT:        .type   sharedFn,@function
+; ASM-NEXT: sharedFn:
+
+; ASM:        .type   constantData,@object
+; ASM-NEXT:        .section        .rodata.constantData,"G",@,sharedComdat,comdat
+; ASM-NEXT:        .weak   constantData
+; ASM-NEXT: constantData:

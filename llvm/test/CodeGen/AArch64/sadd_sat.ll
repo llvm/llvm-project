@@ -12,11 +12,9 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds w8, w0, w1
-; CHECK-NEXT:    mov w9, #2147483647
-; CHECK-NEXT:    cmp w8, #0 // =0
-; CHECK-NEXT:    cinv w8, w9, ge
-; CHECK-NEXT:    adds w9, w0, w1
-; CHECK-NEXT:    csel w0, w8, w9, vs
+; CHECK-NEXT:    asr w9, w8, #31
+; CHECK-NEXT:    eor w9, w9, #0x80000000
+; CHECK-NEXT:    csel w0, w9, w8, vs
 ; CHECK-NEXT:    ret
   %tmp = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y);
   ret i32 %tmp;
@@ -26,11 +24,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: func2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x8, x0, x1
-; CHECK-NEXT:    mov x9, #9223372036854775807
-; CHECK-NEXT:    cmp x8, #0 // =0
-; CHECK-NEXT:    cinv x8, x9, ge
-; CHECK-NEXT:    adds x9, x0, x1
-; CHECK-NEXT:    csel x0, x8, x9, vs
+; CHECK-NEXT:    asr x9, x8, #63
+; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
+; CHECK-NEXT:    csel x0, x9, x8, vs
 ; CHECK-NEXT:    ret
   %tmp = call i64 @llvm.sadd.sat.i64(i64 %x, i64 %y);
   ret i64 %tmp;
@@ -44,8 +40,8 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-NEXT:    add w8, w8, w1, sxth
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
 ; CHECK-NEXT:    mov w9, #-32768
+; CHECK-NEXT:    cmn w8, #8, lsl #12 // =32768
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i16 @llvm.sadd.sat.i16(i16 %x, i16 %y);
@@ -56,12 +52,12 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    add w8, w8, w1, sxtb
 ; CHECK-NEXT:    mov w9, #127
-; CHECK-NEXT:    cmp w8, #127 // =127
+; CHECK-NEXT:    add w8, w8, w1, sxtb
+; CHECK-NEXT:    cmp w8, #127
 ; CHECK-NEXT:    csel w8, w8, w9, lt
-; CHECK-NEXT:    cmn w8, #128 // =128
 ; CHECK-NEXT:    mov w9, #-128
+; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i8 @llvm.sadd.sat.i8(i8 %x, i8 %y);
@@ -74,11 +70,11 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-NEXT:    lsl w8, w1, #28
 ; CHECK-NEXT:    sbfx w9, w0, #0, #4
 ; CHECK-NEXT:    add w8, w9, w8, asr #28
-; CHECK-NEXT:    mov w10, #7
-; CHECK-NEXT:    cmp w8, #7 // =7
-; CHECK-NEXT:    csel w8, w8, w10, lt
-; CHECK-NEXT:    cmn w8, #8 // =8
+; CHECK-NEXT:    mov w9, #7
+; CHECK-NEXT:    cmp w8, #7
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-8
+; CHECK-NEXT:    cmn w8, #8
 ; CHECK-NEXT:    csel w0, w8, w9, gt
 ; CHECK-NEXT:    ret
   %tmp = call i4 @llvm.sadd.sat.i4(i4 %x, i4 %y);

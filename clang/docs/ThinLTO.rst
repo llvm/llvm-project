@@ -87,7 +87,7 @@ When using lld-link, the -flto option need only be added to the compile step:
 
 As mentioned earlier, by default the linkers will launch the ThinLTO backend
 threads in parallel, passing the resulting native object files back to the
-linker for the final native link.  As such, the usage model the same as
+linker for the final native link.  As such, the usage model is the same as
 non-LTO.
 
 With gold, if you see an error during the link of the form:
@@ -122,6 +122,15 @@ be reduced to ``N`` via:
   ``-Wl,--thinlto-jobs=N``
 - lld-link:
   ``/opt:lldltojobs=N``
+
+Other possible values for ``N`` are:
+
+- 0:
+  Use one thread per physical core (default)
+- 1:
+  Use a single thread only (disable multi-threading)
+- all:
+  Use one thread per logical core (uses all hyper-threads)
 
 Incremental
 -----------

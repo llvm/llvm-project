@@ -24,7 +24,7 @@
 
 int main(int, char**)
 {
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     const std::multiset<int, C> m(C(3));
     assert(m.empty());
     assert(m.begin() == m.end());

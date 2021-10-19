@@ -33,6 +33,7 @@ target_link_libraries(toyc-ch5
     ${dialect_libs}
     MLIRAnalysis
     MLIRCallInterfaces
+    MLIRCastInterfaces
     MLIRIR
     MLIRParser
     MLIRPass

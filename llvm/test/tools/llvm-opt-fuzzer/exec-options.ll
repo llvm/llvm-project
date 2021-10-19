@@ -15,6 +15,12 @@
 ; Temporary bitcode file
 ; RUN: opt -o %t.input %s
 
+; workaround for https://openradar.appspot.com/FB8914243
+; RUN: rm -f %t.bin--
+; RUN: rm -f %t.bin--x86_64
+; RUN: rm -f %t.bin--x86_64-unknown
+; RUN: rm -f %t.bin--x86_64-instcombine
+
 ; RUN: cp llvm-opt-fuzzer %t.bin--
 ; RUN: not %t.bin-- %t.input 2>&1 | FileCheck -check-prefix=EMPTY %s
 ; EMPTY: -mtriple must be specified

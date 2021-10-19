@@ -91,6 +91,8 @@ public:
   Binary(const Binary &other) = delete;
   virtual ~Binary();
 
+  virtual Error initContent() { return Error::success(); };
+
   StringRef getData() const;
   StringRef getFileName() const;
   MemoryBufferRef getMemoryBufferRef() const;
@@ -145,7 +147,8 @@ public:
 
   bool isLittleEndian() const {
     return !(TypeID == ID_ELF32B || TypeID == ID_ELF64B ||
-             TypeID == ID_MachO32B || TypeID == ID_MachO64B);
+             TypeID == ID_MachO32B || TypeID == ID_MachO64B ||
+             TypeID == ID_XCOFF32 || TypeID == ID_XCOFF64);
   }
 
   bool isWinRes() const { return TypeID == ID_WinRes; }
@@ -163,8 +166,8 @@ public:
   static Error checkOffset(MemoryBufferRef M, uintptr_t Addr,
                            const uint64_t Size) {
     if (Addr + Size < Addr || Addr + Size < Size ||
-        Addr + Size > uintptr_t(M.getBufferEnd()) ||
-        Addr < uintptr_t(M.getBufferStart())) {
+        Addr + Size > reinterpret_cast<uintptr_t>(M.getBufferEnd()) ||
+        Addr < reinterpret_cast<uintptr_t>(M.getBufferStart())) {
       return errorCodeToError(object_error::unexpected_eof);
     }
     return Error::success();
@@ -178,7 +181,8 @@ DEFINE_ISA_CONVERSION_FUNCTIONS(Binary, LLVMBinaryRef)
 ///
 /// @param Source The data to create the Binary from.
 Expected<std::unique_ptr<Binary>> createBinary(MemoryBufferRef Source,
-                                               LLVMContext *Context = nullptr);
+                                               LLVMContext *Context = nullptr,
+                                               bool InitContent = true);
 
 template <typename T> class OwningBinary {
   std::unique_ptr<T> Bin;
@@ -229,7 +233,8 @@ template <typename T> const T* OwningBinary<T>::getBinary() const {
 }
 
 Expected<OwningBinary<Binary>> createBinary(StringRef Path,
-                                            LLVMContext *Context = nullptr);
+                                            LLVMContext *Context = nullptr,
+                                            bool InitContent = true);
 
 } // end namespace object
 

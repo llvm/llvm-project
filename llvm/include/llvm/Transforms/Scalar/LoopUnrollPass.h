@@ -22,7 +22,7 @@ class Function;
 class Loop;
 class LPMUpdater;
 
-/// Loop unroll pass that only does full loop unrolling.
+/// Loop unroll pass that only does full loop unrolling and peeling.
 class LoopFullUnrollPass : public PassInfoMixin<LoopFullUnrollPass> {
   const int OptLevel;
 
@@ -140,6 +140,8 @@ public:
       : UnrollOpts(UnrollOpts) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

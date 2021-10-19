@@ -33,9 +33,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_DISPATCHVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_DISPATCHVIEW_H
 
-#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MCA/View.h"
 #include <map>
 
 namespace llvm {
@@ -78,6 +78,8 @@ public:
     printDispatchStalls(OS);
     printDispatchHistogram(OS);
   }
+  StringRef getNameAsString() const override { return "DispatchStatistics"; }
+  json::Value toJSON() const override;
 };
 } // namespace mca
 } // namespace llvm

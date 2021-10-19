@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <string.h>
+#include <cstring>
 
 #include <memory>
 
@@ -36,9 +36,6 @@ using namespace lldb_private;
 static ConstString g_this = ConstString("this");
 
 char CPPLanguageRuntime::ID = 0;
-
-// Destructor
-CPPLanguageRuntime::~CPPLanguageRuntime() {}
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
@@ -102,9 +99,7 @@ line_entry_helper(Target &target, const SymbolContext &sc, Symbol *symbol,
 CPPLanguageRuntime::LibCppStdFunctionCallableInfo
 CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     lldb::ValueObjectSP &valobj_sp) {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat,
-                     "CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo");
+  LLDB_SCOPED_TIMER();
 
   LibCppStdFunctionCallableInfo optional_info;
 
@@ -153,6 +148,9 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     if (sub_member__f_)
         member__f_ = sub_member__f_;
   }
+
+  if (!member__f_)
+    return optional_info;
 
   lldb::addr_t member__f_pointer_value = member__f_->GetValueAsUnsigned(0);
 
@@ -324,6 +322,9 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
     }
   }
 
+  if (symbol == nullptr)
+    return optional_info;
+
   // Case 1 or 3
   if (scl.GetSize() >= 1) {
     optional_info = line_entry_helper(target, scl[0], symbol,
@@ -399,8 +400,8 @@ CPPLanguageRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       // We create a ThreadPlan to keep stepping through using the address range
       // of the current function.
       ret_plan_sp = std::make_shared<ThreadPlanStepInRange>(
-          thread, range_of_curr_func, sc, eOnlyThisThread, eLazyBoolYes,
-          eLazyBoolYes);
+          thread, range_of_curr_func, sc, nullptr, eOnlyThisThread,
+          eLazyBoolYes, eLazyBoolYes);
       return ret_plan_sp;
     }
   }

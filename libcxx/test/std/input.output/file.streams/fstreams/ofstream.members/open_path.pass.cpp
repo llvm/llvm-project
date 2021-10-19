@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: c++filesystem-disabled
+// UNSUPPORTED: libcpp-has-no-filesystem-library
+
+// Filesystem is supported on Apple platforms starting with macosx10.15.
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 // <fstream>
 
@@ -42,7 +45,9 @@ int main(int, char**) {
     fs >> c;
     assert(c == 'a');
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
+
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     std::wofstream fs;
     assert(!fs.is_open());
@@ -59,7 +64,8 @@ int main(int, char**) {
     fs >> c;
     assert(c == L'a');
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
+#endif
 
   return 0;
 }

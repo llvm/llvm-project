@@ -19,7 +19,7 @@ template <typename T> class IListBaseTest : public ::testing::Test {};
 // Test variants with the same test.
 typedef ::testing::Types<ilist_base<false>, ilist_base<true>>
     IListBaseTestTypes;
-TYPED_TEST_CASE(IListBaseTest, IListBaseTestTypes);
+TYPED_TEST_SUITE(IListBaseTest, IListBaseTestTypes, );
 
 TYPED_TEST(IListBaseTest, insertBeforeImpl) {
   typedef TypeParam list_base_type;

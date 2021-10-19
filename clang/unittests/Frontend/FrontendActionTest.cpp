@@ -272,8 +272,7 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
         MemoryBuffer::getMemBuffer("int foo(void) { return 1; }\n").release());
     Invocation->getFrontendOpts().Inputs.push_back(
         FrontendInputFile("test.h", Language::C));
-    Invocation->getFrontendOpts().OutputFile =
-        std::string(StringRef(PCHFilename));
+    Invocation->getFrontendOpts().OutputFile = PCHFilename.str().str();
     Invocation->getFrontendOpts().ProgramAction = frontend::GeneratePCH;
     Invocation->getTargetOpts().Triple = "x86_64-apple-darwin19.0.0";
     CompilerInstance Compiler;

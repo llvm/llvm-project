@@ -1,68 +1,46 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-matmul-to-vector-patterns-tile-1d | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-matmul-to-vector-patterns-tile-2d | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-contraction-to-vector-patterns | FileCheck %s --check-prefix=VECTOR-CONTRACTION
+// RUN: mlir-opt %s -test-linalg-transform-patterns=test-matmul-to-vector-patterns-tile-1d | FileCheck %s -check-prefix=CHECK-1D
+// RUN: mlir-opt %s -test-linalg-transform-patterns=test-matmul-to-vector-patterns-tile-2d | FileCheck %s -check-prefix=CHECK-2D
 
 func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
                   %B: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
                   %C: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>) {
-  linalg.matmul %A, %B, %C {__internal_linalg_transform__ = "START"} :
-    (memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
-     memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
-     memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
+  linalg.matmul {__internal_linalg_transform__ = "START"}
+    ins(%A, %B: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
+                memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
+   outs(%C: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
   return
 }
 
-// CHECK-LABEL:func @matmul
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
-//      CHECK: store {{.*}}[] : memref<vector<8x16xf32>>
+// CHECK-1D-LABEL:func @matmul
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x16xf32>, memref<8x16xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<16x12xf32>, memref<16x12xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32>
 //
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<16x12xf32>
-//      CHECK: store {{.*}}[] : memref<vector<16x12xf32>>
+//      CHECK-1D: vector.transfer_read {{.*}} : memref<8x16xf32, #{{.*}}>, vector<8x16xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x16xf32>, memref<8x16xf32, #{{.*}}>
+//      CHECK-1D: vector.transfer_read {{.*}} : memref<16x12xf32, #{{.*}}>, vector<16x12xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<16x12xf32>, memref<16x12xf32, #{{.*}}>
+//      CHECK-1D: vector.transfer_read {{.*}} : memref<8x12xf32, #{{.*}}>, vector<8x12xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32, #{{.*}}>
 //
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x12xf32>
-//      CHECK: store {{.*}}[] : memref<vector<8x12xf32>>
+//      CHECK-1D: vector.contract
+// CHECK-1D-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-1D-SAME:   : vector<8x16xf32>, vector<12x16xf32> into vector<8x12xf32>
 //
-//      CHECK: linalg.copy
-//      CHECK: linalg.copy
-//      CHECK: linalg.copy
-//
-//      CHECK: vector.contract
-// CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
-// CHECK-SAME:   : vector<8x16xf32>, vector<16x12xf32> into vector<8x12xf32>
-//
-//      CHECK: linalg.copy
+//      CHECK-1D: vector.transfer_read {{.*}} : memref<8x12xf32, #{{.*}}>, vector<8x12xf32>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32, #{{.*}}>
 
-// VECTOR-CONTRACTION-LABEL: contraction_dot
-func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32>) {
-  // VECTOR-CONTRACTION: vector.contract
-  // VECTOR-CONTRACTION-SAME: vector<1584xf32>, vector<1584xf32> into f32
-  linalg.dot %A, %B, %C : (memref<1584xf32>, memref<1584xf32>, memref<f32>)
-  return
-}
-
-// VECTOR-CONTRACTION-LABEL: contraction_matvec
-func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %C: memref<1584xf32>) {
-  // VECTOR-CONTRACTION: vector.contract
-  // VECTOR-CONTRACTION-SAME: vector<1584x1584xf32>, vector<1584xf32> into vector<1584xf32>
-  linalg.matvec %A, %B, %C :
-    (memref<1584x1584xf32>, memref<1584xf32>, memref<1584xf32>)
-  return
-}
-
-// VECTOR-CONTRACTION-LABEL: contraction_matmul
-func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf32>, %C: memref<1584x1584xf32>) {
-  // VECTOR-CONTRACTION: vector.contract
-  // VECTOR-CONTRACTION-SAME: vector<1584x1584xf32>, vector<1584x1584xf32> into vector<1584x1584xf32>
-  linalg.matmul %A, %B, %C :
-    (memref<1584x1584xf32>, memref<1584x1584xf32>, memref<1584x1584xf32>)
-  return
-}
-
-// VECTOR-CONTRACTION-LABEL: contraction_batch_matmul
-func @contraction_batch_matmul(%A: memref<1584x1584x1584xf32>, %B: memref<1584x1584x1584xf32>, %C: memref<1584x1584x1584xf32>) {
-  // VECTOR-CONTRACTION: vector.contract
-  // VECTOR-CONTRACTION-SAME: vector<1584x1584x1584xf32>, vector<1584x1584x1584xf32> into vector<1584x1584x1584xf32>
-  linalg.batch_matmul %A, %B, %C :
-    (memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>)
-  return
-}
+// CHECK-2D-LABEL:func @matmul
+//      CHECK-2D: vector.transfer_write {{.*}} : vector<8x16xf32>, memref<8x16xf32>
+//      CHECK-2D: vector.transfer_write {{.*}} : vector<16x12xf32>, memref<16x12xf32>
+//      CHECK-2D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32>
+//
+//      CHECK-2D: linalg.copy
+//      CHECK-2D: linalg.copy
+//      CHECK-2D: linalg.copy
+//
+//      CHECK-2D: vector.contract
+// CHECK-2D-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-2D-SAME:   : vector<8x16xf32>, vector<12x16xf32> into vector<8x12xf32>
+//
+//      CHECK-2D: linalg.copy

@@ -149,8 +149,8 @@ struct CHIArg {
   // The instruction (VN) which uses the values flowing out of CHI.
   Instruction *I;
 
-  bool operator==(const CHIArg &A) { return VN == A.VN; }
-  bool operator!=(const CHIArg &A) { return !(*this == A); }
+  bool operator==(const CHIArg &A) const { return VN == A.VN; }
+  bool operator!=(const CHIArg &A) const { return !(*this == A); }
 };
 
 using CHIIt = SmallVectorImpl<CHIArg>::iterator;
@@ -293,15 +293,6 @@ private:
   // Return true when there are exception handling in BB.
   bool hasEH(const BasicBlock *BB);
 
-  // Return true when a successor of BB dominates A.
-  bool successorDominate(const BasicBlock *BB, const BasicBlock *A) {
-    for (const BasicBlock *Succ : successors(BB))
-      if (DT->dominates(Succ, A))
-        return true;
-
-    return false;
-  }
-
   // Return true when I1 appears before I2 in the instructions of BB.
   bool firstInBB(const Instruction *I1, const Instruction *I2) {
     assert(I1->getParent() == I2->getParent());
@@ -386,12 +377,12 @@ private:
     if (!Root)
       return;
     // Depth first walk on PDom tree to fill the CHIargs at each PDF.
-    RenameStackType RenameStack;
     for (auto Node : depth_first(Root)) {
       BasicBlock *BB = Node->getBlock();
       if (!BB)
         continue;
 
+      RenameStackType RenameStack;
       // Collect all values in BB and push to stack.
       fillRenameStack(BB, ValueBBs, RenameStack);
 
@@ -556,7 +547,6 @@ public:
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<AAResultsWrapperPass>();
   }
 };
 
@@ -806,11 +796,8 @@ bool GVNHoist::valueAnticipable(CHIArgs C, Instruction *TI) const {
     return false; // Not enough args in this CHI.
 
   for (auto CHI : C) {
-    BasicBlock *Dest = CHI.Dest;
     // Find if all the edges have values flowing out of BB.
-    bool Found = llvm::any_of(
-        successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
-    if (!Found)
+    if (!llvm::is_contained(successors(TI), CHI.Dest))
       return false;
   }
   return true;
@@ -840,6 +827,8 @@ void GVNHoist::fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
   auto it1 = ValueBBs.find(BB);
   if (it1 != ValueBBs.end()) {
     // Iterate in reverse order to keep lower ranked values on the top.
+    LLVM_DEBUG(dbgs() << "\nVisiting: " << BB->getName()
+                      << " for pushing instructions on stack";);
     for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
       // Get the value of instruction I
       LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
@@ -900,8 +889,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
     auto TI = BB->getTerminator();
     auto B = CHIs.begin();
     // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
-    auto PHIIt = std::find_if(CHIs.begin(), CHIs.end(),
-                              [B](CHIArg &A) { return A != *B; });
+    auto PHIIt = llvm::find_if(CHIs, [B](CHIArg &A) { return A != *B; });
     auto PrevIt = CHIs.begin();
     while (PrevIt != PHIIt) {
       // Collect values which satisfy safety checks.
@@ -1257,7 +1245,6 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<MemorySSAAnalysis>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

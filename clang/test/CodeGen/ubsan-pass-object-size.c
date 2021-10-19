@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -w -triple x86_64-apple-darwin10 -fsanitize=array-bounds -o - | FileCheck %s
 
-// CHECK-LABEL: define i32 @foo(
+// CHECK-LABEL: define{{.*}} i32 @foo(
 int foo(int *const p __attribute__((pass_object_size(0))), int n) {
   int x = (p)[n];
 
@@ -25,42 +25,42 @@ int foo(int *const p __attribute__((pass_object_size(0))), int n) {
 
 typedef struct {} ZeroSizedType;
 
-// CHECK-LABEL: define void @bar(
+// CHECK-LABEL: define{{.*}} void @bar(
 ZeroSizedType bar(ZeroSizedType *const p __attribute__((pass_object_size(0))), int n) {
   // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret void
   return p[n];
 }
 
-// CHECK-LABEL: define i32 @baz(
+// CHECK-LABEL: define{{.*}} i32 @baz(
 int baz(int *const p __attribute__((pass_object_size(1))), int n) {
   // CHECK: __ubsan_handle_out_of_bounds
   // CHECK: ret i32
   return p[n];
 }
 
-// CHECK-LABEL: define i32 @mat(
+// CHECK-LABEL: define{{.*}} i32 @mat(
 int mat(int *const p __attribute__((pass_object_size(2))), int n) {
   // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret i32
   return p[n];
 }
 
-// CHECK-LABEL: define i32 @pat(
+// CHECK-LABEL: define{{.*}} i32 @pat(
 int pat(int *const p __attribute__((pass_object_size(3))), int n) {
   // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret i32
   return p[n];
 }
 
-// CHECK-LABEL: define i32 @cat(
+// CHECK-LABEL: define{{.*}} i32 @cat(
 int cat(int p[static 10], int n) {
   // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret i32
   return p[n];
 }
 
-// CHECK-LABEL: define i32 @bat(
+// CHECK-LABEL: define{{.*}} i32 @bat(
 int bat(int n, int p[n]) {
   // CHECK-NOT: __ubsan_handle_out_of_bounds
   // CHECK: ret i32

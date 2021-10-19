@@ -35,7 +35,7 @@ namespace llvm {
       return true;
     }
 
-    static bool isNodeHidden(const SUnit *Node) {
+    static bool isNodeHidden(const SUnit *Node, const ScheduleDAG *G) {
       return (Node->NumPreds > 10 || Node->NumSuccs > 10);
     }
 

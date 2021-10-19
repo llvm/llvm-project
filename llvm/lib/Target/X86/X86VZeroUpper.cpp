@@ -182,8 +182,7 @@ static bool callHasRegMask(MachineInstr &MI) {
 /// Insert a vzeroupper instruction before I.
 void VZeroUpperInserter::insertVZeroUpper(MachineBasicBlock::iterator I,
                                           MachineBasicBlock &MBB) {
-  DebugLoc dl = I->getDebugLoc();
-  BuildMI(MBB, I, dl, TII->get(X86::VZEROUPPER));
+  BuildMI(MBB, I, I->getDebugLoc(), TII->get(X86::VZEROUPPER));
   ++NumVZU;
   EverMadeChange = true;
 }

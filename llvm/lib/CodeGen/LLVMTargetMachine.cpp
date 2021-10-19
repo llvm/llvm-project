@@ -25,10 +25,10 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -40,13 +40,16 @@ static cl::opt<bool> EnableTrapUnreachable("trap-unreachable",
 
 void LLVMTargetMachine::initAsmInfo() {
   MRI.reset(TheTarget.createMCRegInfo(getTargetTriple().str()));
+  assert(MRI && "Unable to create reg info");
   MII.reset(TheTarget.createMCInstrInfo());
+  assert(MII && "Unable to create instruction info");
   // FIXME: Having an MCSubtargetInfo on the target machine is a hack due
   // to some backends having subtarget feature dependent module level
   // code generation. This is similar to the hack in the AsmPrinter for
   // module level assembly etc.
   STI.reset(TheTarget.createMCSubtargetInfo(
       getTargetTriple().str(), getTargetCPU(), getTargetFeatureString()));
+  assert(STI && "Unable to create subtarget info");
 
   MCAsmInfo *TmpAsmInfo = TheTarget.createMCAsmInfo(
       *MRI, getTargetTriple().str(), Options.MCOptions);
@@ -58,8 +61,15 @@ void LLVMTargetMachine::initAsmInfo() {
          "Make sure you include the correct TargetSelect.h"
          "and that InitializeAllTargetMCs() is being invoked!");
 
-  if (Options.DisableIntegratedAS)
+  if (Options.BinutilsVersion.first > 0)
+    TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);
+
+  if (Options.DisableIntegratedAS) {
     TmpAsmInfo->setUseIntegratedAssembler(false);
+    // If there is explict option disable integratedAS, we can't use it for
+    // inlineasm either.
+    TmpAsmInfo->setParseInlineAsmUsingAsmParser(false);
+  }
 
   TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
 
@@ -118,6 +128,24 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
                                       raw_pwrite_stream *DwoOut,
                                       CodeGenFileType FileType,
                                       MCContext &Context) {
+  Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
+      createMCStreamer(Out, DwoOut, FileType, Context);
+  if (auto Err = MCStreamerOrErr.takeError())
+    return true;
+
+  // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
+  FunctionPass *Printer =
+      getTarget().createAsmPrinter(*this, std::move(*MCStreamerOrErr));
+  if (!Printer)
+    return true;
+
+  PM.add(Printer);
+  return false;
+}
+
+Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
+    raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    MCContext &Context) {
   if (Options.MCOptions.MCSaveTempLabels)
     Context.setAllowTemporaryLabels(false);
 
@@ -152,10 +180,14 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     // Create the code emitter for the target if it exists.  If not, .o file
     // emission fails.
     MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, Context);
+    if (!MCE)
+      return make_error<StringError>("createMCCodeEmitter failed",
+                                     inconvertibleErrorCode());
     MCAsmBackend *MAB =
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
-    if (!MCE || !MAB)
-      return true;
+    if (!MAB)
+      return make_error<StringError>("createMCAsmBackend failed",
+                                     inconvertibleErrorCode());
 
     Triple T(getTargetTriple().str());
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
@@ -174,14 +206,7 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
     break;
   }
 
-  // Create the AsmPrinter, which takes ownership of AsmStreamer if successful.
-  FunctionPass *Printer =
-      getTarget().createAsmPrinter(*this, std::move(AsmStreamer));
-  if (!Printer)
-    return true;
-
-  PM.add(Printer);
-  return false;
+  return std::move(AsmStreamer);
 }
 
 bool LLVMTargetMachine::addPassesToEmitFile(
@@ -196,11 +221,14 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   if (!PassConfig)
     return true;
 
-  if (!TargetPassConfig::willCompleteCodeGenPipeline())
-    PM.add(createPrintMIRPass(Out));
-  else if (addAsmPrinter(PM, Out, DwoOut, FileType,
-                           MMIWP->getMMI().getContext()))
-    return true;
+  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
+      return true;
+  } else {
+    // MIR printing is redundant with -filetype=null.
+    if (FileType != CGFT_Null)
+      PM.add(createPrintMIRPass(Out));
+  }
 
   PM.add(createFreeMachineFunctionPass());
   return false;

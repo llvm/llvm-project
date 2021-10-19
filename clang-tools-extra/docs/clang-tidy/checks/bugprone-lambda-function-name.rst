@@ -10,7 +10,7 @@ is almost never what was intended.
 Example:
 
 .. code-block:: c++
-								
+
   void FancyFunction() {
     [] { printf("Called from %s\n", __func__); }();
     [] { printf("Now called from %s\n", __FUNCTION__); }();

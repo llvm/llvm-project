@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -211,7 +210,7 @@ struct MappingTraits<HSAMD::Metadata> {
 namespace AMDGPU {
 namespace HSAMD {
 
-std::error_code fromString(std::string String, Metadata &HSAMetadata) {
+std::error_code fromString(StringRef String, Metadata &HSAMetadata) {
   yaml::Input YamlInput(String);
   YamlInput >> HSAMetadata;
   return YamlInput.error();

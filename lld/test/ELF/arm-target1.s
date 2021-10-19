@@ -15,7 +15,7 @@
 
 // RELOC: Relocations [
 // RELOC:   .rel.text {
-// RELOC:     0x0 R_ARM_TARGET1 patatino 0x0
+// RELOC:     0x0 R_ARM_TARGET1 patatino
 // RELOC:   }
 // RELOC: ]
 

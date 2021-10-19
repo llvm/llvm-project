@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LTO_LTOMODULE_H
-#define LLVM_LTO_LTOMODULE_H
+#ifndef LLVM_LTO_LEGACY_LTOMODULE_H
+#define LLVM_LTO_LEGACY_LTOMODULE_H
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringMap.h"
@@ -47,8 +47,6 @@ private:
   std::unique_ptr<LLVMContext> OwnedContext;
 
   std::string LinkerOpts;
-
-  std::string DependentLibraries;
 
   std::unique_ptr<Module> Mod;
   MemoryBufferRef MBRef;
@@ -168,6 +166,10 @@ public:
   Expected<uint32_t> getMachOCPUType() const;
 
   Expected<uint32_t> getMachOCPUSubType() const;
+
+  /// Returns true if the module has either the @llvm.global_ctors or the
+  /// @llvm.global_dtors symbol. Otherwise returns false.
+  bool hasCtorDtor() const;
 
 private:
   /// Parse metadata from the module

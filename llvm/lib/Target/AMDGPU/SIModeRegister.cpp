@@ -14,20 +14,9 @@
 //===----------------------------------------------------------------------===//
 //
 #include "AMDGPU.h"
-#include "AMDGPUInstrInfo.h"
-#include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include <queue>
 
 #define DEBUG_TYPE "si-mode-register"
@@ -242,8 +231,10 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
   Status IPChange;
   for (MachineInstr &MI : MBB) {
     Status InstrMode = getInstructionMode(MI, TII);
-    if ((MI.getOpcode() == AMDGPU::S_SETREG_B32) ||
-        (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32)) {
+    if (MI.getOpcode() == AMDGPU::S_SETREG_B32 ||
+        MI.getOpcode() == AMDGPU::S_SETREG_B32_mode ||
+        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
+        MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
       // We preserve any explicit mode register setreg instruction we encounter,
       // as we assume it has been inserted by a higher authority (this is
       // likely to be a very rare occurrence).
@@ -267,7 +258,8 @@ void SIModeRegister::processBlockPhase1(MachineBasicBlock &MBB,
       // If this is an immediate then we know the value being set, but if it is
       // not an immediate then we treat the modified bits of the mode register
       // as unknown.
-      if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
+      if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 ||
+          MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_mode) {
         unsigned Val = TII->getNamedOperand(MI, AMDGPU::OpName::imm)->getImm();
         unsigned Mode = (Val << Offset) & Mask;
         Status Setreg = Status(Mask, Mode);

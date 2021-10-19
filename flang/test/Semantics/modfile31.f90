@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Test 7.6 enum values
 
 module m1

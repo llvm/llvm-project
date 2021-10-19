@@ -342,14 +342,32 @@ declare i64 @llvm.llround.i64.f32(float)
 
 define dso_local double @test_nearbyint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_nearbyint:
-; BE:    # %bb.0: # %entry
-; BE:    bl nearbyint
-; BE:    blr
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    mflr r0
+; BE-NEXT:    std r0, 16(r1)
+; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 112
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    bl nearbyint
+; BE-NEXT:    nop
+; BE-NEXT:    addi r1, r1, 112
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
 ;
 ; CHECK-LABEL: test_nearbyint:
-; CHECK:    # %bb.0: # %entry
-; CHECK:    bl nearbyint
-; CHECK:    blr
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl nearbyint
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
 ;
 ; FAST-LABEL: test_nearbyint:
 ; FAST:       # %bb.0: # %entry
@@ -364,14 +382,32 @@ declare double @llvm.nearbyint.f64(double)
 
 define dso_local float @test_nearbyintf(float %f) local_unnamed_addr {
 ; BE-LABEL: test_nearbyintf:
-; BE:    # %bb.0: # %entry
-; BE:    bl nearbyint
-; BE:    blr
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    mflr r0
+; BE-NEXT:    std r0, 16(r1)
+; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 112
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    bl nearbyintf
+; BE-NEXT:    nop
+; BE-NEXT:    addi r1, r1, 112
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
 ;
 ; CHECK-LABEL: test_nearbyintf:
-; CHECK:    # %bb.0: # %entry
-; CHECK:    bl nearbyintf
-; CHECK:    blr
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r0, 16(r1)
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl nearbyintf
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
 ;
 ; FAST-LABEL: test_nearbyintf:
 ; FAST:       # %bb.0: # %entry

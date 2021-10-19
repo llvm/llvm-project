@@ -22,7 +22,7 @@ void f(X *noreturn) {
 
   // A message send which contains a message send is OK.
   [ [ X alloc ] init ];
-  [ [ int(), noreturn getSelf ] getSize ]; // expected-warning {{unused}}
+  [ [ int(), noreturn getSelf ] getSize ]; // expected-warning {{left operand of comma operator has no effect}}
 
   // A message send which contains a lambda is OK.
   [ [noreturn] { return noreturn; } () setSize: 4 ];

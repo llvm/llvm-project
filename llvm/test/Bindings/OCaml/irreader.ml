@@ -38,7 +38,7 @@ let test_irreader () =
     let m   = parse_ir context buf in
     match lookup_global "foo" m with
     | Some foo ->
-        insist ((global_initializer foo) = (const_int (i32_type context) 42))
+        insist ((global_initializer foo) = (Some (const_int (i32_type context) 42)))
     | None ->
         failwith "global"
   end;

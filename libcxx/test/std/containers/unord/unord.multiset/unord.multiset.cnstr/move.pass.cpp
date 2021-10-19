@@ -32,20 +32,20 @@ int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    test_allocator<int>
                                    > C;
         C c0(7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             test_allocator<int>(10)
            );
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == test_allocator<int>(10));
         assert(c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
@@ -57,8 +57,8 @@ int main(int, char**)
     }
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    test_allocator<int>
                                    > C;
         typedef int P;
@@ -73,19 +73,21 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             test_allocator<int>(10)
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(c.count(1) == 2);
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == test_allocator<int>(10));
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
@@ -97,20 +99,20 @@ int main(int, char**)
     }
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    min_allocator<int>
                                    > C;
         C c0(7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             min_allocator<int>()
            );
         C c = std::move(c0);
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == min_allocator<int>());
         assert(c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
@@ -122,8 +124,8 @@ int main(int, char**)
     }
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_hash<int>,
+                                   test_equal_to<int>,
                                    min_allocator<int>
                                    > C;
         typedef int P;
@@ -138,19 +140,21 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
-            test_compare<std::equal_to<int> >(9),
+            test_hash<int>(8),
+            test_equal_to<int>(9),
             min_allocator<int>()
            );
+        C::iterator it0 = c0.begin();
         C c = std::move(c0);
+        assert(it0 == c.begin()); // Iterators remain valid
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         assert(c.count(1) == 2);
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
+        assert(c.hash_function() == test_hash<int>(8));
+        assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == min_allocator<int>());
         assert(!c.empty());
         assert(static_cast<std::size_t>(std::distance(c.begin(), c.end())) == c.size());
@@ -160,17 +164,6 @@ int main(int, char**)
 
         assert(c0.empty());
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::unordered_multiset<int> s1 = {1, 2, 3};
-        std::unordered_multiset<int>::iterator i = s1.begin();
-        int k = *i;
-        std::unordered_multiset<int> s2 = std::move(s1);
-        assert(*i == k);
-        s2.erase(i);
-        assert(s2.size() == 2);
-    }
-#endif
 
-  return 0;
+    return 0;
 }

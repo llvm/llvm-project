@@ -58,8 +58,8 @@ namespace delete_selection {
   struct C {
     C();
     void *operator new(std::size_t);
-    void operator delete(void*) = delete;
-    void operator delete(C *, std::destroying_delete_t) = delete; // expected-note 0-1 {{deleted here}}
+    void operator delete(void*) = delete; // expected-note 0-1 {{deleted here}}
+    void operator delete(C *, std::destroying_delete_t) = delete;
   };
   // TODO: We only diagnose the use of a deleted operator delete when exceptions
   // are enabled. Otherwise we don't bother doing the lookup.
@@ -140,4 +140,50 @@ namespace templated {
   template<typename T> struct D {
     void operator delete(typename id_struct<D>::type *, std::destroying_delete_t); // expected-error {{use 'D<T> *'}}
   };
+}
+
+namespace dtor_access {
+  struct S {
+    void operator delete(S *p, std::destroying_delete_t);
+  private:
+    ~S(); // expected-note {{here}}
+  };
+
+  // FIXME: PR47474: GCC accepts this, and it seems somewhat reasonable to
+  // allow, even though [expr.delete]p12 says this is ill-formed.
+  void f() { delete new S; } // expected-error {{calling a private destructor}}
+
+  struct T {
+    void operator delete(T *, std::destroying_delete_t);
+  protected:
+    virtual ~T(); // expected-note {{here}}
+  };
+
+  struct U : T {
+    void operator delete(void *);
+  private:
+    ~U() override;
+  };
+
+  void g() { delete (T *)new U; } // expected-error {{calling a protected destructor}}
+}
+
+namespace delete_from_new {
+  struct A {
+    A(); // might throw
+    void operator delete(A *, std::destroying_delete_t) = delete;
+  };
+  struct B {
+    B(); // might throw
+    void operator delete(void *) = delete; // #member-delete-from-new
+    void operator delete(B *, std::destroying_delete_t) = delete;
+  };
+  void f() {
+    new A; // calls ::operator delete
+    new B; // calls B::operator delete
+#ifdef __EXCEPTIONS
+  // expected-error@-2 {{attempt to use a deleted function}}
+  // expected-note@#member-delete-from-new {{deleted here}}
+#endif
+  }
 }

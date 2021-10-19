@@ -2,8 +2,12 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  AsyncRuntime.cpp
   CRunnerUtils.cpp
+  CudaRuntimeWrappers.cpp
+  SparseUtils.cpp
   ExecutionEngine.cpp
+  RocmRuntimeWrappers.cpp
   RunnerUtils.cpp
   OptUtils.cpp
   JitRunner.cpp
@@ -23,6 +27,7 @@ add_mlir_library(MLIRExecutionEngine
 
   LINK_COMPONENTS
   Core
+  Coroutines
   ExecutionEngine
   Object
   OrcJIT
@@ -40,9 +45,11 @@ add_mlir_library(MLIRExecutionEngine
 
   LINK_LIBS PUBLIC
   MLIRLLVMIR
-  MLIRTargetLLVMIR
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
   )
 
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_library(MLIRJitRunner
   JitRunner.cpp
 
@@ -57,11 +64,13 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
+  ${dialect_libs}
   MLIRExecutionEngine
   MLIRIR
   MLIRParser
-  MLIRStandardOps
-  MLIRTargetLLVMIR
+  MLIRStandard
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
   MLIRTransforms
   MLIRStandardToLLVM
   MLIRSupport
@@ -70,17 +79,11 @@ add_mlir_library(MLIRJitRunner
 add_mlir_library(mlir_c_runner_utils
   SHARED
   CRunnerUtils.cpp
+  SparseUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )
 set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 11)
-
-add_mlir_library(mlir_c_runner_utils_static
-  CRunnerUtils.cpp
-
-  EXCLUDE_FROM_LIBMLIR
-  )
-set_property(TARGET mlir_c_runner_utils_static PROPERTY CXX_STANDARD 11)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)
 
 add_mlir_library(mlir_runner_utils
@@ -88,8 +91,97 @@ add_mlir_library(mlir_runner_utils
   RunnerUtils.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
-  mlir_c_runner_utils_static
 )
 target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+add_mlir_library(mlir_async_runtime
+  SHARED
+  AsyncRuntime.cpp
+
+  EXCLUDE_FROM_LIBMLIR
+
+  LINK_LIBS PUBLIC
+  ${LLVM_PTHREAD_LIB}
+)
+set_property(TARGET mlir_async_runtime PROPERTY CXX_VISIBILITY_PRESET hidden)
+target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
+
+if(MLIR_ENABLE_CUDA_RUNNER)
+  # Configure CUDA support. Using check_language first allows us to give a
+  # custom error message.
+  include(CheckLanguage)
+  check_language(CUDA)
+  if (CMAKE_CUDA_COMPILER)
+    enable_language(CUDA)
+  else()
+    message(SEND_ERROR
+      "Building the mlir cuda runner requires a working CUDA install")
+  endif()
+
+  # We need the libcuda.so library.
+  find_library(CUDA_RUNTIME_LIBRARY cuda)
+
+  add_mlir_library(mlir_cuda_runtime
+    SHARED
+    CudaRuntimeWrappers.cpp
+
+    EXCLUDE_FROM_LIBMLIR
+  )
+  set_property(TARGET mlir_cuda_runtime PROPERTY CXX_STANDARD 14)
+  target_include_directories(mlir_cuda_runtime
+    PRIVATE
+    ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  )
+  target_link_libraries(mlir_cuda_runtime
+    PRIVATE
+    ${CUDA_RUNTIME_LIBRARY}
+  )
+endif()
+
+if(MLIR_ENABLE_ROCM_RUNNER)
+  # Configure ROCm support.
+  if (NOT DEFINED ROCM_PATH)
+    if (NOT DEFINED ENV{ROCM_PATH})
+      set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to which ROCm has been installed")
+    else()
+      set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
+    endif()
+    set(HIP_PATH "${ROCM_PATH}/hip" CACHE PATH "Path to which HIP has been installed")
+  endif()
+  set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+  find_package(HIP)
+  if (NOT HIP_FOUND)
+    message(SEND_ERROR "Building mlir with ROCm support requires a working ROCm and HIP install")
+  else()
+    message(STATUS "ROCm HIP version: ${HIP_VERSION}")
+  endif()
+
+  # Locate HIP runtime library.
+  find_library(ROCM_RUNTIME_LIBRARY amdhip64
+               PATHS "${HIP_PATH}/lib")
+  if (NOT ROCM_RUNTIME_LIBRARY)
+    message(SEND_ERROR "Could not locate ROCm HIP runtime library")
+  else()
+    message(STATUS "ROCm HIP runtime lib: ${ROCM_RUNTIME_LIBRARY}")
+  endif()
+
+  add_mlir_library(mlir_rocm_runtime
+    SHARED
+    RocmRuntimeWrappers.cpp
+
+    EXCLUDE_FROM_LIBMLIR
+  )
+  target_compile_definitions(mlir_rocm_runtime
+    PRIVATE
+    __HIP_PLATFORM_HCC__
+  )
+  target_include_directories(mlir_rocm_runtime
+    PRIVATE
+    ${HIP_PATH}/include
+    ${ROCM_PATH}/include
+  )
+  target_link_libraries(mlir_rocm_runtime
+    PRIVATE
+    ${ROCM_RUNTIME_LIBRARY}
+  )
+endif()

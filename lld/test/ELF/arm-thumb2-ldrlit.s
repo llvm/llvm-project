@@ -10,7 +10,7 @@
 // RUN:               } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=SYMS
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7m-none-eabi %t | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 /// Test the various legal cases for the R_ARM_THM_PC12 relocation
 /// Interesting things to note

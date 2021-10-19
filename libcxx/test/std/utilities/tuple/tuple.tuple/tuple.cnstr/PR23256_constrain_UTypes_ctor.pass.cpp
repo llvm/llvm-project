@@ -16,9 +16,11 @@
 //    EXPLICIT(...) tuple(UTypes&&...)
 
 // Check that the UTypes... ctor is properly disabled before evaluating any
-// SFINAE when the tuple-like copy/move ctor should *clearly* be selected
+// SFINAE when the copy/move ctor from another tuple should clearly be selected
 // instead. This happens 'sizeof...(UTypes) == 1' and the first element of
-// 'UTypes...' is an instance of the tuple itself. See PR23256.
+// 'UTypes...' is an instance of the tuple itself.
+//
+// See https://llvm.org/PR23256.
 
 #include <tuple>
 #include <memory>

@@ -195,8 +195,7 @@ struct A {
 
 void test_dr425(A a) {
   (void)(1.0f * a); // expected-error{{ambiguous}} \
-                    // expected-note 4{{candidate}} \
-                    // expected-note {{remaining 8 candidates omitted; pass -fshow-overloads=all to show them}}
+                    // expected-note 12{{candidate}}
 }
 
 // pr5432

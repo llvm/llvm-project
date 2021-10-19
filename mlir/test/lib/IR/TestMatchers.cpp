@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 
@@ -17,6 +17,10 @@ namespace {
 /// This is a test pass for verifying matchers.
 struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
   void runOnFunction() override;
+  StringRef getArgument() const final { return "test-matchers"; }
+  StringRef getDescription() const final {
+    return "Test C++ pattern matchers.";
+  }
 };
 } // end anonymous namespace
 
@@ -40,85 +44,86 @@ static void test1(FuncOp f) {
   auto b = m_Val(f.getArgument(1));
   auto c = m_Val(f.getArgument(2));
 
-  auto p0 = m_Op<AddFOp>(); // using 0-arity matcher
+  auto p0 = m_Op<arith::AddFOp>(); // using 0-arity matcher
   llvm::outs() << "Pattern add(*) matched " << countMatches(f, p0)
                << " times\n";
 
-  auto p1 = m_Op<MulFOp>(); // using 0-arity matcher
+  auto p1 = m_Op<arith::MulFOp>(); // using 0-arity matcher
   llvm::outs() << "Pattern mul(*) matched " << countMatches(f, p1)
                << " times\n";
 
-  auto p2 = m_Op<AddFOp>(m_Op<AddFOp>(), m_Any());
+  auto p2 = m_Op<arith::AddFOp>(m_Op<arith::AddFOp>(), m_Any());
   llvm::outs() << "Pattern add(add(*), *) matched " << countMatches(f, p2)
                << " times\n";
 
-  auto p3 = m_Op<AddFOp>(m_Any(), m_Op<AddFOp>());
+  auto p3 = m_Op<arith::AddFOp>(m_Any(), m_Op<arith::AddFOp>());
   llvm::outs() << "Pattern add(*, add(*)) matched " << countMatches(f, p3)
                << " times\n";
 
-  auto p4 = m_Op<MulFOp>(m_Op<AddFOp>(), m_Any());
+  auto p4 = m_Op<arith::MulFOp>(m_Op<arith::AddFOp>(), m_Any());
   llvm::outs() << "Pattern mul(add(*), *) matched " << countMatches(f, p4)
                << " times\n";
 
-  auto p5 = m_Op<MulFOp>(m_Any(), m_Op<AddFOp>());
+  auto p5 = m_Op<arith::MulFOp>(m_Any(), m_Op<arith::AddFOp>());
   llvm::outs() << "Pattern mul(*, add(*)) matched " << countMatches(f, p5)
                << " times\n";
 
-  auto p6 = m_Op<MulFOp>(m_Op<MulFOp>(), m_Any());
+  auto p6 = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Any());
   llvm::outs() << "Pattern mul(mul(*), *) matched " << countMatches(f, p6)
                << " times\n";
 
-  auto p7 = m_Op<MulFOp>(m_Op<MulFOp>(), m_Op<MulFOp>());
+  auto p7 = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::MulFOp>());
   llvm::outs() << "Pattern mul(mul(*), mul(*)) matched " << countMatches(f, p7)
                << " times\n";
 
-  auto mul_of_mulmul = m_Op<MulFOp>(m_Op<MulFOp>(), m_Op<MulFOp>());
-  auto p8 = m_Op<MulFOp>(mul_of_mulmul, mul_of_mulmul);
+  auto mul_of_mulmul =
+      m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::MulFOp>());
+  auto p8 = m_Op<arith::MulFOp>(mul_of_mulmul, mul_of_mulmul);
   llvm::outs()
       << "Pattern mul(mul(mul(*), mul(*)), mul(mul(*), mul(*))) matched "
       << countMatches(f, p8) << " times\n";
 
   // clang-format off
-  auto mul_of_muladd = m_Op<MulFOp>(m_Op<MulFOp>(), m_Op<AddFOp>());
-  auto mul_of_anyadd = m_Op<MulFOp>(m_Any(), m_Op<AddFOp>());
-  auto p9 = m_Op<MulFOp>(m_Op<MulFOp>(
-                     mul_of_muladd, m_Op<MulFOp>()),
-                   m_Op<MulFOp>(mul_of_anyadd, mul_of_anyadd));
+  auto mul_of_muladd = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(), m_Op<arith::AddFOp>());
+  auto mul_of_anyadd = m_Op<arith::MulFOp>(m_Any(), m_Op<arith::AddFOp>());
+  auto p9 = m_Op<arith::MulFOp>(m_Op<arith::MulFOp>(
+                     mul_of_muladd, m_Op<arith::MulFOp>()),
+                   m_Op<arith::MulFOp>(mul_of_anyadd, mul_of_anyadd));
   // clang-format on
   llvm::outs() << "Pattern mul(mul(mul(mul(*), add(*)), mul(*)), mul(mul(*, "
                   "add(*)), mul(*, add(*)))) matched "
                << countMatches(f, p9) << " times\n";
 
-  auto p10 = m_Op<AddFOp>(a, b);
+  auto p10 = m_Op<arith::AddFOp>(a, b);
   llvm::outs() << "Pattern add(a, b) matched " << countMatches(f, p10)
                << " times\n";
 
-  auto p11 = m_Op<AddFOp>(a, c);
+  auto p11 = m_Op<arith::AddFOp>(a, c);
   llvm::outs() << "Pattern add(a, c) matched " << countMatches(f, p11)
                << " times\n";
 
-  auto p12 = m_Op<AddFOp>(b, a);
+  auto p12 = m_Op<arith::AddFOp>(b, a);
   llvm::outs() << "Pattern add(b, a) matched " << countMatches(f, p12)
                << " times\n";
 
-  auto p13 = m_Op<AddFOp>(c, a);
+  auto p13 = m_Op<arith::AddFOp>(c, a);
   llvm::outs() << "Pattern add(c, a) matched " << countMatches(f, p13)
                << " times\n";
 
-  auto p14 = m_Op<MulFOp>(a, m_Op<AddFOp>(c, b));
+  auto p14 = m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(c, b));
   llvm::outs() << "Pattern mul(a, add(c, b)) matched " << countMatches(f, p14)
                << " times\n";
 
-  auto p15 = m_Op<MulFOp>(a, m_Op<AddFOp>(b, c));
+  auto p15 = m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(b, c));
   llvm::outs() << "Pattern mul(a, add(b, c)) matched " << countMatches(f, p15)
                << " times\n";
 
-  auto mul_of_aany = m_Op<MulFOp>(a, m_Any());
-  auto p16 = m_Op<MulFOp>(mul_of_aany, m_Op<AddFOp>(a, c));
+  auto mul_of_aany = m_Op<arith::MulFOp>(a, m_Any());
+  auto p16 = m_Op<arith::MulFOp>(mul_of_aany, m_Op<arith::AddFOp>(a, c));
   llvm::outs() << "Pattern mul(mul(a, *), add(a, c)) matched "
                << countMatches(f, p16) << " times\n";
 
-  auto p17 = m_Op<MulFOp>(mul_of_aany, m_Op<AddFOp>(c, b));
+  auto p17 = m_Op<arith::MulFOp>(mul_of_aany, m_Op<arith::AddFOp>(c, b));
   llvm::outs() << "Pattern mul(mul(a, *), add(c, b)) matched "
                << countMatches(f, p17) << " times\n";
 }
@@ -126,8 +131,9 @@ static void test1(FuncOp f) {
 void test2(FuncOp f) {
   auto a = m_Val(f.getArgument(0));
   FloatAttr floatAttr;
-  auto p = m_Op<MulFOp>(a, m_Op<AddFOp>(a, m_Constant(&floatAttr)));
-  auto p1 = m_Op<MulFOp>(a, m_Op<AddFOp>(a, m_Constant()));
+  auto p =
+      m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant(&floatAttr)));
+  auto p1 = m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant()));
   // Last operation that is not the terminator.
   Operation *lastOp = f.getBody().front().back().getPrevNode();
   if (p.match(lastOp))
@@ -148,7 +154,5 @@ void TestMatchers::runOnFunction() {
 }
 
 namespace mlir {
-void registerTestMatchers() {
-  PassRegistration<TestMatchers>("test-matchers", "Test C++ pattern matchers.");
-}
+void registerTestMatchers() { PassRegistration<TestMatchers>(); }
 } // namespace mlir

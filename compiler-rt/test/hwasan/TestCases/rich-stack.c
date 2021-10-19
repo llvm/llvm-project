@@ -1,7 +1,8 @@
 // Test how stack frames are reported (not fully implemented yet).
 // RUN: %clang_hwasan %s -o %t
 // RUN: not %run %t 3 2 -1 2>&1 | FileCheck %s --check-prefix=R321
-// REQUIRES: stable-runtime
+// REQUIRES: stable-runtime, pointer-tagging
+
 #include <stdint.h>
 #include <stdlib.h>
 void USE(void *x) { // pretend_to_do_something(void *x)
@@ -60,7 +61,7 @@ int main(int argc, char **argv) {
 
 // R321: HWAddressSanitizer: tag-mismatch
 // R321-NEXT: WRITE of size 8
-// R321-NEXT: in BAR
+// R321: in BAR
 // R321-NEXT: in FOO
 // R321-NEXT: in main
 // R321: is located in stack of thread T0

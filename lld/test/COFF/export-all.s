@@ -4,13 +4,24 @@
 
 # RUN: lld-link -lldmingw -dll -out:%t.dll -entry:DllMainCRTStartup@12 %t.obj -implib:%t.lib
 # RUN: llvm-readobj --coff-exports %t.dll | grep Name: | FileCheck %s
+# RUN: llvm-readobj --coff-exports %t.dll | FileCheck %s --check-prefix=CHECK-RVA
 # RUN: llvm-readobj %t.lib | FileCheck -check-prefix=IMPLIB %s
 
 # CHECK: Name:
+# CHECK-NEXT: Name: comdatFunc
 # CHECK-NEXT: Name: dataSym
 # CHECK-NEXT: Name: foobar
 # CHECK-EMPTY:
 
+# CHECK-RVA: Name: comdatFunc
+# CHECK-RVA-NEXT: RVA: 0x1003
+# CHECK-RVA: Name: dataSym
+# CHECK-RVA-NEXT: RVA: 0x3000
+# CHECK-RVA: Name: foobar
+# CHECK-RVA-NEXT: RVA: 0x1001
+
+# IMPLIB: Symbol: __imp__comdatFunc
+# IMPLIB: Symbol: _comdatFunc
 # IMPLIB: Symbol: __imp__dataSym
 # IMPLIB-NOT: Symbol: _dataSym
 # IMPLIB: Symbol: __imp__foobar
@@ -22,12 +33,16 @@
 .global _unexported
 .global __imp__unexported
 .global .refptr._foobar
+.global _comdatFunc
 .text
 _DllMainCRTStartup@12:
   ret
 _foobar:
   ret
 _unexported:
+  ret
+.section .text$_comdatFunc,"xr",one_only,_comdatFunc
+_comdatFunc:
   ret
 .data
 _dataSym:
@@ -44,6 +59,10 @@ __imp__unexported:
 #
 # RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -export-all-symbols -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=CHECK2 %s
+# RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
+
+# RUN: lld-link -safeseh:no -out:%t.exe %t.obj -lldmingw -export-all-symbols -output-def:%t.def -entry:_DllMainCRTStartup
+# RUN: llvm-readobj --coff-exports %t.exe | FileCheck -check-prefix=CHECK2 %s
 # RUN: cat %t.def | FileCheck -check-prefix=CHECK2-DEF %s
 
 # Note, this will actually export _DllMainCRTStartup as well, since

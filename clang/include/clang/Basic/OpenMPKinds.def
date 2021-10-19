@@ -59,6 +59,9 @@
 #ifndef OPENMP_REDUCTION_MODIFIER
 #define OPENMP_REDUCTION_MODIFIER(Name)
 #endif
+#ifndef OPENMP_ADJUST_ARGS_KIND
+#define OPENMP_ADJUST_ARGS_KIND(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -89,6 +92,7 @@ OPENMP_DEFAULTMAP_MODIFIER(tofrom)
 OPENMP_DEFAULTMAP_MODIFIER(firstprivate)
 OPENMP_DEFAULTMAP_MODIFIER(none)
 OPENMP_DEFAULTMAP_MODIFIER(default)
+OPENMP_DEFAULTMAP_MODIFIER(present)
 
 // Static attributes for 'depend' clause.
 OPENMP_DEPEND_KIND(in)
@@ -122,6 +126,8 @@ OPENMP_MAP_MODIFIER_KIND(always)
 OPENMP_MAP_MODIFIER_KIND(close)
 OPENMP_MAP_MODIFIER_KIND(mapper)
 OPENMP_MAP_MODIFIER_KIND(present)
+// This is an OpenMP extension for the sake of OpenACC support.
+OPENMP_MAP_MODIFIER_KIND(ompx_hold)
 
 // Modifiers for 'to' or 'from' clause.
 OPENMP_MOTION_MODIFIER_KIND(mapper)
@@ -146,6 +152,11 @@ OPENMP_REDUCTION_MODIFIER(default)
 OPENMP_REDUCTION_MODIFIER(inscan)
 OPENMP_REDUCTION_MODIFIER(task)
 
+// Adjust-op kinds for the 'adjust_args' clause.
+OPENMP_ADJUST_ARGS_KIND(nothing)
+OPENMP_ADJUST_ARGS_KIND(need_device_ptr)
+
+#undef OPENMP_ADJUST_ARGS_KIND
 #undef OPENMP_REDUCTION_MODIFIER
 #undef OPENMP_DEVICE_MODIFIER
 #undef OPENMP_ORDER_KIND

@@ -23,14 +23,14 @@ public:
                                "Parent for per-plugin structured data commands",
                                "plugin structured-data <plugin>") {}
 
-  ~CommandStructuredData() override {}
+  ~CommandStructuredData() override = default;
 };
 }
 
 StructuredDataPlugin::StructuredDataPlugin(const ProcessWP &process_wp)
     : PluginInterface(), m_process_wp(process_wp) {}
 
-StructuredDataPlugin::~StructuredDataPlugin() {}
+StructuredDataPlugin::~StructuredDataPlugin() = default;
 
 bool StructuredDataPlugin::GetEnabled(ConstString type_name) const {
   // By default, plugins are always enabled.  Plugin authors should override

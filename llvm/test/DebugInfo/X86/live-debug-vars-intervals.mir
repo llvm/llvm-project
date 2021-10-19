@@ -107,7 +107,7 @@ body:             |
   bb.0.entry:
     liveins: $edi
     %0:gr32 = COPY $edi
-    MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0 :: (store 4 into %ir.x.addr)
+    MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.x.addr)
     DBG_VALUE %stack.0.x.addr, $noreg, !11, !DIExpression(DW_OP_deref), debug-location !12
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !12
     %1:gr64 = LEA64r %stack.0.x.addr, 1, $noreg, 0, $noreg
@@ -115,9 +115,9 @@ body:             |
     CALL64pcrel32 @escape, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !12
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !12
     DBG_VALUE %stack.0.x.addr, $noreg, !11, !DIExpression(), debug-location !12
-    MOV32mi $rip, 1, $noreg, @global, $noreg, 1, debug-location !12 :: (store 4 into @global)
+    MOV32mi $rip, 1, $noreg, @global, $noreg, 1, debug-location !12 :: (store (s32) into @global)
     DBG_VALUE %stack.0.x.addr, $noreg, !11, !DIExpression(DW_OP_deref), debug-location !12
-    MOV32mi %stack.0.x.addr, 1, $noreg, 0, $noreg, 2, debug-location !12 :: (store 4 into %ir.x.addr)
+    MOV32mi %stack.0.x.addr, 1, $noreg, 0, $noreg, 2, debug-location !12 :: (store (s32) into %ir.x.addr)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !12
     $rdi = COPY %1, debug-location !12
     CALL64pcrel32 @escape, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !12
@@ -135,7 +135,7 @@ body:             |
   bb.0.entry:
     liveins: $edi
     %0:gr32 = COPY $edi
-    MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0 :: (store 4 into %ir.x.addr)
+    MOV32mr %stack.0.x.addr, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.x.addr)
     DBG_VALUE %stack.0.x.addr, $noreg, !14, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16), debug-location !15
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %1:gr64 = LEA64r %stack.0.x.addr, 1, $noreg, 0, $noreg
@@ -143,9 +143,9 @@ body:             |
     CALL64pcrel32 @escape, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     DBG_VALUE %stack.0.x.addr, $noreg, !14, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !15
-    MOV32mi $rip, 1, $noreg, @global, $noreg, 1 :: (store 4 into @global)
+    MOV32mi $rip, 1, $noreg, @global, $noreg, 1 :: (store (s32) into @global)
     DBG_VALUE %stack.0.x.addr, $noreg, !14, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 16), debug-location !15
-    MOV32mi %stack.0.x.addr, 1, $noreg, 0, $noreg, 2 :: (store 4 into %ir.x.addr)
+    MOV32mi %stack.0.x.addr, 1, $noreg, 0, $noreg, 2 :: (store (s32) into %ir.x.addr)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY %1
     CALL64pcrel32 @escape, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp

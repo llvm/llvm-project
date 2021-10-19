@@ -17,7 +17,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include <cstdio>
 
@@ -159,7 +159,7 @@ ModuleLock::ModuleLock(const FileSpec &root_dir_spec, const UUID &uuid,
   m_file_spec = JoinPath(lock_dir_spec, uuid.GetAsString().c_str());
 
   auto file = FileSystem::Instance().Open(
-      m_file_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
+      m_file_spec, File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
                        File::eOpenOptionCloseOnExec);
   if (file)
     m_file_up = std::move(file.get());

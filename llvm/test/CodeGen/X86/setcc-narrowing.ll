@@ -11,7 +11,6 @@ define i32 @t1() nounwind ssp {
 ; CHECK-NEXT:    cmpl $0, _t1.global
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:    ## -- End function
 entry:
   %0 = load i64, i64* @t1.global, align 8
   %and = and i64 4294967295, %0

@@ -27,106 +27,179 @@
 using namespace llvm;
 using namespace mlir;
 
-namespace mlir {
 // Defined in the test directory, no public header.
-void registerConvertCallOpPass();
+namespace mlir {
 void registerConvertToTargetEnvPass();
-void registerInliner();
-void registerMemRefBoundCheck();
 void registerPassManagerTestPass();
-void registerPatternsTestPass();
 void registerPrintOpAvailabilityPass();
+void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
-void registerSimpleParametricTilingPass();
+void registerSliceAnalysisTestPass();
 void registerSymbolTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
-void registerTestBufferPlacementPreparationPass();
-void registerTestCallGraphPass();
-void registerTestConstantFold();
-void registerTestConvertGPUKernelToCubinPass();
-void registerTestConvertGPUKernelToHsacoPass();
-void registerTestDominancePass();
-void registerTestDialect(DialectRegistry &);
-void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
+void registerTestLoopPermutationPass();
+void registerTestMatchers();
+void registerTestOperationEqualPass();
+void registerTestPrintDefUsePass();
+void registerTestPrintNestingPass();
+void registerTestReducer();
+void registerTestSpirvEntryPointABIPass();
+void registerTestSpirvGLSLCanonicalizationPass();
+void registerTestSpirvModuleCombinerPass();
+void registerTestTraitsPass();
+void registerTosaTestQuantUtilAPIPass();
+void registerVectorizerTestPass();
+
+namespace test {
+void registerConvertCallOpPass();
+void registerInliner();
+void registerMemRefBoundCheck();
+void registerPatternsTestPass();
+void registerSimpleParametricTilingPass();
+void registerTestAffineLoopParametricTilingPass();
+void registerTestAliasAnalysisPass();
+void registerTestBuiltinAttributeInterfaces();
+void registerTestCallGraphPass();
+void registerTestConstantFold();
+void registerTestConvVectorization();
+void registerTestGpuSerializeToCubinPass();
+void registerTestGpuSerializeToHsacoPass();
+void registerTestDataLayoutQuery();
+void registerTestDecomposeCallGraphTypes();
+void registerTestDiagnosticsPass();
+void registerTestDominancePass();
+void registerTestDynamicPipelinePass();
+void registerTestExpandTanhPass();
+void registerTestComposeSubView();
 void registerTestGpuParallelLoopMappingPass();
+void registerTestIRVisitorsPass();
 void registerTestInterfaces();
+void registerTestLinalgCodegenStrategy();
+void registerTestLinalgControlFuseByExpansion();
+void registerTestLinalgDistribution();
+void registerTestLinalgElementwiseFusion();
+void registerTestPushExpandingReshape();
+void registerTestLinalgFusionTransforms();
+void registerTestLinalgTensorFusionTransforms();
+void registerTestLinalgTiledLoopFusionTransforms();
+void registerTestLinalgGreedyFusion();
 void registerTestLinalgHoisting();
+void registerTestLinalgTileAndFuseSequencePass();
 void registerTestLinalgTransforms();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
-void registerTestLoopPermutationPass();
 void registerTestLoopUnrollingPass();
-void registerTestMatchers();
+void registerTestMatchReductionPass();
+void registerTestMathAlgebraicSimplificationPass();
+void registerTestMathPolynomialApproximationPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
+void registerTestNumberOfBlockExecutionsPass();
+void registerTestNumberOfOperationExecutionsPass();
 void registerTestOpaqueLoc();
+void registerTestPDLByteCodePass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
-void registerTestReducer();
-void registerTestSpirvEntryPointABIPass();
 void registerTestSCFUtilsPass();
 void registerTestVectorConversions();
-void registerVectorizerTestPass();
+} // namespace test
 } // namespace mlir
+
+namespace test {
+void registerTestDialect(DialectRegistry &);
+} // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
-  registerConvertCallOpPass();
   registerConvertToTargetEnvPass();
-  registerInliner();
-  registerMemRefBoundCheck();
   registerPassManagerTestPass();
-  registerPatternsTestPass();
   registerPrintOpAvailabilityPass();
+  registerShapeFunctionTestPasses();
   registerSideEffectTestPasses();
-  registerSimpleParametricTilingPass();
+  registerSliceAnalysisTestPass();
   registerSymbolTestPasses();
   registerTestAffineDataCopyPass();
-  registerTestAllReduceLoweringPass();
   registerTestAffineLoopUnswitchingPass();
+  registerTestAllReduceLoweringPass();
+  registerTestFunc();
+  registerTestGpuMemoryPromotionPass();
   registerTestLoopPermutationPass();
-  registerTestCallGraphPass();
-  registerTestConstantFold();
+  registerTestMatchers();
+  registerTestOperationEqualPass();
+  registerTestPrintDefUsePass();
+  registerTestPrintNestingPass();
+  registerTestReducer();
+  registerTestSpirvEntryPointABIPass();
+  registerTestSpirvGLSLCanonicalizationPass();
+  registerTestSpirvModuleCombinerPass();
+  registerTestTraitsPass();
+  registerVectorizerTestPass();
+  registerTosaTestQuantUtilAPIPass();
+
+  mlir::test::registerConvertCallOpPass();
+  mlir::test::registerInliner();
+  mlir::test::registerMemRefBoundCheck();
+  mlir::test::registerPatternsTestPass();
+  mlir::test::registerSimpleParametricTilingPass();
+  mlir::test::registerTestAffineLoopParametricTilingPass();
+  mlir::test::registerTestAliasAnalysisPass();
+  mlir::test::registerTestBuiltinAttributeInterfaces();
+  mlir::test::registerTestCallGraphPass();
+  mlir::test::registerTestConstantFold();
+  mlir::test::registerTestDiagnosticsPass();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
-  registerTestConvertGPUKernelToCubinPass();
+  mlir::test::registerTestGpuSerializeToCubinPass();
 #endif
 #if MLIR_ROCM_CONVERSIONS_ENABLED
-  registerTestConvertGPUKernelToHsacoPass();
+  mlir::test::registerTestGpuSerializeToHsacoPass();
 #endif
-  registerTestBufferPlacementPreparationPass();
-  registerTestDominancePass();
-  registerTestFunc();
-  registerTestExpandTanhPass();
-  registerTestGpuMemoryPromotionPass();
-  registerTestInterfaces();
-  registerTestLinalgHoisting();
-  registerTestLinalgTransforms();
-  registerTestLivenessPass();
-  registerTestLoopFusion();
-  registerTestLoopMappingPass();
-  registerTestLoopUnrollingPass();
-  registerTestMatchers();
-  registerTestMemRefDependenceCheck();
-  registerTestMemRefStrideCalculation();
-  registerTestOpaqueLoc();
-  registerTestPreparationPassWithAllowedMemrefResults();
-  registerTestRecursiveTypesPass();
-  registerTestReducer();
-  registerTestGpuParallelLoopMappingPass();
-  registerTestSpirvEntryPointABIPass();
-  registerTestSCFUtilsPass();
-  registerTestVectorConversions();
-  registerVectorizerTestPass();
+  mlir::test::registerTestConvVectorization();
+  mlir::test::registerTestDecomposeCallGraphTypes();
+  mlir::test::registerTestDataLayoutQuery();
+  mlir::test::registerTestDominancePass();
+  mlir::test::registerTestDynamicPipelinePass();
+  mlir::test::registerTestExpandTanhPass();
+  mlir::test::registerTestComposeSubView();
+  mlir::test::registerTestGpuParallelLoopMappingPass();
+  mlir::test::registerTestIRVisitorsPass();
+  mlir::test::registerTestInterfaces();
+  mlir::test::registerTestLinalgCodegenStrategy();
+  mlir::test::registerTestLinalgControlFuseByExpansion();
+  mlir::test::registerTestLinalgDistribution();
+  mlir::test::registerTestLinalgElementwiseFusion();
+  mlir::test::registerTestPushExpandingReshape();
+  mlir::test::registerTestLinalgFusionTransforms();
+  mlir::test::registerTestLinalgTensorFusionTransforms();
+  mlir::test::registerTestLinalgTiledLoopFusionTransforms();
+  mlir::test::registerTestLinalgGreedyFusion();
+  mlir::test::registerTestLinalgHoisting();
+  mlir::test::registerTestLinalgTileAndFuseSequencePass();
+  mlir::test::registerTestLinalgTransforms();
+  mlir::test::registerTestLivenessPass();
+  mlir::test::registerTestLoopFusion();
+  mlir::test::registerTestLoopMappingPass();
+  mlir::test::registerTestLoopUnrollingPass();
+  mlir::test::registerTestMatchReductionPass();
+  mlir::test::registerTestMathAlgebraicSimplificationPass();
+  mlir::test::registerTestMathPolynomialApproximationPass();
+  mlir::test::registerTestMemRefDependenceCheck();
+  mlir::test::registerTestMemRefStrideCalculation();
+  mlir::test::registerTestNumberOfBlockExecutionsPass();
+  mlir::test::registerTestNumberOfOperationExecutionsPass();
+  mlir::test::registerTestOpaqueLoc();
+  mlir::test::registerTestPDLByteCodePass();
+  mlir::test::registerTestRecursiveTypesPass();
+  mlir::test::registerTestSCFUtilsPass();
+  mlir::test::registerTestVectorConversions();
 }
 #endif
 
 int main(int argc, char **argv) {
-  registerAllDialects();
   registerAllPasses();
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
@@ -134,9 +207,9 @@ int main(int argc, char **argv) {
   DialectRegistry registry;
   registerAllDialects(registry);
 #ifdef MLIR_INCLUDE_TESTS
-  registerTestDialect(registry);
+  ::test::registerTestDialect(registry);
 #endif
-  return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver\n",
-                            registry,
-                            /*preloadDialectsInContext=*/false));
+  return mlir::asMainReturnCode(
+      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry,
+                        /*preloadDialectsInContext=*/false));
 }

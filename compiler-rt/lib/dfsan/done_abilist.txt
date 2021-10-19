@@ -28,12 +28,39 @@ fun:dfsan_set_write_callback=uninstrumented
 fun:dfsan_set_write_callback=custom
 fun:dfsan_flush=uninstrumented
 fun:dfsan_flush=discard
+fun:dfsan_print_origin_trace=uninstrumented
+fun:dfsan_print_origin_trace=discard
+fun:dfsan_sprint_origin_trace=uninstrumented
+fun:dfsan_sprint_origin_trace=discard
+fun:dfsan_sprint_stack_trace=uninstrumented
+fun:dfsan_sprint_stack_trace=discard
+fun:dfsan_get_origin=uninstrumented
+fun:dfsan_get_origin=custom
+fun:dfsan_get_init_origin=uninstrumented
+fun:dfsan_get_init_origin=discard
+fun:dfsan_get_track_origins=uninstrumented
+fun:dfsan_get_track_origins=discard
 
 ###############################################################################
 # glibc
 ###############################################################################
+# Functions of memory allocators
+fun:__libc_memalign=discard
+fun:aligned_alloc=discard
+fun:calloc=discard
+fun:cfree=discard
+fun:mallinfo=discard
 fun:malloc=discard
 fun:free=discard
+fun:malloc_stats=discard
+fun:malloc_usable_size=discard
+fun:mallopt=discard
+fun:memalign=discard
+fun:posix_memalign=discard
+fun:pvalloc=discard
+fun:realloc=discard
+fun:reallocarray=discard
+fun:valloc=discard
 
 # Functions that return a value that depends on the input, but the output might
 # not be necessarily data-dependent on the input.
@@ -48,25 +75,55 @@ fun:tolower=functional
 fun:toupper=functional
 
 # Functions that return a value that is data-dependent on the input.
+fun:__isinf=functional
+fun:__isinff=functional
+fun:__signbit=functional
+fun:__signbitf=functional
+fun:__signbitl=functional
 fun:btowc=functional
 fun:exp=functional
 fun:exp2=functional
+fun:expf=functional
+fun:expl=functional
 fun:fabs=functional
 fun:finite=functional
+fun:finitef=functional
+fun:finitel=functional
 fun:floor=functional
 fun:fmod=functional
 fun:isinf=functional
+fun:isinff=functional
+fun:isinfl=functional
 fun:isnan=functional
+fun:isnanf=functional
+fun:isnanl=functional
 fun:log=functional
+fun:log1p=functional
+fun:log1pf=functional
+fun:log1pl=functional
+fun:log2=functional
+fun:log2f=functional
+fun:log2l=functional
 fun:modf=functional
+fun:nextafter=functional
+fun:nextafterf=functional
+fun:nextafterl=functional
+fun:nexttoward=functional
+fun:nexttowardf=functional
+fun:nexttowardl=functional
 fun:pow=functional
+fun:powf=functional
+fun:powl=functional
 fun:round=functional
 fun:sqrt=functional
+fun:sqrtf=functional
+fun:sqrtl=functional
 fun:wctob=functional
 
 # Functions that produce an output that does not depend on the input (shadow is
 # zeroed automatically).
 fun:__assert_fail=discard
+fun:__cmsg_nxthdr=discard
 fun:__ctype_b_loc=discard
 fun:__cxa_atexit=discard
 fun:__errno_location=discard
@@ -83,8 +140,12 @@ fun:chdir=discard
 fun:close=discard
 fun:closedir=discard
 fun:connect=discard
+fun:creat=discard
 fun:dladdr=discard
 fun:dlclose=discard
+fun:epoll_create=discard
+fun:epoll_create1=discard
+fun:epoll_ctl=discard
 fun:fclose=discard
 fun:feof=discard
 fun:ferror=discard
@@ -111,9 +172,9 @@ fun:mkdir=discard
 fun:mmap=discard
 fun:munmap=discard
 fun:open=discard
+fun:openat=discard
 fun:pipe=discard
 fun:posix_fadvise=discard
-fun:posix_memalign=discard
 fun:prctl=discard
 fun:printf=discard
 fun:pthread_sigmask=discard
@@ -145,22 +206,31 @@ fun:symlink=discard
 fun:syscall=discard
 fun:unlink=discard
 fun:uselocale=discard
+fun:vfprintf=discard
 
 # Functions that produce output does not depend on the input (need to zero the
 # shadow manually).
-fun:calloc=custom
+fun:_dl_get_tls_static_info=custom
 fun:clock_gettime=custom
 fun:dlopen=custom
+fun:epoll_wait=custom
 fun:fgets=custom
 fun:fstat=custom
 fun:getcwd=custom
 fun:get_current_dir_name=custom
+fun:getentropy=custom
 fun:gethostname=custom
+fun:getpeername=custom
 fun:getrlimit=custom
 fun:getrusage=custom
+fun:getsockname=custom
+fun:getsockopt=custom
 fun:nanosleep=custom
 fun:pread=custom
 fun:read=custom
+fun:recvmmsg=custom
+fun:recvmsg=custom
+fun:sigaltstack=custom
 fun:socketpair=custom
 fun:stat=custom
 fun:time=custom
@@ -171,6 +241,7 @@ fun:ctime_r=custom
 fun:inet_pton=custom
 fun:localtime_r=custom
 fun:memcpy=custom
+fun:memmove=custom
 fun:memset=custom
 fun:strcpy=custom
 fun:strdup=custom
@@ -180,9 +251,11 @@ fun:strtol=custom
 fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
+fun:strcat=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
+fun:bcmp=custom
 fun:memchr=custom
 fun:memcmp=custom
 fun:strcasecmp=custom
@@ -191,11 +264,12 @@ fun:strcmp=custom
 fun:strlen=custom
 fun:strncasecmp=custom
 fun:strncmp=custom
+fun:strpbrk=custom
 fun:strrchr=custom
 fun:strstr=custom
 
 # Functions which take action based on global state, such as running a callback
-# set by a sepperate function.
+# set by a separate function.
 fun:write=custom
 
 # Functions that take a callback (wrap the callback manually).
@@ -207,6 +281,7 @@ fun:sched_getaffinity=custom
 fun:select=custom
 fun:sigemptyset=custom
 fun:sigaction=custom
+fun:signal=custom
 fun:gettimeofday=custom
 
 # sprintf-like
@@ -217,10 +292,38 @@ fun:snprintf=custom
 fun:asprintf=discard
 fun:qsort=discard
 
+# fork
+fun:fork=custom
+
 ###############################################################################
 # pthread
 ###############################################################################
+fun:__pthread_register_cancel=discard
+fun:__pthread_unregister_cancel=discard
+fun:pthread_attr_destroy=discard
+fun:pthread_attr_getaffinity_np=discard
+fun:pthread_attr_getdetachstate=discard
+fun:pthread_attr_getguardsize=discard
+fun:pthread_attr_getinheritsched=discard
+fun:pthread_attr_getschedparam=discard
+fun:pthread_attr_getschedpolicy=discard
+fun:pthread_attr_getscope=discard
+fun:pthread_attr_getstack=discard
+fun:pthread_attr_getstackaddr=disacrd
+fun:pthread_attr_getstacksize=discard
+fun:pthread_attr_init=discard
+fun:pthread_attr_setaffinity_np=discard
+fun:pthread_attr_setdetachstate=discard
+fun:pthread_attr_setguardsize=discard
+fun:pthread_attr_setinheritsched=discard
+fun:pthread_attr_setschedparam=discard
+fun:pthread_attr_setschedpolicy=discard
+fun:pthread_attr_setscope=discard
+fun:pthread_attr_setstack=discard
+fun:pthread_attr_setstackaddr=discard
+fun:pthread_attr_setstacksize=discard
 fun:pthread_equal=discard
+fun:pthread_getschedparam=discard
 fun:pthread_getspecific=discard
 fun:pthread_key_create=discard
 fun:pthread_key_delete=discard
@@ -232,12 +335,27 @@ fun:pthread_mutex_unlock=discard
 fun:pthread_mutexattr_destroy=discard
 fun:pthread_mutexattr_init=discard
 fun:pthread_mutexattr_settype=discard
+fun:pthread_rwlock_destroy=discard
+fun:pthread_rwlock_init=discard
+fun:pthread_rwlock_rdlock=discard
+fun:pthread_rwlock_timedrdlock=discard
+fun:pthread_rwlock_timedwrlock=discard
+fun:pthread_rwlock_tryrdlock=discard
+fun:pthread_rwlock_trywrlock=discard
+fun:pthread_rwlock_wrlock=discard
+fun:pthread_rwlock_unlock=discard
+fun:pthread_setschedparam=discard
+fun:pthread_setname_np=discard
 fun:pthread_once=discard
 fun:pthread_self=discard
 fun:pthread_setspecific=discard
 
 # Functions that take a callback (wrap the callback manually).
 fun:pthread_create=custom
+
+# Functions that produce output does not depend on the input (need to zero the
+# shadow manually).
+fun:pthread_join=custom
 
 ###############################################################################
 # libffi/libgo
@@ -301,6 +419,38 @@ fun:__sanitizer_cov_trace_pc*=discard
 fun:__sanitizer_cov_pcs_init=uninstrumented
 fun:__sanitizer_cov_pcs_init=discard
 
+fun:__sanitizer_get_current_allocated_bytes=uninstrumented
+fun:__sanitizer_get_current_allocated_bytes=discard
+fun:__sanitizer_get_heap_size=uninstrumented
+fun:__sanitizer_get_heap_size=discard
+fun:__sanitizer_get_free_bytes=uninstrumented
+fun:__sanitizer_get_free_bytes=discard
+fun:__sanitizer_get_unmapped_bytes=uninstrumented
+fun:__sanitizer_get_unmapped_bytes=discard
+fun:__sanitizer_get_estimated_allocated_size=uninstrumented
+fun:__sanitizer_get_estimated_allocated_size=discard
+fun:__sanitizer_get_ownership=uninstrumented
+fun:__sanitizer_get_ownership=discard
+fun:__sanitizer_get_allocated_size=uninstrumented
+fun:__sanitizer_get_allocated_size=discard
+fun:__sanitizer_print_stack_trace=uninstrumented
+fun:__sanitizer_print_stack_trace=discard
+
+fun:TcmallocSlab_Internal_PushBatch_FixedShift=uninstrumented
+fun:TcmallocSlab_Internal_PushBatch_FixedShift=discard
+fun:TcmallocSlab_Internal_PushBatch_FixedShift_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PushBatch_FixedShift_VCPU=discard
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64=uninstrumented
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64=discard
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PerCpuCmpxchg64_VCPU=discard
+fun:TcmallocSlab_Internal_PopBatch_FixedShift=uninstrumented
+fun:TcmallocSlab_Internal_PopBatch_FixedShift=discard
+fun:TcmallocSlab_Internal_PopBatch_FixedShift_VCPU=uninstrumented
+fun:TcmallocSlab_Internal_PopBatch_FixedShift_VCPU=discard
+
 # Ignores the dfsan wrappers.
 fun:__dfsw_*=uninstrumented
 fun:__dfsw_*=discard
+fun:__dfso_*=uninstrumented
+fun:__dfso_*=discard

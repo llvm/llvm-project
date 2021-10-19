@@ -1,0 +1,36 @@
+// RUN: mlir-lsp-server -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"mlir","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.mlir",
+  "languageId":"mlir",
+  "version":1,
+  "text":"func ()"
+}}}
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK-NEXT: "params": {
+// CHECK-NEXT:     "diagnostics": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "category": "Parse Error",
+// CHECK-NEXT:         "message": "custom op 'builtin.func' expected valid '@'-identifier for symbol name",
+// CHECK-NEXT:         "range": {
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:             "character": 7,
+// CHECK-NEXT:             "line": 0
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "start": {
+// CHECK-NEXT:             "character": 6,
+// CHECK-NEXT:             "line": 0
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "severity": 1,
+// CHECK-NEXT:         "source": "mlir"
+// CHECK-NEXT:       }
+// CHECK-NEXT:     ],
+// CHECK-NEXT:     "uri": "test:///foo.mlir",
+// CHECK-NEXT:     "version": 1
+// CHECK-NEXT:   }
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

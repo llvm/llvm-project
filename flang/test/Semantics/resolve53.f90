@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! 15.4.3.4.5 Restrictions on generic declarations
 ! Specific procedures of generic interfaces must be distinguishable.
 
@@ -210,7 +210,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic 'operator(+)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(+)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(+)
     module procedure f1
     module procedure f3
@@ -219,7 +219,7 @@ module m14
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic operator '.bar.' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f1' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f1
     module procedure f3
@@ -304,7 +304,7 @@ module m15
 
 contains
   subroutine s1(x)
-    type(t1(1, 4)) :: x
+    type(t1(1, 5)) :: x
   end
   subroutine s2(x)
     type(t1(2, 4)) :: x
@@ -319,7 +319,7 @@ contains
     type(t3) :: x
   end subroutine
   subroutine s6(x)
-    type(t3(1, 99, k2b=2, k2a=3, l2=*, l3=97, k3=4)) :: x
+    type(t3(1, 99, k2b=2, k2a=3, l2=*, l3=103, k3=4)) :: x
   end subroutine
   subroutine s7(x)
     type(t3(k1=1, l1=99, k2a=3, k2b=2, k3=4)) :: x
@@ -331,7 +331,6 @@ contains
     type(t3(k1=2)) :: x
   end subroutine
 end
-
 
 ! Check that specifics for type-bound generics can be distinguished
 module m16
@@ -441,20 +440,20 @@ module m19
     module procedure f1
     module procedure f2
   end interface
-  !ERROR: Generic operator '.bar.' may not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable
+  !ERROR: Generic 'OPERATOR(.bar.)' may not have specific procedures 'f2' and 'f3' as their interfaces are not distinguishable
   interface operator(.bar.)
     module procedure f2
     module procedure f3
   end interface
 contains
   integer function f1(i)
-    integer :: i
+    integer, intent(in) :: i
   end
   integer function f2(i, j)
-    integer :: i, j
+    integer, value :: i, j
   end
   integer function f3(i, j)
-    integer :: i, j
+    integer, intent(in) :: i, j
   end
 end
 
@@ -472,11 +471,11 @@ end module
 subroutine s1()
   use m20
   interface operator(.not.)
-    !ERROR: Procedure 'f' is already specified in generic 'operator(.not.)'
+    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(.NOT.)'
     procedure f
   end interface
   interface operator(+)
-    !ERROR: Procedure 'f' is already specified in generic 'operator(+)'
+    !ERROR: Procedure 'f' from module 'm20' is already specified in generic 'OPERATOR(+)'
     procedure f
   end interface
 end subroutine s1

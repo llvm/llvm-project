@@ -44,6 +44,7 @@ Hexagon::Hexagon() {
   gotRel = R_HEX_GLOB_DAT;
   symbolicRel = R_HEX_32;
 
+  gotBaseSymInGotPlt = true;
   // The zero'th GOT entry is reserved for the address of _DYNAMIC.  The
   // next 3 are reserved for the dynamic loader.
   gotPltHeaderEntriesNum = 4;
@@ -53,7 +54,6 @@ Hexagon::Hexagon() {
 
   // Hexagon Linux uses 64K pages by default.
   defaultMaxPageSize = 0x10000;
-  noneRel = R_HEX_NONE;
   tlsGotRel = R_HEX_TPREL_32;
   tlsModuleIndexRel = R_HEX_DTPMOD_32;
   tlsOffsetRel = R_HEX_DTPREL_32;
@@ -66,7 +66,7 @@ uint32_t Hexagon::calcEFlags() const {
   // greatest revision in the list of inputs.
   uint32_t ret = 0;
   for (InputFile *f : objectFiles) {
-    uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader()->e_flags;
+    uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
     if (eflags > ret)
       ret = eflags;
   }
@@ -154,13 +154,35 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_TPREL_32_6_X:
   case R_HEX_TPREL_HI16:
   case R_HEX_TPREL_LO16:
-    return R_TLS;
+    return R_TPREL;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
           ") against symbol " + toString(s));
     return R_NONE;
   }
 }
+
+// There are (arguably too) many relocation masks for the DSP's
+// R_HEX_6_X type.  The table below is used to select the correct mask
+// for the given instruction.
+struct InstructionMask {
+  uint32_t cmpMask;
+  uint32_t relocMask;
+};
+static const InstructionMask r6[] = {
+    {0x38000000, 0x0000201f}, {0x39000000, 0x0000201f},
+    {0x3e000000, 0x00001f80}, {0x3f000000, 0x00001f80},
+    {0x40000000, 0x000020f8}, {0x41000000, 0x000007e0},
+    {0x42000000, 0x000020f8}, {0x43000000, 0x000007e0},
+    {0x44000000, 0x000020f8}, {0x45000000, 0x000007e0},
+    {0x46000000, 0x000020f8}, {0x47000000, 0x000007e0},
+    {0x6a000000, 0x00001f80}, {0x7c000000, 0x001f2000},
+    {0x9a000000, 0x00000f60}, {0x9b000000, 0x00000f60},
+    {0x9c000000, 0x00000f60}, {0x9d000000, 0x00000f60},
+    {0x9f000000, 0x001f0100}, {0xab000000, 0x0000003f},
+    {0xad000000, 0x0000003f}, {0xaf000000, 0x00030078},
+    {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
+    {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
 
 static bool isDuplex(uint32_t insn) {
   // Duplex forms have a fixed mask and parse bits 15:14 are always
@@ -170,29 +192,6 @@ static bool isDuplex(uint32_t insn) {
 }
 
 static uint32_t findMaskR6(uint32_t insn) {
-  // There are (arguably too) many relocation masks for the DSP's
-  // R_HEX_6_X type.  The table below is used to select the correct mask
-  // for the given instruction.
-  struct InstructionMask {
-    uint32_t cmpMask;
-    uint32_t relocMask;
-  };
-
-  static const InstructionMask r6[] = {
-      {0x38000000, 0x0000201f}, {0x39000000, 0x0000201f},
-      {0x3e000000, 0x00001f80}, {0x3f000000, 0x00001f80},
-      {0x40000000, 0x000020f8}, {0x41000000, 0x000007e0},
-      {0x42000000, 0x000020f8}, {0x43000000, 0x000007e0},
-      {0x44000000, 0x000020f8}, {0x45000000, 0x000007e0},
-      {0x46000000, 0x000020f8}, {0x47000000, 0x000007e0},
-      {0x6a000000, 0x00001f80}, {0x7c000000, 0x001f2000},
-      {0x9a000000, 0x00000f60}, {0x9b000000, 0x00000f60},
-      {0x9c000000, 0x00000f60}, {0x9d000000, 0x00000f60},
-      {0x9f000000, 0x001f0100}, {0xab000000, 0x0000003f},
-      {0xad000000, 0x0000003f}, {0xaf000000, 0x00030078},
-      {0xd7000000, 0x006020e0}, {0xd8000000, 0x006020e0},
-      {0xdb000000, 0x006020e0}, {0xdf000000, 0x006020e0}};
-
   if (isDuplex(insn))
     return 0x03f00000;
 
@@ -200,7 +199,7 @@ static uint32_t findMaskR6(uint32_t insn) {
     if ((0xff000000 & insn) == i.cmpMask)
       return i.relocMask;
 
-  error("unrecognized instruction for R_HEX_6 relocation: 0x" +
+  error("unrecognized instruction for 6_X relocation: 0x" +
         utohexstr(insn));
   return 0;
 }
@@ -232,7 +231,11 @@ static uint32_t findMaskR16(uint32_t insn) {
   if (isDuplex(insn))
     return 0x03f00000;
 
-  error("unrecognized instruction for R_HEX_16_X relocation: 0x" +
+  for (InstructionMask i : r6)
+    if ((0xff000000 & insn) == i.cmpMask)
+      return i.relocMask;
+
+  error("unrecognized instruction for 16_X type: 0x" +
         utohexstr(insn));
   return 0;
 }

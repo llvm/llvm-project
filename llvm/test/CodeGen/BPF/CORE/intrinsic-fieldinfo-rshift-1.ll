@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-ALU64 %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-ALU32 %s
 ; Source code:
 ;   typedef struct s1 { int a1:7; int a2:4; int a3:5; int a4:16;} __s1;
 ;   union u1 { int b1; __s1 b2; };
@@ -15,7 +14,9 @@
 ;     return r1 + r2 + r3 + r4;
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %union.u1 = type { i32 }
 %struct.s1 = type { i32 }
@@ -26,16 +27,16 @@ entry:
   call void @llvm.dbg.value(metadata %union.u1* %arg, metadata !28, metadata !DIExpression()), !dbg !33
   %0 = tail call %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1* %arg, i32 1), !dbg !34, !llvm.preserve.access.index !16
   %b2 = bitcast %union.u1* %0 to %struct.s1*, !dbg !34
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 0), !dbg !35, !llvm.preserve.access.index !21
+  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !35, !llvm.preserve.access.index !21
   %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %1, i64 5), !dbg !36
   call void @llvm.dbg.value(metadata i32 %2, metadata !29, metadata !DIExpression()), !dbg !33
-  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 1), !dbg !37, !llvm.preserve.access.index !21
+  %3 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 1), !dbg !37, !llvm.preserve.access.index !21
   %4 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %3, i64 5), !dbg !38
   call void @llvm.dbg.value(metadata i32 %4, metadata !30, metadata !DIExpression()), !dbg !33
-  %5 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 2), !dbg !39, !llvm.preserve.access.index !21
+  %5 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 2), !dbg !39, !llvm.preserve.access.index !21
   %6 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %5, i64 5), !dbg !40
   call void @llvm.dbg.value(metadata i32 %6, metadata !31, metadata !DIExpression()), !dbg !33
-  %7 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* %b2, i32 0, i32 3), !dbg !41, !llvm.preserve.access.index !21
+  %7 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 3), !dbg !41, !llvm.preserve.access.index !21
   %8 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %7, i64 5), !dbg !42
   call void @llvm.dbg.value(metadata i32 %8, metadata !32, metadata !DIExpression()), !dbg !33
   %add = add i32 %4, %2, !dbg !43

@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_LIVEREGUNITS_H
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -67,7 +67,6 @@ public:
         UsedRegUnits.addReg(Reg);
       }
     }
-    return;
   }
 
   /// Initialize and clear the set.

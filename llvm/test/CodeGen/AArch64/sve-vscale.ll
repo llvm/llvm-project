@@ -1,9 +1,6 @@
-; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s 2>%t | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -mattr=+sve -asm-verbose=0 -opaque-pointers < %s | FileCheck %s
 ; RUN: opt -mtriple=aarch64 -codegenprepare -S < %s | llc -mtriple=aarch64 -mattr=+sve -asm-verbose=0 | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
 
 ;
 ; RDVL
@@ -73,8 +70,8 @@ define i32 @vscale_neg1() nounwind {
 
 ; CHECK-LABEL: rdvl_3:
 ; CHECK:       rdvl [[VL_B:x[0-9]+]], #1
-; CHECK-NEXT:  lsr  [[VL_Q:x[0-9]+]], [[VL_B]], #4
 ; CHECK-NEXT:  mov  w[[MUL:[0-9]+]], #3
+; CHECK-NEXT:  lsr  [[VL_Q:x[0-9]+]], [[VL_B]], #4
 ; CHECK-NEXT:  mul  x0, [[VL_Q]], x[[MUL]]
 ; CHECK-NEXT:  ret
 define i32 @rdvl_3() nounwind {

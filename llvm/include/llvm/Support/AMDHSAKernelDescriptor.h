@@ -100,7 +100,7 @@ enum : int32_t {
 #define COMPUTE_PGM_RSRC2(NAME, SHIFT, WIDTH) \
   AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC2_ ## NAME, SHIFT, WIDTH)
 enum : int32_t {
-  COMPUTE_PGM_RSRC2(ENABLE_SGPR_PRIVATE_SEGMENT_WAVEFRONT_OFFSET, 0, 1),
+  COMPUTE_PGM_RSRC2(ENABLE_PRIVATE_SEGMENT, 0, 1),
   COMPUTE_PGM_RSRC2(USER_SGPR_COUNT, 1, 5),
   COMPUTE_PGM_RSRC2(ENABLE_TRAP_HANDLER, 6, 1),
   COMPUTE_PGM_RSRC2(ENABLE_SGPR_WORKGROUP_ID_X, 7, 1),
@@ -122,14 +122,27 @@ enum : int32_t {
 };
 #undef COMPUTE_PGM_RSRC2
 
-// Compute program resource register 3. Must match hardware definition.
-#define COMPUTE_PGM_RSRC3(NAME, SHIFT, WIDTH) \
-  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_ ## NAME, SHIFT, WIDTH)
+// Compute program resource register 3 for GFX90A+. Must match hardware
+// definition.
+#define COMPUTE_PGM_RSRC3_GFX90A(NAME, SHIFT, WIDTH) \
+  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_GFX90A_ ## NAME, SHIFT, WIDTH)
 enum : int32_t {
-  COMPUTE_PGM_RSRC3(SHARED_VGPR_COUNT, 0, 4), // GFX10+
-  COMPUTE_PGM_RSRC3(RESERVED0, 4, 28),
+  COMPUTE_PGM_RSRC3_GFX90A(ACCUM_OFFSET, 0, 6),
+  COMPUTE_PGM_RSRC3_GFX90A(RESERVED0, 6, 10),
+  COMPUTE_PGM_RSRC3_GFX90A(TG_SPLIT, 16, 1),
+  COMPUTE_PGM_RSRC3_GFX90A(RESERVED1, 17, 15),
 };
-#undef COMPUTE_PGM_RSRC3
+#undef COMPUTE_PGM_RSRC3_GFX90A
+
+// Compute program resource register 3 for GFX10+. Must match hardware
+// definition.
+#define COMPUTE_PGM_RSRC3_GFX10(NAME, SHIFT, WIDTH) \
+  AMDHSA_BITS_ENUM_ENTRY(COMPUTE_PGM_RSRC3_GFX10_ ## NAME, SHIFT, WIDTH)
+enum : int32_t {
+  COMPUTE_PGM_RSRC3_GFX10(SHARED_VGPR_COUNT, 0, 4), // GFX10+
+  COMPUTE_PGM_RSRC3_GFX10(RESERVED0, 4, 28),
+};
+#undef COMPUTE_PGM_RSRC3_GFX10
 
 // Kernel code properties. Must be kept backwards compatible.
 #define KERNEL_CODE_PROPERTY(NAME, SHIFT, WIDTH) \
@@ -152,49 +165,64 @@ enum : int32_t {
 struct kernel_descriptor_t {
   uint32_t group_segment_fixed_size;
   uint32_t private_segment_fixed_size;
-  uint8_t reserved0[8];
+  uint32_t kernarg_size;
+  uint8_t reserved0[4];
   int64_t kernel_code_entry_byte_offset;
   uint8_t reserved1[20];
-  uint32_t compute_pgm_rsrc3; // GFX10+
+  uint32_t compute_pgm_rsrc3; // GFX10+ and GFX90A+
   uint32_t compute_pgm_rsrc1;
   uint32_t compute_pgm_rsrc2;
   uint16_t kernel_code_properties;
   uint8_t reserved2[6];
 };
 
+enum : uint32_t {
+  GROUP_SEGMENT_FIXED_SIZE_OFFSET = 0,
+  PRIVATE_SEGMENT_FIXED_SIZE_OFFSET = 4,
+  KERNARG_SIZE_OFFSET = 8,
+  RESERVED0_OFFSET = 12,
+  KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET = 16,
+  RESERVED1_OFFSET = 24,
+  COMPUTE_PGM_RSRC3_OFFSET = 44,
+  COMPUTE_PGM_RSRC1_OFFSET = 48,
+  COMPUTE_PGM_RSRC2_OFFSET = 52,
+  KERNEL_CODE_PROPERTIES_OFFSET = 56,
+  RESERVED2_OFFSET = 58,
+};
+
 static_assert(
     sizeof(kernel_descriptor_t) == 64,
     "invalid size for kernel_descriptor_t");
-static_assert(
-    offsetof(kernel_descriptor_t, group_segment_fixed_size) == 0,
-    "invalid offset for group_segment_fixed_size");
-static_assert(
-    offsetof(kernel_descriptor_t, private_segment_fixed_size) == 4,
-    "invalid offset for private_segment_fixed_size");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved0) == 8,
-    "invalid offset for reserved0");
-static_assert(
-    offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) == 16,
-    "invalid offset for kernel_code_entry_byte_offset");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved1) == 24,
-    "invalid offset for reserved1");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc3) == 44,
-    "invalid offset for compute_pgm_rsrc3");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc1) == 48,
-    "invalid offset for compute_pgm_rsrc1");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc2) == 52,
-    "invalid offset for compute_pgm_rsrc2");
-static_assert(
-    offsetof(kernel_descriptor_t, kernel_code_properties) == 56,
-    "invalid offset for kernel_code_properties");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved2) == 58,
-    "invalid offset for reserved2");
+static_assert(offsetof(kernel_descriptor_t, group_segment_fixed_size) ==
+                  GROUP_SEGMENT_FIXED_SIZE_OFFSET,
+              "invalid offset for group_segment_fixed_size");
+static_assert(offsetof(kernel_descriptor_t, private_segment_fixed_size) ==
+                  PRIVATE_SEGMENT_FIXED_SIZE_OFFSET,
+              "invalid offset for private_segment_fixed_size");
+static_assert(offsetof(kernel_descriptor_t, kernarg_size) ==
+                  KERNARG_SIZE_OFFSET,
+              "invalid offset for kernarg_size");
+static_assert(offsetof(kernel_descriptor_t, reserved0) == RESERVED0_OFFSET,
+              "invalid offset for reserved0");
+static_assert(offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) ==
+                  KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET,
+              "invalid offset for kernel_code_entry_byte_offset");
+static_assert(offsetof(kernel_descriptor_t, reserved1) == RESERVED1_OFFSET,
+              "invalid offset for reserved1");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc3) ==
+                  COMPUTE_PGM_RSRC3_OFFSET,
+              "invalid offset for compute_pgm_rsrc3");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc1) ==
+                  COMPUTE_PGM_RSRC1_OFFSET,
+              "invalid offset for compute_pgm_rsrc1");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc2) ==
+                  COMPUTE_PGM_RSRC2_OFFSET,
+              "invalid offset for compute_pgm_rsrc2");
+static_assert(offsetof(kernel_descriptor_t, kernel_code_properties) ==
+                  KERNEL_CODE_PROPERTIES_OFFSET,
+              "invalid offset for kernel_code_properties");
+static_assert(offsetof(kernel_descriptor_t, reserved2) == RESERVED2_OFFSET,
+              "invalid offset for reserved2");
 
 } // end namespace amdhsa
 } // end namespace llvm

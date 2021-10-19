@@ -3,7 +3,7 @@
 ; inlinehint-threshold. A cold callee with identical body does not get inlined because
 ; cost exceeds the inline-threshold
 
-; RUN: opt < %s -inline -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
+; RUN: opt < %s -inline -inline-threshold=0 -hot-callsite-threshold=100 -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -inline-threshold=0 -hot-callsite-threshold=100 -S | FileCheck %s
 
 ; Run this with the default O2 pipeline to test that profile summary analysis

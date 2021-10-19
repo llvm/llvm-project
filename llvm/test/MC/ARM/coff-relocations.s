@@ -4,6 +4,9 @@
 @ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
 @ RUN:   | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-ENCODING
 
+@ RUN: llvm-mc -triple thumbv7-windows-itanium -filetype obj -o - %s \
+@ RUN:   | llvm-objdump -s - | FileCheck %s --check-prefix=CHECK-DATA
+
 	.syntax unified
 	.text
 	.thumb
@@ -15,28 +18,28 @@ branch24t_0:
 	b target
 
 @ CHECK-ENCODING-LABEL: <branch24t_0>:
-@ CHECK-ENCODING-NEXT: b.w #0
+@ CHECK-ENCODING-NEXT: b.w {{.+}} @ imm = #0
 
 	.thumb_func
 branch24t_1:
 	bl target
 
 @ CHECK-ENCODING-LABEL: <branch24t_1>:
-@ CHECK-ENCODING-NEXR: bl #0
+@ CHECK-ENCODING-NEXR: bl {{.+}} @ imm = #0
 
 	.thumb_func
 branch20t:
 	bcc target
 
 @ CHECK-ENCODING-LABEL: <branch20t>:
-@ CHECK-ENCODING-NEXT: blo.w #0
+@ CHECK-ENCODING-NEXT: blo.w {{.+}} @ imm = #0
 
 	.thumb_func
 blx23t:
 	blx target
 
 @ CHECK-ENCODING-LABEL: <blx23t>:
-@ CHECK-ENCODING-NEXT: blx #0
+@ CHECK-ENCODING-NEXT: blx {{.+}} @ imm = #0
 
 	.thumb_func
 mov32t:
@@ -87,6 +90,11 @@ secrel:
 .Lsecrel:
 	.long target(secrel32)
 
+	.section .rdata, "dr"
+.Ltable:
+	.word addr32nb - .Ltable
+	.word secrel - .Ltable
+
 @ CHECK-ENCODING-LABEL: <secrel>:
 @ CHECK-ENCODING-NEXT: ldr.w r0, [pc, #4]
 @ CHECK-ENCODING-NEXT: bx r0
@@ -105,5 +113,11 @@ secrel:
 @ CHECK-RELOCATION:     0x2C IMAGE_REL_ARM_ADDR32NB
 @ CHECK-RELOCATION:     0x38 IMAGE_REL_ARM_SECREL
 @ CHECK-RELOCATION:   }
+@ CHECK-RELOCATION:   Section (4) .rdata {
+@ CHECK-RELOCATION:     0x0 IMAGE_REL_ARM_REL32
+@ CHECK-RELOCATION:     0x4 IMAGE_REL_ARM_REL32
+@ CHECK-RELOCATION:   }
 @ CHECK-RELOCATION: ]
 
+@ CHECK-DATA: Contents of section .rdata:
+@ CHECK-DATA-NEXT: 0000 04000000 08000000

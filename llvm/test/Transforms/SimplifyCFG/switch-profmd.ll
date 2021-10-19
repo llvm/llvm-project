@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 declare i32 @f(i32 %val)
 

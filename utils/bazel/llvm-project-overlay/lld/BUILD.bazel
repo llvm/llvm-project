@@ -1,0 +1,383 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:tblgen.bzl", "gentbl")
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+# TODO: Actually compute version info
+genrule(
+    name = "config_version_gen",
+    outs = ["include/lld/Common/Version.inc"],
+    cmd = "echo '#define LLD_VERSION_STRING \"14.0.0\"' > $@",
+)
+
+genrule(
+    name = "vcs_version_gen",
+    outs = ["Common/VCSVersion.inc"],
+    cmd = "echo '#undef LLD_REVISION' >> $@\n" +
+          "echo '#undef LLD_REPOSITORY' >> $@\n",
+)
+
+# See https://github.com/bazelbuild/bazel/issues/13803
+cc_library(
+    name = "vcs_version",
+    hdrs = ["Common/VCSVersion.inc"],
+    strip_include_prefix = "Common",
+)
+
+cc_library(
+    name = "Common",
+    srcs = [":config_version_gen"] + glob(["Common/*.cpp"]),
+    hdrs = glob(["include/lld/Common/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":vcs_version",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:Target",
+    ],
+)
+
+gentbl(
+    name = "elf_options_inc_gen",
+    # See https://github.com/bazelbuild/bazel/issues/13803
+    strip_include_prefix = "ELF",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "ELF/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "ELF/Options.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "ELF",
+    srcs = glob([
+        "ELF/*.cpp",
+        "ELF/*.h",
+        "ELF/Arch/*.cpp",
+    ]),
+    includes = ["ELF"],
+    textual_hdrs = [
+        "ELF/Arch/PPCInsns.def",
+    ],
+    deps = [
+        ":Common",
+        ":elf_options_inc_gen",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Analysis",
+        "//llvm:BinaryFormat",
+        "//llvm:BitReader",
+        "//llvm:BitWriter",
+        "//llvm:CodeGen",
+        "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
+        "//llvm:IPO",
+        "//llvm:LTO",
+        "//llvm:Linker",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:TransformUtils",
+    ],
+)
+
+gentbl(
+    name = "coff_options_inc_gen",
+    # See https://github.com/bazelbuild/bazel/issues/13803
+    strip_include_prefix = "COFF",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "COFF/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "COFF/Options.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "COFF",
+    srcs = glob([
+        "COFF/*.cpp",
+        "COFF/*.h",
+    ]),
+    includes = ["COFF"],
+    deps = [
+        ":Common",
+        ":coff_options_inc_gen",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:AllTargetsDisassemblers",
+        "//llvm:Analysis",
+        "//llvm:BitReader",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:DebugInfoPDB",
+        "//llvm:IPO",
+        "//llvm:LTO",
+        "//llvm:LibDriver",
+        "//llvm:Linker",
+        "//llvm:MC",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:Symbolize",
+        "//llvm:TransformUtils",
+        "//llvm:WindowsManifest",
+    ],
+)
+
+gentbl(
+    name = "mingw_options_inc_gen",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "MinGW/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "MinGW/Options.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "MinGW",
+    srcs = glob([
+        "MinGW/*.cpp",
+        "MinGW/*.h",
+    ]),
+    includes = ["MinGW"],
+    deps = [
+        ":Common",
+        ":mingw_options_inc_gen",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "Core",
+    srcs = glob([
+        "lib/Core/*.cpp",
+        "lib/Core/*.h",
+    ]),
+    hdrs = glob(["include/lld/Core/*.h"]),
+    deps = [
+        ":Common",
+    ],
+)
+
+cc_library(
+    name = "YAML",
+    srcs = glob([
+        "lib/ReaderWriter/YAML/*.cpp",
+        "lib/ReaderWriter/YAML/*.h",
+    ]),
+    hdrs = ["include/lld/ReaderWriter/YamlContext.h"],
+    deps = [
+        ":Common",
+        ":Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MachOOld",
+    srcs = glob([
+        "lib/ReaderWriter/MachO/*.cpp",
+        "lib/ReaderWriter/MachO/*.h",
+    ]),
+    hdrs = ["include/lld/ReaderWriter/MachOLinkingContext.h"],
+    deps = [
+        ":Common",
+        ":Core",
+        ":YAML",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+gentbl(
+    name = "macho_options_inc_gen",
+    # See https://github.com/bazelbuild/bazel/issues/13803
+    strip_include_prefix = "MachO",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "MachO/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "MachO/Options.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "MachO",
+    srcs = glob([
+        "MachO/**/*.cpp",
+        "MachO/**/*.h",
+    ]),
+    includes = ["MachO"],
+    deps = [
+        ":Common",
+        ":macho_options_inc_gen",
+        "//libunwind:unwind_headers_only",
+        "//llvm:LTO",
+    ],
+)
+
+cc_library(
+    name = "ReaderWriter",
+    srcs = glob([
+        "lib/ReaderWriter/*.cpp",
+        "lib/ReaderWriter/*.h",
+    ]),
+    deps = [
+        ":Common",
+        ":Core",
+        ":YAML",
+        "//llvm:Object",
+        "//llvm:Support",
+    ],
+)
+
+gentbl(
+    name = "darwin_driver_options_inc_gen",
+    # See https://github.com/bazelbuild/bazel/issues/13803
+    strip_include_prefix = "lib/Driver",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "lib/Driver/DarwinLdOptions.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "lib/Driver/DarwinLdOptions.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "Driver",
+    srcs = glob([
+        "lib/Driver/*.cpp",
+        "lib/Driver/*.h",
+    ]),
+    includes = ["lib/Driver"],
+    deps = [
+        ":Common",
+        ":Core",
+        ":MachOOld",
+        ":ReaderWriter",
+        ":YAML",
+        ":darwin_driver_options_inc_gen",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+gentbl(
+    name = "wasm_options_inc_gen",
+    # See https://github.com/bazelbuild/bazel/issues/13803
+    strip_include_prefix = "wasm",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "wasm/Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "wasm/Options.td",
+    td_srcs = [
+        "//llvm:include/llvm/Option/OptParser.td",
+    ],
+)
+
+cc_library(
+    name = "Wasm",
+    srcs = glob([
+        "wasm/*.cpp",
+        "wasm/*.h",
+    ]),
+    includes = ["wasm"],
+    deps = [
+        ":Common",
+        ":wasm_options_inc_gen",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsCodeGens",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:LTO",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "lld",
+    srcs = glob([
+        "tools/lld/*.cpp",
+        "tools/lld/*.h",
+    ]),
+    tags = [
+        "manual",  # External dependency (libxml through WindowsManifest)
+        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
+    ],
+    deps = [
+        ":COFF",
+        ":Common",
+        ":Core",
+        ":Driver",
+        ":ELF",
+        ":MachOOld",
+        ":MachO",
+        ":MinGW",
+        ":ReaderWriter",
+        ":Wasm",
+        ":YAML",
+        "//llvm:Support",
+    ],
+)
+
+# These are the required names for lld running under different environs.
+#
+# Unix/Linux require that the binary be named "ld.lld".
+# macOS require that the binary be named "ld64.lld".
+# Windows require that the binary be named "lld-link".
+# WebAssembly builds require that the binary be named "wasm-ld".
+genrule(
+    name = "gen_lld",
+    srcs = [":lld"],
+    outs = [
+        "ld.lld",
+        "ld64.lld.darwinnew",
+        "ld64.lld",
+        "lld-link",
+        "wasm-ld",
+    ],
+    cmd =
+        "target=$$(basename $<); for n in ld.lld ld64.lld.darwinnew ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
+    output_to_bindir = 1,
+    tags = [
+        "manual",  # External dependency (libxml through WindowsManifest)
+        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
+    ],
+)

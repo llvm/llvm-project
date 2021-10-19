@@ -1238,6 +1238,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::SEHLeaveStmtClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::OMPCanonicalLoopClass:
     case Stmt::OMPParallelDirectiveClass:
     case Stmt::OMPSimdDirectiveClass:
     case Stmt::OMPForDirectiveClass:
@@ -1292,7 +1293,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
-    case Stmt::CapturedStmtClass: {
+    case Stmt::OMPTileDirectiveClass:
+    case Stmt::OMPInteropDirectiveClass:
+    case Stmt::OMPDispatchDirectiveClass:
+    case Stmt::OMPMaskedDirectiveClass:
+    case Stmt::CapturedStmtClass:
+    case Stmt::OMPUnrollDirectiveClass:
+    case Stmt::OMPMetaDirectiveClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());
       break;
@@ -1414,6 +1421,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPArraySectionExprClass:
     case Stmt::OMPArrayShapingExprClass:
     case Stmt::OMPIteratorExprClass:
+    case Stmt::SYCLUniqueStableNameExprClass:
     case Stmt::TypeTraitExprClass: {
       Bldr.takeNodes(Pred);
       ExplodedNodeSet preVisit;
@@ -2129,6 +2137,83 @@ static const Stmt *ResolveCondition(const Stmt *Condition,
   llvm_unreachable("could not resolve condition");
 }
 
+using ObjCForLctxPair =
+    std::pair<const ObjCForCollectionStmt *, const LocationContext *>;
+
+REGISTER_MAP_WITH_PROGRAMSTATE(ObjCForHasMoreIterations, ObjCForLctxPair, bool)
+
+ProgramStateRef ExprEngine::setWhetherHasMoreIteration(
+    ProgramStateRef State, const ObjCForCollectionStmt *O,
+    const LocationContext *LC, bool HasMoreIteraton) {
+  assert(!State->contains<ObjCForHasMoreIterations>({O, LC}));
+  return State->set<ObjCForHasMoreIterations>({O, LC}, HasMoreIteraton);
+}
+
+ProgramStateRef
+ExprEngine::removeIterationState(ProgramStateRef State,
+                                 const ObjCForCollectionStmt *O,
+                                 const LocationContext *LC) {
+  assert(State->contains<ObjCForHasMoreIterations>({O, LC}));
+  return State->remove<ObjCForHasMoreIterations>({O, LC});
+}
+
+bool ExprEngine::hasMoreIteration(ProgramStateRef State,
+                                  const ObjCForCollectionStmt *O,
+                                  const LocationContext *LC) {
+  assert(State->contains<ObjCForHasMoreIterations>({O, LC}));
+  return *State->get<ObjCForHasMoreIterations>({O, LC});
+}
+
+/// Split the state on whether there are any more iterations left for this loop.
+/// Returns a (HasMoreIteration, HasNoMoreIteration) pair, or None when the
+/// acquisition of the loop condition value failed.
+static Optional<std::pair<ProgramStateRef, ProgramStateRef>>
+assumeCondition(const Stmt *Condition, ExplodedNode *N) {
+  ProgramStateRef State = N->getState();
+  if (const auto *ObjCFor = dyn_cast<ObjCForCollectionStmt>(Condition)) {
+    bool HasMoreIteraton =
+        ExprEngine::hasMoreIteration(State, ObjCFor, N->getLocationContext());
+    // Checkers have already ran on branch conditions, so the current
+    // information as to whether the loop has more iteration becomes outdated
+    // after this point.
+    State = ExprEngine::removeIterationState(State, ObjCFor,
+                                             N->getLocationContext());
+    if (HasMoreIteraton)
+      return std::pair<ProgramStateRef, ProgramStateRef>{State, nullptr};
+    else
+      return std::pair<ProgramStateRef, ProgramStateRef>{nullptr, State};
+  }
+  SVal X = State->getSVal(Condition, N->getLocationContext());
+
+  if (X.isUnknownOrUndef()) {
+    // Give it a chance to recover from unknown.
+    if (const auto *Ex = dyn_cast<Expr>(Condition)) {
+      if (Ex->getType()->isIntegralOrEnumerationType()) {
+        // Try to recover some path-sensitivity.  Right now casts of symbolic
+        // integers that promote their values are currently not tracked well.
+        // If 'Condition' is such an expression, try and recover the
+        // underlying value and use that instead.
+        SVal recovered =
+            RecoverCastedSymbol(State, Condition, N->getLocationContext(),
+                                N->getState()->getStateManager().getContext());
+
+        if (!recovered.isUnknown()) {
+          X = recovered;
+        }
+      }
+    }
+  }
+
+  // If the condition is still unknown, give up.
+  if (X.isUnknownOrUndef())
+    return None;
+
+  DefinedSVal V = X.castAs<DefinedSVal>();
+
+  ProgramStateRef StTrue, StFalse;
+  return State->assume(V);
+}
+
 void ExprEngine::processBranch(const Stmt *Condition,
                                NodeBuilderContext& BldCtx,
                                ExplodedNode *Pred,
@@ -2165,48 +2250,28 @@ void ExprEngine::processBranch(const Stmt *Condition,
     return;
 
   BranchNodeBuilder builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
-  for (const auto PredI : CheckersOutSet) {
-    if (PredI->isSink())
+  for (ExplodedNode *PredN : CheckersOutSet) {
+    if (PredN->isSink())
       continue;
 
-    ProgramStateRef PrevState = PredI->getState();
-    SVal X = PrevState->getSVal(Condition, PredI->getLocationContext());
-
-    if (X.isUnknownOrUndef()) {
-      // Give it a chance to recover from unknown.
-      if (const auto *Ex = dyn_cast<Expr>(Condition)) {
-        if (Ex->getType()->isIntegralOrEnumerationType()) {
-          // Try to recover some path-sensitivity.  Right now casts of symbolic
-          // integers that promote their values are currently not tracked well.
-          // If 'Condition' is such an expression, try and recover the
-          // underlying value and use that instead.
-          SVal recovered = RecoverCastedSymbol(PrevState, Condition,
-                                               PredI->getLocationContext(),
-                                               getContext());
-
-          if (!recovered.isUnknown()) {
-            X = recovered;
-          }
-        }
-      }
-    }
-
-    // If the condition is still unknown, give up.
-    if (X.isUnknownOrUndef()) {
-      builder.generateNode(PrevState, true, PredI);
-      builder.generateNode(PrevState, false, PredI);
-      continue;
-    }
-
-    DefinedSVal V = X.castAs<DefinedSVal>();
+    ProgramStateRef PrevState = PredN->getState();
 
     ProgramStateRef StTrue, StFalse;
-    std::tie(StTrue, StFalse) = PrevState->assume(V);
+    if (const auto KnownCondValueAssumption = assumeCondition(Condition, PredN))
+      std::tie(StTrue, StFalse) = *KnownCondValueAssumption;
+    else {
+      assert(!isa<ObjCForCollectionStmt>(Condition));
+      builder.generateNode(PrevState, true, PredN);
+      builder.generateNode(PrevState, false, PredN);
+      continue;
+    }
+    if (StTrue && StFalse)
+      assert(!isa<ObjCForCollectionStmt>(Condition));;
 
     // Process the true branch.
     if (builder.isFeasible(true)) {
       if (StTrue)
-        builder.generateNode(StTrue, true, PredI);
+        builder.generateNode(StTrue, true, PredN);
       else
         builder.markInfeasible(true);
     }
@@ -2214,7 +2279,7 @@ void ExprEngine::processBranch(const Stmt *Condition,
     // Process the false branch.
     if (builder.isFeasible(false)) {
       if (StFalse)
-        builder.generateNode(StFalse, false, PredI);
+        builder.generateNode(StFalse, false, PredN);
       else
         builder.markInfeasible(false);
     }
@@ -3080,8 +3145,8 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
 
   /// \p PreCallback: callback before break.
   /// \p PostCallback: callback after break.
-  /// \p Stop: stop iteration if returns {@code true}
-  /// \return Whether {@code Stop} ever returned {@code true}.
+  /// \p Stop: stop iteration if returns @c true
+  /// \return Whether @c Stop ever returned @c true.
   static bool traverseHiddenNodes(
       const ExplodedNode *N,
       llvm::function_ref<void(const ExplodedNode *)> PreCallback,
@@ -3092,7 +3157,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
       if (Stop(N))
         return true;
 
-      if (N->succ_size() != 1 || !isNodeHidden(N->getFirstSucc()))
+      if (N->succ_size() != 1 || !isNodeHidden(N->getFirstSucc(), nullptr))
         break;
       PostCallback(N);
 
@@ -3101,7 +3166,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
     return false;
   }
 
-  static bool isNodeHidden(const ExplodedNode *N) {
+  static bool isNodeHidden(const ExplodedNode *N, const ExplodedGraph *G) {
     return N->isTrivial();
   }
 

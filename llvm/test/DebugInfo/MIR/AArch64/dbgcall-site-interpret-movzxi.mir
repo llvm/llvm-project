@@ -118,7 +118,7 @@ body:             |
   bb.0.entry:
     liveins: $lr
 
-    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    early-clobber $sp = frame-setup STPXpre $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.1), (store (s64) into %stack.0)
     $fp = frame-setup ADDXri $sp, 0, 0
     frame-setup CFI_INSTRUCTION def_cfa $w29, 16
     frame-setup CFI_INSTRUCTION offset $w30, -8, debug-location !18
@@ -130,7 +130,7 @@ body:             |
     $x0 = MOVZXi 1, 32, debug-location !20
     BL @call3, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !20
     $x0 = MOVZXi 1, 48, debug-location !21
-    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !21 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2, debug-location !21 :: (load (s64) from %stack.1), (load (s64) from %stack.0)
     TCRETURNdi @call4, 0, csr_aarch64_aapcs, implicit $sp, implicit killed $x0, debug-location !21
 
 ...

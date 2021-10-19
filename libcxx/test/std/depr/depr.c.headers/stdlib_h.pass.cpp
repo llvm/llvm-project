@@ -132,22 +132,23 @@ int main(int, char**)
     static_assert((std::is_same<decltype(rand()), int>::value), "");
     static_assert((std::is_same<decltype(srand(0)), void>::value), "");
 
-#if TEST_STD_VER > 14 && defined(TEST_HAS_ALIGNED_ALLOC)
-    static_assert((std::is_same<decltype(aligned_alloc(0,0)), void*>::value), "");
-#endif
+    // aligned_alloc tested in stdlib_h.aligned_alloc.compile.pass.cpp
 
+    void* pv = 0;
+    void (*handler)() = 0;
+    int (*comp)(void const*, void const*) = 0;
     static_assert((std::is_same<decltype(calloc(0,0)), void*>::value), "");
     static_assert((std::is_same<decltype(free(0)), void>::value), "");
     static_assert((std::is_same<decltype(malloc(0)), void*>::value), "");
     static_assert((std::is_same<decltype(realloc(0,0)), void*>::value), "");
     static_assert((std::is_same<decltype(abort()), void>::value), "");
-    static_assert((std::is_same<decltype(atexit(0)), int>::value), "");
+    static_assert((std::is_same<decltype(atexit(handler)), int>::value), "");
     static_assert((std::is_same<decltype(exit(0)), void>::value), "");
     static_assert((std::is_same<decltype(_Exit(0)), void>::value), "");
     static_assert((std::is_same<decltype(getenv("")), char*>::value), "");
     static_assert((std::is_same<decltype(system("")), int>::value), "");
-    static_assert((std::is_same<decltype(bsearch(0,0,0,0,0)), void*>::value), "");
-    static_assert((std::is_same<decltype(qsort(0,0,0,0)), void>::value), "");
+    static_assert((std::is_same<decltype(bsearch(pv,pv,0,0,comp)), void*>::value), "");
+    static_assert((std::is_same<decltype(qsort(pv,0,0,comp)), void>::value), "");
     static_assert((std::is_same<decltype(abs(0)), int>::value), "");
     static_assert((std::is_same<decltype(labs((long)0)), long>::value), "");
     static_assert((std::is_same<decltype(llabs((long long)0)), long long>::value), "");

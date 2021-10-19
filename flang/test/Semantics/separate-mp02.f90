@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! When a module subprogram has the MODULE prefix the following must match
 ! with the corresponding separate module procedure interface body:
@@ -72,10 +72,10 @@ contains
   end
   module subroutine s9(x, y, z, w)
     character(len=4) :: x
-    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_4); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=4_4)
+    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=4_8)
     character(len=5) :: y
     character(len=*) :: z
-    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_4); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=*)
+    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=*)
     character(len=4) :: w
   end
 end
@@ -109,10 +109,10 @@ contains
     real, intent(out) :: y
     real :: z
   end
-  !ERROR: Dummy argument name 'z' does not match corresponding name 'y' in interface body
   module subroutine s2(x, z)
     real, intent(in) :: x
-    real, intent(out) :: y
+  !ERROR: Dummy argument name 'z' does not match corresponding name 'y' in interface body
+    real, intent(out) :: z
   end
   module subroutine s3(x, y)
     !ERROR: Dummy argument 'x' is a procedure; the corresponding argument in the interface body is not
@@ -136,6 +136,12 @@ module m2b
     end
     module subroutine s3() bind(c, name="s3")
     end
+    module subroutine s4() bind(c, name=" s4")
+    end
+    module subroutine s5() bind(c)
+    end
+    module subroutine s6() bind(c)
+    end
   end interface
 end
 
@@ -148,8 +154,15 @@ contains
   !ERROR: Module subprogram 's2' does not have a binding label but the corresponding interface body does
   module subroutine s2()
   end
-  !ERROR: Module subprogram 's3' has binding label "s3_xxx" but the corresponding interface body has "s3"
+  !ERROR: Module subprogram 's3' has binding label 's3_xxx' but the corresponding interface body has 's3'
   module subroutine s3() bind(c, name="s3" // suffix)
+  end
+  module subroutine s4() bind(c, name="s4  ")
+  end
+  module subroutine s5() bind(c, name=" s5")
+  end
+  !ERROR: Module subprogram 's6' has binding label 'not_s6' but the corresponding interface body has 's6'
+  module subroutine s6() bind(c, name="not_s6")
   end
 end
 
@@ -157,9 +170,9 @@ end
 module m3
   interface
     module subroutine s1(x, y, z)
-      procedure(real), intent(in) :: x
-      procedure(real), intent(out) :: y
-      procedure(real), intent(out) :: z
+      procedure(real), pointer, intent(in) :: x
+      procedure(real), pointer, intent(out) :: y
+      procedure(real), pointer, intent(out) :: z
     end
     module subroutine s2(x, y)
       procedure(real), pointer :: x
@@ -171,11 +184,11 @@ end
 submodule(m3) sm3
 contains
   module subroutine s1(x, y, z)
-    procedure(real), intent(in) :: x
+    procedure(real), pointer, intent(in) :: x
     !ERROR: The intent of dummy argument 'y' does not match the intent of the corresponding argument in the interface body
-    procedure(real), intent(inout) :: y
+    procedure(real), pointer, intent(inout) :: y
     !ERROR: The intent of dummy argument 'z' does not match the intent of the corresponding argument in the interface body
-    procedure(real) :: z
+    procedure(real), pointer :: z
   end
   module subroutine s2(x, y)
     !ERROR: Dummy argument 'x' has the OPTIONAL attribute; the corresponding argument in the interface body does not

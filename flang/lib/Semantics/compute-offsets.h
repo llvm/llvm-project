@@ -11,7 +11,8 @@
 namespace Fortran::semantics {
 
 class SemanticsContext;
-void ComputeOffsets(SemanticsContext &);
+class Scope;
 
+void ComputeOffsets(SemanticsContext &, Scope &);
 } // namespace Fortran::semantics
 #endif

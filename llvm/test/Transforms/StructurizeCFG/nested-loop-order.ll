@@ -1,4 +1,5 @@
 ; RUN: opt -S -structurizecfg %s -o - | FileCheck %s
+; RUN: opt -S -passes=structurizecfg %s -o - | FileCheck %s
 
 define void @main(float addrspace(1)* %out) {
 

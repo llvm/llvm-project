@@ -26,7 +26,6 @@ class AppleObjCRuntimeV2 : public AppleObjCRuntime {
 public:
   ~AppleObjCRuntimeV2() override = default;
 
-  // Static Functions
   static void Initialize();
 
   static void Terminate();
@@ -46,19 +45,18 @@ public:
     return runtime->isA(&ID);
   }
 
-  // These are generic runtime functions:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
-  UtilityFunction *CreateObjectChecker(const char *) override;
+  llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V2;
@@ -87,6 +85,15 @@ public:
 
   lldb::addr_t GetTaggedPointerObfuscator();
 
+  /// Returns the base address for relative method list selector strings.
+  lldb::addr_t GetRelativeSelectorBaseAddr() {
+    return m_relative_selector_base;
+  }
+
+  void SetRelativeSelectorBaseAddr(lldb::addr_t relative_selector_base) {
+    m_relative_selector_base = relative_selector_base;
+  }
+
   void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                     lldb::addr_t &cf_false) override;
 
@@ -104,8 +111,8 @@ public:
 
 protected:
   lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override;
 
 private:
   class HashTableSignature {
@@ -118,9 +125,9 @@ private:
     void UpdateSignature(const RemoteNXMapTable &hash_table);
 
   protected:
-    uint32_t m_count;
-    uint32_t m_num_buckets;
-    lldb::addr_t m_buckets_ptr;
+    uint32_t m_count = 0;
+    uint32_t m_num_buckets = 0;
+    lldb::addr_t m_buckets_ptr = 0;
   };
 
   class NonPointerISACache {
@@ -295,21 +302,98 @@ private:
     }
   };
 
+  /// Abstraction to read the Objective-C class info.
+  class ClassInfoExtractor {
+  public:
+    ClassInfoExtractor(AppleObjCRuntimeV2 &runtime) : m_runtime(runtime) {}
+    std::mutex &GetMutex() { return m_mutex; }
+
+  protected:
+    /// The lifetime of this object is tied to that of the runtime.
+    AppleObjCRuntimeV2 &m_runtime;
+    std::mutex m_mutex;
+  };
+
+  /// We can read the class info from the Objective-C runtime using
+  /// gdb_objc_realized_classes or objc_copyRealizedClassList. The latter is
+  /// preferred because it includes lazily named classes, but it's not always
+  /// available or safe to call.
+  ///
+  /// We potentially need both for the same process, because we may need to use
+  /// gdb_objc_realized_classes until dyld is initialized and then switch over
+  /// to objc_copyRealizedClassList for lazily named classes.
+  class DynamicClassInfoExtractor : public ClassInfoExtractor {
+  public:
+    DynamicClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
+        : ClassInfoExtractor(runtime) {}
+
+    DescriptorMapUpdateResult
+    UpdateISAToDescriptorMap(RemoteNXMapTable &hash_table);
+
+  private:
+    enum Helper { gdb_objc_realized_classes, objc_copyRealizedClassList };
+
+    /// Compute which helper to use. Prefer objc_copyRealizedClassList if it's
+    /// available and it's safe to call (i.e. dyld is fully initialized). Use
+    /// gdb_objc_realized_classes otherwise.
+    Helper ComputeHelper() const;
+
+    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx,
+                                                 Helper helper);
+    lldb::addr_t &GetClassInfoArgs(Helper helper);
+
+    std::unique_ptr<UtilityFunction>
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, std::string code,
+                                    std::string name);
+
+    /// Helper to read class info using the gdb_objc_realized_classes.
+    struct gdb_objc_realized_classes_helper {
+      std::unique_ptr<UtilityFunction> utility_function;
+      lldb::addr_t args = LLDB_INVALID_ADDRESS;
+    };
+
+    /// Helper to read class info using objc_copyRealizedClassList.
+    struct objc_copyRealizedClassList_helper {
+      std::unique_ptr<UtilityFunction> utility_function;
+      lldb::addr_t args = LLDB_INVALID_ADDRESS;
+    };
+
+    gdb_objc_realized_classes_helper m_gdb_objc_realized_classes_helper;
+    objc_copyRealizedClassList_helper m_objc_copyRealizedClassList_helper;
+  };
+
+  /// Abstraction to read the Objective-C class info from the shared cache.
+  class SharedCacheClassInfoExtractor : public ClassInfoExtractor {
+  public:
+    SharedCacheClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
+        : ClassInfoExtractor(runtime) {}
+
+    DescriptorMapUpdateResult UpdateISAToDescriptorMap();
+
+  private:
+    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx);
+
+    std::unique_ptr<UtilityFunction>
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx);
+
+    std::unique_ptr<UtilityFunction> m_utility_function;
+    lldb::addr_t m_args = LLDB_INVALID_ADDRESS;
+  };
+
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
   ObjCISA GetPointerISA(ObjCISA isa);
 
   lldb::addr_t GetISAHashTablePointer();
 
-  bool UpdateISAToDescriptorMapFromMemory(RemoteNXMapTable &hash_table);
-
-  DescriptorMapUpdateResult
-  UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
+  /// Update the generation count of realized classes. This is not an exact
+  /// count but rather a value that is incremented when new classes are realized
+  /// or destroyed. Unlike the count in gdb_objc_realized_classes, it will
+  /// change when lazily named classes get realized.
+  bool RealizedClassGenerationCountChanged();
 
   uint32_t ParseClassInfoArray(const lldb_private::DataExtractor &data,
                                uint32_t num_class_infos);
-
-  DescriptorMapUpdateResult UpdateISAToDescriptorMapSharedCache();
 
   enum class SharedCacheWarningReason {
     eExpressionExecutionFailure,
@@ -319,30 +403,40 @@ private:
   void WarnIfNoClassesCached(SharedCacheWarningReason reason);
 
   lldb::addr_t GetSharedCacheReadOnlyAddress();
+  lldb::addr_t GetSharedCacheBaseAddress();
 
   bool GetCFBooleanValuesIfNeeded();
 
+  bool HasSymbol(ConstString Name);
+
+  NonPointerISACache *GetNonPointerIsaCache() {
+    if (!m_non_pointer_isa_cache_up)
+      m_non_pointer_isa_cache_up.reset(
+          NonPointerISACache::CreateInstance(*this, m_objc_module_sp));
+    return m_non_pointer_isa_cache_up.get();
+  }
+
   friend class ClassDescriptorV2;
 
-  std::unique_ptr<UtilityFunction> m_get_class_info_code;
-  lldb::addr_t m_get_class_info_args;
-  std::mutex m_get_class_info_args_mutex;
+  lldb::ModuleSP m_objc_module_sp;
 
-  std::unique_ptr<UtilityFunction> m_get_shared_cache_class_info_code;
-  lldb::addr_t m_get_shared_cache_class_info_args;
-  std::mutex m_get_shared_cache_class_info_args_mutex;
+  DynamicClassInfoExtractor m_dynamic_class_info_extractor;
+  SharedCacheClassInfoExtractor m_shared_cache_class_info_extractor;
 
   std::unique_ptr<DeclVendor> m_decl_vendor_up;
   lldb::addr_t m_tagged_pointer_obfuscator;
   lldb::addr_t m_isa_hash_table_ptr;
+  lldb::addr_t m_relative_selector_base;
   HashTableSignature m_hash_signature;
   bool m_has_object_getClass;
+  bool m_has_objc_copyRealizedClassList;
   bool m_loaded_objc_opt;
   std::unique_ptr<NonPointerISACache> m_non_pointer_isa_cache_up;
   std::unique_ptr<TaggedPointerVendor> m_tagged_pointer_vendor_up;
   EncodingToTypeSP m_encoding_to_type_sp;
   bool m_noclasses_warning_emitted;
   llvm::Optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
+  uint64_t m_realized_class_generation_count;
 };
 
 } // namespace lldb_private

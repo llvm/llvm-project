@@ -14,5 +14,12 @@ using namespace lld;
 using namespace lld::macho;
 
 uint64_t OutputSection::getSegmentOffset() const {
-  return addr - parent->firstSection()->addr;
+  return addr - parent->addr;
+}
+
+void OutputSection::assignAddressesToStartEndSymbols() {
+  for (Defined *d : sectionStartSymbols)
+    d->value = addr;
+  for (Defined *d : sectionEndSymbols)
+    d->value = addr + getSize();
 }

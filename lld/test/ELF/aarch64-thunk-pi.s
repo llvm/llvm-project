@@ -1,13 +1,12 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: echo "SECTIONS { \
-// RUN:       .text_low : { *(.text_low) } \
-// RUN:       .text_high 0x10000000 : { *(.text_high) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script --shared %t.o -o %t.so 2>&1
+// RUN: split-file %s %t
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %t/asm -o %t.o
+// RUN: ld.lld --script %t/lds --shared %t.o -o %t.so 2>&1
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.so | FileCheck %s
 
 // Check that Position Independent thunks are generated for shared libraries.
+
+//--- asm
  .section .text_low, "ax", %progbits
  .globl low_target
  .type low_target, %function
@@ -36,16 +35,16 @@ low_target2:
 // Expect range extension thunks for .text_low
 // adrp calculation is (PC + signed immediate) & (!0xfff)
 // CHECK: <__AArch64ADRPThunk_high_target>:
-// CHECK-NEXT:       ec:       adrp    x16, #0x10000000
+// CHECK-NEXT:       ec:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x40
 // CHECK-NEXT:                 br      x16
 // CHECK: <__AArch64ADRPThunk_high_target2>:
-// CHECK-NEXT:       f8:       adrp    x16, #0x10000000
+// CHECK-NEXT:       f8:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x8
 // CHECK-NEXT:                 br      x16
 /// Identical to the previous one, but for the target .text_high+8.
 // CHECK: <__AArch64ADRPThunk_>:
-// CHECK-NEXT:      104:       adrp    x16, #0x10000000
+// CHECK-NEXT:      104:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 add     x16, x16, #0x8
 // CHECK-NEXT:                 br      x16
 
@@ -75,7 +74,7 @@ high_target2:
 // Expect Thunk for .text.high
 
 // CHECK: <__AArch64ADRPThunk_low_target2>:
-// CHECK-NEXT: 10000010:       adrp    x16, #-0x10000000
+// CHECK-NEXT: 10000010:       adrp    x16, 0x0
 // CHECK-NEXT:                 add     x16, x16, #0xe0
 // CHECK-NEXT:                 br      x16
 
@@ -83,7 +82,7 @@ high_target2:
 // CHECK-EMPTY:
 // CHECK-NEXT: <.plt>:
 // CHECK-NEXT: 10000020:       stp     x16, x30, [sp, #-0x10]!
-// CHECK-NEXT:                 adrp    x16, #0
+// CHECK-NEXT:                 adrp    x16, 0x10000000
 // CHECK-NEXT:                 ldr     x17, [x16, #0x120]
 // CHECK-NEXT:                 add     x16, x16, #0x120
 // CHECK-NEXT:                 br      x17
@@ -92,13 +91,23 @@ high_target2:
 // CHECK-NEXT:                 nop
 // CHECK-EMPTY:
 // CHECK-NEXT:   <high_target@plt>:
-// CHECK-NEXT: 10000040:       adrp    x16, #0x0
+// CHECK-NEXT: 10000040:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 ldr     x17, [x16, #0x128]
 // CHECK-NEXT:                 add     x16, x16, #0x128
 // CHECK-NEXT:                 br      x17
 // CHECK-EMPTY:
 // CHECK-NEXT:   <low_target@plt>:
-// CHECK-NEXT: 10000050:       adrp    x16, #0x0
+// CHECK-NEXT: 10000050:       adrp    x16, 0x10000000
 // CHECK-NEXT:                 ldr     x17, [x16, #0x130]
 // CHECK-NEXT:                 add     x16, x16, #0x130
 // CHECK-NEXT:                 br      x17
+
+//--- lds
+PHDRS {
+  low PT_LOAD FLAGS(0x1 | 0x4);
+  high PT_LOAD FLAGS(0x1 | 0x4);
+}
+SECTIONS {
+  .text_low : { *(.text_low) } :low
+  .text_high 0x10000000 : { *(.text_high) } :high
+}

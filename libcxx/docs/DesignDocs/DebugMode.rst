@@ -7,34 +7,59 @@ Debug Mode
 
 .. _using-debug-mode:
 
-Using Debug Mode
-================
+Using the debug mode
+====================
 
-Libc++ provides a debug mode that enables assertions meant to detect incorrect
-usage of the standard library. By default these assertions are disabled but
+Libc++ provides a debug mode that enables special debugging checks meant to detect
+incorrect usage of the standard library. These checks are disabled by default, but
 they can be enabled using the ``_LIBCPP_DEBUG`` macro.
 
-**_LIBCPP_DEBUG** Macro
------------------------
+Note that using the debug mode discussed in this document requires that the library
+has been compiled with support for the debug mode (see ``LIBCXX_ENABLE_DEBUG_MODE_SUPPORT``).
 
-**_LIBCPP_DEBUG**:
-  This macro is used to enable assertions and iterator debugging checks within
-  libc++. By default it is undefined.
+Also note that while the debug mode has no effect on libc++'s ABI, it does have broad ODR
+implications. Users should compile their whole program at the same debugging level.
 
-  **Values**: ``0``, ``1``
+The various levels of checking provided by the debug mode follow.
 
-  Defining ``_LIBCPP_DEBUG`` to ``0`` or greater enables most of libc++'s
-  assertions. Defining ``_LIBCPP_DEBUG`` to ``1`` enables "iterator debugging"
-  which provides additional assertions about the validity of iterators used by
-  the program.
+No debugging checks (``_LIBCPP_DEBUG`` not defined)
+---------------------------------------------------
+When ``_LIBCPP_DEBUG`` is not defined, there are no debugging checks performed by
+the library. This is the default.
 
-  Note that this option has no effect on libc++'s ABI; but it does have broad
-  ODR implications. Users should compile their whole program at the same
-  debugging level.
+Basic checks (``_LIBCPP_DEBUG == 0``)
+-------------------------------------
+When ``_LIBCPP_DEBUG`` is defined to ``0`` (to be understood as level ``0``), some
+debugging checks are enabled. The non-exhaustive list of things is:
+
+- Many algorithms, such as ``binary_search``, ``merge``, ``next_permutation``, and ``sort``,
+  wrap the user-provided comparator to assert that `!comp(y, x)` whenever
+  `comp(x, y)`. This can cause the user-provided comparator to be evaluated
+  up to twice as many times as it would be without ``_LIBCPP_DEBUG``, and
+  causes the library to violate some of the Standard's complexity clauses.
+
+- FIXME: Update this list
+
+Iterator debugging checks (``_LIBCPP_DEBUG == 1``)
+--------------------------------------------------
+Defining ``_LIBCPP_DEBUG`` to ``1`` enables "iterator debugging", which provides
+additional assertions about the validity of iterators used by the program.
+
+The following containers and classes support iterator debugging:
+
+- ``std::string``
+- ``std::vector<T>`` (``T != bool``)
+- ``std::list``
+- ``std::unordered_map``
+- ``std::unordered_multimap``
+- ``std::unordered_set``
+- ``std::unordered_multiset``
+
+The remaining containers do not currently support iterator debugging.
+Patches welcome.
 
 Handling Assertion Failures
----------------------------
-
+===========================
 When a debug assertion fails the assertion handler is called via the
 ``std::__libcpp_debug_function`` function pointer. It is possible to override
 this function pointer using a different handler function. Libc++ provides a
@@ -55,37 +80,3 @@ assertion handler as follows.
     str.insert(bad_it, '!'); // causes debug assertion
     // control flow doesn't return
   }
-
-Debug Mode Checks
-=================
-
-Libc++'s debug mode offers two levels of checking. The first enables various
-precondition checks throughout libc++. The second additionally enables
-"iterator debugging" which checks the validity of iterators used by the program.
-
-Basic Checks
-============
-
-These checks are enabled when ``_LIBCPP_DEBUG`` is defined to either 0 or 1.
-
-The following checks are enabled by ``_LIBCPP_DEBUG``:
-
-  * FIXME: Update this list
-
-Iterator Debugging Checks
-=========================
-
-These checks are enabled when ``_LIBCPP_DEBUG`` is defined to 1.
-
-The following containers and STL classes support iterator debugging:
-
-  * ``std::string``
-  * ``std::vector<T>`` (``T != bool``)
-  * ``std::list``
-  * ``std::unordered_map``
-  * ``std::unordered_multimap``
-  * ``std::unordered_set``
-  * ``std::unordered_multiset``
-
-The remaining containers do not currently support iterator debugging.
-Patches welcome.

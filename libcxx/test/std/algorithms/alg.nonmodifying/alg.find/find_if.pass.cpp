@@ -41,14 +41,14 @@ int main(int, char**)
 {
     int ia[] = {0, 1, 2, 3, 4, 5};
     const unsigned s = sizeof(ia)/sizeof(ia[0]);
-    input_iterator<const int*> r = std::find_if(input_iterator<const int*>(ia),
-                                                input_iterator<const int*>(ia+s),
+    cpp17_input_iterator<const int*> r = std::find_if(cpp17_input_iterator<const int*>(ia),
+                                                cpp17_input_iterator<const int*>(ia+s),
                                                 eq(3));
     assert(*r == 3);
-    r = std::find_if(input_iterator<const int*>(ia),
-                     input_iterator<const int*>(ia+s),
+    r = std::find_if(cpp17_input_iterator<const int*>(ia),
+                     cpp17_input_iterator<const int*>(ia+s),
                      eq(10));
-    assert(r == input_iterator<const int*>(ia+s));
+    assert(r == cpp17_input_iterator<const int*>(ia+s));
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

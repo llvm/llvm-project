@@ -31,8 +31,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
+#include "AMDGPU.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
@@ -57,41 +58,53 @@ enum HardClauseType {
   // Internal instructions, which are allowed in the middle of a hard clause,
   // except for s_waitcnt.
   HARDCLAUSE_INTERNAL,
+  // Meta instructions that do not result in any ISA like KILL.
+  HARDCLAUSE_IGNORE,
   // Instructions that are not allowed in a hard clause: SALU, export, branch,
   // message, GDS, s_waitcnt and anything else not mentioned above.
   HARDCLAUSE_ILLEGAL,
 };
 
-HardClauseType getHardClauseType(const MachineInstr &MI) {
-  // On current architectures we only get a benefit from clausing loads.
-  if (MI.mayLoad()) {
-    if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI))
-      return HARDCLAUSE_VMEM;
-    if (SIInstrInfo::isFLAT(MI))
-      return HARDCLAUSE_FLAT;
-    // TODO: LDS
-    if (SIInstrInfo::isSMRD(MI))
-      return HARDCLAUSE_SMEM;
-  }
-
-  // Don't form VALU clauses. It's not clear what benefit they give, if any.
-
-  // In practice s_nop is the only internal instruction we're likely to see.
-  // It's safe to treat the rest as illegal.
-  if (MI.getOpcode() == AMDGPU::S_NOP)
-    return HARDCLAUSE_INTERNAL;
-  return HARDCLAUSE_ILLEGAL;
-}
-
 class SIInsertHardClauses : public MachineFunctionPass {
 public:
   static char ID;
+  const GCNSubtarget *ST = nullptr;
 
   SIInsertHardClauses() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  HardClauseType getHardClauseType(const MachineInstr &MI) {
+
+    // On current architectures we only get a benefit from clausing loads.
+    if (MI.mayLoad()) {
+      if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI)) {
+        if (ST->hasNSAClauseBug()) {
+          const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
+          if (Info && Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA)
+            return HARDCLAUSE_ILLEGAL;
+        }
+        return HARDCLAUSE_VMEM;
+      }
+      if (SIInstrInfo::isFLAT(MI))
+        return HARDCLAUSE_FLAT;
+      // TODO: LDS
+      if (SIInstrInfo::isSMRD(MI))
+        return HARDCLAUSE_SMEM;
+    }
+
+    // Don't form VALU clauses. It's not clear what benefit they give, if any.
+
+    // In practice s_nop is the only internal instruction we're likely to see.
+    // It's safe to treat the rest as illegal.
+    if (MI.getOpcode() == AMDGPU::S_NOP)
+      return HARDCLAUSE_INTERNAL;
+    if (MI.isMetaInstruction())
+      return HARDCLAUSE_IGNORE;
+    return HARDCLAUSE_ILLEGAL;
   }
 
   // Track information about a clause as we discover it.
@@ -103,25 +116,25 @@ public:
     // The last non-internal instruction in the clause.
     MachineInstr *Last = nullptr;
     // The length of the clause including any internal instructions in the
-    // middle or after the end of the clause.
+    // middle (but not at the end) of the clause.
     unsigned Length = 0;
+    // Internal instructions at the and of a clause should not be included in
+    // the clause. Count them in TrailingInternalLength until a new memory
+    // instruction is added.
+    unsigned TrailingInternalLength = 0;
     // The base operands of *Last.
     SmallVector<const MachineOperand *, 4> BaseOps;
   };
 
   bool emitClause(const ClauseInfo &CI, const SIInstrInfo *SII) {
-    // Get the size of the clause excluding any internal instructions at the
-    // end.
-    unsigned Size =
-        std::distance(CI.First->getIterator(), CI.Last->getIterator()) + 1;
-    if (Size < 2)
+    if (CI.First == CI.Last)
       return false;
-    assert(Size <= 64 && "Hard clause is too long!");
+    assert(CI.Length <= 64 && "Hard clause is too long!");
 
     auto &MBB = *CI.First->getParent();
     auto ClauseMI =
         BuildMI(MBB, *CI.First, DebugLoc(), SII->get(AMDGPU::S_CLAUSE))
-            .addImm(Size - 1);
+            .addImm(CI.Length - 1);
     finalizeBundle(MBB, ClauseMI->getIterator(),
                    std::next(CI.Last->getIterator()));
     return true;
@@ -131,12 +144,12 @@ public:
     if (skipFunction(MF.getFunction()))
       return false;
 
-    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-    if (!ST.hasHardClauses())
+    ST = &MF.getSubtarget<GCNSubtarget>();
+    if (!ST->hasHardClauses())
       return false;
 
-    const SIInstrInfo *SII = ST.getInstrInfo();
-    const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+    const SIInstrInfo *SII = ST->getInstrInfo();
+    const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
     bool Changed = false;
     for (auto &MBB : MF) {
@@ -159,6 +172,7 @@ public:
 
         if (CI.Length == 64 ||
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
+             Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
               // Note that we lie to shouldClusterMemOps about the size of the
               // cluster. When shouldClusterMemOps is called from the machine
@@ -173,14 +187,20 @@ public:
 
         if (CI.Length) {
           // Extend the current clause.
-          ++CI.Length;
-          if (Type != HARDCLAUSE_INTERNAL) {
-            CI.Last = &MI;
-            CI.BaseOps = std::move(BaseOps);
+          if (Type != HARDCLAUSE_IGNORE) {
+            if (Type == HARDCLAUSE_INTERNAL) {
+              ++CI.TrailingInternalLength;
+            } else {
+              ++CI.Length;
+              CI.Length += CI.TrailingInternalLength;
+              CI.TrailingInternalLength = 0;
+              CI.Last = &MI;
+              CI.BaseOps = std::move(BaseOps);
+            }
           }
         } else if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           // Start a new clause.
-          CI = ClauseInfo{Type, &MI, &MI, 1, std::move(BaseOps)};
+          CI = ClauseInfo{Type, &MI, &MI, 1, 0, std::move(BaseOps)};
         }
       }
 

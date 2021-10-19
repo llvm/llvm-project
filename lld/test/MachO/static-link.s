@@ -6,7 +6,7 @@
 # RUN: llvm-ar --format=darwin crs %t/libgoodbye.a %t/goodbye.o
 #
 # RUN: llvm-mc -filetype obj -triple x86_64-apple-darwin %s -o %t/test.o
-# RUN: lld -flavor darwinnew -o %t/test -Z -L%t -lgoodbye %t/test.o
+# RUN: %lld -o %t/test -L%t -lgoodbye %t/test.o
 #
 # RUN: llvm-objdump --syms -d -r %t/test | FileCheck %s
 
@@ -15,7 +15,7 @@
 
 # CHECK: Disassembly of section __TEXT,__text
 # CHECK-LABEL: <_main>:
-# CHECK: leaq {{.*}}(%rip), %rsi   # [[ADDR]] <_goodbye_world>
+# CHECK: leaq {{.*}}(%rip), %rsi   ## 0x[[ADDR]] <_goodbye_world>
 
 .section __TEXT,__text
 .global _main

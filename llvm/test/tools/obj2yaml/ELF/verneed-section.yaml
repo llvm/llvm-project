@@ -1,15 +1,17 @@
+## Check that we are able to yamalize the SHT_GNU_verneed section.
+## Check we don't dump the `Info` field when its value
+## is equal to the number of version dependencies.
+
 # RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s
-
-## Check we are able to yamalize SHT_GNU_verneed section.
 
 # CHECK:      - Name:            .gnu.version_r
 # CHECK-NEXT:   Type:            SHT_GNU_verneed
 # CHECK-NEXT:   Flags:           [ SHF_ALLOC ]
-# CHECK-NEXT:   Address:         0x0000000000200250
+# CHECK-NEXT:   Address:         0x200250
 # CHECK-NEXT:   Link:            .dynstr
-# CHECK-NEXT:   AddressAlign:    0x0000000000000004
-# CHECK-NEXT:   Info:            0x0000000000000002
+# CHECK-NEXT:   AddressAlign:    0x4
+# INFO-NEXT:    Info:            0x3
 # CHECK-NEXT:   Dependencies:
 # CHECK-NEXT:     - Version:         1
 # CHECK-NEXT:       File:            dso.so.0
@@ -37,13 +39,12 @@ FileHeader:
   Type:  ET_EXEC
   Entry: 0x0000000000201000
 Sections:
-  - Name:            .gnu.version_r
-    Type:            SHT_GNU_verneed
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x200250
-    Link:            .dynstr
-    AddressAlign:    4
-    Info:            2
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x200250
+    AddressAlign: 4
+    Info:         [[INFO=<none>]]
     Dependencies:
       - Version:         1
         File:            dso.so.0
@@ -66,3 +67,9 @@ Sections:
 DynamicSymbols:
   - Name:    f1
     Binding: STB_GLOBAL
+
+## Check we dump the `Info` field when its value
+## is not equal to the number of version dependencies.
+
+# RUN: yaml2obj %s -DINFO=0x3 -o %t.info
+# RUN: obj2yaml %t.info | FileCheck %s --check-prefixes=CHECK,INFO

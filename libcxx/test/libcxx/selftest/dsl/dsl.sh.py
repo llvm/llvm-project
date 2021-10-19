@@ -6,20 +6,16 @@
 #
 #===----------------------------------------------------------------------===##
 
+# XFAIL: LIBCXX-WINDOWS-FIXME
+
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
-# RUN: %{python} %s x%S \
-# RUN:              x%T \
-# RUN:              x%{escaped_exec} \
-# RUN:              x%{escaped_cxx} \
-# RUN:              x%{escaped_flags} \
-# RUN:              x%{escaped_compile_flags} \
-# RUN:              x%{escaped_link_flags}
-# END.
+# RUN: %{python} %s x%S x%T x%{substitutions}
 
 import base64
 import copy
 import os
+import pickle
 import platform
 import subprocess
 import sys
@@ -38,8 +34,13 @@ import lit.util
 # Steal some parameters from the config running this test so that we can
 # bootstrap our own TestingConfig.
 args = list(map(lambda s: s[1:], sys.argv[1:8])) # Remove the leading 'x'
-SOURCE_ROOT, EXEC_PATH, EXEC, CXX, FLAGS, COMPILE_FLAGS, LINK_FLAGS = args
+SOURCE_ROOT, EXEC_PATH, SUBSTITUTIONS = args
 sys.argv[1:8] = []
+
+# Decode the substitutions.
+SUBSTITUTIONS = pickle.loads(base64.b64decode(SUBSTITUTIONS))
+for s, sub in SUBSTITUTIONS:
+    print("Substitution '{}' is '{}'".format(s, sub))
 
 class SetupConfigs(unittest.TestCase):
     """
@@ -66,14 +67,8 @@ class SetupConfigs(unittest.TestCase):
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
-        base64Decode = lambda s: lit.util.to_string(base64.b64decode(s))
-        self.config.substitutions = [
-            ('%{cxx}', base64Decode(CXX)),
-            ('%{flags}', base64Decode(FLAGS)),
-            ('%{compile_flags}', base64Decode(COMPILE_FLAGS)),
-            ('%{link_flags}', base64Decode(LINK_FLAGS)),
-            ('%{exec}', base64Decode(EXEC))
-        ]
+        self.config.recursiveExpansionLimit = 10
+        self.config.substitutions = copy.deepcopy(SUBSTITUTIONS)
 
     def getSubstitution(self, substitution):
         """
@@ -83,6 +78,18 @@ class SetupConfigs(unittest.TestCase):
         found = [x for (s, x) in self.config.substitutions if s == substitution]
         assert len(found) == 1
         return found[0]
+
+
+def findIndex(list, pred):
+    """Finds the index of the first element satisfying 'pred' in a list, or
+       'len(list)' if there is no such element."""
+    index = 0
+    for x in list:
+        if pred(x):
+            break
+        else:
+            index += 1
+    return index
 
 
 class TestHasCompileFlag(SetupConfigs):
@@ -107,17 +114,18 @@ class TestSourceBuilds(SetupConfigs):
     Tests for libcxx.test.dsl.sourceBuilds
     """
     def test_valid_program_builds(self):
-        source = """int main(int, char**) { }"""
+        source = """int main(int, char**) { return 0; }"""
         self.assertTrue(dsl.sourceBuilds(self.config, source))
 
     def test_compilation_error_fails(self):
-        source = """in main(int, char**) { }"""
+        source = """int main(int, char**) { this does not compile }"""
         self.assertFalse(dsl.sourceBuilds(self.config, source))
 
     def test_link_error_fails(self):
         source = """extern void this_isnt_defined_anywhere();
-                    int main(int, char**) { this_isnt_defined_anywhere(); }"""
+                    int main(int, char**) { this_isnt_defined_anywhere(); return 0; }"""
         self.assertFalse(dsl.sourceBuilds(self.config, source))
+
 
 class TestProgramOutput(SetupConfigs):
     """
@@ -126,20 +134,20 @@ class TestProgramOutput(SetupConfigs):
     def test_valid_program_returns_output(self):
         source = """
         #include <cstdio>
-        int main(int, char**) { std::printf("FOOBAR"); }
+        int main(int, char**) { std::printf("FOOBAR"); return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR")
 
     def test_valid_program_returns_output_newline_handling(self):
         source = """
         #include <cstdio>
-        int main(int, char**) { std::printf("FOOBAR\\n"); }
+        int main(int, char**) { std::printf("FOOBAR\\n"); return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR\n")
 
     def test_valid_program_returns_no_output(self):
         source = """
-        int main(int, char**) { }
+        int main(int, char**) { return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "")
 
@@ -165,10 +173,48 @@ class TestProgramOutput(SetupConfigs):
             assert(argc == 3);
             assert(argv[1] == std::string("first-argument"));
             assert(argv[2] == std::string("second-argument"));
+            return 0;
         }
         """
         args = ["first-argument", "second-argument"]
         self.assertEqual(dsl.programOutput(self.config, source, args=args), "")
+
+    def test_caching_is_not_too_aggressive(self):
+        # Run a program, then change the substitutions and run it again.
+        # Make sure the program is run the second time and the right result
+        # is given, to ensure we're not incorrectly caching the result of the
+        # first program run.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::printf("MACRO=%u\\n", MACRO);
+            return 0;
+        }
+        """
+        compileFlagsIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{compile_flags}')
+        compileFlags = self.config.substitutions[compileFlagsIndex][1]
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=1')
+        output1 = dsl.programOutput(self.config, source)
+        self.assertEqual(output1, "MACRO=1\n")
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=2')
+        output2 = dsl.programOutput(self.config, source)
+        self.assertEqual(output2, "MACRO=2\n")
+
+    def test_program_stderr_is_not_conflated_with_stdout(self):
+        # Run a program that produces stdout output and stderr output too, making
+        # sure the stderr output does not pollute the stdout output.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::fprintf(stdout, "STDOUT-OUTPUT");
+            std::fprintf(stderr, "STDERR-OUTPUT");
+            return 0;
+        }
+        """
+        self.assertEqual(dsl.programOutput(self.config, source), "STDOUT-OUTPUT")
+
 
 class TestHasLocale(SetupConfigs):
     """
@@ -178,12 +224,12 @@ class TestHasLocale(SetupConfigs):
         # It's really hard to test that a system has a given locale, so at least
         # make sure we don't explode when we try to check it.
         try:
-            dsl.hasLocale(self.config, 'en_US.UTF-8')
+            dsl.hasAnyLocale(self.config, ['en_US.UTF-8'])
         except subprocess.CalledProcessError:
             self.fail("checking for hasLocale should not explode")
 
     def test_nonexistent_locale(self):
-        self.assertFalse(dsl.hasLocale(self.config, 'for_sure_this_is_not_an_existing_locale'))
+        self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
 
 
 class TestCompilerMacros(SetupConfigs):
@@ -238,127 +284,104 @@ class TestFeature(SetupConfigs):
     def test_trivial(self):
         feature = dsl.Feature(name='name')
         origSubstitutions = copy.deepcopy(self.config.substitutions)
-        self.assertTrue(feature.isSupported(self.config))
-        feature.enableIn(self.config)
+        actions = feature.getActions(self.config)
+        self.assertTrue(len(actions) == 1)
+        for a in actions:
+            a.applyTo(self.config)
         self.assertEqual(origSubstitutions, self.config.substitutions)
         self.assertIn('name', self.config.available_features)
 
     def test_name_can_be_a_callable(self):
         feature = dsl.Feature(name=lambda cfg: 'name')
-        assert feature.isSupported(self.config)
-        self.assertEqual('name', feature.getName(self.config))
-        feature.enableIn(self.config)
+        for a in feature.getActions(self.config):
+            a.applyTo(self.config)
         self.assertIn('name', self.config.available_features)
 
     def test_name_is_not_a_string_1(self):
         feature = dsl.Feature(name=None)
-        assert feature.isSupported(self.config)
-        self.assertRaises(ValueError, lambda: feature.getName(self.config))
-        self.assertRaises(ValueError, lambda: feature.enableIn(self.config))
+        self.assertRaises(ValueError, lambda: feature.getActions(self.config))
+        self.assertRaises(ValueError, lambda: feature.pretty(self.config))
 
     def test_name_is_not_a_string_2(self):
         feature = dsl.Feature(name=lambda cfg: None)
-        assert feature.isSupported(self.config)
-        self.assertRaises(ValueError, lambda: feature.getName(self.config))
-        self.assertRaises(ValueError, lambda: feature.enableIn(self.config))
+        self.assertRaises(ValueError, lambda: feature.getActions(self.config))
+        self.assertRaises(ValueError, lambda: feature.pretty(self.config))
 
-    def test_getName_when_unsupported(self):
-        feature = dsl.Feature(name='name', when=lambda _: False)
-        assert not feature.isSupported(self.config)
-        self.assertRaises(AssertionError, lambda: feature.getName(self.config))
-
-    def test_adding_compile_flag(self):
-        feature = dsl.Feature(name='name', compileFlag='-foo')
+    def test_adding_action(self):
+        feature = dsl.Feature(name='name', actions=[dsl.AddCompileFlag('-std=c++03')])
         origLinkFlags = copy.deepcopy(self.getSubstitution('%{link_flags}'))
-        assert feature.isSupported(self.config)
-        feature.enableIn(self.config)
+        for a in feature.getActions(self.config):
+            a.applyTo(self.config)
         self.assertIn('name', self.config.available_features)
-        self.assertIn('-foo', self.getSubstitution('%{compile_flags}'))
+        self.assertIn('-std=c++03', self.getSubstitution('%{compile_flags}'))
         self.assertEqual(origLinkFlags, self.getSubstitution('%{link_flags}'))
 
-    def test_compile_flag_can_be_a_callable(self):
+    def test_actions_can_be_a_callable(self):
         feature = dsl.Feature(name='name',
-                              compileFlag=lambda cfg: (self.assertIs(self.config, cfg), '-foo')[1])
-        assert feature.isSupported(self.config)
-        feature.enableIn(self.config)
-        self.assertIn('-foo', self.getSubstitution('%{compile_flags}'))
-
-    def test_adding_link_flag(self):
-        feature = dsl.Feature(name='name', linkFlag='-foo')
-        origCompileFlags = copy.deepcopy(self.getSubstitution('%{compile_flags}'))
-        assert feature.isSupported(self.config)
-        feature.enableIn(self.config)
-        self.assertIn('name', self.config.available_features)
-        self.assertIn('-foo', self.getSubstitution('%{link_flags}'))
-        self.assertEqual(origCompileFlags, self.getSubstitution('%{compile_flags}'))
-
-    def test_link_flag_can_be_a_callable(self):
-        feature = dsl.Feature(name='name',
-                              linkFlag=lambda cfg: (self.assertIs(self.config, cfg), '-foo')[1])
-        assert feature.isSupported(self.config)
-        feature.enableIn(self.config)
-        self.assertIn('-foo', self.getSubstitution('%{link_flags}'))
-
-    def test_adding_both_flags(self):
-        feature = dsl.Feature(name='name', compileFlag='-hello', linkFlag='-world')
-        assert feature.isSupported(self.config)
-        feature.enableIn(self.config)
-        self.assertIn('name', self.config.available_features)
-
-        self.assertIn('-hello', self.getSubstitution('%{compile_flags}'))
-        self.assertNotIn('-world', self.getSubstitution('%{compile_flags}'))
-
-        self.assertIn('-world', self.getSubstitution('%{link_flags}'))
-        self.assertNotIn('-hello', self.getSubstitution('%{link_flags}'))
+                              actions=lambda cfg: (
+                                self.assertIs(self.config, cfg),
+                                [dsl.AddCompileFlag('-std=c++03')]
+                              )[1])
+        for a in feature.getActions(self.config):
+            a.applyTo(self.config)
+        self.assertIn('-std=c++03', self.getSubstitution('%{compile_flags}'))
 
     def test_unsupported_feature(self):
         feature = dsl.Feature(name='name', when=lambda _: False)
-        self.assertFalse(feature.isSupported(self.config))
-        # Also make sure we assert if we ever try to add it to a config
-        self.assertRaises(AssertionError, lambda: feature.enableIn(self.config))
+        self.assertEqual(feature.getActions(self.config), [])
 
     def test_is_supported_gets_passed_the_config(self):
         feature = dsl.Feature(name='name', when=lambda cfg: (self.assertIs(self.config, cfg), True)[1])
-        self.assertTrue(feature.isSupported(self.config))
+        self.assertEqual(len(feature.getActions(self.config)), 1)
 
+
+def _throw():
+    raise ValueError()
 
 class TestParameter(SetupConfigs):
     """
     Tests for libcxx.test.dsl.Parameter
     """
     def test_empty_name_should_blow_up(self):
-        self.assertRaises(ValueError, lambda: dsl.Parameter(name='', choices=['c++03'], type=str, help='', feature=lambda _: None))
+        self.assertRaises(ValueError, lambda: dsl.Parameter(name='', choices=['c++03'], type=str, help='', actions=lambda _: []))
 
     def test_empty_choices_should_blow_up(self):
-        self.assertRaises(ValueError, lambda: dsl.Parameter(name='std', choices=[], type=str, help='', feature=lambda _: None))
+        self.assertRaises(ValueError, lambda: dsl.Parameter(name='std', choices=[], type=str, help='', actions=lambda _: []))
+
+    def test_no_choices_is_ok(self):
+        param = dsl.Parameter(name='triple', type=str, help='', actions=lambda _: [])
+        self.assertEqual(param.name, 'triple')
 
     def test_name_is_set_correctly(self):
-        param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
+        param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', actions=lambda _: [])
         self.assertEqual(param.name, 'std')
 
     def test_no_value_provided_and_no_default_value(self):
-        param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', feature=lambda _: None)
-        self.assertRaises(ValueError, lambda: param.getFeature(self.config, self.litConfig.params))
+        param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', actions=lambda _: [])
+        self.assertRaises(ValueError, lambda: param.getActions(self.config, self.litConfig.params))
 
     def test_no_value_provided_and_default_value(self):
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='', default='c++03',
-                              feature=lambda std: dsl.Feature(name=std))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda std: [dsl.AddFeature(std)])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('c++03', self.config.available_features)
 
     def test_value_provided_on_command_line_and_no_default_value(self):
         self.litConfig.params['std'] = 'c++03'
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='',
-                              feature=lambda std: dsl.Feature(name=std))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda std: [dsl.AddFeature(std)])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('c++03', self.config.available_features)
 
     def test_value_provided_on_command_line_and_default_value(self):
         """The value provided on the command line should override the default value"""
         self.litConfig.params['std'] = 'c++11'
         param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
-                              feature=lambda std: dsl.Feature(name=std))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda std: [dsl.AddFeature(std)])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('c++11', self.config.available_features)
         self.assertNotIn('c++03', self.config.available_features)
 
@@ -366,8 +389,9 @@ class TestParameter(SetupConfigs):
         """The value provided in the config should override the default value"""
         self.config.std ='c++11'
         param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, default='c++03', help='',
-                              feature=lambda std: dsl.Feature(name=std))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda std: [dsl.AddFeature(std)])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('c++11', self.config.available_features)
         self.assertNotIn('c++03', self.config.available_features)
 
@@ -376,43 +400,66 @@ class TestParameter(SetupConfigs):
         self.config.std = 'c++11'
         self.litConfig.params['std'] = 'c++03'
         param = dsl.Parameter(name='std', choices=['c++03', 'c++11'], type=str, help='',
-                              feature=lambda std: dsl.Feature(name=std))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda std: [dsl.AddFeature(std)])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('c++03', self.config.available_features)
         self.assertNotIn('c++11', self.config.available_features)
 
-    def test_feature_is_None(self):
+    def test_no_actions(self):
         self.litConfig.params['std'] = 'c++03'
         param = dsl.Parameter(name='std', choices=['c++03'], type=str, help='',
-                              feature=lambda _: None)
-        feature = param.getFeature(self.config, self.litConfig.params)
-        self.assertIsNone(feature)
+                              actions=lambda _: [])
+        actions = param.getActions(self.config, self.litConfig.params)
+        self.assertEqual(actions, [])
 
     def test_boolean_value_parsed_from_trueish_string_parameter(self):
         self.litConfig.params['enable_exceptions'] = "True"
         param = dsl.Parameter(name='enable_exceptions', choices=[True, False], type=bool, help='',
-                              feature=lambda exceptions: None if exceptions else ValueError())
-        self.assertIsNone(param.getFeature(self.config, self.litConfig.params))
+                              actions=lambda exceptions: [] if exceptions else _throw())
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), [])
 
     def test_boolean_value_from_true_boolean_parameter(self):
         self.litConfig.params['enable_exceptions'] = True
         param = dsl.Parameter(name='enable_exceptions', choices=[True, False], type=bool, help='',
-                              feature=lambda exceptions: None if exceptions else ValueError())
-        self.assertIsNone(param.getFeature(self.config, self.litConfig.params))
+                              actions=lambda exceptions: [] if exceptions else _throw())
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), [])
 
     def test_boolean_value_parsed_from_falseish_string_parameter(self):
         self.litConfig.params['enable_exceptions'] = "False"
         param = dsl.Parameter(name='enable_exceptions', choices=[True, False], type=bool, help='',
-                              feature=lambda exceptions: None if exceptions else dsl.Feature(name="-fno-exceptions"))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda exceptions: [] if exceptions else [dsl.AddFeature("-fno-exceptions")])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('-fno-exceptions', self.config.available_features)
 
     def test_boolean_value_from_false_boolean_parameter(self):
         self.litConfig.params['enable_exceptions'] = False
         param = dsl.Parameter(name='enable_exceptions', choices=[True, False], type=bool, help='',
-                              feature=lambda exceptions: None if exceptions else dsl.Feature(name="-fno-exceptions"))
-        param.getFeature(self.config, self.litConfig.params).enableIn(self.config)
+                              actions=lambda exceptions: [] if exceptions else [dsl.AddFeature("-fno-exceptions")])
+        for a in param.getActions(self.config, self.litConfig.params):
+            a.applyTo(self.config)
         self.assertIn('-fno-exceptions', self.config.available_features)
+
+    def test_list_parsed_from_comma_delimited_string_empty(self):
+        self.litConfig.params['additional_features'] = ""
+        param = dsl.Parameter(name='additional_features', type=list, help='', actions=lambda f: f)
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), [])
+
+    def test_list_parsed_from_comma_delimited_string_1(self):
+        self.litConfig.params['additional_features'] = "feature1"
+        param = dsl.Parameter(name='additional_features', type=list, help='', actions=lambda f: f)
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), ['feature1'])
+
+    def test_list_parsed_from_comma_delimited_string_2(self):
+        self.litConfig.params['additional_features'] = "feature1,feature2"
+        param = dsl.Parameter(name='additional_features', type=list, help='', actions=lambda f: f)
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), ['feature1', 'feature2'])
+
+    def test_list_parsed_from_comma_delimited_string_3(self):
+        self.litConfig.params['additional_features'] = "feature1,feature2, feature3"
+        param = dsl.Parameter(name='additional_features', type=list, help='', actions=lambda f: f)
+        self.assertEqual(param.getActions(self.config, self.litConfig.params), ['feature1', 'feature2', 'feature3'])
 
 
 if __name__ == '__main__':

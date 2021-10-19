@@ -5,15 +5,15 @@
 const unsigned long Size = (1l << 60);
 
 struct Chunk1 {
-  char padding[Size];
-  char more_padding[1][Size];
+  char padding[Size]; // expected-warning {{folded to constant}}
+  char more_padding[1][Size]; // expected-warning {{folded to constant}}
   char data;
 };
 
 int test1 = __builtin_offsetof(struct Chunk1, data);
 
 struct Chunk2 {
-  char padding[Size][Size][Size];  // expected-error 2{{array is too large}}
+  char padding[Size][Size][Size];  // expected-error {{array is too large}}
   char data;
 };
 

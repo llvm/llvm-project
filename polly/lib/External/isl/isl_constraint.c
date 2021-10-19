@@ -574,24 +574,6 @@ __isl_give isl_constraint *isl_constraint_set_constant_si(
 	return constraint;
 }
 
-__isl_give isl_constraint *isl_constraint_set_coefficient(
-	__isl_take isl_constraint *constraint,
-	enum isl_dim_type type, int pos, isl_int v)
-{
-	constraint = isl_constraint_cow(constraint);
-	if (isl_constraint_check_range(constraint, type, pos, 1) < 0)
-		return isl_constraint_free(constraint);
-
-	constraint->v = isl_vec_cow(constraint->v);
-	if (!constraint->v)
-		return isl_constraint_free(constraint);
-
-	pos += isl_local_space_offset(constraint->ls, type);
-	isl_int_set(constraint->v->el[pos], v);
-
-	return constraint;
-}
-
 /* Replace the coefficient of the variable of type "type" at position "pos"
  * of "constraint" by "v".
  */

@@ -1,14 +1,12 @@
 # RUN: yaml2obj %s -o %t1.o
 
-# RUN: not wasm-ld --no-entry --shared-memory %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-MAX
+# RUN: wasm-ld --no-entry --shared-memory --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
 
 # RUN: not wasm-ld --no-entry --shared-memory --max-memory=100000 %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-UNALIGNED
 
 # RUN: not wasm-ld --no-entry --shared-memory --max-memory=131072 --features=bulk-memory %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-ATOMICS
 
 # RUN: not wasm-ld --no-entry --shared-memory --max-memory=131072 --features=atomics %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-BULK-MEM
-
-# RUN: not wasm-ld --no-entry --features=atomics %t1.o -o - 2>&1 | FileCheck %s --check-prefix ATOMICS-NO-SHARED
 
 # RUN: wasm-ld --relocatable --features=atomics %t1.o -o - | obj2yaml | FileCheck %s --check-prefix ATOMICS-RELOCATABLE
 
@@ -24,14 +22,15 @@ Sections:
         Field:           __linear_memory
         Kind:            MEMORY
         Memory:
-          Initial:         0x00000001
+          Minimum:         0x00000001
       - Module:          env
         Field:           __indirect_function_table
         Kind:            TABLE
         Table:
+          Index:           0
           ElemType:        FUNCREF
           Limits:
-            Initial:         0x00000000
+            Minimum:         0x00000000
   - Type:            DATA
     Segments:
       - SectionOffset:   6
@@ -57,23 +56,19 @@ Sections:
         Flags:           [  ]
 ...
 
-# SHARED-NO-MAX: maximum memory too small, 66576 bytes needed{{$}}
-
 # SHARED-UNALIGNED: maximum memory must be 65536-byte aligned{{$}}
 
 # SHARED-NO-ATOMICS: 'atomics' feature must be used in order to use shared memory
 
 # SHARED-NO-BULK-MEM: 'bulk-memory' feature must be used in order to use shared memory
 
-# ATOMICS-NO-SHARED: 'atomics' feature is used, so --shared-memory must be used{{$}}
-
 # ATOMICS-RELOCATABLE:        - Type:            MEMORY
 # ATOMICS-RELOCATABLE-NEXT:     Memories:
-# ATOMICS-RELOCATABLE-NEXT:         Initial:         0x00000001
+# ATOMICS-RELOCATABLE-NEXT:         Minimum:         0x1
 # ATOMICS-RELOCATABLE-NEXT:   - Type:
 
 # SHARED:        - Type:            MEMORY
 # SHARED-NEXT:     Memories:
 # SHARED-NEXT:       - Flags:           [ HAS_MAX, IS_SHARED ]
-# SHARED-NEXT:         Initial:         0x00000002
-# SHARED-NEXT:         Maximum:         0x00000002
+# SHARED-NEXT:         Minimum:         0x2
+# SHARED-NEXT:         Maximum:         0x2

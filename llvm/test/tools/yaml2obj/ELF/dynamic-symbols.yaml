@@ -42,7 +42,7 @@ DynamicSymbols:
 
 ## Check we can use numeric values to refer to sections.
 
-# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: yaml2obj --docnum=2 -DSEC=0xff %s -o %t2
 # RUN: llvm-readobj --dyn-symbols %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=NUM
 
 # NUM:      Name: foo
@@ -53,10 +53,14 @@ DynamicSymbols:
 # NUM:      Section:
 # NUM-SAME: .dynsym (0x2)
 
-# NUM:      Name: zed
+# NUM:      Name: zed1
 # NUM: warning: '[[FILE]]': invalid section index: 255
 # NUM:      Section:
 # NUM-SAME: <?> (0xFF)
+
+# NUM:      Name: zed2
+# NUM:      Section:
+# NUM-SAME: Undefined (0x0)
 
 --- !ELF
 FileHeader:
@@ -67,12 +71,27 @@ Sections:
   - Name: .data
     Type: SHT_PROGBITS
 DynamicSymbols:
-  - Name: foo
+  - Name:    foo
     Section: 1
-  - Name: bar
+  - Name:    bar
     Section: 2
-  - Name: zed
-    Section: 0xff
+  - Name:    zed1
+    Section: [[SEC=<none>]]
+## The case when no "Section" key is set.
+  - Name: zed2
+
+## Check that by default no section is set.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.none
+# RUN: llvm-readobj --dyn-symbols %t2.none 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.none %s --check-prefix=NONE
+
+# NONE:      Name: zed1
+# NONE:      Section:
+# NONE-SAME: Undefined (0x0)
+# NONE:      Name: zed2
+# NONE:      Section:
+# NONE-SAME: Undefined (0x0)
 
 ## Check we report errors when unknown sections are referenced by dynamic symbols.
 
@@ -80,6 +99,7 @@ DynamicSymbols:
 
 # ERR: error: unknown section referenced: '.sec1' by YAML symbol 'foo'
 # ERR: error: unknown section referenced: '.sec2' by YAML symbol 'bar'
+# ERR: error: unknown section referenced: '' by YAML symbol 'zed'
 
 --- !ELF
 FileHeader:
@@ -90,7 +110,9 @@ Sections:
   - Name: .data
     Type: SHT_PROGBITS
 DynamicSymbols:
-  - Name: foo
+  - Name:    foo
     Section: .sec1
-  - Name: bar
+  - Name:    bar
     Section: .sec2
+  - Name:    zed
+    Section: ''

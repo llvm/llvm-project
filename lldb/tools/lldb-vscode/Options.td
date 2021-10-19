@@ -23,3 +23,14 @@ def port: Separate<["--", "-"], "port">,
 def: Separate<["-"], "p">,
   Alias<port>,
   HelpText<"Alias for --port">;
+
+def launch_target: Separate<["--", "-"], "launch-target">,
+  MetaVarName<"<target>">,
+  HelpText<"Launch a target for the launchInTerminal request. Any argument "
+    "provided after this one will be passed to the target. The parameter "
+    "--comm-files-prefix must also be specified.">;
+
+def comm_file: Separate<["--", "-"], "comm-file">,
+  MetaVarName<"<file>">,
+  HelpText<"The fifo file used to communicate the with the debug adaptor"
+    "when using --launch-target.">;

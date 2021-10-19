@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +htm -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 void test1(long int *r, int code, long int *a, long int *b) {
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 
   r[0] = __builtin_tbegin (0);
 // CHECK: @llvm.ppc.tbegin

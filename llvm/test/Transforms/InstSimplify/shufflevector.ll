@@ -36,6 +36,16 @@ define <4 x i32> @splat_operand(<4 x i32> %x) {
   ret <4 x i32> %shuf
 }
 
+define <4 x i32> @splat_operand_poison(<4 x i32> %x) {
+; CHECK-LABEL: @splat_operand_poison(
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[SPLAT]]
+;
+  %splat = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
+  %shuf = shufflevector <4 x i32> %splat, <4 x i32> poison, <4 x i32> <i32 0, i32 3, i32 2, i32 1>
+  ret <4 x i32> %shuf
+}
+
 define <4 x i32> @splat_operand1(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @splat_operand1(
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> zeroinitializer

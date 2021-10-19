@@ -61,4 +61,4 @@ template <class Rep, class Period>
 std::chrono::duration<Rep, Period>&
 operator%=(std::chrono::duration<Rep, Period>& d, NotARep) { return d; }
 
-#endif  // REP_H
+#endif // REP_H

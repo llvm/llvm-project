@@ -26,7 +26,7 @@ RUN: llvm-strings --radix x %t/a.txt | FileCheck %s -check-prefix CHECK-HEX --st
 
 ## Show different syntaxes work.
 RUN: llvm-strings --radix=d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
-RUN: llvm-strings -t=d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings -t d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
 
 CHECK-NONE: {{^}}three
 CHECK-NONE: {{^}}four
@@ -58,4 +58,4 @@ CHECK-HEX: {{^}}     28 nine
 
 ## Show that an invalid value is rejected.
 RUN: not llvm-strings --radix z %t/a.txt 2>&1 | FileCheck %s --check-prefix=INVALID
-INVALID: llvm-strings{{.*}}: for the --radix option: Cannot find option named 'z'!
+INVALID: llvm-strings: error: --radix value should be one of: '' (no offset), 'o' (octal), 'd' (decimal), 'x' (hexadecimal)

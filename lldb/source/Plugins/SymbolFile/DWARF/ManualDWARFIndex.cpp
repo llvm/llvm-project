@@ -13,9 +13,11 @@
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace lldb_private;
@@ -28,8 +30,7 @@ void ManualDWARFIndex::Index() {
   SymbolFileDWARF &main_dwarf = *m_dwarf;
   m_dwarf = nullptr;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, "%p", static_cast<void *>(&main_dwarf));
+  LLDB_SCOPED_TIMERF("%p", static_cast<void *>(&main_dwarf));
 
   DWARFDebugInfo &main_info = main_dwarf.DebugInfo();
   SymbolFileDWARFDwo *dwp_dwarf = main_dwarf.GetDwpSymbolFile().get();
@@ -57,6 +58,17 @@ void ManualDWARFIndex::Index() {
   if (units_to_index.empty())
     return;
 
+  StreamString module_desc;
+  m_module.GetDescription(module_desc.AsRawOstream(),
+                          lldb::eDescriptionLevelBrief);
+
+  // Include 2 passes per unit to index for extracting DIEs from the unit and
+  // indexing the unit, and then 8 extra entries for finalizing each index set.
+  const uint64_t total_progress = units_to_index.size() * 2 + 8;
+  Progress progress(
+      llvm::formatv("Manually indexing DWARF for {0}", module_desc.GetData()),
+      total_progress);
+
   std::vector<IndexSet> sets(units_to_index.size());
 
   // Keep memory down by clearing DIEs for any units if indexing
@@ -65,15 +77,17 @@ void ManualDWARFIndex::Index() {
       units_to_index.size());
   auto parser_fn = [&](size_t cu_idx) {
     IndexUnit(*units_to_index[cu_idx], dwp_dwarf, sets[cu_idx]);
+    progress.Increment();
   };
 
-  auto extract_fn = [&units_to_index, &clear_cu_dies](size_t cu_idx) {
+  auto extract_fn = [&](size_t cu_idx) {
     clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
+    progress.Increment();
   };
 
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.
-  llvm::ThreadPool pool;
+  llvm::ThreadPool pool(llvm::optimal_concurrency(units_to_index.size()));
 
   // Create a task runner that extracts dies for each DWARF unit in a
   // separate thread.
@@ -93,11 +107,12 @@ void ManualDWARFIndex::Index() {
     pool.async(parser_fn, i);
   pool.wait();
 
-  auto finalize_fn = [this, &sets](NameToDIE(IndexSet::*index)) {
+  auto finalize_fn = [this, &sets, &progress](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
     for (auto &set : sets)
       result.Append(set.*index);
     result.Finalize();
+    progress.Increment();
   };
 
   pool.async(finalize_fn, &IndexSet::function_basenames);
@@ -343,7 +358,8 @@ void ManualDWARFIndex::GetGlobalVariables(
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+  lldbassert(!unit.GetSymbolFileDWARF().GetDwoNum());
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }

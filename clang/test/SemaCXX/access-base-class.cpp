@@ -89,3 +89,29 @@ namespace T7 {
   };
 }
 
+namespace T8 {
+template <int>
+struct flag {
+  static constexpr bool value = true;
+};
+
+template <class T>
+struct trait : flag<sizeof(T)> {};
+
+template <class T, bool Inferred = trait<T>::value>
+struct a {};
+
+template <class T>
+class b {
+  a<T> x;
+  using U = a<T>;
+};
+
+template <int>
+struct Impossible {
+  static_assert(false, ""); // expected-error {{static_assert failed}}
+};
+
+// verify "no member named 'value'" bogus diagnostic is not emitted.
+trait<b<Impossible<0>>>::value;
+} // namespace T8

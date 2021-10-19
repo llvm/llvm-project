@@ -80,6 +80,9 @@ if (`uname -a` =~ m/Darwin/) {
   if (-x "/usr/bin/xcrun") {
     $UseXCRUN = 1;
   }
+} elsif (`uname -a` =~ m/OpenBSD/) {
+  $DefaultCCompiler = 'cc';
+  $DefaultCXXCompiler = 'c++';
 } else {
   $DefaultCCompiler = 'gcc';
   $DefaultCXXCompiler = 'g++';

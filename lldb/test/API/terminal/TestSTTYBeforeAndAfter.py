@@ -111,4 +111,4 @@ class TestSTTYBeforeAndAfter(TestBase):
             # Every line should compare equal until the first blank line.
             if len(tuple[0]) == 0:
                 break
-            self.assertTrue(tuple[0] == tuple[1])
+            self.assertEqual(tuple[0], tuple[1])

@@ -53,9 +53,9 @@ void __kmp_itt_reset();
 // --- Parallel region reporting ---
 __kmp_inline void
 __kmp_itt_region_forking(int gtid, int team_size,
-                         int barriers); // Master only, before forking threads.
+                         int barriers); // Primary only, before forking threads.
 __kmp_inline void
-__kmp_itt_region_joined(int gtid); // Master only, after joining threads.
+__kmp_itt_region_joined(int gtid); // Primary only, after joining threads.
 // (*) Note: A thread may execute tasks after this point, though.
 
 // --- Frame reporting ---
@@ -90,6 +90,16 @@ __kmp_inline void __kmp_itt_barrier_finished(int gtid, void *object);
 __kmp_inline void *__kmp_itt_taskwait_object(int gtid);
 __kmp_inline void __kmp_itt_taskwait_starting(int gtid, void *object);
 __kmp_inline void __kmp_itt_taskwait_finished(int gtid, void *object);
+#define KMP_ITT_TASKWAIT_STARTING(obj)                                         \
+  if (UNLIKELY(__itt_sync_create_ptr)) {                                       \
+    obj = __kmp_itt_taskwait_object(gtid);                                     \
+    if (obj != NULL) {                                                         \
+      __kmp_itt_taskwait_starting(gtid, obj);                                  \
+    }                                                                          \
+  }
+#define KMP_ITT_TASKWAIT_FINISHED(obj)                                         \
+  if (UNLIKELY(obj != NULL))                                                   \
+    __kmp_itt_taskwait_finished(gtid, obj);
 
 // --- Task reporting ---
 __kmp_inline void __kmp_itt_task_starting(void *object);
@@ -181,7 +191,7 @@ __kmp_inline void __kmp_itt_stack_callee_leave(__itt_caller);
 #define SSC_MARK_SPIN_END() INSERT_SSC_MARK(0x4377)
 
 // Markers for architecture simulation.
-// FORKING      : Before the master thread forks.
+// FORKING      : Before the primary thread forks.
 // JOINING      : At the start of the join.
 // INVOKING     : Before the threads invoke microtasks.
 // DISPATCH_INIT: At the start of dynamically scheduled loop.
@@ -268,15 +278,21 @@ __kmp_inline void __kmp_itt_stack_callee_leave(__itt_caller);
     } /* if */                                                                 \
   } while (0)
 
-const int KMP_MAX_FRAME_DOMAINS =
-    512; // Maximum number of frame domains to use (maps to
+// Maximum number of frame domains to use (maps to
 // different OpenMP regions in the user source code).
-extern kmp_int32 __kmp_barrier_domain_count;
-extern kmp_int32 __kmp_region_domain_count;
-extern __itt_domain *__kmp_itt_barrier_domains[KMP_MAX_FRAME_DOMAINS];
-extern __itt_domain *__kmp_itt_region_domains[KMP_MAX_FRAME_DOMAINS];
-extern __itt_domain *__kmp_itt_imbalance_domains[KMP_MAX_FRAME_DOMAINS];
-extern kmp_int32 __kmp_itt_region_team_size[KMP_MAX_FRAME_DOMAINS];
+const int KMP_MAX_FRAME_DOMAINS = 997;
+typedef struct kmp_itthash_entry {
+  ident_t *loc;
+  int team_size;
+  __itt_domain *d;
+  struct kmp_itthash_entry *next_in_bucket;
+} kmp_itthash_entry_t;
+typedef struct kmp_itthash {
+  kmp_itthash_entry_t *buckets[KMP_MAX_FRAME_DOMAINS];
+  int count; // just a heuristic to limit number of entries
+} kmp_itthash_t;
+extern kmp_itthash_t __kmp_itt_region_domains;
+extern kmp_itthash_t __kmp_itt_barrier_domains;
 extern __itt_domain *metadata_domain;
 extern __itt_string_handle *string_handle_imbl;
 extern __itt_string_handle *string_handle_loop;

@@ -2,10 +2,10 @@
 
 void device_function() {
 }
-// CHECK-LABEL: define void @device_function()
+// CHECK-LABEL: define{{.*}} void @device_function()
 
 __kernel void kernel_function() {
 }
-// CHECK-LABEL: define spir_kernel void @kernel_function()
+// CHECK-LABEL: define{{.*}} spir_kernel void @kernel_function()
 
 // CHECK: !{{[0-9]+}} = !{void ()* @kernel_function, !"kernel", i32 1}

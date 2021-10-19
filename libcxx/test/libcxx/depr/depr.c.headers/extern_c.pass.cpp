@@ -10,6 +10,8 @@
 // is ill-formed (no diagnostic required), per [using.headers]p3, but we permit
 // it as an extension.
 
+#include <__config>
+
 extern "C" {
 #include <assert.h>
 // complex.h is not supported in extern "C".
@@ -20,7 +22,9 @@ extern "C" {
 #include <inttypes.h>
 #include <iso646.h>
 #include <limits.h>
-#include <locale.h>
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <locale.h>
+#endif
 #include <math.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -35,8 +39,10 @@ extern "C" {
 // tgmath.h is not supported in extern "C".
 #include <time.h>
 // FIXME: #include <uchar.h>
-#include <wchar.h>
-#include <wctype.h>
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#   include <wchar.h>
+#   include <wctype.h>
+#endif
 }
 
 int main(int, char**) {

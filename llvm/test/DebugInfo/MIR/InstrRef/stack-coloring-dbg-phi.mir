@@ -1,0 +1,294 @@
+# RUN: sed 's_;AAAAAA __' < %s \
+# RUN: | llc -x mir -o - -start-before=phi-node-elimination \
+# RUN:     -stop-after=stack-slot-coloring -simplify-mir \
+# RUN:     -experimental-debug-variable-locations=true \
+# RUN: | FileCheck %s --check-prefix=DBGPHIS
+# RUN: sed 's_;BBBBBB __' < %s \
+# RUN: | llc -x mir -o - -start-before=phi-node-elimination \
+# RUN:     -stop-after=stack-slot-coloring -simplify-mir \
+# RUN:     -experimental-debug-variable-locations=false \
+# RUN: | FileCheck %s --check-prefix=DBGVALS
+#
+# Test that DBG_PHI instructions do not add "weight" to stack slots and cause
+# their coalescing / coloring to change. This is hard to trigger, because it's
+# closely coupled with the register allocator. Thus, the test is very
+# complicated and hard to reduce.
+#
+# In block 13 there are two implementations of variable location tracking, but
+# both are commented out. Use sed in the command lines above to un-comment
+# each one and test what it does: in each case, the PHI should occur in
+# %stack.4 rather than anywhere else.
+#
+# Future register allocator changes might change the slot; in that case, just
+# update the slot number, so long as it's the same between each RUN.
+#
+# DBGPHIS: DBG_PHI %stack.4,
+# DBGVALS: DBG_VALUE %stack.4, 
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define hidden fastcc i64 @amd64_push_arguments(i32 *%regcache, i32 *%args) unnamed_addr !dbg !4 {
+    ret i64 0
+  }
+  
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  
+  !llvm.module.flags = !{!0, !1}
+  !llvm.dbg.cu = !{!2}
+
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = !{i32 2, !"Dwarf Version", i32 4}
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "beards", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !3 = !DIFile(filename: "bees.cpp", directory: ".")
+  !4 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, type: !5, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !8)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7}
+  !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !8 = !{}
+  !9 = !DILocation(line: 0, scope: !4)
+  !10 = !DILocalVariable(name: "flannel", scope: !4, file: !3, line: 1, type: !7)
+...
+---
+name:            amd64_push_arguments
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr64 }
+  - { id: 4, class: gr32 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr32 }
+  - { id: 8, class: gr64 }
+  - { id: 9, class: gr32 }
+  - { id: 10, class: gr32 }
+  - { id: 11, class: gr64 }
+  - { id: 12, class: gr32 }
+  - { id: 13, class: gr64 }
+  - { id: 14, class: gr32 }
+  - { id: 15, class: gr64 }
+  - { id: 16, class: gr64 }
+  - { id: 17, class: gr64 }
+  - { id: 18, class: gr32 }
+  - { id: 19, class: gr8 }
+  - { id: 20, class: gr64 }
+  - { id: 21, class: gr32 }
+  - { id: 22, class: gr32 }
+  - { id: 23, class: gr8 }
+  - { id: 24, class: gr32 }
+  - { id: 25, class: gr32 }
+  - { id: 26, class: gr32 }
+  - { id: 27, class: gr32 }
+  - { id: 28, class: gr8 }
+  - { id: 29, class: gr32 }
+  - { id: 30, class: gr8 }
+  - { id: 31, class: gr32 }
+  - { id: 32, class: gr32 }
+  - { id: 33, class: gr32 }
+  - { id: 34, class: gr8 }
+  - { id: 35, class: gr32 }
+  - { id: 36, class: gr64 }
+  - { id: 37, class: gr32 }
+  - { id: 38, class: gr32 }
+  - { id: 39, class: gr8 }
+  - { id: 40, class: gr32 }
+  - { id: 41, class: gr8 }
+  - { id: 42, class: gr32 }
+  - { id: 43, class: gr32 }
+  - { id: 44, class: gr64_nosp }
+  - { id: 45, class: gr64 }
+  - { id: 46, class: gr32 }
+  - { id: 47, class: gr64 }
+  - { id: 48, class: gr32 }
+  - { id: 49, class: gr32 }
+  - { id: 50, class: gr64 }
+  - { id: 51, class: gr64 }
+  - { id: 52, class: gr64 }
+  - { id: 53, class: gr64 }
+  - { id: 54, class: gr32 }
+  - { id: 55, class: gr64 }
+  - { id: 56, class: gr32 }
+liveins:
+  - { reg: '$rdi', virtual-reg: '%15' }
+frameInfo:
+  maxAlignment:    8
+  hasCalls:        true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+  - { id: 1, type: variable-sized, alignment: 1 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.2(0x00000800), %bb.1(0x7ffff800)
+    liveins: $rdi
+  
+    %15:gr64 = COPY killed $rdi
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    %18:gr32 = MOV32r0 implicit-def dead $eflags
+    %19:gr8 = COPY killed %18.sub_8bit
+    TEST8rr killed %19, %19, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.2, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.1, debug-location !9
+  
+  bb.1:
+    RET 0, undef $rax
+  
+  bb.2:
+    %27:gr32 = MOV32r0 implicit-def dead $eflags
+    %50:gr64 = LEA64r %stack.0, 1, $noreg, 0, $noreg
+    %54:gr32 = MOV32ri 8
+  
+  bb.3:
+    successors: %bb.4, %bb.5
+  
+    %0:gr32 = PHI undef %21:gr32, %bb.2, %0, %bb.5, %0, %bb.6, %0, %bb.8, %0, %bb.10, %10, %bb.21
+    %23:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %23, %23, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.5, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.4, debug-location !9
+  
+  bb.4:
+    %24:gr32 = MOV32ri 1
+  
+  bb.5:
+    successors: %bb.3(0x20000000), %bb.6(0x60000000)
+  
+    %1:gr32 = PHI %27, %bb.3, %24, %bb.4, debug-location !9
+    %25:gr32 = nsw ADD32rr %1, %0, implicit-def dead $eflags, debug-location !9
+    CMP32ri8 killed %25, 6, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.3, 7, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.6, debug-location !9
+  
+  bb.6:
+    successors: %bb.3(0x2aaaaaab), %bb.7(0x55555555)
+  
+    %28:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %28, %28, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.7, debug-location !9
+  
+  bb.7:
+    successors: %bb.8(0x60000000), %bb.9(0x20000000)
+  
+    TEST32rr killed %1, %1, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.9, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.8, debug-location !9
+  
+  bb.8:
+    successors: %bb.3(0x55555555), %bb.9(0x2aaaaaab)
+  
+    %30:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %30, %30, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.9, debug-location !9
+  
+  bb.9:
+    successors: %bb.10(0x80000000), %bb.12(0x00000000)
+  
+    CMP32ri8 undef %32:gr32, 16, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.12, 15, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.10, debug-location !9
+  
+  bb.10:
+    successors: %bb.11, %bb.3
+  
+    %34:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %34, %34, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.11, debug-location !9
+  
+  bb.11:
+    %36:gr64 = SUBREG_TO_REG 0, %27, %subreg.sub_32bit
+    JMP_1 %bb.13, debug-location !9
+  
+  bb.12:
+    successors: 
+  
+  
+  bb.13:
+    successors: %bb.18(0x2aaaaaab), %bb.14(0x55555555)
+  
+    %2:gr32 = PHI undef %35:gr32, %bb.11, %14, %bb.21
+    %3:gr64 = PHI %36, %bb.11, %13, %bb.21
+    ;AAAAAA %4:gr32 = PHI %0, %bb.11, %10, %bb.21, debug-instr-number 1
+    ;BBBBBB %4:gr32 = PHI %0, %bb.11, %10, %bb.21
+    %5:gr32 = PHI undef %35:gr32, %bb.11, %9, %bb.21
+    ;AAAAAA DBG_INSTR_REF 1, 0, !10, !DIExpression(), debug-location !9
+    ;BBBBBB DBG_VALUE %4, 0, !10, !DIExpression(), debug-location !9
+    %39:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %39, %39, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.18, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.14, debug-location !9
+  
+  bb.14:
+    successors: %bb.17(0x40000001), %bb.15(0x3fffffff)
+  
+    %41:gr8 = COPY %27.sub_8bit
+    TEST8rr killed %41, %41, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.17, 5, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.15, debug-location !9
+  
+  bb.15:
+  
+  bb.16:
+    %6:gr32 = nsw INC32r killed %4, implicit-def dead $eflags, debug-location !9
+    %48:gr32 = MOV32r0 implicit-def dead $eflags
+    JMP_1 %bb.21, debug-location !9
+  
+  bb.17:
+    %7:gr32 = nsw INC32r killed %5, implicit-def dead $eflags, debug-location !9
+    %46:gr32 = MOV32r0 implicit-def dead $eflags
+    JMP_1 %bb.21, debug-location !9
+  
+  bb.18:
+    successors: %bb.20(0x80000000), %bb.19(0x00000000)
+  
+    TEST32rr %5, %5, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.20, 15, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.19, debug-location !9
+  
+  bb.19:
+    successors: 
+  
+  
+  bb.20:
+    %43:gr32 = nsw DEC32r %5, implicit-def dead $eflags, debug-location !9
+    %44:gr64_nosp = SUBREG_TO_REG 0, killed %43, %subreg.sub_32bit
+    ; Fiddled with to morph into llvm test,
+    %8:gr64 = LEA64r $noreg, 4, killed %44, @amd64_push_arguments, $noreg, debug-location !9
+    %42:gr32 = MOV32ri 8
+    JMP_1 %bb.21, debug-location !9
+  
+  bb.21:
+    successors: %bb.13(0x7c000000), %bb.3(0x04000000)
+  
+    %9:gr32 = PHI %5, %bb.20, %7, %bb.17, %5, %bb.16, debug-location !9
+    %10:gr32 = PHI %4, %bb.20, %4, %bb.17, %6, %bb.16, debug-location !9
+    %11:gr64 = PHI %8, %bb.20, undef %45:gr64, %bb.17, undef %47:gr64, %bb.16
+    %12:gr32 = PHI %42, %bb.20, %46, %bb.17, %48, %bb.16, debug-location !9
+    %49:gr32 = MOV32rm killed %11, 1, $noreg, 0, $noreg, debug-location !9 :: (load (s32) from `i32 *undef`)
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    $rdi = COPY %50, debug-location !9
+    CALL64pcrel32 target-flags(x86-plt) &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit undef $rsi, implicit undef $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax, debug-location !9
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    $rdi = COPY %15, debug-location !9
+    $esi = COPY killed %49, debug-location !9
+    $edx = COPY killed %12, debug-location !9
+    $ecx = COPY %54, debug-location !9
+    $r8 = COPY %50, debug-location !9
+    CALL64r undef %55:gr64, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $esi, implicit killed $edx, implicit killed $ecx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp, debug-location !9
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
+    %13:gr64 = nuw nsw INC64r killed %3, implicit-def dead $eflags, debug-location !9
+    %14:gr32 = ADD32ri8 killed %2, -8, implicit-def dead $eflags, debug-location !9
+    CMP32ri8 %14, 8, implicit-def $eflags, debug-location !9
+    JCC_1 %bb.13, 15, implicit killed $eflags, debug-location !9
+    JMP_1 %bb.3, debug-location !9
+
+...

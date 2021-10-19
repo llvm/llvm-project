@@ -22,7 +22,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 
-#include <string.h>
+#include <cstring>
 namespace lldb_private {
 class Declaration;
 }

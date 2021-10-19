@@ -47,10 +47,10 @@ bb:
 
 ; GCN-LABEL: reassoc_v2i32:
 ; GCN: s_add_i32 [[ADD1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
-; GCN: s_add_i32 [[ADD2:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
-; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD1]], v{{[0-9]+}}
+; GCN-DAG: s_add_i32 [[ADD2:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX8-DAG: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD1]], v{{[0-9]+}}
 ; GFX8: v_add_u32_e32 v{{[0-9]+}}, vcc, [[ADD2]], v{{[0-9]+}}
-; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
+; GFX9-DAG: v_add_u32_e32 v{{[0-9]+}}, [[ADD1]], v{{[0-9]+}}
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, [[ADD2]], v{{[0-9]+}}
 define amdgpu_kernel void @reassoc_v2i32(<2 x i32> addrspace(1)* %arg, <2 x i32> %x, <2 x i32> %y) {
 bb:
@@ -113,7 +113,7 @@ bb:
 
 ; GCN-LABEL: reassoc_i32_ga:
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, var@rel32@hi+12
 ; GCN: s_endpgm
 define amdgpu_kernel void @reassoc_i32_ga(i64 %x) {
 bb:

@@ -28,7 +28,6 @@ namespace mlir {
 
 class AffineForOp;
 class Block;
-class FlatAffineConstraints;
 class Location;
 struct MemRefAccess;
 class Operation;
@@ -49,10 +48,25 @@ void getEnclosingAffineForAndIfOps(Operation &op,
 /// surrounding this operation.
 unsigned getNestingDepth(Operation *op);
 
+/// Returns whether a loop is a parallel loop and contains a reduction loop.
+bool isLoopParallelAndContainsReduction(AffineForOp forOp);
+
 /// Returns in 'sequentialLoops' all sequential loops in loop nest rooted
 /// at 'forOp'.
 void getSequentialLoops(AffineForOp forOp,
                         llvm::SmallDenseSet<Value, 8> *sequentialLoops);
+
+/// Enumerates different result statuses of slice computation by
+/// `computeSliceUnion`
+// TODO: Identify and add different kinds of failures during slice computation.
+struct SliceComputationResult {
+  enum ResultEnum {
+    Success,
+    IncorrectSliceFailure, // Slice is computed, but it is incorrect.
+    GenericFailure,        // Unable to compute src loop computation slice.
+  } value;
+  SliceComputationResult(ResultEnum v) : value(v) {}
+};
 
 /// ComputationSliceState aggregates loop IVs, loop bound AffineMaps and their
 /// associated operands for a set of loops within a loop nest (typically the
@@ -78,10 +92,52 @@ struct ComputationSliceState {
   // Constraints are added for all loop IV bounds (dim or symbol), and
   // constraints are added for slice bounds in 'lbs'/'ubs'.
   // Returns failure if we cannot add loop bounds because of unsupported cases.
-  LogicalResult getAsConstraints(FlatAffineConstraints *cst);
+  LogicalResult getAsConstraints(FlatAffineValueConstraints *cst);
+
+  /// Adds to 'cst' constraints which represent the original loop bounds on
+  /// 'ivs' in 'this'. This corresponds to the original domain of the loop nest
+  /// from which the slice is being computed. Returns failure if we cannot add
+  /// loop bounds because of unsupported cases.
+  LogicalResult getSourceAsConstraints(FlatAffineValueConstraints &cst);
 
   // Clears all bounds and operands in slice state.
   void clearBounds();
+
+  /// Returns true if the computation slice is empty.
+  bool isEmpty() const { return ivs.empty(); }
+
+  /// Returns true if the computation slice encloses all the iterations of the
+  /// sliced loop nest. Returns false if it does not. Returns llvm::None if it
+  /// cannot determine if the slice is maximal or not.
+  // TODO: Cache 'isMaximal' so that we don't recompute it when the slice
+  // information hasn't changed.
+  Optional<bool> isMaximal() const;
+
+  /// Checks the validity of the slice computed. This is done using the
+  /// following steps:
+  /// 1. Get the new domain of the slice that would be created if fusion
+  /// succeeds. This domain gets constructed with source loop IVS and
+  /// destination loop IVS as dimensions.
+  /// 2. Project out the dimensions of the destination loop from the domain
+  /// above calculated in step(1) to express it purely in terms of the source
+  /// loop IVs.
+  /// 3. Calculate a set difference between the iterations of the new domain and
+  /// the original domain of the source loop.
+  /// If this difference is empty, the slice is declared to be valid. Otherwise,
+  /// return false as it implies that the effective fusion results in at least
+  /// one iteration of the slice that was not originally in the source's domain.
+  /// If the validity cannot be determined, returns llvm:None.
+  Optional<bool> isSliceValid();
+
+  void dump() const;
+
+private:
+  /// Fast check to determine if the computation slice is maximal. Returns true
+  /// if each slice dimension maps to an existing dst dimension and both the src
+  /// and the dst loops for those dimensions have the same bounds. Returns false
+  /// if both the src and the dst loops don't have the same bounds. Returns
+  /// llvm::None if none of the above can be proven.
+  Optional<bool> isSliceMaximalFastCheck() const;
 };
 
 /// Computes the computation slice loop bounds for one loop nest as affine maps
@@ -126,26 +182,38 @@ struct ComputationSliceState {
 //    }
 //
 void getComputationSliceState(Operation *depSourceOp, Operation *depSinkOp,
-                              FlatAffineConstraints *dependenceConstraints,
+                              FlatAffineValueConstraints *dependenceConstraints,
                               unsigned loopDepth, bool isBackwardSlice,
                               ComputationSliceState *sliceState);
 
+/// Return the number of iterations for the `slicetripCountMap` provided.
+uint64_t getSliceIterationCount(
+    const llvm::SmallDenseMap<Operation *, uint64_t, 8> &sliceTripCountMap);
+
+/// Builds a map 'tripCountMap' from AffineForOp to constant trip count for
+/// loop nest surrounding represented by slice loop bounds in 'slice'. Returns
+/// true on success, false otherwise (if a non-constant trip count was
+/// encountered).
+bool buildSliceTripCountMap(
+    const ComputationSliceState &slice,
+    llvm::SmallDenseMap<Operation *, uint64_t, 8> *tripCountMap);
+
 /// Computes in 'sliceUnion' the union of all slice bounds computed at
-/// 'loopDepth' between all dependent pairs of ops in 'opsA' and 'opsB'.
-/// The parameter 'numCommonLoops' is the number of loops common to the
-/// operations in 'opsA' and 'opsB'.
-/// If 'isBackwardSlice' is true, computes slice bounds for loop nest
-/// surrounding ops in 'opsA', as a function of IVs and symbols of loop nest
-/// surrounding ops in 'opsB' at 'loopDepth'.
-/// If 'isBackwardSlice' is false, computes slice bounds for loop nest
-/// surrounding ops in 'opsB', as a function of IVs and symbols of loop nest
-/// surrounding ops in 'opsA' at 'loopDepth'.
-/// Returns 'success' if union was computed, 'failure' otherwise.
+/// 'loopDepth' between all dependent pairs of ops in 'opsA' and 'opsB', and
+/// then verifies if it is valid. The parameter 'numCommonLoops' is the number
+/// of loops common to the operations in 'opsA' and 'opsB'. If 'isBackwardSlice'
+/// is true, computes slice bounds for loop nest surrounding ops in 'opsA', as a
+/// function of IVs and symbols of loop nest surrounding ops in 'opsB' at
+/// 'loopDepth'. If 'isBackwardSlice' is false, computes slice bounds for loop
+/// nest surrounding ops in 'opsB', as a function of IVs and symbols of loop
+/// nest surrounding ops in 'opsA' at 'loopDepth'. Returns
+/// 'SliceComputationResult::Success' if union was computed correctly, an
+/// appropriate 'failure' otherwise.
 // TODO: Change this API to take 'forOpA'/'forOpB'.
-LogicalResult computeSliceUnion(ArrayRef<Operation *> opsA,
-                                ArrayRef<Operation *> opsB, unsigned loopDepth,
-                                unsigned numCommonLoops, bool isBackwardSlice,
-                                ComputationSliceState *sliceUnion);
+SliceComputationResult
+computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
+                  unsigned loopDepth, unsigned numCommonLoops,
+                  bool isBackwardSlice, ComputationSliceState *sliceUnion);
 
 /// Creates a clone of the computation contained in the loop nest surrounding
 /// 'srcOpInst', slices the iteration space of src loop based on slice bounds
@@ -174,7 +242,7 @@ AffineForOp insertBackwardComputationSlice(Operation *srcOpInst,
 //    }
 //
 // Region:  {memref = %A, write = false, {%i <= m0 <= %i + 7} }
-// The last field is a 2-d FlatAffineConstraints symbolic in %i.
+// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
 //
 struct MemRefRegion {
   explicit MemRefRegion(Location loc) : loc(loc) {}
@@ -209,14 +277,14 @@ struct MemRefRegion {
   ///    }
   ///
   ///   {memref = %A, write = false, {%i <= m0 <= %i + 7} }
-  /// The last field is a 2-d FlatAffineConstraints symbolic in %i.
+  /// The last field is a 2-d FlatAffineValueConstraints symbolic in %i.
   ///
   LogicalResult compute(Operation *op, unsigned loopDepth,
-                        ComputationSliceState *sliceState = nullptr,
+                        const ComputationSliceState *sliceState = nullptr,
                         bool addMemRefDimBounds = true);
 
-  FlatAffineConstraints *getConstraints() { return &cst; }
-  const FlatAffineConstraints *getConstraints() const { return &cst; }
+  FlatAffineValueConstraints *getConstraints() { return &cst; }
+  const FlatAffineValueConstraints *getConstraints() const { return &cst; }
   bool isWrite() const { return write; }
   void setWrite(bool flag) { write = flag; }
 
@@ -225,10 +293,11 @@ struct MemRefRegion {
   /// otherwise. Note that the symbols of the region are treated specially,
   /// i.e., the returned bounding constant holds for *any given* value of the
   /// symbol identifiers. The 'shape' vector is set to the corresponding
-  /// dimension-wise bounds major to minor. We use int64_t instead of uint64_t
-  /// since index types can be at most int64_t. `lbs` are set to the lower
-  /// bounds for each of the rank dimensions, and lbDivisors contains the
-  /// corresponding denominators for floorDivs.
+  /// dimension-wise bounds major to minor. The number of elements and all the
+  /// dimension-wise bounds are guaranteed to be non-negative. We use int64_t
+  /// instead of uint64_t since index types can be at most int64_t. `lbs` are
+  /// set to the lower bounds for each of the rank dimensions, and lbDivisors
+  /// contains the corresponding denominators for floorDivs.
   Optional<int64_t> getConstantBoundingSizeAndShape(
       SmallVectorImpl<int64_t> *shape = nullptr,
       std::vector<SmallVector<int64_t, 4>> *lbs = nullptr,
@@ -239,10 +308,10 @@ struct MemRefRegion {
   void getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                              AffineMap &ubMap) const;
 
-  /// A wrapper around FlatAffineConstraints::getConstantBoundOnDimSize(). 'pos'
-  /// corresponds to the position of the memref shape's dimension (major to
-  /// minor) which matches 1:1 with the dimensional identifier positions in
-  //'cst'.
+  /// A wrapper around FlatAffineValueConstraints::getConstantBoundOnDimSize().
+  /// 'pos' corresponds to the position of the memref shape's dimension (major
+  /// to minor) which matches 1:1 with the dimensional identifier positions in
+  /// 'cst'.
   Optional<int64_t>
   getConstantBoundOnDimSize(unsigned pos,
                             SmallVectorImpl<int64_t> *lb = nullptr,
@@ -254,7 +323,7 @@ struct MemRefRegion {
   /// Returns the size of this MemRefRegion in bytes.
   Optional<int64_t> getRegionSize();
 
-  // Wrapper around FlatAffineConstraints::unionBoundingBox.
+  // Wrapper around FlatAffineValueConstraints::unionBoundingBox.
   LogicalResult unionBoundingBox(const MemRefRegion &other);
 
   /// Returns the rank of the memref that this region corresponds to.
@@ -278,7 +347,7 @@ struct MemRefRegion {
   /// and thus the region is symbolic in the outer surrounding loops at that
   /// depth.
   // TODO: Replace this to exploit HyperRectangularSet.
-  FlatAffineConstraints cst;
+  FlatAffineValueConstraints cst;
 };
 
 /// Returns the size of memref data in bytes if it's statically shaped, None
@@ -300,14 +369,16 @@ unsigned getNumCommonSurroundingLoops(Operation &A, Operation &B);
 Optional<int64_t> getMemoryFootprintBytes(AffineForOp forOp,
                                           int memorySpace = -1);
 
-/// Returns true if `forOp' is a parallel loop.
-bool isLoopParallel(AffineForOp forOp);
-
 /// Simplify the integer set by simplifying the underlying affine expressions by
 /// flattening and some simple inference. Also, drop any duplicate constraints.
 /// Returns the simplified integer set. This method runs in time linear in the
 /// number of constraints.
 IntegerSet simplifyIntegerSet(IntegerSet set);
+
+/// Returns the innermost common loop depth for the set of operations in 'ops'.
+unsigned getInnermostCommonLoopDepth(
+    ArrayRef<Operation *> ops,
+    SmallVectorImpl<AffineForOp> *surroundingLoops = nullptr);
 
 } // end namespace mlir
 

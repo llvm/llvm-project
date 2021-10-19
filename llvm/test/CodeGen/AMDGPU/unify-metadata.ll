@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn--amdhsa -amdgpu-unify-metadata -S < %s | FileCheck -check-prefix=ALL %s
+; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-unify-metadata -S < %s | FileCheck -check-prefix=ALL %s
 
 ; This test check that we have a singe metadata value after linking several
 ; modules for records such as opencl.ocl.version, llvm.ident and similar.

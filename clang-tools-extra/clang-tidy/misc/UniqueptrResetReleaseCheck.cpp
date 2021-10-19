@@ -16,21 +16,40 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+UniqueptrResetReleaseCheck::UniqueptrResetReleaseCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      Inserter(Options.getLocalOrGlobal("IncludeStyle",
+                                        utils::IncludeSorter::IS_LLVM)) {}
+
+void UniqueptrResetReleaseCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IncludeStyle", Inserter.getStyle());
+}
+
+void UniqueptrResetReleaseCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  Inserter.registerPreprocessor(PP);
+}
+
 void UniqueptrResetReleaseCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMemberCallExpr(
-          on(expr().bind("left")), callee(memberExpr().bind("reset_member")),
-          callee(
-              cxxMethodDecl(hasName("reset"),
-                            ofClass(cxxRecordDecl(hasName("::std::unique_ptr"),
-                                                  decl().bind("left_class"))))),
-          has(ignoringParenImpCasts(cxxMemberCallExpr(
-              on(expr().bind("right")),
-              callee(memberExpr().bind("release_member")),
-              callee(cxxMethodDecl(
-                  hasName("release"),
-                  ofClass(cxxRecordDecl(hasName("::std::unique_ptr"),
-                                        decl().bind("right_class")))))))))
+          callee(memberExpr(
+                     member(cxxMethodDecl(
+                         hasName("reset"),
+                         ofClass(cxxRecordDecl(hasName("::std::unique_ptr"),
+                                               decl().bind("left_class"))))))
+                     .bind("reset_member")),
+          hasArgument(
+              0, ignoringParenImpCasts(cxxMemberCallExpr(
+                     on(expr().bind("right")),
+                     callee(memberExpr(member(cxxMethodDecl(
+                                           hasName("release"),
+                                           ofClass(cxxRecordDecl(
+                                               hasName("::std::unique_ptr"),
+                                               decl().bind("right_class"))))))
+                                .bind("release_member"))))))
           .bind("reset_call"),
       this);
 }
@@ -95,36 +114,39 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ReleaseMember =
       Result.Nodes.getNodeAs<MemberExpr>("release_member");
   const auto *Right = Result.Nodes.getNodeAs<Expr>("right");
-  const auto *Left = Result.Nodes.getNodeAs<Expr>("left");
   const auto *ResetCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset_call");
 
-  std::string LeftText = std::string(clang::Lexer::getSourceText(
-      CharSourceRange::getTokenRange(Left->getSourceRange()),
-      *Result.SourceManager, getLangOpts()));
-  std::string RightText = std::string(clang::Lexer::getSourceText(
-      CharSourceRange::getTokenRange(Right->getSourceRange()),
-      *Result.SourceManager, getLangOpts()));
-
-  if (ResetMember->isArrow())
-    LeftText = "*" + LeftText;
-  if (ReleaseMember->isArrow())
-    RightText = "*" + RightText;
-  std::string DiagText;
-  // Even if x was rvalue, *x is not rvalue anymore.
-  if (!Right->isRValue() || ReleaseMember->isArrow()) {
-    RightText = "std::move(" + RightText + ")";
-    DiagText = "prefer ptr1 = std::move(ptr2) over ptr1.reset(ptr2.release())";
-  } else {
-    DiagText =
-        "prefer ptr = ReturnUnique() over ptr.reset(ReturnUnique().release())";
+  StringRef AssignmentText = " = ";
+  StringRef TrailingText = "";
+  bool NeedsUtilityInclude = false;
+  if (ReleaseMember->isArrow()) {
+    AssignmentText = " = std::move(*";
+    TrailingText = ")";
+    NeedsUtilityInclude = true;
+  } else if (!Right->isPRValue()) {
+    AssignmentText = " = std::move(";
+    TrailingText = ")";
+    NeedsUtilityInclude = true;
   }
-  std::string NewText = LeftText + " = " + RightText;
 
-  diag(ResetMember->getExprLoc(), DiagText) << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(ResetCall->getSourceRange()), NewText);
+  auto D = diag(ResetMember->getExprLoc(),
+                "prefer 'unique_ptr<>' assignment over 'release' and 'reset'");
+  if (ResetMember->isArrow())
+    D << FixItHint::CreateInsertion(ResetMember->getBeginLoc(), "*");
+  D << FixItHint::CreateReplacement(
+           CharSourceRange::getCharRange(ResetMember->getOperatorLoc(),
+                                         Right->getBeginLoc()),
+           AssignmentText)
+    << FixItHint::CreateReplacement(
+           CharSourceRange::getTokenRange(ReleaseMember->getOperatorLoc(),
+                                          ResetCall->getEndLoc()),
+           TrailingText);
+  if (NeedsUtilityInclude)
+    D << Inserter.createIncludeInsertion(
+        Result.SourceManager->getFileID(ResetMember->getBeginLoc()),
+        "<utility>");
 }
-
 } // namespace misc
 } // namespace tidy
 } // namespace clang

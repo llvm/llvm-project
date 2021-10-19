@@ -24,12 +24,9 @@
 #include "ittnotify_config.h"
 __itt_global __kmp_ittapi_clean_global;
 extern __itt_global __kmp_itt__ittapi_global;
-kmp_int32 __kmp_barrier_domain_count;
-kmp_int32 __kmp_region_domain_count;
-__itt_domain *__kmp_itt_barrier_domains[KMP_MAX_FRAME_DOMAINS];
-__itt_domain *__kmp_itt_region_domains[KMP_MAX_FRAME_DOMAINS];
-__itt_domain *__kmp_itt_imbalance_domains[KMP_MAX_FRAME_DOMAINS];
-kmp_int32 __kmp_itt_region_team_size[KMP_MAX_FRAME_DOMAINS];
+
+kmp_itthash_t __kmp_itt_barrier_domains = {{0}, 0};
+kmp_itthash_t __kmp_itt_region_domains = {{0}, 0};
 __itt_domain *metadata_domain = NULL;
 __itt_string_handle *string_handle_imbl = NULL;
 __itt_string_handle *string_handle_loop = NULL;
@@ -63,9 +60,9 @@ void __kmp_itt_reset() {
 
 void __kmp_itt_initialize() {
 
-// ITTNotify library is loaded and initialized at first call to any ittnotify
-// function, so we do not need to explicitly load it any more. Just report OMP
-// RTL version to ITTNotify.
+  // ITTNotify library is loaded and initialized at first call to any ittnotify
+  // function, so we do not need to explicitly load it any more. Just report OMP
+  // RTL version to ITTNotify.
 
 #if USE_ITT_NOTIFY
   // Backup a clean global state
@@ -153,7 +150,9 @@ extern "C" void __itt_error_handler(__itt_error_code err, va_list args) {
       __kmp_str_free(&err_code.str);
     }
   } break;
-  default: { KMP_WARNING(IttUnknownError, err); }
+  default: {
+    KMP_WARNING(IttUnknownError, err);
+  }
   }
 } // __itt_error_handler
 

@@ -144,45 +144,44 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, float* [[A]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX1]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[REORDER_SHUFFLE]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP3]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[R_052:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY]] ], [ [[TMP11:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi float [ [[TMP0]], [[ENTRY]] ], [ [[TMP13:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[REORDER_SHUFFLE]], [[ENTRY]] ], [ [[TMP18:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP5]], 7.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x float> [ [[TMP2]], [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x float> [ [[TMP5]], [[ENTRY]] ], [ [[TMP12:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP8]], 7.000000e+00
 ; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* [[ARRAYIDX14]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[ARRAYIDX19]] to <2 x float>*
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, <2 x float>* [[TMP9]], align 4
-; CHECK-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> undef, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP11]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> undef, float [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP13]] = extractelement <2 x float> [[REORDER_SHUFFLE1]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP12]], float [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP8]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> [[TMP15]], float [[TMP4]], i32 3
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul <4 x float> [[TMP16]], <float 1.100000e+01, float 1.000000e+01, float 9.000000e+00, float 8.000000e+00>
-; CHECK-NEXT:    [[TMP18]] = fadd <4 x float> [[TMP6]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP19]], 121
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast float* [[ARRAYIDX19]] to <2 x float>*
+; CHECK-NEXT:    [[TMP12]] = load <2 x float>, <2 x float>* [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> poison, float [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul <4 x float> [[TMP17]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+01, float 1.100000e+01>
+; CHECK-NEXT:    [[TMP19]] = fadd <4 x float> [[TMP6]], [[TMP18]]
+; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP20]], 121
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x float> [[TMP18]], i32 3
-; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP20]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP18]], i32 2
-; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP18]], i32 1
-; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP22]]
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x float> [[TMP18]], i32 0
-; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP23]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x float> [[TMP19]], i32 0
+; CHECK-NEXT:    [[ADD28:%.*]] = fadd float [[ADD6]], [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x float> [[TMP19]], i32 1
+; CHECK-NEXT:    [[ADD29:%.*]] = fadd float [[ADD28]], [[TMP22]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x float> [[TMP19]], i32 2
+; CHECK-NEXT:    [[ADD30:%.*]] = fadd float [[ADD29]], [[TMP23]]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x float> [[TMP19]], i32 3
+; CHECK-NEXT:    [[ADD31:%.*]] = fadd float [[ADD30]], [[TMP24]]
 ; CHECK-NEXT:    ret float [[ADD31]]
 ;
 entry:
@@ -247,7 +246,7 @@ define float @sort_phi_type(float* nocapture readonly %A) {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x float> [ <float 1.000000e+01, float 1.000000e+01, float 1.000000e+01, float 1.000000e+01>, [[ENTRY]] ], [ [[TMP9:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> undef, float [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP0]], i32 3

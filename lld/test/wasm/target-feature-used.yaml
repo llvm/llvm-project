@@ -43,7 +43,7 @@ Sections:
 ...
 
 # SPECIFIED:        - Type:            CUSTOM
-# SPECIFIED-NEXT:     Name:            target_features
+# SPECIFIED:          Name:            target_features
 # SPECIFIED-NEXT:     Features:
 # SPECIFIED-NEXT:       - Prefix:          USED
 # SPECIFIED-NEXT:         Name:            bar
@@ -56,7 +56,7 @@ Sections:
 # UNSPECIFIED: Target feature 'foo' used by {{.*}}target-feature-used.yaml.tmp1.o is not allowed.{{$}}
 
 # UNSPECIFIED-NOCHECK:        - Type:            CUSTOM
-# UNSPECIFIED-NOCHECK-NEXT:     Name:            target_features
+# UNSPECIFIED-NOCHECK:          Name:            target_features
 # UNSPECIFIED-NOCHECK-NEXT:     Features:
 # UNSPECIFIED-NOCHECK-NEXT:       - Prefix:          USED
 # UNSPECIFIED-NOCHECK-NEXT:         Name:            bar
@@ -67,14 +67,14 @@ Sections:
 # UNSPECIFIED-NOCHECK-NEXT: ...
 
 # USED:        - Type:            CUSTOM
-# USED-NEXT:     Name:            target_features
+# USED:          Name:            target_features
 # USED-NEXT:     Features:
 # USED-NEXT:       - Prefix:          USED
 # USED-NEXT:         Name:            foo
 # USED-NEXT: ...
 
 # REQUIRED:        - Type:            CUSTOM
-# REQUIRED-NEXT:     Name:            target_features
+# REQUIRED:          Name:            target_features
 # REQUIRED-NEXT:     Features:
 # REQUIRED-NEXT:       - Prefix:          USED
 # REQUIRED-NEXT:         Name:            foo
@@ -83,14 +83,14 @@ Sections:
 # DISALLOWED: Target feature 'foo' used in {{.*}}target-feature-used.yaml.tmp1.o is disallowed by {{.*}}target-feature-used.yaml.tmp.disallowed.o. Use --no-check-features to suppress.{{$}}
 
 # DISALLOWED-NOCHECK:        - Type:            CUSTOM
-# DISALLOWED-NOCHECK-NEXT:     Name:            target_features
+# DISALLOWED-NOCHECK:          Name:            target_features
 # DISALLOWED-NOCHECK-NEXT:     Features:
 # DISALLOWED-NOCHECK-NEXT:       - Prefix:          USED
 # DISALLOWED-NOCHECK-NEXT:         Name:            foo
 # DISALLOWED-NOCHECK-NEXT: ...
 
 # NONE:        - Type:            CUSTOM
-# NONE-NEXT:     Name:            target_features
+# NONE:          Name:            target_features
 # NONE-NEXT:     Features:
 # NONE-NEXT:       - Prefix:          USED
 # NONE-NEXT:         Name:            foo

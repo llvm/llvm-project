@@ -22,6 +22,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -41,7 +42,6 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SpecialCaseList.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
@@ -726,8 +726,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   failIfEmpty(AsmInfo, "no asm info for target " + TripleName);
 
-  std::unique_ptr<const MCObjectFileInfo> MOFI(new MCObjectFileInfo);
-  MCContext Ctx(AsmInfo.get(), MRI.get(), MOFI.get());
+  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   failIfEmpty(DisAsm, "no disassembler info for target " + TripleName);

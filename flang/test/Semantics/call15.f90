@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C711 An assumed-type actual argument that corresponds to an assumed-rank 
 ! dummy argument shall be assumed-shape or assumed-rank.
 subroutine s(arg1, arg2, arg3)

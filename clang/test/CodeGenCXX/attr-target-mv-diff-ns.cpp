@@ -21,11 +21,11 @@ int bar() {
 // LINUX: @_Z3fooi.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @_Z3fooi.resolver
 // LINUX: @_ZN2ns3fooEi.ifunc = weak_odr ifunc i32 (i32), i32 (i32)* ()* @_ZN2ns3fooEi.resolver
 
-// LINUX: define i32 @_Z3fooi.sse4.2(i32 %0)
+// LINUX: define{{.*}} i32 @_Z3fooi.sse4.2(i32 %0)
 // LINUX: ret i32 0
-// LINUX: define i32 @_Z3fooi.arch_ivybridge(i32 %0)
+// LINUX: define{{.*}} i32 @_Z3fooi.arch_ivybridge(i32 %0)
 // LINUX: ret i32 1
-// LINUX: define i32 @_Z3fooi(i32 %0)
+// LINUX: define{{.*}} i32 @_Z3fooi(i32 %0)
 // LINUX: ret i32 2
 
 // WINDOWS: define dso_local i32 @"?foo@@YAHH@Z.sse4.2"(i32 %0)
@@ -35,11 +35,11 @@ int bar() {
 // WINDOWS: define dso_local i32 @"?foo@@YAHH@Z"(i32 %0)
 // WINDOWS: ret i32 2
 
-// LINUX: define i32 @_ZN2ns3fooEi.sse4.2(i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2ns3fooEi.sse4.2(i32 %0)
 // LINUX: ret i32 0
-// LINUX: define i32 @_ZN2ns3fooEi.arch_ivybridge(i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2ns3fooEi.arch_ivybridge(i32 %0)
 // LINUX: ret i32 1
-// LINUX: define i32 @_ZN2ns3fooEi(i32 %0)
+// LINUX: define{{.*}} i32 @_ZN2ns3fooEi(i32 %0)
 // LINUX: ret i32 2
 
 // WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z.sse4.2"(i32 %0)
@@ -49,7 +49,7 @@ int bar() {
 // WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z"(i32 %0)
 // WINDOWS: ret i32 2
 
-// LINUX: define i32 @_Z3barv()
+// LINUX: define{{.*}} i32 @_Z3barv()
 // LINUX: call i32 @_Z3fooi.ifunc(i32 1)
 // LINUX: call i32 @_ZN2ns3fooEi.ifunc(i32 2)
 

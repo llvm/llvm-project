@@ -1,26 +1,21 @@
 ## Test that macho2yaml dumps the __debug_foo section (unrecognized debug section)
 ## as a raw content section.
 
-## Due to the current implementation of yaml2macho being buggy, we cannot generate a DWARF section
-## where the sectname starts with '__debug_' and the segname is '__DWARF', from a raw content section.
-## We've slightly modified the segname to be '__FOO'. macho2yaml will still treat it as a debug
-## section.
-
 # RUN: yaml2obj %s | obj2yaml | FileCheck %s --check-prefix=UNRECOGNIZED
 
 #      UNRECOGNIZED: Sections:
 # UNRECOGNIZED-NEXT:   - sectname:        __debug_foo
-# UNRECOGNIZED-NEXT:     segname:         __FOO
-# UNRECOGNIZED-NEXT:     addr:            0x0000000000000000
+# UNRECOGNIZED-NEXT:     segname:         __DWARF
+# UNRECOGNIZED-NEXT:     addr:            0x0
 # UNRECOGNIZED-NEXT:     size:            5
-# UNRECOGNIZED-NEXT:     offset:          0x00000210
+# UNRECOGNIZED-NEXT:     offset:          0x210
 # UNRECOGNIZED-NEXT:     align:           0
-# UNRECOGNIZED-NEXT:     reloff:          0x00000000
+# UNRECOGNIZED-NEXT:     reloff:          0x0
 # UNRECOGNIZED-NEXT:     nreloc:          0
-# UNRECOGNIZED-NEXT:     flags:           0x00000000
-# UNRECOGNIZED-NEXT:     reserved1:       0x00000000
-# UNRECOGNIZED-NEXT:     reserved2:       0x00000000
-# UNRECOGNIZED-NEXT:     reserved3:       0x00000000
+# UNRECOGNIZED-NEXT:     flags:           0x0
+# UNRECOGNIZED-NEXT:     reserved1:       0x0
+# UNRECOGNIZED-NEXT:     reserved2:       0x0
+# UNRECOGNIZED-NEXT:     reserved3:       0x0
 # UNRECOGNIZED-NEXT:     content:         '0123456789'
 # UNRECOGNIZED-NEXT: ...
 
@@ -48,7 +43,7 @@ LoadCommands:
     flags:    0
     Sections:
       - sectname:  __debug_foo
-        segname:   __FOO
+        segname:   __DWARF
         addr:      0x00
         size:      5
         offset:    528

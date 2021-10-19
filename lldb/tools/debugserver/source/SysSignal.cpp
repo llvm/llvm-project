@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SysSignal.h"
-#include <signal.h>
-#include <stddef.h>
+#include <csignal>
+#include <cstddef>
 
 const char *SysSignal::Name(int signal) {
   switch (signal) {

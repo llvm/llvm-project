@@ -38,13 +38,13 @@
 #include <memory>
 #include <mutex>
 
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <locale.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include <cassert>
+#include <cctype>
+#include <cerrno>
+#include <clocale>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <type_traits>
 
 using namespace lldb;
@@ -103,11 +103,11 @@ FILE *IOHandler::GetErrorFILE() {
   return (m_error_sp ? m_error_sp->GetFile().GetStream() : nullptr);
 }
 
-FileSP &IOHandler::GetInputFileSP() { return m_input_sp; }
+FileSP IOHandler::GetInputFileSP() { return m_input_sp; }
 
-StreamFileSP &IOHandler::GetOutputStreamFileSP() { return m_output_sp; }
+StreamFileSP IOHandler::GetOutputStreamFileSP() { return m_output_sp; }
 
-StreamFileSP &IOHandler::GetErrorStreamFileSP() { return m_error_sp; }
+StreamFileSP IOHandler::GetErrorStreamFileSP() { return m_error_sp; }
 
 bool IOHandler::GetIsInteractive() {
   return GetInputFileSP() ? GetInputFileSP()->GetIsInteractive() : false;
@@ -251,8 +251,7 @@ IOHandlerEditline::IOHandlerEditline(
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
       m_current_lines_ptr(nullptr), m_base_line_number(line_number_start),
       m_curr_line_idx(UINT32_MAX), m_multi_line(multi_line),
-      m_color_prompts(color_prompts), m_interrupt_exits(true),
-      m_editing(false) {
+      m_color_prompts(color_prompts), m_interrupt_exits(true) {
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
@@ -265,17 +264,31 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
                                                GetOutputFILE(), GetErrorFILE(),
                                                m_color_prompts);
-    m_editline_up->SetIsInputCompleteCallback(IsInputCompleteCallback, this);
-    m_editline_up->SetAutoCompleteCallback(AutoCompleteCallback, this);
-    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor())
-      m_editline_up->SetSuggestionCallback(SuggestionCallback, this);
+    m_editline_up->SetIsInputCompleteCallback(
+        [this](Editline *editline, StringList &lines) {
+          return this->IsInputCompleteCallback(editline, lines);
+        });
+
+    m_editline_up->SetAutoCompleteCallback([this](CompletionRequest &request) {
+      this->AutoCompleteCallback(request);
+    });
+
+    if (debugger.GetUseAutosuggestion() && debugger.GetUseColor()) {
+      m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
+        return this->SuggestionCallback(line);
+      });
+    }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
     if (indent_chars) {
       // The delegate does support indentation, hook it up so when any
       // indentation character is typed, the delegate gets a chance to fix it
-      m_editline_up->SetFixIndentationCallback(FixIndentationCallback, this,
-                                               indent_chars);
+      FixIndentationCallbackType f = [this](Editline *editline,
+                                            const StringList &lines,
+                                            int cursor_position) {
+        return this->FixIndentationCallback(editline, lines, cursor_position);
+      };
+      m_editline_up->SetFixIndentationCallback(std::move(f), indent_chars);
     }
   }
 #endif
@@ -385,7 +398,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
   }
 
   if (!got_line && in) {
-    m_editing = true;
     while (!got_line) {
       char *r = fgets(buffer, sizeof(buffer), in);
 #ifdef _WIN32
@@ -411,7 +423,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
       m_line_buffer += buffer;
       got_line = SplitLine(m_line_buffer);
     }
-    m_editing = false;
   }
 
   if (got_line) {
@@ -425,37 +436,23 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 
 #if LLDB_ENABLE_LIBEDIT
 bool IOHandlerEditline::IsInputCompleteCallback(Editline *editline,
-                                                StringList &lines,
-                                                void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  return editline_reader->m_delegate.IOHandlerIsInputComplete(*editline_reader,
-                                                              lines);
+                                                StringList &lines) {
+  return m_delegate.IOHandlerIsInputComplete(*this, lines);
 }
 
 int IOHandlerEditline::FixIndentationCallback(Editline *editline,
                                               const StringList &lines,
-                                              int cursor_position,
-                                              void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  return editline_reader->m_delegate.IOHandlerFixIndentation(
-      *editline_reader, lines, cursor_position);
+                                              int cursor_position) {
+  return m_delegate.IOHandlerFixIndentation(*this, lines, cursor_position);
 }
 
 llvm::Optional<std::string>
-IOHandlerEditline::SuggestionCallback(llvm::StringRef line, void *baton) {
-  IOHandlerEditline *editline_reader = static_cast<IOHandlerEditline *>(baton);
-  if (editline_reader)
-    return editline_reader->m_delegate.IOHandlerSuggestion(*editline_reader,
-                                                           line);
-
-  return llvm::None;
+IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
+  return m_delegate.IOHandlerSuggestion(*this, line);
 }
 
-void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request,
-                                             void *baton) {
-  IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
-  if (editline_reader)
-    editline_reader->m_delegate.IOHandlerComplete(*editline_reader, request);
+void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
+  m_delegate.IOHandlerComplete(*this, request);
 }
 #endif
 

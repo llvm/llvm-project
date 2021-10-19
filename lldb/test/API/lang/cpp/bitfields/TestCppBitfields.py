@@ -16,9 +16,6 @@ class CppBitfieldsTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    # BitFields exhibit crashes in record layout on Windows
-    # (http://llvm.org/pr21800)
-    @skipIfWindows
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()
@@ -45,6 +42,16 @@ class CppBitfieldsTestCase(TestBase):
                     substrs=['unsigned int', '5'])
         self.expect("expr (clang_example.f.a)", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=['uint64_t', '1'])
+
+        self.expect("expr uwbf",
+            substrs=['a = 255',
+                    'b = 65535',
+                    'c = 4294967295',
+                    'x = 4294967295'] )
+
+        self.expect("expr uwubf",
+            substrs=['a = 16777215',
+                    'x = 4294967295'] )
 
         self.expect(
             "frame variable --show-types lba",
@@ -110,3 +117,36 @@ class CppBitfieldsTestCase(TestBase):
                 '(uint32_t) b_a = 2',
                 '(uint32_t:1) d_a = 1',
                 ])
+
+        self.expect(
+            "frame variable --show-types bb",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(bool:1) a = true',
+                '(bool:1) b = false',
+                '(bool:2) c = true',
+                '(bool:2) d = true',
+                ])
+
+        bb = self.frame().FindVariable('bb')
+        self.assertTrue(bb.IsValid())
+
+        bb_a = bb.GetChildAtIndex(0)
+        self.assertTrue(bb_a.IsValid())
+        self.assertEqual(bb_a.GetValueAsUnsigned(), 1)
+        self.assertEqual(bb_a.GetValueAsSigned(), 1)
+
+        bb_b = bb.GetChildAtIndex(1)
+        self.assertTrue(bb_b.IsValid())
+        self.assertEqual(bb_b.GetValueAsUnsigned(), 0)
+        self.assertEqual(bb_b.GetValueAsSigned(), 0)
+
+        bb_c = bb.GetChildAtIndex(2)
+        self.assertTrue(bb_c.IsValid())
+        self.assertEqual(bb_c.GetValueAsUnsigned(), 1)
+        self.assertEqual(bb_c.GetValueAsSigned(), 1)
+
+        bb_d = bb.GetChildAtIndex(3)
+        self.assertTrue(bb_d.IsValid())
+        self.assertEqual(bb_d.GetValueAsUnsigned(), 1)
+        self.assertEqual(bb_d.GetValueAsSigned(), 1)

@@ -22,6 +22,6 @@ struct move_only
 int main(int, char**)
 {
     std::vector<move_only> v;
-    std::vector<move_only> copy = v; // expected-error@memory:* {{call to implicitly-deleted copy constructor of 'move_only'}}
+    std::vector<move_only> copy = v; // expected-error-re@* {{{{(no matching function for call to 'construct_at')|(call to implicitly-deleted copy constructor of 'move_only')}}}}
     return 0;
 }

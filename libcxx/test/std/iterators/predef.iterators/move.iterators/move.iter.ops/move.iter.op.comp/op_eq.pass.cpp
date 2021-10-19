@@ -35,8 +35,8 @@ test(It l, It r, bool x)
 int main(int, char**)
 {
     char s[] = "1234567890";
-    test(input_iterator<char*>(s), input_iterator<char*>(s), true);
-    test(input_iterator<char*>(s), input_iterator<char*>(s+1), false);
+    test(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s), true);
+    test(cpp17_input_iterator<char*>(s), cpp17_input_iterator<char*>(s+1), false);
     test(forward_iterator<char*>(s), forward_iterator<char*>(s), true);
     test(forward_iterator<char*>(s), forward_iterator<char*>(s+1), false);
     test(bidirectional_iterator<char*>(s), bidirectional_iterator<char*>(s), true);

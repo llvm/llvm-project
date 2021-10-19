@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/tolower.h"
-#include "src/ctype/ctype_utils.h"
+#include "src/__support/ctype_utils.h"
 
 #include "src/__support/common.h"
 
@@ -15,9 +15,9 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(tolower)(int c) {
+LLVM_LIBC_FUNCTION(int, tolower, (int c)) {
   if (internal::isupper(c))
-    return c + 'a' - 'A';
+    return c + ('a' - 'A');
   return c;
 }
 

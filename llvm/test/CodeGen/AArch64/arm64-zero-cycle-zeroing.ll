@@ -1,14 +1,14 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-zcz                    | FileCheck %s -check-prefixes=ALL,NONEGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-zcz-gp,+no-zcz-fp      | FileCheck %s -check-prefixes=ALL,NONEGP,NONEFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz                    | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz -mattr=+fullfp16   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZERO16
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-gp                 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-fp                 | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-gp,+no-zcz-fp      | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu                                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone                  | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
 ; RUN: llc < %s -mtriple=arm64-linux-gnu   -mcpu=apple-a10                | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONE16
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m3                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo                     | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
+; UN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 
 declare void @bar(half, float, double, <2 x double>)
 declare void @bari(i32, i32)
@@ -19,22 +19,22 @@ define void @t1() nounwind ssp {
 entry:
 ; ALL-LABEL: t1:
 ; ALL-NOT: fmov
-; NONEFP: ldr h0,{{.*}}
-; NONEFP: fmov s1, wzr
-; NONEFP: fmov d2, xzr
-; NONEFP: movi{{(.16b)?}} v3{{(.2d)?}}, #0
+; NONEFP-DAG: ldr h0,{{.*}}
+; NONEFP-DAG: fmov s1, wzr
+; NONEFP-DAG: fmov d2, xzr
+; NONEFP-DAG: movi{{(.16b)?}} v3{{(.2d)?}}, #0
 ; NONE16: fmov h0, wzr
 ; NONE16: fmov s1, wzr
 ; NONE16: fmov d2, xzr
 ; NONE16: movi{{(.16b)?}} v3{{(.2d)?}}, #0
 ; ZEROFP-DAG: ldr h0,{{.*}}
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
+; ZEROFP-DAG: movi d1, #0
+; ZEROFP-DAG: movi d2, #0
+; ZEROFP-DAG: movi v3.2d, #0
+; ZERO16: movi d0, #0
+; ZERO16: movi d1, #0
+; ZERO16: movi d2, #0
+; ZERO16: movi v3.2d, #0
   tail call void @bar(half 0.000000e+00, float 0.000000e+00, double 0.000000e+00, <2 x double> <double 0.000000e+00, double 0.000000e+00>) nounwind
   ret void
 }
@@ -65,8 +65,8 @@ define void @t4() nounwind ssp {
 ; ALL-LABEL: t4:
 ; NONEFP: fmov s{{[0-3]+}}, wzr
 ; NONEFP: fmov s{{[0-3]+}}, wzr
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP: movi d0, #0
+; ZEROFP: movi d1, #0
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
   ret void
 }
@@ -147,7 +147,7 @@ define float @tf32() {
 entry:
 ; ALL-LABEL: tf32:
 ; NONEFP: mov s0, wzr
-; ZEROFP: movi v0.2d, #0
+; ZEROFP: movi d0, #0
   ret float 0.0
 }
 
@@ -155,7 +155,7 @@ define double @td64() {
 entry:
 ; ALL-LABEL: td64:
 ; NONEFP: mov d0, xzr
-; ZEROFP: movi v0.2d, #0
+; ZEROFP: movi d0, #0
   ret double 0.0
 }
 

@@ -1,5 +1,5 @@
-; RUN: opt < %s -simplifycfg -sink-common-insts -S | FileCheck %s
-; RUN: opt < %s -passes='simplify-cfg<sink-common-insts>' -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -sink-common-insts -S | FileCheck %s
+; RUN: opt < %s -passes='simplifycfg<sink-common-insts>' -S | FileCheck %s
 
 define i1 @test1(i1 zeroext %flag, i8* %y) #0 {
 entry:
@@ -47,6 +47,6 @@ if.end:
 
 ; CHECK-LABEL: test2
 ; CHECK: %[[S:[a-z0-9.]+]] = select i1 %flag, i8* %y, i8* %z
-; CHECK: %[[R:[a-z0-9.]+]] = call i1 @llvm.type.test(i8* %[[S]], metadata !0)
+; CHECK: %[[R:[a-z0-9.]+]] = call i1 @llvm.type.test(i8* %[[S]], metadata ![[MD:[0-9]+]]
 ; CHECK: ret i1 %[[R]]
-
+; CHECK: ![[MD]] = !{i32 0, !"typeid1"}

@@ -13,6 +13,12 @@ add_llvm_component_library(LLVMInterpreter
 
   DEPENDS
   intrinsics_gen
+
+  LINK_COMPONENTS
+  CodeGen
+  Core
+  ExecutionEngine
+  Support
   )
 
 if( LLVM_ENABLE_FFI )

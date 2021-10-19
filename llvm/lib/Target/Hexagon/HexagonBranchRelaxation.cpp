@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-brelax"
-
 #include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
@@ -28,6 +26,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iterator>
+
+#define DEBUG_TYPE "hexagon-brelax"
 
 using namespace llvm;
 

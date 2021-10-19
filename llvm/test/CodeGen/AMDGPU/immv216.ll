@@ -1,7 +1,7 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global,-xnack -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs -show-mc-encoding < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
 ; FIXME: Merge into imm.ll
 
 ; GCN-LABEL: {{^}}store_inline_imm_neg_0.0_v2i16:
@@ -139,11 +139,11 @@ define amdgpu_kernel void @add_inline_imm_0.0_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_0.5_v2f16:
 ; GFX10: s_load_dword [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x00,0x0f,0xcc,0x02,0xe0,0x01,0x08]
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe0,0x01,0x08]
 ; GFX10: buffer_store_dword [[REG]]
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x00,0x8f,0xd3,0x04,0xe0,0x01,0x08]
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], 0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x04,0xe0,0x01,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
@@ -164,11 +164,11 @@ define amdgpu_kernel void @add_inline_imm_0.5_v2f16(<2 x half> addrspace(1)* %ou
 
 ; GCN-LABEL: {{^}}add_inline_imm_neg_0.5_v2f16:
 ; GFX10: s_load_dword [[VAL:s[0-9]+]]
-; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x00,0x0f,0xcc,0x02,0xe2,0x01,0x08]
+; GFX10: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x0f,0xcc,0x02,0xe2,0x01,0x08]
 ; GFX10: buffer_store_dword [[REG]]
 
 ; GFX9: s_load_dword [[VAL:s[0-9]+]]
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x00,0x8f,0xd3,0x04,0xe2,0x01,0x08]
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], -0.5 op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x04,0xe2,0x01,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; FIXME: Shouldn't need right shift and SDWA, also extra copy
@@ -334,11 +334,11 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_v2f16(<2 x half> addrspace
 }
 
 ; GCN-LABEL: {{^}}commute_add_literal_v2f16:
-; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x00,0x0f,0xcc,0xff,0x00,0x02,0x10,0x00,0x64,0x00,0x00]
+; GFX10: v_pk_add_f16 v0, 0x6400, v0 op_sel_hi:[0,1] ; encoding: [0x00,0x40,0x0f,0xcc,0xff,0x00,0x02,0x10,0x00,0x64,0x00,0x00]
 
 ; GFX9-DAG: buffer_load_dword [[VAL:v[0-9]+]]
 ; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding
-; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0] ; encoding: [0x00,0x00,0x8f,0xd3,0x00,0x09,0x00,0x08]
+; GFX9: v_pk_add_f16 [[REG:v[0-9]+]], [[VAL]], [[K]] op_sel_hi:[1,0] ; encoding: [0x00,0x40,0x8f,0xd3,0x00,0x09,0x00,0x08]
 ; GFX9: buffer_store_dword [[REG]]
 
 ; VI-DAG: s_movk_i32 [[K:s[0-9]+]], 0x6400 ; encoding

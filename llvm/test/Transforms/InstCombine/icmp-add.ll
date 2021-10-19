@@ -663,3 +663,368 @@ define <2 x i1> @icmp_eq_add_non_splat2(<2 x i32> %a) {
   %cmp = icmp eq <2 x i32> %add, <i32 10, i32 11>
   ret <2 x i1> %cmp
 }
+
+define i1 @without_nsw_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @without_nsw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add i8 %x, 37
+  %t2 = add i8 %y, 35
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nsw_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nsw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nsw nuw i8 %x, 37
+  %t2 = add i8 %y, 35
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nsw_large(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nsw_large(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nsw i8 %x, 37
+  %t2 = add i8 %y, 35
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nsw_small(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nsw_small(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nsw i8 %x, 35
+  %t2 = add i8 %y, 37
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nuw_large(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nuw_large(
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nuw i8 %x, 37
+  %t2 = add i8 %y, 35
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nuw_small(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nuw_small(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nuw i8 %x, 35
+  %t2 = add i8 %y, 37
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @with_nuw_large_negative(i8 %x, i8 %y) {
+; CHECK-LABEL: @with_nuw_large_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -2
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
+;
+  %t1 = add nuw i8 %x, -37
+  %t2 = add i8 %y, -35
+  %tobool = icmp eq i8 %t2, %t1
+  ret i1 %tobool
+}
+
+define i1 @ugt_offset(i8 %a) {
+; CHECK-LABEL: @ugt_offset(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[A:%.*]], -124
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, 124
+  %ov = icmp ugt i8 %t, 251
+  ret i1 %ov
+}
+
+define i1 @ugt_offset_use(i32 %a) {
+; CHECK-LABEL: @ugt_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i32 [[A]], -42
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp ugt i32 %t, 2147483689
+  ret i1 %ov
+}
+
+define <2 x i1> @ugt_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @ugt_offset_splat(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt <2 x i5> [[A:%.*]], <i5 -9, i5 -9>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp ugt <2 x i5> %t, <i5 24, i5 24>
+  ret <2 x i1> %ov
+}
+
+; negative test - constants must differ by SMAX
+
+define i1 @ugt_wrong_offset(i8 %a) {
+; CHECK-LABEL: @ugt_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], 123
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 [[T]], -5
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, 123
+  %ov = icmp ugt i8 %t, 251
+  ret i1 %ov
+}
+
+define i1 @ugt_offset_nuw(i8 %a) {
+; CHECK-LABEL: @ugt_offset_nuw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nuw i8 %a, 124
+  %ov = icmp ugt i8 %t, 251
+  ret i1 %ov
+}
+
+define i1 @ult_offset(i8 %a) {
+; CHECK-LABEL: @ult_offset(
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], 5
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, 250
+  %ov = icmp ult i8 %t, 122
+  ret i1 %ov
+}
+
+define i1 @ult_offset_use(i32 %a) {
+; CHECK-LABEL: @ult_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i32 [[A]], -43
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp ult i32 %t, 2147483690
+  ret i1 %ov
+}
+
+define <2 x i1> @ult_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @ult_offset_splat(
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt <2 x i5> [[A:%.*]], <i5 -10, i5 -10>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp ult <2 x i5> %t, <i5 25, i5 25>
+  ret <2 x i1> %ov
+}
+
+; negative test - constants must differ by SMIN
+
+define i1 @ult_wrong_offset(i8 %a) {
+; CHECK-LABEL: @ult_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[T]], 123
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, 250
+  %ov = icmp ult i8 %t, 123
+  ret i1 %ov
+}
+
+define i1 @ult_offset_nuw(i8 %a) {
+; CHECK-LABEL: @ult_offset_nuw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nuw i8 %a, 42
+  %ov = icmp ult i8 %t, 170
+  ret i1 %ov
+}
+
+define i1 @sgt_offset(i8 %a) {
+; CHECK-LABEL: @sgt_offset(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i8 [[A:%.*]], -122
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp sgt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @sgt_offset_use(i32 %a) {
+; CHECK-LABEL: @sgt_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult i32 [[A]], 2147483606
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp sgt i32 %t, 41
+  ret i1 %ov
+}
+
+define <2 x i1> @sgt_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @sgt_offset_splat(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ult <2 x i5> [[A:%.*]], <i5 7, i5 7>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp sgt <2 x i5> %t, <i5 8, i5 8>
+  ret <2 x i1> %ov
+}
+
+; negative test - constants must differ by 1
+
+define i1 @sgt_wrong_offset(i8 %a) {
+; CHECK-LABEL: @sgt_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -7
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[T]], -7
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -7
+  %ov = icmp sgt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @sgt_offset_nsw(i8 %a, i8 %c) {
+; CHECK-LABEL: @sgt_offset_nsw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp sgt i8 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nsw i8 %a, 42
+  %ov = icmp sgt i8 %t, 41
+  ret i1 %ov
+}
+
+define i1 @slt_offset(i8 %a) {
+; CHECK-LABEL: @slt_offset(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 [[A:%.*]], -123
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp slt i8 %t, -6
+  ret i1 %ov
+}
+
+define i1 @slt_offset_use(i32 %a) {
+; CHECK-LABEL: @slt_offset_use(
+; CHECK-NEXT:    [[T:%.*]] = add i32 [[A:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[T]])
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i32 [[A]], 2147483605
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i32 %a, 42
+  call void @use(i32 %t)
+  %ov = icmp slt i32 %t, 42
+  ret i1 %ov
+}
+
+define <2 x i1> @slt_offset_splat(<2 x i5> %a) {
+; CHECK-LABEL: @slt_offset_splat(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ugt <2 x i5> [[A:%.*]], <i5 6, i5 6>
+; CHECK-NEXT:    ret <2 x i1> [[OV]]
+;
+  %t = add <2 x i5> %a, <i5 9, i5 9>
+  %ov = icmp slt <2 x i5> %t, <i5 9, i5 9>
+  ret <2 x i1> %ov
+}
+
+; negative test - constants must be equal
+
+define i1 @slt_wrong_offset(i8 %a) {
+; CHECK-LABEL: @slt_wrong_offset(
+; CHECK-NEXT:    [[T:%.*]] = add i8 [[A:%.*]], -6
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[T]], -7
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add i8 %a, -6
+  %ov = icmp slt i8 %t, -7
+  ret i1 %ov
+}
+
+define i1 @slt_offset_nsw(i8 %a, i8 %c) {
+; CHECK-LABEL: @slt_offset_nsw(
+; CHECK-NEXT:    [[OV:%.*]] = icmp slt i8 [[A:%.*]], 0
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %t = add nsw i8 %a, 42
+  %ov = icmp slt i8 %t, 42
+  ret i1 %ov
+}
+
+; In the following 4 tests, we could push the inc/dec
+; through the min/max, but we should not break up the
+; min/max idiom by using different icmp and select
+; operands.
+
+define i32 @increment_max(i32 %x) {
+; CHECK-LABEL: @increment_max(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %a = add nsw i32 %x, 1
+  %c = icmp sgt i32 %a, 0
+  %s = select i1 %c, i32 %a, i32 0
+  ret i32 %s
+}
+
+define i32 @decrement_max(i32 %x) {
+; CHECK-LABEL: @decrement_max(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], -1
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %a = add nsw i32 %x, -1
+  %c = icmp sgt i32 %a, 0
+  %s = select i1 %c, i32 %a, i32 0
+  ret i32 %s
+}
+
+define i32 @increment_min(i32 %x) {
+; CHECK-LABEL: @increment_min(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 -1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], 1
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %a = add nsw i32 %x, 1
+  %c = icmp slt i32 %a, 0
+  %s = select i1 %c, i32 %a, i32 0
+  ret i32 %s
+}
+
+define i32 @decrement_min(i32 %x) {
+; CHECK-LABEL: @decrement_min(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 1
+; CHECK-NEXT:    [[S:%.*]] = add nsw i32 [[TMP2]], -1
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %a = add nsw i32 %x, -1
+  %c = icmp slt i32 %a, 0
+  %s = select i1 %c, i32 %a, i32 0
+  ret i32 %s
+}

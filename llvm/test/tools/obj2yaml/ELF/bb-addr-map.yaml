@@ -1,0 +1,151 @@
+## Check how obj2yaml produces YAML .llvm_bb_addr_map descriptions.
+
+## Check that obj2yaml uses the "Entries" tag to describe an .llvm_bb_addr_map section.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=VALID
+
+# VALID:      --- !ELF
+# VALID-NEXT: FileHeader:
+# VALID-NEXT:   Class:   ELFCLASS64
+# VALID-NEXT:   Data:    ELFDATA2LSB
+# VALID-NEXT:   Type:    ET_EXEC
+# VALID-NEXT: Sections:
+# VALID-NEXT:   - Name: .llvm_bb_addr_map
+# VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
+# VALID-NEXT:     Entries:
+## The 'Address' field is omitted when it's zero.
+# VALID-NEXT:         BBEntries:
+# VALID-NEXT:           - AddressOffset:    0x1
+# VALID-NEXT:             Size:             0x2
+# VALID-NEXT:             Metadata:         0x3
+# VALID-NEXT:           - AddressOffset:    0x4
+# VALID-NEXT:             Size:             0x5
+# VALID-NEXT:             Metadata:         0x6
+# VALID-NEXT:           - AddressOffset:    0xFFFFFFFFFFFFFFF7
+# VALID-NEXT:             Size:             0xFFFFFFFFFFFFFFF8
+# VALID-NEXT:             Metadata:         0xFFFFFFFFFFFFFFF9
+# VALID-NEXT:       - Address:   0xFFFFFFFFFFFFFF20
+# VALID-NEXT:         BBEntries:
+# VALID-NEXT:           - AddressOffset:    0xA
+# VALID-NEXT:             Size:             0xB
+# VALID-NEXT:             Metadata:         0xC
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    ShSize:    [[SIZE=<none>]]
+    Entries:
+      - Address:   0x0
+        NumBlocks: [[NUMBLOCKS=<none>]]
+        BBEntries:
+          - AddressOffset:    0x1
+            Size:             0x2
+            Metadata:         0x3
+          - AddressOffset:    0x4
+            Size:             0x5
+            Metadata:         0x6
+          - AddressOffset:    0xFFFFFFFFFFFFFFF7
+            Size:             0xFFFFFFFFFFFFFFF8
+            Metadata:         0xFFFFFFFFFFFFFFF9
+      - Address:   0xFFFFFFFFFFFFFF20
+        BBEntries:
+          - AddressOffset:    0xA
+            Size:             0xB
+            Metadata:         0xC
+
+## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY:      --- !ELF
+# EMPTY-NEXT: FileHeader:
+# EMPTY-NEXT:   Class: ELFCLASS64
+# EMPTY-NEXT:   Data:  ELFDATA2LSB
+# EMPTY-NEXT:   Type:  ET_EXEC
+# EMPTY-NEXT: Sections:
+# EMPTY-NEXT:   - Name:    .llvm_bb_addr_map
+# EMPTY-NEXT:     Type:    SHT_LLVM_BB_ADDR_MAP
+# EMPTY-NOT:      Content:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Content: ""
+
+## Check obj2yaml can dump multiple .llvm_bb_addr_map sections.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      --- !ELF
+# MULTI-NEXT: FileHeader:
+# MULTI-NEXT:   Class: ELFCLASS64
+# MULTI-NEXT:   Data:  ELFDATA2LSB
+# MULTI-NEXT:   Type:  ET_EXEC
+# MULTI-NEXT: Sections:
+# MULTI-NEXT:   - Name:    .llvm_bb_addr_map
+# MULTI-NEXT:     Type:    SHT_LLVM_BB_ADDR_MAP
+# MULTI-NEXT:     Entries:
+## The 'Address' field is omitted when it's zero.
+# MULTI-NEXT:       - BBEntries:
+# MULTI-NEXT:           - AddressOffset:    0x1
+# MULTI-NEXT:             Size:             0x2
+# MULTI-NEXT:             Metadata:         0x3
+# MULTI-NEXT:   - Name:    '.llvm_bb_addr_map (1)'
+# MULTI-NEXT:     Type:    SHT_LLVM_BB_ADDR_MAP
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Address: 0x20
+# MULTI-NEXT:         BBEntries: []
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Entries:
+## Check that obj2yaml does not emit the Address field when it's zero.
+      - Address:   0x0
+        BBEntries:
+          - AddressOffset:    0x1
+            Size:             0x2
+            Metadata:         0x3
+  - Name:    '.llvm_bb_addr_map (1)'
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Address:   0x20
+
+## Check that obj2yaml uses the "Content" tag to describe an .llvm_bb_addr_map section
+## when it can't extract the entries, for example, when the section is truncated, or
+## when an invalid 'NumBlocks' field is specified.
+
+# RUN: yaml2obj --docnum=1 -DSIZE=0x8 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefixes=TRUNCATED,INVALID
+
+# RUN: yaml2obj --docnum=1 -DNUMBLOCKS=2 %s -o %t5
+# RUN: obj2yaml %t5 | FileCheck %s --check-prefixes=BADNUMBLOCKS,INVALID
+
+# INVALID:           --- !ELF
+# INVALID-NEXT:      FileHeader:
+# INVALID-NEXT:        Class:   ELFCLASS64
+# INVALID-NEXT:        Data:    ELFDATA2LSB
+# INVALID-NEXT:        Type:    ET_EXEC
+# INVALID-NEXT:      Sections:
+# INVALID-NEXT:        - Name: .llvm_bb_addr_map
+# INVALID-NEXT:          Type: SHT_LLVM_BB_ADDR_MAP
+# BADNUMBLOCKS-NEXT:     Content: {{([[:xdigit:]]+)}}{{$}}
+# TRUNCATED-NEXT:        Content: '{{([[:xdigit:]]{16})}}'{{$}}

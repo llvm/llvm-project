@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ArchiveWriter.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/MachOUniversalWriter.h"
@@ -19,12 +21,15 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/Architecture.h"
 #include <map>
 
 using namespace llvm;
 using namespace llvm::object;
+
+static LLVMContext LLVMCtx;
 
 typedef std::map<uint64_t, std::vector<NewArchiveMember>>
     MembersPerArchitectureMap;
@@ -85,6 +90,11 @@ static cl::opt<bool>
     VersionOption("V", cl::desc("Print the version number and exit"),
                   cl::cat(LibtoolCategory));
 
+static cl::opt<bool> NoWarningForNoSymbols(
+    "no_warning_for_no_symbols",
+    cl::desc("Do not warn about files that have no symbols"),
+    cl::cat(LibtoolCategory), cl::init(false));
+
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
     "/usr/lib",
@@ -138,7 +148,7 @@ static Error processFileList() {
   std::tie(FileName, DirName) = StringRef(FileList).rsplit(",");
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(FileName, /*FileSize=*/-1,
+      MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
   if (std::error_code EC = FileOrErr.getError())
     return createFileError(FileName, errorCodeToError(EC));
@@ -247,7 +257,42 @@ static Error verifyAndAddMachOObject(MembersPerArchitectureMap &Members,
     return Error::success();
   }
 
+  if (!NoWarningForNoSymbols && O->symbols().empty())
+    WithColor::warning() << Member.MemberName + " has no symbols\n";
+
   uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
+  Members[FileCPUID].push_back(std::move(Member));
+  return Error::success();
+}
+
+static Error verifyAndAddIRObject(MembersPerArchitectureMap &Members,
+                                  NewArchiveMember Member, const Config &C) {
+  auto MBRef = Member.Buf->getMemBufferRef();
+  Expected<std::unique_ptr<object::IRObjectFile>> IROrErr =
+      object::IRObjectFile::create(MBRef, LLVMCtx);
+
+  // Throw error if not a valid IR object file.
+  if (!IROrErr)
+    return createFileError(Member.MemberName, IROrErr.takeError());
+
+  Triple TT = Triple(IROrErr->get()->getTargetTriple());
+
+  Expected<uint32_t> FileCPUTypeOrErr = MachO::getCPUType(TT);
+  if (!FileCPUTypeOrErr)
+    return FileCPUTypeOrErr.takeError();
+
+  Expected<uint32_t> FileCPUSubTypeOrErr = MachO::getCPUSubType(TT);
+  if (!FileCPUSubTypeOrErr)
+    return FileCPUSubTypeOrErr.takeError();
+
+  // If -arch_only is specified then skip this file if it doesn't match
+  // the architecture specified.
+  if (!ArchType.empty() &&
+      !acceptFileArch(*FileCPUTypeOrErr, *FileCPUSubTypeOrErr, C)) {
+    return Error::success();
+  }
+
+  uint64_t FileCPUID = getCPUID(*FileCPUTypeOrErr, *FileCPUSubTypeOrErr);
   Members[FileCPUID].push_back(std::move(Member));
   return Error::success();
 }
@@ -258,6 +303,11 @@ static Error addChildMember(MembersPerArchitectureMap &Members,
       NewArchiveMember::getOldMember(M, C.Deterministic);
   if (!NMOrErr)
     return NMOrErr.takeError();
+
+  file_magic Magic = identify_magic(NMOrErr->Buf->getBuffer());
+
+  if (Magic == file_magic::bitcode)
+    return verifyAndAddIRObject(Members, std::move(*NMOrErr), C);
 
   if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
     return E;
@@ -320,21 +370,41 @@ static Error addUniversalMembers(
       continue;
     }
 
+    Expected<std::unique_ptr<IRObjectFile>> IRObjectOrError =
+        O.getAsIRObject(LLVMCtx);
+    if (IRObjectOrError) {
+      // A universal file member can be a MachOObjectFile, an IRObject or an
+      // Archive. In case we can successfully cast the member as an IRObject, it
+      // is safe to throw away the error generated due to casting the object as
+      // a MachOObjectFile.
+      consumeError(MachOObjOrErr.takeError());
+
+      NewArchiveMember NewMember =
+          NewArchiveMember(IRObjectOrError->get()->getMemoryBufferRef());
+      NewMember.MemberName = sys::path::filename(NewMember.MemberName);
+
+      if (Error E = verifyAndAddIRObject(Members, std::move(NewMember), C))
+        return E;
+      continue;
+    }
+
     Expected<std::unique_ptr<Archive>> ArchiveOrError = O.getAsArchive();
     if (ArchiveOrError) {
-      // A universal file member can either be a MachOObjectFile or an Archive.
-      // In case we can successfully cast the member as an Archive, it is safe
-      // to throw away the error generated due to casting the object as a
-      // MachOObjectFile.
+      // A universal file member can be a MachOObjectFile, an IRObject or an
+      // Archive. In case we can successfully cast the member as an Archive, it
+      // is safe to throw away the error generated due to casting the object as
+      // a MachOObjectFile.
       consumeError(MachOObjOrErr.takeError());
+      consumeError(IRObjectOrError.takeError());
 
       if (Error E = processArchive(Members, **ArchiveOrError, FileName, C))
         return E;
       continue;
     }
 
-    Error CombinedError =
-        joinErrors(ArchiveOrError.takeError(), MachOObjOrErr.takeError());
+    Error CombinedError = joinErrors(
+        ArchiveOrError.takeError(),
+        joinErrors(IRObjectOrError.takeError(), MachOObjOrErr.takeError()));
     return createFileError(FileName, std::move(CombinedError));
   }
 
@@ -367,6 +437,10 @@ static Error addMember(MembersPerArchitectureMap &Members,
     return addUniversalMembers(Members, FileBuffers, std::move(*NMOrErr),
                                FileName, C);
 
+  // Bitcode files.
+  if (Magic == file_magic::bitcode)
+    return verifyAndAddIRObject(Members, std::move(*NMOrErr), C);
+
   if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
     return E;
   return Error::success();
@@ -377,8 +451,8 @@ buildSlices(ArrayRef<OwningBinary<Archive>> OutputBinaries) {
   SmallVector<Slice, 2> Slices;
 
   for (const auto &OB : OutputBinaries) {
-    const Archive *A = OB.getBinary();
-    Expected<Slice> ArchiveSlice = Slice::create(A);
+    const Archive &A = *OB.getBinary();
+    Expected<Slice> ArchiveSlice = Slice::create(A, &LLVMCtx);
     if (!ArchiveSlice)
       return ArchiveSlice.takeError();
     Slices.push_back(*ArchiveSlice);
@@ -497,7 +571,7 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
-  cl::HideUnrelatedOptions({&LibtoolCategory, &ColorCategory});
+  cl::HideUnrelatedOptions({&LibtoolCategory, &getColorCategory()});
   Expected<Config> ConfigOrErr = parseCommandLine(Argc, Argv);
   if (!ConfigOrErr) {
     WithColor::defaultErrorHandler(ConfigOrErr.takeError());

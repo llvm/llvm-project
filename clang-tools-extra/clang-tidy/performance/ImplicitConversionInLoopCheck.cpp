@@ -24,10 +24,10 @@ namespace performance {
 // The subtelty is that in some cases (user defined conversions), we can
 // get to ImplicitCastExpr inside each other, with the outer one a NoOp. In this
 // case we skip the first cast expr.
-static bool IsNonTrivialImplicitCast(const Stmt *ST) {
+static bool isNonTrivialImplicitCast(const Stmt *ST) {
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(ST)) {
     return (ICE->getCastKind() != CK_NoOp) ||
-            IsNonTrivialImplicitCast(ICE->getSubExpr());
+           isNonTrivialImplicitCast(ICE->getSubExpr());
   }
   return false;
 }
@@ -48,7 +48,7 @@ void ImplicitConversionInLoopCheck::registerMatchers(MatchFinder *Finder) {
   // cxxOperatorCallExpr() matcher.
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxForRangeStmt(hasLoopVariable(
               varDecl(
                   hasType(qualType(references(qualType(isConstQualified())))),
@@ -81,7 +81,7 @@ void ImplicitConversionInLoopCheck::check(
   // iterator returns a value instead of a reference, and the loop variable
   // is a reference. This situation is fine (it probably produces the same
   // code at the end).
-  if (IsNonTrivialImplicitCast(Materialized->getSubExpr()))
+  if (isNonTrivialImplicitCast(Materialized->getSubExpr()))
     ReportAndFix(Result.Context, VD, OperatorCall);
 }
 

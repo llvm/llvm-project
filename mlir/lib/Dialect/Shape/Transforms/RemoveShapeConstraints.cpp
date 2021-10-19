@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -45,18 +46,18 @@ class RemoveShapeConstraintsPass
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
-    OwningRewritePatternList patterns;
-    populateRemoveShapeConstraintsPatterns(patterns, &ctx);
+    RewritePatternSet patterns(&ctx);
+    populateRemoveShapeConstraintsPatterns(patterns);
 
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 
 } // namespace
 
-void mlir::populateRemoveShapeConstraintsPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<RemoveCstrBroadcastableOp, RemoveCstrEqOp>(ctx);
+void mlir::populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns) {
+  patterns.add<RemoveCstrBroadcastableOp, RemoveCstrEqOp>(
+      patterns.getContext());
 }
 
 std::unique_ptr<FunctionPass> mlir::createRemoveShapeConstraintsPass() {

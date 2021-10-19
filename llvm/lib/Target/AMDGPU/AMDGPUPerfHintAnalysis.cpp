@@ -22,11 +22,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -212,19 +209,22 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
   for (auto &B : F) {
     LastAccess = MemAccessInfo();
     for (auto &I : B) {
-      if (getMemoryInstrPtr(&I)) {
+      if (const Value *Ptr = getMemoryInstrPtr(&I)) {
+        unsigned Size = divideCeil(
+            Ptr->getType()->getPointerElementType()->getPrimitiveSizeInBits(),
+            32);
         if (isIndirectAccess(&I))
-          ++FI.IAMInstCount;
+          FI.IAMInstCost += Size;
         if (isLargeStride(&I))
-          ++FI.LSMInstCount;
-        ++FI.MemInstCount;
-        ++FI.InstCount;
+          FI.LSMInstCost += Size;
+        FI.MemInstCost += Size;
+        FI.InstCost += Size;
         continue;
       }
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
         if (!Callee || Callee->isDeclaration()) {
-          ++FI.InstCount;
+          ++FI.InstCost;
           continue;
         }
         if (&F == Callee) // Handle immediate recursion
@@ -234,10 +234,10 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
         if (Loc == FIM.end())
           continue;
 
-        FI.MemInstCount += Loc->second.MemInstCount;
-        FI.InstCount += Loc->second.InstCount;
-        FI.IAMInstCount += Loc->second.IAMInstCount;
-        FI.LSMInstCount += Loc->second.LSMInstCount;
+        FI.MemInstCost += Loc->second.MemInstCost;
+        FI.InstCost += Loc->second.InstCost;
+        FI.IAMInstCost += Loc->second.IAMInstCost;
+        FI.LSMInstCost += Loc->second.LSMInstCost;
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         TargetLoweringBase::AddrMode AM;
         auto *Ptr = GetPointerBaseWithConstantOffset(GEP, AM.BaseOffs, *DL);
@@ -247,9 +247,9 @@ AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
                                        GEP->getPointerAddressSpace()))
           // Offset will likely be folded into load or store
           continue;
-        ++FI.InstCount;
+        ++FI.InstCost;
       } else {
-        ++FI.InstCount;
+        ++FI.InstCost;
       }
     }
   }
@@ -267,11 +267,11 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
 
   const AMDGPUPerfHintAnalysis::FuncInfo *Info = visit(F);
 
-  LLVM_DEBUG(dbgs() << F.getName() << " MemInst: " << Info->MemInstCount
+  LLVM_DEBUG(dbgs() << F.getName() << " MemInst cost: " << Info->MemInstCost
                     << '\n'
-                    << " IAMInst: " << Info->IAMInstCount << '\n'
-                    << " LSMInst: " << Info->LSMInstCount << '\n'
-                    << " TotalInst: " << Info->InstCount << '\n');
+                    << " IAMInst cost: " << Info->IAMInstCost << '\n'
+                    << " LSMInst cost: " << Info->LSMInstCost << '\n'
+                    << " TotalInst cost: " << Info->InstCost << '\n');
 
   if (isMemBound(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
@@ -289,13 +289,12 @@ bool AMDGPUPerfHint::runOnFunction(Function &F) {
 }
 
 bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
-  return FI.MemInstCount * 100 / FI.InstCount > MemBoundThresh;
+  return FI.MemInstCost * 100 / FI.InstCost > MemBoundThresh;
 }
 
 bool AMDGPUPerfHint::needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
-  return ((FI.MemInstCount + FI.IAMInstCount * IAWeight +
-           FI.LSMInstCount * LSWeight) *
-          100 / FI.InstCount) > LimitWaveThresh;
+  return ((FI.MemInstCost + FI.IAMInstCost * IAWeight +
+           FI.LSMInstCost * LSWeight) * 100 / FI.InstCost) > LimitWaveThresh;
 }
 
 bool AMDGPUPerfHint::isGlobalAddr(const Value *V) const {

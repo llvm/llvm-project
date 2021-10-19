@@ -9,7 +9,7 @@
 #ifndef LLDB_API_SBSTREAM_H
 #define LLDB_API_SBSTREAM_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/API/SBDefines.h"
 
@@ -72,6 +72,7 @@ protected:
   friend class SBFunction;
   friend class SBInstruction;
   friend class SBInstructionList;
+  friend class SBLaunchInfo;
   friend class SBLineEntry;
   friend class SBMemoryRegionInfo;
   friend class SBModule;
@@ -104,7 +105,7 @@ private:
   SBStream(const SBStream &) = delete;
   const SBStream &operator=(const SBStream &) = delete;
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
-  bool m_is_file;
+  bool m_is_file = false;
 };
 
 } // namespace lldb

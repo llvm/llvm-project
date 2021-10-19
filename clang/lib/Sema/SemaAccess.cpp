@@ -84,6 +84,20 @@ struct EffectiveContext {
     : Inner(DC),
       Dependent(DC->isDependentContext()) {
 
+    // An implicit deduction guide is semantically in the context enclosing the
+    // class template, but for access purposes behaves like the constructor
+    // from which it was produced.
+    if (auto *DGD = dyn_cast<CXXDeductionGuideDecl>(DC)) {
+      if (DGD->isImplicit()) {
+        DC = DGD->getCorrespondingConstructor();
+        if (!DC) {
+          // The copy deduction candidate doesn't have a corresponding
+          // constructor.
+          DC = cast<DeclContext>(DGD->getDeducedTemplate()->getTemplatedDecl());
+        }
+      }
+    }
+
     // C++11 [class.access.nest]p1:
     //   A nested class is a member and as such has the same access
     //   rights as any other member.
@@ -126,7 +140,7 @@ struct EffectiveContext {
 
   bool includesClass(const CXXRecordDecl *R) const {
     R = R->getCanonicalDecl();
-    return llvm::find(Records, R) != Records.end();
+    return llvm::is_contained(Records, R);
   }
 
   /// Retrieves the innermost "useful" context.  Can be null if we're
@@ -1294,17 +1308,18 @@ static bool IsMicrosoftUsingDeclarationAccessBug(Sema& S,
                                                  SourceLocation AccessLoc,
                                                  AccessTarget &Entity) {
   if (UsingShadowDecl *Shadow =
-                         dyn_cast<UsingShadowDecl>(Entity.getTargetDecl())) {
-    const NamedDecl *OrigDecl = Entity.getTargetDecl()->getUnderlyingDecl();
-    if (Entity.getTargetDecl()->getAccess() == AS_private &&
-        (OrigDecl->getAccess() == AS_public ||
-         OrigDecl->getAccess() == AS_protected)) {
-      S.Diag(AccessLoc, diag::ext_ms_using_declaration_inaccessible)
-        << Shadow->getUsingDecl()->getQualifiedNameAsString()
-        << OrigDecl->getQualifiedNameAsString();
-      return true;
+          dyn_cast<UsingShadowDecl>(Entity.getTargetDecl()))
+    if (UsingDecl *UD = dyn_cast<UsingDecl>(Shadow->getIntroducer())) {
+      const NamedDecl *OrigDecl = Entity.getTargetDecl()->getUnderlyingDecl();
+      if (Entity.getTargetDecl()->getAccess() == AS_private &&
+          (OrigDecl->getAccess() == AS_public ||
+           OrigDecl->getAccess() == AS_protected)) {
+        S.Diag(AccessLoc, diag::ext_ms_using_declaration_inaccessible)
+            << UD->getQualifiedNameAsString()
+            << OrigDecl->getQualifiedNameAsString();
+        return true;
+      }
     }
-  }
   return false;
 }
 
@@ -1476,7 +1491,8 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
   } else if (FunctionDecl *FN = dyn_cast<FunctionDecl>(D)) {
     DC = FN;
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
-    DC = cast<DeclContext>(TD->getTemplatedDecl());
+    if (isa<DeclContext>(TD->getTemplatedDecl()))
+      DC = cast<DeclContext>(TD->getTemplatedDecl());
   }
 
   EffectiveContext EC(DC);

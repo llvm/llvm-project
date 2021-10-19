@@ -268,8 +268,7 @@ class OpcodeDuplex {
   let Inst{12-0}  = ISubLo;
 }
 
-class InstDuplex<bits<4> iClass, list<dag> pattern = [],
-                 string cstr = "">
+class InstDuplex<bits<4> iClass, string cstr = "">
   : Instruction, OpcodeDuplex {
   let Namespace = "Hexagon";
   IType Type = TypeDUPLEX;  // uses slot 0,1

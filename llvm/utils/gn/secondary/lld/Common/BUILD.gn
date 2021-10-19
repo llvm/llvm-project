@@ -3,7 +3,7 @@ import("//llvm/utils/gn/build/write_vcsrevision.gni")
 config("write_vcsrevision_config") {
   # To pick up the generated inc file.
   include_dirs = [ target_gen_dir ]
-  visibility = [ ":write_vcsrevision" ]
+  visibility = [ ":write_vcsversion" ]
 }
 
 write_vcsrevision("write_vcsversion") {
@@ -42,5 +42,4 @@ static_library("Common") {
     "Timer.cpp",
     "Version.cpp",
   ]
-  defines = [ "HAVE_VCS_VERSION_INC" ]  # For Version.cpp
 }

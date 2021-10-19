@@ -14,9 +14,8 @@ class TestImportBuiltinFileID(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
     @skipIfDarwinEmbedded
-    @add_test_categories(["gmodules"])
+    @add_test_categories(["gmodules", "objc"])
     def test_import_builtin_fileid(self):
         self.build()
 

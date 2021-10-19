@@ -1,4 +1,4 @@
-//===-- runtime/main.cpp ----------------------------------------*- C++ -*-===//
+//===-- runtime/main.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "main.h"
+#include "flang/Runtime/main.h"
 #include "environment.h"
 #include "terminator.h"
 #include <cfenv>

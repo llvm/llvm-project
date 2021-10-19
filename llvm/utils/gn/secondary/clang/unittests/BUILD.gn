@@ -10,7 +10,10 @@ group("unittests") {
     "CrossTU:CrossTUTests",
     "Driver:ClangDriverTests",
     "Format:FormatTests",
+    "Frontend:FrontendTests",
     "Index:IndexTests",
+    "Interpreter:ClangReplInterpreterTests",
+    "Introspection:IntrospectionTests",
     "Lex:LexTests",
     "Rename:ClangRenameTests",
     "Rewrite:RewriteTests",
@@ -22,7 +25,6 @@ group("unittests") {
   if (clang_enable_static_analyzer) {
     deps += [
       "Analysis:ClangAnalysisTests",
-      "Frontend:FrontendTests",
       "StaticAnalyzer:StaticAnalysisTests",
     ]
   }

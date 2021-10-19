@@ -76,8 +76,8 @@ apply to each Module that is added via addModule:
           TransformLayer(ES, CompileLayer, optimizeModule),
           DL(std::move(DL)), Mangle(ES, this->DL),
           Ctx(std::make_unique<LLVMContext>()) {
-      ES.getMainJITDylib().setGenerator(
-          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
+      ES.getMainJITDylib().addGenerator(
+          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix())));
     }
 
 Our extended KaleidoscopeJIT class starts out the same as it did in Chapter 1,
@@ -224,37 +224,36 @@ Most layers that derived from IRLayer can rely on this default implementation
 of the ``add`` method.
 
 These two operations, ``add`` and ``emit``, together constitute the layer
-concept: A layer is a way to wrap a portion of a compiler pipeline (in this case
-the "opt" phase of an LLVM compiler) whose API is is opaque to ORC in an
-interface that allows ORC to invoke it when needed. The add method takes an
-module in some input program representation (in this case an LLVM IR module) and
-stores it in the target JITDylib, arranging for it to be passed back to the
-Layer's emit method when any symbol defined by that module is requested. Layers
-can compose neatly by calling the 'emit' method of a base layer to complete
-their work. For example, in this tutorial our IRTransformLayer calls through to
-our IRCompileLayer to compile the transformed IR, and our IRCompileLayer in turn
-calls our ObjectLayer to link the object file produced by our compiler.
+concept: A layer is a way to wrap a part of a compiler pipeline (in this case
+the "opt" phase of an LLVM compiler) whose API is opaque to ORC with an
+interface that ORC can call as needed. The add method takes an
+module in some input program representation (in this case an LLVM IR module)
+and stores it in the target ``JITDylib``, arranging for it to be passed back
+to the layer's emit method when any symbol defined by that module is requested.
+Each layer can complete its own work by calling the ``emit`` method of its base
+layer. For example, in this tutorial our IRTransformLayer calls through to
+our IRCompileLayer to compile the transformed IR, and our IRCompileLayer in
+turn calls our ObjectLayer to link the object file produced by our compiler.
 
-
-So far we have learned how to optimize and compile our LLVM IR, but we have not
-focused on when compilation happens. Our current REPL is eager: Each function
-definition is optimized and compiled as soon as it is referenced by any other
-code, regardless of whether it is ever called at runtime. In the next chapter we
-will introduce fully lazy compilation, in which functions are not compiled until
-they are first called at run-time. At this point the trade-offs get much more
-interesting: the lazier we are, the quicker we can start executing the first
-function, but the more often we will have to pause to compile newly encountered
-functions. If we only code-gen lazily, but optimize eagerly, we will have a
-longer startup time (as everything is optimized) but relatively short pauses as
-each function just passes through code-gen. If we both optimize and code-gen
-lazily we can start executing the first function more quickly, but we will have
-longer pauses as each function has to be both optimized and code-gen'd when it
-is first executed. Things become even more interesting if we consider
-interprocedural optimizations like inlining, which must be performed eagerly.
-These are complex trade-offs, and there is no one-size-fits all solution to
-them, but by providing composable layers we leave the decisions to the person
-implementing the JIT, and make it easy for them to experiment with different
-configurations.
+So far we have learned how to optimize and compile our LLVM IR, but we have
+not focused on when compilation happens. Our current REPL optimizes and
+compiles each function as soon as it is referenced by any other code,
+regardless of whether it is ever called at runtime. In the next chapter we
+will introduce a fully lazy compilation, in which functions are not compiled
+until they are first called at run-time. At this point the trade-offs get much
+more interesting: the lazier we are, the quicker we can start executing the
+first function, but the more often we will have to pause to compile newly
+encountered functions. If we only code-gen lazily, but optimize eagerly, we
+will have a longer startup time (as everything is optimized at that time) but
+relatively short pauses as each function just passes through code-gen. If we
+both optimize and code-gen lazily we can start executing the first function
+more quickly, but we will have longer pauses as each function has to be both
+optimized and code-gen'd when it is first executed. Things become even more
+interesting if we consider interprocedural optimizations like inlining, which
+must be performed eagerly. These are complex trade-offs, and there is no
+one-size-fits all solution to them, but by providing composable layers we leave
+the decisions to the person implementing the JIT, and make it easy for them to
+experiment with different configurations.
 
 `Next: Adding Per-function Lazy Compilation <BuildingAJIT3.html>`_
 

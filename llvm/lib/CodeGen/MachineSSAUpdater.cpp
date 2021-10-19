@@ -164,9 +164,7 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
   Register SingularValue;
 
   bool isFirstPred = true;
-  for (MachineBasicBlock::pred_iterator PI = BB->pred_begin(),
-         E = BB->pred_end(); PI != E; ++PI) {
-    MachineBasicBlock *PredBB = *PI;
+  for (MachineBasicBlock *PredBB : BB->predecessors()) {
     Register PredVal = GetValueAtEndOfBlockInternal(PredBB);
     PredValues.push_back(std::make_pair(PredBB, PredVal));
 
@@ -236,10 +234,10 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
   U.setReg(NewVR);
 }
 
-/// SSAUpdaterTraits<MachineSSAUpdater> - Traits for the SSAUpdaterImpl
-/// template, specialized for MachineSSAUpdater.
 namespace llvm {
 
+/// SSAUpdaterTraits<MachineSSAUpdater> - Traits for the SSAUpdaterImpl
+/// template, specialized for MachineSSAUpdater.
 template<>
 class SSAUpdaterTraits<MachineSSAUpdater> {
 public:
@@ -284,9 +282,7 @@ public:
   /// vector.
   static void FindPredecessorBlocks(MachineBasicBlock *BB,
                                     SmallVectorImpl<MachineBasicBlock*> *Preds){
-    for (MachineBasicBlock::pred_iterator PI = BB->pred_begin(),
-           E = BB->pred_end(); PI != E; ++PI)
-      Preds->push_back(*PI);
+    append_range(*Preds, BB->predecessors());
   }
 
   /// GetUndefVal - Create an IMPLICIT_DEF instruction with a new register.

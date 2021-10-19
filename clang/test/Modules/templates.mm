@@ -12,8 +12,8 @@ void testInlineRedeclEarly() {
 
 @import templates_right;
 
-// CHECK-DAG: @list_left = global %[[LIST:.*]] { %[[LISTNODE:.*]]* null, i32 8 }, align 8
-// CHECK-DAG: @list_right = global %[[LIST]] { %[[LISTNODE]]* null, i32 12 }, align 8
+// CHECK-DAG: @list_left ={{.*}} global %[[LIST:.*]] { %[[LISTNODE:.*]]* null, i32 8 }, align 8
+// CHECK-DAG: @list_right ={{.*}} global %[[LIST]] { %[[LISTNODE]]* null, i32 12 }, align 8
 // CHECK-DAG: @__const._Z15testMixedStructv.l = {{.*}} constant %[[LIST]] { %{{.*}}* null, i32 1 }, align 8
 // CHECK-DAG: @__const._Z15testMixedStructv.r = {{.*}} constant %[[LIST]] { %{{.*}}* null, i32 2 }, align 8
 // CHECK-DAG: @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE = external global
@@ -72,7 +72,7 @@ typedef Outer<int>::Inner OuterIntInner;
 static_assert(size_left == size_right, "same field both ways");
 void useListInt(List<int> &);
 
-// CHECK-LABEL: define i32 @_Z15testMixedStructv(
+// CHECK-LABEL: define{{.*}} i32 @_Z15testMixedStructv(
 unsigned testMixedStruct() {
   // CHECK: %[[l:.*]] = alloca %[[ListInt:[^ ]*]], align 8
   // CHECK: %[[r:.*]] = alloca %[[ListInt]], align 8
@@ -125,7 +125,7 @@ void testWithAttributes() {
 
 // Check that returnNonTrivial doesn't return Class0<S0> directly in registers.
 
-// CHECK: declare void @_Z16returnNonTrivialv(%struct.Class0* sret align 8)
+// CHECK: declare void @_Z16returnNonTrivialv(%struct.Class0* sret(%struct.Class0) align 8)
 
 @import template_nontrivial0;
 @import template_nontrivial1;

@@ -1,10 +1,10 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m3                    | FileCheck %s -check-prefix=CHECK -check-prefix=SOFT -check-prefix=NONE
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=NO-VMLA
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m33                   | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=NO-VMLA
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=VFP  -check-prefix=FP-ARMv8  -check-prefix=VMLA
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=VFP  -check-prefix=FP-ARMv8  -check-prefix=VMLA
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7 -mattr=-fp64 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=FP-ARMv8 -check-prefix=VMLA
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=NEON-A7 -check-prefix=VFP4 -check-prefix=NO-VMLA
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a57                   | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=NEON-A57 -check-prefix=FP-ARMv8 -check-prefix=VMLA
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a7                    | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=NEON-A7 -check-prefix=VFP4 -check-prefix=NO-VMLA
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a57                   | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=NEON-A57 -check-prefix=FP-ARMv8 -check-prefix=VMLA
 
 declare float     @llvm.sqrt.f32(float %Val)
 define float @sqrt_f(float %a) {
@@ -15,12 +15,12 @@ define float @sqrt_f(float %a) {
   ret float %1
 }
 
-declare float     @llvm.powi.f32(float %Val, i32 %power)
+declare float     @llvm.powi.f32.i32(float %Val, i32 %power)
 define float @powi_f(float %a, i32 %b) {
 ; CHECK-LABEL: powi_f:
 ; SOFT: bl __powisf2
 ; HARD: b __powisf2
-  %1 = call float @llvm.powi.f32(float %a, i32 %b)
+  %1 = call float @llvm.powi.f32.i32(float %a, i32 %b)
   ret float %1
 }
 

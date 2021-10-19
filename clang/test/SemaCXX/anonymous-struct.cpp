@@ -49,7 +49,7 @@ typedef struct // expected-warning {{anonymous non-C-compatible type given name 
 : B { // expected-note {{type is not C-compatible due to this base class}}
 } C; // expected-note {{type is given name 'C' for linkage purposes by this typedef declaration}}
 
-#if __cplusplus > 201703L
+#if __cplusplus > 201703L && __cplusplus < 202002L
 typedef struct { // expected-warning {{anonymous non-C-compatible type given name for linkage purposes by typedef declaration; add a tag name here}}
   static_assert([]{ return true; }()); // expected-note {{type is not C-compatible due to this lambda expression}}
 } Lambda1; // expected-note {{type is given name 'Lambda1' for linkage purposes by this typedef declaration}}
@@ -131,6 +131,9 @@ namespace ValidButUnsupported {
   typedef struct { // expected-error {{unsupported}}
     enum X {};
     int arr[&f<X> ? 1 : 2];
+#if __cplusplus < 201103L
+    // expected-warning@-2 {{folded to constant}}
+#endif
   } C; // expected-note {{by this typedef}}
 }
 
@@ -171,3 +174,12 @@ union {
     } x;
   } x;
 } static_member_3;
+
+// Ensure we don't compute the linkage of a member function just because it
+// happens to have the same name as a builtin.
+namespace BuiltinName {
+  // Note that this is not an error: we didn't trigger linkage computation in this example.
+  typedef struct { // expected-warning {{anonymous non-C-compatible type}}
+    void memcpy(); // expected-note {{due to this member}}
+  } A; // expected-note {{given name 'A' for linkage purposes by this typedef}}
+}

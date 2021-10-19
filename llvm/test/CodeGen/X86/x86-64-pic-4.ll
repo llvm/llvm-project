@@ -6,7 +6,7 @@
 define i32 @get_a() {
 ; CHECK-LABEL: get_a:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq a@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq a@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    retq
 entry:

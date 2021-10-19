@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "optional"
+#include "__availability"
 
 namespace std
 {
 
-bad_optional_access::~bad_optional_access() _NOEXCEPT = default;
+bad_optional_access::~bad_optional_access() noexcept = default;
 
-const char* bad_optional_access::what() const _NOEXCEPT {
+const char* bad_optional_access::what() const noexcept {
   return "bad_optional_access";
   }
 
@@ -33,9 +34,9 @@ public:
 	bad_optional_access() : std::logic_error("Bad optional Access") {}
 
 //	Get the key function ~bad_optional_access() into the dylib
-    virtual ~bad_optional_access() _NOEXCEPT;
+    virtual ~bad_optional_access() noexcept;
 };
 
-bad_optional_access::~bad_optional_access() _NOEXCEPT = default;
+bad_optional_access::~bad_optional_access() noexcept = default;
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL

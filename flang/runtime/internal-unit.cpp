@@ -1,4 +1,4 @@
-//===-- runtime/internal-unit.cpp -------------------------------*- C++ -*-===//
+//===-- runtime/internal-unit.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "internal-unit.h"
-#include "descriptor.h"
 #include "io-error.h"
+#include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <type_traits>
 

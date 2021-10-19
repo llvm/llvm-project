@@ -220,19 +220,28 @@ bool TemplateName::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateNameDependence::UnexpandedPack;
 }
 
-void
-TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
-                    bool SuppressNNS) const {
+void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
+                         Qualified Qual) const {
   if (TemplateDecl *Template = Storage.dyn_cast<TemplateDecl *>())
-    OS << *Template;
+    if (Qual == Qualified::Fully &&
+        getDependence() != TemplateNameDependenceScope::DependentInstantiation)
+      Template->printQualifiedName(OS, Policy);
+    else
+      OS << *Template;
   else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
-    if (!SuppressNNS)
+    if (Qual == Qualified::Fully &&
+        getDependence() !=
+            TemplateNameDependenceScope::DependentInstantiation) {
+      QTN->getTemplateDecl()->printQualifiedName(OS, Policy);
+      return;
+    }
+    if (Qual == Qualified::AsWritten)
       QTN->getQualifier()->print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
     OS << *QTN->getDecl();
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
-    if (!SuppressNNS && DTN->getQualifier())
+    if (Qual == Qualified::AsWritten && DTN->getQualifier())
       DTN->getQualifier()->print(OS, Policy);
     OS << "template ";
 
@@ -242,7 +251,7 @@ TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       OS << "operator " << getOperatorSpelling(DTN->getOperator());
   } else if (SubstTemplateTemplateParmStorage *subst
                = getAsSubstTemplateTemplateParm()) {
-    subst->getReplacement().print(OS, Policy, SuppressNNS);
+    subst->getReplacement().print(OS, Policy, Qual);
   } else if (SubstTemplateTemplateParmPackStorage *SubstPack
                                         = getAsSubstTemplateTemplateParmPack())
     OS << *SubstPack->getParameterPack();
@@ -254,8 +263,8 @@ TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   }
 }
 
-const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
-                                           TemplateName N) {
+const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
+                                             TemplateName N) {
   std::string NameStr;
   llvm::raw_string_ostream OS(NameStr);
   LangOptions LO;
@@ -266,20 +275,6 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-const PartialDiagnostic&clang::operator<<(const PartialDiagnostic &PD,
-                                           TemplateName N) {
-  std::string NameStr;
-  llvm::raw_string_ostream OS(NameStr);
-  LangOptions LO;
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  OS << '\'';
-  N.print(OS, PrintingPolicy(LO));
-  OS << '\'';
-  OS.flush();
-  return PD << NameStr;
 }
 
 void TemplateName::dump(raw_ostream &OS) const {

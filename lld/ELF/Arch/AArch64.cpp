@@ -34,6 +34,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
@@ -46,8 +47,7 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
                       uint64_t val) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
@@ -62,7 +62,6 @@ AArch64::AArch64() {
   relativeRel = R_AARCH64_RELATIVE;
   iRelativeRel = R_AARCH64_IRELATIVE;
   gotRel = R_AARCH64_GLOB_DAT;
-  noneRel = R_AARCH64_NONE;
   pltRel = R_AARCH64_JUMP_SLOT;
   symbolicRel = R_AARCH64_ABS64;
   tlsDescRel = R_AARCH64_TLSDESC;
@@ -121,7 +120,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_TLSLE_MOVW_TPREL_G1:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G2:
-    return R_TLS;
+    return R_TPREL;
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
@@ -147,6 +146,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return R_GOT;
+  case R_AARCH64_LD64_GOTPAGE_LO15:
+    return R_AARCH64_GOT_PAGE;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     return R_AARCH64_GOT_PAGE_PC;
@@ -159,8 +160,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   }
 }
 
-RelExpr AArch64::adjustRelaxExpr(RelType type, const uint8_t *data,
-                                 RelExpr expr) const {
+RelExpr AArch64::adjustTlsExpr(RelType type, RelExpr expr) const {
   if (expr == R_RELAX_TLS_GD_TO_IE) {
     if (type == R_AARCH64_TLSDESC_ADR_PAGE21)
       return R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC;
@@ -193,8 +193,19 @@ RelType AArch64::getDynRel(RelType type) const {
   return R_AARCH64_NONE;
 }
 
+int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_AARCH64_TLSDESC:
+    return read64(buf + 8);
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
+}
+
 void AArch64::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write64le(buf, in.plt->getVA());
+  write64(buf, in.plt->getVA());
 }
 
 void AArch64::writePltHeader(uint8_t *buf) const {
@@ -322,20 +333,20 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ABS16:
   case R_AARCH64_PREL16:
     checkIntUInt(loc, val, 16, rel);
-    write16le(loc, val);
+    write16(loc, val);
     break;
   case R_AARCH64_ABS32:
   case R_AARCH64_PREL32:
     checkIntUInt(loc, val, 32, rel);
-    write32le(loc, val);
+    write32(loc, val);
     break;
   case R_AARCH64_PLT32:
     checkInt(loc, val, 32, rel);
-    write32le(loc, val);
+    write32(loc, val);
     break;
   case R_AARCH64_ABS64:
   case R_AARCH64_PREL64:
-    write64le(loc, val);
+    write64(loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
     or32AArch64Imm(loc, val);
@@ -400,6 +411,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkAlignment(loc, val, 16, rel);
     or32AArch64Imm(loc, getBits(val, 4, 11));
     break;
+  case R_AARCH64_LD64_GOTPAGE_LO15:
+    checkAlignment(loc, val, 8, rel);
+    or32AArch64Imm(loc, getBits(val, 3, 14));
+    break;
   case R_AARCH64_MOVW_UABS_G0:
     checkUInt(loc, val, 16, rel);
     LLVM_FALLTHROUGH;
@@ -461,6 +476,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:
     or32AArch64Imm(loc, val);
+    break;
+  case R_AARCH64_TLSDESC:
+    // For R_AARCH64_TLSDESC the addend is stored in the second 64-bit word.
+    write64(loc + 8, val);
     break;
   default:
     llvm_unreachable("unknown relocation");
@@ -593,8 +612,7 @@ public:
                 uint64_t pltEntryAddr) const override;
 
 private:
-  bool btiHeader; // bti instruction needed in PLT Header
-  bool btiEntry;  // bti instruction needed in PLT Entry
+  bool btiHeader; // bti instruction needed in PLT Header and Entry
   bool pacEntry;  // autia1716 instruction needed in PLT Entry
 };
 } // namespace
@@ -605,15 +623,14 @@ AArch64BtiPac::AArch64BtiPac() {
   // address of the PLT entry can be taken by the program, which permits an
   // indirect jump to the PLT entry. This can happen when the address
   // of the PLT entry for a function is canonicalised due to the address of
-  // the function in an executable being taken by a shared library.
-  // FIXME: There is a potential optimization to omit the BTI if we detect
-  // that the address of the PLT entry isn't taken.
+  // the function in an executable being taken by a shared library, or
+  // non-preemptible ifunc referenced by non-GOT-generating, non-PLT-generating
+  // relocations.
   // The PAC PLT entries require dynamic loader support and this isn't known
   // from properties in the objects, so we use the command line flag.
-  btiEntry = btiHeader && !config->shared;
   pacEntry = config->zPacPlt;
 
-  if (btiEntry || pacEntry) {
+  if (btiHeader || pacEntry) {
     pltEntrySize = 24;
     ipltEntrySize = 24;
   }
@@ -673,7 +690,12 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   };
   const uint8_t nopData[] = { 0x1f, 0x20, 0x03, 0xd5 }; // nop
 
-  if (btiEntry) {
+  // needsPltAddr indicates a non-ifunc canonical PLT entry whose address may
+  // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
+  // address may escape if referenced by a direct relocation. The condition is
+  // conservative.
+  bool hasBti = btiHeader && (sym.needsPltAddr || sym.isInIplt);
+  if (hasBti) {
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);
     pltEntryAddr += sizeof(btiData);
@@ -690,7 +712,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
     memcpy(buf + sizeof(addrInst), pacBr, sizeof(pacBr));
   else
     memcpy(buf + sizeof(addrInst), stdBr, sizeof(stdBr));
-  if (!btiEntry)
+  if (!hasBti)
     // We didn't add the BTI c instruction so round out size with NOP.
     memcpy(buf + sizeof(addrInst) + sizeof(stdBr), nopData, sizeof(nopData));
 }

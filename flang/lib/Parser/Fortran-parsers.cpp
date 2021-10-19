@@ -47,13 +47,6 @@ constexpr auto nonDigitIdChar{letter || otherIdChar};
 constexpr auto rawName{nonDigitIdChar >> many(nonDigitIdChar || digit)};
 TYPE_PARSER(space >> sourced(rawName >> construct<Name>()))
 
-// R604 constant ->  literal-constant | named-constant
-// Used only via R607 int-constant and R845 data-stmt-constant.
-// The look-ahead check prevents occlusion of constant-subobject in
-// data-stmt-constant.
-TYPE_PARSER(construct<ConstantValue>(literalConstant) ||
-    construct<ConstantValue>(namedConstant / !"%"_tok / !"("_tok))
-
 // R608 intrinsic-operator ->
 //        power-op | mult-op | add-op | concat-op | rel-op |
 //        not-op | and-op | or-op | equiv-op
@@ -103,9 +96,9 @@ TYPE_PARSER(construct<DefinedOperator>(intrinsicOperator) ||
     construct<DefinedOperator>(definedOpName))
 
 // R505 implicit-part -> [implicit-part-stmt]... implicit-stmt
-// TODO: Can overshoot; any trailing PARAMETER, FORMAT, & ENTRY
-// statements after the last IMPLICIT should be transferred to the
-// list of declaration-constructs.
+// N.B. PARAMETER, FORMAT, & ENTRY statements that appear before any
+// other kind of declaration-construct will be parsed into the
+// implicit-part.
 TYPE_CONTEXT_PARSER("implicit part"_en_US,
     construct<ImplicitPart>(many(Parser<ImplicitPartStmt>{})))
 
@@ -644,9 +637,8 @@ constexpr auto objectName{name};
 TYPE_PARSER(construct<EntityDecl>(objectName, maybe(arraySpec),
     maybe(coarraySpec), maybe("*" >> charLength), maybe(initialization)))
 
-// R806 null-init -> function-reference
-// TODO: confirm in semantics that NULL still intrinsic in this scope
-TYPE_PARSER(construct<NullInit>("NULL ( )"_tok) / !"("_tok)
+// R806 null-init -> function-reference   ... which must resolve to NULL()
+TYPE_PARSER(lookAhead(name / "( )") >> construct<NullInit>(expr))
 
 // R807 access-spec -> PUBLIC | PRIVATE
 TYPE_PARSER(construct<AccessSpec>("PUBLIC" >> pure(AccessSpec::Kind::Public)) ||
@@ -827,19 +819,23 @@ TYPE_PARSER(construct<DataStmtRepeat>(intLiteralConstant) ||
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
 //        signed-int-literal-constant | signed-real-literal-constant |
-//        null-init | initial-data-target | structure-constructor
-// TODO: Some structure constructors can be misrecognized as array
-// references into constant subobjects.
-TYPE_PARSER(sourced(first(
-    construct<DataStmtConstant>(scalar(Parser<ConstantValue>{})),
-    construct<DataStmtConstant>(nullInit),
-    construct<DataStmtConstant>(scalar(constantSubobject)) / !"("_tok,
-    construct<DataStmtConstant>(Parser<StructureConstructor>{}),
+//        null-init | initial-data-target |
+//        constant-structure-constructor
+// N.B. scalar-constant and scalar-constant-subobject are ambiguous with
+// initial-data-target; null-init and structure-constructor are ambiguous
+// in the absence of parameters and components; structure-constructor with
+// components can be ambiguous with a scalar-constant-subobject.
+// So we parse literal constants, designator, null-init, and
+// structure-constructor, so that semantics can figure things out later
+// with the symbol table.
+TYPE_PARSER(sourced(first(construct<DataStmtConstant>(literalConstant),
     construct<DataStmtConstant>(signedRealLiteralConstant),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(
         construct<DataStmtConstant>(Parser<SignedComplexLiteralConstant>{})),
-    construct<DataStmtConstant>(initialDataTarget))))
+    construct<DataStmtConstant>(nullInit),
+    construct<DataStmtConstant>(indirect(designator) / !"("_tok),
+    construct<DataStmtConstant>(Parser<StructureConstructor>{}))))
 
 // R848 dimension-stmt ->
 //        DIMENSION [::] array-name ( array-spec )
@@ -1064,6 +1060,7 @@ TYPE_PARSER(construct<PartRef>(name,
     maybe(Parser<ImageSelector>{})))
 
 // R913 structure-component -> data-ref
+// The final part-ref in the data-ref is not allowed to have subscripts.
 TYPE_PARSER(construct<StructureComponent>(
     construct<DataRef>(some(Parser<PartRef>{} / percentOrDot)), name))
 
@@ -1087,7 +1084,8 @@ constexpr auto cosubscript{scalarIntExpr};
 // R924 image-selector ->
 //        lbracket cosubscript-list [, image-selector-spec-list] rbracket
 TYPE_CONTEXT_PARSER("image selector"_en_US,
-    construct<ImageSelector>("[" >> nonemptyList(cosubscript / !"="_tok),
+    construct<ImageSelector>(
+        "[" >> nonemptyList(cosubscript / lookAhead(space / ",]"_ch)),
         defaulted("," >> nonemptyList(Parser<ImageSelectorSpec>{})) / "]"))
 
 // R926 image-selector-spec ->
@@ -1122,8 +1120,6 @@ TYPE_PARSER(construct<StatVariable>(scalar(integer(variable))))
 // R932 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
 //        [lbracket allocate-coarray-spec rbracket]
-// TODO: allocate-shape-spec-list might be misrecognized as
-// the final list of subscripts in allocate-object.
 TYPE_PARSER(construct<Allocation>(Parser<AllocateObject>{},
     defaulted(parenthesized(nonemptyList(Parser<AllocateShapeSpec>{}))),
     maybe(bracketed(Parser<AllocateCoarraySpec>{}))))
@@ -1172,11 +1168,11 @@ constexpr auto endDirective{space >> endOfLine};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              defaulted(parenthesized(some("tkr"_ch))), name))};
-TYPE_PARSER(
-    beginDirective >> sourced(construct<CompilerDirective>(ignore_tkr) ||
-                          construct<CompilerDirective>("DIR$" >>
-                              many(construct<CompilerDirective::NameValue>(
-                                  name, maybe("=" >> digitString64))))) /
+TYPE_PARSER(beginDirective >>
+    sourced(construct<CompilerDirective>(ignore_tkr) ||
+        construct<CompilerDirective>(
+            "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
+                          maybe(("="_tok || ":"_tok) >> digitString64))))) /
         endDirective)
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(construct<BasedPointerStmt>(

@@ -7,6 +7,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 typedef unsigned long ulong;
+typedef unsigned int  uint;
 
 // CHECK-LABEL: @test_div_fixup_f16
 // CHECK: call half @llvm.amdgcn.div.fixup.f16
@@ -114,19 +115,40 @@ void test_update_dpp(global int* out, int arg1, int arg2)
 }
 
 // CHECK-LABEL: @test_ds_fadd
-// CHECK: call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_faddf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_faddf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmin
-// CHECK: call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fminf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fminf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmax
-// CHECK: call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fmaxf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_s_memtime
+// CHECK: call i64 @llvm.amdgcn.s.memtime()
+void test_s_memtime(global ulong* out)
+{
+  *out = __builtin_amdgcn_s_memtime();
+}
+
+// CHECK-LABEL: @test_perm
+// CHECK: call i32 @llvm.amdgcn.perm(i32 %a, i32 %b, i32 %s)
+void test_perm(global uint* out, uint a, uint b, uint s)
+{
+  *out = __builtin_amdgcn_perm(a, b, s);
+}
+
+// CHECK-LABEL: @test_groupstaticsize
+// CHECK: call i32 @llvm.amdgcn.groupstaticsize()
+void test_groupstaticsize(global uint* out)
+{
+  *out = __builtin_amdgcn_groupstaticsize();
 }

@@ -12,11 +12,22 @@ config.test_source_root = os.path.dirname(__file__)
 clang_cflags = [config.target_cflags] + config.debug_info_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 clang_hwasan_common_cflags = clang_cflags + ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+
+if config.target_arch == 'x86_64' and config.enable_aliases == '1':
+  clang_hwasan_common_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
+else:
+  config.available_features.add('pointer-tagging')
 if config.target_arch == 'x86_64':
   # This does basically the same thing as tagged-globals on aarch64. Because
   # the x86_64 implementation is for testing purposes only there is no
   # equivalent target feature implemented on x86_64.
   clang_hwasan_common_cflags += ["-mcmodel=large"]
+
+  # The callback instrumentation used on x86_64 has a 1/64 chance of choosing a
+  # stack tag of 0.  This causes stack tests to become flaky, so we force tags
+  # to be generated via calls to __hwasan_generate_tag, which never returns 0.
+  # TODO: See if we can remove this once we use the outlined instrumentation.
+  clang_hwasan_common_cflags += ["-mllvm", "-hwasan-generate-tags-with-calls=1"]
 clang_hwasan_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-globals",
                                                    "-mllvm", "-hwasan-use-short-granules",
                                                    "-mllvm", "-hwasan-instrument-landing-pads=0",
@@ -38,7 +49,7 @@ config.substitutions.append( ("%clangxx_hwasan ", build_invocation(clang_hwasan_
 config.substitutions.append( ("%clangxx_hwasan_oldrt ", build_invocation(clang_hwasan_oldrt_cxxflags)) )
 config.substitutions.append( ("%compiler_rt_libdir", config.compiler_rt_libdir) )
 
-default_hwasan_opts_str = ':'.join(['disable_allocator_tagging=1', 'random_tags=0'] + config.default_sanitizer_opts)
+default_hwasan_opts_str = ':'.join(['disable_allocator_tagging=1', 'random_tags=0', 'fail_without_syscall_abi=0'] + config.default_sanitizer_opts)
 if default_hwasan_opts_str:
   config.environment['HWASAN_OPTIONS'] = default_hwasan_opts_str
   default_hwasan_opts_str += ':'

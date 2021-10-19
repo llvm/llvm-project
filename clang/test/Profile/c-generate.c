@@ -7,7 +7,7 @@
 //
 // PROF-INSTR-NONE-NOT: __llvm_prf
 //
-// PROF-INSTR-GARBAGE: invalid PGO instrumentor in argument '-fprofile-instrument=garbage'
+// PROF-INSTR-GARBAGE: invalid value 'garbage' in '-fprofile-instrument=garbage'
 
 int main(void) {
   return 0;

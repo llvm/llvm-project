@@ -8,8 +8,8 @@
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: Section ({{.*}}) .rel.dyn {
-// NORELOC-NEXT:   0x402258 R_386_TLS_TPOFF tlsshared0 0x0
-// NORELOC-NEXT:   0x40225C R_386_TLS_TPOFF tlsshared1 0x0
+// NORELOC-NEXT:   0x402258 R_386_TLS_TPOFF tlsshared0
+// NORELOC-NEXT:   0x40225C R_386_TLS_TPOFF tlsshared1
 // NORELOC-NEXT:   }
 // NORELOC-NEXT: ]
 

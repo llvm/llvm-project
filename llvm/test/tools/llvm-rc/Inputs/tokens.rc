@@ -1,5 +1,6 @@
 ﻿1 + 2 - 3214L & 0x120894 032173 2|&~+(-7){0xabcdef 0xABCDEFl} Begin End
 He11o LLVM
+identifier-with-dashes
 
 "RC string test.",L"Another RC string test.'&{",42,100
 

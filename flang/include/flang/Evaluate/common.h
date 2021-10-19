@@ -9,7 +9,6 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
-#include "intrinsics-library.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/enum-set.h"
@@ -20,6 +19,7 @@
 #include "flang/Parser/message.h"
 #include <cinttypes>
 #include <map>
+#include <string>
 
 namespace Fortran::semantics {
 class DerivedTypeSpec;
@@ -38,6 +38,26 @@ ENUM_CLASS(Relation, Less, Equal, Greater, Unordered)
 template <typename A>
 static constexpr Ordering Compare(const A &x, const A &y) {
   if (x < y) {
+    return Ordering::Less;
+  } else if (x > y) {
+    return Ordering::Greater;
+  } else {
+    return Ordering::Equal;
+  }
+}
+
+template <typename CH>
+static constexpr Ordering Compare(
+    const std::basic_string<CH> &x, const std::basic_string<CH> &y) {
+  std::size_t xLen{x.size()}, yLen{y.size()};
+  using String = std::basic_string<CH>;
+  // Fortran CHARACTER comparison is defined with blank padding
+  // to extend a shorter operand.
+  if (xLen < yLen) {
+    return Compare(String{x}.append(yLen - xLen, CH{' '}), y);
+  } else if (xLen > yLen) {
+    return Compare(x, String{y}.append(xLen - yLen, CH{' '}));
+  } else if (x < y) {
     return Ordering::Less;
   } else if (x > y) {
     return Ordering::Greater;
@@ -134,9 +154,9 @@ struct Rounding {
 
 static constexpr Rounding defaultRounding;
 
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#if FLANG_BIG_ENDIAN
 constexpr bool isHostLittleEndian{false};
-#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#elif FLANG_LITTLE_ENDIAN
 constexpr bool isHostLittleEndian{true};
 #else
 #error host endianness is not known
@@ -236,11 +256,9 @@ public:
   Rounding rounding() const { return rounding_; }
   bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
   bool bigEndian() const { return bigEndian_; }
+  std::size_t maxAlignment() const { return maxAlignment_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
-  const HostIntrinsicProceduresLibrary &hostIntrinsicsLibrary() const {
-    return hostIntrinsicsLibrary_;
-  }
-  const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
+  const IntrinsicProcTable &intrinsics() const { return intrinsics_; }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
   std::optional<ConstantSubscript> GetImpliedDo(parser::CharBlock) const;
@@ -261,10 +279,10 @@ private:
   const IntrinsicProcTable &intrinsics_;
   Rounding rounding_{defaultRounding};
   bool flushSubnormalsToZero_{false};
-  bool bigEndian_{false};
+  static constexpr bool bigEndian_{false}; // TODO: configure for target
+  static constexpr std::size_t maxAlignment_{8}; // TODO: configure for target
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
-  HostIntrinsicProceduresLibrary hostIntrinsicsLibrary_;
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);

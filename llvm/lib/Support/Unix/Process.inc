@@ -31,7 +31,7 @@
 #if HAVE_SIGNAL_H
 #include <signal.h>
 #endif
-#if defined(HAVE_MALLINFO)
+#if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
 #if defined(HAVE_MALLCTL)
@@ -89,7 +89,11 @@ Expected<unsigned> Process::getPageSize() {
 }
 
 size_t Process::GetMallocUsage() {
-#if defined(HAVE_MALLINFO)
+#if defined(HAVE_MALLINFO2)
+  struct mallinfo2 mi;
+  mi = ::mallinfo2();
+  return mi.uordblks;
+#elif defined(HAVE_MALLINFO)
   struct mallinfo mi;
   mi = ::mallinfo();
   return mi.uordblks;
@@ -232,11 +236,11 @@ std::error_code Process::FixupStandardFileDescriptors() {
 
 std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   // Create a signal set filled with *all* signals.
-  sigset_t FullSet;
-  if (sigfillset(&FullSet) < 0)
+  sigset_t FullSet, SavedSet;
+  if (sigfillset(&FullSet) < 0 || sigfillset(&SavedSet) < 0)
     return std::error_code(errno, std::generic_category());
+
   // Atomically swap our current signal mask with a full mask.
-  sigset_t SavedSet;
 #if LLVM_ENABLE_THREADS
   if (int EC = pthread_sigmask(SIG_SETMASK, &FullSet, &SavedSet))
     return std::error_code(EC, std::generic_category());
@@ -332,6 +336,7 @@ static bool terminalHasColors(int fd) {
   // First, acquire a global lock because these C routines are thread hostile.
   std::lock_guard<std::mutex> G(*TermColorMutex);
 
+  struct term *previous_term = set_curterm(nullptr);
   int errret = 0;
   if (setupterm(nullptr, fd, &errret) != 0)
     // Regardless of why, if we can't get terminfo, we shouldn't try to print
@@ -355,7 +360,7 @@ static bool terminalHasColors(int fd) {
 
   // Now extract the structure allocated by setupterm and free its memory
   // through a really silly dance.
-  struct term *termp = set_curterm(nullptr);
+  struct term *termp = set_curterm(previous_term);
   (void)del_curterm(termp); // Drop any errors here.
 
   // Return true if we found a color capabilities for the current terminal.
@@ -455,3 +460,5 @@ unsigned llvm::sys::Process::GetRandomNumber() {
   return ::rand();
 #endif
 }
+
+[[noreturn]] void Process::ExitNoCleanup(int RetCode) { _Exit(RetCode); }

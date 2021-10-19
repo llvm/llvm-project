@@ -16,23 +16,29 @@ add_lldb_library(lldbCommands
   CommandObjectLanguage.cpp
   CommandObjectLog.cpp
   CommandObjectMemory.cpp
+  CommandObjectMemoryTag.cpp
   CommandObjectMultiword.cpp
   CommandObjectPlatform.cpp
   CommandObjectPlugin.cpp
   CommandObjectProcess.cpp
   CommandObjectQuit.cpp
+  CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp
   CommandObjectReproducer.cpp
+  CommandObjectScript.cpp
   CommandObjectSession.cpp
   CommandObjectSettings.cpp
   CommandObjectSource.cpp
   CommandObjectStats.cpp
   CommandObjectTarget.cpp
   CommandObjectThread.cpp
+  CommandObjectThreadUtil.cpp
+  CommandObjectTrace.cpp
   CommandObjectType.cpp
   CommandObjectVersion.cpp
   CommandObjectWatchpoint.cpp
   CommandObjectWatchpointCommand.cpp
+  CommandOptionsProcessLaunch.cpp
 
   LINK_LIBS
     lldbBase

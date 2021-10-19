@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -earlycse-debug-hash -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}v_sad_u32_pat1:
 ; GCN: v_sad_u32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -133,8 +133,8 @@ define amdgpu_kernel void @v_sad_u32_multi_use_sub_pat2(i32 addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}v_sad_u32_multi_use_select_pat2:
-; GCN: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: v_cmp_gt_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: s_cmp_gt_u32 s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: s_sub_i32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @v_sad_u32_multi_use_select_pat2(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c) {
   %icmp0 = icmp ugt i32 %a, %b
@@ -254,7 +254,7 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(i8 addrspace(1)* %out) {
 
 ; GCN-LABEL: {{^}}s_sad_u32_i8_pat2:
 ; GCN: s_load_dword
-; GCN: s_bfe_u32
+; GCN-DAG: s_bfe_u32
 ; GCN-DAG: s_sub_i32
 ; GCN-DAG: s_and_b32
 ; GCN-DAG: s_sub_i32
@@ -273,8 +273,8 @@ define amdgpu_kernel void @s_sad_u32_i8_pat2(i8 addrspace(1)* %out, i8 zeroext %
 }
 
 ; GCN-LABEL: {{^}}v_sad_u32_mismatched_operands_pat1:
-; GCN: v_cmp_le_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
-; GCN: s_max_u32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: s_cmp_le_u32 s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: s_max_u32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: v_sub_i32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GCN: v_add_i32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 define amdgpu_kernel void @v_sad_u32_mismatched_operands_pat1(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {

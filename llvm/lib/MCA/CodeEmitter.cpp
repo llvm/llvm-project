@@ -15,8 +15,7 @@
 namespace llvm {
 namespace mca {
 
-CodeEmitter::EncodingInfo
-CodeEmitter::getOrCreateEncodingInfo(unsigned MCID) {
+CodeEmitter::EncodingInfo CodeEmitter::getOrCreateEncodingInfo(unsigned MCID) {
   EncodingInfo &EI = Encodings[MCID];
   if (EI.second)
     return EI;

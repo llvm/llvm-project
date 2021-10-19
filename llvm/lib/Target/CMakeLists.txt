@@ -11,11 +11,19 @@ add_llvm_component_library(LLVMTarget
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Target
+
+  LINK_COMPONENTS
+  Analysis
+  Core
+  MC
+  Support
   )
 
 # When building shared objects for each target there are some internal APIs
 # that are used across shared objects which we can't hide.
-if (NOT BUILD_SHARED_LIBS AND NOT APPLE)
+if (NOT BUILD_SHARED_LIBS AND NOT APPLE AND
+    NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND
+    NOT DEFINED CMAKE_CXX_VISIBILITY_PRESET)
   # Set default visibility to hidden, so we don't export all the Target classes
   # in libLLVM.so.
   set(CMAKE_CXX_VISIBILITY_PRESET hidden)

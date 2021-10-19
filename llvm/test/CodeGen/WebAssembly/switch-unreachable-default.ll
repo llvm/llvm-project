@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; Test that switches are lowered correctly in the presence of an
@@ -43,10 +42,10 @@ unreachable:
 ; CHECK:    br_if 0
 ; CHECK:    block
 ; CHECK:    block
-; CHECK:    br_table {1, 1, 1, 1, 1, 1, 1, 0}
+; CHECK:    br_table {1, 1, 0}
 ; CHECK: .LBB1_2
 ; CHECK:    end_block
-; CHECK:    br_table {0, 0, 0}
+; CHECK:    br_table {0, 0, 0, 0, 0, 0, 0, 0}
 ; CHECK: .LBB1_3
 ; CHECK:    end_block
 ; CHECK:    unreachable

@@ -61,7 +61,7 @@ entry:
 
 define void @inline_req_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_req_nossp() #0
+; CHECK: @inline_req_nossp() #3
   call void @fun_sspreq()
   ret void
 }
@@ -90,7 +90,7 @@ entry:
 
 define void @inline_strong_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_strong_nossp() #1
+; CHECK: @inline_strong_nossp() #3
   call void @fun_sspstrong()
   ret void
 }
@@ -119,7 +119,7 @@ entry:
 
 define void @inline_ssp_nossp() nounwind uwtable {
 entry:
-; CHECK: @inline_ssp_nossp() #2
+; CHECK: @inline_ssp_nossp() #3
   call void @fun_ssp()
   ret void
 }

@@ -56,6 +56,7 @@
 #include <utility>
 
 namespace llvm {
+template <typename T> struct DenseMapInfo;
 
 /// An opaque object representing a hash code.
 ///
@@ -656,7 +657,7 @@ namespace detail {
 
 template <typename... Ts, std::size_t... Indices>
 hash_code hash_value_tuple_helper(const std::tuple<Ts...> &arg,
-                                  std::index_sequence<Indices...> indices) {
+                                  std::index_sequence<Indices...>) {
   return hash_combine(std::get<Indices>(arg)...);
 }
 
@@ -676,6 +677,13 @@ template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
 }
+
+template <> struct DenseMapInfo<hash_code> {
+  static inline hash_code getEmptyKey() { return hash_code(-1); }
+  static inline hash_code getTombstoneKey() { return hash_code(-2); }
+  static unsigned getHashValue(hash_code val) { return val; }
+  static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
+};
 
 } // namespace llvm
 

@@ -132,6 +132,21 @@ test_larger_sorts(int N)
     test_larger_sorts(N, N);
 }
 
+void
+test_pointer_sort()
+{
+    static const int array_size = 10;
+    const int v[array_size] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    const int *pv[array_size];
+    for (int i = 0; i < array_size; i++) {
+      pv[i] = &v[array_size - 1 - i];
+    }
+    std::sort(pv, pv + array_size);
+    assert(*pv[0] == v[0]);
+    assert(*pv[1] == v[1]);
+    assert(*pv[array_size - 1] == v[array_size - 1]);
+}
+
 int main(int, char**)
 {
     // test null range
@@ -154,6 +169,8 @@ int main(int, char**)
     test_larger_sorts(997);
     test_larger_sorts(1000);
     test_larger_sorts(1009);
+
+    test_pointer_sort();
 
   return 0;
 }

@@ -20,9 +20,10 @@ input. Otherwise, it will read from the specified ``filenames``.
 OPTIONS
 -------
 
-.. option:: --all
+.. option:: --all, -a
 
- Equivalent to specifying all the main display options.
+ Equivalent to specifying all the main display options relevant to the file
+ format.
 
 .. option:: --addrsig
 
@@ -32,13 +33,18 @@ OPTIONS
 
  Display architecture-specific information, e.g. the ARM attributes section on ARM.
 
-.. option:: --color
+.. option:: --bb-addr-map
 
- Use colors in the output for warnings and errors.
+ Display the contents of the basic block address map section(s), which contain the
+ address of each function, along with the relative offset of each basic block.
 
 .. option:: --demangle, -C
 
  Display demangled symbol names in the output.
+ 
+.. option:: --dependent-libraries
+
+ Display the dependent libraries section.
 
 .. option:: --dyn-relocations
 
@@ -56,7 +62,7 @@ OPTIONS
 
  Display the callgraph profile section.
 
-.. option:: --elf-hash-histogram, --histogram, -I
+.. option:: --histogram, -I
 
  Display a bucket list histogram for dynamic symbol hash tables.
 
@@ -70,7 +76,7 @@ OPTIONS
  ``GNU``. ``LLVM`` output is an expanded and structured format, whilst ``GNU``
  (the default) output mimics the equivalent GNU :program:`readelf` output.
 
-.. option:: --elf-section-groups, --section-groups, -g
+.. option:: --section-groups, -g
 
  Display section groups.
 
@@ -79,7 +85,7 @@ OPTIONS
  When used with :option:`--relocations`, display each relocation in an expanded
  multi-line format.
 
-.. option:: --file-headers, -h
+.. option:: --file-header, -h
 
  Display file headers.
 
@@ -97,16 +103,12 @@ OPTIONS
 
 .. option:: --headers, -e
 
- Equivalent to setting: :option:`--file-headers`, :option:`--program-headers`,
+ Equivalent to setting: :option:`--file-header`, :option:`--program-headers`,
  and :option:`--sections`.
 
 .. option:: --help
 
  Display a summary of command line options.
-
-.. option:: --help-list
-
- Display an uncategorized summary of command line options.
 
 .. option:: --hex-dump=<section[,section,...]>, -x
 
@@ -116,6 +118,10 @@ OPTIONS
 .. option:: --needed-libs
 
  Display the needed libraries.
+  
+.. option:: --no-demangle
+
+ Do not display demangled symbol names in the output. On by default.
 
 .. option:: --notes, -n
 
@@ -141,6 +147,10 @@ OPTIONS
 
  When used with :option:`--sections`, display section data for each section
  shown. This option has no effect for GNU style output.
+
+.. option:: --section-details, -t
+
+ Display all section details. Used as an alternative to :option:`--sections`.
 
 .. option:: --section-mapping
 
@@ -173,7 +183,7 @@ OPTIONS
 
 .. option:: --symbols, --syms, -s
 
- Display the symbol table.
+ Display the symbol table. Also display the dynamic symbol table when using GNU output style for ELF.
 
 .. option:: --unwind, -u
 
@@ -186,7 +196,11 @@ OPTIONS
 .. option:: --version-info, -V
 
  Display version sections.
+ 
+.. option:: --wide, -W
 
+ Ignored for GNU readelf compatibility. The output is already similar to when using -W with GNU readelf.
+ 
 .. option:: @<FILE>
 
  Read command-line options from response file `<FILE>`.

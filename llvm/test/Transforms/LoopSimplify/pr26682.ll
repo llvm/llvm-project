@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-unknown"
 ; Check that loop-simplify merges two loop exits, but preserves LCSSA form.
 ; CHECK-LABEL: @foo
 ; CHECK: for:
-; CHECK: %or.cond = and i1 %cmp1, %cmp2
+; CHECK: %or.cond = select i1 %cmp1, i1 %cmp2, i1 false
 ; CHECK-NOT: for.cond:
 ; CHECK: for.end:
 ; CHECK: %a.lcssa = phi i32 [ %a, %for ]

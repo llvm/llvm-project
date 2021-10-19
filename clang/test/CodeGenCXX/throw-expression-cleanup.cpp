@@ -14,7 +14,7 @@ void f() {
   } catch (...) { }
 }
 
-// CHECK-LABEL: define void @_Z1fv
+// CHECK-LABEL: define{{.*}} void @_Z1fv
 // CHECK: call void @_ZN5ErrorC1ERK1X
 // CHECK: invoke void @__cxa_throw
 // CHECK: landingpad

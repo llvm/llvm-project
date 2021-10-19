@@ -33,6 +33,104 @@ namespace mca {
 
 constexpr int UNKNOWN_CYCLES = -512;
 
+/// A representation of an mca::Instruction operand
+/// for use in mca::CustomBehaviour.
+class MCAOperand {
+  // This class is mostly copied from MCOperand within
+  // MCInst.h except that we don't keep track of
+  // expressions or sub-instructions.
+  enum MCAOperandType : unsigned char {
+    kInvalid,   ///< Uninitialized, Relocatable immediate, or Sub-instruction.
+    kRegister,  ///< Register operand.
+    kImmediate, ///< Immediate operand.
+    kSFPImmediate, ///< Single-floating-point immediate operand.
+    kDFPImmediate, ///< Double-Floating-point immediate operand.
+  };
+  MCAOperandType Kind;
+
+  union {
+    unsigned RegVal;
+    int64_t ImmVal;
+    uint32_t SFPImmVal;
+    uint64_t FPImmVal;
+  };
+
+  // We only store specific operands for specific instructions
+  // so an instruction's operand 3 may be stored within the list
+  // of MCAOperand as element 0. This Index attribute keeps track
+  // of the original index (3 for this example).
+  unsigned Index;
+
+public:
+  MCAOperand() : Kind(kInvalid), FPImmVal(), Index() {}
+
+  bool isValid() const { return Kind != kInvalid; }
+  bool isReg() const { return Kind == kRegister; }
+  bool isImm() const { return Kind == kImmediate; }
+  bool isSFPImm() const { return Kind == kSFPImmediate; }
+  bool isDFPImm() const { return Kind == kDFPImmediate; }
+
+  /// Returns the register number.
+  unsigned getReg() const {
+    assert(isReg() && "This is not a register operand!");
+    return RegVal;
+  }
+
+  int64_t getImm() const {
+    assert(isImm() && "This is not an immediate");
+    return ImmVal;
+  }
+
+  uint32_t getSFPImm() const {
+    assert(isSFPImm() && "This is not an SFP immediate");
+    return SFPImmVal;
+  }
+
+  uint64_t getDFPImm() const {
+    assert(isDFPImm() && "This is not an FP immediate");
+    return FPImmVal;
+  }
+
+  void setIndex(const unsigned Idx) { Index = Idx; }
+
+  unsigned getIndex() const { return Index; }
+
+  static MCAOperand createReg(unsigned Reg) {
+    MCAOperand Op;
+    Op.Kind = kRegister;
+    Op.RegVal = Reg;
+    return Op;
+  }
+
+  static MCAOperand createImm(int64_t Val) {
+    MCAOperand Op;
+    Op.Kind = kImmediate;
+    Op.ImmVal = Val;
+    return Op;
+  }
+
+  static MCAOperand createSFPImm(uint32_t Val) {
+    MCAOperand Op;
+    Op.Kind = kSFPImmediate;
+    Op.SFPImmVal = Val;
+    return Op;
+  }
+
+  static MCAOperand createDFPImm(uint64_t Val) {
+    MCAOperand Op;
+    Op.Kind = kDFPImmediate;
+    Op.FPImmVal = Val;
+    return Op;
+  }
+
+  static MCAOperand createInvalid() {
+    MCAOperand Op;
+    Op.Kind = kInvalid;
+    Op.FPImmVal = 0;
+    return Op;
+  }
+};
+
 /// A register write descriptor.
 struct WriteDescriptor {
   // Operand index. The index is negative for implicit writes only.
@@ -160,6 +258,7 @@ public:
   int getCyclesLeft() const { return CyclesLeft; }
   unsigned getWriteResourceID() const { return WD->SClassOrWriteResourceID; }
   MCPhysReg getRegisterID() const { return RegisterID; }
+  void setRegisterID(const MCPhysReg RegID) { RegisterID = RegID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
   unsigned getDependentWriteCyclesLeft() const {
@@ -346,7 +445,7 @@ struct ResourceUsage {
 
 /// An instruction descriptor
 struct InstrDesc {
-  SmallVector<WriteDescriptor, 4> Writes; // Implicit writes are at the end.
+  SmallVector<WriteDescriptor, 2> Writes; // Implicit writes are at the end.
   SmallVector<ReadDescriptor, 4> Reads;   // Implicit reads are at the end.
 
   // For every resource used by an instruction of this kind, this vector
@@ -359,6 +458,9 @@ struct InstrDesc {
   // A bitmask of used processor resource units.
   uint64_t UsedProcResUnits;
 
+  // A bitmask of implicit uses of processor resource units.
+  uint64_t ImplicitlyUsedProcResUnits;
+
   // A bitmask of used processor resource groups.
   uint64_t UsedProcResGroups;
 
@@ -370,15 +472,16 @@ struct InstrDesc {
   // subtarget when computing the reciprocal throughput.
   unsigned SchedClassID;
 
-  bool MayLoad;
-  bool MayStore;
-  bool HasSideEffects;
-  bool BeginGroup;
-  bool EndGroup;
+  unsigned MayLoad : 1;
+  unsigned MayStore : 1;
+  unsigned HasSideEffects : 1;
+  unsigned BeginGroup : 1;
+  unsigned EndGroup : 1;
+  unsigned RetireOOO : 1;
 
   // True if all buffered resources are in-order, and there is at least one
   // buffer which is a dispatch hazard (BufferSize = 0).
-  bool MustIssueImmediately;
+  unsigned MustIssueImmediately : 1;
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
@@ -402,23 +505,44 @@ class InstructionBase {
 
   // Output dependencies.
   // One entry per each implicit and explicit register definition.
-  SmallVector<WriteState, 4> Defs;
+  SmallVector<WriteState, 2> Defs;
 
   // Input dependencies.
   // One entry per each implicit and explicit register use.
   SmallVector<ReadState, 4> Uses;
 
+  // List of operands which can be used by mca::CustomBehaviour
+  std::vector<MCAOperand> Operands;
+
+  // Instruction opcode which can be used by mca::CustomBehaviour
+  unsigned Opcode;
+
 public:
-  InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
+  InstructionBase(const InstrDesc &D, const unsigned Opcode)
+      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode) {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
-  const ArrayRef<WriteState> getDefs() const { return Defs; }
+  ArrayRef<WriteState> getDefs() const { return Defs; }
   SmallVectorImpl<ReadState> &getUses() { return Uses; }
-  const ArrayRef<ReadState> getUses() const { return Uses; }
+  ArrayRef<ReadState> getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
 
   unsigned getLatency() const { return Desc.MaxLatency; }
   unsigned getNumMicroOps() const { return Desc.NumMicroOps; }
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Return the MCAOperand which corresponds to index Idx within the original
+  /// MCInst.
+  const MCAOperand *getOperand(const unsigned Idx) const {
+    auto It = std::find_if(
+        Operands.begin(), Operands.end(),
+        [&Idx](const MCAOperand &Op) { return Op.getIndex() == Idx; });
+    if (It == Operands.end())
+      return nullptr;
+    return &(*It);
+  }
+  unsigned getNumOperands() const { return Operands.size(); }
+  void addOperand(const MCAOperand Op) { Operands.push_back(Op); }
 
   bool hasDependentUsers() const {
     return any_of(Defs,
@@ -489,11 +613,11 @@ class Instruction : public InstructionBase {
   bool IsEliminated;
 
 public:
-  Instruction(const InstrDesc &D)
-      : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0), LSUTokenID(0), UsedBuffers(D.UsedBuffers),
-        CriticalRegDep(), CriticalMemDep(), CriticalResourceMask(0),
-        IsEliminated(false) {}
+  Instruction(const InstrDesc &D, const unsigned Opcode)
+      : InstructionBase(D, Opcode), Stage(IS_INVALID),
+        CyclesLeft(UNKNOWN_CYCLES), RCUTokenID(0), LSUTokenID(0),
+        UsedBuffers(D.UsedBuffers), CriticalRegDep(), CriticalMemDep(),
+        CriticalResourceMask(0), IsEliminated(false) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
   unsigned getLSUTokenID() const { return LSUTokenID; }
@@ -593,45 +717,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const InstRef &IR) {
   return OS;
 }
 #endif
-
-/// A reference to a register write.
-///
-/// This class is mainly used by the register file to describe register
-/// mappings. It correlates a register write to the source index of the
-/// defining instruction.
-class WriteRef {
-  std::pair<unsigned, WriteState *> Data;
-  static const unsigned INVALID_IID;
-
-public:
-  WriteRef() : Data(INVALID_IID, nullptr) {}
-  WriteRef(unsigned SourceIndex, WriteState *WS) : Data(SourceIndex, WS) {}
-
-  unsigned getSourceIndex() const { return Data.first; }
-  const WriteState *getWriteState() const { return Data.second; }
-  WriteState *getWriteState() { return Data.second; }
-  void invalidate() { Data.second = nullptr; }
-  bool isWriteZero() const {
-    assert(isValid() && "Invalid null WriteState found!");
-    return getWriteState()->isWriteZero();
-  }
-
-  /// Returns true if this register write has been executed, and the new
-  /// register value is therefore available to users.
-  bool isAvailable() const {
-    if (getSourceIndex() == INVALID_IID)
-      return false;
-    const WriteState *WS = getWriteState();
-    return !WS || WS->isExecuted();
-  }
-
-  bool isValid() const { return Data.second && Data.first != INVALID_IID; }
-  bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
-
-#ifndef NDEBUG
-  void dump() const;
-#endif
-};
 
 } // namespace mca
 } // namespace llvm

@@ -4,20 +4,22 @@
 ; Regression test for a bug in the SLP vectorizer that was causing
 ; these rotates to be incorrectly combined into a vector rotate.
 
-; The bug fix is at https://reviews.llvm.org/D85759. This test has
-; been pre-committed to demonstrate the regressed behavior and provide
-; a clear diff for the bug fix.
-
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 define void @foo(<2 x i64> %x, <4 x i32> %y, i64* %out) #0 {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> [[X:%.*]], <2 x i64> [[X]], <2 x i64> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[OUT:%.*]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP4]], align 8
+; CHECK-NEXT:    [[A:%.*]] = extractelement <2 x i64> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[B:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i32 [[B]] to i64
+; CHECK-NEXT:    [[C:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[A]], i64 [[A]], i64 [[CONV6]])
+; CHECK-NEXT:    store i64 [[C]], i64* [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[D:%.*]] = extractelement <2 x i64> [[X]], i32 1
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[Y]], i32 3
+; CHECK-NEXT:    [[CONV17:%.*]] = zext i32 [[E]] to i64
+; CHECK-NEXT:    [[F:%.*]] = tail call i64 @llvm.fshl.i64(i64 [[D]], i64 [[D]], i64 [[CONV17]])
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[OUT]], i32 1
+; CHECK-NEXT:    store i64 [[F]], i64* [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %a = extractelement <2 x i64> %x, i32 0

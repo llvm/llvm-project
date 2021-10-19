@@ -40,6 +40,12 @@ bool CompilerType::IsAnonymousType() const {
   return false;
 }
 
+bool CompilerType::IsScopedEnumerationType() const {
+  if (IsValid())
+    return m_type_system->IsScopedEnumerationType(m_type);
+  return false;
+}
+
 bool CompilerType::IsArrayType(CompilerType *element_type_ptr, uint64_t *size,
                                bool *is_incomplete) const {
   if (IsValid())
@@ -92,9 +98,9 @@ bool CompilerType::IsCStringType(uint32_t &length) const {
   return false;
 }
 
-bool CompilerType::IsFunctionType(bool *is_variadic_ptr) const {
+bool CompilerType::IsFunctionType() const {
   if (IsValid())
-    return m_type_system->IsFunctionType(m_type, is_variadic_ptr);
+    return m_type_system->IsFunctionType(m_type);
   return false;
 }
 
@@ -242,7 +248,7 @@ bool CompilerType::IsPointerToScalarType() const {
 
 bool CompilerType::IsArrayOfScalarType() const {
   CompilerType element_type;
-  if (IsArrayType(&element_type, nullptr, nullptr))
+  if (IsArrayType(&element_type))
     return element_type.IsScalarType();
   return false;
 }
@@ -341,6 +347,12 @@ CompilerType CompilerType::GetCanonicalType() const {
 CompilerType CompilerType::GetFullyUnqualifiedType() const {
   if (IsValid())
     return m_type_system->GetFullyUnqualifiedType(m_type);
+  return CompilerType();
+}
+
+CompilerType CompilerType::GetEnumerationIntegerType() const {
+  if (IsValid())
+    return m_type_system->GetEnumerationIntegerType(m_type);
   return CompilerType();
 }
 

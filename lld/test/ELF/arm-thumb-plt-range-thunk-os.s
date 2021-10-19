@@ -3,10 +3,11 @@
 // RUN: ld.lld %t --shared --icf=all -o %t.so
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t.so --start-address=0x2000000 --stop-address=0x2000018 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t.so --start-address=0x2800004 --stop-address=0x2800034 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t.so --start-address=0x4000000 --stop-address=0x4000010 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x2000000 --stop-address=0x2000018 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x2800004 --stop-address=0x2800034 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t.so --start-address=0x4000000 --stop-address=0x4000010 | FileCheck --check-prefix=CHECK3 %s
 // RUN: llvm-objdump -d %t.so --start-address=0x4000010 --stop-address=0x4000100 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
+// RUN: rm %t.so
  .syntax unified
  .thumb
 
@@ -37,13 +38,13 @@ preemptible:
 // CHECK1: Disassembly of section .text:
 // CHECK1-EMPTY:
 // CHECK1-NEXT: <sym1>:
-// CHECK1-NEXT:  2000000:       00 f0 00 d8     bl      #8388608
-// CHECK1-NEXT:  2000004:       00 f0 04 d8     bl      #8388616
+// CHECK1-NEXT:  2000000:       00 f0 00 d8     bl      0x2800004 <__ThumbV7PILongThunk_elsewhere>
+// CHECK1-NEXT:  2000004:       00 f0 04 d8     bl      0x2800010 <__ThumbV7PILongThunk_preemptible>
 // CHECK1-NEXT:  2000008:       70 47   bx      lr
 // CHECK1: <preemptible>:
-// CHECK1-NEXT:  200000a:       00 f0 07 d8     bl      #8388622
-// CHECK1-NEXT:  200000e:       00 f0 0b d8     bl      #8388630
-// CHECK1-NEXT:  2000012:       00 f0 09 d8     bl      #8388626
+// CHECK1-NEXT:  200000a:       00 f0 07 d8     bl      0x280001c <__ThumbV7PILongThunk_far_preemptible>
+// CHECK1-NEXT:  200000e:       00 f0 0b d8     bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
+// CHECK1-NEXT:  2000012:       00 f0 09 d8     bl      0x2800028 <__ThumbV7PILongThunk_far_nonpreemptible>
 // CHECK1-NEXT:  2000016:       70 47   bx      lr
 
  .section .text.2, "ax", %progbits
@@ -82,7 +83,7 @@ far_nonpreemptible_alias:
  bl elsewhere
 
 // CHECK3: <far_preemptible>:
-// CHECK3:  4000000:       00 f0 16 e8     blx     #44
+// CHECK3:  4000000:       00 f0 16 e8     blx     0x4000030
 
 // CHECK4: Disassembly of section .plt:
 // CHECK4-EMPTY:

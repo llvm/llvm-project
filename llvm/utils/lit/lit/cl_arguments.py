@@ -1,10 +1,18 @@
 import argparse
+import enum
 import os
 import shlex
 import sys
 
 import lit.reports
 import lit.util
+
+
+@enum.unique
+class TestOrder(enum.Enum):
+    LEXICAL = 'lexical'
+    RANDOM = 'random'
+    SMART = 'smart'
 
 
 def parse_args():
@@ -23,7 +31,7 @@ def parse_args():
             metavar="N",
             help="Number of workers used for testing",
             type=_positive_int,
-            default=lit.util.detectCPUs())
+            default=lit.util.usable_core_count())
     parser.add_argument("--config-prefix",
             dest="configPrefix",
             metavar="NAME",
@@ -109,6 +117,9 @@ def parse_args():
     execution_group.add_argument("--xunit-xml-output",
             type=lit.reports.XunitReport,
             help="Write XUnit-compatible XML test reports to the specified file")
+    execution_group.add_argument("--resultdb-output",
+            type=lit.reports.ResultDBReport,
+            help="Write LuCI ResuldDB compatible JSON to the specified file")
     execution_group.add_argument("--time-trace-output",
             type=lit.reports.TimeTraceReport,
             help="Write Chrome tracing compatible JSON to the specified file")
@@ -116,36 +127,67 @@ def parse_args():
             dest="maxIndividualTestTime",
             help="Maximum time to spend running a single test (in seconds). "
                  "0 means no time limit. [Default: 0]",
-            type=_non_negative_int) # TODO(yln): --[no-]test-timeout, instead of 0 allowed
+            type=_non_negative_int)
     execution_group.add_argument("--max-failures",
             help="Stop execution after the given number of failures.",
             type=_positive_int)
     execution_group.add_argument("--allow-empty-runs",
             help="Do not fail the run if all tests are filtered out",
             action="store_true")
+    execution_group.add_argument("--ignore-fail",
+            dest="ignoreFail",
+            action="store_true",
+            help="Exit with status zero even if some tests fail")
+    execution_group.add_argument("--no-indirectly-run-check",
+            dest="indirectlyRunCheck",
+            help="Do not error if a test would not be run if the user had "
+                 "specified the containing directory instead of naming the "
+                 "test directly.",
+            action="store_false")
 
     selection_group = parser.add_argument_group("Test Selection")
     selection_group.add_argument("--max-tests",
             metavar="N",
             help="Maximum number of tests to run",
             type=_positive_int)
-    selection_group.add_argument("--max-time", #TODO(yln): --timeout
+    selection_group.add_argument("--max-time",
             dest="timeout",
             metavar="N",
             help="Maximum time to spend testing (in seconds)",
             type=_positive_int)
-    selection_group.add_argument("--shuffle",   # TODO(yln): --order=random
-            help="Run tests in random order",   # default or 'by-path' (+ isEarlyTest())
-            action="store_true")
-    selection_group.add_argument("-i", "--incremental",  # TODO(yln): --order=failing-first
-            help="Run modified and failing tests first (updates mtimes)",
+    selection_group.add_argument("--order",
+            choices=[x.value for x in TestOrder],
+            default=TestOrder.SMART,
+            help="Test order to use (default: smart)")
+    selection_group.add_argument("--shuffle",
+            dest="order",
+            help="Run tests in random order (DEPRECATED: use --order=random)",
+            action="store_const",
+            const=TestOrder.RANDOM)
+    selection_group.add_argument("-i", "--incremental",
+            help="Run failed tests first (DEPRECATED: use --order=smart)",
             action="store_true")
     selection_group.add_argument("--filter",
             metavar="REGEX",
             type=_case_insensitive_regex,
             help="Only run tests with paths matching the given regular expression",
             default=os.environ.get("LIT_FILTER", ".*"))
-    selection_group.add_argument("--num-shards", # TODO(yln): --shards N/M
+    selection_group.add_argument("--filter-out",
+            metavar="REGEX",
+            type=_case_insensitive_regex,
+            help="Filter out tests with paths matching the given regular expression",
+            default=os.environ.get("LIT_FILTER_OUT", "^$"))
+    selection_group.add_argument("--xfail",
+            metavar="LIST",
+            type=_semicolon_list,
+            help="XFAIL tests with paths in the semicolon separated list",
+            default=os.environ.get("LIT_XFAIL", ""))
+    selection_group.add_argument("--xfail-not",
+            metavar="LIST",
+            type=_semicolon_list,
+            help="do not XFAIL tests with paths in the semicolon separated list",
+            default=os.environ.get("LIT_XFAIL_NOT", ""))
+    selection_group.add_argument("--num-shards",
             dest="numShards",
             metavar="M",
             help="Split testsuite into M pieces and only run one",
@@ -181,13 +223,8 @@ def parse_args():
     if opts.echoAllCommands:
         opts.showOutput = True
 
-    # TODO(python3): Could be enum
-    if opts.shuffle:
-        opts.order = 'random'
-    elif opts.incremental:
-        opts.order = 'failing-first'
-    else:
-        opts.order = 'default'
+    if opts.incremental:
+        print('WARNING: --incremental is deprecated. Failing tests now always run first.')
 
     if opts.numShards or opts.runShard:
         if not opts.numShards or not opts.runShard:
@@ -198,7 +235,7 @@ def parse_args():
     else:
         opts.shard = None
 
-    opts.reports = filter(None, [opts.output, opts.xunit_xml_output, opts.time_trace_output])
+    opts.reports = filter(None, [opts.output, opts.xunit_xml_output, opts.resultdb_output, opts.time_trace_output])
 
     return opts
 
@@ -228,6 +265,10 @@ def _case_insensitive_regex(arg):
         return re.compile(arg, re.IGNORECASE)
     except re.error as reason:
         raise _error("invalid regular expression: '{}', {}", arg, reason)
+
+
+def _semicolon_list(arg):
+    return arg.split(';')
 
 
 def _error(desc, *args):

@@ -22,7 +22,7 @@ using namespace lldb_private;
 TypeList::TypeList() : m_types() {}
 
 // Destructor
-TypeList::~TypeList() {}
+TypeList::~TypeList() = default;
 
 void TypeList::Insert(const TypeSP &type_sp) {
   // Just push each type on the back for now. We will worry about uniquing

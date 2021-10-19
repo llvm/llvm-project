@@ -4,7 +4,7 @@
 ; GCN: flat_load_dword
 ; GCN: flat_load_dword
 ; GCN: flat_store_dword
-define amdgpu_kernel void @unknown_memdep_analysis(float addrspace(1)* nocapture readonly %arg, float %arg1) #0 {
+define void @unknown_memdep_analysis(float addrspace(1)* nocapture readonly %arg, float %arg1) #0 {
 bb:
   %tmp53 = load float, float addrspace(1)* undef, align 4
   %tmp54 = getelementptr inbounds float, float addrspace(1)* %arg, i32 31

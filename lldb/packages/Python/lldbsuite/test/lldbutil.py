@@ -21,6 +21,7 @@ import six
 # LLDB modules
 import lldb
 from . import lldbtest_config
+from . import configuration
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -62,6 +63,11 @@ def mkdir_p(path):
 # ============================
 
 def get_xcode_sdk(os, env):
+    # Respect --apple-sdk <path> if it's specified. If the SDK is simply
+    # mounted from some disk image, and not actually installed, this is the
+    # only way to use it.
+    if configuration.apple_sdk:
+        return configuration.apple_sdk
     if os == "ios":
         if env == "simulator":
             return "iphonesimulator"
@@ -87,6 +93,11 @@ def get_xcode_sdk_version(sdk):
 def get_xcode_sdk_root(sdk):
     return subprocess.check_output(['xcrun', '--sdk', sdk, '--show-sdk-path'
                                     ]).rstrip().decode('utf-8')
+
+
+def get_xcode_clang(sdk):
+    return subprocess.check_output(['xcrun', '-sdk', sdk, '-f', 'clang'
+                                    ]).rstrip().decode("utf-8")
 
 
 # ===================================================
@@ -241,6 +252,12 @@ def stop_reason_to_str(enum):
         return "watchpoint"
     elif enum == lldb.eStopReasonExec:
         return "exec"
+    elif enum == lldb.eStopReasonFork:
+        return "fork"
+    elif enum == lldb.eStopReasonVFork:
+        return "vfork"
+    elif enum == lldb.eStopReasonVForkDone:
+        return "vforkdone"
     elif enum == lldb.eStopReasonSignal:
         return "signal"
     elif enum == lldb.eStopReasonException:
@@ -936,7 +953,8 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
                              bkpt_module = None,
                              in_cwd = True,
                              only_one_thread = True,
-                             extra_images = None):
+                             extra_images = None,
+                             has_locations_before_run = True):
     """Start up a target, using exe_name as the executable, and run it to
        a breakpoint set by source regex bkpt_pattern.
 
@@ -947,9 +965,10 @@ def run_to_source_breakpoint(test, bkpt_pattern, source_spec,
     # Set the breakpoints
     breakpoint = target.BreakpointCreateBySourceRegex(
             bkpt_pattern, source_spec, bkpt_module)
-    test.assertTrue(breakpoint.GetNumLocations() > 0,
-        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
-        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    if has_locations_before_run:
+        test.assertTrue(breakpoint.GetNumLocations() > 0,
+                        'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+                        %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
     return run_to_breakpoint_do_run(test, target, breakpoint, launch_info,
                                     only_one_thread, extra_images)
 

@@ -29,22 +29,30 @@ set_default("compiler_rt_intercept_libdispatch", @COMPILER_RT_INTERCEPT_LIBDISPA
 set_default("compiler_rt_libdir", "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@")
 set_default("emulator", "@COMPILER_RT_EMULATOR@")
 set_default("asan_shadow_scale", "@COMPILER_RT_ASAN_SHADOW_SCALE@")
+set_default("memprof_shadow_scale", "@COMPILER_RT_MEMPROF_SHADOW_SCALE@")
 set_default("apple_platform", "osx")
 set_default("apple_platform_min_deployment_target_flag", "-mmacosx-version-min")
 set_default("sanitizer_can_use_cxxabi", @SANITIZER_CAN_USE_CXXABI_PYBOOL@)
+set_default("sanitizer_uses_static_cxxabi", @SANITIZER_USE_STATIC_CXX_ABI_PYBOOL@)
+set_default("sanitizer_uses_static_unwind", @SANITIZER_USE_STATIC_LLVM_UNWINDER_PYBOOL@)
 set_default("has_lld", @COMPILER_RT_HAS_LLD_PYBOOL@)
 set_default("can_symbolize", @CAN_SYMBOLIZE@)
-set_default("use_lld", False)
+set_default("use_lld", @COMPILER_RT_TEST_USE_LLD_PYBOOL@)
 set_default("use_thinlto", False)
 set_default("use_lto", config.use_thinlto)
 set_default("use_newpm", False)
 set_default("android", @ANDROID_PYBOOL@)
-set_default("android_ndk_version", @ANDROID_NDK_VERSION@)
+set_default("android_api_level", "@ANDROID_API_LEVEL@")
 set_default("android_serial", "@ANDROID_SERIAL_FOR_TESTING@")
 set_default("android_files_to_push", [])
 set_default("have_rpc_xdr_h", @HAVE_RPC_XDR_H@)
 set_default("gwp_asan", @COMPILER_RT_HAS_GWP_ASAN_PYBOOL@)
 set_default("expensive_checks", @LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL@)
+set_default("test_standalone_build_libs", @COMPILER_RT_TEST_STANDALONE_BUILD_LIBS_PYBOOL@)
+# True iff the test suite supports ignoring the test compiler's runtime library path
+# and using `config.compiler_rt_libdir` instead. This only matters when the runtime
+# library paths differ.
+set_default("test_suite_supports_overriding_runtime_lib_path", False)
 config.available_features.add('target-is-%s' % config.target_arch)
 
 if config.enable_per_target_runtime_dir:

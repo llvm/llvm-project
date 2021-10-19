@@ -7,6 +7,7 @@
 // Tests for the whole-program-vtables feature:
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM-DEFAULTVIS --check-prefix=TT-ITANIUM %s
+// RUN: %clang_cc1 -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS --check-prefix=TT-MS %s
 
 // Tests for cfi + whole-program-vtables:
@@ -79,6 +80,13 @@
 // ITANIUM-DIAG-SAME: !type [[ALL16]]
 // ITANIUM-SAME: !type [[FAF16:![0-9]+]]
 
+// ITANIUM: @_ZTVN5test31EE = external unnamed_addr constant
+// ITANIUM-DEFAULTVIS: @_ZTVN5test31EE = external unnamed_addr constant
+// ITANIUM-OPT: @_ZTVN5test31EE = available_externally unnamed_addr constant {{[^!]*}},
+// ITANIUM-OPT-SAME: !type [[E16:![0-9]+]],
+// ITANIUM-OPT-SAME: !type [[EF16:![0-9]+]]
+// ITANIUM-OPT: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast ({ [3 x i8*] }* @_ZTVN5test31EE to i8*)]
+
 // MS: comdat($"??_7A@@6B@"), !type [[A8:![0-9]+]]
 // MS: comdat($"??_7B@@6B0@@"), !type [[B8:![0-9]+]]
 // MS: comdat($"??_7B@@6BA@@@"), !type [[A8]]
@@ -130,7 +138,7 @@ void D::h() {
 }
 
 // ITANIUM: define hidden void @_Z2afP1A
-// ITANIUM-DEFAULTVIS: define void @_Z2afP1A
+// ITANIUM-DEFAULTVIS: define{{.*}} void @_Z2afP1A
 // MS: define dso_local void @"?af@@YAXPEAUA@@@Z"
 void af(A *a) {
   // TT-ITANIUM: [[P:%[^ ]*]] = call i1 @llvm.type.test(i8* [[VT:%[^ ]*]], metadata !"_ZTS1A")
@@ -144,7 +152,7 @@ void af(A *a) {
   // CFI-NEXT: {{^$}}
 
   // CFI: [[TRAPBB]]
-  // NDIAG-NEXT: call void @llvm.trap()
+  // NDIAG-NEXT: call void @llvm.ubsantrap(i8 2)
   // NDIAG-NEXT: unreachable
   // DIAG-NEXT: [[VTINT:%[^ ]*]] = ptrtoint i8* [[VT]] to i64
   // DIAG-NEXT: [[VTVALID:%[^ ]*]] = zext i1 [[VTVALID0]] to i64
@@ -241,7 +249,7 @@ struct D : C {
 };
 
 // ITANIUM: define hidden void @_ZN5test21fEPNS_1DE
-// ITANIUM-DEFAULTVIS: define void @_ZN5test21fEPNS_1DE
+// ITANIUM-DEFAULTVIS: define{{.*}} void @_ZN5test21fEPNS_1DE
 // MS: define dso_local void @"?f@test2@@YAXPEAUD@1@@Z"
 void f(D *d) {
   // TT-ITANIUM: {{%[^ ]*}} = call i1 @llvm.type.test(i8* {{%[^ ]*}}, metadata !"_ZTSN5test21DE")
@@ -252,6 +260,20 @@ void f(D *d) {
 }
 
 }
+
+namespace test3 {
+// All virtual functions are outline, so we can assume that it will
+// be generated in translation unit where foo is defined.
+struct E {
+  virtual void foo();
+};
+
+void g() {
+  E e;
+  e.foo();
+}
+
+}  // Test9
 
 // ITANIUM: [[A16]] = !{i64 16, !"_ZTS1A"}
 // ITANIUM-DIAG: [[ALL16]] = !{i64 16, !"all-vtables"}
@@ -285,6 +307,9 @@ void f(D *d) {
 // ITANIUM: [[FA_ID]] = distinct !{}
 // ITANIUM: [[FAF16]] = !{i64 16, [[FAF_ID:![0-9]+]]}
 // ITANIUM: [[FAF_ID]] = distinct !{}
+
+// ITANIUM-OPT: [[E16]] = !{i64 16, !"_ZTSN5test31EE"}
+// ITANIUM-OPT: [[EF16]] = !{i64 16, !"_ZTSMN5test31EEFvvE.virtual"}
 
 // MS: [[A8]] = !{i64 8, !"?AUA@@"}
 // MS: [[B8]] = !{i64 8, !"?AUB@@"}

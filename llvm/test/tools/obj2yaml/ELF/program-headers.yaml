@@ -37,59 +37,53 @@
 # RUN: obj2yaml %t1 | FileCheck %s --check-prefix=YAML
 
 # YAML:      ProgramHeaders:
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .hash
+# YAML-NEXT:    LastSec:  .dynstr
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_X, PF_R ]
+# YAML-NEXT:    FirstSec: .foo
+# YAML-NEXT:    LastSec:  .zed
+# YAML-NEXT:    VAddr:    0x1000
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: '.foo (1)'
+# YAML-NEXT:    LastSec:  .baz
+# YAML-NEXT:    VAddr:    0x2000
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_W, PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic.tail
+# YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Align:    0x1000
+# YAML-NEXT:  - Type:     PT_DYNAMIC
+# YAML-NEXT:    Flags:    [ PF_W, PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic
+# YAML-NEXT:    VAddr:    0x3EF0
+# YAML-NEXT:    Align:    0x8
+# YAML-NEXT:  - Type:     PT_GNU_RELRO
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .dynamic
+# YAML-NEXT:    LastSec:  .dynamic
+# YAML-NEXT:    VAddr:    0x3EF0
 # YAML-NEXT:  - Type:  PT_LOAD
 # YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .hash
-# YAML-NEXT:      - Section: .gnu.hash
-# YAML-NEXT:      - Section: .dynsym
-# YAML-NEXT:      - Section: .dynstr
-# YAML-NEXT:    Align: 0x0000000000001000
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_X, PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .foo
-# YAML-NEXT:      - Section: .zed
-# YAML-NEXT:    VAddr: 0x0000000000001000
-# YAML-NEXT:    Align: 0x0000000000001000
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: '.foo (1)'
-# YAML-NEXT:      - Section: .baz
-# YAML-NEXT:    VAddr: 0x0000000000002000
-# YAML-NEXT:    Align: 0x0000000000001000
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_W, PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .dynamic
-# YAML-NEXT:      - Section: .dynamic.tail
-# YAML-NEXT:    VAddr: 0x0000000000003EF0
-# YAML-NEXT:    Align: 0x0000000000001000
-# YAML-NEXT:  - Type:  PT_DYNAMIC
-# YAML-NEXT:    Flags: [ PF_W, PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .dynamic
-# YAML-NEXT:    VAddr: 0x0000000000003EF0
-# YAML-NEXT:    Align: 0x0000000000000008
-# YAML-NEXT:  - Type:  PT_GNU_RELRO
-# YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .dynamic
-# YAML-NEXT:    VAddr: 0x0000000000003EF0
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    VAddr: 0x0000000000004000
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .gnu.hash
-# YAML-NEXT:    VAddr: 0x00000000000001A0
-# YAML-NEXT:  - Type:  PT_LOAD
-# YAML-NEXT:    Flags: [ PF_R ]
-# YAML-NEXT:    Sections:
-# YAML-NEXT:      - Section: .gnu.hash
-# YAML-NEXT:    VAddr: 0x00000000000001A0
+# YAML-NEXT:    VAddr: 0x4000
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .gnu.hash
+# YAML-NEXT:    LastSec:  .gnu.hash
+# YAML-NEXT:    VAddr:    0x1A0
+# YAML-NEXT:  - Type:     PT_LOAD
+# YAML-NEXT:    Flags:    [ PF_R ]
+# YAML-NEXT:    FirstSec: .gnu.hash
+# YAML-NEXT:    LastSec:  .gnu.hash
+# YAML-NEXT:    VAddr:    0x1A0
 # YAML-NEXT: Sections:
 
 --- !ELF
@@ -101,82 +95,75 @@ ProgramHeaders:
 ## Check we can create a PT_LOAD with arbitrary (we used .hash, .gnu.hash)
 ## and implicit sections (we use .dynsym, .dynstr). It also checks that the
 ## SHT_NULL section at index 0 is not included in the segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .hash
-      - Section: .gnu.hash
-      - Section: .dynsym
-      - Section: .dynstr
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .hash
+    LastSec:  .dynstr
     Align:  0x1000
     Offset: 0x0
 ## Check we can create a PT_LOAD with a different set of properties and sections.
-  - Type:  PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    Sections:
-      - Section: .foo
-      - Section: .zed
-    VAddr: 0x1000
-    Align: 0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .foo
+    LastSec:  .zed
+    VAddr:    0x1000
+    Align:    0x1000
 ## Create a PT_LOAD to demonstate we are able to refer to output sections with the same name.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: '.foo (1)'
-      - Section: .baz
-    VAddr: 0x2000
-    Align: 0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: '.foo (1)'
+    LastSec:  .baz
+    VAddr:    0x2000
+    Align:    0x1000
 ## Show we can create a writeable PT_LOAD segment and put an arbitrary section into it.
 ## Here we test both regular (SHT_PROGBITS) and a special section (SHT_DYNAMIC).
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .dynamic
-      - Section: .dynamic.tail
-    VAddr: 0x3EF0
-    Align: 0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic.tail
+    VAddr:    0x3EF0
+    Align:    0x1000
 ## Show we can create a nested dynamic segment and put a section into it.
-  - Type:  PT_DYNAMIC
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .dynamic
-    VAddr: 0x3EF0
-    Align: 0x8
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+    VAddr:    0x3EF0
+    Align:    0x8
 ## Show we can create a relro segment and put a section into it.
 ## We used .dynamic here and in tests above to demonstrate that
 ## we can place a section in any number of segments.
 ## Also, we explicitly set the "Align" property to 1 to demonstate
 ## that we do not dump it, because it is the default alignment
 ## value set by yaml2obj.
-  - Type:  PT_GNU_RELRO
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .dynamic
-    VAddr: 0x3EF0
-    Align: 0x1
+  - Type:     PT_GNU_RELRO
+    Flags:    [ PF_R ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+    VAddr:    0x3EF0
+    Align:    0x1
 ## Show we can dump a standalone empty segment.
   - Type:  PT_LOAD
     Flags: [ PF_R ]
-    Sections: [ ]
     VAddr: 0x4000
     Align: 0x1
 ## ELF specification says that loadable segment entries in the
 ## program header are sorted by virtual address.
 ## Show we can dump an out of order segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .gnu.hash
-    VAddr: 0x1A0
-    Align: 0x1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash
+    VAddr:    0x1A0
+    Align:    0x1
 ## Test we are able to dump duplicated segments.
 ## We use a segment that is the same as the previous one for this.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .gnu.hash
-    VAddr: 0x1A0
-    Align: 0x1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .gnu.hash
+    LastSec:  .gnu.hash
+    VAddr:    0x1A0
+    Align:    0x1
 Sections:
   - Name:    .hash
     Type:    SHT_PROGBITS
@@ -240,31 +227,27 @@ DynamicSymbols: []
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=EMPTY
 
-# EMPTY:      - Type:  PT_LOAD
-# EMPTY-NEXT:   Flags: [ PF_W, PF_R ]
-# EMPTY-NEXT:   Sections:
-# EMPTY-NEXT:     - Section: .empty.tls.start
-# EMPTY-NEXT:     - Section: .section.1
-# EMPTY-NEXT:     - Section: .empty.tls.middle
-# EMPTY-NEXT:     - Section: .section.2
-# EMPTY-NEXT:     - Section: .empty.tls.end
-# EMPTY-NEXT:   VAddr: 0x0000000000001000
-# EMPTY-NEXT:   Align: 0x0000000000001000
-# EMPTY-NEXT: - Type:            PT_TLS
-# EMPTY-NEXT:   Flags:           [ PF_W, PF_R ]
-# EMPTY-NEXT:   Sections:
-# EMPTY-NEXT:     - Section:         .empty.tls.start
-# EMPTY-NEXT:   VAddr:           0x0000000000001000
-# EMPTY-NEXT: - Type:            PT_TLS
-# EMPTY-NEXT:   Flags:           [ PF_W, PF_R ]
-# EMPTY-NEXT:   Sections:
-# EMPTY-NEXT:     - Section:         .empty.tls.middle
-# EMPTY-NEXT:   VAddr:           0x0000000000001100
-# EMPTY-NEXT: - Type:            PT_TLS
-# EMPTY-NEXT:   Flags:           [ PF_W, PF_R ]
-# EMPTY-NEXT:   Sections:
-# EMPTY-NEXT:     - Section:         .empty.tls.end
-# EMPTY-NEXT:   VAddr:           0x0000000000001200
+# EMPTY:      - Type:     PT_LOAD
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.start
+# EMPTY-NEXT:   LastSec:  .empty.tls.end
+# EMPTY-NEXT:   VAddr:    0x1000
+# EMPTY-NEXT:   Align:    0x1000
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.start
+# EMPTY-NEXT:   LastSec:  .empty.tls.start
+# EMPTY-NEXT:   VAddr:    0x1000
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.middle
+# EMPTY-NEXT:   LastSec:  .empty.tls.middle
+# EMPTY-NEXT:   VAddr:    0x1100
+# EMPTY-NEXT: - Type:     PT_TLS
+# EMPTY-NEXT:   Flags:    [ PF_W, PF_R ]
+# EMPTY-NEXT:   FirstSec: .empty.tls.end
+# EMPTY-NEXT:   LastSec:  .empty.tls.end
+# EMPTY-NEXT:   VAddr:    0x1200
 # EMPTY-NEXT: Sections:
 
 --- !ELF
@@ -273,34 +256,30 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .empty.tls.start
-      - Section: .section.1
-      - Section: .empty.tls.middle
-      - Section: .section.2
-      - Section: .empty.tls.end
-    VAddr: 0x1000
-    Align: 0x1000
-  - Type:  PT_TLS
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .empty.tls.start
-    VAddr: 0x1000
-    Align: 0x1
-  - Type:  PT_TLS
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .empty.tls.middle
-    VAddr: 0x1100
-    Align: 0x1
-  - Type:  PT_TLS
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .empty.tls.end
-    VAddr: 0x1200
-    Align: 0x1
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.start
+    LastSec:  .empty.tls.end
+    VAddr:    0x1000
+    Align:    0x1000
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.start
+    LastSec:  .empty.tls.start
+    VAddr:    0x1000
+    Align:    0x1
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.middle
+    LastSec:  .empty.tls.middle
+    VAddr:    0x1100
+    Align:    0x1
+  - Type:     PT_TLS
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .empty.tls.end
+    LastSec:  .empty.tls.end
+    VAddr:    0x1200
+    Align:    0x1
 Sections:
   - Name:    .empty.tls.start
     Type:    SHT_PROGBITS
@@ -337,12 +316,12 @@ Sections:
 # MISALIGNED-READELF-NEXT: LOAD 0x000077 0x0000000000001000 0x0000000000001000 0x000078 0x000078 R   0x1000
 
 # MISALIGNED-YAML:      ProgramHeaders:
-# MISALIGNED-YAML-NEXT:  - Type:  PT_LOAD
-# MISALIGNED-YAML-NEXT:    Flags: [ PF_R ]
-# MISALIGNED-YAML-NEXT:    Sections:
-# MISALIGNED-YAML-NEXT:     - Section: .foo
-# MISALIGNED-YAML-NEXT:    VAddr: 0x0000000000001000
-# MISALIGNED-YAML-NEXT:    Align: 0x0000000000001000
+# MISALIGNED-YAML-NEXT:  - Type:     PT_LOAD
+# MISALIGNED-YAML-NEXT:    Flags:    [ PF_R ]
+# MISALIGNED-YAML-NEXT:    FirstSec: .foo
+# MISALIGNED-YAML-NEXT:    LastSec:  .foo
+# MISALIGNED-YAML-NEXT:    VAddr:    0x1000
+# MISALIGNED-YAML-NEXT:    Align:    0x1000
 # MISALIGNED-YAML-NEXT: Sections:
 
 --- !ELF
@@ -351,13 +330,13 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .foo
-    VAddr:  0x1000
-    Align:  0x1000
-    Offset: 0x000077
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .foo
+    VAddr:    0x1000
+    Align:    0x1000
+    Offset:   0x000077
 Sections:
   - Name:    .foo
     Type:    SHT_PROGBITS
@@ -371,13 +350,22 @@ Sections:
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefix=NON-ALLOC
 
 # NON-ALLOC:      ProgramHeaders:
-# NON-ALLOC-NEXT:   - Type:  PT_LOAD
-# NON-ALLOC-NEXT:     Flags: [ PF_R ]
-# NON-ALLOC-NEXT:     Sections:
-# NON-ALLOC-NEXT:      - Section: .alloc.1
-# NON-ALLOC-NEXT:      - Section: .non-alloc.1
-# NON-ALLOC-NEXT:      - Section: .alloc.2
-# NON-ALLOC-NEXT:     VAddr: 0x0000000000001000
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .non-alloc.1
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.2
+# NON-ALLOC-NEXT:   LastSec:  .alloc.2
+# NON-ALLOC-NEXT: - Type:     PT_LOAD
+# NON-ALLOC-NEXT:   Flags:    [ PF_R ]
+# NON-ALLOC-NEXT:   FirstSec: .alloc.1
+# NON-ALLOC-NEXT:   LastSec:  .alloc.2
 # NON-ALLOC-NEXT: Sections:
 
 --- !ELF
@@ -386,12 +374,22 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .alloc.1
-      - Section: .alloc.2
-    VAddr:  0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .non-alloc.1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .non-alloc.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .non-alloc.2
+    LastSec:  .alloc.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .alloc.1
+    LastSec:  .alloc.2
 Sections:
   - Name:    .alloc.1
     Type:    SHT_PROGBITS
@@ -416,32 +414,27 @@ Sections:
 # RUN: obj2yaml %t5 | FileCheck %s --check-prefix=NOBITS
 
 # NOBITS:      ProgramHeaders:
-# NOBITS-NEXT:   - Type:  PT_LOAD
-# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
-# NOBITS-NEXT:     Sections:
-# NOBITS-NEXT:       - Section: .bss
-# NOBITS-NEXT:   - Type:  PT_LOAD
-# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
-# NOBITS-NEXT:     Sections:
-# NOBITS-NEXT:       - Section: .data.1
-# NOBITS-NEXT:       - Section: .bss
-# NOBITS-NEXT:   - Type:  PT_LOAD
-# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
-# NOBITS-NEXT:     Sections:
-# NOBITS-NEXT:       - Section: .data.1
-# NOBITS-NEXT:       - Section: .bss
-# NOBITS-NEXT:       - Section: .data.2
-# NOBITS-NEXT:   - Type:  PT_LOAD
-# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
-# NOBITS-NEXT:     Sections:
-# NOBITS-NEXT:       - Section: .bss
-# NOBITS-NEXT:       - Section: .data.2
-# NOBITS-NEXT:   - Type:  PT_LOAD
-# NOBITS-NEXT:     Flags: [ PF_W, PF_R ]
-# NOBITS-NEXT:     Sections:
-# NOBITS-NEXT:       - Section: .foo.bss
-# NOBITS-NEXT:       - Section: .bar.bss
-# NOBITS-NEXT:     VAddr: 0x0000000200000000
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .bss
+# NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .data.1
+# NOBITS-NEXT:     LastSec:  .bss
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .data.1
+# NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .bss
+# NOBITS-NEXT:     LastSec:  .data.2
+# NOBITS-NEXT:   - Type:     PT_LOAD
+# NOBITS-NEXT:     Flags:    [ PF_W, PF_R ]
+# NOBITS-NEXT:     FirstSec: .foo.bss
+# NOBITS-NEXT:     LastSec:  .bar.bss
+# NOBITS-NEXT:     VAddr:    0x200000000
 # NOBITS-NEXT: Sections:
 
 --- !ELF
@@ -451,36 +444,31 @@ FileHeader:
   Type:  ET_EXEC
 ProgramHeaders:
 ## Case 1: the segment contains a single SHT_NOBITS section.
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .bss
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bss
+    LastSec:  .bss
 ## Case 2: the SHT_NOBITS section is the last section in the segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .data.1
-      - Section: .bss
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .data.1
+    LastSec:  .bss
 ## Case 3: the SHT_NOBITS section is in the middle of the segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .data.1
-      - Section: .bss
-      - Section: .data.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .data.1
+    LastSec:  .data.2
 ## Case 4: the SHT_NOBITS section is the first section in the segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .bss
-      - Section: .data.2
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bss
+    LastSec:  .data.2
 ## Case 5: another two SHT_NOBITS sections in a different segment.
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .foo.bss
-      - Section: .bar.bss
-    VAddr: 0x200000000
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .foo.bss
+    LastSec:  .bar.bss
+    VAddr:    0x200000000
 Sections:
   - Name:    .data.1
     Type:    SHT_PROGBITS
@@ -518,7 +506,7 @@ Sections:
 # RUN: not yaml2obj --docnum=6 %s -o %t6 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=UNSORTED --implicit-check-not="error:"
 
-# UNSORTED:      error: sections in the program header with index 1 are not sorted by their file offset
+# UNSORTED:      error: program header with index 0: the section index of .bar is greater than the index of .foo
 # UNSORTED-NEXT: error: sections in the program header with index 3 are not sorted by their file offset
 
 --- !ELF
@@ -529,30 +517,27 @@ FileHeader:
 ProgramHeaders:
 ## Case 1: the .bar section is placed after the .foo section in the file.
 ##         Check we report an error about the violation of the order.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .bar
-      - Section: .foo
-    VAddr:  0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .bar
+    LastSec:  .foo
+    VAddr:    0x1000
 ## There is nothing wrong with this segment. We have it to show that
 ## we report correct program header indices in error messages.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .foo
-      - Section: .bar
-    VAddr:  0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .foo
+    LastSec:  .bar
+    VAddr:    0x1000
 ## Case 2: the .bar section is placed before the .zed section in the file,
 ##         but the sh_offset of .zed is less than the sh_offset of
 ##         the .bar section because of the "ShOffset" property.
 ##         Document we report an error for such a case.
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .bar
-      - Section: .zed
-    VAddr:  0x1001
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .bar
+    LastSec:  .zed
+    VAddr:    0x1001
 Sections:
   - Name:    .foo
     Type:    SHT_PROGBITS
@@ -578,7 +563,7 @@ Sections:
 ##        2) '.bar1' ends at 0x79, which is the starting file offset of both '.empty.bar2'
 ##           and '.empty.zed'. We should only include '.empty.bar2', because the VA of the
 ##           '.empty.zed' section is outside the segment's virtual space.
-# RUN: llvm-readelf -sections %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
+# RUN: llvm-readelf -S %t7 | FileCheck %s --check-prefix=ZERO-SIZE-MAPPING
 
 # ZERO-SIZE-MAPPING:      Section Headers:
 # ZERO-SIZE-MAPPING-NEXT:   [Nr] Name        Type     Address          Off    Size
@@ -591,13 +576,11 @@ Sections:
 # RUN: obj2yaml %t7 | FileCheck %s --check-prefix=ZERO-SIZE
 
 # ZERO-SIZE:      ProgramHeaders:
-# ZERO-SIZE-NEXT:   - Type:  PT_LOAD
-# ZERO-SIZE-NEXT:     Flags: [ PF_W, PF_R ]
-# ZERO-SIZE-NEXT:     Sections:
-# ZERO-SIZE-NEXT:       - Section: .empty.bar1
-# ZERO-SIZE-NEXT:       - Section: .bar
-# ZERO-SIZE-NEXT:       - Section: .empty.bar2
-# ZERO-SIZE-NEXT:     VAddr: 0x0000000000002000
+# ZERO-SIZE-NEXT:   - Type:     PT_LOAD
+# ZERO-SIZE-NEXT:     Flags:    [ PF_W, PF_R ]
+# ZERO-SIZE-NEXT:     FirstSec: .empty.bar1
+# ZERO-SIZE-NEXT:     LastSec:  .empty.bar2
+# ZERO-SIZE-NEXT:     VAddr:    0x2000
 # ZERO-SIZE-NEXT: Sections:
 
 --- !ELF
@@ -606,11 +589,11 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    Sections:
-      - Section: .bar
-    VAddr: 0x2000
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    FirstSec: .bar
+    LastSec:  .bar
+    VAddr:    0x2000
 Sections:
   - Name:    .empty.foo
     Type:    SHT_PROGBITS
@@ -642,11 +625,11 @@ Sections:
 # RUN: obj2yaml %t8 | FileCheck %s --check-prefix=BROKEN-VA
 
 # BROKEN-VA:      ProgramHeaders:
-# BROKEN-VA-NEXT:  - Type:  PT_LOAD
-# BROKEN-VA-NEXT:    Flags: [ PF_W, PF_R ]
-# BROKEN-VA-NEXT:    Sections:
-# BROKEN-VA-NEXT:      - Section: .empty_middle
-# BROKEN-VA-NEXT:    VAddr: 0x0000000000001000
+# BROKEN-VA-NEXT:  - Type:     PT_LOAD
+# BROKEN-VA-NEXT:    Flags:    [ PF_W, PF_R ]
+# BROKEN-VA-NEXT:    FirstSec: .empty_middle
+# BROKEN-VA-NEXT:    LastSec:  .empty_middle
+# BROKEN-VA-NEXT:    VAddr:    0x1000
 
 --- !ELF
 FileHeader:
@@ -654,13 +637,11 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_W, PF_R ]
-    VAddr: 0x1000
-    Sections:
-      - Section: .empty_begin
-      - Section: .empty_middle
-      - Section: .empty_end
+  - Type:     PT_LOAD
+    Flags:    [ PF_W, PF_R ]
+    VAddr:    0x1000
+    FirstSec: .empty_begin
+    LastSec:  .empty_end
 Sections:
   - Name:    .empty_begin
     Type:    SHT_PROGBITS

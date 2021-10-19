@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Transforms/Passes.h"
@@ -36,9 +36,8 @@ private:
 void PrintOpStatsPass::runOnOperation() {
   opCount.clear();
 
-  // Compute the operation statistics for each function in the module.
-  for (auto &op : getOperation())
-    op.walk([&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
+  // Compute the operation statistics for the currently visited operation.
+  getOperation()->walk([&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
   printSummary();
 }
 
@@ -81,6 +80,6 @@ void PrintOpStatsPass::printSummary() {
   }
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createPrintOpStatsPass() {
+std::unique_ptr<Pass> mlir::createPrintOpStatsPass() {
   return std::make_unique<PrintOpStatsPass>();
 }

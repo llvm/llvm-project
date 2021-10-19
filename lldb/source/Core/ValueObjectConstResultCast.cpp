@@ -27,7 +27,7 @@ ValueObjectConstResultCast::ValueObjectConstResultCast(
   m_name = name;
 }
 
-ValueObjectConstResultCast::~ValueObjectConstResultCast() {}
+ValueObjectConstResultCast::~ValueObjectConstResultCast() = default;
 
 lldb::ValueObjectSP ValueObjectConstResultCast::Dereference(Status &error) {
   return m_impl.Dereference(error);

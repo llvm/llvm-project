@@ -34,13 +34,13 @@ Sections:
   - Name: .section.foo
     Type: SHT_PROGBITS
     Size: 0x40
-SectionHeaderTable:
-  Sections:
-    - Name: [[SEC1]]
-    - Name: [[SEC2]]
-    - Name: [[SEC3]]
-    - Name: .strtab
-    - Name: .shstrtab
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: [[SEC1]]
+      - Name: [[SEC2]]
+      - Name: [[SEC3]]
+      - Name: .strtab
+      - Name: .shstrtab
 
 ## Show we are able to reorder sections.
 # RUN: yaml2obj %s -o %t2 -DSEC3=".section (1)" -DSEC2=".section (2)" -DSEC1=".section.foo"
@@ -93,8 +93,8 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
-SectionHeaderTable:
-  Sections: []
+  - Type: SectionHeaderTable
+    Sections: []
 
 ## Test that we are able to use "NoHeaders" property to produce an empty section header table.
 # RUN: yaml2obj %s --docnum=3 -DNOHEADERS=true -o %t3.1
@@ -113,8 +113,8 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
-SectionHeaderTable:
-  NoHeaders: [[NOHEADERS]]
+  - Type: SectionHeaderTable
+    NoHeaders: [[NOHEADERS]]
 
 ## Test that we are able to set NoHeaders to false. In this case the tool produces an output
 ## as if there were no `SectionHeaderTable` key at all.
@@ -137,7 +137,7 @@ SectionHeaderTable:
 # RUN: not yaml2obj %s --docnum=4 -DNOHEADERS=true -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECTIONS-NO-HEADERS
 # RUN: not yaml2obj %s --docnum=4 -DNOHEADERS=false -o /dev/null 2>&1 | FileCheck %s --check-prefix=SECTIONS-NO-HEADERS
 
-# SECTIONS-NO-HEADERS: error: NoHeaders can't be used together with Sections/Excluded
+# SECTIONS-NO-HEADERS: error: NoHeaders can't be used together with Offset/Sections/Excluded
 
 --- !ELF
 FileHeader:
@@ -147,14 +147,22 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
-SectionHeaderTable:
-  Sections:  []
-  NoHeaders: [[NOHEADERS]]
+  - Type: SectionHeaderTable
+    Sections:  []
+    NoHeaders: [[NOHEADERS]]
 
-## Check that we do not allow an empty SectionHeaderTable tag and suggest to use an explicit syntax instead.
-# RUN: not yaml2obj %s --docnum=5 -DVAL="" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-VALUE
+## Check that we allow using an empty SectionHeaderTable definition.
+## It can be used to emit the default section header table at an arbitrary position.
 
-# NO-VALUE: SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the section header table
+# RUN: yaml2obj %s --docnum=5 -o %t5.novalues
+# RUN: llvm-readelf --sections %t5.novalues | \
+# RUN:   FileCheck %s --check-prefix=NO-VALUES
+
+## Check we placed the section header table before the .foo section.
+
+# NO-VALUES: There are 4 section headers, starting at offset 0x40:
+# NO-VALUES: [Nr] Name Type     Address          Off    Size
+# NO-VALUES: [ 1] .foo PROGBITS 0000000000000000 000140 000000
 
 --- !ELF
 FileHeader:
@@ -162,19 +170,14 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
+  - Type: SectionHeaderTable
   - Name: .foo
     Type: SHT_PROGBITS
-SectionHeaderTable: [[VAL]]
-
-## An empty mapping is also not allowed for the SectionHeaderTable tag.
-# RUN: not yaml2obj %s --docnum=5 -DVAL="[]" -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOT-A-MAPPING
-
-# NOT-A-MAPPING: error: not a mapping
 
 ## Test that we are still able to override e_shoff, e_shnum and e_shstrndx
 ## fields even when we do not produce section headers.
 # RUN: yaml2obj %s --docnum=6 -o %t4
-# RUN: llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
+# RUN: not llvm-readelf --file-headers %t4 | FileCheck %s --check-prefix=NO-HEADERS-OVERRIDE
 
 # NO-HEADERS-OVERRIDE: Start of section headers:          2 (bytes into file)
 # NO-HEADERS-OVERRIDE: Number of section headers:         3
@@ -189,10 +192,8 @@ FileHeader:
   EShNum:    0x3
   EShStrNdx: 0x4
 Sections:
-  - Name: .foo
-    Type: SHT_PROGBITS
-SectionHeaderTable:
-  NoHeaders: true
+  - Type:      SectionHeaderTable
+    NoHeaders: true
 
 ## Check that section indices are updated properly in other places when we
 ## reorder sections in the section header table.
@@ -236,17 +237,220 @@ Sections:
   - Name: .another.2
     Link: .bar
     Type: SHT_PROGBITS
-SectionHeaderTable:
-  Sections:
-    - Name: [[SEC1]]
-    - Name: [[SEC2]]
-    - Name: .another.1
-    - Name: .another.2
-    - Name: .symtab
-    - Name: .strtab
-    - Name: .shstrtab
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: [[SEC1]]
+      - Name: [[SEC2]]
+      - Name: .another.1
+      - Name: .another.2
+      - Name: .symtab
+      - Name: .strtab
+      - Name: .shstrtab
 Symbols:
   - Name:    foo
     Section: .foo
   - Name:    bar
     Section: .bar
+
+## Check that when "NoHeaders" is set to "true" then we don't emit
+## the .shstrtab section implicitly and don't write the data of the
+## section header table to the file.
+
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: wc -c < %t8 | FileCheck %s --check-prefix=SIZE
+
+# SIZE: 511{{$}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+## We don't want any implicit sections to be added after the .foo section,
+## so add them here explicitly.
+  - Name: .strtab
+    Type: SHT_STRTAB
+## Nothing should be emitted after the following section.
+## So we know that the expected file size is 0x100 + 0xFF == 0x1FF == 511.
+  - Name:   .foo
+    Type:   SHT_PROGBITS
+## Unaligned size. Used to make sure that we don't try to align the file offset
+## for writing the section header table.
+    Size:   0xFF
+    Offset: 0x100
+  - Type:      SectionHeaderTable
+    NoHeaders: true
+
+## Check we do not allow using "Offset" together with "NoHeaders".
+# RUN: not yaml2obj %s --docnum=9 -DNOHEADERS=true -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-HEADERS-OFFSET
+# RUN: not yaml2obj %s --docnum=9 -DNOHEADERS=false -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-HEADERS-OFFSET
+
+# NO-HEADERS-OFFSET: error: NoHeaders can't be used together with Offset/Sections/Excluded
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+  - Type:      SectionHeaderTable
+    Offset:    0x1000
+    NoHeaders: [[NOHEADERS]]
+
+## Check we can place the section header table before other sections.
+
+# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: llvm-readelf --file-headers --sections %t10 | FileCheck %s --check-prefix=PLACE-BEFORE
+
+# PLACE-BEFORE: Start of section headers:  64 (bytes into file)
+# PLACE-BEFORE: Size of section headers:   64 (bytes)
+# PLACE-BEFORE: Number of section headers: 4
+
+# PLACE-BEFORE: Section Headers:
+# PLACE-BEFORE:   [Nr] Name Type     Address          Off    Size
+## 0x140 == Start of section headers (64) + Size of section headers (64) * Number of section headers (4);
+# PLACE-BEFORE:   [ 1] .foo PROGBITS 0000000000000000 000140 000000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:   SectionHeaderTable
+    Offset: [[OFFSET=<none>]]
+    Sections:
+      - Name: .foo
+      - Name: .strtab
+      - Name: .shstrtab
+  - Name: .foo
+    Type: SHT_PROGBITS
+
+## Check we can use the Offset key to place the section header table at a different location.
+
+# RUN: yaml2obj %s --docnum=10 -DOFFSET=0x1000 -o %t10.offset
+# RUN: llvm-readelf --file-headers --sections %t10.offset | \
+# RUN:   FileCheck %s --check-prefix=PLACE-BEFORE-OFFSET
+
+# PLACE-BEFORE-OFFSET: Start of section headers:          4096 (bytes into file)
+# PLACE-BEFORE-OFFSET: Size of section headers:           64 (bytes)
+# PLACE-BEFORE-OFFSET: Number of section headers:         4
+
+# PLACE-BEFORE-OFFSET: Section Headers:
+# PLACE-BEFORE-OFFSET:   [Nr] Name Type     Address          Off    Size
+## 0x1100 == Start of section headers (0x1000) + Size of section headers (64) * Number of section headers (4);
+# PLACE-BEFORE-OFFSET:   [ 1] .foo PROGBITS 0000000000000000 001100 000000
+
+## Check we can place the section header table somewhere in the middle of the sections list.
+
+# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: llvm-readelf --sections %t11 | FileCheck %s --check-prefix=PLACE-AT-MIDDLE
+
+# PLACE-AT-MIDDLE: There are 5 section headers, starting at offset 0x140:
+# PLACE-AT-MIDDLE:      [Nr] Name      Type     Address          Off    Size
+# PLACE-AT-MIDDLE:      [ 1] .foo      PROGBITS 0000000000000000 000040 000100
+## The section header table is placed here, at 0x40 + 0x100 == 0x140.
+## The size of the table is 5 * 64 == 320 == 0x140.
+## 0x140 + 0x140 == offset of the .bar section.
+# PLACE-AT-MIDDLE-NEXT: [ 2] .bar      PROGBITS 0000000000000000 000280 000200
+# PLACE-AT-MIDDLE-NEXT: [ 3] .strtab   STRTAB   0000000000000000 000480 000001
+# PLACE-AT-MIDDLE-NEXT: [ 4] .shstrtab STRTAB   0000000000000000 000481 00001d
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 0x100
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .foo
+      - Name: .bar
+      - Name: .strtab
+      - Name: .shstrtab
+  - Name: .bar
+    Type: SHT_PROGBITS
+    Size: 0x200
+
+## Check we don`t allow having multiple SectionHeaderTable chunks.
+
+# RUN: not yaml2obj %s --docnum=12 -o /dev/null 2>&1 | FileCheck %s --check-prefix=MULTIPLE
+
+# MULTIPLE: error: multiple section header tables are not allowed
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type:     SectionHeaderTable
+    Sections: []
+  - Type:     SectionHeaderTable
+    Sections: []
+
+## Check that we place implicit sections before the section header table
+## when it is placed at the end explicitly.
+
+# RUN: yaml2obj %s --docnum=13 -o %t13
+# RUN: llvm-readelf --sections %t13 | FileCheck %s --check-prefix=IMPLICIT
+
+# IMPLICIT:      There are 3 section headers, starting at offset 0x58:
+# IMPLICIT:      [Nr] Name      Type   Address          Off    Size
+# IMPLICIT:      [ 1] .strtab   STRTAB 0000000000000000 000040 000001
+# IMPLICIT-NEXT: [ 2] .shstrtab STRTAB 0000000000000000 000041 000013
+## The section header table is placed here, at 0x58.
+## alignTo(8, 0x41 + 0x13) == 0x58.
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .shstrtab
+
+## Show that we can reference both the first and last section in the section
+## header table, via sh_link.
+
+# RUN: yaml2obj %s --docnum=14 -o %t14
+# RUN: llvm-readelf --sections %t14 | FileCheck %s --check-prefix=LINK
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .ref.first
+      - Name: .ref.last
+      - Name: .shstrtab
+  - Name: .ref.first
+    Type: SHT_PROGBITS
+    Link: .strtab
+  - Name: .ref.last
+    Type: SHT_PROGBITS
+    Link: .shstrtab
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+
+# LINK:      There are 5 section headers
+# LINK:        [Nr] Name       Type     Address  Off      Size     ES       Flg Lk
+# LINK:        [ 1] .strtab
+# LINK-NEXT:   [ 2] .ref.first PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      1
+# LINK-NEXT:   [ 3] .ref.last  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      4
+# LINK-NEXT:   [ 4] .shstrtab

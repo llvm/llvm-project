@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -161,10 +161,8 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
 }
 
 Type::Type()
-    : std::enable_shared_from_this<Type>(), UserID(0), m_name("<INVALID TYPE>"),
-      m_symbol_file(nullptr), m_context(nullptr), m_encoding_type(nullptr),
-      m_encoding_uid(LLDB_INVALID_UID), m_encoding_uid_type(eEncodingInvalid),
-      m_compiler_type_resolve_state(ResolveState::Unresolved) {
+    : std::enable_shared_from_this<Type>(), UserID(0),
+      m_name("<INVALID TYPE>") {
   m_byte_size = 0;
   m_byte_size_has_value = false;
 }
@@ -727,6 +725,15 @@ ModuleSP Type::GetModule() {
   return ModuleSP();
 }
 
+ModuleSP Type::GetExeModule() {
+  if (m_compiler_type) {
+    SymbolFile *symbol_file = m_compiler_type.GetTypeSystem()->GetSymbolFile();
+    if (symbol_file)
+      return symbol_file->GetObjectFile()->GetModule();
+  }
+  return ModuleSP();
+}
+
 TypeAndOrName::TypeAndOrName(TypeSP &in_type_sp) {
   if (in_type_sp) {
     m_compiler_type = in_type_sp->GetForwardCompilerType();
@@ -821,6 +828,7 @@ TypeImpl::TypeImpl(const CompilerType &static_type,
 void TypeImpl::SetType(const lldb::TypeSP &type_sp) {
   if (type_sp) {
     m_static_type = type_sp->GetForwardCompilerType();
+    m_exe_module_wp = type_sp->GetExeModule();
     m_module_wp = type_sp->GetModule();
   } else {
     m_static_type.Clear();
@@ -847,6 +855,15 @@ void TypeImpl::SetType(const CompilerType &compiler_type,
 }
 
 bool TypeImpl::CheckModule(lldb::ModuleSP &module_sp) const {
+  return CheckModuleCommon(m_module_wp, module_sp);
+}
+
+bool TypeImpl::CheckExeModule(lldb::ModuleSP &module_sp) const {
+  return CheckModuleCommon(m_exe_module_wp, module_sp);
+}
+
+bool TypeImpl::CheckModuleCommon(const lldb::ModuleWP &input_module_wp,
+                                 lldb::ModuleSP &module_sp) const {
   // Check if we have a module for this type. If we do and the shared pointer
   // is can be successfully initialized with m_module_wp, return true. Else
   // return false if we didn't have a module, or if we had a module and it has
@@ -855,7 +872,7 @@ bool TypeImpl::CheckModule(lldb::ModuleSP &module_sp) const {
   // this function returns true. If we have a module, the "module_sp" will be
   // filled in with a strong reference to the module so that the module will at
   // least stay around long enough for the type query to succeed.
-  module_sp = m_module_wp.lock();
+  module_sp = input_module_wp.lock();
   if (!module_sp) {
     lldb::ModuleWP empty_module_wp;
     // If either call to "std::weak_ptr::owner_before(...) value returns true,
@@ -863,9 +880,9 @@ bool TypeImpl::CheckModule(lldb::ModuleSP &module_sp) const {
     // reference to a valid shared pointer. This helps us know if we had a
     // valid reference to a section which is now invalid because the module it
     // was in was deleted
-    if (empty_module_wp.owner_before(m_module_wp) ||
-        m_module_wp.owner_before(empty_module_wp)) {
-      // m_module_wp had a valid reference to a module, but all strong
+    if (empty_module_wp.owner_before(input_module_wp) ||
+        input_module_wp.owner_before(empty_module_wp)) {
+      // input_module_wp had a valid reference to a module, but all strong
       // references have been released and the module has been deleted
       return false;
     }
@@ -897,6 +914,13 @@ void TypeImpl::Clear() {
   m_module_wp = lldb::ModuleWP();
   m_static_type.Clear();
   m_dynamic_type.Clear();
+}
+
+ModuleSP TypeImpl::GetModule() const {
+  lldb::ModuleSP module_sp;
+  if (CheckExeModule(module_sp))
+    return module_sp;
+  return nullptr;
 }
 
 ConstString TypeImpl::GetName() const {

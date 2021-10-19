@@ -29,10 +29,10 @@ entry:
   ret void
 }
 
-declare void @C2(%Object addrspace(1)*, i32, %Object addrspace(1)*)
+declare dso_local void @C2(%Object addrspace(1)*, i32, %Object addrspace(1)*)
 
 ; Function Attrs: nounwind
-declare void @llvm.localescape(...) #0
+declare dso_local void @llvm.localescape(...) #0
 
 attributes #0 = { nounwind }
 

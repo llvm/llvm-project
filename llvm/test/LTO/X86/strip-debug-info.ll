@@ -25,7 +25,6 @@
 ; RUN:     %t-stripped.bc -disable-verify 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=CHECK-WARN
 
-; CHECK-ERR: Broken module found, compilation aborted
 ; CHECK-WARN: warning{{.*}} ignoring invalid debug info
 ; CHECK-WARN-NOT: Broken module found
 ; CHECK: foo

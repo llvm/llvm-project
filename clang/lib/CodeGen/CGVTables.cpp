@@ -427,7 +427,8 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   unsigned CallingConv;
   llvm::AttributeList Attrs;
   CGM.ConstructAttributeList(Callee.getCallee()->getName(), *CurFnInfo, GD,
-                             Attrs, CallingConv, /*AttrOnCallSite=*/true);
+                             Attrs, CallingConv, /*AttrOnCallSite=*/true,
+                             /*IsThunk=*/false, CurFuncDecl);
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
@@ -531,7 +532,7 @@ llvm::Constant *CodeGenVTables::maybeEmitThunk(GlobalDecl GD,
     OldThunkFn->setName(StringRef());
     ThunkFn = llvm::Function::Create(ThunkFnTy, llvm::Function::ExternalLinkage,
                                      Name.str(), &CGM.getModule());
-    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn);
+    CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
 
     // If needed, replace the old thunk with a bitcast.
     if (!OldThunkFn->use_empty()) {
@@ -641,7 +642,7 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
 
   llvm::Constant *target;
   if (auto *func = dyn_cast<llvm::Function>(globalVal)) {
-    target = getOrCreateRelativeStub(func, stubLinkage, isCompleteDtor);
+    target = llvm::DSOLocalEquivalent::get(func);
   } else {
     llvm::SmallString<16> rttiProxyName(globalVal->getName());
     rttiProxyName.append(".rtti_proxy");
@@ -667,74 +668,6 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
 
   builder.addRelativeOffsetToPosition(CGM.Int32Ty, target,
                                       /*position=*/vtableAddressPoint);
-}
-
-llvm::Function *CodeGenVTables::getOrCreateRelativeStub(
-    llvm::Function *func, llvm::GlobalValue::LinkageTypes stubLinkage,
-    bool isCompleteDtor) const {
-  // A complete object destructor can later be substituted in the vtable for an
-  // appropriate base object destructor when optimizations are enabled. This can
-  // happen for child classes that don't have their own destructor. In the case
-  // where a parent virtual destructor is not guaranteed to be in the same
-  // linkage unit as the child vtable, it's possible for an external reference
-  // for this destructor to be substituted into the child vtable, preventing it
-  // from being in rodata. If this function is a complete virtual destructor, we
-  // can just force a stub to be emitted for it.
-  if (func->isDSOLocal() && !isCompleteDtor)
-    return func;
-
-  llvm::SmallString<16> stubName(func->getName());
-  stubName.append(".stub");
-
-  // Instead of taking the offset between the vtable and virtual function
-  // directly, we emit a dso_local stub that just contains a tail call to the
-  // original virtual function and take the offset between that and the
-  // vtable. We do this because there are some cases where the original
-  // function that would've been inserted into the vtable is not dso_local
-  // which may require some kind of dynamic relocation which prevents the
-  // vtable from being readonly. On x86_64, taking the offset between the
-  // function and the vtable gets lowered to the offset between the PLT entry
-  // for the function and the vtable which gives us a PLT32 reloc. On AArch64,
-  // right now only CALL26 and JUMP26 instructions generate PLT relocations,
-  // so we manifest them with stubs that are just jumps to the original
-  // function.
-  auto &module = CGM.getModule();
-  llvm::Function *stub = module.getFunction(stubName);
-  if (stub) {
-    assert(stub->isDSOLocal() &&
-           "The previous definition of this stub should've been dso_local.");
-    return stub;
-  }
-
-  stub = llvm::Function::Create(func->getFunctionType(), stubLinkage, stubName,
-                                module);
-
-  // Propogate function attributes.
-  stub->setAttributes(func->getAttributes());
-
-  stub->setDSOLocal(true);
-  stub->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-  if (!stub->hasLocalLinkage()) {
-    stub->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    stub->setComdat(module.getOrInsertComdat(stubName));
-  }
-
-  // Fill the stub with a tail call that will be optimized.
-  llvm::BasicBlock *block =
-      llvm::BasicBlock::Create(module.getContext(), "entry", stub);
-  llvm::IRBuilder<> block_builder(block);
-  llvm::SmallVector<llvm::Value *, 8> args;
-  for (auto &arg : stub->args())
-    args.push_back(&arg);
-  llvm::CallInst *call = block_builder.CreateCall(func, args);
-  call->setAttributes(func->getAttributes());
-  call->setTailCall();
-  if (call->getType()->isVoidTy())
-    block_builder.CreateRetVoid();
-  else
-    block_builder.CreateRet(call);
-
-  return stub;
 }
 
 bool CodeGenVTables::useRelativeLayout() const {
@@ -795,22 +728,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD;
-
-    // Get the right global decl.
-    switch (component.getKind()) {
-    default:
-      llvm_unreachable("Unexpected vtable component kind");
-    case VTableComponent::CK_FunctionPointer:
-      GD = component.getFunctionDecl();
-      break;
-    case VTableComponent::CK_CompleteDtorPointer:
-      GD = GlobalDecl(component.getDestructorDecl(), Dtor_Complete);
-      break;
-    case VTableComponent::CK_DeletingDtorPointer:
-      GD = GlobalDecl(component.getDestructorDecl(), Dtor_Deleting);
-      break;
-    }
+    GlobalDecl GD = component.getGlobalDecl();
 
     if (CGM.getLangOpts().CUDA) {
       // Emit NULL for methods we can't codegen on this
@@ -1294,8 +1212,16 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   return !HasLTOVisibilityPublicStd(RD);
 }
 
-llvm::GlobalObject::VCallVisibility
-CodeGenModule::GetVCallVisibilityLevel(const CXXRecordDecl *RD) {
+llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
+    const CXXRecordDecl *RD, llvm::DenseSet<const CXXRecordDecl *> &Visited) {
+  // If we have already visited this RD (which means this is a recursive call
+  // since the initial call should have an empty Visited set), return the max
+  // visibility. The recursive calls below compute the min between the result
+  // of the recursive call and the current TypeVis, so returning the max here
+  // ensures that it will have no effect on the current TypeVis.
+  if (!Visited.insert(RD).second)
+    return llvm::GlobalObject::VCallVisibilityTranslationUnit;
+
   LinkageInfo LV = RD->getLinkageAndVisibility();
   llvm::GlobalObject::VCallVisibility TypeVis;
   if (!isExternallyVisible(LV.getLinkage()))
@@ -1307,13 +1233,15 @@ CodeGenModule::GetVCallVisibilityLevel(const CXXRecordDecl *RD) {
 
   for (auto B : RD->bases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
-      TypeVis = std::min(TypeVis,
-                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+      TypeVis = std::min(
+          TypeVis,
+          GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
   for (auto B : RD->vbases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
-      TypeVis = std::min(TypeVis,
-                    GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl()));
+      TypeVis = std::min(
+          TypeVis,
+          GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
   return TypeVis;
 }
@@ -1382,7 +1310,9 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
 
   if (getCodeGenOpts().VirtualFunctionElimination ||
       getCodeGenOpts().WholeProgramVTables) {
-    llvm::GlobalObject::VCallVisibility TypeVis = GetVCallVisibilityLevel(RD);
+    llvm::DenseSet<const CXXRecordDecl *> Visited;
+    llvm::GlobalObject::VCallVisibility TypeVis =
+        GetVCallVisibilityLevel(RD, Visited);
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
       VTable->setVCallVisibilityMetadata(TypeVis);
   }

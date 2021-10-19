@@ -1,11 +1,14 @@
-# RUN: llvm-mc -triple=powerpc -filetype=obj %s -o %t.32.o
-# RUN: llvm-objdump -d --no-show-raw-insn %t.32.o | FileCheck --check-prefixes=ELF32,CHECK %s
+# RUN: llvm-mc -triple=powerpc -filetype=obj %s -o %t.32be.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.32be.o | FileCheck --check-prefixes=ELF32,CHECK %s
 
-# RUN: llvm-mc -triple=powerpc64le -filetype=obj %s -o %t.64.o
-# RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck --check-prefixes=ELF64,CHECK %s
+# RUN: llvm-mc -triple=powerpcle -filetype=obj %s -o %t.32le.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.32le.o | FileCheck --check-prefixes=ELF32,CHECK %s
 
-# RUN: llvm-mc -triple=powerpc64 -filetype=obj %s -o %t.64.o
-# RUN: llvm-objdump -d --no-show-raw-insn %t.64.o | FileCheck --check-prefixes=ELF64,CHECK %s
+# RUN: llvm-mc -triple=powerpc64 -filetype=obj %s -o %t.64be.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.64be.o | FileCheck --check-prefixes=ELF64,CHECK %s
+
+# RUN: llvm-mc -triple=powerpc64le -filetype=obj %s -o %t.64le.o
+# RUN: llvm-objdump -d --no-show-raw-insn %t.64le.o | FileCheck --check-prefixes=ELF64,CHECK %s
 
 # CHECK-LABEL: <bl>:
 # ELF32-NEXT:   bl 0xfffffffc

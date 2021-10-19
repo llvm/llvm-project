@@ -4,39 +4,28 @@
 define void @arm_min_helium_f32(float* %pSrc, i32 %blockSize, float* nocapture %pResult, i32* nocapture %pIndex) {
 ; CHECK-LABEL: arm_min_helium_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r6, r7, lr}
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    vidup.u32 q2, r6, #1
-; CHECK-NEXT:    cmp r1, #4
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge.w r12, #4
-; CHECK-NEXT:    sub.w r6, r1, r12
-; CHECK-NEXT:    adds r6, #3
-; CHECK-NEXT:    mov.w lr, #1
-; CHECK-NEXT:    adr r4, .LCPI0_0
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    vidup.u32 q2, r4, #1
+; CHECK-NEXT:    movw r4, #54437
+; CHECK-NEXT:    movt r4, #21352
+; CHECK-NEXT:    vdup.32 q1, r4
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    add.w lr, lr, r6, lsr #2
-; CHECK-NEXT:    vldrw.u32 q1, [r4]
 ; CHECK-NEXT:    vmov.i32 q3, #0x4
-; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    dls lr, lr
-; CHECK:  .LBB0_1: @ %do.body
+; CHECK-NEXT:    dlstp.32 lr, r1
+; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r12
-; CHECK-NEXT:    sub.w r12, r12, #4
-; CHECK-NEXT:    vpstttt
-; CHECK-NEXT:    vldrwt.u32 q4, [r0], #16
-; CHECK-NEXT:    vcmpt.f32 ge, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0], #16
+; CHECK-NEXT:    vptt.f32 ge, q1, q4
 ; CHECK-NEXT:    vmovt q1, q4
 ; CHECK-NEXT:    vmovt q0, q2
 ; CHECK-NEXT:    vadd.i32 q2, q2, q3
-; CHECK-NEXT:    le lr, .LBB0_1
+; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
-; CHECK-NEXT:    vldr s8, .LCPI0_1
+; CHECK-NEXT:    vldr s8, .LCPI0_0
 ; CHECK-NEXT:    vdup.32 q3, r1
 ; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vminnmv.f32 r0, q1
@@ -47,7 +36,11 @@ define void @arm_min_helium_f32(float* %pSrc, i32 %blockSize, float* nocapture %
 ; CHECK-NEXT:    str r1, [r3]
 ; CHECK-NEXT:    vstr s8, [r2]
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, r6, r7, pc}
+; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long 0x5368d4a5 @ float 9.99999995E+11
 entry:
   %0 = tail call { <4 x i32>, i32 } @llvm.arm.mve.vidup.v4i32(i32 0, i32 1)
   %1 = extractvalue { <4 x i32>, i32 } %0, 0

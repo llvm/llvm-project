@@ -6,39 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_OBJCOPY_ELFCONFIG_H
-#define LLVM_TOOLS_OBJCOPY_ELFCONFIG_H
+#ifndef LLVM_TOOLS_LLVM_OBJCOPY_ELF_ELFCONFIG_H
+#define LLVM_TOOLS_LLVM_OBJCOPY_ELF_ELFCONFIG_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
 namespace objcopy {
-struct CopyConfig;
 
-namespace elf {
+// ELF specific configuration for copying/stripping a single file.
+struct ELFConfig {
+  uint8_t NewSymbolVisibility = (uint8_t)ELF::STV_DEFAULT;
 
-struct NewSymbolInfo {
-  StringRef SymbolName;
-  StringRef SectionName;
-  uint64_t Value = 0;
-  uint8_t Type = ELF::STT_NOTYPE;
-  uint8_t Bind = ELF::STB_GLOBAL;
-  uint8_t Visibility = ELF::STV_DEFAULT;
+  // ELF entry point address expression. The input parameter is an entry point
+  // address in the input ELF file. The entry address in the output file is
+  // calculated with EntryExpr(input_address), when either --set-start or
+  // --change-start is used.
+  std::function<uint64_t(uint64_t)> EntryExpr;
+
+  bool AllowBrokenLinks = false;
+  bool KeepFileSymbols = false;
+  bool LocalizeHidden = false;
 };
 
-struct ELFCopyConfig {
-  Optional<uint8_t> NewSymbolVisibility;
-  std::vector<NewSymbolInfo> SymbolsToAdd;
-};
-
-Expected<ELFCopyConfig> parseConfig(const CopyConfig &Config);
-
-} // namespace elf
 } // namespace objcopy
 } // namespace llvm
 
-#endif
+#endif // LLVM_TOOLS_LLVM_OBJCOPY_ELF_ELFCONFIG_H

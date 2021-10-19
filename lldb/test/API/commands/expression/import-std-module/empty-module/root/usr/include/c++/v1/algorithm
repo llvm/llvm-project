@@ -2,7 +2,7 @@
 // library module so the actual contents of the module are missing.
 #ifdef ENABLE_STD_CONTENT
 
-#include "libc_header.h"
+#include "stdio.h"
 
 namespace std {
   inline namespace __1 {

@@ -152,16 +152,16 @@ declare void @none3() #1
 ; DIS: ^6 = gv: (name: "cold") ; guid = 11668175513417606517
 ; DIS: ^7 = gv: (name: "hot4") ; guid = 13161834114071272798
 ; DIS: ^8 = gv: (name: "none3") ; guid = 16213681105727317812
-; DIS: ^9 = gv: (name: "hot_function", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 16, calls: ((callee: ^5, hotness: hot), (callee: ^6, hotness: cold), (callee: ^4, hotness: hot), (callee: ^7, hotness: cold), (callee: ^10, hotness: none), (callee: ^3, hotness: hot), (callee: ^2, hotness: none), (callee: ^8, hotness: none), (callee: ^1, hotness: critical))))) ; guid = 17381606045411660303
+; DIS: ^9 = gv: (name: "hot_function", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 16, calls: ((callee: ^5, hotness: hot), (callee: ^6, hotness: cold), (callee: ^4, hotness: hot), (callee: ^7, hotness: cold), (callee: ^10, hotness: none), (callee: ^3, hotness: hot), (callee: ^2, hotness: none), (callee: ^8, hotness: none), (callee: ^1, hotness: critical))))) ; guid = 17381606045411660303
 ; DIS: ^10 = gv: (name: "none1") ; guid = 17712061229457633252
 
 ; COMBINED-DIS: ^0 = module: (path: "{{.*}}thinlto-function-summary-callgraph-profile-summary.ll.tmp.o", hash: (0, 0, 0, 0, 0))
 ; COMBINED-DIS: ^1 = module: (path: "{{.*}}thinlto-function-summary-callgraph-profile-summary.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
-; COMBINED-DIS: ^2 = gv: (guid: 3741006263754194003, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^3 = gv: (guid: 5026609803865204483, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^4 = gv: (guid: 8117347573235780485, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^5 = gv: (guid: 9453975128311291976, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^6 = gv: (guid: 11668175513417606517, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^7 = gv: (guid: 16213681105727317812, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^8 = gv: (guid: 17381606045411660303, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 16, calls: ((callee: ^5, hotness: hot), (callee: ^6, hotness: cold), (callee: ^4, hotness: hot), (callee: ^9, hotness: none), (callee: ^3, hotness: hot), (callee: ^2, hotness: none), (callee: ^7, hotness: none)))))
-; COMBINED-DIS: ^9 = gv: (guid: 17712061229457633252, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^2 = gv: (guid: 3741006263754194003, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^3 = gv: (guid: 5026609803865204483, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^4 = gv: (guid: 8117347573235780485, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^5 = gv: (guid: 9453975128311291976, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^6 = gv: (guid: 11668175513417606517, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^7 = gv: (guid: 16213681105727317812, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
+; COMBINED-DIS: ^8 = gv: (guid: 17381606045411660303, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 16, calls: ((callee: ^5, hotness: hot), (callee: ^6, hotness: cold), (callee: ^4, hotness: hot), (callee: ^9, hotness: none), (callee: ^3, hotness: hot), (callee: ^2, hotness: none), (callee: ^7, hotness: none)))))
+; COMBINED-DIS: ^9 = gv: (guid: 17712061229457633252, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))

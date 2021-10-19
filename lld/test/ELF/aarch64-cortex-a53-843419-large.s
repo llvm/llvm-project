@@ -1,13 +1,14 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
 // RUN: ld.lld --fix-cortex-a53-843419 -z separate-code %t.o -o %t2
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=2162688   --stop-address=2162700   | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=2166784   --stop-address=2166788   | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=2170872   --stop-address=2170888   | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=69287928  --stop-address=69287944  | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=102842376 --stop-address=102842392 | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=136384524 --stop-address=136384528 | FileCheck --check-prefix=CHECK6 %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=136388604 --stop-address=136388628 | FileCheck --check-prefix=CHECK7 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x210000   --stop-address=0x21000c   | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x211000   --stop-address=0x211004   | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x211ff8   --stop-address=0x212008   | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x4213ff8  --stop-address=0x4214008  | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x6214008 --stop-address=0x6214018 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x821100c --stop-address=0x8211010 | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=0x8211ffc --stop-address=0x8212014 | FileCheck --check-prefix=CHECK7 %s
+// RUN: rm %t.o %t2
 // Test case for Cortex-A53 Erratum 843419 in an OutputSection exceeding
 // the maximum branch range. Both range extension thunks and patches are
 // required.					      
@@ -42,7 +43,7 @@ t3_ff8_ldr:
         ret
 
 // CHECK3: <t3_ff8_ldr>:
-// CHECK3-NEXT:    211ff8:       e0 00 04 f0     adrp    x0, #134344704
+// CHECK3-NEXT:    211ff8:       e0 00 04 f0     adrp    x0, 0x8230000
 // CHECK3-NEXT:    211ffc:       21 00 40 f9     ldr     x1, [x1]
 // CHECK3-NEXT:    212000:       02 08 80 15     b       0x6214008
 // CHECK3-NEXT:    212004:       c0 03 5f d6     ret
@@ -63,7 +64,7 @@ t3_ff8_str:
         ret
 
 // CHECK4: <t3_ff8_str>:
-// CHECK4-NEXT:  4213ff8:       e0 00 02 b0     adrp    x0, #67227648
+// CHECK4-NEXT:  4213ff8:       e0 00 02 b0     adrp    x0, 0x8230000
 // CHECK4-NEXT:  4213ffc:       21 00 40 f9     ldr     x1, [x1]
 // CHECK4-NEXT:  4214000:       04 00 80 14     b       0x6214010
 // CHECK4-NEXT:  4214004:       c0 03 5f d6     ret
@@ -102,7 +103,7 @@ t3_ffc_ldr:
         ret
 
 // CHECK7: <t3_ffc_ldr>:
-// CHECK7-NEXT:  8211ffc:       e0 00 00 f0     adrp    x0, #126976
+// CHECK7-NEXT:  8211ffc:       e0 00 00 f0     adrp    x0, 0x8230000
 // CHECK7-NEXT:  8212000:       21 00 40 f9     ldr     x1, [x1]
 // CHECK7-NEXT:  8212004:       02 00 00 14     b       0x821200c
 // CHECK7-NEXT:  8212008:       c0 03 5f d6     ret

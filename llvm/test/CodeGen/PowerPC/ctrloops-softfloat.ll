@@ -52,8 +52,8 @@ define void @foo1() #0 {
   br i1 %exitcond, label %1, label %2
   ; CHECK: bl __adddf3
   ; CHECK: cmplwi
-  ; CHECK-NOT: li [[REG1:[0-9]+]], 175
-  ; CHECK-NOT: mtctr [[REG1]]
+  ; CHECK-NOT: li {{[0-9]+}}, 175
+  ; CHECK-NOT: mtctr {{[0-9]+}}
 }
 
 define void @foo2() #0 {
@@ -75,8 +75,8 @@ define void @foo2() #0 {
   br i1 %exitcond, label %1, label %2
   ; CHECK: bl __subdf3
   ; CHECK: cmplwi
-  ; CHECK-NOT: li [[REG1:[0-9]+]], 175
-  ; CHECK-NOT: mtctr [[REG1]]
+  ; CHECK-NOT: li {{[0-9]+}}, 175
+  ; CHECK-NOT: mtctr {{[0-9]+}}
 }
 
 define void @foo3() #0 {
@@ -98,8 +98,8 @@ define void @foo3() #0 {
   br i1 %exitcond, label %1, label %2
   ; CHECK: bl __muldf3
   ; CHECK: cmplwi
-  ; CHECK-NOT: li [[REG1:[0-9]+]], 175
-  ; CHECK-NOT: mtctr [[REG1]]
+  ; CHECK-NOT: li {{[0-9]+}}, 175
+  ; CHECK-NOT: mtctr {{[0-9]+}}
 }
 
 define void @foo4() #0 {
@@ -121,8 +121,8 @@ define void @foo4() #0 {
   br i1 %exitcond, label %1, label %2
   ; CHECK: bl __divdf3
   ; CHECK: cmplwi
-  ; CHECK-NOT: li [[REG1:[0-9]+]], 175
-  ; CHECK-NOT: mtctr [[REG1]]
+  ; CHECK-NOT: li {{[0-9]+}}, 175
+  ; CHECK-NOT: mtctr {{[0-9]+}}
 }
 
 attributes #0 = { "use-soft-float"="true" }

@@ -12,6 +12,7 @@
 #include "llvm/Config/llvm-config.h"
 
 #ifdef LLVM_HAVE_TF_API
+#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/JSON.h"
 
@@ -100,6 +101,89 @@ private:
 Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
                                            const json::Value &Value);
 
+struct LoggedFeatureSpec {
+  TensorSpec Spec;
+  Optional<std::string> LoggingName;
+  const std::string &getLoggingName() const {
+    return LoggingName ? *LoggingName : Spec.name();
+  }
+};
+
+/// Load the output specs. If SpecFileOverride is not empty, that path is used.
+/// Otherwise, the file is assumed to be called 'output_spec.json' and be found
+/// under ModelPath (the model directory).
+/// The first output tensor name must match ExpectedDecisionName.
+/// In case of error, the return is None and the error is logged.
+Optional<std::vector<LoggedFeatureSpec>>
+loadOutputSpecs(LLVMContext &Ctx, StringRef ExpectedDecisionName,
+                StringRef ModelPath, StringRef SpecFileOverride = StringRef());
+
+/// Logging utility - given an ordered specification of features, and assuming
+/// a scalar reward, allow logging feature values and rewards, and then print
+/// as tf.train.SequenceExample text protobuf.
+/// The assumption is that, for an event to be logged (i.e. a set of feature
+/// values and a reward), the user calls the log* API for each feature exactly
+/// once, providing the index matching the position in the feature spec list
+/// provided at construction. The example assumes the first feature's element
+/// type is float, the second is int64, and the reward is float:
+///
+/// event 0:
+///   logFloatValue(0, ...)
+///   logInt64Value(1, ...)
+///   ...
+///   logFloatReward(...)
+/// event 1:
+///   logFloatValue(0, ...)
+///   logInt64Value(1, ...)
+///   ...
+///   logFloatReward(...)
+///
+/// At the end, call print to generate the protobuf.
+/// Alternatively, don't call logReward at the end of each event, just
+/// log{Float|Int32|Int64}FinalReward at the end.
+class LoggerDataImpl;
+class Logger final {
+public:
+  /// Construct a Logger. If IncludeReward is false, then logReward or
+  /// logFinalReward shouldn't be called, and the reward feature won't be
+  /// printed out.
+  Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
+         const TensorSpec &RewardSpec, bool IncludeReward);
+
+  ~Logger();
+
+  void logFloatReward(float Value);
+  void logInt32Reward(int32_t Value);
+  void logInt64Reward(int64_t Value);
+
+  void logFloatFinalReward(float Value);
+  void logInt32FinalReward(int32_t Value);
+  void logInt64FinalReward(int64_t Value);
+
+  void logFloatValue(size_t FeatureID, const float *Value);
+  void logInt32Value(size_t FeatureID, const int32_t *Value);
+  void logInt64Value(size_t FeatureID, const int64_t *Value);
+
+  void logSpecifiedTensorValue(size_t FeatureID, const char *RawData);
+
+  // Warning! For int32_t, the return is set up for int64_t, so the caller needs
+  // to piecemeal cast their int32_t values.
+  // FIXME: let's drop int32_t support. While it's supported by evaluator, it's
+  // not supported by the tensorflow::SequenceExample proto. For small values,
+  // we can consider using bytes.
+  char *addEntryAndGetFloatOrInt64Buffer(size_t FeatureID);
+
+  // Flush the content of the log to the stream, clearing the stored data in the
+  // process.
+  void flush(raw_ostream &OS);
+
+private:
+  std::vector<LoggedFeatureSpec> FeatureSpecs;
+  TensorSpec RewardSpec;
+  const bool IncludeReward;
+  std::unique_ptr<LoggerDataImpl> LoggerData;
+};
+
 class TFModelEvaluator final {
 public:
   /// The result of a model evaluation. Handles the lifetime of the output
@@ -138,6 +222,11 @@ public:
                    const std::vector<TensorSpec> &InputSpecs,
                    const std::vector<TensorSpec> &OutputSpecs,
                    const char *Tags = "serve");
+  TFModelEvaluator(StringRef SavedModelPath,
+                   const std::vector<TensorSpec> &InputSpecs,
+                   function_ref<TensorSpec(size_t)> GetOutputSpecs,
+                   size_t OutputSpecsSize, const char *Tags = "serve");
+
   ~TFModelEvaluator();
   TFModelEvaluator(const TFModelEvaluator &) = delete;
   TFModelEvaluator(TFModelEvaluator &&) = delete;

@@ -51,7 +51,7 @@ bool ExecuteStage::isAvailable(const InstRef &IR) const {
 }
 
 Error ExecuteStage::issueInstruction(InstRef &IR) {
-  SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> Used;
+  SmallVector<ResourceUse, 4> Used;
   SmallVector<InstRef, 4> Pending;
   SmallVector<InstRef, 4> Ready;
 
@@ -203,7 +203,7 @@ Error ExecuteStage::execute(InstRef &IR) {
   unsigned NumMicroOps = Inst.getNumMicroOps();
   NumDispatchedOpcodes += NumMicroOps;
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
- 
+
   if (!IsReadyInstruction) {
     if (Inst.isPending())
       notifyInstructionPending(IR);
@@ -250,20 +250,19 @@ void ExecuteStage::notifyResourceAvailable(const ResourceRef &RR) const {
 }
 
 void ExecuteStage::notifyInstructionIssued(
-    const InstRef &IR,
-    MutableArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const {
+    const InstRef &IR, MutableArrayRef<ResourceUse> Used) const {
   LLVM_DEBUG({
     dbgs() << "[E] Instruction Issued: #" << IR << '\n';
-    for (const std::pair<ResourceRef, ResourceCycles> &Resource : Used) {
-      assert(Resource.second.getDenominator() == 1 && "Invalid cycles!");
-      dbgs() << "[E] Resource Used: [" << Resource.first.first << '.'
-             << Resource.first.second << "], ";
-      dbgs() << "cycles: " << Resource.second.getNumerator() << '\n';
+    for (const ResourceUse &Use : Used) {
+      assert(Use.second.getDenominator() == 1 && "Invalid cycles!");
+      dbgs() << "[E] Resource Used: [" << Use.first.first << '.'
+             << Use.first.second << "], ";
+      dbgs() << "cycles: " << Use.second.getNumerator() << '\n';
     }
   });
 
   // Replace resource masks with valid resource processor IDs.
-  for (std::pair<ResourceRef, ResourceCycles> &Use : Used)
+  for (ResourceUse &Use : Used)
     Use.first.first = HWS.getResourceID(Use.first.first);
 
   notifyEvent<HWInstructionEvent>(HWInstructionIssuedEvent(IR, Used));

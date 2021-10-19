@@ -13,9 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
-#include <map>
 #include <memory>
-#include <string>
 
 namespace clang {
 namespace tidy {

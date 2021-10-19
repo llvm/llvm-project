@@ -12,23 +12,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_CAPI_IR_H
-#define MLIR_INCLUDE_MLIR_CAPI_IR_H
+#ifndef MLIR_CAPI_IR_H
+#define MLIR_CAPI_IR_H
 
 #include "mlir/CAPI/Wrap.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 
 DEFINE_C_API_PTR_METHODS(MlirContext, mlir::MLIRContext)
+DEFINE_C_API_PTR_METHODS(MlirDialect, mlir::Dialect)
 DEFINE_C_API_PTR_METHODS(MlirOperation, mlir::Operation)
 DEFINE_C_API_PTR_METHODS(MlirBlock, mlir::Block)
+DEFINE_C_API_PTR_METHODS(MlirOpPrintingFlags, mlir::OpPrintingFlags)
 DEFINE_C_API_PTR_METHODS(MlirRegion, mlir::Region)
 
 DEFINE_C_API_METHODS(MlirAttribute, mlir::Attribute)
+DEFINE_C_API_METHODS(MlirIdentifier, mlir::Identifier)
 DEFINE_C_API_METHODS(MlirLocation, mlir::Location)
-DEFINE_C_API_METHODS(MlirType, mlir::Type)
-DEFINE_C_API_METHODS(MlirValue, mlir::Value)
 DEFINE_C_API_METHODS(MlirModule, mlir::ModuleOp)
+DEFINE_C_API_METHODS(MlirType, mlir::Type)
+DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
+DEFINE_C_API_METHODS(MlirValue, mlir::Value)
 
-#endif // MLIR_INCLUDE_MLIR_CAPI_IR_H
+#endif // MLIR_CAPI_IR_H

@@ -76,18 +76,20 @@ static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> 
   SmallPtrSet<Constant *, 16> InitAsSet;
   SmallVector<Constant *, 16> Init;
   if (GV) {
-    auto *CA = cast<ConstantArray>(GV->getInitializer());
-    for (auto &Op : CA->operands()) {
-      Constant *C = cast_or_null<Constant>(Op);
-      if (InitAsSet.insert(C).second)
-        Init.push_back(C);
+    if (GV->hasInitializer()) {
+      auto *CA = cast<ConstantArray>(GV->getInitializer());
+      for (auto &Op : CA->operands()) {
+        Constant *C = cast_or_null<Constant>(Op);
+        if (InitAsSet.insert(C).second)
+          Init.push_back(C);
+      }
     }
     GV->eraseFromParent();
   }
 
   Type *Int8PtrTy = llvm::Type::getInt8PtrTy(M.getContext());
   for (auto *V : Values) {
-    Constant *C = ConstantExpr::getBitCast(V, Int8PtrTy);
+    Constant *C = ConstantExpr::getPointerBitCastOrAddrSpaceCast(V, Int8PtrTy);
     if (InitAsSet.insert(C).second)
       Init.push_back(C);
   }
@@ -120,11 +122,14 @@ llvm::declareSanitizerInitFunction(Module &M, StringRef InitName,
 }
 
 Function *llvm::createSanitizerCtor(Module &M, StringRef CtorName) {
-  Function *Ctor = Function::Create(
+  Function *Ctor = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
-      GlobalValue::InternalLinkage, CtorName, &M);
+      GlobalValue::InternalLinkage, 0, CtorName, &M);
+  Ctor->addFnAttr(Attribute::NoUnwind);
   BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
   ReturnInst::Create(M.getContext(), CtorBB);
+  // Ensure Ctor cannot be discarded, even if in a comdat.
+  appendToUsed(M, {Ctor});
   return Ctor;
 }
 
@@ -160,7 +165,7 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
   if (Function *Ctor = M.getFunction(CtorName))
     // FIXME: Sink this logic into the module, similar to the handling of
     // globals. This will make moving to a concurrent model much easier.
-    if (Ctor->arg_size() == 0 ||
+    if (Ctor->arg_empty() ||
         Ctor->getReturnType() == Type::getVoidTy(M.getContext()))
       return {Ctor, declareSanitizerInitFunction(M, InitName, InitArgTypes)};
 
@@ -170,28 +175,6 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
       M, CtorName, InitName, InitArgTypes, InitArgs, VersionCheckName);
   FunctionsCreatedCallback(Ctor, InitFunction);
   return std::make_pair(Ctor, InitFunction);
-}
-
-Function *llvm::getOrCreateInitFunction(Module &M, StringRef Name) {
-  assert(!Name.empty() && "Expected init function name");
-  if (Function *F = M.getFunction(Name)) {
-    if (F->arg_size() != 0 ||
-        F->getReturnType() != Type::getVoidTy(M.getContext())) {
-      std::string Err;
-      raw_string_ostream Stream(Err);
-      Stream << "Sanitizer interface function defined with wrong type: " << *F;
-      report_fatal_error(Err);
-    }
-    return F;
-  }
-  Function *F =
-      cast<Function>(M.getOrInsertFunction(Name, AttributeList(),
-                                           Type::getVoidTy(M.getContext()))
-                         .getCallee());
-
-  appendToGlobalCtors(M, F, 0);
-
-  return F;
 }
 
 void llvm::filterDeadComdatFunctions(
@@ -287,7 +270,7 @@ std::string llvm::getUniqueModuleId(Module *M) {
 
   SmallString<32> Str;
   MD5::stringifyResult(R, Str);
-  return ("$" + Str).str();
+  return ("." + Str).str();
 }
 
 void VFABI::setVectorVariantNames(
@@ -314,7 +297,6 @@ void VFABI::setVectorVariantNames(
            "vector function declaration is missing.");
   }
 #endif
-  CI->addAttribute(
-      AttributeList::FunctionIndex,
+  CI->addFnAttr(
       Attribute::get(M->getContext(), MappingsAttrName, Buffer.str()));
 }

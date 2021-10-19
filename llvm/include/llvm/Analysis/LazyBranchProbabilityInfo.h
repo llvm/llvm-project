@@ -63,7 +63,7 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
     BranchProbabilityInfo &getCalculated() {
       if (!Calculated) {
         assert(F && LI && "call setAnalysis");
-        BPI.calculate(*F, *LI, TLI, nullptr);
+        BPI.calculate(*F, *LI, TLI, nullptr, nullptr);
         Calculated = true;
       }
       return BPI;

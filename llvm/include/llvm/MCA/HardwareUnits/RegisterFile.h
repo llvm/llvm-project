@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_REGISTER_FILE_H
-#define LLVM_MCA_REGISTER_FILE_H
+#ifndef LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H
+#define LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -28,7 +28,55 @@ namespace mca {
 
 class ReadState;
 class WriteState;
-class WriteRef;
+class Instruction;
+
+/// A reference to a register write.
+///
+/// This class is mainly used by the register file to describe register
+/// mappings. It correlates a register write to the source index of the
+/// defining instruction.
+class WriteRef {
+  unsigned IID;
+  unsigned WriteBackCycle;
+  unsigned WriteResID;
+  MCPhysReg RegisterID;
+  WriteState *Write;
+
+  static const unsigned INVALID_IID;
+
+public:
+  WriteRef()
+      : IID(INVALID_IID), WriteBackCycle(), WriteResID(), RegisterID(),
+        Write() {}
+  WriteRef(unsigned SourceIndex, WriteState *WS);
+
+  unsigned getSourceIndex() const { return IID; }
+  unsigned getWriteBackCycle() const;
+
+  const WriteState *getWriteState() const { return Write; }
+  WriteState *getWriteState() { return Write; }
+  unsigned getWriteResourceID() const;
+  MCPhysReg getRegisterID() const;
+
+  void commit();
+  void notifyExecuted(unsigned Cycle);
+
+  bool hasKnownWriteBackCycle() const;
+  bool isWriteZero() const;
+  bool isValid() const { return getSourceIndex() != INVALID_IID; }
+
+  /// Returns true if this register write has been executed, and the new
+  /// register value is therefore available to users.
+  bool isAvailable() const { return hasKnownWriteBackCycle(); }
+
+  bool operator==(const WriteRef &Other) const {
+    return Write && Other.Write && Write == Other.Write;
+  }
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
+};
 
 /// Manages hardware register files, and tracks register definitions for
 /// register renaming purposes.
@@ -145,6 +193,8 @@ class RegisterFile : public HardwareUnit {
   // the target. Bits are set for registers that are known to be zero.
   APInt ZeroRegisters;
 
+  unsigned CurrentCycle;
+
   // This method creates a new register file descriptor.
   // The new register file owns all of the registers declared by register
   // classes in the 'RegisterClasses' set.
@@ -172,11 +222,6 @@ class RegisterFile : public HardwareUnit {
   void freePhysRegs(const RegisterRenamingInfo &Entry,
                     MutableArrayRef<unsigned> FreedPhysRegs);
 
-  // Collects writes that are in a RAW dependency with RS.
-  // This method is called from `addRegisterRead()`.
-  void collectWrites(const ReadState &RS,
-                     SmallVectorImpl<WriteRef> &Writes) const;
-
   // Create an instance of RegisterMappingTracker for every register file
   // specified by the processor model.
   // If no register file is specified, then this method creates a default
@@ -186,6 +231,22 @@ class RegisterFile : public HardwareUnit {
 public:
   RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
                unsigned NumRegs = 0);
+
+  // Collects writes that are in a RAW dependency with RS.
+  void collectWrites(const MCSubtargetInfo &STI, const ReadState &RS,
+                     SmallVectorImpl<WriteRef> &Writes,
+                     SmallVectorImpl<WriteRef> &CommittedWrites) const;
+  struct RAWHazard {
+    MCPhysReg RegisterID;
+    int CyclesLeft;
+
+    RAWHazard() : RegisterID(), CyclesLeft() {}
+    bool isValid() const { return RegisterID; }
+    bool hasUnknownCycles() const { return CyclesLeft < 0; }
+  };
+
+  RAWHazard checkRAWHazards(const MCSubtargetInfo &STI,
+                            const ReadState &RS) const;
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
@@ -203,12 +264,19 @@ public:
   void removeRegisterWrite(const WriteState &WS,
                            MutableArrayRef<unsigned> FreedPhysRegs);
 
-  // Returns true if a move from RS to WS can be eliminated.
-  // On success, it updates WriteState by setting flag `WS.isEliminated`.
-  // If RS is a read from a zero register, and WS is eliminated, then
-  // `WS.WritesZero` is also set, so that method addRegisterWrite() would not
-  // reserve a physical register for it.
-  bool tryEliminateMove(WriteState &WS, ReadState &RS);
+  // Returns true if the PRF at index `PRFIndex` can eliminate a move from RS to
+  // WS.
+  bool canEliminateMove(const WriteState &WS, const ReadState &RS,
+                        unsigned PRFIndex) const;
+
+  // Returns true if this instruction can be fully eliminated at register
+  // renaming stage. On success, this method updates the internal state of each
+  // WriteState by setting flag `WS.isEliminated`, and by propagating the zero
+  // flag for known zero registers. It internally uses `canEliminateMove` to
+  // determine if a read/write pair can be eliminated. By default, it assumes a
+  // register swap if there is more than one register definition.
+  bool tryEliminateMoveOrSwap(MutableArrayRef<WriteState> Writes,
+                              MutableArrayRef<ReadState> Reads);
 
   // Checks if there are enough physical registers in the register files.
   // Returns a "response mask" where each bit represents the response from a
@@ -224,8 +292,14 @@ public:
   // Returns the number of PRFs implemented by this processor.
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
+  unsigned getElapsedCyclesFromWriteBack(const WriteRef &WR) const;
+
+  void onInstructionExecuted(Instruction *IS);
+
   // Notify each PRF that a new cycle just started.
   void cycleStart();
+
+  void cycleEnd() { ++CurrentCycle; }
 
 #ifndef NDEBUG
   void dump() const;
@@ -235,4 +309,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_REGISTER_FILE_H
+#endif // LLVM_MCA_HARDWAREUNITS_REGISTERFILE_H

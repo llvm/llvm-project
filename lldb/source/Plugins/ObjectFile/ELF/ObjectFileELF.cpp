@@ -16,6 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/LZMA.h"
@@ -37,6 +38,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -53,36 +55,36 @@ using namespace llvm::ELF;
 
 LLDB_PLUGIN_DEFINE(ObjectFileELF)
 
-namespace {
-
 // ELF note owner definitions
-const char *const LLDB_NT_OWNER_FREEBSD = "FreeBSD";
-const char *const LLDB_NT_OWNER_GNU = "GNU";
-const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
-const char *const LLDB_NT_OWNER_NETBSDCORE = "NetBSD-CORE";
-const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
-const char *const LLDB_NT_OWNER_ANDROID = "Android";
-const char *const LLDB_NT_OWNER_CORE = "CORE";
-const char *const LLDB_NT_OWNER_LINUX = "LINUX";
+static const char *const LLDB_NT_OWNER_FREEBSD = "FreeBSD";
+static const char *const LLDB_NT_OWNER_GNU = "GNU";
+static const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
+static const char *const LLDB_NT_OWNER_NETBSDCORE = "NetBSD-CORE";
+static const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
+static const char *const LLDB_NT_OWNER_ANDROID = "Android";
+static const char *const LLDB_NT_OWNER_CORE = "CORE";
+static const char *const LLDB_NT_OWNER_LINUX = "LINUX";
 
 // ELF note type definitions
-const elf_word LLDB_NT_FREEBSD_ABI_TAG = 0x01;
-const elf_word LLDB_NT_FREEBSD_ABI_SIZE = 4;
+static const elf_word LLDB_NT_FREEBSD_ABI_TAG = 0x01;
+static const elf_word LLDB_NT_FREEBSD_ABI_SIZE = 4;
 
-const elf_word LLDB_NT_GNU_ABI_TAG = 0x01;
-const elf_word LLDB_NT_GNU_ABI_SIZE = 16;
+static const elf_word LLDB_NT_GNU_ABI_TAG = 0x01;
+static const elf_word LLDB_NT_GNU_ABI_SIZE = 16;
 
-const elf_word LLDB_NT_GNU_BUILD_ID_TAG = 0x03;
+static const elf_word LLDB_NT_GNU_BUILD_ID_TAG = 0x03;
 
-const elf_word LLDB_NT_NETBSD_IDENT_TAG = 1;
-const elf_word LLDB_NT_NETBSD_IDENT_DESCSZ = 4;
-const elf_word LLDB_NT_NETBSD_IDENT_NAMESZ = 7;
-const elf_word LLDB_NT_NETBSD_PROCINFO = 1;
+static const elf_word LLDB_NT_NETBSD_IDENT_TAG = 1;
+static const elf_word LLDB_NT_NETBSD_IDENT_DESCSZ = 4;
+static const elf_word LLDB_NT_NETBSD_IDENT_NAMESZ = 7;
+static const elf_word LLDB_NT_NETBSD_PROCINFO = 1;
 
 // GNU ABI note OS constants
-const elf_word LLDB_NT_GNU_ABI_OS_LINUX = 0x00;
-const elf_word LLDB_NT_GNU_ABI_OS_HURD = 0x01;
-const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
+static const elf_word LLDB_NT_GNU_ABI_OS_LINUX = 0x00;
+static const elf_word LLDB_NT_GNU_ABI_OS_HURD = 0x01;
+static const elf_word LLDB_NT_GNU_ABI_OS_SOLARIS = 0x02;
+
+namespace {
 
 //===----------------------------------------------------------------------===//
 /// \class ELFRelocation
@@ -123,6 +125,7 @@ private:
 
   RelocUnion reloc;
 };
+} // end anonymous namespace
 
 ELFRelocation::ELFRelocation(unsigned type) {
   if (type == DT_REL || type == SHT_REL)
@@ -205,8 +208,6 @@ unsigned ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
   else
     return rel.reloc.get<ELFRela *>()->r_addend;
 }
-
-} // end anonymous namespace
 
 static user_id_t SegmentID(size_t PHdrIndex) {
   return ~user_id_t(PHdrIndex);
@@ -296,9 +297,23 @@ static uint32_t mipsVariantFromElfFlags (const elf::ELFHeader &header) {
   return arch_variant;
 }
 
+static uint32_t riscvVariantFromElfFlags(const elf::ELFHeader &header) {
+  uint32_t fileclass = header.e_ident[EI_CLASS];
+  switch (fileclass) {
+  case llvm::ELF::ELFCLASS32:
+    return ArchSpec::eRISCVSubType_riscv32;
+  case llvm::ELF::ELFCLASS64:
+    return ArchSpec::eRISCVSubType_riscv64;
+  default:
+    return ArchSpec::eRISCVSubType_unknown;
+  }
+}
+
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
+  else if (header.e_machine == llvm::ELF::EM_RISCV)
+    return riscvVariantFromElfFlags(header);
 
   return LLDB_INVALID_CPUTYPE;
 }
@@ -576,9 +591,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
             uint32_t core_notes_crc = 0;
 
             if (!gnu_debuglink_crc) {
-              static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-              lldb_private::Timer scoped_timer(
-                  func_cat,
+              LLDB_SCOPED_TIMERF(
                   "Calculating module crc32 %s with size %" PRIu64 " KiB",
                   file.GetLastPathComponent().AsCString(),
                   (length - file_offset) / 1024);
@@ -620,12 +633,6 @@ size_t ObjectFileELF::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ObjectFileELF::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ObjectFileELF::GetPluginVersion() { return m_plugin_version; }
 // ObjectFile protocol
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
@@ -845,8 +852,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
       if (symbol.d_tag == DT_MIPS_RLD_MAP) {
         // DT_MIPS_RLD_MAP tag stores an absolute address of the debug pointer.
         Address addr;
-        if (target->ReadPointerFromMemory(dyn_base + offset, false, error,
-                                          addr))
+        if (target->ReadPointerFromMemory(dyn_base + offset, error, addr, true))
           return addr;
       }
       if (symbol.d_tag == DT_MIPS_RLD_MAP_REL) {
@@ -854,7 +860,7 @@ Address ObjectFileELF::GetImageInfoAddress(Target *target) {
         // relative to the address of the tag.
         uint64_t rel_offset;
         rel_offset = target->ReadUnsignedIntegerFromMemory(
-            dyn_base + offset, false, GetAddressByteSize(), UINT64_MAX, error);
+            dyn_base + offset, GetAddressByteSize(), UINT64_MAX, error, true);
         if (error.Success() && rel_offset != UINT64_MAX) {
           Address addr;
           addr_t debug_ptr_address =
@@ -1849,7 +1855,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   // unified section list.
   if (GetType() != eTypeDebugInfo)
     unified_section_list = *m_sections_up;
-  
+
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
   // If there's none in the orignal object file, we add it to it.
@@ -1867,7 +1873,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           unified_section_list.AddSection(symtab_section_sp);
       }
     }
-  }  
+  }
 }
 
 std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
@@ -1911,7 +1917,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   ArchSpec spec = m_gnu_debug_data_object_file->GetArchitecture();
   if (spec && m_gnu_debug_data_object_file->SetModulesArchitecture(spec))
     return m_gnu_debug_data_object_file;
-  
+
   return nullptr;
 }
 
@@ -2695,6 +2701,9 @@ Symtab *ObjectFileELF::GetSymtab() {
   if (!module_sp)
     return nullptr;
 
+  Progress progress(llvm::formatv("Parsing symbol table for {0}",
+                                  m_file.GetFilename().AsCString("<Unknown>")));
+
   // We always want to use the main object file so we (hopefully) only have one
   // cached copy of our symtab, dynamic sections, etc.
   ObjectFile *module_obj_file = module_sp->GetObjectFile();
@@ -2758,14 +2767,14 @@ Symtab *ObjectFileELF::GetSymtab() {
         user_id_t reloc_id = reloc_section->GetID();
         const ELFSectionHeaderInfo *reloc_header =
             GetSectionHeaderByIndex(reloc_id);
-        assert(reloc_header);
+        if (reloc_header) {
+          if (m_symtab_up == nullptr)
+            m_symtab_up =
+                std::make_unique<Symtab>(reloc_section->GetObjectFile());
 
-        if (m_symtab_up == nullptr)
-          m_symtab_up =
-              std::make_unique<Symtab>(reloc_section->GetObjectFile());
-
-        ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
-                               reloc_id);
+          ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
+                                 reloc_id);
+        }
       }
     }
 
@@ -2797,31 +2806,37 @@ Symtab *ObjectFileELF::GetSymtab() {
       if (is_valid_entry_point && !m_symtab_up->FindSymbolContainingFileAddress(
                                       entry_point_file_addr)) {
         uint64_t symbol_id = m_symtab_up->GetNumSymbols();
-        Symbol symbol(symbol_id,
-                      GetNextSyntheticSymbolName().GetCString(), // Symbol name.
-                      eSymbolTypeCode, // Type of this symbol.
-                      true,            // Is this globally visible?
-                      false,           // Is this symbol debug info?
-                      false,           // Is this symbol a trampoline?
-                      true,            // Is this symbol artificial?
-                      entry_point_addr.GetSection(), // Section where this
-                                                     // symbol is defined.
-                      0,     // Offset in section or symbol value.
-                      0,     // Size.
-                      false, // Size is valid.
-                      false, // Contains linker annotations?
-                      0);    // Symbol flags.
-        m_symtab_up->AddSymbol(symbol);
+        // Don't set the name for any synthetic symbols, the Symbol
+        // object will generate one if needed when the name is accessed
+        // via accessors.
+        SectionSP section_sp = entry_point_addr.GetSection();
+        Symbol symbol(
+            /*symID=*/symbol_id,
+            /*name=*/llvm::StringRef(), // Name will be auto generated.
+            /*type=*/eSymbolTypeCode,
+            /*external=*/true,
+            /*is_debug=*/false,
+            /*is_trampoline=*/false,
+            /*is_artificial=*/true,
+            /*section_sp=*/section_sp,
+            /*offset=*/0,
+            /*size=*/0, // FDE can span multiple symbols so don't use its size.
+            /*size_is_valid=*/false,
+            /*contains_linker_annotations=*/false,
+            /*flags=*/0);
         // When the entry point is arm thumb we need to explicitly set its
         // class address to reflect that. This is important because expression
         // evaluation relies on correctly setting a breakpoint at this
         // address.
         if (arch.GetMachine() == llvm::Triple::arm &&
-            (entry_point_file_addr & 1))
+            (entry_point_file_addr & 1)) {
+          symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
           m_address_class_map[entry_point_file_addr ^ 1] =
               AddressClass::eCodeAlternateISA;
-        else
+        } else {
           m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+        }
+        m_symtab_up->AddSymbol(symbol);
       }
     }
 
@@ -2885,8 +2900,11 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
   // recalculate the index first.
   std::vector<Symbol> new_symbols;
 
-  eh_frame->ForEachFDEEntries([this, symbol_table, section_list, &new_symbols](
-      lldb::addr_t file_addr, uint32_t size, dw_offset_t) {
+  size_t num_symbols = symbol_table->GetNumSymbols();
+  uint64_t last_symbol_id =
+      num_symbols ? symbol_table->SymbolAtIndex(num_symbols - 1)->GetID() : 0;
+  eh_frame->ForEachFDEEntries([&](lldb::addr_t file_addr, uint32_t size,
+                                  dw_offset_t) {
     Symbol *symbol = symbol_table->FindSymbolAtFileAddress(file_addr);
     if (symbol) {
       if (!symbol->GetByteSizeIsValid()) {
@@ -2898,22 +2916,24 @@ void ObjectFileELF::ParseUnwindSymbols(Symtab *symbol_table,
           section_list->FindSectionContainingFileAddress(file_addr);
       if (section_sp) {
         addr_t offset = file_addr - section_sp->GetFileAddress();
-        const char *symbol_name = GetNextSyntheticSymbolName().GetCString();
-        uint64_t symbol_id = symbol_table->GetNumSymbols();
+        uint64_t symbol_id = ++last_symbol_id;
+        // Don't set the name for any synthetic symbols, the Symbol
+        // object will generate one if needed when the name is accessed
+        // via accessors.
         Symbol eh_symbol(
-            symbol_id,       // Symbol table index.
-            symbol_name,     // Symbol name.
-            eSymbolTypeCode, // Type of this symbol.
-            true,            // Is this globally visible?
-            false,           // Is this symbol debug info?
-            false,           // Is this symbol a trampoline?
-            true,            // Is this symbol artificial?
-            section_sp,      // Section in which this symbol is defined or null.
-            offset,          // Offset in section or symbol value.
-            0,     // Size:          Don't specify the size as an FDE can
-            false, // Size is valid: cover multiple symbols.
-            false, // Contains linker annotations?
-            0);    // Symbol flags.
+            /*symID=*/symbol_id,
+            /*name=*/llvm::StringRef(), // Name will be auto generated.
+            /*type=*/eSymbolTypeCode,
+            /*external=*/true,
+            /*is_debug=*/false,
+            /*is_trampoline=*/false,
+            /*is_artificial=*/true,
+            /*section_sp=*/section_sp,
+            /*offset=*/offset,
+            /*size=*/0, // FDE can span multiple symbols so don't use its size.
+            /*size_is_valid=*/false,
+            /*contains_linker_annotations=*/false,
+            /*flags=*/0);
         new_symbols.push_back(eh_symbol);
       }
     }

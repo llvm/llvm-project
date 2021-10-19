@@ -1,6 +1,8 @@
 ; RUN: llc < %s -mtriple=armv7-apple-ios | FileCheck %s
 ;rdar://8003725
 
+declare void @llvm.trap()
+
 @G1 = external global i32
 @G2 = external global i32
 
@@ -38,6 +40,7 @@ for.body.lr.ph:                                   ; preds = %entry
   %1 = icmp sgt i32 %0, 1
   %smax = select i1 %1, i32 %0, i32 1
   call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([250 x i8], [250 x i8]* @bar, i32 0, i32 0), i8 0, i32 %smax, i1 false)
+  call void @llvm.trap()
   unreachable
 
 for.cond1.preheader:                              ; preds = %entry

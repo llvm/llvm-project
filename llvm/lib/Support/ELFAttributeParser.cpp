@@ -16,7 +16,7 @@
 using namespace llvm;
 using namespace llvm::ELFAttrs;
 
-static const EnumEntry<unsigned> tagNames[] = {
+static constexpr EnumEntry<unsigned> tagNames[] = {
     {"Tag_File", ELFAttrs::File},
     {"Tag_Section", ELFAttrs::Section},
     {"Tag_Symbol", ELFAttrs::Symbol},
@@ -200,7 +200,7 @@ Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
 
   // Unrecognized format-version.
   uint8_t formatVersion = de.getU8(cursor);
-  if (formatVersion != 'A')
+  if (formatVersion != ELFAttrs::Format_Version)
     return createStringError(errc::invalid_argument,
                              "unrecognized format-version: 0x" +
                                  utohexstr(formatVersion));

@@ -27,7 +27,12 @@ struct EntryExitInstrumenterPass
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+
   bool PostInlining;
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

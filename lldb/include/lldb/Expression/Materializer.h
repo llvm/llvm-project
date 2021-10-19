@@ -90,7 +90,7 @@ public:
 
   class Entity {
   public:
-    Entity() : m_alignment(1), m_size(0), m_offset(0) {}
+    Entity() = default;
 
     virtual ~Entity() = default;
 
@@ -113,9 +113,9 @@ public:
     void SetOffset(uint32_t offset) { m_offset = offset; }
 
   protected:
-    uint32_t m_alignment;
-    uint32_t m_size;
-    uint32_t m_offset;
+    uint32_t m_alignment = 1;
+    uint32_t m_size = 0;
+    uint32_t m_offset = 0;
   };
 
 private:

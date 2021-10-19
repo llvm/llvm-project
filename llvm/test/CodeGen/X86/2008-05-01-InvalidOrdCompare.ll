@@ -17,7 +17,7 @@ define i32 @test(double %p) nounwind {
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %bb
-; CHECK-NEXT:    calll test2
+; CHECK-NEXT:    calll test2@PLT
 ; CHECK-NEXT:    movl $17, %eax
 ; CHECK-NEXT:    retl
 	%tmp5 = fcmp uno double %p, 0.000000e+00

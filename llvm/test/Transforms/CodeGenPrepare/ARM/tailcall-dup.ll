@@ -4,6 +4,8 @@ target triple = "armv8m.main-none-eabi"
 
 declare i8* @f0()
 declare i8* @f1()
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
 
 define i8* @tail_dup() {
 ; CHECK-LABEL: tail_dup
@@ -12,6 +14,9 @@ define i8* @tail_dup() {
 ; CHECK: tail call i8* @f1()
 ; CHECK-NEXT: ret i8*
 bb0:
+  %a = alloca i32
+  %a1 = bitcast i32* %a to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a1) nounwind
   %tmp0 = tail call i8* @f0()
   br label %return
 bb1:
@@ -19,6 +24,8 @@ bb1:
   br label %return
 return:
   %retval = phi i8* [ %tmp0, %bb0 ], [ %tmp1, %bb1 ]
+  %a2 = bitcast i32* %a to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %a2) nounwind
   ret i8* %retval
 }
 

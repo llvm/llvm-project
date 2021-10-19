@@ -13,7 +13,6 @@ body: |
     liveins: $sgpr0, $vgpr0
 
     ; GFX10-LABEL: name: uadde_s32_s1_vsv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
@@ -46,7 +45,6 @@ body: |
     liveins: $sgpr0, $vgpr0
 
     ; GFX10-LABEL: name: uadde_s32_s1_vvs
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2

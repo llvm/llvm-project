@@ -18,12 +18,6 @@
 #include "test_macros.h"
 #include "count_new.h"
 
-#if TEST_STD_VER >= 11
-#define DELETE_FUNCTION = delete
-#else
-#define DELETE_FUNCTION
-#endif
-
 struct A
 {
     static int count;
@@ -37,7 +31,7 @@ struct A
     int get_int() const {return int_;}
     char get_char() const {return char_;}
 
-    A* operator& () DELETE_FUNCTION;
+    A* operator& () = delete;
 
 private:
     int int_;
@@ -63,7 +57,7 @@ static void resultDeletor(Result (*pf)()) {
 }
 
 void test_pointer_to_function() {
-    { // https://bugs.llvm.org/show_bug.cgi?id=27566
+    { // https://llvm.org/PR27566
       std::shared_ptr<Result()> x(&theFunction, &resultDeletor);
       std::shared_ptr<Result()> y(theFunction, resultDeletor);
     }
@@ -72,6 +66,26 @@ void test_pointer_to_function() {
 #else // _LIBCPP_VERSION
 void test_pointer_to_function() {}
 #endif // _LIBCPP_VERSION
+
+template <typename T>
+void test(const T &t0)
+{
+    {
+      T t1 = t0;
+      std::shared_ptr<T> p0 = std::make_shared<T>(t0);
+      std::shared_ptr<T> p1 = std::make_shared<T>(t1);
+      assert(*p0 == t0);
+      assert(*p1 == t1);
+    }
+
+    {
+      const T t1 = t0;
+      std::shared_ptr<const T> p0 = std::make_shared<const T>(t0);
+      std::shared_ptr<const T> p1 = std::make_shared<const T>(t1);
+      assert(*p0 == t0);
+      assert(*p1 == t1);
+    }
+}
 
 int main(int, char**)
 {
@@ -86,7 +100,7 @@ int main(int, char**)
     assert(p->get_char() == 'e');
     }
 
-    { // https://bugs.llvm.org/show_bug.cgi?id=24137
+    { // https://llvm.org/PR24137
     std::shared_ptr<Foo> p1       = std::make_shared<Foo>();
     assert(p1.get());
     std::shared_ptr<const Foo> p2 = std::make_shared<const Foo>();
@@ -107,6 +121,10 @@ int main(int, char**)
     }
 #endif
     assert(A::count == 0);
+
+    test<bool>(true);
+    test<int>(3);
+    test<double>(5.0);
 
   return 0;
 }

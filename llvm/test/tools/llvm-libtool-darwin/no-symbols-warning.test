@@ -1,0 +1,50 @@
+## This test verifies that the tool emits a warning for object files
+## without symbols.
+
+# RUN: yaml2obj --docnum=1 %s -o %t-x86_64-empty.o
+# RUN: yaml2obj --docnum=2 %s -o %t-armv7-empty.o
+# RUN: echo 'target triple = "arm64-apple-ios8.0.0"' | llvm-as -o %t-empty.bc
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-non-empty.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-x86_64-empty.o 2>&1 | \
+# RUN:   FileCheck --check-prefix=WARNING %s -DPREFIX=%basename_t.tmp
+
+# WARNING: warning: [[PREFIX]]-x86_64-empty.o has no symbols
+
+# RUN: llvm-libtool-darwin -no_warning_for_no_symbols -static -o %t.lib \
+# RUN:   %t-x86_64-empty.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not='warning:'
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-non-empty.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not='warning:'
+
+# RUN: llvm-libtool-darwin -arch_only x86_64 -static -o %t.lib \
+# RUN:   %t-non-empty.o %t-armv7-empty.o 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not='warning:'
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-empty.bc 2>&1 | \
+# RUN:   FileCheck %s --allow-empty --implicit-check-not='warning:'
+
+## x86_64
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x2000
+  reserved:        0x0
+...
+
+## armv7
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0000000C
+  cpusubtype:      0x00000009
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00002000

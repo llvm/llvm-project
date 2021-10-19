@@ -35,7 +35,9 @@ vector signed __int128 vsx = { 1 };
 vector unsigned __int128 vux = { 1 };
 
 vector float vfa = { 1.e-4f, -132.23f, -22.1, 32.00f };
+vector float vfb = { 1.e-4f, -132.23f, -22.1, 32.00f };
 vector double vda = { 1.e-11, -132.23e10 };
+vector double vdb = { 1.e-11, -132.23e10 };
 
 int res_i;
 double res_d;
@@ -64,7 +66,7 @@ vector unsigned __int128 res_vux;
 vector float res_vf;
 vector double res_vd;
 
-// CHECK-LABEL: define void @test1
+// CHECK-LABEL: define{{.*}} void @test1
 void test1() {
 
   /* vec_abs */
@@ -77,12 +79,14 @@ void test1() {
   res_vsll = vec_add(vsll, vsll);
 // CHECK: add <2 x i64>
 // CHECK-LE: add <2 x i64>
-// CHECK-PPC: error: call to 'vec_add' is ambiguous
 
   res_vull = vec_add(vull, vull);
 // CHECK: add <2 x i64>
 // CHECK-LE: add <2 x i64>
-// CHECK-PPC: error: call to 'vec_add' is ambiguous
+
+  res_vuc = vec_add_u128(vuc, vuc);
+// CHECK: add <1 x i128>
+// CHECK-LE: add <1 x i128>
 
   /* vec_addc */
   res_vsi = vec_addc(vsi, vsi);
@@ -101,6 +105,10 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
 
+  res_vuc = vec_addc_u128(vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vaddcuq
+// CHECK-LE: @llvm.ppc.altivec.vaddcuq
+
   /* vec_adde */
   res_vsx = vec_adde(vsx, vsx, vsx);
 // CHECK: @llvm.ppc.altivec.vaddeuqm
@@ -110,8 +118,16 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddeuqm
 // CHECK-LE: @llvm.ppc.altivec.vaddeuqm
 
+  res_vuc = vec_adde_u128(vuc, vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vaddeuqm
+// CHECK-LE: @llvm.ppc.altivec.vaddeuqm
+
   /* vec_addec */
   res_vsx = vec_addec(vsx, vsx, vsx);
+// CHECK: @llvm.ppc.altivec.vaddecuq
+// CHECK-LE: @llvm.ppc.altivec.vaddecuq
+
+  res_vuc = vec_addec_u128(vuc, vuc, vuc);
 // CHECK: @llvm.ppc.altivec.vaddecuq
 // CHECK-LE: @llvm.ppc.altivec.vaddecuq
 
@@ -167,61 +183,50 @@ void test1() {
   res_vbll = vec_cmpeq(vbll, vbll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   res_vbll = vec_cmpeq(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   res_vbll = vec_cmpeq(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpequd
 // CHECK-LE: @llvm.ppc.altivec.vcmpequd
-// CHECK-PPC: error: call to 'vec_cmpeq' is ambiguous
 
   /* vec_cmpge */
   res_vbll = vec_cmpge(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmpge' is ambiguous
 
   res_vbll = vec_cmpge(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmpge' is ambiguous
 
   /* vec_cmple */
   res_vbll = vec_cmple(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmple' is ambiguous
 
   res_vbll = vec_cmple(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmple' is ambiguous
 
   /* vec_cmpgt */
   res_vbll = vec_cmpgt(vsll, vsll);
 // CHECK: @llvm.ppc.altivec.vcmpgtsd
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtsd
-// CHECK-PPC: error: call to 'vec_cmpgt' is ambiguous
 
   res_vbll = vec_cmpgt(vull, vull);
 // CHECK: @llvm.ppc.altivec.vcmpgtud
 // CHECK-LE: @llvm.ppc.altivec.vcmpgtud
-// CHECK-PPC: error: call to 'vec_cmpgt' is ambiguous
 
   /* vec_cmplt */
   res_vbll = vec_cmplt(vsll, vsll);
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtsd(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
-// CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
 
   res_vbll = vec_cmplt(vull, vull);
 // CHECK: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
 // CHECK-LE: call <2 x i64> @llvm.ppc.altivec.vcmpgtud(<2 x i64> %{{[0-9]*}}, <2 x i64> %{{[0-9]*}})
-// CHECK-PPC: error: call to 'vec_cmplt' is ambiguous
 
   /* vec_eqv */
   res_vsc =  vec_eqv(vsc, vsc);
@@ -429,42 +434,6 @@ void test1() {
 // CHECK-LE: call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %{{.+}}, i1 false)
 
   /* ----------------------- predicates --------------------------- */
-  /* vec_all_eq */
-  res_i = vec_all_eq(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
-  res_i = vec_all_eq(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_eq' is ambiguous
-
   res_i = vec_all_eq(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
@@ -472,42 +441,6 @@ void test1() {
   res_i = vec_all_eq(vfa, vfa);
 // CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
-
-  /* vec_all_ne */
-  res_i = vec_all_ne(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
-
-  res_i = vec_all_ne(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_all_ne' is ambiguous
 
   dummy();
 // CHECK: @dummy
@@ -534,42 +467,6 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
 
-  /* vec_any_eq */
-  res_i = vec_any_eq(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
-  res_i = vec_any_eq(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_eq' is ambiguous
-
   res_i = vec_any_eq(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqdp.p
@@ -577,42 +474,6 @@ void test1() {
   res_i = vec_any_eq(vfa, vfa);
 // CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
-
-  /* vec_any_ne */
-  res_i = vec_any_ne(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
-
-  res_i = vec_any_ne(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpequd.p
-// CHECK-PPC: error: call to 'vec_any_ne' is ambiguous
 
   res_i = vec_any_ne(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpeqdp.p
@@ -622,42 +483,6 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
 
-  /* vec_all_ge */
-  res_i = vec_all_ge(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
-  res_i = vec_all_ge(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_ge' is ambiguous
-
   res_i = vec_all_ge(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgedp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
@@ -665,42 +490,6 @@ void test1() {
   res_i = vec_all_ge(vfa, vfa);
 // CHECK: @llvm.ppc.vsx.xvcmpgesp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
-
-  /* vec_all_gt */
-  res_i = vec_all_gt(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
-
-  res_i = vec_all_gt(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_gt' is ambiguous
 
   res_i = vec_all_gt(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
@@ -710,42 +499,6 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.xvcmpgtsp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgtsp.p
 
-  /* vec_all_le */
-  res_i = vec_all_le(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
-  res_i = vec_all_le(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_le' is ambiguous
-
   res_i = vec_all_le(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgedp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
@@ -753,42 +506,6 @@ void test1() {
   res_i = vec_all_le(vfa, vfa);
 // CHECK: @llvm.ppc.vsx.xvcmpgesp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
-
-  /* vec_all_lt */
-  res_i = vec_all_lt(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
-
-  res_i = vec_all_lt(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_all_lt' is ambiguous
 
   res_i = vec_all_lt(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
@@ -806,42 +523,6 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.xvcmpeqsp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpeqsp.p
 
-  /* vec_any_ge */
-  res_i = vec_any_ge(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
-  res_i = vec_any_ge(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_ge' is ambiguous
-
   res_i = vec_any_ge(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgedp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgedp.p
@@ -850,81 +531,9 @@ void test1() {
 // CHECK: @llvm.ppc.vsx.xvcmpgesp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
 
-  /* vec_any_gt */
-  res_i = vec_any_gt(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
-  res_i = vec_any_gt(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_gt' is ambiguous
-
   res_i = vec_any_gt(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgtdp.p
-
-  /* vec_any_le */
-  res_i = vec_any_le(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
-
-  res_i = vec_any_le(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_le' is ambiguous
 
   res_i = vec_any_le(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgedp.p
@@ -933,42 +542,6 @@ void test1() {
   res_i = vec_any_le(vfa, vfa);
 // CHECK: @llvm.ppc.vsx.xvcmpgesp.p
 // CHECK-LE: @llvm.ppc.vsx.xvcmpgesp.p
-
-  /* vec_any_lt */
-  res_i = vec_any_lt(vsll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vsll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtsd.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vull, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vull, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vbll, vsll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vbll, vull);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
-
-  res_i = vec_any_lt(vbll, vbll);
-// CHECK: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-LE: @llvm.ppc.altivec.vcmpgtud.p
-// CHECK-PPC: error: call to 'vec_any_lt' is ambiguous
 
   res_i = vec_any_lt(vda, vda);
 // CHECK: @llvm.ppc.vsx.xvcmpgtdp.p
@@ -1097,23 +670,19 @@ void test1() {
   res_vsll = vec_rl(vsll, vull);
 // CHECK: @llvm.ppc.altivec.vrld
 // CHECK-LE: @llvm.ppc.altivec.vrld
-// CHECK-PPC: error: call to 'vec_rl' is ambiguous
 
   res_vull = vec_rl(vull, vull);
 // CHECK: @llvm.ppc.altivec.vrld
 // CHECK-LE: @llvm.ppc.altivec.vrld
-// CHECK-PPC: error: call to 'vec_rl' is ambiguous
 
   /* vec_sl */
   res_vsll = vec_sl(vsll, vull);
 // CHECK: shl <2 x i64>
 // CHECK-LE: shl <2 x i64>
-// CHECK-PPC: error: call to 'vec_sl' is ambiguous
 
   res_vull = vec_sl(vull, vull);
 // CHECK: shl <2 x i64>
 // CHECK-LE: shl <2 x i64>
-// CHECK-PPC: error: call to 'vec_sl' is ambiguous
 
   /* vec_sr */
   res_vsll = vec_sr(vsll, vull);
@@ -1121,25 +690,21 @@ void test1() {
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   res_vull = vec_sr(vull, vull);
 // CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
 // CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
-// CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   /* vec_sra */
   res_vsll = vec_sra(vsll, vull);
 // CHECK: ashr <2 x i64>
 // CHECK-LE: ashr <2 x i64>
-// CHECK-PPC: error: call to 'vec_sra' is ambiguous
 
   res_vull = vec_sra(vull, vull);
 // CHECK: ashr <2 x i64>
 // CHECK-LE: ashr <2 x i64>
-// CHECK-PPC: error: call to 'vec_sra' is ambiguous
 
   /* vec_splats */
   res_vsll = vec_splats(sll);
@@ -1506,6 +1071,12 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
 // CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
 
+  res_vf = vec_orc(vfa, vfb);
+// CHECK: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK: or <4 x i32> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <4 x i32> {{%.+}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+// CHECK-LE: or <4 x i32> {{%.+}}, [[T1]]
+
   res_vsll = vec_orc(vsll, vsll);
 // CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK: or <2 x i64> {{%.+}}, [[T1]]
@@ -1560,6 +1131,12 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
 // CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
 
+  res_vd = vec_orc(vda, vdb);
+// CHECK: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK: or <2 x i64> {{%.+}}, [[T1]]
+// CHECK-LE: [[T1:%.+]] = xor <2 x i64> {{%.+}}, <i64 -1, i64 -1>
+// CHECK-LE: or <2 x i64> {{%.+}}, [[T1]]
+
   /* vec_sub */
   res_vsll = vec_sub(vsll, vsll);
 // CHECK: sub <2 x i64>
@@ -1606,10 +1183,21 @@ void test1() {
 // CHECK-LE: llvm.ppc.altivec.vgbbd
 // CHECK-PPC: warning: implicit declaration of function 'vec_gb'
 
-  res_vull = vec_bperm(vux, vux);
-// CHECK: llvm.ppc.altivec.vbpermq
-// CHECK-LE: llvm.ppc.altivec.vbpermq
-// CHECK-PPC: warning: implicit declaration of function 'vec_bperm'
+  res_vsll = vec_gbb(vsll);
+// CHECK: llvm.ppc.altivec.vgbbd
+// CHECK-LE: llvm.ppc.altivec.vgbbd
+
+  res_vull = vec_gbb(vull);
+// CHECK: llvm.ppc.altivec.vgbbd
+// CHECK-LE: llvm.ppc.altivec.vgbbd
+
+  res_vull = vec_bperm(vux, vuc);
+  // CHECK: llvm.ppc.altivec.vbpermq
+  // CHECK-LE: llvm.ppc.altivec.vbpermq
+
+  res_vull = vec_bperm(vuc, vuc);
+  // CHECK: llvm.ppc.altivec.vbpermq
+  // CHECK-LE: llvm.ppc.altivec.vbpermq
 
   res_vsll = vec_neg(vsll);
 // CHECK: sub <2 x i64> zeroinitializer, {{%[0-9]+}}

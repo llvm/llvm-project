@@ -31,9 +31,7 @@ set(ASAN_UNITTEST_COMMON_CFLAGS
   -fno-rtti
   -O2
   -Wno-format
-  -Werror=sign-compare
-  -Wno-non-virtual-dtor
-  )
+  -Werror=sign-compare)
 append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros ASAN_UNITTEST_COMMON_CFLAGS)
 
 # This will ensure the target linker is used
@@ -55,7 +53,7 @@ list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -g)
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
   ${COMPILER_RT_ASAN_SHADOW_SCALE_FLAG}
-  -DASAN_HAS_BLACKLIST=1
+  -DASAN_HAS_IGNORELIST=1
   -DASAN_HAS_EXCEPTIONS=1
   -DASAN_UAR=0
   )
@@ -70,11 +68,11 @@ if(APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS})
 endif()
 
-set(ASAN_BLACKLIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/asan_test.ignore")
+set(ASAN_IGNORELIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/asan_test.ignore")
 set(ASAN_UNITTEST_INSTRUMENTED_CFLAGS
   ${ASAN_UNITTEST_COMMON_CFLAGS}
   -fsanitize=address
-  "-fsanitize-blacklist=${ASAN_BLACKLIST_FILE}"
+  "-fsanitize-ignorelist=${ASAN_IGNORELIST_FILE}"
 )
 if(NOT MSVC)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS --driver-mode=g++)
@@ -165,10 +163,17 @@ set(ASAN_BENCHMARKS_SOURCES
 function(add_asan_tests arch test_runtime)
   cmake_parse_arguments(TEST "" "KIND" "CFLAGS" ${ARGN})
 
+  # The Lit files are configured once per architecture and static/dynamic
+  # selection. Each configuration expects the test binaries in a corresponding
+  # subdirectory. Generate subdirectory names based on the architecture name.
+  string(TOUPPER ${arch} ARCH_UPPER_CASE)
+  set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
+  set(CONFIG_NAME_DYNAMIC ${ARCH_UPPER_CASE}${OS_NAME}DynamicConfig)
+
   # Closure to keep the values.
   function(generate_asan_tests test_objects test_suite testname)
     generate_compiler_rt_tests(${test_objects} ${test_suite} ${testname} ${arch}
-      COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE}
+      COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_IGNORELIST_FILE}
       DEPS gtest asan
       KIND ${TEST_KIND}
       ${ARGN}
@@ -179,7 +184,7 @@ function(add_asan_tests arch test_runtime)
   set(ASAN_INST_TEST_OBJECTS)
   generate_asan_tests(ASAN_INST_TEST_OBJECTS AsanUnitTests
     "Asan-${arch}${TEST_KIND}-Test"
-    SUBDIR "default"
+    SUBDIR "${CONFIG_NAME}"
     LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS}
     SOURCES ${ASAN_INST_TEST_SOURCES}
     CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} ${TEST_CFLAGS})
@@ -193,7 +198,7 @@ function(add_asan_tests arch test_runtime)
       set(ASAN_DYNAMIC_TEST_OBJECTS)
       generate_asan_tests(ASAN_DYNAMIC_TEST_OBJECTS
         AsanDynamicUnitTests "${dynamic_test_name}"
-        SUBDIR "dynamic"
+        SUBDIR "${CONFIG_NAME_DYNAMIC}"
         CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -D_MT -D_DLL
         SOURCES ${ASAN_INST_TEST_SOURCES}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
@@ -203,7 +208,7 @@ function(add_asan_tests arch test_runtime)
 
       # Otherwise, reuse ASAN_INST_TEST_OBJECTS.
       add_compiler_rt_test(AsanDynamicUnitTests "${dynamic_test_name}" "${arch}"
-        SUBDIR "dynamic"
+        SUBDIR "${CONFIG_NAME_DYNAMIC}"
         OBJECTS ${ASAN_INST_TEST_OBJECTS}
         DEPS asan ${ASAN_INST_TEST_OBJECTS}
         LINK_FLAGS ${ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS}
@@ -215,7 +220,7 @@ function(add_asan_tests arch test_runtime)
   set(ASAN_NOINST_TEST_OBJECTS)
   generate_asan_tests(ASAN_NOINST_TEST_OBJECTS
     AsanUnitTests "Asan-${arch}${TEST_KIND}-Noinst-Test"
-    SUBDIR "default"
+    SUBDIR "${CONFIG_NAME}"
     CFLAGS ${ASAN_UNITTEST_COMMON_CFLAGS}
     LINK_FLAGS ${ASAN_UNITTEST_NOINST_LINK_FLAGS}
     SOURCES ${ASAN_NOINST_TEST_SOURCES}
@@ -224,7 +229,7 @@ function(add_asan_tests arch test_runtime)
   set(ASAN_BENCHMARK_OBJECTS)
   generate_asan_tests(ASAN_BENCHMARK_OBJECTS
     AsanBenchmarks "Asan-${arch}${TEST_KIND}-Benchmark"
-    SUBDIR "default"
+    SUBDIR "${CONFIG_NAME}"
     CFLAGS ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS}
     SOURCES ${ASAN_BENCHMARKS_SOURCES}
     LINK_FLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS})
@@ -288,6 +293,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}

@@ -47,6 +47,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ImmutableList.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -72,26 +73,7 @@ QualType CallEvent::getResultType() const {
   const Expr *E = getOriginExpr();
   if (!E)
     return Ctx.VoidTy;
-  assert(E);
-
-  QualType ResultTy = E->getType();
-
-  // A function that returns a reference to 'int' will have a result type
-  // of simply 'int'. Check the origin expr's value kind to recover the
-  // proper type.
-  switch (E->getValueKind()) {
-  case VK_LValue:
-    ResultTy = Ctx.getLValueReferenceType(ResultTy);
-    break;
-  case VK_XValue:
-    ResultTy = Ctx.getRValueReferenceType(ResultTy);
-    break;
-  case VK_RValue:
-    // No adjustment is necessary.
-    break;
-  }
-
-  return ResultTy;
+  return Ctx.getReferenceQualifiedType(E);
 }
 
 static bool isCallback(QualType T) {
@@ -325,10 +307,7 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
   if (getKind() == CE_ObjCMessage)
     return false;
 
-  const IdentifierInfo *II = getCalleeIdentifier();
-  if (!II)
-    return false;
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(getDecl());
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(getDecl());
   if (!FD)
     return false;
 
@@ -338,44 +317,71 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
            (!CD.RequiredParams || CD.RequiredParams <= parameters().size());
   }
 
-  if (!CD.IsLookupDone) {
-    CD.IsLookupDone = true;
+  if (!CD.II.hasValue()) {
     CD.II = &getState()->getStateManager().getContext().Idents.get(
         CD.getFunctionName());
   }
 
-  if (II != CD.II)
-    return false;
+  const auto MatchNameOnly = [](const CallDescription &CD,
+                                const NamedDecl *ND) -> bool {
+    DeclarationName Name = ND->getDeclName();
+    if (const auto *II = Name.getAsIdentifierInfo())
+      return II == CD.II.getValue(); // Fast case.
 
-  // If CallDescription provides prefix names, use them to improve matching
-  // accuracy.
-  if (CD.QualifiedName.size() > 1 && FD) {
-    const DeclContext *Ctx = FD->getDeclContext();
-    // See if we'll be able to match them all.
-    size_t NumUnmatched = CD.QualifiedName.size() - 1;
-    for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
-      if (NumUnmatched == 0)
-        break;
+    // Fallback to the slow stringification and comparison for:
+    // C++ overloaded operators, constructors, destructors, etc.
+    // FIXME This comparison is way SLOWER than comparing pointers.
+    // At some point in the future, we should compare FunctionDecl pointers.
+    return Name.getAsString() == CD.getFunctionName();
+  };
 
-      if (const auto *ND = dyn_cast<NamespaceDecl>(Ctx)) {
-        if (ND->getName() == CD.QualifiedName[NumUnmatched - 1])
-          --NumUnmatched;
+  const auto ExactMatchArgAndParamCounts =
+      [](const CallEvent &Call, const CallDescription &CD) -> bool {
+    const bool ArgsMatch =
+        !CD.RequiredArgs || CD.RequiredArgs == Call.getNumArgs();
+    const bool ParamsMatch =
+        !CD.RequiredParams || CD.RequiredParams == Call.parameters().size();
+    return ArgsMatch && ParamsMatch;
+  };
+
+  const auto MatchQualifiedNameParts = [](const CallDescription &CD,
+                                          const Decl *D) -> bool {
+    const auto FindNextNamespaceOrRecord =
+        [](const DeclContext *Ctx) -> const DeclContext * {
+      while (Ctx && !isa<NamespaceDecl, RecordDecl>(Ctx))
+        Ctx = Ctx->getParent();
+      return Ctx;
+    };
+
+    auto QualifierPartsIt = CD.begin_qualified_name_parts();
+    const auto QualifierPartsEndIt = CD.end_qualified_name_parts();
+
+    // Match namespace and record names. Skip unrelated names if they don't
+    // match.
+    const DeclContext *Ctx = FindNextNamespaceOrRecord(D->getDeclContext());
+    for (; Ctx && QualifierPartsIt != QualifierPartsEndIt;
+         Ctx = FindNextNamespaceOrRecord(Ctx->getParent())) {
+      // If not matched just continue and try matching for the next one.
+      if (cast<NamedDecl>(Ctx)->getName() != *QualifierPartsIt)
         continue;
-      }
-
-      if (const auto *RD = dyn_cast<RecordDecl>(Ctx)) {
-        if (RD->getName() == CD.QualifiedName[NumUnmatched - 1])
-          --NumUnmatched;
-        continue;
-      }
+      ++QualifierPartsIt;
     }
 
-    if (NumUnmatched > 0)
-      return false;
-  }
+    // We matched if we consumed all expected qualifier segments.
+    return QualifierPartsIt == QualifierPartsEndIt;
+  };
 
-  return (!CD.RequiredArgs || CD.RequiredArgs == getNumArgs()) &&
-         (!CD.RequiredParams || CD.RequiredParams == parameters().size());
+  // Let's start matching...
+  if (!ExactMatchArgAndParamCounts(*this, CD))
+    return false;
+
+  if (!MatchNameOnly(CD, FD))
+    return false;
+
+  if (!CD.hasQualifiedNameParts())
+    return true;
+
+  return MatchQualifiedNameParts(CD, FD);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
@@ -466,6 +472,42 @@ bool CallEvent::isVariadic(const Decl *D) {
   llvm_unreachable("unknown callable kind");
 }
 
+static bool isTransparentUnion(QualType T) {
+  const RecordType *UT = T->getAsUnionType();
+  return UT && UT->getDecl()->hasAttr<TransparentUnionAttr>();
+}
+
+// In some cases, symbolic cases should be transformed before we associate
+// them with parameters.  This function incapsulates such cases.
+static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
+                            const ParmVarDecl *Parameter, SValBuilder &SVB) {
+  QualType ParamType = Parameter->getType();
+  QualType ArgumentType = ArgumentExpr->getType();
+
+  // Transparent unions allow users to easily convert values of union field
+  // types into union-typed objects.
+  //
+  // Also, more importantly, they allow users to define functions with different
+  // different parameter types, substituting types matching transparent union
+  // field types with the union type itself.
+  //
+  // Here, we check specifically for latter cases and prevent binding
+  // field-typed values to union-typed regions.
+  if (isTransparentUnion(ParamType) &&
+      // Let's check that we indeed trying to bind different types.
+      !isTransparentUnion(ArgumentType)) {
+    BasicValueFactory &BVF = SVB.getBasicValueFactory();
+
+    llvm::ImmutableList<SVal> CompoundSVals = BVF.getEmptySValList();
+    CompoundSVals = BVF.prependSVal(Value, CompoundSVals);
+
+    // Wrap it with compound value.
+    return SVB.makeCompoundVal(ParamType, CompoundSVals);
+  }
+
+  return Value;
+}
+
 static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
@@ -490,10 +532,12 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     // determined in compile-time but not represented as arg-expressions,
     // which makes getArgSVal() fail and return UnknownVal.
     SVal ArgVal = Call.getArgSVal(Idx);
+    const Expr *ArgExpr = Call.getArgExpr(Idx);
     if (!ArgVal.isUnknown()) {
       Loc ParamLoc = SVB.makeLoc(
           MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
-      Bindings.push_back(std::make_pair(ParamLoc, ArgVal));
+      Bindings.push_back(
+          std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
     }
   }
 
@@ -687,7 +731,7 @@ void CXXInstanceCall::getExtraInvalidatedValues(
     // base class decl, rather than the class of the instance which needs to be
     // checked for mutable fields.
     // TODO: We might as well look at the dynamic type of the object.
-    const Expr *Ex = getCXXThisExpr()->ignoreParenBaseCasts();
+    const Expr *Ex = getCXXThisExpr()->IgnoreParenBaseCasts();
     QualType T = Ex->getType();
     if (T->isPointerType()) // Arrow or implicit-this syntax?
       T = T->getPointeeType();
@@ -1019,12 +1063,12 @@ const PseudoObjectExpr *ObjCMethodCall::getContainingPseudoObjectExpr() const {
 
 static const Expr *
 getSyntacticFromForPseudoObjectExpr(const PseudoObjectExpr *POE) {
-  const Expr *Syntactic = POE->getSyntacticForm();
+  const Expr *Syntactic = POE->getSyntacticForm()->IgnoreParens();
 
   // This handles the funny case of assigning to the result of a getter.
   // This can happen if the getter returns a non-const reference.
   if (const auto *BO = dyn_cast<BinaryOperator>(Syntactic))
-    Syntactic = BO->getLHS();
+    Syntactic = BO->getLHS()->IgnoreParens();
 
   return Syntactic;
 }

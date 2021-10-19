@@ -16,9 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -30,6 +28,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include <cstdint>
 #include <limits>
@@ -79,7 +78,8 @@ bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
 //
 
 /// Return true if the result produced by the instruction is not used, and the
-/// instruction has no side effects.
+/// instruction will return. Certain side-effecting instructions are also
+/// considered dead if there are no uses of the instruction.
 bool isInstructionTriviallyDead(Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
@@ -149,20 +149,6 @@ bool replaceDbgUsesWithUndef(Instruction *I);
 //  Control Flow Graph Restructuring.
 //
 
-/// Like BasicBlock::removePredecessor, this method is called when we're about
-/// to delete Pred as a predecessor of BB. If BB contains any PHI nodes, this
-/// drops the entries in the PHI nodes for Pred.
-///
-/// Unlike the removePredecessor method, this attempts to simplify uses of PHI
-/// nodes that collapse into identity values.  For example, if we have:
-///   x = phi(1, 0, 0, 0)
-///   y = and x, z
-///
-/// .. and delete the predecessor corresponding to the '1', this will attempt to
-/// recursively fold the 'and' to 0.
-void RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
-                                  DomTreeUpdater *DTU = nullptr);
-
 /// BB is a block with one predecessor and its predecessor is known to have one
 /// successor (BB!). Eliminate the edge between them, moving the instructions in
 /// the predecessor into BB. This deletes the predecessor block.
@@ -186,9 +172,11 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB);
 /// It returns true if a modification was made, possibly deleting the basic
 /// block that was pointed to. LoopHeaders is an optional input parameter
 /// providing the set of loop headers that SimplifyCFG should not eliminate.
+extern cl::opt<bool> RequireAndPreserveDomTree;
 bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
+                 DomTreeUpdater *DTU = nullptr,
                  const SimplifyCFGOptions &Options = {},
-                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
+                 ArrayRef<WeakVH> LoopHeaders = {});
 
 /// This function is used to flatten a CFG. For example, it uses parallel-and
 /// and parallel-or mode to collapse if-conditions and merge if-regions with
@@ -198,7 +186,9 @@ bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-bool FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU = nullptr,
+bool FoldBranchToCommonDest(BranchInst *BI, llvm::DomTreeUpdater *DTU = nullptr,
+                            MemorySSAUpdater *MSSAU = nullptr,
+                            const TargetTransformInfo *TTI = nullptr,
                             unsigned BonusInstThreshold = 1);
 
 /// This function takes a virtual register computed by an Instruction and
@@ -274,21 +264,6 @@ bool LowerDbgDeclare(Function &F);
 void insertDebugValuesForPHIs(BasicBlock *BB,
                               SmallVectorImpl<PHINode *> &InsertedPHIs);
 
-/// Finds all intrinsics declaring local variables as living in the memory that
-/// 'V' points to. This may include a mix of dbg.declare and
-/// dbg.addr intrinsics.
-TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
-
-/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
-/// dbg.addr.
-TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
-
-/// Finds the llvm.dbg.value intrinsics describing a value.
-void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
-
-/// Finds the debug info intrinsics describing a value.
-void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
-
 /// Replaces llvm.dbg.declare instruction when the address it
 /// describes is replaced with a new value. If Deref is true, an
 /// additional DW_OP_deref is prepended to the expression. If Offset
@@ -318,12 +293,30 @@ void salvageDebugInfo(Instruction &I);
 void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
 
-/// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
-/// the effects of \p I into the returned DIExpression, or return nullptr if
-/// it cannot be salvaged. \p StackVal: whether DW_OP_stack_value should be
-/// appended to the expression.
-DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
-                                   bool StackVal);
+/// Given an instruction \p I and DIExpression \p DIExpr operating on
+/// it, append the effects of \p I to the DIExpression operand list
+/// \p Ops, or return \p nullptr if it cannot be salvaged.
+/// \p CurrentLocOps is the number of SSA values referenced by the
+/// incoming \p Ops.  \return the first non-constant operand
+/// implicitly referred to by Ops. If \p I references more than one
+/// non-constant operand, any additional operands are added to
+/// \p AdditionalValues.
+///
+/// \example
+////
+///   I = add %a, i32 1
+///
+///   Return = %a
+///   Ops = llvm::dwarf::DW_OP_lit1 llvm::dwarf::DW_OP_add
+///
+///   I = add %a, %b
+///
+///   Return = %a
+///   Ops = llvm::dwarf::DW_OP_LLVM_arg0 llvm::dwarf::DW_OP_add
+///   AdditionalValues = %b
+Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
+                            SmallVectorImpl<uint64_t> &Ops,
+                            SmallVectorImpl<Value *> &AdditionalValues);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that
@@ -352,8 +345,7 @@ removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
-unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap,
-                             bool PreserveLCSSA = false,
+unsigned changeToUnreachable(Instruction *I, bool PreserveLCSSA = false,
                              DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
@@ -362,7 +354,8 @@ unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap,
 /// InvokeInst is a terminator instruction.  Returns the newly split basic
 /// block.
 BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
-                                             BasicBlock *UnwindEdge);
+                                             BasicBlock *UnwindEdge,
+                                             DomTreeUpdater *DTU = nullptr);
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
@@ -495,6 +488,15 @@ bool canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx);
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 Value *invertCondition(Value *Condition);
+
+
+//===----------------------------------------------------------------------===//
+//  Assorted
+//
+
+/// If we can infer one attribute from another on the declaration of a
+/// function, explicitly materialize the maximal set in the IR.
+bool inferAttributesFromOthers(Function &F);
 
 } // end namespace llvm
 

@@ -10,12 +10,13 @@
 #include "MipsInstrInfo.h"
 #include "TestBase.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -25,13 +26,10 @@ using ::testing::get;
 using ::testing::Pointwise;
 using ::testing::Property;
 
+using llvm::unittest::TempDir;
+
 namespace llvm {
 namespace exegesis {
-
-bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
-  return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
-         std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
-}
 
 static std::string Dump(const MCInst &McInst) {
   std::string Buffer;
@@ -52,9 +50,9 @@ MATCHER(EqMCInst, "") {
 
 namespace {
 
-class BenchmarkResultTest : public MipsTestBase {};
+class MipsBenchmarkResultTest : public MipsTestBase {};
 
-TEST_F(BenchmarkResultTest, WriteToAndReadFromDisk) {
+TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   ExitOnError ExitOnErr;
 
   InstructionBenchmark ToDisk;
@@ -76,10 +74,8 @@ TEST_F(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Error = "error";
   ToDisk.Info = "info";
 
-  SmallString<64> Filename;
-  std::error_code EC;
-  EC = sys::fs::createUniqueDirectory("BenchmarkResultTestDir", Filename);
-  ASSERT_FALSE(EC);
+  TempDir TestDirectory("BenchmarkResultTestDir", /*Unique*/ true);
+  SmallString<64> Filename(TestDirectory.path());
   sys::path::append(Filename, "data.yaml");
   errs() << Filename << "-------\n";
   ExitOnErr(ToDisk.writeYaml(State, Filename));
@@ -119,7 +115,7 @@ TEST_F(BenchmarkResultTest, WriteToAndReadFromDisk) {
   }
 }
 
-TEST_F(BenchmarkResultTest, PerInstructionStats) {
+TEST_F(MipsBenchmarkResultTest, PerInstructionStats) {
   PerInstructionStats Stats;
   Stats.push(BenchmarkMeasure{"a", 0.5, 0.0});
   Stats.push(BenchmarkMeasure{"a", 1.5, 0.0});

@@ -23,6 +23,7 @@
 #include <thread>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::once_flag flg0;
@@ -41,8 +42,8 @@ void f0()
 
 int main(int, char**)
 {
-    std::thread t0(f0);
-    std::thread t1(f0);
+    std::thread t0 = support::make_test_thread(f0);
+    std::thread t1 = support::make_test_thread(f0);
     t0.join();
     t1.join();
     assert(global == 1);

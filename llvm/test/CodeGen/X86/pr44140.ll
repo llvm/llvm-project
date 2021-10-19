@@ -41,7 +41,7 @@ define i32 @main() {
 ; CHECK-NEXT:    vmovups %ymm5, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm4, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq opaque
+; CHECK-NEXT:    callq opaque@PLT
 ; CHECK-NEXT:    vmovaps %xmm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %sil, %sil
 ; CHECK-NEXT:    jne .LBB1_1
@@ -49,8 +49,8 @@ define i32 @main() {
 ; CHECK-NEXT:    movabsq $1010101010101010101, %rcx # imm = 0xE04998456557EB5
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    addq $584, %rsp # imm = 0x248
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

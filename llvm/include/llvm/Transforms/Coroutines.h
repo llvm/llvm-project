@@ -23,7 +23,7 @@ void addCoroutinePassesToExtensionPoints(PassManagerBuilder &Builder);
 Pass *createCoroEarlyLegacyPass();
 
 /// Split up coroutines into multiple functions driving their state machines.
-Pass *createCoroSplitLegacyPass();
+Pass *createCoroSplitLegacyPass(bool IsOptimizing = false);
 
 /// Analyze coroutines use sites, devirtualize resume/destroy calls and elide
 /// heap allocation for coroutine frame where possible.

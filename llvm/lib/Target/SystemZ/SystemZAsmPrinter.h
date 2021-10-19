@@ -9,10 +9,12 @@
 #ifndef LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZASMPRINTER_H
 
-#include "SystemZTargetMachine.h"
 #include "SystemZMCInstLower.h"
+#include "SystemZTargetMachine.h"
+#include "SystemZTargetStreamer.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -25,6 +27,12 @@ class raw_ostream;
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
 private:
   StackMaps SM;
+
+  SystemZTargetStreamer *getTargetStreamer() {
+    MCTargetStreamer *TS = OutStreamer->getTargetStreamer();
+    assert(TS && "do not have a target streamer");
+    return static_cast<SystemZTargetStreamer *>(TS);
+  }
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)

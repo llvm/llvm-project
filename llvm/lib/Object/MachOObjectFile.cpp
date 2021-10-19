@@ -42,7 +42,6 @@
 #include <limits>
 #include <list>
 #include <memory>
-#include <string>
 #include <system_error>
 
 using namespace llvm;
@@ -247,8 +246,8 @@ static Error checkOverlappingElement(std::list<MachOElement> &Elements,
   if (Size == 0)
     return Error::success();
 
-  for (auto it=Elements.begin() ; it != Elements.end(); ++it) {
-    auto E = *it;
+  for (auto it = Elements.begin(); it != Elements.end(); ++it) {
+    const auto &E = *it;
     if ((Offset >= E.Offset && Offset < E.Offset + E.Size) ||
         (Offset + Size > E.Offset && Offset + Size < E.Offset + E.Size) ||
         (Offset <= E.Offset && Offset + Size >= E.Offset + E.Size))
@@ -259,7 +258,7 @@ static Error checkOverlappingElement(std::list<MachOElement> &Elements,
     auto nt = it;
     nt++;
     if (nt != Elements.end()) {
-      auto N = *nt;
+      const auto &N = *nt;
       if (Offset + Size <= N.Offset) {
         Elements.insert(nt, {Offset, Size, Name});
         return Error::success();
@@ -1596,6 +1595,9 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
        if ((Err = checkTwoLevelHintsCommand(*this, Load, I,
                                             &TwoLevelHintsLoadCmd, Elements)))
          return;
+    } else if (Load.C.cmd == MachO::LC_IDENT) {
+      // Note: LC_IDENT is ignored.
+      continue;
     } else if (isLoadCommandObsolete(Load.C.cmd)) {
       Err = malformedError("load command " + Twine(I) + " for cmd value of: " +
                            Twine(Load.C.cmd) + " is obsolete and not "
@@ -1833,6 +1835,8 @@ MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
       if (!SecOrError)
         return SecOrError.takeError();
       section_iterator Sec = *SecOrError;
+      if (Sec == section_end())
+        return SymbolRef::ST_Other;
       if (Sec->isData() || Sec->isBSS())
         return SymbolRef::ST_Data;
       return SymbolRef::ST_Function;
@@ -2030,9 +2034,18 @@ bool MachOObjectFile::isSectionBSS(DataRefImpl Sec) const {
           SectionType == MachO::S_GB_ZEROFILL);
 }
 
-bool MachOObjectFile::isDebugSection(StringRef SectionName) const {
+bool MachOObjectFile::isDebugSection(DataRefImpl Sec) const {
+  Expected<StringRef> SectionNameOrErr = getSectionName(Sec);
+  if (!SectionNameOrErr) {
+    // TODO: Report the error message properly.
+    consumeError(SectionNameOrErr.takeError());
+    return false;
+  }
+  StringRef SectionName = SectionNameOrErr.get();
   return SectionName.startswith("__debug") ||
-         SectionName.startswith("__zdebug") || SectionName == "__gdb_index";
+         SectionName.startswith("__zdebug") ||
+         SectionName.startswith("__apple") || SectionName == "__gdb_index" ||
+         SectionName == "__swift_ast";
 }
 
 unsigned MachOObjectFile::getSectionID(SectionRef Sec) const {
@@ -2689,6 +2702,12 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       if (ArchFlag)
         *ArchFlag = "arm64";
       return Triple("arm64-apple-darwin");
+    case MachO::CPU_SUBTYPE_ARM64E:
+      if (McpuDefault)
+        *McpuDefault = "apple-a12";
+      if (ArchFlag)
+        *ArchFlag = "arm64e";
+      return Triple("arm64e-apple-darwin");
     default:
       return Triple();
     }
@@ -2732,17 +2751,32 @@ Triple MachOObjectFile::getHostArch() {
 
 bool MachOObjectFile::isValidArch(StringRef ArchFlag) {
   auto validArchs = getValidArchs();
-  return llvm::find(validArchs, ArchFlag) != validArchs.end();
+  return llvm::is_contained(validArchs, ArchFlag);
 }
 
 ArrayRef<StringRef> MachOObjectFile::getValidArchs() {
-  static const std::array<StringRef, 17> validArchs = {{
-      "i386",   "x86_64", "x86_64h",  "armv4t",  "arm",    "armv5e",
-      "armv6",  "armv6m", "armv7",    "armv7em", "armv7k", "armv7m",
-      "armv7s", "arm64",  "arm64_32", "ppc",     "ppc64",
+  static const std::array<StringRef, 18> ValidArchs = {{
+      "i386",
+      "x86_64",
+      "x86_64h",
+      "armv4t",
+      "arm",
+      "armv5e",
+      "armv6",
+      "armv6m",
+      "armv7",
+      "armv7em",
+      "armv7k",
+      "armv7m",
+      "armv7s",
+      "arm64",
+      "arm64e",
+      "arm64_32",
+      "ppc",
+      "ppc64",
   }};
 
-  return validArchs;
+  return ValidArchs;
 }
 
 Triple::ArchType MachOObjectFile::getArch() const {

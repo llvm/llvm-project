@@ -1,5 +1,5 @@
 ; RUN: opt < %s -S -basic-aa -licm | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 ; This fixes PR22460
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

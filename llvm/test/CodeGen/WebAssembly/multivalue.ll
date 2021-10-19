@@ -1,11 +1,11 @@
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+multivalue,+tail-call | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
 ; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
 ; RUN: llc < %s --filetype=obj -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
 
 ; Test that the multivalue calls, returns, function types, and block
 ; types work as expected.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %pair = type { i32, i64 }
@@ -58,6 +58,7 @@ define %pair @pair_call_return() {
 ; CHECK-NEXT: .functype pair_call_indirect (i32) -> (i32, i64)
 ; CHECK-NEXT: local.get 0{{$}}
 ; CHECK-NEXT: call_indirect () -> (i32, i64){{$}}
+; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
 ; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
 define %pair @pair_call_indirect(%pair()* %f) {

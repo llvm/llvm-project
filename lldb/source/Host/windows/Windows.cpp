@@ -13,34 +13,14 @@
 
 #include "llvm/Support/ConvertUTF.h"
 
-#include <assert.h>
+#include <cassert>
+#include <cctype>
 #include <cerrno>
-#include <ctype.h>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <io.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-namespace {
-bool utf8ToWide(const char *utf8, wchar_t *buf, size_t bufSize) {
-  const llvm::UTF8 *sourceStart = reinterpret_cast<const llvm::UTF8 *>(utf8);
-  size_t sourceLen = strlen(utf8) + 1 /* convert null too */;
-  llvm::UTF16 *target = reinterpret_cast<llvm::UTF16 *>(buf);
-  llvm::ConversionFlags flags = llvm::strictConversion;
-  return llvm::ConvertUTF8toUTF16(&sourceStart, sourceStart + sourceLen, &target,
-                            target + bufSize, flags) == llvm::conversionOK;
-}
-
-bool wideToUtf8(const wchar_t *wide, char *buf, size_t bufSize) {
-  const llvm::UTF16 *sourceStart = reinterpret_cast<const llvm::UTF16 *>(wide);
-  size_t sourceLen = wcslen(wide) + 1 /* convert null too */;
-  llvm::UTF8 *target = reinterpret_cast<llvm::UTF8 *>(buf);
-  llvm::ConversionFlags flags = llvm::strictConversion;
-  return llvm::ConvertUTF16toUTF8(&sourceStart, sourceStart + sourceLen, &target,
-                            target + bufSize, flags) == llvm::conversionOK;
-}
-}
 
 int vasprintf(char **ret, const char *fmt, va_list ap) {
   char *buf;

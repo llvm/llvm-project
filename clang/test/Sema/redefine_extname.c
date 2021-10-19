@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple=x86_64-unknown-linux -Wpragmas -verify %s
+// RUN: %clang_cc1 -triple=powerpc64-ibm-aix-xcoff -Wpragmas -verify %s
 
 // Check that pragma redefine_extname applies to external declarations only.
 #pragma redefine_extname foo_static bar_static

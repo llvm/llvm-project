@@ -27,6 +27,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
@@ -260,10 +261,9 @@ class CHRScope {
           if (TailRegionSet.count(Parent))
             return false;
 
-          assert(llvm::find_if(RegInfos,
-                               [&Parent](const RegInfo &RI) {
-                                 return Parent == RI.R;
-                               }) != RegInfos.end() &&
+          assert(llvm::any_of(
+                     RegInfos,
+                     [&Parent](const RegInfo &RI) { return Parent == RI.R; }) &&
                  "Must be in head");
           return true;
         });
@@ -732,7 +732,7 @@ static Instruction* getBranchInsertPoint(RegInfo &RI) {
     }
   }
   for (Instruction &I : *EntryBB) {
-    if (EntryBlockSelectSet.count(&I) > 0) {
+    if (EntryBlockSelectSet.contains(&I)) {
       assert(&I == HoistPoint &&
              "HoistPoint must be the first one in Selects");
       break;
@@ -766,6 +766,11 @@ CHRScope * CHR::findScope(Region *R) {
   // Exclude loops
   for (BasicBlock *Pred : predecessors(Entry))
     if (R->contains(Pred))
+      return nullptr;
+  // If any of the basic blocks have address taken, we must skip this region
+  // because we cannot clone basic blocks that have address taken.
+  for (BasicBlock *BB : R->blocks())
+    if (BB->hasAddressTaken())
       return nullptr;
   if (Exit) {
     // Try to find an if-then block (check if R is an if-then).
@@ -950,10 +955,9 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
                 << "Dropped select due to unhoistable branch";
           });
         }
-        Selects.erase(std::remove_if(Selects.begin(), Selects.end(),
-                                     [EntryBB](SelectInst *SI) {
-                                       return SI->getParent() == EntryBB;
-                                     }), Selects.end());
+        llvm::erase_if(Selects, [EntryBB](SelectInst *SI) {
+          return SI->getParent() == EntryBB;
+        });
         Unhoistables.clear();
         InsertPoint = Branch;
       }
@@ -1249,7 +1253,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
       SmallVector<CHRScope *, 8> SubSplits = splitScope(
           Sub, Split, &SplitConditionValues, SplitInsertPoint, Output,
           SplitUnhoistables);
-      NewSubs.insert(NewSubs.end(), SubSplits.begin(), SubSplits.end());
+      llvm::append_range(NewSubs, SubSplits);
     }
     Split->Subs = NewSubs;
   }
@@ -1306,17 +1310,17 @@ void CHR::classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope) {
   for (RegInfo &RI : Scope->RegInfos) {
     if (RI.HasBranch) {
       Region *R = RI.R;
-      if (TrueBiasedRegionsGlobal.count(R) > 0)
+      if (TrueBiasedRegionsGlobal.contains(R))
         OutermostScope->TrueBiasedRegions.insert(R);
-      else if (FalseBiasedRegionsGlobal.count(R) > 0)
+      else if (FalseBiasedRegionsGlobal.contains(R))
         OutermostScope->FalseBiasedRegions.insert(R);
       else
         llvm_unreachable("Must be biased");
     }
     for (SelectInst *SI : RI.Selects) {
-      if (TrueBiasedSelectsGlobal.count(SI) > 0)
+      if (TrueBiasedSelectsGlobal.contains(SI))
         OutermostScope->TrueBiasedSelects.insert(SI);
-      else if (FalseBiasedSelectsGlobal.count(SI) > 0)
+      else if (FalseBiasedSelectsGlobal.contains(SI))
         OutermostScope->FalseBiasedSelects.insert(SI);
       else
         llvm_unreachable("Must be biased");
@@ -1399,8 +1403,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
     DenseSet<Instruction *> HoistStops;
     bool IsHoisted = false;
     if (RI.HasBranch) {
-      assert((OutermostScope->TrueBiasedRegions.count(R) > 0 ||
-              OutermostScope->FalseBiasedRegions.count(R) > 0) &&
+      assert((OutermostScope->TrueBiasedRegions.contains(R) ||
+              OutermostScope->FalseBiasedRegions.contains(R)) &&
              "Must be truthy or falsy");
       auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
       // Note checkHoistValue fills in HoistStops.
@@ -1412,8 +1416,8 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
       IsHoisted = true;
     }
     for (SelectInst *SI : RI.Selects) {
-      assert((OutermostScope->TrueBiasedSelects.count(SI) > 0 ||
-              OutermostScope->FalseBiasedSelects.count(SI) > 0) &&
+      assert((OutermostScope->TrueBiasedSelects.contains(SI) ||
+              OutermostScope->FalseBiasedSelects.contains(SI)) &&
              "Must be true or false biased");
       // Note checkHoistValue fills in HoistStops.
       DenseMap<Instruction *, bool> Visited;
@@ -1609,9 +1613,7 @@ static void insertTrivialPHIs(CHRScope *Scope,
         // Insert a trivial phi for I (phi [&I, P0], [&I, P1], ...) at
         // ExitBlock. Replace I with the new phi in UI unless UI is another
         // phi at ExitBlock.
-        unsigned PredCount = std::distance(pred_begin(ExitBlock),
-                                           pred_end(ExitBlock));
-        PHINode *PN = PHINode::Create(I.getType(), PredCount, "",
+        PHINode *PN = PHINode::Create(I.getType(), pred_size(ExitBlock), "",
                                       &ExitBlock->front());
         for (BasicBlock *Pred : predecessors(ExitBlock)) {
           PN->addIncoming(&I, Pred);
@@ -2099,9 +2101,7 @@ PreservedAnalyses ControlHeightReductionPass::run(
   bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();
   if (!Changed)
     return PreservedAnalyses::all();
-  auto PA = PreservedAnalyses();
-  PA.preserve<GlobalsAA>();
-  return PA;
+  return PreservedAnalyses::none();
 }
 
 } // namespace llvm

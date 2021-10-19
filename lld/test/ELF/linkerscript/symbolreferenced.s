@@ -13,6 +13,10 @@
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN1 %s
 # HIDDEN1: 0000000000000001 l       *ABS*  0000000000000000 .hidden newsym
 
+# RUN: echo 'SECTIONS { PROVIDE_HIDDEN("newsym" = 1);}' > %t.script
+# RUN: ld.lld -o %t1 --script %t.script %t
+# RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN1 %s
+
 .global _start
 _start:
  nop

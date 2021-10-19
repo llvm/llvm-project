@@ -6,14 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test makes sure that we do assume that type_infos are unique across
-// all translation units on Apple platforms. See https://llvm.org/PR45549.
+// This test makes sure that we use the correct implementation for comparing
+// type_info objects on Apple platforms. See https://llvm.org/PR45549.
 
-// TODO:
-// We don't really want to require 'darwin' here -- instead we'd like to express
-// that this test requires the flavor of libc++ built by Apple, which we don't
-// have a clear way to express right now. If another flavor of libc++ was built
-// targetting Apple platforms without assuming merged RTTI, this test would fail.
 // REQUIRES: darwin
 
 #include <typeinfo>
@@ -22,6 +17,14 @@
 #   error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be defined on Apple platforms"
 #endif
 
-#if _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION != 1
-#   error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be 1 (assume RTTI is merged) on Apple platforms"
+#if defined(__x86_64__)
+#   if _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION != 1
+#       error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be 1 (assume RTTI is merged) on Apple platforms"
+#   endif
+#elif defined(__aarch64__)
+#   if _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION != 3
+#       error "_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION should be 3 (use the special ARM RTTI) on Apple platforms"
+#   endif
+#else
+#   error "This test should be updated to pin down the RTTI behavior on this ABI."
 #endif

@@ -70,6 +70,11 @@
 // CHECK-NO-NANS-NO-FAST-MATH: "-cc1"
 // CHECK-NO-NANS-NO-FAST-MATH-NOT: "-menable-no-nans"
 //
+// RUN: %clang -### -fapprox-func -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC %s
+// CHECK-APPROX-FUNC: "-cc1"
+// CHECK-APPROX-FUNC: "-fapprox-func"
+//
 // RUN: %clang -### -fmath-errno -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-MATH-ERRNO %s
 // CHECK-MATH-ERRNO: "-cc1"
@@ -291,10 +296,6 @@
 // CHECK-NO-REASSOC-NO-UNSAFE-MATH-NOT: "-menable-unsafe-fp-math"
 // CHECK-NO-REASSOC-NO-UNSAFE-MATH: "-o"
 
-
-// RUN: %clang -### -ftrapping-math -fno-trapping-math -c %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-NO-TRAPPING-MATH %s
-// CHECK-NO-TRAPPING-MATH: "-fno-trapping-math"
 
 // This isn't fast-math, but the option is handled in the same place as other FP params.
 // Last option wins, and strict behavior is assumed by default. 

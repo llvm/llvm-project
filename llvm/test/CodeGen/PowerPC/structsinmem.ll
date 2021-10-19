@@ -56,7 +56,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %5, i8* align 4 bitcast ({ i32, i16, [2 x i8] }* @caller1.p6 to i8*), i64 8, i1 false)
   %6 = bitcast %struct.s7* %p7 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %6, i8* align 4 bitcast ({ i32, i16, i8, i8 }* @caller1.p7 to i8*), i64 8, i1 false)
-  %call = call i32 @callee1(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, %struct.s1* byval %p1, %struct.s2* byval %p2, %struct.s3* byval %p3, %struct.s4* byval %p4, %struct.s5* byval %p5, %struct.s6* byval %p6, %struct.s7* byval %p7)
+  %call = call i32 @callee1(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, %struct.s1* byval(%struct.s1) %p1, %struct.s2* byval(%struct.s2) %p2, %struct.s3* byval(%struct.s3) %p3, %struct.s4* byval(%struct.s4) %p4, %struct.s5* byval(%struct.s5) %p5, %struct.s6* byval(%struct.s6) %p6, %struct.s7* byval(%struct.s7) %p7)
   ret i32 %call
 
 ; CHECK: stb {{[0-9]+}}, 119(1)
@@ -70,7 +70,7 @@ entry:
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
-define internal i32 @callee1(i32 %z1, i32 %z2, i32 %z3, i32 %z4, i32 %z5, i32 %z6, i32 %z7, i32 %z8, %struct.s1* byval %v1, %struct.s2* byval %v2, %struct.s3* byval %v3, %struct.s4* byval %v4, %struct.s5* byval %v5, %struct.s6* byval %v6, %struct.s7* byval %v7) nounwind {
+define internal i32 @callee1(i32 %z1, i32 %z2, i32 %z3, i32 %z4, i32 %z5, i32 %z6, i32 %z7, i32 %z8, %struct.s1* byval(%struct.s1) %v1, %struct.s2* byval(%struct.s2) %v2, %struct.s3* byval(%struct.s3) %v3, %struct.s4* byval(%struct.s4) %v4, %struct.s5* byval(%struct.s5) %v5, %struct.s6* byval(%struct.s6) %v6, %struct.s7* byval(%struct.s7) %v7) nounwind {
 entry:
   %z1.addr = alloca i32, align 4
   %z2.addr = alloca i32, align 4
@@ -145,7 +145,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %5, i8* bitcast (%struct.t6* @caller2.p6 to i8*), i64 6, i1 false)
   %6 = bitcast %struct.t7* %p7 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %6, i8* bitcast (%struct.t7* @caller2.p7 to i8*), i64 7, i1 false)
-  %call = call i32 @callee2(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, %struct.t1* byval %p1, %struct.t2* byval %p2, %struct.t3* byval %p3, %struct.t4* byval %p4, %struct.t5* byval %p5, %struct.t6* byval %p6, %struct.t7* byval %p7)
+  %call = call i32 @callee2(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, %struct.t1* byval(%struct.t1) %p1, %struct.t2* byval(%struct.t2) %p2, %struct.t3* byval(%struct.t3) %p3, %struct.t4* byval(%struct.t4) %p4, %struct.t5* byval(%struct.t5) %p5, %struct.t6* byval(%struct.t6) %p6, %struct.t7* byval(%struct.t7) %p7)
   ret i32 %call
 
 ; CHECK: stb {{[0-9]+}}, 119(1)
@@ -161,7 +161,7 @@ entry:
 ; CHECK: stw {{[0-9]+}}, 161(1)
 }
 
-define internal i32 @callee2(i32 %z1, i32 %z2, i32 %z3, i32 %z4, i32 %z5, i32 %z6, i32 %z7, i32 %z8, %struct.t1* byval %v1, %struct.t2* byval %v2, %struct.t3* byval %v3, %struct.t4* byval %v4, %struct.t5* byval %v5, %struct.t6* byval %v6, %struct.t7* byval %v7) nounwind {
+define internal i32 @callee2(i32 %z1, i32 %z2, i32 %z3, i32 %z4, i32 %z5, i32 %z6, i32 %z7, i32 %z8, %struct.t1* byval(%struct.t1) %v1, %struct.t2* byval(%struct.t2) %v2, %struct.t3* byval(%struct.t3) %v3, %struct.t4* byval(%struct.t4) %v4, %struct.t5* byval(%struct.t5) %v5, %struct.t6* byval(%struct.t6) %v6, %struct.t7* byval(%struct.t7) %v7) nounwind {
 entry:
   %z1.addr = alloca i32, align 4
   %z2.addr = alloca i32, align 4

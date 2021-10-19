@@ -199,6 +199,33 @@ define <2 x float> @test_vcvt_f32_f64(<2 x double> %v) nounwind readnone ssp {
   ret <2 x float> %vcvt1.i
 }
 
+define half @test_vcvt_f16_f32(<1 x float> %x) {
+; GENERIC-LABEL: test_vcvt_f16_f32:
+; GENERIC:       // %bb.0:
+; GENERIC-NEXT:    // kill: def $d0 killed $d0 def $q0
+; GENERIC-NEXT:    fcvt h0, s0
+; GENERIC-NEXT:    ret
+;
+; FAST-LABEL: test_vcvt_f16_f32:
+; FAST:       // %bb.0:
+; FAST-NEXT:    fmov d1, d0
+; FAST-NEXT:    // implicit-def: $q0
+; FAST-NEXT:    fmov d0, d1
+; FAST-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; FAST-NEXT:    fcvt h0, s0
+; FAST-NEXT:    ret
+;
+; GISEL-LABEL: test_vcvt_f16_f32:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    fmov x8, d0
+; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    fcvt h0, s0
+; GISEL-NEXT:    ret
+  %tmp = fptrunc <1 x float> %x to <1 x half>
+  %elt = extractelement <1 x half> %tmp, i32 0
+  ret half %elt
+}
+
 ; FALLBACK-NOT: remark{{.*}}G_FPEXT{{.*}}(in function: test_vcvt_high_f32_f64)
 ; FALLBACK-NOT: remark{{.*}}fpext{{.*}}(in function: test_vcvt_high_f32_f64)
 define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) nounwind readnone ssp {
@@ -210,10 +237,10 @@ define <4 x float> @test_vcvt_high_f32_f64(<2 x float> %x, <2 x double> %v) noun
 ;
 ; FAST-LABEL: test_vcvt_high_f32_f64:
 ; FAST:       // %bb.0:
-; FAST-NEXT:    // implicit-def: $q2
-; FAST-NEXT:    mov.16b v2, v0
-; FAST-NEXT:    fcvtn2 v2.4s, v1.2d
-; FAST-NEXT:    mov.16b v0, v2
+; FAST-NEXT:    fmov d2, d0
+; FAST-NEXT:    // implicit-def: $q0
+; FAST-NEXT:    fmov d0, d2
+; FAST-NEXT:    fcvtn2 v0.4s, v1.2d
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: test_vcvt_high_f32_f64:
@@ -249,10 +276,10 @@ define <4 x float> @test_vcvtx_high_f32_f64(<2 x float> %x, <2 x double> %v) nou
 ;
 ; FAST-LABEL: test_vcvtx_high_f32_f64:
 ; FAST:       // %bb.0:
-; FAST-NEXT:    // implicit-def: $q2
-; FAST-NEXT:    mov.16b v2, v0
-; FAST-NEXT:    fcvtxn2 v2.4s, v1.2d
-; FAST-NEXT:    mov.16b v0, v2
+; FAST-NEXT:    fmov d2, d0
+; FAST-NEXT:    // implicit-def: $q0
+; FAST-NEXT:    fmov d0, d2
+; FAST-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: test_vcvtx_high_f32_f64:
@@ -283,17 +310,12 @@ define i16 @to_half(float %in) {
 ;
 ; FAST-LABEL: to_half:
 ; FAST:       // %bb.0:
-; FAST-NEXT:    sub sp, sp, #16 // =16
-; FAST-NEXT:    .cfi_def_cfa_offset 16
-; FAST-NEXT:    fcvt h0, s0
+; FAST-NEXT:    fcvt h1, s0
 ; FAST-NEXT:    // implicit-def: $w0
-; FAST-NEXT:    fmov s1, w0
-; FAST-NEXT:    mov.16b v1, v0
-; FAST-NEXT:    fmov w8, s1
-; FAST-NEXT:    mov w0, w8
-; FAST-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
-; FAST-NEXT:    mov w0, w8
-; FAST-NEXT:    add sp, sp, #16 // =16
+; FAST-NEXT:    fmov s0, w0
+; FAST-NEXT:    fmov s0, s1
+; FAST-NEXT:    fmov w0, s0
+; FAST-NEXT:    // kill: def $w1 killed $w0
 ; FAST-NEXT:    ret
 ;
 ; GISEL-LABEL: to_half:

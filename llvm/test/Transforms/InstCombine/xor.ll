@@ -1171,3 +1171,63 @@ define i8 @not_ashr_wrong_const(i8 %x) {
   %r = xor i8 %a, -2
   ret i8 %r
 }
+
+; (~A & B) ^ A --> A | B
+
+define <2 x i32> @xor_andn_commute1(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @xor_andn_commute1(
+; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[Z]]
+;
+  %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %r = and <2 x i32> %nota, %b
+  %z = xor <2 x i32> %r, %a
+  ret <2 x i32> %z
+}
+
+; (B & ~A) ^ A --> A | B
+
+define i33 @xor_andn_commute2(i33 %a, i33 %pb) {
+; CHECK-LABEL: @xor_andn_commute2(
+; CHECK-NEXT:    [[B:%.*]] = udiv i33 42, [[PB:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i33 [[B]], [[A:%.*]]
+; CHECK-NEXT:    ret i33 [[Z]]
+;
+  %b = udiv i33 42, %pb ; thwart complexity-based canonicalization
+  %nota = xor i33 %a, -1
+  %r = and i33 %b, %nota
+  %z = xor i33 %r, %a
+  ret i33 %z
+}
+
+; A ^ (~A & B) --> A | B
+
+define i32 @xor_andn_commute3(i32 %pa, i32 %b) {
+; CHECK-LABEL: @xor_andn_commute3(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[PA:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %pa ; thwart complexity-based canonicalization
+  %nota = xor i32 %a, -1
+  %r = and i32 %nota, %b
+  %z = xor i32 %a, %r
+  ret i32 %z
+}
+
+; A ^ (B & ~A) --> A | B
+
+define i32 @xor_andn_commute4(i32 %pa, i32 %pb) {
+; CHECK-LABEL: @xor_andn_commute4(
+; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[PA:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[A]], [[B]]
+; CHECK-NEXT:    ret i32 [[Z]]
+;
+  %a = udiv i32 42, %pa ; thwart complexity-based canonicalization
+  %b = udiv i32 42, %pb ; thwart complexity-based canonicalization
+  %nota = xor i32 %a, -1
+  %r = and i32 %b, %nota
+  %z = xor i32 %a, %r
+  ret i32 %z
+}

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=hawaii -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Test calls when called by other callable functions rather than
 ; kernels.
@@ -16,7 +16,7 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GCN-DAG: v_writelane_b32 v40, s33, 2
 ; GCN-DAG: s_mov_b32 s33, s32
-; GCN-DAG: s_add_u32 s32, s32, 0x400
+; GCN-DAG: s_addk_i32 s32, 0x400
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 
@@ -25,7 +25,7 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: v_readlane_b32 s4, v40, 0
 ; GCN: v_readlane_b32 s5, v40, 1
 
-; GCN-NEXT: s_sub_u32 s32, s32, 0x400
+; GCN-NEXT: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: v_readlane_b32 s33, v40, 2
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -40,10 +40,10 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_i32_imm_stack_use:
 ; GCN: s_waitcnt
 ; GCN: s_mov_b32 s33, s32
-; GCN-DAG: s_add_u32 s32, s32, 0x1400{{$}}
+; GCN-DAG: s_addk_i32 s32, 0x1400{{$}}
 ; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:
 ; GCN: s_swappc_b64
-; GCN: s_sub_u32 s32, s32, 0x1400{{$}}
+; GCN: s_addk_i32 s32, 0xec00{{$}}
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)

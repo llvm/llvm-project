@@ -5,6 +5,14 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
+
+// RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -fopenmp-version=51 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51 %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -152,6 +160,10 @@ T tmain(T argc, T *argv) {
   a=2;
 #pragma omp parallel default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(C) copyin(S<T>::TS, thrp) proc_bind(master) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10])
   foo();
+#ifdef OMP51
+#pragma omp parallel default(none), private(argc,b) firstprivate(argv) shared (d) if (parallel:argc > 0) num_threads(C) copyin(S<T>::TS, thrp) proc_bind(primary) reduction(+:c, arr1[argc]) reduction(max:e, arr[:C][0:10])
+  foo();
+#endif
 #pragma omp parallel if (C) num_threads(s) proc_bind(close) reduction(^:e, f, arr[0:C][:argc]) reduction(default, && : g) reduction(task,+:argc)
   foo();
   return 0;
@@ -166,6 +178,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS,thrp) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
 // CHECK-NEXT: foo()
+// OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(C) copyin(S<T>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:C][0:10])
+// OMP51-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(C) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:C][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
@@ -177,6 +191,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) copyin(S<int>::TS,thrp) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
 // CHECK-NEXT: foo()
+// OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(5) copyin(S<int>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:5][0:10])
+// OMP51-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(5) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:5][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
@@ -188,6 +204,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) copyin(S<long>::TS,thrp) proc_bind(master) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
 // CHECK-NEXT: foo()
+// OMP51-NEXT: #pragma omp parallel default(none) private(argc,b) firstprivate(argv) shared(d) if(parallel: argc > 0) num_threads(1) copyin(S<long>::TS,thrp) proc_bind(primary) reduction(+: c,arr1[argc]) reduction(max: e,arr[:1][0:10])
+// OMP51-NEXT: foo()
 // CHECK-NEXT: #pragma omp parallel if(1) num_threads(s) proc_bind(close) reduction(^: e,f,arr[0:1][:argc]) reduction(default, &&: g) reduction(task, +: argc)
 // CHECK-NEXT: foo()
 

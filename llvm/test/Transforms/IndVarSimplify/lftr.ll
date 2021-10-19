@@ -14,7 +14,7 @@ define i32 @pre_to_post_add() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 1001
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -42,7 +42,7 @@ define i32 @pre_to_post_sub() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -73,7 +73,7 @@ define i32 @quadratic_slt() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -103,7 +103,7 @@ define i32 @quadratic_sle() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -132,7 +132,7 @@ define i32 @quadratic_ule() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -160,12 +160,13 @@ define i32 @quadratic_sgt_loopdec() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[I]], i32 1)
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[I2:%.*]] = mul i32 [[I]], [[I]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I2]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[I2]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
+;
 
 entry:
   br label %loop
@@ -189,12 +190,12 @@ define void @test_zext(i8* %a) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8* [ [[A:%.*]], [[ENTRY]] ], [ [[TMP:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP]] = getelementptr inbounds i8, i8* [[DOT0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[DOT0]], align 1
-; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
-; CHECK-NEXT:    store i8 [[TMP2]], i8* [[P_0]], align 1
+; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[T3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8* [ [[A:%.*]], [[ENTRY]] ], [ [[T:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[T]] = getelementptr inbounds i8, i8* [[DOT0]], i64 1
+; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[DOT0]], align 1
+; CHECK-NEXT:    [[T3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
+; CHECK-NEXT:    store i8 [[T2]], i8* [[P_0]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[P_0]], getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 239)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -204,16 +205,16 @@ entry:
   br label %loop
 
 loop:
-  %i.0 = phi i8 [ 0, %entry ], [ %tmp4, %loop ]
-  %p.0 = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), %entry ], [ %tmp3, %loop ]
-  %.0 = phi i8* [ %a, %entry ], [ %tmp, %loop ]
-  %tmp = getelementptr inbounds i8, i8* %.0, i64 1
-  %tmp2 = load i8, i8* %.0, align 1
-  %tmp3 = getelementptr inbounds i8, i8* %p.0, i64 1
-  store i8 %tmp2, i8* %p.0, align 1
-  %tmp4 = add i8 %i.0, 1
-  %tmp5 = icmp ult i8 %tmp4, -16
-  br i1 %tmp5, label %loop, label %exit
+  %i.0 = phi i8 [ 0, %entry ], [ %t4, %loop ]
+  %p.0 = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), %entry ], [ %t3, %loop ]
+  %.0 = phi i8* [ %a, %entry ], [ %t, %loop ]
+  %t = getelementptr inbounds i8, i8* %.0, i64 1
+  %t2 = load i8, i8* %.0, align 1
+  %t3 = getelementptr inbounds i8, i8* %p.0, i64 1
+  store i8 %t2, i8* %p.0, align 1
+  %t4 = add i8 %i.0, 1
+  %t5 = icmp ult i8 %t4, -16
+  br i1 %t5, label %loop, label %exit
 
 exit:
   ret void
@@ -235,7 +236,7 @@ define void @test_udiv_as_shift(i8* %a, i8 %n) nounwind uwtable ssp {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i8 [ [[I1_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I1_INC]] = add nuw nsw i8 [[I1]], 1
-; CHECK-NEXT:    store volatile i8 0, i8* [[A:%.*]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[A:%.*]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[I1_INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
@@ -268,11 +269,11 @@ define void @use_before_branch() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOPENTRY_0:%.*]]
 ; CHECK:       loopentry.0:
-; CHECK-NEXT:    [[MB_Y_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP_152:%.*]], [[LOOPENTRY_1:%.*]] ]
-; CHECK-NEXT:    [[TMP_14:%.*]] = icmp ule i32 [[MB_Y_0]], 3
-; CHECK-NEXT:    br i1 [[TMP_14]], label [[LOOPENTRY_1]], label [[LOOPEXIT_0:%.*]]
+; CHECK-NEXT:    [[MB_Y_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[T152:%.*]], [[LOOPENTRY_1:%.*]] ]
+; CHECK-NEXT:    [[T14:%.*]] = icmp ule i32 [[MB_Y_0]], 3
+; CHECK-NEXT:    br i1 [[T14]], label [[LOOPENTRY_1]], label [[LOOPEXIT_0:%.*]]
 ; CHECK:       loopentry.1:
-; CHECK-NEXT:    [[TMP_152]] = add nuw nsw i32 [[MB_Y_0]], 2
+; CHECK-NEXT:    [[T152]] = add nuw nsw i32 [[MB_Y_0]], 2
 ; CHECK-NEXT:    br label [[LOOPENTRY_0]]
 ; CHECK:       loopexit.0:
 ; CHECK-NEXT:    unreachable
@@ -281,13 +282,13 @@ entry:
   br label %loopentry.0
 
 loopentry.0:
-  %mb_y.0 = phi i32 [ 0, %entry ], [ %tmp.152, %loopentry.1 ]
-  %tmp.14 = icmp sle i32 %mb_y.0, 3
-  %tmp.15 = zext i1 %tmp.14 to i32
-  br i1 %tmp.14, label %loopentry.1, label %loopexit.0
+  %mb_y.0 = phi i32 [ 0, %entry ], [ %t152, %loopentry.1 ]
+  %t14 = icmp sle i32 %mb_y.0, 3
+  %t15 = zext i1 %t14 to i32
+  br i1 %t14, label %loopentry.1, label %loopexit.0
 
 loopentry.1:
-  %tmp.152 = add i32 %mb_y.0, 2
+  %t152 = add i32 %mb_y.0, 2
   br label %loopentry.0
 
 loopexit.0:		; preds = %loopentry.0
@@ -335,7 +336,7 @@ define void @extend_const() #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
@@ -364,7 +365,7 @@ define i32 @extend_const_postinc() #0 {
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[DO_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INDVARS_IV]], 255
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END:%.*]], label [[DO_BODY]]
@@ -656,6 +657,52 @@ exit:
   ret void
 }
 
+define void @PR49993() {
+; CHECK-LABEL: @PR49993(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       d:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD:%.*]], [[D:%.*]] ], [ [[REM10:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[PHI]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[PHI]], 3
+; CHECK-NEXT:    br i1 [[CMP]], label [[D]], label [[IF_END_LOOPEXIT:%.*]]
+; CHECK:       if.end.loopexit:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[REM1:%.*]] = urem i32 undef, undef
+; CHECK-NEXT:    [[REM2:%.*]] = urem i32 [[REM1]], undef
+; CHECK-NEXT:    [[REM3:%.*]] = urem i32 [[REM2]], undef
+; CHECK-NEXT:    [[REM4:%.*]] = urem i32 [[REM3]], undef
+; CHECK-NEXT:    [[REM5:%.*]] = urem i32 [[REM4]], undef
+; CHECK-NEXT:    [[REM6:%.*]] = urem i32 [[REM5]], undef
+; CHECK-NEXT:    [[REM7:%.*]] = urem i32 [[REM6]], undef
+; CHECK-NEXT:    [[REM8:%.*]] = urem i32 [[REM7]], undef
+; CHECK-NEXT:    [[REM9:%.*]] = urem i32 [[REM8]], undef
+; CHECK-NEXT:    [[REM10]] = urem i32 [[REM9]], undef
+; CHECK-NEXT:    br label [[D]]
+;
+entry:
+  br label %if.end
+
+d:
+  %phi = phi i32 [ %add, %d ], [ %rem10, %if.end ]
+  %add = add nsw i32 %phi, 1
+  %cmp = icmp slt i32 %phi, 3
+  br i1 %cmp, label %d, label %if.end
+
+if.end:
+  %rem1 = urem i32 undef, undef
+  %rem2 = urem i32 %rem1, undef
+  %rem3 = urem i32 %rem2, undef
+  %rem4 = urem i32 %rem3, undef
+  %rem5 = urem i32 %rem4, undef
+  %rem6 = urem i32 %rem5, undef
+  %rem7 = urem i32 %rem6, undef
+  %rem8 = urem i32 %rem7, undef
+  %rem9 = urem i32 %rem8, undef
+  %rem10 = urem i32 %rem9, undef
+  br label %d
+}
 
 declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 

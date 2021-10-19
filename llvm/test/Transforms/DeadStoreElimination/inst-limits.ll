@@ -1,10 +1,9 @@
 ; RUN: opt -S -dse < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; If there are two stores to the same location, DSE should be able to remove
-; the first store if the two stores are separated by no more than 98
-; instructions. The existence of debug intrinsics between the stores should
-; not affect this instruction limit.
+; This test is not relevant for DSE with MemorySSA. Non-memory instructions
+; are ignored anyways. The limits for the MemorySSA traversal are tested in
+; llvm/test/Transforms/DeadStoreElimination/MSSA/memoryssa-scan-limit.ll
 
 @x = global i32 0, align 4
 
@@ -129,7 +128,7 @@ entry:
 define i32 @test_outside_limit() {
 entry:
   ; The first store; later there is a second store to the same location
-  ; CHECK: store i32 1, i32* @x, align 4
+  ; CHECK-NOT: store i32 1, i32* @x, align 4
   store i32 1, i32* @x, align 4
 
   ; Insert 99 dummy instructions between the two stores; this is

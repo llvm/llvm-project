@@ -47,7 +47,6 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     if (!args_or) {
       result.AppendError(toString(args_or.takeError()));
       result.AppendError("Unable to create requested alias.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     args = std::move(*args_or);
@@ -80,7 +79,7 @@ CommandAlias::CommandAlias(CommandInterpreter &interpreter,
                            llvm::StringRef help, llvm::StringRef syntax,
                            uint32_t flags)
     : CommandObject(interpreter, name, help, syntax, flags),
-      m_underlying_command_sp(), m_option_string(std::string(options_args)),
+      m_option_string(std::string(options_args)),
       m_option_args_sp(new OptionArgVector),
       m_is_dashdash_alias(eLazyBoolCalculate), m_did_set_help(false),
       m_did_set_help_long(false) {

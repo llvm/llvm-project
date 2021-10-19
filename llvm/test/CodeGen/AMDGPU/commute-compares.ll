@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -amdgpu-sdwa-peephole=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -amdgpu-sdwa-peephole=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 

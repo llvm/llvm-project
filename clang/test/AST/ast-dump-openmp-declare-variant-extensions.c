@@ -200,8 +200,8 @@ int test() {
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_111:0x[a-z0-9]*]] <col:29> 'int ({{.*}})' {{.*}}Function [[ADDR_18]] 'picked7' 'int ({{.*}})' non_odr_use_unevaluated
 // CHECK-NEXT: |-FunctionDecl [[ADDR_112:0x[a-z0-9]*]] <line:59:1, col:17> col:5 implicit used overloaded1 'int ({{.*}})'
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_113:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(match_any)}, device={kind(cpu, gpu)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_114:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' Function [[ADDR_115:0x[a-z0-9]*]] 'overloaded1[implementation={extension(match_any)}]' 'int ({{.*}})'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_115]] <col:1, col:31> col:1 overloaded1[implementation={extension(match_any)}] 'int ({{.*}})'
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_114:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_115:0x[a-z0-9]*]] 'overloaded1[implementation={extension(match_any)}, device={kind(cpu, gpu)}]' 'int ({{.*}})'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_115]] <col:1, col:31> col:1 overloaded1[implementation={extension(match_any)}, device={kind(cpu, gpu)}] 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_116:0x[a-z0-9]*]] <col:19, col:31>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_117:0x[a-z0-9]*]] <col:21, col:28>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_118:0x[a-z0-9]*]] <col:28> 'int' 0
@@ -210,8 +210,8 @@ int test() {
 // CHECK-NEXT: | | `-ReturnStmt [[ADDR_121:0x[a-z0-9]*]] <col:21, col:28>
 // CHECK-NEXT: | |   `-IntegerLiteral [[ADDR_122:0x[a-z0-9]*]] <col:28> 'int' 1
 // CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_123:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(match_none)}, device={kind(fpga, gpu)}
-// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_124:0x[a-z0-9]*]] <line:64:1> 'int ({{.*}})' Function [[ADDR_125:0x[a-z0-9]*]] 'overloaded2[implementation={extension(match_none)}]' 'int ({{.*}})'
-// CHECK-NEXT: |-FunctionDecl [[ADDR_125]] <col:1, col:31> col:1 overloaded2[implementation={extension(match_none)}] 'int ({{.*}})'
+// CHECK-NEXT: |   `-DeclRefExpr [[ADDR_124:0x[a-z0-9]*]] <line:64:1> 'int ({{.*}})' {{.*}}Function [[ADDR_125:0x[a-z0-9]*]] 'overloaded2[implementation={extension(match_none)}, device={kind(fpga, gpu)}]' 'int ({{.*}})'
+// CHECK-NEXT: |-FunctionDecl [[ADDR_125]] <col:1, col:31> col:1 overloaded2[implementation={extension(match_none)}, device={kind(fpga, gpu)}] 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_126:0x[a-z0-9]*]] <col:19, col:31>
 // CHECK-NEXT: |   `-ReturnStmt [[ADDR_127:0x[a-z0-9]*]] <col:21, col:28>
 // CHECK-NEXT: |     `-IntegerLiteral [[ADDR_128:0x[a-z0-9]*]] <col:28> 'int' 0
@@ -333,11 +333,11 @@ int test() {
 // CHECK-NEXT:         |   |   `-DeclRefExpr [[ADDR_236:0x[a-z0-9]*]] <col:10> 'int ({{.*}})' {{.*}}Function [[ADDR_112]] 'overloaded1' 'int ({{.*}})'
 // CHECK-NEXT:         |   `-CallExpr [[ADDR_237:0x[a-z0-9]*]] <line:59:1, line:83:22> 'int'
 // CHECK-NEXT:         |     `-ImplicitCastExpr [[ADDR_238:0x[a-z0-9]*]] <line:59:1> 'int (*)({{.*}})' <FunctionToPointerDecay>
-// CHECK-NEXT:         |       `-DeclRefExpr [[ADDR_114]] <col:1> 'int ({{.*}})' Function [[ADDR_115]] 'overloaded1[implementation={extension(match_any)}]' 'int ({{.*}})'
+// CHECK-NEXT:         |       `-DeclRefExpr [[ADDR_114]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_115]] 'overloaded1[implementation={extension(match_any)}, device={kind(cpu, gpu)}]' 'int ({{.*}})'
 // CHECK-NEXT:         `-PseudoObjectExpr [[ADDR_239:0x[a-z0-9]*]] <line:83:26, col:38> 'int'
 // CHECK-NEXT:           |-CallExpr [[ADDR_240:0x[a-z0-9]*]] <col:26, col:38> 'int'
 // CHECK-NEXT:           | `-ImplicitCastExpr [[ADDR_241:0x[a-z0-9]*]] <col:26> 'int (*)({{.*}})' <FunctionToPointerDecay>
 // CHECK-NEXT:           |   `-DeclRefExpr [[ADDR_242:0x[a-z0-9]*]] <col:26> 'int ({{.*}})' {{.*}}Function [[ADDR_119]] 'overloaded2' 'int ({{.*}})'
 // CHECK-NEXT:           `-CallExpr [[ADDR_243:0x[a-z0-9]*]] <line:64:1, line:83:38> 'int'
 // CHECK-NEXT:             `-ImplicitCastExpr [[ADDR_244:0x[a-z0-9]*]] <line:64:1> 'int (*)({{.*}})' <FunctionToPointerDecay>
-// CHECK-NEXT:               `-DeclRefExpr [[ADDR_124]] <col:1> 'int ({{.*}})' Function [[ADDR_125]] 'overloaded2[implementation={extension(match_none)}]' 'int ({{.*}})'
+// CHECK-NEXT:               `-DeclRefExpr [[ADDR_124]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_125]] 'overloaded2[implementation={extension(match_none)}, device={kind(fpga, gpu)}]' 'int ({{.*}})'

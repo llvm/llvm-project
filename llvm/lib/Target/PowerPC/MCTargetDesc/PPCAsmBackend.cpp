@@ -20,8 +20,8 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 using namespace llvm;
 
 static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
@@ -196,7 +196,8 @@ public:
     llvm_unreachable("relaxInstruction() unimplemented");
   }
 
-  bool writeNopData(raw_ostream &OS, uint64_t Count) const override {
+  bool writeNopData(raw_ostream &OS, uint64_t Count,
+                    const MCSubtargetInfo *STI) const override {
     uint64_t NumNops = Count / 4;
     for (uint64_t i = 0; i != NumNops; ++i)
       support::endian::write<uint32_t>(OS, 0x60000000, Endian);
@@ -247,12 +248,19 @@ Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_PPC64_NONE)
+                 .Case("BFD_RELOC_16", ELF::R_PPC64_ADDR16)
+                 .Case("BFD_RELOC_32", ELF::R_PPC64_ADDR32)
+                 .Case("BFD_RELOC_64", ELF::R_PPC64_ADDR64)
                  .Default(-1u);
     } else {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_PPC_NONE)
+                 .Case("BFD_RELOC_16", ELF::R_PPC_ADDR16)
+                 .Case("BFD_RELOC_32", ELF::R_PPC_ADDR32)
                  .Default(-1u);
     }
     if (Type != -1u)

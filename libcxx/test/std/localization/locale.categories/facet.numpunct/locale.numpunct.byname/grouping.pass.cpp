@@ -9,6 +9,8 @@
 // NetBSD does not support LC_NUMERIC at the moment
 // XFAIL: netbsd
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 
@@ -33,11 +35,13 @@ int main(int, char**)
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() == "");
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() == "");
         }
+#endif
     }
     {
         std::locale l(LOCALE_en_US_UTF_8);
@@ -46,11 +50,13 @@ int main(int, char**)
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() == "\3\3");
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() == "\3\3");
         }
+#endif
     }
     {
         std::locale l(LOCALE_fr_FR_UTF_8);
@@ -64,11 +70,13 @@ int main(int, char**)
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() ==  group);
         }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         {
             typedef wchar_t C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
             assert(np.grouping() == group);
         }
+#endif
     }
 
   return 0;

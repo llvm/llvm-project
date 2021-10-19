@@ -40,18 +40,13 @@ void SpecialMemberFunctionsCheck::storeOptions(
 void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxRecordDecl(
-          eachOf(
-              has(cxxDestructorDecl(unless(isImplicit())).bind("dtor")),
-              has(cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))
-                      .bind("copy-ctor")),
-              has(cxxMethodDecl(isCopyAssignmentOperator(),
-                                unless(isImplicit()))
-                      .bind("copy-assign")),
-              has(cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))
-                      .bind("move-ctor")),
-              has(cxxMethodDecl(isMoveAssignmentOperator(),
-                                unless(isImplicit()))
-                      .bind("move-assign"))))
+          eachOf(has(cxxDestructorDecl().bind("dtor")),
+                 has(cxxConstructorDecl(isCopyConstructor()).bind("copy-ctor")),
+                 has(cxxMethodDecl(isCopyAssignmentOperator())
+                         .bind("copy-assign")),
+                 has(cxxConstructorDecl(isMoveConstructor()).bind("move-ctor")),
+                 has(cxxMethodDecl(isMoveAssignmentOperator())
+                         .bind("move-assign"))))
           .bind("class-def"),
       this);
 }
@@ -90,8 +85,8 @@ join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
 
   Stream << toString(SMFS[0]);
   size_t LastIndex = SMFS.size() - 1;
-  for (size_t i = 1; i < LastIndex; ++i) {
-    Stream << ", " << toString(SMFS[i]);
+  for (size_t I = 1; I < LastIndex; ++I) {
+    Stream << ", " << toString(SMFS[I]);
   }
   if (LastIndex != 0) {
     Stream << AndOr << toString(SMFS[LastIndex]);
@@ -107,11 +102,11 @@ void SpecialMemberFunctionsCheck::check(
 
   ClassDefId ID(MatchedDecl->getLocation(), std::string(MatchedDecl->getName()));
 
-  auto StoreMember = [this, &ID](SpecialMemberFunctionData data) {
+  auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
     llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
         ClassWithSpecialMembers[ID];
-    if (!llvm::is_contained(Members, data))
-      Members.push_back(std::move(data));
+    if (!llvm::is_contained(Members, Data))
+      Members.push_back(std::move(Data));
   };
 
   if (const auto *Dtor = Result.Nodes.getNodeAs<CXXMethodDecl>("dtor")) {
@@ -146,14 +141,14 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
   llvm::SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
 
   auto HasMember = [&](SpecialMemberFunctionKind Kind) {
-    return llvm::any_of(DefinedMembers, [Kind](const auto &data) {
-      return data.FunctionKind == Kind;
+    return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
+      return Data.FunctionKind == Kind;
     });
   };
 
   auto IsDeleted = [&](SpecialMemberFunctionKind Kind) {
-    return llvm::any_of(DefinedMembers, [Kind](const auto &data) {
-      return data.FunctionKind == Kind && data.IsDeleted;
+    return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
+      return Data.FunctionKind == Kind && Data.IsDeleted;
     });
   };
 
@@ -197,7 +192,7 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
   if (!MissingMembers.empty()) {
     llvm::SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
     llvm::transform(DefinedMembers, std::back_inserter(DefinedMemberKinds),
-                    [](const auto &data) { return data.FunctionKind; });
+                    [](const auto &Data) { return Data.FunctionKind; });
     diag(ID.first, "class '%0' defines %1 but does not define %2")
         << ID.second << cppcoreguidelines::join(DefinedMemberKinds, " and ")
         << cppcoreguidelines::join(MissingMembers, " or ");

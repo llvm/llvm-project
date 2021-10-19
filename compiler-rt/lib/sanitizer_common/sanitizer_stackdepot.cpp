@@ -14,73 +14,54 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_hash.h"
+#include "sanitizer_persistent_allocator.h"
 #include "sanitizer_stackdepotbase.h"
 
 namespace __sanitizer {
 
+static PersistentAllocator<uptr> traceAllocator;
+
 struct StackDepotNode {
-  StackDepotNode *link;
-  u32 id;
-  atomic_uint32_t hash_and_use_count; // hash_bits : 12; use_count : 20;
-  u32 size;
-  u32 tag;
-  uptr stack[1];  // [size]
+  using hash_type = u64;
+  hash_type stack_hash;
+  u32 link;
+  atomic_uint32_t tag_and_use_count;  // tag : 12 high bits; use_count : 20;
 
   static const u32 kTabSizeLog = SANITIZER_ANDROID ? 16 : 20;
-  // Lower kTabSizeLog bits are equal for all items in one bucket.
-  // We use these bits to store the per-stack use counter.
-  static const u32 kUseCountBits = kTabSizeLog;
+  static const u32 kUseCountBits = 20;
   static const u32 kMaxUseCount = 1 << kUseCountBits;
   static const u32 kUseCountMask = (1 << kUseCountBits) - 1;
-  static const u32 kHashMask = ~kUseCountMask;
 
   typedef StackTrace args_type;
-  bool eq(u32 hash, const args_type &args) const {
-    u32 hash_bits =
-        atomic_load(&hash_and_use_count, memory_order_relaxed) & kHashMask;
-    if ((hash & kHashMask) != hash_bits || args.size != size || args.tag != tag)
-      return false;
-    uptr i = 0;
-    for (; i < size; i++) {
-      if (stack[i] != args.trace[i]) return false;
-    }
-    return true;
+  bool eq(hash_type hash, const args_type &args) const {
+    return hash == stack_hash;
   }
-  static uptr storage_size(const args_type &args) {
-    return sizeof(StackDepotNode) + (args.size - 1) * sizeof(uptr);
-  }
-  static u32 hash(const args_type &args) {
-    MurMur2HashBuilder H(args.size * sizeof(uptr));
+  static uptr allocated();
+  static hash_type hash(const args_type &args) {
+    MurMur2Hash64Builder H(args.size * sizeof(uptr));
     for (uptr i = 0; i < args.size; i++) H.add(args.trace[i]);
+    H.add(args.tag);
     return H.get();
   }
   static bool is_valid(const args_type &args) {
     return args.size > 0 && args.trace;
   }
-  void store(const args_type &args, u32 hash) {
-    atomic_store(&hash_and_use_count, hash & kHashMask, memory_order_relaxed);
-    size = args.size;
-    tag = args.tag;
-    internal_memcpy(stack, args.trace, size * sizeof(uptr));
-  }
-  args_type load() const {
-    return args_type(&stack[0], size, tag);
-  }
-  StackDepotHandle get_handle() { return StackDepotHandle(this); }
+  void store(u32 id, const args_type &args, hash_type hash);
+  args_type load(u32 id) const;
+  static StackDepotHandle get_handle(u32 id);
 
   typedef StackDepotHandle handle_type;
 };
 
-COMPILER_CHECK(StackDepotNode::kMaxUseCount == (u32)kStackDepotMaxUseCount);
+COMPILER_CHECK(StackDepotNode::kMaxUseCount >= (u32)kStackDepotMaxUseCount);
 
-u32 StackDepotHandle::id() { return node_->id; }
-int StackDepotHandle::use_count() {
-  return atomic_load(&node_->hash_and_use_count, memory_order_relaxed) &
+int StackDepotHandle::use_count() const {
+  return atomic_load(&node_->tag_and_use_count, memory_order_relaxed) &
          StackDepotNode::kUseCountMask;
 }
 void StackDepotHandle::inc_use_count_unsafe() {
   u32 prev =
-      atomic_fetch_add(&node_->hash_and_use_count, 1, memory_order_relaxed) &
+      atomic_fetch_add(&node_->tag_and_use_count, 1, memory_order_relaxed) &
       StackDepotNode::kUseCountMask;
   CHECK_LT(prev + 1, StackDepotNode::kMaxUseCount);
 }
@@ -89,18 +70,41 @@ void StackDepotHandle::inc_use_count_unsafe() {
 typedef StackDepotBase<StackDepotNode, 1, StackDepotNode::kTabSizeLog>
     StackDepot;
 static StackDepot theDepot;
+// Keep rarely accessed stack traces out of frequently access nodes to improve
+// caching efficiency.
+static TwoLevelMap<uptr *, StackDepot::kNodesSize1, StackDepot::kNodesSize2>
+    tracePtrs;
 
-StackDepotStats *StackDepotGetStats() {
-  return theDepot.GetStats();
+uptr StackDepotNode::allocated() {
+  return traceAllocator.allocated() + tracePtrs.MemoryUsage();
 }
 
-u32 StackDepotPut(StackTrace stack) {
-  StackDepotHandle h = theDepot.Put(stack);
-  return h.valid() ? h.id() : 0;
+void StackDepotNode::store(u32 id, const args_type &args, hash_type hash) {
+  CHECK_EQ(args.tag & (~kUseCountMask >> kUseCountBits), args.tag);
+  atomic_store(&tag_and_use_count, args.tag << kUseCountBits,
+               memory_order_relaxed);
+  stack_hash = hash;
+  uptr *stack_trace = traceAllocator.alloc(args.size + 1);
+  *stack_trace = args.size;
+  internal_memcpy(stack_trace + 1, args.trace, args.size * sizeof(uptr));
+  tracePtrs[id] = stack_trace;
 }
+
+StackDepotNode::args_type StackDepotNode::load(u32 id) const {
+  const uptr *stack_trace = tracePtrs[id];
+  if (!stack_trace)
+    return {};
+  u32 tag =
+      atomic_load(&tag_and_use_count, memory_order_relaxed) >> kUseCountBits;
+  return args_type(stack_trace + 1, *stack_trace, tag);
+}
+
+StackDepotStats StackDepotGetStats() { return theDepot.GetStats(); }
+
+u32 StackDepotPut(StackTrace stack) { return theDepot.Put(stack); }
 
 StackDepotHandle StackDepotPut_WithHandle(StackTrace stack) {
-  return theDepot.Put(stack);
+  return StackDepotNode::get_handle(theDepot.Put(stack));
 }
 
 StackTrace StackDepotGet(u32 id) {
@@ -115,35 +119,20 @@ void StackDepotUnlockAll() {
   theDepot.UnlockAll();
 }
 
-bool StackDepotReverseMap::IdDescPair::IdComparator(
-    const StackDepotReverseMap::IdDescPair &a,
-    const StackDepotReverseMap::IdDescPair &b) {
-  return a.id < b.id;
+void StackDepotPrintAll() {
+#if !SANITIZER_GO
+  theDepot.PrintAll();
+#endif
 }
 
-StackDepotReverseMap::StackDepotReverseMap() {
-  map_.reserve(StackDepotGetStats()->n_uniq_ids + 100);
-  for (int idx = 0; idx < StackDepot::kTabSize; idx++) {
-    atomic_uintptr_t *p = &theDepot.tab[idx];
-    uptr v = atomic_load(p, memory_order_consume);
-    StackDepotNode *s = (StackDepotNode*)(v & ~1);
-    for (; s; s = s->link) {
-      IdDescPair pair = {s->id, s};
-      map_.push_back(pair);
-    }
-  }
-  Sort(map_.data(), map_.size(), &IdDescPair::IdComparator);
+StackDepotHandle StackDepotNode::get_handle(u32 id) {
+  return StackDepotHandle(&theDepot.nodes[id], id);
 }
 
-StackTrace StackDepotReverseMap::Get(u32 id) {
-  if (!map_.size())
-    return StackTrace();
-  IdDescPair pair = {id, nullptr};
-  uptr idx =
-      InternalLowerBound(map_, 0, map_.size(), pair, IdDescPair::IdComparator);
-  if (idx > map_.size() || map_[idx].id != id)
-    return StackTrace();
-  return map_[idx].desc->load();
+void StackDepotTestOnlyUnmap() {
+  theDepot.TestOnlyUnmap();
+  tracePtrs.TestOnlyUnmap();
+  traceAllocator.TestOnlyUnmap();
 }
 
 } // namespace __sanitizer

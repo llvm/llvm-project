@@ -19,7 +19,13 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <iterator>
 
 using namespace clang;
 using namespace ento;
@@ -97,47 +103,63 @@ public:
     return CmpOpTable[getIndexFromOp(CurrentOP)][CmpOpCount];
   }
 };
+
 //===----------------------------------------------------------------------===//
 //                           RangeSet implementation
 //===----------------------------------------------------------------------===//
 
-void RangeSet::IntersectInRange(BasicValueFactory &BV, Factory &F,
-                                const llvm::APSInt &Lower,
-                                const llvm::APSInt &Upper,
-                                PrimRangeSet &newRanges,
-                                PrimRangeSet::iterator &i,
-                                PrimRangeSet::iterator &e) const {
-  // There are six cases for each range R in the set:
-  //   1. R is entirely before the intersection range.
-  //   2. R is entirely after the intersection range.
-  //   3. R contains the entire intersection range.
-  //   4. R starts before the intersection range and ends in the middle.
-  //   5. R starts in the middle of the intersection range and ends after it.
-  //   6. R is entirely contained in the intersection range.
-  // These correspond to each of the conditions below.
-  for (/* i = begin(), e = end() */; i != e; ++i) {
-    if (i->To() < Lower) {
-      continue;
-    }
-    if (i->From() > Upper) {
-      break;
-    }
+RangeSet::ContainerType RangeSet::Factory::EmptySet{};
 
-    if (i->Includes(Lower)) {
-      if (i->Includes(Upper)) {
-        newRanges =
-            F.add(newRanges, Range(BV.getValue(Lower), BV.getValue(Upper)));
-        break;
-      } else
-        newRanges = F.add(newRanges, Range(BV.getValue(Lower), i->To()));
-    } else {
-      if (i->Includes(Upper)) {
-        newRanges = F.add(newRanges, Range(i->From(), BV.getValue(Upper)));
-        break;
-      } else
-        newRanges = F.add(newRanges, *i);
-    }
+RangeSet RangeSet::Factory::add(RangeSet Original, Range Element) {
+  ContainerType Result;
+  Result.reserve(Original.size() + 1);
+
+  const_iterator Lower = llvm::lower_bound(Original, Element);
+  Result.insert(Result.end(), Original.begin(), Lower);
+  Result.push_back(Element);
+  Result.insert(Result.end(), Lower, Original.end());
+
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::add(RangeSet Original, const llvm::APSInt &Point) {
+  return add(Original, Range(Point));
+}
+
+RangeSet RangeSet::Factory::getRangeSet(Range From) {
+  ContainerType Result;
+  Result.push_back(From);
+  return makePersistent(std::move(Result));
+}
+
+RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
+  llvm::FoldingSetNodeID ID;
+  void *InsertPos;
+
+  From.Profile(ID);
+  ContainerType *Result = Cache.FindNodeOrInsertPos(ID, InsertPos);
+
+  if (!Result) {
+    // It is cheaper to fully construct the resulting range on stack
+    // and move it to the freshly allocated buffer if we don't have
+    // a set like this already.
+    Result = construct(std::move(From));
+    Cache.InsertNode(Result, InsertPos);
   }
+
+  return Result;
+}
+
+RangeSet::ContainerType *RangeSet::Factory::construct(ContainerType &&From) {
+  void *Buffer = Arena.Allocate();
+  return new (Buffer) ContainerType(std::move(From));
+}
+
+RangeSet RangeSet::Factory::add(RangeSet LHS, RangeSet RHS) {
+  ContainerType Result;
+  std::merge(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
+             std::back_inserter(Result));
+  return makePersistent(std::move(Result));
 }
 
 const llvm::APSInt &RangeSet::getMinValue() const {
@@ -147,22 +169,31 @@ const llvm::APSInt &RangeSet::getMinValue() const {
 
 const llvm::APSInt &RangeSet::getMaxValue() const {
   assert(!isEmpty());
-  // NOTE: It's a shame that we can't implement 'getMaxValue' without scanning
-  //       the whole tree to get to the last element.
-  //       llvm::ImmutableSet should support decrement for 'end' iterators
-  //       or reverse order iteration.
-  auto It = begin();
-  for (auto End = end(); std::next(It) != End; ++It) {
-  }
-  return It->To();
+  return std::prev(end())->To();
+}
+
+bool RangeSet::containsImpl(llvm::APSInt &Point) const {
+  if (isEmpty() || !pin(Point))
+    return false;
+
+  Range Dummy(Point);
+  const_iterator It = llvm::upper_bound(*this, Dummy);
+  if (It == begin())
+    return false;
+
+  return std::prev(It)->Includes(Point);
+}
+
+bool RangeSet::pin(llvm::APSInt &Point) const {
+  APSIntType Type(getMinValue());
+  if (Type.testInRange(Point, true) != APSIntType::RTR_Within)
+    return false;
+
+  Type.apply(Point);
+  return true;
 }
 
 bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
-  if (isEmpty()) {
-    // This range is already infeasible.
-    return false;
-  }
-
   // This function has nine cases, the cartesian product of range-testing
   // both the upper and lower bounds against the symbol's type.
   // Each case requires a different pinning operation.
@@ -243,129 +274,216 @@ bool RangeSet::pin(llvm::APSInt &Lower, llvm::APSInt &Upper) const {
   return true;
 }
 
-// Returns a set containing the values in the receiving set, intersected with
-// the closed range [Lower, Upper]. Unlike the Range type, this range uses
-// modular arithmetic, corresponding to the common treatment of C integer
-// overflow. Thus, if the Lower bound is greater than the Upper bound, the
-// range is taken to wrap around. This is equivalent to taking the
-// intersection with the two ranges [Min, Upper] and [Lower, Max],
-// or, alternatively, /removing/ all integers between Upper and Lower.
-RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
-                             llvm::APSInt Lower, llvm::APSInt Upper) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(RangeSet What, llvm::APSInt Lower,
+                                      llvm::APSInt Upper) {
+  if (What.isEmpty() || !What.pin(Lower, Upper))
+    return getEmptySet();
 
-  if (isEmpty() || !pin(Lower, Upper))
-    return newRanges;
+  ContainerType DummyContainer;
 
-  PrimRangeSet::iterator i = begin(), e = end();
-  if (Lower <= Upper)
-    IntersectInRange(BV, F, Lower, Upper, newRanges, i, e);
-  else {
-    // The order of the next two statements is important!
-    // IntersectInRange() does not reset the iteration state for i and e.
-    // Therefore, the lower range most be handled first.
-    IntersectInRange(BV, F, BV.getMinValue(Upper), Upper, newRanges, i, e);
-    IntersectInRange(BV, F, Lower, BV.getMaxValue(Lower), newRanges, i, e);
+  if (Lower <= Upper) {
+    // [Lower, Upper] is a regular range.
+    //
+    // Shortcut: check that there is even a possibility of the intersection
+    //           by checking the two following situations:
+    //
+    //               <---[  What  ]---[------]------>
+    //                              Lower  Upper
+    //                            -or-
+    //               <----[------]----[  What  ]---->
+    //                  Lower  Upper
+    if (What.getMaxValue() < Lower || Upper < What.getMinValue())
+      return getEmptySet();
+
+    DummyContainer.push_back(
+        Range(ValueFactory.getValue(Lower), ValueFactory.getValue(Upper)));
+  } else {
+    // [Lower, Upper] is an inverted range, i.e. [MIN, Upper] U [Lower, MAX]
+    //
+    // Shortcut: check that there is even a possibility of the intersection
+    //           by checking the following situation:
+    //
+    //               <------]---[  What  ]---[------>
+    //                    Upper             Lower
+    if (What.getMaxValue() < Lower && Upper < What.getMinValue())
+      return getEmptySet();
+
+    DummyContainer.push_back(
+        Range(ValueFactory.getMinValue(Upper), ValueFactory.getValue(Upper)));
+    DummyContainer.push_back(
+        Range(ValueFactory.getValue(Lower), ValueFactory.getMaxValue(Lower)));
   }
 
-  return newRanges;
+  return intersect(*What.Impl, DummyContainer);
 }
 
-// Returns a set containing the values in the receiving set, intersected with
-// the range set passed as parameter.
-RangeSet RangeSet::Intersect(BasicValueFactory &BV, Factory &F,
-                             const RangeSet &Other) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(const RangeSet::ContainerType &LHS,
+                                      const RangeSet::ContainerType &RHS) {
+  ContainerType Result;
+  Result.reserve(std::max(LHS.size(), RHS.size()));
 
-  for (iterator i = Other.begin(), e = Other.end(); i != e; ++i) {
-    RangeSet newPiece = Intersect(BV, F, i->From(), i->To());
-    for (iterator j = newPiece.begin(), ee = newPiece.end(); j != ee; ++j) {
-      newRanges = F.add(newRanges, *j);
-    }
+  const_iterator First = LHS.begin(), Second = RHS.begin(),
+                 FirstEnd = LHS.end(), SecondEnd = RHS.end();
+
+  const auto SwapIterators = [&First, &FirstEnd, &Second, &SecondEnd]() {
+    std::swap(First, Second);
+    std::swap(FirstEnd, SecondEnd);
+  };
+
+  // If we ran out of ranges in one set, but not in the other,
+  // it means that those elements are definitely not in the
+  // intersection.
+  while (First != FirstEnd && Second != SecondEnd) {
+    // We want to keep the following invariant at all times:
+    //
+    //    ----[ First ---------------------->
+    //    --------[ Second ----------------->
+    if (Second->From() < First->From())
+      SwapIterators();
+
+    // Loop where the invariant holds:
+    do {
+      // Check for the following situation:
+      //
+      //    ----[ First ]--------------------->
+      //    ---------------[ Second ]--------->
+      //
+      // which means that...
+      if (Second->From() > First->To()) {
+        // ...First is not in the intersection.
+        //
+        // We should move on to the next range after First and break out of the
+        // loop because the invariant might not be true.
+        ++First;
+        break;
+      }
+
+      // We have a guaranteed intersection at this point!
+      // And this is the current situation:
+      //
+      //    ----[   First   ]----------------->
+      //    -------[ Second ------------------>
+      //
+      // Additionally, it definitely starts with Second->From().
+      const llvm::APSInt &IntersectionStart = Second->From();
+
+      // It is important to know which of the two ranges' ends
+      // is greater.  That "longer" range might have some other
+      // intersections, while the "shorter" range might not.
+      if (Second->To() > First->To()) {
+        // Here we make a decision to keep First as the "longer"
+        // range.
+        SwapIterators();
+      }
+
+      // At this point, we have the following situation:
+      //
+      //    ---- First      ]-------------------->
+      //    ---- Second ]--[  Second+1 ---------->
+      //
+      // We don't know the relationship between First->From and
+      // Second->From and we don't know whether Second+1 intersects
+      // with First.
+      //
+      // However, we know that [IntersectionStart, Second->To] is
+      // a part of the intersection...
+      Result.push_back(Range(IntersectionStart, Second->To()));
+      ++Second;
+      // ...and that the invariant will hold for a valid Second+1
+      // because First->From <= Second->To < (Second+1)->From.
+    } while (Second != SecondEnd);
   }
 
-  return newRanges;
+  if (Result.empty())
+    return getEmptySet();
+
+  return makePersistent(std::move(Result));
 }
 
-// Turn all [A, B] ranges to [-B, -A], when "-" is a C-like unary minus
-// operation under the values of the type.
-//
-// We also handle MIN because applying unary minus to MIN does not change it.
-// Example 1:
-// char x = -128;        // -128 is a MIN value in a range of 'char'
-// char y = -x;          // y: -128
-// Example 2:
-// unsigned char x = 0;  // 0 is a MIN value in a range of 'unsigned char'
-// unsigned char y = -x; // y: 0
-//
-// And it makes us to separate the range
-// like [MIN, N] to [MIN, MIN] U [-N,MAX].
-// For instance, whole range is {-128..127} and subrange is [-128,-126],
-// thus [-128,-127,-126,.....] negates to [-128,.....,126,127].
-//
-// Negate restores disrupted ranges on bounds,
-// e.g. [MIN, B] => [MIN, MIN] U [-B, MAX] => [MIN, B].
-RangeSet RangeSet::Negate(BasicValueFactory &BV, Factory &F) const {
-  PrimRangeSet newRanges = F.getEmptySet();
+RangeSet RangeSet::Factory::intersect(RangeSet LHS, RangeSet RHS) {
+  // Shortcut: let's see if the intersection is even possible.
+  if (LHS.isEmpty() || RHS.isEmpty() || LHS.getMaxValue() < RHS.getMinValue() ||
+      RHS.getMaxValue() < LHS.getMinValue())
+    return getEmptySet();
 
-  if (isEmpty())
-    return newRanges;
+  return intersect(*LHS.Impl, *RHS.Impl);
+}
 
-  const llvm::APSInt sampleValue = getMinValue();
-  const llvm::APSInt &MIN = BV.getMinValue(sampleValue);
-  const llvm::APSInt &MAX = BV.getMaxValue(sampleValue);
+RangeSet RangeSet::Factory::intersect(RangeSet LHS, llvm::APSInt Point) {
+  if (LHS.containsImpl(Point))
+    return getRangeSet(ValueFactory.getValue(Point));
+
+  return getEmptySet();
+}
+
+RangeSet RangeSet::Factory::negate(RangeSet What) {
+  if (What.isEmpty())
+    return getEmptySet();
+
+  const llvm::APSInt SampleValue = What.getMinValue();
+  const llvm::APSInt &MIN = ValueFactory.getMinValue(SampleValue);
+  const llvm::APSInt &MAX = ValueFactory.getMaxValue(SampleValue);
+
+  ContainerType Result;
+  Result.reserve(What.size() + (SampleValue == MIN));
 
   // Handle a special case for MIN value.
-  iterator i = begin();
-  const llvm::APSInt &from = i->From();
-  const llvm::APSInt &to = i->To();
-  if (from == MIN) {
-    // If [from, to] are [MIN, MAX], then just return the same [MIN, MAX].
-    if (to == MAX) {
-      newRanges = ranges;
-    } else {
-      // Add separate range for the lowest value.
-      newRanges = F.add(newRanges, Range(MIN, MIN));
-      // Skip adding the second range in case when [from, to] are [MIN, MIN].
-      if (to != MIN) {
-        newRanges = F.add(newRanges, Range(BV.getValue(-to), MAX));
-      }
+  const_iterator It = What.begin();
+  const_iterator End = What.end();
+
+  const llvm::APSInt &From = It->From();
+  const llvm::APSInt &To = It->To();
+
+  if (From == MIN) {
+    // If the range [From, To] is [MIN, MAX], then result is also [MIN, MAX].
+    if (To == MAX) {
+      return What;
     }
+
+    const_iterator Last = std::prev(End);
+
+    // Try to find and unite the following ranges:
+    // [MIN, MIN] & [MIN + 1, N] => [MIN, N].
+    if (Last->To() == MAX) {
+      // It means that in the original range we have ranges
+      //   [MIN, A], ... , [B, MAX]
+      // And the result should be [MIN, -B], ..., [-A, MAX]
+      Result.emplace_back(MIN, ValueFactory.getValue(-Last->From()));
+      // We already negated Last, so we can skip it.
+      End = Last;
+    } else {
+      // Add a separate range for the lowest value.
+      Result.emplace_back(MIN, MIN);
+    }
+
+    // Skip adding the second range in case when [From, To] are [MIN, MIN].
+    if (To != MIN) {
+      Result.emplace_back(ValueFactory.getValue(-To), MAX);
+    }
+
     // Skip the first range in the loop.
-    ++i;
+    ++It;
   }
 
   // Negate all other ranges.
-  for (iterator e = end(); i != e; ++i) {
+  for (; It != End; ++It) {
     // Negate int values.
-    const llvm::APSInt &newFrom = BV.getValue(-i->To());
-    const llvm::APSInt &newTo = BV.getValue(-i->From());
+    const llvm::APSInt &NewFrom = ValueFactory.getValue(-It->To());
+    const llvm::APSInt &NewTo = ValueFactory.getValue(-It->From());
+
     // Add a negated range.
-    newRanges = F.add(newRanges, Range(newFrom, newTo));
+    Result.emplace_back(NewFrom, NewTo);
   }
 
-  if (newRanges.isSingleton())
-    return newRanges;
-
-  // Try to find and unite next ranges:
-  // [MIN, MIN] & [MIN + 1, N] => [MIN, N].
-  iterator iter1 = newRanges.begin();
-  iterator iter2 = std::next(iter1);
-
-  if (iter1->To() == MIN && (iter2->From() - 1) == MIN) {
-    const llvm::APSInt &to = iter2->To();
-    // remove adjacent ranges
-    newRanges = F.remove(newRanges, *iter1);
-    newRanges = F.remove(newRanges, *newRanges.begin());
-    // add united range
-    newRanges = F.add(newRanges, Range(MIN, to));
-  }
-
-  return newRanges;
+  llvm::sort(Result);
+  return makePersistent(std::move(Result));
 }
 
-RangeSet RangeSet::Delete(BasicValueFactory &BV, Factory &F,
-                          const llvm::APSInt &Point) const {
+RangeSet RangeSet::Factory::deletePoint(RangeSet From,
+                                        const llvm::APSInt &Point) {
+  if (!From.contains(Point))
+    return From;
+
   llvm::APSInt Upper = Point;
   llvm::APSInt Lower = Point;
 
@@ -373,23 +491,20 @@ RangeSet RangeSet::Delete(BasicValueFactory &BV, Factory &F,
   --Lower;
 
   // Notice that the lower bound is greater than the upper bound.
-  return Intersect(BV, F, Upper, Lower);
+  return intersect(From, Upper, Lower);
 }
 
-void RangeSet::print(raw_ostream &os) const {
-  bool isFirst = true;
-  os << "{ ";
-  for (iterator i = begin(), e = end(); i != e; ++i) {
-    if (isFirst)
-      isFirst = false;
-    else
-      os << ", ";
-
-    os << '[' << i->From().toString(10) << ", " << i->To().toString(10)
-       << ']';
-  }
-  os << " }";
+LLVM_DUMP_METHOD void Range::dump(raw_ostream &OS) const {
+  OS << '[' << toString(From(), 10) << ", " << toString(To(), 10) << ']';
 }
+LLVM_DUMP_METHOD void Range::dump() const { dump(llvm::errs()); }
+
+LLVM_DUMP_METHOD void RangeSet::dump(raw_ostream &OS) const {
+  OS << "{ ";
+  llvm::interleaveComma(*this, OS, [&OS](const Range &R) { R.dump(OS); });
+  OS << " }";
+}
+LLVM_DUMP_METHOD void RangeSet::dump() const { dump(llvm::errs()); }
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(SymbolSet, SymbolRef)
 
@@ -436,33 +551,43 @@ public:
                                                      SymbolRef Sym);
 
   /// Merge classes for the given symbols and return a new state.
-  LLVM_NODISCARD static inline ProgramStateRef
-  merge(BasicValueFactory &BV, RangeSet::Factory &F, ProgramStateRef State,
-        SymbolRef First, SymbolRef Second);
+  LLVM_NODISCARD static inline ProgramStateRef merge(RangeSet::Factory &F,
+                                                     ProgramStateRef State,
+                                                     SymbolRef First,
+                                                     SymbolRef Second);
   // Merge this class with the given class and return a new state.
-  LLVM_NODISCARD inline ProgramStateRef merge(BasicValueFactory &BV,
-                                              RangeSet::Factory &F,
-                                              ProgramStateRef State,
-                                              EquivalenceClass Other);
+  LLVM_NODISCARD inline ProgramStateRef
+  merge(RangeSet::Factory &F, ProgramStateRef State, EquivalenceClass Other);
 
   /// Return a set of class members for the given state.
-  LLVM_NODISCARD inline SymbolSet getClassMembers(ProgramStateRef State);
+  LLVM_NODISCARD inline SymbolSet getClassMembers(ProgramStateRef State) const;
+
   /// Return true if the current class is trivial in the given state.
-  LLVM_NODISCARD inline bool isTrivial(ProgramStateRef State);
+  /// A class is trivial if and only if there is not any member relations stored
+  /// to it in State/ClassMembers.
+  /// An equivalence class with one member might seem as it does not hold any
+  /// meaningful information, i.e. that is a tautology. However, during the
+  /// removal of dead symbols we do not remove classes with one member for
+  /// resource and performance reasons. Consequently, a class with one member is
+  /// not necessarily trivial. It could happen that we have a class with two
+  /// members and then during the removal of dead symbols we remove one of its
+  /// members. In this case, the class is still non-trivial (it still has the
+  /// mappings in ClassMembers), even though it has only one member.
+  LLVM_NODISCARD inline bool isTrivial(ProgramStateRef State) const;
+
   /// Return true if the current class is trivial and its only member is dead.
   LLVM_NODISCARD inline bool isTriviallyDead(ProgramStateRef State,
-                                             SymbolReaper &Reaper);
+                                             SymbolReaper &Reaper) const;
 
   LLVM_NODISCARD static inline ProgramStateRef
-  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
-               ProgramStateRef State, SymbolRef First, SymbolRef Second);
+  markDisequal(RangeSet::Factory &F, ProgramStateRef State, SymbolRef First,
+               SymbolRef Second);
   LLVM_NODISCARD static inline ProgramStateRef
-  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
-               ProgramStateRef State, EquivalenceClass First,
-               EquivalenceClass Second);
+  markDisequal(RangeSet::Factory &F, ProgramStateRef State,
+               EquivalenceClass First, EquivalenceClass Second);
   LLVM_NODISCARD inline ProgramStateRef
-  markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
-               ProgramStateRef State, EquivalenceClass Other) const;
+  markDisequal(RangeSet::Factory &F, ProgramStateRef State,
+               EquivalenceClass Other) const;
   LLVM_NODISCARD static inline ClassSet
   getDisequalClasses(ProgramStateRef State, SymbolRef Sym);
   LLVM_NODISCARD inline ClassSet
@@ -470,8 +595,22 @@ public:
   LLVM_NODISCARD inline ClassSet
   getDisequalClasses(DisequalityMapTy Map, ClassSet::Factory &Factory) const;
 
+  LLVM_NODISCARD static inline Optional<bool> areEqual(ProgramStateRef State,
+                                                       EquivalenceClass First,
+                                                       EquivalenceClass Second);
   LLVM_NODISCARD static inline Optional<bool>
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
+
+  /// Iterate over all symbols and try to simplify them.
+  LLVM_NODISCARD static inline ProgramStateRef simplify(SValBuilder &SVB,
+                                                        RangeSet::Factory &F,
+                                                        ProgramStateRef State,
+                                                        EquivalenceClass Class);
+
+  void dumpToStream(ProgramStateRef State, raw_ostream &os) const;
+  LLVM_DUMP_METHOD void dump(ProgramStateRef State) const {
+    dumpToStream(State, llvm::errs());
+  }
 
   /// Check equivalence data for consistency.
   LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
@@ -515,15 +654,13 @@ private:
   }
   static inline SymbolSet::Factory &getMembersFactory(ProgramStateRef State);
 
-  inline ProgramStateRef mergeImpl(BasicValueFactory &BV, RangeSet::Factory &F,
-                                   ProgramStateRef State, SymbolSet Members,
-                                   EquivalenceClass Other,
+  inline ProgramStateRef mergeImpl(RangeSet::Factory &F, ProgramStateRef State,
+                                   SymbolSet Members, EquivalenceClass Other,
                                    SymbolSet OtherMembers);
-  static inline void
+  static inline bool
   addToDisequalityInfo(DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
-                       BasicValueFactory &BV, RangeSet::Factory &F,
-                       ProgramStateRef State, EquivalenceClass First,
-                       EquivalenceClass Second);
+                       RangeSet::Factory &F, ProgramStateRef State,
+                       EquivalenceClass First, EquivalenceClass Second);
 
   /// This is a unique identifier of the class.
   uintptr_t ID;
@@ -532,6 +669,15 @@ private:
 //===----------------------------------------------------------------------===//
 //                             Constraint functions
 //===----------------------------------------------------------------------===//
+
+LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED bool
+areFeasible(ConstraintRangeTy Constraints) {
+  return llvm::none_of(
+      Constraints,
+      [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
+        return ClassConstraint.second.isEmpty();
+      });
+}
 
 LLVM_NODISCARD inline const RangeSet *getConstraint(ProgramStateRef State,
                                                     EquivalenceClass Class) {
@@ -543,70 +689,52 @@ LLVM_NODISCARD inline const RangeSet *getConstraint(ProgramStateRef State,
   return getConstraint(State, EquivalenceClass::find(State, Sym));
 }
 
+LLVM_NODISCARD ProgramStateRef setConstraint(ProgramStateRef State,
+                                             EquivalenceClass Class,
+                                             RangeSet Constraint) {
+  return State->set<ConstraintRange>(Class, Constraint);
+}
+
+LLVM_NODISCARD ProgramStateRef setConstraints(ProgramStateRef State,
+                                              ConstraintRangeTy Constraints) {
+  return State->set<ConstraintRange>(Constraints);
+}
+
 //===----------------------------------------------------------------------===//
 //                       Equality/diseqiality abstraction
 //===----------------------------------------------------------------------===//
 
-/// A small helper structure representing symbolic equality.
+/// A small helper function for detecting symbolic (dis)equality.
 ///
 /// Equality check can have different forms (like a == b or a - b) and this
 /// class encapsulates those away if the only thing the user wants to check -
-/// whether it's equality/diseqiality or not and have an easy access to the
-/// compared symbols.
-struct EqualityInfo {
-public:
-  SymbolRef Left, Right;
-  // true for equality and false for disequality.
-  bool IsEquality = true;
-
-  void invert() { IsEquality = !IsEquality; }
-  /// Extract equality information from the given symbol and the constants.
-  ///
-  /// This function assumes the following expression Sym + Adjustment != Int.
-  /// It is a default because the most widespread case of the equality check
-  /// is (A == B) + 0 != 0.
-  static Optional<EqualityInfo> extract(SymbolRef Sym, const llvm::APSInt &Int,
-                                        const llvm::APSInt &Adjustment) {
-    // As of now, the only equality form supported is Sym + 0 != 0.
-    if (!Int.isNullValue() || !Adjustment.isNullValue())
-      return llvm::None;
-
-    return extract(Sym);
+/// whether it's equality/diseqiality or not.
+///
+/// \returns true if assuming this Sym to be true means equality of operands
+///          false if it means disequality of operands
+///          None otherwise
+Optional<bool> meansEquality(const SymSymExpr *Sym) {
+  switch (Sym->getOpcode()) {
+  case BO_Sub:
+    // This case is: A - B != 0 -> disequality check.
+    return false;
+  case BO_EQ:
+    // This case is: A == B != 0 -> equality check.
+    return true;
+  case BO_NE:
+    // This case is: A != B != 0 -> diseqiality check.
+    return false;
+  default:
+    return llvm::None;
   }
-  /// Extract equality information from the given symbol.
-  static Optional<EqualityInfo> extract(SymbolRef Sym) {
-    return EqualityExtractor().Visit(Sym);
-  }
-
-private:
-  class EqualityExtractor
-      : public SymExprVisitor<EqualityExtractor, Optional<EqualityInfo>> {
-  public:
-    Optional<EqualityInfo> VisitSymSymExpr(const SymSymExpr *Sym) const {
-      switch (Sym->getOpcode()) {
-      case BO_Sub:
-        // This case is: A - B != 0 -> disequality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), false};
-      case BO_EQ:
-        // This case is: A == B != 0 -> equality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), true};
-      case BO_NE:
-        // This case is: A != B != 0 -> diseqiality check.
-        return EqualityInfo{Sym->getLHS(), Sym->getRHS(), false};
-      default:
-        return llvm::None;
-      }
-    }
-  };
-};
+}
 
 //===----------------------------------------------------------------------===//
 //                            Intersection functions
 //===----------------------------------------------------------------------===//
 
 template <class SecondTy, class... RestTy>
-LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
-                                         RangeSet::Factory &F, RangeSet Head,
+LLVM_NODISCARD inline RangeSet intersect(RangeSet::Factory &F, RangeSet Head,
                                          SecondTy Second, RestTy... Tail);
 
 template <class... RangeTy> struct IntersectionTraits;
@@ -629,15 +757,14 @@ struct IntersectionTraits<OptionalOrPointer, TailTy...> {
 };
 
 template <class EndTy>
-LLVM_NODISCARD inline EndTy intersect(BasicValueFactory &BV,
-                                      RangeSet::Factory &F, EndTy End) {
+LLVM_NODISCARD inline EndTy intersect(RangeSet::Factory &F, EndTy End) {
   // If the list contains only RangeSet or Optional<RangeSet>, simply return
   // that range set.
   return End;
 }
 
 LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED inline Optional<RangeSet>
-intersect(BasicValueFactory &BV, RangeSet::Factory &F, const RangeSet *End) {
+intersect(RangeSet::Factory &F, const RangeSet *End) {
   // This is an extraneous conversion from a raw pointer into Optional<RangeSet>
   if (End) {
     return *End;
@@ -646,25 +773,23 @@ intersect(BasicValueFactory &BV, RangeSet::Factory &F, const RangeSet *End) {
 }
 
 template <class... RestTy>
-LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
-                                         RangeSet::Factory &F, RangeSet Head,
+LLVM_NODISCARD inline RangeSet intersect(RangeSet::Factory &F, RangeSet Head,
                                          RangeSet Second, RestTy... Tail) {
   // Here we call either the <RangeSet,RangeSet,...> or <RangeSet,...> version
   // of the function and can be sure that the result is RangeSet.
-  return intersect(BV, F, Head.Intersect(BV, F, Second), Tail...);
+  return intersect(F, F.intersect(Head, Second), Tail...);
 }
 
 template <class SecondTy, class... RestTy>
-LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
-                                         RangeSet::Factory &F, RangeSet Head,
+LLVM_NODISCARD inline RangeSet intersect(RangeSet::Factory &F, RangeSet Head,
                                          SecondTy Second, RestTy... Tail) {
   if (Second) {
     // Here we call the <RangeSet,RangeSet,...> version of the function...
-    return intersect(BV, F, Head, *Second, Tail...);
+    return intersect(F, Head, *Second, Tail...);
   }
   // ...and here it is either <RangeSet,RangeSet,...> or <RangeSet,...>, which
   // means that the result is definitely RangeSet.
-  return intersect(BV, F, Head, Tail...);
+  return intersect(F, Head, Tail...);
 }
 
 /// Main generic intersect function.
@@ -689,12 +814,12 @@ LLVM_NODISCARD inline RangeSet intersect(BasicValueFactory &BV,
 template <class HeadTy, class SecondTy, class... RestTy>
 LLVM_NODISCARD inline
     typename IntersectionTraits<HeadTy, SecondTy, RestTy...>::Type
-    intersect(BasicValueFactory &BV, RangeSet::Factory &F, HeadTy Head,
-              SecondTy Second, RestTy... Tail) {
+    intersect(RangeSet::Factory &F, HeadTy Head, SecondTy Second,
+              RestTy... Tail) {
   if (Head) {
-    return intersect(BV, F, *Head, Second, Tail...);
+    return intersect(F, *Head, Second, Tail...);
   }
-  return intersect(BV, F, Second, Tail...);
+  return intersect(F, Second, Tail...);
 }
 
 //===----------------------------------------------------------------------===//
@@ -710,9 +835,9 @@ class SymbolicRangeInferrer
     : public SymExprVisitor<SymbolicRangeInferrer, RangeSet> {
 public:
   template <class SourceType>
-  static RangeSet inferRange(BasicValueFactory &BV, RangeSet::Factory &F,
-                             ProgramStateRef State, SourceType Origin) {
-    SymbolicRangeInferrer Inferrer(BV, F, State);
+  static RangeSet inferRange(RangeSet::Factory &F, ProgramStateRef State,
+                             SourceType Origin) {
+    SymbolicRangeInferrer Inferrer(F, State);
     return Inferrer.infer(Origin);
   }
 
@@ -733,13 +858,18 @@ public:
   }
 
   RangeSet VisitSymSymExpr(const SymSymExpr *Sym) {
-    return VisitBinaryOperator(Sym);
+    return intersect(
+        RangeFactory,
+        // If Sym is (dis)equality, we might have some information
+        // on that in our equality classes data structure.
+        getRangeForEqualities(Sym),
+        // And we should always check what we can get from the operands.
+        VisitBinaryOperator(Sym));
   }
 
 private:
-  SymbolicRangeInferrer(BasicValueFactory &BV, RangeSet::Factory &F,
-                        ProgramStateRef S)
-      : ValueFactory(BV), RangeFactory(F), State(S) {}
+  SymbolicRangeInferrer(RangeSet::Factory &F, ProgramStateRef S)
+      : ValueFactory(F.getValueFactory()), RangeFactory(F), State(S) {}
 
   /// Infer range information from the given integer constant.
   ///
@@ -763,26 +893,25 @@ private:
   }
 
   RangeSet infer(SymbolRef Sym) {
-    if (Optional<RangeSet> ConstraintBasedRange = intersect(
-            ValueFactory, RangeFactory, getConstraint(State, Sym),
-            // If Sym is a difference of symbols A - B, then maybe we have range
-            // set stored for B - A.
-            //
-            // If we have range set stored for both A - B and B - A then
-            // calculate the effective range set by intersecting the range set
-            // for A - B and the negated range set of B - A.
-            getRangeForNegatedSub(Sym), getRangeForEqualities(Sym))) {
-      return *ConstraintBasedRange;
-    }
-
-    // If Sym is a comparison expression (except <=>),
-    // find any other comparisons with the same operands.
-    // See function description.
-    if (Optional<RangeSet> CmpRangeSet = getRangeForComparisonSymbol(Sym)) {
-      return *CmpRangeSet;
-    }
-
-    return Visit(Sym);
+    return intersect(
+        RangeFactory,
+        // Of course, we should take the constraint directly associated with
+        // this symbol into consideration.
+        getConstraint(State, Sym),
+        // If Sym is a difference of symbols A - B, then maybe we have range
+        // set stored for B - A.
+        //
+        // If we have range set stored for both A - B and B - A then
+        // calculate the effective range set by intersecting the range set
+        // for A - B and the negated range set of B - A.
+        getRangeForNegatedSub(Sym),
+        // If Sym is a comparison expression (except <=>),
+        // find any other comparisons with the same operands.
+        // See function description.
+        getRangeForComparisonSymbol(Sym),
+        // Apart from the Sym itself, we can infer quite a lot if we look
+        // into subexpressions of Sym.
+        Visit(Sym));
   }
 
   RangeSet infer(EquivalenceClass Class) {
@@ -940,7 +1069,7 @@ private:
   /// Return a range set subtracting zero from \p Domain.
   RangeSet assumeNonZero(RangeSet Domain, QualType T) {
     APSIntType IntType = ValueFactory.getAPSIntType(T);
-    return Domain.Delete(ValueFactory, RangeFactory, IntType.getZeroValue());
+    return RangeFactory.deletePoint(Domain, IntType.getZeroValue());
   }
 
   // FIXME: Once SValBuilder supports unary minus, we should use SValBuilder to
@@ -963,7 +1092,7 @@ private:
             SymMgr.getSymSymExpr(SSE->getRHS(), BO_Sub, SSE->getLHS(), T);
 
         if (const RangeSet *NegatedRange = getConstraint(State, NegatedSym)) {
-          return NegatedRange->Negate(ValueFactory, RangeFactory);
+          return RangeFactory.negate(*NegatedRange);
         }
       }
     }
@@ -985,7 +1114,7 @@ private:
     if (!SSE)
       return llvm::None;
 
-    BinaryOperatorKind CurrentOP = SSE->getOpcode();
+    const BinaryOperatorKind CurrentOP = SSE->getOpcode();
 
     // We currently do not support <=> (C++20).
     if (!BinaryOperator::isComparisonOp(CurrentOP) || (CurrentOP == BO_Cmp))
@@ -999,7 +1128,12 @@ private:
 
     SymbolManager &SymMgr = State->getSymbolManager();
 
-    int UnknownStates = 0;
+    // We use this variable to store the last queried operator (`QueriedOP`)
+    // for which the `getCmpOpState` returned with `Unknown`. If there are two
+    // different OPs that returned `Unknown` then we have to query the special
+    // `UnknownX2` column. We assume that `getCmpOpState(CurrentOP, CurrentOP)`
+    // never returns `Unknown`, so `CurrentOP` is a good initial value.
+    BinaryOperatorKind LastQueriedOpToUnknown = CurrentOP;
 
     // Loop goes through all of the columns exept the last one ('UnknownX2').
     // We treat `UnknownX2` column separately at the end of the loop body.
@@ -1036,15 +1170,18 @@ private:
           CmpOpTable.getCmpOpState(CurrentOP, QueriedOP);
 
       if (BranchState == OperatorRelationsTable::Unknown) {
-        if (++UnknownStates == 2)
-          // If we met both Unknown states.
+        if (LastQueriedOpToUnknown != CurrentOP &&
+            LastQueriedOpToUnknown != QueriedOP) {
+          // If we got the Unknown state for both different operators.
           // if (x <= y)    // assume true
           //   if (x != y)  // assume true
           //     if (x < y) // would be also true
           // Get a state from `UnknownX2` column.
           BranchState = CmpOpTable.getCmpOpStateForUnknownX2(CurrentOP);
-        else
+        } else {
+          LastQueriedOpToUnknown = QueriedOP;
           continue;
+        }
       }
 
       return (BranchState == OperatorRelationsTable::True) ? getTrueRange(T)
@@ -1054,17 +1191,21 @@ private:
     return llvm::None;
   }
 
-  Optional<RangeSet> getRangeForEqualities(SymbolRef Sym) {
-    Optional<EqualityInfo> Equality = EqualityInfo::extract(Sym);
+  Optional<RangeSet> getRangeForEqualities(const SymSymExpr *Sym) {
+    Optional<bool> Equality = meansEquality(Sym);
 
     if (!Equality)
       return llvm::None;
 
-    if (Optional<bool> AreEqual = EquivalenceClass::areEqual(
-            State, Equality->Left, Equality->Right)) {
-      if (*AreEqual == Equality->IsEquality) {
+    if (Optional<bool> AreEqual =
+            EquivalenceClass::areEqual(State, Sym->getLHS(), Sym->getRHS())) {
+      // Here we cover two cases at once:
+      //   * if Sym is equality and its operands are known to be equal -> true
+      //   * if Sym is disequality and its operands are disequal -> true
+      if (*AreEqual == *Equality) {
         return getTrueRange(Sym->getType());
       }
+      // Opposite combinations result in false.
       return getFalseRange(Sym->getType());
     }
 
@@ -1251,13 +1392,215 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 }
 
 //===----------------------------------------------------------------------===//
+//                         Constraint assignment logic
+//===----------------------------------------------------------------------===//
+
+/// ConstraintAssignorBase is a small utility class that unifies visitor
+/// for ranges with a visitor for constraints (rangeset/range/constant).
+///
+/// It is designed to have one derived class, but generally it can have more.
+/// Derived class can control which types we handle by defining methods of the
+/// following form:
+///
+///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///                                       CONSTRAINT Constraint);
+///
+/// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
+///       CONSTRAINT is the type of constraint (RangeSet/Range/Const)
+///       return value signifies whether we should try other handle methods
+///          (i.e. false would mean to stop right after calling this method)
+template <class Derived> class ConstraintAssignorBase {
+public:
+  using Const = const llvm::APSInt &;
+
+#define DISPATCH(CLASS) return assign##CLASS##Impl(cast<CLASS>(Sym), Constraint)
+
+#define ASSIGN(CLASS, TO, SYM, CONSTRAINT)                                     \
+  if (!static_cast<Derived *>(this)->assign##CLASS##To##TO(SYM, CONSTRAINT))   \
+  return false
+
+  void assign(SymbolRef Sym, RangeSet Constraint) {
+    assignImpl(Sym, Constraint);
+  }
+
+  bool assignImpl(SymbolRef Sym, RangeSet Constraint) {
+    switch (Sym->getKind()) {
+#define SYMBOL(Id, Parent)                                                     \
+  case SymExpr::Id##Kind:                                                      \
+    DISPATCH(Id);
+#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
+    }
+    llvm_unreachable("Unknown SymExpr kind!");
+  }
+
+#define DEFAULT_ASSIGN(Id)                                                     \
+  bool assign##Id##To##RangeSet(const Id *Sym, RangeSet Constraint) {          \
+    return true;                                                               \
+  }                                                                            \
+  bool assign##Id##To##Range(const Id *Sym, Range Constraint) { return true; } \
+  bool assign##Id##To##Const(const Id *Sym, Const Constraint) { return true; }
+
+  // When we dispatch for constraint types, we first try to check
+  // if the new constraint is the constant and try the corresponding
+  // assignor methods.  If it didn't interrupt, we can proceed to the
+  // range, and finally to the range set.
+#define CONSTRAINT_DISPATCH(Id)                                                \
+  if (const llvm::APSInt *Const = Constraint.getConcreteValue()) {             \
+    ASSIGN(Id, Const, Sym, *Const);                                            \
+  }                                                                            \
+  if (Constraint.size() == 1) {                                                \
+    ASSIGN(Id, Range, Sym, *Constraint.begin());                               \
+  }                                                                            \
+  ASSIGN(Id, RangeSet, Sym, Constraint)
+
+  // Our internal assign method first tries to call assignor methods for all
+  // constraint types that apply.  And if not interrupted, continues with its
+  // parent class.
+#define SYMBOL(Id, Parent)                                                     \
+  bool assign##Id##Impl(const Id *Sym, RangeSet Constraint) {                  \
+    CONSTRAINT_DISPATCH(Id);                                                   \
+    DISPATCH(Parent);                                                          \
+  }                                                                            \
+  DEFAULT_ASSIGN(Id)
+#define ABSTRACT_SYMBOL(Id, Parent) SYMBOL(Id, Parent)
+#include "clang/StaticAnalyzer/Core/PathSensitive/Symbols.def"
+
+  // Default implementations for the top class that doesn't have parents.
+  bool assignSymExprImpl(const SymExpr *Sym, RangeSet Constraint) {
+    CONSTRAINT_DISPATCH(SymExpr);
+    return true;
+  }
+  DEFAULT_ASSIGN(SymExpr);
+
+#undef DISPATCH
+#undef CONSTRAINT_DISPATCH
+#undef DEFAULT_ASSIGN
+#undef ASSIGN
+};
+
+/// A little component aggregating all of the reasoning we have about
+/// assigning new constraints to symbols.
+///
+/// The main purpose of this class is to associate constraints to symbols,
+/// and impose additional constraints on other symbols, when we can imply
+/// them.
+///
+/// It has a nice symmetry with SymbolicRangeInferrer.  When the latter
+/// can provide more precise ranges by looking into the operands of the
+/// expression in question, ConstraintAssignor looks into the operands
+/// to see if we can imply more from the new constraint.
+class ConstraintAssignor : public ConstraintAssignorBase<ConstraintAssignor> {
+public:
+  template <class ClassOrSymbol>
+  LLVM_NODISCARD static ProgramStateRef
+  assign(ProgramStateRef State, SValBuilder &Builder, RangeSet::Factory &F,
+         ClassOrSymbol CoS, RangeSet NewConstraint) {
+    if (!State || NewConstraint.isEmpty())
+      return nullptr;
+
+    ConstraintAssignor Assignor{State, Builder, F};
+    return Assignor.assign(CoS, NewConstraint);
+  }
+
+  inline bool assignSymExprToConst(const SymExpr *Sym, Const Constraint);
+  inline bool assignSymSymExprToRangeSet(const SymSymExpr *Sym,
+                                         RangeSet Constraint);
+
+private:
+  ConstraintAssignor(ProgramStateRef State, SValBuilder &Builder,
+                     RangeSet::Factory &F)
+      : State(State), Builder(Builder), RangeFactory(F) {}
+  using Base = ConstraintAssignorBase<ConstraintAssignor>;
+
+  /// Base method for handling new constraints for symbols.
+  LLVM_NODISCARD ProgramStateRef assign(SymbolRef Sym, RangeSet NewConstraint) {
+    // All constraints are actually associated with equivalence classes, and
+    // that's what we are going to do first.
+    State = assign(EquivalenceClass::find(State, Sym), NewConstraint);
+    if (!State)
+      return nullptr;
+
+    // And after that we can check what other things we can get from this
+    // constraint.
+    Base::assign(Sym, NewConstraint);
+    return State;
+  }
+
+  /// Base method for handling new constraints for classes.
+  LLVM_NODISCARD ProgramStateRef assign(EquivalenceClass Class,
+                                        RangeSet NewConstraint) {
+    // There is a chance that we might need to update constraints for the
+    // classes that are known to be disequal to Class.
+    //
+    // In order for this to be even possible, the new constraint should
+    // be simply a constant because we can't reason about range disequalities.
+    if (const llvm::APSInt *Point = NewConstraint.getConcreteValue()) {
+
+      ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+      ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
+
+      // Add new constraint.
+      Constraints = CF.add(Constraints, Class, NewConstraint);
+
+      for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
+        RangeSet UpdatedConstraint = SymbolicRangeInferrer::inferRange(
+            RangeFactory, State, DisequalClass);
+
+        UpdatedConstraint = RangeFactory.deletePoint(UpdatedConstraint, *Point);
+
+        // If we end up with at least one of the disequal classes to be
+        // constrained with an empty range-set, the state is infeasible.
+        if (UpdatedConstraint.isEmpty())
+          return nullptr;
+
+        Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
+      }
+      assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                         "a state with infeasible constraints");
+
+      return setConstraints(State, Constraints);
+    }
+
+    return setConstraint(State, Class, NewConstraint);
+  }
+
+  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
+                                   SymbolRef RHS) {
+    return EquivalenceClass::markDisequal(RangeFactory, State, LHS, RHS);
+  }
+
+  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
+                                SymbolRef RHS) {
+    return EquivalenceClass::merge(RangeFactory, State, LHS, RHS);
+  }
+
+  LLVM_NODISCARD Optional<bool> interpreteAsBool(RangeSet Constraint) {
+    assert(!Constraint.isEmpty() && "Empty ranges shouldn't get here");
+
+    if (Constraint.getConcreteValue())
+      return !Constraint.getConcreteValue()->isZero();
+
+    APSIntType T{Constraint.getMinValue()};
+    Const Zero = T.getZeroValue();
+    if (!Constraint.contains(Zero))
+      return true;
+
+    return llvm::None;
+  }
+
+  ProgramStateRef State;
+  SValBuilder &Builder;
+  RangeSet::Factory &RangeFactory;
+};
+
+//===----------------------------------------------------------------------===//
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
-      : RangedConstraintManager(EE, SVB) {}
+      : RangedConstraintManager(EE, SVB), F(getBasicVals()) {}
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from ConstraintManager.
@@ -1284,6 +1627,15 @@ public:
 
   void printJson(raw_ostream &Out, ProgramStateRef State, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const override;
+  void printConstraints(raw_ostream &Out, ProgramStateRef State,
+                        const char *NL = "\n", unsigned int Space = 0,
+                        bool IsDot = false) const;
+  void printEquivalenceClasses(raw_ostream &Out, ProgramStateRef State,
+                               const char *NL = "\n", unsigned int Space = 0,
+                               bool IsDot = false) const;
+  void printDisequalities(raw_ostream &Out, ProgramStateRef State,
+                          const char *NL = "\n", unsigned int Space = 0,
+                          bool IsDot = false) const;
 
   //===------------------------------------------------------------------===//
   // Implementation for interface from RangedConstraintManager.
@@ -1326,6 +1678,10 @@ private:
 
   RangeSet getRange(ProgramStateRef State, SymbolRef Sym);
   RangeSet getRange(ProgramStateRef State, EquivalenceClass Class);
+  ProgramStateRef setRange(ProgramStateRef State, SymbolRef Sym,
+                           RangeSet Range);
+  ProgramStateRef setRange(ProgramStateRef State, EquivalenceClass Class,
+                           RangeSet Range);
 
   RangeSet getSymLTRange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
@@ -1342,80 +1698,63 @@ private:
   RangeSet getSymGERange(ProgramStateRef St, SymbolRef Sym,
                          const llvm::APSInt &Int,
                          const llvm::APSInt &Adjustment);
-
-  //===------------------------------------------------------------------===//
-  // Equality tracking implementation
-  //===------------------------------------------------------------------===//
-
-  ProgramStateRef trackEQ(ProgramStateRef State, SymbolRef Sym,
-                          const llvm::APSInt &Int,
-                          const llvm::APSInt &Adjustment) {
-    if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-      // Extract function assumes that we gave it Sym + Adjustment != Int,
-      // so the result should be opposite.
-      Equality->invert();
-      return track(State, *Equality);
-    }
-
-    return State;
-  }
-
-  ProgramStateRef trackNE(ProgramStateRef State, SymbolRef Sym,
-                          const llvm::APSInt &Int,
-                          const llvm::APSInt &Adjustment) {
-    if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
-      return track(State, *Equality);
-    }
-
-    return State;
-  }
-
-  ProgramStateRef track(ProgramStateRef State, EqualityInfo ToTrack) {
-    if (ToTrack.IsEquality) {
-      return trackEquality(State, ToTrack.Left, ToTrack.Right);
-    }
-    return trackDisequality(State, ToTrack.Left, ToTrack.Right);
-  }
-
-  ProgramStateRef trackDisequality(ProgramStateRef State, SymbolRef LHS,
-                                   SymbolRef RHS) {
-    return EquivalenceClass::markDisequal(getBasicVals(), F, State, LHS, RHS);
-  }
-
-  ProgramStateRef trackEquality(ProgramStateRef State, SymbolRef LHS,
-                                SymbolRef RHS) {
-    return EquivalenceClass::merge(getBasicVals(), F, State, LHS, RHS);
-  }
-
-  LLVM_NODISCARD inline ProgramStateRef setConstraint(ProgramStateRef State,
-                                                      EquivalenceClass Class,
-                                                      RangeSet Constraint) {
-    ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-    ConstraintRangeTy::Factory &CF = State->get_context<ConstraintRange>();
-
-    // Add new constraint.
-    Constraints = CF.add(Constraints, Class, Constraint);
-
-    // There is a chance that we might need to update constraints for the
-    // classes that are known to be disequal to Class.
-    //
-    // In order for this to be even possible, the new constraint should
-    // be simply a constant because we can't reason about range disequalities.
-    if (const llvm::APSInt *Point = Constraint.getConcreteValue())
-      for (EquivalenceClass DisequalClass : Class.getDisequalClasses(State)) {
-        RangeSet UpdatedConstraint =
-            getRange(State, DisequalClass).Delete(getBasicVals(), F, *Point);
-        Constraints = CF.add(Constraints, DisequalClass, UpdatedConstraint);
-      }
-
-    return State->set<ConstraintRange>(Constraints);
-  }
-
-  LLVM_NODISCARD inline ProgramStateRef
-  setConstraint(ProgramStateRef State, SymbolRef Sym, RangeSet Constraint) {
-    return setConstraint(State, EquivalenceClass::find(State, Sym), Constraint);
-  }
 };
+
+bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
+                                              const llvm::APSInt &Constraint) {
+  llvm::SmallSet<EquivalenceClass, 4> SimplifiedClasses;
+  // Iterate over all equivalence classes and try to simplify them.
+  ClassMembersTy Members = State->get<ClassMembers>();
+  for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
+    EquivalenceClass Class = ClassToSymbolSet.first;
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
+    if (!State)
+      return false;
+    SimplifiedClasses.insert(Class);
+  }
+
+  // Trivial equivalence classes (those that have only one symbol member) are
+  // not stored in the State. Thus, we must skim through the constraints as
+  // well. And we try to simplify symbols in the constraints.
+  ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+  for (std::pair<EquivalenceClass, RangeSet> ClassConstraint : Constraints) {
+    EquivalenceClass Class = ClassConstraint.first;
+    if (SimplifiedClasses.count(Class)) // Already simplified.
+      continue;
+    State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
+    if (!State)
+      return false;
+  }
+
+  return true;
+}
+
+bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
+                                                    RangeSet Constraint) {
+  Optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
+
+  if (!ConstraintAsBool)
+    return true;
+
+  if (Optional<bool> Equality = meansEquality(Sym)) {
+    // Here we cover two cases:
+    //   * if Sym is equality and the new constraint is true -> Sym's operands
+    //     should be marked as equal
+    //   * if Sym is disequality and the new constraint is false -> Sym's
+    //     operands should be also marked as equal
+    if (*Equality == *ConstraintAsBool) {
+      State = trackEquality(State, Sym->getLHS(), Sym->getRHS());
+    } else {
+      // Other combinations leave as with disequal operands.
+      State = trackDisequality(State, Sym->getLHS(), Sym->getRHS());
+    }
+
+    if (!State)
+      return false;
+  }
+
+  return true;
+}
 
 } // end anonymous namespace
 
@@ -1447,8 +1786,19 @@ ConstraintMap ento::getConstraintMap(ProgramStateRef State) {
 //                     EqualityClass implementation details
 //===----------------------------------------------------------------------===//
 
+LLVM_DUMP_METHOD void EquivalenceClass::dumpToStream(ProgramStateRef State,
+                                                     raw_ostream &os) const {
+  SymbolSet ClassMembers = getClassMembers(State);
+  for (const SymbolRef &MemberSym : ClassMembers) {
+    MemberSym->dump();
+    os << "\n";
+  }
+}
+
 inline EquivalenceClass EquivalenceClass::find(ProgramStateRef State,
                                                SymbolRef Sym) {
+  assert(State && "State should not be null");
+  assert(Sym && "Symbol should not be null");
   // We store far from all Symbol -> Class mappings
   if (const EquivalenceClass *NontrivialClass = State->get<ClassMap>(Sym))
     return *NontrivialClass;
@@ -1457,19 +1807,17 @@ inline EquivalenceClass EquivalenceClass::find(ProgramStateRef State,
   return Sym;
 }
 
-inline ProgramStateRef EquivalenceClass::merge(BasicValueFactory &BV,
-                                               RangeSet::Factory &F,
+inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
                                                ProgramStateRef State,
                                                SymbolRef First,
                                                SymbolRef Second) {
   EquivalenceClass FirstClass = find(State, First);
   EquivalenceClass SecondClass = find(State, Second);
 
-  return FirstClass.merge(BV, F, State, SecondClass);
+  return FirstClass.merge(F, State, SecondClass);
 }
 
-inline ProgramStateRef EquivalenceClass::merge(BasicValueFactory &BV,
-                                               RangeSet::Factory &F,
+inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
                                                ProgramStateRef State,
                                                EquivalenceClass Other) {
   // It is already the same class.
@@ -1497,15 +1845,14 @@ inline ProgramStateRef EquivalenceClass::merge(BasicValueFactory &BV,
   // its members.  Merging is not a trivial operation, so it's easier to
   // merge the smaller class into the bigger one.
   if (Members.getHeight() >= OtherMembers.getHeight()) {
-    return mergeImpl(BV, F, State, Members, Other, OtherMembers);
+    return mergeImpl(F, State, Members, Other, OtherMembers);
   } else {
-    return Other.mergeImpl(BV, F, State, OtherMembers, *this, Members);
+    return Other.mergeImpl(F, State, OtherMembers, *this, Members);
   }
 }
 
 inline ProgramStateRef
-EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
-                            RangeSet::Factory &RangeFactory,
+EquivalenceClass::mergeImpl(RangeSet::Factory &RangeFactory,
                             ProgramStateRef State, SymbolSet MyMembers,
                             EquivalenceClass Other, SymbolSet OtherMembers) {
   // Essentially what we try to recreate here is some kind of union-find
@@ -1528,7 +1875,7 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
   // Intersection here makes perfect sense because both of these constraints
   // must hold for the whole new class.
   if (Optional<RangeSet> NewClassConstraint =
-          intersect(ValueFactory, RangeFactory, getConstraint(State, *this),
+          intersect(RangeFactory, getConstraint(State, *this),
                     getConstraint(State, Other))) {
     // NOTE: Essentially, NewClassConstraint should NEVER be infeasible because
     //       range inferrer shouldn't generate ranges incompatible with
@@ -1543,6 +1890,9 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
     Constraints = CRF.remove(Constraints, Other);
     // Assign new constraints for this class.
     Constraints = CRF.add(Constraints, *this, *NewClassConstraint);
+
+    assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                       "a state with infeasible constraints");
 
     State = State->set<ConstraintRange>(Constraints);
   }
@@ -1577,6 +1927,11 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
 
   // 4. Update disequality relations
   ClassSet DisequalToOther = Other.getDisequalClasses(DisequalityInfo, CF);
+  // We are about to merge two classes but they are already known to be
+  // non-equal. This is a contradiction.
+  if (DisequalToOther.contains(*this))
+    return nullptr;
+
   if (!DisequalToOther.isEmpty()) {
     ClassSet DisequalToThis = getDisequalClasses(DisequalityInfo, CF);
     DisequalityInfo = DF.remove(DisequalityInfo, Other);
@@ -1614,7 +1969,7 @@ EquivalenceClass::getMembersFactory(ProgramStateRef State) {
   return State->get_context<SymbolSet>();
 }
 
-SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) {
+SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) const {
   if (const SymbolSet *Members = State->get<ClassMembers>(*this))
     return *Members;
 
@@ -1624,34 +1979,31 @@ SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) {
   return F.add(F.getEmptySet(), getRepresentativeSymbol());
 }
 
-bool EquivalenceClass::isTrivial(ProgramStateRef State) {
+bool EquivalenceClass::isTrivial(ProgramStateRef State) const {
   return State->get<ClassMembers>(*this) == nullptr;
 }
 
 bool EquivalenceClass::isTriviallyDead(ProgramStateRef State,
-                                       SymbolReaper &Reaper) {
+                                       SymbolReaper &Reaper) const {
   return isTrivial(State) && Reaper.isDead(getRepresentativeSymbol());
 }
 
-inline ProgramStateRef EquivalenceClass::markDisequal(BasicValueFactory &VF,
-                                                      RangeSet::Factory &RF,
+inline ProgramStateRef EquivalenceClass::markDisequal(RangeSet::Factory &RF,
                                                       ProgramStateRef State,
                                                       SymbolRef First,
                                                       SymbolRef Second) {
-  return markDisequal(VF, RF, State, find(State, First), find(State, Second));
+  return markDisequal(RF, State, find(State, First), find(State, Second));
 }
 
-inline ProgramStateRef EquivalenceClass::markDisequal(BasicValueFactory &VF,
-                                                      RangeSet::Factory &RF,
+inline ProgramStateRef EquivalenceClass::markDisequal(RangeSet::Factory &RF,
                                                       ProgramStateRef State,
                                                       EquivalenceClass First,
                                                       EquivalenceClass Second) {
-  return First.markDisequal(VF, RF, State, Second);
+  return First.markDisequal(RF, State, Second);
 }
 
 inline ProgramStateRef
-EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
-                               ProgramStateRef State,
+EquivalenceClass::markDisequal(RangeSet::Factory &RF, ProgramStateRef State,
                                EquivalenceClass Other) const {
   // If we know that two classes are equal, we can only produce an infeasible
   // state.
@@ -1664,10 +2016,14 @@ EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
 
   // Disequality is a symmetric relation, so if we mark A as disequal to B,
   // we should also mark B as disequalt to A.
-  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, *this,
-                       Other);
-  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, Other,
-                       *this);
+  if (!addToDisequalityInfo(DisequalityInfo, Constraints, RF, State, *this,
+                            Other) ||
+      !addToDisequalityInfo(DisequalityInfo, Constraints, RF, State, Other,
+                            *this))
+    return nullptr;
+
+  assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                     "a state with infeasible constraints");
 
   State = State->set<DisequalityMap>(DisequalityInfo);
   State = State->set<ConstraintRange>(Constraints);
@@ -1675,10 +2031,10 @@ EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
   return State;
 }
 
-inline void EquivalenceClass::addToDisequalityInfo(
+inline bool EquivalenceClass::addToDisequalityInfo(
     DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
-    BasicValueFactory &VF, RangeSet::Factory &RF, ProgramStateRef State,
-    EquivalenceClass First, EquivalenceClass Second) {
+    RangeSet::Factory &RF, ProgramStateRef State, EquivalenceClass First,
+    EquivalenceClass Second) {
 
   // 1. Get all of the required factories.
   DisequalityMapTy::Factory &F = State->get_context<DisequalityMap>();
@@ -1701,19 +2057,31 @@ inline void EquivalenceClass::addToDisequalityInfo(
     if (const llvm::APSInt *Point = SecondConstraint->getConcreteValue()) {
 
       RangeSet FirstConstraint = SymbolicRangeInferrer::inferRange(
-          VF, RF, State, First.getRepresentativeSymbol());
+          RF, State, First.getRepresentativeSymbol());
 
-      FirstConstraint = FirstConstraint.Delete(VF, RF, *Point);
+      FirstConstraint = RF.deletePoint(FirstConstraint, *Point);
+
+      // If the First class is about to be constrained with an empty
+      // range-set, the state is infeasible.
+      if (FirstConstraint.isEmpty())
+        return false;
+
       Constraints = CRF.add(Constraints, First, FirstConstraint);
     }
+
+  return true;
 }
 
 inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
                                                  SymbolRef FirstSym,
                                                  SymbolRef SecondSym) {
-  EquivalenceClass First = find(State, FirstSym);
-  EquivalenceClass Second = find(State, SecondSym);
+  return EquivalenceClass::areEqual(State, find(State, FirstSym),
+                                    find(State, SecondSym));
+}
 
+inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
+                                                 EquivalenceClass First,
+                                                 EquivalenceClass Second) {
   // The same equivalence class => symbols are equal.
   if (First == Second)
     return true;
@@ -1726,6 +2094,42 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
 
   // It is not clear.
   return llvm::None;
+}
+
+// Iterate over all symbols and try to simplify them. Once a symbol is
+// simplified then we check if we can merge the simplified symbol's equivalence
+// class to this class. This way, we simplify not just the symbols but the
+// classes as well: we strive to keep the number of the classes to be the
+// absolute minimum.
+LLVM_NODISCARD ProgramStateRef
+EquivalenceClass::simplify(SValBuilder &SVB, RangeSet::Factory &F,
+                           ProgramStateRef State, EquivalenceClass Class) {
+  SymbolSet ClassMembers = Class.getClassMembers(State);
+  for (const SymbolRef &MemberSym : ClassMembers) {
+
+    const SVal SimplifiedMemberVal = simplifyToSVal(State, MemberSym);
+    const SymbolRef SimplifiedMemberSym = SimplifiedMemberVal.getAsSymbol();
+
+    // The symbol is collapsed to a constant, check if the current State is
+    // still feasible.
+    if (const auto CI = SimplifiedMemberVal.getAs<nonloc::ConcreteInt>()) {
+      const llvm::APSInt &SV = CI->getValue();
+      const RangeSet *ClassConstraint = getConstraint(State, Class);
+      // We have found a contradiction.
+      if (ClassConstraint && !ClassConstraint->contains(SV))
+        return nullptr;
+    }
+
+    if (SimplifiedMemberSym && MemberSym != SimplifiedMemberSym) {
+      // The simplified symbol should be the member of the original Class,
+      // however, it might be in another existing class at the moment. We
+      // have to merge these classes.
+      State = merge(F, State, MemberSym, SimplifiedMemberSym);
+      if (!State)
+        return nullptr;
+    }
+  }
+  return State;
 }
 
 inline ClassSet EquivalenceClass::getDisequalClasses(ProgramStateRef State,
@@ -1854,7 +2258,7 @@ ConditionTruthVal RangeConstraintManager::checkNull(ProgramStateRef State,
   llvm::APSInt Zero = IntType.getZeroValue();
 
   // Check if zero is in the set of possible values.
-  if (Ranges->Intersect(BV, F, Zero, Zero).isEmpty())
+  if (!Ranges->contains(Zero))
     return false;
 
   // Zero is a possible value, but it is not the /only/ possible value.
@@ -2009,12 +2413,13 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
 
 RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
                                           SymbolRef Sym) {
-  return SymbolicRangeInferrer::inferRange(getBasicVals(), F, State, Sym);
+  return SymbolicRangeInferrer::inferRange(F, State, Sym);
 }
 
-RangeSet RangeConstraintManager::getRange(ProgramStateRef State,
-                                          EquivalenceClass Class) {
-  return SymbolicRangeInferrer::inferRange(getBasicVals(), F, State, Class);
+ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
+                                                 SymbolRef Sym,
+                                                 RangeSet Range) {
+  return ConstraintAssignor::assign(State, getSValBuilder(), F, Sym, Range);
 }
 
 //===------------------------------------------------------------------------===
@@ -2039,15 +2444,10 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
     return St;
 
   llvm::APSInt Point = AdjustmentType.convert(Int) - Adjustment;
+  RangeSet New = getRange(St, Sym);
+  New = F.deletePoint(New, Point);
 
-  RangeSet New = getRange(St, Sym).Delete(getBasicVals(), F, Point);
-
-  if (New.isEmpty())
-    // this is infeasible assumption
-    return nullptr;
-
-  ProgramStateRef NewState = setConstraint(St, Sym, New);
-  return trackNE(NewState, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 ProgramStateRef
@@ -2061,14 +2461,10 @@ RangeConstraintManager::assumeSymEQ(ProgramStateRef St, SymbolRef Sym,
 
   // [Int-Adjustment, Int-Adjustment]
   llvm::APSInt AdjInt = AdjustmentType.convert(Int) - Adjustment;
-  RangeSet New = getRange(St, Sym).Intersect(getBasicVals(), F, AdjInt, AdjInt);
+  RangeSet New = getRange(St, Sym);
+  New = F.intersect(New, AdjInt);
 
-  if (New.isEmpty())
-    // this is infeasible assumption
-    return nullptr;
-
-  ProgramStateRef NewState = setConstraint(St, Sym, New);
-  return trackEQ(NewState, Sym, Int, Adjustment);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
@@ -2096,7 +2492,8 @@ RangeSet RangeConstraintManager::getSymLTRange(ProgramStateRef St,
   llvm::APSInt Upper = ComparisonVal - Adjustment;
   --Upper;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet Result = getRange(St, Sym);
+  return F.intersect(Result, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2104,7 +2501,7 @@ RangeConstraintManager::assumeSymLT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymLTRange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
@@ -2132,7 +2529,8 @@ RangeSet RangeConstraintManager::getSymGTRange(ProgramStateRef St,
   llvm::APSInt Upper = Max - Adjustment;
   ++Lower;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet SymRange = getRange(St, Sym);
+  return F.intersect(SymRange, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2140,7 +2538,7 @@ RangeConstraintManager::assumeSymGT(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymGTRange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return setRange(St, Sym, New);
 }
 
 RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
@@ -2168,7 +2566,8 @@ RangeSet RangeConstraintManager::getSymGERange(ProgramStateRef St,
   llvm::APSInt Lower = ComparisonVal - Adjustment;
   llvm::APSInt Upper = Max - Adjustment;
 
-  return getRange(St, Sym).Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet SymRange = getRange(St, Sym);
+  return F.intersect(SymRange, Lower, Upper);
 }
 
 ProgramStateRef
@@ -2176,7 +2575,7 @@ RangeConstraintManager::assumeSymGE(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymGERange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return setRange(St, Sym, New);
 }
 
 RangeSet
@@ -2204,7 +2603,8 @@ RangeConstraintManager::getSymLERange(llvm::function_ref<RangeSet()> RS,
   llvm::APSInt Lower = Min - Adjustment;
   llvm::APSInt Upper = ComparisonVal - Adjustment;
 
-  return RS().Intersect(getBasicVals(), F, Lower, Upper);
+  RangeSet Default = RS();
+  return F.intersect(Default, Lower, Upper);
 }
 
 RangeSet RangeConstraintManager::getSymLERange(ProgramStateRef St,
@@ -2219,7 +2619,7 @@ RangeConstraintManager::assumeSymLE(ProgramStateRef St, SymbolRef Sym,
                                     const llvm::APSInt &Int,
                                     const llvm::APSInt &Adjustment) {
   RangeSet New = getSymLERange(St, Sym, Int, Adjustment);
-  return New.isEmpty() ? nullptr : setConstraint(St, Sym, New);
+  return setRange(St, Sym, New);
 }
 
 ProgramStateRef RangeConstraintManager::assumeSymWithinInclusiveRange(
@@ -2229,7 +2629,7 @@ ProgramStateRef RangeConstraintManager::assumeSymWithinInclusiveRange(
   if (New.isEmpty())
     return nullptr;
   RangeSet Out = getSymLERange([&] { return New; }, To, Adjustment);
-  return Out.isEmpty() ? nullptr : setConstraint(State, Sym, Out);
+  return setRange(State, Sym, Out);
 }
 
 ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
@@ -2237,8 +2637,8 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
     const llvm::APSInt &To, const llvm::APSInt &Adjustment) {
   RangeSet RangeLT = getSymLTRange(State, Sym, From, Adjustment);
   RangeSet RangeGT = getSymGTRange(State, Sym, To, Adjustment);
-  RangeSet New(RangeLT.addRange(F, RangeGT));
-  return New.isEmpty() ? nullptr : setConstraint(State, Sym, New);
+  RangeSet New(F.add(RangeLT, RangeGT));
+  return setRange(State, Sym, New);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2248,6 +2648,23 @@ ProgramStateRef RangeConstraintManager::assumeSymOutsideInclusiveRange(
 void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
                                        const char *NL, unsigned int Space,
                                        bool IsDot) const {
+  printConstraints(Out, State, NL, Space, IsDot);
+  printEquivalenceClasses(Out, State, NL, Space, IsDot);
+  printDisequalities(Out, State, NL, Space, IsDot);
+}
+
+static std::string toString(const SymbolRef &Sym) {
+  std::string S;
+  llvm::raw_string_ostream O(S);
+  Sym->dumpToStream(O);
+  return O.str();
+}
+
+void RangeConstraintManager::printConstraints(raw_ostream &Out,
+                                              ProgramStateRef State,
+                                              const char *NL,
+                                              unsigned int Space,
+                                              bool IsDot) const {
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
 
   Indent(Out, Space, IsDot) << "\"constraints\": ";
@@ -2256,25 +2673,162 @@ void RangeConstraintManager::printJson(raw_ostream &Out, ProgramStateRef State,
     return;
   }
 
+  std::map<std::string, RangeSet> OrderedConstraints;
+  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
+    SymbolSet ClassMembers = P.first.getClassMembers(State);
+    for (const SymbolRef &ClassMember : ClassMembers) {
+      bool insertion_took_place;
+      std::tie(std::ignore, insertion_took_place) =
+          OrderedConstraints.insert({toString(ClassMember), P.second});
+      assert(insertion_took_place &&
+             "two symbols should not have the same dump");
+    }
+  }
+
   ++Space;
   Out << '[' << NL;
   bool First = true;
-  for (std::pair<EquivalenceClass, RangeSet> P : Constraints) {
-    SymbolSet ClassMembers = P.first.getClassMembers(State);
-
-    // We can print the same constraint for every class member.
-    for (SymbolRef ClassMember : ClassMembers) {
-      if (First) {
-        First = false;
-      } else {
-        Out << ',';
-        Out << NL;
-      }
-      Indent(Out, Space, IsDot)
-          << "{ \"symbol\": \"" << ClassMember << "\", \"range\": \"";
-      P.second.print(Out);
-      Out << "\" }";
+  for (std::pair<std::string, RangeSet> P : OrderedConstraints) {
+    if (First) {
+      First = false;
+    } else {
+      Out << ',';
+      Out << NL;
     }
+    Indent(Out, Space, IsDot)
+        << "{ \"symbol\": \"" << P.first << "\", \"range\": \"";
+    P.second.dump(Out);
+    Out << "\" }";
+  }
+  Out << NL;
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
+}
+
+static std::string toString(ProgramStateRef State, EquivalenceClass Class) {
+  SymbolSet ClassMembers = Class.getClassMembers(State);
+  llvm::SmallVector<SymbolRef, 8> ClassMembersSorted(ClassMembers.begin(),
+                                                     ClassMembers.end());
+  llvm::sort(ClassMembersSorted,
+             [](const SymbolRef &LHS, const SymbolRef &RHS) {
+               return toString(LHS) < toString(RHS);
+             });
+
+  bool FirstMember = true;
+
+  std::string Str;
+  llvm::raw_string_ostream Out(Str);
+  Out << "[ ";
+  for (SymbolRef ClassMember : ClassMembersSorted) {
+    if (FirstMember)
+      FirstMember = false;
+    else
+      Out << ", ";
+    Out << "\"" << ClassMember << "\"";
+  }
+  Out << " ]";
+  return Out.str();
+}
+
+void RangeConstraintManager::printEquivalenceClasses(raw_ostream &Out,
+                                                     ProgramStateRef State,
+                                                     const char *NL,
+                                                     unsigned int Space,
+                                                     bool IsDot) const {
+  ClassMembersTy Members = State->get<ClassMembers>();
+
+  Indent(Out, Space, IsDot) << "\"equivalence_classes\": ";
+  if (Members.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  std::set<std::string> MembersStr;
+  for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members)
+    MembersStr.insert(toString(State, ClassToSymbolSet.first));
+
+  ++Space;
+  Out << '[' << NL;
+  bool FirstClass = true;
+  for (const std::string &Str : MembersStr) {
+    if (FirstClass) {
+      FirstClass = false;
+    } else {
+      Out << ',';
+      Out << NL;
+    }
+    Indent(Out, Space, IsDot);
+    Out << Str;
+  }
+  Out << NL;
+
+  --Space;
+  Indent(Out, Space, IsDot) << "]," << NL;
+}
+
+void RangeConstraintManager::printDisequalities(raw_ostream &Out,
+                                                ProgramStateRef State,
+                                                const char *NL,
+                                                unsigned int Space,
+                                                bool IsDot) const {
+  DisequalityMapTy Disequalities = State->get<DisequalityMap>();
+
+  Indent(Out, Space, IsDot) << "\"disequality_info\": ";
+  if (Disequalities.isEmpty()) {
+    Out << "null," << NL;
+    return;
+  }
+
+  // Transform the disequality info to an ordered map of
+  // [string -> (ordered set of strings)]
+  using EqClassesStrTy = std::set<std::string>;
+  using DisequalityInfoStrTy = std::map<std::string, EqClassesStrTy>;
+  DisequalityInfoStrTy DisequalityInfoStr;
+  for (std::pair<EquivalenceClass, ClassSet> ClassToDisEqSet : Disequalities) {
+    EquivalenceClass Class = ClassToDisEqSet.first;
+    ClassSet DisequalClasses = ClassToDisEqSet.second;
+    EqClassesStrTy MembersStr;
+    for (EquivalenceClass DisEqClass : DisequalClasses)
+      MembersStr.insert(toString(State, DisEqClass));
+    DisequalityInfoStr.insert({toString(State, Class), MembersStr});
+  }
+
+  ++Space;
+  Out << '[' << NL;
+  bool FirstClass = true;
+  for (std::pair<std::string, EqClassesStrTy> ClassToDisEqSet :
+       DisequalityInfoStr) {
+    const std::string &Class = ClassToDisEqSet.first;
+    if (FirstClass) {
+      FirstClass = false;
+    } else {
+      Out << ',';
+      Out << NL;
+    }
+    Indent(Out, Space, IsDot) << "{" << NL;
+    unsigned int DisEqSpace = Space + 1;
+    Indent(Out, DisEqSpace, IsDot) << "\"class\": ";
+    Out << Class;
+    const EqClassesStrTy &DisequalClasses = ClassToDisEqSet.second;
+    if (!DisequalClasses.empty()) {
+      Out << "," << NL;
+      Indent(Out, DisEqSpace, IsDot) << "\"disequal_to\": [" << NL;
+      unsigned int DisEqClassSpace = DisEqSpace + 1;
+      Indent(Out, DisEqClassSpace, IsDot);
+      bool FirstDisEqClass = true;
+      for (const std::string &DisEqClass : DisequalClasses) {
+        if (FirstDisEqClass) {
+          FirstDisEqClass = false;
+        } else {
+          Out << ',' << NL;
+          Indent(Out, DisEqClassSpace, IsDot);
+        }
+        Out << DisEqClass;
+      }
+      Out << "]" << NL;
+    }
+    Indent(Out, Space, IsDot) << "}";
   }
   Out << NL;
 

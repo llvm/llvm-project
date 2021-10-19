@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <iterator>
+#include <new>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <tuple>

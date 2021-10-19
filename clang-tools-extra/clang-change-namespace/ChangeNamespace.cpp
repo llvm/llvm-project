@@ -324,10 +324,6 @@ bool conflictInNamespace(const ASTContext &AST, llvm::StringRef QualifiedSymbol,
   return false;
 }
 
-AST_MATCHER(EnumDecl, isScoped) {
-    return Node.isScoped();
-}
-
 bool isTemplateParameter(TypeLoc Type) {
   while (!Type.isNull()) {
     if (Type.getTypeLocClass() == TypeLoc::SubstTemplateTypeParm)
@@ -446,7 +442,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                hasDeclaration(DeclMatcher),
                                unless(templateSpecializationType()))))),
                            hasParent(nestedNameSpecifierLoc()),
-                           hasAncestor(isImplicit()),
+                           hasAncestor(decl(isImplicit())),
                            hasAncestor(UsingShadowDeclInClass),
                            hasAncestor(functionDecl(isDefaulted())))),
               hasAncestor(decl().bind("dc")))
@@ -470,7 +466,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
           hasAncestor(decl(IsInMovedNs).bind("dc")),
           loc(nestedNameSpecifier(
               specifiesType(hasDeclaration(DeclMatcher.bind("from_decl"))))),
-          unless(anyOf(hasAncestor(isImplicit()),
+          unless(anyOf(hasAncestor(decl(isImplicit())),
                        hasAncestor(UsingShadowDeclInClass),
                        hasAncestor(functionDecl(isDefaulted())),
                        hasAncestor(typeLoc(loc(qualType(hasDeclaration(
@@ -499,7 +495,7 @@ void ChangeNamespaceTool::registerMatchers(ast_matchers::MatchFinder *Finder) {
                                 hasAncestor(cxxRecordDecl()))),
                    hasParent(namespaceDecl()));
   Finder->addMatcher(expr(hasAncestor(decl().bind("dc")), IsInMovedNs,
-                          unless(hasAncestor(isImplicit())),
+                          unless(hasAncestor(decl(isImplicit()))),
                           anyOf(callExpr(callee(FuncMatcher)).bind("call"),
                                 declRefExpr(to(FuncMatcher.bind("func_decl")))
                                     .bind("func_ref"))),

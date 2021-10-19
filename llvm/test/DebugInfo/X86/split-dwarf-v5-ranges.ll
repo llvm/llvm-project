@@ -1,22 +1,29 @@
-; RUN: llc -split-dwarf-file=foo.dwo -mtriple=x86_64-unknown-linux-gnu -filetype=obj < %s \
-; RUN: 	    | llvm-dwarfdump -v -debug-info -debug-rnglists - | FileCheck %s
+; RUN: llc -split-dwarf-file=foo.dwo -mtriple=x86_64-unknown-linux-gnu -filetype=obj %s -o %t32
+; RUN: llvm-dwarfdump -v -debug-info -debug-rnglists %t32 | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
 
-; CHECK: .debug_info contents:
-; CHECK: .debug_info.dwo contents:
-; CHECK: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
-; CHECK:          [0x0000000000000001, 0x000000000000000c) ".text"
-; CHECK:          [0x000000000000000e, 0x0000000000000013) ".text")
+; RUN: llc -dwarf64 -split-dwarf-file=foo.dwo -mtriple=x86_64-unknown-linux-gnu -filetype=obj %s -o %t64
+; RUN: llvm-dwarfdump -v -debug-info -debug-rnglists %t64 | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF64
 
-; CHECK: .debug_rnglists.dwo contents:
-; CHECK: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
-; CHECK: offsets: [
-; CHECK: 0x00000004 => 0x00000010
-; CHECK: ]
-; CHECK: ranges:
-; CHECK: 0x00000010: [DW_RLE_base_addressx]:  0x0000000000000000
-; CHECK: 0x00000012: [DW_RLE_offset_pair  ]:  0x0000000000000001, 0x000000000000000c => [0x0000000000000001, 0x000000000000000c)
-; CHECK: 0x00000015: [DW_RLE_offset_pair  ]:  0x000000000000000e, 0x0000000000000013 => [0x000000000000000e, 0x0000000000000013)
-; CHECK: 0x00000018: [DW_RLE_end_of_list  ]
+; CHECK:   .debug_info contents:
+; CHECK:   .debug_info.dwo contents:
+; CHECK:   DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x[[#%.8x,RNG_OFF:]]
+; CHECK:      [0x0000000000000001, 0x000000000000000c) ".text"
+; CHECK:      [0x000000000000000e, 0x0000000000000013) ".text")
+
+; CHECK:   .debug_rnglists.dwo contents:
+; DWARF32: 0x00000000: range list header: length = 0x00000015, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
+; DWARF64: 0x00000000: range list header: length = 0x0000000000000019, format = DWARF64, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000001
+; CHECK:   offsets: [
+; DWARF32: 0x00000004 => 0x[[#RNG_OFF]]
+; DWARF64: 0x0000000000000008 => 0x[[#RNG_OFF]]
+; CHECK:   ]
+; CHECK:   ranges:
+; CHECK:   0x[[#RNG_OFF]]:   [DW_RLE_base_addressx]:  0x0000000000000000
+; CHECK:   0x[[#RNG_OFF+2]]: [DW_RLE_offset_pair  ]:  0x0000000000000001, 0x000000000000000c => [0x0000000000000001, 0x000000000000000c)
+; CHECK:   0x[[#RNG_OFF+5]]: [DW_RLE_offset_pair  ]:  0x000000000000000e, 0x0000000000000013 => [0x000000000000000e, 0x0000000000000013)
+; CHECK:   0x[[#RNG_OFF+8]]: [DW_RLE_end_of_list  ]
 
 ; Function Attrs: noinline optnone uwtable
 define dso_local void @_Z2f3v() !dbg !7 {

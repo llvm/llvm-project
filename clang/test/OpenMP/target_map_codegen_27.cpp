@@ -46,7 +46,7 @@ void explicit_maps_pointer_references (int *p){
   int *&a = p;
 
   // Region 00
-  // CK28-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
+  // CK28-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE00]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null, i8** null)
   // CK28-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK28-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
@@ -66,7 +66,7 @@ void explicit_maps_pointer_references (int *p){
   }
 
   // Region 01
-  // CK28-DAG: call i32 @__tgt_target_mapper(i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null)
+  // CK28-DAG: call i32 @__tgt_target_mapper(%struct.ident_t* @{{.+}}, i64 {{[^,]+}}, i8* {{[^,]+}}, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[SIZE01]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}}, i8** null, i8** null)
   // CK28-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK28-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 

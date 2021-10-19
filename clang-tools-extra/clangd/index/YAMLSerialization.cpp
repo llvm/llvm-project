@@ -18,6 +18,7 @@
 #include "SymbolLocation.h"
 #include "SymbolOrigin.h"
 #include "dex/Dex.h"
+#include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -533,9 +534,7 @@ symbolFromYAML(StringRef YAML, llvm::UniqueStringSaver *Strings) {
   clangd::Symbol Deserialized;
   llvm::yaml::Input YAMLInput(YAML, Strings);
   if (YAMLInput.error())
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Unable to deserialize Symbol from YAML: {0}", YAML),
-        llvm::inconvertibleErrorCode());
+    return error("Unable to deserialize Symbol from YAML: {0}", YAML);
   YAMLInput >> Deserialized;
   return Deserialized;
 }
@@ -545,9 +544,7 @@ llvm::Expected<clangd::Ref> refFromYAML(StringRef YAML,
   clangd::Ref Deserialized;
   llvm::yaml::Input YAMLInput(YAML, Strings);
   if (YAMLInput.error())
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Unable to deserialize Symbol from YAML: {0}", YAML),
-        llvm::inconvertibleErrorCode());
+    return error("Unable to deserialize Symbol from YAML: {0}", YAML);
   YAMLInput >> Deserialized;
   return Deserialized;
 }

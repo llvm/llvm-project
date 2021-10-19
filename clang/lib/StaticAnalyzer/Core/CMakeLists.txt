@@ -20,7 +20,7 @@ add_clang_library(clangStaticAnalyzerCore
   CommonBugCategories.cpp
   ConstraintManager.cpp
   CoreEngine.cpp
-  DynamicSize.cpp
+  DynamicExtent.cpp
   DynamicType.cpp
   Environment.cpp
   ExplodedGraph.cpp
@@ -31,7 +31,6 @@ add_clang_library(clangStaticAnalyzerCore
   ExprEngineObjC.cpp
   FunctionSummary.cpp
   HTMLDiagnostics.cpp
-  IssueHash.cpp
   LoopUnrolling.cpp
   LoopWidening.cpp
   MemRegion.cpp

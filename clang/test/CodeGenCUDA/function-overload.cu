@@ -12,6 +12,9 @@
 #include "Inputs/cuda.h"
 
 // Check constructors/destructors for D/H functions
+#ifdef __CUDA_ARCH__
+__device__
+#endif
 int x;
 struct s_cd_dh {
   __host__ s_cd_dh() { x = 11; }
@@ -23,7 +26,7 @@ struct s_cd_hd {
   __host__ __device__ ~s_cd_hd() { x = 32; }
 };
 
-// CHECK-BOTH: define void @_Z7wrapperv
+// CHECK-BOTH: define{{.*}} void @_Z7wrapperv
 #if defined(__CUDA_ARCH__)
 __device__
 #else

@@ -14,16 +14,11 @@
 
 #include "AMDGPUHSAMetadataStreamer.h"
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIProgramInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm;
 
 static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
@@ -64,7 +59,7 @@ void MetadataStreamerV2::verify(StringRef HSAMetadataString) const {
   errs() << "AMDGPU HSA Metadata Parser Test: ";
 
   HSAMD::Metadata FromHSAMetadataString;
-  if (fromString(std::string(HSAMetadataString), FromHSAMetadataString)) {
+  if (fromString(HSAMetadataString, FromHSAMetadataString)) {
     errs() << "FAIL\n";
     return;
   }
@@ -231,8 +226,8 @@ MetadataStreamerV2::getHSADebugProps(const MachineFunction &MF,
 void MetadataStreamerV2::emitVersion() {
   auto &Version = HSAMetadata.mVersion;
 
-  Version.push_back(VersionMajor);
-  Version.push_back(VersionMinor);
+  Version.push_back(VersionMajorV2);
+  Version.push_back(VersionMinorV2);
 }
 
 void MetadataStreamerV2::emitPrintf(const Module &Mod) {
@@ -440,7 +435,8 @@ bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(getHSAMetadata());
 }
 
-void MetadataStreamerV2::begin(const Module &Mod) {
+void MetadataStreamerV2::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
 }
@@ -613,8 +609,8 @@ MetadataStreamerV3::getWorkGroupDimensions(MDNode *Node) const {
 
 void MetadataStreamerV3::emitVersion() {
   auto Version = HSAMetadataDoc->getArrayNode();
-  Version.push_back(Version.getDocument()->getNode(VersionMajor));
-  Version.push_back(Version.getDocument()->getNode(VersionMinor));
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV3));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV3));
   getRootMetadata("amdhsa.version") = Version;
 }
 
@@ -669,6 +665,10 @@ void MetadataStreamerV3::emitKernelAttrs(const Function &Func,
         Func.getFnAttribute("runtime-handle").getValueAsString().str(),
         /*Copy=*/true);
   }
+  if (Func.hasFnAttribute("device-init"))
+    Kern[".kind"] = Kern.getDocument()->getNode("init");
+  else if (Func.hasFnAttribute("device-fini"))
+    Kern[".kind"] = Kern.getDocument()->getNode("fini");
 }
 
 void MetadataStreamerV3::emitKernelArgs(const Function &Func,
@@ -798,7 +798,8 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   if (!HiddenArgNumBytes)
     return;
 
-  auto &DL = Func.getParent()->getDataLayout();
+  const Module *M = Func.getParent();
+  auto &DL = M->getDataLayout();
   auto Int64Ty = Type::getInt64Ty(Func.getContext());
 
   if (HiddenArgNumBytes >= 8)
@@ -814,16 +815,16 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
   auto Int8PtrTy =
       Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
-  // Emit "printf buffer" argument if printf is used, otherwise emit dummy
-  // "none" argument.
+  // Emit "printf buffer" argument if printf is used, emit "hostcall buffer"
+  // if "hostcall" module flag is set, otherwise emit dummy "none" argument.
   if (HiddenArgNumBytes >= 32) {
-    if (Func.getParent()->getNamedMetadata("llvm.printf.fmts"))
+    if (M->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                     Args);
-    else if (Func.getParent()->getFunction("__ockl_hostcall_internal")) {
+    else if (M->getModuleFlag("amdgpu_hostcall")) {
       // The printf runtime binding pass should have ensured that hostcall and
       // printf are not used in the same module.
-      assert(!Func.getParent()->getNamedMetadata("llvm.printf.fmts"));
+      assert(!M->getNamedMetadata("llvm.printf.fmts"));
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                     Args);
     } else
@@ -886,7 +887,8 @@ bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerV3::begin(const Module &Mod) {
+void MetadataStreamerV3::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
   emitVersion();
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
@@ -924,6 +926,30 @@ void MetadataStreamerV3::emitKernel(const MachineFunction &MF,
   }
 
   Kernels.push_back(Kern);
+}
+
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV4
+//===----------------------------------------------------------------------===//
+
+void MetadataStreamerV4::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV4));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV4));
+  getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerV4::emitTargetID(const IsaInfo::AMDGPUTargetID &TargetID) {
+  getRootMetadata("amdhsa.target") =
+      HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
+}
+
+void MetadataStreamerV4::begin(const Module &Mod,
+                               const IsaInfo::AMDGPUTargetID &TargetID) {
+  emitVersion();
+  emitTargetID(TargetID);
+  emitPrintf(Mod);
+  getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }
 
 } // end namespace HSAMD

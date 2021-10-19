@@ -8,8 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "config.h"
-#include "AddressSpace.hpp"
-#include "DwarfParser.hpp"
 
 
 // static linker symbols to prevent wrong two level namespace for _Unwind symbols

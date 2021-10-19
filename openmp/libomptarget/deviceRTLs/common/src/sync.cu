@@ -9,6 +9,7 @@
 // Include all synchronization.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/omptarget.h"
 #include "target_impl.h"
@@ -41,16 +42,16 @@ EXTERN int32_t __kmpc_cancel_barrier(kmp_Ident *loc_ref, int32_t tid) {
 }
 
 EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
-  if (checkRuntimeUninitialized(loc_ref)) {
-    ASSERT0(LT_FUSSY, checkSPMDMode(loc_ref),
+  if (isRuntimeUninitialized()) {
+    ASSERT0(LT_FUSSY, __kmpc_is_spmd_exec_mode(),
             "Expected SPMD mode with uninitialized runtime.");
     __kmpc_barrier_simple_spmd(loc_ref, tid);
   } else {
-    tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc_ref));
+    tid = GetLogicalThreadIdInBlock();
     int numberOfActiveOMPThreads =
-        GetNumberOfOmpThreads(checkSPMDMode(loc_ref));
+        GetNumberOfOmpThreads(__kmpc_is_spmd_exec_mode());
     if (numberOfActiveOMPThreads > 1) {
-      if (checkSPMDMode(loc_ref)) {
+      if (__kmpc_is_spmd_exec_mode()) {
         __kmpc_barrier_simple_spmd(loc_ref, tid);
       } else {
         // The #threads parameter must be rounded up to the WARPSIZE.
@@ -60,8 +61,7 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
         PRINT(LD_SYNC,
               "call kmpc_barrier with %d omp threads, sync parameter %d\n",
               (int)numberOfActiveOMPThreads, (int)threads);
-        // Barrier #1 is for synchronization among active threads.
-        __kmpc_impl_named_sync(L1_BARRIER, threads);
+        __kmpc_impl_named_sync(threads);
       }
     } else {
       // Still need to flush the memory per the standard.
@@ -123,7 +123,7 @@ EXTERN void __kmpc_flush(kmp_Ident *loc) {
 // Vote
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask() {
+EXTERN uint64_t __kmpc_warp_active_thread_mask(void) {
   PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask\n");
   return __kmpc_impl_activemask();
 }
@@ -132,7 +132,9 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask() {
 // Syncwarp
 ////////////////////////////////////////////////////////////////////////////////
 
-EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask) {
+EXTERN void __kmpc_syncwarp(uint64_t Mask) {
   PRINT0(LD_IO, "call __kmpc_syncwarp\n");
   __kmpc_impl_syncwarp(Mask);
 }
+
+#pragma omp end declare target

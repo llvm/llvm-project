@@ -48,7 +48,7 @@ static bool runImpl(Function &F) {
   bool Changed = false;
   for (BasicBlock &BB : F)
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
-      SmallVector<Value *, 16> CallArgs(II->arg_begin(), II->arg_end());
+      SmallVector<Value *, 16> CallArgs(II->args());
       SmallVector<OperandBundleDef, 1> OpBundles;
       II->getOperandBundlesAsDefs(OpBundles);
       // Insert a normal call instruction...

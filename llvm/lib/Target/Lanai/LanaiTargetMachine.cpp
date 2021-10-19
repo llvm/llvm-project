@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
@@ -48,9 +48,7 @@ static std::string computeDataLayout() {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
-  return *RM;
+  return RM.getValueOr(Reloc::PIC_);
 }
 
 LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,

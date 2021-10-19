@@ -9,7 +9,7 @@
 #include "src/string/strchr.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrChrTest, FindsFirstCharacter) {
+TEST(LlvmLibcStrChrTest, FindsFirstCharacter) {
   const char *src = "abcde";
 
   // Should return original string since 'a' is the first character.
@@ -18,7 +18,7 @@ TEST(StrChrTest, FindsFirstCharacter) {
   ASSERT_STREQ(src, "abcde");
 }
 
-TEST(StrChrTest, FindsMiddleCharacter) {
+TEST(LlvmLibcStrChrTest, FindsMiddleCharacter) {
   const char *src = "abcde";
 
   // Should return characters after (and including) 'c'.
@@ -27,7 +27,7 @@ TEST(StrChrTest, FindsMiddleCharacter) {
   ASSERT_STREQ(src, "abcde");
 }
 
-TEST(StrChrTest, FindsLastCharacterThatIsNotNullTerminator) {
+TEST(LlvmLibcStrChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   const char *src = "abcde";
 
   // Should return 'e' and null-terminator.
@@ -36,7 +36,7 @@ TEST(StrChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   ASSERT_STREQ(src, "abcde");
 }
 
-TEST(StrChrTest, FindsNullTerminator) {
+TEST(LlvmLibcStrChrTest, FindsNullTerminator) {
   const char *src = "abcde";
 
   // Should return null terminator.
@@ -45,12 +45,12 @@ TEST(StrChrTest, FindsNullTerminator) {
   ASSERT_STREQ(src, "abcde");
 }
 
-TEST(StrChrTest, CharacterNotWithinStringShouldReturnNullptr) {
+TEST(LlvmLibcStrChrTest, CharacterNotWithinStringShouldReturnNullptr) {
   // Since 'z' is not within the string, should return nullptr.
   ASSERT_STREQ(__llvm_libc::strchr("123?", 'z'), nullptr);
 }
 
-TEST(StrChrTest, TheSourceShouldNotChange) {
+TEST(LlvmLibcStrChrTest, TheSourceShouldNotChange) {
   const char *src = "abcde";
   // When the character is found, the source string should not change.
   __llvm_libc::strchr(src, 'd');
@@ -63,7 +63,7 @@ TEST(StrChrTest, TheSourceShouldNotChange) {
   ASSERT_STREQ(src, "abcde");
 }
 
-TEST(StrChrTest, ShouldFindFirstOfDuplicates) {
+TEST(LlvmLibcStrChrTest, ShouldFindFirstOfDuplicates) {
   // '1' is duplicated in the string, but it should find the first copy.
   ASSERT_STREQ(__llvm_libc::strchr("abc1def1ghi", '1'), "1def1ghi");
 
@@ -72,7 +72,7 @@ TEST(StrChrTest, ShouldFindFirstOfDuplicates) {
   ASSERT_STREQ(__llvm_libc::strchr(dups, 'X'), dups);
 }
 
-TEST(StrChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
+TEST(LlvmLibcStrChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   // Null terminator should match.
   ASSERT_STREQ(__llvm_libc::strchr("", '\0'), "");
   // All other characters should not match.

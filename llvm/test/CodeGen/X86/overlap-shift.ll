@@ -9,7 +9,7 @@
 
 ; Check that the shift gets turned into an LEA.
 
-@G = external global i32                ; <i32*> [#uses=1]
+@G = external dso_local global i32                ; <i32*> [#uses=1]
 
 define i32 @test1(i32 %X) {
 ; CHECK-LABEL: test1:

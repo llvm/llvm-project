@@ -118,10 +118,7 @@ public:
   const SmallVectorImpl<const char *> &getValues() const { return Values; }
 
   bool containsValue(StringRef Value) const {
-    for (unsigned i = 0, e = getNumValues(); i != e; ++i)
-      if (Values[i] == Value)
-        return true;
-    return false;
+    return llvm::is_contained(Values, Value);
   }
 
   /// Append the argument onto the given array as strings.

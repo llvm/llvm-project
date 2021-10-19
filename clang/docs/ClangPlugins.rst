@@ -111,7 +111,7 @@ attribute, are:
    target.
 
 To see a working example of an attribute plugin, see `the Attribute.cpp example
-<https://github.com/llvm/llvm-project/blob/master/clang/examples/Attribute/Attribute.cpp>`_.
+<https://github.com/llvm/llvm-project/blob/main/clang/examples/Attribute/Attribute.cpp>`_.
 
 Putting it all together
 =======================
@@ -119,7 +119,7 @@ Putting it all together
 Let's look at an example plugin that prints top-level function names.  This
 example is checked into the clang repository; please take a look at
 the `latest version of PrintFunctionNames.cpp
-<https://github.com/llvm/llvm-project/blob/master/clang/examples/PrintFunctionNames/PrintFunctionNames.cpp>`_.
+<https://github.com/llvm/llvm-project/blob/main/clang/examples/PrintFunctionNames/PrintFunctionNames.cpp>`_.
 
 Running the plugin
 ==================
@@ -160,7 +160,7 @@ source tree:
             -plugin -Xclang print-fns
 
 Also see the print-function-name plugin example's
-`README <https://github.com/llvm/llvm-project/blob/master/clang/examples/PrintFunctionNames/README.txt>`_
+`README <https://github.com/llvm/llvm-project/blob/main/clang/examples/PrintFunctionNames/README.txt>`_
 
 
 Using the clang command line

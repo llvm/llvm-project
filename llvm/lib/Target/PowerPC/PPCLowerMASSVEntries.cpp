@@ -28,9 +28,6 @@ using namespace llvm;
 
 namespace {
 
-// Length of the suffix "massv", which is specific to IBM MASSV library entries.
-const unsigned MASSVSuffixLength = 5;
-
 static StringRef MASSVFuncs[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS_NAMES
 #include "llvm/Analysis/VecFuncs.def"
@@ -70,20 +67,26 @@ bool PPCLowerMASSVEntries::isMASSVFunc(StringRef Name) {
 
 // FIXME:
 /// Returns a string corresponding to the specified PowerPC subtarget. e.g.:
-/// "P8" for Power8, "P9" for Power9. The string is used as a suffix while
+/// "_P8" for Power8, "_P9" for Power9. The string is used as a suffix while
 /// generating subtarget-specific MASSV library functions. Current support
-/// includes  Power8 and Power9 subtargets.
+/// includes minimum subtarget Power8 for Linux and Power7 for AIX.
 StringRef PPCLowerMASSVEntries::getCPUSuffix(const PPCSubtarget *Subtarget) {
-  // Assume Power8 when Subtarget is unavailable.
+  // Assume generic when Subtarget is unavailable.
   if (!Subtarget)
-    return "P8";
+    return "";
+  // TODO: add _P10 enties to Linux MASS lib and remove the check for AIX
+  if (Subtarget->isAIXABI() && Subtarget->hasP10Vector())
+    return "_P10";
   if (Subtarget->hasP9Vector())
-    return "P9";
+    return "_P9";
   if (Subtarget->hasP8Vector())
-    return "P8";
+    return "_P8";
+  if (Subtarget->isAIXABI())
+    return "_P7";
 
-  report_fatal_error("Unsupported Subtarget: MASSV is supported only on "
-                     "Power8 and Power9 subtargets.");
+  report_fatal_error(
+      "Mininum subtarget for -vector-library=MASSV option is Power8 on Linux "
+      "and Power7 on AIX when vectorization is not disabled.");
 }
 
 /// Creates PowerPC subtarget-specific name corresponding to the specified
@@ -92,7 +95,7 @@ std::string
 PPCLowerMASSVEntries::createMASSVFuncName(Function &Func,
                                           const PPCSubtarget *Subtarget) {
   StringRef Suffix = getCPUSuffix(Subtarget);
-  auto GenericName = Func.getName().drop_back(MASSVSuffixLength).str();
+  auto GenericName = Func.getName().str();
   std::string MASSVEntryName = GenericName + Suffix.str();
   return MASSVEntryName;
 }
@@ -101,11 +104,11 @@ PPCLowerMASSVEntries::createMASSVFuncName(Function &Func,
 /// intrinsics when the exponent is 0.25 or 0.75.
 bool PPCLowerMASSVEntries::handlePowSpecialCases(CallInst *CI, Function &Func,
                                                  Module &M) {
-  if (Func.getName() != "__powf4_massv" && Func.getName() != "__powd2_massv")
+  if (Func.getName() != "__powf4" && Func.getName() != "__powd2")
     return false;
 
   if (Constant *Exp = dyn_cast<Constant>(CI->getArgOperand(1)))
-    if (ConstantFP *CFP = dyn_cast<ConstantFP>(Exp->getSplatValue())) {
+    if (ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(Exp->getSplatValue())) {
       // If the argument is 0.75 or 0.25 it is cheaper to turn it into pow
       // intrinsic so that it could be optimzed as sequence of sqrt's.
       if (!CI->hasNoInfs() || !CI->hasApproxFunc())
@@ -167,9 +170,7 @@ bool PPCLowerMASSVEntries::runOnModule(Module &M) {
     // Call to lowerMASSVCall() invalidates the iterator over users upon
     // replacing the users. Precomputing the current list of users allows us to
     // replace all the call sites.
-    SmallVector<User *, 4> MASSVUsers;
-    for (auto *User: Func.users())
-      MASSVUsers.push_back(User);
+    SmallVector<User *, 4> MASSVUsers(Func.users());
     
     for (auto *User : MASSVUsers) {
       auto *CI = dyn_cast<CallInst>(User);

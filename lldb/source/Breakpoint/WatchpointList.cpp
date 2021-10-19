@@ -12,10 +12,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-WatchpointList::WatchpointList()
-    : m_watchpoints(), m_mutex(), m_next_wp_id(0) {}
+WatchpointList::WatchpointList() : m_watchpoints(), m_mutex() {}
 
-WatchpointList::~WatchpointList() {}
+WatchpointList::~WatchpointList() = default;
 
 // Add a watchpoint to the list.
 lldb::watch_id_t WatchpointList::Add(const WatchpointSP &wp_sp, bool notify) {

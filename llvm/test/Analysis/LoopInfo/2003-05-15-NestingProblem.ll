@@ -1,7 +1,6 @@
 ; This testcase was incorrectly computing that the loopentry.7 loop was
 ; not a child of the loopentry.6 loop.
 ;
-; RUN: opt < %s -analyze -loops | FileCheck %s
 ; RUN: opt < %s -passes='print<loops>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Loop at depth 4 containing: %loopentry.7<header><latch><exiting>

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=+cmov | FileCheck %s
 ; Both values were being zero extended.
-@u = external global i8
-@s = external global i8
+@u = external dso_local global i8
+@s = external dso_local global i8
 define i32 @foo(i1 %cond) {
 ; CHECK: @foo
   %u_base = load i8, i8* @u

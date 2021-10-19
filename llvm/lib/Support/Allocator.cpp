@@ -26,7 +26,7 @@ void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
          << " (includes alignment, etc)\n";
 }
 
-} // End namespace detail.
+} // namespace detail
 
 void PrintRecyclerStats(size_t Size,
                         size_t Align,
@@ -36,4 +36,4 @@ void PrintRecyclerStats(size_t Size,
          << "Number of elements free for recycling: " << FreeListSize << '\n';
 }
 
-}
+} // namespace llvm

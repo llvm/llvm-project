@@ -3,6 +3,7 @@
 ; RUN: -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=FALLBACK,CHECK
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_2s
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtas_2s:
 ;CHECK-NOT: ld1
@@ -12,6 +13,7 @@ define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 	ret <2 x i32> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_4s
 define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtas_4s:
 ;CHECK-NOT: ld1
@@ -21,6 +23,7 @@ define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 	ret <4 x i32> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_2d
 define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtas_2d:
 ;CHECK-NOT: ld1
@@ -587,7 +590,7 @@ define <2 x float> @frintn_2s(<2 x float> %A) nounwind {
 ;CHECK-NOT: ld1
 ;CHECK: frintn.2s v0, v0
 ;CHECK-NEXT: ret
-	%tmp3 = call <2 x float> @llvm.aarch64.neon.frintn.v2f32(<2 x float> %A)
+	%tmp3 = call <2 x float> @llvm.roundeven.v2f32(<2 x float> %A)
 	ret <2 x float> %tmp3
 }
 
@@ -596,7 +599,7 @@ define <4 x float> @frintn_4s(<4 x float> %A) nounwind {
 ;CHECK-NOT: ld1
 ;CHECK: frintn.4s v0, v0
 ;CHECK-NEXT: ret
-	%tmp3 = call <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float> %A)
+	%tmp3 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %A)
 	ret <4 x float> %tmp3
 }
 
@@ -605,13 +608,13 @@ define <2 x double> @frintn_2d(<2 x double> %A) nounwind {
 ;CHECK-NOT: ld1
 ;CHECK: frintn.2d v0, v0
 ;CHECK-NEXT: ret
-	%tmp3 = call <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %A)
+	%tmp3 = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %A)
 	ret <2 x double> %tmp3
 }
 
-declare <2 x float> @llvm.aarch64.neon.frintn.v2f32(<2 x float>) nounwind readnone
-declare <4 x float> @llvm.aarch64.neon.frintn.v4f32(<4 x float>) nounwind readnone
-declare <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double>) nounwind readnone
+declare <2 x float> @llvm.roundeven.v2f32(<2 x float>) nounwind readnone
+declare <4 x float> @llvm.roundeven.v4f32(<4 x float>) nounwind readnone
+declare <2 x double> @llvm.roundeven.v2f64(<2 x double>) nounwind readnone
 
 ; FALLBACK-NOT: remark{{.*}}frintp_2s
 define <2 x float> @frintp_2s(<2 x float> %A) nounwind {

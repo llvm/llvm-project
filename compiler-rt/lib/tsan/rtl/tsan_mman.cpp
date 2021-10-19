@@ -70,10 +70,7 @@ struct GlobalProc {
   Mutex mtx;
   Processor *proc;
 
-  GlobalProc()
-      : mtx(MutexTypeGlobalProc, StatMtxGlobalProc)
-      , proc(ProcCreate()) {
-  }
+  GlobalProc() : mtx(MutexTypeGlobalProc), proc(ProcCreate()) {}
 };
 
 static char global_proc_placeholder[sizeof(GlobalProc)] ALIGNED(64);
@@ -145,13 +142,13 @@ void AllocatorPrintStats() {
 
 static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   if (atomic_load_relaxed(&thr->in_signal_handler) == 0 ||
-      !flags()->report_signal_unsafe)
+      !ShouldReport(thr, ReportTypeSignalUnsafe))
     return;
   VarSizeStackTrace stack;
   ObtainCurrentStack(thr, pc, &stack);
   if (IsFiredSuppression(ctx, ReportTypeSignalUnsafe, stack))
     return;
-  ThreadRegistryLock l(ctx->thread_registry);
+  ThreadRegistryLock l(&ctx->thread_registry);
   ScopedReport rep(ReportTypeSignalUnsafe);
   rep.AddStack(stack, true);
   OutputReport(thr, rep);
@@ -221,7 +218,7 @@ void *user_reallocarray(ThreadState *thr, uptr pc, void *p, uptr size, uptr n) {
 }
 
 void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
-  DPrintf("#%d: alloc(%zu) = %p\n", thr->tid, sz, p);
+  DPrintf("#%d: alloc(%zu) = 0x%zx\n", thr->tid, sz, p);
   ctx->metamap.AllocBlock(thr, pc, p, sz);
   if (write && thr->ignore_reads_and_writes == 0)
     MemoryRangeImitateWrite(thr, pc, (uptr)p, sz);
@@ -232,7 +229,7 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write) {
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write) {
   CHECK_NE(p, (void*)0);
   uptr sz = ctx->metamap.FreeBlock(thr->proc(), p);
-  DPrintf("#%d: free(%p, %zu)\n", thr->tid, p, sz);
+  DPrintf("#%d: free(0x%zx, %zu)\n", thr->tid, p, sz);
   if (write && thr->ignore_reads_and_writes == 0)
     MemoryRangeFreed(thr, pc, (uptr)p, sz);
 }
@@ -339,7 +336,7 @@ void invoke_free_hook(void *ptr) {
   RunFreeHooks(ptr);
 }
 
-void *internal_alloc(MBlockType typ, uptr sz) {
+void *Alloc(uptr sz) {
   ThreadState *thr = cur_thread();
   if (thr->nomalloc) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().
@@ -348,7 +345,7 @@ void *internal_alloc(MBlockType typ, uptr sz) {
   return InternalAlloc(sz, &thr->proc()->internal_alloc_cache);
 }
 
-void internal_free(void *p) {
+void FreeImpl(void *p) {
   ThreadState *thr = cur_thread();
   if (thr->nomalloc) {
     thr->nomalloc = 0;  // CHECK calls internal_malloc().

@@ -34,7 +34,7 @@ void foobar(int &ref) {
   for (int j=0; j<100; j++) foo();
 }
 
-struct S1; // expected-note {{declared here}} expected-note 4 {{forward declaration of 'S1'}}
+struct S1; // expected-note {{declared here}} expected-note 6 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -290,7 +290,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{invalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
+#pragma omp teams distribute reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute reduction(+ : h, k, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be reduction}}

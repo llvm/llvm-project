@@ -11,15 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LiveRegUnits.h"
-
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 
 using namespace llvm;
 
@@ -85,8 +81,17 @@ static void addBlockLiveIns(LiveRegUnits &LiveUnits,
 static void addCalleeSavedRegs(LiveRegUnits &LiveUnits,
                                const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
-    LiveUnits.addReg(*CSR);
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR) {
+    const unsigned N = *CSR;
+
+    const auto &CSI = MFI.getCalleeSavedInfo();
+    auto Info =
+        llvm::find_if(CSI, [N](auto Info) { return Info.getReg() == N; });
+    // If we have no info for this callee-saved register, assume it is liveout
+    if (Info == CSI.end() || Info->isRestored())
+      LiveUnits.addReg(N);
+  }
 }
 
 void LiveRegUnits::addPristines(const MachineFunction &MF) {

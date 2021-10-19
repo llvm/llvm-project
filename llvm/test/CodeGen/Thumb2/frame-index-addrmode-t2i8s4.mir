@@ -31,14 +31,14 @@ body:             |
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 80
     ; CHECK: renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     ; CHECK: renamable $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: t2STRDi8 killed $r1, killed $r0, $sp, 8, 14 /* CC::al */, $noreg :: (volatile store 8 into %ir.arrayidx)
-    ; CHECK: $r0, $r1 = t2LDRDi8 $sp, 8, 14 /* CC::al */, $noreg :: (volatile dereferenceable load 8 from %ir.arrayidx1)
+    ; CHECK: t2STRDi8 killed $r1, killed $r0, $sp, 8, 14 /* CC::al */, $noreg :: (volatile store (s64) into %ir.arrayidx)
+    ; CHECK: $r0, $r1 = t2LDRDi8 $sp, 8, 14 /* CC::al */, $noreg :: (volatile dereferenceable load (s64) from %ir.arrayidx1)
     ; CHECK: $sp = frame-destroy tADDspi $sp, 20, 14 /* CC::al */, $noreg
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
     renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
     renamable $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-    t2STRDi8 killed $r1, killed $r0, %stack.0.a, 8, 14 /* CC::al */, $noreg :: (volatile store 8 into %ir.arrayidx)
-    $r0, $r1 = t2LDRDi8 %stack.0.a, 8, 14 /* CC::al */, $noreg :: (volatile dereferenceable load 8 from %ir.arrayidx1)
+    t2STRDi8 killed $r1, killed $r0, %stack.0.a, 8, 14 /* CC::al */, $noreg :: (volatile store (s64) into %ir.arrayidx)
+    $r0, $r1 = t2LDRDi8 %stack.0.a, 8, 14 /* CC::al */, $noreg :: (volatile dereferenceable load (s64) from %ir.arrayidx1)
     tBX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
 
 ...

@@ -14,7 +14,7 @@ public:
   ~X();
 };
 
-// CHECK-LABEL: define void @_Z4Testv(
+// CHECK-LABEL: define{{.*}} void @_Z4Testv(
 X Test()
 {
   X x;

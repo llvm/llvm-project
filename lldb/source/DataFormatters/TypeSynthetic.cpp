@@ -128,7 +128,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
                                               ValueObject &backend)
     : SyntheticChildrenFrontEnd(backend), m_python_class(pclass),
       m_wrapper_sp(), m_interpreter(nullptr) {
-  if (backend == LLDB_INVALID_UID)
+  if (backend.GetID() == LLDB_INVALID_UID)
     return;
 
   TargetSP target_sp = backend.GetTargetSP();
@@ -143,7 +143,7 @@ ScriptedSyntheticChildren::FrontEnd::FrontEnd(std::string pclass,
         m_python_class.c_str(), backend.GetSP());
 }
 
-ScriptedSyntheticChildren::FrontEnd::~FrontEnd() {}
+ScriptedSyntheticChildren::FrontEnd::~FrontEnd() = default;
 
 lldb::ValueObjectSP
 ScriptedSyntheticChildren::FrontEnd::GetChildAtIndex(size_t idx) {

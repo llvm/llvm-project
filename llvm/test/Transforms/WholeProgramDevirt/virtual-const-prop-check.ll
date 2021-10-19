@@ -1,19 +1,19 @@
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
 ; Skipping vf0i1 is identical to setting public LTO visibility. We don't devirtualize vf0i1 and all other
 ; virtual call targets.
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 ; We have two set of call targets {vf0i1, vf1i1} and {vf1i32, vf2i32, vf3i32, vf4i32}.
 ; The command below prevents both of them from devirtualization.
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1,vf1i32 %s 2>&1 | FileCheck %s --check-prefix=SKIP-ALL
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf0i1,vf1i32 %s 2>&1 | FileCheck %s --check-prefix=SKIP-ALL
 ; Check wildcard
-; RUN: opt -S -wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-skip=vf?i1 %s 2>&1 | FileCheck %s --check-prefix=SKIP
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: remark: <unknown>:0:0: virtual-const-prop: devirtualized a call to vf1i32
-; CHECK: remark: <unknown>:0:0: virtual-const-prop-1-bit: devirtualized a call to vf1i1
 ; CHECK: remark: <unknown>:0:0: virtual-const-prop-1-bit: devirtualized a call to vf0i1
+; CHECK: remark: <unknown>:0:0: virtual-const-prop-1-bit: devirtualized a call to vf1i1
+; CHECK: remark: <unknown>:0:0: virtual-const-prop: devirtualized a call to vf1i32
 ; CHECK: remark: <unknown>:0:0: devirtualized vf0i1
 ; CHECK: remark: <unknown>:0:0: devirtualized vf1i1
 ; CHECK: remark: <unknown>:0:0: devirtualized vf1i32
@@ -31,28 +31,28 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; SKIP-ALL-NOT: devirtualized
 
-; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\01\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
+; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\00\00\00\02", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [0 x i8] zeroinitializer }, section "vt1sec", !type [[T8:![0-9]+]]
 @vt1 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf1i32 to i8*)
 ], section "vt1sec", !type !0
 
-; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\02\02\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf2i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\02\00\00\00\01", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf2i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
 @vt2 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf2i32 to i8*)
 ], !type !0
 
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\03\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\03\00\00\00\02", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
 @vt3 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf3i32 to i8*)
 ], !type !0
 
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\02\04\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\04\00\00\00\01", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
 @vt4 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
@@ -104,9 +104,9 @@ define i1 @call1(i8* %obj) {
   %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 0, metadata !"typeid")
   %fptr = extractvalue {i8*, i1} %pair, 0
   %fptr_casted = bitcast i8* %fptr to i1 (i8*)*
-  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, i8* [[VT1]], i32 -5
+  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, i8* [[VT1]], i32 -1
   ; CHECK: [[VTLOAD1:%[^ ]*]] = load i8, i8* [[VTGEP1]]
-  ; CHECK: [[VTAND1:%[^ ]*]] = and i8 [[VTLOAD1]], 2
+  ; CHECK: [[VTAND1:%[^ ]*]] = and i8 [[VTLOAD1]], 1
   ; CHECK: [[VTCMP1:%[^ ]*]] = icmp ne i8 [[VTAND1]], 0
   %result = call i1 %fptr_casted(i8* %obj)
   ; CHECK: [[AND1:%[^ ]*]] = and i1 [[VTCMP1]], true
@@ -125,9 +125,9 @@ define i1 @call2(i8* %obj) {
   %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 8, metadata !"typeid")
   %fptr = extractvalue {i8*, i1} %pair, 0
   %fptr_casted = bitcast i8* %fptr to i1 (i8*)*
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, i8* [[VT2]], i32 -5
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, i8* [[VT2]], i32 -1
   ; CHECK: [[VTLOAD2:%[^ ]*]] = load i8, i8* [[VTGEP2]]
-  ; CHECK: [[VTAND2:%[^ ]*]] = and i8 [[VTLOAD2]], 1
+  ; CHECK: [[VTAND2:%[^ ]*]] = and i8 [[VTLOAD2]], 2
   ; CHECK: [[VTCMP2:%[^ ]*]] = icmp ne i8 [[VTAND2]], 0
   %result = call i1 %fptr_casted(i8* %obj)
   ; CHECK: [[AND2:%[^ ]*]] = and i1 [[VTCMP2]], true
@@ -146,7 +146,7 @@ define i32 @call3(i8* %obj) {
   %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 16, metadata !"typeid")
   %fptr = extractvalue {i8*, i1} %pair, 0
   %fptr_casted = bitcast i8* %fptr to i32 (i8*)*
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, i8* [[VT3]], i32 -4
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, i8* [[VT3]], i32 -5
   ; CHECK: [[VTBC3:%[^ ]*]] = bitcast i8* [[VTGEP3]] to i32*
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, i32* [[VTBC3]]
   %result = call i32 %fptr_casted(i8* %obj)

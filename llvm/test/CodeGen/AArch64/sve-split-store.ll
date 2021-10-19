@@ -78,14 +78,13 @@ define void @masked_store_split_32i8(<vscale x 32 x i8> %data, <vscale x 32 x i8
 define void @masked_store_split_32i16(<vscale x 32 x i16> %data, <vscale x 32 x i16> *%a, <vscale x 32 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p2.b
-; CHECK-NEXT:    zip2 p3.b, p1.b, p2.b
-; CHECK-NEXT:    zip1 p1.b, p1.b, p2.b
-; CHECK-NEXT:    st1h { z3.h }, p3, [x0, #3, mul vl]
-; CHECK-NEXT:    zip2 p3.b, p0.b, p2.b
-; CHECK-NEXT:    zip1 p0.b, p0.b, p2.b
+; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    st1h { z3.h }, p2, [x0, #3, mul vl]
 ; CHECK-NEXT:    st1h { z2.h }, p1, [x0, #2, mul vl]
-; CHECK-NEXT:    st1h { z1.h }, p3, [x0, #1, mul vl]
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    st1h { z1.h }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.nxv32i16(<vscale x 32 x i16> %data, <vscale x 32 x i16> *%a, i32 1, <vscale x 32 x i1> %pg)
@@ -95,10 +94,9 @@ define void @masked_store_split_32i16(<vscale x 32 x i16> %data, <vscale x 32 x 
 define void @masked_store_split_8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32> *%a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip2 p2.h, p0.h, p1.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p1.h
-; CHECK-NEXT:    st1w { z1.s }, p2, [x0, #1, mul vl]
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    st1w { z1.s }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32> *%a, i32 1, <vscale x 8 x i1> %pg)
@@ -108,16 +106,15 @@ define void @masked_store_split_8i32(<vscale x 8 x i32> %data, <vscale x 8 x i32
 define void @masked_store_split_8i64(<vscale x 8 x i64> %data, <vscale x 8 x i64> *%a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_store_split_8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip2 p2.h, p0.h, p1.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p1.h
-; CHECK-NEXT:    zip2 p3.s, p2.s, p1.s
-; CHECK-NEXT:    zip1 p2.s, p2.s, p1.s
-; CHECK-NEXT:    st1d { z2.d }, p2, [x0, #2, mul vl]
-; CHECK-NEXT:    zip2 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p1.s
-; CHECK-NEXT:    st1d { z3.d }, p3, [x0, #3, mul vl]
-; CHECK-NEXT:    st1d { z1.d }, p2, [x0, #1, mul vl]
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    st1d { z3.d }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    st1d { z2.d }, p1, [x0, #2, mul vl]
+; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    st1d { z1.d }, p1, [x0, #1, mul vl]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.masked.store.nxv8i64(<vscale x 8 x i64> %data, <vscale x 8 x i64> *%a, i32 1, <vscale x 8 x i1> %pg)

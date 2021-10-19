@@ -66,6 +66,8 @@ def ssub_10 : ComposedSubRegIndex<dsub_5, ssub_0>;
 def ssub_11 : ComposedSubRegIndex<dsub_5, ssub_1>;
 def ssub_12 : ComposedSubRegIndex<dsub_6, ssub_0>;
 def ssub_13 : ComposedSubRegIndex<dsub_6, ssub_1>;
+def ssub_14 : ComposedSubRegIndex<dsub_7, ssub_0>;
+def ssub_15 : ComposedSubRegIndex<dsub_7, ssub_1>;
 
 def gsub_0 : SubRegIndex<32>;
 def gsub_1 : SubRegIndex<32, 32>;
@@ -83,7 +85,7 @@ def R5  : ARMReg< 5, "r5">,  DwarfRegNum<[5]>;
 def R6  : ARMReg< 6, "r6">,  DwarfRegNum<[6]>;
 def R7  : ARMReg< 7, "r7">,  DwarfRegNum<[7]>;
 // These require 32-bit instructions.
-let CostPerUse = 1 in {
+let CostPerUse = [1] in {
 def R8  : ARMReg< 8, "r8">,  DwarfRegNum<[8]>;
 def R9  : ARMReg< 9, "r9">,  DwarfRegNum<[9]>;
 def R10 : ARMReg<10, "r10">, DwarfRegNum<[10]>;
@@ -233,6 +235,23 @@ def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
       return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
   }];
   let DiagnosticString = "operand must be a register in range [r0, r15]";
+}
+
+// Register set that excludes registers that are reserved for procedure calls.
+// This is used for pseudo-instructions that are actually implemented using a
+// procedure call.
+def GPRnoip : RegisterClass<"ARM", [i32], 32, (sub GPR, R12, LR)> {
+  // Allocate LR as the first CSR since it is always saved anyway.
+  // For Thumb1 mode, we don't want to allocate hi regs at all, as we don't
+  // know how to spill them. If we make our prologue/epilogue code smarter at
+  // some point, we can go back to using the above allocation orders for the
+  // Thumb1 instructions that know how to use hi regs.
+  let AltOrders = [(add GPRnoip, GPRnoip), (trunc GPRnoip, 8),
+                   (add (trunc GPRnoip, 8), (shl GPRnoip, 8))];
+  let AltOrderSelect = [{
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
+  }];
+  let DiagnosticString = "operand must be a register in range [r0, r14]";
 }
 
 // GPRs without the PC.  Some ARM instructions do not allow the PC in
@@ -538,6 +557,9 @@ def QQPR : RegisterClass<"ARM", [v4i64], 256, (add Tuples2Q)> {
   let AltOrderSelect = [{ return 1; }];
 }
 
+// Same as QQPR but for MVE, containing the 7 register pairs made up from Q0-Q7.
+def MQQPR : RegisterClass<"ARM", [v4i64], 256, (trunc QQPR, 7)>;
+
 // Tuples of 4 D regs that isn't also a pair of Q regs.
 def TuplesOE4D : RegisterTuples<[dsub_0, dsub_1, dsub_2, dsub_3],
                                 [(decimate (shl DPR, 1), 2),
@@ -560,6 +582,9 @@ def QQQQPR : RegisterClass<"ARM", [v8i64], 256, (add Tuples2QQ)> {
   let AltOrders = [(rotl QQQQPR, 8)];
   let AltOrderSelect = [{ return 1; }];
 }
+
+// Same as QQPR but for MVE, containing the 5 register quads made up from Q0-Q7.
+def MQQQQPR : RegisterClass<"ARM", [v8i64], 256, (trunc QQQQPR, 5)>;
 
 
 // Pseudo-registers representing 2-spaced consecutive D registers.

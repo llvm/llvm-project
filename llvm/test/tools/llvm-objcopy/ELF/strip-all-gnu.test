@@ -56,9 +56,9 @@ Sections:
     Info:            .text
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
-  - Type: 0x61234567
-    Sections:
-      - Section: .debug_in_segment
+  - Type:     0x61234567
+    FirstSec: .debug_in_segment
+    LastSec:  .debug_in_segment
 
 # CHECK: SectionHeaderCount: 8
 

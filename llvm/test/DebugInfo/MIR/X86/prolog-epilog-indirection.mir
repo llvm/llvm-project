@@ -116,10 +116,10 @@ body:             |
     DBG_VALUE %stack.0.l_1081, $noreg, !33, !DIExpression(DW_OP_LLVM_fragment, 1, 2), debug-location !21
     DBG_VALUE %stack.0.l_1081, $noreg, !34, !DIExpression(DW_OP_LLVM_tag_offset, 0), debug-location !21
     DBG_VALUE 1834104526, $noreg, !18, !DIExpression(), debug-location !21
-    MOV64mr $rip, 1, $noreg, @b, $noreg, killed renamable $rax, debug-location !22 :: (store 8 into @b, !tbaa !23)
+    MOV64mr $rip, 1, $noreg, @b, $noreg, killed renamable $rax, debug-location !22 :: (store (s64) into @b, !tbaa !23)
     DBG_VALUE %stack.0.l_1081, 0, !19, !DIExpression(), debug-location !21
-    MOV32mi $rip, 1, $noreg, @a, $noreg, 9, debug-location !27 :: (store 4 into @a, !tbaa !28)
-    MOV32mi %stack.0.l_1081, 1, $noreg, 0, $noreg, 9, debug-location !30 :: (store 4 into %ir.l_1081, !tbaa !28)
+    MOV32mi $rip, 1, $noreg, @a, $noreg, 9, debug-location !27 :: (store (s32) into @a, !tbaa !28)
+    MOV32mi %stack.0.l_1081, 1, $noreg, 0, $noreg, 9, debug-location !30 :: (store (s32) into %ir.l_1081, !tbaa !28)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !31
     dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al, debug-location !31
     CALL64pcrel32 @optimize_me_not, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax, debug-location !31

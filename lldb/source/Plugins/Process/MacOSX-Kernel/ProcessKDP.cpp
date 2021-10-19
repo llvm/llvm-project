@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <cstdlib>
 
 #include <memory>
 #include <mutex>
@@ -73,7 +73,7 @@ public:
     m_collection_sp->Initialize(g_processkdp_properties);
   }
 
-  virtual ~PluginProperties() {}
+  virtual ~PluginProperties() = default;
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
@@ -82,13 +82,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
-
-static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
-  static ProcessKDPPropertiesSP g_settings_sp;
-  if (!g_settings_sp)
-    g_settings_sp = std::make_shared<PluginProperties>();
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 } // anonymous namespace end
@@ -111,7 +107,8 @@ void ProcessKDP::Terminate() {
 
 lldb::ProcessSP ProcessKDP::CreateInstance(TargetSP target_sp,
                                            ListenerSP listener_sp,
-                                           const FileSpec *crash_file_path) {
+                                           const FileSpec *crash_file_path,
+                                           bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file_path == NULL)
     process_sp = std::make_shared<ProcessKDP>(target_sp, listener_sp);
@@ -160,7 +157,7 @@ ProcessKDP::ProcessKDP(TargetSP target_sp, ListenerSP listener_sp)
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
                                    "async thread continue");
   const uint64_t timeout_seconds =
-      GetGlobalPluginProperties()->GetPacketTimeout();
+      GetGlobalPluginProperties().GetPacketTimeout();
   if (timeout_seconds > 0)
     m_comm.SetPacketTimeout(std::chrono::seconds(timeout_seconds));
 }
@@ -174,13 +171,6 @@ ProcessKDP::~ProcessKDP() {
   // destroy the broadcaster.
   Finalize();
 }
-
-// PluginInterface
-lldb_private::ConstString ProcessKDP::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ProcessKDP::GetPluginVersion() { return 1; }
 
 Status ProcessKDP::WillLaunch(Module *module) {
   Status error;
@@ -507,8 +497,8 @@ lldb::ThreadSP ProcessKDP::GetKernelThread() {
   return thread_sp;
 }
 
-bool ProcessKDP::UpdateThreadList(ThreadList &old_thread_list,
-                                  ThreadList &new_thread_list) {
+bool ProcessKDP::DoUpdateThreadList(ThreadList &old_thread_list,
+                                    ThreadList &new_thread_list) {
   // locker will keep a mutex locked until it goes out of scope
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_THREAD));
   LLDB_LOGV(log, "pid = {0}", GetID());
@@ -726,7 +716,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the kdp-remote process plug-in."),
         is_global_setting);
   }
@@ -901,7 +891,7 @@ public:
     m_option_group.Finalize();
   }
 
-  ~CommandObjectProcessKDPPacketSend() {}
+  ~CommandObjectProcessKDPPacketSend() = default;
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
@@ -909,7 +899,6 @@ public:
       if (!m_command_byte.GetOptionValue().OptionWasSet()) {
         result.AppendError(
             "the --command option must be set to a valid command byte");
-        result.SetStatus(eReturnStatusFailed);
       } else {
         const uint64_t command_byte =
             m_command_byte.GetOptionValue().GetUInt64Value(0);
@@ -932,7 +921,6 @@ public:
                                                "even number of ASCII hex "
                                                "characters: '%s'",
                                                ascii_hex_bytes_cstr);
-                  result.SetStatus(eReturnStatusFailed);
                   return false;
                 }
                 payload_bytes.resize(ascii_hex_bytes_cstr_len / 2);
@@ -942,7 +930,6 @@ public:
                                                "ASCII hex characters (no "
                                                "spaces or hex prefixes): '%s'",
                                                ascii_hex_bytes_cstr);
-                  result.SetStatus(eReturnStatusFailed);
                   return false;
                 }
               }
@@ -969,30 +956,25 @@ public:
                 else
                   result.AppendErrorWithFormat("unknown error 0x%8.8x",
                                                error.GetError());
-                result.SetStatus(eReturnStatusFailed);
                 return false;
               }
             } else {
               result.AppendErrorWithFormat("process must be stopped in order "
                                            "to send KDP packets, state is %s",
                                            StateAsCString(state));
-              result.SetStatus(eReturnStatusFailed);
             }
           } else {
             result.AppendError("invalid process");
-            result.SetStatus(eReturnStatusFailed);
           }
         } else {
           result.AppendErrorWithFormat("invalid command byte 0x%" PRIx64
                                        ", valid values are 1 - 255",
                                        command_byte);
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments, only options.",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
     }
     return false;
   }
@@ -1010,7 +992,7 @@ public:
         CommandObjectSP(new CommandObjectProcessKDPPacketSend(interpreter)));
   }
 
-  ~CommandObjectProcessKDPPacket() {}
+  ~CommandObjectProcessKDPPacket() = default;
 };
 
 class CommandObjectMultiwordProcessKDP : public CommandObjectMultiword {
@@ -1024,7 +1006,7 @@ public:
                                  interpreter)));
   }
 
-  ~CommandObjectMultiwordProcessKDP() {}
+  ~CommandObjectMultiwordProcessKDP() = default;
 };
 
 CommandObject *ProcessKDP::GetPluginCommandObject() {

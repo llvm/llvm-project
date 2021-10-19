@@ -1,19 +1,18 @@
 REQUIRES: x86
-REQUIRES: darwin
+REQUIRES: system-darwin
 
 RUN: mkdir -p %t1 %t2
 
-RUN: lld -flavor darwinnew -arch x86_64 -v -L%t1 -F%t2 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 %s
+RUN: not ld64.lld -arch x86_64 -v -L%t1 -F%t2 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 %s
 CHECK:      Library search paths:
 CHECK-NEXT: [[LDIR]]
 CHECK-NEXT: /usr/lib
-CHECK-NEXT: /usr/local/lib
-CHECK-NEXT: Framework search paths:
+CHECK: Framework search paths:
 CHECK-NEXT: [[FDIR]]
 CHECK-NEXT: /Library/Frameworks
 CHECK-NEXT: /System/Library/Frameworks
 
-RUN: lld -flavor darwinnew -arch x86_64 -v -L%t1 -F%t2 -Z 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 --check-prefix=CHECK_Z %s
+RUN: not ld64.lld -arch x86_64 -v -L%t1 -F%t2 -Z 2>&1 | FileCheck -DLDIR=%t1 -DFDIR=%t2 --check-prefix=CHECK_Z %s
 CHECK_Z:      Library search paths:
 CHECK_Z-NEXT: [[LDIR]]
 CHECK_Z-NEXT: Framework search paths:

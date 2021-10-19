@@ -20,6 +20,7 @@
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
+#include "llvm/ADT/UniqueVector.h"
 
 namespace llvm {
   class Constant;
@@ -115,6 +116,9 @@ protected:
 public:
   virtual ~CGObjCRuntime();
 
+  std::string getSymbolNameForMethod(const ObjCMethodDecl *method,
+                                     bool includeCategoryName = true);
+
   /// Generate the function required to register all Objective-C components in
   /// this compilation unit with the runtime library.
   virtual llvm::Function *ModuleInitFunction() = 0;
@@ -201,6 +205,16 @@ public:
                            bool IsClassMessage,
                            const CallArgList &CallArgs,
                            const ObjCMethodDecl *Method = nullptr) = 0;
+
+  /// Walk the list of protocol references from a class, category or
+  /// protocol to traverse the DAG formed from it's inheritance hierarchy. Find
+  /// the list of protocols that ends each walk at either a runtime
+  /// protocol or a non-runtime protocol with no parents. For the common case of
+  /// just a list of standard runtime protocols this just returns the same list
+  /// that was passed in.
+  std::vector<const ObjCProtocolDecl *>
+  GetRuntimeProtocolList(ObjCProtocolDecl::protocol_iterator begin,
+                         ObjCProtocolDecl::protocol_iterator end);
 
   /// Emit the code to return the named protocol as an object, as in a
   /// \@protocol expression.
@@ -323,6 +337,23 @@ public:
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
+  bool canMessageReceiverBeNull(CodeGenFunction &CGF,
+                                const ObjCMethodDecl *method,
+                                bool isSuper,
+                                const ObjCInterfaceDecl *classReceiver,
+                                llvm::Value *receiver);
+  static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
+
+  /// Destroy the callee-destroyed arguments of the given method,
+  /// if it has any.  Used for nil-receiver paths in message sends.
+  /// Never does anything if the method does not satisfy
+  /// hasParamDestroyedInCallee().
+  ///
+  /// \param callArgs - just the formal arguments, not including implicit
+  ///   arguments such as self and cmd
+  static void destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
+                                              const ObjCMethodDecl *method,
+                                              const CallArgList &callArgs);
 
   // FIXME: This probably shouldn't be here, but the code to compute
   // it is here.

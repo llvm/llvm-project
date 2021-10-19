@@ -341,7 +341,7 @@ We use a small helper function for this:
     else
       Scope = LexicalBlocks.back();
     Builder.SetCurrentDebugLocation(
-        DebugLoc::get(AST->getLine(), AST->getCol(), Scope));
+        DILocation::get(Scope->getContext(), AST->getLine(), AST->getCol(), Scope));
   }
 
 This both tells the main ``IRBuilder`` where we are, but also what scope
@@ -400,7 +400,7 @@ argument allocas in ``FunctionAST::codegen``.
           true);
 
       DBuilder->insertDeclare(Alloca, D, DBuilder->createExpression(),
-                              DebugLoc::get(LineNo, 0, SP),
+                              DILocation::get(SP->getContext(), LineNo, 0, SP),
                               Builder.GetInsertBlock());
 
       // Store the initial value into the alloca.
@@ -452,7 +452,7 @@ debug information. To build this example, use:
 .. code-block:: bash
 
     # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core mcjit native` -O3 -o toy
+    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
     # Run
     ./toy
 

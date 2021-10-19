@@ -145,3 +145,24 @@ for.body:                                         ; preds = %for.cond
   %inc = add nuw nsw i32 %shift.0, 1
   br label %for.cond
 }
+
+define i1 @freeze_nonzero(i8 %x, i8 %mask) {
+; CHECK-LABEL: @freeze_nonzero(
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[X:%.*]], [[MASK:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[Y]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       B:
+; CHECK-NEXT:    ret i1 false
+;
+  %y = or i8 %x, %mask
+  %c = icmp ne i8 %y, 0
+  br i1 %c, label %A, label %B
+A:
+  %fr = freeze i8 %y
+  %c2 = icmp eq i8 %fr, 0
+  ret i1 %c2
+B:
+  ret i1 0
+}

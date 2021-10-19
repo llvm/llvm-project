@@ -12,9 +12,9 @@ RUN: obj2yaml %t2.wasm | FileCheck %s --check-prefixes=CHECK,CHECK-4G
 CHECK:      - Type:            MEMORY
 CHECK-NEXT:   Memories:
 CHECK-NEXT:     - Flags:           [ HAS_MAX ]
-CHECK-NEXT:       Initial:         0x00000002
-CHECK-2G-NEXT:    Maximum:         0x00008000
-CHECK-4G-NEXT:    Maximum:         0x00010000
+CHECK-NEXT:       Minimum:         0x2
+CHECK-2G-NEXT:    Maximum:         0x8000
+CHECK-4G-NEXT:    Maximum:         0x10000
 
 ; Test error for more than 4G of memory
 RUN: not wasm-ld %t.o -o %t3.wasm --initial-memory=4295032832 2>&1 | FileCheck %s --check-prefix INIT-ERROR

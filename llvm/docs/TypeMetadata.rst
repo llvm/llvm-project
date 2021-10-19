@@ -223,7 +223,7 @@ efficiently to minimize the sizes of the underlying bitsets.
       ret void
     }
 
-.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
+.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
 
 ``!vcall_visibility`` Metadata
 ==============================

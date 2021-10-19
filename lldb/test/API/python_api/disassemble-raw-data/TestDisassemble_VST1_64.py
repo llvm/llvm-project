@@ -17,10 +17,8 @@ class Disassemble_VST1_64(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfLLVMTargetMissing("ARM")
-    @skipIfReproducer # lldb::FileSP used in typemap cannot be instrumented.
     def test_disassemble_invalid_vst_1_64_raw_data(self):
         """Test disassembling invalid vst1.64 raw bytes with the API."""
         # Create a target from the debugger.
@@ -76,4 +74,4 @@ class Disassemble_VST1_64(TestBase):
             print("Raw bytes:    ", [hex(x) for x in raw_bytes])
             print("Disassembled%s" % str(inst))
 
-        self.assertTrue(inst.GetMnemonic(target) == "vst1.64")
+        self.assertEqual(inst.GetMnemonic(target), "vst1.64")

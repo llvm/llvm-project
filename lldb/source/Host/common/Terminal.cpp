@@ -12,8 +12,8 @@
 #include "lldb/Host/PosixApi.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <csignal>
 #include <fcntl.h>
-#include <signal.h>
 
 #if LLDB_ENABLE_TERMIOS
 #include <termios.h>
@@ -81,62 +81,45 @@ bool Terminal::SetCanonical(bool enabled) {
   return false;
 }
 
-// Default constructor
-TerminalState::TerminalState()
-    : m_tty(), m_tflags(-1),
+struct TerminalState::Data {
 #if LLDB_ENABLE_TERMIOS
-      m_termios_up(),
+  struct termios m_termios; ///< Cached terminal state information.
 #endif
-      m_process_group(-1) {
+};
+
+TerminalState::TerminalState(Terminal term, bool save_process_group)
+    : m_tty(term) {
+  Save(term, save_process_group);
 }
 
-// Destructor
-TerminalState::~TerminalState() {}
+TerminalState::~TerminalState() { Restore(); }
 
 void TerminalState::Clear() {
   m_tty.Clear();
   m_tflags = -1;
-#if LLDB_ENABLE_TERMIOS
-  m_termios_up.reset();
-#endif
+  m_data.reset();
   m_process_group = -1;
 }
 
-// Save the current state of the TTY for the file descriptor "fd" and if
-// "save_process_group" is true, attempt to save the process group info for the
-// TTY.
-bool TerminalState::Save(int fd, bool save_process_group) {
-  m_tty.SetFileDescriptor(fd);
+bool TerminalState::Save(Terminal term, bool save_process_group) {
+  Clear();
+  m_tty = term;
   if (m_tty.IsATerminal()) {
+    int fd = m_tty.GetFileDescriptor();
 #if LLDB_ENABLE_POSIX
     m_tflags = ::fcntl(fd, F_GETFL, 0);
-#endif
 #if LLDB_ENABLE_TERMIOS
-    if (m_termios_up == nullptr)
-      m_termios_up.reset(new struct termios);
-    int err = ::tcgetattr(fd, m_termios_up.get());
-    if (err != 0)
-      m_termios_up.reset();
-#endif // #if LLDB_ENABLE_TERMIOS
-#if LLDB_ENABLE_POSIX
+    std::unique_ptr<Data> new_data{new Data()};
+    if (::tcgetattr(fd, &new_data->m_termios) == 0)
+      m_data = std::move(new_data);
+#endif // LLDB_ENABLE_TERMIOS
     if (save_process_group)
-      m_process_group = ::tcgetpgrp(0);
-    else
-      m_process_group = -1;
-#endif
-  } else {
-    m_tty.Clear();
-    m_tflags = -1;
-#if LLDB_ENABLE_TERMIOS
-    m_termios_up.reset();
-#endif
-    m_process_group = -1;
+      m_process_group = ::tcgetpgrp(fd);
+#endif // LLDB_ENABLE_POSIX
   }
   return IsValid();
 }
 
-// Restore the state of the TTY using the cached values from a previous call to
-// Save().
 bool TerminalState::Restore() const {
 #if LLDB_ENABLE_POSIX
   if (IsValid()) {
@@ -146,8 +129,8 @@ bool TerminalState::Restore() const {
 
 #if LLDB_ENABLE_TERMIOS
     if (TTYStateIsValid())
-      tcsetattr(fd, TCSANOW, m_termios_up.get());
-#endif // #if LLDB_ENABLE_TERMIOS
+      tcsetattr(fd, TCSANOW, &m_data->m_termios);
+#endif // LLDB_ENABLE_TERMIOS
 
     if (ProcessGroupIsValid()) {
       // Save the original signal handler.
@@ -160,77 +143,19 @@ bool TerminalState::Restore() const {
     }
     return true;
   }
-#endif
+#endif // LLDB_ENABLE_POSIX
   return false;
 }
 
-// Returns true if this object has valid saved TTY state settings that can be
-// used to restore a previous state.
 bool TerminalState::IsValid() const {
   return m_tty.FileDescriptorIsValid() &&
-         (TFlagsIsValid() || TTYStateIsValid());
+         (TFlagsIsValid() || TTYStateIsValid() || ProcessGroupIsValid());
 }
 
-// Returns true if m_tflags is valid
 bool TerminalState::TFlagsIsValid() const { return m_tflags != -1; }
 
-// Returns true if m_ttystate is valid
-bool TerminalState::TTYStateIsValid() const {
-#if LLDB_ENABLE_TERMIOS
-  return m_termios_up != nullptr;
-#else
-  return false;
-#endif
-}
+bool TerminalState::TTYStateIsValid() const { return bool(m_data); }
 
-// Returns true if m_process_group is valid
 bool TerminalState::ProcessGroupIsValid() const {
   return static_cast<int32_t>(m_process_group) != -1;
-}
-
-// Constructor
-TerminalStateSwitcher::TerminalStateSwitcher() : m_currentState(UINT32_MAX) {}
-
-// Destructor
-TerminalStateSwitcher::~TerminalStateSwitcher() {}
-
-// Returns the number of states that this switcher contains
-uint32_t TerminalStateSwitcher::GetNumberOfStates() const {
-  return llvm::array_lengthof(m_ttystates);
-}
-
-// Restore the state at index "idx".
-//
-// Returns true if the restore was successful, false otherwise.
-bool TerminalStateSwitcher::Restore(uint32_t idx) const {
-  const uint32_t num_states = GetNumberOfStates();
-  if (idx >= num_states)
-    return false;
-
-  // See if we already are in this state?
-  if (m_currentState < num_states && (idx == m_currentState) &&
-      m_ttystates[idx].IsValid())
-    return true;
-
-  // Set the state to match the index passed in and only update the current
-  // state if there are no errors.
-  if (m_ttystates[idx].Restore()) {
-    m_currentState = idx;
-    return true;
-  }
-
-  // We failed to set the state. The tty state was invalid or not initialized.
-  return false;
-}
-
-// Save the state at index "idx" for file descriptor "fd" and save the process
-// group if requested.
-//
-// Returns true if the restore was successful, false otherwise.
-bool TerminalStateSwitcher::Save(uint32_t idx, int fd,
-                                 bool save_process_group) {
-  const uint32_t num_states = GetNumberOfStates();
-  if (idx < num_states)
-    return m_ttystates[idx].Save(fd, save_process_group);
-  return false;
 }

@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/call_once.h"
 #include "config/linux/syscall.h" // For syscall functions.
 #include "include/sys/syscall.h"  // For syscall numbers.
 #include "include/threads.h"      // For call_once related type definition.
 #include "src/__support/common.h"
-#include "src/threads/linux/thread_utils.h"
+#include "src/threads/linux/Futex.h"
 
 #include <limits.h>
 #include <linux/futex.h>
@@ -22,8 +23,9 @@ static constexpr unsigned START = 0x11;
 static constexpr unsigned WAITING = 0x22;
 static constexpr unsigned FINISH = 0x33;
 
-void LLVM_LIBC_ENTRYPOINT(call_once)(once_flag *flag, __call_once_func_t func) {
-  FutexData *futex_word = reinterpret_cast<FutexData *>(flag);
+LLVM_LIBC_FUNCTION(void, call_once,
+                   (once_flag * flag, __call_once_func_t func)) {
+  FutexWord *futex_word = reinterpret_cast<FutexWord *>(flag);
   unsigned int not_called = ONCE_FLAG_INIT;
 
   // The C standard wording says:

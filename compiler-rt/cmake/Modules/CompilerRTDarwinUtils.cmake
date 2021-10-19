@@ -395,14 +395,28 @@ macro(darwin_add_builtin_libraries)
   set(CMAKE_CXX_FLAGS "")
   set(CMAKE_ASM_FLAGS "")
 
-  set(PROFILE_SOURCES ../profile/InstrProfiling 
-                      ../profile/InstrProfilingBuffer
-                      ../profile/InstrProfilingPlatformDarwin
-                      ../profile/InstrProfilingWriter
-                      ../profile/InstrProfilingInternal
-                      ../profile/InstrProfilingVersionVar)
+  append_string_if(COMPILER_RT_HAS_ASM_LSE " -DHAS_ASM_LSE" CFLAGS)
+
+  set(PROFILE_SOURCES ../profile/InstrProfiling.c
+                      ../profile/InstrProfilingBuffer.c
+                      ../profile/InstrProfilingPlatformDarwin.c
+                      ../profile/InstrProfilingWriter.c
+                      ../profile/InstrProfilingInternal.c
+                      ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
+
+    if((arm64 IN_LIST DARWIN_BUILTIN_ARCHS OR arm64e IN_LIST DARWIN_BUILTIN_ARCHS) AND NOT TARGET lse_builtin_symlinks)
+      add_custom_target(
+        lse_builtin_symlinks
+        BYPRODUCTS ${lse_builtins}
+        ${arm64_lse_commands}
+      )
+
+      set(deps_arm64 lse_builtin_symlinks)
+      set(deps_arm64e lse_builtin_symlinks)
+    endif()
+
     foreach (arch ${DARWIN_BUILTIN_ARCHS})
       darwin_find_excluded_builtins_list(${arch}_${os}_EXCLUDED_BUILTINS
                               OS ${os}
@@ -417,6 +431,7 @@ macro(darwin_add_builtin_libraries)
       darwin_add_builtin_library(clang_rt builtins
                               OS ${os}
                               ARCH ${arch}
+                              DEPS ${deps_${arch}}
                               SOURCES ${filtered_sources}
                               CFLAGS ${CFLAGS} -arch ${arch}
                               PARENT_TARGET builtins)
@@ -441,6 +456,7 @@ macro(darwin_add_builtin_libraries)
         darwin_add_builtin_library(clang_rt cc_kext
                                 OS ${os}
                                 ARCH ${arch}
+                                DEPS ${deps_${arch}}
                                 SOURCES ${filtered_sources} ${PROFILE_SOURCES}
                                 CFLAGS ${CFLAGS} -arch ${arch} -mkernel
                                 DEFS KERNEL_USE
@@ -455,8 +471,8 @@ macro(darwin_add_builtin_libraries)
                       PARENT_TARGET builtins
                       LIPO_FLAGS ${${os}_cc_kext_lipo_flags}
                       DEPENDS ${${os}_cc_kext_libs}
-                      OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-                      INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
+                      OUTPUT_DIR ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
+                      INSTALL_DIR ${COMPILER_RT_INSTALL_LIBRARY_DIR})
     endif()
   endforeach()
 
@@ -465,8 +481,8 @@ macro(darwin_add_builtin_libraries)
                      PARENT_TARGET builtins
                      LIPO_FLAGS ${${os}_builtins_lipo_flags}
                      DEPENDS ${${os}_builtins_libs}
-                     OUTPUT_DIR ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-                     INSTALL_DIR ${COMPILER_RT_LIBRARY_INSTALL_DIR})
+                     OUTPUT_DIR ${COMPILER_RT_OUTPUT_LIBRARY_DIR}
+                     INSTALL_DIR ${COMPILER_RT_INSTALL_LIBRARY_DIR})
   endforeach()
   darwin_add_embedded_builtin_libraries()
 endmacro()
@@ -504,9 +520,9 @@ macro(darwin_add_embedded_builtin_libraries)
     set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 i386 x86_64)
 
     set(DARWIN_macho_embedded_LIBRARY_OUTPUT_DIR
-      ${COMPILER_RT_OUTPUT_DIR}/lib/macho_embedded)
+      ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
     set(DARWIN_macho_embedded_LIBRARY_INSTALL_DIR
-      ${COMPILER_RT_INSTALL_PATH}/lib/macho_embedded)
+      ${COMPILER_RT_INSTALL_LIBRARY_DIR}/macho_embedded)
       
     set(CFLAGS_armv7 "-target thumbv7-apple-darwin-eabi")
     set(CFLAGS_i386 "-march=pentium")

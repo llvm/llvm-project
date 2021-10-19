@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=tonga -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=tonga -mattr=-xnack -run-pass post-RA-sched -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN:      FLAT_LOAD_DWORD
 # GCN-NEXT: FLAT_LOAD_DWORD
@@ -17,15 +17,15 @@ body:             |
 
     $vgpr0_vgpr1 = IMPLICIT_DEF
     $vgpr4_vgpr5 = IMPLICIT_DEF
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     $vgpr2 = IMPLICIT_DEF
     $vgpr3 = IMPLICIT_DEF
     $vgpr6 = IMPLICIT_DEF
     $vgpr0 = V_ADD_CO_U32_e32 16, $vgpr2, implicit-def $vcc, implicit $exec
     $vgpr1 = V_ADDC_U32_e32 $vgpr3, killed $vgpr6, implicit-def dead $vcc, implicit $vcc, implicit $exec
-    FLAT_STORE_DWORD $vgpr2_vgpr3, killed $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
-    FLAT_STORE_DWORD $vgpr0_vgpr1, killed $vgpr4, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD $vgpr2_vgpr3, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
+    FLAT_STORE_DWORD $vgpr0_vgpr1, killed $vgpr4, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
 
 ...

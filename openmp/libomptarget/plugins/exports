@@ -19,6 +19,16 @@ VERS1.0 {
     __tgt_rtl_run_target_region;
     __tgt_rtl_run_target_region_async;
     __tgt_rtl_synchronize;
+    __tgt_rtl_register_lib;
+    __tgt_rtl_unregister_lib;
+    __tgt_rtl_supports_empty_images;
+    __tgt_rtl_set_info_flag;
+    __tgt_rtl_print_device_info;
+    __tgt_rtl_create_event;
+    __tgt_rtl_record_event;
+    __tgt_rtl_wait_event;
+    __tgt_rtl_sync_event;
+    __tgt_rtl_destroy_event;
   local:
     *;
 };

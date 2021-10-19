@@ -143,15 +143,15 @@ body:             |
     liveins: $w0, $w1, $d0, $d1, $d2, $d3, $lr
 
     $sp = frame-setup SUBXri $sp, 32, 0
-    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.2)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.3), (store (s64) into %stack.2)
     $fp = frame-setup ADDXri $sp, 16, 0
     DBG_VALUE $w0, _, !19, !22, debug-location !23
-    STURWi killed $w0, $fp, -4 :: (store 4 into %stack.0.x.addr)
+    STURWi killed $w0, $fp, -4 :: (store (s32) into %stack.0.x.addr)
     DBG_VALUE $w1, _, !20, !22, debug-location !28
-    STRWui killed $w1, $sp, 2, debug-location !30 :: (store 4 into %stack.1)
+    STRWui killed $w1, $sp, 2, debug-location !30 :: (store (s32) into %stack.1)
     DBG_VALUE $sp, 0, !20, !36, debug-location !28
     BL @g, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit killed $d3, implicit-def $sp, debug-location !30
-    $w0 = LDRWui $sp, 2, debug-location !33 :: (load 4 from %stack.1)
+    $w0 = LDRWui $sp, 2, debug-location !33 :: (load (s32) from %stack.1)
     CBZW killed $w0, %bb.2.if.end, debug-location !33
 
   bb.1.if.then:
@@ -166,7 +166,7 @@ body:             |
     DBG_VALUE $sp, 0, !20, !36, debug-location !28
     $w8 = MOVZWi 0, 0
     $x0 = ORRXrs $xzr, undef $x8, 0, implicit killed $w8, debug-location !35
-    $fp, $lr = LDPXi $sp, 2, debug-location !35 :: (load 8 from %stack.3), (load 8 from %stack.2)
+    $fp, $lr = LDPXi $sp, 2, debug-location !35 :: (load (s64) from %stack.3), (load (s64) from %stack.2)
     $sp = ADDXri $sp, 32, 0, debug-location !35
     RET undef $lr, implicit killed $w0, debug-location !35
 

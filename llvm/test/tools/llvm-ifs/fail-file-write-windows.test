@@ -1,0 +1,16 @@
+## Test failing to write output file on windows platform.
+
+# REQUIRES: system-windows
+# RUN: touch %t.TestFile
+# RUN: chmod 400 %t.TestFile
+# RUN: not llvm-ifs --output-format=ELF --output=%t.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+# RUN: chmod 777 %t.TestFile
+# RUN: rm -rf %t.TestFile
+
+--- !ifs-v1
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
+...
+
+# ERR: error: [[MSG]]

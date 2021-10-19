@@ -18,6 +18,15 @@ tablegen("AArch64GenFastISel") {
   td_file = "AArch64.td"
 }
 
+tablegen("AArch64GenO0PreLegalizeGICombiner") {
+  visibility = [ ":LLVMAArch64CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=AArch64O0PreLegalizerCombinerHelper",
+  ]
+  td_file = "AArch64.td"
+}
+
 tablegen("AArch64GenGlobalISel") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [ "-gen-global-isel" ]
@@ -48,6 +57,15 @@ tablegen("AArch64GenPreLegalizeGICombiner") {
   td_file = "AArch64.td"
 }
 
+tablegen("AArch64GenPostLegalizeGILowering") {
+  visibility = [ ":LLVMAArch64CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=AArch64PostLegalizerLoweringHelper",
+  ]
+  td_file = "AArch64.td"
+}
+
 tablegen("AArch64GenRegisterBank") {
   visibility = [ ":LLVMAArch64CodeGen" ]
   args = [ "-gen-register-bank" ]
@@ -61,7 +79,9 @@ static_library("LLVMAArch64CodeGen") {
     ":AArch64GenFastISel",
     ":AArch64GenGlobalISel",
     ":AArch64GenMCPseudoLowering",
+    ":AArch64GenO0PreLegalizeGICombiner",
     ":AArch64GenPostLegalizeGICombiner",
+    ":AArch64GenPostLegalizeGILowering",
     ":AArch64GenPreLegalizeGICombiner",
     ":AArch64GenRegisterBank",
 
@@ -107,7 +127,9 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",
     "AArch64LoadStoreOptimizer.cpp",
+    "AArch64LowerHomogeneousPrologEpilog.cpp",
     "AArch64MCInstLower.cpp",
+    "AArch64MIPeepholeOpt.cpp",
     "AArch64MachineFunctionInfo.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
@@ -126,9 +148,13 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64TargetObjectFile.cpp",
     "AArch64TargetTransformInfo.cpp",
     "GISel/AArch64CallLowering.cpp",
+    "GISel/AArch64GlobalISelUtils.cpp",
     "GISel/AArch64InstructionSelector.cpp",
     "GISel/AArch64LegalizerInfo.cpp",
+    "GISel/AArch64O0PreLegalizerCombiner.cpp",
     "GISel/AArch64PostLegalizerCombiner.cpp",
+    "GISel/AArch64PostLegalizerLowering.cpp",
+    "GISel/AArch64PostSelectOptimize.cpp",
     "GISel/AArch64PreLegalizerCombiner.cpp",
     "GISel/AArch64RegisterBankInfo.cpp",
     "SVEIntrinsicOpts.cpp",

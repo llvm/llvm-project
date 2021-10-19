@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFFORMVALUE_H
-#define LLVM_DEBUGINFO_DWARFFORMVALUE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -82,6 +82,9 @@ public:
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
   void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
                             object::SectionedAddress SA) const;
+  void dumpAddress(raw_ostream &OS, uint64_t Address) const;
+  static void dumpAddress(raw_ostream &OS, uint8_t AddressSize,
+                          uint64_t Address);
   static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
                                  DIDumpOptions DumpOpts, uint64_t SectionIndex);
 
@@ -97,10 +100,6 @@ public:
   bool extractValue(const DWARFDataExtractor &Data, uint64_t *OffsetPtr,
                     dwarf::FormParams FormParams, const DWARFUnit *U) {
     return extractValue(Data, OffsetPtr, FormParams, nullptr, U);
-  }
-
-  bool isInlinedCStr() const {
-    return Value.data != nullptr && Value.data == (const uint8_t *)Value.cstr;
   }
 
   /// getAsFoo functions below return the extracted value as Foo if only
@@ -120,6 +119,19 @@ public:
   Optional<ArrayRef<uint8_t>> getAsBlock() const;
   Optional<uint64_t> getAsCStringOffset() const;
   Optional<uint64_t> getAsReferenceUVal() const;
+  /// Correctly extract any file paths from a form value.
+  ///
+  /// These attributes can be in the from DW_AT_decl_file or DW_AT_call_file
+  /// attributes. We need to use the file index in the correct DWARFUnit's line
+  /// table prologue, and each DWARFFormValue has the DWARFUnit the form value
+  /// was extracted from.
+  ///
+  /// \param Kind The kind of path to extract.
+  ///
+  /// \returns A valid string value on success, or llvm::None if the form class
+  /// is not FC_Constant, or if the file index is not valid.
+  Optional<std::string>
+  getAsFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
   /// Skip a form's value in \p DebugInfoData at the offset specified by
   /// \p OffsetPtr.
@@ -320,4 +332,4 @@ inline Optional<ArrayRef<uint8_t>> toBlock(const Optional<DWARFFormValue> &V) {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFFORMVALUE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H

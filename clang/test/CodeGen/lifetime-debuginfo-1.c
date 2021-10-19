@@ -5,7 +5,7 @@
 
 extern int x;
 
-// CHECK-LABEL: define i32 @f
+// CHECK-LABEL: define{{.*}} i32 @f
 int f() {
   int *p = &x;
 // CHECK: ret i32 %{{.*}}, !dbg [[DI:![0-9]*]]

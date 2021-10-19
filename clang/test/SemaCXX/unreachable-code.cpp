@@ -68,3 +68,34 @@ int pr6130(unsigned i) {
       throw PR6130(); // no-warning
   }
 }
+
+extern "C" void foo(void);
+extern "C" __attribute__((weak)) decltype(foo) foo;
+
+void weak_redecl() {
+  if (foo)
+    return;
+  bar(); // no-warning
+}
+
+namespace pr52103 {
+
+void g(int a);
+
+void f(int a) {
+  if (a > 4) [[ likely ]] { // no-warning
+    return;
+  }
+
+  if (a > 4) [[ unlikely ]] { // no-warning
+    return;
+
+    return; // expected-warning {{will never be executed}}
+  }
+
+  [[clang::musttail]] return g(a); // no-warning
+
+  [[clang::musttail]] return g(a); // expected-warning {{will never be executed}}
+}
+
+}

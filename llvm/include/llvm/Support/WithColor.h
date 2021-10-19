@@ -20,7 +20,7 @@ namespace cl {
 class OptionCategory;
 }
 
-extern cl::OptionCategory ColorCategory;
+extern cl::OptionCategory &getColorCategory();
 
 // Symbolic names for various syntax elements.
 enum class HighlightColor {
@@ -136,4 +136,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_DEBUGINFO_WITHCOLOR_H
+#endif // LLVM_SUPPORT_WITHCOLOR_H

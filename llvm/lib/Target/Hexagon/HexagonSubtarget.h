@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/Support/Alignment.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -179,6 +180,12 @@ public:
   bool hasV67OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V67;
   }
+  bool hasV68Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V68;
+  }
+  bool hasV68OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V68;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
@@ -211,6 +218,9 @@ public:
   }
   bool useHVXV67Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V67;
+  }
+  bool useHVXV68Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V68;
   }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
@@ -275,36 +285,14 @@ public:
     return makeArrayRef(Types);
   }
 
-  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const {
-    if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
-      return false;
-    MVT ElemTy = VecTy.getVectorElementType();
-    if (!IncludeBool && ElemTy == MVT::i1)
-      return false;
+  bool isHVXElementType(MVT Ty, bool IncludeBool = false) const;
+  bool isHVXVectorType(MVT VecTy, bool IncludeBool = false) const;
+  bool isTypeForHVX(Type *VecTy, bool IncludeBool = false) const;
 
-    unsigned HwLen = getVectorLength();
-    unsigned NumElems = VecTy.getVectorNumElements();
-    ArrayRef<MVT> ElemTypes = getHVXElementTypes();
-
-    if (IncludeBool && ElemTy == MVT::i1) {
-      // Boolean HVX vector types are formed from regular HVX vector types
-      // by replacing the element type with i1.
-      for (MVT T : ElemTypes)
-        if (NumElems * T.getSizeInBits() == 8*HwLen)
-          return true;
-      return false;
-    }
-
-    unsigned VecWidth = VecTy.getSizeInBits();
-    if (VecWidth != 8*HwLen && VecWidth != 16*HwLen)
-      return false;
-    return llvm::any_of(ElemTypes, [ElemTy] (MVT T) { return ElemTy == T; });
-  }
-
-  unsigned getTypeAlignment(MVT Ty) const {
+  Align getTypeAlignment(MVT Ty) const {
     if (isHVXVectorType(Ty, true))
-      return getVectorLength();
-    return Ty.getSizeInBits() / 8;
+      return Align(getVectorLength());
+    return Align(std::max<unsigned>(1, Ty.getSizeInBits() / 8));
   }
 
   unsigned getL1CacheLineSize() const;

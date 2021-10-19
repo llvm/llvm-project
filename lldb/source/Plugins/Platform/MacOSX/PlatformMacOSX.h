@@ -13,9 +13,7 @@
 
 class PlatformMacOSX : public PlatformDarwin {
 public:
-  PlatformMacOSX(bool is_host);
-
-  ~PlatformMacOSX() override;
+  PlatformMacOSX();
 
   // Class functions
   static lldb::PlatformSP CreateInstance(bool force,
@@ -25,43 +23,29 @@ public:
 
   static void Terminate();
 
-  static lldb_private::ConstString GetPluginNameStatic(bool is_host);
+  static lldb_private::ConstString GetPluginNameStatic();
 
-  static const char *GetDescriptionStatic(bool is_host);
+  static const char *GetDescriptionStatic();
 
   // lldb_private::PluginInterface functions
-  lldb_private::ConstString GetPluginName() override {
-    return GetPluginNameStatic(IsHost());
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
   }
-
-  uint32_t GetPluginVersion() override { return 1; }
 
   lldb_private::Status
   GetSharedModule(const lldb_private::ModuleSpec &module_spec,
                   lldb_private::Process *process, lldb::ModuleSP &module_sp,
                   const lldb_private::FileSpecList *module_search_paths_ptr,
-                  lldb::ModuleSP *old_module_sp_ptr,
+                  llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                   bool *did_create_ptr) override;
 
-  const char *GetDescription() override {
-    return GetDescriptionStatic(IsHost());
-  }
-
-  lldb_private::Status
-  GetSymbolFile(const lldb_private::FileSpec &platform_file,
-                const lldb_private::UUID *uuid_ptr,
-                lldb_private::FileSpec &local_file);
+  const char *GetDescription() override { return GetDescriptionStatic(); }
 
   lldb_private::Status
   GetFile(const lldb_private::FileSpec &source,
           const lldb_private::FileSpec &destination) override {
     return PlatformDarwin::GetFile(source, destination);
   }
-
-  lldb_private::Status
-  GetFileWithUUID(const lldb_private::FileSpec &platform_file,
-                  const lldb_private::UUID *uuid_ptr,
-                  lldb_private::FileSpec &local_file) override;
 
   bool GetSupportedArchitectureAtIndex(uint32_t idx,
                                        lldb_private::ArchSpec &arch) override;
@@ -77,9 +61,6 @@ public:
   }
 
 private:
-  PlatformMacOSX(const PlatformMacOSX &) = delete;
-  const PlatformMacOSX &operator=(const PlatformMacOSX &) = delete;
-
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   uint32_t m_num_arm_arches = 0;
 #endif

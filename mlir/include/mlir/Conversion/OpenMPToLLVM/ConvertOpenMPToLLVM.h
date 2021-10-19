@@ -8,7 +8,7 @@
 #ifndef MLIR_CONVERSION_OPENMPTOLLVM_OPENMPTOLLVM_H_
 #define MLIR_CONVERSION_OPENMPTOLLVM_OPENMPTOLLVM_H_
 
-#include<memory>
+#include <memory>
 
 namespace mlir {
 class LLVMTypeConverter;
@@ -16,12 +16,12 @@ class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Populate the given list with patterns that convert from OpenMP to LLVM.
-void populateOpenMPToLLVMConversionPatterns(MLIRContext *context,
-                                            LLVMTypeConverter &converter,
-                                            OwningRewritePatternList &patterns);
+void populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                            RewritePatternSet &patterns);
 
 /// Create a pass to convert OpenMP operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertOpenMPToLLVMPass();

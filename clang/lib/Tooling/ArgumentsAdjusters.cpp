@@ -21,6 +21,16 @@
 namespace clang {
 namespace tooling {
 
+static StringRef getDriverMode(const CommandLineArguments &Args) {
+  for (const auto &Arg : Args) {
+    StringRef ArgRef = Arg;
+    if (ArgRef.consume_front("--driver-mode=")) {
+      return ArgRef;
+    }
+  }
+  return StringRef();
+}
+
 /// Add -fsyntax-only option and drop options that triggers output generation.
 ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
@@ -52,7 +62,8 @@ ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
         HasSyntaxOnly = true;
     }
     if (!HasSyntaxOnly)
-      AdjustedArgs.push_back("-fsyntax-only");
+      AdjustedArgs =
+          getInsertArgumentAdjuster("-fsyntax-only")(AdjustedArgs, "");
     return AdjustedArgs;
   };
 }
@@ -75,38 +86,30 @@ ArgumentsAdjuster getClangStripOutputAdjuster() {
   };
 }
 
-ArgumentsAdjuster getClangStripSerializeDiagnosticAdjuster() {
-  return [](const CommandLineArguments &Args, StringRef /*unused*/) {
-    CommandLineArguments AdjustedArgs;
-    for (size_t i = 0, e = Args.size(); i < e; ++i) {
-      StringRef Arg = Args[i];
-      if (Arg == "--serialize-diagnostics") {
-        // Skip the diagnostic output argument.
-        ++i;
-        continue;
-      }
-      AdjustedArgs.push_back(Args[i]);
-    }
-    return AdjustedArgs;
-  };
-}
-
 ArgumentsAdjuster getClangStripDependencyFileAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
+    auto UsingClDriver = (getDriverMode(Args) == "cl");
+
     CommandLineArguments AdjustedArgs;
     for (size_t i = 0, e = Args.size(); i < e; ++i) {
       StringRef Arg = Args[i];
-      // All dependency-file options begin with -M. These include -MM,
-      // -MF, -MG, -MP, -MT, -MQ, -MD, and -MMD.
-      if (!Arg.startswith("-M") && !Arg.startswith("/showIncludes") &&
-          !Arg.startswith("-showIncludes")) {
-        AdjustedArgs.push_back(Args[i]);
+
+      // These flags take an argument: -MX foo. Skip the next argument also.
+      if (!UsingClDriver && (Arg == "-MF" || Arg == "-MT" || Arg == "-MQ")) {
+        ++i;
         continue;
       }
+      // When not using the cl driver mode, dependency file generation options
+      // begin with -M. These include -MM, -MF, -MG, -MP, -MT, -MQ, -MD, and
+      // -MMD.
+      if (!UsingClDriver && Arg.startswith("-M"))
+        continue;
+      // Under MSVC's cl driver mode, dependency file generation is controlled
+      // using /showIncludes
+      if (Arg.startswith("/showIncludes") || Arg.startswith("-showIncludes"))
+        continue;
 
-      if (Arg == "-MF" || Arg == "-MT" || Arg == "-MQ")
-        // These flags take an argument: -MX foo. Skip the next argument also.
-        ++i;
+      AdjustedArgs.push_back(Args[i]);
     }
     return AdjustedArgs;
   };
@@ -119,7 +122,7 @@ ArgumentsAdjuster getInsertArgumentAdjuster(const CommandLineArguments &Extra,
 
     CommandLineArguments::iterator I;
     if (Pos == ArgumentInsertPosition::END) {
-      I = Return.end();
+      I = std::find(Return.begin(), Return.end(), "--");
     } else {
       I = Return.begin();
       ++I; // To leave the program name in place

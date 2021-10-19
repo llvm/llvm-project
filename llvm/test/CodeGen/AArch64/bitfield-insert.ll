@@ -10,9 +10,9 @@ define [1 x i64] @from_clang([1 x i64] %f.coerce, i32 %n) nounwind readnone {
 ; CHECK-LABEL: from_clang:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov w8, #135
+; CHECK-NEXT:    and x9, x0, #0xffffff00
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    bfi w8, w1, #3, #4
-; CHECK-NEXT:    and x9, x0, #0xffffff00
 ; CHECK-NEXT:    orr x0, x8, x9
 ; CHECK-NEXT:    ret
 entry:
@@ -96,8 +96,8 @@ define void @test_32bit_masked(i32 *%existing, i32 *%new) {
 ; CHECK-LABEL: test_32bit_masked:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov w10, #135
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    and w8, w8, w10
 ; CHECK-NEXT:    bfi w8, w9, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
@@ -142,8 +142,8 @@ define void @test_32bit_complexmask(i32 *%existing, i32 *%new) {
 ; CHECK-LABEL: test_32bit_complexmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov w10, #647
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    and w8, w8, w10
 ; CHECK-NEXT:    bfi w8, w9, #3, #4
 ; CHECK-NEXT:    str w8, [x0]
@@ -166,8 +166,8 @@ define void @test_32bit_badmask(i32 *%existing, i32 *%new) {
 ; CHECK-LABEL: test_32bit_badmask:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov w10, #135
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov w11, #632
 ; CHECK-NEXT:    and w8, w8, w10
 ; CHECK-NEXT:    and w9, w11, w9, lsl #3
@@ -191,13 +191,13 @@ define void @test_32bit_badmask(i32 *%existing, i32 *%new) {
 define void @test_64bit_badmask(i64 *%existing, i64 *%new) {
 ; CHECK-LABEL: test_64bit_badmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    ldr x9, [x1]
-; CHECK-NEXT:    mov w10, #135
-; CHECK-NEXT:    and x8, x8, x10
-; CHECK-NEXT:    lsl w9, w9, #3
-; CHECK-NEXT:    mov w10, #664
-; CHECK-NEXT:    and x9, x9, x10
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, #135
+; CHECK-NEXT:    ldr x10, [x1]
+; CHECK-NEXT:    mov w11, #664
+; CHECK-NEXT:    and x8, x9, x8
+; CHECK-NEXT:    lsl w10, w10, #3
+; CHECK-NEXT:    and x9, x10, x11
 ; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
@@ -380,8 +380,8 @@ define i32 @test_or_and_and2(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_or_and_and2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    lsr w8, w0, #4
-; CHECK-NEXT:    bfi w1, w8, #4, #12
 ; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    bfi w0, w8, #4, #12
 ; CHECK-NEXT:    ret
 entry:
   %and = and i32 %a, 65520   ; 0x0000fff0
@@ -528,10 +528,10 @@ define i32 @test7(i32 %a) {
 define i64 @test8(i64 %a) {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, #2035482624
-; CHECK-NEXT:    and x8, x0, #0xff000000000000ff
-; CHECK-NEXT:    movk x9, #36694, lsl #32
-; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    mov x8, #2035482624
+; CHECK-NEXT:    and x9, x0, #0xff000000000000ff
+; CHECK-NEXT:    movk x8, #36694, lsl #32
+; CHECK-NEXT:    orr x0, x9, x8
 ; CHECK-NEXT:    ret
   %1 = and i64 %a, -72057594037927681 ; 0xff000000000000ff
   %2 = or i64 %1, 157601565442048     ; 0x00008f5679530000
@@ -545,8 +545,8 @@ define i64 @test8(i64 %a) {
 define i32 @test9(i64 %b, i32 %e) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x0, x0, #12
 ; CHECK-NEXT:    lsr w8, w1, #23
+; CHECK-NEXT:    lsr x0, x0, #12
 ; CHECK-NEXT:    bfi w0, w8, #23, #9
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
@@ -575,4 +575,19 @@ define <2 x i32> @test_complex_type(<2 x i32>* %addr, i64 %in, i64* %bf ) {
   store i64 %both, i64* %bf
 
   ret <2 x i32> %vec
+}
+
+define i64 @test_truncated_shift(i64 %x, i64 %y) {
+; CHECK-LABEL: test_truncated_shift:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl w8, w1, #25
+; CHECK-NEXT:    lsr x8, x8, #25
+; CHECK-NEXT:    bfi x0, x8, #25, #5
+; CHECK-NEXT:    ret
+entry:
+  %and = and i64 %x, -1040187393
+  %shl4 = shl i64 %y, 25
+  %and5 = and i64 %shl4, 1040187392
+  %or = or i64 %and5, %and
+  ret i64 %or
 }

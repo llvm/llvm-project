@@ -203,6 +203,10 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 }
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
+  // FIXME: This pass causes verification failures.
+  MF.getProperties().set(
+      MachineFunctionProperties::Property::FailsVerification);
+
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();

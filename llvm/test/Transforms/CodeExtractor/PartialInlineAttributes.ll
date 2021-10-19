@@ -37,7 +37,7 @@ if.end:
   ret i32 %add
 }
 
-define i32 @callee_writeonly(i32 %v) writeonly {
+define i32 @callee_writeonly(i32 %v) writeonly ssp {
 entry:
   %cmp = icmp sgt i32 %v, 2000
   br i1 %cmp, label %if.then, label %if.end
@@ -58,7 +58,7 @@ if.end:
 ; CHECK: call void @callee_most.2.if.then(i32 %v
 ; CHECK: call i32 @callee_noinline(i32 %v)
 ; CHECK: call void @callee_writeonly.1.if.then(i32 %v
-define i32 @caller(i32 %v) {
+define i32 @caller(i32 %v) ssp {
 entry:
   %c1 = call i32 @callee_most(i32 %v)
   %c2 = call i32 @callee_noinline(i32 %v)
@@ -66,7 +66,7 @@ entry:
   ret i32 %c3
 }
 
-; CHECK: define internal void @callee_writeonly.1.if.then(i32 %v, i32* %sub.out) { 
+; CHECK: define internal void @callee_writeonly.1.if.then(i32 %v, i32* %sub.out) [[FN_ATTRS0:#[0-9]+]]
 ; CHECK: define internal void @callee_most.2.if.then(i32 %v, i32* %sub.out)  [[FN_ATTRS:#[0-9]+]]
 
 ; attributes to preserve
@@ -76,6 +76,7 @@ attributes #0 = {
   sanitize_thread ssp sspreq sspstrong strictfp uwtable "foo"="bar"
   "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
+; CHECK: attributes [[FN_ATTRS0]] = { ssp
 ; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong strictfp uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; attributes to drop

@@ -82,9 +82,9 @@
 ## Member does not exist:
 # RUN: llvm-ar rc %t/missing.a %t/1.o %t/2.o %t/3.o
 # RUN: not llvm-ar m %t/missing.a %t/missing.txt 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt
+# RUN:   | FileCheck %s --check-prefix=MISSING-FILE -DFILE=%t/missing.txt -DMSG=%errc_ENOENT
 
-# MISSING-FILE: error: [[FILE]]: {{[nN]}}o such file or directory
+# MISSING-FILE: error: [[FILE]]: [[MSG]]
 
 --- !ELF
 FileHeader:

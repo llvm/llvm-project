@@ -1,17 +1,17 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass si-insert-skips,post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -19,21 +19,21 @@ body:            |
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlanex16
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANEX16_B32
+# GCN-NEXT: V_PERMLANEX16_B32_e64
 ---
 name:            hazard_vcmpx_permlanex16
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -41,7 +41,7 @@ body:            |
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
-    $vgpr1 = V_PERMLANEX16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANEX16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -49,14 +49,14 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      V_NOP
 # GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_v_nop
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -65,21 +65,21 @@ body:            |
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
     V_NOP_e32 implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16_far
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      $vgpr1 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_far
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -96,21 +96,21 @@ body:            |
     V_NOP_e32 implicit $exec
     V_NOP_e32 implicit $exec
     V_NOP_e32 implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
 # GCN-LABEL: name: hazard_vcmpx_permlane16_no_hazard
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      V_ADD_F32
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_no_hazard
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -118,7 +118,7 @@ body:            |
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = IMPLICIT_DEF
     $vgpr2 = V_ADD_F32_e32 $vgpr1, $vgpr1,  implicit $mode, implicit $exec
-    $vgpr1 = V_PERMLANE16_B32 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, killed $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -126,20 +126,20 @@ body:            |
 # GCN:      V_CMPX_LE_F32_nosdst_e32
 # GCN:      S_ADD_U32
 # GCN-NEXT: dead $vgpr1 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
-# GCN-NEXT: V_PERMLANE16_B32
+# GCN-NEXT: V_PERMLANE16_B32_e64
 ---
 name:            hazard_vcmpx_permlane16_undef_src
 body:            |
   bb.0:
     successors: %bb.1
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    SI_KILL_F32_COND_IMM_TERMINATOR $vgpr0, 0, 3, implicit-def $exec, implicit-def $vcc, implicit-def $scc, implicit $exec
+    V_CMPX_LE_F32_nosdst_e32 0, $vgpr0, implicit-def $exec, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
     $vgpr2 = IMPLICIT_DEF
     $sgpr0 = IMPLICIT_DEF
     $sgpr1 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
-    $vgpr1 = V_PERMLANE16_B32 0, undef $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, undef $vgpr1, 0, implicit $exec
+    $vgpr1 = V_PERMLANE16_B32_e64 0, undef $vgpr1, 0, killed $sgpr1, 0, killed $sgpr0, undef $vgpr1, 0, implicit $exec
     S_ENDPGM 0
 ...

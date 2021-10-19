@@ -15,7 +15,7 @@ define zeroext i16 @test1_fast(double %d) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq __truncdfhf2
+; AVX-NEXT:    callq __truncdfhf2@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -41,7 +41,7 @@ define zeroext i16 @test2_fast(x86_fp80 %d) #0 {
 ; AVX-NEXT:    .cfi_def_cfa_offset 32
 ; AVX-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    fstpt (%rsp)
-; AVX-NEXT:    callq __truncxfhf2
+; AVX-NEXT:    callq __truncxfhf2@PLT
 ; AVX-NEXT:    addq $24, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -55,7 +55,7 @@ define zeroext i16 @test1(double %d) #1 {
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    pushq %rax
 ; ALL-NEXT:    .cfi_def_cfa_offset 16
-; ALL-NEXT:    callq __truncdfhf2
+; ALL-NEXT:    callq __truncdfhf2@PLT
 ; ALL-NEXT:    popq %rcx
 ; ALL-NEXT:    .cfi_def_cfa_offset 8
 ; ALL-NEXT:    retq
@@ -71,7 +71,7 @@ define zeroext i16 @test2(x86_fp80 %d) #1 {
 ; ALL-NEXT:    .cfi_def_cfa_offset 32
 ; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    fstpt (%rsp)
-; ALL-NEXT:    callq __truncxfhf2
+; ALL-NEXT:    callq __truncxfhf2@PLT
 ; ALL-NEXT:    addq $24, %rsp
 ; ALL-NEXT:    .cfi_def_cfa_offset 8
 ; ALL-NEXT:    retq

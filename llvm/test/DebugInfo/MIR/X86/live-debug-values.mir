@@ -35,7 +35,7 @@
 # CHECK: ![[N_VAR:[0-9]+]] = !DILocalVariable(name: "n",{{.*}})
 #
 # CHECK:      bb.5.if.end.7:
-# CHECK:        DBG_VALUE $ebx, $noreg, ![[N_VAR]], !DIExpression(), debug-location !{{[0-9]+}}
+# CHECK:        DBG_VALUE $ebx, $noreg, ![[N_VAR]], !DIExpression()
 
 
 --- |
@@ -206,7 +206,7 @@ body:             |
     liveins: $rsi
   
     DBG_VALUE $rsi, _, !13, !20, debug-location !22
-    $rdi = MOV64rm killed $rsi, 1, _, 8, _, debug-location !27 :: (load 8 from %ir.arrayidx, !tbaa !28)
+    $rdi = MOV64rm killed $rsi, 1, _, 8, _, debug-location !27 :: (load (s64) from %ir.arrayidx, !tbaa !28)
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !32
     CALL64pcrel32 @atoi, csr_64, implicit $rsp, implicit $rdi, implicit $al, implicit-def $rsp, implicit-def $eax, debug-location !32
     $edi = MOV32rr $eax, debug-location !32
@@ -245,7 +245,7 @@ body:             |
   bb.5.if.end.7:
     liveins: $ecx
   
-    MOV32mr $rip, 1, _, @m, _, $ecx, debug-location !43 :: (store 4 into @m, !tbaa !44)
+    MOV32mr $rip, 1, _, @m, _, $ecx, debug-location !43 :: (store (s32) into @m, !tbaa !44)
     dead undef $edi = MOV32ri @.str, implicit-def $rdi, debug-location !46
     dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al, debug-location !47
     $esi = MOV32rr killed $ecx, debug-location !46

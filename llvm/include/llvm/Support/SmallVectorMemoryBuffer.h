@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_OBJECTMEMORYBUFFER_H
-#define LLVM_EXECUTIONENGINE_OBJECTMEMORYBUFFER_H
+#ifndef LLVM_SUPPORT_SMALLVECTORMEMORYBUFFER_H
+#define LLVM_SUPPORT_SMALLVECTORMEMORYBUFFER_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"

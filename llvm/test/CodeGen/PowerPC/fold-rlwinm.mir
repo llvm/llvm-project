@@ -182,3 +182,22 @@ body: |
     STW %2:gprc, %0:gprc, 100
     BLR8 implicit $lr8, implicit $rm
 ...
+---
+name: testFoldRLWINMAndANDI
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    ; CHECK-LABEL: name: testFoldRLWINMAndANDI
+    ; CHECK: liveins: $x3
+    ; CHECK: [[COPY:%[0-9]+]]:g8rc = COPY $x3
+    ; CHECK: [[COPY1:%[0-9]+]]:gprc = COPY [[COPY]].sub_32
+    ; CHECK: [[RLWINM:%[0-9]+]]:gprc = RLWINM [[COPY1]], 4, 28, 31
+    ; CHECK: [[ANDI_rec:%[0-9]+]]:gprc = ANDI_rec [[RLWINM]], 4, implicit-def $cr0
+    ; CHECK: BLR8 implicit $lr8, implicit $rm
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM %1:gprc, 4, 28, 31
+    %3:gprc = ANDI_rec %2:gprc, 4, implicit-def $cr0
+    BLR8 implicit $lr8, implicit $rm
+...

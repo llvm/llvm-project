@@ -22,12 +22,13 @@ void func() {
   const char *literal = "Hello, world!";
 }
 
-// ASAN: sectioned_global{{.*}} global { i32, [60 x i8] }{{.*}}, align 32
+// ASAN: sectioned_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
 // KASAN: sectioned_global{{.*}} global i32
-// ASAN: @__special_global{{.*}} global { i32, [60 x i8] }{{.*}}, align 32
+// ASAN: @__special_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
 // KASAN: @__special_global{{.*}} global i32
 
-// CHECK-LABEL: define internal void @asan.module_ctor
+/// Without -fasynchronous-unwind-tables, ctor and dtor get the uwtable attribute.
+// CHECK-LABEL: define internal void @asan.module_ctor() #[[#ATTR:]] {
 // ASAN-NEXT: call void @__asan_init
 // ASAN-NEXT: call void @__asan_version_mismatch_check
 // KASAN-NOT: call void @__asan_init
@@ -36,9 +37,18 @@ void func() {
 // KASAN-NEXT: call void @__asan_register_globals({{.*}}, i{{32|64}} 5)
 // CHECK-NEXT: ret void
 
-// CHECK-LABEL: define internal void @asan.module_dtor
+// CHECK:      define internal void @asan.module_dtor() #[[#ATTR]] {
 // CHECK-NEXT: call void @__asan_unregister_globals
 // CHECK-NEXT: ret void
+
+// CHECK: attributes #[[#ATTR]] = { nounwind }
+
+/// If -fasynchronous-unwind-tables, set the module flag "uwtable". ctor/dtor
+/// will thus get the uwtable attribute.
+// RUN: %clang_cc1 -emit-llvm -fsanitize=address -funwind-tables=2 -o - %s | FileCheck %s --check-prefixes=UWTABLE
+// UWTABLE: define internal void @asan.module_dtor() #[[#ATTR:]] {
+// UWTABLE: attributes #[[#ATTR]] = { nounwind uwtable }
+// UWTABLE: ![[#]] = !{i32 7, !"uwtable", i32 1}
 
 // CHECK: !llvm.asan.globals = !{![[EXTRA_GLOBAL:[0-9]+]], ![[GLOBAL:[0-9]+]], ![[DYN_INIT_GLOBAL:[0-9]+]], ![[ATTR_GLOBAL:[0-9]+]], ![[BLACKLISTED_GLOBAL:[0-9]+]], ![[SECTIONED_GLOBAL:[0-9]+]], ![[SPECIAL_GLOBAL:[0-9]+]], ![[STATIC_VAR:[0-9]+]], ![[LITERAL:[0-9]+]]}
 // CHECK: ![[EXTRA_GLOBAL]] = !{{{.*}} ![[EXTRA_GLOBAL_LOC:[0-9]+]], !"extra_global", i1 false, i1 false}

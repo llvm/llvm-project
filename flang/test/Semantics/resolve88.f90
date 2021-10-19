@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C746, C747, and C748
 module m
   use ISO_FORTRAN_ENV
@@ -11,8 +11,8 @@ module m
     real, allocatable, codimension[:] :: allocatableField
     !ERROR: Component 'deferredfield' is a coarray and must have the ALLOCATABLE attribute
     real, codimension[:] :: deferredField
-    !ERROR: 'pointerfield' may not have the POINTER attribute because it is a coarray
     !ERROR: Component 'pointerfield' is a coarray and must have the ALLOCATABLE attribute
+    !ERROR: 'pointerfield' may not have the POINTER attribute because it is a coarray
     real, pointer, codimension[:] :: pointerField
     !ERROR: Component 'realfield' is a coarray and must have the ALLOCATABLE attribute and have a deferred coshape
     real, codimension[*] :: realField
@@ -41,17 +41,17 @@ module m
   end type goodC_funptrCoarrayType
 
   type team_typeCoarrayType
-    !ERROR: A coarray component may not be of type TEAM_TYPE from ISO_FORTRAN_ENV
+    !ERROR: Coarray 'field' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR
     type(team_type), allocatable, codimension[:] :: field
   end type team_typeCoarrayType
 
   type c_ptrCoarrayType
-    !ERROR: A coarray component may not be of type C_PTR or C_FUNPTR from ISO_C_BINDING
+    !ERROR: Coarray 'field' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR
     type(c_ptr), allocatable, codimension[:] :: field
   end type c_ptrCoarrayType
 
   type c_funptrCoarrayType
-    !ERROR: A coarray component may not be of type C_PTR or C_FUNPTR from ISO_C_BINDING
+    !ERROR: Coarray 'field' may not have type TEAM_TYPE, C_PTR, or C_FUNPTR
     type(c_funptr), allocatable, codimension[:] :: field
   end type c_funptrCoarrayType
 

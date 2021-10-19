@@ -25,7 +25,8 @@ def ExynosM4Model : SchedMachineModel {
   let CompleteModel         =   1; // Use the default model otherwise.
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F);
 }
 
 //===----------------------------------------------------------------------===//
@@ -557,7 +558,8 @@ def : SchedAlias<WriteVLD, M4WriteL5>;
 def : SchedAlias<WriteVST, M4WriteVST1>;
 
 // ASIMD FP instructions.
-def : SchedAlias<WriteV, M4WriteNALU1>;
+def : SchedAlias<WriteVd, M4WriteNALU1>;
+def : SchedAlias<WriteVq, M4WriteNALU1>;
 
 // Other miscellaneous instructions.
 def : WriteRes<WriteAtomic,  []> { let Unsupported = 1; }
@@ -580,6 +582,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // Finer scheduling model.

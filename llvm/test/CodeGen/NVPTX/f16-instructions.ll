@@ -1,12 +1,12 @@
 ; ## Full FP16 support enabled by default.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
-; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16,CHECK-F16-NOFTZ %s
+; RUN: | FileCheck -check-prefixes CHECK,CHECK-NOFTZ,CHECK-F16-NOFTZ %s
 ; ## Full FP16 with FTZ
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:          -denormal-fp-math-f32=preserve-sign \
-; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16,CHECK-F16-FTZ %s
+; RUN: | FileCheck -check-prefixes CHECK,CHECK-F16-FTZ %s
 ; ## FP16 support explicitly disabled.
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53 -asm-verbose=false \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all --nvptx-no-f16-math \
@@ -164,13 +164,13 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FA:%f[0-9]+]], [[A]];
 ; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FB:%f[0-9]+]], [[B]];
 ; CHECK-NOFTZ-NEXT: div.rn.f32      [[D:%f[0-9]+]], [[FA]], [[FB]];
-; CHECK-NOFTZ-NEXT: cvt.rmi.f32.f32 [[DI:%f[0-9]+]], [[D]];
+; CHECK-NOFTZ-NEXT: cvt.rzi.f32.f32 [[DI:%f[0-9]+]], [[D]];
 ; CHECK-NOFTZ-NEXT: mul.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
 ; CHECK-NOFTZ-NEXT: sub.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FA:%f[0-9]+]], [[A]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FB:%f[0-9]+]], [[B]];
 ; CHECK-F16-FTZ-NEXT: div.rn.ftz.f32      [[D:%f[0-9]+]], [[FA]], [[FB]];
-; CHECK-F16-FTZ-NEXT: cvt.rmi.ftz.f32.f32 [[DI:%f[0-9]+]], [[D]];
+; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%f[0-9]+]], [[D]];
 ; CHECK-F16-FTZ-NEXT: mul.ftz.f32         [[RI:%f[0-9]+]], [[DI]], [[FB]];
 ; CHECK-F16-FTZ-NEXT: sub.ftz.f32         [[RF:%f[0-9]+]], [[FA]], [[RI]];
 ; CHECK-NEXT: cvt.rn.f16.f32  [[R:%h[0-9]+]], [[RF]];
@@ -806,7 +806,7 @@ define half @test_bitcast_i16tohalf(i16 %a) #0 {
 
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -845,7 +845,7 @@ define half @test_sqrt(half %a) #0 {
 ;;; Can't do this yet: requires libcall.
 ; XCHECK-LABEL: test_powi(
 ;define half @test_powi(half %a, i32 %b) #0 {
-;  %r = call half @llvm.powi.f16(half %a, i32 %b)
+;  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
 ;  ret half %r
 ;}
 

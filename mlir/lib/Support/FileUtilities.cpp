@@ -35,7 +35,7 @@ std::unique_ptr<llvm::ToolOutputFile>
 mlir::openOutputFile(StringRef outputFilename, std::string *errorMessage) {
   std::error_code error;
   auto result = std::make_unique<llvm::ToolOutputFile>(outputFilename, error,
-                                                       llvm::sys::fs::F_None);
+                                                       llvm::sys::fs::OF_None);
   if (error) {
     if (errorMessage)
       *errorMessage = "cannot open output file '" + outputFilename.str() +

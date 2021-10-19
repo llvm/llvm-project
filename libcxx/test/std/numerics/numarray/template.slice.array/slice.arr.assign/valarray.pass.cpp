@@ -23,7 +23,8 @@ int main(int, char**)
     int a2[] = {-1, -2, -3, -4, -5};
     std::valarray<int> v1(a1, sizeof(a1)/sizeof(a1[0]));
     std::valarray<int> v2(a2, sizeof(a2)/sizeof(a2[0]));
-    v1[std::slice(1, 5, 3)] = v2;
+    std::slice_array<int> s1 = v1[std::slice(1, 5, 3)];
+    s1 = v2;
     assert(v1.size() == 16);
     assert(v1[ 0] ==  0);
     assert(v1[ 1] == -1);
@@ -42,5 +43,19 @@ int main(int, char**)
     assert(v1[14] == 14);
     assert(v1[15] == 15);
 
-  return 0;
+    ASSERT_SAME_TYPE(decltype(s1 = v2), void);
+
+// The initializer list constructor is disabled in C++03 mode.
+#if TEST_STD_VER > 03
+    std::valarray<double> m = { 0, 0, 0 };
+    std::slice_array<double> s2 = m[std::slice(0, 3, 1)];
+    s2 = { 1, 2, 3 };
+    assert(m[0] == 1);
+    assert(m[1] == 2);
+    assert(m[2] == 3);
+
+    ASSERT_SAME_TYPE(decltype(s2 = {1, 2, 3}), void);
+#endif // TEST_STD_VER > 03
+
+    return 0;
 }

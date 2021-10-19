@@ -11,7 +11,7 @@ define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; X86-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vcmpltps %ymm3, %ymm2, %ymm1
 ; X86-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X86-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test:
@@ -22,7 +22,7 @@ define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; X64-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vcmpltps %ymm3, %ymm2, %ymm1
 ; X64-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %c1 = fadd <8 x float> %a, %b
  %b1 = fmul <8 x float> %b, %a

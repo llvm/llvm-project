@@ -28,17 +28,17 @@ int main(int, char**)
 {
     {
         typedef std::unordered_multimap<NotConstructible, NotConstructible,
-                                   test_hash<std::hash<NotConstructible> >,
-                                   test_compare<std::equal_to<NotConstructible> >,
+                                   test_hash<NotConstructible>,
+                                   test_equal_to<NotConstructible>,
                                    test_allocator<std::pair<const NotConstructible,
                                                                   NotConstructible> >
                                    > C;
         C c(7,
-            test_hash<std::hash<NotConstructible> >(8)
+            test_hash<NotConstructible>(8)
            );
         LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.hash_function() == test_hash<std::hash<NotConstructible> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
+        assert(c.hash_function() == test_hash<NotConstructible>(8));
+        assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() ==
                (test_allocator<std::pair<const NotConstructible, NotConstructible> >()));
         assert(c.size() == 0);
@@ -50,17 +50,17 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<NotConstructible, NotConstructible,
-                                   test_hash<std::hash<NotConstructible> >,
-                                   test_compare<std::equal_to<NotConstructible> >,
+                                   test_hash<NotConstructible>,
+                                   test_equal_to<NotConstructible>,
                                    min_allocator<std::pair<const NotConstructible,
                                                                  NotConstructible> >
                                    > C;
         C c(7,
-            test_hash<std::hash<NotConstructible> >(8)
+            test_hash<NotConstructible>(8)
            );
         LIBCPP_ASSERT(c.bucket_count() == 7);
-        assert(c.hash_function() == test_hash<std::hash<NotConstructible> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
+        assert(c.hash_function() == test_hash<NotConstructible>(8));
+        assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() ==
                (min_allocator<std::pair<const NotConstructible, NotConstructible> >()));
         assert(c.size() == 0);

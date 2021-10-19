@@ -10,7 +10,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Log.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -21,8 +21,8 @@ StreamFile::StreamFile(uint32_t flags, uint32_t addr_size, ByteOrder byte_order)
 }
 
 StreamFile::StreamFile(int fd, bool transfer_ownership) : Stream() {
-  m_file_sp =
-      std::make_shared<NativeFile>(fd, File::eOpenOptionWrite, transfer_ownership);
+  m_file_sp = std::make_shared<NativeFile>(fd, File::eOpenOptionWriteOnly,
+                                           transfer_ownership);
 }
 
 StreamFile::StreamFile(FILE *fh, bool transfer_ownership) : Stream() {
@@ -43,7 +43,7 @@ StreamFile::StreamFile(const char *path, File::OpenOptions options,
   }
 }
 
-StreamFile::~StreamFile() {}
+StreamFile::~StreamFile() = default;
 
 void StreamFile::Flush() { m_file_sp->Flush(); }
 

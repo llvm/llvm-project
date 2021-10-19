@@ -13,7 +13,7 @@ __attribute__((objc_exception))
 
 @implementation A
 @end
-// CHECK: @"OBJC_EHTYPE_$_A" = global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
+// CHECK: @"OBJC_EHTYPE_$_A" ={{.*}} global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
 // CHECK-HIDDEN: @"OBJC_EHTYPE_$_A" = hidden global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
 
 __attribute__((objc_exception))
@@ -23,5 +23,5 @@ __attribute__((visibility("default")))
 
 @implementation B
 @end
-// CHECK: @"OBJC_EHTYPE_$_B" = global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
-// CHECK-HIDDEN: @"OBJC_EHTYPE_$_B" = global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
+// CHECK: @"OBJC_EHTYPE_$_B" ={{.*}} global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)
+// CHECK-HIDDEN: @"OBJC_EHTYPE_$_B" ={{.*}} global {{%.*}} { i8** getelementptr inbounds (i8*, i8** @objc_ehtype_vtable, i32 2)

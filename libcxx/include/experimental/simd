@@ -659,6 +659,9 @@ public:
 #pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_SIMD
 
 #if _LIBCPP_STD_VER >= 17
@@ -722,12 +725,12 @@ constexpr size_t __ceil_pow_of_2(size_t __val) {
 
 template <class _Tp, size_t __bytes>
 struct __vec_ext_traits {
-#if !defined(_LIBCPP_COMPILER_CLANG)
+#if !defined(_LIBCPP_COMPILER_CLANG_BASED)
   typedef _Tp type __attribute__((vector_size(__ceil_pow_of_2(__bytes))));
 #endif
 };
 
-#if defined(_LIBCPP_COMPILER_CLANG)
+#if defined(_LIBCPP_COMPILER_CLANG_BASED)
 #define _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, _NUM_ELEMENT)                        \
   template <>                                                                  \
   struct __vec_ext_traits<_TYPE, sizeof(_TYPE) * _NUM_ELEMENT> {               \
@@ -960,7 +963,7 @@ template <int _Np>
 using fixed_size = __simd_abi<_StorageKind::_Array, _Np>;
 
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr size_t max_fixed_size = 32;
+inline constexpr size_t max_fixed_size = 32;
 
 template <class _Tp>
 using compatible = fixed_size<16 / sizeof(_Tp)>;
@@ -987,10 +990,10 @@ struct element_aligned_tag {};
 struct vector_aligned_tag {};
 template <size_t>
 struct overaligned_tag {};
-_LIBCPP_INLINE_VAR constexpr element_aligned_tag element_aligned{};
-_LIBCPP_INLINE_VAR constexpr vector_aligned_tag vector_aligned{};
+inline constexpr element_aligned_tag element_aligned{};
+inline constexpr vector_aligned_tag vector_aligned{};
 template <size_t _Np>
-_LIBCPP_INLINE_VAR constexpr overaligned_tag<_Np> overaligned{};
+inline constexpr overaligned_tag<_Np> overaligned{};
 
 // traits [simd.traits]
 template <class _Tp>
@@ -1029,14 +1032,13 @@ struct is_simd_flag_type<overaligned_tag<_Align>>
     : std::integral_constant<bool, true> {};
 
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr bool is_abi_tag_v = is_abi_tag<_Tp>::value;
+inline constexpr bool is_abi_tag_v = is_abi_tag<_Tp>::value;
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr bool is_simd_v = is_simd<_Tp>::value;
+inline constexpr bool is_simd_v = is_simd<_Tp>::value;
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr bool is_simd_mask_v = is_simd_mask<_Tp>::value;
+inline constexpr bool is_simd_mask_v = is_simd_mask<_Tp>::value;
 template <class _Tp>
-_LIBCPP_INLINE_VAR constexpr bool is_simd_flag_type_v =
-    is_simd_flag_type<_Tp>::value;
+inline constexpr bool is_simd_flag_type_v = is_simd_flag_type<_Tp>::value;
 template <class _Tp, size_t _Np>
 struct abi_for_size {
   using type = simd_abi::fixed_size<_Np>;
@@ -1061,11 +1063,10 @@ template <class _Tp, class _Up = typename _Tp::value_type>
 struct memory_alignment;
 
 template <class _Tp, class _Abi = simd_abi::compatible<_Tp>>
-_LIBCPP_INLINE_VAR constexpr size_t simd_size_v = simd_size<_Tp, _Abi>::value;
+inline constexpr size_t simd_size_v = simd_size<_Tp, _Abi>::value;
 
 template <class _Tp, class _Up = typename _Tp::value_type>
-_LIBCPP_INLINE_VAR constexpr size_t memory_alignment_v =
-    memory_alignment<_Tp, _Up>::value;
+inline constexpr size_t memory_alignment_v = memory_alignment<_Tp, _Up>::value;
 
 // class template simd [simd.class]
 template <class _Tp>
@@ -1565,5 +1566,7 @@ public:
 #endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL_SIMD
+
+_LIBCPP_POP_MACROS
 
 #endif /* _LIBCPP_EXPERIMENTAL_SIMD */

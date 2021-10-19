@@ -54,10 +54,10 @@ the definition or the first declaration seen in a translation unit.
 
 .. option:: IgnoreMacros
 
-   If this option is set to non-zero (default is `1`), the check will not warn
+   If this option is set to `true` (default is `true`), the check will not warn
    about names declared inside macros.
 
 .. option:: Strict
 
-   If this option is set to non-zero (default is `0`), then names must match
+   If this option is set to `true` (default is `false`), then names must match
    exactly (or be absent).

@@ -53,9 +53,6 @@ struct MyArray : public OSArray {
   OSObject *generateObject(OSObject *input) override;
 };
 
-// These are never refcounted.
-struct OSSymbol : OSObject {};
-
 struct OtherStruct {
   static void doNothingToArray(OSArray *array);
   OtherStruct(OSArray *arr);
@@ -529,19 +526,73 @@ void check_dynamic_cast_null_branch(OSObject *obj) {
 
 void check_dynamic_cast_null_check() {
   OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1)); // expected-note{{Call to method 'OSObject::generateObject' returns an OSObject}}
-    // expected-warning@-1{{Potential leak of an object}}
-    // expected-note@-2{{Object leaked}}
-    // expected-note@-3{{Assuming dynamic cast returns null due to type mismatch}}
+                                                                      // expected-warning@-1{{Potential leak of an object}}
+                                                                      // expected-note@-2{{Object leaked}}
+                                                                      // expected-note@-3{{Assuming dynamic cast returns null due to type mismatch}}
   if (!arr)
     return;
   arr->release();
 }
 
+void check_dynamic_cast_alias() {
+  OSObject *originalPtr = OSObject::generateObject(1);   // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject}}
+  OSArray *newPtr = OSDynamicCast(OSArray, originalPtr); // expected-note {{'newPtr' initialized to the value of 'originalPtr'}}
+  if (newPtr) {                                          // expected-note {{'newPtr' is non-null}}
+                                                         // expected-note@-1 {{Taking true branch}}
+    originalPtr = OSObject::generateObject(42);
+    (void)newPtr;
+  }
+  originalPtr->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
+                          // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
+}
+
+void check_dynamic_cast_alias_cond() {
+  OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject}}
+  OSArray *newPtr = 0;
+  if ((newPtr = OSDynamicCast(OSArray, originalPtr))) { // expected-note {{The value of 'originalPtr' is assigned to 'newPtr'}}
+                                                        // expected-note@-1 {{'newPtr' is non-null}}
+                                                        // expected-note@-2 {{Taking true branch}}
+    originalPtr = OSObject::generateObject(42);
+    (void)newPtr;
+  }
+  originalPtr->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
+                          // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
+}
+
+void check_dynamic_cast_alias_intermediate() {
+  OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  OSObject *intermediate = originalPtr;                // TODO: add note here as well
+  OSArray *newPtr = 0;
+  if ((newPtr = OSDynamicCast(OSArray, intermediate))) { // expected-note {{The value of 'intermediate' is assigned to 'newPtr'}}
+                                                         // expected-note@-1 {{'newPtr' is non-null}}
+                                                         // expected-note@-2 {{Taking true branch}}
+    intermediate = OSObject::generateObject(42);
+    (void)newPtr;
+  }
+  intermediate->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
+                           // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
+}
+
+void check_dynamic_cast_alias_intermediate_2() {
+  OSObject *originalPtr = OSObject::generateObject(1); // expected-note {{Call to method 'OSObject::generateObject' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  OSObject *intermediate = originalPtr;                // TODO: add note here as well
+  OSArray *newPtr = 0;
+  if ((newPtr = OSDynamicCast(OSArray, intermediate))) { // expected-note {{Value assigned to 'newPtr'}}
+                                                         // expected-note@-1 {{'newPtr' is non-null}}
+                                                         // expected-note@-2 {{Taking true branch}}
+    intermediate = OSObject::generateObject(42);
+    (void)originalPtr;
+  }
+  (void)newPtr;
+  intermediate->release(); // expected-warning {{Potential leak of an object stored into 'newPtr'}}
+                           // expected-note@-1 {{Object leaked: object allocated and stored into 'newPtr' is not referenced later in this execution path and has a retain count of +1}}
+}
+
 void use_after_release() {
   OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
-  arr->release(); // expected-note{{Object released}}
-  arr->getCount(); // expected-warning{{Reference-counted object is used after it is released}}
-                   // expected-note@-1{{Reference-counted object is used after it is released}}
+  arr->release();                           // expected-note{{Object released}}
+  arr->getCount();                          // expected-warning{{Reference-counted object is used after it is released}}
+                                            // expected-note@-1{{Reference-counted object is used after it is released}}
 }
 
 void potential_leak() {
@@ -644,7 +695,8 @@ void test_smart_ptr_leak() {
   OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   {
     OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
-   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+                        // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+                        // expected-note@-2 {{'p' initialized here}}
     // expected-note@os_smart_ptr.h:13{{Field 'pointer' is non-null}}
     // expected-note@os_smart_ptr.h:13{{Taking true branch}}
     // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
@@ -656,9 +708,9 @@ void test_smart_ptr_leak() {
   // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
   // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
   // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
- // expected-note@-6{{Returning from '~smart_ptr'}}
-} // expected-warning{{Potential leak of an object stored into 'obj'}}
-// expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-note@-6{{Returning from '~smart_ptr'}}
+} // expected-warning{{Potential leak of an object stored into 'p'}}
+// expected-note@-1{{Object leaked: object allocated and stored into 'p' is not referenced later in this execution path and has a retain count of +1}}
 
 void test_smart_ptr_no_leak() {
   OSObject *obj = new OSObject;
@@ -666,6 +718,16 @@ void test_smart_ptr_no_leak() {
     OSObjectPtr p(obj);
   }
   obj->release();
+}
+
+void test_osmetaclass_release() {
+  const char *name = "no_name";
+  const OSMetaClass *meta = OSMetaClass::copyMetaClassWithName(name);
+  if (!meta) {
+    return;
+  } else {
+    meta->releaseMetaClass();
+  }
 }
 
 OSObject *getRuleViolation() {
@@ -757,10 +819,3 @@ void test() {
   b(0);
 }
 } // namespace inherited_constructor_crash
-
-namespace ossymbol_suppression {
-OSSymbol *createSymbol();
-void test() {
-  OSSymbol *sym = createSymbol(); // no-warning
-}
-} // namespace ossymbol_suppression

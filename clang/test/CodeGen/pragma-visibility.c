@@ -12,7 +12,7 @@ int y = 4;
 #pragma GCC visibility push(hidden)
 extern __attribute((visibility("default"))) int z;
 int z = 0;
-// CHECK: @z = global
+// CHECK: @z ={{.*}} global
 #pragma GCC visibility pop
 
 #pragma GCC visibility push(hidden)
@@ -21,4 +21,4 @@ void f() {}
 
 __attribute((visibility("default"))) void g();
 void g() {}
-// CHECK-LABEL: define void @g
+// CHECK-LABEL: define{{.*}} void @g

@@ -60,7 +60,8 @@ void test_nontype_template_bool(int *List, int Length) {
 
 template <int V, int I>
 void test_nontype_template_badarg(int *List, int Length) {
-  /* expected-error {{use of undeclared identifier 'Vec'}} */ #pragma clang loop vectorize_width(Vec) interleave_count(I)
+  /* expected-error {{use of undeclared identifier 'Vec'}} */ #pragma clang loop vectorize_width(Vec) interleave_count(I) /*
+     expected-note {{vectorize_width loop hint malformed; use vectorize_width(X, fixed) or vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')}} */
   /* expected-error {{use of undeclared identifier 'Int'}} */ #pragma clang loop vectorize_width(V) interleave_count(Int)
   for (int i = 0; i < Length; i++) {
     List[i] = i;
@@ -71,6 +72,11 @@ template <typename T>
 void test_type_template_vectorize(int *List, int Length) {
   const T Value = -1;
   /* expected-error {{invalid value '-1'; must be positive}} */ #pragma clang loop vectorize_width(Value)
+  for (int i = 0; i < Length; i++) {
+    List[i] = i;
+  }
+
+  /* expected-error {{invalid value '-1'; must be positive}} */ #pragma clang loop vectorize_width(Value, fixed)
   for (int i = 0; i < Length; i++) {
     List[i] = i;
   }
@@ -189,12 +195,15 @@ test_nontype_template_interleave<8>(List, Length);
 /* expected-warning {{extra tokens at end of '#pragma clang loop'}} */ #pragma clang loop vectorize_width(1 +) 1
 /* expected-warning {{extra tokens at end of '#pragma clang loop'}} */ #pragma clang loop vectorize_width(1) +1
 const int VV = 4;
-/* expected-error {{expected expression}} */ #pragma clang loop vectorize_width(VV +/ 2)
-/* expected-error {{use of undeclared identifier 'undefined'}} */ #pragma clang loop vectorize_width(VV+undefined)
+/* expected-error {{expected expression}} */ #pragma clang loop vectorize_width(VV +/ 2) /*
+   expected-note {{vectorize_width loop hint malformed; use vectorize_width(X, fixed) or vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')}} */
+/* expected-error {{use of undeclared identifier 'undefined'}} */ #pragma clang loop vectorize_width(VV+undefined) /*
+   expected-note {{vectorize_width loop hint malformed; use vectorize_width(X, fixed) or vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')}} */
 /* expected-error {{expected ')'}} */ #pragma clang loop vectorize_width(1+(^*/2 * ()
 /* expected-warning {{extra tokens at end of '#pragma clang loop' - ignored}} */ #pragma clang loop vectorize_width(1+(-0[0]))))))
 
-/* expected-error {{use of undeclared identifier 'badvalue'}} */ #pragma clang loop vectorize_width(badvalue)
+/* expected-error {{use of undeclared identifier 'badvalue'}} */ #pragma clang loop vectorize_width(badvalue) /*
+   expected-note {{vectorize_width loop hint malformed; use vectorize_width(X, fixed) or vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')}} */
 /* expected-error {{use of undeclared identifier 'badvalue'}} */ #pragma clang loop interleave_count(badvalue)
 /* expected-error {{use of undeclared identifier 'badvalue'}} */ #pragma clang loop unroll_count(badvalue)
   while (i-6 < Length) {
@@ -215,7 +224,7 @@ const int VV = 4;
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop interleave(*)
 /* expected-error {{invalid argument; expected 'enable', 'full' or 'disable'}} */ #pragma clang loop unroll(=)
 /* expected-error {{invalid argument; expected 'enable' or 'disable'}} */ #pragma clang loop distribute(+)
-/* expected-error {{type name requires a specifier or qualifier}} expected-error {{expected expression}} */ #pragma clang loop vectorize_width(^)
+/* expected-error {{type name requires a specifier or qualifier}} expected-error {{expected expression}} */ #pragma clang loop vectorize_width(^) /* expected-note {{vectorize_width loop hint malformed; use vectorize_width(X, fixed) or vectorize_width(X, scalable) where X is an integer, or vectorize_width('fixed' or 'scalable')}} */
 /* expected-error {{expected expression}} expected-error {{expected expression}} */ #pragma clang loop interleave_count(/)
 /* expected-error {{expected expression}} expected-error {{expected expression}} */ #pragma clang loop unroll_count(==)
   while (i-8 < Length) {

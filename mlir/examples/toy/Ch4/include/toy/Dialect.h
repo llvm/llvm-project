@@ -14,34 +14,20 @@
 #ifndef MLIR_TUTORIAL_TOY_DIALECT_H_
 #define MLIR_TUTORIAL_TOY_DIALECT_H_
 
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/Function.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "toy/ShapeInferenceInterface.h"
 
-namespace mlir {
-namespace toy {
-
-/// This is the definition of the Toy dialect. A dialect inherits from
-/// mlir::Dialect and registers custom attributes, operations, and types (in its
-/// constructor). It can also override some general behavior exposed via virtual
-/// methods.
-class ToyDialect : public mlir::Dialect {
-public:
-  explicit ToyDialect(mlir::MLIRContext *ctx);
-
-  /// Provide a utility accessor to the dialect namespace. This is used by
-  /// several utilities for casting between dialects.
-  static llvm::StringRef getDialectNamespace() { return "toy"; }
-};
+/// Include the auto-generated header file containing the declaration of the toy
+/// dialect.
+#include "toy/Dialect.h.inc"
 
 /// Include the auto-generated header file containing the declarations of the
 /// toy operations.
 #define GET_OP_CLASSES
 #include "toy/Ops.h.inc"
-
-} // end namespace toy
-} // end namespace mlir
 
 #endif // MLIR_TUTORIAL_TOY_DIALECT_H_

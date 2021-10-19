@@ -51,6 +51,8 @@
 #define KMP_COMPILER "Intel(R) C++ Compiler 18.0"
 #elif __INTEL_COMPILER == 1900
 #define KMP_COMPILER "Intel(R) C++ Compiler 19.0"
+#elif __INTEL_COMPILER == 1910
+#define KMP_COMPILER "Intel(R) C++ Compiler 19.1"
 #elif __INTEL_COMPILER >= 9900
 #define KMP_COMPILER "Intel(R) C++ Compiler mainline"
 #endif
@@ -178,7 +180,7 @@ void __kmp_print_version_1(void) {
 #else
       "no"
 #endif
-          );
+  );
   __kmp_printf("%s", buffer.str);
   __kmp_str_buf_free(&buffer);
   K_DIAG(1, ("KMP_VERSION is true\n"));

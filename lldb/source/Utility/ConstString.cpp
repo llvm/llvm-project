@@ -21,9 +21,9 @@
 #include <array>
 #include <utility>
 
-#include <inttypes.h>
-#include <stdint.h>
-#include <string.h>
+#include <cinttypes>
+#include <cstdint>
+#include <cstring>
 
 using namespace lldb_private;
 
@@ -253,7 +253,7 @@ bool ConstString::Equals(ConstString lhs, ConstString rhs,
   // perform case insensitive equality test
   llvm::StringRef lhs_string_ref(lhs.GetStringRef());
   llvm::StringRef rhs_string_ref(rhs.GetStringRef());
-  return lhs_string_ref.equals_lower(rhs_string_ref);
+  return lhs_string_ref.equals_insensitive(rhs_string_ref);
 }
 
 int ConstString::Compare(ConstString lhs, ConstString rhs,
@@ -270,7 +270,7 @@ int ConstString::Compare(ConstString lhs, ConstString rhs,
     if (case_sensitive) {
       return lhs_string_ref.compare(rhs_string_ref);
     } else {
-      return lhs_string_ref.compare_lower(rhs_string_ref);
+      return lhs_string_ref.compare_insensitive(rhs_string_ref);
     }
   }
 

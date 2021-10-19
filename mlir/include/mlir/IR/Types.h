@@ -15,19 +15,6 @@
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
-class FloatType;
-class Identifier;
-class IndexType;
-class IntegerType;
-class MLIRContext;
-class TypeStorage;
-class TypeRange;
-
-namespace detail {
-struct FunctionTypeStorage;
-struct OpaqueTypeStorage;
-} // namespace detail
-
 /// Instances of the Type class are uniqued, have an immutable identifier and an
 /// optional mutable component.  They wrap a pointer to the storage object owned
 /// by MLIRContext.  Therefore, instances of Type are passed around by value.
@@ -45,8 +32,9 @@ struct OpaqueTypeStorage;
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
 ///  * Optional:
-///    - static LogicalResult verifyConstructionInvariants(Location loc,
-///                                                        Args... args)
+///    - static LogicalResult verify(
+///                                function_ref<InFlightDiagnostic()> emitError,
+///                                Args... args)
 ///      * This method is invoked when calling the 'TypeBase::get/getChecked'
 ///        methods to ensure that the arguments passed in are valid to construct
 ///        a type instance with.
@@ -91,6 +79,8 @@ public:
 
   using ImplType = TypeStorage;
 
+  using AbstractTy = AbstractType;
+
   constexpr Type() : impl(nullptr) {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
@@ -105,8 +95,7 @@ public:
   bool operator!() const { return impl == nullptr; }
 
   template <typename U> bool isa() const;
-  template <typename First, typename Second, typename... Rest>
-  bool isa() const;
+  template <typename First, typename Second, typename... Rest> bool isa() const;
   template <typename U> U dyn_cast() const;
   template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
@@ -118,55 +107,57 @@ public:
   /// dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
 
-  /// Return the LLVMContext in which this type was uniqued.
+  /// Return the MLIRContext in which this type was uniqued.
   MLIRContext *getContext() const;
 
   /// Get the dialect this type is registered to.
-  Dialect &getDialect() const;
+  Dialect &getDialect() const { return impl->getAbstractType().getDialect(); }
 
   // Convenience predicates.  This is only for floating point types,
   // derived types should use isa/dyn_cast.
-  bool isIndex();
-  bool isBF16();
-  bool isF16();
-  bool isF32();
-  bool isF64();
+  bool isIndex() const;
+  bool isBF16() const;
+  bool isF16() const;
+  bool isF32() const;
+  bool isF64() const;
+  bool isF80() const;
+  bool isF128() const;
 
   /// Return true if this is an integer type with the specified width.
-  bool isInteger(unsigned width);
+  bool isInteger(unsigned width) const;
   /// Return true if this is a signless integer type (with the specified width).
-  bool isSignlessInteger();
-  bool isSignlessInteger(unsigned width);
+  bool isSignlessInteger() const;
+  bool isSignlessInteger(unsigned width) const;
   /// Return true if this is a signed integer type (with the specified width).
-  bool isSignedInteger();
-  bool isSignedInteger(unsigned width);
+  bool isSignedInteger() const;
+  bool isSignedInteger(unsigned width) const;
   /// Return true if this is an unsigned integer type (with the specified
   /// width).
-  bool isUnsignedInteger();
-  bool isUnsignedInteger(unsigned width);
+  bool isUnsignedInteger() const;
+  bool isUnsignedInteger(unsigned width) const;
 
   /// Return the bit width of an integer or a float type, assert failure on
   /// other types.
-  unsigned getIntOrFloatBitWidth();
+  unsigned getIntOrFloatBitWidth() const;
 
   /// Return true if this is a signless integer or index type.
-  bool isSignlessIntOrIndex();
+  bool isSignlessIntOrIndex() const;
   /// Return true if this is a signless integer, index, or float type.
-  bool isSignlessIntOrIndexOrFloat();
+  bool isSignlessIntOrIndexOrFloat() const;
   /// Return true of this is a signless integer or a float type.
-  bool isSignlessIntOrFloat();
+  bool isSignlessIntOrFloat() const;
 
   /// Return true if this is an integer (of any signedness) or an index type.
-  bool isIntOrIndex();
+  bool isIntOrIndex() const;
   /// Return true if this is an integer (of any signedness) or a float type.
-  bool isIntOrFloat();
+  bool isIntOrFloat() const;
   /// Return true if this is an integer (of any signedness), index, or float
   /// type.
-  bool isIntOrIndexOrFloat();
+  bool isIntOrIndexOrFloat() const;
 
   /// Print the current type.
-  void print(raw_ostream &os);
-  void dump();
+  void print(raw_ostream &os) const;
+  void dump() const;
 
   friend ::llvm::hash_code hash_value(Type arg);
 
@@ -178,8 +169,14 @@ public:
     return Type(reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
   }
 
+  /// Returns true if the type was registered with a particular trait.
+  template <template <typename T> class Trait>
+  bool hasTrait() {
+    return getAbstractType().hasTrait<Trait>();
+  }
+
   /// Return the abstract type descriptor for this type.
-  const AbstractType &getAbstractType() { return impl->getAbstractType(); }
+  const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 
 protected:
   ImplType *impl;
@@ -226,62 +223,8 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// FunctionType
+// Type Utils
 //===----------------------------------------------------------------------===//
-
-/// Function types map from a list of inputs to a list of results.
-class FunctionType
-    : public Type::TypeBase<FunctionType, Type, detail::FunctionTypeStorage> {
-public:
-  using Base::Base;
-
-  static FunctionType get(TypeRange inputs, TypeRange results,
-                          MLIRContext *context);
-
-  // Input types.
-  unsigned getNumInputs() const;
-  Type getInput(unsigned i) const { return getInputs()[i]; }
-  ArrayRef<Type> getInputs() const;
-
-  // Result types.
-  unsigned getNumResults() const;
-  Type getResult(unsigned i) const { return getResults()[i]; }
-  ArrayRef<Type> getResults() const;
-};
-
-//===----------------------------------------------------------------------===//
-// OpaqueType
-//===----------------------------------------------------------------------===//
-
-/// Opaque types represent types of non-registered dialects. These are types
-/// represented in their raw string form, and can only usefully be tested for
-/// type equality.
-class OpaqueType
-    : public Type::TypeBase<OpaqueType, Type, detail::OpaqueTypeStorage> {
-public:
-  using Base::Base;
-
-  /// Get or create a new OpaqueType with the provided dialect and string data.
-  static OpaqueType get(Identifier dialect, StringRef typeData,
-                        MLIRContext *context);
-
-  /// Get or create a new OpaqueType with the provided dialect and string data.
-  /// If the given identifier is not a valid namespace for a dialect, then a
-  /// null type is returned.
-  static OpaqueType getChecked(Identifier dialect, StringRef typeData,
-                               MLIRContext *context, Location location);
-
-  /// Returns the dialect namespace of the opaque type.
-  Identifier getDialectNamespace() const;
-
-  /// Returns the raw type data of the opaque type.
-  StringRef getTypeData() const;
-
-  /// Verify the construction of an opaque type.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    Identifier dialect,
-                                                    StringRef typeData);
-};
 
 // Make Type hashable.
 inline ::llvm::hash_code hash_value(Type arg) {

@@ -9,15 +9,13 @@
 #include "JSON.h"
 
 // C includes
-#include <assert.h>
-#include <limits.h>
+#include <cassert>
+#include <climits>
 
 // C++ includes
-#include "lldb/Host/StringConvert.h"
+#include "StringConvert.h"
 #include <iomanip>
 #include <sstream>
-
-using namespace lldb_private;
 
 std::string JSONString::json_string_quote_metachars(const std::string &s) {
   if (s.find('"') == std::string::npos)

@@ -18,7 +18,7 @@ entry:
 
   ; CHECK-LABEL: func_guard_nocf
   ; CHECK:       adrp x8, target_func
-	; CHECK:       add x8, x8, target_func
+	; CHECK:       add x8, x8, :lo12:target_func
   ; CHECK-NOT:   __guard_check_icall_fptr
 	; CHECK:       blr x8
 }
@@ -36,10 +36,10 @@ entry:
 
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_optnone_cf
-	; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        add x9, x8, __guard_check_icall_fptr
 	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, target_func
+	; CHECK:        add x8, x8, :lo12:target_func
+	; CHECK:        adrp x9, __guard_check_icall_fptr
+	; CHECK:        add x9, x9, :lo12:__guard_check_icall_fptr
 	; CHECK:        ldr x9, [x9]
 	; CHECK:        mov x15, x8
 	; CHECK:        blr x9
@@ -60,9 +60,9 @@ entry:
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_cf
   ; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        ldr x9, [x8, __guard_check_icall_fptr]
+	; CHECK:        ldr x9, [x8, :lo12:__guard_check_icall_fptr]
 	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, target_func
+	; CHECK:        add x8, x8, :lo12:target_func
 	; CHECK:        mov x15, x8
 	; CHECK: 	     	blr x9
 	; CHECK-NEXT:   blr x8
@@ -89,15 +89,15 @@ lpad:                                             ; preds = %entry
   ; The call to __guard_check_icall_fptr should come immediately before the call to the target function.
   ; CHECK-LABEL: func_cf_invoke
   ; CHECK:        adrp x8, __guard_check_icall_fptr
-	; CHECK:        ldr x9, [x8, __guard_check_icall_fptr]
+	; CHECK:        ldr x9, [x8, :lo12:__guard_check_icall_fptr]
 	; CHECK:        adrp x8, target_func
-	; CHECK:        add x8, x8, target_func
+	; CHECK:        add x8, x8, :lo12:target_func
 	; CHECK:        mov x15, x8
 	; CHECK:        blr x9
   ; CHECK-NEXT:   .Ltmp0:
 	; CHECK-NEXT:   blr x8
-  ; CHECK:       ; %invoke.cont
-  ; CHECK:       ; %lpad
+  ; CHECK:       // %common.ret
+  ; CHECK:       // %lpad
 }
 
 declare void @h()

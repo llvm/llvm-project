@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m
 ! C730 The same type-attr-spec shall not appear more than once in a given 
 ! derived-type-stmt.

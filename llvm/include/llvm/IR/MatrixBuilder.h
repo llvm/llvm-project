@@ -74,7 +74,7 @@ public:
 
     Value *Ops[] = {DataPtr, Stride, B.getInt1(IsVolatile), B.getInt32(Rows),
                     B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {RetType};
+    Type *OverloadedTypes[] = {RetType, Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_load, OverloadedTypes);
@@ -82,7 +82,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(1, AlignAttr);
+    Call->addParamAttr(0, AlignAttr);
     return Call;
   }
 
@@ -97,7 +97,7 @@ public:
     Value *Ops[] = {Matrix,           Ptr,
                     Stride,           B.getInt1(IsVolatile),
                     B.getInt32(Rows), B.getInt32(Columns)};
-    Type *OverloadedTypes[] = {Matrix->getType()};
+    Type *OverloadedTypes[] = {Matrix->getType(), Stride->getType()};
 
     Function *TheFn = Intrinsic::getDeclaration(
         getModule(), Intrinsic::matrix_column_major_store, OverloadedTypes);
@@ -105,7 +105,7 @@ public:
     CallInst *Call = B.CreateCall(TheFn->getFunctionType(), TheFn, Ops, Name);
     Attribute AlignAttr =
         Attribute::getWithAlignment(Call->getContext(), Alignment);
-    Call->addAttribute(2, AlignAttr);
+    Call->addParamAttr(1, AlignAttr);
     return Call;
   }
 
@@ -215,9 +215,39 @@ public:
     return B.CreateMul(LHS, RHS);
   }
 
-  /// Extracts the element at (\p RowIdx, \p ColumnIdx) from \p Matrix.
-  Value *CreateExtractElement(Value *Matrix, Value *RowIdx, Value *ColumnIdx,
-                              unsigned NumRows, Twine const &Name = "") {
+  /// Divide matrix \p LHS by scalar \p RHS. If the operands are integers, \p
+  /// IsUnsigned indicates whether UDiv or SDiv should be used.
+  Value *CreateScalarDiv(Value *LHS, Value *RHS, bool IsUnsigned) {
+    assert(LHS->getType()->isVectorTy() && !RHS->getType()->isVectorTy());
+    assert(!isa<ScalableVectorType>(LHS->getType()) &&
+           "LHS Assumed to be fixed width");
+    RHS =
+        B.CreateVectorSplat(cast<VectorType>(LHS->getType())->getElementCount(),
+                            RHS, "scalar.splat");
+    return cast<VectorType>(LHS->getType())
+                   ->getElementType()
+                   ->isFloatingPointTy()
+               ? B.CreateFDiv(LHS, RHS)
+               : (IsUnsigned ? B.CreateUDiv(LHS, RHS) : B.CreateSDiv(LHS, RHS));
+  }
+
+  /// Create an assumption that \p Idx is less than \p NumElements.
+  void CreateIndexAssumption(Value *Idx, unsigned NumElements,
+                             Twine const &Name = "") {
+
+    Value *NumElts =
+        B.getIntN(Idx->getType()->getScalarSizeInBits(), NumElements);
+    auto *Cmp = B.CreateICmpULT(Idx, NumElts);
+    if (auto *ConstCond = dyn_cast<ConstantInt>(Cmp))
+      assert(ConstCond->isOne() && "Index must be valid!");
+    else
+      B.CreateAssumption(Cmp);
+  }
+
+  /// Compute the index to access the element at (\p RowIdx, \p ColumnIdx) from
+  /// a matrix with \p NumRows embedded in a vector.
+  Value *CreateIndex(Value *RowIdx, Value *ColumnIdx, unsigned NumRows,
+                     Twine const &Name = "") {
 
     unsigned MaxWidth = std::max(RowIdx->getType()->getScalarSizeInBits(),
                                  ColumnIdx->getType()->getScalarSizeInBits());
@@ -225,9 +255,7 @@ public:
     RowIdx = B.CreateZExt(RowIdx, IntTy);
     ColumnIdx = B.CreateZExt(ColumnIdx, IntTy);
     Value *NumRowsV = B.getIntN(MaxWidth, NumRows);
-    return B.CreateExtractElement(
-        Matrix, B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx),
-        "matext");
+    return B.CreateAdd(B.CreateMul(ColumnIdx, NumRowsV), RowIdx);
   }
 };
 

@@ -320,13 +320,15 @@ TEST(ProgramTest, TestWriteWithSystemEncoding) {
 #if defined(_WIN32)
   char buf[18];
   ASSERT_EQ(::read(fd, buf, 18), 18);
+  const char *utf16_text;
   if (strncmp(buf, "\xfe\xff", 2) == 0) { // UTF16-BE
-    ASSERT_EQ(strncmp(&buf[2], utf16be_text, 16), 0);
+    utf16_text = utf16be_text;
   } else if (strncmp(buf, "\xff\xfe", 2) == 0) { // UTF16-LE
-    ASSERT_EQ(strncmp(&buf[2], utf16le_text, 16), 0);
+    utf16_text = utf16le_text;
   } else {
     FAIL() << "Invalid BOM in UTF-16 file";
   }
+  ASSERT_EQ(strncmp(&buf[2], utf16_text, 16), 0);
 #else
   char buf[10];
   ASSERT_EQ(::read(fd, buf, 10), 10);

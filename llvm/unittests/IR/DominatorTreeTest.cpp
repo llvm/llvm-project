@@ -1071,3 +1071,32 @@ TEST(DominatorTree, EdgeDomination) {
     EXPECT_TRUE(DT->dominates(E23, E23));
   });
 }
+
+TEST(DominatorTree, ValueDomination) {
+  StringRef ModuleString = R"(
+    @foo = global i8 0
+    define i8 @f(i8 %arg) {
+      ret i8 %arg
+    }
+  )";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(*M, "f",
+                 [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+    Argument *A = F.getArg(0);
+    GlobalValue *G = M->getNamedValue("foo");
+    Constant *C = ConstantInt::getNullValue(Type::getInt8Ty(Context));
+
+    Instruction *I = F.getEntryBlock().getTerminator();
+    EXPECT_TRUE(DT->dominates(A, I));
+    EXPECT_TRUE(DT->dominates(G, I));
+    EXPECT_TRUE(DT->dominates(C, I));
+
+    const Use &U = I->getOperandUse(0);
+    EXPECT_TRUE(DT->dominates(A, U));
+    EXPECT_TRUE(DT->dominates(G, U));
+    EXPECT_TRUE(DT->dominates(C, U));
+  });
+}

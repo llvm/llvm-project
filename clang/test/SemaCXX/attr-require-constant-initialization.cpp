@@ -152,7 +152,7 @@ void test_basic_start_static_2_2() {
 #else
   ATTR static PODType pod; // expected-error {{variable does not have a constant initializer}}
 // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
-// expected-note@-2 {{subobject of type 'int' is not initialized}}
+// expected-note-re@-2 {{{{non-constexpr constructor|subobject of type 'int' is not initialized}}}}
 #endif
   ATTR static PODType pot2 = {ReturnInt()}; // expected-error {{variable does not have a constant initializer}}
                                             // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
@@ -191,7 +191,7 @@ struct TT2 {
 PODType TT2::pod_noinit; // expected-note 0+ {{declared here}}
 #if __cplusplus >= 201103L
 // expected-error@-2 {{variable does not have a constant initializer}}
-// expected-note@-3 {{subobject of type 'int' is not initialized}}
+// expected-note-re@-3 {{{{non-constexpr constructor|subobject of type 'int' is not initialized}}}}
 #endif
 PODType TT2::pod_copy_init(TT2::pod_noinit); // expected-error {{variable does not have a constant initializer}}
 #if __cplusplus >= 201103L

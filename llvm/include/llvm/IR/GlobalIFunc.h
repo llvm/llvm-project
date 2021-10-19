@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \brief
+/// \file
 /// This file contains the declaration of the GlobalIFunc class, which
 /// represents a single indirect function in the IR. Indirect function uses
 /// ELF symbol type extension to mark that the address of a declaration should
@@ -57,11 +57,15 @@ public:
   void setResolver(Constant *Resolver) {
     setIndirectSymbol(Resolver);
   }
-  const Constant *getResolver() const {
-    return getIndirectSymbol();
-  }
-  Constant *getResolver() {
-    return getIndirectSymbol();
+  const Constant *getResolver() const { return getIndirectSymbol(); }
+  Constant *getResolver() { return getIndirectSymbol(); }
+
+  // Return the resolver function after peeling off potential ConstantExpr
+  // indirection.
+  const Function *getResolverFunction() const;
+  Function *getResolverFunction() {
+    return const_cast<Function *>(
+        static_cast<const GlobalIFunc *>(this)->getResolverFunction());
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:

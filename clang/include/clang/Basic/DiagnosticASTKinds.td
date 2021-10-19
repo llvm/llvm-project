@@ -72,6 +72,10 @@ def note_constexpr_array_index : Note<"cannot refer to element %0 of "
   "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
+def note_constexpr_dynamic_rounding : Note<
+  "cannot evaluate this expression if rounding mode is dynamic">;
+def note_constexpr_float_arithmetic_strict : Note<
+  "compile time floating point arithmetic suppressed in strict evaluation modes">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<
   "subtracted pointers are not elements of the same array">;
 def note_constexpr_pointer_subtraction_zero_size : Note<
@@ -250,7 +254,7 @@ def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
   "non-trivial destruction of type %0 in a constant expression is not supported">;
-def note_constexpr_unsupported_tempoarary_nontrivial_dtor : Note<
+def note_constexpr_unsupported_temporary_nontrivial_dtor : Note<
   "non-trivial destruction of lifetime-extended temporary with type %0 "
   "used in the result of a constant expression is not yet supported">;
 def note_constexpr_unsupported_unsized_array : Note<
@@ -298,6 +302,8 @@ def note_constexpr_bit_cast_invalid_subtype : Note<
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
+def note_constexpr_bit_cast_unrepresentable_value : Note<
+  "value %1 cannot be represented in type %0">;
 def note_constexpr_pseudo_destructor : Note<
   "pseudo-destructor call is not permitted in constant expressions "
   "until C++20">;
@@ -343,6 +349,8 @@ def note_constexpr_new_delete_mismatch : Note<
   "used to delete pointer to "
   "%select{array object of type %2|non-array object of type %2|"
   "object allocated with 'new'}0}1">;
+def note_constexpr_deallocate_null : Note<
+  "'std::allocator<...>::deallocate' used to delete a null pointer">;
 def note_constexpr_delete_subobject : Note<
   "delete of pointer%select{ to subobject|}1 '%0' "
   "%select{|that does not point to complete object}1">;

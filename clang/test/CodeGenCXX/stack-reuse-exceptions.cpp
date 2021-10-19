@@ -18,7 +18,7 @@ struct NontrivialDtor {
   ~NontrivialDtor();
 };
 
-// CHECK-LABEL: define void @_Z33cleanupsAreEmittedWithoutTryCatchv
+// CHECK-LABEL: define{{.*}} void @_Z33cleanupsAreEmittedWithoutTryCatchv
 void cleanupsAreEmittedWithoutTryCatch() {
 // CHECK: %[[CLEAN:[^ ]+]] = bitcast %struct.NontrivialDtor* %{{[^ ]+}} to i8*
 // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* nonnull %[[CLEAN]])
@@ -56,7 +56,7 @@ void cleanupsAreEmittedWithoutTryCatch() {
   getLarge();
 }
 
-// CHECK-LABEL: define void @_Z30cleanupsAreEmittedWithTryCatchv
+// CHECK-LABEL: define{{.*}} void @_Z30cleanupsAreEmittedWithTryCatchv
 void cleanupsAreEmittedWithTryCatch() {
 // CHECK: %[[CLEAN:[^ ]+]] = bitcast %struct.NontrivialDtor* %{{[^ ]+}} to i8*
 // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* nonnull %[[CLEAN]])
@@ -121,7 +121,7 @@ void cleanupsAreEmittedWithTryCatch() {
   getLarge();
 }
 
-// CHECK-LABEL: define void @_Z39cleanupInTryHappensBeforeCleanupInCatchv
+// CHECK-LABEL: define{{.*}} void @_Z39cleanupInTryHappensBeforeCleanupInCatchv
 void cleanupInTryHappensBeforeCleanupInCatch() {
 // CHECK: %[[T1:[^ ]+]] = bitcast %struct.Large* %{{[^ ]+}} to i8*
 // CHECK: call void @llvm.lifetime.start.p0i8({{[^,]+}}, i8* nonnull %[[T1]])

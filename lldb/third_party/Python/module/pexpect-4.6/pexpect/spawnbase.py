@@ -30,7 +30,7 @@ class SpawnBase(object):
     pid = None
     flag_eof = False
 
-    def __init__(self, timeout=30, maxread=2000, searchwindowsize=None,
+    def __init__(self, timeout=60, maxread=2000, searchwindowsize=None,
                  logfile=None, encoding=None, codec_errors='strict'):
         self.stdin = sys.stdin
         self.stdout = sys.stdout

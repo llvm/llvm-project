@@ -61,10 +61,17 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
 bool GEPOperator::accumulateConstantOffset(
     const DataLayout &DL, APInt &Offset,
     function_ref<bool(Value &, APInt &)> ExternalAnalysis) const {
-   assert(Offset.getBitWidth() ==
-              DL.getIndexSizeInBits(getPointerAddressSpace()) &&
-          "The offset bit width does not match DL specification.");
+  assert(Offset.getBitWidth() ==
+             DL.getIndexSizeInBits(getPointerAddressSpace()) &&
+         "The offset bit width does not match DL specification.");
+  SmallVector<const Value *> Index(value_op_begin() + 1, value_op_end());
+  return GEPOperator::accumulateConstantOffset(getSourceElementType(), Index,
+                                               DL, Offset, ExternalAnalysis);
+}
 
+bool GEPOperator::accumulateConstantOffset(
+    Type *SourceType, ArrayRef<const Value *> Index, const DataLayout &DL,
+    APInt &Offset, function_ref<bool(Value &, APInt &)> ExternalAnalysis) {
   bool UsedExternalAnalysis = false;
   auto AccumulateOffset = [&](APInt Index, uint64_t Size) -> bool {
     Index = Index.sextOrTrunc(Offset.getBitWidth());
@@ -85,9 +92,10 @@ bool GEPOperator::accumulateConstantOffset(
     }
     return true;
   };
-
-  for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
-       GTI != GTE; ++GTI) {
+  auto begin = generic_gep_type_iterator<decltype(Index.begin())>::begin(
+      SourceType, Index.begin());
+  auto end = generic_gep_type_iterator<decltype(Index.end())>::end(Index.end());
+  for (auto GTI = begin, GTE = end; GTI != GTE; ++GTI) {
     // Scalable vectors are multiplied by a runtime constant.
     bool ScalableType = false;
     if (isa<ScalableVectorType>(GTI.getIndexedType()))
@@ -131,6 +139,65 @@ bool GEPOperator::accumulateConstantOffset(
     if (!AccumulateOffset(AnalysisIndex,
                           DL.getTypeAllocSize(GTI.getIndexedType())))
       return false;
+  }
+  return true;
+}
+
+bool GEPOperator::collectOffset(
+    const DataLayout &DL, unsigned BitWidth,
+    MapVector<Value *, APInt> &VariableOffsets,
+    APInt &ConstantOffset) const {
+  assert(BitWidth == DL.getIndexSizeInBits(getPointerAddressSpace()) &&
+         "The offset bit width does not match DL specification.");
+
+  auto CollectConstantOffset = [&](APInt Index, uint64_t Size) {
+    Index = Index.sextOrTrunc(BitWidth);
+    APInt IndexedSize = APInt(BitWidth, Size);
+    ConstantOffset += Index * IndexedSize;
+  };
+
+  for (gep_type_iterator GTI = gep_type_begin(this), GTE = gep_type_end(this);
+       GTI != GTE; ++GTI) {
+    // Scalable vectors are multiplied by a runtime constant.
+    bool ScalableType = isa<ScalableVectorType>(GTI.getIndexedType());
+
+    Value *V = GTI.getOperand();
+    StructType *STy = GTI.getStructTypeOrNull();
+    // Handle ConstantInt if possible.
+    if (auto ConstOffset = dyn_cast<ConstantInt>(V)) {
+      if (ConstOffset->isZero())
+        continue;
+      // If the type is scalable and the constant is not zero (vscale * n * 0 =
+      // 0) bailout.
+      // TODO: If the runtime value is accessible at any point before DWARF
+      // emission, then we could potentially keep a forward reference to it
+      // in the debug value to be filled in later.
+      if (ScalableType)
+        return false;
+      // Handle a struct index, which adds its field offset to the pointer.
+      if (STy) {
+        unsigned ElementIdx = ConstOffset->getZExtValue();
+        const StructLayout *SL = DL.getStructLayout(STy);
+        // Element offset is in bytes.
+        CollectConstantOffset(APInt(BitWidth, SL->getElementOffset(ElementIdx)),
+                              1);
+        continue;
+      }
+      CollectConstantOffset(ConstOffset->getValue(),
+                            DL.getTypeAllocSize(GTI.getIndexedType()));
+      continue;
+    }
+
+    if (STy || ScalableType)
+      return false;
+    APInt IndexedSize =
+        APInt(BitWidth, DL.getTypeAllocSize(GTI.getIndexedType()));
+    // Insert an initial offset of 0 for V iff none exists already, then
+    // increment the offset by IndexedSize.
+    if (!IndexedSize.isZero()) {
+      VariableOffsets.insert({V, APInt(BitWidth, 0)});
+      VariableOffsets[V] += IndexedSize;
+    }
   }
   return true;
 }

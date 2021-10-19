@@ -13,9 +13,9 @@
 
 #include <pthread.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 const int kNumThreads = 2;
 pthread_t tid[kNumThreads];
@@ -47,7 +47,7 @@ void child(void) {
     pthread_join(tid[i], 0);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   const int kChildren = 40;
   pid_t pid;
   for (int i = 0; i < kChildren; ++i) {

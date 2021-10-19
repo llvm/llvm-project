@@ -18,6 +18,8 @@
 
 #include <shared_mutex>
 #include <cassert>
+#include <chrono>
+#include <mutex>
 
 #include "test_macros.h"
 

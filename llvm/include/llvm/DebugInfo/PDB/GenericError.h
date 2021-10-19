@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_ERROR_H
-#define LLVM_DEBUGINFO_PDB_ERROR_H
+#ifndef LLVM_DEBUGINFO_PDB_GENERICERROR_H
+#define LLVM_DEBUGINFO_PDB_GENERICERROR_H
 
 #include "llvm/Support/Error.h"
 

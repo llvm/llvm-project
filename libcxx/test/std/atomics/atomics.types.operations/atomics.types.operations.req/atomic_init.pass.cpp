@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: libcpp-has-no-threads
-//  ... assertion fails line 36
+// XFAIL: !non-lockfree-atomics
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <atomic>
 
 // template <class T>
 //     void
-//     atomic_init(volatile atomic<T>* obj, T desr);
+//     atomic_init(volatile atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 //
 // template <class T>
 //     void
-//     atomic_init(atomic<T>* obj, T desr);
+//     atomic_init(atomic<T>* obj, atomic<T>::value_type desr) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -36,6 +37,9 @@ struct TestFn {
     volatile A vt;
     std::atomic_init(&vt, T(2));
     assert(vt == T(2));
+
+    ASSERT_NOEXCEPT(std::atomic_init(&t, T(1)));
+    ASSERT_NOEXCEPT(std::atomic_init(&vt, T(2)));
   }
 };
 

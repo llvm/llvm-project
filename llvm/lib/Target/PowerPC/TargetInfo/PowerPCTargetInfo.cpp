@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 
 Target &llvm::getThePPC32Target() {
   static Target ThePPC32Target;
   return ThePPC32Target;
+}
+Target &llvm::getThePPC32LETarget() {
+  static Target ThePPC32LETarget;
+  return ThePPC32LETarget;
 }
 Target &llvm::getThePPC64Target() {
   static Target ThePPC64Target;
@@ -24,8 +28,11 @@ Target &llvm::getThePPC64LETarget() {
 }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetInfo() {
-  RegisterTarget<Triple::ppc, /*HasJIT=*/true> X(getThePPC32Target(), "ppc32",
+  RegisterTarget<Triple::ppc, /*HasJIT=*/true> W(getThePPC32Target(), "ppc32",
                                                  "PowerPC 32", "PPC");
+
+  RegisterTarget<Triple::ppcle, /*HasJIT=*/true> X(
+      getThePPC32LETarget(), "ppc32le", "PowerPC 32 LE", "PPC");
 
   RegisterTarget<Triple::ppc64, /*HasJIT=*/true> Y(getThePPC64Target(), "ppc64",
                                                    "PowerPC 64", "PPC");

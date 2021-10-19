@@ -21,7 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/Core/Lookup.h"
+#include "clang/Tooling/Refactoring/Lookup.h"
 #include "clang/Tooling/Refactoring/RecursiveSymbolVisitor.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
@@ -222,6 +222,24 @@ public:
                             /*Context=*/nullptr,
                             /*Specifier=*/nullptr,
                             /*IgnorePrefixQualifiers=*/true});
+    }
+    return true;
+  }
+
+  bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
+    for (const DesignatedInitExpr::Designator &D : E->designators()) {
+      if (D.isFieldDesignator() && D.getField()) {
+        const FieldDecl *Decl = D.getField();
+        if (isInUSRSet(Decl)) {
+          auto StartLoc = D.getFieldLoc();
+          auto EndLoc = D.getFieldLoc();
+          RenameInfos.push_back({StartLoc, EndLoc,
+                                 /*FromDecl=*/nullptr,
+                                 /*Context=*/nullptr,
+                                 /*Specifier=*/nullptr,
+                                 /*IgnorePrefixQualifiers=*/true});
+        }
+      }
     }
     return true;
   }

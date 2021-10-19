@@ -42,7 +42,7 @@ void solaris::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -152,7 +152,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = Args.MakeArgString(getToolChain().GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 static StringRef getSolarisLibSuffix(const llvm::Triple &Triple) {
@@ -283,9 +283,7 @@ void Solaris::addLibStdCxxIncludePaths(
   const GCCVersion &Version = GCCInstallation.getVersion();
 
   // The primary search for libstdc++ supports multiarch variants.
-  addLibStdCXXIncludePaths(LibDir.str() + "/../include", "/c++/" + Version.Text,
-                           TripleStr,
-                           /*GCCMultiarchTriple*/ "",
-                           /*TargetMultiarchTriple*/ "",
-                           Multilib.includeSuffix(), DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
+                           TripleStr, Multilib.includeSuffix(), DriverArgs,
+                           CC1Args);
 }

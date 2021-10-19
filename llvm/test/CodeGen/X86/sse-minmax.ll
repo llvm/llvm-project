@@ -103,8 +103,7 @@ define double @ole(double %x, double %y)  {
 ; STRICT-NEXT:    cmplesd %xmm1, %xmm2
 ; STRICT-NEXT:    andpd %xmm2, %xmm0
 ; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm0, %xmm2
-; STRICT-NEXT:    movapd %xmm2, %xmm0
+; STRICT-NEXT:    orpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole:
@@ -261,11 +260,10 @@ define double @oge_x(double %x)  {
 define double @ole_x(double %x)  {
 ; STRICT-LABEL: ole_x:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    xorpd %xmm2, %xmm2
-; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmplesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    xorpd %xmm1, %xmm1
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    cmplesd %xmm1, %xmm2
+; STRICT-NEXT:    andpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole_x:
@@ -338,8 +336,7 @@ define double @ugt(double %x, double %y)  {
 ; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
 ; STRICT-NEXT:    andpd %xmm2, %xmm0
 ; STRICT-NEXT:    andnpd %xmm1, %xmm2
-; STRICT-NEXT:    orpd %xmm0, %xmm2
-; STRICT-NEXT:    movapd %xmm2, %xmm0
+; STRICT-NEXT:    orpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt:
@@ -499,11 +496,10 @@ define double @ule_inverse(double %x, double %y)  {
 define double @ugt_x(double %x)  {
 ; STRICT-LABEL: ugt_x:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    xorpd %xmm2, %xmm2
-; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmpnlesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    xorpd %xmm1, %xmm1
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
+; STRICT-NEXT:    andpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt_x:
@@ -674,7 +670,7 @@ define double @ule_inverse_x(double %x)  {
 define double @ogt_y(double %x)  {
 ; ALL-LABEL: ogt_y:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; ALL-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ALL-NEXT:    retq
   %c = fcmp ogt double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -684,7 +680,7 @@ define double @ogt_y(double %x)  {
 define double @olt_y(double %x)  {
 ; ALL-LABEL: olt_y:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    minsd {{.*}}(%rip), %xmm0
+; ALL-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ALL-NEXT:    retq
   %c = fcmp olt double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -701,7 +697,7 @@ define double @ogt_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: ogt_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: ogt_inverse_y:
@@ -725,7 +721,7 @@ define double @olt_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: olt_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: olt_inverse_y:
@@ -752,7 +748,7 @@ define double @oge_y(double %x)  {
 ;
 ; RELAX-LABEL: oge_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp oge double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -762,18 +758,17 @@ define double @oge_y(double %x)  {
 define double @ole_y(double %x)  {
 ; STRICT-LABEL: ole_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmplesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm0
-; STRICT-NEXT:    andnpd %xmm2, %xmm1
-; STRICT-NEXT:    orpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    cmplesd %xmm1, %xmm2
+; STRICT-NEXT:    andpd %xmm2, %xmm0
+; STRICT-NEXT:    andnpd %xmm1, %xmm2
+; STRICT-NEXT:    orpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ole_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    minsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp ole double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -794,7 +789,7 @@ define double @oge_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: oge_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: oge_inverse_y:
@@ -822,7 +817,7 @@ define double @ole_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: ole_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: ole_inverse_y:
@@ -839,18 +834,17 @@ define double @ole_inverse_y(double %x)  {
 define double @ugt_y(double %x)  {
 ; STRICT-LABEL: ugt_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; STRICT-NEXT:    movapd %xmm0, %xmm1
-; STRICT-NEXT:    cmpnlesd %xmm2, %xmm1
-; STRICT-NEXT:    andpd %xmm1, %xmm0
-; STRICT-NEXT:    andnpd %xmm2, %xmm1
-; STRICT-NEXT:    orpd %xmm0, %xmm1
-; STRICT-NEXT:    movapd %xmm1, %xmm0
+; STRICT-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; STRICT-NEXT:    movapd %xmm0, %xmm2
+; STRICT-NEXT:    cmpnlesd %xmm1, %xmm2
+; STRICT-NEXT:    andpd %xmm2, %xmm0
+; STRICT-NEXT:    andnpd %xmm1, %xmm2
+; STRICT-NEXT:    orpd %xmm2, %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; RELAX-LABEL: ugt_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp ugt double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -870,7 +864,7 @@ define double @ult_y(double %x)  {
 ;
 ; RELAX-LABEL: ult_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    minsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp ult double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -891,7 +885,7 @@ define double @ugt_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: ugt_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: ugt_inverse_y:
@@ -919,7 +913,7 @@ define double @ult_inverse_y(double %x)  {
 ;
 ; UNSAFE-LABEL: ult_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: ult_inverse_y:
@@ -943,7 +937,7 @@ define double @uge_y(double %x)  {
 ;
 ; RELAX-LABEL: uge_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp uge double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -960,7 +954,7 @@ define double @ule_y(double %x)  {
 ;
 ; RELAX-LABEL: ule_y:
 ; RELAX:       # %bb.0:
-; RELAX-NEXT:    minsd {{.*}}(%rip), %xmm0
+; RELAX-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; RELAX-NEXT:    retq
   %c = fcmp ule double %x, -0.000000e+00
   %d = select i1 %c, double %x, double -0.000000e+00
@@ -970,12 +964,12 @@ define double @ule_y(double %x)  {
 define double @uge_inverse_y(double %x)  {
 ; STRICT-LABEL: uge_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    minsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: uge_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: uge_inverse_y:
@@ -992,12 +986,12 @@ define double @uge_inverse_y(double %x)  {
 define double @ule_inverse_y(double %x)  {
 ; STRICT-LABEL: ule_inverse_y:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: ule_inverse_y:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: ule_inverse_y:
@@ -1023,7 +1017,7 @@ define double @clampTo3k_a(double %x)  {
 ;
 ; UNSAFE-LABEL: clampTo3k_a:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_a:
@@ -1040,12 +1034,12 @@ define double @clampTo3k_a(double %x)  {
 define double @clampTo3k_b(double %x)  {
 ; STRICT-LABEL: clampTo3k_b:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    minsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: clampTo3k_b:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_b:
@@ -1069,7 +1063,7 @@ define double @clampTo3k_c(double %x)  {
 ;
 ; UNSAFE-LABEL: clampTo3k_c:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_c:
@@ -1086,12 +1080,12 @@ define double @clampTo3k_c(double %x)  {
 define double @clampTo3k_d(double %x)  {
 ; STRICT-LABEL: clampTo3k_d:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: clampTo3k_d:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_d:
@@ -1115,7 +1109,7 @@ define double @clampTo3k_e(double %x)  {
 ;
 ; UNSAFE-LABEL: clampTo3k_e:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_e:
@@ -1132,12 +1126,12 @@ define double @clampTo3k_e(double %x)  {
 define double @clampTo3k_f(double %x)  {
 ; STRICT-LABEL: clampTo3k_f:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: clampTo3k_f:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    maxsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_f:
@@ -1161,7 +1155,7 @@ define double @clampTo3k_g(double %x)  {
 ;
 ; UNSAFE-LABEL: clampTo3k_g:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_g:
@@ -1178,12 +1172,12 @@ define double @clampTo3k_g(double %x)  {
 define double @clampTo3k_h(double %x)  {
 ; STRICT-LABEL: clampTo3k_h:
 ; STRICT:       # %bb.0:
-; STRICT-NEXT:    minsd {{.*}}(%rip), %xmm0
+; STRICT-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; STRICT-NEXT:    retq
 ;
 ; UNSAFE-LABEL: clampTo3k_h:
 ; UNSAFE:       # %bb.0:
-; UNSAFE-NEXT:    minsd {{.*}}(%rip), %xmm0
+; UNSAFE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; UNSAFE-NEXT:    retq
 ;
 ; FINITE-LABEL: clampTo3k_h:

@@ -20,7 +20,7 @@ namespace clang {
 /// Provides notifications for file changes in a directory.
 ///
 /// Invokes client-provided function on every filesystem event in the watched
-/// directory. Initially the the watched directory is scanned and for every file
+/// directory. Initially the watched directory is scanned and for every file
 /// found, an event is synthesized as if the file was added.
 ///
 /// This is not a general purpose directory monitoring tool - list of

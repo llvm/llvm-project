@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C701 The type-param-value for a kind type parameter shall be a constant
 ! expression.  This constraint looks like a mistake in the standard.
 integer, parameter :: k = 8
@@ -23,7 +23,7 @@ type(t( &
 real :: u(l*2)
 !ERROR: Must have INTEGER type, but is REAL(4)
 character(len=l) :: v
-!ERROR: Initialization expression for PARAMETER 'o' (o) cannot be computed as a constant value
+!ERROR: Value of named constant 'o' (o) cannot be computed as a constant value
 real, parameter ::  o = o
 !ERROR: Must be a constant value
 integer, parameter ::  p = 0/0

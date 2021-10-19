@@ -14,8 +14,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class ProcessMonitor;
-
 class RegisterContextPOSIX_arm64 : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_arm64(
@@ -56,6 +54,7 @@ protected:
   size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm64::FPU); }
 
   bool IsSVE(unsigned reg) const;
+  bool IsPAuth(unsigned reg) const;
 
   bool IsSVEZ(unsigned reg) const { return m_register_info_up->IsSVEZReg(reg); }
   bool IsSVEP(unsigned reg) const { return m_register_info_up->IsSVEPReg(reg); }

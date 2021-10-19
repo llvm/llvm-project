@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -x c -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-NOSANITIZE
+// RUN: %clang_cc1 -x c -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 -x c -fsanitize=pointer-overflow -fno-sanitize-recover=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-C,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
 // RUN: %clang_cc1 -x c -fsanitize=pointer-overflow -fsanitize-recover=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-C,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
 // RUN: %clang_cc1 -x c -fsanitize=pointer-overflow -fsanitize-trap=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-C,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
 
-// RUN: %clang_cc1 -x c++ -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-NOSANITIZE
+// RUN: %clang_cc1 -x c++ -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s
 // RUN: %clang_cc1 -x c++ -fsanitize=pointer-overflow -fno-sanitize-recover=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-CPP,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-NORECOVER,CHECK-SANITIZE-UNREACHABLE
 // RUN: %clang_cc1 -x c++ -fsanitize=pointer-overflow -fsanitize-recover=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-CPP,CHECK-SANITIZE-ANYRECOVER,CHECK-SANITIZE-RECOVER
 // RUN: %clang_cc1 -x c++ -fsanitize=pointer-overflow -fsanitize-trap=pointer-overflow -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck %s -implicit-check-not="call void @__ubsan_handle_pointer_overflow" --check-prefixes=CHECK,CHECK-SANITIZE,CHECK-SANITIZE-CPP,CHECK-SANITIZE-TRAP,CHECK-SANITIZE-UNREACHABLE
@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 char *volatile_ptr(char *volatile base, unsigned long offset) {
-  // CHECK:                           define i8* @volatile_ptr(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @volatile_ptr(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -41,7 +41,7 @@ char *volatile_ptr(char *volatile base, unsigned long offset) {
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(i8* bitcast ({ {{{.*}}} }* @[[LINE_100]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
   // CHECK-SANITIZE-RECOVER-NEXT:       call void @__ubsan_handle_pointer_overflow(i8* bitcast ({ {{{.*}}} }* @[[LINE_100]] to i8*), i64 %[[BASE_RELOADED_INT]], i64 %[[COMPUTED_GEP]])
-  // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.trap(){{.*}}, !nosanitize
+  // CHECK-SANITIZE-TRAP-NEXT:          call void @llvm.ubsantrap(i8 19){{.*}}, !nosanitize
   // CHECK-SANITIZE-UNREACHABLE-NEXT:   unreachable, !nosanitize
   // CHECK-SANITIZE:                  [[CONT]]:
   // CHECK-NEXT:                        ret i8* %[[ADD_PTR]]

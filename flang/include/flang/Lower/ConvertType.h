@@ -48,11 +48,6 @@ template <common::TypeCategory, int>
 class Type;
 } // namespace evaluate
 
-namespace parser {
-class CharBlock;
-class CookedSource;
-} // namespace parser
-
 namespace semantics {
 class Symbol;
 } // namespace semantics

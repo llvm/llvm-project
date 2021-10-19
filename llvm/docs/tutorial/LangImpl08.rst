@@ -4,4 +4,4 @@
 Kaleidoscope Tutorial
 =====================
 
-The Kaleidoscope Tutorial has `moved to another location <MyFirstLanguageFrontend/index.html>`_ .
+The Kaleidoscope Tutorial has moved to :doc:`MyFirstLanguageFrontend/index`.

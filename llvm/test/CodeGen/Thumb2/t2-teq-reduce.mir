@@ -104,7 +104,7 @@ body:             |
   ; CHECK: bb.1.while.body.end:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next.i.14)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next.i.14)
   ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   BUNDLE implicit-def dead $itstate, implicit killed $cpsr, implicit $r0 {
   ; CHECK:     t2IT 0, 8, implicit-def $itstate
@@ -113,19 +113,19 @@ body:             |
   ; CHECK: bb.2.while.begin:
   ; CHECK:   successors: %bb.4(0x04000000), %bb.3(0x7c000000)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.info.i)
-  ; CHECK:   renamable $r2 = tLDRHi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load 2 from %ir.data16.i1)
+  ; CHECK:   renamable $r2 = tLDRi renamable $r0, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info.i)
+  ; CHECK:   renamable $r2 = tLDRHi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s16) from %ir.data16.i1)
   ; CHECK:   dead renamable $r2, $cpsr = tEOR killed renamable $r2, renamable $r1, 14 /* CC::al */, $noreg
   ; CHECK:   t2Bcc %bb.4, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.3.while.body.a:
   ; CHECK:   successors: %bb.4(0x4207fef8), %bb.1(0x3df80108)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next.i2)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next.i2)
   ; CHECK:   tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   BUNDLE implicit-def dead $itstate, implicit-def dead $r2, implicit-def $cpsr, implicit $r0, implicit killed $cpsr, implicit $r1 {
   ; CHECK:     t2IT 1, 30, implicit-def $itstate
-  ; CHECK:     renamable $r2 = tLDRi renamable $r0, 1, 1 /* CC::ne */, $cpsr, implicit internal $itstate :: (load 4 from %ir.info.i.1)
-  ; CHECK:     renamable $r2 = tLDRHi internal killed renamable $r2, 0, 1 /* CC::ne */, $cpsr, implicit internal killed $r2, implicit internal $itstate :: (load 2 from %ir.data16.i.13)
+  ; CHECK:     renamable $r2 = tLDRi renamable $r0, 1, 1 /* CC::ne */, $cpsr, implicit internal $itstate :: (load (s32) from %ir.info.i.1)
+  ; CHECK:     renamable $r2 = tLDRHi internal killed renamable $r2, 0, 1 /* CC::ne */, $cpsr, implicit internal killed $r2, implicit internal $itstate :: (load (s16) from %ir.data16.i.13)
   ; CHECK:     t2TEQrr internal killed renamable $r2, renamable $r1, 1 /* CC::ne */, killed $cpsr, implicit-def $cpsr, implicit internal killed $itstate
   ; CHECK:   }
   ; CHECK:   t2Bcc %bb.1, 1 /* CC::ne */, killed $cpsr
@@ -142,7 +142,7 @@ body:             |
     successors: %bb.1(0x80000000)
     liveins: $r0, $r1
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.next.i.14)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.next.i.14)
     tCMPi8 renamable $r0, 0, 14, $noreg, implicit-def $cpsr
     BUNDLE implicit-def dead $itstate, implicit killed $cpsr, implicit $r0 {
       t2IT 0, 8, implicit-def $itstate
@@ -153,8 +153,8 @@ body:             |
     successors: %bb.4(0x04000000), %bb.2(0x7c000000)
     liveins: $r0, $r1
 
-    renamable $r2 = tLDRi renamable $r0, 1, 14, $noreg :: (load 4 from %ir.info.i)
-    renamable $r2 = tLDRHi killed renamable $r2, 0, 14, $noreg :: (load 2 from %ir.data16.i1)
+    renamable $r2 = tLDRi renamable $r0, 1, 14, $noreg :: (load (s32) from %ir.info.i)
+    renamable $r2 = tLDRHi killed renamable $r2, 0, 14, $noreg :: (load (s16) from %ir.data16.i1)
     dead renamable $r2, $cpsr = tEOR killed renamable $r2, renamable $r1, 14, $noreg
     t2Bcc %bb.4, 0, killed $cpsr
 
@@ -162,12 +162,12 @@ body:             |
     successors: %bb.4(0x80000000), %bb.3(0x78200000)
     liveins: $r0, $r1
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.next.i2)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.next.i2)
     tCMPi8 renamable $r0, 0, 14, $noreg, implicit-def $cpsr
     BUNDLE implicit-def dead $itstate, implicit-def dead $r2, implicit-def $cpsr, implicit $r0, implicit killed $cpsr, implicit $r1 {
       t2IT 1, 30, implicit-def $itstate
-      renamable $r2 = tLDRi renamable $r0, 1, 1, $cpsr, implicit internal $itstate :: (load 4 from %ir.info.i.1)
-      renamable $r2 = tLDRHi internal killed renamable $r2, 0, 1, $cpsr, implicit internal killed $r2, implicit internal $itstate :: (load 2 from %ir.data16.i.13)
+      renamable $r2 = tLDRi renamable $r0, 1, 1, $cpsr, implicit internal $itstate :: (load (s32) from %ir.info.i.1)
+      renamable $r2 = tLDRHi internal killed renamable $r2, 0, 1, $cpsr, implicit internal killed $r2, implicit internal $itstate :: (load (s16) from %ir.data16.i.13)
       t2TEQrr internal killed renamable $r2, renamable $r1, 1, killed $cpsr, implicit-def $cpsr, implicit internal killed $itstate
     }
     t2Bcc %bb.3, 1, killed $cpsr
@@ -193,27 +193,27 @@ body:             |
   ; CHECK: bb.1.while.begin:
   ; CHECK:   successors: %bb.5(0x04000000), %bb.2(0x7c000000)
   ; CHECK:   liveins: $r1, $r2
-  ; CHECK:   renamable $r0 = tLDRi renamable $r2, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.info.i)
-  ; CHECK:   renamable $r0 = tLDRHi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 2 from %ir.data16.i1)
+  ; CHECK:   renamable $r0 = tLDRi renamable $r2, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info.i)
+  ; CHECK:   renamable $r0 = tLDRHi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s16) from %ir.data16.i1)
   ; CHECK:   t2TEQrr renamable $r0, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2Bcc %bb.5, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.2.while.body.a:
   ; CHECK:   successors: %bb.5(0x04000000), %bb.3(0x7c000000)
   ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   renamable $r2 = tLDRi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next.i2)
+  ; CHECK:   renamable $r2 = tLDRi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next.i2)
   ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2Bcc %bb.5, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.3.it.block:
   ; CHECK:   successors: %bb.5(0x04000000), %bb.4(0x7c000000)
   ; CHECK:   liveins: $r1, $r2
-  ; CHECK:   renamable $r0 = tLDRi renamable $r2, 1, 14 /* CC::al */, $noreg :: (load 4 from %ir.info.i.1)
-  ; CHECK:   renamable $r0 = tLDRHi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 2 from %ir.data16.i.13)
+  ; CHECK:   renamable $r0 = tLDRi renamable $r2, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.info.i.1)
+  ; CHECK:   renamable $r0 = tLDRHi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s16) from %ir.data16.i.13)
   ; CHECK:   t2TEQrr renamable $r0, renamable $r1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2Bcc %bb.5, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.4.while.body.end:
   ; CHECK:   successors: %bb.5(0x04000000), %bb.1(0x7c000000)
   ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   renamable $r2 = tLDRi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.next.i.14)
+  ; CHECK:   renamable $r2 = tLDRi killed renamable $r2, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.next.i.14)
   ; CHECK:   tCMPi8 renamable $r2, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2Bcc %bb.1, 1 /* CC::ne */, killed $cpsr
   ; CHECK: bb.5.exit:
@@ -229,8 +229,8 @@ body:             |
     successors: %bb.5(0x04000000), %bb.2(0x7c000000)
     liveins: $r1, $r2
 
-    renamable $r0 = t2LDRi12 renamable $r2, 4, 14, $noreg :: (load 4 from %ir.info.i)
-    renamable $r0 = t2LDRHi12 killed renamable $r0, 0, 14, $noreg :: (load 2 from %ir.data16.i1)
+    renamable $r0 = t2LDRi12 renamable $r2, 4, 14, $noreg :: (load (s32) from %ir.info.i)
+    renamable $r0 = t2LDRHi12 killed renamable $r0, 0, 14, $noreg :: (load (s16) from %ir.data16.i1)
     t2TEQrr renamable $r0, renamable $r1, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.5, 0, killed $cpsr
 
@@ -238,7 +238,7 @@ body:             |
     successors: %bb.5(0x04000000), %bb.3(0x7c000000)
     liveins: $r0, $r1, $r2
 
-    renamable $r2 = t2LDRi12 killed renamable $r2, 0, 14, $noreg :: (load 4 from %ir.next.i2)
+    renamable $r2 = t2LDRi12 killed renamable $r2, 0, 14, $noreg :: (load (s32) from %ir.next.i2)
     t2CMPri renamable $r2, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.5, 0, killed $cpsr
 
@@ -246,8 +246,8 @@ body:             |
     successors: %bb.5(0x04000000), %bb.4(0x7c000000)
     liveins: $r1, $r2
 
-    renamable $r0 = t2LDRi12 renamable $r2, 4, 14, $noreg :: (load 4 from %ir.info.i.1)
-    renamable $r0 = t2LDRHi12 killed renamable $r0, 0, 14, $noreg :: (load 2 from %ir.data16.i.13)
+    renamable $r0 = t2LDRi12 renamable $r2, 4, 14, $noreg :: (load (s32) from %ir.info.i.1)
+    renamable $r0 = t2LDRHi12 killed renamable $r0, 0, 14, $noreg :: (load (s16) from %ir.data16.i.13)
     t2TEQrr renamable $r0, renamable $r1, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.5, 0, killed $cpsr
 
@@ -255,7 +255,7 @@ body:             |
     successors: %bb.5(0x04000000), %bb.1(0x7c000000)
     liveins: $r0, $r1, $r2
 
-    renamable $r2 = t2LDRi12 killed renamable $r2, 0, 14, $noreg :: (load 4 from %ir.next.i.14)
+    renamable $r2 = t2LDRi12 killed renamable $r2, 0, 14, $noreg :: (load (s32) from %ir.next.i.14)
     t2CMPri renamable $r2, 0, 14, $noreg, implicit-def $cpsr
     t2Bcc %bb.1, 1, killed $cpsr
 

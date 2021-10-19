@@ -44,9 +44,7 @@ public:
 #include <__config>
 #include <exception>
 #include <iosfwd>  // for string forward decl
-#ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -308,4 +306,4 @@ void __throw_underflow_error(const char*__msg)
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif  // _LIBCPP_STDEXCEPT
+#endif // _LIBCPP_STDEXCEPT

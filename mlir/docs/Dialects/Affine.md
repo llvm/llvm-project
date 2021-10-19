@@ -13,8 +13,8 @@ core concepts that are used throughout the document.
 ### Dimensions and Symbols
 
 Dimensions and symbols are the two kinds of identifiers that can appear in the
-polyhedral structures, and are always of [`index`](../LangRef.md#index-type)
-type. Dimensions are declared in parentheses and symbols are declared in square
+polyhedral structures, and are always of [`index`](Builtin.md/#indextype) type.
+Dimensions are declared in parentheses and symbols are declared in square
 brackets.
 
 Examples:
@@ -54,36 +54,34 @@ Example:
 ```mlir
 #affine_map2to3 = affine_map<(d0, d1)[s0] -> (d0, d1 + s0, d1 - s0)>
 // Binds %N to the s0 symbol in affine_map2to3.
-%x = alloc()[%N] : memref<40x50xf32, #affine_map2to3>
+%x = memref.alloc()[%N] : memref<40x50xf32, #affine_map2to3>
 ```
 
 ### Restrictions on Dimensions and Symbols
 
 The affine dialect imposes certain restrictions on dimension and symbolic
 identifiers to enable powerful analysis and transformation. An SSA value's use
-can be bound to a symbolic identifier if that SSA value is either
-1. a region argument for an op with trait `AffineScope` (eg. `FuncOp`),
-2. a value defined at the top level of an `AffineScope` op (i.e., immediately
-enclosed by the latter),
-3. a value that dominates the `AffineScope` op enclosing the value's use,
-4. the result of a [`constant` operation](Standard.md#constant-operation),
-5. the result of an [`affine.apply`
-operation](#affineapply-operation) that recursively takes as arguments any valid
-symbolic identifiers, or
-6. the result of a [`dim` operation](Standard.md#dim-operation) on either a
-memref that is an argument to a `AffineScope` op or a memref where the
-corresponding dimension is either static or a dynamic one in turn bound to a
-valid symbol.
+can be bound to a symbolic identifier if that SSA value is either 1. a region
+argument for an op with trait `AffineScope` (eg. `FuncOp`), 2. a value defined
+at the top level of an `AffineScope` op (i.e., immediately enclosed by the
+latter), 3. a value that dominates the `AffineScope` op enclosing the value's
+use, 4. the result of a
+[`constant` operation](Standard.md/#stdconstant-constantop), 5. the result of an
+[`affine.apply` operation](#affineapply-affineapplyop) that recursively takes as
+arguments any valid symbolic identifiers, or 6. the result of a
+[`dim` operation](MemRef.md/#memrefdim-mlirmemrefdimop) on either a memref that
+is an argument to a `AffineScope` op or a memref where the corresponding
+dimension is either static or a dynamic one in turn bound to a valid symbol.
 *Note:* if the use of an SSA value is not contained in any op with the
 `AffineScope` trait, only the rules 4-6 can be applied.
 
 Note that as a result of rule (3) above, symbol validity is sensitive to the
-location of the SSA use.  Dimensions may be bound not only to anything that a
+location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
-[`affine.for`](#affinefor-operation) and
-[`affine.parallel`](#affineparallel-operation) operations, and the result of an
-[`affine.apply` operation](#affineapply-operation) (which recursively may use
-other dimensions and symbols).
+[`affine.for`](#affinefor-affineforop) and
+[`affine.parallel`](#affineparallel-affineparallelop) operations, and the result
+of an [`affine.apply` operation](#affineapply-affineapplyop) (which recursively
+may use other dimensions and symbols).
 
 ### Affine Expressions
 
@@ -113,30 +111,30 @@ less than or equal to that result. `mod` is the modulo operation: since its
 second argument is always positive, its results are always positive in our
 usage. The `integer-literal` operand for ceildiv, floordiv, and mod is always
 expected to be positive. `bare-id` is an identifier which must have type
-[index](../LangRef.md#index-type). The precedence of operations in an affine
+[index](Builtin.md/#indextype). The precedence of operations in an affine
 expression are ordered from highest to lowest in the order: (1)
 parenthesization, (2) negation, (3) modulo, multiplication, floordiv, and
 ceildiv, and (4) addition and subtraction. All of these operators associate from
 left to right.
 
-A _multidimensional affine expression_ is a comma separated list of
+A *multidimensional affine expression* is a comma separated list of
 one-dimensional affine expressions, with the entire list enclosed in
 parentheses.
 
 **Context:** An affine function, informally, is a linear function plus a
-constant. More formally, a function f defined on a vector $$\vec{v} \in
-\mathbb{Z}^n$$ is a multidimensional affine function of $$\vec{v}$$ if
-$$f(\vec{v})$$ can be expressed in the form $$M \vec{v} + \vec{c}$$ where $$M$$
-is a constant matrix from $$\mathbb{Z}^{m \times n}$$ and $$\vec{c}$$ is a
-constant vector from $$\mathbb{Z}$$. $$m$$ is the dimensionality of such an
-affine function. MLIR further extends the definition of an affine function to
-allow 'floordiv', 'ceildiv', and 'mod' with respect to positive integer
-constants. Such extensions to affine functions have often been referred to as
-quasi-affine functions by the polyhedral compiler community. MLIR uses the term
-'affine map' to refer to these multidimensional quasi-affine functions. As
-examples, $$(i+j+1, j)$$, $$(i \mod 2, j+i)$$, $$(j, i/4, i \mod 4)$$, $$(2i+1,
-j)$$ are two-dimensional affine functions of $$(i, j)$$, but $$(i \cdot j,
-i^2)$$, $$(i \mod j, i/j)$$ are not affine functions of $$(i, j)$$.
+constant. More formally, a function f defined on a vector $\vec{v} \in
+\mathbb{Z}^n$ is a multidimensional affine function of $\vec{v}$ if $f(\vec{v})$
+can be expressed in the form $M \vec{v} + \vec{c}$ where $M$ is a constant
+matrix from $\mathbb{Z}^{m \times n}$ and $\vec{c}$ is a constant vector from
+$\mathbb{Z}$. $m$ is the dimensionality of such an affine function. MLIR further
+extends the definition of an affine function to allow 'floordiv', 'ceildiv', and
+'mod' with respect to positive integer constants. Such extensions to affine
+functions have often been referred to as quasi-affine functions by the
+polyhedral compiler community. MLIR uses the term 'affine map' to refer to these
+multidimensional quasi-affine functions. As examples, $(i+j+1, j)$, $(i \mod 2,
+j+i)$, $(j, i/4, i \mod 4)$, $(2i+1, j)$ are two-dimensional affine functions of
+$(i, j)$, but $(i \cdot j, i^2)$, $(i \mod j, i/j)$ are not affine functions of
+$(i, j)$.
 
 ### Affine Maps
 
@@ -157,9 +155,9 @@ dimension indices and symbols into a list of results, with affine expressions
 combining the indices and symbols. Affine maps distinguish between
 [indices and symbols](#dimensions-and-symbols) because indices are inputs to the
 affine map when the map is called (through an operation such as
-[affine.apply](#affineapply-operation)), whereas symbols are bound when
-the map is established (e.g. when a memref is formed, establishing a
-memory [layout map](../LangRef.md#layout-map)).
+[affine.apply](#affineapply-affineapplyop)), whereas symbols are bound when the
+map is established (e.g. when a memref is formed, establishing a memory
+[layout map](Builtin.md/#layout-map)).
 
 Affine maps are used for various core structures in MLIR. The restrictions we
 impose on their form allows powerful analysis and transformation, while keeping
@@ -192,10 +190,10 @@ Examples:
 
 // Use an affine mapping definition in an alloc operation, binding the
 // SSA value %N to the symbol s0.
-%a = alloc()[%N] : memref<4x4xf32, #affine_map42>
+%a = memref.alloc()[%N] : memref<4x4xf32, #affine_map42>
 
 // Same thing with an inline affine mapping definition.
-%b = alloc()[%N] : memref<4x4xf32, affine_map<(d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)>>
+%b = memref.alloc()[%N] : memref<4x4xf32, affine_map<(d0, d1)[s0] -> (d0, d0 + d1 + s0 floordiv 2)>>
 ```
 
 ### Semi-affine maps
@@ -378,22 +376,20 @@ operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`
 The `affine.dma_start` op starts a non-blocking DMA operation that transfers
 data from a source memref to a destination memref. The source and destination
 memref need not be of the same dimensionality, but need to have the same
-elemental type. The operands include the source and destination memref's
-each followed by its indices, size of the data transfer in terms of the
-number of elements (of the elemental type of the memref), a tag memref with
-its indices, and optionally at the end, a stride and a
-number_of_elements_per_stride arguments. The tag location is used by an
-AffineDmaWaitOp to check for completion. The indices of the source memref,
-destination memref, and the tag memref have the same restrictions as any
-affine.load/store. In particular, index for each memref dimension must be an
-affine expression of loop induction variables and symbols.
-The optional stride arguments should be of 'index' type, and specify a
-stride for the slower memory space (memory space with a lower memory space
-id), transferring chunks of number_of_elements_per_stride every stride until
-%num_elements are transferred. Either both or no stride arguments should be
-specified. The value of 'num_elements' must be a multiple of
+elemental type. The operands include the source and destination memref's each
+followed by its indices, size of the data transfer in terms of the number of
+elements (of the elemental type of the memref), a tag memref with its indices,
+and optionally at the end, a stride and a number_of_elements_per_stride
+arguments. The tag location is used by an AffineDmaWaitOp to check for
+completion. The indices of the source memref, destination memref, and the tag
+memref have the same restrictions as any affine.load/store. In particular, index
+for each memref dimension must be an affine expression of loop induction
+variables and symbols. The optional stride arguments should be of 'index' type,
+and specify a stride for the slower memory space (memory space with a lower
+memory space id), transferring chunks of number_of_elements_per_stride every
+stride until %num_elements are transferred. Either both or no stride arguments
+should be specified. The value of 'num_elements' must be a multiple of
 'number_of_elements_per_stride'.
-
 
 Example:
 
@@ -402,9 +398,9 @@ For example, a DmaStartOp operation that transfers 256 elements of a memref
 '%src' in memory space 0 at indices [%i + 3, %j] to memref '%dst' in memory
 space 1 at indices [%k + 7, %l], would be specified as follows:
 
-  %num_elements = constant 256
-  %idx = constant 0 : index
-  %tag = alloc() : memref<1xi32, 4>
+  %num_elements = arith.constant 256
+  %idx = arith.constant 0 : index
+  %tag = memref.alloc() : memref<1xi32, 4>
   affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
     %num_elements :
       memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>
@@ -426,10 +422,10 @@ operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`
 ```
 
 The `affine.dma_start` op blocks until the completion of a DMA operation
-associated with the tag element '%tag[%index]'. %tag is a memref, and %index
-has to be an index with the same restrictions as any load/store index.
-In particular, index for each memref dimension must be an affine expression of
-loop induction variables and symbols. %num_elements is the number of elements
+associated with the tag element '%tag[%index]'. %tag is a memref, and %index has
+to be an index with the same restrictions as any load/store index. In
+particular, index for each memref dimension must be an affine expression of loop
+induction variables and symbols. %num_elements is the number of elements
 associated with the DMA operation. For example:
 
 Example:

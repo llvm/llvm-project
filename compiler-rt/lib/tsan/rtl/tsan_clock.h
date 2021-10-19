@@ -17,7 +17,7 @@
 
 namespace __tsan {
 
-typedef DenseSlabAlloc<ClockBlock, 1<<16, 1<<10> ClockAlloc;
+typedef DenseSlabAlloc<ClockBlock, 1 << 22, 1 << 10> ClockAlloc;
 typedef DenseSlabAllocCache ClockCache;
 
 // The clock that lives in sync variables (mutexes, atomics, etc).
@@ -65,9 +65,19 @@ class SyncClock {
   static const uptr kDirtyTids = 2;
 
   struct Dirty {
-    u64 epoch  : kClkBits;
-    u64 tid : 64 - kClkBits;  // kInvalidId if not active
+    u32 tid() const { return tid_ == kShortInvalidTid ? kInvalidTid : tid_; }
+    void set_tid(u32 tid) {
+      tid_ = tid == kInvalidTid ? kShortInvalidTid : tid;
+    }
+    u64 epoch : kClkBits;
+
+   private:
+    // Full kInvalidTid won't fit into Dirty::tid.
+    static const u64 kShortInvalidTid = (1ull << (64 - kClkBits)) - 1;
+    u64 tid_ : 64 - kClkBits;  // kInvalidId if not active
   };
+
+  static_assert(sizeof(Dirty) == 8, "Dirty is not 64bit");
 
   unsigned release_store_tid_;
   unsigned release_store_reused_;
@@ -203,7 +213,7 @@ class ThreadClock {
   // We reuse it for subsequent store-release operations without intervening
   // acquire operations. Since it is shared (and thus constant), clock value
   // for the current thread is then stored in dirty entries in the SyncClock.
-  // We host a refernece to the table while it is cached here.
+  // We host a reference to the table while it is cached here.
   u32 cached_idx_;
   u16 cached_size_;
   u16 cached_blocks_;

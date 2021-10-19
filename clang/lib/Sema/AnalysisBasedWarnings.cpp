@@ -24,6 +24,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
+#include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
@@ -36,6 +37,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -495,8 +497,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
       HasAbnormalEdge = true;
       continue;
     }
-    if (std::find(B.succ_begin(), B.succ_end(), &cfg->getExit())
-        == B.succ_end()) {
+    if (!llvm::is_contained(B.succs(), &cfg->getExit())) {
       HasAbnormalEdge = true;
       continue;
     }
@@ -1078,11 +1079,9 @@ namespace {
       while (!BlockQueue.empty()) {
         const CFGBlock *P = BlockQueue.front();
         BlockQueue.pop_front();
-        for (CFGBlock::const_succ_iterator I = P->succ_begin(),
-                                           E = P->succ_end();
-             I != E; ++I) {
-          if (*I && ReachableBlocks.insert(*I).second)
-            BlockQueue.push_back(*I);
+        for (const CFGBlock *B : P->succs()) {
+          if (B && ReachableBlocks.insert(B).second)
+            BlockQueue.push_back(B);
         }
       }
     }
@@ -1123,7 +1122,7 @@ namespace {
                 // unreachable in all instantiations of the template.
                 if (!IsTemplateInstantiation)
                   S.Diag(AS->getBeginLoc(),
-                         diag::warn_fallthrough_attr_unreachable);
+                         diag::warn_unreachable_fallthrough_attr);
                 markFallthroughVisited(AS);
                 ++AnnotatedCnt;
                 break;
@@ -1504,6 +1503,25 @@ static void diagnoseRepeatedUseOfWeak(Sema &S,
   }
 }
 
+namespace clang {
+namespace {
+typedef SmallVector<PartialDiagnosticAt, 1> OptionalNotes;
+typedef std::pair<PartialDiagnosticAt, OptionalNotes> DelayedDiag;
+typedef std::list<DelayedDiag> DiagList;
+
+struct SortDiagBySourceLocation {
+  SourceManager &SM;
+  SortDiagBySourceLocation(SourceManager &SM) : SM(SM) {}
+
+  bool operator()(const DelayedDiag &left, const DelayedDiag &right) {
+    // Although this call will be slow, this is only called when outputting
+    // multiple warnings.
+    return SM.isBeforeInTranslationUnit(left.first.first, right.first.first);
+  }
+};
+} // anonymous namespace
+} // namespace clang
+
 namespace {
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
@@ -1623,26 +1641,129 @@ private:
     });
   }
 };
-} // anonymous namespace
 
-namespace clang {
-namespace {
-typedef SmallVector<PartialDiagnosticAt, 1> OptionalNotes;
-typedef std::pair<PartialDiagnosticAt, OptionalNotes> DelayedDiag;
-typedef std::list<DelayedDiag> DiagList;
-
-struct SortDiagBySourceLocation {
-  SourceManager &SM;
-  SortDiagBySourceLocation(SourceManager &SM) : SM(SM) {}
-
-  bool operator()(const DelayedDiag &left, const DelayedDiag &right) {
-    // Although this call will be slow, this is only called when outputting
-    // multiple warnings.
-    return SM.isBeforeInTranslationUnit(left.first.first, right.first.first);
+/// Inter-procedural data for the called-once checker.
+class CalledOnceInterProceduralData {
+public:
+  // Add the delayed warning for the given block.
+  void addDelayedWarning(const BlockDecl *Block,
+                         PartialDiagnosticAt &&Warning) {
+    DelayedBlockWarnings[Block].emplace_back(std::move(Warning));
   }
+  // Report all of the warnings we've gathered for the given block.
+  void flushWarnings(const BlockDecl *Block, Sema &S) {
+    for (const PartialDiagnosticAt &Delayed : DelayedBlockWarnings[Block])
+      S.Diag(Delayed.first, Delayed.second);
+
+    discardWarnings(Block);
+  }
+  // Discard all of the warnings we've gathered for the given block.
+  void discardWarnings(const BlockDecl *Block) {
+    DelayedBlockWarnings.erase(Block);
+  }
+
+private:
+  using DelayedDiagnostics = SmallVector<PartialDiagnosticAt, 2>;
+  llvm::DenseMap<const BlockDecl *, DelayedDiagnostics> DelayedBlockWarnings;
 };
+
+class CalledOnceCheckReporter : public CalledOnceCheckHandler {
+public:
+  CalledOnceCheckReporter(Sema &S, CalledOnceInterProceduralData &Data)
+      : S(S), Data(Data) {}
+  void handleDoubleCall(const ParmVarDecl *Parameter, const Expr *Call,
+                        const Expr *PrevCall, bool IsCompletionHandler,
+                        bool Poised) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_called_twice
+                            : diag::warn_called_once_gets_called_twice;
+    S.Diag(Call->getBeginLoc(), DiagToReport) << Parameter;
+    S.Diag(PrevCall->getBeginLoc(), diag::note_called_once_gets_called_twice)
+        << Poised;
+  }
+
+  void handleNeverCalled(const ParmVarDecl *Parameter,
+                         bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called
+                            : diag::warn_called_once_never_called;
+    S.Diag(Parameter->getBeginLoc(), DiagToReport)
+        << Parameter << /* Captured */ false;
+  }
+
+  void handleNeverCalled(const ParmVarDecl *Parameter, const Decl *Function,
+                         const Stmt *Where, NeverCalledReason Reason,
+                         bool IsCalledDirectly,
+                         bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called_when
+                            : diag::warn_called_once_never_called_when;
+    PartialDiagnosticAt Warning(Where->getBeginLoc(), S.PDiag(DiagToReport)
+                                                          << Parameter
+                                                          << IsCalledDirectly
+                                                          << (unsigned)Reason);
+
+    if (const auto *Block = dyn_cast<BlockDecl>(Function)) {
+      // We shouldn't report these warnings on blocks immediately
+      Data.addDelayedWarning(Block, std::move(Warning));
+    } else {
+      S.Diag(Warning.first, Warning.second);
+    }
+  }
+
+  void handleCapturedNeverCalled(const ParmVarDecl *Parameter,
+                                 const Decl *Where,
+                                 bool IsCompletionHandler) override {
+    auto DiagToReport = IsCompletionHandler
+                            ? diag::warn_completion_handler_never_called
+                            : diag::warn_called_once_never_called;
+    S.Diag(Where->getBeginLoc(), DiagToReport)
+        << Parameter << /* Captured */ true;
+  }
+
+  void
+  handleBlockThatIsGuaranteedToBeCalledOnce(const BlockDecl *Block) override {
+    Data.flushWarnings(Block, S);
+  }
+
+  void handleBlockWithNoGuarantees(const BlockDecl *Block) override {
+    Data.discardWarnings(Block);
+  }
+
+private:
+  Sema &S;
+  CalledOnceInterProceduralData &Data;
+};
+
+constexpr unsigned CalledOnceWarnings[] = {
+    diag::warn_called_once_never_called,
+    diag::warn_called_once_never_called_when,
+    diag::warn_called_once_gets_called_twice};
+
+constexpr unsigned CompletionHandlerWarnings[]{
+    diag::warn_completion_handler_never_called,
+    diag::warn_completion_handler_never_called_when,
+    diag::warn_completion_handler_called_twice};
+
+bool shouldAnalyzeCalledOnceImpl(llvm::ArrayRef<unsigned> DiagIDs,
+                                 const DiagnosticsEngine &Diags,
+                                 SourceLocation At) {
+  return llvm::any_of(DiagIDs, [&Diags, At](unsigned DiagID) {
+    return !Diags.isIgnored(DiagID, At);
+  });
+}
+
+bool shouldAnalyzeCalledOnceConventions(const DiagnosticsEngine &Diags,
+                                        SourceLocation At) {
+  return shouldAnalyzeCalledOnceImpl(CompletionHandlerWarnings, Diags, At);
+}
+
+bool shouldAnalyzeCalledOnceParameters(const DiagnosticsEngine &Diags,
+                                       SourceLocation At) {
+  return shouldAnalyzeCalledOnceImpl(CalledOnceWarnings, Diags, At) ||
+         shouldAnalyzeCalledOnceConventions(Diags, At);
+}
 } // anonymous namespace
-} // namespace clang
 
 //===----------------------------------------------------------------------===//
 // -Wthread-safety
@@ -1892,6 +2013,13 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleNegativeNotHeld(const NamedDecl *D, Name LockName,
+                             SourceLocation Loc) override {
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_fun_requires_negative_cap) << D << LockName);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleFunExcludesLock(StringRef Kind, Name FunName, Name LockName,
                              SourceLocation Loc) override {
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_fun_excludes_mutex)
@@ -2022,54 +2150,68 @@ public:
 //  warnings on a function, method, or block.
 //===----------------------------------------------------------------------===//
 
-clang::sema::AnalysisBasedWarnings::Policy::Policy() {
+sema::AnalysisBasedWarnings::Policy::Policy() {
   enableCheckFallThrough = 1;
   enableCheckUnreachable = 0;
   enableThreadSafetyAnalysis = 0;
   enableConsumedAnalysis = 0;
 }
 
+/// InterProceduralData aims to be a storage of whatever data should be passed
+/// between analyses of different functions.
+///
+/// At the moment, its primary goal is to make the information gathered during
+/// the analysis of the blocks available during the analysis of the enclosing
+/// function.  This is important due to the fact that blocks are analyzed before
+/// the enclosed function is even parsed fully, so it is not viable to access
+/// anything in the outer scope while analyzing the block.  On the other hand,
+/// re-building CFG for blocks and re-analyzing them when we do have all the
+/// information (i.e. during the analysis of the enclosing function) seems to be
+/// ill-designed.
+class sema::AnalysisBasedWarnings::InterProceduralData {
+public:
+  // It is important to analyze blocks within functions because it's a very
+  // common pattern to capture completion handler parameters by blocks.
+  CalledOnceInterProceduralData CalledOnceData;
+};
+
 static unsigned isEnabled(DiagnosticsEngine &D, unsigned diag) {
   return (unsigned)!D.isIgnored(diag, SourceLocation());
 }
 
-clang::sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
-  : S(s),
-    NumFunctionsAnalyzed(0),
-    NumFunctionsWithBadCFGs(0),
-    NumCFGBlocks(0),
-    MaxCFGBlocksPerFunction(0),
-    NumUninitAnalysisFunctions(0),
-    NumUninitAnalysisVariables(0),
-    MaxUninitAnalysisVariablesPerFunction(0),
-    NumUninitAnalysisBlockVisits(0),
-    MaxUninitAnalysisBlockVisitsPerFunction(0) {
+sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
+    : S(s), IPData(std::make_unique<InterProceduralData>()),
+      NumFunctionsAnalyzed(0), NumFunctionsWithBadCFGs(0), NumCFGBlocks(0),
+      MaxCFGBlocksPerFunction(0), NumUninitAnalysisFunctions(0),
+      NumUninitAnalysisVariables(0), MaxUninitAnalysisVariablesPerFunction(0),
+      NumUninitAnalysisBlockVisits(0),
+      MaxUninitAnalysisBlockVisitsPerFunction(0) {
 
   using namespace diag;
   DiagnosticsEngine &D = S.getDiagnostics();
 
   DefaultPolicy.enableCheckUnreachable =
-    isEnabled(D, warn_unreachable) ||
-    isEnabled(D, warn_unreachable_break) ||
-    isEnabled(D, warn_unreachable_return) ||
-    isEnabled(D, warn_unreachable_loop_increment);
+      isEnabled(D, warn_unreachable) || isEnabled(D, warn_unreachable_break) ||
+      isEnabled(D, warn_unreachable_return) ||
+      isEnabled(D, warn_unreachable_loop_increment);
 
-  DefaultPolicy.enableThreadSafetyAnalysis =
-    isEnabled(D, warn_double_lock);
+  DefaultPolicy.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock);
 
   DefaultPolicy.enableConsumedAnalysis =
-    isEnabled(D, warn_use_in_invalid_state);
+      isEnabled(D, warn_use_in_invalid_state);
 }
+
+// We need this here for unique_ptr with forward declared class.
+sema::AnalysisBasedWarnings::~AnalysisBasedWarnings() = default;
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
     S.Diag(D.Loc, D.PD);
 }
 
-void clang::sema::
-AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
-                                     sema::FunctionScopeInfo *fscope,
-                                     const Decl *D, QualType BlockType) {
+void clang::sema::AnalysisBasedWarnings::IssueWarnings(
+    sema::AnalysisBasedWarnings::Policy P, sema::FunctionScopeInfo *fscope,
+    const Decl *D, QualType BlockType) {
 
   // We avoid doing analysis-based warnings when there are errors for
   // two reasons:
@@ -2089,7 +2231,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
   if (cast<DeclContext>(D)->isDependentContext())
     return;
 
-  if (Diags.hasUncompilableErrorOccurred()) {
+  if (S.hasUncompilableErrorOccurred()) {
     // Flush out any possibly unreachable diagnostics.
     flushDiagnostics(S, fscope);
     return;
@@ -2130,8 +2272,7 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
       .setAlwaysAdd(Stmt::CStyleCastExprClass)
       .setAlwaysAdd(Stmt::DeclRefExprClass)
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
-      .setAlwaysAdd(Stmt::UnaryOperatorClass)
-      .setAlwaysAdd(Stmt::AttributedStmtClass);
+      .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
   // Install the logical handler.
@@ -2254,6 +2395,17 @@ AnalysisBasedWarnings::IssueWarnings(sema::AnalysisBasedWarnings::Policy P,
             std::max(MaxUninitAnalysisBlockVisitsPerFunction,
                      stats.NumBlockVisits);
       }
+    }
+  }
+
+  // Check for violations of "called once" parameter properties.
+  if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
+      shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {
+    if (AC.getCFG()) {
+      CalledOnceCheckReporter Reporter(S, IPData->CalledOnceData);
+      checkCalledOnceParameters(
+          AC, Reporter,
+          shouldAnalyzeCalledOnceConventions(Diags, D->getBeginLoc()));
     }
   }
 

@@ -20,7 +20,7 @@ namespace cert {
 void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxThrowExpr(has(ignoringParenImpCasts(
               cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
                                    isCopyConstructor(), unless(isNoThrow()))))

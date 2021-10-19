@@ -47,11 +47,7 @@ public:
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
                                lldb_private::Debugger &debugger,
-                               lldb_private::Target *target, // Can be nullptr,
-                                                             // if nullptr
-                                                             // create a new
-                                                             // target, else use
-                                                             // existing one
+                               lldb_private::Target &target,
                                lldb_private::Status &error) override;
 
   std::string GetPlatformSpecificConnectionInformation() override;
@@ -70,9 +66,6 @@ public:
 
   lldb_private::Status UnloadImage(lldb_private::Process *process,
                                    uint32_t image_token) override;
-
-  size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
-                                   lldb_private::Status &error) override;
 
   lldb_private::ConstString GetFullNameForDylib(lldb_private::ConstString basename) override;
 

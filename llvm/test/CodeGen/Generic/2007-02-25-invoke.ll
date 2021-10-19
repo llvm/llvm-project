@@ -13,4 +13,4 @@ blat:
   ret i32 0
 }
 
-declare i32 @__gxx_personality_v0(...)
+declare i32 @__gxx_personality_v0(...) addrspace(0)

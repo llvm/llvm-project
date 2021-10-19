@@ -11,7 +11,7 @@ struct T {
   int n;
 };
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define{{.*}} void @_Z1fv(
 void f() {
   // CHECK: call void @_ZN1SC1Ev(
   // CHECK: invoke void @__cxa_throw
@@ -28,7 +28,7 @@ void f() {
   // CHECK: }
 }
 
-// CHECK-LABEL: define void @_Z1gv(
+// CHECK-LABEL: define{{.*}} void @_Z1gv(
 void g() {
   // CHECK: call void @_ZN1SC1Ev(
   // CHECK: invoke void @__cxa_throw
@@ -48,7 +48,7 @@ void g() {
 void x() noexcept;
 void y() noexcept;
 
-// CHECK-LABEL: define void @_Z1hbb(
+// CHECK-LABEL: define{{.*}} void @_Z1hbb(
 void h(bool b1, bool b2) {
   // CHECK: {{.*}} = alloca i1,
   // CHECK: %[[S_ISACTIVE:.*]] = alloca i1,

@@ -1,5 +1,6 @@
 // RUN: %clang_dfsan %s -o %t && %run %t
-// RUN: %clang_dfsan -mllvm -dfsan-args-abi %s -o %t && %run %t
+//
+// REQUIRES: x86_64-target-arch
 
 // Tests that labels are propagated through computation and that union labels
 // are properly created.
@@ -11,15 +12,15 @@ int main(void) {
   assert(dfsan_union(0, 0) == 0);
 
   int i = 1;
-  dfsan_label i_label = dfsan_create_label("i", 0);
+  dfsan_label i_label = 1;
   dfsan_set_label(i_label, &i, sizeof(i));
 
   int j = 2;
-  dfsan_label j_label = dfsan_create_label("j", 0);
+  dfsan_label j_label = 2;
   dfsan_set_label(j_label, &j, sizeof(j));
 
   int k = 3;
-  dfsan_label k_label = dfsan_create_label("k", 0);
+  dfsan_label k_label = 4;
   dfsan_set_label(k_label, &k, sizeof(k));
 
   int k2 = 4;

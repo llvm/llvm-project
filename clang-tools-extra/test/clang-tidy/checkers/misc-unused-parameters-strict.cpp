@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s misc-unused-parameters %t -- \
-// RUN:   -config="{CheckOptions: [{key: StrictMode, value: 1}]}" --
+// RUN:   -config="{CheckOptions: [{key: StrictMode, value: true}]}" --
 
 // Warn on empty function bodies in StrictMode.
 namespace strict_mode {

@@ -11,7 +11,7 @@ define void @in_tree_user(double* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @in_tree_user(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[CONV]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[CONV]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

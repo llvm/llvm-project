@@ -1,5 +1,5 @@
 ; REQUIRES: assert
-; RUN: opt -print-predicateinfo -analyze -debug < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=print-predicateinfo -debug < %s 2>&1 | FileCheck %s
 
 declare void @use(i32)
 

@@ -30,125 +30,368 @@
 namespace llvm {
 namespace symbolize {
 
-// Prints source code around in the FileName the Line.
-void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
-  if (PrintSourceContext <= 0)
-    return;
+class SourceCode {
+  std::unique_ptr<MemoryBuffer> MemBuf;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(FileName);
-  if (!BufOrErr)
-    return;
+  const Optional<StringRef> load(StringRef FileName,
+                                 const Optional<StringRef> &EmbeddedSource) {
+    if (Lines <= 0)
+      return None;
 
-  std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
-  int64_t FirstLine =
-      std::max(static_cast<int64_t>(1), Line - PrintSourceContext / 2);
-  int64_t LastLine = FirstLine + PrintSourceContext;
-  size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
+    if (EmbeddedSource)
+      return EmbeddedSource;
+    else {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+          MemoryBuffer::getFile(FileName);
+      if (!BufOrErr)
+        return None;
+      MemBuf = std::move(*BufOrErr);
+      return MemBuf->getBuffer();
+    }
+  }
 
-  for (line_iterator I = line_iterator(*Buf, false);
-       !I.is_at_eof() && I.line_number() <= LastLine; ++I) {
-    int64_t L = I.line_number();
-    if (L >= FirstLine && L <= LastLine) {
+  const Optional<StringRef> pruneSource(const Optional<StringRef> &Source) {
+    if (!Source)
+      return None;
+    size_t FirstLinePos = StringRef::npos, Pos = 0;
+    for (int64_t L = 1; L <= LastLine; ++L, ++Pos) {
+      if (L == FirstLine)
+        FirstLinePos = Pos;
+      Pos = Source->find('\n', Pos);
+      if (Pos == StringRef::npos)
+        break;
+    }
+    if (FirstLinePos == StringRef::npos)
+      return None;
+    return Source->substr(FirstLinePos, (Pos == StringRef::npos)
+                                            ? StringRef::npos
+                                            : Pos - FirstLinePos);
+  }
+
+public:
+  const int64_t Line;
+  const int Lines;
+  const int64_t FirstLine;
+  const int64_t LastLine;
+  const Optional<StringRef> PrunedSource;
+
+  SourceCode(
+      StringRef FileName, int64_t Line, int Lines,
+      const Optional<StringRef> &EmbeddedSource = Optional<StringRef>(None))
+      : Line(Line), Lines(Lines),
+        FirstLine(std::max(static_cast<int64_t>(1), Line - Lines / 2)),
+        LastLine(FirstLine + Lines - 1),
+        PrunedSource(pruneSource(load(FileName, EmbeddedSource))) {}
+
+  void format(raw_ostream &OS) {
+    if (!PrunedSource)
+      return;
+    size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
+    int64_t L = FirstLine;
+    for (size_t Pos = 0; Pos < PrunedSource->size(); ++L) {
+      size_t PosEnd = PrunedSource->find('\n', Pos);
+      StringRef String = PrunedSource->substr(
+          Pos, (PosEnd == StringRef::npos) ? StringRef::npos : (PosEnd - Pos));
+      if (String.endswith("\r"))
+        String = String.drop_back(1);
       OS << format_decimal(L, MaxLineNumberWidth);
       if (L == Line)
         OS << " >: ";
       else
         OS << "  : ";
-      OS << *I << "\n";
+      OS << String << '\n';
+      if (PosEnd == StringRef::npos)
+        break;
+      Pos = PosEnd + 1;
     }
   }
+};
+
+void PlainPrinterBase::printHeader(uint64_t Address) {
+  if (Config.PrintAddress) {
+    OS << "0x";
+    OS.write_hex(Address);
+    StringRef Delimiter = Config.Pretty ? ": " : "\n";
+    OS << Delimiter;
+  }
 }
 
-void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
-  if (PrintFunctionNames) {
-    std::string FunctionName = Info.FunctionName;
+// Prints source code around in the FileName the Line.
+void PlainPrinterBase::printContext(SourceCode SourceCode) {
+  SourceCode.format(OS);
+}
+
+void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
+  if (Config.PrintFunctions) {
     if (FunctionName == DILineInfo::BadString)
       FunctionName = DILineInfo::Addr2LineBadString;
-
-    StringRef Delimiter = PrintPretty ? " at " : "\n";
-    StringRef Prefix = (PrintPretty && Inlined) ? " (inlined by) " : "";
+    StringRef Delimiter = Config.Pretty ? " at " : "\n";
+    StringRef Prefix = (Config.Pretty && Inlined) ? " (inlined by) " : "";
     OS << Prefix << FunctionName << Delimiter;
   }
-  std::string Filename = Info.FileName;
+}
+
+void LLVMPrinter::printSimpleLocation(StringRef Filename,
+                                      const DILineInfo &Info) {
+  OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
+  printContext(
+      SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
+}
+
+void GNUPrinter::printSimpleLocation(StringRef Filename,
+                                     const DILineInfo &Info) {
+  OS << Filename << ':' << Info.Line;
+  if (Info.Discriminator)
+    OS << " (discriminator " << Info.Discriminator << ')';
+  OS << '\n';
+  printContext(
+      SourceCode(Filename, Info.Line, Config.SourceContextLines, Info.Source));
+}
+
+void PlainPrinterBase::printVerbose(StringRef Filename,
+                                    const DILineInfo &Info) {
+  OS << "  Filename: " << Filename << '\n';
+  if (Info.StartLine) {
+    OS << "  Function start filename: " << Info.StartFileName << '\n';
+    OS << "  Function start line: " << Info.StartLine << '\n';
+  }
+  printStartAddress(Info);
+  OS << "  Line: " << Info.Line << '\n';
+  OS << "  Column: " << Info.Column << '\n';
+  if (Info.Discriminator)
+    OS << "  Discriminator: " << Info.Discriminator << '\n';
+}
+
+void LLVMPrinter::printStartAddress(const DILineInfo &Info) {
+  if (Info.StartAddress) {
+    OS << "  Function start address: 0x";
+    OS.write_hex(*Info.StartAddress);
+    OS << '\n';
+  }
+}
+
+void LLVMPrinter::printFooter() { OS << '\n'; }
+
+void PlainPrinterBase::print(const DILineInfo &Info, bool Inlined) {
+  printFunctionName(Info.FunctionName, Inlined);
+  StringRef Filename = Info.FileName;
   if (Filename == DILineInfo::BadString)
     Filename = DILineInfo::Addr2LineBadString;
-  if (!Verbose) {
-    OS << Filename << ":" << Info.Line;
-    if (Style == OutputStyle::LLVM)
-      OS << ":" << Info.Column;
-    else if (Style == OutputStyle::GNU && Info.Discriminator != 0)
-      OS << " (discriminator " << Info.Discriminator << ")";
-    OS << "\n";
-    printContext(Filename, Info.Line);
-    return;
-  }
-  OS << "  Filename: " << Filename << "\n";
-  if (Info.StartLine)
-    OS << "Function start line: " << Info.StartLine << "\n";
-  OS << "  Line: " << Info.Line << "\n";
-  OS << "  Column: " << Info.Column << "\n";
-  if (Info.Discriminator)
-    OS << "  Discriminator: " << Info.Discriminator << "\n";
+  if (Config.Verbose)
+    printVerbose(Filename, Info);
+  else
+    printSimpleLocation(Filename, Info);
 }
 
-DIPrinter &DIPrinter::operator<<(const DILineInfo &Info) {
+void PlainPrinterBase::print(const Request &Request, const DILineInfo &Info) {
+  printHeader(*Request.Address);
   print(Info, false);
-  return *this;
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DIInliningInfo &Info) {
+void PlainPrinterBase::print(const Request &Request,
+                             const DIInliningInfo &Info) {
+  printHeader(*Request.Address);
   uint32_t FramesNum = Info.getNumberOfFrames();
-  if (FramesNum == 0) {
+  if (FramesNum == 0)
     print(DILineInfo(), false);
-    return *this;
-  }
-  for (uint32_t i = 0; i < FramesNum; i++)
-    print(Info.getFrame(i), i > 0);
-  return *this;
+  else
+    for (uint32_t I = 0; I < FramesNum; ++I)
+      print(Info.getFrame(I), I > 0);
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
-  std::string Name = Global.Name;
+void PlainPrinterBase::print(const Request &Request, const DIGlobal &Global) {
+  printHeader(*Request.Address);
+  StringRef Name = Global.Name;
   if (Name == DILineInfo::BadString)
     Name = DILineInfo::Addr2LineBadString;
   OS << Name << "\n";
   OS << Global.Start << " " << Global.Size << "\n";
-  return *this;
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DILocal &Local) {
-  if (Local.FunctionName.empty())
-    OS << "??\n";
+void PlainPrinterBase::print(const Request &Request,
+                             const std::vector<DILocal> &Locals) {
+  printHeader(*Request.Address);
+  if (Locals.empty())
+    OS << DILineInfo::Addr2LineBadString << '\n';
   else
-    OS << Local.FunctionName << '\n';
+    for (const DILocal &L : Locals) {
+      if (L.FunctionName.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.FunctionName;
+      OS << '\n';
 
-  if (Local.Name.empty())
-    OS << "??\n";
-  else
-    OS << Local.Name << '\n';
+      if (L.Name.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.Name;
+      OS << '\n';
 
-  if (Local.DeclFile.empty())
-    OS << "??";
-  else
-    OS << Local.DeclFile;
-  OS << ':' << Local.DeclLine << '\n';
+      if (L.DeclFile.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.DeclFile;
 
-  if (Local.FrameOffset)
-    OS << *Local.FrameOffset << ' ';
-  else
-    OS << "?? ";
+      OS << ':' << L.DeclLine << '\n';
 
-  if (Local.Size)
-    OS << *Local.Size << ' ';
-  else
-    OS << "?? ";
+      if (L.FrameOffset)
+        OS << *L.FrameOffset;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << ' ';
 
-  if (Local.TagOffset)
-    OS << *Local.TagOffset << '\n';
+      if (L.Size)
+        OS << *L.Size;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << ' ';
+
+      if (L.TagOffset)
+        OS << *L.TagOffset;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << '\n';
+    }
+  printFooter();
+}
+
+void PlainPrinterBase::printInvalidCommand(const Request &Request,
+                                           StringRef Command) {
+  OS << Command << '\n';
+}
+
+bool PlainPrinterBase::printError(const Request &Request,
+                                  const ErrorInfoBase &ErrorInfo,
+                                  StringRef ErrorBanner) {
+  ES << ErrorBanner;
+  ErrorInfo.log(ES);
+  ES << '\n';
+  // Print an empty struct too.
+  return true;
+}
+
+static std::string toHex(uint64_t V) {
+  return ("0x" + Twine::utohexstr(V)).str();
+}
+
+static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
+  json::Object Json({{"ModuleName", Request.ModuleName.str()}});
+  if (Request.Address)
+    Json["Address"] = toHex(*Request.Address);
+  if (!ErrorMsg.empty())
+    Json["Error"] = json::Object({{"Message", ErrorMsg.str()}});
+  return Json;
+}
+
+void JSONPrinter::print(const Request &Request, const DILineInfo &Info) {
+  DIInliningInfo InliningInfo;
+  InliningInfo.addFrame(Info);
+  print(Request, InliningInfo);
+}
+
+void JSONPrinter::print(const Request &Request, const DIInliningInfo &Info) {
+  json::Array Array;
+  for (uint32_t I = 0, N = Info.getNumberOfFrames(); I < N; ++I) {
+    const DILineInfo &LineInfo = Info.getFrame(I);
+    json::Object Object(
+        {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
+                              ? LineInfo.FunctionName
+                              : ""},
+         {"StartFileName", LineInfo.StartFileName != DILineInfo::BadString
+                               ? LineInfo.StartFileName
+                               : ""},
+         {"StartLine", LineInfo.StartLine},
+         {"StartAddress",
+          LineInfo.StartAddress ? toHex(*LineInfo.StartAddress) : ""},
+         {"FileName",
+          LineInfo.FileName != DILineInfo::BadString ? LineInfo.FileName : ""},
+         {"Line", LineInfo.Line},
+         {"Column", LineInfo.Column},
+         {"Discriminator", LineInfo.Discriminator}});
+    SourceCode SourceCode(LineInfo.FileName, LineInfo.Line,
+                          Config.SourceContextLines, LineInfo.Source);
+    std::string FormattedSource;
+    raw_string_ostream Stream(FormattedSource);
+    SourceCode.format(Stream);
+    if (!FormattedSource.empty())
+      Object["Source"] = std::move(FormattedSource);
+    Array.push_back(std::move(Object));
+  }
+  json::Object Json = toJSON(Request);
+  Json["Symbol"] = std::move(Array);
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
   else
-    OS << "??\n";
-  return *this;
+    printJSON(std::move(Json));
+}
+
+void JSONPrinter::print(const Request &Request, const DIGlobal &Global) {
+  json::Object Data(
+      {{"Name", Global.Name != DILineInfo::BadString ? Global.Name : ""},
+       {"Start", toHex(Global.Start)},
+       {"Size", toHex(Global.Size)}});
+  json::Object Json = toJSON(Request);
+  Json["Data"] = std::move(Data);
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
+  else
+    printJSON(std::move(Json));
+}
+
+void JSONPrinter::print(const Request &Request,
+                        const std::vector<DILocal> &Locals) {
+  json::Array Frame;
+  for (const DILocal &Local : Locals) {
+    json::Object FrameObject(
+        {{"FunctionName", Local.FunctionName},
+         {"Name", Local.Name},
+         {"DeclFile", Local.DeclFile},
+         {"DeclLine", int64_t(Local.DeclLine)},
+         {"Size", Local.Size ? toHex(*Local.Size) : ""},
+         {"TagOffset", Local.TagOffset ? toHex(*Local.TagOffset) : ""}});
+    if (Local.FrameOffset)
+      FrameObject["FrameOffset"] = *Local.FrameOffset;
+    Frame.push_back(std::move(FrameObject));
+  }
+  json::Object Json = toJSON(Request);
+  Json["Frame"] = std::move(Frame);
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
+  else
+    printJSON(std::move(Json));
+}
+
+void JSONPrinter::printInvalidCommand(const Request &Request,
+                                      StringRef Command) {
+  printError(Request,
+             StringError("unable to parse arguments: " + Command,
+                         std::make_error_code(std::errc::invalid_argument)),
+             "");
+}
+
+bool JSONPrinter::printError(const Request &Request,
+                             const ErrorInfoBase &ErrorInfo,
+                             StringRef ErrorBanner) {
+  json::Object Json = toJSON(Request, ErrorInfo.message());
+  if (ObjectList)
+    ObjectList->push_back(std::move(Json));
+  else
+    printJSON(std::move(Json));
+  return false;
+}
+
+void JSONPrinter::listBegin() {
+  assert(!ObjectList);
+  ObjectList = std::make_unique<json::Array>();
+}
+
+void JSONPrinter::listEnd() {
+  assert(ObjectList);
+  printJSON(std::move(*ObjectList));
+  ObjectList.reset();
 }
 
 } // end namespace symbolize

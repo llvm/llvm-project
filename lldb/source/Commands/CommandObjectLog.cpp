@@ -76,7 +76,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), log_file(), log_options(0) {}
+    CommandOptions() : Options(), log_file() {}
 
     ~CommandOptions() override = default;
 
@@ -136,7 +136,7 @@ public:
     // Instance variables to hold the values for command options.
 
     FileSpec log_file;
-    uint32_t log_options;
+    uint32_t log_options = 0;
   };
 
   void
@@ -151,7 +151,6 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -225,7 +224,6 @@ protected:
       result.AppendErrorWithFormat(
           "%s takes a log channel and one or more log types.\n",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

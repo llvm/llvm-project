@@ -1,12 +1,22 @@
+## Check how obj2yaml dumps the sh_entsize field.
+
+## Check we don't dump the "EntSize" key for SHT_SYMTAB/SHT_DYNSYM sections
+## when the value of sh_entsize is equal to sizeof(ELF_Sym) == 0x18.
+
 # RUN: yaml2obj %s -o %t
 # RUN: obj2yaml %t | FileCheck %s
 
-## Check obj2yaml is able to dump sh_entsize field of a section.
-
-# CHECK:      - Name:            .rodata.cst4
-# CHECK-NEXT:   Type:            SHT_PROGBITS
-# CHECK-NEXT:   Flags:           [ SHF_ALLOC, SHF_MERGE ]
-# CHECK-NEXT:   EntSize:         0x0000000000000004
+# CHECK:       - Name:    .rodata.cst4
+# CHECK-NEXT:    Type:    SHT_PROGBITS
+# CHECK-NEXT:    EntSize: 0x4
+# CHECK-NEXT:  - Name: .mysymtab
+# CHECK-NEXT:    Type: SHT_SYMTAB
+# CHECK-NEXT:    Link: .strtab
+# CHECK-NEXT:    Size: 0x0
+# CHECK-NEXT:  - Name: .mydynsym
+# CHECK-NEXT:    Type: SHT_DYNSYM
+# CHECK-NEXT:    Size: 0x0
+# CHECK-NEXT: ...
 
 --- !ELF
 FileHeader:
@@ -14,7 +24,28 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_REL
 Sections:
-  - Name:            .rodata.cst4
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_MERGE ]
-    EntSize:         0x0000000000000004
+  - Name:    .rodata.cst4
+    Type:    SHT_PROGBITS
+    EntSize: 0x4
+  - Name:    .mysymtab
+    Type:    SHT_SYMTAB
+    EntSize: [[SYMTABES=0x18]]
+  - Name:    .mydynsym
+    Type:    SHT_DYNSYM
+    EntSize: [[DYNSYMES=0x18]]
+
+## Document that we are unable to dump a SHT_SYMTAB section when its entry size
+## is not equal to sizeof(ELF_Sym).
+
+# RUN: yaml2obj %s -DSYMTABES=0x19 -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERR1
+
+# ERR1: Error reading file: [[FILE]]: section [index 2] has invalid sh_entsize: expected 24, but got 25
+
+## Document that we are unable to dump a SHT_DYNSYM section when its entry size
+## is not equal to sizeof(ELF_Sym).
+
+# RUN: yaml2obj %s -DDYNSYMES=0x19 -o %t3
+# RUN: not obj2yaml %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=ERR2
+
+# ERR2: Error reading file: [[FILE]]: section [index 3] has invalid sh_entsize: expected 24, but got 25

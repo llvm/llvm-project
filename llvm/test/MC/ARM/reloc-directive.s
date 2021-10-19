@@ -21,6 +21,11 @@
   .reloc 0, R_ARM_LDR_PC_G0, foo+3
   .reloc 0, R_ARM_THM_ALU_PREL_11_0, 5
 
+  .reloc 0, BFD_RELOC_NONE, 9
+  .reloc 0, BFD_RELOC_8, 9
+  .reloc 0, BFD_RELOC_16, 9
+  .reloc 0, BFD_RELOC_32, 9
+
 .data
 .globl foo
 foo:
@@ -34,14 +39,22 @@ foo:
 # PRINT: .reloc 0, R_ARM_ALU_PC_G0, .data+2
 # PRINT: .reloc 0, R_ARM_LDR_PC_G0, foo+3
 # PRINT: .reloc 0, R_ARM_THM_ALU_PREL_11_0, 5
+# PRINT:      .reloc 0, BFD_RELOC_NONE, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
+# PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
 
 # ARM relocations use the Elf32_Rel format. Addends are neither stored in the
 # relocation entries nor applied in the referenced locations.
-# CHECK:      0x8 R_ARM_NONE .data 0x0
-# CHECK-NEXT: 0x4 R_ARM_NONE foo 0x0
-# CHECK-NEXT: 0x0 R_ARM_NONE - 0x0
-# CHECK-NEXT: 0x0 R_ARM_ALU_PC_G0 .data 0x0
-# CHECK-NEXT: 0x0 R_ARM_LDR_PC_G0 foo 0x0
-# CHECK-NEXT: 0x0 R_ARM_THM_ALU_PREL_11_0 - 0x0
+# CHECK:      0x8 R_ARM_NONE .data
+# CHECK-NEXT: 0x4 R_ARM_NONE foo
+# CHECK-NEXT: 0x0 R_ARM_NONE -
+# CHECK-NEXT: 0x0 R_ARM_ALU_PC_G0 .data
+# CHECK-NEXT: 0x0 R_ARM_LDR_PC_G0 foo
+# CHECK-NEXT: 0x0 R_ARM_THM_ALU_PREL_11_0 -
+# CHECK-NEXT: 0x0 R_ARM_NONE -
+# CHECK-NEXT: 0x0 R_ARM_ABS8 -
+# CHECK-NEXT: 0x0 R_ARM_ABS16 -
+# CHECK-NEXT: 0x0 R_ARM_ABS32 -
 
 # HEX: 0x00000000 00000000 00000000

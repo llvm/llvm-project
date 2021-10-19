@@ -19,7 +19,7 @@ Welcome to the LLVM project!
 
 The LLVM project has multiple components. The core of the project is
 itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and converts it into
+files needed to process intermediate representations and convert them into
 object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
@@ -50,11 +50,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
 
      * ``cd llvm-project``
 
-     * ``mkdir build``
-
-     * ``cd build``
-
-     * ``cmake -G <generator> [options] ../llvm``
+     * ``cmake -S llvm -B build -G <generator> [options]``
 
         Some common build system generators are:
 
@@ -65,12 +61,13 @@ This is an example work-flow and configuration to get and build the LLVM source:
           solutions.
         * ``Xcode`` --- for generating Xcode projects.
 
-        Some Common options:
+        Some common options:
 
         * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
           sub-projects you'd like to additionally build. Can include any of: clang,
-          clang-tools-extra, libcxx, libcxxabi, libunwind, lldb, compiler-rt, lld,
-          polly, or debuginfo-tests.
+          clang-tools-extra, compiler-rt,cross-project-tests, flang, libc, libclc,
+          libcxx, libcxxabi, libunwind, lld, lldb, mlir, openmp, parallel-libs,
+          polly, or pstl.
 
           For example, to build LLVM, Clang, libcxx, and libcxxabi, use
           ``-DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi"``.
@@ -85,7 +82,7 @@ This is an example work-flow and configuration to get and build the LLVM source:
         * ``-DLLVM_ENABLE_ASSERTIONS=On`` --- Compile with assertion checks enabled
           (default is Yes for Debug builds, No for all other build types).
 
-      * ``cmake --build . [-- [options] <target>]`` or your build system specified above
+      * ``cmake --build build [-- [options] <target>]`` or your build system specified above
         directly.
 
         * The default target (i.e. ``ninja`` or ``make``) will build all of LLVM.

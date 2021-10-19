@@ -28,7 +28,7 @@ MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
-    End = Ctx.createTempSymbol("sec_end", true);
+    End = Ctx.createTempSymbol("sec_end");
   return End;
 }
 
@@ -60,10 +60,8 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
   if (Subsection == 0 && SubsectionFragmentMap.empty())
     return end();
 
-  SmallVectorImpl<std::pair<unsigned, MCFragment *>>::iterator MI =
-      std::lower_bound(SubsectionFragmentMap.begin(),
-                       SubsectionFragmentMap.end(),
-                       std::make_pair(Subsection, (MCFragment *)nullptr));
+  SmallVectorImpl<std::pair<unsigned, MCFragment *>>::iterator MI = lower_bound(
+      SubsectionFragmentMap, std::make_pair(Subsection, (MCFragment *)nullptr));
   bool ExactMatch = false;
   if (MI != SubsectionFragmentMap.end()) {
     ExactMatch = MI->first == Subsection;
@@ -82,6 +80,7 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
     SubsectionFragmentMap.insert(MI, std::make_pair(Subsection, F));
     getFragmentList().insert(IP, F);
     F->setParent(this);
+    F->setSubsectionNumber(Subsection);
   }
 
   return IP;

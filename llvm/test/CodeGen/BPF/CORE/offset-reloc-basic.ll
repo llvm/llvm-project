@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ; Source code:
 ;    struct sk_buff {
 ;      int i;
@@ -17,7 +16,9 @@
 ;      return dev != 0;
 ;    }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.sk_buff = type { i32, %struct.net_device* }
 %struct.net_device = type opaque
@@ -30,7 +31,7 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %3) #4, !dbg !29
   call void @llvm.dbg.value(metadata %struct.net_device* null, metadata !27, metadata !DIExpression()), !dbg !28
   store %struct.net_device* null, %struct.net_device** %2, align 8, !dbg !30, !tbaa !31
-  %4 = tail call %struct.net_device** @llvm.preserve.struct.access.index.p0p0s_struct.net_devices.p0s_struct.sk_buffs(%struct.sk_buff* %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
+  %4 = tail call %struct.net_device** @llvm.preserve.struct.access.index.p0p0s_struct.net_devices.p0s_struct.sk_buffs(%struct.sk_buff* elementtype(%struct.sk_buff) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
   %5 = bitcast %struct.net_device** %4 to i8*, !dbg !35
   %6 = call i32 inttoptr (i64 4 to i32 (i8*, i32, i8*)*)(i8* nonnull %3, i32 8, i8* %5) #4, !dbg !36
   %7 = load %struct.net_device*, %struct.net_device** %2, align 8, !dbg !37, !tbaa !31

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -filetype=obj -verify-machineinstrs < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=fiji -d - | FileCheck --check-prefixes=GCN,VI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -verify-machineinstrs < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx900 -d - | FileCheck --check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -filetype=obj -verify-machineinstrs < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=fiji -d - | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -verify-machineinstrs < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=gfx900 -d - | FileCheck --check-prefix=GCN %s
 ; XUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -filetype=obj -verify-machineinstrs < %s | llvm-objdump --triple=amdgcn--amdhsa --mcpu=hawaii -d - | FileCheck --check-prefixes=GCN,CI %s
 
 ; GCN: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

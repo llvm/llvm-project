@@ -232,6 +232,26 @@ private:
           EvalResult(("Cannot decode unknown symbol '" + Symbol + "'").str()),
           "");
 
+    // if there is an offset number expr
+    int64_t Offset = 0;
+    BinOpToken BinOp;
+    std::tie(BinOp, RemainingExpr) = parseBinOpToken(RemainingExpr);
+    switch (BinOp) {
+    case BinOpToken::Add: {
+      EvalResult Number;
+      std::tie(Number, RemainingExpr) = evalNumberExpr(RemainingExpr);
+      Offset = Number.getValue();
+      break;
+    }
+    case BinOpToken::Invalid:
+      break;
+    default:
+      return std::make_pair(
+          unexpectedToken(RemainingExpr, RemainingExpr,
+                          "expected '+' for offset or ',' if no offset"),
+          "");
+    }
+
     if (!RemainingExpr.startswith(","))
       return std::make_pair(
           unexpectedToken(RemainingExpr, RemainingExpr, "expected ','"), "");
@@ -249,7 +269,7 @@ private:
 
     MCInst Inst;
     uint64_t Size;
-    if (!decodeInst(Symbol, Inst, Size))
+    if (!decodeInst(Symbol, Inst, Size, Offset))
       return std::make_pair(
           EvalResult(("Couldn't decode instruction at '" + Symbol + "'").str()),
           "");
@@ -307,7 +327,7 @@ private:
 
     MCInst Inst;
     uint64_t InstSize;
-    if (!decodeInst(Symbol, Inst, InstSize))
+    if (!decodeInst(Symbol, Inst, InstSize, 0))
       return std::make_pair(
           EvalResult(("Couldn't decode instruction at '" + Symbol + "'").str()),
           "");
@@ -352,7 +372,7 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     uint64_t StubAddr;
-    std::string ErrorMsg = "";
+    std::string ErrorMsg;
     std::tie(StubAddr, ErrorMsg) = Checker.getStubOrGOTAddrFor(
         StubContainerName, Symbol, PCtx.IsInsideLoad, IsStubAddr);
 
@@ -381,7 +401,9 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     StringRef SectionName;
-    std::tie(SectionName, RemainingExpr) = parseSymbol(RemainingExpr);
+    size_t CloseParensIdx = RemainingExpr.find(')');
+    SectionName = RemainingExpr.substr(0, CloseParensIdx).rtrim();
+    RemainingExpr = RemainingExpr.substr(CloseParensIdx).ltrim();
 
     if (!RemainingExpr.startswith(")"))
       return std::make_pair(
@@ -389,7 +411,7 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     uint64_t StubAddr;
-    std::string ErrorMsg = "";
+    std::string ErrorMsg;
     std::tie(StubAddr, ErrorMsg) = Checker.getSectionAddr(
         FileName, SectionName, PCtx.IsInsideLoad);
 
@@ -662,10 +684,12 @@ private:
     return evalComplexExpr(std::make_pair(ThisResult, RemainingExpr), PCtx);
   }
 
-  bool decodeInst(StringRef Symbol, MCInst &Inst, uint64_t &Size) const {
+  bool decodeInst(StringRef Symbol, MCInst &Inst, uint64_t &Size,
+                  int64_t Offset) const {
     MCDisassembler *Dis = Checker.Disassembler;
     StringRef SymbolMem = Checker.getSymbolContent(Symbol);
-    ArrayRef<uint8_t> SymbolBytes(SymbolMem.bytes_begin(), SymbolMem.size());
+    ArrayRef<uint8_t> SymbolBytes(SymbolMem.bytes_begin() + Offset,
+                                  SymbolMem.size() - Offset);
 
     MCDisassembler::DecodeStatus S =
         Dis->getInstruction(Inst, Size, SymbolBytes, 0, nulls());
@@ -673,7 +697,7 @@ private:
     return (S == MCDisassembler::Success);
   }
 };
-}
+} // namespace llvm
 
 RuntimeDyldCheckerImpl::RuntimeDyldCheckerImpl(
     IsSymbolValidFunction IsSymbolValid, GetSymbolInfoFunction GetSymbolInfo,
@@ -794,7 +818,7 @@ StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
     logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return StringRef();
   }
-  return SymInfo->getContent();
+  return {SymInfo->getContent().data(), SymInfo->getContent().size()};
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(

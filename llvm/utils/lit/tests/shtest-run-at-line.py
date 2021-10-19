@@ -1,7 +1,7 @@
 # Check that -vv makes the line number of the failing RUN command clear.
 # (-v is actually sufficient in the case of the internal shell.)
-#
-# RUN: not %{lit} -j 1 -vv %{inputs}/shtest-run-at-line > %t.out
+
+# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line > %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
 # END.

@@ -20,11 +20,11 @@ namespace ns {
   };
 }
 
-// CHECK: analyzer-display-progress.cpp f()
-// CHECK: analyzer-display-progress.cpp g()
-// CHECK: analyzer-display-progress.cpp h()
-// CHECK: analyzer-display-progress.cpp SomeStruct::f()
-// CHECK: analyzer-display-progress.cpp SomeOtherStruct::f()
-// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(int)
-// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, ::SomeStruct)
-// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, struct ns::SomeStruct)
+// CHECK: analyzer-display-progress.cpp f() : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp g() : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp h() : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp SomeStruct::f() : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp SomeOtherStruct::f() : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(int) : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, ::SomeStruct) : {{[0-9]+}}
+// CHECK: analyzer-display-progress.cpp ns::SomeStruct::f(float, struct ns::SomeStruct) : {{[0-9]+}}

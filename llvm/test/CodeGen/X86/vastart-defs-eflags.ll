@@ -9,9 +9,14 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-LABEL: check_flag:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je LBB0_2
-; CHECK-NEXT:  ## %bb.1: ## %entry
+; CHECK-NEXT:    je LBB0_4
+; CHECK-NEXT:  ## %bb.3: ## %entry
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
@@ -20,16 +25,11 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-NEXT:    movaps %xmm5, (%rsp)
 ; CHECK-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  LBB0_2: ## %entry
-; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:  LBB0_4: ## %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl $512, %edi ## imm = 0x200
-; CHECK-NEXT:    je LBB0_4
-; CHECK-NEXT:  ## %bb.3: ## %if.then
+; CHECK-NEXT:    je LBB0_2
+; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, 16
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
@@ -37,7 +37,7 @@ define i32 @check_flag(i32 %flags, ...) nounwind {
 ; CHECK-NEXT:    movl $48, 4
 ; CHECK-NEXT:    movl $8, 0
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:  LBB0_4: ## %if.end
+; CHECK-NEXT:  LBB0_2: ## %if.end
 ; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    retq
 entry:

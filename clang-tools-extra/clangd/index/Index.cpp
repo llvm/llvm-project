@@ -31,8 +31,9 @@ std::shared_ptr<SymbolIndex> SwapIndex::snapshot() const {
   return Index;
 }
 
-bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
-  llvm::json::ObjectMapper O(Parameters);
+bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Parameters, P);
   int64_t Limit;
   bool OK =
       O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&
@@ -48,12 +49,12 @@ bool fromJSON(const llvm::json::Value &Parameters, FuzzyFindRequest &Request) {
 llvm::json::Value toJSON(const FuzzyFindRequest &Request) {
   return llvm::json::Object{
       {"Query", Request.Query},
-      {"Scopes", llvm::json::Array{Request.Scopes}},
+      {"Scopes", Request.Scopes},
       {"AnyScope", Request.AnyScope},
       {"Limit", Request.Limit},
       {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
-      {"ProximityPaths", llvm::json::Array{Request.ProximityPaths}},
-      {"PreferredTypes", llvm::json::Array{Request.PreferredTypes}},
+      {"ProximityPaths", Request.ProximityPaths},
+      {"PreferredTypes", Request.PreferredTypes},
   };
 }
 
@@ -73,6 +74,17 @@ void SwapIndex::relations(
     const RelationsRequest &R,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> CB) const {
   return snapshot()->relations(R, CB);
+}
+
+llvm::unique_function<IndexContents(llvm::StringRef) const>
+SwapIndex::indexedFiles() const {
+  // The index snapshot should outlive this method return value.
+  auto SnapShot = snapshot();
+  auto IndexedFiles = SnapShot->indexedFiles();
+  return [KeepAlive{std::move(SnapShot)},
+          IndexContainsFile{std::move(IndexedFiles)}](llvm::StringRef File) {
+    return IndexContainsFile(File);
+  };
 }
 
 size_t SwapIndex::estimateMemoryUsage() const {

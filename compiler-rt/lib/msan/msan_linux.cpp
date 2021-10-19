@@ -26,7 +26,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <unwind.h>
-#include <execinfo.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 
@@ -38,7 +37,7 @@ namespace __msan {
 void ReportMapRange(const char *descr, uptr beg, uptr size) {
   if (size > 0) {
     uptr end = beg + size - 1;
-    VPrintf(1, "%s : %p - %p\n", descr, beg, end);
+    VPrintf(1, "%s : 0x%zx - 0x%zx\n", descr, beg, end);
   }
 }
 
@@ -46,7 +45,7 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size) {
   if (size > 0) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
-      Printf("FATAL: Memory range %p - %p is not available.\n", beg, end);
+      Printf("FATAL: Memory range 0x%zx - 0x%zx is not available.\n", beg, end);
       return false;
     }
   }
@@ -66,8 +65,8 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range %p - %p (%s).\n", beg, end,
-             name);
+      Printf("FATAL: Cannot protect memory range 0x%zx - 0x%zx (%s).\n", beg,
+             end, name);
       return false;
     }
   }
@@ -107,7 +106,7 @@ static void CheckMemoryLayoutSanity() {
 
 bool InitShadow(bool init_origins) {
   // Let user know mapping parameters first.
-  VPrintf(1, "__msan_init %p\n", &__msan_init);
+  VPrintf(1, "__msan_init %p\n", reinterpret_cast<void *>(&__msan_init));
   for (unsigned i = 0; i < kMemoryLayoutSize; ++i)
     VPrintf(1, "%s: %zx - %zx\n", kMemoryLayout[i].name, kMemoryLayout[i].start,
             kMemoryLayout[i].end - 1);
@@ -116,7 +115,7 @@ bool InitShadow(bool init_origins) {
 
   if (!MEM_IS_APP(&__msan_init)) {
     Printf("FATAL: Code %p is out of application range. Non-PIE build?\n",
-           (uptr)&__msan_init);
+           reinterpret_cast<void *>(&__msan_init));
     return false;
   }
 

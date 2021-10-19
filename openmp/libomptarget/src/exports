@@ -3,6 +3,7 @@ VERS1.0 {
     __tgt_register_requires;
     __tgt_register_lib;
     __tgt_unregister_lib;
+    __tgt_init_all_rtls;
     __tgt_target_data_begin;
     __tgt_target_data_end;
     __tgt_target_data_update;
@@ -25,6 +26,8 @@ VERS1.0 {
     __tgt_target_teams_nowait_mapper;
     __tgt_mapper_num_components;
     __tgt_push_mapper_component;
+    __kmpc_push_target_tripcount;
+    __kmpc_push_target_tripcount_mapper;
     omp_get_num_devices;
     omp_get_initial_device;
     omp_target_alloc;
@@ -34,7 +37,12 @@ VERS1.0 {
     omp_target_memcpy_rect;
     omp_target_associate_ptr;
     omp_target_disassociate_ptr;
-    __kmpc_push_target_tripcount;
+    llvm_omp_target_alloc_host;
+    llvm_omp_target_alloc_shared;
+    llvm_omp_target_alloc_device;
+    llvm_omp_get_dynamic_shared;
+    __tgt_set_info_flag;
+    __tgt_print_device_info;
   local:
     *;
 };

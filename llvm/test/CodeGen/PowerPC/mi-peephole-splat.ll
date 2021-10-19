@@ -3,10 +3,14 @@
 ; RUN: | FileCheck --check-prefix=CHECK-LE %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-linux-gnu -mattr=+vsx < %s \
 ; RUN: | FileCheck --check-prefix=CHECK-BE %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff -mattr=+vsx \
+; RUN: -vec-extabi < %s | FileCheck --check-prefix=CHECK-BE %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-linux-gnu -mcpu=pwr9 < %s \
 ; RUN: | FileCheck --check-prefix=CHECK-P9LE %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-linux-gnu -mcpu=pwr9 < %s \
 ; RUN: | FileCheck --check-prefix=CHECK-P9BE %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr9 \
+; RUN: -vec-extabi < %s | FileCheck --check-prefix=CHECK-BE %s
 
 define double @splat_swap(<2 x double> %x, <2 x double> %y) nounwind  {
 ; CHECK-LE-LABEL: splat_swap:

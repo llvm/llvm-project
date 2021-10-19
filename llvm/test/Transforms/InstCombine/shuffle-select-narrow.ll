@@ -5,8 +5,8 @@
 
 define <2 x i8> @narrow_shuffle_of_select(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i8> [[TMP1]], <2 x i8> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -20,8 +20,8 @@ define <2 x i8> @narrow_shuffle_of_select(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %
 
 define <2 x i8> @narrow_shuffle_of_select_overspecified_extend(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_overspecified_extend(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[Y:%.*]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP:%.*]], <2 x i8> [[TMP1]], <2 x i8> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -35,8 +35,8 @@ define <2 x i8> @narrow_shuffle_of_select_overspecified_extend(<2 x i1> %cmp, <4
 
 define <3 x float> @narrow_shuffle_of_select_undefs(<3 x i1> %cmp, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_undefs(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[CMP:%.*]], <3 x float> [[TMP1]], <3 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;

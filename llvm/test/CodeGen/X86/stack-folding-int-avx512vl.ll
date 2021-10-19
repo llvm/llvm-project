@@ -1902,7 +1902,6 @@ define <16 x i16> @stack_fold_pmaxuw_ymm(<16 x i16> %a0, <16 x i16> %a1) {
   %3 = select <16 x i1> %2, <16 x i16> %a0, <16 x i16> %a1
   ret <16 x i16> %3
 }
-declare <16 x i16> @llvm.x86.avx2.pmaxu.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <16 x i8> @stack_fold_pminsb(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: stack_fold_pminsb:

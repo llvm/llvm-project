@@ -11,9 +11,12 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
+#include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
+#include "../bugprone/SuspiciousMemoryComparisonCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
+#include "../concurrency/ThreadCanceltypeAsynchronousCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjects.h"
@@ -96,8 +99,13 @@ public:
         "cert-dcl37-c");
     // ENV
     CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    // EXP
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-exp42-c");
     // FLP
     CheckFactories.registerCheck<FloatLoopCounter>("cert-flp30-c");
+    CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
+        "cert-flp37-c");
     // FIO
     CheckFactories.registerCheck<misc::NonCopyableObjectsCheck>("cert-fio38-c");
     // ERR
@@ -109,6 +117,11 @@ public:
     // POS
     CheckFactories.registerCheck<bugprone::BadSignalToKillThreadCheck>(
         "cert-pos44-c");
+    CheckFactories
+        .registerCheck<concurrency::ThreadCanceltypeAsynchronousCheck>(
+            "cert-pos47-c");
+    // SIG
+    CheckFactories.registerCheck<bugprone::SignalHandlerCheck>("cert-sig30-c");
     // STR
     CheckFactories.registerCheck<bugprone::SignedCharMisuseCheck>(
         "cert-str34-c");
@@ -118,8 +131,8 @@ public:
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
-    Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "0";
-    Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "0";
+    Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
+    Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "false";
     return Options;
   }
 };

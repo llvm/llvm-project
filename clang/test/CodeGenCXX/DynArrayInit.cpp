@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -O3 -emit-llvm -o - %s | FileCheck %s
 // PR7490
 
-// CHECK-LABEL: define signext i8 @_Z2f0v
+// CHECK-LABEL: define{{.*}} signext i8 @_Z2f0v
 // CHECK: ret i8 0
 // CHECK: }
 inline void* operator new[](unsigned long, void* __p)  { return __p; }

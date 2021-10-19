@@ -35,8 +35,8 @@ createAffineLoopInvariantCodeMotionPass();
 /// ops.
 std::unique_ptr<OperationPass<FuncOp>> createAffineParallelizePass();
 
-/// Normalize affine.parallel ops so that lower bounds are 0 and steps are 1.
-std::unique_ptr<OperationPass<FuncOp>> createAffineParallelNormalizePass();
+/// Apply normalization transformations to affine loop-like ops.
+std::unique_ptr<OperationPass<FuncOp>> createAffineLoopNormalizePass();
 
 /// Performs packing (or explicit copying) of accessed memref regions into
 /// buffers in the specified faster memory space through either pointwise copies
@@ -47,6 +47,11 @@ std::unique_ptr<OperationPass<FuncOp>> createAffineDataCopyGenerationPass(
     uint64_t fastMemCapacityBytes = std::numeric_limits<uint64_t>::max());
 /// Overload relying on pass options for initialization.
 std::unique_ptr<OperationPass<FuncOp>> createAffineDataCopyGenerationPass();
+
+/// Creates a pass to replace affine memref accesses by scalars using store to
+/// load forwarding and redundant load elimination; consequently also eliminate
+/// dead allocs.
+std::unique_ptr<OperationPass<FuncOp>> createAffineScalarReplacementPass();
 
 /// Creates a pass to perform tiling on loop nests.
 std::unique_ptr<OperationPass<FuncOp>>
@@ -61,7 +66,8 @@ std::unique_ptr<OperationPass<FuncOp>> createLoopTilingPass();
 /// and no callback is provided, anything passed from the command-line (if at
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
 std::unique_ptr<OperationPass<FuncOp>> createLoopUnrollPass(
-    int unrollFactor = -1, bool unrollFull = false,
+    int unrollFactor = -1, bool unrollUpToFactor = false,
+    bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
 
 /// Creates a loop unroll jam pass to unroll jam by the specified factor. A

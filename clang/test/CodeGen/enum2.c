@@ -12,4 +12,4 @@ void foo (void)
 // CHECK-SAME: elements: ![[ELTS:[0-9]+]]
 // CHECK: ![[LONG]] = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 // CHECK: ![[ELTS]] = !{![[MAX:[0-9]+]]}
-// CHECK: ![[MAX]] = !DIEnumerator(name: "MAX", value: 0, isUnsigned: true)
+// CHECK: ![[MAX]] = !DIEnumerator(name: "MAX", value: 0)

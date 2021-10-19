@@ -36,7 +36,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             created.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, disconnectAutomatically=False)
 
         # We set a breakpoint right before the side effect file is created
         self.set_source_breakpoints(self.source, [line_number(self.source, '// breakpoint')])
@@ -51,6 +51,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
+    @expectedFailureNetBSD
     def test_attach(self):
         """
             This test attaches to a process that creates a file. We attach and disconnect

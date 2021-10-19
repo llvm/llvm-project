@@ -45,14 +45,14 @@ For example, consider the following:
   }
 
 This code contains a statement that has a loop carried dependence on
-itself creating a cycle in the DDG. The figure bellow illustrates
+itself creating a cycle in the DDG. The figure below illustrates
 how the cycle of dependency is carried through multiple def-use relations
 and a memory access dependency.
 
 .. image:: cycle.png
 
 The DDG corresponding to this example would have a pi-block that contains
-all the nodes participating in the cycle, as shown bellow:
+all the nodes participating in the cycle, as shown below:
 
 .. image:: cycle_pi.png
 
@@ -71,7 +71,7 @@ High-Level Design
 The DDG and the PDG are both directed graphs and they extend the
 ``DirectedGraph`` class. Each implementation extends its corresponding
 node and edge types resulting in the inheritance relationship depicted
-in the UML diagram bellow:
+in the UML diagram below:
 
 .. image:: uml_nodes_and_edges.png
 

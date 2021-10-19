@@ -333,7 +333,7 @@ void CodeExtractorAnalysisCache::findSideEffectInfoForBlock(BasicBlock &BB) {
         MemAddr = LI->getPointerOperand();
       }
       // Global variable can not be aliased with locals.
-      if (dyn_cast<Constant>(MemAddr))
+      if (isa<Constant>(MemAddr))
         break;
       Value *Base = MemAddr->stripInBoundsConstantOffsets();
       if (!isa<AllocaInst>(Base)) {
@@ -426,15 +426,15 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   BasicBlock *NewExitBlock = CommonExitBlock->splitBasicBlock(
       CommonExitBlock->getFirstNonPHI()->getIterator());
 
-  for (auto PI = pred_begin(CommonExitBlock), PE = pred_end(CommonExitBlock);
-       PI != PE;) {
-    BasicBlock *Pred = *PI++;
+  for (BasicBlock *Pred :
+       llvm::make_early_inc_range(predecessors(CommonExitBlock))) {
     if (Blocks.count(Pred))
       continue;
     Pred->getTerminator()->replaceUsesOfWith(CommonExitBlock, NewExitBlock);
   }
   // Now add the old exit block to the outline region.
   Blocks.insert(CommonExitBlock);
+  OldTargets.push_back(NewExitBlock);
   return CommonExitBlock;
 }
 
@@ -533,6 +533,46 @@ void CodeExtractor::findAllocas(const CodeExtractorAnalysisCache &CEAC,
       LLVM_DEBUG(dbgs() << "Sinking alloca: " << *AI << "\n");
       SinkCands.insert(AI);
       continue;
+    }
+
+    // Find bitcasts in the outlined region that have lifetime marker users
+    // outside that region. Replace the lifetime marker use with an
+    // outside region bitcast to avoid unnecessary alloca/reload instructions
+    // and extra lifetime markers.
+    SmallVector<Instruction *, 2> LifetimeBitcastUsers;
+    for (User *U : AI->users()) {
+      if (!definedInRegion(Blocks, U))
+        continue;
+
+      if (U->stripInBoundsConstantOffsets() != AI)
+        continue;
+
+      Instruction *Bitcast = cast<Instruction>(U);
+      for (User *BU : Bitcast->users()) {
+        IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(BU);
+        if (!IntrInst)
+          continue;
+
+        if (!IntrInst->isLifetimeStartOrEnd())
+          continue;
+
+        if (definedInRegion(Blocks, IntrInst))
+          continue;
+
+        LLVM_DEBUG(dbgs() << "Replace use of extracted region bitcast"
+                          << *Bitcast << " in out-of-region lifetime marker "
+                          << *IntrInst << "\n");
+        LifetimeBitcastUsers.push_back(IntrInst);
+      }
+    }
+
+    for (Instruction *I : LifetimeBitcastUsers) {
+      Module *M = AIFunc->getParent();
+      LLVMContext &Ctx = M->getContext();
+      auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
+      CastInst *CastI =
+          CastInst::CreatePointerCast(AI, Int8PtrTy, "lt.cast", I);
+      I->replaceUsesOfWith(I->getOperand(1), CastI);
     }
 
     // Follow any bitcasts.
@@ -728,8 +768,7 @@ void CodeExtractor::severSplitPHINodesOfExits(
         NewBB = BasicBlock::Create(ExitBB->getContext(),
                                    ExitBB->getName() + ".split",
                                    ExitBB->getParent(), ExitBB);
-        SmallVector<BasicBlock *, 4> Preds(pred_begin(ExitBB),
-                                           pred_end(ExitBB));
+        SmallVector<BasicBlock *, 4> Preds(predecessors(ExitBB));
         for (BasicBlock *PredBB : Preds)
           if (Blocks.count(PredBB))
             PredBB->getTerminator()->replaceUsesOfWith(ExitBB, NewBB);
@@ -847,7 +886,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   //  "target-features" attribute allowing it to be lowered.
   // FIXME: This should be changed to check to see if a specific
   //           attribute can not be inherited.
-  for (const auto &Attr : oldFunction->getAttributes().getFnAttributes()) {
+  for (const auto &Attr : oldFunction->getAttributes().getFnAttrs()) {
     if (Attr.isStringAttribute()) {
       if (Attr.getKindAsString() == "thunk")
         continue;
@@ -864,6 +903,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::Convergent:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
+      case Attribute::ElementType:
       case Attribute::InAlloca:
       case Attribute::InReg:
       case Attribute::InaccessibleMemOnly:
@@ -891,6 +931,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::StructRet:
       case Attribute::SwiftError:
       case Attribute::SwiftSelf:
+      case Attribute::SwiftAsync:
       case Attribute::WillReturn:
       case Attribute::WriteOnly:
       case Attribute::ZExt:
@@ -903,9 +944,12 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
       case Attribute::Cold:
+      case Attribute::DisableSanitizerInstrumentation:
+      case Attribute::Hot:
       case Attribute::NoRecurse:
       case Attribute::InlineHint:
       case Attribute::MinSize:
+      case Attribute::NoCallback:
       case Attribute::NoDuplicate:
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
@@ -913,6 +957,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
       case Attribute::NoUnwind:
+      case Attribute::NoSanitizeCoverage:
       case Attribute::NullPointerIsValid:
       case Attribute::OptForFuzzing:
       case Attribute::OptimizeNone:
@@ -930,7 +975,10 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::StackProtectStrong:
       case Attribute::StrictFP:
       case Attribute::UWTable:
+      case Attribute::VScaleRange:
       case Attribute::NoCfCheck:
+      case Attribute::MustProgress:
+      case Attribute::NoProfile:
         break;
       }
 
@@ -1118,9 +1166,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   AllocaInst *Struct = nullptr;
   if (AggregateArgs && (inputs.size() + outputs.size() > 0)) {
     std::vector<Type *> ArgTypes;
-    for (ValueSet::iterator v = StructValues.begin(),
-           ve = StructValues.end(); v != ve; ++v)
-      ArgTypes.push_back((*v)->getType());
+    for (Value *V : StructValues)
+      ArgTypes.push_back(V->getType());
 
     // Allocate a struct at the beginning of this function
     StructArgTy = StructType::get(newFunction->getContext(), ArgTypes);
@@ -1202,45 +1249,57 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
   // not in the region to be extracted.
   std::map<BasicBlock *, BasicBlock *> ExitBlockMap;
 
+  // Iterate over the previously collected targets, and create new blocks inside
+  // the function to branch to.
   unsigned switchVal = 0;
+  for (BasicBlock *OldTarget : OldTargets) {
+    if (Blocks.count(OldTarget))
+      continue;
+    BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
+    if (NewTarget)
+      continue;
+
+    // If we don't already have an exit stub for this non-extracted
+    // destination, create one now!
+    NewTarget = BasicBlock::Create(Context,
+                                    OldTarget->getName() + ".exitStub",
+                                    newFunction);
+    unsigned SuccNum = switchVal++;
+
+    Value *brVal = nullptr;
+    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
+    switch (NumExitBlocks) {
+    case 0:
+    case 1: break;  // No value needed.
+    case 2:         // Conditional branch, return a bool
+      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
+      break;
+    default:
+      brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
+      break;
+    }
+
+    ReturnInst::Create(Context, brVal, NewTarget);
+
+    // Update the switch instruction.
+    TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
+                                        SuccNum),
+                        OldTarget);
+  }
+
   for (BasicBlock *Block : Blocks) {
     Instruction *TI = Block->getTerminator();
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-      if (!Blocks.count(TI->getSuccessor(i))) {
-        BasicBlock *OldTarget = TI->getSuccessor(i);
-        // add a new basic block which returns the appropriate value
-        BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-        if (!NewTarget) {
-          // If we don't already have an exit stub for this non-extracted
-          // destination, create one now!
-          NewTarget = BasicBlock::Create(Context,
-                                         OldTarget->getName() + ".exitStub",
-                                         newFunction);
-          unsigned SuccNum = switchVal++;
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      // add a new basic block which returns the appropriate value
+      BasicBlock *NewTarget = ExitBlockMap[OldTarget];
+      assert(NewTarget && "Unknown target block!");
 
-          Value *brVal = nullptr;
-          switch (NumExitBlocks) {
-          case 0:
-          case 1: break;  // No value needed.
-          case 2:         // Conditional branch, return a bool
-            brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
-            break;
-          default:
-            brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
-            break;
-          }
-
-          ReturnInst::Create(Context, brVal, NewTarget);
-
-          // Update the switch instruction.
-          TheSwitch->addCase(ConstantInt::get(Type::getInt16Ty(Context),
-                                              SuccNum),
-                             OldTarget);
-        }
-
-        // rewrite the original branch instruction with this new target
-        TI->setSuccessor(i, NewTarget);
-      }
+      // rewrite the original branch instruction with this new target
+      TI->setSuccessor(i, NewTarget);
+   }
   }
 
   // Store the arguments right after the definition of output value.
@@ -1343,12 +1402,17 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
   Function::BasicBlockListType &oldBlocks = oldFunc->getBasicBlockList();
   Function::BasicBlockListType &newBlocks = newFunction->getBasicBlockList();
 
+  auto newFuncIt = newFunction->front().getIterator();
   for (BasicBlock *Block : Blocks) {
     // Delete the basic block from the old function, and the list of blocks
     oldBlocks.remove(Block);
 
     // Insert this basic block into the new function
-    newBlocks.push_back(Block);
+    // Insert the original blocks after the entry block created
+    // for the new function. The entry block may be followed
+    // by a set of exit blocks at this point, but these exit
+    // blocks better be placed at the end of the new function.
+    newFuncIt = newBlocks.insertAfter(newFuncIt, Block);
   }
 }
 
@@ -1435,7 +1499,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   // function arguments, as the parameters don't correspond to anything at the
   // source level.
   assert(OldSP->getUnit() && "Missing compile unit for subprogram");
-  DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolvedNodes=*/false,
+  DIBuilder DIB(*OldFunc.getParent(), /*AllowUnresolved=*/false,
                 OldSP->getUnit());
   auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
   DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
@@ -1470,20 +1534,19 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       continue;
     }
 
-    // If the location isn't a constant or an instruction, delete the
-    // intrinsic.
-    auto *DVI = cast<DbgVariableIntrinsic>(DII);
-    Value *Location = DVI->getVariableLocation();
-    if (!Location ||
-        (!isa<Constant>(Location) && !isa<Instruction>(Location))) {
-      DebugIntrinsicsToDelete.push_back(DVI);
-      continue;
-    }
+    auto IsInvalidLocation = [&NewFunc](Value *Location) {
+      // Location is invalid if it isn't a constant or an instruction, or is an
+      // instruction but isn't in the new function.
+      if (!Location ||
+          (!isa<Constant>(Location) && !isa<Instruction>(Location)))
+        return true;
+      Instruction *LocationInst = dyn_cast<Instruction>(Location);
+      return LocationInst && LocationInst->getFunction() != &NewFunc;
+    };
 
-    // If the variable location is an instruction but isn't in the new
-    // function, delete the intrinsic.
-    Instruction *LocationInst = dyn_cast<Instruction>(Location);
-    if (LocationInst && LocationInst->getFunction() != &NewFunc) {
+    auto *DVI = cast<DbgVariableIntrinsic>(DII);
+    // If any of the used locations are invalid, delete the intrinsic.
+    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
       DebugIntrinsicsToDelete.push_back(DVI);
       continue;
     }
@@ -1496,7 +1559,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
           NewSP, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
           OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
           OldVar->getAlignInBits());
-    DVI->setArgOperand(1, MetadataAsValue::get(Ctx, NewVar));
+    DVI->setVariable(cast<DILocalVariable>(NewVar));
   }
   for (auto *DII : DebugIntrinsicsToDelete)
     DII->eraseFromParent();
@@ -1506,24 +1569,32 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   // function.
   for (Instruction &I : instructions(NewFunc)) {
     if (const DebugLoc &DL = I.getDebugLoc())
-      I.setDebugLoc(DebugLoc::get(DL.getLine(), DL.getCol(), NewSP));
+      I.setDebugLoc(DILocation::get(Ctx, DL.getLine(), DL.getCol(), NewSP));
 
     // Loop info metadata may contain line locations. Fix them up.
-    auto updateLoopInfoLoc = [&Ctx,
-                              NewSP](const DILocation &Loc) -> DILocation * {
-      return DILocation::get(Ctx, Loc.getLine(), Loc.getColumn(), NewSP,
-                             nullptr);
+    auto updateLoopInfoLoc = [&Ctx, NewSP](Metadata *MD) -> Metadata * {
+      if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+        return DILocation::get(Ctx, Loc->getLine(), Loc->getColumn(), NewSP,
+                               nullptr);
+      return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
   }
   if (!TheCall.getDebugLoc())
-    TheCall.setDebugLoc(DebugLoc::get(0, 0, OldSP));
+    TheCall.setDebugLoc(DILocation::get(Ctx, 0, 0, OldSP));
 
   eraseDebugIntrinsicsWithNonLocalRefs(NewFunc);
 }
 
 Function *
 CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
+  ValueSet Inputs, Outputs;
+  return extractCodeRegion(CEAC, Inputs, Outputs);
+}
+
+Function *
+CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
+                                 ValueSet &inputs, ValueSet &outputs) {
   if (!isEligible())
     return nullptr;
 
@@ -1552,10 +1623,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
       Instruction *I = &*It;
       ++It;
 
-      if (match(I, m_Intrinsic<Intrinsic::assume>())) {
+      if (auto *AI = dyn_cast<AssumeInst>(I)) {
         if (AC)
-          AC->unregisterAssumption(cast<CallInst>(I));
-        I->eraseFromParent();
+          AC->unregisterAssumption(AI);
+        AI->eraseFromParent();
       }
     }
   }
@@ -1569,19 +1640,28 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
   SmallPtrSet<BasicBlock *, 1> ExitBlocks;
   for (BasicBlock *Block : Blocks) {
-    for (succ_iterator SI = succ_begin(Block), SE = succ_end(Block); SI != SE;
-         ++SI) {
-      if (!Blocks.count(*SI)) {
+    for (BasicBlock *Succ : successors(Block)) {
+      if (!Blocks.count(Succ)) {
         // Update the branch weight for this successor.
         if (BFI) {
-          BlockFrequency &BF = ExitWeights[*SI];
-          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, *SI);
+          BlockFrequency &BF = ExitWeights[Succ];
+          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, Succ);
         }
-        ExitBlocks.insert(*SI);
+        ExitBlocks.insert(Succ);
       }
     }
   }
   NumExitBlocks = ExitBlocks.size();
+
+  for (BasicBlock *Block : Blocks) {
+    Instruction *TI = Block->getTerminator();
+    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
+      if (Blocks.count(TI->getSuccessor(i)))
+        continue;
+      BasicBlock *OldTarget = TI->getSuccessor(i);
+      OldTargets.push_back(OldTarget);
+    }
+  }
 
   // If we have to split PHI nodes of the entry or exit blocks, do so now.
   severSplitPHINodesOfEntry(header);
@@ -1613,7 +1693,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
   }
   newFuncRoot->getInstList().push_back(BranchI);
 
-  ValueSet inputs, outputs, SinkingCands, HoistingCands;
+  ValueSet SinkingCands, HoistingCands;
   BasicBlock *CommonExit = nullptr;
   findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   assert(HoistingCands.empty() || CommonExit);
@@ -1740,7 +1820,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
                                           const Function &NewFunc,
                                           AssumptionCache *AC) {
   for (auto AssumeVH : AC->assumptions()) {
-    CallInst *I = dyn_cast_or_null<CallInst>(AssumeVH);
+    auto *I = dyn_cast_or_null<CallInst>(AssumeVH);
     if (!I)
       continue;
 
@@ -1752,12 +1832,12 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // that were previously in the old function, but that have now been moved
     // to the new function.
     for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
-      CallInst *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
+      auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
       if (!AffectedCI)
         continue;
       if (AffectedCI->getFunction() != &OldFunc)
         return true;
-      auto *AssumedInst = dyn_cast<Instruction>(AffectedCI->getOperand(0));
+      auto *AssumedInst = cast<Instruction>(AffectedCI->getOperand(0));
       if (AssumedInst->getFunction() != &OldFunc)
         return true;
     }

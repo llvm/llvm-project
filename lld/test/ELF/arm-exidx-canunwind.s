@@ -55,8 +55,8 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:    20108:       bl      #4 <func1>
-// CHECK-NEXT:                 bl      #4 <func2>
+// CHECK-NEXT:    20108:       bl      0x20114 <func1>
+// CHECK-NEXT:                 bl      0x20118 <func2>
 // CHECK-NEXT:                 bx      lr
 // CHECK:      <func1>:
 // CHECK-NEXT:    20114:       bx      lr

@@ -23,7 +23,6 @@
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include <cassert>
 #include <memory>
-#include <vector>
 
 namespace llvm {
 
@@ -111,6 +110,12 @@ public:
                  const MachineDomTreeNode *B) const {
     applySplitCriticalEdges();
     return DT->dominates(A, B);
+  }
+
+  void getDescendants(MachineBasicBlock *A,
+                      SmallVectorImpl<MachineBasicBlock *> &Result) {
+    applySplitCriticalEdges();
+    DT->getDescendants(A, Result);
   }
 
   bool dominates(const MachineBasicBlock *A, const MachineBasicBlock *B) const {

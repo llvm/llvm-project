@@ -44,8 +44,8 @@ namespace {
 ///  E.g. A group of interleaving access loads (Factor = 2; accessing every
 ///       other element)
 ///        %wide.vec = load <8 x i32>, <8 x i32>* %ptr
-///        %v0 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <0, 2, 4, 6>
-///        %v1 = shuffle <8 x i32> %wide.vec, <8 x i32> undef, <1, 3, 5, 7>
+///        %v0 = shuffle <8 x i32> %wide.vec, <8 x i32> poison, <0, 2, 4, 6>
+///        %v1 = shuffle <8 x i32> %wide.vec, <8 x i32> poison, <1, 3, 5, 7>
 class X86InterleavedAccessGroup {
   /// Reference to the wide-load instruction of an interleaved access
   /// group.
@@ -211,7 +211,7 @@ void X86InterleavedAccessGroup::decompose(
     VecBasePtr = Builder.CreateBitCast(LI->getPointerOperand(), VecBasePtrTy);
   }
   // Generate N loads of T type.
-  assert(VecBaseTy->getPrimitiveSizeInBits().isByteSized() &&
+  assert(VecBaseTy->getPrimitiveSizeInBits().isKnownMultipleOf(8) &&
          "VecBaseTy's size must be a multiple of 8");
   const Align FirstAlignment = LI->getAlign();
   const Align SubsequentAlignment = commonAlignment(
@@ -295,8 +295,7 @@ static void reorderSubVector(MVT VT, SmallVectorImpl<Value *> &TransposedMatrix,
 
   if (VecElems == 16) {
     for (unsigned i = 0; i < Stride; i++)
-      TransposedMatrix[i] = Builder.CreateShuffleVector(
-          Vec[i], UndefValue::get(Vec[i]->getType()), VPShuf);
+      TransposedMatrix[i] = Builder.CreateShuffleVector(Vec[i], VPShuf);
     return;
   }
 
@@ -577,8 +576,7 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
   // Vec[2]= b5 b6 b7 c5 c6 c7 a6 a7
 
   for (int i = 0; i < 3; i++)
-    Vec[i] = Builder.CreateShuffleVector(
-        Vec[i], UndefValue::get(Vec[0]->getType()), VPShuf);
+    Vec[i] = Builder.CreateShuffleVector(Vec[i], VPShuf);
 
   // TempVector[0]= a6 a7 a0 a1 a2 b0 b1 b2
   // TempVector[1]= c0 c1 c2 c3 c4 a3 a4 a5
@@ -600,10 +598,8 @@ void X86InterleavedAccessGroup::deinterleave8bitStride3(
   // TransposedMatrix[1]= b0 b1 b2 b3 b4 b5 b6 b7
   // TransposedMatrix[2]= c0 c1 c2 c3 c4 c5 c6 c7
 
-  Value *TempVec = Builder.CreateShuffleVector(
-      Vec[1], UndefValue::get(Vec[1]->getType()), VPAlign3);
-  TransposedMatrix[0] = Builder.CreateShuffleVector(
-      Vec[0], UndefValue::get(Vec[1]->getType()), VPAlign2);
+  Value *TempVec = Builder.CreateShuffleVector(Vec[1], VPAlign3);
+  TransposedMatrix[0] = Builder.CreateShuffleVector(Vec[0], VPAlign2);
   TransposedMatrix[1] = VecElems == 8 ? Vec[2] : TempVec;
   TransposedMatrix[2] = VecElems == 8 ? TempVec : Vec[2];
 }
@@ -660,10 +656,8 @@ void X86InterleavedAccessGroup::interleave8bitStride3(
   // Vec[1]= c5 c6 c7 c0 c1 c2 c3 c4
   // Vec[2]= b0 b1 b2 b3 b4 b5 b6 b7
 
-  Vec[0] = Builder.CreateShuffleVector(
-      InVec[0], UndefValue::get(InVec[0]->getType()), VPAlign2);
-  Vec[1] = Builder.CreateShuffleVector(
-      InVec[1], UndefValue::get(InVec[1]->getType()), VPAlign3);
+  Vec[0] = Builder.CreateShuffleVector(InVec[0], VPAlign2);
+  Vec[1] = Builder.CreateShuffleVector(InVec[1], VPAlign3);
   Vec[2] = InVec[2];
 
   // Vec[0]= a6 a7 a0 a1 a2 b0 b1 b2
@@ -730,29 +724,33 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
   auto *ShuffleTy = cast<FixedVectorType>(Shuffles[0]->getType());
 
   if (isa<LoadInst>(Inst)) {
-    // Try to generate target-sized register(/instruction).
-    decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
-
     auto *ShuffleEltTy = cast<FixedVectorType>(Inst->getType());
     unsigned NumSubVecElems = ShuffleEltTy->getNumElements() / Factor;
-    // Perform matrix-transposition in order to compute interleaved
-    // results by generating some sort of (optimized) target-specific
-    // instructions.
-
     switch (NumSubVecElems) {
     default:
       return false;
     case 4:
-      transpose_4x4(DecomposedVectors, TransposedVectors);
-      break;
     case 8:
     case 16:
     case 32:
     case 64:
-      deinterleave8bitStride3(DecomposedVectors, TransposedVectors,
-                              NumSubVecElems);
+      if (ShuffleTy->getNumElements() != NumSubVecElems)
+        return false;
       break;
     }
+
+    // Try to generate target-sized register(/instruction).
+    decompose(Inst, Factor, ShuffleTy, DecomposedVectors);
+
+    // Perform matrix-transposition in order to compute interleaved
+    // results by generating some sort of (optimized) target-specific
+    // instructions.
+
+    if (NumSubVecElems == 4)
+      transpose_4x4(DecomposedVectors, TransposedVectors);
+    else
+      deinterleave8bitStride3(DecomposedVectors, TransposedVectors,
+                              NumSubVecElems);
 
     // Now replace the unoptimized-interleaved-vectors with the
     // transposed-interleaved vectors.

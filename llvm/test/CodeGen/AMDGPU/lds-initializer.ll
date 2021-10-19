@@ -1,5 +1,5 @@
-; RUN: not --crash llc -march=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
-; RUN: not --crash llc -march=amdgcn -mcpu=tonga < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tahiti < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tonga < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; CHECK: lds: unsupported initializer for address space
 

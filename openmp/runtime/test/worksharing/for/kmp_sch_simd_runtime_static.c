@@ -5,6 +5,7 @@
 // in combination with OMP_SCHEDULE=static[,chunk]
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <omp.h>
 
 #if defined(WIN32) || defined(_WIN32)
@@ -133,7 +134,7 @@ run_loop(
       // Guided scheduling uses FP computations, so current chunk may
       // be a bit bigger (+1) than allowed maximum.
       if (!( cur <= max + 1))
-        printf("Error with iter %d, %d, err %d\n", cur, max, ++err);
+        printf("Error with iter %llu, %llu, err %d\n", cur, max, ++err);
       // Update maximum for the next chunk.
       if (last) {
         if (!no_chunk && cur > ch && nthreads > 1)

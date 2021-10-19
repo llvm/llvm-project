@@ -24,11 +24,11 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -754,9 +754,9 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {
     return nullptr;
 
   // Check if identifier has a modifier
-  if (Identifier.equals_lower("hi"))
+  if (Identifier.equals_insensitive("hi"))
     Kind = LanaiMCExpr::VK_Lanai_ABS_HI;
-  else if (Identifier.equals_lower("lo"))
+  else if (Identifier.equals_insensitive("lo"))
     Kind = LanaiMCExpr::VK_Lanai_ABS_LO;
 
   // If the identifier corresponds to a variant then extract the real

@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineScheduler.h"
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUEXPORTCLUSTERING_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUEXPORTCLUSTERING_H
+
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
+#include <memory>
 
 namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation> createAMDGPUExportClusteringDAGMutation();
 
 } // namespace llvm
+
+#endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUEXPORTCLUSTERING_H

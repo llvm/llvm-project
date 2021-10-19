@@ -224,7 +224,7 @@ define <8 x i8> @ins16b8(<16 x i8> %tmp1, <8 x i8> %tmp2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v1.b[7], v0.b[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <16 x i8> %tmp1, i32 2
   %tmp4 = insertelement <8 x i8> %tmp2, i8 %tmp3, i32 7
@@ -236,7 +236,7 @@ define <4 x i16> @ins8h4(<8 x i16> %tmp1, <4 x i16> %tmp2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v1.h[3], v0.h[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <8 x i16> %tmp1, i32 2
   %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 3
@@ -248,7 +248,7 @@ define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v1.s[1], v0.s[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <4 x i32> %tmp1, i32 2
   %tmp4 = insertelement <2 x i32> %tmp2, i32 %tmp3, i32 1
@@ -260,7 +260,7 @@ define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v1.d[0], v0.d[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
@@ -272,7 +272,7 @@ define <2 x float> @ins4f2(<4 x float> %tmp1, <2 x float> %tmp2) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    mov v1.s[1], v0.s[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <4 x float> %tmp1, i32 2
   %tmp4 = insertelement <2 x float> %tmp2, float %tmp3, i32 1
@@ -296,7 +296,7 @@ define <8 x i8> @ins8b8(<8 x i8> %tmp1, <8 x i8> %tmp2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.b[4], v0.b[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <8 x i8> %tmp1, i32 2
   %tmp4 = insertelement <8 x i8> %tmp2, i8 %tmp3, i32 4
@@ -309,7 +309,7 @@ define <4 x i16> @ins4h4(<4 x i16> %tmp1, <4 x i16> %tmp2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.h[3], v0.h[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <4 x i16> %tmp1, i32 2
   %tmp4 = insertelement <4 x i16> %tmp2, i16 %tmp3, i32 3
@@ -322,7 +322,7 @@ define <2 x i32> @ins2s2(<2 x i32> %tmp1, <2 x i32> %tmp2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.s[1], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x i32> %tmp1, i32 0
   %tmp4 = insertelement <2 x i32> %tmp2, i32 %tmp3, i32 1
@@ -335,7 +335,7 @@ define <1 x i64> @ins1d1(<1 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.d[0], v0.d[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <1 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
@@ -348,7 +348,7 @@ define <2 x float> @ins2f2(<2 x float> %tmp1, <2 x float> %tmp2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.s[1], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x float> %tmp1, i32 0
   %tmp4 = insertelement <2 x float> %tmp2, float %tmp3, i32 1
@@ -584,7 +584,7 @@ define <8 x i8> @test_vcopy_lane_swap_s8(<8 x i8> %v1, <8 x i8> %v2) {
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v1.b[7], v0.b[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
   %vset_lane = shufflevector <8 x i8> %v1, <8 x i8> %v2, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 0>
   ret <8 x i8> %vset_lane
@@ -1226,18 +1226,19 @@ define <8 x i8> @getl(<16 x i8> %x) #0 {
 define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 ; CHECK-LABEL: test_extracts_inserts_varidx_extract:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    str q0, [sp, #-16]!
 ; CHECK-NEXT:    and x8, x0, #0x7
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bfi x9, x8, #1, #3
 ; CHECK-NEXT:    ldr h1, [x9]
 ; CHECK-NEXT:    mov v1.h[1], v0.h[1]
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]
 ; CHECK-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #16 // =16
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %tmp = extractelement <8 x i16> %x, i32 %idx
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 0
@@ -1253,19 +1254,19 @@ define <4 x i16> @test_extracts_inserts_varidx_extract(<8 x i16> %x, i32 %idx) {
 define <4 x i16> @test_extracts_inserts_varidx_insert(<8 x i16> %x, i32 %idx) {
 ; CHECK-LABEL: test_extracts_inserts_varidx_insert:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16 // =16
+; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    and x8, x0, #0x3
-; CHECK-NEXT:    add x9, sp, #8 // =8
+; CHECK-NEXT:    add x9, sp, #8
 ; CHECK-NEXT:    bfi x9, x8, #1, #2
 ; CHECK-NEXT:    str h0, [x9]
 ; CHECK-NEXT:    ldr d1, [sp, #8]
 ; CHECK-NEXT:    mov v1.h[1], v0.h[1]
 ; CHECK-NEXT:    mov v1.h[2], v0.h[2]
 ; CHECK-NEXT:    mov v1.h[3], v0.h[3]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    add sp, sp, #16 // =16
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %tmp = extractelement <8 x i16> %x, i32 0
   %tmp2 = insertelement <4 x i16> undef, i16 %tmp, i32 %idx
@@ -1491,11 +1492,11 @@ entry:
 define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_concat_diff_v1i32_v1i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    sqabs s1, s1
-; CHECK-NEXT:    sqabs s0, s0
-; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    sqabs s2, s0
+; CHECK-NEXT:    sqabs s0, s1
+; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -1794,7 +1795,7 @@ define <2 x i64> @test_concat_v2i64_v2i64_v1i64(<2 x i64> %x, <1 x i64> %y) #0 {
 ; CHECK-LABEL: test_concat_v2i64_v2i64_v1i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %vecext = extractelement <2 x i64> %x, i32 0

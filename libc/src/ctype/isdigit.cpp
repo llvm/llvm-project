@@ -8,12 +8,14 @@
 
 #include "src/ctype/isdigit.h"
 #include "src/__support/common.h"
-#include "src/ctype/ctype_utils.h"
+#include "src/__support/ctype_utils.h"
 
 namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(isdigit)(int c) { return internal::isdigit(c); }
+LLVM_LIBC_FUNCTION(int, isdigit, (int c)) {
+  return static_cast<int>(internal::isdigit(static_cast<unsigned>(c)));
+}
 
 } // namespace __llvm_libc

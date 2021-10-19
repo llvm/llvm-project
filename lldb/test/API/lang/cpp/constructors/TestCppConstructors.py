@@ -7,6 +7,7 @@ class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr50814", compiler="gcc")
     def test_constructors(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self,"// break here", lldb.SBFileSpec("main.cpp"))
@@ -19,7 +20,7 @@ class TestCase(TestBase):
         self.expect_expr("ClassWithDeletedDefaultCtor(7).value", result_type="int", result_value="7")
 
         # FIXME: It seems we try to call the non-existent default constructor here which is wrong.
-        self.expect("expr ClassWithDefaultedCtor().foo()", error=True, substrs="Couldn't lookup symbols:")
+        self.expect("expr ClassWithDefaultedCtor().foo()", error=True, substrs=["Couldn't lookup symbols:"])
 
         # FIXME: Calling deleted constructors should fail before linking.
         self.expect("expr ClassWithDeletedCtor(1).value", error=True, substrs=["Couldn't lookup symbols:"])

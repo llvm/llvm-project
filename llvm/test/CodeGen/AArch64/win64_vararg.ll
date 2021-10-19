@@ -5,8 +5,8 @@ entry:
 ; CHECK: str     x30, [sp, #-80]!
 ; CHECK: add     x8, sp, #24
 ; CHECK: add     x0, sp, #24
-; CHECK: stp     x1, x2, [sp, #24]
 ; CHECK: stp     x3, x4, [sp, #40]
+; CHECK: stp     x1, x2, [sp, #24]
 ; CHECK: stp     x5, x6, [sp, #56]
 ; CHECK: str     x7, [sp, #72]
 ; CHECK: str     x8, [sp, #8]
@@ -61,8 +61,8 @@ entry:
 ; CHECK-LABEL: f7:
 ; CHECK: sub     sp, sp, #32
 ; CHECK: add     x8, sp, #24
-; CHECK: str     x7, [sp, #24]
 ; CHECK: add     x0, sp, #24
+; CHECK: str     x7, [sp, #24]
 ; CHECK: str     x8, [sp, #8]
 ; CHECK: add     sp, sp, #32
 ; CHECK: ret
@@ -78,8 +78,8 @@ entry:
 ; CHECK-LABEL: copy1:
 ; CHECK: sub     sp, sp, #80
 ; CHECK: add     x8, sp, #24
-; CHECK: stp     x1, x2, [sp, #24]
 ; CHECK: stp     x3, x4, [sp, #40]
+; CHECK: stp     x1, x2, [sp, #24]
 ; CHECK: stp     x5, x6, [sp, #56]
 ; CHECK: str     x7, [sp, #72]
 ; CHECK: stp     x8, x8, [sp], #80
@@ -103,32 +103,32 @@ declare i32 @__stdio_common_vsprintf(i64, i8*, i64, i8*, i8*, i8*) local_unnamed
 declare i64* @__local_stdio_printf_options() local_unnamed_addr #4
 
 ; CHECK-LABEL: fp
-; CHECK: stp     x29, x30, [sp, #-96]
+; CHECK: stp     x19, x20, [sp, #-96]
 ; CHECK: str     x21,      [sp, #16]
-; CHECK: stp     x19, x20, [sp, #32]
-; CHECK: mov     x29, sp
-; CHECK: add     x8, x29, #56
+; CHECK: stp     x29, x30, [sp, #24]
+; CHECK: add     x29, sp, #24
+; CHECK: add     x8, x29, #32
 ; CHECK: mov     x19, x2
 ; CHECK: mov     x20, x1
 ; CHECK: mov     x21, x0
-; CHECK: stp     x3, x4, [x29, #56]
-; CHECK: stp     x5, x6, [x29, #72]
-; CHECK: str     x7, [x29, #88]
-; CHECK: str     x8, [x29, #24]
+; CHECK: stp     x3, x4, [x29, #32]
+; CHECK: stp     x5, x6, [x29, #48]
+; CHECK: str     x7, [x29, #64]
+; CHECK: str     x8, [x29, #16]
 ; CHECK: bl      __local_stdio_printf_options
 ; CHECK: ldr     x8, [x0]
-; CHECK: add     x5, x29, #56
+; CHECK: add     x5, x29, #32
 ; CHECK: mov     x1, x21
 ; CHECK: mov     x2, x20
-; CHECK: orr     x0, x8, #0x2
 ; CHECK: mov     x3, x19
 ; CHECK: mov     x4, xzr
+; CHECK: orr     x0, x8, #0x2
 ; CHECK: bl      __stdio_common_vsprintf
 ; CHECK: cmp     w0, #0
 ; CHECK: csinv   w0, w0, wzr, ge
-; CHECK: ldp     x19, x20, [sp, #32]
+; CHECK: ldp     x29, x30, [sp, #24]
 ; CHECK: ldr     x21,      [sp, #16]
-; CHECK: ldp     x29, x30, [sp], #96
+; CHECK: ldp     x19, x20, [sp], #96
 ; CHECK: ret
 define i32 @fp(i8*, i64, i8*, ...) local_unnamed_addr #6 {
   %4 = alloca i8*, align 8
@@ -150,42 +150,42 @@ define i32 @fp(i8*, i64, i8*, ...) local_unnamed_addr #6 {
 attributes #6 = { "frame-pointer"="all" }
 
 ; CHECK-LABEL: vla
-; CHECK: stp     x29, x30, [sp, #-112]!
-; CHECK: str     x23, [sp, #16]
-; CHECK: stp     x21, x22, [sp, #32]
-; CHECK: stp     x19, x20, [sp, #48]
-; CHECK: mov     x29, sp
-; CHECK: add     x8, x29, #64
-; CHECK: str     x8, [x29, #24]
-; CHECK: mov     w8, w0
-; CHECK: add     x8, x8, #15
-; CHECK: lsr     x15, x8, #4
+; CHECK: stp     x19, x20, [sp, #-112]!
+; CHECK: stp     x21, x22, [sp, #16]
+; CHECK: str     x23,      [sp, #32]
+; CHECK: stp     x29, x30, [sp, #40]
+; CHECK: add     x29, sp, #40
+; CHECK: add     x8, x29, #24
+; CHECK: mov     w9, w0
 ; CHECK: mov     x19, x1
 ; CHECK: mov     [[REG2:x[0-9]+]], sp
-; CHECK: stp     x2, x3, [x29, #64]
-; CHECK: stp     x4, x5, [x29, #80]
-; CHECK: stp     x6, x7, [x29, #96]
+; CHECK: stp     x3, x4, [x29, #32]
+; CHECK: stp     x8, x2, [x29, #16]
+; CHECK: add     x8, x9, #15
+; CHECK: lsr     x15, x8, #4
+; CHECK: stp     x5, x6, [x29, #48]
+; CHECK: str     x7, [x29, #64]
 ; CHECK: bl      __chkstk
 ; CHECK: mov     x8, sp
 ; CHECK: sub     [[REG:x[0-9]+]], x8, x15, lsl #4
 ; CHECK: mov     sp, [[REG]]
-; CHECK: ldr     [[REG3:x[0-9]+]], [x29, #24]
+; CHECK: ldr     [[REG3:x[0-9]+]], [x29, #16]
 ; CHECK: sxtw    [[REG4:x[0-9]+]], w0
 ; CHECK: bl      __local_stdio_printf_options
 ; CHECK: ldr     x8, [x0]
 ; CHECK: mov     x1, [[REG]]
 ; CHECK: mov     x2, [[REG4]]
 ; CHECK: mov     x3, x19
-; CHECK: orr     x0, x8, #0x2
 ; CHECK: mov     x4, xzr
 ; CHECK: mov     x5, [[REG3]]
+; CHECK: orr     x0, x8, #0x2
 ; CHECK: bl      __stdio_common_vsprintf
 ; CHECK: mov     sp, [[REG2]]
-; CHECK: mov     sp, x29
-; CHECK: ldp     x19, x20, [sp, #48]
-; CHECK: ldp     x21, x22, [sp, #32]
-; CHECK: ldr     x23, [sp, #16]
-; CHECK: ldp     x29, x30, [sp], #112
+; CHECK: sub     sp, x29, #40
+; CHECK: ldp     x29, x30, [sp, #40]
+; CHECK: ldr     x23,      [sp, #32]
+; CHECK: ldp     x21, x22, [sp, #16]
+; CHECK: ldp     x19, x20, [sp], #112
 ; CHECK: ret
 define void @vla(i32, i8*, ...) local_unnamed_addr {
   %3 = alloca i8*, align 8
@@ -212,9 +212,8 @@ declare void @llvm.stackrestore(i8*)
 
 ; CHECK-LABEL: snprintf
 ; CHECK-DAG: sub     sp,  sp, #96
-; CHECK-DAG: str     x30, [sp, #16]
-; CHECK-DAG: str     x21, [sp, #24]
-; CHECK-DAG: stp     x19, x20, [sp, #32]
+; CHECK-DAG: stp     x19, x20, [sp, #16]
+; CHECK-DAG: stp     x21, x30, [sp, #32]
 ; CHECK-DAG: add     x8, sp, #56
 ; CHECK-DAG: mov     x19, x2
 ; CHECK-DAG: mov     x20, x1
@@ -232,9 +231,8 @@ declare void @llvm.stackrestore(i8*)
 ; CHECK-DAG: mov     x3, x19
 ; CHECK-DAG: mov     x4, xzr
 ; CHECK-DAG: bl      __stdio_common_vsprintf
-; CHECK-DAG: ldr     x30, [sp, #16]
-; CHECK-DAG: ldr     x21, [sp, #24]
-; CHECK-DAG: ldp     x19, x20, [sp, #32]
+; CHECK-DAG: ldp     x21, x30, [sp, #32]
+; CHECK-DAG: ldp     x19, x20, [sp, #16]
 ; CHECK-DAG: cmp     w0, #0
 ; CHECK-DAG: csinv   w0, w0, wzr, ge
 ; CHECK-DAG: add     sp, sp, #96
@@ -258,17 +256,17 @@ define i32 @snprintf(i8*, i64, i8*, ...) local_unnamed_addr #5 {
 
 ; CHECK-LABEL: fixed_params
 ; CHECK: sub     sp,  sp, #32
-; CHECK-DAG: mov     w6,  w3
-; CHECK-DAG: mov     [[REG1:w[0-9]+]],  w2
+; CHECK: mov     w8,  w4
+; CHECK: mov     w6,  w3
+; CHECK: mov     w4,  w2
 ; CHECK: mov     w2, w1
 ; CHECK: fmov    x1,  d0
 ; CHECK: fmov    x3,  d1
 ; CHECK: fmov    x5,  d2
 ; CHECK: fmov    x7,  d3
-; CHECK: str     w4,  [sp]
-; CHECK: mov     w4,  [[REG1]]
 ; CHECK: str     x30, [sp, #16]
 ; CHECK: str     d4,  [sp, #8]
+; CHECK: str     w8,  [sp]
 ; CHECK: bl      varargs
 ; CHECK: ldr     x30, [sp, #16]
 ; CHECK: add     sp,  sp, #32

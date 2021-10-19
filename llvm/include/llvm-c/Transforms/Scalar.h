@@ -67,6 +67,9 @@ void LLVMAddIndVarSimplifyPass(LLVMPassManagerRef PM);
 /** See llvm::createInstructionCombiningPass function. */
 void LLVMAddInstructionCombiningPass(LLVMPassManagerRef PM);
 
+/** See llvm::createInstSimplifyLegacyPass function. */
+void LLVMAddInstructionSimplifyPass(LLVMPassManagerRef PM);
+
 /** See llvm::createJumpThreadingPass function. */
 void LLVMAddJumpThreadingPass(LLVMPassManagerRef PM);
 

@@ -1,9 +1,10 @@
-// RUN: %libomptarget-compile-run-and-check-aarch64-unknown-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-powerpc64-ibm-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-powerpc64le-ibm-linux-gnu
-// RUN: %libomptarget-compile-run-and-check-x86_64-pc-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-generic
 
+// REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
+
+// Fails on amdgcn with error: GPU Memory Error
+// XFAIL: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@ int main(int argc, char *argv[]) {
   int fails;
   void *host_alloc = 0, *device_alloc = 0;
   int *a = (int *)malloc(N * sizeof(int));
+  int dev = omp_get_default_device();
 
   // Init
   for (int i = 0; i < N; ++i) {
@@ -78,13 +80,24 @@ int main(int argc, char *argv[]) {
 #pragma omp target enter data map(close, to : a[ : N])
 
 #pragma omp target map(from : device_alloc)
-  { device_alloc = &a[0]; }
+  {
+    device_alloc = &a[0];
+    a[0] = 99;
+  }
 
+  // 'close' is missing, so the runtime must check whether s is actually in
+  // shared memory in order to determine whether to transfer data and delete the
+  // allocation.
 #pragma omp target exit data map(from : a[ : N])
 
   // CHECK: a has been mapped to the device.
   if (device_alloc != host_alloc)
     printf("a has been mapped to the device.\n");
+
+  // CHECK: a[0]=99
+  // CHECK: a is present: 0
+  printf("a[0]=%d\n", a[0]);
+  printf("a is present: %d\n", omp_target_is_present(a, dev));
 
   free(a);
 

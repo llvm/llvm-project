@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=machine-scheduler -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=SI-NOHSA -check-prefix=FUNC -check-prefix=DEBUG %s
+; RUN: llc -debug-only=machine-scheduler -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
 target datalayout = "A5"
 ; REQUIRES: asserts
 
@@ -7,7 +7,7 @@ target datalayout = "A5"
 ; size and not 4 corresponding to the sign-extended size (i32).
 
 ; DEBUG: {{^}}# Machine code for function extload_align:
-; DEBUG: (volatile load 2 from %ir.a, addrspace 5)
+; DEBUG: (volatile load (s16) from %ir.a, addrspace 5)
 ; DEBUG: {{^}}# End machine code for function extload_align.
 
 define amdgpu_kernel void @extload_align(i32 addrspace(5)* %out, i32 %index) #0 {

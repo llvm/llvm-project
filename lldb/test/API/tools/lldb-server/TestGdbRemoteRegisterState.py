@@ -9,7 +9,6 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
     def grp_register_save_restore_works(self, with_suffix):
         # Start up the process, use thread suffix, grab main thread id.
         inferior_args = ["message:main entered", "sleep:5"]
@@ -92,34 +91,14 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(final_reg_values)
         self.assertEqual(final_reg_values, initial_reg_values)
 
-    @debugserver_test
-    def test_grp_register_save_restore_works_with_suffix_debugserver(self):
+    def test_grp_register_save_restore_works_with_suffix(self):
         USE_THREAD_SUFFIX = True
-        self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
 
-    @llgs_test
-    def test_grp_register_save_restore_works_with_suffix_llgs(self):
-        USE_THREAD_SUFFIX = True
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
-
-    @debugserver_test
-    def test_grp_register_save_restore_works_no_suffix_debugserver(self):
+    def test_grp_register_save_restore_works_no_suffix(self):
         USE_THREAD_SUFFIX = False
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.grp_register_save_restore_works(USE_THREAD_SUFFIX)
-
-    @llgs_test
-    def test_grp_register_save_restore_works_no_suffix_llgs(self):
-        USE_THREAD_SUFFIX = False
-        self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
         self.grp_register_save_restore_works(USE_THREAD_SUFFIX)

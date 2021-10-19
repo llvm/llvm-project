@@ -10,7 +10,7 @@
 ;   return 0;
 ; }
 
-; CHECK: remark: source.cpp:5:9: loop not vectorized: loop control flow is not understood by vectorizer
+; CHECK: remark: source.cpp:5:9: loop not vectorized: could not determine number of loop iterations
 ; CHECK: remark: source.cpp:5:9: loop not vectorized
 
 ; CHECK: _Z4testPii

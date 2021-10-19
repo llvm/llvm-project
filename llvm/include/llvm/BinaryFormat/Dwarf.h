@@ -27,6 +27,8 @@
 #include "llvm/Support/FormatVariadicDetails.h"
 #include "llvm/ADT/Triple.h"
 
+#include <limits>
+
 namespace llvm {
 class StringRef;
 
@@ -41,30 +43,49 @@ namespace dwarf {
 // enumeration base type.
 
 enum LLVMConstants : uint32_t {
-  // LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
-  DW_TAG_invalid = ~0U,        // Tag for invalid results.
-  DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
-  DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
+  /// LLVM mock tags (see also llvm/BinaryFormat/Dwarf.def).
+  /// \{
+  DW_TAG_invalid = ~0U,        ///< Tag for invalid results.
+  DW_VIRTUALITY_invalid = ~0U, ///< Virtuality for invalid results.
+  DW_MACINFO_invalid = ~0U,    ///< Macinfo type for invalid results.
+  /// \}
 
-  // Special values for an initial length field.
-  DW_LENGTH_lo_reserved = 0xfffffff0, // Lower bound of the reserved range.
-  DW_LENGTH_DWARF64 = 0xffffffff,     // Indicator of 64-bit DWARF format.
-  DW_LENGTH_hi_reserved = 0xffffffff, // Upper bound of the reserved range.
+  /// Special values for an initial length field.
+  /// \{
+  DW_LENGTH_lo_reserved = 0xfffffff0, ///< Lower bound of the reserved range.
+  DW_LENGTH_DWARF64 = 0xffffffff,     ///< Indicator of 64-bit DWARF format.
+  DW_LENGTH_hi_reserved = 0xffffffff, ///< Upper bound of the reserved range.
+  /// \}
 
-  // Other constants.
-  DWARF_VERSION = 4,       // Default dwarf version we output.
-  DW_PUBTYPES_VERSION = 2, // Section version number for .debug_pubtypes.
-  DW_PUBNAMES_VERSION = 2, // Section version number for .debug_pubnames.
-  DW_ARANGES_VERSION = 2,  // Section version number for .debug_aranges.
-  // Identifiers we use to distinguish vendor extensions.
-  DWARF_VENDOR_DWARF = 0, // Defined in v2 or later of the DWARF standard.
+  /// Other constants.
+  /// \{
+  DWARF_VERSION = 4,       ///< Default dwarf version we output.
+  DW_PUBTYPES_VERSION = 2, ///< Section version number for .debug_pubtypes.
+  DW_PUBNAMES_VERSION = 2, ///< Section version number for .debug_pubnames.
+  DW_ARANGES_VERSION = 2,  ///< Section version number for .debug_aranges.
+  /// \}
+
+  /// Identifiers we use to distinguish vendor extensions.
+  /// \{
+  DWARF_VENDOR_DWARF = 0, ///< Defined in v2 or later of the DWARF standard.
   DWARF_VENDOR_APPLE = 1,
   DWARF_VENDOR_BORLAND = 2,
   DWARF_VENDOR_GNU = 3,
   DWARF_VENDOR_GOOGLE = 4,
   DWARF_VENDOR_LLVM = 5,
   DWARF_VENDOR_MIPS = 6,
-  DWARF_VENDOR_WASM = 7
+  DWARF_VENDOR_WASM = 7,
+  DWARF_VENDOR_ALTIUM,
+  DWARF_VENDOR_COMPAQ,
+  DWARF_VENDOR_GHS,
+  DWARF_VENDOR_GO,
+  DWARF_VENDOR_HP,
+  DWARF_VENDOR_IBM,
+  DWARF_VENDOR_INTEL,
+  DWARF_VENDOR_PGI,
+  DWARF_VENDOR_SUN,
+  DWARF_VENDOR_UPC,
+  ///\}
 };
 
 /// Constants that define the DWARF format as 32 or 64 bit.
@@ -118,10 +139,12 @@ enum LocationAtom {
 #include "llvm/BinaryFormat/Dwarf.def"
   DW_OP_lo_user = 0xe0,
   DW_OP_hi_user = 0xff,
-  DW_OP_LLVM_fragment = 0x1000,    ///< Only used in LLVM metadata.
-  DW_OP_LLVM_convert = 0x1001,     ///< Only used in LLVM metadata.
-  DW_OP_LLVM_tag_offset = 0x1002,  ///< Only used in LLVM metadata.
-  DW_OP_LLVM_entry_value = 0x1003, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_fragment = 0x1000,         ///< Only used in LLVM metadata.
+  DW_OP_LLVM_convert = 0x1001,          ///< Only used in LLVM metadata.
+  DW_OP_LLVM_tag_offset = 0x1002,       ///< Only used in LLVM metadata.
+  DW_OP_LLVM_entry_value = 0x1003,      ///< Only used in LLVM metadata.
+  DW_OP_LLVM_implicit_pointer = 0x1004, ///< Only used in LLVM metadata.
+  DW_OP_LLVM_arg = 0x1005,              ///< Only used in LLVM metadata.
 };
 
 enum TypeKind : uint8_t {
@@ -183,6 +206,7 @@ enum SourceLanguage {
 };
 
 inline bool isCPlusPlus(SourceLanguage S) {
+  bool result = false;
   // Deliberately enumerate all the language options so we get a warning when
   // new language options are added (-Wswitch) that'll hopefully help keep this
   // switch up-to-date when new C++ versions are added.
@@ -191,7 +215,8 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_C_plus_plus_03:
   case DW_LANG_C_plus_plus_11:
   case DW_LANG_C_plus_plus_14:
-    return true;
+    result = true;
+    break;
   case DW_LANG_C89:
   case DW_LANG_C:
   case DW_LANG_Ada83:
@@ -230,9 +255,68 @@ inline bool isCPlusPlus(SourceLanguage S) {
   case DW_LANG_BORLAND_Delphi:
   case DW_LANG_lo_user:
   case DW_LANG_hi_user:
-    return false;
+    result = false;
+    break;
   }
-  llvm_unreachable("Invalid source language");
+
+  return result;
+}
+
+inline bool isFortran(SourceLanguage S) {
+  bool result = false;
+  // Deliberately enumerate all the language options so we get a warning when
+  // new language options are added (-Wswitch) that'll hopefully help keep this
+  // switch up-to-date when new Fortran versions are added.
+  switch (S) {
+  case DW_LANG_Fortran77:
+  case DW_LANG_Fortran90:
+  case DW_LANG_Fortran95:
+  case DW_LANG_Fortran03:
+  case DW_LANG_Fortran08:
+    result = true;
+    break;
+  case DW_LANG_C89:
+  case DW_LANG_C:
+  case DW_LANG_Ada83:
+  case DW_LANG_C_plus_plus:
+  case DW_LANG_Cobol74:
+  case DW_LANG_Cobol85:
+  case DW_LANG_Pascal83:
+  case DW_LANG_Modula2:
+  case DW_LANG_Java:
+  case DW_LANG_C99:
+  case DW_LANG_Ada95:
+  case DW_LANG_PLI:
+  case DW_LANG_ObjC:
+  case DW_LANG_ObjC_plus_plus:
+  case DW_LANG_UPC:
+  case DW_LANG_D:
+  case DW_LANG_Python:
+  case DW_LANG_OpenCL:
+  case DW_LANG_Go:
+  case DW_LANG_Modula3:
+  case DW_LANG_Haskell:
+  case DW_LANG_C_plus_plus_03:
+  case DW_LANG_C_plus_plus_11:
+  case DW_LANG_OCaml:
+  case DW_LANG_Rust:
+  case DW_LANG_C11:
+  case DW_LANG_Swift:
+  case DW_LANG_Julia:
+  case DW_LANG_Dylan:
+  case DW_LANG_C_plus_plus_14:
+  case DW_LANG_RenderScript:
+  case DW_LANG_BLISS:
+  case DW_LANG_Mips_Assembler:
+  case DW_LANG_GOOGLE_RenderScript:
+  case DW_LANG_BORLAND_Delphi:
+  case DW_LANG_lo_user:
+  case DW_LANG_hi_user:
+    result = false;
+    break;
+  }
+
+  return result;
 }
 
 enum CaseSensitivity {
@@ -492,6 +576,7 @@ StringRef GDBIndexEntryLinkageString(GDBIndexEntryLinkage Linkage);
 StringRef IndexString(unsigned Idx);
 StringRef FormatString(DwarfFormat Format);
 StringRef FormatString(bool IsDWARF64);
+StringRef RLEString(unsigned RLE);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -683,6 +768,11 @@ template <> struct EnumTraits<LocationAtom> : public std::true_type {
   static constexpr char Type[3] = "OP";
   static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
 };
+
+inline uint64_t computeTombstoneAddress(uint8_t AddressByteSize) {
+  return std::numeric_limits<uint64_t>::max() >> (8 - AddressByteSize) * 8;
+}
+
 } // End of namespace dwarf
 
 /// Dwarf constants format_provider

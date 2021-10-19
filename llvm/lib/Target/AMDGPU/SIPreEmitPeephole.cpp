@@ -12,16 +12,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
+
+static unsigned SkipThreshold;
+
+static cl::opt<unsigned, true> SkipThresholdFlag(
+    "amdgpu-skip-threshold", cl::Hidden,
+    cl::desc(
+        "Number of instructions before jumping over divergent control flow"),
+    cl::location(SkipThreshold), cl::init(12));
 
 namespace {
 
@@ -32,6 +37,13 @@ private:
 
   bool optimizeVccBranch(MachineInstr &MI) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
+  bool getBlockDestinations(MachineBasicBlock &SrcMBB,
+                            MachineBasicBlock *&TrueMBB,
+                            MachineBasicBlock *&FalseMBB,
+                            SmallVectorImpl<MachineOperand> &Cond);
+  bool mustRetainExeczBranch(const MachineBasicBlock &From,
+                             const MachineBasicBlock &To) const;
+  bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
 
 public:
   static char ID;
@@ -221,8 +233,11 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
     return false;
 
   // Scan back to find an identical S_SET_GPR_IDX_ON
-  for (MachineBasicBlock::iterator I = std::next(First.getIterator()),
-       E = MI.getIterator(); I != E; ++I) {
+  for (MachineBasicBlock::instr_iterator I = std::next(First.getIterator()),
+                                         E = MI.getIterator();
+       I != E; ++I) {
+    if (I->isBundle())
+      continue;
     switch (I->getOpcode()) {
     case AMDGPU::S_SET_GPR_IDX_MODE:
       return false;
@@ -251,9 +266,77 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
     }
   }
 
-  MI.eraseFromParent();
+  MI.eraseFromBundle();
   for (MachineInstr *RI : ToRemove)
-    RI->eraseFromParent();
+    RI->eraseFromBundle();
+  return true;
+}
+
+bool SIPreEmitPeephole::getBlockDestinations(
+    MachineBasicBlock &SrcMBB, MachineBasicBlock *&TrueMBB,
+    MachineBasicBlock *&FalseMBB, SmallVectorImpl<MachineOperand> &Cond) {
+  if (TII->analyzeBranch(SrcMBB, TrueMBB, FalseMBB, Cond))
+    return false;
+
+  if (!FalseMBB)
+    FalseMBB = SrcMBB.getNextNode();
+
+  return true;
+}
+
+bool SIPreEmitPeephole::mustRetainExeczBranch(
+    const MachineBasicBlock &From, const MachineBasicBlock &To) const {
+  unsigned NumInstr = 0;
+  const MachineFunction *MF = From.getParent();
+
+  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
+       MBBI != End && MBBI != ToI; ++MBBI) {
+    const MachineBasicBlock &MBB = *MBBI;
+
+    for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
+         I != E; ++I) {
+      // When a uniform loop is inside non-uniform control flow, the branch
+      // leaving the loop might never be taken when EXEC = 0.
+      // Hence we should retain cbranch out of the loop lest it become infinite.
+      if (I->isConditionalBranch())
+        return true;
+
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
+        return true;
+
+      // These instructions are potentially expensive even if EXEC = 0.
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
+          TII->isDS(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+        return true;
+
+      ++NumInstr;
+      if (NumInstr >= SkipThreshold)
+        return true;
+    }
+  }
+
+  return false;
+}
+
+// Returns true if the skip branch instruction is removed.
+bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
+                                          MachineBasicBlock &SrcMBB) {
+  MachineBasicBlock *TrueMBB = nullptr;
+  MachineBasicBlock *FalseMBB = nullptr;
+  SmallVector<MachineOperand, 1> Cond;
+
+  if (!getBlockDestinations(SrcMBB, TrueMBB, FalseMBB, Cond))
+    return false;
+
+  // Consider only the forward branches.
+  if ((SrcMBB.getNumber() >= TrueMBB->getNumber()) ||
+      mustRetainExeczBranch(*FalseMBB, *TrueMBB))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
+  MI.eraseFromParent();
+  SrcMBB.removeSuccessor(TrueMBB);
+
   return true;
 }
 
@@ -261,51 +344,24 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MachineBasicBlock *EmptyMBBAtEnd = nullptr;
   bool Changed = false;
 
+  MF.RenumberBlocks();
+
   for (MachineBasicBlock &MBB : MF) {
-    MachineBasicBlock::iterator MBBE = MBB.getFirstTerminator();
-    MachineBasicBlock::iterator TermI = MBBE;
-    // Check first terminator for VCC branches to optimize
+    MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
+    // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {
       MachineInstr &MI = *TermI;
       switch (MI.getOpcode()) {
       case AMDGPU::S_CBRANCH_VCCZ:
       case AMDGPU::S_CBRANCH_VCCNZ:
         Changed |= optimizeVccBranch(MI);
-        continue;
-      default:
+        break;
+      case AMDGPU::S_CBRANCH_EXECZ:
+        Changed |= removeExeczBranch(MI, MBB);
         break;
       }
-    }
-    // Check all terminators for SI_RETURN_TO_EPILOG
-    // FIXME: This is not an optimization and should be moved somewhere else.
-    while (TermI != MBB.end()) {
-      MachineInstr &MI = *TermI;
-      if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
-        assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
-
-        // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
-        // because external bytecode will be appended at the end.
-        if (&MBB != &MF.back() || &MI != &MBB.back()) {
-          // SI_RETURN_TO_EPILOG is not the last instruction. Add an empty block
-          // at the end and jump there.
-          if (!EmptyMBBAtEnd) {
-            EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
-            MF.insert(MF.end(), EmptyMBBAtEnd);
-          }
-
-          MBB.addSuccessor(EmptyMBBAtEnd);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
-              .addMBB(EmptyMBBAtEnd);
-          MI.eraseFromParent();
-          MBBE = MBB.getFirstTerminator();
-          TermI = MBBE;
-          continue;
-        }
-      }
-      TermI++;
     }
 
     if (!ST.hasVGPRIndexMode())
@@ -317,10 +373,10 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
     // Scan the block for two S_SET_GPR_IDX_ON instructions to see if a
     // second is not needed. Do expensive checks in the optimizeSetGPR()
     // and limit the distance to 20 instructions for compile time purposes.
-    for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBBE; ) {
-      MachineInstr &MI = *MBBI;
-      ++MBBI;
-
+    // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
+    // may be bundled with the instructions they modify.
+    for (auto &MI :
+         make_early_inc_range(make_range(MBB.instr_begin(), MBB.instr_end()))) {
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else

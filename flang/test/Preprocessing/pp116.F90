@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: res = iflm (666)
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: res = IFLM (666)
 ! FLM call split between name and (, no leading &
       integer function IFLM(x)
         integer :: x

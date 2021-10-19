@@ -15,8 +15,8 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 namespace lldb_private {
 class CompilerType;
 class DataExtractor;
@@ -26,9 +26,9 @@ class ValueObject;
 
 namespace lldb_private {
 
-// A class wrapping common implementation details for operations in
-// ValueObjectConstResult ( & Child ) that may need to jump from the host
-// memory space into the target's memory space
+/// A class wrapping common implementation details for operations in
+/// ValueObjectConstResult ( & Child ) that may need to jump from the host
+/// memory space into the target's memory space.
 class ValueObjectConstResultImpl {
 public:
   ValueObjectConstResultImpl(ValueObject *valobj,

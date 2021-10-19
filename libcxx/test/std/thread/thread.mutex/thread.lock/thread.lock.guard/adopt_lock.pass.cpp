@@ -18,16 +18,21 @@
 #include <cstdlib>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::mutex m;
 
-int main()
-{
+void do_try_lock() {
+  assert(m.try_lock() == false);
+}
+
+int main(int, char**) {
   {
     m.lock();
     std::lock_guard<std::mutex> lg(m, std::adopt_lock);
-    assert(m.try_lock() == false);
+    std::thread t = support::make_test_thread(do_try_lock);
+    t.join();
   }
 
   m.lock();

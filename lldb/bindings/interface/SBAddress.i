@@ -17,8 +17,9 @@ libraries, bundles, frameworks) being loaded at different
 addresses than the addresses found in the object file that
 represents them on disk. There are currently two types of addresses
 for a section:
-    o file addresses
-    o load addresses
+
+* file addresses
+* load addresses
 
 File addresses represents the virtual addresses that are in the 'on
 disk' object files. These virtual addresses are converted to be
@@ -108,18 +109,17 @@ public:
     An address might refer to code or data from an existing module, or it
     might refer to something on the stack or heap. The following functions
     will only return valid values if the address has been resolved to a code
-    or data address using 'void SBAddress::SetLoadAddress(...)' or
-    'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'.") GetSymbolContext;
+    or data address using :py:class:`SBAddress.SetLoadAddress' or
+    :py:class:`SBTarget.ResolveLoadAddress`.") GetSymbolContext;
     lldb::SBSymbolContext
     GetSymbolContext (uint32_t resolve_scope);
 
     %feature("docstring", "
     GetModule() and the following grab individual objects for a given address and
     are less efficient if you want more than one symbol related objects.
-    Use one of the following when you want multiple debug symbol related
-    objects for an address:
-       lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t resolve_scope);
-       lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const SBAddress &addr, uint32_t resolve_scope);
+    Use :py:class:`SBAddress.GetSymbolContext` or
+    :py:class:`SBTarget.ResolveSymbolContextForAddress` when you want multiple
+    debug symbol related objects for an address.
     One or more bits from the SymbolContextItem enumerations can be logically
     OR'ed together to more efficiently retrieve multiple symbol objects.") GetModule;
     lldb::SBModule

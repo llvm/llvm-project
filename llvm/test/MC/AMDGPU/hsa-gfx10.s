@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64,-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64,-code-object-v3 -show-encoding %s | llvm-readobj -symbols -s -sd - | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=2 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=2 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
 
 // ELF: Section {
 // ELF: Name: .text
@@ -18,12 +18,12 @@
 // Windows and Linux because of carriage return on Windows
 
 // ELF: Symbol {
-// ELF: Name: amd_kernel_code_t_minimal
+// ELF: Name: amd_kernel_code_t_test_all
 // ELF: Type: AMDGPU_HSA_KERNEL (0xA)
 // ELF: Section: .text
 // ELF: }
 // ELF: Symbol {
-// ELF: Name: amd_kernel_code_t_test_all
+// ELF: Name: amd_kernel_code_t_minimal
 // ELF: Type: AMDGPU_HSA_KERNEL (0xA)
 // ELF: Section: .text
 // ELF: }

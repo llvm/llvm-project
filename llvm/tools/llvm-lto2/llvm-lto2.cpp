@@ -17,10 +17,12 @@
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
@@ -103,6 +105,14 @@ static cl::opt<bool> RemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
+cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+    RemarksHotnessThreshold(
+        "pass-remarks-hotness-threshold",
+        cl::desc("Minimum profile count required for an "
+                 "optimization remark to be output."
+                 " Use 'auto' to apply the threshold from profile summary."),
+        cl::value_desc("uint or 'auto'"), cl::init(0), cl::Hidden);
+
 static cl::opt<std::string>
     RemarksFilename("pass-remarks-output",
                     cl::desc("Output filename for pass remarks"),
@@ -135,7 +145,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     UseNewPM("use-new-pm",
              cl::desc("Run LTO passes using the new pass manager"),
-             cl::init(false), cl::Hidden);
+             cl::init(LLVM_ENABLE_NEW_PASS_MANAGER), cl::Hidden);
 
 static cl::opt<bool>
     DebugPassManager("debug-pass-manager", cl::init(false), cl::Hidden,
@@ -147,6 +157,11 @@ static cl::opt<std::string>
 static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
+
+static cl::opt<bool> EnableFreestanding(
+    "lto-freestanding",
+    cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
+    cl::init(false), cl::Hidden);
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -230,7 +245,7 @@ static int run(int argc, char **argv) {
   };
 
   Conf.CPU = codegen::getMCPU();
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   Conf.MAttrs = codegen::getMAttrs();
   if (auto RM = codegen::getExplicitRelocModel())
     Conf.RelocModel = RM.getValue();
@@ -246,6 +261,7 @@ static int run(int argc, char **argv) {
   Conf.RemarksFilename = RemarksFilename;
   Conf.RemarksPasses = RemarksPasses;
   Conf.RemarksWithHotness = RemarksWithHotness;
+  Conf.RemarksHotnessThreshold = RemarksHotnessThreshold;
   Conf.RemarksFormat = RemarksFormat;
 
   Conf.SampleProfile = SamplePGOFile;
@@ -258,6 +274,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.UseNewPM = UseNewPM;
+  Conf.Freestanding = EnableFreestanding;
   for (auto &PluginFN : PassPlugins)
     Conf.PassPlugins.push_back(PluginFN);
   switch (CGOptLevel) {
@@ -308,12 +325,12 @@ static int run(int argc, char **argv) {
     std::vector<SymbolResolution> Res;
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       auto I = CommandLineResolutions.find({F, std::string(Sym.getName())});
-      // If it isn't found, look for "$", which would have been added
+      // If it isn't found, look for ".", which would have been added
       // (followed by a hash) when the symbol was promoted during module
       // splitting if it was defined in one part and used in the other.
-      // Try looking up the symbol name before the "$".
+      // Try looking up the symbol name before the suffix.
       if (I == CommandLineResolutions.end()) {
-        auto SplitName = Sym.getName().rsplit("$");
+        auto SplitName = Sym.getName().rsplit(".");
         I = CommandLineResolutions.find({F, std::string(SplitName.first)});
       }
       if (I == CommandLineResolutions.end()) {
@@ -401,7 +418,8 @@ static int dumpSymtab(int argc, char **argv) {
       outs() << '\n';
     }
 
-    std::vector<StringRef> ComdatTable = Input->getComdatTable();
+    ArrayRef<std::pair<StringRef, Comdat::SelectionKind>> ComdatTable =
+        Input->getComdatTable();
     for (const InputFile::Symbol &Sym : Input->symbols()) {
       switch (Sym.getVisibility()) {
       case GlobalValue::HiddenVisibility:
@@ -430,8 +448,27 @@ static int dumpSymtab(int argc, char **argv) {
                << Sym.getCommonAlignment() << '\n';
 
       int Comdat = Sym.getComdatIndex();
-      if (Comdat != -1)
-        outs() << "         comdat " << ComdatTable[Comdat] << '\n';
+      if (Comdat != -1) {
+        outs() << "         comdat ";
+        switch (ComdatTable[Comdat].second) {
+        case Comdat::Any:
+          outs() << "any";
+          break;
+        case Comdat::ExactMatch:
+          outs() << "exactmatch";
+          break;
+        case Comdat::Largest:
+          outs() << "largest";
+          break;
+        case Comdat::NoDeduplicate:
+          outs() << "nodeduplicate";
+          break;
+        case Comdat::SameSize:
+          outs() << "samesize";
+          break;
+        }
+        outs() << ' ' << ComdatTable[Comdat].first << '\n';
+      }
 
       if (TT.isOSBinFormatCOFF() && Sym.isWeak() && Sym.isIndirect())
         outs() << "         fallback " << Sym.getCOFFWeakExternalFallback() << '\n';

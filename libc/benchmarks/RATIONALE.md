@@ -13,7 +13,7 @@ systems; and so other metrics can be equally important:
 ## Rationale
 
 The goal here is to satisfy the [Benchmarking
-Principles](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Benchmarking_Principles).
+Principles](https://en.wikipedia.org/wiki/Benchmark_(computing)#Benchmarking_Principles).
 
 1.  **Relevance**: Benchmarks should measure relatively vital features.
 2.  **Representativeness**: Benchmark performance metrics should be broadly
@@ -26,14 +26,14 @@ Principles](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Benchmarking_P
 7.  **Transparency**: Benchmark metrics should be easy to understand.
 
 Benchmarking is a [subtle
-art](https://en.wikipedia.org/wiki/Benchmark_\(computing\)#Challenges) and
+art](https://en.wikipedia.org/wiki/Benchmark_(computing)#Challenges) and
 benchmarking memory functions is no exception. Here we'll dive into
 peculiarities of designing good microbenchmarks for `llvm-libc` memory
 functions.
 
 ## Challenges
 
-As seen in the [README.md](README.md#benchmarking-regimes) the microbenchmarking
+As seen in the [README.md](README.md#stochastic-mode) the microbenchmarking
 facility should focus on measuring **low latency code**. If copying a few bytes
 takes in the order of a few cycles, the benchmark should be able to **measure
 accurately down to the cycle**.
@@ -76,7 +76,7 @@ Each vendor decides which performance counters to implement and their exact
 meaning. Although we want to benchmark `llvm-libc` memory functions for all
 available [target
 triples](https://clang.llvm.org/docs/CrossCompilation.html#target-triple), there
-are **no guarantees that the counter we're interested in is available.** 
+are **no guarantees that the counter we're interested in is available.**
 
 ### Additional imprecisions
 
@@ -189,7 +189,7 @@ active cores."_
 is always set to `performance`. We also want to make sure that the time based
 events are not impacted by frequency scaling.**
 
-See [REAME.md](REAME.md) on how to set this up.
+See [README.md](README.md) on how to set this up.
 
 ### Reserved and pinned cores
 

@@ -96,23 +96,15 @@ defm I64_TRUNC_U_SAT_F64 : I<(outs I64:$dst), (ins F64:$src), (outs), (ins),
                              "i64.trunc_sat_f64_u", 0xfc07>,
                              Requires<[HasNontrappingFPToInt]>;
 
-// Lower llvm.wasm.trunc.saturate.* to saturating instructions
-def : Pat<(int_wasm_trunc_saturate_signed F32:$src),
-          (I32_TRUNC_S_SAT_F32 F32:$src)>;
-def : Pat<(int_wasm_trunc_saturate_unsigned F32:$src),
-          (I32_TRUNC_U_SAT_F32 F32:$src)>;
-def : Pat<(int_wasm_trunc_saturate_signed F64:$src),
-          (I32_TRUNC_S_SAT_F64 F64:$src)>;
-def : Pat<(int_wasm_trunc_saturate_unsigned F64:$src),
-          (I32_TRUNC_U_SAT_F64 F64:$src)>;
-def : Pat<(int_wasm_trunc_saturate_signed F32:$src),
-          (I64_TRUNC_S_SAT_F32 F32:$src)>;
-def : Pat<(int_wasm_trunc_saturate_unsigned F32:$src),
-          (I64_TRUNC_U_SAT_F32 F32:$src)>;
-def : Pat<(int_wasm_trunc_saturate_signed F64:$src),
-          (I64_TRUNC_S_SAT_F64 F64:$src)>;
-def : Pat<(int_wasm_trunc_saturate_unsigned F64:$src),
-          (I64_TRUNC_U_SAT_F64 F64:$src)>;
+// Support the explicitly saturating operations as well.
+def : Pat<(fp_to_sint_sat F32:$src, i32), (I32_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(fp_to_uint_sat F32:$src, i32), (I32_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(fp_to_sint_sat F64:$src, i32), (I32_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(fp_to_uint_sat F64:$src, i32), (I32_TRUNC_U_SAT_F64 F64:$src)>;
+def : Pat<(fp_to_sint_sat F32:$src, i64), (I64_TRUNC_S_SAT_F32 F32:$src)>;
+def : Pat<(fp_to_uint_sat F32:$src, i64), (I64_TRUNC_U_SAT_F32 F32:$src)>;
+def : Pat<(fp_to_sint_sat F64:$src, i64), (I64_TRUNC_S_SAT_F64 F64:$src)>;
+def : Pat<(fp_to_uint_sat F64:$src, i64), (I64_TRUNC_U_SAT_F64 F64:$src)>;
 
 // Conversion from floating point to integer pseudo-instructions which don't
 // trap on overflow or invalid.

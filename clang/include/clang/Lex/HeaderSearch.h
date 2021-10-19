@@ -20,9 +20,12 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
 #include <cstddef>
@@ -48,7 +51,7 @@ class TargetInfo;
 /// The preprocessor keeps track of this information for each
 /// file that is \#included.
 struct HeaderFileInfo {
-  /// True if this is a \#import'd or \#pragma once file.
+  /// True if this is a \#import'd file.
   unsigned isImport : 1;
 
   /// True if this is a \#pragma once file.
@@ -110,6 +113,14 @@ struct HeaderFileInfo {
   /// of the framework.
   StringRef Framework;
 
+  /// List of aliases that this header is known as.
+  /// Most headers should only have at most one alias, but a handful
+  /// have two.
+  llvm::SetVector<llvm::SmallString<32>,
+                  llvm::SmallVector<llvm::SmallString<32>, 2>,
+                  llvm::SmallSet<llvm::SmallString<32>, 2>>
+      Aliases;
+
   HeaderFileInfo()
       : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
         External(false), isModuleHeader(false), isCompilingModuleHeader(false),
@@ -161,6 +172,9 @@ class HeaderSearch {
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
 
+  /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
+  llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
+
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
 
@@ -171,6 +185,9 @@ class HeaderSearch {
   /// NoCurDirSearch is true, then the check for the file in the current
   /// directory is suppressed.
   std::vector<DirectoryLookup> SearchDirs;
+  /// Whether the DirectoryLookup at the corresponding index in SearchDirs has
+  /// been successfully used to lookup a file.
+  std::vector<bool> SearchDirsUsage;
   unsigned AngledDirIdx = 0;
   unsigned SystemDirIdx = 0;
   bool NoCurDirSearch = false;
@@ -182,6 +199,9 @@ class HeaderSearch {
   /// list which is a prefix of 'x' determines whether the file is treated as
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
+
+  /// The hash used for module cache paths.
+  std::string ModuleHash;
 
   /// The path to the module cache.
   std::string ModuleCachePath;
@@ -266,15 +286,17 @@ public:
   DiagnosticsEngine &getDiags() const { return Diags; }
 
   /// Interface for setting the file search paths.
-  void SetSearchPaths(const std::vector<DirectoryLookup> &dirs,
-                      unsigned angledDirIdx, unsigned systemDirIdx,
-                      bool noCurDirSearch) {
+  void SetSearchPaths(std::vector<DirectoryLookup> dirs, unsigned angledDirIdx,
+                      unsigned systemDirIdx, bool noCurDirSearch,
+                      llvm::DenseMap<unsigned, unsigned> searchDirToHSEntry) {
     assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
         "Directory indices are unordered");
-    SearchDirs = dirs;
+    SearchDirs = std::move(dirs);
+    SearchDirsUsage.assign(SearchDirs.size(), false);
     AngledDirIdx = angledDirIdx;
     SystemDirIdx = systemDirIdx;
     NoCurDirSearch = noCurDirSearch;
+    SearchDirToHSEntry = std::move(searchDirToHSEntry);
     //LookupFileCache.clear();
   }
 
@@ -282,6 +304,7 @@ public:
   void AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
     unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
     SearchDirs.insert(SearchDirs.begin() + idx, dir);
+    SearchDirsUsage.insert(SearchDirsUsage.begin() + idx, false);
     if (!isAngled)
       AngledDirIdx++;
     SystemDirIdx++;
@@ -319,10 +342,16 @@ public:
     return {};
   }
 
+  /// Set the hash to use for module cache paths.
+  void setModuleHash(StringRef Hash) { ModuleHash = std::string(Hash); }
+
   /// Set the path to the module cache.
   void setModuleCachePath(StringRef CachePath) {
     ModuleCachePath = std::string(CachePath);
   }
+
+  /// Retrieve the module hash.
+  StringRef getModuleHash() const { return ModuleHash; }
 
   /// Retrieve the path to the module cache.
   StringRef getModuleCachePath() const { return ModuleCachePath; }
@@ -430,11 +459,10 @@ public:
     return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
   }
 
-  /// Mark the specified file as a "once only" file, e.g. due to
+  /// Mark the specified file as a "once only" file due to
   /// \#pragma once.
   void MarkFileIncludeOnce(const FileEntry *File) {
     HeaderFileInfo &FI = getFileInfo(File);
-    FI.isImport = true;
     FI.isPragmaOnce = true;
   }
 
@@ -442,6 +470,10 @@ public:
   /// \#pragma GCC system_header.
   void MarkFileSystemHeader(const FileEntry *File) {
     getFileInfo(File).DirInfo = SrcMgr::C_System;
+  }
+
+  void AddFileAlias(const FileEntry *File, StringRef Alias) {
+    getFileInfo(File).Aliases.insert(Alias);
   }
 
   /// Mark the specified file as part of a module.
@@ -476,12 +508,15 @@ public:
   /// This routine does not consider the effect of \#import
   bool isFileMultipleIncludeGuarded(const FileEntry *File);
 
-  /// Determine whether the given file is known to have ever been \#imported
-  /// (or if it has been \#included and we've encountered a \#pragma once).
+  /// Determine whether the given file is known to have ever been \#imported.
   bool hasFileBeenImported(const FileEntry *File) {
     const HeaderFileInfo *FI = getExistingFileInfo(File);
     return FI && FI->isImport;
   }
+
+  /// Determine which HeaderSearchOptions::UserEntries have been successfully
+  /// used so far and mark their index with 'true' in the resulting bit vector.
+  std::vector<bool> computeUserEntryUsage() const;
 
   /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
@@ -512,6 +547,15 @@ public:
   std::string getPrebuiltModuleFileName(StringRef ModuleName,
                                         bool FileMapOnly = false);
 
+  /// Retrieve the name of the prebuilt module file that should be used
+  /// to load the given module.
+  ///
+  /// \param Module The module whose module file name will be returned.
+  ///
+  /// \returns The name of the module file that corresponds to this module,
+  /// or an empty string if this module does not correspond to any module file.
+  std::string getPrebuiltImplicitModuleFileName(Module *Module);
+
   /// Retrieve the name of the (to-be-)cached module file that should
   /// be used to load a module with the given name.
   ///
@@ -529,6 +573,8 @@ public:
   ///
   /// \param ModuleName The name of the module we're looking for.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowSearch Whether we are allowed to search in the various
   /// search directories to produce a module definition. If not, this lookup
   /// will only return an already-known module.
@@ -537,7 +583,9 @@ public:
   /// in subdirectories.
   ///
   /// \returns The module with the given name.
-  Module *lookupModule(StringRef ModuleName, bool AllowSearch = true,
+  Module *lookupModule(StringRef ModuleName,
+                       SourceLocation ImportLoc = SourceLocation(),
+                       bool AllowSearch = true,
                        bool AllowExtraModuleMapSearch = false);
 
   /// Try to find a module map file in the given directory, returning
@@ -607,12 +655,31 @@ private:
   /// but for compatibility with some buggy frameworks, additional attempts
   /// may be made to find the module under a related-but-different search-name.
   ///
+  /// \param ImportLoc Location of the module include/import.
+  ///
   /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
   /// in subdirectories.
   ///
   /// \returns The module named ModuleName.
   Module *lookupModule(StringRef ModuleName, StringRef SearchName,
+                       SourceLocation ImportLoc,
                        bool AllowExtraModuleMapSearch = false);
+
+  /// Retrieve the name of the (to-be-)cached module file that should
+  /// be used to load a module with the given name.
+  ///
+  /// \param ModuleName The module whose module file name will be returned.
+  ///
+  /// \param ModuleMapPath A path that when combined with \c ModuleName
+  /// uniquely identifies this module. See Module::ModuleMap.
+  ///
+  /// \param CachePath A path to the module cache.
+  ///
+  /// \returns The name of the module file that corresponds to this module,
+  /// or an empty string if this module does not correspond to any module file.
+  std::string getCachedModuleFileNameImpl(StringRef ModuleName,
+                                          StringRef ModuleMapPath,
+                                          StringRef CachePath);
 
   /// Retrieve a module with the given name, which may be part of the
   /// given framework.
@@ -659,6 +726,14 @@ private:
                           const DirectoryEntry *Dir, bool IsSystemHeaderDir,
                           Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule);
+
+  /// Cache the result of a successful lookup at the given include location
+  /// using the search path at index `HitIdx`.
+  void cacheLookupSuccess(LookupFileCacheInfo &CacheLookup, unsigned HitIdx,
+                          SourceLocation IncludeLoc);
+  /// Note that a lookup at the given include location was successful using the
+  /// search path at index `HitIdx`.
+  void noteLookupUsage(unsigned HitIdx, SourceLocation IncludeLoc);
 
 public:
   /// Retrieve the module map.
@@ -708,6 +783,9 @@ public:
   }
 
   search_dir_iterator system_dir_end() const { return SearchDirs.end(); }
+
+  /// Get the index of the given search directory.
+  Optional<unsigned> searchDirIdx(const DirectoryLookup &DL) const;
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);

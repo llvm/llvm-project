@@ -4,6 +4,10 @@
 // RUN:     FileCheck --check-prefix=CHECK-NO-UAR %s
 // RUN: not %env_asan_opts=detect_stack_use_after_return=1 %run %t 2>&1 | \
 // RUN:     FileCheck --check-prefix=CHECK-UAR %s
+// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=never && \
+// RUN:     %run %t 2>&1 | FileCheck --check-prefix=CHECK-NO-UAR %s
+// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always && \
+// RUN:     not %run %t 2>&1 | FileCheck --check-prefix=CHECK-UAR %s
 //
 // On several architectures, the IR does not use byval arguments for foo() and
 // instead creates a copy in main() and gives foo() a pointer to the copy.  In

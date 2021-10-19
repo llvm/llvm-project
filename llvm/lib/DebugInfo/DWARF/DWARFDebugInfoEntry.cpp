@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -18,29 +19,47 @@
 using namespace llvm;
 using namespace dwarf;
 
-bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U,
-                                             uint64_t *OffsetPtr) {
-  DWARFDataExtractor DebugInfoData = U.getDebugInfoExtractor();
-  const uint64_t UEndOffset = U.getNextUnitOffset();
-  return extractFast(U, OffsetPtr, DebugInfoData, UEndOffset, 0);
-}
-
 bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                                       const DWARFDataExtractor &DebugInfoData,
-                                      uint64_t UEndOffset, uint32_t D) {
+                                      uint64_t UEndOffset, uint32_t ParentIdx) {
   Offset = *OffsetPtr;
-  Depth = D;
-  if (Offset >= UEndOffset || !DebugInfoData.isValidOffset(Offset))
+  this->ParentIdx = ParentIdx;
+  if (Offset >= UEndOffset) {
+    U.getContext().getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
+                          "to offset 0x%8.8" PRIx64 " excl. "
+                          "tries to read DIEs at offset 0x%8.8" PRIx64,
+                          U.getOffset(), U.getNextUnitOffset(), *OffsetPtr));
     return false;
+  }
+  assert(DebugInfoData.isValidOffset(UEndOffset - 1));
   uint64_t AbbrCode = DebugInfoData.getULEB128(OffsetPtr);
   if (0 == AbbrCode) {
     // NULL debug tag entry.
     AbbrevDecl = nullptr;
     return true;
   }
-  if (const auto *AbbrevSet = U.getAbbreviations())
-    AbbrevDecl = AbbrevSet->getAbbreviationDeclaration(AbbrCode);
-  if (nullptr == AbbrevDecl) {
+  const auto *AbbrevSet = U.getAbbreviations();
+  if (!AbbrevSet) {
+    U.getContext().getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF unit at offset 0x%8.8" PRIx64 " "
+                          "contains invalid abbreviation set offset 0x%" PRIx64,
+                          U.getOffset(), U.getAbbreviationsOffset()));
+    // Restore the original offset.
+    *OffsetPtr = Offset;
+    return false;
+  }
+  AbbrevDecl = AbbrevSet->getAbbreviationDeclaration(AbbrCode);
+  if (!AbbrevDecl) {
+    U.getContext().getWarningHandler()(
+        createStringError(errc::invalid_argument,
+                          "DWARF unit at offset 0x%8.8" PRIx64 " "
+                          "contains invalid abbreviation %" PRIu64 " at "
+                          "offset 0x%8.8" PRIx64 ", valid abbreviations are %s",
+                          U.getOffset(), AbbrCode, *OffsetPtr,
+                          AbbrevSet->getCodeRange().c_str()));
     // Restore the original offset.
     *OffsetPtr = Offset;
     return false;
@@ -62,6 +81,11 @@ bool DWARFDebugInfoEntry::extractFast(const DWARFUnit &U, uint64_t *OffsetPtr,
                                           OffsetPtr, U.getFormParams())) {
       // We failed to skip this attribute's value, restore the original offset
       // and return the failure status.
+      U.getContext().getWarningHandler()(createStringError(
+          errc::invalid_argument,
+          "DWARF unit at offset 0x%8.8" PRIx64 " "
+          "contains invalid FORM_* 0x%" PRIx16 " at offset 0x%8.8" PRIx64,
+          U.getOffset(), AttrSpec.Form, *OffsetPtr));
       *OffsetPtr = Offset;
       return false;
     }

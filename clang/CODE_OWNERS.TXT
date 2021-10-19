@@ -8,6 +8,10 @@ beautification by scripts.  The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), and snail-mail address
 (S).
 
+N: Alexey Bader
+E: alexey.bader@intel.com
+D: SYCL support
+
 N: Aaron Ballman
 E: aaron@aaronballman.com
 D: Clang attributes

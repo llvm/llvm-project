@@ -1,4 +1,4 @@
-;RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
 
 ;
 ; FMLALB (Vectors)

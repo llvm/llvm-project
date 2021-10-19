@@ -1,4 +1,5 @@
-; RUN: opt -S < %s -instcombine -instcombine-infinite-loop-threshold=2 | FileCheck %s
+; RUN: opt -S < %s -mtriple=unknown -instcombine -instcombine-infinite-loop-threshold=2 | FileCheck -check-prefixes=CHECK,CHECK32 %s
+; RUN: opt -S < %s -mtriple=msp430 -instcombine -instcombine-infinite-loop-threshold=2 | FileCheck -check-prefixes=CHECK,CHECK16 %s
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f80:128:128-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S32"
 
 @G = constant [3 x i8] c"%s\00"		; <[3 x i8]*> [#uses=1]
@@ -188,15 +189,58 @@ define double @fake_exp2(double %x) {
   ret double %y
 }
 define double @fake_ldexp(i32 %x) {
-; CHECK-LABEL: @fake_ldexp(
-; CHECK-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 %x)
-; CHECK-NEXT:    ret double [[Z]]
+; CHECK32-LABEL: @fake_ldexp(
+; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 %x)
+; CHECK32-NEXT:    ret double [[Z]]
+
+; CHECK16-LABEL: @fake_ldexp(
+; CHECK16-NEXT:    [[Y:%.*]] = sitofp i32 %x to double
+; CHECK16-NEXT:    [[Z:%.*]] = call inreg double @exp2(double [[Y]])
+; CHECK16-NEXT:    ret double [[Z]]
 
   %y = sitofp i32 %x to double
   %z = call inreg double @exp2(double %y)
   ret double %z
 }
+define double @fake_ldexp_16(i16 %x) {
+; CHECK32-LABEL: @fake_ldexp_16(
+; CHECK32-NEXT:    [[Y:%.*]] = sext i16 %x to i32
+; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 [[Y]])
+; CHECK32-NEXT:    ret double [[Z]]
 
+; CHECK16-LABEL: @fake_ldexp_16(
+; CHECK16-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i16 %x)
+; CHECK16-NEXT:    ret double [[Z]]
+
+  %y = sitofp i16 %x to double
+  %z = call inreg double @exp2(double %y)
+  ret double %z
+}
+
+; PR50885 - this would crash in ValueTracking.
+
+declare i32 @snprintf(i8*, double, i32*)
+
+define i32 @fake_snprintf(i32 %buf, double %len, i32 * %str) {
+; CHECK-LABEL: @fake_snprintf(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @snprintf(i8* undef, double [[LEN:%.*]], i32* [[STR:%.*]])
+; CHECK-NEXT:    ret i32 [[CALL]]
+;
+  %call = call i32 @snprintf(i8* undef, double %len, i32* %str)
+  ret i32 %call
+}
+
+; Wrong return type for the real strlen.
+; https://llvm.org/PR50836
+
+define i4 @strlen(i8* %s) {
+; CHECK-LABEL: @strlen(
+; CHECK-NEXT:    [[R:%.*]] = call i4 @strlen(i8* [[S:%.*]])
+; CHECK-NEXT:    ret i4 0
+;
+  %r = call i4 @strlen(i8* %s)
+  ret i4 0
+}
 
 attributes #0 = { nobuiltin }
 attributes #1 = { builtin }

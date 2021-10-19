@@ -1,0 +1,40 @@
+# RUN: llc -mcpu=pwr10 -O3 -ppc-track-subreg-liveness -verify-machineinstrs \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
+# RUN:   -o - %s | FileCheck %s
+
+# This test case checks that the 'killed' flag is properly added when using
+# subregisters.
+
+# CHECK-LABEL: test
+# CHECK: KILL_PAIR killed
+# CHECK-NEXT: COPY killed
+# CHECK-NEXT: KILL_PAIR killed
+# CHECK-NEXT: COPY killed
+# CHECK-NEXT: BUILD_UACC killed
+# CHECK-NEXT: XXMTACC killed
+# CHECK-NEXT: SPILL_ACC killed
+
+---
+name:            test
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8 }
+stack:
+  - { id: 0, size: 64 }
+body:             |
+  bb.0:
+    liveins: $v2, $v3, $v4, $v5
+    undef %4.sub_vsx1:vsrprc_with_sub_64_in_vfrc = COPY $v5
+    %4.sub_vsx0:vsrprc_with_sub_64_in_vfrc = COPY $v4
+    undef %5.sub_vsx1:vsrprc_with_sub_64_in_vfrc = COPY $v3
+    %5.sub_vsx0:vsrprc_with_sub_64_in_vfrc = COPY $v2
+    %6:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.0
+    %5:vsrprc_with_sub_64_in_vfrc = KILL_PAIR %5
+    undef %7.sub_pair0:uaccrc = COPY %5
+    %4:vsrprc_with_sub_64_in_vfrc = KILL_PAIR %4
+    %7.sub_pair1:uaccrc = COPY %4
+    %8:accrc = BUILD_UACC %7
+    %8:accrc = XXMTACC %8
+    SPILL_ACC %8, 0, %stack.0
+
+...

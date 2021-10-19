@@ -20,7 +20,6 @@ class TestObjCIvarStripped(TestBase):
         self.stop_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @skipIf(
         debug_info=no_match("dsym"),
         bugnumber="This test requires a stripped binary and a dSYM")
@@ -44,8 +43,8 @@ class TestObjCIvarStripped(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, "Created a process.")
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             "Stopped it too.")
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(

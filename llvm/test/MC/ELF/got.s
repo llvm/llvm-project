@@ -9,7 +9,7 @@
 // CHECK:      Relocations [
 // CHECK:        Section ({{[^ ]+}}) .rela.text {
 // CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOT32 foo 0x{{[^ ]+}}
-// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOTPCREL foo 0x{{[^ ]+}}
+// CHECK-NEXT:       0x{{[^ ]+}} R_X86_64_GOTPCRELX foo 0x{{[^ ]+}}
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 

@@ -15,10 +15,9 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.end, label %for.body
 
 ; CHECK: @main
-; CHECK: li [[REG:[0-9]+]], 0
-; CHECK: oris [[REG2:[0-9]+]], [[REG]], 65535
-; CHECK: ori [[REG3:[0-9]+]], [[REG2]], 65535
-; CHECK: mtctr [[REG3]]
+; CHECK: li [[REG:[0-9]+]], -1
+; CHECK: rldic [[REG2:[0-9]+]], [[REG]], 0, 32
+; CHECK: mtctr [[REG2]]
 ; CHECK: bdnz
 
 for.end:                                          ; preds = %for.body, %entry

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -hoist-common-insts=true -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S | FileCheck %s
 
 declare void @bar(i32*)
 declare void @baz(i32*)

@@ -55,13 +55,10 @@ Sections:
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
     Address: 0x200210
-    Link:    .dynsym
     Entries: [ 0, 2 ]
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Link:  .dynstr
-    Info:  1
     AddressAlign: 4
     Dependencies:
       - Version:   1
@@ -130,13 +127,11 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
     Entries: [ 0, 2 ]
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
     Link:  0
-    Info:  1
     AddressAlign: 4
     Dependencies:
       - Version: 1
@@ -158,7 +153,7 @@ DynamicSymbols:
 
 # BROKEN-AUX-GNU:      Version symbols section '.gnu.version' contains 1 entries:
 # BROKEN-AUX-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
-# BROKEN-AUX-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 0 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
+# BROKEN-AUX-GNU-NEXT: warning: '[[FILE]]': invalid SHT_GNU_verneed section with index 2: found a misaligned auxiliary entry at offset 0x11
 # BROKEN-AUX-GNU-NEXT:  000:   2 (<corrupt>)
 
 # BROKEN-AUX-LLVM:      VersionSymbols [
@@ -178,13 +173,11 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
     Entries: [ 2 ]
   - Name:         .gnu.version_r
     Type:         SHT_GNU_verneed
     Flags:        [ SHF_ALLOC ]
     Info:         1
-    Link:         .dynstr
     AddressAlign: 4
 ## The byte offset to the auxiliary entry is 0x11, i.e. it is not correctly aligned in memory.
     Content: "0100010001000000110000000000000000000000"
@@ -244,7 +237,6 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Info:  1
     Link:  .mystrtab
     AddressAlign: 4
     Dependencies:
@@ -299,7 +291,6 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Info:  1
     Link:  .mystrtab
     AddressAlign: 4
     Dependencies:
@@ -315,7 +306,7 @@ DynamicSymbols:
 
 ## Check that we report a warning when sh_link references a non-existent section.
 
-# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: yaml2obj --docnum=6 %s -DLINK=0xFF -o %t6
 # RUN: llvm-readobj --sections -V %t6 2>&1 | FileCheck %s -DFILE=%t6 --implicit-check-not="warning:" --check-prefix=INVALID-LINK-LLVM
 # RUN: llvm-readelf --sections -V %t6 2>&1 | FileCheck %s -DFILE=%t6 --implicit-check-not="warning:" --check-prefix=INVALID-LINK-GNU
 
@@ -349,11 +340,11 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  0xFF
+  - Name:   .gnu.version_r
+    Type:   SHT_GNU_verneed
+    Flags:  [ SHF_ALLOC ]
+    Link:   [[LINK=.dynstr]]
+    ShName: [[SHNAME=<none>]]
     Dependencies:
       - Version: 1
         File:    foo
@@ -362,8 +353,57 @@ Sections:
             Hash:  0
             Flags: 0
             Other: 0
+  - Name:   .dynstr
+    Type:   SHT_STRTAB
+    ShName: [[DYNSTRNAME=<none>]]
 DynamicSymbols:
   - Name: foo
+
+## Check that llvm-readelf reports a warning when the name of the SHT_GNU_verneed section can't be read.
+
+# RUN: yaml2obj --docnum=6 %s -DSHNAME=0xFFFFFFFF -o %t.invalid.name
+# RUN: llvm-readobj -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalid.name --check-prefix=INVALID-NAME-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalid.name --check-prefix=INVALID-NAME-GNU --implicit-check-not=warning:
+
+# INVALID-NAME-LLVM:      VersionRequirements [
+# INVALID-NAME-LLVM-NEXT:   Dependency {
+# INVALID-NAME-LLVM-NEXT:     Version: 1
+# INVALID-NAME-LLVM-NEXT:     Count: 1
+# INVALID-NAME-LLVM-NEXT:     FileName: foo
+# INVALID-NAME-LLVM-NEXT:     Entries [
+# INVALID-NAME-LLVM-NEXT:       Entry {
+# INVALID-NAME-LLVM-NEXT:         Hash: 0
+# INVALID-NAME-LLVM-NEXT:         Flags [ (0x0)
+# INVALID-NAME-LLVM-NEXT:         ]
+# INVALID-NAME-LLVM-NEXT:         Index: 0
+# INVALID-NAME-LLVM-NEXT:         Name: foo
+# INVALID-NAME-LLVM-NEXT:       }
+# INVALID-NAME-LLVM-NEXT:     ]
+# INVALID-NAME-LLVM-NEXT:   }
+# INVALID-NAME-LLVM-NEXT: ]
+
+# INVALID-NAME-GNU:      warning: '[[FILE]]': unable to get the name of SHT_GNU_verneed section with index 1: a section [index 1] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# INVALID-NAME-GNU-NEXT: Version needs section '<?>' contains 1 entries:
+# INVALID-NAME-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.dynstr)
+# INVALID-NAME-GNU-NEXT:   0x0000: Version: 1  File: foo  Cnt: 1
+# INVALID-NAME-GNU-NEXT:   0x0010:   Name: foo  Flags: none  Version: 0
+
+## Check that llvm-readelf reports a warning when we are unable to read the name of
+## the section linked with the SHT_GNU_verneed section (usually ".dynstr").
+
+# RUN: yaml2obj --docnum=6 %s -DDYNSTRNAME=0xFFFFFFFF -o %t.invalid.name2
+# RUN: llvm-readobj -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalid.name2 --check-prefix=INVALID-NAME-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalid.name2 --check-prefix=INVALID-NAME2-GNU --implicit-check-not=warning:
+
+# INVALID-NAME2-GNU:      Version needs section '.gnu.version_r' contains 1 entries:
+# INVALID-NAME2-GNU-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# INVALID-NAME2-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (<?>)
+# INVALID-NAME2-GNU-NEXT:   0x0000: Version: 1  File: foo  Cnt: 1
+# INVALID-NAME2-GNU-NEXT:   0x0010:   Name: foo  Flags: none  Version: 0
 
 ## Check that we report a warning when we can't read the content of the SHT_GNU_verneed section.
 
@@ -379,11 +419,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  .dynstr
+  - Name:     .gnu.version_r
+    Type:     SHT_GNU_verneed
+    Flags:    [ SHF_ALLOC ]
     ShOffset: 0xFFFFFFFF
 ## Triggers creation of the .dynstr.
 DynamicSymbols:
@@ -404,11 +442,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  .dynstr
+  - Name:   .gnu.version_r
+    Type:   SHT_GNU_verneed
+    Flags:  [ SHF_ALLOC ]
     ShSize: 0x1
     Dependencies:
       - Version: 1
@@ -440,7 +476,6 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Info:  1
     Link:  .dynstr
     Dependencies:
       - Version: 1
@@ -468,11 +503,9 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
-  - Name:  .gnu.version_r
-    Type:  SHT_GNU_verneed
-    Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  .dynstr
+  - Name:   .gnu.version_r
+    Type:   SHT_GNU_verneed
+    Flags:  [ SHF_ALLOC ]
     ShSize: 21
     Dependencies:
       - Version: 1
@@ -503,7 +536,6 @@ Sections:
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
     Info:  1
-    Link:  .dynstr
 ## The byte offset to the auxiliary entry is 0x11, i.e. it is not correctly aligned in memory.
     Content: "0100010001000000110000000000000000000000"
 DynamicSymbols:
@@ -526,8 +558,6 @@ Sections:
   - Name:  .gnu.version_r
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
-    Info:  1
-    Link:  .dynstr
     Dependencies:
       - Version: 0xfefe
         File:    foo
@@ -575,13 +605,11 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
-    Link:    .dynsym
     Entries: [ 0, 2 ]
-  - Name:         .gnu.version_r
-    Type:         SHT_GNU_verneed
-    Flags:        [ SHF_ALLOC ]
-    Link:         .custom.dynstr
-    Info:         1
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Link:  .custom.dynstr
     AddressAlign: 4
     Dependencies:
       - Version: 1

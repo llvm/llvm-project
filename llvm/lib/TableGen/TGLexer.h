@@ -45,15 +45,20 @@ namespace tgtok {
     paste,              // #
     dotdotdot,          // ...
 
-    // Keywords. ('ElseKW' is named to distinguish it from the existing 'Else'
-    // that means the preprocessor #else.)
-    Bit, Bits, Class, Code, Dag, Def, Foreach, Defm, Field, In, Int, Let, List,
-    MultiClass, String, Defset, Defvar, If, Then, ElseKW,
+    // Reserved keywords. ('ElseKW' is named to distinguish it from the
+    // existing 'Else' that means the preprocessor #else.)
+    Assert, Bit, Bits, Class, Code, Dag, Def, Defm, Defset, Defvar, ElseKW,
+    FalseKW, Field, Foreach, If, In, Include, Int, Let, List, MultiClass,
+    String, Then, TrueKW,
 
-    // !keywords.
-    XConcat, XADD, XMUL, XAND, XOR, XSRA, XSRL, XSHL, XListConcat, XListSplat,
-    XStrConcat, XCast, XSubst, XForEach, XFoldl, XHead, XTail, XSize, XEmpty,
-    XIf, XCond, XEq, XIsA, XDag, XNe, XLe, XLt, XGe, XGt, XSetOp, XGetOp,
+    // Bang operators.
+    XConcat, XADD, XSUB, XMUL, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
+    XListConcat, XListSplat, XStrConcat, XInterleave, XSubstr, XFind, XCast,
+    XSubst, XForEach, XFilter, XFoldl, XHead, XTail, XSize, XEmpty, XIf,
+    XCond, XEq, XIsA, XDag, XNe, XLe, XLt, XGe, XGt, XSetDagOp, XGetDagOp,
+
+    // Boolean literals.
+    TrueVal, FalseVal,
 
     // Integer value.
     IntVal,
@@ -81,8 +86,8 @@ class TGLexer {
   // Information about the current token.
   const char *TokStart = nullptr;
   tgtok::TokKind CurCode = tgtok::TokKind::Eof;
-  std::string CurStrVal;  // This is valid for ID, STRVAL, VARNAME, CODEFRAGMENT
-  int64_t CurIntVal = 0;  // This is valid for INTVAL.
+  std::string CurStrVal; // This is valid for Id, StrVal, VarName, CodeFragment
+  int64_t CurIntVal = 0; // This is valid for IntVal.
 
   /// CurBuffer - This is the current buffer index we're lexing from as managed
   /// by the SourceMgr object.

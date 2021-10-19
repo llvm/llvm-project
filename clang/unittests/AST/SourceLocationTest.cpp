@@ -683,8 +683,7 @@ TEST(ObjCMessageExpr, ParenExprRange) {
                              "+ (void) f1: (A)arg;\n"
                              "@end\n"
                              "void f2() { A a; [B f1: (a)]; }\n",
-                             traverse(ast_type_traits::TK_AsIs, parenExpr()),
-                             Lang_OBJCXX));
+                             traverse(TK_AsIs, parenExpr()), Lang_OBJCXX));
 }
 
 TEST(FunctionDecl, FunctionDeclWithThrowSpecification) {

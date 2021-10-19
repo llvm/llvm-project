@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Test operation folding edge case (both expected value and messages)
 ! These tests make assumptions regarding real(4) and integer(4) extrema.
 
@@ -79,9 +79,9 @@ module real_tests
   !WARN: invalid argument on division
   real(4), parameter :: r4_nan = 0._4/0._4
   TEST_ISNAN(r4_nan)
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_pinf = 1._4/0._4
-  !WARN: division by zero on division
+  !WARN: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
   logical, parameter :: test_r4_nan_parentheses1 = .NOT.(((r4_nan)).EQ.r4_nan)

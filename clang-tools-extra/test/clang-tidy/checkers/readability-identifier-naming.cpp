@@ -18,6 +18,7 @@
 // RUN:     {key: readability-identifier-naming.ConstexprVariableCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.EnumCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumPrefix, value: 'E'}, \
+// RUN:     {key: readability-identifier-naming.ScopedEnumConstantCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantCase, value: UPPER_CASE}, \
@@ -67,7 +68,7 @@
 // RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0}, \
+// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: false}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \
@@ -80,13 +81,14 @@
 // RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro -std=c++17 -fcoroutines-ts \
 // RUN:   -I%S/Inputs/readability-identifier-naming \
 // RUN:   -isystem %S/Inputs/readability-identifier-naming/system
 
 // clang-format off
 
 #include <system-header.h>
+#include <coroutines.h>
 #include "user-header.h"
 // NO warnings or fixes expected from declarations within header files without
 // the -header-filter= option
@@ -146,6 +148,10 @@ int global3;
 int g_twice_global3 = ADD_TO_SELF(global3);
 // CHECK-FIXES: {{^}}int g_twice_global3 = ADD_TO_SELF(g_global3);{{$}}
 
+int g_Global4;
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for global variable 'g_Global4'
+// CHECK-FIXES: {{^}}int g_global4;{{$}}
+
 enum my_enumeration {
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: invalid case style for enum 'my_enumeration'
 // CHECK-FIXES: {{^}}enum EMyEnumeration {{{$}}
@@ -158,6 +164,18 @@ enum my_enumeration {
     THIS_ConstValue = 1,
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for enum constant 'THIS_ConstValue'
 // CHECK-FIXES: {{^}}    THIS_CONST_VALUE = 1,{{$}}
+};
+
+enum class EMyEnumeration {
+    myConstant = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'myConstant'
+// CHECK-FIXES: {{^}}    MyConstant = 1,{{$}}
+    your_CONST = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'your_CONST'
+// CHECK-FIXES: {{^}}    YourConst = 1,{{$}}
+    THIS_ConstValue = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'THIS_ConstValue'
+// CHECK-FIXES: {{^}}    ThisConstValue = 1,{{$}}
 };
 
 constexpr int ConstExpr_variable = MyConstant;
@@ -266,13 +284,31 @@ public:
   virtual ~AOverridden() = default;
   virtual void BadBaseMethod() = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
 };
 
 class COverriding : public AOverridden {
 public:
   // Overriding a badly-named base isn't a new violation.
   void BadBaseMethod() override {}
+  // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
+
+  void foo() {
+    BadBaseMethod();
+    // CHECK-FIXES: {{^}}    v_Bad_Base_Method();
+    this->BadBaseMethod();
+    // CHECK-FIXES: {{^}}    this->v_Bad_Base_Method();
+    AOverridden::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    AOverridden::v_Bad_Base_Method();
+    COverriding::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    COverriding::v_Bad_Base_Method();
+  }
 };
+
+void VirtualCall(AOverridden &a_vItem) {
+  a_vItem.BadBaseMethod();
+  // CHECK-FIXES: {{^}}  a_vItem.v_Bad_Base_Method();
+}
 
 template <typename derived_t>
 class CRTPBase {
@@ -512,6 +548,9 @@ unsigned const MyConstGlobal_array[] = {1,2,3};
 // CHECK-FIXES: {{^}}unsigned const MY_CONST_GLOBAL_ARRAY[] = {1,2,3};{{$}}
 
 int * MyGlobal_Ptr;// -> ok
+int * my_second_global_Ptr;
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global pointer 'my_second_global_Ptr'
+// CHECK-FIXES: {{^}}int * MySecondGlobal_Ptr;{{$}}
 int * const MyConstantGlobalPointer = nullptr;
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant pointer 'MyConstantGlobalPointer'
 // CHECK-FIXES: {{^}}int * const MY_CONSTANT_GLOBAL_POINTER_Ptr = nullptr;{{$}}
@@ -583,3 +622,14 @@ template<typename type_t>
 auto GetRes(type_t& Param) -> decltype(Param.res());
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for parameter 'Param'
 // CHECK-FIXES: auto GetRes(type_t& a_param) -> decltype(a_param.res());
+
+// Check implicit declarations in coroutines
+
+struct async_obj {
+public:
+  never_suspend operator co_await() const noexcept;
+};
+
+task ImplicitDeclTest(async_obj &a_object) {
+  co_await a_object;  // CHECK-MESSAGES-NOT: warning: invalid case style for local variable
+}

@@ -45,7 +45,7 @@ public:
   }
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     RenameAliasTests, RenameAliasTest,
     testing::ValuesIn(std::vector<Case>({
         // basic functions
@@ -190,7 +190,7 @@ INSTANTIATE_TEST_CASE_P(
          "NewTPtr"},
         {"void f(::TPtr<int> p) {}", "void f(::NewTPtr<int> p) {}", "TPtr",
          "NewTPtr"},
-    })), );
+    })));
 
 TEST_P(RenameAliasTest, RenameAlias) {
   auto Param = GetParam();

@@ -156,9 +156,9 @@ bool AVRDAGToDAGISel::selectIndexedLoad(SDNode *N) {
     return false;
   }
 
-  SDNode *ResNode = CurDAG->getMachineNode(Opcode, SDLoc(N), VT,
-                                           PtrVT, MVT::Other,
-                                           LD->getBasePtr(), LD->getChain());
+  SDNode *ResNode =
+      CurDAG->getMachineNode(Opcode, SDLoc(N), VT, PtrVT, MVT::Other,
+                             LD->getBasePtr(), LD->getChain());
   ReplaceUses(N, ResNode);
   CurDAG->RemoveDeadNode(N);
 
@@ -199,12 +199,11 @@ unsigned AVRDAGToDAGISel::selectIndexedProgMemLoad(const LoadSDNode *LD,
   return Opcode;
 }
 
-bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                                   unsigned ConstraintCode,
-                                                   std::vector<SDValue> &OutOps) {
+bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, unsigned ConstraintCode, std::vector<SDValue> &OutOps) {
   assert((ConstraintCode == InlineAsm::Constraint_m ||
-         ConstraintCode == InlineAsm::Constraint_Q) &&
-      "Unexpected asm memory constraint");
+          ConstraintCode == InlineAsm::Constraint_Q) &&
+         "Unexpected asm memory constraint");
 
   MachineRegisterInfo &RI = MF->getRegInfo();
   const AVRSubtarget &STI = MF->getSubtarget<AVRSubtarget>();
@@ -242,10 +241,7 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
     ConstantSDNode *ImmNode = dyn_cast<ConstantSDNode>(ImmOp);
 
     unsigned Reg;
-    bool CanHandleRegImmOpt = true;
-
-    CanHandleRegImmOpt &= ImmNode != 0;
-    CanHandleRegImmOpt &= ImmNode->getAPIntValue().getZExtValue() < 64;
+    bool CanHandleRegImmOpt = ImmNode && ImmNode->getAPIntValue().ult(64);
 
     if (CopyFromRegOp->getOpcode() == ISD::CopyFromReg) {
       RegisterSDNode *RegNode =
@@ -279,7 +275,8 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
       }
 
       if (ImmNode->getValueType(0) != MVT::i8) {
-        Disp = CurDAG->getTargetConstant(ImmNode->getAPIntValue().getZExtValue(), dl, MVT::i8);
+        Disp = CurDAG->getTargetConstant(
+            ImmNode->getAPIntValue().getZExtValue(), dl, MVT::i8);
       } else {
         Disp = ImmOp;
       }
@@ -312,11 +309,10 @@ template <> bool AVRDAGToDAGISel::select<ISD::FrameIndex>(SDNode *N) {
   // effective address of the final stack slot.
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
   SDValue TFI =
-    CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
+      CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
 
-  CurDAG->SelectNodeTo(N, AVR::FRMIDX,
-                       getTargetLowering()->getPointerTy(DL), TFI,
-                       CurDAG->getTargetConstant(0, SDLoc(N), MVT::i16));
+  CurDAG->SelectNodeTo(N, AVR::FRMIDX, getTargetLowering()->getPointerTy(DL),
+                       TFI, CurDAG->getTargetConstant(0, SDLoc(N), MVT::i16));
   return true;
 }
 
@@ -383,8 +379,8 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
   // Check if the opcode can be converted into an indexed load.
   if (unsigned LPMOpc = selectIndexedProgMemLoad(LD, VT)) {
     // It is legal to fold the load into an indexed load.
-    ResNode = CurDAG->getMachineNode(LPMOpc, DL, VT, MVT::i16, MVT::Other, Ptr,
-                                     RegZ);
+    ResNode =
+        CurDAG->getMachineNode(LPMOpc, DL, VT, MVT::i16, MVT::Other, Ptr, RegZ);
     ReplaceUses(SDValue(N, 1), SDValue(ResNode, 1));
   } else {
     // Selecting an indexed load is not legal, fallback to a normal load.
@@ -394,8 +390,8 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
                                        Ptr, RegZ);
       break;
     case MVT::i16:
-      ResNode = CurDAG->getMachineNode(AVR::LPMWRdZ, DL, MVT::i16,
-                                       MVT::Other, Ptr, RegZ);
+      ResNode = CurDAG->getMachineNode(AVR::LPMWRdZ, DL, MVT::i16, MVT::Other,
+                                       Ptr, RegZ);
       ReplaceUses(SDValue(N, 1), SDValue(ResNode, 1));
       break;
     default:
@@ -444,7 +440,7 @@ template <> bool AVRDAGToDAGISel::select<AVRISD::CALL>(SDNode *N) {
   Ops.push_back(Chain.getValue(1));
 
   SDNode *ResNode =
-    CurDAG->getMachineNode(AVR::ICALL, DL, MVT::Other, MVT::Glue, Ops);
+      CurDAG->getMachineNode(AVR::ICALL, DL, MVT::Other, MVT::Glue, Ops);
 
   ReplaceUses(SDValue(N, 0), SDValue(ResNode, 0));
   ReplaceUses(SDValue(N, 1), SDValue(ResNode, 1));
@@ -535,16 +531,23 @@ bool AVRDAGToDAGISel::trySelect(SDNode *N) {
 
   switch (Opcode) {
   // Nodes we fully handle.
-  case ISD::FrameIndex: return select<ISD::FrameIndex>(N);
-  case ISD::BRIND:      return select<ISD::BRIND>(N);
+  case ISD::FrameIndex:
+    return select<ISD::FrameIndex>(N);
+  case ISD::BRIND:
+    return select<ISD::BRIND>(N);
   case ISD::UMUL_LOHI:
-  case ISD::SMUL_LOHI:  return selectMultiplication(N);
+  case ISD::SMUL_LOHI:
+    return selectMultiplication(N);
 
   // Nodes we handle partially. Other cases are autogenerated
-  case ISD::STORE:   return select<ISD::STORE>(N);
-  case ISD::LOAD:    return select<ISD::LOAD>(N);
-  case AVRISD::CALL: return select<AVRISD::CALL>(N);
-  default:           return false;
+  case ISD::STORE:
+    return select<ISD::STORE>(N);
+  case ISD::LOAD:
+    return select<ISD::LOAD>(N);
+  case AVRISD::CALL:
+    return select<AVRISD::CALL>(N);
+  default:
+    return false;
   }
 }
 
@@ -554,4 +557,3 @@ FunctionPass *createAVRISelDag(AVRTargetMachine &TM,
 }
 
 } // end of namespace llvm
-

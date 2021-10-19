@@ -1,8 +1,8 @@
 ; RUN: llc < %s -O0 -fast-isel-abort=1 -relocation-model=pic -mtriple=armv7-pc-linux-gnueabi | FileCheck %s
 
-@var = global i32 42
+@var = dso_local global i32 42
 
-define i32* @foo() {
+define dso_local i32* @foo() {
 ; CHECK:      foo:
 ; CHECK:      ldr     r0, .L[[POOL:.*]]
 ; CHECK-NEXT: .L[[ADDR:.*]]:

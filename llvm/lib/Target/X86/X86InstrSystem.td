@@ -39,7 +39,8 @@ let mayLoad = 1, mayStore = 0, hasSideEffects = 1, isTrap = 1 in {
                    "ud1{q} {$src2, $src1|$src1, $src2}", []>, TB;
 }
 
-def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;
+let isTerminator = 1 in
+  def HLT : I<0xF4, RawFrm, (outs), (ins), "hlt", []>;
 def RSM : I<0xAA, RawFrm, (outs), (ins), "rsm", []>, TB;
 
 // Interrupt and SysCall Instructions.
@@ -47,13 +48,11 @@ let Uses = [EFLAGS] in
   def INTO : I<0xce, RawFrm, (outs), (ins), "into", []>, Requires<[Not64BitMode]>;
 
 def INT3 : I<0xcc, RawFrm, (outs), (ins), "int3", [(int_x86_int (i8 3))]>;
-} // SchedRW
 
+def UBSAN_UD1 : PseudoI<(outs), (ins i32imm:$kind), [(ubsantrap (i32 timm:$kind))]>;
 // The long form of "int $3" turns into int3 as a size optimization.
 // FIXME: This doesn't work because InstAlias can't match immediate constants.
 //def : InstAlias<"int\t$3", (INT3)>;
-
-let SchedRW = [WriteSystem] in {
 
 def INT : Ii8<0xcd, RawFrm, (outs), (ins u8imm:$trap), "int\t$trap",
               [(int_x86_int timm:$trap)]>;
@@ -168,6 +167,17 @@ def DS_PREFIX : I<0x3E, PrefixByte, (outs), (ins), "ds", []>;
 def ES_PREFIX : I<0x26, PrefixByte, (outs), (ins), "es", []>;
 def FS_PREFIX : I<0x64, PrefixByte, (outs), (ins), "fs", []>;
 def GS_PREFIX : I<0x65, PrefixByte, (outs), (ins), "gs", []>;
+} // SchedRW
+
+//===----------------------------------------------------------------------===//
+// Address-size override prefixes.
+//
+
+let SchedRW = [WriteNop] in {
+def ADDR16_PREFIX : I<0x67, PrefixByte, (outs), (ins), "addr16", []>,
+                      Requires<[In32BitMode]>;
+def ADDR32_PREFIX : I<0x67, PrefixByte, (outs), (ins), "addr32", []>,
+                      Requires<[In64BitMode]>;
 } // SchedRW
 
 //===----------------------------------------------------------------------===//
@@ -447,7 +457,7 @@ let Defs = [EAX, EBX, ECX, EDX], Uses = [EAX, ECX] in
 // Cache instructions
 let SchedRW = [WriteSystem] in {
 def INVD : I<0x08, RawFrm, (outs), (ins), "invd", []>, TB;
-def WBINVD : I<0x09, RawFrm, (outs), (ins), "wbinvd", [(int_x86_wbinvd)]>, TB;
+def WBINVD : I<0x09, RawFrm, (outs), (ins), "wbinvd", [(int_x86_wbinvd)]>, PS;
 
 // wbnoinvd is like wbinvd, except without invalidation
 // encoding: like wbinvd + an 0xF3 prefix
@@ -519,16 +529,17 @@ let SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // XSAVE instructions
 let SchedRW = [WriteSystem] in {
-let Predicates = [HasXSAVE] in {
+// NOTE: No HasXSAVE predicate so that these can be used with _xgetbv/_xsetbv
+// on Windows without needing to enable the xsave feature to be compatible with
+// MSVC.
 let Defs = [EDX, EAX], Uses = [ECX] in
-  def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
+def XGETBV : I<0x01, MRM_D0, (outs), (ins), "xgetbv", []>, PS;
 
 let Uses = [EDX, EAX, ECX] in
-  def XSETBV : I<0x01, MRM_D1, (outs), (ins),
-                "xsetbv",
-                [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
+def XSETBV : I<0x01, MRM_D1, (outs), (ins),
+              "xsetbv",
+              [(int_x86_xsetbv ECX, EDX, EAX)]>, PS;
 
-} // HasXSAVE
 
 let Uses = [EDX, EAX] in {
 def XSAVE : I<0xAE, MRM4m, (outs), (ins opaquemem:$dst),

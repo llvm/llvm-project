@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.S = type { [100 x i8] }
 
 ; Function Attrs: safestack uwtable
-define void @f(%struct.S* byval align 8 %zzz) #0 !dbg !12 {
+define void @f(%struct.S* byval(%struct.S) align 8 %zzz) #0 !dbg !12 {
 ; CHECK: define void @f
 
 entry:

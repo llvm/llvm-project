@@ -74,14 +74,17 @@ protected:
 };
 
 template <typename DERIVED, typename REFERENCE>
-class StmtIteratorImpl : public StmtIteratorBase,
-                         public std::iterator<std::forward_iterator_tag,
-                                              REFERENCE, ptrdiff_t,
-                                              REFERENCE, REFERENCE> {
+class StmtIteratorImpl : public StmtIteratorBase {
 protected:
   StmtIteratorImpl(const StmtIteratorBase& RHS) : StmtIteratorBase(RHS) {}
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = REFERENCE;
+  using difference_type = std::ptrdiff_t;
+  using pointer = REFERENCE;
+  using reference = REFERENCE;
+
   StmtIteratorImpl() = default;
   StmtIteratorImpl(Stmt **s) : StmtIteratorBase(s) {}
   StmtIteratorImpl(Decl **dgi, Decl **dge) : StmtIteratorBase(dgi, dge) {}
@@ -104,12 +107,13 @@ public:
     return tmp;
   }
 
-  bool operator==(const DERIVED& RHS) const {
-    return stmt == RHS.stmt && DGI == RHS.DGI && RawVAPtr == RHS.RawVAPtr;
+  friend bool operator==(const DERIVED &LHS, const DERIVED &RHS) {
+    return LHS.stmt == RHS.stmt && LHS.DGI == RHS.DGI &&
+           LHS.RawVAPtr == RHS.RawVAPtr;
   }
 
-  bool operator!=(const DERIVED& RHS) const {
-    return stmt != RHS.stmt || DGI != RHS.DGI || RawVAPtr != RHS.RawVAPtr;
+  friend bool operator!=(const DERIVED &LHS, const DERIVED &RHS) {
+    return !(LHS == RHS);
   }
 
   REFERENCE operator*() const {

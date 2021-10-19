@@ -42,6 +42,10 @@ static llvm::cl::opt<bool> clTestLoopFusionTransformation(
 namespace {
 
 struct TestLoopFusion : public PassWrapper<TestLoopFusion, FunctionPass> {
+  StringRef getArgument() const final { return "test-loop-fusion"; }
+  StringRef getDescription() const final {
+    return "Tests loop fusion utility functions.";
+  }
   void runOnFunction() override;
 };
 
@@ -59,8 +63,8 @@ static bool testDependenceCheck(AffineForOp srcForOp, AffineForOp dstForOp,
     FusionResult result =
         mlir::canFuseLoops(srcForOp, dstForOp, d, &sliceUnion);
     if (result.value == FusionResult::FailBlockDependence) {
-      srcForOp.getOperation()->emitRemark("block-level dependence preventing"
-                                          " fusion of loop nest ")
+      srcForOp->emitRemark("block-level dependence preventing"
+                           " fusion of loop nest ")
           << i << " into loop nest " << j << " at depth " << loopDepth;
     }
   }
@@ -99,10 +103,11 @@ static std::string getSliceStr(const mlir::ComputationSliceState &sliceUnion) {
   return os.str();
 }
 
-// Computes fusion slice union on 'loops[i]' and 'loops[j]' at loop depths
-// in range ['loopDepth' + 1, 'maxLoopDepth'].
-// Emits a string representation of the slice union as a remark on 'loops[j]'.
-// Returns false as IR is not transformed.
+/// Computes fusion slice union on 'loops[i]' and 'loops[j]' at loop depths
+/// in range ['loopDepth' + 1, 'maxLoopDepth'].
+/// Emits a string representation of the slice union as a remark on 'loops[j]'
+/// and marks this as incorrect slice if the slice is invalid. Returns false as
+/// IR is not transformed.
 static bool testSliceComputation(AffineForOp forOpA, AffineForOp forOpB,
                                  unsigned i, unsigned j, unsigned loopDepth,
                                  unsigned maxLoopDepth) {
@@ -110,7 +115,11 @@ static bool testSliceComputation(AffineForOp forOpA, AffineForOp forOpB,
     mlir::ComputationSliceState sliceUnion;
     FusionResult result = mlir::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
-      forOpB.getOperation()->emitRemark("slice (")
+      forOpB->emitRemark("slice (")
+          << " src loop: " << i << ", dst loop: " << j << ", depth: " << d
+          << " : " << getSliceStr(sliceUnion) << ")";
+    } else if (result.value == FusionResult::FailIncorrectSlice) {
+      forOpB->emitRemark("Incorrect slice (")
           << " src loop: " << i << ", dst loop: " << j << ", depth: " << d
           << " : " << getSliceStr(sliceUnion) << ")";
     }
@@ -129,7 +138,7 @@ static bool testLoopFusionTransformation(AffineForOp forOpA, AffineForOp forOpB,
     mlir::ComputationSliceState sliceUnion;
     FusionResult result = mlir::canFuseLoops(forOpA, forOpB, d, &sliceUnion);
     if (result.value == FusionResult::Success) {
-      mlir::fuseLoops(forOpA, forOpB, &sliceUnion);
+      mlir::fuseLoops(forOpA, forOpB, sliceUnion);
       // Note: 'forOpA' is removed to simplify test output. A proper loop
       // fusion pass should check the data dependence graph and run memref
       // region analysis to ensure removing 'forOpA' is safe.
@@ -192,8 +201,7 @@ void TestLoopFusion::runOnFunction() {
 }
 
 namespace mlir {
-void registerTestLoopFusion() {
-  PassRegistration<TestLoopFusion>("test-loop-fusion",
-                                   "Tests loop fusion utility functions.");
-}
+namespace test {
+void registerTestLoopFusion() { PassRegistration<TestLoopFusion>(); }
+} // namespace test
 } // namespace mlir

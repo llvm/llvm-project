@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -flogical-abbreviations -fxor-operator
+! RUN: %python %S/test_errors.py %s %flang -flogical-abbreviations -fxor-operator
 
 ! Like m4 in resolve63 but compiled with different options.
 ! Alternate operators are enabled so treat these as intrinsic.

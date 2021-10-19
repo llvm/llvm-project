@@ -143,6 +143,9 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return classifyLocalReference(GV);
 
   if (isTargetCOFF()) {
+    // ExternalSymbolSDNode like _tls_index.
+    if (!GV)
+      return X86II::MO_NO_FLAG;
     if (GV->hasDLLImportStorageClass())
       return X86II::MO_DLLIMPORT;
     return X86II::MO_COFFSTUB;
@@ -166,6 +169,10 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
   }
 
+  // 32-bit ELF references GlobalAddress directly in static relocation model.
+  // We cannot use MO_GOT because EBX may not be set up.
+  if (TM.getRelocationModel() == Reloc::Static)
+    return X86II::MO_NO_FLAG;
   return X86II::MO_GOT;
 }
 
@@ -180,10 +187,13 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
   if (TM.shouldAssumeDSOLocal(M, GV))
     return X86II::MO_NO_FLAG;
 
-  // Functions on COFF can be non-DSO local for two reasons:
+  // Functions on COFF can be non-DSO local for three reasons:
+  // - They are intrinsic functions (!GV)
   // - They are marked dllimport
   // - They are extern_weak, and a stub is needed
   if (isTargetCOFF()) {
+    if (!GV)
+      return X86II::MO_NO_FLAG;
     if (GV->hasDLLImportStorageClass())
       return X86II::MO_DLLIMPORT;
     return X86II::MO_COFFSTUB;
@@ -202,6 +212,9 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
          (!F && M.getRtLibUseGOT())) &&
         is64Bit())
        return X86II::MO_GOTPCREL;
+    // Reference ExternalSymbol directly in static relocation model.
+    if (!is64Bit() && !GV && TM.getRelocationModel() == Reloc::Static)
+      return X86II::MO_NO_FLAG;
     return X86II::MO_PLT;
   }
 
@@ -258,12 +271,13 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     report_fatal_error("64-bit code requested on a subtarget that doesn't "
                        "support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD and Solaris (both
-  // 32 and 64 bit) and for all 64-bit targets.
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, NaCl, and for all
+  // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
+  // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isTargetDarwin() || isTargetLinux() || isTargetSolaris() ||
-           isTargetKFreeBSD() || In64BitMode)
+  else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
+           isTargetNaCl() || In64BitMode)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.

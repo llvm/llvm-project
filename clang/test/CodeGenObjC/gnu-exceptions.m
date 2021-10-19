@@ -6,7 +6,7 @@ void log(int i);
 
 @class C;
 
-// CHECK: define void @test0() [[TF:#[0-9]+]]
+// CHECK: define{{.*}} void @test0() [[TF:#[0-9]+]]
 // CHECK-SAME: personality i8* bitcast (i32 (...)* @__gnu_objc_personality_v0 to i8*)
 void test0() {
   @try {

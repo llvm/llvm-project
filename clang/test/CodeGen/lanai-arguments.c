@@ -3,20 +3,20 @@
 
 // Basic argument/attribute tests for Lanai.
 
-// CHECK: define void @f0(i32 inreg %i, i32 inreg %j, i64 inreg %k)
+// CHECK: define{{.*}} void @f0(i32 inreg %i, i32 inreg %j, i64 inreg %k)
 void f0(int i, long j, long long k) {}
 
 typedef struct {
   int aa;
   int bb;
 } s1;
-// CHECK: define void @f1(i32 inreg %i.coerce0, i32 inreg %i.coerce1)
+// CHECK: define{{.*}} void @f1(i32 inreg %i.coerce0, i32 inreg %i.coerce1)
 void f1(s1 i) {}
 
 typedef struct {
   int cc;
 } s2;
-// CHECK: define void @f2(%struct.s2* noalias sret align 4 %agg.result)
+// CHECK: define{{.*}} void @f2(%struct.s2* noalias sret(%struct.s2) align 4 %agg.result)
 s2 f2() {
   s2 foo;
   return foo;
@@ -26,19 +26,19 @@ typedef struct {
   int cc;
   int dd;
 } s3;
-// CHECK: define void @f3(%struct.s3* noalias sret align 4 %agg.result)
+// CHECK: define{{.*}} void @f3(%struct.s3* noalias sret(%struct.s3) align 4 %agg.result)
 s3 f3() {
   s3 foo;
   return foo;
 }
 
-// CHECK: define void @f4(i64 inreg %i)
+// CHECK: define{{.*}} void @f4(i64 inreg %i)
 void f4(long long i) {}
 
-// CHECK: define void @f5(i8 inreg %a, i16 inreg %b)
+// CHECK: define{{.*}} void @f5(i8 inreg %a, i16 inreg %b)
 void f5(char a, short b) {}
 
-// CHECK: define void @f6(i8 inreg %a, i16 inreg %b)
+// CHECK: define{{.*}} void @f6(i8 inreg %a, i16 inreg %b)
 void f6(unsigned char a, unsigned short b) {}
 
 enum my_enum {
@@ -47,14 +47,14 @@ enum my_enum {
   ENUM3,
 };
 // Enums should be treated as the underlying i32.
-// CHECK: define void @f7(i32 inreg %a)
+// CHECK: define{{.*}} void @f7(i32 inreg %a)
 void f7(enum my_enum a) {}
 
 enum my_big_enum {
   ENUM4 = 0xFFFFFFFFFFFFFFFF,
 };
 // Big enums should be treated as the underlying i64.
-// CHECK: define void @f8(i64 inreg %a)
+// CHECK: define{{.*}} void @f8(i64 inreg %a)
 void f8(enum my_big_enum a) {}
 
 union simple_union {
@@ -62,7 +62,7 @@ union simple_union {
   char b;
 };
 // Unions should be passed inreg.
-// CHECK: define void @f9(i32 inreg %s.coerce)
+// CHECK: define{{.*}} void @f9(i32 inreg %s.coerce)
 void f9(union simple_union s) {}
 
 typedef struct {
@@ -71,5 +71,5 @@ typedef struct {
   int b8 : 8;
 } bitfield1;
 // Bitfields should be passed inreg.
-// CHECK: define void @f10(i32 inreg %bf1.coerce)
+// CHECK: define{{.*}} void @f10(i32 inreg %bf1.coerce)
 void f10(bitfield1 bf1) {}

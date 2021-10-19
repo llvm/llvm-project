@@ -17,10 +17,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
-#define LLVM_CODEGEN_GLOBALISEL_MACHINELEGALIZEHELPER_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
+#define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -32,6 +33,7 @@ class LegalizerInfo;
 class Legalizer;
 class MachineRegisterInfo;
 class GISelChangeObserver;
+class LostDebugLocObserver;
 class TargetLowering;
 
 class LegalizerHelper {
@@ -78,10 +80,11 @@ public:
   ///
   /// Considered as an opaque blob, the legal code will use and define the same
   /// registers as \p MI.
-  LegalizeResult legalizeInstrStep(MachineInstr &MI);
+  LegalizeResult legalizeInstrStep(MachineInstr &MI,
+                                   LostDebugLocObserver &LocObserver);
 
   /// Legalize an instruction by emiting a runtime library call instead.
-  LegalizeResult libcall(MachineInstr &MI);
+  LegalizeResult libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver);
 
   /// Legalize an instruction by reducing the width of the underlying scalar
   /// type.
@@ -170,8 +173,12 @@ private:
   widenScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult
   widenScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
-  LegalizeResult
-  widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LegalizeResult widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT WideTy);
+  LegalizeResult widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT WideTy);
+  LegalizeResult widenScalarMulo(MachineInstr &MI, unsigned TypeIdx,
+                                 LLT WideTy);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
@@ -245,6 +252,24 @@ private:
 
   void changeOpcode(MachineInstr &MI, unsigned NewOpcode);
 
+  LegalizeResult tryNarrowPow2Reduction(MachineInstr &MI, Register SrcReg,
+                                        LLT SrcTy, LLT NarrowTy,
+                                        unsigned ScalarOpc);
+
+  // Memcpy family legalization helpers.
+  LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
+                             uint64_t KnownLen, Align Alignment,
+                             bool IsVolatile);
+  LegalizeResult lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
+                                   uint64_t KnownLen, Align DstAlign,
+                                   Align SrcAlign, bool IsVolatile);
+  LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
+                             uint64_t KnownLen, uint64_t Limit, Align DstAlign,
+                             Align SrcAlign, bool IsVolatile);
+  LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
+                              uint64_t KnownLen, Align DstAlign, Align SrcAlign,
+                              bool IsVolatile);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -283,6 +308,8 @@ public:
 
   LegalizeResult moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
                                        LLT MoreTy);
+  LegalizeResult moreElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
+                                           LLT MoreTy);
 
   LegalizeResult fewerElementsVectorUnmergeValues(MachineInstr &MI,
                                                   unsigned TypeIdx,
@@ -293,8 +320,11 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
-  LegalizeResult
-  reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+  LegalizeResult fewerElementsVectorMulo(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT NarrowTy);
+
+  LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
+                                      LLT NarrowTy);
 
   /// Legalize an instruction by reducing the operation width, either by
   /// narrowing the type of the operation or by reducing the number of elements
@@ -312,8 +342,17 @@ public:
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
 
+  LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
+                                               unsigned TypeIdx, LLT NarrowTy);
+
+  LegalizeResult fewerElementsVectorShuffle(MachineInstr &MI, unsigned TypeIdx,
+                                            LLT NarrowTy);
+
   LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
+                                    LLT NarrowTy);
   LegalizeResult narrowScalarMul(MachineInstr &MI, LLT Ty);
+  LegalizeResult narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
@@ -333,9 +372,14 @@ public:
                                         LLT CastTy);
 
   LegalizeResult lowerBitcast(MachineInstr &MI);
-  LegalizeResult lowerLoad(MachineInstr &MI);
-  LegalizeResult lowerStore(MachineInstr &MI);
+  LegalizeResult lowerLoad(GAnyLoad &MI);
+  LegalizeResult lowerStore(GStore &MI);
   LegalizeResult lowerBitCount(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
+  LegalizeResult lowerFunnelShift(MachineInstr &MI);
+  LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
+  LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
@@ -367,6 +411,14 @@ public:
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
+  LegalizeResult lowerSMULH_UMULH(MachineInstr &MI);
+  LegalizeResult lowerSelect(MachineInstr &MI);
+  LegalizeResult lowerDIVREM(MachineInstr &MI);
+  LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
+  LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
+  LegalizeResult lowerVectorReduction(MachineInstr &MI);
+  LegalizeResult lowerMemcpyInline(MachineInstr &MI);
+  LegalizeResult lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given
@@ -383,9 +435,9 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
               ArrayRef<CallLowering::ArgInfo> Args);
 
 /// Create a libcall to memcpy et al.
-LegalizerHelper::LegalizeResult createMemLibcall(MachineIRBuilder &MIRBuilder,
-                                                 MachineRegisterInfo &MRI,
-                                                 MachineInstr &MI);
+LegalizerHelper::LegalizeResult
+createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                 MachineInstr &MI, LostDebugLocObserver &LocObserver);
 
 } // End namespace llvm.
 

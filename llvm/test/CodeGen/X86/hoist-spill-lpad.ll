@@ -12,11 +12,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = global [20 x i64] zeroinitializer, align 16
+@a = dso_local global [20 x i64] zeroinitializer, align 16
 @_ZTIi = external constant i8*
 
 ; Function Attrs: uwtable
-define void @_Z3foov() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @_Z3foov() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   %tmp = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @a, i64 0, i64 1), align 8
   invoke void @_Z3goov()

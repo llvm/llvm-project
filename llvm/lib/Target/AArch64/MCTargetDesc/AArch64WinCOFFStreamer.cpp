@@ -28,6 +28,7 @@ public:
 
   void EmitWinEHHandlerData(SMLoc Loc) override;
   void EmitWindowsUnwindTables() override;
+  void EmitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
   void finishImpl() override;
 };
 
@@ -36,7 +37,12 @@ void AArch64WinCOFFStreamer::EmitWinEHHandlerData(SMLoc Loc) {
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section!
-  EHStreamer.EmitUnwindInfo(*this, getCurrentWinFrameInfo());
+  EHStreamer.EmitUnwindInfo(*this, getCurrentWinFrameInfo(),
+                            /* HandlerData = */ true);
+}
+
+void AArch64WinCOFFStreamer::EmitWindowsUnwindTables(WinEH::FrameInfo *Frame) {
+  EHStreamer.EmitUnwindInfo(*this, Frame, /* HandlerData = */ false);
 }
 
 void AArch64WinCOFFStreamer::EmitWindowsUnwindTables() {
@@ -53,17 +59,14 @@ void AArch64WinCOFFStreamer::finishImpl() {
 }
 } // end anonymous namespace
 
-namespace llvm {
-
 // Helper function to common out unwind code setup for those codes that can
 // belong to both prolog and epilog.
 // There are three types of Windows ARM64 SEH codes.  They can
 // 1) take no operands: SEH_Nop, SEH_PrologEnd, SEH_EpilogStart, SEH_EpilogEnd
 // 2) take an offset: SEH_StackAlloc, SEH_SaveFPLR, SEH_SaveFPLR_X
 // 3) take a register and an offset/size: all others
-void AArch64TargetWinCOFFStreamer::EmitARM64WinUnwindCode(unsigned UnwindCode,
-                                                          int Reg,
-                                                          int Offset) {
+void AArch64TargetWinCOFFStreamer::emitARM64WinUnwindCode(unsigned UnwindCode,
+                                                          int Reg, int Offset) {
   auto &S = getStreamer();
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
@@ -76,83 +79,96 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinUnwindCode(unsigned UnwindCode,
     CurFrame->Instructions.push_back(Inst);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIAllocStack(unsigned Size) {
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIAllocStack(unsigned Size) {
   unsigned Op = Win64EH::UOP_AllocSmall;
   if (Size >= 16384)
     Op = Win64EH::UOP_AllocLarge;
   else if (Size >= 512)
     Op = Win64EH::UOP_AllocMedium;
-  EmitARM64WinUnwindCode(Op, -1, Size);
+  emitARM64WinUnwindCode(Op, -1, Size);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFPLR(int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFPLR, -1, Offset);
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveR19R20X(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveR19R20X, -1, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFPLRX(int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFPLRX, -1, Offset);
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFPLR(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFPLR, -1, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveReg(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFPLRX(int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFPLRX, -1, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveReg(unsigned Reg,
                                                           int Offset) {
   assert(Offset >= 0 && Offset <= 504 &&
         "Offset for save reg should be >= 0 && <= 504");
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveReg, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveReg, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveRegX(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveRegX(unsigned Reg,
                                                            int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveRegX, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveRegX, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveRegP(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveRegP(unsigned Reg,
                                                            int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveRegP, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveRegP, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveRegPX(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveRegPX(unsigned Reg,
                                                             int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveRegPX, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveRegPX, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFReg(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveLRPair(unsigned Reg,
+                                                             int Offset) {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveLRPair, Reg, Offset);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFReg(unsigned Reg,
                                                            int Offset) {
   assert(Offset >= 0 && Offset <= 504 &&
         "Offset for save reg should be >= 0 && <= 504");
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFReg, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFReg, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFRegX(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFRegX(unsigned Reg,
                                                             int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFRegX, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFRegX, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFRegP(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFRegP(unsigned Reg,
                                                             int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFRegP, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFRegP, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISaveFRegPX(unsigned Reg,
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveFRegPX(unsigned Reg,
                                                              int Offset) {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SaveFRegPX, Reg, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveFRegPX, Reg, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFISetFP() {
-  EmitARM64WinUnwindCode(Win64EH::UOP_SetFP, -1, 0);
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISetFP() {
+  emitARM64WinUnwindCode(Win64EH::UOP_SetFP, -1, 0);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIAddFP(unsigned Offset) {
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIAddFP(unsigned Offset) {
   assert(Offset <= 2040 && "UOP_AddFP must have offset <= 2040");
-  EmitARM64WinUnwindCode(Win64EH::UOP_AddFP, -1, Offset);
+  emitARM64WinUnwindCode(Win64EH::UOP_AddFP, -1, Offset);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFINop() {
-  EmitARM64WinUnwindCode(Win64EH::UOP_Nop, -1, 0);
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFINop() {
+  emitARM64WinUnwindCode(Win64EH::UOP_Nop, -1, 0);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFISaveNext() {
+  emitARM64WinUnwindCode(Win64EH::UOP_SaveNext, -1, 0);
 }
 
 // The functions below handle opcodes that can end up in either a prolog or
 // an epilog, but not both.
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIPrologEnd() {
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIPrologEnd() {
   auto &S = getStreamer();
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
@@ -165,7 +181,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIPrologEnd() {
   CurFrame->Instructions.insert(it, Inst);
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogStart() {
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogStart() {
   auto &S = getStreamer();
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
@@ -175,7 +191,7 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogStart() {
   CurrentEpilog = S.emitCFILabel();
 }
 
-void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   auto &S = getStreamer();
   WinEH::FrameInfo *CurFrame = S.EnsureValidWinFrameInfo(SMLoc());
   if (!CurFrame)
@@ -188,7 +204,23 @@ void AArch64TargetWinCOFFStreamer::EmitARM64WinCFIEpilogEnd() {
   CurrentEpilog = nullptr;
 }
 
-MCWinCOFFStreamer *createAArch64WinCOFFStreamer(
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFITrapFrame() {
+  emitARM64WinUnwindCode(Win64EH::UOP_TrapFrame, -1, 0);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIMachineFrame() {
+  emitARM64WinUnwindCode(Win64EH::UOP_PushMachFrame, -1, 0);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIContext() {
+  emitARM64WinUnwindCode(Win64EH::UOP_Context, -1, 0);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIClearUnwoundToCall() {
+  emitARM64WinUnwindCode(Win64EH::UOP_ClearUnwoundToCall, -1, 0);
+}
+
+MCWinCOFFStreamer *llvm::createAArch64WinCOFFStreamer(
     MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
     std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
     bool RelaxAll, bool IncrementalLinkerCompatible) {
@@ -197,5 +229,3 @@ MCWinCOFFStreamer *createAArch64WinCOFFStreamer(
   S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }
-
-} // end llvm namespace

@@ -1,11 +1,11 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-pc-linux -relocation-model=pic | FileCheck %s
 
 
-define void @f() {
+define dso_local void @f() {
   ret void
 }
 
-define void @g() {
+define dso_local void @g() {
 ; CHECK: g:
 ; CHECK: bl f{{$}}
   call void @f()

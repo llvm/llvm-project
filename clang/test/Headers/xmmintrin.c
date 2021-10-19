@@ -7,13 +7,13 @@
 // REQUIRES: x86-registered-target
 #include <xmmintrin.h>
 
-// CHECK: @c = global i8 0, align 16
+// CHECK: @c ={{.*}} global i8 0, align 16
 _MM_ALIGN16 char c;
 
 // Make sure the last step of _mm_cvtps_pi16 converts <4 x i32> to <4 x i16> by
 // checking that clang emits PACKSSDW instead of PACKSSWB.
 
-// CHECK: define i64 @test_mm_cvtps_pi16
+// CHECK: define{{.*}} i64 @test_mm_cvtps_pi16
 // CHECK: call x86_mmx @llvm.x86.mmx.packssdw
 
 __m64 test_mm_cvtps_pi16(__m128 a) {

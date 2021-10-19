@@ -40,21 +40,6 @@ enum class CvSignature : uint32_t {
   ElfBuildId = 0x4270454c, // BpEL (Breakpad/Crashpad minidumps)
 };
 
-// Reference:
-// https://crashpad.chromium.org/doxygen/structcrashpad_1_1CodeViewRecordPDB70.html
-struct CvRecordPdb70 {
-  struct {
-    llvm::support::ulittle32_t Data1;
-    llvm::support::ulittle16_t Data2;
-    llvm::support::ulittle16_t Data3;
-    uint8_t Data4[8];
-  } Uuid;
-  llvm::support::ulittle32_t Age;
-  // char PDBFileName[];
-};
-static_assert(sizeof(CvRecordPdb70) == 20,
-              "sizeof CvRecordPdb70 is not correct!");
-
 enum class MinidumpMiscInfoFlags : uint32_t {
   ProcessID = (1 << 0),
   ProcessTimes = (1 << 1),

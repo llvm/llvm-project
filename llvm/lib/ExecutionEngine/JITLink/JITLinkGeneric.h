@@ -32,66 +32,51 @@ namespace jitlink {
 /// remaining linker work) to allow them to be performed asynchronously.
 class JITLinkerBase {
 public:
-  JITLinkerBase(std::unique_ptr<JITLinkContext> Ctx, PassConfiguration Passes)
-      : Ctx(std::move(Ctx)), Passes(std::move(Passes)) {
+  JITLinkerBase(std::unique_ptr<JITLinkContext> Ctx,
+                std::unique_ptr<LinkGraph> G, PassConfiguration Passes)
+      : Ctx(std::move(Ctx)), G(std::move(G)), Passes(std::move(Passes)) {
     assert(this->Ctx && "Ctx can not be null");
+    assert(this->G && "G can not be null");
   }
 
   virtual ~JITLinkerBase();
 
 protected:
-  struct SegmentLayout {
-    using BlocksList = std::vector<Block *>;
+  using InFlightAlloc = JITLinkMemoryManager::InFlightAlloc;
+  using AllocResult = Expected<std::unique_ptr<InFlightAlloc>>;
+  using FinalizeResult = Expected<JITLinkMemoryManager::FinalizedAlloc>;
 
-    BlocksList ContentBlocks;
-    BlocksList ZeroFillBlocks;
-  };
-
-  using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
+  // Returns the PassConfiguration for this instance. This can be used by
+  // JITLinkerBase implementations to add late passes that reference their
+  // own data structures (e.g. for ELF implementations to locate / construct
+  // a GOT start symbol prior to fixup).
+  PassConfiguration &getPassConfig() { return Passes; }
 
   // Phase 1:
-  //   1.1: Build link graph
-  //   1.2: Run pre-prune passes
+  //   1.1: Run pre-prune passes
   //   1.2: Prune graph
   //   1.3: Run post-prune passes
-  //   1.4: Sort blocks into segments
-  //   1.5: Allocate segment memory
-  //   1.6: Identify externals and make an async call to resolve function
+  //   1.4: Allocate memory.
   void linkPhase1(std::unique_ptr<JITLinkerBase> Self);
 
   // Phase 2:
-  //   2.1: Apply resolution results
-  //   2.2: Fix up block contents
-  //   2.3: Call OnResolved callback
-  //   2.3: Make an async call to transfer and finalize memory.
-  void linkPhase2(std::unique_ptr<JITLinkerBase> Self,
-                  Expected<AsyncLookupResult> LookupResult,
-                  SegmentLayoutMap Layout);
+  //   2.2: Run post-allocation passes
+  //   2.3: Notify context of final assigned symbol addresses
+  //   2.4: Identify external symbols and make an async call to resolve
+  void linkPhase2(std::unique_ptr<JITLinkerBase> Self, AllocResult AR);
 
   // Phase 3:
-  //   3.1: Call OnFinalized callback, handing off allocation.
-  void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
+  //   3.1: Apply resolution results
+  //   3.2: Run pre-fixup passes
+  //   3.3: Fix up block contents
+  //   3.4: Run post-fixup passes
+  //   3.5: Make an async call to transfer and finalize memory.
+  void linkPhase3(std::unique_ptr<JITLinkerBase> Self,
+                  Expected<AsyncLookupResult> LookupResult);
 
-  // Build a graph from the given object buffer.
-  // To be implemented by the client.
-  virtual Expected<std::unique_ptr<LinkGraph>>
-  buildGraph(MemoryBufferRef ObjBuffer) = 0;
-
-  // For debug dumping of the link graph.
-  virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
-
-  // Align a JITTargetAddress to conform with block alignment requirements.
-  static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
-    uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
-    return Addr + Delta;
-  }
-
-  // Align a pointer to conform with block alignment requirements.
-  static char *alignToBlock(char *P, Block &B) {
-    uint64_t PAddr = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(P));
-    uint64_t Delta = (B.getAlignmentOffset() - PAddr) % B.getAlignment();
-    return P + Delta;
-  }
+  // Phase 4:
+  //   4.1: Call OnFinalized callback, handing off allocation.
+  void linkPhase4(std::unique_ptr<JITLinkerBase> Self, FinalizeResult FR);
 
 private:
   // Run all passes in the given pass list, bailing out immediately if any pass
@@ -102,20 +87,14 @@ private:
   // Implemented in JITLinker.
   virtual Error fixUpBlocks(LinkGraph &G) const = 0;
 
-  SegmentLayoutMap layOutBlocks();
-  Error allocateSegments(const SegmentLayoutMap &Layout);
   JITLinkContext::LookupMap getExternalSymbolNames() const;
   void applyLookupResult(AsyncLookupResult LR);
-  void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
-                                       JITLinkMemoryManager::Allocation &Alloc);
-  void deallocateAndBailOut(Error Err);
-
-  void dumpGraph(raw_ostream &OS);
+  void abandonAllocAndBailOut(std::unique_ptr<JITLinkerBase> Self, Error Err);
 
   std::unique_ptr<JITLinkContext> Ctx;
-  PassConfiguration Passes;
   std::unique_ptr<LinkGraph> G;
-  std::unique_ptr<JITLinkMemoryManager::Allocation> Alloc;
+  PassConfiguration Passes;
+  std::unique_ptr<InFlightAlloc> Alloc;
 };
 
 template <typename LinkerImpl> class JITLinker : public JITLinkerBase {
@@ -152,6 +131,8 @@ private:
 
       // Copy Block data and apply fixups.
       LLVM_DEBUG(dbgs() << "    Applying fixups.\n");
+      assert((!B->isZeroFill() || B->edges_size() == 0) &&
+             "Edges in zero-fill block?");
       for (auto &E : B->edges()) {
 
         // Skip non-relocation edges.
@@ -159,8 +140,7 @@ private:
           continue;
 
         // Dispatch to LinkerImpl for fixup.
-        auto *BlockData = const_cast<char *>(B->getContent().data());
-        if (auto Err = impl().applyFixup(*B, E, BlockData))
+        if (auto Err = impl().applyFixup(G, *B, E))
           return Err;
       }
     }

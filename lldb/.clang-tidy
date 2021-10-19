@@ -1,2 +1,7 @@
-# Checks enabled in the top-level .clang-tidy minus readability-identifier-naming
-Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-unused-parameters,-misc-non-private-member-variables-in-classes'
+Checks: '-readability-identifier-naming,modernize-use-default-member-init,modernize-use-equals-default'
+InheritParentConfig: true
+CheckOptions:
+  - key:             modernize-use-default-member-init.IgnoreMacros
+    value:           '1'
+  - key:             modernize-use-default-member-init.UseAssignment
+    value:           '1'

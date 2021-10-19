@@ -76,7 +76,7 @@ define void @wo_hcaller(%class.T* %this, i8* %c) {
 
 ; CHECK-LABEL: wo_hcaller:
 ; CHECK: bl wo_hcallee
-; CHECK-NOT: nop
+; CHECK-NEXT: nop
 
 ; SCM-LABEL: wo_hcaller:
 ; SCM:       bl wo_hcallee
@@ -90,7 +90,7 @@ define void @wo_pcaller(%class.T* %this, i8* %c) {
 
 ; CHECK-LABEL: wo_pcaller:
 ; CHECK: bl wo_pcallee
-; CHECK-NOT: nop
+; CHECK-NEXT: nop
 
 ; SCM-LABEL:   wo_pcaller:
 ; SCM:         bl wo_pcallee
@@ -114,7 +114,7 @@ define void @w_pcaller(i8* %ptr) {
 
 ; CHECK-LABEL: w_pcaller:
 ; CHECK: bl w_pcallee
-; CHECK-NOT: nop
+; CHECK-NEXT: nop
 
 ; SCM-LABEL: w_pcaller:
 ; SCM:       bl w_pcallee
@@ -128,7 +128,7 @@ define void @w_hcaller(i8* %ptr) {
 
 ; CHECK-LABEL: w_hcaller:
 ; CHECK: bl w_hcallee
-; CHECK-NOT: nop
+; CHECK-NEXT: nop
 
 ; SCM-LABEL: w_hcaller:
 ; SCM:       bl w_hcallee

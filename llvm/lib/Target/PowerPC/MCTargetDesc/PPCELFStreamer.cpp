@@ -1,9 +1,8 @@
 //===-------- PPCELFStreamer.cpp - ELF Object Output ---------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -57,7 +56,7 @@ void PPCELFStreamer::emitPrefixedInstruction(const MCInst &Inst,
   // all of the nops required as part of the alignment operation. In the cases
   // when no nops are added then The fragment is still created but it remains
   // empty.
-  emitCodeAlignment(64, 4);
+  emitCodeAlignment(64, &STI, 4);
 
   // Emit the instruction.
   // Since the previous emit created a new fragment then adding this instruction

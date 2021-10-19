@@ -26,7 +26,9 @@ bb6:                                              ; preds = %bb6.lr.ph, %bb6
 loop.exit:                                ; preds = %bb6
   %_tmp142.lcssa = phi i64 [ %_tmp142, %bb6 ]
   %split = phi i16 [ undef, %bb6 ]
-; CHECK: %split = phi i16 [ undef, %bb6 ], [ undef, %bb6.lver.orig ]
+; CHECK: %split.ph = phi i16 [ undef, %bb6.lver.orig ]
+; CHECK: %split.ph3 = phi i16 [ undef, %bb6 ]
+; CHECK: %split = phi i16 [ %split.ph, %loop.exit.loopexit ], [ %split.ph3, %loop.exit.loopexit1 ]
   br label %bb9
 
 bb9:                                              ; preds = %bb9.loopexit, %bb1
@@ -52,7 +54,9 @@ bb6:                                              ; preds = %bb6.lr.ph, %bb6
 loop.exit:                                ; preds = %bb6
   %_tmp142.lcssa = phi i64 [ %_tmp142, %bb6 ]
   %split = phi i16 [ %t, %bb6 ]
-; CHECK: %split = phi i16 [ %t, %bb6 ], [ %t, %bb6.lver.orig ]
+; CHECK: %split.ph = phi i16 [ %t, %bb6.lver.orig ]
+; CHECK: %split.ph3 = phi i16 [ %t, %bb6 ]
+; CHECK: %split = phi i16 [ %split.ph, %loop.exit.loopexit ], [ %split.ph3, %loop.exit.loopexit1 ]
   br label %bb9
 
 bb9:                                              ; preds = %bb9.loopexit, %bb1

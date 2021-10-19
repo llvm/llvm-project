@@ -57,6 +57,7 @@ def CoreturnStmt : StmtNode<Stmt>;
 // Expressions
 def Expr : StmtNode<ValueStmt, 1>;
 def PredefinedExpr : StmtNode<Expr>;
+def SYCLUniqueStableNameExpr : StmtNode<Expr>;
 def DeclRefExpr : StmtNode<Expr>;
 def IntegerLiteral : StmtNode<Expr>;
 def FixedPointLiteral : StmtNode<Expr>;
@@ -216,10 +217,16 @@ def MSDependentExistsStmt : StmtNode<Stmt>;
 def AsTypeExpr : StmtNode<Expr>;
 
 // OpenMP Directives.
+def OMPCanonicalLoop : StmtNode<Stmt>;
 def OMPExecutableDirective : StmtNode<Stmt, 1>;
-def OMPLoopDirective : StmtNode<OMPExecutableDirective, 1>;
+def OMPMetaDirective : StmtNode<OMPExecutableDirective>;
+def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
+def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;
@@ -272,3 +279,6 @@ def OMPTargetTeamsDistributeDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeParallelForDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeParallelForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsDistributeSimdDirective : StmtNode<OMPLoopDirective>;
+def OMPInteropDirective : StmtNode<OMPExecutableDirective>;
+def OMPDispatchDirective : StmtNode<OMPExecutableDirective>;
+def OMPMaskedDirective : StmtNode<OMPExecutableDirective>;

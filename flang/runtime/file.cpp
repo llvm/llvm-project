@@ -1,4 +1,4 @@
-//===-- runtime/file.cpp ----------------------------------------*- C++ -*-===//
+//===-- runtime/file.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,19 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
-#include "magic-numbers.h"
-#include "memory.h"
+#include "flang/Runtime/magic-numbers.h"
+#include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #ifdef _WIN32
 #define NOMINMAX
 #include <io.h>
 #include <windows.h>
 #else
-#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -45,7 +45,8 @@ static int openfile_mkstemp(IoErrorHandler &handler) {
   if (::GetTempFileNameA(tempDirName, "Fortran", uUnique, tempFileName) == 0) {
     return -1;
   }
-  int fd{::_open(tempFileName, _O_CREAT | _O_TEMPORARY, _S_IREAD | _S_IWRITE)};
+  int fd{::_open(
+      tempFileName, _O_CREAT | _O_TEMPORARY | _O_RDWR, _S_IREAD | _S_IWRITE)};
 #else
   char path[]{"/tmp/Fortran-Scratch-XXXXXX"};
   int fd{::mkstemp(path)};
@@ -199,7 +200,6 @@ std::size_t OpenFile::Read(FileOffset at, char *buffer, std::size_t minBytes,
   while (got < minBytes) {
     auto chunk{::read(fd_, buffer + got, maxBytes - got)};
     if (chunk == 0) {
-      handler.SignalEnd();
       break;
     } else if (chunk < 0) {
       auto err{errno};
@@ -246,7 +246,7 @@ std::size_t OpenFile::Write(FileOffset at, const char *buffer,
 
 inline static int openfile_ftruncate(int fd, OpenFile::FileOffset at) {
 #ifdef _WIN32
-  return !::_chsize(fd, at);
+  return ::_chsize(fd, at);
 #else
   return ::ftruncate(fd, at);
 #endif
@@ -396,6 +396,15 @@ int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
 }
 
 bool IsATerminal(int fd) { return ::isatty(fd); }
+
+#ifdef WIN32
+// Access flags are normally defined in unistd.h, which unavailable under
+// Windows. Instead, define the flags as documented at
+// https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess
+#define F_OK 00
+#define W_OK 02
+#define R_OK 04
+#endif
 
 bool IsExtant(const char *path) { return ::access(path, F_OK) == 0; }
 bool MayRead(const char *path) { return ::access(path, R_OK) == 0; }

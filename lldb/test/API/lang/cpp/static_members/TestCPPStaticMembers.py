@@ -11,51 +11,33 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class CPPStaticMembersTestCase(TestBase):
+class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailure  # llvm.org/pr15401
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
-    def test_with_run_command(self):
-        """Test that member variables have the correct layout, scope and qualifiers when stopped inside and outside C++ methods"""
+    # We fail to lookup static members on Windows.
+    @expectedFailureAll(oslist=["windows"])
+    def test_access_from_main(self):
         self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+        lldbutil.run_to_source_breakpoint(self, "// stop in main", lldb.SBFileSpec("main.cpp"))
 
-        self.set_breakpoint(line_number('main.cpp', '// breakpoint 1'))
-        self.set_breakpoint(line_number('main.cpp', '// breakpoint 2'))
+        self.expect_expr("my_a.m_a", result_type="short", result_value="1")
+        self.expect_expr("my_a.s_b", result_type="long", result_value="2")
+        self.expect_expr("my_a.s_c", result_type="int", result_value="3")
 
-        self.runCmd("process launch", RUN_SUCCEEDED)
-        self.expect("expression my_a.access()",
-                    startstr="(long) $0 = 10")
+    # We fail to lookup static members on Windows.
+    @expectedFailureAll(oslist=["windows"])
+    def test_access_from_member_function(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// stop in member function", lldb.SBFileSpec("main.cpp"))
+        self.expect_expr("m_a", result_type="short", result_value="1")
+        self.expect_expr("s_b", result_type="long", result_value="2")
+        self.expect_expr("s_c", result_type="int", result_value="3")
 
-        self.expect("expression my_a.m_a",
-                    startstr="(short) $1 = 1")
-
-        # Note: SymbolFileDWARF::ParseChildMembers doesn't call
-        # AddFieldToRecordType, consistent with clang's AST layout.
-        self.expect("expression my_a.s_d",
-                    startstr="(int) $2 = 4")
-
-        self.expect("expression my_a.s_b",
-                    startstr="(long) $3 = 2")
-
-        self.expect("expression A::s_b",
-                    startstr="(long) $4 = 2")
-
-        # should not be available in global scope
-        self.expect("expression s_d",
+    # Currently lookups find variables that are in any scope.
+    @expectedFailureAll()
+    def test_access_without_scope(self):
+        self.build()
+        self.createTestTarget()
+        self.expect("expression s_c", error=True,
                     startstr="error: use of undeclared identifier 's_d'")
-
-        self.runCmd("process continue")
-        self.expect("expression m_c",
-                    startstr="(char) $5 = \'\\x03\'")
-
-        self.expect("expression s_b",
-                    startstr="(long) $6 = 2")
-
-        self.runCmd("process continue")
-
-    def set_breakpoint(self, line):
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", line, num_expected_locations=1, loc_exact=False)

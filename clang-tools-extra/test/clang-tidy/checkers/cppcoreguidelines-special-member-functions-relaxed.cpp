@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: [{key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions, value: 1}, {key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: 1}]}" --
+// RUN: %check_clang_tidy %s cppcoreguidelines-special-member-functions %t -- -config="{CheckOptions: [{key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions, value: true}, {key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true}]}" --
 
 class DefinesDestructor {
   ~DefinesDestructor();

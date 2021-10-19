@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting Arguments from defined functions.
+// to reduce uninteresting Arguments from declared and defined functions.
 //
 //===----------------------------------------------------------------------===//
 
 #include "ReduceArguments.h"
 #include "Delta.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Intrinsics.h"
 #include <set>
 #include <vector>
 
@@ -25,6 +26,10 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
   const auto &Users = OldF.users();
   for (auto I = Users.begin(), E = Users.end(); I != E; )
     if (auto *CI = dyn_cast<CallInst>(*I++)) {
+      // Skip uses in call instructions where OldF isn't the called function
+      // (e.g. if OldF is an argument of the call).
+      if (CI->getCalledFunction() != &OldF)
+        continue;
       SmallVector<Value *, 8> Args;
       for (auto ArgI = CI->arg_begin(), E = CI->arg_end(); ArgI != E; ++ArgI)
         if (ArgIndexesToKeep.count(ArgI - CI->arg_begin()))
@@ -38,17 +43,22 @@ static void replaceFunctionCalls(Function &OldF, Function &NewF,
     }
 }
 
+/// Returns whether or not this function should be considered a candidate for
+/// argument removal. Currently, functions with no arguments and intrinsics are
+/// not considered. Intrinsics aren't considered because their signatures are
+/// fixed.
+static bool shouldRemoveArguments(const Function &F) {
+  return !F.arg_empty() && !F.isIntrinsic();
+}
+
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
-                                       Module *Program) {
-  Oracle O(ChunksToKeep);
-
+static void extractArgumentsFromModule(Oracle &O, Module &Program) {
   std::set<Argument *> ArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
-  for (auto &F : *Program)
-    if (!F.arg_empty()) {
+  for (auto &F : Program)
+    if (shouldRemoveArguments(F)) {
       Funcs.push_back(&F);
       for (auto &A : F.args())
         if (O.shouldKeep())
@@ -89,7 +99,7 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
     ClonedFunc->removeFromParent();
-    Program->getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
+    Program.getFunctionList().insertAfter(F->getIterator(), ClonedFunc);
 
     replaceFunctionCalls(*F, *ClonedFunc, ArgIndexesToKeep);
     // Rename Cloned Function to Old's name
@@ -100,15 +110,15 @@ static void extractArgumentsFromModule(std::vector<Chunk> ChunksToKeep,
   }
 }
 
-/// Counts the amount of arguments in non-declaration functions and prints their
-/// respective name, index, and parent function name
-static int countArguments(Module *Program) {
+/// Counts the amount of arguments in functions and prints their respective
+/// name, index, and parent function name
+static int countArguments(Module &Program) {
   // TODO: Silence index with --quiet flag
   outs() << "----------------------------\n";
   outs() << "Param Index Reference:\n";
   int ArgsCount = 0;
-  for (auto &F : *Program)
-    if (!F.arg_empty()) {
+  for (auto &F : Program)
+    if (shouldRemoveArguments(F)) {
       outs() << "  " << F.getName() << "\n";
       for (auto &A : F.args())
         outs() << "\t" << ++ArgsCount << ": " << A.getName() << "\n";

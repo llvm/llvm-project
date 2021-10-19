@@ -126,6 +126,25 @@ There are several kinds of mapping regions:
   <span style='background-color:#4A789C'>  return </span><span style='background-color:#7FCA9F'>MAX</span><span style='background-color:#4A789C'>(x, 42);                          </span> <span class='c1'>// Expansion Region from 3:10 to 3:13</span>
   <span style='background-color:#4A789C'>}</span>
   </pre>`
+* Branch regions associate instrumentable branch conditions in the source code
+  with a `coverage mapping counter`_ to track how many times an individual
+  condition evaluated to 'true' and another `coverage mapping counter`_ to
+  track how many times that condition evaluated to false.  Instrumentable
+  branch conditions may comprise larger boolean expressions using boolean
+  logical operators.  The 'true' and 'false' cases reflect unique branch paths
+  that can be traced back to the source code.
+  For example:
+
+  :raw-html:`<pre class='highlight' style='line-height:initial;'><span>int func(int x, int y) {
+  <span>  if (<span style='background-color:#4A789C'>(x &gt; 1)</span> || <span style='background-color:#4A789C'>(y &gt; 3)</span>) {</span>  <span class='c1'>// Branch Region from 3:6 to 3:12</span>
+  <span>                             </span><span class='c1'>// Branch Region from 3:17 to 3:23</span>
+  <span>    printf("%d\n", x);              </span>
+  <span>  } else {                                </span>
+  <span>    printf("\n");                         </span>
+  <span>  }</span>
+  <span>  return 0;                                 </span>
+  <span>}</span>
+  </pre>`
 
 .. _source code range:
 
@@ -198,6 +217,11 @@ counts for the unreachable lines and highlight the unreachable code.
 Without them, the tool would think that those lines and regions were still
 executed, as it doesn't possess the frontend's knowledge.
 
+Note that branch regions are created to track branch conditions in the source
+code and refer to two coverage mapping counters, one to track the number of
+times the branch condition evaluated to "true", and one to track the number of
+times the branch condition evaluated to "false".
+
 LLVM IR Representation
 ======================
 
@@ -242,7 +266,23 @@ too deeply).
    [32 x i8] c"..." ; Encoded data (dissected later)
   }, section "__llvm_covmap", align 8
 
-The current version of the format is version 4. There are two differences from version 3:
+The current version of the format is version 6.
+
+There is one difference between versions 6 and 5:
+
+* The first entry in the filename list is the compilation directory. When the
+  filename is relative, the compilation directory is combined with the relative
+  path to get an absolute path. This can reduce size by omitting the duplicate
+  prefix in filenames.
+
+There is one difference between versions 5 and 4:
+
+* The notion of branch region has been introduced along with a corresponding
+  region kind.  Branch regions encode two counters, one to track how many
+  times a "true" branch condition is taken, and one to track how many times a
+  "false" branch condition is taken.
+
+There are two differences between versions 4 and 3:
 
 * Function records are now named symbols, and are marked *linkonce_odr*. This
   allows linkers to merge duplicate function records. Merging of duplicate
@@ -511,7 +551,8 @@ or
 
 ``[pseudo-counter]``
 
-The header encodes the region's counter and the region's kind.
+The header encodes the region's counter and the region's kind. A branch region
+will encode two counters.
 
 The value of the counter's tag distinguishes between the counters and
 pseudo-counters --- if the tag is zero, than this header contains a
@@ -544,6 +585,7 @@ the ordinary counter. It has the following interpretation:
 
   * 0 - This mapping region is a code region with a counter of zero.
   * 2 - This mapping region is a skipped region.
+  * 4 - This mapping region is a branch region.
 
 .. _source range:
 

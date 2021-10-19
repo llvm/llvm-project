@@ -10,7 +10,7 @@ Public dialects are typically separated into at least 3 directories:
 * mlir/test/Dialect/Foo           (for tests)
 
 Along with other public headers, the 'include' directory contains a
-TableGen file in the [ODS format](OpDefinitions.md), describing the
+TableGen file in the [ODS format](../OpDefinitions.md), describing the
 operations in the dialect.  This is used to generate operation
 declarations (FooOps.h.inc) and definitions (FooOps.cpp.inc) and
 operation interface declarations (FooOpsInterfaces.h.inc) and
@@ -23,10 +23,10 @@ FooOpsInterfaces.h.inc.
 
 The 'Transforms' directory contains rewrite rules for the dialect,
 typically described in TableGen file using the [DDR
-format](DeclarativeRewrites.md).
+format](../DeclarativeRewrites.md).
 
 Note that dialect names should not generally be suffixed with “Ops”,
-although some files pertaining to the operations of a dialect (e.g.
+although some files pertaining only to the operations of a dialect (e.g.
 FooOps.cpp) might be.
 
 ## CMake best practices
@@ -38,10 +38,8 @@ tablegen in a file FooOps.td.  This file forms the core of a dialect and
 is declared using add_mlir_dialect().
 
 ```cmake
-
 add_mlir_dialect(FooOps foo)
-add_mlir_doc(FooOps -gen-dialect-doc FooDialect Dialects/)
-
+add_mlir_doc(FooOps FooDialect Dialects/ -gen-dialect-doc)
 ```
 
 This generates the correct rules to run mlir-tblgen, along with a
@@ -49,6 +47,7 @@ This generates the correct rules to run mlir-tblgen, along with a
 
 Dialect transformations are typically declared in a file FooTransforms.td.
 Targets for TableGen are described in typical llvm fashion.
+
 ```cmake
 set(LLVM_TARGET_DEFINITIONS FooTransforms.td)
 mlir_tablegen(FooTransforms.h.inc -gen-rewriters)
@@ -67,20 +66,18 @@ other dialect libraries.  Typically this dependence is declared using
 target_link_libraries() and the PUBLIC keyword.  For instance:
 
 ```cmake
+add_mlir_dialect_library(MLIRFoo
+  DEPENDS
+  MLIRFooOpsIncGen
+  MLIRFooTransformsIncGen
 
-add_mlir_dialect_library(FooOps
-	DEPENDS
-	MLIRFooOpsIncGen
-	MLIRFooTransformsIncGen
+  LINK_COMPONENTS
+  Core
 
-	LINK_COMPONENTS
-	Core
-
-	LINK_LIBS PUBLIC
-	BarOps
-	<some-other-library>
-   )
-
+  LINK_LIBS PUBLIC
+  MLIRBar
+  <some-other-library>
+  )
 ```
 
 add_mlir_dialect_library() is a thin wrapper around add_llvm_library()
@@ -90,9 +87,7 @@ access to all dialects.  This list is also linked into libMLIR.so.
 The list can be retrieved from the MLIR_DIALECT_LIBS global property:
 
 ```cmake
-
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 ```
 
 Note that although the Bar dialect also uses TableGen to declare its
@@ -139,18 +134,16 @@ dialects (e.g. MLIRStandard).  Typically this dependence is specified
 using target_link_libraries() and the PUBLIC keyword.  For instance:
 
 ```cmake
-
 add_mlir_conversion_library(MLIRBarToFoo
-	BarToFoo.cpp
+  BarToFoo.cpp
 
-        ADDITIONAL_HEADER_DIRS
-        ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/BarToFoo
 
-   LINK_LIBS PUBLIC
-	BarOps
-	FooOps
-	)
-
+  LINK_LIBS PUBLIC
+  MLIRBar
+  MLIRFoo
+  )
 ```
 
 add_mlir_conversion_library() is a thin wrapper around
@@ -161,9 +154,7 @@ is also linked in libMLIR.so.  The list can be retrieved from the
 MLIR_CONVERSION_LIBS global property:
 
 ```cmake
-
 get_property(dialect_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-
 ```
 
 Note that it is only necessary to specify a PUBLIC dependence against

@@ -62,7 +62,7 @@ namespace test1 {
   private: int priv; static int spriv; // expected-note 8 {{declared private here}}
   };
 
-  class Test : protected Base { // expected-note 6 {{declared protected here}} expected-note 8 {{constrained by protected inheritance here}}
+  class Test : protected Base { // expected-note 3 {{declared protected here}} expected-note 8 {{constrained by protected inheritance here}}
     void test() {
       pub++;
       spub++;
@@ -81,11 +81,11 @@ namespace test1 {
   };
 
   void test(Test *t) {
-    t->pub++; // expected-error {{protected member}} expected-error {{protected base class}}
+    t->pub++; // expected-error {{protected member}}
     t->spub++; // expected-error {{protected member}}
-    t->prot++; // expected-error {{protected member}} expected-error {{protected base class}}
+    t->prot++; // expected-error {{protected member}}
     t->sprot++; // expected-error {{protected member}}
-    t->priv++; // expected-error {{private member}} expected-error {{protected base class}}
+    t->priv++; // expected-error {{private member}}
     t->spriv++; // expected-error {{private member}}
 
     // Two possible errors here: one for Base, one for the member
@@ -118,7 +118,7 @@ namespace test2 {
     static int spriv; // expected-note 4 {{declared private here}}
   };
 
-  class Test : private Base { // expected-note 6 {{declared private here}} \
+  class Test : private Base { // expected-note 3 {{declared private here}} \
                               // expected-note 10 {{constrained by private inheritance here}}
     void test() {
       pub++;
@@ -138,11 +138,11 @@ namespace test2 {
   };
 
   void test(Test *t) {
-    t->pub++; // expected-error {{private member}} expected-error {{private base class}}
+    t->pub++; // expected-error {{private member}}
     t->spub++; // expected-error {{private member}}
-    t->prot++; // expected-error {{private member}} expected-error {{private base class}}
+    t->prot++; // expected-error {{private member}}
     t->sprot++; // expected-error {{private member}}
-    t->priv++; // expected-error {{private member}} expected-error {{private base class}}
+    t->priv++; // expected-error {{private member}}
     t->spriv++; // expected-error {{private member}}
 
     t->Base::pub++; // expected-error {{private member}} expected-error {{private base class}}

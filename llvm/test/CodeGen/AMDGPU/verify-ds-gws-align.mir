@@ -1,0 +1,37 @@
+# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
+
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_INIT killed %0.sub1:areg_128_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_INIT killed %0.sub3:areg_128_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_BARRIER killed %2.sub0:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_INIT killed %3:vgpr_32, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+# GFX90A-ERR: DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+---
+name:            gws_odd_vgpr
+body:             |
+  bb.0:
+    %0:areg_128_align2 = IMPLICIT_DEF
+    DS_GWS_INIT killed %0.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    %0:areg_128_align2 = IMPLICIT_DEF
+    DS_GWS_INIT killed %0.sub3, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    DS_GWS_SEMA_BR killed %1.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    %2:vreg_64 = IMPLICIT_DEF
+    DS_GWS_BARRIER killed %2.sub0, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    %3:vgpr_32 = IMPLICIT_DEF
+    DS_GWS_INIT killed %3, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    $vgpr1 = IMPLICIT_DEF
+    DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    $agpr1 = IMPLICIT_DEF
+    DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+    S_ENDPGM 0
+
+...

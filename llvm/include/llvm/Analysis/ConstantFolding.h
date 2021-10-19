@@ -25,6 +25,7 @@ template <typename T> class ArrayRef;
 class CallBase;
 class Constant;
 class ConstantExpr;
+class DSOLocalEquivalent;
 class DataLayout;
 class Function;
 class GlobalValue;
@@ -34,8 +35,11 @@ class Type;
 
 /// If this constant is a constant offset from a global, return the global and
 /// the constant. Because of constantexprs, this function is recursive.
+/// If the global is part of a dso_local_equivalent constant, return it through
+/// `Equiv` if it is provided.
 bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
-                                const DataLayout &DL);
+                                const DataLayout &DL,
+                                DSOLocalEquivalent **DSOEquiv = nullptr);
 
 /// ConstantFoldInstruction - Try to constant fold the specified instruction.
 /// If successful, the constant result is returned, if not, null is returned.
@@ -132,7 +136,9 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &
 /// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
 /// getelementptr constantexpr, return the constant value being addressed by the
 /// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE);
+Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
+                                                 Type *Ty,
+                                                 const DataLayout &DL);
 
 /// ConstantFoldLoadThroughGEPIndices - Given a constant and getelementptr
 /// indices (with an *implied* zero pointer index that is not in the list),

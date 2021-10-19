@@ -249,10 +249,10 @@ def VPTPredROperand : AsmOperandClass {
 
 // Base class for both kinds of vpred.
 class vpred_ops<dag extra_op, dag extra_mi> : OperandWithDefaultOps<OtherVT,
-            !con((ops (i32 0), (i32 zero_reg)), extra_op)> {
+            !con((ops (i32 0), (i32 zero_reg), (i32 zero_reg)), extra_op)> {
   let PrintMethod = "printVPTPredicateOperand";
   let OperandNamespace = "ARM";
-  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg), extra_mi);
+  let MIOperandInfo = !con((ops i32imm:$cond, VCCR:$cond_reg, GPRlr:$tp_reg), extra_mi);
 
   // For convenience, we provide a string value that can be appended
   // to the constraints string. It's empty for vpred_n, and for
@@ -408,6 +408,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   // in an IT block).
   bit thumbArithFlagSetting = 0;
 
+  bits<2> VecSize = 0;
   bit validForTailPredication = 0;
   bit retainsPreviousHalfElement = 0;
   bit horizontalReduction = 0;
@@ -428,6 +429,7 @@ class InstTemplate<AddrMode am, int sz, IndexMode im,
   let TSFlags{21}    = retainsPreviousHalfElement;
   let TSFlags{22}    = horizontalReduction;
   let TSFlags{23}    = doubleWidthResult;
+  let TSFlags{25-24} = VecSize;
 
   let Constraints = cstr;
   let Itinerary = itin;
@@ -1385,8 +1387,8 @@ class ThumbXI<dag oops, dag iops, AddrMode am, int sz,
 }
 
 class T2I<dag oops, dag iops, InstrItinClass itin,
-          string opc, string asm, list<dag> pattern>
-  : Thumb2I<oops, iops, AddrModeNone, 4, itin, opc, asm, "", pattern>;
+          string opc, string asm, list<dag> pattern, AddrMode am = AddrModeNone>
+  : Thumb2I<oops, iops, am, 4, itin, opc, asm, "", pattern>;
 class T2Ii12<dag oops, dag iops, InstrItinClass itin,
              string opc, string asm, list<dag> pattern>
   : Thumb2I<oops, iops, AddrModeT2_i12, 4, itin, opc, asm, "",pattern>;

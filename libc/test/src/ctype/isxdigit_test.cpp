@@ -9,7 +9,7 @@
 #include "src/ctype/isxdigit.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsXDigit, DefaultLocale) {
+TEST(LlvmLibcIsXDigit, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {
     if (('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'f') ||
         ('A' <= ch && ch <= 'F'))

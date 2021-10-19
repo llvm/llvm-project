@@ -20,17 +20,12 @@ class LaunchWithShellExpandTestCase(TestBase):
             "windows",
             "linux",
             "freebsd"],
-        bugnumber="llvm.org/pr24778 llvm.org/pr22627")
+        bugnumber="llvm.org/pr24778 llvm.org/pr22627 llvm.org/pr48349")
     @skipIfDarwinEmbedded # iOS etc don't launch the binary via a shell, so arg expansion won't happen
     @expectedFailureNetBSD
     def test(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        self.runCmd("target create %s" % exe)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
 
         # Create any breakpoints we need
         breakpoint = target.BreakpointCreateBySourceRegex(
@@ -56,25 +51,18 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         stop_reason = thread.GetStopReason()
 
-        self.assertTrue(
-            stop_reason == lldb.eStopReasonBreakpoint,
+        self.assertEqual(
+            stop_reason, lldb.eStopReasonBreakpoint,
             "Thread in process stopped in 'main' should have a stop reason of eStopReasonBreakpoint")
 
-        self.expect("frame variable argv[1]", substrs=['file1.txt'])
-        self.expect("frame variable argv[2]", substrs=['file2.txt'])
-        self.expect("frame variable argv[3]", substrs=['file3.txt'])
-        self.expect("frame variable argv[4]", substrs=['file4.txy'])
-        self.expect("frame variable argv[5]", substrs=['()'])
-        self.expect("frame variable argv[6]", substrs=['>'])
-        self.expect("frame variable argv[7]", substrs=['<'])
-        self.expect(
-            "frame variable argv[5]",
-            substrs=['file5.tyx'],
-            matching=False)
-        self.expect(
-            "frame variable argv[8]",
-            substrs=['file5.tyx'],
-            matching=False)
+        self.expect_var_path("argv[1]", summary='"file1.txt"')
+        self.expect_var_path("argv[2]", summary='"file2.txt"')
+        self.expect_var_path("argv[3]", summary='"file3.txt"')
+        self.expect_var_path("argv[4]", summary='"file4.txy"')
+        self.expect_var_path("argv[5]", summary='"()"')
+        self.expect_var_path("argv[6]", summary='">"')
+        self.expect_var_path("argv[7]", summary='"<"')
+        self.expect_var_path("argc", value='8')
 
         self.runCmd("process kill")
 
@@ -94,8 +82,8 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         stop_reason = thread.GetStopReason()
 
-        self.assertTrue(
-            stop_reason == lldb.eStopReasonBreakpoint,
+        self.assertEqual(
+            stop_reason, lldb.eStopReasonBreakpoint,
             "Thread in process stopped in 'main' should have a stop reason of eStopReasonBreakpoint")
 
         self.expect("frame variable argv[1]", substrs=['foo bar'])
@@ -117,8 +105,8 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         stop_reason = thread.GetStopReason()
 
-        self.assertTrue(
-            stop_reason == lldb.eStopReasonBreakpoint,
+        self.assertEqual(
+            stop_reason, lldb.eStopReasonBreakpoint,
             "Thread in process stopped in 'main' should have a stop reason of eStopReasonBreakpoint")
 
         self.expect("frame variable argv[1]", substrs=['foo bar'])

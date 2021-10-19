@@ -45,16 +45,16 @@
 // CHECK: encoding: [0x0f,0x01,0xf8]
 
 	vmrun %eax
-// CHECK: vmrun %eax
+// CHECK: vmrun
 // CHECK: encoding: [0x0f,0x01,0xd8]
 	vmmcall
 // CHECK: vmmcall
 // CHECK: encoding: [0x0f,0x01,0xd9]
 	vmload %eax
-// CHECK: vmload %eax
+// CHECK: vmload
 // CHECK: encoding: [0x0f,0x01,0xda]
 	vmsave %eax
-// CHECK: vmsave %eax
+// CHECK: vmsave
 // CHECK: encoding: [0x0f,0x01,0xdb]
 	stgi
 // CHECK: stgi
@@ -63,10 +63,10 @@
 // CHECK: clgi
 // CHECK: encoding: [0x0f,0x01,0xdd]
 	skinit %eax
-// CHECK: skinit %eax
+// CHECK: skinit
 // CHECK: encoding: [0x0f,0x01,0xde]
 	invlpga %eax, %ecx
-// CHECK: invlpga %eax, %ecx
+// CHECK: invlpga
 // CHECK: encoding: [0x0f,0x01,0xdf]
 
 	rdtscp
@@ -451,6 +451,14 @@ cmovnae	%bx,%bx
 // CHECK:       clzero
 // CHECK:  encoding: [0x0f,0x01,0xfc]
                 clzero %eax
+
+// CHECK:       tlbsync 
+// CHECK:  encoding: [0x0f,0x01,0xff]
+                tlbsync
+
+// CHECK:       invlpgb
+// CHECK:  encoding: [0x0f,0x01,0xfe]
+                invlpgb %eax, %edx
 
 // radr://8017522
 // CHECK: wait

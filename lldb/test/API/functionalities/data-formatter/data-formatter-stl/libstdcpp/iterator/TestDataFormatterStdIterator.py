@@ -21,6 +21,7 @@ class StdIteratorDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
         """Test that libstdcpp iterators format properly."""
         self.build()

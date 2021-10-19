@@ -1,9 +1,9 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32-EB
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32-EB
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32R6-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32R6-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32R6-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,MIPS32R6-EB
 %struct.S2 = type { %struct.S1, %struct.S1 }
 %struct.S1 = type { i8, i8 }
 %struct.S4 = type { [7 x i8] }
@@ -30,7 +30,7 @@ entry:
 
 ; MIPS32R6-DAG:  lhu $[[PART1:[0-9]+]], 2($[[R0]])
 
-  tail call void @foo2(%struct.S1* byval getelementptr inbounds (%struct.S2, %struct.S2* @s2, i32 0, i32 1)) nounwind
+  tail call void @foo2(%struct.S1* byval(%struct.S1) getelementptr inbounds (%struct.S2, %struct.S2* @s2, i32 0, i32 1)) nounwind
   ret void
 }
 
@@ -76,10 +76,10 @@ entry:
 ; MIPS32R6-EB-DAG: sll $[[T3:[0-9]+]], $[[T1]], 8
 ; MIPS32R6-EB-DAG: or  $5, $[[T2]], $[[T3]]
 
-  tail call void @foo4(%struct.S4* byval @s4) nounwind
+  tail call void @foo4(%struct.S4* byval(%struct.S4) @s4) nounwind
   ret void
 }
 
-declare void @foo2(%struct.S1* byval)
+declare void @foo2(%struct.S1* byval(%struct.S1))
 
-declare void @foo4(%struct.S4* byval)
+declare void @foo4(%struct.S4* byval(%struct.S4))

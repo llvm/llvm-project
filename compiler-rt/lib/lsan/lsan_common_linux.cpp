@@ -93,6 +93,11 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
   return 0;
 }
 
+#if SANITIZER_ANDROID && __ANDROID_API__ < 21
+extern "C" __attribute__((weak)) int dl_iterate_phdr(
+    int (*)(struct dl_phdr_info *, size_t, void *), void *);
+#endif
+
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
   if (!flags()->use_globals) return;

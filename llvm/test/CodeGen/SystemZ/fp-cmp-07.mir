@@ -38,7 +38,7 @@ body:             |
   bb.1.store:
     liveins: $f0s, $r2d
 
-    STE $f0s, killed $r2d, 0, $noreg :: (store 4 into %ir.dest)
+    STE $f0s, killed $r2d, 0, $noreg :: (store (s32) into %ir.dest)
     Return implicit $f0s
 
 ...

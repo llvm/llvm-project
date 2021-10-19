@@ -1,4 +1,5 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefix DWARF
 
 ; Input C code:
 
@@ -42,8 +43,6 @@
 ; CHECK: 	.int8	159                       # DW_OP_stack_value
 
 
-
-
 source_filename = "stackified.c"
 target triple = "wasm32-unknown-unknown"
 
@@ -57,10 +56,32 @@ entry:
   ret void, !dbg !22
 }
 
+; DebugFixup pass should not add a DBG_VALUE after the BR_IF instruction at the
+; end of the 'entry' BB, because it is not allowed to have more instructions
+; after a terminator and debug ranges are terminated at the end of a BB anyway.
+; If this passes 'llc -verify-machineinstrs', that means the DBG_VALUE
+; instruction is correctly omitted.
+
+; DWARF-LABEL: DW_AT_name ("no_dbg_value_after_terminator")
+; DWARF:       DW_TAG_variable
+; DWARF-NEXT:    DW_AT_location
+; DWARF-NEXT:      [
+; DWARF-NEXT:    DW_AT_name ("myvar")
+define void @no_dbg_value_after_terminator(i32 %a, i32 %b) !dbg !23 {
+entry:
+  %cmp = icmp ne i32 %a, %b, !dbg !25
+  call void @llvm.dbg.value(metadata i1 %cmp, metadata !27, metadata !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 8, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !25
+  br i1 %cmp, label %bb.1, label %bb.0, !dbg !25
+
+bb.0:                                             ; preds = %entry
+  unreachable
+
+bb.1:                                             ; preds = %entry
+  ret void
+}
+
 declare i32 @input()
-
 declare !dbg !4 void @output(i32, i32)
-
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
@@ -90,3 +111,9 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !20 = !DILocation(line: 5, column: 11, scope: !12)
 !21 = !DILocation(line: 6, column: 3, scope: !12)
 !22 = !DILocation(line: 7, column: 1, scope: !12)
+!23 = distinct !DISubprogram(name: "no_dbg_value_after_terminator", scope: null, type: !24, spFlags: DISPFlagDefinition, unit: !0)
+!24 = !DISubroutineType(types: !2)
+!25 = !DILocation(line: 0, scope: !26)
+!26 = distinct !DILexicalBlock(scope: !23)
+!27 = !DILocalVariable(name: "myvar", scope: !26, type: !28)
+!28 = !DIBasicType(name: "bool", size: 8, encoding: DW_ATE_boolean)

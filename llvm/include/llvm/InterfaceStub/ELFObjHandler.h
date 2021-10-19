@@ -5,28 +5,40 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
-///
+/// \file
 /// This supports reading and writing of elf dynamic shared objects.
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
-#define LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
+#ifndef LLVM_INTERFACESTUB_ELFOBJHANDLER_H
+#define LLVM_INTERFACESTUB_ELFOBJHANDLER_H
 
-#include "llvm/InterfaceStub/ELFStub.h"
+#include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Support/FileSystem.h"
 
 namespace llvm {
 
 class MemoryBuffer;
 
-namespace elfabi {
+namespace ifs {
 
 /// Attempt to read a binary ELF file from a MemoryBuffer.
-Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf);
+Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 
-} // end namespace elfabi
+/// Attempt to write a binary ELF stub.
+/// This function determines appropriate ELFType using the passed ELFTarget and
+/// then writes a binary ELF stub to a specified file path.
+///
+/// @param FilePath File path for writing the ELF binary.
+/// @param Stub Source ELFStub to generate a binary ELF stub from.
+/// @param WriteIfChanged Whether or not to preserve timestamp if
+///        the output stays the same.
+Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
+                      bool WriteIfChanged = false);
+
+} // end namespace ifs
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
+#endif // LLVM_INTERFACESTUB_ELFOBJHANDLER_H

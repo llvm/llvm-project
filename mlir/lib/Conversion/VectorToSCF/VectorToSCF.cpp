@@ -1,4 +1,4 @@
-//===- VectorToSCF.cpp - Conversion from Vector to mix of SCF and Std -----===//
+//===- VectorToSCF.cpp - Convert vector to SCF dialect ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements target-dependent lowering of vector transfer operations.
+// This file implements lowering of vector transfer operations to SCF.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,663 +15,1258 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
 #include "../PassDetail.h"
-#include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/SCF/EDSC/Builders.h"
-#include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Types.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using vector::TransferReadOp;
 using vector::TransferWriteOp;
 
 namespace {
-/// Helper class captures the common information needed to lower N>1-D vector
-/// transfer operations (read and write).
-/// On construction, this class opens an edsc::ScopedContext for simpler IR
-/// manipulation.
-/// In pseudo-IR, for an n-D vector_transfer_read such as:
-///
-/// ```
-///   vector_transfer_read(%m, %offsets, identity_map, %fill) :
-///     memref<(leading_dims) x (major_dims) x (minor_dims) x type>,
-///     vector<(major_dims) x (minor_dims) x type>
-/// ```
-///
-/// where rank(minor_dims) is the lower-level vector rank (e.g. 1 for LLVM or
-/// higher).
-///
-/// This is the entry point to emitting pseudo-IR resembling:
-///
-/// ```
-///   %tmp = alloc(): memref<(major_dims) x vector<minor_dim x type>>
-///   for (%ivs_major, {0}, {vector_shape}, {1}) { // (N-1)-D loop nest
-///     if (any_of(%ivs_major + %offsets, <, major_dims)) {
-///       %v = vector_transfer_read(
-///         {%offsets_leading, %ivs_major + %offsets_major, %offsets_minor},
-///          %ivs_minor):
-///         memref<(leading_dims) x (major_dims) x (minor_dims) x type>,
-///         vector<(minor_dims) x type>;
-///       store(%v, %tmp);
-///     } else {
-///       %v = splat(vector<(minor_dims) x type>, %fill)
-///       store(%v, %tmp, %ivs_major);
-///     }
-///   }
-///   %res = load(%tmp, %0): memref<(major_dims) x vector<minor_dim x type>>):
-//      vector<(major_dims) x (minor_dims) x type>
-/// ```
-///
-template <typename ConcreteOp>
-class NDTransferOpHelper {
-public:
-  NDTransferOpHelper(PatternRewriter &rewriter, ConcreteOp xferOp,
-                     const VectorTransferToSCFOptions &options)
-      : rewriter(rewriter), options(options), loc(xferOp.getLoc()),
-        scope(std::make_unique<ScopedContext>(rewriter, loc)), xferOp(xferOp),
-        op(xferOp.getOperation()) {
-    vectorType = xferOp.getVectorType();
-    // TODO: when we go to k > 1-D vectors adapt minorRank.
-    minorRank = 1;
-    majorRank = vectorType.getRank() - minorRank;
-    leadingRank = xferOp.getLeadingMemRefRank();
-    majorVectorType =
-        VectorType::get(vectorType.getShape().take_front(majorRank),
-                        vectorType.getElementType());
-    minorVectorType =
-        VectorType::get(vectorType.getShape().take_back(minorRank),
-                        vectorType.getElementType());
-    /// Memref of minor vector type is used for individual transfers.
-    memRefMinorVectorType =
-        MemRefType::get(majorVectorType.getShape(), minorVectorType, {},
-                        xferOp.getMemRefType().getMemorySpace());
-  }
 
-  LogicalResult doReplace();
+/// Attribute name used for labeling transfer ops during progressive lowering.
+static const char kPassLabel[] = "__vector_to_scf_lowering__";
 
-private:
-  /// Creates the loop nest on the "major" dimensions and calls the
-  /// `loopBodyBuilder` lambda in the context of the loop nest.
-  template <typename Lambda>
-  void emitLoops(Lambda loopBodyBuilder);
+/// Patterns that inherit from this struct have access to
+/// VectorTransferToSCFOptions.
+template <typename OpTy>
+struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
+  explicit VectorToSCFPattern(MLIRContext *context,
+                              VectorTransferToSCFOptions opt)
+      : OpRewritePattern<OpTy>(context), options(opt) {}
 
-  /// Operate within the body of `emitLoops` to:
-  ///   1. Compute the indexings `majorIvs + majorOffsets` and save them in
-  ///      `majorIvsPlusOffsets`.
-  ///   2. Return a boolean that determines whether the first `majorIvs.rank()`
-  ///      dimensions `majorIvs + majorOffsets` are all within `memrefBounds`.
-  Value emitInBoundsCondition(ValueRange majorIvs, ValueRange majorOffsets,
-                              MemRefBoundsCapture &memrefBounds,
-                              SmallVectorImpl<Value> &majorIvsPlusOffsets);
-
-  /// Common state to lower vector transfer ops.
-  PatternRewriter &rewriter;
-  const VectorTransferToSCFOptions &options;
-  Location loc;
-  std::unique_ptr<ScopedContext> scope;
-  ConcreteOp xferOp;
-  Operation *op;
-  // A vector transfer copies data between:
-  //   - memref<(leading_dims) x (major_dims) x (minor_dims) x type>
-  //   - vector<(major_dims) x (minor_dims) x type>
-  unsigned minorRank;         // for now always 1
-  unsigned majorRank;         // vector rank - minorRank
-  unsigned leadingRank;       // memref rank - vector rank
-  VectorType vectorType;      // vector<(major_dims) x (minor_dims) x type>
-  VectorType majorVectorType; // vector<(major_dims) x type>
-  VectorType minorVectorType; // vector<(minor_dims) x type>
-  MemRefType memRefMinorVectorType; // memref<vector<(minor_dims) x type>>
+  VectorTransferToSCFOptions options;
 };
 
-template <typename ConcreteOp>
-template <typename Lambda>
-void NDTransferOpHelper<ConcreteOp>::emitLoops(Lambda loopBodyBuilder) {
-  /// Loop nest operates on the major dimensions
-  MemRefBoundsCapture memrefBoundsCapture(xferOp.memref());
-
-  if (options.unroll) {
-    auto shape = majorVectorType.getShape();
-    auto strides = computeStrides(shape);
-    unsigned numUnrolledInstances = computeMaxLinearIndex(shape);
-    ValueRange indices(xferOp.indices());
-    for (unsigned idx = 0; idx < numUnrolledInstances; ++idx) {
-      SmallVector<int64_t, 4> offsets = delinearize(strides, idx);
-      SmallVector<Value, 4> offsetValues =
-          llvm::to_vector<4>(llvm::map_range(offsets, [](int64_t off) -> Value {
-            return std_constant_index(off);
-          }));
-      loopBodyBuilder(offsetValues, indices.take_front(leadingRank),
-                      indices.drop_front(leadingRank).take_front(majorRank),
-                      indices.take_back(minorRank), memrefBoundsCapture);
-    }
-  } else {
-    VectorBoundsCapture vectorBoundsCapture(majorVectorType);
-    auto majorLbs = vectorBoundsCapture.getLbs();
-    auto majorUbs = vectorBoundsCapture.getUbs();
-    auto majorSteps = vectorBoundsCapture.getSteps();
-    affineLoopNestBuilder(
-        majorLbs, majorUbs, majorSteps, [&](ValueRange majorIvs) {
-          ValueRange indices(xferOp.indices());
-          loopBodyBuilder(majorIvs, indices.take_front(leadingRank),
-                          indices.drop_front(leadingRank).take_front(majorRank),
-                          indices.take_back(minorRank), memrefBoundsCapture);
-        });
+/// Given a vector transfer op, calculate which dimension of the `source`
+/// memref should be unpacked in the next application of TransferOpConversion.
+/// A return value of None indicates a broadcast.
+template <typename OpTy>
+static Optional<int64_t> unpackedDim(OpTy xferOp) {
+  auto map = xferOp.permutation_map();
+  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+    return expr.getPosition();
   }
-}
-
-static Optional<int64_t> extractConstantIndex(Value v) {
-  if (auto cstOp = v.getDefiningOp<ConstantIndexOp>())
-    return cstOp.getValue();
-  if (auto affineApplyOp = v.getDefiningOp<AffineApplyOp>())
-    if (affineApplyOp.getAffineMap().isSingleConstant())
-      return affineApplyOp.getAffineMap().getSingleConstantResult();
+  assert(xferOp.isBroadcastDim(0) &&
+         "Expected AffineDimExpr or AffineConstantExpr");
   return None;
 }
 
-// Missing foldings of scf.if make it necessary to perform poor man's folding
-// eagerly, especially in the case of unrolling. In the future, this should go
-// away once scf.if folds properly.
-static Value onTheFlyFoldSLT(Value v, Value ub) {
-  using namespace mlir::edsc::op;
-  auto maybeCstV = extractConstantIndex(v);
-  auto maybeCstUb = extractConstantIndex(ub);
-  if (maybeCstV && maybeCstUb && *maybeCstV < *maybeCstUb)
-    return Value();
-  return slt(v, ub);
+/// Compute the permutation map for the new (N-1)-D vector transfer op. This
+/// map is identical to the current permutation map, but the first result is
+/// omitted.
+template <typename OpTy>
+static AffineMap unpackedPermutationMap(OpBuilder &b, OpTy xferOp) {
+  auto map = xferOp.permutation_map();
+  return AffineMap::get(map.getNumDims(), 0, map.getResults().drop_front(),
+                        b.getContext());
 }
 
-template <typename ConcreteOp>
-Value NDTransferOpHelper<ConcreteOp>::emitInBoundsCondition(
-    ValueRange majorIvs, ValueRange majorOffsets,
-    MemRefBoundsCapture &memrefBounds,
-    SmallVectorImpl<Value> &majorIvsPlusOffsets) {
-  Value inBoundsCondition;
-  majorIvsPlusOffsets.reserve(majorIvs.size());
-  unsigned idx = 0;
-  SmallVector<Value, 4> bounds =
-      linalg::applyMapToValues(rewriter, xferOp.getLoc(),
-                               xferOp.permutation_map(), memrefBounds.getUbs());
-  for (auto it : llvm::zip(majorIvs, majorOffsets, bounds)) {
-    Value iv = std::get<0>(it), off = std::get<1>(it), ub = std::get<2>(it);
-    using namespace mlir::edsc::op;
-    majorIvsPlusOffsets.push_back(iv + off);
-    if (xferOp.isMaskedDim(leadingRank + idx)) {
-      Value inBoundsCond = onTheFlyFoldSLT(majorIvsPlusOffsets.back(), ub);
-      if (inBoundsCond)
-        inBoundsCondition = (inBoundsCondition)
-                                ? (inBoundsCondition && inBoundsCond)
-                                : inBoundsCond;
-    }
-    ++idx;
+/// Calculate the indices for the new vector transfer op.
+///
+/// E.g.: transfer_read %A[%a, %b, %c, %d] ... : vector<5x4x3xf32> ...
+///       --> transfer_read %A[%a, %b + iv, %c, %d] ... vector<4x3f32>
+///                                 ^^^^^^
+///              `iv` is the iteration variable of the (new) surrounding loop.
+template <typename OpTy>
+static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
+                           SmallVector<Value, 8> &indices) {
+  typename OpTy::Adaptor adaptor(xferOp);
+  // Corresponding memref dim of the vector dim that is unpacked.
+  auto dim = unpackedDim(xferOp);
+  auto prevIndices = adaptor.indices();
+  indices.append(prevIndices.begin(), prevIndices.end());
+
+  Location loc = xferOp.getLoc();
+  bool isBroadcast = !dim.hasValue();
+  if (!isBroadcast) {
+    AffineExpr d0, d1;
+    bindDims(xferOp.getContext(), d0, d1);
+    Value offset = adaptor.indices()[dim.getValue()];
+    indices[dim.getValue()] =
+        makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
-  return inBoundsCondition;
 }
 
-// TODO: Parallelism and threadlocal considerations.
-static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
-                                     Operation *op) {
-  auto &b = ScopedContext::getBuilderRef();
+static void maybeYieldValue(OpBuilder &b, Location loc, bool hasRetVal,
+                            Value value) {
+  if (hasRetVal) {
+    assert(value && "Expected non-empty value");
+    b.create<scf::YieldOp>(loc, value);
+  } else {
+    b.create<scf::YieldOp>(loc);
+  }
+}
+
+/// Generates a boolean Value that is true if the iv-th bit in xferOp's mask
+/// is set to true. No such check is generated under following circumstances:
+/// * xferOp does not have a mask.
+/// * xferOp's mask is not 1D. (In case of (N>1)-D, a subvector of the mask is
+///   computed and attached to the new transfer op in the pattern.)
+/// * The to-be-unpacked dim of xferOp is a broadcast.
+template <typename OpTy>
+static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
+  if (!xferOp.mask())
+    return Value();
+  if (xferOp.getMaskType().getRank() != 1)
+    return Value();
+  if (xferOp.isBroadcastDim(0))
+    return Value();
+
+  Location loc = xferOp.getLoc();
+  Value ivI32 = b.create<arith::IndexCastOp>(
+      loc, IntegerType::get(b.getContext(), 32), iv);
+  return b.create<vector::ExtractElementOp>(loc, xferOp.mask(), ivI32);
+}
+
+/// Helper function TransferOpConversion and TransferOp1dConversion.
+/// Generate an in-bounds check if the transfer op may go out-of-bounds on the
+/// specified dimension `dim` with the loop iteration variable `iv`.
+/// E.g., when unpacking dimension 0 from:
+/// ```
+/// %vec = vector.transfer_read %A[%a, %b] %cst
+///     : vector<5x4xf32>, memref<?x?xf32>
+/// ```
+/// An if check similar to this will be generated inside the loop:
+/// ```
+/// %d = memref.dim %A, %c0 : memref<?x?xf32>
+/// if (%a + iv < %d) {
+///   (in-bounds case)
+/// } else {
+///   (out-of-bounds case)
+/// }
+/// ```
+///
+/// If the transfer is 1D and has a mask, this function generates a more complex
+/// check also accounts for potentially masked out elements.
+///
+/// This function variant returns the value returned by `inBoundsCase` or
+/// `outOfBoundsCase`. The MLIR type of the return value must be specified in
+/// `resultTypes`.
+template <typename OpTy>
+static Value generateInBoundsCheck(
+    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    TypeRange resultTypes,
+    function_ref<Value(OpBuilder &, Location)> inBoundsCase,
+    function_ref<Value(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
+  bool hasRetVal = !resultTypes.empty();
+  Value cond; // Condition to be built...
+
+  // Condition check 1: Access in-bounds?
+  bool isBroadcast = !dim.hasValue(); // No in-bounds check for broadcasts.
+  Location loc = xferOp.getLoc();
+  ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
+  if (!xferOp.isDimInBounds(0) && !isBroadcast) {
+    Value memrefDim = vector::createOrFoldDimOp(b, loc, xferOp.source(), *dim);
+    AffineExpr d0, d1;
+    bindDims(xferOp.getContext(), d0, d1);
+    Value base = xferOp.indices()[dim.getValue()];
+    Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
+    cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
+                                    memrefIdx);
+  }
+
+  // Condition check 2: Masked in?
+  if (auto maskCond = generateMaskCheck(b, xferOp, iv)) {
+    if (cond)
+      cond = lb.create<arith::AndIOp>(cond, maskCond);
+    else
+      cond = maskCond;
+  }
+
+  // If the condition is non-empty, generate an SCF::IfOp.
+  if (cond) {
+    auto check = lb.create<scf::IfOp>(
+        resultTypes, cond,
+        /*thenBuilder=*/
+        [&](OpBuilder &b, Location loc) {
+          maybeYieldValue(b, loc, hasRetVal, inBoundsCase(b, loc));
+        },
+        /*elseBuilder=*/
+        [&](OpBuilder &b, Location loc) {
+          if (outOfBoundsCase) {
+            maybeYieldValue(b, loc, hasRetVal, outOfBoundsCase(b, loc));
+          } else {
+            b.create<scf::YieldOp>(loc);
+          }
+        });
+
+    return hasRetVal ? check.getResult(0) : Value();
+  }
+
+  // Condition is empty, no need for an SCF::IfOp.
+  return inBoundsCase(b, loc);
+}
+
+/// In this function variant, `inBoundsCase` and `outOfBoundsCase` do not have
+/// a return value. Consequently, this function does not have a return value.
+template <typename OpTy>
+static void generateInBoundsCheck(
+    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    function_ref<void(OpBuilder &, Location)> inBoundsCase,
+    function_ref<void(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
+  generateInBoundsCheck(
+      b, xferOp, iv, dim, /*resultTypes=*/TypeRange(),
+      /*inBoundsCase=*/
+      [&](OpBuilder &b, Location loc) {
+        inBoundsCase(b, loc);
+        return Value();
+      },
+      /*outOfBoundsCase=*/
+      [&](OpBuilder &b, Location loc) {
+        if (outOfBoundsCase)
+          outOfBoundsCase(b, loc);
+        return Value();
+      });
+}
+
+/// Given an ArrayAttr, return a copy where the first element is dropped.
+static ArrayAttr dropFirstElem(OpBuilder &b, ArrayAttr attr) {
+  if (!attr)
+    return attr;
+  return ArrayAttr::get(b.getContext(), attr.getValue().drop_front());
+}
+
+/// Add the pass label to a vector transfer op if its rank is not the target
+/// rank.
+template <typename OpTy>
+static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
+                                unsigned targetRank) {
+  if (newXferOp.getVectorType().getRank() > targetRank)
+    newXferOp->setAttr(kPassLabel, b.getUnitAttr());
+}
+
+/// Return true if this transfer op operates on a source tensor.
+template <typename OpTy>
+static bool isTensorOp(OpTy xferOp) {
+  if (xferOp.getShapedType().template isa<RankedTensorType>()) {
+    if (xferOp.getOperationName().equals(TransferWriteOp::getOperationName())) {
+      // TransferWriteOps on tensors have a result.
+      assert(xferOp->getNumResults() > 0);
+    }
+    return true;
+  }
+  return false;
+}
+
+namespace lowering_n_d {
+
+/// Helper data structure for data and mask buffers.
+struct BufferAllocs {
+  Value dataBuffer;
+  Value maskBuffer;
+};
+
+/// Allocate temporary buffers for data (vector) and mask (if present).
+/// TODO: Parallelism and threadlocal considerations.
+template <typename OpTy>
+static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
+  Location loc = xferOp.getLoc();
   OpBuilder::InsertionGuard guard(b);
   Operation *scope =
-      op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+      xferOp->template getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
   b.setInsertionPointToStart(&scope->getRegion(0).front());
-  Value res =
-      std_alloca(memRefMinorVectorType, ValueRange{}, b.getI64IntegerAttr(128));
-  return res;
+
+  BufferAllocs result;
+  auto bufferType = MemRefType::get({}, xferOp.getVectorType());
+  result.dataBuffer = b.create<memref::AllocaOp>(loc, bufferType);
+
+  if (xferOp.mask()) {
+    auto maskType = MemRefType::get({}, xferOp.mask().getType());
+    auto maskBuffer = b.create<memref::AllocaOp>(loc, maskType);
+    b.setInsertionPoint(xferOp);
+    b.create<memref::StoreOp>(loc, xferOp.mask(), maskBuffer);
+    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer);
+  }
+
+  return result;
 }
 
+/// Given a MemRefType with VectorType element type, unpack one dimension from
+/// the VectorType into the MemRefType.
+///
+/// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
+static MemRefType unpackOneDim(MemRefType type) {
+  auto vectorType = type.getElementType().dyn_cast<VectorType>();
+  auto memrefShape = type.getShape();
+  SmallVector<int64_t, 8> newMemrefShape;
+  newMemrefShape.append(memrefShape.begin(), memrefShape.end());
+  newMemrefShape.push_back(vectorType.getDimSize(0));
+  return MemRefType::get(newMemrefShape,
+                         VectorType::get(vectorType.getShape().drop_front(),
+                                         vectorType.getElementType()));
+}
+
+/// Given a transfer op, find the memref from which the mask is loaded. This
+/// is similar to Strategy<TransferWriteOp>::getBuffer.
+template <typename OpTy>
+static Value getMaskBuffer(OpTy xferOp) {
+  assert(xferOp.mask() && "Expected that transfer op has mask");
+  auto loadOp = xferOp.mask().template getDefiningOp<memref::LoadOp>();
+  assert(loadOp && "Expected transfer op mask produced by LoadOp");
+  return loadOp.getMemRef();
+}
+
+/// Codegen strategy, depending on the operation.
+template <typename OpTy>
+struct Strategy;
+
+/// Code strategy for vector TransferReadOp.
 template <>
-LogicalResult NDTransferOpHelper<TransferReadOp>::doReplace() {
-  Value alloc, result;
-  if (options.unroll)
-    result = std_splat(vectorType, xferOp.padding());
-  else
-    alloc = setAllocAtFunctionEntry(memRefMinorVectorType, op);
+struct Strategy<TransferReadOp> {
+  /// Find the StoreOp that is used for writing the current TransferReadOp's
+  /// result to the temporary buffer allocation.
+  static memref::StoreOp getStoreOp(TransferReadOp xferOp) {
+    assert(xferOp->hasOneUse() && "Expected exactly one use of TransferReadOp");
+    auto storeOp = dyn_cast<memref::StoreOp>((*xferOp->use_begin()).getOwner());
+    assert(storeOp && "Expected TransferReadOp result used by StoreOp");
+    return storeOp;
+  }
 
-  emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
-                ValueRange majorOffsets, ValueRange minorOffsets,
-                MemRefBoundsCapture &memrefBounds) {
-    /// Lambda to load 1-D vector in the current loop ivs + offset context.
-    auto load1DVector = [&](ValueRange majorIvsPlusOffsets) -> Value {
-      SmallVector<Value, 8> indexing;
-      indexing.reserve(leadingRank + majorRank + minorRank);
-      indexing.append(leadingOffsets.begin(), leadingOffsets.end());
-      indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
-      indexing.append(minorOffsets.begin(), minorOffsets.end());
-      Value memref = xferOp.memref();
-      auto map =
-          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
-      ArrayAttr masked;
-      if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
-        OpBuilder &b = ScopedContext::getBuilderRef();
-        masked = b.getBoolArrayAttr({false});
+  /// Find the temporary buffer allocation. All labeled TransferReadOps are
+  /// used like this, where %buf is either the buffer allocation or a type cast
+  /// of the buffer allocation:
+  /// ```
+  /// %vec = vector.transfer_read ... { __vector_to_scf_lowering__ } ...
+  /// memref.store %vec, %buf[...] ...
+  /// ```
+  static Value getBuffer(TransferReadOp xferOp) {
+    return getStoreOp(xferOp).getMemRef();
+  }
+
+  /// Retrieve the indices of the current StoreOp that stores into the buffer.
+  static void getBufferIndices(TransferReadOp xferOp,
+                               SmallVector<Value, 8> &indices) {
+    auto storeOp = getStoreOp(xferOp);
+    auto prevIndices = memref::StoreOpAdaptor(storeOp).indices();
+    indices.append(prevIndices.begin(), prevIndices.end());
+  }
+
+  /// Rewrite the TransferReadOp, assuming that there are no out-of-bounds
+  /// accesses on the to-be-unpacked dimension.
+  ///
+  /// 1. Generate a new (N-1)-d TransferReadOp using the loop iteration
+  ///    variable `iv`.
+  /// 2. Store the result into the (already `vector.type_cast`ed) buffer.
+  ///
+  /// E.g.:
+  /// ```
+  /// %vec = vector.transfer_read %A[%a+%i, %b, %c], %cst
+  ///     : memref<?x?x?xf32>, vector<4x3xf32>
+  /// memref.store %vec, %buf[%i] : memref<5xvector<4x3xf32>>
+  /// ```
+  /// Is rewritten to:
+  /// ```
+  /// %casted = vector.type_cast %buf
+  ///     : memref<5xvector<4x3xf32>> to memref<5x4xvector<3xf32>>
+  /// for %j = 0 to 4 {
+  ///   %vec = vector.transfer_read %A[%a+%i, %b+%j, %c], %cst
+  ///       : memref<?x?x?xf32>, vector<3xf32>
+  ///   memref.store %vec, %casted[%i, %j] : memref<5x4xvector<3xf32>>
+  /// }
+  /// ```
+  ///
+  /// Note: The loop and type cast are generated in TransferOpConversion.
+  ///       The original TransferReadOp and store op are deleted in `cleanup`.
+  /// Note: The `mask` operand is set in TransferOpConversion.
+  static TransferReadOp rewriteOp(OpBuilder &b,
+                                  VectorTransferToSCFOptions options,
+                                  TransferReadOp xferOp, Value buffer, Value iv,
+                                  ValueRange /*loopState*/) {
+    SmallVector<Value, 8> storeIndices;
+    getBufferIndices(xferOp, storeIndices);
+    storeIndices.push_back(iv);
+
+    SmallVector<Value, 8> xferIndices;
+    getXferIndices(b, xferOp, iv, xferIndices);
+
+    Location loc = xferOp.getLoc();
+    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
+    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto inBoundsAttr = dropFirstElem(b, xferOp.in_boundsAttr());
+    auto newXferOp = b.create<vector::TransferReadOp>(
+        loc, vecType, xferOp.source(), xferIndices,
+        AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), xferOp.padding(),
+        Value(), inBoundsAttr);
+
+    maybeApplyPassLabel(b, newXferOp, options.targetRank);
+
+    b.create<memref::StoreOp>(loc, newXferOp.vector(), buffer, storeIndices);
+    return newXferOp;
+  }
+
+  /// Handle out-of-bounds accesses on the to-be-unpacked dimension: Write
+  /// padding value to the temporary buffer.
+  static Value handleOutOfBoundsDim(OpBuilder &b, TransferReadOp xferOp,
+                                    Value buffer, Value iv,
+                                    ValueRange /*loopState*/) {
+    SmallVector<Value, 8> storeIndices;
+    getBufferIndices(xferOp, storeIndices);
+    storeIndices.push_back(iv);
+
+    Location loc = xferOp.getLoc();
+    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
+    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto vec = b.create<SplatOp>(loc, vecType, xferOp.padding());
+    b.create<memref::StoreOp>(loc, vec, buffer, storeIndices);
+
+    return Value();
+  }
+
+  /// Cleanup after rewriting the op.
+  static void cleanup(PatternRewriter &rewriter, TransferReadOp xferOp,
+                      scf::ForOp /*forOp*/) {
+    rewriter.eraseOp(getStoreOp(xferOp));
+    rewriter.eraseOp(xferOp);
+  }
+
+  /// Return the initial loop state for the generated scf.for loop.
+  static Value initialLoopState(TransferReadOp xferOp) { return Value(); }
+};
+
+/// Codegen strategy for vector TransferWriteOp.
+template <>
+struct Strategy<TransferWriteOp> {
+  /// Find the temporary buffer allocation. All labeled TransferWriteOps are
+  /// used like this, where %buf is either the buffer allocation or a type cast
+  /// of the buffer allocation:
+  /// ```
+  /// %vec = memref.load %buf[...] ...
+  /// vector.transfer_write %vec ... { __vector_to_scf_lowering__ } ...
+  /// ```
+  static Value getBuffer(TransferWriteOp xferOp) {
+    auto loadOp = xferOp.vector().getDefiningOp<memref::LoadOp>();
+    assert(loadOp && "Expected transfer op vector produced by LoadOp");
+    return loadOp.getMemRef();
+  }
+
+  /// Retrieve the indices of the current LoadOp that loads from the buffer.
+  static void getBufferIndices(TransferWriteOp xferOp,
+                               SmallVector<Value, 8> &indices) {
+    auto loadOp = xferOp.vector().getDefiningOp<memref::LoadOp>();
+    auto prevIndices = memref::LoadOpAdaptor(loadOp).indices();
+    indices.append(prevIndices.begin(), prevIndices.end());
+  }
+
+  /// Rewrite the TransferWriteOp, assuming that there are no out-of-bounds
+  /// accesses on the to-be-unpacked dimension.
+  ///
+  /// 1. Load an (N-1)-d vector from the (already `vector.type_cast`ed) buffer,
+  ///    using the loop iteration variable `iv`.
+  /// 2. Generate a new (N-1)-d TransferWriteOp, writing the loaded vector back
+  ///    to memory.
+  ///
+  /// Note: For more details, see comments on Strategy<TransferReadOp>.
+  static TransferWriteOp rewriteOp(OpBuilder &b,
+                                   VectorTransferToSCFOptions options,
+                                   TransferWriteOp xferOp, Value buffer,
+                                   Value iv, ValueRange loopState) {
+    SmallVector<Value, 8> loadIndices;
+    getBufferIndices(xferOp, loadIndices);
+    loadIndices.push_back(iv);
+
+    SmallVector<Value, 8> xferIndices;
+    getXferIndices(b, xferOp, iv, xferIndices);
+
+    Location loc = xferOp.getLoc();
+    auto vec = b.create<memref::LoadOp>(loc, buffer, loadIndices);
+    auto inBoundsAttr = dropFirstElem(b, xferOp.in_boundsAttr());
+    auto source = loopState.empty() ? xferOp.source() : loopState[0];
+    Type type = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
+    auto newXferOp = b.create<vector::TransferWriteOp>(
+        loc, type, vec, source, xferIndices,
+        AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
+        inBoundsAttr);
+
+    maybeApplyPassLabel(b, newXferOp, options.targetRank);
+
+    return newXferOp;
+  }
+
+  /// Handle out-of-bounds accesses on the to-be-unpacked dimension.
+  static Value handleOutOfBoundsDim(OpBuilder &b, TransferWriteOp xferOp,
+                                    Value buffer, Value iv,
+                                    ValueRange loopState) {
+    return isTensorOp(xferOp) ? loopState[0] : Value();
+  }
+
+  /// Cleanup after rewriting the op.
+  static void cleanup(PatternRewriter &rewriter, TransferWriteOp xferOp,
+                      scf::ForOp forOp) {
+    if (isTensorOp(xferOp)) {
+      assert(forOp->getNumResults() == 1 && "Expected one for loop result");
+      rewriter.replaceOp(xferOp, forOp->getResult(0));
+    } else {
+      rewriter.eraseOp(xferOp);
+    }
+  }
+
+  /// Return the initial loop state for the generated scf.for loop.
+  static Value initialLoopState(TransferWriteOp xferOp) {
+    return isTensorOp(xferOp) ? xferOp.source() : Value();
+  }
+};
+
+template <typename OpTy>
+LogicalResult checkPrepareXferOp(OpTy xferOp,
+                                 VectorTransferToSCFOptions options) {
+  if (xferOp->hasAttr(kPassLabel))
+    return failure();
+  if (xferOp.getVectorType().getRank() <= options.targetRank)
+    return failure();
+  if (isTensorOp(xferOp) && !options.lowerTensors)
+    return failure();
+  // Transfer ops that modify the element type are not supported atm.
+  if (xferOp.getVectorType().getElementType() !=
+      xferOp.getShapedType().getElementType())
+    return failure();
+  return success();
+}
+
+/// Prepare a TransferReadOp for progressive lowering.
+///
+/// 1. Allocate a temporary buffer.
+/// 2. Label the TransferReadOp, marking it eligible for progressive lowering.
+/// 3. Store the result of the TransferReadOp into the temporary buffer.
+/// 4. Load the result from the temporary buffer and replace all uses of the
+///    original TransferReadOp with this load.
+///
+/// E.g.:
+/// ```
+/// %vec = vector.transfer_read %A[%a, %b, %c], %cst
+///     : vector<5x4xf32>, memref<?x?x?xf32>
+/// ```
+/// is rewritten to:
+/// ```
+/// %0 = memref.alloca() : memref<vector<5x4xf32>>
+/// %1 = vector.transfer_read %A[%a, %b, %c], %cst
+///     { __vector_to_scf_lowering__ } : vector<5x4xf32>, memref<?x?x?xf32>
+/// memref.store %1, %0[] : memref<vector<5x4xf32>>
+/// %vec = memref.load %0[] : memref<vector<5x4xf32>>
+/// ```
+///
+/// Note: A second temporary buffer may be allocated for the `mask` operand.
+struct PrepareTransferReadConversion
+    : public VectorToSCFPattern<TransferReadOp> {
+  using VectorToSCFPattern<TransferReadOp>::VectorToSCFPattern;
+
+  LogicalResult matchAndRewrite(TransferReadOp xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (checkPrepareXferOp(xferOp, options).failed())
+      return failure();
+
+    auto buffers = allocBuffers(rewriter, xferOp);
+    auto *newXfer = rewriter.clone(*xferOp.getOperation());
+    newXfer->setAttr(kPassLabel, rewriter.getUnitAttr());
+    if (xferOp.mask()) {
+      dyn_cast<TransferReadOp>(newXfer).maskMutable().assign(
+          buffers.maskBuffer);
+    }
+
+    Location loc = xferOp.getLoc();
+    rewriter.create<memref::StoreOp>(loc, newXfer->getResult(0),
+                                     buffers.dataBuffer);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
+
+    return success();
+  }
+};
+
+/// Prepare a TransferWriteOp for progressive lowering.
+///
+/// 1. Allocate a temporary buffer.
+/// 2. Store the vector into the buffer.
+/// 3. Load the vector from the buffer again.
+/// 4. Use the loaded vector as a TransferWriteOp operand and label the op,
+///    marking it eligible for progressive lowering via TransferOpConversion.
+///
+/// E.g.:
+/// ```
+/// vector.transfer_write %vec, %A[%a, %b, %c]
+///     : vector<5x4xf32>, memref<?x?x?xf32>
+/// ```
+/// is rewritten to:
+/// ```
+/// %0 = memref.alloca() : memref<vector<5x4xf32>>
+/// memref.store %vec, %0[] : memref<vector<5x4xf32>>
+/// %1 = memref.load %0[] : memref<vector<5x4xf32>>
+/// vector.transfer_write %1, %A[%a, %b, %c] { __vector_to_scf_lowering__ }
+///     : vector<5x4xf32>, memref<?x?x?xf32>
+/// ```
+///
+/// Note: A second temporary buffer may be allocated for the `mask` operand.
+struct PrepareTransferWriteConversion
+    : public VectorToSCFPattern<TransferWriteOp> {
+  using VectorToSCFPattern<TransferWriteOp>::VectorToSCFPattern;
+
+  LogicalResult matchAndRewrite(TransferWriteOp xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (checkPrepareXferOp(xferOp, options).failed())
+      return failure();
+
+    Location loc = xferOp.getLoc();
+    auto buffers = allocBuffers(rewriter, xferOp);
+    rewriter.create<memref::StoreOp>(loc, xferOp.vector(), buffers.dataBuffer);
+    auto loadedVec = rewriter.create<memref::LoadOp>(loc, buffers.dataBuffer);
+    rewriter.updateRootInPlace(xferOp, [&]() {
+      xferOp.vectorMutable().assign(loadedVec);
+      xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());
+    });
+
+    if (xferOp.mask()) {
+      rewriter.updateRootInPlace(
+          xferOp, [&]() { xferOp.maskMutable().assign(buffers.maskBuffer); });
+    }
+
+    return success();
+  }
+};
+
+/// Progressive lowering of vector transfer ops: Unpack one dimension.
+///
+/// 1. Unpack one dimension from the current buffer type and cast the buffer
+///    to that new type. E.g.:
+///    ```
+///    %vec = memref.load %0[%1] : memref<5xvector<4x3xf32>>
+///    vector.transfer_write %vec ...
+///    ```
+///    The following cast is generated:
+///    ```
+///    %casted = vector.type_cast %0
+///        : memref<5xvector<4x3xf32>> to memref<5x4xvector<3xf32>>
+///    ```
+/// 2. Generate a for loop and rewrite the transfer op according to the
+///    corresponding Strategy<OpTy>. If the to-be-unpacked dimension can be
+///    out-of-bounds, generate an if-check and handle both cases separately.
+/// 3. Clean up according to the corresponding Strategy<OpTy>.
+///
+/// Note: If the transfer op is a TransferWriteOp and operates on a tensor
+/// source (as opposed to a memref source), then each iteration of the generated
+/// scf.for loop yields the new tensor value. E.g.:
+/// ```
+/// %result = scf.for i = 0 to 5 {
+///   %0 = memref.load %buffer[i] : memref<5xvector<4x3xf32>>
+///   %1 = vector.transfer_write %0, %source[...]
+///       : vector<4x3xf32>, tensor<5x4x3xf32>
+///   scf.yield %1 : tensor<5x4x3xf32>
+/// }
+/// ```
+template <typename OpTy>
+struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
+  using VectorToSCFPattern<OpTy>::VectorToSCFPattern;
+
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    this->setHasBoundedRewriteRecursion();
+  }
+
+  LogicalResult matchAndRewrite(OpTy xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (!xferOp->hasAttr(kPassLabel))
+      return failure();
+
+    // Find and cast data buffer. How the buffer can be found depends on OpTy.
+    ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
+    auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
+    auto dataBufferType = dataBuffer.getType().template dyn_cast<MemRefType>();
+    auto castedDataType = unpackOneDim(dataBufferType);
+    auto castedDataBuffer =
+        locB.create<vector::TypeCastOp>(castedDataType, dataBuffer);
+
+    // If the xferOp has a mask: Find and cast mask buffer.
+    Value castedMaskBuffer;
+    if (xferOp.mask()) {
+      auto maskBuffer = getMaskBuffer(xferOp);
+      auto maskBufferType =
+          maskBuffer.getType().template dyn_cast<MemRefType>();
+      if (xferOp.isBroadcastDim(0) || xferOp.getMaskType().getRank() == 1) {
+        // Do not unpack a dimension of the mask, if:
+        // * To-be-unpacked transfer op dimension is a broadcast.
+        // * Mask is 1D, i.e., the mask cannot be further unpacked.
+        //   (That means that all remaining dimensions of the transfer op must
+        //   be broadcasted.)
+        castedMaskBuffer = maskBuffer;
+      } else {
+        auto castedMaskType = unpackOneDim(maskBufferType);
+        castedMaskBuffer =
+            locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
       }
-      return vector_transfer_read(minorVectorType, memref, indexing,
-                                  AffineMapAttr::get(map), xferOp.padding(),
-                                  masked);
-    };
+    }
 
-    // 1. Compute the inBoundsCondition in the current loops ivs + offset
-    // context.
-    SmallVector<Value, 4> majorIvsPlusOffsets;
-    Value inBoundsCondition = emitInBoundsCondition(
-        majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
+    // Loop bounds and step.
+    auto lb = locB.create<arith::ConstantIndexOp>(0);
+    auto ub = locB.create<arith::ConstantIndexOp>(
+        castedDataType.getDimSize(castedDataType.getRank() - 1));
+    auto step = locB.create<arith::ConstantIndexOp>(1);
+    // TransferWriteOps that operate on tensors return the modified tensor and
+    // require a loop state.
+    auto loopState = Strategy<OpTy>::initialLoopState(xferOp);
 
-    if (inBoundsCondition) {
-      // 2. If the condition is not null, we need an IfOp, which may yield
-      // if `options.unroll` is true.
-      SmallVector<Type, 1> resultType;
-      if (options.unroll)
-        resultType.push_back(vectorType);
+    // Generate for loop.
+    auto result = locB.create<scf::ForOp>(
+        lb, ub, step, loopState ? ValueRange(loopState) : ValueRange(),
+        [&](OpBuilder &b, Location loc, Value iv, ValueRange loopState) {
+          Type stateType = loopState.empty() ? Type() : loopState[0].getType();
 
-      // 3. If in-bounds, progressively lower to a 1-D transfer read, otherwise
-      // splat a 1-D vector.
-      ValueRange ifResults = conditionBuilder(
-          resultType, inBoundsCondition,
-          [&]() -> scf::ValueVector {
-            Value vector = load1DVector(majorIvsPlusOffsets);
-            // 3.a. If `options.unroll` is true, insert the 1-D vector in the
-            // aggregate. We must yield and merge with the `else` branch.
-            if (options.unroll) {
-              vector = vector_insert(vector, result, majorIvs);
-              return {vector};
-            }
-            // 3.b. Otherwise, just go through the temporary `alloc`.
-            std_store(vector, alloc, majorIvs);
-            return {};
+          auto result = generateInBoundsCheck(
+              b, xferOp, iv, unpackedDim(xferOp),
+              stateType ? TypeRange(stateType) : TypeRange(),
+              /*inBoundsCase=*/
+              [&](OpBuilder &b, Location loc) {
+                // Create new transfer op.
+                OpTy newXfer = Strategy<OpTy>::rewriteOp(
+                    b, this->options, xferOp, castedDataBuffer, iv, loopState);
+
+                // If old transfer op has a mask: Set mask on new transfer op.
+                // Special case: If the mask of the old transfer op is 1D and
+                // the
+                //               unpacked dim is not a broadcast, no mask is
+                //               needed on the new transfer op.
+                if (xferOp.mask() && (xferOp.isBroadcastDim(0) ||
+                                      xferOp.getMaskType().getRank() > 1)) {
+                  OpBuilder::InsertionGuard guard(b);
+                  b.setInsertionPoint(newXfer); // Insert load before newXfer.
+
+                  SmallVector<Value, 8> loadIndices;
+                  Strategy<OpTy>::getBufferIndices(xferOp, loadIndices);
+                  // In case of broadcast: Use same indices to load from memref
+                  // as before.
+                  if (!xferOp.isBroadcastDim(0))
+                    loadIndices.push_back(iv);
+
+                  auto mask = b.create<memref::LoadOp>(loc, castedMaskBuffer,
+                                                       loadIndices);
+                  rewriter.updateRootInPlace(
+                      newXfer, [&]() { newXfer.maskMutable().assign(mask); });
+                }
+
+                return loopState.empty() ? Value() : newXfer->getResult(0);
+              },
+              /*outOfBoundsCase=*/
+              [&](OpBuilder &b, Location /*loc*/) {
+                return Strategy<OpTy>::handleOutOfBoundsDim(
+                    b, xferOp, castedDataBuffer, iv, loopState);
+              });
+
+          maybeYieldValue(b, loc, !loopState.empty(), result);
+        });
+
+    Strategy<OpTy>::cleanup(rewriter, xferOp, result);
+    return success();
+  }
+};
+
+} // namespace lowering_n_d
+
+namespace lowering_n_d_unrolled {
+
+/// If the original transfer op has a mask, compute the mask of the new transfer
+/// op (for the current iteration `i`) and assign it.
+template <typename OpTy>
+static void maybeAssignMask(OpBuilder &b, OpTy xferOp, OpTy newXferOp,
+                            int64_t i) {
+  if (!xferOp.mask())
+    return;
+
+  if (xferOp.isBroadcastDim(0)) {
+    // To-be-unpacked dimension is a broadcast, which does not have a
+    // corresponding mask dimension. Mask attribute remains unchanged.
+    newXferOp.maskMutable().assign(xferOp.mask());
+    return;
+  }
+
+  if (xferOp.getMaskType().getRank() > 1) {
+    // Unpack one dimension of the mask.
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPoint(newXferOp); // Insert load before newXfer.
+
+    llvm::SmallVector<int64_t, 1> indices({i});
+    Location loc = xferOp.getLoc();
+    auto newMask = b.create<vector::ExtractOp>(loc, xferOp.mask(), indices);
+    newXferOp.maskMutable().assign(newMask);
+  }
+
+  // If we end up here: The mask of the old transfer op is 1D and the unpacked
+  // dim is not a broadcast, so no mask is needed on the new transfer op.
+  // `generateInBoundsCheck` will have evaluated the mask already.
+}
+
+/// Progressive lowering of vector TransferReadOp with unrolling: Unpack one
+/// dimension. This is similar to TransferOpConversion<TransferReadOp>, but no
+/// memref buffer is allocated and the SCF loop is fully unrolled.
+///
+/// ```
+/// E.g.:
+/// ```
+/// %vec = vector.transfer_read %A[%a, %b, %c], %padding
+///     : memref<?x?x?xf32>, vector<5x4xf32>
+/// ```
+/// is rewritten to IR such as (simplified):
+/// ```
+/// %v_init = splat %padding : vector<5x4xf32>
+/// %tmp0 = vector.transfer_read %A[%a, %b, %c], %padding
+///     : memref<?x?x?xf32>, vector<4xf32>
+/// %v0 = vector.insert %tmp0, %v_init[0] : vector<4xf32> into vector<5x4xf32>
+/// %tmp1 = vector.transfer_read %A[%a, %b + 1, %c], %padding
+///     : memref<?x?x?xf32>, vector<4xf32>
+/// %v1 = vector.insert %tmp1, %v0[1] : vector<4xf32> into vector<5x4xf32>
+/// ...
+/// %tmp4 = vector.transfer_read %A[%a, %b + 4, %c], %padding
+///     : memref<?x?x?xf32>, vector<4xf32>
+/// %vec = vector.insert %tmp1, %v3[4] : vector<4xf32> into vector<5x4xf32>
+/// ```
+///
+/// Note: As an optimization, if the result of the original TransferReadOp
+/// was directly inserted into another vector, no new %v_init vector is created.
+/// Instead, the new TransferReadOp results are inserted into that vector.
+struct UnrollTransferReadConversion
+    : public VectorToSCFPattern<TransferReadOp> {
+  using VectorToSCFPattern<TransferReadOp>::VectorToSCFPattern;
+
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
+
+  /// Return the vector into which the newly created TransferReadOp results
+  /// are inserted.
+  Value getResultVector(TransferReadOp xferOp,
+                        PatternRewriter &rewriter) const {
+    if (auto insertOp = getInsertOp(xferOp))
+      return insertOp.dest();
+    Location loc = xferOp.getLoc();
+    return rewriter.create<SplatOp>(loc, xferOp.getVectorType(),
+                                    xferOp.padding());
+  }
+
+  /// If the result of the TransferReadOp has exactly one user, which is a
+  /// vector::InsertOp, return that operation.
+  vector::InsertOp getInsertOp(TransferReadOp xferOp) const {
+    if (xferOp->hasOneUse()) {
+      Operation *xferOpUser = *xferOp->getUsers().begin();
+      if (auto insertOp = dyn_cast<vector::InsertOp>(xferOpUser))
+        return insertOp;
+    }
+
+    return vector::InsertOp();
+  }
+
+  /// If the result of the TransferReadOp has exactly one user, which is a
+  /// vector::InsertOp, return that operation's indices.
+  void getInsertionIndices(TransferReadOp xferOp,
+                           SmallVector<int64_t, 8> &indices) const {
+    if (auto insertOp = getInsertOp(xferOp)) {
+      llvm::for_each(insertOp.position(), [&](Attribute attr) {
+        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
+      });
+    }
+  }
+
+  /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
+  /// accesses, and broadcasts and transposes in permutation maps.
+  LogicalResult matchAndRewrite(TransferReadOp xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (xferOp.getVectorType().getRank() <= options.targetRank)
+      return failure();
+    if (isTensorOp(xferOp) && !options.lowerTensors)
+      return failure();
+    // Transfer ops that modify the element type are not supported atm.
+    if (xferOp.getVectorType().getElementType() !=
+        xferOp.getShapedType().getElementType())
+      return failure();
+
+    auto insertOp = getInsertOp(xferOp);
+    auto vec = getResultVector(xferOp, rewriter);
+    auto vecType = vec.getType().dyn_cast<VectorType>();
+    auto xferVecType = xferOp.getVectorType();
+    auto newXferVecType = VectorType::get(xferVecType.getShape().drop_front(),
+                                          xferVecType.getElementType());
+    int64_t dimSize = xferVecType.getShape()[0];
+
+    // Generate fully unrolled loop of transfer ops.
+    Location loc = xferOp.getLoc();
+    for (int64_t i = 0; i < dimSize; ++i) {
+      Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
+
+      vec = generateInBoundsCheck(
+          rewriter, xferOp, iv, unpackedDim(xferOp), TypeRange(vecType),
+          /*inBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
+            // Indices for the new transfer op.
+            SmallVector<Value, 8> xferIndices;
+            getXferIndices(b, xferOp, iv, xferIndices);
+
+            // Indices for the new vector.insert op.
+            SmallVector<int64_t, 8> insertionIndices;
+            getInsertionIndices(xferOp, insertionIndices);
+            insertionIndices.push_back(i);
+
+            auto inBoundsAttr = dropFirstElem(b, xferOp.in_boundsAttr());
+            auto newXferOp = b.create<vector::TransferReadOp>(
+                loc, newXferVecType, xferOp.source(), xferIndices,
+                AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
+                xferOp.padding(), Value(), inBoundsAttr);
+            maybeAssignMask(b, xferOp, newXferOp, i);
+            return b.create<vector::InsertOp>(loc, newXferOp, vec,
+                                              insertionIndices);
           },
-          [&]() -> scf::ValueVector {
-            Value vector = std_splat(minorVectorType, xferOp.padding());
-            // 3.c. If `options.unroll` is true, insert the 1-D vector in the
-            // aggregate. We must yield and merge with the `then` branch.
-            if (options.unroll) {
-              vector = vector_insert(vector, result, majorIvs);
-              return {vector};
-            }
-            // 3.d. Otherwise, just go through the temporary `alloc`.
-            std_store(vector, alloc, majorIvs);
-            return {};
+          /*outOfBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
+            // Loop through original (unmodified) vector.
+            return vec;
+          });
+    }
+
+    if (insertOp) {
+      // Rewrite single user of the old TransferReadOp, which was an InsertOp.
+      rewriter.replaceOp(insertOp, vec);
+      rewriter.eraseOp(xferOp);
+    } else {
+      rewriter.replaceOp(xferOp, vec);
+    }
+
+    return success();
+  }
+};
+
+/// Progressive lowering of vector TransferWriteOp with unrolling: Unpack one
+/// dimension. This is similar to TransferOpConversion<TransferWriteOp>, but no
+/// memref buffer is allocated and the SCF loop is fully unrolled.
+///
+/// ```
+/// E.g.:
+/// ```
+/// vector.transfer_write %vec, %A[%a, %b, %c]
+///     : vector<5x4xf32>, memref<?x?x?xf32>
+/// ```
+/// is rewritten to IR such as (simplified):
+/// ```
+/// %v0 = vector.extract %vec[0] : vector<5x4xf32>
+/// vector.transfer_write %v0, %A[%a, %b, %c] : vector<4xf32>, memref<...>
+/// %v1 = vector.extract %vec[1] : vector<5x4xf32>
+/// vector.transfer_write %v1, %A[%a, %b + 1, %c] : vector<4xf32>, memref<...>
+/// ...
+/// %v4 = vector.extract %vec[4] : vector<5x4xf32>
+/// vector.transfer_write %v4, %A[%a, %b + 4, %c] : vector<4xf32>, memref<...>
+/// ```
+///
+/// Note: As an optimization, if the vector of the original TransferWriteOp
+/// was directly extracted from another vector via an ExtractOp `a`, extract
+/// the vectors for the newly generated TransferWriteOps from `a`'s input. By
+/// doing so, `a` may become dead, and the number of ExtractOps generated during
+/// recursive application of this pattern will be minimal.
+struct UnrollTransferWriteConversion
+    : public VectorToSCFPattern<TransferWriteOp> {
+  using VectorToSCFPattern<TransferWriteOp>::VectorToSCFPattern;
+
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
+
+  /// Return the vector from which newly generated ExtracOps will extract.
+  Value getDataVector(TransferWriteOp xferOp) const {
+    if (auto extractOp = getExtractOp(xferOp))
+      return extractOp.vector();
+    return xferOp.vector();
+  }
+
+  /// If the input of the given TransferWriteOp is an ExtractOp, return it.
+  vector::ExtractOp getExtractOp(TransferWriteOp xferOp) const {
+    if (auto *op = xferOp.vector().getDefiningOp())
+      return dyn_cast<vector::ExtractOp>(op);
+    return vector::ExtractOp();
+  }
+
+  /// If the input of the given TransferWriteOp is an ExtractOp, return its
+  /// indices.
+  void getExtractionIndices(TransferWriteOp xferOp,
+                            SmallVector<int64_t, 8> &indices) const {
+    if (auto extractOp = getExtractOp(xferOp)) {
+      llvm::for_each(extractOp.position(), [&](Attribute attr) {
+        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
+      });
+    }
+  }
+
+  /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
+  /// accesses, and broadcasts and transposes in permutation maps.
+  LogicalResult matchAndRewrite(TransferWriteOp xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (xferOp.getVectorType().getRank() <= options.targetRank)
+      return failure();
+    if (isTensorOp(xferOp) && !options.lowerTensors)
+      return failure();
+    // Transfer ops that modify the element type are not supported atm.
+    if (xferOp.getVectorType().getElementType() !=
+        xferOp.getShapedType().getElementType())
+      return failure();
+
+    auto vec = getDataVector(xferOp);
+    auto xferVecType = xferOp.getVectorType();
+    int64_t dimSize = xferVecType.getShape()[0];
+    auto source = xferOp.source(); // memref or tensor to be written to.
+    auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
+
+    // Generate fully unrolled loop of transfer ops.
+    Location loc = xferOp.getLoc();
+    for (int64_t i = 0; i < dimSize; ++i) {
+      Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
+
+      auto updatedSource = generateInBoundsCheck(
+          rewriter, xferOp, iv, unpackedDim(xferOp),
+          isTensorOp(xferOp) ? TypeRange(sourceType) : TypeRange(),
+          /*inBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
+            // Indices for the new transfer op.
+            SmallVector<Value, 8> xferIndices;
+            getXferIndices(b, xferOp, iv, xferIndices);
+
+            // Indices for the new vector.extract op.
+            SmallVector<int64_t, 8> extractionIndices;
+            getExtractionIndices(xferOp, extractionIndices);
+            extractionIndices.push_back(i);
+
+            auto extracted =
+                b.create<vector::ExtractOp>(loc, vec, extractionIndices);
+            auto inBoundsAttr = dropFirstElem(b, xferOp.in_boundsAttr());
+            auto newXferOp = b.create<vector::TransferWriteOp>(
+                loc, sourceType, extracted, source, xferIndices,
+                AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
+                inBoundsAttr);
+
+            maybeAssignMask(b, xferOp, newXferOp, i);
+
+            return isTensorOp(xferOp) ? newXferOp->getResult(0) : Value();
+          },
+          /*outOfBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
+            return isTensorOp(xferOp) ? source : Value();
           });
 
-      if (!resultType.empty())
-        result = *ifResults.begin();
-    } else {
-      // 4. Guaranteed in-bounds, progressively lower to a 1-D transfer read.
-      Value loaded1D = load1DVector(majorIvsPlusOffsets);
-      // 5.a. If `options.unroll` is true, insert the 1-D vector in the
-      // aggregate.
-      if (options.unroll)
-        result = vector_insert(loaded1D, result, majorIvs);
-      // 5.b. Otherwise, just go through the temporary `alloc`.
-      else
-        std_store(loaded1D, alloc, majorIvs);
+      if (isTensorOp(xferOp))
+        source = updatedSource;
     }
-  });
 
-  assert((!options.unroll ^ (bool)result) &&
-         "Expected resulting Value iff unroll");
-  if (!result)
-    result = std_load(vector_type_cast(MemRefType::get({}, vectorType), alloc));
-  rewriter.replaceOp(op, result);
+    if (isTensorOp(xferOp))
+      rewriter.replaceOp(xferOp, source);
+    else
+      rewriter.eraseOp(xferOp);
 
-  return success();
+    return success();
+  }
+};
+
+} // namespace lowering_n_d_unrolled
+
+namespace lowering_1_d {
+
+/// Compute the indices into the memref for the LoadOp/StoreOp generated as
+/// part of TransferOp1dConversion. Return the memref dimension on which
+/// the transfer is operating. A return value of None indicates a broadcast.
+template <typename OpTy>
+static Optional<int64_t>
+get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
+                   SmallVector<Value, 8> &memrefIndices) {
+  auto indices = xferOp.indices();
+  auto map = xferOp.permutation_map();
+
+  memrefIndices.append(indices.begin(), indices.end());
+  assert(map.getNumResults() == 1 &&
+         "Expected 1 permutation map result for 1D transfer");
+  if (auto expr = map.getResult(0).template dyn_cast<AffineDimExpr>()) {
+    Location loc = xferOp.getLoc();
+    auto dim = expr.getPosition();
+    AffineExpr d0, d1;
+    bindDims(xferOp.getContext(), d0, d1);
+    Value offset = memrefIndices[dim];
+    memrefIndices[dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    return dim;
+  }
+
+  assert(xferOp.isBroadcastDim(0) &&
+         "Expected AffineDimExpr or AffineConstantExpr");
+  return None;
 }
 
+/// Codegen strategy for TransferOp1dConversion, depending on the
+/// operation.
+template <typename OpTy>
+struct Strategy1d;
+
+/// Codegen strategy for TransferReadOp.
 template <>
-LogicalResult NDTransferOpHelper<TransferWriteOp>::doReplace() {
-  Value alloc;
-  if (!options.unroll) {
-    alloc = setAllocAtFunctionEntry(memRefMinorVectorType, op);
-    std_store(xferOp.vector(),
-              vector_type_cast(MemRefType::get({}, vectorType), alloc));
+struct Strategy1d<TransferReadOp> {
+  static void generateForLoopBody(OpBuilder &b, Location loc,
+                                  TransferReadOp xferOp, Value iv,
+                                  ValueRange loopState) {
+    SmallVector<Value, 8> indices;
+    auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
+    Value ivI32 = b.create<arith::IndexCastOp>(
+        loc, IntegerType::get(b.getContext(), 32), iv);
+    auto vec = loopState[0];
+
+    // In case of out-of-bounds access, leave `vec` as is (was initialized with
+    // padding value).
+    auto nextVec = generateInBoundsCheck(
+        b, xferOp, iv, dim, TypeRange(xferOp.getVectorType()),
+        /*inBoundsCase=*/
+        [&](OpBuilder &b, Location loc) {
+          Value val = b.create<memref::LoadOp>(loc, xferOp.source(), indices);
+          return b.create<vector::InsertElementOp>(loc, val, vec, ivI32);
+        },
+        /*outOfBoundsCase=*/
+        [&](OpBuilder & /*b*/, Location loc) { return vec; });
+    b.create<scf::YieldOp>(loc, nextVec);
   }
 
-  emitLoops([&](ValueRange majorIvs, ValueRange leadingOffsets,
-                ValueRange majorOffsets, ValueRange minorOffsets,
-                MemRefBoundsCapture &memrefBounds) {
-    // Lower to 1-D vector_transfer_write and let recursion handle it.
-    auto emitTransferWrite = [&](ValueRange majorIvsPlusOffsets) {
-      SmallVector<Value, 8> indexing;
-      indexing.reserve(leadingRank + majorRank + minorRank);
-      indexing.append(leadingOffsets.begin(), leadingOffsets.end());
-      indexing.append(majorIvsPlusOffsets.begin(), majorIvsPlusOffsets.end());
-      indexing.append(minorOffsets.begin(), minorOffsets.end());
-      Value result;
-      // If `options.unroll` is true, extract the 1-D vector from the
-      // aggregate.
-      if (options.unroll)
-        result = vector_extract(xferOp.vector(), majorIvs);
-      else
-        result = std_load(alloc, majorIvs);
-      auto map =
-          getTransferMinorIdentityMap(xferOp.getMemRefType(), minorVectorType);
-      ArrayAttr masked;
-      if (!xferOp.isMaskedDim(xferOp.getVectorType().getRank() - 1)) {
-        OpBuilder &b = ScopedContext::getBuilderRef();
-        masked = b.getBoolArrayAttr({false});
-      }
-      vector_transfer_write(result, xferOp.memref(), indexing,
-                            AffineMapAttr::get(map), masked);
-    };
+  static Value initialLoopState(OpBuilder &b, TransferReadOp xferOp) {
+    // Inititalize vector with padding value.
+    Location loc = xferOp.getLoc();
+    return b.create<SplatOp>(loc, xferOp.getVectorType(), xferOp.padding());
+  }
+};
 
-    // 1. Compute the inBoundsCondition in the current loops ivs + offset
-    // context.
-    SmallVector<Value, 4> majorIvsPlusOffsets;
-    Value inBoundsCondition = emitInBoundsCondition(
-        majorIvs, majorOffsets, memrefBounds, majorIvsPlusOffsets);
+/// Codegen strategy for TransferWriteOp.
+template <>
+struct Strategy1d<TransferWriteOp> {
+  static void generateForLoopBody(OpBuilder &b, Location loc,
+                                  TransferWriteOp xferOp, Value iv,
+                                  ValueRange /*loopState*/) {
+    SmallVector<Value, 8> indices;
+    auto dim = get1dMemrefIndices(b, xferOp, iv, indices);
+    Value ivI32 = b.create<arith::IndexCastOp>(
+        loc, IntegerType::get(b.getContext(), 32), iv);
 
-    if (inBoundsCondition) {
-      // 2.a. If the condition is not null, we need an IfOp, to write
-      // conditionally. Progressively lower to a 1-D transfer write.
-      conditionBuilder(inBoundsCondition,
-                       [&] { emitTransferWrite(majorIvsPlusOffsets); });
-    } else {
-      // 2.b. Guaranteed in-bounds. Progressively lower to a 1-D transfer write.
-      emitTransferWrite(majorIvsPlusOffsets);
-    }
-  });
+    // Nothing to do in case of out-of-bounds access.
+    generateInBoundsCheck(
+        b, xferOp, iv, dim,
+        /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
+          auto val =
+              b.create<vector::ExtractElementOp>(loc, xferOp.vector(), ivI32);
+          b.create<memref::StoreOp>(loc, val, xferOp.source(), indices);
+        });
+    b.create<scf::YieldOp>(loc);
+  }
 
-  rewriter.eraseOp(op);
+  static Value initialLoopState(OpBuilder &b, TransferWriteOp xferOp) {
+    return Value();
+  }
+};
 
-  return success();
+/// Return true if the last dimension of the MemRefType has unit stride.
+static bool isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
 
+/// Lower a 1D vector transfer op to SCF using scalar loads/stores. This is
+/// necessary in cases where a 1D vector transfer op cannot be lowered into
+/// vector load/stores due to non-unit strides or broadcasts:
+///
+/// * Transfer dimension is not the last memref dimension
+/// * Transfer dimension is a broadcast (i.e., scalar load + broadcast)
+/// * Memref has a layout map with non-unit stride on the last dimension
+///
+/// This pattern generates IR as follows:
+///
+/// 1. Generate a for loop iterating over each vector element.
+/// 2. Inside the loop, generate a InsertElementOp or ExtractElementOp,
+///    depending on OpTy.
+///
+/// TODO: In some cases (no masking, etc.), LLVM::MatrixColumnMajorLoadOp
+///       can be generated instead of TransferOp1dConversion. Add such a pattern
+///       to ConvertVectorToLLVM.
+///
+/// E.g.:
+/// ```
+/// vector.transfer_write %vec, %A[%a, %b]
+///    {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true]}
+///    : vector<9xf32>, memref<?x?xf32>
+/// ```
+/// Is rewritten to approximately the following pseudo-IR:
+/// ```
+/// for i = 0 to 9 {
+///   %t = vector.extractelement %vec[i] : vector<9xf32>
+///   memref.store %t, %arg0[%a + i, %b] : memref<?x?xf32>
+/// }
+/// ```
+template <typename OpTy>
+struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
+  using VectorToSCFPattern<OpTy>::VectorToSCFPattern;
+
+  LogicalResult matchAndRewrite(OpTy xferOp,
+                                PatternRewriter &rewriter) const override {
+    auto map = xferOp.permutation_map();
+    auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
+
+    if (!memRefType)
+      return failure();
+    if (xferOp.getVectorType().getRank() != 1)
+      return failure();
+    if (map.isMinorIdentity() && isLastMemrefDimUnitStride(memRefType))
+      return failure(); // Handled by ConvertVectorToLLVM
+
+    // Loop bounds, step, state...
+    Location loc = xferOp.getLoc();
+    auto vecType = xferOp.getVectorType();
+    auto lb = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto ub =
+        rewriter.create<arith::ConstantIndexOp>(loc, vecType.getDimSize(0));
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto loopState = Strategy1d<OpTy>::initialLoopState(rewriter, xferOp);
+
+    // Generate for loop.
+    rewriter.replaceOpWithNewOp<scf::ForOp>(
+        xferOp, lb, ub, step, loopState ? ValueRange(loopState) : ValueRange(),
+        [&](OpBuilder &b, Location loc, Value iv, ValueRange loopState) {
+          Strategy1d<OpTy>::generateForLoopBody(b, loc, xferOp, iv, loopState);
+        });
+
+    return success();
+  }
+};
+
+} // namespace lowering_1_d
 } // namespace
-
-/// Analyzes the `transfer` to find an access dimension along the fastest remote
-/// MemRef dimension. If such a dimension with coalescing properties is found,
-/// `pivs` and `vectorBoundsCapture` are swapped so that the invocation of
-/// LoopNestBuilder captures it in the innermost loop.
-template <typename TransferOpTy>
-static int computeCoalescedIndex(TransferOpTy transfer) {
-  // rank of the remote memory access, coalescing behavior occurs on the
-  // innermost memory dimension.
-  auto remoteRank = transfer.getMemRefType().getRank();
-  // Iterate over the results expressions of the permutation map to determine
-  // the loop order for creating pointwise copies between remote and local
-  // memories.
-  int coalescedIdx = -1;
-  auto exprs = transfer.permutation_map().getResults();
-  for (auto en : llvm::enumerate(exprs)) {
-    auto dim = en.value().template dyn_cast<AffineDimExpr>();
-    if (!dim) {
-      continue;
-    }
-    auto memRefDim = dim.getPosition();
-    if (memRefDim == remoteRank - 1) {
-      // memRefDim has coalescing properties, it should be swapped in the last
-      // position.
-      assert(coalescedIdx == -1 && "Unexpected > 1 coalesced indices");
-      coalescedIdx = en.index();
-    }
-  }
-  return coalescedIdx;
-}
-
-/// Emits remote memory accesses that are clipped to the boundaries of the
-/// MemRef.
-template <typename TransferOpTy>
-static SmallVector<Value, 8>
-clip(TransferOpTy transfer, MemRefBoundsCapture &bounds, ArrayRef<Value> ivs) {
-  using namespace mlir::edsc;
-
-  Value zero(std_constant_index(0)), one(std_constant_index(1));
-  SmallVector<Value, 8> memRefAccess(transfer.indices());
-  SmallVector<Value, 8> clippedScalarAccessExprs(memRefAccess.size());
-  // Indices accessing to remote memory are clipped and their expressions are
-  // returned in clippedScalarAccessExprs.
-  for (unsigned memRefDim = 0; memRefDim < clippedScalarAccessExprs.size();
-       ++memRefDim) {
-    // Linear search on a small number of entries.
-    int loopIndex = -1;
-    auto exprs = transfer.permutation_map().getResults();
-    for (auto en : llvm::enumerate(exprs)) {
-      auto expr = en.value();
-      auto dim = expr.template dyn_cast<AffineDimExpr>();
-      // Sanity check.
-      assert(
-          (dim || expr.template cast<AffineConstantExpr>().getValue() == 0) &&
-          "Expected dim or 0 in permutationMap");
-      if (dim && memRefDim == dim.getPosition()) {
-        loopIndex = en.index();
-        break;
-      }
-    }
-
-    // We cannot distinguish atm between unrolled dimensions that implement
-    // the "always full" tile abstraction and need clipping from the other
-    // ones. So we conservatively clip everything.
-    using namespace edsc::op;
-    auto N = bounds.ub(memRefDim);
-    auto i = memRefAccess[memRefDim];
-    if (loopIndex < 0) {
-      auto N_minus_1 = N - one;
-      auto select_1 = std_select(slt(i, N), i, N_minus_1);
-      clippedScalarAccessExprs[memRefDim] =
-          std_select(slt(i, zero), zero, select_1);
-    } else {
-      auto ii = ivs[loopIndex];
-      auto i_plus_ii = i + ii;
-      auto N_minus_1 = N - one;
-      auto select_1 = std_select(slt(i_plus_ii, N), i_plus_ii, N_minus_1);
-      clippedScalarAccessExprs[memRefDim] =
-          std_select(slt(i_plus_ii, zero), zero, select_1);
-    }
-  }
-
-  return clippedScalarAccessExprs;
-}
 
 namespace mlir {
 
-template <typename TransferOpTy>
-VectorTransferRewriter<TransferOpTy>::VectorTransferRewriter(
-    VectorTransferToSCFOptions options, MLIRContext *context)
-    : RewritePattern(TransferOpTy::getOperationName(), 1, context),
-      options(options) {}
-
-/// Used for staging the transfer in a local buffer.
-template <typename TransferOpTy>
-MemRefType VectorTransferRewriter<TransferOpTy>::tmpMemRefType(
-    TransferOpTy transfer) const {
-  auto vectorType = transfer.getVectorType();
-  return MemRefType::get(vectorType.getShape(), vectorType.getElementType(), {},
-                         0);
-}
-
-/// Lowers TransferReadOp into a combination of:
-///   1. local memory allocation;
-///   2. perfect loop nest over:
-///      a. scalar load from local buffers (viewed as a scalar memref);
-///      a. scalar store to original memref (with clipping).
-///   3. vector_load from local buffer (viewed as a memref<1 x vector>);
-///   4. local memory deallocation.
-///
-/// Lowers the data transfer part of a TransferReadOp while ensuring no
-/// out-of-bounds accesses are possible. Out-of-bounds behavior is handled by
-/// clipping. This means that a given value in memory can be read multiple
-/// times and concurrently.
-///
-/// Important notes about clipping and "full-tiles only" abstraction:
-/// =================================================================
-/// When using clipping for dealing with boundary conditions, the same edge
-/// value will appear multiple times (a.k.a edge padding). This is fine if the
-/// subsequent vector operations are all data-parallel but **is generally
-/// incorrect** in the presence of reductions or extract operations.
-///
-/// More generally, clipping is a scalar abstraction that is expected to work
-/// fine as a baseline for CPUs and GPUs but not for vector_load and DMAs.
-/// To deal with real vector_load and DMAs, a "padded allocation + view"
-/// abstraction with the ability to read out-of-memref-bounds (but still within
-/// the allocated region) is necessary.
-///
-/// Whether using scalar loops or vector_load/DMAs to perform the transfer,
-/// junk values will be materialized in the vectors and generally need to be
-/// filtered out and replaced by the "neutral element". This neutral element is
-/// op-dependent so, in the future, we expect to create a vector filter and
-/// apply it to a splatted constant vector with the proper neutral element at
-/// each ssa-use. This filtering is not necessary for pure data-parallel
-/// operations.
-///
-/// In the case of vector_store/DMAs, Read-Modify-Write will be required, which
-/// also have concurrency implications. Note that by using clipped scalar stores
-/// in the presence of data-parallel only operations, we generate code that
-/// writes the same value multiple time on the edge locations.
-///
-/// TODO: implement alternatives to clipping.
-/// TODO: support non-data-parallel operations.
-
-/// Performs the rewrite.
-template <>
-LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  using namespace mlir::edsc::op;
-
-  TransferReadOp transfer = cast<TransferReadOp>(op);
-  if (transfer.permutation_map().isMinorIdentity()) {
-    // If > 1D, emit a bunch of loops around 1-D vector transfers.
-    if (transfer.getVectorType().getRank() > 1)
-      return NDTransferOpHelper<TransferReadOp>(rewriter, transfer, options)
-          .doReplace();
-    // If 1-D this is now handled by the target-specific lowering.
-    if (transfer.getVectorType().getRank() == 1)
-      return failure();
-  }
-
-  // Conservative lowering to scalar load / stores.
-  // 1. Setup all the captures.
-  ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.memref());
-  MemRefBoundsCapture memRefBoundsCapture(transfer.memref());
-  VectorBoundsCapture vectorBoundsCapture(transfer.vector());
-  int coalescedIdx = computeCoalescedIndex(transfer);
-  // Swap the vectorBoundsCapture which will reorder loop bounds.
-  if (coalescedIdx >= 0)
-    vectorBoundsCapture.swapRanges(vectorBoundsCapture.rank() - 1,
-                                   coalescedIdx);
-
-  auto lbs = vectorBoundsCapture.getLbs();
-  auto ubs = vectorBoundsCapture.getUbs();
-  SmallVector<Value, 8> steps;
-  steps.reserve(vectorBoundsCapture.getSteps().size());
-  for (auto step : vectorBoundsCapture.getSteps())
-    steps.push_back(std_constant_index(step));
-
-  // 2. Emit alloc-copy-load-dealloc.
-  Value tmp = std_alloc(tmpMemRefType(transfer));
-  StdIndexedValue local(tmp);
-  Value vec = vector_type_cast(tmp);
-  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
-    auto ivs = llvm::to_vector<8>(loopIvs);
-    // Swap the ivs which will reorder memory accesses.
-    if (coalescedIdx >= 0)
-      std::swap(ivs.back(), ivs[coalescedIdx]);
-    // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    local(ivs) = remote(clip(transfer, memRefBoundsCapture, ivs));
-  });
-  Value vectorValue = std_load(vec);
-  (std_dealloc(tmp)); // vexing parse
-
-  // 3. Propagate.
-  rewriter.replaceOp(op, vectorValue);
-  return success();
-}
-
-/// Lowers TransferWriteOp into a combination of:
-///   1. local memory allocation;
-///   2. vector_store to local buffer (viewed as a memref<1 x vector>);
-///   3. perfect loop nest over:
-///      a. scalar load from local buffers (viewed as a scalar memref);
-///      a. scalar store to original memref (with clipping).
-///   4. local memory deallocation.
-///
-/// More specifically, lowers the data transfer part while ensuring no
-/// out-of-bounds accesses are possible. Out-of-bounds behavior is handled by
-/// clipping. This means that a given value in memory can be written to multiple
-/// times and concurrently.
-///
-/// See `Important notes about clipping and full-tiles only abstraction` in the
-/// description of `readClipped` above.
-///
-/// TODO: implement alternatives to clipping.
-/// TODO: support non-data-parallel operations.
-template <>
-LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  using namespace edsc::op;
-
-  TransferWriteOp transfer = cast<TransferWriteOp>(op);
-  if (transfer.permutation_map().isMinorIdentity()) {
-    // If > 1D, emit a bunch of loops around 1-D vector transfers.
-    if (transfer.getVectorType().getRank() > 1)
-      return NDTransferOpHelper<TransferWriteOp>(rewriter, transfer, options)
-          .doReplace();
-    // If 1-D this is now handled by the target-specific lowering.
-    if (transfer.getVectorType().getRank() == 1)
-      return failure();
-  }
-
-  // 1. Setup all the captures.
-  ScopedContext scope(rewriter, transfer.getLoc());
-  StdIndexedValue remote(transfer.memref());
-  MemRefBoundsCapture memRefBoundsCapture(transfer.memref());
-  Value vectorValue(transfer.vector());
-  VectorBoundsCapture vectorBoundsCapture(transfer.vector());
-  int coalescedIdx = computeCoalescedIndex(transfer);
-  // Swap the vectorBoundsCapture which will reorder loop bounds.
-  if (coalescedIdx >= 0)
-    vectorBoundsCapture.swapRanges(vectorBoundsCapture.rank() - 1,
-                                   coalescedIdx);
-
-  auto lbs = vectorBoundsCapture.getLbs();
-  auto ubs = vectorBoundsCapture.getUbs();
-  SmallVector<Value, 8> steps;
-  steps.reserve(vectorBoundsCapture.getSteps().size());
-  for (auto step : vectorBoundsCapture.getSteps())
-    steps.push_back(std_constant_index(step));
-
-  // 2. Emit alloc-store-copy-dealloc.
-  Value tmp = std_alloc(tmpMemRefType(transfer));
-  StdIndexedValue local(tmp);
-  Value vec = vector_type_cast(tmp);
-  std_store(vectorValue, vec);
-  loopNestBuilder(lbs, ubs, steps, [&](ValueRange loopIvs) {
-    auto ivs = llvm::to_vector<8>(loopIvs);
-    // Swap the ivs which will reorder memory accesses.
-    if (coalescedIdx >= 0)
-      std::swap(ivs.back(), ivs[coalescedIdx]);
-    // Computes clippedScalarAccessExprs in the loop nest scope (ivs exist).
-    remote(clip(transfer, memRefBoundsCapture, ivs)) = local(ivs);
-  });
-  (std_dealloc(tmp)); // vexing parse...
-
-  rewriter.eraseOp(op);
-  return success();
-}
-
 void populateVectorToSCFConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
-    const VectorTransferToSCFOptions &options) {
-  patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
-                  VectorTransferRewriter<vector::TransferWriteOp>>(options,
-                                                                   context);
+    RewritePatternSet &patterns, const VectorTransferToSCFOptions &options) {
+  if (options.unroll) {
+    patterns.add<lowering_n_d_unrolled::UnrollTransferReadConversion,
+                 lowering_n_d_unrolled::UnrollTransferWriteConversion>(
+        patterns.getContext(), options);
+  } else {
+    patterns.add<lowering_n_d::PrepareTransferReadConversion,
+                 lowering_n_d::PrepareTransferWriteConversion,
+                 lowering_n_d::TransferOpConversion<TransferReadOp>,
+                 lowering_n_d::TransferOpConversion<TransferWriteOp>>(
+        patterns.getContext(), options);
+  }
+
+  if (options.targetRank == 1) {
+    patterns.add<lowering_1_d::TransferOp1dConversion<TransferReadOp>,
+                 lowering_1_d::TransferOp1dConversion<TransferWriteOp>>(
+        patterns.getContext(), options);
+  }
 }
 
 } // namespace mlir
@@ -683,14 +1278,30 @@ struct ConvertVectorToSCFPass
   ConvertVectorToSCFPass() = default;
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
+    this->targetRank = options.targetRank;
+    this->lowerPermutationMaps = options.lowerPermutationMaps;
+    this->lowerTensors = options.lowerTensors;
   }
 
   void runOnFunction() override {
-    OwningRewritePatternList patterns;
-    auto *context = getFunction().getContext();
-    populateVectorToSCFConversionPatterns(
-        patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    VectorTransferToSCFOptions options;
+    options.unroll = fullUnroll;
+    options.targetRank = targetRank;
+    options.lowerPermutationMaps = lowerPermutationMaps;
+    options.lowerTensors = lowerTensors;
+
+    // Lower permutation maps first.
+    if (lowerPermutationMaps) {
+      RewritePatternSet lowerTransferPatterns(getFunction().getContext());
+      mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
+          lowerTransferPatterns);
+      (void)applyPatternsAndFoldGreedily(getFunction(),
+                                         std::move(lowerTransferPatterns));
+    }
+
+    RewritePatternSet patterns(getFunction().getContext());
+    populateVectorToSCFConversionPatterns(patterns, options);
+    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 

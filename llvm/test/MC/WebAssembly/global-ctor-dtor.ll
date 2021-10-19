@@ -25,14 +25,7 @@ declare void @func3()
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:         0x00000001
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x00000002
+; CHECK-NEXT:           Minimum:         0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           func3
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -53,6 +46,14 @@ declare void @func3()
 ; CHECK-NEXT:         Field:           func0
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         SigIndex:        1
+; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           __indirect_function_table
+; CHECK-NEXT:         Kind:            TABLE
+; CHECK-NEXT:         Table:
+; CHECK-NEXT:           Index:           0
+; CHECK-NEXT:           ElemType:        FUNCREF
+; CHECK-NEXT:           Limits:
+; CHECK-NEXT:             Minimum:         0x2
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1 ]
 ; CHECK-NEXT:   - Type:            ELEM
@@ -67,28 +68,28 @@ declare void @func3()
 ; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:         Offset:          0x00000004
+; CHECK-NEXT:         Offset:          0x4
 ; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:         Offset:          0x0000000F
+; CHECK-NEXT:         Offset:          0xF
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:         Offset:          0x00000017
+; CHECK-NEXT:         Offset:          0x17
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:         Offset:          0x0000001D
+; CHECK-NEXT:         Offset:          0x1D
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           6
-; CHECK-NEXT:         Offset:          0x0000002C
+; CHECK-NEXT:         Offset:          0x2C
 ; CHECK-NEXT:       - Type:            R_WASM_TABLE_INDEX_SLEB
 ; CHECK-NEXT:         Index:           5
-; CHECK-NEXT:         Offset:          0x00000037
+; CHECK-NEXT:         Offset:          0x37
 ; CHECK-NEXT:       - Type:            R_WASM_MEMORY_ADDR_SLEB
 ; CHECK-NEXT:         Index:           3
-; CHECK-NEXT:         Offset:          0x0000003F
+; CHECK-NEXT:         Offset:          0x3F
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
-; CHECK-NEXT:         Offset:          0x00000045
+; CHECK-NEXT:         Offset:          0x45
 ; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Locals:

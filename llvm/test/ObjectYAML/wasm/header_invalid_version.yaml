@@ -3,4 +3,4 @@
 FileHeader:
   Version:         0x00000002
 ...
-# CHECK: Error reading file: <stdin>: Bad version number
+# CHECK: Error reading file: <stdin>: invalid version number: 2

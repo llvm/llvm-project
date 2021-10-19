@@ -40,6 +40,7 @@ public:
         : std::moneypunct_byname<char, true>(nm, refs) {}
 };
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 class Fwf
     : public std::moneypunct_byname<wchar_t, false>
 {
@@ -55,6 +56,7 @@ public:
     explicit Fwt(const std::string& nm, std::size_t refs = 0)
         : std::moneypunct_byname<wchar_t, true>(nm, refs) {}
 };
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 int main(int, char**)
 {
@@ -66,6 +68,7 @@ int main(int, char**)
         Fnt f("C", 1);
         assert(f.decimal_point() == std::numeric_limits<char>::max());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f("C", 1);
         assert(f.decimal_point() == std::numeric_limits<wchar_t>::max());
@@ -74,6 +77,7 @@ int main(int, char**)
         Fwt f("C", 1);
         assert(f.decimal_point() == std::numeric_limits<wchar_t>::max());
     }
+#endif
 
     {
         Fnf f(LOCALE_en_US_UTF_8, 1);
@@ -83,6 +87,7 @@ int main(int, char**)
         Fnt f(LOCALE_en_US_UTF_8, 1);
         assert(f.decimal_point() == '.');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_en_US_UTF_8, 1);
         assert(f.decimal_point() == L'.');
@@ -91,6 +96,7 @@ int main(int, char**)
         Fwt f(LOCALE_en_US_UTF_8, 1);
         assert(f.decimal_point() == L'.');
     }
+#endif
 
     {
         Fnf f(LOCALE_fr_FR_UTF_8, 1);
@@ -100,6 +106,7 @@ int main(int, char**)
         Fnt f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.decimal_point() == ',');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.decimal_point() == L',');
@@ -108,17 +115,20 @@ int main(int, char**)
         Fwt f(LOCALE_fr_FR_UTF_8, 1);
         assert(f.decimal_point() == L',');
     }
+#endif
+
 // GLIBC 2.23 uses '.' as the decimal point while other C libraries use ','
 // GLIBC 2.27 corrects this
-#ifndef TEST_GLIBC_PREREQ
-#define TEST_GLIBC_PREREQ(x, y) 0
-#endif
-#if !defined(TEST_HAS_GLIBC) || TEST_GLIBC_PREREQ(2, 27)
-    const char sep = ',';
-    const wchar_t wsep = L',';
+#if defined(_CS_GNU_LIBC_VERSION)
+    const char sep = glibc_version_less_than("2.27") ? '.' : ',';
+#   ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    const wchar_t wsep = glibc_version_less_than("2.27") ? L'.' : L',';
+#   endif
 #else
-    const char sep = '.';
-    const wchar_t wsep = L'.';
+    const char sep = ',';
+#   ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    const wchar_t wsep = L',';
+#   endif
 #endif
     {
         Fnf f(LOCALE_ru_RU_UTF_8, 1);
@@ -128,6 +138,7 @@ int main(int, char**)
         Fnt f(LOCALE_ru_RU_UTF_8, 1);
         assert(f.decimal_point() == sep);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_ru_RU_UTF_8, 1);
         assert(f.decimal_point() == wsep);
@@ -136,6 +147,7 @@ int main(int, char**)
         Fwt f(LOCALE_ru_RU_UTF_8, 1);
         assert(f.decimal_point() == wsep);
     }
+#endif
 
     {
         Fnf f(LOCALE_zh_CN_UTF_8, 1);
@@ -145,6 +157,7 @@ int main(int, char**)
         Fnt f(LOCALE_zh_CN_UTF_8, 1);
         assert(f.decimal_point() == '.');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_zh_CN_UTF_8, 1);
         assert(f.decimal_point() == L'.');
@@ -153,6 +166,7 @@ int main(int, char**)
         Fwt f(LOCALE_zh_CN_UTF_8, 1);
         assert(f.decimal_point() == L'.');
     }
+#endif
 
   return 0;
 }

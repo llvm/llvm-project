@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 !Shape analysis related tests for SELECT RANK Construct(R1148)
 program select_rank

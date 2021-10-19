@@ -27,18 +27,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Injection point for custom user configurations.
-// The following macros can be defined:
-//
-//   Flag related macros:
-//     GMOCK_DECLARE_bool_(name)
-//     GMOCK_DECLARE_int32_(name)
-//     GMOCK_DECLARE_string_(name)
-//     GMOCK_DEFINE_bool_(name, default_val, doc)
-//     GMOCK_DEFINE_int32_(name, default_val, doc)
-//     GMOCK_DEFINE_string_(name, default_val, doc)
+// Injection point for custom user configurations. See README for details
 //
 // ** Custom implementation starts here **
+
+// GOOGLETEST_CM0002 DO NOT DELETE
 
 #ifndef GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_GMOCK_PORT_H_
 #define GMOCK_INCLUDE_GMOCK_INTERNAL_CUSTOM_GMOCK_PORT_H_

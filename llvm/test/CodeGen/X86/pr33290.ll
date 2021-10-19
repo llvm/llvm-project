@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefix=X64
 
-@a = common global i32 0, align 4
-@c = common local_unnamed_addr global i8 0, align 1
-@b = common local_unnamed_addr global i32* null, align 8
+@a = common dso_local global i32 0, align 4
+@c = common dso_local local_unnamed_addr global i8 0, align 1
+@b = common dso_local local_unnamed_addr global i32* null, align 8
 
-define void @e() {
+define dso_local void @e() {
 ; X86-LABEL: e:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl b, %eax
@@ -21,18 +21,17 @@ define void @e() {
 ;
 ; X64-LABEL: e:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq {{.*}}(%rip), %rax
-; X64-NEXT:    movl $a, %esi
+; X64-NEXT:    movq b(%rip), %rax
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %for.cond
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl {{.*}}(%rip), %edx
-; X64-NEXT:    addq %rsi, %rdx
-; X64-NEXT:    setb %cl
-; X64-NEXT:    addq $2, %rdx
-; X64-NEXT:    adcb $0, %cl
-; X64-NEXT:    movb %cl, {{.*}}(%rip)
-; X64-NEXT:    movl %edx, (%rax)
+; X64-NEXT:    movzbl c(%rip), %ecx
+; X64-NEXT:    addq $a, %rcx
+; X64-NEXT:    setb %dl
+; X64-NEXT:    addq $2, %rcx
+; X64-NEXT:    adcb $0, %dl
+; X64-NEXT:    movb %dl, c(%rip)
+; X64-NEXT:    movl %ecx, (%rax)
 ; X64-NEXT:    jmp .LBB0_1
 entry:
   %0 = load i32*, i32** @b, align 8

@@ -107,10 +107,20 @@ enum { overflow = 123456 * 234567 };
 // expected-warning@-5 {{overflow in expression; result is -1106067520 with type 'int'}}
 #endif
 
+// FIXME: This is not consistent with the above case.
+enum NoFold : int { overflow2 = 123456 * 234567 };
+#if __cplusplus >= 201103L
+// expected-error@-2 {{enumerator value is not a constant expression}}
+// expected-note@-3 {{value 28958703552 is outside the range of representable values}}
+#else
+// expected-warning@-5 {{overflow in expression; result is -1106067520 with type 'int'}}
+// expected-warning@-6 {{extension}}
+#endif
+
 // PR28903
 struct PR28903 {
   enum {
-    PR28903_A = (enum { // expected-error-re {{'PR28903::(anonymous enum at {{.*}})' cannot be defined in an enumeration}}
+    PR28903_A = (enum { // expected-error-re {{'PR28903::(unnamed enum at {{.*}})' cannot be defined in an enumeration}}
       PR28903_B,
       PR28903_C = PR28903_B
     })

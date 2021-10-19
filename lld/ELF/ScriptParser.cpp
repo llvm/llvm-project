@@ -32,6 +32,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -76,6 +77,7 @@ private:
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
+  void readOverwriteSections();
   void readPhdrs();
   void readRegionAlias();
   void readSearchDir();
@@ -101,6 +103,7 @@ private:
                                                  uint64_t withFlags,
                                                  uint64_t withoutFlags);
   unsigned readPhdrType();
+  SortSectionPolicy peekSortKind();
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool provide, bool hidden);
   SymbolAssignment *readAssignment(StringRef tok);
@@ -249,6 +252,8 @@ void ScriptParser::readLinkerScript() {
       readOutputArch();
     } else if (tok == "OUTPUT_FORMAT") {
       readOutputFormat();
+    } else if (tok == "OVERWRITE_SECTIONS") {
+      readOverwriteSections();
     } else if (tok == "PHDRS") {
       readPhdrs();
     } else if (tok == "REGION_ALIAS") {
@@ -283,10 +288,11 @@ void ScriptParser::addFile(StringRef s) {
   if (isUnderSysroot && s.startswith("/")) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
-    if (sys::fs::exists(path)) {
+    if (sys::fs::exists(path))
       driver->addFile(saver.save(path), /*withLOption=*/false);
-      return;
-    }
+    else
+      setError("cannot find " + s + " inside " + config->sysroot);
+    return;
   }
 
   if (s.startswith("/")) {
@@ -410,7 +416,9 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-x86-64", {ELF32LEKind, EM_X86_64})
       .Case("elf64-aarch64", {ELF64LEKind, EM_AARCH64})
       .Case("elf64-littleaarch64", {ELF64LEKind, EM_AARCH64})
+      .Case("elf64-bigaarch64", {ELF64BEKind, EM_AARCH64})
       .Case("elf32-powerpc", {ELF32BEKind, EM_PPC})
+      .Case("elf32-powerpcle", {ELF32LEKind, EM_PPC})
       .Case("elf64-powerpc", {ELF64BEKind, EM_PPC64})
       .Case("elf64-powerpcle", {ELF64LEKind, EM_PPC64})
       .Case("elf64-x86-64", {ELF64LEKind, EM_X86_64})
@@ -423,16 +431,30 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-littleriscv", {ELF32LEKind, EM_RISCV})
       .Case("elf64-littleriscv", {ELF64LEKind, EM_RISCV})
       .Case("elf64-sparc", {ELF64BEKind, EM_SPARCV9})
+      .Case("elf32-msp430", {ELF32LEKind, EM_MSP430})
       .Default({ELFNoneKind, EM_NONE});
 }
 
-// Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(bfdname, big, little).
-// Currently we ignore big and little parameters.
+// Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(default, big, little). Choose
+// big if -EB is specified, little if -EL is specified, or default if neither is
+// specified.
 void ScriptParser::readOutputFormat() {
   expect("(");
 
+  StringRef s;
   config->bfdname = unquote(next());
-  StringRef s = config->bfdname;
+  if (!consume(")")) {
+    expect(",");
+    s = unquote(next());
+    if (config->optEB)
+      config->bfdname = s;
+    expect(",");
+    s = unquote(next());
+    if (config->optEL)
+      config->bfdname = s;
+    consume(")");
+  }
+  s = config->bfdname;
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
@@ -441,14 +463,8 @@ void ScriptParser::readOutputFormat() {
     setError("unknown output format name: " + config->bfdname);
   if (s == "elf32-ntradlittlemips" || s == "elf32-ntradbigmips")
     config->mipsN32Abi = true;
-
-  if (consume(")"))
-    return;
-  expect(",");
-  skip();
-  expect(",");
-  skip();
-  expect(")");
+  if (config->emachine == EM_MSP430)
+    config->osabi = ELFOSABI_STANDALONE;
 }
 
 void ScriptParser::readPhdrs() {
@@ -541,6 +557,12 @@ std::vector<BaseCommand *> ScriptParser::readOverlay() {
   return v;
 }
 
+void ScriptParser::readOverwriteSections() {
+  expect("{");
+  while (!errorCount() && !consume("}"))
+    script->overwriteSections.push_back(readOutputSectionDescription(next()));
+}
+
 void ScriptParser::readSections() {
   expect("{");
   std::vector<BaseCommand *> v;
@@ -574,9 +596,12 @@ void ScriptParser::readSections() {
   else if (!consume("BEFORE"))
     setError("expected AFTER/BEFORE, but got '" + next() + "'");
   StringRef where = next();
+  std::vector<StringRef> names;
   for (BaseCommand *cmd : v)
     if (auto *os = dyn_cast<OutputSection>(cmd))
-      script->insertCommands.push_back({os, isAfter, where});
+      names.push_back(os->name);
+  if (!names.empty())
+    script->insertCommands.push_back({std::move(names), isAfter, where});
 }
 
 void ScriptParser::readTarget() {
@@ -617,16 +642,20 @@ StringMatcher ScriptParser::readFilePatterns() {
   return Matcher;
 }
 
+SortSectionPolicy ScriptParser::peekSortKind() {
+  return StringSwitch<SortSectionPolicy>(peek())
+      .Cases("SORT", "SORT_BY_NAME", SortSectionPolicy::Name)
+      .Case("SORT_BY_ALIGNMENT", SortSectionPolicy::Alignment)
+      .Case("SORT_BY_INIT_PRIORITY", SortSectionPolicy::Priority)
+      .Case("SORT_NONE", SortSectionPolicy::None)
+      .Default(SortSectionPolicy::Default);
+}
+
 SortSectionPolicy ScriptParser::readSortKind() {
-  if (consume("SORT") || consume("SORT_BY_NAME"))
-    return SortSectionPolicy::Name;
-  if (consume("SORT_BY_ALIGNMENT"))
-    return SortSectionPolicy::Alignment;
-  if (consume("SORT_BY_INIT_PRIORITY"))
-    return SortSectionPolicy::Priority;
-  if (consume("SORT_NONE"))
-    return SortSectionPolicy::None;
-  return SortSectionPolicy::Default;
+  SortSectionPolicy ret = peekSortKind();
+  if (ret != SortSectionPolicy::Default)
+    skip();
+  return ret;
 }
 
 // Reads SECTIONS command contents in the following form:
@@ -652,11 +681,15 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
     }
 
     StringMatcher SectionMatcher;
-    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE")
+    // Break if the next token is ), EXCLUDE_FILE, or SORT*.
+    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE" &&
+           peekSortKind() == SortSectionPolicy::Default)
       SectionMatcher.addPattern(unquote(next()));
 
     if (!SectionMatcher.empty())
       ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});
+    else if (excludeFilePat.empty())
+      break;
     else
       setError("section pattern is expected");
   }
@@ -968,6 +1001,7 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
 }
 
 SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
+  name = unquote(name);
   StringRef op = next();
   assert(op == "=" || op == "+=");
   Expr e = readExpr();
@@ -1097,24 +1131,24 @@ Expr ScriptParser::readConstant() {
 static Optional<uint64_t> parseInt(StringRef tok) {
   // Hexadecimal
   uint64_t val;
-  if (tok.startswith_lower("0x")) {
+  if (tok.startswith_insensitive("0x")) {
     if (!to_integer(tok.substr(2), val, 16))
       return None;
     return val;
   }
-  if (tok.endswith_lower("H")) {
+  if (tok.endswith_insensitive("H")) {
     if (!to_integer(tok.drop_back(), val, 16))
       return None;
     return val;
   }
 
   // Decimal
-  if (tok.endswith_lower("K")) {
+  if (tok.endswith_insensitive("K")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return None;
     return val * 1024;
   }
-  if (tok.endswith_lower("M")) {
+  if (tok.endswith_insensitive("M")) {
     if (!to_integer(tok.drop_back(), val, 10))
       return None;
     return val * 1024 * 1024;
@@ -1214,6 +1248,13 @@ static void checkIfExists(OutputSection *cmd, StringRef location) {
     error(location + ": undefined section " + cmd->name);
 }
 
+static bool isValidSymbolName(StringRef s) {
+  auto valid = [](char c) {
+    return isAlnum(c) || c == '$' || c == '.' || c == '_';
+  };
+  return !s.empty() && !isDigit(s[0]) && llvm::all_of(s, valid);
+}
+
 Expr ScriptParser::readPrimary() {
   if (peek() == "(")
     return readParenExpr();
@@ -1310,7 +1351,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return alignTo(script->getDot(), e().getValue()); };
   }
   if (tok == "DEFINED") {
-    StringRef name = readParenLiteral();
+    StringRef name = unquote(readParenLiteral());
     return [=] {
       Symbol *b = symtab->find(name);
       return (b && b->isDefined()) ? 1 : 0;
@@ -1388,7 +1429,9 @@ Expr ScriptParser::readPrimary() {
     return [=] { return *val; };
 
   // Tok is a symbol name.
-  if (!isValidCIdentifier(tok))
+  if (tok.startswith("\""))
+    tok = unquote(tok);
+  else if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
   script->referencedSymbols.push_back(tok);
   return [=] { return script->getSymbolValue(tok, location); };
@@ -1454,9 +1497,9 @@ void ScriptParser::readAnonymousDeclaration() {
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
   for (const SymbolVersion &pat : locals)
-    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
+    config->versionDefinitions[VER_NDX_LOCAL].localPatterns.push_back(pat);
   for (const SymbolVersion &pat : globals)
-    config->versionDefinitions[VER_NDX_GLOBAL].patterns.push_back(pat);
+    config->versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(pat);
 
   expect(";");
 }
@@ -1468,13 +1511,12 @@ void ScriptParser::readVersionDeclaration(StringRef verStr) {
   std::vector<SymbolVersion> locals;
   std::vector<SymbolVersion> globals;
   std::tie(locals, globals) = readSymbols();
-  for (const SymbolVersion &pat : locals)
-    config->versionDefinitions[VER_NDX_LOCAL].patterns.push_back(pat);
 
   // Create a new version definition and add that to the global symbols.
   VersionDefinition ver;
   ver.name = verStr;
-  ver.patterns = globals;
+  ver.nonLocalPatterns = std::move(globals);
+  ver.localPatterns = std::move(locals);
   ver.id = config->versionDefinitions.size();
   config->versionDefinitions.push_back(ver);
 
@@ -1620,17 +1662,23 @@ std::pair<uint32_t, uint32_t> ScriptParser::readMemoryAttributes() {
 }
 
 void elf::readLinkerScript(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read linker script",
+                                 mb.getBufferIdentifier());
   ScriptParser(mb).readLinkerScript();
 }
 
 void elf::readVersionScript(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read version script",
+                                 mb.getBufferIdentifier());
   ScriptParser(mb).readVersionScript();
 }
 
 void elf::readDynamicList(MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read dynamic list", mb.getBufferIdentifier());
   ScriptParser(mb).readDynamicList();
 }
 
 void elf::readDefsym(StringRef name, MemoryBufferRef mb) {
+  llvm::TimeTraceScope timeScope("Read defsym input", name);
   ScriptParser(mb).readDefsym(name);
 }

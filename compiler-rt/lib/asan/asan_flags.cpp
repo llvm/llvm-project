@@ -26,10 +26,6 @@ namespace __asan {
 
 Flags asan_flags_dont_use_directly;  // use via flags().
 
-static const char *MaybeCallAsanDefaultOptions() {
-  return (&__asan_default_options) ? __asan_default_options() : "";
-}
-
 static const char *MaybeUseAsanDefaultOptionsCompileDefinition() {
 #ifdef ASAN_DEFAULT_OPTIONS
   return SANITIZER_STRINGIFY(ASAN_DEFAULT_OPTIONS);
@@ -108,14 +104,14 @@ void InitializeFlags() {
   asan_parser.ParseString(asan_compile_def);
 
   // Override from user-specified string.
-  const char *asan_default_options = MaybeCallAsanDefaultOptions();
+  const char *asan_default_options = __asan_default_options();
   asan_parser.ParseString(asan_default_options);
 #if CAN_SANITIZE_UB
-  const char *ubsan_default_options = __ubsan::MaybeCallUbsanDefaultOptions();
+  const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 #if CAN_SANITIZE_LEAKS
-  const char *lsan_default_options = __lsan::MaybeCallLsanDefaultOptions();
+  const char *lsan_default_options = __lsan_default_options();
   lsan_parser.ParseString(lsan_default_options);
 #endif
 
@@ -159,10 +155,6 @@ void InitializeFlags() {
   CHECK_LE(f->max_redzone, 2048);
   CHECK(IsPowerOfTwo(f->redzone));
   CHECK(IsPowerOfTwo(f->max_redzone));
-  if (SANITIZER_RTEMS) {
-    CHECK(!f->unmap_shadow_on_exit);
-    CHECK(!f->protect_shadow_gap);
-  }
 
   // quarantine_size is deprecated but we still honor it.
   // quarantine_size can not be used together with quarantine_size_mb.

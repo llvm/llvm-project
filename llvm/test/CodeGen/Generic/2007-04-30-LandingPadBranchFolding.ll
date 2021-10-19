@@ -1,4 +1,4 @@
-; RUN: llc < %s 
+; RUN: llc < %s
 ; PR1228
 
 	%"struct.std::basic_string<char,std::char_traits<char>,std::allocator<char> >::_Alloc_hider" = type { i8* }
@@ -60,4 +60,4 @@ declare void @_ZNSs7reserveEj()
 
 declare void @_ZNSs6appendEPKcj()
 
-declare i32 @__gxx_personality_v0(...)
+declare i32 @__gxx_personality_v0(...) addrspace(0)

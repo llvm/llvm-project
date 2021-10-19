@@ -39,6 +39,10 @@ class RestrictedPtrType<Type type> : Type {
 def VarArgType : Type {}
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
+def LongType : NamedType<"long">;
+def UnsignedLongType : NamedType<"unsigned long">;
+def LongLongType : NamedType<"long long">;
+def UnsignedLongLongType : NamedType<"unsigned long long">;
 def FloatType : NamedType<"float">;
 def DoubleType : NamedType<"double">;
 def LongDoubleType : NamedType<"long double">;
@@ -48,11 +52,51 @@ def CharType : NamedType<"char">;
 def VoidPtr : PtrType<VoidType>;
 def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
-def FloatPtr : PtrType<FloatType>;
 def LongDoublePtr : PtrType<LongDoubleType>;
+
+def IntMaxTType : NamedType<"intmax_t">;
+def UIntMaxTType : NamedType<"uintmax_t">;
 
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;
+
+//types moved from stdc.td
+def VoidRestrictedPtr : RestrictedPtrType<VoidType>;
+def ConstVoidRestrictedPtr : ConstType<VoidRestrictedPtr>;
+
+def CharPtr : PtrType<CharType>;
+def ConstCharPtr : ConstType<CharPtr>;
+def CharRestrictedPtr : RestrictedPtrType<CharType>;
+def CharRestrictedPtrPtr : RestrictedPtrType<CharPtr>;
+def ConstCharRestrictedPtr : ConstType<CharRestrictedPtr>;
+
+def OnceFlagType : NamedType<"once_flag">;
+def OnceFlagTypePtr : PtrType<OnceFlagType>;
+// TODO(sivachandra): Remove this non-standard type when a formal
+// way to describe callable types is available.
+def CallOnceFuncType : NamedType<"__call_once_func_t">;
+def MtxTType : NamedType<"mtx_t">;
+def MtxTTypePtr : PtrType<MtxTType>;
+def CndTType : NamedType<"cnd_t">;
+def CndTTypePtr : PtrType<CndTType>;
+def ThrdStartTType : NamedType<"thrd_start_t">;
+def ThrdTType : NamedType<"thrd_t">;
+def ThrdTTypePtr : PtrType<ThrdTType>;
+
+def IntPtr : PtrType<IntType>;
+def FloatPtr : PtrType<FloatType>;
+def DoublePtr : PtrType<DoubleType>;
+
+def SigHandlerT : NamedType<"__sighandler_t">;
+
+def TimeTType : NamedType<"time_t">;
+
+def BSearchCompareT : NamedType<"__bsearchcompare_t">;
+def QSortCompareT : NamedType<"__qsortcompare_t">;
+
+//added because __assert_fail needs it.
+def UnsignedType : NamedType<"unsigned">;
+
 
 class Macro<string name> {
   string Name = name;

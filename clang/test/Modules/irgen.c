@@ -6,7 +6,7 @@
 
 @import irgen;
 
-// CHECK: define void @triple_value
+// CHECK: define{{.*}} void @triple_value
 void triple_value(int *px) {
   *px = triple(*px);
 }

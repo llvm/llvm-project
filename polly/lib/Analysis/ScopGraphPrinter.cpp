@@ -135,7 +135,7 @@ struct DOTGraphTraits<ScopDetectionWrapperPass *>
 
   // Print the cluster of the subregions. This groups the single basic blocks
   // and adds a different background color for each group.
-  static void printRegionCluster(const ScopDetection *SD, const Region *R,
+  static void printRegionCluster(ScopDetection *SD, const Region *R,
                                  raw_ostream &O, unsigned depth = 0) {
     O.indent(2 * depth) << "subgraph cluster_" << static_cast<const void *>(R)
                         << " {\n";

@@ -21,8 +21,8 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Scalar.h"
 #include <string>
@@ -84,8 +84,9 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // 128-bit floats are aligned only to 64 bits.
   Ret += "-f128:64";
 
-  // When using the vector ABI, 128-bit vectors are also aligned to 64 bits.
-  if (VectorABI)
+  // When using the vector ABI on Linux, 128-bit vectors are also aligned to 64
+  // bits. On z/OS, vector types are always aligned to 64 bits.
+  if (VectorABI || TT.isOSzOS())
     Ret += "-v128:64";
 
   // We prefer 16 bits of aligned for all globals; see above.
@@ -95,6 +96,15 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   Ret += "-n32:64";
 
   return Ret;
+}
+
+static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
+  if (TT.isOSzOS())
+    return std::make_unique<TargetLoweringObjectFileGOFF>();
+
+  // Note: Some times run with -triple s390x-unknown.
+  // In this case, default to ELF unless z/OS specifically provided.
+  return std::make_unique<TargetLoweringObjectFileELF>();
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
@@ -160,7 +170,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
           getEffectiveRelocModel(RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
           OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
 
@@ -179,9 +189,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
-  bool softFloat =
-    F.hasFnAttribute("use-soft-float") &&
-    F.getFnAttribute("use-soft-float").getValueAsString() == "true";
+  bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
 
   if (softFloat)
     FS += FS.empty() ? "+soft-float" : ",+soft-float";
@@ -277,7 +285,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // vector instructions will be shortened into opcodes that compare
   // elimination recognizes.
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createSystemZShortenInstPass(getSystemZTargetMachine()), false);
+    addPass(createSystemZShortenInstPass(getSystemZTargetMachine()));
 
   // We eliminate comparisons here rather than earlier because some
   // transformations can change the set of available CC values and we
@@ -303,7 +311,7 @@ void SystemZPassConfig::addPreEmitPass() {
   // between the comparison and the branch, but it isn't clear whether
   // preventing that would be a win or not.
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createSystemZElimComparePass(getSystemZTargetMachine()), false);
+    addPass(createSystemZElimComparePass(getSystemZTargetMachine()));
   addPass(createSystemZLongBranchPass(getSystemZTargetMachine()));
 
   // Do final scheduling after all other optimizations, to get an

@@ -26,7 +26,6 @@ class ChangeValueAPITestCase(TestBase):
         self.end_line = line_number(
             'main.c', '// Set a breakpoint here at the end')
 
-    @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr25652")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test_change_value(self):
@@ -82,8 +81,8 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(result, "Setting val returned True.")
         actual_value = val_value.GetValueAsSigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value from val")
-        self.assertTrue(
-            actual_value == 12345,
+        self.assertEqual(
+            actual_value, 12345,
             "Got the right changed value from val")
 
         # Now check that we can set a structure element:
@@ -144,14 +143,11 @@ class ChangeValueAPITestCase(TestBase):
             thread.IsValid(),
             "There should be a thread stopped due to breakpoint condition")
 
-        # Grab the stdout and make sure we changed the real values as well.
-        # This doesn't work for reproducers as the inferior doesn't run.
-        if not configuration.is_reproducer():
-            expected_value = "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
-            stdout = process.GetSTDOUT(1000)
-            self.assertTrue(
-                expected_value in stdout,
-                "STDOUT showed changed values.")
+        expected_value = "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
+        stdout = process.GetSTDOUT(1000)
+        self.assertTrue(
+            expected_value in stdout,
+            "STDOUT showed changed values.")
 
         # Finally, change the stack pointer to 0, and we should not make it to
         # our end breakpoint.
@@ -163,8 +159,8 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(result, "Setting sp returned true.")
         actual_value = sp_value.GetValueAsUnsigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value for sp")
-        self.assertTrue(
-            actual_value == 1,
+        self.assertEqual(
+            actual_value, 1,
             "Got the right changed value for sp.")
 
         # Boundary condition test the SBValue.CreateValueFromExpression() API.

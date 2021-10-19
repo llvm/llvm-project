@@ -25,6 +25,8 @@ let Predicates = [NoAVX512] in {
 
 let Predicates = [HasAVX512] in {
   // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f16 (extractelt (v8f16 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v8f16 VR128X:$src), FR16X)>;
   def : Pat<(f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
             (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X)>;
   def : Pat<(f64 (extractelt (v2f64 VR128X:$src), (iPTR 0))),
@@ -32,6 +34,8 @@ let Predicates = [HasAVX512] in {
 }
 
 let Predicates = [NoVLX] in {
+  def : Pat<(v8f16 (scalar_to_vector FR16X:$src)),
+            (COPY_TO_REGCLASS FR16X:$src, VR128)>;
   // Implicitly promote a 32-bit scalar to a vector.
   def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
             (COPY_TO_REGCLASS FR32:$src, VR128)>;
@@ -41,6 +45,8 @@ let Predicates = [NoVLX] in {
 }
 
 let Predicates = [HasVLX] in {
+  def : Pat<(v8f16 (scalar_to_vector FR16X:$src)),
+            (COPY_TO_REGCLASS FR16X:$src, VR128X)>;
   // Implicitly promote a 32-bit scalar to a vector.
   def : Pat<(v4f32 (scalar_to_vector FR32X:$src)),
             (COPY_TO_REGCLASS FR32X:$src, VR128X)>;
@@ -74,6 +80,7 @@ defm : subvector_subreg_lowering<VR128, v2i64, VR256, v4i64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v2f64, VR256, v4f64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8i16, VR256, v16i16, sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v16i8, VR256, v32i8,  sub_xmm>;
+defm : subvector_subreg_lowering<VR128, v8f16, VR256, v16f16, sub_xmm>;
 
 // A 128-bit subvector extract from the first 512-bit vector position is a
 // subregister copy that needs no instruction. Likewise, a 128-bit subvector
@@ -85,6 +92,7 @@ defm : subvector_subreg_lowering<VR128, v2i64, VR512, v8i64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v2f64, VR512, v8f64,  sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v8i16, VR512, v32i16, sub_xmm>;
 defm : subvector_subreg_lowering<VR128, v16i8, VR512, v64i8,  sub_xmm>;
+defm : subvector_subreg_lowering<VR128, v8f16, VR512, v32f16, sub_xmm>;
 
 // A 128-bit subvector extract from the first 512-bit vector position is a
 // subregister copy that needs no instruction. Likewise, a 128-bit subvector
@@ -96,6 +104,7 @@ defm : subvector_subreg_lowering<VR256, v4i64,  VR512, v8i64,  sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v4f64,  VR512, v8f64,  sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v16i16, VR512, v32i16, sub_ymm>;
 defm : subvector_subreg_lowering<VR256, v32i8,  VR512, v64i8,  sub_ymm>;
+defm : subvector_subreg_lowering<VR256, v16f16, VR512, v32f16, sub_ymm>;
 
 
 // If we're inserting into an all zeros vector, just use a plain move which
@@ -103,8 +112,7 @@ defm : subvector_subreg_lowering<VR256, v32i8,  VR512, v64i8,  sub_ymm>;
 // any moves that we can prove are unnecessary.
 multiclass subvec_zero_lowering<string MoveStr,
                                 RegisterClass RC, ValueType DstTy,
-                                ValueType SrcTy, ValueType ZeroTy,
-                                SubRegIndex SubIdx> {
+                                ValueType SrcTy, SubRegIndex SubIdx> {
   def : Pat<(DstTy (insert_subvector immAllZerosV,
                                      (SrcTy RC:$src), (iPTR 0))),
             (SUBREG_TO_REG (i64 0),
@@ -112,51 +120,57 @@ multiclass subvec_zero_lowering<string MoveStr,
 }
 
 let Predicates = [HasAVX, NoVLX] in {
-  defm : subvec_zero_lowering<"APD", VR128, v4f64, v2f64, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"APS", VR128, v8f32, v4f32, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v4i64, v2i64, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v8i32, v4i32, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v16i16, v8i16, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v32i8, v16i8, v8i32, sub_xmm>;
+  defm : subvec_zero_lowering<"APD", VR128, v4f64, v2f64, sub_xmm>;
+  defm : subvec_zero_lowering<"APS", VR128, v8f32, v4f32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v4i64, v2i64, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v8i32, v4i32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v16i16, v8i16, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v32i8, v16i8, sub_xmm>;
 }
 
 let Predicates = [HasVLX] in {
-  defm : subvec_zero_lowering<"APDZ128", VR128X, v4f64, v2f64, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"APSZ128", VR128X, v8f32, v4f32, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v4i64, v2i64, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v8i32, v4i32, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v16i16, v8i16, v8i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v32i8, v16i8, v8i32, sub_xmm>;
+  defm : subvec_zero_lowering<"APDZ128", VR128X, v4f64, v2f64, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v8f32, v4f32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v4i64, v2i64, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v8i32, v4i32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v16i16, v8i16, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v32i8, v16i8, sub_xmm>;
 
-  defm : subvec_zero_lowering<"APDZ128", VR128X, v8f64, v2f64, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"APSZ128", VR128X, v16f32, v4f32, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v8i64, v2i64, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v16i32, v4i32, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v32i16, v8i16, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v64i8, v16i8, v16i32, sub_xmm>;
+  defm : subvec_zero_lowering<"APDZ128", VR128X, v8f64, v2f64, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v16f32, v4f32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v8i64, v2i64, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v16i32, v4i32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v32i16, v8i16, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA64Z128", VR128X, v64i8, v16i8, sub_xmm>;
 
-  defm : subvec_zero_lowering<"APDZ256", VR256X, v8f64, v4f64, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"APSZ256", VR256X, v16f32, v8f32, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v8i64, v4i64, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v16i32, v8i32, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v32i16, v16i16, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v64i8, v32i8, v16i32, sub_ymm>;
+  defm : subvec_zero_lowering<"APDZ256", VR256X, v8f64, v4f64, sub_ymm>;
+  defm : subvec_zero_lowering<"APSZ256", VR256X, v16f32, v8f32, sub_ymm>;
+  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v8i64, v4i64, sub_ymm>;
+  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v16i32, v8i32, sub_ymm>;
+  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v32i16, v16i16, sub_ymm>;
+  defm : subvec_zero_lowering<"DQA64Z256", VR256X, v64i8, v32i8, sub_ymm>;
 }
 
 let Predicates = [HasAVX512, NoVLX] in {
-  defm : subvec_zero_lowering<"APD", VR128, v8f64, v2f64, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"APS", VR128, v16f32, v4f32, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v8i64, v2i64, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v16i32, v4i32, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v32i16, v8i16, v16i32, sub_xmm>;
-  defm : subvec_zero_lowering<"DQA", VR128, v64i8, v16i8, v16i32, sub_xmm>;
+  defm : subvec_zero_lowering<"APD", VR128, v8f64, v2f64, sub_xmm>;
+  defm : subvec_zero_lowering<"APS", VR128, v16f32, v4f32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v8i64, v2i64, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v16i32, v4i32, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v32i16, v8i16, sub_xmm>;
+  defm : subvec_zero_lowering<"DQA", VR128, v64i8, v16i8, sub_xmm>;
 
-  defm : subvec_zero_lowering<"APDY", VR256, v8f64, v4f64, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"APSY", VR256, v16f32, v8f32, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQAY", VR256, v8i64, v4i64, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQAY", VR256, v16i32, v8i32, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQAY", VR256, v32i16, v16i16, v16i32, sub_ymm>;
-  defm : subvec_zero_lowering<"DQAY", VR256, v64i8, v32i8, v16i32, sub_ymm>;
+  defm : subvec_zero_lowering<"APDY", VR256, v8f64, v4f64, sub_ymm>;
+  defm : subvec_zero_lowering<"APSY", VR256, v16f32, v8f32, sub_ymm>;
+  defm : subvec_zero_lowering<"DQAY", VR256, v8i64, v4i64, sub_ymm>;
+  defm : subvec_zero_lowering<"DQAY", VR256, v16i32, v8i32, sub_ymm>;
+  defm : subvec_zero_lowering<"DQAY", VR256, v32i16, v16i16, sub_ymm>;
+  defm : subvec_zero_lowering<"DQAY", VR256, v64i8, v32i8, sub_ymm>;
+}
+
+let Predicates = [HasFP16, HasVLX] in {
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v16f16, v8f16, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ128", VR128X, v32f16, v8f16, sub_xmm>;
+  defm : subvec_zero_lowering<"APSZ256", VR256X, v32f16, v16f16, sub_ymm>;
 }
 
 class maskzeroupper<ValueType vt, RegisterClass RC> :

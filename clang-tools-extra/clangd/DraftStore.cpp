@@ -9,7 +9,10 @@
 #include "DraftStore.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
 
 namespace clang {
 namespace clangd {
@@ -21,7 +24,7 @@ llvm::Optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
   if (It == Drafts.end())
     return None;
 
-  return It->second;
+  return It->second.D;
 }
 
 std::vector<Path> DraftStore::getActiveFiles() const {
@@ -34,98 +37,51 @@ std::vector<Path> DraftStore::getActiveFiles() const {
   return ResultVector;
 }
 
-static void updateVersion(DraftStore::Draft &D,
-                          llvm::Optional<int64_t> Version) {
-  if (Version) {
-    // We treat versions as opaque, but the protocol says they increase.
-    if (*Version <= D.Version)
-      log("File version went from {0} to {1}", D.Version, Version);
-    D.Version = *Version;
-  } else {
-    // Note that if D was newly-created, this will bump D.Version from -1 to 0.
-    ++D.Version;
+static void increment(std::string &S) {
+  // Ensure there is a numeric suffix.
+  if (S.empty() || !llvm::isDigit(S.back())) {
+    S.push_back('0');
+    return;
   }
-}
-
-int64_t DraftStore::addDraft(PathRef File, llvm::Optional<int64_t> Version,
-                         llvm::StringRef Contents) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
-  Draft &D = Drafts[File];
-  updateVersion(D, Version);
-  D.Contents = Contents.str();
-  return D.Version;
-}
-
-llvm::Expected<DraftStore::Draft> DraftStore::updateDraft(
-    PathRef File, llvm::Optional<int64_t> Version,
-    llvm::ArrayRef<TextDocumentContentChangeEvent> Changes) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
-  auto EntryIt = Drafts.find(File);
-  if (EntryIt == Drafts.end()) {
-    return llvm::make_error<llvm::StringError>(
-        "Trying to do incremental update on non-added document: " + File,
-        llvm::errc::invalid_argument);
-  }
-  Draft &D = EntryIt->second;
-  std::string Contents = EntryIt->second.Contents;
-
-  for (const TextDocumentContentChangeEvent &Change : Changes) {
-    if (!Change.range) {
-      Contents = Change.text;
-      continue;
+  // Increment the numeric suffix.
+  auto I = S.rbegin(), E = S.rend();
+  for (;;) {
+    if (I == E || !llvm::isDigit(*I)) {
+      // Reached start of numeric section, it was all 9s.
+      S.insert(I.base(), '1');
+      break;
     }
-
-    const Position &Start = Change.range->start;
-    llvm::Expected<size_t> StartIndex =
-        positionToOffset(Contents, Start, false);
-    if (!StartIndex)
-      return StartIndex.takeError();
-
-    const Position &End = Change.range->end;
-    llvm::Expected<size_t> EndIndex = positionToOffset(Contents, End, false);
-    if (!EndIndex)
-      return EndIndex.takeError();
-
-    if (*EndIndex < *StartIndex)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv(
-              "Range's end position ({0}) is before start position ({1})", End,
-              Start),
-          llvm::errc::invalid_argument);
-
-    // Since the range length between two LSP positions is dependent on the
-    // contents of the buffer we compute the range length between the start and
-    // end position ourselves and compare it to the range length of the LSP
-    // message to verify the buffers of the client and server are in sync.
-
-    // EndIndex and StartIndex are in bytes, but Change.rangeLength is in UTF-16
-    // code units.
-    ssize_t ComputedRangeLength =
-        lspLength(Contents.substr(*StartIndex, *EndIndex - *StartIndex));
-
-    if (Change.rangeLength && ComputedRangeLength != *Change.rangeLength)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Change's rangeLength ({0}) doesn't match the "
-                        "computed range length ({1}).",
-                        *Change.rangeLength, ComputedRangeLength),
-          llvm::errc::invalid_argument);
-
-    std::string NewContents;
-    NewContents.reserve(*StartIndex + Change.text.length() +
-                        (Contents.length() - *EndIndex));
-
-    NewContents = Contents.substr(0, *StartIndex);
-    NewContents += Change.text;
-    NewContents += Contents.substr(*EndIndex);
-
-    Contents = std::move(NewContents);
+    if (*I != '9') {
+      // Found a digit we can increment, we're done.
+      ++*I;
+      break;
+    }
+    *I = '0'; // and keep incrementing to the left.
   }
+}
 
-  updateVersion(D, Version);
-  D.Contents = std::move(Contents);
-  return D;
+static void updateVersion(DraftStore::Draft &D,
+                          llvm::StringRef SpecifiedVersion) {
+  if (!SpecifiedVersion.empty()) {
+    // We treat versions as opaque, but the protocol says they increase.
+    if (SpecifiedVersion.compare_numeric(D.Version) <= 0)
+      log("File version went from {0} to {1}", D.Version, SpecifiedVersion);
+    D.Version = SpecifiedVersion.str();
+  } else {
+    // Note that if D was newly-created, this will bump D.Version from "" to 1.
+    increment(D.Version);
+  }
+}
+
+std::string DraftStore::addDraft(PathRef File, llvm::StringRef Version,
+                                 llvm::StringRef Contents) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  auto &D = Drafts[File];
+  updateVersion(D.D, Version);
+  std::time(&D.MTime);
+  D.D.Contents = std::make_shared<std::string>(Contents);
+  return D.D.Version;
 }
 
 void DraftStore::removeDraft(PathRef File) {
@@ -134,5 +90,39 @@ void DraftStore::removeDraft(PathRef File) {
   Drafts.erase(File);
 }
 
+namespace {
+
+/// A read only MemoryBuffer shares ownership of a ref counted string. The
+/// shared string object must not be modified while an owned by this buffer.
+class SharedStringBuffer : public llvm::MemoryBuffer {
+  const std::shared_ptr<const std::string> BufferContents;
+  const std::string Name;
+
+public:
+  BufferKind getBufferKind() const override {
+    return MemoryBuffer::MemoryBuffer_Malloc;
+  }
+
+  StringRef getBufferIdentifier() const override { return Name; }
+
+  SharedStringBuffer(std::shared_ptr<const std::string> Data, StringRef Name)
+      : BufferContents(std::move(Data)), Name(Name) {
+    assert(BufferContents && "Can't create from empty shared_ptr");
+    MemoryBuffer::init(BufferContents->c_str(),
+                       BufferContents->c_str() + BufferContents->size(),
+                       /*RequiresNullTerminator=*/true);
+  }
+};
+} // namespace
+
+llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> DraftStore::asVFS() const {
+  auto MemFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  std::lock_guard<std::mutex> Guard(Mutex);
+  for (const auto &Draft : Drafts)
+    MemFS->addFile(Draft.getKey(), Draft.getValue().MTime,
+                   std::make_unique<SharedStringBuffer>(
+                       Draft.getValue().D.Contents, Draft.getKey()));
+  return MemFS;
+}
 } // namespace clangd
 } // namespace clang

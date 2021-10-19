@@ -67,11 +67,13 @@ static uint32_t statsPrinted = 0;
 // output interface
 static kmp_stats_output_module *__kmp_stats_global_output = NULL;
 
-double logHistogram::binMax[] = {
-    1.e1l,  1.e2l,  1.e3l,  1.e4l,  1.e5l,  1.e6l,  1.e7l,  1.e8l,
-    1.e9l,  1.e10l, 1.e11l, 1.e12l, 1.e13l, 1.e14l, 1.e15l, 1.e16l,
-    1.e17l, 1.e18l, 1.e19l, 1.e20l, 1.e21l, 1.e22l, 1.e23l, 1.e24l,
-    1.e25l, 1.e26l, 1.e27l, 1.e28l, 1.e29l, 1.e30l};
+double logHistogram::binMax[] = {1.e1l, 1.e2l, 1.e3l, 1.e4l, 1.e5l, 1.e6l,
+                                 1.e7l, 1.e8l, 1.e9l, 1.e10l, 1.e11l, 1.e12l,
+                                 1.e13l, 1.e14l, 1.e15l, 1.e16l, 1.e17l, 1.e18l,
+                                 1.e19l, 1.e20l, 1.e21l, 1.e22l, 1.e23l, 1.e24l,
+                                 1.e25l, 1.e26l, 1.e27l, 1.e28l, 1.e29l, 1.e30l,
+                                 // Always have infinity be the last value
+                                 std::numeric_limits<double>::infinity()};
 
 /* ************* statistic member functions ************* */
 
@@ -133,7 +135,7 @@ void statistic::scale(double factor) {
 }
 
 std::string statistic::format(char unit, bool total) const {
-  std::string result = formatSI(sampleCount, 9, ' ');
+  std::string result = formatSI((double)sampleCount, 9, ' ');
 
   if (sampleCount == 0) {
     result = result + std::string(", ") + formatSI(0.0, 9, unit);
@@ -181,13 +183,10 @@ uint32_t logHistogram::findBin(double sample) {
   // According to a micro-architect this is likely to be faster than a binary
   // search, since
   // it will only have one branch mis-predict
-  for (int b = 0; b < numBins; b++)
+  for (int b = 0; b < numBins - 1; b++)
     if (binMax[b] > v)
       return b;
-  fprintf(stderr,
-          "Trying to add a sample that is too large into a histogram\n");
-  KMP_ASSERT(0);
-  return -1;
+  return numBins - 1;
 }
 
 void logHistogram::addSample(double sample) {
@@ -224,8 +223,12 @@ std::string logHistogram::format(char unit) const {
     result << "\n";
   }
   for (int i = minBin(); i <= maxBin(); i++) {
-    result << "10**" << i << "<=v<10**" << (i + 1) << ", "
-           << formatSI(count(i), 9, ' ') << ", " << formatSI(total(i), 9, unit);
+    result << "10**" << i << "<=v<";
+    if (i + 1 == numBins - 1)
+      result << "infinity, ";
+    else
+      result << "10**" << (i + 1) << ", ";
+    result << formatSI(count(i), 9, ' ') << ", " << formatSI(total(i), 9, unit);
     if (i != maxBin())
       result << "\n";
   }
@@ -461,7 +464,7 @@ int kmp_stats_output_module::printPerThreadFlag = 0;
 int kmp_stats_output_module::printPerThreadEventsFlag = 0;
 
 static char const *lastName(char *name) {
-  int l = strlen(name);
+  int l = (int)strlen(name);
   for (int i = l - 1; i >= 0; --i) {
     if (name[i] == '.')
       name[i] = '_';
@@ -656,7 +659,7 @@ void kmp_stats_output_module::printCounters(FILE *statsOut,
   for (int c = 0; c < COUNTER_LAST; c++) {
     counter const *stat = &theCounters[c];
     fprintf(statsOut, "%-25s, %s\n", counter::name(counter_e(c)),
-            formatSI(stat->getValue(), 9, ' ').c_str());
+            formatSI((double)stat->getValue(), 9, ' ').c_str());
   }
 }
 
@@ -692,22 +695,23 @@ void kmp_stats_output_module::windupExplicitTimers() {
 void kmp_stats_output_module::printPloticusFile() {
   int i;
   int size = __kmp_stats_list->size();
-  FILE *plotOut = fopen(plotFileName, "w+");
-
+  kmp_safe_raii_file_t plotOut(plotFileName, "w+");
   fprintf(plotOut, "#proc page\n"
                    "   pagesize: 15 10\n"
                    "   scale: 1.0\n\n");
 
-  fprintf(plotOut, "#proc getdata\n"
-                   "   file: %s\n\n",
+  fprintf(plotOut,
+          "#proc getdata\n"
+          "   file: %s\n\n",
           eventsFileName);
 
-  fprintf(plotOut, "#proc areadef\n"
-                   "   title: OpenMP Sampling Timeline\n"
-                   "   titledetails: align=center size=16\n"
-                   "   rectangle: 1 1 13 9\n"
-                   "   xautorange: datafield=2,3\n"
-                   "   yautorange: -1 %d\n\n",
+  fprintf(plotOut,
+          "#proc areadef\n"
+          "   title: OpenMP Sampling Timeline\n"
+          "   titledetails: align=center size=16\n"
+          "   rectangle: 1 1 13 9\n"
+          "   xautorange: datafield=2,3\n"
+          "   yautorange: -1 %d\n\n",
           size);
 
   fprintf(plotOut, "#proc xaxis\n"
@@ -716,12 +720,13 @@ void kmp_stats_output_module::printPloticusFile() {
                    "   label: Time (ticks)\n"
                    "   labeldetails: size=14\n\n");
 
-  fprintf(plotOut, "#proc yaxis\n"
-                   "   stubs: inc 1\n"
-                   "   stubrange: 0 %d\n"
-                   "   stubdetails: size=12\n"
-                   "   label: Thread #\n"
-                   "   labeldetails: size=14\n\n",
+  fprintf(plotOut,
+          "#proc yaxis\n"
+          "   stubs: inc 1\n"
+          "   stubrange: 0 %d\n"
+          "   stubdetails: size=12\n"
+          "   label: Thread #\n"
+          "   labeldetails: size=14\n\n",
           size - 1);
 
   fprintf(plotOut, "#proc bars\n"
@@ -735,10 +740,11 @@ void kmp_stats_output_module::printPloticusFile() {
   for (i = 0; i < TIMER_LAST; i++) {
     if (timeStat::logEvent((timer_e)i)) {
       rgb_color c = getEventColor((timer_e)i);
-      fprintf(plotOut, "#proc legendentry\n"
-                       "   sampletype: color\n"
-                       "   label: %s\n"
-                       "   details: rgb(%1.1f,%1.1f,%1.1f)\n\n",
+      fprintf(plotOut,
+              "#proc legendentry\n"
+              "   sampletype: color\n"
+              "   label: %s\n"
+              "   details: rgb(%1.1f,%1.1f,%1.1f)\n\n",
               timeStat::name((timer_e)i), c.r, c.g, c.b);
     }
   }
@@ -746,7 +752,6 @@ void kmp_stats_output_module::printPloticusFile() {
   fprintf(plotOut, "#proc legend\n"
                    "   format: down\n"
                    "   location: max max\n\n");
-  fclose(plotOut);
   return;
 }
 
@@ -797,14 +802,16 @@ void kmp_stats_output_module::outputStats(const char *heading) {
                                        normal timer stats */
   statistic allCounters[COUNTER_LAST];
 
-  FILE *statsOut =
-      !outputFileName.empty() ? fopen(outputFileName.c_str(), "a+") : stderr;
-  if (!statsOut)
-    statsOut = stderr;
+  kmp_safe_raii_file_t statsOut;
+  if (!outputFileName.empty()) {
+    statsOut.open(outputFileName.c_str(), "a+");
+  } else {
+    statsOut.set_stderr();
+  }
 
-  FILE *eventsOut;
+  kmp_safe_raii_file_t eventsOut;
   if (eventPrintingEnabled()) {
-    eventsOut = fopen(eventsFileName, "w+");
+    eventsOut.open(eventsFileName, "w+");
   }
 
   printHeaderInfo(statsOut);
@@ -829,10 +836,10 @@ void kmp_stats_output_module::outputStats(const char *heading) {
     // Accumulate timers.
     for (timer_e s = timer_e(0); s < TIMER_LAST; s = timer_e(s + 1)) {
       // See if we should ignore this timer when aggregating
-      if ((timeStat::masterOnly(s) && (t != 0)) || // Timer only valid on master
-          // and this thread is worker
+      if ((timeStat::masterOnly(s) && (t != 0)) || // Timer only valid on
+          // primary thread and this thread is worker
           (timeStat::workerOnly(s) && (t == 0)) // Timer only valid on worker
-          // and this thread is the master
+          // and this thread is the primary thread
           ) {
         continue;
       }
@@ -849,22 +856,18 @@ void kmp_stats_output_module::outputStats(const char *heading) {
     for (counter_e c = counter_e(0); c < COUNTER_LAST; c = counter_e(c + 1)) {
       if (counter::masterOnly(c) && t != 0)
         continue;
-      allCounters[c].addSample((*it)->getCounter(c)->getValue());
+      allCounters[c].addSample((double)(*it)->getCounter(c)->getValue());
     }
   }
 
   if (eventPrintingEnabled()) {
     printPloticusFile();
-    fclose(eventsOut);
   }
 
   fprintf(statsOut, "Aggregate for all threads\n");
   printTimerStats(statsOut, &allStats[0], &totalStats[0]);
   fprintf(statsOut, "\n");
   printCounterStats(statsOut, &allCounters[0]);
-
-  if (statsOut != stderr)
-    fclose(statsOut);
 }
 
 /* *************  exported C functions ************** */

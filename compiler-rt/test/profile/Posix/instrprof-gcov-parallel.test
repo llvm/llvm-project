@@ -10,9 +10,6 @@ RUN: %run %t.driver %t.target
 RUN: llvm-cov gcov instrprof-gcov-parallel.target.gcda
 RUN: FileCheck --input-file instrprof-gcov-parallel.target.c.gcov %s
 
-# Bug 42535
-# XFAIL: sparc-target-arch
-
 # Test if the .gcda file is correctly created from one of child processes
 # and counters of all processes are recorded correctly.
 # 707 = CHILDREN * COUNT

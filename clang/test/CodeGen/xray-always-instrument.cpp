@@ -16,8 +16,8 @@ void foo() {}
 
 void baz() {}
 
-// CHECK: define void @_Z3foov() #[[ALWAYSATTR:[0-9]+]] {
-// CHECK: define void @_Z3barv() #[[NEVERATTR:[0-9]+]] {
-// CHECK: define void @_Z3bazv() #[[ALWAYSATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z3foov() #[[ALWAYSATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z3barv() #[[NEVERATTR:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z3bazv() #[[ALWAYSATTR:[0-9]+]] {
 // CHECK: attributes #[[ALWAYSATTR]] = {{.*}} "function-instrument"="xray-always" {{.*}}
 // CHECK: attributes #[[NEVERATTR]] = {{.*}} "function-instrument"="xray-never" {{.*}}

@@ -3,6 +3,8 @@ from __future__ import absolute_import
 # System modules
 from distutils.version import LooseVersion
 from functools import wraps
+import ctypes
+import locale
 import os
 import platform
 import re
@@ -85,7 +87,20 @@ def _match_decorator_property(expected, actual):
         return expected == actual
 
 
-def expectedFailure(func, bugnumber=None):
+def _compiler_supports(compiler, flag):
+    """Test whether the compiler supports the given flag."""
+    if platform.system() == 'Darwin':
+        compiler = "xcrun " + compiler
+    f = tempfile.NamedTemporaryFile()
+    try:
+        cmd = "echo 'int main() {}' | %s %s -x c -o %s -" % (compiler, flag, f.name)
+        subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
+def expectedFailure(func):
     return unittest2.expectedFailure(func)
 
 def expectedFailureIfFn(expected_fn, bugnumber=None):
@@ -372,23 +387,12 @@ def apple_simulator_test(platform):
 
 def debugserver_test(func):
     """Decorate the item as a debugserver test."""
-    def should_skip_debugserver_test():
-        return "debugserver tests" if configuration.dont_do_debugserver_test else None
-    return skipTestIfFn(should_skip_debugserver_test)(func)
+    return add_test_categories(["debugserver"])(func)
 
 
 def llgs_test(func):
     """Decorate the item as a lldb-server test."""
-    def should_skip_llgs_tests():
-        return "llgs tests" if configuration.dont_do_llgs_test else None
-    return skipTestIfFn(should_skip_llgs_tests)(func)
-
-
-def not_remote_testsuite_ready(func):
-    """Decorate the item as a test which is not ready yet for remote testsuite."""
-    def is_remote():
-        return "Not ready for remote testsuite" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
+    return add_test_categories(["llgs"])(func)
 
 
 def expectedFailureOS(
@@ -549,22 +553,28 @@ def skipIfiOSSimulator(func):
     return skipTestIfFn(is_ios_simulator)(func)
 
 def skipIfiOS(func):
-    return skipIfPlatform(["ios"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.ios))(func)
 
 def skipIftvOS(func):
-    return skipIfPlatform(["tvos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.tvos))(func)
 
 def skipIfwatchOS(func):
-    return skipIfPlatform(["watchos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.watchos))(func)
 
 def skipIfbridgeOS(func):
-    return skipIfPlatform(["bridgeos"])(func)
+    return skipIfPlatform(lldbplatform.translate(lldbplatform.bridgeos))(func)
 
 def skipIfDarwinEmbedded(func):
     """Decorate the item to skip tests that should be skipped on Darwin armv7/arm64 targets."""
     return skipIfPlatform(
         lldbplatform.translate(
             lldbplatform.darwin_embedded))(func)
+
+def skipIfDarwinSimulator(func):
+    """Decorate the item to skip tests that should be skipped on Darwin simulator targets."""
+    return skipIfPlatform(
+        lldbplatform.translate(
+            lldbplatform.darwin_simulator))(func)
 
 def skipIfFreeBSD(func):
     """Decorate the item to skip tests that should be skipped on FreeBSD."""
@@ -591,6 +601,17 @@ def skipIfLinux(func):
 def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
+
+def skipIfWindowsAndNonEnglish(func):
+    """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
+    def is_Windows_NonEnglish(self):
+        if sys.platform != "win32":
+            return None
+        kernel = ctypes.windll.kernel32
+        if locale.windows_locale[ kernel.GetUserDefaultUILanguage() ] == "en_US":
+            return None
+        return "skipping non-English Windows locale"
+    return skipTestIfFn(is_Windows_NonEnglish)(func)
 
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
@@ -722,12 +743,7 @@ def skipUnlessThreadSanitizer(func):
         # rdar://28659145 - TSAN tests don't look like they're supported on i386
         if self.getArchitecture() == 'i386' and platform.system() == 'Darwin':
             return "TSAN tests not compatible with i386 targets"
-        f = tempfile.NamedTemporaryFile()
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
-            return None  # The compiler cannot compile at all, let's *not* skip the test
-        cmd = "echo 'int main() {}' | %s -fsanitize=thread -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(compiler_path, '-fsanitize=thread'):
             return "Compiler cannot compile with -fsanitize=thread"
         return None
     return skipTestIfFn(is_compiler_clang_with_thread_sanitizer)(func)
@@ -748,8 +764,7 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
         outputf = tempfile.NamedTemporaryFile()
 
         # Try to compile with ubsan turned on.
-        cmd = '%s -fsanitize=undefined %s -o %s' % (self.getCompiler(), inputf.name, outputf.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(self.getCompiler(), '-fsanitize=undefined'):
             return "Compiler cannot compile with -fsanitize=undefined"
 
         # Check that we actually see ubsan instrumentation in the binary.
@@ -797,16 +812,9 @@ def skipUnlessAddressSanitizer(func):
         if is_running_under_asan():
             return "Address sanitizer tests are disabled when runing under ASAN"
 
-        compiler_path = self.getCompiler()
-        compiler = os.path.basename(compiler_path)
-        f = tempfile.NamedTemporaryFile()
         if lldbplatformutil.getPlatform() == 'windows':
             return "ASAN tests not compatible with 'windows'"
-        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
-            return None  # The compiler cannot compile at all, let's *not* skip the test
-        cmd = "echo 'int main() {}' | %s -fsanitize=address -x c -o %s -" % (compiler_path, f.name)
-        if os.popen(cmd).close() is not None:
+        if not _compiler_supports(self.getCompiler(), '-fsanitize=address'):
             return "Compiler cannot compile with -fsanitize=address"
         return None
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
@@ -815,11 +823,53 @@ def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""
     return skipTestIfFn(is_running_under_asan)(func)
 
-def _get_bool_config_skip_if_decorator(key):
+def skipUnlessAArch64MTELinuxCompiler(func):
+    """Decorate the item to skip test unless MTE is supported by the test compiler."""
+
+    def is_toolchain_with_mte(self):
+        compiler_path = self.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        f = tempfile.NamedTemporaryFile()
+        if lldbplatformutil.getPlatform() == 'windows':
+            return "MTE tests are not compatible with 'windows'"
+
+        cmd = "echo 'int main() {}' | %s -x c -o %s -" % (compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            # Cannot compile at all, don't skip the test
+            # so that we report the broken compiler normally.
+            return None
+
+        # We need the Linux headers and ACLE MTE intrinsics
+        test_src = """
+            #include <asm/hwcap.h>
+            #include <arm_acle.h>
+            #ifndef HWCAP2_MTE
+            #error
+            #endif
+            int main() {
+                void* ptr = __arm_mte_create_random_tag((void*)(0), 0);
+            }"""
+        cmd = "echo '%s' | %s -march=armv8.5-a+memtag -x c -o %s -" % (test_src, compiler_path, f.name)
+        if os.popen(cmd).close() is not None:
+            return "Toolchain does not support MTE"
+        return None
+
+    return skipTestIfFn(is_toolchain_with_mte)(func)
+
+def _get_bool_config(key, fail_value = True):
+    """
+    Returns the current LLDB's build config value.
+    :param key The key to lookup in LLDB's build configuration.
+    :param fail_value The error value to return when the key can't be found.
+           Defaults to true so that if an unknown key is lookup up we rather
+           enable more tests (that then fail) than silently skipping them.
+    """
     config = lldb.SBDebugger.GetBuildConfiguration()
     value_node = config.GetValueForKey(key)
-    fail_value = True # More likely to notice if something goes wrong
-    have = value_node.GetValueForKey("value").GetBooleanValue(fail_value)
+    return value_node.GetValueForKey("value").GetBooleanValue(fail_value)
+
+def _get_bool_config_skip_if_decorator(key):
+    have = _get_bool_config(key)
     return unittest2.skipIf(not have, "requires " + key)
 
 def skipIfCursesSupportMissing(func):
@@ -858,9 +908,3 @@ def skipUnlessFeature(feature):
             except subprocess.CalledProcessError:
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
-
-def skipIfReproducer(func):
-    """Skip this test if the environment is set up to run LLDB with reproducers."""
-    return unittest2.skipIf(
-        configuration.capture_path or configuration.replay_path,
-        "reproducers unsupported")(func)

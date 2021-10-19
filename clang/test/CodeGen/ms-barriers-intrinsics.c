@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple i686--windows -emit-llvm %s -o - \
-// RUN:         | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-I386
+// RUN:         | FileCheck %s
 // RUN: %clang_cc1 -ffreestanding -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 \
 // RUN:         -triple x86_64--windows -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-X64

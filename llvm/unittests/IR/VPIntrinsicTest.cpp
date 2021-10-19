@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -16,10 +17,16 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
+#include <sstream>
 
 using namespace llvm;
 
 namespace {
+
+static const char *ReductionIntOpcodes[] = {
+    "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
+
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
@@ -30,24 +37,92 @@ protected:
   LLVMContext C;
   SMDiagnostic Err;
 
-  std::unique_ptr<Module> CreateVPDeclarationModule() {
-      return parseAssemblyString(
-" declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.sdiv.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.srem.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.udiv.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.urem.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.and.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.xor.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.or.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) "
-" declare <8 x i32> @llvm.vp.ashr.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)  "
-" declare <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)  "
-" declare <8 x i32> @llvm.vp.shl.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ",
-          Err, C);
+  std::unique_ptr<Module> createVPDeclarationModule() {
+    const char *BinaryIntOpcodes[] = {"add",  "sub",  "mul", "sdiv", "srem",
+                                      "udiv", "urem", "and", "xor",  "or",
+                                      "ashr", "lshr", "shl"};
+    std::stringstream Str;
+    for (const char *BinaryIntOpcode : BinaryIntOpcodes)
+      Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
+          << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
+
+    const char *BinaryFPOpcodes[] = {"fadd", "fsub", "fmul", "fdiv", "frem"};
+    for (const char *BinaryFPOpcode : BinaryFPOpcodes)
+      Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
+          << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
+
+    Str << " declare void @llvm.vp.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, "
+           "<8 x i1>, i32) ";
+    Str << " declare void @llvm.vp.scatter.v8i32.v8p0i32(<8 x i32>, <8 x "
+           "i32*>, <8 x i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>*, <8 x "
+           "i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
+           "i1>, i32) ";
+
+    for (const char *ReductionOpcode : ReductionIntOpcodes)
+      Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
+          << ".v8i32(i32, <8 x i32>, <8 x i1>, i32) ";
+
+    for (const char *ReductionOpcode : ReductionFPOpcodes)
+      Str << " declare float @llvm.vp.reduce." << ReductionOpcode
+          << ".v8f32(float, <8 x float>, <8 x i1>, i32) ";
+
+    Str << " declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x "
+           "i32>, i32)";
+    Str << " declare <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x "
+           "i32>, <8 x i32>, i32, <8 x i1>, i32, i32) ";
+
+    return parseAssemblyString(Str.str(), Err, C);
   }
 };
+
+/// Check that the property scopes include/llvm/IR/VPIntrinsics.def are closed.
+TEST_F(VPIntrinsicTest, VPIntrinsicsDefScopes) {
+  Optional<Intrinsic::ID> ScopeVPID;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
+  ASSERT_FALSE(ScopeVPID.hasValue());                                          \
+  ScopeVPID = Intrinsic::VPID;
+#define END_REGISTER_VP_INTRINSIC(VPID)                                        \
+  ASSERT_TRUE(ScopeVPID.hasValue());                                           \
+  ASSERT_EQ(ScopeVPID.getValue(), Intrinsic::VPID);                            \
+  ScopeVPID = None;
+
+  Optional<ISD::NodeType> ScopeOPC;
+#define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...)                                   \
+  ASSERT_FALSE(ScopeOPC.hasValue());                                           \
+  ScopeOPC = ISD::SDOPC;
+#define END_REGISTER_VP_SDNODE(SDOPC)                                          \
+  ASSERT_TRUE(ScopeOPC.hasValue());                                            \
+  ASSERT_EQ(ScopeOPC.getValue(), ISD::SDOPC);                                  \
+  ScopeOPC = None;
+#include "llvm/IR/VPIntrinsics.def"
+
+  ASSERT_FALSE(ScopeVPID.hasValue());
+  ASSERT_FALSE(ScopeOPC.hasValue());
+}
+
+/// Check that every VP intrinsic in the test module is recognized as a VP
+/// intrinsic.
+TEST_F(VPIntrinsicTest, VPModuleComplete) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  // Check that all @llvm.vp.* functions in the module are recognized vp
+  // intrinsics.
+  std::set<Intrinsic::ID> SeenIDs;
+  for (const auto &VPDecl : *M) {
+    ASSERT_TRUE(VPDecl.isIntrinsic());
+    ASSERT_TRUE(VPIntrinsic::isVPIntrinsic(VPDecl.getIntrinsicID()));
+    SeenIDs.insert(VPDecl.getIntrinsicID());
+  }
+
+  // Check that every registered VP intrinsic has an instance in the test
+  // module.
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
+  ASSERT_TRUE(SeenIDs.count(Intrinsic::VPID));
+#include "llvm/IR/VPIntrinsics.def"
+}
 
 /// Check that VPIntrinsic:canIgnoreVectorLengthParam() returns true
 /// if the vector length parameter does not mask off any lanes.
@@ -87,38 +162,39 @@ TEST_F(VPIntrinsicTest, CanIgnoreVectorLength) {
   auto *F = M->getFunction("test_static_vlen");
   assert(F);
 
-  const int NumExpected = 12;
-  const bool Expected[] = {false, true, false, false, false, true, false, false, true, false, true, false};
-  int i = 0;
+  const bool Expected[] = {false, true,  false, false, false, true,
+                           false, false, true,  false, true,  false};
+  const auto *ExpectedIt = std::begin(Expected);
   for (auto &I : F->getEntryBlock()) {
     VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(&I);
     if (!VPI)
       continue;
 
-    ASSERT_LT(i, NumExpected);
-    ASSERT_EQ(Expected[i], VPI->canIgnoreVectorLengthParam());
-    ++i;
+    ASSERT_NE(ExpectedIt, std::end(Expected));
+    ASSERT_EQ(*ExpectedIt, VPI->canIgnoreVectorLengthParam());
+    ++ExpectedIt;
   }
 }
 
 /// Check that the argument returned by
-/// VPIntrinsic::Get<X>ParamPos(Intrinsic::ID) has the expected type.
+/// VPIntrinsic::get<X>ParamPos(Intrinsic::ID) has the expected type.
 TEST_F(VPIntrinsicTest, GetParamPos) {
-  std::unique_ptr<Module> M = CreateVPDeclarationModule();
+  std::unique_ptr<Module> M = createVPDeclarationModule();
   assert(M);
 
   for (Function &F : *M) {
     ASSERT_TRUE(F.isIntrinsic());
-    Optional<int> MaskParamPos =
-        VPIntrinsic::GetMaskParamPos(F.getIntrinsicID());
+    Optional<unsigned> MaskParamPos =
+        VPIntrinsic::getMaskParamPos(F.getIntrinsicID());
     if (MaskParamPos.hasValue()) {
       Type *MaskParamType = F.getArg(MaskParamPos.getValue())->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
-      ASSERT_TRUE(cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
+      ASSERT_TRUE(
+          cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
     }
 
-    Optional<int> VecLenParamPos =
-        VPIntrinsic::GetVectorLengthParamPos(F.getIntrinsicID());
+    Optional<unsigned> VecLenParamPos =
+        VPIntrinsic::getVectorLengthParamPos(F.getIntrinsicID());
     if (VecLenParamPos.hasValue()) {
       Type *VecLenParamType = F.getArg(VecLenParamPos.getValue())->getType();
       ASSERT_TRUE(VecLenParamType->isIntegerTy(32));
@@ -139,20 +215,162 @@ TEST_F(VPIntrinsicTest, OpcodeRoundTrip) {
 
   unsigned FullTripCounts = 0;
   for (unsigned OC : Opcodes) {
-    Intrinsic::ID VPID = VPIntrinsic::GetForOpcode(OC);
-    // no equivalent VP intrinsic available
+    Intrinsic::ID VPID = VPIntrinsic::getForOpcode(OC);
+    // No equivalent VP intrinsic available.
     if (VPID == Intrinsic::not_intrinsic)
       continue;
 
-    unsigned RoundTripOC = VPIntrinsic::GetFunctionalOpcodeForVP(VPID);
-    // no equivalent Opcode available
-    if (RoundTripOC == Instruction::Call)
+    Optional<unsigned> RoundTripOC =
+        VPIntrinsic::getFunctionalOpcodeForVP(VPID);
+    // No equivalent Opcode available.
+    if (!RoundTripOC)
       continue;
 
-    ASSERT_EQ(RoundTripOC, OC);
+    ASSERT_EQ(*RoundTripOC, OC);
     ++FullTripCounts;
   }
   ASSERT_NE(FullTripCounts, 0u);
 }
 
+/// Check that going from VP intrinsic to Opcode and back results in the same
+/// intrinsic id.
+TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  unsigned FullTripCounts = 0;
+  for (const auto &VPDecl : *M) {
+    auto VPID = VPDecl.getIntrinsicID();
+    Optional<unsigned> OC = VPIntrinsic::getFunctionalOpcodeForVP(VPID);
+
+    // no equivalent Opcode available
+    if (!OC)
+      continue;
+
+    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForOpcode(*OC);
+
+    ASSERT_EQ(RoundTripVPID, VPID);
+    ++FullTripCounts;
+  }
+  ASSERT_NE(FullTripCounts, 0u);
+}
+
+/// Check that VPIntrinsic::getDeclarationForParams works.
+TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  auto OutM = std::make_unique<Module>("", M->getContext());
+
+  for (auto &F : *M) {
+    auto *FuncTy = F.getFunctionType();
+
+    // Declare intrinsic anew with explicit types.
+    std::vector<Value *> Values;
+    for (auto *ParamTy : FuncTy->params())
+      Values.push_back(UndefValue::get(ParamTy));
+
+    ASSERT_NE(F.getIntrinsicID(), Intrinsic::not_intrinsic);
+    auto *NewDecl = VPIntrinsic::getDeclarationForParams(
+        OutM.get(), F.getIntrinsicID(), Values);
+    ASSERT_TRUE(NewDecl);
+
+    // Check that 'old decl' == 'new decl'.
+    ASSERT_EQ(F.getIntrinsicID(), NewDecl->getIntrinsicID());
+    FunctionType::param_iterator ItNewParams =
+        NewDecl->getFunctionType()->param_begin();
+    FunctionType::param_iterator EndItNewParams =
+        NewDecl->getFunctionType()->param_end();
+    for (auto *ParamTy : FuncTy->params()) {
+      ASSERT_NE(ItNewParams, EndItNewParams);
+      ASSERT_EQ(*ItNewParams, ParamTy);
+      ++ItNewParams;
+    }
+  }
+}
+
+/// Check that the HANDLE_VP_TO_CONSTRAINEDFP maps to an existing intrinsic with
+/// the right amount of metadata args.
+TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
+#define HANDLE_VP_TO_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                 \
+  {                                                                            \
+    SmallVector<Intrinsic::IITDescriptor, 5> T;                                \
+    Intrinsic::getIntrinsicInfoTableEntries(Intrinsic::CFPID, T);              \
+    unsigned NumMetadataArgs = 0;                                              \
+    for (auto TD : T)                                                          \
+      NumMetadataArgs += (TD.Kind == Intrinsic::IITDescriptor::Metadata);      \
+    ASSERT_EQ(NumMetadataArgs, (unsigned)(HASROUND + HASEXCEPT));              \
+  }
+#include "llvm/IR/VPIntrinsics.def"
+}
+
 } // end anonymous namespace
+
+/// Check various properties of VPReductionIntrinsics
+TEST_F(VPIntrinsicTest, VPReductions) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  std::stringstream Str;
+  Str << "declare <8 x i32> @llvm.vp.mul.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, "
+         "i32)";
+  for (const char *ReductionOpcode : ReductionIntOpcodes)
+    Str << " declare i32 @llvm.vp.reduce." << ReductionOpcode
+        << ".v8i32(i32, <8 x i32>, <8 x i1>, i32) ";
+
+  for (const char *ReductionOpcode : ReductionFPOpcodes)
+    Str << " declare float @llvm.vp.reduce." << ReductionOpcode
+        << ".v8f32(float, <8 x float>, <8 x i1>, i32) ";
+
+  Str << "define void @test_reductions(i32 %start, <8 x i32> %val, float "
+         "%fpstart, <8 x float> %fpval, <8 x i1> %m, i32 %vl) {";
+
+  // Mix in a regular non-reduction intrinsic to check that the
+  // VPReductionIntrinsic subclass works as intended.
+  Str << "  %r0 = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %val, <8 x i32> "
+         "%val, <8 x i1> %m, i32 %vl)";
+
+  unsigned Idx = 1;
+  for (const char *ReductionOpcode : ReductionIntOpcodes)
+    Str << "  %r" << Idx++ << " = call i32 @llvm.vp.reduce." << ReductionOpcode
+        << ".v8i32(i32 %start, <8 x i32> %val, <8 x i1> %m, i32 %vl)";
+  for (const char *ReductionOpcode : ReductionFPOpcodes)
+    Str << "  %r" << Idx++ << " = call float @llvm.vp.reduce."
+        << ReductionOpcode
+        << ".v8f32(float %fpstart, <8 x float> %fpval, <8 x i1> %m, i32 %vl)";
+
+  Str << "  ret void"
+         "}";
+
+  std::unique_ptr<Module> M = parseAssemblyString(Str.str(), Err, C);
+  assert(M);
+
+  auto *F = M->getFunction("test_reductions");
+  assert(F);
+
+  for (const auto &I : F->getEntryBlock()) {
+    const VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(&I);
+    if (!VPI)
+      continue;
+
+    Intrinsic::ID ID = VPI->getIntrinsicID();
+    const auto *VPRedI = dyn_cast<VPReductionIntrinsic>(&I);
+
+    if (!VPReductionIntrinsic::isVPReduction(ID)) {
+      EXPECT_EQ(VPRedI, nullptr);
+      EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), false);
+      EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), false);
+      continue;
+    }
+
+    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID).hasValue(), true);
+    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID).hasValue(), true);
+    ASSERT_NE(VPRedI, nullptr);
+    EXPECT_EQ(VPReductionIntrinsic::getStartParamPos(ID),
+              VPRedI->getStartParamPos());
+    EXPECT_EQ(VPReductionIntrinsic::getVectorParamPos(ID),
+              VPRedI->getVectorParamPos());
+    EXPECT_EQ(VPRedI->getStartParamPos(), 0u);
+    EXPECT_EQ(VPRedI->getVectorParamPos(), 1u);
+  }
+}

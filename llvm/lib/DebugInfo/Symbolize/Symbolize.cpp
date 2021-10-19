@@ -39,9 +39,17 @@
 namespace llvm {
 namespace symbolize {
 
+template <typename T>
 Expected<DILineInfo>
-LLVMSymbolizer::symbolizeCodeCommon(SymbolizableModule *Info,
+LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
                                     object::SectionedAddress ModuleOffset) {
+
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
+
+  SymbolizableModule *Info = *InfoOrErr;
+
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -63,36 +71,23 @@ LLVMSymbolizer::symbolizeCodeCommon(SymbolizableModule *Info,
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
                               object::SectionedAddress ModuleOffset) {
-  StringRef ModuleName = Obj.getFileName();
-  auto I = Modules.find(ModuleName);
-  if (I != Modules.end())
-    return symbolizeCodeCommon(I->second.get(), ModuleOffset);
-
-  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
-  Expected<SymbolizableModule *> InfoOrErr =
-                     createModuleInfo(&Obj, std::move(Context), ModuleName);
-  if (!InfoOrErr)
-    return InfoOrErr.takeError();
-  return symbolizeCodeCommon(*InfoOrErr, ModuleOffset);
+  return symbolizeCodeCommon(Obj, ModuleOffset);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
                               object::SectionedAddress ModuleOffset) {
-  Expected<SymbolizableModule *> InfoOrErr = getOrCreateModuleInfo(ModuleName);
-  if (!InfoOrErr)
-    return InfoOrErr.takeError();
-  return symbolizeCodeCommon(*InfoOrErr, ModuleOffset);
+  return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
 
-Expected<DIInliningInfo>
-LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
-                                     object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+template <typename T>
+Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
+    const T &ModuleSpecifier, object::SectionedAddress ModuleOffset) {
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
+
+  SymbolizableModule *Info = *InfoOrErr;
 
   // A null module means an error has already been reported. Return an empty
   // result.
@@ -116,15 +111,28 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return InlinedContext;
 }
 
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(const ObjectFile &Obj,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(Obj, ModuleOffset);
+}
+
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
+}
+
+template <typename T>
 Expected<DIGlobal>
-LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
-                              object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+LLVMSymbolizer::symbolizeDataCommon(const T &ModuleSpecifier,
+                                    object::SectionedAddress ModuleOffset) {
+
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
 
+  SymbolizableModule *Info = *InfoOrErr;
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -142,15 +150,27 @@ LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   return Global;
 }
 
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(const ObjectFile &Obj,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(Obj, ModuleOffset);
+}
+
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(ModuleName, ModuleOffset);
+}
+
+template <typename T>
 Expected<std::vector<DILocal>>
-LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
-                               object::SectionedAddress ModuleOffset) {
-  SymbolizableModule *Info;
-  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
-    Info = InfoOrErr.get();
-  else
+LLVMSymbolizer::symbolizeFrameCommon(const T &ModuleSpecifier,
+                                     object::SectionedAddress ModuleOffset) {
+  auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
+  if (!InfoOrErr)
     return InfoOrErr.takeError();
 
+  SymbolizableModule *Info = *InfoOrErr;
   // A null module means an error has already been reported. Return an empty
   // result.
   if (!Info)
@@ -163,6 +183,18 @@ LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   return Info->symbolizeFrame(ModuleOffset);
+}
+
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(const ObjectFile &Obj,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(Obj, ModuleOffset);
+}
+
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
 
 void LLVMSymbolizer::flush() {
@@ -178,8 +210,8 @@ namespace {
 // /path/to/foo.dSYM/Contents/Resources/DWARF/foo.
 // For Path="/path/to/bar.dSYM" and Basename="foo" assume that debug info is in
 // /path/to/bar.dSYM/Contents/Resources/DWARF/foo.
-std::string getDarwinDWARFResourceForPath(
-    const std::string &Path, const std::string &Basename) {
+std::string getDarwinDWARFResourceForPath(const std::string &Path,
+                                          const std::string &Basename) {
   SmallString<16> ResourceName = StringRef(Path);
   if (sys::path::extension(Path) != ".dSYM") {
     ResourceName += ".dSYM";
@@ -287,10 +319,8 @@ bool darwinDsymMatchesBinary(const MachOObjectFile *DbgObj,
 }
 
 template <typename ELFT>
-Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> *Obj) {
-  if (!Obj)
-    return {};
-  auto PhdrsOrErr = Obj->program_headers();
+Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> &Obj) {
+  auto PhdrsOrErr = Obj.program_headers();
   if (!PhdrsOrErr) {
     consumeError(PhdrsOrErr.takeError());
     return {};
@@ -299,8 +329,9 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> *Obj) {
     if (P.p_type != ELF::PT_NOTE)
       continue;
     Error Err = Error::success();
-    for (auto N : Obj->notes(P, Err))
-      if (N.getType() == ELF::NT_GNU_BUILD_ID && N.getName() == ELF::ELF_NOTE_GNU)
+    for (auto N : Obj.notes(P, Err))
+      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
+          N.getName() == ELF::ELF_NOTE_GNU)
         return N.getDesc();
     consumeError(std::move(Err));
   }
@@ -323,8 +354,7 @@ Optional<ArrayRef<uint8_t>> getBuildID(const ELFObjectFileBase *Obj) {
 }
 
 bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
-                     const ArrayRef<uint8_t> BuildID,
-                     std::string &Result) {
+                     const ArrayRef<uint8_t> BuildID, std::string &Result) {
   auto getDebugPath = [&](StringRef Directory) {
     SmallString<128> Path{Directory};
     sys::path::append(Path, ".build-id",
@@ -336,11 +366,11 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
   if (DebugFileDirectory.empty()) {
     SmallString<128> Path = getDebugPath(
 #if defined(__NetBSD__)
-      // Try /usr/libdata/debug/.build-id/../...
-      "/usr/libdata/debug"
+        // Try /usr/libdata/debug/.build-id/../...
+        "/usr/libdata/debug"
 #else
-      // Try /usr/lib/debug/.build-id/../...
-      "/usr/lib/debug"
+        // Try /usr/lib/debug/.build-id/../...
+        "/usr/lib/debug"
 #endif
     );
     if (llvm::sys::fs::exists(Path)) {
@@ -363,7 +393,8 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
 } // end anonymous namespace
 
 ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
-    const MachOObjectFile *MachExeObj, const std::string &ArchName) {
+                                           const MachOObjectFile *MachExeObj,
+                                           const std::string &ArchName) {
   // On Darwin we may find DWARF in separate object file in
   // resource directory.
   std::vector<std::string> DsymPaths;
@@ -557,11 +588,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
       using namespace pdb;
       std::unique_ptr<IPDBSession> Session;
 
-      PDB_ReaderType ReaderType = PDB_ReaderType::Native;
-#if LLVM_ENABLE_DIA_SDK
-      if (!Opts.UseNativePDBReader)
-        ReaderType = PDB_ReaderType::DIA;
-#endif
+      PDB_ReaderType ReaderType =
+          Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
       if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                     Session)) {
         Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
@@ -572,8 +600,22 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context = DWARFContext::create(*Objects.second, nullptr, Opts.DWPName);
+    Context = DWARFContext::create(
+        *Objects.second, DWARFContext::ProcessDebugRelocations::Process,
+        nullptr, Opts.DWPName);
   return createModuleInfo(Objects.first, std::move(Context), ModuleName);
+}
+
+Expected<SymbolizableModule *>
+LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
+  StringRef ObjName = Obj.getFileName();
+  auto I = Modules.find(ObjName);
+  if (I != Modules.end())
+    return I->second.get();
+
+  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
+  // FIXME: handle COFF object with PDB info to use PDBContext
+  return createModuleInfo(&Obj, std::move(Context), ObjName);
 }
 
 namespace {
@@ -594,10 +636,8 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
   if (Front != '?') {
     size_t AtPos = SymbolName.rfind('@');
     if (AtPos != StringRef::npos &&
-        std::all_of(SymbolName.begin() + AtPos + 1, SymbolName.end(),
-                    [](char C) { return C >= '0' && C <= '9'; })) {
+        all_of(drop_begin(SymbolName, AtPos + 1), isDigit))
       SymbolName = SymbolName.substr(0, AtPos);
-    }
   }
 
   // Remove any ending '@' for vectorcall.
@@ -612,17 +652,9 @@ StringRef demanglePE32ExternCFunc(StringRef SymbolName) {
 std::string
 LLVMSymbolizer::DemangleName(const std::string &Name,
                              const SymbolizableModule *DbiModuleDescriptor) {
-  // We can spoil names of symbols with C linkage, so use an heuristic
-  // approach to check if the name should be demangled.
-  if (Name.substr(0, 2) == "_Z") {
-    int status = 0;
-    char *DemangledName = itaniumDemangle(Name.c_str(), nullptr, nullptr, &status);
-    if (status != 0)
-      return Name;
-    std::string Result = DemangledName;
-    free(DemangledName);
+  std::string Result;
+  if (nonMicrosoftDemangle(Name.c_str(), Result))
     return Result;
-  }
 
   if (!Name.empty() && Name.front() == '?') {
     // Only do MSVC C++ demangling on symbols starting with '?'.
@@ -633,7 +665,7 @@ LLVMSymbolizer::DemangleName(const std::string &Name,
                         MSDF_NoMemberType | MSDF_NoReturnType));
     if (status != 0)
       return Name;
-    std::string Result = DemangledName;
+    Result = DemangledName;
     free(DemangledName);
     return Result;
   }

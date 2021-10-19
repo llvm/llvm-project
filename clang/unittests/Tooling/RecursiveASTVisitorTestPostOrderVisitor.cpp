@@ -41,7 +41,7 @@ public:
   }
 
   bool VisitIntegerLiteral(IntegerLiteral *Lit) {
-    VisitedNodes.push_back(Lit->getValue().toString(10, false));
+    VisitedNodes.push_back(toString(Lit->getValue(), 10, false));
     return true;
   }
 

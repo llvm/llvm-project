@@ -64,9 +64,9 @@ class VersionTuple;
 /// constant references to global variables in the module.  When a global
 /// variable is destroyed, it should have no entries in the GlobalValueRefMap.
 /// The main container class for the LLVM Intermediate Representation.
-class Module {
-/// @name Types And Enumerations
-/// @{
+class LLVM_EXTERNAL_VISIBILITY Module {
+  /// @name Types And Enumerations
+  /// @{
 public:
   /// The type for the list of global variables.
   using GlobalListType = SymbolTableList<GlobalVariable>;
@@ -197,6 +197,14 @@ private:
                                   ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
+  StringMap<unsigned>
+      CurrentIntrinsicIds; ///< Keep track of the current unique id count for
+                           ///< the specified intrinsic basename.
+  DenseMap<std::pair<Intrinsic::ID, const FunctionType *>, unsigned>
+      UniquedIntrinsicNames; ///< Keep track of uniqued names of intrinsics
+                             ///< based on unnamed types. The combination of
+                             ///< ID and FunctionType maps to the extension that
+                             ///< is used to make the intrinsic name unique.
 
   friend class Constant;
 
@@ -221,7 +229,7 @@ public:
   /// Returns the number of non-debug IR instructions in the module.
   /// This is equivalent to the sum of the IR instruction counts of each
   /// function contained in the module.
-  unsigned getInstructionCount();
+  unsigned getInstructionCount() const;
 
   /// Get the module's original source file name. When compiling from
   /// bitcode, this is taken from a bitcode record where it was recorded.
@@ -316,6 +324,9 @@ public:
   /// name is not found.
   GlobalValue *getNamedValue(StringRef Name) const;
 
+  /// Return the number of global values in the module.
+  unsigned getNumNamedValues() const;
+
   /// Return a unique non-zero ID for the specified metadata kind. This ID is
   /// uniqued across modules in the current LLVMContext.
   unsigned getMDKindID(StringRef Name) const;
@@ -329,11 +340,12 @@ public:
   /// \see LLVMContext::getOperandBundleTagID
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
 
-  /// Return the type with the specified name, or null if there is none by that
-  /// name.
-  StructType *getTypeByName(StringRef Name) const;
-
   std::vector<StructType *> getIdentifiedStructTypes() const;
+
+  /// Return a unique name for an intrinsic whose mangling is based on an
+  /// unnamed type. The Proto represents the function prototype.
+  std::string getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
+                                     const FunctionType *Proto);
 
 /// @}
 /// @name Function Accessors
@@ -709,14 +721,19 @@ public:
   }
 
   /// An iterator for DICompileUnits that skips those marked NoDebug.
-  class debug_compile_units_iterator
-      : public std::iterator<std::input_iterator_tag, DICompileUnit *> {
+  class debug_compile_units_iterator {
     NamedMDNode *CUs;
     unsigned Idx;
 
     void SkipNoDebugCUs();
 
   public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = DICompileUnit *;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     explicit debug_compile_units_iterator(NamedMDNode *CUs, unsigned Idx)
         : CUs(CUs), Idx(Idx) {
       SkipNoDebugCUs();
@@ -809,6 +826,9 @@ public:
   /// Returns the Dwarf Version by checking module flags.
   unsigned getDwarfVersion() const;
 
+  /// Returns the DWARF format by checking module flags.
+  bool isDwarf64() const;
+
   /// Returns the CodeView Version by checking module flags.
   /// Returns zero if not present in module.
   unsigned getCodeViewFlag() const;
@@ -854,12 +874,11 @@ public:
 
   /// Returns profile summary metadata. When IsCS is true, use the context
   /// sensitive profile summary.
-  Metadata *getProfileSummary(bool IsCS);
+  Metadata *getProfileSummary(bool IsCS) const;
   /// @}
 
   /// Returns whether semantic interposition is to be respected.
   bool getSemanticInterposition() const;
-  bool noSemanticInterposition() const;
 
   /// Set whether semantic interposition is to be respected.
   void setSemanticInterposition(bool);
@@ -869,6 +888,33 @@ public:
 
   /// Set that PLT should be avoid for RTLib calls.
   void setRtLibUseGOT();
+
+  /// Get/set whether synthesized functions should get the uwtable attribute.
+  bool getUwtable() const;
+  void setUwtable();
+
+  /// Get/set whether synthesized functions should get the "frame-pointer"
+  /// attribute.
+  FramePointerKind getFramePointer() const;
+  void setFramePointer(FramePointerKind Kind);
+
+  /// Get/set what kind of stack protector guard to use.
+  StringRef getStackProtectorGuard() const;
+  void setStackProtectorGuard(StringRef Kind);
+
+  /// Get/set which register to use as the stack protector guard register. The
+  /// empty string is equivalent to "global". Other values may be "tls" or
+  /// "sysreg".
+  StringRef getStackProtectorGuardReg() const;
+  void setStackProtectorGuardReg(StringRef Reg);
+
+  /// Get/set what offset from the stack protector to use.
+  int getStackProtectorGuardOffset() const;
+  void setStackProtectorGuardOffset(int Offset);
+
+  /// Get/set the stack alignment overridden from the default.
+  unsigned getOverrideStackAlignment() const;
+  void setOverrideStackAlignment(unsigned Align);
 
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
@@ -890,10 +936,11 @@ public:
   void setPartialSampleProfileRatio(const ModuleSummaryIndex &Index);
 };
 
-/// Given "llvm.used" or "llvm.compiler.used" as a global name, collect
-/// the initializer elements of that global in Set and return the global itself.
+/// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
+/// initializer elements of that global in a SmallVector and return the global
+/// itself.
 GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallPtrSetImpl<GlobalValue *> &Set,
+                                           SmallVectorImpl<GlobalValue *> &Vec,
                                            bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.

@@ -25,6 +25,12 @@ struct Dummy {
   Dummy(Dummy &&) = default;
 };
 
+struct NotCopyOrMoveConstructible {
+  NotCopyOrMoveConstructible() = default;
+  NotCopyOrMoveConstructible(NotCopyOrMoveConstructible const&) = delete;
+  NotCopyOrMoveConstructible(NotCopyOrMoveConstructible&&) = delete;
+};
+
 int main(int, char**)
 {
     {
@@ -40,6 +46,31 @@ int main(int, char**)
         static_assert(!std::is_copy_constructible<P>::value, "");
         static_assert(std::is_move_constructible<P>::value, "");
     }
+    {
+        // When constructing a pair containing a reference, we only bind the
+        // reference, so it doesn't matter whether the type is or isn't
+        // copy/move constructible.
+        {
+            using P = std::pair<NotCopyOrMoveConstructible&, int>;
+            static_assert(std::is_move_constructible<P>::value, "");
 
-  return 0;
+            NotCopyOrMoveConstructible obj;
+            P p2{obj, 3};
+            P p1(std::move(p2));
+            assert(&p1.first == &obj);
+            assert(&p2.first == &obj);
+        }
+        {
+            using P = std::pair<NotCopyOrMoveConstructible&&, int>;
+            static_assert(std::is_move_constructible<P>::value, "");
+
+            NotCopyOrMoveConstructible obj;
+            P p2{std::move(obj), 3};
+            P p1(std::move(p2));
+            assert(&p1.first == &obj);
+            assert(&p2.first == &obj);
+        }
+    }
+
+    return 0;
 }

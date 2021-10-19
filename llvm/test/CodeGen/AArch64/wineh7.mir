@@ -6,28 +6,15 @@
 # CHECK-NEXT:      FunctionLength: 72
 # CHECK-NEXT:      Version: 0
 # CHECK-NEXT:      ExceptionData: No
-# CHECK-NEXT:      EpiloguePacked: No
-# CHECK-NEXT:      EpilogueScopes: 1
-# CHECK-NEXT:      ByteCodeLength: 16
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 0
+# CHECK-NEXT:      ByteCodeLength: 8
 # CHECK-NEXT:      Prologue [
 # CHECK-NEXT:        0xe204              ; add fp, sp, #32
 # CHECK-NEXT:        0x44                ; stp x29, x30, [sp, #32]
 # CHECK-NEXT:        0xc802              ; stp x19, x20, [sp, #16]
 # CHECK-NEXT:        0xcc85              ; stp x21, x22, [sp, #-48]!
 # CHECK-NEXT:        0xe4                ; end
-# CHECK-NEXT:      ]
-# CHECK-NEXT:      EpilogueScopes [
-# CHECK-NEXT:        EpilogueScope {
-# CHECK-NEXT:          StartOffset: 13
-# CHECK-NEXT:          EpilogueStartIndex: 8
-# CHECK-NEXT:          Opcodes [
-# CHECK-NEXT:            0xe204              ; add fp, sp, #32
-# CHECK-NEXT:            0x44                ; ldp x29, x30, [sp, #32]
-# CHECK-NEXT:            0xc802              ; ldp x19, x20, [sp, #16]
-# CHECK-NEXT:            0xcc85              ; ldp x21, x22, [sp], #48
-# CHECK-NEXT:            0xe4                ; end
-# CHECK-NEXT:          ]
-# CHECK-NEXT:        }
 # CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:  }
@@ -96,11 +83,11 @@ body:             |
   bb.0.entry:
     liveins: $w0, $w1, $w2, $w3, $x21, $x22, $x19, $x20, $lr
 
-    early-clobber $sp = frame-setup STPXpre killed $x21, killed $x22, $sp, -6 :: (store 8 into %stack.5), (store 8 into %stack.6)
+    early-clobber $sp = frame-setup STPXpre killed $x21, killed $x22, $sp, -6 :: (store (s64) into %stack.5), (store (s64) into %stack.6)
     frame-setup SEH_SaveRegP_X 21, 22, -48
-    frame-setup STPXi killed $x19, killed $x20, $sp, 2 :: (store 8 into %stack.3), (store 8 into %stack.4)
+    frame-setup STPXi killed $x19, killed $x20, $sp, 2 :: (store (s64) into %stack.3), (store (s64) into %stack.4)
     frame-setup SEH_SaveRegP 19, 20, 16
-    frame-setup STPXi killed $fp, killed $lr, $sp, 4 :: (store 8 into %stack.1), (store 8 into %stack.2)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 4 :: (store (s64) into %stack.1), (store (s64) into %stack.2)
     frame-setup SEH_SaveFPLR 32
     $fp = frame-setup ADDXri $sp, 32, 0
     frame-setup SEH_AddFP 32
@@ -122,11 +109,11 @@ body:             |
     frame-destroy SEH_EpilogStart
     $sp = frame-destroy SUBXri $fp, 32, 0
     frame-destroy SEH_AddFP 32
-    $fp, $lr = frame-destroy LDPXi $sp, 4 :: (load 8 from %stack.1), (load 8 from %stack.2)
+    $fp, $lr = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.1), (load (s64) from %stack.2)
     frame-destroy SEH_SaveFPLR 32
-    $x19, $x20 = frame-destroy LDPXi $sp, 2 :: (load 8 from %stack.3), (load 8 from %stack.4)
+    $x19, $x20 = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.3), (load (s64) from %stack.4)
     frame-destroy SEH_SaveRegP 19, 20, 16
-    early-clobber $sp, $x21, $x22 = frame-destroy LDPXpost $sp, 6 :: (load 8 from %stack.5), (load 8 from %stack.6)
+    early-clobber $sp, $x21, $x22 = frame-destroy LDPXpost $sp, 6 :: (load (s64) from %stack.5), (load (s64) from %stack.6)
     frame-destroy SEH_SaveRegP_X 21, 22, -48
     frame-destroy SEH_EpilogEnd
     RET_ReallyLR implicit $w0

@@ -18,11 +18,11 @@ define i32 @main() {
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll __D3nan5printFeZv
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    fldt LCPI0_0
+; CHECK-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll __D3nan5printFeZv
 ; CHECK-NEXT:    subl $16, %esp
-; CHECK-NEXT:    fldt LCPI0_1
+; CHECK-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll __D3nan5printFeZv
 ; CHECK-NEXT:    subl $16, %esp

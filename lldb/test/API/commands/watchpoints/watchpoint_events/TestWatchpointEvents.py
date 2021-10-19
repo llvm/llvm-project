@@ -24,11 +24,7 @@ class TestWatchpointEvents (TestBase):
     def test_with_python_api(self):
         """Test that adding, deleting and modifying watchpoints sends the appropriate events."""
         self.build()
-
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
@@ -84,7 +80,7 @@ class TestWatchpointEvents (TestBase):
         local_watch.SetCondition(condition)
         self.GetWatchpointEvent(lldb.eWatchpointEventTypeConditionChanged)
 
-        self.assertTrue(local_watch.GetCondition() == condition,
+        self.assertEqual(local_watch.GetCondition(), condition,
                         'make sure watchpoint condition is "' + condition + '"')
 
     def GetWatchpointEvent(self, event_type):
@@ -96,8 +92,8 @@ class TestWatchpointEvents (TestBase):
             lldb.SBWatchpoint.EventIsWatchpointEvent(event),
             "Event is a watchpoint event.")
         found_type = lldb.SBWatchpoint.GetWatchpointEventTypeFromEvent(event)
-        self.assertTrue(
-            found_type == event_type,
+        self.assertEqual(
+            found_type, event_type,
             "Event is not correct type, expected: %d, found: %d" %
             (event_type,
              found_type))

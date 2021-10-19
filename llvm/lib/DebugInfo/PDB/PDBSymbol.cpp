@@ -161,9 +161,26 @@ PDBSymbol::findChildrenByRVA(PDB_SymType Type, StringRef Name,
 }
 
 std::unique_ptr<IPDBEnumSymbols>
+PDBSymbol::findInlineFramesByVA(uint64_t VA) const {
+  return RawSymbol->findInlineFramesByVA(VA);
+}
+
+std::unique_ptr<IPDBEnumSymbols>
 PDBSymbol::findInlineFramesByRVA(uint32_t RVA) const {
   return RawSymbol->findInlineFramesByRVA(RVA);
 }
+
+std::unique_ptr<IPDBEnumLineNumbers>
+PDBSymbol::findInlineeLinesByVA(uint64_t VA, uint32_t Length) const {
+  return RawSymbol->findInlineeLinesByVA(VA, Length);
+}
+
+std::unique_ptr<IPDBEnumLineNumbers>
+PDBSymbol::findInlineeLinesByRVA(uint32_t RVA, uint32_t Length) const {
+  return RawSymbol->findInlineeLinesByRVA(RVA, Length);
+}
+
+std::string PDBSymbol::getName() const { return RawSymbol->getName(); }
 
 std::unique_ptr<IPDBEnumSymbols>
 PDBSymbol::getChildStats(TagStats &Stats) const {

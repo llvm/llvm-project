@@ -4,7 +4,7 @@
 
 %frame = type { %Foo, i32, %Foo }
 
-declare void @f(%frame* inalloca %a)
+declare void @f(%frame* inalloca(%frame) %a)
 
 declare void @Foo_ctor(%Foo* %this)
 
@@ -28,7 +28,7 @@ entry:
 ; CHECK-NEXT: pushl
 ; CHECK-NEXT: calll _Foo_ctor
 ; CHECK: addl $4, %esp
-  call void @f(%frame* inalloca %args)
+  call void @f(%frame* inalloca(%frame) %args)
 ; CHECK: calll   _f
   ret void
 }

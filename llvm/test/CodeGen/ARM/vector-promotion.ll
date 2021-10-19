@@ -356,18 +356,10 @@ define void @simpleOneInstructionPromotionVariableIdx(<2 x i32>* %addr1, i32* %d
 }
 
 ; Check a vector with more than 2 elements.
-; This requires the STRESS mode because currently 'or v8i8' is not marked
-; as legal or custom, althought the actual assembly is better if we were
-; promoting it.
 ; IR-BOTH-LABEL: @simpleOneInstructionPromotion8x8
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <8 x i8>, <8 x i8>* %addr1
-; Scalar version:  
-; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <8 x i8> [[LOAD]], i32 1
-; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = or i8 [[EXTRACT]], 1
-; Vector version:  
-; IR-STRESS-NEXT: [[OR:%[a-zA-Z_0-9-]+]] = or <8 x i8> [[LOAD]], <i8 undef, i8 1, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
-; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <8 x i8> [[OR]], i32 1
-;
+; IR-BOTH-NEXT: [[OR:%[a-zA-Z_0-9-]+]] = or <8 x i8> [[LOAD]], <i8 undef, i8 1, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
+; IR-BOTH-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <8 x i8> [[OR]], i32 1
 ; IR-BOTH-NEXT: store i8 [[RES]], i8* %dest
 ; IR-BOTH-NEXT: ret
 define void @simpleOneInstructionPromotion8x8(<8 x i8>* %addr1, i8* %dest) {

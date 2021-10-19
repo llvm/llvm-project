@@ -13,6 +13,7 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include <cctype>
 
 using namespace clang::ast_matchers;
 
@@ -62,7 +63,7 @@ struct NewSuffix {
   llvm::Optional<FixItHint> FixIt;
 };
 
-llvm::Optional<SourceLocation> GetMacroAwareLocation(SourceLocation Loc,
+llvm::Optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
                                                      const SourceManager &SM) {
   // Do nothing if the provided location is invalid.
   if (Loc.isInvalid())
@@ -74,11 +75,11 @@ llvm::Optional<SourceLocation> GetMacroAwareLocation(SourceLocation Loc,
   return SpellingLoc;
 }
 
-llvm::Optional<SourceRange> GetMacroAwareSourceRange(SourceRange Loc,
+llvm::Optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
                                                      const SourceManager &SM) {
   llvm::Optional<SourceLocation> Begin =
-      GetMacroAwareLocation(Loc.getBegin(), SM);
-  llvm::Optional<SourceLocation> End = GetMacroAwareLocation(Loc.getEnd(), SM);
+      getMacroAwareLocation(Loc.getBegin(), SM);
+  llvm::Optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
   if (!Begin || !End)
     return llvm::None;
   return SourceRange(*Begin, *End);
@@ -93,7 +94,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
   // Else, find matching suffix, case-*insensitive*ly.
   auto NewSuffix = llvm::find_if(
       NewSuffixes, [OldSuffix](const std::string &PotentialNewSuffix) {
-        return OldSuffix.equals_lower(PotentialNewSuffix);
+        return OldSuffix.equals_insensitive(PotentialNewSuffix);
       });
   // Have a match, return it.
   if (NewSuffix != NewSuffixes.end())
@@ -120,7 +121,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
 
   // The literal may have macro expansion, we need the final expanded src range.
   llvm::Optional<SourceRange> Range =
-      GetMacroAwareSourceRange(ReplacementDsc.LiteralLocation, SM);
+      getMacroAwareSourceRange(ReplacementDsc.LiteralLocation, SM);
   if (!Range)
     return llvm::None;
 
@@ -133,6 +134,11 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   const StringRef LiteralSourceText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(*Range), SM, LO, &Invalid);
   assert(!Invalid && "Failed to retrieve the source text.");
+
+  // Make sure the first character is actually a digit, instead of
+  // something else, like a non-type template parameter.
+  if (!std::isdigit(static_cast<unsigned char>(LiteralSourceText.front())))
+    return llvm::None;
 
   size_t Skip = 0;
 
@@ -196,12 +202,11 @@ void UppercaseLiteralSuffixCheck::registerMatchers(MatchFinder *Finder) {
   // Sadly, we can't check whether the literal has suffix or not.
   // E.g. i32 suffix still results in 'BuiltinType::Kind::Int'.
   // And such an info is not stored in the *Literal itself.
-  Finder->addMatcher(traverse(TK_AsIs,
+  Finder->addMatcher(
       stmt(eachOf(integerLiteral().bind(IntegerLiteralCheck::Name),
                   floatLiteral().bind(FloatingLiteralCheck::Name)),
            unless(anyOf(hasParent(userDefinedLiteral()),
-                        hasAncestor(isImplicit()),
-                        hasAncestor(substNonTypeTemplateParmExpr()))))),
+                        hasAncestor(substNonTypeTemplateParmExpr())))),
       this);
 }
 

@@ -48,7 +48,7 @@ LLDB_PLUGIN_DEFINE(AppleObjCRuntime)
 
 char AppleObjCRuntime::ID = 0;
 
-AppleObjCRuntime::~AppleObjCRuntime() {}
+AppleObjCRuntime::~AppleObjCRuntime() = default;
 
 AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
@@ -122,7 +122,8 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
     }
   } else {
     // If it is not a pointer, see if we can make it into a pointer.
-    TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
+    TypeSystemClang *ast_context =
+        ScratchTypeSystemClang::GetForTarget(*target);
     if (!ast_context)
       return false;
 
@@ -137,7 +138,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
   arg_value_list.PushValue(value);
 
   // This is the return value:
-  TypeSystemClang *ast_context = TypeSystemClang::GetScratch(*target);
+  TypeSystemClang *ast_context = ScratchTypeSystemClang::GetForTarget(*target);
   if (!ast_context)
     return false;
 
@@ -376,12 +377,7 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       llvm::Triple::VendorType::Apple)
     return ObjCRuntimeVersions::eObjC_VersionUnknown;
 
-  const ModuleList &target_modules = target.GetImages();
-  std::lock_guard<std::recursive_mutex> gaurd(target_modules.GetMutex());
-
-  size_t num_images = target_modules.GetSize();
-  for (size_t i = 0; i < num_images; i++) {
-    ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked(i);
+  for (ModuleSP module_sp : target.GetImages().Modules()) {
     // One tricky bit here is that we might get called as part of the initial
     // module loading, but before all the pre-run libraries get winnowed from
     // the module list.  So there might actually be an old and incorrect ObjC
@@ -525,7 +521,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     return FailExceptionParsing("Failed to get synthetic value.");
 
   TypeSystemClang *clang_ast_context =
-      TypeSystemClang::GetScratch(*exception_sp->GetTargetSP());
+      ScratchTypeSystemClang::GetForTarget(*exception_sp->GetTargetSP());
   if (!clang_ast_context)
     return FailExceptionParsing("Failed to get scratch AST.");
   CompilerType objc_id =

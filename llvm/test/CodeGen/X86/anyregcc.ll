@@ -513,22 +513,22 @@ entry:
 ;AVX:      pushq %rdx
 ;AVX:      pushq %rcx
 ;AVX:      pushq %rbx
-;AVX:      vmovaps %ymm15
-;AVX-NEXT: vmovaps %ymm14
-;AVX-NEXT: vmovaps %ymm13
-;AVX-NEXT: vmovaps %ymm12
-;AVX-NEXT: vmovaps %ymm11
-;AVX-NEXT: vmovaps %ymm10
-;AVX-NEXT: vmovaps %ymm9
-;AVX-NEXT: vmovaps %ymm8
-;AVX-NEXT: vmovaps %ymm7
-;AVX-NEXT: vmovaps %ymm6
-;AVX-NEXT: vmovaps %ymm5
-;AVX-NEXT: vmovaps %ymm4
-;AVX-NEXT: vmovaps %ymm3
-;AVX-NEXT: vmovaps %ymm2
-;AVX-NEXT: vmovaps %ymm1
-;AVX-NEXT: vmovaps %ymm0
+;AVX:      vmovups %ymm15
+;AVX-NEXT: vmovups %ymm14
+;AVX-NEXT: vmovups %ymm13
+;AVX-NEXT: vmovups %ymm12
+;AVX-NEXT: vmovups %ymm11
+;AVX-NEXT: vmovups %ymm10
+;AVX-NEXT: vmovups %ymm9
+;AVX-NEXT: vmovups %ymm8
+;AVX-NEXT: vmovups %ymm7
+;AVX-NEXT: vmovups %ymm6
+;AVX-NEXT: vmovups %ymm5
+;AVX-NEXT: vmovups %ymm4
+;AVX-NEXT: vmovups %ymm3
+;AVX-NEXT: vmovups %ymm2
+;AVX-NEXT: vmovups %ymm1
+;AVX-NEXT: vmovups %ymm0
   call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{rbp},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15}"()
   ret void
 }

@@ -102,17 +102,17 @@ define i16 @test_fccmp(i1 %a, i16 %in) {
 ; CHECK-NEXT:    mov w8, #24576
 ; CHECK-NEXT:    fmov s0, w1
 ; CHECK-NEXT:    movk w8, #15974, lsl #16
-; CHECK-NEXT:    mov w9, #16384
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    movk w9, #15428, lsl #16
 ; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    mov w8, #16384
+; CHECK-NEXT:    movk w8, #15428, lsl #16
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    fmov s1, w9
-; CHECK-NEXT:    cset w8, pl
-; CHECK-NEXT:    fccmp s0, s1, #8, pl
-; CHECK-NEXT:    mov w9, #4
-; CHECK-NEXT:    csinc w9, w9, wzr, mi
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    mov w8, #4
+; CHECK-NEXT:    fccmp s0, s2, #8, pl
+; CHECK-NEXT:    csinc w8, w8, wzr, mi
+; CHECK-NEXT:    fcmp s0, s1
+; CHECK-NEXT:    cinc w0, w8, pl
 ; CHECK-NEXT:    ret
   %f16 = bitcast i16 %in to half
   %cmp0 = fcmp ogt half 0xH3333, %f16

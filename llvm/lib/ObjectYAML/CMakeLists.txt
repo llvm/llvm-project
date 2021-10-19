@@ -1,4 +1,6 @@
 add_llvm_component_library(LLVMObjectYAML
+  ArchiveEmitter.cpp
+  ArchiveYAML.cpp
   CodeViewYAMLDebugSections.cpp
   CodeViewYAMLSymbols.cpp
   CodeViewYAMLTypeHashing.cpp
@@ -16,10 +18,18 @@ add_llvm_component_library(LLVMObjectYAML
   MinidumpYAML.cpp
   WasmEmitter.cpp
   WasmYAML.cpp
+  XCOFFEmitter.cpp
   XCOFFYAML.cpp
   YAML.cpp
   yaml2obj.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjectYAML
+
+  LINK_COMPONENTS
+  BinaryFormat
+  Object
+  Support
+  DebugInfoCodeView
+  MC
   )

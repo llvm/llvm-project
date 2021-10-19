@@ -102,8 +102,8 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
-  ASSERT_TRUE(term.OpenFirstAvailablePrimary(O_RDWR, nullptr, 0));
-  ASSERT_TRUE(term.OpenSecondary(O_RDWR | O_NOCTTY, nullptr, 0));
+  ASSERT_THAT_ERROR(term.OpenFirstAvailablePrimary(O_RDWR), llvm::Succeeded());
+  ASSERT_THAT_ERROR(term.OpenSecondary(O_RDWR | O_NOCTTY), llvm::Succeeded());
   auto conn = std::make_unique<ConnectionFileDescriptor>(
       term.ReleasePrimaryFileDescriptor(), true);
 
@@ -151,5 +151,50 @@ TEST_F(MainLoopTest, UnmonitoredSignal) {
   ASSERT_TRUE(loop.Run().Success());
   killer.join();
   ASSERT_EQ(1u, callback_count);
+}
+
+// Test that two callbacks can be registered for the same signal
+// and unregistered independently.
+TEST_F(MainLoopTest, TwoSignalCallbacks) {
+  MainLoop loop;
+  Status error;
+  unsigned callback2_count = 0;
+  unsigned callback3_count = 0;
+
+  auto handle = loop.RegisterSignal(SIGUSR1, make_callback(), error);
+  ASSERT_TRUE(error.Success());
+
+  {
+    // Run a single iteration with two callbacks enabled.
+    auto handle2 = loop.RegisterSignal(
+        SIGUSR1, [&](MainLoopBase &loop) { ++callback2_count; }, error);
+    ASSERT_TRUE(error.Success());
+
+    kill(getpid(), SIGUSR1);
+    ASSERT_TRUE(loop.Run().Success());
+    ASSERT_EQ(1u, callback_count);
+    ASSERT_EQ(1u, callback2_count);
+    ASSERT_EQ(0u, callback3_count);
+  }
+
+  {
+    // Make sure that remove + add new works.
+    auto handle3 = loop.RegisterSignal(
+        SIGUSR1, [&](MainLoopBase &loop) { ++callback3_count; }, error);
+    ASSERT_TRUE(error.Success());
+
+    kill(getpid(), SIGUSR1);
+    ASSERT_TRUE(loop.Run().Success());
+    ASSERT_EQ(2u, callback_count);
+    ASSERT_EQ(1u, callback2_count);
+    ASSERT_EQ(1u, callback3_count);
+  }
+
+  // Both extra callbacks should be unregistered now.
+  kill(getpid(), SIGUSR1);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(3u, callback_count);
+  ASSERT_EQ(1u, callback2_count);
+  ASSERT_EQ(1u, callback3_count);
 }
 #endif

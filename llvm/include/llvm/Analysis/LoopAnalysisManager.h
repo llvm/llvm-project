@@ -47,7 +47,7 @@ class TargetTransformInfo;
 
 /// The adaptor from a function pass to a loop pass computes these analyses and
 /// makes them available to the loop passes "for free". Each loop pass is
-/// expected expected to update these analyses if necessary to ensure they're
+/// expected to update these analyses if necessary to ensure they're
 /// valid after it runs.
 struct LoopStandardAnalysisResults {
   AAResults &AA;
@@ -57,6 +57,8 @@ struct LoopStandardAnalysisResults {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   TargetTransformInfo &TTI;
+  BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   MemorySSA *MSSA;
 };
 

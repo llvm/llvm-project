@@ -16,10 +16,8 @@ class DisassembleRawDataTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfRemote
-    @skipIfReproducer # GetInstructions is not instrumented.
     def test_disassemble_raw_data(self):
         """Test disassembling raw bytes with the API."""
         # Create a target from the debugger.
@@ -33,6 +31,12 @@ class DisassembleRawDataTestCase(TestBase):
         elif re.match("powerpc64le", arch):
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "powerpc64le")
             raw_bytes = bytearray([0x00, 0x00, 0x80, 0x38])
+        elif arch == "aarch64":
+            target = self.dbg.CreateTargetWithFileAndTargetTriple("", "aarch64")
+            raw_bytes = bytearray([0x60, 0x0c, 0x80, 0x52])
+        elif arch == "arm":
+            target = self.dbg.CreateTargetWithFileAndTargetTriple("", "arm")
+            raw_bytes = bytearray([0x63, 0x30, 0xa0, 0xe3])
         else:
             target = self.dbg.CreateTargetWithFileAndTargetTriple("", "x86_64")
             raw_bytes = bytearray([0x48, 0x89, 0xe5])
@@ -47,13 +51,19 @@ class DisassembleRawDataTestCase(TestBase):
             print("Raw bytes:    ", [hex(x) for x in raw_bytes])
             print("Disassembled%s" % str(inst))
         if re.match("mips", arch):
-            self.assertTrue(inst.GetMnemonic(target) == "move")
-            self.assertTrue(inst.GetOperands(target) ==
+            self.assertEqual(inst.GetMnemonic(target), "move")
+            self.assertEqual(inst.GetOperands(target),
                             '$' + "fp, " + '$' + "sp")
         elif re.match("powerpc64le", arch):
-            self.assertTrue(inst.GetMnemonic(target) == "li")
-            self.assertTrue(inst.GetOperands(target) == "4, 0")
+            self.assertEqual(inst.GetMnemonic(target), "li")
+            self.assertEqual(inst.GetOperands(target), "4, 0")
+        elif arch == "aarch64":
+            self.assertEqual(inst.GetMnemonic(target), "mov")
+            self.assertEqual(inst.GetOperands(target), "w0, #0x63")
+        elif arch == "arm":
+            self.assertEqual(inst.GetMnemonic(target), "mov")
+            self.assertEqual(inst.GetOperands(target), "r3, #99")
         else:
-            self.assertTrue(inst.GetMnemonic(target) == "movq")
-            self.assertTrue(inst.GetOperands(target) ==
+            self.assertEqual(inst.GetMnemonic(target), "movq")
+            self.assertEqual(inst.GetOperands(target),
                             '%' + "rsp, " + '%' + "rbp")

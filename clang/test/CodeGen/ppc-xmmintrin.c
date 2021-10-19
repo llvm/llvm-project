@@ -3,8 +3,12 @@
 
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+// RUN: %clang -x c++ -fsyntax-only -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 
 #include <xmmintrin.h>
 
@@ -949,7 +953,7 @@ test_load() {
 // CHECK-LABEL: @test_load
 
 // CHECK: define available_externally <4 x float> @_mm_load_ps
-// CHECK: [[REG469:[0-9a-zA-Z_%.]+]] = call <4 x float> @vec_ld(int, float vector[4] const*)
+// CHECK: [[REG469:[0-9a-zA-Z_%.]+]] = call <4 x float> @vec_ld(long, float vector[4] const*)
 // CHECK-NEXT: ret <4 x float> [[REG469]]
 
 // CHECK: define available_externally <4 x float> @_mm_load_ps1
@@ -989,7 +993,7 @@ test_load() {
 // CHECK-NEXT: ret <4 x float> [[REG490]]
 
 // CHECK: define available_externally <4 x float> @_mm_loadr_ps
-// CHECK: [[REG491:[0-9a-zA-Z_%.]+]] = call <4 x float> @vec_ld(int, float vector[4] const*)
+// CHECK: [[REG491:[0-9a-zA-Z_%.]+]] = call <4 x float> @vec_ld(long, float vector[4] const*)
 // CHECK-NEXT: store <4 x float> [[REG491]], <4 x float>* [[REG492:[0-9a-zA-Z_%.]+]], align 16
 // CHECK-NEXT: [[REG493:[0-9a-zA-Z_%.]+]] = load <4 x float>, <4 x float>* [[REG492]], align 16
 // CHECK-NEXT: [[REG494:[0-9a-zA-Z_%.]+]] = load <4 x float>, <4 x float>* [[REG492]], align 16
@@ -1426,7 +1430,7 @@ test_mul() {
 
 void __attribute__((noinline))
 test_prefetch() {
-  _mm_prefetch(ms, i);
+  _mm_prefetch(ms, _MM_HINT_NTA);
 }
 
 // CHECK-LABEL: @test_prefetch
@@ -1824,7 +1828,7 @@ test_store() {
 // CHECK-NEXT: [[REG939:[0-9a-zA-Z_%.]+]] = load <4 x float>, <4 x float>* {{[0-9a-zA-Z_%.]+}}, align 16
 // CHECK-NEXT: [[REG940:[0-9a-zA-Z_%.]+]] = load float*, float** {{[0-9a-zA-Z_%.]+}}, align 8
 // CHECK-NEXT: [[REG941:[0-9a-zA-Z_%.]+]] = bitcast float* [[REG940]] to <4 x float>*
-// CHECK-NEXT: call void @vec_st(float vector[4], int, float vector[4]*)(<4 x float> [[REG939]], i32 signext 0, <4 x float>* [[REG941]])
+// CHECK-NEXT: call void @vec_st(float vector[4], long, float vector[4]*)(<4 x float> [[REG939]], i64 0, <4 x float>* [[REG941]])
 // CHECK-NEXT: ret void
 
 // CHECK: define available_externally void @_mm_store_ps1

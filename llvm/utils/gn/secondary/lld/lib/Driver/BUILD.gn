@@ -13,7 +13,7 @@ static_library("Driver") {
     "//lld/Common",
     "//lld/lib/Core",
     "//lld/lib/ReaderWriter",
-    "//lld/lib/ReaderWriter/MachO",
+    "//lld/lib/ReaderWriter/MachO:MachOOld",
     "//lld/lib/ReaderWriter/YAML",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

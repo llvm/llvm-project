@@ -3,7 +3,8 @@
 // expected-no-diagnostics
 
 // CHECK: [[MAP_FN:%.+]] = load void (i8*, ...)*, void (i8*, ...)** %
-// CHECK: call void (i8*, ...) [[MAP_FN]](i8* %
+// CHECK: [[FN:%.+]] = bitcast void (i8*, ...)* [[MAP_FN]] to void (i8*,
+// CHECK: call void [[FN]](i8* %
 int main() {
   double a, b;
 

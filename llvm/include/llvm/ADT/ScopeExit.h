@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_SCOPE_EXIT_H
-#define LLVM_ADT_SCOPE_EXIT_H
+#ifndef LLVM_ADT_SCOPEEXIT_H
+#define LLVM_ADT_SCOPEEXIT_H
 
 #include "llvm/Support/Compiler.h"
 

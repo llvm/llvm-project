@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @"OBJC_IVAR_$_A._ivar" = global {{.*}} section "__DATA, __objc_ivar", align 8
+// CHECK: @"OBJC_IVAR_$_A._ivar" ={{.*}} global {{.*}} section "__DATA, __objc_ivar", align 8
 // CHECK: @_objc_empty_cache = external global
 // CHECK: @_objc_empty_vtable = external global
-// CHECK: @"OBJC_CLASS_$_A" = global
-// CHECK: @"OBJC_METACLASS_$_A" = global {{.*}} section "__DATA, __objc_data", align 8
+// CHECK: @"OBJC_CLASS_$_A" ={{.*}} global
+// CHECK: @"OBJC_METACLASS_$_A" ={{.*}} global {{.*}} section "__DATA, __objc_data", align 8
 // CHECK: @OBJC_CLASS_NAME_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_classname,cstring_literals", align 1
 // CHECK: @OBJC_METH_VAR_NAME_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_methname,cstring_literals", align 1
 // CHECK: @OBJC_METH_VAR_TYPE_{{[0-9]*}} = private unnamed_addr constant {{.*}} section "__TEXT,__objc_methtype,cstring_literals", align 1

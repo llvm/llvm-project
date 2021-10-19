@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectInterface.h"
@@ -14,40 +15,76 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
+
+#define DEBUG_TYPE "dialect"
 
 using namespace mlir;
 using namespace detail;
 
-DialectAsmParser::~DialectAsmParser() {}
-
 //===----------------------------------------------------------------------===//
-// Dialect Registration (DEPRECATED)
+// DialectRegistry
 //===----------------------------------------------------------------------===//
 
-/// Registry for all dialect allocation functions.
-static llvm::ManagedStatic<DialectRegistry> dialectRegistry;
-DialectRegistry &mlir::getGlobalDialectRegistry() { return *dialectRegistry; }
+DialectRegistry::DialectRegistry() { insert<BuiltinDialect>(); }
 
-// Note: deprecated, will be removed soon.
-static bool isGlobalDialectRegistryEnabledFlag = false;
-void mlir::enableGlobalDialectRegistry(bool enable) {
-  isGlobalDialectRegistryEnabledFlag = enable;
-}
-bool mlir::isGlobalDialectRegistryEnabled() {
-  return isGlobalDialectRegistryEnabledFlag;
+void DialectRegistry::addDialectInterface(
+    StringRef dialectName, TypeID interfaceTypeID,
+    DialectInterfaceAllocatorFunction allocator) {
+  assert(allocator && "unexpected null interface allocation function");
+  auto it = registry.find(dialectName.str());
+  assert(it != registry.end() &&
+         "adding an interface for an unregistered dialect");
+
+  // Bail out if the interface with the given ID is already in the registry for
+  // the given dialect. We expect a small number (dozens) of interfaces so a
+  // linear search is fine here.
+  auto &ifaces = interfaces[it->second.first];
+  for (const auto &kvp : ifaces.dialectInterfaces) {
+    if (kvp.first == interfaceTypeID) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[" DEBUG_TYPE
+                    "] repeated interface registration for dialect "
+                 << dialectName);
+      return;
+    }
+  }
+
+  ifaces.dialectInterfaces.emplace_back(interfaceTypeID, allocator);
 }
 
-void mlir::registerAllDialects(MLIRContext *context) {
-  dialectRegistry->appendTo(context->getDialectRegistry());
+void DialectRegistry::addObjectInterface(
+    StringRef dialectName, TypeID objectID, TypeID interfaceTypeID,
+    ObjectInterfaceAllocatorFunction allocator) {
+  assert(allocator && "unexpected null interface allocation function");
+
+  auto it = registry.find(dialectName.str());
+  assert(it != registry.end() &&
+         "adding an interface for an op from an unregistered dialect");
+
+  auto dialectID = it->second.first;
+  auto &ifaces = interfaces[dialectID];
+
+  for (const auto &info : ifaces.objectInterfaces) {
+    if (std::get<0>(info) == objectID && std::get<1>(info) == interfaceTypeID) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[" DEBUG_TYPE
+                    "] repeated interface object interface registration");
+      return;
+    }
+  }
+
+  ifaces.objectInterfaces.emplace_back(objectID, interfaceTypeID, allocator);
 }
 
-Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
+DialectAllocatorFunctionRef
+DialectRegistry::getDialectAllocator(StringRef name) const {
   auto it = registry.find(name.str());
   if (it == registry.end())
     return nullptr;
-  return it->second.second(context);
+  return it->second.second;
 }
 
 void DialectRegistry::insert(TypeID typeID, StringRef name,
@@ -59,6 +96,23 @@ void DialectRegistry::insert(TypeID typeID, StringRef name,
         "Trying to register different dialects for the same namespace: " +
         name);
   }
+}
+
+void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
+  auto it = interfaces.find(dialect->getTypeID());
+  if (it == interfaces.end())
+    return;
+
+  // Add an interface if it is not already present.
+  for (const auto &kvp : it->getSecond().dialectInterfaces) {
+    if (dialect->getRegisteredInterface(kvp.first))
+      continue;
+    dialect->addInterface(kvp.second(dialect));
+  }
+
+  // Add attribute, operation and type interfaces.
+  for (const auto &info : it->getSecond().objectInterfaces)
+    std::get<2>(info)(dialect->getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -102,8 +156,8 @@ Attribute Dialect::parseAttribute(DialectAsmParser &parser, Type type) const {
 Type Dialect::parseType(DialectAsmParser &parser) const {
   // If this dialect allows unknown types, then represent this with OpaqueType.
   if (allowsUnknownTypes()) {
-    auto ns = Identifier::get(getNamespace(), getContext());
-    return OpaqueType::get(ns, parser.getFullSymbolSpec(), getContext());
+    Identifier ns = Identifier::get(getNamespace(), getContext());
+    return OpaqueType::get(ns, parser.getFullSymbolSpec());
   }
 
   parser.emitError(parser.getNameLoc())
@@ -111,11 +165,21 @@ Type Dialect::parseType(DialectAsmParser &parser) const {
   return Type();
 }
 
+Optional<Dialect::ParseOpHook>
+Dialect::getParseOperationHook(StringRef opName) const {
+  return None;
+}
+
+llvm::unique_function<void(Operation *, OpAsmPrinter &printer)>
+Dialect::getOperationPrinter(Operation *op) const {
+  assert(op->getDialect() == this &&
+         "Dialect hook invoked on non-dialect owned operation");
+  return nullptr;
+}
+
 /// Utility function that returns if the given string is a valid dialect
 /// namespace.
 bool Dialect::isValidNamespace(StringRef str) {
-  if (str.empty())
-    return true;
   llvm::Regex dialectNameRegex("^[a-zA-Z_][a-zA-Z_0-9\\$]*$");
   return dialectNameRegex.match(str);
 }

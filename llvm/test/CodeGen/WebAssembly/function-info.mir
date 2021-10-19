@@ -1,6 +1,34 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling,+multivalue,+simd128 -run-pass wasm-cfg-sort -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
-# CHECK-LABEL: function_property_test
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare void @foo()
+  define void @function_property_test() {
+    ret void
+  }
+  define void @wasm_eh_info_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    ret void
+  }
+
+  ;; Param / results tests
+  define i32 @i32__i64(i64) {
+    ret i32 0
+  }
+  define void @void__i32_i64_f32_f64() {
+    ret void
+  }
+  define void @void__v16i8_v8i16_v4i32_v2i64(<16 x i8>, <8 x i16>, <4 x i32>, <2 x i64>) {
+    ret void
+  }
+  %pair = type { i32, i64 }
+  define %pair @i32_i64__i32_i64(%pair %p) {
+    ret %pair %p
+  }
+...
+
+# CHECK-LABEL: name: function_property_test
 # CHECK: machineFunctionInfo:
 # CHECK:   isCFGStackified:   true
 name: function_property_test
@@ -9,4 +37,100 @@ liveins:
 body: |
   bb.0:
     RETURN implicit-def dead $arguments
+...
+
+---
+# CHECK-LABEL: name: wasm_eh_info_test
+# CHECK: machineFunctionInfo:
+name: wasm_eh_info_test
+liveins:
+  - { reg: '$arguments' }
+# CHECK:  wasmEHFuncInfo:
+# bb.2 becomes bb.1 and bb.3 becomes bb.2 after CFGSort.
+# CHECK-NEXT:    1:               2
+machineFunctionInfo:
+  wasmEHFuncInfo:
+    2:               3
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+
+  bb.1:
+    RETURN implicit-def dead $arguments
+
+  bb.2 (landing-pad):
+    successors: %bb.1, %bb.3
+    %0:i32 = CATCH &__cpp_exception, implicit-def dead $arguments
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.1, implicit-def $arguments
+
+  bb.3 (landing-pad):
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def $arguments
+...
+
+# Param / results tests
+---
+# CHECK-LABEL: name: i32__i64
+# CHECK:    machineFunctionInfo:
+# CHECK:      params:          [ i64 ]
+# CHECK-NEXT: results:         [ i32 ]
+name: i32__i64
+liveins:
+  - { reg: '$arguments' }
+machineFunctionInfo:
+  params:          [ i64 ]
+  results:         [ i32 ]
+body: |
+  bb.0:
+    %0:i32 = CONST_I32 3, implicit-def dead $arguments
+    RETURN %0:i32, implicit-def dead $arguments
+...
+---
+# CHECK-LABEL: name: void__i32_i64_f32_f64
+# CHECK:    machineFunctionInfo:
+# CHECK:      params:          [ i32, i64, f32, f64 ]
+# CHECK-NEXT: results:         [  ]
+name: void__i32_i64_f32_f64
+liveins:
+  - { reg: '$arguments' }
+machineFunctionInfo:
+  params:          [ i32, i64, f32, f64 ]
+  results:         [  ]
+body: |
+  bb.0:
+    RETURN implicit-def dead $arguments
+...
+---
+# CHECK-LABEL: name: void__v16i8_v8i16_v4i32_v2i64
+# CHECK:    machineFunctionInfo:
+# CHECK:      params:          [ v16i8, v8i16, v4i32, v2i64 ]
+# CHECK-NEXT: results:         [  ]
+name: void__v16i8_v8i16_v4i32_v2i64
+liveins:
+  - { reg: '$arguments' }
+machineFunctionInfo:
+  params:          [ v16i8, v8i16, v4i32, v2i64 ]
+  results:         [  ]
+body: |
+  bb.0:
+    RETURN implicit-def dead $arguments
+...
+---
+# CHECK-LABEL: name: i32_i64__i32_i64
+# CHECK:    machineFunctionInfo:
+# CHECK:      params:          [ i32, i64 ]
+# CHECK-NEXT: results:         [ i32, i64 ]
+name: i32_i64__i32_i64
+liveins:
+  - { reg: '$arguments' }
+machineFunctionInfo:
+  params:          [ i32, i64 ]
+  results:         [ i32, i64 ]
+body: |
+  bb.0:
+    %0:i32 = ARGUMENT_i32 0, implicit $arguments
+    %1:i64 = ARGUMENT_i64 1, implicit $arguments
+    RETURN %0, %1, implicit-def dead $arguments
 ...

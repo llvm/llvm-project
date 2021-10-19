@@ -492,24 +492,23 @@ entry:
 define void @conv_v8f16_to_i128( <8 x half> %a, i128* %store ) {
 ; CHECK-LABEL: conv_v8f16_to_i128:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    adr r1, .LCPI18_0
 ; CHECK-NEXT:    vrev64.16 q9, q0
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1:128]
 ; CHECK-NEXT:    vrev64.16 q8, q8
 ; CHECK-NEXT:    vadd.f16 q8, q9, q8
 ; CHECK-NEXT:    vrev32.16 q8, q8
-; CHECK-NEXT:    vmov.32 r12, d17[1]
-; CHECK-NEXT:    vmov.32 r2, d17[0]
-; CHECK-NEXT:    vmov.32 r3, d16[1]
-; CHECK-NEXT:    vmov.32 r1, d16[0]
-; CHECK-NEXT:    subs r12, r12, #1
-; CHECK-NEXT:    sbcs r2, r2, #0
-; CHECK-NEXT:    sbcs r3, r3, #0
-; CHECK-NEXT:    sbc r1, r1, #0
-; CHECK-NEXT:    stm r0, {r1, r3}
-; CHECK-NEXT:    str r2, [r0, #8]
-; CHECK-NEXT:    str r12, [r0, #12]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    vmov r12, r2, d17
+; CHECK-NEXT:    vmov r3, r1, d16
+; CHECK-NEXT:    subs lr, r2, #1
+; CHECK-NEXT:    sbcs r2, r12, #0
+; CHECK-NEXT:    sbcs r1, r1, #0
+; CHECK-NEXT:    sbc r3, r3, #0
+; CHECK-NEXT:    str r3, [r0]
+; CHECK-NEXT:    stmib r0, {r1, r2, lr}
+; CHECK-NEXT:    pop {r11, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI18_0:

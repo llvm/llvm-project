@@ -3,5 +3,10 @@
   "directory": "DIR",
   "command": "clang -E DIR/no-werror_input.cpp -IInputs -std=c++17 -Weverything -Werror",
   "file": "DIR/no-werror.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /IInputs /std:c++17 -Weverything -Werror -- DIR/no-werror_input_clangcl.cpp",
+  "file": "DIR/no-werror_clangcl.cpp"
 }
 ]

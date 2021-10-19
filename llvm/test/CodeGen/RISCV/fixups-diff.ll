@@ -1,10 +1,10 @@
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=+relax %s -o - \
-; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck %s
 ; RUN: llc -filetype=obj -mtriple=riscv32 -mattr=-relax %s -o - \
-; RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
+; RUN:     | llvm-readobj -r - | FileCheck %s
 
 ; Check that a difference between two symbols in the same fragment
-; causes relocations to be emitted if and only if relaxation is enabled.
+; causes relocations to be emitted.
 ;
 ; This specific test is checking that the size of the function in
 ; the debug information is represented by a relocation. This isn't
@@ -22,11 +22,18 @@ entry:
   ret i32 0
 }
 
-; RELAX: 0x22 R_RISCV_ADD32 - 0x0
-; RELAX: 0x22 R_RISCV_SUB32 - 0x0
-; RELAX: 0x2B R_RISCV_ADD32 - 0x0
-; RELAX: 0x2B R_RISCV_SUB32 - 0x0
-; NORELAX-NOT: R_RISCV_ADD32
+; CHECK:      Section {{.*}} .rela.debug_info {
+; CHECK:        0x22 R_RISCV_ADD32 - 0x0
+; CHECK-NEXT:   0x22 R_RISCV_SUB32 - 0x0
+; CHECK:        0x2B R_RISCV_ADD32 - 0x0
+; CHECK-NEXT:   0x2B R_RISCV_SUB32 - 0x0
+; CHECK:      }
+
+; CHECK:      Section {{.*}} .rela.eh_frame {
+; CHECK:        0x1C R_RISCV_32_PCREL - 0x0
+; CHECK:        0x20 R_RISCV_ADD32 - 0x0
+; CHECK-NEXT:   0x20 R_RISCV_SUB32 - 0x0
+; CHECK:      }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

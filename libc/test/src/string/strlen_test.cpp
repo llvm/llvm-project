@@ -9,14 +9,14 @@
 #include "src/string/strlen.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(StrLenTest, EmptyString) {
+TEST(LlvmLibcStrLenTest, EmptyString) {
   const char *empty = "";
 
   size_t result = __llvm_libc::strlen(empty);
   ASSERT_EQ((size_t)0, result);
 }
 
-TEST(StrLenTest, AnyString) {
+TEST(LlvmLibcStrLenTest, AnyString) {
   const char *any = "Hello World!";
 
   size_t result = __llvm_libc::strlen(any);

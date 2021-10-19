@@ -28,6 +28,7 @@
 
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <errno.h>
+#include <sys/cpuset.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <unistd.h>
@@ -47,22 +48,10 @@
 #include <unistd.h>      // For syscall()
 #endif
 
-static void *threadFuncSync(void *Arg) {
-  SyncThreadInfo *TI = static_cast<SyncThreadInfo *>(Arg);
-  TI->UserFn(TI->UserData);
-  return nullptr;
-}
-
-static void *threadFuncAsync(void *Arg) {
-  std::unique_ptr<AsyncThreadInfo> Info(static_cast<AsyncThreadInfo *>(Arg));
-  (*Info)();
-  return nullptr;
-}
-
-static void
+namespace llvm {
+pthread_t
 llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
-                            llvm::Optional<unsigned> StackSizeInBytes,
-                            JoiningPolicy JP) {
+                            llvm::Optional<unsigned> StackSizeInBytes) {
   int errnum;
 
   // Construct the attributes object.
@@ -89,17 +78,34 @@ llvm_execute_on_thread_impl(void *(*ThreadFunc)(void *), void *Arg,
   if ((errnum = ::pthread_create(&Thread, &Attr, ThreadFunc, Arg)) != 0)
     ReportErrnumFatal("pthread_create failed", errnum);
 
-  if (JP == JoiningPolicy::Join) {
-    // Wait for the thread
-    if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
-      ReportErrnumFatal("pthread_join failed", errnum);
-    }
-  } else if (JP == JoiningPolicy::Detach) {
-    if ((errnum = ::pthread_detach(Thread)) != 0) {
-      ReportErrnumFatal("pthread_detach failed", errnum);
-    }
+  return Thread;
+}
+
+void llvm_thread_detach_impl(pthread_t Thread) {
+  int errnum;
+
+  if ((errnum = ::pthread_detach(Thread)) != 0) {
+    ReportErrnumFatal("pthread_detach failed", errnum);
   }
 }
+
+void llvm_thread_join_impl(pthread_t Thread) {
+  int errnum;
+
+  if ((errnum = ::pthread_join(Thread, nullptr)) != 0) {
+    ReportErrnumFatal("pthread_join failed", errnum);
+  }
+}
+
+pthread_t llvm_thread_get_id_impl(pthread_t Thread) {
+  return Thread;
+}
+
+pthread_t llvm_thread_get_current_id_impl() {
+  return ::pthread_self();
+}
+
+} // namespace llvm
 
 uint64_t llvm::get_threadid() {
 #if defined(__APPLE__)
@@ -282,7 +288,13 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
 #include <thread>
 
 int computeHostNumHardwareThreads() {
-#ifdef __linux__
+#if defined(__FreeBSD__)
+  cpuset_t mask;
+  CPU_ZERO(&mask);
+  if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(mask),
+                         &mask) == 0)
+    return CPU_COUNT(&mask);
+#elif defined(__linux__)
   cpu_set_t Set;
   if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);

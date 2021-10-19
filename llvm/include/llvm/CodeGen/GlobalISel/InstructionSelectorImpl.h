@@ -263,22 +263,27 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-    case GIM_CheckI64ImmPredicate: {
+    case GIM_CheckI64ImmPredicate:
+    case GIM_CheckImmOperandPredicate: {
       int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatcherOpcode == GIM_CheckImmOperandPredicate
+                          ? MatchTable[CurrentIdx++]
+                          : 1;
       int64_t Predicate = MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
-                      dbgs()
-                          << CurrentIdx << ": GIM_CheckI64ImmPredicate(MIs["
-                          << InsnID << "], Predicate=" << Predicate << ")\n");
+                      dbgs() << CurrentIdx << ": GIM_CheckImmPredicate(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_CONSTANT &&
-             "Expected G_CONSTANT");
+      assert((State.MIs[InsnID]->getOperand(OpIdx).isImm() ||
+              State.MIs[InsnID]->getOperand(OpIdx).isCImm()) &&
+             "Expected immediate operand");
       assert(Predicate > GIPFP_I64_Invalid && "Expected a valid predicate");
       int64_t Value = 0;
-      if (State.MIs[InsnID]->getOperand(1).isCImm())
-        Value = State.MIs[InsnID]->getOperand(1).getCImm()->getSExtValue();
-      else if (State.MIs[InsnID]->getOperand(1).isImm())
-        Value = State.MIs[InsnID]->getOperand(1).getImm();
+      if (State.MIs[InsnID]->getOperand(OpIdx).isCImm())
+        Value = State.MIs[InsnID]->getOperand(OpIdx).getCImm()->getSExtValue();
+      else if (State.MIs[InsnID]->getOperand(OpIdx).isImm())
+        Value = State.MIs[InsnID]->getOperand(OpIdx).getImm();
       else
         llvm_unreachable("Expected Imm or CImm operand");
 
@@ -367,7 +372,8 @@ bool InstructionSelector::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(Predicate > GIPFP_MI_Invalid && "Expected a valid predicate");
 
-      if (!testMIPredicate_MI(Predicate, *State.MIs[InsnID]))
+      if (!testMIPredicate_MI(Predicate, *State.MIs[InsnID],
+                              State.RecordedOperands))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -384,7 +390,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
 
       for (const auto &MMO : State.MIs[InsnID]->memoperands())
-        if (MMO->getOrdering() != Ordering)
+        if (MMO->getMergedOrdering() != Ordering)
           if (handleReject() == RejectAndGiveUp)
             return false;
       break;
@@ -402,7 +408,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
 
       for (const auto &MMO : State.MIs[InsnID]->memoperands())
-        if (!isAtLeastOrStrongerThan(MMO->getOrdering(), Ordering))
+        if (!isAtLeastOrStrongerThan(MMO->getMergedOrdering(), Ordering))
           if (handleReject() == RejectAndGiveUp)
             return false;
       break;
@@ -420,7 +426,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
 
       for (const auto &MMO : State.MIs[InsnID]->memoperands())
-        if (!isStrongerThan(Ordering, MMO->getOrdering()))
+        if (!isStrongerThan(Ordering, MMO->getMergedOrdering()))
           if (handleReject() == RejectAndGiveUp)
             return false;
       break;
@@ -589,7 +595,7 @@ bool InstructionSelector::executeMatchTable(
     case GIM_CheckPointerToAny: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
-      int64_t SizeInBits = MatchTable[CurrentIdx++];
+      uint64_t SizeInBits = MatchTable[CurrentIdx++];
 
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs["
@@ -615,6 +621,20 @@ bool InstructionSelector::executeMatchTable(
       } else if (handleReject() == RejectAndGiveUp)
         return false;
 
+      break;
+    }
+    case GIM_RecordNamedOperand: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      uint64_t StoreIdx = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_RecordNamedOperand(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), StoreIdx=" << StoreIdx << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(StoreIdx < State.RecordedOperands.size() && "Index out of range");
+      State.RecordedOperands[StoreIdx] = &State.MIs[InsnID]->getOperand(OpIdx);
       break;
     }
     case GIM_CheckRegBankForClass: {
@@ -1043,8 +1063,12 @@ bool InstructionSelector::executeMatchTable(
       int64_t OpIdx = MatchTable[CurrentIdx++];
       int64_t RCEnum = MatchTable[CurrentIdx++];
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
-      constrainOperandRegToRegClass(*OutMIs[InsnID].getInstr(), OpIdx,
-                                    *TRI.getRegClass(RCEnum), TII, TRI, RBI);
+      MachineInstr &I = *OutMIs[InsnID].getInstr();
+      MachineFunction &MF = *I.getParent()->getParent();
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      const TargetRegisterClass &RC = *TRI.getRegClass(RCEnum);
+      MachineOperand &MO = I.getOperand(OpIdx);
+      constrainOperandRegClass(MF, TRI, MRI, TII, RBI, I, RC, MO);
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_ConstrainOperandRC(OutMIs["
                              << InsnID << "], " << OpIdx << ", " << RCEnum

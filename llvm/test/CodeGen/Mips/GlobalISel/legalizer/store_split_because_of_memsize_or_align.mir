@@ -218,35 +218,33 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 1 into %ir.0)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s8) into %ir.0)
     ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 1)
+    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C2]](s32)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store (s8) into %ir.0 + 1)
     ; MIPS32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C3]](s32)
-    ; MIPS32: G_STORE [[LSHR1]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2)
+    ; MIPS32: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C3]](s32)
+    ; MIPS32: G_STORE [[LSHR1]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store3align1
     ; MIPS32R6: liveins: $a0, $a1
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0, align 1)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0, align 1)
     ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2)
+    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s24) = G_TRUNC %1(s32)
-    G_STORE %2(s24), %0(p0) :: (store 3 into %ir.0, align 1)
+    G_STORE %2(s24), %0(p0) :: (store (s24) into %ir.0, align 1)
     RetRA
 
 ...
@@ -262,30 +260,28 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0)
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 2)
+    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store3align2
     ; MIPS32R6: liveins: $a0, $a1
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0)
     ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 2)
+    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s24) = G_TRUNC %1(s32)
-    G_STORE %2(s24), %0(p0) :: (store 3 into %ir.0, align 2)
+    G_STORE %2(s24), %0(p0) :: (store (s24) into %ir.0, align 2)
     RetRA
 
 ...
@@ -301,30 +297,28 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0, align 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0, align 4)
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 4)
+    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2, basealign 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store3align4
     ; MIPS32R6: liveins: $a0, $a1
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0, align 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0, align 4)
     ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 4)
+    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2, basealign 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s24) = G_TRUNC %1(s32)
-    G_STORE %2(s24), %0(p0) :: (store 3 into %ir.0, align 4)
+    G_STORE %2(s24), %0(p0) :: (store (s24) into %ir.0, align 4)
     RetRA
 
 ...
@@ -340,30 +334,28 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0, align 8)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0, align 8)
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 8)
+    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2, basealign 8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store3align8
     ; MIPS32R6: liveins: $a0, $a1
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
-    ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[COPY]](p0) :: (store 2 into %ir.0, align 8)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s16) into %ir.0, align 8)
     ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 2, align 8)
+    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY1]], [[C1]](s32)
+    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 2, align 2, basealign 8)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %1:_(s32) = COPY $a1
     %2:_(s24) = G_TRUNC %1(s32)
-    G_STORE %2(s24), %0(p0) :: (store 3 into %ir.0, align 8)
+    G_STORE %2(s24), %0(p0) :: (store (s24) into %ir.0, align 8)
     RetRA
 
 ...
@@ -382,8 +374,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store5align1
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -392,15 +384,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s40) = G_TRUNC %1(s64)
-    G_STORE %4(s40), %0(p0) :: (store 5 into %ir.0, align 1)
+    G_STORE %4(s40), %0(p0) :: (store (s40) into %ir.0, align 1)
     RetRA
 
 ...
@@ -419,8 +411,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 2)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 2)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store5align2
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -429,15 +421,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 2)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 2)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s40) = G_TRUNC %1(s64)
-    G_STORE %4(s40), %0(p0) :: (store 5 into %ir.0, align 2)
+    G_STORE %4(s40), %0(p0) :: (store (s40) into %ir.0, align 2)
     RetRA
 
 ...
@@ -456,8 +448,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store5align4
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -466,15 +458,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s40) = G_TRUNC %1(s64)
-    G_STORE %4(s40), %0(p0) :: (store 5 into %ir.0, align 4)
+    G_STORE %4(s40), %0(p0) :: (store (s40) into %ir.0, align 4)
     RetRA
 
 ...
@@ -493,8 +485,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 8)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store5align8
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -503,15 +495,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4, align 8)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s40) = G_TRUNC %1(s64)
-    G_STORE %4(s40), %0(p0) :: (store 5 into %ir.0, align 8)
+    G_STORE %4(s40), %0(p0) :: (store (s40) into %ir.0, align 8)
     RetRA
 
 ...
@@ -530,13 +522,13 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4)
     ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 5)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store (s8) into %ir.0 + 5)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store6align1
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -545,15 +537,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 1)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 1)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s48) = G_TRUNC %1(s64)
-    G_STORE %4(s48), %0(p0) :: (store 6 into %ir.0, align 1)
+    G_STORE %4(s48), %0(p0) :: (store (s48) into %ir.0, align 1)
     RetRA
 
 ...
@@ -572,8 +564,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store6align2
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -582,15 +574,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s48) = G_TRUNC %1(s64)
-    G_STORE %4(s48), %0(p0) :: (store 6 into %ir.0, align 2)
+    G_STORE %4(s48), %0(p0) :: (store (s48) into %ir.0, align 2)
     RetRA
 
 ...
@@ -609,8 +601,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store6align4
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -619,15 +611,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s48) = G_TRUNC %1(s64)
-    G_STORE %4(s48), %0(p0) :: (store 6 into %ir.0, align 4)
+    G_STORE %4(s48), %0(p0) :: (store (s48) into %ir.0, align 4)
     RetRA
 
 ...
@@ -646,8 +638,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 8)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store6align8
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -656,15 +648,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 8)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s48) = G_TRUNC %1(s64)
-    G_STORE %4(s48), %0(p0) :: (store 6 into %ir.0, align 8)
+    G_STORE %4(s48), %0(p0) :: (store (s48) into %ir.0, align 8)
     RetRA
 
 ...
@@ -683,18 +675,13 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
+    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; MIPS32: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C2]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 1 into %ir.0 + 4)
-    ; MIPS32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C3]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD2]](p0) :: (store 1 into %ir.0 + 5)
-    ; MIPS32: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C4]](s32)
-    ; MIPS32: G_STORE [[LSHR1]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s8) into %ir.0 + 4)
+    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
+    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store (s8) into %ir.0 + 5)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store7align1
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -703,20 +690,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 1)
-    ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32R6: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 1)
-    ; MIPS32R6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 1)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 1)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s56) = G_TRUNC %1(s64)
-    G_STORE %4(s56), %0(p0) :: (store 7 into %ir.0, align 1)
+    G_STORE %4(s56), %0(p0) :: (store (s42) into %ir.0, align 1)
     RetRA
 
 ...
@@ -735,13 +717,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4)
-    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 2)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store7align2
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -750,20 +727,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 2)
-    ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32R6: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4)
-    ; MIPS32R6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 2)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 2)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s56) = G_TRUNC %1(s64)
-    G_STORE %4(s56), %0(p0) :: (store 7 into %ir.0, align 2)
+    G_STORE %4(s56), %0(p0) :: (store (s42) into %ir.0, align 2)
     RetRA
 
 ...
@@ -782,13 +754,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 4)
-    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store7align4
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -797,20 +764,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0)
-    ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32R6: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 4)
-    ; MIPS32R6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 4)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s56) = G_TRUNC %1(s64)
-    G_STORE %4(s56), %0(p0) :: (store 7 into %ir.0, align 4)
+    G_STORE %4(s56), %0(p0) :: (store (s42) into %ir.0, align 4)
     RetRA
 
 ...
@@ -829,13 +791,8 @@ body:             |
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 8)
-    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 8)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store7align8
     ; MIPS32R6: liveins: $a0, $a2, $a3
@@ -844,20 +801,15 @@ body:             |
     ; MIPS32R6: [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
     ; MIPS32R6: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32R6: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store 4 into %ir.0, align 8)
-    ; MIPS32R6: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; MIPS32R6: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s32)
-    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store 2 into %ir.0 + 4, align 8)
-    ; MIPS32R6: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; MIPS32R6: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY2]], [[C2]](s32)
-    ; MIPS32R6: G_STORE [[LSHR]](s32), [[PTR_ADD1]](p0) :: (store 1 into %ir.0 + 6, align 8)
+    ; MIPS32R6: G_STORE [[COPY1]](s32), [[COPY]](p0) :: (store (s32) into %ir.0, align 8)
+    ; MIPS32R6: G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s16) into %ir.0 + 4, align 4, basealign 8)
     ; MIPS32R6: RetRA
     %0:_(p0) = COPY $a0
     %2:_(s32) = COPY $a2
     %3:_(s32) = COPY $a3
     %1:_(s64) = G_MERGE_VALUES %2(s32), %3(s32)
     %4:_(s56) = G_TRUNC %1(s64)
-    G_STORE %4(s56), %0(p0) :: (store 7 into %ir.0, align 8)
+    G_STORE %4(s56), %0(p0) :: (store (s42) into %ir.0, align 8)
     RetRA
 
 ...
@@ -876,18 +828,18 @@ body:             |
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
     ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store 4 into @double_align1, align 1)
-    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store 4 into @double_align1 + 4, align 1)
+    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store (s32) into @double_align1, align 1)
+    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @double_align1 + 4, align 1)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_double_align1
     ; MIPS32R6: liveins: $d6
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @double_align1
-    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @double_align1, align 1)
+    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store (s64) into @double_align1, align 1)
     ; MIPS32R6: RetRA
     %0:_(s64) = COPY $d6
     %1:_(p0) = G_GLOBAL_VALUE @double_align1
-    G_STORE %0(s64), %1(p0) :: (store 8 into @double_align1, align 1)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into @double_align1, align 1)
     RetRA
 
 ...
@@ -906,18 +858,18 @@ body:             |
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
     ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store 4 into @double_align2, align 2)
-    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store 4 into @double_align2 + 4, align 2)
+    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store (s32) into @double_align2, align 2)
+    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @double_align2 + 4, align 2)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_double_align2
     ; MIPS32R6: liveins: $d6
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @double_align2
-    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @double_align2, align 2)
+    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store (s64) into @double_align2, align 2)
     ; MIPS32R6: RetRA
     %0:_(s64) = COPY $d6
     %1:_(p0) = G_GLOBAL_VALUE @double_align2
-    G_STORE %0(s64), %1(p0) :: (store 8 into @double_align2, align 2)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into @double_align2, align 2)
     RetRA
 
 ...
@@ -936,18 +888,18 @@ body:             |
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
     ; MIPS32: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store 4 into @double_align4)
-    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store 4 into @double_align4 + 4)
+    ; MIPS32: G_STORE [[UV]](s32), [[GV]](p0) :: (store (s32) into @double_align4)
+    ; MIPS32: G_STORE [[UV1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @double_align4 + 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_double_align4
     ; MIPS32R6: liveins: $d6
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @double_align4
-    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @double_align4, align 4)
+    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store (s64) into @double_align4, align 4)
     ; MIPS32R6: RetRA
     %0:_(s64) = COPY $d6
     %1:_(p0) = G_GLOBAL_VALUE @double_align4
-    G_STORE %0(s64), %1(p0) :: (store 8 into @double_align4, align 4)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into @double_align4, align 4)
     RetRA
 
 ...
@@ -963,17 +915,17 @@ body:             |
     ; MIPS32: liveins: $d6
     ; MIPS32: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @double_align8
-    ; MIPS32: G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @double_align8)
+    ; MIPS32: G_STORE [[COPY]](s64), [[GV]](p0) :: (store (s64) into @double_align8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_double_align8
     ; MIPS32R6: liveins: $d6
     ; MIPS32R6: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @double_align8
-    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store 8 into @double_align8)
+    ; MIPS32R6: G_STORE [[COPY]](s64), [[GV]](p0) :: (store (s64) into @double_align8)
     ; MIPS32R6: RetRA
     %0:_(s64) = COPY $d6
     %1:_(p0) = G_GLOBAL_VALUE @double_align8
-    G_STORE %0(s64), %1(p0) :: (store 8 into @double_align8)
+    G_STORE %0(s64), %1(p0) :: (store (s64) into @double_align8)
     RetRA
 
 ...
@@ -992,8 +944,8 @@ body:             |
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align1
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store 4 into @i64_align1, align 1)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store 4 into @i64_align1 + 4, align 1)
+    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store (s32) into @i64_align1, align 1)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @i64_align1 + 4, align 1)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_i64_align1
     ; MIPS32R6: liveins: $a0, $a1
@@ -1001,13 +953,13 @@ body:             |
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32R6: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align1
-    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store 8 into @i64_align1, align 1)
+    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store (s64) into @i64_align1, align 1)
     ; MIPS32R6: RetRA
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(p0) = G_GLOBAL_VALUE @i64_align1
-    G_STORE %0(s64), %3(p0) :: (store 8 into @i64_align1, align 1)
+    G_STORE %0(s64), %3(p0) :: (store (s64) into @i64_align1, align 1)
     RetRA
 
 ...
@@ -1026,8 +978,8 @@ body:             |
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align2
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store 4 into @i64_align2, align 2)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store 4 into @i64_align2 + 4, align 2)
+    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store (s32) into @i64_align2, align 2)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @i64_align2 + 4, align 2)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_i64_align2
     ; MIPS32R6: liveins: $a0, $a1
@@ -1035,13 +987,13 @@ body:             |
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32R6: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align2
-    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store 8 into @i64_align2, align 2)
+    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store (s64) into @i64_align2, align 2)
     ; MIPS32R6: RetRA
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(p0) = G_GLOBAL_VALUE @i64_align2
-    G_STORE %0(s64), %3(p0) :: (store 8 into @i64_align2, align 2)
+    G_STORE %0(s64), %3(p0) :: (store (s64) into @i64_align2, align 2)
     RetRA
 
 ...
@@ -1060,8 +1012,8 @@ body:             |
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align4
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; MIPS32: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[GV]], [[C]](s32)
-    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store 4 into @i64_align4)
-    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store 4 into @i64_align4 + 4)
+    ; MIPS32: G_STORE [[COPY]](s32), [[GV]](p0) :: (store (s32) into @i64_align4)
+    ; MIPS32: G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store (s32) into @i64_align4 + 4)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_i64_align4
     ; MIPS32R6: liveins: $a0, $a1
@@ -1069,13 +1021,13 @@ body:             |
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32R6: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align4
-    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store 8 into @i64_align4, align 4)
+    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store (s64) into @i64_align4, align 4)
     ; MIPS32R6: RetRA
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(p0) = G_GLOBAL_VALUE @i64_align4
-    G_STORE %0(s64), %3(p0) :: (store 8 into @i64_align4, align 4)
+    G_STORE %0(s64), %3(p0) :: (store (s64) into @i64_align4, align 4)
     RetRA
 
 ...
@@ -1093,7 +1045,7 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align8
-    ; MIPS32: G_STORE [[MV]](s64), [[GV]](p0) :: (store 8 into @i64_align8)
+    ; MIPS32: G_STORE [[MV]](s64), [[GV]](p0) :: (store (s64) into @i64_align8)
     ; MIPS32: RetRA
     ; MIPS32R6-LABEL: name: store_i64_align8
     ; MIPS32R6: liveins: $a0, $a1
@@ -1101,13 +1053,13 @@ body:             |
     ; MIPS32R6: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32R6: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; MIPS32R6: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @i64_align8
-    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store 8 into @i64_align8)
+    ; MIPS32R6: G_STORE [[MV]](s64), [[GV]](p0) :: (store (s64) into @i64_align8)
     ; MIPS32R6: RetRA
     %1:_(s32) = COPY $a0
     %2:_(s32) = COPY $a1
     %0:_(s64) = G_MERGE_VALUES %1(s32), %2(s32)
     %3:_(p0) = G_GLOBAL_VALUE @i64_align8
-    G_STORE %0(s64), %3(p0) :: (store 8 into @i64_align8)
+    G_STORE %0(s64), %3(p0) :: (store (s64) into @i64_align8)
     RetRA
 
 ...

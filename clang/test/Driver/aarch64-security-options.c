@@ -9,15 +9,6 @@
 // RUN: %clang -target aarch64--none-eabi -c %s -### -msign-return-address=all                              2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-A --check-prefix=BTE-OFF
 
-// Check that the -msign-return-address= option can also accept the signing key
-// to use.
-
-// RUN: %clang -target aarch64--none-eabi -c %s -### -msign-return-address=non-leaf                   2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-OFF
-
-// RUN: %clang -target aarch64--none-eabi -c %s -### -msign-return-address=all                        2>&1 | \
-// RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-B --check-prefix=BTE-OFF
-
 // -mbranch-protection with standard
 // RUN: %clang -target aarch64--none-eabi -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON

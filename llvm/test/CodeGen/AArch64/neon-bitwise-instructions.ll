@@ -817,34 +817,131 @@ define <4 x i32> @bsl4xi32(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
   ret <4 x i32> %4
 }
 
-define <8 x i8> @vselect_v8i8(<8 x i8> %a) {
-; CHECK-LABEL: vselect_v8i8:
+define <8 x i8> @vselect_constant_cond_zero_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: vselect_constant_cond_zero_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d1, #0x0000000000ffff
+; CHECK-NEXT:    movi d1, #0x00000000ff00ff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    orr v0.2s, #0
 ; CHECK-NEXT:    ret
-  %b = select <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> <i8 undef, i8 undef, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+  %b = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> zeroinitializer
   ret <8 x i8> %b
 }
 
-define <4 x i16> @vselect_v4i16(<4 x i16> %a) {
-; CHECK-LABEL: vselect_v4i16:
+define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: vselect_constant_cond_zero_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d1, #0x0000000000ffff
+; CHECK-NEXT:    movi d1, #0xffff00000000ffff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    orr v0.2s, #0
 ; CHECK-NEXT:    ret
-  %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i16> %a, <4 x i16> <i16 undef, i16 0, i16 0, i16 0>
+  %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> zeroinitializer
   ret <4 x i16> %b
+}
+
+define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: vselect_constant_cond_zero_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI85_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI85_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.4s, #0
+; CHECK-NEXT:    ret
+  %b = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> zeroinitializer
+  ret <4 x i32> %b
+}
+
+define <8 x i8> @vselect_constant_cond_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: vselect_constant_cond_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d2, #0xffffffffff00ff00
+; CHECK-NEXT:    movi d3, #0x00000000ff00ff
+; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %c = select <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x i8> %a, <8 x i8> %b
+  ret <8 x i8> %c
+}
+
+define <4 x i16> @vselect_constant_cond_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: vselect_constant_cond_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d2, #0x00ffffffff0000
+; CHECK-NEXT:    movi d3, #0xffff00000000ffff
+; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v3.8b
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %c = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i16> %a, <4 x i16> %b
+  ret <4 x i16> %c
+}
+
+define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: vselect_constant_cond_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI88_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI88_0]
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %c = select <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %c
+}
+
+define <8 x i8> @vselect_equivalent_shuffle_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI89_0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI89_0]
+; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %c
+}
+
+define <8 x i16> @vselect_equivalent_shuffle_v8i16(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI90_0
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI90_0]
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 9, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %c
+}
+
+define <4 x i16> @vselect_equivalent_shuffle_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #2
+; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
+; CHECK-NEXT:    ext v0.8b, v0.8b, v0.8b, #2
+; CHECK-NEXT:    ret
+  %c = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+  ret <4 x i16> %c
+}
+
+define <4 x i32> @vselect_equivalent_shuffle_v4i32(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: vselect_equivalent_shuffle_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #4
+; CHECK-NEXT:    ret
+  %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+  ret <4 x i32> %c
 }
 
 define <8 x i8> @vselect_cmp_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: vselect_cmp_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    ret
   %cmp = icmp ne <8 x i8> %a, %b
   %d = select <8 x i1> %cmp, <8 x i8> %b, <8 x i8> %c
@@ -866,8 +963,7 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: vselect_cmpz_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    mvn v0.8b, v0.8b
-; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    ret
   %cmp = icmp ne <8 x i8> %a, zeroinitializer
   %d = select <8 x i1> %cmp, <8 x i8> %b, <8 x i8> %c
@@ -888,12 +984,24 @@ define <8 x i8> @vselect_cmpz_eq(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: vselect_tst:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    bsl v0.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    ret
-	%tmp3 = and <8 x i8> %a, %b
-	%tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
-  %d = select <8 x i1> %tmp4, <8 x i8> %b, <8 x i8> %c
+  %tmp3 = and <8 x i8> %a, %b
+  %tmp4 = icmp eq <8 x i8> %tmp3, zeroinitializer
+  %d = select <8 x i1> %tmp4, <8 x i8> %c, <8 x i8> %b
+  ret <8 x i8> %d
+}
+
+define <8 x i8> @sext_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
+; CHECK-LABEL: sext_tst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %tmp3 = and <8 x i8> %a, %b
+  %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
+  %d = sext <8 x i1> %tmp4 to <8 x i8>
   ret <8 x i8> %d
 }
 

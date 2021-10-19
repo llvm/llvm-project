@@ -92,6 +92,8 @@ public:
 
 S3 h, k;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
+int *gptr;
+#pragma omp threadprivate(gptr) // expected-note {{defined as threadprivate or thread local}}
 
 template <class T>       // expected-note {{declared here}}
 T tmain(T argc) {
@@ -243,7 +245,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp parallel reduction(&& : S2::S2sc) // expected-error {{const-qualified variable cannot be reduction}}
   foo();
-#pragma omp parallel reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{nvalid operands to binary expression ('S4' and 'S4')}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
+#pragma omp parallel reduction(& : e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}} expected-error {{invalid operands to binary expression ('S5' and 'S5')}}
   foo();
 #pragma omp parallel reduction(+ : h, k, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be reduction}}
   foo();
@@ -277,6 +279,8 @@ int main(int argc, char **argv) {
   m++;
 #pragma omp parallel reduction(task, + : m) // omp45-error 2 {{expected expression}} omp45-warning {{missing ':' after reduction identifier - ignoring}}
   m++;
+#pragma omp parallel reduction(+:gptr[:argc]) // expected-error {{threadprivate or thread local variable cannot be reduction}}
+  ;
 
   return tmain(argc) + tmain(fl); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<float>' requested here}}
 }

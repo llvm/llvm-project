@@ -234,6 +234,7 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
   for (uint32_t I = 0; I < NumCandidates; I++) {
     uint64_t Count = ValueDataRef[I].Count;
     assert(Count <= TotalCount);
+    (void)TotalCount;
     uint64_t Target = ValueDataRef[I].Value;
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
                       << "  Target_func: " << Target << "\n");
@@ -263,8 +264,15 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       break;
     }
 
+    // Don't promote if the symbol is not defined in the module. This avoids
+    // creating a reference to a symbol that doesn't exist in the module
+    // This can happen when we compile with a sample profile collected from
+    // one binary but used for another, which may have profiled targets that
+    // aren't used in the new binary. We might have a declaration initially in
+    // the case where the symbol is globally dead in the binary and removed by
+    // ThinLTO.
     Function *TargetFunction = Symtab->getFunction(Target);
-    if (TargetFunction == nullptr) {
+    if (TargetFunction == nullptr || TargetFunction->isDeclaration()) {
       LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", &CB)
@@ -386,8 +394,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
   InstrProfSymtab Symtab;
   if (Error E = Symtab.create(M, InLTO)) {
     std::string SymtabFailure = toString(std::move(E));
-    LLVM_DEBUG(dbgs() << "Failed to create symtab: " << SymtabFailure << "\n");
-    (void)SymtabFailure;
+    M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
   }
   bool Changed = false;

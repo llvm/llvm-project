@@ -11,7 +11,7 @@
 #include "utils/CPP/Array.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(Stdio, FWriteBasic) {
+TEST(LlvmLibcStdio, FWriteBasic) {
   struct StrcpyFile : __llvm_libc::FILE {
     char *buf;
   } f;

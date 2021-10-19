@@ -11,29 +11,31 @@
 # RAW-LLVM1-NEXT:   0xA700550400009
 # RAW-LLVM1-NEXT: }
 
-# RUN: llvm-readobj --relocations %t1 | FileCheck --check-prefix=LLVM1 %s
+# RUN: llvm-readobj --relocations %t1 | \
+# RUN:   FileCheck --match-full-lines --check-prefix=LLVM1 %s
+
 # LLVM1:      Section (1) .relr.dyn {
-# LLVM1-NEXT:   0x10D60 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x10D68 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x10DA0 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20000 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20040 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20050 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20080 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20088 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20090 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20098 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20210 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x202A8 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x202D8 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x202E8 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x202F8 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20308 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20358 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20360 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20368 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20380 R_X86_64_RELATIVE - 0x0
-# LLVM1-NEXT:   0x20390 R_X86_64_RELATIVE - 0x0
+# LLVM1-NEXT:   0x10D60 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x10D68 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x10DA0 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20000 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20040 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20050 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20080 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20088 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20090 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20098 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20210 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202A8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202D8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202E8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x202F8 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20308 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20358 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20360 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20368 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20380 R_X86_64_RELATIVE -
+# LLVM1-NEXT:   0x20390 R_X86_64_RELATIVE -
 # LLVM1-NEXT: }
 
 # RUN: llvm-readelf --relocations --raw-relr %t1 \
@@ -93,22 +95,24 @@ Sections:
 # RAW-LLVM2-NEXT:   0x50400009
 # RAW-LLVM2-NEXT: }
 
-# RUN: llvm-readobj --relocations %t2 | FileCheck --check-prefix=LLVM2 %s
+# RUN: llvm-readobj --relocations %t2 | \
+# RUN:   FileCheck --match-full-lines --check-prefix=LLVM2 %s
+
 # LLVM2:      Section (1) .relr.dyn {
-# LLVM2-NEXT:   0x10D60 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x10D64 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x10D80 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20000 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20020 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20028 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20040 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20044 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20048 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x2004C R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x20088 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x200D4 R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x200EC R_386_RELATIVE - 0x0
-# LLVM2-NEXT:   0x200F4 R_386_RELATIVE - 0x0
+# LLVM2-NEXT:   0x10D60 R_386_RELATIVE -
+# LLVM2-NEXT:   0x10D64 R_386_RELATIVE -
+# LLVM2-NEXT:   0x10D80 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20000 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20020 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20028 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20040 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20044 R_386_RELATIVE -
+# LLVM2-NEXT:   0x20048 R_386_RELATIVE -
+# LLVM2-NEXT:   0x2004C R_386_RELATIVE -
+# LLVM2-NEXT:   0x20088 R_386_RELATIVE -
+# LLVM2-NEXT:   0x200D4 R_386_RELATIVE -
+# LLVM2-NEXT:   0x200EC R_386_RELATIVE -
+# LLVM2-NEXT:   0x200F4 R_386_RELATIVE -
 # LLVM2-NEXT: }
 
 # RUN: llvm-readelf --relocations --raw-relr %t2 | \
@@ -151,7 +155,7 @@ Sections:
                0x000F0501, 0x50400009 ]
     EntSize: [[ENTSIZE=<none>]]
     ShType:  [[SHTYPE=<none>]]
-    Link:    [[LINK=""]]
+    Link:    [[LINK=<none>]]
 
 ## Check we report a warning when we are unable to dump relocations
 ## for a SHT_RELR/SHT_ANDROID_RELR section.
@@ -165,14 +169,14 @@ Sections:
 
 # BROKEN-LLVM:      Relocations [
 # BROKEN-LLVM-NEXT:   Section (1) .relr.dyn {
-# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 # BROKEN-LLVM-NEXT:   }
 # BROKEN-LLVM-NEXT: ]
 
-# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 # BROKEN-GNU:      Relocation section '.relr.dyn' at offset 0x34 contains <?> entries:
 # BROKEN-GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
-# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has invalid sh_entsize: expected 4, but got 1
 
 ## Case B: check the case when relocations can't be read from an SHT_ANDROID_RELR section.
 ##         SHT_ANDROID_RELR = 0x6fffff00.

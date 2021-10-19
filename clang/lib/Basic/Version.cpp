@@ -17,9 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
-#endif
 
 namespace clang {
 

@@ -110,7 +110,8 @@ public:
   /// Construct a callee.  Call this constructor directly when this
   /// isn't a direct call.
   CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
-      : KindOrFunctionPointer(SpecialKind(uintptr_t(functionPtr))) {
+      : KindOrFunctionPointer(
+            SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
     AbstractInfo = abstractInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
@@ -186,7 +187,8 @@ public:
   }
   void setFunctionPointer(llvm::Value *functionPtr) {
     assert(isOrdinary());
-    KindOrFunctionPointer = SpecialKind(uintptr_t(functionPtr));
+    KindOrFunctionPointer =
+        SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
 
   bool isVirtual() const {

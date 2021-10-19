@@ -1,4 +1,5 @@
-; RUN: opt < %s -S -nvvm-reflect | FileCheck %s
+; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -nvvm-reflect | FileCheck %s
+; RUN: opt < %s -S -mtriple=nvptx-nvidia-cuda -passes=nvvm-reflect | FileCheck %s
 
 declare i32 @__nvvm_reflect(i8*)
 @str = private unnamed_addr addrspace(1) constant [11 x i8] c"__CUDA_FTZ\00"

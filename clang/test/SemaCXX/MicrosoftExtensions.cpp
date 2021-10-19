@@ -462,6 +462,77 @@ class SealedDestructor { // expected-note {{mark 'SealedDestructor' as 'sealed' 
     virtual ~SealedDestructor() sealed; // expected-warning {{class with destructor marked 'sealed' cannot be inherited from}}
 };
 
+// expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
+class AbstractClass abstract {
+  int i;
+};
+
+// expected-error@+1 {{variable type 'AbstractClass' is an abstract class}}
+AbstractClass abstractInstance;
+
+// expected-warning@+4 {{abstract class is marked 'sealed'}}
+// expected-note@+3 {{'AbstractAndSealedClass' declared here}}
+// expected-warning@+2 {{'abstract' keyword is a Microsoft extension}}
+// expected-warning@+1 {{'sealed' keyword is a Microsoft extension}}
+class AbstractAndSealedClass abstract sealed {}; // Does no really make sense, but allowed
+
+// expected-error@+1 {{variable type 'AbstractAndSealedClass' is an abstract class}}
+AbstractAndSealedClass abstractAndSealedInstance;
+// expected-error@+1 {{base 'AbstractAndSealedClass' is marked 'sealed'}}
+class InheritFromAbstractAndSealed : AbstractAndSealedClass {};
+
+#if __cplusplus <= 199711L
+// expected-warning@+4 {{'final' keyword is a C++11 extension}}
+// expected-warning@+3 {{'final' keyword is a C++11 extension}}
+#endif
+// expected-error@+1 {{class already marked 'final'}}
+class TooManyVirtSpecifiers1 final final {};
+#if __cplusplus <= 199711L
+// expected-warning@+4 {{'final' keyword is a C++11 extension}}
+#endif
+// expected-warning@+2 {{'sealed' keyword is a Microsoft extension}}
+// expected-error@+1 {{class already marked 'sealed'}}
+class TooManyVirtSpecifiers2 final sealed {};
+#if __cplusplus <= 199711L
+// expected-warning@+6 {{'final' keyword is a C++11 extension}}
+// expected-warning@+5 {{'final' keyword is a C++11 extension}}
+#endif
+// expected-warning@+3 {{abstract class is marked 'final'}}
+// expected-warning@+2 {{'abstract' keyword is a Microsoft extension}}
+// expected-error@+1 {{class already marked 'final'}}
+class TooManyVirtSpecifiers3 final abstract final {};
+#if __cplusplus <= 199711L
+// expected-warning@+6 {{'final' keyword is a C++11 extension}}
+#endif
+// expected-warning@+4 {{abstract class is marked 'final'}}
+// expected-warning@+3 {{'abstract' keyword is a Microsoft extension}}
+// expected-warning@+2 {{'abstract' keyword is a Microsoft extension}}
+// expected-error@+1 {{class already marked 'abstract'}}
+class TooManyVirtSpecifiers4 abstract final abstract {};
+
+class Base {
+  virtual void i();
+};
+class AbstractFunctionInClass : public Base {
+  // expected-note@+2 {{unimplemented pure virtual method 'f' in 'AbstractFunctionInClass'}}
+  // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
+  virtual void f() abstract;
+  // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
+  void g() abstract; // expected-error {{'g' is not virtual and cannot be declared pure}}
+  // expected-note@+2 {{unimplemented pure virtual method 'h' in 'AbstractFunctionInClass'}}
+  // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
+  virtual void h() abstract = 0; // expected-error {{class member already marked 'abstract'}}
+#if __cplusplus <= 199711L
+  // expected-warning@+4 {{'override' keyword is a C++11 extension}}
+#endif
+  // expected-note@+2 {{unimplemented pure virtual method 'i' in 'AbstractFunctionInClass'}}
+  // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}
+  virtual void i() abstract override;
+};
+
+// expected-error@+1 {{variable type 'AbstractFunctionInClass' is an abstract class}}
+AbstractFunctionInClass abstractFunctionInClassInstance;
+
 void AfterClassBody() {
   // expected-warning@+1 {{attribute 'deprecated' is ignored, place it after "struct" to apply attribute to type declaration}}
   struct D {} __declspec(deprecated);

@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
 #define LLVM_CLANG_STATICANALYZER_CORE_ANALYZEROPTIONS_H
 
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
@@ -255,11 +256,10 @@ public:
   unsigned NoRetryExhausted : 1;
 
   /// Emit analyzer warnings as errors.
-  unsigned AnalyzerWerror : 1;
+  bool AnalyzerWerror : 1;
 
   /// The inlining stack depth limit.
-  // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
-  unsigned InlineMaxStackDepth = 5;
+  unsigned InlineMaxStackDepth;
 
   /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
@@ -390,6 +390,20 @@ public:
   ///
   /// \sa CXXMemberInliningMode
   bool mayInlineCXXMemberFunction(CXXInlineableMemberKind K) const;
+
+  ento::PathDiagnosticConsumerOptions getDiagOpts() const {
+    return {FullCompilerInvocation,
+            ShouldDisplayMacroExpansions,
+            ShouldSerializeStats,
+            // The stable report filename option is deprecated because
+            // file names are now always stable. Now the old option acts as
+            // an alias to the new verbose filename option because this
+            // closely mimics the behavior under the old option.
+            ShouldWriteStableReportFilename || ShouldWriteVerboseReportFilename,
+            AnalyzerWerror,
+            ShouldApplyFixIts,
+            ShouldDisplayCheckerNameForText};
+  }
 };
 
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;

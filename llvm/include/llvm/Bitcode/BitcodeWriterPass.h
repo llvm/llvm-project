@@ -71,6 +71,8 @@ public:
   /// Run the bitcode writer pass, and output the module to the selected
   /// output stream.
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+
+  static bool isRequired() { return true; }
 };
 
 }

@@ -49,10 +49,10 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
 }
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
-  : PP(pp), Actions(actions), Diags(PP.getDiagnostics()),
-    GreaterThanIsOperator(true), ColonIsSacred(false),
-    InMessageExpression(false), TemplateParameterDepth(0),
-    ParsingInObjCContainer(false) {
+    : PP(pp), PreferredType(pp.isCodeCompletionEnabled()), Actions(actions),
+      Diags(PP.getDiagnostics()), GreaterThanIsOperator(true),
+      ColonIsSacred(false), InMessageExpression(false),
+      TemplateParameterDepth(0), ParsingInObjCContainer(false) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);
@@ -309,6 +309,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       return false;
 
     case tok::annot_pragma_openmp:
+    case tok::annot_attr_openmp:
     case tok::annot_pragma_openmp_end:
       // Stop before an OpenMP pragma boundary.
       if (OpenMPDirectiveParsing)
@@ -494,6 +495,7 @@ void Parser::Initialize() {
   Ident_instancetype = nullptr;
   Ident_final = nullptr;
   Ident_sealed = nullptr;
+  Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
   Ident_import = nullptr;
@@ -503,10 +505,12 @@ void Parser::Initialize() {
 
   Ident_vector = nullptr;
   Ident_bool = nullptr;
+  Ident_Bool = nullptr;
   Ident_pixel = nullptr;
   if (getLangOpts().AltiVec || getLangOpts().ZVector) {
     Ident_vector = &PP.getIdentifierTable().get("vector");
     Ident_bool = &PP.getIdentifierTable().get("bool");
+    Ident_Bool = &PP.getIdentifierTable().get("_Bool");
   }
   if (getLangOpts().AltiVec)
     Ident_pixel = &PP.getIdentifierTable().get("pixel");
@@ -781,7 +785,11 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     HandlePragmaFPContract();
     return nullptr;
   case tok::annot_pragma_fenv_access:
+  case tok::annot_pragma_fenv_access_ms:
     HandlePragmaFEnvAccess();
+    return nullptr;
+  case tok::annot_pragma_fenv_round:
+    HandlePragmaFEnvRound();
     return nullptr;
   case tok::annot_pragma_float_control:
     HandlePragmaFloatControl();
@@ -792,6 +800,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::annot_pragma_opencl_extension:
     HandlePragmaOpenCLExtension();
     return nullptr;
+  case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp: {
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, attrs);
@@ -867,6 +876,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     SingleDecl = ParseObjCMethodDefinition();
     break;
   case tok::code_completion:
+    cutOffParsing();
     if (CurParsedObjCImpl) {
       // Code-complete Objective-C methods even without leading '-'/'+' prefix.
       Actions.CodeCompleteObjCMethodDecl(getCurScope(),
@@ -876,7 +886,6 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     Actions.CodeCompleteOrdinaryName(
         getCurScope(),
         CurParsedObjCImpl ? Sema::PCC_ObjCImplementation : Sema::PCC_Namespace);
-    cutOffParsing();
     return nullptr;
   case tok::kw_import:
     SingleDecl = ParseModuleImport(SourceLocation());
@@ -898,7 +907,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
     }
 
   case tok::kw_static:
@@ -908,7 +917,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
         << 0;
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
     }
     goto dont_know;
 
@@ -919,7 +928,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
       // Inline namespaces. Allowed as an extension even in C++03.
       if (NextKind == tok::kw_namespace) {
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
       }
 
       // Parse (then ignore) 'inline' prior to a template instantiation. This is
@@ -928,7 +937,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
         Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
           << 1;
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::FileContext, DeclEnd, attrs);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, attrs);
       }
     }
     goto dont_know;
@@ -942,9 +951,8 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
              diag::warn_cxx98_compat_extern_template :
              diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
-      return Actions.ConvertDeclToDeclGroup(
-          ParseExplicitInstantiation(DeclaratorContext::FileContext, ExternLoc,
-                                     TemplateLoc, DeclEnd, attrs));
+      return Actions.ConvertDeclToDeclGroup(ParseExplicitInstantiation(
+          DeclaratorContext::File, ExternLoc, TemplateLoc, DeclEnd, attrs));
     }
     goto dont_know;
 
@@ -1077,8 +1085,6 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
                                                        DS, AnonRecord);
     DS.complete(TheDecl);
-    if (getLangOpts().OpenCL)
-      Actions.setCurrentOpenCLExtensionForDecl(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
       return Actions.BuildDeclaratorGroup(decls);
@@ -1125,11 +1131,11 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   if (getLangOpts().CPlusPlus && isTokenStringLiteral() &&
       DS.getStorageClassSpec() == DeclSpec::SCS_extern &&
       DS.getParsedSpecifiers() == DeclSpec::PQ_StorageClassSpecifier) {
-    Decl *TheDecl = ParseLinkage(DS, DeclaratorContext::FileContext);
+    Decl *TheDecl = ParseLinkage(DS, DeclaratorContext::File);
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, DeclaratorContext::FileContext);
+  return ParseDeclGroup(DS, DeclaratorContext::File);
 }
 
 Parser::DeclGroupPtrTy
@@ -1211,7 +1217,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // a definition.  Late parsed attributes are checked at the end.
   if (Tok.isNot(tok::equal)) {
     for (const ParsedAttr &AL : D.getAttributes())
-      if (AL.isKnownToGCC() && !AL.isCXX11Attribute())
+      if (AL.isKnownToGCC() && !AL.isStandardAttributeSyntax())
         Diag(AL.getLoc(), diag::warn_attribute_on_function_definition) << AL;
   }
 
@@ -1226,7 +1232,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
-    D.setFunctionDefinitionKind(FDK_Definition);
+    D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
     Decl *DP = Actions.HandleDeclarator(ParentScope, D,
                                         TemplateParameterLists);
     D.complete(DP);
@@ -1257,7 +1263,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                    Scope::CompoundStmtScope);
     Scope *ParentScope = getCurScope()->getParent();
 
-    D.setFunctionDefinitionKind(FDK_Definition);
+    D.setFunctionDefinitionKind(FunctionDefinitionKind::Definition);
     Decl *FuncDecl = Actions.HandleDeclarator(ParentScope, D,
                                               MultiTemplateParamsArg());
     D.complete(FuncDecl);
@@ -1438,7 +1444,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     }
 
     // Parse the first declarator attached to this declspec.
-    Declarator ParmDeclarator(DS, DeclaratorContext::KNRTypeListContext);
+    Declarator ParmDeclarator(DS, DeclaratorContext::KNRTypeList);
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.
@@ -1693,6 +1699,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     break;
 
   case Sema::NC_Type: {
+    if (TryAltiVecVectorToken())
+      // vector has been found as a type id when altivec is enabled but
+      // this is followed by a declaration specifier so this is really the
+      // altivec vector token.  Leave it unannotated.
+      break;
     SourceLocation BeginLoc = NameLoc;
     if (SS.isNotEmpty())
       BeginLoc = SS.getBeginLoc();
@@ -1734,6 +1745,11 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     return ANK_Success;
 
   case Sema::NC_NonType:
+    if (TryAltiVecVectorToken())
+      // vector has been found as a non-type id when altivec is enabled but
+      // this is followed by a declaration specifier so this is really the
+      // altivec vector token.  Leave it unannotated.
+      break;
     Tok.setKind(tok::annot_non_type);
     setNonTypeAnnotation(Tok, Classification.getNonTypeDecl());
     Tok.setLocation(NameLoc);
@@ -2112,21 +2128,21 @@ SourceLocation Parser::handleUnexpectedCodeCompletionToken() {
 
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->getFlags() & Scope::FnScope) {
+      cutOffParsing();
       Actions.CodeCompleteOrdinaryName(getCurScope(),
                                        Sema::PCC_RecoveryInFunction);
-      cutOffParsing();
       return PrevTokLocation;
     }
 
     if (S->getFlags() & Scope::ClassScope) {
-      Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       cutOffParsing();
+      Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Class);
       return PrevTokLocation;
     }
   }
 
-  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Namespace);
   cutOffParsing();
+  Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Namespace);
   return PrevTokLocation;
 }
 
@@ -2450,8 +2466,8 @@ bool Parser::ParseModuleName(
   while (true) {
     if (!Tok.is(tok::identifier)) {
       if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteModuleImport(UseLoc, Path);
         cutOffParsing();
+        Actions.CodeCompleteModuleImport(UseLoc, Path);
         return true;
       }
 

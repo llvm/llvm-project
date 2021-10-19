@@ -19,13 +19,8 @@ class UserIDResolver;
 class HostInfoWindows : public HostInfoBase {
   friend class HostInfoBase;
 
-private:
-  // Static class, unconstructable.
-  HostInfoWindows();
-  ~HostInfoWindows();
-
 public:
-  static void Initialize();
+  static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
   static void Terminate();
 
   static size_t GetPageSize();

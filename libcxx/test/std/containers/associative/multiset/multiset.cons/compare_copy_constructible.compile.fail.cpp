@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <set>
 
 // Check that std::multiset fails to instantiate if the comparison predicate is

@@ -14,6 +14,8 @@
 //     size_t operator()(type_index index) const;
 // };
 
+// UNSUPPORTED: no-rtti
+
 #include <typeindex>
 #include <type_traits>
 

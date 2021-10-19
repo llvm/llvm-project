@@ -145,7 +145,7 @@ bool Preprocessor::IsPreviousCachedToken(const Token &Tok) const {
   if (LastCachedTok.getKind() != Tok.getKind())
     return false;
 
-  int RelOffset = 0;
+  SourceLocation::IntTy RelOffset = 0;
   if ((!getSourceManager().isInSameSLocAddrSpace(
           Tok.getLocation(), getLastCachedTokenLocation(), &RelOffset)) ||
       RelOffset)

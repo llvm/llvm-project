@@ -33,10 +33,10 @@ declare i32 @_Z3foov() #1
 ; LINUX-SECTIONS: .section        .text._Z3bazb,"ax",@progbits
 ; LINUX-SECTIONS: _Z3bazb:
 ; Check that the basic block with id 1 doesn't get a section.
-; LINUX-SECTIONS-NOT: .section        .text._Z3bazb._Z3bazb.{{[0-9]+}},"ax",@progbits
+; LINUX-SECTIONS-NOT: .section        .text._Z3bazb._Z3bazb.__part.{{[0-9]+}},"ax",@progbits
 ; LINUX-SECTIONS-LABEL: # %bb.1:
 ; LINUX-SECTIONS-NEXT:        callq   _Z3barv
-; LINUX-SECTIONS: .section        .text._Z3bazb.[[SECTION_LABEL:_Z3bazb.[0-9]+]],"ax",@progbits
+; LINUX-SECTIONS: .section        .text._Z3bazb.[[SECTION_LABEL:_Z3bazb.__part.[0-9]+]],"ax",@progbits
 ; LINUX-SECTIONS-NEXT: [[SECTION_LABEL]]:
 ; LINUX-SECTIONS-NEXT:        callq   _Z3foov
 ; LINUX-SECTIONS: .LBB_END0_2:

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -33,6 +34,16 @@ using namespace llvm;
 #define DEBUG_TYPE "arc-addr-mode"
 
 namespace llvm {
+
+static cl::opt<unsigned> ArcKillAddrMode("arc-kill-addr-mode", cl::init(0),
+                                         cl::ReallyHidden, cl::ZeroOrMore);
+
+#define DUMP_BEFORE() ((ArcKillAddrMode & 0x0001) != 0)
+#define DUMP_AFTER() ((ArcKillAddrMode & 0x0002) != 0)
+#define VIEW_BEFORE() ((ArcKillAddrMode & 0x0004) != 0)
+#define VIEW_AFTER() ((ArcKillAddrMode & 0x0008) != 0)
+#define KILL_PASS() ((ArcKillAddrMode & 0x0010) != 0)
+
 FunctionPass *createARCOptAddrMode();
 void initializeARCOptAddrModePass(PassRegistry &);
 } // end namespace llvm
@@ -73,9 +84,9 @@ private:
   // instruction \p To
   bool canHoistLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
 
-  // Returns true if load/store instruction \p Ldst can be sunk down
-  // to instruction \p To
-  bool canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
+  // // Returns true if load/store instruction \p Ldst can be sunk down
+  // // to instruction \p To
+  // bool canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To);
 
   // Check if instructions \p Ldst and \p Add can be moved to become adjacent
   // If they can return instruction which need not to move.
@@ -413,30 +424,30 @@ bool ARCOptAddrMode::canHoistLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
   return true;
 }
 
-bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
-  // Can only sink load/store within same BB
-  if (Ldst->getParent() != To->getParent())
-    return false;
-  MachineBasicBlock::const_iterator MI(Ldst), ME(To),
-      End(Ldst->getParent()->end());
+// bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
+//   // Can only sink load/store within same BB
+//   if (Ldst->getParent() != To->getParent())
+//     return false;
+//   MachineBasicBlock::const_iterator MI(Ldst), ME(To),
+//       End(Ldst->getParent()->end());
 
-  bool IsStore = Ldst->mayStore();
-  bool IsLoad = Ldst->mayLoad();
+//   bool IsStore = Ldst->mayStore();
+//   bool IsLoad = Ldst->mayLoad();
 
-  Register ValReg = IsLoad ? Ldst->getOperand(0).getReg() : Register();
-  for (; MI != ME && MI != End; ++MI) {
-    if (MI->isDebugValue())
-      continue;
-    if (MI->mayStore() || MI->isCall() || MI->isInlineAsm() ||
-        MI->hasUnmodeledSideEffects())
-      return false;
-    if (IsStore && MI->mayLoad())
-      return false;
-    if (ValReg && MI->readsVirtualRegister(ValReg))
-      return false;
-  }
-  return true;
-}
+//   Register ValReg = IsLoad ? Ldst->getOperand(0).getReg() : Register();
+//   for (; MI != ME && MI != End; ++MI) {
+//     if (MI->isDebugValue())
+//       continue;
+//     if (MI->mayStore() || MI->isCall() || MI->isInlineAsm() ||
+//         MI->hasUnmodeledSideEffects())
+//       return false;
+//     if (IsStore && MI->mayLoad())
+//       return false;
+//     if (ValReg && MI->readsVirtualRegister(ValReg))
+//       return false;
+//   }
+//   return true;
+// }
 
 void ARCOptAddrMode::changeToAddrMode(MachineInstr &Ldst, unsigned NewOpcode,
                                       unsigned NewBase,
@@ -485,8 +496,13 @@ bool ARCOptAddrMode::processBasicBlock(MachineBasicBlock &MBB) {
 }
 
 bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  if (skipFunction(MF.getFunction()) || KILL_PASS())
     return false;
+
+  if (DUMP_BEFORE())
+    MF.dump();
+  if (VIEW_BEFORE())
+    MF.viewCFG();
 
   AST = &MF.getSubtarget<ARCSubtarget>();
   AII = AST->getInstrInfo();
@@ -496,6 +512,11 @@ bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (auto &MBB : MF)
     Changed |= processBasicBlock(MBB);
+
+  if (DUMP_AFTER())
+    MF.dump();
+  if (VIEW_AFTER())
+    MF.viewCFG();
   return Changed;
 }
 

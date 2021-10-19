@@ -24,7 +24,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl $3
-; CHECK-NEXT:    calll bar
+; CHECK-NEXT:    calll bar@PLT
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    movl B+20, %eax
 ; CHECK-NEXT:    movl B+16, %ecx
@@ -39,15 +39,15 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl $3
-; CHECK-NEXT:    calll baz
+; CHECK-NEXT:    calll baz@PLT
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    retl
 entry:
-	tail call void (i32, ...) @bar( i32 3, %struct.W* byval  @.cpx ) nounwind
-	tail call void (i32, ...) @baz( i32 3, %struct.W* byval  @B ) nounwind
+	tail call void (i32, ...) @bar( i32 3, %struct.W* byval(%struct.W) @.cpx ) nounwind
+	tail call void (i32, ...) @baz( i32 3, %struct.W* byval(%struct.W)  @B ) nounwind
 	ret i32 undef
 }
 

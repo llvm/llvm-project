@@ -36,10 +36,10 @@ static void print_usage(void) {
   fprintf(stderr, "  * --targets-list\n");
   fprintf(stderr, "    List available targets\n\n");
   fprintf(stderr, "  * --object-list-sections\n");
-  fprintf(stderr, "    Read object file form stdin - list sections\n\n");
+  fprintf(stderr, "    Read object file from stdin - list sections\n\n");
   fprintf(stderr, "  * --object-list-symbols\n");
   fprintf(stderr,
-          "    Read object file form stdin - list symbols (like nm)\n\n");
+          "    Read object file from stdin - list symbols (like nm)\n\n");
   fprintf(stderr, "  * --disassemble\n");
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
@@ -48,11 +48,10 @@ static void print_usage(void) {
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --echo\n");
-  fprintf(stderr,
-          "    Read bitcode file form stdin - print it back out\n\n");
+  fprintf(stderr, "    Read bitcode file from stdin - print it back out\n\n");
   fprintf(stderr, "  * --test-diagnostic-handler\n");
   fprintf(stderr,
-          "    Read bitcode file form stdin with a diagnostic handler set\n\n");
+          "    Read bitcode file from stdin with a diagnostic handler set\n\n");
   fprintf(stderr, "  * --test-dibuilder\n");
   fprintf(stderr,
           "    Run tests for the DIBuilder C API - print generated module\n\n");

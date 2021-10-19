@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --remove-section=.text.bar %t %t2
-# RUN: llvm-readobj --elf-section-groups %t2 | FileCheck %s
+# RUN: llvm-readobj --section-groups %t2 | FileCheck %s
 
 # In this test the section .text.bar is getting removed, since this section
 # goes after all the sections comprising a group, the content of the

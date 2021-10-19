@@ -17,9 +17,6 @@
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/IRBuilder.h"
-
-#include <iostream>
 
 using namespace llvm;
 
@@ -66,6 +63,9 @@ static Value *callPrintfBegin(IRBuilder<> &Builder, Value *Version) {
   auto Int64Ty = Builder.getInt64Ty();
   auto M = Builder.GetInsertBlock()->getModule();
   auto Fn = M->getOrInsertFunction("__ockl_printf_begin", Int64Ty, Int64Ty);
+  if (!M->getModuleFlag("amdgpu_hostcall")) {
+    M->addModuleFlag(llvm::Module::Override, "amdgpu_hostcall", 1);
+  }
   return Builder.CreateCall(Fn, Version);
 }
 
@@ -137,11 +137,11 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
 
   auto PtrPhi = Builder.CreatePHI(Str->getType(), 2);
   PtrPhi->addIncoming(Str, Prev);
-  auto PtrNext = Builder.CreateGEP(PtrPhi, One);
+  auto PtrNext = Builder.CreateGEP(Builder.getInt8Ty(), PtrPhi, One);
   PtrPhi->addIncoming(PtrNext, While);
 
   // Condition for the while loop.
-  auto Data = Builder.CreateLoad(PtrPhi);
+  auto Data = Builder.CreateLoad(Builder.getInt8Ty(), PtrPhi);
   auto Cmp = Builder.CreateICmpEQ(Data, CharZero);
   Builder.CreateCondBr(Cmp, WhileDone, While);
 

@@ -11,8 +11,8 @@ namespace unconstrained {
   static_assert(is_same_v<decltype(f1('c')), char>);
 
   decltype(auto) f2(auto &x) { return x; }
-  // expected-note@-1{{candidate function [with x:auto = int] not viable: expects an l-value for 1st argument}}
-  // expected-note@-2{{candidate function [with x:auto = char] not viable: expects an l-value for 1st argument}}
+  // expected-note@-1{{candidate function [with x:auto = int] not viable: expects an lvalue for 1st argument}}
+  // expected-note@-2{{candidate function [with x:auto = char] not viable: expects an lvalue for 1st argument}}
   static_assert(is_same_v<decltype(f2(1)), int &>); // expected-error{{no matching}}
   static_assert(is_same_v<decltype(f2('c')), char &>); // expected-error{{no matching}}
 
@@ -46,7 +46,7 @@ namespace unconstrained {
   static_assert(is_same_v<decltype(f8('c', 1)), int>);
 
   decltype(auto) f9(auto &... x) { return (x, ...); }
-  // expected-note@-1{{candidate function [with x:auto = <int (), int>] not viable: expects an l-value for 2nd argument}}
+  // expected-note@-1{{candidate function [with x:auto = <int (), int>] not viable: expects an lvalue for 2nd argument}}
   using f9c1 = decltype(f9(return_int, 1)); // expected-error{{no matching}}
 
   decltype(auto) f11(decltype(auto) x) { return x; } // expected-error{{'decltype(auto)' not allowed in function prototype}}
@@ -186,7 +186,7 @@ namespace constrained {
   static_assert(is_same_v<decltype(f9(i, c)), void>);
   // expected-error@-1{{no matching}}
   static_assert(is_same_v<decltype(f9(i, i, ci)), void>);
-  void f10(C decltype(auto) x);
+  void f10(C decltype(auto) x); // expected-error{{decltype(auto)' not allowed in function prototype}}
   auto f11 = [] (C auto x) { };
   // expected-note@-1{{candidate template ignored}} expected-note@-1{{because}}
   static_assert(is_same_v<decltype(f11(1)), void>);
@@ -238,7 +238,7 @@ namespace constrained {
   static_assert(is_same_v<decltype(f20(i, c)), void>);
   // expected-error@-1{{no matching}}
   static_assert(is_same_v<decltype(f20(c, c, cc)), void>);
-  void f21(C2<char> decltype(auto) x);
+  void f21(C2<char> decltype(auto) x); // expected-error{{decltype(auto)' not allowed in function prototype}}
   auto f22 = [] (C2<char> auto x) { };
   // expected-note@-1{{candidate template ignored}} expected-note@-1{{because}}
   static_assert(is_same_v<decltype(f22(1)), void>);

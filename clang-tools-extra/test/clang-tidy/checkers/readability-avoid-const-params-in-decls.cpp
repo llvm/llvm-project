@@ -59,6 +59,25 @@ int F13(const bool b = true);
 // CHECK-FIXES: int F13(bool b = true);
 int f13 = F13<int>();
 
+template <typename T>
+struct A {};
+
+void F14(const A<const int>);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 1 is const-qualified
+// CHECK-FIXES: void F14(A<const int>);
+
+void F15(const A<const int> Named);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 'Named' is const-qualified
+// CHECK-FIXES: void F15(A<const int> Named);
+
+void F16(const A<const int> *const);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 1 is const-qualified
+// CHECK-FIXES: void F16(const A<const int> *);
+
+void F17(const A<const int> *const Named);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: parameter 'Named' is const-qualified
+// CHECK-FIXES: void F17(const A<const int> *Named);
+
 struct Foo {
   Foo(const int i);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: parameter 'i'
@@ -80,6 +99,29 @@ struct FooT {
   // CHECK-FIXES: void operator()(int i);
 };
 FooT<int> f(1);
+
+template <class T>
+struct BingT {
+  BingT(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: parameter 'i'
+  // CHECK-FIXES: BingT(T i);
+
+  void operator()(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i'
+  // CHECK-FIXES: void operator()(T i);
+};
+BingT<int> f2(1);
+
+template <class T>
+struct NeverInstantiatedT {
+  NeverInstantiatedT(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: parameter 'i'
+  // CHECK-FIXES: NeverInstantiatedT(T i);
+
+  void operator()(const T i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: parameter 'i'
+  // CHECK-FIXES: void operator()(T i);
+};
 
 // Do not match on definitions
 void NF1(const int i) {}
@@ -109,6 +151,13 @@ struct BarT {
   void operator()(const int i) {}
 };
 BarT<int> b(1);
+template <class T>
+struct BatT {
+  BatT(const T i) {}
+
+  void operator()(const T i) {}
+};
+BatT<int> b2(1);
 
 // Do not match on other stuff
 void NF(const alias_type& i);

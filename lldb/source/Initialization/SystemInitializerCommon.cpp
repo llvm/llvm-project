@@ -11,7 +11,6 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
@@ -35,9 +34,11 @@
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
-SystemInitializerCommon::SystemInitializerCommon() {}
+SystemInitializerCommon::SystemInitializerCommon(
+    HostInfo::SharedLibraryDirectoryHelper *helper)
+    : m_shlib_dir_helper(helper) {}
 
-SystemInitializerCommon::~SystemInitializerCommon() {}
+SystemInitializerCommon::~SystemInitializerCommon() = default;
 
 /// Initialize the FileSystem based on the current reproducer mode.
 static llvm::Error InitializeFileSystem() {
@@ -79,9 +80,10 @@ static llvm::Error InitializeFileSystem() {
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
     FileSystem::Initialize(fp.GetFileCollector());
 
-    repro::WorkingDirectoryProvider &wp =
-        g->GetOrCreate<repro::WorkingDirectoryProvider>();
-    fp.RecordInterestingDirectory(wp.GetDirectory());
+    fp.RecordInterestingDirectory(
+        g->GetOrCreate<repro::WorkingDirectoryProvider>().GetDirectory());
+    fp.RecordInterestingDirectory(
+        g->GetOrCreate<repro::HomeDirectoryProvider>().GetDirectory());
 
     return llvm::Error::success();
   }
@@ -94,7 +96,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
-      llvm::StringRef(disable_crash_dialog_var).equals_lower("true")) {
+      llvm::StringRef(disable_crash_dialog_var).equals_insensitive("true")) {
     // This will prevent Windows from displaying a dialog box requiring user
     // interaction when
     // LLDB crashes.  This is mostly useful when automating LLDB, for example
@@ -124,14 +126,13 @@ llvm::Error SystemInitializerCommon::Initialize() {
     return e;
 
   Log::Initialize();
-  HostInfo::Initialize();
+  HostInfo::Initialize(m_shlib_dir_helper);
 
   llvm::Error error = Socket::Initialize();
   if (error)
     return error;
 
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
 
   process_gdb_remote::ProcessGDBRemoteLog::Initialize();
 
@@ -146,8 +147,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 }
 
 void SystemInitializerCommon::Terminate() {
-  static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
-  Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
+  LLDB_SCOPED_TIMER();
 
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();

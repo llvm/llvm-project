@@ -6,11 +6,11 @@ void __attribute__((short_call)) foo4 (void);
 
 void __attribute__((far)) foo2 (void) {}
 
-// CHECK: define void @foo2() [[FAR:#[0-9]+]]
+// CHECK: define{{.*}} void @foo2() [[FAR:#[0-9]+]]
 
 void __attribute__((near)) foo3 (void) { foo1(); foo4(); }
 
-// CHECK: define void @foo3() [[NEAR:#[0-9]+]]
+// CHECK: define{{.*}} void @foo3() [[NEAR:#[0-9]+]]
 
 // CHECK: declare void @foo1() [[LONGDECL:#[0-9]+]]
 // CHECK: declare void @foo4() [[SHORTDECL:#[0-9]+]]

@@ -13,18 +13,18 @@ define void @foo(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; JUMP2-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; JUMP2-NEXT:    retl
 ; JUMP2-NEXT:  .LBB0_3: # %cond_true
-; JUMP2-NEXT:    jmp bar # TAILCALL
+; JUMP2-NEXT:    jmp bar@PLT # TAILCALL
 ;
 ; JUMP1-LABEL: foo:
 ; JUMP1:       # %bb.0: # %entry
 ; JUMP1-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; JUMP1-NEXT:    setne %al
-; JUMP1-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
-; JUMP1-NEXT:    setg %cl
+; JUMP1-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
+; JUMP1-NEXT:    setge %cl
 ; JUMP1-NEXT:    testb %al, %cl
 ; JUMP1-NEXT:    jne .LBB0_1
 ; JUMP1-NEXT:  # %bb.2: # %cond_true
-; JUMP1-NEXT:    jmp bar # TAILCALL
+; JUMP1-NEXT:    jmp bar@PLT # TAILCALL
 ; JUMP1-NEXT:  .LBB0_1: # %UnifiedReturnBlock
 ; JUMP1-NEXT:    retl
 entry:
@@ -49,12 +49,12 @@ define void @unpredictable(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; JUMP2:       # %bb.0: # %entry
 ; JUMP2-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; JUMP2-NEXT:    setne %al
-; JUMP2-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
-; JUMP2-NEXT:    setg %cl
+; JUMP2-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
+; JUMP2-NEXT:    setge %cl
 ; JUMP2-NEXT:    testb %al, %cl
 ; JUMP2-NEXT:    jne .LBB1_1
 ; JUMP2-NEXT:  # %bb.2: # %cond_true
-; JUMP2-NEXT:    jmp bar # TAILCALL
+; JUMP2-NEXT:    jmp bar@PLT # TAILCALL
 ; JUMP2-NEXT:  .LBB1_1: # %UnifiedReturnBlock
 ; JUMP2-NEXT:    retl
 ;
@@ -62,12 +62,12 @@ define void @unpredictable(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; JUMP1:       # %bb.0: # %entry
 ; JUMP1-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; JUMP1-NEXT:    setne %al
-; JUMP1-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
-; JUMP1-NEXT:    setg %cl
+; JUMP1-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
+; JUMP1-NEXT:    setge %cl
 ; JUMP1-NEXT:    testb %al, %cl
 ; JUMP1-NEXT:    jne .LBB1_1
 ; JUMP1-NEXT:  # %bb.2: # %cond_true
-; JUMP1-NEXT:    jmp bar # TAILCALL
+; JUMP1-NEXT:    jmp bar@PLT # TAILCALL
 ; JUMP1-NEXT:  .LBB1_1: # %UnifiedReturnBlock
 ; JUMP1-NEXT:    retl
 entry:

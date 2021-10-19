@@ -1,7 +1,8 @@
 ;; This test checks for emission of DW_OP_implicit_value operation
 ;; for double type.
 
-; RUN: llc -debugger-tune=gdb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -O0 -debugger-tune=gdb -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
+; RUN: llc -O0 -debugger-tune=lldb -filetype=obj %s -o - | llvm-dwarfdump - | FileCheck %s --check-prefixes=CHECK,BOTH
 
 ; CHECK: .debug_info contents:
 ; CHECK: DW_TAG_variable
@@ -9,13 +10,19 @@
 ; CHECK-NEXT:                     [{{.*}}): DW_OP_implicit_value 0x8 0x1f 0x85 0xeb 0x51 0xb8 0x1e 0x09 0x40)
 ; CHECK-NEXT:  DW_AT_name    ("d")
 
-;; Generated from: clang -ggdb -O1
-;;int main() {
-;;        double d = 3.14;
-;;        printf("dummy\n");
-;;        d *= d;
-;;        return 0;
-;;}
+; RUN: llc -O0 -debugger-tune=sce -filetype=obj %s -o -  | llvm-dwarfdump - | FileCheck %s -check-prefixes=SCE-CHECK,BOTH
+
+; SCE-CHECK: .debug_info contents:
+; SCE-CHECK: DW_TAG_variable
+; SCE-CHECK-NEXT:  DW_AT_location        ({{.*}}
+; SCE-CHECK-NEXT:                     [{{.*}}): DW_OP_constu 0x40091eb851eb851f, DW_OP_stack_value)
+; SCE-CHECK-NEXT:  DW_AT_name    ("d")
+
+;; Using DW_OP_implicit_value for fragments is not currently supported.
+; BOTH: DW_TAG_variable
+; BOTH-NEXT:  DW_AT_location        ({{.*}}
+; BOTH-NEXT:                     [{{.*}}): DW_OP_constu 0x4047800000000000, DW_OP_stack_value, DW_OP_piece 0x8, DW_OP_constu 0x4052800000000000, DW_OP_stack_value, DW_OP_piece 0x8)
+; BOTH-NEXT:  DW_AT_name    ("c")
 
 ; ModuleID = 'implicit_value-double.c'
 source_filename = "implicit_value-double.c"
@@ -28,6 +35,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata double 3.140000e+00, metadata !12, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata double 4.700000e+01, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !14
+  call void @llvm.dbg.value(metadata double 7.400000e+01, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !14
   %puts = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @str, i64 0, i64 0)), !dbg !15
   call void @llvm.dbg.value(metadata double undef, metadata !12, metadata !DIExpression()), !dbg !14
   ret i32 0, !dbg !16
@@ -58,9 +67,11 @@ attributes #2 = { nofree nounwind }
 !8 = !DISubroutineType(types: !9)
 !9 = !{!10}
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!11 = !{!12}
+!11 = !{!12, !17}
 !12 = !DILocalVariable(name: "d", scope: !7, file: !1, line: 2, type: !13)
 !13 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
 !14 = !DILocation(line: 0, scope: !7)
 !15 = !DILocation(line: 3, column: 2, scope: !7)
 !16 = !DILocation(line: 5, column: 2, scope: !7)
+!17 = !DILocalVariable(name: "c", scope: !7, file: !1, line: 2, type: !18)
+!18 = !DIBasicType(name: "complex", size: 128, encoding: DW_ATE_complex_float)

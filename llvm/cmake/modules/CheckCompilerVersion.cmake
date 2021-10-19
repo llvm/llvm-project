@@ -12,9 +12,9 @@ set(APPLECLANG_MIN 6.0)
 set(APPLECLANG_SOFT_ERROR 6.0)
 
 # https://en.wikipedia.org/wiki/Microsoft_Visual_C#Internal_version_numbering
-# _MSC_VER == 1910 MSVC++ 14.1 (Visual Studio 2017 version 15.0)
-set(MSVC_MIN 19.1)
-set(MSVC_SOFT_ERROR 19.1)
+# _MSC_VER == 1914 MSVC++ 14.14 (Visual Studio 2017 version 15.4)
+set(MSVC_MIN 19.14)
+set(MSVC_SOFT_ERROR 19.14)
 
 # Map the above GCC versions to dates: https://gcc.gnu.org/develop.html#timeline
 set(GCC_MIN_DATE 20150422)

@@ -24,97 +24,89 @@ using namespace llvm;
 MipsCallLowering::MipsCallLowering(const MipsTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
-bool MipsCallLowering::MipsHandler::assign(Register VReg, const CCValAssign &VA,
-                                           const EVT &VT) {
-  if (VA.isRegLoc()) {
-    assignValueToReg(VReg, VA, VT);
-  } else if (VA.isMemLoc()) {
-    assignValueToAddress(VReg, VA);
-  } else {
-    return false;
+struct MipsOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
+  /// This is the name of the function being called
+  /// FIXME: Relying on this is unsound
+  const char *Func = nullptr;
+
+  /// Is this a return value, or an outgoing call operand.
+  bool IsReturn;
+
+  MipsOutgoingValueAssigner(CCAssignFn *AssignFn_, const char *Func,
+                            bool IsReturn)
+      : OutgoingValueAssigner(AssignFn_), Func(Func), IsReturn(IsReturn) {}
+
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State_) override {
+    MipsCCState &State = static_cast<MipsCCState &>(State_);
+
+    if (IsReturn)
+      State.PreAnalyzeReturnValue(EVT::getEVT(Info.Ty));
+    else
+      State.PreAnalyzeCallOperand(Info.Ty, Info.IsFixed, Func);
+
+    return CallLowering::OutgoingValueAssigner::assignArg(
+        ValNo, OrigVT, ValVT, LocVT, LocInfo, Info, Flags, State);
   }
-  return true;
-}
+};
 
-bool MipsCallLowering::MipsHandler::assignVRegs(ArrayRef<Register> VRegs,
-                                                ArrayRef<CCValAssign> ArgLocs,
-                                                unsigned ArgLocsStartIndex,
-                                                const EVT &VT) {
-  for (unsigned i = 0; i < VRegs.size(); ++i)
-    if (!assign(VRegs[i], ArgLocs[ArgLocsStartIndex + i], VT))
-      return false;
-  return true;
-}
+struct MipsIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
+  /// This is the name of the function being called
+  /// FIXME: Relying on this is unsound
+  const char *Func = nullptr;
 
-void MipsCallLowering::MipsHandler::setLeastSignificantFirst(
-    SmallVectorImpl<Register> &VRegs) {
-  if (!MIRBuilder.getMF().getDataLayout().isLittleEndian())
-    std::reverse(VRegs.begin(), VRegs.end());
-}
+  /// Is this a call return value, or an incoming function argument.
+  bool IsReturn;
 
-bool MipsCallLowering::MipsHandler::handle(
-    ArrayRef<CCValAssign> ArgLocs, ArrayRef<CallLowering::ArgInfo> Args) {
-  SmallVector<Register, 4> VRegs;
-  unsigned SplitLength;
-  const Function &F = MIRBuilder.getMF().getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  const MipsTargetLowering &TLI = *static_cast<const MipsTargetLowering *>(
-      MIRBuilder.getMF().getSubtarget().getTargetLowering());
+  MipsIncomingValueAssigner(CCAssignFn *AssignFn_, const char *Func,
+                            bool IsReturn)
+      : IncomingValueAssigner(AssignFn_), Func(Func), IsReturn(IsReturn) {}
 
-  for (unsigned ArgsIndex = 0, ArgLocsIndex = 0; ArgsIndex < Args.size();
-       ++ArgsIndex, ArgLocsIndex += SplitLength) {
-    EVT VT = TLI.getValueType(DL, Args[ArgsIndex].Ty);
-    SplitLength = TLI.getNumRegistersForCallingConv(F.getContext(),
-                                                    F.getCallingConv(), VT);
-    assert(Args[ArgsIndex].Regs.size() == 1 && "Can't handle multple regs yet");
+  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
+                 CCValAssign::LocInfo LocInfo,
+                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
+                 CCState &State_) override {
+    MipsCCState &State = static_cast<MipsCCState &>(State_);
 
-    if (SplitLength > 1) {
-      VRegs.clear();
-      MVT RegisterVT = TLI.getRegisterTypeForCallingConv(
-          F.getContext(), F.getCallingConv(), VT);
-      for (unsigned i = 0; i < SplitLength; ++i)
-        VRegs.push_back(MRI.createGenericVirtualRegister(LLT{RegisterVT}));
+    if (IsReturn)
+      State.PreAnalyzeCallResult(Info.Ty, Func);
+    else
+      State.PreAnalyzeFormalArgument(Info.Ty, Flags);
 
-      if (!handleSplit(VRegs, ArgLocs, ArgLocsIndex, Args[ArgsIndex].Regs[0],
-                       VT))
-        return false;
-    } else {
-      if (!assign(Args[ArgsIndex].Regs[0], ArgLocs[ArgLocsIndex], VT))
-        return false;
-    }
+    return CallLowering::IncomingValueAssigner::assignArg(
+        ValNo, OrigVT, ValVT, LocVT, LocInfo, Info, Flags, State);
   }
-  return true;
-}
+};
 
 namespace {
-class MipsIncomingValueHandler : public MipsCallLowering::MipsHandler {
+class MipsIncomingValueHandler : public CallLowering::IncomingValueHandler {
+  const MipsSubtarget &STI;
+
 public:
   MipsIncomingValueHandler(MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI)
-      : MipsHandler(MIRBuilder, MRI) {}
+      : IncomingValueHandler(MIRBuilder, MRI),
+        STI(MIRBuilder.getMF().getSubtarget<MipsSubtarget>()) {}
 
 private:
-  void assignValueToReg(Register ValVReg, const CCValAssign &VA,
-                        const EVT &VT) override;
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        CCValAssign VA) override;
 
-  Register getStackAddress(const CCValAssign &VA,
-                           MachineMemOperand *&MMO) override;
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override;
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override;
 
-  void assignValueToAddress(Register ValVReg, const CCValAssign &VA) override;
-
-  bool handleSplit(SmallVectorImpl<Register> &VRegs,
-                   ArrayRef<CCValAssign> ArgLocs, unsigned ArgLocsStartIndex,
-                   Register ArgsReg, const EVT &VT) override;
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk = nullptr) override;
 
   virtual void markPhysRegUsed(unsigned PhysReg) {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
-  }
-
-  MachineInstrBuilder buildLoad(const DstOp &Res, const CCValAssign &VA) {
-    MachineMemOperand *MMO;
-    Register Addr = getStackAddress(VA, MMO);
-    return MIRBuilder.buildLoad(Res, Addr, *MMO);
   }
 };
 
@@ -135,190 +127,166 @@ private:
 } // end anonymous namespace
 
 void MipsIncomingValueHandler::assignValueToReg(Register ValVReg,
-                                                const CCValAssign &VA,
-                                                const EVT &VT) {
-  Register PhysReg = VA.getLocReg();
-  if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    const MipsSubtarget &STI =
-        static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
-    bool IsEL = STI.isLittle();
-    LLT s32 = LLT::scalar(32);
-    auto Lo = MIRBuilder.buildCopy(s32, Register(PhysReg + (IsEL ? 0 : 1)));
-    auto Hi = MIRBuilder.buildCopy(s32, Register(PhysReg + (IsEL ? 1 : 0)));
-    MIRBuilder.buildMerge(ValVReg, {Lo, Hi});
-    markPhysRegUsed(PhysReg);
-    markPhysRegUsed(PhysReg + 1);
-  } else if (VT == MVT::f32 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
-    markPhysRegUsed(PhysReg);
-  } else {
-    switch (VA.getLocInfo()) {
-    case CCValAssign::LocInfo::SExt:
-    case CCValAssign::LocInfo::ZExt:
-    case CCValAssign::LocInfo::AExt: {
-      auto Copy = MIRBuilder.buildCopy(LLT{VA.getLocVT()}, PhysReg);
-      MIRBuilder.buildTrunc(ValVReg, Copy);
-      break;
-    }
-    default:
-      MIRBuilder.buildCopy(ValVReg, PhysReg);
-      break;
-    }
-    markPhysRegUsed(PhysReg);
-  }
+                                                Register PhysReg,
+                                                CCValAssign VA) {
+  markPhysRegUsed(PhysReg);
+  IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
 
-Register MipsIncomingValueHandler::getStackAddress(const CCValAssign &VA,
-                                                   MachineMemOperand *&MMO) {
+Register MipsIncomingValueHandler::getStackAddress(uint64_t Size,
+                                                   int64_t Offset,
+                                                   MachinePointerInfo &MPO,
+                                                   ISD::ArgFlagsTy Flags) {
+
   MachineFunction &MF = MIRBuilder.getMF();
-  unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
-  unsigned Offset = VA.getLocMemOffset();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  // FIXME: This should only be immutable for non-byval memory arguments.
   int FI = MFI.CreateFixedObject(Size, Offset, true);
-  MachinePointerInfo MPO =
-      MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
-
-  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
-  MMO =
-      MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Alignment);
+  MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
 
   return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }
 
 void MipsIncomingValueHandler::assignValueToAddress(Register ValVReg,
-                                                    const CCValAssign &VA) {
-  if (VA.getLocInfo() == CCValAssign::SExt ||
-      VA.getLocInfo() == CCValAssign::ZExt ||
-      VA.getLocInfo() == CCValAssign::AExt) {
-    auto Load = buildLoad(LLT::scalar(32), VA);
-    MIRBuilder.buildTrunc(ValVReg, Load);
-  } else
-    buildLoad(ValVReg, VA);
+                                                    Register Addr, LLT MemTy,
+                                                    MachinePointerInfo &MPO,
+                                                    CCValAssign &VA) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
+                                     inferAlignFromPtrInfo(MF, MPO));
+  MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
 }
 
-bool MipsIncomingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
-                                           ArrayRef<CCValAssign> ArgLocs,
-                                           unsigned ArgLocsStartIndex,
-                                           Register ArgsReg, const EVT &VT) {
-  if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex, VT))
-    return false;
-  setLeastSignificantFirst(VRegs);
-  MIRBuilder.buildMerge(ArgsReg, VRegs);
-  return true;
+/// Handle cases when f64 is split into 2 32-bit GPRs. This is a custom
+/// assignment because generic code assumes getNumRegistersForCallingConv is
+/// accurate. In this case it is not because the type/number are context
+/// dependent on other arguments.
+unsigned
+MipsIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
+                                            ArrayRef<CCValAssign> VAs,
+                                            std::function<void()> *Thunk) {
+  const CCValAssign &VALo = VAs[0];
+  const CCValAssign &VAHi = VAs[1];
+
+  assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+         VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+         "unexpected custom value");
+
+  auto CopyLo = MIRBuilder.buildCopy(LLT::scalar(32), VALo.getLocReg());
+  auto CopyHi = MIRBuilder.buildCopy(LLT::scalar(32), VAHi.getLocReg());
+  if (!STI.isLittle())
+    std::swap(CopyLo, CopyHi);
+
+  Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
+  Arg.Regs = { CopyLo.getReg(0), CopyHi.getReg(0) };
+  MIRBuilder.buildMerge(Arg.OrigRegs[0], {CopyLo, CopyHi});
+
+  markPhysRegUsed(VALo.getLocReg());
+  markPhysRegUsed(VAHi.getLocReg());
+  return 2;
 }
 
 namespace {
-class MipsOutgoingValueHandler : public MipsCallLowering::MipsHandler {
+class MipsOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
+  const MipsSubtarget &STI;
+
 public:
   MipsOutgoingValueHandler(MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI, MachineInstrBuilder &MIB)
-      : MipsHandler(MIRBuilder, MRI), MIB(MIB) {}
+      : OutgoingValueHandler(MIRBuilder, MRI),
+        STI(MIRBuilder.getMF().getSubtarget<MipsSubtarget>()), MIB(MIB) {}
 
 private:
-  void assignValueToReg(Register ValVReg, const CCValAssign &VA,
-                        const EVT &VT) override;
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        CCValAssign VA) override;
 
-  Register getStackAddress(const CCValAssign &VA,
-                           MachineMemOperand *&MMO) override;
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override;
 
-  void assignValueToAddress(Register ValVReg, const CCValAssign &VA) override;
-
-  bool handleSplit(SmallVectorImpl<Register> &VRegs,
-                   ArrayRef<CCValAssign> ArgLocs, unsigned ArgLocsStartIndex,
-                   Register ArgsReg, const EVT &VT) override;
-
-  Register extendRegister(Register ValReg, const CCValAssign &VA);
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override;
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk) override;
 
   MachineInstrBuilder &MIB;
 };
 } // end anonymous namespace
 
 void MipsOutgoingValueHandler::assignValueToReg(Register ValVReg,
-                                                const CCValAssign &VA,
-                                                const EVT &VT) {
-  Register PhysReg = VA.getLocReg();
-  if (VT == MVT::f64 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    const MipsSubtarget &STI =
-        static_cast<const MipsSubtarget &>(MIRBuilder.getMF().getSubtarget());
-    bool IsEL = STI.isLittle();
-    auto Unmerge = MIRBuilder.buildUnmerge(LLT::scalar(32), ValVReg);
-    MIRBuilder.buildCopy(Register(PhysReg + (IsEL ? 0 : 1)), Unmerge.getReg(0));
-    MIRBuilder.buildCopy(Register(PhysReg + (IsEL ? 1 : 0)), Unmerge.getReg(1));
-  } else if (VT == MVT::f32 && PhysReg >= Mips::A0 && PhysReg <= Mips::A3) {
-    MIRBuilder.buildCopy(PhysReg, ValVReg);
-  } else {
-    Register ExtReg = extendRegister(ValVReg, VA);
-    MIRBuilder.buildCopy(PhysReg, ExtReg);
-    MIB.addUse(PhysReg, RegState::Implicit);
-  }
+                                                Register PhysReg,
+                                                CCValAssign VA) {
+  Register ExtReg = extendRegister(ValVReg, VA);
+  MIRBuilder.buildCopy(PhysReg, ExtReg);
+  MIB.addUse(PhysReg, RegState::Implicit);
 }
 
-Register MipsOutgoingValueHandler::getStackAddress(const CCValAssign &VA,
-                                                   MachineMemOperand *&MMO) {
+Register MipsOutgoingValueHandler::getStackAddress(uint64_t Size,
+                                                   int64_t Offset,
+                                                   MachinePointerInfo &MPO,
+                                                   ISD::ArgFlagsTy Flags) {
   MachineFunction &MF = MIRBuilder.getMF();
-  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+  MPO = MachinePointerInfo::getStack(MF, Offset);
 
   LLT p0 = LLT::pointer(0, 32);
   LLT s32 = LLT::scalar(32);
   auto SPReg = MIRBuilder.buildCopy(p0, Register(Mips::SP));
 
-  unsigned Offset = VA.getLocMemOffset();
   auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
-
   auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
-
-  MachinePointerInfo MPO =
-      MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
-  unsigned Size = alignTo(VA.getValVT().getSizeInBits(), 8) / 8;
-  Align Alignment = commonAlignment(TFL->getStackAlign(), Offset);
-  MMO =
-      MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Alignment);
-
   return AddrReg.getReg(0);
 }
 
 void MipsOutgoingValueHandler::assignValueToAddress(Register ValVReg,
-                                                    const CCValAssign &VA) {
-  MachineMemOperand *MMO;
-  Register Addr = getStackAddress(VA, MMO);
+                                                    Register Addr, LLT MemTy,
+                                                    MachinePointerInfo &MPO,
+                                                    CCValAssign &VA) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  uint64_t LocMemOffset = VA.getLocMemOffset();
+
+  auto MMO = MF.getMachineMemOperand(
+      MPO, MachineMemOperand::MOStore, MemTy,
+      commonAlignment(STI.getStackAlignment(), LocMemOffset));
+
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildStore(ExtReg, Addr, *MMO);
 }
 
-Register MipsOutgoingValueHandler::extendRegister(Register ValReg,
-                                                  const CCValAssign &VA) {
-  LLT LocTy{VA.getLocVT()};
-  switch (VA.getLocInfo()) {
-  case CCValAssign::SExt: {
-    return MIRBuilder.buildSExt(LocTy, ValReg).getReg(0);
-  }
-  case CCValAssign::ZExt: {
-    return MIRBuilder.buildZExt(LocTy, ValReg).getReg(0);
-  }
-  case CCValAssign::AExt: {
-    return MIRBuilder.buildAnyExt(LocTy, ValReg).getReg(0);
-  }
-  // TODO : handle upper extends
-  case CCValAssign::Full:
-    return ValReg;
-  default:
-    break;
-  }
-  llvm_unreachable("unable to extend register");
-}
+unsigned
+MipsOutgoingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
+                                            ArrayRef<CCValAssign> VAs,
+                                            std::function<void()> *Thunk) {
+  const CCValAssign &VALo = VAs[0];
+  const CCValAssign &VAHi = VAs[1];
 
-bool MipsOutgoingValueHandler::handleSplit(SmallVectorImpl<Register> &VRegs,
-                                           ArrayRef<CCValAssign> ArgLocs,
-                                           unsigned ArgLocsStartIndex,
-                                           Register ArgsReg, const EVT &VT) {
-  MIRBuilder.buildUnmerge(VRegs, ArgsReg);
-  setLeastSignificantFirst(VRegs);
-  if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex, VT))
-    return false;
+  assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+         VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+         "unexpected custom value");
 
-  return true;
+  auto Unmerge =
+      MIRBuilder.buildUnmerge({LLT::scalar(32), LLT::scalar(32)}, Arg.Regs[0]);
+  Register Lo = Unmerge.getReg(0);
+  Register Hi = Unmerge.getReg(1);
+
+  Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
+  Arg.Regs = { Lo, Hi };
+  if (!STI.isLittle())
+    std::swap(Lo, Hi);
+
+  // If we can return a thunk, just include the register copies. The unmerge can
+  // be emitted earlier.
+  if (Thunk) {
+    *Thunk = [=]() {
+      MIRBuilder.buildCopy(VALo.getLocReg(), Lo);
+      MIRBuilder.buildCopy(VAHi.getLocReg(), Hi);
+    };
+    return 2;
+  }
+  MIRBuilder.buildCopy(VALo.getLocReg(), Lo);
+  MIRBuilder.buildCopy(VAHi.getLocReg(), Hi);
+  return 2;
 }
 
 static bool isSupportedArgumentType(Type *T) {
@@ -343,39 +311,9 @@ static bool isSupportedReturnType(Type *T) {
   return false;
 }
 
-static CCValAssign::LocInfo determineLocInfo(const MVT RegisterVT, const EVT VT,
-                                             const ISD::ArgFlagsTy &Flags) {
-  // > does not mean loss of information as type RegisterVT can't hold type VT,
-  // it means that type VT is split into multiple registers of type RegisterVT
-  if (VT.getSizeInBits() >= RegisterVT.getSizeInBits())
-    return CCValAssign::LocInfo::Full;
-  if (Flags.isSExt())
-    return CCValAssign::LocInfo::SExt;
-  if (Flags.isZExt())
-    return CCValAssign::LocInfo::ZExt;
-  return CCValAssign::LocInfo::AExt;
-}
-
-template <typename T>
-static void setLocInfo(SmallVectorImpl<CCValAssign> &ArgLocs,
-                       const SmallVectorImpl<T> &Arguments) {
-  for (unsigned i = 0; i < ArgLocs.size(); ++i) {
-    const CCValAssign &VA = ArgLocs[i];
-    CCValAssign::LocInfo LocInfo = determineLocInfo(
-        Arguments[i].VT, Arguments[i].ArgVT, Arguments[i].Flags);
-    if (VA.isMemLoc())
-      ArgLocs[i] =
-          CCValAssign::getMem(VA.getValNo(), VA.getValVT(),
-                              VA.getLocMemOffset(), VA.getLocVT(), LocInfo);
-    else
-      ArgLocs[i] = CCValAssign::getReg(VA.getValNo(), VA.getValVT(),
-                                       VA.getLocReg(), VA.getLocVT(), LocInfo);
-  }
-}
-
 bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                   const Value *Val,
-                                   ArrayRef<Register> VRegs) const {
+                                   const Value *Val, ArrayRef<Register> VRegs,
+                                   FunctionLoweringInfo &FLI) const {
 
   MachineInstrBuilder Ret = MIRBuilder.buildInstrNoInsert(Mips::RetRA);
 
@@ -389,33 +327,37 @@ bool MipsCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
 
     SmallVector<ArgInfo, 8> RetInfos;
-    SmallVector<unsigned, 8> OrigArgIndices;
 
-    ArgInfo ArgRetInfo(VRegs, Val->getType());
+    ArgInfo ArgRetInfo(VRegs, *Val, 0);
     setArgFlags(ArgRetInfo, AttributeList::ReturnIndex, DL, F);
-    splitToValueTypes(DL, ArgRetInfo, 0, RetInfos, OrigArgIndices);
-
-    SmallVector<ISD::OutputArg, 8> Outs;
-    subTargetRegTypeForCallingConv(F, RetInfos, OrigArgIndices, Outs);
+    splitToValueTypes(ArgRetInfo, RetInfos, DL, F.getCallingConv());
 
     SmallVector<CCValAssign, 16> ArgLocs;
+    SmallVector<ISD::OutputArg, 8> Outs;
+
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                        F.getContext());
-    CCInfo.AnalyzeReturn(Outs, TLI.CCAssignFnForReturn());
-    setLocInfo(ArgLocs, Outs);
 
     MipsOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret);
-    if (!RetHandler.handle(ArgLocs, RetInfos)) {
+    std::string FuncName = F.getName().str();
+    MipsOutgoingValueAssigner Assigner(TLI.CCAssignFnForReturn(),
+                                       FuncName.c_str(), /*IsReturn*/ true);
+
+    if (!determineAssignments(Assigner, RetInfos, CCInfo))
       return false;
-    }
+
+    if (!handleAssignments(RetHandler, RetInfos, CCInfo, ArgLocs, MIRBuilder))
+      return false;
   }
+
   MIRBuilder.insertInstr(Ret);
   return true;
 }
 
-bool MipsCallLowering::lowerFormalArguments(
-    MachineIRBuilder &MIRBuilder, const Function &F,
-    ArrayRef<ArrayRef<Register>> VRegs) const {
+bool MipsCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
+                                            const Function &F,
+                                            ArrayRef<ArrayRef<Register>> VRegs,
+                                            FunctionLoweringInfo &FLI) const {
 
   // Quick exit if there aren't any args.
   if (F.arg_empty())
@@ -431,18 +373,16 @@ bool MipsCallLowering::lowerFormalArguments(
   const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
 
   SmallVector<ArgInfo, 8> ArgInfos;
-  SmallVector<unsigned, 8> OrigArgIndices;
   unsigned i = 0;
   for (auto &Arg : F.args()) {
-    ArgInfo AInfo(VRegs[i], Arg.getType());
+    ArgInfo AInfo(VRegs[i], Arg, i);
     setArgFlags(AInfo, i + AttributeList::FirstArgIndex, DL, F);
-    ArgInfos.push_back(AInfo);
-    OrigArgIndices.push_back(i);
+
+    splitToValueTypes(AInfo, ArgInfos, DL, F.getCallingConv());
     ++i;
   }
 
   SmallVector<ISD::InputArg, 8> Ins;
-  subTargetRegTypeForCallingConv(F, ArgInfos, OrigArgIndices, Ins);
 
   SmallVector<CCValAssign, 16> ArgLocs;
   MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
@@ -453,11 +393,15 @@ bool MipsCallLowering::lowerFormalArguments(
   const MipsABIInfo &ABI = TM.getABI();
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(F.getCallingConv()),
                        Align(1));
-  CCInfo.AnalyzeFormalArguments(Ins, TLI.CCAssignFnForCall());
-  setLocInfo(ArgLocs, Ins);
+
+  const std::string FuncName = F.getName().str();
+  MipsIncomingValueAssigner Assigner(TLI.CCAssignFnForCall(), FuncName.c_str(),
+                                     /*IsReturn*/ false);
+  if (!determineAssignments(Assigner, ArgInfos, CCInfo))
+    return false;
 
   MipsIncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
-  if (!Handler.handle(ArgLocs, ArgInfos))
+  if (!handleAssignments(Handler, ArgInfos, CCInfo, ArgLocs, MIRBuilder))
     return false;
 
   if (F.isVarArg()) {
@@ -480,15 +424,16 @@ bool MipsCallLowering::lowerFormalArguments(
 
     for (unsigned I = Idx; I < ArgRegs.size(); ++I, VaArgOffset += RegSize) {
       MIRBuilder.getMBB().addLiveIn(ArgRegs[I]);
-
+      LLT RegTy = LLT::scalar(RegSize * 8);
       MachineInstrBuilder Copy =
-          MIRBuilder.buildCopy(LLT::scalar(RegSize * 8), Register(ArgRegs[I]));
+          MIRBuilder.buildCopy(RegTy, Register(ArgRegs[I]));
       FI = MFI.CreateFixedObject(RegSize, VaArgOffset, true);
       MachinePointerInfo MPO = MachinePointerInfo::getFixedStack(MF, FI);
-      MachineInstrBuilder FrameIndex =
-          MIRBuilder.buildFrameIndex(LLT::pointer(MPO.getAddrSpace(), 32), FI);
+
+      const LLT PtrTy = LLT::pointer(MPO.getAddrSpace(), 32);
+      auto FrameIndex = MIRBuilder.buildFrameIndex(PtrTy, FI);
       MachineMemOperand *MMO = MF.getMachineMemOperand(
-          MPO, MachineMemOperand::MOStore, RegSize, Align(RegSize));
+          MPO, MachineMemOperand::MOStore, RegTy, Align(RegSize));
       MIRBuilder.buildStore(Copy, FrameIndex, *MMO);
     }
   }
@@ -542,27 +487,14 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   } else
     MIB.add(Info.Callee);
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  MIB.addRegMask(TRI->getCallPreservedMask(MF, F.getCallingConv()));
+  MIB.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
 
   TargetLowering::ArgListTy FuncOrigArgs;
   FuncOrigArgs.reserve(Info.OrigArgs.size());
 
   SmallVector<ArgInfo, 8> ArgInfos;
-  SmallVector<unsigned, 8> OrigArgIndices;
-  unsigned i = 0;
-  for (auto &Arg : Info.OrigArgs) {
-
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = Arg.Ty;
-    FuncOrigArgs.push_back(Entry);
-
-    ArgInfos.push_back(Arg);
-    OrigArgIndices.push_back(i);
-    ++i;
-  }
-
-  SmallVector<ISD::OutputArg, 8> Outs;
-  subTargetRegTypeForCallingConv(F, ArgInfos, OrigArgIndices, Outs);
+  for (auto &Arg : Info.OrigArgs)
+    splitToValueTypes(Arg, ArgInfos, DL, Info.CallConv);
 
   SmallVector<CCValAssign, 8> ArgLocs;
   bool IsCalleeVarArg = false;
@@ -570,24 +502,33 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     const Function *CF = static_cast<const Function *>(Info.Callee.getGlobal());
     IsCalleeVarArg = CF->isVarArg();
   }
-  MipsCCState CCInfo(F.getCallingConv(), IsCalleeVarArg, MF, ArgLocs,
+
+  // FIXME: Should use MipsCCState::getSpecialCallingConvForCallee, but it
+  // depends on looking directly at the call target.
+  MipsCCState CCInfo(Info.CallConv, IsCalleeVarArg, MF, ArgLocs,
                      F.getContext());
 
   CCInfo.AllocateStack(ABI.GetCalleeAllocdArgSizeInBytes(Info.CallConv),
                        Align(1));
+
   const char *Call =
       Info.Callee.isSymbol() ? Info.Callee.getSymbolName() : nullptr;
-  CCInfo.AnalyzeCallOperands(Outs, TLI.CCAssignFnForCall(), FuncOrigArgs, Call);
-  setLocInfo(ArgLocs, Outs);
 
-  MipsOutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
-  if (!RetHandler.handle(ArgLocs, ArgInfos)) {
+  MipsOutgoingValueAssigner Assigner(TLI.CCAssignFnForCall(), Call,
+                                     /*IsReturn*/ false);
+  if (!determineAssignments(Assigner, ArgInfos, CCInfo))
     return false;
-  }
+
+  MipsOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), MIB);
+  if (!handleAssignments(ArgHandler, ArgInfos, CCInfo, ArgLocs, MIRBuilder))
+    return false;
 
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
-  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-  unsigned StackAlignment = TFL->getStackAlignment();
+  unsigned StackAlignment = F.getParent()->getOverrideStackAlignment();
+  if (!StackAlignment) {
+    const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+    StackAlignment = TFL->getStackAlignment();
+  }
   NextStackOffset = alignTo(NextStackOffset, StackAlignment);
   CallSeqStart.addImm(NextStackOffset).addImm(0);
 
@@ -607,78 +548,29 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (!Info.OrigRet.Ty->isVoidTy()) {
     ArgInfos.clear();
-    SmallVector<unsigned, 8> OrigRetIndices;
 
-    splitToValueTypes(DL, Info.OrigRet, 0, ArgInfos, OrigRetIndices);
+    CallLowering::splitToValueTypes(Info.OrigRet, ArgInfos, DL,
+                                    F.getCallingConv());
 
+    const std::string FuncName = F.getName().str();
     SmallVector<ISD::InputArg, 8> Ins;
-    subTargetRegTypeForCallingConv(F, ArgInfos, OrigRetIndices, Ins);
-
     SmallVector<CCValAssign, 8> ArgLocs;
+    MipsIncomingValueAssigner Assigner(TLI.CCAssignFnForReturn(),
+                                       FuncName.c_str(),
+                                       /*IsReturn*/ true);
+    CallReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), MIB);
+
     MipsCCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs,
                        F.getContext());
 
-    CCInfo.AnalyzeCallResult(Ins, TLI.CCAssignFnForReturn(), Info.OrigRet.Ty,
-                             Call);
-    setLocInfo(ArgLocs, Ins);
+    if (!determineAssignments(Assigner, ArgInfos, CCInfo))
+      return false;
 
-    CallReturnHandler Handler(MIRBuilder, MF.getRegInfo(), MIB);
-    if (!Handler.handle(ArgLocs, ArgInfos))
+    if (!handleAssignments(RetHandler, ArgInfos, CCInfo, ArgLocs, MIRBuilder))
       return false;
   }
 
   MIRBuilder.buildInstr(Mips::ADJCALLSTACKUP).addImm(NextStackOffset).addImm(0);
 
   return true;
-}
-
-template <typename T>
-void MipsCallLowering::subTargetRegTypeForCallingConv(
-    const Function &F, ArrayRef<ArgInfo> Args,
-    ArrayRef<unsigned> OrigArgIndices, SmallVectorImpl<T> &ISDArgs) const {
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
-
-  unsigned ArgNo = 0;
-  for (auto &Arg : Args) {
-
-    EVT VT = TLI.getValueType(DL, Arg.Ty);
-    MVT RegisterVT = TLI.getRegisterTypeForCallingConv(F.getContext(),
-                                                       F.getCallingConv(), VT);
-    unsigned NumRegs = TLI.getNumRegistersForCallingConv(
-        F.getContext(), F.getCallingConv(), VT);
-
-    for (unsigned i = 0; i < NumRegs; ++i) {
-      ISD::ArgFlagsTy Flags = Arg.Flags[0];
-
-      if (i == 0)
-        Flags.setOrigAlign(TLI.getABIAlignmentForCallingConv(Arg.Ty, DL));
-      else
-        Flags.setOrigAlign(Align(1));
-
-      ISDArgs.emplace_back(Flags, RegisterVT, VT, true, OrigArgIndices[ArgNo],
-                           0);
-    }
-    ++ArgNo;
-  }
-}
-
-void MipsCallLowering::splitToValueTypes(
-    const DataLayout &DL, const ArgInfo &OrigArg, unsigned OriginalIndex,
-    SmallVectorImpl<ArgInfo> &SplitArgs,
-    SmallVectorImpl<unsigned> &SplitArgsOrigIndices) const {
-
-  SmallVector<EVT, 4> SplitEVTs;
-  SmallVector<Register, 4> SplitVRegs;
-  const MipsTargetLowering &TLI = *getTLI<MipsTargetLowering>();
-  LLVMContext &Ctx = OrigArg.Ty->getContext();
-
-  ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitEVTs);
-
-  for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-    ArgInfo Info = ArgInfo{OrigArg.Regs[i], SplitEVTs[i].getTypeForEVT(Ctx)};
-    Info.Flags = OrigArg.Flags;
-    SplitArgs.push_back(Info);
-    SplitArgsOrigIndices.push_back(OriginalIndex);
-  }
 }

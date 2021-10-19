@@ -5,8 +5,18 @@
 # RUN:   -livedebugvalues-input-bb-limit=1 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=1 \
 # RUN:   | FileCheck %s -check-prefix=LDV-DISABLED
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -experimental-debug-variable-locations \
+# RUN:   -livedebugvalues-input-bb-limit=1 \
+# RUN:   -livedebugvalues-input-dbg-value-limit=1 \
+# RUN:   | FileCheck %s -check-prefix=LDV-DISABLED
 
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -livedebugvalues-input-bb-limit=1 \
+# RUN:   -livedebugvalues-input-dbg-value-limit=10 \
+# RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -experimental-debug-variable-locations \
 # RUN:   -livedebugvalues-input-bb-limit=1 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=10 \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
@@ -15,8 +25,18 @@
 # RUN:   -livedebugvalues-input-bb-limit=10 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=1 \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -experimental-debug-variable-locations \
+# RUN:   -livedebugvalues-input-bb-limit=10 \
+# RUN:   -livedebugvalues-input-dbg-value-limit=1 \
+# RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
 
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -livedebugvalues-input-bb-limit=10 \
+# RUN:   -livedebugvalues-input-dbg-value-limit=10 \
+# RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown \
+# RUN:   -experimental-debug-variable-locations \
 # RUN:   -livedebugvalues-input-bb-limit=10 \
 # RUN:   -livedebugvalues-input-dbg-value-limit=10 \
 # RUN:   | FileCheck %s -check-prefix=LDV-ENABLED
@@ -86,11 +106,11 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 16
     renamable $edi = ADD32rr renamable $edi, killed renamable $edi, implicit-def $eflags, debug-location !12
     DBG_VALUE renamable $edi, $noreg, !9, !DIExpression(), debug-location !12
-    MOV32mr $rsp, 1, $noreg, 4, $noreg, killed $edi :: (store 4 into %stack.0)
+    MOV32mr $rsp, 1, $noreg, 4, $noreg, killed $edi :: (store (s32) into %stack.0)
     DBG_VALUE $rsp, 0, !9, !DIExpression(DW_OP_plus_uconst, 4), debug-location !12
 
   bb.1.exit:
-    $edi = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (load 4 from %stack.0)
+    $edi = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (load (s32) from %stack.0)
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit-def $eax, debug-location !14
     DBG_VALUE renamable $eax, $noreg, !11, !DIExpression(), debug-location !14
     $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15

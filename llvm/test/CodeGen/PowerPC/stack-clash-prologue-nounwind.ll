@@ -44,12 +44,12 @@ entry:
 define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    li r0, 259
-; CHECK-LE-NEXT:    mtctr r0
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    li r12, 259
+; CHECK-LE-NEXT:    mtctr r12
 ; CHECK-LE-NEXT:  .LBB1_1: # %entry
 ; CHECK-LE-NEXT:    #
-; CHECK-LE-NEXT:    stdu r12, -16(r1)
+; CHECK-LE-NEXT:    stdu r0, -16(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB1_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
 ; CHECK-LE-NEXT:    li r3, 3
@@ -60,12 +60,12 @@ define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ;
 ; CHECK-BE-LABEL: f1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    li r0, 260
-; CHECK-BE-NEXT:    mtctr r0
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    li r12, 260
+; CHECK-BE-NEXT:    mtctr r12
 ; CHECK-BE-NEXT:  .LBB1_1: # %entry
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    stdu r12, -16(r1)
+; CHECK-BE-NEXT:    stdu r0, -16(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB1_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
 ; CHECK-BE-NEXT:    li r3, 3
@@ -76,16 +76,16 @@ define i8 @f1() #0 "stack-probe-size"="0" nounwind {
 ;
 ; CHECK-32-LABEL: f1:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    li r0, 257
-; CHECK-32-NEXT:    mtctr r0
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    li r12, 257
+; CHECK-32-NEXT:    mtctr r12
 ; CHECK-32-NEXT:  .LBB1_1: # %entry
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stwu r12, -16(r1)
+; CHECK-32-NEXT:    stwu r0, -16(r1)
 ; CHECK-32-NEXT:    bdnz .LBB1_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
 ; CHECK-32-NEXT:    li r3, 3
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    lbz r3, 16(r1)
@@ -102,13 +102,13 @@ entry:
 define i8 @f2() #0 nounwind {
 ; CHECK-LE-LABEL: f2:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    stdu r12, -48(r1)
-; CHECK-LE-NEXT:    li r0, 16
-; CHECK-LE-NEXT:    mtctr r0
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    stdu r0, -48(r1)
+; CHECK-LE-NEXT:    li r12, 16
+; CHECK-LE-NEXT:    mtctr r12
 ; CHECK-LE-NEXT:  .LBB2_1: # %entry
 ; CHECK-LE-NEXT:    #
-; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    stdu r0, -4096(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB2_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
 ; CHECK-LE-NEXT:    li r3, 3
@@ -119,13 +119,13 @@ define i8 @f2() #0 nounwind {
 ;
 ; CHECK-BE-LABEL: f2:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    stdu r12, -64(r1)
-; CHECK-BE-NEXT:    li r0, 16
-; CHECK-BE-NEXT:    mtctr r0
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    stdu r0, -64(r1)
+; CHECK-BE-NEXT:    li r12, 16
+; CHECK-BE-NEXT:    mtctr r12
 ; CHECK-BE-NEXT:  .LBB2_1: # %entry
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    stdu r0, -4096(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB2_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
 ; CHECK-BE-NEXT:    li r3, 3
@@ -136,16 +136,16 @@ define i8 @f2() #0 nounwind {
 ;
 ; CHECK-32-LABEL: f2:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    stwu r12, -16(r1)
-; CHECK-32-NEXT:    li r0, 16
-; CHECK-32-NEXT:    mtctr r0
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    stwu r0, -16(r1)
+; CHECK-32-NEXT:    li r12, 16
+; CHECK-32-NEXT:    mtctr r12
 ; CHECK-32-NEXT:  .LBB2_1: # %entry
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    stwu r0, -4096(r1)
 ; CHECK-32-NEXT:    bdnz .LBB2_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    li r3, 3
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
@@ -166,10 +166,10 @@ entry:
 define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ; CHECK-LE-LABEL: f3:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    stdu r12, -48(r1)
-; CHECK-LE-NEXT:    stdu r12, -32768(r1)
-; CHECK-LE-NEXT:    stdu r12, -32768(r1)
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    stdu r0, -48(r1)
+; CHECK-LE-NEXT:    stdu r0, -32768(r1)
+; CHECK-LE-NEXT:    stdu r0, -32768(r1)
 ; CHECK-LE-NEXT:    li r3, 3
 ; CHECK-LE-NEXT:    stb r3, 48(r1)
 ; CHECK-LE-NEXT:    lbz r3, 48(r1)
@@ -178,10 +178,10 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ;
 ; CHECK-BE-LABEL: f3:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    stdu r12, -64(r1)
-; CHECK-BE-NEXT:    stdu r12, -32768(r1)
-; CHECK-BE-NEXT:    stdu r12, -32768(r1)
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    stdu r0, -64(r1)
+; CHECK-BE-NEXT:    stdu r0, -32768(r1)
+; CHECK-BE-NEXT:    stdu r0, -32768(r1)
 ; CHECK-BE-NEXT:    li r3, 3
 ; CHECK-BE-NEXT:    stb r3, 64(r1)
 ; CHECK-BE-NEXT:    lbz r3, 64(r1)
@@ -190,11 +190,11 @@ define i8 @f3() #0 "stack-probe-size"="32768" nounwind {
 ;
 ; CHECK-32-LABEL: f3:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    stwu r12, -16(r1)
-; CHECK-32-NEXT:    stwu r12, -32768(r1)
-; CHECK-32-NEXT:    stwu r12, -32768(r1)
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    stwu r0, -16(r1)
+; CHECK-32-NEXT:    stwu r0, -32768(r1)
+; CHECK-32-NEXT:    stwu r0, -32768(r1)
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    li r3, 3
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
@@ -261,15 +261,15 @@ entry:
 define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-LE-LABEL: f5:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    stdu r12, -48(r1)
-; CHECK-LE-NEXT:    li r0, 16
-; CHECK-LE-NEXT:    mtctr r0
-; CHECK-LE-NEXT:    lis r0, -1
-; CHECK-LE-NEXT:    nop
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    stdu r0, -48(r1)
+; CHECK-LE-NEXT:    li r12, 16
+; CHECK-LE-NEXT:    mtctr r12
+; CHECK-LE-NEXT:    lis r12, -1
+; CHECK-LE-NEXT:    ori r12, r12, 0
 ; CHECK-LE-NEXT:  .LBB5_1: # %entry
 ; CHECK-LE-NEXT:    #
-; CHECK-LE-NEXT:    stdux r12, r1, r0
+; CHECK-LE-NEXT:    stdux r0, r1, r12
 ; CHECK-LE-NEXT:    bdnz .LBB5_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
 ; CHECK-LE-NEXT:    li r3, 3
@@ -280,15 +280,15 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ;
 ; CHECK-BE-LABEL: f5:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    stdu r12, -64(r1)
-; CHECK-BE-NEXT:    li r0, 16
-; CHECK-BE-NEXT:    mtctr r0
-; CHECK-BE-NEXT:    lis r0, -1
-; CHECK-BE-NEXT:    nop
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    stdu r0, -64(r1)
+; CHECK-BE-NEXT:    li r12, 16
+; CHECK-BE-NEXT:    mtctr r12
+; CHECK-BE-NEXT:    lis r12, -1
+; CHECK-BE-NEXT:    ori r12, r12, 0
 ; CHECK-BE-NEXT:  .LBB5_1: # %entry
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    stdux r12, r1, r0
+; CHECK-BE-NEXT:    stdux r0, r1, r12
 ; CHECK-BE-NEXT:    bdnz .LBB5_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
 ; CHECK-BE-NEXT:    li r3, 3
@@ -299,18 +299,18 @@ define i8 @f5() #0 "stack-probe-size"="65536" nounwind {
 ;
 ; CHECK-32-LABEL: f5:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    stwu r12, -16(r1)
-; CHECK-32-NEXT:    li r0, 16
-; CHECK-32-NEXT:    mtctr r0
-; CHECK-32-NEXT:    lis r0, -1
-; CHECK-32-NEXT:    nop
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    stwu r0, -16(r1)
+; CHECK-32-NEXT:    li r12, 16
+; CHECK-32-NEXT:    mtctr r12
+; CHECK-32-NEXT:    lis r12, -1
+; CHECK-32-NEXT:    ori r12, r12, 0
 ; CHECK-32-NEXT:  .LBB5_1: # %entry
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stwux r12, r1, r0
+; CHECK-32-NEXT:    stwux r0, r1, r12
 ; CHECK-32-NEXT:    bdnz .LBB5_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    li r3, 3
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
@@ -331,14 +331,14 @@ entry:
 define i8 @f6() #0 nounwind {
 ; CHECK-LE-LABEL: f6:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    stdu r12, -48(r1)
-; CHECK-LE-NEXT:    lis r0, 4
-; CHECK-LE-NEXT:    nop
-; CHECK-LE-NEXT:    mtctr r0
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    stdu r0, -48(r1)
+; CHECK-LE-NEXT:    lis r12, 4
+; CHECK-LE-NEXT:    ori r12, r12, 0
+; CHECK-LE-NEXT:    mtctr r12
 ; CHECK-LE-NEXT:  .LBB6_1: # %entry
 ; CHECK-LE-NEXT:    #
-; CHECK-LE-NEXT:    stdu r12, -4096(r1)
+; CHECK-LE-NEXT:    stdu r0, -4096(r1)
 ; CHECK-LE-NEXT:    bdnz .LBB6_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
 ; CHECK-LE-NEXT:    li r3, 3
@@ -349,14 +349,14 @@ define i8 @f6() #0 nounwind {
 ;
 ; CHECK-BE-LABEL: f6:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    stdu r12, -64(r1)
-; CHECK-BE-NEXT:    lis r0, 4
-; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    mtctr r0
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    stdu r0, -64(r1)
+; CHECK-BE-NEXT:    lis r12, 4
+; CHECK-BE-NEXT:    ori r12, r12, 0
+; CHECK-BE-NEXT:    mtctr r12
 ; CHECK-BE-NEXT:  .LBB6_1: # %entry
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    stdu r12, -4096(r1)
+; CHECK-BE-NEXT:    stdu r0, -4096(r1)
 ; CHECK-BE-NEXT:    bdnz .LBB6_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
 ; CHECK-BE-NEXT:    li r3, 3
@@ -367,17 +367,17 @@ define i8 @f6() #0 nounwind {
 ;
 ; CHECK-32-LABEL: f6:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    stwu r12, -16(r1)
-; CHECK-32-NEXT:    lis r0, 4
-; CHECK-32-NEXT:    nop
-; CHECK-32-NEXT:    mtctr r0
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    stwu r0, -16(r1)
+; CHECK-32-NEXT:    lis r12, 4
+; CHECK-32-NEXT:    ori r12, r12, 0
+; CHECK-32-NEXT:    mtctr r12
 ; CHECK-32-NEXT:  .LBB6_1: # %entry
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stwu r12, -4096(r1)
+; CHECK-32-NEXT:    stwu r0, -4096(r1)
 ; CHECK-32-NEXT:    bdnz .LBB6_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    li r3, 3
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 16(r1)
@@ -398,17 +398,17 @@ entry:
 define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ; CHECK-LE-LABEL: f7:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    lis r0, -1
-; CHECK-LE-NEXT:    mr r12, r1
-; CHECK-LE-NEXT:    ori r0, r0, 13776
-; CHECK-LE-NEXT:    stdux r12, r1, r0
-; CHECK-LE-NEXT:    li r0, 15258
-; CHECK-LE-NEXT:    mtctr r0
-; CHECK-LE-NEXT:    lis r0, -1
-; CHECK-LE-NEXT:    nop
+; CHECK-LE-NEXT:    lis r12, -1
+; CHECK-LE-NEXT:    mr r0, r1
+; CHECK-LE-NEXT:    ori r12, r12, 13776
+; CHECK-LE-NEXT:    stdux r0, r1, r12
+; CHECK-LE-NEXT:    li r12, 15258
+; CHECK-LE-NEXT:    mtctr r12
+; CHECK-LE-NEXT:    lis r12, -1
+; CHECK-LE-NEXT:    ori r12, r12, 0
 ; CHECK-LE-NEXT:  .LBB7_1: # %entry
 ; CHECK-LE-NEXT:    #
-; CHECK-LE-NEXT:    stdux r12, r1, r0
+; CHECK-LE-NEXT:    stdux r0, r1, r12
 ; CHECK-LE-NEXT:    bdnz .LBB7_1
 ; CHECK-LE-NEXT:  # %bb.2: # %entry
 ; CHECK-LE-NEXT:    li r3, 3
@@ -419,17 +419,17 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ;
 ; CHECK-BE-LABEL: f7:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    lis r0, -1
-; CHECK-BE-NEXT:    mr r12, r1
-; CHECK-BE-NEXT:    ori r0, r0, 13760
-; CHECK-BE-NEXT:    stdux r12, r1, r0
-; CHECK-BE-NEXT:    li r0, 15258
-; CHECK-BE-NEXT:    mtctr r0
-; CHECK-BE-NEXT:    lis r0, -1
-; CHECK-BE-NEXT:    nop
+; CHECK-BE-NEXT:    lis r12, -1
+; CHECK-BE-NEXT:    mr r0, r1
+; CHECK-BE-NEXT:    ori r12, r12, 13760
+; CHECK-BE-NEXT:    stdux r0, r1, r12
+; CHECK-BE-NEXT:    li r12, 15258
+; CHECK-BE-NEXT:    mtctr r12
+; CHECK-BE-NEXT:    lis r12, -1
+; CHECK-BE-NEXT:    ori r12, r12, 0
 ; CHECK-BE-NEXT:  .LBB7_1: # %entry
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    stdux r12, r1, r0
+; CHECK-BE-NEXT:    stdux r0, r1, r12
 ; CHECK-BE-NEXT:    bdnz .LBB7_1
 ; CHECK-BE-NEXT:  # %bb.2: # %entry
 ; CHECK-BE-NEXT:    li r3, 3
@@ -440,20 +440,20 @@ define i8 @f7() #0 "stack-probe-size"="65536" nounwind {
 ;
 ; CHECK-32-LABEL: f7:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    lis r0, -1
-; CHECK-32-NEXT:    mr r12, r1
-; CHECK-32-NEXT:    ori r0, r0, 13808
-; CHECK-32-NEXT:    stwux r12, r1, r0
-; CHECK-32-NEXT:    li r0, 15258
-; CHECK-32-NEXT:    mtctr r0
-; CHECK-32-NEXT:    lis r0, -1
-; CHECK-32-NEXT:    nop
+; CHECK-32-NEXT:    lis r12, -1
+; CHECK-32-NEXT:    mr r0, r1
+; CHECK-32-NEXT:    ori r12, r12, 13808
+; CHECK-32-NEXT:    stwux r0, r1, r12
+; CHECK-32-NEXT:    li r12, 15258
+; CHECK-32-NEXT:    mtctr r12
+; CHECK-32-NEXT:    lis r12, -1
+; CHECK-32-NEXT:    ori r12, r12, 0
 ; CHECK-32-NEXT:  .LBB7_1: # %entry
 ; CHECK-32-NEXT:    #
-; CHECK-32-NEXT:    stwux r12, r1, r0
+; CHECK-32-NEXT:    stwux r0, r1, r12
 ; CHECK-32-NEXT:    bdnz .LBB7_1
 ; CHECK-32-NEXT:  # %bb.2: # %entry
-; CHECK-32-NEXT:    sub r0, r1, r12
+; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    li r3, 3
 ; CHECK-32-NEXT:    sub r0, r1, r0
 ; CHECK-32-NEXT:    stb r3, 9(r1)

@@ -21,8 +21,7 @@
 using std::optional;
 
 template <class T, class U>
-void
-test(optional<U>&& rhs, bool is_going_to_throw = false)
+TEST_CONSTEXPR_CXX20 void test(optional<U>&& rhs, bool is_going_to_throw = false)
 {
     static_assert(!(std::is_convertible<optional<U>&&, optional<T>>::value), "");
     bool rhs_engaged = static_cast<bool>(rhs);
@@ -48,10 +47,10 @@ class X
 {
     int i_;
 public:
-    explicit X(int i) : i_(i) {}
-    X(X&& x) : i_(std::exchange(x.i_, 0)) {}
-    ~X() {i_ = 0;}
-    friend bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
+    constexpr explicit X(int i) : i_(i) {}
+    constexpr X(X&& x) : i_(x.i_) { x.i_ = 0; }
+    TEST_CONSTEXPR_CXX20 ~X() {i_ = 0;}
+    friend constexpr bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
 };
 
 int count = 0;
@@ -62,7 +61,7 @@ public:
     explicit Z(int) { TEST_THROW(6); }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool test()
 {
     {
         optional<int> rhs;
@@ -72,6 +71,16 @@ int main(int, char**)
         optional<int> rhs(3);
         test<X>(std::move(rhs));
     }
+
+    return true;
+}
+
+int main(int, char**)
+{
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    test();
     {
         optional<int> rhs;
         test<Z>(std::move(rhs));

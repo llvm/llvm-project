@@ -52,6 +52,8 @@ public:
   iterator begin() const { return L.begin(); }
   iterator end() const { return L.end(); }
 
+  QualType getType() const { return T; }
+
   static void Profile(llvm::FoldingSetNodeID& ID, QualType T,
                       llvm::ImmutableList<SVal> L);
 
@@ -139,6 +141,12 @@ public:
 
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {
+    // For the purposes of the analysis and constraints, we treat atomics
+    // as their underlying types.
+    if (const AtomicType *AT = T->getAs<AtomicType>()) {
+      T = AT->getValueType();
+    }
+
     assert(T->isIntegralOrEnumerationType() || Loc::isLocType(T));
     return APSIntType(Ctx.getIntWidth(T),
                       !T->isSignedIntegerOrEnumerationType());
@@ -258,9 +266,9 @@ public:
     return CXXBaseListFactory.add(CBS, L);
   }
 
-  const PointerToMemberData *accumCXXBase(
-      llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
-      const nonloc::PointerToMember &PTM);
+  const PointerToMemberData *
+  accumCXXBase(llvm::iterator_range<CastExpr::path_const_iterator> PathRange,
+               const nonloc::PointerToMember &PTM, const clang::CastKind &kind);
 
   const llvm::APSInt* evalAPSInt(BinaryOperator::Opcode Op,
                                      const llvm::APSInt& V1,

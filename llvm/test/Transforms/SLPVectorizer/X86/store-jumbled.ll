@@ -22,7 +22,7 @@ define i32 @jumbled-load(i32* noalias nocapture %in, i32* noalias nocapture %inn
 ; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 1
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 2
 ; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 3
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
+; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[GEP_7]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[REORDER_SHUFFLE]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret i32 undef

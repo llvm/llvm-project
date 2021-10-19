@@ -13,6 +13,7 @@ typedef NonPOD NonPODArMB[10][2];
 // PODs
 enum Enum { EV };
 enum SignedEnum : signed int { };
+enum UnsignedEnum : unsigned int { };
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
 struct IncompleteStruct;
@@ -1440,6 +1441,7 @@ void is_signed()
   int t25[F(__is_signed(IntArNB))];
   int t26[F(__is_signed(Union))];
   int t27[F(__is_signed(UnionAr))];
+  int t28[F(__is_signed(UnsignedEnum))];
 }
 
 void is_unsigned()
@@ -1450,7 +1452,6 @@ void is_unsigned()
   int t04[T(__is_unsigned(unsigned int))];
   int t05[T(__is_unsigned(unsigned long))];
   int t06[T(__is_unsigned(unsigned long long))];
-  int t07[T(__is_unsigned(Enum))];
 
   int t10[F(__is_unsigned(void))];
   int t11[F(__is_unsigned(cvoid))];
@@ -1468,6 +1469,9 @@ void is_unsigned()
   int t24[F(__is_unsigned(Derives))];
   int t25[F(__is_unsigned(ClassType))];
   int t26[F(__is_unsigned(IntArNB))];
+  int t27[F(__is_unsigned(Enum))];
+  int t28[F(__is_unsigned(UnsignedEnum))];
+  int t29[F(__is_unsigned(SignedEnum))];
 }
 
 typedef Int& IntRef;

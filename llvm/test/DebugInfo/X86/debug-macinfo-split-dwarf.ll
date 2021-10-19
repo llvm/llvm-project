@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -O0 -split-dwarf-file=foo.dwo -filetype=obj < %s | llvm-dwarfdump --debug-info --debug-macro - | FileCheck %s
+; RUN: llc -O0 -split-dwarf-file=foo.dwo -filetype=obj < %s | llvm-dwarfdump --debug-info --debug-macro - | FileCheck %s
 
 ; CHECK:.debug_info.dwo contents:
 ; CHECK:     DW_TAG_compile_unit

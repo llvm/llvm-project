@@ -8,7 +8,7 @@ entry:
 
 ; CHECK: %[[A:.*]] = getelementptr i8, i8* %[[USP]], i32 -8
 ; CHECK: %[[StackGuardSlot:.*]] = bitcast i8* %[[A]] to i8**
-; CHECK: %[[StackGuard:.*]] = load i8*, i8** @__stack_chk_guard
+; CHECK: %[[StackGuard:.*]] = call i8* @llvm.stackguard()
 ; CHECK: store i8* %[[StackGuard]], i8** %[[StackGuardSlot]]
   %a = alloca i8, align 1
 

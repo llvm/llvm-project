@@ -7,18 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-// UNSUPPORTED: !libc++ && c++11
-// UNSUPPORTED: !libc++ && c++14
+// UNSUPPORTED: !stdlib=libc++ && c++11
+// UNSUPPORTED: !stdlib=libc++ && c++14
 
 // The roundtrip test uses to_chars, which requires functions in the dylib
 // that were introduced in Mac OS 10.15.
 //
-// XFAIL: with_system_cxx_lib=macosx10.14
-// XFAIL: with_system_cxx_lib=macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
 
 // <charconv>
 

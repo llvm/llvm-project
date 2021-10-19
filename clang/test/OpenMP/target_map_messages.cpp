@@ -1,16 +1,36 @@
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fopenmp-version=51 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp -Wuninitialized
+// -fopenmp, -fno-openmp-extensions
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,omp,ge51-omp -fopenmp -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp -fno-openmp-extensions -ferror-limit 300 -x c %s -Wno-openmp -Wuninitialized
 
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=40 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fopenmp-version=45 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp-simd -fopenmp-version=50 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp-simd -fopenmp-version=51 -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
-// RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -ferror-limit 200 -x c %s -Wno-openmp-mapping -Wuninitialized
+// -fopenmp-simd, -fno-openmp-extensions
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp,lt51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,omp,ge51-omp -fopenmp-simd -fno-openmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -fno-openmp-extensions -ferror-limit 300 -x c %s -Wno-openmp-mapping -Wuninitialized
+
+// -fopenmp -fopenmp-extensions
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp -fopenmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp -fopenmp-extensions -ferror-limit 300 -x c %s -Wno-openmp -Wuninitialized
+
+// -fopenmp-simd -fopenmp-extensions
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=40 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,lt50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=45 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,ompx,lt51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=50 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,ge51,ompx,ge51-ompx -fopenmp-simd -fopenmp-extensions -fopenmp-version=51 -ferror-limit 300 %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -DCCODE -verify -fopenmp-simd -fopenmp-extensions -ferror-limit 300 -x c %s -Wno-openmp-mapping -Wuninitialized
+
+// Check
 #ifdef CCODE
 void foo(int arg) {
   const int n = 0;
@@ -79,7 +99,7 @@ struct SA {
 
     #pragma omp target map(to:b,e)
     {}
-    #pragma omp target map(to:b,e) map(to:b) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+    #pragma omp target map(to:b,e) map(to:b) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
     {}
     #pragma omp target map(to:b[:2],e)
     {}
@@ -118,38 +138,72 @@ struct SA {
     {}
     #pragma omp target map(close)   // expected-error {{use of undeclared identifier 'close'}}
     {}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c,f)
     {}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c[1:2],f)
     {}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c,f[1:2])
     {}
     // expected-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c[:],f)
     {}
     // expected-error@+2 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, tofrom: c,f[:])
     {}
     // expected-error@+1 {{use of undeclared identifier 'present'}}
     #pragma omp target map(present)
+    {}
+    // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, tofrom: c,f)
+    {}
+    // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, tofrom: c[1:2],f)
+    {}
+    // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, tofrom: c,f[1:2])
+    {}
+    // expected-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, tofrom: c[:],f)
+    {}
+    // expected-error@+3 {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
+    // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, tofrom: c,f[:])
+    {}
+    // expected-error@+1 {{use of undeclared identifier 'ompx_hold'}}
+    #pragma omp target map(ompx_hold)
     {}
     #pragma omp target map(close, close, tofrom: a)   // expected-error {{same map type modifier has been specified more than once}}
     {}
     #pragma omp target map(always, close, always, close, tofrom: a)   // expected-error 2 {{same map type modifier has been specified more than once}}
     {}
     // ge51-error@+2 {{same map type modifier has been specified more than once}}
-    // lt51-error@+1 2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // lt51-error@+1 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(present, present, tofrom: a)
     {}
-    // expected-error@+3 2 {{same map type modifier has been specified more than once}}
-    // ge51-error@+2 1 {{same map type modifier has been specified more than once}}
-    // lt51-error@+1 2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
-    #pragma omp target map(always, close, present, always, close, present, tofrom: a)
+    // ompx-error@+3 {{same map type modifier has been specified more than once}}
+    // ge51-omp-error@+2 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(ompx_hold, ompx_hold, tofrom: a)
+    {}
+    // expected-error@+7 2 {{same map type modifier has been specified more than once}}
+    // ge51-error@+6 {{same map type modifier has been specified more than once}}
+    // lt51-ompx-error@+5 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'ompx_hold'}}
+    // lt51-omp-error@+4 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    // ompx-error@+3 {{same map type modifier has been specified more than once}}
+    // ge51-omp-error@+2 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-omp-error@+1 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
+    #pragma omp target map(always, close, present, ompx_hold, always, close, present, ompx_hold, tofrom: a)
     {}
     #pragma omp target map( , tofrom: a)   // expected-error {{missing map type modifier}}
     {}
@@ -157,14 +211,14 @@ struct SA {
     {}
     #pragma omp target map( , , : a)   // expected-error {{missing map type modifier}} expected-error {{missing map type modifier}} expected-error {{missing map type}}
     {}
-    // ge51-error@+3 2 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-    // lt51-error@+2 2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // ge51-error@+3 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-error@+2 2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     // expected-error@+1 {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     #pragma omp target map( d, f, bf: a)
     {}
     // expected-error@+4 {{missing map type modifier}}
-    // ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-    // lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     // expected-error@+1 {{missing map type}}
     #pragma omp target map( , f, : a)
     {}
@@ -172,13 +226,13 @@ struct SA {
     {}
     #pragma omp target map(always close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
     {}
-    // ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-    // lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     // expected-error@+1 {{missing map type}}
     #pragma omp target map(always tofrom close: a)
     {}
-    // ge51-error@+2 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-    // lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+    // ge51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+    // lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
     #pragma omp target map(tofrom from: a)
     {}
     #pragma omp target map(close bf: a)   // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
@@ -338,19 +392,19 @@ void SAclient(int arg) {
   {}
 #pragma omp target map(r.ArrS[0].Error)          // expected-error {{no member named 'Error' in 'SB'}}
   {}
-#pragma omp target map(r.ArrS[0].A, r.ArrS[1].A) // expected-error {{multiple array elements associated with the same variable are not allowed in map clauses of the same construct}} expected-note {{used here}}
+#pragma omp target map(r.ArrS[0].A, r.ArrS[1].A) // lt50-error {{multiple array elements associated with the same variable are not allowed in map clauses of the same construct}} lt50-note {{used here}}
   {}
 #pragma omp target map(r.ArrS[0].A, t.ArrS[1].A)
   {}
-#pragma omp target map(r.PtrS[0], r.PtrS->B) // expected-error {{same pointer dereferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
+#pragma omp target map(r.PtrS[0], r.PtrS->B) // lt50-error {{same pointer dereferenced in multiple different ways in map clause expressions}} lt50-note {{used here}}
   {}
-#pragma omp target map(r.PtrS, r.PtrS->B)    // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+#pragma omp target map(r.PtrS, r.PtrS->B)    // lt50-error {{pointer cannot be mapped along with a section derived from itself}} lt50-note {{used here}}
   {}
 #pragma omp target map(r.PtrS->A, r.PtrS->B)
   {}
-#pragma omp target map(r.RPtrS[0], r.RPtrS->B) // expected-error {{same pointer dereferenced in multiple different ways in map clause expressions}} expected-note {{used here}}
+#pragma omp target map(r.RPtrS[0], r.RPtrS->B) // lt50-error {{same pointer dereferenced in multiple different ways in map clause expressions}} lt50-note {{used here}}
   {}
-#pragma omp target map(r.RPtrS, r.RPtrS->B)    // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+#pragma omp target map(r.RPtrS, r.RPtrS->B)    // lt50-error {{pointer cannot be mapped along with a section derived from itself}} lt50-note {{used here}}
   {}
 #pragma omp target map(r.RPtrS->A, r.RPtrS->B)
   {}
@@ -360,13 +414,13 @@ void SAclient(int arg) {
   {}
 #pragma omp target map(r.C, r.D)
   {}
-#pragma omp target map(r.C, r.C)     // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target map(r.C, r.C)     // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   {}
-#pragma omp target map(r.C) map(r.C) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target map(r.C) map(r.C) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   {}
 #pragma omp target map(r.C, r.S)     // this would be an error only caught at runtime - Sema would have to make sure there is not way for the missing data between fields to be mapped somewhere else.
   {}
-#pragma omp target map(r, r.S)       // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target map(r, r.S)       // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   {}
 #pragma omp target map(r.C, t.C)
   {}
@@ -401,16 +455,16 @@ void SAclient(int arg) {
   }
 
 #pragma omp target data map(to \
-                            : r.C) //expected-note {{used here}}
+                            : r.C) // lt50-note {{used here}}
   {
-#pragma omp target map(r.D)        // expected-error {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
+#pragma omp target map(r.D)        // lt50-error {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
     {}
   }
 
 #pragma omp target data map(to \
-                            : t.Ptr) //expected-note {{used here}}
+                            : t.Ptr) // lt50-note {{used here}}
   {
-#pragma omp target map(t.Ptr[:23])   // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target map(t.Ptr[:23])   // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
     {}
   }
 
@@ -448,7 +502,7 @@ bool foobool(int argc) {
   return argc;
 }
 
-struct S1; // expected-note 2 {{declared here}}
+struct S1; // expected-note 2 {{declared here}} // expected-note 3 {{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {
   mutable int a;
@@ -581,27 +635,27 @@ T tmain(T argc) {
 #pragma omp target data map(S2::S2sc)
 #pragma omp target data map(e, g) // warn-warning 2 {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning 2 {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
-#pragma omp target data map(k) map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
-#pragma omp target map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
+#pragma omp target data map(k) map(k) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
+#pragma omp target map(k), map(k[:5]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}} lt50-note 2 {{used here}}
   foo();
 #pragma omp target data map(da)
 #pragma omp target map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note 2 {{used here}}
-#pragma omp target data map(k[:4]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l) // lt50-note 2 {{used here}}
+#pragma omp target data map(k[:4]) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
 #pragma omp target data map(j)
-#pragma omp target map(l) map(l[:5]) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
+#pragma omp target map(l) map(l[:5]) // lt50-error 2 {{variable already marked as mapped in current construct}} lt50-note 2 {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note 2 {{used here}}
-#pragma omp target data map(k) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note 2 {{used here}}
+#pragma omp target data map(k) // lt50-error 2 {{pointer cannot be mapped along with a section derived from itself}}
 #pragma omp target data map(j)
 #pragma omp target map(l)
   foo();
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target data map(tofrom, always: x)
 #pragma omp target data map(always, tofrom: always, tofrom, x)
@@ -610,24 +664,24 @@ T tmain(T argc) {
 
 #pragma omp target data map(close, tofrom: x)
 #pragma omp target data map(close: x) // expected-error {{missing map type}}
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target data map(tofrom, close: x)
 #pragma omp target data map(close, tofrom: close, tofrom, x)
   foo();
 
-// lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 #pragma omp target data map(present, tofrom: x)
 // ge51-error@+2 {{missing map type}}
 // lt51-error@+1 {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
 #pragma omp target data map(present: x)
-// ge51-error@+4 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+3 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // ge51-error@+2 {{missing map type}}
 // lt51-error@+1 {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
 #pragma omp target data map(tofrom, present: x)
-// lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 #pragma omp target data map(present, tofrom: present, tofrom, x)
   foo();
 
@@ -716,27 +770,27 @@ int main(int argc, char **argv) {
 #pragma omp target data map(S2::S2sc)
 #pragma omp target data map(e, g) // warn-warning {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
-#pragma omp target data map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
-#pragma omp target map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
+#pragma omp target data map(k), map(k) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
+#pragma omp target map(k), map(k[:5]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}} lt50-note {{used here}}
   foo();
 #pragma omp target data map(da)
 #pragma omp target map(da[:4])
   foo();
-#pragma omp target data map(k, j, l) // expected-note {{used here}}
-#pragma omp target data map(k[:4]) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k, j, l) // lt50-note {{used here}}
+#pragma omp target data map(k[:4]) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
 #pragma omp target data map(j)
-#pragma omp target map(l) map(l[:5]) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
+#pragma omp target map(l) map(l[:5]) // lt50-error {{variable already marked as mapped in current construct}} lt50-note {{used here}}
   foo();
-#pragma omp target data map(k[:4], j, l[:5]) // expected-note {{used here}}
-#pragma omp target data map(k) // expected-error {{pointer cannot be mapped along with a section derived from itself}}
+#pragma omp target data map(k[:4], j, l[:5]) // lt50-note {{used here}}
+#pragma omp target data map(k) // lt50-error {{pointer cannot be mapped along with a section derived from itself}}
 #pragma omp target data map(j)
 #pragma omp target map(l)
   foo();
 
 #pragma omp target data map(always, tofrom: x)
 #pragma omp target data map(always: x) // expected-error {{missing map type}}
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target data map(tofrom, always: x)
 #pragma omp target data map(always, tofrom: always, tofrom, x)
@@ -744,18 +798,18 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target data map(close, tofrom: x)
 #pragma omp target data map(close: x) // expected-error {{missing map type}}
-// ge51-error@+3 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+2 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // expected-error@+1 {{missing map type}}
 #pragma omp target data map(tofrom, close: x)
   foo();
-// lt51-error@+1 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// lt51-error@+1 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 #pragma omp target data map(present, tofrom: x)
 // ge51-error@+2 {{missing map type}}
 // lt51-error@+1 {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
 #pragma omp target data map(present: x)
-// ge51-error@+4 {{incorrect map type modifier, expected 'always', 'close', 'mapper', or 'present'}}
-// lt51-error@+3 {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}}
+// ge51-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
+// lt51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}}
 // ge51-error@+2 {{missing map type}}
 // lt51-error@+1 {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
 #pragma omp target data map(tofrom, present: x)
@@ -766,47 +820,49 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target map(m) // warn-warning {{Type 'S6<int>' is not trivially copyable and not guaranteed to be mapped correctly}}
   {}
-// expected-note@+1 {{used here}}
+#pragma omp target
+  { s.a++; }
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.s)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.s.a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.b[:5])
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
 #pragma omp target map(s.p[:5])
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.sa[3].a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.sp[3]->a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.p->a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.p->a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.s.b[:2])
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.s.p->b[:2])
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
-// expected-note@+1 {{used here}}
+// lt50-note@+1 {{used here}}
 #pragma omp target map(s.p->p->p->a)
-// expected-error@+1 {{variable already marked as mapped in current construct}}
+// lt50-error@+1 {{variable already marked as mapped in current construct}}
   { s.a++; }
 #pragma omp target map(s.s.s.b[:2])
   { s.s.s.b[0]++; }

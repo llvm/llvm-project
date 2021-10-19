@@ -8,7 +8,6 @@
 
 // <string>
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: libcpp-no-deduction-guides
 
 // template<class InputIterator>
 //   basic_string(InputIterator begin, InputIterator end,
@@ -24,7 +23,6 @@
 //  The deduction guide shall not participate in overload resolution if Allocator
 //  is a type that does not qualify as an allocator.
 
-
 #include <string>
 #include <string_view>
 #include <iterator>
@@ -35,7 +33,7 @@
 
 #include "test_macros.h"
 #include "test_allocator.h"
-#include "../input_iterator.h"
+#include "../cpp17_input_iterator.h"
 #include "min_allocator.h"
 
 int main(int, char**)
@@ -61,6 +59,7 @@ int main(int, char**)
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     std::wstring_view sv = L"12345678901234";
     std::basic_string s1{sv, test_allocator<wchar_t>{}};
@@ -71,6 +70,7 @@ int main(int, char**)
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
     }
+#endif
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     {
     std::u8string_view sv = u8"12345678901234";

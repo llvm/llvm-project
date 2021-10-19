@@ -30,7 +30,6 @@ class WatchpointIteratorTestCase(TestBase):
         self.line = line_number(
             self.source, '// Set break point at this line.')
 
-    @add_test_categories(['pyapi'])
     def test_watch_iter(self):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()
@@ -52,7 +51,7 @@ class WatchpointIteratorTestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -71,7 +70,7 @@ class WatchpointIteratorTestCase(TestBase):
             self.HideStdout()
 
         # There should be only 1 watchpoint location under the target.
-        self.assertTrue(target.GetNumWatchpoints() == 1)
+        self.assertEqual(target.GetNumWatchpoints(), 1)
         self.assertTrue(watchpoint.IsEnabled())
         watch_id = watchpoint.GetID()
         self.assertTrue(watch_id != 0)
@@ -105,7 +104,7 @@ class WatchpointIteratorTestCase(TestBase):
         # Now disable the 'rw' watchpoint.  The program won't stop when it reads
         # 'global' next.
         watchpoint.SetEnabled(False)
-        self.assertTrue(watchpoint.GetHardwareIndex() == -1)
+        self.assertEqual(watchpoint.GetHardwareIndex(), -1)
         self.assertFalse(watchpoint.IsEnabled())
 
         # Continue.  The program does not stop again when the variable is being
@@ -113,13 +112,13 @@ class WatchpointIteratorTestCase(TestBase):
         process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)
 
         # Verify some vital statistics and exercise the iterator API.
         for watchpoint in target.watchpoint_iter():
             self.assertTrue(watchpoint)
-            self.assertTrue(watchpoint.GetWatchSize() == 4)
-            self.assertTrue(watchpoint.GetHitCount() == 1)
+            self.assertEqual(watchpoint.GetWatchSize(), 4)
+            self.assertEqual(watchpoint.GetHitCount(), 1)
             print(watchpoint)

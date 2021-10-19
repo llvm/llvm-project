@@ -16,7 +16,6 @@
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
@@ -415,9 +414,10 @@ private:
           FixLCSSALoop = FixLCSSALoop->getParentLoop();
         assert(FixLCSSALoop && "Should be a loop!");
         // We need all DT updates to be done before forming LCSSA.
-        DTU.applyUpdates(DTUpdates);
         if (MSSAU)
-          MSSAU->applyUpdates(DTUpdates, DT);
+          MSSAU->applyUpdates(DTUpdates, DT, /*UpdateDT=*/true);
+        else
+          DTU.applyUpdates(DTUpdates);
         DTUpdates.clear();
         formLCSSARecursively(*FixLCSSALoop, DT, &LI, &SE);
       }
@@ -425,8 +425,7 @@ private:
 
     if (MSSAU) {
       // Clear all updates now. Facilitates deletes that follow.
-      DTU.applyUpdates(DTUpdates);
-      MSSAU->applyUpdates(DTUpdates, DT);
+      MSSAU->applyUpdates(DTUpdates, DT, /*UpdateDT=*/true);
       DTUpdates.clear();
       if (VerifyMemorySSA)
         MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -452,7 +451,7 @@ private:
       if (LI.isLoopHeader(BB)) {
         assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
         Loop *DL = LI.getLoopFor(BB);
-        if (DL->getParentLoop()) {
+        if (!DL->isOutermost()) {
           for (auto *PL = DL->getParentLoop(); PL; PL = PL->getParentLoop())
             for (auto *BB : DL->getBlocks())
               PL->removeBlockFromLoop(BB);
@@ -734,13 +733,12 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    auto *MSSAA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     Optional<MemorySSAUpdater> MSSAU;
-    if (EnableMSSALoopDependency) {
-      MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-      MSSAU = MemorySSAUpdater(MSSA);
-      if (VerifyMemorySSA)
-        MSSA->verifyMemorySSA();
-    }
+    if (MSSAA)
+      MSSAU = MemorySSAUpdater(&MSSAA->getMSSA());
+    if (MSSAA && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
     bool DeleteCurrentLoop = false;
     bool Changed = simplifyLoopCFG(
         *L, DT, LI, SE, MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
@@ -751,10 +749,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    if (EnableMSSALoopDependency) {
-      AU.addRequired<MemorySSAWrapperPass>();
-      AU.addPreserved<MemorySSAWrapperPass>();
-    }
+    AU.addPreserved<MemorySSAWrapperPass>();
     AU.addPreserved<DependenceAnalysisWrapperPass>();
     getLoopAnalysisUsage(AU);
   }

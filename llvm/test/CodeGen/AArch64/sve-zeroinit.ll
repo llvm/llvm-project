@@ -1,8 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-linux-gnu"
@@ -58,28 +54,28 @@ define <vscale x 8 x half> @test_zeroinit_8xf16() {
 
 define <vscale x 2 x i1> @test_zeroinit_2xi1() {
 ; CHECK-LABEL: test_zeroinit_2xi1
-; CHECK:       whilelo p0.d, xzr, xzr
+; CHECK:       pfalse p0.b
 ; CHECK-NEXT:  ret
   ret <vscale x 2 x i1> zeroinitializer
 }
 
 define <vscale x 4 x i1> @test_zeroinit_4xi1() {
 ; CHECK-LABEL: test_zeroinit_4xi1
-; CHECK:       whilelo p0.s, xzr, xzr
+; CHECK:       pfalse p0.b
 ; CHECK-NEXT:  ret
   ret <vscale x 4 x i1> zeroinitializer
 }
 
 define <vscale x 8 x i1> @test_zeroinit_8xi1() {
 ; CHECK-LABEL: test_zeroinit_8xi1
-; CHECK:       whilelo p0.h, xzr, xzr
+; CHECK:       pfalse p0.b
 ; CHECK-NEXT:  ret
   ret <vscale x 8 x i1> zeroinitializer
 }
 
 define <vscale x 16 x i1> @test_zeroinit_16xi1() {
 ; CHECK-LABEL: test_zeroinit_16xi1
-; CHECK:       whilelo p0.b, xzr, xzr
+; CHECK:       pfalse p0.b
 ; CHECK-NEXT:  ret
   ret <vscale x 16 x i1> zeroinitializer
 }

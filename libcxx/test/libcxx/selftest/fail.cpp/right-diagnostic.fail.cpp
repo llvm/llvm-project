@@ -14,4 +14,4 @@
 struct Foo { };
 typedef Foo::x x; // expected-error{{no type named 'x' in 'Foo'}}
 
-int main() { }
+int main(int, char**) { return 0; }

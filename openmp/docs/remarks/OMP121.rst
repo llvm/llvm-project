@@ -1,0 +1,80 @@
+.. _omp121:
+
+Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume(\"ompx_spmd_amenable\")))` to the called function to override. [OMP121]
+===================================================================================================================================================================
+
+This analysis remarks indicates that a potential side-effect that cannot be
+guarded prevents the target region from executing in SPMD-mode. SPMD-mode
+requires that each thread is active inside the region. Any instruction that
+cannot be either recomputed by each thread independently or guarded and executed
+by a single thread prevents the region from executing in SPMD-mode. 
+
+This remark will attempt to print out the instructions preventing the region
+from being executed in SPMD-mode. Calls to functions outside the current
+translation unit will prevent this transformation from occurring as well, but
+can be overridden using an assumption stating that it contains no calls that
+prevent SPMD execution.
+
+Examples
+--------
+
+Calls to functions outside the current translation unit may contain instructions
+or operations that cannot be executed in SPMD-mode.
+
+.. code-block:: c++
+
+  extern int work();
+
+  void use(int x);
+  
+  void foo() {
+  #pragma omp target teams
+    {
+      int x = work();
+  #pragma omp parallel
+        use(x);
+  
+    }
+  }
+
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp121.cpp
+   omp121.cpp:8:13: remark: Value has potential side effects preventing SPMD-mode 
+   execution.  Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function 
+   to override. [OMP121]
+   int x = work();
+            ^
+
+As the remark suggests, the problem is caused by the unknown call to the
+external function ``work``. This can be overridden by asserting that it does not
+contain any code that prevents SPMD-mode execution.
+
+.. code-block:: c++
+
+  __attribute__((assume("ompx_spmd_amenable"))) extern int work();
+
+  void use(int x);
+  
+  void foo() {
+  #pragma omp target teams
+    {
+      int x = work();
+  #pragma omp parallel
+        use(x);
+  
+    }
+  }
+
+.. code-block:: console
+
+   $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass=openmp-opt omp121.cpp
+   omp121.cpp:6:1: remark: Transformed generic-mode kernel to SPMD-mode. [OMP120]
+   #pragma omp target teams
+   ^
+
+Diagnostic Scope
+----------------
+
+OpenMP target offloading analysis remark.

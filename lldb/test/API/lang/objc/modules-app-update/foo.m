@@ -1,4 +1,4 @@
-@import Foundation;
+@import ObjectiveC;
 @import Foo;
 @implementation Foo
 +(instancetype)init {

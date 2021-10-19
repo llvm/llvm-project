@@ -39,12 +39,10 @@ define float @bextr_uitofp(i32 %x, i32 %y) {
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    movl $3855, %eax # imm = 0xF0F
 ; X32-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    movd %eax, %xmm1
-; X32-NEXT:    por %xmm0, %xmm1
-; X32-NEXT:    subsd %xmm0, %xmm1
-; X32-NEXT:    xorps %xmm0, %xmm0
-; X32-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X32-NEXT:    movd %eax, %xmm0
+; X32-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X32-NEXT:    movss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax

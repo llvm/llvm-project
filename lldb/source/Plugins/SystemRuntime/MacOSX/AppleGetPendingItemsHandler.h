@@ -48,16 +48,14 @@ public:
   ~AppleGetPendingItemsHandler();
 
   struct GetPendingItemsReturnInfo {
-    lldb::addr_t items_buffer_ptr; /* the address of the pending items buffer
-                                      from libBacktraceRecording */
-    lldb::addr_t
-        items_buffer_size; /* the size of the pending items buffer from
-                              libBacktraceRecording */
-    uint64_t count; /* the number of pending items included in the buffer */
+    lldb::addr_t items_buffer_ptr =
+        LLDB_INVALID_ADDRESS; /* the address of the pending items buffer
+          from libBacktraceRecording */
+    lldb::addr_t items_buffer_size = 0; /* the size of the pending items buffer
+                                       from libBacktraceRecording */
+    uint64_t count = 0; /* the number of pending items included in the buffer */
 
-    GetPendingItemsReturnInfo()
-        : items_buffer_ptr(LLDB_INVALID_ADDRESS), items_buffer_size(0),
-          count(0) {}
+    GetPendingItemsReturnInfo() = default;
   };
 
   /// Get the list of pending items for a given queue via a call to

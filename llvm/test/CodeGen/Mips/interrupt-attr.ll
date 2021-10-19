@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=mips32r2 -march=mipsel -relocation-model=static -o - %s | FileCheck %s
+; RUN: llc -mcpu=mips32r2 -mtriple=mipsel -relocation-model=static -o - %s | FileCheck %s
 
 define void @isr_sw0() #0 {
 ; CHECK-LABEL: isr_sw0:

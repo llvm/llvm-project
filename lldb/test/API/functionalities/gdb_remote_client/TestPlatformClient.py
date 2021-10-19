@@ -1,6 +1,7 @@
 import lldb
 import binascii
 import os
+import time
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from gdbclientutils import *
@@ -49,8 +50,7 @@ class TestPlatformClient(GDBRemoteTestBase):
 
         try:
             self.runCmd("platform select remote-linux")
-            self.runCmd("platform connect connect://localhost:%d" %
-                        self.server.port)
+            self.runCmd("platform connect " + self.server.get_connect_url())
             self.assertTrue(self.dbg.GetSelectedPlatform().IsConnected())
             self.expect("platform process list -x",
                         substrs=["2 matching processes were found", "test_process", "another_test_process"])
@@ -65,3 +65,41 @@ class TestPlatformClient(GDBRemoteTestBase):
                         substrs=["error: no processes were found on the \"remote-linux\" platform"])
         finally:
             self.dbg.GetSelectedPlatform().DisconnectRemote()
+
+    class TimeoutResponder(MockGDBServerResponder):
+        """A mock server, which takes a very long time to compute the working
+        directory."""
+        def __init__(self):
+            MockGDBServerResponder.__init__(self)
+
+        def qGetWorkingDir(self):
+            time.sleep(10)
+            return hexlify("/foo/bar")
+
+    def test_no_timeout(self):
+        """Test that we honor the timeout setting. With a large enough timeout,
+        we should get the CWD successfully."""
+
+        self.server.responder = TestPlatformClient.TimeoutResponder()
+        self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 30")
+        plat = lldb.SBPlatform("remote-linux")
+        try:
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions(
+                self.server.get_connect_url())))
+            self.assertEqual(plat.GetWorkingDirectory(), "/foo/bar")
+        finally:
+            plat.DisconnectRemote()
+
+    def test_timeout(self):
+        """Test that we honor the timeout setting. With a small timeout, CWD
+        retrieval should fail."""
+
+        self.server.responder = TestPlatformClient.TimeoutResponder()
+        self.runCmd("settings set plugin.process.gdb-remote.packet-timeout 3")
+        plat = lldb.SBPlatform("remote-linux")
+        try:
+            self.assertSuccess(plat.ConnectRemote(lldb.SBPlatformConnectOptions(
+                self.server.get_connect_url())))
+            self.assertIsNone(plat.GetWorkingDirectory())
+        finally:
+            plat.DisconnectRemote()

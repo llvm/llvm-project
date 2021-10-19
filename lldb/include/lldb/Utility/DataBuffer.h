@@ -10,8 +10,8 @@
 #define LLDB_UTILITY_DATABUFFER_H
 #if defined(__cplusplus)
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 #include "lldb/lldb-types.h"
 
@@ -48,7 +48,7 @@ public:
   /// and be downcast to the DataBuffer pure virtual interface. The virtual
   /// destructor ensures that destructing the base class will destruct the
   /// class that inherited from it correctly.
-  virtual ~DataBuffer() {}
+  virtual ~DataBuffer() = default;
 
   /// Get a pointer to the data.
   ///

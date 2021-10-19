@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -18,15 +18,17 @@ entry:
 ; CHECK: entry:
   ; CHECK-NEXT: call i8* @malloc(i32 40), !dbg ![[DL0:.*]]
   ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL0]]
+
+; CHECK: entry.split:
   ; CHECK: alloca {{.*}}, !dbg ![[DL0]]
   ; CHECK: call i32* @saveSetjmp{{.*}}, !dbg ![[DL1:.*]]
   ; CHECK-NEXT: call i32 @getTempRet0{{.*}}, !dbg ![[DL1]]
   ; CHECK-NEXT: br {{.*}}, !dbg ![[DL2:.*]]
 
-; CHECK: entry.split:
+; CHECK: entry.split.split:
   ; CHECK: call {{.*}} void @__invoke_void{{.*}}, !dbg ![[DL2]]
 
-; CHECK: entry.split.split:
+; CHECK: entry.split.split.split:
   ; CHECK-NEXT: bitcast {{.*}}, !dbg ![[DL3:.*]]
   ; CHECK-NEXT: call void @free{{.*}}, !dbg ![[DL3]]
 
@@ -36,7 +38,7 @@ entry:
 ; CHECK: if.end:
   ; CHECK: call i32 @getTempRet0{{.*}}, !dbg ![[DL2]]
 
-; CHECK: if.then2:
+; CHECK: call.em.longjmp:
   ; CHECK: call void @emscripten_longjmp{{.*}}, !dbg ![[DL2]]
 
 ; CHECK: if.end2:

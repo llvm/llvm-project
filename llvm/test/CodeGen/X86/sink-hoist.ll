@@ -153,7 +153,7 @@ declare <4 x float> @llvm.x86.sse2.cvtdq2ps(<4 x i32>) nounwind readnone
 ; CHECK-LABEL: default_get_pch_validity:
 ; CHECK: movl cl_options_count(%rip), %ecx
 
-@cl_options_count = external constant i32         ; <i32*> [#uses=2]
+@cl_options_count = external dso_local constant i32         ; <i32*> [#uses=2]
 
 define void @default_get_pch_validity() nounwind {
 entry:

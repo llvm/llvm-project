@@ -50,6 +50,7 @@ extern char **environ;
 #elif defined(__DragonFly__)
 #include <sys/mount.h>
 #elif defined(__MVS__)
+#include "llvm/Support/AutoConvert.h"
 #include <sys/ps.h>
 #endif
 
@@ -124,7 +125,8 @@ const file_t kInvalidFile = -1;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
-    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) || defined(__GNU__)
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) || \
+    (defined(__sun__) && defined(__svr4__))
 static int
 test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 {
@@ -147,6 +149,9 @@ test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 static char *
 getprogpath(char ret[PATH_MAX], const char *bin)
 {
+  if (bin == nullptr)
+    return nullptr;
+
   /* First approach: absolute path. */
   if (bin[0] == '/') {
     if (test_dir(ret, "/", bin) == 0)
@@ -205,8 +210,11 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // to the file.
   char exe_path[PATH_MAX];
 #if __FreeBSD_version >= 1300057
-  if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0)
-    return exe_path;
+  if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0) {
+    char link_path[PATH_MAX];
+    if (realpath(exe_path, link_path))
+      return link_path;
+  }
 #else
   // elf_aux_info(AT_EXECPATH, ... is not available in all supported versions,
   // fall back to finding the ELF auxiliary vectors after the process's
@@ -215,9 +223,12 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   while (*p++ != 0)
     ;
   // Iterate through auxiliary vectors for AT_EXECPATH.
-  for (; *(uintptr_t *)p != AT_NULL; p++) {
-    if (*(uintptr_t *)p++ == AT_EXECPATH)
-      return *p;
+  for (Elf_Auxinfo *aux = (Elf_Auxinfo *)p; aux->a_type != AT_NULL; aux++) {
+    if (aux->a_type == AT_EXECPATH) {
+      char link_path[PATH_MAX];
+      if (realpath((char *)aux->a_un.a_ptr, link_path))
+        return link_path;
+    }
   }
 #endif
   // Fall back to argv[0] if auxiliary vectors are not available.
@@ -272,6 +283,20 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   }
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
+    return exe_path;
+#elif defined(__sun__) && defined(__svr4__)
+  char exe_path[PATH_MAX];
+  const char *aPath = "/proc/self/execname";
+  if (sys::fs::exists(aPath)) {
+    int fd = open(aPath, O_RDONLY);
+    if (fd == -1)
+      return "";
+    if (read(fd, exe_path, sizeof(exe_path)) < 0)
+      return "";
+    return exe_path;
+  }
+  // Fall back to the classical detection.
+  if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #elif defined(__MVS__)
   int token = 0;
@@ -682,8 +707,6 @@ void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
 
   path.toVector(dest);
   expandTildeExpr(dest);
-
-  return;
 }
 
 static file_type typeForMode(mode_t Mode) {
@@ -814,6 +837,9 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
   int prot = (Mode == readonly) ? PROT_READ : (PROT_READ | PROT_WRITE);
+#if defined(MAP_NORESERVE)
+  flags |= MAP_NORESERVE;
+#endif
 #if defined(__APPLE__)
   //----------------------------------------------------------------------
   // Newer versions of MacOSX have a flag that will allow us to read from
@@ -842,31 +868,16 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
                                        uint64_t offset, std::error_code &ec)
-    : Size(length), Mapping(), Mode(mode) {
+    : Size(length), Mode(mode) {
   (void)Mode;
   ec = init(fd, offset, mode);
   if (ec)
-    Mapping = nullptr;
+    copyFrom(mapped_file_region());
 }
 
-mapped_file_region::~mapped_file_region() {
+void mapped_file_region::unmapImpl() {
   if (Mapping)
     ::munmap(Mapping, Size);
-}
-
-size_t mapped_file_region::size() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return Size;
-}
-
-char *mapped_file_region::data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<char*>(Mapping);
-}
-
-const char *mapped_file_region::const_data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<const char*>(Mapping);
 }
 
 int mapped_file_region::alignment() {
@@ -970,8 +981,13 @@ static int nativeOpenFlags(CreationDisposition Disp, OpenFlags Flags,
     // Nothing special, just don't add O_CREAT and we get these semantics.
   }
 
+// Using append mode with z/OS UTF-8 auto-conversion results in EINVAL when
+// calling write(). Instead we need to use lseek() to set offset to EOF after
+// open().
+#ifndef __MVS__
   if (Flags & OF_Append)
     Result |= O_APPEND;
+#endif
 
 #ifdef O_CLOEXEC
   if (!(Flags & OF_ChildInherit))
@@ -1000,6 +1016,88 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
     assert(r == 0 && "fcntl(F_SETFD, FD_CLOEXEC) failed");
   }
 #endif
+
+#ifdef __MVS__
+  /* Reason about auto-conversion and file tags. Setting the file tag only
+   * applies if file is opened in write mode:
+   *
+   * Text file:
+   *                  File exists       File created
+   * CD_CreateNew     n/a               conv: on
+   *                                    tag: set 1047
+   * CD_CreateAlways  conv: auto        conv: on
+   *                  tag: auto 1047    tag: set 1047
+   * CD_OpenAlways    conv: auto        conv: on
+   *                  tag: auto 1047    tag: set 1047
+   * CD_OpenExisting  conv: auto        n/a
+   *                  tag: unchanged
+   *
+   * Binary file:
+   *                  File exists       File created
+   * CD_CreateNew     n/a               conv: off
+   *                                    tag: set binary
+   * CD_CreateAlways  conv: off         conv: off
+   *                  tag: auto binary  tag: set binary
+   * CD_OpenAlways    conv: off         conv: off
+   *                  tag: auto binary  tag: set binary
+   * CD_OpenExisting  conv: off         n/a
+   *                  tag: unchanged
+   *
+   * Actions:
+   *   conv: off        -> auto-conversion is turned off
+   *   conv: on         -> auto-conversion is turned on
+   *   conv: auto       -> auto-conversion is turned on if the file is untagged
+   *   tag: set 1047    -> set the file tag to text encoded in 1047
+   *   tag: set binary  -> set the file tag to binary
+   *   tag: auto 1047   -> set file tag to 1047 if not set
+   *   tag: auto binary -> set file tag to binary if not set
+   *   tag: unchanged   -> do not care about the file tag
+   *
+   * It is not possible to distinguish between the cases "file exists" and
+   * "file created". In the latter case, the file tag is not set and the file
+   * size is zero. The decision table boils down to:
+   *
+   * the file tag is set if
+   *   - the file is opened for writing
+   *   - the create disposition is not equal to CD_OpenExisting
+   *   - the file tag is not set
+   *   - the file size is zero
+   *
+   * This only applies if the file is a regular file. E.g. enabling
+   * auto-conversion for reading from /dev/null results in error EINVAL when
+   * calling read().
+   *
+   * Using append mode with z/OS UTF-8 auto-conversion results in EINVAL when
+   * calling write(). Instead we need to use lseek() to set offset to EOF after
+   * open().
+   */
+  if ((Flags & OF_Append) && lseek(ResultFD, 0, SEEK_END) == -1)
+    return std::error_code(errno, std::generic_category());
+  struct stat Stat;
+  if (fstat(ResultFD, &Stat) == -1)
+    return std::error_code(errno, std::generic_category());
+  if (S_ISREG(Stat.st_mode)) {
+    bool DoSetTag = (Access & FA_Write) && (Disp != CD_OpenExisting) &&
+                    !Stat.st_tag.ft_txtflag && !Stat.st_tag.ft_ccsid &&
+                    Stat.st_size == 0;
+    if (Flags & OF_Text) {
+      if (auto EC = llvm::enableAutoConversion(ResultFD))
+        return EC;
+      if (DoSetTag) {
+        if (auto EC = llvm::setFileTag(ResultFD, CCSID_IBM_1047, true))
+          return EC;
+      }
+    } else {
+      if (auto EC = llvm::disableAutoConversion(ResultFD))
+        return EC;
+      if (DoSetTag) {
+        if (auto EC = llvm::setFileTag(ResultFD, FT_BINARY, false))
+          return EC;
+      }
+    }
+  }
+#endif
+
   return std::error_code();
 }
 
@@ -1066,8 +1164,13 @@ file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
 Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+#if defined(__APPLE__)
+  size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
+#else
+  size_t Size = Buf.size();
+#endif
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
   if (ssize_t(NumRead) == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   return NumRead;
@@ -1075,14 +1178,19 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 
 Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+#if defined(__APPLE__)
+  size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
+#else
+  size_t Size = Buf.size();
+#endif
 #ifdef HAVE_PREAD
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Buf.size(), Offset);
+      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
 #endif
   if (NumRead == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
@@ -1197,6 +1305,14 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   if (::realpath(P.begin(), Buffer) == nullptr)
     return std::error_code(errno, std::generic_category());
   dest.append(Buffer, Buffer + strlen(Buffer));
+  return std::error_code();
+}
+
+std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
+  auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
+  // Retry if fchown call fails due to interruption.
+  if ((sys::RetryAfterSignal(-1, FChown)) < 0)
+    return std::error_code(errno, std::generic_category());
   return std::error_code();
 }
 

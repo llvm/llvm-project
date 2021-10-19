@@ -83,6 +83,9 @@ class MachineModuleInfo {
 
   /// This is the MCContext used for the entire code generator.
   MCContext Context;
+  // This is an external context, that if assigned, will be used instead of the
+  // internal context.
+  MCContext *ExternalContext = nullptr;
 
   /// This is the LLVM Module being worked on.
   const Module *TheModule;
@@ -149,6 +152,9 @@ class MachineModuleInfo {
 public:
   explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
 
+  explicit MachineModuleInfo(const LLVMTargetMachine *TM,
+                             MCContext *ExtContext);
+
   MachineModuleInfo(MachineModuleInfo &&MMII);
 
   ~MachineModuleInfo();
@@ -158,8 +164,12 @@ public:
 
   const LLVMTargetMachine &getTarget() const { return TM; }
 
-  const MCContext &getContext() const { return Context; }
-  MCContext &getContext() { return Context; }
+  const MCContext &getContext() const {
+    return ExternalContext ? *ExternalContext : Context;
+  }
+  MCContext &getContext() {
+    return ExternalContext ? *ExternalContext : Context;
+  }
 
   const Module *getModule() const { return TheModule; }
 
@@ -175,7 +185,7 @@ public:
   /// Machine Function map.
   void deleteMachineFunctionFor(Function &F);
 
-  /// Keep track of various per-function pieces of information for backends
+  /// Keep track of various per-module pieces of information for backends
   /// that would like to do so.
   template<typename Ty>
   Ty &getObjFileInfo() {
@@ -233,6 +243,13 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
+  /// If the specified function has had any references to address-taken blocks
+  /// generated, but the block got deleted, return the symbol now so we can
+  /// emit it.  This prevents emitting a reference to a symbol that has no
+  /// definition.
+  void takeDeletedSymbolsForFunction(const Function *F,
+                                     std::vector<MCSymbol*> &Result);
+
   /// \name Exception Handling
   /// \{
 
@@ -265,6 +282,9 @@ class MachineModuleInfoWrapperPass : public ImmutablePass {
 public:
   static char ID; // Pass identification, replacement for typeid
   explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM = nullptr);
+
+  explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
+                                        MCContext *ExtContext);
 
   // Initialization and Finalization
   bool doInitialization(Module &) override;

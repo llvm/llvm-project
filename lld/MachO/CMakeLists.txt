@@ -2,37 +2,61 @@ set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(MachOOptionsTableGen)
 
-add_lld_library(lldMachO2
+include_directories(${LLVM_MAIN_SRC_DIR}/../libunwind/include)
+
+add_lld_library(lldMachO
+  Arch/ARM.cpp
+  Arch/ARM64.cpp
+  Arch/ARM64Common.cpp
+  Arch/ARM64_32.cpp
   Arch/X86_64.cpp
+  ConcatOutputSection.cpp
   Driver.cpp
   DriverUtils.cpp
+  Dwarf.cpp
   ExportTrie.cpp
+  ICF.cpp
   InputFiles.cpp
   InputSection.cpp
-  MergedOutputSection.cpp
+  LTO.cpp
+  MapFile.cpp
+  MarkLive.cpp
   ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp
+  Relocations.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
   Target.cpp
+  UnwindInfoSection.cpp
   Writer.cpp
 
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitReader
   Core
+  DebugInfoDWARF
+  LTO
+  MC
+  ObjCARCOpts
   Object
   Option
+  Passes
   Support
   TextAPI
 
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${XAR_LIB}
 
   DEPENDS
   MachOOptionsTableGen
   ${tablegen_deps}
   )
+
+if(LLVM_HAVE_LIBXAR)
+  target_link_libraries(lldMachO PRIVATE ${XAR_LIB})
+endif()

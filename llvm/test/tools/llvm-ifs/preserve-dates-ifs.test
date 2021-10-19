@@ -1,0 +1,8 @@
+## Test writing unchanged content to TBE file with --write-if-changed flag.
+
+# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=%t %p/Inputs/gnu_hash.so
+# RUN: env TZ=GMT touch -m -t 197001010000 %t
+# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=%t --write-if-changed %p/Inputs/gnu_hash.so
+# RUN: env TZ=GMT ls -l %t | FileCheck %s
+
+# CHECK: {{[[:space:]]1970}}

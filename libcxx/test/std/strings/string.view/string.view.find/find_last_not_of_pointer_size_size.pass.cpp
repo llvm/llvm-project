@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <string>
+// <string_view>
 
 // constexpr size_type find_last_not_of(const charT* s, size_type pos, size_type n) const;
 
@@ -21,6 +21,7 @@ void
 test(const S& s, const typename S::value_type* str, typename S::size_type pos,
      typename S::size_type n, typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.find_last_not_of(str, pos, n));
     assert(s.find_last_not_of(str, pos, n) == x);
     if (x != S::npos)
         assert(x <= pos && x < s.size());

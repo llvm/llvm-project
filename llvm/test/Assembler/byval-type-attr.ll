@@ -13,8 +13,8 @@ define void @bar({i32*, i8}* byval({i32*, i8}) align 4 %0) {
 define void @caller({ i32*, i8 }* %ptr) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK: call void @bar({ i32*, i8 }* byval({ i32*, i8 }) %ptr)
 ; CHECK: invoke void @bar({ i32*, i8 }* byval({ i32*, i8 }) %ptr)
-  call void @bar({i32*, i8}* byval %ptr)
-  invoke void @bar({i32*, i8}* byval %ptr) to label %success unwind label %fail
+  call void @bar({i32*, i8}* byval({i32*, i8}) %ptr)
+  invoke void @bar({i32*, i8}* byval({i32*, i8}) %ptr) to label %success unwind label %fail
 
 success:
   ret void

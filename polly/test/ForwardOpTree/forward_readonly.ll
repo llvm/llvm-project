@@ -42,7 +42,8 @@ return:
 
 ; STATS: Statistics {
 ; STATS:     Instructions copied: 1
-; STATS:     Read-only accesses copied: 1
+; MODEL:     Read-only accesses copied: 1
+; NOMODEL:   Read-only accesses copied: 0
 ; STATS:     Operand trees forwarded: 1
 ; STATS:     Statements with forwarded operand trees: 1
 ; STATS: }

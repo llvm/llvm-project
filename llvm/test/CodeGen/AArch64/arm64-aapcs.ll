@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -enable-misched=false -disable-post-ra < %s | FileCheck %s
 
-@var = global i32 0, align 4
+@var = dso_local global i32 0, align 4
 
 ; CHECK-LABEL: @test_i128_align
-define i128 @test_i128_align(i32, i128 %arg, i32 %after) {
+define dso_local i128 @test_i128_align(i32, i128 %arg, i32 %after) {
   store i32 %after, i32* @var, align 4
 ; CHECK-DAG: str w4, [{{x[0-9]+}}, :lo12:var]
 
@@ -22,10 +22,10 @@ define [2 x i64] @test_i64x2_align(i32, [2 x i64] %arg, i32 %after) {
 ; CHECK: mov x1, x2
 }
 
-@var64 = global i64 0, align 8
+@var64 = dso_local global i64 0, align 8
 
 ; Check stack slots are 64-bit at all times.
-define void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %short,
+define dso_local void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %short,
                                 i32 %int, i64 %long) {
 ; CHECK-LABEL: test_stack_slots:
 ; CHECK-DAG: ldr w[[ext1:[0-9]+]], [sp, #24]
@@ -33,7 +33,6 @@ define void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %short,
 ; CHECK-DAG: ldrb w[[ext3:[0-9]+]], [sp, #8]
 ; CHECK-DAG: ldr x[[ext4:[0-9]+]], [sp, #32]
 ; CHECK-DAG: ldrb w[[ext5:[0-9]+]], [sp]
-; CHECK-DAG: and x[[ext5]], x[[ext5]], #0x1
 
   %ext_bool = zext i1 %bool to i64
   store volatile i64 %ext_bool, i64* @var64, align 8
@@ -60,7 +59,7 @@ define void @test_stack_slots([8 x i64], i1 %bool, i8 %char, i16 %short,
 ; Make sure the callee does extensions (in the absence of zext/sext
 ; keyword on args) while we're here.
 
-define void @test_extension(i1 %bool, i8 %char, i16 %short, i32 %int) {
+define dso_local void @test_extension(i1 %bool, i8 %char, i16 %short, i32 %int) {
   %ext_bool = zext i1 %bool to i64
   store volatile i64 %ext_bool, i64* @var64
 ; CHECK: and [[EXT:x[0-9]+]], x0, #0x1
@@ -88,10 +87,10 @@ declare void @variadic(i32 %a, ...)
 
   ; Under AAPCS variadic functions have the same calling convention as
   ; others. The extra arguments should go in registers rather than on the stack.
-define void @test_variadic() {
+define dso_local void @test_variadic() {
   call void(i32, ...) @variadic(i32 0, i64 1, double 2.0)
-; CHECK: fmov d0, #2.0
 ; CHECK: mov w1, #1
+; CHECK: fmov d0, #2.0
 ; CHECK: bl variadic
   ret void
 }
@@ -99,7 +98,7 @@ define void @test_variadic() {
 ; We weren't marking x7 as used after deciding that the i128 didn't fit into
 ; registers and putting the first half on the stack, so the *second* half went
 ; into x7. Yuck!
-define i128 @test_i128_shadow([7 x i64] %x0_x6, i128 %sp) {
+define dso_local i128 @test_i128_shadow([7 x i64] %x0_x6, i128 %sp) {
 ; CHECK-LABEL: test_i128_shadow:
 ; CHECK: ldp x0, x1, [sp]
 
@@ -114,7 +113,7 @@ define fp128 @test_fp128([8 x float] %arg0, fp128 %arg1) {
 }
 
 ; Check if VPR can be correctly pass by stack.
-define <2 x double> @test_vreg_stack([8 x <2 x double>], <2 x double> %varg_stack) {
+define dso_local <2 x double> @test_vreg_stack([8 x <2 x double>], <2 x double> %varg_stack) {
 entry:
 ; CHECK-LABEL: test_vreg_stack:
 ; CHECK: ldr {{q[0-9]+}}, [sp]
@@ -124,7 +123,7 @@ entry:
 ; Check that f16 can be passed and returned (ACLE 2.0 extension)
 define half @test_half(float, half %arg) {
 ; CHECK-LABEL: test_half:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov s0, s1
   ret half %arg;
 }
 
@@ -136,28 +135,28 @@ define half @test_half_const() {
 }
 
 ; Check that v4f16 can be passed and returned in registers
-define <4 x half> @test_v4_half_register(float, <4 x half> %arg) {
+define dso_local <4 x half> @test_v4_half_register(float, <4 x half> %arg) {
 ; CHECK-LABEL: test_v4_half_register:
-; CHECK: mov v0.16b, v1.16b
+; CHECK: fmov d0, d1
   ret <4 x half> %arg;
 }
 
 ; Check that v8f16 can be passed and returned in registers
-define <8 x half> @test_v8_half_register(float, <8 x half> %arg) {
+define dso_local <8 x half> @test_v8_half_register(float, <8 x half> %arg) {
 ; CHECK-LABEL: test_v8_half_register:
 ; CHECK: mov v0.16b, v1.16b
   ret <8 x half> %arg;
 }
 
 ; Check that v4f16 can be passed and returned on the stack
-define <4 x half> @test_v4_half_stack([8 x <2 x double>], <4 x half> %arg) {
+define dso_local <4 x half> @test_v4_half_stack([8 x <2 x double>], <4 x half> %arg) {
 ; CHECK-LABEL: test_v4_half_stack:
 ; CHECK: ldr d0, [sp]
   ret <4 x half> %arg;
 }
 
 ; Check that v8f16 can be passed and returned on the stack
-define <8 x half> @test_v8_half_stack([8 x <2 x double>], <8 x half> %arg) {
+define dso_local <8 x half> @test_v8_half_stack([8 x <2 x double>], <8 x half> %arg) {
 ; CHECK-LABEL: test_v8_half_stack:
 ; CHECK: ldr q0, [sp]
   ret <8 x half> %arg;

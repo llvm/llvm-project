@@ -2,17 +2,17 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-@g1src = global i8 1
-@g1dst = global i8 1
-@g2src = global i16 2
-@g2dst = global i16 2
-@g3 = global i32 3
-@g4 = global i64 4
-@g5src = external global fp128, align 16
-@g5dst = external global fp128, align 16
+@g1src = dso_local global i8 1
+@g1dst = dso_local global i8 1
+@g2src = dso_local global i16 2
+@g2dst = dso_local global i16 2
+@g3 = dso_local global i32 3
+@g4 = dso_local global i64 4
+@g5src = external dso_local global fp128, align 16
+@g5dst = external dso_local global fp128, align 16
 
 ; Test the simple i8 case.
-define void @f1(i8 *%ptr1) {
+define dso_local void @f1(i8 *%ptr1) {
 ; CHECK-LABEL: f1:
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -23,7 +23,7 @@ define void @f1(i8 *%ptr1) {
 }
 
 ; Test i8 cases where the value is zero-extended to 32 bits.
-define void @f2(i8 *%ptr1) {
+define dso_local void @f2(i8 *%ptr1) {
 ; CHECK-LABEL: f2:
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -36,7 +36,7 @@ define void @f2(i8 *%ptr1) {
 }
 
 ; Test i8 cases where the value is zero-extended to 64 bits.
-define void @f3(i8 *%ptr1) {
+define dso_local void @f3(i8 *%ptr1) {
 ; CHECK-LABEL: f3:
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -49,7 +49,7 @@ define void @f3(i8 *%ptr1) {
 }
 
 ; Test i8 cases where the value is sign-extended to 32 bits.
-define void @f4(i8 *%ptr1) {
+define dso_local void @f4(i8 *%ptr1) {
 ; CHECK-LABEL: f4:
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -62,7 +62,7 @@ define void @f4(i8 *%ptr1) {
 }
 
 ; Test i8 cases where the value is sign-extended to 64 bits.
-define void @f5(i8 *%ptr1) {
+define dso_local void @f5(i8 *%ptr1) {
 ; CHECK-LABEL: f5:
 ; CHECK: mvc 1(1,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -75,7 +75,7 @@ define void @f5(i8 *%ptr1) {
 }
 
 ; Test the simple i16 case.
-define void @f6(i16 *%ptr1) {
+define dso_local void @f6(i16 *%ptr1) {
 ; CHECK-LABEL: f6:
 ; CHECK: mvc 2(2,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -86,7 +86,7 @@ define void @f6(i16 *%ptr1) {
 }
 
 ; Test i16 cases where the value is zero-extended to 32 bits.
-define void @f7(i16 *%ptr1) {
+define dso_local void @f7(i16 *%ptr1) {
 ; CHECK-LABEL: f7:
 ; CHECK: mvc 2(2,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -99,7 +99,7 @@ define void @f7(i16 *%ptr1) {
 }
 
 ; Test i16 cases where the value is zero-extended to 64 bits.
-define void @f8(i16 *%ptr1) {
+define dso_local void @f8(i16 *%ptr1) {
 ; CHECK-LABEL: f8:
 ; CHECK: mvc 2(2,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -112,7 +112,7 @@ define void @f8(i16 *%ptr1) {
 }
 
 ; Test i16 cases where the value is sign-extended to 32 bits.
-define void @f9(i16 *%ptr1) {
+define dso_local void @f9(i16 *%ptr1) {
 ; CHECK-LABEL: f9:
 ; CHECK: mvc 2(2,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -125,7 +125,7 @@ define void @f9(i16 *%ptr1) {
 }
 
 ; Test i16 cases where the value is sign-extended to 64 bits.
-define void @f10(i16 *%ptr1) {
+define dso_local void @f10(i16 *%ptr1) {
 ; CHECK-LABEL: f10:
 ; CHECK: mvc 2(2,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -138,7 +138,7 @@ define void @f10(i16 *%ptr1) {
 }
 
 ; Test the simple i32 case.
-define void @f11(i32 *%ptr1) {
+define dso_local void @f11(i32 *%ptr1) {
 ; CHECK-LABEL: f11:
 ; CHECK: mvc 4(4,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -149,7 +149,7 @@ define void @f11(i32 *%ptr1) {
 }
 
 ; Test i32 cases where the value is zero-extended to 64 bits.
-define void @f12(i32 *%ptr1) {
+define dso_local void @f12(i32 *%ptr1) {
 ; CHECK-LABEL: f12:
 ; CHECK: mvc 4(4,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -162,7 +162,7 @@ define void @f12(i32 *%ptr1) {
 }
 
 ; Test i32 cases where the value is sign-extended to 64 bits.
-define void @f13(i32 *%ptr1) {
+define dso_local void @f13(i32 *%ptr1) {
 ; CHECK-LABEL: f13:
 ; CHECK: mvc 4(4,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -175,7 +175,7 @@ define void @f13(i32 *%ptr1) {
 }
 
 ; Test the i64 case.
-define void @f14(i64 *%ptr1) {
+define dso_local void @f14(i64 *%ptr1) {
 ; CHECK-LABEL: f14:
 ; CHECK: mvc 8(8,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -186,7 +186,7 @@ define void @f14(i64 *%ptr1) {
 }
 
 ; Test the f32 case.
-define void @f15(float *%ptr1) {
+define dso_local void @f15(float *%ptr1) {
 ; CHECK-LABEL: f15:
 ; CHECK: mvc 4(4,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -197,7 +197,7 @@ define void @f15(float *%ptr1) {
 }
 
 ; Test the f64 case.
-define void @f16(double *%ptr1) {
+define dso_local void @f16(double *%ptr1) {
 ; CHECK-LABEL: f16:
 ; CHECK: mvc 8(8,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -208,7 +208,7 @@ define void @f16(double *%ptr1) {
 }
 
 ; Test the f128 case.
-define void @f17(fp128 *%ptr1) {
+define dso_local void @f17(fp128 *%ptr1) {
 ; CHECK-LABEL: f17:
 ; CHECK: mvc 16(16,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -219,7 +219,7 @@ define void @f17(fp128 *%ptr1) {
 }
 
 ; Make sure that we don't use MVC if the load is volatile.
-define void @f18(i64 *%ptr1) {
+define dso_local void @f18(i64 *%ptr1) {
 ; CHECK-LABEL: f18:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -230,7 +230,7 @@ define void @f18(i64 *%ptr1) {
 }
 
 ; ...likewise the store.
-define void @f19(i64 *%ptr1) {
+define dso_local void @f19(i64 *%ptr1) {
 ; CHECK-LABEL: f19:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -243,7 +243,7 @@ define void @f19(i64 *%ptr1) {
 ; Test that MVC is not used for aligned loads and stores if there is
 ; no way of telling whether they alias.  We don't want to use MVC in
 ; cases where the addresses could be equal.
-define void @f20(i64 *%ptr1, i64 *%ptr2) {
+define dso_local void @f20(i64 *%ptr1, i64 *%ptr2) {
 ; CHECK-LABEL: f20:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -253,7 +253,7 @@ define void @f20(i64 *%ptr1, i64 *%ptr2) {
 }
 
 ; ...and again for unaligned loads and stores.
-define void @f21(i64 *%ptr1, i64 *%ptr2) {
+define dso_local void @f21(i64 *%ptr1, i64 *%ptr2) {
 ; CHECK-LABEL: f21:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -263,7 +263,7 @@ define void @f21(i64 *%ptr1, i64 *%ptr2) {
 }
 
 ; Test a case where there is definite overlap.
-define void @f22(i64 %base) {
+define dso_local void @f22(i64 %base) {
 ; CHECK-LABEL: f22:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14
@@ -276,7 +276,7 @@ define void @f22(i64 %base) {
 }
 
 ; Test that we can use MVC for global addresses for i8.
-define void @f23(i8 *%ptr) {
+define dso_local void @f23(i8 *%ptr) {
 ; CHECK-LABEL: f23:
 ; CHECK-DAG: larl [[SRC:%r[0-5]]], g1src
 ; CHECK-DAG: larl [[DST:%r[0-5]]], g1dst
@@ -288,7 +288,7 @@ define void @f23(i8 *%ptr) {
 }
 
 ; Test that we use LHRL and STHRL for i16.
-define void @f24(i16 *%ptr) {
+define dso_local void @f24(i16 *%ptr) {
 ; CHECK-LABEL: f24:
 ; CHECK: lhrl [[REG:%r[0-5]]], g2src
 ; CHECK: sthrl [[REG]], g2dst
@@ -299,7 +299,7 @@ define void @f24(i16 *%ptr) {
 }
 
 ; Test that we use LRL for i32.
-define void @f25(i32 *%ptr) {
+define dso_local void @f25(i32 *%ptr) {
 ; CHECK-LABEL: f25:
 ; CHECK: lrl [[REG:%r[0-5]]], g3
 ; CHECK: st [[REG]], 0(%r2)
@@ -310,7 +310,7 @@ define void @f25(i32 *%ptr) {
 }
 
 ; ...likewise STRL.
-define void @f26(i32 *%ptr) {
+define dso_local void @f26(i32 *%ptr) {
 ; CHECK-LABEL: f26:
 ; CHECK: l [[REG:%r[0-5]]], 0(%r2)
 ; CHECK: strl [[REG]], g3
@@ -321,7 +321,7 @@ define void @f26(i32 *%ptr) {
 }
 
 ; Test that we use LGRL for i64.
-define void @f27(i64 *%ptr) {
+define dso_local void @f27(i64 *%ptr) {
 ; CHECK-LABEL: f27:
 ; CHECK: lgrl [[REG:%r[0-5]]], g4
 ; CHECK: stg [[REG]], 0(%r2)
@@ -332,7 +332,7 @@ define void @f27(i64 *%ptr) {
 }
 
 ; ...likewise STGRL.
-define void @f28(i64 *%ptr) {
+define dso_local void @f28(i64 *%ptr) {
 ; CHECK-LABEL: f28:
 ; CHECK: lg [[REG:%r[0-5]]], 0(%r2)
 ; CHECK: stgrl [[REG]], g4
@@ -343,7 +343,7 @@ define void @f28(i64 *%ptr) {
 }
 
 ; Test that we can use MVC for global addresses for fp128.
-define void @f29(fp128 *%ptr) {
+define dso_local void @f29(fp128 *%ptr) {
 ; CHECK-LABEL: f29:
 ; CHECK-DAG: larl [[SRC:%r[0-5]]], g5src
 ; CHECK-DAG: larl [[DST:%r[0-5]]], g5dst
@@ -355,7 +355,7 @@ define void @f29(fp128 *%ptr) {
 }
 
 ; Test a case where offset disambiguation is enough.
-define void @f30(i64 *%ptr1) {
+define dso_local void @f30(i64 *%ptr1) {
 ; CHECK-LABEL: f30:
 ; CHECK: mvc 8(8,%r2), 0(%r2)
 ; CHECK: br %r14
@@ -366,7 +366,7 @@ define void @f30(i64 *%ptr1) {
 }
 
 ; Test f21 in cases where TBAA tells us there is no alias.
-define void @f31(i64 *%ptr1, i64 *%ptr2) {
+define dso_local void @f31(i64 *%ptr1, i64 *%ptr2) {
 ; CHECK-LABEL: f31:
 ; CHECK: mvc 0(8,%r3), 0(%r2)
 ; CHECK: br %r14
@@ -376,7 +376,7 @@ define void @f31(i64 *%ptr1, i64 *%ptr2) {
 }
 
 ; Test f21 in cases where TBAA is present but doesn't help.
-define void @f32(i64 *%ptr1, i64 *%ptr2) {
+define dso_local void @f32(i64 *%ptr1, i64 *%ptr2) {
 ; CHECK-LABEL: f32:
 ; CHECK-NOT: mvc
 ; CHECK: br %r14

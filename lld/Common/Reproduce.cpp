@@ -54,7 +54,12 @@ std::string lld::toString(const opt::Arg &arg) {
   std::string k = std::string(arg.getSpelling());
   if (arg.getNumValues() == 0)
     return k;
-  std::string v = quote(arg.getValue());
+  std::string v;
+  for (size_t i = 0; i < arg.getNumValues(); ++i) {
+    if (i > 0)
+      v.push_back(' ');
+    v += quote(arg.getValue(i));
+  }
   if (arg.getOption().getRenderStyle() == opt::Option::RenderJoinedStyle)
     return k + v;
   return k + " " + v;

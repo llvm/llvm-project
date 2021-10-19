@@ -30,14 +30,14 @@
 ; CHECK:	mov	rdx, offset X
 ; CHECK:	mov	qword ptr [PX], rdx
 
-@PZ = common global i8* null, align 8
-@Z = common global [4 x i8] zeroinitializer, align 1
-@X = common global [4 x i8] zeroinitializer, align 1
-@PX = common global i8* null, align 8
-@Y = common global [4 x i8] zeroinitializer, align 1
-@PY = common global i8* null, align 8
+@PZ = common dso_local global i8* null, align 8
+@Z = common dso_local global [4 x i8] zeroinitializer, align 1
+@X = common dso_local global [4 x i8] zeroinitializer, align 1
+@PX = common dso_local global i8* null, align 8
+@Y = common dso_local global [4 x i8] zeroinitializer, align 1
+@PY = common dso_local global i8* null, align 8
 
-define i8* @test057(i64 %x) {
+define dso_local i8* @test057(i64 %x) {
 entry:
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8

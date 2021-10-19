@@ -1,12 +1,12 @@
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
+; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -loop-vectorize -force-vector-width=4 \
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,loop-vectorize' -enable-loop-distribute -force-vector-width=4 \
 ; RUN:   -verify-loop-info -verify-dom-info -S < %s | \
 ; RUN:   FileCheck --check-prefix=VECTORIZE %s
 
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info \
-; RUN:   -loop-accesses -analyze < %s | FileCheck %s --check-prefix=ANALYSIS
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,print-access-info' -enable-loop-distribute \
+; RUN:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ; The memcheck version of basic.ll.  We should distribute and vectorize the
 ; second part of this loop with 5 memchecks (A+1 x {C, D, E} + C x {A, B})
@@ -54,14 +54,14 @@ entry:
 ; CHECK:     = icmp
 
 ; CHECK-NOT: = icmp
-; CHECK:     br i1 %memcheck.conflict, label %for.body.ph.lver.orig, label %for.body.ph.ldist1
+; CHECK:     br i1 %conflict.rdx25, label %for.body.ph.lver.orig, label %for.body.ph.ldist1
 
 ; The non-distributed loop that the memchecks fall back on.
 
 ; CHECK: for.body.ph.lver.orig:
 ; CHECK:     br label %for.body.lver.orig
 ; CHECK: for.body.lver.orig:
-; CHECK:    br i1 %exitcond.lver.orig, label %for.end, label %for.body.lver.orig
+; CHECK:    br i1 %exitcond.lver.orig, label %for.end.loopexit, label %for.body.lver.orig
 
 ; Verify the two distributed loops.
 

@@ -38,7 +38,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -83,7 +82,6 @@
 #include <iterator>
 #include <map>
 #include <set>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -141,16 +139,16 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
        ++I, ++ArgNo) {
     if (ByValArgsToTransform.count(&*I)) {
       // Simple byval argument? Just add all the struct element types.
-      Type *AgTy = cast<PointerType>(I->getType())->getElementType();
+      Type *AgTy = I->getParamByValType();
       StructType *STy = cast<StructType>(AgTy);
-      Params.insert(Params.end(), STy->element_begin(), STy->element_end());
+      llvm::append_range(Params, STy->elements());
       ArgAttrVec.insert(ArgAttrVec.end(), STy->getNumElements(),
                         AttributeSet());
       ++NumByValArgsPromoted;
     } else if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
       Params.push_back(I->getType());
-      ArgAttrVec.push_back(PAL.getParamAttributes(ArgNo));
+      ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
@@ -161,13 +159,19 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       // In this table, we will track which indices are loaded from the argument
       // (where direct loads are tracked as no indices).
       ScalarizeTable &ArgIndices = ScalarizedElements[&*I];
-      for (User *U : I->users()) {
+      for (User *U : make_early_inc_range(I->users())) {
         Instruction *UI = cast<Instruction>(U);
         Type *SrcTy;
         if (LoadInst *L = dyn_cast<LoadInst>(UI))
           SrcTy = L->getType();
         else
           SrcTy = cast<GetElementPtrInst>(UI)->getSourceElementType();
+        // Skip dead GEPs and remove them.
+        if (isa<GetElementPtrInst>(UI) && UI->use_empty()) {
+          UI->eraseFromParent();
+          continue;
+        }
+
         IndicesVector Indices;
         Indices.reserve(UI->getNumOperands() - 1);
         // Since loads will only have a single operand, and GEPs only a single
@@ -215,9 +219,11 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   Function *NF = Function::Create(NFTy, F->getLinkage(), F->getAddressSpace(),
                                   F->getName());
   NF->copyAttributesFrom(F);
+  NF->copyMetadata(F, 0);
 
-  // Patch the pointer to LLVM function in debug info descriptor.
-  NF->setSubprogram(F->getSubprogram());
+  // The new function will have the !dbg metadata copied from the original
+  // function. The original function may not be deleted, and dbg metadata need
+  // to be unique so we need to drop it.
   F->setSubprogram(nullptr);
 
   LLVM_DEBUG(dbgs() << "ARG PROMOTION:  Promoting to:" << *NF << "\n"
@@ -225,8 +231,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
 
   // Recompute the parameter attributes list based on the new arguments for
   // the function.
-  NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttributes(),
-                                       PAL.getRetAttributes(), ArgAttrVec));
+  NF->setAttributes(AttributeList::get(F->getContext(), PAL.getFnAttrs(),
+                                       PAL.getRetAttrs(), ArgAttrVec));
   ArgAttrVec.clear();
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
@@ -236,6 +242,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   // to pass in the loaded pointers.
   //
   SmallVector<Value *, 16> Args;
+  const DataLayout &DL = F->getParent()->getDataLayout();
   while (!F->use_empty()) {
     CallBase &CB = cast<CallBase>(*F->user_back());
     assert(CB.getCalledFunction() == F);
@@ -250,20 +257,24 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
          ++I, ++AI, ++ArgNo)
       if (!ArgsToPromote.count(&*I) && !ByValArgsToTransform.count(&*I)) {
         Args.push_back(*AI); // Unmodified argument
-        ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
+        ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
       } else if (ByValArgsToTransform.count(&*I)) {
         // Emit a GEP and load for each element of the struct.
-        Type *AgTy = cast<PointerType>(I->getType())->getElementType();
+        Type *AgTy = I->getParamByValType();
         StructType *STy = cast<StructType>(AgTy);
         Value *Idxs[2] = {
             ConstantInt::get(Type::getInt32Ty(F->getContext()), 0), nullptr};
+        const StructLayout *SL = DL.getStructLayout(STy);
+        Align StructAlign = *I->getParamAlign();
         for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
           Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
           auto *Idx =
               IRB.CreateGEP(STy, *AI, Idxs, (*AI)->getName() + "." + Twine(i));
           // TODO: Tell AA about the new values?
-          Args.push_back(IRB.CreateLoad(STy->getElementType(i), Idx,
-                                        Idx->getName() + ".val"));
+          Align Alignment =
+              commonAlignment(StructAlign, SL->getElementOffset(i));
+          Args.push_back(IRB.CreateAlignedLoad(
+              STy->getElementType(i), Idx, Alignment, Idx->getName() + ".val"));
           ArgAttrVec.push_back(AttributeSet());
         }
       } else if (!I->use_empty()) {
@@ -302,9 +313,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
               IRB.CreateLoad(OrigLoad->getType(), V, V->getName() + ".val");
           newLoad->setAlignment(OrigLoad->getAlign());
           // Transfer the AA info too.
-          AAMDNodes AAInfo;
-          OrigLoad->getAAMetadata(AAInfo);
-          newLoad->setAAMetadata(AAInfo);
+          newLoad->setAAMetadata(OrigLoad->getAAMetadata());
 
           Args.push_back(newLoad);
           ArgAttrVec.push_back(AttributeSet());
@@ -314,7 +323,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     // Push any varargs arguments on the list.
     for (; AI != CB.arg_end(); ++AI, ++ArgNo) {
       Args.push_back(*AI);
-      ArgAttrVec.push_back(CallPAL.getParamAttributes(ArgNo));
+      ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
     }
 
     SmallVector<OperandBundleDef, 1> OpBundles;
@@ -330,9 +339,9 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       NewCS = NewCall;
     }
     NewCS->setCallingConv(CB.getCallingConv());
-    NewCS->setAttributes(
-        AttributeList::get(F->getContext(), CallPAL.getFnAttributes(),
-                           CallPAL.getRetAttributes(), ArgAttrVec));
+    NewCS->setAttributes(AttributeList::get(F->getContext(),
+                                            CallPAL.getFnAttrs(),
+                                            CallPAL.getRetAttrs(), ArgAttrVec));
     NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
     Args.clear();
     ArgAttrVec.clear();
@@ -350,8 +359,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     // F.
     CB.eraseFromParent();
   }
-
-  const DataLayout &DL = F->getParent()->getDataLayout();
 
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
@@ -378,14 +385,14 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       Instruction *InsertPt = &NF->begin()->front();
 
       // Just add all the struct element types.
-      Type *AgTy = cast<PointerType>(I->getType())->getElementType();
-      Value *TheAlloca = new AllocaInst(
-          AgTy, DL.getAllocaAddrSpace(), nullptr,
-          I->getParamAlign().getValueOr(DL.getPrefTypeAlign(AgTy)), "",
-          InsertPt);
+      Type *AgTy = I->getParamByValType();
+      Align StructAlign = *I->getParamAlign();
+      Value *TheAlloca = new AllocaInst(AgTy, DL.getAllocaAddrSpace(), nullptr,
+                                        StructAlign, "", InsertPt);
       StructType *STy = cast<StructType>(AgTy);
       Value *Idxs[2] = {ConstantInt::get(Type::getInt32Ty(F->getContext()), 0),
                         nullptr};
+      const StructLayout *SL = DL.getStructLayout(STy);
 
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
         Idxs[1] = ConstantInt::get(Type::getInt32Ty(F->getContext()), i);
@@ -393,21 +400,13 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
             AgTy, TheAlloca, Idxs, TheAlloca->getName() + "." + Twine(i),
             InsertPt);
         I2->setName(I->getName() + "." + Twine(i));
-        new StoreInst(&*I2++, Idx, InsertPt);
+        Align Alignment = commonAlignment(StructAlign, SL->getElementOffset(i));
+        new StoreInst(&*I2++, Idx, false, Alignment, InsertPt);
       }
 
       // Anything that used the arg should now use the alloca.
       I->replaceAllUsesWith(TheAlloca);
       TheAlloca->takeName(&*I);
-
-      // If the alloca is used in a call, we must clear the tail flag since
-      // the callee now uses an alloca from the caller.
-      for (User *U : TheAlloca->users()) {
-        CallInst *Call = dyn_cast<CallInst>(U);
-        if (!Call)
-          continue;
-        Call->setTailCall(false);
-      }
       continue;
     }
 
@@ -435,11 +434,12 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                           << "' in function '" << F->getName() << "'\n");
       } else {
         GetElementPtrInst *GEP = cast<GetElementPtrInst>(I->user_back());
+        assert(!GEP->use_empty() &&
+               "GEPs without uses should be cleaned up already");
         IndicesVector Operands;
         Operands.reserve(GEP->getNumIndices());
-        for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-             II != IE; ++II)
-          Operands.push_back(cast<ConstantInt>(*II)->getSExtValue());
+        for (const Use &Idx : GEP->indices())
+          Operands.push_back(cast<ConstantInt>(Idx)->getSExtValue());
 
         // GEPs with a single 0 index can be merged with direct loads
         if (Operands.size() == 1 && Operands.front() == 0)
@@ -625,9 +625,8 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         if (V == Arg) {
           // This load actually loads (part of) Arg? Check the indices then.
           Indices.reserve(GEP->getNumIndices());
-          for (User::op_iterator II = GEP->idx_begin(), IE = GEP->idx_end();
-               II != IE; ++II)
-            if (ConstantInt *CI = dyn_cast<ConstantInt>(*II))
+          for (Use &Idx : GEP->indices())
+            if (ConstantInt *CI = dyn_cast<ConstantInt>(Idx))
               Indices.push_back(CI->getSExtValue());
             else
               // We found a non-constant GEP index for this argument? Bail out
@@ -673,20 +672,15 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
       if (GEP->use_empty()) {
         // Dead GEP's cause trouble later.  Just remove them if we run into
         // them.
-        GEP->eraseFromParent();
-        // TODO: This runs the above loop over and over again for dead GEPs
-        // Couldn't we just do increment the UI iterator earlier and erase the
-        // use?
-        return isSafeToPromoteArgument(Arg, ByValTy, AAR, MaxElements);
+        continue;
       }
 
       if (!UpdateBaseTy(GEP->getSourceElementType()))
         return false;
 
       // Ensure that all of the indices are constants.
-      for (User::op_iterator i = GEP->idx_begin(), e = GEP->idx_end(); i != e;
-           ++i)
-        if (ConstantInt *C = dyn_cast<ConstantInt>(*i))
+      for (Use &Idx : GEP->indices())
+        if (ConstantInt *C = dyn_cast<ConstantInt>(Idx))
           Operands.push_back(C->getSExtValue());
         else
           return false; // Not a constant operand GEP!
@@ -817,14 +811,12 @@ static bool canPaddingBeAccessed(Argument *arg) {
 
   // Scan through the uses recursively to make sure the pointer is always used
   // sanely.
-  SmallVector<Value *, 16> WorkList;
-  WorkList.insert(WorkList.end(), arg->user_begin(), arg->user_end());
+  SmallVector<Value *, 16> WorkList(arg->users());
   while (!WorkList.empty()) {
-    Value *V = WorkList.back();
-    WorkList.pop_back();
+    Value *V = WorkList.pop_back_val();
     if (isa<GetElementPtrInst>(V) || isa<PHINode>(V)) {
       if (PtrValues.insert(V).second)
-        WorkList.insert(WorkList.end(), V->user_begin(), V->user_end());
+        llvm::append_range(WorkList, V->users());
     } else if (StoreInst *Store = dyn_cast<StoreInst>(V)) {
       Stores.push_back(Store);
     } else if (!isa<LoadInst>(V)) {
@@ -949,7 +941,10 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // If this is a byval argument, and if the aggregate type is small, just
     // pass the elements, which is always safe, if the passed value is densely
     // packed or if we can prove the padding bytes are never accessed.
-    bool isSafeToPromote = PtrArg->hasByValAttr() &&
+    //
+    // Only handle arguments with specified alignment; if it's unspecified, the
+    // actual alignment of the argument is target-specific.
+    bool isSafeToPromote = PtrArg->hasByValAttr() && PtrArg->getParamAlign() &&
                            (ArgumentPromotionPass::isDenselyPacked(AgTy, DL) ||
                             !canPaddingBeAccessed(PtrArg));
     if (isSafeToPromote) {
@@ -986,13 +981,8 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
     // function, we could end up infinitely peeling the function argument.
     if (isSelfRecursive) {
       if (StructType *STy = dyn_cast<StructType>(AgTy)) {
-        bool RecursiveType = false;
-        for (const auto *EltTy : STy->elements()) {
-          if (EltTy == PtrArg->getType()) {
-            RecursiveType = true;
-            break;
-          }
-        }
+        bool RecursiveType =
+            llvm::is_contained(STy->elements(), PtrArg->getType());
         if (RecursiveType)
           continue;
       }
@@ -1051,6 +1041,7 @@ PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
       // swaps out the particular function mapped to a particular node in the
       // graph.
       C.getOuterRefSCC().replaceNodeFunction(N, *NewF);
+      FAM.clear(OldF, OldF.getName());
       OldF.eraseFromParent();
     }
 

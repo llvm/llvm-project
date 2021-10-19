@@ -35,7 +35,7 @@
   "na", nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                  \
       {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,          \
        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},                              \
-      nullptr, nullptr, nullptr, 0
+      nullptr, nullptr
 
 #define DECLARE_REGISTER_INFOS_ARM64_STRUCT
 
@@ -119,11 +119,6 @@ void EmulateInstructionARM64::Terminate() {
 
 ConstString EmulateInstructionARM64::GetPluginNameStatic() {
   ConstString g_plugin_name("lldb.emulate-instruction.arm64");
-  return g_plugin_name;
-}
-
-lldb_private::ConstString EmulateInstructionARM64::GetPluginName() {
-  static ConstString g_plugin_name("EmulateInstructionARM64");
   return g_plugin_name;
 }
 

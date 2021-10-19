@@ -10,14 +10,12 @@
 #define LLDB_CORE_ARCHITECTURE_H
 
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Target/MemoryTagManager.h"
 
 namespace lldb_private {
 
 class Architecture : public PluginInterface {
 public:
-  Architecture() = default;
-  ~Architecture() override = default;
-
   /// This is currently intended to handle cases where a
   /// program stops at an instruction that won't get executed and it
   /// allows the stop reason, like "breakpoint hit", to be replaced
@@ -101,9 +99,16 @@ public:
     return addr;
   }
 
-private:
-  Architecture(const Architecture &) = delete;
-  void operator=(const Architecture &) = delete;
+  // Returns a pointer to an object that can manage memory tags for this
+  // Architecture E.g. masking out tags, unpacking tag streams etc. Returns
+  // nullptr if the architecture does not have a memory tagging extension.
+  //
+  // The return pointer being valid does not mean that the current process has
+  // memory tagging enabled, just that a tagging technology exists for this
+  // architecture.
+  virtual const MemoryTagManager *GetMemoryTagManager() const {
+    return nullptr;
+  }
 };
 
 } // namespace lldb_private

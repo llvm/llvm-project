@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestTU.h"
+#include "CompileCommands.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "TestFS.h"
@@ -17,6 +18,9 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 namespace clang {
 namespace clangd {
@@ -36,6 +40,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   FS.Files[ImportThunk] = ThunkContents;
 
   ParseInputs Inputs;
+  Inputs.FeatureModules = FeatureModules;
   auto &Argv = Inputs.CompileCommand.CommandLine;
   Argv = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
@@ -52,6 +57,9 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
   // Put the file name at the end -- this allows the extra arg (-xc++) to
   // override the language setting.
   Argv.push_back(FullFilename);
+
+  auto Mangler = CommandMangler::forTests();
+  Mangler.adjust(Inputs.CompileCommand.CommandLine, FullFilename);
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.Directory = testRoot();
   Inputs.Contents = Code;
@@ -59,30 +67,32 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
     FS.OverlayRealFileSystemForModules = true;
   Inputs.TFS = &FS;
   Inputs.Opts = ParseOptions();
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
-  Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
-  Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
+  if (ClangTidyProvider)
+    Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.Index = ExternalIndex;
-  if (Inputs.Index)
-    Inputs.Opts.SuggestMissingIncludes = true;
   return Inputs;
 }
 
 void initializeModuleCache(CompilerInvocation &CI) {
   llvm::SmallString<128> ModuleCachePath;
-  ASSERT_FALSE(
-      llvm::sys::fs::createUniqueDirectory("module-cache", ModuleCachePath));
+  if (llvm::sys::fs::createUniqueDirectory("module-cache", ModuleCachePath)) {
+    llvm::errs() << "Failed to create temp directory for module-cache";
+    std::abort();
+  }
   CI.getHeaderSearchOpts().ModuleCachePath = ModuleCachePath.c_str();
 }
 
 void deleteModuleCache(const std::string ModuleCachePath) {
   if (!ModuleCachePath.empty()) {
-    ASSERT_FALSE(llvm::sys::fs::remove_directories(ModuleCachePath));
+    if (llvm::sys::fs::remove_directories(ModuleCachePath)) {
+      llvm::errs() << "Failed to delete temp directory for module-cache";
+      std::abort();
+    }
   }
 }
 
-std::shared_ptr<const PreambleData> TestTU::preamble() const {
+std::shared_ptr<const PreambleData>
+TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
   MockFS FS;
   auto Inputs = inputs(FS);
   IgnoreDiagnostics Diags;
@@ -93,8 +103,7 @@ std::shared_ptr<const PreambleData> TestTU::preamble() const {
   auto ModuleCacheDeleter = llvm::make_scope_exit(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
   return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
-                                      /*StoreInMemory=*/true,
-                                      /*PreambleCallback=*/nullptr);
+                                      /*StoreInMemory=*/true, PreambleCallback);
 }
 
 ParsedAST TestTU::build() const {
@@ -114,9 +123,11 @@ ParsedAST TestTU::build() const {
   auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
                               Diags.take(), Preamble);
   if (!AST.hasValue()) {
-    ADD_FAILURE() << "Failed to build code:\n" << Code;
-    llvm_unreachable("Failed to build TestTU!");
+    llvm::errs() << "Failed to build code:\n" << Code;
+    std::abort();
   }
+  assert(AST->getDiagnostics() &&
+         "TestTU should always build an AST with a fresh Preamble");
   // Check for error diagnostics and report gtest failures (unless expected).
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
@@ -132,13 +143,14 @@ ParsedAST TestTU::build() const {
     return false;
   }();
   if (!ErrorOk) {
-    for (const auto &D : AST->getDiagnostics())
+    // We always build AST with a fresh preamble in TestTU.
+    for (const auto &D : *AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
-        ADD_FAILURE()
+        llvm::errs()
             << "TestTU failed to build (suppress with /*error-ok*/): \n"
             << D << "\n\nFor code:\n"
             << Code;
-        break; // Just report first error for simplicity.
+        std::abort(); // Stop after first error for simplicity.
       }
   }
   return std::move(*AST);
@@ -158,7 +170,7 @@ RefSlab TestTU::headerRefs() const {
 
 std::unique_ptr<SymbolIndex> TestTU::index() const {
   auto AST = build();
-  auto Idx = std::make_unique<FileIndex>(/*UseDex=*/true);
+  auto Idx = std::make_unique<FileIndex>();
   Idx->updatePreamble(testPath(Filename), /*Version=*/"null",
                       AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getCanonicalIncludes());
@@ -172,44 +184,57 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
     if (QName != (S.Scope + S.Name).str())
       continue;
     if (Result) {
-      ADD_FAILURE() << "Multiple symbols named " << QName << ":\n"
-                    << *Result << "\n---\n"
-                    << S;
+      llvm::errs() << "Multiple symbols named " << QName << ":\n"
+                   << *Result << "\n---\n"
+                   << S;
       assert(false && "QName is not unique");
     }
     Result = &S;
   }
   if (!Result) {
-    ADD_FAILURE() << "No symbol named " << QName << " in "
-                  << ::testing::PrintToString(Slab);
+    llvm::errs() << "No symbol named " << QName << " in "
+                 << llvm::to_string(Slab);
     assert(false && "No symbol with QName");
   }
   return *Result;
 }
 
-const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
-  llvm::SmallVector<llvm::StringRef, 4> Components;
-  QName.split(Components, "::");
+// RAII scoped class to disable TraversalScope for a ParsedAST.
+class TraverseHeadersToo {
+  ASTContext &Ctx;
+  std::vector<Decl *> ScopeToRestore;
 
+public:
+  TraverseHeadersToo(ParsedAST &AST)
+      : Ctx(AST.getASTContext()), ScopeToRestore(Ctx.getTraversalScope()) {
+    Ctx.setTraversalScope({Ctx.getTranslationUnitDecl()});
+  }
+  ~TraverseHeadersToo() { Ctx.setTraversalScope(std::move(ScopeToRestore)); }
+};
+
+const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
   auto &Ctx = AST.getASTContext();
   auto LookupDecl = [&Ctx](const DeclContext &Scope,
                            llvm::StringRef Name) -> const NamedDecl & {
     auto LookupRes = Scope.lookup(DeclarationName(&Ctx.Idents.get(Name)));
     assert(!LookupRes.empty() && "Lookup failed");
-    assert(LookupRes.size() == 1 && "Lookup returned multiple results");
+    assert(LookupRes.isSingleResult() && "Lookup returned multiple results");
     return *LookupRes.front();
   };
 
   const DeclContext *Scope = Ctx.getTranslationUnitDecl();
-  for (auto NameIt = Components.begin(), End = Components.end() - 1;
-       NameIt != End; ++NameIt) {
-    Scope = &cast<DeclContext>(LookupDecl(*Scope, *NameIt));
+
+  StringRef Cur, Rest;
+  for (std::tie(Cur, Rest) = QName.split("::"); !Rest.empty();
+       std::tie(Cur, Rest) = Rest.split("::")) {
+    Scope = &cast<DeclContext>(LookupDecl(*Scope, Cur));
   }
-  return LookupDecl(*Scope, Components.back());
+  return LookupDecl(*Scope, Cur);
 }
 
 const NamedDecl &findDecl(ParsedAST &AST,
                           std::function<bool(const NamedDecl &)> Filter) {
+  TraverseHeadersToo Too(AST);
   struct Visitor : RecursiveASTVisitor<Visitor> {
     decltype(Filter) F;
     llvm::SmallVector<const NamedDecl *, 1> Decls;
@@ -222,7 +247,7 @@ const NamedDecl &findDecl(ParsedAST &AST,
   Visitor.F = Filter;
   Visitor.TraverseDecl(AST.getASTContext().getTranslationUnitDecl());
   if (Visitor.Decls.size() != 1) {
-    ADD_FAILURE() << Visitor.Decls.size() << " symbols matched.";
+    llvm::errs() << Visitor.Decls.size() << " symbols matched.";
     assert(Visitor.Decls.size() == 1);
   }
   return *Visitor.Decls.front();

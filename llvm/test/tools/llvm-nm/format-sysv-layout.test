@@ -1,6 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-nm %t.o --debug-syms --format=sysv | FileCheck %s -DFILE=%t.o --strict-whitespace
-# RUN: llvm-nm %t.o --debug-syms -f=sysv | FileCheck %s -DFILE=%t.o --strict-whitespace
+# RUN: llvm-nm %t.o --debug-syms -fsysv | FileCheck %s -DFILE=%t.o --strict-whitespace
+# RUN: llvm-nm %t.o --debug-syms -f sysv | FileCheck %s -DFILE=%t.o --strict-whitespace
 
 !ELF
 FileHeader:

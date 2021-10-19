@@ -2,7 +2,7 @@
 
 #ifdef LLDB_USE_LIBEDIT_READLINE_COMPAT_MODULE
 
-#include <stdio.h>
+#include <cstdio>
 
 #include <editline/readline.h>
 

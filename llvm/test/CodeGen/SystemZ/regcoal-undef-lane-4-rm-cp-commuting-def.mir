@@ -35,7 +35,7 @@ body:             |
   ; CHECK:   J %bb.4
   ; CHECK: bb.2:
   ; CHECK:   successors:
-  ; CHECK:   STMux %20.subreg_l32, undef %8:addr64bit, 0, $noreg :: (store 4 into `i32* undef`)
+  ; CHECK:   STMux %20.subreg_l32, undef %8:addr64bit, 0, $noreg :: (store (s32) into `i32* undef`)
   ; CHECK: bb.3:
   ; CHECK:   successors:
   ; CHECK: bb.4:
@@ -84,7 +84,7 @@ body:             |
   bb.2:
     successors:
 
-    STMux killed %4, undef %22:addr64bit, 0, $noreg :: (store 4 into `i32* undef`)
+    STMux killed %4, undef %22:addr64bit, 0, $noreg :: (store (s32) into `i32* undef`)
 
   bb.3:
     successors:

@@ -22,11 +22,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
+#include "llvm/Transforms/Utils/SCCPSolver.h"
 
 namespace llvm {
 
@@ -38,16 +40,16 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Helper struct for bundling up the analysis results per function for IPSCCP.
-struct AnalysisResultsForFn {
-  std::unique_ptr<PredicateInfo> PredInfo;
-  DominatorTree *DT;
-  PostDominatorTree *PDT;
-};
-
 bool runIPSCCP(Module &M, const DataLayout &DL,
                std::function<const TargetLibraryInfo &(Function &)> GetTLI,
                function_ref<AnalysisResultsForFn(Function &)> getAnalysis);
+
+bool runFunctionSpecialization(
+    Module &M, const DataLayout &DL,
+    std::function<TargetLibraryInfo &(Function &)> GetTLI,
+    std::function<TargetTransformInfo &(Function &)> GetTTI,
+    std::function<AssumptionCache &(Function &)> GetAC,
+    function_ref<AnalysisResultsForFn(Function &)> GetAnalysis);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_SCALAR_SCCP_H

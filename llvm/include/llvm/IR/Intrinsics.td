@@ -17,7 +17,7 @@ include "llvm/CodeGen/SDNodeProperties.td"
 //  Properties we keep track of for intrinsics.
 //===----------------------------------------------------------------------===//
 
-class IntrinsicProperty<bit is_default = 0> {
+class IntrinsicProperty<bit is_default = false> {
   bit IsDefault = is_default;
 }
 
@@ -28,10 +28,6 @@ class IntrinsicProperty<bit is_default = 0> {
 // IntrNoMem - The intrinsic does not access memory or have any other side
 // effects.  It may be CSE'd deleted if dead, etc.
 def IntrNoMem : IntrinsicProperty;
-
-// IntrNoSync - Threads executing the intrinsic will not synchronize using
-// memory or other means.
-def IntrNoSync : IntrinsicProperty;
 
 // IntrReadMem - This intrinsic only reads from memory. It does not write to
 // memory and has no other side effects. Therefore, it cannot be moved across
@@ -124,17 +120,27 @@ class ReadNone<AttrIndex idx> : IntrinsicProperty {
 
 def IntrNoReturn : IntrinsicProperty;
 
-def IntrNoFree : IntrinsicProperty;
+// IntrNoSync - Threads executing the intrinsic will not synchronize using
+// memory or other means. Applied by default.
+def IntrNoSync : IntrinsicProperty<1>;
 
-def IntrWillReturn : IntrinsicProperty;
+// Applied by default.
+def IntrNoFree : IntrinsicProperty<1>;
+
+// Applied by default.
+def IntrWillReturn : IntrinsicProperty<1>;
 
 // IntrCold - Calls to this intrinsic are cold.
 // Parallels the cold attribute on LLVM IR functions.
 def IntrCold : IntrinsicProperty;
 
-// IntrNoduplicate - Calls to this intrinsic cannot be duplicated.
+// IntrNoDuplicate - Calls to this intrinsic cannot be duplicated.
 // Parallels the noduplicate attribute on LLVM IR functions.
 def IntrNoDuplicate : IntrinsicProperty;
+
+// IntrNoMerge - Calls to this intrinsic cannot be merged
+// Parallels the nomerge attribute on LLVM IR functions.
+def IntrNoMerge : IntrinsicProperty;
 
 // IntrConvergent - Calls to this intrinsic are convergent and may not be made
 // control-dependent on any additional values.
@@ -159,7 +165,7 @@ def IntrHasSideEffects : IntrinsicProperty;
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
-  int isAny = 0;
+  int isAny = false;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -175,7 +181,7 @@ class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
 
-  let isAny = 1;
+  let isAny = true;
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -210,7 +216,7 @@ class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
 class LLVMVectorElementType<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
-// vector type, but change the element count to be half as many
+// vector type, but change the element count to be half as many.
 class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
 
 // Match the type of another intrinsic parameter that is expected to be a
@@ -224,7 +230,7 @@ class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-let isAny = 1 in {
+let isAny = true in {
   def llvm_any_ty        : LLVMType<Any>;
   def llvm_anyint_ty     : LLVMType<iAny>;
   def llvm_anyfloat_ty   : LLVMType<fAny>;
@@ -253,6 +259,8 @@ def llvm_token_ty      : LLVMType<token>;                         // token
 def llvm_x86mmx_ty     : LLVMType<x86mmx>;
 def llvm_ptrx86mmx_ty  : LLVMPointerType<llvm_x86mmx_ty>;         // <1 x i64>*
 
+def llvm_x86amx_ty     : LLVMType<x86amx>;
+
 def llvm_v2i1_ty       : LLVMType<v2i1>;     //   2 x i1
 def llvm_v4i1_ty       : LLVMType<v4i1>;     //   4 x i1
 def llvm_v8i1_ty       : LLVMType<v8i1>;     //   8 x i1
@@ -260,6 +268,7 @@ def llvm_v16i1_ty      : LLVMType<v16i1>;    //  16 x i1
 def llvm_v32i1_ty      : LLVMType<v32i1>;    //  32 x i1
 def llvm_v64i1_ty      : LLVMType<v64i1>;    //  64 x i1
 def llvm_v128i1_ty     : LLVMType<v128i1>;   // 128 x i1
+def llvm_v256i1_ty     : LLVMType<v256i1>;   // 256 x i1
 def llvm_v512i1_ty     : LLVMType<v512i1>;   // 512 x i1
 def llvm_v1024i1_ty    : LLVMType<v1024i1>;  //1024 x i1
 
@@ -289,6 +298,7 @@ def llvm_v8i32_ty      : LLVMType<v8i32>;    //  8 x i32
 def llvm_v16i32_ty     : LLVMType<v16i32>;   // 16 x i32
 def llvm_v32i32_ty     : LLVMType<v32i32>;   // 32 x i32
 def llvm_v64i32_ty     : LLVMType<v64i32>;   // 64 x i32
+def llvm_v256i32_ty    : LLVMType<v256i32>;  //256 x i32
 
 def llvm_v1i64_ty      : LLVMType<v1i64>;    //  1 x i64
 def llvm_v2i64_ty      : LLVMType<v2i64>;    //  2 x i64
@@ -302,6 +312,8 @@ def llvm_v1i128_ty     : LLVMType<v1i128>;   //  1 x i128
 def llvm_v2f16_ty      : LLVMType<v2f16>;    //  2 x half (__fp16)
 def llvm_v4f16_ty      : LLVMType<v4f16>;    //  4 x half (__fp16)
 def llvm_v8f16_ty      : LLVMType<v8f16>;    //  8 x half (__fp16)
+def llvm_v16f16_ty     : LLVMType<v16f16>;   // 16 x half (__fp16)
+def llvm_v32f16_ty     : LLVMType<v32f16>;   // 32 x half (__fp16)
 def llvm_v2bf16_ty     : LLVMType<v2bf16>;   //  2 x bfloat (__bf16)
 def llvm_v4bf16_ty     : LLVMType<v4bf16>;   //  4 x bfloat (__bf16)
 def llvm_v8bf16_ty     : LLVMType<v8bf16>;   //  8 x bfloat (__bf16)
@@ -339,7 +351,7 @@ class Intrinsic<list<LLVMType> ret_types,
                 list<IntrinsicProperty> intr_properties = [],
                 string name = "",
                 list<SDNodeProperty> sd_properties = [],
-                bit disable_default_attributes = 0> : SDPatternOperator {
+                bit disable_default_attributes = true> : SDPatternOperator {
   string LLVMName = name;
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
   list<LLVMType> RetTypes = ret_types;
@@ -351,8 +363,18 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  bit isTarget = 0;
+  bit isTarget = false;
 }
+
+// Intrinsic with default attributes (disable_default_attributes = false).
+class DefaultAttrsIntrinsic<list<LLVMType> ret_types,
+                list<LLVMType> param_types = [],
+                list<IntrinsicProperty> intr_properties = [],
+                string name = "",
+                list<SDNodeProperty> sd_properties = []>
+                : Intrinsic<ret_types, param_types,
+                            intr_properties, name,
+                            sd_properties, /*disable_default_attributes*/ 0> {}
 
 /// GCCBuiltin - If this intrinsic exactly corresponds to a GCC builtin, this
 /// specifies the name of the builtin.  This provides automatic CBE and CFE
@@ -369,10 +391,10 @@ class MSBuiltin<string name> {
 //===--------------- Variable Argument Handling Intrinsics ----------------===//
 //
 
-def int_vastart : Intrinsic<[], [llvm_ptr_ty], [], "llvm.va_start">;
-def int_vacopy  : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], [],
+def int_vastart : DefaultAttrsIntrinsic<[], [llvm_ptr_ty], [], "llvm.va_start">;
+def int_vacopy  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], [],
                             "llvm.va_copy">;
-def int_vaend   : Intrinsic<[], [llvm_ptr_ty], [], "llvm.va_end">;
+def int_vaend   : DefaultAttrsIntrinsic<[], [llvm_ptr_ty], [], "llvm.va_end">;
 
 //===------------------- Garbage Collection Intrinsics --------------------===//
 //
@@ -430,6 +452,9 @@ def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
                                                          llvm_ptr_ty]>;
 def int_objc_clang_arc_use                  : Intrinsic<[],
                                                         [llvm_vararg_ty]>;
+def int_objc_clang_arc_noop_use : DefaultAttrsIntrinsic<[],
+                                                        [llvm_vararg_ty],
+                                                        [IntrInaccessibleMemOnly]>;
 def int_objc_unsafeClaimAutoreleasedReturnValue : Intrinsic<[llvm_ptr_ty],
                                                             [llvm_ptr_ty]>;
 def int_objc_retainedObject                 : Intrinsic<[llvm_ptr_ty],
@@ -456,16 +481,21 @@ def int_objc_arc_annotation_bottomup_bbstart  : Intrinsic<[],
 def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
                                                         [llvm_ptrptr_ty,
                                                          llvm_ptrptr_ty]>;
+//===--------------- Swift asynchronous context intrinsics ----------------===//
 
+// Returns the location of the Swift asynchronous context (usually stored just
+// before the frame pointer), and triggers the creation of a null context if it
+// would otherwise be unneeded.
+def int_swift_async_context_addr : Intrinsic<[llvm_ptrptr_ty], [], [IntrNoMem]>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
-def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty],
+def int_returnaddress : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_i32_ty],
                                   [IntrNoMem, ImmArg<ArgIndex<0>>]>;
-def int_addressofreturnaddress : Intrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
-def int_frameaddress : Intrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
+def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
+def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
-def int_sponentry  : Intrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
+def int_sponentry  : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
 def int_read_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
@@ -476,33 +506,43 @@ def int_read_volatile_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty]
 
 // Gets the address of the local variable area. This is typically a copy of the
 // stack, frame, or base pointer depending on the type of prologue.
-def int_localaddress : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_localaddress : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 
 // Escapes local variables to allow access from other functions.
-def int_localescape : Intrinsic<[], [llvm_vararg_ty]>;
+def int_localescape : DefaultAttrsIntrinsic<[], [llvm_vararg_ty]>;
 
 // Given a function and the localaddress of a parent frame, returns a pointer
 // to an escaped allocation indicated by the index.
-def int_localrecover : Intrinsic<[llvm_ptr_ty],
+def int_localrecover : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 // Given the frame pointer passed into an SEH filter function, returns a
 // pointer to the local variable area suitable for use with llvm.localrecover.
-def int_eh_recoverfp : Intrinsic<[llvm_ptr_ty],
+def int_eh_recoverfp : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_ptr_ty],
                                  [IntrNoMem]>;
 
+// To mark the beginning/end of a try-scope for Windows SEH -EHa
+//  calls/invokes to these intrinsics are placed to model control flows
+//    caused by HW exceptions under option -EHa.
+//  calls/invokes to these intrinsics will be discarded during a codegen pass
+//   after EH tables are generated
+def int_seh_try_begin : Intrinsic<[], [], [IntrWriteMem, IntrWillReturn]>;
+def int_seh_try_end : Intrinsic<[], [], [IntrWriteMem, IntrWillReturn]>;
+def int_seh_scope_begin : Intrinsic<[], [], [IntrNoMem]>;
+def int_seh_scope_end : Intrinsic<[], [], [IntrNoMem]>;
+
 // Note: we treat stacksave/stackrestore as writemem because we don't otherwise
 // model their dependencies on allocas.
-def int_stacksave     : Intrinsic<[llvm_ptr_ty]>,
+def int_stacksave     : DefaultAttrsIntrinsic<[llvm_ptr_ty]>,
                         GCCBuiltin<"__builtin_stack_save">;
-def int_stackrestore  : Intrinsic<[], [llvm_ptr_ty]>,
+def int_stackrestore  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>,
                         GCCBuiltin<"__builtin_stack_restore">;
 
-def int_get_dynamic_area_offset : Intrinsic<[llvm_anyint_ty]>;
+def int_get_dynamic_area_offset : DefaultAttrsIntrinsic<[llvm_anyint_ty]>;
 
-def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
+def int_thread_pointer : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
                          GCCBuiltin<"__builtin_thread_pointer">;
 
 // IntrInaccessibleMemOrArgMemOnly is a little more pessimistic than strictly
@@ -510,47 +550,54 @@ def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
 // from being reordered overly much with respect to nearby access to the same
 // memory while not impeding optimization.
 def int_prefetch
-    : Intrinsic<[], [ llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ],
+    : DefaultAttrsIntrinsic<[], [ llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ],
                 [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn,
                  ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
                  ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
-def int_pcmarker      : Intrinsic<[], [llvm_i32_ty]>;
+def int_pcmarker      : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 
-def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;
+def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 
-// The assume intrinsic is marked as arbitrarily writing so that proper
-// control dependencies will be maintained.
-def int_assume        : Intrinsic<[], [llvm_i1_ty], [IntrWillReturn,
-                                                     NoUndef<ArgIndex<0>>]>;
+// The assume intrinsic is marked InaccessibleMemOnly so that proper control
+// dependencies will be maintained.
+def int_assume : DefaultAttrsIntrinsic<
+    [], [llvm_i1_ty], [IntrInaccessibleMemOnly, NoUndef<ArgIndex<0>>]>;
+
+// 'llvm.experimental.noalias.scope.decl' intrinsic: Inserted at the location of
+// noalias scope declaration. Makes it possible to identify that a noalias scope
+// is only valid inside the body of a loop.
+//
+// Purpose of the different arguments:
+// - arg0: id.scope: metadata representing the scope declaration.
+def int_experimental_noalias_scope_decl
+    : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
+        [IntrInaccessibleMemOnly]>; // blocks LICM and some more
 
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
-def int_stackprotector : Intrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
-def int_stackguard : Intrinsic<[llvm_ptr_ty], [], []>;
+def int_stackprotector : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
+def int_stackguard : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], []>;
 
 // A counter increment for instrumentation based profiling.
 def int_instrprof_increment : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_i32_ty],
-                                        []>;
+                                         llvm_i32_ty, llvm_i32_ty]>;
 
 // A counter increment with step for instrumentation based profiling.
 def int_instrprof_increment_step : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
-                                        []>;
+                                         llvm_i32_ty, llvm_i32_ty, llvm_i64_ty]>;
 
 // A call to profile runtime for value profiling of target expressions
 // through instrumentation based profiling.
 def int_instrprof_value_profile : Intrinsic<[],
                                             [llvm_ptr_ty, llvm_i64_ty,
                                              llvm_i64_ty, llvm_i32_ty,
-                                             llvm_i32_ty],
-                                            []>;
+                                             llvm_i32_ty]>;
 
-def int_call_preallocated_setup : Intrinsic<[llvm_token_ty], [llvm_i32_ty]>;
-def int_call_preallocated_arg : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
-def int_call_preallocated_teardown : Intrinsic<[], [llvm_token_ty]>;
+def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
+def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;
+def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
@@ -558,7 +605,7 @@ def int_call_preallocated_teardown : Intrinsic<[], [llvm_token_ty]>;
 def int_memcpy  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrArgMemOnly, IntrWillReturn,
+                            [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
                              NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
                              WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
@@ -571,7 +618,7 @@ def int_memcpy  : Intrinsic<[],
 def int_memcpy_inline
     : Intrinsic<[],
       [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty],
-      [IntrArgMemOnly, IntrWillReturn,
+      [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
@@ -580,13 +627,15 @@ def int_memcpy_inline
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrArgMemOnly, IntrWillReturn,
+                            [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-                             ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+                             WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+                             ImmArg<ArgIndex<3>>]>;
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i1_ty],
                             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
+                             IntrNoFree,
                              NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
                              ImmArg<ArgIndex<3>>]>;
 
@@ -594,65 +643,65 @@ def int_memset  : Intrinsic<[],
 // rounding modes and FP exception handling.
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
-  def int_fma  : Intrinsic<[llvm_anyfloat_ty],
+  def int_fma  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
-  def int_fmuladd : Intrinsic<[llvm_anyfloat_ty],
+  def int_fmuladd : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                               [LLVMMatchType<0>, LLVMMatchType<0>,
                                LLVMMatchType<0>]>;
 
   // These functions do not read memory, but are sensitive to the
   // rounding mode. LLVM purposely does not model changes to the FP
   // environment so they can be treated as readnone.
-  def int_sqrt : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_powi : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty]>;
-  def int_sin  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_cos  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_pow  : Intrinsic<[llvm_anyfloat_ty],
+  def int_sqrt : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_powi : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
+  def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_pow  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_log  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_log10: Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_log2 : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_exp  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_exp2 : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_fabs : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_copysign : Intrinsic<[llvm_anyfloat_ty],
+  def int_log  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_log10: DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_log2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_exp  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_exp2 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_fabs : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_copysign : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                                [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_floor : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_ceil  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_trunc : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_rint  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_nearbyint : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_round : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_roundeven    : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_canonicalize : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+  def int_floor : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_ceil  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_trunc : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_rint  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_nearbyint : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
 
-  def int_lround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
-  def int_llround : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
-  def int_lrint : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
-  def int_llrint : Intrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_lround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_llround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_lrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+  def int_llrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
 
-def int_minnum : Intrinsic<[llvm_anyfloat_ty],
+def int_minnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
-def int_maxnum : Intrinsic<[llvm_anyfloat_ty],
+def int_maxnum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
-def int_minimum : Intrinsic<[llvm_anyfloat_ty],
+def int_minimum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
-def int_maximum : Intrinsic<[llvm_anyfloat_ty],
+def int_maximum : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>],
   [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
 
 // Internal interface for object size checking
-def int_objectsize : Intrinsic<[llvm_anyint_ty],
+def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                [llvm_anyptr_ty, llvm_i1_ty,
                                 llvm_i1_ty, llvm_i1_ty],
                                [IntrNoMem, IntrSpeculatable, IntrWillReturn,
@@ -664,77 +713,78 @@ def int_objectsize : Intrinsic<[llvm_anyint_ty],
 //
 
 let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
-  def int_flt_rounds    : Intrinsic<[llvm_i32_ty], []>;
+  def int_flt_rounds    : DefaultAttrsIntrinsic<[llvm_i32_ty], []>;
+  def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 }
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
 
 let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
-  def int_experimental_constrained_fadd : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_fsub : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fsub : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_fmul : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fmul : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_fdiv : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fdiv : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_frem : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_frem : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fma : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fma : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fmuladd : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fmuladd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ LLVMMatchType<0>,
                                                          LLVMMatchType<0>,
                                                          LLVMMatchType<0>,
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fptosi : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_fptosi : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                     [ llvm_anyfloat_ty,
                                                       llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fptoui : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_fptoui : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                     [ llvm_anyfloat_ty,
                                                       llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_sitofp : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_sitofp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyint_ty,
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_uitofp : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_uitofp : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyint_ty,
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fptrunc : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fptrunc : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ llvm_anyfloat_ty,
                                                          llvm_metadata_ty,
                                                          llvm_metadata_ty ]>;
 
-  def int_experimental_constrained_fpext : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_fpext : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ llvm_anyfloat_ty,
                                                        llvm_metadata_ty ]>;
 
@@ -742,110 +792,110 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
   // versions of each of them.  When strict rounding and exception control are
   // not required the non-constrained versions of these intrinsics should be
   // used.
-  def int_experimental_constrained_sqrt : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_sqrt : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_powi : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_powi : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_i32_ty,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_sin  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_sin  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_cos  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_cos  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_pow  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_pow  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_log  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_log  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_log10: Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_log10: DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_log2 : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_log2 : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_exp  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_exp  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_exp2 : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_exp2 : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_rint  : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_rint  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_nearbyint : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_nearbyint : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty,
                                                            llvm_metadata_ty ]>;
-  def int_experimental_constrained_lrint : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_lrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                      [ llvm_anyfloat_ty,
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_llrint : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_llrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                       [ llvm_anyfloat_ty,
                                                         llvm_metadata_ty,
                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_maxnum : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_maxnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                       [ LLVMMatchType<0>,
                                                         LLVMMatchType<0>,
                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_minnum : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_minnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                       [ LLVMMatchType<0>,
                                                         LLVMMatchType<0>,
                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_maximum : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_maximum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ LLVMMatchType<0>,
                                                          LLVMMatchType<0>,
                                                          llvm_metadata_ty ]>;
-  def int_experimental_constrained_minimum : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_minimum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                        [ LLVMMatchType<0>,
                                                          LLVMMatchType<0>,
                                                          llvm_metadata_ty ]>;
-  def int_experimental_constrained_ceil : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_ceil : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_floor : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_floor : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_lround : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_lround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                       [ llvm_anyfloat_ty,
                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_llround : Intrinsic<[ llvm_anyint_ty ],
+  def int_experimental_constrained_llround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
                                                        [ llvm_anyfloat_ty,
                                                          llvm_metadata_ty ]>;
-  def int_experimental_constrained_round : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                       llvm_metadata_ty ]>;
-  def int_experimental_constrained_roundeven : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_roundeven : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty ]>;
-  def int_experimental_constrained_trunc : Intrinsic<[ llvm_anyfloat_ty ],
+  def int_experimental_constrained_trunc : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty ]>;
 
   // Constrained floating-point comparison (quiet and signaling variants).
   // Third operand is the predicate represented as a metadata string.
   def int_experimental_constrained_fcmp
-      : Intrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+      : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
                   [ llvm_anyfloat_ty, LLVMMatchType<0>,
                     llvm_metadata_ty, llvm_metadata_ty ]>;
   def int_experimental_constrained_fcmps
-      : Intrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+      : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
                   [ llvm_anyfloat_ty, LLVMMatchType<0>,
                     llvm_metadata_ty, llvm_metadata_ty ]>;
 }
@@ -853,10 +903,10 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
 
 //===------------------------- Expect Intrinsics --------------------------===//
 //
-def int_expect : Intrinsic<[llvm_anyint_ty],
+def int_expect : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrWillReturn]>;
 
-def int_expect_with_probability : Intrinsic<[llvm_anyint_ty],
+def int_expect_with_probability : DefaultAttrsIntrinsic<[llvm_anyint_ty],
   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_double_ty],
   [IntrNoMem, IntrWillReturn]>;
 
@@ -865,19 +915,19 @@ def int_expect_with_probability : Intrinsic<[llvm_anyint_ty],
 
 // None of these intrinsics accesses memory at all.
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
-  def int_bswap: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
-  def int_ctpop: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
-  def int_bitreverse : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
-  def int_fshl : Intrinsic<[llvm_anyint_ty],
+  def int_bswap: DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
+  def int_ctpop: DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
+  def int_bitreverse : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
+  def int_fshl : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_fshr : Intrinsic<[llvm_anyint_ty],
+  def int_fshr : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                       ImmArg<ArgIndex<1>>] in {
-  def int_ctlz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
-  def int_cttz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
+  def int_ctlz : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
+  def int_cttz : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
 }
 
 //===------------------------ Debugger Intrinsics -------------------------===//
@@ -888,19 +938,19 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn,
 // needed in a few places. These synthetic intrinsics have no
 // side-effects and just mark information about their operands.
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
-  def int_dbg_declare      : Intrinsic<[],
+  def int_dbg_declare      : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty,
                                         llvm_metadata_ty,
                                         llvm_metadata_ty]>;
-  def int_dbg_value        : Intrinsic<[],
+  def int_dbg_value        : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty,
                                         llvm_metadata_ty,
                                         llvm_metadata_ty]>;
-  def int_dbg_addr         : Intrinsic<[],
+  def int_dbg_addr         : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty,
                                         llvm_metadata_ty,
                                         llvm_metadata_ty]>;
-  def int_dbg_label        : Intrinsic<[],
+  def int_dbg_label        : DefaultAttrsIntrinsic<[],
                                        [llvm_metadata_ty]>;
 }
 
@@ -930,10 +980,9 @@ def int_eh_unwind_init: Intrinsic<[]>,
 
 def int_eh_dwarf_cfa  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty]>;
 
-let IntrProperties = [IntrNoMem] in {
-  def int_eh_sjlj_lsda             : Intrinsic<[llvm_ptr_ty]>;
-  def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty]>;
-}
+def int_eh_sjlj_lsda             : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty], [IntrNoMem]>;
+
 def int_eh_sjlj_functioncontext : Intrinsic<[], [llvm_ptr_ty]>;
 def int_eh_sjlj_setjmp          : Intrinsic<[llvm_i32_ty], [llvm_ptr_ty]>;
 def int_eh_sjlj_longjmp         : Intrinsic<[], [llvm_ptr_ty], [IntrNoReturn]>;
@@ -941,23 +990,24 @@ def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 
 //===---------------- Generic Variable Attribute Intrinsics----------------===//
 //
-def int_var_annotation : Intrinsic<[],
-                                   [llvm_ptr_ty, llvm_ptr_ty,
-                                    llvm_ptr_ty, llvm_i32_ty],
-                                   [IntrWillReturn], "llvm.var.annotation">;
-def int_ptr_annotation : Intrinsic<[LLVMAnyPointerType<llvm_anyint_ty>],
-                                   [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty,
-                                    llvm_i32_ty],
-                                   [IntrWillReturn], "llvm.ptr.annotation">;
-def int_annotation : Intrinsic<[llvm_anyint_ty],
-                               [LLVMMatchType<0>, llvm_ptr_ty,
-                                llvm_ptr_ty, llvm_i32_ty],
-                               [IntrWillReturn], "llvm.annotation">;
+def int_var_annotation : DefaultAttrsIntrinsic<
+    [], [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [IntrInaccessibleMemOnly], "llvm.var.annotation">;
+
+def int_ptr_annotation : DefaultAttrsIntrinsic<
+    [LLVMAnyPointerType<llvm_anyint_ty>],
+    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty, llvm_ptr_ty],
+    [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
+
+def int_annotation : DefaultAttrsIntrinsic<
+    [llvm_anyint_ty],
+    [LLVMMatchType<0>, llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
+    [IntrInaccessibleMemOnly], "llvm.annotation">;
 
 // Annotates the current program point with metadata strings which are emitted
 // as CodeView debug info records. This is expensive, as it disables inlining
 // and is modelled as having side effects.
-def int_codeview_annotation : Intrinsic<[], [llvm_metadata_ty],
+def int_codeview_annotation : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
                                         [IntrInaccessibleMemOnly, IntrNoDuplicate, IntrWillReturn],
                                         "llvm.codeview.annotation">;
 
@@ -977,124 +1027,124 @@ def int_adjust_trampoline : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
 
 // Expose the carry flag from add operations on two integrals.
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
-  def int_sadd_with_overflow : Intrinsic<[llvm_anyint_ty,
+  def int_sadd_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
                                           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                          [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_uadd_with_overflow : Intrinsic<[llvm_anyint_ty,
-                                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                         [LLVMMatchType<0>, LLVMMatchType<0>]>;
-
-  def int_ssub_with_overflow : Intrinsic<[llvm_anyint_ty,
-                                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                         [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_usub_with_overflow : Intrinsic<[llvm_anyint_ty,
+  def int_uadd_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
                                           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                          [LLVMMatchType<0>, LLVMMatchType<0>]>;
 
-  def int_smul_with_overflow : Intrinsic<[llvm_anyint_ty,
+  def int_ssub_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
                                           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                          [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty,
+  def int_usub_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
+                                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                                         [LLVMMatchType<0>, LLVMMatchType<0>]>;
+
+  def int_smul_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
+                                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+                                         [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umul_with_overflow : DefaultAttrsIntrinsic<[llvm_anyint_ty,
                                           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                                          [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 //===------------------------- Saturation Arithmetic Intrinsics ---------------------===//
 //
-def int_sadd_sat : Intrinsic<[llvm_anyint_ty],
+def int_sadd_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]>;
-def int_uadd_sat : Intrinsic<[llvm_anyint_ty],
+def int_uadd_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]>;
-def int_ssub_sat : Intrinsic<[llvm_anyint_ty],
+def int_ssub_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_usub_sat : Intrinsic<[llvm_anyint_ty],
+def int_usub_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_sshl_sat : Intrinsic<[llvm_anyint_ty],
+def int_sshl_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_ushl_sat : Intrinsic<[llvm_anyint_ty],
+def int_ushl_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===------------------------- Fixed Point Arithmetic Intrinsics ---------------------===//
 //
-def int_smul_fix : Intrinsic<[llvm_anyint_ty],
+def int_smul_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                               Commutative, ImmArg<ArgIndex<2>>]>;
 
-def int_umul_fix : Intrinsic<[llvm_anyint_ty],
+def int_umul_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                              [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                               Commutative, ImmArg<ArgIndex<2>>]>;
 
-def int_sdiv_fix : Intrinsic<[llvm_anyint_ty],
+def int_sdiv_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-def int_udiv_fix : Intrinsic<[llvm_anyint_ty],
+def int_udiv_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===------------------- Fixed Point Saturation Arithmetic Intrinsics ----------------===//
 //
-def int_smul_fix_sat : Intrinsic<[llvm_anyint_ty],
+def int_smul_fix_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                                  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                                   Commutative, ImmArg<ArgIndex<2>>]>;
-def int_umul_fix_sat : Intrinsic<[llvm_anyint_ty],
+def int_umul_fix_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                                  [IntrNoMem, IntrSpeculatable, IntrWillReturn,
                                   Commutative, ImmArg<ArgIndex<2>>]>;
 
-def int_sdiv_fix_sat : Intrinsic<[llvm_anyint_ty],
+def int_sdiv_fix_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-def int_udiv_fix_sat : Intrinsic<[llvm_anyint_ty],
+def int_udiv_fix_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                                  [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===------------------ Integer Min/Max/Abs Intrinsics --------------------===//
 //
-def int_abs : Intrinsic<
+def int_abs : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-def int_smax : Intrinsic<
+def int_smax : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_smin : Intrinsic<
+def int_smin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_umax : Intrinsic<
+def int_umax : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-def int_umin : Intrinsic<
+def int_umin : DefaultAttrsIntrinsic<
     [llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //
-def int_lifetime_start  : Intrinsic<[],
+def int_lifetime_start  : DefaultAttrsIntrinsic<[],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<1>>,
                                      ImmArg<ArgIndex<0>>]>;
-def int_lifetime_end    : Intrinsic<[],
+def int_lifetime_end    : DefaultAttrsIntrinsic<[],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<1>>,
                                      ImmArg<ArgIndex<0>>]>;
-def int_invariant_start : Intrinsic<[llvm_descriptor_ty],
+def int_invariant_start : DefaultAttrsIntrinsic<[llvm_descriptor_ty],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<1>>,
                                      ImmArg<ArgIndex<0>>]>;
-def int_invariant_end   : Intrinsic<[],
+def int_invariant_end   : DefaultAttrsIntrinsic<[],
                                     [llvm_descriptor_ty, llvm_i64_ty,
                                      llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
@@ -1113,26 +1163,26 @@ def int_invariant_end   : Intrinsic<[],
 // it would remove barrier.
 // Note that it is still experimental, which means that its semantics
 // might change in the future.
-def int_launder_invariant_group : Intrinsic<[llvm_anyptr_ty],
+def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                             [LLVMMatchType<0>],
                                             [IntrInaccessibleMemOnly, IntrSpeculatable, IntrWillReturn]>;
 
 
-def int_strip_invariant_group : Intrinsic<[llvm_anyptr_ty],
+def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                           [LLVMMatchType<0>],
                                           [IntrSpeculatable, IntrNoMem, IntrWillReturn]>;
 
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //
-def int_experimental_stackmap : Intrinsic<[],
+def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
                                   [llvm_i64_ty, llvm_i32_ty, llvm_vararg_ty],
                                   [Throws]>;
-def int_experimental_patchpoint_void : Intrinsic<[],
+def int_experimental_patchpoint_void : DefaultAttrsIntrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
                                                   llvm_vararg_ty],
                                                   [Throws]>;
-def int_experimental_patchpoint_i64 : Intrinsic<[llvm_i64_ty],
+def int_experimental_patchpoint_i64 : DefaultAttrsIntrinsic<[llvm_i64_ty],
                                                 [llvm_i64_ty, llvm_i32_ty,
                                                  llvm_ptr_ty, llvm_i32_ty,
                                                  llvm_vararg_ty],
@@ -1151,12 +1201,20 @@ def int_experimental_gc_statepoint : Intrinsic<[llvm_token_ty],
                                 ImmArg<ArgIndex<4>>]>;
 
 def int_experimental_gc_result   : Intrinsic<[llvm_any_ty], [llvm_token_ty],
-                                             [IntrReadMem]>;
+                                             [IntrNoMem]>;
 def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
                                              [llvm_token_ty, llvm_i32_ty,
                                               llvm_i32_ty],
-                                             [IntrReadMem, ImmArg<ArgIndex<1>>,
+                                             [IntrNoMem, ImmArg<ArgIndex<1>>,
                                               ImmArg<ArgIndex<2>>]>;
+
+def int_experimental_gc_get_pointer_base : Intrinsic<[llvm_anyptr_ty],
+                 [llvm_anyptr_ty], [IntrNoMem, IntrWillReturn,
+                 ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
+
+def int_experimental_gc_get_pointer_offset : Intrinsic<[llvm_i64_ty],
+                 [llvm_anyptr_ty], [IntrNoMem, IntrWillReturn,
+                 ReadNone<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
 
 //===------------------------ Coroutine Intrinsics ---------------===//
 // These are documented in docs/Coroutines.rst
@@ -1177,6 +1235,24 @@ def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     []>;
 def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
+def int_coro_id_async : Intrinsic<[llvm_token_ty],
+  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
+  []>;
+def int_coro_async_context_alloc : Intrinsic<[llvm_ptr_ty],
+    [llvm_ptr_ty, llvm_ptr_ty],
+    []>;
+def int_coro_async_context_dealloc : Intrinsic<[],
+    [llvm_ptr_ty],
+    []>;
+def int_coro_async_resume : Intrinsic<[llvm_ptr_ty],
+    [],
+    []>;
+def int_coro_async_size_replace : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
+def int_coro_suspend_async
+    : Intrinsic<[llvm_any_ty],
+                [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty], []>;
+def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
+                                       [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                [WriteOnly<ArgIndex<1>>]>;
 
@@ -1185,6 +1261,8 @@ def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                                ReadOnly<ArgIndex<1>>,
                                NoCapture<ArgIndex<1>>]>;
 def int_coro_end : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty], []>;
+def int_coro_end_async
+    : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_i1_ty, llvm_vararg_ty], []>;
 
 def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_coro_noop : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
@@ -1228,32 +1306,50 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
                GCCBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
                     GCCBuiltin<"__builtin_debugtrap">;
+def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
+                              [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
 
 // Support for speculative runtime guards
-def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+def int_experimental_guard : DefaultAttrsIntrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
                                        [Throws]>;
 
 // Supports widenable conditions for guards represented as explicit branches.
-def int_experimental_widenable_condition : Intrinsic<[llvm_i1_ty], [],
+def int_experimental_widenable_condition : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
         [IntrInaccessibleMemOnly, IntrWillReturn, IntrSpeculatable]>;
 
 // NOP: calls/invokes to this intrinsic are removed by codegen
-def int_donothing : Intrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
+def int_donothing : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrWillReturn]>;
 
 // This instruction has no actual effect, though it is treated by the optimizer
 // has having opaque side effects. This may be inserted into loops to ensure
 // that they are not removed even if they turn out to be empty, for languages
 // which specify that infinite loops must be preserved.
-def int_sideeffect : Intrinsic<[], [], [IntrInaccessibleMemOnly, IntrWillReturn]>;
+def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly, IntrWillReturn]>;
+
+// The pseudoprobe intrinsic works as a place holder to the block it probes.
+// Like the sideeffect intrinsic defined above, this intrinsic is treated by the
+// optimizer as having opaque side effects so that it won't be get rid of or moved
+// out of the block it probes.
+def int_pseudoprobe : DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                                    [IntrInaccessibleMemOnly, IntrWillReturn]>;
+
+// Arithmetic fence intrinsic.
+def int_arithmetic_fence : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
 // Intrinsics to support half precision floating point format
 let IntrProperties = [IntrNoMem, IntrWillReturn] in {
-def int_convert_to_fp16   : Intrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
-def int_convert_from_fp16 : Intrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
+def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
+}
+
+// Saturating floating point to integer intrinsics
+let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
+def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
+def int_fptosi_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
 }
 
 // Clear cache intrinsic, default to ignore (ie. emit nothing)
@@ -1262,152 +1358,301 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
                                 [], "llvm.clear_cache">;
 
 // Intrinsic to detect whether its argument is a constant.
-def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty],
+def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
                                 [IntrNoMem, IntrWillReturn, IntrConvergent],
                                 "llvm.is.constant">;
 
 // Intrinsic to mask out bits of a pointer.
-def int_ptrmask: Intrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_anyint_ty],
+def int_ptrmask: DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_anyint_ty],
                            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-//===---------------- Vector Predication Intrinsics --------------===//
+def int_experimental_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                        [], [IntrNoMem]>;
 
-// Binary operators
-let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
-  def int_vp_add : Intrinsic<[ llvm_anyvector_ty ],
+//===---------------- Vector Predication Intrinsics --------------===//
+// Memory Intrinsics
+def int_vp_store : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty,
+                               LLVMAnyPointerType<LLVMMatchType<0>>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<1>>, IntrNoSync, IntrWriteMem, IntrArgMemOnly, IntrWillReturn ]>;
+
+def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
+                             [ LLVMAnyPointerType<LLVMMatchType<0>>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
+
+def int_vp_gather: DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
+                             [ LLVMVectorOfAnyPointersToElt<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty],
+                             [ IntrReadMem, IntrNoSync, IntrWillReturn, IntrArgMemOnly ]>;
+
+def int_vp_scatter: DefaultAttrsIntrinsic<[],
+                              [ llvm_anyvector_ty,
+                                LLVMVectorOfAnyPointersToElt<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty],
+                              [ IntrArgMemOnly, IntrNoSync, IntrWillReturn ]>; // TODO allow IntrNoCapture for vectors of pointers
+
+// Speculatable Binary operators
+let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  def int_vp_add : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_sub : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_sub : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_mul  : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_mul  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                               [ LLVMMatchType<0>,
                                 LLVMMatchType<0>,
                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                 llvm_i32_ty]>;
-  def int_vp_sdiv : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_ashr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                               [ LLVMMatchType<0>,
                                 LLVMMatchType<0>,
                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                 llvm_i32_ty]>;
-  def int_vp_udiv : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_lshr : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                               [ LLVMMatchType<0>,
                                 LLVMMatchType<0>,
                                 LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                 llvm_i32_ty]>;
-  def int_vp_srem : Intrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-  def int_vp_urem : Intrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-  def int_vp_ashr : Intrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-  def int_vp_lshr : Intrinsic<[ llvm_anyvector_ty ],
-                              [ LLVMMatchType<0>,
-                                LLVMMatchType<0>,
-                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                llvm_i32_ty]>;
-  def int_vp_shl : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_shl : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_or : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_or : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                             [ LLVMMatchType<0>,
                               LLVMMatchType<0>,
                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                               llvm_i32_ty]>;
-  def int_vp_and : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_and : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
-  def int_vp_xor : Intrinsic<[ llvm_anyvector_ty ],
+  def int_vp_xor : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
                              [ LLVMMatchType<0>,
                                LLVMMatchType<0>,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
+}
 
+// Non-speculatable binary operators.
+let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  def int_vp_sdiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+  def int_vp_udiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+  def int_vp_srem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+  def int_vp_urem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+}
+
+// Floating-point arithmetic.
+let IntrProperties =
+    [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  def int_vp_fadd : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fsub : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                             [ LLVMMatchType<0>,
+                               LLVMMatchType<0>,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                               llvm_i32_ty]>;
+  def int_vp_fmul  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+  def int_vp_fdiv : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+  def int_vp_frem : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                llvm_i32_ty]>;
+}
+// Shuffles.
+def int_vp_select : DefaultAttrsIntrinsic<[ llvm_anyvector_ty ],
+                              [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                LLVMMatchType<0>,
+                                LLVMMatchType<0>,
+                                llvm_i32_ty]>;
+
+// Reductions
+let IntrProperties = [IntrSpeculatable, IntrNoMem, IntrNoSync, IntrWillReturn] in {
+  def int_vp_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_add  : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
+  def int_vp_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                    [LLVMVectorElementType<0>,
+                                     llvm_anyvector_ty,
+                                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                     llvm_i32_ty]>;
 }
 
 def int_get_active_lane_mask:
-  Intrinsic<[llvm_anyvector_ty],
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
             [llvm_anyint_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrNoSync, IntrWillReturn]>;
 
+def int_experimental_vp_splice:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMMatchType<0>,
+             LLVMMatchType<0>,
+             llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+             llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
-def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
-                                      LLVMAnyPointerType<LLVMMatchType<0>>,
-                                      llvm_i32_ty,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                 [IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+def int_masked_load:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+            [IntrReadMem, IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-                                 [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+def int_masked_store:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyvector_ty, LLVMAnyPointerType<LLVMMatchType<0>>,
+             llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
+             ImmArg<ArgIndex<2>>]>;
 
-def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                  LLVMMatchType<0>],
-                                 [IntrReadMem, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+def int_masked_gather:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
+            [IntrReadMem, IntrWillReturn, ImmArg<ArgIndex<1>>]>;
 
-def int_masked_scatter: Intrinsic<[],
-                                  [llvm_anyvector_ty,
-                                   LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
-                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                  [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+def int_masked_scatter:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyvector_ty, LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
-def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
-                                     [LLVMPointerToElt<0>,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                      LLVMMatchType<0>],
-                                     [IntrReadMem, IntrWillReturn]>;
+def int_masked_expandload:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+            [LLVMPointerToElt<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+             LLVMMatchType<0>],
+            [IntrReadMem, IntrWillReturn]>;
 
-def int_masked_compressstore: Intrinsic<[],
-                                     [llvm_anyvector_ty,
-                                      LLVMPointerToElt<0>,
-                                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                     [IntrArgMemOnly, IntrWillReturn]>;
+def int_masked_compressstore:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyvector_ty, LLVMPointerToElt<0>,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
-def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
-                              [IntrNoMem, IntrWillReturn]>;
+def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
+                              [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
 
 // Safely loads a function pointer from a virtual table pointer using type metadata.
-def int_type_checked_load : Intrinsic<[llvm_ptr_ty, llvm_i1_ty],
+def int_type_checked_load : DefaultAttrsIntrinsic<[llvm_ptr_ty, llvm_i1_ty],
                                       [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
                                       [IntrNoMem, IntrWillReturn]>;
 
 // Create a branch funnel that implements an indirect call to a limited set of
 // callees. This needs to be a musttail call.
-def int_icall_branch_funnel : Intrinsic<[], [llvm_vararg_ty], []>;
+def int_icall_branch_funnel : DefaultAttrsIntrinsic<[], [llvm_vararg_ty], []>;
 
-def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
+def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;
+
+def int_asan_check_memaccess :
+  Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
 def int_hwasan_check_memaccess :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<2>>]>;
+            [ImmArg<ArgIndex<2>>]>;
 def int_hwasan_check_memaccess_shortgranules :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
-            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<2>>]>;
+            [ImmArg<ArgIndex<2>>]>;
 
 // Xray intrinsics
 //===----------------------------------------------------------------------===//
@@ -1430,85 +1675,88 @@ def int_xray_typedevent : Intrinsic<[], [llvm_i16_ty, llvm_ptr_ty, llvm_i32_ty],
 def int_memcpy_element_unordered_atomic
     : Intrinsic<[],
                 [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-                 NoCapture<ArgIndex<1>>, WriteOnly<ArgIndex<0>>,
-                 ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+                [IntrArgMemOnly, IntrWillReturn, IntrNoSync,
+                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+                 WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+                 ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memmove.element.unordered.atomic.*(dest, src, length, elementsize)
 def int_memmove_element_unordered_atomic
     : Intrinsic<[],
                 [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
-                 NoCapture<ArgIndex<1>>, WriteOnly<ArgIndex<0>>,
-                 ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+                [IntrArgMemOnly, IntrWillReturn, IntrNoSync,
+                 NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+                 WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+                 ImmArg<ArgIndex<3>>]>;
 
 // @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
 def int_memset_element_unordered_atomic
     : Intrinsic<[], [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
-                [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
+                [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoSync,
                  NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
                  ImmArg<ArgIndex<3>>]>;
 
 //===------------------------ Reduction Intrinsics ------------------------===//
 //
-let IntrProperties = [IntrNoMem, IntrWillReturn] in {
-  def int_experimental_vector_reduce_v2_fadd : Intrinsic<[llvm_anyfloat_ty],
-                                                         [LLVMMatchType<0>,
-                                                          llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_v2_fmul : Intrinsic<[llvm_anyfloat_ty],
-                                                         [LLVMMatchType<0>,
-                                                          llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_add : Intrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_mul : Intrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_and : Intrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_or : Intrinsic<[LLVMVectorElementType<0>],
-                                                    [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_xor : Intrinsic<[LLVMVectorElementType<0>],
-                                                     [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_smax : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_smin : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_umax : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_umin : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_fmax : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
-  def int_experimental_vector_reduce_fmin : Intrinsic<[LLVMVectorElementType<0>],
-                                                      [llvm_anyvector_ty]>;
+let IntrProperties = [IntrNoMem] in {
+
+  def int_vector_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [LLVMVectorElementType<0>,
+                                          llvm_anyvector_ty]>;
+  def int_vector_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [LLVMVectorElementType<0>,
+                                          llvm_anyvector_ty]>;
+  def int_vector_reduce_add : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                        [llvm_anyvector_ty]>;
+  def int_vector_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                        [llvm_anyvector_ty]>;
+  def int_vector_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                        [llvm_anyvector_ty]>;
+  def int_vector_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                       [llvm_anyvector_ty]>;
+  def int_vector_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                        [llvm_anyvector_ty]>;
+  def int_vector_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
+  def int_vector_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
+  def int_vector_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
+  def int_vector_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
+  def int_vector_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
+  def int_vector_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                         [llvm_anyvector_ty]>;
 }
 
 //===----- Matrix intrinsics ---------------------------------------------===//
 
 def int_matrix_transpose
-  : Intrinsic<[llvm_anyvector_ty],
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
               [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
               [ IntrNoSync, IntrWillReturn, IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>,
                ImmArg<ArgIndex<2>>]>;
 
 def int_matrix_multiply
-  : Intrinsic<[llvm_anyvector_ty],
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
               [llvm_anyvector_ty, llvm_anyvector_ty, llvm_i32_ty, llvm_i32_ty,
                llvm_i32_ty],
               [IntrNoSync, IntrWillReturn, IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>,
                ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
 def int_matrix_column_major_load
-  : Intrinsic<[llvm_anyvector_ty],
-              [LLVMPointerToElt<0>, llvm_i64_ty, llvm_i1_ty,
+  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+              [LLVMPointerToElt<0>, llvm_anyint_ty, llvm_i1_ty,
                llvm_i32_ty, llvm_i32_ty],
               [IntrNoSync, IntrWillReturn, IntrArgMemOnly, IntrReadMem,
                NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
                ImmArg<ArgIndex<4>>]>;
 
 def int_matrix_column_major_store
-  : Intrinsic<[],
+  : DefaultAttrsIntrinsic<[],
               [llvm_anyvector_ty, LLVMPointerToElt<0>,
-               llvm_i64_ty, llvm_i1_ty, llvm_i32_ty, llvm_i32_ty],
+               llvm_anyint_ty, llvm_i1_ty, llvm_i32_ty, llvm_i32_ty],
               [IntrNoSync, IntrWillReturn, IntrArgMemOnly, IntrWriteMem,
                WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
                ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
@@ -1518,18 +1766,29 @@ def int_matrix_column_major_store
 // Specify that the value given is the number of iterations that the next loop
 // will execute.
 def int_set_loop_iterations :
-  Intrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
+  DefaultAttrsIntrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Same as the above, but produces a value (the same as the input operand) to
+// be fed into the loop.
+def int_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrNoDuplicate]>;
 
 // Specify that the value given is the number of iterations that the next loop
 // will execute. Also test that the given count is not zero, allowing it to
 // control entry to a 'while' loop.
 def int_test_set_loop_iterations :
-  Intrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
+// Same as the above, but produces an extra value (the same as the input
+// operand) to be fed into the loop.
+def int_test_start_loop_iterations :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty, llvm_i1_ty], [LLVMMatchType<0>],
+                        [IntrNoDuplicate]>;
 
 // Decrement loop counter by the given argument. Return false if the loop
 // should exit.
 def int_loop_decrement :
-  Intrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
 
 // Decrement the first operand (the loop counter) by the second operand (the
 // maximum number of elements processed in an iteration). Return the remaining
@@ -1539,35 +1798,57 @@ def int_loop_decrement :
 // it's scevable, so it's the backends responsibility to handle cases where it
 // may be optimised.
 def int_loop_decrement_reg :
-  Intrinsic<[llvm_anyint_ty],
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoDuplicate]>;
 
 //===----- Intrinsics that are used to provide predicate information -----===//
 
-def int_ssa_copy : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
+def int_ssa_copy : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                              [IntrNoMem, Returned<ArgIndex<0>>]>;
 
 //===------- Intrinsics that are used to preserve debug information -------===//
 
-def int_preserve_array_access_index : Intrinsic<[llvm_anyptr_ty],
+def int_preserve_array_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                 [llvm_anyptr_ty, llvm_i32_ty,
                                                  llvm_i32_ty],
                                                 [IntrNoMem,
                                                  ImmArg<ArgIndex<1>>,
                                                  ImmArg<ArgIndex<2>>]>;
-def int_preserve_union_access_index : Intrinsic<[llvm_anyptr_ty],
+def int_preserve_union_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                 [llvm_anyptr_ty, llvm_i32_ty],
                                                 [IntrNoMem,
                                                  ImmArg<ArgIndex<1>>]>;
-def int_preserve_struct_access_index : Intrinsic<[llvm_anyptr_ty],
+def int_preserve_struct_access_index : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                                  [llvm_anyptr_ty, llvm_i32_ty,
                                                   llvm_i32_ty],
                                                  [IntrNoMem,
                                                   ImmArg<ArgIndex<1>>,
                                                   ImmArg<ArgIndex<2>>]>;
 
+//===------------ Intrinsics to perform common vector shuffles ------------===//
+
+def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                   [LLVMMatchType<0>],
+                                   [IntrNoMem]>;
+
 //===---------- Intrinsics to query properties of scalable vectors --------===//
-def int_vscale : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+//===---------- Intrinsics to perform subvector insertion/extraction ------===//
+def int_experimental_vector_insert : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                           [LLVMMatchType<0>, llvm_anyvector_ty, llvm_i64_ty],
+                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_experimental_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                            [llvm_anyvector_ty, llvm_i64_ty],
+                                                            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+//===---------- Named shufflevector intrinsics ------===//
+def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                           [LLVMMatchType<0>,
+                                                            LLVMMatchType<0>,
+                                                            llvm_i32_ty],
+                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1588,3 +1869,4 @@ include "llvm/IR/IntrinsicsBPF.td"
 include "llvm/IR/IntrinsicsSystemZ.td"
 include "llvm/IR/IntrinsicsWebAssembly.td"
 include "llvm/IR/IntrinsicsRISCV.td"
+include "llvm/IR/IntrinsicsVE.td"

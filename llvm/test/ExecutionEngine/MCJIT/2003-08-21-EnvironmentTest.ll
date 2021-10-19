@@ -1,4 +1,4 @@
-; RUN: %lli %s > /dev/null
+; RUN: %lli -jit-kind=mcjit %s > /dev/null
 
 ;
 ; Regression Test: EnvironmentTest.ll

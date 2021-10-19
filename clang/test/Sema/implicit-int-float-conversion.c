@@ -16,7 +16,7 @@ void testAssignment() {
   float ffff = 222222222222UL; // expected-warning {{changes value from 222222222222 to 222222221312}}
 
   long l = 222222222222L;
-#ifdef NONCOST
+#ifdef NONCONST
   float fff = l; // expected-warning {{implicit conversion from 'long' to 'float' may lose precision}}
 #endif
 }

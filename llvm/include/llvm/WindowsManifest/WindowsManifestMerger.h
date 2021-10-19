@@ -22,14 +22,15 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
-#define LLVM_INCLUDE_LLVM_SUPPORT_WINDOWS_MANIFEST_MERGER_H
+#ifndef LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
+#define LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
 
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 
 class MemoryBuffer;
+class MemoryBufferRef;
 
 namespace windows_manifest {
 
@@ -49,7 +50,7 @@ class WindowsManifestMerger {
 public:
   WindowsManifestMerger();
   ~WindowsManifestMerger();
-  Error merge(const MemoryBuffer &Manifest);
+  Error merge(MemoryBufferRef Manifest);
 
   // Returns vector containing merged xml manifest, or uninitialized vector for
   // empty manifest.

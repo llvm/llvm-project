@@ -159,7 +159,7 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
       FileInfo.SectionInfos[Sec.getName()] = {SecSize, SecAddr};
     else
       FileInfo.SectionInfos[Sec.getName()] = {
-          StringRef(FirstSym->getBlock().getContent().data(), SecSize),
+          ArrayRef<char>(FirstSym->getBlock().getContent().data(), SecSize),
           SecAddr};
   }
 

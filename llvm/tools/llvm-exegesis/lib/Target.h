@@ -142,6 +142,11 @@ public:
     return {&Instr};
   }
 
+  // Checks hardware and software support for current benchmark mode.
+  // Returns an error if the target host does not have support to run the
+  // benchmark.
+  virtual Error checkFeatureSupport() const { return Error::success(); }
+
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,
@@ -166,6 +171,16 @@ public:
   // Returns the Pfm counters for the given CPU (or the default if no pfm
   // counters are defined for this CPU).
   const PfmCountersInfo &getPfmCounters(StringRef CpuName) const;
+
+  // Saves the CPU state that needs to be preserved when running a benchmark,
+  // and returns and RAII object that restores the state on destruction.
+  // By default no state is preserved.
+  struct SavedState {
+    virtual ~SavedState();
+  };
+  virtual std::unique_ptr<SavedState> withSavedState() const {
+    return std::make_unique<SavedState>();
+  }
 
 private:
   virtual bool matchesArch(Triple::ArchType Arch) const = 0;

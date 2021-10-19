@@ -18,8 +18,6 @@ class PlatformFreeBSD : public PlatformPOSIX {
 public:
   PlatformFreeBSD(bool is_host);
 
-  ~PlatformFreeBSD() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -31,9 +29,9 @@ public:
 
   static const char *GetPluginDescriptionStatic(bool is_host);
 
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic(IsHost()).GetStringRef();
+  }
 
   // lldb_private::Platform functions
   const char *GetDescription() override {
@@ -46,24 +44,12 @@ public:
 
   bool CanDebugProcess() override;
 
-  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
-                                         BreakpointSite *bp_site) override;
-
-  Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
-
-  lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
-                         Target *target, Status &error) override;
-
   void CalculateTrapHandlerSymbolNames() override;
 
   MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
-
-private:
-  PlatformFreeBSD(const PlatformFreeBSD &) = delete;
-  const PlatformFreeBSD &operator=(const PlatformFreeBSD &) = delete;
 };
 
 } // namespace platform_freebsd

@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
+#include <cerrno>
 #if defined(__APPLE__)
 #include <netinet/in.h>
 #endif
-#include <signal.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <csignal>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #if !defined(_WIN32)
 #include <sys/wait.h>
 #endif
@@ -22,6 +22,7 @@
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "Acceptor.h"
@@ -202,14 +203,15 @@ int main_platform(int argc, char *argv[]) {
 
     case 'p': {
       if (!llvm::to_integer(optarg, port_offset)) {
-        llvm::errs() << "error: invalid port offset string " << optarg << "\n";
+        WithColor::error() << "invalid port offset string " << optarg << "\n";
         option_error = 4;
         break;
       }
       if (port_offset < LOW_PORT || port_offset > HIGH_PORT) {
-        llvm::errs() << llvm::formatv("error: port offset {0} is not in the "
-                                      "valid user port range of {1} - {2}\n",
-                                      port_offset, LOW_PORT, HIGH_PORT);
+        WithColor::error() << llvm::formatv(
+            "port offset {0} is not in the "
+            "valid user port range of {1} - {2}\n",
+            port_offset, LOW_PORT, HIGH_PORT);
         option_error = 5;
       }
     } break;
@@ -219,19 +221,20 @@ int main_platform(int argc, char *argv[]) {
     case 'M': {
       uint16_t portnum;
       if (!llvm::to_integer(optarg, portnum)) {
-        llvm::errs() << "error: invalid port number string " << optarg << "\n";
+        WithColor::error() << "invalid port number string " << optarg << "\n";
         option_error = 2;
         break;
       }
       if (portnum < LOW_PORT || portnum > HIGH_PORT) {
-        llvm::errs() << llvm::formatv("error: port number {0} is not in the "
-                                      "valid user port range of {1} - {2}\n",
-                                      portnum, LOW_PORT, HIGH_PORT);
+        WithColor::error() << llvm::formatv(
+            "port number {0} is not in the "
+            "valid user port range of {1} - {2}\n",
+            portnum, LOW_PORT, HIGH_PORT);
         option_error = 1;
         break;
       }
       if (ch == 'P')
-        gdbserver_portmap[portnum] = LLDB_INVALID_PROCESS_ID;
+        gdbserver_portmap.AllowPort(portnum);
       else if (ch == 'm')
         min_gdbserver_port = portnum;
       else
@@ -250,12 +253,13 @@ int main_platform(int argc, char *argv[]) {
 
   // Make a port map for a port range that was specified.
   if (min_gdbserver_port && min_gdbserver_port < max_gdbserver_port) {
-    for (uint16_t port = min_gdbserver_port; port < max_gdbserver_port; ++port)
-      gdbserver_portmap[port] = LLDB_INVALID_PROCESS_ID;
+    gdbserver_portmap = GDBRemoteCommunicationServerPlatform::PortMap(
+        min_gdbserver_port, max_gdbserver_port);
   } else if (min_gdbserver_port || max_gdbserver_port) {
-    fprintf(stderr, "error: --min-gdbserver-port (%u) is not lower than "
-                    "--max-gdbserver-port (%u)\n",
-            min_gdbserver_port, max_gdbserver_port);
+    WithColor::error() << llvm::formatv(
+        "--min-gdbserver-port ({0}) is not lower than "
+        "--max-gdbserver-port ({1})\n",
+        min_gdbserver_port, max_gdbserver_port);
     option_error = 3;
   }
 
@@ -317,7 +321,7 @@ int main_platform(int argc, char *argv[]) {
     Connection *conn = nullptr;
     error = acceptor_up->Accept(children_inherit_accept_socket, conn);
     if (error.Fail()) {
-      printf("error: %s\n", error.AsCString());
+      WithColor::error() << error.AsCString() << '\n';
       exit(socket_error);
     }
     printf("Connection established.\n");
@@ -349,13 +353,13 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        uint16_t port = 0;
+        llvm::Optional<uint16_t> port = 0;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname
                                                 pid, port, socket_name);
         if (error.Success())
-          platform.SetPendingGdbServer(pid, port, socket_name);
+          platform.SetPendingGdbServer(pid, *port, socket_name);
         else
           fprintf(stderr, "failed to start gdbserver: %s\n", error.AsCString());
       }
@@ -372,10 +376,10 @@ int main_platform(int argc, char *argv[]) {
         }
 
         if (error.Fail()) {
-          fprintf(stderr, "error: %s\n", error.AsCString());
+          WithColor::error() << error.AsCString() << '\n';
         }
       } else {
-        fprintf(stderr, "error: handshake with client failed\n");
+        WithColor::error() << "handshake with client failed\n";
       }
     }
   } while (g_server);

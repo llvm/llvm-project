@@ -107,6 +107,12 @@ static void outputCallingConvention(OutputStream &OS, CallingConv CC) {
   case CallingConv::Clrcall:
     OS << "__clrcall";
     break;
+  case CallingConv::Swift:
+    OS << "__attribute__((__swiftcall__)) ";
+    break;
+  case CallingConv::SwiftAsync:
+    OS << "__attribute__((__swiftasynccall__)) ";
+    break;
   default:
     break;
   }
@@ -117,7 +123,9 @@ std::string Node::toString(OutputFlags Flags) const {
   initializeOutputStream(nullptr, nullptr, OS, 1024);
   this->output(OS, Flags);
   OS << '\0';
-  return {OS.getBuffer()};
+  std::string Owned(OS.getBuffer());
+  std::free(OS.getBuffer());
+  return Owned;
 }
 
 void PrimitiveTypeNode::outputPre(OutputStream &OS, OutputFlags Flags) const {
@@ -649,5 +657,4 @@ void SpecialTableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
     TargetName->output(OS, Flags);
     OS << "'}";
   }
-  return;
 }

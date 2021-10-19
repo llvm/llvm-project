@@ -10,7 +10,7 @@
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RD:%r.+]], -32
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RE:%r.+]], -24
 
-; SECTIONS_CFI:      _Z3foob.1:
+; SECTIONS_CFI:      _Z3foob.__part.1:
 ; SECTIONS_CFI:      .cfi_offset %rbp, -16
 ; SECTIONS_CFI:      .cfi_offset [[RA]], -56
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RB]], -48
@@ -18,7 +18,7 @@
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RD]], -32
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RE]], -24
 
-; SECTIONS_CFI:      _Z3foob.2:
+; SECTIONS_CFI:      _Z3foob.__part.2:
 ; SECTIONS_CFI:      .cfi_offset %rbp, -16
 ; SECTIONS_CFI:      .cfi_offset [[RA]], -56
 ; SECTIONS_CFI-NEXT: .cfi_offset [[RB]], -48

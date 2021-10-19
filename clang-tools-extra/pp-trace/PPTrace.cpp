@@ -69,7 +69,7 @@ static cl::opt<std::string> OutputFileName(
     cl::desc("Output trace to the given file name or '-' for stdout."),
     cl::cat(Cat));
 
-LLVM_ATTRIBUTE_NORETURN static void error(Twine Message) {
+[[noreturn]] static void error(Twine Message) {
   WithColor::error() << Message << '\n';
   exit(1);
 }
@@ -152,7 +152,7 @@ int main(int argc, const char **argv) {
                                  OptionsParser->getSourcePathList());
 
   std::error_code EC;
-  llvm::ToolOutputFile Out(OutputFileName, EC, llvm::sys::fs::OF_Text);
+  llvm::ToolOutputFile Out(OutputFileName, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC)
     error(EC.message());
   PPTraceFrontendActionFactory Factory(Filters, Out.os());

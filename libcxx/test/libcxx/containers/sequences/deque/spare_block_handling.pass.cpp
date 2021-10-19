@@ -15,10 +15,10 @@
 // resizes or shrinks at the correct time.
 
 #include <deque>
-#include <iostream>
+#include <cstdio>
 #include <memory>
-#include <stack>
 #include <queue>
+#include <stack>
 
 #include "min_allocator.h"
 #include "rapid-cxx-test.h"
@@ -31,12 +31,12 @@ struct ContainerAdaptor : public Adaptor {
 
 template <class Deque>
 static void print(const Deque& d) {
-  std::cout << d.size()
-            << " : __front_spare() == " << d.__front_spare()
-            << " : __back_spare() == " << d.__back_spare()
-            << " : __capacity() == " << d.__capacity()
-            << " : bytes allocated == "
-            << malloc_allocator_base::outstanding_bytes << '\n';
+  std::printf("%zu : __front_spare() == %zu"
+              " : __back_spare() == %zu"
+              " : __capacity() == %zu"
+              " : bytes allocated == %zu\n",
+              d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
+              malloc_allocator_base::outstanding_bytes);
 }
 
 template <class T>
@@ -53,18 +53,18 @@ static_assert(BlockSize<LargeT>::value == 16, "");
 
 const auto& AllocBytes = malloc_allocator_base::outstanding_bytes;
 
-template <class DT>
+template <class Deque>
 struct PrintOnFailure {
-   explicit PrintOnFailure(DT const& d) : d(&d) {}
+   explicit PrintOnFailure(Deque const& deque) : deque_(&deque) {}
 
   ~PrintOnFailure() {
     if (::rapid_cxx_test::get_reporter().current_failure().type
         != ::rapid_cxx_test::failure_type::none) {
-      print(*d);
+      print(*deque_);
     }
   }
 private:
-  const DT* d;
+  const Deque* deque_;
 
   PrintOnFailure(PrintOnFailure const&) = delete;
 };

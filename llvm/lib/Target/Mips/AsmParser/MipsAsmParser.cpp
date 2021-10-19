@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -352,8 +352,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandSaaAddr(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                      const MCSubtargetInfo *STI);
 
-  bool reportParseError(Twine ErrorMsg);
-  bool reportParseError(SMLoc Loc, Twine ErrorMsg);
+  bool reportParseError(const Twine &ErrorMsg);
+  bool reportParseError(SMLoc Loc, const Twine &ErrorMsg);
 
   bool parseMemOffset(const MCExpr *&Res, bool isParenExpr);
 
@@ -6982,12 +6982,12 @@ bool MipsAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
 // FIXME: Given that these have the same name, these should both be
 // consistent on affecting the Parser.
-bool MipsAsmParser::reportParseError(Twine ErrorMsg) {
+bool MipsAsmParser::reportParseError(const Twine &ErrorMsg) {
   SMLoc Loc = getLexer().getLoc();
   return Error(Loc, ErrorMsg);
 }
 
-bool MipsAsmParser::reportParseError(SMLoc Loc, Twine ErrorMsg) {
+bool MipsAsmParser::reportParseError(SMLoc Loc, const Twine &ErrorMsg) {
   return Error(Loc, ErrorMsg);
 }
 

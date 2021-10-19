@@ -77,7 +77,7 @@ void test_float() {
   }
 }
 
-int main() {
+int main(int, char**) {
   test<short>();
   test<unsigned short>();
   test<int>();
@@ -87,4 +87,5 @@ int main() {
   test_float<short>();
   test_float<int>();
   test_float<long long>();
+  return 0;
 }

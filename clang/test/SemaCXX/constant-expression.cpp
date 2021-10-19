@@ -88,8 +88,8 @@ enum {
 
 void diags(int n) {
   switch (n) {
-    case (1/0, 1): // expected-error {{not an integral constant expression}} expected-note {{division by zero}}
-    case (int)(1/0, 2.0): // expected-error {{not an integral constant expression}} expected-note {{division by zero}}
+    case (1/0, 1): // expected-error {{not an integral constant expression}} expected-note {{division by zero}} expected-warning {{left operand of comma operator has no effect}}
+    case (int)(1/0, 2.0): // expected-error {{not an integral constant expression}} expected-note {{division by zero}} expected-warning {{left operand of comma operator has no effect}}
     case __imag(1/0): // expected-error {{not an integral constant expression}} expected-note {{division by zero}}
     case (int)__imag((double)(1/0)): // expected-error {{not an integral constant expression}} expected-note {{division by zero}}
       ;
@@ -98,9 +98,9 @@ void diags(int n) {
 
 namespace IntOrEnum {
   const int k = 0;
-  const int &p = k;
+  const int &p = k; // expected-note {{declared here}}
   template<int n> struct S {};
-  S<p> s; // expected-error {{not an integral constant expression}}
+  S<p> s; // expected-error {{not an integral constant expression}} expected-note {{read of variable 'p' of non-integral, non-enumeration type 'const int &'}}
 }
 
 extern const int recurse1;
@@ -110,7 +110,7 @@ extern const int recurse1;
 const int recurse2 = recurse1; // expected-note {{here}}
 const int recurse1 = 1;
 int array1[recurse1]; // ok
-int array2[recurse2]; // expected-warning {{variable length array}} expected-warning {{integer constant expression}} expected-note {{initializer of 'recurse2' is not a constant expression}}
+int array2[recurse2]; // expected-warning 2{{variable length array}} expected-note {{initializer of 'recurse2' is not a constant expression}}
 
 namespace FloatConvert {
   typedef int a[(int)42.3];

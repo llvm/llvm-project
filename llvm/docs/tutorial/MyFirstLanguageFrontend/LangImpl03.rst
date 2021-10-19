@@ -90,7 +90,7 @@ detail, we just need a single instance to pass into APIs that require it.
 
 The ``Builder`` object is a helper object that makes it easy to generate
 LLVM instructions. Instances of the
-`IRBuilder <https://llvm.org/doxygen/IRBuilder_8h-source.html>`_
+`IRBuilder <https://llvm.org/doxygen/IRBuilder_8h_source.html>`_
 class template keep track of the current place to insert instructions
 and has methods to create new instructions.
 

@@ -11,7 +11,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 5
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDUCTION]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDUCTION1]] to i32
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @non_primary_iv_trunc_free(i64 %n) {

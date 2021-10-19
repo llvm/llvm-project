@@ -17,7 +17,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
@@ -25,7 +25,7 @@ body:             |
 ---
 # GCN-LABEL: name: load_without_memoperand
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr
 # GCN-NEXT: S_ENDPGM 0
 name: load_without_memoperand
 tracksRegLiveness: true
@@ -41,7 +41,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
@@ -49,7 +49,7 @@ body:             |
 ---
 # GCN-LABEL: name: load_volatile
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
+# GCN-NEXT: dead %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32))
 # GCN-NEXT: S_ENDPGM 0
 name: load_volatile
 tracksRegLiveness: true
@@ -65,7 +65,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    %1 = FLAT_LOAD_DWORD %0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load 4)
+    %1 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load (s32))
     %2 = V_ADD_F32_e64 0, killed %1, 0, 1, 0, 0, implicit $mode, implicit $exec
     %4 = S_ADD_U32 %3, 1, implicit-def $scc
     S_ENDPGM 0
@@ -73,7 +73,7 @@ body:             |
 ---
 # GCN-LABEL: name: store
 # GCN:      $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-# GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+# GCN-NEXT: FLAT_STORE_DWORD %0, %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
 # GCN-NEXT: S_ENDPGM 0
 name: store
 tracksRegLiveness: true
@@ -86,7 +86,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
-    FLAT_STORE_DWORD %0, %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     S_ENDPGM 0
 ...
 ---

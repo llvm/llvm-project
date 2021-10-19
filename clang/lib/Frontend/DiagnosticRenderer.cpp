@@ -394,6 +394,13 @@ mapDiagnosticRanges(FullSourceLoc CaretLoc, ArrayRef<CharSourceRange> Ranges,
       }
     }
 
+    // There is a chance that begin or end is invalid here, for example if
+    // specific compile error is reported.
+    // It is possible that the FileID's do not match, if one comes from an
+    // included file. In this case we can not produce a meaningful source range.
+    if (Begin.isInvalid() || End.isInvalid() || BeginFileID != EndFileID)
+      continue;
+
     // Do the backtracking.
     SmallVector<FileID, 4> CommonArgExpansions;
     computeCommonMacroArgExpansionFileIDs(Begin, End, SM, CommonArgExpansions);

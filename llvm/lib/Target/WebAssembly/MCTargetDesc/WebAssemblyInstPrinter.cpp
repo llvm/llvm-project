@@ -13,9 +13,10 @@
 
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -48,8 +49,35 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
-  // Print the instruction (this uses the AsmStrings from the .td files).
-  printInstruction(MI, Address, OS);
+  switch (MI->getOpcode()) {
+  case WebAssembly::CALL_INDIRECT_S:
+  case WebAssembly::RET_CALL_INDIRECT_S: {
+    // A special case for call_indirect (and ret_call_indirect), if the table
+    // operand is a symbol: the order of the type and table operands is inverted
+    // in the text format relative to the binary format.  Otherwise if table the
+    // operand isn't a symbol, then we have an MVP compilation unit, and the
+    // table shouldn't appear in the output.
+    OS << "\t";
+    OS << getMnemonic(MI).first;
+    OS << " ";
+
+    assert(MI->getNumOperands() == 2);
+    const unsigned TypeOperand = 0;
+    const unsigned TableOperand = 1;
+    if (MI->getOperand(TableOperand).isExpr()) {
+      printOperand(MI, TableOperand, OS);
+      OS << ", ";
+    } else {
+      assert(MI->getOperand(TableOperand).getImm() == 0);
+    }
+    printOperand(MI, TypeOperand, OS);
+    break;
+  }
+  default:
+    // Print the instruction (this uses the AsmStrings from the .td files).
+    printInstruction(MI, Address, OS);
+    break;
+  }
 
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
@@ -68,7 +96,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     for (auto I = Start, E = MI->getNumOperands(); I < E; ++I) {
       if (MI->getOpcode() == WebAssembly::CALL_INDIRECT &&
           I - Start == NumVariadicDefs) {
-        // Skip type and flags arguments when printing for tests
+        // Skip type and table arguments when printing for tests.
         ++I;
         continue;
       }
@@ -94,19 +122,19 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     case WebAssembly::LOOP_S:
       printAnnotation(OS, "label" + utostr(ControlFlowCounter) + ':');
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, true));
-      break;
+      return;
 
     case WebAssembly::BLOCK:
     case WebAssembly::BLOCK_S:
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
-      break;
+      return;
 
     case WebAssembly::TRY:
     case WebAssembly::TRY_S:
-      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
-      EHPadStack.push_back(EHPadStackCounter++);
-      LastSeenEHInst = TRY;
-      break;
+      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter, false));
+      TryStack.push_back(ControlFlowCounter++);
+      EHInstStack.push_back(TRY);
+      return;
 
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
@@ -115,7 +143,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       } else {
         ControlFlowStack.pop_back();
       }
-      break;
+      return;
 
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
@@ -125,69 +153,113 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         printAnnotation(
             OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
       }
-      break;
+      return;
 
     case WebAssembly::END_TRY:
     case WebAssembly::END_TRY_S:
-      if (ControlFlowStack.empty()) {
+      if (ControlFlowStack.empty() || EHInstStack.empty()) {
         printAnnotation(OS, "End marker mismatch!");
       } else {
         printAnnotation(
             OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
-        LastSeenEHInst = END_TRY;
+        EHInstStack.pop_back();
       }
-      break;
+      return;
 
     case WebAssembly::CATCH:
     case WebAssembly::CATCH_S:
-      if (EHPadStack.empty()) {
+    case WebAssembly::CATCH_ALL:
+    case WebAssembly::CATCH_ALL_S:
+      // There can be multiple catch instructions for one try instruction, so
+      // we print a label only for the first 'catch' label.
+      if (EHInstStack.empty()) {
         printAnnotation(OS, "try-catch mismatch!");
-      } else {
-        printAnnotation(OS, "catch" + utostr(EHPadStack.pop_back_val()) + ':');
+      } else if (EHInstStack.back() == CATCH_ALL) {
+        printAnnotation(OS, "catch/catch_all cannot occur after catch_all");
+      } else if (EHInstStack.back() == TRY) {
+        if (TryStack.empty()) {
+          printAnnotation(OS, "try-catch mismatch!");
+        } else {
+          printAnnotation(OS, "catch" + utostr(TryStack.pop_back_val()) + ':');
+        }
+        EHInstStack.pop_back();
+        if (Opc == WebAssembly::CATCH || Opc == WebAssembly::CATCH_S) {
+          EHInstStack.push_back(CATCH);
+        } else {
+          EHInstStack.push_back(CATCH_ALL);
+        }
       }
-      break;
+      return;
+
+    case WebAssembly::RETHROW:
+    case WebAssembly::RETHROW_S:
+      // 'rethrow' rethrows to the nearest enclosing catch scope, if any. If
+      // there's no enclosing catch scope, it throws up to the caller.
+      if (TryStack.empty()) {
+        printAnnotation(OS, "to caller");
+      } else {
+        printAnnotation(OS, "down to catch" + utostr(TryStack.back()));
+      }
+      return;
+
+    case WebAssembly::DELEGATE:
+    case WebAssembly::DELEGATE_S:
+      if (ControlFlowStack.empty() || TryStack.empty() || EHInstStack.empty()) {
+        printAnnotation(OS, "try-delegate mismatch!");
+      } else {
+        // 'delegate' is
+        // 1. A marker for the end of block label
+        // 2. A destination for throwing instructions
+        // 3. An instruction that itself rethrows to another 'catch'
+        assert(ControlFlowStack.back().first == TryStack.back());
+        std::string Label = "label/catch" +
+                            utostr(ControlFlowStack.pop_back_val().first) +
+                            ": ";
+        TryStack.pop_back();
+        EHInstStack.pop_back();
+        uint64_t Depth = MI->getOperand(0).getImm();
+        if (Depth >= ControlFlowStack.size()) {
+          Label += "to caller";
+        } else {
+          const auto &Pair = ControlFlowStack.rbegin()[Depth];
+          if (Pair.second)
+            printAnnotation(OS, "delegate cannot target a loop");
+          else
+            Label += "down to catch" + utostr(Pair.first);
+        }
+        printAnnotation(OS, Label);
+      }
+      return;
     }
 
     // Annotate any control flow label references.
 
-    // rethrow instruction does not take any depth argument and rethrows to the
-    // nearest enclosing catch scope, if any. If there's no enclosing catch
-    // scope, it throws up to the caller.
-    if (Opc == WebAssembly::RETHROW || Opc == WebAssembly::RETHROW_S) {
-      if (EHPadStack.empty()) {
-        printAnnotation(OS, "to caller");
-      } else {
-        printAnnotation(OS, "down to catch" + utostr(EHPadStack.back()));
-      }
-
-    } else {
-      unsigned NumFixedOperands = Desc.NumOperands;
-      SmallSet<uint64_t, 8> Printed;
-      for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I) {
-        // See if this operand denotes a basic block target.
-        if (I < NumFixedOperands) {
-          // A non-variable_ops operand, check its type.
-          if (Desc.OpInfo[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
-            continue;
-        } else {
-          // A variable_ops operand, which currently can be immediates (used in
-          // br_table) which are basic block targets, or for call instructions
-          // when using -wasm-keep-registers (in which case they are registers,
-          // and should not be processed).
-          if (!MI->getOperand(I).isImm())
-            continue;
-        }
-        uint64_t Depth = MI->getOperand(I).getImm();
-        if (!Printed.insert(Depth).second)
+    unsigned NumFixedOperands = Desc.NumOperands;
+    SmallSet<uint64_t, 8> Printed;
+    for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I) {
+      // See if this operand denotes a basic block target.
+      if (I < NumFixedOperands) {
+        // A non-variable_ops operand, check its type.
+        if (Desc.OpInfo[I].OperandType != WebAssembly::OPERAND_BASIC_BLOCK)
           continue;
-        if (Depth >= ControlFlowStack.size()) {
-          printAnnotation(OS, "Invalid depth argument!");
-        } else {
-          const auto &Pair = ControlFlowStack.rbegin()[Depth];
-          printAnnotation(OS, utostr(Depth) + ": " +
-                                  (Pair.second ? "up" : "down") + " to label" +
-                                  utostr(Pair.first));
-        }
+      } else {
+        // A variable_ops operand, which currently can be immediates (used in
+        // br_table) which are basic block targets, or for call instructions
+        // when using -wasm-keep-registers (in which case they are registers,
+        // and should not be processed).
+        if (!MI->getOperand(I).isImm())
+          continue;
+      }
+      uint64_t Depth = MI->getOperand(I).getImm();
+      if (!Printed.insert(Depth).second)
+        continue;
+      if (Depth >= ControlFlowStack.size()) {
+        printAnnotation(OS, "Invalid depth argument!");
+      } else {
+        const auto &Pair = ControlFlowStack.rbegin()[Depth];
+        printAnnotation(OS, utostr(Depth) + ": " +
+                                (Pair.second ? "up" : "down") + " to label" +
+                                utostr(Pair.first));
       }
     }
   }
@@ -236,17 +308,10 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       O << '=';
   } else if (Op.isImm()) {
     O << Op.getImm();
-  } else if (Op.isFPImm()) {
-    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    const MCOperandInfo &Info = Desc.OpInfo[OpNo];
-    if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
-      // TODO: MC converts all floating point immediate operands to double.
-      // This is fine for numeric values, but may cause NaNs to change bits.
-      O << ::toString(APFloat(float(Op.getFPImm())));
-    } else {
-      assert(Info.OperandType == WebAssembly::OPERAND_F64IMM);
-      O << ::toString(APFloat(Op.getFPImm()));
-    }
+  } else if (Op.isSFPImm()) {
+    O << ::toString(APFloat(APFloat::IEEEsingle(), APInt(32, Op.getSFPImm())));
+  } else if (Op.isDFPImm()) {
+    O << ::toString(APFloat(APFloat::IEEEdouble(), APInt(64, Op.getDFPImm())));
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     // call_indirect instructions have a TYPEINDEX operand that we print
@@ -302,51 +367,25 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
   }
 }
 
-// We have various enums representing a subset of these types, use this
-// function to convert any of them to text.
-const char *WebAssembly::anyTypeToString(unsigned Ty) {
-  switch (Ty) {
-  case wasm::WASM_TYPE_I32:
-    return "i32";
-  case wasm::WASM_TYPE_I64:
-    return "i64";
-  case wasm::WASM_TYPE_F32:
-    return "f32";
-  case wasm::WASM_TYPE_F64:
-    return "f64";
-  case wasm::WASM_TYPE_V128:
-    return "v128";
-  case wasm::WASM_TYPE_FUNCREF:
-    return "funcref";
-  case wasm::WASM_TYPE_FUNC:
-    return "func";
-  case wasm::WASM_TYPE_EXNREF:
-    return "exnref";
-  case wasm::WASM_TYPE_NORESULT:
-    return "void";
-  default:
-    return "invalid_type";
+void WebAssemblyInstPrinter::printWebAssemblyHeapTypeOperand(const MCInst *MI,
+                                                             unsigned OpNo,
+                                                             raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isImm()) {
+    switch (Op.getImm()) {
+    case long(wasm::ValType::EXTERNREF):
+      O << "extern";
+      break;
+    case long(wasm::ValType::FUNCREF):
+      O << "func";
+      break;
+    default:
+      O << "unsupported_heap_type_value";
+      break;
+    }
+  } else {
+    // Typed function references and other subtypes of funcref and externref
+    // currently unimplemented.
+    O << "unsupported_heap_type_operand";
   }
-}
-
-const char *WebAssembly::typeToString(wasm::ValType Ty) {
-  return anyTypeToString(static_cast<unsigned>(Ty));
-}
-
-std::string WebAssembly::typeListToString(ArrayRef<wasm::ValType> List) {
-  std::string S;
-  for (auto &Ty : List) {
-    if (&Ty != &List[0]) S += ", ";
-    S += WebAssembly::typeToString(Ty);
-  }
-  return S;
-}
-
-std::string WebAssembly::signatureToString(const wasm::WasmSignature *Sig) {
-  std::string S("(");
-  S += typeListToString(Sig->Params);
-  S += ") -> (";
-  S += typeListToString(Sig->Returns);
-  S += ")";
-  return S;
 }

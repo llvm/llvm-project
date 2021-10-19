@@ -112,7 +112,7 @@ enum dwarf_regnums {
 #define DEFINE_GPR(reg, alt, kind1, kind2, kind3, kind4)                       \
   {                                                                            \
     #reg, alt, 8, 0, eEncodingUint, eFormatHex, {kind1, kind2, kind3, kind4 }, \
-                                                 nullptr, nullptr, nullptr, 0  \
+                                                 nullptr, nullptr,             \
   }
 
 static const RegisterInfo g_register_infos[] = {
@@ -120,25 +120,25 @@ static const RegisterInfo g_register_infos[] = {
     // Generic,    Process Plugin
     DEFINE_GPR(r0, nullptr, dwarf_r0, dwarf_r0, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r1, "sp", dwarf_r1, dwarf_r1, LLDB_REGNUM_GENERIC_SP,
+    DEFINE_GPR(r1, nullptr, dwarf_r1, dwarf_r1, LLDB_REGNUM_GENERIC_SP,
                LLDB_INVALID_REGNUM),
     DEFINE_GPR(r2, nullptr, dwarf_r2, dwarf_r2, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r3, "arg1", dwarf_r3, dwarf_r3, LLDB_REGNUM_GENERIC_ARG1,
+    DEFINE_GPR(r3, nullptr, dwarf_r3, dwarf_r3, LLDB_REGNUM_GENERIC_ARG1,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r4, "arg2", dwarf_r4, dwarf_r4, LLDB_REGNUM_GENERIC_ARG2,
+    DEFINE_GPR(r4, nullptr, dwarf_r4, dwarf_r4, LLDB_REGNUM_GENERIC_ARG2,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r5, "arg3", dwarf_r5, dwarf_r5, LLDB_REGNUM_GENERIC_ARG3,
+    DEFINE_GPR(r5, nullptr, dwarf_r5, dwarf_r5, LLDB_REGNUM_GENERIC_ARG3,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r6, "arg4", dwarf_r6, dwarf_r6, LLDB_REGNUM_GENERIC_ARG4,
+    DEFINE_GPR(r6, nullptr, dwarf_r6, dwarf_r6, LLDB_REGNUM_GENERIC_ARG4,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r7, "arg5", dwarf_r7, dwarf_r7, LLDB_REGNUM_GENERIC_ARG5,
+    DEFINE_GPR(r7, nullptr, dwarf_r7, dwarf_r7, LLDB_REGNUM_GENERIC_ARG5,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r8, "arg6", dwarf_r8, dwarf_r8, LLDB_REGNUM_GENERIC_ARG6,
+    DEFINE_GPR(r8, nullptr, dwarf_r8, dwarf_r8, LLDB_REGNUM_GENERIC_ARG6,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r9, "arg7", dwarf_r9, dwarf_r9, LLDB_REGNUM_GENERIC_ARG7,
+    DEFINE_GPR(r9, nullptr, dwarf_r9, dwarf_r9, LLDB_REGNUM_GENERIC_ARG7,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(r10, "arg8", dwarf_r10, dwarf_r10, LLDB_REGNUM_GENERIC_ARG8,
+    DEFINE_GPR(r10, nullptr, dwarf_r10, dwarf_r10, LLDB_REGNUM_GENERIC_ARG8,
                LLDB_INVALID_REGNUM),
     DEFINE_GPR(r11, nullptr, dwarf_r11, dwarf_r11, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
@@ -182,15 +182,15 @@ static const RegisterInfo g_register_infos[] = {
                LLDB_INVALID_REGNUM),
     DEFINE_GPR(r31, nullptr, dwarf_r31, dwarf_r31, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(lr, "lr", dwarf_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA,
+    DEFINE_GPR(lr, nullptr, dwarf_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(cr, "cr", dwarf_cr, dwarf_cr, LLDB_REGNUM_GENERIC_FLAGS,
+    DEFINE_GPR(cr, nullptr, dwarf_cr, dwarf_cr, LLDB_REGNUM_GENERIC_FLAGS,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(xer, "xer", dwarf_xer, dwarf_xer, LLDB_INVALID_REGNUM,
+    DEFINE_GPR(xer, nullptr, dwarf_xer, dwarf_xer, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(ctr, "ctr", dwarf_ctr, dwarf_ctr, LLDB_INVALID_REGNUM,
+    DEFINE_GPR(ctr, nullptr, dwarf_ctr, dwarf_ctr, LLDB_INVALID_REGNUM,
                LLDB_INVALID_REGNUM),
-    DEFINE_GPR(pc, "pc", dwarf_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC,
+    DEFINE_GPR(pc, nullptr, dwarf_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC,
                LLDB_INVALID_REGNUM),
     {nullptr,
      nullptr,
@@ -201,8 +201,7 @@ static const RegisterInfo g_register_infos[] = {
      {dwarf_cfa, dwarf_cfa, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM},
      nullptr,
      nullptr,
-     nullptr,
-     0}};
+     }};
 
 static const uint32_t k_num_register_infos =
     llvm::array_lengthof(g_register_infos);
@@ -520,7 +519,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo();
   if (type_flags & eTypeIsScalar) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger) {
@@ -603,7 +602,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         reg_ctx->GetRegisterInfoByName("r3", 0)->kinds[eRegisterKindLLDB];
     value.GetScalar() =
         (uint64_t)thread.GetRegisterContext()->ReadRegisterAsUnsigned(r3_id, 0);
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
     return_valobj_sp = ValueObjectConstResult::Create(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
@@ -683,8 +682,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
       r3_value.GetData(r3_data);
       rdx_value.GetData(rdx_data);
 
-      uint32_t fp_bytes =
-          0; // Tracks how much of the xmm registers we've consumed so far
       uint32_t integer_bytes =
           0; // Tracks how much of the r3/rds registers we've consumed so far
 
@@ -751,7 +748,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
             break;
           } else if (*field_bit_width == 64) {
             copy_from_offset = 0;
-            fp_bytes += field_byte_width;
           } else if (*field_bit_width == 32) {
             // This one is kind of complicated.  If we are in an "eightbyte"
             // with another float, we'll be stuffed into an xmm register with
@@ -815,8 +811,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
                 copy_from_offset = integer_bytes - 8;
                 integer_bytes += field_byte_width;
               }
-            } else {
-              fp_bytes += field_byte_width;
             }
           }
         }
@@ -900,6 +894,7 @@ bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   const int32_t ptr_size = 4;
+  row->SetUnspecifiedRegistersAreUndefined(true);
   row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
@@ -972,11 +967,3 @@ lldb_private::ConstString ABISysV_ppc::GetPluginNameStatic() {
   static ConstString g_name("sysv-ppc");
   return g_name;
 }
-
-// PluginInterface protocol
-
-lldb_private::ConstString ABISysV_ppc::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ABISysV_ppc::GetPluginVersion() { return 1; }

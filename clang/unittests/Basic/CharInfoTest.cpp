@@ -50,44 +50,44 @@ TEST(CharInfoTest, isASCII) {
   EXPECT_FALSE(isASCII('\xff'));
 }
 
-TEST(CharInfoTest, isIdentifierHead) {
-  EXPECT_TRUE(isIdentifierHead('a'));
-  EXPECT_TRUE(isIdentifierHead('A'));
-  EXPECT_TRUE(isIdentifierHead('z'));
-  EXPECT_TRUE(isIdentifierHead('Z'));
-  EXPECT_TRUE(isIdentifierHead('_'));
+TEST(CharInfoTest, isAsciiIdentifierStart) {
+  EXPECT_TRUE(isAsciiIdentifierStart('a'));
+  EXPECT_TRUE(isAsciiIdentifierStart('A'));
+  EXPECT_TRUE(isAsciiIdentifierStart('z'));
+  EXPECT_TRUE(isAsciiIdentifierStart('Z'));
+  EXPECT_TRUE(isAsciiIdentifierStart('_'));
 
-  EXPECT_FALSE(isIdentifierHead('0'));
-  EXPECT_FALSE(isIdentifierHead('.'));
-  EXPECT_FALSE(isIdentifierHead('`'));
-  EXPECT_FALSE(isIdentifierHead('\0'));
+  EXPECT_FALSE(isAsciiIdentifierStart('0'));
+  EXPECT_FALSE(isAsciiIdentifierStart('.'));
+  EXPECT_FALSE(isAsciiIdentifierStart('`'));
+  EXPECT_FALSE(isAsciiIdentifierStart('\0'));
 
-  EXPECT_FALSE(isIdentifierHead('$'));
-  EXPECT_TRUE(isIdentifierHead('$', /*AllowDollar=*/true));
+  EXPECT_FALSE(isAsciiIdentifierStart('$'));
+  EXPECT_TRUE(isAsciiIdentifierStart('$', /*AllowDollar=*/true));
 
-  EXPECT_FALSE(isIdentifierHead('\x80'));
-  EXPECT_FALSE(isIdentifierHead('\xc2'));
-  EXPECT_FALSE(isIdentifierHead('\xff'));
+  EXPECT_FALSE(isAsciiIdentifierStart('\x80'));
+  EXPECT_FALSE(isAsciiIdentifierStart('\xc2'));
+  EXPECT_FALSE(isAsciiIdentifierStart('\xff'));
 }
 
-TEST(CharInfoTest, isIdentifierBody) {
-  EXPECT_TRUE(isIdentifierBody('a'));
-  EXPECT_TRUE(isIdentifierBody('A'));
-  EXPECT_TRUE(isIdentifierBody('z'));
-  EXPECT_TRUE(isIdentifierBody('Z'));
-  EXPECT_TRUE(isIdentifierBody('_'));
+TEST(CharInfoTest, isAsciiIdentifierContinue) {
+  EXPECT_TRUE(isAsciiIdentifierContinue('a'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('A'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('z'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('Z'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('_'));
 
-  EXPECT_TRUE(isIdentifierBody('0'));
-  EXPECT_FALSE(isIdentifierBody('.'));
-  EXPECT_FALSE(isIdentifierBody('`'));
-  EXPECT_FALSE(isIdentifierBody('\0'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('0'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('.'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('`'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('\0'));
 
-  EXPECT_FALSE(isIdentifierBody('$'));
-  EXPECT_TRUE(isIdentifierBody('$', /*AllowDollar=*/true));
+  EXPECT_FALSE(isAsciiIdentifierContinue('$'));
+  EXPECT_TRUE(isAsciiIdentifierContinue('$', /*AllowDollar=*/true));
 
-  EXPECT_FALSE(isIdentifierBody('\x80'));
-  EXPECT_FALSE(isIdentifierBody('\xc2'));
-  EXPECT_FALSE(isIdentifierBody('\xff'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('\x80'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('\xc2'));
+  EXPECT_FALSE(isAsciiIdentifierContinue('\xff'));
 }
 
 TEST(CharInfoTest, isHorizontalWhitespace) {
@@ -413,91 +413,91 @@ TEST(CharInfoTest, toUppercase) {
   EXPECT_EQ('\0', toUppercase('\0'));
 }
 
-TEST(CharInfoTest, isValidIdentifier) {
-  EXPECT_FALSE(isValidIdentifier(""));
+TEST(CharInfoTest, isValidAsciiIdentifier) {
+  EXPECT_FALSE(isValidAsciiIdentifier(""));
 
   // 1 character
-  EXPECT_FALSE(isValidIdentifier("."));
-  EXPECT_FALSE(isValidIdentifier("\n"));
-  EXPECT_FALSE(isValidIdentifier(" "));
-  EXPECT_FALSE(isValidIdentifier("\x80"));
-  EXPECT_FALSE(isValidIdentifier("\xc2"));
-  EXPECT_FALSE(isValidIdentifier("\xff"));
-  EXPECT_FALSE(isValidIdentifier("$"));
-  EXPECT_FALSE(isValidIdentifier("1"));
+  EXPECT_FALSE(isValidAsciiIdentifier("."));
+  EXPECT_FALSE(isValidAsciiIdentifier("\n"));
+  EXPECT_FALSE(isValidAsciiIdentifier(" "));
+  EXPECT_FALSE(isValidAsciiIdentifier("\x80"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\xc2"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\xff"));
+  EXPECT_FALSE(isValidAsciiIdentifier("$"));
+  EXPECT_FALSE(isValidAsciiIdentifier("1"));
 
-  EXPECT_TRUE(isValidIdentifier("_"));
-  EXPECT_TRUE(isValidIdentifier("a"));
-  EXPECT_TRUE(isValidIdentifier("z"));
-  EXPECT_TRUE(isValidIdentifier("A"));
-  EXPECT_TRUE(isValidIdentifier("Z"));
-  EXPECT_TRUE(isValidIdentifier("$", /*AllowDollar=*/true));
+  EXPECT_TRUE(isValidAsciiIdentifier("_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("a"));
+  EXPECT_TRUE(isValidAsciiIdentifier("z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("A"));
+  EXPECT_TRUE(isValidAsciiIdentifier("Z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("$", /*AllowDollar=*/true));
 
   // 2 characters, '_' suffix
-  EXPECT_FALSE(isValidIdentifier("._"));
-  EXPECT_FALSE(isValidIdentifier("\n_"));
-  EXPECT_FALSE(isValidIdentifier(" _"));
-  EXPECT_FALSE(isValidIdentifier("\x80_"));
-  EXPECT_FALSE(isValidIdentifier("\xc2_"));
-  EXPECT_FALSE(isValidIdentifier("\xff_"));
-  EXPECT_FALSE(isValidIdentifier("$_"));
-  EXPECT_FALSE(isValidIdentifier("1_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("._"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\n_"));
+  EXPECT_FALSE(isValidAsciiIdentifier(" _"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\x80_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\xc2_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("\xff_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("$_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("1_"));
 
-  EXPECT_TRUE(isValidIdentifier("__"));
-  EXPECT_TRUE(isValidIdentifier("a_"));
-  EXPECT_TRUE(isValidIdentifier("z_"));
-  EXPECT_TRUE(isValidIdentifier("A_"));
-  EXPECT_TRUE(isValidIdentifier("Z_"));
-  EXPECT_TRUE(isValidIdentifier("$_", /*AllowDollar=*/true));
+  EXPECT_TRUE(isValidAsciiIdentifier("__"));
+  EXPECT_TRUE(isValidAsciiIdentifier("a_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("z_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("A_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("Z_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("$_", /*AllowDollar=*/true));
 
   // 2 characters, '_' prefix
-  EXPECT_FALSE(isValidIdentifier("_."));
-  EXPECT_FALSE(isValidIdentifier("_\n"));
-  EXPECT_FALSE(isValidIdentifier("_ "));
-  EXPECT_FALSE(isValidIdentifier("_\x80"));
-  EXPECT_FALSE(isValidIdentifier("_\xc2"));
-  EXPECT_FALSE(isValidIdentifier("_\xff"));
-  EXPECT_FALSE(isValidIdentifier("_$"));
-  EXPECT_TRUE(isValidIdentifier("_1"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_."));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\n"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_ "));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\x80"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\xc2"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\xff"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_$"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_1"));
 
-  EXPECT_TRUE(isValidIdentifier("__"));
-  EXPECT_TRUE(isValidIdentifier("_a"));
-  EXPECT_TRUE(isValidIdentifier("_z"));
-  EXPECT_TRUE(isValidIdentifier("_A"));
-  EXPECT_TRUE(isValidIdentifier("_Z"));
-  EXPECT_TRUE(isValidIdentifier("_$", /*AllowDollar=*/true));
+  EXPECT_TRUE(isValidAsciiIdentifier("__"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_a"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_A"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_Z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_$", /*AllowDollar=*/true));
 
   // 3 characters, '__' prefix
-  EXPECT_FALSE(isValidIdentifier("__."));
-  EXPECT_FALSE(isValidIdentifier("__\n"));
-  EXPECT_FALSE(isValidIdentifier("__ "));
-  EXPECT_FALSE(isValidIdentifier("__\x80"));
-  EXPECT_FALSE(isValidIdentifier("__\xc2"));
-  EXPECT_FALSE(isValidIdentifier("__\xff"));
-  EXPECT_FALSE(isValidIdentifier("__$"));
-  EXPECT_TRUE(isValidIdentifier("__1"));
+  EXPECT_FALSE(isValidAsciiIdentifier("__."));
+  EXPECT_FALSE(isValidAsciiIdentifier("__\n"));
+  EXPECT_FALSE(isValidAsciiIdentifier("__ "));
+  EXPECT_FALSE(isValidAsciiIdentifier("__\x80"));
+  EXPECT_FALSE(isValidAsciiIdentifier("__\xc2"));
+  EXPECT_FALSE(isValidAsciiIdentifier("__\xff"));
+  EXPECT_FALSE(isValidAsciiIdentifier("__$"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__1"));
 
-  EXPECT_TRUE(isValidIdentifier("___"));
-  EXPECT_TRUE(isValidIdentifier("__a"));
-  EXPECT_TRUE(isValidIdentifier("__z"));
-  EXPECT_TRUE(isValidIdentifier("__A"));
-  EXPECT_TRUE(isValidIdentifier("__Z"));
-  EXPECT_TRUE(isValidIdentifier("__$", /*AllowDollar=*/true));
+  EXPECT_TRUE(isValidAsciiIdentifier("___"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__a"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__A"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__Z"));
+  EXPECT_TRUE(isValidAsciiIdentifier("__$", /*AllowDollar=*/true));
 
   // 3 characters, '_' prefix and suffix
-  EXPECT_FALSE(isValidIdentifier("_._"));
-  EXPECT_FALSE(isValidIdentifier("_\n_"));
-  EXPECT_FALSE(isValidIdentifier("_ _"));
-  EXPECT_FALSE(isValidIdentifier("_\x80_"));
-  EXPECT_FALSE(isValidIdentifier("_\xc2_"));
-  EXPECT_FALSE(isValidIdentifier("_\xff_"));
-  EXPECT_FALSE(isValidIdentifier("_$_"));
-  EXPECT_TRUE(isValidIdentifier("_1_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_._"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\n_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_ _"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\x80_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\xc2_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_\xff_"));
+  EXPECT_FALSE(isValidAsciiIdentifier("_$_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_1_"));
 
-  EXPECT_TRUE(isValidIdentifier("___"));
-  EXPECT_TRUE(isValidIdentifier("_a_"));
-  EXPECT_TRUE(isValidIdentifier("_z_"));
-  EXPECT_TRUE(isValidIdentifier("_A_"));
-  EXPECT_TRUE(isValidIdentifier("_Z_"));
-  EXPECT_TRUE(isValidIdentifier("_$_", /*AllowDollar=*/true));
+  EXPECT_TRUE(isValidAsciiIdentifier("___"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_a_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_z_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_A_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_Z_"));
+  EXPECT_TRUE(isValidAsciiIdentifier("_$_", /*AllowDollar=*/true));
 }

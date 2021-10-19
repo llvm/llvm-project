@@ -26,7 +26,7 @@ struct Y {
 
 X getX();
 
-// CHECK-LABEL: define void @_Z11if_destructi(
+// CHECK-LABEL: define{{.*}} void @_Z11if_destructi(
 void if_destruct(int z) {
   // Verify that the condition variable is destroyed at the end of the
   // "if" statement.
@@ -95,7 +95,7 @@ void switch_destruct(int z) {
 
 int foo();
 
-// CHECK-LABEL: define void @_Z14while_destructi
+// CHECK-LABEL: define{{.*}} void @_Z14while_destructi
 void while_destruct(int z) {
   // CHECK: [[Z:%.*]] = alloca i32
   // CHECK: [[CLEANUPDEST:%.*]] = alloca i32
@@ -135,7 +135,7 @@ void while_destruct(int z) {
   // CHECK: ret
 }
 
-// CHECK-LABEL: define void @_Z12for_destructi(
+// CHECK-LABEL: define{{.*}} void @_Z12for_destructi(
 void for_destruct(int z) {
   // CHECK: [[Z:%.*]] = alloca i32
   // CHECK: [[CLEANUPDEST:%.*]] = alloca i32
@@ -224,7 +224,7 @@ void for_destruct(int z) {
 }
 
 void do_destruct(int z) {
-  // CHECK-LABEL: define void @_Z11do_destruct
+  // CHECK-LABEL: define{{.*}} void @_Z11do_destruct
   do {
     // CHECK: store i32 77
     z = 77;

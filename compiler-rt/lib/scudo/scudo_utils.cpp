@@ -39,7 +39,7 @@ extern int VSNPrintf(char *buff, int buff_length, const char *format,
 
 namespace __scudo {
 
-FORMAT(1, 2) void NORETURN dieWithMessage(const char *Format, ...) {
+void dieWithMessage(const char *Format, ...) {
   static const char ScudoError[] = "Scudo ERROR: ";
   static constexpr uptr PrefixSize = sizeof(ScudoError) - 1;
   // Our messages are tiny, 256 characters is more than enough.
@@ -121,7 +121,7 @@ bool hasHardwareCRC32ARMPosix() { return false; }
 // initialized after the other globals, so we can check its value to know if
 // calling getauxval is safe.
 extern "C" SANITIZER_WEAK_ATTRIBUTE char *__progname;
-INLINE bool areBionicGlobalsInitialized() {
+inline bool areBionicGlobalsInitialized() {
   return !SANITIZER_ANDROID || (&__progname && __progname);
 }
 

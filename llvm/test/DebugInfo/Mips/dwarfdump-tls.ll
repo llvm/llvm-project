@@ -1,13 +1,13 @@
-; RUN: llc -O0 -march=mips -mcpu=mips32r2 -filetype=obj \
+; RUN: llc -O0 -mtriple=mips -mcpu=mips32r2 -filetype=obj \
 ; RUN:     -split-dwarf-file=foo.dwo -o=%t-32.o < %s
 ; RUN: llvm-dwarfdump %t-32.o 2>&1 | FileCheck %s
-; RUN: llc -O0 -march=mips64 -mcpu=mips64r2 -filetype=obj \
+; RUN: llc -O0 -mtriple=mips64 -mcpu=mips64r2 -filetype=obj \
 ; RUN:     -split-dwarf-file=foo.dwo -o=%t-64.o < %s
 ; RUN: llvm-dwarfdump %t-64.o 2>&1 | FileCheck %s
 
-; RUN: llc -O0 -march=mips -mcpu=mips32r2 -filetype=asm \
+; RUN: llc -O0 -mtriple=mips -mcpu=mips32r2 -filetype=asm \
 ; RUN:     -split-dwarf-file=foo.dwo < %s | FileCheck -check-prefix=ASM32 %s
-; RUN: llc -O0 -march=mips64 -mcpu=mips64r2 -filetype=asm \
+; RUN: llc -O0 -mtriple=mips64 -mcpu=mips64r2 -filetype=asm \
 ; RUN:     -split-dwarf-file=foo.dwo < %s | FileCheck -check-prefix=ASM64 %s
 
 @x = thread_local global i32 5, align 4, !dbg !0

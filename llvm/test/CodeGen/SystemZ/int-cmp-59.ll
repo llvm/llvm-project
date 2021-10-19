@@ -9,7 +9,7 @@
 define i64 @main() {
 ; CHECK-LABEL: bb.0.entry:
 ; CHECK: %1:addr64bit = LARL @c
-; CHECK: %2:gr64bit = LLGC %1, 0, $noreg :: (dereferenceable load 1 from @c, align 4)
+; CHECK: %2:gr64bit = LLGC %1, 0, $noreg :: (dereferenceable load (s8) from @c, align 4)
 ; CHECK-NEXT: %4:gr64bit = IMPLICIT_DEF
 ; CHECK-NEXT: %3:gr64bit = RISBGN %4, killed %2, 63, 191, 0
 ; CHECK-NEXT: %5:gr64bit = LCGR killed %3, implicit-def dead $cc

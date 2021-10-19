@@ -97,7 +97,7 @@ define <2 x half> @test_fmax_legacy_ugt_v2f16(<2 x half> %a, <2 x half> %b) #0 {
 ; VI-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v2, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NNAN-NEXT:    v_max_f16_e32 v0, v0, v1
-; VI-NNAN-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NNAN-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SAFE-LABEL: test_fmax_legacy_ugt_v2f16:
@@ -178,7 +178,7 @@ define <3 x half> @test_fmax_legacy_ugt_v3f16(<3 x half> %a, <3 x half> %b) #0 {
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v4, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-NNAN-NEXT:    v_max_f16_e32 v0, v0, v2
 ; VI-NNAN-NEXT:    v_max_f16_e32 v1, v1, v3
-; VI-NNAN-NEXT:    v_or_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NNAN-NEXT:    v_or_b32_e32 v0, v0, v4
 ; VI-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SAFE-LABEL: test_fmax_legacy_ugt_v3f16:
@@ -231,9 +231,9 @@ define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v7, v6
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v7, v6
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v5, v4
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
@@ -260,9 +260,9 @@ define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; VI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v7, v6
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v7, v6
 ; VI-SAFE-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v5, v4
 ; VI-SAFE-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
@@ -280,11 +280,11 @@ define <4 x half> @test_fmax_legacy_ugt_v4f16(<4 x half> %a, <4 x half> %b) #0 {
 ; VI-NNAN:       ; %bb.0:
 ; VI-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v4, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NNAN-NEXT:    v_max_f16_e32 v1, v1, v3
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v5, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NNAN-NEXT:    v_max_f16_e32 v1, v1, v3
 ; VI-NNAN-NEXT:    v_max_f16_e32 v0, v0, v2
-; VI-NNAN-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NNAN-NEXT:    v_or_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NNAN-NEXT:    v_or_b32_e32 v0, v0, v5
+; VI-NNAN-NEXT:    v_or_b32_e32 v1, v1, v4
 ; VI-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SAFE-LABEL: test_fmax_legacy_ugt_v4f16:
@@ -347,17 +347,17 @@ define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; GFX9-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v14, 16, v7
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v15, v14
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v12, 16, v6
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
-; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc
-; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v13, v12
+; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v15, v14
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc
-; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v11, v10
+; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc
+; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v13, v12
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; GFX9-SAFE-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc
+; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v11, v10
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc
 ; GFX9-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v9, v8
 ; GFX9-SAFE-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc
@@ -394,17 +394,17 @@ define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; VI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v14, 16, v7
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v15, v14
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v12, 16, v6
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc
-; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v13, v12
+; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v15, v14
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc
-; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v11, v10
+; VI-SAFE-NEXT:    v_cndmask_b32_e32 v14, v14, v15, vcc
+; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v13, v12
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
 ; VI-SAFE-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; VI-SAFE-NEXT:    v_cndmask_b32_e32 v12, v12, v13, vcc
+; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v11, v10
 ; VI-SAFE-NEXT:    v_cndmask_b32_e32 v10, v10, v11, vcc
 ; VI-SAFE-NEXT:    v_cmp_nle_f16_e32 vcc, v9, v8
 ; VI-SAFE-NEXT:    v_cndmask_b32_e32 v8, v8, v9, vcc
@@ -430,17 +430,17 @@ define <8 x half> @test_fmax_legacy_ugt_v8f16(<8 x half> %a, <8 x half> %b) #0 {
 ; VI-NNAN:       ; %bb.0:
 ; VI-NNAN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v8, v3, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NNAN-NEXT:    v_max_f16_e32 v3, v3, v7
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v9, v2, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NNAN-NEXT:    v_max_f16_e32 v2, v2, v6
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v10, v1, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NNAN-NEXT:    v_max_f16_e32 v1, v1, v5
 ; VI-NNAN-NEXT:    v_max_f16_sdwa v11, v0, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NNAN-NEXT:    v_max_f16_e32 v3, v3, v7
+; VI-NNAN-NEXT:    v_max_f16_e32 v2, v2, v6
+; VI-NNAN-NEXT:    v_max_f16_e32 v1, v1, v5
 ; VI-NNAN-NEXT:    v_max_f16_e32 v0, v0, v4
-; VI-NNAN-NEXT:    v_or_b32_sdwa v0, v0, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NNAN-NEXT:    v_or_b32_sdwa v1, v1, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NNAN-NEXT:    v_or_b32_sdwa v2, v2, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NNAN-NEXT:    v_or_b32_sdwa v3, v3, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NNAN-NEXT:    v_or_b32_e32 v0, v0, v11
+; VI-NNAN-NEXT:    v_or_b32_e32 v1, v1, v10
+; VI-NNAN-NEXT:    v_or_b32_e32 v2, v2, v9
+; VI-NNAN-NEXT:    v_or_b32_e32 v3, v3, v8
 ; VI-NNAN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-SAFE-LABEL: test_fmax_legacy_ugt_v8f16:

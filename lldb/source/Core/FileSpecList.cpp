@@ -13,7 +13,7 @@
 
 #include <utility>
 
-#include <stdint.h>
+#include <cstdint>
 
 using namespace lldb_private;
 using namespace std;

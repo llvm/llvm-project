@@ -37,6 +37,7 @@
 namespace llvm {
 
 class MemoryBuffer;
+class MemoryBufferRef;
 class Twine;
 
 namespace vfs {
@@ -463,7 +464,8 @@ public:
   /// false if the file or directory already exists in the file system with
   /// different contents.
   bool addFileNoOwn(const Twine &Path, time_t ModificationTime,
-                    llvm::MemoryBuffer *Buffer, Optional<uint32_t> User = None,
+                    const llvm::MemoryBufferRef &Buffer,
+                    Optional<uint32_t> User = None,
                     Optional<uint32_t> Group = None,
                     Optional<llvm::sys::fs::file_type> Type = None,
                     Optional<llvm::sys::fs::perms> Perms = None);
@@ -498,7 +500,7 @@ llvm::sys::fs::UniqueID getNextVirtualUniqueID();
 
 /// Gets a \p FileSystem for a virtual file system described in YAML
 /// format.
-IntrusiveRefCntPtr<FileSystem>
+std::unique_ptr<FileSystem>
 getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                llvm::SourceMgr::DiagHandlerTy DiagHandler,
                StringRef YAMLFilePath, void *DiagContext = nullptr,
@@ -514,13 +516,15 @@ struct YAMLVFSEntry {
   bool IsDirectory = false;
 };
 
-class VFSFromYamlDirIterImpl;
+class RedirectingFSDirIterImpl;
 class RedirectingFileSystemParser;
 
 /// A virtual file system parsed from a YAML file.
 ///
-/// Currently, this class allows creating virtual directories and mapping
-/// virtual file paths to existing external files, available in \c ExternalFS.
+/// Currently, this class allows creating virtual files and directories. Virtual
+/// files map to existing external files in \c ExternalFS, and virtual
+/// directories may either map to existing directories in \c ExternalFS or list
+/// their contents in the form of other virtual directories and/or files.
 ///
 /// The basic structure of the parsed file is:
 /// \verbatim
@@ -539,7 +543,7 @@ class RedirectingFileSystemParser;
 ///   'overlay-relative': <boolean, default=false>
 ///   'fallthrough': <boolean, default=true>
 ///
-/// Virtual directories are represented as
+/// Virtual directories that list their contents are represented as
 /// \verbatim
 /// {
 ///   'type': 'directory',
@@ -548,7 +552,7 @@ class RedirectingFileSystemParser;
 /// }
 /// \endverbatim
 ///
-/// The default attributes for virtual directories are:
+/// The default attributes for such virtual directories are:
 /// \verbatim
 /// MTime = now() when created
 /// Perms = 0777
@@ -557,24 +561,56 @@ class RedirectingFileSystemParser;
 /// UniqueID = unspecified unique value
 /// \endverbatim
 ///
+/// When a path prefix matches such a directory, the next component in the path
+/// is matched against the entries in the 'contents' array.
+///
+/// Re-mapped directories, on the other hand, are represented as
+/// /// \verbatim
+/// {
+///   'type': 'directory-remap',
+///   'name': <string>,
+///   'use-external-name': <boolean>, # Optional
+///   'external-contents': <path to external directory>
+/// }
+/// \endverbatim
+///
+/// and inherit their attributes from the external directory. When a path
+/// prefix matches such an entry, the unmatched components are appended to the
+/// 'external-contents' path, and the resulting path is looked up in the
+/// external file system instead.
+///
 /// Re-mapped files are represented as
 /// \verbatim
 /// {
 ///   'type': 'file',
 ///   'name': <string>,
-///   'use-external-name': <boolean> # Optional
+///   'use-external-name': <boolean>, # Optional
 ///   'external-contents': <path to external file>
 /// }
 /// \endverbatim
 ///
-/// and inherit their attributes from the external contents.
+/// Their attributes and file contents are determined by looking up the file at
+/// their 'external-contents' path in the external file system.
 ///
-/// In both cases, the 'name' field may contain multiple path components (e.g.
-/// /path/to/file). However, any directory that contains more than one child
-/// must be uniquely represented by a directory entry.
+/// For 'file', 'directory' and 'directory-remap' entries the 'name' field may
+/// contain multiple path components (e.g. /path/to/file). However, any
+/// directory in such a path that contains more than one child must be uniquely
+/// represented by a 'directory' entry.
+///
+/// When the 'use-external-name' field is set, calls to \a vfs::File::status()
+/// give the external (remapped) filesystem name instead of the name the file
+/// was accessed by. This is an intentional leak through the \a
+/// RedirectingFileSystem abstraction layer. It enables clients to discover
+/// (and use) the external file location when communicating with users or tools
+/// that don't use the same VFS overlay.
+///
+/// FIXME: 'use-external-name' causes behaviour that's inconsistent with how
+/// "real" filesystems behave. Maybe there should be a separate channel for
+/// this information.
 class RedirectingFileSystem : public vfs::FileSystem {
 public:
-  enum EntryKind { EK_Directory, EK_File };
+  enum EntryKind { EK_Directory, EK_DirectoryRemap, EK_File };
+  enum NameKind { NK_NotSet, NK_External, NK_Virtual };
 
   /// A single file or directory in the VFS.
   class Entry {
@@ -589,17 +625,20 @@ public:
     EntryKind getKind() const { return Kind; }
   };
 
-  class RedirectingDirectoryEntry : public Entry {
+  /// A directory in the vfs with explicitly specified contents.
+  class DirectoryEntry : public Entry {
     std::vector<std::unique_ptr<Entry>> Contents;
     Status S;
 
   public:
-    RedirectingDirectoryEntry(StringRef Name,
-                              std::vector<std::unique_ptr<Entry>> Contents,
-                              Status S)
+    /// Constructs a directory entry with explicitly specified contents.
+    DirectoryEntry(StringRef Name, std::vector<std::unique_ptr<Entry>> Contents,
+                   Status S)
         : Entry(EK_Directory, Name), Contents(std::move(Contents)),
           S(std::move(S)) {}
-    RedirectingDirectoryEntry(StringRef Name, Status S)
+
+    /// Constructs an empty directory entry.
+    DirectoryEntry(StringRef Name, Status S)
         : Entry(EK_Directory, Name), S(std::move(S)) {}
 
     Status getStatus() { return S; }
@@ -618,23 +657,22 @@ public:
     static bool classof(const Entry *E) { return E->getKind() == EK_Directory; }
   };
 
-  class RedirectingFileEntry : public Entry {
-  public:
-    enum NameKind { NK_NotSet, NK_External, NK_Virtual };
-
-  private:
+  /// A file or directory in the vfs that is mapped to a file or directory in
+  /// the external filesystem.
+  class RemapEntry : public Entry {
     std::string ExternalContentsPath;
     NameKind UseName;
 
-  public:
-    RedirectingFileEntry(StringRef Name, StringRef ExternalContentsPath,
-                         NameKind UseName)
-        : Entry(EK_File, Name), ExternalContentsPath(ExternalContentsPath),
+  protected:
+    RemapEntry(EntryKind K, StringRef Name, StringRef ExternalContentsPath,
+               NameKind UseName)
+        : Entry(K, Name), ExternalContentsPath(ExternalContentsPath),
           UseName(UseName) {}
 
+  public:
     StringRef getExternalContentsPath() const { return ExternalContentsPath; }
 
-    /// whether to use the external path as the name for this file.
+    /// Whether to use the external path as the name for this file or directory.
     bool useExternalName(bool GlobalUseExternalName) const {
       return UseName == NK_NotSet ? GlobalUseExternalName
                                   : (UseName == NK_External);
@@ -642,16 +680,82 @@ public:
 
     NameKind getUseName() const { return UseName; }
 
+    static bool classof(const Entry *E) {
+      switch (E->getKind()) {
+      case EK_DirectoryRemap:
+        LLVM_FALLTHROUGH;
+      case EK_File:
+        return true;
+      case EK_Directory:
+        return false;
+      }
+      llvm_unreachable("invalid entry kind");
+    }
+  };
+
+  /// A directory in the vfs that maps to a directory in the external file
+  /// system.
+  class DirectoryRemapEntry : public RemapEntry {
+  public:
+    DirectoryRemapEntry(StringRef Name, StringRef ExternalContentsPath,
+                        NameKind UseName)
+        : RemapEntry(EK_DirectoryRemap, Name, ExternalContentsPath, UseName) {}
+
+    static bool classof(const Entry *E) {
+      return E->getKind() == EK_DirectoryRemap;
+    }
+  };
+
+  /// A file in the vfs that maps to a file in the external file system.
+  class FileEntry : public RemapEntry {
+  public:
+    FileEntry(StringRef Name, StringRef ExternalContentsPath, NameKind UseName)
+        : RemapEntry(EK_File, Name, ExternalContentsPath, UseName) {}
+
     static bool classof(const Entry *E) { return E->getKind() == EK_File; }
   };
 
+  /// Represents the result of a path lookup into the RedirectingFileSystem.
+  struct LookupResult {
+    /// The entry the looked-up path corresponds to.
+    Entry *E;
+
+  private:
+    /// When the found Entry is a DirectoryRemapEntry, stores the path in the
+    /// external file system that the looked-up path in the virtual file system
+    //  corresponds to.
+    Optional<std::string> ExternalRedirect;
+
+  public:
+    LookupResult(Entry *E, sys::path::const_iterator Start,
+                 sys::path::const_iterator End);
+
+    /// If the found Entry maps the the input path to a path in the external
+    /// file system (i.e. it is a FileEntry or DirectoryRemapEntry), returns
+    /// that path.
+    Optional<StringRef> getExternalRedirect() const {
+      if (isa<DirectoryRemapEntry>(E))
+        return StringRef(*ExternalRedirect);
+      if (auto *FE = dyn_cast<FileEntry>(E))
+        return FE->getExternalContentsPath();
+      return None;
+    }
+  };
+
 private:
-  friend class VFSFromYamlDirIterImpl;
+  friend class RedirectingFSDirIterImpl;
   friend class RedirectingFileSystemParser;
 
-  bool shouldUseExternalFS() const {
-    return ExternalFSValidWD && IsFallthrough;
-  }
+  bool shouldUseExternalFS() const { return IsFallthrough; }
+
+  /// Canonicalize path by removing ".", "..", "./", components. This is
+  /// a VFS request, do not bother about symlinks in the path components
+  /// but canonicalize in order to perform the correct entry search.
+  std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
+
+  /// Whether to fall back to the external file system when an operation fails
+  /// with the given error code on a path associated with the provided Entry.
+  bool shouldFallBackToExternalFS(std::error_code EC, Entry *E = nullptr) const;
 
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
@@ -659,7 +763,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_lower(rhs)))
+    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }
@@ -669,9 +773,6 @@ private:
 
   /// The current working directory of the file system.
   std::string WorkingDirectory;
-
-  /// Whether the current working directory is valid for the external FS.
-  bool ExternalFSValidWD = false;
 
   /// The file system to use for external references.
   IntrusiveRefCntPtr<FileSystem> ExternalFS;
@@ -709,25 +810,34 @@ private:
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
-  /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly
-  /// recursing into the contents of \p From if it is a directory.
-  ErrorOr<Entry *> lookupPath(llvm::sys::path::const_iterator Start,
-                              llvm::sys::path::const_iterator End,
-                              Entry *From) const;
+  /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly recursing
+  /// into the contents of \p From if it is a directory. Returns a LookupResult
+  /// giving the matched entry and, if that entry is a FileEntry or
+  /// DirectoryRemapEntry, the path it redirects to in the external file system.
+  ErrorOr<LookupResult> lookupPathImpl(llvm::sys::path::const_iterator Start,
+                                       llvm::sys::path::const_iterator End,
+                                       Entry *From) const;
 
-  /// Get the status of a given an \c Entry.
-  ErrorOr<Status> status(const Twine &Path, Entry *E);
+  /// Get the status for a path with the provided \c LookupResult.
+  ErrorOr<Status> status(const Twine &Path, const LookupResult &Result);
 
 public:
-  /// Looks up \p Path in \c Roots.
-  ErrorOr<Entry *> lookupPath(const Twine &Path) const;
+  /// Looks up \p Path in \c Roots and returns a LookupResult giving the
+  /// matched entry and, if the entry was a FileEntry or DirectoryRemapEntry,
+  /// the path it redirects to in the external file system.
+  ErrorOr<LookupResult> lookupPath(StringRef Path) const;
 
   /// Parses \p Buffer, which is expected to be in YAML format and
   /// returns a virtual file system representing its contents.
-  static RedirectingFileSystem *
+  static std::unique_ptr<RedirectingFileSystem>
   create(std::unique_ptr<MemoryBuffer> Buffer,
          SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
          void *DiagContext, IntrusiveRefCntPtr<FileSystem> ExternalFS);
+
+  /// Redirect each of the remapped files from first to second.
+  static std::unique_ptr<RedirectingFileSystem>
+  create(ArrayRef<std::pair<std::string, std::string>> RemappedFiles,
+         bool UseExternalNames, FileSystem &ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;

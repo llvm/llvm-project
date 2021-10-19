@@ -1,10 +1,10 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 declare i32 @gf2(i32)
 declare i32 @gf1(i32)
 
 define  void @tw1(i32 addrspace(4)* noalias nocapture readonly %A, i32 addrspace(4)* noalias nocapture %B) local_unnamed_addr #2 {
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'tw1':
+; CHECK: Divergence Analysis' for function 'tw1':
 ; CHECK: DIVERGENT: i32 addrspace(4)* %A
 ; CHECK: DIVERGENT: i32 addrspace(4)* %B
 entry:

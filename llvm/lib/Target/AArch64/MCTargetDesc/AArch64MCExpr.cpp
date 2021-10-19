@@ -70,6 +70,7 @@ StringRef AArch64MCExpr::getVariantKindName() const {
   case VK_ABS_PAGE_NC:         return ":pg_hi21_nc:";
   case VK_GOT:                 return ":got:";
   case VK_GOT_PAGE:            return ":got:";
+  case VK_GOT_PAGE_LO15:       return ":gotpage_lo15:";
   case VK_GOT_LO12:            return ":got_lo12:";
   case VK_GOTTPREL:            return ":gottprel:";
   case VK_GOTTPREL_PAGE:       return ":gottprel:";

@@ -183,7 +183,7 @@ def test_foreach():
 	assert(not list[1].is_equal(list[2]))
 
 	def fail(bs):
-		raise "fail"
+		raise Exception("fail")
 
 	caught = False
 	try:
@@ -217,7 +217,7 @@ def test_every():
 	assert(not us.every_set(not_in_A))
 
 	def fail(s):
-		raise "fail"
+		raise Exception("fail")
 
 	caught = False
 	try:
@@ -289,7 +289,7 @@ def test_schedule_tree():
 	assert(count[0] == 8)
 
 	def fail_map(node):
-		raise "fail"
+		raise Exception("fail")
 		return node
 	caught = False
 	try:
@@ -318,7 +318,7 @@ def test_schedule_tree():
 	assert(not root.every_descendant(is_not_domain))
 
 	def fail(node):
-		raise "fail"
+		raise Exception("fail")
 	caught = False
 	try:
 		root.every_descendant(fail)
@@ -392,7 +392,7 @@ def test_ast_build():
 	def fail_inc_count_ast(node, build):
 		count_ast_fail[0] += 1
 		if do_fail:
-			raise "fail"
+			raise Exception("fail")
 		return node
 	build = isl.ast_build()
 	build = build.set_at_each_domain(fail_inc_count_ast)

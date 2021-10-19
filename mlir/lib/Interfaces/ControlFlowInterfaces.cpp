@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -73,13 +73,19 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+// A constant value to represent unknown number of region invocations.
+const int64_t mlir::kUnknownNumRegionInvocations = -1;
+
 /// Verify that types match along all region control flow edges originating from
 /// `sourceNo` (region # if source is a region, llvm::None if source is parent
 /// op). `getInputsTypesForRegion` is a function that returns the types of the
-/// inputs that flow from `sourceIndex' to the given region.
-static LogicalResult verifyTypesAlongAllEdges(
-    Operation *op, Optional<unsigned> sourceNo,
-    function_ref<TypeRange(Optional<unsigned>)> getInputsTypesForRegion) {
+/// inputs that flow from `sourceIndex' to the given region, or llvm::None if
+/// the exact type match verification is not necessary (e.g., if the Op verifies
+/// the match itself).
+static LogicalResult
+verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
+                         function_ref<Optional<TypeRange>(Optional<unsigned>)>
+                             getInputsTypesForRegion) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
   SmallVector<RegionSuccessor, 2> successors;
@@ -103,35 +109,37 @@ static LogicalResult verifyTypesAlongAllEdges(
       if (sourceNo)
         diag << "Region #" << sourceNo.getValue();
       else
-        diag << op->getName();
+        diag << "parent operands";
 
       diag << " to ";
       if (succRegionNo)
         diag << "Region #" << succRegionNo.getValue();
       else
-        diag << op->getName();
+        diag << "parent results";
       return diag;
     };
 
-    TypeRange sourceTypes = getInputsTypesForRegion(succRegionNo);
+    Optional<TypeRange> sourceTypes = getInputsTypesForRegion(succRegionNo);
+    if (!sourceTypes.hasValue())
+      continue;
+
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
-    if (sourceTypes.size() != succInputsTypes.size()) {
+    if (sourceTypes->size() != succInputsTypes.size()) {
       InFlightDiagnostic diag = op->emitOpError(" region control flow edge ");
-      return printEdgeName(diag)
-             << " has " << sourceTypes.size()
-             << " source operands, but target successor needs "
-             << succInputsTypes.size();
+      return printEdgeName(diag) << ": source has " << sourceTypes->size()
+                                 << " operands, but target successor needs "
+                                 << succInputsTypes.size();
     }
 
     for (auto typesIdx :
-         llvm::enumerate(llvm::zip(sourceTypes, succInputsTypes))) {
+         llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
       if (sourceType != inputType) {
         InFlightDiagnostic diag = op->emitOpError(" along control flow edge ");
         return printEdgeName(diag)
-               << " source #" << typesIdx.index() << " type " << sourceType
-               << " should match input #" << typesIdx.index() << " type "
+               << ": source type #" << typesIdx.index() << " " << sourceType
+               << " should match input type #" << typesIdx.index() << " "
                << inputType;
       }
     }
@@ -168,34 +176,40 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   for (unsigned regionNo : llvm::seq(0U, op->getNumRegions())) {
     Region &region = op->getRegion(regionNo);
 
-    // Since the interface cannnot distinguish between different ReturnLike
-    // ops within the region branching to different successors, all ReturnLike
-    // ops in this region should have the same operand types. We will then use
-    // one of them as the representative for type matching.
+    // Since there can be multiple `ReturnLike` terminators or others
+    // implementing the `RegionBranchTerminatorOpInterface`, all should have the
+    // same operand types when passing them to the same region.
 
-    Operation *regionReturn = nullptr;
+    Optional<OperandRange> regionReturnOperands;
     for (Block &block : region) {
       Operation *terminator = block.getTerminator();
-      if (!terminator->hasTrait<OpTrait::ReturnLike>())
+      auto terminatorOperands =
+          getRegionBranchSuccessorOperands(terminator, regionNo);
+      if (!terminatorOperands)
         continue;
 
-      if (!regionReturn) {
-        regionReturn = terminator;
+      if (!regionReturnOperands) {
+        regionReturnOperands = terminatorOperands;
         continue;
       }
 
       // Found more than one ReturnLike terminator. Make sure the operand types
       // match with the first one.
-      if (regionReturn->getOperandTypes() != terminator->getOperandTypes())
+      if (regionReturnOperands->getTypes() != terminatorOperands->getTypes())
         return op->emitOpError("Region #")
                << regionNo
                << " operands mismatch between return-like terminators";
     }
 
-    auto inputTypesFromRegion = [&](Optional<unsigned> regionNo) -> TypeRange {
-      // All successors get the same set of operands.
-      return regionReturn ? TypeRange(regionReturn->getOperands().getTypes())
-                          : TypeRange();
+    auto inputTypesFromRegion =
+        [&](Optional<unsigned> regionNo) -> Optional<TypeRange> {
+      // If there is no return-like terminator, the op itself should verify
+      // type consistency.
+      if (!regionReturnOperands)
+        return llvm::None;
+
+      // All successors get the same set of operand types.
+      return TypeRange(regionReturnOperands->getTypes());
     };
 
     if (failed(verifyTypesAlongAllEdges(op, regionNo, inputTypesFromRegion)))
@@ -203,4 +217,50 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// RegionBranchTerminatorOpInterface
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given operation is either annotated with the
+/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
+bool mlir::isRegionReturnLike(Operation *operation) {
+  return dyn_cast<RegionBranchTerminatorOpInterface>(operation) ||
+         operation->hasTrait<OpTrait::ReturnLike>();
+}
+
+/// Returns the mutable operands that are passed to the region with the given
+/// `regionIndex`. If the operation does not implement the
+/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
+/// result will be `llvm::None`. In all other cases, the resulting
+/// `OperandRange` represents all operands that are passed to the specified
+/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// passed to the parent operation will be returned.
+Optional<MutableOperandRange>
+mlir::getMutableRegionBranchSuccessorOperands(Operation *operation,
+                                              Optional<unsigned> regionIndex) {
+  // Try to query a RegionBranchTerminatorOpInterface to determine
+  // all successor operands that will be passed to the successor
+  // input arguments.
+  if (auto regionTerminatorInterface =
+          dyn_cast<RegionBranchTerminatorOpInterface>(operation))
+    return regionTerminatorInterface.getMutableSuccessorOperands(regionIndex);
+
+  // TODO: The ReturnLike trait should imply a default implementation of the
+  // RegionBranchTerminatorOpInterface. This would make this code significantly
+  // easier. Furthermore, this may even make this function obsolete.
+  if (operation->hasTrait<OpTrait::ReturnLike>())
+    return MutableOperandRange(operation);
+  return llvm::None;
+}
+
+/// Returns the read only operands that are passed to the region with the given
+/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
+/// information.
+Optional<OperandRange>
+mlir::getRegionBranchSuccessorOperands(Operation *operation,
+                                       Optional<unsigned> regionIndex) {
+  auto range = getMutableRegionBranchSuccessorOperands(operation, regionIndex);
+  return range ? Optional<OperandRange>(*range) : llvm::None;
 }

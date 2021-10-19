@@ -30,6 +30,7 @@ Sections:
   - Name:            .text
     Type:            SHT_SYMTAB
     Flags:           [ ]
+    Link:            0
     AddressAlign:    0x0000000000000004
     Content:         DEADBEEFBAADF00D
 ...

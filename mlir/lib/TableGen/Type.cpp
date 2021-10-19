@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Type.h"
+#include "mlir/TableGen/Dialect.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/TableGen/Record.h"
 
@@ -34,6 +36,15 @@ bool TypeConstraint::isVariadic() const {
   return def->isSubClassOf("Variadic");
 }
 
+bool TypeConstraint::isVariadicOfVariadic() const {
+  return def->isSubClassOf("VariadicOfVariadic");
+}
+
+StringRef TypeConstraint::getVariadicOfVariadicSegmentSizeAttr() const {
+  assert(isVariadicOfVariadic());
+  return def->getValueAsString("segmentAttrName");
+}
+
 // Returns the builder call for this constraint if this is a buildable type,
 // returns None otherwise.
 Optional<StringRef> TypeConstraint::getBuilderCall() const {
@@ -46,17 +57,33 @@ Optional<StringRef> TypeConstraint::getBuilderCall() const {
   if (!builderCall || !builderCall->getValue())
     return llvm::None;
   return TypeSwitch<llvm::Init *, Optional<StringRef>>(builderCall->getValue())
-      .Case<llvm::StringInit, llvm::CodeInit>([&](auto *init) {
+      .Case<llvm::StringInit>([&](auto *init) {
         StringRef value = init->getValue();
         return value.empty() ? Optional<StringRef>() : value;
       })
       .Default([](auto *) { return llvm::None; });
 }
 
+// Return the C++ class name for this type (which may just be ::mlir::Type).
+std::string TypeConstraint::getCPPClassName() const {
+  StringRef className = def->getValueAsString("cppClassName");
+
+  // If the class name is already namespace resolved, use it.
+  if (className.contains("::"))
+    return className.str();
+
+  // Otherwise, check to see if there is a namespace from a dialect to prepend.
+  if (const llvm::RecordVal *value = def->getValue("dialect")) {
+    Dialect dialect(cast<const llvm::DefInit>(value->getValue())->getDef());
+    return (dialect.getCppNamespace() + "::" + className).str();
+  }
+  return className.str();
+}
+
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
 
-StringRef Type::getTypeDescription() const {
-  return def->getValueAsString("typeDescription");
+StringRef Type::getDescription() const {
+  return def->getValueAsString("description");
 }
 
 Dialect Type::getDialect() const {

@@ -4,33 +4,27 @@
 define i32 @a() {
 ; CHECK-LABEL: a:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
-; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    callq _b
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
-; CHECK-NEXT:    movq _calloc@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _calloc@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    subq $-1, %rax
-; CHECK-NEXT:    setne %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    ## kill: def $rcx killed $ecx
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    ## kill: def $rcx killed $ecx
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
-; CHECK-NEXT:    movq %rax, (%rsp) ## 8-byte Spill
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    cvttsd2si %xmm0, %eax
+; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
   %call = call i32 (...) @b()

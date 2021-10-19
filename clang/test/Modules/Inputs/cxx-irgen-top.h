@@ -36,7 +36,7 @@ namespace ImplicitSpecialMembers {
 namespace OperatorDeleteLookup {
   struct A { void operator delete(void*); virtual ~A() = default; };
   template<typename T> struct B { void operator delete(void*); virtual ~B() {} typedef int t; };
-  typedef B<int>::t b_int_instantated;
+  typedef B<int>::t b_int_instantiated;
 }
 
 namespace EmitInlineMethods {

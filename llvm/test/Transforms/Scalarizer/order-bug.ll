@@ -10,7 +10,7 @@ entry:
   br label %z
 
 y:
-; CHECK: %f.upto0 = insertelement <4 x i32> undef, i32 %b.i0, i32 0
+; CHECK: %f.upto0 = insertelement <4 x i32> poison, i32 %b.i0, i32 0
 ; CHECK: %f.upto1 = insertelement <4 x i32> %f.upto0, i32 %b.i0, i32 1
 ; CHECK: %f.upto2 = insertelement <4 x i32> %f.upto1, i32 %b.i0, i32 2
 ; CHECK: %f = insertelement <4 x i32> %f.upto2, i32 %b.i0, i32 3

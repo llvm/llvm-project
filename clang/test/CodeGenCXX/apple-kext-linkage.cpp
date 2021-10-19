@@ -19,7 +19,7 @@ inline unsigned f(unsigned n) { return n == 0 ? 0 : n + f(n-1); }
 unsigned g(unsigned n) { return f(n); }
 
 // rdar://problem/10133200: give explicit instantiations external linkage in kernel mode
-// CHECK-LABEL: define void @_Z3barIiEvv()
+// CHECK-LABEL: define{{.*}} void @_Z3barIiEvv()
 template <typename T> void bar() {}
 template void bar<int>();
 

@@ -119,7 +119,7 @@ private:
   std::vector<std::vector<std::string>> LinkerOptions;
 
   /// List of declared file names
-  std::vector<std::string> FileNames;
+  std::vector<std::pair<std::string, size_t>> FileNames;
 
   MCDwarfLineTableParams LTParams;
 
@@ -202,6 +202,7 @@ private:
   bool relaxCVInlineLineTable(MCAsmLayout &Layout,
                               MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &DF);
+  bool relaxPseudoProbeAddr(MCAsmLayout &Layout, MCPseudoProbeAddrFragment &DF);
 
   /// finishLayout - Finalize a layout, including fragment lowering.
   void finishLayout(MCAsmLayout &Layout);
@@ -210,7 +211,14 @@ private:
   handleFixup(const MCAsmLayout &Layout, MCFragment &F, const MCFixup &Fixup);
 
 public:
-  std::vector<std::pair<StringRef, const MCSymbol *>> Symvers;
+  struct Symver {
+    SMLoc Loc;
+    const MCSymbol *Sym;
+    StringRef Name;
+    // True if .symver *, *@@@* or .symver *, *, remove.
+    bool KeepOriginalSym;
+  };
+  std::vector<Symver> Symvers;
 
   /// Construct a new assembler instance.
   //
@@ -439,11 +447,12 @@ public:
 
   void registerSymbol(const MCSymbol &Symbol, bool *Created = nullptr);
 
-  ArrayRef<std::string> getFileNames() { return FileNames; }
+  MutableArrayRef<std::pair<std::string, size_t>> getFileNames() {
+    return FileNames;
+  }
 
   void addFileName(StringRef FileName) {
-    if (!is_contained(FileNames, FileName))
-      FileNames.push_back(std::string(FileName));
+    FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
 
   /// Write the necessary bundle padding to \p OS.

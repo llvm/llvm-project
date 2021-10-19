@@ -15,7 +15,6 @@
 //	Extension: constructing from NULL is UB; we just make it a failed iterator
 
 #include <iterator>
-#include <sstream>
 #include <cassert>
 
 #include "test_macros.h"
@@ -26,10 +25,12 @@ int main(int, char**)
         std::ostreambuf_iterator<char> i(nullptr);
         assert(i.failed());
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::ostreambuf_iterator<wchar_t> i(nullptr);
         assert(i.failed());
     }
+#endif
 
   return 0;
 }

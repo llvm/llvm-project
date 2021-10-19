@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Defines struct to track resource usage for kernels and entry functions.
+/// Defines struct to track resource usage and hardware flags for kernels and
+/// entry functions.
 ///
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIPROGRAMINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIPROGRAMINFO_H
+
+#include "llvm/IR/CallingConv.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -32,17 +36,18 @@ struct SIProgramInfo {
     uint32_t MemOrdered = 0; // GFX10+
     uint64_t ScratchSize = 0;
 
-    uint64_t ComputePGMRSrc1 = 0;
-
     // Fields set in PGM_RSRC2 pm4 packet.
     uint32_t LDSBlocks = 0;
     uint32_t ScratchBlocks = 0;
 
     uint64_t ComputePGMRSrc2 = 0;
+    uint64_t ComputePGMRSrc3GFX90A = 0;
 
     uint32_t NumVGPR = 0;
     uint32_t NumArchVGPR = 0;
     uint32_t NumAccVGPR = 0;
+    uint32_t AccumOffset = 0;
+    uint32_t TgSplit = 0;
     uint32_t NumSGPR = 0;
     uint32_t LDSSize = 0;
     bool FlatUsed = false;
@@ -64,6 +69,10 @@ struct SIProgramInfo {
     bool VCCUsed = false;
 
     SIProgramInfo() = default;
+
+    /// Compute the value of the ComputePGMRsrc1 register.
+    uint64_t getComputePGMRSrc1() const;
+    uint64_t getPGMRSrc1(CallingConv::ID CC) const;
 };
 
 } // namespace llvm

@@ -16,12 +16,13 @@ lowered all but one of the `toy` operations, with the last being `toy.print`.
 Before going over the conversion to LLVM, let's lower the `toy.print` operation.
 We will lower this operation to a non-affine loop nest that invokes `printf` for
 each element. Note that, because the dialect conversion framework supports
-[transitive lowering](../../../getting_started/Glossary.md#transitive-lowering), we don't need to
-directly emit operations in the LLVM dialect. By transitive lowering, we mean
-that the conversion framework may apply multiple patterns to fully legalize an
-operation. In this example, we are generating a structured loop nest instead of
-the branch-form in the LLVM dialect. As long as we then have a lowering from the
-loop operations to LLVM, the lowering will still succeed.
+[transitive lowering](../../../getting_started/Glossary.md/#transitive-lowering),
+we don't need to directly emit operations in the LLVM dialect. By transitive
+lowering, we mean that the conversion framework may apply multiple patterns to
+fully legalize an operation. In this example, we are generating a structured
+loop nest instead of the branch-form in the LLVM dialect. As long as we then
+have a lowering from the loop operations to LLVM, the lowering will still
+succeed.
 
 During lowering we can get, or build, the declaration for printf as so:
 
@@ -37,10 +38,11 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
 
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
-  auto llvmI32Ty = LLVM::LLVMType::getInt32Ty(llvmDialect);
-  auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
-  auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI32Ty, llvmI8PtrTy,
-                                                  /*isVarArg=*/true);
+  auto llvmI32Ty = IntegerType::get(context, 32);
+  auto llvmI8PtrTy =
+      LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
+                                                /*isVarArg=*/true);
 
   // Insert the printf function into the body of the parent module.
   PatternRewriter::InsertionGuard insertGuard(rewriter);
@@ -62,7 +64,7 @@ everything to the LLVM dialect.
 ```c++
   mlir::ConversionTarget target(getContext());
   target.addLegalDialect<mlir::LLVMDialect>();
-  target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
+  target.addLegalOp<mlir::ModuleOp>();
 ```
 
 ### Type Converter
@@ -83,20 +85,23 @@ enough for our use case.
 
 Now that the conversion target has been defined, we need to provide the patterns
 used for lowering. At this point in the compilation process, we have a
-combination of `toy`, `affine`, and `std` operations. Luckily, the `std` and
-`affine` dialects already provide the set of patterns needed to transform them
-into LLVM dialect. These patterns allow for lowering the IR in multiple stages
-by relying on [transitive lowering](../../../getting_started/Glossary.md#transitive-lowering).
+combination of `toy`, `affine`, `arith`, and `std` operations. Luckily, the
+`affine`, `arith`, and `std` dialects already provide the set of patterns needed
+to transform them into LLVM dialect. These patterns allow for lowering the IR in
+multiple stages by relying on
+[transitive lowering](../../../getting_started/Glossary.md/#transitive-lowering).
 
 ```c++
-  mlir::OwningRewritePatternList patterns;
+  mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
+  mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
+                                                          patterns);
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
   // The only remaining operation, to lower from the `toy` dialect, is the
   // PrintOp.
-  patterns.insert<PrintOpLowering>(&getContext());
+  patterns.add<PrintOpLowering>(&getContext());
 ```
 
 ### Full Lowering
@@ -126,28 +131,28 @@ We can now lower down to the LLVM dialect, which produces the following code:
 
 ```mlir
 llvm.func @free(!llvm<"i8*">)
-llvm.func @printf(!llvm<"i8*">, ...) -> !llvm.i32
-llvm.func @malloc(!llvm.i64) -> !llvm<"i8*">
+llvm.func @printf(!llvm<"i8*">, ...) -> i32
+llvm.func @malloc(i64) -> !llvm<"i8*">
 llvm.func @main() {
-  %0 = llvm.mlir.constant(1.000000e+00 : f64) : !llvm.double
-  %1 = llvm.mlir.constant(2.000000e+00 : f64) : !llvm.double
+  %0 = llvm.mlir.constant(1.000000e+00 : f64) : f64
+  %1 = llvm.mlir.constant(2.000000e+00 : f64) : f64
 
   ...
 
 ^bb16:
   %221 = llvm.extractvalue %25[0 : index] : !llvm<"{ double*, i64, [2 x i64], [2 x i64] }">
-  %222 = llvm.mlir.constant(0 : index) : !llvm.i64
-  %223 = llvm.mlir.constant(2 : index) : !llvm.i64
-  %224 = llvm.mul %214, %223 : !llvm.i64
-  %225 = llvm.add %222, %224 : !llvm.i64
-  %226 = llvm.mlir.constant(1 : index) : !llvm.i64
-  %227 = llvm.mul %219, %226 : !llvm.i64
-  %228 = llvm.add %225, %227 : !llvm.i64
-  %229 = llvm.getelementptr %221[%228] : (!llvm<"double*">, !llvm.i64) -> !llvm<"double*">
+  %222 = llvm.mlir.constant(0 : index) : i64
+  %223 = llvm.mlir.constant(2 : index) : i64
+  %224 = llvm.mul %214, %223 : i64
+  %225 = llvm.add %222, %224 : i64
+  %226 = llvm.mlir.constant(1 : index) : i64
+  %227 = llvm.mul %219, %226 : i64
+  %228 = llvm.add %225, %227 : i64
+  %229 = llvm.getelementptr %221[%228] : (!llvm."double*">, i64) -> !llvm<"f64*">
   %230 = llvm.load %229 : !llvm<"double*">
-  %231 = llvm.call @printf(%207, %230) : (!llvm<"i8*">, !llvm.double) -> !llvm.i32
-  %232 = llvm.add %219, %218 : !llvm.i64
-  llvm.br ^bb15(%232 : !llvm.i64)
+  %231 = llvm.call @printf(%207, %230) : (!llvm<"i8*">, f64) -> i32
+  %232 = llvm.add %219, %218 : i64
+  llvm.br ^bb15(%232 : i64)
 
   ...
 
@@ -199,7 +204,7 @@ define void @main() {
   %106 = mul i64 %100, 1
   %107 = add i64 %105, %106
   %108 = getelementptr double, double* %103, i64 %107
-  %109 = load double, double* %108
+  %109 = memref.load double, double* %108
   %110 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @frmt_spec, i64 0, i64 0), double %109)
   %111 = add i64 %100, 1
   br label %99
@@ -292,7 +297,8 @@ int runJit(mlir::ModuleOp module) {
 
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(module, optPipeline);
+  auto maybeEngine = mlir::ExecutionEngine::create(module,
+      /*llvmModuleBuilder=*/nullptr, optPipeline);
   assert(maybeEngine && "failed to construct an execution engine");
   auto &engine = maybeEngine.get();
 
@@ -317,10 +323,10 @@ $ echo 'def main() { print([[1, 2], [3, 4]]); }' | ./bin/toyc-ch6 -emit=jit
 
 You can also play with `-emit=mlir`, `-emit=mlir-affine`, `-emit=mlir-llvm`, and
 `-emit=llvm` to compare the various levels of IR involved. Also try options like
-[`--print-ir-after-all`](../../PassManagement.md#ir-printing) to track the
+[`--print-ir-after-all`](../../PassManagement.md/#ir-printing) to track the
 evolution of the IR throughout the pipeline.
 
-The example code used throughout this section can be found in 
+The example code used throughout this section can be found in
 test/Examples/Toy/Ch6/llvm-lowering.mlir.
 
 So far, we have worked with primitive data types. In the

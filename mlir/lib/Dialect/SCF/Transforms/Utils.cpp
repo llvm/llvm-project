@@ -15,7 +15,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -89,14 +89,14 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
 
     // Outline before current function.
     OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(ifOp.getParentOfType<FuncOp>());
+    b.setInsertionPoint(ifOp->getParentOfType<FuncOp>());
 
-    llvm::SetVector<Value> captures;
+    SetVector<Value> captures;
     getUsedValuesDefinedAbove(ifOrElseRegion, captures);
 
     ValueRange values(captures.getArrayRef());
     FunctionType type =
-        FunctionType::get(values.getTypes(), ifOp.getResultTypes(), ctx);
+        FunctionType::get(ctx, values.getTypes(), ifOp.getResultTypes());
     auto outlinedFunc = b.create<FuncOp>(loc, funcName, type);
     b.setInsertionPointToStart(outlinedFunc.addEntryBlock());
     BlockAndValueMapping bvm;
@@ -122,4 +122,26 @@ void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
     *thenFn = outline(ifOp.thenRegion(), thenFnName);
   if (elseFn && !ifOp.elseRegion().empty())
     *elseFn = outline(ifOp.elseRegion(), elseFnName);
+}
+
+bool mlir::getInnermostParallelLoops(Operation *rootOp,
+                                     SmallVectorImpl<scf::ParallelOp> &result) {
+  assert(rootOp != nullptr && "Root operation must not be a nullptr.");
+  bool rootEnclosesPloops = false;
+  for (Region &region : rootOp->getRegions()) {
+    for (Block &block : region.getBlocks()) {
+      for (Operation &op : block) {
+        bool enclosesPloops = getInnermostParallelLoops(&op, result);
+        rootEnclosesPloops |= enclosesPloops;
+        if (auto ploop = dyn_cast<scf::ParallelOp>(op)) {
+          rootEnclosesPloops = true;
+
+          // Collect parallel loop if it is an innermost one.
+          if (!enclosesPloops)
+            result.push_back(ploop);
+        }
+      }
+    }
+  }
+  return rootEnclosesPloops;
 }

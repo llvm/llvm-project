@@ -30,7 +30,9 @@ int isalnum(int);
 void test_alnum_concrete(int v) {
   int ret = isalnum(256); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
   (void)ret;
 }
@@ -54,7 +56,9 @@ void test_alnum_symbolic2(int x) {
 
     int ret = isalnum(x); // \
     // report-warning{{Function argument constraint is not satisfied}} \
+    // report-note{{}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 
     (void)ret;
@@ -66,7 +70,9 @@ int toupper(int);
 void test_toupper_concrete(int v) {
   int ret = toupper(256); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
   (void)ret;
 }
@@ -90,7 +96,9 @@ void test_toupper_symbolic2(int x) {
 
     int ret = toupper(x); // \
     // report-warning{{Function argument constraint is not satisfied}} \
+    // report-note{{}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 
     (void)ret;
@@ -102,7 +110,9 @@ int tolower(int);
 void test_tolower_concrete(int v) {
   int ret = tolower(256); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
   (void)ret;
 }
@@ -126,7 +136,9 @@ void test_tolower_symbolic2(int x) {
 
     int ret = tolower(x); // \
     // report-warning{{Function argument constraint is not satisfied}} \
+    // report-note{{}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 
     (void)ret;
@@ -138,7 +150,9 @@ int toascii(int);
 void test_toascii_concrete(int v) {
   int ret = toascii(256); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
   (void)ret;
 }
@@ -162,7 +176,9 @@ void test_toascii_symbolic2(int x) {
 
     int ret = toascii(x); // \
     // report-warning{{Function argument constraint is not satisfied}} \
+    // report-note{{}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
 
     (void)ret;
@@ -175,7 +191,9 @@ size_t fread(void *restrict, size_t, size_t, FILE *restrict);
 void test_notnull_concrete(FILE *fp) {
   fread(0, sizeof(int), 10, fp); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
 }
 void test_notnull_symbolic(FILE *fp, int *buf) {
@@ -191,8 +209,28 @@ void test_notnull_symbolic2(FILE *fp, int *buf) {
             // bugpath-note{{Taking true branch}}
     fread(buf, sizeof(int), 10, fp); // \
     // report-warning{{Function argument constraint is not satisfied}} \
+    // report-note{{}} \
     // bugpath-warning{{Function argument constraint is not satisfied}} \
+    // bugpath-note{{}} \
     // bugpath-note{{Function argument constraint is not satisfied}}
+}
+typedef __WCHAR_TYPE__ wchar_t;
+// This is one test case for the ARR38-C SEI-CERT rule.
+void ARR38_C_F(FILE *file) {
+  enum { BUFFER_SIZE = 1024 };
+  wchar_t wbuf[BUFFER_SIZE]; // bugpath-note{{'wbuf' initialized here}}
+
+  const size_t size = sizeof(*wbuf);   // bugpath-note{{'size' initialized to}}
+  const size_t nitems = sizeof(wbuf);  // bugpath-note{{'nitems' initialized to}}
+
+  // The 3rd parameter should be the number of elements to read, not
+  // the size in bytes.
+  fread(wbuf, size, nitems, file); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
 }
 
 int __two_constrained_args(int, int);
@@ -226,7 +264,9 @@ int __variadic(void *stream, const char *format, ...);
 void test_arg_constraint_on_variadic_fun() {
   __variadic(0, "%d%d", 1, 2); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
 }
 
@@ -235,7 +275,9 @@ void test_buf_size_concrete() {
   char buf[3];                       // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint(buf, 4); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
 }
 void test_buf_size_symbolic(int s) {
@@ -256,12 +298,15 @@ void test_buf_size_symbolic_and_offset(int s) {
   // bugpath-note{{TRUE}} \
   // bugpath-note{{'s' is <= 2}}
 }
+
 int __buf_size_arg_constraint_mul(const void *, size_t, size_t);
 void test_buf_size_concrete_with_multiplication() {
   short buf[3];                                         // bugpath-note{{'buf' initialized here}}
   __buf_size_arg_constraint_mul(buf, 4, sizeof(short)); // \
   // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
   // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
   // bugpath-note{{Function argument constraint is not satisfied}}
 }
 void test_buf_size_symbolic_with_multiplication(size_t s) {
@@ -279,4 +324,16 @@ void test_buf_size_symbolic_and_offset_with_multiplication(size_t s) {
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
   // bugpath-note{{TRUE}}
+}
+
+// The minimum buffer size for this function is set to 10.
+int __buf_size_arg_constraint_concrete(const void *);
+void test_min_buf_size() {
+  char buf[9];// bugpath-note{{'buf' initialized here}}
+  __buf_size_arg_constraint_concrete(buf); // \
+  // report-warning{{Function argument constraint is not satisfied}} \
+  // report-note{{}} \
+  // bugpath-warning{{Function argument constraint is not satisfied}} \
+  // bugpath-note{{}} \
+  // bugpath-note{{Function argument constraint is not satisfied}}
 }

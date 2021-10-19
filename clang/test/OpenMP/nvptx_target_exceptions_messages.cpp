@@ -52,6 +52,7 @@ int maini1() {
 #pragma omp target map(tofrom \
                        : a, b)
   {
+    // expected-note@+1 {{called by 'maini1'}}
     S s(a);
     static long aaa = 23;
     a = foo() + bar() + b + c + d + aa + aaa + FA<int>(); // expected-note{{called by 'maini1'}}

@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32 %s
+; RUN: llc -march=amdgcn -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.raw.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32 immarg)
@@ -20,8 +20,9 @@ declare i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32 imm
 ; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
-; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
-; GCN: buffer_atomic_add v[[value]]
+; GCN: s_mul_i32 s[[value:[0-9]+]], s[[popcount]], 5
+; GCN: v_mov_b32_e32 v[[data:[0-9]+]], s[[value]]
+; GCN: buffer_atomic_add v[[data]]
 define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
@@ -62,7 +63,9 @@ entry:
 ; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
 ; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX89: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX89: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX10: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
+; GFX10: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
 ; GFX8MORE: buffer_atomic_add v[[value]]
 define amdgpu_kernel void @add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
@@ -86,7 +89,9 @@ entry:
 ; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
 ; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX89: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX89: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX10: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
+; GFX10: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
 ; GFX8MORE: buffer_atomic_add v[[value]]
 define amdgpu_kernel void @struct_add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %vindex) {
 entry:
@@ -118,8 +123,9 @@ entry:
 ; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
-; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
-; GCN: buffer_atomic_sub v[[value]]
+; GCN: s_mul_i32 s[[value:[0-9]+]], s[[popcount]], 5
+; GCN: v_mov_b32_e32 v[[data:[0-9]+]], s[[value]]
+; GCN: buffer_atomic_sub v[[data]]
 define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
@@ -160,7 +166,9 @@ entry:
 ; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
 ; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX89: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX89: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX10: s_mov_b32 s[[copy_value:[0-9]+]], s[[scalar_value]]
+; GFX10: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[copy_value]]
 ; GFX8MORE: buffer_atomic_sub v[[value]]
 define amdgpu_kernel void @sub_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:

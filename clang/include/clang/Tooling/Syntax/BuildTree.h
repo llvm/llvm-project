@@ -19,15 +19,40 @@ namespace clang {
 namespace syntax {
 
 /// Build a syntax tree for the main file.
-syntax::TranslationUnit *buildSyntaxTree(Arena &A,
-                                         const clang::TranslationUnitDecl &TU);
+/// This usually covers the whole TranslationUnitDecl, but can be restricted by
+/// the ASTContext's traversal scope.
+syntax::TranslationUnit *buildSyntaxTree(Arena &A, ASTContext &Context);
 
 // Create syntax trees from subtrees not backed by the source code.
 
-clang::syntax::Leaf *createPunctuation(clang::syntax::Arena &A,
-                                       clang::tok::TokenKind K);
-clang::syntax::EmptyStatement *createEmptyStatement(clang::syntax::Arena &A);
+// Synthesis of Leafs
+/// Create `Leaf` from token with `Spelling` and assert it has the desired
+/// `TokenKind`.
+syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K,
+                         StringRef Spelling);
 
+/// Infer the token spelling from its `TokenKind`, then create `Leaf` from
+/// this token
+syntax::Leaf *createLeaf(syntax::Arena &A, tok::TokenKind K);
+
+// Synthesis of Trees
+/// Creates the concrete syntax node according to the specified `NodeKind` `K`.
+/// Returns it as a pointer to the base class `Tree`.
+syntax::Tree *
+createTree(syntax::Arena &A,
+           ArrayRef<std::pair<syntax::Node *, syntax::NodeRole>> Children,
+           syntax::NodeKind K);
+
+// Synthesis of Syntax Nodes
+syntax::EmptyStatement *createEmptyStatement(syntax::Arena &A);
+
+/// Creates a completely independent copy of `N` with its macros expanded.
+///
+/// The copy is:
+/// * Detached, i.e. `Parent == NextSibling == nullptr` and
+/// `Role == Detached`.
+/// * Synthesized, i.e. `Original == false`.
+syntax::Node *deepCopyExpandingMacros(syntax::Arena &A, const syntax::Node *N);
 } // namespace syntax
 } // namespace clang
 #endif

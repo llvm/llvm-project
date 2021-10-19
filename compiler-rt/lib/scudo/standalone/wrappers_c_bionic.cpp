@@ -23,6 +23,7 @@
 #define SCUDO_ALLOCATOR Allocator
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
+SCUDO_REQUIRE_CONSTANT_INITIALIZATION
 static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
 
@@ -36,6 +37,7 @@ static scudo::Allocator<scudo::AndroidConfig, SCUDO_PREFIX(malloc_postinit)>
 #define SCUDO_ALLOCATOR SvelteAllocator
 
 extern "C" void SCUDO_PREFIX(malloc_postinit)();
+SCUDO_REQUIRE_CONSTANT_INITIALIZATION
 static scudo::Allocator<scudo::AndroidSvelteConfig,
                         SCUDO_PREFIX(malloc_postinit)>
     SCUDO_ALLOCATOR;
@@ -48,12 +50,15 @@ static scudo::Allocator<scudo::AndroidSvelteConfig,
 // TODO(kostyak): support both allocators.
 INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
-INTERFACE void __scudo_get_error_info(
-    struct scudo_error_info *error_info, uintptr_t fault_addr,
-    const char *stack_depot, const char *region_info, const char *memory,
-    const char *memory_tags, uintptr_t memory_addr, size_t memory_size) {
+INTERFACE void
+__scudo_get_error_info(struct scudo_error_info *error_info,
+                       uintptr_t fault_addr, const char *stack_depot,
+                       const char *region_info, const char *ring_buffer,
+                       const char *memory, const char *memory_tags,
+                       uintptr_t memory_addr, size_t memory_size) {
   Allocator.getErrorInfo(error_info, fault_addr, stack_depot, region_info,
-                         memory, memory_tags, memory_addr, memory_size);
+                         ring_buffer, memory, memory_tags, memory_addr,
+                         memory_size);
 }
 
 INTERFACE const char *__scudo_get_stack_depot_addr() {
@@ -70,6 +75,14 @@ INTERFACE const char *__scudo_get_region_info_addr() {
 
 INTERFACE size_t __scudo_get_region_info_size() {
   return Allocator.getRegionInfoArraySize();
+}
+
+INTERFACE const char *__scudo_get_ring_buffer_addr() {
+  return Allocator.getRingBufferAddress();
+}
+
+INTERFACE size_t __scudo_get_ring_buffer_size() {
+  return Allocator.getRingBufferSize();
 }
 
 #endif // SCUDO_ANDROID && _BIONIC

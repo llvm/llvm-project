@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -31,10 +32,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-
 
 using Instr = llvm::cfi_verify::FileAnalysis::Instr;
 using LLVMSymbolizer = llvm::symbolize::LLVMSymbolizer;
@@ -179,7 +178,7 @@ bool FileAnalysis::willTrapOnCFIViolation(const Instr &InstrMeta) const {
   if (!MIA->evaluateBranch(InstrMeta.Instruction, InstrMeta.VMAddress,
                            InstrMeta.InstructionSize, Target))
     return false;
-  return TrapOnFailFunctionAddresses.count(Target) > 0;
+  return TrapOnFailFunctionAddresses.contains(Target);
 }
 
 bool FileAnalysis::canFallThrough(const Instr &InstrMeta) const {
@@ -374,7 +373,9 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   MCPU = "";
   std::string ErrorString;
 
-  Symbolizer.reset(new LLVMSymbolizer());
+  LLVMSymbolizer::Options Opt;
+  Opt.UseSymbolTable = false;
+  Symbolizer.reset(new LLVMSymbolizer(Opt));
 
   ObjectTarget =
       TargetRegistry::lookupTarget(ArchName, ObjectTriple, ErrorString);
@@ -405,7 +406,8 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   if (!MII)
     return make_error<UnsupportedDisassembly>("Failed to initialise MII.");
 
-  Context.reset(new MCContext(AsmInfo.get(), RegisterInfo.get(), &MOFI));
+  Context.reset(new MCContext(Triple(TripleName), AsmInfo.get(),
+                              RegisterInfo.get(), SubtargetInfo.get()));
 
   Disassembler.reset(
       ObjectTarget->createMCDisassembler(*SubtargetInfo, *Context));
@@ -558,7 +560,7 @@ Error FileAnalysis::parseSymbolTable() {
     auto SymNameOrErr = Sym.getName();
     if (!SymNameOrErr)
       consumeError(SymNameOrErr.takeError());
-    else if (TrapOnFailFunctions.count(*SymNameOrErr) > 0) {
+    else if (TrapOnFailFunctions.contains(*SymNameOrErr)) {
       auto AddrOrErr = Sym.getAddress();
       if (!AddrOrErr)
         consumeError(AddrOrErr.takeError());
@@ -574,7 +576,7 @@ Error FileAnalysis::parseSymbolTable() {
       auto SymNameOrErr = Sym.getName();
       if (!SymNameOrErr)
         consumeError(SymNameOrErr.takeError());
-      else if (TrapOnFailFunctions.count(*SymNameOrErr) > 0)
+      else if (TrapOnFailFunctions.contains(*SymNameOrErr))
         TrapOnFailFunctionAddresses.insert(Addr.second);
     }
   }

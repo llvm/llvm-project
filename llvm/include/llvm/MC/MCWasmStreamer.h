@@ -41,6 +41,9 @@ public:
   /// @{
 
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
+                      uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
   void emitThumbFunc(MCSymbol *Func) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
@@ -59,18 +62,16 @@ public:
                     SMLoc Loc = SMLoc()) override;
   void emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
-  void emitValueImpl(const MCExpr *Value, unsigned Size,
-                     SMLoc Loc = SMLoc()) override;
 
   void emitIdent(StringRef IdentString) override;
-
-  void emitValueToAlignment(unsigned, int64_t, unsigned, unsigned) override;
 
   void finishImpl() override;
 
 private:
   void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
+
+  void fixSymbolsInTLSFixups(const MCExpr *expr);
 
   /// Merge the content of the fragment \p EF into the fragment \p DF.
   void mergeFragment(MCDataFragment *, MCDataFragment *);

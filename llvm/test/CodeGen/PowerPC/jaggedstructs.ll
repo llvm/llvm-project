@@ -12,16 +12,27 @@ target triple = "powerpc64-unknown-linux-gnu"
 %struct.S6 = type { [6 x i8] }
 %struct.S7 = type { [7 x i8] }
 
-define void @test(%struct.S3* byval %s3, %struct.S5* byval %s5, %struct.S6* byval %s6, %struct.S7* byval %s7) nounwind {
+define void @test(%struct.S3* byval(%struct.S3) %s3, %struct.S5* byval(%struct.S5) %s5, %struct.S6* byval(%struct.S6) %s6, %struct.S7* byval(%struct.S7) %s7) nounwind {
 entry:
-  call void @check(%struct.S3* byval %s3, %struct.S5* byval %s5, %struct.S6* byval %s6, %struct.S7* byval %s7)
+  call void @check(%struct.S3* byval(%struct.S3) %s3, %struct.S5* byval(%struct.S5) %s5, %struct.S6* byval(%struct.S6) %s6, %struct.S7* byval(%struct.S7) %s7)
   ret void
 }
 
-; CHECK-DAG: std 3, 160(1)
-; CHECK-DAG: std 6, 184(1)
-; CHECK-DAG: std 5, 176(1)
-; CHECK-DAG: std 4, 168(1)
+; CHECK-LABEL: test
+; CHECK:     stb 6, 191(1)
+; CHECK:     rldicl 7, 6, 56, 8
+; CHECK:     sth 7, 189(1)
+; CHECK:     rldicl 6, 6, 40, 24
+; CHECK:     stw 6, 185(1)
+; CHECK:     sth 5, 182(1)
+; CHECK:     rldicl 5, 5, 48, 16
+; CHECK:     stw 5, 178(1)
+; CHECK:     stb 4, 175(1)
+; CHECK:     rldicl 4, 4, 56, 8
+; CHECK:     stw 4, 171(1)
+; CHECK:     stb 3, 167(1)
+; CHECK:     rldicl 3, 3, 56, 8
+; CHECK:     sth 3, 165(1)
 ; CHECK-DAG: lbz {{[0-9]+}}, 167(1)
 ; CHECK-DAG: lhz {{[0-9]+}}, 165(1)
 ; CHECK-DAG: stb {{[0-9]+}}, 55(1)
@@ -43,4 +54,4 @@ entry:
 ; CHECK-DAG: ld 4, 56(1)
 ; CHECK-DAG: ld 3, 48(1)
 
-declare void @check(%struct.S3* byval, %struct.S5* byval, %struct.S6* byval, %struct.S7* byval)
+declare void @check(%struct.S3* byval(%struct.S3), %struct.S5* byval(%struct.S5), %struct.S6* byval(%struct.S6), %struct.S7* byval(%struct.S7))

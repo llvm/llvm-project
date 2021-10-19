@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Win64EHDumper.h"
-#include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,20 +119,58 @@ static std::error_code getSymbol(const COFFObjectFile &COFF, uint64_t VA,
       return errorToErrorCode(Address.takeError());
     if (*Address == VA) {
       Sym = Symbol;
-      return readobj_error::success;
+      return std::error_code();
     }
   }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
+}
+
+static object::SymbolRef getPreferredSymbol(const COFFObjectFile &COFF,
+                                            object::SymbolRef Sym,
+                                            uint32_t &SymbolOffset,
+                                            bool IsRangeEnd) {
+  // The symbol resolved by ResolveSymbol can be any internal
+  // nondescriptive symbol; try to resolve a more descriptive one.
+  COFFSymbolRef CoffSym = COFF.getCOFFSymbol(Sym);
+  if (CoffSym.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+      CoffSym.getSectionDefinition() == nullptr)
+    return Sym;
+  for (const auto &S : COFF.symbols()) {
+    COFFSymbolRef CS = COFF.getCOFFSymbol(S);
+    if (CS.getSectionNumber() == CoffSym.getSectionNumber() &&
+        CS.getValue() <= CoffSym.getValue() + SymbolOffset &&
+        CS.getStorageClass() != COFF::IMAGE_SYM_CLASS_LABEL &&
+        CS.getSectionDefinition() == nullptr) {
+      uint32_t Offset = CoffSym.getValue() + SymbolOffset - CS.getValue();
+      // For the end of a range, don't pick a symbol with a zero offset;
+      // prefer a symbol with a small positive offset.
+      if (Offset <= SymbolOffset && (!IsRangeEnd || Offset > 0)) {
+        SymbolOffset = Offset;
+        Sym = S;
+        CoffSym = CS;
+        if (CS.isExternal() && SymbolOffset == 0)
+          return Sym;
+      }
+    }
+  }
+  return Sym;
 }
 
 static std::string formatSymbol(const Dumper::Context &Ctx,
                                 const coff_section *Section, uint64_t Offset,
-                                uint32_t Displacement) {
+                                uint32_t Displacement,
+                                bool IsRangeEnd = false) {
   std::string Buffer;
   raw_string_ostream OS(Buffer);
 
   SymbolRef Symbol;
   if (!Ctx.ResolveSymbol(Section, Offset, Symbol, Ctx.UserData)) {
+    // We found a relocation at the given offset in the section, pointing
+    // at a symbol.
+
+    // Try to resolve label/section symbols into function names.
+    Symbol = getPreferredSymbol(Ctx.COFF, Symbol, Displacement, IsRangeEnd);
+
     Expected<StringRef> Name = Symbol.getName();
     if (Name) {
       OS << *Name;
@@ -208,7 +245,8 @@ void Dumper::printRuntimeFunctionEntry(const Context &Ctx,
   SW.printString("StartAddress",
                  formatSymbol(Ctx, Section, Offset + 0, RF.StartAddress));
   SW.printString("EndAddress",
-                 formatSymbol(Ctx, Section, Offset + 4, RF.EndAddress));
+                 formatSymbol(Ctx, Section, Offset + 4, RF.EndAddress,
+                              /*IsRangeEnd=*/true));
   SW.printString("UnwindInfoAddress",
                  formatSymbol(Ctx, Section, Offset + 8, RF.UnwindInfoOffset));
 }

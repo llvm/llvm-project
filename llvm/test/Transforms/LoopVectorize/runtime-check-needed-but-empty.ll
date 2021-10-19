@@ -50,7 +50,7 @@ define void @test(float* %A, i32 %x) {
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, float* [[TMP27]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = bitcast float* [[TMP28]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], <4 x float>* [[TMP29]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:

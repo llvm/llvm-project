@@ -5,21 +5,23 @@ FileHeader:
 Sections:
   - Type:            TABLE
     Tables:         
-      - ElemType:        FUNCREF
+      - Index:           0
+        ElemType:        FUNCREF
         Limits:
           Flags:           [ HAS_MAX ]
-          Initial:         0x00000010
+          Minimum:         0x00000010
           Maximum:         0x00000011
 ...
 # CHECK: --- !WASM
 # CHECK: FileHeader:
-# CHECK:   Version:           0x00000001
+# CHECK:   Version:           0x1
 # CHECK: Sections:
 # CHECK:  - Type:            TABLE
 # CHECK:    Tables:         
-# CHECK:      - ElemType:        FUNCREF
+# CHECK:      - Index:           0
+# CHECK:        ElemType:        FUNCREF
 # CHECK:        Limits:
 # CHECK:          Flags:           [ HAS_MAX ]
-# CHECK:          Initial:         0x00000010
-# CHECK:          Maximum:         0x00000011
+# CHECK:          Minimum:         0x10
+# CHECK:          Maximum:         0x11
 # CHECK: ...

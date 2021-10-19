@@ -59,7 +59,7 @@ using namespace lldb_private;
                               {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,       \
                                LLDB_INVALID_REGNUM },                          \
-                               NULL, NULL, NULL, 0
+                               NULL, NULL
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterContextDarwin_arm64::GPR) +                                  \
    sizeof(RegisterContextDarwin_arm64::FPU) +                                  \
@@ -104,7 +104,7 @@ RegisterContextDarwin_arm64::RegisterContextDarwin_arm64(
   }
 }
 
-RegisterContextDarwin_arm64::~RegisterContextDarwin_arm64() {}
+RegisterContextDarwin_arm64::~RegisterContextDarwin_arm64() = default;
 
 void RegisterContextDarwin_arm64::InvalidateAllRegisters() {
   InvalidateAllRegisterStates();

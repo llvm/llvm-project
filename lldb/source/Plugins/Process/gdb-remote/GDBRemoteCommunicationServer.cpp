@@ -6,21 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
+#include <cerrno>
 
 #include "lldb/Host/Config.h"
 
 #include "GDBRemoteCommunicationServer.h"
 
-#include <cstring>
-
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include "lldb/Utility/UnimplementedError.h"
+#include "llvm/Support/JSON.h"
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
+using namespace llvm;
 
 GDBRemoteCommunicationServer::GDBRemoteCommunicationServer(
     const char *comm_name, const char *listener_name)
@@ -31,7 +33,7 @@ GDBRemoteCommunicationServer::GDBRemoteCommunicationServer(
              bool &quit) { return this->Handle_QErrorStringEnable(packet); });
 }
 
-GDBRemoteCommunicationServer::~GDBRemoteCommunicationServer() {}
+GDBRemoteCommunicationServer::~GDBRemoteCommunicationServer() = default;
 
 void GDBRemoteCommunicationServer::RegisterPacketHandler(
     StringExtractorGDBRemote::ServerPacketType packet_type,
@@ -113,18 +115,17 @@ GDBRemoteCommunicationServer::SendErrorResponse(const Status &error) {
 
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendErrorResponse(llvm::Error error) {
+  assert(error);
   std::unique_ptr<llvm::ErrorInfoBase> EIB;
-  std::unique_ptr<PacketUnimplementedError> PUE;
+  std::unique_ptr<UnimplementedError> UE;
   llvm::handleAllErrors(
       std::move(error),
-      [&](std::unique_ptr<PacketUnimplementedError> E) { PUE = std::move(E); },
+      [&](std::unique_ptr<UnimplementedError> E) { UE = std::move(E); },
       [&](std::unique_ptr<llvm::ErrorInfoBase> E) { EIB = std::move(E); });
 
   if (EIB)
     return SendErrorResponse(Status(llvm::Error(std::move(EIB))));
-  if (PUE)
-    return SendUnimplementedResponse(PUE->message().c_str());
-  return SendErrorResponse(Status("Unknown Error"));
+  return SendUnimplementedResponse("");
 }
 
 GDBRemoteCommunication::PacketResult
@@ -153,4 +154,20 @@ bool GDBRemoteCommunicationServer::HandshakeWithClient() {
   return GetAck() == PacketResult::Success;
 }
 
-char PacketUnimplementedError::ID;
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServer::SendJSONResponse(const json::Value &value) {
+  std::string json_string;
+  raw_string_ostream os(json_string);
+  os << value;
+  os.flush();
+  StreamGDBRemote escaped_response;
+  escaped_response.PutEscapedBytes(json_string.c_str(), json_string.size());
+  return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServer::SendJSONResponse(Expected<json::Value> value) {
+  if (!value)
+    return SendErrorResponse(value.takeError());
+  return SendJSONResponse(*value);
+}

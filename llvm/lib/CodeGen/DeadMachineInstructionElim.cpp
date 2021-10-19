@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -48,6 +49,8 @@ namespace {
 
   private:
     bool isDead(const MachineInstr *MI) const;
+
+    bool eliminateDeadMI(MachineFunction &MF);
   };
 }
 char DeadMachineInstructionElim::ID = 0;
@@ -107,7 +110,13 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
 bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  bool AnyChanges = eliminateDeadMI(MF);
+  while (AnyChanges && eliminateDeadMI(MF))
+    ;
+  return AnyChanges;
+}
 
+bool DeadMachineInstructionElim::eliminateDeadMI(MachineFunction &MF) {
   bool AnyChanges = false;
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
@@ -116,22 +125,22 @@ bool DeadMachineInstructionElim::runOnMachineFunction(MachineFunction &MF) {
   // Loop over all instructions in all blocks, from bottom to top, so that it's
   // more likely that chains of dependent but ultimately dead instructions will
   // be cleaned up.
-  for (MachineBasicBlock &MBB : make_range(MF.rbegin(), MF.rend())) {
+  for (MachineBasicBlock *MBB : post_order(&MF)) {
     // Start out assuming that reserved registers are live out of this block.
     LivePhysRegs = MRI->getReservedRegs();
 
     // Add live-ins from successors to LivePhysRegs. Normally, physregs are not
     // live across blocks, but some targets (x86) can have flags live out of a
     // block.
-    for (MachineBasicBlock::succ_iterator S = MBB.succ_begin(),
-           E = MBB.succ_end(); S != E; S++)
-      for (const auto &LI : (*S)->liveins())
+    for (const MachineBasicBlock *Succ : MBB->successors())
+      for (const auto &LI : Succ->liveins())
         LivePhysRegs.set(LI.PhysReg);
 
     // Now scan the instructions and delete dead ones, tracking physreg
     // liveness as we go.
-    for (MachineBasicBlock::reverse_iterator MII = MBB.rbegin(),
-         MIE = MBB.rend(); MII != MIE; ) {
+    for (MachineBasicBlock::reverse_iterator MII = MBB->rbegin(),
+                                             MIE = MBB->rend();
+         MII != MIE;) {
       MachineInstr *MI = &*MII++;
 
       // If the instruction is dead, delete it!

@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
+; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump - | FileCheck %s
 
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"

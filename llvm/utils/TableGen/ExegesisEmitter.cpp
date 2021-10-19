@@ -98,9 +98,9 @@ ExegesisEmitter::ExegesisEmitter(RecordKeeper &RK)
     : Records(RK), PfmCounterNameTable(collectPfmCounters(RK)) {
   std::vector<Record *> Targets = Records.getAllDerivedDefinitions("Target");
   if (Targets.size() == 0)
-    PrintFatalError("ERROR: No 'Target' subclasses defined!");
+    PrintFatalError("No 'Target' subclasses defined!");
   if (Targets.size() != 1)
-    PrintFatalError("ERROR: Multiple subclasses of Target defined!");
+    PrintFatalError("Multiple subclasses of Target defined!");
   Target = std::string(Targets[0]->getName());
 }
 
@@ -144,7 +144,7 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
 
 void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
   // Emit the counter name table.
-  OS << "\nstatic const char* " << Target << "PfmCounterNames[] = {\n";
+  OS << "\nstatic const char *" << Target << "PfmCounterNames[] = {\n";
   for (const auto &NameAndIndex : PfmCounterNameTable)
     OS << "  \"" << NameAndIndex.first << "\", // " << NameAndIndex.second
        << "\n";

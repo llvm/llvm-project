@@ -608,7 +608,7 @@ public:
     llvm::raw_fd_ostream OutStream(FD, true);
     OutStream << Content;
     OutStream.close();
-    auto File = Context.Files.getFile(Path);
+    auto File = Context.Files.getOptionalFileRef(Path);
     assert(File);
 
     StringRef Found =

@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! Verify miscellaneous bugs
 
 ! The function result must be declared after the dummy arguments
@@ -19,11 +19,11 @@ end
 !contains
 ! function f1(x) result(y)
 !  integer(4)::x(:)
-!  integer(4)::y(1_8:int(int(1_8*size(x,dim=1),kind=4),kind=8))
+!  integer(4)::y(1_8:size(x,dim=1))
 ! end
 ! function f2(x)
 !  integer(4)::x(:)
-!  integer(4)::f2(1_8:int(int(1_8*size(x,dim=1),kind=4),kind=8))
+!  integer(4)::f2(1_8:size(x,dim=1))
 ! end
 !end
 

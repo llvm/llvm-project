@@ -7,22 +7,22 @@
 
 ## Check compression of debug sections.
 # RUN: llvm-objcopy --compress-debug-sections %t.o %t-compressed.o
-# RUN: llvm-readobj -S --elf-section-groups %t-compressed.o | \
+# RUN: llvm-readobj -S --section-groups %t-compressed.o | \
 # RUN:   FileCheck %s --check-prefixes=CHECK,COMPRESS
 
 ## Check zlib-gnu compression of debug sections.
 # RUN: llvm-objcopy --compress-debug-sections=zlib-gnu %t.o %t-compressed-gnu.o
-# RUN: llvm-readobj -S --elf-section-groups %t-compressed-gnu.o | \
+# RUN: llvm-readobj -S --section-groups %t-compressed-gnu.o | \
 # RUN:   FileCheck %s --check-prefixes=CHECK,COMPRESSZLIB
 
 ## Check decompression of debug sections.
 # RUN: llvm-objcopy --decompress-debug-sections %t-compressed.o %t-decompressed.o
-# RUN: llvm-readobj --elf-section-groups %t-decompressed.o | \
+# RUN: llvm-readobj --section-groups %t-decompressed.o | \
 # RUN:   FileCheck %s --check-prefixes=CHECK,DECOMPRESS
 
 ## Check decompression of zlib-gnu debug sections.
 # RUN: llvm-objcopy --decompress-debug-sections %t-compressed-gnu.o %t-decompressed-gnu.o
-# RUN: llvm-readobj --elf-section-groups %t-decompressed-gnu.o | \
+# RUN: llvm-readobj --section-groups %t-decompressed-gnu.o | \
 # RUN:   FileCheck %s --check-prefixes=CHECK,DECOMPRESS
 
 # COMPRESSZLIB:      Name: .zdebug_in_group

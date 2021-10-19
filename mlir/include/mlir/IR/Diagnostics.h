@@ -29,7 +29,9 @@ struct LogicalResult;
 class MLIRContext;
 class Operation;
 class OperationName;
+class OpPrintingFlags;
 class Type;
+class Value;
 
 namespace detail {
 struct DiagnosticEngineImpl;
@@ -50,6 +52,34 @@ enum class DiagnosticSeverity {
 /// A variant type that holds a single argument for a diagnostic.
 class DiagnosticArgument {
 public:
+  /// Note: The constructors below are only exposed due to problems accessing
+  /// constructors from type traits, they should not be used directly by users.
+  // Construct from an Attribute.
+  explicit DiagnosticArgument(Attribute attr);
+  // Construct from a floating point number.
+  explicit DiagnosticArgument(double val)
+      : kind(DiagnosticArgumentKind::Double), doubleVal(val) {}
+  explicit DiagnosticArgument(float val) : DiagnosticArgument(double(val)) {}
+  // Construct from a signed integer.
+  template <typename T>
+  explicit DiagnosticArgument(
+      T val, typename std::enable_if<std::is_signed<T>::value &&
+                                     std::numeric_limits<T>::is_integer &&
+                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
+      : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
+  // Construct from an unsigned integer.
+  template <typename T>
+  explicit DiagnosticArgument(
+      T val, typename std::enable_if<std::is_unsigned<T>::value &&
+                                     std::numeric_limits<T>::is_integer &&
+                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
+      : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
+  // Construct from a string reference.
+  explicit DiagnosticArgument(StringRef val)
+      : kind(DiagnosticArgumentKind::String), stringVal(val) {}
+  // Construct from a Type.
+  explicit DiagnosticArgument(Type val);
+
   /// Enum that represents the different kinds of diagnostic arguments
   /// supported.
   enum class DiagnosticArgumentKind {
@@ -99,37 +129,6 @@ public:
 
 private:
   friend class Diagnostic;
-
-  // Construct from an Attribute.
-  explicit DiagnosticArgument(Attribute attr);
-
-  // Construct from a floating point number.
-  explicit DiagnosticArgument(double val)
-      : kind(DiagnosticArgumentKind::Double), doubleVal(val) {}
-  explicit DiagnosticArgument(float val) : DiagnosticArgument(double(val)) {}
-
-  // Construct from a signed integer.
-  template <typename T>
-  explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_signed<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
-      : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
-
-  // Construct from an unsigned integer.
-  template <typename T>
-  explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_unsigned<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
-      : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
-
-  // Construct from a string reference.
-  explicit DiagnosticArgument(StringRef val)
-      : kind(DiagnosticArgumentKind::String), stringVal(val) {}
-
-  // Construct from a Type.
-  explicit DiagnosticArgument(Type val);
 
   /// The kind of this argument.
   DiagnosticArgumentKind kind;
@@ -189,8 +188,10 @@ public:
 
   /// Stream operator for inserting new diagnostic arguments.
   template <typename Arg>
-  typename std::enable_if<!std::is_convertible<Arg, StringRef>::value,
-                          Diagnostic &>::type
+  typename std::enable_if<
+      !std::is_convertible<Arg, StringRef>::value &&
+          std::is_constructible<DiagnosticArgument, Arg>::value,
+      Diagnostic &>::type
   operator<<(Arg &&val) {
     arguments.push_back(DiagnosticArgument(std::forward<Arg>(val)));
     return *this;
@@ -218,19 +219,24 @@ public:
   Diagnostic &operator<<(Operation *val) {
     return *this << *val;
   }
+  /// Append an operation with the given printing flags.
+  Diagnostic &appendOp(Operation &val, const OpPrintingFlags &flags);
+
+  /// Stream in a Value.
+  Diagnostic &operator<<(Value val);
 
   /// Stream in a range.
-  template <typename T> Diagnostic &operator<<(iterator_range<T> range) {
-    return appendRange(range);
-  }
-  template <typename T> Diagnostic &operator<<(ArrayRef<T> range) {
+  template <typename T, typename ValueT = llvm::detail::ValueOfRange<T>>
+  std::enable_if_t<!std::is_constructible<DiagnosticArgument, T>::value,
+                   Diagnostic &>
+  operator<<(T &&range) {
     return appendRange(range);
   }
 
   /// Append a range to the diagnostic. The default delimiter between elements
   /// is ','.
-  template <typename T, template <typename> class Container>
-  Diagnostic &appendRange(const Container<T> &c, const char *delim = ", ") {
+  template <typename T>
+  Diagnostic &appendRange(const T &c, const char *delim = ", ") {
     llvm::interleave(
         c, [this](const auto &a) { *this << a; }, [&]() { *this << delim; });
     return *this;
@@ -531,9 +537,20 @@ struct SourceMgrDiagnosticHandlerImpl;
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr.
 class SourceMgrDiagnosticHandler : public ScopedDiagnosticHandler {
 public:
+  /// This type represents a functor used to filter out locations when printing
+  /// a diagnostic. It should return true if the provided location is okay to
+  /// display, false otherwise. If all locations in a diagnostic are filtered
+  /// out, the first location is used as the sole location. When deciding
+  /// whether or not to filter a location, this function should not recurse into
+  /// any nested location. This recursion is handled automatically by the
+  /// caller.
+  using ShouldShowLocFn = llvm::unique_function<bool(Location)>;
+
   SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx,
-                             raw_ostream &os);
-  SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx);
+                             raw_ostream &os,
+                             ShouldShowLocFn &&shouldShowLocFn = {});
+  SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx,
+                             ShouldShowLocFn &&shouldShowLocFn = {});
   ~SourceMgrDiagnosticHandler();
 
   /// Emit the given diagnostic information with the held source manager.
@@ -554,9 +571,17 @@ protected:
   /// The output stream to use when printing diagnostics.
   raw_ostream &os;
 
+  /// A functor used when determining if a location for a diagnostic should be
+  /// shown. If null, all locations should be shown.
+  ShouldShowLocFn shouldShowLocFn;
+
 private:
   /// Convert a location into the given memory buffer into an SMLoc.
   llvm::SMLoc convertLocToSMLoc(FileLineColLoc loc);
+
+  /// Given a location, returns the first nested location (including 'loc') that
+  /// can be shown to the user.
+  Optional<Location> findLocToShow(Location loc);
 
   /// The maximum depth that a call stack will be printed.
   /// TODO: This should be a tunable flag.

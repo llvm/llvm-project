@@ -7,9 +7,9 @@
 declare i32 @pers(...)
 declare void @llvm.stackrestore(i8*)
 declare i8* @llvm.stacksave()
-declare void @begin(%Iter* sret)
-declare void @plus(%Iter* sret, %Iter*, i32)
-declare void @reverse(%frame.reverse* inalloca align 4)
+declare void @begin(%Iter* sret(%Iter))
+declare void @plus(%Iter* sret(%Iter), %Iter*, i32)
+declare void @reverse(%frame.reverse* inalloca(%frame.reverse) align 4)
 
 define i32 @main() personality i32 (...)* @pers {
   %temp.lvalue = alloca %Iter
@@ -26,10 +26,10 @@ blah:
 ; CHECK:  movl %esp, %[[beg:[^ ]*]]
 ; CHECK:  leal 12(%[[beg]]), %[[end:[^ ]*]]
 
-  call void @begin(%Iter* sret %temp.lvalue)
+  call void @begin(%Iter* sret(%Iter) %temp.lvalue)
 ; CHECK:  calll _begin
 
-  invoke void @plus(%Iter* sret %end, %Iter* %temp.lvalue, i32 4)
+  invoke void @plus(%Iter* sret(%Iter) %end, %Iter* %temp.lvalue, i32 4)
           to label %invoke.cont unwind label %lpad
 
 ;  Uses end as sret param.
@@ -37,12 +37,12 @@ blah:
 ; CHECK:  calll _plus
 
 invoke.cont:
-  call void @begin(%Iter* sret %beg)
+  call void @begin(%Iter* sret(%Iter) %beg)
 
 ; CHECK:  pushl %[[beg]]
 ; CHECK:  calll _begin
 
-  invoke void @reverse(%frame.reverse* inalloca align 4 %rev_args)
+  invoke void @reverse(%frame.reverse* inalloca(%frame.reverse) align 4 %rev_args)
           to label %invoke.cont5 unwind label %lpad
 
 invoke.cont5:                                     ; preds = %invoke.cont

@@ -20,7 +20,9 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -116,16 +118,20 @@ getQualification(ASTContext &Context, const DeclContext *DestContext,
     if (auto *TD = llvm::dyn_cast<TagDecl>(CurContext)) {
       // There can't be any more tag parents after hitting a namespace.
       assert(!ReachedNS);
+      (void)ReachedNS;
       NNS = NestedNameSpecifier::Create(Context, nullptr, false,
                                         TD->getTypeForDecl());
-    } else {
+    } else if (auto *NSD = llvm::dyn_cast<NamespaceDecl>(CurContext)) {
       ReachedNS = true;
-      auto *NSD = llvm::cast<NamespaceDecl>(CurContext);
       NNS = NestedNameSpecifier::Create(Context, nullptr, NSD);
-      // Anonymous and inline namespace names are not spelled while qualifying a
-      // name, so skip those.
+      // Anonymous and inline namespace names are not spelled while qualifying
+      // a name, so skip those.
       if (NSD->isAnonymousNamespace() || NSD->isInlineNamespace())
         continue;
+    } else {
+      // Other types of contexts cannot be spelled in code, just skip over
+      // them.
+      continue;
     }
     // Stop if this namespace is already visible at DestContext.
     if (IsVisible(NNS))
@@ -258,7 +264,7 @@ std::string printTemplateSpecializationArgs(const NamedDecl &ND) {
       // TemplateArgumentTypeLocs, they only have TemplateArgumentTypes. So we
       // create a new argument location list from TypeSourceInfo.
       auto STL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-      llvm::SmallVector<TemplateArgumentLoc, 8> ArgLocs;
+      llvm::SmallVector<TemplateArgumentLoc> ArgLocs;
       ArgLocs.reserve(STL.getNumArgs());
       for (unsigned I = 0; I < STL.getNumArgs(); ++I)
         ArgLocs.push_back(STL.getArgLoc(I));
@@ -282,37 +288,90 @@ std::string printNamespaceScope(const DeclContext &DC) {
   return "";
 }
 
-llvm::Optional<SymbolID> getSymbolID(const Decl *D) {
+static llvm::StringRef
+getNameOrErrForObjCInterface(const ObjCInterfaceDecl *ID) {
+  return ID ? ID->getName() : "<<error-type>>";
+}
+
+std::string printObjCMethod(const ObjCMethodDecl &Method) {
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+
+  OS << (Method.isInstanceMethod() ? '-' : '+') << '[';
+
+  // Should always be true.
+  if (const ObjCContainerDecl *C =
+          dyn_cast<ObjCContainerDecl>(Method.getDeclContext()))
+    OS << printObjCContainer(*C);
+
+  Method.getSelector().print(OS << ' ');
+  if (Method.isVariadic())
+    OS << ", ...";
+
+  OS << ']';
+  OS.flush();
+  return Name;
+}
+
+std::string printObjCContainer(const ObjCContainerDecl &C) {
+  if (const ObjCCategoryDecl *Category = dyn_cast<ObjCCategoryDecl>(&C)) {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    const ObjCInterfaceDecl *Class = Category->getClassInterface();
+    OS << getNameOrErrForObjCInterface(Class) << '(' << Category->getName()
+       << ')';
+    OS.flush();
+    return Name;
+  }
+  if (const ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(&C)) {
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    const ObjCInterfaceDecl *Class = CID->getClassInterface();
+    OS << getNameOrErrForObjCInterface(Class) << '(' << CID->getName() << ')';
+    OS.flush();
+    return Name;
+  }
+  return C.getNameAsString();
+}
+
+SymbolID getSymbolID(const Decl *D) {
   llvm::SmallString<128> USR;
   if (index::generateUSRForDecl(D, USR))
-    return None;
+    return {};
   return SymbolID(USR);
 }
 
-llvm::Optional<SymbolID> getSymbolID(const llvm::StringRef MacroName,
-                                     const MacroInfo *MI,
-                                     const SourceManager &SM) {
+SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
+                     const SourceManager &SM) {
   if (MI == nullptr)
-    return None;
+    return {};
   llvm::SmallString<128> USR;
   if (index::generateUSRForMacro(MacroName, MI->getDefinitionLoc(), SM, USR))
-    return None;
+    return {};
   return SymbolID(USR);
 }
 
-// FIXME: This should be handled while printing underlying decls instead.
 std::string printType(const QualType QT, const DeclContext &CurContext) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  auto Decls = explicitReferenceTargets(
-      ast_type_traits::DynTypedNode::create(QT), DeclRelation::Alias);
-  if (!Decls.empty())
-    OS << getQualification(CurContext.getParentASTContext(), &CurContext,
-                           Decls.front(),
-                           /*VisibleNamespaces=*/llvm::ArrayRef<std::string>{});
   PrintingPolicy PP(CurContext.getParentASTContext().getPrintingPolicy());
-  PP.SuppressScope = true;
   PP.SuppressTagKeyword = true;
+  PP.SuppressUnwrittenScope = true;
+
+  class PrintCB : public PrintingCallbacks {
+  public:
+    PrintCB(const DeclContext *CurContext) : CurContext(CurContext) {}
+    virtual ~PrintCB() {}
+    virtual bool isScopeVisible(const DeclContext *DC) const override {
+      return DC->Encloses(CurContext);
+    }
+
+  private:
+    const DeclContext *CurContext;
+  };
+  PrintCB PCB(&CurContext);
+  PP.Callbacks = &PCB;
+
   QT.print(OS, PP);
   return OS.str();
 }
@@ -351,8 +410,7 @@ public:
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
-      if (!AT->getDeducedType().isNull())
-        DeducedType = AT->getDeducedType();
+      DeducedType = AT->desugar();
     }
     return true;
   }
@@ -369,7 +427,7 @@ public:
     // Loc of auto in return type (c++14).
     auto CurLoc = D->getReturnTypeSourceRange().getBegin();
     // Loc of "auto" in operator auto()
-    if (CurLoc.isInvalid() && dyn_cast<CXXConversionDecl>(D))
+    if (CurLoc.isInvalid() && isa<CXXConversionDecl>(D))
       CurLoc = D->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
     // Loc of "auto" in function with trailing return type (c++11).
     if (CurLoc.isInvalid())
@@ -425,6 +483,30 @@ llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
   return V.DeducedType;
 }
 
+std::vector<const Attr *> getAttributes(const DynTypedNode &N) {
+  std::vector<const Attr *> Result;
+  if (const auto *TL = N.get<TypeLoc>()) {
+    for (AttributedTypeLoc ATL = TL->getAs<AttributedTypeLoc>(); !ATL.isNull();
+         ATL = ATL.getModifiedLoc().getAs<AttributedTypeLoc>()) {
+      if (const Attr *A = ATL.getAttr())
+        Result.push_back(A);
+      assert(!ATL.getModifiedLoc().isNull());
+    }
+  }
+  if (const auto *S = N.get<AttributedStmt>()) {
+    for (; S != nullptr; S = dyn_cast<AttributedStmt>(S->getSubStmt()))
+      for (const Attr *A : S->getAttrs())
+        if (A)
+          Result.push_back(A);
+  }
+  if (const auto *D = N.get<Decl>()) {
+    for (const Attr *A : D->attrs())
+      if (A)
+        Result.push_back(A);
+  }
+  return Result;
+}
+
 std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              SourceLocation InsertionPoint,
@@ -471,5 +553,14 @@ bool hasUnstableLinkage(const Decl *D) {
   return VD && !VD->getType().isNull() && VD->getType()->isUndeducedType();
 }
 
+bool isDeeplyNested(const Decl *D, unsigned MaxDepth) {
+  size_t ContextDepth = 0;
+  for (auto *Ctx = D->getDeclContext(); Ctx && !Ctx->isTranslationUnit();
+       Ctx = Ctx->getParent()) {
+    if (++ContextDepth == MaxDepth)
+      return true;
+  }
+  return false;
+}
 } // namespace clangd
 } // namespace clang

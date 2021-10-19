@@ -20,6 +20,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 typedef std::chrono::milliseconds ms;
@@ -56,7 +57,7 @@ int main(int, char**)
     typedef int T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func1, std::move(p)).detach();
+    support::make_test_thread(func1, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());
@@ -69,7 +70,7 @@ int main(int, char**)
     typedef int& T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func3, std::move(p)).detach();
+    support::make_test_thread(func3, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());
@@ -82,7 +83,7 @@ int main(int, char**)
     typedef void T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func5, std::move(p)).detach();
+    support::make_test_thread(func5, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());
@@ -97,7 +98,7 @@ int main(int, char**)
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
     Clock::time_point t0 = Clock::now();
-    std::thread(func1, std::move(p)).detach();
+    support::make_test_thread(func1, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());
@@ -113,7 +114,7 @@ int main(int, char**)
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
     Clock::time_point t0 = Clock::now();
-    std::thread(func3, std::move(p)).detach();
+    support::make_test_thread(func3, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());
@@ -129,7 +130,7 @@ int main(int, char**)
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
     Clock::time_point t0 = Clock::now();
-    std::thread(func5, std::move(p)).detach();
+    support::make_test_thread(func5, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_for(ms(1)) == std::future_status::timeout);
     assert(f.valid());

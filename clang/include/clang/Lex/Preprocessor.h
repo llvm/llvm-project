@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LEX_PREPROCESSOR_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -67,6 +68,7 @@ class CodeCompletionHandler;
 class CommentHandler;
 class DirectoryEntry;
 class DirectoryLookup;
+class EmptylineHandler;
 class ExternalPreprocessorSource;
 class FileEntry;
 class FileManager;
@@ -256,13 +258,18 @@ class Preprocessor {
   /// with this preprocessor.
   std::vector<CommentHandler *> CommentHandlers;
 
+  /// Empty line handler.
+  EmptylineHandler *Emptyline = nullptr;
+
   /// True if we want to ignore EOF token and continue later on (thus
   /// avoid tearing the Lexer and etc. down).
   bool IncrementalProcessing = false;
 
+public:
   /// The kind of translation unit we are processing.
-  TranslationUnitKind TUKind;
+  const TranslationUnitKind TUKind;
 
+private:
   /// The code-completion handler.
   CodeCompletionHandler *CodeComplete = nullptr;
 
@@ -777,9 +784,44 @@ private:
   /// deserializing from PCH, we don't need to deserialize identifier & macros
   /// just so that we can report that they are unused, we just warn using
   /// the SourceLocations of this set (that will be filled by the ASTReader).
-  /// We are using SmallPtrSet instead of a vector for faster removal.
-  using WarnUnusedMacroLocsTy = llvm::SmallPtrSet<SourceLocation, 32>;
+  using WarnUnusedMacroLocsTy = llvm::SmallDenseSet<SourceLocation, 32>;
   WarnUnusedMacroLocsTy WarnUnusedMacroLocs;
+
+  /// This is a pair of an optional message and source location used for pragmas
+  /// that annotate macros like pragma clang restrict_expansion and pragma clang
+  /// deprecated. This pair stores the optional message and the location of the
+  /// annotation pragma for use producing diagnostics and notes.
+  using MsgLocationPair = std::pair<std::string, SourceLocation>;
+
+  struct MacroAnnotationInfo {
+    SourceLocation Location;
+    std::string Message;
+  };
+
+  struct MacroAnnotations {
+    llvm::Optional<MacroAnnotationInfo> DeprecationInfo;
+    llvm::Optional<MacroAnnotationInfo> RestrictExpansionInfo;
+    llvm::Optional<SourceLocation> FinalAnnotationLoc;
+
+    static MacroAnnotations makeDeprecation(SourceLocation Loc,
+                                            std::string Msg) {
+      return MacroAnnotations{MacroAnnotationInfo{Loc, std::move(Msg)},
+                              llvm::None, llvm::None};
+    }
+
+    static MacroAnnotations makeRestrictExpansion(SourceLocation Loc,
+                                                  std::string Msg) {
+      return MacroAnnotations{
+          llvm::None, MacroAnnotationInfo{Loc, std::move(Msg)}, llvm::None};
+    }
+
+    static MacroAnnotations makeFinal(SourceLocation Loc) {
+      return MacroAnnotations{llvm::None, llvm::None, Loc};
+    }
+  };
+
+  /// Warning information for macro annotations.
+  llvm::DenseMap<const IdentifierInfo *, MacroAnnotations> AnnotationInfos;
 
   /// A "freelist" of MacroArg objects that can be
   /// reused for quick allocation.
@@ -1147,7 +1189,7 @@ public:
   /// Register an exported macro for a module and identifier.
   ModuleMacro *addModuleMacro(Module *Mod, IdentifierInfo *II, MacroInfo *Macro,
                               ArrayRef<ModuleMacro *> Overrides, bool &IsNew);
-  ModuleMacro *getModuleMacro(Module *Mod, IdentifierInfo *II);
+  ModuleMacro *getModuleMacro(Module *Mod, const IdentifierInfo *II);
 
   /// Get the list of leaf (non-overridden) module macros for a name.
   ArrayRef<ModuleMacro*> getLeafModuleMacros(const IdentifierInfo *II) const {
@@ -1157,6 +1199,11 @@ public:
     if (I != LeafModuleMacros.end())
       return I->second;
     return None;
+  }
+
+  /// Get the list of submodules that we're currently building.
+  ArrayRef<BuildingSubmoduleInfo> getBuildingSubmodules() const {
+    return BuildingSubmoduleStack;
   }
 
   /// \{
@@ -1218,6 +1265,11 @@ public:
 
   /// Install empty handlers for all pragmas (making them ignored).
   void IgnorePragmas();
+
+  /// Set empty line handler.
+  void setEmptylineHandler(EmptylineHandler *Handler) { Emptyline = Handler; }
+
+  EmptylineHandler *getEmptylineHandler() const { return Emptyline; }
 
   /// Add the specified comment handler to the preprocessor.
   void addCommentHandler(CommentHandler *Handler);
@@ -1938,7 +1990,8 @@ public:
   /// This either returns the EOF token and returns true, or
   /// pops a level off the include stack and returns false, at which point the
   /// client should call lex again.
-  bool HandleEndOfFile(Token &Result, bool isEndOfMacro = false);
+  bool HandleEndOfFile(Token &Result, SourceLocation Loc,
+                       bool isEndOfMacro = false);
 
   /// Callback invoked when the current TokenLexer hits the end of its
   /// token stream.
@@ -2343,16 +2396,19 @@ private:
                          bool ReadAnyTokensBeforeDirective);
   void HandleEndifDirective(Token &EndifToken);
   void HandleElseDirective(Token &Result, const Token &HashToken);
-  void HandleElifDirective(Token &ElifToken, const Token &HashToken);
+  void HandleElifFamilyDirective(Token &ElifToken, const Token &HashToken,
+                                 tok::PPKeywordKind Kind);
 
   // Pragmas.
   void HandlePragmaDirective(PragmaIntroducer Introducer);
+  void ResolvePragmaIncludeInstead(SourceLocation Location) const;
 
 public:
   void HandlePragmaOnce(Token &OnceTok);
-  void HandlePragmaMark();
+  void HandlePragmaMark(Token &MarkTok);
   void HandlePragmaPoison();
   void HandlePragmaSystemHeader(Token &SysHeaderTok);
+  void HandlePragmaIncludeInstead(Token &Tok);
   void HandlePragmaDependency(Token &DependencyTok);
   void HandlePragmaPushMacro(Token &Tok);
   void HandlePragmaPopMacro(Token &Tok);
@@ -2369,7 +2425,57 @@ public:
   /// warnings.
   void markMacroAsUsed(MacroInfo *MI);
 
+  void addMacroDeprecationMsg(const IdentifierInfo *II, std::string Msg,
+                              SourceLocation AnnotationLoc) {
+    auto Annotations = AnnotationInfos.find(II);
+    if (Annotations == AnnotationInfos.end())
+      AnnotationInfos.insert(std::make_pair(
+          II,
+          MacroAnnotations::makeDeprecation(AnnotationLoc, std::move(Msg))));
+    else
+      Annotations->second.DeprecationInfo =
+          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+  }
+
+  void addRestrictExpansionMsg(const IdentifierInfo *II, std::string Msg,
+                               SourceLocation AnnotationLoc) {
+    auto Annotations = AnnotationInfos.find(II);
+    if (Annotations == AnnotationInfos.end())
+      AnnotationInfos.insert(
+          std::make_pair(II, MacroAnnotations::makeRestrictExpansion(
+                                 AnnotationLoc, std::move(Msg))));
+    else
+      Annotations->second.RestrictExpansionInfo =
+          MacroAnnotationInfo{AnnotationLoc, std::move(Msg)};
+  }
+
+  void addFinalLoc(const IdentifierInfo *II, SourceLocation AnnotationLoc) {
+    auto Annotations = AnnotationInfos.find(II);
+    if (Annotations == AnnotationInfos.end())
+      AnnotationInfos.insert(
+          std::make_pair(II, MacroAnnotations::makeFinal(AnnotationLoc)));
+    else
+      Annotations->second.FinalAnnotationLoc = AnnotationLoc;
+  }
+
+  const MacroAnnotations &getMacroAnnotations(const IdentifierInfo *II) const {
+    return AnnotationInfos.find(II)->second;
+  }
+
+  void emitMacroExpansionWarnings(const Token &Identifier) const {
+    if (Identifier.getIdentifierInfo()->isDeprecatedMacro())
+      emitMacroDeprecationWarning(Identifier);
+
+    if (Identifier.getIdentifierInfo()->isRestrictExpansion() &&
+        !SourceMgr.isInMainFile(Identifier.getLocation()))
+      emitRestrictExpansionWarning(Identifier);
+  }
+
 private:
+  void emitMacroDeprecationWarning(const Token &Identifier) const;
+  void emitRestrictExpansionWarning(const Token &Identifier) const;
+  void emitFinalMacroWarning(const Token &Identifier, bool IsUndef) const;
+
   Optional<unsigned>
   getSkippedRangeForExcludedConditionalBlock(SourceLocation HashLoc);
 
@@ -2388,6 +2494,16 @@ public:
   // The handler shall return true if it has pushed any tokens
   // to be read using e.g. EnterToken or EnterTokenStream.
   virtual bool HandleComment(Preprocessor &PP, SourceRange Comment) = 0;
+};
+
+/// Abstract base class that describes a handler that will receive
+/// source ranges for empty lines encountered in the source file.
+class EmptylineHandler {
+public:
+  virtual ~EmptylineHandler();
+
+  // The handler handles empty lines.
+  virtual void HandleEmptyline(SourceRange Range) = 0;
 };
 
 /// Registry of pragma handlers added by plugins

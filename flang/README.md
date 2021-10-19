@@ -15,9 +15,9 @@ To better understand Fortran as a language
 and the specific grammar accepted by flang,
 read [Fortran For C Programmers](docs/FortranForCProgrammers.md)
 and
-flang's specifications of the [Fortran grammar](docs/f2018-grammar.txt)
+flang's specifications of the [Fortran grammar](docs/f2018-grammar.md)
 and
-the [OpenMP grammar](docs/OpenMP-4.5-grammar.txt).
+the [OpenMP grammar](docs/OpenMP-4.5-grammar.md).
 
 Treatment of language extensions is covered
 in [this document](docs/Extensions.md).
@@ -34,7 +34,7 @@ and
 also review [how flang uses modern C++ features](docs/C++17.md).
 
 If you are interested in writing new documentation, follow 
-[markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/master/llvm/docs/MarkdownQuickstartTemplate.md).
+[markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/main/llvm/docs/MarkdownQuickstartTemplate.md).
 
 ## Supported C++ compilers
 
@@ -69,16 +69,17 @@ of LLVM, follow those instructions and add flang to `LLVM_ENABLE_PROJECTS`.
 We highly recommend using the same compiler to compile both llvm and flang.
 
 The flang CMakeList.txt file uses
-the variable `LLVM_DIR` to find the installed LLVM components
-and
-the variable `MLIR_DIR` to find the installed MLIR components.
+* `LLVM_DIR` to find the installed LLVM components
+* `MLIR_DIR` to find the installed MLIR components
+* `CLANG_DIR` to find the installed Clang components
 
-To get the correct LLVM and MLIR libraries included in your flang build,
-define LLVM_DIR and MLIR_DIR on the cmake command line.
+To get the correct LLVM, MLIR and Clang libraries included in your flang build,
+define `LLVM_DIR`, `MLIR_DIR` and `CLANG_DIR` on the cmake command line.
 ```
 LLVM=<LLVM_BUILD_DIR>/lib/cmake/llvm \
 MLIR=<LLVM_BUILD_DIR>/lib/cmake/mlir \
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ...
+CLANG=<LLVM_BUILD_DIR>/lib/cmake/clang \
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ...
 ```
 where `LLVM_BUILD_DIR` is
 the top-level directory where LLVM was built.
@@ -140,9 +141,18 @@ Release builds execute quickly.
 ### Build Flang out of tree
 ```
 cd ~/flang/build
-cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR ~/flang/src
+cmake -DLLVM_DIR=$LLVM -DMLIR_DIR=$MLIR -DCLANG_DIR=$CLANG ~/flang/src
 make
 ```
+
+### Disable The New Flang Driver
+The new Flang compiler driver, `flang-new`, is implemented in terms of
+`clangDriver` and hence it introduces a dependency on Clang. This dependency is
+otherwise not required. If you do not require the new driver, you can disable
+it by adding `-DFLANG_BUILD_NEW_DRIVER=OFF` to your CMake invocation. With the
+new driver disabled, you no longer need to add `clang` to
+`LLVM_ENABLE_PROJECTS` (or to specify `CLANG_DIR` when building out-of-tree).
+
 # How to Run Tests
 
 Flang supports 2 different categories of tests
@@ -159,7 +169,7 @@ make test check-all
 
 To run individual regression tests llvm-lit needs to know the lit
 configuration for flang. The parameters in charge of this are:
-flang_site_config and flang_config. And they can be set as shown bellow:
+flang_site_config and flang_config. And they can be set as shown below:
 ```
 <path-to-llvm-lit>/llvm-lit \
  --param flang_site_config=<path-to-flang-build>/test-lit/lit.site.cfg.py \
@@ -214,9 +224,11 @@ To generate doxygen-style documentation from source code
 cd ~/llvm-project/build
 cmake -DLLVM_ENABLE_DOXYGEN=ON -DFLANG_INCLUDE_DOCS=ON ../llvm
 make doxygen-flang
+```
 
 It will generate html in
 
+```
     <build-dir>/tools/flang/docs/doxygen/html # for flang docs
 ```
 ## Generate Sphinx-based Documentation
@@ -227,17 +239,18 @@ is mostly meant to be processed by the Sphinx documentation generation
 system to create HTML pages which would be hosted on the webpage of flang and
 updated periodically.
 
-If you would like to generate and view the HTML locally, install
-Sphinx <http://sphinx-doc.org/> and then:
-
+If you would like to generate and view the HTML locally:
+- Install [Sphinx](http://sphinx-doc.org/), including the [sphinx-markdown-tables](https://pypi.org/project/sphinx-markdown-tables/) extension.
 - Pass `-DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF` to the cmake command.
 
 ```
 cd ~/llvm-project/build
 cmake -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ../llvm
 make docs-flang-html
+```
 
 It will generate html in
 
+```
    $BROWSER <build-dir>/tools/flang/docs/html/
 ```

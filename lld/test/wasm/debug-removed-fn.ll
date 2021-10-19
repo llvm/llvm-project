@@ -3,12 +3,13 @@
 ; RUN: llvm-dwarfdump -debug-line -debug-ranges %t.wasm | FileCheck %s
 
 ; CHECK: Address
-; CHECK: 0x0000000000000005
-; CHECK: 0x0000000000000000
+; CHECK: 0x0000000000000003
+; CHECK-NEXT: 0x0000000000000006
+; CHECK-EMPTY:
 
 ; CHECK: .debug_ranges contents:
 ; CHECK: 00000000 {{[0-9]+}} {{[0-9]+}}
-; CHECK: 00000000 {{[0-9]+}} {{[0-9]+}}
+; CHECK: 00000000 fffffffe fffffffe
 ; CHECK: 00000000 <End of list>
 
 ; ModuleID = 't.bc'

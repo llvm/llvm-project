@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
 
 namespace std {
 struct type_info;
@@ -85,9 +85,9 @@ void func(int sel) {
 
   (void)local_int8;
 
-  local_int8, 0; // expected-warning + {{expression result unused}}
+  local_int8, 0; // expected-warning {{left operand of comma operator has no effect}}
 
-  0, local_int8; // expected-warning + {{expression result unused}}
+  0, local_int8; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
 
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
@@ -378,6 +378,8 @@ using array_alias = T[1]; // expected-error {{array has sizeless element type '_
 extern array_alias<int> *array_alias_int_ptr;
 extern array_alias<svint8_t> *array_alias_int8_ptr; // expected-note {{in instantiation of template type alias 'array_alias' requested here}}
 #endif
+
+extern "C" svint8_t c_return_int8();
 
 void cxx_only(int sel) {
   svint8_t local_int8;

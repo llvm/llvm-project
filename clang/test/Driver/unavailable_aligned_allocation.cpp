@@ -22,6 +22,9 @@
 // RUN: -c -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=UNAVAILABLE
 //
+// RUN: %clang -target s390x-none-zos -c -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=UNAVAILABLE
+
 // UNAVAILABLE: "-faligned-alloc-unavailable"
 
 // RUN: %clang -target x86_64-apple-macosx10.14 -c -### %s 2>&1 \
@@ -58,6 +61,12 @@
 // RUN:   | FileCheck %s -check-prefix=AVAILABLE
 //
 // RUN: %clang -target x86_64-apple-macosx10.13 -fno-aligned-allocation -c -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=AVAILABLE
+//
+// RUN: %clang -target s390x-none-zos -faligned-allocation -c -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=AVAILABLE
+//
+// RUN: %clang -target s390x-none-zos -fno-aligned-allocation -c -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=AVAILABLE
 
 // AVAILABLE-NOT: "-faligned-alloc-unavailable"

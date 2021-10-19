@@ -64,12 +64,10 @@ class FixedSizeClassMap : public SizeClassMapBase<Config> {
   static const u8 S = Config::NumBits - 1;
   static const uptr M = (1UL << S) - 1;
 
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-
 public:
   static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
 
-  static const uptr MaxSize = (1UL << Config::MaxSizeLog) + SizeDelta;
+  static const uptr MaxSize = (1UL << Config::MaxSizeLog) + Config::SizeDelta;
   static const uptr NumClasses =
       MidClass + ((Config::MaxSizeLog - Config::MidSizeLog) << S) + 1;
   static_assert(NumClasses <= 256, "");
@@ -79,16 +77,22 @@ public:
   static uptr getSizeByClassId(uptr ClassId) {
     DCHECK_NE(ClassId, BatchClassId);
     if (ClassId <= MidClass)
-      return (ClassId << Config::MinSizeLog) + SizeDelta;
+      return (ClassId << Config::MinSizeLog) + Config::SizeDelta;
     ClassId -= MidClass;
     const uptr T = MidSize << (ClassId >> S);
-    return T + (T >> S) * (ClassId & M) + SizeDelta;
+    return T + (T >> S) * (ClassId & M) + Config::SizeDelta;
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    return u8(getLeastSignificantSetBitIndex(getSizeByClassId(ClassId)));
+  }
+
+  static constexpr bool usesCompressedLSBFormat() { return false; }
+
   static uptr getClassIdBySize(uptr Size) {
-    if (Size <= SizeDelta + (1 << Config::MinSizeLog))
+    if (Size <= Config::SizeDelta + (1 << Config::MinSizeLog))
       return 1;
-    Size -= SizeDelta;
+    Size -= Config::SizeDelta;
     DCHECK_LE(Size, MaxSize);
     if (Size <= MidSize)
       return (Size + MinSize - 1) >> Config::MinSizeLog;
@@ -137,7 +141,41 @@ class TableSizeClassMap : public SizeClassMapBase<Config> {
     u8 Tab[getTableSize()] = {};
   };
 
-  static constexpr SizeTable Table = {};
+  static constexpr SizeTable SzTable = {};
+
+  struct LSBTable {
+    constexpr LSBTable() {
+      u8 Min = 255, Max = 0;
+      for (uptr I = 0; I != ClassesSize; ++I) {
+        for (u8 Bit = 0; Bit != 64; ++Bit) {
+          if (Config::Classes[I] & (1 << Bit)) {
+            Tab[I] = Bit;
+            if (Bit < Min)
+              Min = Bit;
+            if (Bit > Max)
+              Max = Bit;
+            break;
+          }
+        }
+      }
+
+      if (Max - Min > 3 || ClassesSize > 32)
+        return;
+
+      UseCompressedFormat = true;
+      CompressedMin = Min;
+      for (uptr I = 0; I != ClassesSize; ++I)
+        CompressedValue |= u64(Tab[I] - Min) << (I * 2);
+    }
+
+    u8 Tab[ClassesSize] = {};
+
+    bool UseCompressedFormat = false;
+    u8 CompressedMin = 0;
+    u64 CompressedValue = 0;
+  };
+
+  static constexpr LSBTable LTable = {};
 
 public:
   static const u32 MaxNumCachedHint = Config::MaxNumCachedHint;
@@ -152,6 +190,18 @@ public:
     return Config::Classes[ClassId - 1];
   }
 
+  static u8 getSizeLSBByClassId(uptr ClassId) {
+    if (LTable.UseCompressedFormat)
+      return ((LTable.CompressedValue >> ((ClassId - 1) * 2)) & 3) +
+             LTable.CompressedMin;
+    else
+      return LTable.Tab[ClassId - 1];
+  }
+
+  static constexpr bool usesCompressedLSBFormat() {
+    return LTable.UseCompressedFormat;
+  }
+
   static uptr getClassIdBySize(uptr Size) {
     if (Size <= Config::Classes[0])
       return 1;
@@ -159,7 +209,7 @@ public:
     DCHECK_LE(Size, MaxSize);
     if (Size <= (1 << Config::MidSizeLog))
       return ((Size - 1) >> Config::MinSizeLog) + 1;
-    return Table.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
+    return SzTable.Tab[scaledLog2(Size - 1, Config::MidSizeLog, S)];
   }
 
   static u32 getMaxCachedHint(uptr Size) {
@@ -168,13 +218,37 @@ public:
   }
 };
 
+struct DefaultSizeClassConfig {
+  static const uptr NumBits = 3;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 8;
+  static const uptr MaxSizeLog = 17;
+  static const u32 MaxNumCachedHint = 14;
+  static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = 0;
+};
+
+typedef FixedSizeClassMap<DefaultSizeClassConfig> DefaultSizeClassMap;
+
+struct FuchsiaSizeClassConfig {
+  static const uptr NumBits = 3;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 8;
+  static const uptr MaxSizeLog = 17;
+  static const u32 MaxNumCachedHint = 10;
+  static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
+};
+
+typedef FixedSizeClassMap<FuchsiaSizeClassConfig> FuchsiaSizeClassMap;
+
 struct AndroidSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
   static const uptr NumBits = 7;
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 6;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 14;
+  static const u32 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 13;
 
   static constexpr u32 Classes[] = {
@@ -208,16 +282,9 @@ struct AndroidSizeClassConfig {
 
 typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 
-struct DefaultSizeClassConfig {
-  static const uptr NumBits = 3;
-  static const uptr MinSizeLog = 5;
-  static const uptr MidSizeLog = 8;
-  static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 8;
-  static const uptr MaxBytesCachedLog = 10;
-};
-
-typedef FixedSizeClassMap<DefaultSizeClassConfig> DefaultSizeClassMap;
+#if SCUDO_WORDSIZE == 64U && defined(__clang__)
+static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
+#endif
 
 struct SvelteSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
@@ -225,22 +292,38 @@ struct SvelteSizeClassConfig {
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 4;
+  static const u32 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
 #else
   static const uptr NumBits = 4;
   static const uptr MinSizeLog = 3;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 5;
+  static const u32 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = Chunk::getHeaderSize();
 #endif
 };
 
 typedef FixedSizeClassMap<SvelteSizeClassConfig> SvelteSizeClassMap;
 
+// Trusty is configured to only have one region containing blocks of size
+// 2^7 bytes.
+struct TrustySizeClassConfig {
+  static const uptr NumBits = 1;
+  static const uptr MinSizeLog = 7;
+  static const uptr MidSizeLog = 7;
+  static const uptr MaxSizeLog = 7;
+  static const u32 MaxNumCachedHint = 8;
+  static const uptr MaxBytesCachedLog = 10;
+  static const uptr SizeDelta = 0;
+};
+
+typedef FixedSizeClassMap<TrustySizeClassConfig> TrustySizeClassMap;
+
 template <typename SCMap> inline void printMap() {
-  ScopedString Buffer(1024);
+  ScopedString Buffer;
   uptr PrevS = 0;
   uptr TotalCached = 0;
   for (uptr I = 0; I < SCMap::NumClasses; I++) {
@@ -252,8 +335,8 @@ template <typename SCMap> inline void printMap() {
     const uptr L = S ? getMostSignificantSetBitIndex(S) : 0;
     const uptr Cached = SCMap::getMaxCachedHint(S) * S;
     Buffer.append(
-        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %zu %zu; id %zu\n",
-        I, S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
+        "C%02zu => S: %zu diff: +%zu %02zu%% L %zu Cached: %u %zu; id %zu\n", I,
+        S, D, P, L, SCMap::getMaxCachedHint(S), Cached,
         SCMap::getClassIdBySize(S));
     TotalCached += Cached;
     PrevS = S;

@@ -1,10 +1,5 @@
-; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=false %s | FileCheck %s
-; RUN: opt -S -basic-aa -licm -licm-n2-threshold=0 -enable-mssa-loop-dependency=true %s | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -licm -basic-aa -licm-n2-threshold=200 < %s -S | FileCheck %s --check-prefix=ALIAS-N2
-
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=0 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
-; RUN: opt -aa-pipeline=basic-aa -licm-n2-threshold=200 -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck %s --check-prefix=ALIAS-N2
+; RUN: opt -S -basic-aa -licm %s -enable-new-pm=0 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck %s
 
 ; We should be able to hoist loads in presence of read only calls and stores
 ; that do not alias.
@@ -23,13 +18,8 @@ declare void @foo(i64, i32*) readonly
 define void @test1(i32* %ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-LABEL: entry:
+; CHECK:         %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
-; CHECK: %val = load i32, i32* %ptr
-
-; ALIAS-N2-LABEL: @test1(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2:         %val = load i32, i32* %ptr
-; ALIAS-N2-LABEL: loop:
 entry:
   br label %loop
 
@@ -47,13 +37,8 @@ loop:
 define void @test2(i32* %ptr) {
 ; CHECK-LABEL: @test2(
 ; CHECK-LABEL: entry:
-; CHECK: %val = load i32, i32* %ptr
+; CHECK:         %val = load i32, i32* %ptr
 ; CHECK-LABEL: loop:
-
-; ALIAS-N2-LABEL: @test2(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2:         %val = load i32, i32* %ptr
-; ALIAS-N2-LABEL: loop:
 entry:
   br label %loop
 
@@ -70,12 +55,7 @@ define void @test3(i32* %ptr) {
 ; CHECK-LABEL: @test3(
 ; CHECK-LABEL: entry:
 ; CHECK-LABEL: loop:
-; CHECK: %val = load i32, i32* %ptr
-
-; ALIAS-N2-LABEL: @test3(
-; ALIAS-N2-LABEL: entry:
-; ALIAS-N2-LABEL: loop:
-; ALIAS-N2:         %val = load i32, i32* %ptr
+; CHECK:         %val = load i32, i32* %ptr
 entry:
   br label %loop
 

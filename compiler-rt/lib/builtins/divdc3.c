@@ -20,17 +20,19 @@
 COMPILER_RT_ABI Dcomplex __divdc3(double __a, double __b, double __c,
                                   double __d) {
   int __ilogbw = 0;
-  double __logbw = __compiler_rt_logb(crt_fmax(crt_fabs(__c), crt_fabs(__d)));
+  double __logbw = __compiler_rt_logb(__compiler_rt_fmax(crt_fabs(__c),
+                                                         crt_fabs(__d)));
   if (crt_isfinite(__logbw)) {
     __ilogbw = (int)__logbw;
-    __c = crt_scalbn(__c, -__ilogbw);
-    __d = crt_scalbn(__d, -__ilogbw);
+    __c = __compiler_rt_scalbn(__c, -__ilogbw);
+    __d = __compiler_rt_scalbn(__d, -__ilogbw);
   }
   double __denom = __c * __c + __d * __d;
   Dcomplex z;
-  COMPLEX_REAL(z) = crt_scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
+  COMPLEX_REAL(z) =
+      __compiler_rt_scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
   COMPLEX_IMAGINARY(z) =
-      crt_scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
+      __compiler_rt_scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
   if (crt_isnan(COMPLEX_REAL(z)) && crt_isnan(COMPLEX_IMAGINARY(z))) {
     if ((__denom == 0.0) && (!crt_isnan(__a) || !crt_isnan(__b))) {
       COMPLEX_REAL(z) = crt_copysign(CRT_INFINITY, __c) * __a;

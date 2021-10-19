@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 @.LC0 = internal global [10 x i8] c"argc: %d\0A\00"		; <[10 x i8]*> [#uses=1]

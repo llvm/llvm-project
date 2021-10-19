@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLE_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBSTRINGTABLE_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -17,7 +17,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 class BinaryStreamReader;
@@ -61,4 +60,4 @@ private:
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_STRINGTABLE_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_PDBSTRINGTABLE_H

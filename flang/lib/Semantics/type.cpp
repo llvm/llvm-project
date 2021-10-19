@@ -8,7 +8,9 @@
 
 #include "flang/Semantics/type.h"
 #include "check-declarations.h"
+#include "compute-offsets.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
@@ -148,9 +150,10 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
     if (!FindParameter(name)) {
       const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
       if (details.init()) {
-        auto expr{
-            evaluate::Fold(foldingContext, common::Clone(details.init()))};
-        AddParamValue(name, ParamValue{std::move(*expr), details.attr()});
+        auto expr{evaluate::Fold(foldingContext, SomeExpr{*details.init()})};
+        AddParamValue(name,
+            ParamValue{
+                std::move(std::get<SomeIntExpr>(expr.u)), details.attr()});
       } else if (!context.HasError(symbol)) {
         messages.Say(name_,
             "Type parameter '%s' lacks a value and has no default"_err_en_US,
@@ -177,7 +180,18 @@ bool DerivedTypeSpec::IsForwardReferenced() const {
 bool DerivedTypeSpec::HasDefaultInitialization() const {
   DirectComponentIterator components{*this};
   return bool{std::find_if(components.begin(), components.end(),
-      [](const Symbol &component) { return IsInitialized(component); })};
+      [&](const Symbol &component) { return IsInitialized(component); })};
+}
+
+bool DerivedTypeSpec::HasDestruction() const {
+  if (!typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+    return true;
+  }
+  DirectComponentIterator components{*this};
+  return bool{std::find_if(
+      components.begin(), components.end(), [&](const Symbol &component) {
+        return IsDestructible(component, &typeSymbol());
+      })};
 }
 
 ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
@@ -185,62 +199,113 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
+// Objects of derived types might be assignment compatible if they are equal
+// with respect to everything other than their instantiated type parameters
+// and their constant instantiated type parameters have the same values.
+bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
+    const DerivedTypeSpec &that) const {
+  if (!RawEquals(that)) {
+    return false;
+  }
+  return AreTypeParamCompatible(*this, that);
+}
+
 class InstantiateHelper {
 public:
-  InstantiateHelper(SemanticsContext &context, Scope &scope)
-      : context_{context}, scope_{scope} {}
+  InstantiateHelper(Scope &scope) : scope_{scope} {}
   // Instantiate components from fromScope into scope_
   void InstantiateComponents(const Scope &);
 
 private:
+  SemanticsContext &context() const { return scope_.context(); }
   evaluate::FoldingContext &foldingContext() {
-    return context_.foldingContext();
+    return context().foldingContext();
   }
-  template <typename T> T Fold(T &&expr) {
+  template <typename A> A Fold(A &&expr) {
     return evaluate::Fold(foldingContext(), std::move(expr));
   }
   void InstantiateComponent(const Symbol &);
   const DeclTypeSpec *InstantiateType(const Symbol &);
-  const DeclTypeSpec &InstantiateIntrinsicType(const DeclTypeSpec &);
+  const DeclTypeSpec &InstantiateIntrinsicType(
+      SourceName, const DeclTypeSpec &);
   DerivedTypeSpec CreateDerivedTypeSpec(const DerivedTypeSpec &, bool);
 
-  SemanticsContext &context_;
   Scope &scope_;
 };
 
-void DerivedTypeSpec::Instantiate(
-    Scope &containingScope, SemanticsContext &context) {
+static int PlumbPDTInstantiationDepth(const Scope *scope) {
+  int depth{0};
+  while (scope->IsParameterizedDerivedTypeInstantiation()) {
+    ++depth;
+    scope = &scope->parent();
+  }
+  return depth;
+}
+
+// Completes component derived type instantiation and initializer folding
+// for a non-parameterized derived type Scope.
+static void InstantiateNonPDTScope(Scope &typeScope, Scope &containingScope) {
+  auto &context{containingScope.context()};
+  auto &foldingContext{context.foldingContext()};
+  for (auto &pair : typeScope) {
+    Symbol &symbol{*pair.second};
+    if (DeclTypeSpec * type{symbol.GetType()}) {
+      if (DerivedTypeSpec * derived{type->AsDerived()}) {
+        if (!(derived->IsForwardReferenced() &&
+                IsAllocatableOrPointer(symbol))) {
+          derived->Instantiate(containingScope);
+        }
+      }
+    }
+    if (!IsPointer(symbol)) {
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (MaybeExpr & init{object->init()}) {
+          auto restorer{foldingContext.messages().SetLocation(symbol.name())};
+          init = evaluate::NonPointerInitializationExpr(
+              symbol, std::move(*init), foldingContext);
+        }
+      }
+    }
+  }
+  ComputeOffsets(context, typeScope);
+}
+
+void DerivedTypeSpec::Instantiate(Scope &containingScope) {
   if (instantiated_) {
     return;
   }
   instantiated_ = true;
+  auto &context{containingScope.context()};
   auto &foldingContext{context.foldingContext()};
   if (IsForwardReferenced()) {
     foldingContext.messages().Say(typeSymbol_.name(),
         "The derived type '%s' was forward-referenced but not defined"_err_en_US,
         typeSymbol_.name());
+    context.SetError(typeSymbol_);
     return;
   }
   EvaluateParameters(context);
   const Scope &typeScope{DEREF(typeSymbol_.scope())};
   if (!MightBeParameterized()) {
     scope_ = &typeScope;
-    for (auto &pair : typeScope) {
-      Symbol &symbol{*pair.second};
-      if (DeclTypeSpec * type{symbol.GetType()}) {
-        if (DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (!(derived->IsForwardReferenced() &&
-                  IsAllocatableOrPointer(symbol))) {
-            derived->Instantiate(containingScope, context);
-          }
-        }
-      }
+    if (typeScope.derivedTypeSpec()) {
+      CHECK(*this == *typeScope.derivedTypeSpec());
+    } else {
+      Scope &mutableTypeScope{const_cast<Scope &>(typeScope)};
+      mutableTypeScope.set_derivedTypeSpec(*this);
+      InstantiateNonPDTScope(mutableTypeScope, containingScope);
     }
     return;
   }
+  // New PDT instantiation.  Create a new scope and populate it
+  // with components that have been specialized for this set of
+  // parameters.
   Scope &newScope{containingScope.MakeScope(Scope::Kind::DerivedType)};
   newScope.set_derivedTypeSpec(*this);
   ReplaceScope(newScope);
+  auto restorer{foldingContext.WithPDTInstance(*this)};
+  std::string desc{typeSymbol_.name().ToString()};
+  char sep{'('};
   for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
     const SourceName &name{symbol.name()};
     if (typeScope.find(symbol.name()) != typeScope.end()) {
@@ -251,47 +316,52 @@ void DerivedTypeSpec::Instantiate(
         const TypeParamDetails &details{symbol.get<TypeParamDetails>()};
         paramValue->set_attr(details.attr());
         if (MaybeIntExpr expr{paramValue->GetExplicit()}) {
-          // Ensure that any kind type parameters with values are
-          // constant by now.
-          if (details.attr() == common::TypeParamAttr::Kind) {
-            // Any errors in rank and type will have already elicited
-            // messages, so don't pile on by complaining further here.
-            if (auto maybeDynamicType{expr->GetType()}) {
-              if (expr->Rank() == 0 &&
-                  maybeDynamicType->category() == TypeCategory::Integer) {
-                if (!evaluate::ToInt64(*expr)) {
-                  if (auto *msg{foldingContext.messages().Say(
-                          "Value of kind type parameter '%s' (%s) is not "
-                          "a scalar INTEGER constant"_err_en_US,
-                          name, expr->AsFortran())}) {
-                    msg->Attach(name, "declared here"_en_US);
-                  }
-                }
-              }
+          if (auto folded{evaluate::NonPointerInitializationExpr(symbol,
+                  SomeExpr{std::move(*expr)}, foldingContext, &newScope)}) {
+            desc += sep;
+            desc += name.ToString();
+            desc += '=';
+            desc += folded->AsFortran();
+            sep = ',';
+            TypeParamDetails instanceDetails{details.attr()};
+            if (const DeclTypeSpec * type{details.type()}) {
+              instanceDetails.set_type(*type);
             }
+            instanceDetails.set_init(
+                std::move(DEREF(evaluate::UnwrapExpr<SomeIntExpr>(*folded))));
+            newScope.try_emplace(name, std::move(instanceDetails));
           }
-          TypeParamDetails instanceDetails{details.attr()};
-          if (const DeclTypeSpec * type{details.type()}) {
-            instanceDetails.set_type(*type);
-          }
-          instanceDetails.set_init(std::move(*expr));
-          newScope.try_emplace(name, std::move(instanceDetails));
         }
       }
     }
   }
+  parser::Message *contextMessage{nullptr};
+  if (sep != '(') {
+    desc += ')';
+    contextMessage = new parser::Message{foldingContext.messages().at(),
+        "instantiation of parameterized derived type '%s'"_en_US, desc};
+    if (auto outer{containingScope.instantiationContext()}) {
+      contextMessage->SetContext(outer.get());
+    }
+    newScope.set_instantiationContext(contextMessage);
+  }
   // Instantiate every non-parameter symbol from the original derived
   // type's scope into the new instance.
-  auto restorer{foldingContext.WithPDTInstance(*this)};
   newScope.AddSourceRange(typeScope.sourceRange());
-  InstantiateHelper{context, newScope}.InstantiateComponents(typeScope);
-  CheckInstantiatedDerivedType(context, *this);
+  auto restorer2{foldingContext.messages().SetContext(contextMessage)};
+  if (PlumbPDTInstantiationDepth(&containingScope) > 100) {
+    foldingContext.messages().Say(
+        "Too many recursive parameterized derived type instantiations"_err_en_US);
+  } else {
+    InstantiateHelper{newScope}.InstantiateComponents(typeScope);
+  }
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {
   for (const auto &pair : fromScope) {
     InstantiateComponent(*pair.second);
   }
+  ComputeOffsets(context(), scope_);
 }
 
 void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
@@ -309,7 +379,6 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
     if (const DeclTypeSpec * newType{InstantiateType(newSymbol)}) {
       details->ReplaceType(*newType);
     }
-    details->set_init(Fold(std::move(details->init())));
     for (ShapeSpec &dim : details->shape()) {
       if (dim.lbound().isExplicit()) {
         dim.lbound().SetExplicit(Fold(std::move(dim.lbound().GetExplicit())));
@@ -326,6 +395,25 @@ void InstantiateHelper::InstantiateComponent(const Symbol &oldSymbol) {
         dim.ubound().SetExplicit(Fold(std::move(dim.ubound().GetExplicit())));
       }
     }
+    if (MaybeExpr & init{details->init()}) {
+      // Non-pointer components with default initializers are
+      // processed now so that those default initializers can be used
+      // in PARAMETER structure constructors.
+      auto restorer{foldingContext().messages().SetLocation(newSymbol.name())};
+      init = IsPointer(newSymbol)
+          ? Fold(std::move(*init))
+          : evaluate::NonPointerInitializationExpr(
+                newSymbol, std::move(*init), foldingContext());
+    }
+  } else if (auto *procDetails{newSymbol.detailsIf<ProcEntityDetails>()}) {
+    // We have a procedure pointer.  Instantiate its return type
+    if (const DeclTypeSpec * returnType{InstantiateType(newSymbol)}) {
+      ProcInterface &interface{procDetails->interface()};
+      if (!interface.symbol()) {
+        // Don't change the type for interfaces based on symbols
+        interface.set_type(*returnType);
+      }
+    }
   }
 }
 
@@ -336,9 +424,9 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
   } else if (const DerivedTypeSpec * spec{type->AsDerived()}) {
     return &FindOrInstantiateDerivedType(scope_,
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
-        context_, type->category());
+        type->category());
   } else if (type->AsIntrinsic()) {
-    return &InstantiateIntrinsicType(*type);
+    return &InstantiateIntrinsicType(symbol.name(), *type);
   } else if (type->category() == DeclTypeSpec::ClassStar) {
     return type;
   } else {
@@ -348,7 +436,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
 
 // Apply type parameter values to an intrinsic type spec.
 const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
-    const DeclTypeSpec &spec) {
+    SourceName symbolName, const DeclTypeSpec &spec) {
   const IntrinsicTypeSpec &intrinsic{DEREF(spec.AsIntrinsic())};
   if (evaluate::ToInt64(intrinsic.kind())) {
     return spec; // KIND is already a known constant
@@ -356,12 +444,12 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
   // The expression was not originally constant, but now it must be so
   // in the context of a parameterized derived type instantiation.
   KindExpr copy{Fold(common::Clone(intrinsic.kind()))};
-  int kind{context_.GetDefaultKind(intrinsic.category())};
+  int kind{context().GetDefaultKind(intrinsic.category())};
   if (auto value{evaluate::ToInt64(copy)}) {
     if (evaluate::IsValidKindOfIntrinsicType(intrinsic.category(), *value)) {
       kind = *value;
     } else {
-      foldingContext().messages().Say(
+      foldingContext().messages().Say(symbolName,
           "KIND parameter value (%jd) of intrinsic type %s "
           "did not resolve to a supported value"_err_en_US,
           *value,
@@ -631,4 +719,5 @@ void ProcInterface::set_type(const DeclTypeSpec &type) {
   CHECK(!symbol_);
   type_ = &type;
 }
+
 } // namespace Fortran::semantics

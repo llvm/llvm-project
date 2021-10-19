@@ -78,7 +78,7 @@ static void emitStructDecl(const Record &structDef, raw_ostream &os) {
   StructAttr structAttr(&structDef);
   StringRef structName = structAttr.getStructClassName();
   StringRef cppNamespace = structAttr.getCppNamespace();
-  StringRef description = structAttr.getDescription();
+  StringRef description = structAttr.getSummary();
   auto fields = structAttr.getAllFields();
 
   // Wrap in the appropriate namespace.
@@ -143,14 +143,14 @@ static void emitFactoryDef(llvm::StringRef structName,
 )";
 
   for (auto field : fields) {
-    if (field.getType().isOptional())
+    if (field.getType().isOptional() || field.getType().hasDefaultValue())
       os << llvm::formatv(getFieldInfoOptional, field.getName());
     else
       os << llvm::formatv(getFieldInfo, field.getName());
   }
 
   const char *getEndInfo = R"(
-  ::mlir::Attribute dict = ::mlir::DictionaryAttr::get(fields, context);
+  ::mlir::Attribute dict = ::mlir::DictionaryAttr::get(context, fields);
   return dict.dyn_cast<{0}>();
 }
 )";
@@ -169,7 +169,7 @@ bool {0}::classof(::mlir::Attribute attr))";
   auto derived = attr.dyn_cast<::mlir::DictionaryAttr>();
   if (!derived)
     return false;
-  int empty_optionals = 0;
+  int num_absent_attrs = 0;
 )";
 
   os << llvm::formatv(classofInfo, structName) << " {";
@@ -184,7 +184,7 @@ bool {0}::classof(::mlir::Attribute attr))";
   const char *classofArgInfoOptional = R"(
   auto {0} = derived.get("{0}");
   if (!{0})
-    ++empty_optionals;
+    ++num_absent_attrs;
   else if (!({1}))
     return false;
 )";
@@ -193,14 +193,14 @@ bool {0}::classof(::mlir::Attribute attr))";
     auto type = field.getType();
     std::string condition =
         std::string(tgfmt(type.getConditionTemplate(), &fctx.withSelf(name)));
-    if (type.isOptional())
+    if (type.isOptional() || type.hasDefaultValue())
       os << llvm::formatv(classofArgInfoOptional, name, condition);
     else
       os << llvm::formatv(classofArgInfo, name, condition);
   }
 
   const char *classofEndInfo = R"(
-  return derived.size() + empty_optionals == {0};
+  return derived.size() + num_absent_attrs == {0};
 }
 )";
   os << llvm::formatv(classofEndInfo, fields.size());
@@ -229,14 +229,35 @@ emitAccessorDef(llvm::StringRef structName,
   return {1}.cast<{0}>();
 }
 )";
+  const char *fieldInfoDefaultValued = R"(
+{0} {2}::{1}() const {
+  auto derived = this->cast<::mlir::DictionaryAttr>();
+  auto {1} = derived.get("{1}");
+  if (!{1}) {
+    ::mlir::Builder builder(getContext());
+    return {3};
+  }
+  assert({1}.isa<{0}>() && "incorrect Attribute type found.");
+  return {1}.cast<{0}>();
+}
+)";
+  FmtContext fmtCtx;
+  fmtCtx.withBuilder("builder");
+
   for (auto field : fields) {
     auto name = field.getName();
     auto type = field.getType();
     auto storage = type.getStorageType();
-    if (type.isOptional())
+    if (type.isOptional()) {
       os << llvm::formatv(fieldInfoOptional, storage, name, structName);
-    else
+    } else if (type.hasDefaultValue()) {
+      std::string defaultValue = tgfmt(type.getConstBuilderTemplate(), &fmtCtx,
+                                       type.getDefaultValue());
+      os << llvm::formatv(fieldInfoDefaultValued, storage, name, structName,
+                          defaultValue);
+    } else {
       os << llvm::formatv(fieldInfo, storage, name, structName);
+    }
   }
 }
 

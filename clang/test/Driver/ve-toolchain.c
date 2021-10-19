@@ -8,75 +8,92 @@
 // DWARF_VER: "-dwarf-version=4"
 
 ///-----------------------------------------------------------------------------
-/// Checking dynamic-linker
-
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DYNLINKER %s
-// DYNLINKER: nld{{.*}} "-dynamic-linker" "/opt/nec/ve/lib/ld-linux-ve.so.1"
-
-///-----------------------------------------------------------------------------
-/// Checking VE specific option
-
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=VENLDOPT %s
-// VENLDOPT: nld{{.*}} "-z" "max-page-size=0x4000000"
-
-///-----------------------------------------------------------------------------
 /// Checking include-path
 
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DEFINC %s
+// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN:     2>&1 | FileCheck -check-prefix=DEFINC %s
 // DEFINC: clang{{.*}} "-cc1"
-// DEFINC: "-nostdsysteminc"
-// DEFINC: "-internal-isystem" "{{.*}}/lib/clang/{{[0-9.]*}}/include"
-// DEFINC: "-internal-isystem" "/opt/nec/ve/include"
+// DEFINC-SAME: "-nostdsysteminc"
+// DEFINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// DEFINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// DEFINC-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+// DEFINC-SAME: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve %s -nostdlibinc 2>&1 | \
-// RUN:    FileCheck -check-prefix=NOSTDLIBINC %s
+// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN:     -nostdlibinc 2>&1 | FileCheck -check-prefix=NOSTDLIBINC %s
 // NOSTDLIBINC: clang{{.*}} "-cc1"
-// NOSTDLIBINC: "-internal-isystem" "{{.*}}/lib/clang/{{[0-9.]*}}/include"
-// NOSTDLIBINC-NOT: "-internal-isystem" "/opt/nec/ve/include"
+// NOSTDLIBINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// NOSTDLIBINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// NOSTDLIBINC-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+// NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve %s -nobuiltininc 2>&1 | \
-// RUN:    FileCheck -check-prefix=NOBUILTININC %s
+// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN:     -nobuiltininc 2>&1 | FileCheck -check-prefix=NOBUILTININC %s
 // NOBUILTININC: clang{{.*}} "-cc1"
-// NOBUILTININC: "-nobuiltininc"
-// NOBUILTININC-NOT: "-internal-isystem" "{{.*}}/lib/clang/{{[0-9.]*}}/include"
-// NOBUILTININC: "-internal-isystem" "/opt/nec/ve/include"
+// NOBUILTININC-SAME: "-nobuiltininc"
+// NOBUILTININC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// NOBUILTININC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// NOBUILTININC-NOT: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+// NOBUILTININC-SAME: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
-// RUN: %clang -### -target ve %s -nostdinc 2>&1 | \
-// RUN:    FileCheck -check-prefix=NOSTDINC %s
+// RUN: %clang -### -target ve --sysroot %S/Inputs/basic_ve_tree %s \
+// RUN:     -resource-dir=%S/Input/basic_ve_tree/resource_dir \
+// RUN:     -nostdinc 2>&1 | FileCheck -check-prefix=NOSTDINC %s
 // NOSTDINC: clang{{.*}} "-cc1"
-// NOSTDINC: "-nobuiltininc"
-// NOSTDINC-NOT: "-internal-isystem" "{{.*}}/lib/clang/{{[0-9.]*}}/include"
-// NOSTDINC-NOT: "-internal-isystem" "/opt/nec/ve/include"
+// NOSTDINC-SAME: "-nobuiltininc"
+// NOSTDINC-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// NOSTDINC-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// NOSTDINC-NOT: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+// NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
 ///-----------------------------------------------------------------------------
-/// Checking -fuse-init-array
+/// Checking -faddrsig
 
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DEFINITARRAY %s
-// DEFINITARRAY: clang{{.*}} "-cc1"
-// DEFINITARRAY-NOT: "-fuse-init-array"
-
-// RUN: %clang -### -target ve %s -fno-use-init-array 2>&1 | \
-// RUN:     FileCheck -check-prefix=NOTINITARRAY %s
-// NOTINITARRAY: clang{{.*}} "-cc1"
-// NOTINITARRAY: "-fno-use-init-array"
+// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DEFADDRSIG %s
+// DEFADDRSIG: clang{{.*}} "-cc1"
+// DEFADDRSIG-NOT: "-faddrsig"
 
 ///-----------------------------------------------------------------------------
-/// Checking exceptions
-
-// RUN: %clang -### -target ve %s 2>&1 | FileCheck -check-prefix=DEFEXCEPTION %s
-// DEFEXCEPTION: clang{{.*}} "-cc1"
-// DEFEXCEPTION: "-fsjlj-exceptions"
-
-///-----------------------------------------------------------------------------
-/// Passing -fintegrated-as
+/// Checking -fintegrated-as
 
 // RUN: %clang -### -target ve -x assembler %s 2>&1 | \
-// RUN:    FileCheck -check-prefix=NAS_LINK %s
-// RUN: %clang -### -target ve -fintegrated-as -x assembler %s 2>&1 | \
-// RUN:    FileCheck -check-prefix=AS_LINK %s
+// RUN:    FileCheck -check-prefix=AS %s
+// RUN: %clang -### -target ve -fno-integrated-as -x assembler %s 2>&1 | \
+// RUN:    FileCheck -check-prefix=NAS %s
 
-// NAS_LINK: nas{{.*}}
-// NAS_LINK: nld{{.*}}
+// AS: clang{{.*}} "-cc1as"
+// AS: nld{{.*}}
 
-// AS_LINK: clang{{.*}} "-cc1as"
-// AS_LINK: nld{{.*}}
+// NAS: nas{{.*}}
+// NAS: nld{{.*}}
+
+///-----------------------------------------------------------------------------
+/// Checking default behavior:
+///  - dynamic linker
+///  - library paths
+///  - nld VE specific options
+///  - sjlj exception
+
+// RUN: %clang -### -target ve-unknown-linux-gnu \
+// RUN:     --sysroot %S/Inputs/basic_ve_tree \
+// RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
+// RUN:     %s 2>&1 | FileCheck -check-prefix=DEF %s
+
+// DEF:      clang{{.*}}" "-cc1"
+// DEF-SAME: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// DEF-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
+// DEF-SAME: "-exception-model=sjlj"
+// DEF:      nld"
+// DEF-SAME: "--sysroot=[[SYSROOT]]"
+// DEF-SAME: "-dynamic-linker" "/opt/nec/ve/lib/ld-linux-ve.so.1"
+// DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crt1.o"
+// DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crti.o"
+// DEF-SAME: "-z" "max-page-size=0x4000000"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/clang_rt.crtbegin-ve.o"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/libclang_rt.builtins-ve.a" "-lc"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/libclang_rt.builtins-ve.a"
+// DEF-SAME: "[[RESOURCE_DIR]]/lib/linux/clang_rt.crtend-ve.o"
+// DEF-SAME: "[[SYSROOT]]/opt/nec/ve/lib/crtn.o"

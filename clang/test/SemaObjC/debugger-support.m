@@ -4,7 +4,7 @@
 void test0(id x) {
   struct A { int w, x, y, z; };
   struct A result = (struct A) [x makeStruct];
-  // CHECK:     define void @test0(
+  // CHECK:     define{{.*}} void @test0(
   // CHECK:      [[X:%.*]] = alloca i8*, align 8
   // CHECK-NEXT: [[RESULT:%.*]] = alloca [[A:%.*]], align 4
   // CHECK-NEXT: store i8* {{%.*}}, i8** [[X]],

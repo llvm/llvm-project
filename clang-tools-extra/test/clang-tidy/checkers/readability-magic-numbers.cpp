@@ -2,8 +2,8 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  [{key: readability-magic-numbers.IgnoredIntegerValues, value: "0;1;2;10;100;"}, \
 // RUN:   {key: readability-magic-numbers.IgnoredFloatingPointValues, value: "3.14;2.71828;9.81;10000.0;101.0;0x1.2p3"}, \
-// RUN:   {key: readability-magic-numbers.IgnoreBitFieldsWidths, value: 0}, \
-// RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: 1}]}' \
+// RUN:   {key: readability-magic-numbers.IgnoreBitFieldsWidths, value: false}, \
+// RUN:   {key: readability-magic-numbers.IgnorePowersOf2IntegerValues, value: true}]}' \
 // RUN: --
 
 template <typename T, int V>

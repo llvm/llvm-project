@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -O2 -std=c++11 -disable-llvm-passes -o - %s | FileCheck %s
 
-// define void @_Z11simple_moveRU8__strongP11objc_objectS2_
+// define{{.*}} void @_Z11simple_moveRU8__strongP11objc_objectS2_
 void simple_move(__strong id &x, __strong id &y) {
   // CHECK: = load i8*, i8**
   // CHECK: store i8* null
@@ -31,7 +31,7 @@ typename remove_reference<T>::type&& move(T &&x) {
   return static_cast<typename remove_reference<T>::type&&>(x); 
 }
 
-// CHECK-LABEL: define void @_Z12library_moveRU8__strongP11objc_objectS2_
+// CHECK-LABEL: define{{.*}} void @_Z12library_moveRU8__strongP11objc_objectS2_
 void library_move(__strong id &x, __strong id &y) {
   // CHECK: call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8** @_Z4moveIRU8__strongP11objc_objectEON16remove_referenceIT_E4typeEOS5_
   // CHECK: load i8*, i8**
@@ -44,7 +44,7 @@ void library_move(__strong id &x, __strong id &y) {
   x = move(y);
 }
 
-// CHECK-LABEL: define void @_Z12library_moveRU8__strongP11objc_object
+// CHECK-LABEL: define{{.*}} void @_Z12library_moveRU8__strongP11objc_object
 void library_move(__strong id &y) {
   // CHECK: [[X:%.*]] = alloca i8*, align 8
   // CHECK: [[I:%.*]] = alloca i32, align 4
@@ -72,7 +72,7 @@ void library_move(__strong id &y) {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z10const_moveRU8__strongKP11objc_object(
+// CHECK-LABEL: define{{.*}} void @_Z10const_moveRU8__strongKP11objc_object(
 void const_move(const __strong id &x) {
   // CHECK:      [[Y:%.*]] = alloca i8*,
   // CHECK:      [[X:%.*]] = call nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8** @_Z4moveIRU8__strongKP11objc_objectEON16remove_referenceIT_E4typeEOS5_(

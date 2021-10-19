@@ -12,7 +12,7 @@
 
 #include "lldb/API/SBDefines.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 
 namespace lldb {
@@ -50,8 +50,6 @@ public:
   SBFrame GetFrame() const;
 
 protected:
-  void reset(lldb::ExecutionContextRefSP &event_sp);
-
   lldb_private::ExecutionContextRef *get() const;
 
 private:

@@ -10,7 +10,7 @@
 ; without requiring the outer manager to iterate doesn't break any invariant.
 ; RUN: opt -aa-pipeline=basic-aa -passes='cgscc(function-attrs,function(gvn),function-attrs)' -S < %s | FileCheck %s --check-prefix=AFTER
 
-declare void @readnone() readnone
+declare void @readnone() nofree nosync readnone
 declare void @unknown()
 
 ; The @test1_* checks that if we refine an indirect call to a direct call and
@@ -103,4 +103,4 @@ define void @test2_b3() {
   ret void
 }
 
-; CHECK: attributes #0 = { readnone }
+; CHECK: attributes #0 = { nofree nosync readnone }

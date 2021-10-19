@@ -11,7 +11,7 @@ template<typename T> void g(T);
 
 template<template<typename> class F> void h(F<int>);
 
-// CHECK-LABEL: define void @_Z1zv(
+// CHECK-LABEL: define{{.*}} void @_Z1zv(
 void z() {
   vector<int> VI;
   f(VI);

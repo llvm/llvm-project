@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -8,10 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
-
-// AppleClang9 doesn't yet support C++17's implicitly synthesized deduction
-// guides from existing ctors, needed by default_searcher() below.
-// UNSUPPORTED: apple-clang-9
 
 // Test that entities declared [[nodiscard]] as an extension by libc++, are
 // only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
@@ -23,9 +18,12 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_NODISCARD
 
 #include <algorithm>
-#include <functional>
+#include <bit> // bit_cast
+#include <cstddef> // to_integer
+#include <functional> // identity
 #include <iterator>
 #include <memory>
+#include <utility> // to_underlying
 
 #include "test_macros.h"
 
@@ -33,7 +31,7 @@ struct P {
   bool operator()(int) const { return false; }
 };
 
-int main(int, char**) {
+void test_algorithms() {
   int arr[1] = { 1 };
 
   // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
@@ -291,6 +289,64 @@ int main(int, char**) {
 
   // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
   std::upper_bound(std::begin(arr), std::end(arr), 1, std::greater<int>());
+}
+
+template<class LV, class RV>
+void test_template_cast_wrappers(LV&& lv, RV&& rv) {
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::forward<LV>(lv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::forward<RV>(rv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::move(lv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::move(rv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::move_if_noexcept(lv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::move_if_noexcept(rv);
+
+#if TEST_STD_VER >= 17
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::as_const(lv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::as_const(rv);
+#endif
+
+#if TEST_STD_VER >= 20
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::identity()(lv);
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::identity()(rv);
+#endif
+}
+
+void test_nontemplate_cast_wrappers()
+{
+#if TEST_STD_VER > 14
+  std::byte b{42};
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::to_integer<int>(b);
+#endif
+
+#if TEST_STD_VER > 17
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::bit_cast<unsigned int>(42);
+#endif
+
+#if TEST_STD_VER > 20
+  enum E { Apple, Orange } e = Apple;
+  // expected-warning-re@+1 {{ignoring return value of function declared with {{'nodiscard'|warn_unused_result}} attribute}}
+  std::to_underlying(e);
+#endif
+}
+
+int main(int, char**) {
+  test_algorithms();
+
+  int i = 42;
+  test_template_cast_wrappers(i, std::move(i));
+  test_nontemplate_cast_wrappers();
 
   return 0;
 }

@@ -11,6 +11,7 @@
 #include "SnippetRepetitor.h"
 #include "Target.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -128,7 +129,11 @@ void BasicBlockFiller::addReturn(const DebugLoc &DL) {
   } else {
     MachineIRBuilder MIB(MF);
     MIB.setMBB(*MBB);
-    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {});
+
+    FunctionLoweringInfo FuncInfo;
+    FuncInfo.CanLowerReturn = true;
+    MF.getSubtarget().getCallLowering()->lowerReturn(MIB, nullptr, {},
+                                                     FuncInfo);
   }
 }
 
@@ -148,7 +153,7 @@ ArrayRef<unsigned> FunctionFiller::getRegistersSetUp() const {
 }
 
 static std::unique_ptr<Module>
-createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout DL) {
+createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) {
   auto Mod = std::make_unique<Module>(ModuleID, *Context);
   Mod->setDataLayout(DL);
   return Mod;
@@ -304,7 +309,7 @@ ExecutableFunction::ExecutableFunction(
               std::make_unique<TrackingSectionMemoryManager>(&CodeSize))
           .create(TM.release()));
   if (!ExecEngine)
-    report_fatal_error(Error);
+    report_fatal_error(Twine(Error));
   // Adding the generated object file containing the assembled function.
   // The ExecutionEngine makes sure the object file is copied into an
   // executable page.

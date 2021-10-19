@@ -14,7 +14,7 @@
 #ifndef LLVM_SUPPORT_CFGUPDATE_H
 #define LLVM_SUPPORT_CFGUPDATE_H
 
-#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Compiler.h"

@@ -1,17 +1,18 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Forward references in pointer initializers and TBP bindings.
 
 !DEF: /m Module
 module m
  implicit none
  abstract interface
-  !DEF: /m/iface PUBLIC (Subroutine) Subprogram
+  !DEF: /m/iface ABSTRACT, PUBLIC (Subroutine) Subprogram
   subroutine iface
   end subroutine
  end interface
  !DEF: /m/op1 POINTER, PUBLIC ObjectEntity REAL(4)
  real, pointer :: op1
  !DEF: /m/op2 POINTER, PUBLIC ObjectEntity REAL(4)
+ !DEF: /m/null INTRINSIC, PUBLIC, PURE (Function) ProcEntity
  real, pointer :: op2 => null()
  !DEF: /m/op3 POINTER, PUBLIC ObjectEntity REAL(4)
  !DEF: /m/x PUBLIC, TARGET ObjectEntity REAL(4)
@@ -24,6 +25,7 @@ module m
  procedure(iface), pointer :: pp1
  !REF: /m/iface
  !DEF: /m/pp2 EXTERNAL, POINTER, PUBLIC (Subroutine) ProcEntity
+ !REF: /m/null
  procedure(iface), pointer :: pp2 => null()
  !REF: /m/iface
  !DEF: /m/pp3 EXTERNAL, POINTER, PUBLIC (Subroutine) ProcEntity
@@ -46,6 +48,7 @@ module m
   !DEF: /m/t1/opc1 POINTER ObjectEntity REAL(4)
   real, pointer :: opc1
   !DEF: /m/t1/opc2 POINTER ObjectEntity REAL(4)
+  !REF: /m/null
   real, pointer :: opc2 => null()
   !DEF: /m/t1/opc3 POINTER ObjectEntity REAL(4)
   !REF: /m/x
@@ -58,6 +61,7 @@ module m
   procedure(iface), nopass, pointer :: ppc1
   !REF: /m/iface
   !DEF: /m/t1/ppc2 NOPASS, POINTER (Subroutine) ProcEntity
+  !REF: /m/null
   procedure(iface), nopass, pointer :: ppc2 => null()
   !REF: /m/iface
   !DEF: /m/t1/ppc3 NOPASS, POINTER (Subroutine) ProcEntity
@@ -94,6 +98,7 @@ module m
   !DEF: /m/pdt1/opc1 POINTER ObjectEntity REAL(4)
   real, pointer :: opc1
   !DEF: /m/pdt1/opc2 POINTER ObjectEntity REAL(4)
+  !REF: /m/null
   real, pointer :: opc2 => null()
   !DEF: /m/pdt1/opc3 POINTER ObjectEntity REAL(4)
   !REF: /m/x
@@ -107,6 +112,7 @@ module m
   procedure(iface), nopass, pointer :: ppc1
   !REF: /m/iface
   !DEF: /m/pdt1/ppc2 NOPASS, POINTER (Subroutine) ProcEntity
+  !REF: /m/null
   procedure(iface), nopass, pointer :: ppc2 => null()
   !REF: /m/iface
   !DEF: /m/pdt1/ppc3 NOPASS, POINTER (Subroutine) ProcEntity

@@ -2,7 +2,6 @@
 
 ; Test that basic memory operations assemble as expected with 32-bit addresses.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 declare i32 @llvm.wasm.memory.size.i32(i32) nounwind readonly

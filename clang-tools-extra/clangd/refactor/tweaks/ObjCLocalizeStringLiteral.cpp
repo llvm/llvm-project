@@ -35,7 +35,9 @@ namespace {
 class ObjCLocalizeStringLiteral : public Tweak {
 public:
   const char *id() const override final;
-  Intent intent() const override { return Intent::Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
 
   bool prepare(const Selection &Inputs) override;
   Expected<Tweak::Effect> apply(const Selection &Inputs) override;
@@ -68,8 +70,7 @@ ObjCLocalizeStringLiteral::apply(const Selection &Inputs) {
   const auto &TB = AST->getTokens();
   auto Toks = TB.spelledForExpanded(TB.expandedTokens(Str->getSourceRange()));
   if (!Toks || Toks->empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Failed to find tokens to replace.");
+    return error("Failed to find tokens to replace.");
   // Insert `NSLocalizedString(` before the literal.
   auto Reps = tooling::Replacements(tooling::Replacement(
       SM, Toks->front().location(), 0, "NSLocalizedString("));

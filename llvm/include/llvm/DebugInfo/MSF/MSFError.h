@@ -11,13 +11,12 @@
 
 #include "llvm/Support/Error.h"
 
-#include <string>
-
 namespace llvm {
 namespace msf {
 enum class msf_error_code {
   unspecified = 1,
   insufficient_buffer,
+  size_overflow,
   not_writable,
   no_stream,
   invalid_format,

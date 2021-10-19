@@ -3,16 +3,18 @@
 # RUN: llvm-readobj --symbols --sections %t2 | FileCheck %s
 # RUN: llvm-strip --strip-symbol baz -N bar %t -o %t3
 # RUN: cmp %t2 %t3
-# RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t4
-# RUN: cmp %t3 %t4
+# RUN: llvm-objcopy --regex --strip-symbol '^b.*' -N bar %t %t4
+# RUN: cmp %t2 %t4
+# RUN: llvm-strip --regex --strip-symbol '^b.*' -N bar %t -o %t5
+# RUN: cmp %t3 %t5
 # RUN: echo " bar # bar" > %t-list.txt
 # RUN: echo " baz # baz" >> %t-list.txt
 # RUN: echo " # no symbol" >> %t-list.txt
-# RUN: llvm-objcopy --strip-symbols %t-list.txt %t %t5
-# RUN: cmp %t3 %t5
-# RUN: echo "b.* # bar & baz" > %t-list2.txt
-# RUN: llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t6
+# RUN: llvm-objcopy --strip-symbols %t-list.txt %t %t6
 # RUN: cmp %t3 %t6
+# RUN: echo "b.* # bar & baz" > %t-list2.txt
+# RUN: llvm-objcopy --regex --strip-symbols %t-list2.txt %t %t7
+# RUN: cmp %t3 %t7
 
 !ELF
 FileHeader:

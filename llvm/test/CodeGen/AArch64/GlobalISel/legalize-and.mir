@@ -10,10 +10,8 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[AND]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
-    ; CHECK: $x0 = COPY [[COPY3]](s64)
+    ; CHECK: $w0 = COPY [[AND]](s32)
+    ; CHECK: $x0 = COPY [[COPY]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s8) = G_TRUNC %0(s64)
@@ -24,4 +22,51 @@ body:             |
     %5:_(s64) = G_ANYEXT %2(s8)
     $x0 = COPY %5(s64)
 
+...
+---
+name:            test_nonpow2
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_nonpow2
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 16)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16) from unknown-address + 8, align 8)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s8) from unknown-address + 10, align 2)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD1]](s32), [[DEF]](s32)
+    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[MV]], [[C3]](s64)
+    ; CHECK: [[OR:%[0-9]+]]:_(s64) = G_OR [[SHL]], [[ZEXTLOAD]]
+    ; CHECK: [[OR1:%[0-9]+]]:_(s64) = G_OR [[C]], [[LOAD]]
+    ; CHECK: [[OR2:%[0-9]+]]:_(s64) = G_OR [[OR]], [[C]]
+    ; CHECK: [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD %ptr(p0) :: (load (s64), align 16)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
+    ; CHECK: [[ZEXTLOAD1:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY1]](p0) :: (load (s16) from unknown-address + 8, align 8)
+    ; CHECK: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s8) from unknown-address + 10, align 2)
+    ; CHECK: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD3]](s32), [[DEF]](s32)
+    ; CHECK: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[MV1]], [[C3]](s64)
+    ; CHECK: [[OR3:%[0-9]+]]:_(s64) = G_OR [[SHL1]], [[ZEXTLOAD1]]
+    ; CHECK: [[OR4:%[0-9]+]]:_(s64) = G_OR [[C]], [[LOAD2]]
+    ; CHECK: [[OR5:%[0-9]+]]:_(s64) = G_OR [[OR3]], [[C]]
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[OR1]], [[OR4]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[OR2]], [[OR5]]
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[AND]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
+    ; CHECK: G_STORE [[COPY2]](s64), %ptr(p0) :: (store (s64), align 16)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[TRUNC]], [[C3]](s64)
+    ; CHECK: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C2]](s64)
+    ; CHECK: G_STORE [[TRUNC]](s32), [[PTR_ADD]](p0) :: (store (s16) into unknown-address + 8, align 8)
+    ; CHECK: G_STORE [[LSHR]](s32), [[PTR_ADD3]](p0) :: (store (s8) into unknown-address + 10, align 2)
+    %ptr:_(p0) = COPY $x0
+    %a:_(s88) = G_LOAD %ptr(p0) :: (load (s88))
+    %b:_(s88) = G_LOAD %ptr(p0) :: (load (s88))
+    %and:_(s88) = G_AND %a, %b
+    G_STORE %and(s88), %ptr(p0) :: (store (s88))
 ...

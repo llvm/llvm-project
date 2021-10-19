@@ -133,6 +133,13 @@ func @failedSameOperandAndResultShape_operand_result_mismatch(%t10x10 : tensor<1
 
 // -----
 
+func @failedSameOperandAndResultShape_operand_result_mismatch(%t10 : tensor<10xf32>, %t1: tensor<?xf32>) {
+  // expected-error@+1 {{requires the same shape for all operands and results}}
+  "test.same_operand_and_result_shape"(%t1, %t10) : (tensor<?xf32>, tensor<10xf32>) -> tensor<3xf32>
+}
+
+// -----
+
 func @failedSameOperandAndResultShape_no_operands() {
   // expected-error@+1 {{expected 1 or more operands}}
   "test.same_operand_and_result_shape"() : () -> (tensor<1xf32>)
@@ -162,6 +169,89 @@ func @succeededSameOperandAndResultType(%t10x10 : tensor<10x10xf32>, %t1: tensor
 func @failedSameOperandAndResultType_operand_result_mismatch(%t10 : tensor<10xf32>, %t20 : tensor<20xf32>) {
   // expected-error@+1 {{requires the same type for all operands and results}}
   "test.same_operand_and_result_type"(%t10, %t20) : (tensor<10xf32>, tensor<20xf32>) -> tensor<10xf32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_different_rankedness(%arg0: tensor<?xf32>, %arg1: tensor<*xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<*xf32>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_different_rank(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (tensor<?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
+func @elementwiseMappable_dynamic_shapes(%arg0: tensor<?xf32>,
+    %arg1: tensor<5xf32>) {
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) :
+      (tensor<?xf32>, tensor<5xf32>) -> tensor<?xf32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_different_base_type(%arg0: vector<2xf32>, %arg1: tensor<2xf32>) {
+  // expected-error@+1 {{all non-scalar operands/results must have the same shape and base type}}
+  %0 = "test.elementwise_mappable"(%arg0, %arg1) : (vector<2xf32>, tensor<2xf32>) -> tensor<2xf32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_non_scalar_output(%arg0: vector<2xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then there must be at least one non-scalar result}}
+  %0 = "test.elementwise_mappable"(%arg0) : (vector<2xf32>) -> f32
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_non_scalar_result_all_scalar_input(%arg0: f32) {
+  // expected-error@+1 {{if a result is non-scalar, then at least one operand must be non-scalar}}
+  %0 = "test.elementwise_mappable"(%arg0) : (f32) -> tensor<f32>
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_mixed_scalar_non_scalar_results(%arg0: tensor<10xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then all results must be non-scalar}}
+  %0, %1 = "test.elementwise_mappable"(%arg0) : (tensor<10xf32>) -> (f32, tensor<10xf32>)
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_zero_results(%arg0: tensor<10xf32>) {
+  // expected-error@+1 {{if an operand is non-scalar, then there must be at least one non-scalar result}}
+  "test.elementwise_mappable"(%arg0) : (tensor<10xf32>) -> ()
+  return
+}
+
+// -----
+
+func @failedElementwiseMappable_zero_operands() {
+  // expected-error@+1 {{if a result is non-scalar, then at least one operand must be non-scalar}}
+  "test.elementwise_mappable"() : () -> (tensor<6xf32>)
+  return
+}
+
+// -----
+
+func @succeededElementwiseMappable(%arg0: vector<2xf32>) {
+  // Check that varying element types are allowed.
+  // CHECK: test.elementwise_mappable
+  %0 = "test.elementwise_mappable"(%arg0) : (vector<2xf32>) -> vector<2xf16>
+  return
 }
 
 // -----
@@ -266,12 +356,10 @@ func @failedSingleBlockImplicitTerminator_missing_terminator() {
 
 // Test that operation with the SymbolTable Trait define a new symbol scope.
 "test.symbol_scope"() ({
-  func @foo() {
-  }
+  func private @foo()
   "test.finish" () : () -> ()
 }) : () -> ()
-func @foo() {
-}
+func private @foo()
 
 // -----
 
@@ -287,22 +375,29 @@ func @foo() {
 // -----
 
 func @failedMissingOperandSizeAttr(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) : (i32, i32, i32, i32) -> ()
 }
 
 // -----
 
 func @failedOperandSizeAttrWrongType(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
-  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : (i32, i32, i32, i32) -> ()
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = 10} : (i32, i32, i32, i32) -> ()
 }
 
 // -----
 
 func @failedOperandSizeAttrWrongRank(%arg: i32) {
-  // expected-error @+1 {{requires 1D vector attribute 'operand_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
   "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : (i32, i32, i32, i32) -> ()
+}
+
+// -----
+
+func @failedOperandSizeAttrWrongElementType(%arg: i32) {
+  // expected-error @+1 {{requires 1D i32 elements attribute 'operand_segment_sizes'}}
+  "test.attr_sized_operands"(%arg, %arg, %arg, %arg) {operand_segment_sizes = dense<[1, 1, 1, 1]>: vector<4xi64>} : (i32, i32, i32, i32) -> ()
 }
 
 // -----
@@ -337,22 +432,29 @@ func @succeededOperandSizeAttr(%arg: i32) {
 // -----
 
 func @failedMissingResultSizeAttr() {
-  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
   %0:4 = "test.attr_sized_results"() : () -> (i32, i32, i32, i32)
 }
 
 // -----
 
 func @failedResultSizeAttrWrongType() {
-  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
-  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, 1, 1]>: tensor<4xi32>} : () -> (i32, i32, i32, i32)
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = 10} : () -> (i32, i32, i32, i32)
 }
 
 // -----
 
 func @failedResultSizeAttrWrongRank() {
-  // expected-error @+1 {{requires 1D vector attribute 'result_segment_sizes'}}
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[[1, 1], [1, 1]]>: vector<2x2xi32>} : () -> (i32, i32, i32, i32)
+}
+
+// -----
+
+func @failedResultSizeAttrWrongElementType() {
+  // expected-error @+1 {{requires 1D i32 elements attribute 'result_segment_sizes'}}
+  %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[1, 1, 1, 1]>: vector<4xi64>} : () -> (i32, i32, i32, i32)
 }
 
 // -----
@@ -372,7 +474,7 @@ func @failedResultSizeAttrWrongTotalSize() {
 // -----
 
 func @failedResultSizeAttrWrongCount() {
-  // expected-error @+1 {{'result_segment_sizes' attribute for specifying result segments must have 4 elements}}
+  // expected-error @+1 {{'result_segment_sizes' attribute for specifying result segments must have 4 elements, but got 3}}
   %0:4 = "test.attr_sized_results"() {result_segment_sizes = dense<[2, 1, 1]>: vector<3xi32>} : () -> (i32, i32, i32, i32)
 }
 
@@ -404,7 +506,7 @@ func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalInsideDominanceFreeScope() -> () {
   test.graph_region {
-    func @test() -> i1 {
+    builtin.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
@@ -423,7 +525,7 @@ func @illegalInsideDominanceFreeScope() -> () {
 // checked for dominance
 func @illegalCDFGInsideDominanceFreeScope() -> () {
   test.graph_region {
-    func @test() -> i1 {
+    builtin.func @test() -> i1 {
     ^bb1:
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
@@ -461,4 +563,40 @@ func @graph_region_cant_have_blocks() {
   ^bb43:
     "terminator"() : () -> ()
   }
+}
+
+// -----
+
+// Check that we can query traits in types
+func @succeeded_type_traits() {
+  // CHECK: "test.result_type_with_trait"() : () -> !test.test_type_with_trait
+  "test.result_type_with_trait"() : () -> !test.test_type_with_trait
+  return
+}
+
+// -----
+
+// Check that we can query traits in types
+func @failed_type_traits() {
+  // expected-error@+1 {{result type should have trait 'TestTypeTrait'}}
+  "test.result_type_with_trait"() : () -> i32
+  return
+}
+
+// -----
+
+// Check that we can query traits in attributes
+func @succeeded_attr_traits() {
+  // CHECK: "test.attr_with_trait"() {attr = #test.attr_with_trait} : () -> ()
+  "test.attr_with_trait"() {attr = #test.attr_with_trait} : () -> ()
+  return
+}
+
+// -----
+
+// Check that we can query traits in attributes
+func @failed_attr_traits() {
+  // expected-error@+1 {{'attr' attribute should have trait 'TestAttrTrait'}}
+  "test.attr_with_trait"() {attr = 42 : i32} : () -> ()
+  return
 }

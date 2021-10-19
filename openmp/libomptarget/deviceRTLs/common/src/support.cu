@@ -9,83 +9,28 @@
 // Wrapper implementation to some functions natively supported by the GPU.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
-#include "common/support.h"
 #include "common/debug.h"
 #include "common/omptarget.h"
+#include "common/support.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
 
-DEVICE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode) {
+void setExecutionParameters(OMPTgtExecModeFlags EMode,
+                            OMPTgtRuntimeModeFlags RMode) {
   execution_param = EMode;
   execution_param |= RMode;
 }
 
-DEVICE bool isGenericMode() { return (execution_param & ModeMask) == Generic; }
+bool isGenericMode() { return execution_param & OMP_TGT_EXEC_MODE_GENERIC; }
 
-DEVICE bool isSPMDMode() { return (execution_param & ModeMask) == Spmd; }
+bool isRuntimeUninitialized() { return !isRuntimeInitialized(); }
 
-DEVICE bool isRuntimeUninitialized() {
-  return (execution_param & RuntimeMask) == RuntimeUninitialized;
-}
-
-DEVICE bool isRuntimeInitialized() {
-  return (execution_param & RuntimeMask) == RuntimeInitialized;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Execution Modes based on location parameter fields
-////////////////////////////////////////////////////////////////////////////////
-
-DEVICE bool checkSPMDMode(kmp_Ident *loc) {
-  if (!loc)
-    return isSPMDMode();
-
-  // If SPMD is true then we are not in the UNDEFINED state so
-  // we can return immediately.
-  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
-    return true;
-
-  // If not in SPMD mode and runtime required is a valid
-  // combination of flags so we can return immediately.
-  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
-    return false;
-
-  // We are in underfined state.
-  return isSPMDMode();
-}
-
-DEVICE bool checkGenericMode(kmp_Ident *loc) {
-  return !checkSPMDMode(loc);
-}
-
-DEVICE bool checkRuntimeUninitialized(kmp_Ident *loc) {
-  if (!loc)
-    return isRuntimeUninitialized();
-
-  // If runtime is required then we know we can't be
-  // in the undefined mode. We can return immediately.
-  if (!(loc->reserved_2 & KMP_IDENT_SIMPLE_RT_MODE))
-    return false;
-
-  // If runtime is required then we need to check is in
-  // SPMD mode or not. If not in SPMD mode then we end
-  // up in the UNDEFINED state that marks the orphaned
-  // functions.
-  if (loc->reserved_2 & KMP_IDENT_SPMD_MODE)
-    return true;
-
-  // Check if we are in an UNDEFINED state. Undefined is denoted by
-  // non-SPMD + noRuntimeRequired which is a combination that
-  // cannot actually happen. Undefined states is used to mark orphaned
-  // functions.
-  return isRuntimeUninitialized();
-}
-
-DEVICE bool checkRuntimeInitialized(kmp_Ident *loc) {
-  return !checkRuntimeUninitialized(loc);
+bool isRuntimeInitialized() {
+  return execution_param & OMP_TGT_RUNTIME_INITIALIZED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -106,11 +51,13 @@ DEVICE bool checkRuntimeInitialized(kmp_Ident *loc) {
 //      If NumThreads is 1024, master id is 992.
 //
 // Called in Generic Execution Mode only.
-DEVICE int GetMasterThreadID() { return (GetNumberOfThreadsInBlock() - 1) & ~(WARPSIZE - 1); }
+int GetMasterThreadID() {
+  return (__kmpc_get_hardware_num_threads_in_block() - 1) & ~(WARPSIZE - 1);
+}
 
 // The last warp is reserved for the master; other warps are workers.
 // Called in Generic Execution Mode only.
-DEVICE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
+int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // get thread id in team
@@ -119,11 +66,11 @@ DEVICE int GetNumberOfWorkersInTeam() { return GetMasterThreadID(); }
 // or a serial region by the master.  If the master (whose CUDA thread
 // id is GetMasterThreadID()) calls this routine, we return 0 because
 // it is a shadow for the first worker.
-DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
+int GetLogicalThreadIdInBlock() {
   // Implemented using control flow (predication) instead of with a modulo
   // operation.
-  int tid = GetThreadIdInBlock();
-  if (!isSPMDExecutionMode && tid >= GetMasterThreadID())
+  int tid = __kmpc_get_hardware_thread_id_in_block();
+  if (__kmpc_is_generic_main_thread(tid))
     return 0;
   else
     return tid;
@@ -135,30 +82,33 @@ DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode) {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-DEVICE int GetOmpThreadId(int threadId, bool isSPMDExecutionMode) {
+int GetOmpThreadId() {
+  int tid = __kmpc_get_hardware_thread_id_in_block();
+  if (__kmpc_is_generic_main_thread(tid))
+    return 0;
   // omp_thread_num
   int rc;
-  if ((parallelLevel[GetWarpId()] & (OMP_ACTIVE_PARALLEL_LEVEL - 1)) > 1) {
+  if (__kmpc_parallel_level() > 1) {
     rc = 0;
-  } else if (isSPMDExecutionMode) {
-    rc = GetThreadIdInBlock();
+  } else if (__kmpc_is_spmd_exec_mode()) {
+    rc = tid;
   } else {
     omptarget_nvptx_TaskDescr *currTaskDescr =
-        omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
+        omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(tid);
     ASSERT0(LT_FUSSY, currTaskDescr, "expected a top task descr");
     rc = currTaskDescr->ThreadId();
   }
   return rc;
 }
 
-DEVICE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
+int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
   // omp_num_threads
   int rc;
   int Level = parallelLevel[GetWarpId()];
   if (Level != OMP_ACTIVE_PARALLEL_LEVEL + 1) {
     rc = 1;
   } else if (isSPMDExecutionMode) {
-    rc = GetNumberOfThreadsInBlock();
+    rc = __kmpc_get_hardware_num_threads_in_block();
   } else {
     rc = threadsInTeam;
   }
@@ -169,25 +119,25 @@ DEVICE int GetNumberOfOmpThreads(bool isSPMDExecutionMode) {
 ////////////////////////////////////////////////////////////////////////////////
 // Team id linked to OpenMP
 
-DEVICE int GetOmpTeamId() {
+int GetOmpTeamId() {
   // omp_team_num
   return GetBlockIdInKernel(); // assume 1 block per team
 }
 
-DEVICE int GetNumberOfOmpTeams() {
+int GetNumberOfOmpTeams() {
   // omp_num_teams
-  return GetNumberOfBlocksInKernel(); // assume 1 block per team
+  return __kmpc_get_hardware_num_blocks(); // assume 1 block per team
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Masters
 
-DEVICE int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
+int IsTeamMaster(int ompThreadId) { return (ompThreadId == 0); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Parallel level
 
-DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
+void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
   __kmpc_impl_lanemask_t LaneMaskLt = __kmpc_impl_lanemask_lt();
   unsigned Rank = __kmpc_impl_popc(Mask & LaneMaskLt);
@@ -199,7 +149,7 @@ DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
 }
 
-DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
+void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
   __kmpc_impl_syncwarp(Mask);
   __kmpc_impl_lanemask_t LaneMaskLt = __kmpc_impl_lanemask_lt();
   unsigned Rank = __kmpc_impl_popc(Mask & LaneMaskLt);
@@ -215,13 +165,13 @@ DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask) {
 // get OpenMP number of procs
 
 // Get the number of processors in the device.
-DEVICE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
+int GetNumberOfProcsInDevice(bool isSPMDExecutionMode) {
   if (!isSPMDExecutionMode)
     return GetNumberOfWorkersInTeam();
-  return GetNumberOfThreadsInBlock();
+  return __kmpc_get_hardware_num_threads_in_block();
 }
 
-DEVICE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
+int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
   return GetNumberOfProcsInDevice(isSPMDExecutionMode);
 }
 
@@ -229,8 +179,8 @@ DEVICE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode) {
 // Memory
 ////////////////////////////////////////////////////////////////////////////////
 
-DEVICE unsigned long PadBytes(unsigned long size,
-                              unsigned long alignment) // must be a power of 2
+unsigned long PadBytes(unsigned long size,
+                       unsigned long alignment) // must be a power of 2
 {
   // compute the necessary padding to satisfy alignment constraint
   ASSERT(LT_FUSSY, (alignment & (alignment - 1)) == 0,
@@ -238,7 +188,7 @@ DEVICE unsigned long PadBytes(unsigned long size,
   return (~(unsigned long)size + 1) & (alignment - 1);
 }
 
-DEVICE void *SafeMalloc(size_t size, const char *msg) // check if success
+void *SafeMalloc(size_t size, const char *msg) // check if success
 {
   void *ptr = __kmpc_impl_malloc(size);
   PRINT(LD_MEM, "malloc data of size %llu for %s: 0x%llx\n",
@@ -246,7 +196,7 @@ DEVICE void *SafeMalloc(size_t size, const char *msg) // check if success
   return ptr;
 }
 
-DEVICE void *SafeFree(void *ptr, const char *msg) {
+void *SafeFree(void *ptr, const char *msg) {
   PRINT(LD_MEM, "free data ptr 0x%llx for %s\n", (unsigned long long)ptr, msg);
   __kmpc_impl_free(ptr);
   return NULL;
@@ -256,11 +206,24 @@ DEVICE void *SafeFree(void *ptr, const char *msg) {
 // Teams Reduction Scratchpad Helpers
 ////////////////////////////////////////////////////////////////////////////////
 
-DEVICE unsigned int *GetTeamsReductionTimestamp() {
+unsigned int *GetTeamsReductionTimestamp() {
   return static_cast<unsigned int *>(ReductionScratchpadPtr);
 }
 
-DEVICE char *GetTeamsReductionScratchpad() {
+char *GetTeamsReductionScratchpad() {
   return static_cast<char *>(ReductionScratchpadPtr) + 256;
 }
 
+// Invoke an outlined parallel function unwrapping arguments (up
+// to 32).
+void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
+                            void **args, size_t nargs) {
+  switch (nargs) {
+#include "common/generated_microtask_cases.gen"
+  default:
+    printf("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
+    __builtin_trap();
+  }
+}
+
+#pragma omp end declare target

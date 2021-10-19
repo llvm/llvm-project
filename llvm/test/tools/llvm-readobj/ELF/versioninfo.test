@@ -16,49 +16,30 @@ Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynsym
     AddressAlign: 0x0000000000000002
-    EntSize:      0x0000000000000002
     Entries:      [ 0, 2, 3, 4, 5, 6]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x0000000000000004
-    Info:         0x0000000000000006
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
+      - Names:
+          - VERSION1
+      - Flags: 1
         Names:
           - VERSION1
-      - Version:    1
-        Flags:      1
-        VersionNdx: 0
-        Hash:       0
+      - Flags: 2
         Names:
           - VERSION1
-      - Version:    1
-        Flags:      2
-        VersionNdx: 0
-        Hash:       0
+      - Flags: 4
         Names:
           - VERSION1
-      - Version:    1
-        Flags:      4
-        VersionNdx: 0
-        Hash:       0
-        Names:
-          - VERSION1
-      - Version:    1
-        Flags:      7
+      - Flags:      7
         VersionNdx: 2
         Hash:       175630257
         Names:
           - VERSION1
-      - Version:    1
-        Flags:      8
+      - Flags:      8
         VersionNdx: 3
         Hash:       175630258
         Names:
@@ -68,9 +49,7 @@ Sections:
   - Name:         .gnu.version_r
     Type:         SHT_GNU_verneed
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x0000000000000004
-    Info:         0x0000000000000002
     Dependencies:
       - Version: 1
         File:    verneed1.so.0
@@ -122,11 +101,11 @@ DynamicSymbols:
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 2
-# LLVM-NEXT:     Name: sym1@@VERSION1
+# LLVM-NEXT:     Name: sym1@VERSION1
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 3
-# LLVM-NEXT:     Name: sym2@@VERSION2
+# LLVM-NEXT:     Name: sym2@VERSION2
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Symbol {
 # LLVM-NEXT:     Version: 4

@@ -1,5 +1,5 @@
 ; tests lowering of vector bswap
-; RUN: lli -force-interpreter %s | FileCheck %s
+; RUN: lli -jit-kind=mcjit -force-interpreter %s | FileCheck %s
 
 ; CHECK: 0x100
 ; CHECK: 0x10000

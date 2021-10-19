@@ -108,10 +108,16 @@ def main():
       # now, we just ignore all but the last.
       prefix_list.append((check_prefixes, tool_cmd_args))
 
-    func_dict = {}
-    for prefixes, _ in prefix_list:
-      for prefix in prefixes:
-        func_dict.update({prefix: dict()})
+    builder = common.FunctionTestBuilder(
+      run_list = prefix_list,
+      flags = type('', (object,), {
+            'verbose': args.verbose,
+            'function_signature': False,
+            'check_attributes': False,
+            'replace_value_regex': []}),
+      scrubber_args = [],
+      path=test)
+
     for prefixes, opt_args in prefix_list:
       common.debug('Extracted opt cmd:', opt_basename, opt_args, file=sys.stderr)
       common.debug('Extracted FileCheck prefixes:', str(prefixes), file=sys.stderr)
@@ -120,10 +126,10 @@ def main():
 
       # Split analysis outputs by "Printing analysis " declarations.
       for raw_tool_output in re.split(r'Printing analysis ', raw_tool_outputs):
-        common.build_function_body_dictionary(
-          common.ANALYZE_FUNCTION_RE, common.scrub_body, [],
-          raw_tool_output, prefixes, func_dict, args.verbose, False, False)
+        builder.process_run_line(common.ANALYZE_FUNCTION_RE, common.scrub_body,
+                                 raw_tool_output, prefixes, False)
 
+    func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
     prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])

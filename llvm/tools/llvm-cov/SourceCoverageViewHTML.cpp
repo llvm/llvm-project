@@ -248,7 +248,7 @@ const char *ReportTitleTag = "h2";
 const char *CreatedTimeTag = "h4";
 
 std::string getPathToStyle(StringRef ViewPath) {
-  std::string PathToStyle = "";
+  std::string PathToStyle;
   std::string PathSep = std::string(sys::path::get_separator());
   unsigned NumSeps = ViewPath.count(PathSep);
   for (unsigned I = 0, E = NumSeps; I < E; ++I)
@@ -313,6 +313,8 @@ static void emitColumnLabelsForIndex(raw_ostream &OS,
   Columns.emplace_back(tag("td", "Line Coverage", "column-entry-bold"));
   if (Opts.ShowRegionSummary)
     Columns.emplace_back(tag("td", "Region Coverage", "column-entry-bold"));
+  if (Opts.ShowBranchSummary)
+    Columns.emplace_back(tag("td", "Branch Coverage", "column-entry-bold"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
 
@@ -378,6 +380,10 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
     AddCoverageTripleToColumn(FCS.RegionCoverage.getCovered(),
                               FCS.RegionCoverage.getNumRegions(),
                               FCS.RegionCoverage.getPercentCovered());
+  if (Opts.ShowBranchSummary)
+    AddCoverageTripleToColumn(FCS.BranchCoverage.getCovered(),
+                              FCS.BranchCoverage.getNumBranches(),
+                              FCS.BranchCoverage.getPercentCovered());
 
   if (IsTotals)
     OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row-bold");
@@ -611,7 +617,7 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
 
 void SourceCoverageViewHTML::renderLineCoverageColumn(
     raw_ostream &OS, const LineCoverageStats &Line) {
-  std::string Count = "";
+  std::string Count;
   if (Line.isMapped())
     Count = tag("pre", formatCount(Line.getExecutionCount()));
   std::string CoverageClass =
@@ -647,6 +653,72 @@ void SourceCoverageViewHTML::renderExpansionView(raw_ostream &OS,
   OS << BeginExpansionDiv;
   ESV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/false,
                   /*ShowTitle=*/false, ViewDepth + 1);
+  OS << EndExpansionDiv;
+}
+
+void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
+                                              unsigned ViewDepth) {
+  // Render the child subview.
+  if (getOptions().Debug)
+    errs() << "Branch at line " << BRV.getLine() << '\n';
+
+  OS << BeginExpansionDiv;
+  OS << BeginPre;
+  for (const auto &R : BRV.Regions) {
+    // Calculate TruePercent and False Percent.
+    double TruePercent = 0.0;
+    double FalsePercent = 0.0;
+    unsigned Total = R.ExecutionCount + R.FalseExecutionCount;
+
+    if (!getOptions().ShowBranchCounts && Total != 0) {
+      TruePercent = ((double)(R.ExecutionCount) / (double)Total) * 100.0;
+      FalsePercent = ((double)(R.FalseExecutionCount) / (double)Total) * 100.0;
+    }
+
+    // Display Line + Column.
+    std::string LineNoStr = utostr(uint64_t(R.LineStart));
+    std::string ColNoStr = utostr(uint64_t(R.ColumnStart));
+    std::string TargetName = "L" + LineNoStr;
+
+    OS << "  Branch (";
+    OS << tag("span",
+              a("#" + TargetName, tag("span", LineNoStr + ":" + ColNoStr),
+                TargetName),
+              "line-number") +
+              "): [";
+
+    if (R.Folded) {
+      OS << "Folded - Ignored]\n";
+      continue;
+    }
+
+    // Display TrueCount or TruePercent.
+    std::string TrueColor = R.ExecutionCount ? "None" : "red";
+    std::string TrueCovClass =
+        (R.ExecutionCount > 0) ? "covered-line" : "uncovered-line";
+
+    OS << tag("span", "True", TrueColor);
+    OS << ": ";
+    if (getOptions().ShowBranchCounts)
+      OS << tag("span", formatCount(R.ExecutionCount), TrueCovClass) << ", ";
+    else
+      OS << format("%0.2f", TruePercent) << "%, ";
+
+    // Display FalseCount or FalsePercent.
+    std::string FalseColor = R.FalseExecutionCount ? "None" : "red";
+    std::string FalseCovClass =
+        (R.FalseExecutionCount > 0) ? "covered-line" : "uncovered-line";
+
+    OS << tag("span", "False", FalseColor);
+    OS << ": ";
+    if (getOptions().ShowBranchCounts)
+      OS << tag("span", formatCount(R.FalseExecutionCount), FalseCovClass);
+    else
+      OS << format("%0.2f", FalsePercent) << "%";
+
+    OS << "]\n";
+  }
+  OS << EndPre;
   OS << EndExpansionDiv;
 }
 

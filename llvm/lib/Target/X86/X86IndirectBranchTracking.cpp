@@ -28,7 +28,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-indirect-branch-tracking"
 
-static cl::opt<bool> IndirectBranchTracking(
+cl::opt<bool> IndirectBranchTracking(
     "x86-indirect-branch-tracking", cl::init(false), cl::Hidden,
     cl::desc("Enable X86 indirect branch tracking pass."));
 
@@ -92,7 +92,7 @@ static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
   if (!CalleeFn)
     return false;
   AttributeList Attrs = CalleeFn->getAttributes();
-  return Attrs.hasFnAttribute(Attribute::ReturnsTwice);
+  return Attrs.hasFnAttr(Attribute::ReturnsTwice);
 }
 
 bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {

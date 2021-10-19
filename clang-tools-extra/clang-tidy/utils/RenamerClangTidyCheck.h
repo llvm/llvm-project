@@ -59,6 +59,9 @@ public:
     /// automatically.
     ConflictsWithMacroDefinition,
 
+    /// The fixup results in an identifier that is not a valid c/c++ identifier.
+    FixInvalidIdentifier,
+
     /// Values pass this threshold will be ignored completely
     /// i.e no message, no fixup.
     IgnoreFailureThreshold,
@@ -94,9 +97,8 @@ public:
 
     ShouldFixStatus FixStatus = ShouldFixStatus::ShouldFix;
 
-    /// A set of all the identifier usages starting SourceLocation, in
-    /// their encoded form.
-    llvm::DenseSet<unsigned> RawUsageLocs;
+    /// A set of all the identifier usages starting SourceLocation.
+    llvm::DenseSet<SourceLocation> RawUsageLocs;
 
     NamingCheckFailure() = default;
   };

@@ -23,7 +23,7 @@ vector.ph:                                        ; preds = %entry
   br i1 %0, label %for.cond.cleanup.loopexit.unr-lcssa, label %vector.ph.new
 
 vector.ph.new:                                    ; preds = %vector.ph
-  call void @llvm.set.loop.iterations.i32(i32 %tmp13)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %tmp13)
   %unroll_iter = sub i32 %tmp13, %xtraiter
   br label %vector.body
 
@@ -113,6 +113,6 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #1
 declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>) #2
-declare void @llvm.set.loop.iterations.i32(i32) #3
+declare i32 @llvm.start.loop.iterations.i32(i32) #3
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
 

@@ -19,71 +19,59 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Execution Parameters
 ////////////////////////////////////////////////////////////////////////////////
-enum ExecutionMode {
-  Spmd = 0x00u,
-  Generic = 0x01u,
-  ModeMask = 0x01u,
+enum OMPTgtExecModeFlags : int8_t {
+  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
+  OMP_TGT_EXEC_MODE_SPMD = 1 << 1
 };
 
-enum RuntimeMode {
-  RuntimeInitialized = 0x00u,
-  RuntimeUninitialized = 0x02u,
-  RuntimeMask = 0x02u,
+enum OMPTgtRuntimeModeFlags : int8_t {
+  OMP_TGT_RUNTIME_UNINITIALIZED = 0,
+  OMP_TGT_RUNTIME_INITIALIZED = 1 << 2
 };
 
-DEVICE void setExecutionParameters(ExecutionMode EMode, RuntimeMode RMode);
-DEVICE bool isGenericMode();
-DEVICE bool isSPMDMode();
-DEVICE bool isRuntimeUninitialized();
-DEVICE bool isRuntimeInitialized();
-
-////////////////////////////////////////////////////////////////////////////////
-// Execution Modes based on location parameter fields
-////////////////////////////////////////////////////////////////////////////////
-
-DEVICE bool checkSPMDMode(kmp_Ident *loc);
-DEVICE bool checkGenericMode(kmp_Ident *loc);
-DEVICE bool checkRuntimeUninitialized(kmp_Ident *loc);
-DEVICE bool checkRuntimeInitialized(kmp_Ident *loc);
+void setExecutionParameters(OMPTgtExecModeFlags EMode,
+                            OMPTgtRuntimeModeFlags RMode);
+bool isGenericMode();
+bool isRuntimeUninitialized();
+bool isRuntimeInitialized();
 
 ////////////////////////////////////////////////////////////////////////////////
 // get info from machine
 ////////////////////////////////////////////////////////////////////////////////
 
 // get global ids to locate tread/team info (constant regardless of OMP)
-DEVICE int GetLogicalThreadIdInBlock(bool isSPMDExecutionMode);
-DEVICE int GetMasterThreadID();
-DEVICE int GetNumberOfWorkersInTeam();
+int GetLogicalThreadIdInBlock();
+int GetMasterThreadID();
+int GetNumberOfWorkersInTeam();
 
 // get OpenMP thread and team ids
-DEVICE int GetOmpThreadId(int threadId,
-                          bool isSPMDExecutionMode);    // omp_thread_num
-DEVICE int GetOmpTeamId();                              // omp_team_num
+int GetOmpThreadId();                         // omp_thread_num
+int GetOmpTeamId();                           // omp_team_num
 
 // get OpenMP number of threads and team
-DEVICE int GetNumberOfOmpThreads(bool isSPMDExecutionMode); // omp_num_threads
-DEVICE int GetNumberOfOmpTeams();                           // omp_num_teams
+int GetNumberOfOmpThreads(bool isSPMDExecutionMode); // omp_num_threads
+int GetNumberOfOmpTeams();                           // omp_num_teams
 
 // get OpenMP number of procs
-DEVICE int GetNumberOfProcsInTeam(bool isSPMDExecutionMode);
-DEVICE int GetNumberOfProcsInDevice(bool isSPMDExecutionMode);
+int GetNumberOfProcsInTeam(bool isSPMDExecutionMode);
+int GetNumberOfProcsInDevice(bool isSPMDExecutionMode);
 
 // masters
-DEVICE int IsTeamMaster(int ompThreadId);
+int IsTeamMaster(int ompThreadId);
 
 // Parallel level
-DEVICE void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
-DEVICE void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
+void IncParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
+void DecParallelLevel(bool ActiveParallel, __kmpc_impl_lanemask_t Mask);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Memory
 ////////////////////////////////////////////////////////////////////////////////
 
 // safe alloc and free
-DEVICE void *SafeMalloc(size_t size, const char *msg); // check if success
-DEVICE void *SafeFree(void *ptr, const char *msg);
+void *SafeMalloc(size_t size, const char *msg); // check if success
+void *SafeFree(void *ptr, const char *msg);
 // pad to a alignment (power of 2 only)
-DEVICE unsigned long PadBytes(unsigned long size, unsigned long alignment);
+unsigned long PadBytes(unsigned long size, unsigned long alignment);
 #define ADD_BYTES(_addr, _bytes)                                               \
   ((void *)((char *)((void *)(_addr)) + (_bytes)))
 #define SUB_BYTES(_addr, _bytes)                                               \
@@ -92,7 +80,12 @@ DEVICE unsigned long PadBytes(unsigned long size, unsigned long alignment);
 ////////////////////////////////////////////////////////////////////////////////
 // Teams Reduction Scratchpad Helpers
 ////////////////////////////////////////////////////////////////////////////////
-DEVICE unsigned int *GetTeamsReductionTimestamp();
-DEVICE char *GetTeamsReductionScratchpad();
+unsigned int *GetTeamsReductionTimestamp();
+char *GetTeamsReductionScratchpad();
+
+// Invoke an outlined parallel function unwrapping global, shared arguments (up
+// to 128).
+void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
+                            void **args, size_t nargs);
 
 #endif

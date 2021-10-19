@@ -137,7 +137,7 @@ class EnumTypesTestCase(TestBase):
             self.assertEqual(member.signed, value_matches[idx], "Value matches for %d"%(idx))
         
     def test_api(self):
-        """Test the the SBTypeEnumMember API's work correctly for enum_test_days"""
+        """Test that the SBTypeEnumMember API's work correctly for enum_test_days"""
         self.build()
         target = lldbutil.run_to_breakpoint_make_target(self)
 

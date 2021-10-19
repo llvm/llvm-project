@@ -4,14 +4,14 @@
 # RUN: od -t x1 %t.sec | FileCheck %s
 
 # RUN: not llvm-objcopy --dump-section=nonexistent=%t.sec %t 2>&1 | FileCheck --check-prefix=NONEXISTENT %s
-# RUN: not llvm-objcopy --dump-section=producers=%t.dir/bar %t 2>&1 | FileCheck --check-prefix=DIROUT %s
+# RUN: not llvm-objcopy --dump-section=producers=%t.dir/bar %t 2>&1 | FileCheck -DMSG=%errc_ENOENT --check-prefix=DIROUT %s
 
 ## Raw contents of the producers section.
 # CHECK: 0000000 01 0c 70 72 6f 63 65 73 73 65 64 2d 62 79 01 05
 # CHECK: 0000020 63 6c 61 6e 67 05 39 2e 30 2e 30
 
 # NONEXISTENT: section 'nonexistent' not found
-# DIROUT: error: {{.*}}/bar': {{[nN]}}o such file or directory
+# DIROUT: error: {{.*}}/bar': [[MSG]]
 
 ## Check that dumping and removing a section works in the same invocation
 # RUN: llvm-objcopy --dump-section=producers=%t.sec --remove-section=producers %t %t2

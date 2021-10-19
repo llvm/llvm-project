@@ -17,10 +17,10 @@
 #include "cxa_exception.h"
 #include "cxa_handlers.h"
 #include "fallback_malloc.h"
-#include "include/atomic_support.h"
+#include "include/atomic_support.h" // from libc++
 
 #if __has_feature(address_sanitizer)
-extern "C" void __asan_handle_no_return(void);
+#include <sanitizer/asan_interface.h>
 #endif
 
 // +---------------------------+-----------------------------+---------------+
@@ -384,7 +384,7 @@ asm (
     "	bl	abort\n"
     "	.popsection"
 );
-#endif  // defined(_LIBCXXABI_ARM_EHABI)
+#endif // defined(_LIBCXXABI_ARM_EHABI)
 
 /*
 This routine can catch foreign or native exceptions.  If native, the exception

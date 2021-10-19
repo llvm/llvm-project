@@ -1,5 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source code:
 ;   struct s { int a; int b; };
@@ -7,7 +8,9 @@
 ;   int get_value(const void *addr);
 ;   int test(struct s *arg) { return get_value(_(&arg->b)); }
 ; Compiler flag to generate IR:
-;   clang -target bpf -S -O2 -g -emit-llvm test.c
+;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.s = type { i32, i32 }
 
@@ -15,7 +18,7 @@
 define dso_local i32 @test(%struct.s* %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata %struct.s* %arg, metadata !17, metadata !DIExpression()), !dbg !18
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* %arg, i32 1, i32 1), !dbg !19, !llvm.preserve.access.index !12
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg, i32 1, i32 1), !dbg !19, !llvm.preserve.access.index !12
   %1 = bitcast i32* %0 to i8*, !dbg !19
   %call = tail call i32 @get_value(i8* %1) #4, !dbg !20
   ret i32 %call, !dbg !21

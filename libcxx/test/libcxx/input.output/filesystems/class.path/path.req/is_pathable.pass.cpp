@@ -63,8 +63,8 @@ struct MakeTestType {
   using const_cstr_type = const CharT*;
   using array_type = CharT[25];
   using const_array_type = const CharT[25];
-  using iter_type = input_iterator<CharT*>;
-  using bad_iter_type = input_iterator<signed char*>;
+  using iter_type = cpp17_input_iterator<CharT*>;
+  using bad_iter_type = cpp17_input_iterator<signed char*>;
 
   template <class TestT>
   static void AssertPathable() {
@@ -97,7 +97,9 @@ struct MakeTestType {
 
 int main(int, char**) {
   MakeTestType<char>::Test();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   MakeTestType<wchar_t>::Test();
+#endif
   MakeTestType<char16_t>::Test();
   MakeTestType<char32_t>::Test();
 

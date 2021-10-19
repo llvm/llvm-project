@@ -1,94 +1,173 @@
 # 'llvm' Dialect
 
-This dialect wraps the LLVM IR types and instructions into MLIR types and
-operations. It provides several additional operations that are necessary to
-cover for the differences in the IR structure (e.g., MLIR does not have `phi`
-operations and LLVM IR does not have a `constant` operation).
+This dialect maps [LLVM IR](https://llvm.org/docs/LangRef.html) into MLIR by
+defining the corresponding operations and types. LLVM IR metadata is usually
+represented as MLIR attributes, which offer additional structure verification.
 
-In this document, we use "LLVM IR" to designate the
+We use "LLVM IR" to designate the
 [intermediate representation of LLVM](https://llvm.org/docs/LangRef.html) and
-"LLVM IR _dialect_" to refer to the MLIR dialect reflecting LLVM instructions
-and types.
+"LLVM _dialect_" or "LLVM IR _dialect_" to refer to this MLIR dialect.
+
+Unless explicitly stated otherwise, the semantics of the LLVM dialect operations
+must correspond to the semantics of LLVM IR instructions and any divergence is
+considered a bug. The dialect also contains auxiliary operations that smoothen
+the differences in the IR structure, e.g., MLIR does not have `phi` operations
+and LLVM IR does not have a `constant` operation. These auxiliary operations are
+systematically prefixed with `mlir`, e.g. `llvm.mlir.constant` where `llvm.` is
+the dialect namespace prefix.
 
 [TOC]
 
-## Context and Module Association
+## Dependency on LLVM IR
 
-The LLVM IR dialect object _contains_ an LLVM Context and an LLVM Module that it
-uses to define, print, parse and manage LLVM IR types. These objects can be
-obtained from the dialect object using `.getLLVMContext()` and
-`getLLVMModule()`. All LLVM IR objects that interact with the LLVM IR dialect
-must exist in the dialect's context.
+LLVM dialect is not expected to depend on any object that requires an
+`LLVMContext`, such as an LLVM IR instruction or type. Instead, MLIR provides
+thread-safe alternatives compatible with the rest of the infrastructure. The
+dialect is allowed to depend on the LLVM IR objects that don't require a
+context, such as data layout and triple description.
 
-## Types
+## Module Structure
 
-The LLVM IR dialect defines a single MLIR type, `LLVM::LLVMType`, that can wrap
-any existing LLVM IR type. Its syntax is as follows
+IR modules use the built-in MLIR `ModuleOp` and support all its features. In
+particular, modules can be named, nested and are subject to symbol visibility.
+Modules can contain any operations, including LLVM functions and globals.
 
-```
-type ::= `!llvm<"` llvm-canonical-type `">
-llvm-canonical-type ::= <canonical textual representation defined by LLVM>
-```
+### Data Layout and Triple
 
-For example, one can use primitive types `!llvm.i32`, pointer types
-`!llvm<"i8*">`, vector types `!llvm<"<4 x float>">` or structure types
-`!llvm<"{i32, float}">`. The parsing and printing of the canonical form are
-delegated to the LLVM assembly parser and printer.
-
-LLVM IR dialect types contain an `llvm::Type*` object that can be obtained by
-calling `.getUnderlyingType()` and used in LLVM API calls directly. These
-objects are allocated within the LLVM context associated with the LLVM IR
-dialect and may be linked to the properties of the associated LLVM module.
-
-LLVM IR dialect type can be constructed from any `llvm::Type*` that is
-associated with the LLVM context of the dialect. In this document, we use the
-term "wrapped LLVM IR type" to refer to the LLVM IR dialect type containing a
-specific LLVM IR type.
-
-## Operations
-
-All operations in the LLVM IR dialect have a custom form in MLIR. The mnemonic
-of an operation is that used in LLVM IR prefixed with "`llvm.`".
-
-### LLVM functions
-
-MLIR functions are defined by an operation that is not built into the IR itself.
-The LLVM IR dialect provides an `llvm.func` operation to define functions
-compatible with LLVM IR. These functions have wrapped LLVM IR function type but
-use MLIR syntax to express it. They are required to have exactly one result
-type. LLVM function operation is intended to capture additional properties of
-LLVM functions, such as linkage and calling convention, that may be modeled
-differently by the built-in MLIR function.
+An IR module may have an optional data layout and triple information attached
+using MLIR attributes `llvm.data_layout` and `llvm.triple`, respectively. Both
+are string attributes with the
+[same syntax](https://llvm.org/docs/LangRef.html#data-layout) as in LLVM IR and
+are verified to be correct. They can be defined as follows.
 
 ```mlir
-// The type of @bar is !llvm<"i64 (i64)">
-llvm.func @bar(%arg0: !llvm.i64) -> !llvm.i64 {
-  llvm.return %arg0 : !llvm.i64
+module attributes {llvm.data_layout = "e",
+                   llvm.target_triple = "aarch64-linux-android"} {
+  // module contents
 }
-
-// Type type of @foo is !llvm<"void (i64)">
-// !llvm.void type is omitted
-llvm.func @foo(%arg0: !llvm.i64) {
-  llvm.return
-}
-
-// A function with `internal` linkage.
-llvm.func internal @internal_func() {
-  llvm.return
-}
-
 ```
 
-#### Attribute pass-through
+### Functions
 
-An LLVM IR dialect function provides a mechanism to forward function-level
-attributes to LLVM IR using the `passthrough` attribute. This is an array
-attribute containing either string attributes or array attributes. In the former
-case, the value of the string is interpreted as the name of LLVM IR function
-attribute. In the latter case, the array is expected to contain exactly two
-string attributes, the first corresponding to the name of LLVM IR function
-attribute, and the second corresponding to its value. Note that even integer
-LLVM IR function attributes have their value represented in the string form.
+LLVM functions are represented by a special operation, `llvm.func`, that has
+syntax similar to that of the built-in function operation but supports
+LLVM-related features such as linkage and variadic argument lists. See detailed
+description in the operation list [below](#llvmfunc-mlirllvmllvmfuncop).
+
+### PHI Nodes and Block Arguments
+
+MLIR uses block arguments instead of PHI nodes to communicate values between
+blocks. Therefore, the LLVM dialect has no operation directly equivalent to
+`phi` in LLVM IR. Instead, all terminators can pass values as successor operands
+as these values will be forwarded as block arguments when the control flow is
+transferred.
+
+For example:
+
+```mlir
+^bb1:
+  %0 = llvm.addi %arg0, %cst : i32
+  llvm.br ^bb2[%0: i32]
+
+// If the control flow comes from ^bb1, %arg1 == %0.
+^bb2(%arg1: i32)
+  // ...
+```
+
+is equivalent to LLVM IR
+
+```llvm
+%0:
+  %1 = add i32 %arg0, %cst
+  br %3
+
+%3:
+  %arg1 = phi [%1, %0], //...
+```
+
+Since there is no need to use the block identifier to differentiate the source
+of different values, the LLVM dialect supports terminators that transfer the
+control flow to the same block with different arguments. For example:
+
+```mlir
+^bb1:
+  llvm.cond_br %cond, ^bb2[%0: i32], ^bb2[%1: i32]
+
+^bb2(%arg0: i32):
+  // ...
+```
+
+### Context-Level Values
+
+Some value kinds in LLVM IR, such as constants and undefs, are uniqued in
+context and used directly in relevant operations. MLIR does not support such
+values for thread-safety and concept parsimony reasons. Instead, regular values
+are produced by dedicated operations that have the corresponding semantics:
+[`llvm.mlir.constant`](#llvmmlirconstant-mlirllvmconstantop),
+[`llvm.mlir.undef`](#llvmmlirundef-mlirllvmundefop),
+[`llvm.mlir.null`](#llvmmlirnull-mlirllvmnullop). Note how these operations are
+prefixed with `mlir.` to indicate that they don't belong to LLVM IR but are only
+necessary to model it in MLIR. The values produced by these operations are
+usable just like any other value.
+
+Examples:
+
+```mlir
+// Create an undefined value of structure type with a 32-bit integer followed
+// by a float.
+%0 = llvm.mlir.undef : !llvm.struct<(i32, f32)>
+
+// Null pointer to i8.
+%1 = llvm.mlir.null : !llvm.ptr<i8>
+
+// Null pointer to a function with signature void().
+%2 = llvm.mlir.null : !llvm.ptr<func<void ()>>
+
+// Constant 42 as i32.
+%3 = llvm.mlir.constant(42 : i32) : i32
+
+// Splat dense vector constant.
+%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
+```
+
+Note that constants list the type twice. This is an artifact of the LLVM dialect
+not using built-in types, which are used for typed MLIR attributes. The syntax
+will be reevaluated after considering composite constants.
+
+### Globals
+
+Global variables are also defined using a special operation,
+[`llvm.mlir.global`](#llvmmlirglobal-mlirllvmglobalop), located at the module
+level. Globals are MLIR symbols and are identified by their name.
+
+Since functions need to be isolated-from-above, i.e. values defined outside the
+function cannot be directly used inside the function, an additional operation,
+[`llvm.mlir.addressof`](#llvmmliraddressof-mlirllvmaddressofop), is provided to
+locally define a value containing the _address_ of a global. The actual value
+can then be loaded from that pointer, or a new value can be stored into it if
+the global is not declared constant. This is similar to LLVM IR where globals
+are accessed through name and have a pointer type.
+
+### Linkage
+
+Module-level named objects in the LLVM dialect, namely functions and globals,
+have an optional _linkage_ attribute derived from LLVM IR
+[linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
+specified by the same keyword as in LLVM IR and is located between the operation
+name (`llvm.func` or `llvm.global`) and the symbol name. If no linkage keyword
+is present, `external` linkage is assumed by default. Linakge is _distinct_ from
+MLIR symbol visibility.
+
+### Attribute Pass-Through
+
+The LLVM dialect provides a mechanism to forward function-level attributes to
+LLVM IR using the `passthrough` attribute. This is an array attribute containing
+either string attributes or array attributes. In the former case, the value of
+the string is interpreted as the name of LLVM IR function attribute. In the
+latter case, the array is expected to contain exactly two string attributes, the
+first corresponding to the name of LLVM IR function attribute, and the second
+corresponding to its value. Note that even integer LLVM IR function attributes
+have their value represented in the string form.
 
 Example:
 
@@ -105,398 +184,285 @@ llvm.func @func() attributes {
 If the attribute is not known to LLVM IR, it will be attached as a string
 attribute.
 
-#### Linkage
+## Types
 
-An LLVM IR dialect function has a linkage attribute derived from LLVM IR
-[linkage types](https://llvm.org/docs/LangRef.html#linkage-types). Linkage is
-specified by the same keyword as in LLVM IR and is located between `llvm.func`
-and the symbol name. If no linkage keyword is present, `external` linkage is
-assumed by default.
+LLVM dialect uses built-in types whenever possible and defines a set of
+complementary types, which correspond to the LLVM IR types that cannot be
+directly represented with built-in types. Similarly to other MLIR context-owned
+objects, the creation and manipulation of LLVM dialect types is thread-safe.
 
-### LLVM IR operations
+MLIR does not support module-scoped named type declarations, e.g. `%s = type
+{i32, i32}` in LLVM IR. Instead, types must be fully specified at each use,
+except for recursive types where only the first reference to a named type needs
+to be fully specified. MLIR [type aliases](../LangRef.md/#type-aliases) can be used
+to achieve more compact syntax.
 
-The following operations are currently supported. The semantics of these
-operations corresponds to the semantics of the similarly-named LLVM IR
-instructions.
+The general syntax of LLVM dialect types is `!llvm.`, followed by a type kind
+identifier (e.g., `ptr` for pointer or `struct` for structure) and by an
+optional list of type parameters in angle brackets. The dialect follows MLIR
+style for types with nested angle brackets and keyword specifiers rather than
+using different bracket styles to differentiate types. Types inside the angle
+brackets may omit the `!llvm.` prefix for brevity: the parser first attempts to
+find a type (starting with `!` or a built-in type) and falls back to accepting a
+keyword. For example, `!llvm.ptr<!llvm.ptr<i32>>` and `!llvm.ptr<ptr<i32>>` are
+equivalent, with the latter being the canonical form, and denote a pointer to a
+pointer to a 32-bit integer.
 
-#### Integer binary arithmetic operations
+### Built-in Type Compatibility
 
-Take two arguments of wrapped LLVM IR integer type, produce one value of the
-same type.
+LLVM dialect accepts a subset of built-in types that are referred to as _LLVM
+dialect-compatible types_. The following types are compatible:
 
--   `add`
--   `sub`
--   `mul`
--   `udiv`
--   `sdiv`
--   `urem`
--   `srem`
+-   Signless integers - `iN` (`IntegerType`).
+-   Floating point types - `bfloat`, `half`, `float`, `double` , `f80`, `f128`
+    (`FloatType`).
+-   1D vectors of signless integers or floating point types - `vector<NxT>`
+    (`VectorType`).
 
-Examples:
+Note that only a subset of types that can be represented by a given class is
+compatible. For example, signed and unsigned integers are not compatible. LLVM
+provides a function, `bool LLVM::isCompatibleType(Type)`, that can be used as a
+compatibility check.
 
-```mlir
-// Integer addition.
-%0 = llvm.add %a, %b : !llvm.i32
+Each LLVM IR type corresponds to *exactly one* MLIR type, either built-in or
+LLVM dialect type. For example, because `i32` is LLVM-compatible, there is no
+`!llvm.i32` type. However, `!llvm.ptr<T>` is defined in the LLVM dialect as
+there is no corresponding built-in type.
 
-// Unsigned integer division.
-%1 = llvm.udiv %a, %b : !llvm.i32
-```
+### Additional Simple Types
 
-#### Floating point binary arithmetic operations
+The following non-parametric types derived from the LLVM IR are available in the
+LLVM dialect:
 
-Take two arguments of wrapped LLVM IR floating point type, produce one value of
-the same type.
+-   `!llvm.x86_mmx` (`LLVMX86MMXType`) - value held in an MMX register on x86
+    machine.
+-   `!llvm.ppc_fp128` (`LLVMPPCFP128Type`) - 128-bit floating-point value (two
+    64 bits).
+-   `!llvm.token` (`LLVMTokenType`) - a non-inspectable value associated with an
+    operation.
+-   `!llvm.metadata` (`LLVMMetadataType`) - LLVM IR metadata, to be used only if
+    the metadata cannot be represented as structured MLIR attributes.
+-   `!llvm.void` (`LLVMVoidType`) - does not represent any value; can only
+    appear in function results.
 
--   `fadd`
--   `fsub`
--   `fmul`
--   `fdiv`
--   `frem`
+These types represent a single value (or an absence thereof in case of `void`)
+and correspond to their LLVM IR counterparts.
 
-Examples:
+### Additional Parametric Types
 
-```mlir
-// Float addition.
-%0 = llvm.fadd %a, %b : !llvm.float
+These types are parameterized by the types they contain, e.g., the pointee or
+the element type, which can be either compatible built-in or LLVM dialect types.
 
-// Float division.
-%1 = llvm.fdiv %a, %b : !llvm.float
-```
+#### Pointer Types
 
-#### Memory-related operations
+Pointer types specify an address in memory.
 
--   `<r> = alloca <size> x <type>`
--   `<r> = getelementptr <address>[<index> (, <index>)+]`
--   `<r> = load <address>`
--   `store <value>, <address>`
-
-In these operations, `<size>` must be a value of wrapped LLVM IR integer type,
-`<address>` must be a value of wrapped LLVM IR pointer type, and `<value>` must
-be a value of wrapped LLVM IR type that corresponds to the pointer type of
-`<address>`.
-
-The `index` operands are integer values whose semantics is identical to the
-non-pointer arguments of LLVM IR's `getelementptr`.
-
-Examples:
-
-```mlir
-// Allocate an array of 4 floats on stack
-%c4 = llvm.mlir.constant(4) : !llvm.i64
-%0 = llvm.alloca %c4 x !llvm.float : (!llvm.i64) -> !llvm<"float*">
-
-// Get the second element of the array (note 0-based indexing).
-%c1 = llvm.mlir.constant(1) : !llvm.i64
-%1 = llvm.getelementptr %0[%c1] : (!llvm<"float*">, !llvm.i64)
-                                   -> !llvm<"float*">
-
-// Store a constant into this element.
-%cf = llvm.mlir.constant(42.0 : f32) : !llvm.float
-llvm.store %cf, %1 : !llvm<"float*">
-
-// Load the value from this element.
-%3 = llvm.load %1 : !llvm<"float*">
-```
-
-#### Operations on values of aggregate type.
-
--   `<value> = extractvalue <struct>[<index> (, <index>)+]`
--   `<struct> = insertvalue <value>, <struct>[<index> (, <index>)+]`
-
-In these operations, `<struct>` must be a value of wrapped LLVM IR structure
-type and `<value>` must be a value that corresponds to one of the (nested)
-structure element types.
-
-Note the use of integer literals to designate subscripts, which is made possible
-by `extractvalue` and `insertvalue` must have constant subscripts. Internally,
-they are modeled as array attributes.
-
-Examples:
-
-```mlir
-// Get the value third element of the second element of a structure.
-%0 = llvm.extractvalue %s[1, 2] : !llvm<"{i32, {i1, i8, i16}">
-
-// Insert the value to the third element of the second element of a structure.
-// Note that this returns a new structure-typed value.
-%1 = llvm.insertvalue %0, %s[1, 2] : !llvm<"{i32, {i1, i8, i16}">
-```
-
-#### Terminator operations.
-
-Branch operations:
-
--   `br [<successor>(<operands>)]`
--   `cond_br <condition> [<true-successor>(<true-operands>),`
-    `<false-successor>(<false-operands>)]`
-
-In order to comply with MLIR design, branch operations in the LLVM IR dialect
-pass arguments to basic blocks. Successors must be valid block MLIR identifiers
-and operand lists for each of them must have the same types as the arguments of
-the respective blocks. `<condition>` must be a wrapped LLVM IR `i1` type.
-
-Since LLVM IR uses the name of the predecessor basic block to identify the
-sources of a PHI node, it is invalid for two entries of the PHI node to indicate
-different values coming from the same block. Therefore, `cond_br` in the LLVM IR
-dialect disallows its successors to be the same block _if_ this block has
-arguments.
-
-Examples:
-
-```mlir
-// Branch without arguments.
-^bb0:
-  llvm.br ^bb0
-
-// Branch and pass arguments.
-^bb1(%arg: !llvm.i32):
-  llvm.br ^bb1(%arg : !llvm.i32)
-
-// Conditionally branch and pass arguments to one of the blocks.
-llvm.cond_br %cond, ^bb0, %bb1(%arg : !llvm.i32)
-
-// It's okay to use the same block without arguments, but probably useless.
-llvm.cond_br %cond, ^bb0, ^bb0
-
-// ERROR: Passing different arguments to the same block in a conditional branch.
-llvm.cond_br %cond, ^bb1(%0 : !llvm.i32), ^bb1(%1 : !llvm.i32)
+Pointer types are parametric types parameterized by the element type and the
+address space. The address space is an integer, but this choice may be
+reconsidered if MLIR implements named address spaces. Their syntax is as
+follows:
 
 ```
-
-Call operations:
-
--   `<r> = call(<operands>)`
--   `call(<operands>)`
-
-In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect implements
-this behavior by providing a variadic `call` operation for 0- and 1-result
-functions. Even though MLIR supports multi-result functions, LLVM IR dialect
-disallows them.
-
-The `call` instruction supports both direct and indirect calls. Direct calls
-start with a function name (`@`-prefixed) and indirect calls start with an SSA
-value (`%`-prefixed). The direct callee, if present, is stored as a function
-attribute `callee`. The trailing type of the instruction is always the MLIR
-function type, which may be different from the indirect callee that has the
-wrapped LLVM IR function type.
-
-Examples:
-
-```mlir
-// Direct call without arguments and with one result.
-%0 = llvm.call @foo() : () -> (!llvm.float)
-
-// Direct call with arguments and without a result.
-llvm.call @bar(%0) : (!llvm.float) -> ()
-
-// Indirect call with an argument and without a result.
-llvm.call %1(%0) : (!llvm.float) -> ()
+  llvm-ptr-type ::= `!llvm.ptr<` type (`,` integer-literal)? `>`
 ```
 
-#### Miscellaneous operations.
+where the optional integer literal corresponds to the memory space. Both cases
+are represented by `LLVMPointerType` internally.
 
-Integer comparisons: `icmp "predicate" <lhs>, <rhs>`. The following predicate
-values are supported:
+#### Array Types
 
--   `eq` - equality comparison;
--   `ne` - inequality comparison;
--   `slt` - signed less-than comparison
--   `sle` - signed less-than-or-equal comparison
--   `sgt` - signed greater-than comparison
--   `sge` - signed greater-than-or-equal comparison
--   `ult` - unsigned less-than comparison
--   `ule` - unsigned less-than-or-equal comparison
--   `ugt` - unsigned greater-than comparison
--   `uge` - unsigned greater-than-or-equal comparison
+Array types represent sequences of elements in memory. Array elements can be
+addressed with a value unknown at compile time, and can be nested. Only 1D
+arrays are allowed though.
 
-Bitwise reinterpretation: `bitcast <value>`.
+Array types are parameterized by the fixed size and the element type.
+Syntactically, their representation is the following:
 
-Selection: `select <condition>, <lhs>, <rhs>`.
-
-### Auxiliary MLIR Operations for Constants and Globals
-
-LLVM IR has broad support for first-class constants, which is not the case for
-MLIR. Instead, constants are defined in MLIR as regular SSA values produced by
-operations with specific traits. The LLVM dialect provides a set of operations
-that model LLVM IR constants. These operations do not correspond to LLVM IR
-instructions and are therefore prefixed with `llvm.mlir`.
-
-Inline constants can be created by `llvm.mlir.constant`, which currently
-supports integer, float, string or elements attributes (constant structs are not
-currently supported). LLVM IR constant expressions are expected to be
-constructed as sequences of regular operations on SSA values produced by
-`llvm.mlir.constant`. Additionally, MLIR provides semantically-charged
-operations `llvm.mlir.undef` and `llvm.mlir.null` for the corresponding
-constants.
-
-LLVM IR globals can be defined using `llvm.mlir.global` at the module level,
-except for functions that are defined with `llvm.func`. Globals, both variables
-and functions, can be accessed by taking their address with the
-`llvm.mlir.addressof` operation, which produces a pointer to the named global,
-unlike the `llvm.mlir.constant` that produces the value of the same type as the
-constant.
-
-#### `llvm.mlir.addressof`
-
-Creates an SSA value containing a pointer to a global variable or constant
-defined by `llvm.mlir.global`. The global value can be defined after its first
-referenced. If the global value is a constant, storing into it is not allowed.
-
-Examples:
-
-```mlir
-func @foo() {
-  // Get the address of a global variable.
-  %0 = llvm.mlir.addressof @const : !llvm<"i32*">
-
-  // Use it as a regular pointer.
-  %1 = llvm.load %0 : !llvm<"i32*">
-
-  // Get the address of a function.
-  %2 = llvm.mlir.addressof @foo : !llvm<"void ()*">
-
-  // The function address can be used for indirect calls.
-  llvm.call %2() : () -> ()
-}
-
-// Define the global.
-llvm.mlir.global @const(42 : i32) : !llvm.i32
+```
+  llvm-array-type ::= `!llvm.array<` integer-literal `x` type `>`
 ```
 
-#### `llvm.mlir.constant`
+and they are internally represented as `LLVMArrayType`.
 
-Unlike LLVM IR, MLIR does not have first-class constant values. Therefore, all
-constants must be created as SSA values before being used in other operations.
-`llvm.mlir.constant` creates such values for scalars and vectors. It has a
-mandatory `value` attribute, which may be an integer, floating point attribute;
-dense or sparse attribute containing integers or floats. The type of the
-attribute is one of the corresponding MLIR standard types. It may be omitted for
-`i64` and `f64` types that are implied. The operation produces a new SSA value
-of the specified LLVM IR dialect type. The type of that value _must_ correspond
-to the attribute type converted to LLVM IR.
+#### Function Types
 
-Examples:
+Function types represent the type of a function, i.e. its signature.
 
-```mlir
-// Integer constant, internal i32 is mandatory
-%0 = llvm.mlir.constant(42 : i32) : !llvm.i32
+Function types are parameterized by the result type, the list of argument types
+and by an optional "variadic" flag. Unlike built-in `FunctionType`, LLVM dialect
+functions (`LLVMFunctionType`) always have single result, which may be
+`!llvm.void` if the function does not return anything. The syntax is as follows:
 
-// It's okay to omit i64.
-%1 = llvm.mlir.constant(42) : !llvm.i64
-
-// Floating point constant.
-%2 = llvm.mlir.constant(42.0 : f32) : !llvm.float
-
-// Splat dense vector constant.
-%3 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : !llvm<"<4 x float>">
+```
+  llvm-func-type ::= `!llvm.func<` type `(` type-list (`,` `...`)? `)` `>`
 ```
 
-#### `llvm.mlir.global`
-
-Since MLIR allows for arbitrary operations to be present at the top level,
-global variables are defined using the `llvm.mlir.global` operation. Both global
-constants and variables can be defined, and the value may also be initialized in
-both cases.
-
-There are two forms of initialization syntax. Simple constants that can be
-represented as MLIR attributes can be given in-line:
+For example,
 
 ```mlir
-llvm.mlir.global @variable(32.0 : f32) : !llvm.float
+!llvm.func<void ()>           // a function with no arguments;
+!llvm.func<i32 (f32, i32)>    // a function with two arguments and a result;
+!llvm.func<void (i32, ...)>   // a variadic function with at least one argument.
 ```
 
-This initialization and type syntax is similar to `llvm.mlir.constant` and may
-use two types: one for MLIR attribute and another for the LLVM value. These
-types must be compatible.
+In the LLVM dialect, functions are not first-class objects and one cannot have a
+value of function type. Instead, one can take the address of a function and
+operate on pointers to functions.
 
-More complex constants that cannot be represented as MLIR attributes can be
-given in an initializer region:
+### Vector Types
+
+Vector types represent sequences of elements, typically when multiple data
+elements are processed by a single instruction (SIMD). Vectors are thought of as
+stored in registers and therefore vector elements can only be addressed through
+constant indices.
+
+Vector types are parameterized by the size, which may be either _fixed_ or a
+multiple of some fixed size in case of _scalable_ vectors, and the element type.
+Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
+still considered 1D.
+
+LLVM dialect uses built-in vector types for _fixed_-size vectors of built-in
+types, and provides additional types for fixed-sized vectors of LLVM dialect
+types (`LLVMFixedVectorType`) and scalable vectors of any types
+(`LLVMScalableVectorType`). These two additional types share the following
+syntax:
+
+```
+  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` type `>`
+```
+
+Note that the sets of element types supported by built-in and LLVM dialect
+vector types are mutually exclusive, e.g., the built-in vector type does not
+accept `!llvm.ptr<i32>` and the LLVM dialect fixed-width vector type does not
+accept `i32`.
+
+The following functions are provided to operate on any kind of the vector types
+compatible with the LLVM dialect:
+
+-   `bool LLVM::isCompatibleVectorType(Type)` - checks whether a type is a
+    vector type compatible with the LLVM dialect;
+-   `Type LLVM::getVectorElementType(Type)` - returns the element type of any
+    vector type compatible with the LLVM dialect;
+-   `llvm::ElementCount LLVM::getVectorNumElements(Type)` - returns the number
+    of elements in any vector type compatible with the LLVM dialect;
+-   `Type LLVM::getFixedVectorType(Type, unsigned)` - gets a fixed vector type
+    with the given element type and size; the resulting type is either a
+    built-in or an LLVM dialect vector type depending on which one supports the
+    given element type.
+
+#### Examples of Compatible Vector Types
 
 ```mlir
-// This global is initialized with the equivalent of:
-//   i32* getelementptr (i32* @g2, i32 2)
-llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
-  %0 = llvm.mlir.addressof @g2 : !llvm<"i32*">
-  %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
-  %2 = llvm.getelementptr %0[%1] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
-  // The initializer region must end with `llvm.return`.
-  llvm.return %2 : !llvm<"i32*">
-}
+vector<42 x i32>                   // Vector of 42 32-bit integers.
+!llvm.vec<42 x ptr<i32>>           // Vector of 42 pointers to 32-bit integers.
+!llvm.vec<? x 4 x i32>             // Scalable vector of 32-bit integers with
+                                   // size divisible by 4.
+!llvm.array<2 x vector<2 x i32>>   // Array of 2 vectors of 2 32-bit integers.
+!llvm.array<2 x vec<2 x ptr<i32>>> // Array of 2 vectors of 2 pointers to 32-bit
+                                   // integers.
 ```
 
-Only one of the initializer attribute or initializer region may be provided.
+### Structure Types
 
-`llvm.mlir.global` must appear at top-level of the enclosing module. It uses an
-@-identifier for its value, which will be uniqued by the module with respect to
-other @-identifiers in it.
+The structure type is used to represent a collection of data members together in
+memory. The elements of a structure may be any type that has a size.
 
-Examples:
+Structure types are represented in a single dedicated class
+mlir::LLVM::LLVMStructType. Internally, the struct type stores a (potentially
+empty) name, a (potentially empty) list of contained types and a bitmask
+indicating whether the struct is named, opaque, packed or uninitialized.
+Structure types that don't have a name are referred to as _literal_ structs.
+Such structures are uniquely identified by their contents. _Identified_ structs
+on the other hand are uniquely identified by the name.
+
+#### Identified Structure Types
+
+Identified structure types are uniqued using their name in a given context.
+Attempting to construct an identified structure with the same name a structure
+that already exists in the context *will result in the existing structure being
+returned*. **MLIR does not auto-rename identified structs in case of name
+conflicts** because there is no naming scope equivalent to a module in LLVM IR
+since MLIR modules can be arbitrarily nested.
+
+Programmatically, identified structures can be constructed in an _uninitialized_
+state. In this case, they are given a name but the body must be set up by a
+later call, using MLIR's type mutation mechanism. Such uninitialized types can
+be used in type construction, but must be eventually initialized for IR to be
+valid. This mechanism allows for constructing _recursive_ or mutually referring
+structure types: an uninitialized type can be used in its own initialization.
+
+Once the type is initialized, its body cannot be changed anymore. Any further
+attempts to modify the body will fail and return failure to the caller _unless
+the type is initialized with the exact same body_. Type initialization is
+thread-safe; however, if a concurrent thread initializes the type before the
+current thread, the initialization may return failure.
+
+The syntax for identified structure types is as follows.
+
+```
+llvm-ident-struct-type ::= `!llvm.struct<` string-literal, `opaque` `>`
+                         | `!llvm.struct<` string-literal, `packed`?
+                           `(` type-or-ref-list  `)` `>`
+type-or-ref-list ::= <maybe empty comma-separated list of type-or-ref>
+type-or-ref ::= <any compatible type with optional !llvm.>
+              | `!llvm.`? `struct<` string-literal `>`
+```
+
+The body of the identified struct is printed in full unless the it is
+transitively contained in the same struct. In the latter case, only the
+identifier is printed. For example, the structure containing the pointer to
+itself is represented as `!llvm.struct<"A", (ptr<"A">)>`, and the structure `A`
+containing two pointers to the structure `B` containing a pointer to the
+structure `A` is represented as `!llvm.struct<"A", (ptr<"B", (ptr<"A">)>,
+ptr<"B", (ptr<"A">))>`. Note that the structure `B` is "unrolled" for both
+elements. _A structure with the same name but different body is a syntax error._
+**The user must ensure structure name uniqueness across all modules processed in
+a given MLIR context.** Structure names are arbitrary string literals and may
+include, e.g., spaces and keywords.
+
+Identified structs may be _opaque_. In this case, the body is unknown but the
+structure type is considered _initialized_ and is valid in the IR.
+
+#### Literal Structure Types
+
+Literal structures are uniqued according to the list of elements they contain,
+and can optionally be packed. The syntax for such structs is as follows.
+
+```
+llvm-literal-struct-type ::= `!llvm.struct<` `packed`? `(` type-list `)` `>`
+type-list ::= <maybe empty comma-separated list of types with optional !llvm.>
+```
+
+Literal structs cannot be recursive, but can contain other structs. Therefore,
+they must be constructed in a single step with the entire list of contained
+elements provided.
+
+#### Examples of Structure Types
 
 ```mlir
-// Global values use @-identifiers.
-llvm.mlir.global constant @cst(42 : i32) : !llvm.i32
-
-// Non-constant values must also be initialized.
-llvm.mlir.global @variable(32.0 : f32) : !llvm.float
-
-// Strings are expected to be of wrapped LLVM i8 array type and do not
-// automatically include the trailing zero.
-llvm.mlir.global @string("abc") : !llvm<"[3 x i8]">
-
-// For strings globals, the trailing type may be omitted.
-llvm.mlir.global constant @no_trailing_type("foo bar")
-
-// A complex initializer is constructed with an initializer region.
-llvm.mlir.global constant @int_gep() : !llvm<"i32*"> {
-  %0 = llvm.mlir.addressof @g2 : !llvm<"i32*">
-  %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
-  %2 = llvm.getelementptr %0[%1] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
-  llvm.return %2 : !llvm<"i32*">
-}
+!llvm.struct<>                  // NOT allowed
+!llvm.struct<()>                // empty, literal
+!llvm.struct<(i32)>             // literal
+!llvm.struct<(struct<(i32)>)>   // struct containing a struct
+!llvm.struct<packed (i8, i32)>  // packed struct
+!llvm.struct<"a">               // recursive reference, only allowed within
+                                // another struct, NOT allowed at top level
+!llvm.struct<"a", ptr<struct<"a">>>  // supported example of recursive reference
+!llvm.struct<"a", ()>           // empty, named (necessary to differentiate from
+                                // recursive reference)
+!llvm.struct<"a", opaque>       // opaque, named
+!llvm.struct<"a", (i32)>        // named
+!llvm.struct<"a", packed (i8, i32)>  // named, packed
 ```
 
-Similarly to functions, globals have a linkage attribute. In the custom syntax,
-this attribute is placed between `llvm.mlir.global` and the optional `constant`
-keyword. If the attribute is omitted, `external` linkage is assumed by default.
+### Unsupported Types
 
-Examples:
+LLVM IR `label` type does not have a counterpart in the LLVM dialect since, in
+MLIR, blocks are not values and don't need a type.
 
-```mlir
-// A constant with internal linkage will not participate in linking.
-llvm.mlir.global internal constant @cst(42 : i32) : !llvm.i32
+## Operations
 
-// By default, "external" linkage is assumed and the global participates in
-// symbol resolution at link-time.
-llvm.mlir.global @glob(0 : f32) : !llvm.float
-```
+All operations in the LLVM IR dialect have a custom form in MLIR. The mnemonic
+of an operation is that used in LLVM IR prefixed with "`llvm.`".
 
-#### `llvm.mlir.null`
-
-Unlike LLVM IR, MLIR does not have first-class null pointers. They must be
-explicitly created as SSA values using `llvm.mlir.null`. This operation has
-operands or attributes, and returns a null value of a wrapped LLVM IR pointer
-type.
-
-Examples:
-
-```mlir
-// Null pointer to i8 value.
-%0 = llvm.mlir.null : !llvm<"i8*">
-
-// Null pointer to a function with signature void() value.
-%1 = llvm.mlir.null : !llvm<"void()*">
-```
-
-#### `llvm.mlir.undef`
-
-Unlike LLVM IR, MLIR does not have first-class undefined values. Such values
-must be created as SSA values using `llvm.mlir.undef`. This operation has no
-operands or attributes. It creates an undefined value of the specified LLVM IR
-dialect type wrapping an LLVM IR structure type.
-
-Example:
-
-```mlir
-// Create a structure with a 32-bit integer followed by a float.
-%0 = llvm.mlir.undef : !llvm<"{i32, float}">
-```
+[include "Dialects/LLVMOps.md"]

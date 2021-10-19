@@ -54,12 +54,6 @@ namespace llvm {
   /// 'i8*' type.
   Value *emitStrDup(Value *Ptr, IRBuilderBase &B, const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the strnlen function to the builder, for the specified
-  /// pointer. Ptr is required to be some pointer type, MaxLen must be of size_t
-  /// type, and the return value has 'intptr_t' type.
-  Value *emitStrNLen(Value *Ptr, Value *MaxLen, IRBuilderBase &B,
-                     const DataLayout &DL, const TargetLibraryInfo *TLI);
-
   /// Emit a call to the strchr function to the builder, for the specified
   /// pointer and character. Ptr is required to be some pointer type, and the
   /// return value has 'i8*' type.
@@ -95,6 +89,10 @@ namespace llvm {
   Value *emitMemCpyChk(Value *Dst, Value *Src, Value *Len, Value *ObjSize,
                        IRBuilderBase &B, const DataLayout &DL,
                        const TargetLibraryInfo *TLI);
+
+  /// Emit a call to the mempcpy function.
+  Value *emitMemPCpy(Value *Dst, Value *Src, Value *Len, IRBuilderBase &B,
+                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
   /// Emit a call to the memchr function. This assumes that Ptr is a pointer,
   /// Val is an i32 value, and Len is an 'intptr_t' value.
@@ -201,8 +199,8 @@ namespace llvm {
                     const TargetLibraryInfo *TLI);
 
   /// Emit a call to the calloc function.
-  Value *emitCalloc(Value *Num, Value *Size, const AttributeList &Attrs,
-                    IRBuilderBase &B, const TargetLibraryInfo &TLI);
+  Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
+                    const TargetLibraryInfo &TLI);
 }
 
 #endif

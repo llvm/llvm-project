@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C721 A type-param-value of * shall be used only
 ! * to declare a dummy argument,
 ! * to declare a named constant,

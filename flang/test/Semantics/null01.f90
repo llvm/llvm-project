@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! NULL() intrinsic function error tests
 
 subroutine test
@@ -8,6 +8,10 @@ subroutine test
     subroutine s1(j)
       integer, intent(in) :: j
     end subroutine
+    subroutine canbenull(x, y)
+      integer, intent(in), optional :: x
+      real, intent(in), pointer :: y
+    end
     function f0()
       real :: f0
     end function
@@ -25,6 +29,7 @@ subroutine test
       procedure(s1), pointer :: f3
     end function
   end interface
+  external implicit
   type :: dt0
     integer, pointer :: ip0
   end type dt0
@@ -61,11 +66,9 @@ subroutine test
   dt0x = dt0(ip0=null())
   dt0x = dt0(ip0=null(ip0))
   dt0x = dt0(ip0=null(mold=ip0))
-  !ERROR: TARGET type 'REAL(4)' is not compatible with POINTER type 'INTEGER(4)'
-  !ERROR: pointer 'ip0' is associated with the result of a reference to function 'null' whose pointer result has an incompatible type or shape
+  !ERROR: function result type 'REAL(4)' is not compatible with pointer type 'INTEGER(4)'
   dt0x = dt0(ip0=null(mold=rp0))
-  !ERROR: TARGET type 'REAL(4)' is not compatible with POINTER type 'INTEGER(4)'
-  !ERROR: pointer 'ip1' is associated with the result of a reference to function 'null' whose pointer result has an incompatible type or shape
+  !ERROR: function result type 'REAL(4)' is not compatible with pointer type 'INTEGER(4)'
   dt1x = dt1(ip1=null(mold=rp1))
   dt2x = dt2(pps0=null())
   dt2x = dt2(pps0=null(mold=dt2x%pps0))
@@ -74,4 +77,10 @@ subroutine test
   !ERROR: Procedure pointer 'pps1' associated with result of reference to function 'null' that is an incompatible procedure pointer
   dt3x = dt3(pps1=null(mold=dt2x%pps0))
   dt3x = dt3(pps1=null(mold=dt3x%pps1))
+  call canbenull(null(), null()) ! fine
+  call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
+  !ERROR: Null pointer argument requires an explicit interface
+  call implicit(null())
+  !ERROR: Null pointer argument requires an explicit interface
+  call implicit(null(mold=ip0))
 end subroutine test

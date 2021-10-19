@@ -8,7 +8,7 @@ int test() {
   return __builtin_dwarf_sp_column();
 }
 
-// CHECK-LABEL: define i32 @test()
+// CHECK-LABEL: define{{.*}} i32 @test()
 // CHECK:         store i8 4, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i32 0, i32 0), align 1
 // CHECK-NEXT:    store i8 4, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i32 0, i32 1), align 1
 // CHECK-NEXT:    store i8 4, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @dwarf_reg_size_table, i32 0, i32 2), align 1

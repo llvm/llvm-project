@@ -105,6 +105,15 @@ sym10:
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Name: sym10
+// CHECK-NEXT:    Value: 0x0
+// CHECK-NEXT:    Size: 0
+// CHECK-NEXT:    Binding: Local (0x0)
+// CHECK-NEXT:    Type: Function (0x2)
+// CHECK-NEXT:    Other: 0
+// CHECK-NEXT:    Section: .text
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: sym09
 // CHECK-NEXT:    Value: 0x1
 // CHECK-NEXT:    Size: 0
@@ -113,15 +122,6 @@ sym10:
 // GAS:           Type: None (0x0)
 // CHECK-NEXT:    Type: Function (0x2)
 
-// CHECK-NEXT:    Other: 0
-// CHECK-NEXT:    Section: .text
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: sym10
-// CHECK-NEXT:    Value: 0x0
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Local (0x0)
-// CHECK-NEXT:    Type: Function (0x2)
 // CHECK-NEXT:    Other: 0
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }

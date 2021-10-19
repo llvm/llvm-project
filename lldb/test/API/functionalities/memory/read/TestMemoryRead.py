@@ -2,11 +2,11 @@
 Test the 'memory read' command.
 """
 
-
-
 import lldb
-from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
 
 
 class MemoryReadTestCase(TestBase):
@@ -19,27 +19,34 @@ class MemoryReadTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    def test_memory_read(self):
-        """Test the 'memory read' command with plain and vector formats."""
+    def build_run_stop(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break in main() after the variables are assigned values.
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(self,
+                                                "main.cpp",
+                                                self.line,
+                                                num_expected_locations=1,
+                                                loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+        self.expect("thread list",
+                    STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
-        self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
+        self.expect("breakpoint list -f",
+                    BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 1'])
 
-        # Test the memory read commands.
+    @no_debug_info_test
+    def test_memory_read(self):
+        """Test the 'memory read' command with plain and vector formats."""
+        self.build_run_stop()
 
         # (lldb) memory read -f d -c 1 `&argc`
         # 0x7fff5fbff9a0: 1
@@ -66,12 +73,11 @@ class MemoryReadTestCase(TestBase):
         for i in range(4):
             if i == 0:
                 # Verify that the printout for argc is correct.
-                self.assertTrue(
-                    argc == int(
-                        lines[i].split(':')[1].strip(' {}'), 0))
+                self.assertEqual(
+                    argc, int(lines[i].split(':')[1].strip(' {}'), 0))
             addr = int(lines[i].split(':')[0], 0)
             # Verify that the printout for addr is incremented correctly.
-            self.assertEquals(addr, (address + i * 4))
+            self.assertEqual(addr, (address + i * 4))
 
         # (lldb) memory read --format char[] --size 7 --count 1 `&my_string`
         # 0x7fff5fbff990: {abcdefg}
@@ -130,5 +136,42 @@ class MemoryReadTestCase(TestBase):
               objects_read.extend(l.split(':')[1].split())
           # Check that we got back 4 0x0000 etc bytes
           for o in objects_read:
-              self.assertTrue (len(o) == expected_object_length)
+              self.assertEqual(len(o), expected_object_length)
           self.assertEquals(len(objects_read), 4)
+
+    @no_debug_info_test
+    def test_memory_read_file(self):
+        self.build_run_stop()
+        res = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand("memory read -f d -c 1 `&argc`", res)
+        self.assertTrue(res.Succeeded(), "memory read failed:" + res.GetError())
+
+        # Record golden output.
+        golden_output = res.GetOutput()
+
+        memory_read_file = self.getBuildArtifact("memory-read-output")
+
+        def check_file_content(expected):
+            with open(memory_read_file) as f:
+                lines = f.readlines()
+                lines = [s.strip() for s in lines]
+                expected = [s.strip() for s in expected]
+                self.assertEqual(lines, expected)
+
+        # Sanity check.
+        self.runCmd("memory read -f d -c 1 -o '{}' `&argc`".format(memory_read_file))
+        check_file_content([golden_output])
+
+        # Write some garbage to the file.
+        with open(memory_read_file, 'w') as f:
+            f.write("some garbage")
+
+        # Make sure the file is truncated when we run the command again.
+        self.runCmd("memory read -f d -c 1 -o '{}' `&argc`".format(memory_read_file))
+        check_file_content([golden_output])
+
+        # Make sure the file is appended when we run the command with --append-outfile.
+        self.runCmd(
+            "memory read -f d -c 1 -o '{}' --append-outfile `&argc`".format(
+                memory_read_file))
+        check_file_content([golden_output, golden_output])

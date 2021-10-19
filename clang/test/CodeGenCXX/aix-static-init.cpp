@@ -38,12 +38,13 @@ namespace test4 {
   }
 } // namespace test4
 
+// CHECK: @_ZGVZN5test41fEvE11staticLocal = internal global i64 0, align 8
 // CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I__, i8* null }]
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__D_a, i8* null }]
 
 // CHECK: define internal void @__cxx_global_var_init() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* @_ZN5test12t1E)
+// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t1E)
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor__ZN5test12t1E)
 // CHECK:   ret void
 // CHECK: }
@@ -74,7 +75,7 @@ namespace test4 {
 
 // CHECK: define internal void @__cxx_global_var_init.1() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* @_ZN5test12t2E)
+// CHECK:   call void @_ZN5test15Test1C1Ev(%"struct.test1::Test1"* {{[^,]*}} @_ZN5test12t2E)
 // CHECK:   %0 = call i32 @atexit(void ()* @__dtor__ZN5test12t2E)
 // CHECK:   ret void
 // CHECK: }
@@ -135,7 +136,7 @@ namespace test4 {
 
 // CHECK: define void @_ZN5test41fEv() [[ATTR:#[0-9]+]] {
 // CHECK: entry:
-// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVZN5test41fEvE11staticLocal to i8*) acquire
+// CHECK:   %0 = load atomic i8, i8* bitcast (i64* @_ZGVZN5test41fEvE11staticLocal to i8*) acquire, align 8
 // CHECK:   %guard.uninitialized = icmp eq i8 %0, 0
 // CHECK:   br i1 %guard.uninitialized, label %init.check, label %init.end
 
@@ -145,7 +146,7 @@ namespace test4 {
 // CHECK:   br i1 %tobool, label %init, label %init.end
 
 // CHECK: init:
-// CHECK:   call void @_ZN5test45Test4C1Ev(%"struct.test4::Test4"* @_ZZN5test41fEvE11staticLocal)
+// CHECK:   call void @_ZN5test45Test4C1Ev(%"struct.test4::Test4"* {{[^,]*}} @_ZZN5test41fEvE11staticLocal)
 // CHECK:   %2 = call i32 @atexit(void ()* @__dtor__ZZN5test41fEvE11staticLocal)
 // CHECK:   call void @__cxa_guard_release(i64* @_ZGVZN5test41fEvE11staticLocal)
 // CHECK:   br label %init.end

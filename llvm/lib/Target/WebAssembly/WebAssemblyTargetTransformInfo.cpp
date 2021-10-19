@@ -36,22 +36,30 @@ unsigned WebAssemblyTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return Result;
 }
 
-unsigned WebAssemblyTTIImpl::getRegisterBitWidth(bool Vector) const {
-  if (Vector && getST()->hasSIMD128())
-    return 128;
+TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
+    TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(64);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(getST()->hasSIMD128() ? 128 : 64);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
 
-  return 64;
+  llvm_unreachable("Unsupported register kind");
 }
 
-unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
+InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info,
-    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
+    TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
 
-  unsigned Cost = BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
+  InstructionCost Cost =
+      BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
+          Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
 
   if (auto *VTy = dyn_cast<VectorType>(Ty)) {
     switch (Opcode) {
@@ -74,9 +82,11 @@ unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(
   return Cost;
 }
 
-unsigned WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                unsigned Index) {
-  unsigned Cost = BasicTTIImplBase::getVectorInstrCost(Opcode, Val, Index);
+InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(unsigned Opcode,
+                                                       Type *Val,
+                                                       unsigned Index) {
+  InstructionCost Cost =
+      BasicTTIImplBase::getVectorInstrCost(Opcode, Val, Index);
 
   // SIMD128's insert/extract currently only take constant indices.
   if (Index == -1u)
@@ -101,4 +111,31 @@ bool WebAssemblyTTIImpl::areInlineCompatible(const Function *Caller,
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
 
   return (CallerBits & CalleeBits) == CalleeBits;
+}
+
+void WebAssemblyTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
+  // Scan the loop: don't unroll loops with calls. This is a standard approach
+  // for most (all?) targets.
+  for (BasicBlock *BB : L->blocks())
+    for (Instruction &I : *BB)
+      if (isa<CallInst>(I) || isa<InvokeInst>(I))
+        if (const Function *F = cast<CallBase>(I).getCalledFunction())
+          if (isLoweredToCall(F))
+            return;
+
+  // The chosen threshold is within the range of 'LoopMicroOpBufferSize' of
+  // the various microarchitectures that use the BasicTTI implementation and
+  // has been selected through heuristics across multiple cores and runtimes.
+  UP.Partial = UP.Runtime = UP.UpperBound = true;
+  UP.PartialThreshold = 30;
+
+  // Avoid unrolling when optimizing for size.
+  UP.OptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = 0;
+
+  // Set number of instructions optimized when "back edge"
+  // becomes "fall through" to default value of 2.
+  UP.BEInsns = 2;
 }

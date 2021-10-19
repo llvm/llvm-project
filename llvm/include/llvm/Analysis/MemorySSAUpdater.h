@@ -119,8 +119,11 @@ public:
       ArrayRef<BasicBlock *> ExitBlocks,
       ArrayRef<std::unique_ptr<ValueToValueMapTy>> VMaps, DominatorTree &DT);
 
-  /// Apply CFG updates, analogous with the DT edge updates.
-  void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
+  /// Apply CFG updates, analogous with the DT edge updates. By default, the
+  /// DT is assumed to be already up to date. If UpdateDTFirst is true, first
+  /// update the DT with the same updates.
+  void applyUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT,
+                    bool UpdateDTFirst = false);
   /// Apply CFG insert updates, analogous with the DT edge updates.
   void applyInsertUpdates(ArrayRef<CFGUpdate> Updates, DominatorTree &DT);
 
@@ -236,11 +239,6 @@ public:
   /// I's block that follow I (inclusive), and update the Phis in the blocks'
   /// successors.
   void changeToUnreachable(const Instruction *I);
-
-  /// Conditional branch BI is changed or replaced with an unconditional branch
-  /// to `To`. Update Phis in BI's successors to remove BI's BB.
-  void changeCondBranchToUnconditionalTo(const BranchInst *BI,
-                                         const BasicBlock *To);
 
   /// Get handle on MemorySSA.
   MemorySSA* getMemorySSA() const { return MSSA; }

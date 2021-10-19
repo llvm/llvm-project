@@ -62,5 +62,5 @@ ProgramHeaders:
     Flags: [ PF_X, PF_W, PF_R ]
     VAddr: 0x1008 # Modified by hand to start at 0x1006
     Align: 0x4
-    Sections:
-      - Section: .text
+    FirstSec: .text
+    LastSec:  .text

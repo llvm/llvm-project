@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name include-macros.c %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name include-macros.c %s | FileCheck %s
 
 #include "Inputs/macros.h"
 

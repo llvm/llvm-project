@@ -7,9 +7,9 @@
 //===-----------------------------------------------------------------------===/
 
 #include "TextStubHelpers.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
-#include "llvm/TextAPI/MachO/TextAPIReader.h"
-#include "llvm/TextAPI/MachO/TextAPIWriter.h"
+#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/TextAPIReader.h"
+#include "llvm/TextAPI/TextAPIWriter.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
@@ -82,8 +82,8 @@ TEST(TBDv4, ReadFile) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::macOS);
-  Platforms.insert(PlatformKind::iOS);
+  Platforms.insert(getPlatformFromName("macos"));
+  Platforms.insert(getPlatformFromName("ios"));
   auto Archs = AK_i386 | AK_x86_64;
   TargetList Targets = {
       Target(AK_i386, PlatformKind::macOS),
@@ -255,18 +255,9 @@ TEST(TBDv4, ReadMultipleDocuments) {
                             {Targets[0], Targets[2]});
   EXPECT_EQ(1U, File->reexportedLibraries().size());
   EXPECT_EQ(reexport, File->reexportedLibraries().front());
-  ExportedSymbolSeq Exports;
-  for (const auto *Sym : File->symbols()) {
-    EXPECT_FALSE(Sym->isWeakReferenced());
-    EXPECT_FALSE(Sym->isUndefined());
-    Exports.emplace_back(ExportedSymbol{Sym->getKind(), Sym->getName().str(),
-                                        Sym->isWeakDefined(),
-                                        Sym->isThreadLocalValue()});
-  }
-  EXPECT_EQ(0U, Exports.size());
+  EXPECT_TRUE(File->symbols().empty());
 
   // Check Inlined Document
-  Exports.clear();
   Targets.clear();
   Uuids.clear();
   PlatformKind Platform = PlatformKind::macOS;
@@ -277,7 +268,7 @@ TEST(TBDv4, ReadMultipleDocuments) {
       {Targets[1], "21111111-1111-1111-1111-111111111111"},
   };
 
-  auto Document = File->documents().front();
+  TBDReexportFile Document = File->documents().front();
   EXPECT_EQ(FileType::TBD_V4, Document->getFileType());
   EXPECT_EQ(Archs, Document->getArchitectures());
   EXPECT_EQ(Uuids, Document->uuids());
@@ -292,6 +283,7 @@ TEST(TBDv4, ReadMultipleDocuments) {
   EXPECT_TRUE(Document->isApplicationExtensionSafe());
   EXPECT_FALSE(Document->isInstallAPI());
 
+  ExportedSymbolSeq Exports;
   ExportedSymbolSeq Reexports, Undefineds;
   for (const auto *Sym : Document->symbols()) {
     ExportedSymbol Temp =
@@ -505,7 +497,7 @@ TEST(TBDv4, MultipleTargets) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4MultipleTargets),
             stripWhitespace(Buffer.c_str()));
@@ -534,7 +526,7 @@ TEST(TBDv4, MultipleTargetsSameArch) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4TargetsSameArch),
             stripWhitespace(Buffer.c_str()));
@@ -559,7 +551,7 @@ TEST(TBDv4, MultipleTargetsSamePlatform) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4MultipleTargetsSamePlatform),
             stripWhitespace(Buffer.c_str()));
@@ -584,7 +576,7 @@ TEST(TBDv4, Target_maccatalyst) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4TargetMacCatalyst),
             stripWhitespace(Buffer.c_str()));
@@ -608,7 +600,7 @@ TEST(TBDv4, Target_x86_ios) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4Targetx86iOS),
             stripWhitespace(Buffer.c_str()));
@@ -632,7 +624,7 @@ TEST(TBDv4, Target_arm_bridgeOS) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4PlatformBridgeOS),
             stripWhitespace(Buffer.c_str()));
@@ -656,7 +648,7 @@ TEST(TBDv4, Target_arm_iOS) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4ArchArm64e), stripWhitespace(Buffer.c_str()));
 }
@@ -679,7 +671,7 @@ TEST(TBDv4, Target_x86_macos) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4Targetx86MacOS),
             stripWhitespace(Buffer.c_str()));
@@ -704,7 +696,7 @@ TEST(TBDv4, Target_x86_ios_simulator) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4Targetx86iOSSim),
             stripWhitespace(Buffer.c_str()));
@@ -728,7 +720,7 @@ TEST(TBDv4, Target_x86_tvos_simulator) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4x86tvOSSim), stripWhitespace(Buffer.c_str()));
 }
@@ -752,7 +744,7 @@ TEST(TBDv4, Target_i386_watchos_simulator) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4i386watchOSSim),
             stripWhitespace(Buffer.c_str()));
@@ -776,7 +768,7 @@ TEST(TBDv4, Target_i386_driverkit) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4i386DriverKit),
             stripWhitespace(Buffer.c_str()));
@@ -835,7 +827,7 @@ TEST(TBDv4, Swift_5) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4SwiftVersion5),
             stripWhitespace(Buffer.c_str()));
@@ -858,7 +850,7 @@ TEST(TBDv4, Swift_99) {
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
-  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  Error WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(TBDv4SwiftVersion99),
             stripWhitespace(Buffer.c_str()));
@@ -924,8 +916,8 @@ TEST(TBDv4, MalformedFile2) {
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
   ASSERT_EQ(
-      "malformed file\nTest.tbd:5:9: error: unknown key 'foobar'\nfoobar: "
-      "\"unsupported key\"\n        ^~~~~~~~~~~~~~~~~\n",
+      "malformed file\nTest.tbd:5:1: error: unknown key 'foobar'\nfoobar: "
+      "\"unsupported key\"\n^~~~~~\n",
       ErrorMessage);
 }
 
@@ -944,6 +936,240 @@ TEST(TBDv4, MalformedFile3) {
   EXPECT_EQ("malformed file\nTest.tbd:5:20: error: invalid Swift ABI "
             "version.\nswift-abi-version: 1.1\n                   ^~~\n",
             ErrorMessage);
+}
+
+TEST(TBDv4, InterfaceEquality) {
+  static const char TBDv4File[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets:  [ i386-macos, x86_64-macos, x86_64-ios ]\n"
+      "uuids:\n"
+      "  - target: i386-macos\n"
+      "    value: 00000000-0000-0000-0000-000000000000\n"
+      "  - target: x86_64-macos\n"
+      "    value: 11111111-1111-1111-1111-111111111111\n"
+      "  - target: x86_64-ios\n"
+      "    value: 11111111-1111-1111-1111-111111111111\n"
+      "flags: [ flat_namespace, installapi ]\n"
+      "install-name: Umbrella.framework/Umbrella\n"
+      "current-version: 1.2.3\n"
+      "compatibility-version: 1.2\n"
+      "swift-abi-version: 5\n"
+      "parent-umbrella:\n"
+      "  - targets: [ i386-macos, x86_64-macos, x86_64-ios ]\n"
+      "    umbrella: System\n"
+      "allowable-clients:\n"
+      "  - targets: [ i386-macos, x86_64-macos, x86_64-ios ]\n"
+      "    clients: [ ClientA ]\n"
+      "reexported-libraries:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    libraries: [ /System/Library/Frameworks/A.framework/A ]\n"
+      "exports:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    symbols: [ _symA ]\n"
+      "    objc-classes: []\n"
+      "    objc-eh-types: []\n"
+      "    objc-ivars: []\n"
+      "    weak-symbols: []\n"
+      "    thread-local-symbols: []\n"
+      "  - targets: [ x86_64-ios ]\n"
+      "    symbols: [_symB]\n"
+      "  - targets: [ x86_64-macos, x86_64-ios ]\n"
+      "    symbols: [_symAB]\n"
+      "reexports:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    symbols: [_symC]\n"
+      "    objc-classes: []\n"
+      "    objc-eh-types: []\n"
+      "    objc-ivars: []\n"
+      "    weak-symbols: []\n"
+      "    thread-local-symbols: []\n"
+      "undefineds:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    symbols: [ _symD ]\n"
+      "    objc-classes: []\n"
+      "    objc-eh-types: []\n"
+      "    objc-ivars: []\n"
+      "    weak-symbols: []\n"
+      "    thread-local-symbols: []\n"
+      "tbd-version:     4\n"
+      "targets:         [ i386-maccatalyst, x86_64-maccatalyst ]\n"
+      "uuids:\n"
+      "  - target:          i386-maccatalyst\n"
+      "    value:           00000000-0000-0000-0000-000000000000\n"
+      "  - target:          x86_64-maccatalyst\n"
+      "    value:           11111111-1111-1111-1111-111111111111\n"
+      "install-name:    '/System/Library/Frameworks/A.framework/A'\n"
+      "exports:\n"
+      "  - targets:         [ i386-maccatalyst ]\n"
+      "    weak-symbols:    [ _symC ]\n"
+      "  - targets:         [ i386-maccatalyst, x86_64-maccatalyst ]\n"
+      "    symbols:         [ _symA ]\n"
+      "    objc-classes:    [ Class1 ]\n"
+      "  - targets:         [ x86_64-maccatalyst ]\n"
+      "    symbols:         [ _symAB ]\n"
+      "...\n";
+
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv4File, "TestA.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  InterfaceFile FileA = std::move(*ResultA.get());
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv4File, "TestB.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  InterfaceFile FileB = std::move(*ResultB.get());
+  EXPECT_TRUE(FileA == FileB);
+}
+
+TEST(TBDv4, InterfaceDiffVersionsEquality) {
+  static const char TBDv4File[] =
+      "--- !tapi-tbd\n"
+      "tbd-version: 4\n"
+      "targets:  [ i386-macos, x86_64-macos ]\n"
+      "uuids:\n"
+      "  - target: i386-macos\n"
+      "    value: 00000000-0000-0000-0000-000000000000\n"
+      "  - target: x86_64-macos\n"
+      "    value: 11111111-1111-1111-1111-111111111111\n"
+      "flags: [ installapi ]\n"
+      "install-name: Umbrella.framework/Umbrella\n"
+      "current-version: 1.2.3\n"
+      "compatibility-version: 1.0\n"
+      "swift-abi-version: 5\n"
+      "parent-umbrella:\n"
+      "  - targets: [ i386-macos, x86_64-macos ]\n"
+      "    umbrella: System\n"
+      "allowable-clients:\n"
+      "  - targets: [ i386-macos, x86_64-macos ]\n"
+      "    clients: [ ClientA ]\n"
+      "reexported-libraries:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    libraries: [ /System/Library/Frameworks/A.framework/A ]\n"
+      "exports:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    symbols: [ _sym5 ]\n"
+      "    objc-classes: [ class3]\n"
+      "    objc-eh-types: []\n"
+      "    objc-ivars: [ class1._ivar3 ]\n"
+      "    weak-symbols: [ _weak3 ]\n"
+      "  - targets: [ x86_64-macos ]\n"
+      "    symbols: [_symAB]\n"
+      "  - targets: [ i386-macos, x86_64-macos ]\n"
+      "    symbols: [_symA]\n"
+      "    objc-classes: [ class1, class2 ]\n"
+      "    objc-eh-types: [ class1 ]\n"
+      "    objc-ivars: [ class1._ivar1, class1._ivar2 ]\n"
+      "    weak-symbols: [ _weak1, _weak2 ]\n"
+      "    thread-local-symbols: [ _tlv1, _tlv3 ]\n"
+      "undefineds:\n"
+      "  - targets: [ i386-macos ]\n"
+      "    symbols: [ _symC ]\n"
+      "    objc-classes: []\n"
+      "    objc-eh-types: []\n"
+      "    objc-ivars: []\n"
+      "    weak-symbols: []\n"
+      "    thread-local-symbols: []\n"
+      "...\n";
+
+  static const char TBDv3File[] =
+      "--- !tapi-tbd-v3\n"
+      "archs: [ i386, x86_64 ]\n"
+      "uuids: [ 'i386: 00000000-0000-0000-0000-000000000000',\n"
+      "         'x86_64: 22222222-2222-2222-2222-222222222222']\n"
+      "platform: macosx\n"
+      "flags: [ installapi ]\n"
+      "install-name: Umbrella.framework/Umbrella\n"
+      "current-version: 1.2.3\n"
+      "compatibility-version: 1.0\n"
+      "swift-abi-version: 5\n"
+      "parent-umbrella: System\n"
+      "exports:\n"
+      "  - archs: [ i386, x86_64 ]\n"
+      "    allowable-clients: [ ClientA ]\n"
+      "    symbols: [ _symA ]\n"
+      "    objc-classes: [ class1, class2 ]\n"
+      "    objc-eh-types: [ class1 ]\n"
+      "    objc-ivars: [ class1._ivar1, class1._ivar2 ]\n"
+      "    weak-def-symbols: [ _weak1, _weak2 ]\n"
+      "    thread-local-symbols: [ _tlv1, _tlv3 ]\n"
+      "  - archs: [ i386 ]\n"
+      "    re-exports: [ /System/Library/Frameworks/A.framework/A ]\n"
+      "    symbols: [ _sym5 ]\n"
+      "    objc-classes: [ class3 ]\n"
+      "    objc-ivars: [ class1._ivar3 ]\n"
+      "    weak-def-symbols: [ _weak3 ]\n"
+      "  - archs: [ x86_64 ]\n"
+      "    symbols: [ _symAB ]\n"
+      "undefineds:\n"
+      "  - archs: [ i386 ]\n"
+      "    symbols: [ _symC ]\n"
+      "...\n";
+
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv4File, "TestA.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  InterfaceFile FileA = std::move(*ResultA.get());
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv3File, "TestB.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  InterfaceFile FileB = std::move(*ResultB.get());
+  EXPECT_NE(FileA.uuids(), FileB.uuids());
+  EXPECT_TRUE(FileA == FileB);
+}
+
+TEST(TBDv4, InterfaceInequality) {
+  static const char TBDv4File[] = "--- !tapi-tbd\n"
+                                  "tbd-version: 4\n"
+                                  "targets:  [ i386-macos, x86_64-macos ]\n"
+                                  "install-name: Umbrella.framework/Umbrella\n"
+                                  "...\n";
+
+  Expected<TBDFile> ResultA =
+      TextAPIReader::get(MemoryBufferRef(TBDv4File, "TestA.tbd"));
+  EXPECT_TRUE(!!ResultA);
+  InterfaceFile FileA = std::move(*ResultA.get());
+  Expected<TBDFile> ResultB =
+      TextAPIReader::get(MemoryBufferRef(TBDv4File, "TestB.tbd"));
+  EXPECT_TRUE(!!ResultB);
+  InterfaceFile FileB = std::move(*ResultB.get());
+
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addTarget(Target(AK_x86_64, PlatformKind::iOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setCurrentVersion(PackedVersion(1, 2, 3));
+    File->setCompatibilityVersion(PackedVersion(1, 0, 0));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(
+      FileA, FileB, [](InterfaceFile *File) { File->setSwiftABIVersion(5); }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setTwoLevelNamespace(false);
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(
+      FileA, FileB, [](InterfaceFile *File) { File->setInstallAPI(true); }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->setApplicationExtensionSafe(false);
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addParentUmbrella(Target(AK_x86_64, PlatformKind::macOS), "System.dylib");
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addAllowableClient("ClientA", Target(AK_i386, PlatformKind::macOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addReexportedLibrary("/System/Library/Frameworks/A.framework/A",
+                               Target(AK_i386, PlatformKind::macOS));
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    File->addSymbol(SymbolKind::GlobalSymbol, "_symA", {Target(AK_x86_64, PlatformKind::macOS)});
+  }));
+  EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
+    InterfaceFile Document;
+    Document.addTargets(TargetList {Target(AK_i386, PlatformKind::macOS),
+                      Target(AK_x86_64, PlatformKind::macOS)});
+    Document.setInstallName("/System/Library/Frameworks/A.framework/A");
+    File->addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
+  }));
 }
 
 } // end namespace TBDv4

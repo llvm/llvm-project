@@ -7,10 +7,10 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"
 
-@a = local_unnamed_addr global i32 0, align 4, !dbg !0
+@a = dso_local local_unnamed_addr global i32 0, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind readonly ssp uwtable
-define i32 @b(i8 signext %0) local_unnamed_addr #0 !dbg !12 {
+define dso_local i32 @b(i8 signext %0) local_unnamed_addr #0 !dbg !12 {
   call void @llvm.dbg.value(metadata i8 %0, metadata !17, metadata !DIExpression()), !dbg !18
   %2 = load i32, i32* @a, align 4, !dbg !19, !tbaa !20
   %3 = icmp sgt i32 %2, 1, !dbg !24
@@ -31,7 +31,7 @@ define i32 @b(i8 signext %0) local_unnamed_addr #0 !dbg !12 {
   ret i32 %11, !dbg !30
 }
 
-define i32 @main() local_unnamed_addr #0 !dbg !31 {
+define dso_local i32 @main() local_unnamed_addr #0 !dbg !31 {
   %1 = call i32 @b(i8 signext 0), !dbg !34
   ret i32 %1, !dbg !35
 }

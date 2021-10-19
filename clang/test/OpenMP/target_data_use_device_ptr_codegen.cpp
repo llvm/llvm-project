@@ -21,19 +21,19 @@
 
 double *g;
 
-// CK1: @g = global double*
-// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 51, i64 96]
-// CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE04:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE05:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE06:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE07:@.+]] = {{.*}}constant [1 x i64] [i64 99]
-// CK1: [[MTYPE08:@.+]] = {{.*}}constant [2 x i64] [i64 99, i64 35]
-// CK1: [[MTYPE09:@.+]] = {{.*}}constant [2 x i64] [i64 99, i64 99]
-// CK1: [[MTYPE10:@.+]] = {{.*}}constant [2 x i64] [i64 99, i64 99]
-// CK1: [[MTYPE11:@.+]] = {{.*}}constant [2 x i64] [i64 35, i64 96]
-// CK1: [[MTYPE12:@.+]] = {{.*}}constant [2 x i64] [i64 35, i64 96]
+// CK1: @g ={{.*}} global double*
+// CK1: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 19, i64 64]
+// CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE04:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE05:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE06:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE07:@.+]] = {{.*}}constant [1 x i64] [i64 67]
+// CK1: [[MTYPE08:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 3]
+// CK1: [[MTYPE09:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 67]
+// CK1: [[MTYPE10:@.+]] = {{.*}}constant [2 x i64] [i64 67, i64 67]
+// CK1: [[MTYPE11:@.+]] = {{.*}}constant [2 x i64] [i64 3, i64 64]
+// CK1: [[MTYPE12:@.+]] = {{.*}}constant [2 x i64] [i64 3, i64 64]
 
 // CK1-LABEL: @_Z3foo
 template<typename T>
@@ -346,10 +346,10 @@ void bar(float *&a, int *&b) {
 #ifdef CK2
 
 // CK2: [[ST:%.+]] = type { double*, double** }
-// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 32, i64 281474976710739]
-// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 32, i64 281474976710739]
-// CK2: [[MTYPE02:@.+]] = {{.*}}constant [3 x i64] [i64 35, i64 32, i64 562949953421392]
-// CK2: [[MTYPE03:@.+]] = {{.*}}constant [3 x i64] [i64 32, i64 281474976710739, i64 281474976710736]
+// CK2: [[MTYPE00:@.+]] = {{.*}}constant [2 x i64] [i64 0, i64 281474976710739]
+// CK2: [[MTYPE01:@.+]] = {{.*}}constant [2 x i64] [i64 0, i64 281474976710739]
+// CK2: [[MTYPE02:@.+]] = {{.*}}constant [3 x i64] [i64 3, i64 0, i64 562949953421392]
+// CK2: [[MTYPE03:@.+]] = {{.*}}constant [3 x i64] [i64 0, i64 281474976710739, i64 281474976710736]
 
 template <typename T>
 struct ST {
@@ -383,10 +383,10 @@ struct ST {
     a++;
 
     // CK2:     [[BP:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* %{{.+}}, i32 0, i32 1
-    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double***
-    // CK2:     store double** [[RVAL:%.+]], double*** [[CBP]],
+    // CK2:     [[CBP:%.+]] = bitcast i8** [[BP]] to double****
+    // CK2:     store double*** [[RVAL:%.+]], double**** [[CBP]],
     // CK2:     call void @__tgt_target_data_begin{{.+}}[[MTYPE01]]
-    // CK2:     [[CBP1:%.+]] = bitcast double*** [[CBP]] to double**
+    // CK2:     [[CBP1:%.+]] = bitcast double**** [[CBP]] to double**
     // CK2:     [[VAL:%.+]] = load double*, double** [[CBP1]],
     // CK2:     store double* [[VAL]], double** [[PVT:%.+]],
     // CK2:     store double** [[PVT]], double*** [[PVT2:%.+]],
@@ -428,8 +428,8 @@ struct ST {
     la++;
 
     // CK2:     [[BP1:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* %{{.+}}, i32 0, i32 1
-    // CK2:     [[CBP1:%.+]] = bitcast i8** [[BP1]] to double***
-    // CK2:     store double** [[RVAL1:%.+]], double*** [[CBP1]],
+    // CK2:     [[CBP1:%.+]] = bitcast i8** [[BP1]] to double****
+    // CK2:     store double*** [[RVAL1:%.+]], double**** [[CBP1]],
     // CK2:     [[BP2:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* %{{.+}}, i32 0, i32 2
     // CK2:     [[CBP2:%.+]] = bitcast i8** [[BP2]] to double***
     // CK2:     store double** [[RVAL2:%.+]], double*** [[CBP2]],
@@ -438,7 +438,7 @@ struct ST {
     // CK2:     [[VAL2:%.+]] = load double*, double** [[_CBP2]],
     // CK2:     store double* [[VAL2]], double** [[PVT2:%.+]],
     // CK2:     store double** [[PVT2]], double*** [[_PVT2:%.+]],
-    // CK2:     [[_CBP1:%.+]] = bitcast double*** [[CBP1]] to double**
+    // CK2:     [[_CBP1:%.+]] = bitcast double**** [[CBP1]] to double**
     // CK2:     [[VAL1:%.+]] = load double*, double** [[_CBP1]],
     // CK2:     store double* [[VAL1]], double** [[PVT1:%.+]],
     // CK2:     store double** [[PVT1]], double*** [[_PVT1:%.+]],

@@ -11,6 +11,7 @@
 
 #include "Hexagon.h"
 #include "HexagonBlockRanges.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -82,8 +83,8 @@ public:
     return true;
   }
 
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
   bool hasFP(const MachineFunction &MF) const override;
 
   const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries)

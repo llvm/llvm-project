@@ -34,4 +34,24 @@ TEST(CastExprTest, GetSubExprAsWrittenThroughMaterializedTemporary) {
                     "S1 f(S2 s) { return static_cast<S1>(s); }\n");
 }
 
+// Verify that getSubExprAsWritten looks through a ConstantExpr in a scenario
+// like
+//
+//   CXXFunctionalCastExpr functional cast to struct S <ConstructorConversion>
+//   `-ConstantExpr 'S'
+//     |-value: Struct
+//     `-CXXConstructExpr 'S' 'void (int)'
+//       `-IntegerLiteral 'int' 0
+TEST(CastExprTest, GetSubExprAsWrittenThroughConstantExpr) {
+    CastExprVisitor Visitor;
+    Visitor.OnExplicitCast = [](ExplicitCastExpr *Expr) {
+      auto *Sub = Expr->getSubExprAsWritten();
+      EXPECT_TRUE(isa<IntegerLiteral>(Sub))
+        << "Expected IntegerLiteral, but saw " << Sub->getStmtClassName();
+    };
+    Visitor.runOver("struct S { consteval S(int) {} };\n"
+                    "S f() { return S(0); }\n",
+                    CastExprVisitor::Lang_CXX2a);
+}
+
 }

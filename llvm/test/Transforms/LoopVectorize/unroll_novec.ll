@@ -24,7 +24,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;CHECK: store i32
 ;CHECK: store i32
 ;CHECK-NOT: store i32
-;CHECK: add i64 %{{.*}}, 4
+;CHECK: add nuw i64 %{{.*}}, 4
 ;CHECK: ret void
 define void @inc(i32 %n) nounwind uwtable noinline ssp {
   %1 = icmp sgt i32 %n, 0

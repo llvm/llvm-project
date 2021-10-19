@@ -252,7 +252,6 @@ StringRef getArchExtFeature(StringRef ArchExt);
 bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
                            std::vector<StringRef> &Features,
                            unsigned &ArgFPUKind);
-StringRef getHWDivName(uint64_t HWDivKind);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);

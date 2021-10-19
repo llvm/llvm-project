@@ -24,7 +24,7 @@
 int main(int, char**)
 {
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef test_allocator<std::pair<const int, double> > A;
     typedef std::multimap<int, double, Cmp, A> C;
     typedef C::value_type V;
@@ -58,7 +58,7 @@ int main(int, char**)
     assert(m.get_allocator() == A(5));
     }
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef min_allocator<std::pair<const int, double> > A;
     typedef std::multimap<int, double, Cmp, A> C;
     typedef C::value_type V;
@@ -92,7 +92,7 @@ int main(int, char**)
     assert(m.get_allocator() == A());
     }
     {
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     typedef std::pair<const int, double> V;
     typedef min_allocator<V> A;
     typedef std::multimap<int, double, C, A> M;
@@ -123,7 +123,7 @@ int main(int, char**)
     assert(m.get_allocator() == a);
     }
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef explicit_allocator<std::pair<const int, double> > A;
     typedef std::multimap<int, double, Cmp, A> C;
     typedef C::value_type V;

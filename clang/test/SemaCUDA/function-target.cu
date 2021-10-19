@@ -9,6 +9,7 @@ __host__ __device__ void h1hd(void);
 __global__ void h1g(void);
 
 struct h1ds { // expected-note {{requires 1 argument}}
+	      // expected-note@-1 {{candidate constructor (the implicit move constructor) not viable}}
   __device__ h1ds(); // expected-note {{candidate constructor not viable: call to __device__ function from __host__ function}}
 };
 

@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown-wasm"
 ; CHECK0-NOT: bar
 ; CHECK0: T foo
 ; CHECK0-NOT: bar
-define void @foo() {
+define void @foo() mustprogress {
   call void @bar()
   ret void
 }
@@ -18,7 +18,7 @@ define void @foo() {
 ; CHECK1-NOT: foo
 ; CHECK1: T bar
 ; CHECK1-NOT: foo
-define void @bar() {
+define void @bar() mustprogress {
   call void @foo()
   ret void
 }

@@ -1,0 +1,6 @@
+# RUN: cp -f %S/Inputs/prefix-never-matches.cpp %t.cpp
+# RUN: %update_cc_test_checks %t.cpp 2>&1 | FileCheck %s
+# RUN: FileCheck --input-file=%t.cpp %s --check-prefix=OUTPUT
+
+# CHECK: WARNING: Prefix A had conflicting output
+# OUTPUT-NOT: A:

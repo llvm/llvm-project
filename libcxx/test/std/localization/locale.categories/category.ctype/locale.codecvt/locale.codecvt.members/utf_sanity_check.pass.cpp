@@ -6,6 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+// This test relies on P0482 being fixed, which isn't in
+// older Apple dylibs
+//
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+
+// This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <locale>
 
 // template <> class codecvt<char32_t, char, mbstate_t>
@@ -47,8 +55,7 @@ int main(int, char**) {
   char* c16cp;
   F32_8::extern_type c8[4];
 
-// C++20 codecvt specializations for char8_t are not yet implemented
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_VERSION)
+#if TEST_STD_VER > 17
   typedef std::codecvt<char32_t, char8_t, std::mbstate_t> F32_8T;
   typedef std::codecvt<char16_t, char8_t, std::mbstate_t> F16_8T;
   const F32_8T& f32_8t = std::use_facet<F32_8T>(std::locale::classic());
@@ -69,8 +76,7 @@ int main(int, char**) {
              F32_8::error);
 #endif
 
-// C++20 codecvt specializations for char8_t are not yet implemented
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_VERSION)
+#if TEST_STD_VER > 17
       assert(f32_8t.out(mbs32_8t, &c32x, &c32x + 1, c_c32p, c8t, c8t + 4,
                         c8tp) == F32_8T::error);
 #endif
@@ -153,8 +159,7 @@ int main(int, char**) {
       assert(c32p - &c32 == 1);
       assert(c32 == c32x);
 
-// C++20 codecvt specializations for char8_t are not yet implemented
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_VERSION)
+#if TEST_STD_VER > 17
       assert(f32_8t.out(mbs32_8t, &c32x, &c32x + 1, c_c32p, c8t, c8t + 4,
                         c8tp) == F32_8T::ok);
       assert(c_c32p - &c32x == 1);

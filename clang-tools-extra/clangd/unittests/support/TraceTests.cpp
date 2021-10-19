@@ -61,6 +61,7 @@ bool VerifyObject(llvm::yaml::Node &N,
     if (!V) {
       ADD_FAILURE() << KS << " is not a string";
       Match = false;
+      continue;
     }
     std::string VS = V->getValue(Tmp).str();
     if (VS != I->second) {
@@ -153,7 +154,7 @@ protected:
   std::vector<std::string> outputLines() {
     // Deliberately don't flush output stream, the tracer should do that.
     // This is important when clangd crashes.
-    llvm::SmallVector<llvm::StringRef, 4> Lines;
+    llvm::SmallVector<llvm::StringRef> Lines;
     llvm::StringRef(Output).split(Lines, "\r\n");
     return {Lines.begin(), Lines.end()};
   }
@@ -184,6 +185,11 @@ TEST_F(CSVMetricsTracerTest, Escaping) {
   EXPECT_THAT(outputLines(), ElementsAre(_, StartsWith(R"(d,dist,",",1)"),
                                          StartsWith(R"(d,dist,"a""b",1)"),
                                          StartsWith("d,dist,\"a\nb\",1"), ""));
+}
+
+TEST_F(CSVMetricsTracerTest, IgnoresArgs) {
+  trace::Span Tracer("Foo");
+  EXPECT_EQ(nullptr, Tracer.Args);
 }
 
 } // namespace

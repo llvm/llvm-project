@@ -56,9 +56,7 @@ namespace {
 
     SUnit *pop() {
       if (empty()) return nullptr;
-      SUnit *V = Queue.back();
-      Queue.pop_back();
-      return V;
+      return Queue.pop_back_val();
     }
   };
 
@@ -760,7 +758,7 @@ void ScheduleDAGLinearize::Schedule() {
 
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
-  InstrEmitter Emitter(BB, InsertPos);
+  InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
   DenseMap<SDValue, Register> VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });

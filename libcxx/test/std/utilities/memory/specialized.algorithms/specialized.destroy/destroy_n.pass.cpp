@@ -11,40 +11,109 @@
 // <memory>
 
 // template <class ForwardIt, class Size>
-// ForwardIt destroy_n(ForwardIt, Size s);
+// constexpr ForwardIt destroy_n(ForwardIt, Size s);
 
 #include <memory>
-#include <cstdlib>
 #include <cassert>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
 struct Counted {
-  static int count;
-  static void reset() { count = 0; }
-  Counted() { ++count; }
-  Counted(Counted const&) { ++count; }
-  ~Counted() { --count; }
-  friend void operator&(Counted) = delete;
+    int* counter_;
+    TEST_CONSTEXPR Counted(int* counter) : counter_(counter) { ++*counter_; }
+    TEST_CONSTEXPR Counted(Counted const& other) : counter_(other.counter_) { ++*counter_; }
+    TEST_CONSTEXPR_CXX20 ~Counted() { --*counter_; }
+    friend void operator&(Counted) = delete;
 };
-int Counted::count = 0;
 
-int main(int, char**)
-{
-    using It = forward_iterator<Counted*>;
-    const int N = 5;
-    alignas(Counted) char pool[sizeof(Counted)*N] = {};
-    Counted* p = (Counted*)pool;
-    std::uninitialized_fill(p, p+N, Counted());
-    assert(Counted::count == 5);
-    Counted* np = std::destroy_n(p, 1);
-    assert(np == p+1);
-    assert(Counted::count == 4);
-    p += 1;
-    It it = std::destroy_n(It(p), 4);
-    assert(it == It(p+4));
-    assert(Counted::count == 0);
+#if TEST_STD_VER > 17
+constexpr bool test_arrays()  {
+    {
+        using Array = Counted[3];
+        using Alloc = std::allocator<Array>;
+        int counter = 0;
+        Alloc alloc;
+        Array* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
 
-  return 0;
+        for (Array* p = pool; p != pool + 5; ++p) {
+            Array& arr = *p;
+            for (int i = 0; i != 3; ++i) {
+                std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i]), &counter);
+            }
+        }
+        assert(counter == 5 * 3);
+
+        Array* p = std::destroy_n(pool, 5);
+        ASSERT_SAME_TYPE(decltype(std::destroy_n(pool, 5)), Array*);
+        assert(p == pool + 5);
+        assert(counter == 0);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+    }
+    {
+        using Array = Counted[3][2];
+        using Alloc = std::allocator<Array>;
+        int counter = 0;
+        Alloc alloc;
+        Array* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
+
+        for (Array* p = pool; p != pool + 5; ++p) {
+            Array& arr = *p;
+            for (int i = 0; i != 3; ++i) {
+                for (int j = 0; j != 2; ++j) {
+                    std::allocator_traits<Alloc>::construct(alloc, std::addressof(arr[i][j]), &counter);
+                }
+            }
+        }
+        assert(counter == 5 * 3 * 2);
+
+        Array* p = std::destroy_n(pool, 5);
+        ASSERT_SAME_TYPE(decltype(std::destroy_n(pool, 5)), Array*);
+        assert(p == pool + 5);
+        assert(counter == 0);
+
+        std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+    }
+
+    return true;
+}
+#endif
+
+template <class It>
+TEST_CONSTEXPR_CXX20 void test() {
+    using Alloc = std::allocator<Counted>;
+    int counter = 0;
+    Alloc alloc;
+    Counted* pool = std::allocator_traits<Alloc>::allocate(alloc, 5);
+
+    for (Counted* p = pool; p != pool + 5; ++p)
+        std::allocator_traits<Alloc>::construct(alloc, p, &counter);
+    assert(counter == 5);
+
+    It it = std::destroy_n(It(pool), 5);
+    ASSERT_SAME_TYPE(decltype(std::destroy_n(It(pool), 5)), It);
+    assert(it == It(pool + 5));
+    assert(counter == 0);
+
+    std::allocator_traits<Alloc>::deallocate(alloc, pool, 5);
+}
+
+TEST_CONSTEXPR_CXX20 bool tests() {
+    test<Counted*>();
+    test<forward_iterator<Counted*>>();
+    return true;
+}
+
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    test_arrays();
+    static_assert(tests());
+    // TODO: Until std::construct_at has support for arrays, it's impossible to test this
+    //       in a constexpr context.
+    // static_assert(test_arrays());
+#endif
+    return 0;
 }

@@ -18,6 +18,7 @@
 #include <cassert>
 #include <utility>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 class G
@@ -51,7 +52,7 @@ int main(int, char**)
         assert(G::n_alive == 1);
         assert(!G::op_run);
 
-        std::thread t0(g);
+        std::thread t0 = support::make_test_thread(g);
         std::thread::id id = t0.get_id();
 
         std::thread t1;

@@ -31,7 +31,8 @@ namespace __asan {
 // AsanInitInternal->InitializeHighMemEnd (asan_rtl.cpp).
 // Just do some additional sanity checks here.
 void InitializeShadowMemory() {
-  if (Verbosity()) PrintAddressSpaceLayout();
+  if (Verbosity())
+    PrintAddressSpaceLayout();
 
   // Make sure SHADOW_OFFSET doesn't use __asan_shadow_memory_dynamic_address.
   __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
@@ -62,7 +63,34 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
   UNIMPLEMENTED();
 }
 
-bool PlatformUnpoisonStacks() { return false; }
+bool PlatformUnpoisonStacks() {
+  // The current sp might not point to the default stack. This
+  // could be because we are in a crash stack from fuzzing for example.
+  // Unpoison the default stack and the current stack page.
+  AsanThread *curr_thread = GetCurrentThread();
+  CHECK(curr_thread != nullptr);
+  uptr top = curr_thread->stack_top();
+  uptr bottom = curr_thread->stack_bottom();
+  // The default stack grows from top to bottom. (bottom < top).
+
+  uptr local_stack = reinterpret_cast<uptr>(__builtin_frame_address(0));
+  if (local_stack >= bottom && local_stack <= top) {
+    // The current stack is the default stack.
+    // We only need to unpoison from where we are using until the end.
+    bottom = RoundDownTo(local_stack, GetPageSize());
+    UnpoisonStack(bottom, top, "default");
+  } else {
+    // The current stack is not the default stack.
+    // Unpoison the entire default stack and the current stack page.
+    UnpoisonStack(bottom, top, "default");
+    bottom = RoundDownTo(local_stack, GetPageSize());
+    top = bottom + GetPageSize();
+    UnpoisonStack(bottom, top, "unknown");
+    return true;
+  }
+
+  return false;
+}
 
 // We can use a plain thread_local variable for TSD.
 static thread_local void *per_thread;
@@ -81,7 +109,7 @@ void AsanTSDInit(void (*destructor)(void *tsd)) {
 void PlatformTSDDtor(void *tsd) { UNREACHABLE(__func__); }
 
 static inline size_t AsanThreadMmapSize() {
-  return RoundUpTo(sizeof(AsanThread), PAGE_SIZE);
+  return RoundUpTo(sizeof(AsanThread), _zx_system_get_page_size());
 }
 
 struct AsanThread::InitOptions {
@@ -91,8 +119,7 @@ struct AsanThread::InitOptions {
 // Shared setup between thread creation and startup for the initial thread.
 static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
                                     uptr user_id, bool detached,
-                                    const char *name, uptr stack_bottom,
-                                    uptr stack_size) {
+                                    const char *name) {
   // In lieu of AsanThread::Create.
   AsanThread *thread = (AsanThread *)MmapOrDie(AsanThreadMmapSize(), __func__);
 
@@ -100,12 +127,6 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
   u32 tid =
       asanThreadRegistry().CreateThread(user_id, detached, parent_tid, &args);
   asanThreadRegistry().SetThreadName(tid, name);
-
-  // On other systems, AsanThread::Init() is called from the new
-  // thread itself.  But on Fuchsia we already know the stack address
-  // range beforehand, so we can do most of the setup right now.
-  const AsanThread::InitOptions options = {stack_bottom, stack_size};
-  thread->Init(&options);
 
   return thread;
 }
@@ -135,9 +156,16 @@ AsanThread *CreateMainThread() {
       _zx_object_get_property(thrd_get_zx_handle(self), ZX_PROP_NAME, name,
                               sizeof(name)) == ZX_OK
           ? name
-          : nullptr,
-      __sanitizer::MainThreadStackBase, __sanitizer::MainThreadStackSize);
+          : nullptr);
+  // We need to set the current thread before calling AsanThread::Init() below,
+  // since it reads the thread ID.
   SetCurrentThread(t);
+  DCHECK_EQ(t->tid(), 0);
+
+  const AsanThread::InitOptions options = {__sanitizer::MainThreadStackBase,
+                                           __sanitizer::MainThreadStackSize};
+  t->Init(&options);
+
   return t;
 }
 
@@ -148,13 +176,21 @@ static void *BeforeThreadCreateHook(uptr user_id, bool detached,
                                     uptr stack_size) {
   EnsureMainThreadIDIsCorrect();
   // Strict init-order checking is thread-hostile.
-  if (flags()->strict_init_order) StopInitOrderChecking();
+  if (flags()->strict_init_order)
+    StopInitOrderChecking();
 
   GET_STACK_TRACE_THREAD;
   u32 parent_tid = GetCurrentTidOrInvalid();
 
-  return CreateAsanThread(&stack, parent_tid, user_id, detached, name,
-                          stack_bottom, stack_size);
+  AsanThread *thread =
+      CreateAsanThread(&stack, parent_tid, user_id, detached, name);
+
+  // On other systems, AsanThread::Init() is called from the new
+  // thread itself.  But on Fuchsia we already know the stack address
+  // range beforehand, so we can do most of the setup right now.
+  const AsanThread::InitOptions options = {stack_bottom, stack_size};
+  thread->Init(&options);
+  return thread;
 }
 
 // This is called after creating a new thread (in the creating thread),

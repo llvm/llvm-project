@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=ALL -check-prefix=EG %s
 
 ; This test makes sure we do not double count global values when they are

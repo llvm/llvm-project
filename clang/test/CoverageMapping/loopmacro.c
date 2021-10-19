@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loopmacro.c %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name loopmacro.c %s | FileCheck %s
 
 // CHECK: main
 // CHECK-NEXT: File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:2 = #0
@@ -6,6 +6,7 @@
 // CHECK-NEXT: Expansion,File 0, {{[0-9]+}}:7 -> {{[0-9]+}}:20 = (#0 + #1)
 // CHECK-NEXT: File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:30 = (#0 + #1)
 
+// CHECK-NEXT: Branch,File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:30 = #1, #0
 // CHECK-NEXT: File 1, [[@LINE+4]]:4 -> [[@LINE+6]]:23 = (#0 + #1)
 // CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = (#0 + #1)
 // CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:16 -> [[@LINE+3]]:21 = (#0 + #1)

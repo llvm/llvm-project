@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: res=((111)+666)
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: res = ((111)+666)
 * FLM expansion of argument
       integer function IFLM(x)
         integer :: x

@@ -1,13 +1,12 @@
-; RUN: opt -S -dse -memdep-block-scan-limit=3 < %s | FileCheck %s
-; RUN: opt -S -strip-debug -dse -memdep-block-scan-limit=3 < %s | FileCheck %s
+; RUN: opt -S -dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
+; RUN: opt -S -strip-debug -dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
 
-; Test case to check that the memory dependency analysis gets the same
-; result even if we have a dbg value between the memcpy and
-; store. The memory dependency is then used by DSE to remove the store.
+; Test case to check that DSE gets the same result even if we have a dbg value
+; between the memcpy.
 
-; We use -memdep-block-scan-limit=3 to be able to create a small test case.
-; Without it, we would need to squeeze in 100 instructions since the default
-; limit is 100.
+; This test case is less relevant for the MemorySSA backed version of DSE, as
+; debug values are not modeled in MemorySSA and are skipped regardless of the
+; exploration limit.
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -19,6 +18,11 @@ define void @foo() #0 !dbg !14 {
 entry:
   %i = alloca i8, align 1
   store i8 1, i8* %i, align 1, !dbg !19
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   %0 = bitcast [1 x i8]* @g to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %i, i8* %0, i64 1, i1 false), !dbg !20
@@ -65,8 +69,9 @@ attributes #2 = { argmemonly nounwind }
 !20 = !DILocation(line: 9, column: 5, scope: !14)
 !21 = !DILocation(line: 10, column: 1, scope: !14)
 
-; Check that the store is removed and that the memcpy is still there
+; Check that the both the store and memcpy are removed because they both access
+; an alloca that is not read.
 ; CHECK-LABEL: foo
 ; CHECK-NOT:   store i8
-; CHECK:       call void @llvm.memcpy
+; CHECK-NOT:   call void @llvm.memcpy
 ; CHECK:       ret void

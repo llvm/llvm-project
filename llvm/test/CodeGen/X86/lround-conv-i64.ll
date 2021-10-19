@@ -4,7 +4,7 @@
 define i64 @testmsxs(float %x) {
 ; CHECK-LABEL: testmsxs:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp lroundf # TAILCALL
+; CHECK-NEXT:    jmp lroundf@PLT # TAILCALL
 entry:
   %0 = tail call i64 @llvm.lround.i64.f32(float %x)
   ret i64 %0
@@ -13,7 +13,7 @@ entry:
 define i64 @testmsxd(double %x) {
 ; CHECK-LABEL: testmsxd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp lround # TAILCALL
+; CHECK-NEXT:    jmp lround@PLT # TAILCALL
 entry:
   %0 = tail call i64 @llvm.lround.i64.f64(double %x)
   ret i64 %0
@@ -22,7 +22,7 @@ entry:
 define i64 @testmsll(x86_fp80 %x) {
 ; CHECK-LABEL: testmsll:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    jmp lroundl # TAILCALL
+; CHECK-NEXT:    jmp lroundl@PLT # TAILCALL
 entry:
   %0 = tail call i64 @llvm.lround.i64.f80(x86_fp80 %x)
   ret i64 %0

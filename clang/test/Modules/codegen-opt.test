@@ -18,7 +18,7 @@ FOO: $_Z4foo2v = comdat any
 FOO: $_ZZ3foovE1i = comdat any
 FOO: @_ZZ3foovE1i = linkonce_odr global i32 0, comdat
 FOO-NOT: {{comdat|define|declare}}
-FOO: define void @_Z7foo_extv()
+FOO: define{{.*}} void @_Z7foo_extv()
 FOO-NOT: {{define|declare}}
 FOO: define weak_odr void @_Z3foov() #{{[0-9]+}} comdat
 FOO-NOT: {{define|declare}}
@@ -57,7 +57,7 @@ BAR-OPT-NOT: {{define|declare}}
 
 USE-OPT: @_ZZ3foovE1i = linkonce_odr global i32 0, comdat
 USE-CMN-NOT: {{comdat|define|declare}}
-USE-CMN: define i32 @main()
+USE-CMN: define{{.*}} i32 @main()
 USE-CMN-NOT: {{define|declare}}
 USE: declare void @_Z3barv()
 Include all the available_externally definitions required for main (bar -> foo -> f2)

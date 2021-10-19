@@ -17,7 +17,7 @@ void g0() {
   f0(1, s);
   f0m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g0
+// CHECK: define{{.*}} void @g0
 // CHECK: call void @f0(i64 1, [2 x i64] [i64 6, i64 7]
 // CHECK: call void @f0m{{.*}}[2 x i64] [i64 6, i64 7]
 // CHECK: declare void @f0(i64, [2 x i64])
@@ -35,7 +35,7 @@ void g1() {
   f1(1, s);
   f1m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g1
+// CHECK: define{{.*}} void @g1
 // CHECK: call void @f1{{.*}}[2 x i64] [i64 6, i64 7]
 // CHECK: call void @f1m{{.*}}[2 x i64] [i64 6, i64 7]
 // CHECK: declare void @f1(i64, [2 x i64])
@@ -54,7 +54,7 @@ void g3() {
   f3(1, s);
   f3m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g3
+// CHECK: define{{.*}} void @g3
 // CHECK: call void @f3(i64 1, i128 129127208515966861318)
 // CHECK: call void @f3m(i64 1, i64 2, i64 3, i64 4, i64 5, i128 129127208515966861318)
 // CHECK: declare void @f3(i64, i128)
@@ -74,7 +74,7 @@ void g4() {
   f4(1, s);
   f4m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g4()
+// CHECK: define{{.*}} void @g4()
 // CHECK: call void @f4(i32 1, [2 x i64] [i64 30064771078, i64 0])
 // CHECK: void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
 // CHECK: declare void @f4(i32, [2 x i64])
@@ -94,7 +94,7 @@ void f5m(int, int, int, int, int, P16);
     f5(1, s);
     f5m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g5()
+// CHECK: define{{.*}} void @g5()
 // CHECK: call void @f5(i32 1, [2 x i64] [i64 30064771078, i64 0])
 // CHECK: void @f5m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i64] [i64 30064771078, i64 0])
 // CHECK: declare void @f5(i32, [2 x i64])

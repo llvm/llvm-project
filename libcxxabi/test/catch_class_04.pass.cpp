@@ -14,16 +14,14 @@
 
 // UNSUPPORTED: no-exceptions
 
+// Compilers emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats, you've just diagnosed the
+// behavior under test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
+
 #include <exception>
 #include <stdlib.h>
 #include <assert.h>
-
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
 
 struct B
 {
@@ -204,7 +202,7 @@ void f5()
     }
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -218,4 +216,6 @@ int main()
     assert(C1::count == 0);
     assert(C2::count == 0);
     assert(B::count == 0);
+
+    return 0;
 }

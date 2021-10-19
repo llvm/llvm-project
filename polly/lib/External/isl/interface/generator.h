@@ -64,6 +64,18 @@ typedef std::set<FunctionDecl *, function_name_less> function_set;
  * "fn_type" is a reference to a function that described subclasses, if any.
  * If "fn_type" is set, then "type_subclasses" maps the values returned
  * by that function to the names of the corresponding subclasses.
+ *
+ * The following fields are only used for the C++ bindings.
+ * For methods that are not derived from a function that applies
+ * directly to this class, but are rather copied from some ancestor,
+ * "copied_from" records the direct superclass from which the method
+ * was copied (where it may have been copied from a further ancestor) and
+ * "copy_depth" records the distance to the ancestor to which
+ * the function applies.
+ * "construction_types" contains the set of isl classes that can be
+ * implicitly converted to this class through a unary constructor,
+ * mapped to the single argument
+ * of this unary constructor.
  */
 struct isl_class {
 	string name;
@@ -80,6 +92,12 @@ struct isl_class {
 	FunctionDecl *fn_copy;
 	FunctionDecl *fn_free;
 
+	std::map<clang::FunctionDecl *, const isl_class &> copied_from;
+	std::map<clang::FunctionDecl *, int> copy_depth;
+	std::map<std::string, clang::ParmVarDecl *> construction_types;
+
+	/* Is the first argument an instance of the class? */
+	bool first_arg_matches_class(FunctionDecl *method) const;
 	/* Does "method" correspond to a static method? */
 	bool is_static(FunctionDecl *method) const;
 	/* Is this class a subclass based on a type function? */
@@ -152,6 +170,8 @@ private:
 	void extract_class_automatic_conversions(const isl_class &clazz);
 	void extract_automatic_conversions();
 public:
+	static std::string drop_suffix(const std::string &s,
+		const std::string &suffix);
 	static void die(const char *msg) __attribute__((noreturn));
 	static void die(string msg) __attribute__((noreturn));
 	static vector<string> find_superclasses(Decl *decl);

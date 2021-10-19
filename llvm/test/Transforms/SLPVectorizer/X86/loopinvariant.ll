@@ -28,20 +28,14 @@ define i32 @foo(i32* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX28:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[ARRAYIDX]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x i32>, <8 x i32>* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> undef, i32 [[N]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP9]], i32 [[N]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[N]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i32> [[TMP11]], i32 [[N]], i32 3
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i32> [[TMP12]], i32 [[N]], i32 4
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP13]], i32 [[N]], i32 5
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i32> [[TMP14]], i32 [[N]], i32 6
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i32> [[TMP15]], i32 [[N]], i32 7
-; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <8 x i32> [[TMP8]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[ARRAYIDX]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> [[TMP17]], <8 x i32>* [[TMP18]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> poison, i32 [[N]], i32 0
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[TMP8]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[ARRAYIDX]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> [[TMP10]], <8 x i32>* [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP19]], [[N]]
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP12]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 undef

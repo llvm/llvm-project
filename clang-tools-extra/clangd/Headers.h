@@ -12,7 +12,9 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "index/Symbol.h"
+#include "support/Logger.h"
 #include "support/Path.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -22,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <string>
 
@@ -58,11 +61,12 @@ struct Inclusion {
   unsigned HashOffset = 0; // Byte offset from start of file to #.
   int HashLine = 0;        // Line number containing the directive, 0-indexed.
   SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
+  llvm::Optional<unsigned> HeaderID;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 bool operator==(const Inclusion &LHS, const Inclusion &RHS);
 
-// Contains information about one file in the build grpah and its direct
+// Contains information about one file in the build graph and its direct
 // dependencies. Doesn't own the strings it references (IncludeGraph is
 // self-contained).
 struct IncludeGraphNode {
@@ -112,36 +116,61 @@ operator|=(IncludeGraphNode::SourceFlag &A, IncludeGraphNode::SourceFlag B) {
 // in any non-preamble inclusions.
 class IncludeStructure {
 public:
-  std::vector<Inclusion> MainFileIncludes;
+  IncludeStructure() {
+    // Reserve HeaderID = 0 for the main file.
+    RealPathNames.emplace_back();
+  }
+
+  // Returns a PPCallback that visits all inclusions in the main file and
+  // populates the structure.
+  std::unique_ptr<PPCallbacks> collect(const SourceManager &SM);
+
+  // HeaderID identifies file in the include graph. It corresponds to a
+  // FileEntry rather than a FileID, but stays stable across preamble & main
+  // file builds.
+  enum class HeaderID : unsigned {};
+
+  llvm::Optional<HeaderID> getID(const FileEntry *Entry) const;
+  HeaderID getOrCreateID(const FileEntry *Entry);
+
+  StringRef getRealPath(HeaderID ID) const {
+    assert(static_cast<unsigned>(ID) <= RealPathNames.size());
+    return RealPathNames[static_cast<unsigned>(ID)];
+  }
+
+  // Return all transitively reachable files.
+  llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
 
   // Return all transitively reachable files, and their minimum include depth.
   // All transitive includes (absolute paths), with their minimum include depth.
   // Root --> 0, #included file --> 1, etc.
-  // Root is clang's name for a file, which may not be absolute.
-  // Usually it should be SM.getFileEntryForID(SM.getMainFileID())->getName().
-  llvm::StringMap<unsigned> includeDepth(llvm::StringRef Root) const;
+  // Root is the ID of the header being visited first.
+  llvm::DenseMap<HeaderID, unsigned>
+  includeDepth(HeaderID Root = MainFileID) const;
 
-  // This updates IncludeDepth(), but not MainFileIncludes.
-  void recordInclude(llvm::StringRef IncludingName,
-                     llvm::StringRef IncludedName,
-                     llvm::StringRef IncludedRealName);
+  // Maps HeaderID to the ids of the files included from it.
+  llvm::DenseMap<HeaderID, SmallVector<HeaderID>> IncludeChildren;
+
+  std::vector<Inclusion> MainFileIncludes;
+
+  // We reserve HeaderID(0) for the main file and will manually check for that
+  // in getID and getOrCreateID because the UniqueID is not stable when the
+  // content of the main file changes.
+  static const HeaderID MainFileID = HeaderID(0u);
 
 private:
+  // MainFileEntry will be used to check if the queried file is the main file
+  // or not.
+  const FileEntry *MainFileEntry = nullptr;
+
+  std::vector<std::string> RealPathNames; // In HeaderID order.
+  // FileEntry::UniqueID is mapped to the internal representation (HeaderID).
   // Identifying files in a way that persists from preamble build to subsequent
   // builds is surprisingly hard. FileID is unavailable in InclusionDirective(),
-  // and RealPathName and UniqueID are not preserved in the preamble.
-  // We use the FileEntry::Name, which is stable, interned into a "file index".
-  // The paths we want to expose are the RealPathName, so store those too.
-  std::vector<std::string> RealPathNames; // In file index order.
-  unsigned fileIndex(llvm::StringRef Name);
-  llvm::StringMap<unsigned> NameToIndex; // Values are file indexes.
-  // Maps a file's index to that of the files it includes.
-  llvm::DenseMap<unsigned, SmallVector<unsigned, 8>> IncludeChildren;
+  // and RealPathName and UniqueID are not preserved in
+  // the preamble.
+  llvm::DenseMap<llvm::sys::fs::UniqueID, HeaderID> UIDToIndex;
 };
-
-/// Returns a PPCallback that visits all inclusions in the main file.
-std::unique_ptr<PPCallbacks>
-collectIncludeStructureCallback(const SourceManager &SM, IncludeStructure *Out);
 
 // Calculates insertion edit for including a new header in a file.
 class IncludeInserter {
@@ -201,5 +230,32 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
+namespace llvm {
+
+// Support HeaderIDs as DenseMap keys.
+template <> struct DenseMapInfo<clang::clangd::IncludeStructure::HeaderID> {
+  static inline clang::clangd::IncludeStructure::HeaderID getEmptyKey() {
+    return static_cast<clang::clangd::IncludeStructure::HeaderID>(
+        DenseMapInfo<unsigned>::getEmptyKey());
+  }
+
+  static inline clang::clangd::IncludeStructure::HeaderID getTombstoneKey() {
+    return static_cast<clang::clangd::IncludeStructure::HeaderID>(
+        DenseMapInfo<unsigned>::getTombstoneKey());
+  }
+
+  static unsigned
+  getHashValue(const clang::clangd::IncludeStructure::HeaderID &Tag) {
+    return hash_value(static_cast<unsigned>(Tag));
+  }
+
+  static bool isEqual(const clang::clangd::IncludeStructure::HeaderID &LHS,
+                      const clang::clangd::IncludeStructure::HeaderID &RHS) {
+    return LHS == RHS;
+  }
+};
+
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEADERS_H

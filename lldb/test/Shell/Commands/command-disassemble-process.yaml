@@ -10,6 +10,7 @@
 # RUN:   | FileCheck %s
 
 # RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
+# RUN:   -o "settings set stop-disassembly-max-size 8000" \
 # RUN:   -o disassemble -o exit 2>&1 | FileCheck %s --check-prefix=BIG
 
 # CHECK:       (lldb) disassemble
@@ -96,14 +97,14 @@ ProgramHeaders:
     Flags: [ PF_X, PF_R ]
     VAddr: 0x4000
     Align: 0x1000
-    Sections:
-      - Section: .text
+    FirstSec: .text
+    LastSec:  .text
   - Type: PT_LOAD
     Flags: [ PF_W, PF_R ]
     VAddr: 0x5000
     Align: 0x1000
-    Sections:
-      - Section: .note.gnu.build-id
+    FirstSec: .note.gnu.build-id
+    LastSec: .note.gnu.build-id
 ...
 
 --- !minidump

@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "HexagonArch.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -32,8 +32,8 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -78,6 +78,8 @@ cl::opt<bool> MV67("mv67", cl::Hidden, cl::desc("Build for Hexagon V67"),
                    cl::init(false));
 cl::opt<bool> MV67T("mv67t", cl::Hidden, cl::desc("Build for Hexagon V67T"),
                     cl::init(false));
+cl::opt<bool> MV68("mv68", cl::Hidden, cl::desc("Build for Hexagon V68"),
+                   cl::init(false));
 
 cl::opt<Hexagon::ArchEnum>
     EnableHVX("mhvx",
@@ -88,6 +90,7 @@ cl::opt<Hexagon::ArchEnum>
         clEnumValN(Hexagon::ArchEnum::V65, "v65", "Build for HVX v65"),
         clEnumValN(Hexagon::ArchEnum::V66, "v66", "Build for HVX v66"),
         clEnumValN(Hexagon::ArchEnum::V67, "v67", "Build for HVX v67"),
+        clEnumValN(Hexagon::ArchEnum::V68, "v68", "Build for HVX v68"),
         // Sentinel for no value specified.
         clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
       // Sentinel for flag not present.
@@ -118,6 +121,8 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv67";
   if (MV67T)
     return "hexagonv67t";
+  if (MV68)
+    return "hexagonv68";
   return "";
 }
 
@@ -363,6 +368,9 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V67:
     Result.push_back("+hvxv67");
     break;
+  case Hexagon::ArchEnum::V68:
+    Result.push_back("+hvxv68");
+    break;
   case Hexagon::ArchEnum::Generic:{
     Result.push_back(StringSwitch<StringRef>(CPU)
              .Case("hexagonv60", "+hvxv60")
@@ -370,7 +378,8 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
              .Case("hexagonv65", "+hvxv65")
              .Case("hexagonv66", "+hvxv66")
              .Case("hexagonv67", "+hvxv67")
-             .Case("hexagonv67t", "+hvxv67"));
+             .Case("hexagonv67t", "+hvxv67")
+             .Case("hexagonv68", "+hvxv68"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
@@ -413,8 +422,8 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV67, ArchV66, ArchV65, ArchV62, ArchV60, ArchV55,
-                     ArchV5}) {
+  for (unsigned F : {ArchV68, ArchV67, ArchV66, ArchV65, ArchV62, ArchV60,
+                     ArchV55, ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -429,7 +438,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   }
   bool HasHvxVer = false;
   for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
-                     ExtensionHVXV66, ExtensionHVXV67}) {
+                     ExtensionHVXV66, ExtensionHVXV67, ExtensionHVXV68}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -442,6 +451,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+    case ArchV68:
+      FB.set(ExtensionHVXV68);
+      LLVM_FALLTHROUGH;
     case ArchV67:
       FB.set(ExtensionHVXV67);
       LLVM_FALLTHROUGH;
@@ -525,6 +537,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
     {"hexagonv67", ELF::EF_HEXAGON_MACH_V67},
     {"hexagonv67t", ELF::EF_HEXAGON_MACH_V67T},
+    {"hexagonv68", ELF::EF_HEXAGON_MACH_V68},
   };
 
   auto F = ElfFlags.find(STI.getCPU());

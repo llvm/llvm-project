@@ -21,7 +21,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    movl $36, %ecx
 ; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; CHECK-NEXT:    movl $1, (%esp)
-; CHECK-NEXT:    calll t
+; CHECK-NEXT:    calll t@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    leal -8(%ebp), %esp
 ; CHECK-NEXT:    popl %esi
@@ -32,8 +32,8 @@ entry:
 	%s = alloca %struct.S		; <%struct.S*> [#uses=2]
 	%tmp15 = getelementptr %struct.S, %struct.S* %s, i32 0, i32 0		; <<2 x i64>*> [#uses=1]
 	store <2 x i64> < i64 8589934595, i64 1 >, <2 x i64>* %tmp15, align 16
-	call void @t( i32 1, %struct.S* byval  %s ) nounwind
+	call void @t( i32 1, %struct.S* byval(%struct.S) %s) nounwind
 	ret i32 0
 }
 
-declare void @t(i32, %struct.S* byval )
+declare void @t(i32, %struct.S* byval(%struct.S))

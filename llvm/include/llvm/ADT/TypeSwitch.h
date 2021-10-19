@@ -35,7 +35,12 @@ public:
   /// Invoke a case on the derived class with multiple case types.
   template <typename CaseT, typename CaseT2, typename... CaseTs,
             typename CallableT>
-  DerivedT &Case(CallableT &&caseFn) {
+  // This is marked always_inline and nodebug so it doesn't show up in stack
+  // traces at -O0 (or other optimization levels).  Large TypeSwitch's are
+  // common, are equivalent to a switch, and don't add any value to stack
+  // traces.
+  LLVM_ATTRIBUTE_ALWAYS_INLINE LLVM_ATTRIBUTE_NODEBUG DerivedT &
+  Case(CallableT &&caseFn) {
     DerivedT &derived = static_cast<DerivedT &>(*this);
     return derived.template Case<CaseT>(caseFn)
         .template Case<CaseT2, CaseTs...>(caseFn);
@@ -123,6 +128,12 @@ public:
     if (result)
       return std::move(*result);
     return defaultFn(this->value);
+  }
+  /// As a default, return the given value.
+  LLVM_NODISCARD ResultT Default(ResultT defaultResult) {
+    if (result)
+      return std::move(*result);
+    return defaultResult;
   }
 
   LLVM_NODISCARD

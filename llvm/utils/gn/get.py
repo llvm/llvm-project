@@ -46,22 +46,21 @@ def main():
     platform = get_platform()
     if not platform:
         print('no prebuilt binary for', sys.platform)
-        return 1
-    if platform == 'mac-arm64':
-        print('no prebuilt mac-arm64 binaries yet. build it yourself with:')
+        print('build it yourself with:')
         print('  rm -rf /tmp/gn &&')
         print('  pushd /tmp && git clone https://gn.googlesource.com/gn &&')
         print('  cd gn && build/gen.py && ninja -C out gn && popd &&')
-        print('  mkdir -p llvm/utils/gn/bin/mac-arm64 &&')
-        print('  cp /tmp/gn/out/gn llvm/utils/gn/bin/mac-arm64')
+        print('  cp /tmp/gn/out/gn somewhere/on/PATH')
         return 1
-
     dirname = os.path.join(os.path.dirname(__file__), 'bin', platform)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
     url = 'https://chrome-infra-packages.appspot.com/dl/gn/gn/%s/+/latest'
     gn = 'gn' + ('.exe' if sys.platform == 'win32' else '')
+    if platform == 'mac-arm64': # For https://openradar.appspot.com/FB8914243
+        try: os.remove(os.path.join(dirname, gn))
+        except OSError: pass
     download_and_unpack(url % platform, dirname, gn)
     set_executable_bit(os.path.join(dirname, gn))
 

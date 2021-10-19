@@ -15,6 +15,8 @@
 # WHITESPACE-NEXT: {{^}}  2 .data         00000000 0000000000000000 0000000000000000 DATA{{$}}
 # WHITESPACE-NEXT: {{^}}  3 .bss          00000000 0000000000000000 0000000000000000 BSS{{$}}
 # WHITESPACE-NEXT: {{^}}  4 .other        00000000 0000000000000000 0000000000000000 {{$}}
+# WHITESPACE-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 0000000000000000 DEBUG{{$}}
+# WHITESPACE-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 0000000000000000 DATA, DEBUG{{$}}
 
 # WHITESPACE-NO-LMA:      {{^}}Sections:{{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}Idx Name          Size     VMA              Type{{$}}
@@ -23,6 +25,8 @@
 # WHITESPACE-NO-LMA-NEXT: {{^}}  2 .data         00000000 0000000000000000 DATA{{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}  3 .bss          00000000 0000000000000000 BSS{{$}}
 # WHITESPACE-NO-LMA-NEXT: {{^}}  4 .other        00000000 0000000000000000 {{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  5 .debug_abbrev 00000000 0000000000000000 DEBUG{{$}}
+# WHITESPACE-NO-LMA-NEXT: {{^}}  6 .debug_info   00000000 0000000000000000 DATA, DEBUG{{$}}
 
 --- !ELF
 FileHeader:
@@ -42,6 +46,17 @@ Sections:
     Flags: [SHF_ALLOC, SHF_WRITE]
   - Name:  .other
     Type:  SHT_REL
+  - Name:  .debug_abbrev
+    Type:  SHT_PROGBITS
+  - Name:  .debug_info
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+ 
+## Check that --section-headers and --headers are aliases for -h.
+# RUN: llvm-objdump --section-headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
+# RUN: llvm-objdump --headers --show-lma %t-whitespace.o \
+# RUN:   | FileCheck %s --check-prefix=WHITESPACE --strict-whitespace
 
 ## The name field automatically expands past the default 13 columns when a
 ## section name is longer than that.

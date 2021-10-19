@@ -13,7 +13,6 @@ class TestReadMemCString(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfReproducer # SBProcess::ReadCStringFromMemory is not instrumented.
     def test_read_memory_c_string(self):
         """Test corner case behavior of SBProcess::ReadCStringFromMemory"""
         self.build()
@@ -48,11 +47,11 @@ class TestReadMemCString(TestBase):
         # None object.
         empty_str = process.ReadCStringFromMemory(empty_str_addr, 2048, err)
         self.assertTrue(err.Success())
-        self.assertTrue(empty_str == "")
+        self.assertEqual(empty_str, "")
 
         one_letter_string = process.ReadCStringFromMemory(one_letter_str_addr, 2048, err)
         self.assertTrue(err.Success())
-        self.assertTrue(one_letter_string == "1")
+        self.assertEqual(one_letter_string, "1")
 
         invalid_memory_string = process.ReadCStringFromMemory(invalid_memory_str_addr, 2048, err)
         self.assertTrue(err.Fail())

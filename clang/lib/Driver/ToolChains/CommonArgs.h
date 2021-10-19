@@ -9,8 +9,8 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_COMMONARGS_H
 
-#include "InputInfo.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -26,6 +26,10 @@ void addPathIfExists(const Driver &D, const Twine &Path,
 void AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                      const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs, const JobAction &JA);
+
+void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
+                                          const llvm::opt::ArgList &Args,
+                                          llvm::opt::ArgStringList &CmdArgs);
 
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
@@ -45,7 +49,40 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-const char *SplitDebugName(const llvm::opt::ArgList &Args,
+void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
+                                const JobAction &JA,
+                                const InputInfoList &Inputs,
+                                const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CmdArgs,
+                                StringRef Arch, StringRef Target,
+                                bool isBitCodeSDL, bool postClangLink);
+void AddStaticDeviceLibsPostLinking(const Driver &D,
+                                    const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    StringRef Arch, StringRef Target,
+                                    bool isBitCodeSDL, bool postClangLink);
+void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
+                         const InputInfoList *Inputs, const Driver &D,
+                         const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
+                         StringRef Target, bool isBitCodeSDL,
+                         bool postClangLink);
+
+bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+               llvm::opt::ArgStringList &CmdArgs,
+               SmallVector<std::string, 8> LibraryPaths, std::string Lib,
+               StringRef Arch, StringRef Target, bool isBitCodeSDL,
+               bool postClangLink);
+
+bool GetSDLFromOffloadArchive(Compilation &C, const Driver &D, const Tool &T,
+                              const JobAction &JA, const InputInfoList &Inputs,
+                              const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args,
+                              SmallVector<std::string, 8> LibraryPaths,
+                              StringRef Lib, StringRef Arch, StringRef Target,
+                              bool isBitCodeSDL, bool postClangLink);
+
+const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
@@ -103,8 +140,8 @@ void AddTargetFeature(const llvm::opt::ArgList &Args,
                       llvm::opt::OptSpecifier OnOpt,
                       llvm::opt::OptSpecifier OffOpt, StringRef FeatureName);
 
-std::string getCPUName(const llvm::opt::ArgList &Args, const llvm::Triple &T,
-                       bool FromAs = false);
+std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
+                       const llvm::Triple &T, bool FromAs = false);
 
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.
@@ -133,6 +170,23 @@ void addMultilibFlag(bool Enabled, const char *const Flag,
 
 void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
+
+void checkAMDGPUCodeObjectVersion(const Driver &D,
+                                  const llvm::opt::ArgList &Args);
+
+unsigned getAMDGPUCodeObjectVersion(const Driver &D,
+                                    const llvm::opt::ArgList &Args);
+
+bool haveAMDGPUCodeObjectVersionArgument(const Driver &D,
+                                         const llvm::opt::ArgList &Args);
+
+void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs,
+                            const llvm::Triple &Triple, bool IsLTO);
+
+void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        StringRef BitcodeSuffix, const llvm::Triple &Triple);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

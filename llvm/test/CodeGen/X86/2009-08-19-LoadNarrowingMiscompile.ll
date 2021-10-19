@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i386-pc-linux | FileCheck %s
 
-@a = external global i96, align 4
-@b = external global i64, align 8
+@a = external dso_local global i96, align 4
+@b = external dso_local global i64, align 8
 
 define void @c() nounwind {
 ; CHECK: movl a+8, %eax

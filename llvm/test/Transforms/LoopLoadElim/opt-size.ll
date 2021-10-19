@@ -1,5 +1,6 @@
 ; RUN: opt -basic-aa -loop-load-elim -S < %s | FileCheck %s
-; RUN: opt -basic-aa -loop-load-elim -pgso -S < %s | FileCheck %s -check-prefix=PGSO
+; RUN: opt -basic-aa -loop-load-elim -pgso -S < %s -enable-new-pm=0 | FileCheck %s -check-prefix=PGSO
+; RUN: opt -aa-pipeline=basic-aa -passes='require<profile-summary>,function(loop-load-elim)' -S < %s | FileCheck %s -check-prefix=PGSO
 ; RUN: opt -basic-aa -loop-load-elim -pgso=false -S < %s | FileCheck %s -check-prefix=NPGSO
 
 ; When optimizing for size don't eliminate in this loop because the loop would

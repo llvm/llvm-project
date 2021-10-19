@@ -37,7 +37,7 @@ Known Limitations
 -----------------
 
 * Notice that the migration example above leaves the ``private`` access
-  specification untouched. You might want to run the check:doc:`modernize-use-equals-delete
+  specification untouched. You might want to run the check :doc:`modernize-use-equals-delete
   <modernize-use-equals-delete>` to get warnings for deleted functions in
   private sections.
 

@@ -1,23 +1,14 @@
 ; This test checks -print-after/before on loop passes
 ; Besides of the loop itself it should be dumping loop pre-header and exits.
 ;
-; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
-; RUN: 	   -loop-deletion -print-before=loop-deletion \
+; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes='loop(loop-deletion)' -print-before=loop-deletion \
 ; RUN:	   | FileCheck %s -check-prefix=DEL
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes='loop(loop-deletion)' -print-before-all \
-; RUN:	   | FileCheck %s -check-prefix=DEL
-; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
-; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=bar \
-; RUN:	   | FileCheck %s -check-prefix=BAR -check-prefix=BAR-OLD
-; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after-all -filter-print-funcs=bar \
+; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after=loop-unroll-full -filter-print-funcs=bar \
 ; RUN:	   | FileCheck %s -check-prefix=BAR
-; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
-; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=foo -print-module-scope \
-; RUN:	   | FileCheck %s -check-prefix=FOO-MODULE -check-prefix=FOO-MODULE-OLD
 ; RUN: opt < %s 2>&1 -disable-output \
-; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after-all -filter-print-funcs=foo -print-module-scope \
+; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after=loop-unroll-full -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO-MODULE
 
 ; DEL:	    IR Dump Before {{Delete dead loops|LoopDeletionPass}}
@@ -43,15 +34,11 @@
 ; BAR-NEXT:  loop:
 ; BAR:	    ; Exit blocks
 ; BAR:	     end:
-; BAR-OLD-NOT: IR Dump
-; BAR-OLD-NOT:  ; Loop
 
-; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}}
-; FOO-MODULE-SAME: loop: %loop
+; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}%loop
 ; FOO-MODULE-NEXT: ModuleID =
 ; FOO-MODULE: define void @foo
 ; FOO-MODULE: define void @bar
-; FOO-MODULE-OLD-NOT: IR Dump
 
 define void @foo(){
   %idx = alloca i32, align 4

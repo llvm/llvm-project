@@ -13,19 +13,19 @@
 ; $ clang /tmp/a.cc -S -emit-llvm -g -gcodeview -target x86_64-windows-msvc -o t.ll
 
 ; CHECK:       Struct (0x{{[0-9A-F]+}}) {
-; CHEC-NEXT:     TypeLeafKind: LF_STRUCTURE (0x1505)
-; CHEC-NEXT:     MemberCount: 0
-; CHEC-NEXT:     Properties [ (0x280)
-; CHEC-NEXT:       ForwardReference (0x80)
-; CHEC-NEXT:       HasUniqueName (0x200)
-; CHEC-NEXT:     ]
-; CHEC-NEXT:     FieldList: 0x0
-; CHEC-NEXT:     DerivedFrom: 0x0
-; CHEC-NEXT:     VShape: 0x0
-; CHEC-NEXT:     SizeOf: 0
-; CHEC-NEXT:     Name: S
-; CHEC-NEXT:     LinkageName: .?AUS@@
-; CHEC-NEXT:   }
+; CHECK-NEXT:     TypeLeafKind: LF_STRUCTURE (0x1505)
+; CHECK-NEXT:     MemberCount: 0
+; CHECK-NEXT:     Properties [ (0x280)
+; CHECK-NEXT:       ForwardReference (0x80)
+; CHECK-NEXT:       HasUniqueName (0x200)
+; CHECK-NEXT:     ]
+; CHECK-NEXT:     FieldList: 0x0
+; CHECK-NEXT:     DerivedFrom: 0x0
+; CHECK-NEXT:     VShape: 0x0
+; CHECK-NEXT:     SizeOf: 0
+; CHECK-NEXT:     Name: S
+; CHECK-NEXT:     LinkageName: .?AUS@@
+; CHECK-NEXT:   }
 
 ; CHECK:        Struct (0x{{[0-9A-F]+}}) {
 ; CHECK-NEXT:     TypeLeafKind: LF_STRUCTURE (0x1505)

@@ -17,10 +17,9 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
-#include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Verifier.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -114,7 +113,7 @@ private:
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(Location loc) {
-    return builder.getFileLineColLoc(builder.getIdentifier(*loc.file), loc.line,
+    return mlir::FileLineColLoc::get(builder.getIdentifier(*loc.file), loc.line,
                                      loc.col);
   }
 
@@ -191,9 +190,9 @@ private:
     auto protoArgs = funcAST.getProto()->getArgs();
 
     // Declare all the function arguments in the symbol table.
-    for (const auto &name_value :
+    for (const auto nameValue :
          llvm::zip(protoArgs, entryBlock.getArguments())) {
-      if (failed(declare(*std::get<0>(name_value), std::get<1>(name_value))))
+      if (failed(declare(*std::get<0>(nameValue), std::get<1>(nameValue))))
         return nullptr;
     }
 
@@ -225,7 +224,7 @@ private:
 
     // If this function isn't main, then set the visibility to private.
     if (funcAST.getProto()->getName() != "main")
-      function.setVisibility(mlir::FuncOp::Visibility::Private);
+      function.setPrivate();
 
     return function;
   }
@@ -523,7 +522,7 @@ private:
     mlir::FuncOp calledFunc = calledFuncIt->second;
     return builder.create<GenericCallOp>(
         location, calledFunc.getType().getResult(0),
-        builder.getSymbolRefAttr(callee), operands);
+        mlir::SymbolRefAttr::get(builder.getContext(), callee), operands);
   }
 
   /// Emit a print expression. It emits specific operations for two builtins:

@@ -155,10 +155,10 @@ b2:                                               ; preds = %b1
   %v120 = getelementptr <16 x i32>, <16 x i32>* %v2, i32 6
   %v121 = tail call <16 x i32> @llvm.hexagon.V6.vshufoh(<16 x i32> undef, <16 x i32> undef)
   store <16 x i32> %v121, <16 x i32>* %v120, align 64, !tbaa !0
-  unreachable
+  ret void
 
 b3:                                               ; preds = %b1
-  unreachable
+  ret void
 
 b4:                                               ; preds = %b0
   ret void

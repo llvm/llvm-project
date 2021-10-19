@@ -12,7 +12,7 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-LABEL: test_load_and_cmp:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 44(sp)
+; RV32I-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
 ; RV32I-NEXT:    lw a6, %lo(x)(a0)
 ; RV32I-NEXT:    lw a7, %lo(x+4)(a0)
@@ -33,9 +33,9 @@ define i32 @test_load_and_cmp() nounwind {
 ; RV32I-NEXT:    addi a0, sp, 24
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    sw a6, 24(sp)
-; RV32I-NEXT:    call __netf2
+; RV32I-NEXT:    call __netf2@plt
 ; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    lw ra, 44(sp)
+; RV32I-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 48
 ; RV32I-NEXT:    ret
   %1 = load fp128, fp128* @x, align 16
@@ -49,7 +49,7 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-LABEL: test_add_and_fptosi:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -80
-; RV32I-NEXT:    sw ra, 76(sp)
+; RV32I-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, %hi(x)
 ; RV32I-NEXT:    lw a6, %lo(x)(a0)
 ; RV32I-NEXT:    lw a7, %lo(x+4)(a0)
@@ -71,7 +71,7 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-NEXT:    addi a1, sp, 40
 ; RV32I-NEXT:    addi a2, sp, 24
 ; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    call __addtf3
+; RV32I-NEXT:    call __addtf3@plt
 ; RV32I-NEXT:    lw a1, 56(sp)
 ; RV32I-NEXT:    lw a0, 60(sp)
 ; RV32I-NEXT:    lw a2, 64(sp)
@@ -81,8 +81,8 @@ define i32 @test_add_and_fptosi() nounwind {
 ; RV32I-NEXT:    sw a0, 12(sp)
 ; RV32I-NEXT:    addi a0, sp, 8
 ; RV32I-NEXT:    sw a1, 8(sp)
-; RV32I-NEXT:    call __fixtfsi
-; RV32I-NEXT:    lw ra, 76(sp)
+; RV32I-NEXT:    call __fixtfsi@plt
+; RV32I-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 80
 ; RV32I-NEXT:    ret
   %1 = load fp128, fp128* @x, align 16

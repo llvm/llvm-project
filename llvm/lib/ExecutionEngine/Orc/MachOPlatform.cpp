@@ -9,157 +9,201 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "orc"
 
+using namespace llvm;
+using namespace llvm::orc;
+using namespace llvm::orc::shared;
+
 namespace {
 
-struct objc_class;
-struct objc_image_info;
-struct objc_object;
-struct objc_selector;
+class MachOHeaderMaterializationUnit : public MaterializationUnit {
+public:
+  MachOHeaderMaterializationUnit(MachOPlatform &MOP,
+                                 const SymbolStringPtr &HeaderStartSymbol)
+      : MaterializationUnit(createHeaderSymbols(MOP, HeaderStartSymbol),
+                            HeaderStartSymbol),
+        MOP(MOP) {}
 
-using Class = objc_class *;
-using id = objc_object *;
-using SEL = objc_selector *;
+  StringRef getName() const override { return "MachOHeaderMU"; }
 
-using ObjCMsgSendTy = id (*)(id, SEL, ...);
-using ObjCReadClassPairTy = Class (*)(Class, const objc_image_info *);
-using SelRegisterNameTy = SEL (*)(const char *);
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
+    unsigned PointerSize;
+    support::endianness Endianness;
+    const auto &TT =
+        MOP.getExecutionSession().getExecutorProcessControl().getTargetTriple();
 
-enum class ObjCRegistrationAPI { Uninitialized, Unavailable, Initialized };
+    switch (TT.getArch()) {
+    case Triple::aarch64:
+    case Triple::x86_64:
+      PointerSize = 8;
+      Endianness = support::endianness::little;
+      break;
+    default:
+      llvm_unreachable("Unrecognized architecture");
+    }
 
-ObjCRegistrationAPI ObjCRegistrationAPIState =
-    ObjCRegistrationAPI::Uninitialized;
-ObjCMsgSendTy objc_msgSend = nullptr;
-ObjCReadClassPairTy objc_readClassPair = nullptr;
-SelRegisterNameTy sel_registerName = nullptr;
+    auto G = std::make_unique<jitlink::LinkGraph>(
+        "<MachOHeaderMU>", TT, PointerSize, Endianness,
+        jitlink::getGenericEdgeKindName);
+    auto &HeaderSection = G->createSection("__header", jitlink::MemProt::Read);
+    auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
+
+    // Init symbol is header-start symbol.
+    G->addDefinedSymbol(HeaderBlock, 0, *R->getInitializerSymbol(),
+                        HeaderBlock.getSize(), jitlink::Linkage::Strong,
+                        jitlink::Scope::Default, false, true);
+    for (auto &HS : AdditionalHeaderSymbols)
+      G->addDefinedSymbol(HeaderBlock, HS.Offset, HS.Name,
+                          HeaderBlock.getSize(), jitlink::Linkage::Strong,
+                          jitlink::Scope::Default, false, true);
+
+    MOP.getObjectLinkingLayer().emit(std::move(R), std::move(G));
+  }
+
+  void discard(const JITDylib &JD, const SymbolStringPtr &Sym) override {}
+
+private:
+  struct HeaderSymbol {
+    const char *Name;
+    uint64_t Offset;
+  };
+
+  static constexpr HeaderSymbol AdditionalHeaderSymbols[] = {
+      {"___mh_executable_header", 0}};
+
+  static jitlink::Block &createHeaderBlock(jitlink::LinkGraph &G,
+                                           jitlink::Section &HeaderSection) {
+    MachO::mach_header_64 Hdr;
+    Hdr.magic = MachO::MH_MAGIC_64;
+    switch (G.getTargetTriple().getArch()) {
+    case Triple::aarch64:
+      Hdr.cputype = MachO::CPU_TYPE_ARM64;
+      Hdr.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
+      break;
+    case Triple::x86_64:
+      Hdr.cputype = MachO::CPU_TYPE_X86_64;
+      Hdr.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
+      break;
+    default:
+      llvm_unreachable("Unrecognized architecture");
+    }
+    Hdr.filetype = MachO::MH_DYLIB; // Custom file type?
+    Hdr.ncmds = 0;
+    Hdr.sizeofcmds = 0;
+    Hdr.flags = 0;
+    Hdr.reserved = 0;
+
+    if (G.getEndianness() != support::endian::system_endianness())
+      MachO::swapStruct(Hdr);
+
+    auto HeaderContent = G.allocateString(
+        StringRef(reinterpret_cast<const char *>(&Hdr), sizeof(Hdr)));
+
+    return G.createContentBlock(HeaderSection, HeaderContent, 0, 8, 0);
+  }
+
+  static SymbolFlagsMap
+  createHeaderSymbols(MachOPlatform &MOP,
+                      const SymbolStringPtr &HeaderStartSymbol) {
+    SymbolFlagsMap HeaderSymbolFlags;
+
+    HeaderSymbolFlags[HeaderStartSymbol] = JITSymbolFlags::Exported;
+    for (auto &HS : AdditionalHeaderSymbols)
+      HeaderSymbolFlags[MOP.getExecutionSession().intern(HS.Name)] =
+          JITSymbolFlags::Exported;
+
+    return HeaderSymbolFlags;
+  }
+
+  MachOPlatform &MOP;
+};
+
+constexpr MachOHeaderMaterializationUnit::HeaderSymbol
+    MachOHeaderMaterializationUnit::AdditionalHeaderSymbols[];
+
+StringRef EHFrameSectionName = "__TEXT,__eh_frame";
+StringRef ModInitFuncSectionName = "__DATA,__mod_init_func";
+StringRef ObjCClassListSectionName = "__DATA,__objc_classlist";
+StringRef ObjCImageInfoSectionName = "__DATA,__objc_image_info";
+StringRef ObjCSelRefsSectionName = "__DATA,__objc_selrefs";
+StringRef Swift5ProtoSectionName = "__TEXT,__swift5_proto";
+StringRef Swift5ProtosSectionName = "__TEXT,__swift5_protos";
+StringRef ThreadBSSSectionName = "__DATA,__thread_bss";
+StringRef ThreadDataSectionName = "__DATA,__thread_data";
+StringRef ThreadVarsSectionName = "__DATA,__thread_vars";
+
+StringRef InitSectionNames[] = {
+    ModInitFuncSectionName, ObjCSelRefsSectionName, ObjCClassListSectionName,
+    Swift5ProtosSectionName, Swift5ProtoSectionName};
 
 } // end anonymous namespace
 
 namespace llvm {
 namespace orc {
 
-template <typename FnTy>
-static Error setUpObjCRegAPIFunc(FnTy &Target, sys::DynamicLibrary &LibObjC,
-                                 const char *Name) {
-  if (void *Addr = LibObjC.getAddressOfSymbol(Name))
-    Target = reinterpret_cast<FnTy>(Addr);
-  else
-    return make_error<StringError>(
-        (Twine("Could not find address for ") + Name).str(),
-        inconvertibleErrorCode());
-  return Error::success();
-}
+Expected<std::unique_ptr<MachOPlatform>>
+MachOPlatform::Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+                      JITDylib &PlatformJD, const char *OrcRuntimePath,
+                      Optional<SymbolAliasMap> RuntimeAliases) {
 
-Error enableObjCRegistration(const char *PathToLibObjC) {
-  // If we've already tried to initialize then just bail out.
-  if (ObjCRegistrationAPIState != ObjCRegistrationAPI::Uninitialized)
-    return Error::success();
+  auto &EPC = ES.getExecutorProcessControl();
 
-  ObjCRegistrationAPIState = ObjCRegistrationAPI::Unavailable;
+  // If the target is not supported then bail out immediately.
+  if (!supportedTarget(EPC.getTargetTriple()))
+    return make_error<StringError>("Unsupported MachOPlatform triple: " +
+                                       EPC.getTargetTriple().str(),
+                                   inconvertibleErrorCode());
 
-  std::string ErrMsg;
-  auto LibObjC =
-      sys::DynamicLibrary::getPermanentLibrary(PathToLibObjC, &ErrMsg);
+  // Create default aliases if the caller didn't supply any.
+  if (!RuntimeAliases)
+    RuntimeAliases = standardPlatformAliases(ES);
 
-  if (!LibObjC.isValid())
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+  // Define the aliases.
+  if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
+    return std::move(Err);
 
-  if (auto Err = setUpObjCRegAPIFunc(objc_msgSend, LibObjC, "objc_msgSend"))
-    return Err;
-  if (auto Err = setUpObjCRegAPIFunc(objc_readClassPair, LibObjC,
-                                     "objc_readClassPair"))
-    return Err;
-  if (auto Err =
-          setUpObjCRegAPIFunc(sel_registerName, LibObjC, "sel_registerName"))
-    return Err;
+  // Add JIT-dispatch function support symbols.
+  if (auto Err = PlatformJD.define(absoluteSymbols(
+          {{ES.intern("___orc_rt_jit_dispatch"),
+            {EPC.getJITDispatchInfo().JITDispatchFunction.getValue(),
+             JITSymbolFlags::Exported}},
+           {ES.intern("___orc_rt_jit_dispatch_ctx"),
+            {EPC.getJITDispatchInfo().JITDispatchContext.getValue(),
+             JITSymbolFlags::Exported}}})))
+    return std::move(Err);
 
-  ObjCRegistrationAPIState = ObjCRegistrationAPI::Initialized;
-  return Error::success();
-}
+  // Create a generator for the ORC runtime archive.
+  auto OrcRuntimeArchiveGenerator = StaticLibraryDefinitionGenerator::Load(
+      ObjLinkingLayer, OrcRuntimePath, EPC.getTargetTriple());
+  if (!OrcRuntimeArchiveGenerator)
+    return OrcRuntimeArchiveGenerator.takeError();
 
-bool objCRegistrationEnabled() {
-  return ObjCRegistrationAPIState == ObjCRegistrationAPI::Initialized;
-}
-
-void MachOJITDylibInitializers::runModInits() const {
-  for (const auto &ModInit : ModInitSections) {
-    for (uint64_t I = 0; I != ModInit.NumPtrs; ++I) {
-      auto *InitializerAddr = jitTargetAddressToPointer<uintptr_t *>(
-          ModInit.Address + (I * sizeof(uintptr_t)));
-      auto *Initializer =
-          jitTargetAddressToFunction<void (*)()>(*InitializerAddr);
-      Initializer();
-    }
-  }
-}
-
-void MachOJITDylibInitializers::registerObjCSelectors() const {
-  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
-
-  for (const auto &ObjCSelRefs : ObjCSelRefsSections) {
-    for (uint64_t I = 0; I != ObjCSelRefs.NumPtrs; ++I) {
-      auto SelEntryAddr = ObjCSelRefs.Address + (I * sizeof(uintptr_t));
-      const auto *SelName =
-          *jitTargetAddressToPointer<const char **>(SelEntryAddr);
-      auto Sel = sel_registerName(SelName);
-      *jitTargetAddressToPointer<SEL *>(SelEntryAddr) = Sel;
-    }
-  }
-}
-
-Error MachOJITDylibInitializers::registerObjCClasses() const {
-  assert(objCRegistrationEnabled() && "ObjC registration not enabled.");
-
-  struct ObjCClassCompiled {
-    void *Metaclass;
-    void *Parent;
-    void *Cache1;
-    void *Cache2;
-    void *Data;
-  };
-
-  auto *ImageInfo =
-      jitTargetAddressToPointer<const objc_image_info *>(ObjCImageInfoAddr);
-  auto ClassSelector = sel_registerName("class");
-
-  for (const auto &ObjCClassList : ObjCClassListSections) {
-    for (uint64_t I = 0; I != ObjCClassList.NumPtrs; ++I) {
-      auto ClassPtrAddr = ObjCClassList.Address + (I * sizeof(uintptr_t));
-      auto Cls = *jitTargetAddressToPointer<Class *>(ClassPtrAddr);
-      auto *ClassCompiled =
-          *jitTargetAddressToPointer<ObjCClassCompiled **>(ClassPtrAddr);
-      objc_msgSend(reinterpret_cast<id>(ClassCompiled->Parent), ClassSelector);
-      auto Registered = objc_readClassPair(Cls, ImageInfo);
-
-      // FIXME: Improve diagnostic by reporting the failed class's name.
-      if (Registered != Cls)
-        return make_error<StringError>("Unable to register Objective-C class",
-                                       inconvertibleErrorCode());
-    }
-  }
-  return Error::success();
-}
-
-MachOPlatform::MachOPlatform(
-    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
-    std::unique_ptr<MemoryBuffer> StandardSymbolsObject)
-    : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
-      StandardSymbolsObject(std::move(StandardSymbolsObject)) {
-  ObjLinkingLayer.addPlugin(std::make_unique<InitScraperPlugin>(*this));
+  // Create the instance.
+  Error Err = Error::success();
+  auto P = std::unique_ptr<MachOPlatform>(
+      new MachOPlatform(ES, ObjLinkingLayer, PlatformJD,
+                        std::move(*OrcRuntimeArchiveGenerator), Err));
+  if (Err)
+    return std::move(Err);
+  return std::move(P);
 }
 
 Error MachOPlatform::setupJITDylib(JITDylib &JD) {
-  auto ObjBuffer = MemoryBuffer::getMemBuffer(
-      StandardSymbolsObject->getMemBufferRef(), false);
-  return ObjLinkingLayer.add(JD, std::move(ObjBuffer));
+  return JD.define(std::make_unique<MachOHeaderMaterializationUnit>(
+      *this, MachOHeaderStartSymbol));
 }
 
-Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
+Error MachOPlatform::notifyAdding(ResourceTracker &RT,
+                                  const MaterializationUnit &MU) {
+  auto &JD = RT.getJITDylib();
   const auto &InitSym = MU.getInitializerSymbol();
   if (!InitSym)
     return Error::success();
@@ -173,62 +217,131 @@ Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
   return Error::success();
 }
 
-Error MachOPlatform::notifyRemoving(JITDylib &JD, VModuleKey K) {
+Error MachOPlatform::notifyRemoving(ResourceTracker &RT) {
   llvm_unreachable("Not supported yet");
 }
 
-Expected<MachOPlatform::InitializerSequence>
-MachOPlatform::getInitializerSequence(JITDylib &JD) {
+static void addAliases(ExecutionSession &ES, SymbolAliasMap &Aliases,
+                       ArrayRef<std::pair<const char *, const char *>> AL) {
+  for (auto &KV : AL) {
+    auto AliasName = ES.intern(KV.first);
+    assert(!Aliases.count(AliasName) && "Duplicate symbol name in alias map");
+    Aliases[std::move(AliasName)] = {ES.intern(KV.second),
+                                     JITSymbolFlags::Exported};
+  }
+}
 
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform: Building initializer sequence for "
-           << JD.getName() << "\n";
-  });
+SymbolAliasMap MachOPlatform::standardPlatformAliases(ExecutionSession &ES) {
+  SymbolAliasMap Aliases;
+  addAliases(ES, Aliases, requiredCXXAliases());
+  addAliases(ES, Aliases, standardRuntimeUtilityAliases());
+  return Aliases;
+}
 
-  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
+ArrayRef<std::pair<const char *, const char *>>
+MachOPlatform::requiredCXXAliases() {
+  static const std::pair<const char *, const char *> RequiredCXXAliases[] = {
+      {"___cxa_atexit", "___orc_rt_macho_cxa_atexit"}};
 
-  while (true) {
+  return ArrayRef<std::pair<const char *, const char *>>(RequiredCXXAliases);
+}
 
-    DenseMap<JITDylib *, SymbolLookupSet> NewInitSymbols;
+ArrayRef<std::pair<const char *, const char *>>
+MachOPlatform::standardRuntimeUtilityAliases() {
+  static const std::pair<const char *, const char *>
+      StandardRuntimeUtilityAliases[] = {
+          {"___orc_rt_run_program", "___orc_rt_macho_run_program"},
+          {"___orc_rt_log_error", "___orc_rt_log_error_to_stderr"}};
 
-    ES.runSessionLocked([&]() {
-      DFSLinkOrder = JD.getDFSLinkOrder();
+  return ArrayRef<std::pair<const char *, const char *>>(
+      StandardRuntimeUtilityAliases);
+}
 
-      for (auto &InitJD : DFSLinkOrder) {
-        auto RISItr = RegisteredInitSymbols.find(InitJD.get());
-        if (RISItr != RegisteredInitSymbols.end()) {
-          NewInitSymbols[InitJD.get()] = std::move(RISItr->second);
-          RegisteredInitSymbols.erase(RISItr);
-        }
-      }
-    });
+bool MachOPlatform::isInitializerSection(StringRef SegName,
+                                         StringRef SectName) {
+  for (auto &Name : InitSectionNames) {
+    if (Name.startswith(SegName) && Name.substr(7) == SectName)
+      return true;
+  }
+  return false;
+}
 
-    if (NewInitSymbols.empty())
-      break;
+bool MachOPlatform::supportedTarget(const Triple &TT) {
+  switch (TT.getArch()) {
+  case Triple::x86_64:
+    return true;
+  default:
+    return false;
+  }
+}
 
-    LLVM_DEBUG({
-      dbgs() << "MachOPlatform: Issuing lookups for new init symbols: "
-                "(lookup may require multiple rounds)\n";
-      for (auto &KV : NewInitSymbols)
-        dbgs() << "  \"" << KV.first->getName() << "\": " << KV.second << "\n";
-    });
+MachOPlatform::MachOPlatform(
+    ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
+    JITDylib &PlatformJD,
+    std::unique_ptr<DefinitionGenerator> OrcRuntimeGenerator, Error &Err)
+    : ES(ES), ObjLinkingLayer(ObjLinkingLayer),
+      MachOHeaderStartSymbol(ES.intern("___dso_handle")) {
+  ErrorAsOutParameter _(&Err);
 
-    // Outside the lock, issue the lookup.
-    if (auto R = lookupInitSymbols(JD.getExecutionSession(), NewInitSymbols))
-      ; // Nothing to do in the success case.
-    else
-      return R.takeError();
+  ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
+
+  PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
+
+  // PlatformJD hasn't been 'set-up' by the platform yet (since we're creating
+  // the platform now), so set it up.
+  if (auto E2 = setupJITDylib(PlatformJD)) {
+    Err = std::move(E2);
+    return;
   }
 
-  LLVM_DEBUG({
-    dbgs() << "MachOPlatform: Init symbol lookup complete, building init "
-              "sequence\n";
-  });
+  RegisteredInitSymbols[&PlatformJD].add(
+      MachOHeaderStartSymbol, SymbolLookupFlags::WeaklyReferencedSymbol);
 
-  // Lock again to collect the initializers.
-  InitializerSequence FullInitSeq;
+  // Associate wrapper function tags with JIT-side function implementations.
+  if (auto E2 = associateRuntimeSupportFunctions(PlatformJD)) {
+    Err = std::move(E2);
+    return;
+  }
+
+  // Lookup addresses of runtime functions callable by the platform,
+  // call the platform bootstrap function to initialize the platform-state
+  // object in the executor.
+  if (auto E2 = bootstrapMachORuntime(PlatformJD)) {
+    Err = std::move(E2);
+    return;
+  }
+}
+
+Error MachOPlatform::associateRuntimeSupportFunctions(JITDylib &PlatformJD) {
+  ExecutionSession::JITDispatchHandlerAssociationMap WFs;
+
+  using GetInitializersSPSSig =
+      SPSExpected<SPSMachOJITDylibInitializerSequence>(SPSString);
+  WFs[ES.intern("___orc_rt_macho_get_initializers_tag")] =
+      ES.wrapAsyncWithSPS<GetInitializersSPSSig>(
+          this, &MachOPlatform::rt_getInitializers);
+
+  using GetDeinitializersSPSSig =
+      SPSExpected<SPSMachOJITDylibDeinitializerSequence>(SPSExecutorAddr);
+  WFs[ES.intern("___orc_rt_macho_get_deinitializers_tag")] =
+      ES.wrapAsyncWithSPS<GetDeinitializersSPSSig>(
+          this, &MachOPlatform::rt_getDeinitializers);
+
+  using LookupSymbolSPSSig =
+      SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
+  WFs[ES.intern("___orc_rt_macho_symbol_lookup_tag")] =
+      ES.wrapAsyncWithSPS<LookupSymbolSPSSig>(this,
+                                              &MachOPlatform::rt_lookupSymbol);
+
+  return ES.registerJITDispatchHandlers(PlatformJD, std::move(WFs));
+}
+
+void MachOPlatform::getInitializersBuildSequencePhase(
+    SendInitializerSequenceFn SendResult, JITDylib &JD,
+    std::vector<JITDylibSP> DFSLinkOrder) {
+  MachOJITDylibInitializerSequence FullInitSeq;
   {
-    std::lock_guard<std::mutex> Lock(InitSeqsMutex);
+    std::lock_guard<std::mutex> Lock(PlatformMutex);
     for (auto &InitJD : reverse(DFSLinkOrder)) {
       LLVM_DEBUG({
         dbgs() << "MachOPlatform: Appending inits for \"" << InitJD->getName()
@@ -236,175 +349,434 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
       });
       auto ISItr = InitSeqs.find(InitJD.get());
       if (ISItr != InitSeqs.end()) {
-        FullInitSeq.emplace_back(InitJD.get(), std::move(ISItr->second));
+        FullInitSeq.emplace_back(std::move(ISItr->second));
         InitSeqs.erase(ISItr);
       }
     }
   }
 
-  return FullInitSeq;
+  SendResult(std::move(FullInitSeq));
 }
 
-Expected<MachOPlatform::DeinitializerSequence>
-MachOPlatform::getDeinitializerSequence(JITDylib &JD) {
-  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder = JD.getDFSLinkOrder();
+void MachOPlatform::getInitializersLookupPhase(
+    SendInitializerSequenceFn SendResult, JITDylib &JD) {
 
-  DeinitializerSequence FullDeinitSeq;
-  {
-    std::lock_guard<std::mutex> Lock(InitSeqsMutex);
-    for (auto &DeinitJD : DFSLinkOrder) {
-      FullDeinitSeq.emplace_back(DeinitJD.get(), MachOJITDylibDeinitializers());
+  auto DFSLinkOrder = JD.getDFSLinkOrder();
+  DenseMap<JITDylib *, SymbolLookupSet> NewInitSymbols;
+  ES.runSessionLocked([&]() {
+    for (auto &InitJD : DFSLinkOrder) {
+      auto RISItr = RegisteredInitSymbols.find(InitJD.get());
+      if (RISItr != RegisteredInitSymbols.end()) {
+        NewInitSymbols[InitJD.get()] = std::move(RISItr->second);
+        RegisteredInitSymbols.erase(RISItr);
+      }
     }
-  }
-
-  return FullDeinitSeq;
-}
-
-void MachOPlatform::registerInitInfo(
-    JITDylib &JD, JITTargetAddress ObjCImageInfoAddr,
-    MachOJITDylibInitializers::SectionExtent ModInits,
-    MachOJITDylibInitializers::SectionExtent ObjCSelRefs,
-    MachOJITDylibInitializers::SectionExtent ObjCClassList) {
-  std::lock_guard<std::mutex> Lock(InitSeqsMutex);
-
-  auto &InitSeq = InitSeqs[&JD];
-
-  InitSeq.setObjCImageInfoAddr(ObjCImageInfoAddr);
-
-  if (ModInits.Address)
-    InitSeq.addModInitsSection(std::move(ModInits));
-
-  if (ObjCSelRefs.Address)
-    InitSeq.addObjCSelRefsSection(std::move(ObjCSelRefs));
-
-  if (ObjCClassList.Address)
-    InitSeq.addObjCClassListSection(std::move(ObjCClassList));
-}
-
-static Expected<MachOJITDylibInitializers::SectionExtent>
-getSectionExtent(jitlink::LinkGraph &G, StringRef SectionName) {
-  auto *Sec = G.findSectionByName(SectionName);
-  if (!Sec)
-    return MachOJITDylibInitializers::SectionExtent();
-  jitlink::SectionRange R(*Sec);
-  if (R.getSize() % G.getPointerSize() != 0)
-    return make_error<StringError>(SectionName + " section size is not a "
-                                                 "multiple of the pointer size",
-                                   inconvertibleErrorCode());
-  return MachOJITDylibInitializers::SectionExtent(
-      R.getStart(), R.getSize() / G.getPointerSize());
-}
-
-void MachOPlatform::InitScraperPlugin::modifyPassConfig(
-    MaterializationResponsibility &MR, const Triple &TT,
-    jitlink::PassConfiguration &Config) {
-
-  Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
-    JITLinkSymbolVector InitSectionSymbols;
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__mod_init_func");
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_selrefs");
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_classlist");
-
-    if (!InitSymbolDeps.empty()) {
-      std::lock_guard<std::mutex> Lock(InitScraperMutex);
-      InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
-    }
-
-    if (auto Err = processObjCImageInfo(G, MR))
-      return Err;
-
-    return Error::success();
   });
 
-  Config.PostFixupPasses.push_back([this, &JD = MR.getTargetJITDylib()](
-                                       jitlink::LinkGraph &G) -> Error {
-    MachOJITDylibInitializers::SectionExtent ModInits, ObjCSelRefs,
-        ObjCClassList;
+  // If there are no further init symbols to look up then move on to the next
+  // phase.
+  if (NewInitSymbols.empty()) {
+    getInitializersBuildSequencePhase(std::move(SendResult), JD,
+                                      std::move(DFSLinkOrder));
+    return;
+  }
 
-    JITTargetAddress ObjCImageInfoAddr = 0;
-    if (auto *ObjCImageInfoSec = G.findSectionByName("__objc_image_info")) {
-      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart()) {
-        ObjCImageInfoAddr = Addr;
-        dbgs() << "Recorded __objc_imageinfo @ " << formatv("{0:x16}", Addr);
+  // Otherwise issue a lookup and re-run this phase when it completes.
+  lookupInitSymbolsAsync(
+      [this, SendResult = std::move(SendResult), &JD](Error Err) mutable {
+        if (Err)
+          SendResult(std::move(Err));
+        else
+          getInitializersLookupPhase(std::move(SendResult), JD);
+      },
+      ES, std::move(NewInitSymbols));
+}
+
+void MachOPlatform::rt_getInitializers(SendInitializerSequenceFn SendResult,
+                                       StringRef JDName) {
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_getInitializers(\"" << JDName << "\")\n";
+  });
+
+  JITDylib *JD = ES.getJITDylibByName(JDName);
+  if (!JD) {
+    LLVM_DEBUG({
+      dbgs() << "  No such JITDylib \"" << JDName << "\". Sending error.\n";
+    });
+    SendResult(make_error<StringError>("No JITDylib named " + JDName,
+                                       inconvertibleErrorCode()));
+    return;
+  }
+
+  getInitializersLookupPhase(std::move(SendResult), *JD);
+}
+
+void MachOPlatform::rt_getDeinitializers(SendDeinitializerSequenceFn SendResult,
+                                         ExecutorAddr Handle) {
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_getDeinitializers(\""
+           << formatv("{0:x}", Handle.getValue()) << "\")\n";
+  });
+
+  JITDylib *JD = nullptr;
+
+  {
+    std::lock_guard<std::mutex> Lock(PlatformMutex);
+    auto I = HeaderAddrToJITDylib.find(Handle.getValue());
+    if (I != HeaderAddrToJITDylib.end())
+      JD = I->second;
+  }
+
+  if (!JD) {
+    LLVM_DEBUG({
+      dbgs() << "  No JITDylib for handle "
+             << formatv("{0:x}", Handle.getValue()) << "\n";
+    });
+    SendResult(make_error<StringError>("No JITDylib associated with handle " +
+                                           formatv("{0:x}", Handle.getValue()),
+                                       inconvertibleErrorCode()));
+    return;
+  }
+
+  SendResult(MachOJITDylibDeinitializerSequence());
+}
+
+void MachOPlatform::rt_lookupSymbol(SendSymbolAddressFn SendResult,
+                                    ExecutorAddr Handle, StringRef SymbolName) {
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform::rt_lookupSymbol(\""
+           << formatv("{0:x}", Handle.getValue()) << "\")\n";
+  });
+
+  JITDylib *JD = nullptr;
+
+  {
+    std::lock_guard<std::mutex> Lock(PlatformMutex);
+    auto I = HeaderAddrToJITDylib.find(Handle.getValue());
+    if (I != HeaderAddrToJITDylib.end())
+      JD = I->second;
+  }
+
+  if (!JD) {
+    LLVM_DEBUG({
+      dbgs() << "  No JITDylib for handle "
+             << formatv("{0:x}", Handle.getValue()) << "\n";
+    });
+    SendResult(make_error<StringError>("No JITDylib associated with handle " +
+                                           formatv("{0:x}", Handle.getValue()),
+                                       inconvertibleErrorCode()));
+    return;
+  }
+
+  // Use functor class to work around XL build compiler issue on AIX.
+  class RtLookupNotifyComplete {
+  public:
+    RtLookupNotifyComplete(SendSymbolAddressFn &&SendResult)
+        : SendResult(std::move(SendResult)) {}
+    void operator()(Expected<SymbolMap> Result) {
+      if (Result) {
+        assert(Result->size() == 1 && "Unexpected result map count");
+        SendResult(ExecutorAddr(Result->begin()->second.getAddress()));
+      } else {
+        SendResult(Result.takeError());
       }
     }
 
-    // Record __mod_init_func.
-    if (auto ModInitsOrErr = getSectionExtent(G, "__mod_init_func"))
-      ModInits = std::move(*ModInitsOrErr);
-    else
-      return ModInitsOrErr.takeError();
+  private:
+    SendSymbolAddressFn SendResult;
+  };
 
-    // Record __objc_selrefs.
-    if (auto ObjCSelRefsOrErr = getSectionExtent(G, "__objc_selrefs"))
-      ObjCSelRefs = std::move(*ObjCSelRefsOrErr);
-    else
-      return ObjCSelRefsOrErr.takeError();
-
-    // Record __objc_classlist.
-    if (auto ObjCClassListOrErr = getSectionExtent(G, "__objc_classlist"))
-      ObjCClassList = std::move(*ObjCClassListOrErr);
-    else
-      return ObjCClassListOrErr.takeError();
-
-    // Dump the scraped inits.
-    LLVM_DEBUG({
-      dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
-      dbgs() << "  __objc_selrefs: ";
-      if (ObjCSelRefs.NumPtrs)
-        dbgs() << ObjCSelRefs.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ObjCSelRefs.Address) << "\n";
-      else
-        dbgs() << "none\n";
-
-      dbgs() << "  __objc_classlist: ";
-      if (ObjCClassList.NumPtrs)
-        dbgs() << ObjCClassList.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ObjCClassList.Address) << "\n";
-      else
-        dbgs() << "none\n";
-
-      dbgs() << "  __mod_init_func: ";
-      if (ModInits.NumPtrs)
-        dbgs() << ModInits.NumPtrs << " pointer(s) at "
-               << formatv("{0:x16}", ModInits.Address) << "\n";
-      else
-        dbgs() << "none\n";
-    });
-
-    MP.registerInitInfo(JD, ObjCImageInfoAddr, std::move(ModInits),
-                        std::move(ObjCSelRefs), std::move(ObjCClassList));
-
-    return Error::success();
-  });
+  // FIXME: Proper mangling.
+  auto MangledName = ("_" + SymbolName).str();
+  ES.lookup(
+      LookupKind::DLSym, {{JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet(ES.intern(MangledName)), SymbolState::Ready,
+      RtLookupNotifyComplete(std::move(SendResult)), NoDependenciesToRegister);
 }
 
-ObjectLinkingLayer::Plugin::LocalDependenciesMap
-MachOPlatform::InitScraperPlugin::getSyntheticSymbolLocalDependencies(
+Error MachOPlatform::bootstrapMachORuntime(JITDylib &PlatformJD) {
+
+  if (auto Err = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder(&PlatformJD),
+          {{ES.intern("___orc_rt_macho_platform_bootstrap"),
+            &orc_rt_macho_platform_bootstrap},
+           {ES.intern("___orc_rt_macho_platform_shutdown"),
+            &orc_rt_macho_platform_shutdown},
+           {ES.intern("___orc_rt_macho_register_object_sections"),
+            &orc_rt_macho_register_object_sections},
+           {ES.intern("___orc_rt_macho_create_pthread_key"),
+            &orc_rt_macho_create_pthread_key}}))
+    return Err;
+
+  if (auto Err = ES.callSPSWrapper<void()>(orc_rt_macho_platform_bootstrap))
+    return Err;
+
+  // FIXME: Ordering is fuzzy here. We're probably best off saying
+  // "behavior is undefined if code that uses the runtime is added before
+  // the platform constructor returns", then move all this to the constructor.
+  RuntimeBootstrapped = true;
+  std::vector<MachOPerObjectSectionsToRegister> DeferredPOSRs;
+  {
+    std::lock_guard<std::mutex> Lock(PlatformMutex);
+    DeferredPOSRs = std::move(BootstrapPOSRs);
+  }
+
+  for (auto &D : DeferredPOSRs)
+    if (auto Err = registerPerObjectSections(D))
+      return Err;
+
+  return Error::success();
+}
+
+Error MachOPlatform::registerInitInfo(
+    JITDylib &JD, ExecutorAddr ObjCImageInfoAddr,
+    ArrayRef<jitlink::Section *> InitSections) {
+
+  std::unique_lock<std::mutex> Lock(PlatformMutex);
+
+  MachOJITDylibInitializers *InitSeq = nullptr;
+  {
+    auto I = InitSeqs.find(&JD);
+    if (I == InitSeqs.end()) {
+      // If there's no init sequence entry yet then we need to look up the
+      // header symbol to force creation of one.
+      Lock.unlock();
+
+      auto SearchOrder =
+          JD.withLinkOrderDo([](const JITDylibSearchOrder &SO) { return SO; });
+      if (auto Err = ES.lookup(SearchOrder, MachOHeaderStartSymbol).takeError())
+        return Err;
+
+      Lock.lock();
+      I = InitSeqs.find(&JD);
+      assert(I != InitSeqs.end() &&
+             "Entry missing after header symbol lookup?");
+    }
+    InitSeq = &I->second;
+  }
+
+  InitSeq->ObjCImageInfoAddress = ObjCImageInfoAddr;
+
+  for (auto *Sec : InitSections) {
+    // FIXME: Avoid copy here.
+    jitlink::SectionRange R(*Sec);
+    InitSeq->InitSections[Sec->getName()].push_back(
+        {ExecutorAddr(R.getStart()), ExecutorAddr(R.getEnd())});
+  }
+
+  return Error::success();
+}
+
+Error MachOPlatform::registerPerObjectSections(
+    const MachOPerObjectSectionsToRegister &POSR) {
+
+  if (!orc_rt_macho_register_object_sections)
+    return make_error<StringError>("Attempting to register per-object "
+                                   "sections, but runtime support has not "
+                                   "been loaded yet",
+                                   inconvertibleErrorCode());
+
+  Error ErrResult = Error::success();
+  if (auto Err = ES.callSPSWrapper<shared::SPSError(
+                     SPSMachOPerObjectSectionsToRegister)>(
+          orc_rt_macho_register_object_sections, ErrResult, POSR))
+    return Err;
+  return ErrResult;
+}
+
+Expected<uint64_t> MachOPlatform::createPThreadKey() {
+  if (!orc_rt_macho_create_pthread_key)
+    return make_error<StringError>(
+        "Attempting to create pthread key in target, but runtime support has "
+        "not been loaded yet",
+        inconvertibleErrorCode());
+
+  Expected<uint64_t> Result(0);
+  if (auto Err = ES.callSPSWrapper<SPSExpected<uint64_t>(void)>(
+          orc_rt_macho_create_pthread_key, Result))
+    return std::move(Err);
+  return Result;
+}
+
+void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
+    MaterializationResponsibility &MR, jitlink::LinkGraph &LG,
+    jitlink::PassConfiguration &Config) {
+
+  // If the initializer symbol is the MachOHeader start symbol then just add
+  // the macho header support passes.
+  if (MR.getInitializerSymbol() == MP.MachOHeaderStartSymbol) {
+    addMachOHeaderSupportPasses(MR, Config);
+    // The header materialization unit doesn't require any other support, so we
+    // can bail out early.
+    return;
+  }
+
+  // If the object contains initializers then add passes to record them.
+  if (MR.getInitializerSymbol())
+    addInitializerSupportPasses(MR, Config);
+
+  // Add passes for eh-frame and TLV support.
+  addEHAndTLVSupportPasses(MR, Config);
+}
+
+ObjectLinkingLayer::Plugin::SyntheticSymbolDependenciesMap
+MachOPlatform::MachOPlatformPlugin::getSyntheticSymbolDependencies(
     MaterializationResponsibility &MR) {
-  std::lock_guard<std::mutex> Lock(InitScraperMutex);
+  std::lock_guard<std::mutex> Lock(PluginMutex);
   auto I = InitSymbolDeps.find(&MR);
   if (I != InitSymbolDeps.end()) {
-    LocalDependenciesMap Result;
+    SyntheticSymbolDependenciesMap Result;
     Result[MR.getInitializerSymbol()] = std::move(I->second);
     InitSymbolDeps.erase(&MR);
     return Result;
   }
-  return LocalDependenciesMap();
+  return SyntheticSymbolDependenciesMap();
 }
 
-void MachOPlatform::InitScraperPlugin::preserveInitSectionIfPresent(
-    JITLinkSymbolVector &Symbols, jitlink::LinkGraph &G,
-    StringRef SectionName) {
-  if (auto *Sec = G.findSectionByName(SectionName)) {
-    auto SecBlocks = Sec->blocks();
-    if (!llvm::empty(SecBlocks))
-      Symbols.push_back(
-          &G.addAnonymousSymbol(**SecBlocks.begin(), 0, 0, false, true));
+void MachOPlatform::MachOPlatformPlugin::addInitializerSupportPasses(
+    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
+
+  /// Preserve init sections.
+  Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) {
+    if (auto Err = preserveInitSections(G, MR))
+      return Err;
+    return processObjCImageInfo(G, MR);
+  });
+
+  Config.PostFixupPasses.push_back(
+      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
+        return registerInitSections(G, JD);
+      });
+}
+
+void MachOPlatform::MachOPlatformPlugin::addMachOHeaderSupportPasses(
+    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
+
+  Config.PostAllocationPasses.push_back([this, &JD = MR.getTargetJITDylib()](
+                                            jitlink::LinkGraph &G) -> Error {
+    auto I = llvm::find_if(G.defined_symbols(), [this](jitlink::Symbol *Sym) {
+      return Sym->getName() == *MP.MachOHeaderStartSymbol;
+    });
+    assert(I != G.defined_symbols().end() &&
+           "Missing MachO header start symbol");
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      JITTargetAddress HeaderAddr = (*I)->getAddress();
+      MP.HeaderAddrToJITDylib[HeaderAddr] = &JD;
+      assert(!MP.InitSeqs.count(&JD) && "InitSeq entry for JD already exists");
+      MP.InitSeqs.insert(std::make_pair(
+          &JD,
+          MachOJITDylibInitializers(JD.getName(), ExecutorAddr(HeaderAddr))));
+    }
+    return Error::success();
+  });
+}
+
+void MachOPlatform::MachOPlatformPlugin::addEHAndTLVSupportPasses(
+    MaterializationResponsibility &MR, jitlink::PassConfiguration &Config) {
+
+  // Insert TLV lowering at the start of the PostPrunePasses, since we want
+  // it to run before GOT/PLT lowering.
+  Config.PostPrunePasses.insert(
+      Config.PostPrunePasses.begin(),
+      [this, &JD = MR.getTargetJITDylib()](jitlink::LinkGraph &G) {
+        return fixTLVSectionsAndEdges(G, JD);
+      });
+
+  // Add a pass to register the final addresses of the eh-frame and TLV sections
+  // with the runtime.
+  Config.PostFixupPasses.push_back([this](jitlink::LinkGraph &G) -> Error {
+    MachOPerObjectSectionsToRegister POSR;
+
+    if (auto *EHFrameSection = G.findSectionByName(EHFrameSectionName)) {
+      jitlink::SectionRange R(*EHFrameSection);
+      if (!R.empty())
+        POSR.EHFrameSection = {ExecutorAddr(R.getStart()),
+                               ExecutorAddr(R.getEnd())};
+    }
+
+    // Get a pointer to the thread data section if there is one. It will be used
+    // below.
+    jitlink::Section *ThreadDataSection =
+        G.findSectionByName(ThreadDataSectionName);
+
+    // Handle thread BSS section if there is one.
+    if (auto *ThreadBSSSection = G.findSectionByName(ThreadBSSSectionName)) {
+      // If there's already a thread data section in this graph then merge the
+      // thread BSS section content into it, otherwise just treat the thread
+      // BSS section as the thread data section.
+      if (ThreadDataSection)
+        G.mergeSections(*ThreadDataSection, *ThreadBSSSection);
+      else
+        ThreadDataSection = ThreadBSSSection;
+    }
+
+    // Having merged thread BSS (if present) and thread data (if present),
+    // record the resulting section range.
+    if (ThreadDataSection) {
+      jitlink::SectionRange R(*ThreadDataSection);
+      if (!R.empty())
+        POSR.ThreadDataSection = {ExecutorAddr(R.getStart()),
+                                  ExecutorAddr(R.getEnd())};
+    }
+
+    if (POSR.EHFrameSection.Start || POSR.ThreadDataSection.Start) {
+
+      // If we're still bootstrapping the runtime then just record this
+      // frame for now.
+      if (!MP.RuntimeBootstrapped) {
+        std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+        MP.BootstrapPOSRs.push_back(POSR);
+        return Error::success();
+      }
+
+      // Otherwise register it immediately.
+      if (auto Err = MP.registerPerObjectSections(POSR))
+        return Err;
+    }
+
+    return Error::success();
+  });
+}
+
+Error MachOPlatform::MachOPlatformPlugin::preserveInitSections(
+    jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
+
+  JITLinkSymbolSet InitSectionSymbols;
+  for (auto &InitSectionName : InitSectionNames) {
+    // Skip non-init sections.
+    auto *InitSection = G.findSectionByName(InitSectionName);
+    if (!InitSection)
+      continue;
+
+    // Make a pass over live symbols in the section: those blocks are already
+    // preserved.
+    DenseSet<jitlink::Block *> AlreadyLiveBlocks;
+    for (auto &Sym : InitSection->symbols()) {
+      auto &B = Sym->getBlock();
+      if (Sym->isLive() && Sym->getOffset() == 0 &&
+          Sym->getSize() == B.getSize() && !AlreadyLiveBlocks.count(&B)) {
+        InitSectionSymbols.insert(Sym);
+        AlreadyLiveBlocks.insert(&B);
+      }
+    }
+
+    // Add anonymous symbols to preserve any not-already-preserved blocks.
+    for (auto *B : InitSection->blocks())
+      if (!AlreadyLiveBlocks.count(B))
+        InitSectionSymbols.insert(
+            &G.addAnonymousSymbol(*B, 0, B->getSize(), false, true));
   }
+
+  if (!InitSectionSymbols.empty()) {
+    std::lock_guard<std::mutex> Lock(PluginMutex);
+    InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
+  }
+
+  return Error::success();
 }
 
-Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
+Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
     jitlink::LinkGraph &G, MaterializationResponsibility &MR) {
 
   // If there's an ObjC imagine info then either
@@ -413,7 +785,7 @@ Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
   // OR
   //   (2) We already have a recorded __objc_imageinfo for this JITDylib,
   //       in which case we just verify it.
-  auto *ObjCImageInfo = G.findSectionByName("__objc_imageinfo");
+  auto *ObjCImageInfo = G.findSectionByName(ObjCImageInfoSectionName);
   if (!ObjCImageInfo)
     return Error::success();
 
@@ -421,15 +793,15 @@ Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
 
   // Check that the section is not empty if present.
   if (llvm::empty(ObjCImageInfoBlocks))
-    return make_error<StringError>("Empty __objc_imageinfo section in " +
-                                       G.getName(),
+    return make_error<StringError>("Empty " + ObjCImageInfoSectionName +
+                                       " section in " + G.getName(),
                                    inconvertibleErrorCode());
 
   // Check that there's only one block in the section.
   if (std::next(ObjCImageInfoBlocks.begin()) != ObjCImageInfoBlocks.end())
-    return make_error<StringError>("Multiple blocks in __objc_imageinfo "
-                                   "section in " +
-                                       G.getName(),
+    return make_error<StringError>("Multiple blocks in " +
+                                       ObjCImageInfoSectionName +
+                                       " section in " + G.getName(),
                                    inconvertibleErrorCode());
 
   // Check that the __objc_imageinfo section is unreferenced.
@@ -440,8 +812,8 @@ Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
         for (auto &E : B->edges())
           if (E.getTarget().isDefined() &&
               &E.getTarget().getBlock().getSection() == ObjCImageInfo)
-            return make_error<StringError>("__objc_imageinfo is referenced "
-                                           "within file " +
+            return make_error<StringError>(ObjCImageInfoSectionName +
+                                               " is referenced within file " +
                                                G.getName(),
                                            inconvertibleErrorCode());
   }
@@ -453,7 +825,7 @@ Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
       support::endian::read32(ObjCImageInfoData + 4, G.getEndianness());
 
   // Lock the mutex while we verify / update the ObjCImageInfos map.
-  std::lock_guard<std::mutex> Lock(InitScraperMutex);
+  std::lock_guard<std::mutex> Lock(PluginMutex);
 
   auto ObjCImageInfoItr = ObjCImageInfos.find(&MR.getTargetJITDylib());
   if (ObjCImageInfoItr != ObjCImageInfos.end()) {
@@ -478,6 +850,93 @@ Error MachOPlatform::InitScraperPlugin::processObjCImageInfo(
     // move on. The section should already be marked no-dead-strip.
     ObjCImageInfos[&MR.getTargetJITDylib()] = std::make_pair(Version, Flags);
   }
+
+  return Error::success();
+}
+
+Error MachOPlatform::MachOPlatformPlugin::registerInitSections(
+    jitlink::LinkGraph &G, JITDylib &JD) {
+
+  ExecutorAddr ObjCImageInfoAddr;
+  SmallVector<jitlink::Section *> InitSections;
+
+  if (auto *ObjCImageInfoSec = G.findSectionByName(ObjCImageInfoSectionName)) {
+    if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
+      ObjCImageInfoAddr.setValue(Addr);
+  }
+
+  for (auto InitSectionName : InitSectionNames)
+    if (auto *Sec = G.findSectionByName(InitSectionName))
+      InitSections.push_back(Sec);
+
+  // Dump the scraped inits.
+  LLVM_DEBUG({
+    dbgs() << "MachOPlatform: Scraped " << G.getName() << " init sections:\n";
+    if (ObjCImageInfoAddr)
+      dbgs() << "  " << ObjCImageInfoSectionName << ": "
+             << formatv("{0:x}", ObjCImageInfoAddr.getValue()) << "\n";
+    for (auto *Sec : InitSections) {
+      jitlink::SectionRange R(*Sec);
+      dbgs() << "  " << Sec->getName() << ": "
+             << formatv("[ {0:x} -- {1:x} ]", R.getStart(), R.getEnd()) << "\n";
+    }
+  });
+
+  return MP.registerInitInfo(JD, ObjCImageInfoAddr, InitSections);
+}
+
+Error MachOPlatform::MachOPlatformPlugin::fixTLVSectionsAndEdges(
+    jitlink::LinkGraph &G, JITDylib &JD) {
+
+  // Rename external references to __tlv_bootstrap to ___orc_rt_tlv_get_addr.
+  for (auto *Sym : G.external_symbols())
+    if (Sym->getName() == "__tlv_bootstrap") {
+      Sym->setName("___orc_rt_macho_tlv_get_addr");
+      break;
+    }
+
+  // Store key in __thread_vars struct fields.
+  if (auto *ThreadDataSec = G.findSectionByName(ThreadVarsSectionName)) {
+    Optional<uint64_t> Key;
+    {
+      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+      auto I = MP.JITDylibToPThreadKey.find(&JD);
+      if (I != MP.JITDylibToPThreadKey.end())
+        Key = I->second;
+    }
+
+    if (!Key) {
+      if (auto KeyOrErr = MP.createPThreadKey())
+        Key = *KeyOrErr;
+      else
+        return KeyOrErr.takeError();
+    }
+
+    uint64_t PlatformKeyBits =
+        support::endian::byte_swap(*Key, G.getEndianness());
+
+    for (auto *B : ThreadDataSec->blocks()) {
+      if (B->getSize() != 3 * G.getPointerSize())
+        return make_error<StringError>("__thread_vars block at " +
+                                           formatv("{0:x}", B->getAddress()) +
+                                           " has unexpected size",
+                                       inconvertibleErrorCode());
+
+      auto NewBlockContent = G.allocateBuffer(B->getSize());
+      llvm::copy(B->getContent(), NewBlockContent.data());
+      memcpy(NewBlockContent.data() + G.getPointerSize(), &PlatformKeyBits,
+             G.getPointerSize());
+      B->setContent(NewBlockContent);
+    }
+  }
+
+  // Transform any TLV edges into GOT edges.
+  for (auto *B : G.blocks())
+    for (auto &E : B->edges())
+      if (E.getKind() ==
+          jitlink::x86_64::RequestTLVPAndTransformToPCRel32TLVPLoadREXRelaxable)
+        E.setKind(jitlink::x86_64::
+                      RequestGOTAndTransformToPCRel32GOTLoadREXRelaxable);
 
   return Error::success();
 }

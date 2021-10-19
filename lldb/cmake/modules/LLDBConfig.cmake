@@ -65,6 +65,7 @@ option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)
+option(LLDB_SKIP_DSYM "Whether to skip generating a dSYM when installing lldb." OFF)
 
 if (LLDB_USE_SYSTEM_DEBUGSERVER)
   # The custom target for the system debugserver has no install target, so we
@@ -228,7 +229,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
     )
 
@@ -237,7 +237,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
     PATTERN ".cmake" EXCLUDE
     )
 
@@ -247,6 +246,30 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_llvm_install_targets(install-lldb-headers
                              COMPONENT lldb-headers)
+  endif()
+endif()
+
+
+# If LLDB is building against a prebuilt Clang, then the Clang resource
+# directory that LLDB is using for its embedded Clang instance needs to point
+# to the resource directory of the used Clang installation.
+if (NOT TARGET clang-resource-headers)
+  set(LLDB_CLANG_RESOURCE_DIR_NAME "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+  # Iterate over the possible places where the external resource directory
+  # could be and pick the first that exists.
+  foreach(CANDIDATE "${Clang_DIR}/../.." "${LLVM_DIR}" "${LLVM_LIBRARY_DIRS}"
+                    "${LLVM_BUILD_LIBRARY_DIR}"
+                    "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+    # Build the resource directory path by appending 'clang/<version number>'.
+    set(CANDIDATE_RESOURCE_DIR "${CANDIDATE}/clang/${LLDB_CLANG_RESOURCE_DIR_NAME}")
+    if (IS_DIRECTORY "${CANDIDATE_RESOURCE_DIR}")
+      set(LLDB_EXTERNAL_CLANG_RESOURCE_DIR "${CANDIDATE_RESOURCE_DIR}")
+      break()
+    endif()
+  endforeach()
+
+  if (NOT LLDB_EXTERNAL_CLANG_RESOURCE_DIR)
+    message(FATAL_ERROR "Expected directory for clang-resource headers not found: ${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}")
   endif()
 endif()
 

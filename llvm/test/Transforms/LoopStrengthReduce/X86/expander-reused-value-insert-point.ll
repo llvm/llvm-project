@@ -25,7 +25,7 @@ define void @test(double* %ioptr, i32 %X, double* %start, double* %end) {
 ; CHECK-NEXT:    [[UGLYGEP2:%.*]] = bitcast i8* [[UGLYGEP]] to double*
 ; CHECK-NEXT:    [[F1I_0:%.*]] = load double, double* [[UGLYGEP2]], align 8
 ; CHECK-NEXT:    call void @use(double [[F1I_0]])
-; CHECK-NEXT:    [[EC0:%.*]] = icmp eq double* [[END:%.*]], [[ADD_PTR94]]
+; CHECK-NEXT:    [[EC0:%.*]] = icmp eq double* [[ADD_PTR94]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC0]], label [[FOR_BODY37]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]

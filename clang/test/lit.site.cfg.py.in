@@ -9,11 +9,15 @@ config.llvm_libs_dir = path(r"@LLVM_LIBS_DIR@")
 config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
+config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
+config.clang_lit_site_cfg = __file__
 config.clang_obj_root = path(r"@CLANG_BINARY_DIR@")
 config.clang_src_dir = path(r"@CLANG_SOURCE_DIR@")
 config.clang_tools_dir = path(r"@CLANG_TOOLS_DIR@")
+config.clang_lib_dir = path(r"@CMAKE_LIBRARY_OUTPUT_DIRECTORY@")
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@TARGET_TRIPLE@"
+config.host_cc = "@CMAKE_C_COMPILER@"
 config.host_cxx = "@CMAKE_CXX_COMPILER@"
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
@@ -24,13 +28,14 @@ config.clang_staticanalyzer_z3 = "@LLVM_WITH_Z3@"
 config.clang_examples = @CLANG_BUILD_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = @ENABLE_BACKTRACES@
-config.enable_experimental_new_pass_manager = @ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER@
+config.enable_experimental_new_pass_manager = @LLVM_ENABLE_NEW_PASS_MANAGER@
 config.enable_threads = @LLVM_ENABLE_THREADS@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.clang_vendor_uti = "@CLANG_VENDOR_UTI@"
+config.llvm_external_lit = path(r"@LLVM_EXTERNAL_LIT@")
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
@@ -46,9 +51,6 @@ except KeyError:
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
-
-if not "@CLANG_DEFAULT_LINKER@":
-    config.available_features.add('platform-linker')
 
 # Let the main config do the real work.
 lit_config.load_config(

@@ -22,20 +22,14 @@ public:
                  DWARFFormValue::ValueType value)
       : m_attr(attr), m_form(form), m_value(value) {}
 
-  void set(dw_attr_t attr, dw_form_t form) {
-    m_attr = attr;
-    m_form = form;
-  }
   dw_attr_t get_attr() const { return m_attr; }
   dw_form_t get_form() const { return m_form; }
+  DWARFFormValue::ValueType get_value() const { return m_value; }
   void get(dw_attr_t &attr, dw_form_t &form,
            DWARFFormValue::ValueType &val) const {
     attr = m_attr;
     form = m_form;
     val = m_value;
-  }
-  bool operator==(const DWARFAttribute &rhs) const {
-    return m_attr == rhs.m_attr && m_form == rhs.m_form;
   }
   typedef std::vector<DWARFAttribute> collection;
   typedef collection::iterator iterator;
@@ -52,11 +46,9 @@ public:
   DWARFAttributes();
   ~DWARFAttributes();
 
-  void Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
-              dw_attr_t attr, dw_form_t form);
-  const DWARFUnit *CompileUnitAtIndex(uint32_t i) const {
-    return m_infos[i].cu;
-  }
+  void Append(const DWARFFormValue &form_value, dw_offset_t attr_die_offset,
+              dw_attr_t attr);
+  DWARFUnit *CompileUnitAtIndex(uint32_t i) const { return m_infos[i].cu; }
   dw_offset_t DIEOffsetAtIndex(uint32_t i) const {
     return m_infos[i].die_offset;
   }
@@ -64,6 +56,9 @@ public:
     return m_infos[i].attr.get_attr();
   }
   dw_attr_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
+  DWARFFormValue::ValueType ValueAtIndex(uint32_t i) const {
+    return m_infos[i].attr.get_value();
+  }
   bool ExtractFormValueAtIndex(uint32_t i, DWARFFormValue &form_value) const;
   DWARFDIE FormValueAsReferenceAtIndex(uint32_t i) const;
   DWARFDIE FormValueAsReference(dw_attr_t attr) const;
@@ -73,8 +68,8 @@ public:
 
 protected:
   struct AttributeValue {
-    const DWARFUnit *cu;        // Keep the compile unit with each attribute in
-                                // case we have DW_FORM_ref_addr values
+    DWARFUnit *cu; // Keep the compile unit with each attribute in
+                   // case we have DW_FORM_ref_addr values
     dw_offset_t die_offset;
     DWARFAttribute attr;
   };

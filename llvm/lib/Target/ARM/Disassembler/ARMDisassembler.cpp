@@ -19,10 +19,10 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -227,10 +227,12 @@ static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder);
+static DecodeStatus DecodeMQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder);
 static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
@@ -852,15 +854,19 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
     ++VCCI;
     if (VCC == ARMVCC::None)
-      MI.insert(VCCI, MCOperand::createReg(0));
+      VCCI = MI.insert(VCCI, MCOperand::createReg(0));
     else
-      MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+      VCCI = MI.insert(VCCI, MCOperand::createReg(ARM::P0));
+    ++VCCI;
+    VCCI = MI.insert(VCCI, MCOperand::createReg(0));
+    ++VCCI;
     if (OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
       int TiedOp = ARMInsts[MI.getOpcode()].getOperandConstraint(
-        VCCPos + 2, MCOI::TIED_TO);
+        VCCPos + 3, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
-      MI.insert(VCCI, MI.getOperand(TiedOp));
+      // Copy the operand to ensure it's not invalidated when MI grows.
+      MI.insert(VCCI, MCOperand(MI.getOperand(TiedOp)));
     }
   } else if (VCC != ARMVCC::None) {
     Check(S, SoftFail);
@@ -2675,8 +2681,12 @@ DecodeBranchImmInstruction(MCInst &Inst, unsigned Insn,
   if (!tryAddingSymbolicOperand(Address, Address + SignExtend32<26>(imm) + 8,
                                 true, 4, Inst, Decoder))
     Inst.addOperand(MCOperand::createImm(SignExtend32<26>(imm)));
-  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
-    return MCDisassembler::Fail;
+
+  // We already have BL_pred for BL w/ predicate, no need to add addition
+  // predicate opreands for BL
+  if (Inst.getOpcode() != ARM::BL)
+    if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+      return MCDisassembler::Fail;
 
   return S;
 }
@@ -6149,9 +6159,9 @@ static const uint16_t QQPRDecoderTable[] = {
      ARM::Q4_Q5,  ARM::Q5_Q6,  ARM::Q6_Q7
 };
 
-static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t Address,
-                              const void *Decoder) {
+static DecodeStatus DecodeMQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
   if (RegNo > 6)
     return MCDisassembler::Fail;
 
@@ -6165,9 +6175,9 @@ static const uint16_t QQQQPRDecoderTable[] = {
      ARM::Q3_Q4_Q5_Q6,  ARM::Q4_Q5_Q6_Q7
 };
 
-static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t Address,
-                              const void *Decoder) {
+static DecodeStatus DecodeMQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const void *Decoder) {
   if (RegNo > 4)
     return MCDisassembler::Fail;
 
@@ -6669,17 +6679,14 @@ static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
     return MCDisassembler::Fail;
   if (TypeT3) {
     Inst.setOpcode(sign1 ? ARM::t2SUBspImm12 : ARM::t2ADDspImm12);
-    S = 0;
     Inst.addOperand(MCOperand::createImm(Imm12)); // zext imm12
   } else {
     Inst.setOpcode(sign1 ? ARM::t2SUBspImm : ARM::t2ADDspImm);
     if (!Check(DS, DecodeT2SOImm(Inst, Imm12, Address, Decoder))) // imm12
       return MCDisassembler::Fail;
+    if (!Check(DS, DecodeCCOutOperand(Inst, S, Address, Decoder))) // cc_out
+      return MCDisassembler::Fail;
   }
-  if (!Check(DS, DecodeCCOutOperand(Inst, S, Address, Decoder))) // cc_out
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(0)); // pred
 
   return DS;
 }

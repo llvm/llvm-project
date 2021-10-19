@@ -8,18 +8,19 @@
 #ifndef MLIR_CONVERSION_LINALGTOLLVM_LINALGTOLLVM_H_
 #define MLIR_CONVERSION_LINALGTOLLVM_LINALGTOLLVM_H_
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Transforms/DialectConversion.h"
+#include <memory>
 
 namespace mlir {
+class LLVMTypeConverter;
 class MLIRContext;
 class ModuleOp;
-template <typename T> class OperationPass;
+template <typename T>
+class OperationPass;
+class RewritePatternSet;
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                            OwningRewritePatternList &patterns,
-                                            MLIRContext *ctx);
+                                            RewritePatternSet &patterns);
 
 /// Create a pass to convert Linalg operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToLLVMPass();

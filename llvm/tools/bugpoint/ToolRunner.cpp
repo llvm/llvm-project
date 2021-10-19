@@ -495,7 +495,7 @@ Expected<int> LLC::ExecuteProgram(const std::string &Bitcode,
     return std::move(E);
 
   std::vector<std::string> CCArgs(ArgsForCC);
-  CCArgs.insert(CCArgs.end(), SharedLibs.begin(), SharedLibs.end());
+  llvm::append_range(CCArgs, SharedLibs);
 
   // Assuming LLC worked, compile the result with CC and run it.
   return cc->ExecuteProgram(OutputAsmFile, Args, *FileKind, InputFile,
@@ -607,12 +607,12 @@ AbstractInterpreter::createJIT(const char *Argv0, std::string &Message,
 
 static bool IsARMArchitecture(std::vector<StringRef> Args) {
   for (size_t I = 0; I < Args.size(); ++I) {
-    if (!Args[I].equals_lower("-arch"))
+    if (!Args[I].equals_insensitive("-arch"))
       continue;
     ++I;
     if (I == Args.size())
       break;
-    if (Args[I].startswith_lower("arm"))
+    if (Args[I].startswith_insensitive("arm"))
       return true;
   }
 

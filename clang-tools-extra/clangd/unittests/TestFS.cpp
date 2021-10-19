@@ -99,14 +99,11 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
-    if (!HintPath.startswith(testRoot()))
-      return llvm::make_error<llvm::StringError>(
-          "Hint path doesn't start with test root: " + HintPath,
-          llvm::inconvertibleErrorCode());
+    if (!HintPath.empty() && !HintPath.startswith(testRoot()))
+      return error("Hint path is not empty and doesn't start with {0}: {1}",
+                   testRoot(), HintPath);
     if (!Body.consume_front("/"))
-      return llvm::make_error<llvm::StringError>(
-          "Body of an unittest: URI must start with '/'",
-          llvm::inconvertibleErrorCode());
+      return error("Body of an unittest: URI must start with '/'");
     llvm::SmallString<16> Path(Body.begin(), Body.end());
     llvm::sys::path::native(Path);
     return testPath(Path);
@@ -116,9 +113,7 @@ public:
   uriFromAbsolutePath(llvm::StringRef AbsolutePath) const override {
     llvm::StringRef Body = AbsolutePath;
     if (!Body.consume_front(testRoot()))
-      return llvm::make_error<llvm::StringError>(
-          AbsolutePath + "does not start with " + testRoot(),
-          llvm::inconvertibleErrorCode());
+      return error("{0} does not start with {1}", AbsolutePath, testRoot());
 
     return URI(Scheme, /*Authority=*/"",
                llvm::sys::path::convert_to_slash(Body));

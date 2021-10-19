@@ -22,6 +22,7 @@
 namespace llvm {
 
 class MCSymbolWasm;
+class formatted_raw_ostream;
 
 /// WebAssembly-specific streamer interface, to implement support
 /// WebAssembly-specific assembly directives.
@@ -39,8 +40,10 @@ public:
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .globaltype
   virtual void emitGlobalType(const MCSymbolWasm *Sym) = 0;
-  /// .eventtype
-  virtual void emitEventType(const MCSymbolWasm *Sym) = 0;
+  /// .tabletype
+  virtual void emitTableType(const MCSymbolWasm *Sym) = 0;
+  /// .tagtype
+  virtual void emitTagType(const MCSymbolWasm *Sym) = 0;
   /// .import_module
   virtual void emitImportModule(const MCSymbolWasm *Sym,
                                 StringRef ImportModule) = 0;
@@ -67,7 +70,8 @@ public:
   void emitFunctionType(const MCSymbolWasm *Sym) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override;
-  void emitEventType(const MCSymbolWasm *Sym) override;
+  void emitTableType(const MCSymbolWasm *Sym) override;
+  void emitTagType(const MCSymbolWasm *Sym) override;
   void emitImportModule(const MCSymbolWasm *Sym, StringRef ImportModule) override;
   void emitImportName(const MCSymbolWasm *Sym, StringRef ImportName) override;
   void emitExportName(const MCSymbolWasm *Sym, StringRef ExportName) override;
@@ -83,7 +87,8 @@ public:
   void emitFunctionType(const MCSymbolWasm *Sym) override {}
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(const MCSymbolWasm *Sym) override {}
-  void emitEventType(const MCSymbolWasm *Sym) override {}
+  void emitTableType(const MCSymbolWasm *Sym) override {}
+  void emitTagType(const MCSymbolWasm *Sym) override {}
   void emitImportModule(const MCSymbolWasm *Sym,
                         StringRef ImportModule) override {}
   void emitImportName(const MCSymbolWasm *Sym,
@@ -103,7 +108,8 @@ public:
   void emitFunctionType(const MCSymbolWasm *) override {}
   void emitIndIdx(const MCExpr *) override {}
   void emitGlobalType(const MCSymbolWasm *) override {}
-  void emitEventType(const MCSymbolWasm *) override {}
+  void emitTableType(const MCSymbolWasm *) override {}
+  void emitTagType(const MCSymbolWasm *) override {}
   void emitImportModule(const MCSymbolWasm *, StringRef) override {}
   void emitImportName(const MCSymbolWasm *, StringRef) override {}
   void emitExportName(const MCSymbolWasm *, StringRef) override {}

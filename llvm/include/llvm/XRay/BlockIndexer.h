@@ -10,8 +10,8 @@
 // thread and a range of records representing a block.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIB_XRAY_BLOCKINDEXER_H_
-#define LLVM_LIB_XRAY_BLOCKINDEXER_H_
+#ifndef LLVM_XRAY_BLOCKINDEXER_H
+#define LLVM_XRAY_BLOCKINDEXER_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/XRay/FDRRecords.h"
@@ -65,4 +65,4 @@ public:
 } // namespace xray
 } // namespace llvm
 
-#endif // LLVM_LIB_XRAY_BLOCKINDEXER_H_
+#endif // LLVM_XRAY_BLOCKINDEXER_H

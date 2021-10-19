@@ -15,7 +15,7 @@ define float @fmov_float2() {
 ; CHECK-LABEL: fmov_float2
 ; CHECK:       fmov s0, wzr
 ; GISEL-LABEL: fmov_float2
-; GISEL:       fmov s0, wzr
+; GISEL:       movi d0, #0000000000000000
   ret float 0.0e+00
 }
 
@@ -31,7 +31,7 @@ define double @fmov_double2() {
 ; CHECK-LABEL: fmov_double2
 ; CHECK:       fmov d0, xzr
 ; GISEL-LABEL: fmov_double2
-; GISEL:       fmov d0, xzr
+; GISEL:       movi d0, #0000000000000000
   ret double 0.0e+00
 }
 

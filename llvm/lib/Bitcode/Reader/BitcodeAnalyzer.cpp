@@ -135,6 +135,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(MODULE_CODE, FUNCTION)
       STRINGIFY_CODE(MODULE_CODE, ALIAS)
       STRINGIFY_CODE(MODULE_CODE, GCNAME)
+      STRINGIFY_CODE(MODULE_CODE, COMDAT)
       STRINGIFY_CODE(MODULE_CODE, VSTOFFSET)
       STRINGIFY_CODE(MODULE_CODE, METADATA_VALUES_UNUSED)
       STRINGIFY_CODE(MODULE_CODE, SOURCE_FILENAME)
@@ -176,16 +177,20 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(TYPE_CODE, OPAQUE)
       STRINGIFY_CODE(TYPE_CODE, INTEGER)
       STRINGIFY_CODE(TYPE_CODE, POINTER)
+      STRINGIFY_CODE(TYPE_CODE, HALF)
       STRINGIFY_CODE(TYPE_CODE, ARRAY)
       STRINGIFY_CODE(TYPE_CODE, VECTOR)
       STRINGIFY_CODE(TYPE_CODE, X86_FP80)
       STRINGIFY_CODE(TYPE_CODE, FP128)
       STRINGIFY_CODE(TYPE_CODE, PPC_FP128)
       STRINGIFY_CODE(TYPE_CODE, METADATA)
+      STRINGIFY_CODE(TYPE_CODE, X86_MMX)
       STRINGIFY_CODE(TYPE_CODE, STRUCT_ANON)
       STRINGIFY_CODE(TYPE_CODE, STRUCT_NAME)
       STRINGIFY_CODE(TYPE_CODE, STRUCT_NAMED)
       STRINGIFY_CODE(TYPE_CODE, FUNCTION)
+      STRINGIFY_CODE(TYPE_CODE, TOKEN)
+      STRINGIFY_CODE(TYPE_CODE, BFLOAT)
     }
 
   case bitc::CONSTANTS_BLOCK_ID:
@@ -213,6 +218,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(CST_CODE, INLINEASM)
       STRINGIFY_CODE(CST_CODE, CE_SHUFVEC_EX)
       STRINGIFY_CODE(CST_CODE, CE_UNOP)
+      STRINGIFY_CODE(CST_CODE, DSO_LOCAL_EQUIVALENT)
     case bitc::CST_CODE_BLOCKADDRESS:
       return "CST_CODE_BLOCKADDRESS";
       STRINGIFY_CODE(CST_CODE, DATA)
@@ -356,6 +362,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(METADATA, GLOBAL_VAR_EXPR)
       STRINGIFY_CODE(METADATA, INDEX_OFFSET)
       STRINGIFY_CODE(METADATA, INDEX)
+      STRINGIFY_CODE(METADATA, ARG_LIST)
     }
   case bitc::METADATA_KIND_BLOCK_ID:
     switch (CodeID) {
@@ -737,7 +744,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   // BLOCKINFO is a special part of the stream.
   bool DumpRecords = O.hasValue();
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
-    if (O)
+    if (O && !O->DumpBlockinfo)
       O->OS << Indent << "<BLOCKINFO_BLOCK/>\n";
     Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
         Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
@@ -751,8 +758,8 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
     if (Error Err = Stream.JumpToBit(BlockBitStart))
       return Err;
     // It's not really interesting to dump the contents of the blockinfo
-    // block.
-    DumpRecords = false;
+    // block, so only do it if the user explicitly requests it.
+    DumpRecords = O && O->DumpBlockinfo;
   }
 
   unsigned NumWords = 0;

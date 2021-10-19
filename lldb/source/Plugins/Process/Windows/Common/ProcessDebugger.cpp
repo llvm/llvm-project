@@ -405,7 +405,8 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   MEMORY_BASIC_INFORMATION mem_info = {};
   SIZE_T result = ::VirtualQueryEx(handle, addr, &mem_info, sizeof(mem_info));
   if (result == 0) {
-    if (::GetLastError() == ERROR_INVALID_PARAMETER) {
+    DWORD last_error = ::GetLastError();
+    if (last_error == ERROR_INVALID_PARAMETER) {
       // ERROR_INVALID_PARAMETER is returned if VirtualQueryEx is called with
       // an address past the highest accessible address. We should return a
       // range from the vm_addr to LLDB_INVALID_ADDRESS
@@ -417,7 +418,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       info.SetMapped(MemoryRegionInfo::eNo);
       return error;
     } else {
-      error.SetError(::GetLastError(), eErrorTypeWin32);
+      error.SetError(last_error, eErrorTypeWin32);
       LLDB_LOG(log,
                "VirtualQueryEx returned error {0} while getting memory "
                "region info for address {1:x}",
@@ -460,7 +461,6 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     info.SetMapped(MemoryRegionInfo::eNo);
   }
 
-  error.SetError(::GetLastError(), eErrorTypeWin32);
   LLDB_LOGV(log,
             "Memory region info for address {0}: readable={1}, "
             "executable={2}, writable={3}",

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify %s
 
-template <class T> struct Base { // expected-note 4 {{member found by ambiguous name lookup}}
+template <class T> struct Base {
+  // expected-note@-1 2{{member type 'Base<int>' found by ambiguous name lookup}}
+  // expected-note@-2 2{{member type 'Base<char>' found by ambiguous name lookup}}
   static void f();
 }; 
 

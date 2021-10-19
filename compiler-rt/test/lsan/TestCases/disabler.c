@@ -1,7 +1,10 @@
 // Test for __lsan_disable() / __lsan_enable().
-// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_globals=0:use_tls=0"
+// RUN: LSAN_BASE="report_objects=1:use_registers=0:use_stacks=0:use_tls=0"
 // RUN: %clang_lsan %s -o %t
 // RUN: %env_lsan_opts=$LSAN_BASE not %run %t 2>&1 | FileCheck %s
+
+// Investigate why it does not fail with use_tls=0
+// UNSUPPORTED: arm-linux || armhf-linux
 
 #include <stdio.h>
 #include <stdlib.h>

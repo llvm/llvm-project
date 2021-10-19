@@ -34,15 +34,15 @@ define void @i24_or(i24* %a) {
 define void @i24_and_or(i24* %a) {
 ; X86-LABEL: i24_and_or:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %edx
-; X86-NEXT:    movzbl 2(%ecx), %eax
-; X86-NEXT:    movb %al, 2(%ecx)
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    orl $384, %eax # imm = 0x180
-; X86-NEXT:    andl $16777088, %eax # imm = 0xFFFF80
-; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %edx
+; X86-NEXT:    movzbl 2(%eax), %ecx
+; X86-NEXT:    movb %cl, 2(%eax)
+; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    orl %edx, %ecx
+; X86-NEXT:    orl $384, %ecx # imm = 0x180
+; X86-NEXT:    andl $16777088, %ecx # imm = 0xFFFF80
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: i24_and_or:
@@ -66,21 +66,21 @@ define void @i24_and_or(i24* %a) {
 define void @i24_insert_bit(i24* %a, i1 zeroext %bit) {
 ; X86-LABEL: i24_insert_bit:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl (%ecx), %esi
-; X86-NEXT:    movzbl 2(%ecx), %eax
-; X86-NEXT:    movb %al, 2(%ecx)
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    shll $13, %edx
-; X86-NEXT:    andl $16769023, %eax # imm = 0xFFDFFF
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    movw %ax, (%ecx)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%eax), %edx
+; X86-NEXT:    movzbl 2(%eax), %ebx
+; X86-NEXT:    movb %bl, 2(%eax)
+; X86-NEXT:    shll $16, %ebx
+; X86-NEXT:    orl %edx, %ebx
+; X86-NEXT:    shll $13, %ecx
+; X86-NEXT:    andl $16769023, %ebx # imm = 0xFFDFFF
+; X86-NEXT:    orl %ecx, %ebx
+; X86-NEXT:    movw %bx, (%eax)
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;

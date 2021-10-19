@@ -28,7 +28,7 @@ bool WatchpointOptions::NullCallback(void *baton,
 // WatchpointOptions constructor
 WatchpointOptions::WatchpointOptions()
     : m_callback(WatchpointOptions::NullCallback), m_callback_baton_sp(),
-      m_callback_is_synchronous(false), m_thread_spec_up() {}
+      m_thread_spec_up() {}
 
 // WatchpointOptions copy constructor
 WatchpointOptions::WatchpointOptions(const WatchpointOptions &rhs)

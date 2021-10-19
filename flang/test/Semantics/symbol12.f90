@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 ! Verify that SAVE attribute is propagated by EQUIVALENCE
 
 !DEF: /s1 (Subroutine) Subprogram

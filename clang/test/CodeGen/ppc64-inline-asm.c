@@ -4,7 +4,7 @@ _Bool test_wc_i1(_Bool b1, _Bool b2) {
   _Bool o;
   asm("crand %0, %1, %2" : "=wc"(o) : "wc"(b1), "wc"(b2) : );
   return o;
-// CHECK-LABEL: define zeroext i1 @test_wc_i1(i1 zeroext %b1, i1 zeroext %b2)
+// CHECK-LABEL: define{{.*}} zeroext i1 @test_wc_i1(i1 zeroext %b1, i1 zeroext %b2)
 // CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i1 %b1, i1 %b2)
 }
 

@@ -41,7 +41,6 @@ enum RelExpr {
   R_GOTPLT,
   R_GOTPLTREL,
   R_GOTREL,
-  R_NEG_TLS,
   R_NONE,
   R_PC,
   R_PLT,
@@ -58,7 +57,8 @@ enum RelExpr {
   R_RELAX_TLS_LD_TO_LE,
   R_RELAX_TLS_LD_TO_LE_ABS,
   R_SIZE,
-  R_TLS,
+  R_TPREL,
+  R_TPREL_NEG,
   R_TLSDESC,
   R_TLSDESC_CALL,
   R_TLSDESC_PC,
@@ -78,6 +78,7 @@ enum RelExpr {
   // of a relocation type, there are some relocations whose semantics are
   // unique to a target. Such relocation are marked with R_<TARGET_NAME>.
   R_AARCH64_GOT_PAGE_PC,
+  R_AARCH64_GOT_PAGE,
   R_AARCH64_PAGE_PC,
   R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC,
   R_AARCH64_TLSDESC_PAGE,
@@ -131,7 +132,7 @@ bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 class ThunkSection;
 class Thunk;
-struct InputSectionDescription;
+class InputSectionDescription;
 
 class ThunkCreator {
 public:
@@ -147,8 +148,8 @@ private:
   void mergeThunks(ArrayRef<OutputSection *> outputSections);
 
   ThunkSection *getISDThunkSec(OutputSection *os, InputSection *isec,
-                               InputSectionDescription *isd, uint32_t type,
-                               uint64_t src);
+                               InputSectionDescription *isd,
+                               const Relocation &rel, uint64_t src);
 
   ThunkSection *getISThunkSec(InputSection *isec);
 
@@ -194,6 +195,19 @@ static inline int64_t getAddend(const typename ELFT::Rel &rel) {
 template <class ELFT>
 static inline int64_t getAddend(const typename ELFT::Rela &rel) {
   return rel.r_addend;
+}
+
+template <typename RelTy>
+ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
+  auto cmp = [](const RelTy &a, const RelTy &b) {
+    return a.r_offset < b.r_offset;
+  };
+  if (!llvm::is_sorted(rels, cmp)) {
+    storage.assign(rels.begin(), rels.end());
+    llvm::stable_sort(storage, cmp);
+    rels = storage;
+  }
+  return rels;
 }
 } // namespace elf
 } // namespace lld

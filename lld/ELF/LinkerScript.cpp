@@ -30,6 +30,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -250,26 +251,34 @@ getChangedSymbolAssignment(const SymbolAssignmentMap &oldValues) {
 // Process INSERT [AFTER|BEFORE] commands. For each command, we move the
 // specified output section to the designated place.
 void LinkerScript::processInsertCommands() {
+  std::vector<OutputSection *> moves;
   for (const InsertCommand &cmd : insertCommands) {
-    // If cmd.os is empty, it may have been discarded by
-    // adjustSectionsBeforeSorting(). We do not handle such output sections.
-    auto from = llvm::find(sectionCommands, cmd.os);
-    if (from == sectionCommands.end())
-      continue;
-    sectionCommands.erase(from);
+    for (StringRef name : cmd.names) {
+      // If base is empty, it may have been discarded by
+      // adjustSectionsBeforeSorting(). We do not handle such output sections.
+      auto from = llvm::find_if(sectionCommands, [&](BaseCommand *base) {
+        return isa<OutputSection>(base) &&
+               cast<OutputSection>(base)->name == name;
+      });
+      if (from == sectionCommands.end())
+        continue;
+      moves.push_back(cast<OutputSection>(*from));
+      sectionCommands.erase(from);
+    }
 
     auto insertPos = llvm::find_if(sectionCommands, [&cmd](BaseCommand *base) {
       auto *to = dyn_cast<OutputSection>(base);
       return to != nullptr && to->name == cmd.where;
     });
     if (insertPos == sectionCommands.end()) {
-      error("unable to insert " + cmd.os->name +
+      error("unable to insert " + cmd.names[0] +
             (cmd.isAfter ? " after " : " before ") + cmd.where);
     } else {
       if (cmd.isAfter)
         ++insertPos;
-      sectionCommands.insert(insertPos, cmd.os);
+      sectionCommands.insert(insertPos, moves.begin(), moves.end());
     }
+    moves.clear();
   }
 }
 
@@ -320,20 +329,33 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-static std::string getFilename(InputFile *file) {
-  if (!file)
-    return "";
-  if (file->archiveName.empty())
-    return std::string(file->getName());
-  return (file->archiveName + ':' + file->getName()).str();
+static inline StringRef getFilename(const InputFile *file) {
+  return file ? file->getNameForScript() : StringRef();
+}
+
+bool InputSectionDescription::matchesFile(const InputFile *file) const {
+  if (filePat.isTrivialMatchAll())
+    return true;
+
+  if (!matchesFileCache || matchesFileCache->first != file)
+    matchesFileCache.emplace(file, filePat.match(getFilename(file)));
+
+  return matchesFileCache->second;
+}
+
+bool SectionPattern::excludesFile(const InputFile *file) const {
+  if (excludedFilePat.empty())
+    return false;
+
+  if (!excludesFileCache || excludesFileCache->first != file)
+    excludesFileCache.emplace(file, excludedFilePat.match(getFilename(file)));
+
+  return excludesFileCache->second;
 }
 
 bool LinkerScript::shouldKeep(InputSectionBase *s) {
-  if (keptSections.empty())
-    return false;
-  std::string filename = getFilename(s->file);
   for (InputSectionDescription *id : keptSections)
-    if (id->filePat.match(filename))
+    if (id->matchesFile(s->file))
       for (SectionPattern &p : id->sectionPatterns)
         if (p.sectionPat.match(s->name) &&
             (s->flags & id->withFlags) == id->withFlags &&
@@ -395,15 +417,16 @@ static void sortSections(MutableArrayRef<InputSectionBase *> vec,
 // 3. If one SORT command is given, and if it is SORT_NONE, don't sort.
 // 4. If no SORT command is given, sort according to --sort-section.
 static void sortInputSections(MutableArrayRef<InputSectionBase *> vec,
-                              const SectionPattern &pat) {
-  if (pat.sortOuter == SortSectionPolicy::None)
+                              SortSectionPolicy outer,
+                              SortSectionPolicy inner) {
+  if (outer == SortSectionPolicy::None)
     return;
 
-  if (pat.sortInner == SortSectionPolicy::Default)
+  if (inner == SortSectionPolicy::Default)
     sortSections(vec, config->sortSection);
   else
-    sortSections(vec, pat.sortInner);
-  sortSections(vec, pat.sortOuter);
+    sortSections(vec, inner);
+  sortSections(vec, outer);
 }
 
 // Compute and remember which sections the InputSectionDescription matches.
@@ -411,13 +434,27 @@ std::vector<InputSectionBase *>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
                                    ArrayRef<InputSectionBase *> sections) {
   std::vector<InputSectionBase *> ret;
+  std::vector<size_t> indexes;
+  DenseSet<size_t> seen;
+  auto sortByPositionThenCommandLine = [&](size_t begin, size_t end) {
+    llvm::sort(MutableArrayRef<size_t>(indexes).slice(begin, end - begin));
+    for (size_t i = begin; i != end; ++i)
+      ret[i] = sections[indexes[i]];
+    sortInputSections(
+        MutableArrayRef<InputSectionBase *>(ret).slice(begin, end - begin),
+        config->sortSection, SortSectionPolicy::None);
+  };
 
   // Collects all sections that satisfy constraints of Cmd.
+  size_t sizeAfterPrevSort = 0;
   for (const SectionPattern &pat : cmd->sectionPatterns) {
-    size_t sizeBefore = ret.size();
+    size_t sizeBeforeCurrPat = ret.size();
 
-    for (InputSectionBase *sec : sections) {
-      if (!sec->isLive() || sec->parent)
+    for (size_t i = 0, e = sections.size(); i != e; ++i) {
+      // Skip if the section is dead or has been matched by a previous input
+      // section description or a previous pattern.
+      InputSectionBase *sec = sections[i];
+      if (!sec->isLive() || sec->parent || seen.contains(i))
         continue;
 
       // For -emit-relocs we have to ignore entries like
@@ -433,19 +470,37 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!pat.sectionPat.match(sec->name))
         continue;
 
-      std::string filename = getFilename(sec->file);
-      if (!cmd->filePat.match(filename) ||
-          pat.excludedFilePat.match(filename) ||
+      if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
           (sec->flags & cmd->withFlags) != cmd->withFlags ||
           (sec->flags & cmd->withoutFlags) != 0)
         continue;
 
       ret.push_back(sec);
+      indexes.push_back(i);
+      seen.insert(i);
     }
 
+    if (pat.sortOuter == SortSectionPolicy::Default)
+      continue;
+
+    // Matched sections are ordered by radix sort with the keys being (SORT*,
+    // --sort-section, input order), where SORT* (if present) is most
+    // significant.
+    //
+    // Matched sections between the previous SORT* and this SORT* are sorted by
+    // (--sort-alignment, input order).
+    sortByPositionThenCommandLine(sizeAfterPrevSort, sizeBeforeCurrPat);
+    // Matched sections by this SORT* pattern are sorted using all 3 keys.
+    // ret[sizeBeforeCurrPat,ret.size()) are already in the input order, so we
+    // just sort by sortOuter and sortInner.
     sortInputSections(
-        MutableArrayRef<InputSectionBase *>(ret).slice(sizeBefore), pat);
+        MutableArrayRef<InputSectionBase *>(ret).slice(sizeBeforeCurrPat),
+        pat.sortOuter, pat.sortInner);
+    sizeAfterPrevSort = ret.size();
   }
+  // Matched sections after the last SORT* are sorted by (--sort-alignment,
+  // input order).
+  sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
   return ret;
 }
 
@@ -500,52 +555,73 @@ LinkerScript::createInputSectionList(OutputSection &outCmd) {
 
 // Create output sections described by SECTIONS commands.
 void LinkerScript::processSectionCommands() {
-  size_t i = 0;
-  for (BaseCommand *base : sectionCommands) {
-    if (auto *sec = dyn_cast<OutputSection>(base)) {
-      std::vector<InputSectionBase *> v = createInputSectionList(*sec);
+  auto process = [this](OutputSection *osec) {
+    std::vector<InputSectionBase *> v = createInputSectionList(*osec);
 
-      // The output section name `/DISCARD/' is special.
-      // Any input section assigned to it is discarded.
-      if (sec->name == "/DISCARD/") {
-        for (InputSectionBase *s : v)
-          discard(s);
-        discardSynthetic(*sec);
-        sec->sectionCommands.clear();
-        continue;
-      }
-
-      // This is for ONLY_IF_RO and ONLY_IF_RW. An output section directive
-      // ".foo : ONLY_IF_R[OW] { ... }" is handled only if all member input
-      // sections satisfy a given constraint. If not, a directive is handled
-      // as if it wasn't present from the beginning.
-      //
-      // Because we'll iterate over SectionCommands many more times, the easy
-      // way to "make it as if it wasn't present" is to make it empty.
-      if (!matchConstraints(v, sec->constraint)) {
-        for (InputSectionBase *s : v)
-          s->parent = nullptr;
-        sec->sectionCommands.clear();
-        continue;
-      }
-
-      // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
-      // is given, input sections are aligned to that value, whether the
-      // given value is larger or smaller than the original section alignment.
-      if (sec->subalignExpr) {
-        uint32_t subalign = sec->subalignExpr().getValue();
-        for (InputSectionBase *s : v)
-          s->alignment = subalign;
-      }
-
-      // Set the partition field the same way OutputSection::recordSection()
-      // does. Partitions cannot be used with the SECTIONS command, so this is
-      // always 1.
-      sec->partition = 1;
-
-      sec->sectionIndex = i++;
+    // The output section name `/DISCARD/' is special.
+    // Any input section assigned to it is discarded.
+    if (osec->name == "/DISCARD/") {
+      for (InputSectionBase *s : v)
+        discard(s);
+      discardSynthetic(*osec);
+      osec->sectionCommands.clear();
+      return false;
     }
-  }
+
+    // This is for ONLY_IF_RO and ONLY_IF_RW. An output section directive
+    // ".foo : ONLY_IF_R[OW] { ... }" is handled only if all member input
+    // sections satisfy a given constraint. If not, a directive is handled
+    // as if it wasn't present from the beginning.
+    //
+    // Because we'll iterate over SectionCommands many more times, the easy
+    // way to "make it as if it wasn't present" is to make it empty.
+    if (!matchConstraints(v, osec->constraint)) {
+      for (InputSectionBase *s : v)
+        s->parent = nullptr;
+      osec->sectionCommands.clear();
+      return false;
+    }
+
+    // Handle subalign (e.g. ".foo : SUBALIGN(32) { ... }"). If subalign
+    // is given, input sections are aligned to that value, whether the
+    // given value is larger or smaller than the original section alignment.
+    if (osec->subalignExpr) {
+      uint32_t subalign = osec->subalignExpr().getValue();
+      for (InputSectionBase *s : v)
+        s->alignment = subalign;
+    }
+
+    // Set the partition field the same way OutputSection::recordSection()
+    // does. Partitions cannot be used with the SECTIONS command, so this is
+    // always 1.
+    osec->partition = 1;
+    return true;
+  };
+
+  // Process OVERWRITE_SECTIONS first so that it can overwrite the main script
+  // or orphans.
+  DenseMap<StringRef, OutputSection *> map;
+  size_t i = 0;
+  for (OutputSection *osec : overwriteSections)
+    if (process(osec) && !map.try_emplace(osec->name, osec).second)
+      warn("OVERWRITE_SECTIONS specifies duplicate " + osec->name);
+  for (BaseCommand *&base : sectionCommands)
+    if (auto *osec = dyn_cast<OutputSection>(base)) {
+      if (OutputSection *overwrite = map.lookup(osec->name)) {
+        log(overwrite->location + " overwrites " + osec->name);
+        overwrite->sectionIndex = i++;
+        base = overwrite;
+      } else if (process(osec)) {
+        osec->sectionIndex = i++;
+      }
+    }
+
+  // If an OVERWRITE_SECTIONS specified output section is not in
+  // sectionCommands, append it to the end. The section will be inserted by
+  // orphan placement.
+  for (OutputSection *osec : overwriteSections)
+    if (osec->partition == 1 && osec->sectionIndex == UINT32_MAX)
+      sectionCommands.push_back(osec);
 }
 
 void LinkerScript::processSymbolAssignments() {
@@ -679,8 +755,11 @@ addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
       auto *firstIsec = cast<InputSectionBase>(
           cast<InputSectionDescription>(sec->sectionCommands[0])
               ->sectionBases[0]);
-      if (firstIsec->getLinkOrderDep()->getOutputSection() !=
-          isec->getLinkOrderDep()->getOutputSection())
+      OutputSection *firstIsecOut =
+          firstIsec->flags & SHF_LINK_ORDER
+              ? firstIsec->getLinkOrderDep()->getOutputSection()
+              : nullptr;
+      if (firstIsecOut != isec->getLinkOrderDep()->getOutputSection())
         continue;
     }
 
@@ -722,7 +801,7 @@ void LinkerScript::addOrphanSections() {
           add(depSec);
   };
 
-  // For futher --emit-reloc handling code we need target output section
+  // For further --emit-reloc handling code we need target output section
   // to be created before we create relocation output section, so we want
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
@@ -751,6 +830,9 @@ void LinkerScript::addOrphanSections() {
 }
 
 void LinkerScript::diagnoseOrphanHandling() const {
+  llvm::TimeTraceScope timeScope("Diagnose orphan sections");
+  if (config->orphanHandling == OrphanHandlingPolicy::Place)
+    return;
   for (const InputSectionBase *sec : orphanSections) {
     // Input SHT_REL[A] retained by --emit-relocs are ignored by
     // computeInputSections(). Don't warn/error.
@@ -761,23 +843,14 @@ void LinkerScript::diagnoseOrphanHandling() const {
     StringRef name = getOutputSectionName(sec);
     if (config->orphanHandling == OrphanHandlingPolicy::Error)
       error(toString(sec) + " is being placed in '" + name + "'");
-    else if (config->orphanHandling == OrphanHandlingPolicy::Warn)
+    else
       warn(toString(sec) + " is being placed in '" + name + "'");
   }
 }
 
 uint64_t LinkerScript::advance(uint64_t size, unsigned alignment) {
-  bool isTbss =
-      (ctx->outSec->flags & SHF_TLS) && ctx->outSec->type == SHT_NOBITS;
-  uint64_t start = isTbss ? dot + ctx->threadBssOffset : dot;
-  start = alignTo(start, alignment);
-  uint64_t end = start + size;
-
-  if (isTbss)
-    ctx->threadBssOffset = end - dot;
-  else
-    dot = end;
-  return end;
+  dot = alignTo(dot, alignment) + size;
+  return dot;
 }
 
 void LinkerScript::output(InputSection *s) {
@@ -849,13 +922,24 @@ static OutputSection *findFirstSection(PhdrEntry *load) {
 // This function assigns offsets to input sections and an output section
 // for a single sections command (e.g. ".text { *(.text); }").
 void LinkerScript::assignOffsets(OutputSection *sec) {
+  const bool isTbss = (sec->flags & SHF_TLS) && sec->type == SHT_NOBITS;
   const bool sameMemRegion = ctx->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = ctx->lmaRegion == nullptr;
   const uint64_t savedDot = dot;
   ctx->memRegion = sec->memRegion;
   ctx->lmaRegion = sec->lmaRegion;
 
-  if (sec->flags & SHF_ALLOC) {
+  if (!(sec->flags & SHF_ALLOC)) {
+    // Non-SHF_ALLOC sections have zero addresses.
+    dot = 0;
+  } else if (isTbss) {
+    // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
+    // starts from the end address of the previous tbss section.
+    if (ctx->tbssAddr == 0)
+      ctx->tbssAddr = dot;
+    else
+      dot = ctx->tbssAddr;
+  } else {
     if (ctx->memRegion)
       dot = ctx->memRegion->curPos;
     if (sec->addrExpr)
@@ -868,9 +952,6 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     if (ctx->memRegion && ctx->memRegion->curPos < dot)
       expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
                          ctx->memRegion->name, sec->name);
-  } else {
-    // Non-SHF_ALLOC sections have zero addresses.
-    dot = 0;
   }
 
   switchTo(sec);
@@ -926,18 +1007,18 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
 
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
   // as they are not part of the process image.
-  if (!(sec->flags & SHF_ALLOC))
+  if (!(sec->flags & SHF_ALLOC)) {
     dot = savedDot;
+  } else if (isTbss) {
+    // NOBITS TLS sections are similar. Additionally save the end address.
+    ctx->tbssAddr = dot;
+    dot = savedDot;
+  }
 }
 
 static bool isDiscardable(OutputSection &sec) {
   if (sec.name == "/DISCARD/")
     return true;
-
-  // We do not remove empty sections that are explicitly
-  // assigned to any segment.
-  if (!sec.phdrs.empty())
-    return false;
 
   // We do not want to remove OutputSections with expressions that reference
   // symbols even if the OutputSection is empty. We want to ensure that the
@@ -964,6 +1045,18 @@ static bool isDiscardable(OutputSection &sec) {
   return true;
 }
 
+static void maybePropagatePhdrs(OutputSection &sec,
+                                std::vector<StringRef> &phdrs) {
+  if (sec.phdrs.empty()) {
+    // To match the bfd linker script behaviour, only propagate program
+    // headers to sections that are allocated.
+    if (sec.flags & SHF_ALLOC)
+      sec.phdrs = phdrs;
+  } else {
+    phdrs = sec.phdrs;
+  }
+}
+
 void LinkerScript::adjustSectionsBeforeSorting() {
   // If the output section contains only symbol assignments, create a
   // corresponding output section. The issue is what to do with linker script
@@ -987,6 +1080,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
   // the previous sections. Only a few flags are needed to keep the impact low.
   uint64_t flags = SHF_ALLOC;
 
+  std::vector<StringRef> defPhdrs;
   for (BaseCommand *&cmd : sectionCommands) {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
@@ -1008,6 +1102,18 @@ void LinkerScript::adjustSectionsBeforeSorting() {
     if (isEmpty)
       sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
                             SHF_WRITE | SHF_EXECINSTR);
+
+    // The code below may remove empty output sections. We should save the
+    // specified program headers (if exist) and propagate them to subsequent
+    // sections which do not specify program headers.
+    // An example of such a linker script is:
+    // SECTIONS { .empty : { *(.empty) } :rw
+    //            .foo : { *(.foo) } }
+    // Note: at this point the order of output sections has not been finalized,
+    // because orphans have not been inserted into their expected positions. We
+    // will handle them in adjustSectionsAfterSorting().
+    if (sec->sectionIndex != UINT32_MAX)
+      maybePropagatePhdrs(*sec, defPhdrs);
 
     if (isEmpty && isDiscardable(*sec)) {
       sec->markDead();
@@ -1053,20 +1159,9 @@ void LinkerScript::adjustSectionsAfterSorting() {
 
   // Walk the commands and propagate the program headers to commands that don't
   // explicitly specify them.
-  for (BaseCommand *base : sectionCommands) {
-    auto *sec = dyn_cast<OutputSection>(base);
-    if (!sec)
-      continue;
-
-    if (sec->phdrs.empty()) {
-      // To match the bfd linker script behaviour, only propagate program
-      // headers to sections that are allocated.
-      if (sec->flags & SHF_ALLOC)
-        sec->phdrs = defPhdrs;
-    } else {
-      defPhdrs = sec->phdrs;
-    }
-  }
+  for (BaseCommand *base : sectionCommands)
+    if (auto *sec = dyn_cast<OutputSection>(base))
+      maybePropagatePhdrs(*sec, defPhdrs);
 }
 
 static uint64_t computeBase(uint64_t min, bool allocateHeaders) {

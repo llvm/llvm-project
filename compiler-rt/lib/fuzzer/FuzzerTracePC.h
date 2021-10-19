@@ -54,7 +54,7 @@ struct MemMemTable {
   void Add(const uint8_t *Data, size_t Size) {
     if (Size <= 2) return;
     Size = std::min(Size, Word::GetMaxSize());
-    size_t Idx = SimpleFastHash(Data, Size) % kSize;
+    auto Idx = SimpleFastHash(Data, Size) % kSize;
     MemMemWords[Idx].Set(Data, Size);
   }
   const Word &Get(size_t Idx) {
@@ -79,7 +79,7 @@ class TracePC {
   void SetPrintNewPCs(bool P) { DoPrintNewPCs = P; }
   void SetPrintNewFuncs(size_t P) { NumPrintNewFuncs = P; }
   void UpdateObservedPCs();
-  template <class Callback> void CollectFeatures(Callback CB) const;
+  template <class Callback> size_t CollectFeatures(Callback CB) const;
 
   void ResetMaps() {
     ValueProfileMap.Reset();
@@ -94,7 +94,7 @@ class TracePC {
 
   void PrintModuleInfo();
 
-  void PrintCoverage();
+  void PrintCoverage(bool PrintAllCounters);
 
   template<class CallBack>
   void IterateCoveredFunctions(CallBack CB);
@@ -169,7 +169,7 @@ private:
   size_t NumPCTables;
   size_t NumPCsInPCTables;
 
-  Set<const PCTableEntry*> ObservedPCs;
+  std::set<const PCTableEntry *> ObservedPCs;
   std::unordered_map<uintptr_t, uintptr_t> ObservedFuncs;  // PC => Counter.
 
   uint8_t *FocusFunctionCounterPtr = nullptr;
@@ -193,7 +193,7 @@ size_t ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
       Handle8bitCounter(FirstFeature, P - Begin, V);
 
   // Iterate by Step bytes at a time.
-  for (; P < End; P += Step)
+  for (; P + Step <= End; P += Step)
     if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P)) {
       Bundle = HostToLE(Bundle);
       for (size_t I = 0; I < Step; I++, Bundle >>= 8)
@@ -234,16 +234,16 @@ unsigned CounterToFeature(T Counter) {
     return Bit;
 }
 
-template <class Callback>  // void Callback(size_t Feature)
-ATTRIBUTE_NO_SANITIZE_ADDRESS
-ATTRIBUTE_NOINLINE
-void TracePC::CollectFeatures(Callback HandleFeature) const {
+template <class Callback> // void Callback(uint32_t Feature)
+ATTRIBUTE_NO_SANITIZE_ADDRESS ATTRIBUTE_NOINLINE size_t
+TracePC::CollectFeatures(Callback HandleFeature) const {
   auto Handle8bitCounter = [&](size_t FirstFeature,
                                size_t Idx, uint8_t Counter) {
     if (UseCounters)
-      HandleFeature(FirstFeature + Idx * 8 + CounterToFeature(Counter));
+      HandleFeature(static_cast<uint32_t>(FirstFeature + Idx * 8 +
+                                          CounterToFeature(Counter)));
     else
-      HandleFeature(FirstFeature + Idx);
+      HandleFeature(static_cast<uint32_t>(FirstFeature + Idx));
   };
 
   size_t FirstFeature = 0;
@@ -263,16 +263,18 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
 
   if (UseValueProfileMask) {
     ValueProfileMap.ForEach([&](size_t Idx) {
-      HandleFeature(FirstFeature + Idx);
+      HandleFeature(static_cast<uint32_t>(FirstFeature + Idx));
     });
     FirstFeature += ValueProfileMap.SizeInBits();
   }
 
   // Step function, grows similar to 8 * Log_2(A).
-  auto StackDepthStepFunction = [](uint32_t A) -> uint32_t {
-    if (!A) return A;
-    uint32_t Log2 = Log(A);
-    if (Log2 < 3) return A;
+  auto StackDepthStepFunction = [](size_t A) -> size_t {
+    if (!A)
+      return A;
+    auto Log2 = Log(A);
+    if (Log2 < 3)
+      return A;
     Log2 -= 3;
     return (Log2 + 1) * 8 + ((A >> Log2) & 7);
   };
@@ -280,8 +282,13 @@ void TracePC::CollectFeatures(Callback HandleFeature) const {
   assert(StackDepthStepFunction(1024 * 4) == 80);
   assert(StackDepthStepFunction(1024 * 1024) == 144);
 
-  if (auto MaxStackOffset = GetMaxStackOffset())
-    HandleFeature(FirstFeature + StackDepthStepFunction(MaxStackOffset / 8));
+  if (auto MaxStackOffset = GetMaxStackOffset()) {
+    HandleFeature(static_cast<uint32_t>(
+        FirstFeature + StackDepthStepFunction(MaxStackOffset / 8)));
+    FirstFeature += StackDepthStepFunction(std::numeric_limits<size_t>::max());
+  }
+
+  return FirstFeature;
 }
 
 extern TracePC TPC;

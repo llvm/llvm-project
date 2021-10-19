@@ -20,7 +20,7 @@ namespace pdb {
 class NativeFunctionSymbol : public NativeRawSymbol {
 public:
   NativeFunctionSymbol(NativeSession &Session, SymIndexId Id,
-                       const codeview::ProcSym &Sym);
+                       const codeview::ProcSym &Sym, uint32_t RecordOffset);
 
   ~NativeFunctionSymbol() override;
 
@@ -33,9 +33,12 @@ public:
   uint64_t getLength() const override;
   uint32_t getRelativeVirtualAddress() const override;
   uint64_t getVirtualAddress() const override;
+  std::unique_ptr<IPDBEnumSymbols>
+  findInlineFramesByVA(uint64_t VA) const override;
 
 protected:
   const codeview::ProcSym Sym;
+  uint32_t RecordOffset = 0;
 };
 
 } // namespace pdb

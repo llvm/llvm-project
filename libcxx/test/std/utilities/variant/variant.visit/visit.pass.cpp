@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -10,10 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 // Throwing bad_variant_access is supported starting in macosx10.13
-// XFAIL: with_system_cxx_lib=macosx10.12 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.11 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.10 && !no-exceptions
-// XFAIL: with_system_cxx_lib=macosx10.9 && !no-exceptions
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
 
 // <variant>
 // template <class Visitor, class... Variants>
@@ -27,69 +23,7 @@
 #include <variant>
 
 #include "test_macros.h"
-#include "type_id.h"
 #include "variant_test_helpers.h"
-
-enum CallType : unsigned {
-  CT_None,
-  CT_NonConst = 1,
-  CT_Const = 2,
-  CT_LValue = 4,
-  CT_RValue = 8
-};
-
-inline constexpr CallType operator|(CallType LHS, CallType RHS) {
-  return static_cast<CallType>(static_cast<unsigned>(LHS) |
-                               static_cast<unsigned>(RHS));
-}
-
-struct ForwardingCallObject {
-
-  template <class... Args>
-  ForwardingCallObject& operator()(Args&&...) & {
-    set_call<Args &&...>(CT_NonConst | CT_LValue);
-    return *this;
-  }
-
-  template <class... Args>
-  const ForwardingCallObject& operator()(Args&&...) const & {
-    set_call<Args &&...>(CT_Const | CT_LValue);
-    return *this;
-  }
-
-  template <class... Args>
-  ForwardingCallObject&& operator()(Args&&...) && {
-    set_call<Args &&...>(CT_NonConst | CT_RValue);
-    return std::move(*this);
-  }
-
-  template <class... Args>
-  const ForwardingCallObject&& operator()(Args&&...) const && {
-    set_call<Args &&...>(CT_Const | CT_RValue);
-    return std::move(*this);
-  }
-
-  template <class... Args> static void set_call(CallType type) {
-    assert(last_call_type == CT_None);
-    assert(last_call_args == nullptr);
-    last_call_type = type;
-    last_call_args = std::addressof(makeArgumentID<Args...>());
-  }
-
-  template <class... Args> static bool check_call(CallType type) {
-    bool result = last_call_type == type && last_call_args &&
-                  *last_call_args == makeArgumentID<Args...>();
-    last_call_type = CT_None;
-    last_call_args = nullptr;
-    return result;
-  }
-
-  static CallType last_call_type;
-  static const TypeID *last_call_args;
-};
-
-CallType ForwardingCallObject::last_call_type = CT_None;
-const TypeID *ForwardingCallObject::last_call_args = nullptr;
 
 void test_call_operator_forwarding() {
   using Fn = ForwardingCallObject;
@@ -296,18 +230,6 @@ void test_return_type() {
   }
 }
 
-struct ReturnFirst {
-  template <class... Args> constexpr int operator()(int f, Args &&...) const {
-    return f;
-  }
-};
-
-struct ReturnArity {
-  template <class... Args> constexpr int operator()(Args &&...) const {
-    return sizeof...(Args);
-  }
-};
-
 void test_constexpr() {
   constexpr ReturnFirst obj{};
   constexpr ReturnArity aobj{};
@@ -412,7 +334,7 @@ void test_exceptions() {
 #endif
 }
 
-// See https://bugs.llvm.org/show_bug.cgi?id=31916
+// See https://llvm.org/PR31916
 void test_caller_accepts_nonconst() {
   struct A {};
   struct Visitor {
@@ -422,6 +344,86 @@ void test_caller_accepts_nonconst() {
   std::visit(Visitor{}, v);
 }
 
+struct MyVariant : std::variant<short, long, float> {};
+
+namespace std {
+template <size_t Index>
+void get(const MyVariant&) {
+  assert(false);
+}
+} // namespace std
+
+void test_derived_from_variant() {
+  auto v1 = MyVariant{42};
+  const auto cv1 = MyVariant{142};
+  std::visit([](auto x) { assert(x == 42); }, v1);
+  std::visit([](auto x) { assert(x == 142); }, cv1);
+  std::visit([](auto x) { assert(x == -1.25f); }, MyVariant{-1.25f});
+  std::visit([](auto x) { assert(x == 42); }, std::move(v1));
+  std::visit([](auto x) { assert(x == 142); }, std::move(cv1));
+
+  // Check that visit does not take index nor valueless_by_exception members from the base class.
+  struct EvilVariantBase {
+    int index;
+    char valueless_by_exception;
+  };
+
+  struct EvilVariant1 : std::variant<int, long, double>,
+                        std::tuple<int>,
+                        EvilVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant1{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant1{12.3});
+
+  // Check that visit unambiguously picks the variant, even if the other base has __impl member.
+  struct ImplVariantBase {
+    struct Callable {
+      bool operator()();
+    };
+
+    Callable __impl;
+  };
+
+  struct EvilVariant2 : std::variant<int, long, double>, ImplVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant2{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant2{12.3});
+}
+
+struct any_visitor {
+  template <typename T>
+  void operator()(const T&) const {}
+};
+
+template <typename T, typename = decltype(std::visit(
+                          std::declval<any_visitor&>(), std::declval<T>()))>
+constexpr bool has_visit(int) {
+  return true;
+}
+
+template <typename T>
+constexpr bool has_visit(...) {
+  return false;
+}
+
+void test_sfinae() {
+  struct BadVariant : std::variant<short>, std::variant<long, float> {};
+  struct BadVariant2 : private std::variant<long, float> {};
+  struct GoodVariant : std::variant<long, float> {};
+  struct GoodVariant2 : GoodVariant {};
+
+  static_assert(!has_visit<int>(0));
+  static_assert(!has_visit<BadVariant>(0));
+  static_assert(!has_visit<BadVariant2>(0));
+  static_assert(has_visit<std::variant<int>>(0));
+  static_assert(has_visit<GoodVariant>(0));
+  static_assert(has_visit<GoodVariant2>(0));
+}
+
 int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
@@ -429,6 +431,8 @@ int main(int, char**) {
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
+  test_derived_from_variant();
+  test_sfinae();
 
   return 0;
 }

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_DIVERGENCEANALYSIS_H
+#define LLVM_ANALYSIS_DIVERGENCEANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/SyncDependenceAnalysis.h"
@@ -34,7 +34,7 @@ class TargetTransformInfo;
 /// This analysis propagates divergence in a data-parallel context from sources
 /// of divergence to all users. It requires reducible CFGs. All assignments
 /// should be in SSA form.
-class DivergenceAnalysis {
+class DivergenceAnalysisImpl {
 public:
   /// \brief This instance will analyze the whole function \p F or the loop \p
   /// RegionLoop.
@@ -43,9 +43,9 @@ public:
   /// Otherwise the whole function is analyzed.
   /// \param IsLCSSAForm whether the analysis may assume that the IR in the
   /// region in in LCSSA form.
-  DivergenceAnalysis(const Function &F, const Loop *RegionLoop,
-                     const DominatorTree &DT, const LoopInfo &LI,
-                     SyncDependenceAnalysis &SDA, bool IsLCSSAForm);
+  DivergenceAnalysisImpl(const Function &F, const Loop *RegionLoop,
+                         const DominatorTree &DT, const LoopInfo &LI,
+                         SyncDependenceAnalysis &SDA, bool IsLCSSAForm);
 
   /// \brief The loop that defines the analyzed region (if any).
   const Loop *getRegionLoop() const { return RegionLoop; }
@@ -59,8 +59,10 @@ public:
   /// \brief Mark \p UniVal as a value that is always uniform.
   void addUniformOverride(const Value &UniVal);
 
-  /// \brief Mark \p DivVal as a value that is always divergent.
-  void markDivergent(const Value &DivVal);
+  /// \brief Mark \p DivVal as a value that is always divergent. Will not do so
+  /// if `isAlwaysUniform(DivVal)`.
+  /// \returns Whether the tracked divergence state of \p DivVal changed.
+  bool markDivergent(const Value &DivVal);
 
   /// \brief Propagate divergence to all instructions in the region.
   /// Divergence is seeded by calls to \p markDivergent.
@@ -76,73 +78,39 @@ public:
   /// \brief Whether \p Val is divergent at its definition.
   bool isDivergent(const Value &Val) const;
 
-  /// \brief Whether \p U is divergent. Uses of a uniform value can be divergent.
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be
+  /// divergent.
   bool isDivergentUse(const Use &U) const;
 
-  void print(raw_ostream &OS, const Module *) const;
-
 private:
-  bool updateTerminator(const Instruction &Term) const;
-  bool updatePHINode(const PHINode &Phi) const;
+  /// \brief Mark \p Term as divergent and push all Instructions that become
+  /// divergent as a result on the worklist.
+  void analyzeControlDivergence(const Instruction &Term);
+  /// \brief Mark all phi nodes in \p JoinBlock as divergent and push them on
+  /// the worklist.
+  void taintAndPushPhiNodes(const BasicBlock &JoinBlock);
 
-  /// \brief Computes whether \p Inst is divergent based on the
-  /// divergence of its operands.
-  ///
-  /// \returns Whether \p Inst is divergent.
-  ///
-  /// This should only be called for non-phi, non-terminator instructions.
-  bool updateNormalInstruction(const Instruction &Inst) const;
+  /// \brief Identify all Instructions that become divergent because \p DivExit
+  /// is a divergent loop exit of \p DivLoop. Mark those instructions as
+  /// divergent and push them on the worklist.
+  void propagateLoopExitDivergence(const BasicBlock &DivExit,
+                                   const Loop &DivLoop);
 
-  /// \brief Mark users of live-out users as divergent.
-  ///
-  /// \param LoopHeader the header of the divergent loop.
-  ///
-  /// Marks all users of live-out values of the loop headed by \p LoopHeader
-  /// as divergent and puts them on the worklist.
-  void taintLoopLiveOuts(const BasicBlock &LoopHeader);
+  /// \brief Internal implementation function for propagateLoopExitDivergence.
+  void analyzeLoopExitDivergence(const BasicBlock &DivExit,
+                                 const Loop &OuterDivLoop);
 
-  /// \brief Push all users of \p Val (in the region) to the worklist
+  /// \brief Mark all instruction as divergent that use a value defined in \p
+  /// OuterDivLoop. Push their users on the worklist.
+  void analyzeTemporalDivergence(const Instruction &I,
+                                 const Loop &OuterDivLoop);
+
+  /// \brief Push all users of \p Val (in the region) to the worklist.
   void pushUsers(const Value &I);
-
-  /// \brief Push all phi nodes in @block to the worklist
-  void pushPHINodes(const BasicBlock &Block);
-
-  /// \brief Mark \p Block as join divergent
-  ///
-  /// A block is join divergent if two threads may reach it from different
-  /// incoming blocks at the same time.
-  void markBlockJoinDivergent(const BasicBlock &Block) {
-    DivergentJoinBlocks.insert(&Block);
-  }
 
   /// \brief Whether \p Val is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BasicBlock &ObservingBlock,
                            const Value &Val) const;
-
-  /// \brief Whether \p Block is join divergent
-  ///
-  /// (see markBlockJoinDivergent).
-  bool isJoinDivergent(const BasicBlock &Block) const {
-    return DivergentJoinBlocks.find(&Block) != DivergentJoinBlocks.end();
-  }
-
-  /// \brief Propagate control-induced divergence to users (phi nodes and
-  /// instructions).
-  //
-  // \param JoinBlock is a divergent loop exit or join point of two disjoint
-  // paths.
-  // \returns Whether \p JoinBlock is a divergent loop exit of \p TermLoop.
-  bool propagateJoinDivergence(const BasicBlock &JoinBlock,
-                               const Loop *TermLoop);
-
-  /// \brief Propagate induced value divergence due to control divergence in \p
-  /// Term.
-  void propagateBranchDivergence(const Instruction &Term);
-
-  /// \brief Propagate divergent caused by a divergent loop exit.
-  ///
-  /// \param ExitingLoop is a divergent loop.
-  void propagateLoopDivergence(const Loop &ExitingLoop);
 
 private:
   const Function &F;
@@ -165,9 +133,6 @@ private:
   // Set of known-uniform values.
   DenseSet<const Value *> UniformOverrides;
 
-  // Blocks with joining divergent control from different predecessors.
-  DenseSet<const BasicBlock *> DivergentJoinBlocks;
-
   // Detected/marked divergent values.
   DenseSet<const Value *> DivergentValues;
 
@@ -175,28 +140,39 @@ private:
   std::vector<const Instruction *> Worklist;
 };
 
-/// \brief Divergence analysis frontend for GPU kernels.
-class GPUDivergenceAnalysis {
-  SyncDependenceAnalysis SDA;
-  DivergenceAnalysis DA;
+class DivergenceInfo {
+  Function &F;
+
+  // If the function contains an irreducible region the divergence
+  // analysis can run indefinitely. We set ContainsIrreducible and no
+  // analysis is actually performed on the function. All values in
+  // this function are conservatively reported as divergent instead.
+  bool ContainsIrreducible;
+  std::unique_ptr<SyncDependenceAnalysis> SDA;
+  std::unique_ptr<DivergenceAnalysisImpl> DA;
 
 public:
-  /// Runs the divergence analysis on @F, a GPU kernel
-  GPUDivergenceAnalysis(Function &F, const DominatorTree &DT,
-                        const PostDominatorTree &PDT, const LoopInfo &LI,
-                        const TargetTransformInfo &TTI);
+  DivergenceInfo(Function &F, const DominatorTree &DT,
+                 const PostDominatorTree &PDT, const LoopInfo &LI,
+                 const TargetTransformInfo &TTI, bool KnownReducible);
 
   /// Whether any divergence was detected.
-  bool hasDivergence() const { return DA.hasDetectedDivergence(); }
+  bool hasDivergence() const {
+    return ContainsIrreducible || DA->hasDetectedDivergence();
+  }
 
   /// The GPU kernel this analysis result is for
-  const Function &getFunction() const { return DA.getFunction(); }
+  const Function &getFunction() const { return F; }
 
   /// Whether \p V is divergent at its definition.
-  bool isDivergent(const Value &V) const;
+  bool isDivergent(const Value &V) const {
+    return ContainsIrreducible || DA->isDivergent(V);
+  }
 
   /// Whether \p U is divergent. Uses of a uniform value can be divergent.
-  bool isDivergentUse(const Use &U) const;
+  bool isDivergentUse(const Use &U) const {
+    return ContainsIrreducible || DA->isDivergentUse(U);
+  }
 
   /// Whether \p V is uniform/non-divergent.
   bool isUniform(const Value &V) const { return !isDivergent(V); }
@@ -204,11 +180,32 @@ public:
   /// Whether \p U is uniform/non-divergent. Uses of a uniform value can be
   /// divergent.
   bool isUniformUse(const Use &U) const { return !isDivergentUse(U); }
-
-  /// Print all divergent values in the kernel.
-  void print(raw_ostream &OS, const Module *) const;
 };
+
+/// \brief Divergence analysis frontend for GPU kernels.
+class DivergenceAnalysis : public AnalysisInfoMixin<DivergenceAnalysis> {
+  friend AnalysisInfoMixin<DivergenceAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = DivergenceInfo;
+
+  /// Runs the divergence analysis on @F, a GPU kernel
+  Result run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// Printer pass to dump divergence analysis results.
+struct DivergenceAnalysisPrinterPass
+    : public PassInfoMixin<DivergenceAnalysisPrinterPass> {
+  DivergenceAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+private:
+  raw_ostream &OS;
+}; // class DivergenceAnalysisPrinterPass
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_DIVERGENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_DIVERGENCEANALYSIS_H

@@ -10,83 +10,92 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 
-class SocketTest : public testing::Test {
-public:
-  SubsystemRAII<Socket> subsystems;
+struct SocketTestParams {
+  bool is_ipv6;
+  std::string localhost_ip;
 };
 
-TEST_F(SocketTest, DecodeHostAndPort) {
+class SocketTest : public testing::TestWithParam<SocketTestParams> {
+public:
+  SubsystemRAII<Socket> subsystems;
+
+protected:
+  bool HostSupportsProtocol() const {
+    if (GetParam().is_ipv6)
+      return HostSupportsIPv6();
+    return HostSupportsIPv4();
+  }
+};
+
+TEST_P(SocketTest, DecodeHostAndPort) {
   std::string host_str;
   std::string port_str;
-  int32_t port;
-  Status error;
-  EXPECT_TRUE(Socket::DecodeHostAndPort("localhost:1138", host_str, port_str,
-                                        port, &error));
+  uint16_t port;
+
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("localhost:1138", host_str, port_str, port),
+      llvm::Succeeded());
   EXPECT_STREQ("localhost", host_str.c_str());
   EXPECT_STREQ("1138", port_str.c_str());
   EXPECT_EQ(1138, port);
-  EXPECT_TRUE(error.Success());
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:65536", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:65536'",
-               error.AsCString());
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("google.com:65536", host_str, port_str, port),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:-1138", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:-1138'",
-               error.AsCString());
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("google.com:-1138", host_str, port_str, port),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:-1138'"));
 
-  EXPECT_FALSE(Socket::DecodeHostAndPort("google.com:65536", host_str, port_str,
-                                         port, &error));
-  EXPECT_TRUE(error.Fail());
-  EXPECT_STREQ("invalid host:port specification: 'google.com:65536'",
-               error.AsCString());
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("google.com:65536", host_str, port_str, port),
+      llvm::FailedWithMessage(
+          "invalid host:port specification: 'google.com:65536'"));
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("12345", host_str, port_str, port, &error));
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("12345", host_str, port_str, port),
+      llvm::Succeeded());
   EXPECT_STREQ("", host_str.c_str());
   EXPECT_STREQ("12345", port_str.c_str());
   EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("*:0", host_str, port_str, port, &error));
+  EXPECT_THAT_ERROR(Socket::DecodeHostAndPort("*:0", host_str, port_str, port),
+                    llvm::Succeeded());
   EXPECT_STREQ("*", host_str.c_str());
   EXPECT_STREQ("0", port_str.c_str());
   EXPECT_EQ(0, port);
-  EXPECT_TRUE(error.Success());
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("*:65535", host_str, port_str, port, &error));
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("*:65535", host_str, port_str, port),
+      llvm::Succeeded());
   EXPECT_STREQ("*", host_str.c_str());
   EXPECT_STREQ("65535", port_str.c_str());
   EXPECT_EQ(65535, port);
-  EXPECT_TRUE(error.Success());
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port, &error));
+  EXPECT_THAT_ERROR(
+      Socket::DecodeHostAndPort("[::1]:12345", host_str, port_str, port),
+      llvm::Succeeded());
   EXPECT_STREQ("::1", host_str.c_str());
   EXPECT_STREQ("12345", port_str.c_str());
   EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
 
-  EXPECT_TRUE(
-      Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345", host_str, port_str, port, &error));
+  EXPECT_THAT_ERROR(Socket::DecodeHostAndPort("[abcd:12fg:AF58::1]:12345",
+                                              host_str, port_str, port),
+                    llvm::Succeeded());
   EXPECT_STREQ("abcd:12fg:AF58::1", host_str.c_str());
   EXPECT_STREQ("12345", port_str.c_str());
   EXPECT_EQ(12345, port);
-  EXPECT_TRUE(error.Success());
 }
 
 #if LLDB_ENABLE_POSIX
-TEST_F(SocketTest, DomainListenConnectAccept) {
+TEST_P(SocketTest, DomainListenConnectAccept) {
   llvm::SmallString<64> Path;
   std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
@@ -102,18 +111,22 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
 }
 #endif
 
-TEST_F(SocketTest, TCPListen0ConnectAccept) {
+TEST_P(SocketTest, TCPListen0ConnectAccept) {
+  if (!HostSupportsProtocol())
+    return;
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
-  CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
+  CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
+                            &socket_b_up);
 }
 
-TEST_F(SocketTest, TCPGetAddress) {
+TEST_P(SocketTest, TCPGetAddress) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
-  if (!HostSupportsIPv4())
+  if (!HostSupportsProtocol())
     return;
-  CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
+  CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
+                            &socket_b_up);
 
   EXPECT_EQ(socket_a_up->GetLocalPortNumber(),
             socket_b_up->GetRemotePortNumber());
@@ -121,11 +134,16 @@ TEST_F(SocketTest, TCPGetAddress) {
             socket_a_up->GetRemotePortNumber());
   EXPECT_NE(socket_a_up->GetLocalPortNumber(),
             socket_b_up->GetLocalPortNumber());
-  EXPECT_STREQ("127.0.0.1", socket_a_up->GetRemoteIPAddress().c_str());
-  EXPECT_STREQ("127.0.0.1", socket_b_up->GetRemoteIPAddress().c_str());
+  EXPECT_STREQ(GetParam().localhost_ip.c_str(),
+               socket_a_up->GetRemoteIPAddress().c_str());
+  EXPECT_STREQ(GetParam().localhost_ip.c_str(),
+               socket_b_up->GetRemoteIPAddress().c_str());
 }
 
-TEST_F(SocketTest, UDPConnect) {
+TEST_P(SocketTest, UDPConnect) {
+  // UDPSocket::Connect() creates sockets with AF_INET (IPv4).
+  if (!HostSupportsIPv4())
+    return;
   llvm::Expected<std::unique_ptr<UDPSocket>> socket =
       UDPSocket::Connect("127.0.0.1:0", /*child_processes_inherit=*/false);
 
@@ -133,7 +151,9 @@ TEST_F(SocketTest, UDPConnect) {
   EXPECT_TRUE(socket.get()->IsValid());
 }
 
-TEST_F(SocketTest, TCPListen0GetPort) {
+TEST_P(SocketTest, TCPListen0GetPort) {
+  if (!HostSupportsIPv4())
+    return;
   Predicate<uint16_t> port_predicate;
   port_predicate.SetValue(0, eBroadcastNever);
   llvm::Expected<std::unique_ptr<TCPSocket>> sock =
@@ -143,12 +163,13 @@ TEST_F(SocketTest, TCPListen0GetPort) {
   EXPECT_NE(sock.get()->GetLocalPortNumber(), 0);
 }
 
-TEST_F(SocketTest, TCPGetConnectURI) {
+TEST_P(SocketTest, TCPGetConnectURI) {
   std::unique_ptr<TCPSocket> socket_a_up;
   std::unique_ptr<TCPSocket> socket_b_up;
-  if (!HostSupportsIPv4())
+  if (!HostSupportsProtocol())
     return;
-  CreateTCPConnectedSockets("127.0.0.1", &socket_a_up, &socket_b_up);
+  CreateTCPConnectedSockets(GetParam().localhost_ip, &socket_a_up,
+                            &socket_b_up);
 
   llvm::StringRef scheme;
   llvm::StringRef hostname;
@@ -160,7 +181,8 @@ TEST_F(SocketTest, TCPGetConnectURI) {
   EXPECT_EQ(port, socket_a_up->GetRemotePortNumber());
 }
 
-TEST_F(SocketTest, UDPGetConnectURI) {
+TEST_P(SocketTest, UDPGetConnectURI) {
+  // UDPSocket::Connect() creates sockets with AF_INET (IPv4).
   if (!HostSupportsIPv4())
     return;
   llvm::Expected<std::unique_ptr<UDPSocket>> socket =
@@ -177,7 +199,7 @@ TEST_F(SocketTest, UDPGetConnectURI) {
 }
 
 #if LLDB_ENABLE_POSIX
-TEST_F(SocketTest, DomainGetConnectURI) {
+TEST_P(SocketTest, DomainGetConnectURI) {
   llvm::SmallString<64> domain_path;
   std::error_code EC =
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
@@ -200,5 +222,17 @@ TEST_F(SocketTest, DomainGetConnectURI) {
   EXPECT_TRUE(UriParser::Parse(uri, scheme, hostname, port, path));
   EXPECT_EQ(scheme, "unix-connect");
   EXPECT_EQ(path, domain_path);
+
+  EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
 #endif
+
+INSTANTIATE_TEST_SUITE_P(
+    SocketTests, SocketTest,
+    testing::Values(SocketTestParams{/*is_ipv6=*/false,
+                                     /*localhost_ip=*/"127.0.0.1"},
+                    SocketTestParams{/*is_ipv6=*/true, /*localhost_ip=*/"::1"}),
+    // Prints "SocketTests/SocketTest.DecodeHostAndPort/ipv4" etc. in test logs.
+    [](const testing::TestParamInfo<SocketTestParams> &info) {
+      return info.param.is_ipv6 ? "ipv6" : "ipv4";
+    });

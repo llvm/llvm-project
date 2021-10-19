@@ -164,8 +164,6 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM,
 }
 }
 
-const unsigned zero_reg = 0;
-
 #define GET_GLOBALISEL_IMPL
 #include "ARMGenGlobalISel.inc"
 #undef GET_GLOBALISEL_IMPL
@@ -1097,24 +1095,6 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
-
-    if (ValSize == 1 && NewOpc == Opcodes.STORE8) {
-      // Before storing a 1-bit value, make sure to clear out any unneeded bits.
-      Register OriginalValue = I.getOperand(0).getReg();
-
-      Register ValueToStore = MRI.createVirtualRegister(&ARM::GPRRegClass);
-      I.getOperand(0).setReg(ValueToStore);
-
-      auto InsertBefore = I.getIterator();
-      auto AndI = BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(Opcodes.AND))
-        .addDef(ValueToStore)
-        .addUse(OriginalValue)
-        .addImm(1)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
-      if (!constrainSelectedInstRegOperands(*AndI, TII, TRI, RBI))
-        return false;
-    }
 
     I.setDesc(TII.get(NewOpc));
 

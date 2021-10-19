@@ -64,17 +64,17 @@ body: |
     liveins: $vgpr0, $vgpr1, $vgpr2
 
     ; CHECK-LABEL: name: test_sadde_s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[C]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK: [[SADDE:%[0-9]+]]:_(s16), [[SADDE1:%[0-9]+]]:_(s1) = G_SADDE [[TRUNC1]], [[SADDE]], [[ICMP]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SADDE]](s16)
-    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[SADDE1]](s1)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG %13, 16
+    ; CHECK: [[UADDE:%[0-9]+]]:_(s32), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[SEXT_INREG]], [[SEXT_INREG1]], [[ICMP]]
+    ; CHECK: [[SEXT_INREG2:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UADDE]], 16
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UADDE]](s32), [[SEXT_INREG2]]
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[ICMP1]](s1)
+    ; CHECK: $vgpr0 = COPY [[UADDE]](s32)
     ; CHECK: $vgpr1 = COPY [[ZEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

@@ -1,15 +1,21 @@
-// -*- C++ -*-
-//===------------------------------ span ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: libcpp-has-no-incomplete-ranges
+
+// AppleClang 12.0.0 doesn't fully support ranges/concepts
+// XFAIL: apple-clang-12.0.0
 
 // <span>
 
+//   template<class It, class EndOrSize>
+//     span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
+//
 //   template<class T, size_t N>
 //     span(T (&)[N]) -> span<T, N>;
 //
@@ -19,70 +25,94 @@
 //   template<class T, size_t N>
 //     span(const array<T, N>&) -> span<const T, N>;
 //
-//   template<class Container>
-//     span(Container&) -> span<typename Container::value_type>;
-//
-//   template<class Container>
-//     span(const Container&) -> span<const typename Container::value_type>;
-
+//   template<class R>
+//     span(R&&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
 
 
 #include <span>
-#include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <string>
-#include <type_traits>
 
 #include "test_macros.h"
 
-// std::array is explicitly allowed to be initialized with A a = { init-list };.
-// Disable the missing braces warning for this reason.
-#include "disable_missing_braces_warning.h"
+void test_iterator_sentinel() {
+  int arr[] = {1, 2, 3};
+  {
+  std::span s{std::begin(arr), std::end(arr)};
+  ASSERT_SAME_TYPE(decltype(s), std::span<int>);
+  assert(s.size() == std::size(arr));
+  assert(s.data() == std::data(arr));
+  }
+  {
+  std::span s{std::begin(arr), 3};
+  ASSERT_SAME_TYPE(decltype(s), std::span<int>);
+  assert(s.size() == std::size(arr));
+  assert(s.data() == std::data(arr));
+  }
+}
 
-int main(int, char**)
-{
+void test_c_array() {
     {
-    int arr[] = {1,2,3};
+    int arr[] = {1, 2, 3};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<int, 3>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
     }
 
     {
+    const int arr[] = {1,2,3};
+    std::span s{arr};
+    ASSERT_SAME_TYPE(decltype(s), std::span<const int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
+    }
+}
+
+void test_std_array() {
+    {
     std::array<double, 4> arr = {1.0, 2.0, 3.0, 4.0};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<double, 4>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<double, 4>);
+    assert(s.size() == arr.size());
+    assert(s.data() == arr.data());
     }
 
     {
     const std::array<long, 5> arr = {4, 5, 6, 7, 8};
     std::span s{arr};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<const long, 5>);
-    assert((std::equal(std::begin(arr), std::end(arr), s.begin(), s.end())));
+    ASSERT_SAME_TYPE(decltype(s), std::span<const long, 5>);
+    assert(s.size() == arr.size());
+    assert(s.data() == arr.data());
     }
+}
 
+void test_range_std_container() {
     {
     std::string str{"ABCDE"};
     std::span s{str};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<char>);
-    assert((size_t)s.size() == str.size());
-    assert((std::equal(s.begin(), s.end(), std::begin(s), std::end(s))));
+    ASSERT_SAME_TYPE(decltype(s), std::span<char>);
+    assert(s.size() == str.size());
+    assert(s.data() == str.data());
     }
 
     {
     const std::string str{"QWERTYUIOP"};
     std::span s{str};
-    using S = decltype(s);
-    ASSERT_SAME_TYPE(S, std::span<const char>);
-    assert((size_t)s.size() == str.size());
-    assert((std::equal(s.begin(), s.end(), std::begin(s), std::end(s))));
+    ASSERT_SAME_TYPE(decltype(s), std::span<const char>);
+    assert(s.size() == str.size());
+    assert(s.data() == str.data());
     }
+}
+
+int main(int, char**)
+{
+  test_iterator_sentinel();
+  test_c_array();
+  test_std_array();
+  test_range_std_container();
 
   return 0;
 }

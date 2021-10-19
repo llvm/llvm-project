@@ -20,9 +20,7 @@ class ObjCModulesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.m', '// Set breakpoint 0 here.')
 
-    @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
-    @skipIfReproducer # FIXME: Unexpected packet during (active) replay
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -78,3 +76,5 @@ class ObjCModulesTestCase(TestBase):
             "p [NSURL URLWithString:@\"http://lldb.llvm.org\"].scheme",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["http"])
+        # Test that the NULL macro still works with a loaded module.
+        self.expect_expr("int *i = NULL; i == NULL", result_value="true")

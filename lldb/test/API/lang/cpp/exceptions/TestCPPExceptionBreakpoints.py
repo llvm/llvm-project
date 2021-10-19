@@ -24,7 +24,6 @@ class CPPBreakpointTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24538, clang-cl does not support throw or catch")
-    @expectedFailureNetBSD
     def test(self):
         """Test lldb exception breakpoint command for CPP."""
         self.build()
@@ -47,15 +46,15 @@ class CPPBreakpointTestCase(TestBase):
         stopped_threads = []
         stopped_threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, exception_bkpt)
-        self.assertTrue(
-            len(stopped_threads) == 1,
+        self.assertEqual(
+            len(stopped_threads), 1,
             "Stopped at our exception breakpoint.")
         thread = stopped_threads[0]
         # Make sure our throw function is still above us on the stack:
 
         frame_functions = lldbutil.get_function_names(thread)
-        self.assertTrue(
-            frame_functions.count("throws_exception_on_even(int)") == 1,
+        self.assertEqual(
+            frame_functions.count("throws_exception_on_even(int)"), 1,
             "Our throw function is still on the stack.")
 
         # Okay we hit our exception throw breakpoint, now make sure we get our catch breakpoint.
@@ -71,12 +70,12 @@ class CPPBreakpointTestCase(TestBase):
             thread = stopped_threads[0]
             frame_functions = lldbutil.get_function_names(thread)
 
-        self.assertTrue(
-            frame_functions.count("throws_exception_on_even(int)") == 0,
+        self.assertEqual(
+            frame_functions.count("throws_exception_on_even(int)"), 0,
             "At catch our throw function is off the stack")
-        self.assertTrue(
-            frame_functions.count("intervening_function(int)") == 0,
+        self.assertEqual(
+            frame_functions.count("intervening_function(int)"), 0,
             "At catch our intervening function is off the stack")
-        self.assertTrue(
-            frame_functions.count("catches_exception(int)") == 1,
+        self.assertEqual(
+            frame_functions.count("catches_exception(int)"), 1,
             "At catch our catch function is on the stack")

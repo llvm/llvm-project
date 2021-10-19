@@ -27,7 +27,7 @@ void GIMatchDagInstr::print(raw_ostream &OS) const {
     SmallVector<std::pair<unsigned, StringRef>, 8> ToPrint;
     for (const auto &Assignment : UserAssignedNamesForOperands)
       ToPrint.emplace_back(Assignment.first, Assignment.second);
-    llvm::sort(ToPrint.begin(), ToPrint.end());
+    llvm::sort(ToPrint);
     StringRef Separator = "";
     for (const auto &Assignment : ToPrint) {
       OS << Separator << "$" << Assignment.second << "=getOperand("

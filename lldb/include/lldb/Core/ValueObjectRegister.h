@@ -18,8 +18,8 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-types.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class DataExtractor;
@@ -84,7 +84,7 @@ public:
 
   static lldb::ValueObjectSP Create(ExecutionContextScope *exe_scope,
                                     lldb::RegisterContextSP &reg_ctx_sp,
-                                    uint32_t reg_num);
+                                    const RegisterInfo *reg_info);
 
   llvm::Optional<uint64_t> GetByteSize() override;
 
@@ -119,15 +119,16 @@ protected:
   CompilerType m_compiler_type;
 
 private:
-  void ConstructObject(uint32_t reg_num);
+  void ConstructObject(const RegisterInfo *reg_info);
 
   friend class ValueObjectRegisterSet;
 
   ValueObjectRegister(ValueObject &parent, lldb::RegisterContextSP &reg_ctx_sp,
-                      uint32_t reg_num);
+                      const RegisterInfo *reg_info);
   ValueObjectRegister(ExecutionContextScope *exe_scope,
                       ValueObjectManager &manager,
-                      lldb::RegisterContextSP &reg_ctx_sp, uint32_t reg_num);
+                      lldb::RegisterContextSP &reg_ctx_sp,
+                      const RegisterInfo *reg_info);
 
   // For ValueObject only
   ValueObjectRegister(const ValueObjectRegister &) = delete;

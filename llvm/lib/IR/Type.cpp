@@ -25,8 +25,8 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -49,6 +49,7 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
   case X86_MMXTyID   : return getX86_MMXTy(C);
+  case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
     return nullptr;
@@ -57,6 +58,50 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
 
 bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
+}
+
+bool Type::isOpaquePointerTy() const {
+  if (auto *PTy = dyn_cast<PointerType>(this))
+    return PTy->isOpaque();
+  return false;
+}
+
+const fltSemantics &Type::getFltSemantics() const {
+  switch (getTypeID()) {
+  case HalfTyID: return APFloat::IEEEhalf();
+  case BFloatTyID: return APFloat::BFloat();
+  case FloatTyID: return APFloat::IEEEsingle();
+  case DoubleTyID: return APFloat::IEEEdouble();
+  case X86_FP80TyID: return APFloat::x87DoubleExtended();
+  case FP128TyID: return APFloat::IEEEquad();
+  case PPC_FP128TyID: return APFloat::PPCDoubleDouble();
+  default: llvm_unreachable("Invalid floating type");
+  }
+}
+
+bool Type::isIEEE() const {
+  return APFloat::getZero(getFltSemantics()).isIEEE();
+}
+
+Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
+  Type *Ty;
+  if (&S == &APFloat::IEEEhalf())
+    Ty = Type::getHalfTy(C);
+  else if (&S == &APFloat::BFloat())
+    Ty = Type::getBFloatTy(C);
+  else if (&S == &APFloat::IEEEsingle())
+    Ty = Type::getFloatTy(C);
+  else if (&S == &APFloat::IEEEdouble())
+    Ty = Type::getDoubleTy(C);
+  else if (&S == &APFloat::x87DoubleExtended())
+    Ty = Type::getX86_FP80Ty(C);
+  else if (&S == &APFloat::IEEEquad())
+    Ty = Type::getFP128Ty(C);
+  else {
+    assert(&S == &APFloat::PPCDoubleDouble() && "Unknown FP format");
+    Ty = Type::getPPC_FP128Ty(C);
+  }
+  return Ty;
 }
 
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
@@ -79,6 +124,14 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
     return true;
   if ((isX86_MMXTy() && isa<FixedVectorType>(Ty)) &&
       Ty->getPrimitiveSizeInBits().getFixedSize() == 64)
+    return true;
+
+  //  8192-bit fixed width vector types can be losslessly converted to x86amx.
+  if (((isa<FixedVectorType>(this)) && Ty->isX86_AMXTy()) &&
+      getPrimitiveSizeInBits().getFixedSize() == 8192)
+    return true;
+  if ((isX86_AMXTy() && isa<FixedVectorType>(Ty)) &&
+      Ty->getPrimitiveSizeInBits().getFixedSize() == 8192)
     return true;
 
   // At this point we have only various mismatches of the first class types
@@ -120,6 +173,7 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::FP128TyID: return TypeSize::Fixed(128);
   case Type::PPC_FP128TyID: return TypeSize::Fixed(128);
   case Type::X86_MMXTyID: return TypeSize::Fixed(64);
+  case Type::X86_AMXTyID: return TypeSize::Fixed(8192);
   case Type::IntegerTyID:
     return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
@@ -179,6 +233,7 @@ Type *Type::getX86_FP80Ty(LLVMContext &C) { return &C.pImpl->X86_FP80Ty; }
 Type *Type::getFP128Ty(LLVMContext &C) { return &C.pImpl->FP128Ty; }
 Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
 Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
+Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 
 IntegerType *Type::getInt1Ty(LLVMContext &C) { return &C.pImpl->Int1Ty; }
 IntegerType *Type::getInt8Ty(LLVMContext &C) { return &C.pImpl->Int8Ty; }
@@ -221,6 +276,10 @@ PointerType *Type::getPPC_FP128PtrTy(LLVMContext &C, unsigned AS) {
 
 PointerType *Type::getX86_MMXPtrTy(LLVMContext &C, unsigned AS) {
   return getX86_MMXTy(C)->getPointerTo(AS);
+}
+
+PointerType *Type::getX86_AMXPtrTy(LLVMContext &C, unsigned AS) {
+  return getX86_AMXTy(C)->getPointerTo(AS);
 }
 
 PointerType *Type::getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS) {
@@ -275,14 +334,7 @@ IntegerType *IntegerType::get(LLVMContext &C, unsigned NumBits) {
   return Entry;
 }
 
-bool IntegerType::isPowerOf2ByteWidth() const {
-  unsigned BitWidth = getBitWidth();
-  return (BitWidth > 7) && isPowerOf2_32(BitWidth);
-}
-
-APInt IntegerType::getMask() const {
-  return APInt::getAllOnesValue(getBitWidth());
-}
+APInt IntegerType::getMask() const { return APInt::getAllOnes(getBitWidth()); }
 
 //===----------------------------------------------------------------------===//
 //                       FunctionType Implementation
@@ -378,6 +430,18 @@ StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
   }
 
   return ST;
+}
+
+bool StructType::containsScalableVectorType() const {
+  for (Type *Ty : elements()) {
+    if (isa<ScalableVectorType>(Ty))
+      return true;
+    if (auto *STy = dyn_cast<StructType>(Ty))
+      if (STy->containsScalableVectorType())
+        return true;
+  }
+
+  return false;
 }
 
 void StructType::setBody(ArrayRef<Type*> Elements, bool isPacked) {
@@ -499,9 +563,14 @@ bool StructType::isSized(SmallPtrSetImpl<Type*> *Visited) const {
   // Okay, our struct is sized if all of the elements are, but if one of the
   // elements is opaque, the struct isn't sized *yet*, but may become sized in
   // the future, so just bail out without caching.
-  for (element_iterator I = element_begin(), E = element_end(); I != E; ++I)
-    if (!(*I)->isSized(Visited))
+  for (Type *Ty : elements()) {
+    // If the struct contains a scalable vector type, don't consider it sized.
+    // This prevents it from being used in loads/stores/allocas/GEPs.
+    if (isa<ScalableVectorType>(Ty))
       return false;
+    if (!Ty->isSized(Visited))
+      return false;
+  }
 
   // Here we cheat a bit and cast away const-ness. The goal is to memoize when
   // we find a sized type, as types can only move from opaque to sized, not the
@@ -521,7 +590,7 @@ StringRef StructType::getName() const {
 bool StructType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy();
 }
 
 bool StructType::isLayoutIdentical(StructType *Other) const {
@@ -531,10 +600,6 @@ bool StructType::isLayoutIdentical(StructType *Other) const {
     return false;
 
   return elements() == Other->elements();
-}
-
-StructType *Module::getTypeByName(StringRef Name) const {
-  return getContext().pImpl->NamedStructTypes.lookup(Name);
 }
 
 Type *StructType::getTypeAtIndex(const Value *V) const {
@@ -555,6 +620,10 @@ bool StructType::indexValid(const Value *V) const {
     C = C->getSplatValue();
   const ConstantInt *CU = dyn_cast_or_null<ConstantInt>(C);
   return CU && CU->getZExtValue() < getNumElements();
+}
+
+StructType *StructType::getTypeByName(LLVMContext &C, StringRef Name) {
+  return C.pImpl->NamedStructTypes.lookup(Name);
 }
 
 //===----------------------------------------------------------------------===//
@@ -583,7 +652,8 @@ ArrayType *ArrayType::get(Type *ElementType, uint64_t NumElements) {
 bool ArrayType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
          !ElemTy->isMetadataTy() && !ElemTy->isFunctionTy() &&
-         !ElemTy->isTokenTy() && !isa<ScalableVectorType>(ElemTy);
+         !ElemTy->isTokenTy() && !ElemTy->isX86_AMXTy() &&
+         !isa<ScalableVectorType>(ElemTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -662,12 +732,32 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
 
   LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
 
+  // Automatically convert typed pointers to opaque pointers.
+  if (CImpl->OpaquePointers)
+    return get(EltTy->getContext(), AddressSpace);
+
   // Since AddressSpace #0 is the common case, we special case it.
   PointerType *&Entry = AddressSpace == 0 ? CImpl->PointerTypes[EltTy]
      : CImpl->ASPointerTypes[std::make_pair(EltTy, AddressSpace)];
 
   if (!Entry)
     Entry = new (CImpl->Alloc) PointerType(EltTy, AddressSpace);
+  return Entry;
+}
+
+PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
+  LLVMContextImpl *CImpl = C.pImpl;
+  assert(CImpl->OpaquePointers &&
+         "Can only create opaque pointers in opaque pointer mode");
+
+  // Since AddressSpace #0 is the common case, we special case it.
+  PointerType *&Entry =
+      AddressSpace == 0
+          ? CImpl->PointerTypes[nullptr]
+          : CImpl->ASPointerTypes[std::make_pair(nullptr, AddressSpace)];
+
+  if (!Entry)
+    Entry = new (CImpl->Alloc) PointerType(C, AddressSpace);
   return Entry;
 }
 
@@ -678,13 +768,19 @@ PointerType::PointerType(Type *E, unsigned AddrSpace)
   setSubclassData(AddrSpace);
 }
 
-PointerType *Type::getPointerTo(unsigned addrs) const {
-  return PointerType::get(const_cast<Type*>(this), addrs);
+PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
+    : Type(C, PointerTyID), PointeeTy(nullptr) {
+  setSubclassData(AddrSpace);
+}
+
+PointerType *Type::getPointerTo(unsigned AddrSpace) const {
+  return PointerType::get(const_cast<Type*>(this), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {
   return !ElemTy->isVoidTy() && !ElemTy->isLabelTy() &&
-         !ElemTy->isMetadataTy() && !ElemTy->isTokenTy();
+         !ElemTy->isMetadataTy() && !ElemTy->isTokenTy() &&
+         !ElemTy->isX86_AMXTy();
 }
 
 bool PointerType::isLoadableOrStorableType(Type *ElemTy) {

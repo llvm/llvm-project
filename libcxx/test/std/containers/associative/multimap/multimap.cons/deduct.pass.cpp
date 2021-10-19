@@ -8,7 +8,6 @@
 
 // <map>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
 
 // template<class InputIterator,
 //          class Compare = less<iter-value-type<InputIterator>>,
@@ -131,6 +130,25 @@ int main(int, char**)
     const PC expected_m[] = { {1,1L}, {1,1L}, {2,2L}, {3,1L}, {INT_MAX,1L} };
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 45);
+    }
+
+    {
+    // Examples from LWG3025
+    std::multimap m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::multimap<int, int>);
+
+    std::multimap m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::multimap m1{{std::pair{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m1), std::multimap<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::multimap m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
     }
 
     return 0;

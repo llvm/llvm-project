@@ -24,10 +24,9 @@
 
 # CASE1:      --- !ELF
 # CASE1-NEXT: FileHeader:
-# CASE1-NEXT:   Class:   ELFCLASS64
-# CASE1-NEXT:   Data:    ELFDATA2LSB
-# CASE1-NEXT:   Type:    ET_REL
-# CASE1-NEXT:   Machine: EM_NONE
+# CASE1-NEXT:   Class: ELFCLASS64
+# CASE1-NEXT:   Data:  ELFDATA2LSB
+# CASE1-NEXT:   Type:  ET_REL
 # CASE1-NEXT: Sections:
 # CASE1-NEXT:   - Name: .foo
 # CASE1-NEXT:     Type: SHT_PROGBITS
@@ -85,7 +84,7 @@ Symbols:
 # CASE2:      Relocations:
 # CASE2-NEXT:  - Symbol: 'foo (1)'
 # CASE2-NEXT:    Type:   R_X86_64_PC32
-# CASE2-NEXT:  - Offset: 0x0000000000000004
+# CASE2-NEXT:  - Offset: 0x4
 # CASE2-NEXT:    Symbol: foo
 # CASE2-NEXT:    Type:   R_X86_64_PC32
 # CASE2-NEXT: Symbols:

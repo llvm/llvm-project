@@ -37,8 +37,9 @@ body:             |
     ; GCN-LABEL: name: select_from_same_results_of_unmerge_values
     ; GCN: liveins: $vgpr0
     ; GCN: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-    ; GCN: $vgpr0 = COPY [[UV]](s32)
+    ; GCN: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[DEF]](<2 x s32>)
+    ; GCN: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
+    ; GCN: $vgpr0 = COPY [[TRUNC]](s32)
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
     %0:_(<2 x s32>) = G_IMPLICIT_DEF
     %1:_(s32) = COPY $vgpr0
@@ -48,4 +49,50 @@ body:             |
     $vgpr0 = COPY %5
     SI_RETURN_TO_EPILOG $vgpr0
 
+...
+
+---
+name: select_different_result_from_different_unmerge_values_with_the_same_source
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; GCN-LABEL: name: select_different_result_from_different_unmerge_values_with_the_same_source
+    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
+    ; GCN: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY1]](s32)
+    ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; GCN: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV1]], [[UV7]]
+    ; GCN: $vgpr0 = COPY [[SELECT]](s32)
+    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s1) = G_TRUNC %1:_(s32)
+    %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
+    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
+    %11:_(s32) = G_SELECT %2:_(s1), %4:_, %10:_
+    $vgpr0 = COPY %11
+...
+
+---
+name: select_same_result_from_different_unmerge_values_with_the_same_source
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+
+    ; GCN-LABEL: name: select_same_result_from_different_unmerge_values_with_the_same_source
+    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; GCN: $vgpr0 = COPY [[UV1]](s32)
+    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s32) = COPY $vgpr4
+    %2:_(s1) = G_TRUNC %1:_(s32)
+    %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
+    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
+    %11:_(s32) = G_SELECT %2:_(s1), %4:_, %8:_
+    $vgpr0 = COPY %11
 ...

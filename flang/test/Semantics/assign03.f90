@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
 module m
@@ -42,7 +42,7 @@ contains
 
   ! C1030 and 10.2.2.4 - procedure names as target of procedure pointer
   subroutine s4(s_dummy)
-    procedure(s), intent(in) :: s_dummy
+    procedure(s) :: s_dummy
     procedure(s), pointer :: p, q
     procedure(), pointer :: r
     integer :: i
@@ -79,8 +79,9 @@ contains
     integer function f_impure()
       f_impure = 1
     end
-    elemental integer function f_elemental()
-      f_elemental = 1
+    elemental integer function f_elemental(n)
+      real, value :: n
+      f_elemental = n
     end
   end
 

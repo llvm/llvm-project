@@ -312,14 +312,22 @@ will not be instrumented.
   // for every non-constant array index.
   void __sanitizer_cov_trace_gep(uintptr_t Idx);
 
-Partially disabling instrumentation
-===================================
+Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
+===========================================================================
+
+It is possible to disable coverage instrumentation for select functions via the
+function attribute ``__attribute__((no_sanitize("coverage")))``. Because this
+attribute may not be supported by other compilers, it is recommended to use it
+together with ``__has_feature(coverage_sanitizer)``.
+
+Disabling instrumentation without source modification
+=====================================================
 
 It is sometimes useful to tell SanitizerCoverage to instrument only a subset of the
-functions in your target.
+functions in your target without modifying source files.
 With ``-fsanitize-coverage-allowlist=allowlist.txt``
-and ``-fsanitize-coverage-blocklist=blocklist.txt``,
-you can specify such a subset through the combination of a allowlist and a blocklist.
+and ``-fsanitize-coverage-ignorelist=blocklist.txt``,
+you can specify such a subset through the combination of an allowlist and a blocklist.
 
 SanitizerCoverage will only instrument functions that satisfy two conditions.
 First, the function should belong to a source file with a path that is both allowlisted

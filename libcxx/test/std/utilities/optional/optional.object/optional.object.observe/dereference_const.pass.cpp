@@ -11,10 +11,6 @@
 
 // constexpr const T& optional<T>::operator*() const &;
 
-#ifdef _LIBCPP_DEBUG
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <optional>
 #include <type_traits>
 #include <cassert>
@@ -41,6 +37,7 @@ int main(int, char**)
     {
         const optional<X> opt; ((void)opt);
         ASSERT_SAME_TYPE(decltype(*opt), X const&);
+        LIBCPP_STATIC_ASSERT(noexcept(*opt));
         // ASSERT_NOT_NOEXCEPT(*opt);
         // FIXME: This assertion fails with GCC because it can see that
         // (A) operator*() is constexpr, and
@@ -58,13 +55,6 @@ int main(int, char**)
         constexpr optional<Y> opt(Y{});
         assert((*opt).test() == 2);
     }
-#ifdef _LIBCPP_DEBUG
-    {
-        const optional<X> opt;
-        assert((*opt).test() == 3);
-        assert(false);
-    }
-#endif  // _LIBCPP_DEBUG
 
-  return 0;
+    return 0;
 }

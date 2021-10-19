@@ -1,5 +1,5 @@
-#RUN: llvm-xray stack -per-thread-stacks %s | FileCheck %s --check-prefix PER-THREAD
-#RUN: llvm-xray stack -aggregate-threads %s | FileCheck %s --check-prefix AGGREGATE
+#RUN: llvm-xray stack --per-thread-stacks %s | FileCheck %s --check-prefix PER-THREAD
+#RUN: llvm-xray stack --aggregate-threads %s | FileCheck %s --check-prefix AGGREGATE
 
 ---
 header:

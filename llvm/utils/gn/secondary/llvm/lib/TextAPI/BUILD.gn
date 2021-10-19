@@ -4,16 +4,15 @@ static_library("TextAPI") {
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
   ]
-  include_dirs = [ "." ]
   sources = [
-    "MachO/Architecture.cpp",
-    "MachO/ArchitectureSet.cpp",
-    "MachO/InterfaceFile.cpp",
-    "MachO/PackedVersion.cpp",
-    "MachO/Platform.cpp",
-    "MachO/Symbol.cpp",
-    "MachO/Target.cpp",
-    "MachO/TextStub.cpp",
-    "MachO/TextStubCommon.cpp",
+    "Architecture.cpp",
+    "ArchitectureSet.cpp",
+    "InterfaceFile.cpp",
+    "PackedVersion.cpp",
+    "Platform.cpp",
+    "Symbol.cpp",
+    "Target.cpp",
+    "TextStub.cpp",
+    "TextStubCommon.cpp",
   ]
 }

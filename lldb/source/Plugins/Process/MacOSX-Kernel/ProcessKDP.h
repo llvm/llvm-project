@@ -32,7 +32,8 @@ public:
   // Constructors and Destructors
   static lldb::ProcessSP
   CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                 const lldb_private::FileSpec *crash_file_path);
+                 const lldb_private::FileSpec *crash_file_path,
+                 bool can_connect);
 
   static void Initialize();
 
@@ -84,9 +85,9 @@ public:
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // Process Control
   lldb_private::Status WillResume() override;
@@ -157,8 +158,8 @@ protected:
 
   void Clear();
 
-  bool UpdateThreadList(lldb_private::ThreadList &old_thread_list,
-                        lldb_private::ThreadList &new_thread_list) override;
+  bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
+                          lldb_private::ThreadList &new_thread_list) override;
 
   enum {
     eBroadcastBitAsyncContinue = (1 << 0),

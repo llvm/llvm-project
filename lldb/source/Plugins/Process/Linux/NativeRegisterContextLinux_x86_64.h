@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_x86_64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include <sys/uio.h>
@@ -21,7 +22,9 @@ namespace process_linux {
 
 class NativeProcessLinux;
 
-class NativeRegisterContextLinux_x86_64 : public NativeRegisterContextLinux {
+class NativeRegisterContextLinux_x86_64
+    : public NativeRegisterContextLinux,
+      public NativeRegisterContextDBReg_x86 {
 public:
   NativeRegisterContextLinux_x86_64(const ArchSpec &target_arch,
                                     NativeThreadProtocol &native_thread);
@@ -42,27 +45,9 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  Status IsWatchpointHit(uint32_t wp_index, bool &is_hit) override;
+  llvm::Optional<SyscallData> GetSyscallData() override;
 
-  Status GetWatchpointHitIndex(uint32_t &wp_index,
-                               lldb::addr_t trap_addr) override;
-
-  Status IsWatchpointVacant(uint32_t wp_index, bool &is_vacant) override;
-
-  bool ClearHardwareWatchpoint(uint32_t wp_index) override;
-
-  Status ClearAllHardwareWatchpoints() override;
-
-  Status SetHardwareWatchpointWithIndex(lldb::addr_t addr, size_t size,
-                                        uint32_t watch_flags,
-                                        uint32_t wp_index);
-
-  uint32_t SetHardwareWatchpoint(lldb::addr_t addr, size_t size,
-                                 uint32_t watch_flags) override;
-
-  lldb::addr_t GetWatchpointAddress(uint32_t wp_index) override;
-
-  uint32_t NumSupportedHardwareWatchpoints() override;
+  llvm::Optional<MmapData> GetMmapData() override;
 
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }
@@ -105,6 +90,7 @@ private:
     uint32_t first_mpxc;
     uint32_t last_mpxc;
     uint32_t first_dr;
+    uint32_t last_dr;
     uint32_t gpr_flags;
   };
 
@@ -127,6 +113,8 @@ private:
   bool IsGPR(uint32_t reg_index) const;
 
   bool IsFPR(uint32_t reg_index) const;
+
+  bool IsDR(uint32_t reg_index) const;
 
   bool CopyXSTATEtoYMM(uint32_t reg_index, lldb::ByteOrder byte_order);
 

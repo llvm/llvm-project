@@ -14,34 +14,46 @@
 
 // RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu1.o -DTU1
 // RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu2.o -DTU2
-// RUN: %{cxx} %{flags} %{link_flags} %t.tu1.o %t.tu2.o -o %t.exe
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
+// The functions checked below come from <iostream> & friends
+// UNSUPPORTED: libcpp-has-no-localization
+
 #include <cassert>
-#include <iostream>
+#include <ios>
+#include <istream>
 #include <map>
+#include <ostream>
 #include <string>
 #include <utility>
 
+#include "test_macros.h"
 
 typedef std::ios_base& (FormatFlagFunction)(std::ios_base&);
 typedef std::basic_ostream<char>& (OstreamManipFunction)(std::basic_ostream<char>&);
-typedef std::basic_ostream<wchar_t>& (WOstreamManipFunction)(std::basic_ostream<wchar_t>&);
 typedef std::basic_istream<char>& (IstreamManipFunction)(std::basic_istream<char>&);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+typedef std::basic_ostream<wchar_t>& (WOstreamManipFunction)(std::basic_ostream<wchar_t>&);
 typedef std::basic_istream<wchar_t>& (WIstreamManipFunction)(std::basic_istream<wchar_t>&);
+#endif
 
 extern FormatFlagFunction* get_formatflag_tu1(std::string);
 extern FormatFlagFunction* get_formatflag_tu2(std::string);
 
 extern OstreamManipFunction* get_ostreammanip_tu1(std::string);
 extern OstreamManipFunction* get_ostreammanip_tu2(std::string);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 extern WOstreamManipFunction* get_wostreammanip_tu1(std::string);
 extern WOstreamManipFunction* get_wostreammanip_tu2(std::string);
+#endif
 
 extern IstreamManipFunction* get_istreammanip_tu1(std::string);
 extern IstreamManipFunction* get_istreammanip_tu2(std::string);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 extern WIstreamManipFunction* get_wistreammanip_tu1(std::string);
 extern WIstreamManipFunction* get_wistreammanip_tu2(std::string);
+#endif
 
 #ifdef TU1
 FormatFlagFunction* get_formatflag_tu1(std::string func)
@@ -102,11 +114,12 @@ OstreamManipFunction* get_ostreammanip_tu2(std::string func)
 }
 
 // [ostream.manip] (wchar_t)
-#ifdef TU1
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#   ifdef TU1
 WOstreamManipFunction* get_wostreammanip_tu1(std::string func)
-#else
+#   else
 WOstreamManipFunction* get_wostreammanip_tu2(std::string func)
-#endif
+#   endif
 {
     std::map<std::string, WOstreamManipFunction*> all_funcs;
     typedef std::char_traits<wchar_t> Traits;
@@ -115,6 +128,7 @@ WOstreamManipFunction* get_wostreammanip_tu2(std::string func)
     all_funcs.insert(std::make_pair("flush", &std::flush<wchar_t, Traits>));
     return all_funcs.at(func);
 }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 // [istream.manip] (char)
 #ifdef TU1
@@ -130,21 +144,22 @@ IstreamManipFunction* get_istreammanip_tu2(std::string func)
 }
 
 // [istream.manip] (wchar_t)
-#ifdef TU1
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#   ifdef TU1
 WIstreamManipFunction* get_wistreammanip_tu1(std::string func)
-#else
+#   else
 WIstreamManipFunction* get_wistreammanip_tu2(std::string func)
-#endif
+#   endif
 {
     std::map<std::string, WIstreamManipFunction*> all_funcs;
     typedef std::char_traits<wchar_t> Traits;
     all_funcs.insert(std::make_pair("ws", &std::ws<wchar_t, Traits>));
     return all_funcs.at(func);
 }
-
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 #ifdef TU2
-    int main() {
+    int main(int, char**) {
         assert(get_formatflag_tu1("boolalpha") == get_formatflag_tu2("boolalpha"));
         assert(get_formatflag_tu1("noboolalpha") == get_formatflag_tu2("noboolalpha"));
         assert(get_formatflag_tu1("showbase") == get_formatflag_tu2("showbase"));
@@ -174,12 +189,18 @@ WIstreamManipFunction* get_wistreammanip_tu2(std::string func)
         assert(get_ostreammanip_tu1("ends") == get_ostreammanip_tu2("ends"));
         assert(get_ostreammanip_tu1("flush") == get_ostreammanip_tu2("flush"));
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         assert(get_wostreammanip_tu1("endl") == get_wostreammanip_tu2("endl"));
         assert(get_wostreammanip_tu1("ends") == get_wostreammanip_tu2("ends"));
         assert(get_wostreammanip_tu1("flush") == get_wostreammanip_tu2("flush"));
+#endif
 
         assert(get_istreammanip_tu1("ws") == get_istreammanip_tu2("ws"));
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
         assert(get_wistreammanip_tu1("ws") == get_wistreammanip_tu2("ws"));
+#endif
+
+        return 0;
     }
 #endif

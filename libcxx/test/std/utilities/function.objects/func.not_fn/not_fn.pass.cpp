@@ -17,177 +17,7 @@
 
 #include "test_macros.h"
 #include "type_id.h"
-
-
-///////////////////////////////////////////////////////////////////////////////
-//                       CALLABLE TEST TYPES
-///////////////////////////////////////////////////////////////////////////////
-
-bool returns_true() { return true; }
-
-template <class Ret = bool>
-struct MoveOnlyCallable {
-  MoveOnlyCallable(MoveOnlyCallable const&) = delete;
-  MoveOnlyCallable(MoveOnlyCallable&& other)
-      : value(other.value)
-  { other.value = !other.value; }
-
-  template <class ...Args>
-  Ret operator()(Args&&...) { return Ret{value}; }
-
-  explicit MoveOnlyCallable(bool x) : value(x) {}
-  Ret value;
-};
-
-template <class Ret = bool>
-struct CopyCallable {
-  CopyCallable(CopyCallable const& other)
-      : value(other.value) {}
-
-  CopyCallable(CopyCallable&& other)
-      : value(other.value) { other.value = !other.value; }
-
-  template <class ...Args>
-  Ret operator()(Args&&...) { return Ret{value}; }
-
-  explicit CopyCallable(bool x) : value(x)  {}
-  Ret value;
-};
-
-
-template <class Ret = bool>
-struct ConstCallable {
-  ConstCallable(ConstCallable const& other)
-      : value(other.value) {}
-
-  ConstCallable(ConstCallable&& other)
-      : value(other.value) { other.value = !other.value; }
-
-  template <class ...Args>
-  Ret operator()(Args&&...) const { return Ret{value}; }
-
-  explicit ConstCallable(bool x) : value(x)  {}
-  Ret value;
-};
-
-
-
-template <class Ret = bool>
-struct NoExceptCallable {
-  NoExceptCallable(NoExceptCallable const& other)
-      : value(other.value) {}
-
-  template <class ...Args>
-  Ret operator()(Args&&...) noexcept { return Ret{value}; }
-
-  template <class ...Args>
-  Ret operator()(Args&&...) const noexcept { return Ret{value}; }
-
-  explicit NoExceptCallable(bool x) : value(x)  {}
-  Ret value;
-};
-
-struct CopyAssignableWrapper {
-  CopyAssignableWrapper(CopyAssignableWrapper const&) = default;
-  CopyAssignableWrapper(CopyAssignableWrapper&&) = default;
-  CopyAssignableWrapper& operator=(CopyAssignableWrapper const&) = default;
-  CopyAssignableWrapper& operator=(CopyAssignableWrapper &&) = default;
-
-  template <class ...Args>
-  bool operator()(Args&&...) { return value; }
-
-  explicit CopyAssignableWrapper(bool x) : value(x) {}
-  bool value;
-};
-
-
-struct MoveAssignableWrapper {
-  MoveAssignableWrapper(MoveAssignableWrapper const&) = delete;
-  MoveAssignableWrapper(MoveAssignableWrapper&&) = default;
-  MoveAssignableWrapper& operator=(MoveAssignableWrapper const&) = delete;
-  MoveAssignableWrapper& operator=(MoveAssignableWrapper &&) = default;
-
-  template <class ...Args>
-  bool operator()(Args&&...) { return value; }
-
-  explicit MoveAssignableWrapper(bool x) : value(x) {}
-  bool value;
-};
-
-struct MemFunCallable {
-  explicit MemFunCallable(bool x) : value(x) {}
-
-  bool return_value() const { return value; }
-  bool return_value_nc() { return value; }
-  bool value;
-};
-
-enum CallType : unsigned {
-  CT_None,
-  CT_NonConst = 1,
-  CT_Const = 2,
-  CT_LValue = 4,
-  CT_RValue = 8
-};
-
-inline constexpr CallType operator|(CallType LHS, CallType RHS) {
-    return static_cast<CallType>(static_cast<unsigned>(LHS) | static_cast<unsigned>(RHS));
-}
-
-struct ForwardingCallObject {
-
-  template <class ...Args>
-  bool operator()(Args&&...) & {
-      set_call<Args&&...>(CT_NonConst | CT_LValue);
-      return true;
-  }
-
-  template <class ...Args>
-  bool operator()(Args&&...) const & {
-      set_call<Args&&...>(CT_Const | CT_LValue);
-      return true;
-  }
-
-  // Don't allow the call operator to be invoked as an rvalue.
-  template <class ...Args>
-  bool operator()(Args&&...) && {
-      set_call<Args&&...>(CT_NonConst | CT_RValue);
-      return true;
-  }
-
-  template <class ...Args>
-  bool operator()(Args&&...) const && {
-      set_call<Args&&...>(CT_Const | CT_RValue);
-      return true;
-  }
-
-  template <class ...Args>
-  static void set_call(CallType type) {
-      assert(last_call_type == CT_None);
-      assert(last_call_args == nullptr);
-      last_call_type = type;
-      last_call_args = &makeArgumentID<Args...>();
-  }
-
-  template <class ...Args>
-  static bool check_call(CallType type) {
-      bool result =
-           last_call_type == type
-        && last_call_args
-        && *last_call_args == makeArgumentID<Args...>();
-      last_call_type = CT_None;
-      last_call_args = nullptr;
-      return result;
-  }
-
-  static CallType      last_call_type;
-  static TypeID const* last_call_args;
-};
-
-CallType ForwardingCallObject::last_call_type = CT_None;
-TypeID const* ForwardingCallObject::last_call_args = nullptr;
-
-
+#include "callable_types.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //                        BOOL TEST TYPES
@@ -209,7 +39,7 @@ private:
   friend struct CopyCallable<EvilBool>;
   friend struct NoExceptCallable<EvilBool>;
 
-  explicit EvilBool(bool x) : value(x) {}
+  constexpr explicit EvilBool(bool x) : value(x) {}
   EvilBool& operator=(EvilBool const& other) = default;
 
 public:
@@ -222,14 +52,14 @@ struct ExplicitBool {
   ExplicitBool(ExplicitBool const&) = default;
   ExplicitBool(ExplicitBool&&) = default;
 
-  explicit operator bool() const { return value; }
+  constexpr explicit operator bool() const { return value; }
 
 private:
   friend struct MoveOnlyCallable<ExplicitBool>;
   friend struct CopyCallable<ExplicitBool>;
 
-  explicit ExplicitBool(bool x) : value(x) {}
-  ExplicitBool& operator=(bool x) {
+  constexpr explicit ExplicitBool(bool x) : value(x) {}
+  constexpr ExplicitBool& operator=(bool x) {
       value = x;
       return *this;
   }
@@ -243,7 +73,7 @@ struct NoExceptEvilBool {
   NoExceptEvilBool(NoExceptEvilBool&&) = default;
   NoExceptEvilBool& operator=(NoExceptEvilBool const& other) = default;
 
-  explicit NoExceptEvilBool(bool x) : value(x) {}
+  constexpr explicit NoExceptEvilBool(bool x) : value(x) {}
 
   friend NoExceptEvilBool operator!(NoExceptEvilBool const& other) noexcept {
     return NoExceptEvilBool{!other.value};
@@ -254,7 +84,8 @@ struct NoExceptEvilBool {
 
 
 
-void constructor_tests()
+TEST_CONSTEXPR_CXX20
+bool constructor_tests()
 {
     {
         using T = MoveOnlyCallable<bool>;
@@ -296,6 +127,10 @@ void constructor_tests()
         assert(ret() == false);
         assert(ret2() == true);
         assert(ret2("abc") == true);
+        // initialize not_fn with rvalue
+        auto ret3 = std::not_fn(std::move(value));
+        assert(ret(0) == false);
+        assert(ret3(0) == true);
     }
     {
         using T = CopyAssignableWrapper;
@@ -304,17 +139,10 @@ void constructor_tests()
         using RetT = decltype(std::not_fn(value));
         static_assert(std::is_move_constructible<RetT>::value, "");
         static_assert(std::is_copy_constructible<RetT>::value, "");
-        LIBCPP_STATIC_ASSERT(std::is_move_assignable<RetT>::value, "");
-        LIBCPP_STATIC_ASSERT(std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(value);
         assert(ret() == false);
         auto ret2 = std::not_fn(value2);
         assert(ret2() == true);
-#if defined(_LIBCPP_VERSION)
-        ret = ret2;
-        assert(ret() == true);
-        assert(ret2() == true);
-#endif // _LIBCPP_VERSION
     }
     {
         using T = MoveAssignableWrapper;
@@ -323,17 +151,13 @@ void constructor_tests()
         using RetT = decltype(std::not_fn(std::move(value)));
         static_assert(std::is_move_constructible<RetT>::value, "");
         static_assert(!std::is_copy_constructible<RetT>::value, "");
-        LIBCPP_STATIC_ASSERT(std::is_move_assignable<RetT>::value, "");
         static_assert(!std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(std::move(value));
         assert(ret() == false);
         auto ret2 = std::not_fn(std::move(value2));
         assert(ret2() == true);
-#if defined(_LIBCPP_VERSION)
-        ret = std::move(ret2);
-        assert(ret() == true);
-#endif // _LIBCPP_VERSION
     }
+    return true;
 }
 
 void return_type_tests()
@@ -368,7 +192,8 @@ void return_type_tests()
 
 // Other tests only test using objects with call operators. Test various
 // other callable types here.
-void other_callable_types_test()
+TEST_CONSTEXPR_CXX20
+bool other_callable_types_test()
 {
     { // test with function pointer
         auto ret = std::not_fn(returns_true);
@@ -407,6 +232,7 @@ void other_callable_types_test()
         assert(ret(&mt) == false);
         assert(ret(&mf) == true);
     }
+    return true;
 }
 
 void throws_in_constructor_test()
@@ -438,7 +264,8 @@ void throws_in_constructor_test()
 #endif
 }
 
-void call_operator_sfinae_test() {
+TEST_CONSTEXPR_CXX20
+bool call_operator_sfinae_test() {
     { // wrong number of arguments
         using T = decltype(std::not_fn(returns_true));
         static_assert(std::is_invocable<T>::value, ""); // callable only with no args
@@ -462,94 +289,100 @@ void call_operator_sfinae_test() {
         static_assert(std::is_invocable<T, bool>::value, "");
         static_assert(!std::is_invocable<T, std::string>::value, "");
     }
+    return true;
 }
 
-void call_operator_forwarding_test()
+TEST_CONSTEXPR_CXX20
+bool call_operator_forwarding_test()
 {
     using Fn = ForwardingCallObject;
-    auto obj = std::not_fn(Fn{});
+    Fn::State st;
+    auto obj = std::not_fn(Fn{st});
     const auto& c_obj = obj;
     { // test zero args
         obj();
-        assert(Fn::check_call<>(CT_NonConst | CT_LValue));
+        assert(st.check_call<>(CT_NonConst | CT_LValue));
         std::move(obj)();
-        assert(Fn::check_call<>(CT_NonConst | CT_RValue));
+        assert(st.check_call<>(CT_NonConst | CT_RValue));
         c_obj();
-        assert(Fn::check_call<>(CT_Const | CT_LValue));
+        assert(st.check_call<>(CT_Const | CT_LValue));
         std::move(c_obj)();
-        assert(Fn::check_call<>(CT_Const | CT_RValue));
+        assert(st.check_call<>(CT_Const | CT_RValue));
     }
     { // test value categories
         int x = 42;
         const int cx = 42;
         obj(x);
-        assert(Fn::check_call<int&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&>(CT_NonConst | CT_LValue));
         obj(cx);
-        assert(Fn::check_call<const int&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<const int&>(CT_NonConst | CT_LValue));
         obj(std::move(x));
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_LValue));
         obj(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<const int&&>(CT_NonConst | CT_LValue));
         obj(42);
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_LValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_LValue));
     }
     { // test value categories - rvalue
         int x = 42;
         const int cx = 42;
         std::move(obj)(x);
-        assert(Fn::check_call<int&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&>(CT_NonConst | CT_RValue));
         std::move(obj)(cx);
-        assert(Fn::check_call<const int&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<const int&>(CT_NonConst | CT_RValue));
         std::move(obj)(std::move(x));
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_RValue));
         std::move(obj)(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<const int&&>(CT_NonConst | CT_RValue));
         std::move(obj)(42);
-        assert(Fn::check_call<int&&>(CT_NonConst | CT_RValue));
+        assert(st.check_call<int&&>(CT_NonConst | CT_RValue));
     }
     { // test value categories - const call
         int x = 42;
         const int cx = 42;
         c_obj(x);
-        assert(Fn::check_call<int&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&>(CT_Const | CT_LValue));
         c_obj(cx);
-        assert(Fn::check_call<const int&>(CT_Const | CT_LValue));
+        assert(st.check_call<const int&>(CT_Const | CT_LValue));
         c_obj(std::move(x));
-        assert(Fn::check_call<int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&&>(CT_Const | CT_LValue));
         c_obj(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<const int&&>(CT_Const | CT_LValue));
         c_obj(42);
-        assert(Fn::check_call<int&&>(CT_Const | CT_LValue));
+        assert(st.check_call<int&&>(CT_Const | CT_LValue));
     }
     { // test value categories - const call rvalue
         int x = 42;
         const int cx = 42;
         std::move(c_obj)(x);
-        assert(Fn::check_call<int&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&>(CT_Const | CT_RValue));
         std::move(c_obj)(cx);
-        assert(Fn::check_call<const int&>(CT_Const | CT_RValue));
+        assert(st.check_call<const int&>(CT_Const | CT_RValue));
         std::move(c_obj)(std::move(x));
-        assert(Fn::check_call<int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&&>(CT_Const | CT_RValue));
         std::move(c_obj)(std::move(cx));
-        assert(Fn::check_call<const int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<const int&&>(CT_Const | CT_RValue));
         std::move(c_obj)(42);
-        assert(Fn::check_call<int&&>(CT_Const | CT_RValue));
+        assert(st.check_call<int&&>(CT_Const | CT_RValue));
     }
     { // test multi arg
+        using String = const char *;
         const double y = 3.14;
-        std::string s = "abc";
-        obj(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_LValue);
-        std::move(obj)(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_NonConst | CT_RValue);
-        c_obj(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_LValue);
-        std::move(c_obj)(42, std::move(y), s, std::string{"foo"});
-        Fn::check_call<int&&, const double&&, std::string&, std::string&&>(CT_Const  | CT_RValue);
+        String s = "abc";
+        obj(42, std::move(y), s, String{"foo"});
+        assert((st.check_call<int&&, const double&&, String&, String&&>(CT_NonConst | CT_LValue)));
+        std::move(obj)(42, std::move(y), s, String{"foo"});
+        assert((st.check_call<int&&, const double&&, String&, String&&>(CT_NonConst | CT_RValue)));
+        c_obj(42, std::move(y), s, String{"foo"});
+        assert((st.check_call<int&&, const double&&, String&, String&&>(CT_Const  | CT_LValue)));
+        std::move(c_obj)(42, std::move(y), s, String{"foo"});
+        assert((st.check_call<int&&, const double&&, String&, String&&>(CT_Const  | CT_RValue)));
     }
+    return true;
 }
 
-void call_operator_noexcept_test()
+TEST_CONSTEXPR_CXX20
+bool call_operator_noexcept_test()
 {
     {
         using T = ConstCallable<bool>;
@@ -587,19 +420,22 @@ void call_operator_noexcept_test()
         auto const& cret = ret;
         static_assert(!noexcept(cret()), "call should not be noexcept");
     }
+    return true;
 }
 
-void test_lwg2767() {
+TEST_CONSTEXPR_CXX20
+bool test_lwg2767() {
     // See https://cplusplus.github.io/LWG/lwg-defects.html#2767
     struct Abstract { virtual void f() const = 0; };
     struct Derived : public Abstract { void f() const {} };
-    struct F { bool operator()(Abstract&&) { return false; } };
+    struct F { constexpr bool operator()(Abstract&&) { return false; } };
     {
         Derived d;
         Abstract &a = d;
         bool b = std::not_fn(F{})(std::move(a));
         assert(b);
     }
+    return true;
 }
 
 int main(int, char**)
@@ -613,5 +449,14 @@ int main(int, char**)
     call_operator_noexcept_test();
     test_lwg2767();
 
-  return 0;
+#if TEST_STD_VER >= 20
+    static_assert(constructor_tests());
+    static_assert(other_callable_types_test());
+    static_assert(call_operator_sfinae_test()); // somewhat of an extension
+    static_assert(call_operator_forwarding_test());
+    static_assert(call_operator_noexcept_test());
+    static_assert(test_lwg2767());
+#endif
+
+    return 0;
 }

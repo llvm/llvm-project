@@ -188,6 +188,9 @@ public:
   PathPieces &getMutablePieces() { return PD->getMutablePieces(); }
 
   bool shouldAddPathEdges() const { return Consumer->shouldAddPathEdges(); }
+  bool shouldAddControlNotes() const {
+    return Consumer->shouldAddControlNotes();
+  }
   bool shouldGenerateDiagnostics() const {
     return Consumer->shouldGenerateDiagnostics();
   }
@@ -1232,8 +1235,11 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
   } else if (auto BE = P.getAs<BlockEdge>()) {
 
-    if (!C.shouldAddPathEdges()) {
+    if (C.shouldAddControlNotes()) {
       generateMinimalDiagForBlockEdge(C, *BE);
+    }
+
+    if (!C.shouldAddPathEdges()) {
       return;
     }
 
@@ -1254,12 +1260,14 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
       // do-while statements are explicitly excluded here
 
       auto p = std::make_shared<PathDiagnosticEventPiece>(
-          L, "Looping back to the head "
-          "of the loop");
+          L, "Looping back to the head of the loop");
       p->setPrunable(true);
 
       addEdgeToPath(C.getActivePath(), PrevLoc, p->getLocation());
-      C.getActivePath().push_front(std::move(p));
+      // We might've added a very similar control node already
+      if (!C.shouldAddControlNotes()) {
+        C.getActivePath().push_front(std::move(p));
+      }
 
       if (const auto *CS = dyn_cast_or_null<CompoundStmt>(Body)) {
         addEdgeToPath(C.getActivePath(), PrevLoc,
@@ -1300,10 +1308,14 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
           auto PE = std::make_shared<PathDiagnosticEventPiece>(L, str);
           PE->setPrunable(true);
           addEdgeToPath(C.getActivePath(), PrevLoc, PE->getLocation());
-          C.getActivePath().push_front(std::move(PE));
+
+          // We might've added a very similar control node already
+          if (!C.shouldAddControlNotes()) {
+            C.getActivePath().push_front(std::move(PE));
+          }
         }
       } else if (isa<BreakStmt>(Term) || isa<ContinueStmt>(Term) ||
-          isa<GotoStmt>(Term)) {
+                 isa<GotoStmt>(Term)) {
         PathDiagnosticLocation L(Term, SM, C.getCurrLocationContext());
         addEdgeToPath(C.getActivePath(), PrevLoc, L);
       }
@@ -1446,7 +1458,7 @@ static void addContextEdges(PathPieces &pieces, const LocationContext *LC) {
         break;
 
       // If the source is in the same context, we're already good.
-      if (llvm::find(SrcContexts, DstContext) != SrcContexts.end())
+      if (llvm::is_contained(SrcContexts, DstContext))
         break;
 
       // Update the subexpression node to point to the context edge.
@@ -1570,9 +1582,8 @@ static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
   if (FID != SM.getFileID(ExpansionRange.getEnd()))
     return None;
 
-  bool Invalid;
-  const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, &Invalid);
-  if (Invalid)
+  Optional<MemoryBufferRef> Buffer = SM.getBufferOrNone(FID);
+  if (!Buffer)
     return None;
 
   unsigned BeginOffset = SM.getFileOffset(ExpansionRange.getBegin());
@@ -1989,14 +2000,6 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
 
   const SourceManager &SM = getSourceManager();
   const AnalyzerOptions &Opts = getAnalyzerOptions();
-  StringRef ErrorTag = ErrorNode->getLocation().getTag()->getTagDescription();
-
-  // See whether we need to silence the checker/package.
-  // FIXME: This will not work if the report was emitted with an incorrect tag.
-  for (const std::string &CheckerOrPackage : Opts.SilencedCheckersAndPackages) {
-    if (ErrorTag.startswith(CheckerOrPackage))
-      return nullptr;
-  }
 
   if (!PDC->shouldGenerateDiagnostics())
     return generateEmptyDiagnosticForReport(R, getSourceManager());
@@ -2194,8 +2197,8 @@ void BasicBugReport::Profile(llvm::FoldingSetNodeID& hash) const {
   for (SourceRange range : Ranges) {
     if (!range.isValid())
       continue;
-    hash.AddInteger(range.getBegin().getRawEncoding());
-    hash.AddInteger(range.getEnd().getRawEncoding());
+    hash.Add(range.getBegin());
+    hash.Add(range.getEnd());
   }
 }
 
@@ -2217,8 +2220,8 @@ void PathSensitiveBugReport::Profile(llvm::FoldingSetNodeID &hash) const {
   for (SourceRange range : Ranges) {
     if (!range.isValid())
       continue;
-    hash.AddInteger(range.getBegin().getRawEncoding());
-    hash.AddInteger(range.getEnd().getRawEncoding());
+    hash.Add(range.getBegin());
+    hash.Add(range.getEnd());
   }
 }
 
@@ -2258,8 +2261,22 @@ void PathSensitiveBugReport::markInteresting(SymbolRef sym,
 
   insertToInterestingnessMap(InterestingSymbols, sym, TKind);
 
+  // FIXME: No tests exist for this code and it is questionable:
+  // How to handle multiple metadata for the same region?
   if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
     markInteresting(meta->getRegion(), TKind);
+}
+
+void PathSensitiveBugReport::markNotInteresting(SymbolRef sym) {
+  if (!sym)
+    return;
+  InterestingSymbols.erase(sym);
+
+  // The metadata part of markInteresting is not reversed here.
+  // Just making the same region not interesting is incorrect
+  // in specific cases.
+  if (const auto *meta = dyn_cast<SymbolMetadata>(sym))
+    markNotInteresting(meta->getRegion());
 }
 
 void PathSensitiveBugReport::markInteresting(const MemRegion *R,
@@ -2272,6 +2289,17 @@ void PathSensitiveBugReport::markInteresting(const MemRegion *R,
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     markInteresting(SR->getSymbol(), TKind);
+}
+
+void PathSensitiveBugReport::markNotInteresting(const MemRegion *R) {
+  if (!R)
+    return;
+
+  R = R->getBaseRegion();
+  InterestingRegions.erase(R);
+
+  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+    markNotInteresting(SR->getSymbol());
 }
 
 void PathSensitiveBugReport::markInteresting(SVal V,
@@ -2739,8 +2767,8 @@ static void CompactMacroExpandedPieces(PathPieces &path,
 }
 
 /// Generate notes from all visitors.
-/// Notes associated with {@code ErrorNode} are generated using
-/// {@code getEndPath}, and the rest are generated with {@code VisitNode}.
+/// Notes associated with @c ErrorNode are generated using
+/// @c getEndPath, and the rest are generated with @c VisitNode.
 static std::unique_ptr<VisitorsDiagnosticsTy>
 generateVisitorsDiagnostics(PathSensitiveBugReport *R,
                             const ExplodedNode *ErrorNode,
@@ -2750,7 +2778,7 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
   PathSensitiveBugReport::VisitorList visitors;
 
   // Run visitors on all nodes starting from the node *before* the last one.
-  // The last node is reserved for notes generated with {@code getEndPath}.
+  // The last node is reserved for notes generated with @c getEndPath.
   const ExplodedNode *NextNode = ErrorNode->getFirstPred();
   while (NextNode) {
 
@@ -2812,12 +2840,12 @@ Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
 
     // Register refutation visitors first, if they mark the bug invalid no
     // further analysis is required
-    R->addVisitor(std::make_unique<LikelyFalsePositiveSuppressionBRVisitor>());
+    R->addVisitor<LikelyFalsePositiveSuppressionBRVisitor>();
 
     // Register additional node visitors.
-    R->addVisitor(std::make_unique<NilReceiverBRVisitor>());
-    R->addVisitor(std::make_unique<ConditionBRVisitor>());
-    R->addVisitor(std::make_unique<TagVisitor>());
+    R->addVisitor<NilReceiverBRVisitor>();
+    R->addVisitor<ConditionBRVisitor>();
+    R->addVisitor<TagVisitor>();
 
     BugReporterContext BRC(Reporter);
 
@@ -2830,7 +2858,7 @@ Optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
-        R->addVisitor(std::make_unique<FalsePositiveRefutationBRVisitor>());
+        R->addVisitor<FalsePositiveRefutationBRVisitor>();
 
         // We don't overwrite the notes inserted by other visitors because the
         // refutation manager does not add any new note to the path
@@ -3041,6 +3069,14 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)
     return;
+
+  // See whether we need to silence the checker/package.
+  for (const std::string &CheckerOrPackage :
+       getAnalyzerOptions().SilencedCheckersAndPackages) {
+    if (report->getBugType().getCheckerName().startswith(
+            CheckerOrPackage))
+      return;
+  }
 
   ArrayRef<PathDiagnosticConsumer*> Consumers = getPathDiagnosticConsumers();
   std::unique_ptr<DiagnosticForConsumerMapTy> Diagnostics =

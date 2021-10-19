@@ -6,7 +6,7 @@ typedef float fx3x4_t __attribute__((matrix_type(3, 4)));
 // CHECK: %struct.Matrix = type { i8, [12 x float], float }
 
 void load_store(dx5x5_t *a, dx5x5_t *b) {
-  // CHECK-LABEL:  define void @_Z10load_storePU11matrix_typeLm5ELm5EdS0_(
+  // CHECK-LABEL:  define{{.*}} void @_Z10load_storePu11matrix_typeILm5ELm5EdES0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [25 x double]*, align 8
   // CHECK-NEXT:    %b.addr = alloca [25 x double]*, align 8
@@ -26,7 +26,7 @@ void load_store(dx5x5_t *a, dx5x5_t *b) {
 typedef float fx3x3_t __attribute__((matrix_type(3, 3)));
 
 void parameter_passing(fx3x3_t a, fx3x3_t *b) {
-  // CHECK-LABEL: define void @_Z17parameter_passingU11matrix_typeLm3ELm3EfPS_(
+  // CHECK-LABEL: define{{.*}} void @_Z17parameter_passingu11matrix_typeILm3ELm3EfEPS_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [9 x float], align 4
   // CHECK-NEXT:    %b.addr = alloca [9 x float]*, align 8
@@ -42,7 +42,7 @@ void parameter_passing(fx3x3_t a, fx3x3_t *b) {
 }
 
 fx3x3_t return_matrix(fx3x3_t *a) {
-  // CHECK-LABEL: define <9 x float> @_Z13return_matrixPU11matrix_typeLm3ELm3Ef(
+  // CHECK-LABEL: define{{.*}} <9 x float> @_Z13return_matrixPu11matrix_typeILm3ELm3EfE(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca [9 x float]*, align 8
   // CHECK-NEXT:    store [9 x float]* %a, [9 x float]** %a.addr, align 8
@@ -60,7 +60,7 @@ struct Matrix {
 };
 
 void matrix_struct_pointers(Matrix *a, Matrix *b) {
-  // CHECK-LABEL: define void @_Z22matrix_struct_pointersP6MatrixS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z22matrix_struct_pointersP6MatrixS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %struct.Matrix*, align 8
   // CHECK-NEXT:    %b.addr = alloca %struct.Matrix*, align 8
@@ -79,7 +79,7 @@ void matrix_struct_pointers(Matrix *a, Matrix *b) {
 }
 
 void matrix_struct_reference(Matrix &a, Matrix &b) {
-  // CHECK-LABEL: define void @_Z23matrix_struct_referenceR6MatrixS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z23matrix_struct_referenceR6MatrixS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %struct.Matrix*, align 8
   // CHECK-NEXT:    %b.addr = alloca %struct.Matrix*, align 8
@@ -105,7 +105,7 @@ public:
 };
 
 void matrix_class_reference(MatrixClass &a, MatrixClass &b) {
-  // CHECK-LABEL: define void @_Z22matrix_class_referenceR11MatrixClassS0_(
+  // CHECK-LABEL: define{{.*}} void @_Z22matrix_class_referenceR11MatrixClassS0_(
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %a.addr = alloca %class.MatrixClass*, align 8
   // CHECK-NEXT:    %b.addr = alloca %class.MatrixClass*, align 8
@@ -138,7 +138,7 @@ void matrix_template_reference(MatrixClassTemplate<Ty, Rows, Cols> &a, MatrixCla
 }
 
 MatrixClassTemplate<float, 10, 15> matrix_template_reference_caller(float *Data) {
-  // CHECK-LABEL: define void @_Z32matrix_template_reference_callerPf(%class.MatrixClassTemplate* noalias sret align 8 %agg.result, float* %Data
+  // CHECK-LABEL: define{{.*}} void @_Z32matrix_template_reference_callerPf(%class.MatrixClassTemplate* noalias sret(%class.MatrixClassTemplate) align 8 %agg.result, float* %Data
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %Data.addr = alloca float*, align 8
   // CHECK-NEXT:    %Arg = alloca %class.MatrixClassTemplate, align 8
@@ -198,7 +198,7 @@ selector<4> use_matrix(matrix<float, R, C> &m) {}
 
 void test_template_deduction() {
 
-  // CHECK-LABEL: define void @_Z23test_template_deductionv()
+  // CHECK-LABEL: define{{.*}} void @_Z23test_template_deductionv()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m0 = alloca [120 x i32], align 4
   // CHECK-NEXT:    %w = alloca %struct.selector, align 1
@@ -215,42 +215,42 @@ void test_template_deduction() {
   // CHECK-NEXT:    %m4 = alloca [144 x float], align 4
   // CHECK-NEXT:    %v = alloca %struct.selector.3, align 1
   // CHECK-NEXT:    %undef.agg.tmp4 = alloca %struct.selector.3, align 1
-  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12EE8selectorILi3EERU11matrix_typeXLm10EEXT0_ET_([120 x i32]* nonnull align 4 dereferenceable(480) %m0)
-  // CHECK-NEXT:    call void @_Z10use_matrixIiE8selectorILi2EERU11matrix_typeLm10ELm10ET_([100 x i32]* nonnull align 4 dereferenceable(400) %m1)
-  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12EE8selectorILi1EERU11matrix_typeXT0_EXLm10EET_([120 x i32]* nonnull align 4 dereferenceable(480) %m2)
-  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12ELm12EE8selectorILi0EERU11matrix_typeXT0_EXT1_ET_([144 x i32]* nonnull align 4 dereferenceable(576) %m3)
-  // CHECK-NEXT:    call void @_Z10use_matrixILm12ELm12EE8selectorILi4EERU11matrix_typeXT_EXT0_Ef([144 x float]* nonnull align 4 dereferenceable(576) %m4)
+  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12EE8selectorILi3EERu11matrix_typeILm10EXT0_ET_E([120 x i32]* nonnull align 4 dereferenceable(480) %m0)
+  // CHECK-NEXT:    call void @_Z10use_matrixIiE8selectorILi2EERu11matrix_typeILm10ELm10ET_E([100 x i32]* nonnull align 4 dereferenceable(400) %m1)
+  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12EE8selectorILi1EERu11matrix_typeIXT0_ELm10ET_E([120 x i32]* nonnull align 4 dereferenceable(480) %m2)
+  // CHECK-NEXT:    call void @_Z10use_matrixIiLm12ELm12EE8selectorILi0EERu11matrix_typeIXT0_EXT1_ET_E([144 x i32]* nonnull align 4 dereferenceable(576) %m3)
+  // CHECK-NEXT:    call void @_Z10use_matrixILm12ELm12EE8selectorILi4EERu11matrix_typeIXT_EXT0_EfE([144 x float]* nonnull align 4 dereferenceable(576) %m4)
   // CHECK-NEXT:    ret void
 
-  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12EE8selectorILi3EERU11matrix_typeXLm10EEXT0_ET_([120 x i32]* nonnull align 4 dereferenceable(480) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12EE8selectorILi3EERu11matrix_typeILm10EXT0_ET_E([120 x i32]* nonnull align 4 dereferenceable(480) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [120 x i32]*, align 8
   // CHECK-NEXT:    store [120 x i32]* %m, [120 x i32]** %m.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiE8selectorILi2EERU11matrix_typeLm10ELm10ET_([100 x i32]* nonnull align 4 dereferenceable(400) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiE8selectorILi2EERu11matrix_typeILm10ELm10ET_E([100 x i32]* nonnull align 4 dereferenceable(400) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [100 x i32]*, align 8
   // CHECK-NEXT:    store [100 x i32]* %m, [100 x i32]** %m.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12EE8selectorILi1EERU11matrix_typeXT0_EXLm10EET_([120 x i32]* nonnull align 4 dereferenceable(480) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12EE8selectorILi1EERu11matrix_typeIXT0_ELm10ET_E([120 x i32]* nonnull align 4 dereferenceable(480) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [120 x i32]*, align 8
   // CHECK-NEXT:    store [120 x i32]* %m, [120 x i32]** %m.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12ELm12EE8selectorILi0EERU11matrix_typeXT0_EXT1_ET_([144 x i32]* nonnull align 4 dereferenceable(576) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixIiLm12ELm12EE8selectorILi0EERu11matrix_typeIXT0_EXT1_ET_E([144 x i32]* nonnull align 4 dereferenceable(576) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [144 x i32]*, align 8
   // CHECK-NEXT:    store [144 x i32]* %m, [144 x i32]** %m.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixILm12ELm12EE8selectorILi4EERU11matrix_typeXT_EXT0_Ef([144 x float]* nonnull align 4 dereferenceable(576)
+  // CHECK-LABEL: define linkonce_odr void @_Z10use_matrixILm12ELm12EE8selectorILi4EERu11matrix_typeIXT_EXT0_EfE([144 x float]* nonnull align 4 dereferenceable(576)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [144 x float]*, align 8
   // CHECK-NEXT:    store [144 x float]* %m, [144 x float]** %m.addr, align 8
@@ -274,13 +274,13 @@ void foo(matrix<int, R, 10> &m) {
 }
 
 void test_auto_t() {
-  // CHECK-LABEL: define void @_Z11test_auto_tv()
+  // CHECK-LABEL: define{{.*}} void @_Z11test_auto_tv()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m = alloca [130 x i32], align 4
-  // CHECK-NEXT:    call void @_Z3fooILm13EEvRU11matrix_typeXT_EXLm10EEi([130 x i32]* nonnull align 4 dereferenceable(520) %m)
+  // CHECK-NEXT:    call void @_Z3fooILm13EEvRu11matrix_typeIXT_ELm10EiE([130 x i32]* nonnull align 4 dereferenceable(520) %m)
   // CHECK-NEXT:    ret void
 
-  // CHECK-LABEL: define linkonce_odr void @_Z3fooILm13EEvRU11matrix_typeXT_EXLm10EEi([130 x i32]* nonnull align 4 dereferenceable(520) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z3fooILm13EEvRu11matrix_typeIXT_ELm10EiE([130 x i32]* nonnull align 4 dereferenceable(520) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [130 x i32]*, align 8
   // CHECK-NEXT:    store [130 x i32]* %m, [130 x i32]** %m.addr, align 8
@@ -306,7 +306,7 @@ template <unsigned long R>
 selector<2> use_matrix_3(matrix<int, R - 2, R> &m) {}
 
 void test_use_matrix_2() {
-  // CHECK-LABEL: define void @_Z17test_use_matrix_2v()
+  // CHECK-LABEL: define{{.*}} void @_Z17test_use_matrix_2v()
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m1 = alloca [24 x i32], align 4
   // CHECK-NEXT:    %r1 = alloca [40 x float], align 4
@@ -321,25 +321,25 @@ void test_use_matrix_2() {
   // CHECK-NEXT:    %r4 = alloca [20 x float], align 4
   // CHECK-NEXT:    %r5 = alloca %struct.selector.0, align 1
   // CHECK-NEXT:    %undef.agg.tmp3 = alloca %struct.selector.0, align 1
-  // CHECK-NEXT:    %call = call <40 x float> @_Z12use_matrix_2ILm4ELm6EEU11matrix_typeXplT_Li1EEXplT0_Li2EEfRU11matrix_typeXT_EXT0_Ei([24 x i32]* nonnull align 4 dereferenceable(96) %m1)
+  // CHECK-NEXT:    %call = call <40 x float> @_Z12use_matrix_2ILm4ELm6EEu11matrix_typeIXplT_Li1EEXplT0_Li2EEfERu11matrix_typeIXT_EXT0_EiE([24 x i32]* nonnull align 4 dereferenceable(96) %m1)
   // CHECK-NEXT:    %0 = bitcast [40 x float]* %r1 to <40 x float>*
   // CHECK-NEXT:    store <40 x float> %call, <40 x float>* %0, align 4
-  // CHECK-NEXT:    call void @_Z12use_matrix_2ILm2ELm12EE8selectorILi0EERU11matrix_typeXplT_Li2EEXdvT0_Li2EEiRU11matrix_typeXT_EXT0_Ef([24 x i32]* nonnull align 4 dereferenceable(96) %m1, [24 x float]* nonnull align 4 dereferenceable(96) %m2)
-  // CHECK-NEXT:    call void @_Z12use_matrix_2ILm5ELm8EE8selectorILi1EERU11matrix_typeXplT_T0_EXT0_EiRU11matrix_typeXT_EXmiT0_T_Ef([104 x i32]* nonnull align 4 dereferenceable(416) %m3, [15 x float]* nonnull align 4 dereferenceable(60) %m4)
-  // CHECK-NEXT:    %call2 = call <20 x float> @_Z12use_matrix_2ILm5EEU11matrix_typeXplT_T_EXmiT_Li3EEfRU11matrix_typeXT_EXLm10EEi([50 x i32]* nonnull align 4 dereferenceable(200) %m5)
+  // CHECK-NEXT:    call void @_Z12use_matrix_2ILm2ELm12EE8selectorILi0EERu11matrix_typeIXplT_Li2EEXdvT0_Li2EEiERu11matrix_typeIXT_EXT0_EfE([24 x i32]* nonnull align 4 dereferenceable(96) %m1, [24 x float]* nonnull align 4 dereferenceable(96) %m2)
+  // CHECK-NEXT:    call void @_Z12use_matrix_2ILm5ELm8EE8selectorILi1EERu11matrix_typeIXplT_T0_EXT0_EiERu11matrix_typeIXT_EXmiT0_T_EfE([104 x i32]* nonnull align 4 dereferenceable(416) %m3, [15 x float]* nonnull align 4 dereferenceable(60) %m4)
+  // CHECK-NEXT:    %call2 = call <20 x float> @_Z12use_matrix_2ILm5EEu11matrix_typeIXplT_T_EXmiT_Li3EEfERu11matrix_typeIXT_ELm10EiE([50 x i32]* nonnull align 4 dereferenceable(200) %m5)
   // CHECK-NEXT:    %1 = bitcast [20 x float]* %r4 to <20 x float>*
   // CHECK-NEXT:    store <20 x float> %call2, <20 x float>* %1, align 4
-  // CHECK-NEXT:    call void @_Z12use_matrix_3ILm6EE8selectorILi2EERU11matrix_typeXmiT_Li2EEXT_Ei([24 x i32]* nonnull align 4 dereferenceable(96) %m1)
+  // CHECK-NEXT:    call void @_Z12use_matrix_3ILm6EE8selectorILi2EERu11matrix_typeIXmiT_Li2EEXT_EiE([24 x i32]* nonnull align 4 dereferenceable(96) %m1)
   // CHECK-NEXT:    ret void
 
-  // CHECK-LABEL: define linkonce_odr <40 x float> @_Z12use_matrix_2ILm4ELm6EEU11matrix_typeXplT_Li1EEXplT0_Li2EEfRU11matrix_typeXT_EXT0_Ei([24 x i32]* nonnull align 4 dereferenceable(96) %m)
+  // CHECK-LABEL: define linkonce_odr <40 x float> @_Z12use_matrix_2ILm4ELm6EEu11matrix_typeIXplT_Li1EEXplT0_Li2EEfERu11matrix_typeIXT_EXT0_EiE([24 x i32]* nonnull align 4 dereferenceable(96) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [24 x i32]*, align 8
   // CHECK-NEXT:    store [24 x i32]* %m, [24 x i32]** %m.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_2ILm2ELm12EE8selectorILi0EERU11matrix_typeXplT_Li2EEXdvT0_Li2EEiRU11matrix_typeXT_EXT0_Ef([24 x i32]* nonnull align 4 dereferenceable(96) %m1, [24 x float]* nonnull align 4 dereferenceable(96) %m2)
+  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_2ILm2ELm12EE8selectorILi0EERu11matrix_typeIXplT_Li2EEXdvT0_Li2EEiERu11matrix_typeIXT_EXT0_EfE([24 x i32]* nonnull align 4 dereferenceable(96) %m1, [24 x float]* nonnull align 4 dereferenceable(96) %m2)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m1.addr = alloca [24 x i32]*, align 8
   // CHECK-NEXT:    %m2.addr = alloca [24 x float]*, align 8
@@ -348,7 +348,7 @@ void test_use_matrix_2() {
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_2ILm5ELm8EE8selectorILi1EERU11matrix_typeXplT_T0_EXT0_EiRU11matrix_typeXT_EXmiT0_T_Ef([104 x i32]* nonnull align 4 dereferenceable(416) %m1, [15 x float]* nonnull align 4 dereferenceable(60) %m2)
+  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_2ILm5ELm8EE8selectorILi1EERu11matrix_typeIXplT_T0_EXT0_EiERu11matrix_typeIXT_EXmiT0_T_EfE([104 x i32]* nonnull align 4 dereferenceable(416) %m1, [15 x float]* nonnull align 4 dereferenceable(60) %m2)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m1.addr = alloca [104 x i32]*, align 8
   // CHECK-NEXT:    %m2.addr = alloca [15 x float]*, align 8
@@ -357,14 +357,14 @@ void test_use_matrix_2() {
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr <20 x float> @_Z12use_matrix_2ILm5EEU11matrix_typeXplT_T_EXmiT_Li3EEfRU11matrix_typeXT_EXLm10EEi([50 x i32]* nonnull align 4 dereferenceable(200) %m1)
+  // CHECK-LABEL: define linkonce_odr <20 x float> @_Z12use_matrix_2ILm5EEu11matrix_typeIXplT_T_EXmiT_Li3EEfERu11matrix_typeIXT_ELm10EiE([50 x i32]* nonnull align 4 dereferenceable(200) %m1)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m1.addr = alloca [50 x i32]*, align 8
   // CHECK-NEXT:    store [50 x i32]* %m1, [50 x i32]** %m1.addr, align 8
   // CHECK-NEXT:    call void @llvm.trap()
   // CHECK-NEXT:    unreachable
 
-  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_3ILm6EE8selectorILi2EERU11matrix_typeXmiT_Li2EEXT_Ei([24 x i32]* nonnull align 4 dereferenceable(96) %m)
+  // CHECK-LABEL: define linkonce_odr void @_Z12use_matrix_3ILm6EE8selectorILi2EERu11matrix_typeIXmiT_Li2EEXT_EiE([24 x i32]* nonnull align 4 dereferenceable(96) %m)
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    %m.addr = alloca [24 x i32]*, align 8
   // CHECK-NEXT:    store [24 x i32]* %m, [24 x i32]** %m.addr, align 8

@@ -5,13 +5,13 @@
 define void @t(<4 x float> %A) {
 ; SSE-LABEL: t:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE-NEXT:    movaps %xmm0, 0
 ; SSE-NEXT:    retl
 ;
 ; AVX-LABEL: t:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorps {{\.LCPI.*}}, %xmm0, %xmm0
+; AVX-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, 0
 ; AVX-NEXT:    retl
   %tmp1277 = fsub <4 x float> < float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00 >, %A

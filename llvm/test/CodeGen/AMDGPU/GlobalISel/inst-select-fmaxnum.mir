@@ -25,12 +25,12 @@ body: |
     ; GFX7: %7:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %8:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %9:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -50,9 +50,9 @@ body: |
     ; maxnum vv
     %6:vgpr(s32) = G_FMAXNUM %1, %2
 
-    G_STORE %4, %3 :: (store 4, addrspace 1)
-    G_STORE %5, %3 :: (store 4, addrspace 1)
-    G_STORE %6, %3 :: (store 4, addrspace 1)
+    G_STORE %4, %3 :: (store (s32), addrspace 1)
+    G_STORE %5, %3 :: (store (s32), addrspace 1)
+    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
     ; 64-bit
 
@@ -91,12 +91,12 @@ body: |
     ; GFX7: %7:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %8:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: %9:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
-    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GFX7: %10:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %11:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7: %12:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
     ; GFX7: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -116,9 +116,9 @@ body: |
     ; maxnum vv
     %6:vgpr(s32) = G_FMAXNUM %1, %2
 
-    G_STORE %4, %3 :: (store 4, addrspace 1)
-    G_STORE %5, %3 :: (store 4, addrspace 1)
-    G_STORE %6, %3 :: (store 4, addrspace 1)
+    G_STORE %4, %3 :: (store (s32), addrspace 1)
+    G_STORE %5, %3 :: (store (s32), addrspace 1)
+    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
     ; 64-bit
 

@@ -728,6 +728,9 @@ description (``*.td``) files.  Our goal is for the entire instruction selector
 to be generated from these ``.td`` files, though currently there are still
 things that require custom C++ code.
 
+`GlobalISel <https://llvm.org/docs/GlobalISel/index.html>`_ is another
+instruction selection framework.
+
 .. _SelectionDAG:
 
 Introduction to SelectionDAGs
@@ -2064,11 +2067,12 @@ Tail call optimization
 ----------------------
 
 Tail call optimization, callee reusing the stack of the caller, is currently
-supported on x86/x86-64, PowerPC, and WebAssembly. It is performed on x86/x86-64
-and PowerPC if:
+supported on x86/x86-64, PowerPC, AArch64, and WebAssembly. It is performed on
+x86/x86-64, PowerPC, and AArch64 if:
 
 * Caller and callee have the calling convention ``fastcc``, ``cc 10`` (GHC
-  calling convention), ``cc 11`` (HiPE calling convention), or ``tailcc``.
+  calling convention), ``cc 11`` (HiPE calling convention), ``tailcc``, or
+  ``swifttailcc``.
 
 * The call is a tail call - in tail position (ret immediately follows call and
   ret uses value of call or is void).
@@ -2102,6 +2106,10 @@ WebAssembly constraints:
 * The caller and callee's return types must match. The caller cannot
   be void unless the callee is, too.
 
+AArch64 constraints:
+
+* No variable argument lists are used.
+
 Example:
 
 Call as ``llc -tailcallopt test.ll``.
@@ -2112,7 +2120,7 @@ Call as ``llc -tailcallopt test.ll``.
 
   define fastcc i32 @tailcaller(i32 %in1, i32 %in2) {
     %l1 = add i32 %in1, %in2
-    %tmp = tail call fastcc i32 @tailcallee(i32 %in1 inreg, i32 %in2 inreg, i32 %in1, i32 %l1)
+    %tmp = tail call fastcc i32 @tailcallee(i32 inreg %in1, i32 inreg %in2, i32 %in1, i32 %l1)
     ret i32 %tmp
   }
 

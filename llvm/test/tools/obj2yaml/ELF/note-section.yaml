@@ -10,7 +10,7 @@
 # VALID-NEXT:   Notes:
 # VALID-NEXT:    - Name: ''
 # VALID-NEXT:      Desc: ''
-# VALID-NEXT:      Type: 0x00
+# VALID-NEXT:      Type: 0x0
 # VALID-NEXT: - Name: .note.bar
 # VALID-NEXT:   Type: SHT_NOTE
 # VALID-NEXT:   Notes:

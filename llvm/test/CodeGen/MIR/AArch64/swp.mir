@@ -24,10 +24,10 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: swp
-    ; CHECK: {{[0-9]+}}:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic 4 on %ir.addr)
+    ; CHECK: {{[0-9]+}}:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
     %0:gpr64common = COPY $x0
     %1:gpr32 = MOVi32imm 1
-    %2:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic 4 on %ir.addr)
+    %2:gpr32 = SWPW killed %1, %0 :: (volatile load store monotonic (s32) on %ir.addr)
     $w0 = COPY %2
     RET_ReallyLR implicit $w0
 ...

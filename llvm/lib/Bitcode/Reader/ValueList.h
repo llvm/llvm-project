@@ -28,13 +28,6 @@ class Value;
 class BitcodeReaderValueList {
   std::vector<WeakTrackingVH> ValuePtrs;
 
-  /// Struct containing fully-specified copies of the type of each
-  /// value. When pointers are opaque, this will be contain non-opaque
-  /// variants so that restructuring instructions can determine their
-  /// type correctly even if being loaded from old bitcode where some
-  /// types are implicit.
-  std::vector<Type *> FullTypes;
-
   /// As we resolve forward-referenced constants, we add information about them
   /// to this vector.  This allows us to resolve them in bulk instead of
   /// resolving each reference at a time.  See the code in
@@ -64,17 +57,12 @@ public:
   unsigned size() const { return ValuePtrs.size(); }
   void resize(unsigned N) {
     ValuePtrs.resize(N);
-    FullTypes.resize(N);
   }
-  void push_back(Value *V, Type *Ty) {
-    ValuePtrs.emplace_back(V);
-    FullTypes.emplace_back(Ty);
-  }
+  void push_back(Value *V) { ValuePtrs.emplace_back(V); }
 
   void clear() {
     assert(ResolveConstants.empty() && "Constants not resolved?");
     ValuePtrs.clear();
-    FullTypes.clear();
   }
 
   Value *operator[](unsigned i) const {
@@ -85,20 +73,18 @@ public:
   Value *back() const { return ValuePtrs.back(); }
   void pop_back() {
     ValuePtrs.pop_back();
-    FullTypes.pop_back();
   }
   bool empty() const { return ValuePtrs.empty(); }
 
   void shrinkTo(unsigned N) {
     assert(N <= size() && "Invalid shrinkTo request!");
     ValuePtrs.resize(N);
-    FullTypes.resize(N);
   }
 
   Constant *getConstantFwdRef(unsigned Idx, Type *Ty);
-  Value *getValueFwdRef(unsigned Idx, Type *Ty, Type **FullTy = nullptr);
+  Value *getValueFwdRef(unsigned Idx, Type *Ty);
 
-  void assignValue(Value *V, unsigned Idx, Type *FullTy);
+  void assignValue(Value *V, unsigned Idx);
 
   /// Once all constants are read, this method bulk resolves any forward
   /// references.

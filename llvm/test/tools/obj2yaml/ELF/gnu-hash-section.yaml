@@ -10,11 +10,11 @@
 # FIELDS-NEXT:     Type:   SHT_GNU_HASH
 # FIELDS-NEXT:     Flags:  [ SHF_ALLOC ]
 # FIELDS-NEXT:     Header:
-# FIELDS-NEXT:       SymNdx: 0x00000001
-# FIELDS-NEXT:       Shift2: 0x00000002
-# FIELDS-NEXT:     BloomFilter: [ 0x0000000000000003, 0x0000000000000004 ]
-# FIELDS-NEXT:     HashBuckets: [ 0x00000005, 0x00000006, 0x00000007 ]
-# FIELDS-NEXT:     HashValues:  [ 0x00000008, 0x00000009, 0x0000000A, 0x0000000B ]
+# FIELDS-NEXT:       SymNdx: 0x1
+# FIELDS-NEXT:       Shift2: 0x2
+# FIELDS-NEXT:     BloomFilter: [ 0x3, 0x4 ]
+# FIELDS-NEXT:     HashBuckets: [ 0x5, 0x6, 0x7 ]
+# FIELDS-NEXT:     HashValues:  [ 0x8, 0x9, 0xA, 0xB ]
 
 --- !ELF
 FileHeader:
@@ -44,27 +44,30 @@ Sections:
 # INVALID-NEXT: - Name:        .gnu.hash.empty
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Flags:       [ SHF_ALLOC ]
-# INVALID-NEXT:   Address:     0x000000000000000F
+# INVALID-NEXT:   Address:     0xF
 # INVALID-NEXT:   Header:
-# INVALID-NEXT:     SymNdx:      0x00000000
-# INVALID-NEXT:     Shift2:      0x00000000
+# INVALID-NEXT:     SymNdx:      0x0
+# INVALID-NEXT:     Shift2:      0x0
 # INVALID-NEXT:   BloomFilter: [ ]
 # INVALID-NEXT:   HashBuckets: [ ]
 # INVALID-NEXT:   HashValues:  [ ]
 # INVALID-NEXT: - Name:        .gnu.hash.broken.maskwords
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Content:     '00000000000000000100000000000000'
-# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets
+# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets.a
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Content:     '01000000000000000000000000000000'
+# INVALID-NEXT: - Name:        .gnu.hash.broken.nbuckets.b
+# INVALID-NEXT:   Type:        SHT_GNU_HASH
+# INVALID-NEXT:   Content:     FFFFFFFF000000000100000000000000{{$}}
 # INVALID-NEXT: - Name:        .gnu.hash.hashvalues.ok
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Header:
-# INVALID-NEXT:     SymNdx:      0x00000000
-# INVALID-NEXT:     Shift2:      0x00000000
+# INVALID-NEXT:     SymNdx:      0x0
+# INVALID-NEXT:     Shift2:      0x0
 # INVALID-NEXT:   BloomFilter: [ ]
 # INVALID-NEXT:   HashBuckets: [ ]
-# INVALID-NEXT:   HashValues:  [ 0x00000000 ]
+# INVALID-NEXT:   HashValues:  [ 0x0 ]
 # INVALID-NEXT: - Name:        .gnu.hash.hashvalues.fail
 # INVALID-NEXT:   Type:        SHT_GNU_HASH
 # INVALID-NEXT:   Content:     '000000000000000000000000000000000000000000'
@@ -108,15 +111,27 @@ Sections:
     BloomFilter: []
     HashBuckets: []
     HashValues:  []
-## Case 4: NBuckets field is broken, it says that the number of entries
+## Case 4(a): NBuckets field is broken, it says that the number of entries
 ## in the hash buckets is 1, but it is empty.
-  - Name:  .gnu.hash.broken.nbuckets
+  - Name:  .gnu.hash.broken.nbuckets.a
     Type:  SHT_GNU_HASH
     Header:
       SymNdx: 0x0
       Shift2: 0x0
       MaskWords: 0x0
       NBuckets:  0x1
+    BloomFilter: []
+    HashBuckets: []
+    HashValues:  []
+## Case 4(b): NBuckets = 0xFFFFFFFF is incorrect. The result will cause 32-bit
+## unsigned overflows if we keep intermediate expressions uint32_t.
+  - Name:  .gnu.hash.broken.nbuckets.b
+    Type:  SHT_GNU_HASH
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+      MaskWords: 0x1
+      NBuckets:  0xFFFFFFFF
     BloomFilter: []
     HashBuckets: []
     HashValues:  []

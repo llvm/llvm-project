@@ -21,7 +21,6 @@ Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
     Link:    [[LINK]]
-    Info:    0x0
     Entries: []
 
 ## Check that we report a warning when the sh_link field of a SHT_GNU_verdef section references a non-string table section.
@@ -34,11 +33,11 @@ Sections:
 
 ## Check that we report a warning when we can't read the content of the SHT_GNU_verdef section.
 
-# RUN: yaml2obj %s --docnum=2 -o %t3
+# RUN: yaml2obj %s --docnum=2 -DSHOFFSET=0xFFFFFFFF -o %t3
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 
-# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x228)
+# INVALID-DATA: warning: '[[FILE]]': cannot read content of SHT_GNU_verdef section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x230)
 
 --- !ELF
 FileHeader:
@@ -48,12 +47,42 @@ FileHeader:
 Sections:
   - Name:     .gnu.version_d
     Type:     SHT_GNU_verdef
-    Link:     .dynstr
-    Info:     0x0
     Entries:  []
-    ShOffset: 0xFFFFFFFF
+    ShOffset: [[SHOFFSET=<none>]]
+    ShName:   [[SHNAME=<none>]]
+  - Name:   .dynstr
+    Type:   SHT_STRTAB
+    ShName: [[DYNSTRNAME=<none>]]
 DynamicSymbols:
   - Name: foo
+
+## Check that llvm-readelf reports a warning when the name of the SHT_GNU_verdef section can't be read.
+
+# RUN: yaml2obj %s --docnum=2 -DSHNAME=0xFF -o %t.invalid.name
+# RUN: llvm-readobj -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-LLVM -DFILE=%t.invalid.name --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-GNU -DFILE=%t.invalid.name --implicit-check-not=warning:
+
+# INVALID-NAME-LLVM:      VersionDefinitions [
+# INVALID-NAME-LLVM-NEXT: ]
+
+# INVALID-NAME-GNU:      warning: '[[FILE]]': unable to get the name of SHT_GNU_verdef section with index 1: a section [index 1] has an invalid sh_name (0xff) offset which goes past the end of the section name string table
+# INVALID-NAME-GNU-NEXT: Version definition section '<?>' contains 0 entries:
+# INVALID-NAME-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (.dynstr)
+
+## Check that llvm-readelf reports a warning when we are unable to read the name of
+## the section linked with the SHT_GNU_verdef section (usually ".dynstr").
+
+# RUN: yaml2obj %s --docnum=2 -DDYNSTRNAME=0xFF -o %t.invalid.name2
+# RUN: llvm-readobj -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME-LLVM -DFILE=%t.invalid.name2 --implicit-check-not=warning:
+# RUN: llvm-readelf -V %t.invalid.name2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-NAME2-GNU -DFILE=%t.invalid.name2 --implicit-check-not=warning:
+
+# INVALID-NAME2-GNU:      Version definition section '.gnu.version_d' contains 0 entries:
+# INVALID-NAME2-GNU-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 2: a section [index 2] has an invalid sh_name (0xff) offset which goes past the end of the section name string table
+# INVALID-NAME2-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 2 (<?>)
 
 ## Check that we report a warning when a SHT_GNU_verdef section contains a version definition
 ## that goes past the end of the section.
@@ -70,16 +99,10 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .dynstr
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
     ShSize: 1
 DynamicSymbols:
@@ -100,16 +123,10 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .dynstr
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
     ShSize: 21
 DynamicSymbols:
@@ -144,16 +161,11 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    .strtab
-    Info:    0x1
+  - Name: .gnu.version_d
+    Type: SHT_GNU_verdef
+    Link: .strtab
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
   - Name: .strtab
     Type: SHT_STRTAB
@@ -181,11 +193,7 @@ Sections:
     Link: .dynstr
     Info: 0x1
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
-        Names:
+      - Names:
           - FOO
 DynamicSymbols:
   - Name: foo
@@ -234,10 +242,7 @@ Sections:
     Link: .dynstr
     Info: 0x1
     Entries:
-      - Version:    0xfefe
-        Flags:      0
-        VersionNdx: 0
-        Hash:       0
+      - Version: 0xfefe
         Names: []
 DynamicSymbols:
   - Name: foo
@@ -252,7 +257,7 @@ DynamicSymbols:
 # INVALID-VERDEF-LLVM:      VersionSymbols [
 # INVALID-VERDEF-LLVM-NEXT:    Symbol {
 # INVALID-VERDEF-LLVM-NEXT:      Version: 0
-# INVALID-VERDEF-LLVM-NEXT:      Name:
+# INVALID-VERDEF-LLVM-NEXT:      Name: {{$}}
 # INVALID-VERDEF-LLVM-NEXT:    }
 # INVALID-VERDEF-LLVM-NEXT:    Symbol {
 # INVALID-VERDEF-LLVM-NEXT:    Version: 2
@@ -261,7 +266,7 @@ DynamicSymbols:
 
 # INVALID-VERDEF-GNU:      Version symbols section '.gnu.version' contains 2 entries:
 # INVALID-VERDEF-GNU-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 3 (.dynsym)
-# INVALID-VERDEF-GNU-NEXT: warning: '[[FILE]]': unable to get a version for entry 1 of SHT_GNU_versym section with index 1: invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
+# INVALID-VERDEF-GNU-NEXT: warning: '[[FILE]]': invalid SHT_GNU_verdef section with index 2: version definition 1 goes past the end of the section
 # INVALID-VERDEF-GNU-NEXT:   000: 0 (*local*) 2 (<corrupt>)
 
 --- !ELF
@@ -273,14 +278,12 @@ Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynsym
     AddressAlign: 0x0000000000000002
     EntSize:      0x0000000000000002
     Entries:      [ 0, 2 ]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x4
     Info:         0x1
     Entries: []

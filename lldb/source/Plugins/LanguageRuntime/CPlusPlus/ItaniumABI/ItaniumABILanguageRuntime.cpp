@@ -196,7 +196,7 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   //
 
   class_type_or_name.Clear();
-  value_type = Value::ValueType::eValueTypeScalar;
+  value_type = Value::ValueType::Scalar;
 
   // Only a pointer or reference type can have a different dynamic and static
   // type:
@@ -410,13 +410,6 @@ lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginNameStatic() {
   return g_name;
 }
 
-// PluginInterface protocol
-lldb_private::ConstString ItaniumABILanguageRuntime::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ItaniumABILanguageRuntime::GetPluginVersion() { return 1; }
-
 BreakpointResolverSP ItaniumABILanguageRuntime::CreateExceptionResolver(
     const BreakpointSP &bkpt, bool catch_bp, bool throw_bp) {
   return CreateExceptionResolver(bkpt, catch_bp, throw_bp, false);
@@ -536,7 +529,7 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
     return {};
 
   TypeSystemClang *clang_ast_context =
-      TypeSystemClang::GetScratch(m_process->GetTarget());
+      ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
   if (!clang_ast_context)
     return {};
 

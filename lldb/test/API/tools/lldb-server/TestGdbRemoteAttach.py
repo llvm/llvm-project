@@ -1,18 +1,17 @@
-
-
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    def attach_with_vAttach(self):
+    def test_attach_with_vAttach(self):
+        self.build()
+        self.set_inferior_startup_attach_manually()
+
         # Start the inferior, start the debug monitor, nothing is attached yet.
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["sleep:60"])
@@ -50,18 +49,3 @@ class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(pid_text)
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, inferior.pid)
-
-    @debugserver_test
-    def test_attach_with_vAttach_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_attach_manually()
-        self.attach_with_vAttach()
-
-    @expectedFailureNetBSD
-    @llgs_test
-    def test_attach_with_vAttach_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_attach_manually()
-        self.attach_with_vAttach()

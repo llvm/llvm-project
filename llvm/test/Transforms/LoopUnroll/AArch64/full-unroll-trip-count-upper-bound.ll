@@ -11,9 +11,10 @@
 ;   }
 ;
 ; This test is meant to check that this loop is unrolled into four iterations.
+; Note that the load on the last iteration is dead and thus doesn't appear in
+; the output.
 
 ; UNROLL-LABEL: @test
-; UNROLL: load i32, i32*
 ; UNROLL: load i32, i32*
 ; UNROLL: load i32, i32*
 ; UNROLL: load i32, i32*

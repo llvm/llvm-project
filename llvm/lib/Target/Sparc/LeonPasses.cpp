@@ -10,14 +10,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "LeonPasses.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
+#include "SparcSubtarget.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
@@ -88,7 +87,7 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 
         if (MO.isGlobal()) {
           StringRef FuncName = MO.getGlobal()->getName();
-          if (FuncName.compare_lower("fesetround") == 0) {
+          if (FuncName.compare_insensitive("fesetround") == 0) {
             errs() << "Error: You are using the detectroundchange "
                       "option to detect rounding changes that will "
                       "cause LEON errata. The only way to fix this "

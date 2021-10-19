@@ -261,16 +261,16 @@ DWARF:
 #      EMPTY-CONTENT: Sections:
 # EMPTY-CONTENT-NEXT:   - sectname:  __debug_str
 # EMPTY-CONTENT-NEXT:     segname:   __DWARF
-# EMPTY-CONTENT-NEXT:     addr:      0x0000000000000000
+# EMPTY-CONTENT-NEXT:     addr:      0x0
 # EMPTY-CONTENT-NEXT:     size:      0
-# EMPTY-CONTENT-NEXT:     offset:    0x00000210
+# EMPTY-CONTENT-NEXT:     offset:    0x210
 # EMPTY-CONTENT-NEXT:     align:     0
-# EMPTY-CONTENT-NEXT:     reloff:    0x00000000
+# EMPTY-CONTENT-NEXT:     reloff:    0x0
 # EMPTY-CONTENT-NEXT:     nreloc:    0
-# EMPTY-CONTENT-NEXT:     flags:     0x00000000
-# EMPTY-CONTENT-NEXT:     reserved1: 0x00000000
-# EMPTY-CONTENT-NEXT:     reserved2: 0x00000000
-# EMPTY-CONTENT-NEXT:     reserved3: 0x00000000
+# EMPTY-CONTENT-NEXT:     flags:     0x0
+# EMPTY-CONTENT-NEXT:     reserved1: 0x0
+# EMPTY-CONTENT-NEXT:     reserved2: 0x0
+# EMPTY-CONTENT-NEXT:     reserved3: 0x0
 # EMPTY-CONTENT-NEXT: DWARF:
 # EMPTY-CONTENT-NEXT:   debug_str: []
 
@@ -321,3 +321,61 @@ DWARF:
 # EMPTY-STRING-NEXT:   debug_str:
 # EMPTY-STRING-NEXT:     - ''
 # EMPTY-STRING-NEXT: ...
+
+## d) Test generating and dumping a __debug_str section which contains a string without a null terminator.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | FileCheck %s --check-prefix=NO-TERMINATOR
+
+#  NO-TERMINATOR-NOT: DWARF:
+#      NO-TERMINATOR: Sections:
+# NO-TERMINATOR-NEXT:   - sectname:  __debug_str
+# NO-TERMINATOR-NEXT:     segname:   __DWARF
+# NO-TERMINATOR-NEXT:     addr:      0x0
+# NO-TERMINATOR-NEXT:     size:      7
+# NO-TERMINATOR-NEXT:     offset:    0x210
+# NO-TERMINATOR-NEXT:     align:     0
+# NO-TERMINATOR-NEXT:     reloff:    0x0
+# NO-TERMINATOR-NEXT:     nreloc:    0
+# NO-TERMINATOR-NEXT:     flags:     0x0
+# NO-TERMINATOR-NEXT:     reserved1: 0x0
+# NO-TERMINATOR-NEXT:     reserved2: 0x0
+# NO-TERMINATOR-NEXT:     reserved3: 0x0
+# NO-TERMINATOR-NEXT:     content:   '61626300616263'
+# NO-TERMINATOR-NEXT: ...
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  152
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   1
+    flags:    0
+    Sections:
+      - sectname:  __debug_str
+        segname:   __DWARF
+        addr:      0x00
+        size:      7
+        offset:    0x210
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        content:   '61626300616263' ## "abc\0abc"

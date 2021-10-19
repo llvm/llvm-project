@@ -14,7 +14,6 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 class ObjCDataFormatterExpr(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_expr_with_run_command(self):
         """Test common cases of expression parser <--> formatters interaction."""
         self.build()

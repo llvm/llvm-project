@@ -1,4 +1,4 @@
-//===- PDBInterfaceAnchors.h - defines class anchor funcions ----*- C++ -*-===//
+//===- PDBInterfaceAnchors.h - defines class anchor functions ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Class anchors are necessary per the LLVM Coding style guide, to ensure that
 // the vtable is only generated in this object file, and not in every object
-// file that incldues the corresponding header.
+// file that includes the corresponding header.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"

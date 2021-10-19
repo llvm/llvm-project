@@ -5,7 +5,7 @@ using size_t = decltype(sizeof(0));
 extern "C" char *something(long long x) {
 }
 
-// CHECK: @_Znwm = alias i8* (i64), i8* (i64)* @something
+// CHECK: @_Znwm ={{.*}} alias i8* (i64), i8* (i64)* @something
 void *operator new(size_t) __attribute__((alias("something")));
 
 // PR16715: don't assert here.

@@ -17,3 +17,9 @@
 	.arch armv8-a+lse
 	casa  w5, w7, [x20]
 # CHECK:        casa    w5, w7, [x20]
+
+	.arch armv8.5-a+rng
+	mrs   x0, rndr
+	mrs   x0, rndrrs
+# CHECK:        mrs     x0, RNDR
+# CHECK:        mrs     x0, RNDRRS

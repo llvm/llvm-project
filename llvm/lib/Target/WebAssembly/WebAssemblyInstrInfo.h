@@ -68,6 +68,8 @@ public:
 
   ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const override;
+
+  const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 };
 
 } // end namespace llvm

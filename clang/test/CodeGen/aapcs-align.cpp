@@ -18,7 +18,7 @@ void g0() {
   f0(1, s);
   f0m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g0
+// CHECK: define{{.*}} void @g0
 // CHECK: call void @f0(i32 1, [2 x i32] [i32 6, i32 7]
 // CHECK: call void @f0m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i32] [i32 6, i32 7]
 // CHECK: declare void @f0(i32, [2 x i32])
@@ -36,7 +36,7 @@ void g1() {
   f1(1, s);
   f1m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g1
+// CHECK: define{{.*}} void @g1
 // CHECK: call void @f1(i32 1, [2 x i32] [i32 6, i32 7]
 // CHECK: call void @f1m(i32 1, i32 2, i32 3, i32 4, i32 5, [2 x i32] [i32 6, i32 7]
 // CHECK: declare void @f1(i32, [2 x i32])
@@ -55,7 +55,7 @@ void g2() {
   f2(1, s);
   f2m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g2
+// CHECK: define{{.*}} void @g2
 // CHECK: call void @f2(i32 1, [4 x i32] [i32 6, i32 7
 // CHECK: call void @f2m(i32 1, i32 2, i32 3, i32 4, i32 5, [4 x i32] [i32 6, i32 7
 // CHECK: declare void @f2(i32, [4 x i32])
@@ -74,7 +74,7 @@ void g3() {
   f3(1, s);
   f3m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g3
+// CHECK: define{{.*}} void @g3
 // CHECK: call void @f3(i32 1, [1 x i64] [i64 30064771078]
 // CHECK: call void @f3m(i32 1, i32 2, i32 3, i32 4, i32 5, [1 x i64] [i64 30064771078]
 // CHECK: declare void @f3(i32, [1 x i64])
@@ -94,7 +94,7 @@ void g4() {
   f4(1, s);
   f4m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g4
+// CHECK: define{{.*}} void @g4
 // CHECK: call void @f4(i32 1, %struct.SF16* nonnull byval(%struct.SF16) align 8
 // CHECK: call void @f4m(i32 1, i32 2, i32 3, i32 4, i32 5, %struct.SF16* nonnull byval(%struct.SF16) align 8
 // CHECK: declare void @f4(i32, %struct.SF16* byval(%struct.SF16) align 8)
@@ -113,7 +113,7 @@ void g5() {
   f5(1, s);
   f5m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g5
+// CHECK: define{{.*}} void @g5
 // CHECK: call void @f5(i32 1, [3 x i32] [i32 6, i32 7, i32 0])
 // CHECK: call void @f5m(i32 1, i32 2, i32 3, i32 4, i32 5, [3 x i32] [i32 6, i32 7, i32 0])
 // CHECK: declare void @f5(i32, [3 x i32])
@@ -133,7 +133,7 @@ void g6() {
   f6(1, s);
   f6m(1, 2, 3, 4, 5, s);
 }
-// CHECK: define void @g6
+// CHECK: define{{.*}} void @g6
 // CHECK: call void @f6(i32 1, [4 x i32] [i32 6, i32 7, i32 0, i32 0])
 // CHECK: call void @f6m(i32 1, i32 2, i32 3, i32 4, i32 5, [4 x i32] [i32 6, i32 7, i32 0, i32 0])
 // CHECK: declare void @f6(i32, [4 x i32])

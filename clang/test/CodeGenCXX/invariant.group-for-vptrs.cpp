@@ -8,7 +8,7 @@ struct D : A {
   void foo();
 };
 
-// CHECK-LABEL: define void @_Z21testExternallyVisiblev()
+// CHECK-LABEL: define{{.*}} void @_Z21testExternallyVisiblev()
 void testExternallyVisible() {
   A *a = new A;
 
@@ -37,7 +37,7 @@ struct C : B {
 
 }
 
-// CHECK-LABEL: define void @_Z21testInternallyVisibleb(
+// CHECK-LABEL: define{{.*}} void @_Z21testInternallyVisibleb(
 void testInternallyVisible(bool p) {
   B *b = new B;
   // CHECK: = load {{.*}}, !invariant.group ![[MD]]

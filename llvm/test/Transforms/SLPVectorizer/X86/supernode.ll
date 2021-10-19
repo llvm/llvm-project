@@ -21,10 +21,10 @@ define void @test_supernode_add(double* %Aarray, double* %Barray, double *%Carra
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; ENABLED-NEXT:    [[C0:%.*]] = load double, double* [[IDXC0]], align 8
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, double* [[IDXC1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C1]], i32 1
 ; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[C0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A1]], i32 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
 ; ENABLED-NEXT:    [[TMP8:%.*]] = bitcast double* [[IDXS0]] to <2 x double>*
@@ -80,10 +80,10 @@ define void @test_supernode_addsub(double* %Aarray, double* %Barray, double *%Ca
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; ENABLED-NEXT:    [[C0:%.*]] = load double, double* [[IDXC0]], align 8
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, double* [[IDXC1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C1]], i32 1
 ; ENABLED-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[C0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A1]], i32 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
 ; ENABLED-NEXT:    [[TMP8:%.*]] = bitcast double* [[IDXS0]] to <2 x double>*
@@ -220,11 +220,11 @@ define void @supernode_scheduling(double* %Aarray, double* %Barray, double *%Car
 ; ENABLED-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXA0]] to <2 x double>*
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, double* [[IDXB1]], align 8
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> undef, double [[C]], i32 0
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i32 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B1]], i32 1
 ; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
 ; ENABLED-NEXT:    [[D:%.*]] = load double, double* [[IDXD]], align 8
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> undef, double [[B0]], i32 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[D]], i32 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]
 ; ENABLED-NEXT:    [[TMP8:%.*]] = bitcast double* [[IDXS0]] to <2 x double>*
@@ -286,14 +286,14 @@ define void @supernode_scheduling_cross_block(double* %Aarray, double* %Barray, 
 ; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[SARRAY]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, double* [[IDXA0]], align 8
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, double* [[IDXB1]], align 8
-; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[A0]], i32 0
+; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
 ; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B1]], i32 1
 ; ENABLED-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[TMP1]], <double 2.000000e+00, double 2.000000e+00>
 ; ENABLED-NEXT:    br label [[BB:%.*]]
 ; ENABLED:       bb:
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, double* [[IDXA1]], align 8
 ; ENABLED-NEXT:    [[B0:%.*]] = load double, double* [[IDXB0]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> undef, double [[B0]], i32 0
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
 ; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[A1]], i32 1
 ; ENABLED-NEXT:    [[TMP5:%.*]] = fadd fast <2 x double> [[TMP2]], [[TMP4]]
 ; ENABLED-NEXT:    [[TMP6:%.*]] = bitcast double* [[IDXS0]] to <2 x double>*

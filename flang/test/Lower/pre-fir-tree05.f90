@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-pre-fir-tree -fparse-only -fopenacc %s | FileCheck %s
+! RUN: %flang_fc1 -fsyntax-only -fdebug-pre-fir-tree -fopenacc %s | FileCheck %s
 
 ! Test structure of the Pre-FIR tree with OpenACC construct
 
@@ -27,9 +27,9 @@ subroutine foo()
   !$acc end parallel
   ! CHECK-NEXT: <<End OpenACCConstruct>>
   ! CHECK-NEXT: <<End OpenACCConstruct>>
-  ! CHECK-NEXT: ContinueStmt
+  ! CHECK-NEXT: EndSubroutineStmt
 end subroutine
-! CHECK-NEXT: EndSubroutine foo
+! CHECK-NEXT: End Subroutine foo
 
 ! CHECK: Subroutine foo
 subroutine foo2()
@@ -43,7 +43,7 @@ subroutine foo2()
   end do
   !$acc end parallel loop
   ! CHECK-NEXT: <<End OpenACCConstruct>>
-  ! CHECK-NEXT: ContinueStmt
+  ! CHECK-NEXT: EndSubroutineStmt
 end subroutine
-! CHECK-NEXT: EndSubroutine foo2
+! CHECK-NEXT: End Subroutine foo2
 

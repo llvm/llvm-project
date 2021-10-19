@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -triple=wasm32-unknown-unknown -mattr=+exception-handling < %s | FileCheck %s
 
 # Tests if block/loop/try/catch/end/branch/rethrow instructions are correctly
 # printed with their annotations.
@@ -8,10 +8,10 @@
   .type    test_annotation,@function
 test_annotation:
   .functype   test_annotation () -> ()
-  .eventtype  __cpp_exception i32
+  .tagtype  __cpp_exception i32
   try
   br        0
-  catch
+  catch     __cpp_exception
   block
   br_if     0
   loop
@@ -19,21 +19,18 @@ test_annotation:
   end_loop
   end_block
   try
-  rethrow
-  catch
+  rethrow   0
+  catch     __cpp_exception
+  catch_all
   block
   try
   br        0
-  catch
-  local.set 0
-  block    i32
-  local.get 0
-  br_on_exn 0, __cpp_exception
-  rethrow
-  end_block
+  try
+  delegate  1
+  catch_all
   end_try
   end_block
-  rethrow
+  rethrow   0
   end_try
   end_try
   end_function
@@ -42,7 +39,7 @@ test_annotation:
 # CHECK:      test_annotation:
 # CHECK:        try
 # CHECK-NEXT:   br        0               # 0: down to label0
-# CHECK-NEXT:   catch                     # catch0:
+# CHECK-NEXT:   catch     __cpp_exception # catch0:
 # CHECK-NEXT:   block
 # CHECK-NEXT:   br_if     0               # 0: down to label1
 # CHECK-NEXT:   loop                      # label2:
@@ -50,21 +47,18 @@ test_annotation:
 # CHECK-NEXT:   end_loop
 # CHECK-NEXT:   end_block                 # label1:
 # CHECK-NEXT:   try
-# CHECK-NEXT:   rethrow                   # down to catch1
-# CHECK-NEXT:   catch                     # catch1:
+# CHECK-NEXT:   rethrow   0               # down to catch3
+# CHECK-NEXT:   catch     __cpp_exception # catch3:
+# CHECK-NEXT:   catch_all{{$}}
 # CHECK-NEXT:   block
 # CHECK-NEXT:   try
 # CHECK-NEXT:   br        0               # 0: down to label5
-# CHECK-NEXT:   catch                     # catch2:
-# CHECK-NEXT:   local.set 0
-# CHECK-NEXT:   block    i32
-# CHECK-NEXT:   local.get 0
-# CHECK-NEXT:   br_on_exn 0, __cpp_exception # 0: down to label6
-# CHECK-NEXT:   rethrow                   # to caller
-# CHECK-NEXT:   end_block                 # label6:
+# CHECK-NEXT:   try
+# CHECK-NEXT:   delegate    1             # label/catch6: down to catch4
+# CHECK-NEXT:   catch_all                 # catch5:
 # CHECK-NEXT:   end_try                   # label5:
 # CHECK-NEXT:   end_block                 # label4:
-# CHECK-NEXT:   rethrow                   # to caller
+# CHECK-NEXT:   rethrow   0               # to caller
 # CHECK-NEXT:   end_try                   # label3:
 # CHECK-NEXT:   end_try                   # label0:
 # CHECK-NEXT:   end_function

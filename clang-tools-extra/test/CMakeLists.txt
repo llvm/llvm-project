@@ -16,8 +16,7 @@ endif ()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
 llvm_canonicalize_cmake_booleans(
-  CLANG_ENABLE_STATIC_ANALYZER
-  LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA
+  CLANG_TIDY_ENABLE_STATIC_ANALYZER
   )
 
 configure_lit_site_cfg(
@@ -68,10 +67,6 @@ set(CLANG_TOOLS_TEST_DEPS
   # Clang-tidy tests need clang for building modules.
   clang
 )
-if (LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA)
-  # For the clang-tidy libclang integration test.
-  set(CLANG_TOOLS_TEST_DEPS ${CLANG_TOOLS_TEST_DEPS} "c-index-test")
-endif ()
 
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
@@ -90,3 +85,7 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   )
 
 set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
+
+add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+  )

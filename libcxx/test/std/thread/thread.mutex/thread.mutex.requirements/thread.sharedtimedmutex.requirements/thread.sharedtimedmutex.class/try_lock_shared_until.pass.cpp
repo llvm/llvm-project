@@ -9,10 +9,10 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03, c++11
 
+// ALLOW_RETRIES: 2
+
 // shared_timed_mutex was introduced in macosx10.12
-// UNSUPPORTED: with_system_cxx_lib=macosx10.11
-// UNSUPPORTED: with_system_cxx_lib=macosx10.10
-// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // <shared_mutex>
 
@@ -21,12 +21,15 @@
 // template <class Clock, class Duration>
 //     bool try_lock_shared_until(const chrono::time_point<Clock, Duration>& abs_time);
 
-#include <shared_mutex>
 #include <thread>
-#include <vector>
-#include <cstdlib>
-#include <cassert>
 
+#include <atomic>
+#include <cassert>
+#include <cstdlib>
+#include <shared_mutex>
+#include <vector>
+
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 std::shared_timed_mutex m;
@@ -70,7 +73,7 @@ int main(int, char**)
     m.lock();
     std::vector<std::thread> v;
     for (int i = 0; i < threads; ++i)
-      v.push_back(std::thread(f1));
+      v.push_back(support::make_test_thread(f1));
     while (countDown > 0)
       std::this_thread::yield();
     m.unlock();
@@ -81,7 +84,7 @@ int main(int, char**)
     m.lock();
     std::vector<std::thread> v;
     for (int i = 0; i < threads; ++i)
-      v.push_back(std::thread(f2));
+      v.push_back(support::make_test_thread(f2));
     for (auto& t : v)
       t.join();
     m.unlock();

@@ -117,6 +117,11 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
+static cl::opt<bool>
+    ClDropTypeTests("lowertypetests-drop-type-tests",
+                    cl::desc("Simply drop type test assume sequences"),
+                    cl::Hidden, cl::init(false));
+
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -198,7 +203,7 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
       // indices from the old fragment in this fragment do not insert any more
       // indices.
       std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      Fragment.insert(Fragment.end(), OldFragment.begin(), OldFragment.end());
+      llvm::append_range(Fragment, OldFragment);
       OldFragment.clear();
     }
   }
@@ -336,7 +341,7 @@ private:
 
 struct ScopedSaveAliaseesAndUsed {
   Module &M;
-  SmallPtrSet<GlobalValue *, 16> Used, CompilerUsed;
+  SmallVector<GlobalValue *, 4> Used, CompilerUsed;
   std::vector<std::pair<GlobalIndirectSymbol *, Function *>> FunctionAliases;
 
   ScopedSaveAliaseesAndUsed(Module &M) : M(M) {
@@ -367,9 +372,8 @@ struct ScopedSaveAliaseesAndUsed {
   }
 
   ~ScopedSaveAliaseesAndUsed() {
-    appendToUsed(M, std::vector<GlobalValue *>(Used.begin(), Used.end()));
-    appendToCompilerUsed(M, std::vector<GlobalValue *>(CompilerUsed.begin(),
-                                                       CompilerUsed.end()));
+    appendToUsed(M, Used);
+    appendToCompilerUsed(M, CompilerUsed);
 
     for (auto P : FunctionAliases)
       P.first->setIndirectSymbol(
@@ -529,7 +533,8 @@ struct LowerTypeTests : public ModulePass {
   LowerTypeTests(ModuleSummaryIndex *ExportSummary,
                  const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
       : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary), DropTypeTests(DropTypeTests) {
+        ImportSummary(ImportSummary),
+        DropTypeTests(DropTypeTests || ClDropTypeTests) {
     initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
   }
 
@@ -1205,6 +1210,7 @@ void LowerTypeTestsModule::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
 
 static const unsigned kX86JumpTableEntrySize = 8;
 static const unsigned kARMJumpTableEntrySize = 4;
+static const unsigned kARMBTIJumpTableEntrySize = 8;
 
 unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
   switch (Arch) {
@@ -1213,7 +1219,12 @@ unsigned LowerTypeTestsModule::getJumpTableEntrySize() {
       return kX86JumpTableEntrySize;
     case Triple::arm:
     case Triple::thumb:
+      return kARMJumpTableEntrySize;
     case Triple::aarch64:
+      if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+            M.getModuleFlag("branch-target-enforcement")))
+        if (BTE->getZExtValue())
+          return kARMBTIJumpTableEntrySize;
       return kARMJumpTableEntrySize;
     default:
       report_fatal_error("Unsupported architecture for jump tables");
@@ -1232,7 +1243,13 @@ void LowerTypeTestsModule::createJumpTableEntry(
   if (JumpTableArch == Triple::x86 || JumpTableArch == Triple::x86_64) {
     AsmOS << "jmp ${" << ArgIndex << ":c}@plt\n";
     AsmOS << "int3\nint3\nint3\n";
-  } else if (JumpTableArch == Triple::arm || JumpTableArch == Triple::aarch64) {
+  } else if (JumpTableArch == Triple::arm) {
+    AsmOS << "b $" << ArgIndex << "\n";
+  } else if (JumpTableArch == Triple::aarch64) {
+    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+          Dest->getParent()->getModuleFlag("branch-target-enforcement")))
+      if (BTE->getZExtValue())
+        AsmOS << "bti c\n";
     AsmOS << "b $" << ArgIndex << "\n";
   } else if (JumpTableArch == Triple::thumb) {
     AsmOS << "b.w $" << ArgIndex << "\n";
@@ -1393,6 +1410,10 @@ void LowerTypeTestsModule::createJumpTable(
     // Thumb jump table assembly needs Thumb2. The following attribute is added
     // by Clang for -march=armv7.
     F->addFnAttr("target-cpu", "cortex-a8");
+  }
+  if (JumpTableArch == Triple::aarch64) {
+    F->addFnAttr("branch-target-enforcement", "false");
+    F->addFnAttr("sign-return-address", "none");
   }
   // Make sure we don't emit .eh_frame for this function.
   F->addFnAttr(Attribute::NoUnwind);
@@ -1672,7 +1693,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleSummaryIndex *ExportSummary,
     const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
     : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(DropTypeTests) {
+      DropTypeTests(DropTypeTests || ClDropTypeTests) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -1707,7 +1728,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
     ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
                           ": ");
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_Text);
+    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_TextWithCRLF);
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
@@ -1775,12 +1796,16 @@ bool LowerTypeTestsModule::lower() {
          UI != UE;) {
       auto *CI = cast<CallInst>((*UI++).getUser());
       // Find and erase llvm.assume intrinsics for this llvm.type.test call.
-      for (auto CIU = CI->use_begin(), CIUE = CI->use_end(); CIU != CIUE;) {
-        if (auto *AssumeCI = dyn_cast<CallInst>((*CIU++).getUser())) {
-          Function *F = AssumeCI->getCalledFunction();
-          if (F && F->getIntrinsicID() == Intrinsic::assume)
-            AssumeCI->eraseFromParent();
-        }
+      for (auto CIU = CI->use_begin(), CIUE = CI->use_end(); CIU != CIUE;)
+        if (auto *Assume = dyn_cast<AssumeInst>((*CIU++).getUser()))
+          Assume->eraseFromParent();
+      // If the assume was merged with another assume, we might have a use on a
+      // phi (which will feed the assume). Simply replace the use on the phi
+      // with "true" and leave the merged assume.
+      if (!CI->use_empty()) {
+        assert(all_of(CI->users(),
+                      [](User *U) -> bool { return isa<PHINode>(U); }));
+        CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
       }
       CI->eraseFromParent();
     }
@@ -2042,6 +2067,21 @@ bool LowerTypeTestsModule::lower() {
   if (TypeTestFunc) {
     for (const Use &U : TypeTestFunc->uses()) {
       auto CI = cast<CallInst>(U.getUser());
+      // If this type test is only used by llvm.assume instructions, it
+      // was used for whole program devirtualization, and is being kept
+      // for use by other optimization passes. We do not need or want to
+      // lower it here. We also don't want to rewrite any associated globals
+      // unnecessarily. These will be removed by a subsequent LTT invocation
+      // with the DropTypeTests flag set.
+      bool OnlyAssumeUses = !CI->use_empty();
+      for (const Use &CIU : CI->uses()) {
+        if (isa<AssumeInst>(CIU.getUser()))
+          continue;
+        OnlyAssumeUses = false;
+        break;
+      }
+      if (OnlyAssumeUses)
+        continue;
 
       auto TypeIdMDVal = dyn_cast<MetadataAsValue>(CI->getArgOperand(1));
       if (!TypeIdMDVal)
@@ -2060,11 +2100,11 @@ bool LowerTypeTestsModule::lower() {
       auto CI = cast<CallInst>(U.getUser());
 
       std::vector<GlobalTypeMember *> Targets;
-      if (CI->getNumArgOperands() % 2 != 1)
+      if (CI->arg_size() % 2 != 1)
         report_fatal_error("number of arguments should be odd");
 
       GlobalClassesTy::member_iterator CurSet;
-      for (unsigned I = 1; I != CI->getNumArgOperands(); I += 2) {
+      for (unsigned I = 1; I != CI->arg_size(); I += 2) {
         int64_t Offset;
         auto *Base = dyn_cast<GlobalObject>(GetPointerBaseWithConstantOffset(
             CI->getOperand(I), Offset, M.getDataLayout()));
@@ -2239,9 +2279,13 @@ bool LowerTypeTestsModule::lower() {
 
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  bool Changed =
-      LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-          .lower();
+  bool Changed;
+  if (UseCommandLine)
+    Changed = LowerTypeTestsModule::runForTesting(M);
+  else
+    Changed =
+        LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
+            .lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

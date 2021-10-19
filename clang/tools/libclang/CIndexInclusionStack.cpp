@@ -35,7 +35,7 @@ void getInclusions(bool IsLocal, unsigned n, CXTranslationUnit TU,
       continue;
 
     const SrcMgr::FileInfo &FI = SL.getFile();
-    if (!FI.getContentCache()->OrigEntry)
+    if (!FI.getContentCache().OrigEntry)
       continue;
 
     // If this is the main file, and there is a preamble, skip this SLoc. The
@@ -60,7 +60,7 @@ void getInclusions(bool IsLocal, unsigned n, CXTranslationUnit TU,
     // Callback to the client.
     // FIXME: We should have a function to construct CXFiles.
     CB(static_cast<CXFile>(
-           const_cast<FileEntry *>(FI.getContentCache()->OrigEntry)),
+           const_cast<FileEntry *>(FI.getContentCache().OrigEntry)),
        InclusionStack.data(), InclusionStack.size(), clientData);
   }
 }

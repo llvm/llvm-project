@@ -13,6 +13,7 @@
 #include "mlir/TableGen/Constraint.h"
 #include "llvm/TableGen/Record.h"
 
+using namespace mlir;
 using namespace mlir::tblgen;
 
 Constraint::Constraint(const llvm::Record *record)
@@ -56,11 +57,10 @@ std::string Constraint::getConditionTemplate() const {
   return getPredicate().getCondition();
 }
 
-llvm::StringRef Constraint::getDescription() const {
-  auto doc = def->getValueAsString("description");
-  if (doc.empty())
-    return def->getName();
-  return doc;
+StringRef Constraint::getSummary() const {
+  if (Optional<StringRef> summary = def->getValueAsOptionalString("summary"))
+    return *summary;
+  return def->getName();
 }
 
 AppliedConstraint::AppliedConstraint(Constraint &&constraint,

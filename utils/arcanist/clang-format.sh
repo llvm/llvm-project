@@ -14,7 +14,7 @@ set -euo pipefail
 # switch to warning or error if you want to prompt the user.
 if ! hash clang-format >/dev/null; then
   echo "advice"
-  echo "clang-format not found in user's PATH; not linting file."
+  echo "clang-format not found in user’s local PATH; not linting file."
   echo "===="
   exit 0
 fi
@@ -52,7 +52,7 @@ trap 'cleanup' INT HUP QUIT TERM EXIT
 # because whether/how these are installed differs between distributions,
 # and we have an executable copy in the tree anyway.
 arc_base_commit=$(arc which --show-base)
-git diff-index -U0 "${arc_base_commit}" \
+git diff-index -U0 "${arc_base_commit}" "${src_file}" \
   | clang/tools/clang-format/clang-format-diff.py -style file -i -p1
 
 cp -p "${src_file}" "${formatted_file}"

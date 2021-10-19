@@ -46,12 +46,12 @@ __device__ float device_mul_or_add(float a, float b);
 extern "C" __device__ double __nv_sin(double x);
 extern "C" __device__ double __nv_exp(double x);
 
-// CHECK-IR-LABEL: define void @_Z26should_not_be_internalizedPf(
+// CHECK-IR-LABEL: define{{.*}} void @_Z26should_not_be_internalizedPf(
 // CHECK-PTX-LABEL: .visible .func _Z26should_not_be_internalizedPf(
 __device__ void should_not_be_internalized(float *data) {}
 
 // Make sure kernel call has not been internalized.
-// CHECK-IR-LABEL: define void @_Z6kernelPfS_
+// CHECK-IR-LABEL: define{{.*}} void @_Z6kernelPfS_
 // CHECK-PTX-LABEL: .visible .entry _Z6kernelPfS_(
 __global__ __attribute__((used)) void kernel(float *out, float *in) {
   *out = device_mul_or_add(in[0], in[1]);
@@ -62,7 +62,7 @@ __global__ __attribute__((used)) void kernel(float *out, float *in) {
 // Make sure device_mul_or_add() is present in IR, is internal and
 // calls __nvvm_reflect().
 // CHECK-IR-LABEL: define internal float @_Z17device_mul_or_addff(
-// CHECK-IR-NLD-LABEL: define float @_Z17device_mul_or_addff(
+// CHECK-IR-NLD-LABEL: define{{.*}} float @_Z17device_mul_or_addff(
 // CHECK-IR: call i32 @__nvvm_reflect
 // CHECK-IR: ret float
 

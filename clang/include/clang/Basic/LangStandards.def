@@ -152,6 +152,16 @@ LANGSTANDARD(gnucxx20, "gnu++20",
              CPlusPlus20 | Digraphs | HexFloat | GNUMode)
 LANGSTANDARD_ALIAS_DEPR(gnucxx20, "gnu++2a")
 
+LANGSTANDARD(cxx2b, "c++2b",
+             CXX, "Working draft for ISO C++ 2023 DIS",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat)
+
+LANGSTANDARD(gnucxx2b, "gnu++2b",
+             CXX, "Working draft for ISO C++ 2023 DIS with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus2b | Digraphs | HexFloat | GNUMode)
+
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",
@@ -167,8 +177,18 @@ LANGSTANDARD(opencl12, "cl1.2",
 LANGSTANDARD(opencl20, "cl2.0",
              OpenCL, "OpenCL 2.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
-LANGSTANDARD(openclcpp, "clc++",
-             OpenCL, "C++ for OpenCL",
+LANGSTANDARD(opencl30, "cl3.0",
+             OpenCL, "OpenCL 3.0",
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
+
+LANGSTANDARD(openclcpp10, "clc++1.0",
+             OpenCL, "C++ for OpenCL 1.0",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             Digraphs | HexFloat | OpenCL)
+LANGSTANDARD_ALIAS(openclcpp10, "clc++")
+
+LANGSTANDARD(openclcpp2021, "clc++2021",
+             OpenCL, "C++ for OpenCL 2021",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat | OpenCL)
 
@@ -176,15 +196,18 @@ LANGSTANDARD_ALIAS_DEPR(opencl10, "CL")
 LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
-LANGSTANDARD_ALIAS_DEPR(openclcpp, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
+LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
+LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
 
 // CUDA
 LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
-             LineComment | CPlusPlus | Digraphs)
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
 // HIP
 LANGSTANDARD(hip, "hip", HIP, "HIP",
-             LineComment | CPlusPlus | Digraphs)
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS

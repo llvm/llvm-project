@@ -5,24 +5,26 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -code-model=large -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-LARGE %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-none-eabi -code-model=tiny -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-TINY %s
 
-@varfloat = global float 0.0
-@vardouble = global double 0.0
+@varfloat = dso_local global float 0.0
+@vardouble = dso_local global double 0.0
 
-define void @floating_lits() {
+define dso_local void @floating_lits() optsize {
 ; CHECK-LABEL: floating_lits:
 
   %floatval = load float, float* @varfloat
-  %newfloat = fadd float %floatval, 128.0
-; CHECK: mov [[W128:w[0-9]+]], #1124073472
-; CHECK: fmov [[LIT128:s[0-9]+]], [[W128]]
+  %newfloat = fadd float %floatval, 511.0
+; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
 ; CHECK-NOFP-NOT: ldr {{s[0-9]+}},
 
-; CHECK-TINY: mov [[W128:w[0-9]+]], #1124073472
-; CHECK-TINE: fmov [[LIT128:s[0-9]+]], [[W128]]
+; CHECK-TINY: ldr [[LIT128:s[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-NOFP-TINY-NOT: ldr {{s[0-9]+}},
 
-; CHECK-LARGE: mov [[W128:w[0-9]+]], #1124073472
-; CHECK-LARGE: fmov [[LIT128:s[0-9]+]], [[W128]]
+; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g1_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
+; CHECK-LARGE: movk x[[LITADDR]], #:abs_g3:[[CURLIT]]
+; CHECK-LARGE: ldr {{s[0-9]+}}, [x[[LITADDR]]]
 ; CHECK-LARGE: fadd
 ; CHECK-NOFP-LARGE-NOT: ldr {{s[0-9]+}},
 ; CHECK-NOFP-LARGE-NOT: fadd
@@ -30,20 +32,17 @@ define void @floating_lits() {
   store float %newfloat, float* @varfloat
 
   %doubleval = load double, double* @vardouble
-  %newdouble = fadd double %doubleval, 129.0
+  %newdouble = fadd double %doubleval, 511.0
+; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK: ldr [[LIT129:d[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
 ; CHECK-NOFP-NOT: ldr {{d[0-9]+}},
-; CHECK: mov  [[W129:x[0-9]+]], #35184372088832
-; CHECK: movk [[W129]], #16480, lsl #48
-; CHECK: fmov {{d[0-9]+}}, [[W129]]
 ; CHECK-NOFP-NOT: fadd
 
-; CHECK-TINY: mov  [[W129:x[0-9]+]], #35184372088832
-; CHECK-TINY: movk [[W129]], #16480, lsl #48
-; CHECK-TINY: fmov {{d[0-9]+}}, [[W129]]
+; CHECK-TINY: ldr [[LIT129:d[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-NOFP-TINY-NOT: ldr {{d[0-9]+}},
 ; CHECK-NOFP-TINY-NOT: fadd
 
-; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:vardouble]]
+; CHECK-LARGE: movz x[[LITADDR:[0-9]+]], #:abs_g0_nc:[[CURLIT:.LCPI[0-9]+_[0-9]+]]
 ; CHECK-LARGE: movk x[[LITADDR]], #:abs_g1_nc:[[CURLIT]]
 ; CHECK-LARGE: movk x[[LITADDR]], #:abs_g2_nc:[[CURLIT]]
 ; CHECK-LARGE: movk x[[LITADDR]], #:abs_g3:[[CURLIT]]
@@ -53,4 +52,28 @@ define void @floating_lits() {
   store double %newdouble, double* @vardouble
 
   ret void
+}
+
+define dso_local float @float_ret_optnone() optnone noinline {
+; CHECK-LABEL: float_ret_optnone:
+
+  ret float 0x3FB99999A0000000
+; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK: ldr [[LIT128:s[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
+
+; In the large code model, FastISel cannot load from the constant pool.
+; CHECK-LARGE-NOT: adrp
+; CHECK-LARGE-NOT: ldr
+}
+
+define dso_local double @double_ret_optnone() optnone noinline {
+; CHECK-LABEL: double_ret_optnone:
+
+  ret double 0.1
+; CHECK: adrp x[[LITBASE:[0-9]+]], [[CURLIT:.LCPI[0-9]+_[0-9]+]]
+; CHECK: ldr [[LIT128:d[0-9]+]], [x[[LITBASE]], {{#?}}:lo12:[[CURLIT]]]
+
+; In the large code model, FastISel cannot load from the constant pool.
+; CHECK-LARGE-NOT: adrp
+; CHECK-LARGE-NOT: ldr
 }

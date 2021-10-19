@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -mir-vreg-namer-use-stable-hash -run-pass mir-canonicalizer %s | FileCheck %s
 
 ...
 ---
@@ -37,9 +38,9 @@ body: |
   bb.0:
     liveins: $x0, $x1, $d0, $d1
 
-    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    %42:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
 
-    ;CHECK: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load 8)
+    ;CHECK: %bb0_{{[0-9]+}}__1:gpr32 = LDRWui %stack.0, 0 :: (dereferenceable load (s64))
     ;CHECK-NEXT: $w0 = COPY %bb0_
     ;CHECK-NEXT: RET_ReallyLR implicit $w0
 

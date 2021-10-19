@@ -12,7 +12,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
 #include <atomic>
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 class Stream;
@@ -25,6 +25,7 @@ public:
   class Category {
   public:
     explicit Category(const char *category_name);
+    llvm::StringRef GetName() { return m_name; }
 
   private:
     friend class Timer;
@@ -40,7 +41,11 @@ public:
 
   /// Default constructor.
   Timer(Category &category, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+#if !defined(_MSC_VER)
+  // MSVC appears to have trouble recognizing the this argument in the constructor.
+      __attribute__((format(printf, 3, 4)))
+#endif
+    ;
 
   /// Destructor
   ~Timer();
@@ -72,5 +77,14 @@ private:
 };
 
 } // namespace lldb_private
+
+// Use a format string because LLVM_PRETTY_FUNCTION might not be a string
+// literal.
+#define LLDB_SCOPED_TIMER()                                                    \
+  static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
+  ::lldb_private::Timer _scoped_timer(_cat, "%s", LLVM_PRETTY_FUNCTION)
+#define LLDB_SCOPED_TIMERF(...)                                                \
+  static ::lldb_private::Timer::Category _cat(LLVM_PRETTY_FUNCTION);           \
+  ::lldb_private::Timer _scoped_timer(_cat, __VA_ARGS__)
 
 #endif // LLDB_UTILITY_TIMER_H

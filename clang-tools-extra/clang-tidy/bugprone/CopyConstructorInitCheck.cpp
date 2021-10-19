@@ -110,8 +110,8 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   FixItMsg += ' ';
 
   Diag << FixItHint::CreateInsertion(FixItLoc, FixItMsg);
-} // namespace misc
+}
 
-} // namespace misc
+} // namespace bugprone
 } // namespace tidy
 } // namespace clang

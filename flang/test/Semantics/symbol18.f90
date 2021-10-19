@@ -1,17 +1,17 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %python %S/test_symbols.py %s %flang_fc1
 
 ! Intrinsic function in type declaration statement: type is ignored
 
 !DEF: /p1 MainProgram
 program p1
- !DEF: /p1/cos INTRINSIC (Function) ProcEntity
+ !DEF: /p1/cos ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity INTEGER(4)
  integer cos
  !DEF: /p1/y (Implicit) ObjectEntity REAL(4)
  !REF: /p1/cos
  !DEF: /p1/x (Implicit) ObjectEntity REAL(4)
  y = cos(x)
  !REF: /p1/y
- !DEF: /p1/sin INTRINSIC (Function) ProcEntity
+ !DEF: /p1/sin ELEMENTAL, INTRINSIC, PURE (Function) ProcEntity
  !REF: /p1/x
  y = sin(x)
  !REF: /p1/y

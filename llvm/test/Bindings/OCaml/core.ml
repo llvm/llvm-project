@@ -1,7 +1,7 @@
-(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/core.ml
- * RUN: %ocamlc -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %t/core.ml -o %t/executable
+(* RUN: rm -rf %t && mkdir -p %t && cp %s %t/core.ml && cp %S/Utils/Testsuite.ml %t/Testsuite.ml
+ * RUN: %ocamlc -g -w +A -package llvm.analysis -package llvm.bitwriter -I %t/ -linkpkg %t/Testsuite.ml %t/core.ml -o %t/executable
  * RUN: %t/executable %t/bitcode.bc
- * RUN: %ocamlopt -g -w +A -package llvm.analysis -package llvm.bitwriter -linkpkg %t/core.ml -o %t/executable
+ * RUN: %ocamlopt -g -w +A -package llvm.analysis -package llvm.bitwriter -I %t/ -linkpkg %t/Testsuite.ml %t/core.ml -o %t/executable
  * RUN: %t/executable %t/bitcode.bc
  * RUN: llvm-dis < %t/bitcode.bc > %t/dis.ll
  * RUN: FileCheck %s < %t/dis.ll
@@ -17,13 +17,7 @@
 open Llvm
 open Llvm_bitwriter
 
-
-(* Tiny unit test framework - really just to help find which line is busted *)
-let exit_status = ref 0
-let suite_name = ref ""
-let group_name = ref ""
-let case_num = ref 0
-let print_checkpoints = false
+open Testsuite
 let context = global_context ()
 let i1_type = Llvm.i1_type context
 let i8_type = Llvm.i8_type context
@@ -34,32 +28,6 @@ let void_type = Llvm.void_type context
 let float_type = Llvm.float_type context
 let double_type = Llvm.double_type context
 let fp128_type = Llvm.fp128_type context
-
-let group name =
-  group_name := !suite_name ^ "/" ^ name;
-  case_num := 0;
-  if print_checkpoints then
-    prerr_endline ("  " ^ name ^ "...")
-
-let insist cond =
-  incr case_num;
-  if not cond then
-    exit_status := 10;
-  match print_checkpoints, cond with
-  | false, true -> ()
-  | false, false ->
-      prerr_endline ("FAILED: " ^ !suite_name ^ "/" ^ !group_name ^ " #" ^ (string_of_int !case_num))
-  | true, true ->
-      prerr_endline ("    " ^ (string_of_int !case_num))
-  | true, false ->
-      prerr_endline ("    " ^ (string_of_int !case_num) ^ " FAIL")
-
-let suite name f =
-  suite_name := name;
-  if print_checkpoints then
-    prerr_endline (name ^ ":");
-  f ()
-
 
 (*===-- Fixture -----------------------------------------------------------===*)
 
@@ -261,6 +229,14 @@ let test_constants () =
   ignore (define_global "const_undef" c m);
   insist (i1_type = type_of c);
   insist (is_undef c);
+
+  (* CHECK: const_poison{{.*}}poison
+   *)
+  group "poison";
+  let c = poison i1_type in
+  ignore (define_global "const_poison" c m);
+  insist (i1_type = type_of c);
+  insist (is_poison c);
 
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
@@ -540,14 +516,14 @@ let test_global_variables () =
            set_initializer forty_two32 in
     insist (not (is_declaration g));
     insist (not (is_declaration g2));
-    insist ((global_initializer g) == (global_initializer g2));
+    insist ((global_initializer g) = (global_initializer g2));
 
     let g = define_qualified_global "QGVar02" forty_two32 3 m in
     let g2 = declare_qualified_global i32_type "QGVar03" 3 m ++
            set_initializer forty_two32 in
     insist (not (is_declaration g));
     insist (not (is_declaration g2));
-    insist ((global_initializer g) == (global_initializer g2));
+    insist ((global_initializer g) = (global_initializer g2));
   end;
 
   (* CHECK: GVar04{{.*}}thread_local
@@ -587,6 +563,10 @@ let test_global_variables () =
 
   begin group "iteration";
     let m = create_module context "temp" in
+
+    insist (get_module_identifier m = "temp");
+    set_module_identifer m "temp2";
+    insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
     insist (At_start m = global_end m);

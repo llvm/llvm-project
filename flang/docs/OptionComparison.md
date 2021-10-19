@@ -1,10 +1,20 @@
-# Compiler options
+<!--===- docs/OptionComparison.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
+# Compiler options comparison
 
 This document catalogs the options processed by F18's peers/competitors.  Much of the document is taken up by a set of tables that list the options categorized into different topics.  Some of the table headings link to more information about the contents of the tables.  For example, the table on **Standards conformance** options links to [notes on Standards conformance](#standards).
 
-**There's also important information in the ___[Notes section](#notes)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
+**There's also important information in the ___[Appendix section](#appendix)___ near the end of the document on how this data was gathered and what ___is___ and ___is not___ included in this document.**  
 
 Note that compilers may support language features without having an option for them.  Such cases are frequently, but not always noted in this document.
+
+## Categorization of Options
 
 <table>
   <tr>
@@ -1175,7 +1185,7 @@ Mcuda
 
 
 
-## <a name="notes"></a>Notes
+## Notes
 
 **<a name="standards"></a>Standards conformance:** 
 
@@ -1282,14 +1292,12 @@ GNU is the only compiler with options governing the use of non-standard intrinsi
 **Warn for bad call checking**: This Cray option ("-eb") issues a warning message rather than an error message when the compiler detects a call to a procedure with one or more dummy arguments having the TARGET, VOLATILE or ASYNCHRONOUS attribute and there is not an explicit interface definition.
 
 
-## Notes
+## Appendix
 
 
 ### What is and is not included
 
-This document focuses on options relevant to the Fortran language.  This includes some features (such as recursion) that are only indirectly related.  Options related to the following areas are not included:
-
-
+This document focuses on options relevant to the Fortran language definition.  This includes some features (such as recursion) that are only indirectly related to the Fortran language definition.  Options related to the following areas are not included:
 
 *   Input/Output
 *   Optimization
@@ -1308,11 +1316,9 @@ This document focuses on options relevant to the Fortran language.  This include
 *   Threads or parallelization
 *   Profiling and code coverage
 
-
 ### Data sources
 
 Here's the list of compilers surveyed, hot linked to the source of data on it.  Note that this is the only mention of the Oracle and NAG compilers in this document.
-
 
 
 *   [Cray Fortran Reference Manual version 8.7](https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/compiler-command-line-options)

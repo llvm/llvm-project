@@ -19,6 +19,9 @@ __attribute__((interrupt)) void foo8() {}
 __attribute__((interrupt())) void foo9() {}
 __attribute__((interrupt(""))) void foo10() {}
 
+#ifndef SOFT
+// expected-note@+2 {{'callee1' declared here}}
+#endif
 void callee1();
 __attribute__((interrupt("IRQ"))) void callee2();
 void caller1() {

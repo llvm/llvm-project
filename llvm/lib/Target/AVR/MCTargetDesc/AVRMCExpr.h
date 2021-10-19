@@ -20,20 +20,21 @@ class AVRMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
   enum VariantKind {
-    VK_AVR_None,
+    VK_AVR_None = 0,
 
     VK_AVR_HI8,  ///< Corresponds to `hi8()`.
     VK_AVR_LO8,  ///< Corresponds to `lo8()`.
     VK_AVR_HH8,  ///< Corresponds to `hlo8() and hh8()`.
     VK_AVR_HHI8, ///< Corresponds to `hhi8()`.
 
+    VK_AVR_PM,     ///< Corresponds to `pm()`, reference to program memory.
     VK_AVR_PM_LO8, ///< Corresponds to `pm_lo8()`.
     VK_AVR_PM_HI8, ///< Corresponds to `pm_hi8()`.
     VK_AVR_PM_HH8, ///< Corresponds to `pm_hh8()`.
 
     VK_AVR_LO8_GS, ///< Corresponds to `lo8(gs())`.
     VK_AVR_HI8_GS, ///< Corresponds to `hi8(gs())`.
-    VK_AVR_GS, ///< Corresponds to `gs()`.
+    VK_AVR_GS,     ///< Corresponds to `gs()`.
   };
 
 public:

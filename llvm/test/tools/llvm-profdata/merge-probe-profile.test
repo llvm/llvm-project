@@ -1,0 +1,24 @@
+# Tests for merge of probe-based profile files.
+# Check the dangling probe 3 ends up with 18446744073709551615 (INT64_MAX), i.e, not aggregated.
+
+RUN: llvm-profdata merge --sample --text %p/Inputs/pseudo-probe-profile.proftext -o - | FileCheck %s --check-prefix=MERGE1
+RUN: llvm-profdata merge --sample --extbinary %p/Inputs/pseudo-probe-profile.proftext -o %t && llvm-profdata merge --sample --text %t -o - | FileCheck %s --check-prefix=MERGE1
+MERGE1: foo:3200:13
+MERGE1:  1: 13
+MERGE1:  2: 7
+MERGE1:  3: 18446744073709551615
+MERGE1:  4: 13
+MERGE1:  5: 7 _Z3foov:5 _Z3barv:2
+MERGE1:  6: 6 _Z3barv:4 _Z3foov:2
+MERGE1:  !CFGChecksum: 563022570642068
+
+RUN: llvm-profdata merge --sample --text %p/Inputs/pseudo-probe-profile.proftext %p/Inputs/pseudo-probe-profile.proftext -o - | FileCheck %s --check-prefix=MERGE2
+RUN: llvm-profdata merge --sample --extbinary %p/Inputs/pseudo-probe-profile.proftext %p/Inputs/pseudo-probe-profile.proftext -o %t && llvm-profdata merge --sample --text %t -o - | FileCheck %s --check-prefix=MERGE2
+MERGE2: foo:6400:26
+MERGE2:  1: 26
+MERGE2:  2: 14
+MERGE2:  3: 18446744073709551615
+MERGE2:  4: 26
+MERGE2:  5: 14 _Z3foov:10 _Z3barv:4
+MERGE2:  6: 12 _Z3barv:8 _Z3foov:4
+MERGE2:  !CFGChecksum: 563022570642068

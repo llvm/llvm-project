@@ -1,4 +1,4 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=5 | llvm-objdump -d --section=.text - | FileCheck %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=5 -x86-pad-for-align=1 | llvm-objdump -d - | FileCheck %s
 
 # This test file highlights the interactions between prefix padding and
 # relaxation padding.

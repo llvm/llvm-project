@@ -88,5 +88,9 @@ int main(int argc, char** argv)
       num_failed++;
     }
   }
+  if (num_failed == 0)
+    printf("passed\n");
+  else
+    printf("failed %d\n", num_failed);
   return num_failed;
 }

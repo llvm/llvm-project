@@ -1383,7 +1383,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      100   0.50                  U     insl	%dx, %es:(%rdi)
 # CHECK-NEXT:  1      100   0.50    *      *      U     int	$7
 # CHECK-NEXT:  1      100   0.50                  U     invlpg	(%rax)
-# CHECK-NEXT:  1      100   0.50                  U     invlpga	%rax, %ecx
+# CHECK-NEXT:  1      100   0.50                  U     invlpga
 # CHECK-NEXT:  4      2     2.00                        lahf
 # CHECK-NEXT:  1      1     1.00    *                   leave
 # CHECK-NEXT:  1      100   0.50                  U     lodsb	(%rsi), %al
@@ -2325,7 +2325,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     insl	%dx, %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     int	$7
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     invlpg	(%rax)
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     invlpga	%rax, %ecx
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     invlpga
 # CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lahf
 # CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leave
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     lodsb	(%rsi), %al

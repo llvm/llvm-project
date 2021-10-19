@@ -711,7 +711,6 @@ DWARF:
       LineRange:       14
       OpcodeBase:      13
       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-      IncludeDirs:     []
       Files:           
         - Name:            inlined-functions.cpp
           DirIdx:          0

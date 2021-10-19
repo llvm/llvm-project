@@ -15,10 +15,11 @@
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
+#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -188,7 +189,7 @@ class FrontendInputFile {
   /// The input, if it comes from a buffer rather than a file. This object
   /// does not own the buffer, and the caller is responsible for ensuring
   /// that it outlives any users.
-  const llvm::MemoryBuffer *Buffer = nullptr;
+  llvm::Optional<llvm::MemoryBufferRef> Buffer;
 
   /// The kind of input, e.g., C source, AST file, LLVM IR.
   InputKind Kind;
@@ -200,16 +201,16 @@ public:
   FrontendInputFile() = default;
   FrontendInputFile(StringRef File, InputKind Kind, bool IsSystem = false)
       : File(File.str()), Kind(Kind), IsSystem(IsSystem) {}
-  FrontendInputFile(const llvm::MemoryBuffer *Buffer, InputKind Kind,
+  FrontendInputFile(llvm::MemoryBufferRef Buffer, InputKind Kind,
                     bool IsSystem = false)
       : Buffer(Buffer), Kind(Kind), IsSystem(IsSystem) {}
 
   InputKind getKind() const { return Kind; }
   bool isSystem() const { return IsSystem; }
 
-  bool isEmpty() const { return File.empty() && Buffer == nullptr; }
+  bool isEmpty() const { return File.empty() && Buffer == None; }
   bool isFile() const { return !isBuffer(); }
-  bool isBuffer() const { return Buffer != nullptr; }
+  bool isBuffer() const { return Buffer != None; }
   bool isPreprocessed() const { return Kind.isPreprocessed(); }
 
   StringRef getFile() const {
@@ -217,9 +218,9 @@ public:
     return File;
   }
 
-  const llvm::MemoryBuffer *getBuffer() const {
+  llvm::MemoryBufferRef getBuffer() const {
     assert(isBuffer());
-    return Buffer;
+    return *Buffer;
   }
 };
 
@@ -238,9 +239,6 @@ public:
 
   /// Show frontend performance metrics and statistics.
   unsigned ShowStats : 1;
-
-  /// Show timers for individual actions.
-  unsigned ShowTimers : 1;
 
   /// print the supported cpus for the current target
   unsigned PrintSupportedCPUs : 1;
@@ -291,6 +289,9 @@ public:
   /// Whether we are performing an implicit module build.
   unsigned BuildingImplicitModule : 1;
 
+  /// Whether to use a filesystem lock when building implicit modules.
+  unsigned BuildingImplicitModuleUsesLock : 1;
+
   /// Whether we should embed all used files into the PCM file.
   unsigned ModulesEmbedAllFiles : 1;
 
@@ -302,6 +303,9 @@ public:
 
   /// When using -emit-module, treat the modulemap as a system module.
   unsigned IsSystemModule : 1;
+
+  /// Output (and read) PCM files regardless of compiler errors.
+  unsigned AllowPCMWithCompilerErrors : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -374,6 +378,10 @@ public:
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
 
+  /// The input kind, either specified via -x argument or deduced from the input
+  /// file name.
+  InputKind DashX;
+
   /// The input files and their types.
   SmallVector<FrontendInputFile, 0> Inputs;
 
@@ -400,7 +408,7 @@ public:
   std::string ActionName;
 
   /// Args to pass to the plugins
-  std::unordered_map<std::string,std::vector<std::string>> PluginArgs;
+  std::map<std::string, std::vector<std::string>> PluginArgs;
 
   /// The list of plugin actions to run in addition to the normal action.
   std::vector<std::string> AddPluginActions;
@@ -450,14 +458,15 @@ public:
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
-        ShowStats(false), ShowTimers(false), TimeTrace(false),
-        ShowVersion(false), FixWhatYouCan(false), FixOnlyWarnings(false),
-        FixAndRecompile(false), FixToTemporaries(false),
-        ARCMTMigrateEmitARCErrors(false), SkipFunctionBodies(false),
-        UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
-        ASTDumpDecls(false), ASTDumpLookups(false),
-        BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true), TimeTraceGranularity(500) {}
+        ShowStats(false), TimeTrace(false), ShowVersion(false),
+        FixWhatYouCan(false), FixOnlyWarnings(false), FixAndRecompile(false),
+        FixToTemporaries(false), ARCMTMigrateEmitARCErrors(false),
+        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
+        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
+        ASTDumpLookups(false), BuildingImplicitModule(false),
+        BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
+        IncludeTimestamps(true), UseTemporary(true),
+        AllowPCMWithCompilerErrors(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

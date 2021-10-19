@@ -24,8 +24,10 @@ class RISCV final : public TargetInfo {
 public:
   RISCV();
   uint32_t calcEFlags() const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
@@ -73,7 +75,6 @@ static uint32_t utype(uint32_t op, uint32_t rd, uint32_t imm) {
 
 RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
-  noneRel = R_RISCV_NONE;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
   iRelativeRel = R_RISCV_IRELATIVE;
@@ -91,7 +92,6 @@ RISCV::RISCV() {
   gotRel = symbolicRel;
 
   // .got[0] = _DYNAMIC
-  gotBaseSymInGotPlt = false;
   gotHeaderEntriesNum = 1;
 
   // .got.plt[0] = _dl_runtime_resolve, .got.plt[1] = link_map
@@ -104,8 +104,8 @@ RISCV::RISCV() {
 
 static uint32_t getEFlags(InputFile *f) {
   if (config->is64)
-    return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader()->e_flags;
-  return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader()->e_flags;
+    return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
+  return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
 
 uint32_t RISCV::calcEFlags() const {
@@ -133,6 +133,28 @@ uint32_t RISCV::calcEFlags() const {
   return target;
 }
 
+int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  case R_RISCV_32:
+  case R_RISCV_TLS_DTPMOD32:
+  case R_RISCV_TLS_DTPREL32:
+    return SignExtend64<32>(read32le(buf));
+  case R_RISCV_64:
+    return read64le(buf);
+  case R_RISCV_RELATIVE:
+  case R_RISCV_IRELATIVE:
+    return config->is64 ? read64le(buf) : read32le(buf);
+  case R_RISCV_NONE:
+  case R_RISCV_JUMP_SLOT:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
+  }
+}
+
 void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
     write64le(buf, mainPart->dynamic->getVA());
@@ -145,6 +167,15 @@ void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
     write64le(buf, in.plt->getVA());
   else
     write32le(buf, in.plt->getVA());
+}
+
+void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  if (config->writeAddends) {
+    if (config->is64)
+      write64le(buf, s.getVA());
+    else
+      write32le(buf, s.getVA());
+  }
 }
 
 void RISCV::writePltHeader(uint8_t *buf) const {
@@ -235,7 +266,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_LO12_I:
   case R_RISCV_TPREL_LO12_S:
-    return R_TLS;
+    return R_TPREL;
   case R_RISCV_RELAX:
   case R_RISCV_TPREL_ADD:
     return R_NONE;

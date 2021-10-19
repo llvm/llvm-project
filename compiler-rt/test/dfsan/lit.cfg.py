@@ -9,7 +9,9 @@ config.name = 'DataFlowSanitizer' + config.name_suffix
 config.test_source_root = os.path.dirname(__file__)
 
 # Setup default compiler flags used with -fsanitize=dataflow option.
-clang_dfsan_cflags = ["-fsanitize=dataflow", config.target_cflags]
+clang_dfsan_cflags = (["-fsanitize=dataflow"] +
+                      [config.target_cflags])
+
 clang_dfsan_cxxflags = config.cxx_mode_flags + clang_dfsan_cflags
 
 def build_invocation(compile_flags):

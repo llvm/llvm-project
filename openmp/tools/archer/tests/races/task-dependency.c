@@ -1,7 +1,6 @@
 /*
  * task-dependency.c -- Archer testcase
  */
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 // RUN: %libarcher-compile-and-run-race | FileCheck %s
+// RUN: %libarcher-compile-and-run-race-noserial | FileCheck %s
 // REQUIRES: tsan
 #include "ompt/ompt-signal.h"
 #include <omp.h>
@@ -19,15 +19,16 @@
 #include <unistd.h>
 
 int main(int argc, char *argv[]) {
-  int var = 0, a = 0;
+  int var = 0, a = 0, b = 0;
 
-#pragma omp parallel num_threads(2) shared(var, a)
+#pragma omp parallel num_threads(8) shared(var, a)
 #pragma omp master
   {
-#pragma omp task shared(var, a) depend(out : var)
+#pragma omp task shared(var, a, b) depend(out : var)
     {
       OMPT_SIGNAL(a);
       var++;
+      OMPT_SIGNAL(b);
     }
 
 #pragma omp task shared(a) depend(in : var)
@@ -36,8 +37,9 @@ int main(int argc, char *argv[]) {
       OMPT_WAIT(a, 3);
     }
 
-#pragma omp task shared(var) // depend(in: var) is missing here!
+#pragma omp task shared(var, b) // depend(in: var) is missing here!
     {
+      OMPT_WAIT(b, 1);
       var++;
       OMPT_SIGNAL(a);
     }
@@ -53,7 +55,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK-NEXT:   {{(Write|Read)}} of size 4
-// CHECK-NEXT: #0 {{.*}}task-dependency.c:41
+// CHECK-NEXT: #0 {{.*}}task-dependency.c:43
 // CHECK:   Previous write of size 4
 // CHECK-NEXT: #0 {{.*}}task-dependency.c:30
 // CHECK: DONE

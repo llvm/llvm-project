@@ -23,7 +23,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
     their regions. Currently, two kinds of regions are
     supported. RegionKind::Graph represents a graph region without
     control flow semantics. RegionKind::SSACFG represents an
-    [SSA-style control flow](LangRef.md#modeling-control-flow) region
+    [SSA-style control flow](../LangRef.md/#modeling-control-flow) region
     with basic blocks, sequential semantics, and reachability.
   }];
   let cppNamespace = "::mlir";
@@ -33,7 +33,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
       /*desc=*/[{
         Return the kind of the region with the given index inside this operation.
       }],
-      /*retTy=*/"RegionKind",
+      /*retTy=*/"::mlir::RegionKind",
       /*methodName=*/"getRegionKind",
       /*args=*/(ins "unsigned":$index)
     >,
@@ -44,9 +44,22 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
       /*methodName=*/"hasSSADominance",
       /*args=*/(ins "unsigned":$index),
       /*methodBody=*/[{
-        return getRegionKind(index) == RegionKind::SSACFG;
+        return getRegionKind(index) == ::mlir::RegionKind::SSACFG;
       }]
     >,
+  ];
+}
+
+def HasOnlyGraphRegion : NativeOpTrait<"HasOnlyGraphRegion">;
+
+// Op's regions that don't need a terminator: requires some other traits
+// so it defines a list that must be concatenated.
+def GraphRegionNoTerminator {
+  list<OpTrait> traits = [
+    NoTerminator,
+    SingleBlock,
+    RegionKindInterface,
+    HasOnlyGraphRegion
   ];
 }
 

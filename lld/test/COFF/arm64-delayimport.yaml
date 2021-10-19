@@ -5,7 +5,7 @@
 # RUN: llvm-objdump -d %t.exe | FileCheck %s --check-prefix DISASM
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck %s -check-prefix IMPORTS
 
-# DISASM:  140001014:      11 00 00 d0     adrp    x17, #8192
+# DISASM:  140001014:      11 00 00 d0     adrp    x17, 0x140003000
 # DISASM:  140001018:      31 22 00 91     add     x17, x17, #8
 # DISASM:  14000101c:      01 00 00 14     b       0x140001020 <.text+0x20>
 # DISASM:  140001020:      fd 7b b3 a9     stp     x29, x30, [sp, #-208]!
@@ -19,7 +19,7 @@
 # DISASM:  140001040:      e4 97 04 ad     stp     q4, q5, [sp, #144]
 # DISASM:  140001044:      e6 9f 05 ad     stp     q6, q7, [sp, #176]
 # DISASM:  140001048:      e1 03 11 aa     mov     x1, x17
-# DISASM:  14000104c:      00 00 00 b0     adrp    x0, #4096
+# DISASM:  14000104c:      00 00 00 b0     adrp    x0, 0x140002000
 # DISASM:  140001050:      00 00 00 91     add     x0, x0, #0
 # DISASM:  140001054:      eb ff ff 97     bl      0x140001000 <.text>
 # DISASM:  140001058:      f0 03 00 aa     mov     x16, x0

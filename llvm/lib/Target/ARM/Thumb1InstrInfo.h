@@ -25,7 +25,7 @@ public:
   explicit Thumb1InstrInfo(const ARMSubtarget &STI);
 
   /// Return the noop instruction to use for a noop.
-  void getNoop(MCInst &NopInst) const override;
+  MCInst getNop() const override;
 
   // Return the non-pre/post incrementing version of 'Opc'. Return 0
   // if there is not such an opcode.
@@ -53,13 +53,6 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
   bool canCopyGluedNodeDuringSchedule(SDNode *N) const override;
-
-protected:
-  virtual MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
-
 private:
   void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };

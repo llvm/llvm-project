@@ -50,5 +50,34 @@ Symbols:
     Section: .data
   - Name:    foo
     Section: .text.foo
+    Binding: STB_GLOBAL
   - Name:    for
     Section: .data
+
+## Check we don't suggest an empty name symbol (e.g. STT_SECTION).
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name: .rela.text
+    Type:  SHT_RELA
+    Info: .text
+    Relocations:
+      - Type:   R_X86_64_64
+        Symbol: f
+Symbols:
+  - Name:    ""
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    f
+    Binding: STB_GLOBAL

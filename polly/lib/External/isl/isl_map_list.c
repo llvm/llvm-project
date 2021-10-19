@@ -20,6 +20,7 @@
 #define EL_BASE map
 
 #include <isl_list_templ.c>
+#include <isl_list_read_templ.c>
 
 #undef EL
 #define EL isl_union_map

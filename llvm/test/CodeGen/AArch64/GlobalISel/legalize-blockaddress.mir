@@ -4,9 +4,9 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-none-linux-gnu"
 
-  @addr = global i8* null
+  @addr = dso_local global i8* null
 
-  define void @test_blockaddress() {
+  define dso_local void @test_blockaddress() {
     store i8* blockaddress(@test_blockaddress, %block), i8** @addr
     indirectbr i8* blockaddress(@test_blockaddress, %block), [label %block]
 
@@ -28,14 +28,14 @@ body:             |
   ; CHECK:   [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
   ; CHECK:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @addr
   ; CHECK:   [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; CHECK:   G_STORE [[BLOCK_ADDR]](p0), [[ADD_LOW]](p0) :: (store 8 into @addr)
+  ; CHECK:   G_STORE [[BLOCK_ADDR]](p0), [[ADD_LOW]](p0) :: (store (p0) into @addr)
   ; CHECK:   G_BRINDIRECT [[BLOCK_ADDR]](p0)
   ; CHECK: bb.1.block (address-taken):
   ; CHECK:   RET_ReallyLR
   bb.1 (%ir-block.0):
     %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     %1:_(p0) = G_GLOBAL_VALUE @addr
-    G_STORE %0(p0), %1(p0) :: (store 8 into @addr)
+    G_STORE %0(p0), %1(p0) :: (store (p0) into @addr)
     G_BRINDIRECT %0(p0)
 
   bb.2.block (address-taken):

@@ -50,6 +50,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
 #include <utility>
@@ -521,10 +522,14 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
         // If intrinsic is pointing at a live SSA value, there may be an
         // earlier optimization bug: if we know the location of the variable,
         // why isn't the scope of the location alive?
-        if (Value *V = DII->getVariableLocation())
-          if (Instruction *II = dyn_cast<Instruction>(V))
-            if (isLive(II))
+        for (Value *V : DII->location_ops()) {
+          if (Instruction *II = dyn_cast<Instruction>(V)) {
+            if (isLive(II)) {
               dbgs() << "Dropping debug info for " << *DII << "\n";
+              break;
+            }
+          }
+        }
       }
     }
   });
@@ -533,7 +538,7 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
   // that have no side effects and do not influence the control flow or return
   // value of the function, and may therefore be deleted safely.
   // NOTE: We reuse the Worklist vector here for memory efficiency.
-  for (Instruction &I : instructions(F)) {
+  for (Instruction &I : llvm::reverse(instructions(F))) {
     // Check if the instruction is alive.
     if (isLive(&I))
       continue;
@@ -548,8 +553,11 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
 
     // Prepare to delete.
     Worklist.push_back(&I);
-    I.dropAllReferences();
+    salvageDebugInfo(I);
   }
+
+  for (Instruction *&I : Worklist)
+    I->dropAllReferences();
 
   for (Instruction *&I : Worklist) {
     ++NumRemoved;
@@ -643,7 +651,7 @@ void AggressiveDeadCodeElimination::computeReversePostOrder() {
   SmallPtrSet<BasicBlock*, 16> Visited;
   unsigned PostOrder = 0;
   for (auto &BB : F) {
-    if (succ_begin(&BB) != succ_end(&BB))
+    if (!succ_empty(&BB))
       continue;
     for (BasicBlock *Block : inverse_post_order_ext(&BB,Visited))
       BlockInfo[Block].PostOrder = PostOrder++;
@@ -696,7 +704,6 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<PostDominatorTreeAnalysis>();
   }
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

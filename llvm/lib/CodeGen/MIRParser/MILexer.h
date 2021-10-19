@@ -74,6 +74,7 @@ struct MIToken {
     kw_exact,
     kw_nofpexcept,
     kw_debug_location,
+    kw_debug_instr_number,
     kw_cfi_same_value,
     kw_cfi_offset,
     kw_cfi_rel_offset,
@@ -82,6 +83,7 @@ struct MIToken {
     kw_cfi_adjust_cfa_offset,
     kw_cfi_escape,
     kw_cfi_def_cfa,
+    kw_cfi_llvm_def_aspace_cfa,
     kw_cfi_register,
     kw_cfi_remember_state,
     kw_cfi_restore,
@@ -103,6 +105,7 @@ struct MIToken {
     kw_non_temporal,
     kw_invariant,
     kw_align,
+    kw_basealign,
     kw_addrspace,
     kw_stack,
     kw_got,
@@ -113,6 +116,7 @@ struct MIToken {
     kw_liveout,
     kw_address_taken,
     kw_landing_pad,
+    kw_inlineasm_br_indirect_target,
     kw_ehfunclet_entry,
     kw_liveins,
     kw_successors,
@@ -124,6 +128,10 @@ struct MIToken {
     kw_heap_alloc_marker,
     kw_bbsections,
     kw_unknown_size,
+    kw_unknown_address,
+
+    // Metadata types.
+    kw_distinct,
 
     // Named metadata keywords
     md_tbaa,

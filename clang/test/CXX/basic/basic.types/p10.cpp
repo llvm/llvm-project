@@ -32,7 +32,7 @@ struct Incomplete; // expected-note 2{{forward declaration of 'Incomplete'}}
 template<class T> struct ClassTemp {};
 
 constexpr Incomplete incomplete = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete'}} expected-note {{incomplete type 'const Incomplete' is not a literal type}}
-constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'Incomplete const[]'}} expected-note {{incomplete type 'Incomplete const[]' is not a literal type}}
+constexpr Incomplete incomplete2[] = {}; // expected-error {{constexpr variable cannot have non-literal type 'const Incomplete []'}} expected-note {{incomplete type 'const Incomplete []' is not a literal type}}
 constexpr ClassTemp<int> classtemplate = {};
 constexpr ClassTemp<int> classtemplate2[] = {};
 
@@ -139,8 +139,8 @@ constexpr int f(ArrBad) { return 0; } // expected-error {{1st parameter type 'Ar
 constexpr int arb(int n) {
   int a[n]; // expected-error {{variable of non-literal type 'int [n]' cannot be defined in a constexpr function}}
 }
-constexpr long Overflow[ // expected-error {{constexpr variable cannot have non-literal type 'long const[(1 << 30) << 2]'}}
-    (1 << 30) << 2]{};   // expected-warning {{requires 34 bits to represent}}
+// expected-warning@+1 {{variable length array folded to constant array as an extension}}
+constexpr long Overflow[(1 << 30) << 2]{}; // expected-warning {{requires 34 bits to represent}}
 
 namespace inherited_ctor {
   struct A { constexpr A(int); };

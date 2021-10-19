@@ -42,6 +42,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(i64 addrspace(3)* noca
 ; GCN-NEXT:    s_and_b64 vcc, exec, 0
 ; GCN-NEXT:  BB0_6: ; %bb9
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_mov_b64 vcc, vcc
 ; GCN-NEXT:    s_cbranch_vccz BB0_6
 ; GCN-NEXT:  BB0_7: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
@@ -185,6 +186,7 @@ define amdgpu_kernel void @nested_loop_conditions(i64 addrspace(1)* nocapture %a
 ; GCN-NEXT:  BB1_6: ; %bb31
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: @nested_loop_conditions(
 ; IR-NEXT:  bb:

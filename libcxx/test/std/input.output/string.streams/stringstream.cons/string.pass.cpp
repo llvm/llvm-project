@@ -44,6 +44,7 @@ int main(int, char**)
         ss << i << ' ' << 123;
         assert(ss.str() == "456 1236 ");
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wstringstream ss(L" 123 456 ");
         assert(ss.rdbuf() != 0);
@@ -57,13 +58,14 @@ int main(int, char**)
         ss << i << ' ' << 123;
         assert(ss.str() == L"456 1236 ");
     }
-    { // This is https://bugs.llvm.org/show_bug.cgi?id=33727
+#endif
+    { // This is https://llvm.org/PR33727
         typedef std::basic_string   <char, std::char_traits<char>, NoDefaultAllocator<char> > S;
         typedef std::basic_stringbuf<char, std::char_traits<char>, NoDefaultAllocator<char> > SB;
 
         S s(NoDefaultAllocator<char>(1));
         SB sb(s);
-    //  This test is not required by the standard, but *where else* could it get the allocator?
+        // This test is not required by the standard, but *where else* could it get the allocator?
         assert(sb.str().get_allocator() == s.get_allocator());
     }
 

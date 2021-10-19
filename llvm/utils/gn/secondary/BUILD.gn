@@ -8,23 +8,26 @@ group("default") {
     "//clang-tools-extra/test",
     "//clang/test",
     "//clang/tools/scan-build",
+    "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
     "//lld/test",
     "//llvm/test",
   ]
-  if (current_os == "linux" || current_os == "mac") {
-    deps += [ "//compiler-rt" ]
-  }
   if (current_os == "linux") {
     deps += [
       "//libcxx",
       "//libcxxabi",
-      "//libunwind",
     ]
+  }
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//lldb/test" ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
+  }
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//libunwind" ]
   }
 
   testonly = true
@@ -75,6 +78,9 @@ group("llvm-objcopy") {
 }
 group("llvm-objdump") {
   deps = [ "//llvm/tools/llvm-objdump:symlinks" ]
+}
+group("llvm-rc") {
+  deps = [ "//llvm/tools/llvm-rc:symlinks" ]
 }
 group("llvm-readobj") {
   deps = [ "//llvm/tools/llvm-readobj:symlinks" ]

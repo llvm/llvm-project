@@ -79,7 +79,6 @@ print >> out_file, '''\
 <!--*************************************************************************-->
 <h1>C++ Defect Report Support in Clang</h1>
 <!--*************************************************************************-->
-<p>Last updated: $Date$</p>
 
 <h2 id="cxxdr">C++ defect report implementation status</h2>
 
@@ -93,7 +92,7 @@ print >> out_file, '''\
     <th>Available in Clang?</th>
   </tr>'''
 
-latest_release = 11
+latest_release = 13
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
@@ -136,12 +135,16 @@ def availability(issue):
     avail_style = ' class="na"'
   elif status.startswith('sup '):
     dup = status.split(' ', 1)[1]
-    avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)
-    try:
-      _, avail_style = availability(int(dup))
-    except:
-      print >>sys.stderr, "issue %s marked as sup %s" % (issue, dup)
-      avail_style = ' class="none"'
+    if dup.startswith('P'):
+      avail = 'Superseded by <a href="https://wg21.link/%s">%s</a>' % (dup, dup)
+      avail_style = ' class="na"'
+    else:
+      avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)
+      try:
+        _, avail_style = availability(int(dup))
+      except:
+        print >>sys.stderr, "issue %s marked as sup %s" % (issue, dup)
+        avail_style = ' class="none"'
   elif status.startswith('dup '):
     dup = int(status.split(' ', 1)[1])
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)

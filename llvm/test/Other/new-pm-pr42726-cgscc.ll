@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=default -passes="default<O1>" %s -S | FileCheck %s
+; RUN: opt -passes="default<O1>" %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 declare void @bar()

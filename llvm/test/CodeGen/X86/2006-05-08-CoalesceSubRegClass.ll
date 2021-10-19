@@ -4,8 +4,8 @@
 
 ; RUN: llc < %s -mtriple=i686-- -relocation-model=static | FileCheck %s
 
-@B = external global i32		; <i32*> [#uses=2]
-@C = external global i16*		; <i16**> [#uses=2]
+@B = external dso_local global i32		; <i32*> [#uses=2]
+@C = external dso_local global i16*		; <i16**> [#uses=2]
 
 define void @test(i32 %A) {
 ; CHECK-LABEL: test:

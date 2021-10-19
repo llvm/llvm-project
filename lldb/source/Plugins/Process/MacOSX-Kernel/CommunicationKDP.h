@@ -25,7 +25,7 @@ public:
 
   const static uint32_t kMaxPacketSize = 1200;
   const static uint32_t kMaxDataSize = 1024;
-  typedef lldb_private::StreamBuffer<1024> PacketStreamType;
+  typedef lldb_private::StreamBuffer<4096> PacketStreamType;
   enum CommandType {
     KDP_CONNECT = 0u,
     KDP_DISCONNECT,

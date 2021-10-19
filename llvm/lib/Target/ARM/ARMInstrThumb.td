@@ -168,6 +168,7 @@ def thumb_cb_target : Operand<OtherVT> {
   let EncoderMethod = "getThumbCBTargetOpValue";
   let DecoderMethod = "DecodeThumbCmpBROperand";
 }
+} // OperandType = "OPERAND_PCREL"
 
 // t_addrmode_pc := <label> => pc + imm8 * 4
 //
@@ -176,7 +177,6 @@ def t_addrmode_pc : MemOperand {
   let DecoderMethod = "DecodeThumbAddrModePC";
   let PrintMethod = "printThumbLdrLabelOperand";
   let ParserMatchClass = ThumbMemPC;
-}
 }
 
 // t_addrmode_rr := reg + reg
@@ -548,14 +548,18 @@ let isCall = 1,
 
   // Also used for Thumb2
   def tBLXr : TI<(outs), (ins pred:$p, GPR:$func), IIC_Br,
-                  "blx${p}\t$func",
-                  [(ARMcall GPR:$func)]>,
+                  "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T]>,
               T1Special<{1,1,1,?}>, Sched<[WriteBrL]> { // A6.2.3 & A8.6.24;
     bits<4> func;
     let Inst{6-3} = func;
     let Inst{2-0} = 0b000;
   }
+  def tBLXr_noip :  ARMPseudoExpand<(outs), (ins pred:$p, GPRnoip:$func),
+                   2, IIC_Br, [], (tBLXr pred:$p, GPR:$func)>,
+                   Requires<[IsThumb, HasV5T]>,
+                   Sched<[WriteBrL]>;
+
 
   // ARMv8-M Security Extensions
   def tBLXNSr : TI<(outs), (ins pred:$p, GPRnopc:$func), IIC_Br,
@@ -585,6 +589,11 @@ let isCall = 1,
                   []>,
              Requires<[IsThumb]>, Sched<[WriteBr]>;
 }
+
+def : ARMPat<(ARMcall GPR:$func), (tBLXr $func)>,
+      Requires<[IsThumb, HasV5T, NoSLSBLRMitigation]>;
+def : ARMPat<(ARMcall GPRnoip:$func), (tBLXr_noip $func)>,
+      Requires<[IsThumb, HasV5T, SLSBLRMitigation]>;
 
 let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   let isPredicable = 1 in
@@ -1650,19 +1659,16 @@ def : T1Pat<(post_store tGPR:$Rt, tGPR:$Rn, 4),
             (tSTMIA_UPD tGPR:$Rn, tGPR:$Rt)>;
 
 // If it's impossible to use [r,r] address mode for sextload, select to
-// ldr{b|h} + sxt{b|h} instead.
-def : T1Pat<(sextloadi8 t_addrmode_is1:$addr),
-            (tSXTB (tLDRBi t_addrmode_is1:$addr))>,
+// ldsr{b|h} r, 0 instead, in a hope that the mov 0 will be more likely to be
+// commoned out than a sxth.
+let AddedComplexity = 10 in {
+def : T1Pat<(sextloadi8 tGPR:$Rn),
+            (tLDRSB tGPR:$Rn, (tMOVi8 0))>,
       Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi8 t_addrmode_rr:$addr),
-            (tSXTB (tLDRBr t_addrmode_rr:$addr))>,
+def : T1Pat<(sextloadi16 tGPR:$Rn),
+            (tLDRSH tGPR:$Rn, (tMOVi8 0))>,
       Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi16 t_addrmode_is2:$addr),
-            (tSXTH (tLDRHi t_addrmode_is2:$addr))>,
-      Requires<[IsThumb, IsThumb1Only, HasV6]>;
-def : T1Pat<(sextloadi16 t_addrmode_rr:$addr),
-            (tSXTH (tLDRHr t_addrmode_rr:$addr))>,
-      Requires<[IsThumb, IsThumb1Only, HasV6]>;
+}
 
 def : T1Pat<(sextloadi8 t_addrmode_is1:$addr),
             (tASRri (tLSLri (tLDRBi t_addrmode_is1:$addr), 24), 24)>;
@@ -1760,3 +1766,21 @@ def : tInstAlias<"asr${s}${p} $Rdm, $imm",
 def tLDRConstPool
   : tAsmPseudo<"ldr${p} $Rt, $immediate",
                (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// See ARMInstrInfo.td. These two thumb specific pseudos are required to
+// restrict the register class for the UXTB/UXTH ops used in the expansion.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
+    mayLoad = 1, mayStore = 1 in {
+def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                             (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                             NoItinerary, []>, Sched<[]>;
+
+def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+                              (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                              NoItinerary, []>, Sched<[]>;
+}

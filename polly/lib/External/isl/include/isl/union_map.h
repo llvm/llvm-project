@@ -23,6 +23,8 @@ __isl_give isl_id *isl_union_map_get_dim_id(__isl_keep isl_union_map *umap,
 __isl_constructor
 __isl_give isl_union_map *isl_union_map_from_basic_map(
 	__isl_take isl_basic_map *bmap);
+__isl_export
+__isl_give isl_union_map *isl_map_to_union_map(__isl_take isl_map *map);
 __isl_constructor
 __isl_give isl_union_map *isl_union_map_from_map(__isl_take isl_map *map);
 __isl_overload
@@ -164,10 +166,16 @@ __isl_give isl_union_map *isl_union_map_intersect_range_space(
 	__isl_take isl_union_map *umap, __isl_take isl_space *space);
 __isl_give isl_union_map *isl_union_map_intersect_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_set *uset);
+__isl_export
+__isl_give isl_union_map *isl_union_map_intersect_domain_factor_domain(
+	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor);
+__isl_export
 __isl_give isl_union_map *isl_union_map_intersect_domain_factor_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor);
+__isl_export
 __isl_give isl_union_map *isl_union_map_intersect_range_factor_domain(
 	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor);
+__isl_export
 __isl_give isl_union_map *isl_union_map_intersect_range_factor_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor);
 
@@ -270,6 +278,7 @@ isl_size isl_union_map_n_map(__isl_keep isl_union_map *umap);
 __isl_export
 isl_stat isl_union_map_foreach_map(__isl_keep isl_union_map *umap,
 	isl_stat (*fn)(__isl_take isl_map *map, void *user), void *user);
+__isl_export
 __isl_give isl_map_list *isl_union_map_get_map_list(
 	__isl_keep isl_union_map *umap);
 __isl_export
@@ -285,6 +294,8 @@ __isl_give isl_map *isl_union_map_extract_map(__isl_keep isl_union_map *umap,
 	__isl_take isl_space *space);
 __isl_export
 isl_bool isl_union_map_isa_map(__isl_keep isl_union_map *umap);
+__isl_export
+__isl_give isl_map *isl_union_map_as_map(__isl_take isl_union_map *umap);
 __isl_give isl_map *isl_map_from_union_map(__isl_take isl_union_map *umap);
 
 __isl_give isl_basic_map *isl_union_map_sample(__isl_take isl_union_map *umap);
@@ -310,7 +321,13 @@ __isl_overload
 __isl_give isl_union_map *isl_union_map_eq_at_multi_union_pw_aff(
 	__isl_take isl_union_map *umap,
 	__isl_take isl_multi_union_pw_aff *mupa);
+__isl_give isl_union_map *isl_union_map_lex_le_at_multi_union_pw_aff(
+	__isl_take isl_union_map *umap,
+	__isl_take isl_multi_union_pw_aff *mupa);
 __isl_give isl_union_map *isl_union_map_lex_lt_at_multi_union_pw_aff(
+	__isl_take isl_union_map *umap,
+	__isl_take isl_multi_union_pw_aff *mupa);
+__isl_give isl_union_map *isl_union_map_lex_ge_at_multi_union_pw_aff(
 	__isl_take isl_union_map *umap,
 	__isl_take isl_multi_union_pw_aff *mupa);
 __isl_give isl_union_map *isl_union_map_lex_gt_at_multi_union_pw_aff(

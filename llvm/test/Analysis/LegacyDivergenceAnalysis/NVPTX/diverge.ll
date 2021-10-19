@@ -1,4 +1,4 @@
-; RUN: opt %s -analyze -divergence | FileCheck %s
+; RUN: opt %s -enable-new-pm=0 -analyze -divergence | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

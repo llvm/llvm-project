@@ -113,7 +113,7 @@ Error ARMAttributeParser::ARM_ISA_use(AttrType tag) {
 }
 
 Error ARMAttributeParser::THUMB_ISA_use(AttrType tag) {
-  static const char *strings[] = {"Not Permitted", "Thumb-1", "Thumb-2"};
+  static const char *strings[] = {"Not Permitted", "Thumb-1", "Thumb-2", "Permitted"};
   return parseStringAttribute("THUMB_ISA_use", tag, makeArrayRef(strings));
 }
 

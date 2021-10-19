@@ -51,12 +51,9 @@ public:
   /// \param Reg A 16-bit register to split.
   void splitReg(Register Reg, Register &LoReg, Register &HiReg) const;
 
-  bool shouldCoalesce(MachineInstr *MI,
-                      const TargetRegisterClass *SrcRC,
-                      unsigned SubReg,
-                      const TargetRegisterClass *DstRC,
-                      unsigned DstSubReg,
-                      const TargetRegisterClass *NewRC,
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 };
 

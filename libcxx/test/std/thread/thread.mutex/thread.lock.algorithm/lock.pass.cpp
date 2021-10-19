@@ -11,7 +11,7 @@
 // This test hangs forever when built against libstdc++ and MSVC. In order to allow
 // validation of the test suite against other STLs we have to mark it
 // unsupported.
-// UNSUPPORTED: libstdc++, msvc
+// UNSUPPORTED: stdlib=libstdc++, stdlib=msvc
 
 // <mutex>
 
@@ -387,7 +387,7 @@ int main(int, char**)
             assert(!l2.locked());
         }
     }
-#endif  // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_EXCEPTIONS
     {
         L0 l0;
         L0 l1;
@@ -516,7 +516,7 @@ int main(int, char**)
             assert(!l3.locked());
         }
     }
-#endif  // TEST_HAS_NO_EXCEPTIONS
+#endif // TEST_HAS_NO_EXCEPTIONS
 #endif // TEST_STD_VER >= 11
 
   return 0;

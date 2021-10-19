@@ -56,10 +56,10 @@ Sections:
     Address: 0x1000
     Content: 909090909090909090909090
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
 Symbols:
   - Name:    both_static
     Value:   0x1001

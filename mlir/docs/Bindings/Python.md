@@ -1,37 +1,71 @@
 # MLIR Python Bindings
 
-Current status: Under development and not enabled by default
+**Current status**: Under development and not enabled by default
 
+[TOC]
 
 ## Building
 
 ### Pre-requisites
 
-* [`pybind11`](https://github.com/pybind/pybind11) must be installed and able to
-  be located by CMake.
-* A relatively recent Python3 installation
+*   A relatively recent Python3 installation
+*   Installation of python dependencies as specified in
+    `mlir/python/requirements.txt`
 
 ### CMake variables
 
-* **`MLIR_BINDINGS_PYTHON_ENABLED`**`:BOOL`
+*   **`MLIR_ENABLE_BINDINGS_PYTHON`**`:BOOL`
 
-  Enables building the Python bindings. Defaults to `OFF`.
+    Enables building the Python bindings. Defaults to `OFF`.
 
-* **`MLIR_PYTHON_BINDINGS_VERSION_LOCKED`**`:BOOL`
+*   **`Python3_EXECUTABLE`**:`STRING`
 
-  Links the native extension against the Python runtime library, which is
-  optional on some platforms. While setting this to `OFF` can yield some greater
-  deployment flexibility, linking in this way allows the linker to report
-  compile time errors for unresolved symbols on all platforms, which makes for a
-  smoother development workflow. Defaults to `ON`.
+    Specifies the `python` executable used for the LLVM build, including for
+    determining header/link flags for the Python bindings. On systems with
+    multiple Python implementations, setting this explicitly to the preferred
+    `python3` executable is strongly recommended.
 
-* **`PYTHON_EXECUTABLE`**:`STRING`
+### Recommended development practices
 
-  Specifies the `python` executable used for the LLVM build, including for
-  determining header/link flags for the Python bindings. On systems with
-  multiple Python implementations, setting this explicitly to the preferred
-  `python3` executable is strongly recommended.
+It is recommended to use a python virtual environment. Many ways exist for this,
+but the following is the simplest:
 
+```shell
+# Make sure your 'python' is what you expect. Note that on multi-python
+# systems, this may have a version suffix, and on many Linuxes and MacOS where
+# python2 and python3 co-exist, you may also want to use `python3`.
+which python
+python -m venv ~/.venv/mlirdev
+source ~/.venv/mlirdev/bin/activate
+
+# Note that many LTS distros will bundle a version of pip itself that is too
+# old to download all of the latest binaries for certain platforms.
+# The pip version can be obtained with `python -m pip --version`, and for
+# Linux specifically, this should be cross checked with minimum versions
+# here: https://github.com/pypa/manylinux
+# It is recommended to upgrade pip:
+python -m pip install --upgrade pip
+
+
+# Now the `python` command will resolve to your virtual environment and
+# packages will be installed there.
+python -m pip install -r mlir/python/requirements.txt
+
+# Now run `cmake`, `ninja`, et al.
+```
+
+For interactive use, it is sufficient to add the
+`tools/mlir/python_packages/mlir_core/` directory in your `build/` directory to
+the `PYTHONPATH`. Typically:
+
+```shell
+export PYTHONPATH=$(cd build && pwd)/tools/mlir/python_packages/mlir_core
+```
+
+Note that if you have installed (i.e. via `ninja install`, et al), then python
+packages for all enabled projects will be in your install tree under
+`python_packages/` (i.e. `python_packages/mlir_core`). Official distributions
+are built with a more specialized setup.
 
 ## Design
 
@@ -39,29 +73,28 @@ Current status: Under development and not enabled by default
 
 There are likely two primary use cases for the MLIR python bindings:
 
-1. Support users who expect that an installed version of LLVM/MLIR will yield
-   the ability to `import mlir` and use the API in a pure way out of the box.
+1.  Support users who expect that an installed version of LLVM/MLIR will yield
+    the ability to `import mlir` and use the API in a pure way out of the box.
 
-2. Downstream integrations will likely want to include parts of the API in their
-   private namespace or specially built libraries, probably mixing it with other
-   python native bits.
-
+1.  Downstream integrations will likely want to include parts of the API in
+    their private namespace or specially built libraries, probably mixing it
+    with other python native bits.
 
 ### Composable modules
 
-In order to support use case #2, the Python bindings are organized into
+In order to support use case \#2, the Python bindings are organized into
 composable modules that downstream integrators can include and re-export into
 their own namespace if desired. This forces several design points:
 
-* Separate the construction/populating of a `py::module` from `PYBIND11_MODULE`
-  global constructor.
+*   Separate the construction/populating of a `py::module` from
+    `PYBIND11_MODULE` global constructor.
 
-* Introduce headers for C++-only wrapper classes as other related C++ modules
-  will need to interop with it.
+*   Introduce headers for C++-only wrapper classes as other related C++ modules
+    will need to interop with it.
 
-* Separate any initialization routines that depend on optional components into
-  its own module/dependency (currently, things like `registerAllDialects` fall
-  into this category).
+*   Separate any initialization routines that depend on optional components into
+    its own module/dependency (currently, things like `registerAllDialects` fall
+    into this category).
 
 There are a lot of co-related issues of shared library linkage, distribution
 concerns, etc that affect such things. Organizing the code into composable
@@ -80,76 +113,37 @@ of functional units in MLIR.
 
 Examples:
 
-* `mlir.ir`
-* `mlir.passes` (`pass` is a reserved word :( )
-* `mlir.dialect`
-* `mlir.execution_engine` (aside from namespacing, it is important that
-  "bulky"/optional parts like this are isolated)
+*   `mlir.ir`
+*   `mlir.passes` (`pass` is a reserved word :( )
+*   `mlir.dialect`
+*   `mlir.execution_engine` (aside from namespacing, it is important that
+    "bulky"/optional parts like this are isolated)
 
-In addition, initialization functions that imply optional dependencies should
-be in underscored (notionally private) modules such as `_init` and linked
+In addition, initialization functions that imply optional dependencies should be
+in underscored (notionally private) modules such as `_init` and linked
 separately. This allows downstream integrators to completely customize what is
-included "in the box" and covers things like dialect registration,
-pass registration, etc.
+included "in the box" and covers things like dialect registration, pass
+registration, etc.
 
 ### Loader
 
 LLVM/MLIR is a non-trivial python-native project that is likely to co-exist with
 other non-trivial native extensions. As such, the native extension (i.e. the
 `.so`/`.pyd`/`.dylib`) is exported as a notionally private top-level symbol
-(`_mlir`), while a small set of Python code is provided in `mlir/__init__.py`
-and siblings which loads and re-exports it. This split provides a place to stage
-code that needs to prepare the environment *before* the shared library is loaded
-into the Python runtime, and also provides a place that one-time initialization
-code can be invoked apart from module constructors.
+(`_mlir`), while a small set of Python code is provided in
+`mlir/_cext_loader.py` and siblings which loads and re-exports it. This split
+provides a place to stage code that needs to prepare the environment *before*
+the shared library is loaded into the Python runtime, and also provides a place
+that one-time initialization code can be invoked apart from module constructors.
 
-To start with the `mlir/__init__.py` loader shim can be very simple and scale to
-future need:
+It is recommended to avoid using `__init__.py` files to the extent possible,
+until reaching a leaf package that represents a discrete component. The rule to
+keep in mind is that the presence of an `__init__.py` file prevents the ability
+to split anything at that level or below in the namespace into different
+directories, deployment packages, wheels, etc.
 
-```python
-from _mlir import *
-```
-
-### Limited use of globals
-
-For normal operations, parent-child constructor relationships are realized with
-constructor methods on a parent class as opposed to requiring
-invocation/creation from a global symbol.
-
-For example, consider two code fragments:
-
-```python
-
-op = build_my_op()
-
-region = mlir.Region(op)
-
-```
-
-vs
-
-```python
-
-op = build_my_op()
-
-region = op.new_region()
-
-```
-
-For tightly coupled data structures like `Operation`, the latter is generally
-preferred because:
-
-* It is syntactically less possible to create something that is going to access
-  illegal memory (less error handling in the bindings, less testing, etc).
-
-* It reduces the global-API surface area for creating related entities. This
-  makes it more likely that if constructing IR based on an Operation instance of
-  unknown providence, receiving code can just call methods on it to do what they
-  want versus needing to reach back into the global namespace and find the right
-  `Region` class.
-
-* It leaks fewer things that are in place for C++ convenience (i.e. default
-  constructors to invalid instances).
+See the documentation for more information and advice:
+https://packaging.python.org/guides/packaging-namespace-packages/
 
 ### Use the C-API
 
@@ -160,6 +154,532 @@ boundary. In addition, factoring in this way side-steps some very difficult
 issues that arise when combining RTTI-based modules (which pybind derived things
 are) with non-RTTI polymorphic C++ code (the default compilation mode of LLVM).
 
+### Ownership in the Core IR
+
+There are several top-level types in the core IR that are strongly owned by
+their python-side reference:
+
+*   `PyContext` (`mlir.ir.Context`)
+*   `PyModule` (`mlir.ir.Module`)
+*   `PyOperation` (`mlir.ir.Operation`) - but with caveats
+
+All other objects are dependent. All objects maintain a back-reference
+(keep-alive) to their closest containing top-level object. Further, dependent
+objects fall into two categories: a) uniqued (which live for the life-time of
+the context) and b) mutable. Mutable objects need additional machinery for
+keeping track of when the C++ instance that backs their Python object is no
+longer valid (typically due to some specific mutation of the IR, deletion, or
+bulk operation).
+
+### Optionality and argument ordering in the Core IR
+
+The following types support being bound to the current thread as a context
+manager:
+
+*   `PyLocation` (`loc: mlir.ir.Location = None`)
+*   `PyInsertionPoint` (`ip: mlir.ir.InsertionPoint = None`)
+*   `PyMlirContext` (`context: mlir.ir.Context = None`)
+
+In order to support composability of function arguments, when these types appear
+as arguments, they should always be the last and appear in the above order and
+with the given names (which is generally the order in which they are expected to
+need to be expressed explicitly in special cases) as necessary. Each should
+carry a default value of `py::none()` and use either a manual or automatic
+conversion for resolving either with the explicit value or a value from the
+thread context manager (i.e. `DefaultingPyMlirContext` or
+`DefaultingPyLocation`).
+
+The rationale for this is that in Python, trailing keyword arguments to the
+*right* are the most composable, enabling a variety of strategies such as kwarg
+passthrough, default values, etc. Keeping function signatures composable
+increases the chances that interesting DSLs and higher level APIs can be
+constructed without a lot of exotic boilerplate.
+
+Used consistently, this enables a style of IR construction that rarely needs to
+use explicit contexts, locations, or insertion points but is free to do so when
+extra control is needed.
+
+#### Operation hierarchy
+
+As mentioned above, `PyOperation` is special because it can exist in either a
+top-level or dependent state. The life-cycle is unidirectional: operations can
+be created detached (top-level) and once added to another operation, they are
+then dependent for the remainder of their lifetime. The situation is more
+complicated when considering construction scenarios where an operation is added
+to a transitive parent that is still detached, necessitating further accounting
+at such transition points (i.e. all such added children are initially added to
+the IR with a parent of their outer-most detached operation, but then once it is
+added to an attached operation, they need to be re-parented to the containing
+module).
+
+Due to the validity and parenting accounting needs, `PyOperation` is the owner
+for regions and blocks and needs to be a top-level type that we can count on not
+aliasing. This let's us do things like selectively invalidating instances when
+mutations occur without worrying that there is some alias to the same operation
+in the hierarchy. Operations are also the only entity that are allowed to be in
+a detached state, and they are interned at the context level so that there is
+never more than one Python `mlir.ir.Operation` object for a unique
+`MlirOperation`, regardless of how it is obtained.
+
+The C/C++ API allows for Region/Block to also be detached, but it simplifies the
+ownership model a lot to eliminate that possibility in this API, allowing the
+Region/Block to be completely dependent on its owning operation for accounting.
+The aliasing of Python `Region`/`Block` instances to underlying
+`MlirRegion`/`MlirBlock` is considered benign and these objects are not interned
+in the context (unlike operations).
+
+If we ever want to re-introduce detached regions/blocks, we could do so with new
+"DetachedRegion" class or similar and also avoid the complexity of accounting.
+With the way it is now, we can avoid having a global live list for regions and
+blocks. We may end up needing an op-local one at some point TBD, depending on
+how hard it is to guarantee how mutations interact with their Python peer
+objects. We can cross that bridge easily when we get there.
+
+Module, when used purely from the Python API, can't alias anyway, so we can use
+it as a top-level ref type without a live-list for interning. If the API ever
+changes such that this cannot be guaranteed (i.e. by letting you marshal a
+native-defined Module in), then there would need to be a live table for it too.
+
+## User-level API
+
+### Context Management
+
+The bindings rely on Python
+[context managers](https://docs.python.org/3/reference/datamodel.html#context-managers)
+(`with` statements) to simplify creation and handling of IR objects by omitting
+repeated arguments such as MLIR contexts, operation insertion points and
+locations. A context manager sets up the default object to be used by all
+binding calls within the following context and in the same thread. This default
+can be overridden by specific calls through the dedicated keyword arguments.
+
+#### MLIR Context
+
+An MLIR context is a top-level entity that owns attributes and types and is
+referenced from virtually all IR constructs. Contexts also provide thread safety
+at the C++ level. In Python bindings, the MLIR context is also a Python context
+manager, one can write:
+
+```python
+from mlir.ir import Context, Module
+
+with Context() as ctx:
+  # IR construction using `ctx` as context.
+
+  # For example, parsing an MLIR module from string requires the context.
+  Module.parse("builtin.module {}")
+```
+
+IR objects referencing a context usually provide access to it through the
+`.context` property. Most IR-constructing functions expect the context to be
+provided in some form. In case of attributes and types, the context may be
+extracted from the contained attribute or type. In case of operations, the
+context is systematically extracted from Locations (see below). When the context
+cannot be extracted from any argument, the bindings API expects the (keyword)
+argument `context`. If it is not provided or set to `None` (default), it will be
+looked up from an implicit stack of contexts maintained by the bindings in the
+current thread and updated by context managers. If there is no surrounding
+context, an error will be raised.
+
+Note that it is possible to manually specify the MLIR context both inside and
+outside of the `with` statement:
+
+```python
+from mlir.ir import Context, Module
+
+standalone_ctx = Context()
+with Context() as managed_ctx:
+  # Parse a module in managed_ctx.
+  Module.parse("...")
+
+  # Parse a module in standalone_ctx (override the context manager).
+  Module.parse("...", context=standalone_ctx)
+
+# Parse a module without using context managers.
+Module.parse("...", context=standalone_ctx)
+```
+
+The context object remains live as long as there are IR objects referencing it.
+
+#### Insertion Points and Locations
+
+When constructing an MLIR operation, two pieces of information are required:
+
+-   an *insertion point* that indicates where the operation is to be created in
+    the IR region/block/operation structure (usually before or after another
+    operation, or at the end of some block); it may be missing, at which point
+    the operation is created in the *detached* state;
+-   a *location* that contains user-understandable information about the source
+    of the operation (for example, file/line/column information), which must
+    always be provided as it carries a reference to the MLIR context.
+
+Both can be provided using context managers or explicitly as keyword arguments
+in the operation constructor. They can be also provided as keyword arguments
+`ip` and `loc` both within and outside of the context manager.
+
+```python
+from mlir.ir import Context, InsertionPoint, Location, Module, Operation
+
+with Context() as ctx:
+  module = Module.create()
+
+  # Prepare for inserting operations into the body of the module and indicate
+  # that these operations originate in the "f.mlir" file at the given line and
+  # column.
+  with InsertionPoint(module.body), Location.file("f.mlir", line=42, col=1):
+    # This operation will be inserted at the end of the module body and will
+    # have the location set up by the context manager.
+    Operation(<...>)
+
+    # This operation will be inserted at the end of the module (and after the
+    # previously constructed operation) and will have the location provided as
+    # the keyword argument.
+    Operation(<...>, loc=Location.file("g.mlir", line=1, col=10))
+
+    # This operation will be inserted at the *beginning* of the block rather
+    # than at its end.
+    Operation(<...>, ip=InsertionPoint.at_block_begin(module.body))
+```
+
+Note that `Location` needs an MLIR context to be constructed. It can take the
+context set up in the current thread by some surrounding context manager, or
+accept it as an explicit argument:
+
+```python
+from mlir.ir import Context, Location
+
+# Create a context and a location in this context in the same `with` statement.
+with Context() as ctx, Location.file("f.mlir", line=42, col=1, context=ctx):
+  pass
+```
+
+Locations are owned by the context and live as long as they are (transitively)
+referenced from somewhere in Python code.
+
+Unlike locations, the insertion point may be left unspecified (or, equivalently,
+set to `None` or `False`) during operation construction. In this case, the
+operation is created in the *detached* state, that is, it is not added into the
+region of another operation and is owned by the caller. This is usually the case
+for top-level operations that contain the IR, such as modules. Regions, blocks
+and values contained in an operation point back to it and maintain it live.
+
+### Inspecting IR Objects
+
+Inspecting the IR is one of the primary tasks the Python bindings are designed
+for. One can traverse the IR operation/region/block structure and inspect their
+aspects such as operation attributes and value types.
+
+#### Operations, Regions and Blocks
+
+Operations are represented as either:
+
+-   the generic `Operation` class, useful in particular for generic processing
+    of unregistered operations; or
+-   a specific subclass of `OpView` that provides more semantically-loaded
+    accessors to operation properties.
+
+Given an `OpView` subclass, one can obtain an `Operation` using its `.operation`
+property. Given an `Operation`, one can obtain the corresponding `OpView` using
+its `.opview` property *as long as* the corresponding class has been set up.
+This typically means that the Python module of its dialect has been loaded. By
+default, the `OpView` version is produced when navigating the IR tree.
+
+One can check if an operation has a specific type by means of Python's
+`isinstance` function:
+
+```python
+operation = <...>
+opview = <...>
+if isinstance(operation.opview, mydialect.MyOp):
+  pass
+if isinstance(opview, mydialect.MyOp):
+  pass
+```
+
+The components of an operation can be inspected using its properties.
+
+-   `attributes` is a collection of operation attributes . It can be subscripted
+    as both dictionary and sequence, e.g., both `operation.attributes["value"]`
+    and `operation.attributes[0]` will work. There is no guarantee on the order
+    in which the attributes are traversed when iterating over the `attributes`
+    property as sequence.
+-   `operands` is a sequence collection of operation operands.
+-   `results` is a sequence collection of operation results.
+-   `regions` is a sequence collection of regions attached to the operation.
+
+The objects produced by `operands` and `results` have a `.types` property that
+contains a sequence collection of types of the corresponding values.
+
+```python
+from mlir.ir import Operation
+
+operation1 = <...>
+operation2 = <...>
+if operation1.results.types == operation2.operand.types:
+  pass
+```
+
+`OpView` subclasses for specific operations may provide leaner accessors to
+properties of an opeation. For example, named attributes, operand and results
+are usually accessible as properties of the `OpView` subclass with the same
+name, such as `operation.const_value` instead of
+`operation.attributes["const_value"]`. If this name is a reserved Python
+keyword, it is suffixed with an underscore.
+
+The operation itself is iterable, which provides access to the attached regions
+in order:
+
+```python
+from mlir.ir import Operation
+
+operation = <...>
+for region in operation:
+  do_something_with_region(region)
+```
+
+A region is conceptually a sequence of blocks. Objects of the `Region` class are
+thus iterable, which provides access to the blocks. One can also use the
+`.blocks` property.
+
+```python
+# Regions are directly iterable and give acceess to blocks.
+for block1, block2 in zip(operation.regions[0], operation.regions[0].blocks)
+  assert block1 == block2
+```
+
+A block contains a sequence of operations, and has several additional
+properties. Objects of the `Block` class are iterable and provide access to the
+operations contained in the block. So does the `.operations` property. Blocks
+also have a list of arguments available as a sequence collection using the
+`.arguments` property.
+
+Block and region belong to the parent operation in Python bindings and keep it
+alive. This operation can be accessed using the `.owner` property.
+
+#### Attributes and Types
+
+Attributes and types are (mostly) immutable context-owned objects. They are
+represented as either:
+
+-   an opaque `Attribute` or `Type` object supporting printing and comparsion;
+    or
+-   a concrete subclass thereof with access to properties of the attribute or
+    type.
+
+Given an `Attribute` or `Type` object, one can obtain a concrete subclass using
+the constructor of the subclass. This may raise a `ValueError` if the attribute
+or type is not of the expected subclass:
+
+```python
+from mlir.ir import Attribute, Type
+from mlir.<dialect> import ConcreteAttr, ConcreteType
+
+attribute = <...>
+type = <...>
+try:
+  concrete_attr = ConcreteAttr(attribute)
+  concrete_type = ConcreteType(type)
+except ValueError as e:
+  # Handle incorrect subclass.
+```
+
+In addition, concrete attribute and type classes provide a static `isinstance`
+method to check whether an object of the opaque `Attribute` or `Type` type can
+be downcasted:
+
+```python
+from mlir.ir import Attribute, Type
+from mlir.<dialect> import ConcreteAttr, ConcreteType
+
+attribute = <...>
+type = <...>
+
+# No need to handle errors here.
+if ConcreteAttr.isinstance(attribute):
+  concrete_attr = ConcreteAttr(attribute)
+if ConcreteType.isinstance(type):
+  concrete_type = ConcreteType(type)
+```
+
+By default, and unlike operations, attributes and types are returned from IR
+traversals using the opaque `Attribute` or `Type` that needs to be downcasted.
+
+Concrete attribute and type classes usually expose their properties as Python
+readonly properties. For example, the elemental type of a tensor type can be
+accessed using the `.element_type` property.
+
+#### Values
+
+MLIR has two kinds of values based on their defining object: block arguments and
+operation results. Values are handled similarly to attributes and types. They
+are represented as either:
+
+-   a generic `Value` object; or
+-   a concrete `BlockArgument` or `OpResult` object.
+
+The former provides all the generic functionality such as comparison, type
+access and printing. The latter provide access to the defining block or
+operation and the position of the value within it. By default, the generic
+`Value` objects are returned from IR traversals. Downcasting is implemented
+through concrete subclass constructors, similarly to attribtues and types:
+
+```python
+from mlir.ir import BlockArgument, OpResult, Value
+
+value = ...
+
+# Set `concrete` to the specific value subclass.
+try:
+  concrete = BlockArgument(value)
+except ValueError:
+  # This must not raise another ValueError as values are either block arguments
+  # or op results.
+  concrete = OpResult(value)
+```
+
+### Creating IR Objects
+
+Python bindings also support IR creation and manipulation.
+
+#### Operations, Regions and Blocks
+
+Operations can be created given a `Location` and an optional `InsertionPoint`.
+It is often easier to user context managers to specify locations and insertion
+points for several operations created in a row as decribed above.
+
+Concrete operations can be created by using constructors of the corresponding
+`OpView` subclasses. The generic, default form of the constructor accepts:
+
+-   an optional sequence of types for operation results (`results`);
+-   an optional sequence of values for operation operands, or another operation
+    producing those values (`operands`);
+-   an optional dictionary of operation attributes (`attributes`);
+-   an optional sequence of successor blocks (`successors`);
+-   the number of regions to attach to the operation (`regions`, default `0`);
+-   the `loc` keyword argument containing the `Location` of this operation; if
+    `None`, the location created by the closest context manager is used or an
+    exception will be raised if there is no context manager;
+-   the `ip` keyword argument indicating where the operation will be inserted in
+    the IR; if `None`, the insertion point created by the closest context
+    manager is used; if there is no surrounding context manager, the operation
+    is created in the detached state.
+
+Most operations will customize the constructor to accept a reduced list of
+arguments that are relevant for the operation. For example, zero-result
+operations may omit the `results` argument, so can the operations where the
+result types can be derived from operand types unambiguously. As a concrete
+example, built-in function operations can be constructed by providing a function
+name as string and its argument and result types as a tuple of sequences:
+
+```python
+from mlir.ir import Context, Module
+from mlir.dialects import builtin
+
+with Context():
+  module = Module.create()
+  with InsertionPoint(module.body), Location.unknown():
+    func = builtin.FuncOp("main", ([], []))
+```
+
+Also see below for constructors generated from ODS.
+
+Operations can also be constructed using the generic class and based on the
+canonical string name of the operation using `Operation.create`. It accepts the
+operation name as string, which must exactly match the canonical name of the
+operation in C++ or ODS, followed by the same argument list as the default
+constructor for `OpView`. *This form is discouraged* from use and is intended
+for generic operation processing.
+
+```python
+from mlir.ir import Context, Module
+from mlir.dialects import builtin
+
+with Context():
+  module = Module.create()
+  with InsertionPoint(module.body), Location.unknown():
+    # Operations can be created in a generic way.
+    func = Operation.create(
+        "builtin.func", results=[], operands=[],
+        attributes={"type":TypeAttr.get(FunctionType.get([], []))},
+        successors=None, regions=1)
+    # The result will be downcasted to the concrete `OpView` subclass if
+    # available.
+    assert isinstance(func, builtin.FuncOp)
+```
+
+Regions are created for an operation when constructing it on the C++ side. They
+are not constructible in Python and are not expected to exist outside of
+operations (unlike in C++ that supports detached regions).
+
+Blocks can be created within a given region and inserted before or after another
+block of the same region using `create_before()`, `create_after()` methods of
+the `Block` class, or the `create_at_start()` static method of the same class.
+They are not expected to exist outside of regions (unlike in C++ that supports
+detached blocks).
+
+```python
+from mlir.ir import Block, Context, Operation
+
+with Context():
+  op = Operation.create("generic.op", regions=1)
+
+  # Create the first block in the region.
+  entry_block = Block.create_at_start(op.regions[0])
+
+  # Create further blocks.
+  other_block = entry_block.create_after()
+```
+
+Blocks can be used to create `InsertionPoint`s, which can point to the beginning
+or the end of the block, or just before its terminator. It is common for
+`OpView` subclasses to provide a `.body` property that can be used to construct
+an `InsertionPoint`. For example, builtin `Module` and `FuncOp` provide a
+`.body` and `.add_entry_blocK()`, respectively.
+
+#### Attributes and Types
+
+Attributes and types can be created given a `Context` or another attribute or
+type object that already references the context. To indicate that they are owned
+by the context, they are obtained by calling the static `get` method on the
+concrete attribute or type class. These method take as arguments the data
+necessary to construct the attribute or type and a the keyword `context`
+argument when the context cannot be derived from other arguments.
+
+```python
+from mlir.ir import Context, F32Type, FloatAttr
+
+# Attribute and types require access to an MLIR context, either directly or
+# through another context-owned object.
+ctx = Context()
+f32 = F32Type.get(context=ctx)
+pi = FloatAttr.get(f32, 3.14)
+
+# They may use the context defined by the surrounding context manager.
+with Context():
+  f32 = F32Type.get()
+  pi = FloatAttr.get(f32, 3.14)
+```
+
+Some attributes provide additional construction methods for clarity.
+
+```python
+from mlir.ir import Context, IntegerAttr, IntegerType
+
+with Context():
+  i8 = IntegerType.get_signless(8)
+  IntegerAttr.get(i8, 42)
+```
+
+Builtin attribute can often be constructed from Python types with similar
+structure. For example, `ArrayAttr` can be constructed from a sequence
+collection of attributes, and a `DictAttr` can be constructed from a dictionary:
+
+```python
+from mlir.ir import ArrayAttr, Context, DictAttr, UnitAttr
+
+with Context():
+  array = ArrayAttr.get([UnitAttr.get(), UnitAttr.get()])
+  dictionary = DictAttr.get({"array": array, "unit": UnitAttr.get()})
+```
 
 ## Style
 
@@ -168,7 +688,7 @@ isomorphic with the underlying C++ structures. However, concessions are made
 either for practicality or to give the resulting library an appropriately
 "Pythonic" flavor.
 
-### Properties vs get*() methods
+### Properties vs get\*() methods
 
 Generally favor converting trivial methods like `getContext()`, `getName()`,
 `isEntryBlock()`, etc to read-only Python properties (i.e. `context`). It is
@@ -187,13 +707,13 @@ Over:
 m.def("getContext", ...)
 ```
 
-### __repr__ methods
+### **repr** methods
 
-Things that have nice printed representations are really great :)  If there is a
+Things that have nice printed representations are really great :) If there is a
 reasonable printed form, it can be a significant productivity boost to wire that
 to the `__repr__` method (and verify it with a [doctest](#sample-doctest)).
 
-### CamelCase vs snake_case
+### CamelCase vs snake\_case
 
 Name functions/methods/properties in `snake_case` and classes in `CamelCase`. As
 a mechanical concession to Python style, this can go a long way to making the
@@ -252,57 +772,16 @@ mutually exclusive with a more complete mapping of the backing constructs.
 Tests should be added in the `test/Bindings/Python` directory and should
 typically be `.py` files that have a lit run line.
 
-While lit can run any python module, prefer to lay tests out according to these
-rules:
+We use `lit` and `FileCheck` based tests:
 
-* For tests of the API surface area, prefer
-  [`doctest`](https://docs.python.org/3/library/doctest.html).
-* For generative tests (those that produce IR), define a Python module that
-  constructs/prints the IR and pipe it through `FileCheck`.
-* Parsing should be kept self-contained within the module under test by use of
-  raw constants and an appropriate `parse_asm` call.
-* Any file I/O code should be staged through a tempfile vs relying on file
-  artifacts/paths outside of the test module.
-
-### Sample Doctest
-
-```python
-# RUN: %PYTHON %s
-
-"""
-  >>> m = load_test_module()
-Test basics:
-  >>> m.operation.name
-  "module"
-  >>> m.operation.is_registered
-  True
-  >>> ... etc ...
-
-Verify that repr prints:
-  >>> m.operation
-  <operation 'module'>
-"""
-
-import mlir
-
-TEST_MLIR_ASM = r"""
-func @test_operation_correct_regions() {
-  // ...
-}
-"""
-
-# TODO: Move to a test utility class once any of this actually exists.
-def load_test_module():
-  ctx = mlir.ir.Context()
-  ctx.allow_unregistered_dialects = True
-  module = ctx.parse_asm(TEST_MLIR_ASM)
-  return module
-
-
-if __name__ == "__main__":
-  import doctest
-  doctest.testmod()
-```
+*   For generative tests (those that produce IR), define a Python module that
+    constructs/prints the IR and pipe it through `FileCheck`.
+*   Parsing should be kept self-contained within the module under test by use of
+    raw constants and an appropriate `parse_asm` call.
+*   Any file I/O code should be staged through a tempfile vs relying on file
+    artifacts/paths outside of the test module.
+*   For convenience, we also test non-generative API interactions with the same
+    mechanisms, printing and `CHECK`ing as needed.
 
 ### Sample FileCheck test
 
@@ -326,3 +805,210 @@ def create_my_op():
   builder.my_op()
   return m
 ```
+
+## Integration with ODS
+
+The MLIR Python bindings integrate with the tablegen-based ODS system for
+providing user-friendly wrappers around MLIR dialects and operations. There are
+multiple parts to this integration, outlined below. Most details have been
+elided: refer to the build rules and python sources under `mlir.dialects` for
+the canonical way to use this facility.
+
+Users are responsible for providing a `{DIALECT_NAMESPACE}.py` (or an equivalent
+directory with `__init__.py` file) as the entrypoint.
+
+### Generating `_{DIALECT_NAMESPACE}_ops_gen.py` wrapper modules
+
+Each dialect with a mapping to python requires that an appropriate
+`_{DIALECT_NAMESPACE}_ops_gen.py` wrapper module is created. This is done by
+invoking `mlir-tblgen` on a python-bindings specific tablegen wrapper that
+includes the boilerplate and actual dialect specific `td` file. An example, for
+the `StandardOps` (which is assigned the namespace `std` as a special case):
+
+```tablegen
+#ifndef PYTHON_BINDINGS_STANDARD_OPS
+#define PYTHON_BINDINGS_STANDARD_OPS
+
+include "mlir/Bindings/Python/Attributes.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+
+#endif
+```
+
+In the main repository, building the wrapper is done via the CMake function
+`add_mlir_dialect_python_bindings`, which invokes:
+
+```
+mlir-tblgen -gen-python-op-bindings -bind-dialect={DIALECT_NAMESPACE} \
+    {PYTHON_BINDING_TD_FILE}
+```
+
+The generates op classes must be included in the `{DIALECT_NAMESPACE}.py` file
+in a similar way that generated headers are included for C++ generated code:
+
+```python
+from ._my_dialect_ops_gen import *
+```
+
+### Extending the search path for wrapper modules
+
+When the python bindings need to locate a wrapper module, they consult the
+`dialect_search_path` and use it to find an appropriately named module. For the
+main repository, this search path is hard-coded to include the `mlir.dialects`
+module, which is where wrappers are emitted by the abobe build rule. Out of tree
+dialects and add their modules to the search path by calling:
+
+```python
+mlir._cext.append_dialect_search_prefix("myproject.mlir.dialects")
+```
+
+### Wrapper module code organization
+
+The wrapper module tablegen emitter outputs:
+
+*   A `_Dialect` class (extending `mlir.ir.Dialect`) with a `DIALECT_NAMESPACE`
+    attribute.
+*   An `{OpName}` class for each operation (extending `mlir.ir.OpView`).
+*   Decorators for each of the above to register with the system.
+
+Note: In order to avoid naming conflicts, all internal names used by the wrapper
+module are prefixed by `_ods_`.
+
+Each concrete `OpView` subclass further defines several public-intended
+attributes:
+
+*   `OPERATION_NAME` attribute with the `str` fully qualified operation name
+    (i.e. `math.abs`).
+*   An `__init__` method for the *default builder* if one is defined or inferred
+    for the operation.
+*   `@property` getter for each operand or result (using an auto-generated name
+    for unnamed of each).
+*   `@property` getter, setter and deleter for each declared attribute.
+
+It further emits additional private-intended attributes meant for subclassing
+and customization (default cases omit these attributes in favor of the defaults
+on `OpView`):
+
+*   `_ODS_REGIONS`: A specification on the number and types of regions.
+    Currently a tuple of (min_region_count, has_no_variadic_regions). Note that
+    the API does some light validation on this but the primary purpose is to
+    capture sufficient information to perform other default building and region
+    accessor generation.
+*   `_ODS_OPERAND_SEGMENTS` and `_ODS_RESULT_SEGMENTS`: Black-box value which
+    indicates the structure of either the operand or results with respect to
+    variadics. Used by `OpView._ods_build_default` to decode operand and result
+    lists that contain lists.
+
+#### Default Builder
+
+Presently, only a single, default builder is mapped to the `__init__` method.
+The intent is that this `__init__` method represents the *most specific* of the
+builders typically generated for C++; however currently it is just the generic
+form below.
+
+*   One argument for each declared result:
+    *   For single-valued results: Each will accept an `mlir.ir.Type`.
+    *   For variadic results: Each will accept a `List[mlir.ir.Type]`.
+*   One argument for each declared operand or attribute:
+    *   For single-valued operands: Each will accept an `mlir.ir.Value`.
+    *   For variadic operands: Each will accept a `List[mlir.ir.Value]`.
+    *   For attributes, it will accept an `mlir.ir.Attribute`.
+*   Trailing usage-specific, optional keyword arguments:
+    *   `loc`: An explicit `mlir.ir.Location` to use. Defaults to the location
+        bound to the thread (i.e. `with Location.unknown():`) or an error if
+        none is bound nor specified.
+    *   `ip`: An explicit `mlir.ir.InsertionPoint` to use. Default to the
+        insertion point bound to the thread (i.e. `with InsertionPoint(...):`).
+
+In addition, each `OpView` inherits a `build_generic` method which allows
+construction via a (nested in the case of variadic) sequence of `results` and
+`operands`. This can be used to get some default construction semantics for
+operations that are otherwise unsupported in Python, at the expense of having a
+very generic signature.
+
+#### Extending Generated Op Classes
+
+Note that this is a rather complex mechanism and this section errs on the side
+of explicitness. Users are encouraged to find an example and duplicate it if
+they don't feel the need to understand the subtlety. The `builtin` dialect
+provides some relatively simple examples.
+
+As mentioned above, the build system generates Python sources like
+`_{DIALECT_NAMESPACE}_ops_gen.py` for each dialect with Python bindings. It is
+often desirable to to use these generated classes as a starting point for
+further customization, so an extension mechanism is provided to make this easy
+(you are always free to do ad-hoc patching in your `{DIALECT_NAMESPACE}.py` file
+but we prefer a more standard mechanism that is applied uniformly).
+
+To provide extensions, add a `_{DIALECT_NAMESPACE}_ops_ext.py` file to the
+`dialects` module (i.e. adjacent to your `{DIALECT_NAMESPACE}.py` top-level and
+the `*_ops_gen.py` file). Using the `builtin` dialect and `FuncOp` as an
+example, the generated code will include an import like this:
+
+```python
+try:
+  from . import _builtin_ops_ext as _ods_ext_module
+except ImportError:
+  _ods_ext_module = None
+```
+
+Then for each generated concrete `OpView` subclass, it will apply a decorator
+like:
+
+```python
+@_ods_cext.register_operation(_Dialect)
+@_ods_extend_opview_class(_ods_ext_module)
+class FuncOp(_ods_ir.OpView):
+```
+
+See the `_ods_common.py` `extend_opview_class` function for details of the
+mechanism. At a high level:
+
+*   If the extension module exists, locate an extension class for the op (in
+    this example, `FuncOp`):
+    *   First by looking for an attribute with the exact name in the extension
+        module.
+    *   Falling back to calling a `select_opview_mixin(parent_opview_cls)`
+        function defined in the extension module.
+*   If a mixin class is found, a new subclass is dynamically created that
+    multiply inherits from `({_builtin_ops_ext.FuncOp},
+    _builtin_ops_gen.FuncOp)`.
+
+The mixin class should not inherit from anything (i.e. directly extends `object`
+only). The facility is typically used to define custom `__init__` methods,
+properties, instance methods and static methods. Due to the inheritance
+ordering, the mixin class can act as though it extends the generated `OpView`
+subclass in most contexts (i.e. `issubclass(_builtin_ops_ext.FuncOp, OpView)`
+will return `False` but usage generally allows you treat it as duck typed as an
+`OpView`).
+
+There are a couple of recommendations, given how the class hierarchy is defined:
+
+*   For static methods that need to instantiate the actual "leaf" op (which is
+    dynamically generated and would result in circular dependencies to try to
+    reference by name), prefer to use `@classmethod` and the concrete subclass
+    will be provided as your first `cls` argument. See
+    `_builtin_ops_ext.FuncOp.from_py_func` as an example.
+*   If seeking to replace the generated `__init__` method entirely, you may
+    actually want to invoke the super-super-class `mlir.ir.OpView` constructor
+    directly, as it takes an `mlir.ir.Operation`, which is likely what you are
+    constructing (i.e. the generated `__init__` method likely adds more API
+    constraints than you want to expose in a custom builder).
+
+A pattern that comes up frequently is wanting to provide a sugared `__init__`
+method which has optional or type-polymorphism/implicit conversions but to
+otherwise want to invoke the default op building logic. For such cases, it is
+recommended to use an idiom such as:
+
+```python
+  def __init__(self, sugar, spice, *, loc=None, ip=None):
+    ... massage into result_type, operands, attributes ...
+    OpView.__init__(self, self.build_generic(
+        results=[result_type],
+        operands=operands,
+        attributes=attributes,
+        loc=loc,
+        ip=ip))
+```
+
+Refer to the documentation for `build_generic` for more information.

@@ -1,5 +1,5 @@
-! RUN: %f18 -funparse-with-symbols -DSTRICT_F18 -Mstandard %s 2>&1 | FileCheck %s
-! RUN: %f18 -funparse-with-symbols -DARCHAIC_FORTRAN %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols -DSTRICT_F18 -pedantic %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-with-symbols -DARCHAIC_FORTRAN %s 2>&1 | FileCheck %s
 ! CHECK-NOT: :{{[[:space:]]}}error:{{[[:space:]]}}
 ! FIXME: the above check line does not work because diags are not emitted with error: in them.
 
@@ -122,7 +122,7 @@ subroutine do_loop09(a,n,j)
   goto 400
 200 print *, "found the index", j
   print *, "value at", j, "is", a(j)
-  goto 300 ! FIXME: emits diagnostic even without -Mstandard
+  goto 300 ! FIXME: emits diagnostic even without -pedantic
 400  do 100 i = 1, n
      if (i .eq. j) then
         goto 200	! extension: extended GOTO ranges

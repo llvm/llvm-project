@@ -15,6 +15,7 @@
 #include "AVRMCInstLower.h"
 #include "AVRSubtarget.h"
 #include "MCTargetDesc/AVRInstPrinter.h"
+#include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -23,11 +24,12 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "avr-asm-printer"
@@ -37,9 +39,8 @@ namespace llvm {
 /// An AVR assembly code printer.
 class AVRAsmPrinter : public AsmPrinter {
 public:
-  AVRAsmPrinter(TargetMachine &TM,
-                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MRI(*TM.getMCRegisterInfo()) { }
+  AVRAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)), MRI(*TM.getMCRegisterInfo()) {}
 
   StringRef getPassName() const override { return "AVR Assembly Printer"; }
 
@@ -53,8 +54,15 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
+  const MCExpr *lowerConstant(const Constant *CV) override;
+
+  void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
+
+  bool doFinalization(Module &M) override;
+
 private:
   const MCRegisterInfo &MRI;
+  bool EmittedStructorSymbolAttrs = false;
 };
 
 void AVRAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
@@ -176,9 +184,61 @@ void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, I);
 }
 
+const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
+  MCContext &Ctx = OutContext;
+
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
+    bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
+    if (IsProgMem) {
+      const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
+      return AVRMCExpr::create(AVRMCExpr::VK_AVR_PM, Expr, false, Ctx);
+    }
+  }
+
+  return AsmPrinter::lowerConstant(CV);
+}
+
+void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
+  if (!EmittedStructorSymbolAttrs) {
+    OutStreamer->emitRawComment(
+        " Emitting these undefined symbol references causes us to link the"
+        " libgcc code that runs our constructors/destructors");
+    OutStreamer->emitRawComment(" This matches GCC's behavior");
+
+    MCSymbol *CtorsSym = OutContext.getOrCreateSymbol("__do_global_ctors");
+    OutStreamer->emitSymbolAttribute(CtorsSym, MCSA_Global);
+
+    MCSymbol *DtorsSym = OutContext.getOrCreateSymbol("__do_global_dtors");
+    OutStreamer->emitSymbolAttribute(DtorsSym, MCSA_Global);
+
+    EmittedStructorSymbolAttrs = true;
+  }
+
+  AsmPrinter::emitXXStructor(DL, CV);
+}
+
+bool AVRAsmPrinter::doFinalization(Module &M) {
+  MCSymbol *DoCopyData = OutContext.getOrCreateSymbol("__do_copy_data");
+  MCSymbol *DoClearBss = OutContext.getOrCreateSymbol("__do_clear_bss");
+
+  // FIXME: We can disable __do_copy_data if there are no static RAM variables.
+
+  OutStreamer->emitRawComment(
+      " Declaring this symbol tells the CRT that it should");
+  OutStreamer->emitRawComment(
+      "copy all variables from program memory to RAM on startup");
+  OutStreamer->emitSymbolAttribute(DoCopyData, MCSA_Global);
+
+  OutStreamer->emitRawComment(
+      " Declaring this symbol tells the CRT that it should");
+  OutStreamer->emitRawComment("clear the zeroed data section on startup");
+  OutStreamer->emitSymbolAttribute(DoClearBss, MCSA_Global);
+
+  return AsmPrinter::doFinalization(M);
+}
+
 } // end of namespace llvm
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
   llvm::RegisterAsmPrinter<llvm::AVRAsmPrinter> X(llvm::getTheAVRTarget());
 }
-

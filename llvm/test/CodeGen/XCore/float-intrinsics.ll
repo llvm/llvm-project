@@ -6,7 +6,7 @@ declare double @llvm.log.f64(double)
 declare double @llvm.log10.f64(double)
 declare double @llvm.log2.f64(double)
 declare double @llvm.pow.f64(double, double)
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.sin.f64(double)
 declare double @llvm.sqrt.f64(double)
 
@@ -125,16 +125,16 @@ define float @powf(float %F, float %power) {
 define double @powi(double %F, i32 %power) {
 ; CHECK-LABEL: powi:
 ; CHECK: bl __powidf2
-        %result = call double @llvm.powi.f64(double %F, i32 %power)
+        %result = call double @llvm.powi.f64.i32(double %F, i32 %power)
 	ret double %result
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powif(float %F, i32 %power) {
 ; CHECK-LABEL: powif:
 ; CHECK: bl __powisf2
-        %result = call float @llvm.powi.f32(float %F, i32 %power)
+        %result = call float @llvm.powi.f32.i32(float %F, i32 %power)
 	ret float %result
 }
 

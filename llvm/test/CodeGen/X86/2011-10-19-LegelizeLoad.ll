@@ -6,19 +6,19 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %union.anon = type { <2 x i8> }
 
-@i = global <2 x i8> <i8 150, i8 100>, align 8
-@j = global <2 x i8> <i8 10, i8 13>, align 8
-@res = common global %union.anon zeroinitializer, align 8
+@i = dso_local global <2 x i8> <i8 150, i8 100>, align 8
+@j = dso_local global <2 x i8> <i8 10, i8 13>, align 8
+@res = common dso_local global %union.anon zeroinitializer, align 8
 
 ; Make sure we load the constants i and j starting offset zero.
 ; Also make sure that we sign-extend it.
 ; Based on /gcc-4_2-testsuite/src/gcc.c-torture/execute/pr23135.c
 
-define i32 @main() nounwind uwtable {
+define dso_local i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq i(%rip), %rsi
+; CHECK-NEXT:    movq j(%rip), %rax
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    shrq $8, %rdx
 ; CHECK-NEXT:    movsbl %al, %ecx
@@ -32,7 +32,7 @@ define i32 @main() nounwind uwtable {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0
-; CHECK-NEXT:    pextrw $0, %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    pextrw $0, %xmm0, res(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
 entry:

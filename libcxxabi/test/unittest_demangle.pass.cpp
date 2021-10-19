@@ -81,6 +81,7 @@ void testPODSmallVector() {
   }
 }
 
-int main() {
+int main(int, char**) {
   testPODSmallVector();
+  return 0;
 }

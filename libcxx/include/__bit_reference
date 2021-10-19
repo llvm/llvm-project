@@ -11,7 +11,7 @@
 #define _LIBCPP___BIT_REFERENCE
 
 #include <__config>
-#include <bit>
+#include <__bits>
 #include <algorithm>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -239,8 +239,8 @@ __bit_iterator<_Cp, _IsConst>
 find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value_)
 {
     if (static_cast<bool>(__value_))
-        return __find_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
-    return __find_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
+        return _VSTD::__find_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return _VSTD::__find_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
 // count
@@ -313,8 +313,8 @@ typename __bit_iterator<_Cp, _IsConst>::difference_type
 count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value_)
 {
     if (static_cast<bool>(__value_))
-        return __count_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
-    return __count_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
+        return _VSTD::__count_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return _VSTD::__count_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
 // fill_n
@@ -387,9 +387,9 @@ fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __v
     if (__n > 0)
     {
         if (__value_)
-            __fill_n_true(__first, __n);
+            _VSTD::__fill_n_true(__first, __n);
         else
-            __fill_n_false(__first, __n);
+            _VSTD::__fill_n_false(__first, __n);
     }
 }
 
@@ -538,8 +538,8 @@ __bit_iterator<_Cp, false>
 copy(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result)
 {
     if (__first.__ctz_ == __result.__ctz_)
-        return __copy_aligned(__first, __last, __result);
-    return __copy_unaligned(__first, __last, __result);
+        return _VSTD::__copy_aligned(__first, __last, __result);
+    return _VSTD::__copy_unaligned(__first, __last, __result);
 }
 
 // copy_backward
@@ -685,8 +685,8 @@ __bit_iterator<_Cp, false>
 copy_backward(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, __bit_iterator<_Cp, false> __result)
 {
     if (__last.__ctz_ == __result.__ctz_)
-        return __copy_backward_aligned(__first, __last, __result);
-    return __copy_backward_unaligned(__first, __last, __result);
+        return _VSTD::__copy_backward_aligned(__first, __last, __result);
+    return _VSTD::__copy_backward_unaligned(__first, __last, __result);
 }
 
 // move
@@ -868,8 +868,8 @@ swap_ranges(__bit_iterator<__C1, false> __first1, __bit_iterator<__C1, false> __
             __bit_iterator<__C2, false> __first2)
 {
     if (__first1.__ctz_ == __first2.__ctz_)
-        return __swap_ranges_aligned(__first1, __last1, __first2);
-    return __swap_ranges_unaligned(__first1, __last1, __first2);
+        return _VSTD::__swap_ranges_aligned(__first1, __last1, __first2);
+    return _VSTD::__swap_ranges_unaligned(__first1, __last1, __first2);
 }
 
 // rotate
@@ -1083,8 +1083,8 @@ bool
 equal(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1, __bit_iterator<_Cp, _IC2> __first2)
 {
     if (__first1.__ctz_ == __first2.__ctz_)
-        return __equal_aligned(__first1, __last1, __first2);
-    return __equal_unaligned(__first1, __last1, __first2);
+        return _VSTD::__equal_aligned(__first1, __last1, __first2);
+    return _VSTD::__equal_unaligned(__first1, __last1, __first2);
 }
 
 template <class _Cp, bool _IsConst,
@@ -1114,28 +1114,26 @@ public:
 #endif
     {}
 
-    // avoid re-declaring a copy constructor for the non-const version.
-    using __type_for_copy_to_const =
-      _If<_IsConst, __bit_iterator<_Cp, false>, struct __private_nat>;
-
+    // When _IsConst=false, this is the copy constructor.
+    // It is non-trivial. Making it trivial would break ABI.
+    // When _IsConst=true, this is a converting constructor;
+    // the copy and move constructors are implicitly generated
+    // and trivial.
     _LIBCPP_INLINE_VISIBILITY
-    __bit_iterator(const __type_for_copy_to_const& __it) _NOEXCEPT
+    __bit_iterator(const __bit_iterator<_Cp, false>& __it) _NOEXCEPT
         : __seg_(__it.__seg_), __ctz_(__it.__ctz_) {}
 
-    // The non-const __bit_iterator has historically had a non-trivial
-    // copy constructor (as a quirk of its construction). We need to maintain
-    // this for ABI purposes.
-    using __type_for_abi_non_trivial_copy_ctor =
-      _If<!_IsConst, __bit_iterator, struct __private_nat>;
-
+    // When _IsConst=false, we have a user-provided copy constructor,
+    // so we must also provide a copy assignment operator because
+    // the implicit generation of a defaulted one is deprecated.
+    // When _IsConst=true, the assignment operators are
+    // implicitly generated and trivial.
     _LIBCPP_INLINE_VISIBILITY
-    __bit_iterator(__type_for_abi_non_trivial_copy_ctor const& __it) _NOEXCEPT
-      : __seg_(__it.__seg_), __ctz_(__it.__ctz_) {}
-
-    // Always declare the copy assignment operator since the implicit declaration
-    // is deprecated.
-    _LIBCPP_INLINE_VISIBILITY
-    __bit_iterator& operator=(__bit_iterator const&) = default;
+    __bit_iterator& operator=(const _If<_IsConst, struct __private_nat, __bit_iterator>& __it) {
+        __seg_ = __it.__seg_;
+        __ctz_ = __it.__ctz_;
+        return *this;
+    }
 
     _LIBCPP_INLINE_VISIBILITY reference operator*() const _NOEXCEPT
         {return reference(__seg_, __storage_type(1) << __ctz_);}
@@ -1302,4 +1300,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP___BIT_REFERENCE
+#endif // _LIBCPP___BIT_REFERENCE

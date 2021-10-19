@@ -83,7 +83,7 @@ protected:
 typedef ::testing::Types<TinyPtrVector<int *>, TinyPtrVector<double *>,
                          TinyPtrVector<PointerIntPair<int *, 1>>>
     TinyPtrVectorTestTypes;
-TYPED_TEST_CASE(TinyPtrVectorTest, TinyPtrVectorTestTypes);
+TYPED_TEST_SUITE(TinyPtrVectorTest, TinyPtrVectorTestTypes, );
 
 TYPED_TEST(TinyPtrVectorTest, EmptyTest) {
   this->expectValues(this->V, this->testArray(0));

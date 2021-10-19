@@ -198,10 +198,14 @@ bool isJumpTableCanonical(Function *F);
 } // end namespace lowertypetests
 
 class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+  bool UseCommandLine = false;
+
+  ModuleSummaryIndex *ExportSummary = nullptr;
+  const ModuleSummaryIndex *ImportSummary = nullptr;
+  bool DropTypeTests = true;
+
 public:
-  ModuleSummaryIndex *ExportSummary;
-  const ModuleSummaryIndex *ImportSummary;
-  bool DropTypeTests;
+  LowerTypeTestsPass() : UseCommandLine(true) {}
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
                      const ModuleSummaryIndex *ImportSummary,
                      bool DropTypeTests = false)

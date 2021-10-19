@@ -121,3 +121,19 @@ sb x10, (x11)
 sh x10, (x11)
 # CHECK-EXPAND: sw a0, 0(a1)
 sw x10, (x11)
+
+# CHECK-EXPAND: slli a0, a1, 24
+# CHECK-EXPAND: srai a0, a0, 24
+sext.b x10, x11
+
+# CHECK-EXPAND: slli a0, a1, 16
+# CHECK-EXPAND: srai a0, a0, 16
+sext.h x10, x11
+
+# CHECK-INST: andi a0, a1, 255
+# CHECK-ALIAS: andi a0, a1, 255
+zext.b x10, x11
+
+# CHECK-EXPAND: slli a0, a1, 16
+# CHECK-EXPAND: srli a0, a0, 16
+zext.h x10, x11

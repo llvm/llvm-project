@@ -17,10 +17,12 @@
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -84,7 +86,7 @@ class GBRSimplex;
 ///
 /// The unknowns in row position are represented in terms of the basis unknowns.
 /// If the basis unknowns are u_1, u_2, ... u_m, and a row in the tableau is
-/// d, c, a_1, a_2, ... a_m, this representats the unknown for that row as
+/// d, c, a_1, a_2, ... a_m, this represents the unknown for that row as
 /// (c + a_1*u_1 + a_2*u_2 + ... + a_m*u_m)/d. In our running example, if the
 /// basis is the initial basis of x, y, then the constraint 1 + 2x + 3y >= 0
 /// would be represented by the row [1, 1, 2, 3].
@@ -117,7 +119,7 @@ class GBRSimplex;
 ///
 /// The Simplex class supports redundancy checking via detectRedundant and
 /// isMarkedRedundant. A redundant constraint is one which is never violated as
-/// long as the other constrants are not violated, i.e., removing a redundant
+/// long as the other constraints are not violated, i.e., removing a redundant
 /// constraint does not change the set of solutions to the constraints. As a
 /// heuristic, constraints that have been marked redundant can be ignored for
 /// most operations. Therefore, these constraints are kept in rows 0 to
@@ -125,7 +127,7 @@ class GBRSimplex;
 /// of constraints that have been marked redundant.
 ///
 /// This Simplex class also supports taking snapshots of the current state
-/// and rolling back to prior snapshots. This works by maintaing an undo log
+/// and rolling back to prior snapshots. This works by maintaining an undo log
 /// of operations. Snapshots are just pointers to a particular location in the
 /// log, and rolling back to a snapshot is done by reverting each log entry's
 /// operation from the end until we reach the snapshot's location.
@@ -150,15 +152,18 @@ public:
   void addInequality(ArrayRef<int64_t> coeffs);
 
   /// Returns the number of variables in the tableau.
-  unsigned numVariables() const;
+  unsigned getNumVariables() const;
 
   /// Returns the number of constraints in the tableau.
-  unsigned numConstraints() const;
+  unsigned getNumConstraints() const;
 
   /// Add an equality to the tableau. If coeffs is c_0, c_1, ... c_n, where n
   /// is the current number of variables, then the corresponding equality is
   /// c_n + c_0*x_0 + c_1*x_1 + ... + c_{n-1}*x_{n-1} == 0.
   void addEquality(ArrayRef<int64_t> coeffs);
+
+  /// Add new variables to the end of the list of variables.
+  void appendVariable(unsigned count = 1);
 
   /// Mark the tableau as being empty.
   void markEmpty();
@@ -169,20 +174,28 @@ public:
   /// Rollback to a snapshot. This invalidates all later snapshots.
   void rollback(unsigned snapshot);
 
+  /// Add all the constraints from the given FlatAffineConstraints.
+  void intersectFlatAffineConstraints(const FlatAffineConstraints &fac);
+
   /// Compute the maximum or minimum value of the given row, depending on
-  /// direction. The specified row is never pivoted.
+  /// direction. The specified row is never pivoted. On return, the row may
+  /// have a negative sample value if the direction is down.
   ///
-  /// Returns a (num, den) pair denoting the optimum, or None if no
-  /// optimum exists, i.e., if the expression is unbounded in this direction.
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
   Optional<Fraction> computeRowOptimum(Direction direction, unsigned row);
 
   /// Compute the maximum or minimum value of the given expression, depending on
-  /// direction.
+  /// direction. Should not be called when the Simplex is empty.
   ///
-  /// Returns a (num, den) pair denoting the optimum, or a null value if no
-  /// optimum exists, i.e., if the expression is unbounded in this direction.
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
   Optional<Fraction> computeOptimum(Direction direction,
                                     ArrayRef<int64_t> coeffs);
+
+  /// Returns whether the perpendicular of the specified constraint is a
+  /// is a direction along which the polytope is bounded.
+  bool isBoundedAlongConstraint(unsigned constraintIndex);
 
   /// Returns whether the specified constraint has been marked as redundant.
   /// Constraints are numbered from 0 starting at the first added inequality.
@@ -208,7 +221,11 @@ public:
   /// tableau A and one in B.
   static Simplex makeProduct(const Simplex &a, const Simplex &b);
 
-  /// Returns the current sample point if it is integral. Otherwise, returns an
+  /// Returns a rational sample point. This should not be called when Simplex is
+  /// empty.
+  SmallVector<Fraction, 8> getRationalSample() const;
+
+  /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.
   Optional<SmallVector<int64_t, 8>> getSamplePointIfIntegral() const;
 
@@ -287,14 +304,24 @@ private:
   /// and the denominator.
   void normalizeRow(unsigned row);
 
-  /// Swap the two rows in the tableau and associated data structures.
+  /// Swap the two rows/columns in the tableau and associated data structures.
   void swapRows(unsigned i, unsigned j);
+  void swapColumns(unsigned i, unsigned j);
 
   /// Restore the unknown to a non-negative sample value.
   ///
   /// Returns true if the unknown was successfully restored to a non-negative
   /// sample value, false otherwise.
   LogicalResult restoreRow(Unknown &u);
+
+  /// Compute the maximum or minimum of the specified Unknown, depending on
+  /// direction. The specified unknown may be pivoted. If the unknown is
+  /// restricted, it will have a non-negative sample value on return.
+  /// Should not be called if the Simplex is empty.
+  ///
+  /// Returns a Fraction denoting the optimum, or a null value if no optimum
+  /// exists, i.e., if the expression is unbounded in this direction.
+  Optional<Fraction> computeOptimum(Direction direction, Unknown &u);
 
   /// Mark the specified unknown redundant. This operation is added to the undo
   /// log and will be undone by rollbacks. The specified unknown must be in row
@@ -304,6 +331,7 @@ private:
   /// Enum to denote operations that need to be undone during rollback.
   enum class UndoLogEntry {
     RemoveLastConstraint,
+    RemoveLastVariable,
     UnmarkEmpty,
     UnmarkLastRedundant
   };

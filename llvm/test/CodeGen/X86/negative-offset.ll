@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Test that a constant consisting of a global symbol with a negative offset
 ; is properly folded and isel'd.
 
-@G = external global [8 x i32]
+@G = external dso_local global [8 x i32]
 define i8* @negative_offset(i8* %a) {
 ; CHECK-LABEL: negative_offset:
 ; CHECK:       # %bb.0:

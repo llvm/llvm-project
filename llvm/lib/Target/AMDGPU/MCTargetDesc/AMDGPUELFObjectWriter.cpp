@@ -8,15 +8,9 @@
 
 #include "AMDGPUFixupKinds.h"
 #include "AMDGPUMCTargetDesc.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -86,9 +80,12 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
     const auto *SymA = Target.getSymA();
     assert(SymA);
 
-    Ctx.reportError(Fixup.getLoc(),
-                    Twine("undefined label '") + SymA->getSymbol().getName() + "'");
-    return ELF::R_AMDGPU_NONE;
+    if (SymA->getSymbol().isUndefined()) {
+      Ctx.reportError(Fixup.getLoc(), Twine("undefined label '") +
+                                          SymA->getSymbol().getName() + "'");
+      return ELF::R_AMDGPU_NONE;
+    }
+    return ELF::R_AMDGPU_REL16;
   }
 
   llvm_unreachable("unhandled relocation type");

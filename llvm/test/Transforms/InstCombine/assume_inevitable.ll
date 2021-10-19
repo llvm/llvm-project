@@ -15,7 +15,7 @@ define i32 @assume_inevitable(i32* %a, i32* %b, i8* %c) {
 ; CHECK-NEXT:    [[DUMMY_EQ:%.*]] = icmp ugt i32 [[LOADRES]], 42
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[DUMMY_EQ]])
 ; CHECK-NEXT:    [[M_I8:%.*]] = bitcast i64* [[M]] to i8*
-; CHECK-NEXT:    [[M_A:%.*]] = call i8* @llvm.ptr.annotation.p0i8(i8* nonnull [[M_I8]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2)
+; CHECK-NEXT:    [[M_A:%.*]] = call i8* @llvm.ptr.annotation.p0i8(i8* nonnull [[M_I8]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2, i8* null)
 ; CHECK-NEXT:    [[M_X:%.*]] = bitcast i8* [[M_A]] to i64*
 ; CHECK-NEXT:    [[OBJSZ:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[C:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i64 [[OBJSZ]], i64* [[M_X]], align 4
@@ -44,7 +44,7 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 1, i8* %dummy)
 
   %m_i8 = bitcast i64* %m to i8*
-  %m_a = call i8* @llvm.ptr.annotation.p0i8(i8* %m_i8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), i32 2)
+  %m_a = call i8* @llvm.ptr.annotation.p0i8(i8* %m_i8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i32 0, i32 0), i32 2, i8* null)
   %m_x = bitcast i8* %m_a to i64*
   %objsz = call i64 @llvm.objectsize.i64.p0i8(i8* %c, i1 false)
   store i64 %objsz, i64* %m_x
@@ -64,7 +64,7 @@ entry:
 
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1)
 declare i32 @llvm.annotation.i32(i32, i8*, i8*, i32)
-declare i8* @llvm.ptr.annotation.p0i8(i8*, i8*, i8*, i32)
+declare i8* @llvm.ptr.annotation.p0i8(i8*, i8*, i8*, i32, i8*)
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

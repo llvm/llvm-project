@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -28,8 +28,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 using namespace clang;
 
@@ -577,19 +577,22 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
       TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   // Get the instruction descriptor.
   std::unique_ptr<llvm::MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  std::unique_ptr<llvm::MCObjectFileInfo> MOFI(new llvm::MCObjectFileInfo());
   std::unique_ptr<llvm::MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, TO.CPU, FeaturesStr));
   // Target MCTargetDesc may not be linked in clang-based tools.
-  if (!MAI || !MII | !MOFI || !STI) {
+
+  if (!MAI || !MII || !STI) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
         << "target MC unavailable";
     return EmptyStmt();
   }
 
   llvm::SourceMgr TempSrcMgr;
-  llvm::MCContext Ctx(MAI.get(), MRI.get(), MOFI.get(), &TempSrcMgr);
-  MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, Ctx);
+  llvm::MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &TempSrcMgr);
+  std::unique_ptr<llvm::MCObjectFileInfo> MOFI(
+      TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
+  Ctx.setObjectFileInfo(MOFI.get());
+
   std::unique_ptr<llvm::MemoryBuffer> Buffer =
       llvm::MemoryBuffer::getMemBuffer(AsmString, "<MS inline asm>");
 
@@ -630,9 +633,9 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   SmallVector<std::pair<void *, bool>, 4> OpExprs;
   SmallVector<std::string, 4> Constraints;
   SmallVector<std::string, 4> Clobbers;
-  if (Parser->parseMSInlineAsm(AsmLoc.getPtrEncoding(), AsmStringIR, NumOutputs,
-                               NumInputs, OpExprs, Constraints, Clobbers,
-                               MII.get(), IP.get(), Callback))
+  if (Parser->parseMSInlineAsm(AsmStringIR, NumOutputs, NumInputs, OpExprs,
+                               Constraints, Clobbers, MII.get(), IP.get(),
+                               Callback))
     return StmtError();
 
   // Filter out "fpsw" and "mxcsr". They aren't valid GCC asm clobber

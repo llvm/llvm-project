@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: libcpp-has-no-wide-characters
+
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
@@ -24,7 +26,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef std::time_get_byname<wchar_t, input_iterator<const wchar_t*> > F;
+typedef std::time_get_byname<wchar_t, cpp17_input_iterator<const wchar_t*> > F;
 
 class my_facet
     : public F

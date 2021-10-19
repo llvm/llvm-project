@@ -14,8 +14,9 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
 
-#include <limits.h>
+#include <climits>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -46,8 +47,8 @@ static void FixupEnvironment(Environment &env) {
 #endif
 }
 
-static void LLVM_ATTRIBUTE_NORETURN ExitWithError(int error_fd,
-                                                  const char *operation) {
+[[noreturn]] static void ExitWithError(int error_fd,
+                                       const char *operation) {
   int err = errno;
   llvm::raw_fd_ostream os(error_fd, true);
   os << operation << " failed: " << llvm::sys::StrError(err);
@@ -88,8 +89,8 @@ static void DupDescriptor(int error_fd, const FileSpec &file_spec, int fd,
   return;
 }
 
-static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
-                                              const ProcessLaunchInfo &info) {
+[[noreturn]] static void ChildFunc(int error_fd,
+                                   const ProcessLaunchInfo &info) {
   if (info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)) {
     if (setpgid(0, 0) != 0)
       ExitWithError(error_fd, "setpgid");
@@ -143,9 +144,32 @@ static void LLVM_ATTRIBUTE_NORETURN ChildFunc(int error_fd,
     // Close everything besides stdin, stdout, and stderr that has no file
     // action to avoid leaking. Only do this when debugging, as elsewhere we
     // actually rely on passing open descriptors to child processes.
-    for (int fd = 3; fd < sysconf(_SC_OPEN_MAX); ++fd)
-      if (!info.GetFileActionForFD(fd) && fd != error_fd)
-        close(fd);
+
+    const llvm::StringRef proc_fd_path = "/proc/self/fd";
+    std::error_code ec;
+    bool result;
+    ec = llvm::sys::fs::is_directory(proc_fd_path, result);
+    if (result) {
+      std::vector<int> files_to_close;
+      // Directory iterator doesn't ensure any sequence.
+      for (llvm::sys::fs::directory_iterator iter(proc_fd_path, ec), file_end;
+           iter != file_end && !ec; iter.increment(ec)) {
+        int fd = std::stoi(iter->path().substr(proc_fd_path.size() + 1));
+
+        // Don't close first three entries since they are stdin, stdout and
+        // stderr.
+        if (fd > 2 && !info.GetFileActionForFD(fd) && fd != error_fd)
+          files_to_close.push_back(fd);
+      }
+      for (int file_to_close : files_to_close)
+        close(file_to_close);
+    } else {
+      // Since /proc/self/fd didn't work, trying the slow way instead.
+      int max_fd = sysconf(_SC_OPEN_MAX);
+      for (int fd = 3; fd < max_fd; ++fd)
+        if (!info.GetFileActionForFD(fd) && fd != error_fd)
+          close(fd);
+    }
 
     // Start tracing this child that is about to exec.
     if (ptrace(PT_TRACE_ME, 0, nullptr, 0) == -1)

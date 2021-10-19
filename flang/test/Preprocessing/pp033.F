@@ -1,6 +1,6 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: if(777.eq.777)then
-! CHECK: print*,'pp033.F no: ',777
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: if (777 .eq. 777) then
+! CHECK: print *, 'pp033.F no: ', 777
 * /* C comment \ newline */ erased from #define
       integer, parameter :: KWM = 666
 #define KWM 77/* C comment \

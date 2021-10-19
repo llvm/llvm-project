@@ -17,9 +17,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-HostNativeThreadBase::HostNativeThreadBase()
-    : m_thread(LLDB_INVALID_HOST_THREAD), m_result(0) {}
-
 HostNativeThreadBase::HostNativeThreadBase(thread_t thread)
     : m_thread(thread), m_result(0) {}
 

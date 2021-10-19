@@ -45,17 +45,17 @@
 
 namespace Fortran::semantics {
 
-using NameToSymbolMap = std::map<const char *, SymbolRef>;
+using NameToSymbolMap = std::multimap<parser::CharBlock, SymbolRef>;
 static void DoDumpSymbols(llvm::raw_ostream &, const Scope &, int indent = 0);
 static void PutIndent(llvm::raw_ostream &, int indent);
 
 static void GetSymbolNames(const Scope &scope, NameToSymbolMap &symbols) {
   // Finds all symbol names in the scope without collecting duplicates.
   for (const auto &pair : scope) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &pair : scope.commonBlocks()) {
-    symbols.emplace(pair.second->name().begin(), *pair.second);
+    symbols.emplace(pair.second->name(), *pair.second);
   }
   for (const auto &child : scope.children()) {
     GetSymbolNames(child, symbols);
@@ -167,7 +167,7 @@ static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
   ResolveNames(context, program);
   RewriteParseTree(context, program);
-  ComputeOffsets(context);
+  ComputeOffsets(context, context.globalScope());
   CheckDeclarations(context);
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2 pass2{context};
@@ -181,12 +181,13 @@ static bool PerformStatementSemantics(
 SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
-    parser::AllSources &allSources)
+    parser::AllCookedSources &allCookedSources)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      allSources_{allSources},
+      allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
-      foldingContext_{
-          parser::ContextualMessages{&messages_}, defaultKinds_, intrinsics_} {}
+      globalScope_{*this}, foldingContext_{
+                               parser::ContextualMessages{&messages_},
+                               defaultKinds_, intrinsics_} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -264,13 +265,12 @@ void SemanticsContext::PopConstruct() {
 
 void SemanticsContext::CheckIndexVarRedefine(const parser::CharBlock &location,
     const Symbol &variable, parser::MessageFixedText &&message) {
-  if (const Symbol * root{GetAssociationRoot(variable)}) {
-    auto it{activeIndexVars_.find(*root)};
-    if (it != activeIndexVars_.end()) {
-      std::string kind{EnumToString(it->second.kind)};
-      Say(location, std::move(message), kind, root->name())
-          .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
-    }
+  const Symbol &symbol{ResolveAssociations(variable)};
+  auto it{activeIndexVars_.find(symbol)};
+  if (it != activeIndexVars_.end()) {
+    std::string kind{EnumToString(it->second.kind)};
+    Say(location, std::move(message), kind, symbol.name())
+        .Attach(it->second.location, "Enclosing %s construct"_en_US, kind);
   }
 }
 
@@ -302,19 +302,16 @@ void SemanticsContext::ActivateIndexVar(
     const parser::Name &name, IndexVarKind kind) {
   CheckIndexVarRedefine(name);
   if (const Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      activeIndexVars_.emplace(*root, IndexVarInfo{name.source, kind});
-    }
+    activeIndexVars_.emplace(
+        ResolveAssociations(*indexVar), IndexVarInfo{name.source, kind});
   }
 }
 
 void SemanticsContext::DeactivateIndexVar(const parser::Name &name) {
   if (Symbol * indexVar{name.symbol}) {
-    if (const Symbol * root{GetAssociationRoot(*indexVar)}) {
-      auto it{activeIndexVars_.find(*root)};
-      if (it != activeIndexVars_.end() && it->second.location == name.source) {
-        activeIndexVars_.erase(it);
-      }
+    auto it{activeIndexVars_.find(ResolveAssociations(*indexVar))};
+    if (it != activeIndexVars_.end() && it->second.location == name.source) {
+      activeIndexVars_.erase(it);
     }
   }
 }
@@ -329,19 +326,51 @@ SymbolVector SemanticsContext::GetIndexVars(IndexVarKind kind) {
   return result;
 }
 
+SourceName SemanticsContext::SaveTempName(std::string &&name) {
+  return {*tempNames_.emplace(std::move(name)).first};
+}
+
 SourceName SemanticsContext::GetTempName(const Scope &scope) {
   for (const auto &str : tempNames_) {
-    SourceName name{str};
-    if (scope.find(name) == scope.end()) {
-      return name;
+    if (str.size() > 5 && str.substr(0, 5) == ".F18.") {
+      SourceName name{str};
+      if (scope.find(name) == scope.end()) {
+        return name;
+      }
     }
   }
-  tempNames_.emplace_back(".F18.");
-  tempNames_.back() += std::to_string(tempNames_.size());
-  return {tempNames_.back()};
+  return SaveTempName(".F18."s + std::to_string(tempNames_.size()));
+}
+
+Scope *SemanticsContext::GetBuiltinModule(const char *name) {
+  return ModFileReader{*this}.Read(
+      SourceName{name, std::strlen(name)}, nullptr, true /*silence errors*/);
+}
+
+void SemanticsContext::UseFortranBuiltinsModule() {
+  if (builtinsScope_ == nullptr) {
+    builtinsScope_ = GetBuiltinModule("__fortran_builtins");
+    if (builtinsScope_) {
+      intrinsics_.SupplyBuiltins(*builtinsScope_);
+    }
+  }
 }
 
 bool Semantics::Perform() {
+  // Implicitly USE the __Fortran_builtins module so that special types
+  // (e.g., __builtin_team_type) are available to semantics, esp. for
+  // intrinsic checking.
+  if (!program_.v.empty()) {
+    const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
+        &program_.v.front().u)};
+    if (frontModule &&
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__fortran_builtins") {
+      // Don't try to read the builtins module when we're actually building it.
+    } else {
+      context_.UseFortranBuiltinsModule();
+    }
+  }
   return ValidateLabels(context_, program_) &&
       parser::CanonicalizeDo(program_) && // force line break
       CanonicalizeAcc(context_.messages(), program_) &&
@@ -351,7 +380,7 @@ bool Semantics::Perform() {
 }
 
 void Semantics::EmitMessages(llvm::raw_ostream &os) const {
-  context_.messages().Emit(os, cooked_);
+  context_.messages().Emit(os, context_.allCookedSources());
 }
 
 void Semantics::DumpSymbols(llvm::raw_ostream &os) {
@@ -361,9 +390,10 @@ void Semantics::DumpSymbols(llvm::raw_ostream &os) {
 void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   NameToSymbolMap symbols;
   GetSymbolNames(context_.globalScope(), symbols);
+  const parser::AllCookedSources &allCooked{context_.allCookedSources()};
   for (const auto &pair : symbols) {
     const Symbol &symbol{pair.second};
-    if (auto sourceInfo{cooked_.GetSourcePositionRange(symbol.name())}) {
+    if (auto sourceInfo{allCooked.GetSourcePositionRange(symbol.name())}) {
       os << symbol.name().ToString() << ": " << sourceInfo->first.file.path()
          << ", " << sourceInfo->first.line << ", " << sourceInfo->first.column
          << "-" << sourceInfo->second.column << "\n";
@@ -380,8 +410,8 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
   if (const auto *symbol{scope.symbol()}) {
     os << ' ' << symbol->name();
   }
-  if (scope.size()) {
-    os << " size=" << scope.size() << " alignment=" << scope.alignment();
+  if (scope.alignment().has_value()) {
+    os << " size=" << scope.size() << " alignment=" << *scope.alignment();
   }
   if (scope.derivedTypeSpec()) {
     os << " instantiation of " << *scope.derivedTypeSpec();

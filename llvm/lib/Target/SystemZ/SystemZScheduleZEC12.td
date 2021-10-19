@@ -151,8 +151,8 @@ def : InstRW<[WLat1, FXU, LSU, NormalGr], (instregex "CL(G)?T(Asm.*)?$")>;
 
 // Call
 def : InstRW<[WLat1, FXU2, VBU, GroupAlone], (instregex "(Call)?BRAS$")>;
-def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BRASL$")>;
-def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BAS(R)?$")>;
+def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BRASL(_XPLINK64)?$")>;
+def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "(Call)?BAS(R)?(_XPLINK64)?$")>;
 def : InstRW<[WLat1, FXU2, LSU, GroupAlone], (instregex "TLS_(G|L)DCALL$")>;
 
 // Return
@@ -187,7 +187,7 @@ def : InstRW<[WLat1, FXU, NormalGr], (instregex "LLIL(F|H|L)$")>;
 
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "LG(F|H)I$")>;
 def : InstRW<[WLat1, FXU, NormalGr], (instregex "LHI(Mux)?$")>;
-def : InstRW<[WLat1, FXU, NormalGr], (instregex "LR(Mux)?$")>;
+def : InstRW<[WLat1, FXU, NormalGr], (instregex "LR$")>;
 
 // Load and trap
 def : InstRW<[WLat1LSU, FXU, LSU, NormalGr], (instregex "L(FH|G)?AT$")>;

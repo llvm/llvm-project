@@ -1,26 +1,303 @@
 set(files
+  __algorithm/adjacent_find.h
+  __algorithm/all_of.h
+  __algorithm/any_of.h
+  __algorithm/binary_search.h
+  __algorithm/clamp.h
+  __algorithm/comp_ref_type.h
+  __algorithm/comp.h
+  __algorithm/copy_backward.h
+  __algorithm/copy_if.h
+  __algorithm/copy_n.h
+  __algorithm/copy.h
+  __algorithm/count_if.h
+  __algorithm/count.h
+  __algorithm/equal_range.h
+  __algorithm/equal.h
+  __algorithm/fill_n.h
+  __algorithm/fill.h
+  __algorithm/find_end.h
+  __algorithm/find_first_of.h
+  __algorithm/find_if_not.h
+  __algorithm/find_if.h
+  __algorithm/find.h
+  __algorithm/for_each_n.h
+  __algorithm/for_each.h
+  __algorithm/generate_n.h
+  __algorithm/generate.h
+  __algorithm/half_positive.h
+  __algorithm/includes.h
+  __algorithm/inplace_merge.h
+  __algorithm/is_heap_until.h
+  __algorithm/is_heap.h
+  __algorithm/is_partitioned.h
+  __algorithm/is_permutation.h
+  __algorithm/is_sorted_until.h
+  __algorithm/is_sorted.h
+  __algorithm/iter_swap.h
+  __algorithm/lexicographical_compare.h
+  __algorithm/lower_bound.h
+  __algorithm/make_heap.h
+  __algorithm/max_element.h
+  __algorithm/max.h
+  __algorithm/merge.h
+  __algorithm/min_element.h
+  __algorithm/min.h
+  __algorithm/minmax_element.h
+  __algorithm/minmax.h
+  __algorithm/mismatch.h
+  __algorithm/move_backward.h
+  __algorithm/move.h
+  __algorithm/next_permutation.h
+  __algorithm/none_of.h
+  __algorithm/nth_element.h
+  __algorithm/partial_sort_copy.h
+  __algorithm/partial_sort.h
+  __algorithm/partition_copy.h
+  __algorithm/partition_point.h
+  __algorithm/partition.h
+  __algorithm/pop_heap.h
+  __algorithm/prev_permutation.h
+  __algorithm/push_heap.h
+  __algorithm/remove_copy_if.h
+  __algorithm/remove_copy.h
+  __algorithm/remove_if.h
+  __algorithm/remove.h
+  __algorithm/replace_copy_if.h
+  __algorithm/replace_copy.h
+  __algorithm/replace_if.h
+  __algorithm/replace.h
+  __algorithm/reverse_copy.h
+  __algorithm/reverse.h
+  __algorithm/rotate_copy.h
+  __algorithm/rotate.h
+  __algorithm/sample.h
+  __algorithm/search_n.h
+  __algorithm/search.h
+  __algorithm/set_difference.h
+  __algorithm/set_intersection.h
+  __algorithm/set_symmetric_difference.h
+  __algorithm/set_union.h
+  __algorithm/shift_left.h
+  __algorithm/shift_right.h
+  __algorithm/shuffle.h
+  __algorithm/sift_down.h
+  __algorithm/sort_heap.h
+  __algorithm/sort.h
+  __algorithm/stable_partition.h
+  __algorithm/stable_sort.h
+  __algorithm/swap_ranges.h
+  __algorithm/transform.h
+  __algorithm/unique_copy.h
+  __algorithm/unique.h
+  __algorithm/unwrap_iter.h
+  __algorithm/upper_bound.h
+  __availability
   __bit_reference
+  __bit/bit_cast.h
+  __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
-  __errc
+  __charconv/chars_format.h
+  __charconv/from_chars_result.h
+  __charconv/to_chars_result.h
+  __compare/common_comparison_category.h
+  __compare/compare_three_way.h
+  __compare/compare_three_way_result.h
+  __compare/is_eq.h
+  __compare/ordering.h
+  __compare/synth_three_way.h
+  __compare/three_way_comparable.h
+  __concepts/arithmetic.h
+  __concepts/assignable.h
+  __concepts/boolean_testable.h
+  __concepts/class_or_enum.h
+  __concepts/common_reference_with.h
+  __concepts/common_with.h
+  __concepts/constructible.h
+  __concepts/convertible_to.h
+  __concepts/copyable.h
+  __concepts/derived_from.h
+  __concepts/destructible.h
+  __concepts/different_from.h
+  __concepts/equality_comparable.h
+  __concepts/invocable.h
+  __concepts/movable.h
+  __concepts/predicate.h
+  __concepts/regular.h
+  __concepts/relation.h
+  __concepts/same_as.h
+  __concepts/semiregular.h
+  __concepts/swappable.h
+  __concepts/totally_ordered.h
+  __config
   __debug
-  __functional_03
+  __errc
+  __format/format_arg.h
+  __format/format_args.h
+  __format/format_context.h
+  __format/format_error.h
+  __format/format_fwd.h
+  __format/format_parse_context.h
+  __format/format_string.h
+  __format/formatter.h
+  __format/formatter_bool.h
+  __format/formatter_char.h
+  __format/formatter_integer.h
+  __format/formatter_integral.h
+  __format/formatter_string.h
+  __format/parser_std_format_spec.h
+  __function_like.h
   __functional_base
-  __functional_base_03
+  __functional/binary_function.h
+  __functional/binary_negate.h
+  __functional/bind_back.h
+  __functional/bind_front.h
+  __functional/bind.h
+  __functional/binder1st.h
+  __functional/binder2nd.h
+  __functional/compose.h
+  __functional/default_searcher.h
+  __functional/function.h
+  __functional/hash.h
+  __functional/identity.h
+  __functional/invoke.h
+  __functional/is_transparent.h
+  __functional/mem_fn.h
+  __functional/mem_fun_ref.h
+  __functional/not_fn.h
+  __functional/operations.h
+  __functional/perfect_forward.h
+  __functional/pointer_to_binary_function.h
+  __functional/pointer_to_unary_function.h
+  __functional/ranges_operations.h
+  __functional/reference_wrapper.h
+  __functional/unary_function.h
+  __functional/unary_negate.h
+  __functional/unwrap_ref.h
+  __functional/weak_result_type.h
   __hash_table
+  __iterator/access.h
+  __iterator/advance.h
+  __iterator/back_insert_iterator.h
+  __iterator/common_iterator.h
+  __iterator/concepts.h
+  __iterator/counted_iterator.h
+  __iterator/data.h
+  __iterator/default_sentinel.h
+  __iterator/distance.h
+  __iterator/empty.h
+  __iterator/erase_if_container.h
+  __iterator/front_insert_iterator.h
+  __iterator/incrementable_traits.h
+  __iterator/insert_iterator.h
+  __iterator/istream_iterator.h
+  __iterator/istreambuf_iterator.h
+  __iterator/iter_move.h
+  __iterator/iter_swap.h
+  __iterator/iterator_traits.h
+  __iterator/iterator.h
+  __iterator/move_iterator.h
+  __iterator/next.h
+  __iterator/ostream_iterator.h
+  __iterator/ostreambuf_iterator.h
+  __iterator/prev.h
+  __iterator/projected.h
+  __iterator/readable_traits.h
+  __iterator/reverse_access.h
+  __iterator/reverse_iterator.h
+  __iterator/size.h
+  __iterator/unreachable_sentinel.h
+  __iterator/wrap_iter.h
   __libcpp_version
   __locale
+  __mbstate_t.h
+  __memory/addressof.h
+  __memory/allocation_guard.h
+  __memory/allocator_arg_t.h
+  __memory/allocator_traits.h
+  __memory/allocator.h
+  __memory/auto_ptr.h
+  __memory/compressed_pair.h
+  __memory/construct_at.h
+  __memory/pointer_safety.h
+  __memory/pointer_traits.h
+  __memory/raw_storage_iterator.h
+  __memory/shared_ptr.h
+  __memory/temporary_buffer.h
+  __memory/uninitialized_algorithms.h
+  __memory/unique_ptr.h
+  __memory/uses_allocator.h
   __mutex_base
   __node_handle
   __nullptr
+  __random/uniform_int_distribution.h
+  __ranges/access.h
+  __ranges/all.h
+  __ranges/common_view.h
+  __ranges/concepts.h
+  __ranges/copyable_box.h
+  __ranges/counted.h
+  __ranges/dangling.h
+  __ranges/data.h
+  __ranges/drop_view.h
+  __ranges/empty_view.h
+  __ranges/empty.h
+  __ranges/enable_borrowed_range.h
+  __ranges/enable_view.h
+  __ranges/iota_view.h
+  __ranges/join_view.h
+  __ranges/non_propagating_cache.h
+  __ranges/range_adaptor.h
+  __ranges/ref_view.h
+  __ranges/reverse_view.h
+  __ranges/single_view.h
+  __ranges/size.h
+  __ranges/subrange.h
+  __ranges/take_view.h
+  __ranges/transform_view.h
+  __ranges/view_interface.h
   __split_buffer
-  __sso_allocator
   __std_stream
   __string
+  __support/android/locale_bionic.h
+  __support/fuchsia/xlocale.h
+  __support/ibm/gettod_zos.h
+  __support/ibm/limits.h
+  __support/ibm/locale_mgmt_zos.h
+  __support/ibm/nanosleep.h
+  __support/ibm/support.h
+  __support/ibm/xlocale.h
+  __support/musl/xlocale.h
+  __support/newlib/xlocale.h
+  __support/openbsd/xlocale.h
+  __support/solaris/floatingpoint.h
+  __support/solaris/wchar.h
+  __support/solaris/xlocale.h
+  __support/win32/limits_msvc_win32.h
+  __support/win32/locale_win32.h
+  __support/xlocale/__nop_locale_mgmt.h
+  __support/xlocale/__posix_l_fallback.h
+  __support/xlocale/__strtonum_fallback.h
   __threading_support
   __tree
   __tuple
   __undef_macros
+  __utility/as_const.h
+  __utility/cmp.h
+  __utility/decay_copy.h
+  __utility/declval.h
+  __utility/exchange.h
+  __utility/forward.h
+  __utility/in_place.h
+  __utility/integer_sequence.h
+  __utility/move.h
+  __utility/pair.h
+  __utility/piecewise_construct.h
+  __utility/rel_ops.h
+  __utility/swap.h
+  __utility/to_underlying.h
+  __variant/monostate.h
   algorithm
   any
   array
@@ -93,6 +370,7 @@ set(files
   fenv.h
   filesystem
   float.h
+  format
   forward_list
   fstream
   functional
@@ -123,6 +401,7 @@ set(files
   ostream
   queue
   random
+  ranges
   ratio
   regex
   scoped_allocator
@@ -141,8 +420,8 @@ set(files
   stdlib.h
   streambuf
   string
-  string.h
   string_view
+  string.h
   strstream
   system_error
   tgmath.h
@@ -162,121 +441,55 @@ set(files
   wctype.h
   )
 
-if(LIBCXX_INSTALL_SUPPORT_HEADERS)
-  set(files
-    ${files}
-    support/android/locale_bionic.h
-    support/fuchsia/xlocale.h
-    support/ibm/limits.h
-    support/ibm/locale_mgmt_aix.h
-    support/ibm/support.h
-    support/ibm/xlocale.h
-    support/musl/xlocale.h
-    support/newlib/xlocale.h
-    support/solaris/floatingpoint.h
-    support/solaris/wchar.h
-    support/solaris/xlocale.h
-    support/win32/limits_msvc_win32.h
-    support/win32/locale_win32.h
-    support/xlocale/__nop_locale_mgmt.h
-    support/xlocale/__posix_l_fallback.h
-    support/xlocale/__strtonum_fallback.h
-    )
-endif()
+configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 
-configure_file("__config_site.in"
-               "${LIBCXX_BINARY_DIR}/__config_site"
-               @ONLY)
-
-# Generate a custom __config header. The new header is created
-# by prepending __config_site to the current __config header.
-add_custom_command(OUTPUT ${LIBCXX_BINARY_DIR}/__generated_config
-  COMMAND ${Python3_EXECUTABLE} ${LIBCXX_SOURCE_DIR}/utils/cat_files.py
-    ${LIBCXX_BINARY_DIR}/__config_site
-    ${LIBCXX_SOURCE_DIR}/include/__config
-    -o ${LIBCXX_BINARY_DIR}/__generated_config
-  DEPENDS ${LIBCXX_SOURCE_DIR}/include/__config
-          ${LIBCXX_BINARY_DIR}/__config_site
-)
-# Add a target that executes the generation commands.
-add_custom_target(cxx-generated-config ALL
-  DEPENDS ${LIBCXX_BINARY_DIR}/__generated_config)
-
-# In some build configurations (like bootstrapping clang), we need to be able to
-# install the libcxx headers before the CMake configuration for libcxx runs. Making
-# the name of this target configurable allows LLVM/runtimes/CMakeLists.txt to
-# add this subdirectory to the LLVM build to put libcxx's headers in place
-# before libcxx's build configuration is run.
-if (NOT CXX_HEADER_TARGET)
-  set(CXX_HEADER_TARGET cxx-headers)
-endif()
-if(LIBCXX_HEADER_DIR)
-  set(output_dir ${LIBCXX_HEADER_DIR}/include/c++/v1)
-
-  set(out_files)
-  foreach(f ${files})
-    set(src ${CMAKE_CURRENT_SOURCE_DIR}/${f})
-    set(dst ${output_dir}/${f})
-    add_custom_command(OUTPUT ${dst}
-      DEPENDS ${src}
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-      COMMENT "Copying CXX header ${f}")
-    list(APPEND out_files ${dst})
-  endforeach()
-
-  # Copy the generated header as __config into build directory.
-  set(src ${LIBCXX_BINARY_DIR}/__generated_config)
-  set(dst ${output_dir}/__config)
+set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site")
+foreach(f ${files})
+  set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
+  set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
   add_custom_command(OUTPUT ${dst}
-      DEPENDS ${src} cxx-generated-config
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-      COMMENT "Copying CXX __config")
-  list(APPEND out_files ${dst})
-  add_custom_target(generate-cxx-headers DEPENDS ${out_files})
+    DEPENDS ${src}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
+    COMMENT "Copying CXX header ${f}")
+  list(APPEND _all_includes "${dst}")
+endforeach()
 
-  add_library(${CXX_HEADER_TARGET} INTERFACE)
-  add_dependencies(${CXX_HEADER_TARGET} generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
-  # TODO: Use target_include_directories once we figure out why that breaks the runtimes build
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(${CXX_HEADER_TARGET} INTERFACE /I "${output_dir}")
-  else()
-    target_compile_options(${CXX_HEADER_TARGET} INTERFACE -I "${output_dir}")
-  endif()
+add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
-  # Make sure the generated __config_site header is included when we build the library.
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(${CXX_HEADER_TARGET} INTERFACE /FI "${LIBCXX_BINARY_DIR}/__config_site")
-  else()
-    target_compile_options(${CXX_HEADER_TARGET} INTERFACE -include "${LIBCXX_BINARY_DIR}/__config_site")
-  endif()
+add_library(cxx-headers INTERFACE)
+add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
+# TODO: Use target_include_directories once we figure out why that breaks the runtimes build
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+  target_compile_options(cxx-headers INTERFACE /I${LIBCXX_GENERATED_INCLUDE_DIR}
+                                     INTERFACE /I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
 else()
-  add_library(${CXX_HEADER_TARGET} INTERFACE)
+  target_compile_options(cxx-headers INTERFACE -I${LIBCXX_GENERATED_INCLUDE_DIR}
+                                     INTERFACE -I${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
 endif()
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})
     get_filename_component(dir ${file} DIRECTORY)
     install(FILES ${file}
-      DESTINATION ${LIBCXX_INSTALL_HEADER_PREFIX}include/c++/v1/${dir}
-      COMPONENT ${CXX_HEADER_TARGET}
+      DESTINATION ${LIBCXX_INSTALL_INCLUDE_DIR}/${dir}
+      COMPONENT cxx-headers
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     )
   endforeach()
 
-  # Install the generated header as __config.
-  install(FILES ${LIBCXX_BINARY_DIR}/__generated_config
-    DESTINATION ${LIBCXX_INSTALL_HEADER_PREFIX}include/c++/v1
+  # Install the generated __config_site.
+  install(FILES ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site
+    DESTINATION ${LIBCXX_INSTALL_INCLUDE_TARGET_DIR}
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    RENAME __config
-    COMPONENT ${CXX_HEADER_TARGET})
+    COMPONENT cxx-headers)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
-    add_custom_target(install-${CXX_HEADER_TARGET}
-                      DEPENDS ${CXX_HEADER_TARGET} cxx-generated-config
+    add_custom_target(install-cxx-headers
+                      DEPENDS cxx-headers
                       COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=${CXX_HEADER_TARGET}
+                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     # Stripping is a no-op for headers
-    add_custom_target(install-${CXX_HEADER_TARGET}-stripped DEPENDS install-${CXX_HEADER_TARGET})
+    add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()
 endif()

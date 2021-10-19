@@ -29,7 +29,7 @@ void UseBoolLiteralsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           implicitCastExpr(
               has(ignoringParenImpCasts(integerLiteral().bind("literal"))),
               hasImplicitDestinationType(qualType(booleanType())),
@@ -38,7 +38,7 @@ void UseBoolLiteralsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                conditionalOperator(
                    hasParent(implicitCastExpr(
                        hasImplicitDestinationType(qualType(booleanType())),

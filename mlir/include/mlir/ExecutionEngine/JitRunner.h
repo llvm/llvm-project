@@ -19,19 +19,45 @@
 #define MLIR_SUPPORT_JITRUNNER_H_
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+
+namespace llvm {
+class Module;
+class LLVMContext;
+
+namespace orc {
+class MangleAndInterner;
+} // namespace orc
+} // namespace llvm
 
 namespace mlir {
 
+class DialectRegistry;
 class ModuleOp;
 struct LogicalResult;
 
-// Entry point for all CPU runners. Expects the common argc/argv arguments for
-// standard C++ main functions and an mlirTransformer.
-// The latter is applied after parsing the input into MLIR IR and before passing
-// the MLIR module to the ExecutionEngine.
-int JitRunnerMain(
-    int argc, char **argv,
-    llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer);
+struct JitRunnerConfig {
+  /// MLIR transformer applied after parsing the input into MLIR IR and before
+  /// passing the MLIR module to the ExecutionEngine.
+  llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer = nullptr;
+
+  /// A custom function that is passed to ExecutionEngine. It processes MLIR
+  /// module and creates LLVM IR module.
+  llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+                                                   llvm::LLVMContext &)>
+      llvmModuleBuilder = nullptr;
+
+  /// A callback to register symbols with ExecutionEngine at runtime.
+  llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
+      runtimesymbolMap = nullptr;
+};
+
+/// Entry point for all CPU runners. Expects the common argc/argv arguments for
+/// standard C++ main functions. The supplied dialect registry is expected to
+/// contain any registers that appear in the input IR, they will be loaded
+/// on-demand by the parser.
+int JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
+                  JitRunnerConfig config = {});
 
 } // namespace mlir
 

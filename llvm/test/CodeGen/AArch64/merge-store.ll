@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mcpu=cyclone -mattr=+slow-misaligned-128store | FileCheck %s --check-prefixes=CHECK,SPLITTING
 ; RUN: llc < %s -mtriple=aarch64-eabi -mattr=-slow-misaligned-128store | FileCheck %s --check-prefixes=CHECK,MISALIGNED
 
-@g0 = external global <3 x float>, align 16
-@g1 = external global <3 x float>, align 4
+@g0 = external dso_local global <3 x float>, align 16
+@g1 = external dso_local global <3 x float>, align 4
 
 define void @blam() {
 ; SPLITTING-LABEL: blam:

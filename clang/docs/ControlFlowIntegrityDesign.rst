@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
+.. _GlobalLayoutBuilder: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
 
 Alignment
 ~~~~~~~~~
@@ -300,7 +300,7 @@ The interleaving scheme, however, can only work with individual virtual tables s
 In comparison, the old scheme does not require the splitting but it is more efficient when the combined virtual tables have been split.
 The `GlobalSplit`_ pass is responsible for splitting combined virtual tables into individual ones. 
 
-.. _GlobalSplit: https://github.com/llvm/llvm-project/blob/master/llvm/lib/Transforms/IPO/GlobalSplit.cpp
+.. _GlobalSplit: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/IPO/GlobalSplit.cpp
 
 Order virtual tables by a pre-order traversal of the class hierarchy 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -718,7 +718,7 @@ General case
 ------------
 For functions called multiple times a *return jump table* is constructed
 in the same manner as jump tables for indirect function calls (see above).
-The correct jump table entry (or it's index) is passed by `CALL` to `f()`
+The correct jump table entry (or its index) is passed by `CALL` to `f()`
 (as an extra argument) and then spilled to stack.
 The `RET` instruction is replaced with a load of the jump table entry,
 jump table range check, and `JMP` to the jump table entry.

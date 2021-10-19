@@ -8,7 +8,7 @@ make sense to make a "revolutionary" change when any individual problem can be
 fixed in place?
 
 This document explains that adoption of MLIR to solve graph based problems
-_isn't_ a revolutionary change: it is an incremental series of steps which build
+*isn't* a revolutionary change: it is an incremental series of steps which build
 on each other, each of which delivers local value. This document also addresses
 some points of confusion that keep coming up.
 
@@ -115,7 +115,7 @@ of the benefits that MLIR provides, in no particular order:
 ### A Lossless Human Editable Textual Representation
 
 The MLIR in-memory data structure has a human readable and writable format, as
-well as [a specification](LangRef.md) for that format - built just like any
+well as [a specification](../LangRef.md) for that format - built just like any
 other programming language. Important properties of this format are that it is
 compact, easy to read, and lossless. You can dump an MLIR program out to disk
 and munge around with it, then send it through a few more passes.
@@ -156,18 +156,18 @@ turned into zero:
 ```mlir
   // RUN: mlir-opt %s -canonicalize | FileCheck %s
   func @test_subi_zero_cfg(%arg0: i32) -> i32 {
-    %y = subi %arg0, %arg0 : i32
+    %y = arith.subi %arg0, %arg0 : i32
     return %y: i32
   }
   // CHECK-LABEL: func @test_subi_zero_cfg(%arg0: i32)
-  // CHECK-NEXT: %c0_i32 = constant 0 : i32
+  // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
   // CHECK-NEXT: return %c0
 ```
 
 The "CHECK" comments are interpreted by the
 [LLVM FileCheck tool](https://llvm.org/docs/CommandGuide/FileCheck.html), which
 is sort of like a really advanced grep. This test is fully self-contained: it
-feeds the input into the [canonicalize pass](Canonicalization.md), and checks
+feeds the input into the [canonicalize pass](../Canonicalization.md), and checks
 that the output matches the CHECK lines. See the `test/Transforms` directory for
 more examples. In contrast, standard unit testing exposes the API of the
 underlying framework to lots and lots of tests (making it harder to refactor and
@@ -210,13 +210,13 @@ write tests like this:
 ```mlir
   // RUN: mlir-opt %s -memref-dependence-check -verify-diagnostics
   func @different_memrefs() {
-    %m.a = alloc() : memref<100xf32>
-    %m.b = alloc() : memref<100xf32>
-    %c0 = constant 0 : index
-    %c1 = constant 1.0 : f32
-    store %c1, %m.a[%c0] : memref<100xf32>
+    %m.a = memref.alloc() : memref<100xf32>
+    %m.b = memref.alloc() : memref<100xf32>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1.0 : f32
+    memref.store %c1, %m.a[%c0] : memref<100xf32>
     // expected-note@-1 {{dependence from memref access 0 to access 1 = false}}
-    %v0 = load %m.b[%c0] : memref<100xf32>
+    %v0 = memref.load %m.b[%c0] : memref<100xf32>
     return
   }
 ```
@@ -238,8 +238,8 @@ and use this information when available, but because TensorFlow graphs don't
 capture this (e.g. serialize it to proto), passes have to recompute it on demand
 with ShapeRefiner.
 
-The [MLIR Tensor Type](LangRef.md#tensor-type) directly captures shape
-information, so you can have things like:
+The [MLIR Tensor Type](../Dialects/Builtin.md/#rankedtensortype) directly
+captures shape information, so you can have things like:
 
 ```mlir
   %x = tf.Add %x, %y : tensor<128 x 8 x ? x f32>
@@ -254,11 +254,11 @@ and the API is easier to work with from an ergonomics perspective.
 ### Unified Graph Rewriting Infrastructure
 
 This is still a work in progress, but we have sightlines towards a
-[general rewriting infrastructure](RationaleGenericDAGRewriter.md) for transforming DAG
-tiles into other DAG tiles, using a declarative pattern format. DAG to DAG
-rewriting is a generalized solution for many common compiler optimizations,
-lowerings, and other rewrites and having an IR enables us to invest in building
-a single high-quality implementation.
+[general rewriting infrastructure](RationaleGenericDAGRewriter.md) for
+transforming DAG tiles into other DAG tiles, using a declarative pattern format.
+DAG to DAG rewriting is a generalized solution for many common compiler
+optimizations, lowerings, and other rewrites and having an IR enables us to
+invest in building a single high-quality implementation.
 
 Declarative pattern rules are preferable to imperative C++ code for a number of
 reasons: they are more compact, easier to reason about, can have checkers

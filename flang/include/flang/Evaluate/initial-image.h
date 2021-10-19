@@ -30,19 +30,21 @@ public:
   };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
+  InitialImage(InitialImage &&that) = default;
 
   std::size_t size() const { return data_.size(); }
 
-  template <typename A> Result Add(ConstantSubscript, std::size_t, const A &) {
+  template <typename A>
+  Result Add(ConstantSubscript, std::size_t, const A &, FoldingContext &) {
     return NotAConstant;
   }
   template <typename T>
-  Result Add(
-      ConstantSubscript offset, std::size_t bytes, const Constant<T> &x) {
+  Result Add(ConstantSubscript offset, std::size_t bytes, const Constant<T> &x,
+      FoldingContext &context) {
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
-      auto elementBytes{ToInt64(x.GetType().MeasureSizeInBytes())};
+      auto elementBytes{ToInt64(x.GetType().MeasureSizeInBytes(context, true))};
       if (!elementBytes ||
           bytes !=
               x.values().size() * static_cast<std::size_t>(*elementBytes)) {
@@ -55,7 +57,8 @@ public:
   }
   template <int KIND>
   Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x) {
+      const Constant<Type<TypeCategory::Character, KIND>> &x,
+      FoldingContext &) {
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
@@ -80,28 +83,28 @@ public:
       }
     }
   }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &);
+  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
+      FoldingContext &);
   template <typename T>
-  Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x) {
+  Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
+      FoldingContext &c) {
     return std::visit(
-        [&](const auto &y) { return Add(offset, bytes, y); }, x.u);
+        [&](const auto &y) { return Add(offset, bytes, y, c); }, x.u);
   }
 
   void AddPointer(ConstantSubscript, const Expr<SomeType> &);
 
-  void Incorporate(ConstantSubscript, const InitialImage &);
+  void Incorporate(ConstantSubscript toOffset, const InitialImage &from,
+      ConstantSubscript fromOffset, ConstantSubscript bytes);
 
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
       const DynamicType &, const ConstantSubscripts &,
       ConstantSubscript offset = 0) const;
-  std::optional<Expr<SomeType>> AsConstantDataPointer(
-      const DynamicType &, ConstantSubscript offset = 0) const;
-  const ProcedureDesignator &AsConstantProcPointer(
+  std::optional<Expr<SomeType>> AsConstantPointer(
       ConstantSubscript offset = 0) const;
 
   friend class AsConstantHelper;
-  friend class AsConstantDataPointerHelper;
 
 private:
   std::vector<char> data_;

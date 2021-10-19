@@ -9,6 +9,26 @@
 ! See Fortran 2018, clause 17.2
 module ieee_arithmetic
 
+  use __Fortran_builtins, only: &
+    ieee_is_nan => __builtin_ieee_is_nan, &
+    ieee_next_after => __builtin_ieee_next_after, &
+    ieee_next_down => __builtin_ieee_next_down, &
+    ieee_next_up => __builtin_ieee_next_up, &
+    ieee_scalb => scale, &
+    ieee_selected_real_kind => __builtin_ieee_selected_real_kind, &
+    ieee_support_datatype => __builtin_ieee_support_datatype, &
+    ieee_support_denormal => __builtin_ieee_support_denormal, &
+    ieee_support_divide => __builtin_ieee_support_divide, &
+    ieee_support_inf => __builtin_ieee_support_inf, &
+    ieee_support_io => __builtin_ieee_support_io, &
+    ieee_support_nan => __builtin_ieee_support_nan, &
+    ieee_support_sqrt => __builtin_ieee_support_sqrt, &
+    ieee_support_standard => __builtin_ieee_support_standard, &
+    ieee_support_subnormal => __builtin_ieee_support_subnormal, &
+    ieee_support_underflow_control => __builtin_ieee_support_underflow_control
+
+  implicit none
+
   type :: ieee_class_type
     private
     integer(kind=1) :: which = 0
@@ -52,25 +72,41 @@ module ieee_arithmetic
     module procedure class_ne
     module procedure round_ne
   end interface operator(/=)
+  private :: class_eq, class_ne, round_eq, round_ne
 
   ! See Fortran 2018, 17.10 & 17.11
-  interface ieee_class
-    module procedure ieee_class_a2
-    module procedure ieee_class_a3
-    module procedure ieee_class_a4
-    module procedure ieee_class_a8
-    module procedure ieee_class_a10
-    module procedure ieee_class_a16
-  end interface ieee_class
+  generic :: ieee_class => ieee_class_a2, ieee_class_a3, ieee_class_a4, ieee_class_a8, ieee_class_a10, ieee_class_a16
+  private :: ieee_class_a2, ieee_class_a3, ieee_class_a4, ieee_class_a8, ieee_class_a10, ieee_class_a16
 
-  interface ieee_copy_sign
-    module procedure ieee_copy_sign_a2
-    module procedure ieee_copy_sign_a3
-    module procedure ieee_copy_sign_a4
-    module procedure ieee_copy_sign_a8
-    module procedure ieee_copy_sign_a10
-    module procedure ieee_copy_sign_a16
-  end interface ieee_copy_sign
+  generic :: ieee_copy_sign => ieee_copy_sign_a2, ieee_copy_sign_a3, ieee_copy_sign_a4, ieee_copy_sign_a8, ieee_copy_sign_a10, ieee_copy_sign_a16
+  private :: ieee_copy_sign_a2, ieee_copy_sign_a3, ieee_copy_sign_a4, ieee_copy_sign_a8, ieee_copy_sign_a10, ieee_copy_sign_a16
+
+  generic :: ieee_is_finite => ieee_is_finite_a2, ieee_is_finite_a3, ieee_is_finite_a4, ieee_is_finite_a8, ieee_is_finite_a10, ieee_is_finite_a16
+  private :: ieee_is_finite_a2, ieee_is_finite_a3, ieee_is_finite_a4, ieee_is_finite_a8, ieee_is_finite_a10, ieee_is_finite_a16
+
+  generic :: ieee_rem => &
+    ieee_rem_a2_a2, ieee_rem_a2_a3, ieee_rem_a2_a4, ieee_rem_a2_a8, ieee_rem_a2_a10, ieee_rem_a2_a16, &
+    ieee_rem_a3_a2, ieee_rem_a3_a3, ieee_rem_a3_a4, ieee_rem_a3_a8, ieee_rem_a3_a10, ieee_rem_a3_a16, &
+    ieee_rem_a4_a2, ieee_rem_a4_a3, ieee_rem_a4_a4, ieee_rem_a4_a8, ieee_rem_a4_a10, ieee_rem_a4_a16, &
+    ieee_rem_a8_a2, ieee_rem_a8_a3, ieee_rem_a8_a4, ieee_rem_a8_a8, ieee_rem_a8_a10, ieee_rem_a8_a16, &
+    ieee_rem_a10_a2, ieee_rem_a10_a3, ieee_rem_a10_a4, ieee_rem_a10_a8, ieee_rem_a10_a10, ieee_rem_a10_a16, &
+    ieee_rem_a16_a2, ieee_rem_a16_a3, ieee_rem_a16_a4, ieee_rem_a16_a8, ieee_rem_a16_a10, ieee_rem_a16_a16
+  private :: &
+    ieee_rem_a2_a2, ieee_rem_a2_a3, ieee_rem_a2_a4, ieee_rem_a2_a8, ieee_rem_a2_a10, ieee_rem_a2_a16, &
+    ieee_rem_a3_a2, ieee_rem_a3_a3, ieee_rem_a3_a4, ieee_rem_a3_a8, ieee_rem_a3_a10, ieee_rem_a3_a16, &
+    ieee_rem_a4_a2, ieee_rem_a4_a3, ieee_rem_a4_a4, ieee_rem_a4_a8, ieee_rem_a4_a10, ieee_rem_a4_a16, &
+    ieee_rem_a8_a2, ieee_rem_a8_a3, ieee_rem_a8_a4, ieee_rem_a8_a8, ieee_rem_a8_a10, ieee_rem_a8_a16, &
+    ieee_rem_a10_a2, ieee_rem_a10_a3, ieee_rem_a10_a4, ieee_rem_a10_a8, ieee_rem_a10_a10, ieee_rem_a10_a16, &
+    ieee_rem_a16_a2, ieee_rem_a16_a3, ieee_rem_a16_a4, ieee_rem_a16_a8, ieee_rem_a16_a10, ieee_rem_a16_a16
+
+  generic :: ieee_support_rounding => ieee_support_rounding_, &
+    ieee_support_rounding_2, ieee_support_rounding_3, &
+    ieee_support_rounding_4, ieee_support_rounding_8, &
+    ieee_support_rounding_10, ieee_support_rounding_16
+  private :: ieee_support_rounding_, &
+    ieee_support_rounding_2, ieee_support_rounding_3, &
+    ieee_support_rounding_4, ieee_support_rounding_8, &
+    ieee_support_rounding_10, ieee_support_rounding_16
 
   ! TODO: more interfaces (_fma, &c.)
 
@@ -180,5 +216,106 @@ module ieee_arithmetic
   _COPYSIGN(10,16,80)
   _COPYSIGN(16,16,128)
 #undef _COPYSIGN
+
+#define _IS_FINITE(KIND) \
+  elemental function ieee_is_finite_a##KIND(x) result(res); \
+    real(kind=KIND), intent(in) :: x; \
+    logical :: res; \
+    type(ieee_class_type) :: classification; \
+    classification = ieee_class(x); \
+    res = classification == ieee_negative_zero .or. classification == ieee_positive_zero \
+     .or. classification == ieee_negative_denormal .or. classification == ieee_positive_denormal \
+     .or. classification == ieee_negative_normal .or. classification == ieee_positive_normal; \
+  end function
+  _IS_FINITE(2)
+  _IS_FINITE(3)
+  _IS_FINITE(4)
+  _IS_FINITE(8)
+  _IS_FINITE(10)
+  _IS_FINITE(16)
+#undef _IS_FINITE
+
+! TODO: handle edge cases from 17.11.31
+#define _REM(XKIND,YKIND) \
+  elemental function ieee_rem_a##XKIND##_a##YKIND(x, y) result(res); \
+    real(kind=XKIND), intent(in) :: x; \
+    real(kind=YKIND), intent(in) :: y; \
+    integer, parameter :: rkind = max(XKIND, YKIND); \
+    real(kind=rkind) :: res, tmp; \
+    tmp = anint(real(x, kind=rkind) / y); \
+    res = x - y * tmp; \
+  end function
+  _REM(2,2)
+  _REM(2,3)
+  _REM(2,4)
+  _REM(2,8)
+  _REM(2,10)
+  _REM(2,16)
+  _REM(3,2)
+  _REM(3,3)
+  _REM(3,4)
+  _REM(3,8)
+  _REM(3,10)
+  _REM(3,16)
+  _REM(4,2)
+  _REM(4,3)
+  _REM(4,4)
+  _REM(4,8)
+  _REM(4,10)
+  _REM(4,16)
+  _REM(8,2)
+  _REM(8,3)
+  _REM(8,4)
+  _REM(8,8)
+  _REM(8,10)
+  _REM(8,16)
+  _REM(10,2)
+  _REM(10,3)
+  _REM(10,4)
+  _REM(10,8)
+  _REM(10,10)
+  _REM(10,16)
+  _REM(16,2)
+  _REM(16,3)
+  _REM(16,4)
+  _REM(16,8)
+  _REM(16,10)
+  _REM(16,16)
+#undef _REM
+
+  pure logical function ieee_support_rounding_(round_type)
+    type(ieee_round_type), intent(in) :: round_type
+    ieee_support_rounding_ = .true.
+  end function
+  pure logical function ieee_support_rounding_2(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=2), intent(in) :: x
+    ieee_support_rounding_2 = .true.
+  end function
+  pure logical function ieee_support_rounding_3(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=3), intent(in) :: x
+    ieee_support_rounding_3 = .true.
+  end function
+  pure logical function ieee_support_rounding_4(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=4), intent(in) :: x
+    ieee_support_rounding_4 = .true.
+  end function
+  pure logical function ieee_support_rounding_8(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=8), intent(in) :: x
+    ieee_support_rounding_8 = .true.
+  end function
+  pure logical function ieee_support_rounding_10(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=10), intent(in) :: x
+    ieee_support_rounding_10 = .true.
+  end function
+  pure logical function ieee_support_rounding_16(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=16), intent(in) :: x
+    ieee_support_rounding_16 = .true.
+  end function
 
 end module ieee_arithmetic

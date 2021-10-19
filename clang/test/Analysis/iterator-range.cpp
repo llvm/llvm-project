@@ -939,3 +939,10 @@ void ptr_iter_diff(cont_with_ptr_iterator<S> &c) {
   auto i0 = c.begin(), i1 = c.end();
   ptrdiff_t len = i1 - i0; // no-crash
 }
+
+int uninit_var(int n) {
+  int uninit; // expected-note{{'uninit' declared without an initial value}}
+  return n - uninit; // no-crash
+  // expected-warning@-1 {{The right operand of '-' is a garbage value}}
+  // expected-note@-2 {{The right operand of '-' is a garbage value}}
+}

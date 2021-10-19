@@ -5,15 +5,15 @@ define void @arm_cmplx_mag_squared_q15_mve(i16* %pSrc, i16* %pDst, i32 %blockSiz
 ; CHECK-LABEL: arm_cmplx_mag_squared_q15_mve:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    subs.w r12, r2, #8
+; CHECK-NEXT:    subs.w r3, r2, #8
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    vmulh.s16 q2, q1, q1
+; CHECK-NEXT:    vmulh.s16 q1, q1, q1
 ; CHECK-NEXT:    vmulh.s16 q0, q0, q0
-; CHECK-NEXT:    vqadd.s16 q0, q0, q2
+; CHECK-NEXT:    vqadd.s16 q0, q0, q1
 ; CHECK-NEXT:    vshr.s16 q0, q0, #1
 ; CHECK-NEXT:    vstrh.16 q0, [r1], #16
 ; CHECK-NEXT:    letp lr, .LBB0_1
@@ -57,9 +57,9 @@ define i32 @bad(i32* readonly %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:    subs r3, r2, r3
 ; CHECK-NEXT:    add.w r12, r3, #3
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2

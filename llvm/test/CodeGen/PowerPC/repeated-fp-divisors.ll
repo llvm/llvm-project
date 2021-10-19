@@ -43,8 +43,8 @@ define <4 x float> @repeated_fp_divisor(float %a, <4 x float> %b) {
 ; CHECK-NEXT:    blr
   %ins = insertelement <4 x float> undef, float %a, i32 0
   %splat = shufflevector <4 x float> %ins, <4 x float> undef, <4 x i32> zeroinitializer
-  %t1 = fmul reassoc <4 x float> %b, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 0x3FF028F5C0000000>
-  %mul = fdiv reassoc arcp nsz ninf <4 x float> %t1, %splat
+  %t1 = fmul contract reassoc <4 x float> %b, <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 0x3FF028F5C0000000>
+  %mul = fdiv contract reassoc arcp nsz ninf <4 x float> %t1, %splat
   ret <4 x float> %mul
 }
 

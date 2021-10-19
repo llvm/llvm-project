@@ -40,6 +40,92 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
+/// Finds all intrinsics declaring local variables as living in the memory that
+/// 'V' points to. This may include a mix of dbg.declare and
+/// dbg.addr intrinsics.
+TinyPtrVector<DbgVariableIntrinsic *> llvm::FindDbgAddrUses(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = LocalAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+  auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
+  if (!MDV)
+    return {};
+
+  TinyPtrVector<DbgVariableIntrinsic *> Declares;
+  for (User *U : MDV->users()) {
+    if (auto *DII = dyn_cast<DbgVariableIntrinsic>(U))
+      if (DII->isAddressOfVariable())
+        Declares.push_back(DII);
+  }
+
+  return Declares;
+}
+
+TinyPtrVector<DbgDeclareInst *> llvm::FindDbgDeclareUses(Value *V) {
+  TinyPtrVector<DbgDeclareInst *> DDIs;
+  for (DbgVariableIntrinsic *DVI : FindDbgAddrUses(V))
+    if (auto *DDI = dyn_cast<DbgDeclareInst>(DVI))
+      DDIs.push_back(DDI);
+  return DDIs;
+}
+
+void llvm::findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return;
+  // TODO: If this value appears multiple times in a DIArgList, we should still
+  // only add the owning DbgValueInst once; use this set to track ArgListUsers.
+  // This behaviour can be removed when we can automatically remove duplicates.
+  SmallPtrSet<DbgValueInst *, 4> EncounteredDbgValues;
+  if (auto *L = LocalAsMetadata::getIfExists(V)) {
+    if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L)) {
+      for (User *U : MDV->users())
+        if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(U))
+          DbgValues.push_back(DVI);
+    }
+    for (Metadata *AL : L->getAllArgListUsers()) {
+      if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), AL)) {
+        for (User *U : MDV->users())
+          if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(U))
+            if (EncounteredDbgValues.insert(DVI).second)
+              DbgValues.push_back(DVI);
+      }
+    }
+  }
+}
+
+void llvm::findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers,
+                        Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup.
+  if (!V->isUsedByMetadata())
+    return;
+  // TODO: If this value appears multiple times in a DIArgList, we should still
+  // only add the owning DbgValueInst once; use this set to track ArgListUsers.
+  // This behaviour can be removed when we can automatically remove duplicates.
+  SmallPtrSet<DbgVariableIntrinsic *, 4> EncounteredDbgValues;
+  if (auto *L = LocalAsMetadata::getIfExists(V)) {
+    if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L)) {
+      for (User *U : MDV->users())
+        if (DbgVariableIntrinsic *DII = dyn_cast<DbgVariableIntrinsic>(U))
+          DbgUsers.push_back(DII);
+    }
+    for (Metadata *AL : L->getAllArgListUsers()) {
+      if (auto *MDV = MetadataAsValue::getIfExists(V->getContext(), AL)) {
+        for (User *U : MDV->users())
+          if (DbgVariableIntrinsic *DII = dyn_cast<DbgVariableIntrinsic>(U))
+            if (EncounteredDbgValues.insert(DII).second)
+              DbgUsers.push_back(DII);
+      }
+    }
+  }
+}
+
 DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   if (auto *LocalScope = dyn_cast_or_null<DILocalScope>(Scope))
     return LocalScope->getSubprogram();
@@ -262,8 +348,7 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
 }
 
 static MDNode *updateLoopMetadataDebugLocationsImpl(
-    MDNode *OrigLoopID,
-    function_ref<DILocation *(const DILocation &)> Updater) {
+    MDNode *OrigLoopID, function_ref<Metadata *(Metadata *)> Updater) {
   assert(OrigLoopID && OrigLoopID->getNumOperands() > 0 &&
          "Loop ID needs at least one operand");
   assert(OrigLoopID && OrigLoopID->getOperand(0).get() == OrigLoopID &&
@@ -274,11 +359,10 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
 
   for (unsigned i = 1; i < OrigLoopID->getNumOperands(); ++i) {
     Metadata *MD = OrigLoopID->getOperand(i);
-    if (DILocation *DL = dyn_cast<DILocation>(MD)) {
-      if (DILocation *NewDL = Updater(*DL))
-        MDs.push_back(NewDL);
-    } else
-      MDs.push_back(MD);
+    if (!MD)
+      MDs.push_back(nullptr);
+    else if (Metadata *NewMD = Updater(MD))
+      MDs.push_back(NewMD);
   }
 
   MDNode *NewLoopID = MDNode::getDistinct(OrigLoopID->getContext(), MDs);
@@ -288,7 +372,7 @@ static MDNode *updateLoopMetadataDebugLocationsImpl(
 }
 
 void llvm::updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<DILocation *(const DILocation &)> Updater) {
+    Instruction &I, function_ref<Metadata *(Metadata *)> Updater) {
   MDNode *OrigLoopID = I.getMetadata(LLVMContext::MD_loop);
   if (!OrigLoopID)
     return;
@@ -296,26 +380,62 @@ void llvm::updateLoopMetadataDebugLocations(
   I.setMetadata(LLVMContext::MD_loop, NewLoopID);
 }
 
+/// Return true if a node is a DILocation or if a DILocation is
+/// indirectly referenced by one of the node's children.
+static bool isDILocationReachable(SmallPtrSetImpl<Metadata *> &Visited,
+                                  SmallPtrSetImpl<Metadata *> &Reachable,
+                                  Metadata *MD) {
+  MDNode *N = dyn_cast_or_null<MDNode>(MD);
+  if (!N)
+    return false;
+  if (isa<DILocation>(N) || Reachable.count(N))
+    return true;
+  if (!Visited.insert(N).second)
+    return false;
+  for (auto &OpIt : N->operands()) {
+    Metadata *Op = OpIt.get();
+    if (isDILocationReachable(Visited, Reachable, Op)) {
+      Reachable.insert(N);
+      return true;
+    }
+  }
+  return false;
+}
+
 static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   assert(!N->operands().empty() && "Missing self reference?");
+  SmallPtrSet<Metadata *, 8> Visited, DILocationReachable;
+  // If we already visited N, there is nothing to do.
+  if (!Visited.insert(N).second)
+    return N;
 
-  // if there is no debug location, we do not have to rewrite this MDNode.
-  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
-        return isa<DILocation>(Op.get());
-      }))
+  // If there is no debug location, we do not have to rewrite this
+  // MDNode. This loop also initializes DILocationReachable, later
+  // needed by updateLoopMetadataDebugLocationsImpl; the use of
+  // count_if avoids an early exit.
+  if (!std::count_if(N->op_begin() + 1, N->op_end(),
+                     [&Visited, &DILocationReachable](const MDOperand &Op) {
+                       return isDILocationReachable(
+                                  Visited, DILocationReachable, Op.get());
+                     }))
     return N;
 
   // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
-  if (std::none_of(N->op_begin() + 1, N->op_end(), [](const MDOperand &Op) {
-        return !isa<DILocation>(Op.get());
-      }))
+  if (std::all_of(
+          N->op_begin() + 1, N->op_end(),
+          [&Visited, &DILocationReachable](const MDOperand &Op) {
+            return isDILocationReachable(Visited, DILocationReachable,
+                                         Op.get());
+          }))
     return nullptr;
 
-  auto dropDebugLoc = [](const DILocation &) -> DILocation * {
-    return nullptr;
-  };
-  return updateLoopMetadataDebugLocationsImpl(N, dropDebugLoc);
+  return updateLoopMetadataDebugLocationsImpl(
+      N, [&DILocationReachable](Metadata *MD) -> Metadata * {
+        if (isa<DILocation>(MD) || DILocationReachable.count(MD))
+          return nullptr;
+        return MD;
+      });
 }
 
 bool llvm::stripDebugInfo(Function &F) {
@@ -325,7 +445,7 @@ bool llvm::stripDebugInfo(Function &F) {
     F.setSubprogram(nullptr);
   }
 
-  DenseMap<MDNode*, MDNode*> LoopIDsMap;
+  DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
     for (auto II = BB.begin(), End = BB.end(); II != End;) {
       Instruction &I = *II++; // We may delete the instruction, increment now.
@@ -338,18 +458,16 @@ bool llvm::stripDebugInfo(Function &F) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
       }
-    }
-
-    auto *TermInst = BB.getTerminator();
-    if (!TermInst)
-      // This is invalid IR, but we may not have run the verifier yet
-      continue;
-    if (auto *LoopID = TermInst->getMetadata(LLVMContext::MD_loop)) {
-      auto *NewLoopID = LoopIDsMap.lookup(LoopID);
-      if (!NewLoopID)
-        NewLoopID = LoopIDsMap[LoopID] = stripDebugLocFromLoopID(LoopID);
-      if (NewLoopID != LoopID)
-        TermInst->setMetadata(LLVMContext::MD_loop, NewLoopID);
+      if (auto *LoopID = I.getMetadata(LLVMContext::MD_loop)) {
+        auto *NewLoopID = LoopIDsMap.lookup(LoopID);
+        if (!NewLoopID)
+          NewLoopID = LoopIDsMap[LoopID] = stripDebugLocFromLoopID(LoopID);
+        if (NewLoopID != LoopID)
+          I.setMetadata(LLVMContext::MD_loop, NewLoopID);
+      }
+      // Strip heapallocsite attachments, they point into the DIType system.
+      if (I.hasMetadataOtherThanDebugLoc())
+        I.setMetadata("heapallocsite", nullptr);
     }
   }
   return Changed;
@@ -358,16 +476,12 @@ bool llvm::stripDebugInfo(Function &F) {
 bool llvm::StripDebugInfo(Module &M) {
   bool Changed = false;
 
-  for (Module::named_metadata_iterator NMI = M.named_metadata_begin(),
-         NME = M.named_metadata_end(); NMI != NME;) {
-    NamedMDNode *NMD = &*NMI;
-    ++NMI;
-
+  for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
     // We're stripping debug info, and without them, coverage information
     // doesn't quite make sense.
-    if (NMD->getName().startswith("llvm.dbg.") ||
-        NMD->getName() == "llvm.gcov") {
-      NMD->eraseFromParent();
+    if (NMD.getName().startswith("llvm.dbg.") ||
+        NMD.getName() == "llvm.gcov") {
+      NMD.eraseFromParent();
       Changed = true;
     }
   }
@@ -652,16 +766,23 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);
           InlinedAt = remap(InlinedAt);
-          return DebugLoc::get(DL.getLine(), DL.getCol(), Scope, InlinedAt);
+          return DILocation::get(M.getContext(), DL.getLine(), DL.getCol(),
+                                 Scope, InlinedAt);
         };
 
         if (I.getDebugLoc() != DebugLoc())
           I.setDebugLoc(remapDebugLoc(I.getDebugLoc()));
 
         // Remap DILocations in llvm.loop attachments.
-        updateLoopMetadataDebugLocations(I, [&](const DILocation &Loc) {
-          return remapDebugLoc(&Loc).get();
+        updateLoopMetadataDebugLocations(I, [&](Metadata *MD) -> Metadata * {
+          if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+            return remapDebugLoc(Loc).get();
+          return MD;
         });
+
+        // Strip heapallocsite attachments, they point into the DIType system.
+        if (I.hasMetadataOtherThanDebugLoc())
+          I.setMetadata("heapallocsite", nullptr);
       }
     }
   }
@@ -694,6 +815,38 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
 void Instruction::applyMergedLocation(const DILocation *LocA,
                                       const DILocation *LocB) {
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
+}
+
+void Instruction::updateLocationAfterHoist() { dropLocation(); }
+
+void Instruction::dropLocation() {
+  const DebugLoc &DL = getDebugLoc();
+  if (!DL)
+    return;
+
+  // If this isn't a call, drop the location to allow a location from a
+  // preceding instruction to propagate.
+  if (!isa<CallBase>(this)) {
+    setDebugLoc(DebugLoc());
+    return;
+  }
+
+  // Set a line 0 location for calls to preserve scope information in case
+  // inlining occurs.
+  DISubprogram *SP = getFunction()->getSubprogram();
+  if (SP)
+    // If a function scope is available, set it on the line 0 location. When
+    // hoisting a call to a predecessor block, using the function scope avoids
+    // making it look like the callee was reached earlier than it should be.
+    setDebugLoc(DILocation::get(getContext(), 0, 0, SP));
+  else
+    // The parent function has no scope. Go ahead and drop the location. If
+    // the parent function is inlined, and the callee has a subprogram, the
+    // inliner will attach a location to the call.
+    //
+    // One alternative is to set a line 0 location with the existing scope and
+    // inlinedAt info. The location might be sensitive to when inlining occurs.
+    setDebugLoc(DebugLoc());
 }
 
 //===----------------------------------------------------------------------===//
@@ -754,6 +907,11 @@ void LLVMDisposeDIBuilder(LLVMDIBuilderRef Builder) {
 
 void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder) {
   unwrap(Builder)->finalize();
+}
+
+void LLVMDIBuilderFinalizeSubprogram(LLVMDIBuilderRef Builder,
+                                     LLVMMetadataRef subprogram) {
+  unwrap(Builder)->finalizeSubprogram(unwrapDI<DISubprogram>(subprogram));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
@@ -850,41 +1008,43 @@ LLVMDIBuilderCreateImportedModuleFromNamespace(LLVMDIBuilderRef Builder,
                                                     Line));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromAlias(LLVMDIBuilderRef Builder,
-                                           LLVMMetadataRef Scope,
-                                           LLVMMetadataRef ImportedEntity,
-                                           LLVMMetadataRef File,
-                                           unsigned Line) {
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromAlias(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope,
+    LLVMMetadataRef ImportedEntity, LLVMMetadataRef File, unsigned Line,
+    LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
   return wrap(unwrap(Builder)->createImportedModule(
-                  unwrapDI<DIScope>(Scope),
-                  unwrapDI<DIImportedEntity>(ImportedEntity),
-                  unwrapDI<DIFile>(File), Line));
+      unwrapDI<DIScope>(Scope), unwrapDI<DIImportedEntity>(ImportedEntity),
+      unwrapDI<DIFile>(File), Line, Elts));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedModuleFromModule(LLVMDIBuilderRef Builder,
-                                            LLVMMetadataRef Scope,
-                                            LLVMMetadataRef M,
-                                            LLVMMetadataRef File,
-                                            unsigned Line) {
-  return wrap(unwrap(Builder)->createImportedModule(unwrapDI<DIScope>(Scope),
-                                                    unwrapDI<DIModule>(M),
-                                                    unwrapDI<DIFile>(File),
-                                                    Line));
+LLVMMetadataRef LLVMDIBuilderCreateImportedModuleFromModule(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef M,
+    LLVMMetadataRef File, unsigned Line, LLVMMetadataRef *Elements,
+    unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
+  return wrap(unwrap(Builder)->createImportedModule(
+      unwrapDI<DIScope>(Scope), unwrapDI<DIModule>(M), unwrapDI<DIFile>(File),
+      Line, Elts));
 }
 
-LLVMMetadataRef
-LLVMDIBuilderCreateImportedDeclaration(LLVMDIBuilderRef Builder,
-                                       LLVMMetadataRef Scope,
-                                       LLVMMetadataRef Decl,
-                                       LLVMMetadataRef File,
-                                       unsigned Line,
-                                       const char *Name, size_t NameLen) {
+LLVMMetadataRef LLVMDIBuilderCreateImportedDeclaration(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, LLVMMetadataRef Decl,
+    LLVMMetadataRef File, unsigned Line, const char *Name, size_t NameLen,
+    LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto Elts =
+      (NumElements > 0)
+          ? unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements})
+          : nullptr;
   return wrap(unwrap(Builder)->createImportedDeclaration(
-                  unwrapDI<DIScope>(Scope),
-                  unwrapDI<DINode>(Decl),
-                  unwrapDI<DIFile>(File), Line, {Name, NameLen}));
+      unwrapDI<DIScope>(Scope), unwrapDI<DINode>(Decl), unwrapDI<DIFile>(File),
+      Line, {Name, NameLen}, Elts));
 }
 
 LLVMMetadataRef

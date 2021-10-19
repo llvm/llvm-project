@@ -66,8 +66,9 @@ void tools::PS4cpu::Assemble::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("orbis-as"));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 static void AddPS4SanitizerArgs(const ToolChain &TC, ArgStringList &CmdArgs) {
@@ -152,8 +153,9 @@ void tools::PS4cpu::Link::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(ToolChain.GetProgramPath("orbis-ld"));
 
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 toolchains::PS4CPU::PS4CPU(const Driver &D, const llvm::Triple &Triple,
@@ -237,9 +239,8 @@ SanitizerMask toolchains::PS4CPU::getSupportedSanitizers() const {
 }
 
 void toolchains::PS4CPU::addClangTargetOptions(
-      const ArgList &DriverArgs,
-      ArgStringList &CC1Args,
-      Action::OffloadKind DeviceOffloadingKind) const {
+    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadingKind) const {
   // PS4 does not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
     Arg *A = DriverArgs.getLastArg(options::OPT_fuse_init_array);
@@ -248,4 +249,36 @@ void toolchains::PS4CPU::addClangTargetOptions(
   }
 
   CC1Args.push_back("-fno-use-init-array");
+
+  const Arg *A =
+      DriverArgs.getLastArg(options::OPT_fvisibility_from_dllstorageclass,
+                            options::OPT_fno_visibility_from_dllstorageclass);
+  if (!A ||
+      A->getOption().matches(options::OPT_fvisibility_from_dllstorageclass)) {
+    CC1Args.push_back("-fvisibility-from-dllstorageclass");
+
+    if (DriverArgs.hasArg(options::OPT_fvisibility_dllexport_EQ))
+      DriverArgs.AddLastArg(CC1Args, options::OPT_fvisibility_dllexport_EQ);
+    else
+      CC1Args.push_back("-fvisibility-dllexport=protected");
+
+    if (DriverArgs.hasArg(options::OPT_fvisibility_nodllstorageclass_EQ))
+      DriverArgs.AddLastArg(CC1Args,
+                            options::OPT_fvisibility_nodllstorageclass_EQ);
+    else
+      CC1Args.push_back("-fvisibility-nodllstorageclass=hidden");
+
+    if (DriverArgs.hasArg(options::OPT_fvisibility_externs_dllimport_EQ))
+      DriverArgs.AddLastArg(CC1Args,
+                            options::OPT_fvisibility_externs_dllimport_EQ);
+    else
+      CC1Args.push_back("-fvisibility-externs-dllimport=default");
+
+    if (DriverArgs.hasArg(
+            options::OPT_fvisibility_externs_nodllstorageclass_EQ))
+      DriverArgs.AddLastArg(
+          CC1Args, options::OPT_fvisibility_externs_nodllstorageclass_EQ);
+    else
+      CC1Args.push_back("-fvisibility-externs-nodllstorageclass=default");
+  }
 }

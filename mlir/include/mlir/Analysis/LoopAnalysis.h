@@ -22,6 +22,7 @@ namespace mlir {
 class AffineExpr;
 class AffineForOp;
 class AffineMap;
+class BlockArgument;
 class MemRefType;
 class NestedPattern;
 class Operation;
@@ -33,10 +34,8 @@ class Value;
 /// multi-result map. The trip count expression is simplified before returning.
 /// This method only utilizes map composition to construct lower and upper
 /// bounds before computing the trip count expressions
-// TODO: this should be moved into 'Transforms/' and be replaced by a pure
-// analysis method relying on FlatAffineConstraints
-void buildTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
-                                  SmallVectorImpl<Value> *operands);
+void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
+                                SmallVectorImpl<Value> *operands);
 
 /// Returns the trip count of the loop if it's a constant, None otherwise. This
 /// uses affine expression analysis and is able to determine constant trip count
@@ -83,6 +82,37 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 // TODO: extend this to check for memory-based dependence violation when we have
 // the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
+
+/// Utility to match a generic reduction given a list of iteration-carried
+/// arguments, `iterCarriedArgs` and the position of the potential reduction
+/// argument within the list, `redPos`. If a reduction is matched, returns the
+/// reduced value and the topologically-sorted list of combiner operations
+/// involved in the reduction. Otherwise, returns a null value.
+///
+/// The matching algorithm relies on the following invariants, which are subject
+/// to change:
+///  1. The first combiner operation must be a binary operation with the
+///     iteration-carried value and the reduced value as operands.
+///  2. The iteration-carried value and combiner operations must be side
+///     effect-free, have single result and a single use.
+///  3. Combiner operations must be immediately nested in the region op
+///     performing the reduction.
+///  4. Reduction def-use chain must end in a terminator op that yields the
+///     next iteration/output values in the same order as the iteration-carried
+///     values in `iterCarriedArgs`.
+///  5. `iterCarriedArgs` must contain all the iteration-carried/output values
+///     of the region op performing the reduction.
+///
+/// This utility is generic enough to detect reductions involving multiple
+/// combiner operations (disabled for now) across multiple dialects, including
+/// Linalg, Affine and SCF. For the sake of genericity, it does not return
+/// specific enum values for the combiner operations since its goal is also
+/// matching reductions without pre-defined semantics in core MLIR. It's up to
+/// each client to make sense out of the list of combiner operations. It's also
+/// up to each client to check for additional invariants on the expected
+/// reductions not covered by this generic matching.
+Value matchReduction(ArrayRef<BlockArgument> iterCarriedArgs, unsigned redPos,
+                     SmallVectorImpl<Operation *> &combinerOps);
 } // end namespace mlir
 
 #endif // MLIR_ANALYSIS_LOOP_ANALYSIS_H

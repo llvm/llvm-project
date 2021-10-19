@@ -16,7 +16,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include <cctype>
 
 using namespace lldb;
@@ -42,27 +42,22 @@ ABI::FindPlugin(lldb::ProcessSP process_sp, const ArchSpec &arch) {
 
 ABI::~ABI() = default;
 
-bool RegInfoBasedABI::GetRegisterInfoByName(ConstString name, RegisterInfo &info) {
+bool RegInfoBasedABI::GetRegisterInfoByName(llvm::StringRef name,
+                                            RegisterInfo &info) {
   uint32_t count = 0;
   const RegisterInfo *register_info_array = GetRegisterInfoArray(count);
   if (register_info_array) {
-    const char *unique_name_cstr = name.GetCString();
     uint32_t i;
     for (i = 0; i < count; ++i) {
       const char *reg_name = register_info_array[i].name;
-      assert(ConstString(reg_name).GetCString() == reg_name &&
-             "register_info_array[i].name not from a ConstString?");
-      if (reg_name == unique_name_cstr) {
+      if (reg_name == name) {
         info = register_info_array[i];
         return true;
       }
     }
     for (i = 0; i < count; ++i) {
       const char *reg_alt_name = register_info_array[i].alt_name;
-      assert((reg_alt_name == nullptr ||
-              ConstString(reg_alt_name).GetCString() == reg_alt_name) &&
-             "register_info_array[i].alt_name not from a ConstString?");
-      if (reg_alt_name == unique_name_cstr) {
+      if (reg_alt_name == name) {
         info = register_info_array[i];
         return true;
       }
@@ -125,12 +120,13 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
     const Value &result_value = live_valobj_sp->GetValue();
 
     switch (result_value.GetValueType()) {
-    case Value::eValueTypeHostAddress:
-    case Value::eValueTypeFileAddress:
-      // we don't do anything with these for now
+    case Value::ValueType::Invalid:
+      return {};
+    case Value::ValueType::HostAddress:
+    case Value::ValueType::FileAddress:
+      // we odon't do anything with these for now
       break;
-    case Value::eValueTypeScalar:
-    case Value::eValueTypeVector:
+    case Value::ValueType::Scalar:
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsFreezeDried;
       expr_variable_sp->m_flags |=
@@ -138,7 +134,7 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVNeedsAllocation;
       break;
-    case Value::eValueTypeLoadAddress:
+    case Value::ValueType::LoadAddress:
       expr_variable_sp->m_live_sp = live_valobj_sp;
       expr_variable_sp->m_flags |=
           ExpressionVariable::EVIsProgramReference;
@@ -218,33 +214,39 @@ std::unique_ptr<llvm::MCRegisterInfo> ABI::MakeMCRegisterInfo(const ArchSpec &ar
   return info_up;
 }
 
-void RegInfoBasedABI::AugmentRegisterInfo(RegisterInfo &info) {
-  if (info.kinds[eRegisterKindEHFrame] != LLDB_INVALID_REGNUM &&
-      info.kinds[eRegisterKindDWARF] != LLDB_INVALID_REGNUM)
-    return;
+void RegInfoBasedABI::AugmentRegisterInfo(
+    std::vector<DynamicRegisterInfo::Register> &regs) {
+  for (DynamicRegisterInfo::Register &info : regs) {
+    if (info.regnum_ehframe != LLDB_INVALID_REGNUM &&
+        info.regnum_dwarf != LLDB_INVALID_REGNUM)
+      continue;
 
-  RegisterInfo abi_info;
-  if (!GetRegisterInfoByName(ConstString(info.name), abi_info))
-    return;
+    RegisterInfo abi_info;
+    if (!GetRegisterInfoByName(info.name.GetStringRef(), abi_info))
+      continue;
 
-  if (info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindEHFrame] = abi_info.kinds[eRegisterKindEHFrame];
-  if (info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindDWARF] = abi_info.kinds[eRegisterKindDWARF];
-  if (info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindGeneric] = abi_info.kinds[eRegisterKindGeneric];
+    if (info.regnum_ehframe == LLDB_INVALID_REGNUM)
+      info.regnum_ehframe = abi_info.kinds[eRegisterKindEHFrame];
+    if (info.regnum_dwarf == LLDB_INVALID_REGNUM)
+      info.regnum_dwarf = abi_info.kinds[eRegisterKindDWARF];
+    if (info.regnum_generic == LLDB_INVALID_REGNUM)
+      info.regnum_generic = abi_info.kinds[eRegisterKindGeneric];
+  }
 }
 
-void MCBasedABI::AugmentRegisterInfo(RegisterInfo &info) {
-  uint32_t eh, dwarf;
-  std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name);
+void MCBasedABI::AugmentRegisterInfo(
+    std::vector<DynamicRegisterInfo::Register> &regs) {
+  for (DynamicRegisterInfo::Register &info : regs) {
+    uint32_t eh, dwarf;
+    std::tie(eh, dwarf) = GetEHAndDWARFNums(info.name.GetStringRef());
 
-  if (info.kinds[eRegisterKindEHFrame] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindEHFrame] = eh;
-  if (info.kinds[eRegisterKindDWARF] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindDWARF] = dwarf;
-  if (info.kinds[eRegisterKindGeneric] == LLDB_INVALID_REGNUM)
-    info.kinds[eRegisterKindGeneric] = GetGenericNum(info.name);
+    if (info.regnum_ehframe == LLDB_INVALID_REGNUM)
+      info.regnum_ehframe = eh;
+    if (info.regnum_dwarf == LLDB_INVALID_REGNUM)
+      info.regnum_dwarf = dwarf;
+    if (info.regnum_generic == LLDB_INVALID_REGNUM)
+      info.regnum_generic = GetGenericNum(info.name.GetStringRef());
+  }
 }
 
 std::pair<uint32_t, uint32_t>

@@ -6,7 +6,7 @@
 .globl read_global
 .globl write_global
 .globaltype foo_global, i32
-.globaltype global2, i64
+.globaltype global2, i64, immutable
 .globaltype global3, f32
 .globaltype global4, f64
 
@@ -16,11 +16,14 @@ read_global:
   end_function
 
 write_global:
-  .functype write_global (i32) -> ()
+  .functype write_global (i32, i64, f32, f64) -> ()
   local.get 0
   global.set foo_global
+  local.get 1
   global.set global2
+  local.get 2
   global.set global3
+  local.get 3
   global.set global4
   end_function
 
@@ -41,6 +44,12 @@ global4:
 # BIN-NEXT:       Mutable:         true
 # BIN-NEXT:       InitExpr:
 # BIN-NEXT:         Opcode:          I32_CONST
+# BIN-NEXT:         Value:           0
+# BIN-NEXT:     - Index:           1
+# BIN-NEXT:       Type:            I64
+# BIN-NEXT:       Mutable:         false
+# BIN-NEXT:       InitExpr:
+# BIN-NEXT:         Opcode:          I64_CONST
 # BIN-NEXT:         Value:           0
 
 #      BIN:  - Type:            CUSTOM

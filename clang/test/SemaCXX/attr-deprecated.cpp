@@ -256,3 +256,15 @@ typedef struct TDS {
 } TDS __attribute__((deprecated)); // expected-note {{'TDS' has been explicitly marked deprecated here}}
 TDS tds; // expected-warning {{'TDS' is deprecated}}
 struct TDS tds2; // no warning, attribute only applies to the typedef.
+
+namespace test8 {
+struct A {
+  // expected-note@+1 {{'B' has been explicitly marked deprecated here}}
+  struct __attribute__((deprecated)) B {};
+};
+template <typename T> struct D : T {
+  using typename T::B;
+  B b; // expected-warning {{'B' is deprecated}}
+};
+D<A> da; // expected-note {{in instantiation of template class}}
+} // namespace test8

@@ -12,7 +12,6 @@ define i32 @test(i32 %a, i32 %b, i32 %c) optsize {
 ; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[ARRAYINIT_ELEMENT]], align 4
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT1:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* [[REF_TMP]], i64 0, i64 2
 ; CHECK-NEXT:    store i32 [[C:%.*]], i32* [[ARRAYINIT_ELEMENT1]], align 4
-; CHECK-NEXT:    [[ADD_PTR_I_I:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* [[REF_TMP]], i64 0, i64 3
 ; CHECK-NEXT:    [[CMP_I_I_I3:%.*]] = icmp slt i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I_I4:%.*]] = select i1 [[CMP_I_I_I3]], i32* [[ARRAYINIT_ELEMENT]], i32* [[ARRAYINIT_BEGIN]]
 ; CHECK-NEXT:    [[INCDEC_PTR_I_I5:%.*]] = getelementptr inbounds [3 x i32], [3 x i32]* [[REF_TMP]], i64 0, i64 2
@@ -22,7 +21,6 @@ define i32 @test(i32 %a, i32 %b, i32 %c) optsize {
 ; CHECK-NEXT:    [[DOTPRE2:%.*]] = load i32, i32* [[INCDEC_PTR_I_I5]], align 4
 ; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp slt i32 [[DOTPRE]], [[DOTPRE2]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I_I:%.*]] = select i1 [[CMP_I_I_I]], i32* [[INCDEC_PTR_I_I5]], i32* [[SPEC_SELECT_I_I4]]
-; CHECK-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds i32, i32* [[INCDEC_PTR_I_I5]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[SPEC_SELECT_I_I]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;

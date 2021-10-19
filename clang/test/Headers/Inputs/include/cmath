@@ -82,8 +82,13 @@ bool isless(float, float);
 bool islessgreater(double, double);
 bool islessgreater(float, float);
 bool isnan(long double);
+#ifdef USE_ISNAN_WITH_INT_RETURN
+int isnan(double);
+int isnan(float);
+#else
 bool isnan(double);
 bool isnan(float);
+#endif
 bool isnormal(double);
 bool isnormal(float);
 bool isunordered(double, double);

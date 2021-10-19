@@ -506,11 +506,9 @@ define <4 x float> @_Z10testInsEltILj0EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj0EDv4_ffET0_S1_T1_
 ; CHECK: xscvdpspn 0, 1
-; CHECK: xxsldwi 0, 0, 0, 3
 ; CHECK: xxinsertw 34, 0, 12
 ; CHECK-BE-LABEL: _Z10testInsEltILj0EDv4_ffET0_S1_T1_
 ; CHECK-BE: xscvdpspn 0, 1
-; CHECK-BE: xxsldwi 0, 0, 0, 3
 ; CHECK-BE: xxinsertw 34, 0, 0
   %vecins = insertelement <4 x float> %a, float %b, i32 0
   ret <4 x float> %vecins
@@ -520,11 +518,9 @@ define <4 x float> @_Z10testInsEltILj1EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj1EDv4_ffET0_S1_T1_
 ; CHECK: xscvdpspn 0, 1
-; CHECK: xxsldwi 0, 0, 0, 3
 ; CHECK: xxinsertw 34, 0, 8
 ; CHECK-BE-LABEL: _Z10testInsEltILj1EDv4_ffET0_S1_T1_
 ; CHECK-BE: xscvdpspn 0, 1
-; CHECK-BE: xxsldwi 0, 0, 0, 3
 ; CHECK-BE: xxinsertw 34, 0, 4
   %vecins = insertelement <4 x float> %a, float %b, i32 1
   ret <4 x float> %vecins
@@ -534,11 +530,9 @@ define <4 x float> @_Z10testInsEltILj2EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj2EDv4_ffET0_S1_T1_
 ; CHECK: xscvdpspn 0, 1
-; CHECK: xxsldwi 0, 0, 0, 3
 ; CHECK: xxinsertw 34, 0, 4
 ; CHECK-BE-LABEL: _Z10testInsEltILj2EDv4_ffET0_S1_T1_
 ; CHECK-BE: xscvdpspn 0, 1
-; CHECK-BE: xxsldwi 0, 0, 0, 3
 ; CHECK-BE: xxinsertw 34, 0, 8
   %vecins = insertelement <4 x float> %a, float %b, i32 2
   ret <4 x float> %vecins
@@ -548,11 +542,9 @@ define <4 x float> @_Z10testInsEltILj3EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 entry:
 ; CHECK-LABEL: _Z10testInsEltILj3EDv4_ffET0_S1_T1_
 ; CHECK: xscvdpspn 0, 1
-; CHECK: xxsldwi 0, 0, 0, 3
 ; CHECK: xxinsertw 34, 0, 0
 ; CHECK-BE-LABEL: _Z10testInsEltILj3EDv4_ffET0_S1_T1_
 ; CHECK-BE: xscvdpspn 0, 1
-; CHECK-BE: xxsldwi 0, 0, 0, 3
 ; CHECK-BE: xxinsertw 34, 0, 12
   %vecins = insertelement <4 x float> %a, float %b, i32 3
   ret <4 x float> %vecins
@@ -1065,7 +1057,7 @@ declare <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32>, <2 x i64>, i32)
 define <2 x i64> @intrinsicExtractTest(<2 x i64> %a) {
 entry:
 ; CHECK-LABEL: intrinsicExtractTest
-; CHECK: xxextractuw 0, 34, 5
+; CHECK: xxextractuw 34, 34, 5
 ; CHECK: blr
   %ans = tail call <2 x i64> @llvm.ppc.vsx.xxextractuw(<2 x i64> %a, i32 5)
   ret <2 x i64> %ans

@@ -56,9 +56,9 @@ These transformations are applied to all levels of IR:
 ## Defining Canonicalizations
 
 Two mechanisms are available with which to define canonicalizations;
-`getCanonicalizationPatterns` and `fold`.
+general `RewritePattern`s and the `fold` method.
 
-### Canonicalizing with `getCanonicalizationPatterns`
+### Canonicalizing with `RewritePattern`s
 
 This mechanism allows for providing canonicalizations as a set of
 `RewritePattern`s, either imperatively defined in C++ or declaratively as
@@ -67,33 +67,46 @@ infrastructure allows for expressing many different types of canonicalizations.
 These transformations may be as simple as replacing a multiplication with a
 shift, or even replacing a conditional branch with an unconditional one.
 
-In [ODS](OpDefinitions.md), an operation can set the `hasCanonicalizer` bit to
-generate a declaration for the `getCanonicalizationPatterns` method.
+In [ODS](OpDefinitions.md), an operation can set the `hasCanonicalizer` bit or
+the `hasCanonicalizeMethod` bit to generate a declaration for the
+`getCanonicalizationPatterns` method:
 
 ```tablegen
 def MyOp : ... {
+  // I want to define a fully general set of patterns for this op.
   let hasCanonicalizer = 1;
+}
+
+def OtherOp : ... {
+  // A single "matchAndRewrite" style RewritePattern implemented as a method
+  // is good enough for me.
+  let hasCanonicalizeMethod = 1;
 }
 ```
 
 Canonicalization patterns can then be provided in the source file:
 
 ```c++
-void MyOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void MyOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                        MLIRContext *context) {
-  patterns.insert<...>(...);
+  patterns.add<...>(...);
+}
+
+LogicalResult OtherOp::canonicalize(OtherOp op, PatternRewriter &rewriter) {
+  // patterns and rewrites go here.
+  return failure();
 }
 ```
 
 See the [quickstart guide](Tutorials/QuickstartRewrites.md) for information on
 defining operation rewrites.
 
-### Canonicalizing with `fold`
+### Canonicalizing with the `fold` method
 
 The `fold` mechanism is an intentionally limited, but powerful mechanism that
 allows for applying canonicalizations in many places throughout the compiler.
 For example, outside of the canonicalizer pass, `fold` is used within the
-[dialect conversion infrastructure](#DialectConversion.md) as a legalization
+[dialect conversion infrastructure](DialectConversion.md) as a legalization
 mechanism, and can be invoked directly anywhere with an `OpBuilder` via
 `OpBuilder::createOrFold`.
 

@@ -93,6 +93,18 @@
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "@executable_path"
 // CHECK-ASAN-WATCHOSSIM: "-rpath" "{{.*}}lib{{.*}}darwin"
 
+// RUN: %clang -no-canonical-prefixes -### -target x86_64-apple-ios13.1-macabi \
+// RUN:   -stdlib=platform -fsanitize=address \
+// RUN:   -resource-dir %S/Inputs/resource_dir \
+// RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-MACCATALYST %s
+
+// CHECK-ASAN-MACCATALYST: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-MACCATALYST-NOT: "-lstdc++"
+// CHECK-ASAN-MACCATALYST-NOT: "-lc++"
+// CHECK-ASAN-MACCATALYST: libclang_rt.asan_osx_dynamic.dylib"
+// CHECK-ASAN-MACCATALYST: "-rpath" "@executable_path"
+// CHECK-ASAN-MACCATALYST: "-rpath" "{{.*}}lib{{.*}}darwin"
+
 // RUN: %clang -no-canonical-prefixes -### -target armv7-apple-ios  \
 // RUN:   -stdlib=platform -fsanitize=address -miphoneos-version-min=7 \
 // RUN:   %s -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ASAN-IOS %s

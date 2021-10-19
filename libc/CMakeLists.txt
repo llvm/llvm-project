@@ -5,19 +5,24 @@ cmake_minimum_required(VERSION 3.13.4)
 cmake_policy(SET CMP0076 OLD)
 list(APPEND CMAKE_MODULE_PATH  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# The top-level source directory of libc.
+# The top-level sourse and binary directories.
 set(LIBC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
-
 set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
 string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
 
-set(LIBC_TARGET_MACHINE ${CMAKE_SYSTEM_PROCESSOR})
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+include(LLVMLibCArchitectures)
+include(LLVMLibCCheckMPFR)
+
+# Flags to pass down to the compiler while building the libc functions.
+set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
 # is supported by the compiler.
@@ -40,7 +45,12 @@ else()
                   --print-resource-dir not supported by host compiler")
 endif()
 
-option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" ON)
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
+
+option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+if(LLVM_LIBC_ENABLE_LINTING AND (NOT LLVM_LIBC_FULL_BUILD))
+  message(FATAL_ERROR "Cannot enable linting when full libc build is not enabled.")
+endif()
 if(LLVM_LIBC_ENABLE_LINTING)
   if("clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS
              AND "clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -54,7 +64,7 @@ if(LLVM_LIBC_ENABLE_LINTING)
       To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
       (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
   endif()
-else()
+elseif(LLVM_LIBC_FULL_BUILD)
   message(WARNING "
     Linting for libc is currently disabled.
 
@@ -62,18 +72,34 @@ else()
     (pass -DLLVM_LIBC_ENABLE_LINTING=ON to cmake).")
 endif()
 
+option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
+if(LLVM_LIBC_INCLUDE_SCUDO)
+  if (NOT "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS")
+  endif()
+endif()
+
 include(CMakeParseArguments)
 include(LLVMLibCRules)
 include(LLVMLibCCheckCpuFeatures)
 
-add_subdirectory(include)
-add_subdirectory(config)
+if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
+  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/entrypoints.txt")
+elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
+  set(entrypoint_file "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/entrypoints.txt")
+else()
+  message(FATAL_ERROR "entrypoints.txt file for the target platform not found.")
+endif()
+include(${entrypoint_file})
 
-include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/entrypoints.txt")
-include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_MACHINE}/headers.txt")
+if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
+  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/headers.txt")
+elseif(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/headers.txt")
+  include("${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}//headers.txt")
+endif()
 
 set(TARGET_ENTRYPOINT_NAME_LIST "")
-foreach(entrypoint IN LISTS TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
+foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
   string(FIND ${entrypoint} "." last_dot_loc REVERSE)
   if(${last_dot_loc} EQUAL -1)
     message(FATAL "Invalid entrypoint target name ${entrypoint}; Expected a '.' "
@@ -84,12 +110,22 @@ foreach(entrypoint IN LISTS TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS)
   list(APPEND TARGET_ENTRYPOINT_NAME_LIST ${entrypoint_name})
 endforeach()
 
+if(LLVM_LIBC_FULL_BUILD)
+  # We need to set up hdrgen first since other targets depend on it.
+  add_subdirectory(utils/LibcTableGenUtil)
+  add_subdirectory(utils/HdrGen)
+endif()
+
+add_subdirectory(include)
+add_subdirectory(config)
 add_subdirectory(src)
 add_subdirectory(utils)
 
-# The loader can potentially depend on the library components so add it
-# after the library implementation directories.
-add_subdirectory(loader)
+if(LLVM_LIBC_FULL_BUILD)
+  # The loader can potentially depend on the library components so add it
+  # after the library implementation directories.
+  add_subdirectory(loader)
+endif()
 
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all

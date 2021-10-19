@@ -1,3 +1,1 @@
-if(LINK_WITH_FIR)
-  add_subdirectory(Optimizer)
-endif()
+add_subdirectory(Optimizer)

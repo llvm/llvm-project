@@ -23,6 +23,30 @@ namespace tools {
 
 /// Flang compiler tool.
 class LLVM_LIBRARY_VISIBILITY Flang : public Tool {
+private:
+  /// Extract fortran dialect options from the driver arguments and add them to
+  /// the list of arguments for the generated command/job.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddFortranDialectOptions(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const;
+
+  /// Extract preprocessing options from the driver arguments and add them to
+  /// the preprocessor command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddPreprocessingOptions(const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs) const;
+  /// Extract other compilation options from the driver arguments and add them
+  /// to the command arguments.
+  ///
+  /// \param [in] Args The list of input driver arguments
+  /// \param [out] CmdArgs The list of output command arguments
+  void AddOtherOptions(const llvm::opt::ArgList &Args,
+                       llvm::opt::ArgStringList &CmdArgs) const;
+
 public:
   Flang(const ToolChain &TC);
   ~Flang() override;

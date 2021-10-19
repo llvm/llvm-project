@@ -14,6 +14,7 @@
 
 #include "interception/interception.h"
 #include "msan_origin.h"
+#include "msan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
 
 DECLARE_REAL(void *, memset, void *dest, int c, uptr n)
@@ -47,7 +48,7 @@ void CopyOrigin(const void *dst, const void *src, uptr size,
   uptr beg = d & ~3UL;
   // Copy left unaligned origin if that memory is poisoned.
   if (beg < d) {
-    u32 o = GetOriginIfPoisoned((uptr)src, d - beg);
+    u32 o = GetOriginIfPoisoned((uptr)src, beg + 4 - d);
     if (o) {
       if (__msan_get_track_origins() > 1) o = ChainOrigin(o, stack);
       *(u32 *)MEM_TO_ORIGIN(beg) = o;
@@ -94,23 +95,98 @@ void CopyOrigin(const void *dst, const void *src, uptr size,
   }
 }
 
+void ReverseCopyOrigin(const void *dst, const void *src, uptr size,
+                       StackTrace *stack) {
+  if (!MEM_IS_APP(dst) || !MEM_IS_APP(src))
+    return;
+
+  uptr d = (uptr)dst;
+  uptr end = (d + size) & ~3UL;
+
+  // Copy right unaligned origin if that memory is poisoned.
+  if (end < d + size) {
+    u32 o = GetOriginIfPoisoned((uptr)src + (end - d), (d + size) - end);
+    if (o) {
+      if (__msan_get_track_origins() > 1)
+        o = ChainOrigin(o, stack);
+      *(u32 *)MEM_TO_ORIGIN(end) = o;
+    }
+  }
+
+  uptr beg = d & ~3UL;
+
+  if (beg + 4 < end) {
+    // Align src up.
+    uptr s = ((uptr)src + 3) & ~3UL;
+    if (__msan_get_track_origins() > 1) {
+      u32 *src = (u32 *)MEM_TO_ORIGIN(s + end - beg - 4);
+      u32 *src_s = (u32 *)MEM_TO_SHADOW(s + end - beg - 4);
+      u32 *src_begin = (u32 *)MEM_TO_ORIGIN(s);
+      u32 *dst = (u32 *)MEM_TO_ORIGIN(end - 4);
+      u32 src_o = 0;
+      u32 dst_o = 0;
+      for (; src >= src_begin; --src, --src_s, --dst) {
+        if (!*src_s)
+          continue;
+        if (*src != src_o) {
+          src_o = *src;
+          dst_o = ChainOrigin(src_o, stack);
+        }
+        *dst = dst_o;
+      }
+    } else {
+      REAL(memmove)
+      ((void *)MEM_TO_ORIGIN(beg), (void *)MEM_TO_ORIGIN(s), end - beg - 4);
+    }
+  }
+
+  // Copy left unaligned origin if that memory is poisoned.
+  if (beg < d) {
+    u32 o = GetOriginIfPoisoned((uptr)src, beg + 4 - d);
+    if (o) {
+      if (__msan_get_track_origins() > 1)
+        o = ChainOrigin(o, stack);
+      *(u32 *)MEM_TO_ORIGIN(beg) = o;
+    }
+  }
+}
+
+void MoveOrigin(const void *dst, const void *src, uptr size,
+                StackTrace *stack) {
+  // If destination origin range overlaps with source origin range, move
+  // origins by coping origins in a reverse order; otherwise, copy origins in
+  // a normal order.
+  uptr src_aligned_beg = reinterpret_cast<uptr>(src) & ~3UL;
+  uptr src_aligned_end = (reinterpret_cast<uptr>(src) + size) & ~3UL;
+  uptr dst_aligned_beg = reinterpret_cast<uptr>(dst) & ~3UL;
+  if (dst_aligned_beg < src_aligned_end && dst_aligned_beg >= src_aligned_beg)
+    return ReverseCopyOrigin(dst, src, size, stack);
+  return CopyOrigin(dst, src, size, stack);
+}
+
 void MoveShadowAndOrigin(const void *dst, const void *src, uptr size,
                          StackTrace *stack) {
   if (!MEM_IS_APP(dst)) return;
   if (!MEM_IS_APP(src)) return;
   if (src == dst) return;
+  // MoveOrigin transfers origins by refering to their shadows. So we
+  // need to move origins before moving shadows.
+  if (__msan_get_track_origins())
+    MoveOrigin(dst, src, size, stack);
   REAL(memmove)((void *)MEM_TO_SHADOW((uptr)dst),
                 (void *)MEM_TO_SHADOW((uptr)src), size);
-  if (__msan_get_track_origins()) CopyOrigin(dst, src, size, stack);
 }
 
 void CopyShadowAndOrigin(const void *dst, const void *src, uptr size,
                          StackTrace *stack) {
   if (!MEM_IS_APP(dst)) return;
   if (!MEM_IS_APP(src)) return;
+  // Because origin's range is slightly larger than app range, memcpy may also
+  // cause overlapped origin ranges.
   REAL(memcpy)((void *)MEM_TO_SHADOW((uptr)dst),
                (void *)MEM_TO_SHADOW((uptr)src), size);
-  if (__msan_get_track_origins()) CopyOrigin(dst, src, size, stack);
+  if (__msan_get_track_origins())
+    MoveOrigin(dst, src, size, stack);
 }
 
 void CopyMemory(void *dst, const void *src, uptr size, StackTrace *stack) {
@@ -138,7 +214,7 @@ void SetShadow(const void *ptr, uptr size, u8 value) {
       if (page_end != shadow_end) {
         REAL(memset)((void *)page_end, 0, shadow_end - page_end);
       }
-      if (!MmapFixedNoReserve(page_beg, page_end - page_beg))
+      if (!MmapFixedSuperNoReserve(page_beg, page_end - page_beg))
         Die();
     }
   }
@@ -166,6 +242,9 @@ void PoisonMemory(const void *dst, uptr size, StackTrace *stack) {
   SetShadow(dst, size, (u8)-1);
 
   if (__msan_get_track_origins()) {
+    MsanThread *t = GetCurrentThread();
+    if (t && t->InSignalHandler())
+      return;
     Origin o = Origin::CreateHeapOrigin(stack);
     SetOrigin(dst, size, o.raw_id());
   }

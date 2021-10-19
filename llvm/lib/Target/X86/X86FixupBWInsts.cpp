@@ -137,6 +137,8 @@ private:
   /// Machine instruction info used throughout the class.
   const X86InstrInfo *TII = nullptr;
 
+  const TargetRegisterInfo *TRI = nullptr;
+
   /// Local member for function's OptForSize attribute.
   bool OptForSize = false;
 
@@ -162,6 +164,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+  TRI = MF.getRegInfo().getTargetRegisterInfo();
   MLI = &getAnalysis<MachineLoopInfo>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MBFI = (PSI && PSI->hasProfileSummary()) ?
@@ -187,8 +190,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 /// If so, return that super register in \p SuperDestReg.
 bool FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI,
                                             Register &SuperDestReg) const {
-  auto *TRI = &TII->getRegisterInfo();
-
+  const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
   SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
 
@@ -304,6 +306,14 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
 
   MIB.setMemRefs(MI->memoperands());
 
+  // If it was debug tracked, record a substitution.
+  if (unsigned OldInstrNum = MI->peekDebugInstrNum()) {
+    unsigned Subreg = TRI->getSubRegIndex(MIB->getOperand(0).getReg(),
+                                          MI->getOperand(0).getReg());
+    unsigned NewInstrNum = MIB->getDebugInstrNum(*MF);
+    MF->makeDebugValueSubstitution({OldInstrNum, 0}, {NewInstrNum, 0}, Subreg);
+  }
+
   return MIB;
 }
 
@@ -320,7 +330,7 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
 
   // This is only correct if we access the same subregister index: otherwise,
   // we could try to replace "movb %ah, %al" with "movl %eax, %eax".
-  auto *TRI = &TII->getRegisterInfo();
+  const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   if (TRI->getSubRegIndex(NewSrcReg, OldSrc.getReg()) !=
       TRI->getSubRegIndex(NewDestReg, OldDest.getReg()))
     return nullptr;
@@ -366,6 +376,13 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
     MIB.add(MI->getOperand(i));
 
   MIB.setMemRefs(MI->memoperands());
+
+  if (unsigned OldInstrNum = MI->peekDebugInstrNum()) {
+    unsigned Subreg = TRI->getSubRegIndex(MIB->getOperand(0).getReg(),
+                                          MI->getOperand(0).getReg());
+    unsigned NewInstrNum = MIB->getDebugInstrNum(*MF);
+    MF->makeDebugValueSubstitution({OldInstrNum, 0}, {NewInstrNum, 0}, Subreg);
+  }
 
   return MIB;
 }

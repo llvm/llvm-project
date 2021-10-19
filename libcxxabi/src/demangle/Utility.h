@@ -52,7 +52,7 @@ class OutputStream {
     char *TempPtr = std::end(Temp);
 
     while (N) {
-      *--TempPtr = '0' + char(N % 10);
+      *--TempPtr = char('0' + N % 10);
       N /= 10;
     }
 
@@ -124,6 +124,16 @@ public:
 
   OutputStream &operator<<(unsigned int N) {
     return this->operator<<(static_cast<unsigned long long>(N));
+  }
+
+  void insert(size_t Pos, const char *S, size_t N) {
+    assert(Pos <= CurrentPosition);
+    if (N == 0)
+      return;
+    grow(N);
+    std::memmove(Buffer + Pos + N, Buffer + Pos, CurrentPosition - Pos);
+    std::memcpy(Buffer + Pos, S, N);
+    CurrentPosition += N;
   }
 
   size_t getCurrentPosition() const { return CurrentPosition; }

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 
 ! Check for semantic errors in ALLOCATE statements
 
@@ -43,7 +43,6 @@ subroutine C943_C944(src, src2)
   allocate(real:: y2, mold=mld)
   !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
   allocate(y3, source=src, stat=stat, errmsg=msg, mold=mld)
-  !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
   !ERROR: At most one of source-expr and type-spec may appear in a ALLOCATE statement
   allocate(real:: y4, source=src, stat=stat, errmsg=msg, mold=mld)
 end subroutine

@@ -6,7 +6,7 @@
 // RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
 // RUN: ld.lld --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump -d --triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d %t2 | FileCheck %s
 // Simple test that we can support range extension thunks with linker scripts
  .syntax unified
  .section .text_low, "ax", %progbits
@@ -32,8 +32,8 @@ low_target2:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:       94:        70 47   bx      lr
 // CHECK: <low_target>:
-// CHECK-NEXT:       96:        00 f0 03 f8     bl      #6
-// CHECK-NEXT:       9a:        00 f0 06 f8     bl      #12
+// CHECK-NEXT:       96:        00 f0 03 f8     bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
+// CHECK-NEXT:       9a:        00 f0 06 f8     bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
 // CHECK: <__Thumbv7ABSLongThunk_high_target>:
 // CHECK-NEXT:       a0:        40 f2 01 0c     movw    r12, #1
 // CHECK-NEXT:       a4:        c0 f2 00 2c     movt    r12, #512
@@ -43,8 +43,8 @@ low_target2:
 // CHECK-NEXT:       ae:        c0 f2 00 2c     movt    r12, #512
 // CHECK-NEXT:       b2:        60 47   bx      r12
 // CHECK: <low_target2>:
-// CHECK-NEXT:       b4:        ff f7 f4 ff     bl      #-24
-// CHECK-NEXT:       b8:        ff f7 f7 ff     bl      #-18
+// CHECK-NEXT:       b4:        ff f7 f4 ff     bl      0xa0 <__Thumbv7ABSLongThunk_high_target>
+// CHECK-NEXT:       b8:        ff f7 f7 ff     bl      0xaa <__Thumbv7ABSLongThunk_high_target2>
 
  .section .text_high, "ax", %progbits
  .thumb
@@ -65,8 +65,8 @@ high_target2:
 // CHECK: Disassembly of section .text_high:
 // CHECK-EMPTY:
 // CHECK-NEXT: <high_target>:
-// CHECK-NEXT:  2000000:        00 f0 02 f8     bl      #4
-// CHECK-NEXT:  2000004:        00 f0 05 f8     bl      #10
+// CHECK-NEXT:  2000000:        00 f0 02 f8     bl      0x2000008 <__Thumbv7ABSLongThunk_low_target>
+// CHECK-NEXT:  2000004:        00 f0 05 f8     bl      0x2000012 <__Thumbv7ABSLongThunk_low_target2>
 // CHECK: <__Thumbv7ABSLongThunk_low_target>:
 // CHECK-NEXT:  2000008:        40 f2 97 0c     movw    r12, #151
 // CHECK-NEXT:  200000c:        c0 f2 00 0c     movt    r12, #0
@@ -76,5 +76,5 @@ high_target2:
 // CHECK-NEXT:  2000016:        c0 f2 00 0c     movt    r12, #0
 // CHECK-NEXT:  200001a:        60 47   bx      r12
 // CHECK: <high_target2>:
-// CHECK-NEXT:  200001c:        ff f7 f4 ff     bl      #-24
-// CHECK-NEXT:  2000020:        ff f7 f7 ff     bl      #-18
+// CHECK-NEXT:  200001c:        ff f7 f4 ff     bl      0x2000008 <__Thumbv7ABSLongThunk_low_target>
+// CHECK-NEXT:  2000020:        ff f7 f7 ff     bl      0x2000012 <__Thumbv7ABSLongThunk_low_target2>

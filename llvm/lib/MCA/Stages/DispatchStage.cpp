@@ -94,13 +94,10 @@ Error DispatchStage::dispatch(InstRef IR) {
   if (Desc.EndGroup)
     AvailableEntries = 0;
 
-  // Check if this is an optimizable reg-reg move.
-  if (IS.isOptimizableMove()) {
-    assert(IS.getDefs().size() == 1 && "Expected a single input!");
-    assert(IS.getUses().size() == 1 && "Expected a single output!");
-    if (PRF.tryEliminateMove(IS.getDefs()[0], IS.getUses()[0]))
+  // Check if this is an optimizable reg-reg move or an XCHG-like instruction.
+  if (IS.isOptimizableMove())
+    if (PRF.tryEliminateMoveOrSwap(IS.getDefs(), IS.getUses()))
       IS.setEliminated();
-  }
 
   // A dependency-breaking instruction doesn't have to wait on the register
   // input operands, and it is often optimized at register renaming stage.
@@ -136,8 +133,8 @@ Error DispatchStage::dispatch(InstRef IR) {
 }
 
 Error DispatchStage::cycleStart() {
-  PRF.cycleStart();
-
+  // The retire stage is responsible for calling method `cycleStart`
+  // on the PRF.
   if (!CarryOver) {
     AvailableEntries = DispatchWidth;
     return ErrorSuccess();
@@ -156,6 +153,10 @@ Error DispatchStage::cycleStart() {
 }
 
 bool DispatchStage::isAvailable(const InstRef &IR) const {
+  // Conservatively bail out if there are no available dispatch entries.
+  if (!AvailableEntries)
+    return false;
+
   const Instruction &Inst = *IR.getInstruction();
   unsigned NumMicroOps = Inst.getNumMicroOps();
   const InstrDesc &Desc = Inst.getDesc();

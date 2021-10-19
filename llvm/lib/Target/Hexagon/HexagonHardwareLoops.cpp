@@ -390,7 +390,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   TRI = HST.getRegisterInfo();
 
   for (auto &L : *MLI)
-    if (!L->getParentLoop()) {
+    if (L->isOutermost()) {
       bool L0Used = false;
       bool L1Used = false;
       Changed |= convertToHardwareLoop(L, L0Used, L1Used);
@@ -468,7 +468,7 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
     return false;
 
   Register CmpReg1, CmpReg2;
-  int CmpImm = 0, CmpMask = 0;
+  int64_t CmpImm = 0, CmpMask = 0;
   bool CmpAnalyzed =
       TII->analyzeCompare(*PredI, CmpReg1, CmpReg2, CmpMask, CmpImm);
   // Fail if the compare was not analyzed, or it's not comparing a register
@@ -652,7 +652,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   unsigned CondOpc = CondI->getOpcode();
 
   Register CmpReg1, CmpReg2;
-  int Mask = 0, ImmValue = 0;
+  int64_t Mask = 0, ImmValue = 0;
   bool AnalyzedCmp =
       TII->analyzeCompare(*CondI, CmpReg1, CmpReg2, Mask, ImmValue);
   if (!AnalyzedCmp)
@@ -1098,12 +1098,11 @@ void HexagonHardwareLoops::removeIfDead(MachineInstr *MI) {
       for (MachineRegisterInfo::use_iterator I = MRI->use_begin(Reg),
            E = MRI->use_end(); I != E; I = nextI) {
         nextI = std::next(I);  // I is invalidated by the setReg
-        MachineOperand &Use = *I;
         MachineInstr *UseMI = I->getParent();
         if (UseMI == MI)
           continue;
-        if (Use.isDebug())
-          UseMI->getOperand(0).setReg(0U);
+        if (I->isDebug())
+          I->setReg(0U);
       }
     }
 
@@ -1370,10 +1369,8 @@ bool HexagonHardwareLoops::isLoopFeeder(MachineLoop *L, MachineBasicBlock *A,
     LLVM_DEBUG(dbgs() << "\nhw_loop head, "
                       << printMBBReference(**L->block_begin()));
     // Ignore all BBs that form Loop.
-    for (MachineBasicBlock *MBB : L->getBlocks()) {
-      if (A == MBB)
-        return false;
-    }
+    if (llvm::is_contained(L->getBlocks(), A))
+      return false;
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
     LoopFeederPhi.insert(std::make_pair(MO->getReg(), Def));
     return true;
@@ -1432,7 +1429,7 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
   Register Reg = InitVal->getReg();
 
   // We don't know the value of a physical register.
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return true;
 
   MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -1456,7 +1453,7 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
          E = MRI->use_instr_nodbg_end(); I != E; ++I) {
     MachineInstr *MI = &*I;
     Register CmpReg1, CmpReg2;
-    int CmpMask = 0, CmpValue = 0;
+    int64_t CmpMask = 0, CmpValue = 0;
 
     if (!TII->analyzeCompare(*MI, CmpReg1, CmpReg2, CmpMask, CmpValue))
       continue;
@@ -1510,7 +1507,7 @@ bool HexagonHardwareLoops::checkForImmediate(const MachineOperand &MO,
   int64_t TV;
 
   Register R = MO.getReg();
-  if (!Register::isVirtualRegister(R))
+  if (!R.isVirtual())
     return false;
   MachineInstr *DI = MRI->getVRegDef(R);
   unsigned DOpc = DI->getOpcode();

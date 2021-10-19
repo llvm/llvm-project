@@ -13,19 +13,26 @@ endif()
 set(LLVM_INCLUDE_DIR ${LLVM_PATH}/include CACHE PATH "Path to llvm/include")
 set(LLVM_PATH ${LLVM_PATH} CACHE PATH "Path to LLVM source tree")
 set(LLVM_MAIN_SRC_DIR ${LLVM_PATH})
-set(LLVM_CMAKE_PATH "${LLVM_PATH}/cmake/modules")
+set(LLVM_CMAKE_DIR "${LLVM_PATH}/cmake/modules")
+set(LLVM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_CURRENT_BINARY_DIR}/lib")
 
-if (EXISTS "${LLVM_CMAKE_PATH}")
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+if (EXISTS "${LLVM_CMAKE_DIR}")
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 elseif (EXISTS "${LLVM_MAIN_SRC_DIR}/cmake/modules")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_MAIN_SRC_DIR}/cmake/modules")
 else()
-  message(FATAL_ERROR "Neither ${LLVM_CMAKE_PATH} nor ${LLVM_MAIN_SRC_DIR}/cmake/modules found. "
+  message(FATAL_ERROR "Neither ${LLVM_CMAKE_DIR} nor ${LLVM_MAIN_SRC_DIR}/cmake/modules found. "
                       "This is not a supported configuration.")
 endif()
 
 message(STATUS "Configuring for standalone build.")
-set(LIBCXX_STANDALONE_BUILD 1)
+
+# By default, we target the host, but this can be overridden at CMake invocation time.
+include(GetHostTriple)
+get_host_triple(LLVM_INFERRED_HOST_TRIPLE)
+set(LLVM_HOST_TRIPLE "${LLVM_INFERRED_HOST_TRIPLE}" CACHE STRING "Host on which LLVM binaries will run")
+set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_HOST_TRIPLE}" CACHE STRING "Target triple used by default.")
 
 # Add LLVM Functions --------------------------------------------------------
 if (WIN32)
@@ -48,11 +55,6 @@ endif()
 if (NOT DEFINED LLVM_ENABLE_SPHINX)
   set(LLVM_ENABLE_SPHINX OFF)
 endif()
-
-# In a standalone build, we don't have llvm to automatically generate the
-# llvm-lit script for us.  So we need to provide an explicit directory that
-# the configurator should write the script into.
-set(LLVM_LIT_OUTPUT_DIR "${libcxx_BINARY_DIR}/bin")
 
 if (LLVM_INCLUDE_TESTS)
   # Required LIT Configuration ------------------------------------------------

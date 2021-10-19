@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 enum class WorkerThreadState { Uninitialized, AllowedToRun, Exiting };
@@ -71,7 +72,7 @@ int main(int, char**)
     typedef int T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func1, std::move(p)).detach();
+    support::make_test_thread(func1, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_until(Clock::now() + ms(10)) == std::future_status::timeout);
     assert(f.valid());
@@ -89,7 +90,7 @@ int main(int, char**)
     typedef int& T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func3, std::move(p)).detach();
+    support::make_test_thread(func3, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_until(Clock::now() + ms(10)) == std::future_status::timeout);
     assert(f.valid());
@@ -107,7 +108,7 @@ int main(int, char**)
     typedef void T;
     std::promise<T> p;
     std::shared_future<T> f = p.get_future();
-    std::thread(func5, std::move(p)).detach();
+    support::make_test_thread(func5, std::move(p)).detach();
     assert(f.valid());
     assert(f.wait_until(Clock::now() + ms(10)) == std::future_status::timeout);
     assert(f.valid());

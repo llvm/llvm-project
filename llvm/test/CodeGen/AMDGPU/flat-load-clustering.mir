@@ -54,24 +54,24 @@ body:             |
 
     %1 = COPY $sgpr4_sgpr5
     %0 = COPY $vgpr0
-    %3 = S_LOAD_DWORDX2_IMM %1, 0, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
-    %4 = S_LOAD_DWORDX2_IMM %1, 8, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %1, 8, 0 :: (non-temporal dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`)
     %7 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %2 = V_MOV_B32_e32 0, implicit $exec
     undef %12.sub0 = V_ADD_CO_U32_e32 %4.sub0, %7, implicit-def $vcc, implicit $exec
     %11 = COPY %4.sub1
     %12.sub1 = V_ADDC_U32_e32 %11, %2, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
-    %5 = FLAT_LOAD_DWORD %12, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.gep1)
+    %5 = FLAT_LOAD_DWORD %12, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.gep1)
     undef %9.sub0 = V_ADD_CO_U32_e32 %3.sub0, %7, implicit-def $vcc, implicit $exec
     %8 = COPY %3.sub1
     %9.sub1 = V_ADDC_U32_e32 %8, %2, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
     undef %13.sub0 = V_ADD_CO_U32_e32 16, %12.sub0, implicit-def $vcc, implicit $exec
     %13.sub1 = V_ADDC_U32_e32 %12.sub1, %2, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
-    %6 = FLAT_LOAD_DWORD %13, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.gep34)
+    %6 = FLAT_LOAD_DWORD %13, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %ir.gep34)
     undef %10.sub0 = V_ADD_CO_U32_e32 16, %9.sub0, implicit-def $vcc, implicit $exec
     %10.sub1 = V_ADDC_U32_e32 %9.sub1, %2, implicit-def dead $vcc, implicit killed $vcc, implicit $exec
-    FLAT_STORE_DWORD %9, %5, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.gep2)
-    FLAT_STORE_DWORD %10, %6, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4 into %ir.gep4)
+    FLAT_STORE_DWORD %9, %5, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.gep2)
+    FLAT_STORE_DWORD %10, %6, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.gep4)
     S_ENDPGM 0
 
 ...

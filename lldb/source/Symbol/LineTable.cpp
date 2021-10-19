@@ -34,7 +34,7 @@ LineTable::LineTable(CompileUnit *comp_unit,
 }
 
 // Destructor
-LineTable::~LineTable() {}
+LineTable::~LineTable() = default;
 
 void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
                                 uint16_t column, uint16_t file_idx,
@@ -58,7 +58,7 @@ void LineTable::InsertLineEntry(lldb::addr_t file_addr, uint32_t line,
   //  Dump (&s, Address::DumpStyleFileAddress);
 }
 
-LineSequence::LineSequence() {}
+LineSequence::LineSequence() = default;
 
 void LineTable::LineSequenceImpl::Clear() { m_entries.clear(); }
 
@@ -303,91 +303,26 @@ bool LineTable::ConvertEntryAtIndexToLineEntry(uint32_t idx,
 }
 
 uint32_t LineTable::FindLineEntryIndexByFileIndex(
-    uint32_t start_idx, const std::vector<uint32_t> &file_indexes,
-    uint32_t line, bool exact, LineEntry *line_entry_ptr) {
+    uint32_t start_idx, uint32_t file_idx,
+    const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr) {
+  auto file_idx_matcher = [](uint32_t file_index, uint16_t entry_file_idx) {
+    return file_index == entry_file_idx;
+  };
+  return FindLineEntryIndexByFileIndexImpl<uint32_t>(
 
-  const size_t count = m_entries.size();
-  size_t best_match = UINT32_MAX;
-
-  for (size_t idx = start_idx; idx < count; ++idx) {
-    // Skip line table rows that terminate the previous row (is_terminal_entry
-    // is non-zero)
-    if (m_entries[idx].is_terminal_entry)
-      continue;
-
-    if (!llvm::is_contained(file_indexes, m_entries[idx].file_idx))
-      continue;
-
-    // Exact match always wins.  Otherwise try to find the closest line > the
-    // desired line.
-    // FIXME: Maybe want to find the line closest before and the line closest
-    // after and
-    // if they're not in the same function, don't return a match.
-
-    if (m_entries[idx].line < line) {
-      continue;
-    } else if (m_entries[idx].line == line) {
-      if (line_entry_ptr)
-        ConvertEntryAtIndexToLineEntry(idx, *line_entry_ptr);
-      return idx;
-    } else if (!exact) {
-      if (best_match == UINT32_MAX)
-        best_match = idx;
-      else if (m_entries[idx].line < m_entries[best_match].line)
-        best_match = idx;
-    }
-  }
-
-  if (best_match != UINT32_MAX) {
-    if (line_entry_ptr)
-      ConvertEntryAtIndexToLineEntry(best_match, *line_entry_ptr);
-    return best_match;
-  }
-  return UINT32_MAX;
+      start_idx, file_idx, src_location_spec, line_entry_ptr, file_idx_matcher);
 }
 
-uint32_t LineTable::FindLineEntryIndexByFileIndex(uint32_t start_idx,
-                                                  uint32_t file_idx,
-                                                  uint32_t line, bool exact,
-                                                  LineEntry *line_entry_ptr) {
-  const size_t count = m_entries.size();
-  size_t best_match = UINT32_MAX;
+uint32_t LineTable::FindLineEntryIndexByFileIndex(
+    uint32_t start_idx, const std::vector<uint32_t> &file_idx,
+    const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr) {
+  auto file_idx_matcher = [](const std::vector<uint32_t> &file_indexes,
+                             uint16_t entry_file_idx) {
+    return llvm::is_contained(file_indexes, entry_file_idx);
+  };
 
-  for (size_t idx = start_idx; idx < count; ++idx) {
-    // Skip line table rows that terminate the previous row (is_terminal_entry
-    // is non-zero)
-    if (m_entries[idx].is_terminal_entry)
-      continue;
-
-    if (m_entries[idx].file_idx != file_idx)
-      continue;
-
-    // Exact match always wins.  Otherwise try to find the closest line > the
-    // desired line.
-    // FIXME: Maybe want to find the line closest before and the line closest
-    // after and
-    // if they're not in the same function, don't return a match.
-
-    if (m_entries[idx].line < line) {
-      continue;
-    } else if (m_entries[idx].line == line) {
-      if (line_entry_ptr)
-        ConvertEntryAtIndexToLineEntry(idx, *line_entry_ptr);
-      return idx;
-    } else if (!exact) {
-      if (best_match == UINT32_MAX)
-        best_match = idx;
-      else if (m_entries[idx].line < m_entries[best_match].line)
-        best_match = idx;
-    }
-  }
-
-  if (best_match != UINT32_MAX) {
-    if (line_entry_ptr)
-      ConvertEntryAtIndexToLineEntry(best_match, *line_entry_ptr);
-    return best_match;
-  }
-  return UINT32_MAX;
+  return FindLineEntryIndexByFileIndexImpl<std::vector<uint32_t>>(
+      start_idx, file_idx, src_location_spec, line_entry_ptr, file_idx_matcher);
 }
 
 size_t LineTable::FineLineEntriesForFileIndex(uint32_t file_idx, bool append,

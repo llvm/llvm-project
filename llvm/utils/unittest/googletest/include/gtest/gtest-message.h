@@ -26,10 +26,9 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 //
-// Author: wan@google.com (Zhanyong Wan)
-//
-// The Google C++ Testing Framework (Google Test)
+// The Google C++ Testing and Mocking Framework (Google Test)
 //
 // This header file defines the Message class.
 //
@@ -43,13 +42,19 @@
 // to CHANGE WITHOUT NOTICE.  Therefore DO NOT DEPEND ON IT in a user
 // program!
 
+// GOOGLETEST_CM0001 DO NOT DELETE
+
 #ifndef GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
 #define GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_
 
 #include <limits>
+#include <memory>
 
 #include "gtest/internal/gtest-port.h"
 #include "gtest/internal/custom/raw-ostream.h"
+
+GTEST_DISABLE_MSC_WARNINGS_PUSH_(4251 \
+/* class A needs to have dll-interface to be used by clients of class B */)
 
 // Ensures that there is at least one operator<< in the global namespace.
 // See Message& operator<<(...) below for why.
@@ -103,14 +108,6 @@ class GTEST_API_ Message {
     *ss_ << str;
   }
 
-#if GTEST_OS_SYMBIAN
-  // Streams a value (either a pointer or not) to this object.
-  template <typename T>
-  inline Message& operator <<(const T& value) {
-    StreamHelper(typename internal::is_pointer<T>::type(), value);
-    return *this;
-  }
-#else
   // Streams a non-pointer value to this object.
   template <typename T>
   inline Message& operator <<(const T& val) {
@@ -148,14 +145,13 @@ class GTEST_API_ Message {
   // as "(null)".
   template <typename T>
   inline Message& operator <<(T* const& pointer) {  // NOLINT
-    if (pointer == NULL) {
+    if (pointer == nullptr) {
       *ss_ << "(null)";
     } else {
       *ss_ << llvm_gtest::printable(pointer);
     }
     return *this;
   }
-#endif  // GTEST_OS_SYMBIAN
 
   // Since the basic IO manipulators are overloaded for both narrow
   // and wide streams, we have to provide this specialized definition
@@ -184,12 +180,6 @@ class GTEST_API_ Message {
   Message& operator <<(const ::std::wstring& wstr);
 #endif  // GTEST_HAS_STD_WSTRING
 
-#if GTEST_HAS_GLOBAL_WSTRING
-  // Converts the given wide string to a narrow string using the UTF-8
-  // encoding, and streams the result to this Message object.
-  Message& operator <<(const ::wstring& wstr);
-#endif  // GTEST_HAS_GLOBAL_WSTRING
-
   // Gets the text streamed to this object so far as an std::string.
   // Each '\0' character in the buffer is replaced with "\\0".
   //
@@ -197,32 +187,8 @@ class GTEST_API_ Message {
   std::string GetString() const;
 
  private:
-
-#if GTEST_OS_SYMBIAN
-  // These are needed as the Nokia Symbian Compiler cannot decide between
-  // const T& and const T* in a function template. The Nokia compiler _can_
-  // decide between class template specializations for T and T*, so a
-  // tr1::type_traits-like is_pointer works, and we can overload on that.
-  template <typename T>
-  inline void StreamHelper(internal::true_type /*is_pointer*/, T* pointer) {
-    if (pointer == NULL) {
-      *ss_ << "(null)";
-    } else {
-      *ss_ << pointer;
-    }
-  }
-  template <typename T>
-  inline void StreamHelper(internal::false_type /*is_pointer*/,
-                           const T& value) {
-    // See the comments in Message& operator <<(const T&) above for why
-    // we need this using statement.
-    using ::operator <<;
-    *ss_ << value;
-  }
-#endif  // GTEST_OS_SYMBIAN
-
   // We'll hold the text streamed to this object here.
-  const internal::scoped_ptr< ::std::stringstream> ss_;
+  const std::unique_ptr< ::std::stringstream> ss_;
 
   // We declare (but don't implement) this to prevent the compiler
   // from implementing the assignment operator.
@@ -247,5 +213,7 @@ std::string StreamableToString(const T& streamable) {
 
 }  // namespace internal
 }  // namespace testing
+
+GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
 
 #endif  // GTEST_INCLUDE_GTEST_GTEST_MESSAGE_H_

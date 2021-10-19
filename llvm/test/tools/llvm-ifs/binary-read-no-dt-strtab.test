@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=%t.tbe %t 2>&1 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000
+    Content:         "00"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000000008
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000001
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x0000
+    Align:    8
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x0008
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+# CHECK: Couldn't locate dynamic string table (no DT_STRTAB entry)

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR1975
 
-@nodes = external global i64		; <i64*> [#uses=2]
+@nodes = external dso_local global i64		; <i64*> [#uses=2]
 
 define fastcc i32 @ab(i32 %alpha, i32 %beta) nounwind  {
 entry:

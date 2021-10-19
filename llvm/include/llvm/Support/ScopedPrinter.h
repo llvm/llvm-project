@@ -12,6 +12,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
@@ -31,8 +32,9 @@ template <typename T> struct EnumEntry {
   // "Advanced Micro Devices X86-64" on GNU style
   StringRef AltName;
   T Value;
-  EnumEntry(StringRef N, StringRef A, T V) : Name(N), AltName(A), Value(V) {}
-  EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
+  constexpr EnumEntry(StringRef N, StringRef A, T V)
+      : Name(N), AltName(A), Value(V) {}
+  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
 };
 
 struct HexNumber {
@@ -56,9 +58,9 @@ struct HexNumber {
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
-const std::string to_hexString(uint64_t Value, bool UpperCase = true);
+std::string to_hexString(uint64_t Value, bool UpperCase = true);
 
-template <class T> const std::string to_string(const T &Value) {
+template <class T> std::string to_string(const T &Value) {
   std::string number;
   llvm::raw_string_ostream stream(number);
   stream << Value;
@@ -207,38 +209,28 @@ public:
 
   template <typename T> void printList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
-    bool Comma = false;
-    for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
-      OS << Item;
-      Comma = true;
-    }
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << Item;
     OS << "]\n";
   }
 
   template <typename T, typename U>
   void printList(StringRef Label, const T &List, const U &Printer) {
     startLine() << Label << ": [";
-    bool Comma = false;
+    ListSeparator LS;
     for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
+      OS << LS;
       Printer(OS, Item);
-      Comma = true;
     }
     OS << "]\n";
   }
 
   template <typename T> void printHexList(StringRef Label, const T &List) {
     startLine() << Label << ": [";
-    bool Comma = false;
-    for (const auto &Item : List) {
-      if (Comma)
-        OS << ", ";
-      OS << hex(Item);
-      Comma = true;
-    }
+    ListSeparator LS;
+    for (const auto &Item : List)
+      OS << LS << hex(Item);
     OS << "]\n";
   }
 

@@ -43,7 +43,7 @@ class ExecAnatomyTest(unittest.TestCase):
 
     def test_all_exec_calls(self):
         this_dir, _ = os.path.split(__file__)
-        source_dir = os.path.normpath(os.path.join(this_dir, '..', 'exec'))
+        source_dir = os.path.abspath(os.path.join(this_dir, '..', 'exec'))
         with libear.TemporaryDirectory() as tmp_dir:
             expected, result = run(source_dir, tmp_dir)
             self.assertEqualJson(expected, result)

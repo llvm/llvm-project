@@ -543,8 +543,7 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   }
 
   if (value_sp)
-    error = value_sp->SetValueFromString(
-        llvm::StringRef::withNullAsEmpty(value_cstr), eVarSetOperationAssign);
+    error = value_sp->SetValueFromString(value_cstr, eVarSetOperationAssign);
   else
     error.SetErrorString("unsupported type mask");
   return value_sp;
@@ -566,6 +565,12 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
     strm << name;
   }
   return dumped_something;
+}
+
+OptionValueSP OptionValue::DeepCopy(const OptionValueSP &new_parent) const {
+  auto clone = Clone();
+  clone->SetParent(new_parent);
+  return clone;
 }
 
 void OptionValue::AutoComplete(CommandInterpreter &interpreter,

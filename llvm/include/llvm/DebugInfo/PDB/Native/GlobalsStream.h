@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_GLOBALS_STREAM_H
-#define LLVM_DEBUGINFO_PDB_RAW_GLOBALS_STREAM_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_GLOBALSSTREAM_H
 
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"

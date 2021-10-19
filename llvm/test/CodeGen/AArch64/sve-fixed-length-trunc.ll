@@ -199,11 +199,11 @@ define void @trunc_v64i32_v64i16(<64 x i32>* %in, <64 x i16>* %out) #0 {
 ; NOTE: v4i8 is not legal so result i8 elements are held within i16 containers.
 define <4 x i8> @trunc_v4i64_v4i8(<4 x i64>* %in) #0 {
 ; CHECK-LABEL: trunc_v4i64_v4i8:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
-; VBITS_GE_256-NEXT: uzp1 z0.h, [[A_WORDS]].h, [[A_WORDS]].h
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[A_DWORDS:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: uzp1 [[A_WORDS:z[0-9]+]].s, [[A_DWORDS]].s, [[A_DWORDS]].s
+; CHECK-NEXT: uzp1 z0.h, [[A_WORDS]].h, [[A_WORDS]].h
+; CHECK-NEXT: ret
   %a = load <4 x i64>, <4 x i64>* %in
   %b = trunc <4 x i64> %a to <4 x i8>
   ret <4 x i8> %b

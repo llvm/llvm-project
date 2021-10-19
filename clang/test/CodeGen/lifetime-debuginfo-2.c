@@ -10,7 +10,7 @@
 extern int f(int);
 extern int g(int);
 
-// CHECK-LABEL: define i32 @test
+// CHECK-LABEL: define{{.*}} i32 @test
 int test(int a, int b) {
   int res;
 

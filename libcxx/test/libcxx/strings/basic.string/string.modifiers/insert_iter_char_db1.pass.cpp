@@ -10,28 +10,21 @@
 
 // iterator insert(const_iterator p, charT c);
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <string>
-#include <stdexcept>
-#include <cassert>
 
 #include "test_macros.h"
-
+#include "debug_macros.h"
 
 int main(int, char**)
 {
-#if _LIBCPP_DEBUG >= 1
-    {
-        typedef std::string S;
-        S s;
-        S s2;
-        s.insert(s2.begin(), '1');
-        assert(false);
-    }
-#endif
+    typedef std::string S;
+    S s;
+    S s2;
+    TEST_LIBCPP_ASSERT_FAILURE(s.insert(s2.begin(), '1'), "Attempted to subtract incompatible iterators");
 
-  return 0;
+    return 0;
 }

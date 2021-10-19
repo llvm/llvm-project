@@ -9,7 +9,6 @@
 #include "ASTStructExtractor.h"
 
 #include "lldb/Utility/Log.h"
-#include "stdlib.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -21,6 +20,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 using namespace llvm;
 using namespace clang;
@@ -38,7 +38,7 @@ ASTStructExtractor::ASTStructExtractor(ASTConsumer *passthrough,
   m_passthrough_sema = dyn_cast<SemaConsumer>(passthrough);
 }
 
-ASTStructExtractor::~ASTStructExtractor() {}
+ASTStructExtractor::~ASTStructExtractor() = default;
 
 void ASTStructExtractor::Initialize(ASTContext &Context) {
   m_ast_context = &Context;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-unused-raii %t
+// RUN: %check_clang_tidy %s bugprone-unused-raii %t -- -- -fno-delayed-template-parsing
 
 struct Foo {
   Foo();
@@ -36,6 +36,52 @@ struct Ctor {
   }
 };
 
+template <typename T>
+void templ() {
+  T();
+}
+
+template <typename T>
+void neverInstantiated() {
+  T();
+}
+
+struct CtorDefaultArg {
+  CtorDefaultArg(int i = 0);
+  ~CtorDefaultArg();
+};
+
+template <typename T>
+struct TCtorDefaultArg {
+  TCtorDefaultArg(T i = 0);
+  ~TCtorDefaultArg();
+};
+
+struct CtorTwoDefaultArg {
+  CtorTwoDefaultArg(int i = 0, bool b = false);
+  ~CtorTwoDefaultArg();
+};
+
+template <typename T>
+void templatetest() {
+  TCtorDefaultArg<T>();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<T> give_me_a_name;
+  TCtorDefaultArg<T>{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<T> give_me_a_name;
+
+  TCtorDefaultArg<T>(T{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<T> give_me_a_name(T{});
+  TCtorDefaultArg<T>{T{}};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<T> give_me_a_name{T{}};
+
+  int i = 0;
+  (void)i;
+}
+
 void test() {
   Foo(42);
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
@@ -53,6 +99,32 @@ void test() {
   FooBar();
 // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
 // CHECK-FIXES: FooBar give_me_a_name;
+
+  Foo{42};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: Foo give_me_a_name{42};
+  FooBar{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: FooBar give_me_a_name;
+
+  CtorDefaultArg();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: CtorDefaultArg give_me_a_name;
+
+  CtorTwoDefaultArg();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: CtorTwoDefaultArg give_me_a_name;
+
+  TCtorDefaultArg<int>();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<int> give_me_a_name;
+
+  TCtorDefaultArg<int>{};
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: object destroyed immediately after creation; did you mean to name the object?
+  // CHECK-FIXES: TCtorDefaultArg<int> give_me_a_name;
+
+  templ<FooBar>();
+  templ<Bar>();
 
   Bar();
   f();

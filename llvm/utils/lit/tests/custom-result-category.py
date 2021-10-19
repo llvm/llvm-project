@@ -1,7 +1,7 @@
 # UNSUPPORTED: system-windows
 # Test lit.main.add_result_category() extension API.
 
-# RUN: not %{lit} -j 1 %{inputs}/custom-result-category | FileCheck %s
+# RUN: not %{lit} %{inputs}/custom-result-category | FileCheck %s
 
 # CHECK: CUSTOM_PASS: custom-result-category :: test1.txt
 # CHECK: CUSTOM_FAILURE: custom-result-category :: test2.txt

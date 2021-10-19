@@ -2,5 +2,7 @@
   "phabricator.uri" : "https://reviews.llvm.org/",
   "repository.callsign" : "G",
   "conduit_uri" : "https://reviews.llvm.org/",
-  "base": "git:HEAD^"
+  "base": "git:HEAD^",
+  "arc.land.onto.default": "main",
+  "arc.land.onto": ["main"]
 }

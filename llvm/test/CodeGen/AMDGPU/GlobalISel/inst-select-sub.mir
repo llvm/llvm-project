@@ -2,7 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX6 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX9 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s  | FileCheck -check-prefix=GFX9 %s
 
 ---
 name:            sub_s32
@@ -35,17 +35,6 @@ body: |
     ; GFX9: [[V_SUB_U32_e64_1:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[S_SUB_I32_]], [[V_SUB_U32_e64_]], 0, implicit $exec
     ; GFX9: [[V_SUB_U32_e64_2:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[V_SUB_U32_e64_1]], [[COPY2]], 0, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_SUB_U32_e64_2]]
-    ; GFX10-LABEL: name: sub_s32
-    ; GFX10: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_vgpr4
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
-    ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
-    ; GFX10: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10: [[S_SUB_I32_:%[0-9]+]]:sreg_32 = S_SUB_I32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX10: [[V_SUB_U32_e64_:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[COPY2]], [[S_SUB_I32_]], 0, implicit $exec
-    ; GFX10: [[V_SUB_U32_e64_1:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[S_SUB_I32_]], [[V_SUB_U32_e64_]], 0, implicit $exec
-    ; GFX10: [[V_SUB_U32_e64_2:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[V_SUB_U32_e64_1]], [[COPY2]], 0, implicit $exec
-    ; GFX10: S_ENDPGM 0, implicit [[V_SUB_U32_e64_2]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:vgpr(s32) = COPY $vgpr0

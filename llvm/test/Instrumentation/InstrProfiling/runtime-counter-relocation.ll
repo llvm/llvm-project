@@ -3,8 +3,9 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
-; RELOC: @__llvm_profile_counter_bias = linkonce_odr hidden global i64 0
+@__profn_foo = private constant [3 x i8] c"foo"
+; RELOC: $__llvm_profile_counter_bias = comdat any
+; RELOC: @__llvm_profile_counter_bias = linkonce_odr hidden global i64 0, comdat
 
 ; CHECK-LABEL: define void @foo
 ; CHECK-NEXT: %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i64 0, i64 0)

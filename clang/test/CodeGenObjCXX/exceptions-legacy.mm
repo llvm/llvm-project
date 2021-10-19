@@ -12,7 +12,7 @@ void test0(id obj) {
     foo();
   }
 }
-// CHECK-LABEL:    define void @_Z5test0P11objc_object(
+// CHECK-LABEL:    define{{.*}} void @_Z5test0P11objc_object(
 //   Enter the @synchronized block.
 // CHECK:      call i32 @objc_sync_enter(i8* [[OBJ:%.*]])
 // CHECK:      call void @objc_exception_try_enter([[BUF_T:%.*]]* nonnull [[BUF:%.*]])
@@ -52,7 +52,7 @@ void test1(id obj, bool *failed) {
     *failed = true;
   }
 }
-// CHECK-LABEL:    define void @_Z5test1P11objc_objectPb(
+// CHECK-LABEL:    define{{.*}} void @_Z5test1P11objc_objectPb(
 //   Enter the @try block.
 // CHECK:      call void @objc_exception_try_enter([[BUF_T]]* nonnull [[BUF:%.*]])
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[BUF_T]], [[BUF_T]]* [[BUF]], i32 0, i32 0, i32 0

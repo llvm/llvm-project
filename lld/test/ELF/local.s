@@ -27,24 +27,6 @@
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: .Labs
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Absolute
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: abs
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Absolute
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: blah
 // CHECK-NEXT:     Value:
 // CHECK-NEXT:     Size: 0
@@ -70,6 +52,24 @@
 // CHECK-NEXT:     Type: None
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: .text
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: abs
+// CHECK-NEXT:     Value:
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other: 0
+// CHECK-NEXT:     Section: Absolute
+// CHECK-NEXT:   }
+// CHECK-NEXT:   Symbol {
+// CHECK-NEXT:     Name: .Labs
+// CHECK-NEXT:     Value:
+// CHECK-NEXT:     Size: 0
+// CHECK-NEXT:     Binding: Local
+// CHECK-NEXT:     Type: None
+// CHECK-NEXT:     Other: 0
+// CHECK-NEXT:     Section: Absolute
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: _start

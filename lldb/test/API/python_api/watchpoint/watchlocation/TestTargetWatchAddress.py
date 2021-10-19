@@ -27,7 +27,6 @@ class TargetWatchAddressAPITestCase(TestBase):
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
 
-    @add_test_categories(['pyapi'])
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
         self.build()
@@ -49,7 +48,7 @@ class TargetWatchAddressAPITestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
@@ -99,7 +98,6 @@ class TargetWatchAddressAPITestCase(TestBase):
 
         # This finishes our test.
 
-    @add_test_categories(['pyapi'])
     # No size constraint on MIPS for watches
     @skipIf(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
     @skipIf(archs=['s390x'])  # Likewise on SystemZ
@@ -124,7 +122,7 @@ class TargetWatchAddressAPITestCase(TestBase):
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)

@@ -10,7 +10,7 @@ define void @g64xh(i64 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB0_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB0_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -31,7 +31,7 @@ define void @g64xh(i64 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
 ; CHECK-X86-NEXT:    jne .LBB0_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB0_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 2048
@@ -52,7 +52,7 @@ define void @g64xl(i64 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB1_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB1_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -73,7 +73,7 @@ define void @g64xl(i64 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testb $8, %al
 ; CHECK-X86-NEXT:    jne .LBB1_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB1_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 8
@@ -94,7 +94,7 @@ define void @g32xh(i32 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB2_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB2_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -115,7 +115,7 @@ define void @g32xh(i32 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
 ; CHECK-X86-NEXT:    jne .LBB2_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB2_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 2048
@@ -136,7 +136,7 @@ define void @g32xl(i32 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB3_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB3_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -157,7 +157,7 @@ define void @g32xl(i32 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testb $8, %al
 ; CHECK-X86-NEXT:    jne .LBB3_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB3_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 8
@@ -178,7 +178,7 @@ define void @g16xh(i16 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB4_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB4_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -200,7 +200,7 @@ define void @g16xh(i16 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testl $2048, %eax # imm = 0x800
 ; CHECK-X86-NEXT:    jne .LBB4_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB4_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i16 %x, 2048
@@ -221,7 +221,7 @@ define void @g16xl(i16 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    jne .LBB5_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB5_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -243,7 +243,7 @@ define void @g16xl(i16 inreg %x) nounwind {
 ; CHECK-X86-NEXT:    testb $8, %al
 ; CHECK-X86-NEXT:    jne .LBB5_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB5_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i16 %x, 8
@@ -266,7 +266,7 @@ define void @g64x16(i64 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB6_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -290,7 +290,7 @@ define void @g64x16(i64 inreg %x) nounwind {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB6_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 32896
   %s = icmp eq i64 %t, 0
@@ -312,7 +312,7 @@ define void @g64x16minsize(i64 inreg %x) nounwind minsize {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB7_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -334,7 +334,7 @@ define void @g64x16minsize(i64 inreg %x) nounwind minsize {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB7_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 32896
   %s = icmp eq i64 %t, 0
@@ -356,7 +356,7 @@ define void @g32x16(i32 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB8_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -380,7 +380,7 @@ define void @g32x16(i32 inreg %x) nounwind {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB8_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 32896
   %s = icmp eq i32 %t, 0
@@ -402,7 +402,7 @@ define void @g32x16minsize(i32 inreg %x) nounwind minsize {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB9_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -424,7 +424,7 @@ define void @g32x16minsize(i32 inreg %x) nounwind minsize {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB9_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 32896
   %s = icmp eq i32 %t, 0
@@ -446,7 +446,7 @@ define void @g64x32(i64 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB10_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -470,7 +470,7 @@ define void @g64x32(i64 inreg %x) nounwind {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB10_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 268468352
   %s = icmp eq i64 %t, 0
@@ -492,7 +492,7 @@ define void @truncand32(i16 inreg %x) nounwind {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB11_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -517,7 +517,7 @@ define void @truncand32(i16 inreg %x) nounwind {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB11_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i16 %x, 2049
   %s = icmp eq i16 %t, 0
@@ -539,7 +539,7 @@ define void @testw(i16 inreg %x) nounwind minsize {
 ; CHECK-LINUX64-NEXT:    retq
 ; CHECK-LINUX64-NEXT:  .LBB12_1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:    retq
 ;
@@ -562,7 +562,7 @@ define void @testw(i16 inreg %x) nounwind minsize {
 ; CHECK-X86-NEXT:  # %bb.2: # %no
 ; CHECK-X86-NEXT:    retl
 ; CHECK-X86-NEXT:  .LBB12_1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:    retl
   %t = and i16 %x, 2049
   %s = icmp eq i16 %t, 0
@@ -582,7 +582,7 @@ define void @and16_trunc_8_sign(i16 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB13_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB13_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -603,7 +603,7 @@ define void @and16_trunc_8_sign(i16 %x) nounwind {
 ; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB13_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB13_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i16 %x, 128
@@ -625,7 +625,7 @@ define void @and32_trunc_8_sign(i32 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB14_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB14_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -646,7 +646,7 @@ define void @and32_trunc_8_sign(i32 %x) nounwind {
 ; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB14_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB14_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 128
@@ -668,7 +668,7 @@ define void @and64_trunc_8_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB15_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB15_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -689,7 +689,7 @@ define void @and64_trunc_8_sign(i64 %x) nounwind {
 ; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB15_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB15_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 128
@@ -712,7 +712,7 @@ define void @and32_trunc_16_sign(i32 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB16_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB16_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -736,7 +736,7 @@ define void @and32_trunc_16_sign(i32 %x) nounwind {
 ; CHECK-X86-NEXT:    testw %ax, %ax
 ; CHECK-X86-NEXT:    js .LBB16_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB16_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 32768
@@ -758,7 +758,7 @@ define void @and32_trunc_16_sign_minsize(i32 %x) minsize nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB17_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB17_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -780,7 +780,7 @@ define void @and32_trunc_16_sign_minsize(i32 %x) minsize nounwind {
 ; CHECK-X86-NEXT:    testw $-32768, %ax # imm = 0x8000
 ; CHECK-X86-NEXT:    js .LBB17_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB17_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i32 %x, 32768
@@ -803,7 +803,7 @@ define void @and64_trunc_16_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB18_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB18_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -827,7 +827,7 @@ define void @and64_trunc_16_sign(i64 %x) nounwind {
 ; CHECK-X86-NEXT:    testw %ax, %ax
 ; CHECK-X86-NEXT:    js .LBB18_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB18_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 32768
@@ -849,7 +849,7 @@ define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB19_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB19_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -870,7 +870,7 @@ define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ; CHECK-X86-NEXT:    testw $-32768, {{[0-9]+}}(%esp) # imm = 0x8000
 ; CHECK-X86-NEXT:    js .LBB19_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB19_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 32768
@@ -892,7 +892,7 @@ define void @and64_trunc_32_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-NEXT:    js .LBB20_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
-; CHECK-LINUX64-NEXT:    callq bar
+; CHECK-LINUX64-NEXT:    callq bar@PLT
 ; CHECK-LINUX64-NEXT:    popq %rax
 ; CHECK-LINUX64-NEXT:  .LBB20_2: # %no
 ; CHECK-LINUX64-NEXT:    retq
@@ -913,7 +913,7 @@ define void @and64_trunc_32_sign(i64 %x) nounwind {
 ; CHECK-X86-NEXT:    testl $-2147483648, {{[0-9]+}}(%esp) # imm = 0x80000000
 ; CHECK-X86-NEXT:    js .LBB20_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
-; CHECK-X86-NEXT:    calll bar
+; CHECK-X86-NEXT:    calll bar@PLT
 ; CHECK-X86-NEXT:  .LBB20_2: # %no
 ; CHECK-X86-NEXT:    retl
   %t = and i64 %x, 2147483648

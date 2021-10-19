@@ -58,12 +58,12 @@ define void @as_paramater() {
 
 ; Check if a sret parameter works in a no-prototype function.
 ; CHECK-LABEL: @sret_param
-; CHECK: call void @make_struct_foo(%struct.foo* sret %foo)
+; CHECK: call void @make_struct_foo(%struct.foo* sret(%struct.foo) %foo)
 %struct.foo = type { i32, i32 }
-declare void @make_struct_foo(%struct.foo* sret, ...) #1
+declare void @make_struct_foo(%struct.foo* sret(%struct.foo), ...) #1
 define void @sret_param() {
   %foo = alloca %struct.foo, align 4
-  call void bitcast (void (%struct.foo*, ...)* @make_struct_foo to void (%struct.foo*)*)(%struct.foo* sret %foo)
+  call void bitcast (void (%struct.foo*, ...)* @make_struct_foo to void (%struct.foo*)*)(%struct.foo* sret(%struct.foo) %foo)
   ret void
 }
 

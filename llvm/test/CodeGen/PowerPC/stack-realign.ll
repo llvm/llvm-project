@@ -11,7 +11,7 @@ declare void @bar(i32*)
 
 @barbaz = external global i32
 
-define void @goo(%struct.s* byval nocapture readonly %a) {
+define void @goo(%struct.s* byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [2 x i32], align 32
   %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
@@ -43,7 +43,7 @@ entry:
 
 ; CHECK: std 3, 48(30)
 
-; CHECK: ld 1, 0(1)
+; CHECK: mr 1, 30
 ; CHECK-DAG: ld [[SR:[0-9]+]], 16(1)
 ; CHECK-DAG: ld 30, -16(1)
 ; CHECK-DAG: mtlr [[SR]]
@@ -69,7 +69,7 @@ entry:
 
 ; CHECK-FP: std 3, 48(30)
 
-; CHECK-FP: ld 1, 0(1)
+; CHECK-FP: mr 1, 30
 ; CHECK-FP-DAG: ld [[SR:[0-9]+]], 16(1)
 ; CHECK-FP-DAG: ld 31, -8(1)
 ; CHECK-FP-DAG: ld 30, -16(1)
@@ -105,7 +105,7 @@ entry:
 ; CHECK-32-PIC:     addic 29, 0, 12
 
 ; The large-frame-size case.
-define void @hoo(%struct.s* byval nocapture readonly %a) {
+define void @hoo(%struct.s* byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [200000 x i32], align 32
   %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0
@@ -174,7 +174,7 @@ entry:
 
 ; Make sure that the FP save area is still allocated correctly relative to
 ; where r30 is saved.
-define void @loo(%struct.s* byval nocapture readonly %a) {
+define void @loo(%struct.s* byval(%struct.s) nocapture readonly %a) {
 entry:
   %x = alloca [2 x i32], align 32
   %a1 = getelementptr inbounds %struct.s, %struct.s* %a, i64 0, i32 0

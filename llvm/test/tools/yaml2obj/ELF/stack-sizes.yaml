@@ -147,7 +147,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=ENTRIES-AND-CONTENT
 
-# ENTRIES-AND-CONTENT: error: .stack_sizes: Content and Entries cannot be used together
+# ENTRIES-AND-CONTENT: error: "Entries" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -162,11 +162,13 @@ Sections:
       - Address: 0x10
         Size:    0x20
 
-## Check we must specify either "Content", "Entries" or "Size" tag when describing .stack_sizes.
+## Check we emit an empty section if neither "Content", "Size" nor "Entries" were set.
 
-# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readelf --sections %t6 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: .stack_sizes: one of Content, Entries and Size must be specified
+# NO-TAGS: [Nr] Name         Type     Address          Off    Size
+# NO-TAGS: [ 1] .stack_sizes PROGBITS 0000000000000000 000040 000000
 
 --- !ELF
 FileHeader:
@@ -181,7 +183,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=ENTRIES-AND-SIZE
 
-# ENTRIES-AND-SIZE: .stack_sizes: Size and Entries cannot be used together
+# ENTRIES-AND-SIZE: error: "Entries" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -244,7 +246,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=10 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
 
-# SIZE-CONTENT-ERR: error: .stack_sizes: Size must be greater than or equal to the content size
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
 
 --- !ELF
 FileHeader:

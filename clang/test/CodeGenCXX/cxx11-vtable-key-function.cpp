@@ -10,7 +10,7 @@ struct X {
 X::~X() = default;
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test11XE = unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test11XE ={{.*}} unnamed_addr constant
 }
 
 namespace Test2 {
@@ -22,7 +22,7 @@ struct X {
 void X::f() {}
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test21XE = unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test21XE ={{.*}} unnamed_addr constant
 }
 
 namespace Test3 {
@@ -34,5 +34,5 @@ struct X {
 void X::f() {}
 
 // Verify that the vtable is emitted.
-// CHECK-DAG: @_ZTVN5Test31XE = unnamed_addr constant
+// CHECK-DAG: @_ZTVN5Test31XE ={{.*}} unnamed_addr constant
 }

@@ -16,7 +16,9 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Casting.h"
+#include <functional>
 #include <type_traits>
 
 namespace mlir {
@@ -79,10 +81,14 @@ public:
 
   bool operator!() const { return expr == nullptr; }
 
-  template <typename U> bool isa() const;
-  template <typename U> U dyn_cast() const;
-  template <typename U> U dyn_cast_or_null() const;
-  template <typename U> U cast() const;
+  template <typename U>
+  bool isa() const;
+  template <typename U>
+  U dyn_cast() const;
+  template <typename U>
+  U dyn_cast_or_null() const;
+  template <typename U>
+  U cast() const;
 
   MLIRContext *getContext() const;
 
@@ -110,6 +116,9 @@ public:
   /// Return true if the affine expression involves AffineDimExpr `position`.
   bool isFunctionOfDim(unsigned position) const;
 
+  /// Return true if the affine expression involves AffineSymbolExpr `position`.
+  bool isFunctionOfSymbol(unsigned position) const;
+
   /// Walk all of the AffineExpr's in this expression in postorder.
   void walk(std::function<void(AffineExpr)> callback) const;
 
@@ -120,6 +129,12 @@ public:
   AffineExpr replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
                                    ArrayRef<AffineExpr> symReplacements) const;
 
+  /// Dim-only version of replaceDimsAndSymbols.
+  AffineExpr replaceDims(ArrayRef<AffineExpr> dimReplacements) const;
+
+  /// Symbol-only version of replaceDimsAndSymbols.
+  AffineExpr replaceSymbols(ArrayRef<AffineExpr> symReplacements) const;
+
   /// Sparse replace method. Replace `expr` by `replacement` and return the
   /// modified expression tree.
   AffineExpr replace(AffineExpr expr, AffineExpr replacement) const;
@@ -129,9 +144,15 @@ public:
   /// `*this` and apply replace with `map` on its subexpressions.
   AffineExpr replace(const DenseMap<AffineExpr, AffineExpr> &map) const;
 
-  /// Replace symbols[0 .. numDims - 1] by
-  /// symbols[shift .. shift + numDims - 1].
-  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift) const;
+  /// Replace dims[offset ... numDims)
+  /// by dims[offset + shift ... shift + numDims).
+  AffineExpr shiftDims(unsigned numDims, unsigned shift,
+                       unsigned offset = 0) const;
+
+  /// Replace symbols[offset ... numSymbols)
+  /// by symbols[offset + shift ... shift + numSymbols).
+  AffineExpr shiftSymbols(unsigned numSymbols, unsigned shift,
+                          unsigned offset = 0) const;
 
   AffineExpr operator+(int64_t v) const;
   AffineExpr operator+(AffineExpr other) const;
@@ -163,6 +184,15 @@ public:
   AffineExpr compose(AffineMap map) const;
 
   friend ::llvm::hash_code hash_value(AffineExpr arg);
+
+  /// Methods supporting C API.
+  const void *getAsOpaquePointer() const {
+    return static_cast<const void *>(expr);
+  }
+  static AffineExpr getFromOpaquePointer(const void *pointer) {
+    return AffineExpr(
+        reinterpret_cast<ImplType *>(const_cast<void *>(pointer)));
+  }
 
 protected:
   ImplType *expr;
@@ -236,7 +266,8 @@ AffineExpr getAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
 
 raw_ostream &operator<<(raw_ostream &os, AffineExpr expr);
 
-template <typename U> bool AffineExpr::isa() const {
+template <typename U>
+bool AffineExpr::isa() const {
   if (std::is_same<U, AffineBinaryOpExpr>::value)
     return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
   if (std::is_same<U, AffineDimExpr>::value)
@@ -246,15 +277,18 @@ template <typename U> bool AffineExpr::isa() const {
   if (std::is_same<U, AffineConstantExpr>::value)
     return getKind() == AffineExprKind::Constant;
 }
-template <typename U> U AffineExpr::dyn_cast() const {
+template <typename U>
+U AffineExpr::dyn_cast() const {
   if (isa<U>())
     return U(expr);
   return U(nullptr);
 }
-template <typename U> U AffineExpr::dyn_cast_or_null() const {
+template <typename U>
+U AffineExpr::dyn_cast_or_null() const {
   return (!*this || !isa<U>()) ? U(nullptr) : U(expr);
 }
-template <typename U> U AffineExpr::cast() const {
+template <typename U>
+U AffineExpr::cast() const {
   assert(isa<U>());
   return U(expr);
 }
@@ -267,20 +301,37 @@ AffineExpr simplifyAffineExpr(AffineExpr expr, unsigned numDims,
                               unsigned numSymbols);
 
 namespace detail {
-template <int N> void bindDims(MLIRContext *ctx) {}
+template <int N>
+void bindDims(MLIRContext *ctx) {}
 
 template <int N, typename AffineExprTy, typename... AffineExprTy2>
-void bindDims(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &... exprs) {
+void bindDims(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
   e = getAffineDimExpr(N, ctx);
   bindDims<N + 1, AffineExprTy2 &...>(ctx, exprs...);
+}
+
+template <int N>
+void bindSymbols(MLIRContext *ctx) {}
+
+template <int N, typename AffineExprTy, typename... AffineExprTy2>
+void bindSymbols(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
+  e = getAffineSymbolExpr(N, ctx);
+  bindSymbols<N + 1, AffineExprTy2 &...>(ctx, exprs...);
 }
 } // namespace detail
 
 /// Bind a list of AffineExpr references to DimExpr at positions:
 ///   [0 .. sizeof...(exprs)]
 template <typename... AffineExprTy>
-void bindDims(MLIRContext *ctx, AffineExprTy &... exprs) {
+void bindDims(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindDims<0>(ctx, exprs...);
+}
+
+/// Bind a list of AffineExpr references to SymbolExpr at positions:
+///   [0 .. sizeof...(exprs)]
+template <typename... AffineExprTy>
+void bindSymbols(MLIRContext *ctx, AffineExprTy &...exprs) {
+  detail::bindSymbols<0>(ctx, exprs...);
 }
 
 } // namespace mlir
@@ -288,7 +339,8 @@ void bindDims(MLIRContext *ctx, AffineExprTy &... exprs) {
 namespace llvm {
 
 // AffineExpr hash just like pointers
-template <> struct DenseMapInfo<mlir::AffineExpr> {
+template <>
+struct DenseMapInfo<mlir::AffineExpr> {
   static mlir::AffineExpr getEmptyKey() {
     auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));

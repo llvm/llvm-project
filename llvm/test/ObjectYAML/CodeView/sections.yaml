@@ -13,7 +13,7 @@ sections:
     Types:
       - Kind:            LF_TYPESERVER2
         TypeServer2:
-          Guid:            '{01DF191B-22BF-6B42-96CE-5258B8329FE5}'
+          Guid:            '{1B19DF01-BF22-426B-96CE-5258B8329FE5}'
           Age:             24
           Name:            'C:\src\llvm-project\build\vc140.pdb'
   - Name:            '.debug$H'
@@ -66,7 +66,7 @@ symbols:
 # CHECK:     Types:
 # CHECK:       - Kind:            LF_TYPESERVER2
 # CHECK:         TypeServer2:
-# CHECK:           Guid:            '{01DF191B-22BF-6B42-96CE-5258B8329FE5}'
+# CHECK:           Guid:            '{1B19DF01-BF22-426B-96CE-5258B8329FE5}'
 # CHECK:           Age:             24
 # CHECK:           Name:            'C:\src\llvm-project\build\vc140.pdb'
 # CHECK:   - Name:            '.debug$H'

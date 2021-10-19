@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++03 -verify %s
-// RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++03 -Wno-c++11-extensions -triple i386-pc-unknown -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin9 -verify %s
 
 __builtin_va_list ap;
 
@@ -26,6 +26,33 @@ void record_context(int a, ...) {
     // expected-error@+1 {{default argument references parameter 'a'}}
     void meth(int a, int b = (__builtin_va_start(ap, a), 0)) {}
   };
+}
+
+// Ensure the correct behavior for promotable type UB checking.
+void promotable(int a, ...) {
+  enum Unscoped1 { One = 0x7FFFFFFF };
+  (void)__builtin_va_arg(ap, Unscoped1); // ok
+
+  enum Unscoped2 { Two = 0xFFFFFFFF };
+  (void)__builtin_va_arg(ap, Unscoped2); // ok
+
+  enum class Scoped { Three };
+  (void)__builtin_va_arg(ap, Scoped); // ok
+
+  enum Fixed : int { Four };
+  (void)__builtin_va_arg(ap, Fixed); // ok
+
+  enum FixedSmall : char { Five };
+  (void)__builtin_va_arg(ap, FixedSmall); // expected-warning {{second argument to 'va_arg' is of promotable type 'FixedSmall'; this va_arg has undefined behavior because arguments will be promoted to 'int'}}
+
+  enum FixedLarge : long long { Six };
+  (void)__builtin_va_arg(ap, FixedLarge); // ok
+
+  // Ensure that qualifiers are ignored.
+  (void)__builtin_va_arg(ap, const volatile int);  // ok
+
+  // Ensure that signed vs unsigned doesn't matter either.
+  (void)__builtin_va_arg(ap, unsigned int);
 }
 
 #if __cplusplus >= 201103L

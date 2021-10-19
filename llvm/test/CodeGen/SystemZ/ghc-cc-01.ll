@@ -2,32 +2,32 @@
 ;
 ; RUN: llc -mtriple=s390x-ibm-linux < %s | FileCheck %s
 
-@base  = external global i64 ; assigned to register: r7
-@sp    = external global i64 ; assigned to register: r8
-@hp    = external global i64 ; assigned to register: r10
-@r1    = external global i64 ; assigned to register: r11
-@r2    = external global i64 ; assigned to register: r12
-@r3    = external global i64 ; assigned to register: r13
-@r4    = external global i64 ; assigned to register: r6
-@r5    = external global i64 ; assigned to register: r2
-@r6    = external global i64 ; assigned to register: r3
-@r7    = external global i64 ; assigned to register: r4
-@r8    = external global i64 ; assigned to register: r5
-@splim = external global i64 ; assigned to register: r9
+@base  = external dso_local global i64 ; assigned to register: r7
+@sp    = external dso_local global i64 ; assigned to register: r8
+@hp    = external dso_local global i64 ; assigned to register: r10
+@r1    = external dso_local global i64 ; assigned to register: r11
+@r2    = external dso_local global i64 ; assigned to register: r12
+@r3    = external dso_local global i64 ; assigned to register: r13
+@r4    = external dso_local global i64 ; assigned to register: r6
+@r5    = external dso_local global i64 ; assigned to register: r2
+@r6    = external dso_local global i64 ; assigned to register: r3
+@r7    = external dso_local global i64 ; assigned to register: r4
+@r8    = external dso_local global i64 ; assigned to register: r5
+@splim = external dso_local global i64 ; assigned to register: r9
 
-@f1 = external global float  ; assigned to register: s8
-@f2 = external global float  ; assigned to register: s9
-@f3 = external global float  ; assigned to register: s10
-@f4 = external global float  ; assigned to register: s11
-@f5 = external global float  ; assigned to register: s0
-@f6 = external global float  ; assigned to register: s1
+@f1 = external dso_local global float  ; assigned to register: s8
+@f2 = external dso_local global float  ; assigned to register: s9
+@f3 = external dso_local global float  ; assigned to register: s10
+@f4 = external dso_local global float  ; assigned to register: s11
+@f5 = external dso_local global float  ; assigned to register: s0
+@f6 = external dso_local global float  ; assigned to register: s1
 
-@d1 = external global double ; assigned to register: d12
-@d2 = external global double ; assigned to register: d13
-@d3 = external global double ; assigned to register: d14
-@d4 = external global double ; assigned to register: d15
-@d5 = external global double ; assigned to register: d2
-@d6 = external global double ; assigned to register: d3
+@d1 = external dso_local global double ; assigned to register: d12
+@d2 = external dso_local global double ; assigned to register: d13
+@d3 = external dso_local global double ; assigned to register: d14
+@d4 = external dso_local global double ; assigned to register: d15
+@d5 = external dso_local global double ; assigned to register: d2
+@d6 = external dso_local global double ; assigned to register: d3
 
 define ghccc void @foo() nounwind {
 entry:

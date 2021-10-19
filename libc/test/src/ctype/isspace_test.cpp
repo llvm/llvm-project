@@ -9,7 +9,7 @@
 #include "src/ctype/isspace.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsSpace, DefaultLocale) {
+TEST(LlvmLibcIsSpace, DefaultLocale) {
   // Loops through all characters, verifying that space characters
   // return true and everything else returns false.
   // Hexadecimal | Symbol

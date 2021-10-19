@@ -1538,6 +1538,14 @@ vmovq %xmm0, %rax
 // CHECK:  encoding: [0x0f,0x01,0xfc]
                 clzero %rax
 
+// CHECK:       tlbsync 
+// CHECK:  encoding: [0x0f,0x01,0xff]
+                tlbsync
+
+// CHECK:       invlpgb
+// CHECK:  encoding: [0x0f,0x01,0xfe]
+                invlpgb %rax, %edx 
+
 // CHECK: 	movl %r15d, (%r15,%r15)
 // CHECK:  encoding: [0x47,0x89,0x3c,0x3f]
 movl %r15d, (%r15,%r15)
@@ -1998,3 +2006,55 @@ movl $1, (%rbp,%rbx,4)
 movl $1, (%r13,%rbx,4)
 {disp8} movl $1, (%r13,%rbx,4)
 {disp32} movl $1, (%r13,%rbx,4)
+
+// CHECK: seamcall
+// CHECK: encoding: [0x66,0x0f,0x01,0xcf]
+seamcall
+
+// CHECK: seamret
+// CHECK: encoding: [0x66,0x0f,0x01,0xcd]
+seamret
+
+// CHECK: seamops
+// CHECK: encoding: [0x66,0x0f,0x01,0xce]
+seamops
+
+// CHECK: tdcall
+// CHECK: encoding: [0x66,0x0f,0x01,0xcc]
+tdcall
+
+// CHECK: hreset
+// CHECK: encoding: [0xf3,0x0f,0x3a,0xf0,0xc0,0x01]
+hreset $1
+
+// CHECK: uiret
+// CHECK: encoding: [0xf3,0x0f,0x01,0xec]
+uiret
+
+// CHECK: clui
+// CHECK: encoding: [0xf3,0x0f,0x01,0xee]
+clui
+
+// CHECK: stui
+// CHECK: encoding: [0xf3,0x0f,0x01,0xef]
+stui
+
+// CHECK: testui
+// CHECK: encoding: [0xf3,0x0f,0x01,0xed]
+testui
+
+// CHECK: senduipi %rax
+// CHECK: encoding: [0xf3,0x0f,0xc7,0xf0]
+senduipi %rax
+
+// CHECK: senduipi %rdx
+// CHECK: encoding: [0xf3,0x0f,0xc7,0xf2]
+senduipi %rdx
+
+// CHECK: senduipi %r8
+// CHECK: encoding: [0xf3,0x41,0x0f,0xc7,0xf0]
+senduipi %r8
+
+// CHECK: senduipi %r13
+// CHECK: encoding: [0xf3,0x41,0x0f,0xc7,0xf5]
+senduipi %r13

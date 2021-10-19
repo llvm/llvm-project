@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -36,14 +37,14 @@ protected:
     // initialize a target. A skeleton Target for unittests would allow us to
     // always run these tests.
     if (!T)
-      return;
+      GTEST_SKIP();
 
     TargetOptions Options;
     TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
         T->createTargetMachine("AArch64", "", "+sve", Options, None, None,
                                CodeGenOpt::Aggressive)));
     if (!TM)
-      return;
+      GTEST_SKIP();
 
     SMDiagnostic SMError;
     M = parseAssemblyString(Assembly, SMError, Context);
@@ -84,8 +85,6 @@ protected:
 };
 
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto Int16VT = EVT::getIntegerVT(Context, 16);
@@ -99,8 +98,6 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
 }
 
 TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto Int16VT = EVT::getIntegerVT(Context, 16);
@@ -118,8 +115,6 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBitsSVE_ZERO_EXTEND_VECTOR_INREG) {
 }
 
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
   auto VecVT = EVT::getVectorVT(Context, IntVT, 3);
@@ -133,8 +128,6 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto Int16VT = EVT::getIntegerVT(Context, 16);
@@ -147,8 +140,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
   auto Int16VT = EVT::getIntegerVT(Context, 16);
@@ -161,8 +152,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_SIGN_EXTEND_VECTOR_INREG) 
 }
 
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
   auto VecVT = EVT::getVectorVT(Context, IntVT, 3);
@@ -175,9 +164,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_EXTRACT_SUBVECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -197,9 +183,6 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -226,9 +209,6 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsNEON) {
 }
 
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -253,8 +233,6 @@ TEST_F(AArch64SelectionDAGTest, SimplifyDemandedBitsSVE) {
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_ADD) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
   auto UnknownOp = DAG->getRegister(0, IntVT);
@@ -274,8 +252,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_ADD) {
 
 // Piggy-backing on the AArch64 tests to verify SelectionDAG::computeKnownBits.
 TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
-  if (!TM)
-    return;
   SDLoc Loc;
   auto IntVT = EVT::getIntegerVT(Context, 8);
   auto N0 = DAG->getConstant(0x55, Loc, IntVT);
@@ -294,9 +270,6 @@ TEST_F(AArch64SelectionDAGTest, ComputeKnownBits_SUB) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -317,9 +290,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -344,9 +314,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_ADD_of_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -367,9 +334,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -394,9 +358,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -412,9 +373,6 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_BUILD_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -433,9 +391,6 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Fixed_ADD_of_BUILD_VECTOR) 
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -451,9 +406,6 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_SPLAT_VECTOR) {
 }
 
 TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTOR) {
-  if (!TM)
-    return;
-
   TargetLowering TL(*TM);
 
   SDLoc Loc;
@@ -471,46 +423,149 @@ TEST_F(AArch64SelectionDAGTest, getSplatSourceVector_Scalable_ADD_of_SPLAT_VECTO
   EXPECT_EQ(SplatIdx, 0);
 }
 
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableMVT) {
-  if (!TM)
-    return;
+TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
+  TargetLowering TL(*TM);
 
+  SDLoc Loc;
+  unsigned NumElts = 16;
+  MVT IntVT = MVT::i8;
+  MVT VecVT = MVT::getVectorVT(IntVT, NumElts);
+
+  // Base scalar constants.
+  SDValue Val0 = DAG->getConstant(0, Loc, IntVT);
+  SDValue Val1 = DAG->getConstant(1, Loc, IntVT);
+  SDValue Val2 = DAG->getConstant(2, Loc, IntVT);
+  SDValue Val3 = DAG->getConstant(3, Loc, IntVT);
+  SDValue UndefVal = DAG->getUNDEF(IntVT);
+
+  // Build some repeating sequences.
+  SmallVector<SDValue, 16> Pattern1111, Pattern1133, Pattern0123;
+  for(int I = 0; I != 4; ++I) {
+    Pattern1111.append(4, Val1);
+    Pattern1133.append(2, Val1);
+    Pattern1133.append(2, Val3);
+    Pattern0123.push_back(Val0);
+    Pattern0123.push_back(Val1);
+    Pattern0123.push_back(Val2);
+    Pattern0123.push_back(Val3);
+  }
+
+  // Build a non-pow2 repeating sequence.
+  SmallVector<SDValue, 16> Pattern022;
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+  Pattern022.append(2, Val2);
+  Pattern022.push_back(Val0);
+
+  // Build a non-repeating sequence.
+  SmallVector<SDValue, 16> Pattern1_3;
+  Pattern1_3.append(8, Val1);
+  Pattern1_3.append(8, Val3);
+
+  // Add some undefs to make it trickier.
+  Pattern1111[1] = Pattern1111[2] = Pattern1111[15] = UndefVal;
+  Pattern1133[0] = Pattern1133[2] = UndefVal;
+
+  auto *BV1111 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1111));
+  auto *BV1133 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1133));
+  auto *BV0123=
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern0123));
+  auto *BV022 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern022));
+  auto *BV1_3 =
+      cast<BuildVectorSDNode>(DAG->getBuildVector(VecVT, Loc, Pattern1_3));
+
+  // Check for sequences.
+  SmallVector<SDValue, 16> Seq1111, Seq1133, Seq0123, Seq022, Seq1_3;
+  BitVector Undefs1111, Undefs1133, Undefs0123, Undefs022, Undefs1_3;
+
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 3u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], Val1);
+
+  EXPECT_TRUE(BV1133->getRepeatedSequence(Seq1133, &Undefs1133));
+  EXPECT_EQ(Undefs1133.count(), 2u);
+  EXPECT_EQ(Seq1133.size(), 4u);
+  EXPECT_EQ(Seq1133[0], Val1);
+  EXPECT_EQ(Seq1133[1], Val1);
+  EXPECT_EQ(Seq1133[2], Val3);
+  EXPECT_EQ(Seq1133[3], Val3);
+
+  EXPECT_TRUE(BV0123->getRepeatedSequence(Seq0123, &Undefs0123));
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
+  EXPECT_EQ(Seq0123[0], Val0);
+  EXPECT_EQ(Seq0123[1], Val1);
+  EXPECT_EQ(Seq0123[2], Val2);
+  EXPECT_EQ(Seq0123[3], Val3);
+
+  EXPECT_FALSE(BV022->getRepeatedSequence(Seq022, &Undefs022));
+  EXPECT_FALSE(BV1_3->getRepeatedSequence(Seq1_3, &Undefs1_3));
+
+  // Try again with DemandedElts masks.
+  APInt Mask1111_0 = APInt::getOneBitSet(NumElts, 0);
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_0, Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 0u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], Val1);
+
+  APInt Mask1111_1 = APInt::getOneBitSet(NumElts, 2);
+  EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_1, Seq1111, &Undefs1111));
+  EXPECT_EQ(Undefs1111.count(), 1u);
+  EXPECT_EQ(Seq1111.size(), 1u);
+  EXPECT_EQ(Seq1111[0], UndefVal);
+
+  APInt Mask0123 = APInt(NumElts, 0x7777);
+  EXPECT_TRUE(BV0123->getRepeatedSequence(Mask0123, Seq0123, &Undefs0123));
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
+  EXPECT_EQ(Seq0123[0], Val0);
+  EXPECT_EQ(Seq0123[1], Val1);
+  EXPECT_EQ(Seq0123[2], Val2);
+  EXPECT_EQ(Seq0123[3], SDValue());
+
+  APInt Mask1_3 = APInt::getHighBitsSet(16, 8);
+  EXPECT_TRUE(BV1_3->getRepeatedSequence(Mask1_3, Seq1_3, &Undefs1_3));
+  EXPECT_EQ(Undefs1_3.count(), 0u);
+  EXPECT_EQ(Seq1_3.size(), 1u);
+  EXPECT_EQ(Seq1_3[0], Val3);
+}
+
+TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableMVT) {
   MVT VT = MVT::nxv4i64;
   EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
   ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
 }
 
 TEST_F(AArch64SelectionDAGTest, getTypeConversion_PromoteScalableMVT) {
-  if (!TM)
-    return;
-
   MVT VT = MVT::nxv2i32;
   EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypePromoteInteger);
   ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
 }
 
 TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeMVT_nxv1f32) {
-  if (!TM)
-    return;
-
   MVT VT = MVT::nxv1f32;
   EXPECT_NE(getTypeAction(VT), TargetLoweringBase::TypeScalarizeVector);
   ASSERT_TRUE(getTypeToTransformTo(VT).isScalableVector());
 }
 
 TEST_F(AArch64SelectionDAGTest, getTypeConversion_SplitScalableEVT) {
-  if (!TM)
-    return;
-
   EVT VT = EVT::getVectorVT(Context, MVT::i64, 256, true);
   EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeSplitVector);
   EXPECT_EQ(getTypeToTransformTo(VT), VT.getHalfNumVectorElementsVT(Context));
 }
 
 TEST_F(AArch64SelectionDAGTest, getTypeConversion_WidenScalableEVT) {
-  if (!TM)
-    return;
-
   EVT FromVT = EVT::getVectorVT(Context, MVT::i64, 6, true);
   EVT ToVT = EVT::getVectorVT(Context, MVT::i64, 8, true);
 
@@ -518,12 +573,22 @@ TEST_F(AArch64SelectionDAGTest, getTypeConversion_WidenScalableEVT) {
   EXPECT_EQ(getTypeToTransformTo(FromVT), ToVT);
 }
 
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeEVT_nxv1f128) {
-  if (!TM)
-    return;
+TEST_F(AArch64SelectionDAGTest,
+       getTypeConversion_ScalarizeScalableEVT_nxv1f128) {
+  EVT VT = EVT::getVectorVT(Context, MVT::f128, ElementCount::getScalable(1));
+  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeScalarizeScalableVector);
+  EXPECT_EQ(getTypeToTransformTo(VT), MVT::f128);
+}
 
-  EVT FromVT = EVT::getVectorVT(Context, MVT::f128, 1, true);
-  EXPECT_DEATH(getTypeAction(FromVT), "Cannot legalize this vector");
+TEST_F(AArch64SelectionDAGTest, TestFold_STEP_VECTOR) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto VecVT = EVT::getVectorVT(Context, MVT::i8, 16, true);
+
+  // Should create SPLAT_VECTOR
+  SDValue Zero = DAG->getConstant(0, Loc, IntVT);
+  SDValue Op = DAG->getNode(ISD::STEP_VECTOR, Loc, VecVT, Zero);
+  EXPECT_EQ(Op.getOpcode(), ISD::SPLAT_VECTOR);
 }
 
 } // end namespace llvm

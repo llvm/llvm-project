@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cerrno>
+#include <cstdint>
 #include <cstring>
-#include <errno.h>
-#include <stdint.h>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -95,7 +95,7 @@ RegisterContextPOSIX_powerpc::RegisterContextPOSIX_powerpc(
   m_register_info_up.reset(register_info);
 }
 
-RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() {}
+RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() = default;
 
 void RegisterContextPOSIX_powerpc::Invalidate() {}
 

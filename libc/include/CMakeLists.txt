@@ -26,6 +26,22 @@ add_gen_header(
 )
 
 add_gen_header(
+  fenv
+  DEF_FILE fenv.h.def
+  GEN_HDR fenv.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_gen_header(
+  inttypes
+  DEF_FILE inttypes.h.def
+  GEN_HDR inttypes.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   math
   DEF_FILE math.h.def
   GEN_HDR math.h
@@ -46,6 +62,14 @@ add_gen_header(
   string
   DEF_FILE string.h.def
   GEN_HDR string.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_gen_header(
+  time
+  DEF_FILE time.h.def
+  GEN_HDR time.h
   DEPENDS
     .llvm_libc_common_h
 )
@@ -103,6 +127,7 @@ add_gen_header(
   DEF_FILE unistd.h.def
   GEN_HDR unistd.h
   DEPENDS
+    .libc_posix_types
     .llvm_libc_common_h
 )
 

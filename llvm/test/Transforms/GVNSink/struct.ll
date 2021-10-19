@@ -1,4 +1,5 @@
 ; RUN: opt -gvn-sink -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-sink -S < %s | FileCheck %s
 
 %struct = type {i32, i32}
 %struct2 = type { [ 2 x i32], i32 }

@@ -15,8 +15,8 @@
 ;
 ; RUN: opt -S -loop-vectorize -enable-vplan-native-path < %s | FileCheck %s
 ; CHECK-LABEL: vector.ph:
-; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> undef, i32 %n, i32 0
-; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK: %[[SplatVal:.*]] = insertelement <4 x i32> poison, i32 %n, i32 0
+; CHECK: %[[Splat:.*]] = shufflevector <4 x i32> %[[SplatVal]], <4 x i32> poison, <4 x i32> zeroinitializer
 
 ; CHECK-LABEL: vector.body:
 ; CHECK: %[[Ind:.*]] = phi i64 [ 0, %vector.ph ], [ %[[IndNext:.*]], %[[ForInc:.*]] ]
@@ -29,7 +29,7 @@
 ; CHECK: br label %[[InnerLoop:.+]]
 
 ; CHECK: [[InnerLoop]]:
-; CHECK: %[[InnerPhi:.*]] = phi <4 x i64> [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ], [ zeroinitializer, %vector.body ]
+; CHECK: %[[InnerPhi:.*]] = phi <4 x i64> [ zeroinitializer, %vector.body ], [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ]
 ; CHECK: %[[AAddr2:.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* @arr, i64 0, <4 x i64> %[[InnerPhi]], <4 x i64> %[[VecInd]]
 ; CHECK: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %[[StoreVal]], <4 x i32*> %[[AAddr2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true
 ; CHECK: %[[InnerPhiNext]] = add nuw nsw <4 x i64> %[[InnerPhi]], <i64 1, i64 1, i64 1, i64 1>
@@ -38,7 +38,7 @@
 ; CHECK: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; CHECK: [[ForInc]]:
-; CHECK: %[[IndNext]] = add i64 %[[Ind]], 4
+; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
 ; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], 8
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body

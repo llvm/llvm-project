@@ -5,7 +5,7 @@
 ; aligned.
 @T3_retval = common global <16 x float> zeroinitializer, align 16
 
-define void @test(<16 x float>* noalias sret %agg.result) nounwind ssp {
+define void @test(<16 x float>* noalias sret(<16 x float>) %agg.result) nounwind ssp {
 entry:
 ; CHECK: test
 ; CHECK: stp [[Q1:q[0-9]+]], [[Q2:q[0-9]+]], [sp, #32]

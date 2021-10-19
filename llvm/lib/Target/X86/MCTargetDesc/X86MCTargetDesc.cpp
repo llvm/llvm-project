@@ -26,9 +26,9 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
@@ -332,7 +332,7 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new X86ELFMCAsmInfo(TheTriple);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment()) {
-    if (Options.getAssemblyLanguage().equals_lower("masm"))
+    if (Options.getAssemblyLanguage().equals_insensitive("masm"))
       MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
     else
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
@@ -405,6 +405,7 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
   Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
+                                                  const MCSubtargetInfo *STI,
                                                   uint64_t Addr,
                                                   uint64_t Size) const override;
 };
@@ -532,7 +533,8 @@ bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
 }
 
 Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
-    const MCInst &Inst, uint64_t Addr, uint64_t Size) const {
+    const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
+    uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
   int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
   if (MemOpStart == -1)

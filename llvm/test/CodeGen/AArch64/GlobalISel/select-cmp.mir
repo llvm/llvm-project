@@ -12,7 +12,7 @@ body:             |
     ; CHECK-LABEL: name: cmp_imm_32
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-    ; CHECK: $wzr = SUBSWri [[COPY]], 42, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 42, 0, implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -35,7 +35,7 @@ body:             |
     ; CHECK-LABEL: name: cmp_imm_64
     ; CHECK: liveins: $x0
     ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK: $xzr = SUBSXri [[COPY]], 42, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[COPY]], 42, 0, implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -82,7 +82,7 @@ body:             |
     ; CHECK-LABEL: name: cmp_imm_lookthrough
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-    ; CHECK: $wzr = SUBSWri [[COPY]], 42, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 42, 0, implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -105,7 +105,7 @@ body:             |
     ; CHECK-LABEL: name: cmp_imm_lookthrough_bad_trunc
     ; CHECK: liveins: $w0
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-    ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -115,3 +115,246 @@ body:             |
     %5:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $w0
+    ; CHECK-LABEL: name: cmp_neg_imm_32
+    ; CHECK: liveins: $w0
+    ; CHECK: %reg0:gpr32sp = COPY $w0
+    ; CHECK: [[ADDSWri:%[0-9]+]]:gpr32 = ADDSWri %reg0, 10, 0, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cst:gpr(s32) = G_CONSTANT i32 -10
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s32), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: cmp_neg_imm_64
+    ; CHECK: liveins: $x0
+    ; CHECK: %reg0:gpr64sp = COPY $x0
+    ; CHECK: [[ADDSXri:%[0-9]+]]:gpr64 = ADDSXri %reg0, 10, 0, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s64) = COPY $x0
+    %cst:gpr(s64) = G_CONSTANT i64 -10
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s64), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_neg_imm_invalid
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $w0
+    ; CHECK-LABEL: name: cmp_neg_imm_invalid
+    ; CHECK: liveins: $w0
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %cst:gpr32 = MOVi32imm -5000
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %reg0, %cst, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %cst:gpr(s32) = G_CONSTANT i32 -5000
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg0(s32), %cst
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            cmp_arith_extended_s64
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $x1
+
+    ; CHECK-LABEL: name: cmp_arith_extended_s64
+    ; CHECK: liveins: $w0, $x1
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %reg1:gpr64sp = COPY $x1
+    ; CHECK: [[SUBSXrx:%[0-9]+]]:gpr64 = SUBSXrx %reg1, %reg0, 18, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s64) = COPY $x1
+    %ext:gpr(s64) = G_ZEXT %reg0(s32)
+    %cst:gpr(s64) = G_CONSTANT i64 2
+    %shift:gpr(s64) = G_SHL %ext, %cst(s64)
+    %cmp:gpr(s32) = G_ICMP intpred(ugt), %reg1(s64), %shift
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_arith_extended_s32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $h0
+
+    ; CHECK-LABEL: name: cmp_arith_extended_s32
+    ; CHECK: liveins: $w0, $w1, $h0
+    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, $h0, %subreg.hsub
+    ; CHECK: %reg0:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK: %reg1:gpr32sp = COPY $w1
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY %reg0
+    ; CHECK: [[SUBSWrx:%[0-9]+]]:gpr32 = SUBSWrx %reg1, [[COPY]], 10, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s16) = COPY $h0
+    %reg1:gpr(s32) = COPY $w1
+    %ext:gpr(s32) = G_ZEXT %reg0(s16)
+    %cst:gpr(s32) = G_CONSTANT i32 2
+    %shift:gpr(s32) = G_SHL %ext, %cst(s32)
+    %cmp:gpr(s32) = G_ICMP intpred(ugt), %reg1(s32), %shift
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_arith_extended_shl_too_large
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $x1
+
+    ; The constant on the G_SHL is > 4, so we won't sleect SUBSXrx
+
+    ; CHECK-LABEL: name: cmp_arith_extended_shl_too_large
+    ; CHECK: liveins: $w0, $x1
+    ; CHECK: %reg0:gpr32 = COPY $w0
+    ; CHECK: %reg1:gpr64 = COPY $x1
+    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %reg0, 0
+    ; CHECK: %ext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK: [[SUBSXrs:%[0-9]+]]:gpr64 = SUBSXrs %reg1, %ext, 5, implicit-def $nzcv
+    ; CHECK: %cmp:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
+    ; CHECK: $w0 = COPY %cmp
+    ; CHECK: RET_ReallyLR implicit $w0
+    %reg0:gpr(s32) = COPY $w0
+    %reg1:gpr(s64) = COPY $x1
+    %ext:gpr(s64) = G_ZEXT %reg0(s32)
+    %cst:gpr(s64) = G_CONSTANT i64 5
+    %shift:gpr(s64) = G_SHL %ext, %cst(s64)
+    %cmp:gpr(s32) = G_ICMP intpred(ugt), %reg1(s64), %shift
+    $w0 = COPY %cmp(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_add_rhs
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; The CSINC should use the add's RHS.
+
+    ; CHECK-LABEL: name: cmp_add_rhs
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %cmp_lhs:gpr32 = COPY $w0
+    ; CHECK: %cmp_rhs:gpr32 = COPY $w1
+    ; CHECK: %add_rhs:gpr32 = COPY $w2
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+    ; CHECK: %add:gpr32 = CSINCWr %add_rhs, %add_rhs, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %cmp_lhs:gpr(s32) = COPY $w0
+    %cmp_rhs:gpr(s32) = COPY $w1
+    %add_rhs:gpr(s32) = COPY $w2
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %cmp_lhs(s32), %cmp_rhs
+    %add:gpr(s32) = G_ADD %cmp, %add_rhs
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_add_lhs
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; The CSINC should use the add's LHS.
+
+    ; CHECK-LABEL: name: cmp_add_lhs
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %cmp_lhs:gpr32 = COPY $w0
+    ; CHECK: %cmp_rhs:gpr32 = COPY $w1
+    ; CHECK: %add_lhs:gpr32 = COPY $w2
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+    ; CHECK: %add:gpr32 = CSINCWr %add_lhs, %add_lhs, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %cmp_lhs:gpr(s32) = COPY $w0
+    %cmp_rhs:gpr(s32) = COPY $w1
+    %add_lhs:gpr(s32) = COPY $w2
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %cmp_lhs(s32), %cmp_rhs
+    %add:gpr(s32) = G_ADD %add_lhs, %cmp
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_add_lhs_vector
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $q0, $q1, $q2
+
+    ; We don't emit CSINC with vectors, so there should be no optimization here.
+
+    ; CHECK-LABEL: name: cmp_add_lhs_vector
+    ; CHECK: liveins: $q0, $q1, $q2
+    ; CHECK: %cmp_lhs:fpr128 = COPY $q0
+    ; CHECK: %cmp_rhs:fpr128 = COPY $q1
+    ; CHECK: %add_lhs:fpr128 = COPY $q2
+    ; CHECK: [[CMEQv4i32_:%[0-9]+]]:fpr128 = CMEQv4i32 %cmp_lhs, %cmp_rhs
+    ; CHECK: %add:fpr128 = ADDv4i32 %add_lhs, [[CMEQv4i32_]]
+    ; CHECK: $q0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $q0
+    %cmp_lhs:fpr(<4 x s32>) = COPY $q0
+    %cmp_rhs:fpr(<4 x s32>) = COPY $q1
+    %add_lhs:fpr(<4 x s32>) = COPY $q2
+    %cmp:fpr(<4 x s32>) = G_ICMP intpred(eq), %cmp_lhs(<4 x s32>), %cmp_rhs
+    %add:fpr(<4 x s32>) = G_ADD %add_lhs, %cmp
+    $q0 = COPY %add(<4 x s32>)
+    RET_ReallyLR implicit $q0

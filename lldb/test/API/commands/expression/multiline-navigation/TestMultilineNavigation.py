@@ -18,6 +18,8 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_nav_arrow_up(self):
         """Tests that we can navigate back to the previous line with the up arrow"""
         self.launch()
@@ -40,6 +42,8 @@ class TestCase(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_nav_arrow_down(self):
         """Tests that we can navigate to the next line with the down arrow"""
         self.launch()
@@ -65,5 +69,39 @@ class TestCase(PExpectTest):
         # If the expression is '333' then arrow down failed to get
         # us back to the second line.
         self.child.expect_exact("(int) $0 = 334")
+
+        self.quit()
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr48316')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
+    def test_nav_arrow_up_empty(self):
+        """
+        Tests that navigating with the up arrow doesn't crash and skips
+        empty history entries.
+        """
+        self.launch()
+
+        # Create a real history entry '456' and then follow up with an
+        # empty entry (that shouldn't be saved).
+        self.child.sendline("expr")
+        self.child.expect_exact("terminate with an empty line to evaluate")
+        self.child.send("456\n\n")
+        self.expect_prompt()
+
+        self.child.sendline("expr")
+        self.child.expect_exact("terminate with an empty line to evaluate")
+        self.child.send("\n")
+        self.expect_prompt()
+
+        # The up arrow should recall the actual history entry and not the
+        # the empty entry (as that one shouldn't have been saved).
+        self.child.sendline("expr")
+        self.child.expect_exact("terminate with an empty line to evaluate")
+        self.child.send(self.arrow_up)
+        self.child.expect_exact("456")
+        self.child.send("\n\n")
+        self.expect_prompt()
 
         self.quit()

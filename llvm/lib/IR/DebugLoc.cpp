@@ -50,7 +50,7 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
   // FIXME: Add a method on \a DILocation that does this work.
   const MDNode *Scope = getInlinedAtScope();
   if (auto *SP = getDISubprogram(Scope))
-    return DebugLoc::get(SP->getScopeLine(), 0, SP);
+    return DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
 
   return DebugLoc();
 }
@@ -68,21 +68,9 @@ void DebugLoc::setImplicitCode(bool ImplicitCode) {
   }
 }
 
-DebugLoc DebugLoc::get(unsigned Line, unsigned Col, const MDNode *Scope,
-                       const MDNode *InlinedAt, bool ImplicitCode) {
-  // If no scope is available, this is an unknown location.
-  if (!Scope)
-    return DebugLoc();
-
-  return DILocation::get(Scope->getContext(), Line, Col,
-                         const_cast<MDNode *>(Scope),
-                         const_cast<MDNode *>(InlinedAt), ImplicitCode);
-}
-
 DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
                                    LLVMContext &Ctx,
-                                   DenseMap<const MDNode *, MDNode *> &Cache,
-                                   bool ReplaceLast) {
+                                   DenseMap<const MDNode *, MDNode *> &Cache) {
   SmallVector<DILocation *, 3> InlinedAtLocations;
   DILocation *Last = InlinedAt;
   DILocation *CurInlinedAt = DL;
@@ -95,8 +83,6 @@ DebugLoc DebugLoc::appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt,
       break;
     }
 
-    if (ReplaceLast && !IA->getInlinedAt())
-      break;
     InlinedAtLocations.push_back(IA);
     CurInlinedAt = IA;
   }

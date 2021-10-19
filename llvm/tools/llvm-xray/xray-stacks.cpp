@@ -252,13 +252,15 @@ private:
 /// maintain an index of unique functions, and provide a means of iterating
 /// through all the instrumented call stacks which we know about.
 
+namespace {
 struct StackDuration {
   llvm::SmallVector<int64_t, 4> TerminalDurations;
   llvm::SmallVector<int64_t, 4> IntermediateDurations;
 };
+} // namespace
 
-StackDuration mergeStackDuration(const StackDuration &Left,
-                                 const StackDuration &Right) {
+static StackDuration mergeStackDuration(const StackDuration &Left,
+                                        const StackDuration &Right) {
   StackDuration Data{};
   Data.TerminalDurations.reserve(Left.TerminalDurations.size() +
                                  Right.TerminalDurations.size());
@@ -280,7 +282,7 @@ StackDuration mergeStackDuration(const StackDuration &Left,
 using StackTrieNode = TrieNode<StackDuration>;
 
 template <AggregationType AggType>
-std::size_t GetValueForStack(const StackTrieNode *Node);
+static std::size_t GetValueForStack(const StackTrieNode *Node);
 
 // When computing total time spent in a stack, we're adding the timings from
 // its callees and the timings from when it was a leaf.
@@ -454,8 +456,7 @@ public:
     int Level = 0;
     OS << formatv("{0,-5} {1,-60} {2,+12} {3,+16}\n", "lvl", "function",
                   "count", "sum");
-    for (auto *F :
-         reverse(make_range(CurrentStack.begin() + 1, CurrentStack.end()))) {
+    for (auto *F : reverse(drop_begin(CurrentStack))) {
       auto Sum = std::accumulate(F->ExtraData.IntermediateDurations.begin(),
                                  F->ExtraData.IntermediateDurations.end(), 0LL);
       auto FuncId = FN.SymbolOrNumber(F->FuncId);
@@ -638,10 +639,8 @@ public:
           {
             auto E =
                 std::make_pair(Top, Top->ExtraData.TerminalDurations.size());
-            TopStacksByCount.insert(std::lower_bound(TopStacksByCount.begin(),
-                                                     TopStacksByCount.end(), E,
-                                                     greater_second),
-                                    E);
+            TopStacksByCount.insert(
+                llvm::lower_bound(TopStacksByCount, E, greater_second), E);
             if (TopStacksByCount.size() == 11)
               TopStacksByCount.pop_back();
           }
@@ -669,9 +668,9 @@ public:
   }
 };
 
-std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
-                               const XRayRecord &Record,
-                               const FuncIdConversionHelper &Converter) {
+static std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
+                                      const XRayRecord &Record,
+                                      const FuncIdConversionHelper &Converter) {
   switch (Error) {
   case StackTrie::AccountRecordStatus::ENTRY_NOT_FOUND:
     return std::string(

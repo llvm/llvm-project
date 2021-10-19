@@ -8,6 +8,7 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAddr.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
@@ -25,6 +26,7 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     uint64_t AbbrevTableID = 0;
     for (auto AbbrvDeclSet : *AbbrevSetPtr) {
       Y.DebugAbbrev.emplace_back();
+      Y.DebugAbbrev.back().ID = AbbrevTableID++;
       for (auto AbbrvDecl : AbbrvDeclSet.second) {
         DWARFYAML::Abbrev Abbrv;
         Abbrv.Code = AbbrvDecl.getCode();
@@ -39,21 +41,58 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             AttAbrv.Value = Attribute.getImplicitConstValue();
           Abbrv.Attributes.push_back(AttAbrv);
         }
-        Y.DebugAbbrev.back().ID = AbbrevTableID++;
         Y.DebugAbbrev.back().Table.push_back(Abbrv);
       }
     }
   }
 }
 
-void dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  StringRef RemainingTable = DCtx.getDWARFObj().getStrSection();
-  Y.DebugStrings.emplace();
-  while (RemainingTable.size() > 0) {
-    auto SymbolPair = RemainingTable.split('\0');
-    RemainingTable = SymbolPair.second;
-    Y.DebugStrings->push_back(SymbolPair.first);
+Error dumpDebugAddr(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  DWARFDebugAddrTable AddrTable;
+  DWARFDataExtractor AddrData(DCtx.getDWARFObj(),
+                              DCtx.getDWARFObj().getAddrSection(),
+                              DCtx.isLittleEndian(), /*AddrSize=*/0);
+  std::vector<DWARFYAML::AddrTableEntry> AddrTables;
+  uint64_t Offset = 0;
+  while (AddrData.isValidOffset(Offset)) {
+    // We ignore any errors that don't prevent parsing the section, since we can
+    // still represent such sections.
+    if (Error Err = AddrTable.extractV5(AddrData, &Offset, /*CUAddrSize=*/0,
+                                        consumeError))
+      return Err;
+    AddrTables.emplace_back();
+    for (uint64_t Addr : AddrTable.getAddressEntries()) {
+      // Currently, the parser doesn't support parsing an address table with non
+      // linear addresses (segment_selector_size != 0). The segment selectors
+      // are specified to be zero.
+      AddrTables.back().SegAddrPairs.push_back(
+          {/*SegmentSelector=*/0, /*Address=*/Addr});
+    }
+
+    AddrTables.back().Format = AddrTable.getFormat();
+    AddrTables.back().Length = AddrTable.getLength();
+    AddrTables.back().Version = AddrTable.getVersion();
+    AddrTables.back().AddrSize = AddrTable.getAddressSize();
+    AddrTables.back().SegSelectorSize = AddrTable.getSegmentSelectorSize();
   }
+  Y.DebugAddr = std::move(AddrTables);
+  return Error::success();
+}
+
+Error dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  DataExtractor StrData = DCtx.getStringExtractor();
+  uint64_t Offset = 0;
+  std::vector<StringRef> DebugStr;
+  Error Err = Error::success();
+  while (StrData.isValidOffset(Offset)) {
+    const char *CStr = StrData.getCStr(&Offset, &Err);
+    if (Err)
+      return Err;
+    DebugStr.push_back(CStr);
+  }
+
+  Y.DebugStrings = DebugStr;
+  return Err;
 }
 
 Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
@@ -108,6 +147,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                           DCtx.isLittleEndian(), AddrSize);
   uint64_t Offset = 0;
   DWARFDebugRangeList DwarfRanges;
+  std::vector<DWARFYAML::Ranges> DebugRanges;
 
   while (Data.isValidOffset(Offset)) {
     DWARFYAML::Ranges YamlRanges;
@@ -117,8 +157,10 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       return E;
     for (const auto &RLE : DwarfRanges.getEntries())
       YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
-    Y.DebugRanges.push_back(std::move(YamlRanges));
+    DebugRanges.push_back(std::move(YamlRanges));
   }
+
+  Y.DebugRanges = DebugRanges;
   return ErrorSuccess();
 }
 
@@ -177,8 +219,8 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     const DWARFDebugAbbrev *DebugAbbrev = DCtx.getDebugAbbrev();
     NewUnit.AbbrevTableID = std::distance(
         DebugAbbrev->begin(),
-        std::find_if(
-            DebugAbbrev->begin(), DebugAbbrev->end(),
+        llvm::find_if(
+            *DebugAbbrev,
             [&](const std::pair<uint64_t, DWARFAbbreviationDeclarationSet> &P) {
               return P.first == CU->getAbbreviations()->getOffset();
             }));
@@ -336,9 +378,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       DebugLines.LineRange = LineData.getU8(&Offset);
       DebugLines.OpcodeBase = LineData.getU8(&Offset);
 
-      DebugLines.StandardOpcodeLengths.reserve(DebugLines.OpcodeBase - 1);
+      DebugLines.StandardOpcodeLengths.emplace();
       for (uint8_t i = 1; i < DebugLines.OpcodeBase; ++i)
-        DebugLines.StandardOpcodeLengths.push_back(LineData.getU8(&Offset));
+        DebugLines.StandardOpcodeLengths->push_back(LineData.getU8(&Offset));
 
       while (Offset < EndPrologue) {
         StringRef Dir = LineData.getCStr(&Offset);
@@ -377,10 +419,10 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
           case dwarf::DW_LNE_end_sequence:
             break;
           default:
-            while (Offset < StartExt + NewOp.ExtLen)
+            while (Offset < StartExt + *NewOp.ExtLen)
               NewOp.UnknownOpcodeData.push_back(LineData.getU8(&Offset));
           }
-        } else if (NewOp.Opcode < DebugLines.OpcodeBase) {
+        } else if (NewOp.Opcode < *DebugLines.OpcodeBase) {
           switch (NewOp.Opcode) {
           case dwarf::DW_LNS_copy:
           case dwarf::DW_LNS_negate_stmt:
@@ -407,7 +449,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
           default:
             for (uint8_t i = 0;
-                 i < DebugLines.StandardOpcodeLengths[NewOp.Opcode - 1]; ++i)
+                 i <
+                 DebugLines.StandardOpcodeLengths.getValue()[NewOp.Opcode - 1];
+                 ++i)
               NewOp.StandardOpcodeData.push_back(LineData.getULEB128(&Offset));
           }
         }

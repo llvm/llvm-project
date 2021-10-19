@@ -154,7 +154,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 @__PRETTY_FUNCTION__._ZN4llvm7ErrorOrISt10unique_ptrINS_12MemoryBufferESt14default_deleteIS2_EEE10getStorageEv = private unnamed_addr constant [206 x i8] c"storage_type *llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> > >::getStorage() [T = std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer> >]\00", align 1
 @_ZNSs4_Rep20_S_empty_rep_storageE = external global [0 x i64]
 
-declare void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret, [2 x i64], i64) #1
+declare void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret(%"class.llvm::ErrorOr"), [2 x i64], i64) #1
 
 declare void @_ZN4llvm16NamedRegionTimerC1ENS_9StringRefES1_b(%"struct.llvm::NamedRegionTimer"*, [2 x i64], [2 x i64], i1 zeroext) #1
 
@@ -184,7 +184,7 @@ entry:
   %2 = load i64, i64* %_M_length.i.i, align 8, !tbaa !7
   %.fca.0.insert18 = insertvalue [2 x i64] undef, i64 %1, 0
   %.fca.1.insert21 = insertvalue [2 x i64] %.fca.0.insert18, i64 %2, 1
-  call void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret %FileOrErr, [2 x i64] %.fca.1.insert21, i64 -1) #3
+  call void @_ZN4llvm12MemoryBuffer14getFileOrSTDINENS_9StringRefEl(%"class.llvm::ErrorOr"* sret(%"class.llvm::ErrorOr") %FileOrErr, [2 x i64] %.fca.1.insert21, i64 -1) #3
   %HasError.i24 = getelementptr inbounds %"class.llvm::ErrorOr", %"class.llvm::ErrorOr"* %FileOrErr, i64 0, i32 1
   %bf.load.i25 = load i8, i8* %HasError.i24, align 8
   %3 = and i8 %bf.load.i25, 1
@@ -211,7 +211,7 @@ if.then:                                          ; preds = %_ZNK4llvm7ErrorOrIS
   %vtable.i = load void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)**, void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)*** %6, align 8, !tbaa !11
   %vfn.i = getelementptr inbounds void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)*, void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)** %vtable.i, i64 3
   %7 = load void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)*, void (%"class.std::basic_string"*, %"class.std::error_category"*, i32)** %vfn.i, align 8
-  call void %7(%"class.std::basic_string"* sret %ref.tmp5, %"class.std::error_category"* %.c, i32 signext %phitmp) #3
+  call void %7(%"class.std::basic_string"* sret(%"class.std::basic_string") %ref.tmp5, %"class.std::error_category"* %.c, i32 signext %phitmp) #3
   %call2.i.i = call dereferenceable(8) %"class.std::basic_string"* @_ZNSs6insertEmPKcm(%"class.std::basic_string"* %ref.tmp5, i64 0, i8* getelementptr inbounds ([28 x i8], [28 x i8]* @.str, i64 0, i64 0), i64 27) #3
   %_M_p2.i.i.i.i = getelementptr inbounds %"class.std::basic_string", %"class.std::basic_string"* %call2.i.i, i64 0, i32 0, i32 0
   %8 = load i8*, i8** %_M_p2.i.i.i.i, align 8, !tbaa !13

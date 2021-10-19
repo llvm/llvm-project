@@ -1,5 +1,6 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass mir-canonicalizer -o - %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass mir-canonicalizer -verify-machineinstrs -o - %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass mir-canonicalizer -mir-vreg-namer-use-stable-hash -verify-machineinstrs -o - %s
 
 --- |
 
@@ -15,18 +16,18 @@ body: |
 
     ; CHECK-LABEL: name: addrspace_memoperands
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load 8, addrspace 1)
-    ; CHECK: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 4, align 2, addrspace 3)
-    ; CHECK: G_STORE [[LOAD]](s64), [[COPY]](p0) :: (store 8, addrspace 1)
-    ; CHECK: G_STORE [[LOAD1]](s32), [[COPY]](p0) :: (store 4, align 2, addrspace 3)
-    ; CHECK: G_STORE [[LOAD1]](s32), [[COPY]](p0) :: (store 4)
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s64), addrspace 1)
+    ; CHECK: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32), align 2, addrspace 3)
+    ; CHECK: G_STORE [[LOAD]](s64), [[COPY]](p0) :: (store (s64), addrspace 1)
+    ; CHECK: G_STORE [[LOAD1]](s32), [[COPY]](p0) :: (store (s32), align 2, addrspace 3)
+    ; CHECK: G_STORE [[LOAD1]](s32), [[COPY]](p0) :: (store (s32))
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
-    %1:_(s64) = G_LOAD %0(p0) :: (load 8, addrspace 1)
-    %2:_(s32) = G_LOAD %0(p0) :: (load 4, align 2, addrspace 3)
-    G_STORE %1(s64), %0(p0) :: (store 8, addrspace 1)
-    G_STORE %2(s32), %0(p0) :: (store 4, align 2, addrspace 3)
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64), addrspace 1)
+    %2:_(s32) = G_LOAD %0(p0) :: (load (s32), align 2, addrspace 3)
+    G_STORE %1(s64), %0(p0) :: (store (s64), addrspace 1)
+    G_STORE %2(s32), %0(p0) :: (store (s32), align 2, addrspace 3)
     ; addrspace 0 is accepted by the parser but not printed
-    G_STORE %2(s32), %0(p0) :: (store 4, addrspace 0)
+    G_STORE %2(s32), %0(p0) :: (store (s32), addrspace 0)
     RET_ReallyLR
 ...

@@ -75,11 +75,11 @@ class ExprDiagnosticsTestCase(TestBase):
         # In the future our declarations should have valid source locations.
         value = frame.EvaluateExpression("struct FooBar { double x };", top_level_opts)
         self.assertFalse(value.GetError().Success())
-        self.assertEqual("error: <user expression 6>:1:8: redefinition of 'FooBar'\nstruct FooBar { double x };\n       ^\n", value.GetError().GetCString())
+        self.assertIn("error: <user expression 6>:1:8: redefinition of 'FooBar'\nstruct FooBar { double x };\n       ^\n", value.GetError().GetCString())
 
         value = frame.EvaluateExpression("foo(1, 2)")
         self.assertFalse(value.GetError().Success())
-        self.assertEqual("error: <user expression 7>:1:1: no matching function for call to 'foo'\nfoo(1, 2)\n^~~\nnote: candidate function not viable: requires single argument 'x', but 2 arguments were provided\n\n", value.GetError().GetCString())
+        self.assertIn("error: <user expression 7>:1:1: no matching function for call to 'foo'\nfoo(1, 2)\n^~~\nnote: candidate function not viable: requires single argument 'x', but 2 arguments were provided\n\n", value.GetError().GetCString())
 
         # Redefine something that we defined in a user-expression. We should use the previous expression file name
         # for the original decl.
@@ -88,7 +88,7 @@ class ExprDiagnosticsTestCase(TestBase):
         self.assertFalse(value.GetError().Success())
         self.assertIn("error: <user expression 9>:1:8: redefinition of 'Redef'\nstruct Redef { float y; };\n       ^\n<user expression 8>:1:8: previous definition is here\nstruct Redef { double x; };\n       ^", value.GetError().GetCString())
 
-    @skipUnlessDarwin
+    @add_test_categories(["objc"])
     def test_source_locations_from_objc_modules(self):
         self.build()
 

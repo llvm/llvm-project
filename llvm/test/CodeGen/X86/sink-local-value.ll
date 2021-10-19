@@ -1,11 +1,11 @@
-; RUN: llc -fast-isel-sink-local-values -O0 < %s | FileCheck %s
+; RUN: llc -O0 < %s | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-linux-gnu"
 
 ; Try some simple cases that show how local value sinking improves line tables.
 
-@sink_across = external global i32
+@sink_across = external dso_local global i32
 
 declare void @simple_callee(i32, i32)
 

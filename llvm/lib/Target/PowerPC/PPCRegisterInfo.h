@@ -94,6 +94,16 @@ public:
   bool isCallerPreservedPhysReg(MCRegister PhysReg,
                                 const MachineFunction &MF) const override;
 
+  // Provide hints to the register allocator for allocating subregisters
+  // of primed and unprimed accumulators. For example, if accumulator
+  // ACC5 is assigned, we also want to assign UACC5 to the input.
+  // Similarly if UACC5 is assigned, we want to assign VSRp10, VSRp11
+  // to its inputs.
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
+
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
@@ -101,9 +111,7 @@ public:
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
 
-  bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override {
-    return true;
-  }
+  bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
 
   void lowerDynamicAlloc(MachineBasicBlock::iterator II) const;
   void lowerDynamicAreaOffset(MachineBasicBlock::iterator II) const;
@@ -119,10 +127,19 @@ public:
                           unsigned FrameIndex) const;
   void lowerCRBitRestore(MachineBasicBlock::iterator II,
                          unsigned FrameIndex) const;
-  void lowerVRSAVESpilling(MachineBasicBlock::iterator II,
-                           unsigned FrameIndex) const;
-  void lowerVRSAVERestore(MachineBasicBlock::iterator II,
-                          unsigned FrameIndex) const;
+
+  void lowerACCSpilling(MachineBasicBlock::iterator II,
+                        unsigned FrameIndex) const;
+  void lowerACCRestore(MachineBasicBlock::iterator II,
+                       unsigned FrameIndex) const;
+
+  void lowerQuadwordSpilling(MachineBasicBlock::iterator II,
+                             unsigned FrameIndex) const;
+  void lowerQuadwordRestore(MachineBasicBlock::iterator II,
+                            unsigned FrameIndex) const;
+
+  static void emitAccCopyInfo(MachineBasicBlock &MBB, MCRegister DestReg,
+                              MCRegister SrcReg);
 
   bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
                             int &FrameIdx) const override;
@@ -132,9 +149,8 @@ public:
 
   // Support for virtual base registers.
   bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
-  void materializeFrameBaseRegister(MachineBasicBlock *MBB, Register BaseReg,
-                                    int FrameIdx,
-                                    int64_t Offset) const override;
+  Register materializeFrameBaseRegister(MachineBasicBlock *MBB, int FrameIdx,
+                                        int64_t Offset) const override;
   void resolveFrameIndex(MachineInstr &MI, Register BaseReg,
                          int64_t Offset) const override;
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
@@ -151,11 +167,18 @@ public:
   /// register name so that only the number is left.  Used by for linux asm.
   static const char *stripRegisterPrefix(const char *RegName) {
     switch (RegName[0]) {
+      case 'a':
+        if (RegName[1] == 'c' && RegName[2] == 'c')
+          return RegName + 3;
+      break;
       case 'r':
       case 'f':
       case 'v':
-        if (RegName[1] == 's')
+        if (RegName[1] == 's') {
+          if (RegName[2] == 'p')
+            return RegName + 3;
           return RegName + 2;
+        }
         return RegName + 1;
       case 'c': if (RegName[1] == 'r') return RegName + 2;
     }

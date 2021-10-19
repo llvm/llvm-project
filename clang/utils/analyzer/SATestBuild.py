@@ -213,6 +213,7 @@ class TestInfo(NamedTuple):
     project: ProjectInfo
     override_compiler: bool = False
     extra_analyzer_config: str = ""
+    extra_checkers: str = ""
     is_reference_build: bool = False
     strictness: int = 0
 
@@ -233,13 +234,16 @@ class RegressionTester:
     """
     A component aggregating all of the project testing.
     """
+
     def __init__(self, jobs: int, projects: List[ProjectInfo],
                  override_compiler: bool, extra_analyzer_config: str,
+                 extra_checkers: str,
                  regenerate: bool, strictness: bool):
         self.jobs = jobs
         self.projects = projects
         self.override_compiler = override_compiler
         self.extra_analyzer_config = extra_analyzer_config
+        self.extra_checkers = extra_checkers
         self.regenerate = regenerate
         self.strictness = strictness
 
@@ -252,6 +256,7 @@ class RegressionTester:
                 TestInfo(project,
                          self.override_compiler,
                          self.extra_analyzer_config,
+                         self.extra_checkers,
                          self.regenerate, self.strictness))
         if self.jobs <= 1:
             return self._single_threaded_test_all(projects_to_test)
@@ -305,10 +310,12 @@ class ProjectTester:
     """
     A component aggregating testing for one project.
     """
+
     def __init__(self, test_info: TestInfo, silent: bool = False):
         self.project = test_info.project
         self.override_compiler = test_info.override_compiler
         self.extra_analyzer_config = test_info.extra_analyzer_config
+        self.extra_checkers = test_info.extra_checkers
         self.is_reference_build = test_info.is_reference_build
         self.strictness = test_info.strictness
         self.silent = silent
@@ -414,6 +421,8 @@ class ProjectTester:
         if 'SA_ADDITIONAL_CHECKERS' in os.environ:
             all_checkers = (all_checkers + ',' +
                             os.environ['SA_ADDITIONAL_CHECKERS'])
+        if self.extra_checkers != "":
+            all_checkers += "," + self.extra_checkers
 
         # Run scan-build from within the patched source directory.
         cwd = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
@@ -847,7 +856,8 @@ def normalize_reference_results(directory: str, output_dir: str,
                 continue
 
             plist = os.path.join(dir_path, filename)
-            data = plistlib.readPlist(plist)
+            with open(plist, "rb") as plist_file:
+                data = plistlib.load(plist_file)
             path_prefix = directory
 
             if build_mode == 1:
@@ -866,7 +876,8 @@ def normalize_reference_results(directory: str, output_dir: str,
             if 'clang_version' in data:
                 data.pop('clang_version')
 
-            plistlib.writePlist(data, plist)
+            with open(plist, "wb") as plist_file:
+                plistlib.dump(data, plist_file)
 
 
 def get_build_log_path(output_dir: str) -> str:

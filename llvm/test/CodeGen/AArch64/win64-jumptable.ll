@@ -1,5 +1,5 @@
 ; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 | FileCheck %s
-; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj -unwind - | FileCheck %s -check-prefix=UNWIND
+; RUN: llc -o - %s -mtriple=aarch64-windows -aarch64-enable-compress-jump-tables=0 -filetype=obj | llvm-readobj --unwind - | FileCheck %s -check-prefix=UNWIND
 
 define void @f(i32 %x) {
 entry:
@@ -40,13 +40,10 @@ declare void @g(i32, i32)
 ; CHECK-NEXT:  .seh_endfunclet
 ; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: .LJTI0_0:
-; CHECK:    .word .LBB0_2-.LJTI0_0
-; CHECK:    .word .LBB0_3-.LJTI0_0
-; CHECK:    .word .LBB0_4-.LJTI0_0
-; CHECK:    .word .LBB0_5-.LJTI0_0
-; CHECK:    .section  .xdata,"dr"
-; CHECK:    .seh_handlerdata
-; CHECK:    .text
+; CHECK:    .word .LBB0_2-.Ltmp0
+; CHECK:    .word .LBB0_3-.Ltmp0
+; CHECK:    .word .LBB0_4-.Ltmp0
+; CHECK:    .word .LBB0_5-.Ltmp0
 ; CHECK:    .seh_endproc
 
 ; Check that we can emit an object file with correct unwind info.

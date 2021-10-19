@@ -10,6 +10,6 @@ define i8* @foo() {
   ret i8* %1
 }
 
-declare i8* @bar()
+declare dso_local i8* @bar()
 declare void @llvm.assume(i1)
 

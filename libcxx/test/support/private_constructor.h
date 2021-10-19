@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __PRIVATE_CONSTRUCTOR__H
-#define __PRIVATE_CONSTRUCTOR__H
-
-#include <iostream>
+#ifndef TEST_SUPPORT_PRIVATE_CONSTRUCTOR_H
+#define TEST_SUPPORT_PRIVATE_CONSTRUCTOR_H
 
 struct PrivateConstructor {
 
@@ -25,6 +23,4 @@ bool operator < ( const PrivateConstructor &lhs, const PrivateConstructor &rhs )
 bool operator < ( const PrivateConstructor &lhs, int rhs ) { return lhs.get() < rhs; }
 bool operator < ( int lhs, const PrivateConstructor &rhs ) { return lhs < rhs.get(); }
 
-std::ostream & operator << ( std::ostream &os, const PrivateConstructor &foo ) { return os << foo.get (); }
-
-#endif
+#endif // TEST_SUPPORT_PRIVATE_CONSTRUCTOR_H

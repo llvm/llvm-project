@@ -86,5 +86,12 @@ attributes #0 = { nounwind "amdgpu-git-ptr-high"="0x1234" }
 declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg)
 
 
-; Check we have CS_NUM_USED_VGPRS in PAL metadata.
-; PAL: .amd_amdgpu_pal_metadata {{.*}},0x10000027,
+; PAL:         .amdgpu_pal_metadata
+; PAL-NEXT: ---
+; PAL-NEXT: amdpal.pipelines:
+; PAL-NEXT:   - .hardware_stages:
+; PAL-NEXT:       .cs:
+; PAL-NEXT:         .entry_point:    scratch2_cs
+; PAL-NEXT:         .scratch_memory_size: 0x10
+; PAL-NEXT:         .sgpr_count:     0x
+; PAL-NEXT:         .vgpr_count:     0x

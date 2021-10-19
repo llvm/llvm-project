@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=VI %s
 # RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=CI %s
 # RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=SI %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GFX10 %s
 
 ---
 name: m0_gws_init0
@@ -15,22 +16,26 @@ body: |
     ; GFX9: liveins: $vgpr0
     ; GFX9: $m0 = S_MOV_B32 -1
     ; GFX9: S_NOP 0
-    ; GFX9: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; GFX9: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; VI-LABEL: name: m0_gws_init0
     ; VI: liveins: $vgpr0
     ; VI: $m0 = S_MOV_B32 -1
     ; VI: S_NOP 0
-    ; VI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; VI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; CI-LABEL: name: m0_gws_init0
     ; CI: liveins: $vgpr0
     ; CI: $m0 = S_MOV_B32 -1
-    ; CI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; CI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; SI-LABEL: name: m0_gws_init0
     ; SI: liveins: $vgpr0
     ; SI: $m0 = S_MOV_B32 -1
-    ; SI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_init0
+    ; GFX10: liveins: $vgpr0
+    ; GFX10: $m0 = S_MOV_B32 -1
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $m0 = S_MOV_B32 -1
-    DS_GWS_INIT  $vgpr0, 0, 1, implicit $m0, implicit $exec
+    DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec
 
 ...
 
@@ -44,23 +49,27 @@ body: |
     ; GFX9: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; GFX9: $m0 = S_MOV_B32 -1
     ; GFX9: S_NOP 0
-    ; GFX9: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; GFX9: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; VI-LABEL: name: m0_gws_init1
     ; VI: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; VI: $m0 = S_MOV_B32 -1
     ; VI: S_NOP 0
-    ; VI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; VI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; CI-LABEL: name: m0_gws_init1
     ; CI: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; CI: $m0 = S_MOV_B32 -1
-    ; CI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; CI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; SI-LABEL: name: m0_gws_init1
     ; SI: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; SI: $m0 = S_MOV_B32 -1
-    ; SI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_init1
+    ; GFX10: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX10: $m0 = S_MOV_B32 -1
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
-    DS_GWS_INIT  $vgpr0, 0, 1, implicit $m0, implicit $exec
+    DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec
 
 ...
 
@@ -79,25 +88,30 @@ body: |
     ; GFX9: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     ; GFX9: $m0 = S_MOV_B32 $sgpr0
     ; GFX9: S_NOP 0
-    ; GFX9: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; GFX9: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; VI-LABEL: name: m0_gws_readlane
     ; VI: liveins: $vgpr0, $vgpr1
     ; VI: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     ; VI: $m0 = S_MOV_B32 $sgpr0
     ; VI: S_NOP 0
-    ; VI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; VI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; CI-LABEL: name: m0_gws_readlane
     ; CI: liveins: $vgpr0, $vgpr1
     ; CI: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     ; CI: $m0 = S_MOV_B32 $sgpr0
-    ; CI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; CI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     ; SI-LABEL: name: m0_gws_readlane
     ; SI: liveins: $vgpr0, $vgpr1
     ; SI: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     ; SI: $m0 = S_MOV_B32 $sgpr0
-    ; SI: DS_GWS_INIT $vgpr0, 0, 1, implicit $m0, implicit $exec
+    ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_readlane
+    ; GFX10: liveins: $vgpr0, $vgpr1
+    ; GFX10: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+    ; GFX10: $m0 = S_MOV_B32 $sgpr0
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     $m0 = S_MOV_B32 $sgpr0
-    DS_GWS_INIT  $vgpr0, 0, 1, implicit $m0, implicit $exec
+    DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec
 
 ...

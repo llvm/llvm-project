@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_SYNTHETIC_COUNTS_UTILS_H
-#define LLVM_ANALYSIS_SYNTHETIC_COUNTS_UTILS_H
+#ifndef LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
+#define LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CallGraph.h"

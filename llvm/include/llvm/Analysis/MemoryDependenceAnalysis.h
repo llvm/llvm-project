@@ -20,30 +20,18 @@
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cassert>
-#include <cstdint>
-#include <utility>
-#include <vector>
 
 namespace llvm {
 
 class AAResults;
 class AssumptionCache;
+class BatchAAResults;
 class DominatorTree;
-class Function;
-class Instruction;
-class LoadInst;
 class PHITransAddr;
-class TargetLibraryInfo;
 class PhiValues;
-class Value;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -302,7 +290,7 @@ private:
     /// The maximum size of the dereferences of the pointer.
     ///
     /// May be UnknownSize if the sizes are unknown.
-    LocationSize Size = LocationSize::unknown();
+    LocationSize Size = LocationSize::afterPointer();
     /// The AA tags associated with dereferences of the pointer.
     ///
     /// The members may be null if there are no tags or conflicting tags.
@@ -343,7 +331,7 @@ private:
   // A map from instructions to their non-local dependencies.
   using NonLocalDepMapType = DenseMap<Instruction *, PerInstNLInfo>;
 
-  NonLocalDepMapType NonLocalDeps;
+  NonLocalDepMapType NonLocalDepsMap;
 
   // A reverse mapping from dependencies to the dependees.  This is
   // used when removing instructions to keep the cache coherent.
@@ -363,6 +351,10 @@ private:
   PredIteratorCache PredCache;
 
   unsigned DefaultBlockScanLimit;
+
+  /// Offsets to dependant clobber loads.
+  using ClobberOffsetsMapType = DenseMap<LoadInst *, int32_t>;
+  ClobberOffsetsMapType ClobberOffsets;
 
 public:
   MemoryDependenceResults(AAResults &AA, AssumptionCache &AC,
@@ -452,10 +444,18 @@ public:
                                         Instruction *QueryInst = nullptr,
                                         unsigned *Limit = nullptr);
 
+  MemDepResult getPointerDependencyFrom(const MemoryLocation &Loc, bool isLoad,
+                                        BasicBlock::iterator ScanIt,
+                                        BasicBlock *BB,
+                                        Instruction *QueryInst,
+                                        unsigned *Limit,
+                                        BatchAAResults &BatchAA);
+
   MemDepResult
   getSimplePointerDependencyFrom(const MemoryLocation &MemLoc, bool isLoad,
                                  BasicBlock::iterator ScanIt, BasicBlock *BB,
-                                 Instruction *QueryInst, unsigned *Limit);
+                                 Instruction *QueryInst, unsigned *Limit,
+                                 BatchAAResults &BatchAA);
 
   /// This analysis looks for other loads and stores with invariant.group
   /// metadata and the same pointer operand. Returns Unknown if it does not
@@ -467,6 +467,14 @@ public:
 
   /// Release memory in caches.
   void releaseMemory();
+
+  /// Return the clobber offset to dependent instruction.
+  Optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
+    const auto Off = ClobberOffsets.find(DepInst);
+    if (Off != ClobberOffsets.end())
+      return Off->getSecond();
+    return None;
+  }
 
 private:
   MemDepResult getCallDependencyFrom(CallBase *Call, bool isReadOnlyCall,
@@ -480,12 +488,13 @@ private:
                                    DenseMap<BasicBlock *, Value *> &Visited,
                                    bool SkipFirstBlock = false,
                                    bool IsIncomplete = false);
-  MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
+  MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
-                                       unsigned NumSortedEntries);
+                                       unsigned NumSortedEntries,
+                                       BatchAAResults &BatchAA);
 
-  void RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair P);
+  void removeCachedNonLocalPointerDependencies(ValueIsLoadPair P);
 
   void verifyRemoved(Instruction *Inst) const;
 };

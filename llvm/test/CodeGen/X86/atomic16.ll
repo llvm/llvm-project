@@ -1,8 +1,8 @@
 ; RUN: llc < %s -O0 -mtriple=x86_64-unknown-unknown -mcpu=corei7 -verify-machineinstrs -show-mc-encoding | FileCheck %s --check-prefix X64
 ; RUN: llc < %s -O0 -mtriple=i386-unknown-unknown -mcpu=corei7 -verify-machineinstrs | FileCheck %s --check-prefix X32
 
-@sc16 = external global i16
-@fsc16 = external global half
+@sc16 = external dso_local global i16
+@fsc16 = external dso_local global half
 
 define void @atomic_fetch_add16() nounwind {
 ; X64-LABEL:   atomic_fetch_add16

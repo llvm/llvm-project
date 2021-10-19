@@ -22,7 +22,7 @@ RegisterContextThreadMemory::RegisterContextThreadMemory(
     : RegisterContext(thread, 0), m_thread_wp(thread.shared_from_this()),
       m_reg_ctx_sp(), m_register_data_addr(register_data_addr), m_stop_id(0) {}
 
-RegisterContextThreadMemory::~RegisterContextThreadMemory() {}
+RegisterContextThreadMemory::~RegisterContextThreadMemory() = default;
 
 void RegisterContextThreadMemory::UpdateRegisterContext() {
   ThreadSP thread_sp(m_thread_wp.lock());

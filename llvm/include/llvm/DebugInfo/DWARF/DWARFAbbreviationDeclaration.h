@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
-#define LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -111,6 +111,16 @@ public:
     return AttributeSpecs[idx].Attr;
   }
 
+  bool getAttrIsImplicitConstByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].isImplicitConst();
+  }
+
+  int64_t getAttrImplicitConstValueByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].getImplicitConstValue();
+  }
+
   /// Get the index of the specified attribute.
   ///
   /// Searches the this abbreviation declaration for the index of the specified
@@ -133,6 +143,27 @@ public:
   Optional<DWARFFormValue> getAttributeValue(const uint64_t DIEOffset,
                                              const dwarf::Attribute Attr,
                                              const DWARFUnit &U) const;
+
+  /// Compute an offset from a DIE specified by DIE offset and attribute index.
+  ///
+  /// \param AttrIndex an index of DWARF attribute.
+  /// \param DIEOffset the DIE offset that points to the ULEB128 abbreviation
+  /// code in the .debug_info data.
+  /// \param U the DWARFUnit the contains the DIE.
+  /// \returns an offset of the attribute.
+  uint64_t getAttributeOffsetFromIndex(uint32_t AttrIndex, uint64_t DIEOffset,
+                                       const DWARFUnit &U) const;
+
+  /// Extract a DWARF form value from a DIE speccified by attribute index and
+  /// its offset.
+  ///
+  /// \param AttrIndex an index of DWARF attribute.
+  /// \param Offset offset of the attribute.
+  /// \param U the DWARFUnit the contains the DIE.
+  /// \returns Optional DWARF form value if the attribute was extracted.
+  Optional<DWARFFormValue>
+  getAttributeValueFromOffset(uint32_t AttrIndex, uint64_t Offset,
+                              const DWARFUnit &U) const;
 
   bool extract(DataExtractor Data, uint64_t* OffsetPtr);
   void dump(raw_ostream &OS) const;
@@ -180,4 +211,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H

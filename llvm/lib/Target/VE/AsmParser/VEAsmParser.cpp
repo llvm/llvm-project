@@ -25,7 +25,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <memory>
@@ -124,6 +124,9 @@ static const MCPhysReg F128Regs[32] = {
     VE::Q8,  VE::Q9,  VE::Q10, VE::Q11, VE::Q12, VE::Q13, VE::Q14, VE::Q15,
     VE::Q16, VE::Q17, VE::Q18, VE::Q19, VE::Q20, VE::Q21, VE::Q22, VE::Q23,
     VE::Q24, VE::Q25, VE::Q26, VE::Q27, VE::Q28, VE::Q29, VE::Q30, VE::Q31};
+
+static const MCPhysReg VM512Regs[8] = {VE::VMP0, VE::VMP1, VE::VMP2, VE::VMP3,
+                                       VE::VMP4, VE::VMP5, VE::VMP6, VE::VMP7};
 
 static const MCPhysReg MISCRegs[31] = {
     VE::USRCC,      VE::PSW,        VE::SAR,        VE::NoRegister,
@@ -274,6 +277,17 @@ public:
     if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
       int64_t Value = ConstExpr->getValue();
       return isUInt<3>(Value);
+    }
+    return false;
+  }
+  bool isUImm4() {
+    if (!isImm())
+      return false;
+
+    // Constant case
+    if (const auto *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Value = ConstExpr->getValue();
+      return isUInt<4>(Value);
     }
     return false;
   }
@@ -476,6 +490,10 @@ public:
     addImmOperands(Inst, N);
   }
 
+  void addUImm4Operands(MCInst &Inst, unsigned N) const {
+    addImmOperands(Inst, N);
+  }
+
   void addUImm6Operands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
   }
@@ -645,6 +663,15 @@ public:
     if (regIdx % 2 || regIdx > 63)
       return false;
     Op.Reg.RegNum = F128Regs[regIdx / 2];
+    return true;
+  }
+
+  static bool MorphToVM512Reg(VEOperand &Op) {
+    unsigned Reg = Op.getReg();
+    unsigned regIdx = Reg - VE::VM0;
+    if (regIdx % 2 || regIdx > 15)
+      return false;
+    Op.Reg.RegNum = VM512Regs[regIdx / 2];
     return true;
   }
 
@@ -902,6 +929,24 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
     Mnemonic = parseRD(Name, 10, NameLoc, Operands);
   } else if (Name.startswith("cvt.l.d")) {
     Mnemonic = parseRD(Name, 7, NameLoc, Operands);
+  } else if (Name.startswith("vcvt.w.d.sx") || Name.startswith("vcvt.w.d.zx") ||
+             Name.startswith("vcvt.w.s.sx") || Name.startswith("vcvt.w.s.zx")) {
+    Mnemonic = parseRD(Name, 11, NameLoc, Operands);
+  } else if (Name.startswith("vcvt.l.d")) {
+    Mnemonic = parseRD(Name, 8, NameLoc, Operands);
+  } else if (Name.startswith("pvcvt.w.s.lo") ||
+             Name.startswith("pvcvt.w.s.up")) {
+    Mnemonic = parseRD(Name, 12, NameLoc, Operands);
+  } else if (Name.startswith("pvcvt.w.s")) {
+    Mnemonic = parseRD(Name, 9, NameLoc, Operands);
+  } else if (Name.startswith("vfmk.l.") || Name.startswith("vfmk.w.") ||
+             Name.startswith("vfmk.d.") || Name.startswith("vfmk.s.")) {
+    bool ICC = Name[5] == 'l' || Name[5] == 'w' ? true : false;
+    Mnemonic = parseCC(Name, 7, Name.size(), ICC, true, NameLoc, Operands);
+  } else if (Name.startswith("pvfmk.w.lo.") || Name.startswith("pvfmk.w.up.") ||
+             Name.startswith("pvfmk.s.lo.") || Name.startswith("pvfmk.s.up.")) {
+    bool ICC = Name[6] == 'l' || Name[6] == 'w' ? true : false;
+    Mnemonic = parseCC(Name, 11, Name.size(), ICC, true, NameLoc, Operands);
   } else {
     Operands->push_back(VEOperand::CreateToken(Mnemonic, NameLoc));
   }
@@ -1362,9 +1407,38 @@ OperandMatchResultTy VEAsmParser::parseOperand(OperandVector &Operands,
     return ResTy;
 
   switch (getLexer().getKind()) {
-  case AsmToken::LParen:
-    // FIXME: Parsing "(" + %vreg + ", " + %vreg + ")"
-    // FALLTHROUGH
+  case AsmToken::LParen: {
+    // Parsing "(" + %vreg + ", " + %vreg + ")"
+    const AsmToken Tok1 = Parser.getTok();
+    Parser.Lex(); // Eat the '('.
+
+    unsigned RegNo1;
+    SMLoc S1, E1;
+    if (tryParseRegister(RegNo1, S1, E1) != MatchOperand_Success) {
+      getLexer().UnLex(Tok1);
+      return MatchOperand_NoMatch;
+    }
+
+    if (!Parser.getTok().is(AsmToken::Comma))
+      return MatchOperand_ParseFail;
+    Parser.Lex(); // Eat the ','.
+
+    unsigned RegNo2;
+    SMLoc S2, E2;
+    if (tryParseRegister(RegNo2, S2, E2) != MatchOperand_Success)
+      return MatchOperand_ParseFail;
+
+    if (!Parser.getTok().is(AsmToken::RParen))
+      return MatchOperand_ParseFail;
+
+    Operands.push_back(VEOperand::CreateToken(Tok1.getString(), Tok1.getLoc()));
+    Operands.push_back(VEOperand::CreateReg(RegNo1, S1, E1));
+    Operands.push_back(VEOperand::CreateReg(RegNo2, S2, E2));
+    Operands.push_back(VEOperand::CreateToken(Parser.getTok().getString(),
+                                              Parser.getTok().getLoc()));
+    Parser.Lex(); // Eat the ')'.
+    break;
+  }
   default: {
     std::unique_ptr<VEOperand> Op;
     ResTy = parseVEAsmOperand(Op);
@@ -1377,7 +1451,24 @@ OperandMatchResultTy VEAsmParser::parseOperand(OperandVector &Operands,
     if (!Parser.getTok().is(AsmToken::LParen))
       break;
 
-    // FIXME: Parsing %vec-reg + "(" + %sclar-reg/number + ")"
+    // Parsing %vec-reg + "(" + %sclar-reg/number + ")"
+    std::unique_ptr<VEOperand> Op1 = VEOperand::CreateToken(
+        Parser.getTok().getString(), Parser.getTok().getLoc());
+    Parser.Lex(); // Eat the '('.
+
+    std::unique_ptr<VEOperand> Op2;
+    ResTy = parseVEAsmOperand(Op2);
+    if (ResTy != MatchOperand_Success || !Op2)
+      return MatchOperand_ParseFail;
+
+    if (!Parser.getTok().is(AsmToken::RParen))
+      return MatchOperand_ParseFail;
+
+    Operands.push_back(std::move(Op1));
+    Operands.push_back(std::move(Op2));
+    Operands.push_back(VEOperand::CreateToken(Parser.getTok().getString(),
+                                              Parser.getTok().getLoc()));
+    Parser.Lex(); // Eat the ')'.
     break;
   }
   }
@@ -1443,6 +1534,10 @@ unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
     break;
   case MCK_F128:
     if (Op.isReg() && VEOperand::MorphToF128Reg(Op))
+      return MCTargetAsmParser::Match_Success;
+    break;
+  case MCK_VM512:
+    if (Op.isReg() && VEOperand::MorphToVM512Reg(Op))
       return MCTargetAsmParser::Match_Success;
     break;
   case MCK_MISC:

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -S --symbols - | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | llvm-readobj -S -r --symbols - | FileCheck %s
 
 ; CHECK: Format: WASM
 ; CHECK-NEXT:Arch: wasm32
@@ -219,7 +219,6 @@
 ; CHECK-NEXT:    Flags [ (0x10)
 ; CHECK-NEXT:      UNDEFINED (0x10)
 ; CHECK-NEXT:    ]
-; CHECK-NEXT:    ImportName: __stack_pointer
 ; CHECK-NEXT:    ImportModule: env
 ; CHECK-NEXT:    ElementIndex: 0x0
 ; CHECK-NEXT:  }

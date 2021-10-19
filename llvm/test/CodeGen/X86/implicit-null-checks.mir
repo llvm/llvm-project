@@ -377,6 +377,22 @@
     ret i32 undef
   }
 
+  define i32 @imp_null_check_address_mul_overflow(i32* %x, i32 %a) {
+  entry:
+    %c = icmp eq i32* %x, null
+    br i1 %c, label %is_null, label %not_null, !make.implicit !0
+  
+  is_null:                                          ; preds = %entry
+    ret i32 42
+  
+  not_null:                                         ; preds = %entry
+    %y = ptrtoint i32* %x to i32
+    %y64 = zext i32 %y to i64
+    %b = mul i64 %y64, 9223372036854775807 ; 0X0FFFF.. i.e. 2^63 - 1
+    %z = trunc i64 %b to i32
+    ret i32 %z
+  }
+
   attributes #0 = { "target-features"="+bmi,+bmi2" }
 
   !0 = !{}
@@ -391,7 +407,7 @@ liveins:
   - { reg: '$esi' }
 # CHECK:  bb.0.entry:
 # CHECK:    $eax = MOV32ri 2200000
-# CHECK-NEXT:    $eax = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $eax, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:    $eax = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $eax, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1
 
 body:             |
@@ -405,7 +421,7 @@ body:             |
     liveins: $esi, $rdi
 
     $eax = MOV32ri 2200000
-    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.x)
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
     CMP32rr killed $eax, killed $esi, implicit-def $eflags
     JCC_1 %bb.4, 4, implicit $eflags
 
@@ -431,7 +447,7 @@ liveins:
   - { reg: '$esi' }
   - { reg: '$rdx' }
 # CHECK: bb.0.entry:
-# CHECK:    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load 4 from %ir.ptr)
+# CHECK:    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.ptr)
 # CHECK-NEXT:    TEST64rr $rdi, $rdi, implicit-def $eflags
 # CHECK-NEXT:    JCC_1 %bb.3, 4, implicit $eflags
 
@@ -439,7 +455,7 @@ body:             |
   bb.0.entry:
     liveins: $esi, $rdi, $rdx
 
-    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load 4 from %ir.ptr)
+    $eax = MOV32rm killed $rdx, 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.ptr)
     TEST64rr $rdi, $rdi, implicit-def $eflags
     JCC_1 %bb.3, 4, implicit $eflags
 
@@ -447,7 +463,7 @@ body:             |
     liveins: $esi, $rdi
 
     $eax = MOV32ri 2200000
-    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.x)
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
     CMP32rr killed $eax, killed $esi, implicit-def $eflags
     JCC_1 %bb.4, 4, implicit $eflags
 
@@ -489,7 +505,7 @@ body:             |
 
     $eax = MOV32ri 2200000
     $eax = ADD32ri killed $eax, 100, implicit-def dead $eflags
-    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.x)
+    $eax = AND32rm killed $eax, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
     CMP32rr killed $eax, killed $esi, implicit-def $eflags
     JCC_1 %bb.4, 4, implicit $eflags
 
@@ -529,7 +545,7 @@ body:             |
     liveins: $rsi, $rdi
 
     $rdi  = MOV64ri 5000
-    $rdi = AND64rm killed $rdi, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.x)
+    $rdi = AND64rm killed $rdi, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
     CMP64rr killed $rdi, killed $rsi, implicit-def $eflags
     JCC_1 %bb.4, 4, implicit $eflags
 
@@ -556,7 +572,7 @@ liveins:
   - { reg: '$rsi' }
 # CHECK:  bb.0.entry:
 # CHECK:  $rbx = MOV64rr $rdx
-# CHECK-NEXT:  $rbx = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $rbx, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load 4 from %ir.x)
+# CHECK-NEXT:  $rbx = FAULTING_OP 1, %bb.3, {{[0-9]+}}, $rbx, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags :: (load (s32) from %ir.x)
 
 body:             |
   bb.0.entry:
@@ -569,7 +585,7 @@ body:             |
     liveins: $rsi, $rdi, $rdx
 
     $rbx  = MOV64rr $rdx
-    $rbx = AND64rm killed $rbx, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.x)
+    $rbx = AND64rm killed $rbx, killed $rdi, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.x)
     $rdx = MOV64ri 0
     CMP64rr killed $rbx, killed $rsi, implicit-def $eflags
     JCC_1 %bb.4, 4, implicit $eflags
@@ -617,7 +633,7 @@ body:             |
     liveins: $rbx
 
     CALL64pcrel32 @f, csr_64, implicit $rsp, implicit-def $rsp
-    $eax = MOV32rm killed $rbx, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
+    $eax = MOV32rm killed $rbx, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
     $rbx = POP64r implicit-def $rsp, implicit $rsp
     RETQ $eax
 
@@ -653,10 +669,10 @@ body:             |
   bb.1.not_null:
     liveins: $rdi, $rsi
 
-    $rcx = MOV64rm killed $rsi, 1, $noreg, 0, $noreg :: (load 8 from %ir.ptr2)
+    $rcx = MOV64rm killed $rsi, 1, $noreg, 0, $noreg :: (load (s64) from %ir.ptr2)
     $esi = MOV32ri 3076
-    $eax = BEXTR32rm killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags :: (load 4 from %ir.ptr)
-    $eax = ADD32rm killed $eax, killed $rcx, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load 4 from %ir.val)
+    $eax = BEXTR32rm killed $rdi, 1, $noreg, 0, $noreg, killed $esi, implicit-def dead $eflags :: (load (s32) from %ir.ptr)
+    $eax = ADD32rm killed $eax, killed $rcx, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.val)
     RETQ $eax
 
   bb.2.is_null:
@@ -701,7 +717,7 @@ body:             |
 name:            imp_null_check_gep_load_with_use_dep
 # CHECK-LABEL: name:            imp_null_check_gep_load_with_use_dep
 # CHECK:  bb.0.entry:
-# CHECK:    $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load 4 from %ir.x)
+# CHECK:    $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1
 alignment:       16
 tracksRegLiveness: true
@@ -719,7 +735,7 @@ body:             |
     liveins: $rdi, $rsi
   
     $rsi = ADD64rr $rsi, $rdi, implicit-def dead $eflags
-    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load 4 from %ir.x)
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
     $eax = LEA64_32r killed $rax, 1, killed $rsi, 4, $noreg
     RETQ $eax
   
@@ -911,7 +927,7 @@ body:             |
   bb.1.not_null:
     liveins: $rdi, $rsi
 
-    MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi :: (volatile store 4 into %ir.ptr)
+    MOV32mr killed $rdi, 1, $noreg, 0, $noreg, killed $esi :: (volatile store (s32) into %ir.ptr)
     RETQ
 
   bb.2.is_null:
@@ -1218,7 +1234,7 @@ body:             |
 name:            inc_store_and_load_no_alias
 # CHECK-LABEL: inc_store_and_load_no_alias
 # CHECK: bb.0.entry:
-# CHECK:  $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
+# CHECK:  $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
 # CHECK-NEXT: JMP_1 %bb.1
 # CHECK: bb.1.not_null
 
@@ -1237,8 +1253,8 @@ body:             |
   bb.1.not_null:
     liveins: $rdi, $rsi
 
-    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store 4 into %ir.ptr2)
-    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
     RETQ $eax
 
   bb.2.is_null:
@@ -1269,8 +1285,8 @@ body:             |
   bb.1.not_null:
     liveins: $rdi, $rsi
 
-    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store 4 into %ir.ptr2)
-    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load 4 from %ir.ptr)
+    MOV32mi killed $rsi, 1, $noreg, 0, $noreg, 3 :: (store (s32) into %ir.ptr2)
+    $eax = MOV32rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.ptr)
     RETQ $eax
 
   bb.2.is_null:
@@ -1298,21 +1314,50 @@ body:             |
     liveins: $rdi, $rsi
 
     $rsp = frame-setup SUB64ri8 $rsp, 8, implicit-def dead $eflags
-    MOV32mr $rsp, 1, $noreg, 0, $noreg, $esi :: (store 4 into %stack.0)
+    MOV32mr $rsp, 1, $noreg, 0, $noreg, $esi :: (store (s32) into %stack.0)
     TEST64rr $rdi, $rdi, implicit-def $eflags
     JCC_1 %bb.2, 4, implicit killed $eflags
 
   bb.1.not_null:
     liveins: $rdi, $rsi
 
-    $r14d = MOV32rm $rsp, 1, $noreg, 0, $noreg :: (load 4 from %stack.0)
-    MOV64mr $rsp, 1, $noreg, 0, $noreg, $rdi :: (store 8 into %stack.0)
-    $edi = MOV32rm $rdi, 1, $noreg, 8, $noreg :: (load 4 from %ir.ptr)
+    $r14d = MOV32rm $rsp, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
+    MOV64mr $rsp, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
+    $edi = MOV32rm $rdi, 1, $noreg, 8, $noreg :: (load (s32) from %ir.ptr)
     $eax = MOV32rr $edi
     RETQ $eax
 
   bb.2.is_null:
     $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
+    RETQ $eax
+
+...
+---
+name:            imp_null_check_address_mul_overflow
+# CHECK-LABEL: name:            imp_null_check_address_mul_overflow
+# CHECK:  bb.0.entry:
+# CHECK-NOT: FAULTING_OP
+alignment:       16
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+body:             |
+  bb.0.entry:
+    liveins: $rsi, $rdi
+  
+    TEST64rr $rdi, $rdi, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+  
+  bb.2.not_null:
+    liveins: $rdi, $rsi
+  
+    $rcx = MOV64ri -9223372036854775808
+    $eax = MOV32rm killed $rdi, 2, $rcx, 0, $noreg, implicit-def $rax
+    RETQ $eax
+  
+  bb.1.is_null:
+    $eax = MOV32ri 42
     RETQ $eax
 
 ...

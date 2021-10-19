@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown -O0 | FileCheck --check-prefix=CHECK-O0 %s
 
-@var = global i32 0
+@var = dso_local global i32 0
 
 ; Test how llvm handles return type of {i16, i8}. The return value will be
 ; passed in %eax and %dl.
@@ -12,7 +12,7 @@ define i16 @test(i32 %key) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen
+; CHECK-NEXT:    callq gen@PLT
 ; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
 ; CHECK-NEXT:    movsbl %dl, %ecx
 ; CHECK-NEXT:    addl %ecx, %eax
@@ -27,7 +27,7 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-O0-NEXT:    callq gen
+; CHECK-O0-NEXT:    callq gen@PLT
 ; CHECK-O0-NEXT:    cwtl
 ; CHECK-O0-NEXT:    movsbl %dl, %ecx
 ; CHECK-O0-NEXT:    addl %ecx, %eax
@@ -54,14 +54,14 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; If we can't pass every return value in register, we will pass everything
 ; in memroy. The caller provides space for the return value and passes
 ; the address in %rax. The first input argument will be in %rdi.
-define i32 @test2(i32 %key) #0 {
+define dso_local i32 @test2(i32 %key) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsp, %rax
-; CHECK-NEXT:    callq gen2
+; CHECK-NEXT:    callq gen2@PLT
 ; CHECK-NEXT:    movl (%rsp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
@@ -78,17 +78,16 @@ define i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movq %rsp, %rax
-; CHECK-O0-NEXT:    callq gen2
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-O0-NEXT:    callq gen2@PLT
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-O0-NEXT:    movl (%rsp), %esi
+; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %esi
+; CHECK-O0-NEXT:    movl (%rsp), %eax
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-O0-NEXT:    addl %edi, %esi
-; CHECK-O0-NEXT:    addl %edx, %esi
-; CHECK-O0-NEXT:    addl %ecx, %esi
-; CHECK-O0-NEXT:    addl %eax, %esi
-; CHECK-O0-NEXT:    movl %esi, %eax
+; CHECK-O0-NEXT:    addl %edi, %eax
+; CHECK-O0-NEXT:    addl %esi, %eax
+; CHECK-O0-NEXT:    addl %edx, %eax
+; CHECK-O0-NEXT:    addl %ecx, %eax
 ; CHECK-O0-NEXT:    addq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -141,13 +140,13 @@ define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
 
 ; The return value {i32, i32, i32, i32} will be returned via registers %eax,
 ; %edx, %ecx, %r8d.
-define i32 @test3(i32 %key) #0 {
+define dso_local i32 @test3(i32 %key) #0 {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen3
+; CHECK-NEXT:    callq gen3@PLT
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    addl %r8d, %eax
@@ -161,7 +160,7 @@ define i32 @test3(i32 %key) #0 {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-O0-NEXT:    callq gen3
+; CHECK-O0-NEXT:    callq gen3@PLT
 ; CHECK-O0-NEXT:    addl %edx, %eax
 ; CHECK-O0-NEXT:    addl %ecx, %eax
 ; CHECK-O0-NEXT:    addl %r8d, %eax
@@ -189,13 +188,13 @@ declare swiftcc { i32, i32, i32, i32 } @gen3(i32 %key)
 
 ; The return value {float, float, float, float} will be returned via registers
 ; %xmm0, %xmm1, %xmm2, %xmm3.
-define float @test4(float %key) #0 {
+define dso_local float @test4(float %key) #0 {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen4
+; CHECK-NEXT:    callq gen4@PLT
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    addss %xmm3, %xmm0
@@ -209,7 +208,7 @@ define float @test4(float %key) #0 {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    callq gen4
+; CHECK-O0-NEXT:    callq gen4@PLT
 ; CHECK-O0-NEXT:    addss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm3, %xmm0
@@ -235,24 +234,24 @@ entry:
 
 declare swiftcc { float, float, float, float } @gen4(float %key)
 
-define void @consume_i1_ret() {
+define dso_local void @consume_i1_ret() {
 ; CHECK-LABEL: consume_i1_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq produce_i1_ret
+; CHECK-NEXT:    callq produce_i1_ret@PLT
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %r8b, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -261,7 +260,7 @@ define void @consume_i1_ret() {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq produce_i1_ret
+; CHECK-O0-NEXT:    callq produce_i1_ret@PLT
 ; CHECK-O0-NEXT:    andb $1, %al
 ; CHECK-O0-NEXT:    movzbl %al, %eax
 ; CHECK-O0-NEXT:    movl %eax, var
@@ -295,7 +294,7 @@ define void @consume_i1_ret() {
 
 declare swiftcc { i1, i1, i1, i1 } @produce_i1_ret()
 
-define swiftcc void @foo(i64* sret %agg.result, i64 %val) {
+define swiftcc void @foo(i64* sret(i64) %agg.result, i64 %val) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, (%rax)
@@ -314,7 +313,7 @@ define swiftcc double @test5() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen5
+; CHECK-NEXT:    callq gen5@PLT
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm3, %xmm0
@@ -326,7 +325,7 @@ define swiftcc double @test5() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen5
+; CHECK-O0-NEXT:    callq gen5@PLT
 ; CHECK-O0-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm3, %xmm0
@@ -355,7 +354,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen6
+; CHECK-NEXT:    callq gen6@PLT
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm3, %xmm0
@@ -370,7 +369,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen6
+; CHECK-O0-NEXT:    callq gen6@PLT
 ; CHECK-O0-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm3, %xmm0
@@ -418,10 +417,10 @@ define swiftcc { i32, i32, i32, i32 } @gen7(i32 %key) {
 ;
 ; CHECK-O0-LABEL: gen7:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movl %edi, %eax
-; CHECK-O0-NEXT:    movl %edi, %edx
-; CHECK-O0-NEXT:    movl %edi, %ecx
 ; CHECK-O0-NEXT:    movl %edi, %r8d
+; CHECK-O0-NEXT:    movl %r8d, %eax
+; CHECK-O0-NEXT:    movl %r8d, %edx
+; CHECK-O0-NEXT:    movl %r8d, %ecx
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { i32, i32, i32, i32 } undef, i32 %key, 0
   %v1 = insertvalue { i32, i32, i32, i32 } %v0, i32 %key, 1
@@ -441,10 +440,10 @@ define swiftcc { i64, i64, i64, i64 } @gen8(i64 %key) {
 ;
 ; CHECK-O0-LABEL: gen8:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq %rdi, %rax
-; CHECK-O0-NEXT:    movq %rdi, %rdx
-; CHECK-O0-NEXT:    movq %rdi, %rcx
 ; CHECK-O0-NEXT:    movq %rdi, %r8
+; CHECK-O0-NEXT:    movq %r8, %rax
+; CHECK-O0-NEXT:    movq %r8, %rdx
+; CHECK-O0-NEXT:    movq %r8, %rcx
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { i64, i64, i64, i64 } undef, i64 %key, 0
   %v1 = insertvalue { i64, i64, i64, i64 } %v0, i64 %key, 1
@@ -464,11 +463,10 @@ define swiftcc { i8, i8, i8, i8 } @gen9(i8 %key) {
 ;
 ; CHECK-O0-LABEL: gen9:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    # kill: def $dil killed $dil killed $edi
-; CHECK-O0-NEXT:    movb %dil, %al
-; CHECK-O0-NEXT:    movb %dil, %dl
-; CHECK-O0-NEXT:    movb %dil, %cl
 ; CHECK-O0-NEXT:    movb %dil, %r8b
+; CHECK-O0-NEXT:    movb %r8b, %al
+; CHECK-O0-NEXT:    movb %r8b, %dl
+; CHECK-O0-NEXT:    movb %r8b, %cl
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { i8, i8, i8, i8 } undef, i8 %key, 0
   %v1 = insertvalue { i8, i8, i8, i8 } %v0, i8 %key, 1
@@ -490,17 +488,14 @@ define swiftcc { double, double, double, double, i64, i64, i64, i64 } @gen10(dou
 ;
 ; CHECK-O0-LABEL: gen10:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
-; CHECK-O0-NEXT:    # xmm1 = mem[0],zero
-; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 8-byte Reload
-; CHECK-O0-NEXT:    # xmm2 = mem[0],zero
-; CHECK-O0-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 8-byte Reload
-; CHECK-O0-NEXT:    # xmm3 = mem[0],zero
-; CHECK-O0-NEXT:    movq %rdi, %rax
-; CHECK-O0-NEXT:    movq %rdi, %rdx
-; CHECK-O0-NEXT:    movq %rdi, %rcx
 ; CHECK-O0-NEXT:    movq %rdi, %r8
+; CHECK-O0-NEXT:    movaps %xmm0, %xmm3
+; CHECK-O0-NEXT:    movaps %xmm3, %xmm0
+; CHECK-O0-NEXT:    movaps %xmm3, %xmm1
+; CHECK-O0-NEXT:    movaps %xmm3, %xmm2
+; CHECK-O0-NEXT:    movq %r8, %rax
+; CHECK-O0-NEXT:    movq %r8, %rdx
+; CHECK-O0-NEXT:    movq %r8, %rcx
 ; CHECK-O0-NEXT:    retq
   %v0 = insertvalue { double, double, double, double, i64, i64, i64, i64 } undef, double %keyd, 0
   %v1 = insertvalue { double, double, double, double, i64, i64, i64, i64 } %v0, double %keyd, 1
@@ -519,7 +514,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen11
+; CHECK-NEXT:    callq gen11@PLT
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    addps %xmm3, %xmm0
@@ -531,7 +526,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen11
+; CHECK-O0-NEXT:    callq gen11@PLT
 ; CHECK-O0-NEXT:    addps %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addps %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addps %xmm3, %xmm0
@@ -559,7 +554,7 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen12
+; CHECK-NEXT:    callq gen12@PLT
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    movaps %xmm3, %xmm1
@@ -569,13 +564,15 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ;
 ; CHECK-O0-LABEL: test12:
 ; CHECK-O0:       # %bb.0: # %entry
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen12
-; CHECK-O0-NEXT:    addps %xmm1, %xmm0
-; CHECK-O0-NEXT:    addps %xmm2, %xmm0
+; CHECK-O0-NEXT:    subq $24, %rsp
+; CHECK-O0-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-O0-NEXT:    callq gen12@PLT
+; CHECK-O0-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-O0-NEXT:    movaps %xmm3, %xmm1
-; CHECK-O0-NEXT:    popq %rax
+; CHECK-O0-NEXT:    movaps (%rsp), %xmm3 # 16-byte Reload
+; CHECK-O0-NEXT:    addps %xmm3, %xmm0
+; CHECK-O0-NEXT:    addps %xmm2, %xmm0
+; CHECK-O0-NEXT:    addq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
 entry:

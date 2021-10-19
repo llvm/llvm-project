@@ -26,7 +26,7 @@ MemoryCache::MemoryCache(Process &process)
       m_L2_cache_line_byte_size(process.GetMemoryCacheLineSize()) {}
 
 // Destructor
-MemoryCache::~MemoryCache() {}
+MemoryCache::~MemoryCache() = default;
 
 void MemoryCache::Clear(bool clear_invalid_ranges) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -259,7 +259,7 @@ AllocatedBlock::AllocatedBlock(lldb::addr_t addr, uint32_t byte_size,
   assert(byte_size > chunk_size);
 }
 
-AllocatedBlock::~AllocatedBlock() {}
+AllocatedBlock::~AllocatedBlock() = default;
 
 lldb::addr_t AllocatedBlock::ReserveBlock(uint32_t size) {
   // We must return something valid for zero bytes.
@@ -329,7 +329,7 @@ bool AllocatedBlock::FreeBlock(addr_t addr) {
 AllocatedMemoryCache::AllocatedMemoryCache(Process &process)
     : m_process(process), m_mutex(), m_memory_map() {}
 
-AllocatedMemoryCache::~AllocatedMemoryCache() {}
+AllocatedMemoryCache::~AllocatedMemoryCache() = default;
 
 void AllocatedMemoryCache::Clear() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);

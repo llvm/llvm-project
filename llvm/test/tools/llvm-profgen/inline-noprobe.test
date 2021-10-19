@@ -1,0 +1,52 @@
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --skip-symbolization
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t --skip-symbolization
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-RAW-PROFILE
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+; RUN: llvm-profgen --format=text --use-dwarf-correlation --perfscript=%S/Inputs/inline-noprobe.perfscript --binary=%S/Inputs/inline-noprobe.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK
+
+CHECK: main:669:0
+CHECK:  0: 0
+CHECK:  2: 0
+CHECK:  1: foo:669
+CHECK:   2.1: 42
+CHECK:   3: 62
+CHECK:   3.2: 21
+CHECK:   4: 0
+CHECK:   3.1: bar:210
+CHECK:    1: 42
+CHECK:   3.2: bar:63
+CHECK:    1: 21
+
+CHECK-RAW-PROFILE:      3
+CHECK-RAW-PROFILE-NEXT: 650-691:21
+CHECK-RAW-PROFILE-NEXT: 669-677:20
+CHECK-RAW-PROFILE-NEXT: 669-691:21
+CHECK-RAW-PROFILE-NEXT: 2
+CHECK-RAW-PROFILE-NEXT: 677->650:21
+CHECK-RAW-PROFILE-NEXT: 691->669:43
+
+; original code:
+; clang -O3 -g -fdebug-info-for-profiling test.c -o a.out
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 2) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 3) s = bar(i, s); else s += bar(s, i);
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

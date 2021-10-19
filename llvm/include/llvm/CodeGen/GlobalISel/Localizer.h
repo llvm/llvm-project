@@ -52,9 +52,6 @@ private:
   /// TTI used for getting remat costs for instructions.
   TargetTransformInfo *TTI;
 
-  /// Check whether or not \p MI needs to be moved close to its uses.
-  bool shouldLocalize(const MachineInstr &MI);
-
   /// Check if \p MOUse is used in the same basic block as \p Def.
   /// If the use is in the same block, we say it is local.
   /// When the use is not local, \p InsertMBB will contain the basic
@@ -66,6 +63,11 @@ private:
   void init(MachineFunction &MF);
 
   typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
+
+  /// If \p Op is a phi operand and not unique in that phi, that is,
+  /// there are other operands in the phi with the same register,
+  /// return true.
+  bool isNonUniquePhiValue(MachineOperand &Op) const;
 
   /// Do inter-block localization from the entry block.
   bool localizeInterBlock(MachineFunction &MF,

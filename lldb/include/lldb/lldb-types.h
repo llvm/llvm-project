@@ -12,7 +12,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 // All host systems must define:
 //  lldb::thread_t          The native thread type for spawned threads on the

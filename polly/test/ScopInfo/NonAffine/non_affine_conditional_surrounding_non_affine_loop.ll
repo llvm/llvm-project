@@ -37,7 +37,7 @@
 ; INNERMOST-NEXT:    [tmp6, p_1, p_2] -> {  :  }
 ; INNERMOST-NEXT:    Invalid Context:
 ; INNERMOST-NEXT:    [tmp6, p_1, p_2] -> {  : p_2 < p_1 and (tmp6 < 0 or tmp6 > 0) }
-; INNERMOST-NEXT:    p0: %tmp6
+; INNERMOST:         p0: %tmp6
 ; INNERMOST-NEXT:    p1: {0,+,(sext i32 %N to i64)}<%bb3>
 ; INNERMOST-NEXT:    p2: {0,+,1}<nuw><nsw><%bb3>
 ; INNERMOST-NEXT:    Arrays {
@@ -80,7 +80,7 @@
 ; ALL-NEXT: {  :  }
 ; ALL-NEXT: Invalid Context:
 ; ALL-NEXT: {  : false }
-; ALL-NEXT: Arrays {
+; ALL:      Arrays {
 ; ALL-NEXT:     i32 MemRef_A[*]; // Element size 4
 ; ALL-NEXT: }
 ; ALL-NEXT: Arrays (Bounds as pw_affs) {

@@ -457,6 +457,8 @@ bool IndexingContext::handleDeclOccurrence(const Decl *D, SourceLocation Loc,
 void IndexingContext::handleMacroDefined(const IdentifierInfo &Name,
                                          SourceLocation Loc,
                                          const MacroInfo &MI) {
+  if (!shouldIndexMacroOccurrence(/*IsRef=*/false, Loc))
+    return;
   SymbolRoleSet Roles = (unsigned)SymbolRole::Definition;
   DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
 }
@@ -464,6 +466,8 @@ void IndexingContext::handleMacroDefined(const IdentifierInfo &Name,
 void IndexingContext::handleMacroUndefined(const IdentifierInfo &Name,
                                            SourceLocation Loc,
                                            const MacroInfo &MI) {
+  if (!shouldIndexMacroOccurrence(/*IsRef=*/false, Loc))
+    return;
   SymbolRoleSet Roles = (unsigned)SymbolRole::Undefinition;
   DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
 }
@@ -471,6 +475,37 @@ void IndexingContext::handleMacroUndefined(const IdentifierInfo &Name,
 void IndexingContext::handleMacroReference(const IdentifierInfo &Name,
                                            SourceLocation Loc,
                                            const MacroInfo &MI) {
+  if (!shouldIndexMacroOccurrence(/*IsRef=*/true, Loc))
+    return;
   SymbolRoleSet Roles = (unsigned)SymbolRole::Reference;
   DataConsumer.handleMacroOccurrence(&Name, &MI, Roles, Loc);
+}
+
+bool IndexingContext::shouldIndexMacroOccurrence(bool IsRef,
+                                                 SourceLocation Loc) {
+  if (!IndexOpts.IndexMacros)
+    return false;
+
+  switch (IndexOpts.SystemSymbolFilter) {
+  case IndexingOptions::SystemSymbolFilterKind::None:
+    break;
+  case IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly:
+    if (!IsRef)
+      return true;
+    break;
+  case IndexingOptions::SystemSymbolFilterKind::All:
+    return true;
+  }
+
+  SourceManager &SM = Ctx->getSourceManager();
+  FileID FID = SM.getFileID(SM.getFileLoc(Loc));
+  if (FID.isInvalid())
+    return false;
+
+  bool Invalid = false;
+  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
+  if (Invalid || !SEntry.isFile())
+    return false;
+
+  return SEntry.getFile().getFileCharacteristic() == SrcMgr::C_User;
 }

@@ -82,6 +82,7 @@ bool CodeCompletionContext::wantConstructorResults() const {
   case CCC_ObjCInterfaceName:
   case CCC_ObjCCategoryName:
   case CCC_IncludedFile:
+  case CCC_Attribute:
     return false;
   }
 
@@ -161,6 +162,8 @@ StringRef clang::getCompletionKindString(CodeCompletionContext::Kind Kind) {
     return "ObjCCategoryName";
   case CCKind::CCC_IncludedFile:
     return "IncludedFile";
+  case CCKind::CCC_Attribute:
+    return "Attribute";
   case CCKind::CCC_Recovery:
     return "Recovery";
   }
@@ -356,8 +359,7 @@ const char *CodeCompletionAllocator::CopyString(const Twine &String) {
 }
 
 StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
-  if (!ND)
+  if (!isa<NamedDecl>(DC))
     return {};
 
   // Check whether we've already cached the parent name.
@@ -470,8 +472,7 @@ void CodeCompletionBuilder::addParentContext(const DeclContext *DC) {
   if (DC->isFunctionOrMethod())
     return;
 
-  const NamedDecl *ND = dyn_cast<NamedDecl>(DC);
-  if (!ND)
+  if (!isa<NamedDecl>(DC))
     return;
 
   ParentName = getCodeCompletionTUInfo().getParentName(DC);
@@ -757,7 +758,7 @@ bool clang::operator<(const CodeCompletionResult &X,
   std::string XSaved, YSaved;
   StringRef XStr = X.getOrderedName(XSaved);
   StringRef YStr = Y.getOrderedName(YSaved);
-  int cmp = XStr.compare_lower(YStr);
+  int cmp = XStr.compare_insensitive(YStr);
   if (cmp)
     return cmp < 0;
 

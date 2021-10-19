@@ -1,7 +1,6 @@
 /*
  * task-two.c -- Archer testcase
  */
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 // RUN: %libarcher-compile-and-run-race | FileCheck %s
+// RUN: %libarcher-compile-and-run-race-noserial | FileCheck %s
 // REQUIRES: tsan
 #include <omp.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#define NUM_THREADS 2
+#define NUM_THREADS 8
 
 int main(int argc, char *argv[]) {
   int var = 0;

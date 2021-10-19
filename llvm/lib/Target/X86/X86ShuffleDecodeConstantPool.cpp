@@ -100,7 +100,7 @@ static bool extractConstantMask(const Constant *C, unsigned MaskEltSizeInBits,
 
     // Only treat the element as UNDEF if all bits are UNDEF, otherwise
     // treat it as zero.
-    if (EltUndef.isAllOnesValue()) {
+    if (EltUndef.isAllOnes()) {
       UndefElts.setBit(i);
       RawMask[i] = 0;
       continue;
@@ -293,55 +293,4 @@ void DecodeVPPERMMask(const Constant *C, unsigned Width,
   }
 }
 
-void DecodeVPERMVMask(const Constant *C, unsigned ElSize, unsigned Width,
-                      SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
-         "Unexpected vector size.");
-  assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
-         "Unexpected vector element size.");
-
-  // The shuffle mask requires elements the same size as the target.
-  APInt UndefElts;
-  SmallVector<uint64_t, 64> RawMask;
-  if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
-    return;
-
-  unsigned NumElts = Width / ElSize;
-
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (UndefElts[i]) {
-      ShuffleMask.push_back(SM_SentinelUndef);
-      continue;
-    }
-    int Index = RawMask[i] & (NumElts - 1);
-    ShuffleMask.push_back(Index);
-  }
-}
-
-void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize, unsigned Width,
-                       SmallVectorImpl<int> &ShuffleMask) {
-  assert((Width == 128 || Width == 256 || Width == 512) &&
-         C->getType()->getPrimitiveSizeInBits() >= Width &&
-         "Unexpected vector size.");
-  assert((ElSize == 8 || ElSize == 16 || ElSize == 32 || ElSize == 64) &&
-         "Unexpected vector element size.");
-
-  // The shuffle mask requires elements the same size as the target.
-  APInt UndefElts;
-  SmallVector<uint64_t, 64> RawMask;
-  if (!extractConstantMask(C, ElSize, UndefElts, RawMask))
-    return;
-
-  unsigned NumElts = Width / ElSize;
-
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (UndefElts[i]) {
-      ShuffleMask.push_back(SM_SentinelUndef);
-      continue;
-    }
-    int Index = RawMask[i] & (NumElts*2 - 1);
-    ShuffleMask.push_back(Index);
-  }
-}
-} // llvm namespace
+} // namespace llvm

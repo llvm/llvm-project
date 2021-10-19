@@ -1,30 +1,28 @@
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++98 | \
 // RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
-// RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=UNQUAL
+// RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=line-tables-only -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++98 | \
 // RUN:    grep 'DISubprogram' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
-// RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=QUAL
+// RUN:    FileCheck %s
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++11 | \
 // RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
-// RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=UNQUAL
+// RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null | \
 // RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
-// RUN:    FileCheck %s --check-prefix=CHECK --check-prefix=UNQUAL
+// RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 
 void freefunc() { }
 // CHECK-DAG: "freefunc"
 
 namespace N {
   int b() { return 0; }
-// UNQUAL-DAG: "b"
-// QUAL-DAG: "N::b"
+// CHECK-DAG: "b"
   namespace { void func() { } }
-// UNQUAL-DAG: "func"
-// QUAL-DAG: "N::`anonymous namespace'::func"
+// CHECK-DAG: "func"
 }
 
 void _c(void) {
@@ -35,24 +33,19 @@ void _c(void) {
 struct foo {
   int operator+(int);
   foo(){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   ~foo(){}
-// UNQUAL-DAG: "~foo"
-// QUAL-DAG: "foo::~foo"
+// CHECK-DAG: "~foo"
 
   foo(int i){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   foo(char *q){}
-// UNQUAL-DAG: "foo"
-// QUAL-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   static foo* static_method() { return 0; }
-// UNQUAL-DAG: "static_method"
-// QUAL-DAG: "foo::static_method"
+// CHECK-DAG: "static_method"
 
 };
 
@@ -61,8 +54,7 @@ void use_foo() {
   foo::static_method();
 }
 
-// UNQUAL-DAG: "operator+"
-// QUAL-DAG: "foo::operator+"
+// CHECK-DAG: "operator+"
 int foo::operator+(int a) { return a; }
 
 // PR17371
@@ -82,23 +74,23 @@ void OverloadedNewDelete::operator delete(void *) { }
 void OverloadedNewDelete::operator delete[](void *) { }
 int OverloadedNewDelete::operator+(int x) { return x; };
 
-// UNQUAL-DAG: "operator new"
-// UNQUAL-DAG: "operator new[]"
-// UNQUAL-DAG: "operator delete"
-// UNQUAL-DAG: "operator delete[]"
-// UNQUAL-DAG: "operator+"
-// QUAL-DAG: "OverloadedNewDelete::operator new"
-// QUAL-DAG: "OverloadedNewDelete::operator new[]"
-// QUAL-DAG: "OverloadedNewDelete::operator delete"
-// QUAL-DAG: "OverloadedNewDelete::operator delete[]"
-// QUAL-DAG: "OverloadedNewDelete::operator+"
-
+// CHECK-DAG: "operator new"
+// CHECK-DAG: "operator new[]"
+// CHECK-DAG: "operator delete"
+// CHECK-DAG: "operator delete[]"
+// CHECK-DAG: "operator+"
 
 template <typename T, void (*)(void)>
 void fn_tmpl() {}
 
 template void fn_tmpl<int, freefunc>();
 // CHECK-DAG: "fn_tmpl<int,&freefunc>"
+
+template <typename T, void (*)(void)>
+void fn_tmpl_typecheck() {}
+
+template void fn_tmpl_typecheck<int, &freefunc>();
+// CHECK-DAG: "fn_tmpl_typecheck<int,&freefunc>"
 
 template <typename A, typename B, typename C> struct ClassTemplate { A a; B b; C c; };
 ClassTemplate<char, short, ClassTemplate<int, int, int> > f;

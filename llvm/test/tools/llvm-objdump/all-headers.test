@@ -7,15 +7,21 @@
 ## in the following order which provides GNU objdump compatability.
 
 # CHECK:       file format elf64-x86-64
-# CHECK-EMPTY:
 # CHECK-NEXT:  architecture: x86_64
 # CHECK-NEXT:  start address: 0x0000000000000000
 # CHECK-EMPTY:
-# CHECK-NEXT: Program Header:
-# CHECK: Dynamic Section:
-# CHECK: Sections:
-# CHECK: SYMBOL TABLE:
-# CHECK: RELOCATION RECORDS FOR [.text]:
+# CHECK-NEXT:  Program Header:
+# CHECK-EMPTY:
+# CHECK-NEXT:  Dynamic Section:
+# CHECK:         INIT
+# CHECK-EMPTY:
+# CHECK-NEXT:  Sections:
+# CHECK:         6 .shstrtab   0000002e 0000000000000000
+# CHECK-EMPTY:
+# CHECK-NEXT:  SYMBOL TABLE:
+# CHECK-NEXT:  0000000000000000 l       .text  0000000000000000 foo
+# CHECK-EMPTY:
+# CHECK-NEXT:  RELOCATION RECORDS FOR [.text]:
 
 ## Check how we dump the archives.
 ## Check we dump the appropriate headers for each file in the archive.

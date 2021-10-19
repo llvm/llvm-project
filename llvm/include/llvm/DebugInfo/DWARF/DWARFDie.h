@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDIE_H
-#define LLVM_DEBUGINFO_DWARFDIE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDIE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDIE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -220,16 +220,6 @@ public:
   /// information is available.
   Expected<DWARFAddressRangesVector> getAddressRanges() const;
 
-  /// Get all address ranges for any DW_TAG_subprogram DIEs in this DIE or any
-  /// of its children.
-  ///
-  /// Get the hi/low PC range if both attributes are available or exrtracts the
-  /// non-contiguous address ranges from the DW_AT_ranges attribute for this DIE
-  /// and all children.
-  ///
-  /// \param Ranges the addres range vector to fill in.
-  void collectChildrenAddressRanges(DWARFAddressRangesVector &Ranges) const;
-
   bool addressRangeContainsAddress(const uint64_t Address) const;
 
   Expected<DWARFLocationExpressionsVector>
@@ -246,6 +236,8 @@ public:
   /// for ShortName if LinkageName is not found.
   /// Returns null if no name is found.
   const char *getName(DINameKind Kind) const;
+  void getFullName(raw_string_ostream &,
+                   std::string *OriginalFullName = nullptr) const;
 
   /// Return the DIE short name resolving DW_AT_specification or
   /// DW_AT_abstract_origin references if necessary. Returns null if no name
@@ -262,6 +254,7 @@ public:
   /// for this subprogram by resolving DW_AT_sepcification or
   /// DW_AT_abstract_origin references if necessary.
   uint64_t getDeclLine() const;
+  std::string getDeclFile(DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
   /// Retrieves values of DW_AT_call_file, DW_AT_call_line and DW_AT_call_column
   /// from DIE (or zeroes if they are missing). This function looks for
@@ -381,11 +374,6 @@ inline bool operator==(const DWARFDie::iterator &LHS,
   return LHS.Die == RHS.Die;
 }
 
-inline bool operator!=(const DWARFDie::iterator &LHS,
-                       const DWARFDie::iterator &RHS) {
-  return !(LHS == RHS);
-}
-
 // These inline functions must follow the DWARFDie::iterator definition above
 // as they use functions from that class.
 inline DWARFDie::iterator DWARFDie::begin() const {
@@ -482,4 +470,4 @@ inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDIE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDIE_H

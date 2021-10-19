@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64 -mattr=+mte | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+mte -aarch64-order-frame-objects=0 | FileCheck %s
 
 declare void @use(i8* %p)
 declare void @llvm.aarch64.settag(i8* %p, i64 %a)
@@ -19,9 +19,9 @@ entry:
 define i32 @stg16_16_16_16_ret() {
 entry:
 ; CHECK-LABEL: stg16_16_16_16_ret:
+; CHECK: mov  w0, wzr
 ; CHECK: st2g sp, [sp, #32]
 ; CHECK: st2g sp, [sp], #64
-; CHECK: mov  w0, wzr
 ; CHECK: ret
   %a = alloca i8, i32 16, align 16
   %b = alloca i8, i32 16, align 16
@@ -136,8 +136,8 @@ entry:
 ; CHECK: tbz   w0, #0, [[LABEL:.LBB.*]]
 ; CHECK: add   x9, sp, #
 ; CHECK: mov   x8, #256
-; CHECK: st2g  x9, [x9], #32
 ; CHECK: sub   x8, x8, #32
+; CHECK: st2g  x9, [x9], #32
 ; CHECK: cbnz  x8,
 ; CHECK: [[LABEL]]:
 ; CHECK: stg     sp, [sp, #
@@ -164,8 +164,8 @@ entry:
 ; CHECK: tbz   w0, #0, [[LABEL:.LBB.*]]
 ; CHECK: add   x9, sp, #
 ; CHECK: mov   x8, #1024
-; CHECK: st2g  x9, [x9], #32
 ; CHECK: sub   x8, x8, #32
+; CHECK: st2g  x9, [x9], #32
 ; CHECK: cbnz  x8,
 ; CHECK: [[LABEL]]:
 ; CHECK: stg     sp, [sp, #
@@ -192,8 +192,8 @@ entry:
 ; CHECK-LABEL: stg128_128_gap_128_128:
 ; CHECK: mov     x9, sp
 ; CHECK: mov     x8, #256
-; CHECK: st2g    x9, [x9], #32
 ; CHECK: sub     x8, x8, #32
+; CHECK: st2g    x9, [x9], #32
 ; CHECK: cbnz    x8,
 ; CHECK: mov     x8, #256
 ; CHECK: st2g    sp, [sp], #32

@@ -8,14 +8,11 @@
 
 // <forward_list>
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: libcpp-no-deduction-guides
-
 
 // template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
-//    deque(InputIterator, InputIterator, Allocator = Allocator())
-//    -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>;
+//    forward_list(InputIterator, InputIterator, Allocator = Allocator())
+//    -> forward_list<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
-
 
 #include <forward_list>
 #include <iterator>
@@ -100,5 +97,34 @@ int main(int, char**)
     assert(std::distance(fwl.begin(), fwl.end()) == 0); // no size for forward_list
     }
 
-  return 0;
+    {
+        typedef test_allocator<short> Alloc;
+        typedef test_allocator<int> ConvertibleToAlloc;
+
+        {
+        std::forward_list<short, Alloc> source;
+        std::forward_list fwl(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(fwl), decltype(source)>);
+        }
+
+        {
+        std::forward_list<short, Alloc> source;
+        std::forward_list fwl(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(fwl), decltype(source)>);
+        }
+
+        {
+        std::forward_list<short, Alloc> source;
+        std::forward_list fwl(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(fwl), decltype(source)>);
+        }
+
+        {
+        std::forward_list<short, Alloc> source;
+        std::forward_list fwl(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(fwl), decltype(source)>);
+        }
+    }
+
+    return 0;
 }

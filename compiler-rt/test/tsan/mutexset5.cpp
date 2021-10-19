@@ -33,7 +33,7 @@ int main() {
   // CHECK:     #1 main {{.*}}mutexset5.cpp:[[@LINE+4]]
   // CHECK:   Mutex [[M2]] (0x{{.*}}) created at:
   // CHECK:     #0 pthread_mutex_init
-  // CHECK:     #1 main {{.*}}mutexset5.cpp:[[@LINE+5]]
+  // CHECK:     #1 main {{.*}}mutexset5.cpp:[[@LINE+2]]
   pthread_mutex_init(&mtx1, 0);
   pthread_mutex_init(&mtx2, 0);
   pthread_t t[2];

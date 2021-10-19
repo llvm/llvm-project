@@ -14,15 +14,21 @@
 // a SIMD => wavefront mapping once that is implemented.
 //
 //===----------------------------------------------------------------------===//
+#pragma omp declare target
 
 #include "common/debug.h"
 
-static DEVICE void warn() {
+static void warn() {
   PRINT0(LD_ALL, "Locks are not supported in this thread mapping model");
 }
 
-DEVICE void __kmpc_impl_init_lock(omp_lock_t *) { warn(); }
-DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *) { warn(); }
-DEVICE void __kmpc_impl_set_lock(omp_lock_t *) { warn(); }
-DEVICE void __kmpc_impl_unset_lock(omp_lock_t *) { warn(); }
-DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock) { warn(); }
+void __kmpc_impl_init_lock(omp_lock_t *) { warn(); }
+void __kmpc_impl_destroy_lock(omp_lock_t *) { warn(); }
+void __kmpc_impl_set_lock(omp_lock_t *) { warn(); }
+void __kmpc_impl_unset_lock(omp_lock_t *) { warn(); }
+int __kmpc_impl_test_lock(omp_lock_t *lock) {
+  warn();
+  return 0;
+}
+
+#pragma omp end declare target

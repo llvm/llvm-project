@@ -8,7 +8,7 @@ find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 find_first_existing_vc_file("${LLD_SOURCE_DIR}" lld_vc)
 
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(lld_vc AND LLVM_APPEND_VC_REV)
   set(lld_source_dir ${LLD_SOURCE_DIR})
@@ -25,9 +25,6 @@ add_custom_command(OUTPUT "${version_inc}"
 set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
   HEADER_FILE_ONLY TRUE)
-
-set_property(SOURCE Version.cpp APPEND PROPERTY
-  COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
 
 add_lld_library(lldCommon
   Args.cpp

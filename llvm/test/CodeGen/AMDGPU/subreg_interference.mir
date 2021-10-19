@@ -16,8 +16,8 @@
 # CHECK: S_NOP 0, implicit-def renamable $sgpr3
 # CHECK: S_NOP 0, implicit-def renamable $sgpr1
 # CHECK: S_NOP 0, implicit-def renamable $sgpr2
-# CHECK: S_NOP 0, implicit renamable $sgpr0, implicit renamable $sgpr3
-# CHECK: S_NOP 0, implicit renamable $sgpr1, implicit renamable $sgpr2
+# CHECK: S_NOP 0, implicit killed renamable $sgpr0, implicit renamable $sgpr3
+# CHECK: S_NOP 0, implicit killed renamable $sgpr1, implicit renamable $sgpr2
 name: func0
 body: |
   bb.0:

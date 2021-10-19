@@ -13,11 +13,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUINSTRUCTIONSELECTOR_H
 
-#include "AMDGPU.h"
-#include "AMDGPUArgumentUsageInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/InstrTypes.h"
 
@@ -37,6 +32,9 @@ struct ImageDimIntrinsicInfo;
 
 class AMDGPUInstrInfo;
 class AMDGPURegisterBankInfo;
+class AMDGPUTargetMachine;
+class BlockFrequencyInfo;
+class ProfileSummaryInfo;
 class GCNSubtarget;
 class MachineInstr;
 class MachineIRBuilder;
@@ -46,10 +44,12 @@ class RegisterBank;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
+class TargetRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
   MachineRegisterInfo *MRI;
+  const GCNSubtarget *Subtarget;
 
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
@@ -59,8 +59,9 @@ public:
   bool select(MachineInstr &I) override;
   static const char *getName();
 
-  void setupMF(MachineFunction &MF, GISelKnownBits &KB,
-               CodeGenCoverage &CoverageInfo) override;
+  void setupMF(MachineFunction &MF, GISelKnownBits *KB,
+               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               BlockFrequencyInfo *BFI) override;
 
 private:
   struct GEPInfo {
@@ -70,6 +71,8 @@ private:
     int64_t Imm;
     GEPInfo(const MachineInstr &GEP) : GEP(GEP), Imm(0) { }
   };
+
+  bool isSGPR(Register Reg) const;
 
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
@@ -103,6 +106,7 @@ private:
   bool selectG_PTR_ADD(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INSERT(MachineInstr &I) const;
+  bool selectG_SBFX_UBFX(MachineInstr &I) const;
 
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectWritelane(MachineInstr &MI) const;
@@ -140,9 +144,13 @@ private:
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_SHUFFLE_VECTOR(MachineInstr &I) const;
+  bool selectAMDGPU_BUFFER_ATOMIC_FADD(MachineInstr &I) const;
+  bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
+                              MachineOperand &DataOp) const;
+  bool selectBVHIntrinsic(MachineInstr &I) const;
 
-  std::pair<Register, unsigned>
-  selectVOP3ModsImpl(MachineOperand &Root) const;
+  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
+                                                   bool AllowAbs = true) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
@@ -153,9 +161,13 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectVOP3BMods0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3BMods(MachineOperand &Root) const;
 
   ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
 
@@ -178,25 +190,30 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgpr(MachineOperand &Root) const;
 
-  template <bool Signed>
-  InstructionSelector::ComplexRendererFns
-  selectFlatOffsetImpl(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
-  selectFlatOffset(MachineOperand &Root) const;
+  std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
+                                                uint64_t FlatVariant) const;
 
   InstructionSelector::ComplexRendererFns
-  selectFlatOffsetSigned(MachineOperand &Root) const;
+  selectFlatOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectScratchSAddr(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffen(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectMUBUFScratchOffset(MachineOperand &Root) const;
 
-  bool isDSOffsetLegal(Register Base, int64_t Offset,
-                       unsigned OffsetBits) const;
+  bool isDSOffsetLegal(Register Base, int64_t Offset) const;
+  bool isDSOffset2Legal(Register Base, int64_t Offset0, int64_t Offset1,
+                        unsigned Size) const;
 
   std::pair<Register, unsigned>
   selectDS1Addr1OffsetImpl(MachineOperand &Root) const;
@@ -209,10 +226,10 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS128Bit8ByteAligned(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned>
-  selectDSReadWrite2Impl(MachineOperand &Root, bool IsDS128) const;
+  std::pair<Register, unsigned> selectDSReadWrite2Impl(MachineOperand &Root,
+                                                       unsigned size) const;
   InstructionSelector::ComplexRendererFns
-  selectDSReadWrite2(MachineOperand &Root, bool IsDS128) const;
+  selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
   std::pair<Register, int64_t>
   getPtrBaseWithConstantOffset(Register Root,
@@ -261,26 +278,6 @@ private:
   void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
-  void renderTruncTImm1(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const {
-    renderTruncTImm(MIB, MI, OpIdx);
-  }
-
-  void renderTruncTImm8(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const {
-    renderTruncTImm(MIB, MI, OpIdx);
-  }
-
-  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const {
-    renderTruncTImm(MIB, MI, OpIdx);
-  }
-
-  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const {
-    renderTruncTImm(MIB, MI, OpIdx);
-  }
-
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
@@ -289,14 +286,13 @@ private:
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
-  void renderExtractGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
-  void renderExtractSLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
-  void renderExtractDLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+  void renderExtractCPol(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
   void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
+  void renderSetGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                    int OpIdx) const;
+
   void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx) const;
 

@@ -9,6 +9,7 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanHCFGBuilder.h"
 #include "VPlanTestBase.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "gtest/gtest.h"
 
@@ -39,7 +40,7 @@ protected:
                                                    VPlan &Plan) {
     AC.reset(new AssumptionCache(F));
     SE.reset(new ScalarEvolution(F, TLI, *AC, *DT, *LI));
-    BasicAA.reset(new BasicAAResult(DL, F, TLI, *AC, &*DT, &*LI));
+    BasicAA.reset(new BasicAAResult(DL, F, TLI, *AC, &*DT));
     AARes.reset(new AAResults(TLI));
     AARes->addAAResult(*BasicAA);
     PSE.reset(new PredicatedScalarEvolution(*SE, *L));
@@ -116,6 +117,11 @@ TEST_F(VPlanSlpTest, testSlpSimple_2) {
   auto *CombinedLoadB = cast<VPInstruction>(CombinedAdd->getOperand(1));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadA->getOpcode());
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadB->getOpcode());
+
+  delete CombinedStore;
+  delete CombinedAdd;
+  delete CombinedLoadA;
+  delete CombinedLoadB;
 }
 
 TEST_F(VPlanSlpTest, testSlpSimple_3) {
@@ -190,6 +196,11 @@ TEST_F(VPlanSlpTest, testSlpSimple_3) {
   VPInstruction *GetB = cast<VPInstruction>(&*std::next(Body->begin(), 3));
   EXPECT_EQ(GetA, CombinedLoadA->getOperand(0));
   EXPECT_EQ(GetB, CombinedLoadB->getOperand(0));
+
+  delete CombinedStore;
+  delete CombinedAdd;
+  delete CombinedLoadA;
+  delete CombinedLoadB;
 }
 
 TEST_F(VPlanSlpTest, testSlpReuse_1) {
@@ -249,6 +260,10 @@ TEST_F(VPlanSlpTest, testSlpReuse_1) {
   auto *CombinedLoadA = cast<VPInstruction>(CombinedAdd->getOperand(0));
   EXPECT_EQ(CombinedLoadA, CombinedAdd->getOperand(1));
   EXPECT_EQ(VPInstruction::SLPLoad, CombinedLoadA->getOpcode());
+
+  delete CombinedStore;
+  delete CombinedAdd;
+  delete CombinedLoadA;
 }
 
 TEST_F(VPlanSlpTest, testSlpReuse_2) {
@@ -355,6 +370,15 @@ static void checkReorderExample(VPInstruction *Store1, VPInstruction *Store2,
   VPInstruction *LoadvD1 = cast<VPInstruction>(&*std::next(Body->begin(), 19));
   EXPECT_EQ(LoadvD0->getOperand(0), CombinedLoadD->getOperand(0));
   EXPECT_EQ(LoadvD1->getOperand(0), CombinedLoadD->getOperand(1));
+
+  delete CombinedStore;
+  delete CombinedAdd;
+  delete CombinedMulAB;
+  delete CombinedMulCD;
+  delete CombinedLoadA;
+  delete CombinedLoadB;
+  delete CombinedLoadC;
+  delete CombinedLoadD;
 }
 
 TEST_F(VPlanSlpTest, testSlpReorder_1) {

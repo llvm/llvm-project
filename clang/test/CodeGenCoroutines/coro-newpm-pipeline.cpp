@@ -3,29 +3,17 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null \
 // RUN:   -fexperimental-new-pass-manager -fdebug-pass-manager -fcoroutines-ts \
-// RUN:   -O0 %s 2>&1 | FileCheck %s
+// RUN:   -O0 %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm-bc -o /dev/null \
 // RUN:   -fexperimental-new-pass-manager -fdebug-pass-manager -fcoroutines-ts \
-// RUN:   -O1 %s 2>&1 | FileCheck %s
+// RUN:   -O1 %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-OPT
 //
-// CHECK: Starting llvm::Module pass manager run.
-// CHECK: Running pass:{{.*}}CoroEarlyPass
+// CHECK-ALL: Running pass:{{.*}}CoroEarlyPass
 //
-// The first coro-split pass enqueues a second run of the entire CGSCC pipeline.
-// CHECK: Starting CGSCC pass manager run.
-// CHECK: Running pass: CoroSplitPass on (_Z3foov)
-// CHECK: Running pass:{{.*}}CoroElidePass{{.*}} on {{.*}}_Z3foov{{.*}}
-// CHECK: Finished CGSCC pass manager run.
+// CHECK-ALL: Running pass: CoroSplitPass on (_Z3foov)
+// CHECK-OPT: Running pass:{{.*}}CoroElidePass{{.*}} on {{.*}}_Z3foov{{.*}}
 //
-// The second coro-split pass splits coroutine 'foo' into funclets
-// 'foo.resume', 'foo.destroy', and 'foo.cleanup'.
-// CHECK: Starting CGSCC pass manager run.
-// CHECK: Running pass: CoroSplitPass on (_Z3foov)
-// CHECK: Running pass:{{.*}}CoroElidePass{{.*}} on {{.*}}_Z3foov{{.*}}
-// CHECK: Finished CGSCC pass manager run.
-//
-// CHECK: Running pass:{{.*}}CoroCleanupPass
-// CHECK: Finished llvm::Module pass manager run.
+// CHECK-ALL: Running pass:{{.*}}CoroCleanupPass
 
 namespace std {
 namespace experimental {
@@ -33,7 +21,7 @@ namespace experimental {
 struct handle {};
 
 struct awaitable {
-  bool await_ready() noexcept { return true; }
+  bool await_ready() noexcept { return false; }
   void await_suspend(handle) noexcept {}
   bool await_resume() noexcept { return true; }
 };

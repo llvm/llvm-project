@@ -272,15 +272,15 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
 ; CHECK-NEXT:    lis 3, .LCPI0_0@ha
-; CHECK-NEXT:    lfs 2, .LCPI0_0@l(3)
+; CHECK-NEXT:    lfs 1, .LCPI0_0@l(3)
 ; CHECK-NEXT:    mtfsb0 30
 ; CHECK-NEXT:    lis 3, .LCPI0_1@ha
-; CHECK-NEXT:    fadd 1, 30, 31
+; CHECK-NEXT:    fadd 2, 30, 31
 ; CHECK-NEXT:    mtfsf 1, 0
 ; CHECK-NEXT:    lfs 0, .LCPI0_1@l(3)
-; CHECK-NEXT:    fctiwz 1, 1
-; CHECK-NEXT:    stfd 1, 88(1)
-; CHECK-NEXT:    fcmpu 0, 30, 2
+; CHECK-NEXT:    fctiwz 2, 2
+; CHECK-NEXT:    stfd 2, 88(1)
+; CHECK-NEXT:    fcmpu 0, 30, 1
 ; CHECK-NEXT:    lwz 3, 100(1)
 ; CHECK-NEXT:    fcmpu 1, 31, 0
 ; CHECK-NEXT:    lwz 4, 92(1)

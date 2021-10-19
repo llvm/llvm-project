@@ -38,10 +38,6 @@ void DynamicLoaderPOSIXDYLD::Initialize() {
 
 void DynamicLoaderPOSIXDYLD::Terminate() {}
 
-lldb_private::ConstString DynamicLoaderPOSIXDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
 lldb_private::ConstString DynamicLoaderPOSIXDYLD::GetPluginNameStatic() {
   static ConstString g_name("linux-dyld");
   return g_name;
@@ -51,8 +47,6 @@ const char *DynamicLoaderPOSIXDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
          "loads/unloads in POSIX processes.";
 }
-
-uint32_t DynamicLoaderPOSIXDYLD::GetPluginVersion() { return 1; }
 
 DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
                                                       bool force) {
@@ -76,7 +70,8 @@ DynamicLoaderPOSIXDYLD::DynamicLoaderPOSIXDYLD(Process *process)
       m_load_offset(LLDB_INVALID_ADDRESS), m_entry_point(LLDB_INVALID_ADDRESS),
       m_auxv(), m_dyld_bid(LLDB_INVALID_BREAK_ID),
       m_vdso_base(LLDB_INVALID_ADDRESS),
-      m_interpreter_base(LLDB_INVALID_ADDRESS) {}
+      m_interpreter_base(LLDB_INVALID_ADDRESS), m_initial_modules_added(false) {
+}
 
 DynamicLoaderPOSIXDYLD::~DynamicLoaderPOSIXDYLD() {
   if (m_dyld_bid != LLDB_INVALID_BREAK_ID) {
@@ -101,6 +96,7 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
 
   ModuleSP executable_sp = GetTargetExecutable();
   ResolveExecutableModule(executable_sp);
+  m_rendezvous.UpdateExecutablePath();
 
   // find the main process load offset
   addr_t load_offset = ComputeLoadOffset();
@@ -331,28 +327,37 @@ bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
     LLDB_LOG(log, "Rendezvous structure is not set up yet. "
                   "Trying to locate rendezvous breakpoint in the interpreter "
                   "by symbol name.");
-    ModuleSP interpreter = LoadInterpreterModule();
-    if (!interpreter) {
-      LLDB_LOG(log, "Can't find interpreter, rendezvous breakpoint isn't set.");
-      return false;
-    }
-
-    // Function names from different dynamic loaders that are known to be used
-    // as rendezvous between the loader and debuggers.
+    // Function names from different dynamic loaders that are known to be
+    // used as rendezvous between the loader and debuggers.
     static std::vector<std::string> DebugStateCandidates{
         "_dl_debug_state", "rtld_db_dlactivity", "__dl_rtld_db_dlactivity",
         "r_debug_state",   "_r_debug_state",     "_rtld_debug_state",
     };
 
-    FileSpecList containingModules;
-    containingModules.Append(interpreter->GetFileSpec());
-    dyld_break = target.CreateBreakpoint(
-        &containingModules, nullptr /* containingSourceFiles */,
-        DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
-        0,           /* offset */
-        eLazyBoolNo, /* skip_prologue */
-        true,        /* internal */
-        false /* request_hardware */);
+    ModuleSP interpreter = LoadInterpreterModule();
+    if (!interpreter) {
+      FileSpecList containingModules;
+      containingModules.Append(
+          m_process->GetTarget().GetExecutableModulePointer()->GetFileSpec());
+
+      dyld_break = target.CreateBreakpoint(
+          &containingModules, /*containingSourceFiles=*/nullptr,
+          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+          /*offset=*/0,
+          /*skip_prologue=*/eLazyBoolNo,
+          /*internal=*/true,
+          /*request_hardware=*/false);
+    } else {
+      FileSpecList containingModules;
+      containingModules.Append(interpreter->GetFileSpec());
+      dyld_break = target.CreateBreakpoint(
+          &containingModules, /*containingSourceFiles=*/nullptr,
+          DebugStateCandidates, eFunctionNameTypeFull, eLanguageTypeC,
+          /*offset=*/0,
+          /*skip_prologue=*/eLazyBoolNo,
+          /*internal=*/true,
+          /*request_hardware=*/false);
+    }
   }
 
   if (dyld_break->GetNumResolvedLocations() != 1) {
@@ -418,14 +423,42 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
 
   ModuleList &loaded_modules = m_process->GetTarget().GetImages();
 
-  if (m_rendezvous.ModulesDidLoad()) {
+  if (m_rendezvous.ModulesDidLoad() || !m_initial_modules_added) {
     ModuleList new_modules;
 
-    E = m_rendezvous.loaded_end();
-    for (I = m_rendezvous.loaded_begin(); I != E; ++I) {
+    // If this is the first time rendezvous breakpoint fires, we need
+    // to take care of adding all the initial modules reported by
+    // the loader.  This is necessary to list ld-linux.so on Linux,
+    // and all DT_NEEDED entries on *BSD.
+    if (m_initial_modules_added) {
+      I = m_rendezvous.loaded_begin();
+      E = m_rendezvous.loaded_end();
+    } else {
+      I = m_rendezvous.begin();
+      E = m_rendezvous.end();
+      m_initial_modules_added = true;
+    }
+    for (; I != E; ++I) {
       ModuleSP module_sp =
           LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
       if (module_sp.get()) {
+        if (module_sp->GetObjectFile()->GetBaseAddress().GetLoadAddress(
+                &m_process->GetTarget()) == m_interpreter_base &&
+            module_sp != m_interpreter_module.lock()) {
+          if (m_interpreter_module.lock() == nullptr) {
+            m_interpreter_module = module_sp;
+          } else {
+            // If this is a duplicate instance of ld.so, unload it.  We may end
+            // up with it if we load it via a different path than before
+            // (symlink vs real path).
+            // TODO: remove this once we either fix library matching or avoid
+            // loading the interpreter when setting the rendezvous breakpoint.
+            UnloadSections(module_sp);
+            loaded_modules.Remove(module_sp);
+            continue;
+          }
+        }
+
         loaded_modules.AppendIfNeeded(module_sp);
         new_modules.Append(module_sp);
       }
@@ -544,6 +577,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
                                                     true /* notify */)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_interpreter_base,
                          false);
+    m_interpreter_module = module_sp;
     return module_sp;
   }
   return nullptr;
@@ -593,6 +627,7 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);
+  m_initial_modules_added = true;
 }
 
 addr_t DynamicLoaderPOSIXDYLD::ComputeLoadOffset() {

@@ -1,4 +1,4 @@
- ; RUN: %lli -force-interpreter=true %s > /dev/null
+ ; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s > /dev/null
 
 define i32 @main() {
  %v0 = insertelement <2 x i8> zeroinitializer, i8 1, i32 1

@@ -11,10 +11,13 @@ class ConcurrentSignalWatchBreak(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD  # timing out on buildbot
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple='^mips')
     @expectedFailureNetBSD
+    @skipIf(
+        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
+        archs=['arm64', 'arm64e', 'arm64_32', 'arm'],
+        bugnumber="rdar://81811539")
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test a signal/watchpoint/breakpoint in multiple threads."""

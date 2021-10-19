@@ -3,7 +3,7 @@
 struct X { int i; float f; };
 struct Y { X x; };
 
-// CHECK-LABEL: define void @_Z21reinterpret_cast_testRiRfR1X
+// CHECK-LABEL: define{{.*}} void @_Z21reinterpret_cast_testRiRfR1X
 void reinterpret_cast_test(int &ir, float &fr, X &xr) {
   // CHECK: load float*, float**
   // CHECK: bitcast float*
@@ -48,7 +48,7 @@ void reinterpret_cast_test(int &ir, float &fr, X &xr) {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z6c_castRiRfR1X
+// CHECK-LABEL: define{{.*}} void @_Z6c_castRiRfR1X
 void c_cast(int &ir, float &fr, X &xr) {
   // CHECK: load float*, float**
   // CHECK: bitcast float*
@@ -93,7 +93,7 @@ void c_cast(int &ir, float &fr, X &xr) {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z15functional_castRiRfR1X
+// CHECK-LABEL: define{{.*}} void @_Z15functional_castRiRfR1X
 void functional_cast(int &ir, float &fr, X &xr) {
   typedef int &intref;
   typedef float &floatref;

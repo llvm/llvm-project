@@ -20,15 +20,13 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::Static;
-  return *RM;
+  return RM.getValueOr(Reloc::Static);
 }
 
 static CodeModel::Model
@@ -101,7 +99,7 @@ bool XCorePassConfig::addInstSelector() {
 }
 
 void XCorePassConfig::addPreEmitPass() {
-  addPass(createXCoreFrameToArgsOffsetEliminationPass(), false);
+  addPass(createXCoreFrameToArgsOffsetEliminationPass());
 }
 
 // Force static initialization.

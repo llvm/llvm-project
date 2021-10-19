@@ -4,7 +4,7 @@
 
 %WideUInt32 = type { i32, i32 }
 
-define void @PR25858_i32(%WideUInt32* sret, %WideUInt32*, %WideUInt32*) nounwind {
+define void @PR25858_i32(%WideUInt32* sret(%WideUInt32), %WideUInt32*, %WideUInt32*) nounwind {
 ; X86-LABEL: PR25858_i32:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %esi
@@ -55,7 +55,7 @@ declare  { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 
 %WideUInt64 = type { i64, i64 }
 
-define void @PR25858_i64(%WideUInt64* sret, %WideUInt64*, %WideUInt64*) nounwind {
+define void @PR25858_i64(%WideUInt64* sret(%WideUInt64), %WideUInt64*, %WideUInt64*) nounwind {
 ; X86-LABEL: PR25858_i64:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %ebp
@@ -63,23 +63,23 @@ define void @PR25858_i64(%WideUInt64* sret, %WideUInt64*, %WideUInt64*) nounwind
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %esi
-; X86-NEXT:    movl 4(%edx), %edi
-; X86-NEXT:    subl (%ecx), %esi
-; X86-NEXT:    sbbl 4(%ecx), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl (%edi), %ecx
+; X86-NEXT:    movl 4(%edi), %edx
+; X86-NEXT:    subl (%esi), %ecx
+; X86-NEXT:    sbbl 4(%esi), %edx
 ; X86-NEXT:    setb %bl
-; X86-NEXT:    movl 12(%edx), %ebp
-; X86-NEXT:    movl 8(%edx), %edx
-; X86-NEXT:    subl 8(%ecx), %edx
-; X86-NEXT:    sbbl 12(%ecx), %ebp
-; X86-NEXT:    movzbl %bl, %ecx
-; X86-NEXT:    subl %ecx, %edx
+; X86-NEXT:    movl 12(%edi), %ebp
+; X86-NEXT:    movl 8(%edi), %edi
+; X86-NEXT:    subl 8(%esi), %edi
+; X86-NEXT:    sbbl 12(%esi), %ebp
+; X86-NEXT:    movzbl %bl, %esi
+; X86-NEXT:    subl %esi, %edi
 ; X86-NEXT:    sbbl $0, %ebp
-; X86-NEXT:    movl %esi, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
 ; X86-NEXT:    movl %ebp, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

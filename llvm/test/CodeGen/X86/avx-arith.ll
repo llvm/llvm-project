@@ -14,7 +14,7 @@ entry:
 define <4 x double> @addpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %add.i = fadd <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -34,7 +34,7 @@ entry:
 define <8 x float> @addps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: addps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %add.i = fadd <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>
@@ -96,7 +96,7 @@ entry:
 define <4 x double> @mulpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %mul.i = fmul <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -116,7 +116,7 @@ entry:
 define <8 x float> @mulps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: mulps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vmulps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %mul.i = fmul <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>
@@ -136,7 +136,7 @@ entry:
 define <4 x double> @divpd256fold(<4 x double> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divpd256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vdivpd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vdivpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %div.i = fdiv <4 x double> %y, <double 4.500000e+00, double 3.400000e+00, double 2.300000e+00, double 1.200000e+00>
@@ -156,7 +156,7 @@ entry:
 define <8 x float> @divps256fold(<8 x float> %y) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: divps256fold:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    vdivps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vdivps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
   %div.i = fdiv <8 x float> %y, <float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000, float 4.500000e+00, float 0x400B333340000000, float 0x4002666660000000, float 0x3FF3333340000000>

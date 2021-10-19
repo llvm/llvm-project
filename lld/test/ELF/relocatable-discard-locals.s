@@ -15,9 +15,9 @@
 ## --discard-locals removes unused local symbols which start with ".L"
 # DISCARD-LOCALS:    0: {{0+}} 0 NOTYPE  LOCAL  DEFAULT UND
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} .Lused
+# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused
 # DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} unused_gc
-# DISCARD-LOCALS-NEXT:           NOTYPE  LOCAL  DEFAULT {{.*}} used
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} .text
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} text
 # DISCARD-LOCALS-NEXT:           SECTION LOCAL  DEFAULT {{.*}} gc

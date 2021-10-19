@@ -72,10 +72,9 @@ class JITLoaderGDBTestCase(TestBase):
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
-        if not configuration.is_reproducer():
-            self.assertTrue(os.path.exists(logfile))
-            logcontent = open(logfile).read()
-            self.assertIn("SetJITBreakpoint setting JIT breakpoint", logcontent)
+        self.assertTrue(os.path.exists(logfile))
+        logcontent = open(logfile).read()
+        self.assertIn("SetJITBreakpoint setting JIT breakpoint", logcontent)
 
     @skipIfWindows # This test fails on Windows during C code build
     def test_jit_int_off(self):
@@ -101,7 +100,6 @@ class JITLoaderGDBTestCase(TestBase):
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
-        if not configuration.is_reproducer():
-            self.assertTrue(os.path.exists(logfile))
-            logcontent = open(logfile).read()
-            self.assertNotIn("SetJITBreakpoint setting JIT breakpoint", logcontent)
+        self.assertTrue(os.path.exists(logfile))
+        logcontent = open(logfile).read()
+        self.assertNotIn("SetJITBreakpoint setting JIT breakpoint", logcontent)

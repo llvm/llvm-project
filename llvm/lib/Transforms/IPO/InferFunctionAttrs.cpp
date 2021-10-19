@@ -15,6 +15,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "inferattrs"
@@ -25,9 +26,15 @@ static bool inferAllPrototypeAttributes(
 
   for (Function &F : M.functions())
     // We only infer things using the prototype and the name; we don't need
-    // definitions.
-    if (F.isDeclaration() && !F.hasOptNone())
-      Changed |= inferLibFuncAttributes(F, GetTLI(F));
+    // definitions.  This ensures libfuncs are annotated and also allows our
+    // CGSCC inference to avoid needing to duplicate the inference from other
+    // attribute logic on all calls to declarations (as declarations aren't
+    // explicitly visited by CGSCC passes in the new pass manager.)
+    if (F.isDeclaration() && !F.hasOptNone()) {
+      if (!F.hasFnAttribute(Attribute::NoBuiltin))
+        Changed |= inferLibFuncAttributes(F, GetTLI(F));
+      Changed |= inferAttributesFromOthers(F);
+    }
 
   return Changed;
 }

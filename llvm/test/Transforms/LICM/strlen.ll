@@ -13,7 +13,7 @@ loop:
 }
 
 ; CHECK: declare i64 @strlen(i8* nocapture) #0
-; CHECK: attributes #0 = { argmemonly nofree nounwind readonly }
+; CHECK: attributes #0 = { argmemonly mustprogress nofree nounwind readonly willreturn }
 declare i64 @strlen(i8*)
 
 

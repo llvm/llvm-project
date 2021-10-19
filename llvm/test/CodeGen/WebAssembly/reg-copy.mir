@@ -56,13 +56,24 @@ body: |
     RETURN implicit-def $arguments
 ...
 ---
-name: copy_exnref
-# CHECK-LABEL: copy_exnref
+name: copy_funcref
+# CHECK-LABEL: copy_funcref
 body: |
   ; CHECK-LABEL: bb.0:
-  ; CHECK-NEXT: %0:exnref = COPY_EXNREF %1:exnref
+  ; CHECK-NEXT: %0:funcref = COPY_FUNCREF %1:funcref
   ; CHECK-NEXT: RETURN
   bb.0:
-    %0:exnref = COPY %1:exnref
+    %0:funcref = COPY %1:funcref
+    RETURN implicit-def $arguments
+...
+---
+name: copy_externref
+# CHECK-LABEL: copy_externref
+body: |
+  ; CHECK-LABEL: bb.0:
+  ; CHECK-NEXT: %0:externref = COPY_EXTERNREF %1:externref
+  ; CHECK-NEXT: RETURN
+  bb.0:
+    %0:externref = COPY %1:externref
     RETURN implicit-def $arguments
 ...

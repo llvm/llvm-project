@@ -21,7 +21,9 @@
 #pragma push_macro("SM_72")
 #pragma push_macro("SM_75")
 #pragma push_macro("SM_80")
-#define SM_80 "sm_80"
+#pragma push_macro("SM_86")
+#define SM_86 "sm_86"
+#define SM_80 "sm_80|" SM_86
 #define SM_75 "sm_75|" SM_80
 #define SM_72 "sm_72|" SM_75
 #define SM_70 "sm_70|" SM_72
@@ -35,7 +37,15 @@
 #pragma push_macro("PTX64")
 #pragma push_macro("PTX65")
 #pragma push_macro("PTX70")
-#define PTX70 "ptx70"
+#pragma push_macro("PTX71")
+#pragma push_macro("PTX72")
+#pragma push_macro("PTX73")
+#pragma push_macro("PTX74")
+#define PTX74 "ptx74"
+#define PTX73 "ptx73|" PTX74
+#define PTX72 "ptx72|" PTX73
+#define PTX71 "ptx71|" PTX72
+#define PTX70 "ptx70|" PTX71
 #define PTX65 "ptx65|" PTX70
 #define PTX64 "ptx64|" PTX65
 #define PTX63 "ptx63|" PTX64
@@ -43,7 +53,7 @@
 #define PTX60 "ptx60|" PTX61
 
 #pragma push_macro("AND")
-#define AND(a, b) a "," b
+#define AND(a, b) "(" a "),(" b ")"
 
 // Special Registers
 
@@ -450,11 +460,44 @@ TARGET_BUILTIN(__nvvm_match_any_sync_i64, "WiUiWi", "", PTX60)
 TARGET_BUILTIN(__nvvm_match_all_sync_i32p, "UiUiUii*", "", PTX60)
 TARGET_BUILTIN(__nvvm_match_all_sync_i64p, "WiUiWii*", "", PTX60)
 
+// Redux
+TARGET_BUILTIN(__nvvm_redux_sync_add, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_min, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_max, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_umin, "UiUii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_umax, "UiUii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_and, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_xor, "iii", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_redux_sync_or, "iii", "", AND(SM_80,PTX70))
+
 // Membar
 
 BUILTIN(__nvvm_membar_cta, "v", "")
 BUILTIN(__nvvm_membar_gl, "v", "")
 BUILTIN(__nvvm_membar_sys, "v", "")
+
+// mbarrier
+
+TARGET_BUILTIN(__nvvm_mbarrier_init, "vWi*i", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_init_shared, "vWi*3i", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mbarrier_inval, "vWi*", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_inval_shared, "vWi*3", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mbarrier_arrive, "WiWi*", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_shared, "WiWi*3", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_noComplete, "WiWi*i", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_noComplete_shared, "WiWi*3i", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_drop, "WiWi*", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_drop_shared, "WiWi*3", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_drop_noComplete, "WiWi*i", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_arrive_drop_noComplete_shared, "WiWi*3i", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mbarrier_test_wait, "bWi*Wi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_mbarrier_test_wait_shared, "bWi*3Wi", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_mbarrier_pending_count, "iWi", "", AND(SM_80,PTX70))
 
 // Memcpy, Memset
 
@@ -685,6 +728,7 @@ TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX
 TARGET_BUILTIN(__bmma_m8n8k128_ld_a_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_b_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_c, "vi*iC*UiIi", "", AND(SM_75,PTX63))
+TARGET_BUILTIN(__bmma_m8n8k128_mma_and_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX71))
 TARGET_BUILTIN(__bmma_m8n8k128_mma_xor_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m16n16k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
@@ -720,6 +764,44 @@ TARGET_BUILTIN(__imma_m8n8k32_mma_s4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m8n8k32_mma_u4, "vi*iC*iC*iC*IiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m8n8k32_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 
+// Builtins to support double and alternate float WMMA instructions on sm_80
+TARGET_BUILTIN(__dmma_m8n8k4_ld_a, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_ld_b, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_ld_c, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_st_c_f64, "vd*dC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__dmma_m8n8k4_mma_f64, "vd*dC*dC*dC*IiIi", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__mma_bf16_m16n16k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m16n16k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m16n16k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m8n32k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_bf16_m32n8k16_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_a, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_b, "vi*iC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_ld_c, "vf*fC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_m16n16k8_st_c_f32, "vf*fC*UiIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__mma_tf32_m16n16k8_mma_f32, "vf*iC*iC*fC*IiIi", "", AND(SM_80,PTX70))
+
+// Async Copy
+TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive, "vWi*", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_shared, "vWi*3", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc, "vWi*", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_mbarrier_arrive_noinc_shared, "vWi*3", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_4, "vv*3vC*1", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_8, "vv*3vC*1", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_ca_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_cg_shared_global_16, "vv*3vC*1", "", AND(SM_80,PTX70))
+
+TARGET_BUILTIN(__nvvm_cp_async_commit_group, "v", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_wait_group, "vIi", "", AND(SM_80,PTX70))
+TARGET_BUILTIN(__nvvm_cp_async_wait_all, "v", "", AND(SM_80,PTX70))
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #pragma pop_macro("AND")
@@ -728,9 +810,14 @@ TARGET_BUILTIN(__imma_m8n8k32_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 #pragma pop_macro("SM_72")
 #pragma pop_macro("SM_75")
 #pragma pop_macro("SM_80")
+#pragma pop_macro("SM_86")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
 #pragma pop_macro("PTX63")
 #pragma pop_macro("PTX64")
 #pragma pop_macro("PTX65")
 #pragma pop_macro("PTX70")
+#pragma pop_macro("PTX71")
+#pragma pop_macro("PTX72")
+#pragma pop_macro("PTX73")
+#pragma pop_macro("PTX74")

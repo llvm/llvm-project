@@ -1,17 +1,17 @@
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-05 %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL %s
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-STABLE-05 %s
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.5 -analysis-inconsistency-epsilon=0.5 -analysis-display-unstable-clusters -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-UNSTABLE-05 %s
 
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.49 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL,CHECK-CLUSTERS-049 %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.49 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-CLUSTERS-ALL %s
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.49 -analysis-inconsistency-epsilon=0.5 -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-STABLE-049 %s
 # RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file=- -analysis-clustering-epsilon=0.49 -analysis-inconsistency-epsilon=0.5 -analysis-display-unstable-clusters -analysis-numpoints=1 -analysis-clustering=naive | FileCheck -check-prefixes=CHECK-INCONSISTENCIES-UNSTABLE-049 %s
 
 # CHECK-CLUSTERS-ALL: {{^}}cluster_id,opcode_name,config,sched_class,latency{{$}}
 
-# CHECK-CLUSTERS-NEXT-05: {{^}}0,
-# CHECK-CLUSTERS-SAME-05: ,90.00{{$}}
-# CHECK-CLUSTERS-05: {{^}}0,
-# CHECK-CLUSTERS-SAME-05: ,90.50{{$}}
+# CHECK-CLUSTERS-ALL-NEXT: {{^}}0,
+# CHECK-CLUSTERS-ALL-SAME: ,90.00{{$}}
+# CHECK-CLUSTERS-ALL: {{^}}0,
+# CHECK-CLUSTERS-ALL-SAME: ,90.50{{$}}
 
 # CHECK-INCONSISTENCIES-STABLE-05: ADD32rr
 # CHECK-INCONSISTENCIES-STABLE-05: ADD32rr

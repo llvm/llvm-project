@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-not-null-terminated-result %t -- \
 // RUN: -config="{CheckOptions: \
 // RUN: [{key: bugprone-not-null-terminated-result.WantToUseSafeFunctions, \
-// RUN:   value: 1}]}" \
+// RUN:   value: true}]}" \
 // RUN: -- -std=c11 -I %S/Inputs/bugprone-not-null-terminated-result
 
 #include "not-null-terminated-result-c.h"

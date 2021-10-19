@@ -30,6 +30,7 @@ module LLVM_Backend {
 
     // These are intended for (repeated) textual inclusion.
     textual header "CodeGen/DIEValue.def"
+    textual header "CodeGen/MachinePassRegistry.def"
   }
 }
 
@@ -65,9 +66,11 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/ARC.def"
     textual header "BinaryFormat/ELFRelocs/AVR.def"
     textual header "BinaryFormat/ELFRelocs/BPF.def"
+    textual header "BinaryFormat/ELFRelocs/CSKY.def"
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
     textual header "BinaryFormat/ELFRelocs/i386.def"
     textual header "BinaryFormat/ELFRelocs/Lanai.def"
+    textual header "BinaryFormat/ELFRelocs/M68k.def"
     textual header "BinaryFormat/ELFRelocs/Mips.def"
     textual header "BinaryFormat/ELFRelocs/MSP430.def"
     textual header "BinaryFormat/ELFRelocs/PowerPC64.def"
@@ -178,21 +181,25 @@ module LLVM_ExecutionEngine {
   // translation unit (or none) and aren't part of this module.
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
-  exclude header "ExecutionEngine/OrcMCJITReplacement.h"
-
-  // FIXME: These exclude directives were added as a workaround for
-  //        <rdar://problem/29247092> and should be removed once it is fixed.
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetClient.h"
-  exclude header "ExecutionEngine/Orc/OrcRemoteTargetServer.h"
-  exclude header "ExecutionEngine/Orc/RemoteObjectLayer.h"
 
   // Exclude headers from LLVM_OrcSupport.
-  exclude header "ExecutionEngine/Orc/OrcError.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+  exclude header "ExecutionEngine/Orc/Shared/OrcError.h"
+}
 
+module LLVM_FileCheck {
+  requires cplusplus
+
+  umbrella "FileCheck"
+  module * { export * }
+}
+
+module LLVM_Frontend_OpenMP {
+  requires cplusplus
+
+  umbrella "Frontend/OpenMP"
+  module * { export * }
+
+  exclude header "Frontend/OpenMP/OMPKinds.def"
 }
 
 // Orc utilities that don't depend only on Support (not ExecutionEngine or
@@ -201,10 +208,7 @@ module LLVM_ExecutionEngine {
 module LLVM_OrcSupport {
   requires cplusplus
 
-  header "ExecutionEngine/Orc/OrcError.h"
-  header "ExecutionEngine/Orc/RPC/RPCUtils.h"
-  header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
-  header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
+  header "ExecutionEngine/Orc/Shared/OrcError.h"
 
   export *
 }
@@ -370,6 +374,9 @@ module LLVM_Transforms {
   umbrella "Transforms"
 
   module * { export * }
+
+  // Requires DEBUG_TYPE to be defined by including file.
+  exclude header "Transforms/Utils/InstructionWorklist.h"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"

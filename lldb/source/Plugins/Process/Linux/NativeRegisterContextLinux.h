@@ -11,27 +11,77 @@
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
+#include "lldb/Target/MemoryTagManager.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 namespace process_linux {
 
-class NativeRegisterContextLinux : public NativeRegisterContextRegisterInfo {
-public:
-  NativeRegisterContextLinux(NativeThreadProtocol &native_thread,
-                             RegisterInfoInterface *reg_info_interface_p);
+class NativeThreadLinux;
 
+class NativeRegisterContextLinux
+    : public virtual NativeRegisterContextRegisterInfo {
+public:
   // This function is implemented in the NativeRegisterContextLinux_* subclasses
   // to create a new instance of the host specific NativeRegisterContextLinux.
   // The implementations can't collide as only one NativeRegisterContextLinux_*
   // variant should be compiled into the final executable.
   static std::unique_ptr<NativeRegisterContextLinux>
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+                                       NativeThreadLinux &native_thread);
 
   // Invalidates cached values in register context data structures
   virtual void InvalidateAllRegisters(){}
 
+  struct SyscallData {
+    /// The syscall instruction. If the architecture uses software
+    /// single-stepping, the instruction should also be followed by a trap to
+    /// ensure the process is stopped after the syscall.
+    llvm::ArrayRef<uint8_t> Insn;
+
+    /// Registers used for syscall arguments. The first register is used to
+    /// store the syscall number.
+    llvm::ArrayRef<uint32_t> Args;
+
+    uint32_t Result; ///< Register containing the syscall result.
+  };
+  /// Return architecture-specific data needed to make inferior syscalls, if
+  /// they are supported.
+  virtual llvm::Optional<SyscallData> GetSyscallData() { return llvm::None; }
+
+  struct MmapData {
+    // Syscall numbers can be found (e.g.) in /usr/include/asm/unistd.h for the
+    // relevant architecture.
+    unsigned SysMmap;   ///< mmap syscall number.
+    unsigned SysMunmap; ///< munmap syscall number
+  };
+  /// Return the architecture-specific data needed to make mmap syscalls, if
+  /// they are supported.
+  virtual llvm::Optional<MmapData> GetMmapData() { return llvm::None; }
+
+  struct MemoryTaggingDetails {
+    /// Object with tag handling utilities. If the function below returns
+    /// a valid structure, you can assume that this pointer is valid.
+    std::unique_ptr<MemoryTagManager> manager;
+    int ptrace_read_req;  /// ptrace operation number for memory tag read
+    int ptrace_write_req; /// ptrace operation number for memory tag write
+  };
+  /// Return architecture specific data needed to use memory tags,
+  /// if they are supported.
+  virtual llvm::Expected<MemoryTaggingDetails>
+  GetMemoryTaggingDetails(int32_t type) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Architecture does not support memory tagging");
+  }
+
 protected:
+  // NB: This constructor is here only because gcc<=6.5 requires a virtual base
+  // class initializer on abstract class (even though it is never used). It can
+  // be deleted once we move to gcc>=7.0.
+  NativeRegisterContextLinux(NativeThreadProtocol &thread)
+      : NativeRegisterContextRegisterInfo(thread, nullptr) {}
+
   lldb::ByteOrder GetByteOrder() const;
 
   virtual Status ReadRegisterRaw(uint32_t reg_index, RegisterValue &reg_value);

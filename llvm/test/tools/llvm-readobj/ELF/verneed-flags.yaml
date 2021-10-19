@@ -83,10 +83,8 @@ FileHeader:
   Type:  ET_EXEC
   Entry: 0x0000000000201000
 Sections:
-  - Name:            .gnu.version_r
-    Type:            SHT_GNU_verneed
-    Link:            .dynstr
-    Info:            0x0000000000000001
+  - Name: .gnu.version_r
+    Type: SHT_GNU_verneed
     Dependencies:
       - Version:         1
         File:            dso.so.0

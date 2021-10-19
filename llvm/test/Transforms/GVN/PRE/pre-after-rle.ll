@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -phi-values -gvn -S < %s | FileCheck %s
 
 declare noalias i8* @malloc(i64)
 

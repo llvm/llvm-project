@@ -1,11 +1,11 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x21000 --stop-address=0x21006 %t2 | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x22004 --stop-address=0x22008 %t2 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x1021ff8 --stop-address=0x1021ffc %t2 | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x2012ff8 --stop-address=0x2021ffc %t2 | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=thumbv7a-none-linux-gnueabi --start-address=0x3021fec --stop-address=0x3021ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x21000 --stop-address=0x21006 %t2 | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x22004 --stop-address=0x22008 %t2 | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x1021ff8 --stop-address=0x1021ffc %t2 | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x2012ff8 --stop-address=0x2021ffc %t2 | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d --no-show-raw-insn --start-address=0x3021fec --stop-address=0x3021ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
  .syntax unified
  .balign 0x1000
  .thumb
@@ -22,7 +22,7 @@ _start:
 
 
 // CHECK2:      <__Thumbv7ABSLongThunk__start>:
-// CHECK2-NEXT:    22004: b.w     #-4104 <_start>
+// CHECK2-NEXT:    22004: b.w     0x21000 <_start>
 
 /// Gigantic section where we need a ThunkSection either side of it
  .section .text.large1, "ax", %progbits
@@ -32,8 +32,8 @@ _start:
  .space (16 * 1024 * 1024) - 4
  bl _start
  .space (16 * 1024 * 1024) - 16
-// CHECK3: 1021ff8: bl      #-16777208
-// CHECK4: 2021ff8: bl      #16777200
+// CHECK3: 1021ff8: bl      0x22004 <__Thumbv7ABSLongThunk__start>
+// CHECK4: 2021ff8: bl      0x3021fec <__Thumbv7ABSLongThunk__start>
 
 // CHECK5:      <__Thumbv7ABSLongThunk__start>:
 // CHECK5-NEXT:  3021fec: movw    r12, #4097

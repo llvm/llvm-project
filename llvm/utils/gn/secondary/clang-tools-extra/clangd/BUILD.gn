@@ -1,3 +1,4 @@
+import("//clang-tools-extra/clangd/quality/gen_decision_forest.gni")
 import("//clang-tools-extra/clangd/xpc/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 
@@ -10,23 +11,36 @@ config("features_config") {
 write_cmake_config("features") {
   input = "Features.inc.in"
   output = "$target_gen_dir/Features.inc"
-  values = []
+  values = [
+    "CLANGD_ENABLE_REMOTE=0",
+    "CLANGD_MALLOC_TRIM=1",
+    "CLANGD_TIDY_CHECKS=1",
+    "ENABLE_GRPC_REFLECTION=0",
+  ]
   if (clangd_build_xpc) {
     values += [ "CLANGD_BUILD_XPC=1" ]
   } else {
     values += [ "CLANGD_BUILD_XPC=0" ]
   }
-  values += [ "CLANGD_ENABLE_REMOTE=0" ]
   public_configs = [ ":features_config" ]
+}
+
+gen_decision_forest("CompletionModel") {
+  model = "quality/model"
+  filename = "CompletionModel"
+  cpp_class = "clang::clangd::Example"
+  deps = [ "//clang/lib/Sema" ]
 }
 
 static_library("clangd") {
   output_name = "clangDaemon"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":CompletionModel",
     ":features",
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clang-tidy:all-checks",
+    "//clang-tools-extra/clang-tidy:clang-tidy-config",
     "//clang-tools-extra/clangd/support",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
@@ -55,6 +69,7 @@ static_library("clangd") {
   ]
   sources = [
     "AST.cpp",
+    "ASTSignals.cpp",
     "ClangdLSPServer.cpp",
     "ClangdServer.cpp",
     "CodeComplete.cpp",
@@ -68,8 +83,11 @@ static_library("clangd") {
     "ConfigYAML.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
+    "DumpAST.cpp",
     "ExpectedTypes.cpp",
     "FS.cpp",
+    "Feature.cpp",
+    "FeatureModule.cpp",
     "FileDistance.cpp",
     "FindSymbols.cpp",
     "FindTarget.cpp",
@@ -78,8 +96,11 @@ static_library("clangd") {
     "GlobalCompilationDatabase.cpp",
     "HeaderSourceSwitch.cpp",
     "Headers.cpp",
+    "HeuristicResolver.cpp",
     "Hover.cpp",
+    "IncludeCleaner.cpp",
     "IncludeFixer.cpp",
+    "InlayHints.cpp",
     "JSONTransport.cpp",
     "ParsedAST.cpp",
     "PathMapping.cpp",
@@ -93,6 +114,7 @@ static_library("clangd") {
     "SemanticSelection.cpp",
     "SourceCode.cpp",
     "TUScheduler.cpp",
+    "TidyProvider.cpp",
     "URI.cpp",
     "XRefs.cpp",
     "index/Background.cpp",
@@ -106,6 +128,7 @@ static_library("clangd") {
     "index/IndexAction.cpp",
     "index/MemIndex.cpp",
     "index/Merge.cpp",
+    "index/ProjectAware.cpp",
     "index/Ref.cpp",
     "index/Relation.cpp",
     "index/Serialization.cpp",

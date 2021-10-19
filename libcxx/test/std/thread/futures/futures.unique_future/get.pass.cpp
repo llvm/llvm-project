@@ -20,6 +20,7 @@
 #include <future>
 #include <cassert>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 void func1(std::promise<int> p)
@@ -68,7 +69,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func1, std::move(p)).detach();
+            support::make_test_thread(func1, std::move(p)).detach();
             assert(f.valid());
             assert(f.get() == 3);
             assert(!f.valid());
@@ -77,7 +78,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func2, std::move(p)).detach();
+            support::make_test_thread(func2, std::move(p)).detach();
             try
             {
                 assert(f.valid());
@@ -97,7 +98,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func3, std::move(p)).detach();
+            support::make_test_thread(func3, std::move(p)).detach();
             assert(f.valid());
             assert(f.get() == 5);
             assert(!f.valid());
@@ -106,7 +107,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func4, std::move(p)).detach();
+            support::make_test_thread(func4, std::move(p)).detach();
             try
             {
                 assert(f.valid());
@@ -126,7 +127,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func5, std::move(p)).detach();
+            support::make_test_thread(func5, std::move(p)).detach();
             assert(f.valid());
             f.get();
             assert(!f.valid());
@@ -135,7 +136,7 @@ int main(int, char**)
         {
             std::promise<T> p;
             std::future<T> f = p.get_future();
-            std::thread(func6, std::move(p)).detach();
+            support::make_test_thread(func6, std::move(p)).detach();
             try
             {
                 assert(f.valid());

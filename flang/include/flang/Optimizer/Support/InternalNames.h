@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_SUPPORT_INTERNALNAMES_H
-#define OPTIMIZER_SUPPORT_INTERNALNAMES_H
+#ifndef FORTRAN_OPTIMIZER_SUPPORT_INTERNALNAMES_H
+#define FORTRAN_OPTIMIZER_SUPPORT_INTERNALNAMES_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -32,6 +32,7 @@ struct NameUniquer {
   /// The sort of the unique name
   enum class NameKind {
     NOT_UNIQUED,
+    BLOCK_DATA_NAME,
     COMMON,
     CONSTANT,
     DERIVED_TYPE,
@@ -40,7 +41,8 @@ struct NameUniquer {
     INTRINSIC_TYPE_DESC,
     PROCEDURE,
     TYPE_DESC,
-    VARIABLE
+    VARIABLE,
+    NAMELIST_GROUP
   };
 
   /// Components of an unparsed unique name
@@ -52,61 +54,69 @@ struct NameUniquer {
         : modules{modules.begin(), modules.end()}, host{host}, name{name},
           kinds{kinds.begin(), kinds.end()} {}
 
-    llvm::SmallVector<std::string, 2> modules;
+    llvm::SmallVector<std::string> modules;
     llvm::Optional<std::string> host;
     std::string name;
-    llvm::SmallVector<std::int64_t, 4> kinds;
+    llvm::SmallVector<std::int64_t> kinds;
   };
 
-  NameUniquer() = default;
-
   /// Unique a common block name
-  std::string doCommonBlock(llvm::StringRef name);
+  static std::string doCommonBlock(llvm::StringRef name);
+
+  /// Unique a block data unit name
+  static std::string doBlockData(llvm::StringRef name);
 
   /// Unique a (global) constant name
-  std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,
-                         llvm::Optional<llvm::StringRef> host,
-                         llvm::StringRef name);
+  static std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,
+                                llvm::Optional<llvm::StringRef> host,
+                                llvm::StringRef name);
 
   /// Unique a dispatch table name
-  std::string doDispatchTable(llvm::ArrayRef<llvm::StringRef> modules,
-                              llvm::Optional<llvm::StringRef> host,
-                              llvm::StringRef name,
-                              llvm::ArrayRef<std::int64_t> kinds);
+  static std::string doDispatchTable(llvm::ArrayRef<llvm::StringRef> modules,
+                                     llvm::Optional<llvm::StringRef> host,
+                                     llvm::StringRef name,
+                                     llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a compiler generated name
-  std::string doGenerated(llvm::StringRef name);
+  static std::string doGenerated(llvm::StringRef name);
 
   /// Unique an intrinsic type descriptor
-  std::string doIntrinsicTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                                        llvm::Optional<llvm::StringRef> host,
-                                        IntrinsicType type, std::int64_t kind);
+  static std::string
+  doIntrinsicTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
+                            llvm::Optional<llvm::StringRef> host,
+                            IntrinsicType type, std::int64_t kind);
 
   /// Unique a procedure name
-  std::string doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
-                          llvm::Optional<llvm::StringRef> host,
-                          llvm::StringRef name);
+  static std::string doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
+                                 llvm::Optional<llvm::StringRef> host,
+                                 llvm::StringRef name);
 
   /// Unique a derived type name
-  std::string doType(llvm::ArrayRef<llvm::StringRef> modules,
-                     llvm::Optional<llvm::StringRef> host, llvm::StringRef name,
-                     llvm::ArrayRef<std::int64_t> kinds);
+  static std::string doType(llvm::ArrayRef<llvm::StringRef> modules,
+                            llvm::Optional<llvm::StringRef> host,
+                            llvm::StringRef name,
+                            llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (derived) type descriptor name
-  std::string doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                               llvm::Optional<llvm::StringRef> host,
-                               llvm::StringRef name,
-                               llvm::ArrayRef<std::int64_t> kinds);
-  std::string doTypeDescriptor(llvm::ArrayRef<std::string> modules,
-                               llvm::Optional<std::string> host,
-                               llvm::StringRef name,
-                               llvm::ArrayRef<std::int64_t> kinds);
+  static std::string doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
+                                      llvm::Optional<llvm::StringRef> host,
+                                      llvm::StringRef name,
+                                      llvm::ArrayRef<std::int64_t> kinds);
+  static std::string doTypeDescriptor(llvm::ArrayRef<std::string> modules,
+                                      llvm::Optional<std::string> host,
+                                      llvm::StringRef name,
+                                      llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (global) variable name. A variable with save attribute
   /// defined inside a subprogram also needs to be handled here
-  std::string doVariable(llvm::ArrayRef<llvm::StringRef> modules,
-                         llvm::Optional<llvm::StringRef> host,
-                         llvm::StringRef name);
+  static std::string doVariable(llvm::ArrayRef<llvm::StringRef> modules,
+                                llvm::Optional<llvm::StringRef> host,
+                                llvm::StringRef name);
+
+  /// Unique a namelist group name
+  static std::string doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
+                                     llvm::Optional<llvm::StringRef> host,
+                                     llvm::StringRef name);
 
   /// Entry point for the PROGRAM (called by the runtime)
   /// Can be overridden with the `--main-entry-name=<name>` option.
@@ -116,13 +126,25 @@ struct NameUniquer {
   static std::pair<NameKind, DeconstructedName>
   deconstruct(llvm::StringRef uniquedName);
 
+  /// Check if the name is an external facing name.
+  static bool isExternalFacingUniquedName(
+      const std::pair<NameKind, DeconstructedName> &deconstructResult);
+
+  /// Check whether the name should be re-mangle with external ABI convention.
+  static bool needExternalNameMangling(llvm::StringRef uniquedName);
+
 private:
-  std::string intAsString(std::int64_t i);
-  std::string doKind(std::int64_t kind);
-  std::string doKinds(llvm::ArrayRef<std::int64_t> kinds);
-  std::string toLower(llvm::StringRef name);
+  static std::string intAsString(std::int64_t i);
+  static std::string doKind(std::int64_t kind);
+  static std::string doKinds(llvm::ArrayRef<std::int64_t> kinds);
+  static std::string toLower(llvm::StringRef name);
+
+  NameUniquer() = delete;
+  NameUniquer(const NameUniquer &) = delete;
+  NameUniquer(NameUniquer &&) = delete;
+  NameUniquer &operator=(const NameUniquer &) = delete;
 };
 
 } // namespace fir
 
-#endif // OPTIMIZER_SUPPORT_INTERNALNAMES_H
+#endif // FORTRAN_OPTIMIZER_SUPPORT_INTERNALNAMES_H

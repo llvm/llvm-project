@@ -1,4 +1,4 @@
-; RUN: FileCheck -check-prefix=A -check-prefix=B -input-file %s %s
+; RUN: FileCheck -check-prefix=A -check-prefix=B -input-file %s %s -allow-unused-prefixes
 
 this is the string to be matched
 

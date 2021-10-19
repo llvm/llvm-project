@@ -17,40 +17,40 @@ struct fabc { float a; float b; float c; };
 
 struct f2a2b { float a[2]; float b[2]; };
 
-// CHECK: define [1 x float] @func_f1(float inreg %x.coerce)
+// CHECK: define{{.*}} [1 x float] @func_f1(float inreg %x.coerce)
 struct f1 func_f1(struct f1 x) { return x; }
 
-// CHECK: define [2 x float] @func_f2([2 x float] %x.coerce)
+// CHECK: define{{.*}} [2 x float] @func_f2([2 x float] %x.coerce)
 struct f2 func_f2(struct f2 x) { return x; }
 
-// CHECK: define [3 x float] @func_f3([3 x float] %x.coerce)
+// CHECK: define{{.*}} [3 x float] @func_f3([3 x float] %x.coerce)
 struct f3 func_f3(struct f3 x) { return x; }
 
-// CHECK: define [4 x float] @func_f4([4 x float] %x.coerce)
+// CHECK: define{{.*}} [4 x float] @func_f4([4 x float] %x.coerce)
 struct f4 func_f4(struct f4 x) { return x; }
 
-// CHECK: define [5 x float] @func_f5([5 x float] %x.coerce)
+// CHECK: define{{.*}} [5 x float] @func_f5([5 x float] %x.coerce)
 struct f5 func_f5(struct f5 x) { return x; }
 
-// CHECK: define [6 x float] @func_f6([6 x float] %x.coerce)
+// CHECK: define{{.*}} [6 x float] @func_f6([6 x float] %x.coerce)
 struct f6 func_f6(struct f6 x) { return x; }
 
-// CHECK: define [7 x float] @func_f7([7 x float] %x.coerce)
+// CHECK: define{{.*}} [7 x float] @func_f7([7 x float] %x.coerce)
 struct f7 func_f7(struct f7 x) { return x; }
 
-// CHECK: define [8 x float] @func_f8([8 x float] %x.coerce)
+// CHECK: define{{.*}} [8 x float] @func_f8([8 x float] %x.coerce)
 struct f8 func_f8(struct f8 x) { return x; }
 
-// CHECK: define void @func_f9(%struct.f9* noalias sret align 4 %agg.result, [5 x i64] %x.coerce)
+// CHECK: define{{.*}} void @func_f9(%struct.f9* noalias sret(%struct.f9) align 4 %agg.result, [5 x i64] %x.coerce)
 struct f9 func_f9(struct f9 x) { return x; }
 
-// CHECK: define [2 x float] @func_fab([2 x float] %x.coerce)
+// CHECK: define{{.*}} [2 x float] @func_fab([2 x float] %x.coerce)
 struct fab func_fab(struct fab x) { return x; }
 
-// CHECK: define [3 x float] @func_fabc([3 x float] %x.coerce)
+// CHECK: define{{.*}} [3 x float] @func_fabc([3 x float] %x.coerce)
 struct fabc func_fabc(struct fabc x) { return x; }
 
-// CHECK: define [4 x float] @func_f2a2b([4 x float] %x.coerce)
+// CHECK: define{{.*}} [4 x float] @func_f2a2b([4 x float] %x.coerce)
 struct f2a2b func_f2a2b(struct f2a2b x) { return x; }
 
 // CHECK-LABEL: @call_f1
@@ -106,7 +106,7 @@ void call_f8(void) { global_f8 = func_f8(global_f8); }
 // CHECK: %[[TMP2:[^ ]+]] = bitcast [5 x i64]* %[[TMP1]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %[[TMP2]], i8* align 4 bitcast (%struct.f9* @global_f9 to i8*), i64 36, i1 false)
 // CHECK: %[[TMP3:[^ ]+]] = load [5 x i64], [5 x i64]* %[[TMP1]]
-// CHECK: call void @func_f9(%struct.f9* sret align 4 %{{[^ ]+}}, [5 x i64] %[[TMP3]])
+// CHECK: call void @func_f9(%struct.f9* sret(%struct.f9) align 4 %{{[^ ]+}}, [5 x i64] %[[TMP3]])
 struct f9 global_f9;
 void call_f9(void) { global_f9 = func_f9(global_f9); }
 
@@ -138,37 +138,37 @@ struct v9 { vector int v[9]; };
 struct vab { vector int a; vector int b; };
 struct vabc { vector int a; vector int b; vector int c; };
 
-// CHECK: define [1 x <4 x i32>] @func_v1(<4 x i32> inreg %x.coerce)
+// CHECK: define{{.*}} [1 x <4 x i32>] @func_v1(<4 x i32> inreg %x.coerce)
 struct v1 func_v1(struct v1 x) { return x; }
 
-// CHECK: define [2 x <4 x i32>] @func_v2([2 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [2 x <4 x i32>] @func_v2([2 x <4 x i32>] %x.coerce)
 struct v2 func_v2(struct v2 x) { return x; }
 
-// CHECK: define [3 x <4 x i32>] @func_v3([3 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [3 x <4 x i32>] @func_v3([3 x <4 x i32>] %x.coerce)
 struct v3 func_v3(struct v3 x) { return x; }
 
-// CHECK: define [4 x <4 x i32>] @func_v4([4 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [4 x <4 x i32>] @func_v4([4 x <4 x i32>] %x.coerce)
 struct v4 func_v4(struct v4 x) { return x; }
 
-// CHECK: define [5 x <4 x i32>] @func_v5([5 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [5 x <4 x i32>] @func_v5([5 x <4 x i32>] %x.coerce)
 struct v5 func_v5(struct v5 x) { return x; }
 
-// CHECK: define [6 x <4 x i32>] @func_v6([6 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [6 x <4 x i32>] @func_v6([6 x <4 x i32>] %x.coerce)
 struct v6 func_v6(struct v6 x) { return x; }
 
-// CHECK: define [7 x <4 x i32>] @func_v7([7 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [7 x <4 x i32>] @func_v7([7 x <4 x i32>] %x.coerce)
 struct v7 func_v7(struct v7 x) { return x; }
 
-// CHECK: define [8 x <4 x i32>] @func_v8([8 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [8 x <4 x i32>] @func_v8([8 x <4 x i32>] %x.coerce)
 struct v8 func_v8(struct v8 x) { return x; }
 
-// CHECK: define void @func_v9(%struct.v9* noalias sret align 16 %agg.result, %struct.v9* byval(%struct.v9) align 16 %x)
+// CHECK: define{{.*}} void @func_v9(%struct.v9* noalias sret(%struct.v9) align 16 %agg.result, %struct.v9* byval(%struct.v9) align 16 %x)
 struct v9 func_v9(struct v9 x) { return x; }
 
-// CHECK: define [2 x <4 x i32>] @func_vab([2 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [2 x <4 x i32>] @func_vab([2 x <4 x i32>] %x.coerce)
 struct vab func_vab(struct vab x) { return x; }
 
-// CHECK: define [3 x <4 x i32>] @func_vabc([3 x <4 x i32>] %x.coerce)
+// CHECK: define{{.*}} [3 x <4 x i32>] @func_vabc([3 x <4 x i32>] %x.coerce)
 struct vabc func_vabc(struct vabc x) { return x; }
 
 // CHECK-LABEL: @call_v1
@@ -220,7 +220,7 @@ struct v8 global_v8;
 void call_v8(void) { global_v8 = func_v8(global_v8); }
 
 // CHECK-LABEL: @call_v9
-// CHECK: call void @func_v9(%struct.v9* sret align 16 %{{[^ ]+}}, %struct.v9* byval(%struct.v9) align 16 @global_v9)
+// CHECK: call void @func_v9(%struct.v9* sret(%struct.v9) align 16 %{{[^ ]+}}, %struct.v9* byval(%struct.v9) align 16 @global_v9)
 struct v9 global_v9;
 void call_v9(void) { global_v9 = func_v9(global_v9); }
 
@@ -255,37 +255,37 @@ struct v3f9 { float3 v[9]; };
 struct v3fab { float3 a; float3 b; };
 struct v3fabc { float3 a; float3 b; float3 c; };
 
-// CHECK: define [1 x <4 x float>] @func_v3f1(<3 x float> inreg %x.coerce)
+// CHECK: define{{.*}} [1 x <4 x float>] @func_v3f1(<3 x float> inreg %x.coerce)
 struct v3f1 func_v3f1(struct v3f1 x) { return x; }
 
-// CHECK: define [2 x <4 x float>] @func_v3f2([2 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [2 x <4 x float>] @func_v3f2([2 x <4 x float>] %x.coerce)
 struct v3f2 func_v3f2(struct v3f2 x) { return x; }
 
-// CHECK: define [3 x <4 x float>] @func_v3f3([3 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [3 x <4 x float>] @func_v3f3([3 x <4 x float>] %x.coerce)
 struct v3f3 func_v3f3(struct v3f3 x) { return x; }
 
-// CHECK: define [4 x <4 x float>] @func_v3f4([4 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [4 x <4 x float>] @func_v3f4([4 x <4 x float>] %x.coerce)
 struct v3f4 func_v3f4(struct v3f4 x) { return x; }
 
-// CHECK: define [5 x <4 x float>] @func_v3f5([5 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [5 x <4 x float>] @func_v3f5([5 x <4 x float>] %x.coerce)
 struct v3f5 func_v3f5(struct v3f5 x) { return x; }
 
-// CHECK: define [6 x <4 x float>] @func_v3f6([6 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [6 x <4 x float>] @func_v3f6([6 x <4 x float>] %x.coerce)
 struct v3f6 func_v3f6(struct v3f6 x) { return x; }
 
-// CHECK: define [7 x <4 x float>] @func_v3f7([7 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [7 x <4 x float>] @func_v3f7([7 x <4 x float>] %x.coerce)
 struct v3f7 func_v3f7(struct v3f7 x) { return x; }
 
-// CHECK: define [8 x <4 x float>] @func_v3f8([8 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [8 x <4 x float>] @func_v3f8([8 x <4 x float>] %x.coerce)
 struct v3f8 func_v3f8(struct v3f8 x) { return x; }
 
-// CHECK: define void @func_v3f9(%struct.v3f9* noalias sret align 16 %agg.result, %struct.v3f9* byval(%struct.v3f9) align 16 %x)
+// CHECK: define{{.*}} void @func_v3f9(%struct.v3f9* noalias sret(%struct.v3f9) align 16 %agg.result, %struct.v3f9* byval(%struct.v3f9) align 16 %x)
 struct v3f9 func_v3f9(struct v3f9 x) { return x; }
 
-// CHECK: define [2 x <4 x float>] @func_v3fab([2 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [2 x <4 x float>] @func_v3fab([2 x <4 x float>] %x.coerce)
 struct v3fab func_v3fab(struct v3fab x) { return x; }
 
-// CHECK: define [3 x <4 x float>] @func_v3fabc([3 x <4 x float>] %x.coerce)
+// CHECK: define{{.*}} [3 x <4 x float>] @func_v3fabc([3 x <4 x float>] %x.coerce)
 struct v3fabc func_v3fabc(struct v3fabc x) { return x; }
 
 // CHECK-LABEL: @call_v3f1
@@ -337,7 +337,7 @@ struct v3f8 global_v3f8;
 void call_v3f8(void) { global_v3f8 = func_v3f8(global_v3f8); }
 
 // CHECK-LABEL: @call_v3f9
-// CHECK: call void @func_v3f9(%struct.v3f9* sret align 16 %{{[^ ]+}}, %struct.v3f9* byval(%struct.v3f9) align 16 @global_v3f9)
+// CHECK: call void @func_v3f9(%struct.v3f9* sret(%struct.v3f9) align 16 %{{[^ ]+}}, %struct.v3f9* byval(%struct.v3f9) align 16 @global_v3f9)
 struct v3f9 global_v3f9;
 void call_v3f9(void) { global_v3f9 = func_v3f9(global_v3f9); }
 
@@ -368,58 +368,58 @@ struct s9 { char c[9]; };
 struct s16 { char c[16]; };
 struct s17 { char c[17]; };
 
-// CHECK: define i8 @ret_s1()
+// CHECK: define{{.*}} i8 @ret_s1()
 struct s1 ret_s1() {
   return (struct s1) { 17 };
 }
 
-// CHECK: define i16 @ret_s2()
+// CHECK: define{{.*}} i16 @ret_s2()
 struct s2 ret_s2() {
   return (struct s2) { 17, 18 };
 }
 
-// CHECK: define i24 @ret_s3()
+// CHECK: define{{.*}} i24 @ret_s3()
 struct s3 ret_s3() {
   return (struct s3) { 17, 18, 19 };
 }
 
-// CHECK: define i32 @ret_s4()
+// CHECK: define{{.*}} i32 @ret_s4()
 struct s4 ret_s4() {
   return (struct s4) { 17, 18, 19, 20 };
 }
 
-// CHECK: define i40 @ret_s5()
+// CHECK: define{{.*}} i40 @ret_s5()
 struct s5 ret_s5() {
   return (struct s5) { 17, 18, 19, 20, 21 };
 }
 
-// CHECK: define i48 @ret_s6()
+// CHECK: define{{.*}} i48 @ret_s6()
 struct s6 ret_s6() {
   return (struct s6) { 17, 18, 19, 20, 21, 22 };
 }
 
-// CHECK: define i56 @ret_s7()
+// CHECK: define{{.*}} i56 @ret_s7()
 struct s7 ret_s7() {
   return (struct s7) { 17, 18, 19, 20, 21, 22, 23 };
 }
 
-// CHECK: define i64 @ret_s8()
+// CHECK: define{{.*}} i64 @ret_s8()
 struct s8 ret_s8() {
   return (struct s8) { 17, 18, 19, 20, 21, 22, 23, 24 };
 }
 
-// CHECK: define { i64, i64 } @ret_s9()
+// CHECK: define{{.*}} { i64, i64 } @ret_s9()
 struct s9 ret_s9() {
   return (struct s9) { 17, 18, 19, 20, 21, 22, 23, 24, 25 };
 }
 
-// CHECK: define { i64, i64 } @ret_s16()
+// CHECK: define{{.*}} { i64, i64 } @ret_s16()
 struct s16 ret_s16() {
   return (struct s16) { 17, 18, 19, 20, 21, 22, 23, 24,
                         25, 26, 27, 28, 29, 30, 31, 32 };
 }
 
-// CHECK: define void @ret_s17(%struct.s17*
+// CHECK: define{{.*}} void @ret_s17(%struct.s17*
 struct s17 ret_s17() {
   return (struct s17) { 17, 18, 19, 20, 21, 22, 23, 24,
                         25, 26, 27, 28, 29, 30, 31, 32, 33 };

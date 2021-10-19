@@ -24,14 +24,15 @@ Sections:
         Field:           __linear_memory
         Kind:            MEMORY
         Memory:
-          Initial:         0x00000000
+          Minimum:         0x00000000
       - Module:          env
         Field:           __indirect_function_table
         Kind:            TABLE
         Table:
+          Index:           0
           ElemType:        FUNCREF
           Limits:
-            Initial:         0x00000000
+            Minimum:         0x00000000
   - Type:            FUNCTION
     FunctionTypes:   [ 0 ]
   - Type:            CODE

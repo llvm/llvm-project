@@ -21,14 +21,14 @@ namespace macho {
 class Reader {
 public:
   virtual ~Reader(){};
-  virtual std::unique_ptr<Object> create() const = 0;
+  virtual Expected<std::unique_ptr<Object>> create() const = 0;
 };
 
 class MachOReader : public Reader {
   const object::MachOObjectFile &MachOObj;
 
   void readHeader(Object &O) const;
-  void readLoadCommands(Object &O) const;
+  Error readLoadCommands(Object &O) const;
   void readSymbolTable(Object &O) const;
   void setSymbolInRelocationInfo(Object &O) const;
   void readRebaseInfo(Object &O) const;
@@ -39,6 +39,7 @@ class MachOReader : public Reader {
   void readLinkData(Object &O, Optional<size_t> LCIndex, LinkData &LD) const;
   void readCodeSignature(Object &O) const;
   void readDataInCodeData(Object &O) const;
+  void readLinkerOptimizationHint(Object &O) const;
   void readFunctionStartsData(Object &O) const;
   void readIndirectSymbolTable(Object &O) const;
   void readSwiftVersion(Object &O) const;
@@ -46,7 +47,7 @@ class MachOReader : public Reader {
 public:
   explicit MachOReader(const object::MachOObjectFile &Obj) : MachOObj(Obj) {}
 
-  std::unique_ptr<Object> create() const override;
+  Expected<std::unique_ptr<Object>> create() const override;
 };
 
 } // end namespace macho

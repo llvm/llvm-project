@@ -15,6 +15,7 @@
 
 #include "VE.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Support/TypeSize.h"
 
 namespace llvm {
 
@@ -38,8 +39,10 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  bool hasBP(const MachineFunction &MF) const;
   bool hasFP(const MachineFunction &MF) const override;
+  bool hasBP(const MachineFunction &MF) const;
+  bool hasGOT(const MachineFunction &MF) const;
+
   // VE reserves argument space always for call sites in the function
   // immediately on entry of the current function.
   bool hasReservedCallFrame(const MachineFunction &MF) const override {
@@ -48,8 +51,8 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;
 
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
 
   const SpillSlot *
   getCalleeSavedSpillSlots(unsigned &NumEntries) const override {

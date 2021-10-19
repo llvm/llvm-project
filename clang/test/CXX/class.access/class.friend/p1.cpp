@@ -128,7 +128,7 @@ namespace test2 {
     X *getPrev() { return Prev; } // expected-note{{member is declared here}}
   };
 
-  class ilist_node : private ilist_half_node { // expected-note {{declared private here}} expected-note {{constrained by private inheritance here}}
+  class ilist_node : private ilist_half_node { // expected-note {{constrained by private inheritance here}}
     friend struct ilist_walker;
     X *Next;
     X *getNext() { return Next; } // expected-note {{declared private here}}
@@ -143,8 +143,7 @@ namespace test2 {
 
   struct ilist_walker_bad {
     static X *getPrev(X *N) { return N->getPrev(); } // \
-    // expected-error {{'getPrev' is a private member of 'test2::ilist_half_node'}} \
-    // expected-error {{cannot cast 'test2::X' to its private base class 'test2::ilist_half_node'}}
+    // expected-error {{'getPrev' is a private member of 'test2::ilist_half_node'}}
 
     static X *getNext(X *N) { return N->getNext(); } // \
     // expected-error {{'getNext' is a private member of 'test2::ilist_node'}}
@@ -273,7 +272,7 @@ namespace test7 {
 // Return types, parameters and default arguments to friend functions.
 namespace test8 {
   class A {
-    typedef int I; // expected-note 4 {{declared private here}}
+    typedef int I;        // expected-note 6 {{declared private here}}
     static const I x = 0; // expected-note {{implicitly declared private here}}
     friend I f(I i);
     template<typename T> friend I g(I i);
@@ -290,7 +289,16 @@ namespace test8 {
   template<typename T> A::I g2(A::I i) { // expected-error 2 {{is a private member of}}
     T t;
   }
-  template A::I g2<A::I>(A::I i);
+  template <> A::I g2<char>(A::I i) { return 0; } // OK
+  template A::I g2<A::I>(A::I i);                 // OK
+  template <> A::I g2<char>(A::I i);              // OK
+  template <> A::I g2<A::I *>(A::I i);            // OK
+  template A::I g2<unsigned>(A::I i);             // OK
+  template int g2<A::I **>(int i);                // OK
+  template A::I g2<A::I ***>(A::I i);             // OK
+
+  template <typename T> A::I g3(A::I i) { return 0; } // expected-error 2 {{is a private member of}}
+  template <> int g3<A::I>(int i);                    // OK
 }
 
 // PR6885

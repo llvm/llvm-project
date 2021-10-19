@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %python %S/test_folding.py %s %flang_fc1
 ! Tests folding of SHAPE(TRANSFER(...))
 
 module m

@@ -31,12 +31,12 @@
 
 ATTR(cpu_specific(ivybridge))
 void SingleVersion(void){}
-// LINUX: define void @SingleVersion.S() #[[S:[0-9]+]]
+// LINUX: define{{.*}} void @SingleVersion.S() #[[S:[0-9]+]]
 // WINDOWS: define dso_local void @SingleVersion.S() #[[S:[0-9]+]]
 
 ATTR(cpu_specific(ivybridge))
 void NotCalled(void){}
-// LINUX: define void @NotCalled.S() #[[S]]
+// LINUX: define{{.*}} void @NotCalled.S() #[[S]]
 // WINDOWS: define dso_local void @NotCalled.S() #[[S:[0-9]+]]
 
 // Done before any of the implementations.  Also has an undecorated forward
@@ -256,7 +256,7 @@ int DispatchFirst(void);
 
 ATTR(cpu_specific(atom))
 int DispatchFirst(void) {return 0;}
-// LINUX: define i32 @DispatchFirst.O
+// LINUX: define{{.*}} i32 @DispatchFirst.O
 // LINUX: ret i32 0
 
 // WINDOWS: define dso_local i32 @DispatchFirst.O()
@@ -264,12 +264,12 @@ int DispatchFirst(void) {return 0;}
 
 ATTR(cpu_specific(pentium))
 int DispatchFirst(void) {return 1;}
-// LINUX: define i32 @DispatchFirst.B
+// LINUX: define{{.*}} i32 @DispatchFirst.B
 // LINUX: ret i32 1
 
 // WINDOWS: define dso_local i32 @DispatchFirst.B
 // WINDOWS: ret i32 1
 
-// CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+cx8,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
-// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx8,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+cx8,+mmx,+movbe,+sse,+sse2,+sse3,+ssse3,+x87"

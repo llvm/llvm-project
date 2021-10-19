@@ -8,7 +8,9 @@
 ; FUNC-LABEL: {{^}}bfi_def:
 ; R600: BFI_INT
 
-; GCN:   v_bfi_b32
+; GCN-DAG:   s_andn2_b32
+; GCN-DAG:   s_and_b32
+; GCN:   s_or_b32
 define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = xor i32 %x, -1
@@ -24,7 +26,9 @@ entry:
 ; FUNC-LABEL: {{^}}bfi_sha256_ch:
 ; R600: BFI_INT
 
-; GCN:   v_bfi_b32
+; GCN:   s_xor_b32
+; GCN:   s_and_b32
+; GCN:   s_xor_b32
 define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = xor i32 %y, %z
@@ -40,8 +44,10 @@ entry:
 ; R600: XOR_INT * [[DST:T[0-9]+\.[XYZW]]], KC0[2].Z, KC0[2].W
 ; R600: BFI_INT * {{T[0-9]+\.[XYZW]}}, {{[[DST]]|PV\.[XYZW]}}, KC0[3].X, KC0[2].W
 
-; GCN: v_xor_b32_e32 [[DST:v[0-9]+]], {{s[0-9]+, v[0-9]+}}
-; GCN: v_bfi_b32 {{v[0-9]+}}, [[DST]], {{s[0-9]+, v[0-9]+}}
+; GCN: s_and_b32
+; GCN: s_or_b32
+; GCN: s_and_b32
+; GCN: s_or_b32
 define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
 entry:
   %0 = and i32 %x, %z
@@ -117,12 +123,9 @@ entry:
 
 ; FIXME: Should leave as 64-bit SALU ops
 ; FUNC-LABEL: {{^}}s_bitselect_i64_pat_0:
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_bfi_b32
-; GCN-DAG: v_bfi_b32
+; GCN: s_and_b64
+; GCN: s_andn2_b64
+; GCN: s_or_b64
 define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
@@ -134,12 +137,9 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 }
 
 ; FUNC-LABEL: {{^}}s_bitselect_i64_pat_1:
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_bfi_b32
-; GCN-DAG: v_bfi_b32
+; GCN: s_xor_b64
+; GCN: s_and_b64
+; GCN: s_xor_b64
 define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
@@ -151,12 +151,9 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 }
 
 ; FUNC-LABEL: {{^}}s_bitselect_i64_pat_2:
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_bfi_b32
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_bfi_b32
+; GCN: s_xor_b64
+; GCN: s_and_b64
+; GCN: s_xor_b64
 define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
@@ -168,12 +165,10 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 }
 
 ; FUNC-LABEL: {{^}}s_bfi_sha256_ma_i64:
-; GCN: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_xor_b32
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s
-; GCN-DAG: v_xor_b32
-; GCN-DAG: v_bfi_b32
-; GCN: v_bfi_b32
+; GCN: s_and_b64
+; GCN: s_or_b64
+; GCN: s_and_b64
+; GCN: s_or_b64
 define amdgpu_kernel void @s_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 entry:
   %and0 = and i64 %x, %z

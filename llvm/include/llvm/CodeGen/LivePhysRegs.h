@@ -133,6 +133,10 @@ public:
   /// pristine registers.
   void addLiveIns(const MachineBasicBlock &MBB);
 
+  /// Adds all live-in registers of basic block \p MBB but skips pristine
+  /// registers.
+  void addLiveInsNoPristines(const MachineBasicBlock &MBB);
+
   /// Adds all live-out registers of basic block \p MBB.
   /// Live out registers are the union of the live-in registers of the successor
   /// blocks and pristine registers. Live out registers of the end block are the

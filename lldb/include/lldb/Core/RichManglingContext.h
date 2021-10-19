@@ -24,12 +24,12 @@ namespace lldb_private {
 /// providers. See Mangled::DemangleWithRichManglingInfo()
 class RichManglingContext {
 public:
-  RichManglingContext() : m_provider(None), m_ipd_buf_size(2048) {
+  RichManglingContext() {
     m_ipd_buf = static_cast<char *>(std::malloc(m_ipd_buf_size));
     m_ipd_buf[0] = '\0';
   }
 
-  ~RichManglingContext() { std::free(m_ipd_buf); }
+  ~RichManglingContext();
 
   /// Use the ItaniumPartialDemangler to obtain rich mangling information from
   /// the given mangled name.
@@ -41,9 +41,6 @@ public:
 
   /// If this symbol describes a constructor or destructor.
   bool IsCtorOrDtor() const;
-
-  /// If this symbol describes a function.
-  bool IsFunction() const;
 
   /// Get the base name of a function. This doesn't include trailing template
   /// arguments, ie "a::b<int>" gives "b". The result will overwrite the
@@ -70,21 +67,27 @@ private:
   enum InfoProvider { None, ItaniumPartialDemangler, PluginCxxLanguage };
 
   /// Selects the rich mangling info provider.
-  InfoProvider m_provider;
+  InfoProvider m_provider = None;
 
   /// Reference to the buffer used for results of ParseXy() operations.
   llvm::StringRef m_buffer;
 
   /// Members for ItaniumPartialDemangler
   llvm::ItaniumPartialDemangler m_ipd;
+  /// Note: m_ipd_buf is a raw pointer due to being resized by realloc via
+  /// ItaniumPartialDemangler. It should be managed with malloc/free, not
+  /// new/delete.
   char *m_ipd_buf;
-  size_t m_ipd_buf_size;
+  size_t m_ipd_buf_size = 2048;
 
   /// Members for PluginCxxLanguage
   /// Cannot forward declare inner class CPlusPlusLanguage::MethodName. The
   /// respective header is in Plugins and including it from here causes cyclic
   /// dependency. Instead keep a llvm::Any and cast it on-access in the cpp.
   llvm::Any m_cxx_method_parser;
+
+  /// Clean up memory when using PluginCxxLanguage
+  void ResetCxxMethodParser();
 
   /// Clean up memory and set a new info provider for this instance.
   void ResetProvider(InfoProvider new_provider);

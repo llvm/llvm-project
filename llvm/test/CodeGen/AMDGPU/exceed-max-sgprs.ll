@@ -1,6 +1,6 @@
 ; RUN: not llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
-; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_tahiti
+; ERROR: error: scalar registers (106) exceeds limit (104) in function 'use_too_many_sgprs_tahiti'
 define amdgpu_kernel void @use_too_many_sgprs_tahiti() #0 {
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()
@@ -19,7 +19,7 @@ define amdgpu_kernel void @use_too_many_sgprs_tahiti() #0 {
   ret void
 }
 
-; ERROR: error: scalar registers limit of 104 exceeded (106) in use_too_many_sgprs_bonaire
+; ERROR: error: scalar registers (106) exceeds limit (104) in function 'use_too_many_sgprs_bonaire'
 define amdgpu_kernel void @use_too_many_sgprs_bonaire() #1 {
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()
@@ -38,7 +38,7 @@ define amdgpu_kernel void @use_too_many_sgprs_bonaire() #1 {
   ret void
 }
 
-; ERROR: error: scalar registers limit of 104 exceeded (108) in use_too_many_sgprs_bonaire_flat_scr
+; ERROR: error: scalar registers (108) exceeds limit (104) in function 'use_too_many_sgprs_bonaire_flat_scr'
 define amdgpu_kernel void @use_too_many_sgprs_bonaire_flat_scr() #1 {
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()
@@ -58,7 +58,7 @@ define amdgpu_kernel void @use_too_many_sgprs_bonaire_flat_scr() #1 {
   ret void
 }
 
-; ERROR: error: scalar registers limit of 96 exceeded (98) in use_too_many_sgprs_iceland
+; ERROR: error: scalar registers (98) exceeds limit (96) in function 'use_too_many_sgprs_iceland'
 define amdgpu_kernel void @use_too_many_sgprs_iceland() #2 {
   call void asm sideeffect "", "~{vcc}" ()
   call void asm sideeffect "", "~{s[0:7]}" ()
@@ -76,7 +76,7 @@ define amdgpu_kernel void @use_too_many_sgprs_iceland() #2 {
   ret void
 }
 
-; ERROR: error: addressable scalar registers limit of 102 exceeded (103) in use_too_many_sgprs_fiji
+; ERROR: error: addressable scalar registers (103) exceeds limit (102) in function 'use_too_many_sgprs_fiji'
 define amdgpu_kernel void @use_too_many_sgprs_fiji() #3 {
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()

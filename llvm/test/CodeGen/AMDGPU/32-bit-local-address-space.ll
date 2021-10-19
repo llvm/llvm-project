@@ -83,7 +83,7 @@ define amdgpu_kernel void @mul_32bit_ptr(float addrspace(1)* %out, [3 x float] a
 @g_lds = addrspace(3) global float undef, align 4
 
 ; FUNC-LABEL: {{^}}infer_ptr_alignment_global_offset:
-; SI: v_mov_b32_e32 [[PTR:v[0-9]+]], g_lds@abs32@lo
+; SI: v_mov_b32_e32 [[PTR:v[0-9]+]], 0{{$}}
 ; SI: ds_read_b32 v{{[0-9]+}}, [[PTR]]
 define amdgpu_kernel void @infer_ptr_alignment_global_offset(float addrspace(1)* %out, i32 %tid) {
   %val = load float, float addrspace(3)* @g_lds

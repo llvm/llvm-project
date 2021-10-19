@@ -11,10 +11,10 @@ namespace lldb {
 %feature("docstring",
 "Represents a list of symbol context object. See also SBSymbolContext.
 
-For example (from test/python_api/target/TestTargetAPI.py),
+For example (from test/python_api/target/TestTargetAPI.py), ::
 
     def find_functions(self, exe_name):
-        '''Exercise SBTaget.FindFunctions() API.'''
+        '''Exercise SBTarget.FindFunctions() API.'''
         exe = os.path.join(os.getcwd(), exe_name)
 
         # Create a target by the debugger.

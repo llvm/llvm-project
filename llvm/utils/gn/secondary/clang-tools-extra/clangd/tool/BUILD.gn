@@ -6,6 +6,7 @@ executable("clangd") {
     "//clang-tools-extra/clang-tidy",
     "//clang-tools-extra/clangd",
     "//clang-tools-extra/clangd:features",
+    "//clang-tools-extra/clangd/index/remote/unimplemented",
     "//clang-tools-extra/clangd/refactor/tweaks",
     "//clang/lib/AST",
     "//clang/lib/Basic",
@@ -25,5 +26,8 @@ executable("clangd") {
   }
 
   include_dirs = [ ".." ]
-  sources = [ "ClangdMain.cpp" ]
+  sources = [
+    "Check.cpp",
+    "ClangdMain.cpp",
+  ]
 }

@@ -1,7 +1,7 @@
 # Check the basic discovery process, including a sub-suite.
 #
 # RUN: %{lit} %{inputs}/discovery \
-# RUN:   -j 1 --debug --show-tests --show-suites \
+# RUN:   --debug --show-tests --show-suites \
 # RUN:   -v > %t.out 2> %t.err
 # RUN: FileCheck --check-prefix=CHECK-BASIC-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-BASIC-ERR < %t.err %s
@@ -51,21 +51,21 @@
 # CHECK-CONFIG-MAP-ERR: resolved input '{{.*(/|\\\\)config-map-discovery(/|\\\\)main-config}}' to 'config-map'::()
 
 
-# Check discovery when exact test names are given.
+# Check discovery when tests are named directly.
 #
 # RUN: %{lit} \
 # RUN:     %{inputs}/discovery/subdir/test-three.py \
 # RUN:     %{inputs}/discovery/subsuite/test-one.txt \
-# RUN:   -j 1 --show-tests --show-suites -v > %t.out
-# RUN: FileCheck --check-prefix=CHECK-EXACT-TEST < %t.out %s
+# RUN:   --show-tests --show-suites -v > %t.out
+# RUN: FileCheck --check-prefix=CHECK-DIRECT-TEST < %t.out %s
 #
-# CHECK-EXACT-TEST: -- Available Tests --
-# CHECK-EXACT-TEST: sub-suite :: test-one
-# CHECK-EXACT-TEST: top-level-suite :: subdir/test-three
+# CHECK-DIRECT-TEST: -- Available Tests --
+# CHECK-DIRECT-TEST: sub-suite :: test-one
+# CHECK-DIRECT-TEST: top-level-suite :: subdir/test-three
 
 # Check discovery when config files end in .py
 # RUN: %{lit} %{inputs}/py-config-discovery \
-# RUN:   -j 1 --debug --show-tests --show-suites \
+# RUN:   --debug --show-tests --show-suites \
 # RUN:   -v > %t.out 2> %t.err
 # RUN: FileCheck --check-prefix=CHECK-PYCONFIG-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-PYCONFIG-ERR < %t.err %s
@@ -95,7 +95,7 @@
 # Check discovery when using an exec path.
 #
 # RUN: %{lit} %{inputs}/exec-discovery \
-# RUN:   -j 1 --debug --show-tests --show-suites \
+# RUN:   --debug --show-tests --show-suites \
 # RUN:   -v > %t.out 2> %t.err
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-OUT < %t.out %s
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-ERR < %t.err %s
@@ -122,32 +122,75 @@
 # CHECK-ASEXEC-OUT: top-level-suite :: test-one
 # CHECK-ASEXEC-OUT: top-level-suite :: test-two
 
-# Check discovery when exact test names are given.
+# Check discovery when tests are named directly.
 #
 # FIXME: Note that using a path into a subsuite doesn't work correctly here.
 #
 # RUN: %{lit} \
 # RUN:     %{inputs}/exec-discovery/subdir/test-three.py \
-# RUN:   -j 1 --show-tests --show-suites -v > %t.out
-# RUN: FileCheck --check-prefix=CHECK-ASEXEC-EXACT-TEST < %t.out %s
+# RUN:   --show-tests --show-suites -v > %t.out
+# RUN: FileCheck --check-prefix=CHECK-ASEXEC-DIRECT-TEST < %t.out %s
 #
-# CHECK-ASEXEC-EXACT-TEST: -- Available Tests --
-# CHECK-ASEXEC-EXACT-TEST: top-level-suite :: subdir/test-three
+# CHECK-ASEXEC-DIRECT-TEST: -- Available Tests --
+# CHECK-ASEXEC-DIRECT-TEST: top-level-suite :: subdir/test-three
 
+# Check an error is emitted when the directly named test would not be run
+# indirectly (e.g. when the directory containing the test is specified).
+#
+# RUN: not %{lit} \
+# RUN:     %{inputs}/discovery/test.not-txt 2>%t.err
+# RUN: FileCheck --check-prefix=CHECK-ERROR-INDIRECT-RUN-CHECK < %t.err %s
+#
+# CHECK-ERROR-INDIRECT-RUN-CHECK: error: 'top-level-suite :: test.not-txt' would not be run indirectly
+
+# Check that no error is emitted with --no-indirectly-run-check.
+#
+# RUN: %{lit} \
+# RUN:     %{inputs}/discovery/test.not-txt --no-indirectly-run-check
+
+# Check that a standalone test with no suffixes set is run without any errors.
+#
+# RUN: %{lit} %{inputs}/standalone-tests/true.txt > %t.out
+# RUN: FileCheck --check-prefix=CHECK-STANDALONE < %t.out %s
+#
+# CHECK-STANDALONE: PASS: Standalone tests :: true.txt
+
+# Check that an error is produced if suffixes variable is set for a suite with
+# standalone tests.
+#
+# RUN: not %{lit} %{inputs}/standalone-tests-with-suffixes 2> %t.err
+# RUN: FileCheck --check-prefixes=CHECK-STANDALONE-SUFFIXES,CHECK-STANDALONE-DISCOVERY < %t.err %s
+#
+# CHECK-STANDALONE-SUFFIXES: standalone_tests set {{.*}} but suffixes
+
+# Check that an error is produced if excludes variable is set for a suite with
+# standalone tests.
+#
+# RUN: not %{lit} %{inputs}/standalone-tests-with-excludes 2> %t.err
+# RUN: FileCheck --check-prefixes=CHECK-STANDALONE-EXCLUDES,CHECK-STANDALONE-DISCOVERY < %t.err %s
+#
+# CHECK-STANDALONE-EXCLUDES: standalone_tests set {{.*}} but {{.*}} excludes
+
+# Check that no discovery is done for testsuite with standalone tests.
+#
+# RUN: not %{lit} %{inputs}/standalone-tests 2>%t.err
+# RUN: FileCheck --check-prefix=CHECK-STANDALONE-DISCOVERY < %t.err %s
+#
+# CHECK-STANDALONE-DISCOVERY: error: did not discover any tests for provided path(s)
 
 # Check that we don't recurse infinitely when loading an site specific test
 # suite located inside the test source root.
 #
 # RUN: %{lit} \
 # RUN:     %{inputs}/exec-discovery-in-tree/obj/ \
-# RUN:   -j 1 --show-tests --show-suites -v > %t.out
+# RUN:   --show-tests --show-suites -v > %t.out
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-INTREE < %t.out %s
 #
 # Try it again after cd'ing into the test suite using a short relative path.
 #
 # RUN: cd %{inputs}/exec-discovery-in-tree/obj/
 # RUN: %{lit} . \
-# RUN:   -j 1 --show-tests --show-suites -v > %t.out
+# RUN:   --show-tests --show-suites -v > %t.out
 # RUN: FileCheck --check-prefix=CHECK-ASEXEC-INTREE < %t.out %s
 #
 #      CHECK-ASEXEC-INTREE:   exec-discovery-in-tree-suite - 1 tests

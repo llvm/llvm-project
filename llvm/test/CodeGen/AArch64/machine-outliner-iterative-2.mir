@@ -42,7 +42,7 @@ body:             |
   bb.0:
     liveins: $w0, $lr, $x19
 
-    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store 8), (store 8)
+    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store (s64)), (store (s64))
     $w19 = ORRWrs $wzr, killed $w0, 0
     $w0 = ORRWri $wzr, 0
     $w1 = ORRWri $wzr, 1
@@ -58,7 +58,7 @@ body:             |
     $w0 = ORRWri $wzr, 0
     $w1 = ORRWri $wzr, 1
     BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
-    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load 8), (load 8)
+    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64)), (load (s64))
     RET undef $lr
 
 ...
@@ -88,7 +88,7 @@ body:             |
   bb.0:
     liveins: $w0, $lr, $x19
 
-    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store 8), (store 8)
+    early-clobber $sp = frame-setup STPXpre killed $x19, killed $lr, $sp, -2 :: (store (s64)), (store (s64))
     $w19 = ORRWrs $wzr, killed $w0, 0
     $w0 = ORRWri $wzr, 0
     $w1 = ORRWri $wzr, 1
@@ -104,7 +104,7 @@ body:             |
     $w0 = ORRWri $wzr, 0
     $w1 = ORRWri $wzr, 1
     BL @z1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $w0, implicit killed $w1, implicit-def $sp
-    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load 8), (load 8)
+    early-clobber $sp, $x19, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64)), (load (s64))
     RET undef $lr
 ...
 

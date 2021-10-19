@@ -15,17 +15,20 @@ class ReturnValueTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def affected_by_pr33042(self):
-        return ("clang" in self.getCompiler() and self.getArchitecture() ==
-            "aarch64" and self.getPlatform() == "linux")
+        return ("clang" in self.getCompiler() and self.isAArch64() and
+            self.getPlatform() == "linux")
 
     def affected_by_pr44132(self):
-        return ((self.getArchitecture() == "aarch64" or self.getArchitecture() == 'arm') and self.getPlatform() == "linux")
+        return (self.getArchitecture() in ["aarch64", "arm"] and
+                self.getPlatform() in ["freebsd", "linux"])
 
-    # ABIMacOSX_arm can't fetch simple values inside a structure
+    # ABIMacOSX_arm(64) can't fetch simple values inside a structure
     def affected_by_radar_34562999(self):
-        return (self.getArchitecture() == 'armv7' or self.getArchitecture() == 'armv7k') and self.platformIsDarwin()
+        arch = self.getArchitecture().lower()
+        return arch in ['arm64', 'arm64e', 'armv7', 'armv7k'] and self.platformIsDarwin()
 
-    @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
+    @expectedFailureAll(oslist=["freebsd"], archs=["i386"],
+                        bugnumber="llvm.org/pr48376")
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
         oslist=["linux"],
@@ -123,7 +126,7 @@ class ReturnValueTestCase(TestBase):
         #self.assertTrue(return_value.IsValid())
         #return_float = float(return_value.GetValue())
 
-        #self.assertTrue(in_float == return_float)
+        #self.assertEqual(in_float, return_float)
 
         if not self.affected_by_radar_34562999() and not self.affected_by_pr44132():
             self.return_and_test_struct_value("return_one_int")
@@ -154,7 +157,8 @@ class ReturnValueTestCase(TestBase):
             #self.return_and_test_struct_value ("return_one_int_one_double_packed")
             self.return_and_test_struct_value("return_one_int_one_long")
 
-    @expectedFailureAll(oslist=["freebsd"], archs=["i386"])
+    @expectedFailureAll(oslist=["freebsd"], archs=["i386"],
+                        bugnumber="llvm.org/pr48376")
     @expectedFailureAll(oslist=["macosx"], archs=["i386"], bugnumber="<rdar://problem/28719652>")
     @expectedFailureAll(
         oslist=["linux"],

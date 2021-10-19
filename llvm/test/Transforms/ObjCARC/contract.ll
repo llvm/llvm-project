@@ -1,4 +1,5 @@
 ; RUN: opt -objc-arc-contract -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 
@@ -226,7 +227,15 @@ define void @test13() {
   ret void
 }
 
+; CHECK-LABEL: define void @test14(
+; CHECK-NOT: clang.arc.noop.use
+; CHECK: ret void
+define void @test14(i8* %a, i8* %b) {
+  call void (...) @llvm.objc.clang.arc.noop.use(i8* %a, i8* %b) nounwind
+  ret void
+}
 
 declare void @llvm.objc.clang.arc.use(...) nounwind
+declare void @llvm.objc.clang.arc.noop.use(...) nounwind
 
 ; CHECK: attributes [[NUW]] = { nounwind }

@@ -512,6 +512,7 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
     mach_port_t task_self = mach_task_self();
     task_t task = TASK_NULL;
     for (uint32_t i = 0; i < num_retries; i++) {
+      DNBLog("[LaunchAttach] (%d) about to task_for_pid(%d)", getpid(), pid);
       err = ::task_for_pid(task_self, pid, &task);
 
       if (DNBLogCheckLogBit(LOG_TASK) || err.Fail()) {
@@ -522,13 +523,19 @@ task_t MachTask::TaskPortForProcessID(pid_t pid, DNBError &err,
                    err.AsString() ? err.AsString() : "success");
         if (err.Fail()) {
           err.SetErrorString(str);
-          DNBLogError ("MachTask::TaskPortForProcessID task_for_pid failed: %s", str);
+          DNBLogError(
+              "[LaunchAttach] MachTask::TaskPortForProcessID task_for_pid(%d) "
+              "failed: %s",
+              pid, str);
         }
         err.LogThreaded(str);
       }
 
-      if (err.Success())
+      if (err.Success()) {
+        DNBLog("[LaunchAttach] (%d) successfully task_for_pid(%d)'ed", getpid(),
+               pid);
         return task;
+      }
 
       // Sleep a bit and try again
       ::usleep(usec_interval);
@@ -595,7 +602,7 @@ bool MachTask::IsValid(task_t task) {
   return false;
 }
 
-bool MachTask::StartExceptionThread(DNBError &err) {
+bool MachTask::StartExceptionThread(bool unmask_signals, DNBError &err) {
   DNBLogThreadedIf(LOG_EXCEPTIONS, "MachTask::%s ( )", __FUNCTION__);
 
   task_t task = TaskPortForProcessID(err);
@@ -622,6 +629,12 @@ bool MachTask::StartExceptionThread(DNBError &err) {
     if (m_exc_port_info.mask == 0) {
       err.SetErrorString("failed to get exception port info");
       return false;
+    }
+
+    if (unmask_signals) {
+      m_exc_port_info.mask = m_exc_port_info.mask &
+                             ~(EXC_MASK_BAD_ACCESS | EXC_MASK_BAD_INSTRUCTION |
+                               EXC_MASK_ARITHMETIC);
     }
 
     // Set the ability to get all exceptions on this port
@@ -971,15 +984,15 @@ nub_bool_t MachTask::DeallocateMemory(nub_addr_t addr) {
   allocation_collection::iterator pos, end = m_allocations.end();
   for (pos = m_allocations.begin(); pos != end; pos++) {
     if ((*pos).first == addr) {
+      size_t size = (*pos).second;
       m_allocations.erase(pos);
 #define ALWAYS_ZOMBIE_ALLOCATIONS 0
       if (ALWAYS_ZOMBIE_ALLOCATIONS ||
           getenv("DEBUGSERVER_ZOMBIE_ALLOCATIONS")) {
-        ::mach_vm_protect(task, (*pos).first, (*pos).second, 0, VM_PROT_NONE);
+        ::mach_vm_protect(task, addr, size, 0, VM_PROT_NONE);
         return true;
       } else
-        return ::mach_vm_deallocate(task, (*pos).first, (*pos).second) ==
-               KERN_SUCCESS;
+        return ::mach_vm_deallocate(task, addr, size) == KERN_SUCCESS;
     }
   }
   return false;

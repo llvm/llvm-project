@@ -10,34 +10,35 @@ namespace lldb {
 
 %feature("docstring",
 "Represents one of the stack frames associated with a thread.
-SBThread contains SBFrame(s). For example (from test/lldbutil.py),
 
-def print_stacktrace(thread, string_buffer = False):
-    '''Prints a simple stack trace of this thread.'''
+SBThread contains SBFrame(s). For example (from test/lldbutil.py), ::
 
-    ...
+    def print_stacktrace(thread, string_buffer = False):
+        '''Prints a simple stack trace of this thread.'''
 
-    for i in range(depth):
-        frame = thread.GetFrameAtIndex(i)
-        function = frame.GetFunction()
+        ...
 
-        load_addr = addrs[i].GetLoadAddress(target)
-        if not function:
-            file_addr = addrs[i].GetFileAddress()
-            start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
-            symbol_offset = file_addr - start_addr
-            print >> output, '  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}'.format(
-                num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset)
-        else:
-            print >> output, '  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}'.format(
-                num=i, addr=load_addr, mod=mods[i],
-                func='%s [inlined]' % funcs[i] if frame.IsInlined() else funcs[i],
-                file=files[i], line=lines[i],
-                args=get_args_as_string(frame, showFuncName=False) if not frame.IsInlined() else '()')
+        for i in range(depth):
+            frame = thread.GetFrameAtIndex(i)
+            function = frame.GetFunction()
 
-    ...
+            load_addr = addrs[i].GetLoadAddress(target)
+            if not function:
+                file_addr = addrs[i].GetFileAddress()
+                start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
+                symbol_offset = file_addr - start_addr
+                print >> output, '  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}'.format(
+                    num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset)
+            else:
+                print >> output, '  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}'.format(
+                    num=i, addr=load_addr, mod=mods[i],
+                    func='%s [inlined]' % funcs[i] if frame.IsInlined() else funcs[i],
+                    file=files[i], line=lines[i],
+                    args=get_args_as_string(frame, showFuncName=False) if not frame.IsInlined() else '()')
 
-And,
+        ...
+
+And, ::
 
     for frame in thread:
         print frame
@@ -246,20 +247,27 @@ public:
     %feature("docstring", "
     Get a lldb.SBValue for a variable path.
 
-    Variable paths can include access to pointer or instance members:
+    Variable paths can include access to pointer or instance members: ::
+
         rect_ptr->origin.y
         pt.x
-    Pointer dereferences:
+
+    Pointer dereferences: ::
+
         *this->foo_ptr
         **argv
-    Address of:
+
+    Address of: ::
+
         &pt
         &my_array[3].x
-    Array accesses and treating pointers as arrays:
+
+    Array accesses and treating pointers as arrays: ::
+
         int_array[1]
         pt_ptr[22].x
 
-    Unlike EvaluateExpression() which returns lldb.SBValue objects
+    Unlike `EvaluateExpression()` which returns :py:class:`SBValue` objects
     with constant copies of the values at the time of evaluation,
     the result of this function is a value that will continue to
     track the current value of the value as execution progresses
@@ -274,7 +282,7 @@ public:
     Find variables, register sets, registers, or persistent variables using
     the frame as the scope.
 
-    The version that doesn't supply a 'use_dynamic' value will use the
+    The version that doesn't supply a ``use_dynamic`` value will use the
     target's default.") FindValue;
     lldb::SBValue
     FindValue (const char *name, ValueType value_type);

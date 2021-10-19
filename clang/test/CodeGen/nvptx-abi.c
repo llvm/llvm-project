@@ -6,7 +6,7 @@ typedef struct float4_s {
 } float4_t;
 
 float4_t my_function(void) {
-// CHECK-LABEL: define %struct.float4_s @my_function
+// CHECK-LABEL: define{{.*}} %struct.float4_s @my_function
   float4_t t;
   return t;
 };

@@ -10,4 +10,4 @@ set(LLD_CMAKE_DIR "@LLD_CONFIG_CMAKE_DIR@")
 set(LLD_INCLUDE_DIRS "@LLD_CONFIG_INCLUDE_DIRS@")
 
 # Provide all our library targets to users.
-include("@LLD_CONFIG_EXPORTS_FILE@")
+@LLD_CONFIG_INCLUDE_EXPORTS@

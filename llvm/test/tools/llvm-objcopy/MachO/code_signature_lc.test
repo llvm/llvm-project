@@ -5,7 +5,7 @@
 
 # CHECK:      cmd LC_CODE_SIGNATURE
 # CHECK-NEXT: cmdsize 16
-# CHECK-NEXT: dataoff 124
+# CHECK-NEXT: dataoff 128
 # CHECK-NEXT: datasize 16
 
 # RUN: llvm-objcopy %t %t.copy
@@ -28,13 +28,13 @@ LoadCommands:
     vmaddr:          4294979584
     vmsize:          4096
     fileoff:         120
-    filesize:        20
+    filesize:        24
     maxprot:         7
     initprot:        1
     nsects:          0
     flags:           0
   - cmd:             LC_CODE_SIGNATURE
     cmdsize:         16
-    dataoff:         124
+    dataoff:         128
     datasize:        16
 ...

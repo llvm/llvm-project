@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -delinearize | FileCheck %s
+; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 ; XFAIL: *
 ; We do not recognize anymore variable size arrays.
 

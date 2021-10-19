@@ -13,7 +13,6 @@
 #include "ASTCommon.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
@@ -69,6 +68,7 @@ namespace clang {
     void VisitTypedefDecl(TypedefDecl *D);
     void VisitTypeAliasDecl(TypeAliasDecl *D);
     void VisitUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D);
+    void VisitUnresolvedUsingIfExistsDecl(UnresolvedUsingIfExistsDecl *D);
     void VisitTagDecl(TagDecl *D);
     void VisitEnumDecl(EnumDecl *D);
     void VisitRecordDecl(RecordDecl *D);
@@ -96,6 +96,7 @@ namespace clang {
     void VisitFieldDecl(FieldDecl *D);
     void VisitMSPropertyDecl(MSPropertyDecl *D);
     void VisitMSGuidDecl(MSGuidDecl *D);
+    void VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -113,6 +114,7 @@ namespace clang {
     void VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
     void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
     void VisitUsingDecl(UsingDecl *D);
+    void VisitUsingEnumDecl(UsingEnumDecl *D);
     void VisitUsingPackDecl(UsingPackDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitConstructorUsingShadowDecl(ConstructorUsingShadowDecl *D);
@@ -556,7 +558,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->isDefaulted());
   Record.push_back(D->isExplicitlyDefaulted());
   Record.push_back(D->hasImplicitReturnZero());
-  Record.push_back(D->getConstexprKind());
+  Record.push_back(static_cast<uint64_t>(D->getConstexprKind()));
   Record.push_back(D->usesSEHTry());
   Record.push_back(D->hasSkippedBody());
   Record.push_back(D->isMultiVersion());
@@ -565,7 +567,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.AddSourceLocation(D->getEndLoc());
 
   Record.push_back(D->getODRHash());
-  Record.push_back(D->usesFPIntrin());
 
   if (D->isDefaulted()) {
     if (auto *FDI = D->getDefaultedFunctionInfo()) {
@@ -673,6 +674,7 @@ static void addExplicitSpecifier(ExplicitSpecifier ES,
 
 void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
+  Record.AddDeclRef(D->Ctor);
   VisitFunctionDecl(D);
   Record.push_back(D->isCopyDeductionCandidate());
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
@@ -965,6 +967,12 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
   Code = serialization::DECL_MS_GUID;
 }
 
+void ASTDeclWriter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
+  VisitValueDecl(D);
+  Record.AddAPValue(D->getValue());
+  Code = serialization::DECL_TEMPLATE_PARAM_OBJECT;
+}
+
 void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
   VisitValueDecl(D);
   Record.push_back(D->getChainingSize());
@@ -1000,19 +1008,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   }
   Record.push_back(D->getLinkageInternal());
 
-  if (D->getInit()) {
-    if (!D->isInitKnownICE())
-      Record.push_back(1);
-    else {
-      Record.push_back(
-          2 |
-          (D->isInitICE() ? 1 : 0) |
-          (D->ensureEvaluatedStmt()->HasConstantDestruction ? 4 : 0));
-    }
-    Record.AddStmt(D->getInit());
-  } else {
-    Record.push_back(0);
-  }
+  Record.AddVarDeclInit(D);
 
   if (D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) {
     BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
@@ -1283,6 +1279,16 @@ void ASTDeclWriter::VisitUsingDecl(UsingDecl *D) {
   Code = serialization::DECL_USING;
 }
 
+void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
+  VisitNamedDecl(D);
+  Record.AddSourceLocation(D->getUsingLoc());
+  Record.AddSourceLocation(D->getEnumLoc());
+  Record.AddDeclRef(D->getEnumDecl());
+  Record.AddDeclRef(D->FirstUsingShadow.getPointer());
+  Record.AddDeclRef(Context.getInstantiatedFromUsingEnumDecl(D));
+  Code = serialization::DECL_USING_ENUM;
+}
+
 void ASTDeclWriter::VisitUsingPackDecl(UsingPackDecl *D) {
   Record.push_back(D->NumExpansions);
   VisitNamedDecl(D);
@@ -1337,6 +1343,12 @@ void ASTDeclWriter::VisitUnresolvedUsingTypenameDecl(
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
   Record.AddSourceLocation(D->getEllipsisLoc());
   Code = serialization::DECL_UNRESOLVED_USING_TYPENAME;
+}
+
+void ASTDeclWriter::VisitUnresolvedUsingIfExistsDecl(
+    UnresolvedUsingIfExistsDecl *D) {
+  VisitNamedDecl(D);
+  Code = serialization::DECL_UNRESOLVED_USING_IF_EXISTS;
 }
 
 void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
@@ -1396,7 +1408,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  Record.push_back(D->getTraillingAllocKind());
+  Record.push_back(D->getTrailingAllocKind());
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
   if (auto Inherited = D->getInheritedConstructor()) {
     Record.AddDeclRef(Inherited.getShadowDecl());
@@ -2199,7 +2211,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
   Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // IsInitICE (local)
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // HasConstant*
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
@@ -2346,6 +2358,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); //GetObjectKind
   // CastExpr
   Abv->Add(BitCodeAbbrevOp(0)); // PathSize
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // HasFPFeatures
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 6)); // CastKind
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // PartOfExplicitCast
   // ImplicitCastExpr

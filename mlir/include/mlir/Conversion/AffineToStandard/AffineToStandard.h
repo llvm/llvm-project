@@ -18,15 +18,14 @@ class AffineMap;
 class AffineParallelOp;
 class Location;
 struct LogicalResult;
-class MLIRContext;
 class OpBuilder;
 class Pass;
 class RewritePattern;
 class Value;
 class ValueRange;
 
-// Owning list of rewriting patterns.
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.
@@ -43,13 +42,11 @@ Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
 /// branch-based control flow.
-void populateAffineToStdConversionPatterns(OwningRewritePatternList &patterns,
-                                           MLIRContext *ctx);
+void populateAffineToStdConversionPatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert vector-related Affine ops to the Vector
 /// dialect.
-void populateAffineToVectorConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
+void populateAffineToVectorConversionPatterns(RewritePatternSet &patterns);
 
 /// Emit code that computes the lower bound of the given affine loop using
 /// standard arithmetic operations.

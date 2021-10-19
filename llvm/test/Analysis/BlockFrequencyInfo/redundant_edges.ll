@@ -1,5 +1,3 @@
-; RUN: opt < %s -analyze -block-freq | FileCheck %s
-; RUN: opt < %s -analyze -lazy-block-freq | FileCheck %s
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 define void @test1() {
@@ -9,7 +7,7 @@ define void @test1() {
 entry:
   br label %loop
 
-; CHECK-NEXT: loop: float = 32.0
+; CHECK-NEXT: loop: float = 16.5
 loop:
   switch i32 undef, label %loop [
     i32 0, label %return

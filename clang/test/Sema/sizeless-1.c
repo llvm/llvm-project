@@ -57,6 +57,7 @@ void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
   svint8_t local_int8;
+  int8_typedef typedef_int8;
   svint16_t local_int16;
 
   svint8_t __attribute__((aligned)) aligned_int8_1;    // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
@@ -75,9 +76,9 @@ void func(int sel) {
 
   (void)local_int8;
 
-  local_int8, 0; // expected-warning + {{expression result unused}}
+  local_int8, 0; // expected-warning {{left operand of comma operator has no effect}}
 
-  0, local_int8; // expected-warning + {{expression result unused}}
+  0, local_int8; // expected-warning {{left operand of comma operator has no effect}} expected-warning {{expression result unused}}
 
   svint8_t init_int8 = local_int8;
   svint8_t bad_init_int8 = for; // expected-error {{expected expression}}
@@ -137,6 +138,7 @@ void func(int sel) {
   const_volatile_int8 = local_int8; // expected-error {{cannot assign to variable 'const_volatile_int8' with const-qualified type 'const volatile svint8_t'}}
 
   init_int8 = sel ? init_int8 : local_int8;
+  init_int8 = sel ? init_int8 : typedef_int8;
   init_int8 = sel ? init_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_volatile_int8;
@@ -289,5 +291,11 @@ void test_generic(void) {
   int a2[_Generic(local_int16, svint8_t : 1, svint16_t : 2, default : 3) == 2 ? 1 : -1];
   int a3[_Generic(0, svint8_t : 1, svint16_t : 2, default : 3) == 3 ? 1 : -1];
   (void)_Generic(0, svint8_t : 1, svint8_t : 2, default : 3); // expected-error {{type 'svint8_t' (aka '__SVInt8_t') in generic association compatible with previously specified type 'svint8_t'}} expected-note {{compatible type}}
+}
+
+void test_compound_literal(void) {
+  svint8_t local_int8;
+
+  (void)(svint8_t){local_int8};
 }
 #endif

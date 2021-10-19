@@ -12,9 +12,9 @@ int x;
 
 inline void f0(int y) { x = y; }
 
-// CHECK-LABEL: define void @test()
+// CHECK-LABEL: define{{.*}} void @test()
 // CHECK: declare void @f0(i32)
-// LTO-LABEL: define void @test()
+// LTO-LABEL: define{{.*}} void @test()
 // LTO: define available_externally void @f0
 void test() {
   f0(17);

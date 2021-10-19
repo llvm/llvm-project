@@ -13,12 +13,12 @@
 # CHECK: DW_AT_stmt_list	(0x00000000)
 # CHECK: DW_AT_comp_dir	("/")
 # CHECK: DW_AT_APPLE_optimized	(true)
-# CHECK: DW_AT_low_pc	(0x0000000000000000)
-# CHECK: DW_AT_high_pc	(0x0000000000000008)
+# CHECK: DW_AT_low_pc	(0x00000000)
+# CHECK: DW_AT_high_pc	(0x00000008)
 
 # CHECK: DW_TAG_subprogram
-# CHECK: DW_AT_low_pc	(0x0000000000000000)
-# CHECK: DW_AT_high_pc	(0x0000000000000008)
+# CHECK: DW_AT_low_pc	(0x00000000)
+# CHECK: DW_AT_high_pc	(0x00000008)
 # CHECK: DW_AT_APPLE_omit_frame_ptr	(true)
 # CHECK: DW_AT_frame_base	(DW_OP_reg13 SP)
 # CHECK: DW_AT_name	("f")

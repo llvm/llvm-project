@@ -7,4 +7,4 @@ Sections:
   - Type:            START
     StartFunction:   0
 
-# CHECK: {{.*}}: Invalid start function
+# CHECK: {{.*}}: invalid start function

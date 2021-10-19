@@ -35,11 +35,11 @@
 // If set, values like allocator chunk size, as well as defaults for some flags
 // will be changed towards less memory overhead.
 #ifndef ASAN_LOW_MEMORY
-# if SANITIZER_IOS || SANITIZER_ANDROID || SANITIZER_RTEMS
-#  define ASAN_LOW_MEMORY 1
-# else
-#  define ASAN_LOW_MEMORY 0
-# endif
+#  if SANITIZER_IOS || SANITIZER_ANDROID
+#    define ASAN_LOW_MEMORY 1
+#  else
+#    define ASAN_LOW_MEMORY 0
+#  endif
 #endif
 
 #ifndef ASAN_DYNAMIC
@@ -77,7 +77,7 @@ void InitializeShadowMemory();
 // asan_malloc_linux.cpp / asan_malloc_mac.cpp
 void ReplaceSystemMalloc();
 
-// asan_linux.cpp / asan_mac.cpp / asan_rtems.cpp / asan_win.cpp
+// asan_linux.cpp / asan_mac.cpp / asan_win.cpp
 uptr FindDynamicShadowStart();
 void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
@@ -159,9 +159,6 @@ const int kAsanArrayCookieMagic = 0xac;
 const int kAsanIntraObjectRedzone = 0xbb;
 const int kAsanAllocaLeftMagic = 0xca;
 const int kAsanAllocaRightMagic = 0xcb;
-// Used to populate the shadow gap for systems without memory
-// protection there (i.e. Myriad).
-const int kAsanShadowGap = 0xcc;
 
 static const uptr kCurrentStackFrameMagic = 0x41B58AB3;
 static const uptr kRetiredStackFrameMagic = 0x45E0360E;

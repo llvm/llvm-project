@@ -23,13 +23,11 @@
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
-using namespace llvm;
-using namespace polly;
-
 namespace polly {
+using llvm::LoopInfo;
+using llvm::SmallSet;
 
 struct InvariantEquivClassTy;
-} // namespace polly
 
 struct SubtreeReferences {
   LoopInfo &LI;
@@ -60,7 +58,7 @@ struct SubtreeReferences {
 ///                         SubtreeReferences structure.
 /// @param CreateScalarRefs Should the result include allocas of scalar
 ///                         references?
-void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+void addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                            bool CreateScalarRefs = true);
 
 class IslNodeBuilder {
@@ -79,13 +77,6 @@ public:
   virtual ~IslNodeBuilder() = default;
 
   void addParameters(__isl_take isl_set *Context);
-
-  /// Create Values which hold the sizes of the outermost dimension of all
-  /// Fortran arrays in the current scop.
-  ///
-  /// @returns False, if a problem occurred and a Fortran array was not
-  /// materialized. True otherwise.
-  bool materializeFortranArrayOutermostDimension();
 
   /// Generate code that evaluates @p Condition at run-time.
   ///
@@ -219,7 +210,8 @@ protected:
   //    of loop iterations.
   //
   // 3. With the existing code, upper bounds have been easier to implement.
-  isl::ast_expr getUpperBound(isl::ast_node For, CmpInst::Predicate &Predicate);
+  isl::ast_expr getUpperBound(isl::ast_node_for For,
+                              CmpInst::Predicate &Predicate);
 
   /// Return non-negative number of iterations in case of the following form
   /// of a loop and -1 otherwise.
@@ -230,7 +222,7 @@ protected:
   ///
   /// NumIter is a non-negative integer value. Condition can have
   /// isl_ast_op_lt type.
-  int getNumberOfIterations(isl::ast_node For);
+  int getNumberOfIterations(isl::ast_node_for For);
 
   /// Compute the values and loops referenced in this subtree.
   ///
@@ -250,7 +242,7 @@ protected:
   ///               this subtree.
   /// @param Loops  A vector that will be filled with the Loops referenced in
   ///               this subtree.
-  void getReferencesInSubtree(__isl_keep isl_ast_node *For,
+  void getReferencesInSubtree(const isl::ast_node &For,
                               SetVector<Value *> &Values,
                               SetVector<const Loop *> &Loops);
 
@@ -319,7 +311,7 @@ protected:
   bool preloadInvariantEquivClass(InvariantEquivClassTy &IAClass);
 
   void createForVector(__isl_take isl_ast_node *For, int VectorWidth);
-  void createForSequential(isl::ast_node For, bool MarkParallel);
+  void createForSequential(isl::ast_node_for For, bool MarkParallel);
 
   /// Create LLVM-IR that executes a for node thread parallel.
   ///
@@ -400,8 +392,7 @@ protected:
   ///         below this ast node to the scheduling vectors used to enumerate
   ///         them.
   ///
-  virtual __isl_give isl_union_map *
-  getScheduleForAstNode(__isl_take isl_ast_node *Node);
+  virtual isl::union_map getScheduleForAstNode(const isl::ast_node &Node);
 
 private:
   /// Create code for a copy statement.
@@ -428,5 +419,7 @@ private:
   /// See [Code generation of induction variables of loops outside Scops]
   Value *materializeNonScopLoopInductionVariable(const Loop *L);
 };
+
+} // namespace polly
 
 #endif // POLLY_ISLNODEBUILDER_H

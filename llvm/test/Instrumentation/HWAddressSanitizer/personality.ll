@@ -1,5 +1,5 @@
-; RUN: opt < %s -mtriple aarch64-linux-android29 -hwasan -S | FileCheck %s --check-prefix=NOPERS
-; RUN: opt < %s -mtriple aarch64-linux-android30 -hwasan -S | FileCheck %s --check-prefix=PERS
+; RUN: opt < %s -mtriple aarch64-linux-android29 -passes=hwasan -S | FileCheck %s --check-prefix=NOPERS
+; RUN: opt < %s -mtriple aarch64-linux-android30 -passes=hwasan -S | FileCheck %s --check-prefix=PERS
 
 ; NOPERS: define void @nostack() #{{[0-9]+}} {
 ; PERS: define void @nostack() #{{[0-9]+}} {

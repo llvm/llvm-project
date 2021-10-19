@@ -9,9 +9,10 @@
 #include "BenchmarkResult.h"
 #include "X86InstrInfo.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,11 +27,6 @@ using ::testing::Property;
 
 namespace llvm {
 namespace exegesis {
-
-bool operator==(const BenchmarkMeasure &A, const BenchmarkMeasure &B) {
-  return std::tie(A.Key, A.PerInstructionValue, A.PerSnippetValue) ==
-         std::tie(B.Key, B.PerInstructionValue, B.PerSnippetValue);
-}
 
 static std::string Dump(const MCInst &McInst) {
   std::string Buffer;
@@ -67,7 +63,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
                                         .addReg(X86::AL)
                                         .addReg(X86::AH)
                                         .addImm(123)
-                                        .addFPImm(0.5));
+                                        .addDFPImm(bit_cast<uint64_t>(0.5)));
   ToDisk.Key.Config = "config";
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{X86::AL, APInt(8, "-1", 10)},

@@ -7,12 +7,19 @@
 #      CHECK:----------------------------------------------------
 # CHECK-NEXT:file: {{.*}}
 # CHECK-NEXT:----------------------------------------------------
-# CHECK-NEXT:SECTION       SIZE (b)
-# CHECK-NEXT:------------  --------
-# CHECK-NEXT:__debug_info         4 (0.93%)
+# CHECK-NEXT:SECTION           SIZE (b)
+# CHECK-NEXT:----------------  --------
+# CHECK-NEXT:__debug_str            183 (9.78%)
+# CHECK-NEXT:__debug_abbrev          58 (3.10%)
+# CHECK-NEXT:__debug_info            83 (4.43%)
+# CHECK-NEXT:__apple_names           60 (3.21%)
+# CHECK-NEXT:__apple_objc            36 (1.92%)
+# CHECK-NEXT:__apple_namespac        36 (1.92%)
+# CHECK-NEXT:__apple_types           71 (3.79%)
+# CHECK-NEXT:__debug_line            61 (3.26%)
 # CHECK-EMPTY:
-# CHECK-NEXT: Total Size: 4  (0.93%)
-# CHECK-NEXT: Total File Size: 432
+# CHECK-NEXT: Total Size: 588  (31.41%)
+# CHECK-NEXT: Total File Size: 1872
 # CHECK-NEXT:----------------------------------------------------
 
 --- !mach-o
@@ -22,20 +29,20 @@ FileHeader:
   cpusubtype:      0x00000003
   filetype:        0x00000001
   ncmds:           4
-  sizeofcmds:      360
+  sizeofcmds:      1080
   flags:           0x00002000
   reserved:        0x00000000
 LoadCommands:
   - cmd:             LC_SEGMENT_64
-    cmdsize:         232
+    cmdsize:         952
     segname:         ''
     vmaddr:          0
-    vmsize:          4
-    fileoff:         392
-    filesize:        0
+    vmsize:          701
+    fileoff:         1112
+    filesize:        701
     maxprot:         7
     initprot:        7
-    nsects:          2
+    nsects:          11
     flags:           0
     Sections:
 ## This is a debug section following the ELF naming style, and is used
@@ -43,48 +50,197 @@ LoadCommands:
       - sectname:        .debug_line
         segname:         __DWARF
         addr:            0x0000000000000000
-        size:            0
-        offset:          0x00000188
+        size:            15
+        offset:          0x00000458
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         554889E531C0C745FC000000005DC3
+      - sectname:        __debug_str
+        segname:         __DWARF
+        addr:            0x000000000000000F
+        size:            183
+        offset:          0x00000467
         align:           0
         reloff:          0x00000000
         nreloc:          0
-        flags:           0x80000000
+        flags:           0x02000000
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-        content:         ''
-      - sectname:        __debug_info
+      - sectname:        __debug_abbrev
         segname:         __DWARF
-        addr:            0x0000000000000000
-        size:            4
-        offset:          0x00000000
-        align:           2
+        addr:            0x00000000000000C6
+        size:            58
+        offset:          0x0000051E
+        align:           0
         reloff:          0x00000000
         nreloc:          0
-        flags:           0x00000001
+        flags:           0x02000000
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x0000000000000100
+        size:            83
+        offset:          0x00000558
+        align:           0
+        reloff:          0x00000718
+        nreloc:          2
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        relocations:
+          - address:         0x00000033
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x00000026
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0x0000000000000153
+        size:            60
+        offset:          0x000005AB
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         485341480100000001000000010000000C000000000000000100000001000600000000006A7F9A7C2C000000AE000000010000003200000000000000
+      - sectname:        __apple_objc
+        segname:         __DWARF
+        addr:            0x000000000000018F
+        size:            36
+        offset:          0x000005E7
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_namespac
+        segname:         __DWARF
+        addr:            0x00000000000001B3
+        size:            36
+        offset:          0x0000060B
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
+      - sectname:        __apple_types
+        segname:         __DWARF
+        addr:            0x00000000000001D7
+        size:            71
+        offset:          0x0000062F
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         48534148010000000100000001000000140000000000000003000000010006000300050004000B00000000003080880B34000000B3000000010000004B00000024000000000000
+      - sectname:        __compact_unwind
+        segname:         __LD
+        addr:            0x0000000000000220
+        size:            32
+        offset:          0x00000678
+        align:           3
+        reloff:          0x00000728
+        nreloc:          1
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         00000000000000000F0000000000000100000000000000000000000000000000
+        relocations:
+          - address:         0x00000000
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x0000000000000240
+        size:            64
+        offset:          0x00000698
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x6800000B
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         1400000000000000017A520001781001100C070890010000240000001C000000A0FDFFFFFFFFFFFF0F0000000000000000410E108602430D0600000000000000
+      - sectname:        __debug_line
+        segname:         __DWARF
+        addr:            0x0000000000000280
+        size:            61
+        offset:          0x000006D8
+        align:           0
+        reloff:          0x00000730
+        nreloc:          1
+        flags:           0x02000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        relocations:
+          - address:         0x0000002B
+            symbolnum:       1
+            pcrel:           false
+            length:          3
+            extern:          false
+            type:            0
+            scattered:       false
+            value:           0
   - cmd:             LC_BUILD_VERSION
     cmdsize:         24
     platform:        1
-    minos:           658944
-    sdk:             658944
+    minos:           720896
+    sdk:             720896
     ntools:          0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          392
-    nsyms:           2
-    stroff:          424
+    symoff:          1848
+    nsyms:           1
+    stroff:          1864
     strsize:         8
   - cmd:             LC_DYSYMTAB
     cmdsize:         80
     ilocalsym:       0
-    nlocalsym:       1
-    iextdefsym:      1
-    nextdefsym:      0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
     iundefsym:       1
-    nundefsym:       1
+    nundefsym:       0
     tocoff:          0
     ntoc:            0
     modtaboff:       0
@@ -98,9 +254,14 @@ LoadCommands:
     locreloff:       0
     nlocrel:         0
 LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
   StringTable:
     - ''
-    - _b
-    - _a
+    - _main
     - ''
 ...

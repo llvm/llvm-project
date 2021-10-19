@@ -21,6 +21,7 @@
 // };
 
 #include <shared_mutex>
+#include <mutex>
 #include <type_traits>
 
 #include "test_macros.h"

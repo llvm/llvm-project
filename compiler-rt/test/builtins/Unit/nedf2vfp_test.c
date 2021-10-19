@@ -9,7 +9,7 @@
 
 extern int __nedf2vfp(double a, double b);
 
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
 int test__nedf2vfp(double a, double b)
 {
     int actual = __nedf2vfp(a, b);
@@ -23,7 +23,7 @@ int test__nedf2vfp(double a, double b)
 
 int main()
 {
-#if __arm__ && __VFP_FP__
+#if defined(__arm__) && defined(__ARM_FP) && (__ARM_FP & 0x8)
     if (test__nedf2vfp(0.0, 0.0))
         return 1;
     if (test__nedf2vfp(1.0, 1.0))

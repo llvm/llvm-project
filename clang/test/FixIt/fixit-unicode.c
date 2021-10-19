@@ -13,15 +13,11 @@ struct Foo {
 void test1() {
   struct Foo foo;
   foo.bar = 42☃
-// CHECK: error: non-ASCII characters are not allowed outside of literals and identifiers
-// CHECK: {{^              \^}}
-// CHECK: error: expected ';' after expression
-// Make sure we emit the fixit right in front of the snowman.
-// CHECK: {{^              \^}}
-// CHECK: {{^              ;}}
+  // CHECK: error: character <U+2603> not allowed in an identifier
+  // CHECK: {{^              \^}}
+  // Make sure we emit the fixit right in front of the snowman.
 
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-8]]:15-[[@LINE-8]]:18}:""
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-9]]:15-[[@LINE-9]]:15}:";"
+  // CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-5]]:15-[[@LINE-5]]:18}:""
 }
 
 

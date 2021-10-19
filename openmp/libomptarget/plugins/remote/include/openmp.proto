@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package openmp.libomptarget.remote;
+option cc_enable_arenas = true;
+
+service RemoteOffload {
+  rpc Shutdown(Null) returns (I32) {}
+
+  rpc RegisterLib(TargetBinaryDescription) returns (I32) {}
+  rpc UnregisterLib(Pointer) returns (I32) {}
+
+  rpc IsValidBinary(TargetDeviceImagePtr) returns (I32) {}
+  rpc GetNumberOfDevices(Null) returns (I32) {}
+
+  rpc InitDevice(I32) returns (I32) {}
+  rpc InitRequires(I64) returns (I32) {}
+
+  rpc LoadBinary(Binary) returns (TargetTable) {}
+
+  rpc DataAlloc(AllocData) returns (Pointer) {}
+  rpc DataDelete(DeleteData) returns (I32) {}
+
+  rpc DataSubmit(stream SubmitData) returns (I32) {}
+  rpc DataRetrieve(RetrieveData) returns (stream Data) {}
+
+  rpc IsDataExchangeable(DevicePair) returns (I32) {}
+  rpc DataExchange(ExchangeData) returns (I32) {}
+
+  rpc RunTargetRegion(TargetRegion) returns (I32) {}
+  rpc RunTargetTeamRegion(TargetTeamRegion) returns (I32) {}
+}
+
+message Null {}
+
+message Pointer { uint64 number = 1; }
+
+message I32 { int32 number = 1; }
+
+message I64 { int64 number = 1; }
+
+message DevicePair {
+  int32 src_dev_id = 1;
+  int32 dst_dev_id = 2;
+}
+
+message Binary {
+  uint64 image_ptr = 1;
+  int32 device_id = 2;
+}
+
+message TargetOffloadEntry {
+  bytes data = 1;
+  string name = 2;
+  int32 flags = 3;
+  int32 reserved = 4;
+}
+
+message DeviceOffloadEntry {
+  string name = 1;
+  uint64 addr = 2;
+  int32 flags = 3;
+  int32 reserved = 4;
+  int32 size = 5;
+}
+
+message TargetTable {
+  repeated DeviceOffloadEntry entries = 1;
+  repeated uint64 entry_ptrs = 2;
+}
+
+message TargetDeviceImagePtr {
+  uint64 image_ptr = 1;
+  repeated uint64 entry_ptrs = 2;
+}
+
+message TargetDeviceImage {
+  bytes binary = 1;
+  repeated TargetOffloadEntry entries = 2;
+}
+
+message ImagePtrs {
+  uint64 img_ptr = 1;
+  repeated uint64 entry_ptrs = 2;
+}
+
+message TargetBinaryDescription {
+  repeated ImagePtrs image_ptrs = 1;
+  repeated TargetOffloadEntry entries = 2;
+  repeated TargetDeviceImage images = 3;
+  repeated uint64 entry_ptrs = 4;
+  uint64 bin_ptr = 5;
+}
+
+message AllocData {
+  uint64 size = 1;
+  uint64 hst_ptr = 2;
+  int32 device_id = 3;
+}
+
+message SubmitData {
+  bytes data = 1;
+  uint64 hst_ptr = 2;
+  uint64 tgt_ptr = 3;
+  uint64 start = 5;
+  uint64 size = 6;
+  int32 device_id = 7;
+}
+
+message RetrieveData {
+  uint64 hst_ptr = 1;
+  uint64 tgt_ptr = 2;
+  uint64 size = 3;
+  int32 device_id = 5;
+}
+
+message Data {
+  bytes data = 1;
+  uint64 start = 2;
+  uint64 size = 3;
+  int32 ret = 4;
+}
+
+message ExchangeData {
+  uint64 src_dev_id = 1;
+  uint64 src_ptr = 2;
+  uint64 dst_dev_id = 3;
+  uint64 dst_ptr = 4;
+  uint64 size = 6;
+}
+
+message DeleteData {
+  uint64 tgt_ptr = 1;
+  int32 device_id = 2;
+}
+
+message TargetRegion {
+  repeated uint64 tgt_args = 1;
+  repeated int64 tgt_offsets = 2;
+  uint64 tgt_entry_ptr = 3;
+  int32 device_id = 4;
+  int32 arg_num = 5;
+}
+
+message TargetTeamRegion {
+  repeated uint64 tgt_args = 1;
+  repeated int64 tgt_offsets = 2;
+  uint64 tgt_entry_ptr = 3;
+  uint64 loop_tripcount = 4;
+  int32 device_id = 5;
+  int32 arg_num = 6;
+  int32 team_num = 7;
+  int32 thread_limit = 8;
+}

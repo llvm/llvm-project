@@ -12,8 +12,8 @@ void foo() {}
 
 void arg1(void*) {}
 
-// CHECK: define void @_Z3foov() #[[FOO:[0-9]+]] {
-// CHECK: define void {{.*}}arg1{{.*}} #[[ALWAYSARG1:[0-9]+]] {
+// CHECK: define{{.*}} void @_Z3foov() #[[FOO:[0-9]+]] {
+// CHECK: define{{.*}} void {{.*}}arg1{{.*}} #[[ALWAYSARG1:[0-9]+]] {
 
 // CHECK: attributes #[[FOO]] = {{.*}}
 // CHECK: attributes #[[ALWAYSARG1]] = {{.*}} "function-instrument"="xray-always" {{.*}} "xray-log-args"="1"

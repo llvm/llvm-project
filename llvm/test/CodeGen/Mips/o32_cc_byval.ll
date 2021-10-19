@@ -81,21 +81,21 @@ define void @f1() nounwind {
 ; CHECK-NEXT:    addiu $sp, $sp, 64
 entry:
   %agg.tmp10 = alloca %struct.S3, align 4
-  call void @callee1(float 2.000000e+01, %struct.S1* byval bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
-  call void @callee2(%struct.S2* byval @f1.s2) nounwind
+  call void @callee1(float 2.000000e+01, %struct.S1* byval(%struct.S1) bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
+  call void @callee2(%struct.S2* byval(%struct.S2) @f1.s2) nounwind
   %tmp11 = getelementptr inbounds %struct.S3, %struct.S3* %agg.tmp10, i32 0, i32 0
   store i8 11, i8* %tmp11, align 4
-  call void @callee3(float 2.100000e+01, %struct.S3* byval %agg.tmp10, %struct.S1* byval bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
+  call void @callee3(float 2.100000e+01, %struct.S3* byval(%struct.S3) %agg.tmp10, %struct.S1* byval(%struct.S1) bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
   ret void
 }
 
-declare void @callee1(float, %struct.S1* byval)
+declare void @callee1(float, %struct.S1* byval(%struct.S1))
 
-declare void @callee2(%struct.S2* byval)
+declare void @callee2(%struct.S2* byval(%struct.S2))
 
-declare void @callee3(float, %struct.S3* byval, %struct.S1* byval)
+declare void @callee3(float, %struct.S3* byval(%struct.S3), %struct.S1* byval(%struct.S1))
 
-define void @f2(float %f, %struct.S1* nocapture byval %s1) nounwind {
+define void @f2(float %f, %struct.S1* nocapture byval(%struct.S1) %s1) nounwind {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -144,7 +144,7 @@ entry:
 
 declare void @callee4(i32, double, i64, i32, i16 signext, i8 signext, float)
 
-define void @f3(%struct.S2* nocapture byval %s2) nounwind {
+define void @f3(%struct.S2* nocapture byval(%struct.S2) %s2) nounwind {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -184,7 +184,7 @@ entry:
   ret void
 }
 
-define void @f4(float %f, %struct.S3* nocapture byval %s3, %struct.S1* nocapture byval %s1) nounwind {
+define void @f4(float %f, %struct.S3* nocapture byval(%struct.S3) %s3, %struct.S1* nocapture byval(%struct.S1) %s1) nounwind {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -230,7 +230,7 @@ entry:
 
 %struct.S4 = type { [4 x i32] }
 
-define void @f5(i64 %a0, %struct.S4* nocapture byval %a1) nounwind {
+define void @f5(i64 %a0, %struct.S4* nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -252,8 +252,8 @@ define void @f5(i64 %a0, %struct.S4* nocapture byval %a1) nounwind {
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 32
 entry:
-  tail call void @f6(%struct.S4* byval %a1, i64 %a0) nounwind
+  tail call void @f6(%struct.S4* byval(%struct.S4) %a1, i64 %a0) nounwind
   ret void
 }
 
-declare void @f6(%struct.S4* nocapture byval, i64)
+declare void @f6(%struct.S4* nocapture byval(%struct.S4), i64)

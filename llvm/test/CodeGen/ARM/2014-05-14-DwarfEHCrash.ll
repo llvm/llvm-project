@@ -1,7 +1,7 @@
 ; Assertion `Encoding == DW_EH_PE_absptr && "Can handle absptr encoding only"' failed.
 ; Broken in r208166, fixed in 208715.
 
-; RUN: llc -mtriple=arm-linux-androideabi -o - -filetype=asm -relocation-model=pic %s
+; RUN: llc -mtriple=arm-linux-androideabi -o - -filetype=asm -relocation-model=pic -simplifycfg-require-and-preserve-domtree=1 %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 target triple = "armv4t--linux-androideabi"

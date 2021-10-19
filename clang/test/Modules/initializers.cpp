@@ -123,19 +123,19 @@ inline void use(bool b, ...) {
 #pragma clang module load m
 #endif
 
-// CHECK-IMPORT-NO-NS-DAG: @[[A:a]] = global i32 0, align 4
+// CHECK-IMPORT-NO-NS-DAG: @[[A:a]] ={{.*}} global i32 0, align 4
 // CHECK-IMPORT-NO-NS-DAG: @[[B:b]] = linkonce_odr global i32 0, comdat, align 4
-// CHECK-IMPORT-NO-NS-DAG: @[[C:c]] = thread_local global i32 0, align 4
+// CHECK-IMPORT-NO-NS-DAG: @[[C:c]] ={{.*}} thread_local global i32 0, align 4
 // CHECK-IMPORT-NO-NS-DAG: @[[D:d]] = linkonce_odr thread_local global i32 0, comdat, align 4
 // CHECK-NO-NS-DAG: @[[E:_Z1eIiE]] = linkonce_odr global i32 0, comdat, align 4
 // CHECK-NO-NS-DAG: @[[F:_Z1fIiE]] = linkonce_odr global i32 0, comdat, align 4
 // CHECK-NO-NS-DAG: @[[G:_Z1gIiE]] = linkonce_odr thread_local global i32 0, comdat, align 4
 // CHECK-NO-NS-DAG: @[[H:_Z1hIiE]] = linkonce_odr thread_local global i32 0, comdat, align 4
 
-// CHECK-IMPORT-NS-DAG: @[[A:_ZN2ns1aE]] = global i32 0, align 4
+// CHECK-IMPORT-NS-DAG: @[[A:_ZN2ns1aE]] ={{.*}} global i32 0, align 4
 // CHECK-IMPORT-NS-DAG: @[[B:_ZN2ns1bE]] = linkonce_odr global i32 0, comdat, align 4
 // CHECK-IMPORT-NS-DAG: @[[BG:_ZGVN2ns1bE]] = linkonce_odr global i64 0, comdat($[[B]]), align 8
-// CHECK-IMPORT-NS-DAG: @[[C:_ZN2ns1cE]] = thread_local global i32 0, align 4
+// CHECK-IMPORT-NS-DAG: @[[C:_ZN2ns1cE]] ={{.*}} thread_local global i32 0, align 4
 // CHECK-IMPORT-NS-DAG: @[[D:_ZN2ns1dE]] = linkonce_odr thread_local global i32 0, comdat, align 4
 // CHECK-IMPORT-NS-DAG: @[[DG:_ZGVN2ns1dE]] = linkonce_odr thread_local global i64 0, comdat($[[D]]), align 8
 // CHECK-NS-DAG: @[[E:_ZN2ns1eIiEE]] = linkonce_odr global i32 0, comdat, align 4

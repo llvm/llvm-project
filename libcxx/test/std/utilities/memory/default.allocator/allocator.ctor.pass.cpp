@@ -7,15 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 // <memory>
-// UNSUPPORTED: c++03, c++11, c++14, c++17
 //
 // template <class T>
 // class allocator
 // {
 // public: // All of these are constexpr after C++17
-//  constexpr allocator() noexcept;
-//  constexpr allocator(const allocator&) noexcept;
-//  template<class U> constexpr allocator(const allocator<U>&) noexcept;
+//  allocator() noexcept;
+//  allocator(const allocator&) noexcept;
+//  template<class U> allocator(const allocator<U>&) noexcept;
 // ...
 // };
 
@@ -24,28 +23,27 @@
 
 #include "test_macros.h"
 
+template<class T>
+TEST_CONSTEXPR_CXX20 bool test() {
+  typedef std::allocator<T> A1;
+  typedef std::allocator<long> A2;
 
-int main(int, char**)
-{
-    {
-    typedef std::allocator<char> AC;
-    typedef std::allocator<long> AL;
+  A1 a1;
+  A1 a1_copy = a1; (void)a1_copy;
+  A2 a2 = a1; (void)a2;
 
-    constexpr AC a1;
-    constexpr AC a2{a1};
-    constexpr AL a3{a2};
-    (void) a3;
-    }
-    {
-    typedef std::allocator<const char> AC;
-    typedef std::allocator<const long> AL;
+  return true;
+}
 
-    constexpr AC a1;
-    constexpr AC a2{a1};
-    constexpr AL a3{a2};
-    (void) a3;
-    }
+int main(int, char**) {
+  test<char>();
+  test<char const>();
+  test<void>();
 
-
+#if TEST_STD_VER > 17
+  static_assert(test<char>());
+  static_assert(test<char const>());
+  static_assert(test<void>());
+#endif
   return 0;
 }

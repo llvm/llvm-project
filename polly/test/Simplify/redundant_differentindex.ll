@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-simplify -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; A store that has a different index than the load it is storing is
 ; not redundant.

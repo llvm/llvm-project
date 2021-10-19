@@ -12,6 +12,7 @@
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Twine.h"
+#include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <future>
@@ -167,6 +168,35 @@ public:
     }
     return V;
   }
+};
+
+/// Used to guard an operation that should run at most every N seconds.
+///
+/// Usage:
+///   mutable PeriodicThrottler ShouldLog(std::chrono::seconds(1));
+///   void calledFrequently() {
+///     if (ShouldLog())
+///       log("this is not spammy");
+///   }
+///
+/// This class is threadsafe. If multiple threads are involved, then the guarded
+/// operation still needs to be threadsafe!
+class PeriodicThrottler {
+  using Stopwatch = std::chrono::steady_clock;
+  using Rep = Stopwatch::duration::rep;
+
+  Rep Period;
+  std::atomic<Rep> Next;
+
+public:
+  /// If Period is zero, the throttler will return true every time.
+  PeriodicThrottler(Stopwatch::duration Period, Stopwatch::duration Delay = {})
+      : Period(Period.count()),
+        Next((Stopwatch::now() + Delay).time_since_epoch().count()) {}
+
+  /// Returns whether the operation should run at this time.
+  /// operator() is safe to call concurrently.
+  bool operator()();
 };
 
 } // namespace clangd

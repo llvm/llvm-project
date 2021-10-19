@@ -60,7 +60,7 @@ void DebugMapObject::print(raw_ostream &OS) const {
   using Entry = std::pair<StringRef, SymbolMapping>;
   std::vector<Entry> Entries;
   Entries.reserve(Symbols.getNumItems());
-  for (const auto &Sym : make_range(Symbols.begin(), Symbols.end()))
+  for (const auto &Sym : Symbols)
     Entries.push_back(std::make_pair(Sym.getKey(), Sym.getValue()));
   llvm::sort(Entries, [](const Entry &LHS, const Entry &RHS) {
     return LHS.first < RHS.first;

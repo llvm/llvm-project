@@ -58,21 +58,15 @@ void CodeExpander::emit(raw_ostream &OS) const {
       // Warn if we split because no terminator was found.
       StringRef EndVar = StartVar.drop_front(2 /* ${ */ + Var.size());
       if (EndVar.empty()) {
-        size_t LocOffset = StartVar.data() - Code.data();
-        PrintWarning(
-            Loc.size() > 0 && Loc[0].isValid()
-                ? SMLoc::getFromPointer(Loc[0].getPointer() + LocOffset)
-                : SMLoc(),
-            "Unterminated expansion");
+        PrintWarning(Loc, "Unterminated expansion '${" + Var + "'");
+        PrintNote("Code: [{" + Code + "}]");
       }
 
       auto ValueI = Expansions.find(Var);
       if (ValueI == Expansions.end()) {
-        size_t LocOffset = StartVar.data() - Code.data();
-        PrintError(Loc.size() > 0 && Loc[0].isValid()
-                       ? SMLoc::getFromPointer(Loc[0].getPointer() + LocOffset)
-                       : SMLoc(),
-                   "Attempting to expand an undeclared variable " + Var);
+        PrintError(Loc,
+                   "Attempt to expand an undeclared variable '" + Var + "'");
+        PrintNote("Code: [{" + Code + "}]");
       }
       if (ShowExpansions)
         OS << "/*$" << Var << "{*/";
@@ -82,11 +76,8 @@ void CodeExpander::emit(raw_ostream &OS) const {
       continue;
     }
 
-    size_t LocOffset = Current.data() - Code.data();
-    PrintWarning(Loc.size() > 0 && Loc[0].isValid()
-                     ? SMLoc::getFromPointer(Loc[0].getPointer() + LocOffset)
-                     : SMLoc(),
-                 "Assuming missing escape character");
+    PrintWarning(Loc, "Assuming missing escape character: \\$");
+    PrintNote("Code: [{" + Code + "}]");
     OS << "$";
     Current = Current.drop_front(1);
   }

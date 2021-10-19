@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <numeric>
 // UNSUPPORTED: c++03, c++11, c++14
 
+// <numeric>
+
+// Became constexpr in C++20
 // template<class InputIterator, class OutputIterator, class T, class BinaryOperation>
 //     OutputIterator
 //     exclusive_scan(InputIterator first, InputIterator last,
@@ -17,37 +19,37 @@
 
 #include <numeric>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <functional>
 #include <iterator>
-#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template <class Iter1, class T, class Op, class Iter2>
-void
-test(Iter1 first, Iter1 last, T init, Op op, Iter2 rFirst, Iter2 rLast)
+template <class Iter1, class T, class Op>
+TEST_CONSTEXPR_CXX20 void
+test(Iter1 first, Iter1 last, T init, Op op, const T *rFirst, const T *rLast)
 {
-    std::vector<typename std::iterator_traits<Iter1>::value_type> v;
+    assert((rLast - rFirst) <= 5);  // or else increase the size of "out"
+    T out[5];
 
-//  Not in place
-    std::exclusive_scan(first, last, std::back_inserter(v), init, op);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // Not in place
+    T *end = std::exclusive_scan(first, last, out, init, op);
+    assert(std::equal(out, end, rFirst, rLast));
 
-//  In place
-    v.clear();
-    v.assign(first, last);
-    std::exclusive_scan(v.begin(), v.end(), v.begin(), init, op);
-    assert(std::equal(v.begin(), v.end(), rFirst, rLast));
+    // In place
+    std::copy(first, last, out);
+    end = std::exclusive_scan(out, end, out, init, op);
+    assert(std::equal(out, end, rFirst, rLast));
 }
 
 
 template <class Iter>
-void
+TEST_CONSTEXPR_CXX20 void
 test()
 {
-          int ia[]   = {1, 3, 5,  7,   9};
+    int ia[]         = {1, 3, 5,  7,   9};
     const int pRes[] = {0, 1, 4,  9,  16};
     const int mRes[] = {1, 1, 3, 15, 105};
     const unsigned sa = sizeof(ia) / sizeof(ia[0]);
@@ -57,13 +59,14 @@ test()
     for (unsigned int i = 0; i < sa; ++i ) {
         test(Iter(ia), Iter(ia + i), 0, std::plus<>(),       pRes, pRes + i);
         test(Iter(ia), Iter(ia + i), 1, std::multiplies<>(), mRes, mRes + i);
-        }
+    }
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool
+test()
 {
 //  All the iterator categories
-    test<input_iterator        <const int*> >();
+    test<cpp17_input_iterator        <const int*> >();
     test<forward_iterator      <const int*> >();
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
@@ -72,10 +75,10 @@ int main(int, char**)
 
 //  Make sure that the calculations are done using the init typedef
     {
-    std::vector<unsigned char> v(10);
+    std::array<unsigned char, 10> v;
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::vector<size_t> res;
-    std::exclusive_scan(v.begin(), v.end(), std::back_inserter(res), 1, std::multiplies<>());
+    std::array<size_t, 10> res;
+    std::exclusive_scan(v.begin(), v.end(), res.begin(), 1, std::multiplies<>());
 
     assert(res.size() == 10);
     size_t j = 1;
@@ -87,5 +90,14 @@ int main(int, char**)
     }
     }
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

@@ -10,13 +10,13 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-general.c %s -o - -emit-llvm -fprofile-instrument-use-path=%S/Inputs/c-general.profdata.v1 | FileCheck -allow-deprecated-dag-overlap  -check-prefix=PGOUSE %s
 
 // PGOGEN: @[[SLC:__profc_simple_loops]] = private global [4 x i64] zeroinitializer
-// PGOGEN: @[[IFC:__profc_conditionals]] = private global [11 x i64] zeroinitializer
+// PGOGEN: @[[IFC:__profc_conditionals]] = private global [13 x i64] zeroinitializer
 // PGOGEN: @[[EEC:__profc_early_exits]] = private global [9 x i64] zeroinitializer
 // PGOGEN: @[[JMC:__profc_jumps]] = private global [22 x i64] zeroinitializer
 // PGOGEN: @[[SWC:__profc_switches]] = private global [19 x i64] zeroinitializer
 // PGOGEN: @[[BSC:__profc_big_switch]] = private global [17 x i64] zeroinitializer
-// PGOGEN: @[[BOC:__profc_boolean_operators]] = private global [8 x i64] zeroinitializer
-// PGOGEN: @[[BLC:__profc_boolop_loops]] = private global [9 x i64] zeroinitializer
+// PGOGEN: @[[BOC:__profc_boolean_operators]] = private global [14 x i64] zeroinitializer
+// PGOGEN: @[[BLC:__profc_boolop_loops]] = private global [13 x i64] zeroinitializer
 // PGOGEN: @[[COC:__profc_conditional_operator]] = private global [3 x i64] zeroinitializer
 // PGOGEN: @[[DFC:__profc_do_fallthrough]] = private global [4 x i64] zeroinitializer
 // PGOGEN: @[[MAC:__profc_main]] = private global [1 x i64] zeroinitializer
@@ -69,11 +69,13 @@ void conditionals() {
     }
 
     // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 8
+    // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 9
     // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 7
     // PGOUSE: br {{.*}} !prof ![[IF7:[0-9]+]]
     if (1 && i) {}
+    // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 11
+    // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 12
     // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 10
-    // PGOGEN: store {{.*}} @[[IFC]], i64 0, i64 9
     // PGOUSE: br {{.*}} !prof ![[IF8:[0-9]+]]
     if (0 || i) {}
   }
@@ -360,21 +362,27 @@ void boolean_operators() {
   // PGOUSE: br {{.*}} !prof ![[BO1:[0-9]+]]
   for (int i = 0; i < 100; ++i) {
     // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 2
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 3
     // PGOUSE: br {{.*}} !prof ![[BO2:[0-9]+]]
     v = i % 3 || i;
 
-    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 3
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 4
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 5
     // PGOUSE: br {{.*}} !prof ![[BO3:[0-9]+]]
     v = i % 3 && i;
 
-    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 5
-    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 4
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 8
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 9
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 6
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 7
     // PGOUSE: br {{.*}} !prof ![[BO4:[0-9]+]]
     // PGOUSE: br {{.*}} !prof ![[BO5:[0-9]+]]
     v = i % 3 || i % 2 || i;
 
-    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 7
-    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 6
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 12
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 13
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 10
+    // PGOGEN: store {{.*}} @[[BOC]], i64 0, i64 11
     // PGOUSE: br {{.*}} !prof ![[BO6:[0-9]+]]
     // PGOUSE: br {{.*}} !prof ![[BO7:[0-9]+]]
     v = i % 2 && i % 3 && i;
@@ -391,27 +399,31 @@ void boolop_loops() {
   int i = 100;
 
   // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 2
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 3
   // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 1
   // PGOUSE: br {{.*}} !prof ![[BL1:[0-9]+]]
   // PGOUSE: br {{.*}} !prof ![[BL2:[0-9]+]]
   while (i && i > 50)
     i--;
 
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 5
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 6
   // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 4
-  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 3
   // PGOUSE: br {{.*}} !prof ![[BL3:[0-9]+]]
   // PGOUSE: br {{.*}} !prof ![[BL4:[0-9]+]]
   while ((i % 2) || (i > 0))
     i--;
 
-  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 6
-  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 5
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 8
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 9
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 7
   // PGOUSE: br {{.*}} !prof ![[BL5:[0-9]+]]
   // PGOUSE: br {{.*}} !prof ![[BL6:[0-9]+]]
   for (i = 100; i && i > 50; --i);
 
-  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 8
-  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 7
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 11
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 12
+  // PGOGEN: store {{.*}} @[[BLC]], i64 0, i64 10
   // PGOUSE: br {{.*}} !prof ![[BL7:[0-9]+]]
   // PGOUSE: br {{.*}} !prof ![[BL8:[0-9]+]]
   for (; (i % 2) || (i > 0); --i);

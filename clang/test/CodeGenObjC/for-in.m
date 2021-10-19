@@ -19,7 +19,7 @@ void p(const char*, ...);
 #define L5(n) L4(n+0),L4(n+16)
 #define L6(n) L5(n+0),L5(n+32)
 
-// CHECK-LABEL: define void @t0
+// CHECK-LABEL: define{{.*}} void @t0
 void t0() {
   NSArray *array = [NSArray arrayWithObjects: L1(0), (void*)0];
 

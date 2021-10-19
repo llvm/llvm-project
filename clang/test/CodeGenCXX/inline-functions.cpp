@@ -6,8 +6,8 @@ struct A {
     inline void f();
 };
 
-// NORMAL-NOT: define void @_ZN1A1fEv
-// MSVCCOMPAT-NOT: define void @"?f@A@@QEAAXXZ"
+// NORMAL-NOT: define{{.*}} void @_ZN1A1fEv
+// MSVCCOMPAT-NOT: define{{.*}} void @"?f@A@@QEAAXXZ"
 void A::f() { }
 
 template<typename> struct B { };
@@ -22,7 +22,7 @@ void B<char>::f() { }
 
 // We need a final CHECK line here.
 
-// NORMAL-LABEL: define void @_Z1fv
+// NORMAL-LABEL: define{{.*}} void @_Z1fv
 // MSVCCOMPAT-LABEL: define dso_local void @"?f@@YAXXZ"
 void f() { }
 
@@ -84,7 +84,7 @@ extern inline void ExternAndInlineFn() {}
 inline void InlineThenExternFn() {}
 extern void InlineThenExternFn();
 
-// NORMAL-LABEL: define void @_Z18ExternThenInlineFnv
+// NORMAL-LABEL: define{{.*}} void @_Z18ExternThenInlineFnv
 // MSVCCOMPAT-LABEL: define dso_local void @"?ExternThenInlineFn@@YAXXZ"
 extern void ExternThenInlineFn() {}
 
@@ -111,7 +111,7 @@ constexpr int ConstexprFn() { return 0; }
 template <typename T>
 extern inline void ExternInlineOnPrimaryTemplate(T);
 
-// NORMAL-LABEL: define void @_Z29ExternInlineOnPrimaryTemplateIiEvT_
+// NORMAL-LABEL: define{{.*}} void @_Z29ExternInlineOnPrimaryTemplateIiEvT_
 // MSVCCOMPAT-LABEL: define dso_local void @"??$ExternInlineOnPrimaryTemplate@H@@YAXH@Z"
 template <>
 void ExternInlineOnPrimaryTemplate(int) {}

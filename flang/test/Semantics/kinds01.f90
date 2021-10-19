@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18
+! RUN: %python %S/test_symbols.py %s %flang_fc1
  !DEF: /MainProgram1/jk1 ObjectEntity INTEGER(1)
  integer(kind=1) jk1
  !DEF: /MainProgram1/js1 ObjectEntity INTEGER(1)

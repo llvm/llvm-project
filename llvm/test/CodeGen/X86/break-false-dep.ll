@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx -mcpu=corei7-avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-win32 -mattr=+avx512vl -mcpu=skx | FileCheck %s --check-prefixes=AVX,AVX512VL
 
-define double @t1(float* nocapture %x) nounwind readonly ssp {
+define dso_local double @t1(float* nocapture %x) nounwind readonly ssp {
 ; SSE-LABEL: t1:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -23,7 +23,7 @@ entry:
   ret double %1
 }
 
-define float @t2(double* nocapture %x) nounwind readonly ssp optsize {
+define dso_local float @t2(double* nocapture %x) nounwind readonly ssp optsize {
 ; SSE-LINUX-LABEL: t2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    cvtsd2ss (%rdi), %xmm0
@@ -44,7 +44,7 @@ entry:
   ret float %1
 }
 
-define float @squirtf(float* %x) nounwind {
+define dso_local float @squirtf(float* %x) nounwind {
 ; SSE-LABEL: squirtf:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -62,7 +62,7 @@ entry:
   ret float %t
 }
 
-define double @squirt(double* %x) nounwind {
+define dso_local double @squirt(double* %x) nounwind {
 ; SSE-LABEL: squirt:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -80,7 +80,7 @@ entry:
   ret double %t
 }
 
-define float @squirtf_size(float* %x) nounwind optsize {
+define dso_local float @squirtf_size(float* %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirtf_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtss (%rdi), %xmm0
@@ -101,7 +101,7 @@ entry:
   ret float %t
 }
 
-define double @squirt_size(double* %x) nounwind optsize {
+define dso_local double @squirt_size(double* %x) nounwind optsize {
 ; SSE-LINUX-LABEL: squirt_size:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    sqrtsd (%rdi), %xmm0
@@ -129,7 +129,7 @@ declare double @llvm.sqrt.f64(double)
 ; register.  Verify that the break false dependency fix pass breaks those
 ; dependencies by inserting xorps instructions.
 ;
-define float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
+define dso_local float @loopdep1(i32 %m) nounwind uwtable readnone ssp {
 ; SSE-LINUX-LABEL: loopdep1:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    testl %edi, %edi
@@ -408,13 +408,13 @@ ret:
 ; that follow it in the loop. Additionally, the source of convert is a
 ; memory operand. Verify the break false dependency fix pass breaks this
 ; dependency by inserting a xor before the convert.
-@x = common global [1024 x double] zeroinitializer, align 16
-@y = common global [1024 x double] zeroinitializer, align 16
-@z = common global [1024 x double] zeroinitializer, align 16
-@w = common global [1024 x double] zeroinitializer, align 16
-@v = common global [1024 x i32] zeroinitializer, align 16
+@x = common dso_local global [1024 x double] zeroinitializer, align 16
+@y = common dso_local global [1024 x double] zeroinitializer, align 16
+@z = common dso_local global [1024 x double] zeroinitializer, align 16
+@w = common dso_local global [1024 x double] zeroinitializer, align 16
+@v = common dso_local global [1024 x i32] zeroinitializer, align 16
 
-define void @loopdep3() {
+define dso_local void @loopdep3() {
 ; SSE-LINUX-LABEL: loopdep3:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    xorl %eax, %eax
@@ -473,11 +473,11 @@ define void @loopdep3() {
 ; SSE-WIN-NEXT:    .seh_savexmm %xmm6, 0
 ; SSE-WIN-NEXT:    .seh_endprologue
 ; SSE-WIN-NEXT:    xorl %r9d, %r9d
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r8
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r10
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r11
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %rax
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %rdx
+; SSE-WIN-NEXT:    leaq v(%rip), %r8
+; SSE-WIN-NEXT:    leaq x(%rip), %r10
+; SSE-WIN-NEXT:    leaq y(%rip), %r11
+; SSE-WIN-NEXT:    leaq z(%rip), %rax
+; SSE-WIN-NEXT:    leaq w(%rip), %rdx
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; SSE-WIN-NEXT:    # =>This Loop Header: Depth=1
@@ -519,8 +519,6 @@ define void @loopdep3() {
 ; SSE-WIN-NEXT:    addq $160, %rsp
 ; SSE-WIN-NEXT:    popq %rsi
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: loopdep3:
@@ -551,11 +549,11 @@ define void @loopdep3() {
 ; AVX-NEXT:    .seh_savexmm %xmm6, 0
 ; AVX-NEXT:    .seh_endprologue
 ; AVX-NEXT:    xorl %r9d, %r9d
-; AVX-NEXT:    leaq {{.*}}(%rip), %r8
-; AVX-NEXT:    leaq {{.*}}(%rip), %r10
-; AVX-NEXT:    leaq {{.*}}(%rip), %r11
-; AVX-NEXT:    leaq {{.*}}(%rip), %rax
-; AVX-NEXT:    leaq {{.*}}(%rip), %rdx
+; AVX-NEXT:    leaq v(%rip), %r8
+; AVX-NEXT:    leaq x(%rip), %r10
+; AVX-NEXT:    leaq y(%rip), %r11
+; AVX-NEXT:    leaq z(%rip), %rax
+; AVX-NEXT:    leaq w(%rip), %rdx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; AVX-NEXT:    # =>This Loop Header: Depth=1
@@ -597,8 +595,6 @@ define void @loopdep3() {
 ; AVX-NEXT:    addq $160, %rsp
 ; AVX-NEXT:    popq %rsi
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 entry:
   br label %for.cond1.preheader
@@ -638,7 +634,7 @@ for.end16:                                        ; preds = %for.inc14
 
 }
 
-define double @inlineasmdep(i64 %arg) {
+define dso_local double @inlineasmdep(i64 %arg) {
 ; SSE-LINUX-LABEL: inlineasmdep:
 ; SSE-LINUX:       # %bb.0: # %top
 ; SSE-LINUX-NEXT:    #APP
@@ -716,8 +712,6 @@ define double @inlineasmdep(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $168, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: inlineasmdep:
@@ -775,8 +769,6 @@ define double @inlineasmdep(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $168, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{dirflag},~{fpsr},~{flags}"()
@@ -793,7 +785,7 @@ top:
 
 ; Make sure we are making a smart choice regarding undef registers and
 ; hiding the false dependency behind a true dependency
-define double @truedeps(float %arg) {
+define dso_local double @truedeps(float %arg) {
 ; SSE-LINUX-LABEL: truedeps:
 ; SSE-LINUX:       # %bb.0: # %top
 ; SSE-LINUX-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -879,8 +871,6 @@ define double @truedeps(float %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $184, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: truedeps:
@@ -942,8 +932,6 @@ define double @truedeps(float %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $184, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm6},~{dirflag},~{fpsr},~{flags}"()
@@ -961,7 +949,7 @@ top:
 
 ; Make sure we are making a smart choice regarding undef registers and
 ; choosing the register with the highest clearence
-define double @clearence(i64 %arg) {
+define dso_local double @clearence(i64 %arg) {
 ; SSE-LINUX-LABEL: clearence:
 ; SSE-LINUX:       # %bb.0: # %top
 ; SSE-LINUX-NEXT:    #APP
@@ -1043,8 +1031,6 @@ define double @clearence(i64 %arg) {
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $168, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX-LABEL: clearence:
@@ -1104,8 +1090,6 @@ define double @clearence(i64 %arg) {
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX-NEXT:    addq $168, %rsp
 ; AVX-NEXT:    retq
-; AVX-NEXT:    .seh_handlerdata
-; AVX-NEXT:    .text
 ; AVX-NEXT:    .seh_endproc
 top:
   tail call void asm sideeffect "", "~{xmm6},~{dirflag},~{fpsr},~{flags}"()
@@ -1285,7 +1269,7 @@ ret:
 ; complicated loop structures. This example is the inner loop from
 ; julia> a = falses(10000); a[1:4:end] = true
 ; julia> linspace(1.0,2.0,10000)[a]
-define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
+define dso_local void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c2, double %c3, double %c4, i64 %size) {
 ; SSE-LINUX-LABEL: loopclearance2:
 ; SSE-LINUX:       # %bb.0: # %entry
 ; SSE-LINUX-NEXT:    #APP
@@ -1416,8 +1400,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; SSE-WIN-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; SSE-WIN-NEXT:    addq $152, %rsp
 ; SSE-WIN-NEXT:    retq
-; SSE-WIN-NEXT:    .seh_handlerdata
-; SSE-WIN-NEXT:    .text
 ; SSE-WIN-NEXT:    .seh_endproc
 ;
 ; AVX1-LABEL: loopclearance2:
@@ -1499,8 +1481,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; AVX1-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX1-NEXT:    addq $152, %rsp
 ; AVX1-NEXT:    retq
-; AVX1-NEXT:    .seh_handlerdata
-; AVX1-NEXT:    .text
 ; AVX1-NEXT:    .seh_endproc
 ;
 ; AVX512VL-LABEL: loopclearance2:
@@ -1582,8 +1562,6 @@ define void @loopclearance2(double* nocapture %y, i64* %x, double %c1, double %c
 ; AVX512VL-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
 ; AVX512VL-NEXT:    addq $152, %rsp
 ; AVX512VL-NEXT:    retq
-; AVX512VL-NEXT:    .seh_handlerdata
-; AVX512VL-NEXT:    .text
 ; AVX512VL-NEXT:    .seh_endproc
 entry:
   tail call void asm sideeffect "", "~{xmm7},~{dirflag},~{fpsr},~{flags}"()

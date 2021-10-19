@@ -368,7 +368,7 @@ template <class Derived> struct GenFuncBase {
         CGF.Builder.CreateNUWMul(BaseEltSizeVal, NumElts);
     Address BC = CGF.Builder.CreateBitCast(DstAddr, CGF.CGM.Int8PtrTy);
     llvm::Value *DstArrayEnd =
-        CGF.Builder.CreateInBoundsGEP(BC.getPointer(), SizeInBytes);
+        CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, BC.getPointer(), SizeInBytes);
     DstArrayEnd = CGF.Builder.CreateBitCast(DstArrayEnd, CGF.CGM.Int8PtrPtrTy,
                                             "dstarray.end");
     llvm::BasicBlock *PreheaderBB = CGF.Builder.GetInsertBlock();
@@ -470,16 +470,12 @@ template <class Derived> struct GenFuncBase {
         llvm::Function::Create(FuncTy, llvm::GlobalValue::LinkOnceODRLinkage,
                                FuncName, &CGM.getModule());
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F);
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
-    IdentifierInfo *II = &Ctx.Idents.get(FuncName);
-    FunctionDecl *FD = FunctionDecl::Create(
-        Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
-        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
-    CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);
+    CGF->StartFunction(GlobalDecl(), Ctx.VoidTy, F, FI, Args);
+    auto AL = ApplyDebugLocation::CreateArtificial(*CGF);
     std::array<Address, N> Addrs =
         getParamAddrs<N>(std::make_index_sequence<N>{}, Alignments, Args, CGF);
     asDerived().visitStructFields(QT, CharUnits::Zero(), Addrs);
@@ -568,7 +564,7 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
           this->CGF->Builder.CreateBitCast(SrcAddr, PtrTy), FT);
       SrcLV = this->CGF->EmitLValueForField(SrcBase, FD);
     } else {
-      llvm::PointerType *Ty = this->CGF->ConvertType(FT)->getPointerTo();
+      llvm::PointerType *Ty = this->CGF->ConvertTypeForMem(FT)->getPointerTo();
       Address DstAddr = this->CGF->Builder.CreateBitCast(Addrs[DstIdx], Ty);
       Address SrcAddr = this->CGF->Builder.CreateBitCast(Addrs[SrcIdx], Ty);
       DstLV = this->CGF->MakeAddrLValue(DstAddr, FT);

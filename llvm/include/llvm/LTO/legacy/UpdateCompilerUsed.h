@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LTO_UPDATE_COMPILER_USED_H
-#define LLVM_LTO_UPDATE_COMPILER_USED_H
+#ifndef LLVM_LTO_LEGACY_UPDATECOMPILERUSED_H
+#define LLVM_LTO_LEGACY_UPDATECOMPILERUSED_H
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
@@ -28,4 +28,4 @@ void updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                         const StringSet<> &AsmUndefinedRefs);
 }
 
-#endif // LLVM_LTO_UPDATE_COMPILER_USED_H
+#endif // LLVM_LTO_LEGACY_UPDATECOMPILERUSED_H

@@ -15,15 +15,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
-#include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
-#include "llvm/MC/MCDisassembler/MCSymbolizer.h"
-
-#include <algorithm>
-#include <cstdint>
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/Support/DataExtractor.h"
 #include <memory>
 
 namespace llvm {
@@ -66,6 +60,34 @@ public:
   DecodeStatus tryDecodeInst(const uint8_t* Table, MCInst &MI, uint64_t Inst,
                              uint64_t Address) const;
 
+  Optional<DecodeStatus> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address,
+                                       raw_ostream &CStream) const override;
+
+  DecodeStatus decodeKernelDescriptor(StringRef KdName, ArrayRef<uint8_t> Bytes,
+                                      uint64_t KdAddress) const;
+
+  DecodeStatus
+  decodeKernelDescriptorDirective(DataExtractor::Cursor &Cursor,
+                                  ArrayRef<uint8_t> Bytes,
+                                  raw_string_ostream &KdStream) const;
+
+  /// Decode as directives that handle COMPUTE_PGM_RSRC1.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC1.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
+
+  /// Decode as directives that handle COMPUTE_PGM_RSRC2.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC2.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
+
+  DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;
   DecodeStatus convertMIMGInst(MCInst &MI) const;
@@ -78,12 +100,14 @@ public:
   MCOperand decodeOperand_VS_128(unsigned Val) const;
   MCOperand decodeOperand_VSrc16(unsigned Val) const;
   MCOperand decodeOperand_VSrcV216(unsigned Val) const;
+  MCOperand decodeOperand_VSrcV232(unsigned Val) const;
 
   MCOperand decodeOperand_VReg_64(unsigned Val) const;
   MCOperand decodeOperand_VReg_96(unsigned Val) const;
   MCOperand decodeOperand_VReg_128(unsigned Val) const;
   MCOperand decodeOperand_VReg_256(unsigned Val) const;
   MCOperand decodeOperand_VReg_512(unsigned Val) const;
+  MCOperand decodeOperand_VReg_1024(unsigned Val) const;
 
   MCOperand decodeOperand_SReg_32(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XM0_XEXEC(unsigned Val) const;
@@ -96,7 +120,9 @@ public:
   MCOperand decodeOperand_SReg_512(unsigned Val) const;
 
   MCOperand decodeOperand_AGPR_32(unsigned Val) const;
+  MCOperand decodeOperand_AReg_64(unsigned Val) const;
   MCOperand decodeOperand_AReg_128(unsigned Val) const;
+  MCOperand decodeOperand_AReg_256(unsigned Val) const;
   MCOperand decodeOperand_AReg_512(unsigned Val) const;
   MCOperand decodeOperand_AReg_1024(unsigned Val) const;
   MCOperand decodeOperand_AV_32(unsigned Val) const;
@@ -105,12 +131,15 @@ public:
   enum OpWidthTy {
     OPW32,
     OPW64,
+    OPW96,
     OPW128,
+    OPW160,
     OPW256,
     OPW512,
     OPW1024,
     OPW16,
     OPWV216,
+    OPWV232,
     OPW_LAST_,
     OPW_FIRST_ = OPW32
   };
@@ -122,9 +151,11 @@ public:
 
   static MCOperand decodeIntImmed(unsigned Imm);
   static MCOperand decodeFPImmed(OpWidthTy Width, unsigned Imm);
+  MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant() const;
 
-  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val) const;
+  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
+                        bool MandatoryLiteral = false) const;
   MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
@@ -138,9 +169,16 @@ public:
 
   int getTTmpIdx(unsigned Val) const;
 
+  const MCInstrInfo *getMCII() const { return MCII.get(); }
+
   bool isVI() const;
   bool isGFX9() const;
+  bool isGFX90A() const;
+  bool isGFX9Plus() const;
   bool isGFX10() const;
+  bool isGFX10Plus() const;
+
+  bool hasArchitectedFlatScratch() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -150,6 +188,7 @@ public:
 class AMDGPUSymbolizer : public MCSymbolizer {
 private:
   void *DisInfo;
+  std::vector<uint64_t> ReferencedAddresses;
 
 public:
   AMDGPUSymbolizer(MCContext &Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo,
@@ -164,6 +203,10 @@ public:
   void tryAddingPcLoadReferenceComment(raw_ostream &cStream,
                                        int64_t Value,
                                        uint64_t Address) override;
+
+  ArrayRef<uint64_t> getReferencedAddresses() const override {
+    return ReferencedAddresses;
+  }
 };
 
 } // end namespace llvm

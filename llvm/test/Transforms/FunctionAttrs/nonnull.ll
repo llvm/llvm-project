@@ -327,11 +327,20 @@ declare void @use1(i8* %x)
 declare void @use2(i8* %x, i8* %y);
 declare void @use3(i8* %x, i8* %y, i8* %z);
 
-declare void @use1nonnull(i8* nonnull %x);
-declare void @use2nonnull(i8* nonnull %x, i8* nonnull %y);
-declare void @use3nonnull(i8* nonnull %x, i8* nonnull %y, i8* nonnull %z);
+declare void @use1nonnull(i8* nonnull noundef %x);
+declare void @use1nonnull_without_noundef(i8* nonnull %x);
+declare void @use2nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y);
+declare void @use3nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y, i8* nonnull noundef %z);
 
-declare i8 @use1safecall(i8* %x) readonly nounwind ; readonly+nounwind guarantees that execution continues to successor
+declare i8 @use1safecall(i8* %x) nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
+
+; Without noundef, nonnull cannot be propagated to the parent
+
+define void @parent_poison(i8* %a) {
+; FNATTR-LABEL: @parent_poison(i8* %a)
+  call void @use1nonnull_without_noundef(i8* %a)
+  ret void
+}
 
 ; Can't extend non-null to parent for any argument because the 2nd call is not guaranteed to execute.
 

@@ -18,7 +18,7 @@ define i32 @add_zext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_zext_ifpos:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
   %e = zext i1 %c to i32
@@ -43,8 +43,8 @@ define <4 x i32> @add_zext_ifpos_vec_splat(<4 x i32> %x) {
 define i32 @sel_ifpos_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_tval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, ge
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
@@ -67,7 +67,7 @@ define i32 @add_sext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_sext_ifpos:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #41 // =41
+; CHECK-NEXT:    add w0, w8, #41
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32
@@ -92,8 +92,8 @@ define <4 x i32> @add_sext_ifpos_vec_splat(<4 x i32> %x) {
 define i32 @sel_ifpos_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifpos_fval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, lt
 ; CHECK-NEXT:    ret
   %c = icmp sgt i32 %x, -1
@@ -117,7 +117,7 @@ define i32 @add_zext_ifneg(i32 %x) {
 ; CHECK-LABEL: add_zext_ifneg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #41 // =41
+; CHECK-NEXT:    add w0, w8, #41
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
   %e = zext i1 %c to i32
@@ -128,8 +128,8 @@ define i32 @add_zext_ifneg(i32 %x) {
 define i32 @sel_ifneg_tval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_tval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, lt
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
@@ -151,7 +151,7 @@ define i32 @add_sext_ifneg(i32 %x) {
 ; CHECK-LABEL: add_sext_ifneg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
   %e = sext i1 %c to i32
@@ -162,8 +162,8 @@ define i32 @add_sext_ifneg(i32 %x) {
 define i32 @sel_ifneg_fval_bigger(i32 %x) {
 ; CHECK-LABEL: sel_ifneg_fval_bigger:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w0, #0 // =0
 ; CHECK-NEXT:    mov w8, #41
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cinc w0, w8, ge
 ; CHECK-NEXT:    ret
   %c = icmp slt i32 %x, 0
@@ -175,7 +175,7 @@ define i32 @add_lshr_not(i32 %x) {
 ; CHECK-LABEL: add_lshr_not:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #42 // =42
+; CHECK-NEXT:    add w0, w8, #42
 ; CHECK-NEXT:    ret
   %not = xor i32 %x, -1
   %sh = lshr i32 %not, 31
@@ -247,7 +247,7 @@ define i32 @sub_const_op_lshr(i32 %x) {
 ; CHECK-LABEL: sub_const_op_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    asr w8, w0, #31
-; CHECK-NEXT:    add w0, w8, #43 // =43
+; CHECK-NEXT:    add w0, w8, #43
 ; CHECK-NEXT:    ret
   %sh = lshr i32 %x, 31
   %r = sub i32 43, %sh

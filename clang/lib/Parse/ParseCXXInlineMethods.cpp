@@ -108,7 +108,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
   // or if we are about to parse function member template then consume
   // the tokens and store them for parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing &&
-      D.getFunctionDefinitionKind() == FDK_Definition &&
+      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Definition &&
       !D.getDeclSpec().hasConstexprSpecifier() &&
       !(FnD && FnD->getAsFunction() &&
         FnD->getAsFunction()->getReturnType()->getContainedAutoType()) &&
@@ -405,14 +405,21 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         ConsumeAnyToken();
     } else if (HasUnparsed) {
       assert(Param->hasInheritedDefaultArg());
-      FunctionDecl *Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
-      ParmVarDecl *OldParam = Old->getParamDecl(I);
-      assert (!OldParam->hasUnparsedDefaultArg());
-      if (OldParam->hasUninstantiatedDefaultArg())
-        Param->setUninstantiatedDefaultArg(
-            OldParam->getUninstantiatedDefaultArg());
+      const FunctionDecl *Old;
+      if (const auto *FunTmpl = dyn_cast<FunctionTemplateDecl>(LM.Method))
+        Old =
+            cast<FunctionDecl>(FunTmpl->getTemplatedDecl())->getPreviousDecl();
       else
-        Param->setDefaultArg(OldParam->getInit());
+        Old = cast<FunctionDecl>(LM.Method)->getPreviousDecl();
+      if (Old) {
+        ParmVarDecl *OldParam = const_cast<ParmVarDecl*>(Old->getParamDecl(I));
+        assert(!OldParam->hasUnparsedDefaultArg());
+        if (OldParam->hasUninstantiatedDefaultArg())
+          Param->setUninstantiatedDefaultArg(
+              OldParam->getUninstantiatedDefaultArg());
+        else
+          Param->setDefaultArg(OldParam->getInit());
+      }
     }
   }
 
@@ -771,6 +778,7 @@ void Parser::ParseLexedPragma(LateParsedPragma &LP) {
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
   assert(Tok.isAnnotation() && "Expected annotation token.");
   switch (Tok.getKind()) {
+  case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp: {
     AccessSpecifier AS = LP.getAccessSpecifier();
     ParsedAttributesWithRange Attrs(AttrFactory);

@@ -140,7 +140,7 @@ XorOpnd::XorOpnd(Value *V) {
 
   // view the operand as "V | 0"
   SymbolicPart = V;
-  ConstPart = APInt::getNullValue(V->getType()->getScalarSizeInBits());
+  ConstPart = APInt::getZero(V->getType()->getScalarSizeInBits());
   isOr = true;
 }
 
@@ -920,6 +920,101 @@ static Value *NegateValue(Value *V, Instruction *BI,
   return NewNeg;
 }
 
+// See if this `or` looks like an load widening reduction, i.e. that it
+// consists of an `or`/`shl`/`zext`/`load` nodes only. Note that we don't
+// ensure that the pattern is *really* a load widening reduction,
+// we do not ensure that it can really be replaced with a widened load,
+// only that it mostly looks like one.
+static bool isLoadCombineCandidate(Instruction *Or) {
+  SmallVector<Instruction *, 8> Worklist;
+  SmallSet<Instruction *, 8> Visited;
+
+  auto Enqueue = [&](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    // Each node of an `or` reduction must be an instruction,
+    if (!I)
+      return false; // Node is certainly not part of an `or` load reduction.
+    // Only process instructions we have never processed before.
+    if (Visited.insert(I).second)
+      Worklist.emplace_back(I);
+    return true; // Will need to look at parent nodes.
+  };
+
+  if (!Enqueue(Or))
+    return false; // Not an `or` reduction pattern.
+
+  while (!Worklist.empty()) {
+    auto *I = Worklist.pop_back_val();
+
+    // Okay, which instruction is this node?
+    switch (I->getOpcode()) {
+    case Instruction::Or:
+      // Got an `or` node. That's fine, just recurse into it's operands.
+      for (Value *Op : I->operands())
+        if (!Enqueue(Op))
+          return false; // Not an `or` reduction pattern.
+      continue;
+
+    case Instruction::Shl:
+    case Instruction::ZExt:
+      // `shl`/`zext` nodes are fine, just recurse into their base operand.
+      if (!Enqueue(I->getOperand(0)))
+        return false; // Not an `or` reduction pattern.
+      continue;
+
+    case Instruction::Load:
+      // Perfect, `load` node means we've reached an edge of the graph.
+      continue;
+
+    default:        // Unknown node.
+      return false; // Not an `or` reduction pattern.
+    }
+  }
+
+  return true;
+}
+
+/// Return true if it may be profitable to convert this (X|Y) into (X+Y).
+static bool shouldConvertOrWithNoCommonBitsToAdd(Instruction *Or) {
+  // Don't bother to convert this up unless either the LHS is an associable add
+  // or subtract or mul or if this is only used by one of the above.
+  // This is only a compile-time improvement, it is not needed for correctness!
+  auto isInteresting = [](Value *V) {
+    for (auto Op : {Instruction::Add, Instruction::Sub, Instruction::Mul,
+                    Instruction::Shl})
+      if (isReassociableOp(V, Op))
+        return true;
+    return false;
+  };
+
+  if (any_of(Or->operands(), isInteresting))
+    return true;
+
+  Value *VB = Or->user_back();
+  if (Or->hasOneUse() && isInteresting(VB))
+    return true;
+
+  return false;
+}
+
+/// If we have (X|Y), and iff X and Y have no common bits set,
+/// transform this into (X+Y) to allow arithmetics reassociation.
+static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
+  // Convert an or into an add.
+  BinaryOperator *New =
+      CreateAdd(Or->getOperand(0), Or->getOperand(1), "", Or, Or);
+  New->setHasNoSignedWrap();
+  New->setHasNoUnsignedWrap();
+  New->takeName(Or);
+
+  // Everyone now refers to the add instruction.
+  Or->replaceAllUsesWith(New);
+  New->setDebugLoc(Or->getDebugLoc());
+
+  LLVM_DEBUG(dbgs() << "Converted or into an add: " << *New << '\n');
+  return New;
+}
+
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
@@ -1034,8 +1129,7 @@ static Value *EmitAddTreeOfValues(Instruction *I,
                                   SmallVectorImpl<WeakTrackingVH> &Ops) {
   if (Ops.size() == 1) return Ops.back();
 
-  Value *V1 = Ops.back();
-  Ops.pop_back();
+  Value *V1 = Ops.pop_back_val();
   Value *V2 = EmitAddTreeOfValues(I, Ops);
   return CreateAdd(V2, V1, "reass.add", I, I);
 }
@@ -1185,10 +1279,10 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
 /// be returned.
 static Value *createAndInstr(Instruction *InsertBefore, Value *Opnd,
                              const APInt &ConstOpnd) {
-  if (ConstOpnd.isNullValue())
+  if (ConstOpnd.isZero())
     return nullptr;
 
-  if (ConstOpnd.isAllOnesValue())
+  if (ConstOpnd.isAllOnes())
     return Opnd;
 
   Instruction *I = BinaryOperator::CreateAnd(
@@ -1210,7 +1304,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
   //                       = ((x | c1) ^ c1) ^ (c1 ^ c2)
   //                       = (x & ~c1) ^ (c1 ^ c2)
   // It is useful only when c1 == c2.
-  if (!Opnd1->isOrExpr() || Opnd1->getConstPart().isNullValue())
+  if (!Opnd1->isOrExpr() || Opnd1->getConstPart().isZero())
     return false;
 
   if (!Opnd1->getValue()->hasOneUse())
@@ -1267,7 +1361,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     APInt C3((~C1) ^ C2);
 
     // Do not increase code size!
-    if (!C3.isNullValue() && !C3.isAllOnesValue()) {
+    if (!C3.isZero() && !C3.isAllOnes()) {
       int NewInstNum = ConstOpnd.getBoolValue() ? 1 : 2;
       if (NewInstNum > DeadInstNum)
         return false;
@@ -1283,7 +1377,7 @@ bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
     APInt C3 = C1 ^ C2;
 
     // Do not increase code size
-    if (!C3.isNullValue() && !C3.isAllOnesValue()) {
+    if (!C3.isZero() && !C3.isAllOnes()) {
       int NewInstNum = ConstOpnd.getBoolValue() ? 1 : 2;
       if (NewInstNum > DeadInstNum)
         return false;
@@ -1374,8 +1468,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
     Value *CV;
 
     // Step 3.1: Try simplifying "CurrOpnd ^ ConstOpnd"
-    if (!ConstOpnd.isNullValue() &&
-        CombineXorOpnd(I, CurrOpnd, ConstOpnd, CV)) {
+    if (!ConstOpnd.isZero() && CombineXorOpnd(I, CurrOpnd, ConstOpnd, CV)) {
       Changed = true;
       if (CV)
         *CurrOpnd = XorOpnd(CV);
@@ -1416,7 +1509,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
       ValueEntry VE(getRank(O.getValue()), O.getValue());
       Ops.push_back(VE);
     }
-    if (!ConstOpnd.isNullValue()) {
+    if (!ConstOpnd.isZero()) {
       Value *C = ConstantInt::get(Ty, ConstOpnd);
       ValueEntry VE(getRank(C), C);
       Ops.push_back(VE);
@@ -1425,7 +1518,7 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
     if (Sz == 1)
       return Ops.back().Op;
     if (Sz == 0) {
-      assert(ConstOpnd.isNullValue());
+      assert(ConstOpnd.isZero());
       return ConstantInt::get(Ty, ConstOpnd);
     }
   }
@@ -1899,7 +1992,7 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
 void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
                                                 OrderedSet &Insts) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
-  SmallVector<Value *, 4> Ops(I->op_begin(), I->op_end());
+  SmallVector<Value *, 4> Ops(I->operands());
   ValueRankMap.erase(I);
   Insts.remove(I);
   RedoInsts.remove(I);
@@ -1916,7 +2009,7 @@ void ReassociatePass::EraseInst(Instruction *I) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
   LLVM_DEBUG(dbgs() << "Erasing dead inst: "; I->dump());
 
-  SmallVector<Value*, 8> Ops(I->op_begin(), I->op_end());
+  SmallVector<Value *, 8> Ops(I->operands());
   // Erase the dead instruction.
   ValueRankMap.erase(I);
   RedoInsts.remove(I);
@@ -2115,6 +2208,19 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // optimized for the most likely conditions.
   if (I->getType()->isIntegerTy(1))
     return;
+
+  // If this is a bitwise or instruction of operands
+  // with no common bits set, convert it to X+Y.
+  if (I->getOpcode() == Instruction::Or &&
+      shouldConvertOrWithNoCommonBitsToAdd(I) && !isLoadCombineCandidate(I) &&
+      haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
+                          I->getModule()->getDataLayout(), /*AC=*/nullptr, I,
+                          /*DT=*/nullptr)) {
+    Instruction *NI = convertOrWithNoCommonBitsToAdd(I);
+    RedoInsts.insert(I);
+    MadeChange = true;
+    I = NI;
+  }
 
   // If this is a subtract instruction which is not already in negate form,
   // see if we can convert it to X+-Y.
@@ -2461,9 +2567,6 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   if (MadeChange) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
-    PA.preserve<AAManager>();
-    PA.preserve<BasicAA>();
-    PA.preserve<GlobalsAA>();
     return PA;
   }
 

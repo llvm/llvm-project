@@ -88,5 +88,4 @@ int foo();
 inline int zoo = foo();
 inline static int boo = foo();
 
-
-// CHECK: @llvm.used = appending global [7 x i8*] [i8* bitcast (i32* @"?x1@selectany_init@@3HA" to i8*), i8* bitcast (i32* @"?x@?$A@H@explicit_template_instantiation@@2HA" to i8*), i8* bitcast (i32* @"?ioo@?$X_@H@@2HA" to i8*), i8* getelementptr inbounds (%struct.A, %struct.A* @"?aoo@S1@@2UA@@A", i32 0, i32 0), i8* bitcast (i32* @"?zoo@@3HA" to i8*), i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0), i8* bitcast (i32* @"?x@?$A@H@implicit_template_instantiation@@2HA" to i8*)], section "llvm.metadata"
+// CHECK: @llvm.used = appending global [8 x i8*] [i8* bitcast (i32* @"?x@selectany_init@@3HA" to i8*), i8* bitcast (i32* @"?x1@selectany_init@@3HA" to i8*), i8* bitcast (i32* @"?x@?$A@H@explicit_template_instantiation@@2HA" to i8*), i8* bitcast (i32* @"?ioo@?$X_@H@@2HA" to i8*), i8* getelementptr inbounds (%struct.A, %struct.A* @"?aoo@S1@@2UA@@A", i32 0, i32 0), i8* bitcast (i32* @"?zoo@@3HA" to i8*), i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0), i8* bitcast (i32* @"?x@?$A@H@implicit_template_instantiation@@2HA" to i8*)], section "llvm.metadata"

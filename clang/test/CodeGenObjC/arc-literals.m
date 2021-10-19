@@ -12,7 +12,7 @@
 // CHECK: c"dictionaryWithObjects:forKeys:count:\00"
 // CHECK: c"prop\00"
 
-// CHECK-LABEL: define void @test_numeric()
+// CHECK-LABEL: define{{.*}} void @test_numeric()
 void test_numeric() {
   // CHECK: {{call.*objc_msgSend.*i32 17}}
   // CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue
@@ -37,7 +37,7 @@ void test_numeric() {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @test_array
+// CHECK-LABEL: define{{.*}} void @test_array
 void test_array(id a, id b) {
   // CHECK: [[A:%.*]] = alloca i8*,
   // CHECK: [[B:%.*]] = alloca i8*,
@@ -69,7 +69,7 @@ void test_array(id a, id b) {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @test_dictionary
+// CHECK-LABEL: define{{.*}} void @test_dictionary
 void test_dictionary(id k1, id o1, id k2, id o2) {
   // CHECK: [[K1:%.*]] = alloca i8*,
   // CHECK: [[O1:%.*]] = alloca i8*,
@@ -123,7 +123,7 @@ void test_dictionary(id k1, id o1, id k2, id o2) {
 @property (retain) A* prop;
 @end
 
-// CHECK-LABEL: define void @test_property
+// CHECK-LABEL: define{{.*}} void @test_property
 void test_property(B *b) {
   // Retain parameter
   // CHECK: call i8* @llvm.objc.retain

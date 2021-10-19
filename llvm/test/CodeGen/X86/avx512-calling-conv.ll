@@ -274,7 +274,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    callq _func8xi1
-; KNL-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
 ;
@@ -286,7 +286,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
-; SKX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    retq
 ;
@@ -298,7 +298,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL_X32-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
-; KNL_X32-NEXT:    vandps LCPI7_0, %xmm0, %xmm0
+; KNL_X32-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
 ;
@@ -310,7 +310,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
 ; FASTISEL-NEXT:    vzeroupper
 ; FASTISEL-NEXT:    callq _func8xi1
-; FASTISEL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; FASTISEL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FASTISEL-NEXT:    popq %rax
 ; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <8 x i32>%a, %b
@@ -1564,11 +1564,11 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL_X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_X32-NEXT:    kmovw %k1, %ebx
 ; KNL_X32-NEXT:    kshiftrw $1, %k0, %k1
-; KNL_X32-NEXT:    kmovw %k1, %esi
-; KNL_X32-NEXT:    kshiftrw $2, %k0, %k1
-; KNL_X32-NEXT:    kmovw %k1, %edi
-; KNL_X32-NEXT:    kshiftrw $3, %k0, %k1
 ; KNL_X32-NEXT:    kmovw %k1, %ebp
+; KNL_X32-NEXT:    kshiftrw $2, %k0, %k1
+; KNL_X32-NEXT:    kmovw %k1, %esi
+; KNL_X32-NEXT:    kshiftrw $3, %k0, %k1
+; KNL_X32-NEXT:    kmovw %k1, %edi
 ; KNL_X32-NEXT:    kshiftrw $4, %k0, %k1
 ; KNL_X32-NEXT:    kmovw %k1, %edx
 ; KNL_X32-NEXT:    kshiftrw $5, %k0, %k1
@@ -1578,66 +1578,66 @@ define <17 x i1> @test16(<17 x i1> %a, <17 x i1> %b) nounwind {
 ; KNL_X32-NEXT:    movb %bl, 2(%eax)
 ; KNL_X32-NEXT:    kmovw %k0, %ebx
 ; KNL_X32-NEXT:    andl $1, %ebx
-; KNL_X32-NEXT:    andl $1, %esi
-; KNL_X32-NEXT:    leal (%ebx,%esi,2), %esi
-; KNL_X32-NEXT:    kmovw %k1, %ebx
-; KNL_X32-NEXT:    kshiftrw $7, %k0, %k1
-; KNL_X32-NEXT:    andl $1, %edi
-; KNL_X32-NEXT:    leal (%esi,%edi,4), %esi
-; KNL_X32-NEXT:    kmovw %k1, %edi
-; KNL_X32-NEXT:    kshiftrw $8, %k0, %k1
 ; KNL_X32-NEXT:    andl $1, %ebp
-; KNL_X32-NEXT:    leal (%esi,%ebp,8), %esi
+; KNL_X32-NEXT:    leal (%ebx,%ebp,2), %ebx
 ; KNL_X32-NEXT:    kmovw %k1, %ebp
+; KNL_X32-NEXT:    kshiftrw $7, %k0, %k1
+; KNL_X32-NEXT:    andl $1, %esi
+; KNL_X32-NEXT:    leal (%ebx,%esi,4), %ebx
+; KNL_X32-NEXT:    kmovw %k1, %esi
+; KNL_X32-NEXT:    kshiftrw $8, %k0, %k1
+; KNL_X32-NEXT:    andl $1, %edi
+; KNL_X32-NEXT:    leal (%ebx,%edi,8), %ebx
+; KNL_X32-NEXT:    kmovw %k1, %edi
 ; KNL_X32-NEXT:    kshiftrw $9, %k0, %k1
 ; KNL_X32-NEXT:    andl $1, %edx
 ; KNL_X32-NEXT:    shll $4, %edx
-; KNL_X32-NEXT:    orl %esi, %edx
-; KNL_X32-NEXT:    kmovw %k1, %esi
+; KNL_X32-NEXT:    orl %ebx, %edx
+; KNL_X32-NEXT:    kmovw %k1, %ebx
 ; KNL_X32-NEXT:    kshiftrw $10, %k0, %k1
 ; KNL_X32-NEXT:    andl $1, %ecx
 ; KNL_X32-NEXT:    shll $5, %ecx
 ; KNL_X32-NEXT:    orl %edx, %ecx
 ; KNL_X32-NEXT:    kmovw %k1, %edx
 ; KNL_X32-NEXT:    kshiftrw $11, %k0, %k1
-; KNL_X32-NEXT:    andl $1, %ebx
-; KNL_X32-NEXT:    shll $6, %ebx
-; KNL_X32-NEXT:    andl $1, %edi
-; KNL_X32-NEXT:    shll $7, %edi
-; KNL_X32-NEXT:    orl %ebx, %edi
-; KNL_X32-NEXT:    kmovw %k1, %ebx
-; KNL_X32-NEXT:    kshiftrw $12, %k0, %k1
 ; KNL_X32-NEXT:    andl $1, %ebp
-; KNL_X32-NEXT:    shll $8, %ebp
-; KNL_X32-NEXT:    orl %edi, %ebp
-; KNL_X32-NEXT:    kmovw %k1, %edi
-; KNL_X32-NEXT:    kshiftrw $13, %k0, %k1
+; KNL_X32-NEXT:    shll $6, %ebp
 ; KNL_X32-NEXT:    andl $1, %esi
-; KNL_X32-NEXT:    shll $9, %esi
+; KNL_X32-NEXT:    shll $7, %esi
 ; KNL_X32-NEXT:    orl %ebp, %esi
 ; KNL_X32-NEXT:    kmovw %k1, %ebp
+; KNL_X32-NEXT:    kshiftrw $12, %k0, %k1
+; KNL_X32-NEXT:    andl $1, %edi
+; KNL_X32-NEXT:    shll $8, %edi
+; KNL_X32-NEXT:    orl %esi, %edi
+; KNL_X32-NEXT:    kmovw %k1, %esi
+; KNL_X32-NEXT:    kshiftrw $13, %k0, %k1
+; KNL_X32-NEXT:    andl $1, %ebx
+; KNL_X32-NEXT:    shll $9, %ebx
+; KNL_X32-NEXT:    orl %edi, %ebx
+; KNL_X32-NEXT:    kmovw %k1, %edi
 ; KNL_X32-NEXT:    kshiftrw $14, %k0, %k1
 ; KNL_X32-NEXT:    andl $1, %edx
 ; KNL_X32-NEXT:    shll $10, %edx
-; KNL_X32-NEXT:    orl %esi, %edx
-; KNL_X32-NEXT:    kmovw %k1, %esi
+; KNL_X32-NEXT:    orl %ebx, %edx
+; KNL_X32-NEXT:    kmovw %k1, %ebx
 ; KNL_X32-NEXT:    kshiftrw $15, %k0, %k0
 ; KNL_X32-NEXT:    orl %ecx, %edx
 ; KNL_X32-NEXT:    kmovw %k0, %ecx
-; KNL_X32-NEXT:    andl $1, %ebx
-; KNL_X32-NEXT:    shll $11, %ebx
-; KNL_X32-NEXT:    andl $1, %edi
-; KNL_X32-NEXT:    shll $12, %edi
-; KNL_X32-NEXT:    orl %ebx, %edi
 ; KNL_X32-NEXT:    andl $1, %ebp
-; KNL_X32-NEXT:    shll $13, %ebp
-; KNL_X32-NEXT:    orl %edi, %ebp
+; KNL_X32-NEXT:    shll $11, %ebp
 ; KNL_X32-NEXT:    andl $1, %esi
-; KNL_X32-NEXT:    shll $14, %esi
+; KNL_X32-NEXT:    shll $12, %esi
 ; KNL_X32-NEXT:    orl %ebp, %esi
+; KNL_X32-NEXT:    andl $1, %edi
+; KNL_X32-NEXT:    shll $13, %edi
+; KNL_X32-NEXT:    orl %esi, %edi
+; KNL_X32-NEXT:    andl $1, %ebx
+; KNL_X32-NEXT:    shll $14, %ebx
+; KNL_X32-NEXT:    orl %edi, %ebx
 ; KNL_X32-NEXT:    andl $1, %ecx
 ; KNL_X32-NEXT:    shll $15, %ecx
-; KNL_X32-NEXT:    orl %esi, %ecx
+; KNL_X32-NEXT:    orl %ebx, %ecx
 ; KNL_X32-NEXT:    orl %edx, %ecx
 ; KNL_X32-NEXT:    movw %cx, (%eax)
 ; KNL_X32-NEXT:    addl $20, %esp

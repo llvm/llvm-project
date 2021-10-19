@@ -111,6 +111,8 @@ def err_module_cycle : Error<"cyclic dependency in module '%0': %1">,
   DefaultFatal;
 def err_module_prebuilt : Error<
   "error in loading module '%0' from prebuilt module path">, DefaultFatal;
+def err_module_rebuild_finalized : Error<
+  "cannot rebuild module '%0' as it is already finalized">, DefaultFatal;
 def note_pragma_entered_here : Note<"#pragma entered here">;
 def note_decl_hiding_tag_type : Note<
   "%1 %0 is hidden by a non-type declaration of %0 here">;
@@ -147,8 +149,8 @@ def err_nullability_conflicting : Error<
 
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
-  "%select{OpenCL C|C++ for OpenCL}0 version %1 does not support the "
-  "'%2' %select{type qualifier|storage class specifier}3">;
+  "%0 does not support the '%1' "
+  "%select{type qualifier|storage class specifier}2">;
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
@@ -187,6 +189,17 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
+def ext_cxx2b_size_t_suffix : ExtWarn<
+  "'size_t' suffix for literals is a C++2b extension">,
+  InGroup<CXX2b>;
+def warn_cxx20_compat_size_t_suffix : Warning<
+  "'size_t' suffix for literals is incompatible with C++ standards before "
+  "C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
+def err_cxx2b_size_t_suffix: Error<
+  "'size_t' suffix for literals is a C++2b feature">;
+def err_size_t_literal_too_large: Error<
+  "%select{signed |}0'size_t' literal is out of range of possible "
+  "%select{signed |}0'size_t' values">;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;
@@ -234,6 +247,12 @@ def err_seh___finally_block : Error<
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
   "subexpression not valid in a constant expression">;
+def note_constexpr_invalid_template_arg : Note<
+  "%select{pointer|reference}0 to %select{|subobject of }1"
+  "%select{type_info object|string literal|temporary object|"
+  "predefined '%3' variable}2 is not allowed in a template argument">;
+def err_constexpr_invalid_template_arg : Error<
+  note_constexpr_invalid_template_arg.Text>;
 
 // Sema && Frontend
 let CategoryName = "Inline Assembly Issue" in {
@@ -287,6 +306,8 @@ def err_opt_not_valid_without_opt : Error<
   "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
+def err_invalid_feature_combination : Error<
+  "invalid feature combination: %0">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
@@ -330,6 +351,8 @@ def warn_ignored_hip_only_option : Warning<
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
+def err_omp_required_clause : Error<
+  "directive '#pragma omp %0' requires the '%1' clause">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<
@@ -341,4 +364,13 @@ def note_suggest_disabling_all_checkers : Note<
 def warn_poison_system_directories : Warning <
   "include location '%0' is unsafe for cross-compilation">,
   InGroup<DiagGroup<"poison-system-directories">>, DefaultIgnore;
+
+def warn_opencl_unsupported_core_feature : Warning<
+  "%0 is a core feature in %select{OpenCL C|C++ for OpenCL}1 version %2 but not supported on this target">,
+  InGroup<OpenCLCoreFeaturesDiagGroup>, DefaultIgnore;
+
+def err_opencl_extension_and_feature_differs : Error<
+  "options %0 and %1 are set to different values">;
+def err_opencl_feature_requires : Error<
+  "feature %0 requires support of %1 feature">;
 }

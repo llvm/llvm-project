@@ -80,7 +80,7 @@ entry:
 define void @store_i64_by_i8(i64 %m, i8* %p)  {
 ; CHECK-PPC64LE-LABEL: store_i64_by_i8:
 ; CHECK-PPC64LE:       # %bb.0: # %entry
-; CHECK-PPC64LE-NEXT:    stdx 3, 0, 4
+; CHECK-PPC64LE-NEXT:    std 3, 0(4)
 ; CHECK-PPC64LE-NEXT:    blr
 ;
 ; CHECK-PPC64-LABEL: store_i64_by_i8:
@@ -138,7 +138,7 @@ define void @store_i64_by_i8_bswap(i64 %m, i8* %p)  {
 ;
 ; CHECK-PPC64-LABEL: store_i64_by_i8_bswap:
 ; CHECK-PPC64:       # %bb.0: # %entry
-; CHECK-PPC64-NEXT:    stdx 3, 0, 4
+; CHECK-PPC64-NEXT:    std 3, 0(4)
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %conv = trunc i64 %m to i8
@@ -198,7 +198,7 @@ define void @store_i64_by_i8_bswap_uses(i32 signext %t, i8* %p) {
 ; CHECK-PPC64-NEXT:    slwi 5, 3, 3
 ; CHECK-PPC64-NEXT:    sub 3, 5, 3
 ; CHECK-PPC64-NEXT:    extsw 3, 3
-; CHECK-PPC64-NEXT:    stdx 3, 0, 4
+; CHECK-PPC64-NEXT:    std 3, 0(4)
 ; CHECK-PPC64-NEXT:    blr
 entry:
   %mul = mul nsw i32 %t, 7

@@ -29,6 +29,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-block-freq"
 
+namespace llvm {
 static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
     "view-machine-block-freq-propagation-dags", cl::Hidden,
     cl::desc("Pop up a window to show a dag displaying how machine block "
@@ -75,6 +76,7 @@ static cl::opt<bool> PrintMachineBlockFreq(
 // Command line option to specify the name of the function for block frequency
 // dump. Defined in Analysis/BlockFrequencyInfo.cpp.
 extern cl::opt<std::string> PrintBlockFreqFuncName;
+} // namespace llvm
 
 static GVDAGType getGVDT() {
   if (ViewBlockLayoutWithBFI != GVDT_None)
@@ -231,14 +233,20 @@ MachineBlockFrequencyInfo::getBlockFreq(const MachineBasicBlock *MBB) const {
 
 Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
     const MachineBasicBlock *MBB) const {
+  if (!MBFI)
+    return None;
+
   const Function &F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getBlockProfileCount(F, MBB) : None;
+  return MBFI->getBlockProfileCount(F, MBB);
 }
 
 Optional<uint64_t>
 MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
+  if (!MBFI)
+    return None;
+
   const Function &F = MBFI->getFunction()->getFunction();
-  return MBFI ? MBFI->getProfileCountFromFreq(F, Freq) : None;
+  return MBFI->getProfileCountFromFreq(F, Freq);
 }
 
 bool MachineBlockFrequencyInfo::isIrrLoopHeader(

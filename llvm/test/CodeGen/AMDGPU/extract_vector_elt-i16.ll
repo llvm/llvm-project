@@ -1,14 +1,17 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SIVI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI,GFX89 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,GFX89,SIVI %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}extract_vector_elt_v2i16:
 ; GCN: s_load_dword [[VEC:s[0-9]+]]
-; GCN: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], 16
-; GCN-DAG: v_mov_b32_e32 [[VELT0:v[0-9]+]], [[VEC]]
-; GCN-DAG: v_mov_b32_e32 [[VELT1:v[0-9]+]], [[ELT1]]
-; GCN-DAG: buffer_store_short [[VELT0]]
-; GCN-DAG: buffer_store_short [[VELT1]]
+; SIVI: s_lshr_b32 [[ELT1:s[0-9]+]], [[VEC]], 16
+; SIVI-DAG: v_mov_b32_e32 [[VELT0:v[0-9]+]], [[VEC]]
+; SIVI-DAG: v_mov_b32_e32 [[VELT1:v[0-9]+]], [[ELT1]]
+; SIVI-DAG: buffer_store_short [[VELT0]]
+; SIVI-DAG: buffer_store_short [[VELT1]]
+; GFX9: v_mov_b32_e32 [[VVEC:v[0-9]+]], [[VEC]]
+; GFX9: global_store_short_d16_hi v{{[0-9]+}}, [[VVEC]],
+; GFX9: buffer_store_short [[VVEC]],
 define amdgpu_kernel void @extract_vector_elt_v2i16(i16 addrspace(1)* %out, <2 x i16> addrspace(4)* %vec.ptr) #0 {
   %vec = load <2 x i16>, <2 x i16> addrspace(4)* %vec.ptr
   %p0 = extractelement <2 x i16> %vec, i32 0

@@ -24,7 +24,7 @@ class SymbolFileDWARF;
 
 class DWARFASTParser {
 public:
-  virtual ~DWARFASTParser() {}
+  virtual ~DWARFASTParser() = default;
 
   virtual lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                           const DWARFDIE &die,

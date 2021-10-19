@@ -27,7 +27,8 @@ def CortexA53Model : SchedMachineModel {
   let CompleteModel = 1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
-                                                    PAUnsupported.F);
+                                                    PAUnsupported.F,
+                                                    SMEUnsupported.F);
 }
 
 
@@ -126,7 +127,8 @@ def : WriteRes<WriteFCmp, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteV, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
 
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
@@ -148,6 +150,7 @@ def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 32;
 // No forwarding for these reads.
 def : ReadAdvance<ReadExtrHi, 0>;
 def : ReadAdvance<ReadAdrBase, 0>;
+def : ReadAdvance<ReadST, 0>;
 def : ReadAdvance<ReadVLD, 0>;
 
 // ALU - Most operands in the ALU pipes are not needed for two cycles. Shiftable

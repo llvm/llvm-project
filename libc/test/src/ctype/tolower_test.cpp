@@ -9,7 +9,7 @@
 #include "src/ctype/tolower.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(ToLower, DefaultLocale) {
+TEST(LlvmLibcToLower, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {
     // This follows pattern 'A' + 32 = 'a'.
     if ('A' <= ch && ch <= 'Z')

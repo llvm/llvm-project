@@ -19,7 +19,7 @@
 int __llvm_profile_runtime = 0;
 uint64_t __llvm_profile_get_size_for_buffer(void);
 int __llvm_profile_write_buffer(char *);
-void __llvm_profile_merge_from_buffer(const char *, uint64_t Size);
+int __llvm_profile_merge_from_buffer(const char *, uint64_t Size);
 
 int write_buffer(uint64_t, const char *);
 int main(int argc, const char *argv[]) {

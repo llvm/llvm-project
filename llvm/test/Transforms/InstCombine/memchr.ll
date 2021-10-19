@@ -50,7 +50,7 @@ define void @test3() {
 
 define void @test4(i32 %chr) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
 ; CHECK-NEXT:    store i8* [[DST]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -137,7 +137,7 @@ define i1 @test11(i32 %C) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i16 1, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP3]], 9216
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i16 [[TMP4]], 0
-; CHECK-NEXT:    [[MEMCHR:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR]]
 ;
   %dst = call i8* @memchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @newlines, i64 0, i64 0), i32 %C, i32 2)
@@ -148,7 +148,7 @@ define i1 @test11(i32 %C) {
 ; No 64 bits here
 define i1 @test12(i32 %C) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* nonnull dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @spaces, i32 0, i32 0), i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([4 x i8], [4 x i8]* @spaces, i32 0, i32 0), i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -164,7 +164,7 @@ define i1 @test13(i32 %C) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 1, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], -2147483647
 ; CHECK-NEXT:    [[MEMCHR_BITS:%.*]] = icmp ne i32 [[TMP3]], 0
-; CHECK-NEXT:    [[MEMCHR:%.*]] = and i1 [[MEMCHR_BOUNDS]], [[MEMCHR_BITS]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[MEMCHR_BOUNDS]], i1 [[MEMCHR_BITS]], i1 false
 ; CHECK-NEXT:    ret i1 [[MEMCHR]]
 ;
   %dst = call i8* @memchr(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @single, i64 0, i64 0), i32 %C, i32 2)
@@ -185,7 +185,7 @@ define i1 @test14(i32 %C) {
 
 define i1 @test15(i32 %C) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* nonnull dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @negative, i32 0, i32 0), i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @negative, i32 0, i32 0), i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -225,7 +225,7 @@ define i8* @test17(i8* %str, i32 %c, i32 %n) {
 
 define i8* @test18(i8* %str, i32 %c) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memchr(i8* nonnull dereferenceable(5) [[STR:%.*]], i32 [[C:%.*]], i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(5) [[STR:%.*]], i32 [[C:%.*]], i32 5)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -235,7 +235,7 @@ define i8* @test18(i8* %str, i32 %c) {
 
 define i8* @test19(i8* %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memchr(i8* dereferenceable(5) [[STR:%.*]], i32 [[C:%.*]], i32 5)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memchr(i8* noundef dereferenceable(5) [[STR:%.*]], i32 [[C:%.*]], i32 5)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 

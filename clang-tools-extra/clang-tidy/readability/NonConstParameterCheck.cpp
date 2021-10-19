@@ -18,7 +18,7 @@ namespace readability {
 
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
-  Finder->addMatcher(parmVarDecl(unless(isInstantiated())).bind("Parm"), this);
+  Finder->addMatcher(parmVarDecl().bind("Parm"), this);
 
   // C++ constructor.
   Finder->addMatcher(cxxConstructorDecl().bind("Ctor"), this);
@@ -28,13 +28,11 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(declRefExpr().bind("Ref"), this);
 
   // Analyse parameter usage in function.
-  Finder->addMatcher(
-      traverse(ast_type_traits::TK_AsIs,
-               stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
-                          binaryOperator(), callExpr(), returnStmt(),
-                          cxxConstructExpr()))
-                   .bind("Mark")),
-      this);
+  Finder->addMatcher(stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
+                                binaryOperator(), callExpr(), returnStmt(),
+                                cxxConstructExpr()))
+                         .bind("Mark"),
+                     this);
   Finder->addMatcher(varDecl(hasInitializer(anything())).bind("Mark"), this);
 }
 

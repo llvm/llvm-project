@@ -54,7 +54,7 @@ folding: an operation whose operands contain constants can often be folded to a
 result constant value.
 
 MLIR operations may override a
-[`fold`](../Canonicalization.md/#canonicalizing-with-fold) routine, which
+[`fold`](../Canonicalization.md/#canonicalizing-with-the-fold-method) routine, which
 exposes a simpler API compared to a general DAG-to-DAG pattern matcher, and
 allows for it to be applicable in cases that a generic matcher would not. For
 example, a DAG-rewrite can remove arbitrary nodes in the current function, which
@@ -97,7 +97,7 @@ Compilers end up with a lot of peephole optimizers for various things, e.g. the
 GCC
 ["combine" routines](https://github.com/gcc-mirror/gcc/blob/master/gcc/combine.c)
 (which try to merge two machine instructions into a single one), the LLVM
-[Inst Combine](https://github.com/llvm/llvm-project/tree/master/llvm/lib/Transforms/InstCombine)
+[Inst Combine](https://github.com/llvm/llvm-project/tree/main/llvm/lib/Transforms/InstCombine)
 [pass](https://llvm.org/docs/Passes.html#instcombine-combine-redundant-instructions),
 LLVM's
 [DAG Combiner](https://github.com/llvm-mirror/llvm/blob/master/lib/CodeGen/SelectionDAG/DAGCombiner.cpp),
@@ -105,7 +105,7 @@ the Swift compiler's
 [SIL Combiner](https://github.com/apple/swift/tree/master/lib/SILOptimizer/SILCombiner),
 etc. These generally match one or more operations and produce zero or more
 operations as a result. The LLVM
-[Legalization](https://github.com/llvm/llvm-project/tree/master/llvm/lib/CodeGen/SelectionDAG)
+[Legalization](https://github.com/llvm/llvm-project/tree/main/llvm/lib/CodeGen/SelectionDAG)
 infrastructure has a different outer loop but otherwise works the same way.
 
 These passes have a lot of diversity, but also have a unifying structure: they
@@ -184,7 +184,7 @@ def : Pat<(or GR64:$src, (not (add GR64:$src, 1))),
 This example defines a matcher for the
 ["blci" instruction](https://en.wikipedia.org/wiki/Bit_Manipulation_Instruction_Sets#TBM_\(Trailing_Bit_Manipulation\))
 in the
-[X86 target description](https://github.com/llvm/llvm-project/blob/master/llvm/lib/Target/X86/X86InstrInfo.td),
+[X86 target description](https://github.com/llvm/llvm-project/blob/main/llvm/lib/Target/X86/X86InstrInfo.td),
 there are many others in that file (look for `Pat<>` patterns, since they aren't
 entangled in details of the compiler like assembler/disassembler generation
 logic).

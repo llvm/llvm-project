@@ -28,9 +28,8 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;CHECK-NEXT:  %[[VMASK:.+]] = icmp ugt <8 x i32> %[[VECIND]], %{{broadcast.splat*}}
 ;CHECK-NEXT:  %{{.*}} = shl nuw nsw <8 x i32> %[[VECIND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ;CHECK-NEXT:  %[[M:.+]] = extractelement <8 x i1> %[[VMASK]], i32 0
-;CHECK-NEXT:  br i1 %[[M]], label %pred.load.if, label %pred.load.continue
-;CHECK-NOT:   %[[WIDEVEC:.+]] = load <16 x i8>, <16 x i8>* %{{.*}}, align 1
-;CHECK-NOT:   %{{.*}} = shufflevector <16 x i8> %[[WIDEVEC]], <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+;CHECK-NEXT:  br i1 %[[M]], label %pred.store.if, label %pred.store.continue
+;CHECK-NOT:   %{{.+}} = load <16 x i8>, <16 x i8>* %{{.*}}, align 1
 
 define dso_local void @masked_strided(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
 entry:

@@ -14,11 +14,8 @@
 
 #include "ClangdLSPServer.h"
 #include "ClangdServer.h"
-#include "CodeComplete.h"
-#include "refactor/Rename.h"
 #include "support/ThreadsafeFS.h"
 #include <cstdio>
-#include <sstream>
 
 using namespace clang::clangd;
 
@@ -33,12 +30,12 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
                                     /*Style=*/JSONStreamStyle::Delimited);
   RealThreadsafeFS FS;
   CodeCompleteOptions CCOpts;
-  CCOpts.EnableSnippets = false;
-  ClangdServer::Options Opts;
+  ClangdLSPServer::Options Opts;
+  Opts.CodeComplete.EnableSnippets = false;
+  Opts.UseDirBasedCDB = false;
 
   // Initialize and run ClangdLSPServer.
-  ClangdLSPServer LSPServer(*Transport, FS, CCOpts, RenameOptions(), llvm::None,
-                            false, llvm::None, Opts);
+  ClangdLSPServer LSPServer(*Transport, FS, Opts);
   LSPServer.run();
   return 0;
 }

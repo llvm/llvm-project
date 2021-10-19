@@ -25,8 +25,8 @@ $comdat.exactmatch = comdat exactmatch
 ; CHECK: $comdat.exactmatch = comdat exactmatch
 $comdat.largest = comdat largest
 ; CHECK: $comdat.largest = comdat largest
-$comdat.noduplicates = comdat noduplicates
-; CHECK: $comdat.noduplicates = comdat noduplicates
+$comdat.noduplicates = comdat nodeduplicate
+; CHECK: $comdat.noduplicates = comdat nodeduplicate
 $comdat.samesize = comdat samesize
 ; CHECK: $comdat.samesize = comdat samesize
 
@@ -41,10 +41,10 @@ $comdat.samesize = comdat samesize
 ; CHECK: @const.float = constant double 0.0
 @const.null = constant i8* null
 ; CHECK: @const.null = constant i8* null
-%const.struct.type = type { i32, i8 }
+%const.struct.type = type { i32, i8, i64 }
 %const.struct.type.packed = type <{ i32, i8 }>
-@const.struct = constant %const.struct.type { i32 -1, i8 undef }
-; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef }
+@const.struct = constant %const.struct.type { i32 -1, i8 undef, i64 poison }
+; CHECK: @const.struct = constant %const.struct.type { i32 -1, i8 undef, i64 poison }
 @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 ; CHECK: @const.struct.packed = constant %const.struct.type.packed <{ i32 -1, i8 1 }>
 
@@ -382,6 +382,8 @@ declare preserve_mostcc void @f.preserve_mostcc()
 ; CHECK: declare preserve_mostcc void @f.preserve_mostcc()
 declare preserve_allcc void @f.preserve_allcc()
 ; CHECK: declare preserve_allcc void @f.preserve_allcc()
+declare swifttailcc void @f.swifttailcc()
+; CHECK: declare swifttailcc void @f.swifttailcc()
 declare cc64 void @f.cc64()
 ; CHECK: declare x86_stdcallcc void @f.cc64()
 declare x86_stdcallcc void @f.x86_stdcallcc()
@@ -450,10 +452,10 @@ declare cc82 void @f.cc82()
 ; CHECK: declare hhvm_ccc void @f.cc82()
 declare hhvm_ccc void @f.hhvm_ccc()
 ; CHECK: declare hhvm_ccc void @f.hhvm_ccc()
-declare cc83 void @f.cc83()
-; CHECK: declare x86_intrcc void @f.cc83()
-declare x86_intrcc void @f.x86_intrcc()
-; CHECK: declare x86_intrcc void @f.x86_intrcc()
+declare cc83 void @f.cc83(i8* byval(i8))
+; CHECK: declare x86_intrcc void @f.cc83(i8* byval(i8))
+declare x86_intrcc void @f.x86_intrcc(i8* byval(i8))
+; CHECK: declare x86_intrcc void @f.x86_intrcc(i8* byval(i8))
 declare cc84 void @f.cc84()
 ; CHECK: declare avr_intrcc void @f.cc84()
 declare avr_intrcc void @f.avr_intrcc()
@@ -478,6 +480,8 @@ declare cc90 void @f.cc90()
 ; CHECK: declare amdgpu_cs void @f.cc90()
 declare amdgpu_cs void @f.amdgpu_cs()
 ; CHECK: declare amdgpu_cs void @f.amdgpu_cs()
+declare amdgpu_gfx void @f.amdgpu_gfx()
+; CHECK: declare amdgpu_gfx void @f.amdgpu_gfx()
 declare cc91 void @f.cc91()
 ; CHECK: declare amdgpu_kernel void @f.cc91()
 declare amdgpu_kernel void @f.amdgpu_kernel()
@@ -528,12 +532,12 @@ declare void @f.param.signext(i8 signext)
 ; CHECK: declare void @f.param.signext(i8 signext)
 declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
-declare void @f.param.byval({ i8, i8 }* byval)
+declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 ; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
-declare void @f.param.inalloca(i8* inalloca)
-; CHECK: declare void @f.param.inalloca(i8* inalloca)
-declare void @f.param.sret(i8* sret)
-; CHECK: declare void @f.param.sret(i8* sret)
+declare void @f.param.inalloca(i8* inalloca(i8))
+; CHECK: declare void @f.param.inalloca(i8* inalloca(i8))
+declare void @f.param.sret(i8* sret(i8))
+; CHECK: declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(i8* noalias)
 declare void @f.param.nocapture(i8* nocapture)
@@ -548,6 +552,14 @@ declare void @f.param.dereferenceable(i8* dereferenceable(4))
 ; CHECK: declare void @f.param.dereferenceable(i8* dereferenceable(4))
 declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
 ; CHECK: declare void @f.param.dereferenceable_or_null(i8* dereferenceable_or_null(4))
+declare void @f.param.stack_align([2 x double] alignstack(16))
+; CHECK: declare void @f.param.stack_align([2 x double] alignstack(16))
+declare void @f.param.swiftself(i8* swiftself)
+; CHECK: declare void @f.param.swiftself(i8* swiftself)
+declare void @f.param.swiftasync(i8* swiftasync)
+; CHECK: declare void @f.param.swiftasync(i8* swiftasync)
+declare void @f.param.swifterror(i8** swifterror)
+; CHECK: declare void @f.param.swifterror(i8** swifterror)
 
 ; Functions -- unnamed_addr and local_unnamed_addr
 declare void @f.unnamed_addr() unnamed_addr
@@ -716,44 +728,90 @@ normal:
 
 ;; Atomic Memory Ordering Constraints
 define void @atomics(i32* %word) {
-  %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
-  ; CHECK: %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
-  %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
-  ; CHECK: %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
-  %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
-  ; CHECK: %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
-  %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
-  ; CHECK: %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
-  %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
-  ; CHECK: %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
-  %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
-  ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
-  %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
-  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
-  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
-  %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
-  ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
-  %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
-  ; CHECK: %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic
-  %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
-  ; CHECK: %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic
-  %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
-  ; CHECK: %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic
-  %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
-  ; CHECK: %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic
-  %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
-  ; CHECK: %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic
-  %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
-  ; CHECK: %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic
-  %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
-  ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic
-  %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic
-  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
-  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
-  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ;; Atomic Compare And Exchange w/o alignment
+  %cmpxchg_no_align.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
+  ; CHECK: %cmpxchg_no_align.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic
+  %cmpxchg_no_align.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
+  ; CHECK: %cmpxchg_no_align.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic
+  %cmpxchg_no_align.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
+  ; CHECK: %cmpxchg_no_align.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic
+  %cmpxchg_no_align.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
+  ; CHECK: %cmpxchg_no_align.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic
+  %cmpxchg_no_align.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic
+  %cmpxchg_no_align.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic
+  %cmpxchg_no_align.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic
+  %cmpxchg_no_align.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+  ; CHECK: %cmpxchg_no_align.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic
+
+  ;; Atomic Compare And Exchange w/ alignment
+  %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic, align 16
+  ; CHECK: %cmpxchg.0 = cmpxchg i32* %word, i32 0, i32 4 monotonic monotonic, align 16
+  %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic, align 16
+  ; CHECK: %cmpxchg.1 = cmpxchg i32* %word, i32 0, i32 5 acq_rel monotonic, align 16
+  %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic, align 16
+  ; CHECK: %cmpxchg.2 = cmpxchg i32* %word, i32 0, i32 6 acquire monotonic, align 16
+  %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic, align 16
+  ; CHECK: %cmpxchg.3 = cmpxchg i32* %word, i32 0, i32 7 release monotonic, align 16
+  %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.4 = cmpxchg i32* %word, i32 0, i32 8 seq_cst monotonic, align 16
+  %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.5 = cmpxchg weak i32* %word, i32 0, i32 9 seq_cst monotonic, align 16
+  %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.6 = cmpxchg volatile i32* %word, i32 0, i32 10 seq_cst monotonic, align 16
+  %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 16
+  ; CHECK: %cmpxchg.7 = cmpxchg weak volatile i32* %word, i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 16
+
+  ;; Atomic w/o alignment
+  %atomicrmw_no_align.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
+  ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg i32* %word, i32 12 monotonic
+  %atomicrmw_no_align.add = atomicrmw add i32* %word, i32 13 monotonic
+  ; CHECK: %atomicrmw_no_align.add = atomicrmw add i32* %word, i32 13 monotonic
+  %atomicrmw_no_align.sub = atomicrmw sub i32* %word, i32 14 monotonic
+  ; CHECK: %atomicrmw_no_align.sub = atomicrmw sub i32* %word, i32 14 monotonic
+  %atomicrmw_no_align.and = atomicrmw and i32* %word, i32 15 monotonic
+  ; CHECK: %atomicrmw_no_align.and = atomicrmw and i32* %word, i32 15 monotonic
+  %atomicrmw_no_align.nand = atomicrmw nand i32* %word, i32 16 monotonic
+  ; CHECK: %atomicrmw_no_align.nand = atomicrmw nand i32* %word, i32 16 monotonic
+  %atomicrmw_no_align.or = atomicrmw or i32* %word, i32 17 monotonic
+  ; CHECK: %atomicrmw_no_align.or = atomicrmw or i32* %word, i32 17 monotonic
+  %atomicrmw_no_align.xor = atomicrmw xor i32* %word, i32 18 monotonic
+  ; CHECK: %atomicrmw_no_align.xor = atomicrmw xor i32* %word, i32 18 monotonic
+  %atomicrmw_no_align.max = atomicrmw max i32* %word, i32 19 monotonic
+  ; CHECK: %atomicrmw_no_align.max = atomicrmw max i32* %word, i32 19 monotonic
+  %atomicrmw_no_align.min = atomicrmw volatile min i32* %word, i32 20 monotonic
+  ; CHECK: %atomicrmw_no_align.min = atomicrmw volatile min i32* %word, i32 20 monotonic
+  %atomicrmw_no_align.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw_no_align.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic
+  %atomicrmw_no_align.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+  ; CHECK: %atomicrmw_no_align.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic
+
+  ;; Atomic w/ alignment
+  %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic, align 16
+  ; CHECK: %atomicrmw.xchg = atomicrmw xchg i32* %word, i32 12 monotonic, align 16
+  %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic, align 16
+  ; CHECK: %atomicrmw.add = atomicrmw add i32* %word, i32 13 monotonic, align 16
+  %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic, align 16
+  ; CHECK: %atomicrmw.sub = atomicrmw sub i32* %word, i32 14 monotonic, align 16
+  %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic, align 16
+  ; CHECK: %atomicrmw.and = atomicrmw and i32* %word, i32 15 monotonic, align 16
+  %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic, align 16
+  ; CHECK: %atomicrmw.nand = atomicrmw nand i32* %word, i32 16 monotonic, align 16
+  %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic, align 16
+  ; CHECK: %atomicrmw.or = atomicrmw or i32* %word, i32 17 monotonic, align 16
+  %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic, align 16
+  ; CHECK: %atomicrmw.xor = atomicrmw xor i32* %word, i32 18 monotonic, align 16
+  %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic, align 16
+  ; CHECK: %atomicrmw.max = atomicrmw max i32* %word, i32 19 monotonic, align 16
+  %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic, align 16
+  ; CHECK: %atomicrmw.min = atomicrmw volatile min i32* %word, i32 20 monotonic, align 16
+  %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic, align 16
+  ; CHECK: %atomicrmw.umax = atomicrmw umax i32* %word, i32 21 syncscope("singlethread") monotonic, align 16
+  %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
+  ; CHECK: %atomicrmw.umin = atomicrmw volatile umin i32* %word, i32 22 syncscope("singlethread") monotonic, align 16
+
   fence acquire
   ; CHECK: fence acquire
   fence release
@@ -1073,6 +1131,8 @@ exc:
 
   resume i32 undef
   ; CHECK: resume i32 undef
+  resume i32 poison
+  ; CHECK: resume i32 poison
   unreachable
   ; CHECK: unreachable
 
@@ -1352,6 +1412,14 @@ define void @instructions.conversions() {
   ; CHECK: fptoui float undef to i32
   fptosi float undef to i32
   ; CHECK: fptosi float undef to i32
+  fptrunc float poison to half
+  ; CHECK: fptrunc float poison to half
+  fpext half poison to float
+  ; CHECK: fpext half poison to float
+  fptoui float poison to i32
+  ; CHECK: fptoui float poison to i32
+  fptosi float poison to i32
+  ; CHECK: fptosi float poison to i32
   uitofp i32 1 to float
   ; CHECK: uitofp i32 1 to float
   sitofp i32 -1 to float
@@ -1442,7 +1510,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #44
+  ; CHECK: call void @f.nobuiltin() #46
 
   call fastcc noalias i32* @f.noalias() noinline
   ; CHECK: call fastcc noalias i32* @f.noalias() #12
@@ -1462,9 +1530,9 @@ exit:
   ret void
 }
 
-define void @instructions.call_musttail(i8* inalloca %val) {
-  musttail call void @f.param.inalloca(i8* inalloca %val)
-  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
+define void @instructions.call_musttail(i8* inalloca(i8) %val) {
+  musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
+  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
 
   ret void
 }
@@ -1836,6 +1904,12 @@ define void @instructions.strictfp() strictfp {
   ret void
 }
 
+declare void @f.nosanitize_coverage() nosanitize_coverage
+; CHECK: declare void @f.nosanitize_coverage() #44
+
+declare void @f.disable_sanitizer_instrumentation() disable_sanitizer_instrumentation
+; CHECK: declare void @f.disable_sanitizer_instrumentation() #45
+
 ; immarg attribute
 declare void @llvm.test.immarg.intrinsic(i32 immarg)
 ; CHECK: declare void @llvm.test.immarg.intrinsic(i32 immarg)
@@ -1884,16 +1958,18 @@ declare void @byval_named_type(%named_type* byval(%named_type))
 ; CHECK: attributes #32 = { norecurse }
 ; CHECK: attributes #33 = { inaccessiblememonly }
 ; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly }
-; CHECK: attributes #35 = { nounwind readnone willreturn }
-; CHECK: attributes #36 = { argmemonly nounwind readonly }
-; CHECK: attributes #37 = { argmemonly nounwind }
-; CHECK: attributes #38 = { nounwind readnone }
+; CHECK: attributes #35 = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #36 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #37 = { argmemonly nounwind readonly }
+; CHECK: attributes #38 = { argmemonly nounwind }
 ; CHECK: attributes #39 = { nounwind readonly }
-; CHECK: attributes #40 = { inaccessiblemem_or_argmemonly nounwind willreturn }
+; CHECK: attributes #40 = { inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #41 = { writeonly }
 ; CHECK: attributes #42 = { speculatable }
 ; CHECK: attributes #43 = { strictfp }
-; CHECK: attributes #44 = { builtin }
+; CHECK: attributes #44 = { nosanitize_coverage }
+; CHECK: attributes #45 = { disable_sanitizer_instrumentation }
+; CHECK: attributes #46 = { builtin }
 
 ;; Metadata
 

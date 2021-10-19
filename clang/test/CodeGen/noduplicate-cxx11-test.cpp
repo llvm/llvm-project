@@ -3,7 +3,7 @@
 // This was a problem in Sema, but only shows up as noinline missing
 // in CodeGen.
 
-// CHECK: define i32 @_Z15noduplicatedfuni(i32 %a) [[NI:#[0-9]+]]
+// CHECK: define{{.*}} i32 @_Z15noduplicatedfuni(i32 %a) [[NI:#[0-9]+]]
 
 int noduplicatedfun [[clang::noduplicate]] (int a) {
 
@@ -17,4 +17,4 @@ int main() {
 
 }
 
-// CHECK: attributes [[NI]] = { noduplicate {{.*}}nounwind{{.*}} }
+// CHECK: attributes [[NI]] = { {{.*}}noduplicate {{.*}}nounwind{{.*}} }

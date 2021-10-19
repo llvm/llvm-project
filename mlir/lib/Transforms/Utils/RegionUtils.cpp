@@ -9,6 +9,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -56,14 +57,14 @@ void mlir::visitUsedValuesDefinedAbove(
 }
 
 void mlir::getUsedValuesDefinedAbove(Region &region, Region &limit,
-                                     llvm::SetVector<Value> &values) {
+                                     SetVector<Value> &values) {
   visitUsedValuesDefinedAbove(region, limit, [&](OpOperand *operand) {
     values.insert(operand->get());
   });
 }
 
 void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
-                                     llvm::SetVector<Value> &values) {
+                                     SetVector<Value> &values) {
   for (Region &region : regions)
     getUsedValuesDefinedAbove(region, region, values);
 }
@@ -75,7 +76,8 @@ void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
-static LogicalResult eraseUnreachableBlocks(MutableArrayRef<Region> regions) {
+static LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
+                                            MutableArrayRef<Region> regions) {
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
@@ -108,7 +110,7 @@ static LogicalResult eraseUnreachableBlocks(MutableArrayRef<Region> regions) {
     for (Block &block : llvm::make_early_inc_range(*region)) {
       if (!reachable.count(&block)) {
         block.dropAllDefinedValueUses();
-        block.erase();
+        rewriter.eraseBlock(&block);
         erasedDeadBlocks = true;
         continue;
       }
@@ -139,9 +141,23 @@ namespace {
 class LiveMap {
 public:
   /// Value methods.
-  bool wasProvenLive(Value value) { return liveValues.count(value); }
+  bool wasProvenLive(Value value) {
+    // TODO: For results that are removable, e.g. for region based control flow,
+    // we could allow for these values to be tracked independently.
+    if (OpResult result = value.dyn_cast<OpResult>())
+      return wasProvenLive(result.getOwner());
+    return wasProvenLive(value.cast<BlockArgument>());
+  }
+  bool wasProvenLive(BlockArgument arg) { return liveValues.count(arg); }
   void setProvedLive(Value value) {
-    changed |= liveValues.insert(value).second;
+    // TODO: For results that are removable, e.g. for region based control flow,
+    // we could allow for these values to be tracked independently.
+    if (OpResult result = value.dyn_cast<OpResult>())
+      return setProvedLive(result.getOwner());
+    setProvedLive(value.cast<BlockArgument>());
+  }
+  void setProvedLive(BlockArgument arg) {
+    changed |= liveValues.insert(arg).second;
   }
 
   /// Operation methods.
@@ -173,7 +189,7 @@ static bool isUseSpeciallyKnownDead(OpOperand &use, LiveMap &liveMap) {
   // And similarly, because each successor operand is really an operand to a phi
   // node, rather than to the terminator op itself, a terminator op can't e.g.
   // "print" the value of a successor operand.
-  if (owner->isKnownTerminator()) {
+  if (owner->hasTrait<OpTrait::IsTerminator>()) {
     if (BranchOpInterface branchInterface = dyn_cast<BranchOpInterface>(owner))
       if (auto arg = branchInterface.getSuccessorBlockArgument(operandIndex))
         return !liveMap.wasProvenLive(*arg);
@@ -190,15 +206,6 @@ static void processValue(Value value, LiveMap &liveMap) {
   });
   if (provedLive)
     liveMap.setProvedLive(value);
-}
-
-static bool isOpIntrinsicallyLive(Operation *op) {
-  // This pass doesn't modify the CFG, so terminators are never deleted.
-  if (!op->isKnownNonTerminator())
-    return true;
-  // If the op has a side effect, we treat it as live.
-  // TODO: Properly handle region side effects.
-  return !MemoryEffectOpInterface::hasNoEffect(op) || op->getNumRegions() != 0;
 }
 
 static void propagateLiveness(Region &region, LiveMap &liveMap);
@@ -226,29 +233,25 @@ static void propagateTerminatorLiveness(Operation *op, LiveMap &liveMap) {
 }
 
 static void propagateLiveness(Operation *op, LiveMap &liveMap) {
-  // All Value's are either a block argument or an op result.
-  // We call processValue on those cases.
-
   // Recurse on any regions the op has.
   for (Region &region : op->getRegions())
     propagateLiveness(region, liveMap);
 
   // Process terminator operations.
-  if (op->isKnownTerminator())
+  if (op->hasTrait<OpTrait::IsTerminator>())
     return propagateTerminatorLiveness(op, liveMap);
 
-  // Process the op itself.
-  if (isOpIntrinsicallyLive(op)) {
-    liveMap.setProvedLive(op);
+  // Don't reprocess live operations.
+  if (liveMap.wasProvenLive(op))
     return;
-  }
+
+  // Process the op itself.
+  if (!wouldOpBeTriviallyDead(op))
+    return liveMap.setProvedLive(op);
+
+  // If the op isn't intrinsically alive, check it's results.
   for (Value value : op->getResults())
     processValue(value, liveMap);
-  bool provedLive = llvm::any_of(op->getResults(), [&](Value value) {
-    return liveMap.wasProvenLive(value);
-  });
-  if (provedLive)
-    liveMap.setProvedLive(op);
 }
 
 static void propagateLiveness(Region &region, LiveMap &liveMap) {
@@ -260,8 +263,18 @@ static void propagateLiveness(Region &region, LiveMap &liveMap) {
     // faster convergence to a fixed point (we try to visit uses before defs).
     for (Operation &op : llvm::reverse(block->getOperations()))
       propagateLiveness(&op, liveMap);
-    for (Value value : block->getArguments())
-      processValue(value, liveMap);
+
+    // We currently do not remove entry block arguments, so there is no need to
+    // track their liveness.
+    // TODO: We could track these and enable removing dead operands/arguments
+    // from region control flow operations.
+    if (block->isEntryBlock())
+      continue;
+
+    for (Value value : block->getArguments()) {
+      if (!liveMap.wasProvenLive(value))
+        processValue(value, liveMap);
+    }
   }
 }
 
@@ -294,31 +307,32 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
   }
 }
 
-static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
+static LogicalResult deleteDeadness(RewriterBase &rewriter,
+                                    MutableArrayRef<Region> regions,
                                     LiveMap &liveMap) {
   bool erasedAnything = false;
   for (Region &region : regions) {
     if (region.empty())
       continue;
+    bool hasSingleBlock = llvm::hasSingleElement(region);
 
-    // We do the deletion in an order that deletes all uses before deleting
-    // defs.
-    // MLIR's SSA structural invariants guarantee that except for block
-    // arguments, the use-def graph is acyclic, so this is possible with a
-    // single walk of ops and then a final pass to clean up block arguments.
-    //
-    // To do this, we visit ops in an order that visits domtree children
-    // before domtree parents. A CFG post-order (with reverse iteration with a
-    // block) satisfies that without needing an explicit domtree calculation.
+    // Delete every operation that is not live. Graph regions may have cycles
+    // in the use-def graph, so we must explicitly dropAllUses() from each
+    // operation as we erase it. Visiting the operations in post-order
+    // guarantees that in SSA CFG regions value uses are removed before defs,
+    // which makes dropAllUses() a no-op.
     for (Block *block : llvm::post_order(&region.front())) {
-      eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
+      if (!hasSingleBlock)
+        eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
       for (Operation &childOp :
            llvm::make_early_inc_range(llvm::reverse(block->getOperations()))) {
-        erasedAnything |=
-            succeeded(deleteDeadness(childOp.getRegions(), liveMap));
         if (!liveMap.wasProvenLive(&childOp)) {
           erasedAnything = true;
-          childOp.erase();
+          childOp.dropAllUses();
+          rewriter.eraseOp(&childOp);
+        } else {
+          erasedAnything |= succeeded(
+              deleteDeadness(rewriter, childOp.getRegions(), liveMap));
         }
       }
     }
@@ -326,13 +340,8 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
     // The entry block has an unknown contract with their enclosing block, so
     // skip it.
     for (Block &block : llvm::drop_begin(region.getBlocks(), 1)) {
-      // Iterate in reverse to avoid shifting later arguments when deleting
-      // earlier arguments.
-      for (unsigned i = 0, e = block.getNumArguments(); i < e; i++)
-        if (!liveMap.wasProvenLive(block.getArgument(e - i - 1))) {
-          block.eraseArgument(e - i - 1);
-          erasedAnything = true;
-        }
+      block.eraseArguments(
+          [&](BlockArgument arg) { return !liveMap.wasProvenLive(arg); });
     }
   }
   return success(erasedAnything);
@@ -355,7 +364,8 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
 //
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
-static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
+static LogicalResult runRegionDCE(RewriterBase &rewriter,
+                                  MutableArrayRef<Region> regions) {
   LiveMap liveMap;
   do {
     liveMap.resetChanged();
@@ -364,7 +374,7 @@ static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
       propagateLiveness(region, liveMap);
   } while (liveMap.hasChanged());
 
-  return deleteDeadness(regions, liveMap);
+  return deleteDeadness(rewriter, regions, liveMap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,7 +428,9 @@ BlockEquivalenceData::BlockEquivalenceData(Block *block)
       orderIt += numResults;
     }
     auto opHash = OperationEquivalence::computeHash(
-        &op, OperationEquivalence::Flags::IgnoreOperands);
+        &op, OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::IgnoreLocations);
     hash = llvm::hash_combine(hash, opHash);
   }
 }
@@ -452,7 +464,7 @@ public:
   LogicalResult addToCluster(BlockEquivalenceData &blockData);
 
   /// Try to merge all of the blocks within this cluster into the leader block.
-  LogicalResult merge();
+  LogicalResult merge(RewriterBase &rewriter);
 
 private:
   /// The equivalence data for the leader of the cluster.
@@ -464,10 +476,6 @@ private:
   /// A set of operand+index pairs that correspond to operands that need to be
   /// replaced by arguments when the cluster gets merged.
   std::set<std::pair<int, int>> operandsToMerge;
-
-  /// A map of operations with external uses to a replacement within the leader
-  /// block.
-  DenseMap<Operation *, Operation *> opsToReplace;
 };
 } // end anonymous namespace
 
@@ -480,13 +488,14 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 
   // A set of operands that mismatch between the leader and the new block.
   SmallVector<std::pair<int, int>, 8> mismatchedOperands;
-  SmallVector<std::pair<Operation *, Operation *>, 2> newOpsToReplace;
   auto lhsIt = leaderBlock->begin(), lhsE = leaderBlock->end();
   auto rhsIt = blockData.block->begin(), rhsE = blockData.block->end();
   for (int opI = 0; lhsIt != lhsE && rhsIt != rhsE; ++lhsIt, ++rhsIt, ++opI) {
     // Check that the operations are equivalent.
     if (!OperationEquivalence::isEquivalentTo(
-            &*lhsIt, &*rhsIt, OperationEquivalence::Flags::IgnoreOperands))
+            &*lhsIt, &*rhsIt, OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::ignoreValueEquivalence,
+            OperationEquivalence::Flags::IgnoreLocations))
       return failure();
 
     // Compare the operands of the two operations. If the operand is within
@@ -519,9 +528,16 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
         return failure();
     }
 
-    // If the rhs has external uses, it will need to be replaced.
-    if (rhsIt->isUsedOutsideOfBlock(mergeBlock))
-      newOpsToReplace.emplace_back(&*rhsIt, &*lhsIt);
+    // If the lhs or rhs has external uses, the blocks cannot be merged as the
+    // merged version of this operation will not be either the lhs or rhs
+    // alone (thus semantically incorrect), but some mix dependending on which
+    // block preceeded this.
+    // TODO allow merging of operations when one block does not dominate the
+    // other
+    if (rhsIt->isUsedOutsideOfBlock(mergeBlock) ||
+        lhsIt->isUsedOutsideOfBlock(leaderBlock)) {
+      return failure();
+    }
   }
   // Make sure that the block sizes are equivalent.
   if (lhsIt != lhsE || rhsIt != rhsE)
@@ -529,7 +545,6 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 
   // If we get here, the blocks are equivalent and can be merged.
   operandsToMerge.insert(mismatchedOperands.begin(), mismatchedOperands.end());
-  opsToReplace.insert(newOpsToReplace.begin(), newOpsToReplace.end());
   blocksToMerge.insert(blockData.block);
   return success();
 }
@@ -545,7 +560,7 @@ static bool ableToUpdatePredOperands(Block *block) {
   return true;
 }
 
-LogicalResult BlockMergeCluster::merge() {
+LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
   // Don't consider clusters that don't have blocks to merge.
   if (blocksToMerge.empty())
     return failure();
@@ -560,10 +575,6 @@ LogicalResult BlockMergeCluster::merge() {
     if (!ableToUpdatePredOperands(leaderBlock) ||
         !llvm::all_of(blocksToMerge, ableToUpdatePredOperands))
       return failure();
-
-    // Replace any necessary operations.
-    for (std::pair<Operation *, Operation *> &it : opsToReplace)
-      it.first->replaceAllUsesWith(it.second);
 
     // Collect the iterators for each of the blocks to merge. We will walk all
     // of the iterators at once to avoid operand index invalidation.
@@ -612,7 +623,7 @@ LogicalResult BlockMergeCluster::merge() {
   // Replace all uses of the merged blocks with the leader and erase them.
   for (Block *block : blocksToMerge) {
     block->replaceAllUsesWith(leaderBlock);
-    block->erase();
+    rewriter.eraseBlock(block);
   }
   return success();
 }
@@ -620,7 +631,8 @@ LogicalResult BlockMergeCluster::merge() {
 /// Identify identical blocks within the given region and merge them, inserting
 /// new block arguments as necessary. Returns success if any blocks were merged,
 /// failure otherwise.
-static LogicalResult mergeIdenticalBlocks(Region &region) {
+static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
+                                          Region &region) {
   if (region.empty() || llvm::hasSingleElement(region))
     return failure();
 
@@ -658,7 +670,7 @@ static LogicalResult mergeIdenticalBlocks(Region &region) {
         clusters.emplace_back(std::move(data));
     }
     for (auto &cluster : clusters)
-      mergedAnyBlocks |= succeeded(cluster.merge());
+      mergedAnyBlocks |= succeeded(cluster.merge(rewriter));
   }
 
   return success(mergedAnyBlocks);
@@ -666,14 +678,15 @@ static LogicalResult mergeIdenticalBlocks(Region &region) {
 
 /// Identify identical blocks within the given regions and merge them, inserting
 /// new block arguments as necessary.
-static LogicalResult mergeIdenticalBlocks(MutableArrayRef<Region> regions) {
+static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
+                                          MutableArrayRef<Region> regions) {
   llvm::SmallSetVector<Region *, 1> worklist;
   for (auto &region : regions)
     worklist.insert(&region);
   bool anyChanged = false;
   while (!worklist.empty()) {
     Region *region = worklist.pop_back_val();
-    if (succeeded(mergeIdenticalBlocks(*region))) {
+    if (succeeded(mergeIdenticalBlocks(rewriter, *region))) {
       worklist.insert(region);
       anyChanged = true;
     }
@@ -696,10 +709,12 @@ static LogicalResult mergeIdenticalBlocks(MutableArrayRef<Region> regions) {
 /// includes transformations like unreachable block elimination, dead argument
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise.
-LogicalResult mlir::simplifyRegions(MutableArrayRef<Region> regions) {
-  bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(regions));
-  bool eliminatedOpsOrArgs = succeeded(runRegionDCE(regions));
-  bool mergedIdenticalBlocks = succeeded(mergeIdenticalBlocks(regions));
+LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
+                                    MutableArrayRef<Region> regions) {
+  bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(rewriter, regions));
+  bool eliminatedOpsOrArgs = succeeded(runRegionDCE(rewriter, regions));
+  bool mergedIdenticalBlocks =
+      succeeded(mergeIdenticalBlocks(rewriter, regions));
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
                  mergedIdenticalBlocks);
 }

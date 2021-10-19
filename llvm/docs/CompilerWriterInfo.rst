@@ -102,6 +102,11 @@ RISC-V
 ------
 * `RISC-V User-Level ISA Specification <https://riscv.org/specifications/>`_
 
+C-SKY
+------
+* `C-SKY Architecture User Guide <https://github.com/c-sky/csky-doc/blob/master/CSKY%20Architecture%20user_guide.pdf>`_
+* `C-SKY V2 ABI <https://github.com/c-sky/csky-doc/blob/master/C-SKY_V2_CPU_Applications_Binary_Interface_Standards_Manual.pdf>`_
+
 SPARC
 -----
 
@@ -126,8 +131,9 @@ X86
 XCore
 -----
 
-* `The XMOS XS1 Architecture (ISA) <https://www.xmos.com/en/download/public/The-XMOS-XS1-Architecture%28X7879A%29.pdf>`_
-* `Tools Development Guide (includes ABI) <https://www.xmos.com/download/public/Tools-Development-Guide%28X9114A%29.pdf>`_
+* `The XMOS XS1 Architecture (ISA) <https://www.xmos.ai/download/The-XMOS-XS1-Architecture%281.0%29.pdf>`_
+* `The XMOS XS2 Architecture (ISA) <https://www.xmos.ai/download/xCORE-200:-The-XMOS-XS2-Architecture-%28ISA%29%281.1%29.pdf>`_
+* `Tools Development Guide (includes ABI) <https://www.xmos.ai/download/Tools-Development-Guide%282.1%29.pdf>`_
 
 Hexagon
 -------

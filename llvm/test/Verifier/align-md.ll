@@ -52,7 +52,7 @@ entry:
 
 define i8* @f7(i8** %x) {
 entry:
-  %y = load i8*, i8** %x, !align !{i64 1073741824}
+  %y = load i8*, i8** %x, !align !{i64 8589934592}
   ret i8* %y
 }
 ; CHECK: alignment is larger that implementation defined limit

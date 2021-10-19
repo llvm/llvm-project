@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 module m1
   integer :: x
   integer, private :: y
@@ -27,24 +27,24 @@ use m1, local_y => y
 !ERROR: 'z' not found in module 'm1'
 use m1, local_z => z
 use m1, operator(.localfoo.) => operator(.foo.)
-!ERROR: Operator '.bar.' not found in module 'm1'
+!ERROR: 'OPERATOR(.bar.)' not found in module 'm1'
 use m1, operator(.localbar.) => operator(.bar.)
 
 !ERROR: 'y' is PRIVATE in 'm1'
 use m1, only: y
-!ERROR: Operator '.priv.' is PRIVATE in 'm1'
+!ERROR: 'OPERATOR(.priv.)' is PRIVATE in 'm1'
 use m1, only: operator(.priv.)
-!ERROR: 'operator(*)' is PRIVATE in 'm1'
+!ERROR: 'OPERATOR(*)' is PRIVATE in 'm1'
 use m1, only: operator(*)
 !ERROR: 'z' not found in module 'm1'
 use m1, only: z
 !ERROR: 'z' not found in module 'm1'
 use m1, only: my_x => z
 use m1, only: operator(.foo.)
-!ERROR: Operator '.bar.' not found in module 'm1'
+!ERROR: 'OPERATOR(.bar.)' not found in module 'm1'
 use m1, only: operator(.bar.)
 use m1, only: operator(-) , ifoo
-!ERROR: 'operator(+)' not found in module 'm1'
+!ERROR: 'OPERATOR(+)' not found in module 'm1'
 use m1, only: operator(+)
 
 end

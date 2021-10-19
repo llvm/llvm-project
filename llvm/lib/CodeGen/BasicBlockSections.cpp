@@ -21,9 +21,21 @@
 // clusters of basic blocks. Every cluster will be emitted into a separate
 // section with its basic blocks sequenced in the given order. To get the
 // optimized performance, the clusters must form an optimal BB layout for the
-// function. Every cluster's section is labeled with a symbol to allow the
-// linker to reorder the sections in any arbitrary sequence. A global order of
-// these sections would encapsulate the function layout.
+// function. We insert a symbol at the beginning of every cluster's section to
+// allow the linker to reorder the sections in any arbitrary sequence. A global
+// order of these sections would encapsulate the function layout.
+// For example, consider the following clusters for a function foo (consisting
+// of 6 basic blocks 0, 1, ..., 5).
+//
+// 0 2
+// 1 3 5
+//
+// * Basic blocks 0 and 2 are placed in one section with symbol `foo`
+//   referencing the beginning of this section.
+// * Basic blocks 1, 3, 5 are placed in a separate section. A new symbol
+//   `foo.__part.1` will reference the beginning of this section.
+// * Basic block 4 (note that it is not referenced in the list) is placed in
+//   one section, and a new symbol `foo.cold` will point to it.
 //
 // There are a couple of challenges to be addressed:
 //
@@ -48,19 +60,11 @@
 // Basic Block Labels
 // ==================
 //
-// With -fbasic-block-sections=labels, or when a basic block is placed in a
-// unique section, it is labelled with a symbol.  This allows easy mapping of
-// virtual addresses from PMU profiles back to the corresponding basic blocks.
-// Since the number of basic blocks is large, the labeling bloats the symbol
-// table sizes and the string table sizes significantly. While the binary size
-// does increase, it does not affect performance as the symbol table is not
-// loaded in memory during run-time. The string table size bloat is kept very
-// minimal using a unary naming scheme that uses string suffix compression. The
-// basic blocks for function foo are named "a.BB.foo", "aa.BB.foo", ... This
-// turns out to be very good for string table sizes and the bloat in the string
-// table size for a very large binary is ~8 %.  The naming also allows using
-// the --symbol-ordering-file option in LLD to arbitrarily reorder the
-// sections.
+// With -fbasic-block-sections=labels, we emit the offsets of BB addresses of
+// every function into the .llvm_bb_addr_map section. Along with the function
+// symbols, this allows for mapping of virtual addresses in PMU profiles back to
+// the corresponding basic blocks. This logic is implemented in AsmPrinter. This
+// pass only assigns the BBSectionType of every function to ``labels``.
 //
 //===----------------------------------------------------------------------===//
 
@@ -86,6 +90,21 @@ using llvm::SmallVector;
 using llvm::StringMap;
 using llvm::StringRef;
 using namespace llvm;
+
+// Placing the cold clusters in a separate section mitigates against poor
+// profiles and allows optimizations such as hugepage mapping to be applied at a
+// section granularity. Defaults to ".text.split." which is recognized by lld
+// via the `-z keep-text-section-prefix` flag.
+cl::opt<std::string> llvm::BBSectionsColdTextPrefix(
+    "bbsections-cold-text-prefix",
+    cl::desc("The text prefix to use for cold basic block clusters"),
+    cl::init(".text.split."), cl::Hidden);
+
+cl::opt<bool> BBSectionsDetectSourceDrift(
+    "bbsections-detect-source-drift",
+    cl::desc("This checks if there is a fdo instr. profile hash "
+             "mismatch for this function"),
+    cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -292,10 +311,61 @@ void llvm::sortBasicBlocksAndUpdateBranches(
   updateBranches(MF, PreLayoutFallThroughs);
 }
 
+// If the exception section begins with a landing pad, that landing pad will
+// assume a zero offset (relative to @LPStart) in the LSDA. However, a value of
+// zero implies "no landing pad." This function inserts a NOP just before the EH
+// pad label to ensure a nonzero offset. Returns true if padding is not needed.
+static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
+  for (auto &MBB : MF) {
+    if (MBB.isBeginSection() && MBB.isEHPad()) {
+      MachineBasicBlock::iterator MI = MBB.begin();
+      while (!MI->isEHLabel())
+        ++MI;
+      MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
+      BuildMI(MBB, MI, DebugLoc(),
+              MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
+      return false;
+    }
+  }
+  return true;
+}
+
+// This checks if the source of this function has drifted since this binary was
+// profiled previously.  For now, we are piggy backing on what PGO does to
+// detect this with instrumented profiles.  PGO emits an hash of the IR and
+// checks if the hash has changed.  Advanced basic block layout is usually done
+// on top of PGO optimized binaries and hence this check works well in practice.
+static bool hasInstrProfHashMismatch(MachineFunction &MF) {
+  if (!BBSectionsDetectSourceDrift)
+    return false;
+
+  const char MetadataName[] = "instr_prof_hash_mismatch";
+  auto *Existing = MF.getFunction().getMetadata(LLVMContext::MD_annotation);
+  if (Existing) {
+    MDTuple *Tuple = cast<MDTuple>(Existing);
+    for (auto &N : Tuple->operands())
+      if (cast<MDString>(N.get())->getString() == MetadataName)
+        return true;
+  }
+
+  return false;
+}
+
 bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
   assert(BBSectionsType != BasicBlockSection::None &&
          "BB Sections not enabled!");
+
+  // Check for source drift.  If the source has changed since the profiles
+  // were obtained, optimizing basic blocks might be sub-optimal.
+  // This only applies to BasicBlockSection::List as it creates
+  // clusters of basic blocks using basic block ids. Source drift can
+  // invalidate these groupings leading to sub-optimal code generation with
+  // regards to performance.
+  if (BBSectionsType == BasicBlockSection::List &&
+      hasInstrProfHashMismatch(MF))
+    return true;
+
   // Renumber blocks before sorting them for basic block sections.  This is
   // useful during sorting, basic blocks in the same section will retain the
   // default order.  This renumbering should also be done for basic block
@@ -304,7 +374,6 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
   if (BBSectionsType == BasicBlockSection::Labels) {
     MF.setBBSectionsType(BBSectionsType);
-    MF.createBBLabels();
     return true;
   }
 
@@ -314,7 +383,6 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
                                    FuncBBClusterInfo))
     return true;
   MF.setBBSectionsType(BBSectionsType);
-  MF.createBBLabels();
   assignSections(MF, FuncBBClusterInfo);
 
   // We make sure that the cluster including the entry basic block precedes all
@@ -355,6 +423,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   };
 
   sortBasicBlocksAndUpdateBranches(MF, Comparator);
+  avoidZeroOffsetLandingPad(MF);
   return true;
 }
 

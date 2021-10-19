@@ -1,31 +1,28 @@
-// RUN: %clang_cc1                                 -verify=host -Rpass=openmp -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1                                 -verify      -Rpass=openmp -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -verify      -Rpass=openmp -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
+// RUN: %clang_cc1                                 -verify=host -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1                                 -verify      -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -verify      -Rpass=openmp-opt -Rpass-analysis=openmp-opt -fopenmp -O2 -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t.out
 
 // host-no-diagnostics
 
+void baz(void) __attribute__((assume("omp_no_openmp")));
+
 void bar(void) {
 #pragma omp parallel // #1                                                                                                                                                                                                                                                                                                                                           \
-                     // expected-remark@#1 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}} \
-                     // expected-remark@#1 {{Parallel region is not known to be called from a unique single target region, maybe the surrounding function has external linkage?; will not attempt to rewrite the state machine use.}}
+                     // expected-remark@#1 {{Parallel region is used in unknown ways. Will not attempt to rewrite the state machine. [OMP101]}}
   {
   }
 }
 
 void foo(void) {
-#pragma omp target teams // #2                                                                                                                                                                      \
-                         // expected-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}} \
-                         // expected-remark@#2 {{Target region containing the parallel region that is specialized. (parallel region ID: __omp_outlined__3_wrapper, kernel ID: __omp_offloading}}
+#pragma omp target teams // #2
+                         // expected-remark@#2 {{Rewriting generic-mode kernel with a customized state machine. [OMP131]}}
   {
-#pragma omp parallel // #3                                                                                                                                                                                                                                                                                                                                           \
-                     // expected-remark@#3 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}} \
-                     // expected-remark@#3 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__1_wrapper, kernel ID: __omp_offloading}}
+    baz();               // expected-remark {{Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override. [OMP121]}}
+#pragma omp parallel
     {
     }
     bar();
-#pragma omp parallel // #4                                                                                                                                                                                                                                                                                                                                           \
-                     // expected-remark@#4 {{Found a parallel region that is called in a target region but not part of a combined target construct nor nesed inside a target construct without intermediate code. This can lead to excessive register usage for unrelated target regions in the same translation unit due to spurious call edges assumed by ptxas.}} \
-                     // expected-remark@#4 {{Specialize parallel region that is only reached from a single target region to avoid spurious call edges and excessive register usage in other target regions. (parallel region ID: __omp_outlined__3_wrapper, kernel ID: __omp_offloading}}
+#pragma omp parallel
     {
     }
   }
@@ -43,5 +40,4 @@ void spmd(void) {
   }
 }
 
-// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num moved to}}
-// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num deduplicated}}
+// expected-remark@* {{OpenMP runtime call __kmpc_global_thread_num deduplicated. [OMP170]}}

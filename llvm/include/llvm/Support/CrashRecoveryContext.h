@@ -44,11 +44,11 @@ class CrashRecoveryContextCleanup;
 /// executed in any case, whether crash occurs or not. These actions may be used
 /// to reclaim resources in the case of crash.
 class CrashRecoveryContext {
-  void *Impl;
-  CrashRecoveryContextCleanup *head;
+  void *Impl = nullptr;
+  CrashRecoveryContextCleanup *head = nullptr;
 
 public:
-  CrashRecoveryContext() : Impl(nullptr), head(nullptr) {}
+  CrashRecoveryContext();
   ~CrashRecoveryContext();
 
   /// Register cleanup handler, which is used when the recovery context is
@@ -87,7 +87,7 @@ public:
   /// a protected context which is run in another thread (optionally with a
   /// requested stack size).
   ///
-  /// See RunSafely() and llvm_execute_on_thread().
+  /// See RunSafely().
   ///
   /// On Darwin, if PRIO_DARWIN_BG is set on the calling thread, it will be
   /// propagated to the new thread as well.
@@ -99,8 +99,11 @@ public:
 
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
-  LLVM_ATTRIBUTE_NORETURN
-  void HandleExit(int RetCode);
+  [[noreturn]] void HandleExit(int RetCode);
+
+  /// Throw again a signal or an exception, after it was catched once by a
+  /// CrashRecoveryContext.
+  static bool throwIfCrash(int RetCode);
 
   /// In case of a crash, this is the crash identifier.
   int RetCode = 0;

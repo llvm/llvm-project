@@ -16,9 +16,9 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 namespace lldb_private {
@@ -361,10 +361,10 @@ public:
 protected:
   // Member variables
   Flags m_flags;        ///< Dump flags.
-  uint32_t m_addr_size; ///< Size of an address in bytes.
+  uint32_t m_addr_size = 4; ///< Size of an address in bytes.
   lldb::ByteOrder
       m_byte_order;   ///< Byte order to use when encoding scalar types.
-  unsigned m_indent_level;         ///< Indention level.
+  unsigned m_indent_level = 0;     ///< Indention level.
   std::size_t m_bytes_written = 0; ///< Number of bytes written so far.
 
   void _PutHex8(uint8_t uvalue, bool add_prefix);

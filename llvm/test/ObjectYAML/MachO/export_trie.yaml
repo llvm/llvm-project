@@ -96,7 +96,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   /usr/lib/dyld
+    Content:         /usr/lib/dyld
     ZeroPadBytes:    7
   - cmd:             LC_UUID
     cmdsize:         24
@@ -119,7 +119,7 @@ LoadCommands:
       timestamp:       2
       current_version: 7864576
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libc++.1.dylib'
+    Content:         '/usr/lib/libc++.1.dylib'
     ZeroPadBytes:    1
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
@@ -128,7 +128,7 @@ LoadCommands:
       timestamp:       2
       current_version: 80349697
       compatibility_version: 65536
-    PayloadString:   /usr/lib/libSystem.B.dylib
+    Content:         /usr/lib/libSystem.B.dylib
     ZeroPadBytes:    6
   - cmd:             LC_FUNCTION_STARTS
     cmdsize:         16
@@ -184,8 +184,8 @@ LinkEditData:
 #CHECK:           - TerminalSize:    2
 #CHECK:             NodeOffset:      33
 #CHECK:             Name:            _mh_execute_header
-#CHECK:             Address:         0x0000000000000000
+#CHECK:             Address:         0x0
 #CHECK:           - TerminalSize:    3
 #CHECK:             NodeOffset:      37
 #CHECK:             Name:            main
-#CHECK:             Address:         0x0000000000001160
+#CHECK:             Address:         0x1160

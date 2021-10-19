@@ -1,7 +1,7 @@
 ; If there's a call in the loop which dominates the backedge, we 
 ; don't need a safepoint poll (since the callee must contain a 
 ; poll test).
-;; RUN: opt < %s -place-safepoints -S | FileCheck %s
+;; RUN: opt < %s -place-safepoints -S -enable-new-pm=0 | FileCheck %s
 
 declare void @foo()
 

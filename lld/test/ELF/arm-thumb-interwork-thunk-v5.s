@@ -27,9 +27,9 @@ _start:
         bx lr
 
 // CHECK: <_start>:
-// CHECK-NEXT: 21000: 03 00 00 ea     b       #12 <__ARMv5ABSLongThunk_thumb_func>
-// CHECK-NEXT: 21004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-NEXT: 21008: 00 00 00 fa     blx     #0 <thumb_func>
+// CHECK-NEXT: 21000: 03 00 00 ea     b       0x21014 <__ARMv5ABSLongThunk_thumb_func>
+// CHECK-NEXT: 21004: 01 00 00 fa     blx     0x21010 <thumb_func>
+// CHECK-NEXT: 21008: 00 00 00 fa     blx     0x21010 <thumb_func>
 // CHECK-NEXT: 2100c: 1e ff 2f e1     bx      lr
 
 // CHECK: <thumb_func>:
@@ -41,9 +41,9 @@ _start:
 // CHECK-NEXT: 21018: 11 10 02 00     .word   0x00021011
 
 // CHECK-PI: <_start>:
-// CHECK-PI-NEXT: 11000: 03 00 00 ea     b       #12 <__ARMV5PILongThunk_thumb_func>
-// CHECK-PI-NEXT: 11004: 01 00 00 fa     blx     #4 <thumb_func>
-// CHECK-PI-NEXT: 11008: 00 00 00 fa     blx     #0 <thumb_func>
+// CHECK-PI-NEXT: 11000: 03 00 00 ea     b       0x11014 <__ARMV5PILongThunk_thumb_func>
+// CHECK-PI-NEXT: 11004: 01 00 00 fa     blx     0x11010 <thumb_func>
+// CHECK-PI-NEXT: 11008: 00 00 00 fa     blx     0x11010 <thumb_func>
 // CHECK-PI-NEXT: 1100c: 1e ff 2f e1     bx      lr
 
 // CHECK-PI: <thumb_func>:

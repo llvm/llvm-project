@@ -1,4 +1,5 @@
 from __future__ import print_function
+import struct
 import sys
 
 import gdb.printing
@@ -196,6 +197,46 @@ class DenseMapPrinter:
 
   def to_string(self):
     return 'llvm::DenseMap with %d elements' % (self.val['NumEntries'])
+
+  def display_hint(self):
+    return 'map'
+
+class StringMapPrinter:
+  "Print a StringMap"
+
+  def __init__(self, val):
+    self.val = val
+
+  def children(self):
+    it = self.val['TheTable']
+    end = (it + self.val['NumBuckets'])
+    value_ty = self.val.type.template_argument(0)
+    entry_base_ty = gdb.lookup_type('llvm::StringMapEntryBase')
+    tombstone = gdb.parse_and_eval('llvm::StringMapImpl::TombstoneIntVal');
+
+    while it != end:
+      it_deref = it.dereference()
+      if it_deref == 0 or it_deref == tombstone:
+        it = it + 1
+        continue
+
+      entry_ptr = it_deref.cast(entry_base_ty.pointer())
+      entry = entry_ptr.dereference()
+
+      str_len = entry['keyLength']
+      value_ptr = (entry_ptr + 1).cast(value_ty.pointer())
+      str_data = (entry_ptr + 1).cast(gdb.lookup_type('uintptr_t')) + max(value_ty.sizeof, entry_base_ty.alignof)
+      str_data = str_data.cast(gdb.lookup_type('char').const().pointer())
+      string_ref = gdb.Value(struct.pack('PN', int(str_data), int(str_len)), gdb.lookup_type('llvm::StringRef'))
+      yield 'key', string_ref
+
+      value = value_ptr.dereference()
+      yield 'value', value
+
+      it = it + 1
+
+  def to_string(self):
+    return 'llvm::StringMap with %d elements' % (self.val['NumItems'])
 
   def display_hint(self):
     return 'map'
@@ -442,6 +483,7 @@ pp.add_printer('llvm::ArrayRef', '^llvm::(Mutable)?ArrayRef<.*>$', ArrayRefPrint
 pp.add_printer('llvm::Expected', '^llvm::Expected<.*>$', ExpectedPrinter)
 pp.add_printer('llvm::Optional', '^llvm::Optional<.*>$', OptionalPrinter)
 pp.add_printer('llvm::DenseMap', '^llvm::DenseMap<.*>$', DenseMapPrinter)
+pp.add_printer('llvm::StringMap', '^llvm::StringMap<.*>$', StringMapPrinter)
 pp.add_printer('llvm::Twine', '^llvm::Twine$', TwinePrinter)
 pp.add_printer('llvm::PointerIntPair', '^llvm::PointerIntPair<.*>$', make_pointer_int_pair_printer)
 pp.add_printer('llvm::PointerUnion', '^llvm::PointerUnion<.*>$', make_pointer_union_printer)

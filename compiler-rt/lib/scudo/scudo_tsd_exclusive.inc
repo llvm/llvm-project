@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef SCUDO_TSD_H_
-# error "This file must be included inside scudo_tsd.h."
-#endif  // SCUDO_TSD_H_
+#error "This file must be included inside scudo_tsd.h."
+#endif // SCUDO_TSD_H_
 
 #if SCUDO_TSD_EXCLUSIVE
 
@@ -21,10 +21,9 @@ enum ThreadState : u8 {
   ThreadInitialized,
   ThreadTornDown,
 };
-__attribute__((tls_model("initial-exec")))
-extern THREADLOCAL ThreadState ScudoThreadState;
-__attribute__((tls_model("initial-exec")))
-extern THREADLOCAL ScudoTSD TSD;
+__attribute__((
+    tls_model("initial-exec"))) extern THREADLOCAL ThreadState ScudoThreadState;
+__attribute__((tls_model("initial-exec"))) extern THREADLOCAL ScudoTSD TSD;
 
 extern ScudoTSD FallbackTSD;
 
@@ -34,7 +33,8 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
   initThread(MinimalInit);
 }
 
-ALWAYS_INLINE ScudoTSD *getTSDAndLock(bool *UnlockRequired) {
+ALWAYS_INLINE ScudoTSD *
+getTSDAndLock(bool *UnlockRequired) NO_THREAD_SAFETY_ANALYSIS {
   if (UNLIKELY(ScudoThreadState != ThreadInitialized)) {
     FallbackTSD.lock();
     *UnlockRequired = true;
@@ -44,4 +44,4 @@ ALWAYS_INLINE ScudoTSD *getTSDAndLock(bool *UnlockRequired) {
   return &TSD;
 }
 
-#endif  // SCUDO_TSD_EXCLUSIVE
+#endif // SCUDO_TSD_EXCLUSIVE

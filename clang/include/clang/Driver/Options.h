@@ -9,8 +9,6 @@
 #ifndef LLVM_CLANG_DRIVER_OPTIONS_H
 #define LLVM_CLANG_DRIVER_OPTIONS_H
 
-#include <memory>
-
 namespace llvm {
 namespace opt {
 class OptTable;
@@ -24,7 +22,7 @@ namespace options {
 /// Flags specifically for clang options.  Must not overlap with
 /// llvm::opt::DriverFlag.
 enum ClangFlags {
-  DriverOption = (1 << 4),
+  NoXarchOption = (1 << 4),
   LinkerInput = (1 << 5),
   NoArgumentUnused = (1 << 6),
   Unsupported = (1 << 7),
@@ -34,7 +32,10 @@ enum ClangFlags {
   CC1AsOption = (1 << 11),
   NoDriverOption = (1 << 12),
   LinkOption = (1 << 13),
-  Ignored = (1 << 14),
+  FlangOption = (1 << 14),
+  FC1Option = (1 << 15),
+  FlangOnlyOption = (1 << 16),
+  Ignored = (1 << 17),
 };
 
 enum ID {

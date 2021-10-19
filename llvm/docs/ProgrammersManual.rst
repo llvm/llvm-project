@@ -1521,6 +1521,12 @@ this makes the size of the SmallVector itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
 SmallVectors are most useful when on the stack.
 
+In the absence of a well-motivated choice for the number of
+inlined elements ``N``, it is recommended to use ``SmallVector<T>`` (that is,
+omitting the ``N``). This will choose a default number of
+inlined elements reasonable for allocation on the stack (for example, trying
+to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
+
 SmallVector also provides a nice portable and efficient replacement for
 ``alloca``.
 
@@ -1530,7 +1536,7 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 #. std::vector is exception-safe, and some implementations have pessimizations
    that copy elements when SmallVector would move them.
 
-#. SmallVector understands ``llvm::is_trivially_copyable<Type>`` and uses realloc aggressively.
+#. SmallVector understands ``std::is_trivially_copyable<Type>`` and uses realloc aggressively.
 
 #. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
    below).
@@ -1541,30 +1547,43 @@ SmallVector has grown a few other minor advantages over std::vector, causing
 
 .. note::
 
-   Prefer to use ``SmallVectorImpl<T>`` as a parameter type.
+   Prefer to use ``ArrayRef<T>`` or ``SmallVectorImpl<T>`` as a parameter type.
 
-   In APIs that don't care about the "small size" (most?), prefer to use
-   the ``SmallVectorImpl<T>`` class, which is basically just the "vector
-   header" (and methods) without the elements allocated after it. Note that
-   ``SmallVector<T, N>`` inherits from ``SmallVectorImpl<T>`` so the
-   conversion is implicit and costs nothing. E.g.
+   It's rarely appropriate to use ``SmallVector<T, N>`` as a parameter type.
+   If an API only reads from the vector, it should use :ref:`ArrayRef
+   <dss_arrayref>`.  Even if an API updates the vector the "small size" is
+   unlikely to be relevant; such an API should use the ``SmallVectorImpl<T>``
+   class, which is the "vector header" (and methods) without the elements
+   allocated after it. Note that ``SmallVector<T, N>`` inherits from
+   ``SmallVectorImpl<T>`` so the conversion is implicit and costs nothing. E.g.
 
    .. code-block:: c++
 
-      // BAD: Clients cannot pass e.g. SmallVector<Foo, 4>.
+      // DISCOURAGED: Clients cannot pass e.g. raw arrays.
+      hardcodedContiguousStorage(const SmallVectorImpl<Foo> &In);
+      // ENCOURAGED: Clients can pass any contiguous storage of Foo.
+      allowsAnyContiguousStorage(ArrayRef<Foo> In);
+
+      void someFunc1() {
+        Foo Vec[] = { /* ... */ };
+        hardcodedContiguousStorage(Vec); // Error.
+        allowsAnyContiguousStorage(Vec); // Works.
+      }
+
+      // DISCOURAGED: Clients cannot pass e.g. SmallVector<Foo, 8>.
       hardcodedSmallSize(SmallVector<Foo, 2> &Out);
-      // GOOD: Clients can pass any SmallVector<Foo, N>.
+      // ENCOURAGED: Clients can pass any SmallVector<Foo, N>.
       allowsAnySmallSize(SmallVectorImpl<Foo> &Out);
 
-      void someFunc() {
+      void someFunc2() {
         SmallVector<Foo, 8> Vec;
         hardcodedSmallSize(Vec); // Error.
         allowsAnySmallSize(Vec); // Works.
       }
 
-   Even though it has "``Impl``" in the name, this is so widely used that
-   it really isn't "private to the implementation" anymore. A name like
-   ``SmallVectorHeader`` would be more appropriate.
+   Even though it has "``Impl``" in the name, SmallVectorImpl is widely used
+   and is no longer "private to the implementation". A name like
+   ``SmallVectorHeader`` might be more appropriate.
 
 .. _dss_vector:
 
@@ -2449,7 +2468,7 @@ Basic Inspection and Traversal Routines
 The LLVM compiler infrastructure have many different data structures that may be
 traversed.  Following the example of the C++ standard template library, the
 techniques used to traverse these various data structures are all basically the
-same.  For a enumerable sequence of values, the ``XXXbegin()`` function (or
+same.  For an enumerable sequence of values, the ``XXXbegin()`` function (or
 method) returns an iterator to the start of the sequence, the ``XXXend()``
 function returns an iterator pointing to one past the last valid element of the
 sequence, and there is some ``XXXiterator`` data type that is common between the

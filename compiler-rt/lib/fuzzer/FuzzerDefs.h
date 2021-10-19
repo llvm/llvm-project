@@ -38,28 +38,8 @@ struct ExternalFunctions;
 // Global interface to functions that may or may not be available.
 extern ExternalFunctions *EF;
 
-// We are using a custom allocator to give a different symbol name to STL
-// containers in order to avoid ODR violations.
-template<typename T>
-  class fuzzer_allocator: public std::allocator<T> {
-    public:
-      fuzzer_allocator() = default;
-
-      template<class U>
-      fuzzer_allocator(const fuzzer_allocator<U>&) {}
-
-      template<class Other>
-      struct rebind { typedef fuzzer_allocator<Other> other;  };
-  };
-
-template<typename T>
-using Vector = std::vector<T, fuzzer_allocator<T>>;
-
-template<typename T>
-using Set = std::set<T, std::less<T>, fuzzer_allocator<T>>;
-
-typedef Vector<uint8_t> Unit;
-typedef Vector<Unit> UnitVector;
+typedef std::vector<uint8_t> Unit;
+typedef std::vector<Unit> UnitVector;
 typedef int (*UserCallback)(const uint8_t *Data, size_t Size);
 
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback);

@@ -8,10 +8,12 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
 
 using namespace mlir;
+
+//===----------------------------------------------------------------------===//
+// PatternBenefit
+//===----------------------------------------------------------------------===//
 
 PatternBenefit::PatternBenefit(unsigned benefit) : representation(benefit) {
   assert(representation == benefit && benefit != ImpossibleToMatchSentinel &&
@@ -24,20 +26,61 @@ unsigned short PatternBenefit::getBenefit() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Pattern implementation
+// Pattern
 //===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// OperationName Root Constructors
 
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
-                 MLIRContext *context)
-    : rootKind(OperationName(rootName, context)), benefit(benefit) {}
-Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag)
-    : benefit(benefit) {}
-
-// Out-of-line vtable anchor.
-void Pattern::anchor() {}
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(OperationName(rootName, context).getAsOpaquePointer(),
+              RootKind::OperationName, generatedNames, benefit, context) {}
 
 //===----------------------------------------------------------------------===//
-// RewritePattern and PatternRewriter implementation
+// MatchAnyOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(nullptr, RootKind::Any, generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchInterfaceOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(interfaceID.getAsOpaquePointer(), RootKind::InterfaceID,
+              generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchTraitOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(traitID.getAsOpaquePointer(), RootKind::TraitID, generatedNames,
+              benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// General Constructors
+
+Pattern::Pattern(const void *rootValue, RootKind rootKind,
+                 ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+                 MLIRContext *context)
+    : rootValue(rootValue), rootKind(rootKind), benefit(benefit),
+      contextAndHasBoundedRecursion(context, false) {
+  if (generatedNames.empty())
+    return;
+  generatedOps.reserve(generatedNames.size());
+  std::transform(generatedNames.begin(), generatedNames.end(),
+                 std::back_inserter(generatedOps), [context](StringRef name) {
+                   return OperationName(name, context);
+                 });
+}
+
+//===----------------------------------------------------------------------===//
+// RewritePattern
 //===----------------------------------------------------------------------===//
 
 void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
@@ -49,35 +92,133 @@ LogicalResult RewritePattern::match(Operation *op) const {
   llvm_unreachable("need to implement either match or matchAndRewrite!");
 }
 
-RewritePattern::RewritePattern(StringRef rootName,
-                               ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context)
-    : Pattern(rootName, benefit, context) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
-RewritePattern::RewritePattern(ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context,
-                               MatchAnyOpTypeTag tag)
-    : Pattern(benefit, tag) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
+/// Out-of-line vtable anchor.
+void RewritePattern::anchor() {}
+
+//===----------------------------------------------------------------------===//
+// PDLValue
+//===----------------------------------------------------------------------===//
+
+void PDLValue::print(raw_ostream &os) const {
+  if (!value) {
+    os << "<NULL-PDLValue>";
+    return;
+  }
+  switch (kind) {
+  case Kind::Attribute:
+    os << cast<Attribute>();
+    break;
+  case Kind::Operation:
+    os << *cast<Operation *>();
+    break;
+  case Kind::Type:
+    os << cast<Type>();
+    break;
+  case Kind::TypeRange:
+    llvm::interleaveComma(cast<TypeRange>(), os);
+    break;
+  case Kind::Value:
+    os << cast<Value>();
+    break;
+  case Kind::ValueRange:
+    llvm::interleaveComma(cast<ValueRange>(), os);
+    break;
+  }
 }
 
-PatternRewriter::~PatternRewriter() {
+//===----------------------------------------------------------------------===//
+// PDLPatternModule
+//===----------------------------------------------------------------------===//
+
+void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
+  // Ignore the other module if it has no patterns.
+  if (!other.pdlModule)
+    return;
+  // Steal the other state if we have no patterns.
+  if (!pdlModule) {
+    constraintFunctions = std::move(other.constraintFunctions);
+    rewriteFunctions = std::move(other.rewriteFunctions);
+    pdlModule = std::move(other.pdlModule);
+    return;
+  }
+  // Steal the functions of the other module.
+  for (auto &it : constraintFunctions)
+    registerConstraintFunction(it.first(), std::move(it.second));
+  for (auto &it : rewriteFunctions)
+    registerRewriteFunction(it.first(), std::move(it.second));
+
+  // Merge the pattern operations from the other module into this one.
+  Block *block = pdlModule->getBody();
+  block->getTerminator()->erase();
+  block->getOperations().splice(block->end(),
+                                other.pdlModule->getBody()->getOperations());
+}
+
+//===----------------------------------------------------------------------===//
+// Function Registry
+
+void PDLPatternModule::registerConstraintFunction(
+    StringRef name, PDLConstraintFunction constraintFn) {
+  auto it = constraintFunctions.try_emplace(name, std::move(constraintFn));
+  (void)it;
+  assert(it.second &&
+         "constraint with the given name has already been registered");
+}
+
+void PDLPatternModule::registerRewriteFunction(StringRef name,
+                                               PDLRewriteFunction rewriteFn) {
+  auto it = rewriteFunctions.try_emplace(name, std::move(rewriteFn));
+  (void)it;
+  assert(it.second && "native rewrite function with the given name has "
+                      "already been registered");
+}
+
+//===----------------------------------------------------------------------===//
+// RewriterBase
+//===----------------------------------------------------------------------===//
+
+RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
 
-/// This method performs the final replacement for a pattern, where the
-/// results of the operation are updated to use the specified list of SSA
-/// values.
-void PatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
+/// This method replaces the uses of the results of `op` with the values in
+/// `newValues` when the provided `functor` returns true for a specific use.
+/// The number of values in `newValues` is required to match the number of
+/// results of `op`.
+void RewriterBase::replaceOpWithIf(
+    Operation *op, ValueRange newValues, bool *allUsesReplaced,
+    llvm::unique_function<bool(OpOperand &) const> functor) {
+  assert(op->getNumResults() == newValues.size() &&
+         "incorrect number of values to replace operation");
+
+  // Notify the rewriter subclass that we're about to replace this root.
+  notifyRootReplaced(op);
+
+  // Replace each use of the results when the functor is true.
+  bool replacedAllUses = true;
+  for (auto it : llvm::zip(op->getResults(), newValues)) {
+    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), functor);
+    replacedAllUses &= std::get<0>(it).use_empty();
+  }
+  if (allUsesReplaced)
+    *allUsesReplaced = replacedAllUses;
+}
+
+/// This method replaces the uses of the results of `op` with the values in
+/// `newValues` when a use is nested within the given `block`. The number of
+/// values in `newValues` is required to match the number of results of `op`.
+/// If all uses of this operation are replaced, the operation is erased.
+void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
+                                        Block *block, bool *allUsesReplaced) {
+  replaceOpWithIf(op, newValues, allUsesReplaced, [block](OpOperand &use) {
+    return block->getParentOp()->isProperAncestor(use.getOwner());
+  });
+}
+
+/// This method replaces the results of the operation with the specified list of
+/// values. The number of provided values must match the number of results of
+/// the operation.
+void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   // Notify the rewriter subclass that we're about to replace this root.
   notifyRootReplaced(op);
 
@@ -91,13 +232,13 @@ void PatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
 
 /// This method erases an operation that is known to have no uses. The uses of
 /// the given operation *must* be known to be dead.
-void PatternRewriter::eraseOp(Operation *op) {
+void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
   notifyOperationRemoved(op);
   op->erase();
 }
 
-void PatternRewriter::eraseBlock(Block *block) {
+void RewriterBase::eraseBlock(Block *block) {
   for (auto &op : llvm::make_early_inc_range(llvm::reverse(*block))) {
     assert(op.use_empty() && "expected 'op' to have no uses");
     eraseOp(&op);
@@ -109,8 +250,8 @@ void PatternRewriter::eraseBlock(Block *block) {
 /// 'source's predecessors must be empty or only contain 'dest`.
 /// 'argValues' is used to replace the block arguments of 'source' after
 /// merging.
-void PatternRewriter::mergeBlocks(Block *source, Block *dest,
-                                  ValueRange argValues) {
+void RewriterBase::mergeBlocks(Block *source, Block *dest,
+                               ValueRange argValues) {
   assert(llvm::all_of(source->getPredecessors(),
                       [dest](Block *succ) { return succ == dest; }) &&
          "expected 'source' to have no predecessors or only 'dest'");
@@ -130,14 +271,14 @@ void PatternRewriter::mergeBlocks(Block *source, Block *dest,
 
 // Merge the operations of block 'source' before the operation 'op'. Source
 // block should not have existing predecessors or successors.
-void PatternRewriter::mergeBlockBefore(Block *source, Operation *op,
-                                       ValueRange argValues) {
+void RewriterBase::mergeBlockBefore(Block *source, Operation *op,
+                                    ValueRange argValues) {
   assert(source->hasNoPredecessors() &&
          "expected 'source' to have no predecessors");
   assert(source->hasNoSuccessors() &&
          "expected 'source' to have no successors");
 
-  // Split the block containing 'op' into two, one containg all operations
+  // Split the block containing 'op' into two, one containing all operations
   // before 'op' (prologue) and another (epilogue) containing 'op' and all
   // operations after it.
   Block *prologue = op->getBlock();
@@ -152,14 +293,14 @@ void PatternRewriter::mergeBlockBefore(Block *source, Operation *op,
 
 /// Split the operations starting at "before" (inclusive) out of the given
 /// block into a new block, and return it.
-Block *PatternRewriter::splitBlock(Block *block, Block::iterator before) {
+Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
   return block->splitBlock(before);
 }
 
 /// 'op' and 'newOp' are known to have the same number of results, replace the
 /// uses of op with uses of newOp
-void PatternRewriter::replaceOpWithResultsOfAnotherOp(Operation *op,
-                                                      Operation *newOp) {
+void RewriterBase::replaceOpWithResultsOfAnotherOp(Operation *op,
+                                                   Operation *newOp) {
   assert(op->getNumResults() == newOp->getNumResults() &&
          "replacement op doesn't match results of original op");
   if (op->getNumResults() == 1)
@@ -171,11 +312,11 @@ void PatternRewriter::replaceOpWithResultsOfAnotherOp(Operation *op,
 /// another region.  The two regions must be different.  The caller is in
 /// charge to update create the operation transferring the control flow to the
 /// region and pass it the correct block arguments.
-void PatternRewriter::inlineRegionBefore(Region &region, Region &parent,
-                                         Region::iterator before) {
+void RewriterBase::inlineRegionBefore(Region &region, Region &parent,
+                                      Region::iterator before) {
   parent.getBlocks().splice(before, region.getBlocks());
 }
-void PatternRewriter::inlineRegionBefore(Region &region, Block *before) {
+void RewriterBase::inlineRegionBefore(Region &region, Block *before) {
   inlineRegionBefore(region, *before->getParent(), before->getIterator());
 }
 
@@ -183,131 +324,16 @@ void PatternRewriter::inlineRegionBefore(Region &region, Block *before) {
 /// another region "parent". The two regions must be different. The caller is
 /// responsible for creating or updating the operation transferring flow of
 /// control to the region and passing it the correct block arguments.
-void PatternRewriter::cloneRegionBefore(Region &region, Region &parent,
-                                        Region::iterator before,
-                                        BlockAndValueMapping &mapping) {
+void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
+                                     Region::iterator before,
+                                     BlockAndValueMapping &mapping) {
   region.cloneInto(&parent, before, mapping);
 }
-void PatternRewriter::cloneRegionBefore(Region &region, Region &parent,
-                                        Region::iterator before) {
+void RewriterBase::cloneRegionBefore(Region &region, Region &parent,
+                                     Region::iterator before) {
   BlockAndValueMapping mapping;
   cloneRegionBefore(region, parent, before, mapping);
 }
-void PatternRewriter::cloneRegionBefore(Region &region, Block *before) {
+void RewriterBase::cloneRegionBefore(Region &region, Block *before) {
   cloneRegionBefore(region, *before->getParent(), before->getIterator());
-}
-
-//===----------------------------------------------------------------------===//
-// PatternMatcher implementation
-//===----------------------------------------------------------------------===//
-
-void PatternApplicator::applyCostModel(CostModel model) {
-  // Separate patterns by root kind to simplify lookup later on.
-  patterns.clear();
-  anyOpPatterns.clear();
-  for (const auto &pat : owningPatternList) {
-    // If the pattern is always impossible to match, just ignore it.
-    if (pat->getBenefit().isImpossibleToMatch())
-      continue;
-    if (Optional<OperationName> opName = pat->getRootKind())
-      patterns[*opName].push_back(pat.get());
-    else
-      anyOpPatterns.push_back(pat.get());
-  }
-
-  // Sort the patterns using the provided cost model.
-  llvm::SmallDenseMap<RewritePattern *, PatternBenefit> benefits;
-  auto cmp = [&benefits](RewritePattern *lhs, RewritePattern *rhs) {
-    return benefits[lhs] > benefits[rhs];
-  };
-  auto processPatternList = [&](SmallVectorImpl<RewritePattern *> &list) {
-    // Special case for one pattern in the list, which is the most common case.
-    if (list.size() == 1) {
-      if (model(*list.front()).isImpossibleToMatch())
-        list.clear();
-      return;
-    }
-
-    // Collect the dynamic benefits for the current pattern list.
-    benefits.clear();
-    for (RewritePattern *pat : list)
-      benefits.try_emplace(pat, model(*pat));
-
-    // Sort patterns with highest benefit first, and remove those that are
-    // impossible to match.
-    std::stable_sort(list.begin(), list.end(), cmp);
-    while (!list.empty() && benefits[list.back()].isImpossibleToMatch())
-      list.pop_back();
-  };
-  for (auto &it : patterns)
-    processPatternList(it.second);
-  processPatternList(anyOpPatterns);
-}
-
-void PatternApplicator::walkAllPatterns(
-    function_ref<void(const RewritePattern &)> walk) {
-  for (auto &it : owningPatternList)
-    walk(*it);
-}
-
-LogicalResult PatternApplicator::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
-  // Check to see if there are patterns matching this specific operation type.
-  MutableArrayRef<RewritePattern *> opPatterns;
-  auto patternIt = patterns.find(op->getName());
-  if (patternIt != patterns.end())
-    opPatterns = patternIt->second;
-
-  // Process the patterns for that match the specific operation type, and any
-  // operation type in an interleaved fashion.
-  // FIXME: It'd be nice to just write an llvm::make_merge_range utility
-  // and pass in a comparison function. That would make this code trivial.
-  auto opIt = opPatterns.begin(), opE = opPatterns.end();
-  auto anyIt = anyOpPatterns.begin(), anyE = anyOpPatterns.end();
-  while (opIt != opE && anyIt != anyE) {
-    // Try to match the pattern providing the most benefit.
-    RewritePattern *pattern;
-    if ((*opIt)->getBenefit() >= (*anyIt)->getBenefit())
-      pattern = *(opIt++);
-    else
-      pattern = *(anyIt++);
-
-    // Otherwise, try to match the generic pattern.
-    if (succeeded(matchAndRewrite(op, *pattern, rewriter, canApply, onFailure,
-                                  onSuccess)))
-      return success();
-  }
-  // If we break from the loop, then only one of the ranges can still have
-  // elements. Loop over both without checking given that we don't need to
-  // interleave anymore.
-  for (RewritePattern *pattern : llvm::concat<RewritePattern *>(
-           llvm::make_range(opIt, opE), llvm::make_range(anyIt, anyE))) {
-    if (succeeded(matchAndRewrite(op, *pattern, rewriter, canApply, onFailure,
-                                  onSuccess)))
-      return success();
-  }
-  return failure();
-}
-
-LogicalResult PatternApplicator::matchAndRewrite(
-    Operation *op, const RewritePattern &pattern, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
-  // Check that the pattern can be applied.
-  if (canApply && !canApply(pattern))
-    return failure();
-
-  // Try to match and rewrite this pattern. The patterns are sorted by
-  // benefit, so if we match we can immediately rewrite.
-  rewriter.setInsertionPoint(op);
-  if (succeeded(pattern.matchAndRewrite(op, rewriter)))
-    return success(!onSuccess || succeeded(onSuccess(pattern)));
-
-  if (onFailure)
-    onFailure(pattern);
-  return failure();
 }

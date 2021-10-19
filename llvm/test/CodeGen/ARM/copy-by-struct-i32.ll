@@ -54,7 +54,7 @@ define arm_aapcscc void @s(i64* %q, %struct.anon* %p) {
 entry:
   %0 = load i64, i64* %q, align 8
   %sub = add nsw i64 %0, -1
-  tail call arm_aapcscc void bitcast (void (...)* @r to void (%struct.anon*, %struct.anon*, i64)*)(%struct.anon* byval nonnull align 8 %p, %struct.anon* byval nonnull align 8 %p, i64 %sub)
+  tail call arm_aapcscc void bitcast (void (...)* @r to void (%struct.anon*, %struct.anon*, i64)*)(%struct.anon* byval(%struct.anon) nonnull align 8 %p, %struct.anon* byval(%struct.anon) nonnull align 8 %p, i64 %sub)
   ret void
 }
 

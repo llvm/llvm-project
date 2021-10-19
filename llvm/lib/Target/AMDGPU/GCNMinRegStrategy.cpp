@@ -13,20 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist_node.h"
-#include "llvm/ADT/simple_ilist.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/Support/Allocator.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
-#include <limits>
-#include <vector>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"

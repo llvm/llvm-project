@@ -240,8 +240,9 @@ define <4 x i32> @test18(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3,4,5,6,7]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
-; CHECK-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3,4,5,6,7]
-; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0,1],xmm2[2,3,4,5,6,7]
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %shuf1 = shufflevector <4 x i32> %a, <4 x i32> zeroinitializer, <4 x i32><i32 4, i32 0, i32 4, i32 4>
   %shuf2 = shufflevector <4 x i32> %b, <4 x i32> zeroinitializer, <4 x i32><i32 0, i32 4, i32 4, i32 4>
@@ -435,8 +436,8 @@ define <4 x i32> @test2f(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: or_and_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 7, i64 7>
   %2 = or <2 x i64> %1, <i64 3, i64 3>
@@ -446,8 +447,8 @@ define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 define <4 x i32> @or_and_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: or_and_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 1, i32 3, i32 5, i32 7>
   %2 = or <4 x i32> %1, <i32 3, i32 2, i32 15, i32 2>

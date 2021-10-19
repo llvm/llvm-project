@@ -10,7 +10,7 @@
 // some problems with std::errc that can be avoided by using our own
 // enumeration:
 //
-// * std::errc is a namespace in some implementations. That meas that ADL
+// * std::errc is a namespace in some implementations. That means that ADL
 //   doesn't work and it is sometimes necessary to write std::make_error_code
 //   or in templates:
 //   using std::make_error_code;
@@ -22,7 +22,7 @@
 //   the intersection of all the ones we support.
 //
 // * std::errc is just marked with is_error_condition_enum. This means that
-//   common patters like AnErrorCode == errc::no_such_file_or_directory take
+//   common patterns like AnErrorCode == errc::no_such_file_or_directory take
 //   4 virtual calls instead of two comparisons.
 //===----------------------------------------------------------------------===//
 

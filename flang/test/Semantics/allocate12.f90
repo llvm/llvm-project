@@ -1,7 +1,7 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors in ALLOCATE statements
 
-subroutine C941_C942b_C950(xsrc, x1, a2, b2, cx1, ca2, cb1, cb2, c1)
+subroutine C941_C942b_C950(xsrc, x1, a2, b2, cx1, ca2, cb1, cb2, c1, c2)
 ! C941: An allocate-coarray-spec shall appear if and only if the allocate-object
 ! is a coarray.
   type type0
@@ -40,6 +40,8 @@ subroutine C941_C942b_C950(xsrc, x1, a2, b2, cx1, ca2, cb1, cb2, c1)
   type(B) :: cb1[5:*], cb2(*)[2, -1:*]
 
   type(C) :: c1
+  pointer :: c2(:, :)
+  pointer :: varLocal(:)
 
   class(*), allocatable :: var(:), cvar(:)[:]
 
@@ -48,6 +50,8 @@ subroutine C941_C942b_C950(xsrc, x1, a2, b2, cx1, ca2, cb1, cb2, c1)
   allocate(a1, a2(10), ca1[2, -1:*], ca2(10)[*])
   allocate(b1%x, b2(1)%x, cb1%x, cb2(1)%x, SOURCE=xsrc)
   allocate(c1%x(-1:10, 1:5), c1%cx(-1:10, 1:5)[-1:5, 1:2, 2:*])
+  allocate(c2(9, 27))
+  allocate(varLocal(64))
   allocate(A:: var(5), cvar(10)[*])
 
 

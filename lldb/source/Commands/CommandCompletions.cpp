@@ -213,10 +213,10 @@ public:
                                           Address *addr) override {
     if (context.module_sp) {
       SymbolContextList sc_list;
-      const bool include_symbols = true;
-      const bool include_inlines = true;
-      context.module_sp->FindFunctions(m_regex, include_symbols,
-                                       include_inlines, sc_list);
+      ModuleFunctionSearchOptions function_options;
+      function_options.include_symbols = true;
+      function_options.include_inlines = true;
+      context.module_sp->FindFunctions(m_regex, function_options, sc_list);
 
       SymbolContext sc;
       // Now add the functions & symbols to the list - only add if unique:
@@ -331,7 +331,7 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
   llvm::StringRef PartialItem;
 
   if (CompletionBuffer.startswith("~")) {
-    llvm::StringRef Buffer(CompletionBuffer);
+    llvm::StringRef Buffer = CompletionBuffer;
     size_t FirstSep =
         Buffer.find_if([](char c) { return path::is_separator(c); });
 
@@ -774,9 +774,7 @@ void CommandCompletions::WatchPointIDs(CommandInterpreter &interpreter,
     return;
 
   const WatchpointList &wp_list = exe_ctx.GetTargetPtr()->GetWatchpointList();
-  const size_t wp_num = wp_list.GetSize();
-  for (size_t idx = 0; idx < wp_num; ++idx) {
-    const lldb::WatchpointSP wp_sp = wp_list.GetByIndex(idx);
+  for (lldb::WatchpointSP wp_sp : wp_list.Watchpoints()) {
     StreamString strm;
     wp_sp->Dump(&strm);
     request.TryCompleteCurrentArg(std::to_string(wp_sp->GetID()),

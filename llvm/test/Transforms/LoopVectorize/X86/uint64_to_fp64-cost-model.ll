@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 ; CHECK: cost of 4 for VF 1 For instruction:   %conv = uitofp i64 %tmp to double
 ; CHECK: cost of 5 for VF 2 For instruction:   %conv = uitofp i64 %tmp to double
-; CHECK: cost of 6 for VF 4 For instruction:   %conv = uitofp i64 %tmp to double
+; CHECK: cost of 10 for VF 4 For instruction:   %conv = uitofp i64 %tmp to double
 define void @uint64_to_double_cost(i64* noalias nocapture %a, double* noalias nocapture readonly %b) nounwind {
 entry:
   br label %for.body

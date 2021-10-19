@@ -27,7 +27,7 @@ int main(int, char**)
 {
     {
         typedef MoveOnly V;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef test_allocator<V> A;
         typedef std::multiset<MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -65,7 +65,7 @@ int main(int, char**)
     }
     {
         typedef MoveOnly V;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef test_allocator<V> A;
         typedef std::multiset<MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -103,7 +103,7 @@ int main(int, char**)
     }
     {
         typedef MoveOnly V;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef other_allocator<V> A;
         typedef std::multiset<MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;

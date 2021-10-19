@@ -4,19 +4,19 @@
 ; When compiled and run this should print zero.
 
 
-@c = common local_unnamed_addr global i32 0, align 4
-@f = common local_unnamed_addr global i32 0, align 4
-@e = common local_unnamed_addr global i32 0, align 4
+@c = common dso_local local_unnamed_addr global i32 0, align 4
+@f = common dso_local local_unnamed_addr global i32 0, align 4
+@e = common dso_local local_unnamed_addr global i32 0, align 4
 @.str.1 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
 
 ; We should only see a single store to f (a bytes store to f+3).
-define void @k(i32 %l) {
+define dso_local void @k(i32 %l) {
 ; CHECK-LABEL: k:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
-; CHECK-NEXT:    orl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl e(%rip), %eax
+; CHECK-NEXT:    orl f(%rip), %eax
 ; CHECK-NEXT:    shrl $24, %eax
-; CHECK-NEXT:    movb %al, f+{{.*}}(%rip)
+; CHECK-NEXT:    movb %al, f+3(%rip)
 ; CHECK-NEXT:    retq
   %load = load i32, i32* @c, align 4
   %load6 = load i32, i32* @f, align 4
@@ -38,17 +38,17 @@ define void @k(i32 %l) {
 
 declare i32 @printf(i8* nocapture readonly, ...)
 
-define i32 @main() {
+define dso_local i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq k
-; CHECK-NEXT:    movl {{.*}}(%rip), %esi
+; CHECK-NEXT:    movl f(%rip), %esi
 ; CHECK-NEXT:    movl $.L.str.1, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

@@ -13,7 +13,7 @@
 #include "lldb/API/SBModule.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_vscode {
 
@@ -399,6 +399,18 @@ llvm::json::Value CreateThread(lldb::SBThread &thread);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 
+/// \return
+///     The variable name of \a value or a default placeholder.
+const char *GetNonNullVariableName(lldb::SBValue value);
+
+/// VSCode can't display two variables with the same name, so we need to
+/// distinguish them by using a suffix.
+///
+/// If the source and line information is present, we use it as the suffix.
+/// Otherwise, we fallback to the variable address or register location.
+std::string CreateUniqueVariableNameForDisplay(lldb::SBValue v,
+                                               bool is_name_duplicated);
+
 /// Create a "Variable" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -435,13 +447,46 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread, uint32_t stop_id);
 ///     It set to true the variable will be formatted as hex in
 ///     the "value" key value pair for the value of the variable.
 ///
+/// \param[in] is_name_duplicated
+///     Whether the same variable name appears multiple times within the same
+///     context (e.g. locals). This can happen due to shadowed variables in
+///     nested blocks.
+///
+///     As VSCode doesn't render two of more variables with the same name, we
+///     apply a suffix to distinguish duplicated variables.
+///
 /// \return
 ///     A "Variable" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
-                                 int64_t varID, bool format_hex);
+                                 int64_t varID, bool format_hex,
+                                 bool is_name_duplicated = false);
 
 llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit);
+
+/// Create a runInTerminal reverse request object
+///
+/// \param[in] launch_request
+///     The original launch_request object whose fields are used to construct
+///     the reverse request object.
+///
+/// \param[in] debug_adaptor_path
+///     Path to the current debug adaptor. It will be used to delegate the
+///     launch of the target.
+///
+/// \param[in] comm_file
+///     The fifo file used to communicate the with the target launcher.
+///
+/// \return
+///     A "runInTerminal" JSON object that follows the specification outlined by
+///     Microsoft.
+llvm::json::Object
+CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
+                                  llvm::StringRef debug_adaptor_path,
+                                  llvm::StringRef comm_file);
+
+/// Convert a given JSON object to a string.
+std::string JSONToString(const llvm::json::Value &json);
 
 } // namespace lldb_vscode
 

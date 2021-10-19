@@ -92,3 +92,19 @@ define <8 x i16> @fun10(<8 x i8> %val1) {
   ret <8 x i16> %z
 }
 
+define <2 x i32> @fun11(<2 x i64> %Arg1, <2 x i64> %Arg2) {
+; CHECK-LABEL: fun11:
+; CHECK:      vgbm    %v0, 0
+; CHECK-NEXT: vceqg   %v1, %v24, %v0
+; CHECK-NEXT: vceqg   %v0, %v26, %v0
+; CHECK-NEXT: vo      %v0, %v1, %v0
+; CHECK-NEXT: vrepig  %v1, 1
+; CHECK-NEXT: vn      %v0, %v0, %v1
+; CHECK-NEXT: vpkg    %v24, %v0, %v0
+; CHECK-NEXT: br      %r14
+  %i3 = icmp eq <2 x i64> %Arg1, zeroinitializer
+  %i5 = icmp eq <2 x i64> %Arg2, zeroinitializer
+  %i6 = or <2 x i1> %i3, %i5
+  %i7 = zext <2 x i1> %i6 to <2 x i32>
+  ret <2 x i32> %i7
+}

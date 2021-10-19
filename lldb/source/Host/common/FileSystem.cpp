@@ -19,11 +19,11 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Threading.h"
 
-#include <errno.h>
+#include <cerrno>
+#include <climits>
+#include <cstdarg>
+#include <cstdio>
 #include <fcntl.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdio.h>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -49,7 +49,7 @@ void FileSystem::Initialize() {
   InstanceImpl().emplace();
 }
 
-void FileSystem::Initialize(std::shared_ptr<FileCollector> collector) {
+void FileSystem::Initialize(std::shared_ptr<FileCollectorBase> collector) {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(collector);
 }
@@ -307,7 +307,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
   std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
   if (size == 0) {
     auto buffer_or_error =
-        llvm::WritableMemoryBuffer::getFile(*external_path, -1, is_volatile);
+        llvm::WritableMemoryBuffer::getFile(*external_path, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);
@@ -381,13 +381,13 @@ static int OpenWithFS(const FileSystem &fs, const char *path, int flags,
   return const_cast<FileSystem &>(fs).Open(path, flags, mode);
 }
 
-static int GetOpenFlags(uint32_t options) {
-  const bool read = options & File::eOpenOptionRead;
-  const bool write = options & File::eOpenOptionWrite;
-
+static int GetOpenFlags(File::OpenOptions options) {
   int open_flags = 0;
-  if (write) {
-    if (read)
+  File::OpenOptions rw =
+      options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                 File::eOpenOptionReadWrite);
+  if (rw == File::eOpenOptionWriteOnly || rw == File::eOpenOptionReadWrite) {
+    if (rw == File::eOpenOptionReadWrite)
       open_flags |= O_RDWR;
     else
       open_flags |= O_WRONLY;
@@ -403,7 +403,7 @@ static int GetOpenFlags(uint32_t options) {
 
     if (options & File::eOpenOptionCanCreateNewOnly)
       open_flags |= O_CREAT | O_EXCL;
-  } else if (read) {
+  } else if (rw == File::eOpenOptionReadOnly) {
     open_flags |= O_RDONLY;
 
 #ifndef _WIN32
@@ -478,20 +478,18 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
     return path.str();
 
   // If VFS mapped we know the underlying FS is a RedirectingFileSystem.
-  ErrorOr<vfs::RedirectingFileSystem::Entry *> E =
-      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path);
-  if (!E) {
-    if (E.getError() == llvm::errc::no_such_file_or_directory) {
+  ErrorOr<vfs::RedirectingFileSystem::LookupResult> Result =
+      static_cast<vfs::RedirectingFileSystem &>(*m_fs).lookupPath(path.str());
+  if (!Result) {
+    if (Result.getError() == llvm::errc::no_such_file_or_directory) {
       return path.str();
     }
-    return E.getError();
+    return Result.getError();
   }
 
-  auto *F = dyn_cast<vfs::RedirectingFileSystem::RedirectingFileEntry>(*E);
-  if (!F)
-    return make_error_code(llvm::errc::not_supported);
-
-  return F->getExternalContentsPath().str();
+  if (Optional<StringRef> ExtRedirect = Result->getExternalRedirect())
+    return std::string(*ExtRedirect);
+  return make_error_code(llvm::errc::not_supported);
 }
 
 ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {

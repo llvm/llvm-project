@@ -22,11 +22,8 @@ class FrameDisassembleTestCase(TestBase):
 
     def frame_disassemble_test(self):
         """Sample test to ensure SBFrame::Disassemble produces SOME output"""
-        exe = self.getBuildArtifact("a.out")
-
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         # Now create a breakpoint in main.c at the source matching
         # "Set a breakpoint here"
@@ -48,8 +45,8 @@ class FrameDisassembleTestCase(TestBase):
         # Did we hit our breakpoint?
         from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
         threads = get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
@@ -57,4 +54,6 @@ class FrameDisassembleTestCase(TestBase):
 
         frame = threads[0].GetFrameAtIndex(0)
         disassembly = frame.Disassemble()
-        self.assertNotEqual(len(disassembly), 0, "Disassembly was empty.")
+        self.assertNotEqual(disassembly, "")
+        self.assertNotIn("error", disassembly)
+        self.assertIn(": nop", disassembly)

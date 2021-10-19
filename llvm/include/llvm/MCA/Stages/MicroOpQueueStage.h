@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_MICRO_OP_QUEUE_STAGE_H
-#define LLVM_MCA_MICRO_OP_QUEUE_STAGE_H
+#ifndef LLVM_MCA_STAGES_MICROOPQUEUESTAGE_H
+#define LLVM_MCA_STAGES_MICROOPQUEUESTAGE_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/Stages/Stage.h"
@@ -85,4 +85,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_MICRO_OP_QUEUE_STAGE_H
+#endif // LLVM_MCA_STAGES_MICROOPQUEUESTAGE_H

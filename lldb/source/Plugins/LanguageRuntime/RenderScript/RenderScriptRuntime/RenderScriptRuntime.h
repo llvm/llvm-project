@@ -44,9 +44,9 @@ typedef std::shared_ptr<RSKernelDescriptor> RSKernelDescriptorSP;
 typedef std::shared_ptr<RSScriptGroupDescriptor> RSScriptGroupDescriptorSP;
 
 struct RSCoordinate {
-  uint32_t x, y, z;
+  uint32_t x = 0, y = 0, z = 0;
 
-  RSCoordinate() : x(), y(), z(){};
+  RSCoordinate() = default;
 
   bool operator==(const lldb_renderscript::RSCoordinate &rhs) {
     return x == rhs.x && y == rhs.y && z == rhs.z;
@@ -410,9 +410,9 @@ public:
   bool GetOverrideExprOptions(clang::TargetOptions &prototype);
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   static bool GetKernelCoordinate(lldb_renderscript::RSCoordinate &coord,
                                   Thread *thread_ptr);

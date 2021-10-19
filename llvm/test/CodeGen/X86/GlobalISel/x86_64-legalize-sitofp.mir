@@ -88,11 +88,10 @@ body:             |
     ; CHECK-LABEL: name: int8_to_float
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 24
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s8)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY [[C]](s8)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY2]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s8)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[C]](s8)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY1]](s8)
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[SITOFP]](s32)
     ; CHECK: $xmm0 = COPY [[ANYEXT]](s128)
@@ -121,11 +120,10 @@ body:             |
     ; CHECK-LABEL: name: int16_to_float
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s8)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY [[C]](s8)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY2]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s8)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[C]](s8)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY1]](s8)
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[ASHR]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[SITOFP]](s32)
     ; CHECK: $xmm0 = COPY [[ANYEXT]](s128)
@@ -206,11 +204,10 @@ body:             |
     ; CHECK-LABEL: name: int8_to_double
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 24
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s8)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY [[C]](s8)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY2]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s8)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[C]](s8)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY1]](s8)
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[SITOFP]](s64)
     ; CHECK: $xmm0 = COPY [[ANYEXT]](s128)
@@ -239,11 +236,10 @@ body:             |
     ; CHECK-LABEL: name: int16_to_double
     ; CHECK: liveins: $edi
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s8)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY [[C]](s8)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY2]](s8)
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s8)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[C]](s8)
+    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[COPY1]](s8)
     ; CHECK: [[SITOFP:%[0-9]+]]:_(s64) = G_SITOFP [[ASHR]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[SITOFP]](s64)
     ; CHECK: $xmm0 = COPY [[ANYEXT]](s128)

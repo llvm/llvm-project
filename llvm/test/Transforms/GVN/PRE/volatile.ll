@@ -8,7 +8,7 @@
 define i32 @test1(i32* nocapture %p, i32* nocapture %q) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -24,8 +24,8 @@ entry:
 define i32 @test2(i32* nocapture %p, i32* nocapture %q) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[P]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -41,9 +41,9 @@ entry:
 define i32 @test3(i32* noalias nocapture %p, i32* noalias nocapture %q) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* [[Q:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[P]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[P]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -79,7 +79,7 @@ entry:
 define i32 @test5(i32* nocapture %p, i32* nocapture %q) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -93,11 +93,11 @@ entry:
 define i32 @test6(i32* noalias nocapture %p, i32* noalias nocapture %q) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[Y1]])
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y1]], [[X]]
 ; CHECK-NEXT:    [[CND:%.*]] = icmp eq i32 [[ADD]], 0
 ; CHECK-NEXT:    br i1 [[CND]], label [[EXIT:%.*]], label [[HEADER]]
@@ -124,15 +124,15 @@ define i32 @test7(i1 %c, i32* noalias nocapture %p, i32* noalias nocapture %q) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[ENTRY_HEADER_CRIT_EDGE:%.*]], label [[SKIP:%.*]]
 ; CHECK:       entry.header_crit_edge:
-; CHECK-NEXT:    [[Y_PRE:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[Y_PRE:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       skip:
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[Y1:%.*]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    call void @use(i32 [[Y1]])
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[Y_PRE]], [[ENTRY_HEADER_CRIT_EDGE]] ], [ [[Y]], [[HEADER]] ], [ [[Y1]], [[SKIP]] ]
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CND:%.*]] = icmp eq i32 [[ADD]], 0
 ; CHECK-NEXT:    br i1 [[CND]], label [[EXIT:%.*]], label [[HEADER]]
@@ -172,7 +172,7 @@ define i32 @test8(i1 %b, i1 %c, i32* noalias %p, i32* noalias %q) {
 ; CHECK-NEXT:    call void @clobber(i32* [[P]], i32* [[Q]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[SKIP_HEADER_CRIT_EDGE]], label [[EXIT:%.*]]
 ; CHECK:       skip.header_crit_edge:
-; CHECK-NEXT:    [[Y_PRE]] = load i32, i32* [[P]]
+; CHECK-NEXT:    [[Y_PRE]] = load i32, i32* [[P]], align 4
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
@@ -204,7 +204,7 @@ define i32 @test9(i32* %V) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = call i32 undef()
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 entry:
   %load = call i32 undef()

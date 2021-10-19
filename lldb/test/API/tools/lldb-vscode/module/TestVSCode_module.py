@@ -24,47 +24,36 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         breakpoint_ids = self.set_function_breakpoints(functions)
         self.assertEquals(len(breakpoint_ids), len(functions), 'expect one breakpoint')
         self.continue_to_breakpoints(breakpoint_ids)
-        active_modules = self.vscode.get_active_modules()
+        active_modules = self.vscode.get_modules()
         program_module = active_modules[program_basename]
         self.assertIn(program_basename, active_modules, '%s module is in active modules' % (program_basename))
         self.assertIn('name', program_module, 'make sure name is in module')
         self.assertEqual(program_basename, program_module['name'])
         self.assertIn('path', program_module, 'make sure path is in module')
         self.assertEqual(program, program_module['path'])
-        self.assertTrue('symbolFilePath' not in program_module, 'Make sure a.out.stripped has no debug info')
-        self.assertEqual('Symbols not found.', program_module['symbolStatus'])
+        self.assertNotIn('symbolFilePath', program_module, 'Make sure a.out.stripped has no debug info')
         symbols_path = self.getBuildArtifact(symbol_basename)
         self.vscode.request_evaluate('`%s' % ('target symbols add -s "%s" "%s"' % (program, symbols_path)))
 
-        def checkSymbolsLoaded():
-            active_modules = self.vscode.get_active_modules()
-            program_module = active_modules[program_basename]
-            return 'Symbols loaded.' == program_module['symbolStatus']
-
         def checkSymbolsLoadedWithSize():
-            active_modules = self.vscode.get_active_modules()
+            active_modules = self.vscode.get_modules()
             program_module = active_modules[program_basename]
-            symbolsStatus = program_module['symbolStatus']
-            symbol_regex = re.compile(r"Symbols loaded. \([0-9]+(\.[0-9]*)?[KMG]?B\)")
+            self.assertIn('symbolFilePath', program_module)
+            self.assertIn(symbols_path, program_module['symbolFilePath'])
+            symbol_regex = re.compile(r"[0-9]+(\.[0-9]*)?[KMG]?B")
             return symbol_regex.match(program_module['symbolStatus'])
                 
         if expect_debug_info_size:
             self.waitUntil(checkSymbolsLoadedWithSize)
-        else:
-            self.waitUntil(checkSymbolsLoaded)
-        active_modules = self.vscode.get_active_modules()
+        active_modules = self.vscode.get_modules()
         program_module = active_modules[program_basename]
         self.assertEqual(program_basename, program_module['name'])
         self.assertEqual(program, program_module['path'])
-        self.assertIn('symbolFilePath', program_module)
-        self.assertIn(symbols_path, program_module['symbolFilePath'])
         self.assertIn('addressRange', program_module)
 
     @skipIfWindows
-    @skipUnlessDarwin
     @skipIfRemote  
-    #TODO: Update the Makefile so that this test runs on Linux
-    def test_module_event(self):
+    def test_modules(self):
         '''
             Mac or linux.
 
@@ -73,28 +62,23 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
             sections are in .o files.
 
             On other platforms, we expect a.out to have debug info, so we will expect a size.
-            expect_debug_info_size = platform.system() != 'Darwin'
-            return self.run_test("a.out", expect_debug_info_size)
         '''
-        expect_debug_info_size = platform.system() != 'Darwin'
-        return self.run_test("a.out", expect_debug_info_size)
+        return self.run_test("a.out", expect_debug_info_size=platform.system() != 'Darwin')
 
-    @skipIfWindows
     @skipUnlessDarwin
     @skipIfRemote    
-    def test_module_event_dsym(self):
+    def test_modules_dsym(self):
         '''
             Darwin only test with dSYM file.
 
             On mac, if we load a.out.dSYM as our symbol file, we will have debug symbols and we
             will have DWARF sections added to the module, so we will expect a size.
-            return self.run_test("a.out.dSYM", True)
         '''
-        return self.run_test("a.out.dSYM", True)
+        return self.run_test("a.out.dSYM", expect_debug_info_size=True)
 
     @skipIfWindows
-    @skipUnlessDarwin
     @skipIfRemote
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr49418")
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
@@ -104,11 +88,10 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = [breakpoint1_line]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.continue_to_breakpoints(breakpoint_ids)
-        moduleId = self.vscode.get_active_modules()['a.out']['id']
-        response = self.vscode.request_getCompileUnits(moduleId)
+        moduleId = self.vscode.get_modules()['a.out']['id']
+        response = self.vscode.request_compileUnits(moduleId)
         self.assertTrue(response['body'])
-        self.assertTrue(len(response['body']['compileUnits']) == 1,
+        self.assertEqual(len(response['body']['compileUnits']), 1,
                         'Only one source file should exist')
-        self.assertTrue(response['body']['compileUnits'][0]['compileUnitPath'] == main_source_path,
+        self.assertEqual(response['body']['compileUnits'][0]['compileUnitPath'], main_source_path,
                         'Real path to main.cpp matches')
-

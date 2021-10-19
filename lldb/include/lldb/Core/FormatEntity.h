@@ -9,26 +9,27 @@
 #ifndef LLDB_CORE_FORMATENTITY_H
 #define LLDB_CORE_FORMATENTITY_H
 
-#include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
 #include <algorithm>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include <string>
 #include <vector>
 
 namespace lldb_private {
 class Address;
+class CompletionRequest;
 class ExecutionContext;
+class FileSpec;
+class Status;
 class Stream;
 class StringList;
 class SymbolContext;
 class ValueObject;
 }
+
 namespace llvm {
 class StringRef;
 }
@@ -103,20 +104,51 @@ public:
     };
 
     struct Definition {
+      /// The name/string placeholder that corresponds to this definition.
       const char *name;
-      const char *string; // Insert this exact string into the output
-      Entry::Type type;
-      uint64_t data;
-      uint32_t num_children;
-      Definition *children; // An array of "num_children" Definition entries,
-      bool keep_separator;
+      /// Insert this exact string into the output
+      const char *string = nullptr;
+      /// Entry::Type corresponding to this definition.
+      const Entry::Type type;
+      /// Data that is returned as the value of the format string.
+      const uint64_t data = 0;
+      /// The number of children of this node in the tree of format strings.
+      const uint32_t num_children = 0;
+      /// An array of "num_children" Definition entries.
+      const Definition *children = nullptr;
+      /// Whether the separator is kept during parsing or not.  It's used
+      /// for entries with parameters.
+      const bool keep_separator = false;
+
+      constexpr Definition(const char *name, const FormatEntity::Entry::Type t)
+          : name(name), type(t) {}
+
+      constexpr Definition(const char *name, const char *string)
+          : name(name), string(string), type(Entry::Type::EscapeCode) {}
+
+      constexpr Definition(const char *name, const FormatEntity::Entry::Type t,
+                           const uint64_t data)
+          : name(name), type(t), data(data) {}
+
+      constexpr Definition(const char *name, const FormatEntity::Entry::Type t,
+                           const uint64_t num_children,
+                           const Definition *children,
+                           const bool keep_separator = false)
+          : name(name), type(t), num_children(num_children), children(children),
+            keep_separator(keep_separator) {}
     };
+
+    template <size_t N>
+    static constexpr Definition
+    DefinitionWithChildren(const char *name, const FormatEntity::Entry::Type t,
+                           const Definition (&children)[N],
+                           bool keep_separator = false) {
+      return Definition(name, t, N, children, keep_separator);
+    }
 
     Entry(Type t = Type::Invalid, const char *s = nullptr,
           const char *f = nullptr)
-        : string(s ? s : ""), printf_format(f ? f : ""), children(),
-          definition(nullptr), type(t), fmt(lldb::eFormatDefault), number(0),
-          deref(false) {}
+        : string(s ? s : ""), printf_format(f ? f : ""), children(), type(t) {}
 
     Entry(llvm::StringRef s);
     Entry(char ch);
@@ -133,7 +165,6 @@ public:
       string.clear();
       printf_format.clear();
       children.clear();
-      definition = nullptr;
       type = Type::Invalid;
       fmt = lldb::eFormatDefault;
       number = 0;
@@ -157,8 +188,6 @@ public:
       }
       if (children != rhs.children)
         return false;
-      if (definition != rhs.definition)
-        return false;
       if (type != rhs.type)
         return false;
       if (fmt != rhs.fmt)
@@ -171,11 +200,10 @@ public:
     std::string string;
     std::string printf_format;
     std::vector<Entry> children;
-    Definition *definition;
     Type type;
-    lldb::Format fmt;
-    lldb::addr_t number;
-    bool deref;
+    lldb::Format fmt = lldb::eFormatDefault;
+    lldb::addr_t number = 0;
+    bool deref = false;
   };
 
   static bool Format(const Entry &entry, Stream &s, const SymbolContext *sc,

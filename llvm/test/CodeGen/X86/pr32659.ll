@@ -3,17 +3,17 @@
 
 target triple = "i386-unknown-linux-gnu"
 
-@a = external global i32, align 4
-@d = external global i32*, align 4
-@k = external global i32**, align 4
-@j = external global i32***, align 4
-@h = external global i32, align 4
-@c = external global i32, align 4
-@i = external global i32, align 4
-@b = external global i32, align 4
-@f = external global i64, align 8
-@e = external global i64, align 8
-@g = external global i32, align 4
+@a = external dso_local global i32, align 4
+@d = external dso_local global i32*, align 4
+@k = external dso_local global i32**, align 4
+@j = external dso_local global i32***, align 4
+@h = external dso_local global i32, align 4
+@c = external dso_local global i32, align 4
+@i = external dso_local global i32, align 4
+@b = external dso_local global i32, align 4
+@f = external dso_local global i64, align 8
+@e = external dso_local global i64, align 8
+@g = external dso_local global i32, align 4
 
 declare i32 @fn1(i32 returned) optsize readnone
 
@@ -27,7 +27,7 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl $48, (%esp)
-; CHECK-NEXT:    calll putchar
+; CHECK-NEXT:    calll putchar@PLT
 ; CHECK-NEXT:    movl h, %eax
 ; CHECK-NEXT:    movl c, %ecx
 ; CHECK-NEXT:    movl j, %edx

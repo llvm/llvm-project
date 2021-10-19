@@ -1,4 +1,3 @@
-; RUN: opt < %s -store-to-load-forwarding-conflict-detection=false -loop-accesses -analyze | FileCheck %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -store-to-load-forwarding-conflict-detection=false  -disable-output  < %s 2>&1 | FileCheck %s
 
 ; This test checks that we prove the strided accesses to be independent before

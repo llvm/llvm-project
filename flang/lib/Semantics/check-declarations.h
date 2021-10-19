@@ -12,8 +12,6 @@
 #define FORTRAN_SEMANTICS_CHECK_DECLARATIONS_H_
 namespace Fortran::semantics {
 class SemanticsContext;
-class DerivedTypeSpec;
 void CheckDeclarations(SemanticsContext &);
-void CheckInstantiatedDerivedType(SemanticsContext &, const DerivedTypeSpec &);
 } // namespace Fortran::semantics
 #endif

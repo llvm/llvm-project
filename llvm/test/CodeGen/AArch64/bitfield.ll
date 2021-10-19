@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck %s
 
-@var32 = global i32 0
-@var64 = global i64 0
+@var32 = dso_local global i32 0
+@var64 = dso_local global i64 0
 
-define void @test_extendb32(i8 %var) {
+define dso_local void @test_extendb32(i8 %var) {
 ; CHECK-LABEL: test_extendb32:
 
   %sxt32 = sext i8 %var to i32
@@ -19,7 +19,7 @@ define void @test_extendb32(i8 %var) {
   ret void
 }
 
-define void @test_extendb64(i8 %var) {
+define dso_local void @test_extendb64(i8 %var) {
 ; CHECK-LABEL: test_extendb64:
 
   %sxt64 = sext i8 %var to i64
@@ -35,7 +35,7 @@ define void @test_extendb64(i8 %var) {
   ret void
 }
 
-define void @test_extendh32(i16 %var) {
+define dso_local void @test_extendh32(i16 %var) {
 ; CHECK-LABEL: test_extendh32:
 
   %sxt32 = sext i16 %var to i32
@@ -51,7 +51,7 @@ define void @test_extendh32(i16 %var) {
   ret void
 }
 
-define void @test_extendh64(i16 %var) {
+define dso_local void @test_extendh64(i16 %var) {
 ; CHECK-LABEL: test_extendh64:
 
   %sxt64 = sext i16 %var to i64
@@ -67,7 +67,7 @@ define void @test_extendh64(i16 %var) {
   ret void
 }
 
-define void @test_extendw(i32 %var) {
+define dso_local void @test_extendw(i32 %var) {
 ; CHECK-LABEL: test_extendw:
 
   %sxt64 = sext i32 %var to i64
@@ -80,7 +80,7 @@ define void @test_extendw(i32 %var) {
   ret void
 }
 
-define void @test_shifts(i32 %val32, i64 %val64) {
+define dso_local void @test_shifts(i32 %val32, i64 %val64) {
 ; CHECK-LABEL: test_shifts:
 
   %shift1 = ashr i32 %val32, 31
@@ -128,7 +128,7 @@ define void @test_shifts(i32 %val32, i64 %val64) {
 
 ; LLVM can produce in-register extensions taking place entirely with
 ; 64-bit registers too.
-define void @test_sext_inreg_64(i64 %in) {
+define dso_local void @test_sext_inreg_64(i64 %in) {
 ; CHECK-LABEL: test_sext_inreg_64:
 
 ; i1 doesn't have an official alias, but crops up and is handled by
@@ -157,7 +157,7 @@ define void @test_sext_inreg_64(i64 %in) {
 
 ; These instructions don't actually select to official bitfield
 ; operations, but it's important that we select them somehow:
-define void @test_zext_inreg_64(i64 %in) {
+define dso_local void @test_zext_inreg_64(i64 %in) {
 ; CHECK-LABEL: test_zext_inreg_64:
 
   %trunc_i8 = trunc i64 %in to i8
@@ -178,7 +178,7 @@ define void @test_zext_inreg_64(i64 %in) {
   ret void
 }
 
-define i64 @test_sext_inreg_from_32(i32 %in) {
+define dso_local i64 @test_sext_inreg_from_32(i32 %in) {
 ; CHECK-LABEL: test_sext_inreg_from_32:
 
   %small = trunc i32 %in to i1
@@ -192,7 +192,7 @@ define i64 @test_sext_inreg_from_32(i32 %in) {
 }
 
 
-define i32 @test_ubfx32(i32* %addr) {
+define dso_local i32 @test_ubfx32(i32* %addr) {
 ; CHECK-LABEL: test_ubfx32:
 ; CHECK: ubfx {{w[0-9]+}}, {{w[0-9]+}}, #23, #3
 
@@ -202,7 +202,7 @@ define i32 @test_ubfx32(i32* %addr) {
    ret i32 %masked
 }
 
-define i64 @test_ubfx64(i64* %addr) {
+define dso_local i64 @test_ubfx64(i64* %addr) {
 ; CHECK-LABEL: test_ubfx64:
 ; CHECK: ubfx {{x[0-9]+}}, {{x[0-9]+}}, #25, #10
    %fields = load i64, i64* %addr
@@ -211,7 +211,7 @@ define i64 @test_ubfx64(i64* %addr) {
    ret i64 %masked
 }
 
-define i32 @test_sbfx32(i32* %addr) {
+define dso_local i32 @test_sbfx32(i32* %addr) {
 ; CHECK-LABEL: test_sbfx32:
 ; CHECK: sbfx {{w[0-9]+}}, {{w[0-9]+}}, #6, #3
 
@@ -221,7 +221,7 @@ define i32 @test_sbfx32(i32* %addr) {
    ret i32 %extended
 }
 
-define i64 @test_sbfx64(i64* %addr) {
+define dso_local i64 @test_sbfx64(i64* %addr) {
 ; CHECK-LABEL: test_sbfx64:
 ; CHECK: sbfx {{x[0-9]+}}, {{x[0-9]+}}, #0, #63
 

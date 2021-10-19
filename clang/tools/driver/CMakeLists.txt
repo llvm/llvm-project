@@ -82,7 +82,7 @@ if (APPLE)
   set(TOOL_INFO_PLIST_OUT "${CMAKE_CURRENT_BINARY_DIR}/${TOOL_INFO_PLIST}")
   target_link_libraries(clang
     PRIVATE
-    "-Wl,-sectcreate,__TEXT,__info_plist,${TOOL_INFO_PLIST_OUT}")
+    "-Wl,-sectcreate,__TEXT,__info_plist,\"${TOOL_INFO_PLIST_OUT}\"")
   configure_file("${TOOL_INFO_PLIST}.in" "${TOOL_INFO_PLIST_OUT}" @ONLY)
 
   set(TOOL_INFO_UTI)
@@ -93,7 +93,7 @@ endif()
 
 if(CLANG_ORDER_FILE AND
     (LLVM_LINKER_IS_LD64 OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD))
-  include(CheckLinkerFlag)
+  include(LLVMCheckLinkerFlag)
 
   if (LLVM_LINKER_IS_LD64)
     set(LINKER_ORDER_FILE_OPTION "-Wl,-order_file,${CLANG_ORDER_FILE}")
@@ -104,7 +104,7 @@ if(CLANG_ORDER_FILE AND
   endif()
 
   # This is a test to ensure the actual order file works with the linker.
-  check_linker_flag(${LINKER_ORDER_FILE_OPTION} LINKER_ORDER_FILE_WORKS)
+  llvm_check_linker_flag(CXX ${LINKER_ORDER_FILE_OPTION} LINKER_ORDER_FILE_WORKS)
 
   # Passing an empty order file disables some linker layout optimizations.
   # To work around this and enable workflows for re-linking when the order file

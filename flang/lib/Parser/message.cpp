@@ -38,14 +38,26 @@ void MessageFormattedText::Format(const MessageFixedText *text, ...) {
   }
   va_list ap;
   va_start(ap, text);
+#ifdef _MSC_VER
+  // Microsoft has a separate function for "positional arguments", which is
+  // used in some messages.
+  int need{_vsprintf_p(nullptr, 0, p, ap)};
+#else
   int need{vsnprintf(nullptr, 0, p, ap)};
+#endif
+
   CHECK(need >= 0);
   char *buffer{
       static_cast<char *>(std::malloc(static_cast<std::size_t>(need) + 1))};
   CHECK(buffer);
   va_end(ap);
   va_start(ap, text);
+#ifdef _MSC_VER
+  // Use positional argument variant of printf.
+  int need2{_vsprintf_p(buffer, need + 1, p, ap)};
+#else
   int need2{vsnprintf(buffer, need + 1, p, ap)};
+#endif
   CHECK(need2 == need);
   va_end(ap);
   string_ = buffer;
@@ -165,58 +177,70 @@ std::string Message::ToString() const {
       text_);
 }
 
-void Message::ResolveProvenances(const CookedSource &cooked) {
+void Message::ResolveProvenances(const AllCookedSources &allCooked) {
   if (CharBlock * cb{std::get_if<CharBlock>(&location_)}) {
     if (std::optional<ProvenanceRange> resolved{
-            cooked.GetProvenanceRange(*cb)}) {
+            allCooked.GetProvenanceRange(*cb)}) {
       location_ = *resolved;
     }
   }
   if (Message * attachment{attachment_.get()}) {
-    attachment->ResolveProvenances(cooked);
+    attachment->ResolveProvenances(allCooked);
   }
 }
 
 std::optional<ProvenanceRange> Message::GetProvenanceRange(
-    const CookedSource &cooked) const {
+    const AllCookedSources &allCooked) const {
   return std::visit(
       common::visitors{
-          [&](CharBlock cb) { return cooked.GetProvenanceRange(cb); },
+          [&](CharBlock cb) { return allCooked.GetProvenanceRange(cb); },
           [](const ProvenanceRange &pr) { return std::make_optional(pr); },
       },
       location_);
 }
 
-void Message::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
-  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(cooked)};
+  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   std::string text;
   if (IsFatal()) {
     text += "error: ";
   }
   text += ToString();
-  const AllSources &sources{cooked.allSources()};
+  const AllSources &sources{allCooked.allSources()};
   sources.EmitMessage(o, provenanceRange, text, echoSourceLine);
-  if (attachmentIsContext_) {
-    for (const Message *context{attachment_.get()}; context;
-         context = context->attachment_.get()) {
-      std::optional<ProvenanceRange> contextProvenance{
-          context->GetProvenanceRange(cooked)};
+  bool isContext{attachmentIsContext_};
+  for (const Message *attachment{attachment_.get()}; attachment;
+       attachment = attachment->attachment_.get()) {
+    text.clear();
+    if (isContext) {
       text = "in the context: ";
-      text += context->ToString();
-      // TODO: don't echo the source lines of a context when it's the
-      // same line (or maybe just never echo source for context)
-      sources.EmitMessage(o, contextProvenance, text,
-          echoSourceLine && contextProvenance != provenanceRange);
-      provenanceRange = contextProvenance;
     }
-  } else {
-    for (const Message *attachment{attachment_.get()}; attachment;
-         attachment = attachment->attachment_.get()) {
-      sources.EmitMessage(o, attachment->GetProvenanceRange(cooked),
-          attachment->ToString(), echoSourceLine);
-    }
+    text += attachment->ToString();
+    sources.EmitMessage(
+        o, attachment->GetProvenanceRange(allCooked), text, echoSourceLine);
+    isContext = attachment->attachmentIsContext_;
   }
+}
+
+// Messages are equal if they're for the same location and text, and the user
+// visible aspects of their attachments are the same
+bool Message::operator==(const Message &that) const {
+  if (!AtSameLocation(that) || ToString() != that.ToString()) {
+    return false;
+  }
+  const Message *thatAttachment{that.attachment_.get()};
+  for (const Message *attachment{attachment_.get()}; attachment;
+       attachment = attachment->attachment_.get()) {
+    if (!thatAttachment ||
+        attachment->attachmentIsContext_ !=
+            thatAttachment->attachmentIsContext_ ||
+        *attachment != *thatAttachment) {
+      return false;
+    }
+    thatAttachment = thatAttachment->attachment_.get();
+  }
+  return true;
 }
 
 bool Message::Merge(const Message &that) {
@@ -237,6 +261,10 @@ Message &Message::Attach(Message *m) {
   if (!attachment_) {
     attachment_ = m;
   } else {
+    if (attachment_->references() > 1) {
+      // Don't attach to a shared context attachment; copy it first.
+      attachment_ = new Message{*attachment_};
+    }
     attachment_->Attach(m);
   }
   return *this;
@@ -260,11 +288,6 @@ bool Message::AtSameLocation(const Message &that) const {
       location_, that.location_);
 }
 
-void Messages::clear() {
-  messages_.clear();
-  ResetLastPointer();
-}
-
 bool Messages::Merge(const Message &msg) {
   if (msg.IsMergeable()) {
     for (auto &m : messages_) {
@@ -284,12 +307,12 @@ void Messages::Merge(Messages &&that) {
       if (Merge(that.messages_.front())) {
         that.messages_.pop_front();
       } else {
-        messages_.splice_after(
-            last_, that.messages_, that.messages_.before_begin());
-        ++last_;
+        auto next{that.messages_.begin()};
+        ++next;
+        messages_.splice(
+            messages_.end(), that.messages_, that.messages_.begin(), next);
       }
     }
-    that.ResetLastPointer();
   }
 }
 
@@ -300,13 +323,13 @@ void Messages::Copy(const Messages &that) {
   }
 }
 
-void Messages::ResolveProvenances(const CookedSource &cooked) {
+void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
   for (Message &m : messages_) {
-    m.ResolveProvenances(cooked);
+    m.ResolveProvenances(allCooked);
   }
 }
 
-void Messages::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLines) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
@@ -314,8 +337,14 @@ void Messages::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
   }
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
+  const Message *lastMsg{nullptr};
   for (const Message *msg : sorted) {
-    msg->Emit(o, cooked, echoSourceLines);
+    if (lastMsg && *msg == *lastMsg) {
+      // Don't emit two identical messages for the same location
+      continue;
+    }
+    msg->Emit(o, allCooked, echoSourceLines);
+    lastMsg = msg;
   }
 }
 

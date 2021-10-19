@@ -9,7 +9,7 @@
 #include "src/ctype/isprint.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(IsPrint, DefaultLocale) {
+TEST(LlvmLibcIsPrint, DefaultLocale) {
   for (int ch = 0; ch < 255; ++ch) {
     if (' ' <= ch && ch <= '~') // A-Z, a-z, 0-9, punctuation, space.
       EXPECT_NE(__llvm_libc::isprint(ch), 0);

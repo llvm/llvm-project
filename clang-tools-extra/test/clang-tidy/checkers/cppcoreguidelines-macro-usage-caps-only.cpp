@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-macro-usage %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: cppcoreguidelines-macro-usage.CheckCapsOnly, value: 1}]}' --
+// RUN:  [{key: cppcoreguidelines-macro-usage.CheckCapsOnly, value: true}]}' --
 
 #ifndef INCLUDE_GUARD
 #define INCLUDE_GUARD

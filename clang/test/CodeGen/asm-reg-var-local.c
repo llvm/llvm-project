@@ -2,7 +2,7 @@
 // Exercise various use cases for local asm "register variables".
 
 int foo() {
-// CHECK-LABEL: define i32 @foo()
+// CHECK-LABEL: define{{.*}} i32 @foo()
 // CHECK: [[A:%[a-zA-Z0-9]+]] = alloca i32
 
   register int a asm("rsi")=5;
@@ -25,7 +25,7 @@ int foo() {
 }
 
 int earlyclobber() {
-// CHECK-LABEL: define i32 @earlyclobber()
+// CHECK-LABEL: define{{.*}} i32 @earlyclobber()
 // CHECK: [[A:%[a-zA-Z0-9]+]] = alloca i32
 
   register int a asm("rsi")=5;

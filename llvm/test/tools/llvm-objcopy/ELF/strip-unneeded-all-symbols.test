@@ -2,20 +2,32 @@
 ## eliminate the static symbol table, because it's not used
 ## by the dynamic loader. 
 
-# RUN: yaml2obj %s -o %t
-# RUN: cp %t %t1
-# RUN: llvm-objcopy --strip-unneeded %t %t2
-# RUN: llvm-readobj --section-headers %t2 | FileCheck %s
+# RUN: yaml2obj %s -o %t.exec -DTYPE=EXEC
+# RUN: llvm-objcopy --strip-unneeded %t.exec %t2.exec
+# RUN: llvm-readobj --section-headers %t2.exec | FileCheck %s --check-prefix=NOSYMTAB
+## Sanity check that the symtab wouldn't be removed if the input were an ET_REL.
+# RUN: yaml2obj %s -o %t.rel -DTYPE=REL
+# RUN: llvm-objcopy --strip-unneeded %t.rel %t2.rel
+# RUN: llvm-readobj --section-headers %t2.rel | FileCheck %s --check-prefix=SYMTAB
 
 !ELF
 FileHeader:
   Class:    ELFCLASS64
   Data:     ELFDATA2LSB
-  Type:     ET_EXEC
+  Type:     ET_[[TYPE]]
   Machine:  EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
 Symbols:
-  - Name:     bar
-  - Name:     foo
+  - Name:     local_undef
+  - Name:     local_def
+    Section:  .text
+  - Name:     global_undef
+    Binding:  STB_GLOBAL
+  - Name:     global_def
+    Section:  .text
     Binding:  STB_GLOBAL
 
-# CHECK-NOT: .symtab
+# NOSYMTAB-NOT: .symtab
+# SYMTAB:       .symtab

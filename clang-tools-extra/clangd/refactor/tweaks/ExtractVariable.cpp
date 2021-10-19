@@ -79,7 +79,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
     }
   };
   FindDeclRefsVisitor Visitor;
-  Visitor.TraverseStmt(const_cast<Stmt *>(dyn_cast<Stmt>(Expr)));
+  Visitor.TraverseStmt(const_cast<Stmt *>(cast<Stmt>(Expr)));
   return Visitor.ReferencedDecls;
 }
 
@@ -202,7 +202,7 @@ ExtractionContext::insertDeclaration(llvm::StringRef VarName,
 struct ParsedBinaryOperator {
   BinaryOperatorKind Kind;
   SourceLocation ExprLoc;
-  llvm::SmallVector<const SelectionTree::Node*, 8> SelectedOperands;
+  llvm::SmallVector<const SelectionTree::Node *> SelectedOperands;
 
   // If N is a binary operator, populate this and return true.
   bool parse(const SelectionTree::Node &N) {
@@ -376,23 +376,33 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   if (llvm::isa<DeclRefExpr>(E) || llvm::isa<MemberExpr>(E))
     return false;
 
-  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   // FIXME: we could still hoist the assignment, and leave the variable there?
   ParsedBinaryOperator BinOp;
   if (BinOp.parse(*N) && BinaryOperator::isAssignmentOp(BinOp.Kind))
     return false;
 
+  const SelectionTree::Node &OuterImplicit = N->outerImplicit();
+  const auto *Parent = OuterImplicit.Parent;
+  if (!Parent)
+    return false;
   // We don't want to extract expressions used as statements, that would leave
-  // a `dummy;` around that has no effect.
+  // a `placeholder;` around that has no effect.
   // Unfortunately because the AST doesn't have ExprStmt, we have to check in
   // this roundabout way.
-  const SelectionTree::Node &OuterImplicit = N->outerImplicit();
-  if (!OuterImplicit.Parent ||
-      childExprIsStmt(OuterImplicit.Parent->ASTNode.get<Stmt>(),
+  if (childExprIsStmt(Parent->ASTNode.get<Stmt>(),
                       OuterImplicit.ASTNode.get<Expr>()))
     return false;
 
-  // FIXME: ban extracting the RHS of an assignment: `a = [[foo()]]`
+  // Disable extraction of full RHS on assignment operations, e.g:
+  // auto x = [[RHS_EXPR]];
+  // This would just result in duplicating the code.
+  if (const auto *BO = Parent->ASTNode.get<BinaryOperator>()) {
+    if (BO->isAssignmentOp() &&
+        BO->getRHS() == OuterImplicit.ASTNode.get<Expr>())
+      return false;
+  }
+
   return true;
 }
 
@@ -412,7 +422,7 @@ const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
       llvm::isa<MemberExpr>(SelectedExpr))
     if (const SelectionTree::Node *Call = getCallExpr(N))
       TargetNode = Call;
-  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  // Extracting Exprs like a = 1 gives placeholder = a = 1 which isn't useful.
   if (const BinaryOperator *BinOpExpr =
           dyn_cast_or_null<BinaryOperator>(SelectedExpr)) {
     if (BinOpExpr->getOpcode() == BinaryOperatorKind::BO_Assign)
@@ -423,13 +433,13 @@ const SelectionTree::Node *computeExtractedExpr(const SelectionTree::Node *N) {
   return TargetNode;
 }
 
-/// Extracts an expression to the variable dummy
+/// Extracts an expression to the variable placeholder
 /// Before:
 /// int x = 5 + 4 * 3;
 ///         ^^^^^
 /// After:
-/// auto dummy = 5 + 4;
-/// int x = dummy * 3;
+/// auto placeholder = 5 + 4;
+/// int x = placeholder * 3;
 class ExtractVariable : public Tweak {
 public:
   const char *id() const override final;
@@ -438,7 +448,9 @@ public:
   std::string title() const override {
     return "Extract subexpression to variable";
   }
-  Intent intent() const override { return Refactor; }
+  llvm::StringLiteral kind() const override {
+    return CodeAction::REFACTOR_KIND;
+  }
 
 private:
   // the expression to extract
@@ -464,7 +476,7 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
 Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   tooling::Replacements Result;
   // FIXME: get variable name from user or suggest based on type
-  std::string VarName = "dummy";
+  std::string VarName = "placeholder";
   SourceRange Range = Target->getExtractionChars();
   // insert new variable declaration
   if (auto Err = Result.add(Target->insertDeclaration(VarName, Range)))

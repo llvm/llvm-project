@@ -1,6 +1,8 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-readobj --demangle -r %t.o | FileCheck %s --check-prefix LLVM
-# RUN: llvm-readelf --demangle -r %t.o | FileCheck %s --check-prefix GNU
+# RUN: llvm-readobj --demangle -r %t.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf --demangle -r %t.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=GNU --implicit-check-not=warning:
 
 # GNU:      Relocation section '.rela.plt' at offset {{.*}} contains 5 entries:
 # GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
@@ -30,13 +32,11 @@ Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
     Flags:   [ SHF_ALLOC ]
-    Entries: [ 0, 2, 3, 4, 2 ]
+    Entries: [ 0, 2, 3, 4, 2, 1 ]
   - Name:         .gnu.version_r
     Type:         SHT_GNU_verneed
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x0000000000000004
-    Info:         0x0000000000000002
     Dependencies:
       - Version: 1
         File:    verneed1.so.0

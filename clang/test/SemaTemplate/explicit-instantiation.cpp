@@ -179,4 +179,10 @@ struct B : A<0> {
   virtual void foo() override; // expected-error{{declaration of 'foo' overrides a 'final' function}}
 };
 }
+
+template<typename T> struct LambdaInDefaultMemberInitInExplicitInstantiation {
+  int a = [this] { return a; }();
+};
+template struct LambdaInDefaultMemberInitInExplicitInstantiation<int>;
+LambdaInDefaultMemberInitInExplicitInstantiation<float> x;
 #endif

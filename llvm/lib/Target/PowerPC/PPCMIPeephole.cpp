@@ -226,28 +226,30 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
 void PPCMIPeephole::UpdateTOCSaves(
   std::map<MachineInstr *, bool> &TOCSaves, MachineInstr *MI) {
   assert(TII->isTOCSaveMI(*MI) && "Expecting a TOC save instruction here");
-  assert(MF->getSubtarget<PPCSubtarget>().isELFv2ABI() &&
-         "TOC-save removal only supported on ELFv2");
-  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  // FIXME: Saving TOC in prologue hasn't been implemented well in AIX ABI part,
+  // here only support it under ELFv2.
+  if (MF->getSubtarget<PPCSubtarget>().isELFv2ABI()) {
+    PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
 
-  MachineBasicBlock *Entry = &MF->front();
-  uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+    MachineBasicBlock *Entry = &MF->front();
+    uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
 
-  // If the block in which the TOC save resides is in a block that
-  // post-dominates Entry, or a block that is hotter than entry (keep in mind
-  // that early MachineLICM has already run so the TOC save won't be hoisted)
-  // we can just do the save in the prologue.
-  if (CurrBlockFreq > EntryFreq || MPDT->dominates(MI->getParent(), Entry))
-    FI->setMustSaveTOC(true);
+    // If the block in which the TOC save resides is in a block that
+    // post-dominates Entry, or a block that is hotter than entry (keep in mind
+    // that early MachineLICM has already run so the TOC save won't be hoisted)
+    // we can just do the save in the prologue.
+    if (CurrBlockFreq > EntryFreq || MPDT->dominates(MI->getParent(), Entry))
+      FI->setMustSaveTOC(true);
 
-  // If we are saving the TOC in the prologue, all the TOC saves can be removed
-  // from the code.
-  if (FI->mustSaveTOC()) {
-    for (auto &TOCSave : TOCSaves)
-      TOCSave.second = false;
-    // Add new instruction to map.
-    TOCSaves[MI] = false;
-    return;
+    // If we are saving the TOC in the prologue, all the TOC saves can be
+    // removed from the code.
+    if (FI->mustSaveTOC()) {
+      for (auto &TOCSave : TOCSaves)
+        TOCSave.second = false;
+      // Add new instruction to map.
+      TOCSaves[MI] = false;
+      return;
+    }
   }
 
   bool Keep = true;
@@ -265,6 +267,113 @@ void PPCMIPeephole::UpdateTOCSaves(
   }
   // Add new instruction to map.
   TOCSaves[MI] = Keep;
+}
+
+// This function returns a list of all PHI nodes in the tree starting from
+// the RootPHI node. We perform a BFS traversal to get an ordered list of nodes.
+// The list initially only contains the root PHI. When we visit a PHI node, we
+// add it to the list. We continue to look for other PHI node operands while
+// there are nodes to visit in the list. The function returns false if the
+// optimization cannot be applied on this tree.
+static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
+                                   MachineInstr *RootPHI,
+                                   SmallVectorImpl<MachineInstr *> &PHIs) {
+  PHIs.push_back(RootPHI);
+  unsigned VisitedIndex = 0;
+  while (VisitedIndex < PHIs.size()) {
+    MachineInstr *VisitedPHI = PHIs[VisitedIndex];
+    for (unsigned PHIOp = 1, NumOps = VisitedPHI->getNumOperands();
+         PHIOp != NumOps; PHIOp += 2) {
+      Register RegOp = VisitedPHI->getOperand(PHIOp).getReg();
+      if (!Register::isVirtualRegister(RegOp))
+        return false;
+      MachineInstr *Instr = MRI->getVRegDef(RegOp);
+      // While collecting the PHI nodes, we check if they can be converted (i.e.
+      // all the operands are either copies, implicit defs or PHI nodes).
+      unsigned Opcode = Instr->getOpcode();
+      if (Opcode == PPC::COPY) {
+        Register Reg = Instr->getOperand(1).getReg();
+        if (!Register::isVirtualRegister(Reg) ||
+            MRI->getRegClass(Reg) != &PPC::ACCRCRegClass)
+          return false;
+      } else if (Opcode != PPC::IMPLICIT_DEF && Opcode != PPC::PHI)
+        return false;
+      // If we detect a cycle in the PHI nodes, we exit. It would be
+      // possible to change cycles as well, but that would add a lot
+      // of complexity for a case that is unlikely to occur with MMA
+      // code.
+      if (Opcode != PPC::PHI)
+        continue;
+      if (llvm::is_contained(PHIs, Instr))
+        return false;
+      PHIs.push_back(Instr);
+    }
+    VisitedIndex++;
+  }
+  return true;
+}
+
+// This function changes the unprimed accumulator PHI nodes in the PHIs list to
+// primed accumulator PHI nodes. The list is traversed in reverse order to
+// change all the PHI operands of a PHI node before changing the node itself.
+// We keep a map to associate each changed PHI node to its non-changed form.
+static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
+                                   MachineRegisterInfo *MRI,
+                                   SmallVectorImpl<MachineInstr *> &PHIs,
+                                   Register Dst) {
+  DenseMap<MachineInstr *, MachineInstr *> ChangedPHIMap;
+  for (auto It = PHIs.rbegin(), End = PHIs.rend(); It != End; ++It) {
+    MachineInstr *PHI = *It;
+    SmallVector<std::pair<MachineOperand, MachineOperand>, 4> PHIOps;
+    // We check if the current PHI node can be changed by looking at its
+    // operands. If all the operands are either copies from primed
+    // accumulators, implicit definitions or other unprimed accumulator
+    // PHI nodes, we change it.
+    for (unsigned PHIOp = 1, NumOps = PHI->getNumOperands(); PHIOp != NumOps;
+         PHIOp += 2) {
+      Register RegOp = PHI->getOperand(PHIOp).getReg();
+      MachineInstr *PHIInput = MRI->getVRegDef(RegOp);
+      unsigned Opcode = PHIInput->getOpcode();
+      assert((Opcode == PPC::COPY || Opcode == PPC::IMPLICIT_DEF ||
+              Opcode == PPC::PHI) &&
+             "Unexpected instruction");
+      if (Opcode == PPC::COPY) {
+        assert(MRI->getRegClass(PHIInput->getOperand(1).getReg()) ==
+                   &PPC::ACCRCRegClass &&
+               "Unexpected register class");
+        PHIOps.push_back({PHIInput->getOperand(1), PHI->getOperand(PHIOp + 1)});
+      } else if (Opcode == PPC::IMPLICIT_DEF) {
+        Register AccReg = MRI->createVirtualRegister(&PPC::ACCRCRegClass);
+        BuildMI(*PHIInput->getParent(), PHIInput, PHIInput->getDebugLoc(),
+                TII->get(PPC::IMPLICIT_DEF), AccReg);
+        PHIOps.push_back({MachineOperand::CreateReg(AccReg, false),
+                          PHI->getOperand(PHIOp + 1)});
+      } else if (Opcode == PPC::PHI) {
+        // We found a PHI operand. At this point we know this operand
+        // has already been changed so we get its associated changed form
+        // from the map.
+        assert(ChangedPHIMap.count(PHIInput) == 1 &&
+               "This PHI node should have already been changed.");
+        MachineInstr *PrimedAccPHI = ChangedPHIMap.lookup(PHIInput);
+        PHIOps.push_back({MachineOperand::CreateReg(
+                              PrimedAccPHI->getOperand(0).getReg(), false),
+                          PHI->getOperand(PHIOp + 1)});
+      }
+    }
+    Register AccReg = Dst;
+    // If the PHI node we are changing is the root node, the register it defines
+    // will be the destination register of the original copy (of the PHI def).
+    // For all other PHI's in the list, we need to create another primed
+    // accumulator virtual register as the PHI will no longer define the
+    // unprimed accumulator.
+    if (PHI != PHIs[0])
+      AccReg = MRI->createVirtualRegister(&PPC::ACCRCRegClass);
+    MachineInstrBuilder NewPHI = BuildMI(
+        *PHI->getParent(), PHI, PHI->getDebugLoc(), TII->get(PPC::PHI), AccReg);
+    for (auto RegMBB : PHIOps)
+      NewPHI.add(RegMBB.first).add(RegMBB.second);
+    ChangedPHIMap[PHI] = NewPHI.getInstr();
+  }
 }
 
 // Perform peephole optimizations.
@@ -321,6 +430,38 @@ bool PPCMIPeephole::simplifyCode(void) {
 
       default:
         break;
+      case PPC::COPY: {
+        Register Src = MI.getOperand(1).getReg();
+        Register Dst = MI.getOperand(0).getReg();
+        if (!Register::isVirtualRegister(Src) ||
+            !Register::isVirtualRegister(Dst))
+          break;
+        if (MRI->getRegClass(Src) != &PPC::UACCRCRegClass ||
+            MRI->getRegClass(Dst) != &PPC::ACCRCRegClass)
+          break;
+
+        // We are copying an unprimed accumulator to a primed accumulator.
+        // If the input to the copy is a PHI that is fed only by (i) copies in
+        // the other direction (ii) implicitly defined unprimed accumulators or
+        // (iii) other PHI nodes satisfying (i) and (ii), we can change
+        // the PHI to a PHI on primed accumulators (as long as we also change
+        // its operands). To detect and change such copies, we first get a list
+        // of all the PHI nodes starting from the root PHI node in BFS order.
+        // We then visit all these PHI nodes to check if they can be changed to
+        // primed accumulator PHI nodes and if so, we change them.
+        MachineInstr *RootPHI = MRI->getVRegDef(Src);
+        if (RootPHI->getOpcode() != PPC::PHI)
+          break;
+
+        SmallVector<MachineInstr *, 4> PHIs;
+        if (!collectUnprimedAccPHIs(MRI, RootPHI, PHIs))
+          break;
+
+        convertUnprimedAccPHIs(TII, MRI, PHIs, Dst);
+
+        ToErase = &MI;
+        break;
+      }
       case PPC::LI:
       case PPC::LI8: {
         // If we are materializing a zero, look for any use operands for which
@@ -337,10 +478,12 @@ bool PPCMIPeephole::simplifyCode(void) {
         }
         break;
       }
+      case PPC::STW:
       case PPC::STD: {
         MachineFrameInfo &MFI = MF->getFrameInfo();
         if (MFI.hasVarSizedObjects() ||
-            !MF->getSubtarget<PPCSubtarget>().isELFv2ABI())
+            (!MF->getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+             !MF->getSubtarget<PPCSubtarget>().isAIXABI()))
           break;
         // When encountering a TOC save instruction, call UpdateTOCSaves
         // to add it to the TOCSaves map and mark any existing TOC saves
@@ -521,7 +664,8 @@ bool PPCMIPeephole::simplifyCode(void) {
           Register ShiftOp1 = DefMI->getOperand(1).getReg();
           Register ShiftOp2 = DefMI->getOperand(2).getReg();
           unsigned ShiftImm = DefMI->getOperand(3).getImm();
-          unsigned SplatImm = MI.getOperand(2).getImm();
+          unsigned SplatImm =
+              MI.getOperand(MyOpcode == PPC::XXSPLTW ? 2 : 1).getImm();
           if (ShiftOp1 == ShiftOp2) {
             unsigned NewElem = (SplatImm + ShiftImm) & 0x3;
             if (MRI->hasOneNonDBGUse(ShiftRes)) {
@@ -573,7 +717,7 @@ bool PPCMIPeephole::simplifyCode(void) {
               Simplified = true;
               Register ConvReg1 = RoundInstr->getOperand(1).getReg();
               Register FRSPDefines = RoundInstr->getOperand(0).getReg();
-              MachineInstr &Use = *(MRI->use_instr_begin(FRSPDefines));
+              MachineInstr &Use = *(MRI->use_instr_nodbg_begin(FRSPDefines));
               for (int i = 0, e = Use.getNumOperands(); i < e; ++i)
                 if (Use.getOperand(i).isReg() &&
                     Use.getOperand(i).getReg() == FRSPDefines)
@@ -848,142 +992,9 @@ bool PPCMIPeephole::simplifyCode(void) {
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
       case PPC::RLWINM8_rec: {
-        unsigned FoldingReg = MI.getOperand(1).getReg();
-        if (!Register::isVirtualRegister(FoldingReg))
-          break;
-
-        MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
-        if (SrcMI->getOpcode() != PPC::RLWINM &&
-            SrcMI->getOpcode() != PPC::RLWINM_rec &&
-            SrcMI->getOpcode() != PPC::RLWINM8 &&
-            SrcMI->getOpcode() != PPC::RLWINM8_rec)
-          break;
-        assert((MI.getOperand(2).isImm() && MI.getOperand(3).isImm() &&
-                MI.getOperand(4).isImm() && SrcMI->getOperand(2).isImm() &&
-                SrcMI->getOperand(3).isImm() && SrcMI->getOperand(4).isImm()) &&
-               "Invalid PPC::RLWINM Instruction!");
-        uint64_t SHSrc = SrcMI->getOperand(2).getImm();
-        uint64_t SHMI = MI.getOperand(2).getImm();
-        uint64_t MBSrc = SrcMI->getOperand(3).getImm();
-        uint64_t MBMI = MI.getOperand(3).getImm();
-        uint64_t MESrc = SrcMI->getOperand(4).getImm();
-        uint64_t MEMI = MI.getOperand(4).getImm();
-
-        assert((MEMI < 32 && MESrc < 32 && MBMI < 32 && MBSrc < 32) &&
-               "Invalid PPC::RLWINM Instruction!");
-
-        // If MBMI is bigger than MEMI, we always can not get run of ones.
-        // RotatedSrcMask non-wrap:
-        //                 0........31|32........63
-        // RotatedSrcMask:   B---E        B---E
-        // MaskMI:         -----------|--E  B------
-        // Result:           -----          ---      (Bad candidate)
-        //
-        // RotatedSrcMask wrap:
-        //                 0........31|32........63
-        // RotatedSrcMask: --E   B----|--E    B----
-        // MaskMI:         -----------|--E  B------
-        // Result:         ---   -----|---    -----  (Bad candidate)
-        //
-        // One special case is RotatedSrcMask is a full set mask.
-        // RotatedSrcMask full:
-        //                 0........31|32........63
-        // RotatedSrcMask: ------EB---|-------EB---
-        // MaskMI:         -----------|--E  B------
-        // Result:         -----------|---  -------  (Good candidate)
-
-        // Mark special case.
-        bool SrcMaskFull = (MBSrc - MESrc == 1) || (MBSrc == 0 && MESrc == 31);
-
-        // For other MBMI > MEMI cases, just return.
-        if ((MBMI > MEMI) && !SrcMaskFull)
-          break;
-
-        // Handle MBMI <= MEMI cases.
-        APInt MaskMI = APInt::getBitsSetWithWrap(32, 32 - MEMI - 1, 32 - MBMI);
-        // In MI, we only need low 32 bits of SrcMI, just consider about low 32
-        // bit of SrcMI mask. Note that in APInt, lowerest bit is at index 0,
-        // while in PowerPC ISA, lowerest bit is at index 63.
-        APInt MaskSrc =
-            APInt::getBitsSetWithWrap(32, 32 - MESrc - 1, 32 - MBSrc);
-
-        APInt RotatedSrcMask = MaskSrc.rotl(SHMI);
-        APInt FinalMask = RotatedSrcMask & MaskMI;
-        uint32_t NewMB, NewME;
-
-        // If final mask is 0, MI result should be 0 too.
-        if (FinalMask.isNullValue()) {
-          bool Is64Bit = (MI.getOpcode() == PPC::RLWINM8 ||
-                          MI.getOpcode() == PPC::RLWINM8_rec);
-
-          Simplified = true;
-
-          LLVM_DEBUG(dbgs() << "Replace Instr: ");
-          LLVM_DEBUG(MI.dump());
-
-          if (MI.getOpcode() == PPC::RLWINM || MI.getOpcode() == PPC::RLWINM8) {
-            // Replace MI with "LI 0"
-            MI.RemoveOperand(4);
-            MI.RemoveOperand(3);
-            MI.RemoveOperand(2);
-            MI.getOperand(1).ChangeToImmediate(0);
-            MI.setDesc(TII->get(Is64Bit ? PPC::LI8 : PPC::LI));
-          } else {
-            // Replace MI with "ANDI_rec reg, 0"
-            MI.RemoveOperand(4);
-            MI.RemoveOperand(3);
-            MI.getOperand(2).setImm(0);
-            MI.setDesc(TII->get(Is64Bit ? PPC::ANDI8_rec : PPC::ANDI_rec));
-            MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
-            if (SrcMI->getOperand(1).isKill()) {
-              MI.getOperand(1).setIsKill(true);
-              SrcMI->getOperand(1).setIsKill(false);
-            } else
-              // About to replace MI.getOperand(1), clear its kill flag.
-              MI.getOperand(1).setIsKill(false);
-          }
-
-          LLVM_DEBUG(dbgs() << "With: ");
-          LLVM_DEBUG(MI.dump());
-        } else if ((isRunOfOnes((unsigned)(FinalMask.getZExtValue()), NewMB,
-                               NewME) && NewMB <= NewME)|| SrcMaskFull) {
-          // Here we only handle MBMI <= MEMI case, so NewMB must be no bigger
-          // than NewME. Otherwise we get a 64 bit value after folding, but MI
-          // return a 32 bit value.
-
-          Simplified = true;
-          LLVM_DEBUG(dbgs() << "Converting Instr: ");
-          LLVM_DEBUG(MI.dump());
-
-          uint16_t NewSH = (SHSrc + SHMI) % 32;
-          MI.getOperand(2).setImm(NewSH);
-          // If SrcMI mask is full, no need to update MBMI and MEMI.
-          if (!SrcMaskFull) {
-            MI.getOperand(3).setImm(NewMB);
-            MI.getOperand(4).setImm(NewME);
-          }
-          MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
-          if (SrcMI->getOperand(1).isKill()) {
-            MI.getOperand(1).setIsKill(true);
-            SrcMI->getOperand(1).setIsKill(false);
-          } else
-            // About to replace MI.getOperand(1), clear its kill flag.
-            MI.getOperand(1).setIsKill(false);
-
-          LLVM_DEBUG(dbgs() << "To: ");
-          LLVM_DEBUG(MI.dump());
-        }
-        if (Simplified) {
-          // If FoldingReg has no non-debug use and it has no implicit def (it
-          // is not RLWINMO or RLWINM8o), it's safe to delete its def SrcMI.
-          // Otherwise keep it.
+        Simplified = TII->combineRLWINM(MI, &ToErase);
+        if (Simplified)
           ++NumRotatesCollapsed;
-          if (MRI->use_nodbg_empty(FoldingReg) && !SrcMI->hasImplicitDef()) {
-            ToErase = SrcMI;
-            LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
-            LLVM_DEBUG(SrcMI->dump());
-          }
-        }
         break;
       }
       }
@@ -1555,6 +1566,8 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
   MI.getOperand(2).setImm(NewSH);
   MI.getOperand(3).setImm(NewMB);
+  MI.getOperand(1).setIsKill(SrcMI->getOperand(1).isKill());
+  SrcMI->getOperand(1).setIsKill(false);
 
   LLVM_DEBUG(dbgs() << "To: ");
   LLVM_DEBUG(MI.dump());

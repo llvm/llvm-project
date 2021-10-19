@@ -97,8 +97,8 @@ def VarObj : Variables {
 
     bits<2> undef_bits;
     bits<4> ref_bits;
-    let ref_bits{3-2} = 0b10;
-    let ref_bits{1-0} = undef_bits{1-0};
+    let ref_bits{3...2} = 0b10;
+    let ref_bits{1...0} = undef_bits{1...0};
     // CHECK: data['VarObj']['ref_bits'][3] == 1
     // CHECK: data['VarObj']['ref_bits'][2] == 0
     // CHECK: data['VarObj']['ref_bits'][1]['kind'] == 'varbit'

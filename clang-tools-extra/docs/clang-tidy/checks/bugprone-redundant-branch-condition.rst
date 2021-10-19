@@ -41,7 +41,7 @@ is an operand of a logical "and" (``&&``) or a logical "or" (``||``) operator:
 
 In the first case (logical "and") the suggested fix is to remove the redundant
 condition variable and keep the other side of the ``&&``. In the second case
-(logical "or") the whole ``if`` is removed similarily to the simple case on the
+(logical "or") the whole ``if`` is removed similarly to the simple case on the
 top.
 
 The condition of the outer ``if`` statement may also be a logical "and" (``&&``)
@@ -82,6 +82,8 @@ Known limitations
 ^^^^^^^^^^^^^^^^^
 
 The ``else`` branch is not checked currently for negated condition variable:
+
+.. code-block:: c
 
   bool onFire = isBurning();
   if (onFire) {

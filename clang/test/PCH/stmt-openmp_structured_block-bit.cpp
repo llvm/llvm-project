@@ -21,4 +21,4 @@ void test() {
 // CHECK-NEXT:           |-NullStmt 0x{{.*}} <col:3>
 // CHECK-NEXT:           |-ImplicitParamDecl 0x{{.*}} <line:9:1> col:1 {{(implicit|imported implicit)}} .global_tid. 'const int *const __restrict'
 // CHECK-NEXT:           |-ImplicitParamDecl 0x{{.*}} <col:1> col:1 {{(implicit|imported implicit)}} .bound_tid. 'const int *const __restrict'
-// CHECK-NEXT:           `-ImplicitParamDecl 0x{{.*}} <col:1> col:1 {{(implicit|imported implicit)}} __context '(anonymous struct at {{.*}}stmt-openmp_structured_block-bit.cpp:9:1) *const __restrict'
+// CHECK-NEXT:           `-ImplicitParamDecl 0x{{.*}} <col:1> col:1 {{(implicit|imported implicit)}} __context '(unnamed struct at {{.*}}stmt-openmp_structured_block-bit.cpp:9:1) *const __restrict'

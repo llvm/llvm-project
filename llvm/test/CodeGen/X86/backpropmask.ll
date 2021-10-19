@@ -5,20 +5,20 @@
 ; nodes with multiple result values. In both tests, the stored
 ; 32-bit value should be masked to an 8-bit number (and 255).
 
-@b = local_unnamed_addr global i32 918, align 4
-@d = local_unnamed_addr global i32 8089, align 4
-@c = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global i32 0, align 4
+@b = dso_local local_unnamed_addr global i32 918, align 4
+@d = dso_local local_unnamed_addr global i32 8089, align 4
+@c = common dso_local local_unnamed_addr global i32 0, align 4
+@a = common dso_local local_unnamed_addr global i32 0, align 4
 
-define void @PR37667() {
+define dso_local void @PR37667() {
 ; CHECK-LABEL: PR37667:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl b(%rip), %eax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl {{.*}}(%rip)
-; CHECK-NEXT:    orl {{.*}}(%rip), %edx
+; CHECK-NEXT:    divl d(%rip)
+; CHECK-NEXT:    orl c(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @c, align 4
   %t1 = load i32, i32* @b, align 4
@@ -30,15 +30,15 @@ define void @PR37667() {
   ret void
 }
 
-define void @PR37060() {
+define dso_local void @PR37060() {
 ; CHECK-LABEL: PR37060:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl {{.*}}(%rip)
-; CHECK-NEXT:    xorl {{.*}}(%rip), %edx
+; CHECK-NEXT:    idivl c(%rip)
+; CHECK-NEXT:    xorl b(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @c, align 4
   %rem = srem i32 -1, %t0

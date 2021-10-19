@@ -124,4 +124,30 @@ unsigned int clsll(uint64_t v) {
   return __builtin_arm_cls64(v);
 }
 
+// CHECK-LABEL: @rndr(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.aarch64.rndr()
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+// CHECK-NEXT:    store i64 [[TMP1]], i64* [[__ADDR:%.*]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+// CHECK-NEXT:    ret i32 [[TMP3]]
+//
+int rndr(uint64_t *__addr) {
+  return __builtin_arm_rndr(__addr);
+}
+
+// CHECK-LABEL: @rndrrs(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.aarch64.rndrrs()
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+// CHECK-NEXT:    store i64 [[TMP1]], i64* [[__ADDR:%.*]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
+// CHECK-NEXT:    ret i32 [[TMP3]]
+//
+int rndrrs(uint64_t *__addr) {
+  return __builtin_arm_rndrrs(__addr);
+}
+
 // CHECK: ![[M0]] = !{!"1:2:3:4:5"}

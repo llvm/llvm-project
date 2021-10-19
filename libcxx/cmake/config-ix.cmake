@@ -24,21 +24,31 @@ if (NOT LIBCXX_USE_COMPILER_RT)
   endif()
 endif()
 
-# libc++ is built with -nodefaultlibs, so we want all our checks to also
-# use this option, otherwise we may end up with an inconsistency between
+# libc++ is using -nostdlib++ at the link step when available,
+# otherwise -nodefaultlibs is used. We want all our checks to also
+# use one of these options, otherwise we may end up with an inconsistency between
 # the flags we think we require during configuration (if the checks are
-# performed without -nodefaultlibs) and the flags that are actually
-# required during compilation (which has the -nodefaultlibs). libc is
+# performed without one of those options) and the flags that are actually
+# required during compilation (which has the -nostdlib++ or -nodefaultlibs). libc is
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
-check_c_compiler_flag(-nodefaultlibs LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
-if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+
+check_c_compiler_flag(-nostdlib++ LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG)
+if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+else()
+  check_c_compiler_flag(-nodefaultlibs LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
+  if (LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+  endif()
+endif()
+
+if (LIBCXX_SUPPORTS_NOSTDLIBXX_FLAG OR LIBCXX_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBCXX_HAS_C_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()
   if (LIBCXX_USE_COMPILER_RT)
-    list(APPEND CMAKE_REQUIRED_FLAGS -rtlib=compiler-rt)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -rtlib=compiler-rt")
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY)
     list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBCXX_BUILTINS_LIBRARY}")
   elseif (LIBCXX_HAS_GCC_LIB)

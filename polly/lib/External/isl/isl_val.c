@@ -15,6 +15,7 @@
 #define EL_BASE val
 
 #include <isl_list_templ.c>
+#include <isl_list_read_templ.c>
 
 /* Allocate an isl_val object with indeterminate value.
  */

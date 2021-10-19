@@ -1,5 +1,5 @@
 ; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
-; CHECK: v{{[0-9]+}} = vmem(r{{[0-9]+}}+#0)
+; CHECK: v{{[0-9]+}}.cur = vmem(r{{[0-9]+}}+#0)
 
 target triple = "hexagon"
 

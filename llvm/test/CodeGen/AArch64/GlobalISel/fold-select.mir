@@ -22,7 +22,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY1]], 0, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -67,7 +67,7 @@ body:             |
 
 ...
 ---
-name:            check_update_predicate
+name:            csinc
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -75,25 +75,20 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
-    ; The G_ICMP is optimized here to be a slt comparison by adding 1 to the
-    ; constant. So, the CSELWr should use the predicate code 11, rather than
-    ; 13.
 
-    ; CHECK-LABEL: name: check_update_predicate
+    ; CHECK-LABEL: name: csinc
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %copy1:gpr32sp = COPY $w0
-    ; CHECK: %copy2:gpr32 = COPY $w1
-    ; CHECK: %cst:gpr32 = MOVi32imm -1
-    ; CHECK: $wzr = SUBSWri %copy1, 0, 0, implicit-def $nzcv
-    ; CHECK: %select:gpr32 = CSELWr %cst, %copy2, 11, implicit $nzcv
-    ; CHECK: $w0 = COPY %select
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
+    ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr [[COPY]], $wzr, 0, implicit $nzcv
+    ; CHECK: $w0 = COPY [[CSINCWr]]
     ; CHECK: RET_ReallyLR implicit $w0
-    %copy1:gpr(s32) = COPY $w0
-    %copy2:gpr(s32) = COPY $w1
-    %cst:gpr(s32) = G_CONSTANT i32 -1
-    %cmp:gpr(s32) = G_ICMP intpred(sle), %copy1(s32), %cst
-    %trunc:gpr(s1) = G_TRUNC %cmp(s32)
-    %select:gpr(s32) = G_SELECT %trunc(s1), %cst, %copy2
-    $w0 = COPY %select(s32)
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(s32) = COPY $w1
+    %2:gpr(s32) = G_CONSTANT i32 1
+    %5:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
+    %3:gpr(s1) = G_TRUNC %5(s32)
+    %4:gpr(s32) = G_SELECT %3(s1), %0, %2
+    $w0 = COPY %4(s32)
     RET_ReallyLR implicit $w0
 ...

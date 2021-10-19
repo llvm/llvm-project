@@ -2,6 +2,7 @@
 
 // This should not be rejected.
 #ifdef defined
+#elifdef defined
 #endif
 
 

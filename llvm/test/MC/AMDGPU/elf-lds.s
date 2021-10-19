@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu gfx900 %s -o - | llvm-readobj -t -r - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple amdgcn-- -mcpu gfx900 %s -o - | llvm-readobj -r --syms - | FileCheck %s
 
 	.text
 	.globl test_kernel
@@ -34,8 +34,8 @@ test_kernel:
 
 // CHECK:      Relocations [
 // CHECK:        Section (3) .rel.text {
-// CHECK-NEXT:     0x4 R_AMDGPU_ABS32 lds0 0x0
-// CHECK-NEXT:     0x1C R_AMDGPU_ABS32 lds4 0x0
+// CHECK-NEXT:     0x4 R_AMDGPU_ABS32 lds0
+// CHECK-NEXT:     0x1C R_AMDGPU_ABS32 lds4
 // CHECK-NEXT:   }
 // CHECK:      ]
 
@@ -43,6 +43,16 @@ test_kernel:
 // CHECK:        Name: lds0 (54)
 // CHECK-NEXT:   Value: 0x10
 // CHECK-NEXT:   Size: 192
+// CHECK-NEXT:   Binding: Global (0x1)
+// CHECK-NEXT:   Type: Object (0x1)
+// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Section: Processor Specific (0xFF00)
+// CHECK-NEXT: }
+
+// CHECK:      Symbol {
+// CHECK:        Name: lds4 (39)
+// CHECK-NEXT:   Value: 0x4
+// CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Global (0x1)
 // CHECK-NEXT:   Type: Object (0x1)
 // CHECK-NEXT:   Other: 0
@@ -70,13 +80,3 @@ test_kernel:
 // CHECK-NEXT: }
 
 // CHECK-NOT:    Name: lds3
-
-// CHECK:      Symbol {
-// CHECK:        Name: lds4 (39)
-// CHECK-NEXT:   Value: 0x4
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Global (0x1)
-// CHECK-NEXT:   Type: Object (0x1)
-// CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: Processor Specific (0xFF00)
-// CHECK-NEXT: }

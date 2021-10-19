@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // <string_view>
 
 // void remove_prefix(size_type _n)
@@ -51,9 +50,11 @@ int main(int, char**) {
     test ( "a", 1 );
     test ( "", 0 );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test ( L"ABCDE", 5 );
     test ( L"a", 1 );
     test ( L"", 0 );
+#endif
 
 #if TEST_STD_VER >= 11
     test ( u"ABCDE", 5 );

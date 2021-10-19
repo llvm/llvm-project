@@ -12,11 +12,8 @@
 // when sized deallocation is not supported, e.g., prior to C++14.
 
 // UNSUPPORTED: sanitizer-new-delete
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
-// NOTE: Only clang-3.7 and GCC 5.1 and greater support -fsized-deallocation.
 // REQUIRES: -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation, -O3
 

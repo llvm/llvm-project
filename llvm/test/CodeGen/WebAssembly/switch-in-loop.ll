@@ -4,7 +4,6 @@
 ;; bytecode interpreter) lowers reasonably without any irreducible
 ;; control flow being introduced.
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32"
 
 declare void @a(i32*)

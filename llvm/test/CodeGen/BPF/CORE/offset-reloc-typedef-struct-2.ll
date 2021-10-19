@@ -1,5 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source code:
 ;   #pragma clang attribute push (__attribute__((preserve_access_index)), apply_to = record)
@@ -10,7 +11,9 @@
 ;
 ;   int test(__t *arg) { return arg->a; }
 ; Compiler flag to generate IR:
-;   clang -target bpf -S -O2 -g -emit-llvm test.c
+;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.__t = type { i32 }
 
@@ -18,7 +21,7 @@
 define dso_local i32 @test(%struct.__t* readonly %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata %struct.__t* %arg, metadata !18, metadata !DIExpression()), !dbg !19
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ts(%struct.__t* %arg, i32 0, i32 0), !dbg !20, !llvm.preserve.access.index !4
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ts(%struct.__t* elementtype(%struct.__t) %arg, i32 0, i32 0), !dbg !20, !llvm.preserve.access.index !4
   %1 = load i32, i32* %0, align 4, !dbg !20, !tbaa !21
   ret i32 %1, !dbg !26
 }

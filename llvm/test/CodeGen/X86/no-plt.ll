@@ -24,7 +24,7 @@ define void @memcpy_call(i8* nocapture %a, i8* nocapture readonly %b, i64 %n) {
 define i32 @main() {
 ; X64:    callq *foo@GOTPCREL(%rip)
 ; PIC:    callq bar@PLT
-; STATIC: callq bar{{$}}
+; STATIC: callq bar@PLT
 ; X64:    callq baz
 
   %retval = alloca i32, align 4

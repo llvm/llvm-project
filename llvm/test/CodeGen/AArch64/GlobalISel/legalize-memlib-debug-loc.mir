@@ -47,14 +47,14 @@ body:             |
 
     ; We're checking that the BL call has the debug loc of the original intrinsic call.
     ; CHECK-LABEL: name: test_memset_debug
-    ; CHECK: BL &memset, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, debug-location !11
+    ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, debug-location !11
     ; CHECK: RET_ReallyLR debug-location !12
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32), debug-location !11
     %4:_(s8) = G_TRUNC %1(s32), debug-location !11
-    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store 1 into %ir.ptr)
+    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store (s8) into %ir.ptr)
     RET_ReallyLR debug-location !12
 
 ...

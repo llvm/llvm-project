@@ -3,12 +3,12 @@
 
 ; RUN: cat %s > %t.noftz
 ; RUN: echo '!0 = !{i32 4, !"nvvm-reflect-ftz", i32 0}' >> %t.noftz
-; RUN: opt %t.noftz -S -nvvm-reflect -O2 \
+; RUN: opt %t.noftz -S -mtriple=nvptx-nvidia-cuda -nvvm-reflect -O2 \
 ; RUN:   | FileCheck %s --check-prefix=USE_FTZ_0 --check-prefix=CHECK
 
 ; RUN: cat %s > %t.ftz
 ; RUN: echo '!0 = !{i32 4, !"nvvm-reflect-ftz", i32 1}' >> %t.ftz
-; RUN: opt %t.ftz -S -nvvm-reflect -O2 \
+; RUN: opt %t.ftz -S -mtriple=nvptx-nvidia-cuda -nvvm-reflect -O2 \
 ; RUN:   | FileCheck %s --check-prefix=USE_FTZ_1 --check-prefix=CHECK
 
 @str = private unnamed_addr addrspace(4) constant [11 x i8] c"__CUDA_FTZ\00"

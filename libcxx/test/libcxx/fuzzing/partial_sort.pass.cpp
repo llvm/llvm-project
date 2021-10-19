@@ -1,5 +1,4 @@
-// -*- C++ -*-
-//===-------------------------- partial_sort.cpp --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,26 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11
 
-#include <cassert>
-#include <cstring> // for strlen
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <vector>
 
-#include "../../../fuzzing/fuzzing.h"
-#include "../../../fuzzing/fuzzing.cpp"
+#include "fuzz.h"
 
-const char* test_cases[] = {"", "s", "bac",
-                            "bacasf",
-                            "lkajseravea",
-                            "adsfkajdsfjkas;lnc441324513,34535r34525234"};
+// Use the first element as a position into the data
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size) {
+    if (size <= 1)
+        return 0;
+    const std::size_t sort_point = data[0] % size;
+    std::vector<std::uint8_t> working(data + 1, data + size);
+    const auto sort_iter = working.begin() + sort_point;
+    std::partial_sort(working.begin(), sort_iter, working.end());
 
-const size_t k_num_tests = sizeof(test_cases) / sizeof(test_cases[0]);
+    if (sort_iter != working.end()) {
+        const std::uint8_t nth = *std::min_element(sort_iter, working.end());
+        if (!std::all_of(working.begin(), sort_iter, [=](std::uint8_t v) { return v <= nth; }))
+            return 1;
+        if (!std::all_of(sort_iter, working.end(),   [=](std::uint8_t v) { return v >= nth; }))
+            return 2;
+    }
+    if (!std::is_sorted(working.begin(), sort_iter))
+        return 3;
+    if (!fast_is_permutation(data + 1, data + size, working.cbegin()))
+        return 99;
 
-int main(int, char**) {
-  for (size_t i = 0; i < k_num_tests; ++i) {
-    const size_t size = std::strlen(test_cases[i]);
-    const uint8_t* data = (const uint8_t*)test_cases[i];
-    assert(0 == fuzzing::partial_sort(data, size));
-  }
-  return 0;
+    return 0;
 }

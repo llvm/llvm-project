@@ -171,8 +171,6 @@ private:
                                  NodeSet &ElimNodes /* in, out */) const;
   std::unique_ptr<MachineGadgetGraph>
   trimMitigatedEdges(std::unique_ptr<MachineGadgetGraph> Graph) const;
-  void findAndCutEdges(MachineGadgetGraph &G,
-                       EdgeSet &CutEdges /* out */) const;
   int insertFences(MachineFunction &MF, MachineGadgetGraph &G,
                    EdgeSet &CutEdges /* in, out */) const;
   bool instrUsesRegToAccessMemory(const MachineInstr &I, unsigned Reg) const;
@@ -308,7 +306,8 @@ bool X86LoadValueInjectionLoadHardeningPass::runOnMachineFunction(
       OptimizeDL = llvm::sys::DynamicLibrary::getPermanentLibrary(
           OptimizePluginPath.c_str(), &ErrorMsg);
       if (!ErrorMsg.empty())
-        report_fatal_error("Failed to load opt plugin: \"" + ErrorMsg + '\"');
+        report_fatal_error(Twine("Failed to load opt plugin: \"") + ErrorMsg +
+                           "\"");
       OptimizeCut = (OptimizeCutT)OptimizeDL.getAddressOfSymbol("optimize_cut");
       if (!OptimizeCut)
         report_fatal_error("Invalid optimization plugin");
@@ -374,9 +373,9 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
             auto Use = DFG.addr<UseNode *>(UseID);
             if (Use.Addr->getFlags() & NodeAttrs::PhiRef) { // phi node
               NodeAddr<PhiNode *> Phi = Use.Addr->getOwner(DFG);
-              for (auto I : L.getRealUses(Phi.Id)) {
+              for (const auto& I : L.getRealUses(Phi.Id)) {
                 if (DFG.getPRI().alias(RegisterRef(I.first), DefReg)) {
-                  for (auto UA : I.second)
+                  for (const auto &UA : I.second)
                     Uses.emplace(UA.first);
                 }
               }
@@ -419,7 +418,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
             // Check whether the use propagates to more defs.
             NodeAddr<InstrNode *> Owner{Use.Addr->getOwner(DFG)};
             rdf::NodeList AnalyzedChildDefs;
-            for (auto &ChildDef :
+            for (const auto &ChildDef :
                  Owner.Addr->members_if(DataFlowGraph::IsDef, DFG)) {
               if (!DefsVisited.insert(ChildDef.Id).second)
                 continue; // Already visited this def

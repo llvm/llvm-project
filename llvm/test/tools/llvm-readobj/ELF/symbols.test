@@ -70,19 +70,13 @@
 # RUN: llvm-readobj --symbols %t64 > %t.symbols
 # RUN: llvm-readobj --syms %t64 > %t.syms
 # RUN: cmp %t.symbols %t.syms
-# RUN: llvm-readobj -t %t64 > %t.t
-# RUN: cmp %t.symbols %t.t
-# RUN: llvm-readelf -s --elf-output-style=LLVM %t64 > %t.lowers
-# RUN: cmp %t.symbols %t.lowers
+# RUN: llvm-readobj -s %t64 | diff %t.symbols -
+# RUN: llvm-readelf -s --elf-output-style=LLVM %t64 | diff %t.symbols -
 
 # RUN: llvm-readelf --symbols %t64 > %t.symbols.gnu
 # RUN: llvm-readelf --syms %t64 > %t.syms.gnu
 # RUN: cmp %t.symbols.gnu %t.syms.gnu
-## There is no -t option in llvm-readelf.
-# RUN: not llvm-readelf -t %t64 2>&1 | FileCheck %s --check-prefix=NO-T-ERR
-# NO-T-ERR: Unknown command line argument '-t'
-## -s is an llvm-readobj option to dump sections.
-# RUN: llvm-readobj -s --elf-output-style=GNU %t64 | FileCheck %s --implicit-check-not="Symbol table"
+# RUN: llvm-readelf -s %t64 | diff %t.symbols.gnu -
 
 ## Case 3: Test that both regular and dynamic symbols are dumped when `--symbols` and `--dyn-symbols`
 ##         are specified together. Note that the order is different for different styles.
@@ -193,10 +187,10 @@ Symbols:
 # RUN:  FileCheck %s -DFILE=%t64.err2 --check-prefix=SYMTAB-ENTSIZE-ERR-GNU
 
 # SYMTAB-ENTSIZE-ERR-LLVM:      Symbols [
-# SYMTAB-ENTSIZE-ERR-LLVM-NEXT:   warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 255
+# SYMTAB-ENTSIZE-ERR-LLVM-NEXT:   warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 255
 # SYMTAB-ENTSIZE-ERR-LLVM:      ]
 
-# SYMTAB-ENTSIZE-ERR-GNU:     warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has an invalid sh_entsize: 255
+# SYMTAB-ENTSIZE-ERR-GNU:     warning: '[[FILE]]': unable to read symbols from the SHT_SYMTAB section: section [index 1] has invalid sh_entsize: expected 24, but got 255
 # SYMTAB-ENTSIZE-ERR-GNU-NOT: {{.}}
 
 ## Case 3: check we report a warning, but continue dumping, when we are unable to read the name of the SHT_SYMTAB section.

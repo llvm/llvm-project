@@ -52,13 +52,11 @@ ARM::ARM() {
   relativeRel = R_ARM_RELATIVE;
   iRelativeRel = R_ARM_IRELATIVE;
   gotRel = R_ARM_GLOB_DAT;
-  noneRel = R_ARM_NONE;
   pltRel = R_ARM_JUMP_SLOT;
   symbolicRel = R_ARM_ABS32;
   tlsGotRel = R_ARM_TLS_TPOFF32;
   tlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   tlsOffsetRel = R_ARM_TLS_DTPOFF32;
-  gotBaseSymInGotPlt = false;
   pltHeaderSize = 32;
   pltEntrySize = 16;
   ipltEntrySize = 16;
@@ -150,7 +148,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_NONE:
     return R_NONE;
   case R_ARM_TLS_LE32:
-    return R_TLS;
+    return R_TPREL;
   case R_ARM_V4BX:
     // V4BX is just a marker to indicate there's a "bx rN" instruction at the
     // given address. It can be used to implement a special linker mode which
@@ -279,7 +277,7 @@ void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
 
 bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
                      uint64_t branchAddr, const Symbol &s,
-                     int64_t /*a*/) const {
+                     int64_t a) const {
   // If S is an undefined weak symbol and does not have a PLT entry then it
   // will be resolved as a branch to the next instruction.
   if (s.isUndefWeak() && !s.isInPlt())
@@ -298,7 +296,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     LLVM_FALLTHROUGH;
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
-    return !inBranchRange(type, branchAddr, dst);
+    return !inBranchRange(type, branchAddr, dst + a);
   }
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
@@ -309,7 +307,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     LLVM_FALLTHROUGH;
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
-    return !inBranchRange(type, branchAddr, dst);
+    return !inBranchRange(type, branchAddr, dst + a);
   }
   }
   return false;
@@ -350,46 +348,31 @@ uint32_t ARM::getThunkSectionSpacing() const {
 }
 
 bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
-  uint64_t range;
-  uint64_t instrSize;
-
-  switch (type) {
-  case R_ARM_PC24:
-  case R_ARM_PLT32:
-  case R_ARM_JUMP24:
-  case R_ARM_CALL:
-    range = 0x2000000;
-    instrSize = 4;
-    break;
-  case R_ARM_THM_JUMP19:
-    range = 0x100000;
-    instrSize = 2;
-    break;
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL:
-    range = config->armJ1J2BranchEncoding ? 0x1000000 : 0x400000;
-    instrSize = 2;
-    break;
-  default:
-    return true;
-  }
-  // PC at Src is 2 instructions ahead, immediate of branch is signed
-  if (src > dst)
-    range -= 2 * instrSize;
-  else
-    range += instrSize;
-
   if ((dst & 0x1) == 0)
     // Destination is ARM, if ARM caller then Src is already 4-byte aligned.
     // If Thumb Caller (BLX) the Src address has bottom 2 bits cleared to ensure
     // destination will be 4 byte aligned.
     src &= ~0x3;
   else
-    // Bit 0 == 1 denotes Thumb state, it is not part of the range
+    // Bit 0 == 1 denotes Thumb state, it is not part of the range.
     dst &= ~0x1;
 
-  uint64_t distance = (src > dst) ? src - dst : dst - src;
-  return distance <= range;
+  int64_t offset = dst - src;
+  switch (type) {
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+  case R_ARM_JUMP24:
+  case R_ARM_CALL:
+    return llvm::isInt<26>(offset);
+  case R_ARM_THM_JUMP19:
+    return llvm::isInt<21>(offset);
+  case R_ARM_THM_JUMP24:
+  case R_ARM_THM_CALL:
+    return config->armJ1J2BranchEncoding ? llvm::isInt<25>(offset)
+                                         : llvm::isInt<23>(offset);
+  default:
+    return true;
+  }
 }
 
 // Helper to produce message text when LLD detects that a CALL relocation to
@@ -722,20 +705,29 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
     return 0;
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
+  case R_ARM_GLOB_DAT:
   case R_ARM_GOTOFF32:
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
+  case R_ARM_IRELATIVE:
   case R_ARM_REL32:
+  case R_ARM_RELATIVE:
+  case R_ARM_SBREL32:
   case R_ARM_TARGET1:
   case R_ARM_TARGET2:
+  case R_ARM_TLS_DTPMOD32:
+  case R_ARM_TLS_DTPOFF32:
   case R_ARM_TLS_GD32:
-  case R_ARM_TLS_LDM32:
-  case R_ARM_TLS_LDO32:
   case R_ARM_TLS_IE32:
+  case R_ARM_TLS_LDM32:
   case R_ARM_TLS_LE32:
+  case R_ARM_TLS_LDO32:
+  case R_ARM_TLS_TPOFF32:
     return SignExtend64<32>(read32le(buf));
   case R_ARM_PREL31:
     return SignExtend64<31>(read32le(buf));
@@ -843,6 +835,10 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     uint64_t imm12 = read16le(buf + 2) & 0x0fff;
     return u ? imm12 : -imm12;
   }
+  case R_ARM_NONE:
+  case R_ARM_JUMP_SLOT:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
   }
 }
 

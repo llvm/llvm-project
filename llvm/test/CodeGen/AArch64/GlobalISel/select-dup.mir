@@ -225,6 +225,51 @@ body:             |
 
 ...
 ---
+name:            DUPv8i16gpr_s16_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; Checks that we can still select the gpr variant if the scalar is an s16.
+    ; CHECK-LABEL: name: DUPv8i16gpr_s16_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr128 = DUPv8i16gpr %copy
+    ; CHECK: $q0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $q0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s16) = G_TRUNC %copy
+    %dup:fpr(<8 x s16>) = G_DUP %trunc(s16)
+    $q0 = COPY %dup(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            DUPv4s16gpr_s16_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; CHECK-LABEL: name: DUPv4s16gpr_s16_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr64 = DUPv4i16gpr %copy
+    ; CHECK: $d0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $d0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s16) = G_TRUNC %copy
+    %dup:fpr(<4 x s16>) = G_DUP %trunc(s16)
+    $d0 = COPY %dup(<4 x s16>)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            DUPv8i8gpr
 alignment:       4
 legalized:       true
@@ -241,6 +286,28 @@ body:             |
     ; CHECK: RET_ReallyLR implicit $d0
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<8 x s8>) = G_DUP %copy(s32)
+    $d0 = COPY %dup(<8 x s8>)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            DUPv8i8gpr_s8_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; CHECK-LABEL: name: DUPv8i8gpr_s8_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr64 = DUPv8i8gpr %copy
+    ; CHECK: $d0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $d0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s8) = G_TRUNC %copy(s32)
+    %dup:fpr(<8 x s8>) = G_DUP %trunc(s8)
     $d0 = COPY %dup(<8 x s8>)
     RET_ReallyLR implicit $d0
 
@@ -263,4 +330,110 @@ body:             |
     %copy:gpr(s32) = COPY $w0
     %dup:fpr(<16 x s8>) = G_DUP %copy(s32)
     $q0 = COPY %dup(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            DUPv16i8gpr_s8_src
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; Check we still select the gpr variant when scalar is an s8.
+    ; CHECK-LABEL: name: DUPv16i8gpr_s8_src
+    ; CHECK: liveins: $w0
+    ; CHECK: %copy:gpr32 = COPY $w0
+    ; CHECK: %dup:fpr128 = DUPv16i8gpr %copy
+    ; CHECK: $q0 = COPY %dup
+    ; CHECK: RET_ReallyLR implicit $q0
+    %copy:gpr(s32) = COPY $w0
+    %trunc:gpr(s8) = G_TRUNC %copy
+    %dup:fpr(<16 x s8>) = G_DUP %trunc(s8)
+    $q0 = COPY %dup(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            dup_v2p0
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.1:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: dup_v2p0
+    ; CHECK: liveins: $x0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr64all = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+    ; CHECK: [[DUPv2i64gpr:%[0-9]+]]:fpr128 = DUPv2i64gpr [[COPY1]]
+    ; CHECK: $q0 = COPY [[DUPv2i64gpr]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:gpr(p0) = COPY $x0
+    %4:fpr(<2 x p0>) = G_DUP %0(p0)
+    $q0 = COPY %4(<2 x p0>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            cst_v4s32
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; CHECK-LABEL: name: cst_v4s32
+    ; CHECK: liveins: $w0
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: $q0 = COPY [[LDRQui]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %cst:gpr(s32) = G_CONSTANT i32 3
+    %dup:fpr(<4 x s32>) = G_DUP %cst(s32)
+    $q0 = COPY %dup(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            cst_v8s8
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; CHECK-LABEL: name: cst_v8s8
+    ; CHECK: liveins: $w0
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: $d0 = COPY [[LDRDui]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %cst:gpr(s8) = G_CONSTANT i8 3
+    %dup:fpr(<8 x s8>) = G_DUP %cst(s8)
+    $d0 = COPY %dup(<8 x s8>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            cst_v2p0
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0
+    ; CHECK-LABEL: name: cst_v2p0
+    ; CHECK: liveins: $w0
+    ; CHECK: %cst:gpr64 = MOVi64imm 3
+    ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
+    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
+    ; CHECK: $q0 = COPY [[LDRQui]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %cst:gpr(p0) = G_CONSTANT i64 3
+    %dup:fpr(<2 x p0>) = G_DUP %cst(p0)
+    $q0 = COPY %dup(<2 x p0>)
     RET_ReallyLR implicit $q0

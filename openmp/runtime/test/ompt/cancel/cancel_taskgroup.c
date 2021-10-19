@@ -58,17 +58,18 @@ int main()
     #pragma omp barrier
   }
 
-
   // Check if libomp supports the callbacks for this test.
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_master'
+  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_masked'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
-  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_cancel'
+  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule' 
+  // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_cancel' 
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_thread_begin'
 
-
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_master_begin: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[PARENT_TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_masked_begin:
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
+  // CHECK-SAME: task_id=[[PARENT_TASK_ID:[0-9]+]],
+  // CHECK-SAME: codeptr_ra={{0x[0-f]*}}
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{0x[0-f]*}}, parent_task_frame.reenter={{0x[0-f]*}}, new_task_id=[[FIRST_TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{0x[0-f]*}}, parent_task_frame.reenter={{0x[0-f]*}}, new_task_id=[[SECOND_TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no

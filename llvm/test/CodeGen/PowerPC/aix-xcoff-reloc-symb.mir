@@ -1,5 +1,6 @@
-# RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -x mir -verify-machineinstrs -start-after=lazy-machine-block-freq -filetype=obj -o %t.o < %s
-# RUN: llvm-readobj --relocs --expand-relocs -t %t.o | FileCheck --check-prefixes=RELOC,SYM %s
+# RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -x mir -verify-machineinstrs \
+# RUN:     -xcoff-traceback-table=false -start-after=lazy-machine-block-freq -filetype=obj -o %t.o < %s
+# RUN: llvm-readobj --relocs --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM %s
 # RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 
 ---
@@ -15,7 +16,7 @@ body:             |
   bb.0:
     successors: %bb.0(0x20000000)
     liveins: $r2
-    renamable $r3 = LWZtoc %jump-table.0, $r2 :: (load 4 from got)
+    renamable $r3 = LWZtoc %jump-table.0, $r2 :: (load (s32) from got)
     BLR implicit $lr, implicit $rm, implicit killed $r3
 ...
 

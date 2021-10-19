@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_REMARKS_BITSTREAM_REMARK_PARSER_H
-#define LLVM_REMARKS_BITSTREAM_REMARK_PARSER_H
+#ifndef LLVM_REMARKS_BITSTREAMREMARKPARSER_H
+#define LLVM_REMARKS_BITSTREAMREMARKPARSER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -113,4 +113,4 @@ struct BitstreamParserHelper {
 } // end namespace remarks
 } // end namespace llvm
 
-#endif /* LLVM_REMARKS_BITSTREAM_REMARK_PARSER_H */
+#endif // LLVM_REMARKS_BITSTREAMREMARKPARSER_H

@@ -2,7 +2,7 @@
 // rdar://8893785
 
 void MYFUNC() {
-// CHECK-LABEL:    define void @MYFUNC()
+// CHECK-LABEL:    define{{.*}} void @MYFUNC()
 // CHECK:      [[OBSERVER_SLOT:%.*]] = alloca [[OBSERVER_T:%.*]], align 8
 
 // CHECK:      [[T0:%.*]] = getelementptr inbounds [[OBSERVER_T]], [[OBSERVER_T]]* [[OBSERVER_SLOT]], i32 0, i32 1

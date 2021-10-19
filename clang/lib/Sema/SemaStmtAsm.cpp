@@ -228,7 +228,7 @@ getClobberConflictLocation(MultiExprArg Exprs, StringLiteral **Constraints,
     StringRef Clobber = Clobbers[i]->getString();
     // We only check registers, therefore we don't check cc and memory
     // clobbers
-    if (Clobber == "cc" || Clobber == "memory")
+    if (Clobber == "cc" || Clobber == "memory" || Clobber == "unwind")
       continue;
     Clobber = Target.getNormalizedGCCRegisterName(Clobber, true);
     // Go over the output's registers we collected
@@ -393,30 +393,31 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                               diag::err_asm_invalid_lvalue_in_input)
                          << Info.getConstraintStr()
                          << InputExpr->getSourceRange());
-    } else if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
-      if (!InputExpr->isValueDependent()) {
-        Expr::EvalResult EVResult;
-        if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
-          // For compatibility with GCC, we also allow pointers that would be
-          // integral constant expressions if they were cast to int.
-          llvm::APSInt IntResult;
-          if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
-                                               Context))
-            if (!Info.isValidAsmImmediate(IntResult))
-              return StmtError(Diag(InputExpr->getBeginLoc(),
-                                    diag::err_invalid_asm_value_for_constraint)
-                               << IntResult.toString(10)
-                               << Info.getConstraintStr()
-                               << InputExpr->getSourceRange());
-        }
-      }
-
     } else {
       ExprResult Result = DefaultFunctionArrayLvalueConversion(Exprs[i]);
       if (Result.isInvalid())
         return StmtError();
 
-      Exprs[i] = Result.get();
+      InputExpr = Exprs[i] = Result.get();
+
+      if (Info.requiresImmediateConstant() && !Info.allowsRegister()) {
+        if (!InputExpr->isValueDependent()) {
+          Expr::EvalResult EVResult;
+          if (InputExpr->EvaluateAsRValue(EVResult, Context, true)) {
+            // For compatibility with GCC, we also allow pointers that would be
+            // integral constant expressions if they were cast to int.
+            llvm::APSInt IntResult;
+            if (EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                                Context))
+              if (!Info.isValidAsmImmediate(IntResult))
+                return StmtError(
+                    Diag(InputExpr->getBeginLoc(),
+                         diag::err_invalid_asm_value_for_constraint)
+                    << toString(IntResult, 10) << Info.getConstraintStr()
+                    << InputExpr->getSourceRange());
+          }
+        }
+      }
     }
 
     if (Info.allowsRegister()) {
@@ -448,10 +449,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     unsigned Size = Context.getTypeSize(Ty);
     if (!Context.getTargetInfo().validateInputSize(FeatureMap,
                                                    Literal->getString(), Size))
-      return StmtResult(
-          targetDiag(InputExpr->getBeginLoc(), diag::err_asm_invalid_input_size)
-          << Info.getConstraintStr());
+      return targetDiag(InputExpr->getBeginLoc(),
+                        diag::err_asm_invalid_input_size)
+             << Info.getConstraintStr();
   }
+
+  Optional<SourceLocation> UnwindClobberLoc;
 
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
@@ -468,6 +471,19 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
                      NumClobbers, Clobbers, NumLabels, RParenLoc);
     }
+
+    if (Clobber == "unwind") {
+      UnwindClobberLoc = Literal->getBeginLoc();
+    }
+  }
+
+  // Using unwind clobber and asm-goto together is not supported right now.
+  if (UnwindClobberLoc && NumLabels > 0) {
+    targetDiag(*UnwindClobberLoc, diag::err_asm_unwind_and_goto);
+    return new (Context)
+        GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs,
+                   Names, Constraints, Exprs.data(), AsmString, NumClobbers,
+                   Clobbers, NumLabels, RParenLoc);
   }
 
   GCCAsmStmt *NS =
@@ -720,7 +736,7 @@ void Sema::FillInlineAsmIdentifierInfo(Expr *Res,
   Expr::EvalResult Eval;
   if (T->isFunctionType() || T->isDependentType())
     return Info.setLabel(Res);
-  if (Res->isRValue()) {
+  if (Res->isPRValue()) {
     bool IsEnum = isa<clang::EnumType>(T);
     if (DeclRefExpr *DRE = dyn_cast<clang::DeclRefExpr>(Res))
       if (DRE->getDecl()->getKind() == Decl::EnumConstant)

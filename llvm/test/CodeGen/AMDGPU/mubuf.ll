@@ -71,7 +71,7 @@ main_body:
 ; the offset field.
 ; CHECK-LABEL: {{^}}soffset_no_fold:
 ; CHECK: s_movk_i32 [[SOFFSET:s[0-9]+]], 0x41
-; CHECK: buffer_load_dword v{{[0-9+]}}, v{{[0-9+]}}, s[{{[0-9]+}}:{{[0-9]+}}], [[SOFFSET]] offen glc
+; CHECK: buffer_load_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], [[SOFFSET]] offen glc
 define amdgpu_gs void @soffset_no_fold([6 x <4 x i32>] addrspace(4)* inreg, [17 x <4 x i32>] addrspace(4)* inreg, [16 x <4 x i32>] addrspace(4)* inreg, [32 x <8 x i32>] addrspace(4)* inreg, i32 inreg, i32 inreg, i32, i32, i32, i32, i32, i32, i32, i32) {
 main_body:
   %tmp0 = getelementptr [6 x <4 x i32>], [6 x <4 x i32>] addrspace(4)* %0, i32 0, i32 0

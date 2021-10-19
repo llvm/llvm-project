@@ -10,7 +10,6 @@
 #define LLVM_CLANG_INDEX_COMMENTTOXML_H
 
 #include "clang/Basic/LLVM.h"
-#include <memory>
 
 namespace clang {
 class ASTContext;

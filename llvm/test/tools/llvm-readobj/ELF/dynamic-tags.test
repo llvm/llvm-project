@@ -281,15 +281,14 @@ Sections:
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1010
+    FirstSec: .dynamic
+    LastSec:  .dynamic
 
 # RUN: yaml2obj %s --docnum=1 -DBITS=32 -DSYMBOLIC=0x12345678 -DDEBUG=0xfedcba09 \
 # RUN:   -DTEXTREL=0x11223344 -DBINDNOW=0x88776655 -DFLAGS=0xffffffff \
@@ -481,17 +480,20 @@ Sections:
 # RUN:     --check-prefixes=PHENTSIZE-WARN,PHENTSIZE-GNU
 
 # PHENTSIZE-WARN:      warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_HASH: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_STRTAB: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_SYMTAB: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_RELA: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_HASH: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_STRTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELA: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': DT_SYMENT value of 0x987 is not the size of a symbol (0x18)
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_REL: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_JMPREL: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_RELR: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_GNU_HASH: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': string table was not found
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_REL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_JMPREL: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_SYMTAB_SHNDX: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
+# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': unable to parse DT_GNU_HASH: invalid e_phentsize: 1
+
+# PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
+# PHENTSIZE-LLVM-NEXT: LoadName: <?>
 
 # PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
 # PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
@@ -560,6 +562,7 @@ Sections:
 
 # PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
 # PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
+# PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
 # PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x0000000000000002 (PLTRELSZ)             16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000003 (PLTGOT)               0x1000

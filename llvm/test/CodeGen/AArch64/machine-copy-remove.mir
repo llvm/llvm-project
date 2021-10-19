@@ -536,13 +536,13 @@ body:             |
   bb.2:
     RET_ReallyLR
 ...
-# Eliminate redundant MOVi32imm -1 in bb.1
+# Don't eliminate redundant MOVi32imm -1 in bb.1: the upper bits are nonzero.
 # Note: 64-bit compare/32-bit move imm
 # Kill marker should be removed from compare.
 # CHECK-LABEL: name: test21
-# CHECK: ADDSXri $x0, 1, 0, implicit-def $nzcv
+# CHECK: ADDSXri killed $x0, 1, 0, implicit-def $nzcv
 # CHECK: bb.1:
-# CHECK-NOT: MOVi32imm
+# CHECK: MOVi32imm
 name:            test21
 tracksRegLiveness: true
 body:             |

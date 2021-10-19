@@ -28,17 +28,6 @@ class SocketAddress;
 
 class ConnectionFileDescriptor : public Connection {
 public:
-  static const char *LISTEN_SCHEME;
-  static const char *ACCEPT_SCHEME;
-  static const char *UNIX_ACCEPT_SCHEME;
-  static const char *CONNECT_SCHEME;
-  static const char *TCP_CONNECT_SCHEME;
-  static const char *UDP_SCHEME;
-  static const char *UNIX_CONNECT_SCHEME;
-  static const char *UNIX_ABSTRACT_CONNECT_SCHEME;
-  static const char *FD_SCHEME;
-  static const char *FILE_SCHEME;
-
   ConnectionFileDescriptor(bool child_processes_inherit = false);
 
   ConnectionFileDescriptor(int fd, bool owns_fd);
@@ -66,7 +55,7 @@ public:
 
   bool InterruptRead() override;
 
-  lldb::IOObjectSP GetReadObject() override { return m_read_sp; }
+  lldb::IOObjectSP GetReadObject() override { return m_io_sp; }
 
   uint16_t GetListeningPort(const Timeout<std::micro> &timeout);
 
@@ -95,8 +84,11 @@ protected:
   lldb::ConnectionStatus UnixAbstractSocketConnect(llvm::StringRef socket_name,
                                                    Status *error_ptr);
 
-  lldb::IOObjectSP m_read_sp;
-  lldb::IOObjectSP m_write_sp;
+  lldb::ConnectionStatus ConnectFD(llvm::StringRef args, Status *error_ptr);
+
+  lldb::ConnectionStatus ConnectFile(llvm::StringRef args, Status *error_ptr);
+
+  lldb::IOObjectSP m_io_sp;
 
   Predicate<uint16_t>
       m_port_predicate; // Used when binding to port zero to wait for the thread
@@ -108,7 +100,7 @@ protected:
   std::atomic<bool> m_shutting_down; // This marks that we are shutting down so
                                      // if we get woken up from
   // BytesAvailable to disconnect, we won't try to read again.
-  bool m_waiting_for_accept;
+  bool m_waiting_for_accept = false;
   bool m_child_processes_inherit;
 
   std::string m_uri;

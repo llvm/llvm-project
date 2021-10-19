@@ -7,8 +7,8 @@
 # RUN: ld.lld -r %t.o %t.o -o %t.ro
 # RUN: llvm-readelf -g -S %t.ro | FileCheck %s
 
-# CHECK: Name    Type  Address          Off    Size   ES Flg Lk        Inf Al
-# CHECK: .group  GROUP 0000000000000000 {{.*}} 000014 04     {{[1-9]}}   1  4
+# CHECK: Name    Type  Address          Off    Size   ES Flg Lk        Inf   Al
+# CHECK: .group  GROUP 0000000000000000 {{.*}} 000014 04     {{[1-9]}} [[#]]  4
 
 # CHECK: COMDAT group section [{{.*}}] `.group' [abc] contains 4 sections:
 # CHECK-NEXT: Name
@@ -22,8 +22,8 @@
 # RUN: ld.lld -r -T %t1.lds %t.o %t.o -o %t1.ro
 # RUN: llvm-readelf -g -S %t1.ro | FileCheck %s --check-prefix=SCRIPT1
 
-# SCRIPT1: Name    Type  Address          Off    Size   ES Flg Lk        Inf Al
-# SCRIPT1: .group  GROUP 0000000000000000 {{.*}} 00000c 04     {{[1-9]}}   1  4
+# SCRIPT1: Name    Type  Address          Off    Size   ES Flg Lk        Inf   Al
+# SCRIPT1: .group  GROUP 0000000000000000 {{.*}} 00000c 04     {{[1-9]}} [[#]]  4
 
 # SCRIPT1: COMDAT group section [{{.*}}] `.group' [abc] contains 2 sections:
 # SCRIPT1-NEXT: Name
@@ -35,13 +35,16 @@
 # RUN: llvm-readelf -g -S %t2.ro | FileCheck %s --check-prefix=SCRIPT2
 
 ## Handle discarded group members.
-# SCRIPT2: [Nr] Name    Type  Address          Off    Size   ES Flg Lk        Inf Al
-# SCRIPT2: [ 2] .group  GROUP 0000000000000000 {{.*}} 00000c 04     {{[1-9]}}   1  4
+# SCRIPT2: [Nr] Name    Type  Address          Off    Size   ES Flg Lk        Inf   Al
+# SCRIPT2: [ 2] .group  GROUP 0000000000000000 {{.*}} 00000c 04     {{[1-9]}} [[#]]  4
 
 # SCRIPT2: COMDAT group section [{{.*}}] `.group' [abc] contains 2 sections:
 # SCRIPT2-NEXT: Name
 # SCRIPT2-NEXT: .text.bar
 # SCRIPT2-NEXT: .text.foo
+
+.weak abc
+abc:
 
 .section .rodata.bar,"aG",@progbits,abc,comdat
 .byte 42

@@ -14,31 +14,19 @@
 define dso_local <2 x double> @test1(<8 x i16> %a) {
 ; P9BE-LABEL: test1:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    li r3, 0
-; P9BE-NEXT:    vextuhlx r3, r3, v2
-; P9BE-NEXT:    clrlwi r3, r3, 16
-; P9BE-NEXT:    mtfprwz f0, r3
-; P9BE-NEXT:    li r3, 2
-; P9BE-NEXT:    vextuhlx r3, r3, v2
-; P9BE-NEXT:    xscvuxddp f0, f0
-; P9BE-NEXT:    clrlwi r3, r3, 16
-; P9BE-NEXT:    mtfprwz f1, r3
-; P9BE-NEXT:    xscvuxddp f1, f1
+; P9BE-NEXT:    vextractuh v3, v2, 0
+; P9BE-NEXT:    vextractuh v2, v2, 2
+; P9BE-NEXT:    xscvuxddp f0, v3
+; P9BE-NEXT:    xscvuxddp f1, v2
 ; P9BE-NEXT:    xxmrghd v2, vs0, vs1
 ; P9BE-NEXT:    blr
 ;
 ; P9LE-LABEL: test1:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    li r3, 0
-; P9LE-NEXT:    vextuhrx r3, r3, v2
-; P9LE-NEXT:    clrlwi r3, r3, 16
-; P9LE-NEXT:    mtfprwz f0, r3
-; P9LE-NEXT:    li r3, 2
-; P9LE-NEXT:    vextuhrx r3, r3, v2
-; P9LE-NEXT:    xscvuxddp f0, f0
-; P9LE-NEXT:    clrlwi r3, r3, 16
-; P9LE-NEXT:    mtfprwz f1, r3
-; P9LE-NEXT:    xscvuxddp f1, f1
+; P9LE-NEXT:    vextractuh v3, v2, 14
+; P9LE-NEXT:    vextractuh v2, v2, 12
+; P9LE-NEXT:    xscvuxddp f0, v3
+; P9LE-NEXT:    xscvuxddp f1, v2
 ; P9LE-NEXT:    xxmrghd v2, vs1, vs0
 ; P9LE-NEXT:    blr
 ;

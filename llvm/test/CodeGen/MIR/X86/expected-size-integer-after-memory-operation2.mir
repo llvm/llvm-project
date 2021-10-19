@@ -17,7 +17,7 @@ liveins:
 body: |
   bb.0.entry:
     liveins: $rdi
-  ; CHECK: [[@LINE+1]]:53: expected the size integer literal or 'unknown-size' after memory operation
+  ; CHECK: [[@LINE+1]]:53: expected memory LLT, the size integer literal or 'unknown-size' after memory operation
     $eax = MOV32rm killed $rdi, 1, _, 0, _ :: (load . from %ir.a)
     RETQ $eax
 ...

@@ -35,9 +35,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_REGISTERFILESTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_REGISTERFILESTATISTICS_H
 
-#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MCA/View.h"
 
 namespace llvm {
 namespace mca {
@@ -73,6 +73,10 @@ public:
   void onCycleEnd() override;
   void onEvent(const HWInstructionEvent &Event) override;
   void printView(llvm::raw_ostream &OS) const override;
+  StringRef getNameAsString() const override {
+    return "RegisterFileStatistics";
+  }
+  bool isSerializable() const override { return false; }
 };
 } // namespace mca
 } // namespace llvm

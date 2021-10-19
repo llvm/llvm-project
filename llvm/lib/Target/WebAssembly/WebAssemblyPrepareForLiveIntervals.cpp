@@ -19,10 +19,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -112,8 +112,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
 
   // Move ARGUMENT_* instructions to the top of the entry block, so that their
   // liveness reflects the fact that these really are live-in values.
-  for (auto MII = Entry.begin(), MIE = Entry.end(); MII != MIE;) {
-    MachineInstr &MI = *MII++;
+  for (MachineInstr &MI : llvm::make_early_inc_range(Entry)) {
     if (WebAssembly::isArgument(MI.getOpcode())) {
       MI.removeFromParent();
       Entry.insert(Entry.begin(), &MI);

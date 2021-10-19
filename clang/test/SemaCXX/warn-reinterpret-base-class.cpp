@@ -298,7 +298,7 @@ void different_subobject_downcast(E *e, F *f, A *a) {
 #endif
   (void)reinterpret_cast<H *>(a);
 
-  // expected-warning@+2 {{'reinterpret_cast' to class 'L' (aka 'const F *volatile') from its base at non-zero offset 'E *' behaves differently from 'static_cast'}}
+  // expected-warning@+2 {{'reinterpret_cast' to class 'K' (aka 'const F *') from its base at non-zero offset 'E *' behaves differently from 'static_cast'}}
   // expected-note@+1 {{use 'static_cast' to adjust the pointer correctly while downcasting}}
   (void)reinterpret_cast<L>(e);
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:25}:"static_cast"

@@ -68,9 +68,9 @@ public:
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   struct Object {
@@ -84,25 +84,25 @@ protected:
     lldb_private::ConstString ar_name;
 
     /// Object modification time in the archive.
-    uint32_t modification_time;
+    uint32_t modification_time = 0;
 
     /// Object user id in the archive.
-    uint16_t uid;
+    uint16_t uid = 0;
 
     /// Object group id in the archive.
-    uint16_t gid;
+    uint16_t gid = 0;
 
     /// Object octal file permissions in the archive.
-    uint16_t mode;
+    uint16_t mode = 0;
 
     /// Object size in bytes in the archive.
-    uint32_t size;
+    uint32_t size = 0;
 
     /// File offset in bytes from the beginning of the file of the object data.
-    lldb::offset_t file_offset;
+    lldb::offset_t file_offset = 0;
 
     /// Length of the object data.
-    lldb::offset_t file_size;
+    lldb::offset_t file_size = 0;
   };
 
   class Archive {

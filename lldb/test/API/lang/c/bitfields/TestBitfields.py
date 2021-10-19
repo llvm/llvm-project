@@ -147,6 +147,33 @@ class BitfieldsTestCase(TestBase):
         self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
+        # Check reading a bitfield through a pointer in various ways (PR47743)
+        self.expect("v/x large_packed_ptr->b",
+                substrs=["large_packed_ptr->b = 0x0000000dffffeeee"])
+        self.expect("v/x large_packed_ptr[0].b",
+                substrs=["large_packed_ptr[0].b = 0x0000000dffffeeee"])
+
+    # BitFields exhibit crashes in record layout on Windows
+    # (http://llvm.org/pr21800)
+    @skipIfWindows
+    def test_expression_bug(self):
+        # Ensure evaluating (emulating) an expression does not break bitfield
+        # values for already parsed variables. The expression is run twice
+        # because the very first expression can resume a target (to allocate
+        # memory, etc.) even if it is not being jitted.
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.c"),
+                self.line)
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
+        self.expect("expr --allow-jit false  -- more_bits.a", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['uint32_t', '3'])
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
+        self.expect("expr --allow-jit false  -- more_bits.a", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=['uint32_t', '3'])
+        self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
+                    substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
     @add_test_categories(['pyapi'])
     # BitFields exhibit crashes in record layout on Windows
@@ -179,14 +206,14 @@ class BitfieldsTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         bits = frame.FindVariable("bits")
         self.DebugSBValue(bits)
-        self.assertTrue(
-            bits.GetTypeName() == 'Bits',
+        self.assertEqual(
+            bits.GetTypeName(), 'Bits',
             "bits.GetTypeName() == 'Bits'")
-        self.assertTrue(
-            bits.GetNumChildren() == 10,
+        self.assertEqual(
+            bits.GetNumChildren(), 10,
             "bits.GetNumChildren() == 10")
         test_compiler = self.getCompiler()
-        self.assertTrue(bits.GetByteSize() == 32, "bits.GetByteSize() == 32")
+        self.assertEqual(bits.GetByteSize(), 32, "bits.GetByteSize() == 32")
 
         # Notice the pattern of int(b1.GetValue(), 0).  We pass a base of 0
         # so that the proper radix is determined based on the contents of the

@@ -15,8 +15,8 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -44,6 +44,7 @@ private:
                                     GlobalVariable *to) {
     to->setLinkage(from->getLinkage());
     to->setVisibility(from->getVisibility());
+    to->setDSOLocal(from->isDSOLocal());
     if (from->hasComdat()) {
       to->setComdat(M.getOrInsertComdat(to->getName()));
       to->getComdat()->setSelectionKind(from->getComdat()->getSelectionKind());

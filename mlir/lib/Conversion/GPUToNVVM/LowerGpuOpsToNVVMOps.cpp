@@ -13,12 +13,21 @@
 
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
@@ -30,10 +39,8 @@ using namespace mlir;
 
 namespace {
 
-struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
-  explicit GPUShuffleOpLowering(LLVMTypeConverter &lowering_)
-      : ConvertToLLVMPattern(gpu::ShuffleOp::getOperationName(),
-                             lowering_.getDialect()->getContext(), lowering_) {}
+struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
+  using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
   /// Lowers a shuffle to the corresponding NVVM op.
   ///
@@ -41,10 +48,10 @@ struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   /// which threads participate in the shuffle) and a maskAndClamp (specifying
   /// the highest lane which participates in the shuffle).
   ///
-  ///     %one = llvm.constant(1 : i32) : !llvm.i32
-  ///     %shl = llvm.shl %one, %width : !llvm.i32
-  ///     %active_mask = llvm.sub %shl, %one : !llvm.i32
-  ///     %mask_and_clamp = llvm.sub %width, %one : !llvm.i32
+  ///     %one = llvm.constant(1 : i32) : i32
+  ///     %shl = llvm.shl %one, %width : i32
+  ///     %active_mask = llvm.sub %shl, %one : i32
+  ///     %mask_and_clamp = llvm.sub %width, %one : i32
   ///     %shfl = nvvm.shfl.sync.bfly %active_mask, %value, %offset,
   ///         %mask_and_clamp : !llvm<"{ float, i1 }">
   ///     %shfl_value = llvm.extractvalue %shfl[0 : index] :
@@ -52,16 +59,15 @@ struct GPUShuffleOpLowering : public ConvertToLLVMPattern {
   ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    gpu::ShuffleOpAdaptor adaptor(operands);
 
-    auto valueTy = adaptor.value().getType().cast<LLVM::LLVMType>();
-    auto int32Type = LLVM::LLVMType::getInt32Ty(rewriter.getContext());
-    auto predTy = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
-    auto resultTy =
-        LLVM::LLVMType::getStructTy(rewriter.getContext(), {valueTy, predTy});
+    auto valueTy = adaptor.value().getType();
+    auto int32Type = IntegerType::get(rewriter.getContext(), 32);
+    auto predTy = IntegerType::get(rewriter.getContext(), 1);
+    auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                     {valueTy, predTy});
 
     Value one = rewriter.create<LLVM::ConstantOp>(
         loc, int32Type, rewriter.getI32IntegerAttr(1));
@@ -107,10 +113,12 @@ struct LowerGpuOpsToNVVMOpsPass
     gpu::GPUModuleOp m = getOperation();
 
     /// Customize the bitwidth used for the device side index computations.
-    LowerToLLVMOptions options = {/*useBarePtrCallConv =*/false,
-                                  /*emitCWrappers =*/true,
-                                  /*indexBitwidth =*/indexBitwidth,
-                                  /*useAlignedAlloc =*/false};
+    LowerToLLVMOptions options(
+        m.getContext(),
+        DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
+    options.emitCWrappers = true;
+    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+      options.overrideIndexBitwidth(indexBitwidth);
 
     /// MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
     /// space 5 for private memory attributions, but NVVM represents private
@@ -118,73 +126,137 @@ struct LowerGpuOpsToNVVMOpsPass
     /// converter drops the private memory space to support the use case above.
     LLVMTypeConverter converter(m.getContext(), options);
     converter.addConversion([&](MemRefType type) -> Optional<Type> {
-      if (type.getMemorySpace() != gpu::GPUDialect::getPrivateAddressSpace())
+      if (type.getMemorySpaceAsInt() !=
+          gpu::GPUDialect::getPrivateAddressSpace())
         return llvm::None;
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
     });
 
-    OwningRewritePatternList patterns;
+    // Lowering for MMAMatrixType.
+    converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
+      // The number of items in structToReturn are dependent on the the dataType
+      // and the MMA operand that this operation is associated with.
+      llvm::DenseMap<StringRef, int64_t> numElemsPerThreadF16,
+          numElemsPerThreadF32;
+      numElemsPerThreadF16["AOp"] = 8;
+      numElemsPerThreadF16["BOp"] = 8;
+      numElemsPerThreadF16["COp"] = 4;
+      numElemsPerThreadF32["AOp"] = 8;
+      numElemsPerThreadF32["BOp"] = 8;
+      numElemsPerThreadF32["COp"] = 8;
+      Type structToReturn;
+      if (type.getElementType().isF16()) {
+        // Number of f16's in 32-bit.
+        unsigned vecSize = 2;
+        Type vec = VectorType::get(vecSize, FloatType::getF16(&getContext()));
+        unsigned size = numElemsPerThreadF16[type.getOperand()];
+        SmallVector<Type> elements(size, vec);
+        structToReturn =
+            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
+      } else if (type.getElementType().isF32()) {
+        unsigned size = numElemsPerThreadF32[type.getOperand()];
+        SmallVector<Type> elements(size, FloatType::getF32(&getContext()));
+        structToReturn =
+            LLVM::LLVMStructType::getLiteral(&getContext(), elements);
+      }
+      return structToReturn;
+    });
+
+    RewritePatternSet patterns(m.getContext());
+    RewritePatternSet llvmPatterns(m.getContext());
 
     // Apply in-dialect lowering first. In-dialect lowering will replace ops
     // which need to be lowered further, which is not supported by a single
     // conversion pass.
-    populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsAndFoldGreedily(m, patterns);
-    patterns.clear();
+    populateGpuRewritePatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
-    populateStdToLLVMConversionPatterns(converter, patterns);
-    populateGpuToNVVMConversionPatterns(converter, patterns);
+    mlir::arith::populateArithmeticToLLVMConversionPatterns(converter,
+                                                            llvmPatterns);
+    populateStdToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+    populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
-    target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
-                        LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                        LLVM::Log2Op>();
-    target.addIllegalOp<FuncOp>();
-    target.addLegalDialect<NVVM::NVVMDialect>();
-    // TODO: Remove once we support replacing non-root ops.
-    target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-    if (failed(applyPartialConversion(m, target, patterns)))
+    configureGpuToNVVMConversionLegality(target);
+    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
   }
 };
 
 } // anonymous namespace
 
-void mlir::populateGpuToNVVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  populateWithGenerated(converter.getDialect()->getContext(), &patterns);
+void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
+  target.addIllegalOp<FuncOp>();
+  target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
+  target.addIllegalDialect<gpu::GPUDialect>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+
+  // TODO: Remove once we support replacing non-root ops.
+  target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+}
+
+void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
+                                               RewritePatternSet &patterns) {
+  populateWithGenerated(patterns);
   patterns
-      .insert<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                          NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                          NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                          NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                          NVVM::GridDimYOp, NVVM::GridDimZOp>,
-              GPUShuffleOpLowering, GPUReturnOpLowering,
-              // Explicitly drop memory space when lowering private memory
-              // attributions since NVVM models it as `alloca`s in the default
-              // memory space and does not support `alloca`s with addrspace(5).
-              GPUFuncOpLowering<0>>(converter);
-  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
-                                                "__nv_fabs");
-  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
-                                                 "__nv_ceil");
-  patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__nv_cosf",
-                                               "__nv_cos");
-  patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
-                                               "__nv_exp");
-  patterns.insert<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",
-                                                  "__nv_floor");
-  patterns.insert<OpToFuncCallLowering<LogOp>>(converter, "__nv_logf",
-                                               "__nv_log");
-  patterns.insert<OpToFuncCallLowering<Log10Op>>(converter, "__nv_log10f",
-                                                 "__nv_log10");
-  patterns.insert<OpToFuncCallLowering<Log2Op>>(converter, "__nv_log2f",
-                                                "__nv_log2");
-  patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
-                                                "__nv_tanh");
+      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
+                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
+                                       NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
+                                       NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
+                                       NVVM::GridDimYOp, NVVM::GridDimZOp>,
+           GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+
+  // Explicitly drop memory space when lowering private memory
+  // attributions since NVVM models it as `alloca`s in the default
+  // memory space and does not support `alloca`s with addrspace(5).
+  patterns.add<GPUFuncOpLowering>(
+      converter, /*allocaAddrSpace=*/0,
+      Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
+                      &converter.getContext()));
+
+  patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__nv_fabsf",
+                                                  "__nv_fabs");
+  patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
+                                                   "__nv_atan");
+  patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
+                                                    "__nv_atan2");
+  patterns.add<OpToFuncCallLowering<math::CeilOp>>(converter, "__nv_ceilf",
+                                                   "__nv_ceil");
+  patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
+                                                  "__nv_cos");
+  patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
+                                                  "__nv_exp");
+  patterns.add<OpToFuncCallLowering<math::Exp2Op>>(converter, "__nv_exp2f",
+                                                   "__nv_exp2");
+  patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
+                                                    "__nv_expm1");
+  patterns.add<OpToFuncCallLowering<math::FloorOp>>(converter, "__nv_floorf",
+                                                    "__nv_floor");
+  patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
+                                                  "__nv_log");
+  patterns.add<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",
+                                                    "__nv_log1p");
+  patterns.add<OpToFuncCallLowering<math::Log10Op>>(converter, "__nv_log10f",
+                                                    "__nv_log10");
+  patterns.add<OpToFuncCallLowering<math::Log2Op>>(converter, "__nv_log2f",
+                                                   "__nv_log2");
+  patterns.add<OpToFuncCallLowering<math::PowFOp>>(converter, "__nv_powf",
+                                                   "__nv_pow");
+  patterns.add<OpToFuncCallLowering<math::RsqrtOp>>(converter, "__nv_rsqrtf",
+                                                    "__nv_rsqrt");
+  patterns.add<OpToFuncCallLowering<math::SinOp>>(converter, "__nv_sinf",
+                                                  "__nv_sin");
+  patterns.add<OpToFuncCallLowering<math::SqrtOp>>(converter, "__nv_sqrtf",
+                                                   "__nv_sqrt");
+  patterns.add<OpToFuncCallLowering<math::TanhOp>>(converter, "__nv_tanhf",
+                                                   "__nv_tanh");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

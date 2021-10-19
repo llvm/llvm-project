@@ -2,11 +2,11 @@
 
 %va_list = type {i8*, i8*, i8*, i32, i32}
 
-@var = global %va_list zeroinitializer, align 8
+@var = dso_local global %va_list zeroinitializer, align 8
 
 declare void @llvm.va_start(i8*)
 
-define void @test_simple(i32 %n, ...) {
+define dso_local void @test_simple(i32 %n, ...) {
 ; CHECK-LABEL: test_simple:
 ; CHECK: sub sp, sp, #[[STACKSIZE:[0-9]+]]
 ; CHECK: add [[STACK_TOP:x[0-9]+]], sp, #[[STACKSIZE]]
@@ -42,7 +42,7 @@ define void @test_simple(i32 %n, ...) {
   ret void
 }
 
-define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
+define dso_local void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 ; CHECK-LABEL: test_fewargs:
 ; CHECK: sub sp, sp, #[[STACKSIZE:[0-9]+]]
 ; CHECK: add [[STACK_TOP:x[0-9]+]], sp, #[[STACKSIZE]]
@@ -77,7 +77,7 @@ define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
   ret void
 }
 
-define void @test_nospare([8 x i64], [8 x float], ...) {
+define dso_local void @test_nospare([8 x i64], [8 x float], ...) {
 ; CHECK-LABEL: test_nospare:
 
   %addr = bitcast %va_list* @var to i8*
@@ -92,7 +92,7 @@ define void @test_nospare([8 x i64], [8 x float], ...) {
 
 ; If there are non-variadic arguments on the stack (here two i64s) then the
 ; __stack field should point just past them.
-define void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
+define dso_local void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
 ; CHECK-LABEL: test_offsetstack:
 
 ; CHECK-DAG: stp {{q[0-9]+}}, {{q[0-9]+}}, [sp, #48]
@@ -109,7 +109,7 @@ define void @test_offsetstack([8 x i64], [2 x i64], [3 x float], ...) {
 
 declare void @llvm.va_end(i8*)
 
-define void @test_va_end() nounwind {
+define dso_local void @test_va_end() nounwind {
 ; CHECK-LABEL: test_va_end:
 ; CHECK-NEXT: %bb.0
 
@@ -122,9 +122,9 @@ define void @test_va_end() nounwind {
 
 declare void @llvm.va_copy(i8* %dest, i8* %src)
 
-@second_list = global %va_list zeroinitializer
+@second_list = dso_local global %va_list zeroinitializer
 
-define void @test_va_copy() {
+define dso_local void @test_va_copy() {
 ; CHECK-LABEL: test_va_copy:
   %srcaddr = bitcast %va_list* @var to i8*
   %dstaddr = bitcast %va_list* @second_list to i8*
@@ -132,9 +132,10 @@ define void @test_va_copy() {
 
 ; CHECK: add x[[SRC:[0-9]+]], {{x[0-9]+}}, :lo12:var
 
-; CHECK: ldp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[SRC]]]
+; CHECK: ldr [[BLOCKB:q[0-9]+]], [x[[SRC]], #16]
 ; CHECK: add x[[DST:[0-9]+]], {{x[0-9]+}}, :lo12:second_list
-; CHECK: stp [[BLOCK:q[0-9]+]], [[BLOCK:q[0-9]+]], [x[[DST]]]
+; CHECK: ldr [[BLOCKA:q[0-9]+]], [x[[SRC]]]
+; CHECK: stp [[BLOCKA]], [[BLOCKB]], [x[[DST]]]
   ret void
 ; CHECK: ret
 }

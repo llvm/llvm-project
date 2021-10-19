@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMWinEHPrinter.h"
-#include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "Win64EHDumper.h"
@@ -68,15 +67,20 @@ struct LoadConfigTables {
   uint32_t GuardFlags = 0;
   uint64_t GuardFidTableVA = 0;
   uint64_t GuardFidTableCount = 0;
+  uint64_t GuardIatTableVA = 0;
+  uint64_t GuardIatTableCount = 0;
   uint64_t GuardLJmpTableVA = 0;
   uint64_t GuardLJmpTableCount = 0;
+  uint64_t GuardEHContTableVA = 0;
+  uint64_t GuardEHContTableCount = 0;
 };
 
 class COFFDumper : public ObjDumper {
 public:
   friend class COFFObjectDumpDelegate;
   COFFDumper(const llvm::object::COFFObjectFile *Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj), Writer(Writer), Types(100) {}
+      : ObjDumper(Writer, Obj->getFileName()), Obj(Obj), Writer(Writer),
+        Types(100) {}
 
   void printFileHeaders() override;
   void printSectionHeaders() override;
@@ -90,6 +94,7 @@ public:
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
   void printCOFFDebugDirectory() override;
+  void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
   void printCodeViewDebugInfo() override;
@@ -117,13 +122,14 @@ private:
   void printBaseOfDataField(const pe32plus_header *Hdr);
   template <typename T>
   void printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables);
+  template <typename IntTy>
+  void printCOFFTLSDirectory(const coff_tls_directory<IntTy> *TlsTable);
   typedef void (*PrintExtraCB)(raw_ostream &, const uint8_t *);
   void printRVATable(uint64_t TableVA, uint64_t Count, uint64_t EntrySize,
                      PrintExtraCB PrintExtra = 0);
 
   void printCodeViewSymbolSection(StringRef SectionName, const SectionRef &Section);
   void printCodeViewTypeSection(StringRef SectionName, const SectionRef &Section);
-  StringRef getTypeName(TypeIndex Ty);
   StringRef getFileNameForFileOffset(uint32_t FileOffset);
   void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
   void printTypeIndex(StringRef FieldName, TypeIndex TI) {
@@ -262,9 +268,9 @@ std::error_code COFFDumper::resolveSymbol(const coff_section *Section,
     }
   }
   if (SymI == Obj->symbol_end())
-    return readobj_error::unknown_symbol;
+    return inconvertibleErrorCode();
   Sym = *SymI;
-  return readobj_error::success;
+  return std::error_code();
 }
 
 // Given a section and an offset into this section the function returns the name
@@ -578,7 +584,7 @@ static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
   ArrayRef<uint8_t> AuxData = Obj->getSymbolAuxData(Symbol);
   AuxData = AuxData.slice(AuxSymbolIdx * Obj->getSymbolTableEntrySize());
   Aux = reinterpret_cast<const T*>(AuxData.data());
-  return readobj_error::success;
+  return std::error_code();
 }
 
 void COFFDumper::cacheRelocations() {
@@ -589,8 +595,7 @@ void COFFDumper::cacheRelocations() {
   for (const SectionRef &S : Obj->sections()) {
     const coff_section *Section = Obj->getCOFFSection(S);
 
-    for (const RelocationRef &Reloc : S.relocations())
-      RelocMap[Section].push_back(Reloc);
+    append_range(RelocMap[Section], S.relocations());
 
     // Sort relocations by address.
     llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
@@ -704,7 +709,10 @@ void COFFDumper::printPEHeader(const PEHeader *Hdr) {
     };
 
     for (uint32_t i = 0; i < Hdr->NumberOfRvaAndSize; ++i)
-      printDataDirectory(i, directory[i]);
+      if (i < sizeof(directory) / sizeof(char *))
+        printDataDirectory(i, directory[i]);
+      else
+        printDataDirectory(i, "Unknown");
   }
 }
 
@@ -790,24 +798,35 @@ void COFFDumper::printCOFFLoadConfig() {
     printRVATable(Tables.SEHTableVA, Tables.SEHTableCount, 4);
   }
 
+  auto PrintGuardFlags = [](raw_ostream &OS, const uint8_t *Entry) {
+    uint8_t Flags = *reinterpret_cast<const uint8_t *>(Entry + 4);
+    if (Flags)
+      OS << " flags " << utohexstr(Flags);
+  };
+
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags)) {
-      auto PrintGuardFlags = [](raw_ostream &OS, const uint8_t *Entry) {
-        uint8_t Flags = *reinterpret_cast<const uint8_t *>(Entry + 4);
-        if (Flags)
-          OS << " flags " << utohexstr(Flags);
-      };
+    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags))
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 5,
                     PrintGuardFlags);
-    } else {
+    else
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
-    }
+  }
+
+  if (Tables.GuardIatTableVA) {
+    ListScope LS(W, "GuardIatTable");
+    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount, 4);
   }
 
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
     printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
+  }
+
+  if (Tables.GuardEHContTableVA) {
+    ListScope LS(W, "GuardEHContTable");
+    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount, 5,
+                  PrintGuardFlags);
   }
 }
 
@@ -867,8 +886,8 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   Tables.GuardFidTableCount = Conf->GuardCFFunctionCount;
   Tables.GuardFlags = Conf->GuardFlags;
 
-  // Print the rest. (2017)
-  if (Conf->Size < sizeof(T))
+  // Print everything before Reserved3. (2017)
+  if (Conf->Size < offsetof(T, Reserved3))
     return;
   W.printHex("GuardAddressTakenIatEntryTable",
              Conf->GuardAddressTakenIatEntryTable);
@@ -889,8 +908,22 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
              Conf->GuardRFVerifyStackPointerFunctionPointer);
   W.printHex("HotPatchTableOffset", Conf->HotPatchTableOffset);
 
+  Tables.GuardIatTableVA = Conf->GuardAddressTakenIatEntryTable;
+  Tables.GuardIatTableCount = Conf->GuardAddressTakenIatEntryCount;
+
   Tables.GuardLJmpTableVA = Conf->GuardLongJumpTargetTable;
   Tables.GuardLJmpTableCount = Conf->GuardLongJumpTargetCount;
+
+  // Print the rest. (2019)
+  if (Conf->Size < sizeof(T))
+    return;
+  W.printHex("EnclaveConfigurationPointer", Conf->EnclaveConfigurationPointer);
+  W.printHex("VolatileMetadataPointer", Conf->VolatileMetadataPointer);
+  W.printHex("GuardEHContinuationTable", Conf->GuardEHContinuationTable);
+  W.printNumber("GuardEHContinuationCount", Conf->GuardEHContinuationCount);
+
+  Tables.GuardEHContTableVA = Conf->GuardEHContinuationTable;
+  Tables.GuardEHContTableCount = Conf->GuardEHContinuationCount;
 }
 
 void COFFDumper::printBaseOfDataField(const pe32_header *Hdr) {
@@ -1844,7 +1877,7 @@ void COFFDumper::printResourceDirectoryTable(
         OS << ": (ID " << Entry.Identifier.ID << ")";
       }
     }
-    Name = StringRef(IDStr);
+    Name = IDStr;
     ListScope ResourceType(W, Level.str() + Name.str());
     if (Entry.Offset.isSubDir()) {
       W.printHex("Table Offset", Entry.Offset.value());
@@ -2018,4 +2051,28 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
       reportError(std::move(Err), "<?>");
     Writer.flush();
   }
+}
+
+void COFFDumper::printCOFFTLSDirectory() {
+  if (Obj->is64())
+    printCOFFTLSDirectory(Obj->getTLSDirectory64());
+  else
+    printCOFFTLSDirectory(Obj->getTLSDirectory32());
+}
+
+template <typename IntTy>
+void COFFDumper::printCOFFTLSDirectory(
+    const coff_tls_directory<IntTy> *TlsTable) {
+  DictScope D(W, "TLSDirectory");
+  if (!TlsTable)
+    return;
+
+  W.printHex("StartAddressOfRawData", TlsTable->StartAddressOfRawData);
+  W.printHex("EndAddressOfRawData", TlsTable->EndAddressOfRawData);
+  W.printHex("AddressOfIndex", TlsTable->AddressOfIndex);
+  W.printHex("AddressOfCallBacks", TlsTable->AddressOfCallBacks);
+  W.printHex("SizeOfZeroFill", TlsTable->SizeOfZeroFill);
+  W.printFlags("Characteristics", TlsTable->Characteristics,
+               makeArrayRef(ImageSectionCharacteristics),
+               COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
 }

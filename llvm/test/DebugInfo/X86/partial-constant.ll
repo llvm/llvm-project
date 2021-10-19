@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
+; RUN: llc -filetype=obj < %s | llvm-dwarfdump -v - | FileCheck %s
 ; Generated at -O2 from:
 ; bool c();
 ; void f();

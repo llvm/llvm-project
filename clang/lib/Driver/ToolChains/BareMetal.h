@@ -23,11 +23,20 @@ class LLVM_LIBRARY_VISIBILITY BareMetal : public ToolChain {
 public:
   BareMetal(const Driver &D, const llvm::Triple &Triple,
             const llvm::opt::ArgList &Args);
-  ~BareMetal() override;
+  ~BareMetal() override = default;
 
   static bool handlesTarget(const llvm::Triple &Triple);
+
+  void findMultilibs(const Driver &D, const llvm::Triple &Triple,
+                     const llvm::opt::ArgList &Args);
+
 protected:
   Tool *buildLinker() const override;
+
+  std::string buildCompilerRTBasename(const llvm::opt::ArgList &Args,
+                                      StringRef Component,
+                                      FileType Type = ToolChain::FT_Static,
+                                      bool AddArch = true) const override;
 
 public:
   bool useIntegratedAs() const override { return true; }
@@ -36,6 +45,10 @@ public:
   bool isPIEDefault() const override { return false; }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
+
+  StringRef getOSLibName() const override { return "baremetal"; }
+
+  std::string getCompilerRTPath() const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
@@ -59,6 +72,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
+  std::string computeSysRoot() const override;
 };
 
 } // namespace toolchains

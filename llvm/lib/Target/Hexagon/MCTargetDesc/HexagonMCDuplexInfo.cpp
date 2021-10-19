@@ -637,9 +637,9 @@ bool HexagonMCInstrInfo::isOrderedDuplexPair(MCInstrInfo const &MCII,
       return false;
   }
 
-  if (STI.getCPU().equals_lower("hexagonv5") ||
-      STI.getCPU().equals_lower("hexagonv55") ||
-      STI.getCPU().equals_lower("hexagonv60")) {
+  if (STI.getCPU().equals_insensitive("hexagonv5") ||
+      STI.getCPU().equals_insensitive("hexagonv55") ||
+      STI.getCPU().equals_insensitive("hexagonv60")) {
     // If a store appears, it must be in slot 0 (MIa) 1st, and then slot 1 (MIb);
     //   therefore, not duplexable if slot 1 is a store, and slot 0 is not.
     if ((MIbG == HexagonII::HSIG_S1) || (MIbG == HexagonII::HSIG_S2)) {

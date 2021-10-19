@@ -17,7 +17,7 @@
 ; more than 16 calls in them.
 ;
 ; This test is extracted from the following C++ program compiled with Clang.
-; The IR is simplified with SROA, instcombine, and simplify-cfg. Then C++
+; The IR is simplified with SROA, instcombine, and simplifycfg. Then C++
 ; linkage stuff, attributes, target specific things, metadata and comments were
 ; removed. The order of the fuctions is also made more predictable than Clang's
 ; output order.
@@ -39,7 +39,7 @@
 ;
 ;   void test(bool *B, bool *E) { f<false, 0>(B, E); }
 ;
-; RUN: opt -S < %s -inline -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,OLD
+; RUN: opt -S < %s -inline -inline-threshold=150 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,OLD
 ; RUN: opt -S < %s -passes=inline -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
 ; RUN: opt -S < %s -passes=inliner-wrapper -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
 

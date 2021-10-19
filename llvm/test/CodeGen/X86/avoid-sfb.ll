@@ -724,7 +724,7 @@ if.end:                                           ; preds = %if.then, %entry
 %struct.S6 = type { [4 x i32], i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind uwtable
-define void @test_stack(%struct.S6* noalias nocapture sret %agg.result, %struct.S6* byval nocapture readnone align 8 %s1, %struct.S6* byval nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
+define void @test_stack(%struct.S6* noalias nocapture sret(%struct.S6) %agg.result, %struct.S6* byval(%struct.S6) nocapture readnone align 8 %s1, %struct.S6* byval(%struct.S6) nocapture align 8 %s2, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_stack:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -841,13 +841,13 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-NEXT:    movq %rsi, %r12
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl %r9d, 12(%rdi)
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    cmpl $18, %ebp
 ; CHECK-NEXT:    jl .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl %ebp, 4(%rbx)
 ; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB9_2: # %if.end
 ; CHECK-NEXT:    movups (%r15), %xmm0
 ; CHECK-NEXT:    movups %xmm0, (%r14)
@@ -888,13 +888,13 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; DISABLED-NEXT:    movq %rsi, %r12
 ; DISABLED-NEXT:    movq %rdi, %rbx
 ; DISABLED-NEXT:    movl %r9d, 12(%rdi)
-; DISABLED-NEXT:    callq bar
+; DISABLED-NEXT:    callq bar@PLT
 ; DISABLED-NEXT:    cmpl $18, %ebp
 ; DISABLED-NEXT:    jl .LBB9_2
 ; DISABLED-NEXT:  # %bb.1: # %if.then
 ; DISABLED-NEXT:    movl %ebp, 4(%rbx)
 ; DISABLED-NEXT:    movq %rbx, %rdi
-; DISABLED-NEXT:    callq bar
+; DISABLED-NEXT:    callq bar@PLT
 ; DISABLED-NEXT:  .LBB9_2: # %if.end
 ; DISABLED-NEXT:    movups (%r15), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%r14)
@@ -935,13 +935,13 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-AVX2-NEXT:    movq %rsi, %r12
 ; CHECK-AVX2-NEXT:    movq %rdi, %rbx
 ; CHECK-AVX2-NEXT:    movl %r9d, 12(%rdi)
-; CHECK-AVX2-NEXT:    callq bar
+; CHECK-AVX2-NEXT:    callq bar@PLT
 ; CHECK-AVX2-NEXT:    cmpl $18, %ebp
 ; CHECK-AVX2-NEXT:    jl .LBB9_2
 ; CHECK-AVX2-NEXT:  # %bb.1: # %if.then
 ; CHECK-AVX2-NEXT:    movl %ebp, 4(%rbx)
 ; CHECK-AVX2-NEXT:    movq %rbx, %rdi
-; CHECK-AVX2-NEXT:    callq bar
+; CHECK-AVX2-NEXT:    callq bar@PLT
 ; CHECK-AVX2-NEXT:  .LBB9_2: # %if.end
 ; CHECK-AVX2-NEXT:    vmovups (%r15), %xmm0
 ; CHECK-AVX2-NEXT:    vmovups %xmm0, (%r14)
@@ -982,13 +982,13 @@ define void @test_limit_all(%struct.S* noalias  %s1, %struct.S* nocapture %s2, i
 ; CHECK-AVX512-NEXT:    movq %rsi, %r12
 ; CHECK-AVX512-NEXT:    movq %rdi, %rbx
 ; CHECK-AVX512-NEXT:    movl %r9d, 12(%rdi)
-; CHECK-AVX512-NEXT:    callq bar
+; CHECK-AVX512-NEXT:    callq bar@PLT
 ; CHECK-AVX512-NEXT:    cmpl $18, %ebp
 ; CHECK-AVX512-NEXT:    jl .LBB9_2
 ; CHECK-AVX512-NEXT:  # %bb.1: # %if.then
 ; CHECK-AVX512-NEXT:    movl %ebp, 4(%rbx)
 ; CHECK-AVX512-NEXT:    movq %rbx, %rdi
-; CHECK-AVX512-NEXT:    callq bar
+; CHECK-AVX512-NEXT:    callq bar@PLT
 ; CHECK-AVX512-NEXT:  .LBB9_2: # %if.end
 ; CHECK-AVX512-NEXT:    vmovups (%r15), %xmm0
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, (%r14)
@@ -1056,7 +1056,7 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    movl %edx, 4(%rbx)
 ; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB10_2: # %if.end
 ; CHECK-NEXT:    movups (%r12), %xmm0
 ; CHECK-NEXT:    movups %xmm0, (%r15)
@@ -1104,7 +1104,7 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; DISABLED-NEXT:  # %bb.1: # %if.then
 ; DISABLED-NEXT:    movl %edx, 4(%rbx)
 ; DISABLED-NEXT:    movq %rbx, %rdi
-; DISABLED-NEXT:    callq bar
+; DISABLED-NEXT:    callq bar@PLT
 ; DISABLED-NEXT:  .LBB10_2: # %if.end
 ; DISABLED-NEXT:    movups (%r15), %xmm0
 ; DISABLED-NEXT:    movups %xmm0, (%r14)
@@ -1148,7 +1148,7 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-AVX2-NEXT:  # %bb.1: # %if.then
 ; CHECK-AVX2-NEXT:    movl %edx, 4(%rbx)
 ; CHECK-AVX2-NEXT:    movq %rbx, %rdi
-; CHECK-AVX2-NEXT:    callq bar
+; CHECK-AVX2-NEXT:    callq bar@PLT
 ; CHECK-AVX2-NEXT:  .LBB10_2: # %if.end
 ; CHECK-AVX2-NEXT:    vmovups (%r12), %xmm0
 ; CHECK-AVX2-NEXT:    vmovups %xmm0, (%r15)
@@ -1196,7 +1196,7 @@ define void @test_limit_one_pred(%struct.S* noalias %s1, %struct.S* nocapture %s
 ; CHECK-AVX512-NEXT:  # %bb.1: # %if.then
 ; CHECK-AVX512-NEXT:    movl %edx, 4(%rbx)
 ; CHECK-AVX512-NEXT:    movq %rbx, %rdi
-; CHECK-AVX512-NEXT:    callq bar
+; CHECK-AVX512-NEXT:    callq bar@PLT
 ; CHECK-AVX512-NEXT:  .LBB10_2: # %if.end
 ; CHECK-AVX512-NEXT:    vmovups (%r12), %xmm0
 ; CHECK-AVX512-NEXT:    vmovups %xmm0, (%r15)

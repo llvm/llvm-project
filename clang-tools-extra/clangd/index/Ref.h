@@ -88,13 +88,19 @@ struct Ref {
   /// The source location where the symbol is named.
   SymbolLocation Location;
   RefKind Kind = RefKind::Unknown;
+  /// The ID of the symbol whose definition contains this reference.
+  /// For example, for a reference inside a function body, this would
+  /// be that function. For top-level definitions this isNull().
+  SymbolID Container;
 };
 
 inline bool operator<(const Ref &L, const Ref &R) {
-  return std::tie(L.Location, L.Kind) < std::tie(R.Location, R.Kind);
+  return std::tie(L.Location, L.Kind, L.Container) <
+         std::tie(R.Location, R.Kind, R.Container);
 }
 inline bool operator==(const Ref &L, const Ref &R) {
-  return std::tie(L.Location, L.Kind) == std::tie(R.Location, R.Kind);
+  return std::tie(L.Location, L.Kind, L.Container) ==
+         std::tie(R.Location, R.Kind, R.Container);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Ref &);

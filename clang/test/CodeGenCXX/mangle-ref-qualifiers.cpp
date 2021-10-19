@@ -5,17 +5,17 @@ struct X {
   int h() const &&;
 };
 
-// CHECK-LABEL: define i32 @_ZNR1X1fEv
+// CHECK-LABEL: define{{.*}} i32 @_ZNR1X1fEv
 int X::f() & { return 0; }
-// CHECK-LABEL: define i32 @_ZNO1X1gEv
+// CHECK-LABEL: define{{.*}} i32 @_ZNO1X1gEv
 int X::g() && { return 0; }
-// CHECK-LABEL: define i32 @_ZNKO1X1hEv
+// CHECK-LABEL: define{{.*}} i32 @_ZNKO1X1hEv
 int X::h() const && { return 0; }
 
-// CHECK-LABEL: define void @_Z1fM1XFivREMS_FivOEMS_KFivOE
+// CHECK-LABEL: define{{.*}} void @_Z1fM1XFivREMS_FivOEMS_KFivOE
 void f(int (X::*)() &, int (X::*)() &&, int (X::*)() const&&) { }
 
-// CHECK-LABEL: define void @_Z1g1AIFivEES_IFivREES_IFivOEES_IKFivEES_IKFivREES_IKFivOEES_IVKFivEES_IVKFivREES_IVKFivOEE()
+// CHECK-LABEL: define{{.*}} void @_Z1g1AIFivEES_IFivREES_IFivOEES_IKFivEES_IKFivREES_IKFivOEES_IVKFivEES_IVKFivREES_IVKFivOEE()
 template <class T> struct A {};
 void g(A<int()>, A<int()&>, A<int()&&>,
        A<int() const>, A<int() const &>, A<int() const &&>,

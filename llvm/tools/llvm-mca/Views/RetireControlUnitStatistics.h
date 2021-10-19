@@ -28,8 +28,8 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_RETIRECONTROLUNITSTATISTICS_H
 #define LLVM_TOOLS_LLVM_MCA_RETIRECONTROLUNITSTATISTICS_H
 
-#include "Views/View.h"
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/MCA/View.h"
 #include <map>
 
 namespace llvm {
@@ -52,6 +52,10 @@ public:
   void onEvent(const HWInstructionEvent &Event) override;
   void onCycleEnd() override;
   void printView(llvm::raw_ostream &OS) const override;
+  StringRef getNameAsString() const override {
+    return "RetireControlUnitStatistics";
+  }
+  bool isSerializable() const override { return false; }
 };
 
 } // namespace mca

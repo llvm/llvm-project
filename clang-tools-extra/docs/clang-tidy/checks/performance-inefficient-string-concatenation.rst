@@ -55,5 +55,5 @@ Options
 
 .. option:: StrictMode
 
-   When zero, the check will only check the string usage in ``while``, ``for``
-   and ``for-range`` statements. Default is `0`.
+   When `false`, the check will only check the string usage in ``while``, ``for``
+   and ``for-range`` statements. Default is `false`.

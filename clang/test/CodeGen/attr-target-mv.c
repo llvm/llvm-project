@@ -12,6 +12,8 @@ int __attribute__((target("arch=icelake-server"))) foo(void) {return 7;}
 int __attribute__((target("arch=cooperlake"))) foo(void) {return 8;}
 int __attribute__((target("arch=tigerlake"))) foo(void) {return 9;}
 int __attribute__((target("arch=sapphirerapids"))) foo(void) {return 10;}
+int __attribute__((target("arch=alderlake"))) foo(void) {return 11;}
+int __attribute__((target("arch=rocketlake"))) foo(void) {return 12;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar() {
@@ -64,7 +66,17 @@ __attribute__((target("avx,sse4.2"))) inline void foo_used(int i, double d) {}
 __attribute__((target("default"))) inline void foo_used2(int i, double d) {}
 __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double d) {}
 
-// LINUX: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
+// PR50025:
+static void must_be_emitted(void) {}
+inline __attribute__((target("default"))) void pr50025(void) { must_be_emitted(); }
+void calls_pr50025() { pr50025(); }
+
+// Also need to make sure we get other multiversion functions.
+inline __attribute__((target("default"))) void pr50025b(void) { must_be_emitted(); }
+inline __attribute__((target("default"))) void pr50025c(void) { pr50025b(); }
+void calls_pr50025c() { pr50025c(); }
+
+// LINUX: @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
 // WINDOWS: @llvm.used = appending global [2 x i8*] [i8* bitcast (void (i32, double)* @foo_used to i8*), i8* bitcast (void (i32, double)* @foo_used2.avx_sse4.2 to i8*)], section "llvm.metadata"
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
@@ -74,29 +86,33 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // LINUX: @fwd_decl_default.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_default.resolver
 // LINUX: @fwd_decl_avx.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_avx.resolver
 
-// LINUX: define i32 @foo.sse4.2()
+// LINUX: define{{.*}} i32 @foo.sse4.2()
 // LINUX: ret i32 0
-// LINUX: define i32 @foo.arch_ivybridge()
+// LINUX: define{{.*}} i32 @foo.arch_ivybridge()
 // LINUX: ret i32 1
-// LINUX: define i32 @foo.arch_goldmont()
+// LINUX: define{{.*}} i32 @foo.arch_goldmont()
 // LINUX: ret i32 3
-// LINUX: define i32 @foo.arch_goldmont-plus()
+// LINUX: define{{.*}} i32 @foo.arch_goldmont-plus()
 // LINUX: ret i32 4
-// LINUX: define i32 @foo.arch_tremont()
+// LINUX: define{{.*}} i32 @foo.arch_tremont()
 // LINUX: ret i32 5
-// LINUX: define i32 @foo.arch_icelake-client()
+// LINUX: define{{.*}} i32 @foo.arch_icelake-client()
 // LINUX: ret i32 6
-// LINUX: define i32 @foo.arch_icelake-server()
+// LINUX: define{{.*}} i32 @foo.arch_icelake-server()
 // LINUX: ret i32 7
-// LINUX: define i32 @foo.arch_cooperlake()
+// LINUX: define{{.*}} i32 @foo.arch_cooperlake()
 // LINUX: ret i32 8
-// LINUX: define i32 @foo.arch_tigerlake()
+// LINUX: define{{.*}} i32 @foo.arch_tigerlake()
 // LINUX: ret i32 9
-// LINUX: define i32 @foo.arch_sapphirerapids()
+// LINUX: define{{.*}} i32 @foo.arch_sapphirerapids()
 // LINUX: ret i32 10
-// LINUX: define i32 @foo()
+// LINUX: define{{.*}} i32 @foo.arch_alderlake()
+// LINUX: ret i32 11
+// LINUX: define{{.*}} i32 @foo.arch_rocketlake()
+// LINUX: ret i32 12
+// LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
-// LINUX: define i32 @bar()
+// LINUX: define{{.*}} i32 @bar()
 // LINUX: call i32 @foo.ifunc()
 
 // WINDOWS: define dso_local i32 @foo.sse4.2()
@@ -113,6 +129,16 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: ret i32 6
 // WINDOWS: define dso_local i32 @foo.arch_icelake-server()
 // WINDOWS: ret i32 7
+// WINDOWS: define dso_local i32 @foo.arch_cooperlake()
+// WINDOWS: ret i32 8
+// WINDOWS: define dso_local i32 @foo.arch_tigerlake()
+// WINDOWS: ret i32 9
+// WINDOWS: define dso_local i32 @foo.arch_sapphirerapids()
+// WINDOWS: ret i32 10
+// WINDOWS: define dso_local i32 @foo.arch_alderlake()
+// WINDOWS: ret i32 11
+// WINDOWS: define dso_local i32 @foo.arch_rocketlake()
+// WINDOWS: ret i32 12
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
@@ -132,7 +158,7 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: call i32 @foo.sse4.2
 // WINDOWS: call i32 @foo
 
-// LINUX: define i32 @bar2()
+// LINUX: define{{.*}} i32 @bar2()
 // LINUX: call i32 @foo_inline.ifunc()
 
 // WINDOWS: define dso_local i32 @bar2()
@@ -152,7 +178,7 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: call i32 @foo_inline.sse4.2
 // WINDOWS: call i32 @foo_inline
 
-// LINUX: define void @bar3()
+// LINUX: define{{.*}} void @bar3()
 // LINUX: call void @foo_decls.ifunc()
 
 // WINDOWS: define dso_local void @bar3()
@@ -166,7 +192,7 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: call void @foo_decls.sse4.2
 // WINDOWS: call void @foo_decls
 
-// LINUX: define void @bar4()
+// LINUX: define{{.*}} void @bar4()
 // LINUX: call void @foo_multi.ifunc(i32 1, double 5.{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
@@ -202,11 +228,11 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: call void @foo_multi(i32 %0, double %1)
 // WINDOWS-NEXT: ret void
 
-// LINUX: define i32 @fwd_decl_default()
+// LINUX: define{{.*}} i32 @fwd_decl_default()
 // LINUX: ret i32 2
-// LINUX: define i32 @fwd_decl_avx.avx()
+// LINUX: define{{.*}} i32 @fwd_decl_avx.avx()
 // LINUX: ret i32 2
-// LINUX: define i32 @fwd_decl_avx()
+// LINUX: define{{.*}} i32 @fwd_decl_avx()
 // LINUX: ret i32 2
 
 // WINDOWS: define dso_local i32 @fwd_decl_default()
@@ -216,7 +242,7 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: define dso_local i32 @fwd_decl_avx()
 // WINDOWS: ret i32 2
 
-// LINUX: define void @bar5()
+// LINUX: define{{.*}} void @bar5()
 // LINUX: call i32 @fwd_decl_default.ifunc()
 // LINUX: call i32 @fwd_decl_avx.ifunc()
 
@@ -240,8 +266,8 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: call i32 @fwd_decl_avx.avx
 // WINDOWS: call i32 @fwd_decl_avx
 
-// LINUX: define i32 @changed_to_mv.avx()
-// LINUX: define i32 @changed_to_mv.fma4()
+// LINUX: define{{.*}} i32 @changed_to_mv.avx()
+// LINUX: define{{.*}} i32 @changed_to_mv.fma4()
 
 // WINDOWS: define dso_local i32 @changed_to_mv.avx()
 // WINDOWS: define dso_local i32 @changed_to_mv.fma4()
@@ -294,3 +320,16 @@ __attribute__((target("avx,sse4.2"), used)) inline void foo_used2(int i, double 
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+
+// Ensure that we emit the 'static' function here.
+// LINUX: define linkonce void @pr50025()
+// LINUX: call void @must_be_emitted
+// LINUX: define internal void @must_be_emitted()
+// WINDOWS: define linkonce_odr dso_local void @pr50025()
+// WINDOWS: call void @must_be_emitted
+// WINDOWS: define internal void @must_be_emitted()
+
+// LINUX: define linkonce void @pr50025c()
+// LINUX: define linkonce void @pr50025b()
+// WINDOWS: define linkonce_odr dso_local void @pr50025c()
+// WINDOWS: define linkonce_odr dso_local void @pr50025b()

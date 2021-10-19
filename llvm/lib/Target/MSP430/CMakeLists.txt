@@ -1,3 +1,5 @@
+add_llvm_component_group(MSP430)
+
 set(LLVM_TARGET_DEFINITIONS MSP430.td)
 
 tablegen(LLVM MSP430GenAsmMatcher.inc -gen-asm-matcher)
@@ -24,6 +26,20 @@ add_llvm_target(MSP430CodeGen
   MSP430TargetMachine.cpp
   MSP430AsmPrinter.cpp
   MSP430MCInstLower.cpp
+
+  LINK_COMPONENTS
+  AsmPrinter
+  CodeGen
+  Core
+  MC
+  MSP430Desc
+  MSP430Info
+  SelectionDAG
+  Support
+  Target
+
+  ADD_TO_COMPONENT
+  MSP430
   )
 
 add_subdirectory(MCTargetDesc)

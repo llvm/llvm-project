@@ -30,15 +30,15 @@ ST<int> gb;
 double gc[100];
 
 // CK1: [[SIZE00:@.+]] = {{.+}}constant [1 x i64] [i64 800]
-// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE02:@.+]] = {{.+}}constant [1 x i64] [i64 4]
-// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 33]
+// CK1: [[MTYPE02:@.+]] = {{.+}}constant [1 x i64] [i64 1]
 
-// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 34]
+// CK1: [[MTYPE03:@.+]] = {{.+}}constant [1 x i64] [i64 2]
 
 // CK1: [[SIZE04:@.+]] = {{.+}}constant [2 x i64] [i64 sdiv exact (i64 sub (i64 ptrtoint (double** getelementptr (double*, double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1), i32 1) to i64), i64 ptrtoint (double** getelementptr inbounds (%struct.ST, %struct.ST* @gb, i32 0, i32 1) to i64)), i64 ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)), i64 24]
-// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 32, i64 281474976710673]
+// CK1: [[MTYPE04:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 281474976710673]
 
 // CK1-LABEL: _Z3fooi
 void foo(int arg) {
@@ -64,7 +64,7 @@ void foo(int arg) {
   // CK1: store i32 [[DEVICE]], i32* [[CAP_DEVICE]],
   // CK1: [[DEV1:%.+]] = load i32, i32* %{{.+}}
   // CK1: [[DEV2:%.+]] = sext i32 [[DEV1]] to i64
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{72|40}}, i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{64|36}}, i[[sz]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
   // CK1: [[BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates, %struct.kmp_task_t_with_privates* [[BC]], i32 0, i32 0
   // CK1: [[SHAREDS:%.+]] = getelementptr inbounds %struct.kmp_task_t, %struct.kmp_task_t* [[TASK_T]], i32 0, i32 0
@@ -130,7 +130,7 @@ void foo(int arg) {
   // CK1: [[IF_BOOL:%.+]] = trunc i8 [[IF]] to i1
   // CK1: [[IF:%.+]] = zext i1 [[IF_BOOL]] to i8
   // CK1: store i8 [[IF]], i8* [[IF_DEVICE]],
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{72|40}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY2:@.+]] to i32 (i32, i8*)*))
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{64|36}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY2:@.+]] to i32 (i32, i8*)*))
   // CK1: [[RES_BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates{{.+}}*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 0
   // CK1: [[SHAREDS:%.+]] = getelementptr inbounds %struct.kmp_task_t, %struct.kmp_task_t* [[TASK_T]], i32 0, i32 0
@@ -213,7 +213,7 @@ void foo(int arg) {
   // CK1: [[GEPBP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
   // CK1: [[GEPS0:%.+]] = getelementptr inbounds [1 x i64], [1 x i64]* [[S]], i32 0, i32 0
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{72|40}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY3:@.+]] to i32 (i32, i8*)*))
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{64|36}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY3:@.+]] to i32 (i32, i8*)*))
   // CK1: [[RES_BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates{{.+}}*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 0
   // CK1: [[PRIVS:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 1
@@ -298,7 +298,7 @@ void foo(int arg) {
   // CK1: store double* %{{.+}}, double** [[P1_BC]],
   // CK1: [[GEPBP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[BP]], i32 0, i32 0
   // CK1: [[GEPP0:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[P]], i32 0, i32 0
-  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{104|60}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY4:@.+]] to i32 (i32, i8*)*))
+  // CK1: [[RES:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* {{.+}}, i32 {{.+}}, i32 1, i[[sz]] {{88|52}}, i[[sz]] 1, i32 (i32, i8*)* bitcast (i32 (i32, %struct.kmp_task_t_with_privates{{.+}}*)* [[TASK_ENTRY4:@.+]] to i32 (i32, i8*)*))
   // CK1: [[RES_BC:%.+]] = bitcast i8* [[RES]] to %struct.kmp_task_t_with_privates{{.+}}*
   // CK1: [[TASK_T:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 0
   // CK1: [[PRIVS:%.+]] = getelementptr inbounds %struct.kmp_task_t_with_privates{{.+}}, %struct.kmp_task_t_with_privates{{.+}}* [[RES_BC]], i32 0, i32 1
@@ -373,61 +373,57 @@ void foo(int arg) {
 }
 
 // CK1: define internal{{.*}} i32 [[TASK_ENTRY0]](i32{{.*}}, %struct.kmp_task_t_with_privates* noalias %1)
-// CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** [[GEPM:%.+]])
+// CK1-DAG: call void @__tgt_target_data_update_nowait_mapper(%struct.ident_t* @{{.+}}, i64 [[DEV:%[^,]+]], i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}}, i8** null)
 // CK1-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
 // CK1-DAG: [[DEVi32]] = load i32, i32* %{{[^,]+}},
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
-// CK1-DAG: [[GEPM]] = getelementptr inbounds {{.+}}[[M:%[^,]+]]
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: [[M]] = load [1 x i8*]*, [1 x i8*]** [[M_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]], [1 x i8*]** [[M_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1: ret i32 0
 // CK1: }
 
 // CK1: define internal{{.*}} i32 [[TASK_ENTRY2]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
-// CK1-DAG: call void @__tgt_target_data_update_mapper(i64 4, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** [[GEPM:%.+]])
+// CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 4, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE02]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
-// CK1-DAG: [[GEPM]] = getelementptr inbounds {{.+}}[[M:%[^,]+]]
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: [[M]] = load [1 x i8*]*, [1 x i8*]** [[M_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]], [1 x i8*]** [[M_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1: ret i32 0
 // CK1: }
 
 // CK1: define internal{{.*}} i32 [[TASK_ENTRY3]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
-// CK1-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** [[GEPM:%.+]])
+// CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE03]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
-// CK1-DAG: [[GEPM]] = getelementptr inbounds {{.+}}[[M:%[^,]+]]
 // CK1-DAG: [[BP]] = load [1 x i8*]*, [1 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [1 x i8*]*, [1 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [1 x i64]*, [1 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: [[M]] = load [1 x i8*]*, [1 x i8*]** [[M_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]], [1 x i8*]** [[M_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[BP_PRIV]], [1 x i8*]** [[P_PRIV]], [1 x i64]** [[S_PRIV]])
 // CK1-NOT: __tgt_target_data_end
 // CK1: ret i32 0
 // CK1: }
 
 // CK1: define internal{{.*}} i32 [[TASK_ENTRY4]](i32{{.*}}, %struct.kmp_task_t_with_privates{{.+}}* noalias %1)
-// CK1-DAG: call void @__tgt_target_data_update_mapper(i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** [[GEPM:%.+]])
+// CK1-DAG: call void @__tgt_target_data_update_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 2, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i64* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[2 x i{{.+}}]* [[MTYPE04]]{{.+}}, i8** null)
 // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 // CK1-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
-// CK1-DAG: [[GEPM]] = getelementptr inbounds {{.+}}[[M:%[^,]+]]
 // CK1-DAG: [[BP]] = load [2 x i8*]*, [2 x i8*]** [[BP_PRIV:%[^,]+]],
 // CK1-DAG: [[P]] = load [2 x i8*]*, [2 x i8*]** [[P_PRIV:%[^,]+]],
 // CK1-DAG: [[S]] = load [2 x i64]*, [2 x i64]** [[S_PRIV:%[^,]+]],
-// CK1-DAG: [[M]] = load [2 x i8*]*, [2 x i8*]** [[M_PRIV:%[^,]+]],
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [2 x i8*]** [[BP_PRIV]], [2 x i8*]** [[P_PRIV]], [2 x i64]** [[S_PRIV]], [2 x i8*]** [[M_PRIV]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [2 x i8*]** [[BP_PRIV]], [2 x i8*]** [[P_PRIV]], [2 x i64]** [[S_PRIV]])
 // CK1-NOT: __tgt_target_data_end
 // CK1: ret i32 0
 // CK1: }

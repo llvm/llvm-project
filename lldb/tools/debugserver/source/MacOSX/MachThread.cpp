@@ -15,8 +15,8 @@
 #include "DNBLog.h"
 #include "MachProcess.h"
 #include "ThreadInfo.h"
+#include <cinttypes>
 #include <dlfcn.h>
-#include <inttypes.h>
 #include <mach/thread_policy.h>
 
 static uint32_t GetSequenceID() {

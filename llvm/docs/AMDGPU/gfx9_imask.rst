@@ -5,10 +5,10 @@
     *                                                *
     **************************************************
 
-.. _amdgpu_synid9_imask:
+.. _amdgpu_synid_gfx9_imask:
 
 imask
-===========================
+=====
 
 This operand is a mask which controls indexing mode for operands of subsequent instructions.
 Bits 0, 1 and 2 control indexing of *src0*, *src1* and *src2*, while bit 3 controls indexing of *dst*.

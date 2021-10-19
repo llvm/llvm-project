@@ -9,7 +9,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t2.o
 # RUN: ld.lld -shared -o %t.so --dynamic-list %t.list %t.a %t2.o
 
-# RUN: llvm-readelf -dyn-symbols %t.so | FileCheck %s
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s
 # CHECK-NOT: foo
 
 .global _start

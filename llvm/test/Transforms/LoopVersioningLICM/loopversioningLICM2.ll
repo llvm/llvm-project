@@ -1,4 +1,5 @@
-; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm -debug-only=loop-versioning-licm -disable-loop-unrolling 2>&1 | FileCheck %s
+; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm -debug-only=loop-versioning-licm -disable-loop-unrolling -enable-new-pm=0 2>&1 | FileCheck %s
+; RUN: opt < %s  -S -passes='default<O1>,function(loop-versioning-licm,loop-mssa(licm))' -debug-only=loop-versioning-licm -disable-loop-unrolling 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ;
 ; Test to confirm loop is a good candidate for LoopVersioningLICM
@@ -7,7 +8,7 @@
 ; CHECK: Loop: Loop at depth 2 containing: %for.body3.us<header><latch><exiting>
 ; CHECK-NEXT:     Loop Versioning found to be beneficial
 ;
-; CHECK: for.cond1.for.inc17_crit_edge.us.loopexit6:       ; preds = %for.body3.us
+; CHECK: for.cond1.for.inc17_crit_edge.us.loopexit9:       ; preds = %for.body3.us
 ; CHECK-NEXT: %add14.us.lcssa = phi float [ %add14.us, %for.body3.us ]
 ; CHECK-NEXT: store float %add14.us.lcssa, float* %arrayidx.us, align 4, !alias.scope !0, !noalias !0
 ; CHECK-NEXT: br label %for.cond1.for.inc17_crit_edge.us

@@ -8,8 +8,8 @@
 #ifndef LLDB_HOST_FILECACHE_H
 #define LLDB_HOST_FILECACHE_H
 
+#include <cstdint>
 #include <map>
-#include <stdint.h>
 
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -21,7 +21,7 @@
 namespace lldb_private {
 class FileCache {
 private:
-  FileCache() {}
+  FileCache() = default;
 
   typedef std::map<lldb::user_id_t, lldb::FileUP> FDToFileMap;
 

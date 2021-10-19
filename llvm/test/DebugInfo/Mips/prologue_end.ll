@@ -30,7 +30,7 @@ entry:
 ; PIC:     	addiu	$[[R0]], $[[R0]], %lo(_gp_disp)
 ; PIC:     	addiu	$sp, $sp, -{{[0-9]+}}
 ; PIC:     	sw	$ra, {{[0-9]+}}($sp)
-; PIC:     	addu	$[[R1:[0-9]+]], $[[R0]], $25
+; PIC:     	addu	$[[R1:[0-9]+|gp]], $[[R0]], $25
 ; PIC:     	.loc	1 2 3 prologue_end
 ; PIC:     	lw	$[[R2:[0-9]+]], %got($.str)($[[R1]])
 
@@ -40,7 +40,7 @@ entry:
 ; PIC-FP:	sw	$ra, {{[0-9]+}}($sp)
 ; PIC-FP:	sw	$fp, {{[0-9]+}}($sp)
 ; PIC-FP:	move	$fp, $sp
-; PIC-FP:	addu	$[[R1:[0-9]+]], $[[R0]], $25
+; PIC-FP:	addu	$[[R1:[0-9]+|gp]], $[[R0]], $25
 ; PIC-FP:	.loc	1 2 3 prologue_end
 ; PIC-FP:	lw	$[[R2:[0-9]+]], %got($.str)($[[R1]])
 

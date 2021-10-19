@@ -12,7 +12,7 @@
 #include <memory>
 
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

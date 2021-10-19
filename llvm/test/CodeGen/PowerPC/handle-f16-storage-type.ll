@@ -640,46 +640,46 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ; P8-LABEL: test_extend32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    li r4, 48
+; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    lhz r3, 6(r3)
+; P8-NEXT:    stxvd2x vs61, r1, r4 # 16-byte Folded Spill
+; P8-NEXT:    li r4, 64
+; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
+; P8-NEXT:    li r4, 80
+; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 80
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 2(r30)
+; P8-NEXT:    xxlor vs63, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 64
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 4(r30)
+; P8-NEXT:    xxlor vs62, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 48
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 0(r30)
+; P8-NEXT:    xxlor vs61, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 80
 ; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    lxvd2x vs0, r1, r3 # 16-byte Folded Reload
+; P8-NEXT:    xxmrghd vs0, vs63, vs62
+; P8-NEXT:    li r3, 80
+; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
+; P8-NEXT:    xxmrghd vs1, vs61, vs1
+; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 64
-; P8-NEXT:    lxvd2x vs2, r1, r3 # 16-byte Folded Reload
+; P8-NEXT:    lxvd2x vs62, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 48
-; P8-NEXT:    xxmrghd vs0, vs0, vs2
-; P8-NEXT:    lxvd2x vs2, r1, r3 # 16-byte Folded Reload
-; P8-NEXT:    xxmrghd vs1, vs2, vs1
 ; P8-NEXT:    xvcvdpsp vs34, vs0
+; P8-NEXT:    lxvd2x vs61, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    xvcvdpsp vs35, vs1
 ; P8-NEXT:    vmrgew v2, v2, v3
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
-; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
 ;
@@ -749,43 +749,43 @@ define <4 x double> @test_extend64_vec4(<4 x half>* %p) #0 {
 ; P8-LABEL: test_extend64_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    li r4, 48
+; P8-NEXT:    std r30, 96(r1) # 8-byte Folded Spill
 ; P8-NEXT:    mr r30, r3
 ; P8-NEXT:    lhz r3, 6(r3)
+; P8-NEXT:    stxvd2x vs61, r1, r4 # 16-byte Folded Spill
+; P8-NEXT:    li r4, 64
+; P8-NEXT:    stxvd2x vs62, r1, r4 # 16-byte Folded Spill
+; P8-NEXT:    li r4, 80
+; P8-NEXT:    stxvd2x vs63, r1, r4 # 16-byte Folded Spill
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 80
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 4(r30)
+; P8-NEXT:    xxlor vs63, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 64
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 2(r30)
+; P8-NEXT:    xxlor vs62, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
-; P8-NEXT:    li r3, 48
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    stxvd2x vs1, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    lhz r3, 0(r30)
+; P8-NEXT:    xxlor vs61, f1, f1
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
+; P8-NEXT:    xxmrghd vs35, vs63, vs62
 ; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
-; P8-NEXT:    lxvd2x vs0, r1, r3 # 16-byte Folded Reload
+; P8-NEXT:    xxmrghd vs34, vs61, vs1
+; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
+; P8-NEXT:    lxvd2x vs63, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 64
-; P8-NEXT:    lxvd2x vs2, r1, r3 # 16-byte Folded Reload
+; P8-NEXT:    lxvd2x vs62, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 48
-; P8-NEXT:    xxmrghd vs35, vs0, vs2
-; P8-NEXT:    lxvd2x vs0, r1, r3 # 16-byte Folded Reload
-; P8-NEXT:    xxmrghd vs34, vs0, vs1
+; P8-NEXT:    lxvd2x vs61, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 112
 ; P8-NEXT:    ld r0, 16(r1)
-; P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; P8-NEXT:    mtlr r0
 ; P8-NEXT:    blr
 ;
@@ -1156,6 +1156,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; P8-NEXT:    xscvsxdsp f1, f0
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
+; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    xsaddsp f1, f31, f1
@@ -1175,6 +1176,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    xscvdphp f1, f1
 ; CHECK-NEXT:    mffprwz r3, f1
+; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f1, r3
 ; CHECK-NEXT:    xscvhpdp f1, f1
 ; CHECK-NEXT:    xsaddsp f1, f0, f1
@@ -1225,6 +1227,7 @@ define half @PR40273(half) #0 {
 ; P8-NEXT:    stdu r1, -32(r1)
 ; P8-NEXT:    bl __gnu_f2h_ieee
 ; P8-NEXT:    nop
+; P8-NEXT:    clrldi r3, r3, 48
 ; P8-NEXT:    bl __gnu_h2f_ieee
 ; P8-NEXT:    nop
 ; P8-NEXT:    xxlxor f0, f0, f0
@@ -1245,6 +1248,7 @@ define half @PR40273(half) #0 {
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    xxlxor f1, f1, f1
 ; CHECK-NEXT:    mffprwz r3, f0
+; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    mtfprwz f0, r3
 ; CHECK-NEXT:    xscvhpdp f0, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1

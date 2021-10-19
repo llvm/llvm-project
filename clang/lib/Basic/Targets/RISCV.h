@@ -17,6 +17,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/RISCVISAInfo.h"
 
 namespace clang {
 namespace targets {
@@ -25,23 +26,21 @@ namespace targets {
 class RISCVTargetInfo : public TargetInfo {
 protected:
   std::string ABI, CPU;
-  bool HasM;
-  bool HasA;
-  bool HasF;
-  bool HasD;
-  bool HasC;
-  bool HasB;
+  std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
+  static const Builtin::Info BuiltinInfo[];
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), HasM(false), HasA(false), HasF(false),
-        HasD(false), HasC(false), HasB(false) {
+      : TargetInfo(Triple) {
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    HasRISCVVTypes = true;
+    MCountName = "_mcount";
+    HasFloat16 = true;
   }
 
   bool setCPU(const std::string &Name) override {
@@ -55,13 +54,18 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
   const char *getClobbers() const override { return ""; }
+
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
+    return Expression;
+  }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -78,6 +82,13 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
+
+  std::string convertConstraint(const char *&Constraint) const override;
+
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
 
   bool hasFeature(StringRef Feature) const override;
 
@@ -106,11 +117,13 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidTuneCPUName(StringRef Name) const override;
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (HasA)
+    if (ISAInfo->hasExtension("a"))
       MaxAtomicInlineWidth = 32;
   }
 };
@@ -133,11 +146,13 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidTuneCPUName(StringRef Name) const override;
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
-    if (HasA)
+    if (ISAInfo->hasExtension("a"))
       MaxAtomicInlineWidth = 64;
   }
 };

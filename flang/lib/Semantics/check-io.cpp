@@ -8,6 +8,7 @@
 
 #include "check-io.h"
 #include "flang/Common/format.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
@@ -135,6 +136,9 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   case ParseKind::Sign:
     specKind = IoSpecKind::Sign;
     break;
+  case ParseKind::Carriagecontrol:
+    specKind = IoSpecKind::Carriagecontrol;
+    break;
   case ParseKind::Convert:
     specKind = IoSpecKind::Convert;
     break;
@@ -152,6 +156,13 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
       flags_.set(Flag::AccessStream, s == "STREAM");
     }
     CheckStringValue(specKind, *charConst, parser::FindSourceLocation(spec));
+    if (specKind == IoSpecKind::Carriagecontrol &&
+        (s == "FORTRAN" || s == "NONE")) {
+      context_.Say(parser::FindSourceLocation(spec),
+          "Unimplemented %s value '%s'"_err_en_US,
+          parser::ToUpperCaseLetters(common::EnumToString(specKind)),
+          *charConst);
+    }
   }
 }
 
@@ -288,14 +299,6 @@ void IoChecker::Enter(const parser::InputItem &spec) {
     return;
   }
   CheckForDefinableVariable(*var, "Input");
-  const auto &name{GetLastName(*var)};
-  const auto *expr{GetExpr(*var)};
-  if (name.symbol && IsAssumedSizeArray(*name.symbol) && expr &&
-      !evaluate::IsArrayElement(*GetExpr(*var))) {
-    context_.Say(name.source,
-        "Whole assumed size array '%s' may not be an input item"_err_en_US,
-        name.source); // C1231
-  }
 }
 
 void IoChecker::Enter(const parser::InquireSpec &spec) {
@@ -377,6 +380,9 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     break;
   case ParseKind::Write:
     specKind = IoSpecKind::Write;
+    break;
+  case ParseKind::Carriagecontrol:
+    specKind = IoSpecKind::Carriagecontrol;
     break;
   case ParseKind::Convert:
     specKind = IoSpecKind::Convert;
@@ -545,7 +551,12 @@ void IoChecker::Enter(const parser::OutputItem &item) {
   flags_.set(Flag::DataList);
   if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
     if (const auto *expr{GetExpr(*x)}) {
-      if (IsProcedurePointer(*expr)) {
+      if (evaluate::IsBOZLiteral(*expr)) {
+        context_.Say(parser::FindSourceLocation(*x), // C7109
+            "Output item must not be a BOZ literal constant"_err_en_US);
+      }
+      const Symbol *last{GetLastSymbol(*expr)};
+      if (last && IsProcedurePointer(*last)) {
         context_.Say(parser::FindSourceLocation(*x),
             "Output item must not be a procedure pointer"_err_en_US); // C1233
       }
@@ -821,12 +832,22 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Status,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},
+      {IoSpecKind::Carriagecontrol, {"LIST", "FORTRAN", "NONE"}},
       {IoSpecKind::Convert, {"BIG_ENDIAN", "LITTLE_ENDIAN", "NATIVE"}},
       {IoSpecKind::Dispose, {"DELETE", "KEEP"}},
   };
-  if (!specValues.at(specKind).count(parser::ToUpperCaseLetters(value))) {
-    context_.Say(source, "Invalid %s value '%s'"_err_en_US,
-        parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
+  auto upper{parser::ToUpperCaseLetters(value)};
+  if (specValues.at(specKind).count(upper) == 0) {
+    if (specKind == IoSpecKind::Access && upper == "APPEND") {
+      if (context_.languageFeatures().ShouldWarn(
+              common::LanguageFeature::OpenAccessAppend)) {
+        context_.Say(source, "ACCESS='%s' interpreted as POSITION='%s'"_en_US,
+            value, upper);
+      }
+    } else {
+      context_.Say(source, "Invalid %s value '%s'"_err_en_US,
+          parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
+    }
   }
 }
 
@@ -919,19 +940,30 @@ void IoChecker::CheckForProhibitedSpecifier(
 
 template <typename A>
 void IoChecker::CheckForDefinableVariable(
-    const A &var, const std::string &s) const {
-  const Symbol *sym{
-      GetFirstName(*parser::Unwrap<parser::Variable>(var)).symbol};
-  if (WhyNotModifiable(*sym, context_.FindScope(*context_.location()))) {
-    context_.Say(parser::FindSourceLocation(var),
-        "%s variable '%s' must be definable"_err_en_US, s, sym->name());
+    const A &variable, const std::string &s) const {
+  if (const auto *var{parser::Unwrap<parser::Variable>(variable)}) {
+    if (auto expr{AnalyzeExpr(context_, *var)}) {
+      auto at{var->GetSource()};
+      if (auto whyNot{WhyNotModifiable(at, *expr, context_.FindScope(at),
+              true /*vectorSubscriptIsOk*/)}) {
+        const Symbol *base{GetFirstSymbol(*expr)};
+        context_
+            .Say(at, "%s variable '%s' must be definable"_err_en_US, s,
+                (base ? base->name() : at).ToString())
+            .Attach(std::move(*whyNot));
+      }
+    }
   }
 }
 
 void IoChecker::CheckForPureSubprogram() const { // C1597
   CHECK(context_.location());
-  if (FindPureProcedureContaining(context_.FindScope(*context_.location()))) {
-    context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
+  if (const Scope *
+      scope{context_.globalScope().FindScope(*context_.location())}) {
+    if (FindPureProcedureContaining(*scope)) {
+      context_.Say(
+          "External I/O is not allowed in a pure subprogram"_err_en_US);
+    }
   }
 }
 

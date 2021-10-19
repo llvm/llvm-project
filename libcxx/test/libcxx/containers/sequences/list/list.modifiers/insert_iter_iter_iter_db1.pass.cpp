@@ -6,23 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // <list>
 
 // template <InputIterator Iter>
 //   iterator insert(const_iterator position, Iter first, Iter last);
 
+// UNSUPPORTED: libcxx-no-debug-mode
 
-#define _LIBCPP_DEBUG 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <list>
-#include <cstdlib>
-#include <cassert>
+
 #include "test_macros.h"
-#include "test_iterators.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
@@ -30,11 +26,8 @@ int main(int, char**)
         std::list<int> v(100);
         std::list<int> v2(100);
         int a[] = {1, 2, 3, 4, 5};
-        const int N = sizeof(a)/sizeof(a[0]);
-        std::list<int>::iterator i = v.insert(next(v2.cbegin(), 10),
-                                        input_iterator<const int*>(a),
-                                       input_iterator<const int*>(a+N));
-        assert(false);
+        TEST_LIBCPP_ASSERT_FAILURE(v.insert(v2.cbegin(), a, a + 5),
+                                   "list::insert(iterator, range) called with an iterator not referring to this list");
     }
 
   return 0;

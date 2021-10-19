@@ -107,7 +107,7 @@ public:
   PrinterTest() : Data(), OS(Data), P(OS), R(Helper<T>::construct()) {}
 };
 
-TYPED_TEST_CASE_P(PrinterTest);
+TYPED_TEST_SUITE_P(PrinterTest);
 
 TYPED_TEST_P(PrinterTest, PrintsRecord) {
   ASSERT_NE(nullptr, this->R);
@@ -116,13 +116,13 @@ TYPED_TEST_P(PrinterTest, PrintsRecord) {
   EXPECT_THAT(this->Data, Eq(Helper<TypeParam>::expected()));
 }
 
-REGISTER_TYPED_TEST_CASE_P(PrinterTest, PrintsRecord);
+REGISTER_TYPED_TEST_SUITE_P(PrinterTest, PrintsRecord);
 using FDRRecordTypes =
     ::testing::Types<BufferExtents, NewBufferRecord, EndBufferRecord,
                      NewCPUIDRecord, TSCWrapRecord, WallclockRecord,
                      CustomEventRecord, CallArgRecord, BufferExtents,
                      PIDRecord>;
-INSTANTIATE_TYPED_TEST_CASE_P(Records, PrinterTest, FDRRecordTypes);
+INSTANTIATE_TYPED_TEST_SUITE_P(Records, PrinterTest, FDRRecordTypes, );
 
 TEST(FDRRecordPrinterTest, WriteFunctionRecordEnter) {
   std::string Data;

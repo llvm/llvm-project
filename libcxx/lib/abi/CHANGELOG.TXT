@@ -7,10 +7,326 @@ Each entry should start with the revision number followed by a description of
 the change. The entry should contain a summary of the ABI changes made,
 including what symbols were added, removed, or changed.
 
-To generate a summary use "sym_diff.py" diffing against the appropriate ABI list.
-Afterwards the ABI list should be updated to include the new changes.
+To generate a summary, re-generate the new ABI list using the
+`generate-cxx-abilist` target, and look at the diff.
 
 New entries should be added directly below the "Version" header.
+
+------------
+Version 12.0
+------------
+
+* a984dcaf7c21 - [libc++] [P0482] [C++20] Implement missing bits for codecvt and codecvt_byname.
+
+  This commit added new instantiations with char8_t for classes codecvt and
+  codecvt_byname in <locale> in the library.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
+  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
+  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
+  Symbol added: __ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTINSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: __ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZTINSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: _ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
+  Symbol added: _ZTSNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
+  Symbol added: _ZTSNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+
+* 997d41cdec53 - [libc++] Instantiate additional <iostream> members in the dylib
+
+  This commit added new explicit instantiations for classes in <iostream> in
+  the library. This was done after noticing that many programs that used streams
+  ended up containing weak definitions of these classes, which has a negative
+  impact on both code size and load times. This change is not an ABI break,
+  since we are just adding additional symbols.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4swapERS3_
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4syncEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5closeEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5imbueERKNS_6localeE
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE6setbufEPcl
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekoffExNS_8ios_base7seekdirEj
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekposENS_4fposI11__mbstate_tEEj
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE8overflowEi
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9pbackfailEi
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9underflowEv
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1EOS3_
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1Ev
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2EOS3_
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2Ev
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED0Ev
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED1Ev
+  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED2Ev
+  Symbol added: __ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: __ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
+  Symbol added: __ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: __ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strERKNS_12basic_stringIcS2_S4_EE
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE4swapERS5_
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE7seekoffExNS_8ios_base7seekdirEj
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE8overflowEi
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9pbackfailEi
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9underflowEv
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC1EOS5_
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC2EOS5_
+  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: __ZNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: __ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: __ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: __ZTCNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: __ZTCNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE0_NS_13basic_ostreamIcS2_EE
+  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_14basic_iostreamIcS2_EE
+  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE16_NS_13basic_ostreamIcS2_EE
+  Symbol added: __ZTCNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: __ZTCNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_ostreamIcS2_EE
+  Symbol added: __ZTINSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTINSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTINSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTINSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTINSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTINSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTSNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTSNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTSNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTSNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTTNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTTNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTTNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTTNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTTNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTVNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTVNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTVNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: __ZTVNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTVNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTVNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: __ZTVNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4swapERS3_
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4syncEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5closeEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5imbueERKNS_6localeE
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE6setbufEPcl
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekoffExNS_8ios_base7seekdirEj
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekposENS_4fposI11__mbstate_tEEj
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE8overflowEi
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9pbackfailEi
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9underflowEv
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1EOS3_
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1Ev
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2EOS3_
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2Ev
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED0Ev
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED1Ev
+  Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED2Ev
+  Symbol added: _ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: _ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
+  Symbol added: _ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openEPKcj
+  Symbol added: _ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strERKNS_12basic_stringIcS2_S4_EE
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE4swapERS5_
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE7seekoffExNS_8ios_base7seekdirEj
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE8overflowEi
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9pbackfailEi
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9underflowEv
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC1EOS5_
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC2EOS5_
+  Symbol added: _ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: _ZNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: _ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: _ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
+  Symbol added: _ZTCNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: _ZTCNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE0_NS_13basic_ostreamIcS2_EE
+  Symbol added: _ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: _ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_14basic_iostreamIcS2_EE
+  Symbol added: _ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE16_NS_13basic_ostreamIcS2_EE
+  Symbol added: _ZTCNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
+  Symbol added: _ZTCNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_ostreamIcS2_EE
+  Symbol added: _ZTINSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTINSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTINSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTINSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTINSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTINSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTSNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTSNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTSNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTSNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTTNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTTNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTTNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTTNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTTNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTVNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTVNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTVNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
+  Symbol added: _ZTVNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTVNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTVNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+  Symbol added: _ZTVNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
+
+* 9b40ee8eb0c1 - [libc++] Define new/delete in libc++abi only by default
+
+  By default, libc++ does not include the definition for new and delete anymore.
+  Those were previously defined in both libc++ and libc++abi, which was an
+  ODR violation.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  The following symbols are now re-exported from libc++abi instead of exported
+  by libc++ directly (this should not be an ABI break):
+
+  Symbol moved: __ZdaPv
+  Symbol moved: __ZdaPvm
+  Symbol moved: __ZdaPvmSt11align_val_t
+  Symbol moved: __ZdaPvRKSt9nothrow_t
+  Symbol moved: __ZdaPvSt11align_val_t
+  Symbol moved: __ZdaPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __ZdlPv
+  Symbol moved: __ZdlPvm
+  Symbol moved: __ZdlPvmSt11align_val_t
+  Symbol moved: __ZdlPvRKSt9nothrow_t
+  Symbol moved: __ZdlPvSt11align_val_t
+  Symbol moved: __ZdlPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __Znam
+  Symbol moved: __ZnamRKSt9nothrow_t
+  Symbol moved: __ZnamSt11align_val_t
+  Symbol moved: __ZnamSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __Znwm
+  Symbol moved: __ZnwmRKSt9nothrow_t
+  Symbol moved: __ZnwmSt11align_val_t
+  Symbol moved: __ZnwmSt11align_val_tRKSt9nothrow_t
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  The following symbols were moved to libc++abi, but are NOT being re-exported
+  by libc++. This constitutes an ABI break if one links against libc++ but
+  not libc++abi.
+
+  Symbol moved: _ZdaPv
+  Symbol moved: _ZdaPvm
+  Symbol moved: _ZdaPvmSt11align_val_t
+  Symbol moved: _ZdaPvRKSt9nothrow_t
+  Symbol moved: _ZdaPvSt11align_val_t
+  Symbol moved: _ZdaPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _ZdlPv
+  Symbol moved: _ZdlPvm
+  Symbol moved: _ZdlPvmSt11align_val_t
+  Symbol moved: _ZdlPvRKSt9nothrow_t
+  Symbol moved: _ZdlPvSt11align_val_t
+  Symbol moved: _ZdlPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _Znam
+  Symbol moved: _ZnamRKSt9nothrow_t
+  Symbol moved: _ZnamSt11align_val_t
+  Symbol moved: _ZnamSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _Znwm
+  Symbol moved: _ZnwmRKSt9nothrow_t
+  Symbol moved: _ZnwmSt11align_val_t
+  Symbol moved: _ZnwmSt11align_val_tRKSt9nothrow_t
+
+* 4f13b9992971 - [libc++] Simplify how we re-export symbols from libc++abi
+
+  We re-export some symbols that were exported from libc++abi but not from
+  libc++. Exporting new symbols is not an ABI break.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: ___cxa_allocate_dependent_exception
+  Symbol added: ___cxa_free_dependent_exception
 
 ------------
 Version 10.0
@@ -583,7 +899,6 @@ Version 4.0
 
   x86_64-linux-gnu
   ----------------
-  Symbol added: posix_memalign@GLIBC_2.2.5
   Symbol added: _ZdaPvSt11align_val_t
   Symbol added: _ZdlPvSt11align_val_t
   Symbol added: _ZnamSt11align_val_t

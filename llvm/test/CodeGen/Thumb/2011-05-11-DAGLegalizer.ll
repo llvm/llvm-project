@@ -48,7 +48,7 @@ do.body:                                          ; preds = %entry
   %tmp20 = bitcast %struct.RRRRRRRR* %agg.tmp16 to i8*
   %tmp21 = bitcast %struct.RRRRRRRR* %arrayidx19 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp20, i8* align 4 %tmp21, i32 312, i1 false)
-  call void (i8*, i32, i8*, i8*, ...) @CLLoggingLog(i8* %tmp, i32 2, i8* getelementptr inbounds ([62 x i8], [62 x i8]* @__PRETTY_FUNCTION__._ZN12CLGll, i32 0, i32 0), i8* getelementptr inbounds ([75 x i8], [75 x i8]* @.str, i32 0, i32 0), %struct.RRRRRRRR* byval %agg.tmp, %struct.RRRRRRRR* byval %agg.tmp4, %struct.RRRRRRRR* byval %agg.tmp10, %struct.RRRRRRRR* byval %agg.tmp16)
+  call void (i8*, i32, i8*, i8*, ...) @CLLoggingLog(i8* %tmp, i32 2, i8* getelementptr inbounds ([62 x i8], [62 x i8]* @__PRETTY_FUNCTION__._ZN12CLGll, i32 0, i32 0), i8* getelementptr inbounds ([75 x i8], [75 x i8]* @.str, i32 0, i32 0), %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp4, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp10, %struct.RRRRRRRR* byval(%struct.RRRRRRRR) %agg.tmp16)
   br label %do.end
 
 do.end:                                           ; preds = %do.body

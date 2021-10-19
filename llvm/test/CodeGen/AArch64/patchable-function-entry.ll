@@ -1,8 +1,10 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64 -no-integrated-as %s -o - | FileCheck --check-prefix=NOLINK %s
+; RUN: llc -mtriple=aarch64 -function-sections %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.35 %s -o - | FileCheck --check-prefix=NOLINK %s
+; RUN: llc -mtriple=aarch64 -no-integrated-as -binutils-version=2.36 %s -o - | FileCheck %s
 
-;; GNU as < 2.35 did not support section flag 'o'.
+;; GNU ld < 2.36 did not support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
 ; NOLINK-NOT: "awo"
 
 define i32 @f0() "patchable-function-entry"="0" {

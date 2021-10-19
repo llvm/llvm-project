@@ -83,6 +83,11 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(AVR::R0, RegState::Kill)
         .addReg(AVR::R0, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
+        .addReg(AVR::R1, RegState::Define)
+        .addReg(AVR::R1, RegState::Kill)
+        .addReg(AVR::R1, RegState::Kill)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // Early exit if the frame pointer is not needed in this function.
@@ -106,9 +111,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Mark the FramePtr as live-in in every block except the entry.
-  for (MachineFunction::iterator I = std::next(MF.begin()), E = MF.end();
-       I != E; ++I) {
-    I->addLiveIn(AVR::R29R28);
+  for (MachineBasicBlock &MBBJ : llvm::drop_begin(MF)) {
+    MBBJ.addLiveIn(AVR::R29R28);
   }
 
   if (!FrameSize) {
@@ -131,6 +135,26 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
+static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
+  const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+
+  DebugLoc DL = MBBI->getDebugLoc();
+  const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
+  const AVRInstrInfo &TII = *STI.getInstrInfo();
+
+  // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
+  // handlers at the very end of the function, just before reti.
+  if (AFI->isInterruptOrSignalHandler()) {
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
+        .addImm(0x3f)
+        .addReg(AVR::R0, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
+  }
+}
+
 void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
@@ -151,18 +175,9 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
-  // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
-  // handlers at the very end of the function, just before reti.
-  if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
-        .addImm(0x3f)
-        .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
-  }
-
   // Early exit if there is no need to restore the frame pointer.
   if (!FrameSize) {
+    restoreStatusRegister(MF, MBB);
     return;
   }
 
@@ -198,6 +213,8 @@ void AVRFrameLowering::emitEpilogue(MachineFunction &MF,
   // Write back R29R28 to SP and temporarily disable interrupts.
   BuildMI(MBB, MBBI, DL, TII.get(AVR::SPWRITE), AVR::SP)
       .addReg(AVR::R29R28, RegState::Kill);
+
+  restoreStatusRegister(MF, MBB);
 }
 
 // Return true if the specified function should have a dedicated frame
@@ -343,13 +360,13 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
       // values, etc) is tricky and thus left to be optimized in the future.
       BuildMI(MBB, MI, DL, TII.get(AVR::SPREAD), AVR::R31R30).addReg(AVR::SP);
 
-      MachineInstr *New = BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
-                              .addReg(AVR::R31R30, RegState::Kill)
-                              .addImm(Amount);
+      MachineInstr *New =
+          BuildMI(MBB, MI, DL, TII.get(AVR::SUBIWRdK), AVR::R31R30)
+              .addReg(AVR::R31R30, RegState::Kill)
+              .addImm(Amount);
       New->getOperand(3).setIsDead();
 
-      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP)
-          .addReg(AVR::R31R30, RegState::Kill);
+      BuildMI(MBB, MI, DL, TII.get(AVR::SPWRITE), AVR::SP).addReg(AVR::R31R30);
 
       // Make sure the remaining stack stores are converted to real store
       // instructions.
@@ -518,4 +535,3 @@ char AVRDynAllocaSR::ID = 0;
 FunctionPass *createAVRDynAllocaSRPass() { return new AVRDynAllocaSR(); }
 
 } // end of namespace llvm
-

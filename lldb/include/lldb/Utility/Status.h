@@ -15,7 +15,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdarg>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -184,20 +184,11 @@ public:
   ///     success (non-erro), \b false otherwise.
   bool Success() const;
 
-  /// Test for a failure due to a generic interrupt.
-  ///
-  /// Returns true if the error code in this object was caused by an
-  /// interrupt. At present only supports Posix EINTR.
-  ///
-  /// \return
-  ///     \b true if this object contains an value that describes
-  ///     failure due to interrupt, \b false otherwise.
-  bool WasInterrupted() const;
-
 protected:
   /// Member variables
-  ValueType m_code;             ///< Status code as an integer value.
-  lldb::ErrorType m_type;       ///< The type of the above error code.
+  ValueType m_code = 0; ///< Status code as an integer value.
+  lldb::ErrorType m_type =
+      lldb::eErrorTypeInvalid;  ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
 };
 

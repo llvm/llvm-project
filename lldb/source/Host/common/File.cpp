@@ -8,11 +8,11 @@
 
 #include "lldb/Host/File.h"
 
-#include <errno.h>
+#include <cerrno>
+#include <climits>
+#include <cstdarg>
+#include <cstdio>
 #include <fcntl.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdio.h>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
@@ -41,20 +41,23 @@ using llvm::Expected;
 
 Expected<const char *>
 File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
+  File::OpenOptions rw =
+      options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                 File::eOpenOptionReadWrite);
+
   if (options & File::eOpenOptionAppend) {
-    if (options & File::eOpenOptionRead) {
+    if (rw == File::eOpenOptionReadWrite) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "a+x";
       else
         return "a+";
-    } else if (options & File::eOpenOptionWrite) {
+    } else if (rw == File::eOpenOptionWriteOnly) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "ax";
       else
         return "a";
     }
-  } else if (options & File::eOpenOptionRead &&
-             options & File::eOpenOptionWrite) {
+  } else if (rw == File::eOpenOptionReadWrite) {
     if (options & File::eOpenOptionCanCreate) {
       if (options & File::eOpenOptionCanCreateNewOnly)
         return "w+x";
@@ -62,10 +65,10 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
         return "w+";
     } else
       return "r+";
-  } else if (options & File::eOpenOptionRead) {
-    return "r";
-  } else if (options & File::eOpenOptionWrite) {
+  } else if (rw == File::eOpenOptionWriteOnly) {
     return "w";
+  } else if (rw == File::eOpenOptionReadOnly) {
+    return "r";
   }
   return llvm::createStringError(
       llvm::inconvertibleErrorCode(),
@@ -75,19 +78,20 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionRead)
-          .Cases("w", "wb", eOpenOptionWrite)
+          .Cases("r", "rb", eOpenOptionReadOnly)
+          .Cases("w", "wb", eOpenOptionWriteOnly)
           .Cases("a", "ab",
-                 eOpenOptionWrite | eOpenOptionAppend | eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionRead | eOpenOptionWrite)
+                 eOpenOptionWriteOnly | eOpenOptionAppend |
+                 eOpenOptionCanCreate)
+          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
           .Cases("w+", "wb+", "w+b",
-                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionCanCreate |
-                     eOpenOptionTruncate)
+                 eOpenOptionReadWrite | eOpenOptionCanCreate |
+                 eOpenOptionTruncate)
           .Cases("a+", "ab+", "a+b",
-                 eOpenOptionRead | eOpenOptionWrite | eOpenOptionAppend |
+                 eOpenOptionReadWrite | eOpenOptionAppend |
                      eOpenOptionCanCreate)
-          .Default(OpenOptions());
-  if (opts)
+          .Default(eOpenOptionInvalid);
+  if (opts != eOpenOptionInvalid)
     return opts;
   return llvm::createStringError(
       llvm::inconvertibleErrorCode(),
@@ -310,9 +314,15 @@ Status NativeFile::Close() {
     if (m_own_stream) {
       if (::fclose(m_stream) == EOF)
         error.SetErrorToErrno();
-    } else if (m_options & eOpenOptionWrite) {
-      if (::fflush(m_stream) == EOF)
-        error.SetErrorToErrno();
+    } else {
+      File::OpenOptions rw =
+          m_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                       File::eOpenOptionReadWrite);
+
+      if (rw == eOpenOptionWriteOnly || rw == eOpenOptionReadWrite) {
+        if (::fflush(m_stream) == EOF)
+          error.SetErrorToErrno();
+      }
     }
   }
   if (DescriptorIsValid() && m_own_descriptor) {
@@ -732,10 +742,15 @@ size_t NativeFile::PrintfVarArg(const char *format, va_list args) {
 
 mode_t File::ConvertOpenOptionsForPOSIXOpen(OpenOptions open_options) {
   mode_t mode = 0;
-  if (open_options & eOpenOptionRead && open_options & eOpenOptionWrite)
+  File::OpenOptions rw =
+      open_options & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                      File::eOpenOptionReadWrite);
+  if (rw == eOpenOptionReadWrite)
     mode |= O_RDWR;
-  else if (open_options & eOpenOptionWrite)
+  else if (rw == eOpenOptionWriteOnly)
     mode |= O_WRONLY;
+  else if (rw == eOpenOptionReadOnly)
+    mode |= O_RDONLY;
 
   if (open_options & eOpenOptionAppend)
     mode |= O_APPEND;

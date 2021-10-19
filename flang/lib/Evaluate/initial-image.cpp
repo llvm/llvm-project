@@ -14,7 +14,7 @@
 namespace Fortran::evaluate {
 
 auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
-    const Constant<SomeDerived> &x) -> Result {
+    const Constant<SomeDerived> &x, FoldingContext &context) -> Result {
   if (offset < 0 || offset + bytes > data_.size()) {
     return OutOfRange;
   } else {
@@ -36,7 +36,7 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
             AddPointer(offset + component.offset(), indExpr.value());
           } else {
             Result added{Add(offset + component.offset(), component.size(),
-                indExpr.value())};
+                indExpr.value(), context)};
             if (added != Ok) {
               return Ok;
             }
@@ -54,11 +54,14 @@ void InitialImage::AddPointer(
   pointers_.emplace(offset, pointer);
 }
 
-void InitialImage::Incorporate(
-    ConstantSubscript offset, const InitialImage &that) {
-  CHECK(that.pointers_.empty()); // pointers are not allowed in EQUIVALENCE
-  CHECK(offset + that.size() <= size());
-  std::memcpy(&data_[offset], &that.data_[0], that.size());
+void InitialImage::Incorporate(ConstantSubscript toOffset,
+    const InitialImage &from, ConstantSubscript fromOffset,
+    ConstantSubscript bytes) {
+  CHECK(from.pointers_.empty()); // pointers are not allowed in EQUIVALENCE
+  CHECK(fromOffset >= 0 && bytes >= 0 &&
+      static_cast<std::size_t>(fromOffset + bytes) <= from.size());
+  CHECK(static_cast<std::size_t>(toOffset + bytes) <= size());
+  std::memcpy(&data_[toOffset], &from.data_[fromOffset], bytes);
 }
 
 // Classes used with common::SearchTypes() to (re)construct Constant<> values
@@ -88,7 +91,8 @@ public:
     using Scalar = typename Const::Element;
     std::size_t elements{TotalElementCount(extents_)};
     std::vector<Scalar> typedValue(elements);
-    auto elemBytes{ToInt64(type_.MeasureSizeInBytes(&context_))};
+    auto elemBytes{
+        ToInt64(type_.MeasureSizeInBytes(context_, GetRank(extents_) > 0))};
     CHECK(elemBytes && *elemBytes >= 0);
     std::size_t stride{static_cast<std::size_t>(*elemBytes)};
     CHECK(offset_ + elements * stride <= image_.data_.size());
@@ -96,26 +100,31 @@ public:
       const semantics::DerivedTypeSpec &derived{type_.GetDerivedTypeSpec()};
       for (auto iter : DEREF(derived.scope())) {
         const Symbol &component{*iter.second};
-        bool isPointer{IsPointer(component)};
-        if (component.has<semantics::ObjectEntityDetails>() ||
-            component.has<semantics::ProcEntityDetails>()) {
-          auto componentType{DynamicType::From(component)};
-          CHECK(componentType);
+        bool isProcPtr{IsProcedurePointer(component)};
+        if (isProcPtr || component.has<semantics::ObjectEntityDetails>()) {
           auto at{offset_ + component.offset()};
-          if (isPointer) {
+          if (isProcPtr) {
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
-              Result value{image_.AsConstantDataPointer(*componentType, at)};
-              CHECK(value);
-              typedValue[j].emplace(component, std::move(*value));
+              if (Result value{image_.AsConstantPointer(at)}) {
+                typedValue[j].emplace(component, std::move(*value));
+              }
+            }
+          } else if (IsPointer(component)) {
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
+              if (Result value{image_.AsConstantPointer(at)}) {
+                typedValue[j].emplace(component, std::move(*value));
+              }
             }
           } else {
+            auto componentType{DynamicType::From(component)};
+            CHECK(componentType.has_value());
             auto componentExtents{GetConstantExtents(context_, component)};
-            CHECK(componentExtents);
+            CHECK(componentExtents.has_value());
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
-              Result value{image_.AsConstant(
-                  context_, *componentType, *componentExtents, at)};
-              CHECK(value);
-              typedValue[j].emplace(component, std::move(*value));
+              if (Result value{image_.AsConstant(
+                      context_, *componentType, *componentExtents, at)}) {
+                typedValue[j].emplace(component, std::move(*value));
+              }
             }
           }
         }
@@ -158,45 +167,11 @@ std::optional<Expr<SomeType>> InitialImage::AsConstant(FoldingContext &context,
       AsConstantHelper{context, type, extents, *this, offset});
 }
 
-class AsConstantDataPointerHelper {
-public:
-  using Result = std::optional<Expr<SomeType>>;
-  using Types = AllTypes;
-  AsConstantDataPointerHelper(const DynamicType &type,
-      const InitialImage &image, ConstantSubscript offset = 0)
-      : type_{type}, image_{image}, offset_{offset} {}
-  template <typename T> Result Test() {
-    if (T::category != type_.category()) {
-      return std::nullopt;
-    }
-    if constexpr (T::category != TypeCategory::Derived) {
-      if (T::kind != type_.kind()) {
-        return std::nullopt;
-      }
-    }
-    auto iter{image_.pointers_.find(offset_)};
-    if (iter == image_.pointers_.end()) {
-      return AsGenericExpr(NullPointer{});
-    }
-    return iter->second;
-  }
-
-private:
-  const DynamicType &type_;
-  const InitialImage &image_;
-  ConstantSubscript offset_;
-};
-
-std::optional<Expr<SomeType>> InitialImage::AsConstantDataPointer(
-    const DynamicType &type, ConstantSubscript offset) const {
-  return common::SearchTypes(AsConstantDataPointerHelper{type, *this, offset});
-}
-
-const ProcedureDesignator &InitialImage::AsConstantProcPointer(
+std::optional<Expr<SomeType>> InitialImage::AsConstantPointer(
     ConstantSubscript offset) const {
-  auto iter{pointers_.find(0)};
-  CHECK(iter != pointers_.end());
-  return DEREF(std::get_if<ProcedureDesignator>(&iter->second.u));
+  auto iter{pointers_.find(offset)};
+  return iter == pointers_.end() ? std::optional<Expr<SomeType>>{}
+                                 : iter->second;
 }
 
 } // namespace Fortran::evaluate

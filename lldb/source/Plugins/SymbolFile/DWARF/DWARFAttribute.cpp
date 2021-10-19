@@ -12,7 +12,7 @@
 
 DWARFAttributes::DWARFAttributes() : m_infos() {}
 
-DWARFAttributes::~DWARFAttributes() {}
+DWARFAttributes::~DWARFAttributes() = default;
 
 uint32_t DWARFAttributes::FindAttributeIndex(dw_attr_t attr) const {
   collection::const_iterator end = m_infos.end();
@@ -25,10 +25,11 @@ uint32_t DWARFAttributes::FindAttributeIndex(dw_attr_t attr) const {
   return UINT32_MAX;
 }
 
-void DWARFAttributes::Append(const DWARFUnit *cu, dw_offset_t attr_die_offset,
-                             dw_attr_t attr, dw_form_t form) {
-  AttributeValue attr_value = {
-      cu, attr_die_offset, {attr, form, DWARFFormValue::ValueType()}};
+void DWARFAttributes::Append(const DWARFFormValue &form_value,
+                             dw_offset_t attr_die_offset, dw_attr_t attr) {
+  AttributeValue attr_value = {const_cast<DWARFUnit *>(form_value.GetUnit()),
+                               attr_die_offset,
+                               {attr, form_value.Form(), form_value.Value()}};
   m_infos.push_back(attr_value);
 }
 
@@ -37,6 +38,10 @@ bool DWARFAttributes::ExtractFormValueAtIndex(
   const DWARFUnit *cu = CompileUnitAtIndex(i);
   form_value.SetUnit(cu);
   form_value.SetForm(FormAtIndex(i));
+  if (form_value.Form() == DW_FORM_implicit_const) {
+    form_value.SetValue(ValueAtIndex(i));
+    return true;
+  }
   lldb::offset_t offset = DIEOffsetAtIndex(i);
   return form_value.ExtractValue(cu->GetData(), &offset);
 }

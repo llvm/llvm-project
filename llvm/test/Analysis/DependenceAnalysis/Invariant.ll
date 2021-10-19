@@ -1,13 +1,23 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
-; RUN: opt < %s -analyze -basic-aa -da | FileCheck %s
 
 ; Test for a bug, which caused an assert when an invalid
 ; SCEVAddRecExpr is created in addToCoefficient.
 
+; float foo (float g, float* rr[40]) {
+;   float res= 0.0f;
+;   for (int i = 0; i < 40; i += 5) {
+;     for (int j = 0; j < 40; j += 5) {
+;       float add = rr[j][j] + rr[i][j];
+;       res = add > g? add : res;
+;     }
+;   }
+;   return res;
+; }
+
 ; CHECK-LABEL: foo
 ; CHECK: da analyze - consistent input [S 0]!
-; CHECK: da analyze - input [* *|<]!
+; CHECK: da analyze - input [* 0|<]!
 ; CHECK: da analyze - none!
 
 define float @foo(float %g, [40 x float]* %rr) nounwind {

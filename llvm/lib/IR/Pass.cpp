@@ -62,7 +62,7 @@ bool ModulePass::skipModule(Module &M) const {
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
-  return Resolver->getAnalysisIfAvailable(&AID, true) != nullptr;
+  return Resolver->getAnalysisIfAvailable(&AID) != nullptr;
 }
 
 // dumpPassStructure - Implement the -debug-pass=Structure option
@@ -259,22 +259,23 @@ void AnalysisUsage::setPreservesCFG() {
 AnalysisUsage &AnalysisUsage::addPreserved(StringRef Arg) {
   const PassInfo *PI = Pass::lookupPassInfo(Arg);
   // If the pass exists, preserve it. Otherwise silently do nothing.
-  if (PI) Preserved.push_back(PI->getTypeInfo());
+  if (PI)
+    pushUnique(Preserved, PI->getTypeInfo());
   return *this;
 }
 
 AnalysisUsage &AnalysisUsage::addRequiredID(const void *ID) {
-  Required.push_back(ID);
+  pushUnique(Required, ID);
   return *this;
 }
 
 AnalysisUsage &AnalysisUsage::addRequiredID(char &ID) {
-  Required.push_back(&ID);
+  pushUnique(Required, &ID);
   return *this;
 }
 
 AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(char &ID) {
-  Required.push_back(&ID);
-  RequiredTransitive.push_back(&ID);
+  pushUnique(Required, &ID);
+  pushUnique(RequiredTransitive, &ID);
   return *this;
 }

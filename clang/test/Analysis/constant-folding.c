@@ -179,6 +179,36 @@ void testBitwiseRules(unsigned int a, int b, int c) {
   }
 }
 
+unsigned reset();
+
+void testCombinedSources(unsigned a, unsigned b) {
+  if (b >= 10 && (a | b) <= 30) {
+    // Check that we can merge constraints from (a | b), a, and b.
+    // Because of the order of assumptions, we already know that (a | b) is [10, 30].
+    clang_analyzer_eval((a | b) >= 10 && (a | b) <= 30); // expected-warning{{TRUE}}
+  }
+
+  a = reset();
+  b = reset();
+
+  if ((a | b) <= 30 && b >= 10) {
+    // Check that we can merge constraints from (a | b), a, and b.
+    // At this point, we know that (a | b) is [0, 30], but the knowledge
+    // of b >= 10 added later can help us to refine it and change it to [10, 30].
+    clang_analyzer_eval(10 <= (a | b) && (a | b) <= 30); // expected-warning{{TRUE}}
+  }
+
+  a = reset();
+  b = reset();
+
+  unsigned c = (a | b) & (a != b);
+  if (c <= 40 && a == b) {
+    // Even though we have a directo constraint for c [0, 40],
+    // we can get a more precise range by looking at the expression itself.
+    clang_analyzer_eval(c == 0); // expected-warning{{TRUE}}
+  }
+}
+
 void testRemainderRules(unsigned int a, unsigned int b, int c, int d) {
   // Check that we know that remainder of zero divided by any number is still 0.
   clang_analyzer_eval((0 % c) == 0); // expected-warning{{TRUE}}

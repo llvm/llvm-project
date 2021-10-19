@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_ABI_X86_ABIMACOSX_I386_H
 #define LLDB_SOURCE_PLUGINS_ABI_X86_ABIMACOSX_I386_H
 
-#include "Plugins/ABI/X86/ABIX86.h"
+#include "Plugins/ABI/X86/ABIX86_i386.h"
 #include "lldb/Core/Value.h"
 #include "lldb/lldb-private.h"
 
-class ABIMacOSX_i386 : public ABIX86 {
+class ABIMacOSX_i386 : public ABIX86_i386 {
 public:
   ~ABIMacOSX_i386() override = default;
 
@@ -77,9 +77,9 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   lldb::ValueObjectSP
@@ -94,7 +94,7 @@ protected:
   }
 
 private:
-  using ABIX86::ABIX86; // Call CreateInstance instead.
+  using ABIX86_i386::ABIX86_i386; // Call CreateInstance instead.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_ABI_X86_ABIMACOSX_I386_H

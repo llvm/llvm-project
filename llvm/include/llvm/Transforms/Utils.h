@@ -26,12 +26,6 @@ class Pass;
 ModulePass *createMetaRenamerPass();
 
 //===----------------------------------------------------------------------===//
-// createUniqueInternalLinkageNamesPass - Make internal linkage symbol names
-// unique.
-//
-ModulePass *createUniqueInternalLinkageNamesPass();
-
-//===----------------------------------------------------------------------===//
 //
 // LowerInvoke - This pass removes invoke instructions, converting them to call
 // instructions.
@@ -117,7 +111,7 @@ extern char &LoopSimplifyID;
 
 /// This function returns a new pass that downgrades the debug info in the
 /// module to line tables only.
-ModulePass *createStripNonLineTableDebugInfoPass();
+ModulePass *createStripNonLineTableDebugLegacyPass();
 
 //===----------------------------------------------------------------------===//
 //

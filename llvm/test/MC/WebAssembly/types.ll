@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+unimplemented-simd128 -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mattr=+simd128 -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

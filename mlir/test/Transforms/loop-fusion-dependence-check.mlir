@@ -4,11 +4,11 @@
 
 // CHECK-LABEL: func @cannot_fuse_would_create_cycle() {
 func @cannot_fuse_would_create_cycle() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   // Set up the following dependences:
   // 1) loop0 -> loop1 on memref '%a'
@@ -37,11 +37,11 @@ func @cannot_fuse_would_create_cycle() {
 
 // CHECK-LABEL: func @can_fuse_rar_dependence() {
 func @can_fuse_rar_dependence() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   // Set up the following dependences:
   // Make dependence from 0 to 1 on '%a' read-after-read.
@@ -69,12 +69,12 @@ func @can_fuse_rar_dependence() {
 
 // CHECK-LABEL: func @can_fuse_different_memrefs() {
 func @can_fuse_different_memrefs() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
-  %d = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
+  %d = memref.alloc() : memref<10xf32>
 
-  %cf7 = constant 7.0 : f32
+  %cf7 = arith.constant 7.0 : f32
 
   // Set up the following dependences:
   // Make dependence from 0 to 1 on unrelated memref '%d'.
@@ -102,9 +102,9 @@ func @can_fuse_different_memrefs() {
 
 // CHECK-LABEL: func @should_not_fuse_across_intermediate_store() {
 func @should_not_fuse_across_intermediate_store() {
-  %0 = alloc() : memref<10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 0 into loop nest 1 at depth 0}}
@@ -127,9 +127,9 @@ func @should_not_fuse_across_intermediate_store() {
 
 // CHECK-LABEL: func @should_not_fuse_across_intermediate_load() {
 func @should_not_fuse_across_intermediate_load() {
-  %0 = alloc() : memref<10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 0 into loop nest 1 at depth 0}}
@@ -152,10 +152,10 @@ func @should_not_fuse_across_intermediate_load() {
 
 // CHECK-LABEL: func @should_not_fuse_across_ssa_value_def() {
 func @should_not_fuse_across_ssa_value_def() {
-  %0 = alloc() : memref<10xf32>
-  %1 = alloc() : memref<10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10xf32>
+  %1 = memref.alloc() : memref<10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 0 into loop nest 1 at depth 0}}
@@ -168,7 +168,7 @@ func @should_not_fuse_across_ssa_value_def() {
   "op0"(%v1) : (f32) -> ()
 
   // Loop nest '%i1' cannot be fused past SSA value def '%c2' which it uses.
-  %c2 = constant 2 : index
+  %c2 = arith.constant 2 : index
 
   affine.for %i1 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 1 into loop nest 0 at depth 0}}
@@ -182,9 +182,9 @@ func @should_not_fuse_across_ssa_value_def() {
 
 // CHECK-LABEL: func @should_not_fuse_store_before_load() {
 func @should_not_fuse_store_before_load() {
-  %0 = alloc() : memref<10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 0 into loop nest 2 at depth 0}}
@@ -208,9 +208,9 @@ func @should_not_fuse_store_before_load() {
 
 // CHECK-LABEL: func @should_not_fuse_across_load_at_depth1() {
 func @should_not_fuse_across_load_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10x10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -232,9 +232,9 @@ func @should_not_fuse_across_load_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_load_in_loop_at_depth1() {
 func @should_not_fuse_across_load_in_loop_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10x10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -258,9 +258,9 @@ func @should_not_fuse_across_load_in_loop_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_store_at_depth1() {
 func @should_not_fuse_across_store_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10x10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -282,9 +282,9 @@ func @should_not_fuse_across_store_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_store_in_loop_at_depth1() {
 func @should_not_fuse_across_store_in_loop_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10x10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -308,10 +308,10 @@ func @should_not_fuse_across_store_in_loop_at_depth1() {
 
 // CHECK-LABEL: func @should_not_fuse_across_ssa_value_def_at_depth1() {
 func @should_not_fuse_across_ssa_value_def_at_depth1() {
-  %0 = alloc() : memref<10x10xf32>
-  %1 = alloc() : memref<10x10xf32>
-  %c0 = constant 0 : index
-  %cf7 = constant 7.0 : f32
+  %0 = memref.alloc() : memref<10x10xf32>
+  %1 = memref.alloc() : memref<10x10xf32>
+  %c0 = arith.constant 0 : index
+  %cf7 = arith.constant 7.0 : f32
 
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
@@ -326,7 +326,7 @@ func @should_not_fuse_across_ssa_value_def_at_depth1() {
     "op0"(%v1) : (f32) -> ()
 
     // Loop nest '%i2' cannot be fused past SSA value def '%c2' which it uses.
-    %c2 = constant 2 : index
+    %c2 = arith.constant 2 : index
 
     affine.for %i2 = 0 to 10 {
       // expected-remark@-1 {{block-level dependence preventing fusion of loop nest 1 into loop nest 0 at depth 1}}

@@ -93,13 +93,20 @@ private:
     llvm::Type *PaddingType; // canHavePaddingType()
     llvm::Type *UnpaddedCoerceAndExpandType; // isCoerceAndExpand()
   };
+  struct DirectAttrInfo {
+    unsigned Offset;
+    unsigned Align;
+  };
+  struct IndirectAttrInfo {
+    unsigned Align;
+    unsigned AddrSpace;
+  };
   union {
-    unsigned DirectOffset;     // isDirect() || isExtend()
-    unsigned IndirectAlign;    // isIndirect()
+    DirectAttrInfo DirectAttr;     // isDirect() || isExtend()
+    IndirectAttrInfo IndirectAttr; // isIndirect()
     unsigned AllocaFieldIndex; // isInAlloca()
   };
   Kind TheKind;
-  unsigned IndirectAddrSpace : 24; // isIndirect()
   bool PaddingInReg : 1;
   bool InAllocaSRet : 1;    // isInAlloca()
   bool InAllocaIndirect : 1;// isInAlloca()
@@ -126,19 +133,20 @@ private:
 
 public:
   ABIArgInfo(Kind K = Direct)
-      : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0), TheKind(K),
-        IndirectAddrSpace(0), PaddingInReg(false), InAllocaSRet(false),
+      : TypeData(nullptr), PaddingType(nullptr), DirectAttr{0, 0}, TheKind(K),
+        PaddingInReg(false), InAllocaSRet(false),
         InAllocaIndirect(false), IndirectByVal(false), IndirectRealign(false),
         SRetAfterThis(false), InReg(false), CanBeFlattened(false),
         SignExt(false) {}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
-                              bool CanBeFlattened = true) {
+                              bool CanBeFlattened = true, unsigned Align = 0) {
     auto AI = ABIArgInfo(Direct);
     AI.setCoerceToType(T);
     AI.setPaddingType(Padding);
     AI.setDirectOffset(Offset);
+    AI.setDirectAlign(Align);
     AI.setCanBeFlattened(CanBeFlattened);
     return AI;
   }
@@ -154,6 +162,7 @@ public:
     AI.setCoerceToType(T);
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
     AI.setSignExt(true);
     return AI;
   }
@@ -164,6 +173,7 @@ public:
     AI.setCoerceToType(T);
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
     AI.setSignExt(false);
     return AI;
   }
@@ -299,11 +309,20 @@ public:
   // Direct/Extend accessors
   unsigned getDirectOffset() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
-    return DirectOffset;
+    return DirectAttr.Offset;
   }
   void setDirectOffset(unsigned Offset) {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
-    DirectOffset = Offset;
+    DirectAttr.Offset = Offset;
+  }
+
+  unsigned getDirectAlign() const {
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    return DirectAttr.Align;
+  }
+  void setDirectAlign(unsigned Align) {
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    DirectAttr.Align = Align;
   }
 
   bool isSignExt() const {
@@ -369,11 +388,11 @@ public:
   // Indirect accessors
   CharUnits getIndirectAlign() const {
     assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
-    return CharUnits::fromQuantity(IndirectAlign);
+    return CharUnits::fromQuantity(IndirectAttr.Align);
   }
   void setIndirectAlign(CharUnits IA) {
     assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
-    IndirectAlign = IA.getQuantity();
+    IndirectAttr.Align = IA.getQuantity();
   }
 
   bool getIndirectByVal() const {
@@ -387,12 +406,12 @@ public:
 
   unsigned getIndirectAddrSpace() const {
     assert(isIndirectAliased() && "Invalid kind!");
-    return IndirectAddrSpace;
+    return IndirectAttr.AddrSpace;
   }
 
   void setIndirectAddrSpace(unsigned AddrSpace) {
     assert(isIndirectAliased() && "Invalid kind!");
-    IndirectAddrSpace = AddrSpace;
+    IndirectAttr.AddrSpace = AddrSpace;
   }
 
   bool getIndirectRealign() const {

@@ -1,0 +1,3 @@
+RUN: not llvm-objdump -s %p/Inputs/WASM/bad-symbol-type.wasm 2>&1 | FileCheck %s
+
+CHECK: invalid symbol type: 63

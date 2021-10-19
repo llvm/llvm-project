@@ -1,3 +1,18 @@
+<!--===- docs/Calls.md
+
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+
+# Representation of Fortran function calls
+
+```eval_rst
+.. contents::
+   :local:
+```
+
 ## Procedure reference implementation protocol
 
 Fortran function and subroutine references are complicated.
@@ -116,7 +131,7 @@ below; this is of course not standard terminology.
 Internal and module subprograms that are ever passed as arguments &/or
 assigned as targets of procedure pointers may be F77ish.
 
-Every F77ish procedure can and must be distiguished at compilation time.
+Every F77ish procedure can and must be distinguished at compilation time.
 Such procedures should respect the external naming conventions (when external)
 and any legacy ABI used for Fortran '77 programs on the target architecture,
 so that portable libraries can be compiled
@@ -142,7 +157,7 @@ internal procedures.
 Note that the `INTENT` attribute does not, by itself,
 require the use of explicit interface; neither does the use of a dummy
 procedure (implicit or explicit in their interfaces).
-So the analyis of calls to F77ish procedures must allow for the
+So the analysis of calls to F77ish procedures must allow for the
 invisible use of `INTENT(OUT)`.
 
 ## Protocol overview
@@ -470,7 +485,7 @@ type-bound procedure in the type corresponds to an index into this table.
 
 Calls to dummy procedures and procedure pointers that resolve to
 internal procedures need to pass an additional "host instance" argument that
-addresses a block of storage in the stack frame of the their
+addresses a block of storage in the stack frame of their
 host subprogram that was active at the time they were passed as an
 effective argument or associated with a procedure pointer.
 This is similar to a static link in implementations of programming

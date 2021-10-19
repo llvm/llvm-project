@@ -46,7 +46,7 @@ PlatformPOSIX::PlatformPOSIX(bool is_host)
 ///
 /// The destructor is virtual since this class is designed to be
 /// inherited from by the plug-in instance.
-PlatformPOSIX::~PlatformPOSIX() {}
+PlatformPOSIX::~PlatformPOSIX() = default;
 
 lldb_private::OptionGroupOptions *PlatformPOSIX::GetConnectionOptions(
     lldb_private::CommandInterpreter &interpreter) {
@@ -205,7 +205,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     // close dst
     LLDB_LOGF(log, "[GetFile] Using block by block transfer....\n");
     Status error;
-    user_id_t fd_src = OpenFile(source, File::eOpenOptionRead,
+    user_id_t fd_src = OpenFile(source, File::eOpenOptionReadOnly,
                                 lldb::eFilePermissionsFileDefault, error);
 
     if (fd_src == UINT64_MAX)
@@ -218,7 +218,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
       permissions = lldb::eFilePermissionsFileDefault;
 
     user_id_t fd_dst = FileCache::GetInstance().OpenFile(
-        destination, File::eOpenOptionCanCreate | File::eOpenOptionWrite |
+        destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |
                          File::eOpenOptionTruncate,
         permissions, error);
 
@@ -300,9 +300,9 @@ const lldb::UnixSignalsSP &PlatformPOSIX::GetRemoteUnixSignals() {
 Status PlatformPOSIX::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't connect to the host platform '%s', always connected",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "can't connect to the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (!m_remote_platform_sp)
       m_remote_platform_sp =
@@ -344,9 +344,9 @@ Status PlatformPOSIX::DisconnectRemote() {
   Status error;
 
   if (IsHost()) {
-    error.SetErrorStringWithFormat(
-        "can't disconnect from the host platform '%s', always connected",
-        GetPluginName().GetCString());
+    error.SetErrorStringWithFormatv(
+        "can't disconnect from the host platform '{0}', always connected",
+        GetPluginName());
   } else {
     if (m_remote_platform_sp)
       error = m_remote_platform_sp->DisconnectRemote();
@@ -377,7 +377,6 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
     }
 
     if (target && error.Success()) {
-      debugger.GetTargetList().SetSelectedTarget(target);
       if (log) {
         ModuleSP exe_module_sp = target->GetExecutableModule();
         LLDB_LOGF(log, "PlatformPOSIX::%s set selected target to %p %s",
@@ -388,7 +387,7 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
 
       process_sp =
           target->CreateProcess(attach_info.GetListenerForProcess(debugger),
-                                attach_info.GetProcessPluginName(), nullptr);
+                                "gdb-remote", nullptr, true);
 
       if (process_sp) {
         ListenerSP listener_sp = attach_info.GetHijackListener();
@@ -411,29 +410,97 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
   return process_sp;
 }
 
-lldb::ProcessSP
-PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
-                            Target *target, // Can be NULL, if NULL create a new
-                                            // target, else use existing one
-                            Status &error) {
+lldb::ProcessSP PlatformPOSIX::DebugProcess(ProcessLaunchInfo &launch_info,
+                                            Debugger &debugger, Target &target,
+                                            Status &error) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+  LLDB_LOG(log, "target {0}", &target);
+
   ProcessSP process_sp;
 
-  if (IsHost()) {
-    // We are going to hand this process off to debugserver which will be in
-    // charge of setting the exit status.  However, we still need to reap it
-    // from lldb. So, make sure we use a exit callback which does not set exit
-    // status.
-    const bool monitor_signals = false;
-    launch_info.SetMonitorProcessCallback(
-        &ProcessLaunchInfo::NoOpMonitorCallback, monitor_signals);
-    process_sp = Platform::DebugProcess(launch_info, debugger, target, error);
-  } else {
+  if (!IsHost()) {
     if (m_remote_platform_sp)
       process_sp = m_remote_platform_sp->DebugProcess(launch_info, debugger,
                                                       target, error);
     else
       error.SetErrorString("the platform is not currently connected");
+    return process_sp;
   }
+
+  //
+  // For local debugging, we'll insist on having ProcessGDBRemote create the
+  // process.
+  //
+
+  // Make sure we stop at the entry point
+  launch_info.GetFlags().Set(eLaunchFlagDebug);
+
+  // We always launch the process we are going to debug in a separate process
+  // group, since then we can handle ^C interrupts ourselves w/o having to
+  // worry about the target getting them as well.
+  launch_info.SetLaunchInSeparateProcessGroup(true);
+
+  // Now create the gdb-remote process.
+  LLDB_LOG(log, "having target create process with gdb-remote plugin");
+  process_sp =
+      target.CreateProcess(launch_info.GetListener(), "gdb-remote", nullptr,
+                            true);
+
+  if (!process_sp) {
+    error.SetErrorString("CreateProcess() failed for gdb-remote process");
+    LLDB_LOG(log, "error: {0}", error);
+    return process_sp;
+  }
+
+  LLDB_LOG(log, "successfully created process");
+  // Adjust launch for a hijacker.
+  ListenerSP listener_sp;
+  if (!launch_info.GetHijackListener()) {
+    LLDB_LOG(log, "setting up hijacker");
+    listener_sp =
+        Listener::MakeListener("lldb.PlatformLinux.DebugProcess.hijack");
+    launch_info.SetHijackListener(listener_sp);
+    process_sp->HijackProcessEvents(listener_sp);
+  }
+
+  // Log file actions.
+  if (log) {
+    LLDB_LOG(log, "launching process with the following file actions:");
+    StreamString stream;
+    size_t i = 0;
+    const FileAction *file_action;
+    while ((file_action = launch_info.GetFileActionAtIndex(i++)) != nullptr) {
+      file_action->Dump(stream);
+      LLDB_LOG(log, "{0}", stream.GetData());
+      stream.Clear();
+    }
+  }
+
+  // Do the launch.
+  error = process_sp->Launch(launch_info);
+  if (error.Success()) {
+    // Handle the hijacking of process events.
+    if (listener_sp) {
+      const StateType state = process_sp->WaitForProcessToStop(
+          llvm::None, nullptr, false, listener_sp);
+
+      LLDB_LOG(log, "pid {0} state {0}", process_sp->GetID(), state);
+    }
+
+    // Hook up process PTY if we have one (which we should for local debugging
+    // with llgs).
+    int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
+    if (pty_fd != PseudoTerminal::invalid_fd) {
+      process_sp->SetSTDIOFileDescriptor(pty_fd);
+      LLDB_LOG(log, "hooked up STDIO pty to process");
+    } else
+      LLDB_LOG(log, "not using process STDIO pty");
+  } else {
+    LLDB_LOG(log, "{0}", error);
+    // FIXME figure out appropriate cleanup here. Do we delete the process?
+    // Does our caller do that?
+  }
+
   return process_sp;
 }
 
@@ -490,7 +557,19 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   // __lldb_dlopen_result for consistency. The wrapper returns a void * but
   // doesn't use it because UtilityFunctions don't work with void returns at
   // present.
+  //
+  // Use lazy binding so as to not make dlopen()'s success conditional on
+  // forcing every symbol in the library.
+  //
+  // In general, the debugger should allow programs to load & run with
+  // libraries as far as they can, instead of defaulting to being super-picky
+  // about unavailable symbols.
+  //
+  // The value "1" appears to imply lazy binding (RTLD_LAZY) on both Darwin
+  // and other POSIX OSes.
   static const char *dlopen_wrapper_code = R"(
+  const int RTLD_LAZY = 1;
+
   struct __lldb_dlopen_result {
     void *image_ptr;
     const char *error_str;
@@ -507,7 +586,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   {
     // This is the case where the name is the full path:
     if (!path_strings) {
-      result_ptr->image_ptr = dlopen(name, 2);
+      result_ptr->image_ptr = dlopen(name, RTLD_LAZY);
       if (result_ptr->image_ptr)
         result_ptr->error_str = nullptr;
       return nullptr;
@@ -521,7 +600,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       buffer[path_len] = '/';
       char *target_ptr = buffer+path_len+1; 
       memcpy((void *) target_ptr, (void *) name, name_len + 1);
-      result_ptr->image_ptr = dlopen(buffer, 2);
+      result_ptr->image_ptr = dlopen(buffer, RTLD_LAZY);
       if (result_ptr->image_ptr) {
         result_ptr->error_str = nullptr;
         break;
@@ -540,30 +619,26 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   expr.append(dlopen_wrapper_code);
   Status utility_error;
   DiagnosticManager diagnostics;
-  
-  std::unique_ptr<UtilityFunction> dlopen_utility_func_up(process
-      ->GetTarget().GetUtilityFunctionForLanguage(expr.c_str(),
-                                                  eLanguageTypeObjC,
-                                                  dlopen_wrapper_name,
-                                                  utility_error));
-  if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not make utility"
-                                   "function: %s", utility_error.AsCString());
+
+  auto utility_fn_or_error = process->GetTarget().CreateUtilityFunction(
+      std::move(expr), dlopen_wrapper_name, eLanguageTypeObjC, exe_ctx);
+  if (!utility_fn_or_error) {
+    std::string error_str = llvm::toString(utility_fn_or_error.takeError());
+    error.SetErrorStringWithFormat("dlopen error: could not create utility"
+                                   "function: %s",
+                                   error_str.c_str());
     return nullptr;
   }
-  if (!dlopen_utility_func_up->Install(diagnostics, exe_ctx)) {
-    error.SetErrorStringWithFormat("dlopen error: could not install utility"
-                                   "function: %s", 
-                                   diagnostics.GetString().c_str());
-    return nullptr;
-  }
+  std::unique_ptr<UtilityFunction> dlopen_utility_func_up =
+      std::move(*utility_fn_or_error);
 
   Value value;
   ValueList arguments;
   FunctionCaller *do_dlopen_function = nullptr;
 
   // Fetch the clang types we will need:
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!ast)
     return nullptr;
 
@@ -575,7 +650,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   // We are passing four arguments, the basename, the list of places to look,
   // a buffer big enough for all the path + name combos, and
   // a pointer to the storage we've made for the result:
-  value.SetValueType(Value::eValueTypeScalar);
+  value.SetValueType(Value::ValueType::Scalar);
   value.SetCompilerType(clang_void_pointer_type);
   arguments.PushValue(value);
   value.SetCompilerType(clang_char_pointer_type);
@@ -807,7 +882,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 
   Value return_value;
   // Fetch the clang types we will need:
-  TypeSystemClang *ast = TypeSystemClang::GetScratch(process->GetTarget());
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
   if (!ast) {
     error.SetErrorString("dlopen error: Unable to get TypeSystemClang");
     return LLDB_INVALID_IMAGE_TOKEN;
@@ -907,13 +983,6 @@ PlatformPOSIX::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
               extern "C" int   dlclose(void*);
               extern "C" char* dlerror(void);
              )";
-}
-
-size_t PlatformPOSIX::ConnectToWaitingProcesses(Debugger &debugger,
-                                                Status &error) {
-  if (m_remote_platform_sp)
-    return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
-  return Platform::ConnectToWaitingProcesses(debugger, error);
 }
 
 ConstString PlatformPOSIX::GetFullNameForDylib(ConstString basename) {

@@ -1,4 +1,3 @@
-; RUN: opt -disable-output -licm -enable-new-pm=0 -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
 ; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: @f()
@@ -20,7 +19,7 @@
 ; CHECK-NEXT: [[NO7]] = MemoryPhi({lbl2,[[NO8]]},{for.end,2})
 
 ; CHECK: cleanup:
-; CHECK-NEXT: MemoryUse([[NO7]]) MayAlias
+; CHECK-NEXT: MemoryUse([[NO7]])
 ; CHECK-NEXT:  %cleanup.dest = load i32, i32* undef, align 1
 
 ; CHECK: lbl1.backedge:

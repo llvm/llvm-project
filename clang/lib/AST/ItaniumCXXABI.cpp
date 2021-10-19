@@ -181,6 +181,37 @@ public:
   }
 };
 
+// A version of this for SYCL that makes sure that 'device' mangling context
+// matches the lambda mangling number, so that __builtin_sycl_unique_stable_name
+// can be consistently generated between a MS and Itanium host by just referring
+// to the device mangling number.
+class ItaniumSYCLNumberingContext : public ItaniumNumberingContext {
+  llvm::DenseMap<const CXXMethodDecl *, unsigned> ManglingNumbers;
+  using ManglingItr = decltype(ManglingNumbers)::iterator;
+
+public:
+  ItaniumSYCLNumberingContext(ItaniumMangleContext *Mangler)
+      : ItaniumNumberingContext(Mangler) {}
+
+  unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
+    unsigned Number = ItaniumNumberingContext::getManglingNumber(CallOperator);
+    std::pair<ManglingItr, bool> emplace_result =
+        ManglingNumbers.try_emplace(CallOperator, Number);
+    (void)emplace_result;
+    assert(emplace_result.second && "Lambda number set multiple times?");
+    return Number;
+  }
+
+  using ItaniumNumberingContext::getManglingNumber;
+
+  unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
+    ManglingItr Itr = ManglingNumbers.find(CallOperator);
+    assert(Itr != ManglingNumbers.end() && "Lambda not yet mangled?");
+
+    return Itr->second;
+  }
+};
+
 class ItaniumCXXABI : public CXXABI {
 private:
   std::unique_ptr<MangleContext> Mangler;
@@ -249,6 +280,9 @@ public:
 
   std::unique_ptr<MangleNumberingContext>
   createMangleNumberingContext() const override {
+    if (Context.getLangOpts().isSYCL())
+      return std::make_unique<ItaniumSYCLNumberingContext>(
+          cast<ItaniumMangleContext>(Mangler.get()));
     return std::make_unique<ItaniumNumberingContext>(
         cast<ItaniumMangleContext>(Mangler.get()));
   }
@@ -257,4 +291,10 @@ public:
 
 CXXABI *clang::CreateItaniumCXXABI(ASTContext &Ctx) {
   return new ItaniumCXXABI(Ctx);
+}
+
+std::unique_ptr<MangleNumberingContext>
+clang::createItaniumNumberingContext(MangleContext *Mangler) {
+  return std::make_unique<ItaniumNumberingContext>(
+      cast<ItaniumMangleContext>(Mangler));
 }

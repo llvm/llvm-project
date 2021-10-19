@@ -36,10 +36,15 @@ multiclass B<string name, string help1, string help2> {
 
 defm auxiliary: Eq<"auxiliary", "Set DT_AUXILIARY field to the specified name">;
 
-def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
+def Bno_symbolic: F<"Bno-symbolic">, HelpText<"Don't bind default visibility defined symbols locally for -shared (default)">;
+
+def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind default visibility defined symbols locally for -shared">;
 
 def Bsymbolic_functions: F<"Bsymbolic-functions">,
-  HelpText<"Bind defined function symbols locally">;
+  HelpText<"Bind default visibility defined function symbols locally for -shared">;
+
+def Bsymbolic_non_weak_functions: F<"Bsymbolic-non-weak-functions">,
+  HelpText<"Bind default visibility defined STB_GLOBAL function symbols locally for -shared">;
 
 def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
 
@@ -63,6 +68,10 @@ defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value
 defm optimize_bb_jumps: BB<"optimize-bb-jumps",
     "Remove direct jumps at the end to the next basic block",
     "Do not remove any direct jumps at the end to the next basic block (default)">;
+
+defm fortran_common : BB<"fortran-common",
+    "Search archive members for definitions to override COMMON symbols (default)",
+    "Do not search archive members for definitions to override COMMON symbols">;
 
 defm split_stack_adjust_size
     : Eq<"split-stack-adjust-size",
@@ -113,16 +122,14 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // -chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--", "-"], "chroot">;
 
-def color_diagnostics: F<"color-diagnostics">,
-  HelpText<"Alias for --color-diagnostics=always">;
-
+defm color_diagnostics: B<"color-diagnostics",
+  "Alias for --color-diagnostics=always",
+  "Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: J<"color-diagnostics=">,
-  HelpText<"Use colors in diagnostics">,
+  HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
-defm cref: B<"cref",
-    "Output cross reference table",
-    "Do not output cross reference table">;
+def cref: FF<"cref">, HelpText<"Output cross reference table">;
 
 defm define_common: B<"define-common",
     "Assign space to common symbols",
@@ -149,11 +156,12 @@ def discard_none: F<"discard-none">,
 defm dynamic_linker: Eq<"dynamic-linker", "Which dynamic linker to use">;
 
 defm dynamic_list : Eq<"dynamic-list",
-   "Read a list of dynamic symbols. (executable) Put matched non-local defined"
-   "symbols to the dynamic symbol table. (shared object) References to matched"
-   "non-local STV_DEFAULT symbols shouldn't be bound to definitions within the "
-   "shared object. Implies -Bsymbolic but does not set DF_SYMBOLIC">,
+   "Similar to --export-dynamic-symbol-list. When creating a shared object, "
+   "this additionally implies -Bsymbolic but does not set DF_SYMBOLIC">,
    MetaVarName<"<file>">;
+
+def eb: F<"EB">, HelpText<"Select the big-endian format in OUTPUT_FORMAT">;
+def el: F<"EL">, HelpText<"Select the little-endian format in OUTPUT_FORMAT">;
 
 defm eh_frame_hdr: B<"eh-frame-hdr",
     "Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header",
@@ -179,6 +187,9 @@ defm error_limit:
 def error_unresolved_symbols: F<"error-unresolved-symbols">,
   HelpText<"Report unresolved symbols as errors">;
 
+defm error_handling_script: EEq<"error-handling-script",
+    "Specify an error handling script">;
+
 defm exclude_libs: Eq<"exclude-libs", "Exclude static libraries from automatic export">;
 
 defm execute_only: BB<"execute-only",
@@ -195,6 +206,10 @@ defm export_dynamic_symbol : EEq<"export-dynamic-symbol",
     "shouldn't be bound to definitions within the shared object. "
     "Does not imply -Bsymbolic.">,
     MetaVarName<"glob">;
+
+defm export_dynamic_symbol_list : EEq<"export-dynamic-symbol-list",
+   "Read a list of dynamic symbol patterns. Apply --export-dynamic-symbol on each pattern">,
+    MetaVarName<"file">;
 
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
@@ -271,9 +286,6 @@ def nmagic: F<"nmagic">, MetaVarName<"<magic>">,
 def nostdlib: F<"nostdlib">,
   HelpText<"Only search directories specified on the command line">;
 
-def no_color_diagnostics: F<"no-color-diagnostics">,
-  HelpText<"Do not use colors in diagnostics">;
-
 def no_dynamic_linker: F<"no-dynamic-linker">,
   HelpText<"Inhibit output of .interp section">;
 
@@ -302,7 +314,7 @@ defm orphan_handling:
   Eq<"orphan-handling", "Control how orphan sections are handled when linker script used">;
 
 defm pack_dyn_relocs:
-  Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
+  EEq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
 
 defm use_android_relr_tags: BB<"use-android-relr-tags",
@@ -340,7 +352,9 @@ def push_state: F<"push-state">,
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
 
-defm reproduce: Eq<"reproduce", "Write a tar file containing input files and command line options to reproduce link">;
+defm reproduce:
+  Eq<"reproduce",
+     "Write tar file containing inputs and command to reproduce link">;
 
 defm rosegment: BB<"rosegment",
   "Put read-only non-executable sections in their own segment (default)",
@@ -372,7 +386,7 @@ def start_group: F<"start-group">,
 def start_lib: F<"start-lib">,
   HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 
-def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
+def strip_all: F<"strip-all">, HelpText<"Strip all symbols. Implies --strip-debug">;
 
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
@@ -436,6 +450,17 @@ def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number and exit">;
 
+def power10_stubs: F<"power10-stubs">, HelpText<"Alias for --power10-stubs=auto">;
+
+def no_power10_stubs: F<"no-power10-stubs">, HelpText<"Alias for --power10-stubs=no">;
+
+def power10_stubs_eq:
+  J<"power10-stubs=">, HelpText<
+                     "Enables Power10 instructions in all stubs without options, "
+                     "options override previous flags."
+                     "auto: Allow Power10 instructions in stubs if applicable."
+                     "no:   No Power10 instructions in stubs.">;
+
 defm version_script: Eq<"version-script", "Read a version script">;
 
 defm warn_backrefs: BB<"warn-backrefs",
@@ -467,8 +492,11 @@ defm whole_archive: B<"whole-archive",
     "Force load of all members in a static library",
     "Do not force load of all members in a static library (default)">;
 
-defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
-  MetaVarName<"<symbol>=<symbol>">;
+def why_extract: JJ<"why-extract=">, HelpText<"Print to a file about why archive members are extracted">;
+
+defm wrap : Eq<"wrap", "Redirect symbol references to __wrap_symbol and "
+                       "__real_symbol references to symbol">,
+            MetaVarName<"<symbol>">;
 
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
@@ -524,8 +552,9 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
-def lto_new_pass_manager: FF<"lto-new-pass-manager">,
-  HelpText<"Use new pass manager">;
+defm lto_legacy_pass_manager: BB<"lto-legacy-pass-manager",
+  "Use the legacy pass manager in LLVM",
+  "Use the new pass manager in LLVM">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -536,29 +565,39 @@ def lto_cs_profile_generate: FF<"lto-cs-profile-generate">,
   HelpText<"Perform context sensitive PGO instrumentation">;
 def lto_cs_profile_file: JJ<"lto-cs-profile-file=">,
   HelpText<"Context sensitive profile file path">;
+defm lto_pgo_warn_mismatch: BB<"lto-pgo-warn-mismatch",
+  "turn on warnings about profile cfg mismatch (default)>",
+  "turn off warnings about profile cfg mismatch">;
 def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def lto_sample_profile: JJ<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
-def lto_whole_program_visibility: FF<"lto-whole-program-visibility">,
-  HelpText<"Asserts that the LTO link has whole program visibility">;
+defm lto_whole_program_visibility: BB<"lto-whole-program-visibility",
+  "Asserts that the LTO link has whole program visibility",
+  "Asserts that the LTO link does not have whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
   HelpText<"YAML output file for optimization remarks">;
+defm opt_remarks_hotness_threshold: EEq<"opt-remarks-hotness-threshold",
+  "Minimum profile count required for an optimization remark to be output."
+  " Use 'auto' to apply the threshold from profile summary.">,
+  MetaVarName<"<value>">;
 def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
 def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
-def save_temps: F<"save-temps">;
+def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
 defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
-def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,
-  HelpText<"Shuffle input sections using the given seed. If 0, use a random seed">;
+defm shuffle_sections: EEq<"shuffle-sections",
+  "Shuffle matched sections using the given seed before mapping them to the output sections. "
+  "If -1, reverse the section order. If 0, use a random seed">,
+  MetaVarName<"<section-glob>=<seed>">;
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
@@ -585,7 +624,9 @@ def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs>, HelpText<"Alias for --thinlto-j
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;
 def: F<"plugin-opt=new-pass-manager">,
-  Alias<lto_new_pass_manager>, HelpText<"Alias for --lto-new-pass-manager">;
+  Alias<no_lto_legacy_pass_manager>, HelpText<"Alias for --no-lto-legacy-pass-manager">;
+def: F<"plugin-opt=legacy-pass-manager">,
+  Alias<lto_legacy_pass_manager>, HelpText<"Alias for --no-legacy-pass-manager">;
 def: F<"plugin-opt=cs-profile-generate">,
   Alias<lto_cs_profile_generate>, HelpText<"Alias for --lto-cs-profile-generate">;
 def: J<"plugin-opt=cs-profile-path=">,
@@ -593,6 +634,21 @@ def: J<"plugin-opt=cs-profile-path=">,
 def: J<"plugin-opt=obj-path=">,
   Alias<lto_obj_path_eq>,
   HelpText<"Alias for --lto-obj-path=">;
+def: J<"plugin-opt=opt-remarks-filename=">,
+  Alias<opt_remarks_filename>,
+  HelpText<"Alias for --opt-remarks-filename">;
+def: J<"plugin-opt=opt-remarks-passes=">,
+  Alias<opt_remarks_passes>,
+  HelpText<"Alias for --opt-remarks-passes">;
+def: J<"plugin-opt=opt-remarks-format=">,
+  Alias<opt_remarks_format>,
+  HelpText<"Alias for --opt-remarks-format">;
+def: F<"plugin-opt=opt-remarks-with-hotness">,
+  Alias<opt_remarks_with_hotness>,
+  HelpText<"Alias for --opt-remarks-with_hotness">;
+def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
+  Alias<opt_remarks_hotness_threshold>,
+  HelpText<"Alias for --opt-remarks-hotness-threshold">;
 def: J<"plugin-opt=sample-profile=">,
   Alias<lto_sample_profile>, HelpText<"Alias for --lto-sample-profile">;
 def: F<"plugin-opt=save-temps">, Alias<save_temps>, HelpText<"Alias for --save-temps">;
@@ -653,12 +709,16 @@ def: F<"stats">;
 def: F<"warn-execstack">;
 def: F<"warn-once">;
 def: F<"warn-shared-textrel">;
-def: F<"EB">;
-def: F<"EL">;
 def: JoinedOrSeparate<["-"], "G">;
 def: F<"Qy">;
 
 // Hidden option used for testing MIPS multi-GOT implementation.
 defm mips_got_size:
   Eq<"mips-got-size", "Max size of a single MIPS GOT. 0x10000 by default.">,
+  Flags<[HelpHidden]>;
+
+// Hidden option used to opt-in to additional output checks.
+defm check_dynamic_relocations: BB<"check-dynamic-relocations",
+    "Perform additional validation of the written dynamic relocations",
+    "Do not perform additional validation of the written dynamic relocations">,
   Flags<[HelpHidden]>;

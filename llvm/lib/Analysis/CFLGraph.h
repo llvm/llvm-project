@@ -284,6 +284,13 @@ template <typename CFLAA> class CFLGraphBuilder {
       addAssignEdge(Src, &Inst);
     }
 
+    void visitFreezeInst(FreezeInst &Inst) {
+      // Accessing freeze(ptr) is equivalent to accessing ptr.
+      // The former raises UB iff latter raises UB.
+      auto *Src = Inst.getOperand(0);
+      addAssignEdge(Src, &Inst);
+    }
+
     void visitBinaryOperator(BinaryOperator &Inst) {
       auto *Op1 = Inst.getOperand(0);
       auto *Op2 = Inst.getOperand(1);

@@ -18,10 +18,10 @@ tlsdescseq:
 	.word variable(tlsdesc) + (. - 1b)
 
 @ CHECK: Relocations [
-@ CHECK:     0x4 R_ARM_TLS_DESCSEQ variable 0x0
-@ CHECK:     0x8 R_ARM_TLS_DESCSEQ variable 0x0
-@ CHECK:     0xC R_ARM_TLS_DESCSEQ variable 0x0
-@ CHECK:     0x10 R_ARM_TLS_GOTDESC variable 0x0
+@ CHECK:     0x4 R_ARM_TLS_DESCSEQ variable
+@ CHECK:     0x8 R_ARM_TLS_DESCSEQ variable
+@ CHECK:     0xC R_ARM_TLS_DESCSEQ variable
+@ CHECK:     0x10 R_ARM_TLS_GOTDESC variable
 @ CHECK: ]
 
 @ CHECK-ASM: ldr r1, [pc, #8]

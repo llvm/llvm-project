@@ -84,6 +84,7 @@ void __kmp_close_console(void) {
 static void __kmp_redirect_output(void) {
   __kmp_acquire_bootstrap_lock(&__kmp_console_lock);
 
+  (void)is_console;
   if (!__kmp_console_exists) {
     HANDLE ho;
     HANDLE he;
@@ -101,6 +102,7 @@ static void __kmp_redirect_output(void) {
 
       DWORD err = GetLastError();
       // TODO: output error somehow (maybe message box)
+      (void)err;
       __kmp_stdout = NULL;
 
     } else {
@@ -112,6 +114,7 @@ static void __kmp_redirect_output(void) {
 
       DWORD err = GetLastError();
       // TODO: output error somehow (maybe message box)
+      (void)err;
       __kmp_stderr = NULL;
 
     } else {
@@ -149,8 +152,8 @@ void __kmp_vprintf(enum kmp_io out_stream, char const *format, va_list ap) {
     int chars = 0;
 
 #ifdef KMP_DEBUG_PIDS
-    chars = KMP_SNPRINTF(db, __kmp_debug_buf_chars, "pid=%d: ",
-                         (kmp_int32)getpid());
+    chars = KMP_SNPRINTF(db, __kmp_debug_buf_chars,
+                         "pid=%d: ", (kmp_int32)getpid());
 #endif
     chars += KMP_VSNPRINTF(db, __kmp_debug_buf_chars, format, ap);
 
@@ -158,16 +161,18 @@ void __kmp_vprintf(enum kmp_io out_stream, char const *format, va_list ap) {
       if (chars + 1 > __kmp_debug_buf_warn_chars) {
 #if KMP_OS_WINDOWS
         DWORD count;
-        __kmp_str_buf_print(&__kmp_console_buf, "OMP warning: Debugging buffer "
-                                                "overflow; increase "
-                                                "KMP_DEBUG_BUF_CHARS to %d\n",
+        __kmp_str_buf_print(&__kmp_console_buf,
+                            "OMP warning: Debugging buffer "
+                            "overflow; increase "
+                            "KMP_DEBUG_BUF_CHARS to %d\n",
                             chars + 1);
         WriteFile(stream, __kmp_console_buf.str, __kmp_console_buf.used, &count,
                   NULL);
         __kmp_str_buf_clear(&__kmp_console_buf);
 #else
-        fprintf(stream, "OMP warning: Debugging buffer overflow; "
-                        "increase KMP_DEBUG_BUF_CHARS to %d\n",
+        fprintf(stream,
+                "OMP warning: Debugging buffer overflow; "
+                "increase KMP_DEBUG_BUF_CHARS to %d\n",
                 chars + 1);
         fflush(stream);
 #endif

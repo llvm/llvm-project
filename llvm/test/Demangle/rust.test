@@ -1,0 +1,538 @@
+RUN: llvm-cxxfilt -n  < %s | FileCheck --match-full-lines %s
+
+CHECK: a::main
+       _RNvC1a4main
+
+CHECK: hello::rust
+       _RNvCshGpAVYOtgW1_5hello4rust
+
+CHECK: a::b::c
+       _RNvNvC1a1b1c
+
+; Instantiating crate
+
+CHECK: crate
+       _RC5crateC3foo
+
+; Closure namespace
+
+CHECK: crate::{closure#0}
+       _RNCC5crate0
+
+CHECK: crate::{closure#1}
+       _RNCC5crates_0
+
+CHECK: crate::{closure:foo#0}
+       _RNCC5crate3foo
+
+CHECK: crate::{closure:foo#1}
+       _RNCC5crates_3foo
+
+; Shim namespace
+
+CHECK: crate::{shim:reify#0}
+       _RNSC5crate5reify
+
+; Unrecognized special namespace
+
+CHECK: crate::{Z:ident#10}
+       _RNZC5crates8_5ident
+
+; Inherent impl
+
+CHECK: <_>
+       _RMC5cratep
+
+CHECK: <_>
+       _RMs_C5cratep
+
+; Trait impl
+
+CHECK: <_ as Clone>
+       _RXC5cratepC5Clone
+
+CHECK: <_ as Clone>
+       _RXs_C5cratepC5Clone
+
+; Trait definition
+
+CHECK: <_ as Ord>
+       _RYpC3Ord
+
+; Generic type arguments
+
+CHECK: generic::<_>
+       _RIC7genericpE
+
+CHECK: generic::<_, _>
+       _RIC7genericppE
+
+CHECK: generic::<_, _, _>
+       _RIC7genericpppE
+
+; Generic const arguments
+
+CHECK: generic_const::<_>
+       _RIC13generic_constKpE
+
+; Generic lifetime arguments
+
+CHECK: generic_lifetime::<'_>
+       _RIC16generic_lifetimeL_E
+
+; Invalid lifetime index.
+
+CHECK: _RIC16generic_lifetimeL0_E
+       _RIC16generic_lifetimeL0_E
+
+; Basic types
+
+CHECK: basic::<i8>
+       _RIC5basicaE
+
+CHECK: basic::<bool>
+       _RIC5basicbE
+
+CHECK: basic::<char>
+       _RIC5basiccE
+
+CHECK: basic::<f64>
+       _RIC5basicdE
+
+CHECK: basic::<str>
+       _RIC5basiceE
+
+CHECK: basic::<f32>
+       _RIC5basicfE
+
+CHECK: basic::<u8>
+       _RIC5basichE
+
+CHECK: basic::<isize>
+       _RIC5basiciE
+
+CHECK: basic::<usize>
+       _RIC5basicjE
+
+CHECK: basic::<i32>
+       _RIC5basiclE
+
+CHECK: basic::<u32>
+       _RIC5basicmE
+
+CHECK: basic::<i128>
+       _RIC5basicnE
+
+CHECK: basic::<u128>
+       _RIC5basicoE
+
+CHECK: basic::<_>
+       _RIC5basicpE
+
+CHECK: basic::<i16>
+       _RIC5basicsE
+
+CHECK: basic::<u16>
+       _RIC5basictE
+
+CHECK: basic::<()>
+       _RIC5basicuE
+
+CHECK: basic::<...>
+       _RIC5basicvE
+
+CHECK: basic::<i64>
+       _RIC5basicxE
+
+CHECK: basic::<u64>
+       _RIC5basicyE
+
+CHECK: basic::<!>
+       _RIC5basiczE
+
+; Named types. Test possible paths productions.
+
+CHECK: named::<name>
+       _RIC5namedC4nameE
+
+CHECK: named::<<_>>
+       _RIC5namedMC5cratepE
+
+CHECK: named::<<_ as Name>>
+       _RIC5namedXC5cratepC4NameE
+
+CHECK: named::<<_ as Name>>
+       _RIC5namedYpC4NameE
+
+CHECK: named::<name::Name>
+       _RIC5namedNvC4name4NameE
+
+CHECK: named::<Name<>>
+       _RIC5namedIC4NameEE
+
+; Types
+
+CHECK: types::<[u8; 0]>
+       _RIC5typesAhj0_E
+
+CHECK: types::<[_]>
+       _RIC5typesSpE
+
+CHECK: types::<()>
+       _RIC5typesTEE
+
+CHECK: types::<(_,)>
+       _RIC5typesTpEE
+
+CHECK: types::<(_, _)>
+       _RIC5typesTppEE
+
+CHECK: types::<(_, _, _)>
+       _RIC5typesTpppEE
+
+CHECK: types::<&_>
+       _RIC5typesRpE
+
+CHECK: types::<&_>
+       _RIC5typesRL_pE
+
+CHECK: types::<&mut _>
+       _RIC5typesQpE
+
+CHECK: types::<&mut _>
+       _RIC5typesQL_pE
+
+CHECK: types::<*const _>
+       _RIC5typesPpE
+
+CHECK: types::<*mut _>
+       _RIC5typesOpE
+
+; Function signatures
+
+CHECK: function::<fn()>
+       _RIC8functionFEuE
+
+CHECK: function::<fn() -> _>
+       _RIC8functionFEpE
+
+CHECK: function::<fn(_)>
+       _RIC8functionFpEuE
+
+CHECK: function::<fn(_, _)>
+       _RIC8functionFppEuE
+
+CHECK: function::<fn(_, _, _)>
+       _RIC8functionFpppEuE
+
+CHECK: function::<unsafe fn()>
+       _RIC8functionFUEuE
+
+CHECK: function::<extern "C" fn()>
+       _RIC8functionFKCEuE
+
+CHECK: function::<extern "cdecl" fn()>
+       _RIC8functionFK5cdeclEuE
+
+CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
+       _RIC8functionFUK21C_cmse_nonsecure_callEuE
+
+; Invalid ABI with punycode.
+
+CHECK: _RIC8functionFKu3n3hEuE
+       _RIC8functionFKu3n3hEuE
+
+; Trait objects
+
+CHECK: trait::<dyn >
+       _RIC5traitDEL_E
+
+CHECK: trait::<dyn for<'a> >
+       _RIC5traitDG_EL_E
+
+CHECK: trait::<for<'a> fn(dyn for<'b> + 'a)>
+       _RIC5traitFG_DG_EL0_EuE
+
+CHECK: trait::<dyn Display>
+       _RIC5traitDC7DisplayEL_E
+
+CHECK: trait::<dyn Display + Send + Sync>
+       _RIC5traitDC7DisplayC4SendC4SyncEL_E
+
+CHECK: trait::<dyn for<'a> Display>
+       _RIC5traitDG_C7DisplayEL_E
+
+CHECK: trait::<dyn IntoIterator<_, Item = _>>
+       _RIC5traitDIC12IntoIteratorpEp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _>>
+       _RIC5traitDC12IntoIteratorp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _, IntoIter = _>>
+       _RIC5traitDC12IntoIteratorp4Itempp8IntoIterpEL_E
+
+; Invalid trait object, missing lifetime.
+
+CHECK: _RIC5traitDEE
+       _RIC5traitDEE
+
+; Binders
+
+CHECK: binders::<for<'a> fn(&'a _)>
+       _RIC7bindersFG_RL0_pEuE
+
+CHECK: binders::<for<'a> fn(&'a mut _)>
+       _RIC7bindersFG_QL0_pEuE
+
+CHECK: binders::<for<'a, 'b> fn(&'a _, &'b _)>
+       _RIC7bindersFG0_RL1_pRL0_pEuE
+
+CHECK: binders::<for<'a, 'b> fn() -> for<'c, 'd> fn(&'a _, &'d _)>
+       _RIC7bindersFG0_EFG0_RL3_pRL0_pEuE
+
+CHECK: binders::<for<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o, 'p, 'q, 'r, 's, 't, 'u, 'v, 'w, 'x, 'y, 'z, 'z1, 'z2, 'z3, 'z4> fn(&'a &'b &'c &'d &'e &'f &'g &'h &'i &'j &'k &'l &'m &'n &'o &'p &'q &'r &'s &'t &'u &'v &'w &'x &'y &'z &'z1 &'z2 &'z3 &'z4 ())>
+       _RIC7bindersFGs_RLt_RLs_RLr_RLq_RLp_RLo_RLn_RLm_RLl_RLk_RLj_RLi_RLh_RLg_RLf_RLe_RLd_RLc_RLb_RLa_RL9_RL8_RL7_RL6_RL5_RL4_RL3_RL2_RL1_RL0_uEuE
+
+; Invalid binder. Too many bound lifetimes.
+
+CHECK: _RIC7bindersFGFF_EuE
+       _RIC7bindersFGFF_EuE
+
+; Integer constants. Test value demangling.
+
+CHECK: integer::<0>
+       _RIC7integerKi0_E
+
+CHECK: integer::<1>
+       _RIC7integerKi1_E
+
+CHECK: integer::<-1>
+       _RIC7integerKin1_E
+
+CHECK: integer::<-15>
+       _RIC7integerKinf_E
+
+CHECK: integer::<-16>
+       _RIC7integerKin10_E
+
+CHECK: integer::<18446744073709551615>
+       _RIC7integerKoffffffffffffffff_E
+
+CHECK: integer::<0x10000000000000000>
+       _RIC7integerKo10000000000000000_E
+
+CHECK: integer::<-0x123456789abcdef01>
+       _RIC7integerKnn123456789abcdef01_E
+
+; Invalid integer constant without any digits:
+
+CHECK: _RIC7integerKi_E
+       _RIC7integerKi_E
+
+; Invalid integer constants with insignificant leading zeros:
+
+CHECK: _RIC7integerKi00_E
+       _RIC7integerKi00_E
+
+CHECK: _RIC7integerKi01_E
+       _RIC7integerKi01_E
+
+; Integer constants. Test all integer types.
+
+CHECK: i8::<0>
+       _RIC2i8Ka0_E
+
+CHECK: u8::<0>
+       _RIC2u8Kh0_E
+
+CHECK: isize::<0>
+       _RIC5isizeKi0_E
+
+CHECK: usize::<0>
+       _RIC5usizeKj0_E
+
+CHECK: i32::<0>
+       _RIC3i32Kl0_E
+
+CHECK: u32::<0>
+       _RIC3u32Km0_E
+
+CHECK: i128::<0>
+       _RIC4i128Kn0_E
+
+CHECK: u128::<0>
+       _RIC4u128Ko0_E
+
+CHECK: i16::<0>
+       _RIC3i16Ks0_E
+
+CHECK: u16::<0>
+       _RIC3u16Kt0_E
+
+CHECK: i64::<0>
+       _RIC3i64Kx0_E
+
+CHECK: u64::<0>
+       _RIC3u64Ky0_E
+
+; Bool constants
+
+CHECK: bool::<false>
+       _RIC4boolKb0_E
+
+CHECK: bool::<true>
+       _RIC4boolKb1_E
+
+; Invalid bool constants
+
+CHECK: _RIC4boolKb2_E
+       _RIC4boolKb2_E
+
+CHECK: _RIC4boolKbn0_E
+       _RIC4boolKbn0_E
+
+; Char constants
+
+CHECK: char::<'a'>
+       _RIC4charKc61_E
+
+CHECK: char::<'"'>
+       _RIC4charKc22_E
+
+CHECK: char::<'\t'>
+       _RIC4charKc9_E
+
+CHECK: char::<'\r'>
+       _RIC4charKcd_E
+
+CHECK: char::<'\n'>
+       _RIC4charKca_E
+
+CHECK: char::<'\\'>
+       _RIC4charKc5c_E
+
+CHECK: char::<'\''>
+       _RIC4charKc27_E
+
+CHECK: char::<'\u{1f40d}'>
+       _RIC4charKc1f40d_E
+
+CHECK: char::<'\u{10ffff}'>
+       _RIC4charKc10ffff_E
+
+; Invalid char constants
+
+CHECK: _RIC4charKc1234567_E
+       _RIC4charKc1234567_E
+
+; Backreferences
+
+CHECK: backref::<backref::ident>
+       _RIC7backrefNvB0_5identE
+
+CHECK: backref::<(), ()>
+       _RIC7backrefuB9_E
+
+CHECK: backref::<7, 7>
+       _RIC7backrefKi7_KBa_E
+
+; Invalid backreferences
+
+CHECK: _RB_
+       _RB_
+
+CHECK: _RB5_
+       _RB5_
+
+CHECK: _RNvB_1a
+       _RNvB_1a
+
+CHECK: _RIC7backrefSB9_E
+       _RIC7backrefSB9_E
+
+CHECK: _RIC7backrefKBa_E
+       _RIC7backrefKBa_E
+
+; Dot suffix
+
+CHECK: dot (.llvm.1234)
+       _RC3dot.llvm.1234
+
+CHECK: dot (.llvm.6789)
+       _RC3dotC5crate.llvm.6789
+
+; Punycode
+
+CHECK: punycode::東京
+       _RNvC8punycodeu7_1lqs71d
+
+CHECK: punycode::zażółć_gęślą_jaźń
+       _RNvC8punycodeu29za_gl_ja_w3a7psa2tqtgb10airva
+
+CHECK: punycode::საჭმელად_გემრიელი_სადილი
+       _RNvC8punycodeu30____7hkackfecea1cbdathfdh9hlq6y
+
+CHECK: Gödel::Escher::Bach
+       _RNtNvCu8Gdel_5qa6Escher4Bach
+
+CHECK: punycode::🦁🐅
+       _RNvC8punycodeu7wn8hx1g
+
+; Punycode - invalid code point
+
+CHECK: _RCu5r731r
+       _RCu5r731r
+
+CHECK: _RCu8b44444yy
+       _RCu8b44444yy
+
+CHECK: _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+       _RNvC1au25zzzzzzzzzzzzzzzzzzzzzzzzz
+
+; Punycode - early EOF
+
+CHECK: _RCu8_CCCAR_u4
+       _RCu8_CCCAR_u4
+
+; Punycode - overflow
+
+CHECK: _RNvC1au21p18888888888888888888
+       _RNvC1au21p18888888888888888888
+
+; Invalid mangled characters
+
+CHECK: _RNvC2a.1c
+       _RNvC2a.1c
+
+CHECK: _RNvC2a$1c
+       _RNvC2a$1c
+
+; Invalid namespace (not in [a-zA-Z]).
+
+CHECK: _RN_C5crate4main
+       _RN_C5crate4main
+
+; Invalid identifier length (UINT64_MAX + 3, which happens to be ok after a wraparound).
+
+CHECK: _RNvC2ab18446744073709551618xy
+       _RNvC2ab18446744073709551618xy
+
+; Mangling scheme includes an optional encoding version. When present it would
+; indicate an encoding we don't support yet. Check that it is rejected:
+
+CHECK: _R0NvC1a4main
+       _R0NvC1a4main
+
+; Early EOF
+
+CHECK: _RNv
+       _RNv
+
+CHECK: _RNvC
+       _RNvC
+
+CHECK: _RNvC1a5main
+       _RNvC1a5main
+
+CHECK: _RNvC1a20abc
+       _RNvC1a20abc

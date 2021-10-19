@@ -10,9 +10,9 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AVR_H
 
 #include "Gnu.h"
-#include "InputInfo.h"
-#include "clang/Driver/ToolChain.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/ToolChain.h"
 
 namespace clang {
 namespace driver {
@@ -22,6 +22,14 @@ class LLVM_LIBRARY_VISIBILITY AVRToolChain : public Generic_ELF {
 public:
   AVRToolChain(const Driver &D, const llvm::Triple &Triple,
                const llvm::opt::ArgList &Args);
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   Tool *buildLinker() const override;

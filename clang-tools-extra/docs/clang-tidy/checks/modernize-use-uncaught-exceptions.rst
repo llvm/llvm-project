@@ -12,53 +12,53 @@ they will be replaced with.
 
 .. code-block:: c++
 
-	#define MACRO1 std::uncaught_exception
-	#define MACRO2 std::uncaught_exception
+  #define MACRO1 std::uncaught_exception
+  #define MACRO2 std::uncaught_exception
 
-	int uncaught_exception() {
-		return 0;
-	}
+  int uncaught_exception() {
+    return 0;
+  }
 
-	int main() {
-		int res;
+  int main() {
+    int res;
 
-	  res = uncaught_exception();
-	  // No warning, since it is not the deprecated function from namespace std
-	  
-	  res = MACRO2();
-	  // Warning, but will not be replaced
-	  
-	  res = std::uncaught_exception();
-	  // Warning and replaced
-	  
-	  using std::uncaught_exception;
-	  // Warning and replaced
-	  
-	  res = uncaught_exception();
-	  // Warning and replaced
-	}
+    res = uncaught_exception();
+    // No warning, since it is not the deprecated function from namespace std
+
+    res = MACRO2();
+    // Warning, but will not be replaced
+
+    res = std::uncaught_exception();
+    // Warning and replaced
+
+    using std::uncaught_exception;
+    // Warning and replaced
+
+    res = uncaught_exception();
+    // Warning and replaced
+  }
 
 After applying the fixes the code will look like the following:
 
 .. code-block:: c++
 
-	#define MACRO1 std::uncaught_exception
-	#define MACRO2 std::uncaught_exception
+  #define MACRO1 std::uncaught_exception
+  #define MACRO2 std::uncaught_exception
 
-	int uncaught_exception() {
-		return 0;
-	}
+  int uncaught_exception() {
+    return 0;
+  }
 
-	int main() {
-	  int res;
-	  
-	  res = uncaught_exception();
-	  
-	  res = MACRO2();
-	  
-	  res = std::uncaught_exceptions();
-	  
-	  using std::uncaught_exceptions;
-	  
-	  res = uncaught_exceptions();
-	}
+  int main() {
+    int res;
+
+    res = uncaught_exception();
+
+    res = MACRO2();
+
+    res = std::uncaught_exceptions();
+
+    using std::uncaught_exceptions;
+
+    res = uncaught_exceptions();
+  }

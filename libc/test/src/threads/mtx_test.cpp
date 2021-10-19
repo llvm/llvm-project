@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "include/threads.h"
+#include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
 #include "src/threads/mtx_unlock.h"
@@ -35,7 +36,7 @@ int counter(void *arg) {
   return 0;
 }
 
-TEST(MutexTest, RelayCounter) {
+TEST(LlvmLibcMutexTest, RelayCounter) {
   ASSERT_EQ(__llvm_libc::mtx_init(&mutex, mtx_plain),
             static_cast<int>(thrd_success));
 
@@ -63,6 +64,8 @@ TEST(MutexTest, RelayCounter) {
   int retval = 123;
   __llvm_libc::thrd_join(&thread, &retval);
   ASSERT_EQ(retval, 0);
+
+  __llvm_libc::mtx_destroy(&mutex);
 }
 
 mtx_t start_lock, step_lock;
@@ -79,7 +82,7 @@ int stepper(void *arg) {
   return 0;
 }
 
-TEST(MutexTest, WaitAndStep) {
+TEST(LlvmLibcMutexTest, WaitAndStep) {
   ASSERT_EQ(__llvm_libc::mtx_init(&start_lock, mtx_plain),
             static_cast<int>(thrd_success));
   ASSERT_EQ(__llvm_libc::mtx_init(&step_lock, mtx_plain),
@@ -126,4 +129,63 @@ TEST(MutexTest, WaitAndStep) {
   int retval = 123;
   __llvm_libc::thrd_join(&thread, &retval);
   ASSERT_EQ(retval, 0);
+
+  __llvm_libc::mtx_destroy(&start_lock);
+  __llvm_libc::mtx_destroy(&step_lock);
+}
+
+static constexpr int THREAD_COUNT = 10;
+static mtx_t multiple_waiter_lock;
+static mtx_t counter_lock;
+static int wait_count = 0;
+
+int waiter_func(void *) {
+  __llvm_libc::mtx_lock(&counter_lock);
+  ++wait_count;
+  __llvm_libc::mtx_unlock(&counter_lock);
+
+  // Block on the waiter lock until the main
+  // thread unblocks.
+  __llvm_libc::mtx_lock(&multiple_waiter_lock);
+  __llvm_libc::mtx_unlock(&multiple_waiter_lock);
+
+  __llvm_libc::mtx_lock(&counter_lock);
+  --wait_count;
+  __llvm_libc::mtx_unlock(&counter_lock);
+
+  return 0;
+}
+
+TEST(LlvmLibcMutexTest, MultipleWaiters) {
+  __llvm_libc::mtx_init(&multiple_waiter_lock, mtx_plain);
+  __llvm_libc::mtx_init(&counter_lock, mtx_plain);
+
+  __llvm_libc::mtx_lock(&multiple_waiter_lock);
+  thrd_t waiters[THREAD_COUNT];
+  for (int i = 0; i < THREAD_COUNT; ++i) {
+    __llvm_libc::thrd_create(waiters + i, waiter_func, nullptr);
+  }
+
+  // Spin until the counter is incremented to the desired
+  // value.
+  while (true) {
+    __llvm_libc::mtx_lock(&counter_lock);
+    if (wait_count == THREAD_COUNT) {
+      __llvm_libc::mtx_unlock(&counter_lock);
+      break;
+    }
+    __llvm_libc::mtx_unlock(&counter_lock);
+  }
+
+  __llvm_libc::mtx_unlock(&multiple_waiter_lock);
+
+  int retval;
+  for (int i = 0; i < THREAD_COUNT; ++i) {
+    __llvm_libc::thrd_join(waiters + i, &retval);
+  }
+
+  ASSERT_EQ(wait_count, 0);
+
+  __llvm_libc::mtx_destroy(&multiple_waiter_lock);
+  __llvm_libc::mtx_destroy(&counter_lock);
 }

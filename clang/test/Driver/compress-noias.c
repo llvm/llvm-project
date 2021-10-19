@@ -17,7 +17,7 @@
 
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
-// CHECK-OPT_GZ: "--compress-debug-sections"
+// CHECK-OPT_GZ: "--compress-debug-sections=zlib"
 
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz=none -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s
 // RUN: %clang -### -target i686-unknown-linux-gnu -fno-integrated-as -gz=none -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s

@@ -1,10 +1,13 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
-// GCC does not pass in mutexinoutset
-// clang 9 introduced codegen for mutexinoutset
+// GCC 9 introduced codegen for mutexinoutset
+// UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7, gcc-8
 
-// UNSUPPORTED: gcc
+// icc does not yet support mutexinoutset
+// XFAIL: icc
+
+// clang 9 introduced codegen for mutexinoutset
 // UNSUPPORTED: clang-4, clang-5, clang-6, clang-7, clang-8
 
 #include "callback.h"
@@ -94,9 +97,6 @@ int main() {
 // CHECK-SAME: task_id=[[SECOND_TASK]], deps=[([[ADDRX]],
 // CHECK-SAME: ompt_dependence_type_mutexinoutset)], ndeps=1
 
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
-// CHECK-SAME: first_task_id=[[FIRST_TASK]], second_task_id=[[SECOND_TASK]]
-
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
 // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],
@@ -111,9 +111,6 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
 // CHECK-SAME: task_id=[[THIRD_TASK]], deps=[([[ADDRX]],
 // CHECK-SAME: ompt_dependence_type_in)], ndeps=1
-
-// CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_dependence_pair:
-// CHECK-SAME: first_task_id=[[SECOND_TASK]], second_task_id=[[THIRD_TASK]]
 
 // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[PARALLEL_ID]],
 // CHECK-SAME: task_id=[[IMPLICIT_TASK_ID]], exit_frame=[[EXIT]],

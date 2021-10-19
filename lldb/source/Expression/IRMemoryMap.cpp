@@ -639,7 +639,7 @@ void IRMemoryMap::ReadMemory(uint8_t *bytes, lldb::addr_t process_address,
 
     if (target_sp) {
       Address absolute_address(process_address);
-      target_sp->ReadMemory(absolute_address, false, bytes, size, error);
+      target_sp->ReadMemory(absolute_address, bytes, size, error, true);
       return;
     }
 

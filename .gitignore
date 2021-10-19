@@ -21,6 +21,9 @@
 #OS X specific files.
 .DS_store
 
+# Ignore the user specified CMake presets in subproject directories.
+/*/CMakeUserPresets.json
+
 # Nested build directory
 /build*
 
@@ -53,6 +56,8 @@ autoconf/autom4te.cache
 # VS2017 and VSCode config files.
 .vscode
 .vs
+# pythonenv for github Codespaces
+pythonenv*
 # clangd index. (".clangd" is a config file now, thus trailing slash)
 .clangd/
 .cache
@@ -61,3 +66,5 @@ autoconf/autom4te.cache
 /clang/utils/analyzer/projects/*/PatchedSource
 /clang/utils/analyzer/projects/*/ScanBuildResults
 /clang/utils/analyzer/projects/*/RefScanBuildResults
+# automodapi puts generated documentation files here.
+/lldb/docs/python_api/

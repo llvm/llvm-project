@@ -54,7 +54,7 @@ namespace test2 {
   };
 
   void A::foo() { bar(); }
-  // CHECK-LABEL: define void @_ZN5test21A3fooEv()
+  // CHECK-LABEL: define{{.*}} void @_ZN5test21A3fooEv()
   // CHECK: declare void @_ZN5test21A3barEv()
 
   const std::type_info &ti = typeid(A);

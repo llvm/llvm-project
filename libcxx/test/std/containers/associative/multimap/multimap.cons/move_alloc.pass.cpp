@@ -29,7 +29,7 @@ int main(int, char**)
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef test_allocator<VC> A;
         typedef std::multimap<MoveOnly, MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -68,7 +68,7 @@ int main(int, char**)
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef test_allocator<VC> A;
         typedef std::multimap<MoveOnly, MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -107,7 +107,7 @@ int main(int, char**)
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef other_allocator<VC> A;
         typedef std::multimap<MoveOnly, MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -196,7 +196,7 @@ int main(int, char**)
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef min_allocator<VC> A;
         typedef std::multimap<MoveOnly, MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;
@@ -235,7 +235,7 @@ int main(int, char**)
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;
-        typedef test_compare<std::less<MoveOnly> > C;
+        typedef test_less<MoveOnly> C;
         typedef explicit_allocator<VC> A;
         typedef std::multimap<MoveOnly, MoveOnly, C, A> M;
         typedef std::move_iterator<V*> I;

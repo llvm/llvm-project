@@ -25,7 +25,7 @@ void IRCompileLayer::setNotifyCompiled(NotifyCompiledFunction NotifyCompiled) {
   this->NotifyCompiled = std::move(NotifyCompiled);
 }
 
-void IRCompileLayer::emit(MaterializationResponsibility R,
+void IRCompileLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                           ThreadSafeModule TSM) {
   assert(TSM && "Module must not be null");
 
@@ -33,13 +33,13 @@ void IRCompileLayer::emit(MaterializationResponsibility R,
     {
       std::lock_guard<std::mutex> Lock(IRLayerMutex);
       if (NotifyCompiled)
-        NotifyCompiled(R.getVModuleKey(), std::move(TSM));
+        NotifyCompiled(*R, std::move(TSM));
       else
         TSM = ThreadSafeModule();
     }
     BaseLayer.emit(std::move(R), std::move(*Obj));
   } else {
-    R.failMaterialization();
+    R->failMaterialization();
     getExecutionSession().reportError(Obj.takeError());
   }
 }

@@ -65,18 +65,18 @@ body:             |
   bb.0.entry:
     $sp = frame-setup tSUBspi $sp, 2, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
-    renamable $r0 = tLDRpci %const.0, 14, $noreg :: (load 4 from constant-pool)
+    renamable $r0 = tLDRpci %const.0, 14, $noreg :: (load (s32) from constant-pool)
     renamable $s0 = FCONSTH 112, 14, $noreg
-    tSTRspi killed renamable $r0, $sp, 1, 14, $noreg :: (volatile store 4 into %ir.F)
-    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
-    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
-    renamable $s0 = VLDRH %const.1, 0, 14, $noreg :: (load 2 from constant-pool)
+    tSTRspi killed renamable $r0, $sp, 1, 14, $noreg :: (volatile store (s32) into %ir.F)
+    VSTRH killed renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
+    renamable $s2 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
+    renamable $s0 = VLDRH %const.1, 0, 14, $noreg :: (load (s16) from constant-pool)
     dead renamable $r0 = SPACE 1230, undef renamable $r0
     renamable $s0 = VADDH killed renamable $s2, killed renamable $s0, 14, $noreg
-    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store 2 into %ir.S)
+    VSTRH renamable $s0, $sp, 1, 14, $noreg :: (volatile store (s16) into %ir.S)
     renamable $r0 = VMOVRH killed renamable $s0, 14, $noreg
     dead renamable $r1 = SPACE 1330, undef renamable $r0
-    dead renamable $s0 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load 2 from %ir.S)
+    dead renamable $s0 = VLDRH $sp, 1, 14, $noreg :: (volatile dereferenceable load (s16) from %ir.S)
     $sp = tADDspi $sp, 2, 14, $noreg
     tBX_RET 14, $noreg, implicit killed $r0
 

@@ -7,7 +7,7 @@ namespace test0 {
     id x;
   };
 
-  // CHECK:    define [[A:%.*]]* @_ZN5test04testENS_1AE(
+  // CHECK:    define{{.*}} [[A:%.*]]* @_ZN5test04testENS_1AE(
   // CHECK:      alloca
   // CHECK-NEXT: getelementptr
   // CHECK-NEXT: store

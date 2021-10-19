@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===---------------------------- test_macros.h ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -87,8 +87,8 @@
 #elif defined(__clang_major__)
 #define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__GNUC__)
-#define TEST_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
-#define TEST_GCC_VER_NEW (TEST_GCC_VER * 10 + __GNUC_PATCHLEVEL__)
+// Given GCC XX.YY.ZZ, TEST_GCC_VER is XXYYZZ
+#define TEST_GCC_VER ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)
 #endif
 
 /* Make a nice name for the standard version */
@@ -101,6 +101,8 @@
 # define TEST_STD_VER 14
 #elif __cplusplus <= 201703L
 # define TEST_STD_VER 17
+#elif __cplusplus <= 202002L
+# define TEST_STD_VER 20
 #else
 # define TEST_STD_VER 99    // greater than current standard
 // This is deliberately different than _LIBCPP_STD_VER to discourage matching them up.
@@ -137,7 +139,7 @@
 # define TEST_NOEXCEPT_COND(...)
 #endif
 
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 11
 # define TEST_THROW_SPEC(...)
 #else
 # define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
@@ -161,85 +163,17 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
-// Sniff out to see if the underlying C library has C11 features
-// This is cribbed from __config; but lives here as well because we can't assume libc++
-#if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11
-#  if defined(__FreeBSD__)
-//  Specifically, FreeBSD does NOT have timespec_get, even though they have all
-//  the rest of C11 - this is PR#38495
-#    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_QUICK_EXIT
-#  elif defined(__BIONIC__)
-#    if __ANDROID_API__ >= 21
-#      define TEST_HAS_QUICK_EXIT
-#    endif
-#    if __ANDROID_API__ >= 28
-#      define TEST_HAS_ALIGNED_ALLOC
-#    endif
-#    if __ANDROID_API__ >= 29
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
-#    define TEST_HAS_QUICK_EXIT
-#    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_TIMESPEC_GET
-#  elif defined(__linux__)
-// This block preserves the old behavior used by include/__config:
-// _LIBCPP_GLIBC_PREREQ would be defined to 0 if __GLIBC_PREREQ was not
-// available. The configuration here may be too vague though, as Bionic, uClibc,
-// newlib, etc may all support these features but need to be configured.
-#    if defined(TEST_GLIBC_PREREQ)
-#      if TEST_GLIBC_PREREQ(2, 15)
-#        define TEST_HAS_QUICK_EXIT
-#      endif
-#      if TEST_GLIBC_PREREQ(2, 17)
-#        define TEST_HAS_ALIGNED_ALLOC
-#        define TEST_HAS_TIMESPEC_GET
-#      endif
-#    elif defined(_LIBCPP_HAS_MUSL_LIBC)
-#      define TEST_HAS_QUICK_EXIT
-#      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(_WIN32)
-#    if defined(_MSC_VER) && !defined(__MINGW32__)
-#      define TEST_HAS_QUICK_EXIT
-#      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  elif defined(__APPLE__)
-     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
-     // aligned releases
-#    if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500 || \
-         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
-         __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
-         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
-#      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_TIMESPEC_GET
-#    endif
-#  endif // __APPLE__
-#endif
-
-/* Features that were introduced in C++14 */
-#if TEST_STD_VER >= 14
-#define TEST_HAS_EXTENDED_CONSTEXPR
-#define TEST_HAS_VARIABLE_TEMPLATES
-#endif
-
-/* Features that were introduced in C++17 */
-#if TEST_STD_VER >= 17
-#endif
-
-/* Features that were introduced after C++17 */
-#if TEST_STD_VER > 17
-#endif
-
-
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
     && !defined(__GXX_RTTI)
 #define TEST_HAS_NO_RTTI
+#endif
+
+#if !defined(TEST_HAS_NO_RTTI)
+# define RTTI_ASSERT(X) assert(X)
+#else
+# define RTTI_ASSERT(X)
 #endif
 
 #if !TEST_HAS_FEATURE(cxx_exceptions) && !defined(__cpp_exceptions) \
@@ -301,6 +235,10 @@
 #define LIBCPP_ONLY(...) ((void)0)
 #endif
 
+#if !defined(_LIBCPP_HAS_NO_RANGES)
+#define TEST_SUPPORTS_RANGES
+#endif
+
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {
@@ -359,6 +297,60 @@ inline void DoNotOptimize(Tp const& value) {
 #else
 #define TEST_ALWAYS_INLINE
 #define TEST_NOINLINE
+#endif
+
+#ifdef _WIN32
+#define TEST_NOT_WIN32(...) ((void)0)
+#else
+#define TEST_NOT_WIN32(...) __VA_ARGS__
+#endif
+
+#if (defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||   \
+    defined(__MVS__)
+// Macros for waiving cases when we can't count allocations done within
+// the library implementation.
+//
+// On Windows, when libc++ is built as a DLL, references to operator new/delete
+// within the DLL are bound at link time to the operator new/delete within
+// the library; replacing them in the user executable doesn't override the
+// calls within the library.
+//
+// The same goes on IBM zOS.
+#define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
+#define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
+#else
+#define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) assert(__VA_ARGS__)
+#define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 1
+#endif
+
+#if (defined(_WIN32) && !defined(_MSC_VER) &&                                  \
+     !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||                      \
+    defined(__MVS__)
+// Normally, a replaced e.g. 'operator new' ends up used if the user code
+// does a call to e.g. 'operator new[]'; it's enough to replace the base
+// versions and have it override all of them.
+//
+// When the fallback operators are located within the libc++ library and we
+// can't override the calls within it (see above), this fallback mechanism
+// doesn't work either.
+//
+// On Windows, when using the MSVC vcruntime, the operator new/delete fallbacks
+// are linked separately from the libc++ library, linked statically into
+// the end user executable, and these fallbacks work even in DLL configurations.
+// In MinGW configurations when built as a DLL, and on zOS, these fallbacks
+// don't work though.
+#define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) ((void)(__VA_ARGS__))
+#else
+#define ASSERT_WITH_OPERATOR_NEW_FALLBACKS(...) assert(__VA_ARGS__)
+#endif
+
+#ifdef _WIN32
+#define TEST_WIN_NO_FILESYSTEM_PERMS_NONE
+#endif
+
+// Support for carving out parts of the test suite, like removing wide characters, etc.
+#if defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+#   define TEST_HAS_NO_WIDE_CHARACTERS
 #endif
 
 #if defined(__GNUC__)

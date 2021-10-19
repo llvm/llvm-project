@@ -3,10 +3,10 @@
 # Check multiple epilogues, save_reg, save_reg_x.
 
 # CHECK-LABEL:   bb.0.entry:
-# CHECK:         early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4
-# CHECK-NEXT:    frame-setup SEH_SaveFPLR_X -32
-# CHECK-NEXT:    frame-setup STRXui killed $x19, $sp, 2
-# CHECK-NEXT:    frame-setup SEH_SaveReg 19, 16
+# CHECK:         early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32
+# CHECK-NEXT:    frame-setup SEH_SaveReg_X 19, -32
+# CHECK-NEXT:    frame-setup STPXi killed $fp, killed $lr, $sp, 1
+# CHECK-NEXT:    frame-setup SEH_SaveFPLR 8
 # CHECK-NEXT:    $sp = frame-setup SUBXri $sp, 496, 0
 # CHECK-NEXT:    frame-setup SEH_StackAlloc 496
 # CHECK-NEXT:    frame-setup SEH_PrologEnd
@@ -15,10 +15,10 @@
 # CHECK:         frame-destroy SEH_EpilogStart
 # CHECK-NEXT:    $sp = frame-destroy ADDXri $sp, 496, 0
 # CHECK-NEXT:    frame-destroy SEH_StackAlloc 496
-# CHECK-NEXT:    $x19 = frame-destroy LDRXui $sp, 2
-# CHECK-NEXT:    frame-destroy SEH_SaveReg 19, 16
-# CHECK-NEXT:    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 4
-# CHECK-NEXT:    frame-destroy SEH_SaveFPLR_X -32
+# CHECK-NEXT:    $fp, $lr = frame-destroy LDPXi $sp, 1
+# CHECK-NEXT:    frame-destroy SEH_SaveFPLR 8
+# CHECK-NEXT:    early-clobber $sp, $x19 = frame-destroy LDRXpost $sp, 32
+# CHECK-NEXT:    frame-destroy SEH_SaveReg_X 19, -32
 # CHECK-NEXT:    frame-destroy SEH_EpilogEnd
 # CHECK-NEXT:    TCRETURNdi @"?func2@@YAHXZ", 0, csr_aarch64_aapcs, implicit $sp
 

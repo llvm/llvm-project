@@ -44,9 +44,9 @@ class DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(OutputFileType OutFileType, raw_pwrite_stream &OutFile,
                 std::function<StringRef(StringRef Input)> Translator,
-                bool Minimize, messageHandler Error, messageHandler Warning)
+                messageHandler Error, messageHandler Warning)
       : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
-        Minimize(Minimize), ErrorHandler(Error), WarningHandler(Warning) {}
+        ErrorHandler(Error), WarningHandler(Warning) {}
 
   bool init(Triple TheTriple);
 
@@ -64,7 +64,7 @@ public:
   ///
   /// As a side effect, this also switches the current Dwarf version
   /// of the MC layer to the one of U.getOrigUnit().
-  void emitCompileUnitHeader(CompileUnit &Unit) override;
+  void emitCompileUnitHeader(CompileUnit &Unit, unsigned DwarfVersion) override;
 
   /// Recursively emit the DIE tree rooted at \p Die.
   void emitDIE(DIE &Die) override;
@@ -189,7 +189,6 @@ private:
   raw_pwrite_stream &OutFile;
   OutputFileType OutFileType = OutputFileType::Object;
   std::function<StringRef(StringRef Input)> Translator;
-  bool Minimize = true;
 
   uint64_t RangesSectionSize = 0;
   uint64_t LocSectionSize = 0;

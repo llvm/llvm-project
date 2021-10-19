@@ -18,6 +18,8 @@
 #include "TokenAnnotator.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 #include <string>
 #include <tuple>
 
@@ -173,6 +175,28 @@ public:
   };
 
 private:
+  struct CellDescription {
+    unsigned Index = 0;
+    unsigned Cell = 0;
+    unsigned EndIndex = 0;
+    bool HasSplit = false;
+    CellDescription *NextColumnElement = nullptr;
+
+    constexpr bool operator==(const CellDescription &Other) const {
+      return Index == Other.Index && Cell == Other.Cell &&
+             EndIndex == Other.EndIndex;
+    }
+    constexpr bool operator!=(const CellDescription &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  struct CellDescriptions {
+    SmallVector<CellDescription> Cells;
+    unsigned CellCount = 0;
+    unsigned InitialSpaces = 0;
+  };
+
   /// Calculate \c IsTrailingComment, \c TokenLength for the last tokens
   /// or token parts in a line and \c PreviousEndOfTokenColumn and
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
@@ -206,6 +230,89 @@ private:
   /// Align escaped newlines from change \p Start to change \p End at
   /// the specified \p Column.
   void alignEscapedNewlines(unsigned Start, unsigned End, unsigned Column);
+
+  /// Align Array Initializers over all \c Changes.
+  void alignArrayInitializers();
+
+  /// Align Array Initializers from change \p Start to change \p End at
+  /// the specified \p Column.
+  void alignArrayInitializers(unsigned Start, unsigned End);
+
+  /// Align Array Initializers being careful to right justify the columns
+  /// as described by \p CellDescs.
+  void alignArrayInitializersRightJustified(CellDescriptions &&CellDescs);
+
+  /// Align Array Initializers being careful to leftt justify the columns
+  /// as described by \p CellDescs.
+  void alignArrayInitializersLeftJustified(CellDescriptions &&CellDescs);
+
+  /// Calculate the cell width between two indexes.
+  unsigned calculateCellWidth(unsigned Start, unsigned End,
+                              bool WithSpaces = false) const;
+
+  /// Get a set of fully specified CellDescriptions between \p Start and
+  /// \p End of the change list.
+  CellDescriptions getCells(unsigned Start, unsigned End);
+
+  /// Does this \p Cell contain a split element?
+  static bool isSplitCell(const CellDescription &Cell);
+
+  /// Get the width of the preceding cells from \p Start to \p End.
+  template <typename I>
+  auto getNetWidth(const I &Start, const I &End, unsigned InitialSpaces) const {
+    auto NetWidth = InitialSpaces;
+    for (auto PrevIter = Start; PrevIter != End; ++PrevIter) {
+      // If we broke the line the initial spaces are already
+      // accounted for.
+      if (Changes[PrevIter->Index].NewlinesBefore > 0)
+        NetWidth = 0;
+      NetWidth +=
+          calculateCellWidth(PrevIter->Index, PrevIter->EndIndex, true) + 1;
+    }
+    return NetWidth;
+  }
+
+  /// Get the maximum width of a cell in a sequence of columns.
+  template <typename I>
+  unsigned getMaximumCellWidth(I CellIter, unsigned NetWidth) const {
+    unsigned CellWidth =
+        calculateCellWidth(CellIter->Index, CellIter->EndIndex, true);
+    if (Changes[CellIter->Index].NewlinesBefore == 0)
+      CellWidth += NetWidth;
+    for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+         Next = Next->NextColumnElement) {
+      auto ThisWidth = calculateCellWidth(Next->Index, Next->EndIndex, true);
+      if (Changes[Next->Index].NewlinesBefore == 0)
+        ThisWidth += NetWidth;
+      CellWidth = std::max(CellWidth, ThisWidth);
+    }
+    return CellWidth;
+  }
+
+  /// Get The maximum width of all columns to a given cell.
+  template <typename I>
+  unsigned getMaximumNetWidth(const I &CellStart, const I &CellStop,
+                              unsigned InitialSpaces,
+                              unsigned CellCount) const {
+    auto MaxNetWidth = getNetWidth(CellStart, CellStop, InitialSpaces);
+    auto RowCount = 1U;
+    auto Offset = std::distance(CellStart, CellStop);
+    for (const auto *Next = CellStop->NextColumnElement; Next != nullptr;
+         Next = Next->NextColumnElement) {
+      auto Start = (CellStart + RowCount * CellCount);
+      auto End = Start + Offset;
+      MaxNetWidth =
+          std::max(MaxNetWidth, getNetWidth(Start, End, InitialSpaces));
+      ++RowCount;
+    }
+    return MaxNetWidth;
+  }
+
+  /// Align a split cell with a newline to the first element in the cell.
+  void alignToStartOfCell(unsigned Start, unsigned End);
+
+  /// Link the Cell pointers in the list of Cells.
+  static CellDescriptions linkCells(CellDescriptions &&CellDesc);
 
   /// Fill \c Replaces with the replacements for all effective changes.
   void generateChanges();

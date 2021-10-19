@@ -485,3 +485,17 @@ void foo1() {
 
 @class NSString;
 static NSString* const kGlobal = @"";
+
+@interface NSDictionary
+- (id)objectForKeyedSubscript:(id)key;
+@end
+
+@interface WeakProp
+@property (weak) NSDictionary *nd;
+@end
+
+@implementation WeakProp
+-(void)m {
+  (void)self.nd[@""]; // no warning
+}
+@end

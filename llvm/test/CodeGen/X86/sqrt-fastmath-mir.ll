@@ -23,28 +23,28 @@ define float @sqrt_ieee_ninf(float %f) #0 {
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
   ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
-  ; CHECK:   %3:fr32 = ninf nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
-  ; CHECK:   %5:fr32 = ninf nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load 4 from constant-pool)
-  ; CHECK:   %7:fr32 = ninf nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
-  ; CHECK:   %8:fr32 = ninf nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
-  ; CHECK:   %9:fr32 = ninf nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr
-  ; CHECK:   %10:fr32 = ninf nofpexcept VFMADD213SSr %8, %9, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   %11:fr32 = ninf nofpexcept VMULSSrr %9, [[VMOVSSrm_alt1]], implicit $mxcsr
-  ; CHECK:   %12:fr32 = ninf nofpexcept VMULSSrr killed %11, killed %10, implicit $mxcsr
+  ; CHECK:   %3:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
+  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+  ; CHECK:   %5:fr32 = ninf afn nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
+  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load (s32) from constant-pool)
+  ; CHECK:   %7:fr32 = ninf afn nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
+  ; CHECK:   %8:fr32 = ninf afn nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
+  ; CHECK:   %9:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr
+  ; CHECK:   %10:fr32 = ninf afn nofpexcept VFMADD213SSr %8, %9, [[VMOVSSrm_alt]], implicit $mxcsr
+  ; CHECK:   %11:fr32 = ninf afn nofpexcept VMULSSrr %9, [[VMOVSSrm_alt1]], implicit $mxcsr
+  ; CHECK:   %12:fr32 = ninf afn nofpexcept VMULSSrr killed %11, killed %10, implicit $mxcsr
   ; CHECK:   [[COPY1:%[0-9]+]]:vr128 = COPY %12
   ; CHECK:   [[COPY2:%[0-9]+]]:vr128 = COPY [[COPY]]
-  ; CHECK:   [[VPBROADCASTDrm:%[0-9]+]]:vr128 = VPBROADCASTDrm $rip, 1, $noreg, %const.2, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   [[VPBROADCASTDrm:%[0-9]+]]:vr128 = VPBROADCASTDrm $rip, 1, $noreg, %const.2, $noreg :: (load (s32) from constant-pool)
   ; CHECK:   [[VPANDrr:%[0-9]+]]:vr128 = VPANDrr killed [[COPY2]], killed [[VPBROADCASTDrm]]
   ; CHECK:   [[COPY3:%[0-9]+]]:fr32 = COPY [[VPANDrr]]
-  ; CHECK:   %18:fr32 = nofpexcept VCMPSSrm killed [[COPY3]], $rip, 1, $noreg, %const.3, $noreg, 1, implicit $mxcsr :: (load 4 from constant-pool)
+  ; CHECK:   %18:fr32 = nofpexcept VCMPSSrm killed [[COPY3]], $rip, 1, $noreg, %const.3, $noreg, 1, implicit $mxcsr :: (load (s32) from constant-pool)
   ; CHECK:   [[COPY4:%[0-9]+]]:vr128 = COPY %18
   ; CHECK:   [[VPANDNrr:%[0-9]+]]:vr128 = VPANDNrr killed [[COPY4]], killed [[COPY1]]
   ; CHECK:   [[COPY5:%[0-9]+]]:fr32 = COPY [[VPANDNrr]]
   ; CHECK:   $xmm0 = COPY [[COPY5]]
   ; CHECK:   RET 0, $xmm0
-  %call = tail call ninf float @llvm.sqrt.f32(float %f)
+  %call = tail call ninf afn float @llvm.sqrt.f32(float %f)
   ret float %call
 }
 
@@ -68,16 +68,16 @@ define float @sqrt_daz_ninf(float %f) #1 {
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
   ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
-  ; CHECK:   %3:fr32 = ninf nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
-  ; CHECK:   %5:fr32 = ninf nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load 4 from constant-pool)
-  ; CHECK:   %7:fr32 = ninf nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
-  ; CHECK:   %8:fr32 = ninf nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
-  ; CHECK:   %9:fr32 = ninf nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr
-  ; CHECK:   %10:fr32 = ninf nofpexcept VFMADD213SSr %8, %9, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   %11:fr32 = ninf nofpexcept VMULSSrr %9, [[VMOVSSrm_alt1]], implicit $mxcsr
-  ; CHECK:   %12:fr32 = ninf nofpexcept VMULSSrr killed %11, killed %10, implicit $mxcsr
+  ; CHECK:   %3:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
+  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
+  ; CHECK:   %5:fr32 = ninf afn nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
+  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load (s32) from constant-pool)
+  ; CHECK:   %7:fr32 = ninf afn nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
+  ; CHECK:   %8:fr32 = ninf afn nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
+  ; CHECK:   %9:fr32 = ninf afn nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr
+  ; CHECK:   %10:fr32 = ninf afn nofpexcept VFMADD213SSr %8, %9, [[VMOVSSrm_alt]], implicit $mxcsr
+  ; CHECK:   %11:fr32 = ninf afn nofpexcept VMULSSrr %9, [[VMOVSSrm_alt1]], implicit $mxcsr
+  ; CHECK:   %12:fr32 = ninf afn nofpexcept VMULSSrr killed %11, killed %10, implicit $mxcsr
   ; CHECK:   [[COPY1:%[0-9]+]]:vr128 = COPY %12
   ; CHECK:   [[FsFLD0SS:%[0-9]+]]:fr32 = FsFLD0SS
   ; CHECK:   %15:fr32 = nofpexcept VCMPSSrr [[COPY]], killed [[FsFLD0SS]], 0, implicit $mxcsr
@@ -86,7 +86,7 @@ define float @sqrt_daz_ninf(float %f) #1 {
   ; CHECK:   [[COPY3:%[0-9]+]]:fr32 = COPY [[VPANDNrr]]
   ; CHECK:   $xmm0 = COPY [[COPY3]]
   ; CHECK:   RET 0, $xmm0
-  %call = tail call ninf float @llvm.sqrt.f32(float %f)
+  %call = tail call ninf afn float @llvm.sqrt.f32(float %f)
   ret float %call
 }
 
@@ -96,11 +96,11 @@ define float @rsqrt_ieee(float %f) #0 {
   ; CHECK:   liveins: $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK:   %3:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
   ; CHECK:   %5:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load (s32) from constant-pool)
   ; CHECK:   %7:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
   ; CHECK:   %8:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
   ; CHECK:   %9:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr
@@ -120,11 +120,11 @@ define float @rsqrt_daz(float %f) #1 {
   ; CHECK:   liveins: $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK:   %3:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
   ; CHECK:   %5:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
-  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load 4 from constant-pool)
+  ; CHECK:   [[VMOVSSrm_alt1:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.1, $noreg :: (load (s32) from constant-pool)
   ; CHECK:   %7:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[VRSQRTSSr]], [[VMOVSSrm_alt1]], implicit $mxcsr
   ; CHECK:   %8:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr killed %7, killed %5, implicit $mxcsr
   ; CHECK:   %9:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], %8, implicit $mxcsr

@@ -4,7 +4,7 @@
 
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
-; RUN: llvm-lto2 run -thinlto-distributed-indexes %t.o \
+; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -o %t2.index \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZTV1B, \
@@ -24,7 +24,7 @@
 ; Round trip it through llvm-as
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK-DIS
 ; CHECK-DIS: ^0 = module: (path: "{{.*}}thinlto-distributed-cfi.ll.tmp.o", hash: ({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}))
-; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 7, typeIdInfo: (typeTests: (^2)))))
+; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 7, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 1, mayThrow: 0, hasUnknownCall: 0), typeIdInfo: (typeTests: (^2)))))
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \

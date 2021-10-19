@@ -1,0 +1,222 @@
+# RUN: llc -o %t -filetype=obj -start-before=prologepilog %s
+# RUN: llvm-dwarfdump --name="z0" %t | FileCheck %s --check-prefix=CHECKZ0
+# RUN: llvm-dwarfdump --name="z1" %t | FileCheck %s --check-prefix=CHECKZ1
+# RUN: llvm-dwarfdump --name="p0" %t | FileCheck %s --check-prefix=CHECKP0
+# RUN: llvm-dwarfdump --name="p1" %t | FileCheck %s --check-prefix=CHECKP1
+# RUN: llvm-dwarfdump --name="localv0" %t | FileCheck %s --check-prefix=CHECKLV0
+# RUN: llvm-dwarfdump --name="localv1" %t | FileCheck %s --check-prefix=CHECKLV1
+# RUN: llvm-dwarfdump --name="localp0" %t | FileCheck %s --check-prefix=CHECKLP0
+# RUN: llvm-dwarfdump --name="localp1" %t | FileCheck %s --check-prefix=CHECKLP1
+#
+# CHECKZ0:       DW_AT_location    (DW_OP_fbreg +0, DW_OP_lit8, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKZ0-NEXT:  DW_AT_name        ("z0")
+# CHECKZ1:       DW_AT_location    (DW_OP_fbreg +0, DW_OP_lit16, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKZ1-NEXT:  DW_AT_name        ("z1")
+# CHECKP0:       DW_AT_location    (DW_OP_fbreg +0, DW_OP_lit17, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKP0-NEXT:  DW_AT_name        ("p0")
+# CHECKP1:       DW_AT_location    (DW_OP_fbreg +0, DW_OP_lit18, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKP1-NEXT:  DW_AT_name        ("p1")
+# CHECKLV0:      DW_AT_location    (DW_OP_fbreg +0, DW_OP_constu 0x20, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKLV0-NEXT: DW_AT_name        ("localv0")
+# CHECKLV1:      DW_AT_location    (DW_OP_fbreg +0, DW_OP_constu 0x28, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKLV1-NEXT: DW_AT_name        ("localv1")
+# CHECKLP0:      DW_AT_location    (DW_OP_fbreg +0, DW_OP_constu 0x29, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKLP0-NEXT: DW_AT_name        ("localp0")
+# CHECKLP1:      DW_AT_location    (DW_OP_fbreg +0, DW_OP_constu 0x2a, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECKLP1-NEXT: DW_AT_name        ("localp1")
+--- |
+  ; ModuleID = 't.c'
+  source_filename = "t.c"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-linux-gnu"
+
+  ; Function Attrs: noinline nounwind optnone
+  define dso_local <vscale x 4 x i32> @foo(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1, <vscale x 16 x i1> %p0, <vscale x 16 x i1> %p1, i32 %w0) #0 !dbg !11 {
+  entry:
+    %z0.addr = alloca <vscale x 4 x i32>, align 16
+    %z1.addr = alloca <vscale x 4 x i32>, align 16
+    %p0.addr = alloca <vscale x 16 x i1>, align 2
+    %p1.addr = alloca <vscale x 16 x i1>, align 2
+    %w0.addr = alloca i32, align 4
+    %local_gpr0 = alloca i32, align 4
+    %localv0 = alloca <vscale x 4 x i32>, align 16
+    %localv1 = alloca <vscale x 4 x i32>, align 16
+    %localp0 = alloca <vscale x 16 x i1>, align 2
+    %localp1 = alloca <vscale x 16 x i1>, align 2
+    store <vscale x 4 x i32> %z0, <vscale x 4 x i32>* %z0.addr, align 16
+    call void @llvm.dbg.declare(metadata <vscale x 4 x i32>* %z0.addr, metadata !29, metadata !DIExpression()), !dbg !30
+    store <vscale x 4 x i32> %z1, <vscale x 4 x i32>* %z1.addr, align 16
+    call void @llvm.dbg.declare(metadata <vscale x 4 x i32>* %z1.addr, metadata !31, metadata !DIExpression()), !dbg !32
+    store <vscale x 16 x i1> %p0, <vscale x 16 x i1>* %p0.addr, align 2
+    call void @llvm.dbg.declare(metadata <vscale x 16 x i1>* %p0.addr, metadata !33, metadata !DIExpression()), !dbg !34
+    store <vscale x 16 x i1> %p1, <vscale x 16 x i1>* %p1.addr, align 2
+    call void @llvm.dbg.declare(metadata <vscale x 16 x i1>* %p1.addr, metadata !35, metadata !DIExpression()), !dbg !36
+    store i32 %w0, i32* %w0.addr, align 4
+    call void @llvm.dbg.declare(metadata i32* %w0.addr, metadata !37, metadata !DIExpression()), !dbg !38
+    call void @llvm.dbg.declare(metadata i32* %local_gpr0, metadata !39, metadata !DIExpression()), !dbg !40
+    %0 = load i32, i32* %w0.addr, align 4, !dbg !41
+    store i32 %0, i32* %local_gpr0, align 4, !dbg !40
+    call void @llvm.dbg.declare(metadata <vscale x 4 x i32>* %localv0, metadata !42, metadata !DIExpression()), !dbg !43
+    %1 = load <vscale x 4 x i32>, <vscale x 4 x i32>* %z0.addr, align 16, !dbg !44
+    store <vscale x 4 x i32> %1, <vscale x 4 x i32>* %localv0, align 16, !dbg !43
+    call void @llvm.dbg.declare(metadata <vscale x 4 x i32>* %localv1, metadata !45, metadata !DIExpression()), !dbg !46
+    %2 = load <vscale x 4 x i32>, <vscale x 4 x i32>* %z1.addr, align 16, !dbg !47
+    store <vscale x 4 x i32> %2, <vscale x 4 x i32>* %localv1, align 16, !dbg !46
+    call void @llvm.dbg.declare(metadata <vscale x 16 x i1>* %localp0, metadata !48, metadata !DIExpression()), !dbg !49
+    %3 = load <vscale x 16 x i1>, <vscale x 16 x i1>* %p0.addr, align 2, !dbg !50
+    store <vscale x 16 x i1> %3, <vscale x 16 x i1>* %localp0, align 2, !dbg !49
+    call void @llvm.dbg.declare(metadata <vscale x 16 x i1>* %localp1, metadata !51, metadata !DIExpression()), !dbg !52
+    %4 = load <vscale x 16 x i1>, <vscale x 16 x i1>* %p1.addr, align 2, !dbg !53
+    store <vscale x 16 x i1> %4, <vscale x 16 x i1>* %localp1, align 2, !dbg !52
+    %call = call <vscale x 4 x i32> @bar(i32* %local_gpr0, <vscale x 4 x i32>* %localv0, <vscale x 4 x i32>* %localv1, <vscale x 16 x i1>* %localp0, <vscale x 16 x i1>* %localp1), !dbg !54
+    ret <vscale x 4 x i32> %call, !dbg !55
+  }
+
+  ; Function Attrs: nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+  declare dso_local <vscale x 4 x i32> @bar(i32*, <vscale x 4 x i32>*, <vscale x 4 x i32>*, <vscale x 16 x i1>*, <vscale x 16 x i1>*)
+
+  attributes #0 = { "frame-pointer"="non-leaf" "target-features"="+neon,+sve" }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6, !7, !8, !9}
+  !llvm.ident = !{!10}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "t.c", directory: "/tmp/")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 1, !"branch-target-enforcement", i32 0}
+  !7 = !{i32 1, !"sign-return-address", i32 0}
+  !8 = !{i32 1, !"sign-return-address-all", i32 0}
+  !9 = !{i32 1, !"sign-return-address-with-bkey", i32 0}
+  !10 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git b19275ba870a06c5ef0428af6264ffd28c7cde9e)"}
+  !11 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !12, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{!14, !14, !14, !21, !21, !27}
+  !15 = !DIFile(filename: "lib/clang/12.0.0/include/arm_sve.h", directory: "/tmp")
+  !14 = !DIDerivedType(tag: DW_TAG_typedef, name: "svint32_t", file: !15, line: 34, baseType: !16)
+  !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "__SVInt32_t", file: !1, baseType: !17)
+  !17 = !DICompositeType(tag: DW_TAG_array_type, baseType: !18, flags: DIFlagVector, elements: !19)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !{!20}
+  !20 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 2, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  !21 = !DIDerivedType(tag: DW_TAG_typedef, name: "svbool_t", file: !15, line: 90, baseType: !22)
+  !22 = !DIDerivedType(tag: DW_TAG_typedef, name: "__SVBool_t", file: !1, baseType: !23)
+  !23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !24, flags: DIFlagVector, elements: !25)
+  !24 = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
+  !25 = !{!26}
+  !26 = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 1, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  !27 = !DIDerivedType(tag: DW_TAG_typedef, name: "int32_t", file: !28, line: 38, baseType: !18)
+  !28 = !DIFile(filename: "/usr/include/stdint.h", directory: "")
+  !29 = !DILocalVariable(name: "z0", arg: 1, scope: !11, file: !1, line: 4, type: !14)
+  !30 = !DILocation(line: 4, column: 25, scope: !11)
+  !31 = !DILocalVariable(name: "z1", arg: 2, scope: !11, file: !1, line: 4, type: !14)
+  !32 = !DILocation(line: 4, column: 39, scope: !11)
+  !33 = !DILocalVariable(name: "p0", arg: 3, scope: !11, file: !1, line: 4, type: !21)
+  !34 = !DILocation(line: 4, column: 52, scope: !11)
+  !35 = !DILocalVariable(name: "p1", arg: 4, scope: !11, file: !1, line: 4, type: !21)
+  !36 = !DILocation(line: 4, column: 65, scope: !11)
+  !37 = !DILocalVariable(name: "w0", arg: 5, scope: !11, file: !1, line: 4, type: !27)
+  !38 = !DILocation(line: 4, column: 77, scope: !11)
+  !39 = !DILocalVariable(name: "local_gpr0", scope: !11, file: !1, line: 5, type: !27)
+  !40 = !DILocation(line: 5, column: 11, scope: !11)
+  !41 = !DILocation(line: 5, column: 24, scope: !11)
+  !42 = !DILocalVariable(name: "localv0", scope: !11, file: !1, line: 6, type: !14)
+  !43 = !DILocation(line: 6, column: 13, scope: !11)
+  !44 = !DILocation(line: 6, column: 23, scope: !11)
+  !45 = !DILocalVariable(name: "localv1", scope: !11, file: !1, line: 7, type: !14)
+  !46 = !DILocation(line: 7, column: 13, scope: !11)
+  !47 = !DILocation(line: 7, column: 23, scope: !11)
+  !48 = !DILocalVariable(name: "localp0", scope: !11, file: !1, line: 8, type: !21)
+  !49 = !DILocation(line: 8, column: 12, scope: !11)
+  !50 = !DILocation(line: 8, column: 22, scope: !11)
+  !51 = !DILocalVariable(name: "localp1", scope: !11, file: !1, line: 9, type: !21)
+  !52 = !DILocation(line: 9, column: 12, scope: !11)
+  !53 = !DILocation(line: 9, column: 22, scope: !11)
+  !54 = !DILocation(line: 10, column: 10, scope: !11)
+  !55 = !DILocation(line: 10, column: 3, scope: !11)
+
+...
+---
+name:            foo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$z0' }
+  - { reg: '$z1' }
+  - { reg: '$p0' }
+  - { reg: '$p1' }
+  - { reg: '$w0' }
+frameInfo:
+  maxAlignment:    16
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  localFrameSize:  8
+stack:
+  - { id: 0, name: z0.addr, size: 16, alignment: 16, stack-id: scalable-vector,
+      debug-info-variable: '!29', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!30' }
+  - { id: 1, name: z1.addr, size: 16, alignment: 16, stack-id: scalable-vector,
+      debug-info-variable: '!31', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!32' }
+  - { id: 2, name: p0.addr, size: 2, alignment: 2, stack-id: scalable-vector,
+      debug-info-variable: '!33', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!34' }
+  - { id: 3, name: p1.addr, size: 2, alignment: 2, stack-id: scalable-vector,
+      debug-info-variable: '!35', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!36' }
+  - { id: 4, name: w0.addr, size: 4, alignment: 4, local-offset: -4, debug-info-variable: '!37',
+      debug-info-expression: '!DIExpression()', debug-info-location: '!38' }
+  - { id: 5, name: local_gpr0, size: 4, alignment: 4, local-offset: -8,
+      debug-info-variable: '!39', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!40' }
+  - { id: 6, name: localv0, size: 16, alignment: 16, stack-id: scalable-vector,
+      debug-info-variable: '!42', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!43' }
+  - { id: 7, name: localv1, size: 16, alignment: 16, stack-id: scalable-vector,
+      debug-info-variable: '!45', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!46' }
+  - { id: 8, name: localp0, size: 2, alignment: 2, stack-id: scalable-vector,
+      debug-info-variable: '!48', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!49' }
+  - { id: 9, name: localp1, size: 2, alignment: 2, stack-id: scalable-vector,
+      debug-info-variable: '!51', debug-info-expression: '!DIExpression()',
+      debug-info-location: '!52' }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $z0, $z1, $p0, $p1, $w0
+
+    renamable $p2 = COPY killed $p0
+    renamable $p0 = PTRUE_S 31
+    ST1W_IMM killed renamable $z0, renamable $p0, %stack.0.z0.addr, 0 :: (store unknown-size into %ir.z0.addr, align 16)
+    ST1W_IMM killed renamable $z1, renamable $p0, %stack.1.z1.addr, 0 :: (store unknown-size into %ir.z1.addr, align 16)
+    STR_PXI killed renamable $p2, %stack.2.p0.addr, 0 :: (store unknown-size into %ir.p0.addr, align 2)
+    STR_PXI killed renamable $p1, %stack.3.p1.addr, 0 :: (store unknown-size into %ir.p1.addr, align 2)
+    STRWui killed renamable $w0, %stack.4.w0.addr, 0 :: (store (s32) into %ir.w0.addr)
+    renamable $w8 = LDRWui %stack.4.w0.addr, 0, debug-location !41 :: (dereferenceable load (s32) from %ir.w0.addr)
+    STRWui killed renamable $w8, %stack.5.local_gpr0, 0, debug-location !40 :: (store (s32) into %ir.local_gpr0)
+    renamable $z0 = LD1W_IMM renamable $p0, %stack.0.z0.addr, 0, debug-location !44 :: (load unknown-size from %ir.z0.addr, align 16)
+    ST1W_IMM killed renamable $z0, renamable $p0, %stack.6.localv0, 0, debug-location !43 :: (store unknown-size into %ir.localv0, align 16)
+    renamable $z0 = LD1W_IMM renamable $p0, %stack.1.z1.addr, 0, debug-location !47 :: (load unknown-size from %ir.z1.addr, align 16)
+    ST1W_IMM killed renamable $z0, killed renamable $p0, %stack.7.localv1, 0, debug-location !46 :: (store unknown-size into %ir.localv1, align 16)
+    renamable $p0 = LDR_PXI %stack.2.p0.addr, 0, debug-location !50 :: (load unknown-size from %ir.p0.addr, align 2)
+    STR_PXI killed renamable $p0, %stack.8.localp0, 0, debug-location !49 :: (store unknown-size into %ir.localp0, align 2)
+    renamable $p0 = LDR_PXI %stack.3.p1.addr, 0, debug-location !53 :: (load unknown-size from %ir.p1.addr, align 2)
+    STR_PXI killed renamable $p0, %stack.9.localp1, 0, debug-location !52 :: (store unknown-size into %ir.localp1, align 2)
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !54
+    renamable $x0 = ADDXri %stack.5.local_gpr0, 0, 0
+    renamable $x1 = ADDXri %stack.6.localv0, 0, 0
+    renamable $x2 = ADDXri %stack.7.localv1, 0, 0
+    renamable $x3 = ADDXri %stack.8.localp0, 0, 0
+    renamable $x4 = ADDXri %stack.9.localp1, 0, 0
+    BL @bar, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit killed $x2, implicit killed $x3, implicit killed $x4, implicit-def $sp, implicit-def $z0, debug-location !54
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !54
+    RET_ReallyLR implicit killed $z0, debug-location !55
+
+...

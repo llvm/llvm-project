@@ -20,7 +20,6 @@ class TestObjCIvarOffsets(TestBase):
         self.stop_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test printing ObjC objects that use unbacked properties"""
@@ -37,8 +36,8 @@ class TestObjCIvarOffsets(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, "Created a process.")
-        self.assertTrue(
-            process.GetState() == lldb.eStateStopped,
+        self.assertEqual(
+            process.GetState(), lldb.eStateStopped,
             "Stopped it too.")
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(

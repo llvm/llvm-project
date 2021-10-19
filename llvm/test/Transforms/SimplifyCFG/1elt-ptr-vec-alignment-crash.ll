@@ -1,4 +1,4 @@
-; RUN: opt -passes=simplify-cfg -S < %s | FileCheck %s
+; RUN: opt -passes=simplifycfg -S < %s | FileCheck %s
 
 ; Ensure that we do not crash when trying to evaluate alignment of a <1 x ???*>.
 

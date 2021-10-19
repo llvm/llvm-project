@@ -40,23 +40,23 @@ public:
     StringRef Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
                              PP.getSourceManager(), PP.getLangOpts());
-    CheckMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
+    checkMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
   }
 
   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
              const MacroDefinition &MacroDefinition) override {
     std::string MacroName = PP.getSpelling(MacroNameTok);
-    CheckMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifdef, DK_Ifdef, true);
-    CheckMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifdef, DK_Ifndef,
+    checkMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifdef, DK_Ifdef, true);
+    checkMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifdef, DK_Ifndef,
                          false);
   }
 
   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
               const MacroDefinition &MacroDefinition) override {
     std::string MacroName = PP.getSpelling(MacroNameTok);
-    CheckMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifndef, DK_Ifndef,
+    checkMacroRedundancy(Loc, MacroName, IfndefStack, DK_Ifndef, DK_Ifndef,
                          true);
-    CheckMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifndef, DK_Ifdef,
+    checkMacroRedundancy(Loc, MacroName, IfdefStack, DK_Ifndef, DK_Ifdef,
                          false);
   }
 
@@ -70,7 +70,7 @@ public:
   }
 
 private:
-  void CheckMacroRedundancy(SourceLocation Loc, StringRef MacroName,
+  void checkMacroRedundancy(SourceLocation Loc, StringRef MacroName,
                             SmallVector<PreprocessorEntry, 4> &Stack,
                             DirectiveKind WarningKind, DirectiveKind NoteKind,
                             bool Store) {

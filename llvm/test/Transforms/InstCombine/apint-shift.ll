@@ -209,13 +209,10 @@ define <2 x i7> @shl_lshr_splat_vec(<2 x i7> %X) {
   ret <2 x i7> %sh2
 }
 
-; Don't hide the shl from scalar evolution. DAGCombine will get it.
-
 define i23 @test11(i23 %x) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[A:%.*]] = mul i23 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = lshr i23 [[A]], 11
-; CHECK-NEXT:    [[C:%.*]] = shl i23 [[B]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i23 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = and i23 [[TMP1]], -4096
 ; CHECK-NEXT:    ret i23 [[C]]
 ;
   %a = mul i23 %x, 3
@@ -246,13 +243,10 @@ define <2 x i47> @test12_splat_vec(<2 x i47> %X) {
   ret <2 x i47> %sh2
 }
 
-; Don't hide the shl from scalar evolution. DAGCombine will get it.
-
 define i18 @test13(i18 %x) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[A:%.*]] = mul i18 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i18 [[A]], 8
-; CHECK-NEXT:    [[C:%.*]] = shl i18 [[TMP1]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i18 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = and i18 [[TMP1]], -512
 ; CHECK-NEXT:    ret i18 [[C]]
 ;
   %a = mul i18 %x, 3
@@ -343,7 +337,7 @@ define <2 x i1> @test16vec_nonuniform(<2 x i84> %X) {
 
 define <2 x i1> @test16vec_undef(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 poison>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

@@ -16,10 +16,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Object/MachO.h"
 
 #include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
-#include "llvm/Object/MachO.h"
 
 #include <list>
 
@@ -81,7 +81,8 @@ protected:
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
 
-  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj);
+  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT,
+                        LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
   LinkGraph &getGraph() const { return *G; }
 
@@ -158,6 +159,7 @@ protected:
   static bool isAltEntry(const NormalizedSymbol &NSym);
 
   static bool isDebugSection(const NormalizedSection &NSec);
+  static bool isZeroFillSection(const NormalizedSection &NSec);
 
   MachO::relocation_info
   getRelocationInfo(const object::relocation_iterator RelItr) {
@@ -199,8 +201,20 @@ private:
   /// all defined symbols in sections without custom parsers.
   Error graphifyRegularSymbols();
 
+  /// Create and return a graph symbol for the given normalized symbol.
+  ///
+  /// NSym's GraphSymbol member will be updated to point at the newly created
+  /// symbol.
+  Symbol &createStandardGraphSymbol(NormalizedSymbol &Sym, Block &B,
+                                    size_t Size, bool IsText,
+                                    bool IsNoDeadStrip, bool IsCanonical);
+
   /// Create graph blocks and symbols for all sections.
   Error graphifySectionsWithCustomParsers();
+
+  /// Graphify cstring section.
+  Error graphifyCStringSection(NormalizedSection &NSec,
+                               std::vector<NormalizedSymbol *> NSyms);
 
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
   // memory until the Symbol/Addressable destructors have been run.
@@ -215,6 +229,17 @@ private:
   DenseMap<uint32_t, NormalizedSymbol *> IndexToSymbol;
   std::map<JITTargetAddress, Symbol *> AddrToCanonicalSymbol;
   StringMap<SectionParserFunction> CustomSectionParserFunctions;
+};
+
+/// A pass to split up __LD,__compact_unwind sections.
+class CompactUnwindSplitter {
+public:
+  CompactUnwindSplitter(StringRef CompactUnwindSectionName)
+      : CompactUnwindSectionName(CompactUnwindSectionName) {}
+  Error operator()(LinkGraph &G);
+
+private:
+  StringRef CompactUnwindSectionName;
 };
 
 } // end namespace jitlink

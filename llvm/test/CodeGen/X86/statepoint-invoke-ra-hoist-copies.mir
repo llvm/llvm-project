@@ -1,0 +1,756 @@
+# REQUIRES: asserts
+# RUN: llc -x mir -run-pass=simple-register-coalescing,greedy -verify-machineinstrs < %s 2>&1  | FileCheck %s
+
+# CHECK-NOT: Bad Parent VNI
+--- |
+  ; ModuleID = 'hoist-copies'
+  source_filename = "hoist-copies.ll"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define float @hoge(i8 addrspace(3)* %arg) gc "statepoint-example" personality i32* ()* @widget {
+  bb:
+    %tmp = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* null, align 8
+    %tmp1 = load i32, i32 addrspace(3)* undef, align 4
+    %tmp2 = load i32, i32 addrspace(3)* undef, align 4
+    %tmp3 = load i32, i32 addrspace(3)* null, align 4
+    %tmp4 = load i32, i32 addrspace(3)* null, align 4
+    %tmp5 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* undef, align 8
+    %tmp6 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* undef, align 8
+    %tmp7 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* undef, align 8
+    %tmp8 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* undef, align 8
+    %tmp9 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(3)* undef, align 8
+    %tmp10 = inttoptr i64 undef to i8 addrspace(1)*
+    %tmp11 = inttoptr i64 undef to i8 addrspace(1)*
+    br i1 undef, label %bb12, label %bb93
+
+  bb12:                                             ; preds = %bb
+    %tmp13 = load atomic i32, i32 addrspace(1)* undef unordered, align 4
+    %tmp14 = and i32 %tmp13, 33554431
+    %tmp15 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* nonnull @barney, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 1, i32 0, i32 83, i32 0, i32 19, i32 0, i32 0, i8 addrspace(1)* %tmp, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp5, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp6, i32 0, i8 addrspace(1)* %tmp7, i32 0, i8 addrspace(1)* %tmp8, i32 0, i8 addrspace(1)* %tmp9, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* %tmp, i8 addrspace(1)* %tmp6, i8 addrspace(1)* %tmp7, i8 addrspace(1)* %tmp8, i8 addrspace(1)* %tmp9, i8 addrspace(1)* %tmp5, i8 addrspace(1)* %tmp10, i8 addrspace(1)* %tmp11) ]
+    %tmp16 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 1, i32 1) ; (%tmp6, %tmp6)
+    %tmp17 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 2, i32 2) ; (%tmp7, %tmp7)
+    %tmp18 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 4, i32 4) ; (%tmp9, %tmp9)
+    %tmp19 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 5, i32 5) ; (%tmp5, %tmp5)
+    %tmp20 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 6, i32 6) ; (%tmp10, %tmp10)
+    %tmp21 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp15, i32 7, i32 7) ; (%tmp11, %tmp11)
+    %tmp22 = invoke token (i64, i32, float (i32, i8 addrspace(1)*, i64, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_f32i32p1i8i64i32f(i64 1, i32 16, float (i32, i8 addrspace(1)*, i64, i32)* nonnull @quux, i32 4, i32 0, i32 %tmp14, i8 addrspace(1)* %tmp16, i64 -170, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 0, i32 0, i32 103, i32 1, i32 19, i32 0, i32 3, float undef, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp19, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp16, i32 0, i8 addrspace(1)* %tmp17, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* %tmp18, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* null, i8 addrspace(1)* %tmp16, i8 addrspace(1)* %tmp17, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp18, i8 addrspace(1)* %tmp19, i8 addrspace(1)* %tmp20, i8 addrspace(1)* %tmp21) ]
+            to label %bb23 unwind label %bb75
+
+  bb23:                                             ; preds = %bb12
+    %tmp24 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 1, i32 1) ; (%tmp16, %tmp16)
+    %tmp25 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 2, i32 2) ; (%tmp17, %tmp17)
+    %tmp26 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 4, i32 4) ; (%tmp18, %tmp18)
+    %tmp27 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 5, i32 5) ; (%tmp19, %tmp19)
+    %tmp28 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 6, i32 6) ; (%tmp20, %tmp20)
+    %tmp29 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp22, i32 7, i32 7) ; (%tmp21, %tmp21)
+    %tmp30 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* %tmp26, i32 undef, i32 %tmp4, i32 %tmp4, i32 0, i32 0) [ "deopt"(i32 0, i32 8, i32 0, i32 153, i32 4, i32 19, i32 0, i32 4, i64 undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp27, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp24, i32 0, i8 addrspace(1)* %tmp25, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* %tmp26, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* null, i8 addrspace(1)* %tmp27, i8 addrspace(1)* %tmp24, i8 addrspace(1)* %tmp25, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp26, i8 addrspace(1)* %tmp28, i8 addrspace(1)* %tmp29) ]
+            to label %bb56 unwind label %bb65
+
+  bb31:                                             ; preds = %bb67
+    %tmp32 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* %tmp71, i32 %tmp4, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 0, i32 0, i32 537, i32 2, i32 19, i32 0, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* null, i32 3, i32 undef, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 1, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp69, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp70, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* %tmp71, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* null, i8 addrspace(1)* %tmp69, i8 addrspace(1)* %tmp70, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp71, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp72, i8 addrspace(1)* undef) ]
+            to label %bb33 unwind label %bb77
+
+  bb33:                                             ; preds = %bb31
+    %tmp34 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @ham, i32 1, i32 0, i32 15, i32 0, i32 0) [ "deopt"(i32 0, i32 2, i32 0, i32 591, i32 0, i32 19, i32 0, i32 7, i8* null, i32 3, i32 undef, i32 3, i32 63, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 1, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, float undef, i32 3, i32 undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 1, i32 1, i32 16, i32 0, i32 0, i32 0), "gc-live"() ]
+    unreachable
+
+  bb35:                                             ; preds = %bb67
+    %tmp36 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* %tmp71, i32 %tmp4, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 8, i32 0, i32 300, i32 2, i32 19, i32 0, i32 0, i8 addrspace(1)* %tmp71, i32 3, i32 undef, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp69, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp70, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* %tmp71, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* null, i8 addrspace(1)* %tmp69, i8 addrspace(1)* %tmp70, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp71, i8 addrspace(1)* %tmp72, i8 addrspace(1)* undef) ]
+            to label %bb37 unwind label %bb79
+
+  bb37:                                             ; preds = %bb35
+    %tmp38 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp36, i32 1, i32 1) ; (%tmp69, %tmp69)
+    %tmp39 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp36, i32 6, i32 6) ; (%tmp72, %tmp72)
+    %tmp40 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 -7122, i32 0, i32 0) [ "deopt"(i32 0, i32 8, i32 0, i32 308, i32 0, i32 19, i32 0, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp38, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* null, i8 addrspace(1)* %tmp38, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp39, i8 addrspace(1)* undef) ]
+            to label %bb41 unwind label %bb85
+
+  bb41:                                             ; preds = %bb37
+    %tmp42 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp40, i32 6, i32 6) ; (%tmp39, %tmp39)
+    %tmp43 = getelementptr inbounds i8, i8 addrspace(1)* %tmp42, i64 904
+    %tmp44 = bitcast i8 addrspace(1)* %tmp43 to i8 addrspace(1)* addrspace(1)*
+    %tmp45 = load atomic i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %tmp44 unordered, align 8
+    %tmp46 = icmp eq i8 addrspace(1)* %tmp45, null
+    %tmp47 = xor i64 0, -1
+    %tmp48 = inttoptr i64 %tmp47 to i8 addrspace(1)*
+    %tmp49 = select i1 %tmp46, i8 addrspace(1)* null, i8 addrspace(1)* %tmp48
+    br i1 undef, label %bb52, label %bb50
+
+  bb50:                                             ; preds = %bb41
+    %0 = bitcast i8 addrspace(1)* %tmp43 to i8 addrspace(1)* addrspace(1)*
+    %tmp51 = call i8 addrspace(1)* @wombat(i8 addrspace(1)* %tmp49, i8 addrspace(1)* addrspace(1)* %0)
+    br label %bb52
+
+  bb52:                                             ; preds = %bb50, %bb41
+    %tmp53 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 0, i32 0, i32 335, i32 2, i32 19, i32 0, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp42, i8 addrspace(1)* undef) ]
+            to label %bb54 unwind label %bb90
+
+  bb54:                                             ; preds = %bb52
+    %tmp55 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 1, i32 0, i32 344, i32 4, i32 19, i32 0, i32 0, i8 addrspace(1)* null, i32 3, i32 undef, i32 4, i64 undef, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 3, i32 undef, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"() ]
+    unreachable
+
+  bb56:                                             ; preds = %bb23
+    %tmp57 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp30, i32 1, i32 1) ; (%tmp27, %tmp27)
+    %tmp58 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp30, i32 2, i32 2) ; (%tmp24, %tmp24)
+    %tmp59 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp30, i32 5, i32 5) ; (%tmp26, %tmp26)
+    %tmp60 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp30, i32 6, i32 6) ; (%tmp28, %tmp28)
+    %tmp61 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp30, i32 7, i32 7) ; (%tmp29, %tmp29)
+    %tmp62 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* %tmp59, i32 %tmp1, i32 7, i32 %tmp3, i32 0, i32 0) [ "deopt"(i32 0, i32 8, i32 0, i32 208, i32 4, i32 19, i32 0, i32 0, i8 addrspace(1)* %tmp57, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* null, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp57, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp58, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* %tmp59, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"(i8 addrspace(1)* %tmp57, i8 addrspace(1)* %tmp58, i8 addrspace(1)* undef, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp59, i8 addrspace(1)* null, i8 addrspace(1)* %tmp60, i8 addrspace(1)* %tmp61) ]
+            to label %bb63 unwind label %bb67
+
+  bb63:                                             ; preds = %bb56
+    %tmp64 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 9, i32 0, i32 215, i32 8, i32 19, i32 0, i32 0, i8 addrspace(1)* null, i32 7, i32 undef, i32 7, i32 undef, i32 7, double undef, i32 7, i8* null, i32 0, i8 addrspace(1)* null, i32 4, double undef, i32 7, i8* null, i32 0, i8 addrspace(1)* null, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 2, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 0, i8 addrspace(1)* undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"() ]
+    unreachable
+
+  bb65:                                             ; preds = %bb23
+    %tmp66 = landingpad token
+            cleanup
+    unreachable
+
+  bb67:                                             ; preds = %bb56
+    %tmp68 = landingpad token
+            cleanup
+    %tmp69 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp68, i32 0, i32 0) ; (%tmp57, %tmp57)
+    %tmp70 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp68, i32 1, i32 1) ; (%tmp58, %tmp58)
+    %tmp71 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp68, i32 4, i32 4) ; (%tmp59, %tmp59)
+    %tmp72 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp68, i32 6, i32 6) ; (%tmp60, %tmp60)
+    switch i32 undef, label %bb99 [
+      i32 66, label %bb35
+      i32 57, label %bb31
+    ]
+
+  bb75:                                             ; preds = %bb12
+    %tmp76 = landingpad token
+            cleanup
+    unreachable
+
+  bb77:                                             ; preds = %bb31
+    %tmp78 = landingpad token
+            cleanup
+    br label %bb95
+
+  bb79:                                             ; preds = %bb35
+    %tmp80 = landingpad token
+            cleanup
+    %tmp81 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp80, i32 5, i32 5) ; (%tmp71, %tmp71)
+    %tmp84 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(256)* inttoptr (i64 8 to i8 addrspace(1)* addrspace(256)*), align 8
+    br label %bb99
+
+  bb85:                                             ; preds = %bb37
+    %tmp86 = landingpad token
+            cleanup
+    %tmp87 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp86, i32 6, i32 6) ; (%tmp39, %tmp39)
+    br label %bb99
+
+  bb90:                                             ; preds = %bb52
+    %tmp91 = landingpad token
+            cleanup
+    %tmp92 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp91, i32 7, i32 7) ; (%tmp42, %tmp42)
+    br label %bb95
+
+  bb93:                                             ; preds = %bb
+    %tmp94 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @ham, i32 1, i32 2, i32 14, i32 0, i32 0) [ "deopt"(i32 0, i32 1, i32 0, i32 94, i32 4, i32 19, i32 0, i32 3, float undef, i32 0, i8 addrspace(1)* %tmp6, i32 0, i8 addrspace(1)* %tmp7, i32 3, i32 -170, i32 0, i8 addrspace(1)* %tmp, i32 3, i32 %tmp1, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 %tmp4, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp5, i32 3, float undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp6, i32 0, i8 addrspace(1)* %tmp7, i32 0, i8 addrspace(1)* %tmp8, i32 0, i8 addrspace(1)* %tmp9, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null), "gc-live"() ]
+    unreachable
+
+  bb95:                                             ; preds = %bb114, %bb90, %bb77
+    %tmp96 = phi i8 addrspace(1)* [ undef, %bb114 ], [ undef, %bb77 ], [ %tmp92, %bb90 ]
+    %tmp97 = getelementptr inbounds i8, i8 addrspace(1)* %tmp96, i64 928
+    %tmp98 = bitcast i8 addrspace(1)* %tmp97 to i64 addrspace(1)*
+    store atomic i64 undef, i64 addrspace(1)* %tmp98 unordered, align 8
+    ret float undef
+
+  bb99:                                             ; preds = %bb85, %bb79, %bb67
+    %tmp101 = phi i8 addrspace(1)* [ %tmp87, %bb85 ], [ undef, %bb79 ], [ %tmp72, %bb67 ]
+    %tmp102 = phi i8 addrspace(1)* [ undef, %bb85 ], [ %tmp81, %bb79 ], [ %tmp71, %bb67 ]
+    %tmp103 = phi i8 addrspace(1)* [ undef, %bb85 ], [ undef, %bb79 ], [ %tmp69, %bb67 ]
+    %tmp104 = phi i8 addrspace(1)* [ undef, %bb85 ], [ %tmp84, %bb79 ], [ undef, %bb67 ]
+    %sunkaddr = getelementptr inbounds i8, i8 addrspace(1)* %tmp101, i64 904
+    %1 = bitcast i8 addrspace(1)* %sunkaddr to i8 addrspace(1)* addrspace(1)*
+    %tmp105 = load atomic i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %1 unordered, align 8
+    %tmp106 = icmp eq i8 addrspace(1)* %tmp105, null
+    %tmp107 = xor i64 0, -1
+    %tmp108 = inttoptr i64 %tmp107 to i8 addrspace(1)*
+    %tmp109 = select i1 %tmp106, i8 addrspace(1)* null, i8 addrspace(1)* %tmp108
+    %tmp110 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @hoge.1, i32 5, i32 0, i32 undef, i8 addrspace(1)* %tmp102, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(i32 0, i32 0, i32 0, i32 572, i32 2, i32 19, i32 0, i32 0, i8 addrspace(1)* %tmp109, i32 3, i32 undef, i32 7, i8* null, i32 3, i32 undef, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* %tmp103, i32 3, float undef, i32 3, i32 undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* %tmp104, i32 7, i8* null), "gc-live"(i8 addrspace(1)* %tmp109, i8 addrspace(1)* %tmp103, i8 addrspace(1)* %tmp104, i8 addrspace(1)* undef, i8 addrspace(1)* %tmp101) ]
+            to label %bb111 unwind label %bb114
+
+  bb111:                                            ; preds = %bb99
+    %tmp112 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp110, i32 4, i32 4) ; (%tmp101, %tmp101)
+    %tmp113 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @ham, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i32 0, i32 1, i32 0, i32 581, i32 4, i32 19, i32 0, i32 0, i8 addrspace(1)* null, i32 3, i32 undef, i32 4, i64 undef, i32 7, i8* null, i32 7, i8* null, i32 3, i32 undef, i32 3, i32 %tmp2, i32 3, i32 %tmp3, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 3, i32 undef, i32 0, i8 addrspace(1)* undef, i32 3, float undef, i32 3, i32 undef, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 7, i8* null, i32 0, i8 addrspace(1)* undef, i32 7, i8* null), "gc-live"() ]
+    unreachable
+
+  bb114:                                            ; preds = %bb99
+    %tmp115 = landingpad token
+            cleanup
+    br label %bb95
+  }
+
+  declare i32* @widget()
+
+  declare float @quux(i32, i8 addrspace(1)*, i64, i32)
+
+  declare i32 @hoge.1(i32, i8 addrspace(1)*, i32, i32, i32)
+
+  declare void @barney()
+
+  declare void @ham(i32)
+
+  declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
+
+  ; Function Attrs: nounwind readnone
+  declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
+
+  declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 immarg, i32 immarg, void ()*, i32 immarg, i32 immarg, ...)
+
+  declare token @llvm.experimental.gc.statepoint.p0f_f32i32p1i8i64i32f(i64 immarg, i32 immarg, float (i32, i8 addrspace(1)*, i64, i32)*, i32 immarg, i32 immarg, ...)
+
+  declare token @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 immarg, i32 immarg, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
+
+  declare i8 addrspace(1)* @wombat(i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)*)
+
+  attributes #0 = { nounwind readnone }
+
+...
+---
+name:            hoge
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gr64, preferred-register: '' }
+  - { id: 1, class: gr32, preferred-register: '' }
+  - { id: 2, class: gr32, preferred-register: '' }
+  - { id: 3, class: gr32, preferred-register: '' }
+  - { id: 4, class: gr32, preferred-register: '' }
+  - { id: 5, class: gr64, preferred-register: '' }
+  - { id: 6, class: gr64, preferred-register: '' }
+  - { id: 7, class: gr64, preferred-register: '' }
+  - { id: 8, class: gr64, preferred-register: '' }
+  - { id: 9, class: gr64, preferred-register: '' }
+  - { id: 10, class: gr64, preferred-register: '' }
+  - { id: 11, class: gr64, preferred-register: '' }
+  - { id: 12, class: gr64, preferred-register: '' }
+  - { id: 13, class: gr64, preferred-register: '' }
+  - { id: 14, class: gr64, preferred-register: '' }
+  - { id: 15, class: gr64, preferred-register: '' }
+  - { id: 16, class: gr64, preferred-register: '' }
+  - { id: 17, class: gr64, preferred-register: '' }
+  - { id: 18, class: gr64, preferred-register: '' }
+  - { id: 19, class: gr64, preferred-register: '' }
+  - { id: 20, class: gr64, preferred-register: '' }
+  - { id: 21, class: gr64, preferred-register: '' }
+  - { id: 22, class: gr64, preferred-register: '' }
+  - { id: 23, class: gr64, preferred-register: '' }
+  - { id: 24, class: gr64, preferred-register: '' }
+  - { id: 25, class: gr64, preferred-register: '' }
+  - { id: 26, class: gr64, preferred-register: '' }
+  - { id: 27, class: gr64, preferred-register: '' }
+  - { id: 28, class: gr64, preferred-register: '' }
+  - { id: 29, class: gr64, preferred-register: '' }
+  - { id: 30, class: gr64, preferred-register: '' }
+  - { id: 31, class: gr32, preferred-register: '' }
+  - { id: 32, class: gr8, preferred-register: '' }
+  - { id: 33, class: gr32, preferred-register: '' }
+  - { id: 34, class: gr64, preferred-register: '' }
+  - { id: 35, class: gr64, preferred-register: '' }
+  - { id: 36, class: gr64, preferred-register: '' }
+  - { id: 37, class: gr64, preferred-register: '' }
+  - { id: 38, class: gr64, preferred-register: '' }
+  - { id: 39, class: gr64, preferred-register: '' }
+  - { id: 40, class: gr64, preferred-register: '' }
+  - { id: 41, class: gr64, preferred-register: '' }
+  - { id: 42, class: gr64, preferred-register: '' }
+  - { id: 43, class: gr64, preferred-register: '' }
+  - { id: 44, class: gr64, preferred-register: '' }
+  - { id: 45, class: gr64, preferred-register: '' }
+  - { id: 46, class: gr64, preferred-register: '' }
+  - { id: 47, class: gr64, preferred-register: '' }
+  - { id: 48, class: gr64, preferred-register: '' }
+  - { id: 49, class: gr64, preferred-register: '' }
+  - { id: 50, class: gr64, preferred-register: '' }
+  - { id: 51, class: gr64, preferred-register: '' }
+  - { id: 52, class: gr32, preferred-register: '' }
+  - { id: 53, class: gr64, preferred-register: '' }
+  - { id: 54, class: gr32, preferred-register: '' }
+  - { id: 55, class: gr64, preferred-register: '' }
+  - { id: 56, class: gr64, preferred-register: '' }
+  - { id: 57, class: gr64, preferred-register: '' }
+  - { id: 58, class: gr32, preferred-register: '' }
+  - { id: 59, class: gr64, preferred-register: '' }
+  - { id: 60, class: fr32, preferred-register: '' }
+  - { id: 61, class: gr64, preferred-register: '' }
+  - { id: 62, class: gr64, preferred-register: '' }
+  - { id: 63, class: gr64, preferred-register: '' }
+  - { id: 64, class: gr64, preferred-register: '' }
+  - { id: 65, class: gr64, preferred-register: '' }
+  - { id: 66, class: gr64, preferred-register: '' }
+  - { id: 67, class: gr64, preferred-register: '' }
+  - { id: 68, class: gr32, preferred-register: '' }
+  - { id: 69, class: gr32, preferred-register: '' }
+  - { id: 70, class: gr64, preferred-register: '' }
+  - { id: 71, class: gr64, preferred-register: '' }
+  - { id: 72, class: gr32, preferred-register: '' }
+  - { id: 73, class: gr64, preferred-register: '' }
+  - { id: 74, class: gr64, preferred-register: '' }
+  - { id: 75, class: gr64, preferred-register: '' }
+  - { id: 76, class: gr64, preferred-register: '' }
+  - { id: 77, class: gr64, preferred-register: '' }
+  - { id: 78, class: gr64, preferred-register: '' }
+  - { id: 79, class: gr32, preferred-register: '' }
+  - { id: 80, class: gr32, preferred-register: '' }
+  - { id: 81, class: gr64, preferred-register: '' }
+  - { id: 82, class: gr32, preferred-register: '' }
+  - { id: 83, class: gr64, preferred-register: '' }
+  - { id: 84, class: gr64, preferred-register: '' }
+  - { id: 85, class: gr64, preferred-register: '' }
+  - { id: 86, class: gr32, preferred-register: '' }
+  - { id: 87, class: gr8, preferred-register: '' }
+  - { id: 88, class: gr32, preferred-register: '' }
+  - { id: 89, class: gr8, preferred-register: '' }
+  - { id: 90, class: gr32, preferred-register: '' }
+  - { id: 91, class: gr32, preferred-register: '' }
+  - { id: 92, class: gr32, preferred-register: '' }
+  - { id: 93, class: gr64, preferred-register: '' }
+  - { id: 94, class: gr64, preferred-register: '' }
+  - { id: 95, class: gr64, preferred-register: '' }
+  - { id: 96, class: gr64, preferred-register: '' }
+  - { id: 97, class: gr32, preferred-register: '' }
+  - { id: 98, class: gr64, preferred-register: '' }
+  - { id: 99, class: gr64, preferred-register: '' }
+  - { id: 100, class: gr64, preferred-register: '' }
+  - { id: 101, class: gr32, preferred-register: '' }
+  - { id: 102, class: gr64, preferred-register: '' }
+  - { id: 103, class: gr64, preferred-register: '' }
+  - { id: 104, class: gr64, preferred-register: '' }
+  - { id: 105, class: gr32, preferred-register: '' }
+  - { id: 106, class: gr32, preferred-register: '' }
+  - { id: 107, class: gr32, preferred-register: '' }
+  - { id: 108, class: gr64, preferred-register: '' }
+  - { id: 109, class: gr64, preferred-register: '' }
+  - { id: 110, class: gr32, preferred-register: '' }
+  - { id: 111, class: gr64, preferred-register: '' }
+  - { id: 112, class: gr64, preferred-register: '' }
+  - { id: 113, class: gr64, preferred-register: '' }
+  - { id: 114, class: gr64, preferred-register: '' }
+  - { id: 115, class: gr32, preferred-register: '' }
+  - { id: 116, class: gr32, preferred-register: '' }
+  - { id: 117, class: gr64, preferred-register: '' }
+  - { id: 118, class: gr32, preferred-register: '' }
+  - { id: 119, class: gr32, preferred-register: '' }
+  - { id: 120, class: gr64, preferred-register: '' }
+  - { id: 121, class: gr64, preferred-register: '' }
+  - { id: 122, class: gr32, preferred-register: '' }
+  - { id: 123, class: gr64, preferred-register: '' }
+  - { id: 124, class: gr64, preferred-register: '' }
+  - { id: 125, class: gr64, preferred-register: '' }
+  - { id: 126, class: gr64, preferred-register: '' }
+  - { id: 127, class: gr64, preferred-register: '' }
+  - { id: 128, class: gr32, preferred-register: '' }
+  - { id: 129, class: gr8, preferred-register: '' }
+  - { id: 130, class: gr64, preferred-register: '' }
+  - { id: 131, class: gr64, preferred-register: '' }
+  - { id: 132, class: gr32, preferred-register: '' }
+  - { id: 133, class: gr64, preferred-register: '' }
+  - { id: 134, class: gr32, preferred-register: '' }
+  - { id: 135, class: gr32, preferred-register: '' }
+  - { id: 136, class: gr32, preferred-register: '' }
+  - { id: 137, class: gr64, preferred-register: '' }
+  - { id: 138, class: gr32, preferred-register: '' }
+  - { id: 139, class: gr64, preferred-register: '' }
+  - { id: 140, class: gr64, preferred-register: '' }
+  - { id: 141, class: gr32, preferred-register: '' }
+  - { id: 142, class: gr64, preferred-register: '' }
+  - { id: 143, class: gr64, preferred-register: '' }
+  - { id: 144, class: gr64, preferred-register: '' }
+  - { id: 145, class: gr64, preferred-register: '' }
+  - { id: 146, class: gr32, preferred-register: '' }
+  - { id: 147, class: gr32, preferred-register: '' }
+  - { id: 148, class: gr32, preferred-register: '' }
+  - { id: 149, class: gr32, preferred-register: '' }
+  - { id: 150, class: gr64, preferred-register: '' }
+  - { id: 151, class: gr64, preferred-register: '' }
+  - { id: 152, class: gr64, preferred-register: '' }
+  - { id: 153, class: gr64, preferred-register: '' }
+  - { id: 154, class: gr32, preferred-register: '' }
+  - { id: 155, class: gr64, preferred-register: '' }
+  - { id: 156, class: gr64, preferred-register: '' }
+  - { id: 157, class: gr64, preferred-register: '' }
+  - { id: 158, class: gr64, preferred-register: '' }
+  - { id: 159, class: fr32, preferred-register: '' }
+  - { id: 160, class: gr32, preferred-register: '' }
+  - { id: 161, class: gr32, preferred-register: '' }
+  - { id: 162, class: gr64, preferred-register: '' }
+  - { id: 163, class: gr64, preferred-register: '' }
+  - { id: 164, class: gr64, preferred-register: '' }
+  - { id: 165, class: gr64, preferred-register: '' }
+  - { id: 166, class: gr64, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.bb:
+    successors: %bb.1(0x80000000), %bb.21(0x00000000)
+
+    %0:gr64 = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(3)* null`, addrspace 3)
+    %2:gr32 = MOV32rm undef %29:gr64, 1, $noreg, 0, $noreg :: (load (s32) from `i32 addrspace(3)* undef`, addrspace 3)
+    %1:gr32 = COPY %2
+    %4:gr32 = MOV32rm $noreg, 1, $noreg, 0, $noreg :: (load (s32) from `i32 addrspace(3)* null`, addrspace 3)
+    %3:gr32 = COPY %4
+    %9:gr64 = MOV64rm undef %30:gr64, 1, $noreg, 0, $noreg :: (load (s64) from `i8 addrspace(1)* addrspace(3)* undef`, addrspace 3)
+    %5:gr64 = COPY %9
+    %31:gr32 = MOV32r0 implicit-def dead $eflags
+    %32:gr8 = COPY killed %31.sub_8bit
+    TEST8rr killed %32, %32, implicit-def $eflags
+    JCC_1 %bb.21, 5, implicit killed $eflags
+    JMP_1 %bb.1
+
+  bb.1.bb12:
+    successors: %bb.2(0x80000000), %bb.16(0x00000000)
+
+    %52:gr32 = MOV32rm undef %53:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `i32 addrspace(1)* undef`, addrspace 1)
+    %54:gr32 = COPY killed %52
+    %54:gr32 = AND32ri %54, 33554431, implicit-def dead $eflags
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %55:gr64 = COPY killed %0
+    %43:gr64 = COPY killed %9
+    %42:gr64 = COPY %5
+    %44:gr64 = COPY %5
+    %45:gr64 = COPY %5
+    %56:gr64 = COPY killed %5
+    %40:gr64, %41:gr64, %42:gr64, %43:gr64, %44:gr64, %45:gr64, dead %55:gr64, dead %56:gr64 = STATEPOINT 2882400000, 0, 0, target-flags(x86-plt) @barney, 2, 0, 2, 0, 2, 45, 2, 0, 2, 1, 2, 0, 2, 83, 2, 0, 2, 19, 2, 0, 2, 0, %55, 2, 3, %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %56, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %56, 2, 0, %56, 2, 0, %56, 2, 0, %43, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, undef %40(tied-def 0), undef %41(tied-def 1), %42(tied-def 2), %43(tied-def 3), %44(tied-def 4), %45(tied-def 5), %55(tied-def 6), %56(tied-def 7), 2, 0, 2, 8, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp0>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %57:gr64 = MOV64ri32 -170
+    $edi = COPY killed %54
+    $rsi = COPY %45
+    $rdx = COPY killed %57
+    %51:gr64 = COPY killed %45
+    %46:gr64 = COPY killed %40
+    %48:gr64 = COPY killed %42
+    %50:gr64 = COPY killed %44
+    %47:gr64 = COPY killed %41
+    %49:gr64 = COPY killed %43
+    %46:gr64, %47:gr64, %48:gr64, %49:gr64, %50:gr64, %51:gr64 = STATEPOINT 1, 16, 4, undef %59:gr64, killed $edi, killed $rsi, killed $rdx, undef $ecx, 2, 0, 2, 0, 2, 47, 2, 0, 2, 0, 2, 0, 2, 103, 2, 1, 2, 19, 2, 0, 2, 3, 2, 4278124286, 2, 0, 2, 0, 2, 3, %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %48, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %51, 2, 0, %50, 2, 0, 2, 4278124286, 2, 0, %49, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, %46(tied-def 0), %47(tied-def 1), %48(tied-def 2), %49(tied-def 3), %50(tied-def 4), %51(tied-def 5), 2, 0, 2, 4278124286, 2, 0, 2, 8, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $xmm0
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp1>
+    JMP_1 %bb.2
+
+  bb.2.bb23:
+    successors: %bb.11(0x80000000), %bb.13(0x00000000)
+
+    EH_LABEL <mcsymbol .Ltmp2>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rsi = COPY %49
+    $ecx = COPY %4
+    $r8d = COPY %4
+    %64:gr64 = COPY killed %47
+    %65:gr64 = COPY killed %49
+    %66:gr64 = COPY killed %51
+    %63:gr64 = COPY killed %46
+    %67:gr64 = COPY killed %48
+    %70:gr64 = COPY killed %50
+    dead %63:gr64, %64:gr64, %65:gr64, %66:gr64, %67:gr64, dead %70:gr64 = STATEPOINT 1, 16, 5, undef %71:gr64, undef $edi, killed $rsi, undef $edx, killed $ecx, killed $r8d, 2, 0, 2, 0, 2, 53, 2, 0, 2, 8, 2, 0, 2, 153, 2, 4, 2, 19, 2, 0, 2, 4, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 0, 2, 3, %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %67, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %66, 2, 0, %70, 2, 0, 2, 4278124286, 2, 0, %65, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 8, %63(tied-def 0), %64(tied-def 1), %65(tied-def 2), %66(tied-def 3), %67(tied-def 4), 2, 4278124286, 2, 0, %70(tied-def 5), 2, 0, 2, 8, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp3>
+    JMP_1 %bb.11
+
+  bb.3.bb31:
+    successors: %bb.4(0x00000000), %bb.17(0x80000000)
+
+    EH_LABEL <mcsymbol .Ltmp4>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rsi = COPY %76
+    $edx = COPY %4
+    %93:gr64 = COPY killed %78
+    %94:gr64 = COPY killed %77
+    %95:gr64 = COPY killed %76
+    dead %93:gr64, dead %94:gr64, dead %95:gr64 = STATEPOINT 1, 16, 5, undef %96:gr64, undef $edi, killed $rsi, killed $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 49, 2, 0, 2, 0, 2, 0, 2, 537, 2, 2, 2, 19, 2, 0, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 0, 2, 3, 2, 4278124286, 2, 3, killed %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %4, 2, 3, 2, 1, 2, 3, 2, 4278124286, 2, 0, %93, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %94, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, %95, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 5, 2, 4278124286, 2, 0, %93(tied-def 0), %94(tied-def 1), %95(tied-def 2), 2, 0, 2, 5, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp5>
+    JMP_1 %bb.4
+
+  bb.4.bb33:
+    successors:
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %101:gr32 = MOV32ri 15
+    $edi = COPY killed %101
+    STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, killed $edi, 2, 0, 2, 0, 2, 51, 2, 0, 2, 2, 2, 0, 2, 591, 2, 0, 2, 19, 2, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 3, 2, 63, 2, 3, killed %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, killed %4, 2, 3, 2, 1, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 2, 1, 2, 16, 2, 0, 2, 0, 2, 0, 2, 1, 2, 4278124286, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.5.bb35:
+    successors: %bb.6(0x40000000), %bb.18(0x40000000)
+
+    EH_LABEL <mcsymbol .Ltmp6>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rsi = COPY %76
+    $edx = COPY killed %4
+    %103:gr64 = COPY killed %78
+    %102:gr64 = COPY killed %75
+    %108:gr64 = COPY killed %77
+    %104:gr64 = COPY killed %76
+    %102:gr64, %103:gr64, %104:gr64, dead %108:gr64 = STATEPOINT 1, 16, 5, undef %109:gr64, undef $edi, killed $rsi, killed $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 49, 2, 0, 2, 8, 2, 0, 2, 300, 2, 2, 2, 19, 2, 0, 2, 0, %104, 2, 3, 2, 4278124286, 2, 0, 2, 0, 2, 3, %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %103, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %108, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, %104, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 6, %102(tied-def 0), %103(tied-def 1), %104(tied-def 2), 2, 0, %108(tied-def 3), 2, 4278124286, 2, 0, 2, 6, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp7>
+    JMP_1 %bb.6
+
+  bb.6.bb37:
+    successors: %bb.7(0x40000000), %bb.19(0x40000000)
+
+    EH_LABEL <mcsymbol .Ltmp8>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %115:gr32 = MOV32ri -7122
+    $r8d = COPY killed %115
+    %120:gr64 = COPY killed %103
+    %114:gr64 = COPY killed %102
+    %114:gr64, dead %120:gr64 = STATEPOINT 1, 16, 5, undef %121:gr64, undef $edi, undef $rsi, undef $edx, undef $ecx, killed $r8d, 2, 0, 2, 0, 2, 45, 2, 0, 2, 8, 2, 0, 2, 308, 2, 0, 2, 19, 2, 0, 2, 0, 2, 0, 2, 3, killed %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %120, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 4, %114(tied-def 0), 2, 0, %120(tied-def 1), 2, 4278124286, 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp9>
+    JMP_1 %bb.7
+
+  bb.7.bb41:
+    successors: %bb.9(0x40000000), %bb.8(0x40000000)
+
+    %12:gr64 = COPY %114
+    %126:gr64 = MOV64rm %114, 1, $noreg, 904, $noreg :: (load unordered (s64) from %ir.tmp44, addrspace 1)
+    %127:gr64 = COPY killed %126
+    dead %127:gr64 = NEG64r %127, implicit-def $eflags
+    %14:gr64 = SETB_C64r implicit-def dead $eflags, implicit killed $eflags
+    %128:gr32 = MOV32r0 implicit-def dead $eflags
+    %129:gr8 = COPY killed %128.sub_8bit
+    TEST8rr killed %129, %129, implicit-def $eflags
+    JCC_1 %bb.9, 5, implicit killed $eflags
+    JMP_1 %bb.8
+
+  bb.8.bb50:
+    successors: %bb.9(0x80000000)
+
+    %13:gr64 = COPY killed %114
+    %13:gr64 = nuw ADD64ri32 %13, 904, implicit-def dead $eflags
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = COPY killed %14
+    $rsi = COPY killed %13
+    CALL64pcrel32 target-flags(x86-plt) @wombat, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.9.bb52:
+    successors: %bb.10(0x00000000), %bb.20(0x80000000)
+
+    EH_LABEL <mcsymbol .Ltmp10>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %131:gr64 = COPY killed %12
+    %131:gr64 = STATEPOINT 1, 16, 5, undef %137:gr64, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 49, 2, 0, 2, 0, 2, 0, 2, 335, 2, 2, 2, 19, 2, 0, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 2, %131(tied-def 0), 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp11>
+    JMP_1 %bb.10
+
+  bb.10.bb54:
+    successors:
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %141:gr32 = MOV32ri 10
+    $edi = COPY killed %141
+    STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, killed $edi, 2, 0, 2, 2, 2, 53, 2, 0, 2, 1, 2, 0, 2, 344, 2, 4, 2, 19, 2, 0, 2, 0, 2, 0, 2, 3, 2, 4278124286, 2, 4, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, killed %2, 2, 3, killed %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 2, 2, 0, 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.11.bb56:
+    successors: %bb.12(0x00000000), %bb.14(0x80000000)
+
+    EH_LABEL <mcsymbol .Ltmp12>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %79:gr32 = MOV32ri 7
+    $rsi = COPY %65
+    $edx = COPY %1
+    $ecx = COPY killed %79
+    $r8d = COPY %3
+    %75:gr64 = COPY killed %64
+    %77:gr64 = COPY killed %66
+    %76:gr64 = COPY killed %65
+    %78:gr64 = COPY killed %67
+    %75:gr64, %76:gr64, %77:gr64, %78:gr64 = STATEPOINT 1, 16, 5, undef %81:gr64, undef $edi, killed $rsi, killed $edx, killed $ecx, killed $r8d, 2, 0, 2, 0, 2, 53, 2, 0, 2, 8, 2, 0, 2, 208, 2, 4, 2, 19, 2, 0, 2, 0, %78, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 0, 2, 0, 2, 0, 2, 3, %1, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %78, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %77, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, %76, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 6, %75(tied-def 0), %76(tied-def 1), %77(tied-def 2), %78(tied-def 3), 2, 0, 2, 4278124286, 2, 0, 2, 6, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp13>
+    JMP_1 %bb.12
+
+  bb.12.bb63:
+    successors:
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %161:gr32 = MOV32ri 10
+    $edi = COPY killed %161
+    STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, killed $edi, 2, 0, 2, 2, 2, 61, 2, 0, 2, 9, 2, 0, 2, 215, 2, 8, 2, 19, 2, 0, 2, 0, 2, 0, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 0, 2, 4, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 0, 2, 3, killed %1, 2, 3, killed %2, 2, 3, killed %3, 2, 3, 2, 2, 2, 3, 2, 4278124286, 2, 3, killed %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 2, 2, 0, 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.13.bb65 (landing-pad):
+    successors:
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp14>
+
+  bb.14.bb67 (landing-pad):
+    successors: %bb.3(0x2aaaaaab), %bb.15(0x55555555)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp15>
+    %86:gr32 = MOV32r0 implicit-def dead $eflags
+    %87:gr8 = COPY killed %86.sub_8bit
+    TEST8rr killed %87, %87, implicit-def $eflags
+    JCC_1 %bb.3, 5, implicit killed $eflags
+    JMP_1 %bb.15
+
+  bb.15.bb67:
+    successors: %bb.5(0x40000001), %bb.26(0x3fffffff)
+
+    %88:gr32 = MOV32r0 implicit-def dead $eflags
+    %89:gr8 = COPY killed %88.sub_8bit
+    TEST8rr killed %89, %89, implicit-def $eflags
+    JCC_1 %bb.5, 5, implicit killed $eflags
+
+  bb.26:
+    successors: %bb.23(0x80000000)
+
+    %163:gr64 = COPY killed %75
+    %164:gr64 = COPY killed %76
+    %165:gr64 = COPY killed %78
+    %166:gr64 = IMPLICIT_DEF
+    JMP_1 %bb.23
+
+  bb.16.bb75 (landing-pad):
+    successors:
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp16>
+
+  bb.17.bb77 (landing-pad):
+    successors: %bb.22(0x80000000)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp17>
+    %162:gr64 = IMPLICIT_DEF
+    JMP_1 %bb.22
+
+  bb.18.bb79 (landing-pad):
+    successors: %bb.23(0x80000000)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp18>
+    %19:gr64 = COPY killed %104
+    %20:gr64 = MOV64rm $noreg, 1, $noreg, 8, $gs :: (load (s64) from `i8 addrspace(1)* addrspace(256)* inttoptr (i64 8 to i8 addrspace(1)* addrspace(256)*)`, addrspace 256)
+    %163:gr64 = IMPLICIT_DEF
+    %164:gr64 = COPY killed %19
+    %165:gr64 = IMPLICIT_DEF
+    %166:gr64 = COPY killed %20
+    JMP_1 %bb.23
+
+  bb.19.bb85 (landing-pad):
+    successors: %bb.23(0x80000000)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp19>
+    %21:gr64 = COPY killed %114
+    %163:gr64 = COPY killed %21
+    %164:gr64 = IMPLICIT_DEF
+    %165:gr64 = IMPLICIT_DEF
+    %166:gr64 = IMPLICIT_DEF
+    JMP_1 %bb.23
+
+  bb.20.bb90 (landing-pad):
+    successors: %bb.22(0x80000000)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp20>
+    %22:gr64 = COPY killed %131
+    %162:gr64 = COPY killed %22
+    JMP_1 %bb.22
+
+  bb.21.bb93:
+    successors:
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %33:gr32 = MOV32ri 14
+    $edi = COPY killed %33
+    %36:gr64 = COPY killed %0
+    %39:gr64 = COPY killed %9
+    %34:gr64 = COPY %5
+    %35:gr64 = COPY %5
+    %37:gr64 = COPY %5
+    %38:gr64 = COPY killed %5
+    dead %34:gr64, dead %35:gr64, dead %36:gr64, dead %37:gr64, dead %38:gr64, dead %39:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, killed $edi, 2, 0, 2, 2, 2, 53, 2, 0, 2, 1, 2, 0, 2, 94, 2, 4, 2, 19, 2, 0, 2, 3, 2, 4278124286, 2, 0, %38, 2, 0, %38, 2, 3, 2, -170, 2, 0, %36, 2, 3, killed %1, 2, 3, killed %2, 2, 3, killed %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, killed %4, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %38, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %38, 2, 0, %38, 2, 0, %38, 2, 0, %39, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 6, %34(tied-def 0), %35(tied-def 1), %36(tied-def 2), %37(tied-def 3), %38(tied-def 4), %39(tied-def 5), 2, 0, 2, 6, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.22.bb95:
+    %23:gr64 = COPY killed %162
+    MOV64mr killed %23, 1, $noreg, 928, $noreg, undef %158:gr64 :: (store unordered (s64) into %ir.tmp98, addrspace 1)
+    RET 0, undef $xmm0
+
+  bb.23.bb99:
+    successors: %bb.24(0x00000000), %bb.25(0x80000000)
+
+    %27:gr64 = COPY killed %166
+    %26:gr64 = COPY killed %165
+    %25:gr64 = COPY killed %164
+    %24:gr64 = COPY killed %163
+    %143:gr64 = MOV64rm %24, 1, $noreg, 904, $noreg :: (load unordered (s64) from %ir.1, addrspace 1)
+    %144:gr64 = COPY killed %143
+    dead %144:gr64 = NEG64r %144, implicit-def $eflags
+    %145:gr64 = SETB_C64r implicit-def dead $eflags, implicit killed $eflags
+    EH_LABEL <mcsymbol .Ltmp21>
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rsi = COPY killed %25
+    %151:gr64 = COPY killed %26
+    %152:gr64 = COPY killed %27
+    %150:gr64 = COPY killed %145
+    %142:gr64 = COPY killed %24
+    dead %142:gr64, dead %150:gr64, dead %151:gr64, dead %152:gr64 = STATEPOINT 1, 16, 5, undef %153:gr64, undef $edi, killed $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 49, 2, 0, 2, 0, 2, 0, 2, 572, 2, 2, 2, 19, 2, 0, 2, 0, %150, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 3, %2, 2, 3, %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, %151, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %152, 2, 7, 2, 0, 2, 4, %142(tied-def 0), %150(tied-def 1), %151(tied-def 2), %152(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    EH_LABEL <mcsymbol .Ltmp22>
+    JMP_1 %bb.24
+
+  bb.24.bb111:
+    successors:
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    %160:gr32 = MOV32ri 10
+    $edi = COPY killed %160
+    STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @ham, killed $edi, 2, 0, 2, 2, 2, 53, 2, 0, 2, 1, 2, 0, 2, 581, 2, 4, 2, 19, 2, 0, 2, 0, 2, 0, 2, 3, 2, 4278124286, 2, 4, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 3, 2, 4278124286, 2, 3, killed %2, 2, 3, killed %3, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 0, 2, 4278124286, 2, 3, 2, 4278124286, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 2, 2, 0, 2, 4278124286, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+
+  bb.25.bb114 (landing-pad):
+    successors: %bb.22(0x80000000)
+    liveins: $rax, $rdx
+
+    EH_LABEL <mcsymbol .Ltmp23>
+    %162:gr64 = IMPLICIT_DEF
+    JMP_1 %bb.22
+
+...

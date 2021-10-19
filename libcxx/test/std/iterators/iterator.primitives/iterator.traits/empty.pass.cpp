@@ -37,5 +37,5 @@ int main(int, char**)
     typedef std::iterator_traits<not_an_iterator> It;
     static_assert(!(has_value_type<It>::value), "");
 
-  return 0;
+    return 0;
 }

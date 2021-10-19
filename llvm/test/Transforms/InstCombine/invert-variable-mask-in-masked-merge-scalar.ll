@@ -52,9 +52,8 @@ define i4 @in_constant_varx_6_invmask(i4 %x, i4 %mask) {
 
 define i4 @in_constant_mone_vary_invmask(i4 %y, i4 %mask) {
 ; CHECK-LABEL: @in_constant_mone_vary_invmask(
-; CHECK-NEXT:    [[N1_DEMORGAN:%.*]] = or i4 [[Y:%.*]], [[MASK:%.*]]
-; CHECK-NEXT:    [[N1:%.*]] = xor i4 [[N1_DEMORGAN]], -1
-; CHECK-NEXT:    [[R:%.*]] = xor i4 [[N1]], [[Y]]
+; CHECK-NEXT:    [[MASK_NOT:%.*]] = xor i4 [[MASK:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[MASK_NOT]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %notmask = xor i4 %mask, -1

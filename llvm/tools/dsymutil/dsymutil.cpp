@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -92,6 +91,7 @@ struct DsymutilOptions {
   bool InputIsYAMLDebugMap = false;
   bool PaperTrailWarnings = false;
   bool Verify = false;
+  bool ForceKeepFunctionForStatic = false;
   std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
@@ -201,11 +201,13 @@ static Expected<AccelTableKind> getAccelTableKind(opt::InputArgList &Args) {
       return AccelTableKind::Apple;
     if (S == "Dwarf")
       return AccelTableKind::Dwarf;
+    if (S == "Pub")
+      return AccelTableKind::Pub;
     if (S == "Default")
       return AccelTableKind::Default;
     return make_error<StringError>(
         "invalid accelerator type specified: '" + S +
-            "'. Support values are 'Apple', 'Dwarf' and 'Default'.",
+            "'. Support values are 'Apple', 'Dwarf', 'Pub' and 'Default'.",
         inconvertibleErrorCode());
   }
   return AccelTableKind::Default;
@@ -223,13 +225,14 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
   Options.Verify = Args.hasArg(OPT_verify);
 
-  Options.LinkOpts.Minimize = Args.hasArg(OPT_minimize);
   Options.LinkOpts.NoODR = Args.hasArg(OPT_no_odr);
   Options.LinkOpts.NoOutput = Args.hasArg(OPT_no_output);
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
   Options.LinkOpts.Update = Args.hasArg(OPT_update);
   Options.LinkOpts.Verbose = Args.hasArg(OPT_verbose);
   Options.LinkOpts.Statistics = Args.hasArg(OPT_statistics);
+  Options.LinkOpts.KeepFunctionForStatic =
+      Args.hasArg(OPT_keep_func_for_static);
 
   if (opt::Arg *ReproducerPath = Args.getLastArg(OPT_use_reproducer)) {
     Options.ReproMode = ReproducerMode::Use;
@@ -313,7 +316,7 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
   SmallString<128> InfoPlist(BundleRoot);
   sys::path::append(InfoPlist, "Contents/Info.plist");
   std::error_code EC;
-  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_Text);
+  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         "cannot create Plist: " + toString(errorCodeToError(EC)), EC);
@@ -433,6 +436,11 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
       (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
     return OutputLocation(std::string(InputFile));
 
+  // When dumping the debug map, just return an empty output location. This
+  // allows us to compute the output location once.
+  if (Options.DumpDebugMap)
+    return OutputLocation("");
+
   // If a flat dSYM has been requested, things are pretty simple.
   if (Options.Flat) {
     if (Options.OutputFile.empty()) {
@@ -490,25 +498,25 @@ int main(int argc, char **argv) {
   }
 
   if (Args.hasArg(OPT_help)) {
-    T.PrintHelp(
+    T.printHelp(
         outs(), (std::string(argv[0]) + " [options] <input files>").c_str(),
         "manipulate archived DWARF debug symbol files.\n\n"
         "dsymutil links the DWARF debug information found in the object files\n"
         "for the executable <input file> by using debug symbols information\n"
         "contained in its symbol table.\n",
         false);
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   if (Args.hasArg(OPT_version)) {
     cl::PrintVersionMessage();
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   auto OptionsOrErr = getOptions(Args);
   if (!OptionsOrErr) {
     WithColor::error() << toString(OptionsOrErr.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto &Options = *OptionsOrErr;
@@ -522,7 +530,7 @@ int main(int argc, char **argv) {
       Reproducer::createReproducer(Options.ReproMode, Options.ReproducerPath);
   if (!Repro) {
     WithColor::error() << toString(Repro.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   Options.LinkOpts.VFS = (*Repro)->getVFS();
@@ -531,7 +539,7 @@ int main(int argc, char **argv) {
     if (Arch != "*" && Arch != "all" &&
         !object::MachOObjectFile::isValidArch(Arch)) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
   SymbolMapLoader SymMapLoader(Options.SymbolMap);
@@ -541,7 +549,7 @@ int main(int argc, char **argv) {
     if (Options.DumpStab) {
       if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
                     Options.LinkOpts.PrependPath))
-        return 1;
+        return EXIT_FAILURE;
       continue;
     }
 
@@ -553,7 +561,7 @@ int main(int argc, char **argv) {
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
                          << "': " << EC.message() << '\n';
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Remember the number of debug maps that are being processed to decide how
@@ -571,11 +579,20 @@ int main(int argc, char **argv) {
     // Ensure that the debug map is not empty (anymore).
     if (DebugMapPtrsOrErr->empty()) {
       WithColor::error() << "no architecture to link\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder(Options.LinkOpts.VFS);
+
+    // Compute the output location and update the resource directory.
+    Expected<OutputLocation> OutputLocationOrErr =
+        getOutputFileName(InputFile, Options);
+    if (!OutputLocationOrErr) {
+      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      return EXIT_FAILURE;
+    }
+    Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
     // Statistics only require different architectures to be processed
     // sequentially, the link itself can still happen in parallel. Change the
@@ -618,14 +635,6 @@ int main(int argc, char **argv) {
       // types don't work with std::bind in the ThreadPool implementation.
       std::shared_ptr<raw_fd_ostream> OS;
 
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
-      Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
-
       std::string OutputFile = OutputLocationOrErr->DWARFFile;
       if (NeedsTempFiles) {
         TempFiles.emplace_back(Map->getTriple().getArchName().str());
@@ -633,7 +642,7 @@ int main(int argc, char **argv) {
         auto E = TempFiles.back().createTempFile();
         if (E) {
           WithColor::error() << toString(std::move(E));
-          return 1;
+          return EXIT_FAILURE;
         }
 
         auto &TempFile = *(TempFiles.back().File);
@@ -646,7 +655,7 @@ int main(int argc, char **argv) {
             Options.LinkOpts.NoOutput ? "-" : OutputFile, EC, sys::fs::OF_None);
         if (EC) {
           WithColor::error() << OutputFile << ": " << EC.message();
-          return 1;
+          return EXIT_FAILURE;
         }
       }
 
@@ -672,21 +681,28 @@ int main(int argc, char **argv) {
     Threads.wait();
 
     if (!AllOK)
-      return 1;
+      return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
                                                Options.LinkOpts, SDKPath))
-        return 1;
+        return EXIT_FAILURE;
+    }
+
+    // The Mach-O object file format is limited to 4GB. Make sure that we print
+    // an error when we emit an invalid Mach-O companion file. Leave the
+    // invalid object file around on disk for inspection.
+    ErrorOr<vfs::Status> stat =
+        Options.LinkOpts.VFS->status(OutputLocationOrErr->DWARFFile);
+    if (stat) {
+      if (stat->getSize() > std::numeric_limits<uint32_t>::max()) {
+        WithColor::error() << "the linked debug info exceeds the 4GB Mach-O "
+                              "object file format.";
+        return EXIT_FAILURE;
+      }
     }
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

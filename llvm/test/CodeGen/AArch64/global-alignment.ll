@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s
 
-@var32 = global [3 x i32] zeroinitializer
-@var64 = global [3 x i64] zeroinitializer
-@var32_align64 = global [3 x i32] zeroinitializer, align 8
-@alias = alias [3 x i32], [3 x i32]* @var32_align64
+@var32 = dso_local global [3 x i32] zeroinitializer
+@var64 = dso_local global [3 x i64] zeroinitializer
+@var32_align64 = dso_local global [3 x i32] zeroinitializer, align 8
+@alias = dso_local alias [3 x i32], [3 x i32]* @var32_align64
 
-define i64 @test_align32() {
+define dso_local i64 @test_align32() {
 ; CHECK-LABEL: test_align32:
   %addr = bitcast [3 x i32]* @var32 to i64*
 
@@ -19,7 +19,7 @@ define i64 @test_align32() {
   ret i64 %val
 }
 
-define i64 @test_align64() {
+define dso_local i64 @test_align64() {
 ; CHECK-LABEL: test_align64:
   %addr = bitcast [3 x i64]* @var64 to i64*
 
@@ -33,7 +33,7 @@ define i64 @test_align64() {
   ret i64 %val
 }
 
-define i64 @test_var32_align64() {
+define dso_local i64 @test_var32_align64() {
 ; CHECK-LABEL: test_var32_align64:
   %addr = bitcast [3 x i32]* @var32_align64 to i64*
 
@@ -47,7 +47,7 @@ define i64 @test_var32_align64() {
   ret i64 %val
 }
 
-define i64 @test_var32_alias() {
+define dso_local i64 @test_var32_alias() {
 ; CHECK-LABEL: test_var32_alias:
   %addr = bitcast [3 x i32]* @alias to i64*
 
@@ -60,9 +60,9 @@ define i64 @test_var32_alias() {
   ret i64 %val
 }
 
-@yet_another_var = external global {i32, i32}
+@yet_another_var = external dso_local global {i32, i32}
 
-define i64 @test_yet_another_var() {
+define dso_local i64 @test_yet_another_var() {
 ; CHECK-LABEL: test_yet_another_var:
 
   ; @yet_another_var has a preferred alignment of 8, but that's not enough if
@@ -75,7 +75,7 @@ define i64 @test_yet_another_var() {
   ret i64 %val
 }
 
-define i64()* @test_functions() {
+define dso_local i64()* @test_functions() {
 ; CHECK-LABEL: test_functions:
   ret i64()* @test_yet_another_var
 ; CHECK: adrp [[HIBITS:x[0-9]+]], test_yet_another_var

@@ -8,7 +8,6 @@
 
 #include "SBReproducerPrivate.h"
 
-#include "SBReproducerPrivate.h"
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
@@ -31,7 +30,7 @@ using namespace lldb_private;
 using namespace lldb_private::repro;
 
 SBReplayOptions::SBReplayOptions()
-    : m_opaque_up(std::make_unique<ReplayOptions>()){};
+    : m_opaque_up(std::make_unique<ReplayOptions>()){}
 
 SBReplayOptions::SBReplayOptions(const SBReplayOptions &rhs)
     : m_opaque_up(std::make_unique<ReplayOptions>(*rhs.m_opaque_up)) {}
@@ -118,7 +117,6 @@ SBRegistry::SBRegistry() {
   RegisterMethods<SBThreadCollection>(R);
   RegisterMethods<SBThreadPlan>(R);
   RegisterMethods<SBTrace>(R);
-  RegisterMethods<SBTraceOptions>(R);
   RegisterMethods<SBType>(R);
   RegisterMethods<SBTypeCategory>(R);
   RegisterMethods<SBTypeEnumMember>(R);
@@ -266,6 +264,27 @@ const char *SBReproducer::Replay(const char *path,
   return nullptr;
 }
 
+const char *SBReproducer::Finalize(const char *path) {
+  static std::string error;
+  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+
+  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
+  if (!loader) {
+    error = "unable to get replay loader.";
+    return error.c_str();
+  }
+
+  if (auto e = repro::Finalize(loader)) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+
+  return nullptr;
+}
+
 bool SBReproducer::Generate() {
   auto &r = Reproducer::Instance();
   if (auto generator = r.GetGenerator()) {
@@ -285,10 +304,11 @@ bool SBReproducer::SetAutoGenerate(bool b) {
 }
 
 const char *SBReproducer::GetPath() {
-  static std::string path;
+  ConstString path;
   auto &r = Reproducer::Instance();
-  path = r.GetReproducerPath().GetCString();
-  return path.c_str();
+  if (FileSpec reproducer_path = Reproducer::Instance().GetReproducerPath())
+    path = ConstString(r.GetReproducerPath().GetCString());
+  return path.GetCString();
 }
 
 void SBReproducer::SetWorkingDirectory(const char *path) {

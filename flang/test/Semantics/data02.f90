@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check that expressions are analyzed in data statements
 
 subroutine s1
@@ -6,7 +6,7 @@ subroutine s1
     character(1) :: c
   end type
   type(t) :: x
-  !ERROR: Value in structure constructor of type INTEGER(4) is incompatible with component 'c' of type CHARACTER(KIND=1,LEN=1_4)
+  !ERROR: Value in structure constructor of type INTEGER(4) is incompatible with component 'c' of type CHARACTER(KIND=1,LEN=1_8)
   data x /t(1)/
 end
 

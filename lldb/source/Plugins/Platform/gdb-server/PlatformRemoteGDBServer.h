@@ -37,9 +37,9 @@ public:
   ~PlatformRemoteGDBServer() override;
 
   // lldb_private::PluginInterface functions
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // lldb_private::Platform functions
   Status
@@ -64,10 +64,7 @@ public:
   Status KillProcess(const lldb::pid_t pid) override;
 
   lldb::ProcessSP DebugProcess(ProcessLaunchInfo &launch_info,
-                               Debugger &debugger,
-                               Target *target, // Can be NULL, if NULL create a
-                                               // new target, else use existing
-                                               // one
+                               Debugger &debugger, Target &target,
                                Status &error) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
@@ -140,7 +137,7 @@ public:
   Status Unlink(const FileSpec &path) override;
 
   Status RunShellCommand(
-      const char *command,         // Shouldn't be NULL
+      llvm::StringRef shell, llvm::StringRef command,
       const FileSpec &working_dir, // Pass empty FileSpec to use the current
                                    // working directory
       int *status_ptr, // Pass NULL if you don't want the process exit status
@@ -153,12 +150,6 @@ public:
   void CalculateTrapHandlerSymbolNames() override;
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
-
-  lldb::ProcessSP ConnectProcess(llvm::StringRef connect_url,
-                                 llvm::StringRef plugin_name,
-                                 lldb_private::Debugger &debugger,
-                                 lldb_private::Target *target,
-                                 lldb_private::Status &error) override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
                                    lldb_private::Status &error) override;

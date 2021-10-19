@@ -20,11 +20,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Support/KindMapping.h"
-#include "mlir/IR/Module.h"
-
-namespace fir {
-struct NameUniquer;
-}
+#include "mlir/IR/BuiltinOps.h"
 
 namespace Fortran {
 namespace common {
@@ -34,7 +30,7 @@ namespace evaluate {
 class IntrinsicProcTable;
 } // namespace evaluate
 namespace parser {
-class CookedSource;
+class AllCookedSources;
 struct Program;
 } // namespace parser
 namespace semantics {
@@ -55,8 +51,8 @@ public:
   static LoweringBridge
   create(const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-         const Fortran::parser::CookedSource &cooked) {
-    return LoweringBridge{defaultKinds, intrinsics, cooked};
+         const Fortran::parser::AllCookedSources &allCooked) {
+    return LoweringBridge{defaultKinds, intrinsics, allCooked};
   }
 
   //===--------------------------------------------------------------------===//
@@ -71,7 +67,7 @@ public:
   const Fortran::evaluate::IntrinsicProcTable &getIntrinsicTable() const {
     return intrinsics;
   }
-  const Fortran::parser::CookedSource *getCookedSource() const {
+  const Fortran::parser::AllCookedSources *getCookedSource() const {
     return cooked;
   }
 
@@ -92,20 +88,20 @@ public:
   void parseSourceFile(llvm::SourceMgr &);
 
   /// Cross the bridge from the Fortran parse-tree, etc. to MLIR dialects
-  void lower(const Fortran::parser::Program &program, fir::NameUniquer &uniquer,
+  void lower(const Fortran::parser::Program &program,
              const Fortran::semantics::SemanticsContext &semanticsContext);
 
 private:
   explicit LoweringBridge(
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
-      const Fortran::parser::CookedSource &cooked);
+      const Fortran::parser::AllCookedSources &);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
-  const Fortran::parser::CookedSource *cooked;
+  const Fortran::parser::AllCookedSources *cooked;
   std::unique_ptr<mlir::MLIRContext> context;
   std::unique_ptr<mlir::ModuleOp> module;
   fir::KindMapping kindMap;

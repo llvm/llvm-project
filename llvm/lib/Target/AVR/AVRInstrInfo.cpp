@@ -20,9 +20,9 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetRegistry.h"
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
@@ -55,13 +55,13 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Register DestLo, DestHi, SrcLo, SrcHi;
 
       TRI.splitReg(DestReg, DestLo, DestHi);
-      TRI.splitReg(SrcReg,  SrcLo,  SrcHi);
+      TRI.splitReg(SrcReg, SrcLo, SrcHi);
 
       // Copy each individual register with the `MOV` instruction.
       BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestLo)
-        .addReg(SrcLo, getKillRegState(KillSrc));
+          .addReg(SrcLo, getKillRegState(KillSrc));
       BuildMI(MBB, MI, DL, get(AVR::MOVRdRr), DestHi)
-        .addReg(SrcHi, getKillRegState(KillSrc));
+          .addReg(SrcHi, getKillRegState(KillSrc));
     }
   } else {
     if (AVR::GPR8RegClass.contains(DestReg, SrcReg)) {
@@ -83,7 +83,7 @@ unsigned AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   case AVR::LDDRdPtrQ:
-  case AVR::LDDWRdYQ: { //:FIXME: remove this once PR13375 gets fixed
+  case AVR::LDDWRdYQ: { //: FIXME: remove this once PR13375 gets fixed
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -179,7 +179,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     Opcode = AVR::LDDRdPtrQ;
   } else if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
     // Opcode = AVR::LDDWRdPtrQ;
-    //:FIXME: remove this once PR13375 gets fixed
+    //: FIXME: remove this once PR13375 gets fixed
     Opcode = AVR::LDDWRdYQ;
   } else {
     llvm_unreachable("Cannot load this register from a stack slot!");
@@ -289,7 +289,7 @@ bool AVRInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
 
     // Handle unconditional branches.
-    //:TODO: add here jmp
+    //: TODO: add here jmp
     if (I->getOpcode() == AVR::RJMPk) {
       UnCondBrIter = I;
 
@@ -399,9 +399,9 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL,
-                                    int *BytesAdded) const {
-  if (BytesAdded) *BytesAdded = 0;
+                                    const DebugLoc &DL, int *BytesAdded) const {
+  if (BytesAdded)
+    *BytesAdded = 0;
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
@@ -421,13 +421,15 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
   AVRCC::CondCodes CC = (AVRCC::CondCodes)Cond[0].getImm();
   auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC)).addMBB(TBB);
 
-  if (BytesAdded) *BytesAdded += getInstSizeInBytes(CondMI);
+  if (BytesAdded)
+    *BytesAdded += getInstSizeInBytes(CondMI);
   ++Count;
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
     auto &MI = *BuildMI(&MBB, DL, get(AVR::RJMPk)).addMBB(FBB);
-    if (BytesAdded) *BytesAdded += getInstSizeInBytes(MI);
+    if (BytesAdded)
+      *BytesAdded += getInstSizeInBytes(MI);
     ++Count;
   }
 
@@ -436,7 +438,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                     int *BytesRemoved) const {
-  if (BytesRemoved) *BytesRemoved = 0;
+  if (BytesRemoved)
+    *BytesRemoved = 0;
 
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
@@ -446,7 +449,7 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->isDebugInstr()) {
       continue;
     }
-    //:TODO: add here the missing jmp instructions once they are implemented
+    //: TODO: add here the missing jmp instructions once they are implemented
     // like jmp, {e}ijmp, and other cond branches, ...
     if (I->getOpcode() != AVR::RJMPk &&
         getCondFromBranchOpc(I->getOpcode()) == AVRCC::COND_INVALID) {
@@ -454,7 +457,8 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
     }
 
     // Remove the branch.
-    if (BytesRemoved) *BytesRemoved += getInstSizeInBytes(*I);
+    if (BytesRemoved)
+      *BytesRemoved += getInstSizeInBytes(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
@@ -490,7 +494,8 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction &MF = *MI.getParent()->getParent();
-    const AVRTargetMachine &TM = static_cast<const AVRTargetMachine&>(MF.getTarget());
+    const AVRTargetMachine &TM =
+        static_cast<const AVRTargetMachine &>(MF.getTarget());
     const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
 
@@ -560,15 +565,14 @@ unsigned AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                                             const DebugLoc &DL,
                                             int64_t BrOffset,
                                             RegScavenger *RS) const {
-    // This method inserts a *direct* branch (JMP), despite its name.
-    // LLVM calls this method to fixup unconditional branches; it never calls
-    // insertBranch or some hypothetical "insertDirectBranch".
-    // See lib/CodeGen/RegisterRelaxation.cpp for details.
-    // We end up here when a jump is too long for a RJMP instruction.
-    auto &MI = *BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  // This method inserts a *direct* branch (JMP), despite its name.
+  // LLVM calls this method to fixup unconditional branches; it never calls
+  // insertBranch or some hypothetical "insertDirectBranch".
+  // See lib/CodeGen/RegisterRelaxation.cpp for details.
+  // We end up here when a jump is too long for a RJMP instruction.
+  auto &MI = *BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
 
-    return getInstSizeInBytes(MI);
+  return getInstSizeInBytes(MI);
 }
 
 } // end of namespace llvm
-

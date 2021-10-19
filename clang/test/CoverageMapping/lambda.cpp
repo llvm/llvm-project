@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c++ -std=c++11 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s -main-file-name lambda.cpp | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -x c++ -std=c++11 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s -main-file-name lambda.cpp | FileCheck %s
 
 // CHECK-LABEL: _Z3fooi:
 void foo(int i) { // CHECK: File 0, [[@LINE]]:17 -> {{[0-9]+}}:2 = #0

@@ -20,6 +20,7 @@ group("unittests") {
     "ExecutionEngine/JITLink:JITLinkTests",
     "ExecutionEngine/MCJIT:MCJITTests",
     "ExecutionEngine/Orc:OrcJITTests",
+    "FileCheck:FileCheckTests",
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
     "IR:IRTests",
@@ -28,9 +29,11 @@ group("unittests") {
     "Linker:LinkerTests",
     "MC:MCTests",
     "MI:MITests",
+    "MIR:MIRTests",
     "Object:ObjectTests",
     "ObjectYAML:ObjectYAMLTests",
     "Option:OptionTests",
+    "Passes:PassesBindingsTests",
     "Passes:PluginsTests",
     "ProfileData:ProfileDataTests",
     "Remarks:RemarksTests",
@@ -45,6 +48,7 @@ group("unittests") {
     "XRay:XRayTests",
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
+    "tools/llvm-profgen:LLVMProfgenTests",
   ]
 
   # Target-dependent unit tests.
@@ -77,6 +81,9 @@ group("unittests") {
       "Target/PowerPC:PowerPCTests",
       "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests",
     ]
+  }
+  if (llvm_build_SystemZ) {
+    deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]
   }
   if (llvm_build_WebAssembly) {
     deps += [ "Target/WebAssembly:WebAssemblyTests" ]

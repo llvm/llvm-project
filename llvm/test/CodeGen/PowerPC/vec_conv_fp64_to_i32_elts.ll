@@ -13,12 +13,8 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    xscvdpuxws f1, v2
-; CHECK-P8-NEXT:    xscvdpuxws f0, f0
-; CHECK-P8-NEXT:    mffprwz r3, f1
-; CHECK-P8-NEXT:    mtvsrwz v2, r3
-; CHECK-P8-NEXT:    mffprwz r4, f0
-; CHECK-P8-NEXT:    mtvsrwz v3, r4
+; CHECK-P8-NEXT:    xscvdpuxws v2, v2
+; CHECK-P8-NEXT:    xscvdpuxws v3, f0
 ; CHECK-P8-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -26,27 +22,19 @@ define i64 @test2elt(<2 x double> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xscvdpuxws f0, v2
-; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    mtvsrws v3, r3
-; CHECK-P9-NEXT:    xscvdpuxws f0, f0
-; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    xscvdpuxws v3, v2
+; CHECK-P9-NEXT:    xscvdpuxws v2, f0
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xscvdpuxws f0, v2
-; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    mtvsrws v3, r3
-; CHECK-BE-NEXT:    xscvdpuxws f0, f0
-; CHECK-BE-NEXT:    mffprwz r3, f0
-; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-BE-NEXT:    xscvdpuxws v3, v2
+; CHECK-BE-NEXT:    xscvdpuxws v2, f0
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -97,7 +85,7 @@ entry:
   ret <4 x i32> %1
 }
 
-define void @test8elt(<8 x i32>* noalias nocapture sret %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test8elt(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
@@ -171,7 +159,7 @@ entry:
   ret void
 }
 
-define void @test16elt(<16 x i32>* noalias nocapture sret %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test16elt(<16 x i32>* noalias nocapture sret(<16 x i32>) %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
@@ -305,12 +293,8 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ; CHECK-P8-LABEL: test2elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    xscvdpsxws f1, v2
-; CHECK-P8-NEXT:    xscvdpsxws f0, f0
-; CHECK-P8-NEXT:    mffprwz r3, f1
-; CHECK-P8-NEXT:    mtvsrwz v2, r3
-; CHECK-P8-NEXT:    mffprwz r4, f0
-; CHECK-P8-NEXT:    mtvsrwz v3, r4
+; CHECK-P8-NEXT:    xscvdpsxws v2, v2
+; CHECK-P8-NEXT:    xscvdpsxws v3, f0
 ; CHECK-P8-NEXT:    vmrghw v2, v2, v3
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    mffprd r3, f0
@@ -318,27 +302,19 @@ define i64 @test2elt_signed(<2 x double> %a) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xscvdpsxws f0, v2
-; CHECK-P9-NEXT:    mffprwz r3, f0
 ; CHECK-P9-NEXT:    xxswapd vs0, v2
-; CHECK-P9-NEXT:    mtvsrws v3, r3
-; CHECK-P9-NEXT:    xscvdpsxws f0, f0
-; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    mtvsrws v2, r3
+; CHECK-P9-NEXT:    xscvdpsxws v3, v2
+; CHECK-P9-NEXT:    xscvdpsxws v2, f0
 ; CHECK-P9-NEXT:    vmrghw v2, v3, v2
 ; CHECK-P9-NEXT:    mfvsrld r3, v2
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt_signed:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    xscvdpsxws f0, v2
-; CHECK-BE-NEXT:    mffprwz r3, f0
 ; CHECK-BE-NEXT:    xxswapd vs0, v2
-; CHECK-BE-NEXT:    mtvsrws v3, r3
-; CHECK-BE-NEXT:    xscvdpsxws f0, f0
-; CHECK-BE-NEXT:    mffprwz r3, f0
-; CHECK-BE-NEXT:    mtvsrws v2, r3
-; CHECK-BE-NEXT:    vmrghw v2, v3, v2
+; CHECK-BE-NEXT:    xscvdpsxws v3, v2
+; CHECK-BE-NEXT:    xscvdpsxws v2, f0
+; CHECK-BE-NEXT:    vmrgow v2, v3, v2
 ; CHECK-BE-NEXT:    mfvsrd r3, v2
 ; CHECK-BE-NEXT:    blr
 entry:
@@ -389,7 +365,7 @@ entry:
   ret <4 x i32> %1
 }
 
-define void @test8elt_signed(<8 x i32>* noalias nocapture sret %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test8elt_signed(<8 x i32>* noalias nocapture sret(<8 x i32>) %agg.result, <8 x double>* nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32
@@ -463,7 +439,7 @@ entry:
   ret void
 }
 
-define void @test16elt_signed(<16 x i32>* noalias nocapture sret %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
+define void @test16elt_signed(<16 x i32>* noalias nocapture sret(<16 x i32>) %agg.result, <16 x double>* nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 32

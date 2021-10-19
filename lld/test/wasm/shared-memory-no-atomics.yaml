@@ -14,14 +14,15 @@ Sections:
         Field:           __linear_memory
         Kind:            MEMORY
         Memory:
-          Initial:         0x00000001
+          Minimum:         0x00000001
       - Module:          env
         Field:           __indirect_function_table
         Kind:            TABLE
         Table:
+          Index:           0
           ElemType:        FUNCREF
           Limits:
-            Initial:         0x00000000
+            Minimum:         0x00000000
   - Type:            DATA
     Segments:
       - SectionOffset:   6
@@ -54,7 +55,7 @@ Sections:
 
 # NO-SHARED:      - Type:            MEMORY
 # NO-SHARED-NEXT:   Memories:
-# NO-SHARED-NEXT:     - Initial:         0x00000002
+# NO-SHARED-NEXT:     - Minimum:         0x2
 # NO-SHARED-NOT:        Maximum:
 
 # SHARED: --shared-memory is disallowed by {{.*}}shared-memory-no-atomics.yaml.tmp1.o because it was not compiled with 'atomics' or 'bulk-memory' features.

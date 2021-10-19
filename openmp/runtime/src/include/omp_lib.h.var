@@ -52,6 +52,10 @@
       parameter(omp_depend_kind=int_ptr_kind())
       integer omp_event_handle_kind
       parameter(omp_event_handle_kind=int_ptr_kind())
+      integer omp_interop_kind
+      parameter(omp_interop_kind=int_ptr_kind())
+      integer omp_interop_fr_kind
+      parameter(omp_interop_fr_kind=omp_integer_kind)
 
       integer(kind=omp_integer_kind)openmp_version
       parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
@@ -131,8 +135,8 @@
       integer(omp_control_tool_result_kind)omp_control_tool_ignored
       parameter(omp_control_tool_ignored=1)
 
-      integer(kind=omp_alloctrait_key_kind)omp_atk_threadmodel
-      parameter(omp_atk_threadmodel=1)
+      integer(kind=omp_alloctrait_key_kind)omp_atk_sync_hint
+      parameter(omp_atk_sync_hint=1)
       integer(kind=omp_alloctrait_key_kind)omp_atk_alignment
       parameter(omp_atk_alignment=2)
       integer(kind=omp_alloctrait_key_kind)omp_atk_access
@@ -148,18 +152,20 @@
       integer(kind=omp_alloctrait_key_kind)omp_atk_partition
       parameter(omp_atk_partition=8)
 
+      integer(kind=omp_alloctrait_val_kind)omp_atv_default
+      parameter(omp_atv_default=-1)
       ! Reserved for future use
       integer(kind=omp_alloctrait_val_kind)omp_atv_false
       parameter(omp_atv_false=0)
       ! Reserved for future use
       integer(kind=omp_alloctrait_val_kind)omp_atv_true
       parameter(omp_atv_true=1)
-      integer(kind=omp_alloctrait_val_kind)omp_atv_default
-      parameter(omp_atv_default=2)
       integer(kind=omp_alloctrait_val_kind)omp_atv_contended
       parameter(omp_atv_contended=3)
       integer(kind=omp_alloctrait_val_kind)omp_atv_uncontended
       parameter(omp_atv_uncontended=4)
+      integer(kind=omp_alloctrait_val_kind)omp_atv_serialized
+      parameter(omp_atv_serialized=5)
       integer(kind=omp_alloctrait_val_kind)omp_atv_sequential
       parameter(omp_atv_sequential=5)
       integer(kind=omp_alloctrait_val_kind)omp_atv_private
@@ -212,6 +218,13 @@
       parameter(omp_pteam_mem_alloc=7)
       integer(kind=omp_allocator_handle_kind)omp_thread_mem_alloc
       parameter(omp_thread_mem_alloc=8)
+      ! Preview of target memory support
+      integer(omp_allocator_handle_kind)llvm_omp_target_host_mem_alloc
+      parameter(llvm_omp_target_host_mem_alloc=100)
+      integer(omp_allocator_handle_kind)llvm_omp_target_shared_mem_alloc
+      parameter(llvm_omp_target_shared_mem_alloc=101)
+      integer(omp_allocator_handle_kind)llvm_omp_target_device_mem_alloc
+      parameter(llvm_omp_target_device_mem_alloc=102)
 
       integer(kind=omp_memspace_handle_kind)omp_default_mem_space
       parameter(omp_default_mem_space=0)
@@ -223,6 +236,13 @@
       parameter(omp_high_bw_mem_space=3)
       integer(kind=omp_memspace_handle_kind)omp_low_lat_mem_space
       parameter(omp_low_lat_mem_space=4)
+      ! Preview of target memory support
+      integer(omp_memspace_handle_kind)llvm_omp_target_host_mem_space
+      parameter(llvm_omp_target_host_mem_space=100)
+      integer(omp_memspace_handle_kind)llvm_omp_target_shared_mem_space
+      parameter(llvm_omp_target_shared_mem_space=101)
+      integer(omp_memspace_handle_kind)llvm_omp_target_device_mem_space
+      parameter(llvm_omp_target_device_mem_space=102)
 
       integer(kind=omp_pause_resource_kind)omp_pause_resume
       parameter(omp_pause_resume=0)
@@ -230,6 +250,24 @@
       parameter(omp_pause_soft=1)
       integer(kind=omp_pause_resource_kind)omp_pause_hard
       parameter(omp_pause_hard=2)
+
+      integer(kind=omp_interop_fr_kind)omp_ifr_cuda
+      parameter(omp_ifr_cuda=1)
+      integer(kind=omp_interop_fr_kind)omp_ifr_cuda_driver
+      parameter(omp_ifr_cuda_driver=2)
+      integer(kind=omp_interop_fr_kind)omp_ifr_opencl
+      parameter(omp_ifr_opencl=3)
+      integer(kind=omp_interop_fr_kind)omp_ifr_sycl
+      parameter(omp_ifr_sycl=4)
+      integer(kind=omp_interop_fr_kind)omp_ifr_hip
+      parameter(omp_ifr_hip=5)
+      integer(kind=omp_interop_fr_kind)omp_ifr_level_zero
+      parameter(omp_ifr_level_zero=6)
+      integer(kind=omp_interop_fr_kind)omp_ifr_last
+      parameter(omp_ifr_last=7)
+
+      integer(kind=omp_interop_kind)omp_interop_none
+      parameter(omp_interop_none=0)
 
       interface
 
@@ -441,7 +479,7 @@
 
         function omp_get_supported_active_levels() bind(c)
           import
-          integer (kind=omp_integer_kind) omp_get_supported_active_levels
+          integer(kind=omp_integer_kind)omp_get_supported_active_levels
         end function omp_get_supported_active_levels
 
         subroutine omp_fulfill_event(event) bind(c)
@@ -580,10 +618,181 @@
           integer (kind=kmp_size_t_kind) :: omp_capture_affinity
         end function omp_capture_affinity
 
+        subroutine omp_set_num_teams(num_teams) bind(c)
+          import
+          integer (kind=omp_integer_kind), value :: num_teams
+        end subroutine omp_set_num_teams
+
+        function omp_get_max_teams() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_max_teams
+        end function omp_get_max_teams
+
+        subroutine omp_set_teams_thread_limit(thread_limit) bind(c)
+          import
+          integer (kind=omp_integer_kind), value :: thread_limit
+        end subroutine omp_set_teams_thread_limit
+
+        function omp_get_teams_thread_limit() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_teams_thread_limit
+        end function omp_get_teams_thread_limit
+
         subroutine omp_display_env(verbose) bind(c)
           import
           logical (kind=omp_logical_kind), value :: verbose
         end subroutine omp_display_env
+
+        function omp_target_alloc(size, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+          type(c_ptr) omp_target_alloc
+          integer(c_size_t), value :: size
+          integer(c_int), value :: device_num
+        end function omp_target_alloc
+
+        subroutine omp_target_free(device_ptr, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+          type(c_ptr), value :: device_ptr
+          integer(c_int), value :: device_num
+        end subroutine omp_target_free
+
+        function omp_target_is_present(ptr, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+          integer(c_int) omp_target_is_present
+          type(c_ptr), value :: ptr
+          integer(c_int), value :: device_num
+        end function omp_target_is_present
+
+        function omp_target_memcpy(dst, src, length, dst_offset,                                                                    &
+     &      src_offset, dst_device_num, src_device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+          integer(c_int) omp_target_memcpy
+          type(c_ptr), value :: dst, src
+          integer(c_size_t), value :: length, dst_offset, src_offset
+          integer(c_int), value :: dst_device_num, src_device_num
+        end function omp_target_memcpy
+
+        function omp_target_memcpy_rect(dst, src, element_size,                                                                     &
+     &      num_dims, volume, dst_offsets, src_offsets, dst_dimensions,                                                             &
+     &      src_dimensions, dst_device_num, src_device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+          integer(c_int) omp_target_memcpy_rect
+          type(c_ptr), value :: dst, src
+          integer(c_size_t), value :: element_size
+          integer(c_int), value :: num_dims, dst_device_num,                                                                        &
+     &        src_device_num
+          integer(c_size_t), intent(in) :: volume(*), dst_offsets(*),                                                               &
+     &        src_offsets(*), dst_dimensions(*), src_dimensions(*)
+        end function omp_target_memcpy_rect
+
+        function omp_target_memcpy_async(dst, src, length, dst_offset,                                                              &
+     &      src_offset, dst_device_num, src_device_num, depobj_count,                                                               &
+     &      depobj_list) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+          import
+          integer(c_int) omp_target_memcpy_async
+          type(c_ptr), value :: dst, src
+          integer(c_size_t), value :: length, dst_offset, src_offset
+          integer(c_int), value :: dst_device_num, src_device_num,                                                                  &
+     &        depobj_count
+          integer(omp_depend_kind), optional :: depobj_list(*)
+        end function omp_target_memcpy_async
+
+        function omp_target_memcpy_rect_async(dst, src, element_size,                                                               &
+     &      num_dims, volume, dst_offsets, src_offsets, dst_dimensions,                                                             &
+     &      src_dimensions, dst_device_num, src_device_num,                                                                         &
+     &      depobj_count, depobj_list) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+          import
+          integer(c_int) omp_target_memcpy_rect_async
+          type(c_ptr), value :: dst, src
+          integer(c_size_t), value :: element_size
+          integer(c_int), value :: num_dims, dst_device_num,                                                                        &
+     &        src_device_num, depobj_count
+          integer(c_size_t), intent(in) :: volume(*), dst_offsets(*),                                                               &
+     &        src_offsets(*), dst_dimensions(*), src_dimensions(*)
+          integer(omp_depend_kind), optional :: depobj_list(*)
+        end function omp_target_memcpy_rect_async
+
+        function omp_target_associate_ptr(host_ptr, device_ptr, size,                                                               &
+     &      device_offset, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+          integer(c_int) omp_target_associate_ptr
+          type(c_ptr), value :: host_ptr, device_ptr
+          integer(c_size_t), value :: size, device_offset
+          integer(c_int), value :: device_num
+        end function omp_target_associate_ptr
+
+        function omp_get_mapped_ptr(ptr, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+          type(c_ptr) omp_get_mapped_ptr
+          type(c_ptr), value :: ptr
+          integer(c_int), value :: device_num
+        end function omp_get_mapped_ptr
+
+        function omp_target_disassociate_ptr(ptr, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+          integer(c_int) omp_target_disassociate_ptr
+          type(c_ptr), value :: ptr
+          integer(c_int), value :: device_num
+        end function omp_target_disassociate_ptr
+
+        function omp_target_is_accessible(ptr, size, device_num) bind(c)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+          integer(c_int) omp_target_is_accessible
+          type(c_ptr), value :: ptr
+          integer(c_size_t), value :: size
+          integer(c_int), value :: device_num
+        end function omp_target_is_accessible
+
+        function omp_alloc(size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_alloc
+          integer(c_size_t), value :: size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_alloc
+
+        function omp_aligned_alloc(alignment, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_aligned_alloc
+          integer(c_size_t), value :: alignment, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_aligned_alloc
+
+        function omp_calloc(nmemb, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_calloc
+          integer(c_size_t), value :: nmemb, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_calloc
+
+        function omp_aligned_calloc(alignment, nmemb, size, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_aligned_calloc
+          integer(c_size_t), value :: alignment, nmemb, size
+          integer(omp_allocator_handle_kind), value :: allocator
+        end function omp_aligned_calloc
+
+        function omp_realloc(ptr, size, allocator, free_allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          type(c_ptr) omp_realloc
+          type(c_ptr), value :: ptr
+          integer(c_size_t), value :: size
+          integer(omp_allocator_handle_kind), value :: allocator
+          integer(omp_allocator_handle_kind), value :: free_allocator
+        end function omp_realloc
+
+        subroutine omp_free(ptr, allocator) bind(c)
+          use omp_lib_kinds
+          use, intrinsic :: iso_c_binding, only : c_ptr
+          type(c_ptr), value :: ptr
+          integer(omp_allocator_handle_kind), value :: allocator
+        end subroutine omp_free
 
 !       ***
 !       *** kmp_* entry points

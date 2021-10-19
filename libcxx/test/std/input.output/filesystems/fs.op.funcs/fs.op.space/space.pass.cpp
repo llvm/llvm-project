@@ -14,7 +14,6 @@
 // space_info space(const path& p, error_code& ec) noexcept;
 
 #include "filesystem_include.h"
-#include <sys/statvfs.h>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
@@ -49,7 +48,7 @@ TEST_CASE(test_error_reporting)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            space(f);
+            (void)space(f);
             return false;
         } catch (filesystem_error const& err) {
             return err.path1() == f
@@ -85,23 +84,12 @@ TEST_CASE(basic_space_test)
     // All the test cases should reside on the same filesystem and therefore
     // should have the same expected result. Compute this expected result
     // one and check that it looks semi-sane.
-    struct statvfs expect;
-    TEST_REQUIRE(::statvfs(static_env.Dir.c_str(), &expect) != -1);
-    TEST_CHECK(expect.f_bavail > 0);
-    TEST_CHECK(expect.f_bfree > 0);
-    TEST_CHECK(expect.f_bsize > 0);
-    TEST_CHECK(expect.f_blocks > 0);
-    TEST_REQUIRE(expect.f_frsize > 0);
-    auto do_mult = [&](std::uintmax_t val) {
-        std::uintmax_t fsize = expect.f_frsize;
-        std::uintmax_t new_val = val * fsize;
-        TEST_CHECK(new_val / fsize == val); // Test for overflow
-        return new_val;
-    };
     const std::uintmax_t bad_value = static_cast<std::uintmax_t>(-1);
-    const std::uintmax_t expect_capacity = do_mult(expect.f_blocks);
-    const std::uintmax_t expect_free = do_mult(expect.f_bfree);
-    const std::uintmax_t expect_avail = do_mult(expect.f_bavail);
+    std::uintmax_t expect_capacity;
+    std::uintmax_t expect_free;
+    std::uintmax_t expect_avail;
+    TEST_REQUIRE(utils::space(static_env.Dir.string(), expect_capacity,
+                              expect_free, expect_avail));
 
     // Other processes running on the operating system may have changed
     // the amount of space available. Check that these are within tolerances.

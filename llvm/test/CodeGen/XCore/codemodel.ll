@@ -28,8 +28,8 @@
 ; LARGE: [[JUMP]]
 ; LARGE: ldw r0, r11[0]
 ; LARGE: retsp 0
-@A1 = external global [50000 x i32]
-@A2 = external global [50000 x i32]
+@A1 = external dso_local global [50000 x i32]
+@A2 = external dso_local global [50000 x i32]
 define [50000 x i32]* @test(i1 %bool) nounwind {
 entry:
   %Addr = select i1 %bool, [50000 x i32]* @A1, [50000 x i32]* @A2
@@ -95,7 +95,7 @@ entry:
 ; LARGE: ldw r1, dp[s+36]
 ; LARGE: add r0, r0, r1
 ; LARGE: retsp 0
-define i32 @f(i32* %i) {
+define dso_local i32 @f(i32* %i) {
 entry:
   %0 = getelementptr inbounds i32, i32* %i, i32 16383
   %1 = load i32, i32* %0
@@ -130,8 +130,8 @@ entry:
 ; LARGE: ldw r0, cp[.LCPI{{[0-9_]*}}]
 ; LARGE-NEXT: ldw r0, r0[0]
 ; LARGE-NEXT: retsp 0
-@NoSize = external global [0 x i32]
-define i32 @UnknownSize() nounwind {
+@NoSize = external dso_local global [0 x i32]
+define dso_local i32 @UnknownSize() nounwind {
 entry:
   %0 = load i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @NoSize, i32 0, i32 10)
   ret i32 %0
@@ -150,7 +150,7 @@ entry:
 ; LARGE: ldw r0, cp[.LCPI{{[0-9_]*}}]
 ; LARGE-NEXT: retsp 0
 %Struct = type opaque
-@Unknown = external global %Struct
+@Unknown = external dso_local global %Struct
 define %Struct* @UnknownStruct() nounwind {
 entry:
   ret %Struct* @Unknown
@@ -163,14 +163,14 @@ entry:
 ; LARGE: .section  .dp.bss.large,"awd",@nobits
 ; LARGE-LABEL: l:
 ; LARGE: .space  400
-@l = global [100 x i32] zeroinitializer
+@l = dso_local global [100 x i32] zeroinitializer
 
 ; CHECK-LABEL: s:
 ; CHECK: .space 40
 ; LARGE: .section  .dp.bss,"awd",@nobits
 ; LARGE-LABEL: s:
 ; LARGE: .space  40
-@s = global [10 x i32] zeroinitializer
+@s = dso_local global [10 x i32] zeroinitializer
 
 ; CHECK: .section .dp.rodata,"awd",@progbits
 ; CHECK-LABEL: cl:
@@ -178,14 +178,14 @@ entry:
 ; LARGE: .section .dp.rodata.large,"awd",@progbits
 ; LARGE-LABEL: cl:
 ; LARGE: .space 400
-@cl = constant  [100 x i32] zeroinitializer
+@cl = dso_local constant  [100 x i32] zeroinitializer
 
 ; CHECK-LABEL: cs:
 ; CHECK: .space 40
 ; LARGE: .section .dp.rodata,"awd",@progbits
 ; LARGE-LABEL: cs:
 ; LARGE: .space 40
-@cs = constant  [10 x i32] zeroinitializer
+@cs = dso_local constant  [10 x i32] zeroinitializer
 
 ; CHECK: .section .cp.rodata,"ac",@progbits
 ; CHECK-LABEL: icl:
@@ -205,10 +205,10 @@ entry:
 ; CHECK: .section  .cp.namedsection,"ac",@progbits
 ; CHECK-LABEL: cpsec:
 ; CHECK: .long 0
-@cpsec = constant i32 0, section ".cp.namedsection"
+@cpsec = dso_local constant i32 0, section ".cp.namedsection"
 
 ; CHECK: .section  .dp.namedsection,"awd",@progbits
 ; CHECK-LABEL: dpsec:
 ; CHECK: .long 0
-@dpsec = global i32 0, section ".dp.namedsection"
+@dpsec = dso_local global i32 0, section ".dp.namedsection"
 

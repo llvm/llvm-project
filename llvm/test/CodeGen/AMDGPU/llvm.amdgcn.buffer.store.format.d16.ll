@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,UNPACKED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX81 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED,GFX9 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,UNPACKED %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,PACKED %s
 
 ; GCN-LABEL: {{^}}buffer_store_format_d16_x:
 ; GCN: s_load_dword s[[LO:[0-9]+]]
@@ -25,6 +25,12 @@ main_body:
 define amdgpu_kernel void @buffer_store_format_d16_xy(<4 x i32> %rsrc, <2 x half> %data, i32 %index) {
 main_body:
   call void @llvm.amdgcn.buffer.store.format.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 %index, i32 0, i1 0, i1 0)
+  ret void
+}
+
+define amdgpu_kernel void @buffer_store_format_d16_xyz(<4 x i32> %rsrc, <3 x half> %data, i32 %index) {
+main_body:
+  call void @llvm.amdgcn.buffer.store.format.v3f16(<3 x half> %data, <4 x i32> %rsrc, i32 %index, i32 0, i1 0, i1 0)
   ret void
 }
 
@@ -54,4 +60,5 @@ main_body:
 
 declare void @llvm.amdgcn.buffer.store.format.f16(half, <4 x i32>, i32, i32, i1, i1)
 declare void @llvm.amdgcn.buffer.store.format.v2f16(<2 x half>, <4 x i32>, i32, i32, i1, i1)
+declare void @llvm.amdgcn.buffer.store.format.v3f16(<3 x half>, <4 x i32>, i32, i32, i1, i1)
 declare void @llvm.amdgcn.buffer.store.format.v4f16(<4 x half>, <4 x i32>, i32, i32, i1, i1)

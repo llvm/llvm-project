@@ -1,5 +1,5 @@
-static_library("MachO") {
-  output_name = "lldMachO"
+static_library("MachOOld") {
+  output_name = "lldMachOOld"
   configs += [ "//llvm/utils/gn/build:lld_code" ]
   deps = [
     "//lld/lib/Core",

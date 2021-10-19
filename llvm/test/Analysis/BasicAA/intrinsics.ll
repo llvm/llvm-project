@@ -22,6 +22,6 @@ entry:
 declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>) nounwind readonly
 declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>) nounwind
 
-; CHECK: attributes #0 = { argmemonly nounwind readonly willreturn }
-; CHECK: attributes #1 = { argmemonly nounwind willreturn }
+; CHECK: attributes #0 = { argmemonly nofree nosync nounwind readonly willreturn }
+; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; CHECK: attributes [[ATTR]] = { nounwind }

@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-SAFE,GCN,SI %s
-; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-NONAN,GCN,SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI-SAFE,GCN %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-SAFE,GCN,VI %s
-; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-NONAN,GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI-SAFE,GCN %s
+; RUN: llc -enable-no-nans-fp-math -enable-no-signed-zeros-fp-math -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}min_fneg_select_regression_0:
 ; GCN-NOT: v_mul

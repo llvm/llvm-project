@@ -7,7 +7,6 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
 ; GCN-NEXT:    s_load_dword s1, s[4:5], 0x24
-; GCN-NEXT:    ; implicit-def: $vcc_hi
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
@@ -16,6 +15,7 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_endpgm
 entry:
   %cond = icmp eq i32 %arg0, 0

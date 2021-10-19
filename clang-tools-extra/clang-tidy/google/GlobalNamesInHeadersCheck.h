@@ -27,6 +27,9 @@ namespace readability {
 ///
 ///     For extension-less header files, using an empty string or leaving an
 ///     empty string between ";" if there are other filename extensions.
+///
+/// For the user-facing documentation see:
+/// http://clang.llvm.org/extra/clang-tidy/checks/google-global-names-in-headers.html
 class GlobalNamesInHeadersCheck : public ClangTidyCheck {
 public:
   GlobalNamesInHeadersCheck(StringRef Name, ClangTidyContext *Context);

@@ -16,7 +16,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK:   [[LOAD:%[0-9]+]]:sreg_64(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load 8 from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
+  ; CHECK:   [[LOAD:%[0-9]+]]:sreg_64(p0) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p0) from %ir.fptr.kernarg.offset.cast, align 16, addrspace 4)
   ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; CHECK:   [[COPY11:%[0-9]+]]:_(p4) = COPY [[COPY7]]
@@ -50,5 +50,24 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr(void()* %fptr) {
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK:   S_ENDPGM 0
   call void %fptr()
+  ret void
+}
+
+define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(void()* %fptr) {
+  ; CHECK-LABEL: name: test_gfx_indirect_call_sgpr_ptr
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[MV:%[0-9]+]]:sreg_64(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $scc
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
+  ; CHECK:   $sgpr30_sgpr31 = SI_CALL [[MV]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
+  ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
+  ; CHECK:   S_SETPC_B64_return [[COPY4]]
+  call amdgpu_gfx void %fptr()
   ret void
 }

@@ -44,9 +44,9 @@ public:
                                         ModuleSpecList &specs);
 
   // PluginInterface protocol
-  ConstString GetPluginName() override { return GetPluginNameStatic(); }
-
-  uint32_t GetPluginVersion() override { return 1; }
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   // LLVM RTTI support
   static char ID;

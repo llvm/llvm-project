@@ -17,7 +17,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> %vec.ind, <2 x i32>* [[TMP6]], align 4
-; CHECK:         %index.next = add i64 %index, 2
+; CHECK:         %index.next = add nuw i64 %index, 2
 ; CHECK-NEXT:    %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 define void @multi_int_induction(i32* %A, i32 %N) {
@@ -406,7 +406,7 @@ for.end:
 ; CHECK:   %[[i1:.+]] = add i64 %index, 1
 ; CHECK:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i0]], i32 1
 ; CHECK:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
-; CHECK:   %index.next = add i64 %index, 2
+; CHECK:   %index.next = add nuw i64 %index, 2
 ; CHECK:   %vec.ind.next = add <2 x i64> %vec.ind, <i64 2, i64 2>
 ; CHECK:   %vec.ind.next2 = add <2 x i32> %vec.ind1, <i32 2, i32 2>
 ;
@@ -417,7 +417,7 @@ for.end:
 ; IND:   %[[i1:.+]] = or i64 %index, 1
 ; IND:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %index, i32 1
 ; IND:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
-; IND:   %index.next = add i64 %index, 2
+; IND:   %index.next = add nuw i64 %index, 2
 ; IND:   %vec.ind.next2 = add <2 x i32> %vec.ind1, <i32 2, i32 2>
 ;
 ; UNROLL-LABEL: @iv_vector_and_scalar_users(
@@ -427,12 +427,12 @@ for.end:
 ; UNROLL:   %[[i1:.+]] = or i64 %index, 1
 ; UNROLL:   %[[i2:.+]] = or i64 %index, 2
 ; UNROLL:   %[[i3:.+]] = or i64 %index, 3
-; UNROLL:   %[[add:.+]]= add <2 x i32> %[[splat:.+]], <i32 2, i32 undef>
+; UNROLL:   %[[add:.+]]= add <2 x i32> %[[splat:.+]], <i32 2, i32 poison>
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %index, i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i2]], i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i3]], i32 1
-; UNROLL:   %index.next = add i64 %index, 4
+; UNROLL:   %index.next = add nuw i64 %index, 4
 ; UNROLL:   %vec.ind.next5 = add <2 x i32> %vec.ind2, <i32 4, i32 4>
 
 %pair.i16 = type { i16, i16 }
@@ -504,7 +504,7 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; CHECK:  br i1 true, label %scalar.ph, label %vector.ph
 
 ; CHECK: middle.block:
-; CHECK:  %[[v9:.+]] = extractelement <2 x i32> %bin.rdx, i32 0
+; CHECK:  %[[v9:.+]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32>
 ; CHECK: scalar.ph:
 ; CHECK:  %bc.resume.val = phi i32 [ 0, %middle.block ], [ 0, %[[v0:.+]] ]
 ; CHECK:  %bc.merge.rdx = phi i32 [ 1, %[[v0:.+]] ], [ %[[v9]], %middle.block ]
@@ -646,7 +646,7 @@ entry:
 ; IND: vector.body:
 ; IND: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; IND: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
-; IND: %index.next = add i32 %index, 2
+; IND: %index.next = add nuw i32 %index, 2
 ; IND: %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
 ; IND: %[[CMP:.*]] = icmp eq i32 %index.next
 ; IND: br i1 %[[CMP]]
@@ -655,7 +655,7 @@ entry:
 ; UNROLL: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; UNROLL: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; UNROLL: %step.add = add <2 x i32> %vec.ind, <i32 2, i32 2>
-; UNROLL: %index.next = add i32 %index, 4
+; UNROLL: %index.next = add nuw i32 %index, 4
 ; UNROLL: %vec.ind.next = add <2 x i32> %vec.ind, <i32 4, i32 4>
 ; UNROLL: %[[CMP:.*]] = icmp eq i32 %index.next
 ; UNROLL: br i1 %[[CMP]]
@@ -679,7 +679,7 @@ exit:
 ; IND: vector.body:
 ; IND: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; IND: %[[VECIND:.*]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %[[STEPADD:.*]], %vector.body ]
-; IND: %index.next = add i64 %index, 2
+; IND: %index.next = add nuw i64 %index, 2
 ; IND: %[[STEPADD]] = add <2 x i32> %[[VECIND]], <i32 2, i32 2>
 ; IND: %[[CMP:.*]] = icmp eq i64 %index.next
 ; IND: br i1 %[[CMP]]
@@ -702,8 +702,8 @@ exit:
 
 ; CHECK-LABEL: @nonprimary(
 ; CHECK: vector.ph:
-; CHECK:   %[[INSERT:.*]] = insertelement <2 x i32> undef, i32 %i, i32 0
-; CHECK:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK:   %[[INSERT:.*]] = insertelement <2 x i32> poison, i32 %i, i32 0
+; CHECK:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK:   %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 1>
 ; CHECK: vector.body:
 ; CHECK:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -714,15 +714,15 @@ exit:
 ; CHECK:   %[[G3:.*]] = getelementptr inbounds i32, i32* %[[G1]], i32 0
 ; CHECK:   %[[B1:.*]] = bitcast i32* %[[G3]] to <2 x i32>*
 ; CHECK:   store <2 x i32> %vec.ind, <2 x i32>* %[[B1]]
-; CHECK:   %index.next = add i32 %index, 2
+; CHECK:   %index.next = add nuw i32 %index, 2
 ; CHECK:   %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
 ; CHECK:   %[[CMP:.*]] = icmp eq i32 %index.next, %n.vec
 ; CHECK:   br i1 %[[CMP]]
 ;
 ; IND-LABEL: @nonprimary(
 ; IND: vector.ph:
-; IND:   %[[INSERT:.*]] = insertelement <2 x i32> undef, i32 %i, i32 0
-; IND:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; IND:   %[[INSERT:.*]] = insertelement <2 x i32> poison, i32 %i, i32 0
+; IND:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; IND:   %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 1>
 ; IND: vector.body:
 ; IND:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -732,15 +732,15 @@ exit:
 ; IND:   %[[G1:.*]] = getelementptr inbounds i32, i32* %a, i64 %[[S1]]
 ; IND:   %[[B1:.*]] = bitcast i32* %[[G1]] to <2 x i32>*
 ; IND:   store <2 x i32> %vec.ind, <2 x i32>* %[[B1]]
-; IND:   %index.next = add i32 %index, 2
+; IND:   %index.next = add nuw i32 %index, 2
 ; IND:   %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
 ; IND:   %[[CMP:.*]] = icmp eq i32 %index.next, %n.vec
 ; IND:   br i1 %[[CMP]]
 ;
 ; UNROLL-LABEL: @nonprimary(
 ; UNROLL: vector.ph:
-; UNROLL:   %[[INSERT:.*]] = insertelement <2 x i32> undef, i32 %i, i32 0
-; UNROLL:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; UNROLL:   %[[INSERT:.*]] = insertelement <2 x i32> poison, i32 %i, i32 0
+; UNROLL:   %[[SPLAT:.*]] = shufflevector <2 x i32> %[[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL:   %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 1>
 ; UNROLL: vector.body:
 ; UNROLL:   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -754,7 +754,7 @@ exit:
 ; UNROLL:   %[[G2:.*]] = getelementptr inbounds i32, i32* %[[G1]], i64 2
 ; UNROLL:   %[[B2:.*]] = bitcast i32* %[[G2]] to <2 x i32>*
 ; UNROLL:   store <2 x i32> %step.add, <2 x i32>* %[[B2]]
-; UNROLL:   %index.next = add i32 %index, 4
+; UNROLL:   %index.next = add nuw i32 %index, 4
 ; UNROLL:   %vec.ind.next = add <2 x i32> %vec.ind, <i32 4, i32 4>
 ; UNROLL:   %[[CMP:.*]] = icmp eq i32 %index.next, %n.vec
 ; UNROLL:   br i1 %[[CMP]]
@@ -783,7 +783,7 @@ exit:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> [[VEC_IND]], <2 x i32>* [[TMP6]], align 4
-; CHECK-NEXT:    %index.next = add i64 %index, 2
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 2
 ; CHECK:         [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 4, i32 4>
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 define void @non_primary_iv_trunc(i32* %a, i64 %n) {
@@ -860,10 +860,10 @@ define i64 @trunc_with_first_order_recurrence() {
 ; CHECK-NEXT:    %vec.phi = phi <2 x i64>
 ; CHECK-NEXT:    %vec.ind = phi <2 x i64> [ <i64 1, i64 2>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; CHECK-NEXT:    %vec.ind2 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next3, %vector.body ]
-; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 undef, i32 42>, %vector.ph ], [ %vec.ind5, %vector.body ]
-; CHECK-NEXT:    %vec.ind5 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next6, %vector.body ]
-; CHECK-NEXT:    %vec.ind7 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next8, %vector.body ]
-; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind5, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    %vector.recur = phi <2 x i32> [ <i32 poison, i32 42>, %vector.ph ], [ %vec.ind4, %vector.body ]
+; CHECK-NEXT:    %vec.ind4 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next5, %vector.body ]
+; CHECK-NEXT:    %vec.ind6 = phi <2 x i32> [ <i32 1, i32 2>, %vector.ph ], [ %vec.ind.next7, %vector.body ]
+; CHECK-NEXT:    shufflevector <2 x i32> %vector.recur, <2 x i32> %vec.ind4, <2 x i32> <i32 1, i32 2>
 entry:
   br label %loop
 

@@ -67,10 +67,13 @@ public:
   void VisitCXXDeleteExpr(CXXDeleteExpr *E) {
     if (E->getOperatorDelete())
       asImpl().visitUsedDecl(E->getBeginLoc(), E->getOperatorDelete());
-    QualType Destroyed = S.Context.getBaseElementType(E->getDestroyedType());
-    if (const RecordType *DestroyedRec = Destroyed->getAs<RecordType>()) {
-      CXXRecordDecl *Record = cast<CXXRecordDecl>(DestroyedRec->getDecl());
-      asImpl().visitUsedDecl(E->getBeginLoc(), S.LookupDestructor(Record));
+    QualType DestroyedOrNull = E->getDestroyedType();
+    if (!DestroyedOrNull.isNull()) {
+      QualType Destroyed = S.Context.getBaseElementType(DestroyedOrNull);
+      if (const RecordType *DestroyedRec = Destroyed->getAs<RecordType>()) {
+        CXXRecordDecl *Record = cast<CXXRecordDecl>(DestroyedRec->getDecl());
+        asImpl().visitUsedDecl(E->getBeginLoc(), S.LookupDestructor(Record));
+      }
     }
 
     Inherited::VisitCXXDeleteExpr(E);

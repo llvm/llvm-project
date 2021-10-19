@@ -1561,7 +1561,7 @@ void Util::addExportInfo(const lld::File &atomFile, NormalizedFile &nFile) {
 uint32_t Util::fileFlags() {
   // FIXME: these need to determined at runtime.
   if (_ctx.outputMachOType() == MH_OBJECT) {
-    return _subsectionsViaSymbols ? MH_SUBSECTIONS_VIA_SYMBOLS : 0;
+    return _subsectionsViaSymbols ? (uint32_t)MH_SUBSECTIONS_VIA_SYMBOLS : 0;
   } else {
     uint32_t flags = MH_DYLDLINK;
     if (!_ctx.useFlatNamespace())

@@ -28,22 +28,14 @@ void CanonicalIncludes::addMapping(llvm::StringRef Path,
 /// Used to minimize the number of lookups in suffix path mappings.
 constexpr int MaxSuffixComponents = 3;
 
-llvm::StringRef
-CanonicalIncludes::mapHeader(llvm::StringRef Header,
-                             llvm::StringRef QualifiedName) const {
+llvm::StringRef CanonicalIncludes::mapHeader(llvm::StringRef Header) const {
   assert(!Header.empty());
-  if (StdSymbolMapping) {
-    auto SE = StdSymbolMapping->find(QualifiedName);
-    if (SE != StdSymbolMapping->end())
-      return SE->second;
-  }
-
   auto MapIt = FullPathMapping.find(Header);
   if (MapIt != FullPathMapping.end())
     return MapIt->second;
 
   if (!StdSuffixHeaderMapping)
-    return Header;
+    return "";
 
   int Components = 1;
 
@@ -56,7 +48,11 @@ CanonicalIncludes::mapHeader(llvm::StringRef Header,
     if (MappingIt != StdSuffixHeaderMapping->end())
       return MappingIt->second;
   }
-  return Header;
+  return "";
+}
+
+llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef QName) const {
+  return StdSymbolMapping ? StdSymbolMapping->lookup(QName) : "";
 }
 
 std::unique_ptr<CommentHandler>
@@ -90,6 +86,10 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
     static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
 #include "StdSymbolMap.inc"
+        // There are two std::move()s, this is by far the most common.
+        SYMBOL(move, std::, <utility>)
+        // There are multiple headers for size_t, pick one.
+        SYMBOL(size_t, std::, <cstddef>)
 #undef SYMBOL
     });
     StdSymbolMapping = Symbols;
@@ -97,6 +97,8 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
     static const auto *CSymbols = new llvm::StringMap<llvm::StringRef>({
 #define SYMBOL(Name, NameSpace, Header) {#Name, #Header},
 #include "CSymbolMap.inc"
+        // There are multiple headers for size_t, pick one.
+        SYMBOL(size_t, None, <stddef.h>)
 #undef SYMBOL
     });
     StdSymbolMapping = CSymbols;
@@ -418,6 +420,8 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
       {"bits/signum.h", "<csignal>"},
       {"bits/sigset.h", "<csignal>"},
       {"bits/sigstack.h", "<csignal>"},
+      {"bits/stdint-intn.h", "<cstdint>"},
+      {"bits/stdint-uintn.h", "<cstdint>"},
       {"bits/stdio_lim.h", "<cstdio>"},
       {"bits/sys_errlist.h", "<cstdio>"},
       {"bits/time.h", "<ctime>"},
@@ -772,7 +776,10 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
                   MaxSuffixComponents;
          }) != SystemHeaderMap->keys().end());
 
-  StdSuffixHeaderMapping = SystemHeaderMap;
+  // FIXME: Suffix mapping contains invalid entries for C, so only enable it for
+  // CPP.
+  if (Language.CPlusPlus)
+    StdSuffixHeaderMapping = SystemHeaderMap;
 }
 
 } // namespace clangd

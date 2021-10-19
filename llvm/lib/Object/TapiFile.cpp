@@ -14,16 +14,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TextAPI/Symbol.h"
 
 using namespace llvm;
 using namespace MachO;
 using namespace object;
-
-static constexpr StringLiteral ObjC1ClassNamePrefix = ".objc_class_name_";
-static constexpr StringLiteral ObjC2ClassNamePrefix = "_OBJC_CLASS_$_";
-static constexpr StringLiteral ObjC2MetaClassNamePrefix = "_OBJC_METACLASS_$_";
-static constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
-static constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
 static uint32_t getFlags(const Symbol *Sym) {
   uint32_t Flags = BasicSymbolRef::SF_Global;

@@ -24,9 +24,21 @@ llvm::cl::list<std::string>
 bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   OS << "#include \"TypeTraits.h\"\n";
   llvm_libc::APIIndexer G(records);
-  for (const auto &header : G.PublicHeaders)
+  std::unordered_set<std::string> headerFileSet;
+  for (const auto &entrypoint : EntrypointNamesOption) {
+    auto match = G.FunctionToHeaderMap.find(entrypoint);
+    if (match == G.FunctionToHeaderMap.end()) {
+      llvm::errs() << "ERROR: entrypoint '" << entrypoint
+                   << "' could not be found in spec in any public header\n";
+      return true;
+    }
+    headerFileSet.insert(match->second);
+  }
+  for (const auto &header : headerFileSet)
     OS << "#include <" << header << ">\n";
+
   OS << '\n';
+
   OS << "int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
     auto match = G.FunctionSpecMap.find(entrypoint);

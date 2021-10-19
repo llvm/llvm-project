@@ -27,9 +27,9 @@
 #include <cstring>
 #include <memory>
 
-#include <errno.h>
-#include <inttypes.h>
-#include <stdio.h>
+#include <cerrno>
+#include <cinttypes>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -176,8 +176,8 @@ size_t Communication::Write(const void *src, size_t src_len,
 
   std::lock_guard<std::mutex> guard(m_write_mutex);
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "{0} Communication::Write (src = {1}, src_len = %" PRIu64
-           ") connection = {2}",
+           "{0} Communication::Write (src = {1}, src_len = {2}"
+           ") connection = {3}",
            this, src, (uint64_t)src_len, connection_sp.get());
 
   if (connection_sp)

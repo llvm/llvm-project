@@ -34,6 +34,8 @@ isl_size isl_basic_set_dim(__isl_keep isl_basic_set *bset,
 
 isl_size isl_set_n_dim(__isl_keep isl_set *set);
 isl_size isl_set_n_param(__isl_keep isl_set *set);
+__isl_export
+isl_size isl_set_tuple_dim(__isl_keep isl_set *set);
 isl_size isl_set_dim(__isl_keep isl_set *set, enum isl_dim_type type);
 
 isl_ctx *isl_basic_set_get_ctx(__isl_keep isl_basic_set *bset);
@@ -275,9 +277,13 @@ __isl_export
 __isl_give isl_set *isl_set_empty(__isl_take isl_space *space);
 __isl_export
 __isl_give isl_set *isl_set_universe(__isl_take isl_space *space);
+__isl_export
+__isl_give isl_set *isl_space_universe_set(__isl_take isl_space *space);
 __isl_give isl_set *isl_set_nat_universe(__isl_take isl_space *space);
 __isl_give isl_set *isl_set_copy(__isl_keep isl_set *set);
 __isl_null isl_set *isl_set_free(__isl_take isl_set *set);
+__isl_export
+__isl_give isl_set *isl_basic_set_to_set(__isl_take isl_basic_set *bset);
 __isl_constructor
 __isl_give isl_set *isl_set_from_basic_set(__isl_take isl_basic_set *bset);
 __isl_export
@@ -506,6 +512,7 @@ isl_bool isl_set_plain_is_disjoint(__isl_keep isl_set *set1,
 
 uint32_t isl_set_get_hash(__isl_keep isl_set *set);
 
+__isl_export
 isl_size isl_set_n_basic_set(__isl_keep isl_set *set);
 __isl_export
 isl_stat isl_set_foreach_basic_set(__isl_keep isl_set *set,
@@ -520,6 +527,8 @@ __isl_give isl_val *isl_set_count_val(__isl_keep isl_set *set);
 
 __isl_constructor
 __isl_give isl_basic_set *isl_basic_set_from_point(__isl_take isl_point *pnt);
+__isl_export
+__isl_give isl_set *isl_point_to_set(__isl_take isl_point *pnt);
 __isl_constructor
 __isl_give isl_set *isl_set_from_point(__isl_take isl_point *pnt);
 __isl_give isl_basic_set *isl_basic_set_box_from_points(
@@ -563,6 +572,8 @@ __isl_give isl_basic_set *isl_basic_set_from_constraint_matrices(
 __isl_give isl_basic_set *isl_basic_set_from_multi_aff(
 	__isl_take isl_multi_aff *ma);
 
+__isl_export
+__isl_give isl_set *isl_multi_aff_as_set(__isl_take isl_multi_aff *ma);
 __isl_give isl_set *isl_set_from_multi_aff(__isl_take isl_multi_aff *ma);
 
 __isl_give isl_mat *isl_basic_set_reduced_basis(__isl_keep isl_basic_set *bset);

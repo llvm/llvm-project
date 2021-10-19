@@ -38,7 +38,7 @@ class MiniDumpTestCase(TestBase):
         thread = self.process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonException)
         stop_description = thread.GetStopDescription(256)
-        self.assertTrue("0xc0000005" in stop_description)
+        self.assertIn("0xc0000005", stop_description)
 
     def test_modules_in_mini_dump(self):
         """Test that lldb can read the list of modules from the minidump."""
@@ -136,7 +136,7 @@ class MiniDumpTestCase(TestBase):
                 frame = thread.GetFrameAtIndex(index)
                 self.assertTrue(frame.IsValid())
                 function_name = frame.GetFunctionName()
-                self.assertTrue(name in function_name)
+                self.assertIn(name, function_name)
 
         finally:
             # Clean up the mini dump file.

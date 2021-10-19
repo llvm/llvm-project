@@ -1,4 +1,4 @@
-; This testcase is distilled from the GNU rx package.  The loop should be 
+; This testcase is distilled from the GNU rx package.  The loop should be
 ; removed but causes a problem when ADCE does.  The source function is:
 ; int rx_bitset_empty (int size, rx_Bitset set) {
 ;  int x;
@@ -11,8 +11,8 @@
 ;  return !s;
 ;}
 ;
-; RUN: opt < %s -adce
-; RUN: opt < %s -adce -adce-remove-loops -S | FileCheck %s
+; RUN: opt < %s -passes=adce
+; RUN: opt < %s -passes=adce -adce-remove-loops -S | FileCheck %s
 
 define i32 @rx_bitset_empty(i32 %size, i32* %set) {
 bb1:

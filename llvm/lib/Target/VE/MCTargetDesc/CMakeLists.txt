@@ -7,4 +7,12 @@ add_llvm_component_library(LLVMVEDesc
   VEMCExpr.cpp
   VEMCTargetDesc.cpp
   VETargetStreamer.cpp
+
+  LINK_COMPONENTS
+  MC
+  VEInfo
+  Support
+
+  ADD_TO_COMPONENT
+  VE
   )

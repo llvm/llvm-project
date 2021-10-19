@@ -1,3 +1,18 @@
+<!--===- docs/Extensions.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
+# Fortran Extensions supported by Flang
+
+```eval_rst
+.. contents::
+   :local:
+```
+
 As a general principle, this compiler will accept by default and
 without complaint many legacy features, extensions to the standard
 language, and features that have been deleted from the standard,
@@ -8,8 +23,8 @@ Other non-standard features, which do conflict with the current
 standard specification of the Fortran programming language, are
 accepted if enabled by command-line options.
 
-Intentional violations of the standard
-======================================
+## Intentional violations of the standard
+
 * Scalar `INTEGER` actual argument expressions (not variables!)
   are converted to the kinds of scalar `INTEGER` dummy arguments
   when the interface is explicit and the kinds differ.
@@ -20,9 +35,44 @@ Intentional violations of the standard
 * We are not strict on the contents of `BLOCK DATA` subprograms
   so long as they contain no executable code, no internal subprograms,
   and allocate no storage outside a named `COMMON` block.  (C1415)
+* Delimited list-directed (and NAMELIST) character output is required
+  to emit contiguous doubled instances of the delimiter character
+  when it appears in the output value.  When fixed-size records
+  are being emitted, as is the case with internal output, this
+  is not possible when the problematic character falls on the last
+  position of a record.  No two other Fortran compilers do the same
+  thing in this situation so there is no good precedent to follow.
+  Because it seems least wrong, we emit one copy of the delimiter as
+  the last character of the current record and another as the first
+  character of the next record.  (The second-least-wrong alternative
+  might be to flag a runtime error, but that seems harsh since it's
+  not an explicit error in the standard, and the output may not have
+  to be usable later as input anyway.)
+  Consequently, the output is not suitable for use as list-directed or
+  NAMELIST input.  If a later standard were to clarify this case, this
+  behavior will change as needed to conform.
+```
+character(11) :: buffer(3)
+character(10) :: quotes = '""""""""""'
+write(buffer,*,delim="QUOTE") quotes
+print "('>',a10,'<')", buffer
+end
+```
+* The name of the control variable in an implied DO loop in an array
+  constructor or DATA statement has a scope over the value-list only,
+  not the bounds of the implied DO loop.  It is not advisable to use
+  an object of the same name as the index variable in a bounds
+  expression, but it will work, instead of being needlessly undefined.
+* If both the `COUNT=` and the `COUNT_MAX=` optional arguments are
+  present on the same call to the intrinsic subroutine `SYSTEM_CLOCK`,
+  we require that their types have the same integer kind, since the
+  kind of these arguments is used to select the clock rate.
+  In common with some other compilers, the clock is in milliseconds
+  for kinds <= 4 and nanoseconds otherwise where the target system
+  supports these rates.
 
-Extensions, deletions, and legacy features supported by default
-===============================================================
+## Extensions, deletions, and legacy features supported by default
+
 * Tabs in source
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
@@ -37,7 +87,6 @@ Extensions, deletions, and legacy features supported by default
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Triplets allowed in array constructors
-* Old-style `PARAMETER pi=3.14` statement without parentheses
 * `%LOC`, `%VAL`, and `%REF`
 * Leading comma allowed before I/O item list
 * Empty parentheses allowed in `PROGRAM P()`
@@ -56,6 +105,7 @@ Extensions, deletions, and legacy features supported by default
 * `NAME=` as synonym for `FILE=`
 * Data edit descriptors without width or other details
 * `D` lines in fixed form as comments or debug code
+* `CARRIAGECONTROL=` on the OPEN and INQUIRE statements
 * `CONVERT=` on the OPEN and INQUIRE statements
 * `DISPOSE=` on the OPEN and INQUIRE statements
 * Leading semicolons are ignored before any statement that
@@ -78,8 +128,10 @@ Extensions, deletions, and legacy features supported by default
 * BOZ literals can be used as INTEGER values in contexts where the type is
   unambiguous: the right hand sides of assigments and initializations
   of INTEGER entities, and as actual arguments to a few intrinsic functions
-  (ACHAR, BTEST, CHAR).  But they cannot be used if the type would not
-  be known (e.g., `IAND(X'1',X'2')`).
+  (ACHAR, BTEST, CHAR).  BOZ literals are interpreted as default INTEGER
+  when they appear as the first items of array constructors with no
+  explicit type.  Otherwise, they generally cannot be used if the type would
+  not be known (e.g., `IAND(X'1',X'2')`).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension)
@@ -93,6 +145,7 @@ Extensions, deletions, and legacy features supported by default
   the arguments as if they were operands to an intrinsic `+` operator,
   and defining the result type accordingly.
 * DOUBLE COMPLEX intrinsics DREAL, DCMPLX, DCONJG, and DIMAG.
+* The DFLOAT intrinsic function.
 * INT_PTR_KIND intrinsic returns the kind of c_intptr_t.
 * Restricted specific conversion intrinsics FLOAT, SNGL, IDINT, IFIX, DREAL,
   and DCMPLX accept arguments of any kind instead of only the default kind or
@@ -113,9 +166,22 @@ Extensions, deletions, and legacy features supported by default
 * A `RETURN` statement may appear in a main program.
 * DATA statement initialization is allowed for procedure pointers outside
   structure constructors.
+* Nonstandard intrinsic functions: ISNAN, SIZEOF
+* A forward reference to a default INTEGER scalar dummy argument is
+  permitted to appear in a specification expression, such as an array
+  bound, in a scope with IMPLICIT NONE(TYPE) if the name
+  of the dummy argument would have caused it to be implicitly typed
+  as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
+  to ease porting from Sun Fortran.
+* Intrinsic subroutines EXIT([status]) and ABORT()
+* The definition of simple contiguity in 9.5.4 applies only to arrays;
+  we also treat scalars as being trivially contiguous, so that they
+  can be used in contexts like data targets in pointer assignments
+  with bounds remapping.
 
-Extensions supported when enabled by options
---------------------------------------------
+### Extensions supported when enabled by options
+
 * C-style backslash escape sequences in quoted CHARACTER literals
   (but not Hollerith) [-fbackslash]
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
@@ -127,17 +193,20 @@ Extensions supported when enabled by options
   rule imposes an artificially small constraint in some cases
   where Fortran mandates that something have the default `INTEGER`
   type: specifically, the results of references to the intrinsic functions
-  `SIZE`, `LBOUND`, `UBOUND`, `SHAPE`, and the location reductions
+  `SIZE`, `STORAGE_SIZE`,`LBOUND`, `UBOUND`, `SHAPE`, and the location reductions
   `FINDLOC`, `MAXLOC`, and `MINLOC` in the absence of an explicit
   `KIND=` actual argument.  We return `INTEGER(KIND=8)` by default in
   these cases when the `-flarge-sizes` option is enabled.
+  `SIZEOF` and `C_SIZEOF` always return `INTEGER(KIND=8)`.
 * Treat each specification-part like is has `IMPLICIT NONE`
   [-fimplicit-none-type-always]
 * Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
   [-fimplicit-none-type-never]
+* Old-style `PARAMETER pi=3.14` statement without parentheses
+  [-falternative-parameter-statement]
 
-Extensions and legacy features deliberately not supported
----------------------------------------------------------
+### Extensions and legacy features deliberately not supported
+
 * `.LG.` as synonym for `.NE.`
 * `REDIMENSION`
 * Allocatable `COMMON`
@@ -180,9 +249,94 @@ Extensions and legacy features deliberately not supported
   PGI, Intel, and XLF support this in ways that are not numerically equivalent.
   PGI converts the arguments while Intel and XLF replace the specific by the related generic.
 
-Preprocessing behavior
-======================
+## Preprocessing behavior
+
 * The preprocessor is always run, whatever the filename extension may be.
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+
+## Standard features not silently accepted
+
+* Fortran explicitly ignores type declaration statements when they
+  attempt to type the name of a generic intrinsic function (8.2 p3).
+  One can declare `CHARACTER::COS` and still get a real result
+  from `COS(3.14159)`, for example.  f18 will complain when a
+  generic intrinsic function's inferred result type does not
+  match an explicit declaration.  This message is a warning.
+
+## Standard features that might as well not be
+
+* f18 supports designators with constant expressions, properly
+  constrained, as initial data targets for data pointers in
+  initializers of variable and component declarations and in
+  `DATA` statements; e.g., `REAL, POINTER :: P => T(1:10:2)`.
+  This Fortran 2008 feature might as well be viewed like an
+  extension; no other compiler that we've tested can handle
+  it yet.
+
+## Behavior in cases where the standard is ambiguous or indefinite
+
+* When an inner procedure of a subprogram uses the value or an attribute
+  of an undeclared name in a specification expression and that name does
+  not appear in the host, it is not clear in the standard whether that
+  name is an implicitly typed local variable of the inner procedure or a
+  host association with an implicitly typed local variable of the host.
+  For example:
+```
+module module
+ contains
+  subroutine host(j)
+    ! Although "m" never appears in the specification or executable
+    ! parts of this subroutine, both of its contained subroutines
+    ! might be accessing it via host association.
+    integer, intent(in out) :: j
+    call inner1(j)
+    call inner2(j)
+   contains
+    subroutine inner1(n)
+      integer(kind(m)), intent(in) :: n
+      m = n + 1
+    end subroutine
+    subroutine inner2(n)
+      integer(kind(m)), intent(out) :: n
+      n = m + 2
+    end subroutine
+  end subroutine
+end module
+
+program demo
+  use module
+  integer :: k
+  k = 0
+  call host(k)
+  print *, k, " should be 3"
+end
+
+```
+
+  Other Fortran compilers disagree in their interpretations of this example;
+  some seem to treat the references to `m` as if they were host associations
+  to an implicitly typed variable (and print `3`), while others seem to
+  treat them as references to implicitly typed local variabless, and
+  load uninitialized values.
+
+  In f18, we chose to emit an error message for this case since the standard
+  is unclear, the usage is not portable, and the issue can be easily resolved
+  by adding a declaration.
+
+* In subclause 7.5.6.2 of Fortran 2018 the standard defines a partial ordering
+  of the final subroutine calls for finalizable objects, their non-parent
+  components, and then their parent components.
+  (The object is finalized, then the non-parent components of each element,
+  and then the parent component.)
+  Some have argued that the standard permits an implementation
+  to finalize the parent component before finalizing an allocatable component in
+  the context of deallocation, and the next revision of the language may codify
+  this option.
+  In the interest of avoiding needless confusion, this compiler implements what
+  we believe to be the least surprising order of finalization.
+  Specifically: all non-parent components are finalized before
+  the parent, allocatable or not;
+  all finalization takes place before any deallocation;
+  and no object or subobject will be finalized more than once.

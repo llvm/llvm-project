@@ -12,23 +12,17 @@
 
 #include "lld/Common/Version.h"
 
-#ifdef HAVE_VCS_VERSION_INC
 #include "VCSVersion.inc"
-#endif
 
 // Returns a version string, e.g.:
-// lld 9.0.0 (https://github.com/llvm/llvm-project.git 9efdd7ac5e914d3c9fa1ef)
+// LLD 14.0.0 (https://github.com/llvm/llvm-project.git
+// 2d9759c7902c5cbc9a7e3ab623321d5578d51687)
 std::string lld::getLLDVersion() {
 #ifdef LLD_VENDOR
 #define LLD_VENDOR_DISPLAY LLD_VENDOR " "
 #else
 #define LLD_VENDOR_DISPLAY
 #endif
-#if defined(LLD_REPOSITORY) && defined(LLD_REVISION)
-  return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING " (" LLD_REPOSITORY
-                            " " LLD_REVISION ")";
-#else
   return LLD_VENDOR_DISPLAY "LLD " LLD_VERSION_STRING;
-#endif
 #undef LLD_VENDOR_DISPLAY
 }

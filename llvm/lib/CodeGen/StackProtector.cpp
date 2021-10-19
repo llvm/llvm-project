@@ -70,6 +70,7 @@ StackProtector::StackProtector() : FunctionPass(ID), SSPBufferSize(8) {
 INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
                       "Insert stack protectors", false, true)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(StackProtector, DEBUG_TYPE,
                     "Insert stack protectors", false, true)
 
@@ -170,7 +171,8 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
     // If this instruction accesses memory make sure it doesn't access beyond
     // the bounds of the allocated object.
     Optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
-    if (MemLoc.hasValue() && MemLoc->Size.getValue() > AllocSize)
+    if (MemLoc.hasValue() && MemLoc->Size.hasValue() &&
+        MemLoc->Size.getValue() > AllocSize)
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:
@@ -191,7 +193,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI,
       // Ignore intrinsics that do not become real instructions.
       // TODO: Narrow this to intrinsics that have store-like effects.
       const auto *CI = cast<CallInst>(I);
-      if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
+      if (!CI->isDebugOrPseudoInst() && !CI->isLifetimeStartOrEnd())
         return true;
       break;
     }
@@ -273,7 +275,6 @@ static const CallInst *findStackProtectorIntrinsic(Function &F) {
 bool StackProtector::RequiresStackProtector() {
   bool Strong = false;
   bool NeedsProtector = false;
-  HasPrologue = findStackProtectorIntrinsic(*F);
 
   if (F->hasFnAttribute(Attribute::SafeStack))
     return false;
@@ -294,8 +295,6 @@ bool StackProtector::RequiresStackProtector() {
     Strong = true; // Use the same heuristic as strong to determine SSPLayout
   } else if (F->hasFnAttribute(Attribute::StackProtectStrong))
     Strong = true;
-  else if (HasPrologue)
-    NeedsProtector = true;
   else if (!F->hasFnAttribute(Attribute::StackProtect))
     return false;
 
@@ -380,7 +379,9 @@ bool StackProtector::RequiresStackProtector() {
 static Value *getStackGuard(const TargetLoweringBase *TLI, Module *M,
                             IRBuilder<> &B,
                             bool *SupportsSelectionDAGSP = nullptr) {
-  if (Value *Guard = TLI->getIRStackGuard(B))
+  Value *Guard = TLI->getIRStackGuard(B);
+  StringRef GuardMode = M->getStackProtectorGuard();
+  if ((GuardMode == "tls" || GuardMode.empty()) && Guard)
     return B.CreateLoad(B.getInt8PtrTy(), Guard, true, "StackGuard");
 
   // Use SelectionDAG SSP handling, since there isn't an IR guard.
@@ -435,13 +436,11 @@ bool StackProtector::InsertStackProtectors() {
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
       TLI->useStackGuardXorFP() ||
-      (EnableSelectionDAGSP && !TM->Options.EnableFastISel &&
-       !TM->Options.EnableGlobalISel);
-  AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
+      (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
+  AllocaInst *AI = nullptr; // Place on stack that stores the stack guard.
 
-  for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
-    BasicBlock *BB = &*I++;
-    ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator());
+  for (BasicBlock &BB : llvm::make_early_inc_range(*F)) {
+    ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
     if (!RI)
       continue;
 
@@ -469,21 +468,36 @@ bool StackProtector::InsertStackProtectors() {
     // instrumentation has already been generated.
     HasIRCheck = true;
 
+    // If we're instrumenting a block with a musttail call, the check has to be
+    // inserted before the call rather than between it and the return. The
+    // verifier guarantees that a musttail call is either directly before the
+    // return or with a single correct bitcast of the return value in between so
+    // we don't need to worry about many situations here.
+    Instruction *CheckLoc = RI;
+    Instruction *Prev = RI->getPrevNonDebugInstruction();
+    if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isMustTailCall())
+      CheckLoc = Prev;
+    else if (Prev) {
+      Prev = Prev->getPrevNonDebugInstruction();
+      if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isMustTailCall())
+        CheckLoc = Prev;
+    }
+
     // Generate epilogue instrumentation. The epilogue intrumentation can be
     // function-based or inlined depending on which mechanism the target is
     // providing.
     if (Function *GuardCheck = TLI->getSSPStackGuardCheck(*M)) {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
-      IRBuilder<> B(RI);
+      IRBuilder<> B(CheckLoc);
       LoadInst *Guard = B.CreateLoad(B.getInt8PtrTy(), AI, true, "Guard");
       CallInst *Call = B.CreateCall(GuardCheck, {Guard});
       Call->setAttributes(GuardCheck->getAttributes());
       Call->setCallingConv(GuardCheck->getCallingConv());
     } else {
       // Generate the epilogue with inline instrumentation.
-      // If we do not support SelectionDAG based tail calls, generate IR level
-      // tail calls.
+      // If we do not support SelectionDAG based calls, generate IR level
+      // calls.
       //
       // For each block with a return instruction, convert this:
       //
@@ -513,23 +527,24 @@ bool StackProtector::InsertStackProtectors() {
       BasicBlock *FailBB = CreateFailBB();
 
       // Split the basic block before the return instruction.
-      BasicBlock *NewBB = BB->splitBasicBlock(RI->getIterator(), "SP_return");
+      BasicBlock *NewBB =
+          BB.splitBasicBlock(CheckLoc->getIterator(), "SP_return");
 
       // Update the dominator tree if we need to.
-      if (DT && DT->isReachableFromEntry(BB)) {
-        DT->addNewBlock(NewBB, BB);
-        DT->addNewBlock(FailBB, BB);
+      if (DT && DT->isReachableFromEntry(&BB)) {
+        DT->addNewBlock(NewBB, &BB);
+        DT->addNewBlock(FailBB, &BB);
       }
 
       // Remove default branch instruction to the new BB.
-      BB->getTerminator()->eraseFromParent();
+      BB.getTerminator()->eraseFromParent();
 
       // Move the newly created basic block to the point right after the old
       // basic block so that it's in the "fall through" position.
-      NewBB->moveAfter(BB);
+      NewBB->moveAfter(&BB);
 
       // Generate the stack protector instructions in the old basic block.
-      IRBuilder<> B(BB);
+      IRBuilder<> B(&BB);
       Value *Guard = getStackGuard(TLI, M, B);
       LoadInst *LI2 = B.CreateLoad(B.getInt8PtrTy(), AI, true);
       Value *Cmp = B.CreateICmpEQ(Guard, LI2);
@@ -555,7 +570,9 @@ BasicBlock *StackProtector::CreateFailBB() {
   LLVMContext &Context = F->getContext();
   BasicBlock *FailBB = BasicBlock::Create(Context, "CallStackCheckFailBlk", F);
   IRBuilder<> B(FailBB);
-  B.SetCurrentDebugLocation(DebugLoc::get(0, 0, F->getSubprogram()));
+  if (F->getSubprogram())
+    B.SetCurrentDebugLocation(
+        DILocation::get(Context, 0, 0, F->getSubprogram()));
   if (Trip.isOSOpenBSD()) {
     FunctionCallee StackChkFail = M->getOrInsertFunction(
         "__stack_smash_handler", Type::getVoidTy(Context),

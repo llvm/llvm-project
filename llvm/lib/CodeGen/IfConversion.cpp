@@ -300,7 +300,7 @@ namespace {
         MachineBasicBlock::iterator TIE = TBBInfo.BB->end();
         MachineBasicBlock::iterator FIE = FBBInfo.BB->end();
 
-        unsigned Dups1, Dups2;
+        unsigned Dups1 = 0, Dups2 = 0;
         if (!CountDuplicatedInstructions(TIB, FIB, TIE, FIE, Dups1, Dups2,
                                          *TBBInfo.BB, *FBBInfo.BB,
                                          /*SkipUnconditionalBranches*/ true))
@@ -742,8 +742,8 @@ bool IfConverter::CountDuplicatedInstructions(
     bool SkipUnconditionalBranches) const {
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
-    TIB = skipDebugInstructionsForward(TIB, TIE);
-    FIB = skipDebugInstructionsForward(FIB, FIE);
+    TIB = skipDebugInstructionsForward(TIB, TIE, false);
+    FIB = skipDebugInstructionsForward(FIB, FIE, false);
     if (TIB == TIE || FIB == FIE)
       break;
     if (!TIB->isIdenticalTo(*FIB))
@@ -751,7 +751,7 @@ bool IfConverter::CountDuplicatedInstructions(
     // A pred-clobbering instruction in the shared portion prevents
     // if-conversion.
     std::vector<MachineOperand> PredDefs;
-    if (TII->DefinesPredicate(*TIB, PredDefs))
+    if (TII->ClobbersPredicate(*TIB, PredDefs, false))
       return false;
     // If we get all the way to the branch instructions, don't count them.
     if (!TIB->isBranch())
@@ -785,8 +785,8 @@ bool IfConverter::CountDuplicatedInstructions(
   while (RTIE != RTIB && RFIE != RFIB) {
     // Skip dbg_value instructions. These do not count.
     // Note that these are reverse iterators going forward.
-    RTIE = skipDebugInstructionsForward(RTIE, RTIB);
-    RFIE = skipDebugInstructionsForward(RFIE, RFIB);
+    RTIE = skipDebugInstructionsForward(RTIE, RTIB, false);
+    RFIE = skipDebugInstructionsForward(RFIE, RFIB, false);
     if (RTIE == RTIB || RFIE == RFIB)
       break;
     if (!RTIE->isIdenticalTo(*RFIE))
@@ -838,8 +838,8 @@ static void verifySameBranchInstructions(
   MachineBasicBlock::reverse_iterator E1 = MBB1->rbegin();
   MachineBasicBlock::reverse_iterator E2 = MBB2->rbegin();
   while (E1 != B1 && E2 != B2) {
-    skipDebugInstructionsForward(E1, B1);
-    skipDebugInstructionsForward(E2, B2);
+    skipDebugInstructionsForward(E1, B1, false);
+    skipDebugInstructionsForward(E2, B2, false);
     if (E1 == B1 && E2 == B2)
       break;
 
@@ -1146,7 +1146,7 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
     // FIXME: Make use of PredDefs? e.g. ADDC, SUBC sets predicates but are
     // still potentially predicable.
     std::vector<MachineOperand> PredDefs;
-    if (TII->DefinesPredicate(MI, PredDefs))
+    if (TII->ClobbersPredicate(MI, PredDefs, true))
       BBI.ClobbersPred = true;
 
     if (!TII->isPredicable(MI)) {
@@ -1564,8 +1564,8 @@ bool IfConverter::IfConvertSimple(BBInfo &BBI, IfcvtKind Kind) {
   if (MRI->tracksLiveness()) {
     // Initialize liveins to the first BB. These are potentially redefined by
     // predicated instructions.
-    Redefs.addLiveIns(CvtMBB);
-    Redefs.addLiveIns(NextMBB);
+    Redefs.addLiveInsNoPristines(CvtMBB);
+    Redefs.addLiveInsNoPristines(NextMBB);
   }
 
   // Remove the branches from the entry so we can add the contents of the true
@@ -1665,8 +1665,8 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
   // predicated instructions.
   Redefs.init(*TRI);
   if (MRI->tracksLiveness()) {
-    Redefs.addLiveIns(CvtMBB);
-    Redefs.addLiveIns(NextMBB);
+    Redefs.addLiveInsNoPristines(CvtMBB);
+    Redefs.addLiveInsNoPristines(NextMBB);
   }
 
   bool HasEarlyExit = CvtBBI->FalseBB != nullptr;
@@ -1828,14 +1828,14 @@ bool IfConverter::IfConvertDiamondCommon(
   //   after tracking the BB1 instructions.
   Redefs.init(*TRI);
   if (MRI->tracksLiveness()) {
-    Redefs.addLiveIns(MBB1);
-    Redefs.addLiveIns(MBB2);
+    Redefs.addLiveInsNoPristines(MBB1);
+    Redefs.addLiveInsNoPristines(MBB2);
   }
 
   // Remove the duplicated instructions at the beginnings of both paths.
   // Skip dbg_value instructions.
-  MachineBasicBlock::iterator DI1 = MBB1.getFirstNonDebugInstr();
-  MachineBasicBlock::iterator DI2 = MBB2.getFirstNonDebugInstr();
+  MachineBasicBlock::iterator DI1 = MBB1.getFirstNonDebugInstr(false);
+  MachineBasicBlock::iterator DI2 = MBB2.getFirstNonDebugInstr(false);
   BBI1->NonPredSize -= NumDups1;
   BBI2->NonPredSize -= NumDups1;
 
@@ -2264,8 +2264,7 @@ void IfConverter::MergeBlocks(BBInfo &ToBBI, BBInfo &FromBBI, bool AddEdges) {
   if (ToBBI.IsBrAnalyzable)
     ToBBI.BB->normalizeSuccProbs();
 
-  SmallVector<MachineBasicBlock *, 4> FromSuccs(FromMBB.succ_begin(),
-                                                FromMBB.succ_end());
+  SmallVector<MachineBasicBlock *, 4> FromSuccs(FromMBB.successors());
   MachineBasicBlock *NBB = getNextBlock(FromMBB);
   MachineBasicBlock *FallThrough = FromBBI.HasFallThrough ? NBB : nullptr;
   // The edge probability from ToBBI.BB to FromMBB, which is only needed when

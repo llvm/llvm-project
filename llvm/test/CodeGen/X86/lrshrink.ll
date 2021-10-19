@@ -28,13 +28,13 @@ define i64 @test(i1 %a, i64 %r1, i64 %r2, i64 %s1, i64 %s2, i64 %t1, i64 %t2) {
 ; CHECK-NEXT:  .LBB0_2: # %else
 ; CHECK-NEXT:    addq %r9, %r14
 ; CHECK-NEXT:    addq %rsi, %r15
-; CHECK-NEXT:    callq _Z3foov
+; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    addq %r15, %rbx
-; CHECK-NEXT:    callq _Z3foov
+; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %r15d
 ; CHECK-NEXT:    addq %rbx, %r15
-; CHECK-NEXT:    callq _Z3foov
+; CHECK-NEXT:    callq _Z3foov@PLT
 ; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    addq %r15, %rax
 ; CHECK-NEXT:    addq %r14, %rax

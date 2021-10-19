@@ -215,7 +215,7 @@ std::string getMarkerForCodeBlock(llvm::StringRef Input) {
 
 // Trims the input and concatenates whitespace blocks into a single ` `.
 std::string canonicalizeSpaces(llvm::StringRef Input) {
-  llvm::SmallVector<llvm::StringRef, 4> Words;
+  llvm::SmallVector<llvm::StringRef> Words;
   llvm::SplitString(Input, Words);
   return llvm::join(Words, " ");
 }

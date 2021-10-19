@@ -40,7 +40,22 @@
 # RUN:                            -delete_rpath @executable_b/. %t 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=COMBINED
 
-# COMBINED: cannot specify both -add_rpath @executable_b/. and -delete_rpath @executable_b/.
+# COMBINED: cannot specify both -add_rpath '@executable_b/.' and -delete_rpath '@executable_b/.'
+
+## Remove all RPATHS
+# RUN: yaml2obj %s -o %t2
+# RUN: llvm-install-name-tool -delete_all_rpaths %t2
+# RUN: llvm-objdump -p %t2 | FileCheck %s
+
+# CHECK-NOT: LC_RPATH
+
+## Remove all RPATHS and add a new one.
+# RUN: yaml2obj %s -o %t3
+# RUN: llvm-install-name-tool --delete_all_rpaths -add_rpath @executable_b/. %t3
+# RUN: llvm-objdump -p %t3 | \
+# RUN:   FileCheck %s --check-prefix=DELETE_AND_ADD --implicit-check-not=@executable
+
+# DELETE_AND_ADD: @executable_b/.
 
 --- !mach-o
 FileHeader:
@@ -56,20 +71,20 @@ LoadCommands:
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_a/.'
+    Content:         '@executable_a/.'
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_b/.'
+    Content:         '@executable_b/.'
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_c/.'
+    Content:         '@executable_c/.'
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_d/.'
+    Content:         '@executable_d/.'
   - cmd:             LC_RPATH
     cmdsize:         32
     path:            12
-    PayloadString:   '@executable_e/.'
+    Content:         '@executable_e/.'

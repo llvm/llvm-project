@@ -509,7 +509,9 @@ static __isl_give isl_pw_aff *accept_affine_factor(__isl_keep isl_stream *s,
 		aff = isl_aff_zero_on_domain(isl_local_space_from_space(isl_space_copy(space)));
 		if (!aff)
 			goto error;
-		isl_int_set_si(aff->v->el[2 + pos], 1);
+		aff->v = isl_vec_set_element_si(aff->v, 2 + pos, 1);
+		if (!aff->v)
+			aff = isl_aff_free(aff);
 		res = isl_pw_aff_from_aff(aff);
 		isl_token_free(tok);
 	} else if (tok->type == ISL_TOKEN_VALUE) {
@@ -593,10 +595,7 @@ static __isl_give isl_pw_aff *add_cst(__isl_take isl_pw_aff *pwaff, isl_int v)
  */
 static __isl_give isl_pw_aff *nan_on_domain(__isl_keep isl_space *space)
 {
-	isl_local_space *ls;
-
-	ls = isl_local_space_from_space(isl_space_copy(space));
-	return isl_pw_aff_nan_on_domain(ls);
+	return isl_pw_aff_nan_on_domain_space(isl_space_copy(space));
 }
 
 static __isl_give isl_pw_aff *accept_affine(__isl_keep isl_stream *s,
@@ -2602,24 +2601,28 @@ static struct isl_obj obj_read_poly(__isl_keep isl_stream *s,
 static struct isl_obj obj_read_poly_or_fold(__isl_keep isl_stream *s,
 	__isl_take isl_set *set, struct vars *v, int n)
 {
+	int min, max;
 	struct isl_obj obj = { isl_obj_pw_qpolynomial_fold, NULL };
 	isl_pw_qpolynomial *pwqp;
 	isl_pw_qpolynomial_fold *pwf = NULL;
+	enum isl_fold fold;
 
-	if (!isl_stream_eat_if_available(s, ISL_TOKEN_MAX))
+	max = isl_stream_eat_if_available(s, ISL_TOKEN_MAX);
+	min = !max && isl_stream_eat_if_available(s, ISL_TOKEN_MIN);
+	if (!min && !max)
 		return obj_read_poly(s, set, v, n);
+	fold = max ? isl_fold_max : isl_fold_min;
 
 	if (isl_stream_eat(s, '('))
 		goto error;
 
 	pwqp = read_term(s, set, v);
-	pwf = isl_pw_qpolynomial_fold_from_pw_qpolynomial(isl_fold_max, pwqp);
+	pwf = isl_pw_qpolynomial_fold_from_pw_qpolynomial(fold, pwqp);
 
 	while (isl_stream_eat_if_available(s, ',')) {
 		isl_pw_qpolynomial_fold *pwf_i;
 		pwqp = read_term(s, set, v);
-		pwf_i = isl_pw_qpolynomial_fold_from_pw_qpolynomial(isl_fold_max,
-									pwqp);
+		pwf_i = isl_pw_qpolynomial_fold_from_pw_qpolynomial(fold, pwqp);
 		pwf = isl_pw_qpolynomial_fold_fold(pwf, pwf_i);
 	}
 
@@ -3385,7 +3388,43 @@ __isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_read_from_file(isl_ctx *ctx,
 	return pwqp;
 }
 
-/* Is the next token an identifer not in "v"?
+/* Read an isl_pw_qpolynomial_fold from "s".
+ * First read a generic object and
+ * then check that it is an isl_pw_qpolynomial_fold.
+ */
+__isl_give isl_pw_qpolynomial_fold *isl_stream_read_pw_qpolynomial_fold(
+	__isl_keep isl_stream *s)
+{
+	struct isl_obj obj;
+
+	obj = obj_read(s);
+	if (obj.v && obj.type != isl_obj_pw_qpolynomial_fold)
+		isl_die(s->ctx, isl_error_invalid, "invalid input", goto error);
+
+	return obj.v;
+error:
+	obj.type->free(obj.v);
+	return NULL;
+}
+
+/* Read an isl_pw_qpolynomial_fold from "str".
+ */
+__isl_give isl_pw_qpolynomial_fold *isl_pw_qpolynomial_fold_read_from_str(
+	isl_ctx *ctx, const char *str)
+{
+	isl_pw_qpolynomial_fold *pwqp;
+	isl_stream *s;
+
+	s = isl_stream_new_str(ctx, str);
+	if (!s)
+		return NULL;
+	pwqp = isl_stream_read_pw_qpolynomial_fold(s);
+	isl_stream_free(s);
+
+	return pwqp;
+}
+
+/* Is the next token an identifier not in "v"?
  */
 static int next_is_fresh_ident(__isl_keep isl_stream *s, struct vars *v)
 {
@@ -3642,6 +3681,9 @@ static __isl_give isl_multi_pw_aff *extract_mpa_from_tuple(
  * through a call to extract_mpa_from_tuple.
  * The result is converted to an isl_pw_multi_aff and
  * its domain is intersected with the domain.
+ *
+ * Note that the last tuple may introduce new identifiers,
+ * but these cannot be referenced in the description of the domain.
  */
 static __isl_give isl_pw_multi_aff *read_conditional_multi_aff(
 	__isl_keep isl_stream *s, __isl_take isl_set *dom, struct vars *v)
@@ -3650,13 +3692,16 @@ static __isl_give isl_pw_multi_aff *read_conditional_multi_aff(
 	isl_multi_pw_aff *mpa;
 	isl_pw_multi_aff *pma;
 	int n = v->n;
+	int n_dom;
 
+	n_dom = v->n;
 	tuple = read_tuple(s, v, 0, 0);
 	if (!tuple)
 		goto error;
 	if (isl_stream_eat_if_available(s, ISL_TOKEN_TO)) {
 		isl_map *map = map_from_tuple(tuple, dom, isl_dim_in, v, 0);
 		dom = isl_map_domain(map);
+		n_dom = v->n;
 		tuple = read_tuple(s, v, 0, 0);
 		if (!tuple)
 			goto error;
@@ -3666,6 +3711,7 @@ static __isl_give isl_pw_multi_aff *read_conditional_multi_aff(
 	if (!mpa)
 		dom = isl_set_free(dom);
 
+	vars_drop(v, v->n - n_dom);
 	dom = read_optional_formula(s, dom, v, 0);
 
 	vars_drop(v, v->n - n);
@@ -3950,10 +3996,14 @@ __isl_give isl_multi_aff *isl_multi_aff_read_from_str(isl_ctx *ctx,
  * is then converted into the isl_multi_pw_aff through a call
  * to extract_mpa_from_tuple and the domain of the result
  * is intersected with the domain.
+ *
+ * Note that the last tuple may introduce new identifiers,
+ * but these cannot be referenced in the description of the domain.
  */
 __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 	__isl_keep isl_stream *s)
 {
+	int n_dom;
 	struct vars *v;
 	isl_set *dom = NULL;
 	isl_multi_pw_aff *tuple = NULL;
@@ -3972,17 +4022,20 @@ __isl_give isl_multi_pw_aff *isl_stream_read_multi_pw_aff(
 	if (isl_stream_eat(s, '{'))
 		goto error;
 
+	n_dom = v->n;
 	tuple = read_tuple(s, v, 0, 0);
 	if (!tuple)
 		goto error;
 	if (isl_stream_eat_if_available(s, ISL_TOKEN_TO)) {
 		isl_map *map = map_from_tuple(tuple, dom, isl_dim_in, v, 0);
 		dom = isl_map_domain(map);
+		n_dom = v->n;
 		tuple = read_tuple(s, v, 0, 0);
 		if (!tuple)
 			goto error;
 	}
 
+	vars_drop(v, v->n - n_dom);
 	if (isl_stream_eat_if_available(s, ':'))
 		dom = read_formula(s, v, dom, 0);
 

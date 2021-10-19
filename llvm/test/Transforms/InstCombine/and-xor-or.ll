@@ -96,6 +96,49 @@ define i32 @and_xor_not_common_op(i32 %a, i32 %b) {
   ret i32 %t4
 }
 
+; a & (a ^ ~b) --> a & b
+
+define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, i32* %dst) {
+; CHECK-LABEL: @and_xor_not_common_op_extrause(
+; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    store i32 [[B2]], i32* [[DST:%.*]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %b2 = xor i32 %b, -1
+  store i32 %b2, i32* %dst
+  %t2 = xor i32 %a, %b2
+  %t4 = and i32 %t2, %a
+  ret i32 %t4
+}
+
+; a & ~(a ^ b) --> a & b
+
+define i32 @and_not_xor_common_op(i32 %a, i32 %b) {
+; CHECK-LABEL: @and_not_xor_common_op(
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %b2 = xor i32 %b, %a
+  %t2 = xor i32 %b2, -1
+  %t4 = and i32 %t2, %a
+  ret i32 %t4
+}
+
+declare i32 @gen32()
+define i32 @and_not_xor_common_op_commutative(i32 %b) {
+; CHECK-LABEL: @and_not_xor_common_op_commutative(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @gen32()
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %a = call i32 @gen32()
+  %b2 = xor i32 %a, %b ; swapped order
+  %t2 = xor i32 %b2, -1
+  %t4 = and i32 %a, %t2 ; swapped order
+  ret i32 %t4
+}
+
 ; rdar://10770603
 ; (x & y) | (x ^ y) -> x | y
 
@@ -341,3 +384,135 @@ define i8 @xor_lshr_multiuse(i8 %x, i8 %y, i8 %z, i8 %shamt) {
   ret i8 %r2
 }
 
+; Reassociate chains of extend(X) | (extend(Y) | Z).
+; Check that logical op is performed on a smaller type and then extended.
+
+define i64 @sext_or_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @sext_or_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[OR2]]
+;
+  %conv = sext i16 %b to i64
+  %conv2 = sext i16 %c to i64
+  %or = or i64 %a, %conv
+  %or2 = or i64 %or, %conv2
+  ret i64 %or2
+}
+
+define i64 @zext_or_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @zext_or_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[OR2]]
+;
+  %conv = zext i16 %b to i64
+  %conv2 = zext i16 %c to i64
+  %or = or i64 %a, %conv
+  %or2 = or i64 %or, %conv2
+  ret i64 %or2
+}
+
+define i64 @sext_and_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @sext_and_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[AND]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[AND2]]
+;
+  %conv = sext i16 %b to i64
+  %conv2 = sext i16 %c to i64
+  %and = and i64 %a, %conv
+  %and2 = and i64 %and, %conv2
+  ret i64 %and2
+}
+
+define i64 @zext_and_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @zext_and_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i64 [[AND]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[AND2]]
+;
+  %conv = zext i16 %b to i64
+  %conv2 = zext i16 %c to i64
+  %and = and i64 %a, %conv
+  %and2 = and i64 %and, %conv2
+  ret i64 %and2
+}
+
+define i64 @sext_xor_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @sext_xor_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i64 [[XOR]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[XOR2]]
+;
+  %conv = sext i16 %b to i64
+  %conv2 = sext i16 %c to i64
+  %xor = xor i64 %a, %conv
+  %xor2 = xor i64 %xor, %conv2
+  ret i64 %xor2
+}
+
+define i64 @zext_xor_chain(i64 %a, i16 %b, i16 %c) {
+; CHECK-LABEL: @zext_xor_chain(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = zext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i64 [[XOR]], [[CONV2]]
+; CHECK-NEXT:    ret i64 [[XOR2]]
+;
+  %conv = zext i16 %b to i64
+  %conv2 = zext i16 %c to i64
+  %xor = xor i64 %a, %conv
+  %xor2 = xor i64 %xor, %conv2
+  ret i64 %xor2
+}
+
+; Negative test with more uses.
+define i64 @sext_or_chain_two_uses1(i64 %a, i16 %b, i16 %c, i64 %d) {
+; CHECK-LABEL: @sext_or_chain_two_uses1(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR]], [[CONV2]]
+; CHECK-NEXT:    [[USE:%.*]] = udiv i64 [[OR]], [[D:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = udiv i64 [[OR2]], [[USE]]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+  %conv = sext i16 %b to i64
+  %conv2 = sext i16 %c to i64
+  ; %or has two uses
+  %or = or i64 %a, %conv
+  %or2 = or i64 %or, %conv2
+  %use = udiv i64 %or, %d
+  %retval = udiv i64 %or2, %use
+  ret i64 %retval
+}
+define i64 @sext_or_chain_two_uses2(i64 %a, i16 %b, i16 %c, i64 %d) {
+; CHECK-LABEL: @sext_or_chain_two_uses2(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[B:%.*]] to i64
+; CHECK-NEXT:    [[CONV2:%.*]] = sext i16 [[C:%.*]] to i64
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[CONV]], [[A:%.*]]
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR]], [[CONV2]]
+; CHECK-NEXT:    [[USE1:%.*]] = udiv i64 [[OR2]], [[D:%.*]]
+; CHECK-NEXT:    [[USE2:%.*]] = udiv i64 [[OR2]], [[USE1]]
+; CHECK-NEXT:    ret i64 [[USE2]]
+;
+  %conv = sext i16 %b to i64
+  %conv2 = sext i16 %c to i64
+  %or = or i64 %a, %conv
+  ; %or2 has two uses
+  %or2 = or i64 %or, %conv2
+  %use1 = udiv i64 %or2, %d
+  %use2 = udiv i64 %or2, %use1
+  ret i64 %use2
+}

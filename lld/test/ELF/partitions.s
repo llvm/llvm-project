@@ -22,9 +22,9 @@
 // CHECK:   [[P1]] f4
 // CHECK: [[MAIN]] f5
 // CHECK:   [[P2]] f6
-// CHECK: [[MAIN]] _start
 // CHECK:   [[P1]] f1
 // CHECK:   [[P2]] f2
+// CHECK: [[MAIN]] _start
 
 .section .llvm_sympart.f1,"",@llvm_sympart
 .asciz "part1"

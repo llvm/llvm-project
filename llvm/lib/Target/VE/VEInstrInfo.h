@@ -23,6 +23,31 @@ namespace llvm {
 
 class VESubtarget;
 
+/// VEII - This namespace holds all of the Aurora VE target-specific
+/// per-instruction flags.  These must match the corresponding definitions in
+/// VEInstrFormats.td.
+namespace VEII {
+enum {
+  // Aurora VE Instruction Flags.  These flags describe the characteristics of
+  // the Aurora VE instructions for vector handling.
+
+  /// VE_Vector - This instruction is Vector Instruction.
+  VE_Vector = 0x1,
+
+  /// VE_VLInUse - This instruction has a vector register in its operands.
+  VE_VLInUse = 0x2,
+
+  /// VE_VLMask/Shift - This is a bitmask that selects the index number where
+  /// an instruction holds vector length informatio (0 to 6, 7 means undef).n
+  VE_VLShift = 2,
+  VE_VLMask = 0x07 << VE_VLShift,
+};
+
+#define HAS_VLINDEX(TSF) ((TSF)&VEII::VE_VLInUse)
+#define GET_VLINDEX(TSF)                                                       \
+  (HAS_VLINDEX(TSF) ? (int)(((TSF)&VEII::VE_VLMask) >> VEII::VE_VLShift) : -1)
+} // end namespace VEII
+
 class VEInstrInfo : public VEGenInstrInfo {
   const VERegisterInfo RI;
   virtual void anchor();
@@ -74,6 +99,13 @@ public:
                             int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
   /// } Stack Spill & Reload
+
+  /// Optimization {
+
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
+                     MachineRegisterInfo *MRI) const override;
+
+  /// } Optimization
 
   Register getGlobalBaseReg(MachineFunction *MF) const;
 

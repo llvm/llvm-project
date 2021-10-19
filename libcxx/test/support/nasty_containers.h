@@ -206,7 +206,7 @@ public:
     void push_back(const value_type& x)     { l_.push_back(x); }
 #if TEST_STD_VER >= 11
     void push_back(value_type&& x)          { l_.push_back(std::forward<value_type&&>(x)); }
-    void push_front(value_type&& x)         { l_.push_back(std::forward<value_type&&>(x)); }
+    void push_front(value_type&& x)         { l_.push_front(std::forward<value_type&&>(x)); }
     template <class... Args>
         void emplace_back(Args&&... args)   { l_.emplace_back(std::forward<Args>(args)...); }
     template <class... Args>
@@ -234,10 +234,10 @@ public:
 #endif
 
     iterator erase(const_iterator pos)                      { return l_.erase(pos); }
-    iterator erase(const_iterator pos, const_iterator last) { return l_.erase(pos, last); }
+    iterator erase(const_iterator first, const_iterator last) { return l_.erase(first, last); }
 
-    void resize(size_type)                      { l_.resize(); }
-    void resize(size_type, const value_type& c) { l_.resize(c); }
+    void resize(size_type n)                      { l_.resize(n); }
+    void resize(size_type n, const value_type& c) { l_.resize(n, c); }
 
     void swap(nasty_list &nl)
 #if TEST_STD_VER > 14

@@ -24,7 +24,7 @@
 #===------------------------------------------------------------------------===#
 
 BEGIN {
-  # harcode the script name
+  # hardcode the script name
   script_name = "generate_netbsd_syscalls.awk"
   outputh = "../include/sanitizer/netbsd_syscall_hooks.h"
   outputinc = "../lib/sanitizer_common/sanitizer_syscalls_netbsd.inc"
@@ -1167,6 +1167,8 @@ function syscall_body(syscall, mode)
     pcmd("/* TODO */")
   } else if (syscall == "dup2") {
     pcmd("/* Nothing to do */")
+  } else if (syscall == "getrandom") {
+    pcmd("/* TODO */")
   } else if (syscall == "fcntl") {
     pcmd("/* Nothing to do */")
   } else if (syscall == "compat_50_select") {
@@ -1430,6 +1432,12 @@ function syscall_body(syscall, mode)
   } else if (syscall == "compat_09_ouname") {
     pcmd("/* TODO */")
   } else if (syscall == "sysarch") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__futex") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__futex_set_robust_list") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__futex_get_robust_list") {
     pcmd("/* TODO */")
   } else if (syscall == "compat_10_osemsys") {
     pcmd("/* TODO */")
@@ -3027,6 +3035,32 @@ function syscall_body(syscall, mode)
       pcmd("  PRE_READ(fhp_, fh_size_);")
       pcmd("}")
     }
+  } else if (syscall == "__acl_get_link") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_set_link") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_delete_link") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_aclcheck_link") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_get_file") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_set_file") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_get_fd") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_set_fd") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_delete_file") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_delete_fd") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_aclcheck_file") {
+    pcmd("/* TODO */")
+  } else if (syscall == "__acl_aclcheck_fd") {
+    pcmd("/* TODO */")
+  } else if (syscall == "lpathconf") {
+    pcmd("/* TODO */")
   } else {
     print "Unrecognized syscall: " syscall
     abnormal_exit = 1

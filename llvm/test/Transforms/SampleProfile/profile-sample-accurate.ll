@@ -1,17 +1,19 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -enable-new-pm=0 -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -enable-new-pm=0 -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
 
 ; RUN: llvm-profdata merge -sample -extbinary -prof-sym-list=%S/Inputs/profile-symbol-list.text %S/Inputs/profsampleacc.extbinary.afdo -o %t.symlist.afdo
-; RUN: opt < %s -sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=PROFSYMLIST
+; RUN: opt < %s -sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -enable-new-pm=0 -S | FileCheck %s --check-prefix=PROFSYMLIST
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-summary-cutoff-hot=600000 -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=PROFSYMLIST
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-accurate-for-symsinlist -profile-symbol-list-cutoff=2 -S | FileCheck %s --check-prefix=PSLCUTOFF2
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.symlist.afdo -profile-accurate-for-symsinlist -profile-symbol-list-cutoff=3 -S | FileCheck %s --check-prefix=PSLCUTOFF3
 ;
 ; If -profile-accurate-for-symsinlist and -profile-sample-accurate both present,
 ; -profile-sample-accurate will override -profile-accurate-for-symsinlist.
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -enable-new-pm=0 -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=600000 -profile-sample-accurate -profile-accurate-for-symsinlist -enable-new-pm=0 -S | FileCheck %s --check-prefix=CALL_SUM_IS_WARM
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profsampleacc.extbinary.afdo -profile-summary-cutoff-hot=900000 -profile-sample-accurate -profile-accurate-for-symsinlist -S | FileCheck %s --check-prefix=CALL_SUM_IS_HOT
 ;
 ; Original C++ test case
@@ -58,6 +60,16 @@ entry:
   %1 = load i32, i32* %y.addr, align 4, !dbg !11
   %add = add nsw i32 %0, %1, !dbg !11
   ret i32 %add, !dbg !11
+}
+
+; Check -profile-symbol-list-cutoff=3 will include _Z3toov into profile
+; symbol list and -profile-symbol-list-cutoff=2 will not.
+; PSLCUTOFF2: define i32 @_Z3toov{{.*}}!prof ![[TOO_ID:[0-9]+]]
+; PSLCUTOFF3: define i32 @_Z3toov{{.*}}!prof ![[TOO_ID:[0-9]+]]
+define i32 @_Z3toov(i32 %x, i32 %y) #0 {
+entry:
+  %add = add nsw i32 %x, %y
+  ret i32 %add
 }
 
 ; Function Attrs: uwtable
@@ -132,6 +144,8 @@ attributes #0 = { "use-sample-profile" }
 ; CALL_SUM_IS_HOT: ![[ZERO_ID]] = !{!"function_entry_count", i64 0}
 ; CALL_SUM_IS_WARM: ![[NONZERO_ID]] = !{!"function_entry_count", i64 5179}
 ; PROFSYMLIST: ![[UNKNOWN_ID]] = !{!"function_entry_count", i64 -1}
+; PSLCUTOFF2: ![[TOO_ID]] = !{!"function_entry_count", i64 -1}
+; PSLCUTOFF3: ![[TOO_ID]] = !{!"function_entry_count", i64 0}
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}

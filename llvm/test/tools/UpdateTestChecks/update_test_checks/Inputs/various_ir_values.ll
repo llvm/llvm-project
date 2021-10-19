@@ -24,7 +24,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   %2 = load i32*, i32** %A.addr, align 8, !dbg !27, !tbaa !16
   %3 = load i32, i32* %2, align 4, !dbg !28, !tbaa !23
   %cmp = icmp slt i32 %1, %3, !dbg !29
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !30
+  br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !30, !prof !61
 
 for.cond.cleanup:                                 ; preds = %for.cond
   %4 = bitcast i32* %i to i8*, !dbg !31
@@ -171,3 +171,4 @@ attributes #3 = { nounwind }
 !58 = distinct !{!58, !52, !59}
 !59 = !DILocation(line: 10, column: 12, scope: !43)
 !60 = !DILocation(line: 11, column: 1, scope: !39)
+!61 = !{!"branch_weights", i32 1, i32 1048575}

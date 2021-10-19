@@ -25,6 +25,42 @@ class SettingsCommandTestCase(TestBase):
                              "environment variables",
                              "executable's environment"])
 
+    def test_set_interpreter_repeat_prev_command(self):
+        """Test the `interpreter.repeat-previous-command` setting."""
+        self.build()
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        setting = "interpreter.repeat-previous-command"
+
+        def cleanup(setting):
+            self.runCmd(
+                "settings clear %s" %
+                setting, check=False)
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup(setting))
+
+        # First, check for the setting default value.
+        self.expect("setting show %s" % setting,
+                    substrs=["interpreter.repeat-previous-command (boolean) = true"])
+
+        # Then, invert the setting, and check that was set correctly
+        self.runCmd("setting set %s false" % setting)
+        self.expect("setting show %s" % setting,
+                    substrs=["interpreter.repeat-previous-command (boolean) = false"])
+
+
+        ci  = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci.IsValid(), "Invalid command interpreter.")
+        # Now, test the functionnality
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand('breakpoint set -n main', res)
+        self.assertTrue(res.Succeeded(), "Command failed.")
+        ci.HandleCommand('', res)
+        self.assertTrue(res.Succeeded(), "Empty command failed.")
+        self.assertEqual(self.dbg.GetSelectedTarget().GetNumBreakpoints(), 1)
+
     def test_append_target_env_vars(self):
         """Test that 'append target.run-args' works."""
         # Append the env-vars.
@@ -203,12 +239,10 @@ class SettingsCommandTestCase(TestBase):
                     substrs=["5ah"])
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
-    @skipIfReproducer
     def test_run_args_and_env_vars(self):
         self.do_test_run_args_and_env_vars(use_launchsimple=False)
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
-    @skipIfReproducer
     def test_launchsimple_args_and_env_vars(self):
         self.do_test_run_args_and_env_vars(use_launchsimple=True)
 
@@ -238,6 +272,11 @@ class SettingsCommandTestCase(TestBase):
         self.assertTrue(found_env_var,
                         "MY_ENV_VAR was not set in LunchInfo object")
 
+        self.assertEqual(launch_info.GetNumArguments(), 3)
+        self.assertEqual(launch_info.GetArgumentAtIndex(0), "A")
+        self.assertEqual(launch_info.GetArgumentAtIndex(1), "B")
+        self.assertEqual(launch_info.GetArgumentAtIndex(2), "C")
+        
         self.expect(
             'target show-launch-environment',
             substrs=["MY_ENV_VAR=YES"])
@@ -288,7 +327,6 @@ class SettingsCommandTestCase(TestBase):
                 "Environment variable 'MY_ENV_VAR' successfully passed."])
 
     @skipIfRemote  # it doesn't make sense to send host env to remote target
-    @skipIfReproducer
     def test_pass_host_env_vars(self):
         """Test that the host env vars are passed to the launched process."""
         self.build()
@@ -385,7 +423,6 @@ class SettingsCommandTestCase(TestBase):
                 "The host environment variable 'MY_HOST_ENV_VAR2' successfully passed."])
 
     @skipIfDarwinEmbedded   # <rdar://problem/34446098> debugserver on ios etc can't write files
-    @skipIfReproducer
     def test_set_error_output_path(self):
         """Test that setting target.error/output-path for the launched process works."""
         self.build()
@@ -461,15 +498,15 @@ class SettingsCommandTestCase(TestBase):
         # if they are provided
         self.runCmd("settings set thread-format    'abc def'   ")
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def"')
+                    startstr='thread-format (format-string) = "abc def"')
         self.runCmd('settings set thread-format    "abc def"   ')
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def"')
+                    startstr='thread-format (format-string) = "abc def"')
         # Make sure when no quotes are provided that we maintain any trailing
         # spaces
         self.runCmd('settings set thread-format abc def   ')
         self.expect("settings show thread-format",
-                    'thread-format (format-string) = "abc def   "')
+                    startstr='thread-format (format-string) = "abc def   "')
         self.runCmd('settings clear thread-format')
 
     def test_settings_with_trailing_whitespace(self):

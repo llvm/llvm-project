@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fms-extensions -emit-llvm < %s | FileCheck %s
 
-// CHECK: @a1 = global i32 1, align 1
+// CHECK: @a1 ={{.*}} global i32 1, align 1
 __unaligned int a1 = 1;
 
-// CHECK: @a2 = global i32 1, align 1
+// CHECK: @a2 ={{.*}} global i32 1, align 1
 int __unaligned a2 = 1;
 
 // CHECK: @a3 = {{.*}} align 1

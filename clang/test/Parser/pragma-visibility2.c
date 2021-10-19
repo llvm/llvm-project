@@ -11,7 +11,7 @@ int v1;
 #pragma GCC visibility pop
 
 int v2;
-// CHECK: @v2 = global i32 0, align 4
+// CHECK: @v2 ={{.*}} global i32 0, align 4
 
 _Pragma("GCC visibility push(hidden)");
 

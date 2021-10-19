@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <memory>
 
 // shared_ptr

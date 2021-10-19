@@ -48,29 +48,27 @@ ClangDynamicCheckerFunctions::~ClangDynamicCheckerFunctions() = default;
 
 bool ClangDynamicCheckerFunctions::Install(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
-  Status error;
-  m_valid_pointer_check.reset(
-      exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-          g_valid_pointer_check_text, lldb::eLanguageTypeC,
-          VALID_POINTER_CHECK_NAME, error));
-  if (error.Fail())
+  auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+      g_valid_pointer_check_text, VALID_POINTER_CHECK_NAME,
+      lldb::eLanguageTypeC, exe_ctx);
+  if (!utility_fn_or_error) {
+    llvm::consumeError(utility_fn_or_error.takeError());
     return false;
+  }
+  m_valid_pointer_check = std::move(*utility_fn_or_error);
 
-  if (!m_valid_pointer_check->Install(diagnostic_manager, exe_ctx))
-    return false;
-
-  Process *process = exe_ctx.GetProcessPtr();
-
-  if (process) {
+  if (Process *process = exe_ctx.GetProcessPtr()) {
     ObjCLanguageRuntime *objc_language_runtime =
         ObjCLanguageRuntime::Get(*process);
 
     if (objc_language_runtime) {
-      m_objc_object_check.reset(objc_language_runtime->CreateObjectChecker(
-          VALID_OBJC_OBJECT_CHECK_NAME));
-
-      if (!m_objc_object_check->Install(diagnostic_manager, exe_ctx))
+      auto utility_fn_or_error = objc_language_runtime->CreateObjectChecker(
+          VALID_OBJC_OBJECT_CHECK_NAME, exe_ctx);
+      if (!utility_fn_or_error) {
+        llvm::consumeError(utility_fn_or_error.takeError());
         return false;
+      }
+      m_objc_object_check = std::move(*utility_fn_or_error);
     }
   }
 

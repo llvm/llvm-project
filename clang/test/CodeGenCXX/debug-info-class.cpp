@@ -71,6 +71,13 @@ struct A {
   }
 };
 
+namespace {
+struct L {
+  void func() {
+  }
+};
+}
+
 void f1() {
   D x;
   x.func();
@@ -79,6 +86,8 @@ void f1() {
   F::inner z;
   K k;
   k.func();
+  L l;
+  l.func();
 }
 
 int main(int argc, char **argv) {
@@ -97,9 +106,9 @@ int main(int argc, char **argv) {
 // RUN: %clang_cc1 -triple i686-cygwin -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple armv7l-unknown-linux-gnueabihf -emit-llvm -debug-info-kind=limited -fexceptions -std=c++11 %s -o - | FileCheck -check-prefix=CHECK11 -check-prefix=CHECK %s
 
-// CHECK98: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
+// CHECK98: invoke {{.+}} @_ZN1BD1Ev(%class.B* {{[^,]*}} %b)
 // CHECK98-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
-// CHECK11: call {{.+}} @_ZN1BD1Ev(%class.B* %b){{.*}}, !dbg ![[EXCEPTLOC:.*]]
+// CHECK11: call {{.+}} @_ZN1BD1Ev(%class.B* {{[^,]*}} %b){{.*}}, !dbg ![[EXCEPTLOC:.*]]
 
 // CHECK: store i32 0, i32* %{{.+}}, !dbg ![[RETLOC:.*]]
 
@@ -136,10 +145,11 @@ int main(int argc, char **argv) {
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
-// CHECK-NOT:              size:
+// CHECK-SAME:             size:
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-NOT:              identifier:
 // CHECK-SAME:             ){{$}}
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-NOT:              identifier:
@@ -149,10 +159,19 @@ int main(int argc, char **argv) {
 // CHECK-SAME:             identifier: "_ZTS1K"
 // CHECK-SAME:             ){{$}}
 
+// CHECK: [[L:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "L"
+// CHECK-SAME:             ){{$}}
+// CHECK: [[L_FUNC_DECL:![0-9]*]] = !DISubprogram(name: "func",{{.*}} scope: [[L]]
+// CHECK-SAME:             DISPFlagLocalToUnit
+
 // CHECK: !DISubprogram(name: "func",{{.*}} scope: [[D]]
 // CHECK-SAME:          DISPFlagDefinition
 // CHECK-SAME:          declaration: [[D_FUNC_DECL:![0-9]*]]
 // CHECK: [[D_FUNC_DECL]] = !DISubprogram(name: "func",{{.*}} scope: [[D]]
+
+// CHECK: !DISubprogram(name: "func",{{.*}} scope: [[L]]
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
+// CHECK-SAME:          declaration: [[L_FUNC_DECL]]
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "inner",{{.*}} line: 50
 // CHECK-NOT: DIFlagFwdDecl
@@ -170,5 +189,5 @@ int main(int argc, char **argv) {
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
 //
-// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 91,
-// CHECK: ![[RETLOC]] = !DILocation(line: 90,
+// CHECK: ![[EXCEPTLOC]] = !DILocation(line: 100,
+// CHECK: ![[RETLOC]] = !DILocation(line: 99,

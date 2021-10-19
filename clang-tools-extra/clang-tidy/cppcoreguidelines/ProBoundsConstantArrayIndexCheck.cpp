@@ -38,12 +38,12 @@ void ProBoundsConstantArrayIndexCheck::registerPPCallbacks(
 void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   // Note: if a struct contains an array member, the compiler-generated
   // constructor has an arraySubscriptExpr.
-  Finder->addMatcher(
-      arraySubscriptExpr(
-          hasBase(ignoringImpCasts(hasType(constantArrayType().bind("type")))),
-          hasIndex(expr().bind("index")), unless(hasAncestor(isImplicit())))
-          .bind("expr"),
-      this);
+  Finder->addMatcher(arraySubscriptExpr(hasBase(ignoringImpCasts(hasType(
+                                            constantArrayType().bind("type")))),
+                                        hasIndex(expr().bind("index")),
+                                        unless(hasAncestor(decl(isImplicit()))))
+                         .bind("expr"),
+                     this);
 
   Finder->addMatcher(
       cxxOperatorCallExpr(
@@ -85,8 +85,7 @@ void ProBoundsConstantArrayIndexCheck::check(
                               IndexRange.getBegin().getLocWithOffset(-1)),
                   ", ")
            << FixItHint::CreateReplacement(Matched->getEndLoc(), ")")
-           << Inserter.createMainFileIncludeInsertion(GslHeader,
-                                                      /*IsAngled=*/false);
+           << Inserter.createMainFileIncludeInsertion(GslHeader);
     }
     return;
   }
@@ -100,7 +99,7 @@ void ProBoundsConstantArrayIndexCheck::check(
 
   if (Index->isSigned() && Index->isNegative()) {
     diag(Matched->getExprLoc(), "std::array<> index %0 is negative")
-        << Index->toString(10);
+        << toString(*Index, 10);
     return;
   }
 
@@ -119,7 +118,7 @@ void ProBoundsConstantArrayIndexCheck::check(
     diag(Matched->getExprLoc(),
          "std::array<> index %0 is past the end of the array "
          "(which contains %1 elements)")
-        << Index->toString(10) << ArraySize.toString(10, false);
+        << toString(*Index, 10) << toString(ArraySize, 10, false);
   }
 }
 

@@ -130,8 +130,7 @@ DWARFMappedHash::DIEInfo::DIEInfo(dw_offset_t o, dw_tag_t t, uint32_t f,
     : die_offset(o), tag(t), type_flags(f), qualified_name_hash(h) {}
 
 DWARFMappedHash::Prologue::Prologue(dw_offset_t _die_base_offset)
-    : die_base_offset(_die_base_offset), atoms(), atom_mask(0),
-      min_hash_data_byte_size(0), hash_data_has_fixed_byte_size(true) {
+    : die_base_offset(_die_base_offset), atoms() {
   // Define an array of DIE offsets by first defining an array, and then define
   // the atom type for the array, in this case we have an array of DIE offsets.
   AppendAtom(eAtomTypeDIEOffset, DW_FORM_data4);

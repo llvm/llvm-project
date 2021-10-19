@@ -13,6 +13,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -173,15 +174,21 @@ protected:
   ObjectFile *m_objfile;
   collection m_symbols;
   FileRangeToIndexMap m_file_addr_to_index;
-  UniqueCStringMap<uint32_t> m_name_to_index;
-  UniqueCStringMap<uint32_t> m_basename_to_index;
-  UniqueCStringMap<uint32_t> m_method_to_index;
-  UniqueCStringMap<uint32_t> m_selector_to_index;
+
+  /// Maps function names to symbol indices (grouped by FunctionNameTypes)
+  std::map<lldb::FunctionNameType, UniqueCStringMap<uint32_t>>
+      m_name_to_symbol_indices;
   mutable std::recursive_mutex
       m_mutex; // Provide thread safety for this symbol table
   bool m_file_addr_to_index_computed : 1, m_name_indexes_computed : 1;
 
 private:
+  UniqueCStringMap<uint32_t> &
+  GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
+    auto map = m_name_to_symbol_indices.find(type);
+    assert(map != m_name_to_symbol_indices.end());
+    return map->second;
+  }
   bool CheckSymbolAtIndex(size_t idx, Debug symbol_debug_type,
                           Visibility symbol_visibility) const {
     switch (symbol_debug_type) {
@@ -211,6 +218,26 @@ private:
     }
     return false;
   }
+
+  /// A helper function that looks up full function names.
+  ///
+  /// We generate unique names for synthetic symbols so that users can look
+  /// them up by name when needed. But because doing so is uncommon in normal
+  /// debugger use, we trade off some performance at lookup time for faster
+  /// symbol table building by detecting these symbols and generating their
+  /// names lazily, rather than adding them to the normal symbol indexes. This
+  /// function does the job of first consulting the name indexes, and if that
+  /// fails it extracts the information it needs from the synthetic name and
+  /// locates the symbol.
+  ///
+  /// @param[in] symbol_name The symbol name to search for.
+  ///
+  /// @param[out] indexes The vector if symbol indexes to update with results.
+  ///
+  /// @returns The number of indexes added to the index vector. Zero if no
+  /// matches were found.
+  uint32_t GetNameIndexes(ConstString symbol_name,
+                          std::vector<uint32_t> &indexes);
 
   void SymbolIndicesToSymbolContextList(std::vector<uint32_t> &symbol_indexes,
                                         SymbolContextList &sc_list);

@@ -162,7 +162,7 @@ HANDLE_DW_TAG(0x001c, inheritance, 2, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x001d, inlined_subroutine, 2, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x001e, module, 2, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x001f, ptr_to_member_type, 2, DWARF, DW_KIND_TYPE)
-HANDLE_DW_TAG(0x0020, set_type, 2, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x0020, set_type, 2, DWARF, DW_KIND_TYPE)
 HANDLE_DW_TAG(0x0021, subrange_type, 2, DWARF, DW_KIND_TYPE)
 HANDLE_DW_TAG(0x0022, with_stmt, 2, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0023, access_declaration, 2, DWARF, DW_KIND_NONE)
@@ -210,15 +210,61 @@ HANDLE_DW_TAG(0x004a, skeleton_unit, 5, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x004b, immutable_type, 5, DWARF, DW_KIND_TYPE)
 // Vendor extensions:
 HANDLE_DW_TAG(0x4081, MIPS_loop, 0, MIPS, DW_KIND_NONE)
+// Conflicting:
+// HANDLE_DW_TAG(0x4081, HP_array_descriptor, 0, HP, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4101, format_label, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4102, function_template, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4103, class_template, 0, GNU, DW_KIND_NONE)
+
+HANDLE_DW_TAG(0x4104, GNU_BINCL, 0, GNU, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4105, GNU_EINCL, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4106, GNU_template_template_param, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4107, GNU_template_parameter_pack, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4108, GNU_formal_parameter_pack, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x4109, GNU_call_site, 0, GNU, DW_KIND_NONE)
 HANDLE_DW_TAG(0x410a, GNU_call_site_parameter, 0, GNU, DW_KIND_NONE)
+
 HANDLE_DW_TAG(0x4200, APPLE_property, 0, APPLE, DW_KIND_NONE)
+
+HANDLE_DW_TAG(0x4201, SUN_function_template, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4202, SUN_class_template, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4203, SUN_struct_template, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4204, SUN_union_template, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4205, SUN_indirect_inheritance, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4206, SUN_codeflags, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4207, SUN_memop_info, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4208, SUN_omp_child_func, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4209, SUN_rtti_descriptor, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x420a, SUN_dtor_info, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x420b, SUN_dtor, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x420c, SUN_f90_interface, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x420d, SUN_fortran_vax_structure, 0, SUN, DW_KIND_NONE)
+HANDLE_DW_TAG(0x42ff, SUN_hi, 0, SUN, DW_KIND_NONE)
+
+// DSP-C/Starcore __circ, _rev
+HANDLE_DW_TAG(0x5101, ALTIUM_circ_type, 0, ALTIUM, DW_KIND_NONE)
+HANDLE_DW_TAG(0x5102, ALTIUM_mwa_circ_type, 0, ALTIUM, DW_KIND_NONE)
+HANDLE_DW_TAG(0x5103, ALTIUM_rev_carry_type, 0, ALTIUM, DW_KIND_NONE)
+// M16 __rom qualifier
+HANDLE_DW_TAG(0x5111, ALTIUM_rom, 0, ALTIUM, DW_KIND_NONE)
+
+// LLVM
+HANDLE_DW_TAG(0x6000, LLVM_annotation, 0, LLVM, DW_KIND_NONE)
+
+// Green Hills.
+HANDLE_DW_TAG(0x8004, GHS_namespace, 0, GHS, DW_KIND_NONE)
+HANDLE_DW_TAG(0x8005, GHS_using_namespace, 0, GHS, DW_KIND_NONE)
+HANDLE_DW_TAG(0x8006, GHS_using_declaration, 0, GHS, DW_KIND_NONE)
+HANDLE_DW_TAG(0x8007, GHS_template_templ_param, 0, GHS, DW_KIND_NONE)
+
+// Unified Parallel C.
+HANDLE_DW_TAG(0x8765, UPC_shared_type, 0, UPC, DW_KIND_NONE)
+HANDLE_DW_TAG(0x8766, UPC_strict_type, 0, UPC, DW_KIND_NONE)
+HANDLE_DW_TAG(0x8767, UPC_relaxed, 0, UPC, DW_KIND_NONE)
+
+HANDLE_DW_TAG(0xa000, PGI_kanji_type, 0, PGI, DW_KIND_NONE)
+HANDLE_DW_TAG(0xa020, PGI_interface_block, 0, PGI, DW_KIND_NONE)
+
 HANDLE_DW_TAG(0xb000, BORLAND_property, 0, BORLAND, DW_KIND_NONE)
 HANDLE_DW_TAG(0xb001, BORLAND_Delphi_string, 0, BORLAND, DW_KIND_TYPE)
 HANDLE_DW_TAG(0xb002, BORLAND_Delphi_dynamic_array, 0, BORLAND, DW_KIND_TYPE)
@@ -351,13 +397,21 @@ HANDLE_DW_AT(0x89, export_symbols, 5, DWARF)
 HANDLE_DW_AT(0x8a, deleted, 5, DWARF)
 HANDLE_DW_AT(0x8b, defaulted, 5, DWARF)
 HANDLE_DW_AT(0x8c, loclists_base, 5, DWARF)
+
 // Vendor extensions:
+HANDLE_DW_AT(0x806, GHS_namespace_alias, 0, GHS)
+HANDLE_DW_AT(0x807, GHS_using_namespace, 0, GHS)
+HANDLE_DW_AT(0x808, GHS_using_declaration, 0, GHS)
+
+HANDLE_DW_AT(0x2001, MIPS_fde, 0, MIPS)
 HANDLE_DW_AT(0x2002, MIPS_loop_begin, 0, MIPS)
 HANDLE_DW_AT(0x2003, MIPS_tail_loop_begin, 0, MIPS)
 HANDLE_DW_AT(0x2004, MIPS_epilog_begin, 0, MIPS)
 HANDLE_DW_AT(0x2005, MIPS_loop_unroll_factor, 0, MIPS)
 HANDLE_DW_AT(0x2006, MIPS_software_pipeline_depth, 0, MIPS)
 HANDLE_DW_AT(0x2007, MIPS_linkage_name, 0, MIPS)
+// Conflicting:
+// HANDLE_DW_AT(0x2007, GHS_mangled, 0, GHS)
 HANDLE_DW_AT(0x2008, MIPS_stride, 0, MIPS)
 HANDLE_DW_AT(0x2009, MIPS_abstract_name, 0, MIPS)
 HANDLE_DW_AT(0x200a, MIPS_clone_origin, 0, MIPS)
@@ -367,9 +421,52 @@ HANDLE_DW_AT(0x200d, MIPS_stride_elem, 0, MIPS)
 HANDLE_DW_AT(0x200e, MIPS_ptr_dopetype, 0, MIPS)
 HANDLE_DW_AT(0x200f, MIPS_allocatable_dopetype, 0, MIPS)
 HANDLE_DW_AT(0x2010, MIPS_assumed_shape_dopetype, 0, MIPS)
+
 // This one appears to have only been implemented by Open64 for
 // fortran and may conflict with other extensions.
 HANDLE_DW_AT(0x2011, MIPS_assumed_size, 0, MIPS)
+
+// HP  0x2001-0x2011 conflict with MIPS
+// HANDLE_DW_AT(0x2001, HP_unmodifiable, 0, HP)
+// HANDLE_DW_AT(0x2005, HP_prologue, 0, HP)
+// HANDLE_DW_AT(0x2008, HP_epilogue, 0, HP)
+// HANDLE_DW_AT(0x2010, HP_actuals_stmt_list, 0, HP)
+// HANDLE_DW_AT(0x2011, HP_proc_per_section, 0, HP)
+
+HANDLE_DW_AT(0x2012, HP_raw_data_ptr, 0, HP)
+HANDLE_DW_AT(0x2013, HP_pass_by_reference, 0, HP)
+HANDLE_DW_AT(0x2014, HP_opt_level, 0, HP)
+HANDLE_DW_AT(0x2015, HP_prof_version_id, 0, HP)
+HANDLE_DW_AT(0x2016, HP_opt_flags, 0, HP)
+HANDLE_DW_AT(0x2017, HP_cold_region_low_pc, 0, HP)
+HANDLE_DW_AT(0x2018, HP_cold_region_high_pc, 0, HP)
+HANDLE_DW_AT(0x2019, HP_all_variables_modifiable, 0, HP)
+HANDLE_DW_AT(0x201a, HP_linkage_name, 0, HP)
+HANDLE_DW_AT(0x201b, HP_prof_flags, 0, HP)
+HANDLE_DW_AT(0x201f, HP_unit_name, 0, HP)
+HANDLE_DW_AT(0x2020, HP_unit_size, 0, HP)
+HANDLE_DW_AT(0x2021, HP_widened_byte_size, 0, HP)
+HANDLE_DW_AT(0x2022, HP_definition_points, 0, HP)
+HANDLE_DW_AT(0x2023, HP_default_location, 0, HP)
+HANDLE_DW_AT(0x2029, HP_is_result_param, 0, HP)
+
+// COMPAQ/HP Conflicts with MIPS/HP  0x2001 - 0x2005
+// HANDLE_DW_AT(0x2001, CPQ_discontig_ranges, 0, COMPAQ)
+// HANDLE_DW_AT(0x2002, CPQ_semantic_events, 0, COMPAQ)
+// HANDLE_DW_AT(0x2003, CPQ_split_lifetimes_var, 0, COMPAQ)
+// HANDLE_DW_AT(0x2004, CPQ_split_lifetimes_rtn, 0, COMPAQ)
+// HANDLE_DW_AT(0x2005, CPQ_prologue_length, 0, COMPAQ)
+
+HANDLE_DW_AT(0x2026, DW_AT_INTEL_other_endian, 0, INTEL)
+
+// Green Hills.
+HANDLE_DW_AT(0x2083, GHS_rsm, 0, GHS)
+HANDLE_DW_AT(0x2085, GHS_frsm, 0, GHS)
+HANDLE_DW_AT(0x2086, GHS_frames, 0, GHS)
+HANDLE_DW_AT(0x2087, GHS_rso, 0, GHS)
+HANDLE_DW_AT(0x2092, GHS_subcpu, 0, GHS)
+HANDLE_DW_AT(0x2093, GHS_lbrace_line, 0, GHS)
+
 // GNU extensions
 HANDLE_DW_AT(0x2101, sf_names, 0, GNU)
 HANDLE_DW_AT(0x2102, src_info, 0, GNU)
@@ -378,17 +475,18 @@ HANDLE_DW_AT(0x2104, src_coords, 0, GNU)
 HANDLE_DW_AT(0x2105, body_begin, 0, GNU)
 HANDLE_DW_AT(0x2106, body_end, 0, GNU)
 HANDLE_DW_AT(0x2107, GNU_vector, 0, GNU)
-HANDLE_DW_AT(0x2110, GNU_template_name, 0, GNU)
 HANDLE_DW_AT(0x210f, GNU_odr_signature, 0, GNU)
+HANDLE_DW_AT(0x2110, GNU_template_name, 0, GNU)
 HANDLE_DW_AT(0x2111, GNU_call_site_value, 0, GNU)
-HANDLE_DW_AT (0x2112, GNU_call_site_data_value, 0, GNU)
-HANDLE_DW_AT (0x2113, GNU_call_site_target, 0, GNU)
-HANDLE_DW_AT (0x2114, GNU_call_site_target_clobbered, 0, GNU)
-HANDLE_DW_AT (0x2115, GNU_tail_call, 0, GNU)
-HANDLE_DW_AT (0x2116, GNU_all_tail_call_sites, 0, GNU)
+HANDLE_DW_AT(0x2112, GNU_call_site_data_value, 0, GNU)
+HANDLE_DW_AT(0x2113, GNU_call_site_target, 0, GNU)
+HANDLE_DW_AT(0x2114, GNU_call_site_target_clobbered, 0, GNU)
+HANDLE_DW_AT(0x2115, GNU_tail_call, 0, GNU)
+HANDLE_DW_AT(0x2116, GNU_all_tail_call_sites, 0, GNU)
 HANDLE_DW_AT(0x2117, GNU_all_call_sites, 0, GNU)
-HANDLE_DW_AT (0x2118, GNU_all_source_call_sites, 0, GNU)
+HANDLE_DW_AT(0x2118, GNU_all_source_call_sites, 0, GNU)
 HANDLE_DW_AT(0x2119, GNU_macros, 0, GNU)
+HANDLE_DW_AT(0x211a, GNU_deleted, 0, GNU)
 // Extensions for Fission proposal.
 HANDLE_DW_AT(0x2130, GNU_dwo_name, 0, GNU)
 HANDLE_DW_AT(0x2131, GNU_dwo_id, 0, GNU)
@@ -397,6 +495,84 @@ HANDLE_DW_AT(0x2133, GNU_addr_base, 0, GNU)
 HANDLE_DW_AT(0x2134, GNU_pubnames, 0, GNU)
 HANDLE_DW_AT(0x2135, GNU_pubtypes, 0, GNU)
 HANDLE_DW_AT(0x2136, GNU_discriminator, 0, GNU)
+HANDLE_DW_AT(0x2137, GNU_entry_view, 0, GNU)
+
+HANDLE_DW_AT(0x2201, SUN_template, 0, SUN)
+// Conflicting:
+// HANDLE_DW_AT(0x2201, VMS_rtnbeg_pd_address);
+
+HANDLE_DW_AT(0x2202, SUN_alignment, 0, SUN)
+HANDLE_DW_AT(0x2203, SUN_vtable, 0, SUN)
+HANDLE_DW_AT(0x2204, SUN_count_guarantee, 0, SUN)
+HANDLE_DW_AT(0x2205, SUN_command_line, 0, SUN)
+HANDLE_DW_AT(0x2206, SUN_vbase, 0, SUN)
+HANDLE_DW_AT(0x2207, SUN_compile_options, 0, SUN)
+HANDLE_DW_AT(0x2208, SUN_language, 0, SUN)
+HANDLE_DW_AT(0x2209, SUN_browser_file, 0, SUN)
+HANDLE_DW_AT(0x2210, SUN_vtable_abi, 0, SUN)
+HANDLE_DW_AT(0x2211, SUN_func_offsets, 0, SUN)
+HANDLE_DW_AT(0x2212, SUN_cf_kind, 0, SUN)
+HANDLE_DW_AT(0x2213, SUN_vtable_index, 0, SUN)
+HANDLE_DW_AT(0x2214, SUN_omp_tpriv_addr, 0, SUN)
+HANDLE_DW_AT(0x2215, SUN_omp_child_func, 0, SUN)
+HANDLE_DW_AT(0x2216, SUN_func_offset, 0, SUN)
+HANDLE_DW_AT(0x2217, SUN_memop_type_ref, 0, SUN)
+HANDLE_DW_AT(0x2218, SUN_profile_id, 0, SUN)
+HANDLE_DW_AT(0x2219, SUN_memop_signature, 0, SUN)
+
+HANDLE_DW_AT(0x2220, SUN_obj_dir, 0, SUN)
+HANDLE_DW_AT(0x2221, SUN_obj_file, 0, SUN)
+HANDLE_DW_AT(0x2222, SUN_original_name, 0, SUN)
+HANDLE_DW_AT(0x2223, SUN_hwcprof_signature, 0, SUN)
+HANDLE_DW_AT(0x2224, SUN_amd64_parmdump, 0, SUN)
+HANDLE_DW_AT(0x2225, SUN_part_link_name, 0, SUN)
+HANDLE_DW_AT(0x2226, SUN_link_name, 0, SUN)
+HANDLE_DW_AT(0x2227, SUN_pass_with_const, 0, SUN)
+HANDLE_DW_AT(0x2228, SUN_return_with_const, 0, SUN)
+HANDLE_DW_AT(0x2229, SUN_import_by_name, 0, SUN)
+HANDLE_DW_AT(0x222a, SUN_90_pointer, 0, SUN)
+HANDLE_DW_AT(0x222b, SUN_pass_by_ref, 0, SUN)
+HANDLE_DW_AT(0x222c, SUN_f90_allocatable, 0, SUN)
+HANDLE_DW_AT(0x222d, SUN_f90_assumed_shape_array, 0, SUN)
+HANDLE_DW_AT(0x222e, SUN_c_vla, 0, SUN)
+HANDLE_DW_AT(0x2230, SUN_return_value_ptr, 0, SUN)
+HANDLE_DW_AT(0x2231, SUN_dtor_start, 0, SUN)
+HANDLE_DW_AT(0x2232, SUN_dtor_length, 0, SUN)
+HANDLE_DW_AT(0x2233, SUN_dtor_state_initial, 0, SUN)
+HANDLE_DW_AT(0x2234, SUN_dtor_state_final, 0, SUN)
+HANDLE_DW_AT(0x2235, SUN_dtor_state_deltas, 0, SUN)
+HANDLE_DW_AT(0x2236, SUN_import_by_lname, 0, SUN)
+HANDLE_DW_AT(0x2237, SUN_f90_use_only, 0, SUN)
+HANDLE_DW_AT(0x2238, SUN_namelist_spec, 0, SUN)
+HANDLE_DW_AT(0x2239, SUN_is_omp_child_func, 0, SUN)
+HANDLE_DW_AT(0x223a, SUN_fortran_main_alias, 0, SUN)
+HANDLE_DW_AT(0x223b, SUN_fortran_based, 0, SUN)
+
+HANDLE_DW_AT(0x2300, ALTIUM_loclist, 0, ALTIUM)
+
+HANDLE_DW_AT(0x2301, use_GNAT_descriptive_type, 0, GNU)
+HANDLE_DW_AT(0x2302, GNAT_descriptive_type, 0, GNU)
+HANDLE_DW_AT(0x2303, GNU_numerator, 0, GNU)
+HANDLE_DW_AT(0x2304, GNU_denominator, 0, GNU)
+HANDLE_DW_AT(0x2305, GNU_bias, 0, GNU)
+
+HANDLE_DW_AT(0x2900, GO_kind, 0, GO)
+HANDLE_DW_AT(0x2901, GO_key, 0, GO)
+HANDLE_DW_AT(0x2902, GO_elem, 0, GO)
+HANDLE_DW_AT(0x2903, GO_embedded_field, 0, GO)
+HANDLE_DW_AT(0x2904, GO_runtime_type, 0, GO)
+
+HANDLE_DW_AT(0x3210, UPC_threads_scaled, 0, UPC)
+
+HANDLE_DW_AT(0x393e, IBM_wsa_addr, 0, IBM)
+HANDLE_DW_AT(0x393f, IBM_home_location, 0, IBM)
+HANDLE_DW_AT(0x3940, IBM_alt_srcview, 0, IBM)
+
+// PGI extensions (STMicroelectronics)
+HANDLE_DW_AT(0x3a00, PGI_lbase, 0, PGI)
+HANDLE_DW_AT(0x3a01, PGI_soffset, 0, PGI)
+HANDLE_DW_AT(0x3a02, PGI_lstride, 0, PGI)
+
 // Borland extensions.
 HANDLE_DW_AT(0x3b11, BORLAND_property_read, 0, BORLAND)
 HANDLE_DW_AT(0x3b12, BORLAND_property_write, 0, BORLAND)
@@ -494,6 +670,8 @@ HANDLE_DW_FORM(0x1f02, GNU_str_index, 0, GNU)
 // Alternate debug sections proposal (output of "dwz" tool).
 HANDLE_DW_FORM(0x1f20, GNU_ref_alt, 0, GNU)
 HANDLE_DW_FORM(0x1f21, GNU_strp_alt, 0, GNU)
+// LLVM addr+offset extension
+HANDLE_DW_FORM(0x2001, LLVM_addrx_offset, 0, LLVM)
 
 // DWARF Expression operators.
 HANDLE_DW_OP(0x03, addr, 2, DWARF)
@@ -666,11 +844,24 @@ HANDLE_DW_OP(0xa9, reinterpret, 5, DWARF)
 // Vendor extensions:
 // Extensions for GNU-style thread-local storage.
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, GNU)
+// Conflicting:
+// HANDLE_DW_OP(0xe0, HP_unknown, 0, HP)
+HANDLE_DW_OP(0xe1, HP_is_value, 0, HP)
+HANDLE_DW_OP(0xe2, HP_fltconst4, 0, HP)
+HANDLE_DW_OP(0xe3, HP_fltconst8, 0, HP)
+HANDLE_DW_OP(0xe4, HP_mod_range, 0, HP)
+HANDLE_DW_OP(0xe5, HP_unmod_range, 0, HP)
+HANDLE_DW_OP(0xe6, HP_tls, 0, HP)
+HANDLE_DW_OP(0xe8, INTEL_bit_piece, 0, INTEL)
+
 // Extensions for WebAssembly.
 HANDLE_DW_OP(0xed, WASM_location, 0, WASM)
 HANDLE_DW_OP(0xee, WASM_location_int, 0, WASM)
+// Historic and not implemented in LLVM.
+HANDLE_DW_OP(0xf0, APPLE_uninit, 0, APPLE)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
+HANDLE_DW_OP(0xf8, PGI_omp_thread_num, 0, PGI)
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
@@ -744,6 +935,20 @@ HANDLE_DW_ATE(0x10, UTF, 4, DWARF)
 HANDLE_DW_ATE(0x11, UCS, 5, DWARF)
 HANDLE_DW_ATE(0x12, ASCII, 5, DWARF)
 
+// The version numbers of all vendor extensions >0x80 were guessed.
+// Conflicting:
+// HANDLE_DW_ATE(0x80, ALTIUM_fract, 2, ALTIUM) = DW_ATE_low_user
+// HANDLE_DW_ATE(0x81, ALTIUM_accum, 2, ALTIUM)
+
+HANDLE_DW_ATE(0x81, HP_complex_float, 2, HP)
+HANDLE_DW_ATE(0x82, HP_float128, 2, HP)
+HANDLE_DW_ATE(0x83, HP_complex_float128, 2, HP)
+HANDLE_DW_ATE(0x84, HP_floathpintel, 2, HP)
+HANDLE_DW_ATE(0x85, HP_imaginary_float90, 2, HP)
+HANDLE_DW_ATE(0x86, HP_imaginary_float128, 2, HP)
+// Conflicting:
+// HANDLE_DW_ATE(0x86, SUN_imaginary_float, 2, SUN)
+
 // DWARF attribute endianity
 HANDLE_DW_END(0x00, default)
 HANDLE_DW_END(0x01, big)
@@ -789,9 +994,9 @@ HANDLE_DW_CC(0xc9, LLVM_PreserveMost)
 HANDLE_DW_CC(0xca, LLVM_PreserveAll)
 HANDLE_DW_CC(0xcb, LLVM_X86RegCall)
 // From GCC source code (include/dwarf2.h): This DW_CC_ value is not currently
-// generated by any toolchain.  It is used internally to GDB to indicate OpenCL C
-// functions that have been compiled with the IBM XL C for OpenCL compiler and use
-// a non-platform calling convention for passing OpenCL C vector types.
+// generated by any toolchain.  It is used internally to GDB to indicate OpenCL
+// C functions that have been compiled with the IBM XL C for OpenCL compiler and
+// use a non-platform calling convention for passing OpenCL C vector types.
 HANDLE_DW_CC(0xff, GDB_IBM_OpenCL)
 
 // Line Number Extended Opcode Encodings
@@ -912,6 +1117,10 @@ HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
 HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
 HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#cfa-definition-instructions
+HANDLE_DW_CFA(0x30, LLVM_def_aspace_cfa)
+HANDLE_DW_CFA(0x31, LLVM_def_aspace_cfa_sf)
 
 // Apple Objective-C Property Attributes.
 // Keep this list in sync with clang's DeclObjCCommon.h
@@ -940,36 +1149,48 @@ HANDLE_DW_UT(0x04, skeleton)
 HANDLE_DW_UT(0x05, split_compile)
 HANDLE_DW_UT(0x06, split_type)
 
-// DWARF section types. (enum name, ELF name, ELF DWO name, cmdline name, option)
-// Note that these IDs don't mean anything.
+// DWARF section types. (enum name, ELF name, ELF DWO name, cmdline name,
+// option) Note that these IDs don't mean anything.
 // TODO: Add Mach-O and COFF names.
 // Official DWARF sections.
 HANDLE_DWARF_SECTION(DebugAbbrev, ".debug_abbrev", "debug-abbrev", BoolOption)
 HANDLE_DWARF_SECTION(DebugAddr, ".debug_addr", "debug-addr", BoolOption)
-HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges", BoolOption)
+HANDLE_DWARF_SECTION(DebugAranges, ".debug_aranges", "debug-aranges",
+                     BoolOption)
 HANDLE_DWARF_SECTION(DebugInfo, ".debug_info", "debug-info", OffsetOption)
 HANDLE_DWARF_SECTION(DebugTypes, ".debug_types", "debug-types", OffsetOption)
 HANDLE_DWARF_SECTION(DebugLine, ".debug_line", "debug-line", OffsetOption)
-HANDLE_DWARF_SECTION(DebugLineStr, ".debug_line_str", "debug-line-str", BoolOption)
+HANDLE_DWARF_SECTION(DebugLineStr, ".debug_line_str", "debug-line-str",
+                     BoolOption)
 HANDLE_DWARF_SECTION(DebugLoc, ".debug_loc", "debug-loc", OffsetOption)
-HANDLE_DWARF_SECTION(DebugLoclists, ".debug_loclists", "debug-loclists", OffsetOption)
+HANDLE_DWARF_SECTION(DebugLoclists, ".debug_loclists", "debug-loclists",
+                     OffsetOption)
 HANDLE_DWARF_SECTION(DebugFrame, ".debug_frame", "debug-frame", OffsetOption)
 HANDLE_DWARF_SECTION(DebugMacro, ".debug_macro", "debug-macro", BoolOption)
 HANDLE_DWARF_SECTION(DebugNames, ".debug_names", "debug-names", BoolOption)
-HANDLE_DWARF_SECTION(DebugPubnames, ".debug_pubnames", "debug-pubnames", BoolOption)
-HANDLE_DWARF_SECTION(DebugPubtypes, ".debug_pubtypes", "debug-pubtypes", BoolOption)
-HANDLE_DWARF_SECTION(DebugGnuPubnames, ".debug_gnu_pubnames", "debug-gnu-pubnames", BoolOption)
-HANDLE_DWARF_SECTION(DebugGnuPubtypes, ".debug_gnu_pubtypes", "debug-gnu-pubtypes", BoolOption)
+HANDLE_DWARF_SECTION(DebugPubnames, ".debug_pubnames", "debug-pubnames",
+                     BoolOption)
+HANDLE_DWARF_SECTION(DebugPubtypes, ".debug_pubtypes", "debug-pubtypes",
+                     BoolOption)
+HANDLE_DWARF_SECTION(DebugGnuPubnames, ".debug_gnu_pubnames",
+                     "debug-gnu-pubnames", BoolOption)
+HANDLE_DWARF_SECTION(DebugGnuPubtypes, ".debug_gnu_pubtypes",
+                     "debug-gnu-pubtypes", BoolOption)
 HANDLE_DWARF_SECTION(DebugRanges, ".debug_ranges", "debug-ranges", BoolOption)
-HANDLE_DWARF_SECTION(DebugRnglists, ".debug_rnglists", "debug-rnglists", BoolOption)
+HANDLE_DWARF_SECTION(DebugRnglists, ".debug_rnglists", "debug-rnglists",
+                     BoolOption)
 HANDLE_DWARF_SECTION(DebugStr, ".debug_str", "debug-str", BoolOption)
-HANDLE_DWARF_SECTION(DebugStrOffsets, ".debug_str_offsets", "debug-str-offsets", BoolOption)
-HANDLE_DWARF_SECTION(DebugCUIndex, ".debug_cu_index", "debug-cu-index", BoolOption)
-HANDLE_DWARF_SECTION(DebugTUIndex, ".debug_tu_index", "debug-tu-index", BoolOption)
+HANDLE_DWARF_SECTION(DebugStrOffsets, ".debug_str_offsets", "debug-str-offsets",
+                     BoolOption)
+HANDLE_DWARF_SECTION(DebugCUIndex, ".debug_cu_index", "debug-cu-index",
+                     BoolOption)
+HANDLE_DWARF_SECTION(DebugTUIndex, ".debug_tu_index", "debug-tu-index",
+                     BoolOption)
 // Vendor extensions.
 HANDLE_DWARF_SECTION(AppleNames, ".apple_names", "apple-names", BoolOption)
 HANDLE_DWARF_SECTION(AppleTypes, ".apple_types", "apple-types", BoolOption)
-HANDLE_DWARF_SECTION(AppleNamespaces, ".apple_namespaces", "apple-namespaces", BoolOption)
+HANDLE_DWARF_SECTION(AppleNamespaces, ".apple_namespaces", "apple-namespaces",
+                     BoolOption)
 HANDLE_DWARF_SECTION(AppleObjC, ".apple_objc", "apple-objc", BoolOption)
 HANDLE_DWARF_SECTION(GdbIndex, ".gdb_index", "gdb-index", BoolOption)
 

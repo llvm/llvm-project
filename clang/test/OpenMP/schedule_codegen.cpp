@@ -10,7 +10,7 @@ int main() {
 #pragma omp for
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd
   for(int i = 0; i < 10; ++i);
@@ -20,7 +20,7 @@ int main() {
 #pragma omp for schedule(static)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(static)
   for(int i = 0; i < 10; ++i);
@@ -30,7 +30,7 @@ int main() {
 #pragma omp for schedule(static, 2)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(static, 2)
   for(int i = 0; i < 10; ++i);
@@ -72,7 +72,7 @@ int main() {
 #pragma omp for schedule(monotonic: static)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(monotonic: static)
   for(int i = 0; i < 10; ++i);
@@ -82,7 +82,7 @@ int main() {
 #pragma omp for schedule(monotonic: static, 2)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_for_static_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 // CHECK: @__kmpc_for_static_fini
 #pragma omp for simd schedule(monotonic: static, 2)
   for(int i = 0; i < 10; ++i);
@@ -91,7 +91,7 @@ int main() {
 #pragma omp for schedule(monotonic: auto)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: auto)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -99,7 +99,7 @@ int main() {
 #pragma omp for schedule(monotonic: runtime)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: runtime)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -107,7 +107,7 @@ int main() {
 #pragma omp for schedule(monotonic: guided)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: guided)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
@@ -115,7 +115,7 @@ int main() {
 #pragma omp for schedule(monotonic: dynamic)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init
-// CHECK-NOT: !llvm.access.group
+// CHECK: !llvm.access.group
 #pragma omp for simd schedule(monotonic: dynamic)
   for(int i = 0; i < 10; ++i);
 // CHECK: @__kmpc_dispatch_init

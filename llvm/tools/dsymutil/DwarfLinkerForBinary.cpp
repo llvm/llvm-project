@@ -59,6 +59,8 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -76,14 +78,12 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -167,7 +167,7 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
     return true;
 
   Streamer = std::make_unique<DwarfStreamer>(
-      Options.FileType, OutFile, Options.Translator, Options.Minimize,
+      Options.FileType, OutFile, Options.Translator,
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
         error(Error, Context);
       },
@@ -252,7 +252,10 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   }
 
   std::error_code EC;
-  raw_fd_ostream OS(Options.NoOutput ? "-" : Path.str(), EC, sys::fs::OF_None);
+  raw_fd_ostream OS(Options.NoOutput ? "-" : Path.str(), EC,
+                    Options.RemarksFormat == remarks::Format::Bitstream
+                        ? sys::fs::OF_None
+                        : sys::fs::OF_Text);
   if (EC)
     return errorCodeToError(EC);
 
@@ -262,7 +265,7 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   return Error::success();
 }
 
-ErrorOr<DwarfFile &>
+ErrorOr<DWARFFile &>
 DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
                                  const DebugMap &DebugMap,
                                  remarks::RemarkLinker &RL) {
@@ -274,7 +277,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
     AddressMapForLinking.push_back(
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj));
 
-    ObjectsForLinking.push_back(std::make_unique<DwarfFile>(
+    ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
         Obj.getObjectFilename(), ContextForLinking.back().get(),
         AddressMapForLinking.back().get(),
         Obj.empty() ? Obj.getWarnings() : EmptyWarnings));
@@ -322,6 +325,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   GeneralLinker.setNumThreads(Options.Threads);
   GeneralLinker.setAccelTableKind(Options.TheAccelTableKind);
   GeneralLinker.setPrependPath(Options.PrependPath);
+  GeneralLinker.setKeepFunctionForStatic(Options.KeepFunctionForStatic);
   if (Options.Translator)
     GeneralLinker.setStringsTranslator(TranslationLambda);
   GeneralLinker.setWarningHandler(
@@ -334,7 +338,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       });
   GeneralLinker.setObjFileLoader(
       [&DebugMap, &RL, this](StringRef ContainerName,
-                             StringRef Path) -> ErrorOr<DwarfFile &> {
+                             StringRef Path) -> ErrorOr<DWARFFile &> {
         auto &Obj = DebugMap.addDebugMapObject(
             Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
@@ -412,9 +416,10 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
                 Stat.getLastModificationTime());
         if (ModificationTime != Obj->getTimestamp()) {
           // Not using the helper here as we can easily stream TimePoint<>.
-          WithColor::warning() << "Timestamp mismatch for " << File << ": "
-                               << Stat.getLastModificationTime() << " and "
-                               << sys::TimePoint<>(Obj->getTimestamp()) << "\n";
+          WithColor::warning()
+              << File << ": timestamp mismatch between swift interface file ("
+              << sys::TimePoint<>(Obj->getTimestamp()) << ") and debug map ("
+              << sys::TimePoint<>(Obj->getTimestamp()) << ")\n";
           continue;
         }
       }
@@ -429,7 +434,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
       GeneralLinker.addObjectFile(*ErrorOrObj);
     else {
-      ObjectsForLinking.push_back(std::make_unique<DwarfFile>(
+      ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
           Obj->empty() ? Obj->getWarnings() : EmptyWarnings));
       GeneralLinker.addObjectFile(*ObjectsForLinking.back());
@@ -488,7 +493,7 @@ static bool isMachOPairedReloc(uint64_t RelocType, uint64_t Arch) {
 /// ValidRelocs array.
 void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     const object::SectionRef &Section, const object::MachOObjectFile &Obj,
-    const DebugMapObject &DMO) {
+    const DebugMapObject &DMO, std::vector<ValidReloc> &ValidRelocs) {
   Expected<StringRef> ContentsOrErr = Section.getContents();
   if (!ContentsOrErr) {
     consumeError(ContentsOrErr.takeError());
@@ -510,7 +515,8 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     if (isMachOPairedReloc(Obj.getAnyRelocationType(MachOReloc),
                            Obj.getArch())) {
       SkipNext = true;
-      Linker.reportWarning("unsupported relocation in debug_info section.",
+      Linker.reportWarning("unsupported relocation in " + *Section.getName() +
+                               " section.",
                            DMO.getObjectFilename());
       continue;
     }
@@ -518,7 +524,8 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     unsigned RelocSize = 1 << Obj.getAnyRelocationLength(MachOReloc);
     uint64_t Offset64 = Reloc.getOffset();
     if ((RelocSize != 4 && RelocSize != 8)) {
-      Linker.reportWarning("unsupported relocation in debug_info section.",
+      Linker.reportWarning("unsupported relocation in " + *Section.getName() +
+                               " section.",
                            DMO.getObjectFilename());
       continue;
     }
@@ -563,33 +570,33 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
 /// appropriate handler depending on the object file format.
 bool DwarfLinkerForBinary::AddressManager::findValidRelocs(
     const object::SectionRef &Section, const object::ObjectFile &Obj,
-    const DebugMapObject &DMO) {
+    const DebugMapObject &DMO, std::vector<ValidReloc> &Relocs) {
   // Dispatch to the right handler depending on the file type.
   if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Obj))
-    findValidRelocsMachO(Section, *MachOObj, DMO);
+    findValidRelocsMachO(Section, *MachOObj, DMO, Relocs);
   else
     Linker.reportWarning(Twine("unsupported object file type: ") +
                              Obj.getFileName(),
                          DMO.getObjectFilename());
-  if (ValidRelocs.empty())
+  if (Relocs.empty())
     return false;
 
   // Sort the relocations by offset. We will walk the DIEs linearly in
   // the file, this allows us to just keep an index in the relocation
   // array that we advance during our walk, rather than resorting to
   // some associative container. See DwarfLinkerForBinary::NextValidReloc.
-  llvm::sort(ValidRelocs);
+  llvm::sort(Relocs);
   return true;
 }
 
-/// Look for relocations in the debug_info section that match
-/// entries in the debug map. These relocations will drive the Dwarf
-/// link by indicating which DIEs refer to symbols present in the
-/// linked binary.
+/// Look for relocations in the debug_info and debug_addr section that match
+/// entries in the debug map. These relocations will drive the Dwarf link by
+/// indicating which DIEs refer to symbols present in the linked binary.
 /// \returns whether there are any valid relocations in the debug info.
-bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugInfo(
+bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugSections(
     const object::ObjectFile &Obj, const DebugMapObject &DMO) {
   // Find the debug_info section.
+  bool FoundValidRelocs = false;
   for (const object::SectionRef &Section : Obj.sections()) {
     StringRef SectionName;
     if (Expected<StringRef> NameOrErr = Section.getName())
@@ -598,55 +605,147 @@ bool DwarfLinkerForBinary::AddressManager::findValidRelocsInDebugInfo(
       consumeError(NameOrErr.takeError());
 
     SectionName = SectionName.substr(SectionName.find_first_not_of("._"));
-    if (SectionName != "debug_info")
-      continue;
-    return findValidRelocs(Section, Obj, DMO);
+    if (SectionName == "debug_info")
+      FoundValidRelocs |=
+          findValidRelocs(Section, Obj, DMO, ValidDebugInfoRelocs);
+    if (SectionName == "debug_addr")
+      FoundValidRelocs |=
+          findValidRelocs(Section, Obj, DMO, ValidDebugAddrRelocs);
   }
-  return false;
+  return FoundValidRelocs;
 }
 
-/// Checks that there is a relocation against an actual debug
-/// map entry between \p StartOffset and \p NextOffset.
-///
-/// This function must be called with offsets in strictly ascending
-/// order because it never looks back at relocations it already 'went past'.
-/// \returns true and sets Info.InDebugMap if it is the case.
-bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
-    uint64_t StartOffset, uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
-  assert(NextValidReloc == 0 ||
-         StartOffset > ValidRelocs[NextValidReloc - 1].Offset);
-  if (NextValidReloc >= ValidRelocs.size())
-    return false;
+std::vector<DwarfLinkerForBinary::AddressManager::ValidReloc>
+DwarfLinkerForBinary::AddressManager::getRelocations(
+    const std::vector<ValidReloc> &Relocs, uint64_t StartPos, uint64_t EndPos) {
+  std::vector<DwarfLinkerForBinary::AddressManager::ValidReloc> Res;
 
-  uint64_t RelocOffset = ValidRelocs[NextValidReloc].Offset;
+  auto CurReloc = partition_point(Relocs, [StartPos](const ValidReloc &Reloc) {
+    return Reloc.Offset < StartPos;
+  });
 
-  // We might need to skip some relocs that we didn't consider. For
-  // example the high_pc of a discarded DIE might contain a reloc that
-  // is in the list because it actually corresponds to the start of a
-  // function that is in the debug map.
-  while (RelocOffset < StartOffset && NextValidReloc < ValidRelocs.size() - 1)
-    RelocOffset = ValidRelocs[++NextValidReloc].Offset;
+  while (CurReloc != Relocs.end() && CurReloc->Offset >= StartPos &&
+         CurReloc->Offset < EndPos) {
+    Res.push_back(*CurReloc);
+    CurReloc++;
+  }
 
-  if (RelocOffset < StartOffset || RelocOffset >= EndOffset)
-    return false;
+  return Res;
+}
 
-  const auto &ValidReloc = ValidRelocs[NextValidReloc++];
-  const auto &Mapping = ValidReloc.Mapping->getValue();
-  const uint64_t BinaryAddress = Mapping.BinaryAddress;
+void DwarfLinkerForBinary::AddressManager::printReloc(const ValidReloc &Reloc) {
+  const auto &Mapping = Reloc.Mapping->getValue();
   const uint64_t ObjectAddress = Mapping.ObjectAddress
                                      ? uint64_t(*Mapping.ObjectAddress)
                                      : std::numeric_limits<uint64_t>::max();
-  if (Linker.Options.Verbose)
-    outs() << "Found valid debug map entry: " << ValidReloc.Mapping->getKey()
-           << "\t"
-           << format("0x%016" PRIx64 " => 0x%016" PRIx64 "\n", ObjectAddress,
-                     BinaryAddress);
 
-  Info.AddrAdjust = BinaryAddress + ValidReloc.Addend;
-  if (Mapping.ObjectAddress)
-    Info.AddrAdjust -= ObjectAddress;
+  outs() << "Found valid debug map entry: " << Reloc.Mapping->getKey() << "\t"
+         << format("0x%016" PRIx64 " => 0x%016" PRIx64 "\n", ObjectAddress,
+                   uint64_t(Mapping.BinaryAddress));
+}
+
+void DwarfLinkerForBinary::AddressManager::fillDieInfo(
+    const ValidReloc &Reloc, CompileUnit::DIEInfo &Info) {
+  Info.AddrAdjust = relocate(Reloc);
+  if (Reloc.Mapping->getValue().ObjectAddress)
+    Info.AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
   Info.InDebugMap = true;
+}
+
+bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
+    const std::vector<ValidReloc> &AllRelocs, uint64_t StartOffset,
+    uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
+  std::vector<ValidReloc> Relocs =
+      getRelocations(AllRelocs, StartOffset, EndOffset);
+
+  if (Relocs.size() == 0)
+    return false;
+
+  if (Linker.Options.Verbose)
+    printReloc(Relocs[0]);
+  fillDieInfo(Relocs[0], Info);
+
   return true;
+}
+
+/// Get the starting and ending (exclusive) offset for the
+/// attribute with index \p Idx descibed by \p Abbrev. \p Offset is
+/// supposed to point to the position of the first attribute described
+/// by \p Abbrev.
+/// \return [StartOffset, EndOffset) as a pair.
+static std::pair<uint64_t, uint64_t>
+getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
+                    uint64_t Offset, const DWARFUnit &Unit) {
+  DataExtractor Data = Unit.getDebugInfoExtractor();
+
+  for (unsigned I = 0; I < Idx; ++I)
+    DWARFFormValue::skipValue(Abbrev->getFormByIndex(I), Data, &Offset,
+                              Unit.getFormParams());
+
+  uint64_t End = Offset;
+  DWARFFormValue::skipValue(Abbrev->getFormByIndex(Idx), Data, &End,
+                            Unit.getFormParams());
+
+  return std::make_pair(Offset, End);
+}
+
+bool DwarfLinkerForBinary::AddressManager::hasLiveMemoryLocation(
+    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+
+  Optional<uint32_t> LocationIdx =
+      Abbrev->findAttributeIndex(dwarf::DW_AT_location);
+  if (!LocationIdx)
+    return false;
+
+  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+  uint64_t LocationOffset, LocationEndOffset;
+  std::tie(LocationOffset, LocationEndOffset) =
+      getAttributeOffsets(Abbrev, *LocationIdx, Offset, *DIE.getDwarfUnit());
+
+  // FIXME: Support relocations debug_addr.
+  return hasValidRelocationAt(ValidDebugInfoRelocs, LocationOffset,
+                              LocationEndOffset, MyInfo);
+}
+
+bool DwarfLinkerForBinary::AddressManager::hasLiveAddressRange(
+    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+
+  Optional<uint32_t> LowPcIdx = Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
+  if (!LowPcIdx)
+    return false;
+
+  dwarf::Form Form = Abbrev->getFormByIndex(*LowPcIdx);
+
+  if (Form == dwarf::DW_FORM_addr) {
+    uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
+    uint64_t LowPcOffset, LowPcEndOffset;
+    std::tie(LowPcOffset, LowPcEndOffset) =
+        getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
+    return hasValidRelocationAt(ValidDebugInfoRelocs, LowPcOffset,
+                                LowPcEndOffset, MyInfo);
+  }
+
+  if (Form == dwarf::DW_FORM_addrx) {
+    Optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
+    if (Optional<uint64_t> AddrOffsetSectionBase =
+            DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
+      uint64_t StartOffset = *AddrOffsetSectionBase + AddrValue->getRawUValue();
+      uint64_t EndOffset =
+          StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
+      return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset,
+                                  MyInfo);
+    } else
+      Linker.reportWarning("no base offset for address table", SrcFileName);
+  }
+
+  return false;
+}
+
+uint64_t
+DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
+  return Reloc.Mapping->getValue().BinaryAddress + Reloc.Addend;
 }
 
 /// Apply the valid relocations found by findValidRelocs() to
@@ -660,38 +759,36 @@ bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
 bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
     MutableArrayRef<char> Data, uint64_t BaseOffset, bool IsLittleEndian) {
   assert(areRelocationsResolved());
-  assert((NextValidReloc == 0 ||
-          BaseOffset > ValidRelocs[NextValidReloc - 1].Offset) &&
-         "BaseOffset should only be increasing.");
-  if (NextValidReloc >= ValidRelocs.size())
-    return false;
+  std::vector<ValidReloc> Relocs = getRelocations(
+      ValidDebugInfoRelocs, BaseOffset, BaseOffset + Data.size());
 
-  // Skip relocs that haven't been applied.
-  while (NextValidReloc < ValidRelocs.size() &&
-         ValidRelocs[NextValidReloc].Offset < BaseOffset)
-    ++NextValidReloc;
-
-  bool Applied = false;
-  uint64_t EndOffset = BaseOffset + Data.size();
-  while (NextValidReloc < ValidRelocs.size() &&
-         ValidRelocs[NextValidReloc].Offset >= BaseOffset &&
-         ValidRelocs[NextValidReloc].Offset < EndOffset) {
-    const auto &ValidReloc = ValidRelocs[NextValidReloc++];
-    assert(ValidReloc.Offset - BaseOffset < Data.size());
-    assert(ValidReloc.Offset - BaseOffset + ValidReloc.Size <= Data.size());
+  for (const ValidReloc &CurReloc : Relocs) {
+    assert(CurReloc.Offset - BaseOffset < Data.size());
+    assert(CurReloc.Offset - BaseOffset + CurReloc.Size <= Data.size());
     char Buf[8];
-    uint64_t Value = ValidReloc.Mapping->getValue().BinaryAddress;
-    Value += ValidReloc.Addend;
-    for (unsigned I = 0; I != ValidReloc.Size; ++I) {
-      unsigned Index = IsLittleEndian ? I : (ValidReloc.Size - I - 1);
+    uint64_t Value = relocate(CurReloc);
+    for (unsigned I = 0; I != CurReloc.Size; ++I) {
+      unsigned Index = IsLittleEndian ? I : (CurReloc.Size - I - 1);
       Buf[I] = uint8_t(Value >> (Index * 8));
     }
-    assert(ValidReloc.Size <= sizeof(Buf));
-    memcpy(&Data[ValidReloc.Offset - BaseOffset], Buf, ValidReloc.Size);
-    Applied = true;
+    assert(CurReloc.Size <= sizeof(Buf));
+    memcpy(&Data[CurReloc.Offset - BaseOffset], Buf, CurReloc.Size);
   }
 
-  return Applied;
+  return Relocs.size() > 0;
+}
+
+llvm::Expected<uint64_t>
+DwarfLinkerForBinary::AddressManager::relocateIndexedAddr(uint64_t StartOffset,
+                                                          uint64_t EndOffset) {
+  std::vector<ValidReloc> Relocs =
+      getRelocations(ValidDebugAddrRelocs, StartOffset, EndOffset);
+  if (Relocs.size() == 0)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "no relocation for offset %llu in debug_addr section", StartOffset);
+
+  return relocate(Relocs[0]);
 }
 
 bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,

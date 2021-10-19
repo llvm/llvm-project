@@ -13,6 +13,10 @@ static_library("builtins") {
   output_dir = crt_current_out_dir
   if (current_os == "mac") {
     output_name = "clang_rt.osx"
+  } else if (current_os == "ios" && current_cpu == "arm64") {
+    output_name = "clang_rt.ios"
+  } else if (current_os == "ios" && current_cpu == "x64") {
+    output_name = "clang_rt.iossim"
   } else {
     output_name = "clang_rt.builtins$crt_current_target_suffix"
   }
@@ -64,6 +68,7 @@ static_library("builtins") {
     "divdi3.c",
     "divmoddi4.c",
     "divmodsi4.c",
+    "divmodti4.c",
     "divsc3.c",
     "divsf3.c",
     "divsi3.c",
@@ -176,7 +181,7 @@ static_library("builtins") {
     sources += [ "clear_cache.c" ]
   }
 
-  if (current_os == "mac") {
+  if (current_os == "mac" || current_os == "ios") {
     sources += [
       "atomic_flag_clear.c",
       "atomic_flag_clear_explicit.c",
@@ -192,6 +197,7 @@ static_library("builtins") {
     sources += [
       "comparetf2.c",
       "extenddftf2.c",
+      "extendhftf2.c",
       "extendsftf2.c",
       "fixtfdi.c",
       "fixtfsi.c",
@@ -207,6 +213,7 @@ static_library("builtins") {
       "floatuntitf.c",
       "multc3.c",
       "trunctfdf2.c",
+      "trunctfhf2.c",
       "trunctfsf2.c",
     ]
   }
@@ -414,13 +421,16 @@ static_library("builtins") {
         "arm/aeabi_uidivmod.S",
         "arm/aeabi_uldivmod.S",
         "arm/chkstk.S",
-        "mingw_fixfloat.c",
       ]
     }
   }
 
   if (current_cpu == "arm64") {
-    sources += [ "aarch64/fp_mode.c" ]
+    sources -= [ "fp_mode.c" ]
+    sources += [
+      "aarch64/fp_mode.c",
+      "cpu_model.c",
+    ]
     if (current_os == "mingw") {
       sources += [ "aarch64/chkstk.S" ]
     }
@@ -475,6 +485,12 @@ static_library("builtins") {
     ]
   }
 
+  if (current_cpu == "riscv" || current_cpu == "riscv64") {
+    sources += [
+      "riscv/restore.S",
+      "riscv/save.S",
+    ]
+  }
   if (current_cpu == "riscv") {
     sources += [ "riscv/mulsi3.S" ]
   }
@@ -495,8 +511,7 @@ static_library("builtins") {
   }
 }
 
-# Currently unused but necessary to make the sync_source_lists_from_cmake.py
-# happy.
+# Currently unused but necessary to make sync_source_lists_from_cmake.py happy.
 source_set("_unused") {
   sources = [
     # Thumb1

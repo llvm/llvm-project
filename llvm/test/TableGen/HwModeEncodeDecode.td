@@ -22,9 +22,9 @@ def fooTypeEncA : InstructionEncoding {
   field bits<32> SoftFail = 0;
   bits<32> Inst;
   bits<8> factor;
-  let Inst{7-0} = factor;
-  let Inst{3-2} = 0b11;
-  let Inst{1-0} = 0b00;
+  let Inst{7...0} = factor;
+  let Inst{3...2} = 0b11;
+  let Inst{1...0} = 0b00;
 }
 
 def fooTypeEncB : InstructionEncoding {
@@ -32,8 +32,8 @@ def fooTypeEncB : InstructionEncoding {
   field bits<32> SoftFail = 0;
   bits<32> Inst;
   bits<8> factor;
-  let Inst{15-8} = factor;
-  let Inst{1-0} = 0b11;
+  let Inst{15...8} = factor;
+  let Inst{1...0} = 0b11;
 }
 
 let OutOperandList = (outs) in {
@@ -52,8 +52,8 @@ def bar: Instruction {
   bits<32> Inst;
   bits<32> SoftFail;
   bits<8> factor;
-  let Inst{31-24} = factor;
-  let Inst{1-0} = 0b10;
+  let Inst{31...24} = factor;
+  let Inst{1...0} = 0b10;
   let AsmString = "bar  $factor";
 }
 

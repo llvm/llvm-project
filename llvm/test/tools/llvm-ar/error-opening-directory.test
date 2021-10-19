@@ -7,6 +7,6 @@
 ## Passing in a directory:
 # RUN: mkdir -p %t/tmpDir
 # RUN: not llvm-ar p %t/tmpDir 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=IS-DIR -DARCHIVE=%t/tmpDir
+# RUN:    FileCheck %s --check-prefix=IS-DIR -DARCHIVE=%t/tmpDir -DMSG=%errc_EISDIR
 
-# IS-DIR: error: unable to open '[[ARCHIVE]]': {{[iI]}}s a directory
+# IS-DIR: error: unable to open '[[ARCHIVE]]': [[MSG]]

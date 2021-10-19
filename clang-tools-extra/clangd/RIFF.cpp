@@ -7,35 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "RIFF.h"
+#include "support/Logger.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Error.h"
 
 namespace clang {
 namespace clangd {
 namespace riff {
 
-static llvm::Error makeError(const llvm::Twine &Msg) {
-  return llvm::make_error<llvm::StringError>(Msg,
-                                             llvm::inconvertibleErrorCode());
-}
-
 llvm::Expected<Chunk> readChunk(llvm::StringRef &Stream) {
   if (Stream.size() < 8)
-    return makeError("incomplete chunk header: " + llvm::Twine(Stream.size()) +
-                     " bytes available");
+    return error("incomplete chunk header: {0} bytes available", Stream.size());
   Chunk C;
   std::copy(Stream.begin(), Stream.begin() + 4, C.ID.begin());
   Stream = Stream.drop_front(4);
   uint32_t Len = llvm::support::endian::read32le(Stream.take_front(4).begin());
   Stream = Stream.drop_front(4);
   if (Stream.size() < Len)
-    return makeError("truncated chunk: want " + llvm::Twine(Len) + ", got " +
-                     llvm::Twine(Stream.size()));
+    return error("truncated chunk: want {0}, got {1}", Len, Stream.size());
   C.Data = Stream.take_front(Len);
   Stream = Stream.drop_front(Len);
   if ((Len % 2) && !Stream.empty()) { // Skip padding byte.
     if (Stream.front())
-      return makeError("nonzero padding byte");
+      return error("nonzero padding byte");
     Stream = Stream.drop_front();
   }
   return std::move(C);
@@ -57,9 +50,9 @@ llvm::Expected<File> readFile(llvm::StringRef Stream) {
   if (!RIFF)
     return RIFF.takeError();
   if (RIFF->ID != fourCC("RIFF"))
-    return makeError("not a RIFF container: root is " + fourCCStr(RIFF->ID));
+    return error("not a RIFF container: root is {0}", fourCCStr(RIFF->ID));
   if (RIFF->Data.size() < 4)
-    return makeError("RIFF chunk too short");
+    return error("RIFF chunk too short");
   File F;
   std::copy(RIFF->Data.begin(), RIFF->Data.begin() + 4, F.Type.begin());
   for (llvm::StringRef Body = RIFF->Data.drop_front(4); !Body.empty();)

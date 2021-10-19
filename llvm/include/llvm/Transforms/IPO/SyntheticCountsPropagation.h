@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_SYNTHETIC_COUNTS_PROPAGATION_H
-#define LLVM_TRANSFORMS_IPO_SYNTHETIC_COUNTS_PROPAGATION_H
+#ifndef LLVM_TRANSFORMS_IPO_SYNTHETICCOUNTSPROPAGATION_H
+#define LLVM_TRANSFORMS_IPO_SYNTHETICCOUNTSPROPAGATION_H
 
 #include "llvm/IR/PassManager.h"
 

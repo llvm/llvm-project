@@ -39,7 +39,7 @@ public:
   createOrDie(const std::vector<std::string> &Paths,
               llvm::vfs::FileSystem &VFS);
 
-  // Query blacklisted entries if any bit in Mask matches the entry's section.
+  // Query ignorelisted entries if any bit in Mask matches the entry's section.
   bool inSection(SanitizerMask Mask, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 

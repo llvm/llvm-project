@@ -34,9 +34,8 @@ using common::LanguageFeature;
 
 class ParseState {
 public:
-  // TODO: Add a constructor for parsing a normalized module file.
   ParseState(const CookedSource &cooked)
-      : p_{&cooked.data().front()}, limit_{&cooked.data().back() + 1} {}
+      : p_{cooked.AsCharBlock().begin()}, limit_{cooked.AsCharBlock().end()} {}
   ParseState(const ParseState &that)
       : p_{that.p_}, limit_{that.limit_}, context_{that.context_},
         userState_{that.userState_}, inFixedForm_{that.inFixedForm_},

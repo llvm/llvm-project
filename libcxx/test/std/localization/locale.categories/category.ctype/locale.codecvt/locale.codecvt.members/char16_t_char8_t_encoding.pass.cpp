@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// This test relies on P0482 being fixed, which isn't in
+// older Apple dylibs
+//
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+
 // <locale>
 
 // template <> class codecvt<char16_t, char8_t, mbstate_t>
 
 // int encoding() const noexcept;
-
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
-// C++20 codecvt specializations for char8_t are not yet implemented:
-// UNSUPPORTED: libc++
 
 #include <cassert>
 #include <locale>

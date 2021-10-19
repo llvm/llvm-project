@@ -1,3 +1,20 @@
+<!--===- docs/C++style.md 
+  
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+  
+-->
+
+# Flang C++ Style Guide
+
+```eval_rst
+.. contents::
+   :local:
+```
+
+This document captures the style guide rules that are followed in the Flang codebase.
+
 ## In brief:
 * Use *clang-format*
 from llvm 7
@@ -98,7 +115,10 @@ Don't try to make columns of variable names or comments
 align vertically -- they are maintenance problems.
 
 Always wrap the bodies of `if()`, `else`, `while()`, `for()`, `do`, &c.
-with braces, even when the body is a single statement or empty.  The
+with braces, even when the body is a single statement or empty.  Note that this
+diverges from the LLVM coding style.  In parts of the codebase that make heavy
+use of LLVM or MLIR APIs (e.g. the Lower and Optimizer libraries), use the
+LLVM style instead.  The
 opening `{` goes on
 the end of the line, not on the next line.  Functions also put the opening
 `{` after the formal arguments or new-style result type, not on the next

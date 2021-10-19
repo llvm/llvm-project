@@ -48,6 +48,9 @@ SubMap& GetSubstitutions() {
       {" %s ", "[ ]+"},
       {"%time", "[ ]*" + time_re + "[ ]+ns"},
       {"%console_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns [ ]*[0-9]+"},
+      {"%console_us_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us [ ]*[0-9]+"},
+      {"%console_ms_report", "[ ]*" + time_re + "[ ]+ms [ ]*" + time_re + "[ ]+ms [ ]*[0-9]+"},
+      {"%console_s_report", "[ ]*" + time_re + "[ ]+s [ ]*" + time_re + "[ ]+s [ ]*[0-9]+"},
       {"%console_time_only_report", "[ ]*" + time_re + "[ ]+ns [ ]*" + time_re + "[ ]+ns"},
       {"%console_us_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us [ ]*[0-9]+"},
       {"%console_us_time_only_report", "[ ]*" + time_re + "[ ]+us [ ]*" + time_re + "[ ]+us"},
@@ -56,6 +59,8 @@ SubMap& GetSubstitutions() {
        "items_per_second,label,error_occurred,error_message"},
       {"%csv_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns,,,,,"},
       {"%csv_us_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",us,,,,,"},
+      {"%csv_ms_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ms,,,,,"},
+      {"%csv_s_report", "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",s,,,,,"},
       {"%csv_bytes_report",
        "[0-9]+," + safe_dec_re + "," + safe_dec_re + ",ns," + safe_dec_re + ",,,,"},
       {"%csv_items_report",
@@ -134,7 +139,7 @@ class TestReporter : public benchmark::BenchmarkReporter {
   TestReporter(std::vector<benchmark::BenchmarkReporter*> reps)
       : reporters_(reps) {}
 
-  virtual bool ReportContext(const Context& context) {
+  virtual bool ReportContext(const Context& context) BENCHMARK_OVERRIDE {
     bool last_ret = false;
     bool first = true;
     for (auto rep : reporters_) {
@@ -148,10 +153,10 @@ class TestReporter : public benchmark::BenchmarkReporter {
     return last_ret;
   }
 
-  void ReportRuns(const std::vector<Run>& report) {
+  void ReportRuns(const std::vector<Run>& report) BENCHMARK_OVERRIDE {
     for (auto rep : reporters_) rep->ReportRuns(report);
   }
-  void Finalize() {
+  void Finalize() BENCHMARK_OVERRIDE {
     for (auto rep : reporters_) rep->Finalize();
   }
 
@@ -373,6 +378,12 @@ int SetSubstitutions(
   return 0;
 }
 
+// Disable deprecated warnings temporarily because we need to reference
+// CSVReporter but don't want to trigger -Werror=-Wdeprecated-declarations
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 void RunOutputTests(int argc, char* argv[]) {
   using internal::GetTestCaseList;
   benchmark::Initialize(&argc, argv);
@@ -430,6 +441,10 @@ void RunOutputTests(int argc, char* argv[]) {
   CHECK(std::strcmp(csv.name, "CSVReporter") == 0);
   internal::GetResultsChecker().CheckResults(csv.out_stream);
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 int SubstrCnt(const std::string& haystack, const std::string& pat) {
   if (pat.length() == 0) return 0;

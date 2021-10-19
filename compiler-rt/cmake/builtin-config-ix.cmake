@@ -22,14 +22,28 @@ int foo(int x, int y) {
 }
 ")
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_FLOAT16
+"
+_Float16 foo(_Float16 x) {
+ return x;
+}
+"
+)
+
+builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_LSE
+"
+asm(\".arch armv8-a+lse\");
+asm(\"cas w0, w1, [x2]\");
+")
 
 set(ARM64 aarch64)
-set(ARM32 arm armhf armv6m armv7m armv7em armv7 armv7s armv7k)
+set(ARM32 arm armhf armv6m armv7m armv7em armv7 armv7s armv7k armv8m.main armv8.1m.main)
 set(HEXAGON hexagon)
 set(X86 i386)
 set(X86_64 x86_64)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)
+set(PPC32 powerpc)
 set(PPC64 powerpc64 powerpc64le)
 set(RISCV32 riscv32)
 set(RISCV64 riscv64)
@@ -47,7 +61,7 @@ endif()
 
 set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${ARM32} ${ARM64}
-  ${HEXAGON} ${MIPS32} ${MIPS64} ${PPC64}
+  ${HEXAGON} ${MIPS32} ${MIPS64} ${PPC32} ${PPC64}
   ${RISCV32} ${RISCV64} ${SPARC} ${SPARCV9}
   ${WASM32} ${WASM64} ${VE})
 
@@ -69,7 +83,8 @@ if(APPLE)
     execute_process(COMMAND
         /usr/libexec/PlistBuddy -c "Print :SupportedTargets:${os}:Archs" ${sdk_path}/SDKSettings.plist
       OUTPUT_VARIABLE SDK_SUPPORTED_ARCHS
-      RESULT_VARIABLE PLIST_ERROR)
+      RESULT_VARIABLE PLIST_ERROR
+      ERROR_QUIET)
     if (PLIST_ERROR EQUAL 0 AND
         SDK_SUPPORTED_ARCHS MATCHES " ${arch}\n")
       message(STATUS "Found ${arch} support in ${sdk_path}/SDKSettings.plist")
@@ -108,7 +123,7 @@ if(APPLE)
     set(DARWIN_watchos_BUILTIN_MIN_VER 2.0)
     set(DARWIN_watchos_BUILTIN_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_BUILTIN_MIN_VER})
-    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k)
+    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k arm64_32)
     set(DARWIN_watchossim_BUILTIN_ALL_POSSIBLE_ARCHS ${X86})
   endif()
   if(COMPILER_RT_ENABLE_TVOS)

@@ -36,7 +36,7 @@ define i32 @bar(i32 %i) local_unnamed_addr {
 ; X86_64-NEXT:    pushq %rbp
 ; X86_64-NEXT:    .cfi_def_cfa_offset 16
 ; X86_64-NEXT:    .cfi_offset %rbp, -16
-; X86_64-NEXT:    movq _buf@{{.*}}(%rip), %rax
+; X86_64-NEXT:    movq _buf@GOTPCREL(%rip), %rax
 ; X86_64-NEXT:    movq (%rax), %rax
 ; X86_64-NEXT:    xorl %edx, %edx
 ; X86_64-NEXT:    rdsspq %rdx
@@ -129,11 +129,11 @@ define i32 @foo(i32 %i) local_unnamed_addr {
 ; X86_64-NEXT:    .cfi_offset %r15, -24
 ; X86_64-NEXT:    ## kill: def $edi killed $edi def $rdi
 ; X86_64-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; X86_64-NEXT:    movq _buf@{{.*}}(%rip), %rax
+; X86_64-NEXT:    movq _buf@GOTPCREL(%rip), %rax
 ; X86_64-NEXT:    movq (%rax), %rax
 ; X86_64-NEXT:    movq %rbp, (%rax)
 ; X86_64-NEXT:    movq %rsp, 16(%rax)
-; X86_64-NEXT:    leaq {{.*}}(%rip), %rcx
+; X86_64-NEXT:    leaq LBB1_4(%rip), %rcx
 ; X86_64-NEXT:    movq %rcx, 8(%rax)
 ; X86_64-NEXT:    xorq %rcx, %rcx
 ; X86_64-NEXT:    rdsspq %rcx

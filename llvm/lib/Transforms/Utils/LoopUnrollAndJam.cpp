@@ -141,6 +141,7 @@ template <typename T>
 static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
                                      BasicBlockSet &AftBlocks, T Visit) {
   SmallVector<Instruction *, 8> Worklist;
+  SmallPtrSet<Instruction *, 8> VisitedInstr;
   for (auto &Phi : Header->phis()) {
     Value *V = Phi.getIncomingValueForBlock(Latch);
     if (Instruction *I = dyn_cast<Instruction>(V))
@@ -148,15 +149,16 @@ static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
   }
 
   while (!Worklist.empty()) {
-    Instruction *I = Worklist.back();
-    Worklist.pop_back();
+    Instruction *I = Worklist.pop_back_val();
     if (!Visit(I))
       return false;
+    VisitedInstr.insert(I);
 
     if (AftBlocks.count(I->getParent()))
       for (auto &U : I->operands())
         if (Instruction *II = dyn_cast<Instruction>(U))
-          Worklist.push_back(II);
+          if (!VisitedInstr.count(II))
+            Worklist.push_back(II);
   }
 
   return true;
@@ -246,7 +248,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   bool CompletelyUnroll = (Count == TripCount);
 
   // We use the runtime remainder in cases where we don't know trip multiple
-  if (TripMultiple == 1 || TripMultiple % Count != 0) {
+  if (TripMultiple % Count != 0) {
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
                                     UnrollRemainder, /*ForgetAllSCEV*/ false,
@@ -347,7 +349,9 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   LoopBlocksDFS::RPOIterator BlockBegin = DFS.beginRPO();
   LoopBlocksDFS::RPOIterator BlockEnd = DFS.endRPO();
 
-  if (Header->getParent()->isDebugInfoForProfiling())
+  // When a FSDiscriminator is enabled, we don't need to add the multiply
+  // factors to the discriminators.
+  if (Header->getParent()->isDebugInfoForProfiling() && !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
@@ -433,9 +437,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks) {
       for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&I))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            AC->registerAssumption(II);
+        if (auto *II = dyn_cast<AssumeInst>(&I))
+          AC->registerAssumption(II);
       }
     }
 
@@ -831,6 +834,23 @@ static bool isEligibleLoopForm(const Loop &Root) {
     // Only one child is allowed.
     if (SubLoopsSize != 1)
       return false;
+
+    // Only loops with a single exit block can be unrolled and jammed.
+    // The function getExitBlock() is used for this check, rather than
+    // getUniqueExitBlock() to ensure loops with mulitple exit edges are
+    // disallowed.
+    if (!L->getExitBlock()) {
+      LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; only loops with single exit "
+                           "blocks can be unrolled and jammed.\n");
+      return false;
+    }
+
+    // Only loops with a single exiting block can be unrolled and jammed.
+    if (!L->getExitingBlock()) {
+      LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; only loops with single "
+                           "exiting blocks can be unrolled and jammed.\n");
+      return false;
+    }
 
     L = L->getSubLoops()[0];
   } while (L);

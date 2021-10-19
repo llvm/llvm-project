@@ -52,7 +52,7 @@ static bool isEmptyARCMTMacroStatement(NullStmt *S,
   if (AfterMacroLoc == SemiLoc)
     return true;
 
-  int RelOffs = 0;
+  SourceLocation::IntTy RelOffs = 0;
   if (!SM.isInSameSLocAddrSpace(AfterMacroLoc, SemiLoc, &RelOffs))
     return false;
   if (RelOffs < 0)

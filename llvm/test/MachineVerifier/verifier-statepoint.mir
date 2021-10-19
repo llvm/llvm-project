@@ -1,0 +1,30 @@
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-machineinstrs -run-pass=none 2>&1 | FileCheck %s
+# REQUIRES: x86-registered-target
+
+# CHECK: Bad machine code: STATEPOINT defs expected to be tied
+# CHECK-NEXT: - function:    bad_statepoint
+# CHECK-NEXT: - basic block: %bb.0
+# CHECK-NEXT: - instruction: renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $rdi, 2, 0, 2, 1, 0, 0, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp
+
+# CHECK: Bad machine code: STATEPOINT def tied to non-gc operand
+# CHECK-NEXT: - function:    bad_statepoint
+# CHECK-NEXT: - basic block: %bb.0
+# CHECK-NEXT: - instruction: renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 1, killed renamable $rdi(tied-def 0), 2, 0, 2, 0, 2, 1, 0, 0, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp
+
+# CHECK: Bad machine code: STATEPOINT def tied to non-gc operand
+# CHECK-NEXT: - function:    bad_statepoint
+# CHECK-NEXT: - basic block: %bb.0
+# CHECK-NEXT: - instruction: renamable $r14, renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $r14(tied-def 0), 2, 1, killed renamable $rdi(tied-def 1), 2, 1, 0, 0, <regmask $bh $bl $bp $bph $bpl $bx $ebp $ebx $hbp $hbx $rbp $rbx $r12 $r13 $r14 $r15 $r12b $r13b $r14b $r15b $r12bh $r13bh $r14bh $r15bh $r12d $r13d $r14d $r15d $r12w $r13w $r14w $r15w $r12wh and 3 more...>, implicit-def $rsp, implicit-def $ssp
+---
+name:              bad_statepoint
+tracksRegLiveness: true
+body:              |
+  bb.0:
+    liveins: $rdi, $r15, $r14
+
+    renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $rdi, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 1, killed renamable $rdi(tied-def 0), 2, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $r14, renamable $rdi = STATEPOINT 0, 0, 0, $r15, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $r14(tied-def 0), 2, 1, killed renamable $rdi(tied-def 1), 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    $rax = COPY killed renamable $rdi
+    RET 0, killed $rax
+...

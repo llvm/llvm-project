@@ -4,7 +4,7 @@
 struct A { int x, y[3]; };
 struct B { A a; };
 
-// CHECK: @b = global %{{[^ ]*}} { %{{[^ ]*}} { i32 1, [3 x i32] [i32 2, i32 5, i32 4] } }
+// CHECK: @b ={{.*}} global %{{[^ ]*}} { %{{[^ ]*}} { i32 1, [3 x i32] [i32 2, i32 5, i32 4] } }
 B b = {(A){1, 2, 3, 4}, .a.y[1] = 5};
 
 union U {
@@ -52,7 +52,7 @@ struct LargeArray {
 struct WithLargeArray {
   LargeArray arr;
 };
-// CHECK: @large = global { { <{ [11 x i32], [4085 x i32] }> } } { { <{ [11 x i32], [4085 x i32] }> } { <{ [11 x i32], [4085 x i32] }> <{ [11 x i32] [i32 1, i32 2, i32 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 10], [4085 x i32] zeroinitializer }> } }
+// CHECK: @large ={{.*}} global { { <{ [11 x i32], [4085 x i32] }> } } { { <{ [11 x i32], [4085 x i32] }> } { <{ [11 x i32], [4085 x i32] }> <{ [11 x i32] [i32 1, i32 2, i32 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 10], [4085 x i32] zeroinitializer }> } }
 WithLargeArray large = {(LargeArray){1, 2, 3}, .arr.arr[10] = 10};
 
 union OverwritePaddingWithBitfield {
@@ -62,5 +62,5 @@ union OverwritePaddingWithBitfield {
 struct WithOverwritePaddingWithBitfield {
   OverwritePaddingWithBitfield a;
 };
-// CHECK: @overwrite_padding = global { { i8, i8 } } { { i8, i8 } { i8 3, i8 1 } }
+// CHECK: @overwrite_padding ={{.*}} global { { i8, i8 } } { { i8, i8 } { i8 3, i8 1 } }
 WithOverwritePaddingWithBitfield overwrite_padding = {(OverwritePaddingWithBitfield){1}, .a.bitfield = 3};

@@ -7,7 +7,7 @@ int test() {
   return __builtin_dwarf_sp_column();
 }
 
-// CHECK-LABEL: define signext i32 @test()
+// CHECK-LABEL: define{{.*}} signext i32 @test()
 // CHECK:       store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 0)
 // CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 1)
 // CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 2)

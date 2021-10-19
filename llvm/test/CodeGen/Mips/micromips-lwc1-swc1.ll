@@ -1,9 +1,9 @@
 ; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | \
-; RUN:   FileCheck %s -check-prefixes=ALL,MM32
+; RUN:   FileCheck %s -check-prefixes=MM32
 ; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips \
 ; RUN:   -relocation-model=pic < %s | \
-; RUN:   FileCheck %s -check-prefixes=ALL,MM32
+; RUN:   FileCheck %s -check-prefixes=MM32
 
 @gf0 = external global float
 

@@ -32,7 +32,7 @@
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
-#include <stdio.h>
+#include <cstdio>
 #define DEBUG_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #else
 #define DEBUG_PRINTF(fmt, ...)
@@ -251,6 +251,7 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
   DataExtractor data; // Load command data
   static ConstString g_dyld_all_image_infos("dyld_all_image_infos");
+  static ConstString g_new_dyld_all_image_infos("dyld4::dyld_all_image_infos");
   if (ReadMachHeader(addr, &m_dyld.header, &data)) {
     if (m_dyld.header.filetype == llvm::MachO::MH_DYLINKER) {
       m_dyld.address = addr;
@@ -268,6 +269,10 @@ bool DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(
           dyld_module_sp.get()) {
         const Symbol *symbol = dyld_module_sp->FindFirstSymbolWithNameAndType(
             g_dyld_all_image_infos, eSymbolTypeData);
+        if (!symbol) {
+          symbol = dyld_module_sp->FindFirstSymbolWithNameAndType(
+              g_new_dyld_all_image_infos, eSymbolTypeData);
+        }
         if (symbol)
           m_dyld_all_image_infos_addr = symbol->GetLoadAddress(&target);
       }
@@ -343,7 +348,7 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     // get the values from the ABI:
 
     TypeSystemClang *clang_ast_context =
-        TypeSystemClang::GetScratch(process->GetTarget());
+        ScratchTypeSystemClang::GetForTarget(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
@@ -355,7 +360,7 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     CompilerType clang_uint32_type =
         clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
             lldb::eEncodingUint, 32);
-    input_value.SetValueType(Value::eValueTypeScalar);
+    input_value.SetValueType(Value::ValueType::Scalar);
     input_value.SetCompilerType(clang_uint32_type);
     //        input_value.SetContext (Value::eContextTypeClangType,
     //        clang_uint32_type);
@@ -728,13 +733,8 @@ bool DynamicLoaderMacOSXDYLD::InitializeFromAllImageInfos() {
     // DYLD_*_PATH pointed to an equivalent version.  We don't want it to stay
     // in the target's module list or it will confuse us, so unload it here.
     Target &target = m_process->GetTarget();
-    const ModuleList &target_modules = target.GetImages();
     ModuleList not_loaded_modules;
-    std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
-
-    size_t num_modules = target_modules.GetSize();
-    for (size_t i = 0; i < num_modules; i++) {
-      ModuleSP module_sp = target_modules.GetModuleAtIndexUnlocked(i);
+    for (ModuleSP module_sp : target.GetImages().Modules()) {
       if (!module_sp->IsLoadedInTarget(&target)) {
         if (log) {
           StreamString s;
@@ -1119,6 +1119,12 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
   return false;
 }
 
+bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
+  if (ReadAllImageInfosStructure())
+    return m_dyld_all_image_infos.libSystemInitialized;
+  return false;
+}
+
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
@@ -1139,13 +1145,6 @@ const char *DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library loads/unloads "
          "in MacOSX user processes.";
 }
-
-// PluginInterface protocol
-lldb_private::ConstString DynamicLoaderMacOSXDYLD::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t DynamicLoaderMacOSXDYLD::GetPluginVersion() { return 1; }
 
 uint32_t DynamicLoaderMacOSXDYLD::AddrByteSize() {
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());

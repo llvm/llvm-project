@@ -39,7 +39,7 @@ body: |
     ; not just use $r10 for that.
     ; CHECK-NOT: STRi12 %1,{{.*}}$r10
 
-    STRi12 $r1, %stack.0, 0, 14, $noreg :: (store 4)
+    STRi12 $r1, %stack.0, 0, 14, $noreg :: (store (s32))
 
     ; use the swiftself parameter value.
     KILL $r10

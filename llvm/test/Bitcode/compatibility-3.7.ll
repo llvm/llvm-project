@@ -23,8 +23,8 @@ $comdat.exactmatch = comdat exactmatch
 ; CHECK: $comdat.exactmatch = comdat exactmatch
 $comdat.largest = comdat largest
 ; CHECK: $comdat.largest = comdat largest
-$comdat.noduplicates = comdat noduplicates
-; CHECK: $comdat.noduplicates = comdat noduplicates
+$comdat.noduplicates = comdat nodeduplicate
+; CHECK: $comdat.noduplicates = comdat nodeduplicate
 $comdat.samesize = comdat samesize
 ; CHECK: $comdat.samesize = comdat samesize
 
@@ -409,12 +409,12 @@ declare void @f.param.signext(i8 signext)
 ; CHECK: declare void @f.param.signext(i8 signext)
 declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
-declare void @f.param.byval({ i8, i8 }* byval)
+declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 ; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 declare void @f.param.inalloca(i8* inalloca)
-; CHECK: declare void @f.param.inalloca(i8* inalloca)
-declare void @f.param.sret(i8* sret)
-; CHECK: declare void @f.param.sret(i8* sret)
+; CHECK: declare void @f.param.inalloca(i8* inalloca(i8))
+declare void @f.param.sret(i8* sret(i8))
+; CHECK: declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(i8* noalias)
 declare void @f.param.nocapture(i8* nocapture)
@@ -1034,7 +1034,7 @@ exit:
 
 define void @instructions.call_musttail(i8* inalloca %val) {
   musttail call void @f.param.inalloca(i8* inalloca %val)
-  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
+  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
 
   ret void
 }
@@ -1242,12 +1242,12 @@ define void @misc.metadata() {
 ; CHECK: attributes #29 = { "thunk" }
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
-; CHECK: attributes #32 = { nounwind readnone willreturn }
-; CHECK: attributes #33 = { argmemonly nounwind readonly }
-; CHECK: attributes #34 = { argmemonly nounwind }
-; CHECK: attributes #35 = { nounwind readnone }
+; CHECK: attributes #32 = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #33 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #34 = { argmemonly nounwind readonly }
+; CHECK: attributes #35 = { argmemonly nounwind }
 ; CHECK: attributes #36 = { nounwind readonly }
-; CHECK: attributes #37 = { inaccessiblemem_or_argmemonly nounwind willreturn }
+; CHECK: attributes #37 = { inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #38 = { builtin }
 
 ;; Metadata

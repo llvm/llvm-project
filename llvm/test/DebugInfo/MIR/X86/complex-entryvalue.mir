@@ -1,0 +1,53 @@
+# RUN: llc -filetype=obj -start-after=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | llvm-dwarfdump - | FileCheck %s
+# CHECK: DW_AT_location	(DW_OP_entry_value(DW_OP_reg5 RDI), DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_lit0, DW_OP_plus)
+--- |
+  ; ModuleID = '/tmp/e.c'
+  source_filename = "/tmp/e.c"
+  target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-apple-macosx11.0.0"
+  
+  ; Function Attrs: norecurse nounwind readnone ssp uwtable willreturn
+  define dso_local void @f(i32 %i) local_unnamed_addr #0 !dbg !8 {
+  entry:
+    call void @llvm.dbg.value(metadata i32 %i, metadata !14, metadata !DIExpression()), !dbg !15
+    ret void, !dbg !16
+  }
+  
+  ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+  
+  attributes #0 = { norecurse nounwind readnone ssp uwtable willreturn }
+  attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "/tmp/e.c", directory: "/")
+  !2 = !{}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = !{i32 1, !"wchar_size", i32 4}
+  !6 = !{i32 7, !"PIC Level", i32 2}
+  !8 = distinct !DISubprogram(name: "f", scope: !9, file: !9, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !9 = !DIFile(filename: "/tmp/e.c", directory: "")
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{null, !12}
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{!14}
+  !14 = !DILocalVariable(name: "i", arg: 1, scope: !8, file: !9, line: 1, type: !12)
+  !15 = !DILocation(line: 0, scope: !8)
+  !16 = !DILocation(line: 1, column: 16, scope: !8)
+
+...
+---
+name:            f
+body:             |
+  bb.0.entry:
+    DBG_VALUE $edi, $noreg, !14, !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_lit0, DW_OP_plus), debug-location !15
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    $rbp = frame-setup MOV64rr $rsp
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !16
+    RETQ debug-location !16
+
+...

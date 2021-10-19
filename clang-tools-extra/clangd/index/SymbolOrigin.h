@@ -25,6 +25,7 @@ enum class SymbolOrigin : uint8_t {
   Static = 1 << 2,     // From the static, externally-built index.
   Merge = 1 << 3,      // A non-trivial index merge was performed.
   Identifier = 1 << 4, // Raw identifiers in file.
+  Remote = 1 << 5,     // Remote index.
   // Remaining bits reserved for index implementations.
 };
 

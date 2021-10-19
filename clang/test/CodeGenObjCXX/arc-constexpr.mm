@@ -4,7 +4,7 @@
 // CHECK: @[[CFSTRING:[a-z0-9_]+]] = private global %struct.__NSConstantString_tag
 @class NSString;
 
-// CHECK-LABEL: define void @_Z5test1v
+// CHECK-LABEL: define{{.*}} void @_Z5test1v
 // CHECK:   %[[ALLOCA:[A-Z]+]] = alloca %[[TYPE]]*
 // CHECK:   %[[V0:[0-9]+]] = call i8* @llvm.objc.retain(i8* bitcast (%struct.__NSConstantString_tag* @[[CFSTRING]]
 // CHECK:   %[[V1:[0-9]+]] = bitcast i8* %[[V0]] to %[[TYPE]]*
@@ -15,7 +15,7 @@ void test1() {
   constexpr NSString *S = @"abc";
 }
 
-// CHECK-LABEL: define void @_Z5test2v
+// CHECK-LABEL: define{{.*}} void @_Z5test2v
 // CHECK:      %[[CONST:[a-zA-Z]+]] = alloca %[[TYPE]]*
 // CHECK:      %[[REF_CONST:[a-zA-Z]+]] = alloca %[[TYPE]]*
 // CHECK:      %[[V0:[0-9]+]] = call i8* @llvm.objc.retain(i8* bitcast (%struct.__NSConstantString_tag* @[[CFSTRING]]
@@ -35,7 +35,7 @@ void test2() {
   NSString* RefConst = Const;
 }
 
-// CHECK-LABEL: define void @_Z5test3v
+// CHECK-LABEL: define{{.*}} void @_Z5test3v
 // CHECK:      %[[WEAK_CONST:[a-zA-Z]+]] = alloca %[[TYPE]]*
 // CHECK:      %[[REF_WEAK_CONST:[a-zA-Z]+]] = alloca %[[TYPE]]*
 // CHECK:      %[[V0:[0-9]+]] = bitcast %[[TYPE]]** %[[WEAK_CONST]]

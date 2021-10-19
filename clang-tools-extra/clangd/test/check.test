@@ -1,0 +1,18 @@
+// RUN: cp %s %t.cpp
+// RUN: clangd -enable-config=0 -log=verbose -check=%t.cpp 2>&1 | FileCheck -strict-whitespace %s
+
+// CHECK: Testing on source file
+// CHECK: internal (cc1) args are: -cc1
+// CHECK: Building preamble...
+// CHECK: Built preamble
+// CHECK: Building AST...
+// CHECK: Testing features at each token
+// CHECK-DAG: tweak: ExpandAuto
+// CHECK-DAG: hover: true
+// CHECK-DAG: tweak: AddUsing
+// CHECK: All checks completed, 0 errors
+
+namespace ns {
+struct Foo {};
+} // namespace ns
+auto f = ns::Foo();

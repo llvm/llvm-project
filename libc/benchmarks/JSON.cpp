@@ -40,6 +40,14 @@ static Error intFromJsonTemplate(const json::Value &V, T &Out) {
   return createStringError(errc::io_error, "Can't parse Integer");
 }
 
+static Error fromJson(const json::Value &V, bool &Out) {
+  if (auto B = V.getAsBoolean()) {
+    Out = *B;
+    return Error::success();
+  }
+  return createStringError(errc::io_error, "Can't parse Boolean");
+}
+
 static Error fromJson(const json::Value &V, double &Out) {
   if (auto S = V.getAsNumber()) {
     Out = *S;
@@ -57,10 +65,6 @@ static Error fromJson(const json::Value &V, std::string &Out) {
 }
 
 static Error fromJson(const json::Value &V, uint32_t &Out) {
-  return intFromJsonTemplate(V, Out);
-}
-
-static Error fromJson(const json::Value &V, uint8_t &Out) {
   return intFromJsonTemplate(V, Out);
 }
 
@@ -132,11 +136,6 @@ static Error fromJson(const json::Value &V, std::vector<T> &Out) {
   return vectorFromJsonTemplate(V, Out);
 }
 
-template <typename T>
-static Error fromJson(const json::Value &V, SmallVectorImpl<T> &Out) {
-  return vectorFromJsonTemplate(V, Out);
-}
-
 // Same as llvm::json::ObjectMapper but adds a finer error reporting mechanism.
 class JsonObjectMapper {
   const json::Object *O;
@@ -186,22 +185,15 @@ static Error fromJson(const json::Value &V,
   return O.takeError();
 }
 
-static Error fromJson(const json::Value &V, libc_benchmarks::SizeRange &Out) {
-  JsonObjectMapper O(V);
-  O.map("From", Out.From);
-  O.map("To", Out.To);
-  O.map("Step", Out.Step);
-  return O.takeError();
-}
-
 static Error fromJson(const json::Value &V,
                       libc_benchmarks::StudyConfiguration &Out) {
   JsonObjectMapper O(V);
-  O.map("Runs", Out.Runs);
-  O.map("BufferSize", Out.BufferSize);
-  O.map("Size", Out.Size);
-  O.map("AddressAlignment", Out.AddressAlignment);
-  O.map("MemsetValue", Out.MemsetValue);
+  O.map("Function", Out.Function);
+  O.map("NumTrials", Out.NumTrials);
+  O.map("IsSweepMode", Out.IsSweepMode);
+  O.map("SweepModeMaxSize", Out.SweepModeMaxSize);
+  O.map("SizeDistributionName", Out.SizeDistributionName);
+  O.map("AccessAlignment", Out.AccessAlignment);
   O.map("MemcmpMismatchAt", Out.MemcmpMismatchAt);
   return O.takeError();
 }
@@ -223,39 +215,29 @@ static Error fromJson(const json::Value &V, libc_benchmarks::HostState &Out) {
   return O.takeError();
 }
 
-static Error fromJson(const json::Value &V,
-                      libc_benchmarks::FunctionMeasurements &Out) {
+static Error fromJson(const json::Value &V, libc_benchmarks::Runtime &Out) {
   JsonObjectMapper O(V);
-  O.map("Name", Out.Name);
-  std::vector<uint32_t> Sizes;
-  O.map("Sizes", Sizes);
-  std::vector<libc_benchmarks::Duration> Runtimes;
-  O.map("Runtimes", Runtimes);
-  if (Sizes.size() != Runtimes.size())
-    return createStringError(errc::io_error,
-                             "Measurement Size and Runtime mistmatch");
-  Out.Measurements.resize(Sizes.size());
-  for (size_t I = 0; I < Sizes.size(); ++I) {
-    Out.Measurements[I].Size = Sizes[I];
-    Out.Measurements[I].Runtime = Runtimes[I];
-  }
+  O.map("Host", Out.Host);
+  O.map("BufferSize", Out.BufferSize);
+  O.map("BatchParameterCount", Out.BatchParameterCount);
+  O.map("BenchmarkOptions", Out.BenchmarkOptions);
   return O.takeError();
 }
 
 static Error fromJson(const json::Value &V, libc_benchmarks::Study &Out) {
   JsonObjectMapper O(V);
-  O.map("Host", Out.Host);
-  O.map("Options", Out.Options);
+  O.map("StudyName", Out.StudyName);
+  O.map("Runtime", Out.Runtime);
   O.map("Configuration", Out.Configuration);
-  O.map("Functions", Out.Functions);
+  O.map("Measurements", Out.Measurements);
   return O.takeError();
 }
 
-static double Seconds(const Duration &D) {
+static double seconds(const Duration &D) {
   return std::chrono::duration<double>(D).count();
 }
 
-Expected<Study> ParseJsonStudy(StringRef Content) {
+Expected<Study> parseJsonStudy(StringRef Content) {
   Expected<json::Value> EV = json::parse(Content);
   if (!EV)
     return EV.takeError();
@@ -265,7 +247,7 @@ Expected<Study> ParseJsonStudy(StringRef Content) {
   return S;
 }
 
-static StringRef Serialize(const BenchmarkLog &L) {
+static StringRef serialize(const BenchmarkLog &L) {
   switch (L) {
   case BenchmarkLog::None:
     return "None";
@@ -277,89 +259,63 @@ static StringRef Serialize(const BenchmarkLog &L) {
   llvm_unreachable("Unhandled BenchmarkLog value");
 }
 
-static void Serialize(const BenchmarkOptions &BO, json::OStream &JOS) {
-  JOS.object([&]() {
-    JOS.attribute("MinDuration", Seconds(BO.MinDuration));
-    JOS.attribute("MaxDuration", Seconds(BO.MaxDuration));
-    JOS.attribute("InitialIterations", BO.InitialIterations);
-    JOS.attribute("MaxIterations", BO.MaxIterations);
-    JOS.attribute("MinSamples", BO.MinSamples);
-    JOS.attribute("MaxSamples", BO.MaxSamples);
-    JOS.attribute("Epsilon", BO.Epsilon);
-    JOS.attribute("ScalingFactor", BO.ScalingFactor);
-    JOS.attribute("Log", Serialize(BO.Log));
+static void serialize(const BenchmarkOptions &BO, json::OStream &JOS) {
+  JOS.attribute("MinDuration", seconds(BO.MinDuration));
+  JOS.attribute("MaxDuration", seconds(BO.MaxDuration));
+  JOS.attribute("InitialIterations", BO.InitialIterations);
+  JOS.attribute("MaxIterations", BO.MaxIterations);
+  JOS.attribute("MinSamples", BO.MinSamples);
+  JOS.attribute("MaxSamples", BO.MaxSamples);
+  JOS.attribute("Epsilon", BO.Epsilon);
+  JOS.attribute("ScalingFactor", BO.ScalingFactor);
+  JOS.attribute("Log", serialize(BO.Log));
+}
+
+static void serialize(const CacheInfo &CI, json::OStream &JOS) {
+  JOS.attribute("Type", CI.Type);
+  JOS.attribute("Level", CI.Level);
+  JOS.attribute("Size", CI.Size);
+  JOS.attribute("NumSharing", CI.NumSharing);
+}
+
+static void serialize(const StudyConfiguration &SC, json::OStream &JOS) {
+  JOS.attribute("Function", SC.Function);
+  JOS.attribute("NumTrials", SC.NumTrials);
+  JOS.attribute("IsSweepMode", SC.IsSweepMode);
+  JOS.attribute("SweepModeMaxSize", SC.SweepModeMaxSize);
+  JOS.attribute("SizeDistributionName", SC.SizeDistributionName);
+  JOS.attribute("AccessAlignment",
+                static_cast<int64_t>(SC.AccessAlignment->value()));
+  JOS.attribute("MemcmpMismatchAt", SC.MemcmpMismatchAt);
+}
+
+static void serialize(const HostState &HS, json::OStream &JOS) {
+  JOS.attribute("CpuName", HS.CpuName);
+  JOS.attribute("CpuFrequency", HS.CpuFrequency);
+  JOS.attributeArray("Caches", [&]() {
+    for (const auto &CI : HS.Caches)
+      JOS.object([&]() { serialize(CI, JOS); });
   });
 }
 
-static void Serialize(const CacheInfo &CI, json::OStream &JOS) {
-  JOS.object([&]() {
-    JOS.attribute("Type", CI.Type);
-    JOS.attribute("Level", CI.Level);
-    JOS.attribute("Size", CI.Size);
-    JOS.attribute("NumSharing", CI.NumSharing);
-  });
+static void serialize(const Runtime &RI, json::OStream &JOS) {
+  JOS.attributeObject("Host", [&]() { serialize(RI.Host, JOS); });
+  JOS.attribute("BufferSize", RI.BufferSize);
+  JOS.attribute("BatchParameterCount", RI.BatchParameterCount);
+  JOS.attributeObject("BenchmarkOptions",
+                      [&]() { serialize(RI.BenchmarkOptions, JOS); });
 }
 
-static void Serialize(const HostState &HS, json::OStream &JOS) {
+void serializeToJson(const Study &S, json::OStream &JOS) {
   JOS.object([&]() {
-    JOS.attribute("CpuName", HS.CpuName);
-    JOS.attribute("CpuFrequency", HS.CpuFrequency);
-    JOS.attributeArray("Caches", [&]() {
-      for (const auto &CI : HS.Caches)
-        Serialize(CI, JOS);
-    });
-  });
-}
-
-static void Serialize(const StudyConfiguration &SC, json::OStream &JOS) {
-  JOS.object([&]() {
-    JOS.attribute("Runs", SC.Runs);
-    JOS.attribute("BufferSize", SC.BufferSize);
-    JOS.attributeObject("Size", [&]() {
-      JOS.attribute("From", SC.Size.From);
-      JOS.attribute("To", SC.Size.To);
-      JOS.attribute("Step", SC.Size.Step);
-    });
-    if (SC.AddressAlignment)
-      JOS.attribute("AddressAlignment",
-                    static_cast<int64_t>(SC.AddressAlignment->value()));
-    JOS.attribute("MemsetValue", SC.MemsetValue);
-    JOS.attribute("MemcmpMismatchAt", SC.MemcmpMismatchAt);
-  });
-}
-
-static void Serialize(const FunctionMeasurements &FM, json::OStream &JOS) {
-  JOS.object([&]() {
-    JOS.attribute("Name", FM.Name);
-    JOS.attributeArray("Sizes", [&]() {
-      for (const auto &M : FM.Measurements)
-        JOS.value(M.Size);
-    });
-    JOS.attributeArray("Runtimes", [&]() {
-      for (const auto &M : FM.Measurements)
-        JOS.value(Seconds(M.Runtime));
-    });
-  });
-}
-
-void SerializeToJson(const Study &S, json::OStream &JOS) {
-  JOS.object([&]() {
-    JOS.attributeBegin("Host");
-    Serialize(S.Host, JOS);
-    JOS.attributeEnd();
-
-    JOS.attributeBegin("Options");
-    Serialize(S.Options, JOS);
-    JOS.attributeEnd();
-
-    JOS.attributeBegin("Configuration");
-    Serialize(S.Configuration, JOS);
-    JOS.attributeEnd();
-
-    if (!S.Functions.empty()) {
-      JOS.attributeArray("Functions", [&]() {
-        for (const auto &FM : S.Functions)
-          Serialize(FM, JOS);
+    JOS.attribute("StudyName", S.StudyName);
+    JOS.attributeObject("Runtime", [&]() { serialize(S.Runtime, JOS); });
+    JOS.attributeObject("Configuration",
+                        [&]() { serialize(S.Configuration, JOS); });
+    if (!S.Measurements.empty()) {
+      JOS.attributeArray("Measurements", [&]() {
+        for (const auto &M : S.Measurements)
+          JOS.value(seconds(M));
       });
     }
   });

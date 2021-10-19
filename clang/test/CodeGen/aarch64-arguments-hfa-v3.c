@@ -9,12 +9,12 @@ typedef struct { float32x3_t arr[4]; } HFAv3;
 // CHECK: %struct.MixedHFAv3 = type { [3 x <3 x float>], <16 x i8> }
 typedef struct { float32x3_t arr[3]; int8x16_t b; } MixedHFAv3;
 
-// CHECK: define %struct.HFAv3 @test([4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}})
+// CHECK: define{{.*}} %struct.HFAv3 @test([4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}})
 HFAv3 test(HFAv3 a0, HFAv3 a1, HFAv3 a2) {
   return a2;
 }
 
-// CHECK: define %struct.MixedHFAv3 @test_mixed([4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}})
+// CHECK: define{{.*}} %struct.MixedHFAv3 @test_mixed([4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}}, [4 x <4 x float>] %{{.*}})
 MixedHFAv3 test_mixed(MixedHFAv3 a0, MixedHFAv3 a1, MixedHFAv3 a2) {
   return a2;
 }

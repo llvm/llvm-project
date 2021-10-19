@@ -1,5 +1,11 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
 
+extern void __assert_fail (__const char *__assertion, __const char *__file,
+    unsigned int __line, __const char *__function)
+     __attribute__ ((__noreturn__));
+#define assert(expr) \
+  ((expr)  ? (void)(0)  : __assert_fail (#expr, __FILE__, __LINE__, __func__))
+
 class Simple1 {
   int n;
   double x;
@@ -401,6 +407,20 @@ public:
   ~Complex19() = default;
 };
 
+class Complex20 {
+  int n;
+  int m;
+
+public:
+  Complex20(int k) : n(0) {
+    assert(k > 0);
+    m = 1;
+    // NO-MESSAGES: initialization of 'm' follows an assertion
+  }
+
+  ~Complex20() = default;
+};
+
 class VeryComplex1 {
   int n1, n2, n3;
   double x1, x2, x3;
@@ -450,5 +470,78 @@ class VeryComplex1 {
     n4 = something_int();
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'n4' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
     // CHECK-FIXES: {{^\ *$}}
+  }
+};
+
+struct Outside {
+  int n;
+  double x;
+  Outside();
+};
+
+Outside::Outside() {
+    // CHECK-FIXES: Outside::Outside() : n(1), x(1.0) {
+  n = 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'n' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
+    // CHECK-FIXES: {{^\ *$}}
+  x = 1.0;
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'x' should be initialized in a member initializer of the constructor [cppcoreguidelines-prefer-member-initializer]
+    // CHECK-FIXES: {{^\ *$}}
+}
+
+struct SafeDependancy {
+  int m;
+  int n;
+  SafeDependancy(int M) : m(M) {
+    // CHECK-FIXES: SafeDependancy(int M) : m(M), n(m) {
+    n = m;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'n' should be initialized in a member initializer of the constructor
+  }
+  // We match against direct field dependancy as well as descendant field
+  // dependancy, ensure both are accounted for.
+  SafeDependancy(short M) : m(M) {
+    // CHECK-FIXES: SafeDependancy(short M) : m(M), n(m + 1) {
+    n = m + 1;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'n' should be initialized in a member initializer of the constructor
+  }
+};
+
+struct BadDependancy {
+  int m;
+  int n;
+  BadDependancy(int N) : n(N) {
+    m = n;
+  }
+  BadDependancy(short N) : n(N) {
+    m = n + 1;
+  }
+};
+
+struct InitFromVarDecl {
+  int m;
+  InitFromVarDecl() {
+    // Can't apply this fix as n is declared in the body of the constructor.
+    int n = 3;
+    m = n;
+  }
+};
+
+struct AlreadyHasInit {
+  int m = 4;
+  AlreadyHasInit() {
+    m = 3;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'm' should be initialized in a member initializer of the constructor
+  }
+};
+
+#define ASSIGN_IN_MACRO(FIELD, VALUE) FIELD = (VALUE);
+
+struct MacroCantFix {
+  int n; // NoFix
+  // CHECK-FIXES: int n; // NoFix
+  MacroCantFix() {
+    ASSIGN_IN_MACRO(n, 0)
+    // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 'n' should be initialized in a member initializer of the constructor
+    // CHECK-FIXES: ASSIGN_IN_MACRO(n, 0)
   }
 };

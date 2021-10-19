@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITCODE_ANALYZER_H
-#define LLVM_BITCODE_BITCODE_ANALYZER_H
+#ifndef LLVM_BITCODE_BITCODEANALYZER_H
+#define LLVM_BITCODE_BITCODEANALYZER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -42,6 +42,8 @@ struct BCDumpOptions {
   bool Symbolic = false;
   /// Print binary blobs using hex escapes.
   bool ShowBinaryBlobs = false;
+  /// Print BLOCKINFO block details.
+  bool DumpBlockinfo = false;
 
   BCDumpOptions(raw_ostream &OS) : OS(OS) {}
 };
@@ -101,4 +103,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_BITCODE_BITCODE_ANALYZER_H
+#endif // LLVM_BITCODE_BITCODEANALYZER_H

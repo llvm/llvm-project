@@ -1,12 +1,14 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump -p %t | FileCheck %s
+# RUN: llvm-objdump -p %t | FileCheck %s --strict-whitespace --match-full-lines
 
-# CHECK:      Version References:
-# CHECK-NEXT:   required from dso.so.0:
-# CHECK-NEXT:     0x000004d2 0x0a 03 v1
-# CHECK-NEXT:     0x0000162e 0x0b 04 v2
-# CHECK-NEXT:   required from dso.so.1:
-# CHECK-NEXT:     0x000011d7 0x0c 02 v3
+#       CHECK:Dynamic Section:
+# CHECK-EMPTY:
+#  CHECK-NEXT:Version References:
+#  CHECK-NEXT:  required from dso.so.0:
+#  CHECK-NEXT:    0x000004d2 0x0a 03 v1
+#  CHECK-NEXT:    0x0000162e 0x0b 04 v2
+#  CHECK-NEXT:  required from dso.so.1:
+#  CHECK-NEXT:    0x000011d7 0x0c 02 v3
 
 --- !ELF
 FileHeader:
@@ -22,7 +24,6 @@ Sections:
     Address:         0x0000000000200250
     Link:            .dynstr
     AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000002
     Dependencies:
       - Version:         1
         File:            dso.so.0

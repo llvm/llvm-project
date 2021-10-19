@@ -12,7 +12,6 @@
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -24,9 +23,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/TargetRegistry.h"
 
 #define DEBUG_TYPE "msp430-asm-parser"
 
@@ -328,7 +327,7 @@ OperandMatchResultTy MSP430AsmParser::tryParseRegister(unsigned &RegNo,
 bool MSP430AsmParser::parseJccInstruction(ParseInstructionInfo &Info,
                                           StringRef Name, SMLoc NameLoc,
                                           OperandVector &Operands) {
-  if (!Name.startswith_lower("j"))
+  if (!Name.startswith_insensitive("j"))
     return true;
 
   auto CC = Name.drop_front().lower();
@@ -391,7 +390,7 @@ bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
   // Drop .w suffix
-  if (Name.endswith_lower(".w"))
+  if (Name.endswith_insensitive(".w"))
     Name = Name.drop_back(2);
 
   if (!parseJccInstruction(Info, Name, NameLoc, Operands))

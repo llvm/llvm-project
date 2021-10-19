@@ -5,12 +5,14 @@ target triple = "aarch64--linux-android"
 
 declare void @use32(i32*)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone speculatable
+declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone speculatable
 
 ; Debug intrinsics use the new alloca directly, not through a GEP or a tagp.
 define void @DbgIntrinsics() sanitize_memtag {
 entry:
   %x = alloca i32, align 4
   call void @llvm.dbg.declare(metadata i32* %x, metadata !6, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.value(metadata !DIArgList(i32* %x, i32* %x), metadata !6, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus)), !dbg !10
   store i32 42, i32* %x, align 4
   call void @use32(i32* %x)
   ret void
@@ -19,6 +21,7 @@ entry:
 ; CHECK-LABEL: define void @DbgIntrinsics(
 ; CHECK:  [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK:  call void @llvm.dbg.declare(metadata { i32, [12 x i8] }* [[X]],
+; CHECK:  call void @llvm.dbg.value(metadata !DIArgList({ i32, [12 x i8] }* [[X]], { i32, [12 x i8] }* [[X]])
 
 
 !llvm.dbg.cu = !{!0}

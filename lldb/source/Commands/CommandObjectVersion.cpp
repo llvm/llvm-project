@@ -20,7 +20,7 @@ CommandObjectVersion::CommandObjectVersion(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "version",
                           "Show the LLDB debugger version.", "version") {}
 
-CommandObjectVersion::~CommandObjectVersion() {}
+CommandObjectVersion::~CommandObjectVersion() = default;
 
 bool CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
   if (args.GetArgumentCount() == 0) {
@@ -28,7 +28,6 @@ bool CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
     result.SetStatus(eReturnStatusSuccessFinishResult);
   } else {
     result.AppendError("the version command takes no arguments.");
-    result.SetStatus(eReturnStatusFailed);
   }
   return true;
 }

@@ -1,4 +1,3 @@
-; RUN: opt < %s -analyze -block-freq | FileCheck %s
 ; RUN: opt < %s -passes='print<block-freq>' -disable-output 2>&1 | FileCheck %s
 
 ; Function Attrs: noinline norecurse nounwind readnone uwtable

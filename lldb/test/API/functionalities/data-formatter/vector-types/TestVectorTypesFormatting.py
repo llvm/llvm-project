@@ -55,17 +55,17 @@ class VectorTypesFormattingTestCase(TestBase):
         if self.TraceOn():
             print(v)
 
-        self.assertTrue(
-            v.GetNumChildren() == 4,
+        self.assertEqual(
+            v.GetNumChildren(), 4,
             "v as float32[] has 4 children")
-        self.assertTrue(v.GetChildAtIndex(0).GetData().float[
-                        0] == 1.25, "child 0 == 1.25")
-        self.assertTrue(v.GetChildAtIndex(1).GetData().float[
-                        0] == 1.25, "child 1 == 1.25")
-        self.assertTrue(v.GetChildAtIndex(2).GetData().float[
-                        0] == 2.50, "child 2 == 2.50")
-        self.assertTrue(v.GetChildAtIndex(3).GetData().float[
-                        0] == 2.50, "child 3 == 2.50")
+        self.assertEqual(v.GetChildAtIndex(0).GetData().float[0], 1.25,
+                         "child 0 == 1.25")
+        self.assertEqual(v.GetChildAtIndex(1).GetData().float[0], 1.25,
+                         "child 1 == 1.25")
+        self.assertEqual(v.GetChildAtIndex(2).GetData().float[0], 2.50,
+                         "child 2 == 2.50")
+        self.assertEqual(v.GetChildAtIndex(3).GetData().float[0], 2.50,
+                         "child 3 == 2.50")
 
         self.expect("expr -f int16_t[] -- v",
                     substrs=['(0, 16288, 0, 16288, 0, 16416, 0, 16416)'])
@@ -78,11 +78,11 @@ class VectorTypesFormattingTestCase(TestBase):
         oldValue = v.GetChildAtIndex(0).GetValue()
         v.SetFormat(lldb.eFormatHex)
         newValue = v.GetChildAtIndex(0).GetValue()
-        self.assertFalse(oldValue == newValue,
-                         "values did not change along with format")
+        self.assertNotEqual(oldValue, newValue,
+                            "values did not change along with format")
 
         v.SetFormat(lldb.eFormatVectorOfFloat32)
         oldValueAgain = v.GetChildAtIndex(0).GetValue()
-        self.assertTrue(
-            oldValue == oldValueAgain,
+        self.assertEqual(
+            oldValue, oldValueAgain,
             "same format but different values")

@@ -1,6 +1,6 @@
 # REQUIRES: webassembly-registered-target
 # RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %s -o %t.o -g
-       
+
 foo:
     .functype foo () -> ()
     nop
@@ -8,6 +8,7 @@ foo:
 
 bar:
     .functype bar (i32) -> (i32)
+    local.get 0
     return
     end_function
 
@@ -20,4 +21,4 @@ bar:
 # CHECK: wasm-basic.s:6:0
 # CHECK: wasm-basic.s:7:0
 # CHECK: wasm-basic.s:11:0
-# CHECK: wasm-basic.s:12:0
+# CHECK: wasm-basic.s:11:0

@@ -35,18 +35,14 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __lsan;
   uptr stack_top = 0, stack_bottom = 0;
-  ThreadContext *t;
-  if (StackTrace::WillUseFastUnwind(request_fast) &&
-      (t = CurrentThreadContext())) {
+  if (ThreadContext *t = CurrentThreadContext()) {
     stack_top = t->stack_end();
     stack_bottom = t->stack_begin();
   }
-  if (!SANITIZER_MIPS || IsValidFrame(bp, stack_top, stack_bottom)) {
-    if (StackTrace::WillUseFastUnwind(request_fast))
-      Unwind(max_depth, pc, bp, nullptr, stack_top, stack_bottom, true);
-    else
-      Unwind(max_depth, pc, 0, context, 0, 0, false);
-  }
+  if (SANITIZER_MIPS && !IsValidFrame(bp, stack_top, stack_bottom))
+    return;
+  bool fast = StackTrace::WillUseFastUnwind(request_fast);
+  Unwind(max_depth, pc, bp, context, stack_top, stack_bottom, fast);
 }
 
 using namespace __lsan;
@@ -73,11 +69,11 @@ static void InitializeFlags() {
   RegisterCommonFlags(&parser);
 
   // Override from user-specified string.
-  const char *lsan_default_options = MaybeCallLsanDefaultOptions();
+  const char *lsan_default_options = __lsan_default_options();
   parser.ParseString(lsan_default_options);
   parser.ParseStringFromEnv("LSAN_OPTIONS");
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   if (Verbosity()) ReportUnrecognizedFlags();
 

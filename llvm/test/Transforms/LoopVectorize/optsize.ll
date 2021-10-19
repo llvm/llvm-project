@@ -1,9 +1,12 @@
 ; This test verifies that the loop vectorizer will NOT produce a tail
 ; loop with the optimize for size or the minimize size attributes.
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -S | FileCheck %s
-; RUN: opt < %s -loop-vectorize -pgso -S | FileCheck %s -check-prefix=PGSO
-; RUN: opt < %s -loop-vectorize -pgso=false -S | FileCheck %s -check-prefix=NPGSO
+; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -pgso -S | FileCheck %s -check-prefix=PGSO
+; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -pgso=false -S | FileCheck %s -check-prefix=NPGSO
+; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -pgso -S | FileCheck %s -check-prefix=PGSO
+; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -pgso=false -S | FileCheck %s -check-prefix=NPGSO
 
 target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S128"
 
@@ -226,14 +229,14 @@ define void @stride1(i16* noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> undef, i32 [[BSTRIDE:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IND]], <i32 1024, i32 1024>
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -336,6 +339,29 @@ for.body:                                        ; preds = %for.body, %entry
 
 for.end:                                        ; preds = %for.body
   ret void
+}
+
+; Make sure we do not crash while building the VPlan for the loop with the
+; select below.
+define i32 @PR48142(i32* %ptr.start, i32* %ptr.end) optsize {
+; CHECK-LABEL: PR48142
+; CHECK-NOT: vector.body
+entry:
+  br label %for.body
+
+for.body:
+  %i.014 = phi i32 [ 20, %entry ], [ %cond, %for.body ]
+  %ptr.iv = phi i32* [ %ptr.start, %entry ], [ %ptr.next, %for.body ]
+  %cmp4 = icmp slt i32 %i.014, 99
+  %cond = select i1 %cmp4, i32 99, i32 %i.014
+  store i32 0, i32* %ptr.iv
+  %ptr.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  %cmp.not = icmp eq i32* %ptr.next, %ptr.end
+  br i1 %cmp.not, label %exit, label %for.body
+
+exit:
+  %res = phi i32 [ %cond, %for.body ]
+  ret i32 %res
 }
 
 !llvm.module.flags = !{!0}

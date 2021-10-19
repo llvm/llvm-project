@@ -58,6 +58,12 @@ function(add_gen_header target_name)
     "PARAMS;DATA_FILES;DEPENDS"     # Multi value arguments
     ${ARGN}
   )
+  get_fq_target_name(${target_name} fq_target_name)
+  if(NOT LLVM_LIBC_FULL_BUILD)
+    # We don't want to use generated headers if we are doing a non-full-build.
+    add_custom_target(${fq_target_name})
+    return()
+  endif()
   if(NOT ADD_GEN_HDR_DEF_FILE)
     message(FATAL_ERROR "`add_gen_hdr` rule requires DEF_FILE to be specified.")
   endif()
@@ -84,18 +90,22 @@ function(add_gen_header target_name)
 
   file(GLOB td_includes ${LIBC_SOURCE_DIR}/spec/*.td)
 
+  set(ENTRYPOINT_NAME_LIST_ARG ${TARGET_ENTRYPOINT_NAME_LIST})
+  list(TRANSFORM ENTRYPOINT_NAME_LIST_ARG PREPEND "--e=")
+
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND $<TARGET_FILE:libc-hdrgen> -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
+    COMMAND ${LIBC_TABLEGEN_EXE} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
             --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
-            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+           ${ENTRYPOINT_NAME_LIST_ARG}
+           ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
 
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${in_file} ${fq_data_files} ${td_includes}
-            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td libc-hdrgen
+            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+            ${LIBC_TABLEGEN_EXE} ${LIBC_TABLEGEN_TARGET}
   )
 
-  get_fq_target_name(${target_name} fq_target_name)
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
   endif()

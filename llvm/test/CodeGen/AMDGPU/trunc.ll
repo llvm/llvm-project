@@ -41,7 +41,6 @@ define amdgpu_kernel void @trunc_load_shl_i64(i32 addrspace(1)* %out, [8 x i32],
 ; GCN: s_lshl_b64 s{{\[}}[[LO_SHL:[0-9]+]]:{{[0-9]+\]}}, s{{\[}}[[LO_SREG]]:{{[0-9]+\]}}, 2
 ; GCN: s_add_u32 s[[LO_SREG2:[0-9]+]], s[[LO_SHL]],
 ; GCN: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], s[[LO_SREG2]]
-; GCN: s_addc_u32
 ; SI: buffer_store_dword v[[LO_VREG]],
 ; VI: flat_store_dword v[{{[0-9:]+}}], v[[LO_VREG]]
 ; GCN: v_mov_b32_e32
@@ -96,10 +95,9 @@ define amdgpu_kernel void @sgpr_trunc_i32_to_i1(i32 addrspace(1)* %out, i32 %a) 
 ; GCN-LABEL: {{^}}s_trunc_i64_to_i1:
 ; SI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x13
 ; VI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x4c
-; GCN: s_and_b32 [[MASKED:s[0-9]+]], 1, s[[SLO]]
-; GCN: v_cmp_eq_u32_e64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], [[MASKED]], 1{{$}}
+; GCN: s_bitcmp1_b32 s[[SLO]], 0
+; SI: s_cselect_b64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], -1, 0
 ; SI: v_cndmask_b32_e64 {{v[0-9]+}}, -12, 63, s{{\[}}[[VLO]]:[[VHI]]]
-; VI: s_cmp_lg_u64 s{{\[}}[[VLO]]:[[VHI]]], 0
 ; VI: s_cselect_b32 {{s[0-9]+}}, 63, -12
 define amdgpu_kernel void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, [8 x i32], i64 %x) {
   %trunc = trunc i64 %x to i1

@@ -6,7 +6,7 @@
 
 int Global;
 
-void TopFunction(int *p) {
+__attribute__((noinline)) void TopFunction(int *p) {
   *p = 1;
 }
 

@@ -1,21 +1,25 @@
 // RUN: mlir-opt -allow-unregistered-dialect -test-mapping-to-processing-elements %s | FileCheck %s
 
-// CHECK-LABEL: @map1d
-//       CHECK: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index) {
+// CHECK: #[[mul_map:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
+// CHECK: #[[add_map:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+
+//      CHECK: func @map1d
+// CHECK-SAME: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index)
 func @map1d(%lb: index, %ub: index, %step: index) {
   // CHECK: %[[threads:.*]]:2 = "new_processor_id_and_range"() : () -> (index, index)
   %0:2 = "new_processor_id_and_range"() : () -> (index, index)
 
-  // CHECK: %[[thread_offset:.*]] = muli %[[step]], %[[threads]]#0
-  // CHECK: %[[new_lb:.*]] = addi %[[lb]], %[[thread_offset]]
-  // CHECK: %[[new_step:.*]] = muli %[[step]], %[[threads]]#1
+  // CHECK: %[[thread_offset:.+]] = affine.apply #[[mul_map]]()[%[[threads]]#0, %[[step]]]
+  // CHECK: %[[new_lb:.+]] = affine.apply #[[add_map]]()[%[[thread_offset]], %[[lb]]]
+  // CHECK: %[[new_step:.+]] = affine.apply #[[mul_map]]()[%[[threads]]#1, %[[step]]]
+
   // CHECK: scf.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
   scf.for %i = %lb to %ub step %step {}
   return
 }
 
-// CHECK-LABEL: @map2d
-//       CHECK: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index) {
+//      CHECK: func @map2d
+// CHECK-SAME: (%[[lb:.*]]: index, %[[ub:.*]]: index, %[[step:.*]]: index)
 func @map2d(%lb : index, %ub : index, %step : index) {
   // CHECK: %[[blocks:.*]]:2 = "new_processor_id_and_range"() : () -> (index, index)
   %0:2 = "new_processor_id_and_range"() : () -> (index, index)
@@ -24,24 +28,25 @@ func @map2d(%lb : index, %ub : index, %step : index) {
   %1:2 = "new_processor_id_and_range"() : () -> (index, index)
 
   // blockIdx.x * blockDim.x
-  // CHECK: %[[bidxXbdimx:.*]] = muli %[[blocks]]#0, %[[threads]]#1 : index
+  // CHECK: %[[bidxXbdimx:.+]] = affine.apply #[[mul_map]]()[%[[blocks]]#0, %[[threads]]#1]
   //
   // threadIdx.x + blockIdx.x * blockDim.x
-  // CHECK: %[[tidxpbidxXbdimx:.*]] = addi %[[bidxXbdimx]], %[[threads]]#0 : index
+  // CHECK: %[[tidxpbidxXbdimx:.+]] = affine.apply #[[add_map]]()[%[[bidxXbdimx]], %[[threads]]#0]
   //
   // thread_offset = step * (threadIdx.x + blockIdx.x * blockDim.x)
-  // CHECK: %[[thread_offset:.*]] = muli %[[step]], %[[tidxpbidxXbdimx]] : index
+  // CHECK: %[[thread_offset:.+]] = affine.apply #[[mul_map]]()[%[[tidxpbidxXbdimx]], %[[step]]]
   //
   // new_lb = lb + thread_offset
-  // CHECK: %[[new_lb:.*]] = addi %[[lb]], %[[thread_offset]] : index
+  // CHECK: %[[new_lb:.+]] = affine.apply #[[add_map]]()[%[[thread_offset]], %[[lb]]]
   //
   // stepXgdimx = step * gridDim.x
-  // CHECK: %[[stepXgdimx:.*]] = muli %[[step]], %[[blocks]]#1 : index
+  // CHECK: %[[stepXgdimx:.+]] = affine.apply #[[mul_map]]()[%[[blocks]]#1, %[[step]]]
   //
   // new_step = step * gridDim.x * blockDim.x
-  // CHECK: %[[new_step:.*]] = muli %[[stepXgdimx]], %[[threads]]#1 : index
+  // CHECK: %[[new_step:.+]] = affine.apply #[[mul_map]]()[%[[threads]]#1, %[[stepXgdimx]]]
   //
   // CHECK: scf.for %{{.*}} = %[[new_lb]] to %[[ub]] step %[[new_step]] {
+
   scf.for %i = %lb to %ub step %step {}
   return
 }

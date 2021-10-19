@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/call.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
@@ -20,6 +21,7 @@ ActualArgument::ActualArgument(Expr<SomeType> &&x) : u_{std::move(x)} {}
 ActualArgument::ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&v)
     : u_{std::move(v)} {}
 ActualArgument::ActualArgument(AssumedType x) : u_{x} {}
+ActualArgument::ActualArgument(common::Label x) : u_{x} {}
 ActualArgument::~ActualArgument() {}
 
 ActualArgument::AssumedType::AssumedType(const Symbol &symbol)
@@ -54,9 +56,8 @@ int ActualArgument::Rank() const {
 }
 
 bool ActualArgument::operator==(const ActualArgument &that) const {
-  return keyword_ == that.keyword_ &&
-      isAlternateReturn_ == that.isAlternateReturn_ &&
-      isPassedObject_ == that.isPassedObject_ && u_ == that.u_;
+  return keyword_ == that.keyword_ && isPassedObject_ == that.isPassedObject_ &&
+      u_ == that.u_;
 }
 
 void ActualArgument::Parenthesize() {
@@ -116,9 +117,14 @@ int ProcedureDesignator::Rank() const {
 
 const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
   if (const Symbol * symbol{GetSymbol()}) {
-    if (const auto *details{
-            symbol->detailsIf<semantics::ProcEntityDetails>()}) {
-      return details->interface().symbol();
+    const Symbol &ultimate{symbol->GetUltimate()};
+    if (const auto *proc{ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
+      return proc->interface().symbol();
+    } else if (const auto *binding{
+                   ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
+      return &binding->symbol();
+    } else if (ultimate.has<semantics::SubprogramDetails>()) {
+      return &ultimate;
     }
   }
   return nullptr;
@@ -214,5 +220,4 @@ ProcedureRef::~ProcedureRef() {}
 
 void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
 
-FOR_EACH_SPECIFIC_TYPE(template class FunctionRef, )
 } // namespace Fortran::evaluate

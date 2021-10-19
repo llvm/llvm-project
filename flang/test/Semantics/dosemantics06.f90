@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! C1131, C1133 -- check valid and invalid DO loop naming
 ! C1131 (R1119) If the do-stmt of a do-construct specifies a do-construct-name,
 ! the corresponding end-do shall be an end-do-stmt specifying the same

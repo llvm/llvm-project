@@ -87,6 +87,9 @@ on_ompt_callback_sync_region(
       if (kind == ompt_sync_region_barrier_implicit)
         printf("%" PRIu64 ": ompt_event_barrier_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
@@ -112,10 +115,13 @@ on_ompt_callback_sync_region_wait(
       if (kind == ompt_sync_region_barrier_implicit)
         printf("%" PRIu64 ": ompt_event_wait_barrier_end: parallel_id=%" PRIu64 ", task_id=%" PRIu64 ", codeptr_ra=%p\n", ompt_get_thread_data()->value, (parallel_data)?parallel_data->value:0, task_data->value, codeptr_ra);
       break;
+    case ompt_scope_beginend:
+      printf("ompt_scope_beginend should never be passed to %s\n", __func__);
+      exit(-1);
   }
 }
 
-#define register_callback_t(name, type)                       \
+#define register_ompt_callback_t(name, type)                       \
 do{                                                           \
   type f_##name = &on_##name;                                 \
   if (ompt_set_callback(name, (ompt_callback_t)f_##name) ==   \
@@ -123,19 +129,17 @@ do{                                                           \
     printf("0: Could not register callback '" #name "'\n");   \
 }while(0)
 
-#define register_callback(name) register_callback_t(name, name##_t)
+#define register_ompt_callback(name) register_ompt_callback_t(name, name##_t)
 
-int ompt_initialize(
-  ompt_function_lookup_t lookup,
-  ompt_data_t *tool_data)
-{
+int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
+                    ompt_data_t *tool_data) {
   ompt_set_callback_t ompt_set_callback;
   ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
   ompt_get_thread_data = (ompt_get_thread_data_t) lookup("ompt_get_thread_data");
-  register_callback(ompt_callback_sync_region);
-  register_callback_t(ompt_callback_sync_region_wait, ompt_callback_sync_region_t);
-  register_callback(ompt_callback_thread_begin);
+  register_ompt_callback(ompt_callback_sync_region);
+  register_ompt_callback_t(ompt_callback_sync_region_wait, ompt_callback_sync_region_t);
+  register_ompt_callback(ompt_callback_thread_begin);
   printf("0: NULL_POINTER=%p\n", (void*)NULL);
   return 1; //success
 }

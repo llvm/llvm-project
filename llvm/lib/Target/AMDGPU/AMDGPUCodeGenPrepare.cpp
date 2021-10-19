@@ -13,40 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Operator.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Value.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
-#include <cassert>
-#include <iterator>
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
@@ -171,8 +151,6 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 
   unsigned numBitsUnsigned(Value *Op, unsigned ScalarSize) const;
   unsigned numBitsSigned(Value *Op, unsigned ScalarSize) const;
-  bool isI24(Value *V, unsigned ScalarSize) const;
-  bool isU24(Value *V, unsigned ScalarSize) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
@@ -221,6 +199,7 @@ public:
   AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
 
   bool visitFDiv(BinaryOperator &I);
+  bool visitXor(BinaryOperator &I);
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitBinaryOperator(BinaryOperator &I);
@@ -473,16 +452,6 @@ unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op,
   return ScalarSize - ComputeNumSignBits(Op, *DL, 0, AC);
 }
 
-bool AMDGPUCodeGenPrepare::isI24(Value *V, unsigned ScalarSize) const {
-  return ScalarSize >= 24 && // Types less than 24-bit should be treated
-                                     // as unsigned 24-bit values.
-    numBitsSigned(V, ScalarSize) < 24;
-}
-
-bool AMDGPUCodeGenPrepare::isU24(Value *V, unsigned ScalarSize) const {
-  return numBitsUnsigned(V, ScalarSize) <= 24;
-}
-
 static void extractValues(IRBuilder<> &Builder,
                           SmallVectorImpl<Value *> &Values, Value *V) {
   auto *VT = dyn_cast<FixedVectorType>(V->getType());
@@ -528,10 +497,26 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
 
   Intrinsic::ID IntrID = Intrinsic::not_intrinsic;
 
-  // TODO: Should this try to match mulhi24?
-  if (ST->hasMulU24() && isU24(LHS, Size) && isU24(RHS, Size)) {
+  unsigned LHSBits = 0, RHSBits = 0;
+
+  if (ST->hasMulU24() && (LHSBits = numBitsUnsigned(LHS, Size)) <= 24 &&
+      (RHSBits = numBitsUnsigned(RHS, Size)) <= 24) {
+    // The mul24 instruction yields the low-order 32 bits. If the original
+    // result and the destination is wider than 32 bits, the mul24 would
+    // truncate the result.
+    if (Size > 32 && LHSBits + RHSBits > 32)
+      return false;
+
     IntrID = Intrinsic::amdgcn_mul_u24;
-  } else if (ST->hasMulI24() && isI24(LHS, Size) && isI24(RHS, Size)) {
+  } else if (ST->hasMulI24() &&
+             (LHSBits = numBitsSigned(LHS, Size)) < 24 &&
+             (RHSBits = numBitsSigned(RHS, Size)) < 24) {
+    // The original result is positive if its destination is wider than 32 bits
+    // and its highest set bit is at bit 31. Generating mul24 and sign-extending
+    // it would yield a negative value.
+    if (Size > 32 && LHSBits + RHSBits > 30)
+      return false;
+
     IntrID = Intrinsic::amdgcn_mul_i24;
   } else
     return false;
@@ -760,6 +745,11 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Type *Ty = FDiv.getType()->getScalarType();
 
+  // The f64 rcp/rsq approximations are pretty inaccurate. We can do an
+  // expansion around them in codegen.
+  if (Ty->isDoubleTy())
+    return false;
+
   // No intrinsic for fdiv16 if target does not support f16.
   if (Ty->isHalfTy() && !ST->has16BitInsts())
     return false;
@@ -823,9 +813,34 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
   return !!NewFDiv;
 }
 
+bool AMDGPUCodeGenPrepare::visitXor(BinaryOperator &I) {
+  // Match the Xor instruction, its type and its operands
+  IntrinsicInst *IntrinsicCall = dyn_cast<IntrinsicInst>(I.getOperand(0));
+  ConstantInt *RHS = dyn_cast<ConstantInt>(I.getOperand(1));
+  if (!RHS || !IntrinsicCall || RHS->getSExtValue() != -1)
+    return visitBinaryOperator(I);
+
+  // Check if the Call is an intrinsic instruction to amdgcn_class intrinsic
+  // has only one use
+  if (IntrinsicCall->getIntrinsicID() != Intrinsic::amdgcn_class ||
+      !IntrinsicCall->hasOneUse())
+    return visitBinaryOperator(I);
+
+  // "Not" the second argument of the intrinsic call
+  ConstantInt *Arg = dyn_cast<ConstantInt>(IntrinsicCall->getOperand(1));
+  if (!Arg)
+    return visitBinaryOperator(I);
+
+  IntrinsicCall->setOperand(
+      1, ConstantInt::get(Arg->getType(), Arg->getZExtValue() ^ 0x3ff));
+  I.replaceAllUsesWith(IntrinsicCall);
+  I.eraseFromParent();
+  return true;
+}
+
 static bool hasUnsafeFPMath(const Function &F) {
   Attribute Attr = F.getFnAttribute("unsafe-fp-math");
-  return Attr.getValueAsString() == "true";
+  return Attr.getValueAsBool();
 }
 
 static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
@@ -1303,7 +1318,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
       ConstantInt *Lower =
         mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->getValue().isNullValue()) {
+      if (Lower->isNullValue()) {
         WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
       } else {
         Metadata *LowAndHigh[] = {

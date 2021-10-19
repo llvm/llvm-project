@@ -94,7 +94,7 @@ entry:
   ; CHECK-GNUEABI: bl memset
   call void @llvm.memset.p0i8.i32(i8* align 8 %dest, i8 0, i32 500, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments to memory intrinsics are automatically aligned if at least 8 bytes in size
@@ -140,7 +140,7 @@ entry:
   %2 = bitcast [9 x i8]* %arr2 to i8*
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned if less than 8 bytes in size
@@ -179,7 +179,7 @@ entry:
   %2 = bitcast [7 x i8]* %arr2 to i8*
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned if size+offset is less than 8 bytes
@@ -218,7 +218,7 @@ entry:
   %2 = getelementptr inbounds [9 x i8], [9 x i8]* %arr2, i32 0, i32 4
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned if the offset is not a multiple of 4
@@ -257,7 +257,7 @@ entry:
   %2 = getelementptr inbounds [13 x i8], [13 x i8]* %arr2, i32 0, i32 1
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned if the offset is unknown
@@ -296,7 +296,7 @@ entry:
   %2 = getelementptr inbounds [13 x i8], [13 x i8]* %arr2, i32 0, i32 %i
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned if the GEP is not inbounds
@@ -335,7 +335,7 @@ entry:
   %2 = getelementptr [13 x i8], [13 x i8]* %arr2, i32 0, i32 4
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that alloca arguments are not aligned when the offset is past the end of the allocation
@@ -374,7 +374,7 @@ entry:
   %2 = getelementptr inbounds [13 x i8], [13 x i8]* %arr2, i32 0, i32 16
   call void @llvm.memset.p0i8.i32(i8* %2, i8 1, i32 %n, i1 false)
 
-  unreachable
+  ret void
 }
 
 ; Check that global variables are aligned if they are large enough, but only if
@@ -401,7 +401,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr8, i32 0, i32 0), i32 %n, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr9, i32 0, i32 0), i32 %n, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @arr10, i32 0, i32 0), i32 %n, i1 false)
-  unreachable
+  ret void
 }
 
 ; CHECK: {{\.data|\.section.+data}}

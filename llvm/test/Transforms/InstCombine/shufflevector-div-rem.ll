@@ -10,8 +10,8 @@ define i16 @test_srem_orig(i16 %a, i1 %cmp) {
 ; CHECK-LABEL: @test_srem_orig(
 ; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i16> [[SPLATINSERT]], <i16 2, i16 1>
-; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> undef, <2 x i32> <i32 undef, i32 0>
-; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 undef, i16 1>, <2 x i16> [[SPLAT_OP]]
+; CHECK-NEXT:    [[SPLAT_OP:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[T2:%.*]] = select i1 [[CMP:%.*]], <2 x i16> <i16 poison, i16 1>, <2 x i16> [[SPLAT_OP]]
 ; CHECK-NEXT:    [[T3:%.*]] = extractelement <2 x i16> [[T2]], i32 1
 ; CHECK-NEXT:    ret i16 [[T3]]
 ;

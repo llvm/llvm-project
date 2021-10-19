@@ -16,7 +16,7 @@
 #include "lldb/lldb-enumerations.h"
 
 // C includes
-#include <assert.h>
+#include <cassert>
 
 // C++ includes
 
@@ -30,36 +30,35 @@ using namespace minidump;
 #define DEF_R(i)                                                               \
   {                                                                            \
     "r" #i, nullptr, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,          \
-        {ehframe_r##i, dwarf_r##i, INV, INV, reg_r##i},                          \
-        nullptr, nullptr, nullptr, 0    \
+        {ehframe_r##i, dwarf_r##i, INV, INV, reg_r##i}, nullptr, nullptr,      \
   }
 
 #define DEF_R_ARG(i, n)                                                        \
   {                                                                            \
     "r" #i, "arg" #n, 4, OFFSET(r) + i * 4, eEncodingUint, eFormatHex,         \
-        {ehframe_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV, reg_r##i}, \
-        nullptr, nullptr, nullptr, 0                                           \
+        {ehframe_r##i, dwarf_r##i, LLDB_REGNUM_GENERIC_ARG1 + i, INV,          \
+         reg_r##i},                                                            \
+        nullptr, nullptr,                                                      \
   }
 
 #define DEF_D(i)                                                               \
   {                                                                            \
     "d" #i, nullptr, 8, OFFSET(d) + i * 8, eEncodingVector,                    \
         eFormatVectorOfUInt8, {dwarf_d##i, dwarf_d##i, INV, INV, reg_d##i},    \
-        nullptr, nullptr, nullptr, 0    \
+        nullptr, nullptr,                                                      \
   }
 
 #define DEF_S(i)                                                               \
   {                                                                            \
     "s" #i, nullptr, 4, OFFSET(s) + i * 4, eEncodingIEEE754, eFormatFloat,     \
-        {dwarf_s##i, dwarf_s##i, INV, INV, reg_s##i},                          \
-        nullptr, nullptr, nullptr, 0                                           \
+        {dwarf_s##i, dwarf_s##i, INV, INV, reg_s##i}, nullptr, nullptr,        \
   }
 
 #define DEF_Q(i)                                                               \
   {                                                                            \
     "q" #i, nullptr, 16, OFFSET(q) + i * 16, eEncodingVector,                  \
         eFormatVectorOfUInt8, {dwarf_q##i, dwarf_q##i, INV, INV, reg_q##i},    \
-        nullptr, nullptr, nullptr, 0    \
+        nullptr, nullptr,                                                      \
   }
 
 // Zero based LLDB register numbers for this register context
@@ -177,8 +176,7 @@ static RegisterInfo g_reg_info_apple_fp = {
     {ehframe_r7, dwarf_r7, LLDB_REGNUM_GENERIC_FP, INV, reg_r7},
     nullptr,
     nullptr,
-    nullptr,
-    0};
+};
 
 static RegisterInfo g_reg_info_fp = {
     "fp",
@@ -190,8 +188,7 @@ static RegisterInfo g_reg_info_fp = {
     {ehframe_r11, dwarf_r11, LLDB_REGNUM_GENERIC_FP, INV, reg_r11},
     nullptr,
     nullptr,
-    nullptr,
-    0};
+};
 
 // Register info definitions for this register context
 static RegisterInfo g_reg_infos[] = {
@@ -217,8 +214,7 @@ static RegisterInfo g_reg_infos[] = {
      {ehframe_sp, dwarf_sp, LLDB_REGNUM_GENERIC_SP, INV, reg_sp},
      nullptr,
      nullptr,
-     nullptr,
-     0},
+    },
     {"lr",
      "r14",
      4,
@@ -228,8 +224,7 @@ static RegisterInfo g_reg_infos[] = {
      {ehframe_lr, dwarf_lr, LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
      nullptr,
      nullptr,
-     nullptr,
-     0},
+    },
     {"pc",
      "r15",
      4,
@@ -239,8 +234,7 @@ static RegisterInfo g_reg_infos[] = {
      {ehframe_pc, dwarf_pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
      nullptr,
      nullptr,
-     nullptr,
-     0},
+    },
     {"cpsr",
      "psr",
      4,
@@ -250,8 +244,7 @@ static RegisterInfo g_reg_infos[] = {
      {ehframe_cpsr, dwarf_cpsr, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
      nullptr,
      nullptr,
-     nullptr,
-     0},
+    },
     {"fpscr",
      nullptr,
      8,
@@ -261,8 +254,7 @@ static RegisterInfo g_reg_infos[] = {
      {INV, INV, INV, INV, reg_fpscr},
      nullptr,
      nullptr,
-     nullptr,
-     0},
+    },
     DEF_D(0),
     DEF_D(1),
     DEF_D(2),

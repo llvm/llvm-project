@@ -75,17 +75,19 @@ body:             |
     ; CHECK-LABEL: name: test
     ; CHECK: liveins: $rcx, $rsi
     ; CHECK: renamable $rdi = COPY $rsi
-    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rcx :: (store 8 into %stack.0)
-    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store 8 into %stack.1)
-    ; CHECK: STATEPOINT 0, 0, 1, @foo, $rdi, 2, 0, 2, 0, 2, 1, 1, 8, %stack.1, 0, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0), (load 8 from %stack.1)
-    ; CHECK: renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+    ; CHECK: MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rcx :: (store (s64) into %stack.0)
+    ; CHECK: ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    ; CHECK: MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.1)
+    ; CHECK: STATEPOINT 0, 0, 1, @foo, $rdi, 2, 0, 2, 0, 2, 1, 1, 8, %stack.1, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0), (load (s64) from %stack.1)
+    ; CHECK: ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    ; CHECK: renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     ; CHECK: RET 0, $rax
     renamable $rdi = COPY $rsi
-    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rcx :: (store 8 into %stack.0)
+    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rcx :: (store (s64) into %stack.0)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    STATEPOINT 0, 0, 1, @foo, $rdi, 2, 0, 2, 0, 2, 1, killed renamable $rdi, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+    STATEPOINT 0, 0, 1, @foo, $rdi, 2, 0, 2, 0, 2, 1, killed renamable $rdi, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
+    renamable $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     RET 0, $rax
 
 ...

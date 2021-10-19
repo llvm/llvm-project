@@ -29,7 +29,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -68,6 +67,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <limits>
 #include <cassert>
 #include <string>
 
@@ -97,6 +97,10 @@ static cl::opt<std::string>
                     cl::desc("Name for the section containing cold functions "
                              "extracted by hot-cold splitting."));
 
+static cl::opt<int> MaxParametersForSplit(
+    "hotcoldsplit-max-params", cl::init(4), cl::Hidden,
+    cl::desc("Maximum number of parameters for a split function"));
+
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
 // this function unless you modify the MBB version as well.
@@ -113,8 +117,7 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return !(isa<ReturnInst>(I) || isa<IndirectBrInst>(I));
 }
 
-bool unlikelyExecuted(BasicBlock &BB, ProfileSummaryInfo *PSI,
-                      BlockFrequencyInfo *BFI) {
+bool unlikelyExecuted(BasicBlock &BB) {
   // Exception handling blocks are unlikely executed.
   if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
     return true;
@@ -127,19 +130,12 @@ bool unlikelyExecuted(BasicBlock &BB, ProfileSummaryInfo *PSI,
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's
-  // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp);
-  // in the case of a longjmp, if the block is cold according to
-  // profile information, we mark it as unlikely to be executed as well.
+  // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp).
   if (blockEndsInUnreachable(BB)) {
     if (auto *CI =
             dyn_cast_or_null<CallInst>(BB.getTerminator()->getPrevNode()))
-      if (CI->hasFnAttr(Attribute::NoReturn)) {
-        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
-          return (II->getIntrinsicID() != Intrinsic::eh_sjlj_longjmp) ||
-                 (BFI && PSI->isColdBlock(&BB, BFI));
-        return !CI->getCalledFunction()->getName().contains("longjmp") ||
-               (BFI && PSI->isColdBlock(&BB, BFI));
-      }
+      if (CI->hasFnAttr(Attribute::NoReturn))
+        return false;
     return true;
   }
 
@@ -154,9 +150,10 @@ static bool mayExtractBlock(const BasicBlock &BB) {
   //
   // Resumes that are not reachable from a cleanup landing pad are considered to
   // be unreachable. It’s not safe to split them out either.
+  if (BB.hasAddressTaken() || BB.isEHPad())
+    return false;
   auto Term = BB.getTerminator();
-  return !BB.hasAddressTaken() && !BB.isEHPad() && !isa<InvokeInst>(Term) &&
-         !isa<ResumeInst>(Term);
+  return !isa<InvokeInst>(Term) && !isa<ResumeInst>(Term);
 }
 
 /// Mark \p F cold. Based on this assumption, also optimize it for minimum size.
@@ -241,11 +238,11 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
 }
 
 /// Get the benefit score of outlining \p Region.
-static int getOutliningBenefit(ArrayRef<BasicBlock *> Region,
-                               TargetTransformInfo &TTI) {
+static InstructionCost getOutliningBenefit(ArrayRef<BasicBlock *> Region,
+                                           TargetTransformInfo &TTI) {
   // Sum up the code size costs of non-terminator instructions. Tight coupling
   // with \ref getOutliningPenalty is needed to model the costs of terminators.
-  int Benefit = 0;
+  InstructionCost Benefit = 0;
   for (BasicBlock *BB : Region)
     for (Instruction &I : BB->instructionsWithoutDebug())
       if (&I != BB->getTerminator())
@@ -266,18 +263,6 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
   if (SplittingThreshold <= 0)
     return Penalty;
 
-  // The typical code size cost for materializing an argument for the outlined
-  // call.
-  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumInputs << " inputs\n");
-  const int CostForArgMaterialization = TargetTransformInfo::TCC_Basic;
-  Penalty += CostForArgMaterialization * NumInputs;
-
-  // The typical code size cost for an output alloca, its associated store, and
-  // its associated reload.
-  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputs << " outputs\n");
-  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
-  Penalty += CostForRegionOutput * NumOutputs;
-
   // Find the number of distinct exit blocks for the region. Use a conservative
   // check to determine whether control returns from the region.
   bool NoBlocksReturn = true;
@@ -291,12 +276,54 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
     }
 
     for (BasicBlock *SuccBB : successors(BB)) {
-      if (find(Region, SuccBB) == Region.end()) {
+      if (!is_contained(Region, SuccBB)) {
         NoBlocksReturn = false;
         SuccsOutsideRegion.insert(SuccBB);
       }
     }
   }
+
+  // Count the number of phis in exit blocks with >= 2 incoming values from the
+  // outlining region. These phis are split (\ref severSplitPHINodesOfExits),
+  // and new outputs are created to supply the split phis. CodeExtractor can't
+  // report these new outputs until extraction begins, but it's important to
+  // factor the cost of the outputs into the cost calculation.
+  unsigned NumSplitExitPhis = 0;
+  for (BasicBlock *ExitBB : SuccsOutsideRegion) {
+    for (PHINode &PN : ExitBB->phis()) {
+      // Find all incoming values from the outlining region.
+      int NumIncomingVals = 0;
+      for (unsigned i = 0; i < PN.getNumIncomingValues(); ++i)
+        if (find(Region, PN.getIncomingBlock(i)) != Region.end()) {
+          ++NumIncomingVals;
+          if (NumIncomingVals > 1) {
+            ++NumSplitExitPhis;
+            break;
+          }
+        }
+    }
+  }
+
+  // Apply a penalty for calling the split function. Factor in the cost of
+  // materializing all of the parameters.
+  int NumOutputsAndSplitPhis = NumOutputs + NumSplitExitPhis;
+  int NumParams = NumInputs + NumOutputsAndSplitPhis;
+  if (NumParams > MaxParametersForSplit) {
+    LLVM_DEBUG(dbgs() << NumInputs << " inputs and " << NumOutputsAndSplitPhis
+                      << " outputs exceeds parameter limit ("
+                      << MaxParametersForSplit << ")\n");
+    return std::numeric_limits<int>::max();
+  }
+  const int CostForArgMaterialization = 2 * TargetTransformInfo::TCC_Basic;
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumParams << " params\n");
+  Penalty += CostForArgMaterialization * NumParams;
+
+  // Apply the typical code size cost for an output alloca and its associated
+  // reload in the caller. Also penalize the associated store in the callee.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputsAndSplitPhis
+                    << " outputs/split phis\n");
+  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
+  Penalty += CostForRegionOutput * NumOutputsAndSplitPhis;
 
   // Apply a `noreturn` bonus.
   if (NoBlocksReturn) {
@@ -307,7 +334,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
 
   // Apply a penalty for having more than one successor outside of the region.
   // This penalty accounts for the switch needed in the caller.
-  if (!SuccsOutsideRegion.empty()) {
+  if (SuccsOutsideRegion.size() > 1) {
     LLVM_DEBUG(dbgs() << "Applying penalty for: " << SuccsOutsideRegion.size()
                       << " non-region successors\n");
     Penalty += (SuccsOutsideRegion.size() - 1) * TargetTransformInfo::TCC_Basic;
@@ -332,12 +359,12 @@ Function *HotColdSplitting::extractColdRegion(
   // splitting.
   SetVector<Value *> Inputs, Outputs, Sinks;
   CE.findInputsOutputs(Inputs, Outputs, Sinks);
-  int OutliningBenefit = getOutliningBenefit(Region, TTI);
+  InstructionCost OutliningBenefit = getOutliningBenefit(Region, TTI);
   int OutliningPenalty =
       getOutliningPenalty(Region, Inputs.size(), Outputs.size());
   LLVM_DEBUG(dbgs() << "Split profitability: benefit = " << OutliningBenefit
                     << ", penalty = " << OutliningPenalty << "\n");
-  if (OutliningBenefit <= OutliningPenalty)
+  if (!OutliningBenefit.isValid() || OutliningBenefit <= OutliningPenalty)
     return nullptr;
 
   Function *OrigF = Region[0]->getParent();
@@ -599,7 +626,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
       continue;
 
     bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
-                (EnableStaticAnalysis && unlikelyExecuted(*BB, PSI, BFI));
+                (EnableStaticAnalysis && unlikelyExecuted(*BB));
     if (!Cold)
       continue;
 
@@ -672,9 +699,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
   bool HasProfileSummary = (M.getProfileSummary(/* IsCS */ false) != nullptr);
-  for (auto It = M.begin(), End = M.end(); It != End; ++It) {
-    Function &F = *It;
-
+  for (Function &F : M) {
     // Do not touch declarations.
     if (F.isDeclaration())
       continue;

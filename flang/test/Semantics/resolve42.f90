@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1
   !ERROR: Array 'z' without ALLOCATABLE or POINTER attribute must have explicit shape
   common x, y(4), z(:)

@@ -147,14 +147,14 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   // Addressable stack objects are addressed using neg. offsets from fp
   // or pos. offsets from sp/basepointer
-  if (!HasFP || (needsStackRealignment(MF) && FrameIndex >= 0))
+  if (!HasFP || (hasStackRealignment(MF) && FrameIndex >= 0))
     Offset += MF.getFrameInfo().getStackSize();
 
   Register FrameReg = getFrameRegister(MF);
   if (FrameIndex >= 0) {
     if (hasBasePointer(MF))
       FrameReg = getBaseRegister();
-    else if (needsStackRealignment(MF))
+    else if (hasStackRealignment(MF))
       FrameReg = Lanai::SP;
   }
 
@@ -245,7 +245,7 @@ bool LanaiRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   // When we need stack realignment and there are dynamic allocas, we can't
   // reference off of the stack pointer, so we reserve a base pointer.
-  if (needsStackRealignment(MF) && MFI.hasVarSizedObjects())
+  if (hasStackRealignment(MF) && MFI.hasVarSizedObjects())
     return true;
 
   return false;

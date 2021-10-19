@@ -159,7 +159,6 @@ DW_OP_implicit_value                = 0x9E
 DW_OP_stack_value                   = 0x9F
 DW_OP_lo_user                       = 0xE0
 DW_OP_GNU_push_tls_address          = 0xE0
-DW_OP_APPLE_uninit                  = 0xF0
 DW_OP_hi_user                       = 0xFF
 
 

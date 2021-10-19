@@ -151,7 +151,7 @@ inline S &getS() {
 //   init:
 // CHECK: or i32 {{.*}}, 1
 // CHECK: store i32 {{.*}}, i32* @"??_B?1??getS@@YAAAUS@@XZ@51"
-// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"(%struct.S* @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
+// CHECK: call x86_thiscallcc %struct.S* @"??0S@@QAE@XZ"(%struct.S* {{[^,]*}} @"?TheS@?1??getS@@YAAAUS@@XZ@4U2@A")
 // CHECK: call i32 @atexit(void ()* @"??__FTheS@?1??getS@@YAAAUS@@XZ@YAXXZ")
 // CHECK: br label
 //   init.end:

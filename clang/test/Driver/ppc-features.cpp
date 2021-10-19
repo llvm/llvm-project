@@ -1,3 +1,16 @@
+/// Check default CC1 and linker options for ppc32.
+// RUN: %clang -### -target powerpcle-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32LELNX %s
+// RUN: %clang -### -target powerpc-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BELNX %s
+// RUN: %clang -### -target powerpcle-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32LEFBSD %s
+// RUN: %clang -### -target powerpc-unknown-freebsd13.0 %s 2>&1 | FileCheck --check-prefixes=PPC32,PPC32BEFBSD %s
+// PPC32:      "-funwind-tables=2"
+// PPC32-SAME: "-mfloat-abi" "hard"
+
+// PPC32LELNX-NEXT: "-m" "elf32lppclinux"
+// PPC32BELNX-NEXT: "-m" "elf32ppclinux"
+// PPC32LEFBSD-NEXT: "-m" "elf32lppc"
+// PPC32BEFBSD-NEXT: "-m" "elf32ppc_fbsd"
+
 // check -msoft-float option for ppc32
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT %s
 // CHECK-SOFTFLOAT: "-target-feature" "-hard-float"
@@ -30,6 +43,16 @@
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -mfloat-abi=x -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-ERRMSG %s
 // CHECK-ERRMSG: error: invalid float ABI '-mfloat-abi=x'
 
+
+/// Check default CC1 and linker options for ppc64.
+// RUN: %clang -### -target powerpc64le-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64LE %s
+// RUN: %clang -### -target powerpc64-unknown-linux-gnu %s 2>&1 | FileCheck --check-prefixes=PPC64,PPC64BE %s
+// PPC64:      "-funwind-tables=2"
+// PPC64-SAME: "-mfloat-abi" "hard"
+
+// PPC64LE: "-m" "elf64lppc"
+// PPC64BE: "-m" "elf64ppc"
+
 // check -msoft-float option for ppc64
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -msoft-float -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-SOFTFLOAT64 %s
 // CHECK-SOFTFLOAT64: "-target-feature" "-hard-float"
@@ -48,59 +71,11 @@
 
 // Check that -mno-altivec correctly disables the altivec target feature on powerpc.
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-1 %s
-// CHECK-1: "-target-feature" "-altivec"
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=ALTIVEC %s
+// ALTIVEC: "-target-feature" "+altivec"
 
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-2 %s
-// CHECK-2: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-3 %s
-// CHECK-3: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-4 %s
-// CHECK-4: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-5 %s
-// CHECK-5-NOT: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -maltivec -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-6 %s
-// CHECK-6-NOT: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=7400 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-7 %s
-// CHECK-7: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g4 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-8 %s
-// CHECK-8: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=7450 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-9 %s
-// CHECK-9: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g4+ -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-10 %s
-// CHECK-10: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=970 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-11 %s
-// CHECK-11: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=g5 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-12 %s
-// CHECK-12: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr6 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-13 %s
-// CHECK-13: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr7 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-14 %s
-// CHECK-14: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=pwr8 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-15 %s
-// CHECK-15: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-altivec -mcpu=ppc64 -### -o %t.o 2>&1 | FileCheck --check-prefix=CHECK-16 %s
-// CHECK-16: "-target-feature" "-altivec"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-qpx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOQPX %s
-// CHECK-NOQPX: "-target-feature" "-qpx"
-
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-qpx -mqpx -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-QPX %s
-// CHECK-QPX-NOT: "-target-feature" "-qpx"
+// RUN: %clang -### -c -target powerpc64-unknown-linux-gnu %s -maltivec -mno-altivec 2>&1 | FileCheck --check-prefix=NO_ALTIVEC %s
+// NO_ALTIVEC: "-target-feature" "-altivec"
 
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-mfcrf -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-NOMFCRF %s
 // CHECK-NOMFCRF: "-target-feature" "-mfocrf"
@@ -180,25 +155,33 @@
 // CHECK-SPE: "-target-feature" "+spe"
 // CHECK-NOSPE: "-target-feature" "-spe"
 
+// RUN: %clang -target powerpc %s -mefpu2 -c -### 2>&1 | FileCheck -check-prefix=CHECK-EFPU2 %s
+// CHECK-EFPU2: "-target-feature" "+efpu2"
+
 // Assembler features
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_BE_AS_ARGS %s
-// CHECK_BE_AS_ARGS: "-mppc64"
-// CHECK_BE_AS_ARGS: "-many"
+// RUN: %clang -target powerpc-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_32_BE_AS_ARGS %s
+// CHECK_32_BE_AS_ARGS: "-mppc"
+// CHECK_32_BE_AS_ARGS-SAME: "-mbig-endian"
+// CHECK_32_BE_AS_ARGS-SAME: "-many"
 
-// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_LE_AS_ARGS %s
-// CHECK_LE_AS_ARGS: "-mppc64"
-// CHECK_LE_AS_ARGS: "-mlittle-endian"
-// CHECK_LE_AS_ARGS: "-mpower8"
+// RUN: %clang -target powerpcle-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_32_LE_AS_ARGS %s
+// CHECK_32_LE_AS_ARGS: "-mppc"
+// CHECK_32_LE_AS_ARGS-SAME: "-mlittle-endian"
+// CHECK_32_LE_AS_ARGS-SAME: "-many"
 
-// linker features
-// RUN: %clang -target powerpc64-unknown-linux-gnu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_BE_LD_ARGS %s
-// CHECK_BE_LD_ARGS: "elf64ppc"
+// RUN: %clang -target powerpc64-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_64_BE_AS_ARGS %s
+// CHECK_64_BE_AS_ARGS: "-mppc64"
+// CHECK_64_BE_AS_ARGS-SAME: "-mbig-endian"
+// CHECK_64_BE_AS_ARGS-SAME: "-many"
 
-// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_LE_LD_ARGS %s
-// CHECK_LE_LD_ARGS: "elf64lppc"
+// RUN: %clang -target powerpc64le-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_64_LE_AS_ARGS %s
+// CHECK_64_LE_AS_ARGS: "-mppc64"
+// CHECK_64_LE_AS_ARGS-SAME: "-mlittle-endian"
+// CHECK_64_LE_AS_ARGS-SAME: "-mpower8"
 
 // OpenMP features
 // RUN: %clang -target powerpc-unknown-linux-gnu %s -### -fopenmp=libomp -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_OPENMP_TLS %s
+// RUN: %clang -target powerpcle-unknown-linux-gnu %s -### -fopenmp=libomp -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_OPENMP_TLS %s
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -### -fopenmp=libomp -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_OPENMP_TLS %s
 // RUN: %clang -target powerpc64le-unknown-linux-gnu %s -### -fopenmp=libomp -o %t.o 2>&1 | FileCheck -check-prefix=CHECK_OPENMP_TLS %s
 // CHECK_OPENMP_TLS-NOT: "-fnoopenmp-use-tls"

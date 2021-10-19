@@ -14,7 +14,7 @@
     br i1 %cmp11, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     %6 = shl i32 %4, 3
     %7 = sub i32 %N, %6
     br label %vector.body
@@ -23,7 +23,7 @@
     %lsr.iv20 = phi i8* [ %scevgep21, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <16 x i8> [ zeroinitializer, %vector.ph ], [ %13, %vector.body ]
-    %8 = phi i32 [ %5, %vector.ph ], [ %14, %vector.body ]
+    %8 = phi i32 [ %start, %vector.ph ], [ %14, %vector.body ]
     %9 = phi i32 [ %N, %vector.ph ], [ %11, %vector.body ]
     %lsr.iv2022 = bitcast i8* %lsr.iv20 to <16 x i8>*
     %lsr.iv19 = bitcast i8* %lsr.iv to <16 x i8>*
@@ -44,7 +44,7 @@
     %.lcssa = phi <16 x i8> [ %13, %vector.body ]
     %16 = call <16 x i1> @llvm.arm.mve.vctp8(i32 %7)
     %17 = select <16 x i1> %16, <16 x i8> %.lcssa, <16 x i8> %vec.phi.lcssa
-    %18 = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %17)
+    %18 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %17)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -53,8 +53,8 @@
   }
 
   declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #1
-  declare i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8>) #2
-  declare void @llvm.set.loop.iterations.i32(i32) #3
+  declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>) #2
+  declare i32 @llvm.start.loop.iterations.i32(i32) #3
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
   declare <16 x i1> @llvm.arm.mve.vctp8(i32) #4
 
@@ -124,31 +124,30 @@ body:             |
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
   ; CHECK:   renamable $r3 = t2ADDri renamable $r2, 15, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   renamable $r3 = t2BICri killed renamable $r3, 15, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r12 = t2SUBri killed renamable $r3, 16, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r3, renamable $r12, 35, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3 = t2LSRri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 34, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1, $r2, $r3
-  ; CHECK:   renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg
-  ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, undef $q1
+  ; CHECK:   renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg, $noreg
+  ; CHECK:   $q1 = MVE_VORR killed $q0, killed $q0, 0, $noreg, $noreg, undef $q1
   ; CHECK:   MVE_VPST 2, implicit $vpr
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, killed renamable $vpr :: (load 16 from %ir.lsr.iv2022, align 1)
-  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRBU8_post killed renamable $r0, 16, 1, $noreg :: (load 16 from %ir.lsr.iv19, align 1)
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, killed renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv2022, align 1)
+  ; CHECK:   renamable $r0, renamable $q2 = MVE_VLDRBU8_post killed renamable $r0, 16, 1, $noreg, $noreg :: (load (s128) from %ir.lsr.iv19, align 1)
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 16, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
-  ; CHECK:   renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, $noreg, undef renamable $q2
+  ; CHECK:   renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0, $q1, $r3
-  ; CHECK:   renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg
-  ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
-  ; CHECK:   renamable $r0 = MVE_VADDVu8no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg, $noreg
+  ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu8no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
   ; CHECK:   renamable $r0 = tUXTB killed renamable $r0, 14 /* CC::al */, $noreg
   ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit killed $r0
@@ -173,37 +172,37 @@ body:             |
     $r7 = frame-setup tMOVr $sp, 14, $noreg
     frame-setup CFI_INSTRUCTION def_cfa_register $r7
     renamable $r3 = t2ADDri renamable $r2, 15, 14, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
     renamable $r3 = t2BICri killed renamable $r3, 15, 14, $noreg, $noreg
     renamable $r12 = t2SUBri killed renamable $r3, 16, 14, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, renamable $r12, 35, 14, $noreg, $noreg
     renamable $r3 = t2LSRri killed renamable $r12, 4, 14, $noreg, $noreg
     renamable $r3 = t2SUBrs renamable $r2, killed renamable $r3, 34, 14, $noreg, $noreg
-    t2DoLoopStart renamable $lr
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2, $r3
 
-    renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg
-    $q1 = MVE_VORR killed $q0, $q0, 0, $noreg, undef $q1
+    renamable $vpr = MVE_VCTP8 renamable $r2, 0, $noreg, $noreg
+    $q1 = MVE_VORR killed $q0, $q0, 0, $noreg, $noreg, undef $q1
     MVE_VPST 2, implicit $vpr
-    renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv2022, align 1)
-    renamable $r0, renamable $q2 = MVE_VLDRBU8_post killed renamable $r0, 16, 1, $noreg :: (load 16 from %ir.lsr.iv19, align 1)
+    renamable $r1, renamable $q0 = MVE_VLDRBU8_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv2022, align 1)
+    renamable $r0, renamable $q2 = MVE_VLDRBU8_post killed renamable $r0, 16, 1, $noreg, $noreg :: (load (s128) from %ir.lsr.iv19, align 1)
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 16, 14, $noreg
-    renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
+    renamable $q2 = MVE_VADDi8 killed renamable $q2, renamable $q1, 0, $noreg, $noreg, undef renamable $q2
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, undef renamable $q0
+    renamable $q0 = MVE_VADDi8 killed renamable $q2, killed renamable $q0, 0, $noreg, $noreg, undef renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg
 
   bb.3.middle.block:
     liveins: $q0, $q1, $r3
 
-    renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg
-    renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr
-    renamable $r0 = MVE_VADDVu8no_acc killed renamable $q0, 0, $noreg
+    renamable $vpr = MVE_VCTP8 killed renamable $r3, 0, $noreg, $noreg
+    renamable $q0 = MVE_VPSEL killed renamable $q0, killed renamable $q1, 0, killed renamable $vpr, $noreg
+    renamable $r0 = MVE_VADDVu8no_acc killed renamable $q0, 0, $noreg, $noreg
     $sp = t2LDMIA_UPD $sp, 14, $noreg, def $r7, def $lr
     renamable $r0 = tUXTB killed renamable $r0, 14, $noreg
     tBX_RET 14, $noreg, implicit killed $r0

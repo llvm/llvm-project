@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -151,6 +152,14 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
   // Already visited?
   if (!VisitedMetadata.insert(V).second)
     return;
+
+  // The arguments in DIArgList are not exposed as operands, so handle such
+  // nodes specifically here.
+  if (const auto *AL = dyn_cast<DIArgList>(V)) {
+    for (auto *Arg : AL->getArgs())
+      incorporateValue(Arg->getValue());
+    return;
+  }
 
   // Look in operands for types.
   for (Metadata *Op : V->operands()) {

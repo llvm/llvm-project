@@ -90,12 +90,9 @@ class LoadUnloadTestCase(TestBase):
 
     # libloadunload_d.so does not appear in the image list because executable
     # dependencies are resolved relative to the debuggers PWD. Bug?
-    @expectedFailureAll(oslist=["linux"])
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @not_remote_testsuite_ready
+    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
+    @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
-    @expectedFailureNetBSD
-    @skipIfReproducer # VFS is a snapshot.
     def test_modules_search_paths(self):
         """Test target modules list after loading a different copy of the library libd.dylib, and verifies that it works with 'target modules search-paths add'."""
         if self.platformIsDarwin():
@@ -147,12 +144,10 @@ class LoadUnloadTestCase(TestBase):
 
     # libloadunload_d.so does not appear in the image list because executable
     # dependencies are resolved relative to the debuggers PWD. Bug?
-    @expectedFailureAll(oslist=["linux"])
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
+    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"])
     @expectedFailureAndroid  # wrong source file shows up for hidden library
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @skipIfDarwinEmbedded
-    @expectedFailureNetBSD
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""
         self.copy_shlibs_to_remote(hidden_dir=True)
@@ -207,7 +202,6 @@ class LoadUnloadTestCase(TestBase):
         bugnumber="llvm.org/pr25805",
         hostoslist=["windows"],
         triple='.*-android')
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
     def test_lldb_process_load_and_unload_commands(self):
         self.setSvr4Support(False)
@@ -217,13 +211,11 @@ class LoadUnloadTestCase(TestBase):
         bugnumber="llvm.org/pr25805",
         hostoslist=["windows"],
         triple='.*-android')
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAll(oslist=["windows"]) # process load not implemented
     def test_lldb_process_load_and_unload_commands_with_svr4(self):
         self.setSvr4Support(True)
         self.run_lldb_process_load_and_unload_commands()
 
-    @skipIfReproducer # FIXME: Unexpected packet during (passive) replay
     def run_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()
@@ -294,13 +286,11 @@ class LoadUnloadTestCase(TestBase):
 
         self.runCmd("process continue")
 
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
     def test_load_unload(self):
         self.setSvr4Support(False)
         self.run_load_unload()
 
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAll(oslist=["windows"]) # breakpoint not hit
     def test_load_unload_with_svr4(self):
         self.setSvr4Support(True)
@@ -344,12 +334,10 @@ class LoadUnloadTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 2'])
 
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     def test_step_over_load(self):
         self.setSvr4Support(False)
         self.run_step_over_load()
 
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     def test_step_over_load_with_svr4(self):
         self.setSvr4Support(True)
         self.run_step_over_load()
@@ -383,9 +371,7 @@ class LoadUnloadTestCase(TestBase):
 
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
-    @expectedFailureAll(oslist=["linux"], triple=no_match('aarch64-.*-android'))
-    @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
-    @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"], triple=no_match('aarch64-.*-android'))
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()

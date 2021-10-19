@@ -15,44 +15,43 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE2:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_SREM_CONTINUE4:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 99, [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> undef, i16 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[OFFSET_IDX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], <i16 0, i16 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i16, i16* @v_38, align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, i16* @v_38, align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i16> undef, i16 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i16> [[TMP4]], i16 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i16> [[TMP5]], <i16 32767, i16 32767>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i16> [[TMP5]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP7]], <i1 true, i1 true>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT1]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i16> [[BROADCAST_SPLAT2]], <i16 32767, i16 32767>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i16> [[BROADCAST_SPLAT2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i1> [[TMP4]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_SREM_IF:%.*]], label [[PRED_SREM_CONTINUE:%.*]]
 ; CHECK:       pred.srem.if:
-; CHECK-NEXT:    [[TMP10:%.*]] = srem i16 5786, [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i16> undef, i16 [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = srem i16 5786, [[TMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP7]], i32 0
 ; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE]]
 ; CHECK:       pred.srem.continue:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i16> [ undef, [[VECTOR_BODY]] ], [ [[TMP11]], [[PRED_SREM_IF]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_SREM_IF1:%.*]], label [[PRED_SREM_CONTINUE2]]
-; CHECK:       pred.srem.if1:
-; CHECK-NEXT:    [[TMP14:%.*]] = srem i16 5786, [[TMP3]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP14]], i32 1
-; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE2]]
-; CHECK:       pred.srem.continue2:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i16> [ [[TMP12]], [[PRED_SREM_CONTINUE]] ], [ [[TMP15]], [[PRED_SREM_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i16> <i16 5786, i16 5786>, <2 x i16> [[TMP16]]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
-; CHECK-NEXT:    store i16 [[TMP17]], i16* @v_39, align 1
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
-; CHECK-NEXT:    store i16 [[TMP18]], i16* @v_39, align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i16> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[PRED_SREM_IF]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP5]], i32 1
+; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_SREM_IF3:%.*]], label [[PRED_SREM_CONTINUE4]]
+; CHECK:       pred.srem.if3:
+; CHECK-NEXT:    [[TMP11:%.*]] = srem i16 5786, [[TMP2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i16> [[TMP9]], i16 [[TMP11]], i32 1
+; CHECK-NEXT:    br label [[PRED_SREM_CONTINUE4]]
+; CHECK:       pred.srem.continue4:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i16> [ [[TMP9]], [[PRED_SREM_CONTINUE]] ], [ [[TMP12]], [[PRED_SREM_IF3]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i16> <i16 5786, i16 5786>, <2 x i16> [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
+; CHECK-NEXT:    store i16 [[TMP14]], i16* @v_39, align 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    store i16 [[TMP15]], i16* @v_39, align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
+; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 12, 12
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -75,7 +74,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[COND6]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[INC7]] = add nsw i16 [[I_07]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC7]], 111
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop !2
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RV:%.*]] = load i16, i16* @v_39, align 1
 ; CHECK-NEXT:    ret i16 [[RV]]

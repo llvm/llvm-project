@@ -75,6 +75,62 @@ body:             |
 
 ...
 ---
+name:            test_scalar_add_narrowing
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_scalar_add_narrowing
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK: $x0 = COPY [[UADDO]](s64)
+    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s128) = G_MERGE_VALUES %0(s64), %1(s64)
+    %5:_(s128) = G_MERGE_VALUES %2(s64), %3(s64)
+    %6:_(s96) = G_TRUNC %4(s128)
+    %7:_(s96) = G_TRUNC %5(s128)
+    %8:_(s96) = G_ADD %6, %7
+    %9:_(s128) = G_ANYEXT %8(s96)
+    %10:_(s64), %11:_(s64) = G_UNMERGE_VALUES %9(s128)
+    $x0 = COPY %10(s64)
+    $x1 = COPY %11(s64)
+
+...
+---
+name:            test_scalar_add_narrowing_s65
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test_scalar_add_narrowing_s65
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK: $x0 = COPY [[UADDO]](s64)
+    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s128) = G_MERGE_VALUES %0(s64), %1(s64)
+    %5:_(s128) = G_MERGE_VALUES %2(s64), %3(s64)
+    %6:_(s65) = G_TRUNC %4(s128)
+    %7:_(s65) = G_TRUNC %5(s128)
+    %8:_(s65) = G_ADD %6, %7
+    %9:_(s128) = G_ANYEXT %8(s65)
+    %10:_(s64), %11:_(s64) = G_UNMERGE_VALUES %9(s128)
+    $x0 = COPY %10(s64)
+    $x1 = COPY %11(s64)
+
+...
+---
 name:            test_vector_add
 body:             |
   bb.0.entry:
@@ -171,4 +227,46 @@ body:             |
     $q0 = COPY %2(<16 x s8>)
     RET_ReallyLR implicit $q0
 
+...
+---
+name:            add_v4i16
+alignment:       4
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+
+    ; CHECK-LABEL: name: add_v4i16
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK: [[ADD:%[0-9]+]]:_(<4 x s16>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK: $d0 = COPY [[ADD]](<4 x s16>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(<4 x s16>) = COPY $d0
+    %1:_(<4 x s16>) = COPY $d1
+    %2:_(<4 x s16>) = G_ADD %0, %1
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            add_v8s8
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+
+    ; CHECK-LABEL: name: add_v8s8
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK: [[ADD:%[0-9]+]]:_(<8 x s8>) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK: $d0 = COPY [[ADD]](<8 x s8>)
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:_(<8 x s8>) = COPY $d0
+    %1:_(<8 x s8>) = COPY $d1
+    %2:_(<8 x s8>) = G_ADD %0, %1
+    $d0 = COPY %2(<8 x s8>)
+    RET_ReallyLR implicit $d0
 ...

@@ -14,14 +14,14 @@
 // addresses.
 
 // UNSUPPORTED: no-exceptions
+// UNSUPPORTED: no-rtti
 
-// NOTE: Link libc++abi explicitly and before libc++ so that libc++ doesn't drag
-// in the system libc++abi installation on OS X. (DYLD_LIBRARY_PATH is ignored
-// for shell tests because of Apple security features).
+// The fix for PR25898 landed in the system dylibs in macOS 10.13
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.one.o
 // RUN: %{cxx} %{flags} %{compile_flags} -Wno-unreachable-code -c %s -o %t.two.o -DTU_ONE
-// RUN: %{cxx} %{flags} %t.one.o %t.two.o %{link_libcxxabi} %{link_flags} -o %t.exe
+// RUN: %{cxx} %{flags} %t.one.o %t.two.o %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <stdio.h>
@@ -82,7 +82,7 @@ void ThrowNullptr() { throw nullptr; }
 
 struct IncompleteAtThrow {};
 
-int main() {
+int main(int, char**) {
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoNeverDefinedMP(), typeid(int NeverDefined::*));
   try {
     ThrowNeverDefinedMP();
@@ -204,7 +204,8 @@ int main() {
     assert(!p);
   }
   catch(...) { assert(!"FAIL: Didn't catch nullptr as NeverDefined::*" ); }
-
 #endif
+
+  return 0;
 }
 #endif

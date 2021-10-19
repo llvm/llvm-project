@@ -9,19 +9,10 @@
 //
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -84,21 +75,19 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
         MachineOperand &MovSrc = Def->getOperand(1);
         bool ConstantFolded = false;
 
-        if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
-                               isUInt<32>(MovSrc.getImm()))) {
-          // It's possible to have only one component of a super-reg defined by
-          // a single mov, so we need to clear any subregister flag.
-          Src0.setSubReg(0);
-          Src0.ChangeToImmediate(MovSrc.getImm());
-          ConstantFolded = true;
-        } else if (MovSrc.isFI()) {
-          Src0.setSubReg(0);
-          Src0.ChangeToFrameIndex(MovSrc.getIndex());
-          ConstantFolded = true;
-        } else if (MovSrc.isGlobal()) {
-          Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
-                          MovSrc.getTargetFlags());
-          ConstantFolded = true;
+        if (TII->isOperandLegal(MI, Src0Idx, &MovSrc)) {
+          if (MovSrc.isImm() &&
+              (isInt<32>(MovSrc.getImm()) || isUInt<32>(MovSrc.getImm()))) {
+            Src0.ChangeToImmediate(MovSrc.getImm());
+            ConstantFolded = true;
+          } else if (MovSrc.isFI()) {
+            Src0.ChangeToFrameIndex(MovSrc.getIndex());
+            ConstantFolded = true;
+          } else if (MovSrc.isGlobal()) {
+            Src0.ChangeToGA(MovSrc.getGlobal(), MovSrc.getOffset(),
+                            MovSrc.getTargetFlags());
+            ConstantFolded = true;
+          }
         }
 
         if (ConstantFolded) {
@@ -243,9 +232,14 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
     RC = &AMDGPU::VReg_96RegClass;
   } else if (Info->VAddrDwords == 4) {
     RC = &AMDGPU::VReg_128RegClass;
-  } else if (Info->VAddrDwords <= 8) {
+  } else if (Info->VAddrDwords == 5) {
+    RC = &AMDGPU::VReg_160RegClass;
+  } else if (Info->VAddrDwords == 6) {
+    RC = &AMDGPU::VReg_192RegClass;
+  } else if (Info->VAddrDwords == 7) {
+    RC = &AMDGPU::VReg_224RegClass;
+  } else if (Info->VAddrDwords == 8) {
     RC = &AMDGPU::VReg_256RegClass;
-    NewAddrDwords = 8;
   } else {
     RC = &AMDGPU::VReg_512RegClass;
     NewAddrDwords = 16;
@@ -276,8 +270,8 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   // enabled
   int TFEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
   int LWEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::lwe);
-  unsigned TFEVal = MI.getOperand(TFEIdx).getImm();
-  unsigned LWEVal = MI.getOperand(LWEIdx).getImm();
+  unsigned TFEVal = (TFEIdx == -1) ? 0 : MI.getOperand(TFEIdx).getImm();
+  unsigned LWEVal = (LWEIdx == -1) ? 0 : MI.getOperand(LWEIdx).getImm();
   int ToUntie = -1;
   if (TFEVal || LWEVal) {
     // TFE/LWE is enabled so we need to deal with an implicit tied operand
@@ -441,6 +435,22 @@ getSubRegForIndex(Register Reg, unsigned Sub, unsigned I,
   return TargetInstrInfo::RegSubRegPair(Reg, Sub);
 }
 
+static void dropInstructionKeepingImpDefs(MachineInstr &MI,
+                                          const SIInstrInfo *TII) {
+  for (unsigned i = MI.getDesc().getNumOperands() +
+         MI.getDesc().getNumImplicitUses() +
+         MI.getDesc().getNumImplicitDefs(), e = MI.getNumOperands();
+       i != e; ++i) {
+    const MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isDef())
+      continue;
+    BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
+            TII->get(AMDGPU::IMPLICIT_DEF), Op.getReg());
+  }
+
+  MI.eraseFromParent();
+}
+
 // Match:
 // mov t, x
 // mov x, y
@@ -480,18 +490,25 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
   if (!TRI.isVGPR(MRI, X))
     return nullptr;
 
+  if (MovT.hasRegisterImplicitUseOperand(AMDGPU::M0))
+    return nullptr;
+
   const unsigned SearchLimit = 16;
   unsigned Count = 0;
+  bool KilledT = false;
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit; ++Iter, ++Count) {
+       Iter != E && Count < SearchLimit && !KilledT; ++Iter, ++Count) {
 
     MachineInstr *MovY = &*Iter;
+    KilledT = MovY->killsRegister(T, &TRI);
+
     if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
          MovY->getOpcode() != AMDGPU::COPY) ||
         !MovY->getOperand(1).isReg()        ||
         MovY->getOperand(1).getReg() != T   ||
-        MovY->getOperand(1).getSubReg() != Tsub)
+        MovY->getOperand(1).getSubReg() != Tsub ||
+        MovY->hasRegisterImplicitUseOperand(AMDGPU::M0))
       continue;
 
     Register Y = MovY->getOperand(0).getReg();
@@ -525,32 +542,53 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         MovX = nullptr;
         break;
       }
+      // Implicit use of M0 is an indirect move.
+      if (I->hasRegisterImplicitUseOperand(AMDGPU::M0))
+        continue;
+
+      if (Size > 1 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
+        continue;
+
       MovX = &*I;
     }
 
     if (!MovX)
       continue;
 
-    LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << MovY);
+    LLVM_DEBUG(dbgs() << "Matched v_swap_b32:\n" << MovT << *MovX << *MovY);
 
     for (unsigned I = 0; I < Size; ++I) {
       TargetInstrInfo::RegSubRegPair X1, Y1;
       X1 = getSubRegForIndex(X, Xsub, I, TRI, MRI);
       Y1 = getSubRegForIndex(Y, Ysub, I, TRI, MRI);
-      BuildMI(*MovT.getParent(), MovX->getIterator(), MovT.getDebugLoc(),
-                TII->get(AMDGPU::V_SWAP_B32))
+      MachineBasicBlock &MBB = *MovT.getParent();
+      auto MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+                         TII->get(AMDGPU::V_SWAP_B32))
         .addDef(X1.Reg, 0, X1.SubReg)
         .addDef(Y1.Reg, 0, Y1.SubReg)
         .addReg(Y1.Reg, 0, Y1.SubReg)
         .addReg(X1.Reg, 0, X1.SubReg).getInstr();
+      if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
+        // Drop implicit EXEC.
+        MIB->RemoveOperand(MIB->getNumExplicitOperands());
+        MIB->copyImplicitOps(*MBB.getParent(), *MovX);
+      }
     }
     MovX->eraseFromParent();
-    MovY->eraseFromParent();
+    dropInstructionKeepingImpDefs(*MovY, TII);
     MachineInstr *Next = &*std::next(MovT.getIterator());
-    if (MRI.use_nodbg_empty(T))
-      MovT.eraseFromParent();
-    else
+
+    if (T.isVirtual() && MRI.use_nodbg_empty(T)) {
+      dropInstructionKeepingImpDefs(MovT, TII);
+    } else {
       Xop.setIsKill(false);
+      for (int I = MovT.getNumImplicitOperands() - 1; I >= 0; --I ) {
+        unsigned OpNo = MovT.getNumExplicitOperands() + I;
+        const MachineOperand &Op = MovT.getOperand(OpNo);
+        if (Op.isKill() && TRI.regsOverlap(X, Op.getReg()))
+          MovT.RemoveOperand(OpNo);
+      }
+    }
 
     return Next;
   }
@@ -604,35 +642,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
           Next = NextMI->getIterator();
           continue;
         }
-      }
-
-      // Combine adjacent s_nops to use the immediate operand encoding how long
-      // to wait.
-      //
-      // s_nop N
-      // s_nop M
-      //  =>
-      // s_nop (N + M)
-      if (MI.getOpcode() == AMDGPU::S_NOP &&
-          MI.getNumOperands() == 1 && // Don't merge with implicit operands
-          Next != MBB.end() &&
-          (*Next).getOpcode() == AMDGPU::S_NOP &&
-          (*Next).getNumOperands() == 1) {
-
-        MachineInstr &NextMI = *Next;
-        // The instruction encodes the amount to wait with an offset of 1,
-        // i.e. 0 is wait 1 cycle. Convert both to cycles and then convert back
-        // after adding.
-        uint8_t Nop0 = MI.getOperand(0).getImm() + 1;
-        uint8_t Nop1 = NextMI.getOperand(0).getImm() + 1;
-
-        // Make sure we don't overflow the bounds.
-        if (Nop0 + Nop1 <= 8) {
-          NextMI.getOperand(0).setImm(Nop0 + Nop1 - 1);
-          MI.eraseFromParent();
-        }
-
-        continue;
       }
 
       // FIXME: We also need to consider movs of constant operands since

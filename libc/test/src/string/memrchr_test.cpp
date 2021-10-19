@@ -16,7 +16,7 @@ const char *call_memrchr(const void *src, int c, size_t size) {
   return reinterpret_cast<const char *>(__llvm_libc::memrchr(src, c, size));
 }
 
-TEST(MemRChrTest, FindsCharacterAfterNullTerminator) {
+TEST(LlvmLibcMemRChrTest, FindsCharacterAfterNullTerminator) {
   // memrchr should continue searching after a null terminator.
   const size_t size = 6;
   const unsigned char src[size] = {'a', '\0', 'b', 'c', 'd', '\0'};
@@ -24,7 +24,7 @@ TEST(MemRChrTest, FindsCharacterAfterNullTerminator) {
   ASSERT_STREQ(call_memrchr(src, 'b', size), "bcd");
 }
 
-TEST(MemRChrTest, FindsCharacterInNonNullTerminatedCollection) {
+TEST(LlvmLibcMemRChrTest, FindsCharacterInNonNullTerminatedCollection) {
   const size_t size = 3;
   const unsigned char src[size] = {'a', 'b', 'c'};
   // Should return 'b', 'c'.
@@ -33,49 +33,49 @@ TEST(MemRChrTest, FindsCharacterInNonNullTerminatedCollection) {
   ASSERT_EQ(ret[1], 'c');
 }
 
-TEST(MemRChrTest, FindsFirstCharacter) {
+TEST(LlvmLibcMemRChrTest, FindsFirstCharacter) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return original array since 'a' is the first character.
   ASSERT_STREQ(call_memrchr(src, 'a', size), "abcde");
 }
 
-TEST(MemRChrTest, FindsMiddleCharacter) {
+TEST(LlvmLibcMemRChrTest, FindsMiddleCharacter) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return characters after (and including) 'c'.
   ASSERT_STREQ(call_memrchr(src, 'c', size), "cde");
 }
 
-TEST(MemRChrTest, FindsLastCharacterThatIsNotNullTerminator) {
+TEST(LlvmLibcMemRChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return 'e' and null-terminator.
   ASSERT_STREQ(call_memrchr(src, 'e', size), "e");
 }
 
-TEST(MemRChrTest, FindsNullTerminator) {
+TEST(LlvmLibcMemRChrTest, FindsNullTerminator) {
   const size_t size = 6;
   const unsigned char src[size] = {'a', 'b', 'c', 'd', 'e', '\0'};
   // Should return null terminator.
   ASSERT_STREQ(call_memrchr(src, '\0', size), "");
 }
 
-TEST(MemRChrTest, CharacterNotWithinStringShouldReturnNullptr) {
+TEST(LlvmLibcMemRChrTest, CharacterNotWithinStringShouldReturnNullptr) {
   const size_t size = 4;
   const unsigned char src[size] = {'1', '2', '3', '?'};
   // Since 'z' is not within 'characters', should return nullptr.
   ASSERT_STREQ(call_memrchr(src, 'z', size), nullptr);
 }
 
-TEST(MemRChrTest, CharacterNotWithinSizeShouldReturnNullptr) {
+TEST(LlvmLibcMemRChrTest, CharacterNotWithinSizeShouldReturnNullptr) {
   const unsigned char src[5] = {'1', '2', '3', '4', '\0'};
   // Since '4' is not within the first 2 characters, this should return nullptr.
   const size_t size = 2;
   ASSERT_STREQ(call_memrchr(src, '4', size), nullptr);
 }
 
-TEST(MemRChrTest, ShouldFindLastOfDuplicates) {
+TEST(LlvmLibcMemRChrTest, ShouldFindLastOfDuplicates) {
   size_t size = 12; // 11 characters + null terminator.
   const char *dups = "abc1def1ghi";
   // 1 is duplicated in 'dups', but it should find the last copy.
@@ -87,7 +87,7 @@ TEST(MemRChrTest, ShouldFindLastOfDuplicates) {
   ASSERT_STREQ(call_memrchr(repeated, 'X', size), "X");
 }
 
-TEST(MemRChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
+TEST(LlvmLibcMemRChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   const size_t size = 1; // Null terminator.
   const char *empty_string = "";
   // Null terminator should match.
@@ -98,7 +98,7 @@ TEST(MemRChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   ASSERT_STREQ(call_memrchr(empty_string, '?', size), nullptr);
 }
 
-TEST(MemRChrTest, SignedCharacterFound) {
+TEST(LlvmLibcMemRChrTest, SignedCharacterFound) {
   char c = -1;
   const size_t size = 1;
   char src[size] = {c};
@@ -107,7 +107,7 @@ TEST(MemRChrTest, SignedCharacterFound) {
   ASSERT_EQ(actual[0], c);
 }
 
-TEST(MemRChrTest, ZeroLengthShouldReturnNullptr) {
+TEST(LlvmLibcMemRChrTest, ZeroLengthShouldReturnNullptr) {
   const unsigned char src[4] = {'a', 'b', 'c', '\0'};
   // This will iterate over exactly zero characters, so should return nullptr.
   ASSERT_STREQ(call_memrchr(src, 'd', 0), nullptr);

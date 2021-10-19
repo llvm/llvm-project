@@ -12,19 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
-#define LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
+#ifndef LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H
+#define LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H
 
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
 /// Optimize scalar/vector interactions in IR using target cost models.
-struct VectorCombinePass : public PassInfoMixin<VectorCombinePass> {
+class VectorCombinePass : public PassInfoMixin<VectorCombinePass> {
+  /// If true only perform scalarization combines and do not introduce new
+  /// vector operations.
+  bool ScalarizationOnly;
+
 public:
+  VectorCombinePass(bool ScalarizationOnly = false)
+      : ScalarizationOnly(ScalarizationOnly) {}
+
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
-
 }
-#endif // LLVM_TRANSFORMS_VECTOR_VECTORCOMBINE_H
-
+#endif // LLVM_TRANSFORMS_VECTORIZE_VECTORCOMBINE_H

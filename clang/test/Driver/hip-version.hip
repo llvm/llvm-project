@@ -36,6 +36,16 @@
 
 // SPECIFIED2: Found HIP installation: {{.*Driver}}, version 3.7.0
 
+// RUN: %clang -v --rocm-path=%S --hip-version=4.0.21025 2>&1 \
+// RUN:   | FileCheck -check-prefixes=SPECIFIED3 %s
+
+// SPECIFIED3: Found HIP installation: {{.*Driver}}, version 4.0.21025
+
+// RUN: %clang -v --rocm-path=%S --hip-version=4 2>&1 \
+// RUN:   | FileCheck -check-prefixes=SPECIFIED4 %s
+
+// SPECIFIED4: Found HIP installation: {{.*Driver}}, version 4.0.0
+
 // RUN: not %clang -v --rocm-path=%S --hip-version=x.y 2>&1 \
 // RUN:   | FileCheck -check-prefixes=INVALID %s
 

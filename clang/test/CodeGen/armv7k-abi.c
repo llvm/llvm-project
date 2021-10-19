@@ -10,10 +10,10 @@ typedef struct {
   float arr[4];
 } HFA;
 
-// CHECK: define void @simple_hfa([4 x float] %h.coerce)
+// CHECK: define{{.*}} void @simple_hfa([4 x float] %h.coerce)
 void simple_hfa(HFA h) {}
 
-// CHECK: define %struct.HFA @return_simple_hfa
+// CHECK: define{{.*}} %struct.HFA @return_simple_hfa
 HFA return_simple_hfa() {}
 
 typedef struct {
@@ -37,10 +37,10 @@ typedef struct {
   double z;
 } BigStruct;
 
-// CHECK: define void @big_struct_indirect(%struct.BigStruct* %b)
+// CHECK: define{{.*}} void @big_struct_indirect(%struct.BigStruct* %b)
 void big_struct_indirect(BigStruct b) {}
 
-// CHECK: define void @return_big_struct_indirect(%struct.BigStruct* noalias sret
+// CHECK: define{{.*}} void @return_big_struct_indirect(%struct.BigStruct* noalias sret
 BigStruct return_big_struct_indirect() {}
 
 // Structs smaller than 16 bytes should be passed directly, and coerced to
@@ -52,10 +52,10 @@ typedef struct {
   double z;
 } SmallStruct;
 
-// CHECK: define void @small_struct_direct([2 x i64] %s.coerce)
+// CHECK: define{{.*}} void @small_struct_direct([2 x i64] %s.coerce)
 void small_struct_direct(SmallStruct s) {}
 
-// CHECK: define [4 x i32] @return_small_struct_direct()
+// CHECK: define{{.*}} [4 x i32] @return_small_struct_direct()
 SmallStruct return_small_struct_direct() {}
 
 typedef struct {
@@ -64,7 +64,7 @@ typedef struct {
   int z;
 } SmallStructSmallAlign;
 
-// CHECK: define void @small_struct_align_direct([3 x i32] %s.coerce)
+// CHECK: define{{.*}} void @small_struct_align_direct([3 x i32] %s.coerce)
 void small_struct_align_direct(SmallStructSmallAlign s) {}
 
 typedef struct {
@@ -72,17 +72,17 @@ typedef struct {
   short y;
 } PaddedSmallStruct;
 
-// CHECK: define i32 @return_padded_small_struct()
+// CHECK: define{{.*}} i32 @return_padded_small_struct()
 PaddedSmallStruct return_padded_small_struct() {}
 
 typedef struct {
   char arr[7];
 } OddlySizedStruct;
 
-// CHECK: define [2 x i32] @return_oddly_sized_struct()
+// CHECK: define{{.*}} [2 x i32] @return_oddly_sized_struct()
 OddlySizedStruct return_oddly_sized_struct() {}
 
-// CHECK: define <4 x float> @test_va_arg_vec(i8* %l)
+// CHECK: define{{.*}} <4 x float> @test_va_arg_vec(i8* %l)
 // CHECK:   [[ALIGN_TMP:%.*]] = add i32 {{%.*}}, 15
 // CHECK:   [[ALIGNED:%.*]] = and i32 [[ALIGN_TMP]], -16
 // CHECK:   [[ALIGNED_I8:%.*]] = inttoptr i32 [[ALIGNED]] to i8*

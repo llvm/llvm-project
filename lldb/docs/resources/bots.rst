@@ -7,11 +7,15 @@ Buildbot
 LLVM Buildbot is the place where volunteers provide build machines. Everyone can
 `add a buildbot for LLDB <https://llvm.org/docs/HowToAddABuilder.html>`_.
 
-* `lldb-x64-windows-ninja <http://lab.llvm.org:8011/builders/lldb-x64-windows-ninja>`_
-* `lldb-x86_64-debian <http://lab.llvm.org:8011/builders/lldb-x86_64-debian>`_
-* `lldb-aarch64-ubuntu <http://lab.llvm.org:8011/builders/lldb-aarch64-ubuntu/>`_
-* `lldb-arm-ubuntu <http://lab.llvm.org:8011/builders/lldb-arm-ubuntu>`_
-* `lldb-x86_64-fedora <http://lab.llvm.org:8014/builders/lldb-x86_64-fedora>`_
+* `lldb-x64-windows-ninja <https://lab.llvm.org/buildbot/#/builders/83>`_
+* `lldb-x86_64-debian <https://lab.llvm.org/buildbot/#/builders/68>`_
+* `lldb-aarch64-ubuntu <https://lab.llvm.org/buildbot/#/builders/96>`_
+* `lldb-arm-ubuntu <https://lab.llvm.org/buildbot/#/builders/17>`_
+* `lldb-x86_64-fedora <https://lab.llvm.org/staging/#/builders/16>`_
+
+An overview of all LLDB builders (except Fedora) can be found here:
+
+`https://lab.llvm.org/buildbot/#/builders?tags=lldb <https://lab.llvm.org/buildbot/#/builders?tags=lldb>`_
 
 GreenDragon
 -----------

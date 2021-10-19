@@ -55,6 +55,8 @@ public:
   }
 
 protected:
+  // We don't have a process to get the interrupt timeout from, so make one up.
+  static std::chrono::seconds g_timeout;
   TestClient client;
   MockServer server;
   MockDelegate delegate;
@@ -62,7 +64,8 @@ protected:
 
   StateType SendCPacket(StringExtractorGDBRemote &response) {
     return client.SendContinuePacketAndWaitForResponse(delegate, LinuxSignals(),
-                                                       "c", response);
+                                                       "c", g_timeout, 
+                                                       response);
   }
 
   void WaitForRunEvent() {
@@ -71,6 +74,8 @@ protected:
         &client, TestClient::eBroadcastBitRunPacketSent, event_sp, llvm::None);
   }
 };
+
+std::chrono::seconds GDBRemoteClientBaseTest::g_timeout(10);
 
 } // end anonymous namespace
 
@@ -103,7 +108,7 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncSignal) {
   StringExtractorGDBRemote continue_response, response;
 
   // SendAsyncSignal should do nothing when we are not running.
-  ASSERT_FALSE(client.SendAsyncSignal(0x47));
+  ASSERT_FALSE(client.SendAsyncSignal(0x47, g_timeout));
 
   // Continue. After the run packet is sent, send an async signal.
   std::future<StateType> continue_state = std::async(
@@ -112,8 +117,9 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncSignal) {
   ASSERT_EQ("c", response.GetStringRef());
   WaitForRunEvent();
 
-  std::future<bool> async_result = std::async(
-      std::launch::async, [&] { return client.SendAsyncSignal(0x47); });
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    return client.SendAsyncSignal(0x47, g_timeout);
+  });
 
   // First we'll get interrupted.
   ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
@@ -133,7 +139,6 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncSignal) {
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncPacket) {
   StringExtractorGDBRemote continue_response, async_response, response;
-  const bool send_async = true;
 
   // Continue. After the run packet is sent, send an async packet.
   std::future<StateType> continue_state = std::async(
@@ -143,13 +148,12 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndAsyncPacket) {
   WaitForRunEvent();
 
   // Sending without async enabled should fail.
-  ASSERT_EQ(
-      PacketResult::ErrorSendFailed,
-      client.SendPacketAndWaitForResponse("qTest1", response, !send_async));
+  ASSERT_EQ(PacketResult::ErrorSendFailed,
+            client.SendPacketAndWaitForResponse("qTest1", response));
 
   std::future<PacketResult> async_result = std::async(std::launch::async, [&] {
     return client.SendPacketAndWaitForResponse("qTest2", async_response,
-                                               send_async);
+                                               g_timeout);
   });
 
   // First we'll get interrupted.
@@ -178,7 +182,7 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt) {
   StringExtractorGDBRemote continue_response, response;
 
   // Interrupt should do nothing when we're not running.
-  ASSERT_FALSE(client.Interrupt());
+  ASSERT_FALSE(client.Interrupt(g_timeout));
 
   // Continue. After the run packet is sent, send an interrupt.
   std::future<StateType> continue_state = std::async(
@@ -187,8 +191,8 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt) {
   ASSERT_EQ("c", response.GetStringRef());
   WaitForRunEvent();
 
-  std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return client.Interrupt(); });
+  std::future<bool> async_result = std::async(
+      std::launch::async, [&] { return client.Interrupt(g_timeout); });
 
   // We get interrupted.
   ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
@@ -211,8 +215,8 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndLateInterrupt) {
   ASSERT_EQ("c", response.GetStringRef());
   WaitForRunEvent();
 
-  std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return client.Interrupt(); });
+  std::future<bool> async_result = std::async(
+      std::launch::async, [&] { return client.Interrupt(g_timeout); });
 
   // However, the target stops due to a different reason than the original
   // interrupt.
@@ -233,10 +237,9 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndLateInterrupt) {
 
 TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt2PacketBug) {
   StringExtractorGDBRemote continue_response, async_response, response;
-  const bool send_async = true;
 
   // Interrupt should do nothing when we're not running.
-  ASSERT_FALSE(client.Interrupt());
+  ASSERT_FALSE(client.Interrupt(g_timeout));
 
   // Continue. After the run packet is sent, send an async signal.
   std::future<StateType> continue_state = std::async(
@@ -245,8 +248,8 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt2PacketBug) {
   ASSERT_EQ("c", response.GetStringRef());
   WaitForRunEvent();
 
-  std::future<bool> interrupt_result =
-      std::async(std::launch::async, [&] { return client.Interrupt(); });
+  std::future<bool> interrupt_result = std::async(
+      std::launch::async, [&] { return client.Interrupt(g_timeout); });
 
   // We get interrupted. We'll send two packets to simulate a buggy stub.
   ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
@@ -261,8 +264,7 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueAndInterrupt2PacketBug) {
 
   // Packet stream should remain synchronized.
   std::future<PacketResult> send_result = std::async(std::launch::async, [&] {
-    return client.SendPacketAndWaitForResponse("qTest", async_response,
-                                               !send_async);
+    return client.SendPacketAndWaitForResponse("qTest", async_response);
   });
   ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
   ASSERT_EQ("qTest", response.GetStringRef());
@@ -328,8 +330,8 @@ TEST_F(GDBRemoteClientBaseTest, InterruptNoResponse) {
   ASSERT_EQ("c", response.GetStringRef());
   WaitForRunEvent();
 
-  std::future<bool> async_result =
-      std::async(std::launch::async, [&] { return client.Interrupt(); });
+  std::future<bool> async_result = std::async(
+      std::launch::async, [&] { return client.Interrupt(g_timeout); });
 
   // We get interrupted, but we don't send a stop packet.
   ASSERT_EQ(PacketResult::Success, server.GetPacket(response));
@@ -352,7 +354,7 @@ TEST_F(GDBRemoteClientBaseTest, SendPacketAndReceiveResponseWithOutputSupport) {
   ASSERT_EQ(PacketResult::Success, server.SendPacket("OK"));
 
   PacketResult result = client.SendPacketAndReceiveResponseWithOutputSupport(
-      "qRcmd,test", response, true,
+      "qRcmd,test", response, g_timeout,
       [&command_output](llvm::StringRef output) { command_output << output; });
 
   ASSERT_EQ(PacketResult::Success, result);

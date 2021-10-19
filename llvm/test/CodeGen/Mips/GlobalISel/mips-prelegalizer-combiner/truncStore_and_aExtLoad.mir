@@ -17,11 +17,11 @@ body:             |
     ; MIPS32-LABEL: name: load1_s8_to_load1_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1 from %ir.px)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8) from %ir.px)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
-    %1:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.px)
+    %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.px)
     %2:_(s32) = G_ANYEXT %1(s8)
     $v0 = COPY %2(s32)
     RetRA implicit $v0
@@ -38,11 +38,11 @@ body:             |
     ; MIPS32-LABEL: name: load2_s16_to_load2_s32
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 2 from %ir.px)
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16) from %ir.px)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
-    %1:_(s16) = G_LOAD %0(p0) :: (load 2 from %ir.px)
+    %1:_(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.px)
     %2:_(s32) = G_ANYEXT %1(s16)
     $v0 = COPY %2(s32)
     RetRA implicit $v0

@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -globals-aa -licm -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,globals-aa -passes='function(instcombine),require<globals-aa>,function(invalidate<aa>,loop-mssa(licm))' -S | FileCheck %s
 
 ; Make sure -globals-aa ignores dead uses of globals.
 

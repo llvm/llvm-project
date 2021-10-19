@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for C760:
 ! The passed-object dummy argument shall be a scalar, nonpointer, nonallocatable
 ! dummy data object with the same declared type as the type being defined;

@@ -8,7 +8,7 @@
 ; DISABLED-NOT: call i32 @llvm.loop.decrement
 
 ; CHECK-LABEL: skip_call
-; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
 ; CHECK-NOT: call i32 @llvm.loop.decrement
 
 define i32 @skip_call(i32 %n) {
@@ -37,8 +37,8 @@ while.end:
 }
 
 ; CHECK-LABEL: test_target_specific
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 50)
-; CHECK: [[COUNT:%[^ ]+]] = phi i32 [ 50, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 50)
+; CHECK: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %loop, label %exit
@@ -62,10 +62,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_fabs_f16
-; CHECK-MAIN-NOT: call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:  call void @llvm.set.loop.iterations
-; CHECK-FP:       call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP:    call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:  call i32 @llvm.start.loop.iterations
+; CHECK-FP:       call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP:    call i32 @llvm.start.loop.iterations.i32(i32 100)
 define void @test_fabs_f16(half* %a, half* %b) {
 entry:
   br label %loop
@@ -84,10 +84,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_fabs
-; CHECK-MAIN-NOT: call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:  call void @llvm.set.loop.iterations
-; CHECK-FP:       call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP:    call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:  call i32 @llvm.start.loop.iterations
+; CHECK-FP:       call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP:    call i32 @llvm.start.loop.iterations.i32(i32 100)
 
 define float @test_fabs(float* %a) {
 entry:
@@ -107,11 +107,11 @@ exit:
 }
 
 ; CHECK-LABEL: test_fabs_64
-; CHECK-MAIN-NOT:   call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:    call void @llvm.set.loop.iterations
-; CHECK-FP-NOT:     call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-FP64:       void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP-NOT:  call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT:   call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:    call i32 @llvm.start.loop.iterations
+; CHECK-FP-NOT:     call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-FP64:       call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP-NOT:  call i32 @llvm.start.loop.iterations.i32(i32 100)
 define void @test_fabs_64(double* %a, double* %b) {
 entry:
   br label %loop
@@ -130,9 +130,9 @@ exit:
 }
 
 ; CHECK-LABEL: test_fabs_vec
-; CHECK-MVE-NOT: call void @llvm.set.loop.iterations
-; CHECK-MVEFP: call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP: [[COUNT:%[^ ]+]] = phi i32 [ 100, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK-MVE-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVEFP: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK-MVEFP: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVEFP: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVEFP: br i1 [[CMP]], label %loop, label %exit
@@ -154,7 +154,7 @@ exit:
 }
 
 ; CHECK-LABEL: test_log
-; CHECK-NOT: call void @llvm.set.loop.iterations
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
 ; CHECK-NOT: llvm.loop.decrement
 define float @test_log(float* %a) {
 entry:
@@ -174,11 +174,11 @@ exit:
 }
 
 ; CHECK-LABEL: test_sqrt_16
-; CHECK-MAIN-NOT: call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:  call void @llvm.set.loop.iterations
-; CHECK-FP:       call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP:    call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-FP64:     call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:  call i32 @llvm.start.loop.iterations
+; CHECK-FP:       call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP:    call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-FP64:     call i32 @llvm.start.loop.iterations.i32(i32 100)
 define void @test_sqrt_16(half* %a, half* %b) {
 entry:
   br label %loop
@@ -196,11 +196,11 @@ exit:
   ret void
 }
 ; CHECK-LABEL: test_sqrt
-; CHECK-MAIN-NOT: call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT: call void @llvm.set.loop.iterations
-; CHECK-FP: call void @llvm.set.loop.iterations
-; CHECK-MVEFP: call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP: [[COUNT:%[^ ]+]] = phi i32 [ 100, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK-MAIN-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-FP: call i32 @llvm.start.loop.iterations
+; CHECK-MVEFP: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK-MVEFP: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVEFP: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVEFP: br i1 [[CMP]], label %loop, label %exit
@@ -222,11 +222,11 @@ exit:
 }
 
 ; CHECK-LABEL: test_sqrt_64
-; CHECK-MAIN-NOT:   call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:    call void @llvm.set.loop.iterations
-; CHECK-FP-NOT:     call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP-NOT:  call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-FP64:       call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT:   call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:    call i32 @llvm.start.loop.iterations
+; CHECK-FP-NOT:     call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP-NOT:  call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-FP64:       call i32 @llvm.start.loop.iterations.i32(i32 100)
 define void @test_sqrt_64(double* %a, double* %b) {
 entry:
   br label %loop
@@ -245,10 +245,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_sqrt_vec
-; CHECK-MAIN-NOT: call void @llvm.set.loop.iterations 
-; CHECK-MVE-NOT:  call void @llvm.set.loop.iterations
-; CHECK-FP:       call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVEFP:    call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK-MAIN-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVE-NOT:  call i32 @llvm.start.loop.iterations
+; CHECK-FP:       call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVEFP:    call i32 @llvm.start.loop.iterations.i32(i32 100)
 define void @test_sqrt_vec(<4 x float>* %a, <4 x float>* %b) {
 entry:
   br label %loop
@@ -267,7 +267,7 @@ exit:
 }
 
 ; CHECK-LABEL: test_overflow
-; CHECK: call void @llvm.set.loop.iterations
+; CHECK: call i32 @llvm.start.loop.iterations
 define i32 @test_overflow(i32* %a, i32* %b) {
 entry:
   br label %loop
@@ -289,7 +289,7 @@ exit:
 
 ; TODO: We should be able to generate a qadd/sub
 ; CHECK-LABEL: test_sat
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 100)
+; CHECK: call i32 @llvm.start.loop.iterations.i32(i32 100)
 define i32 @test_sat(i32* %a, i32* %b) {
 entry:
   br label %loop
@@ -309,10 +309,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_masked_i32
-; CHECK-NOT: call void @llvm.set.loop.iterations
-; CHECK-MVEFP: call void @llvm.set.loop.iterations
-; CHECK-MVE: call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ 100, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVEFP: call i32 @llvm.start.loop.iterations
+; CHECK-MVE: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
@@ -336,10 +336,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_masked_f32
-; CHECK-NOT: call void @llvm.set.loop.iterations
-; CHECK-MVEFP: call void @llvm.set.loop.iterations
-; CHECK-MVE: call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ 100, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVEFP: call i32 @llvm.start.loop.iterations
+; CHECK-MVE: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
@@ -363,10 +363,10 @@ exit:
 }
 
 ; CHECK-LABEL: test_gather_scatter
-; CHECK-NOT: call void @llvm.set.loop.iterations
-; CHECK-MVEFP: call void @llvm.set.loop.iterations
-; CHECK-MVE: call void @llvm.set.loop.iterations.i32(i32 100)
-; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ 100, %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
+; CHECK-NOT: call i32 @llvm.start.loop.iterations
+; CHECK-MVEFP: call i32 @llvm.start.loop.iterations
+; CHECK-MVE: [[X:%[^ ]+]] = call i32 @llvm.start.loop.iterations.i32(i32 100)
+; CHECK-MVE: [[COUNT:%[^ ]+]] = phi i32 [ [[X]], %entry ], [ [[LOOP_DEC:%[^ ]+]], %loop ]
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit

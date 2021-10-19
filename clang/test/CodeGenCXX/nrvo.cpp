@@ -18,8 +18,8 @@ template<typename T> struct Y {
   }
 };
 
-// CHECK-LABEL: define void @_Z5test0v
-// CHECK-EH-LABEL: define void @_Z5test0v
+// CHECK-LABEL: define{{.*}} void @_Z5test0v
+// CHECK-EH-LABEL: define{{.*}} void @_Z5test0v
 X test0() {
   X x;
   // CHECK:          call {{.*}} @_ZN1XC1Ev
@@ -30,8 +30,8 @@ X test0() {
   return x;
 }
 
-// CHECK-LABEL: define void @_Z5test1b(
-// CHECK-EH-LABEL: define void @_Z5test1b(
+// CHECK-LABEL: define{{.*}} void @_Z5test1b(
+// CHECK-EH-LABEL: define{{.*}} void @_Z5test1b(
 X test1(bool B) {
   // CHECK:      call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret void
@@ -43,8 +43,8 @@ X test1(bool B) {
   // CHECK-EH-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z5test2b
-// CHECK-EH-LABEL: define void @_Z5test2b
+// CHECK-LABEL: define{{.*}} void @_Z5test2b
+// CHECK-EH-LABEL: define{{.*}} void @_Z5test2b
 // CHECK-EH-SAME:  personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 X test2(bool B) {
   // No NRVO.
@@ -126,7 +126,7 @@ X test2(bool B) {
 
 }
 
-// CHECK-LABEL: define void @_Z5test3b
+// CHECK-LABEL: define{{.*}} void @_Z5test3b
 X test3(bool B) {
   // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NOT: call {{.*}} @_ZN1XC1ERKS_
@@ -143,7 +143,7 @@ X test3(bool B) {
 
 extern "C" void exit(int) throw();
 
-// CHECK-LABEL: define void @_Z5test4b
+// CHECK-LABEL: define{{.*}} void @_Z5test4b
 X test4(bool B) {
   {
     // CHECK: call {{.*}} @_ZN1XC1Ev
@@ -158,7 +158,7 @@ X test4(bool B) {
 }
 
 #ifdef __EXCEPTIONS
-// CHECK-EH-LABEL: define void @_Z5test5
+// CHECK-EH-LABEL: define{{.*}} void @_Z5test5
 void may_throw();
 X test5() {
   try {
@@ -173,21 +173,21 @@ X test5() {
 #endif
 
 // rdar://problem/10430868
-// CHECK-LABEL: define void @_Z5test6v
+// CHECK-LABEL: define{{.*}} void @_Z5test6v
 X test6() {
   X a __attribute__((aligned(8)));
   return a;
   // CHECK:      [[A:%.*]] = alloca [[X:%.*]], align 8
   // CHECK-NEXT: [[PTR:%.*]] = getelementptr inbounds %class.X, %class.X* [[A]], i32 0, i32 0
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[PTR]])
-  // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev([[X]]* nonnull [[A]])
-  // CHECK-NEXT: call {{.*}} @_ZN1XC1ERKS_([[X]]* {{%.*}}, [[X]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]])
-  // CHECK-NEXT: call {{.*}} @_ZN1XD1Ev([[X]]* nonnull [[A]])
+  // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev([[X]]* {{[^,]*}} [[A]])
+  // CHECK-NEXT: call {{.*}} @_ZN1XC1ERKS_([[X]]* {{[^,]*}} {{%.*}}, [[X]]* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[A]])
+  // CHECK-NEXT: call {{.*}} @_ZN1XD1Ev([[X]]* {{[^,]*}} [[A]])
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[PTR]])
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z5test7b
+// CHECK-LABEL: define{{.*}} void @_Z5test7b
 X test7(bool b) {
   // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret
@@ -198,7 +198,7 @@ X test7(bool b) {
   return X();
 }
 
-// CHECK-LABEL: define void @_Z5test8b
+// CHECK-LABEL: define{{.*}} void @_Z5test8b
 X test8(bool b) {
   // CHECK: call {{.*}} @_ZN1XC1Ev
   // CHECK-NEXT: ret

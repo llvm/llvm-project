@@ -76,7 +76,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBThreadCollection.cpp
   SBThreadPlan.cpp
   SBTrace.cpp
-  SBTraceOptions.cpp
   SBType.cpp
   SBTypeCategory.cpp
   SBTypeEnumMember.cpp
@@ -182,21 +181,34 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  # Only MSVC has the ABI compatibility problem and avoids using FindPythonLibs,
-  # so only it needs to explicitly link against ${Python3_LIBRARIES}
-  if (MSVC AND LLDB_ENABLE_PYTHON)
-    target_link_libraries(liblldb PRIVATE ${Python3_LIBRARIES})
-  endif()
-else()
+if (NOT MSVC)
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb
   )
 endif()
 
-if (NOT LLDB_BUILT_STANDALONE)
+# The Clang expression parser in LLDB requires the Clang resource directory to function.
+if (TARGET clang-resource-headers)
+  # If building alongside Clang, just add a dependency to ensure it is build together with liblldb.
   add_dependencies(liblldb clang-resource-headers)
+else()
+  # In a standalone build create a symlink from the LLDB library directory that points to the
+  # resource directory in the Clang library directory. LLDB searches relative to its install path,
+  # and the symlink is created in the same relative path as the resource directory of Clang when
+  # building alongside Clang.
+  # When building the LLDB framework, this isn't necessary as there we copy everything we need into
+  # the framework (including the Clang resourece directory).
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    set(LLDB_CLANG_RESOURCE_DIR_PARENT "$<TARGET_FILE_DIR:liblldb>/clang")
+    file(MAKE_DIRECTORY "${LLDB_CLANG_RESOURCE_DIR_PARENT}")
+    add_custom_command(TARGET liblldb POST_BUILD
+      COMMENT "Linking Clang resource dir into LLDB build directory: ${LLDB_CLANG_RESOURCE_DIR_PARENT}"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${LLDB_CLANG_RESOURCE_DIR_PARENT}"
+      COMMAND ${CMAKE_COMMAND} -E create_symlink "${LLDB_EXTERNAL_CLANG_RESOURCE_DIR}"
+              "${LLDB_CLANG_RESOURCE_DIR_PARENT}/${LLDB_CLANG_RESOURCE_DIR_NAME}"
+    )
+  endif()
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)

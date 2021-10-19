@@ -144,24 +144,29 @@ define hidden void @func_indirect_use_workgroup_id_x() #1 {
   ret void
 }
 
+; Argument is in right place already. We are free to clobber other
+; SGPR arguments
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
-; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v40, 0
+; GCN-NOT: s12
+; GCN-NOT: s13
+; GCN-NOT: s14
 define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
-; GCN-NOT: s4
-; GCN: v_readlane_b32 s4, v40, 0
+; GCN-NOT: s12
+; GCN-NOT: s13
+; GCN-NOT: s14
 define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void
 }
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_x:
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; CIVI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0, off
 ; GCN: ; use s12
 define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
@@ -171,7 +176,8 @@ define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
 }
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_y:
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; CIVI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0, off
 ; GCN: ; use s13
 define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -181,7 +187,8 @@ define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
 }
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_z:
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; CIVI: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
+; GFX9: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0, off
 ; GCN: ; use s14
 define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -231,8 +238,8 @@ define hidden void @use_every_sgpr_input() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input:
-; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s13, s15
+; GCN: s_mov_b32 s12, s14
 ; GCN: s_mov_b32 s14, s16
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -250,7 +257,33 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
 ; GCN: .amdhsa_system_sgpr_workgroup_info 0
 ; GCN: .amdhsa_system_vgpr_workitem_id 2
-define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
+  call void @use_every_sgpr_input()
+  ret void
+}
+
+; We have to pass the kernarg segment, but there are no kernel
+; arguments so null is passed.
+; GCN-LABEL: {{^}}kern_indirect_use_every_sgpr_input_no_kernargs:
+; GCN: s_mov_b64 s[10:11], s[8:9]
+; GCN: s_mov_b64 s[8:9], 0{{$}}
+; GCN: s_mov_b32 s32, 0
+; GCN: s_swappc_b64
+
+; GCN: .amdhsa_user_sgpr_private_segment_buffer 1
+; GCN: .amdhsa_user_sgpr_dispatch_ptr 1
+; GCN: .amdhsa_user_sgpr_queue_ptr 1
+; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
+; GCN: .amdhsa_user_sgpr_dispatch_id 1
+; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
+; GCN: .amdhsa_user_sgpr_private_segment_size 0
+; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_y 1
+; GCN: .amdhsa_system_sgpr_workgroup_id_z 1
+; GCN: .amdhsa_system_sgpr_workgroup_info 0
+; GCN: .amdhsa_system_vgpr_workitem_id 2
+define amdgpu_kernel void @kern_indirect_use_every_sgpr_input_no_kernargs() #1 {
   call void @use_every_sgpr_input()
   ret void
 }

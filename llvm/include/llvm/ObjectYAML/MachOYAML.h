@@ -76,7 +76,7 @@ struct LoadCommand {
   std::vector<Section> Sections;
   std::vector<MachO::build_tool_version> Tools;
   std::vector<llvm::yaml::Hex8> PayloadBytes;
-  std::string PayloadString;
+  std::string Content;
   uint64_t ZeroPadBytes;
 };
 
@@ -220,7 +220,7 @@ template <> struct MappingTraits<MachOYAML::Relocation> {
 
 template <> struct MappingTraits<MachOYAML::Section> {
   static void mapping(IO &IO, MachOYAML::Section &Section);
-  static StringRef validate(IO &io, MachOYAML::Section &Section);
+  static std::string validate(IO &io, MachOYAML::Section &Section);
 };
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {

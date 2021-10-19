@@ -21,6 +21,7 @@ void
 test(const S& s, const typename S::value_type* str, typename S::size_type pos,
      typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.rfind(str, pos));
     assert(s.rfind(str, pos) == x);
     if (x != S::npos)
     {
@@ -33,6 +34,7 @@ template <class S>
 void
 test(const S& s, const typename S::value_type* str, typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.rfind(str));
     assert(s.rfind(str) == x);
     if (x != S::npos)
     {

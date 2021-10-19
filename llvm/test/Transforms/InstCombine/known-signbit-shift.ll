@@ -5,7 +5,8 @@
 ; with nsw flag should also be non-negative
 define i1 @test_shift_nonnegative(i32 %a) {
 ; CHECK-LABEL: @test_shift_nonnegative(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %b = lshr i32 %a, 2
   %shift = shl nsw i32 %b, 3
@@ -30,7 +31,7 @@ define i1 @test_shift_negative(i32 %a, i32 %b) {
 ; This test should not crash opt. The shift produces poison.
 define i32 @test_no_sign_bit_conflict1(i1 %b) {
 ; CHECK-LABEL: @test_no_sign_bit_conflict1(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %sel = select i1 %b, i32 8193, i32 8192
   %mul = shl nsw i32 %sel, 18
@@ -41,7 +42,7 @@ define i32 @test_no_sign_bit_conflict1(i1 %b) {
 ; This test should not crash opt. The shift produces poison.
 define i32 @test_no_sign_bit_conflict2(i1 %b) {
 ; CHECK-LABEL: @test_no_sign_bit_conflict2(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %sel = select i1 %b, i32 -8193, i32 -8194
   %mul = shl nsw i32 %sel, 18

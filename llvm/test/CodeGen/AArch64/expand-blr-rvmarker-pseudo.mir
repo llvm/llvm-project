@@ -1,0 +1,118 @@
+# RUN: llc -run-pass=aarch64-expand-pseudo -mtriple=arm64-apple-ios -o - -emit-call-site-info %s | FileCheck %s
+
+--- |
+  define void @test_1_callsite_info() {
+    ret void
+  }
+
+  define void @test_bl_pass_x0_arg() {
+    ret void
+  }
+
+  define void @test_bl_pass_x0_x1_x2_args() {
+    ret void
+  }
+
+  define void @test_bl_pass_w0_w1_args() {
+    ret void
+  }
+
+  define void @test_blr_pass_w0_w1_args() {
+    ret void
+  }
+
+  define void @foo(i32 %a) {
+    ret void
+  }
+
+...
+---
+
+# CHECK-LABEL: : test_1_callsite_info
+# CHECK:       bb.0:
+# CHECK-NEXT:    BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x0, implicit $sp, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BLR $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:    RET undef $lr, implicit killed $w0
+#
+name: test_1_callsite_info
+callSites:
+  - {bb: 0, offset: 0, fwdArgRegs:
+    - { arg: 0, reg: '$x0' } }
+body:             |
+    bb.0:
+        liveins: $lr, $x0
+
+        BLR_RVMARKER $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        RET_ReallyLR implicit killed $w0
+...
+
+# CHECK-LABEL: : test_bl_pass_x0_arg
+# CHECK:       bb.0:
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    RET undef $lr, implicit killed $w0
+#
+name: test_bl_pass_x0_arg
+body:             |
+    bb.0:
+        liveins: $lr, $x0
+
+        BLR_RVMARKER @foo, $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        RET_ReallyLR implicit killed $w0
+...
+
+# CHECK-LABEL: : test_bl_pass_x0_x1_x2_args
+# CHECK:       bb.0:
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def $x0, implicit-def $w0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+# CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    RET undef $lr
+#
+name: test_bl_pass_x0_x1_x2_args
+body:             |
+    bb.0:
+        liveins: $lr, $x0, $x1, $x2
+
+        BLR_RVMARKER @foo, $x0, $x1, $x2, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+        RET_ReallyLR
+...
+
+# CHECK-LABEL: : test_bl_pass_w0_w1_args
+# CHECK:       bb.0:
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BL @foo, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    RET undef $lr, implicit killed $w0
+#
+name: test_bl_pass_w0_w1_args
+body:             |
+    bb.0:
+        liveins: $lr, $w0, $w1
+
+        BLR_RVMARKER @foo, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        RET_ReallyLR implicit killed $w0
+...
+
+
+# CHECK-LABEL: : test_blr_pass_w0_w1_args
+# CHECK:       bb.0:
+# CHECK-NEXT:     BUNDLE implicit-def $lr, implicit-def $w30, implicit-def $sp, implicit-def $wsp, implicit-def dead $x0, implicit-def $fp, implicit-def $w29, implicit $x8, implicit $sp, implicit $w0, implicit $w1, implicit $xzr, implicit $fp {
+# CHECK-NEXT:      BLR $x8, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit $w1, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+# CHECK-NEXT:      $fp = ORRXrs $xzr, $fp, 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:    RET undef $lr, implicit killed $w0
+#
+name: test_blr_pass_w0_w1_args
+body:             |
+    bb.0:
+        liveins: $lr, $x8, $w0, $w1
+
+        BLR_RVMARKER $x8, $w0, $w1, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def dead $x0
+        RET_ReallyLR implicit killed $w0
+...

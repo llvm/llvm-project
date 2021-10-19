@@ -613,7 +613,7 @@ void HexagonGenInsert::buildOrderingMF(RegisterOrdering &RO) const {
         if (MO.isReg() && MO.isDef()) {
           Register R = MO.getReg();
           assert(MO.getSubReg() == 0 && "Unexpected subregister in definition");
-          if (Register::isVirtualRegister(R))
+          if (R.isVirtual())
             RO.insert(std::make_pair(R, Index++));
         }
       }
@@ -730,7 +730,7 @@ void HexagonGenInsert::getInstrDefs(const MachineInstr *MI,
     if (!MO.isReg() || !MO.isDef())
       continue;
     Register R = MO.getReg();
-    if (!Register::isVirtualRegister(R))
+    if (!R.isVirtual())
       continue;
     Defs.insert(R);
   }
@@ -743,7 +743,7 @@ void HexagonGenInsert::getInstrUses(const MachineInstr *MI,
     if (!MO.isReg() || !MO.isUse())
       continue;
     Register R = MO.getReg();
-    if (!Register::isVirtualRegister(R))
+    if (!R.isVirtual())
       continue;
     Uses.insert(R);
   }
@@ -1089,9 +1089,7 @@ void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
     auto IsEmpty = [] (const IFRecordWithRegSet &IR) -> bool {
       return IR.second.empty();
     };
-    auto End = llvm::remove_if(LL, IsEmpty);
-    if (End != LL.end())
-      LL.erase(End, LL.end());
+    llvm::erase_if(LL, IsEmpty);
   } else {
     // The definition of VR is constant-extended, and all candidates have
     // empty removable-register sets. Pick the maximum candidate, and remove
@@ -1179,9 +1177,7 @@ void HexagonGenInsert::pruneRegCopies(unsigned VR) {
   auto IsCopy = [] (const IFRecordWithRegSet &IR) -> bool {
     return IR.first.Wdh == 32 && (IR.first.Off == 0 || IR.first.Off == 32);
   };
-  auto End = llvm::remove_if(LL, IsCopy);
-  if (End != LL.end())
-    LL.erase(End, LL.end());
+  llvm::erase_if(LL, IsCopy);
 }
 
 void HexagonGenInsert::pruneCandidates() {
@@ -1483,7 +1479,7 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register R = MO.getReg();
-      if (!Register::isVirtualRegister(R) || !MRI->use_nodbg_empty(R)) {
+      if (!R.isVirtual() || !MRI->use_nodbg_empty(R)) {
         AllDead = false;
         break;
       }

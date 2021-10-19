@@ -29,6 +29,7 @@
 
 #include "ExpectedTypes.h"
 #include "FileDistance.h"
+#include "TUScheduler.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -78,7 +79,7 @@ struct SymbolQualitySignals {
   void merge(const Symbol &IndexResult);
 
   // Condense these signals down to a single number, higher is better.
-  float evaluate() const;
+  float evaluateHeuristics() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const SymbolQualitySignals &);
@@ -136,17 +137,55 @@ struct SymbolRelevanceSignals {
   // Whether the item matches the type expected in the completion context.
   bool TypeMatchesPreferred = false;
 
+  /// Length of the unqualified partial name of Symbol typed in
+  /// CompletionPrefix.
+  unsigned FilterLength = 0;
+
+  const ASTSignals *MainFileSignals = nullptr;
+  /// Number of references to the candidate in the main file.
+  unsigned MainFileRefs = 0;
+  /// Number of unique symbols in the main file which belongs to candidate's
+  /// namespace. This indicates how relevant the namespace is in the current
+  /// file.
+  unsigned ScopeRefsInFile = 0;
+
+  /// Set of derived signals computed by calculateDerivedSignals(). Must not be
+  /// set explicitly.
+  struct DerivedSignals {
+    /// Whether Name contains some word from context.
+    bool NameMatchesContext = false;
+    /// Min distance between SymbolURI and all the headers included by the TU.
+    unsigned FileProximityDistance = FileDistance::Unreachable;
+    /// Min distance between SymbolScope and all the available scopes.
+    unsigned ScopeProximityDistance = FileDistance::Unreachable;
+  };
+
+  DerivedSignals calculateDerivedSignals() const;
+
   void merge(const CodeCompletionResult &SemaResult);
   void merge(const Symbol &IndexResult);
+  void computeASTSignals(const CodeCompletionResult &SemaResult);
 
   // Condense these signals down to a single number, higher is better.
-  float evaluate() const;
+  float evaluateHeuristics() const;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                               const SymbolRelevanceSignals &);
 
 /// Combine symbol quality and relevance into a single score.
 float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance);
+
+/// Same semantics as CodeComplete::Score. Quality score and Relevance score
+/// have been removed since DecisionForest cannot assign individual scores to
+/// Quality and Relevance signals.
+struct DecisionForestScores {
+  float Total = 0.f;
+  float ExcludingName = 0.f;
+};
+
+DecisionForestScores
+evaluateDecisionForest(const SymbolQualitySignals &Quality,
+                       const SymbolRelevanceSignals &Relevance, float Base);
 
 /// TopN<T> is a lossy container that preserves only the "best" N elements.
 template <typename T, typename Compare = std::greater<T>> class TopN {

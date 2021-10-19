@@ -4,6 +4,7 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,BTVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ZNVER1 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ZNVER2 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver3 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ZNVER3 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SNB %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,IVB %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,HSW %s
@@ -11,6 +12,10 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=knl -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,KNL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SKX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SKX-AVX512 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-client -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=icelake-server -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=rocketlake -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ICX %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=tigerlake -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,ICX %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=slm -iterations=1 -all-stats=false -all-views=false -scheduler-stats < %s | FileCheck --check-prefixes=ALL,SLM %s
 
 xor %eax, %ebx
@@ -49,6 +54,12 @@ xor %eax, %ebx
 # HSW-NEXT:        [2] Average number of used buffer entries.
 # HSW-NEXT:        [3] Maximum number of used buffer entries.
 # HSW-NEXT:        [4] Total number of buffer entries.
+
+# ICX:             Scheduler's queue usage:
+# ICX-NEXT:        [1] Resource name.
+# ICX-NEXT:        [2] Average number of used buffer entries.
+# ICX-NEXT:        [3] Maximum number of used buffer entries.
+# ICX-NEXT:        [4] Total number of buffer entries.
 
 # IVB:             Scheduler's queue usage:
 # IVB-NEXT:        [1] Resource name.
@@ -95,6 +106,12 @@ xor %eax, %ebx
 # ZNVER2-NEXT:     [3] Maximum number of used buffer entries.
 # ZNVER2-NEXT:     [4] Total number of buffer entries.
 
+# ZNVER3:          Scheduler's queue usage:
+# ZNVER3-NEXT:     [1] Resource name.
+# ZNVER3-NEXT:     [2] Average number of used buffer entries.
+# ZNVER3-NEXT:     [3] Maximum number of used buffer entries.
+# ZNVER3-NEXT:     [4] Total number of buffer entries.
+
 # BARCELONA:        [1]            [2]        [3]        [4]
 # BARCELONA-NEXT:  SBPortAny        0          1          54
 
@@ -114,6 +131,9 @@ xor %eax, %ebx
 
 # HSW:              [1]            [2]        [3]        [4]
 # HSW-NEXT:        HWPortAny        0          1          60
+
+# ICX:              [1]            [2]        [3]        [4]
+# ICX-NEXT:        ICXPortAny       0          1          60
 
 # IVB:              [1]            [2]        [3]        [4]
 # IVB-NEXT:        SBPortAny        0          1          54
@@ -139,3 +159,9 @@ xor %eax, %ebx
 # ZNVER2-NEXT:     Zn2AGU           0          0          28
 # ZNVER2-NEXT:     Zn2ALU           0          1          64
 # ZNVER2-NEXT:     Zn2FPU           0          0          36
+
+# ZNVER3:           [1]            [2]        [3]        [4]
+# ZNVER3-NEXT:     Zn3FP            0          0          64
+# ZNVER3-NEXT:     Zn3Int           0          1          96
+# ZNVER3-NEXT:     Zn3Load          0          0          72
+# ZNVER3-NEXT:     Zn3Store         0          0          64

@@ -24,19 +24,19 @@ define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 ;
 ; XOP-LABEL: combine_vec_rot_rot:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vprotd {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vprotd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_vec_rot_rot:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm1
-; AVX2-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_rot_rot:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vprolvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vprolvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>
   %2 = shl <4 x i32> %x, <i32 31, i32 30, i32 29, i32 28>
@@ -122,7 +122,7 @@ define <4 x i32> @combine_vec_rot_select_zero(<4 x i32>, <4 x i32>) {
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [31,31,31,31]
 ; SSE2-NEXT:    pand %xmm1, %xmm3
 ; SSE2-NEXT:    pslld $23, %xmm3
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
 ; SSE2-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm4
@@ -185,9 +185,9 @@ define <4 x i32> @combine_vec_rot_select_zero(<4 x i32>, <4 x i32>) {
 define <4 x i32> @rotate_demanded_bits(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: rotate_demanded_bits:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -204,7 +204,7 @@ define <4 x i32> @rotate_demanded_bits(<4 x i32>, <4 x i32>) {
 ;
 ; XOP-LABEL: rotate_demanded_bits:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
@@ -221,7 +221,7 @@ define <4 x i32> @rotate_demanded_bits(<4 x i32>, <4 x i32>) {
 ;
 ; AVX512-LABEL: rotate_demanded_bits:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %3 = and <4 x i32> %1, <i32 30, i32 30, i32 30, i32 30>
@@ -236,9 +236,9 @@ define <4 x i32> @rotate_demanded_bits(<4 x i32>, <4 x i32>) {
 define <4 x i32> @rotate_demanded_bits_2(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: rotate_demanded_bits_2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0
@@ -255,7 +255,7 @@ define <4 x i32> @rotate_demanded_bits_2(<4 x i32>, <4 x i32>) {
 ;
 ; XOP-LABEL: rotate_demanded_bits_2:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
@@ -272,7 +272,7 @@ define <4 x i32> @rotate_demanded_bits_2(<4 x i32>, <4 x i32>) {
 ;
 ; AVX512-LABEL: rotate_demanded_bits_2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %3 = and <4 x i32> %1, <i32 23, i32 23, i32 23, i32 23>
@@ -288,9 +288,9 @@ define <4 x i32> @rotate_demanded_bits_3(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: rotate_demanded_bits_3:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    paddd %xmm1, %xmm1
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm0

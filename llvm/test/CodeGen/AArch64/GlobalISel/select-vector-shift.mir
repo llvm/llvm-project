@@ -322,7 +322,7 @@ body:             |
 
 ...
 ---
-name:            ashr_v4i64
+name:            ashr_v2i64
 alignment:       4
 legalized:       true
 regBankSelected: true
@@ -336,7 +336,7 @@ body:             |
   bb.1:
     liveins: $q0, $q1
 
-    ; CHECK-LABEL: name: ashr_v4i64
+    ; CHECK-LABEL: name: ashr_v2i64
     ; CHECK: liveins: $q0, $q1
     ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
@@ -351,3 +351,259 @@ body:             |
     RET_ReallyLR implicit $q0
 
 ...
+---
+name:            shl_v4i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: shl_v4i16
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK: [[USHLv4i16_:%[0-9]+]]:fpr64 = USHLv4i16 [[COPY]], [[COPY1]]
+    ; CHECK: $d0 = COPY [[USHLv4i16_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = COPY $d1
+    %2:fpr(<4 x s16>) = G_SHL %0, %1(<4 x s16>)
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            lshr_v4i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: lshr_v4i16
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK: [[NEGv4i16_:%[0-9]+]]:fpr64 = NEGv4i16 [[COPY1]]
+    ; CHECK: [[USHLv4i16_:%[0-9]+]]:fpr64 = USHLv4i16 [[COPY]], [[NEGv4i16_]]
+    ; CHECK: $d0 = COPY [[USHLv4i16_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = COPY $d1
+    %2:fpr(<4 x s16>) = G_LSHR %0, %1(<4 x s16>)
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            lshr_v4i32
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: fpr }
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: lshr_v4i32
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[NEGv4i32_:%[0-9]+]]:fpr128 = NEGv4i32 [[COPY1]]
+    ; CHECK: [[USHLv4i32_:%[0-9]+]]:fpr128 = USHLv4i32 [[COPY]], [[NEGv4i32_]]
+    ; CHECK: $q0 = COPY [[USHLv4i32_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<4 x s32>) = COPY $q0
+    %1:fpr(<4 x s32>) = COPY $q1
+    %2:fpr(<4 x s32>) = G_LSHR %0, %1(<4 x s32>)
+    $q0 = COPY %2(<4 x s32>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            lshr_v8i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: lshr_v8i16
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[NEGv8i16_:%[0-9]+]]:fpr128 = NEGv8i16 [[COPY1]]
+    ; CHECK: [[USHLv8i16_:%[0-9]+]]:fpr128 = USHLv8i16 [[COPY]], [[NEGv8i16_]]
+    ; CHECK: $q0 = COPY [[USHLv8i16_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = COPY $q1
+    %2:fpr(<8 x s16>) = G_LSHR %0, %1(<8 x s16>)
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            ashr_v4i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: ashr_v4i16
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK: [[NEGv4i16_:%[0-9]+]]:fpr64 = NEGv4i16 [[COPY1]]
+    ; CHECK: [[SSHLv4i16_:%[0-9]+]]:fpr64 = SSHLv4i16 [[COPY]], [[NEGv4i16_]]
+    ; CHECK: $d0 = COPY [[SSHLv4i16_]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:fpr(<4 x s16>) = COPY $d1
+    %2:fpr(<4 x s16>) = G_ASHR %0, %1(<4 x s16>)
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            vashr_v4i16_imm
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: vashr_v4i16_imm
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[SSHRv4i16_shift:%[0-9]+]]:fpr64 = SSHRv4i16_shift [[COPY]], 5
+    ; CHECK: $d0 = COPY [[SSHRv4i16_shift]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:gpr(s32) = G_CONSTANT i32 5
+    %2:fpr(<4 x s16>) = G_VASHR %0, %1
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            vlshr_v4i16_imm
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $d0, $d1
+    ; CHECK-LABEL: name: vlshr_v4i16_imm
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[USHRv4i16_shift:%[0-9]+]]:fpr64 = USHRv4i16_shift [[COPY]], 5
+    ; CHECK: $d0 = COPY [[USHRv4i16_shift]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<4 x s16>) = COPY $d0
+    %1:gpr(s32) = G_CONSTANT i32 5
+    %2:fpr(<4 x s16>) = G_VLSHR %0, %1
+    $d0 = COPY %2(<4 x s16>)
+    RET_ReallyLR implicit $d0
+...
+---
+name:            shl_v8i16
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: shl_v8i16
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[USHLv8i16_:%[0-9]+]]:fpr128 = USHLv8i16 [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[USHLv8i16_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<8 x s16>) = COPY $q0
+    %1:fpr(<8 x s16>) = COPY $q1
+    %2:fpr(<8 x s16>) = G_SHL %0, %1(<8 x s16>)
+    $q0 = COPY %2(<8 x s16>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            shl_v16i8
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: shl_v16i8
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[USHLv16i8_:%[0-9]+]]:fpr128 = USHLv16i8 [[COPY]], [[COPY1]]
+    ; CHECK: $q0 = COPY [[USHLv16i8_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<16 x s8>) = COPY $q0
+    %1:fpr(<16 x s8>) = COPY $q1
+    %2:fpr(<16 x s8>) = G_SHL %0, %1(<16 x s8>)
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            lshr_v16i8
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: lshr_v16i8
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:fpr128 = COPY $q1
+    ; CHECK: [[NEGv16i8_:%[0-9]+]]:fpr128 = NEGv16i8 [[COPY1]]
+    ; CHECK: [[USHLv16i8_:%[0-9]+]]:fpr128 = USHLv16i8 [[COPY]], [[NEGv16i8_]]
+    ; CHECK: $q0 = COPY [[USHLv16i8_]]
+    ; CHECK: RET_ReallyLR implicit $q0
+    %0:fpr(<16 x s8>) = COPY $q0
+    %1:fpr(<16 x s8>) = COPY $q1
+    %2:fpr(<16 x s8>) = G_LSHR %0, %1(<16 x s8>)
+    $q0 = COPY %2(<16 x s8>)
+    RET_ReallyLR implicit $q0
+...
+---
+name:            shl_v2i32_imm_dup
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: fpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: fpr }
+liveins:
+  - { reg: '$d0' }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1:
+    liveins: $d0
+
+    ; Should still be able to select immediate forms using a G_DUP from a
+    ; constant.
+
+    ; CHECK-LABEL: name: shl_v2i32_imm_dup
+    ; CHECK: liveins: $d0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK: [[SHLv2i32_shift:%[0-9]+]]:fpr64 = SHLv2i32_shift [[COPY]], 24
+    ; CHECK: $d0 = COPY [[SHLv2i32_shift]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(<2 x s32>) = COPY $d0
+    %2:gpr(s32) = G_CONSTANT i32 24
+    %1:fpr(<2 x s32>) = G_DUP %2(s32)
+    %3:fpr(<2 x s32>) = G_SHL %0, %1(<2 x s32>)
+    $d0 = COPY %3(<2 x s32>)
+    RET_ReallyLR implicit $d0

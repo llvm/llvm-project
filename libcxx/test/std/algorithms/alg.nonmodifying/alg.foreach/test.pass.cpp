@@ -41,8 +41,8 @@ int main(int, char**)
 {
     int ia[] = {0, 1, 2, 3, 4, 5};
     const unsigned s = sizeof(ia)/sizeof(ia[0]);
-    for_each_test f = std::for_each(input_iterator<int*>(ia),
-                                    input_iterator<int*>(ia+s),
+    for_each_test f = std::for_each(cpp17_input_iterator<int*>(ia),
+                                    cpp17_input_iterator<int*>(ia+s),
                                     for_each_test(0));
     assert(f.count == s);
     for (unsigned i = 0; i < s; ++i)

@@ -16,18 +16,21 @@
 class DWARFDebugArangeSet {
 public:
   struct Header {
-    uint32_t length;    // The total length of the entries for that set, not
-                        // including the length field itself.
-    uint16_t version;   // The DWARF version number
-    uint32_t cu_offset; // The offset from the beginning of the .debug_info
-                        // section of the compilation unit entry referenced by
-                        // the table.
-    uint8_t addr_size;  // The size in bytes of an address on the target
-                        // architecture. For segmented addressing, this is the
-                        // size of the offset portion of the address
-    uint8_t seg_size; // The size in bytes of a segment descriptor on the target
-                      // architecture. If the target system uses a flat address
-                      // space, this value is 0.
+    /// The total length of the entries for that set, not including the length
+    /// field itself.
+    uint32_t length = 0;
+    /// The DWARF version number.
+    uint16_t version = 0;
+    /// The offset from the beginning of the .debug_info section of the
+    /// compilation unit entry referenced by the table.
+    uint32_t cu_offset = 0;
+    /// The size in bytes of an address on the target architecture. For
+    /// segmented addressing, this is the size of the offset portion of the
+    /// address.
+    uint8_t addr_size = 0;
+    /// The size in bytes of a segment descriptor on the target architecture.
+    /// If the target system uses a flat address space, this value is 0.
+    uint8_t seg_size = 0;
   };
 
   struct Descriptor {
@@ -44,7 +47,7 @@ public:
   dw_offset_t FindAddress(dw_addr_t address) const;
   size_t NumDescriptors() const { return m_arange_descriptors.size(); }
   const Header &GetHeader() const { return m_header; }
-
+  dw_offset_t GetNextOffset() const { return m_next_offset; }
   const Descriptor &GetDescriptorRef(uint32_t i) const {
     return m_arange_descriptors[i];
   }
@@ -54,7 +57,8 @@ protected:
   typedef DescriptorColl::iterator DescriptorIter;
   typedef DescriptorColl::const_iterator DescriptorConstIter;
 
-  uint32_t m_offset;
+  dw_offset_t m_offset;
+  dw_offset_t m_next_offset;
   Header m_header;
   DescriptorColl m_arange_descriptors;
 };

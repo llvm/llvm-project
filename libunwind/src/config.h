@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <__libunwind_config.h>
+
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)
@@ -32,14 +34,26 @@
   #else
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
   #endif
+#elif defined(_LIBUNWIND_IS_BAREMETAL)
+  #if !defined(_LIBUNWIND_ARM_EHABI)
+    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
+    #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
+  #endif
+#elif defined(__BIONIC__) && defined(_LIBUNWIND_ARM_EHABI)
+  // For ARM EHABI, Bionic didn't implement dl_iterate_phdr until API 21. After
+  // API 21, dl_iterate_phdr exists, but dl_unwind_find_exidx is much faster.
+  #define _LIBUNWIND_USE_DL_UNWIND_FIND_EXIDX 1
 #else
-  #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
+  // Assume an ELF system with a dl_iterate_phdr function.
+  #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
+  #if !defined(_LIBUNWIND_ARM_EHABI)
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
   #endif
 #endif
 
-#if defined(_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+#if defined(_LIBUNWIND_HIDE_SYMBOLS)
+  // The CMake file passes -fvisibility=hidden to control ELF/Mach-O visibility.
   #define _LIBUNWIND_EXPORT
   #define _LIBUNWIND_HIDDEN
 #else
@@ -57,11 +71,15 @@
 #define SYMBOL_NAME(name) XSTR(__USER_LABEL_PREFIX__) #name
 
 #if defined(__APPLE__)
+#if defined(_LIBUNWIND_HIDE_SYMBOLS)
+#define _LIBUNWIND_ALIAS_VISIBILITY(name) __asm__(".private_extern " name);
+#else
+#define _LIBUNWIND_ALIAS_VISIBILITY(name)
+#endif
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
   __asm__(".globl " SYMBOL_NAME(aliasname));                                   \
   __asm__(SYMBOL_NAME(aliasname) " = " SYMBOL_NAME(name));                     \
-  extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
-      __attribute__((weak_import));
+  _LIBUNWIND_ALIAS_VISIBILITY(SYMBOL_NAME(aliasname))
 #elif defined(__ELF__)
 #define _LIBUNWIND_WEAK_ALIAS(name, aliasname)                                 \
   extern "C" _LIBUNWIND_EXPORT __typeof(name) aliasname                        \
@@ -81,6 +99,8 @@
 #error Unsupported target
 #endif
 
+// Apple/armv7k defaults to DWARF/Compact unwinding, but its libunwind also
+// needs to include the SJLJ APIs.
 #if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif
@@ -101,8 +121,27 @@
 #endif
 #endif
 
-#if defined(__powerpc64__) && defined(_ARCH_PWR8)
-#define PPC64_HAS_VMX
+#ifndef _LIBUNWIND_REMEMBER_HEAP_ALLOC
+#if defined(_LIBUNWIND_REMEMBER_STACK_ALLOC) || defined(__APPLE__) ||          \
+    defined(__linux__) || defined(__ANDROID__) || defined(__MINGW32__) ||      \
+    defined(_LIBUNWIND_IS_BAREMETAL)
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) alloca(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr)                                         \
+  do {                                                                         \
+  } while (0)
+#elif defined(_WIN32)
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) _malloca(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) _freea(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
+#else
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) malloc(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) free(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
+#endif
+#else /* _LIBUNWIND_REMEMBER_HEAP_ALLOC */
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) malloc(_size)
+#define _LIBUNWIND_REMEMBER_FREE(_ptr) free(_ptr)
+#define _LIBUNWIND_REMEMBER_CLEANUP_NEEDED
 #endif
 
 #if defined(NDEBUG) && defined(_LIBUNWIND_IS_BAREMETAL)

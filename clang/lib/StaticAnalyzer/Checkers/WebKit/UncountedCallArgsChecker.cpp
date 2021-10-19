@@ -86,7 +86,8 @@ public:
           continue; // FIXME? Should we bail?
 
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        if (!isUncountedPtr(ArgType))
+        Optional<bool> IsUncounted = isUncountedPtr(ArgType);
+        if (!IsUncounted || !(*IsUncounted))
           continue;
 
         const auto *Arg = CE->getArg(ArgIdx);

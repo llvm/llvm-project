@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
   character(kind=1,len=50) internal_file
   character(kind=2,len=50) internal_file2
   character(kind=4,len=50) internal_file4
@@ -178,6 +178,6 @@ subroutine s(aa, n)
   !ERROR: Input variable 'n' must be definable
   read(*, *) n
 
-  !ERROR: Whole assumed size array 'aa' may not be an input item
+  !ERROR: Whole assumed-size array 'aa' may not appear here without subscripts
   read(*, *) aa
 end

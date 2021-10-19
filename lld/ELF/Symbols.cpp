@@ -37,11 +37,9 @@ std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
   std::string ret = demangle(name);
 
-  // If sym has a non-default version, its name may have been truncated at '@'
-  // by Symbol::parseSymbolVersion(). Add the trailing part. This check is safe
-  // because every symbol name ends with '\0'.
-  if (name.data()[name.size()] == '@')
-    ret += name.data() + name.size();
+  const char *suffix = sym.getVersionSuffix();
+  if (*suffix == '@')
+    ret += suffix;
   return ret;
 }
 
@@ -64,7 +62,10 @@ Defined *ElfSym::relaIpltStart;
 Defined *ElfSym::relaIpltEnd;
 Defined *ElfSym::riscvGlobalPointer;
 Defined *ElfSym::tlsModuleBase;
-DenseMap<const Symbol *, const InputFile *> elf::backwardReferences;
+DenseMap<const Symbol *, std::pair<const InputFile *, const InputFile *>>
+    elf::backwardReferences;
+SmallVector<std::tuple<std::string, const InputFile *, const Symbol &>, 0>
+    elf::whyExtract;
 
 static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
   switch (sym.kind()) {
@@ -161,7 +162,9 @@ uint64_t Symbol::getGotVA() const {
   return in.got->getVA() + getGotOffset();
 }
 
-uint64_t Symbol::getGotOffset() const { return gotIndex * config->wordsize; }
+uint64_t Symbol::getGotOffset() const {
+  return gotIndex * target->gotEntrySize;
+}
 
 uint64_t Symbol::getGotPltVA() const {
   if (isInIplt)
@@ -171,8 +174,8 @@ uint64_t Symbol::getGotPltVA() const {
 
 uint64_t Symbol::getGotPltOffset() const {
   if (isInIplt)
-    return pltIndex * config->wordsize;
-  return (pltIndex + target->gotPltHeaderEntriesNum) * config->wordsize;
+    return pltIndex * target->gotEntrySize;
+  return (pltIndex + target->gotPltHeaderEntriesNum) * target->gotEntrySize;
 }
 
 uint64_t Symbol::getPltVA() const {
@@ -207,6 +210,9 @@ OutputSection *Symbol::getOutputSection() const {
 // If a symbol name contains '@', the characters after that is
 // a symbol version name. This function parses that.
 void Symbol::parseSymbolVersion() {
+  // Return if localized by a local: pattern in a version script.
+  if (versionId == VER_NDX_LOCAL)
+    return;
   StringRef s = getName();
   size_t pos = s.find('@');
   if (pos == 0 || pos == StringRef::npos)
@@ -278,7 +284,7 @@ uint8_t Symbol::computeBinding() const {
   if (config->relocatable)
     return binding;
   if ((visibility != STV_DEFAULT && visibility != STV_PROTECTED) ||
-      (versionId == VER_NDX_LOCAL && isDefined()))
+      (versionId == VER_NDX_LOCAL && !isLazy()))
     return STB_LOCAL;
   if (!config->gnuUnique && binding == STB_GNU_UNIQUE)
     return STB_GLOBAL;
@@ -315,6 +321,11 @@ void elf::printTraceSymbol(const Symbol *sym) {
     s = ": definition of ";
 
   message(toString(sym->file) + s + sym->getName());
+}
+
+static void recordWhyExtract(const InputFile *reference,
+                             const InputFile &extracted, const Symbol &sym) {
+  whyExtract.emplace_back(toString(reference), &extracted, sym);
 }
 
 void elf::maybeWarnUnorderableSymbol(const Symbol *sym) {
@@ -367,8 +378,12 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 
   // If -Bsymbolic or --dynamic-list is specified, or -Bsymbolic-functions is
   // specified and the symbol is STT_FUNC, the symbol is preemptible iff it is
-  // in the dynamic list.
-  if (config->symbolic || (config->bsymbolicFunctions && sym.isFunc()))
+  // in the dynamic list. -Bsymbolic-non-weak-functions is a non-weak subset of
+  // -Bsymbolic-functions.
+  if (config->symbolic ||
+      (config->bsymbolic == BsymbolicKind::Functions && sym.isFunc()) ||
+      (config->bsymbolic == BsymbolicKind::NonWeakFunctions && sym.isFunc() &&
+       sym.binding != STB_WEAK))
     return sym.inDynamicList;
   return true;
 }
@@ -376,8 +391,18 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
 void elf::reportBackrefs() {
   for (auto &it : backwardReferences) {
     const Symbol &sym = *it.first;
-    warn("backward reference detected: " + sym.getName() + " in " +
-         toString(it.second) + " refers to " + toString(sym.file));
+    std::string to = toString(it.second.second);
+    // Some libraries have known problems and can cause noise. Filter them out
+    // with --warn-backrefs-exclude=. to may look like *.o or *.a(*.o).
+    bool exclude = false;
+    for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
+      if (pat.match(to)) {
+        exclude = true;
+        break;
+      }
+    if (!exclude)
+      warn("backward reference detected: " + sym.getName() + " in " +
+           toString(it.second.first) + " refers to " + to);
   }
 }
 
@@ -513,18 +538,10 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // group assignment rule simulates the traditional linker's semantics.
     bool backref = config->warnBackrefs && other.file &&
                    file->groupId < other.file->groupId;
-    if (backref) {
-      // Some libraries have known problems and can cause noise. Filter them out
-      // with --warn-backrefs-exclude=.
-      StringRef name =
-          !file->archiveName.empty() ? file->archiveName : file->getName();
-      for (const llvm::GlobPattern &pat : config->warnBackrefsExclude)
-        if (pat.match(name)) {
-          backref = false;
-          break;
-        }
-    }
     fetch();
+
+    if (!config->whyExtract.empty())
+      recordWhyExtract(other.file, *file, *this);
 
     // We don't report backward references to weak symbols as they can be
     // overridden later.
@@ -532,9 +549,10 @@ void Symbol::resolveUndefined(const Undefined &other) {
     // A traditional linker does not error for -ldef1 -lref -ldef2 (linking
     // sandwich), where def2 may or may not be the same as def1. We don't want
     // to warn for this case, so dismiss the warning if we see a subsequent lazy
-    // definition.
+    // definition. this->file needs to be saved because in the case of LTO it
+    // may be reset to nullptr or be replaced with a file named lto.tmp.
     if (backref && !isWeak())
-      backwardReferences.try_emplace(this, other.file);
+      backwardReferences.try_emplace(this, std::make_pair(other.file, file));
     return;
   }
 
@@ -690,7 +708,33 @@ void Symbol::resolveDefined(const Defined &other) {
                     other.value);
 }
 
+template <class LazyT>
+static void replaceCommon(Symbol &oldSym, const LazyT &newSym) {
+  backwardReferences.erase(&oldSym);
+  oldSym.replace(newSym);
+  newSym.fetch();
+}
+
 template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
+  // For common objects, we want to look for global or weak definitions that
+  // should be fetched as the canonical definition instead.
+  if (isCommon() && elf::config->fortranCommon) {
+    if (auto *laSym = dyn_cast<LazyArchive>(&other)) {
+      ArchiveFile *archive = cast<ArchiveFile>(laSym->file);
+      const Archive::Symbol &archiveSym = laSym->sym;
+      if (archive->shouldFetchForCommon(archiveSym)) {
+        replaceCommon(*this, other);
+        return;
+      }
+    } else if (auto *loSym = dyn_cast<LazyObject>(&other)) {
+      LazyObjFile *obj = cast<LazyObjFile>(loSym->file);
+      if (obj->shouldFetchForCommon(loSym->getName())) {
+        replaceCommon(*this, other);
+        return;
+      }
+    }
+  }
+
   if (!isUndefined()) {
     // See the comment in resolveUndefined().
     if (isDefined())
@@ -708,7 +752,10 @@ template <class LazyT> void Symbol::resolveLazy(const LazyT &other) {
     return;
   }
 
+  const InputFile *oldFile = file;
   other.fetch();
+  if (!config->whyExtract.empty())
+    recordWhyExtract(oldFile, *file, *this);
 }
 
 void Symbol::resolveShared(const SharedSymbol &other) {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-dispatch-method=mixed -fobjc-runtime-has-weak -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
 @interface NSObject
 - (id) new;
@@ -7,6 +7,7 @@
 @interface MyObject : NSObject
 - (char)isEqual:(id) __attribute__((ns_consumed)) object;
 - (_Complex float) asComplexWithArg: (id) __attribute__((ns_consumed)) object;
++(instancetype)m0:(id) __attribute__((ns_consumed)) object;
 @end
 
 MyObject *x;
@@ -16,7 +17,7 @@ void test0(void) {
   id obj = [NSObject new];
   [x isEqual : obj];
 }
-// CHECK-LABEL:     define void @test0()
+// CHECK-LABEL:     define{{.*}} void @test0()
 // CHECK:       [[FIVE:%.*]] = call i8* @llvm.objc.retain
 // CHECK-NEXT:  [[SIX:%.*]] = bitcast
 // CHECK-NEXT:  [[SEVEN:%.*]]  = icmp eq i8* [[SIX]], null
@@ -36,7 +37,7 @@ void test1(void) {
   __weak id weakObj = obj;
   _Complex float result = [x asComplexWithArg: obj];
 }
-// CHECK-LABEL:    define void @test1()
+// CHECK-LABEL:    define{{.*}} void @test1()
 // CHECK:      [[OBJ:%.*]] = alloca i8*, align 8
 // CHECK-NEXT: [[WEAKOBJ:%.*]] = alloca i8*, align 8
 // CHECK-NEXT: [[RESULT:%.*]] = alloca { float, float }, align 4
@@ -81,5 +82,28 @@ void test1(void) {
 //   Cleanup.
 // CHECK:      landingpad
 // CHECK:      call void @llvm.objc.destroyWeak(i8** [[WEAKOBJ]]) [[NUW]]
+
+void test2(id a) {
+  id obj = [MyObject m0:a];
+}
+
+// CHECK-LABEL: define{{.*}} void @test2(
+// CHECK: %[[CALL:.*]] = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
+// CHECK-NEXT: %[[V6:.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL]])
+
+// CHECK: phi i8* [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
+
+void test3(id a) {
+  @try {
+    id obj = [MyObject m0:a];
+  } @catch (id x) {
+  }
+}
+
+// CHECK-LABEL: define{{.*}} void @test3(
+// CHECK: %[[CALL:.*]] = invoke i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
+// CHECK: %[[V6:.*]] = {{.*}}call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[CALL]])
+
+// CHECK: phi i8* [ %[[V6]], %{{.*}} ], [ null, %{{.*}} ]
 
 // CHECK: attributes [[NUW]] = { nounwind }

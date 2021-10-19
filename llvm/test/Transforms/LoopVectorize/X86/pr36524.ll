@@ -12,10 +12,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = add i64 2, [[INDEX]]
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[OFFSET_IDX1]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], 0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 80
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0

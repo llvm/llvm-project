@@ -17,6 +17,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include <ciso646> // So we can check the C++ standard lib macros.
@@ -53,36 +54,6 @@ class Twine;
 /// Returns true if LLVM is compiled with support for multi-threading, and
 /// false otherwise.
 bool llvm_is_multithreaded();
-
-/// Execute the given \p UserFn on a separate thread, passing it the provided \p
-/// UserData and waits for thread completion.
-///
-/// This function does not guarantee that the code will actually be executed
-/// on a separate thread or honoring the requested stack size, but tries to do
-/// so where system support is available.
-///
-/// \param UserFn - The callback to execute.
-/// \param UserData - An argument to pass to the callback function.
-/// \param StackSizeInBytes - A requested size (in bytes) for the thread stack
-/// (or None for default)
-void llvm_execute_on_thread(
-    void (*UserFn)(void *), void *UserData,
-    llvm::Optional<unsigned> StackSizeInBytes = llvm::None);
-
-/// Schedule the given \p Func for execution on a separate thread, then return
-/// to the caller immediately. Roughly equivalent to
-/// `std::thread(Func).detach()`, except it allows requesting a specific stack
-/// size, if supported for the platform.
-///
-/// This function would report a fatal error if it can't execute the code
-/// on a separate thread.
-///
-/// \param Func - The callback to execute.
-/// \param StackSizeInBytes - A requested size (in bytes) for the thread stack
-/// (or None for default)
-void llvm_execute_on_thread_async(
-    llvm::unique_function<void()> Func,
-    llvm::Optional<unsigned> StackSizeInBytes = llvm::None);
 
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
@@ -210,13 +181,23 @@ void llvm_execute_on_thread_async(
     return heavyweight_hardware_concurrency();
   }
 
-  /// Returns a default thread strategy where all available hardware ressources
+  /// Returns a default thread strategy where all available hardware resources
   /// are to be used, except for those initially excluded by an affinity mask.
   /// This function takes affinity into consideration. Returns 1 when LLVM is
   /// configured with LLVM_ENABLE_THREADS=OFF.
   inline ThreadPoolStrategy hardware_concurrency(unsigned ThreadCount = 0) {
     ThreadPoolStrategy S;
     S.ThreadsRequested = ThreadCount;
+    return S;
+  }
+
+  /// Returns an optimal thread strategy to execute specified amount of tasks.
+  /// This strategy should prevent us from creating too many threads if we
+  /// occasionaly have an unexpectedly small amount of tasks.
+  inline ThreadPoolStrategy optimal_concurrency(unsigned TaskCount = 0) {
+    ThreadPoolStrategy S;
+    S.Limit = true;
+    S.ThreadsRequested = TaskCount;
     return S;
   }
 

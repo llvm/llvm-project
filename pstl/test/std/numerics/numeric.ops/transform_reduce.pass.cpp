@@ -37,7 +37,7 @@ class MyClass
     int32_t my_field;
     MyClass() { my_field = 0; }
     MyClass(int32_t in) { my_field = in; }
-    MyClass(const MyClass& in) { my_field = in.my_field; }
+    MyClass(const MyClass& in) = default;
 
     friend MyClass
     operator+(const MyClass& x, const MyClass& y)

@@ -1,15 +1,15 @@
 ; REQUIRES: x86
 ; Set up an import library for a DLL that will do the indirect call.
 ; RUN: echo -e 'LIBRARY library\nEXPORTS\n  do_indirect_call\n' > %t.def
-; RUN: lld-link -lib -def:%t.def -out:%t.lib -machine:x64
+; RUN: lld-link -def:%t.def -out:%t.lib -machine:x64
 
 ; Generate an object that will have the load configuration normally provided by
 ; the CRT.
 ; RUN: llvm-mc -triple x86_64-windows-msvc -filetype=obj %S/Inputs/loadconfig-cfg-x64.s -o %t.ldcfg.obj
 
 ; RUN: llvm-as %s -o %t.bc
-; RUN: lld-link -entry:main -guard:cf -dll %t.bc %t.lib %t.ldcfg.obj -out:%t.dll
-; RUN: llvm-readobj --coff-load-config %t.dll | FileCheck %s
+; RUN: lld-link -entry:main -guard:cf -guard:longjmp -dll %t.bc %t.lib %t.ldcfg.obj -out:%t2.dll
+; RUN: llvm-readobj --coff-load-config %t2.dll | FileCheck %s
 
 ; There must be *two* entries in the table: DLL entry point, and my_handler.
 

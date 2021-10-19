@@ -17,6 +17,19 @@ define i1 @test1(i1 %a, i1 %b) {
   ret i1 %and
 }
 
+define i1 @test1_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test1_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[B:%.*]], i1 [[WC]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[LHS]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %lhs = select i1 %b, i1 %wc, i1 false
+  %and = select i1 %lhs, i1 %a, i1 false
+  ret i1 %and
+}
+
 ; Negative test - profitability of dropping WC from first use unclear
 define i1 @test1b(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1b(
@@ -30,6 +43,21 @@ define i1 @test1b(i1 %a, i1 %b) {
   %lhs = and i1 %b, %wc
   call void @use(i1 %lhs)
   %and = and i1 %lhs, %a
+  ret i1 %and
+}
+
+define i1 @test1b_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test1b_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[B:%.*]], i1 [[WC]], i1 false
+; CHECK-NEXT:    call void @use(i1 [[LHS]])
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[LHS]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %lhs = select i1 %b, i1 %wc, i1 false
+  call void @use(i1 %lhs)
+  %and = select i1 %lhs, i1 %a, i1 false
   ret i1 %and
 }
 
@@ -53,6 +81,25 @@ define i1 @test1c(i1 %a, i1 %b) {
   ret i1 %and
 }
 
+define i1 @test1c_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test1c_logical(
+; CHECK-NEXT:    call void @use(i1 [[A:%.*]])
+; CHECK-NEXT:    call void @use(i1 [[B:%.*]])
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    call void @use(i1 [[WC]])
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[B]], i1 [[WC]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[LHS]], i1 [[A]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  call void @use(i1 %a)
+  call void @use(i1 %b)
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  call void @use(i1 %wc)
+  %lhs = select i1 %b, i1 %wc, i1 false
+  %and = select i1 %lhs, i1 %a, i1 false
+  ret i1 %and
+}
+
 define i1 @test2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -63,6 +110,19 @@ define i1 @test2(i1 %a, i1 %b) {
   %wc = call i1 @llvm.experimental.widenable.condition()
   %lhs = and i1 %wc, %b
   %and = and i1 %lhs, %a
+  ret i1 %and
+}
+
+define i1 @test2_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test2_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[WC]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[LHS]], i1 [[A:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %lhs = select i1 %wc, i1 %b, i1 false
+  %and = select i1 %lhs, i1 %a, i1 false
   ret i1 %and
 }
 
@@ -83,6 +143,21 @@ define i1 @test3(i1 %a, i1 %b, i1 %c) {
   ret i1 %and
 }
 
+define i1 @test3_logical(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test3_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[LHS]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i1 [[WC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %lhs = select i1 %a, i1 %b, i1 false
+  %rhs = select i1 %c, i1 %wc, i1 false
+  %and = select i1 %lhs, i1 %rhs, i1 false
+  ret i1 %and
+}
+
 define i1 @test4(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -98,6 +173,21 @@ define i1 @test4(i1 %a, i1 %b, i1 %c) {
   ret i1 %and
 }
 
+define i1 @test4_logical(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @test4_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[LHS]], i1 [[WC]], i1 false
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %lhs = select i1 %a, i1 %b, i1 false
+  %rhs = select i1 %wc, i1 %c, i1 false
+  %and = select i1 %lhs, i1 %rhs, i1 false
+  ret i1 %and
+}
+
 define i1 @test5(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -105,6 +195,16 @@ define i1 @test5(i1 %a, i1 %b) {
 ;
   %wc = call i1 @llvm.experimental.widenable.condition()
   %and = and i1 %wc, %wc
+  ret i1 %and
+}
+
+define i1 @test5_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test5_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    ret i1 [[WC]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %and = select i1 %wc, i1 %wc, i1 false
   ret i1 %and
 }
 
@@ -118,6 +218,19 @@ define i1 @test6(i1 %a, i1 %b) {
   %wc = call i1 @llvm.experimental.widenable.condition()
   %wc2 = call i1 @llvm.experimental.widenable.condition()
   %and = and i1 %wc, %wc2
+  ret i1 %and
+}
+
+define i1 @test6_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test6_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[WC]], i1 [[WC2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %wc2 = call i1 @llvm.experimental.widenable.condition()
+  %and = select i1 %wc, i1 %wc2, i1 false
   ret i1 %and
 }
 
@@ -136,6 +249,21 @@ define i1 @test7(i1 %a, i1 %b) {
   ret i1 %and
 }
 
+define i1 @test7_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test7_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    call void @use(i1 [[WC]])
+; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[WC]], i1 [[WC2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  call void @use(i1 %wc)
+  %wc2 = call i1 @llvm.experimental.widenable.condition()
+  %and = select i1 %wc, i1 %wc2, i1 false
+  ret i1 %and
+}
+
 define i1 @test8(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
@@ -148,6 +276,21 @@ define i1 @test8(i1 %a, i1 %b) {
   %wc2 = call i1 @llvm.experimental.widenable.condition()
   call void @use(i1 %wc2)
   %and = and i1 %wc, %wc2
+  ret i1 %and
+}
+
+define i1 @test8_logical(i1 %a, i1 %b) {
+; CHECK-LABEL: @test8_logical(
+; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    call void @use(i1 [[WC2]])
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[WC]], i1 [[WC2]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %wc = call i1 @llvm.experimental.widenable.condition()
+  %wc2 = call i1 @llvm.experimental.widenable.condition()
+  call void @use(i1 %wc2)
+  %and = select i1 %wc, i1 %wc2, i1 false
   ret i1 %and
 }
 

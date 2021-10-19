@@ -7,19 +7,16 @@
 //==-----------------------------------------------------------------------===//
 
 #include "R600FrameLowering.h"
-#include "AMDGPUSubtarget.h"
-#include "R600RegisterInfo.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/Support/MathExtras.h"
+#include "R600Subtarget.h"
 
 using namespace llvm;
 
 R600FrameLowering::~R600FrameLowering() = default;
 
 /// \returns The number of registers allocated for \p FI.
-int R600FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                              Register &FrameReg) const {
+StackOffset
+R600FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
+                                          Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const R600RegisterInfo *RI
     = MF.getSubtarget<R600Subtarget>().getRegisterInfo();
@@ -44,5 +41,5 @@ int R600FrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   if (FI != -1)
     OffsetBytes = alignTo(OffsetBytes, MFI.getObjectAlign(FI));
 
-  return OffsetBytes / (getStackWidth(MF) * 4);
+  return StackOffset::getFixed(OffsetBytes / (getStackWidth(MF) * 4));
 }

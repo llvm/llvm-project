@@ -10,4 +10,4 @@ Sections:
         Kind:            FUNCTION
         Index:           0x00000001
 
-# CHECK: Error reading file: <stdin>: Invalid function export
+# CHECK: Error reading file: <stdin>: invalid function export

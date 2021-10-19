@@ -240,7 +240,7 @@ EmptySubobjectMap::CanPlaceSubobjectAtOffset(const CXXRecordDecl *RD,
     return true;
 
   const ClassVectorTy &Classes = I->second;
-  if (llvm::find(Classes, RD) == Classes.end())
+  if (!llvm::is_contained(Classes, RD))
     return true;
 
   // There is already an empty class of the same type at this offset.
@@ -615,6 +615,8 @@ protected:
 
   unsigned IsMac68kAlign : 1;
 
+  unsigned IsNaturalAlign : 1;
+
   unsigned IsMsStruct : 1;
 
   /// UnfilledBitsInLastUnit - If the last field laid out was a bitfield,
@@ -622,9 +624,10 @@ protected:
   /// an adjacent bitfield if necessary.  The unit in question is usually
   /// a byte, but larger units are used if IsMsStruct.
   unsigned char UnfilledBitsInLastUnit;
-  /// LastBitfieldTypeSize - If IsMsStruct, represents the size of the type
-  /// of the previous field if it was a bitfield.
-  unsigned char LastBitfieldTypeSize;
+
+  /// LastBitfieldStorageUnitSize - If IsMsStruct, represents the size of the
+  /// storage unit of the previous field if it was a bitfield.
+  unsigned char LastBitfieldStorageUnitSize;
 
   /// MaxFieldAlignment - The maximum allowed field alignment. This is set by
   /// #pragma pack.
@@ -692,8 +695,10 @@ protected:
         UnpackedAlignment(CharUnits::One()),
         UnadjustedAlignment(CharUnits::One()), UseExternalLayout(false),
         InferAlignment(false), Packed(false), IsUnion(false),
-        IsMac68kAlign(false), IsMsStruct(false), UnfilledBitsInLastUnit(0),
-        LastBitfieldTypeSize(0), MaxFieldAlignment(CharUnits::Zero()),
+        IsMac68kAlign(false),
+        IsNaturalAlign(!Context.getTargetInfo().getTriple().isOSAIX()),
+        IsMsStruct(false), UnfilledBitsInLastUnit(0),
+        LastBitfieldStorageUnitSize(0), MaxFieldAlignment(CharUnits::Zero()),
         DataSize(0), NonVirtualSize(CharUnits::Zero()),
         NonVirtualAlignment(CharUnits::One()),
         PreferredNVAlignment(CharUnits::One()),
@@ -708,7 +713,7 @@ protected:
 
   void LayoutFields(const RecordDecl *D);
   void LayoutField(const FieldDecl *D, bool InsertExtraPadding);
-  void LayoutWideBitField(uint64_t FieldSize, uint64_t TypeSize,
+  void LayoutWideBitField(uint64_t FieldSize, uint64_t StorageUnitSize,
                           bool FieldPacked, const FieldDecl *D);
   void LayoutBitField(const FieldDecl *D);
 
@@ -1242,7 +1247,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
       // By handling a base class that is not empty, we're handling the
       // "first (inherited) member".
       HandledFirstNonOverlappingEmptyField = true;
-    } else {
+    } else if (!IsNaturalAlign) {
       UnpackedPreferredBaseAlign = UnpackedBaseAlign;
       PreferredBaseAlign = BaseAlign;
     }
@@ -1312,8 +1317,6 @@ void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
   }
 
   Packed = D->hasAttr<PackedAttr>();
-  HandledFirstNonOverlappingEmptyField =
-      !Context.getTargetInfo().defaultsToAIXPowerAlignment();
 
   // Honor the default struct packing maximum alignment flag.
   if (unsigned DefaultMaxFieldAlignment = Context.getLangOpts().PackStruct) {
@@ -1325,17 +1328,26 @@ void ItaniumRecordLayoutBuilder::InitializeLayout(const Decl *D) {
   // allude to additional (more complicated) semantics, especially with regard
   // to bit-fields, but gcc appears not to follow that.
   if (D->hasAttr<AlignMac68kAttr>()) {
+    assert(
+        !D->hasAttr<AlignNaturalAttr>() &&
+        "Having both mac68k and natural alignment on a decl is not allowed.");
     IsMac68kAlign = true;
     MaxFieldAlignment = CharUnits::fromQuantity(2);
     Alignment = CharUnits::fromQuantity(2);
     PreferredAlignment = CharUnits::fromQuantity(2);
   } else {
+    if (D->hasAttr<AlignNaturalAttr>())
+      IsNaturalAlign = true;
+
     if (const MaxFieldAlignmentAttr *MFAA = D->getAttr<MaxFieldAlignmentAttr>())
       MaxFieldAlignment = Context.toCharUnitsFromBits(MFAA->getAlignment());
 
     if (unsigned MaxAlign = D->getMaxAlignment())
       UpdateAlignment(Context.toCharUnitsFromBits(MaxAlign));
   }
+
+  HandledFirstNonOverlappingEmptyField =
+      !Context.getTargetInfo().defaultsToAIXPowerAlignment() || IsNaturalAlign;
 
   // If there is an external AST source, ask it for the various offsets.
   if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))
@@ -1451,7 +1463,7 @@ roundUpSizeToCharAlignment(uint64_t Size,
 }
 
 void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
-                                                    uint64_t TypeSize,
+                                                    uint64_t StorageUnitSize,
                                                     bool FieldPacked,
                                                     const FieldDecl *D) {
   assert(Context.getLangOpts().CPlusPlus &&
@@ -1481,7 +1493,7 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
 
   // We're not going to use any of the unfilled bits in the last byte.
   UnfilledBitsInLastUnit = 0;
-  LastBitfieldTypeSize = 0;
+  LastBitfieldStorageUnitSize = 0;
 
   uint64_t FieldOffset;
   uint64_t UnpaddedFieldOffset = getDataSizeInBits() - UnfilledBitsInLastUnit;
@@ -1516,12 +1528,17 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
   UpdateAlignment(TypeAlign);
 }
 
+static bool isAIXLayout(const ASTContext &Context) {
+  return Context.getTargetInfo().getTriple().getOS() == llvm::Triple::AIX;
+}
+
 void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
   uint64_t FieldSize = D->getBitWidthValue(Context);
   TypeInfo FieldInfo = Context.getTypeInfo(D->getType());
-  uint64_t TypeSize = FieldInfo.Width;
+  uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
+  bool AlignIsRequired = FieldInfo.isAlignRequired();
 
   // UnfilledBitsInLastUnit is the difference between the end of the
   // last allocated bitfield (i.e. the first bit offset available for
@@ -1529,7 +1546,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // first bit offset available for non-bitfields).  The current data
   // size in bits is always a multiple of the char size; additionally,
   // for ms_struct records it's also a multiple of the
-  // LastBitfieldTypeSize (if set).
+  // LastBitfieldStorageUnitSize (if set).
 
   // The struct-layout algorithm is dictated by the platform ABI,
   // which in principle could use almost any rules it likes.  In
@@ -1583,26 +1600,50 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // First, some simple bookkeeping to perform for ms_struct structs.
   if (IsMsStruct) {
     // The field alignment for integer types is always the size.
-    FieldAlign = TypeSize;
+    FieldAlign = StorageUnitSize;
 
     // If the previous field was not a bitfield, or was a bitfield
     // with a different storage unit size, or if this field doesn't fit into
     // the current storage unit, we're done with that storage unit.
-    if (LastBitfieldTypeSize != TypeSize ||
+    if (LastBitfieldStorageUnitSize != StorageUnitSize ||
         UnfilledBitsInLastUnit < FieldSize) {
       // Also, ignore zero-length bitfields after non-bitfields.
-      if (!LastBitfieldTypeSize && !FieldSize)
+      if (!LastBitfieldStorageUnitSize && !FieldSize)
         FieldAlign = 1;
 
       UnfilledBitsInLastUnit = 0;
-      LastBitfieldTypeSize = 0;
+      LastBitfieldStorageUnitSize = 0;
+    }
+  }
+
+  if (isAIXLayout(Context)) {
+    if (StorageUnitSize < Context.getTypeSize(Context.UnsignedIntTy)) {
+      // On AIX, [bool, char, short] bitfields have the same alignment
+      // as [unsigned].
+      StorageUnitSize = Context.getTypeSize(Context.UnsignedIntTy);
+    } else if (StorageUnitSize > Context.getTypeSize(Context.UnsignedIntTy) &&
+               Context.getTargetInfo().getTriple().isArch32Bit() &&
+               FieldSize <= 32) {
+      // Under 32-bit compile mode, the bitcontainer is 32 bits if a single
+      // long long bitfield has length no greater than 32 bits.
+      StorageUnitSize = 32;
+
+      if (!AlignIsRequired)
+        FieldAlign = 32;
+    }
+
+    if (FieldAlign < StorageUnitSize) {
+      // The bitfield alignment should always be greater than or equal to
+      // bitcontainer size.
+      FieldAlign = StorageUnitSize;
     }
   }
 
   // If the field is wider than its declared type, it follows
-  // different rules in all cases.
-  if (FieldSize > TypeSize) {
-    LayoutWideBitField(FieldSize, TypeSize, FieldPacked, D);
+  // different rules in all cases, except on AIX.
+  // On AIX, wide bitfield follows the same rules as normal bitfield.
+  if (FieldSize > StorageUnitSize && !isAIXLayout(Context)) {
+    LayoutWideBitField(FieldSize, StorageUnitSize, FieldPacked, D);
     return;
   }
 
@@ -1615,12 +1656,17 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // Some such targets do honor it on zero-width bitfields.
     if (FieldSize == 0 &&
         Context.getTargetInfo().useZeroLengthBitfieldAlignment()) {
-      // The alignment to round up to is the max of the field's natural
-      // alignment and a target-specific fixed value (sometimes zero).
-      unsigned ZeroLengthBitfieldBoundary =
-        Context.getTargetInfo().getZeroLengthBitfieldBoundary();
-      FieldAlign = std::max(FieldAlign, ZeroLengthBitfieldBoundary);
-
+      // Some targets don't honor leading zero-width bitfield.
+      if (!IsUnion && FieldOffset == 0 &&
+          !Context.getTargetInfo().useLeadingZeroLengthBitfield())
+        FieldAlign = 1;
+      else {
+        // The alignment to round up to is the max of the field's natural
+        // alignment and a target-specific fixed value (sometimes zero).
+        unsigned ZeroLengthBitfieldBoundary =
+            Context.getTargetInfo().getZeroLengthBitfieldBoundary();
+        FieldAlign = std::max(FieldAlign, ZeroLengthBitfieldBoundary);
+      }
     // If that doesn't apply, just ignore the field alignment.
     } else {
       FieldAlign = 1;
@@ -1686,7 +1732,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // Compute the real offset.
     if (FieldSize == 0 ||
         (AllowPadding &&
-         (FieldOffset & (FieldAlign-1)) + FieldSize > TypeSize)) {
+         (FieldOffset & (FieldAlign - 1)) + FieldSize > StorageUnitSize)) {
       FieldOffset = llvm::alignTo(FieldOffset, FieldAlign);
     } else if (ExplicitFieldAlign &&
                (MaxFieldAlignmentInBits == 0 ||
@@ -1700,7 +1746,8 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // Repeat the computation for diagnostic purposes.
     if (FieldSize == 0 ||
         (AllowPadding &&
-         (UnpackedFieldOffset & (UnpackedFieldAlign-1)) + FieldSize > TypeSize))
+         (UnpackedFieldOffset & (UnpackedFieldAlign - 1)) + FieldSize >
+             StorageUnitSize))
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, UnpackedFieldAlign);
     else if (ExplicitFieldAlign &&
@@ -1728,6 +1775,19 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       !D->getIdentifier())
     FieldAlign = UnpackedFieldAlign = 1;
 
+  // On AIX, zero-width bitfields pad out to the natural alignment boundary,
+  // but do not increase the alignment greater than the MaxFieldAlignment, or 1
+  // if packed.
+  if (isAIXLayout(Context) && !FieldSize) {
+    if (FieldPacked)
+      FieldAlign = 1;
+    if (!MaxFieldAlignment.isZero()) {
+      UnpackedFieldAlign =
+          std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
+      FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
+    }
+  }
+
   // Diagnose differences in layout due to padding or packing.
   if (!UseExternalLayout)
     CheckFieldPadding(FieldOffset, UnpaddedFieldOffset, UnpackedFieldOffset,
@@ -1741,11 +1801,11 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // is a zero-width bitfield, in which case just use a size of 1.
     uint64_t RoundedFieldSize;
     if (IsMsStruct) {
-      RoundedFieldSize =
-        (FieldSize ? TypeSize : Context.getTargetInfo().getCharWidth());
+      RoundedFieldSize = (FieldSize ? StorageUnitSize
+                                    : Context.getTargetInfo().getCharWidth());
 
-    // Otherwise, allocate just the number of bytes required to store
-    // the bitfield.
+      // Otherwise, allocate just the number of bytes required to store
+      // the bitfield.
     } else {
       RoundedFieldSize = roundUpSizeToCharAlignment(FieldSize, Context);
     }
@@ -1757,15 +1817,15 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // We should have cleared UnfilledBitsInLastUnit in every case
     // where we changed storage units.
     if (!UnfilledBitsInLastUnit) {
-      setDataSize(FieldOffset + TypeSize);
-      UnfilledBitsInLastUnit = TypeSize;
+      setDataSize(FieldOffset + StorageUnitSize);
+      UnfilledBitsInLastUnit = StorageUnitSize;
     }
     UnfilledBitsInLastUnit -= FieldSize;
-    LastBitfieldTypeSize = TypeSize;
+    LastBitfieldStorageUnitSize = StorageUnitSize;
 
-  // Otherwise, bump the data size up to include the bitfield,
-  // including padding up to char alignment, and then remember how
-  // bits we didn't use.
+    // Otherwise, bump the data size up to include the bitfield,
+    // including padding up to char alignment, and then remember how
+    // bits we didn't use.
   } else {
     uint64_t NewSizeInBits = FieldOffset + FieldSize;
     uint64_t CharAlignment = Context.getTargetInfo().getCharAlign();
@@ -1775,7 +1835,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // The only time we can get here for an ms_struct is if this is a
     // zero-width bitfield, which doesn't count as anything for the
     // purposes of unfilled bits.
-    LastBitfieldTypeSize = 0;
+    LastBitfieldStorageUnitSize = 0;
   }
 
   // Update the size.
@@ -1825,11 +1885,11 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   uint64_t UnpaddedFieldOffset = getDataSizeInBits() - UnfilledBitsInLastUnit;
   // Reset the unfilled bits.
   UnfilledBitsInLastUnit = 0;
-  LastBitfieldTypeSize = 0;
+  LastBitfieldStorageUnitSize = 0;
 
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
 
-  bool AlignIsRequired = false;
+  AlignRequirementKind AlignRequirement = AlignRequirementKind::None;
   CharUnits FieldSize;
   CharUnits FieldAlign;
   // The amount of this class's dsize occupied by the field.
@@ -1839,12 +1899,12 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   auto setDeclInfo = [&](bool IsIncompleteArrayType) {
     auto TI = Context.getTypeInfoInChars(D->getType());
-    FieldAlign = TI.second;
+    FieldAlign = TI.Align;
     // Flexible array members don't have any size, but they have to be
     // aligned appropriately for their element type.
     EffectiveFieldSize = FieldSize =
-        IsIncompleteArrayType ? CharUnits::Zero() : TI.first;
-    AlignIsRequired = Context.getTypeInfo(D->getType()).AlignIsRequired;
+        IsIncompleteArrayType ? CharUnits::Zero() : TI.Width;
+    AlignRequirement = TI.AlignRequirement;
   };
 
   if (D->getType()->isIncompleteArrayType()) {
@@ -1894,7 +1954,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
           // Since the combination of -mms-bitfields together with structs
           // like max_align_t (which contains a long double) for mingw is
-          // quite comon (and GCC handles it silently), just handle it
+          // quite common (and GCC handles it silently), just handle it
           // silently there. For other targets that have ms_struct enabled
           // (most probably via a pragma or attribute), trigger a diagnostic
           // that defaults to an error.
@@ -1908,6 +1968,19 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     }
   }
 
+  // When used as part of a typedef, or together with a 'packed' attribute, the
+  // 'aligned' attribute can be used to decrease alignment. In that case, it
+  // overrides any computed alignment we have, and there is no need to upgrade
+  // the alignment.
+  auto alignedAttrCanDecreaseAIXAlignment = [AlignRequirement, FieldPacked] {
+    // Enum alignment sources can be safely ignored here, because this only
+    // helps decide whether we need the AIX alignment upgrade, which only
+    // applies to floating-point types.
+    return AlignRequirement == AlignRequirementKind::RequiredByTypedef ||
+           (AlignRequirement == AlignRequirementKind::RequiredByRecord &&
+            FieldPacked);
+  };
+
   // The AIX `power` alignment rules apply the natural alignment of the
   // "first member" if it is of a floating-point data type (or is an aggregate
   // whose recursively "first" member or element is such a type). The alignment
@@ -1918,8 +1991,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   // and zero-width bit-fields count as prior members; members of empty class
   // types marked `no_unique_address` are not considered to be prior members.
   CharUnits PreferredAlign = FieldAlign;
-  if (DefaultsToAIXPowerAlignment && !AlignIsRequired &&
-      FoundFirstNonOverlappingEmptyFieldForAIX) {
+  if (DefaultsToAIXPowerAlignment && !alignedAttrCanDecreaseAIXAlignment() &&
+      (FoundFirstNonOverlappingEmptyFieldForAIX || IsNaturalAlign)) {
     auto performBuiltinTypeAlignmentUpgrade = [&](const BuiltinType *BTy) {
       if (BTy->getKind() == BuiltinType::Double ||
           BTy->getKind() == BuiltinType::LongDouble) {
@@ -1929,12 +2002,13 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       }
     };
 
-    const Type *Ty = D->getType()->getBaseElementTypeUnsafe();
-    if (const ComplexType *CTy = Ty->getAs<ComplexType>()) {
-      performBuiltinTypeAlignmentUpgrade(CTy->getElementType()->castAs<BuiltinType>());
-    } else if (const BuiltinType *BTy = Ty->getAs<BuiltinType>()) {
+    const Type *BaseTy = D->getType()->getBaseElementTypeUnsafe();
+    if (const ComplexType *CTy = BaseTy->getAs<ComplexType>()) {
+      performBuiltinTypeAlignmentUpgrade(
+          CTy->getElementType()->castAs<BuiltinType>());
+    } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
-    } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
+    } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
       const RecordDecl *RD = RT->getDecl();
       assert(RD && "Expected non-null RecordDecl.");
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
@@ -2275,7 +2349,8 @@ static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
     // If the key function is dllimport but the class isn't, then the class has
     // no key function. The DLL that exports the key function won't export the
     // vtable in this case.
-    if (MD->hasAttr<DLLImportAttr>() && !RD->hasAttr<DLLImportAttr>())
+    if (MD->hasAttr<DLLImportAttr>() && !RD->hasAttr<DLLImportAttr>() &&
+        !Context.getTargetInfo().hasPS4DLLImportExport())
       return nullptr;
 
     // We found it.
@@ -2556,7 +2631,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   // Track zero-sized subobjects here where it's already available.
   EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
   // Respect required alignment, this is necessary because we may have adjusted
-  // the alignment in the case of pragam pack.  Note that the required alignment
+  // the alignment in the case of pragma pack.  Note that the required alignment
   // doesn't actually apply to the struct alignment at this point.
   Alignment = std::max(Alignment, Info.Alignment);
   RequiredAlignment = std::max(RequiredAlignment, Layout.getRequiredAlignment());
@@ -2570,9 +2645,9 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     const FieldDecl *FD) {
   // Get the alignment of the field type's natural alignment, ignore any
   // alignment attributes.
-  ElementInfo Info;
-  std::tie(Info.Size, Info.Alignment) =
+  auto TInfo =
       Context.getTypeInfoInChars(FD->getType()->getUnqualifiedDesugaredType());
+  ElementInfo Info{TInfo.Width, TInfo.Align};
   // Respect align attributes on the field.
   CharUnits FieldRequiredAlignment =
       Context.toCharUnitsFromBits(FD->getMaxAlignment());
@@ -3329,6 +3404,7 @@ uint64_t ASTContext::getFieldOffset(const ValueDecl *VD) const {
 uint64_t ASTContext::lookupFieldBitOffset(const ObjCInterfaceDecl *OID,
                                           const ObjCImplementationDecl *ID,
                                           const ObjCIvarDecl *Ivar) const {
+  Ivar = Ivar->getCanonicalDecl();
   const ObjCInterfaceDecl *Container = Ivar->getContainingInterface();
 
   // FIXME: We should eliminate the need to have ObjCImplementationDecl passed
@@ -3529,7 +3605,10 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     } else {
       PrintOffset(OS, FieldOffset, IndentLevel);
     }
-    OS << Field.getType().getAsString() << ' ' << Field << '\n';
+    const QualType &FieldType = C.getLangOpts().DumpRecordLayoutsCanonical
+                                    ? Field.getType().getCanonicalType()
+                                    : Field.getType();
+    OS << FieldType.getAsString() << ' ' << Field << '\n';
   }
 
   // Dump virtual bases.

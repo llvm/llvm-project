@@ -20,7 +20,7 @@
 ; DWARF4: DW_AT_GNU_dwo_name{{.*}}test.dwo
 ; DWARF4: DW_AT_GNU_addr_base{{.*}}0x00000000
 ; DWARF4: DW_TAG_GNU_call_site
-; DWARF4:   DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000002) address = 0x0000000000000018 ".text")
+; DWARF4:   DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000002) address = 0x00000018 ".text")
 ; DWARF4: .debug_addr contents:
 ; DWARF4-NEXT: Addrs: [
 ; DWARF4-NEXT: 0x00000000
@@ -35,8 +35,8 @@
 ; DWARF5-NOT: DW_TAG_{{.*}}
 ; DWARF5: DW_AT_dwo_name{{.*}}test.dwo
 ; DWARF5: DW_AT_addr_base{{.*}}0x00000008
-; DWARF5: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x0000000000000000 ".text")
-; DWARF5: DW_AT_call_return_pc [DW_FORM_addrx] (indexed (00000002) address = 0x0000000000000018 ".text")
+; DWARF5: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x00000000 ".text")
+; DWARF5: DW_AT_call_return_pc [DW_FORM_addrx] (indexed (00000002) address = 0x00000018 ".text")
 ; DWARF5: .debug_addr contents:
 ; DWARF5-NEXT: 0x00000000: Address table header: length = 0x00000010, format = DWARF32, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 ; DWARF5-NEXT: Addrs: [

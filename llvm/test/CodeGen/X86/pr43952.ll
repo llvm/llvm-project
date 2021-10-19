@@ -6,7 +6,7 @@ define void @x() {
 ; CHECK:       ## %bb.0: ## %start
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-EMPTY:
-; CHECK-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1}
+; CHECK-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1}
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retq

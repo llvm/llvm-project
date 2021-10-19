@@ -139,7 +139,7 @@ static void RegionMemUsage(uptr start, uptr end, uptr *res, uptr *dirty) {
   *dirty = dirty_pages * GetPageSizeCached();
 }
 
-void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
+void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
   uptr shadow_res, shadow_dirty;
   uptr meta_res, meta_dirty;
   uptr trace_res, trace_dirty;
@@ -156,39 +156,41 @@ void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive) {
   RegionMemUsage(HeapMemBeg(), HeapMemEnd(), &heap_res, &heap_dirty);
 #else  // !SANITIZER_GO
   uptr app_res, app_dirty;
-  RegionMemUsage(AppMemBeg(), AppMemEnd(), &app_res, &app_dirty);
+  RegionMemUsage(LoAppMemBeg(), LoAppMemEnd(), &app_res, &app_dirty);
 #endif
 
-  StackDepotStats *stacks = StackDepotGetStats();
-  internal_snprintf(buf, buf_size,
-    "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#if !SANITIZER_GO
-    "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-    "heap     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#else  // !SANITIZER_GO
-    "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
-#endif
-    "stacks: %zd unique IDs, %zd kB allocated\n"
-    "threads: %zd total, %zd live\n"
-    "------------------------------\n",
-    ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
-    MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
-    TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
-#if !SANITIZER_GO
-    LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
-    HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
-    HeapMemBeg(), HeapMemEnd(), heap_res / 1024, heap_dirty / 1024,
-#else  // !SANITIZER_GO
-    AppMemBeg(), AppMemEnd(), app_res / 1024, app_dirty / 1024,
-#endif
-    stacks->n_uniq_ids, stacks->allocated / 1024,
-    nthread, nlive);
+  StackDepotStats stacks = StackDepotGetStats();
+  uptr nthread, nlive;
+  ctx->thread_registry.GetNumberOfThreads(&nthread, &nlive);
+  internal_snprintf(
+      buf, buf_size,
+      "shadow   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "meta     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "traces   (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+#  if !SANITIZER_GO
+      "low app  (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "high app (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+      "heap     (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+#  else  // !SANITIZER_GO
+      "app      (0x%016zx-0x%016zx): resident %zd kB, dirty %zd kB\n"
+#  endif
+      "stacks: %zd unique IDs, %zd kB allocated\n"
+      "threads: %zd total, %zd live\n"
+      "------------------------------\n",
+      ShadowBeg(), ShadowEnd(), shadow_res / 1024, shadow_dirty / 1024,
+      MetaShadowBeg(), MetaShadowEnd(), meta_res / 1024, meta_dirty / 1024,
+      TraceMemBeg(), TraceMemEnd(), trace_res / 1024, trace_dirty / 1024,
+#  if !SANITIZER_GO
+      LoAppMemBeg(), LoAppMemEnd(), low_res / 1024, low_dirty / 1024,
+      HiAppMemBeg(), HiAppMemEnd(), high_res / 1024, high_dirty / 1024,
+      HeapMemBeg(), HeapMemEnd(), heap_res / 1024, heap_dirty / 1024,
+#  else  // !SANITIZER_GO
+      LoAppMemBeg(), LoAppMemEnd(), app_res / 1024, app_dirty / 1024,
+#  endif
+      stacks.n_uniq_ids, stacks.allocated / 1024, nthread, nlive);
 }
 
-#if !SANITIZER_GO
+#  if !SANITIZER_GO
 void InitializeShadowMemoryPlatform() { }
 
 // On OS X, GCD worker threads are created without a call to pthread_create. We
@@ -215,8 +217,8 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
       Processor *proc = ProcCreate();
       ProcWire(proc, thr);
       ThreadState *parent_thread_state = nullptr;  // No parent.
-      int tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
-      CHECK_NE(tid, 0);
+      Tid tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
+      CHECK_NE(tid, kMainTid);
       ThreadStart(thr, tid, GetTid(), ThreadType::Worker);
     }
   } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
@@ -234,11 +236,11 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
 #endif
 
 void InitializePlatformEarly() {
-#if defined(__aarch64__)
+#  if !SANITIZER_GO && SANITIZER_IOS
   uptr max_vm = GetMaxUserVirtualAddress() + 1;
-  if (max_vm != Mapping::kHiAppMemEnd) {
+  if (max_vm != HiAppMemEnd()) {
     Printf("ThreadSanitizer: unsupported vm address limit %p, expected %p.\n",
-           max_vm, Mapping::kHiAppMemEnd);
+           max_vm, HiAppMemEnd());
     Die();
   }
 #endif
@@ -281,13 +283,17 @@ uptr ExtractLongJmpSp(uptr *env) {
 }
 
 #if !SANITIZER_GO
+extern "C" void __tsan_tls_initialization() {}
+
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // The pointer to the ThreadState object is stored in the shadow memory
   // of the tls.
   uptr tls_end = tls_addr + tls_size;
   uptr thread_identity = (uptr)pthread_self();
+  const uptr pc = StackTrace::GetNextInstructionPc(
+      reinterpret_cast<uptr>(__tsan_tls_initialization));
   if (thread_identity == main_thread_identity) {
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr, tls_size);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, tls_size);
   } else {
     uptr thr_state_start = thread_identity;
     uptr thr_state_end = thr_state_start + sizeof(uptr);
@@ -295,10 +301,8 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
     CHECK_LE(thr_state_start, tls_addr + tls_size);
     CHECK_GE(thr_state_end, tls_addr);
     CHECK_LE(thr_state_end, tls_addr + tls_size);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, tls_addr,
-                            thr_state_start - tls_addr);
-    MemoryRangeImitateWrite(thr, /*pc=*/2, thr_state_end,
-                            tls_end - thr_state_end);
+    MemoryRangeImitateWrite(thr, pc, tls_addr, thr_state_start - tls_addr);
+    MemoryRangeImitateWrite(thr, pc, thr_state_end, tls_end - thr_state_end);
   }
 }
 #endif
@@ -306,14 +310,13 @@ void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
 #if !SANITIZER_GO
 // Note: this function runs with async signals enabled,
 // so it must not touch any tsan state.
-int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
-    void *abstime), void *c, void *m, void *abstime,
-    void(*cleanup)(void *arg), void *arg) {
+int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
+                                     void (*cleanup)(void *arg), void *arg) {
   // pthread_cleanup_push/pop are hardcore macros mess.
   // We can't intercept nor call them w/o including pthread.h.
   int res;
   pthread_cleanup_push(cleanup, arg);
-  res = fn(c, m, abstime);
+  res = fn(arg);
   pthread_cleanup_pop(0);
   return res;
 }

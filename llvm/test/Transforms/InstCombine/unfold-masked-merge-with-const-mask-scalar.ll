@@ -60,10 +60,8 @@ define i4 @in_constant_varx_14(i4 %x, i4 %mask) {
 
 define i4 @in_constant_mone_vary(i4 %y, i4 %mask) {
 ; CHECK-LABEL: @in_constant_mone_vary(
-; CHECK-NEXT:    [[N0:%.*]] = and i4 [[Y:%.*]], 1
-; CHECK-NEXT:    [[N1:%.*]] = xor i4 [[N0]], 1
-; CHECK-NEXT:    [[R:%.*]] = xor i4 [[N1]], [[Y]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    [[R1:%.*]] = or i4 [[Y:%.*]], 1
+; CHECK-NEXT:    ret i4 [[R1]]
 ;
   %n0 = xor i4 %y, -1 ; %x
   %n1 = and i4 %n0, 1

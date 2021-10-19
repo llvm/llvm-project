@@ -14,15 +14,16 @@
 #ifndef LLVM_UNITTESTS_EXECUTIONENGINE_ORC_ORCTESTCOMMON_H
 #define LLVM_UNITTESTS_EXECUTIONENGINE_ORC_ORCTESTCOMMON_H
 
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
@@ -44,9 +45,15 @@ namespace orc {
 //     linkage and non-hidden visibility.
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
+public:
+  ~CoreAPIsBasedStandardTest() {
+    if (auto Err = ES.endSession())
+      ES.reportError(std::move(Err));
+  }
+
 protected:
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
-  ExecutionSession ES{SSP};
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(SSP)};
   JITDylib &JD = ES.createBareJITDylib("JD");
   SymbolStringPtr Foo = ES.intern("foo");
   SymbolStringPtr Bar = ES.intern("bar");
@@ -86,7 +93,7 @@ private:
 class SimpleMaterializationUnit : public orc::MaterializationUnit {
 public:
   using MaterializeFunction =
-      std::function<void(orc::MaterializationResponsibility)>;
+      std::function<void(std::unique_ptr<orc::MaterializationResponsibility>)>;
   using DiscardFunction =
       std::function<void(const orc::JITDylib &, orc::SymbolStringPtr)>;
   using DestructorFunction = std::function<void()>;
@@ -96,8 +103,7 @@ public:
       orc::SymbolStringPtr InitSym = nullptr,
       DiscardFunction Discard = DiscardFunction(),
       DestructorFunction Destructor = DestructorFunction())
-      : MaterializationUnit(std::move(SymbolFlags), std::move(InitSym),
-                            orc::VModuleKey()),
+      : MaterializationUnit(std::move(SymbolFlags), std::move(InitSym)),
         Materialize(std::move(Materialize)), Discard(std::move(Discard)),
         Destructor(std::move(Destructor)) {}
 
@@ -108,7 +114,8 @@ public:
 
   StringRef getName() const override { return "<Simple>"; }
 
-  void materialize(orc::MaterializationResponsibility R) override {
+  void
+  materialize(std::unique_ptr<orc::MaterializationResponsibility> R) override {
     Materialize(std::move(R));
   }
 
@@ -124,44 +131,6 @@ private:
   MaterializeFunction Materialize;
   DiscardFunction Discard;
   DestructorFunction Destructor;
-};
-
-// Base class for Orc tests that will execute code.
-class OrcExecutionTest {
-public:
-
-  OrcExecutionTest() {
-
-    // Initialize the native target if it hasn't been done already.
-    OrcNativeTarget::initialize();
-
-    // Try to select a TargetMachine for the host.
-    TM.reset(EngineBuilder().selectTarget());
-
-    if (TM) {
-      // If we found a TargetMachine, check that it's one that Orc supports.
-      const Triple& TT = TM->getTargetTriple();
-
-      // Bail out for windows platforms. We do not support these yet.
-      if ((TT.getArch() != Triple::x86_64 && TT.getArch() != Triple::x86) ||
-           TT.isOSWindows())
-        return;
-
-      // Target can JIT?
-      SupportsJIT = TM->getTarget().hasJIT();
-      // Use ability to create callback manager to detect whether Orc
-      // has indirection support on this platform. This way the test
-      // and Orc code do not get out of sync.
-      SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, ES, 0);
-    }
-  };
-
-protected:
-  orc::ExecutionSession ES;
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  bool SupportsJIT = false;
-  bool SupportsIndirection = false;
 };
 
 class ModuleBuilder {
@@ -189,89 +158,6 @@ struct DummyStruct {
 inline StructType *getDummyStructTy(LLVMContext &Context) {
   return StructType::get(ArrayType::get(Type::getInt32Ty(Context), 256));
 }
-
-template <typename HandleT, typename ModuleT>
-class MockBaseLayer {
-public:
-
-  using ModuleHandleT = HandleT;
-
-  using AddModuleSignature =
-    Expected<ModuleHandleT>(ModuleT M,
-                            std::shared_ptr<JITSymbolResolver> R);
-
-  using RemoveModuleSignature = Error(ModuleHandleT H);
-  using FindSymbolSignature = JITSymbol(const std::string &Name,
-                                        bool ExportedSymbolsOnly);
-  using FindSymbolInSignature = JITSymbol(ModuleHandleT H,
-                                          const std::string &Name,
-                                          bool ExportedSymbolsONly);
-  using EmitAndFinalizeSignature = Error(ModuleHandleT H);
-
-  std::function<AddModuleSignature> addModuleImpl;
-  std::function<RemoveModuleSignature> removeModuleImpl;
-  std::function<FindSymbolSignature> findSymbolImpl;
-  std::function<FindSymbolInSignature> findSymbolInImpl;
-  std::function<EmitAndFinalizeSignature> emitAndFinalizeImpl;
-
-  Expected<ModuleHandleT> addModule(ModuleT M,
-                                    std::shared_ptr<JITSymbolResolver> R) {
-    assert(addModuleImpl &&
-           "addModule called, but no mock implementation was provided");
-    return addModuleImpl(std::move(M), std::move(R));
-  }
-
-  Error removeModule(ModuleHandleT H) {
-    assert(removeModuleImpl &&
-           "removeModule called, but no mock implementation was provided");
-    return removeModuleImpl(H);
-  }
-
-  JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
-    assert(findSymbolImpl &&
-           "findSymbol called, but no mock implementation was provided");
-    return findSymbolImpl(Name, ExportedSymbolsOnly);
-  }
-
-  JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
-                         bool ExportedSymbolsOnly) {
-    assert(findSymbolInImpl &&
-           "findSymbolIn called, but no mock implementation was provided");
-    return findSymbolInImpl(H, Name, ExportedSymbolsOnly);
-  }
-
-  Error emitAndFinaliez(ModuleHandleT H) {
-    assert(emitAndFinalizeImpl &&
-           "emitAndFinalize called, but no mock implementation was provided");
-    return emitAndFinalizeImpl(H);
-  }
-};
-
-class ReturnNullJITSymbol {
-public:
-  template <typename... Args>
-  JITSymbol operator()(Args...) const {
-    return nullptr;
-  }
-};
-
-template <typename ReturnT>
-class DoNothingAndReturn {
-public:
-  DoNothingAndReturn(ReturnT Ret) : Ret(std::move(Ret)) {}
-
-  template <typename... Args>
-  void operator()(Args...) const { return Ret; }
-private:
-  ReturnT Ret;
-};
-
-template <>
-class DoNothingAndReturn<void> {
-public:
-  template <typename... Args>
-  void operator()(Args...) const { }
-};
 
 } // namespace llvm
 

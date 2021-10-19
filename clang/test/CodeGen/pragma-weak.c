@@ -1,26 +1,26 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm %s -o - -verify | FileCheck %s
 
-// CHECK: @weakvar = weak global
-// CHECK: @__weakvar_alias = global
-// CHECK: @correct_linkage = weak global
+// CHECK: @weakvar = weak{{.*}} global
+// CHECK: @__weakvar_alias ={{.*}} global
+// CHECK: @correct_linkage = weak{{.*}} global
 
 
-// CHECK-DAG: @both = alias void (), void ()* @__both
-// CHECK-DAG: @both2 = alias void (), void ()* @__both2
-// CHECK-DAG: @weakvar_alias = weak alias i32, i32* @__weakvar_alias
-// CHECK-DAG: @foo = weak alias void (), void ()* @__foo
-// CHECK-DAG: @foo2 = weak alias void (), void ()* @__foo2
-// CHECK-DAG: @stutter = weak alias void (), void ()* @__stutter
-// CHECK-DAG: @stutter2 = weak alias void (), void ()* @__stutter2
-// CHECK-DAG: @declfirst = weak alias void (), void ()* @__declfirst
-// CHECK-DAG: @declfirstattr = weak alias void (), void ()* @__declfirstattr
-// CHECK-DAG: @mix2 = weak alias void (), void ()* @__mix2
-// CHECK-DAG: @a1 = weak alias void (), void ()* @__a1
-// CHECK-DAG: @xxx = weak alias void (), void ()* @__xxx
+// CHECK-DAG: @both ={{.*}} alias void (), void ()* @__both
+// CHECK-DAG: @both2 ={{.*}} alias void (), void ()* @__both2
+// CHECK-DAG: @weakvar_alias = weak{{.*}} alias i32, i32* @__weakvar_alias
+// CHECK-DAG: @foo = weak{{.*}} alias void (), void ()* @__foo
+// CHECK-DAG: @foo2 = weak{{.*}} alias void (), void ()* @__foo2
+// CHECK-DAG: @stutter = weak{{.*}} alias void (), void ()* @__stutter
+// CHECK-DAG: @stutter2 = weak{{.*}} alias void (), void ()* @__stutter2
+// CHECK-DAG: @declfirst = weak{{.*}} alias void (), void ()* @__declfirst
+// CHECK-DAG: @declfirstattr = weak{{.*}} alias void (), void ()* @__declfirstattr
+// CHECK-DAG: @mix2 = weak{{.*}} alias void (), void ()* @__mix2
+// CHECK-DAG: @a1 = weak{{.*}} alias void (), void ()* @__a1
+// CHECK-DAG: @xxx = weak{{.*}} alias void (), void ()* @__xxx
 
 
 
-// CHECK-LABEL: define weak void @weakdef()
+// CHECK-LABEL: define weak{{.*}} void @weakdef()
 
 
 #pragma weak weakvar
@@ -40,12 +40,12 @@ int __weakvar_alias;
 
 #pragma weak foo = __foo
 void __foo(void) {}
-// CHECK-LABEL: define void @__foo()
+// CHECK-LABEL: define{{.*}} void @__foo()
 
 
 void __foo2(void) {}
 #pragma weak foo2 = __foo2
-// CHECK-LABEL: define void @__foo2()
+// CHECK-LABEL: define{{.*}} void @__foo2()
 
 
 ///// test errors
@@ -69,12 +69,12 @@ typedef int __td3;
 #pragma weak stutter = __stutter
 #pragma weak stutter = __stutter
 void __stutter(void) {}
-// CHECK-LABEL: define void @__stutter()
+// CHECK-LABEL: define{{.*}} void @__stutter()
 
 void __stutter2(void) {}
 #pragma weak stutter2 = __stutter2
 #pragma weak stutter2 = __stutter2
-// CHECK-LABEL: define void @__stutter2()
+// CHECK-LABEL: define{{.*}} void @__stutter2()
 
 
 // test decl/pragma weak order
@@ -82,12 +82,12 @@ void __stutter2(void) {}
 void __declfirst(void);
 #pragma weak declfirst = __declfirst
 void __declfirst(void) {}
-// CHECK-LABEL: define void @__declfirst()
+// CHECK-LABEL: define{{.*}} void @__declfirst()
 
 void __declfirstattr(void) __attribute((noinline));
 #pragma weak declfirstattr = __declfirstattr
 void __declfirstattr(void) {}
-// CHECK-LABEL: define void @__declfirstattr()
+// CHECK-LABEL: define{{.*}} void @__declfirstattr()
 
 //// test that other attributes are preserved
 
@@ -96,7 +96,7 @@ void __declfirstattr(void) {}
 void mix(void);
 #pragma weak mix
 __attribute((weak)) void mix(void) { }
-// CHECK-LABEL: define weak void @mix()
+// CHECK-LABEL: define weak{{.*}} void @mix()
 
 // ensure following __attributes are preserved and that only a single
 // alias is generated
@@ -104,7 +104,7 @@ __attribute((weak)) void mix(void) { }
 void __mix2(void) __attribute((noinline));
 void __mix2(void) __attribute((noinline));
 void __mix2(void) {}
-// CHECK-LABEL: define void @__mix2()
+// CHECK-LABEL: define{{.*}} void @__mix2()
 
 ////////////// test #pragma weak/__attribute combinations
 
@@ -113,7 +113,7 @@ void __mix2(void) {}
 void both(void) __attribute((alias("__both")));
 #pragma weak both = __both
 void __both(void) {}
-// CHECK-LABEL: define void @__both()
+// CHECK-LABEL: define{{.*}} void @__both()
 
 // if the TARGET is previously declared then whichever aliasing method
 // comes first applies and subsequent aliases are discarded.
@@ -123,14 +123,14 @@ void __both2(void);
 void both2(void) __attribute((alias("__both2"))); // first, wins
 #pragma weak both2 = __both2
 void __both2(void) {}
-// CHECK-LABEL: define void @__both2()
+// CHECK-LABEL: define{{.*}} void @__both2()
 
 ///////////// ensure that #pragma weak does not alter existing __attributes()
 
 void __a1(void) __attribute((noinline));
 #pragma weak a1 = __a1
 void __a1(void) {}
-// CHECK: define void @__a1() [[NI:#[0-9]+]]
+// CHECK: define{{.*}} void @__a1() [[NI:#[0-9]+]]
 
 #pragma weak xxx = __xxx
 __attribute((pure,noinline,const)) void __xxx(void) { }
@@ -184,7 +184,7 @@ void yyy(void){}
 void zzz(void){}
 #pragma weak yyy
 // NOTE: weak doesn't apply, not before or in same TopLevelDec(!)
-// CHECK-LABEL: define void @yyy()
+// CHECK-LABEL: define{{.*}} void @yyy()
 
 int correct_linkage;
 

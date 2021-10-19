@@ -1,9 +1,9 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=VI-FLUSH -check-prefix=GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=VI-DENORM -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mac_vvv:
-; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0{{$}}
+; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 glc{{$}}
 ; GCN: buffer_load_dword [[B:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
 ; GCN: buffer_load_dword [[C:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
 ; GCN: v_mac_f32_e32 [[C]], [[A]], [[B]]
@@ -105,7 +105,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_a = fsub float -0.0, %a
+  %neg_a = fneg float %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
 
@@ -165,7 +165,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_b = fsub float -0.0, %b
+  %neg_b = fneg float %b
   %tmp0 = fmul float %a, %neg_b
   %tmp1 = fadd float %tmp0, %c
 
@@ -205,7 +205,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_c = fsub float -0.0, %c
+  %neg_c = fneg float %c
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %neg_c
 

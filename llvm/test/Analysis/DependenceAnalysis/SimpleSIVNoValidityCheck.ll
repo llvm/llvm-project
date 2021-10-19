@@ -1,11 +1,17 @@
 ; RUN: opt < %s -disable-output -passes="print<da>"                            \
 ; RUN: -da-disable-delinearization-checks 2>&1 | FileCheck %s
-; RUN: opt < %s -da -analyze -da-disable-delinearization-checks | FileCheck %s
+; RUN: opt < %s -disable-output -passes="print<da>"                            \
+; RUN: 2>&1 | FileCheck --check-prefix=LIN %s
 
 ; CHECK-LABEL: t1
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [1 -2]!
 ; CHECK: da analyze - none!
+
+; LIN-LABEL: t1
+; LIN: da analyze - input [* *]!
+; LIN: da analyze - anti [* *|<]!
+; LIN: da analyze - output [* *]!
 
 ;; void t1(int n, int m, int a[][m]) {
 ;;   for (int i = 0; i < n-1; ++i)
@@ -57,6 +63,11 @@ for.end14:                                        ; preds = %entry, %for.inc12
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [1 -2 0 -3 2]!
 ; CHECK: da analyze - none!
+
+; LIN-LABEL: t2
+; LIN: da analyze - input [* * * * *]!
+; LIN: da analyze - anti [* * * * *|<]!
+; LIN: da analyze - output [* * * * *]!
 
 ;; void t2(int n, int m, int a[][n][n][n][m]) {
 ;;   for (int i1 = 0; i1 < n-1; ++i1)
@@ -178,6 +189,11 @@ for.end50:                                        ; preds = %entry, %for.inc48
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [1 -2]!
 ; CHECK: da analyze - none!
+
+; LIN-LABEL: t3
+; LIN: da analyze - input [* *]!
+; LIN: da analyze - anti [* *|<]!
+; LIN: da analyze - output [* *]!
 
 ;; // No sign or zero extension, but with compile-time unknown loop lower bound.
 ;; void t3(unsigned long long n, unsigned long long m, unsigned long long lb, float a[][m]) {

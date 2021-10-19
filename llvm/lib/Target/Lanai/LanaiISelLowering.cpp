@@ -530,6 +530,15 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
   return Chain;
 }
 
+bool LanaiTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+
+  return CCInfo.CheckReturn(Outs, RetCC_Lanai32);
+}
+
 SDValue
 LanaiTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  bool IsVarArg,
@@ -1020,7 +1029,7 @@ SDValue LanaiTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue Size = Op.getOperand(1);
   SDLoc DL(Op);
 
-  unsigned SPReg = getStackPointerRegisterToSaveRestore();
+  Register SPReg = getStackPointerRegisterToSaveRestore();
 
   // Get a reference to the stack pointer.
   SDValue StackPointer = DAG.getCopyFromReg(Chain, DL, SPReg, MVT::i32);
@@ -1167,7 +1176,7 @@ SDValue LanaiTargetLowering::LowerGlobalAddress(SDValue Op,
 
   // If the code model is small or global variable will be placed in the small
   // section, then assume address will fit in 21-bits.
-  const GlobalObject *GO = GV->getBaseObject();
+  const GlobalObject *GO = GV->getAliaseeObject();
   if (TLOF->isGlobalInSmallSection(GO, getTargetMachine())) {
     SDValue Small = DAG.getTargetGlobalAddress(
         GV, DL, getPointerTy(DAG.getDataLayout()), Offset, LanaiII::MO_NO_FLAG);
@@ -1391,8 +1400,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
       // value is 0.
       OtherOp = DAG.getConstant(0, dl, VT);
     else
-      OtherOp =
-          DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), dl, VT);
+      OtherOp = DAG.getAllOnesConstant(dl, VT);
     return true;
   }
   }
@@ -1500,8 +1508,7 @@ void LanaiTargetLowering::computeKnownBitsForTargetNode(
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
     Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
-    Known.Zero &= Known2.Zero;
-    Known.One &= Known2.One;
+    Known = KnownBits::commonBits(Known, Known2);
     break;
   }
 }

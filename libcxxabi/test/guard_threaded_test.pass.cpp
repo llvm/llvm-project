@@ -20,6 +20,7 @@
 #include <memory>
 #include <vector>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 
@@ -349,21 +350,21 @@ void test_futex_syscall() {
   int lock1 = 0;
   int lock2 = 0;
   int lock3 = 0;
-  std::thread waiter1([&]() {
+  std::thread waiter1 = support::make_test_thread([&]() {
     int expect = 0;
     PlatformFutexWait(&lock1, expect);
     assert(lock1 == 1);
   });
-  std::thread waiter2([&]() {
+  std::thread waiter2 = support::make_test_thread([&]() {
     int expect = 0;
     PlatformFutexWait(&lock2, expect);
     assert(lock2 == 2);
   });
-  std::thread waiter3([&]() {
+  std::thread waiter3 = support::make_test_thread([&]() {
     int expect = 42; // not the value
     PlatformFutexWait(&lock3, expect); // doesn't block
   });
-  std::thread waker([&]() {
+  std::thread waker = support::make_test_thread([&]() {
     lock1 = 1;
     PlatformFutexWake(&lock1);
     lock2 = 2;
@@ -375,9 +376,11 @@ void test_futex_syscall() {
   waker.join();
 }
 
-int main() {
+int main(int, char**) {
   // Test each multi-threaded implementation with real threads.
   test_all_impls();
   // Test the basic sanity of the futex syscall wrappers.
   test_futex_syscall();
+
+  return 0;
 }

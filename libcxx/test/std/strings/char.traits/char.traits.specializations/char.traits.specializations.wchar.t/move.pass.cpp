@@ -12,6 +12,8 @@
 
 // static char_type* move(char_type* s1, const char_type* s2, size_t n);
 
+// UNSUPPORTED: libcpp-has-no-wide-characters
+
 #include <string>
 #include <cassert>
 
@@ -39,7 +41,7 @@ int main(int, char**)
 {
   test();
 
-#if TEST_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED)
+#if TEST_STD_VER > 17
   static_assert(test());
 #endif
 

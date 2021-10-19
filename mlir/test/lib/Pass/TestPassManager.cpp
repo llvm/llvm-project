@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Function.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 
@@ -16,9 +16,17 @@ namespace {
 struct TestModulePass
     : public PassWrapper<TestModulePass, OperationPass<ModuleOp>> {
   void runOnOperation() final {}
+  StringRef getArgument() const final { return "test-module-pass"; }
+  StringRef getDescription() const final {
+    return "Test a module pass in the pass manager";
+  }
 };
 struct TestFunctionPass : public PassWrapper<TestFunctionPass, FunctionPass> {
   void runOnFunction() final {}
+  StringRef getArgument() const final { return "test-function-pass"; }
+  StringRef getDescription() const final {
+    return "Test a function pass in the pass manager";
+  }
 };
 class TestOptionsPass : public PassWrapper<TestOptionsPass, FunctionPass> {
 public:
@@ -41,6 +49,10 @@ public:
   }
 
   void runOnFunction() final {}
+  StringRef getArgument() const final { return "test-options-pass"; }
+  StringRef getDescription() const final {
+    return "Test options parsing capabilities";
+  }
 
   ListOption<int> listOption{*this, "list", llvm::cl::MiscFlags::CommaSeparated,
                              llvm::cl::desc("Example list option")};
@@ -56,6 +68,20 @@ public:
 class TestCrashRecoveryPass
     : public PassWrapper<TestCrashRecoveryPass, OperationPass<>> {
   void runOnOperation() final { abort(); }
+  StringRef getArgument() const final { return "test-pass-crash"; }
+  StringRef getDescription() const final {
+    return "Test a pass in the pass manager that always crashes";
+  }
+};
+
+/// A test pass that always fails to enable testing the failure recovery
+/// mechanisms of the pass manager.
+class TestFailurePass : public PassWrapper<TestFailurePass, OperationPass<>> {
+  void runOnOperation() final { signalPassFailure(); }
+  StringRef getArgument() const final { return "test-pass-failure"; }
+  StringRef getDescription() const final {
+    return "Test a pass in the pass manager that always fails";
+  }
 };
 
 /// A test pass that contains a statistic.
@@ -63,6 +89,8 @@ struct TestStatisticPass
     : public PassWrapper<TestStatisticPass, OperationPass<>> {
   TestStatisticPass() = default;
   TestStatisticPass(const TestStatisticPass &) {}
+  StringRef getArgument() const final { return "test-stats-pass"; }
+  StringRef getDescription() const final { return "Test pass statistics"; }
 
   Statistic opCount{this, "num-ops", "Number of operations counted"};
 
@@ -92,20 +120,16 @@ static void testNestedPipelineTextual(OpPassManager &pm) {
 
 namespace mlir {
 void registerPassManagerTestPass() {
-  PassRegistration<TestOptionsPass>("test-options-pass",
-                                    "Test options parsing capabilities");
+  PassRegistration<TestOptionsPass>();
 
-  PassRegistration<TestModulePass>("test-module-pass",
-                                   "Test a module pass in the pass manager");
+  PassRegistration<TestModulePass>();
 
-  PassRegistration<TestFunctionPass>(
-      "test-function-pass", "Test a function pass in the pass manager");
+  PassRegistration<TestFunctionPass>();
 
-  PassRegistration<TestCrashRecoveryPass>(
-      "test-pass-crash", "Test a pass in the pass manager that always crashes");
+  PassRegistration<TestCrashRecoveryPass>();
+  PassRegistration<TestFailurePass>();
 
-  PassRegistration<TestStatisticPass> unusedStatP("test-stats-pass",
-                                                  "Test pass statistics");
+  PassRegistration<TestStatisticPass>();
 
   PassPipelineRegistration<>("test-pm-nested-pipeline",
                              "Test a nested pipeline in the pass manager",

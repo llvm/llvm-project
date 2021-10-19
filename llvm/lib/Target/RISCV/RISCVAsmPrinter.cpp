@@ -27,7 +27,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -93,8 +93,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   MCInst TmpInst;
-  LowerRISCVMachineInstrToMCInst(MI, TmpInst, *this);
-  EmitToStreamer(*OutStreamer, TmpInst);
+  if (!lowerRISCVMachineInstrToMCInst(MI, TmpInst, *this))
+    EmitToStreamer(*OutStreamer, TmpInst);
 }
 
 bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -193,14 +193,7 @@ void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
 void RISCVAsmPrinter::emitAttributes() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-
-  const Triple &TT = TM.getTargetTriple();
-  StringRef CPU = TM.getTargetCPU();
-  StringRef FS = TM.getTargetFeatureString();
-  const RISCVTargetMachine &RTM = static_cast<const RISCVTargetMachine &>(TM);
-  const RISCVSubtarget STI(TT, CPU, FS, /*ABIName=*/"", RTM);
-
-  RTS.emitTargetAttributes(STI);
+  RTS.emitTargetAttributes(*STI);
 }
 
 // Force static initialization.

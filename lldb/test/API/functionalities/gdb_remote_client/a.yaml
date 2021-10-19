@@ -1,9 +1,9 @@
-!ELF
+--- !ELF
 FileHeader:
-  Class:           ELFCLASS32
+  Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
-  Machine:         EM_ARM
+  Machine:         EM_X86_64
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
@@ -23,12 +23,13 @@ ProgramHeaders:
     VAddr: 0x1000
     PAddr: 0x1000
     Align: 0x4
-    Sections:
-      - Section: .text
+    FirstSec: .text
+    LastSec:  .text
   - Type: PT_LOAD
     Flags: [ PF_R, PF_W ]
     VAddr: 0x2000
     PAddr: 0x1004
     Align: 0x4
-    Sections:
-      - Section: .data
+    FirstSec: .data
+    LastSec:  .data
+

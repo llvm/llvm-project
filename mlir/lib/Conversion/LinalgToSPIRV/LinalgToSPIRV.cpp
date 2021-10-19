@@ -1,4 +1,4 @@
-//===- LinalgToSPIRV.cpp - Linalg to SPIR-V dialect conversion ------------===//
+//===- LinalgToSPIRV.cpp - Linalg to SPIR-V Patterns ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,12 +9,13 @@
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVLowering.h"
-#include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 
@@ -25,11 +26,11 @@ using namespace mlir;
 /// Returns a `Value` containing the `dim`-th dimension's size of SPIR-V
 /// location invocation ID. This function will create necessary operations with
 /// `builder` at the proper region containing `op`.
-static Value getLocalInvocationDimSize(Operation *op, int dim, Location loc,
-                                       OpBuilder *builder) {
+static Value getLocalInvocationDimSize(Operation *op, int dim, Type integerType,
+                                       Location loc, OpBuilder *builder) {
   assert(dim >= 0 && dim < 3 && "local invocation only has three dimensions");
   Value invocation = spirv::getBuiltinVariableValue(
-      op, spirv::BuiltIn::LocalInvocationId, *builder);
+      op, spirv::BuiltIn::LocalInvocationId, integerType, *builder);
   Type xType = invocation.getType().cast<ShapedType>().getElementType();
   return builder->create<spirv::CompositeExtractOp>(
       loc, xType, invocation, builder->getI32ArrayAttr({dim}));
@@ -44,10 +45,9 @@ namespace {
 /// A pattern to convert a linalg.generic op to SPIR-V ops under the condition
 /// that the linalg.generic op is performing reduction with a workload size that
 /// can fit in one workgroup.
-class SingleWorkgroupReduction final
-    : public SPIRVOpLowering<linalg::GenericOp> {
-public:
-  using SPIRVOpLowering<linalg::GenericOp>::SPIRVOpLowering;
+struct SingleWorkgroupReduction final
+    : public OpConversionPattern<linalg::GenericOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   /// Matches the given linalg.generic op as performing reduction and returns
   /// the binary op kind if successful.
@@ -55,7 +55,7 @@ public:
   matchAsPerformingReduction(linalg::GenericOp genericOp);
 
   LogicalResult
-  matchAndRewrite(linalg::GenericOp genericOp, ArrayRef<Value> operands,
+  matchAndRewrite(linalg::GenericOp genericOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -71,8 +71,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
     return llvm::None;
 
   // Make sure this is reduction with one input and one output.
-  if (genericOp.args_in().getZExtValue() != 1 ||
-      genericOp.args_out().getZExtValue() != 1)
+  if (genericOp.getNumInputs() != 1 || genericOp.getNumOutputs() != 1)
     return llvm::None;
 
   auto originalInputType = op->getOperand(0).getType().cast<MemRefType>();
@@ -110,7 +109,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
 }
 
 LogicalResult SingleWorkgroupReduction::matchAndRewrite(
-    linalg::GenericOp genericOp, ArrayRef<Value> operands,
+    linalg::GenericOp genericOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Operation *op = genericOp.getOperation();
   auto originalInputType = op->getOperand(0).getType().cast<MemRefType>();
@@ -128,24 +127,30 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 
   if ((*localSize.begin()).getSExtValue() != originalInputType.getDimSize(0))
     return failure();
-  if (llvm::any_of(llvm::drop_begin(localSize.getIntValues(), 1),
+  if (llvm::any_of(llvm::drop_begin(localSize.getValues<APInt>(), 1),
                    [](const APInt &size) { return !size.isOneValue(); }))
     return failure();
 
   // TODO: Query the target environment to make sure the current
   // workload fits in a local workgroup.
 
-  Value convertedInput = operands[0], convertedOutput = operands[1];
+  Value convertedInput = adaptor.getOperands()[0];
+  Value convertedOutput = adaptor.getOperands()[1];
   Location loc = genericOp.getLoc();
 
+  auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
+  auto indexType = typeConverter->getIndexType();
+
   // Get the invocation ID.
-  Value x = getLocalInvocationDimSize(genericOp, /*dim=*/0, loc, &rewriter);
+  Value x = getLocalInvocationDimSize(genericOp, /*dim=*/0, indexType, loc,
+                                      &rewriter);
 
   // TODO: Load to Workgroup storage class first.
 
+
   // Get the input element accessed by this invocation.
   Value inputElementPtr = spirv::getElementPtr(
-      typeConverter, originalInputType, convertedInput, {x}, loc, rewriter);
+      *typeConverter, originalInputType, convertedInput, {x}, loc, rewriter);
   Value inputElement = rewriter.create<spirv::LoadOp>(loc, inputElementPtr);
 
   // Perform the group reduction operation.
@@ -163,11 +168,10 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 #undef CREATE_GROUP_NON_UNIFORM_BIN_OP
 
   // Get the output element accessed by this reduction.
-  Value zero = spirv::ConstantOp::getZero(
-      typeConverter.getIndexType(rewriter.getContext()), loc, rewriter);
+  Value zero = spirv::ConstantOp::getZero(indexType, loc, rewriter);
   SmallVector<Value, 1> zeroIndices(originalOutputType.getRank(), zero);
   Value outputElementPtr =
-      spirv::getElementPtr(typeConverter, originalOutputType, convertedOutput,
+      spirv::getElementPtr(*typeConverter, originalOutputType, convertedOutput,
                            zeroIndices, loc, rewriter);
 
   // Write out the final reduction result. This should be only conducted by one
@@ -202,8 +206,7 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateLinalgToSPIRVPatterns(MLIRContext *context,
-                                         SPIRVTypeConverter &typeConverter,
-                                         OwningRewritePatternList &patterns) {
-  patterns.insert<SingleWorkgroupReduction>(context, typeConverter);
+void mlir::populateLinalgToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                         RewritePatternSet &patterns) {
+  patterns.add<SingleWorkgroupReduction>(typeConverter, patterns.getContext());
 }

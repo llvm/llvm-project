@@ -17,9 +17,20 @@
 
 namespace mlir {
 
+/// Creates a pass that bufferizes the SCF dialect.
+std::unique_ptr<Pass> createSCFBufferizePass();
+
 /// Creates a pass that specializes for loop for unrolling and
 /// vectorization.
 std::unique_ptr<Pass> createForLoopSpecializationPass();
+
+/// Creates a pass that peels for loops at their upper bounds for
+/// better vectorization.
+std::unique_ptr<Pass> createForLoopPeelingPass();
+
+/// Creates a pass that canonicalizes affine.min and affine.max operations
+/// inside of scf.for loops with known lower and upper bounds.
+std::unique_ptr<Pass> createSCFForLoopCanonicalizationPass();
 
 /// Creates a loop fusion pass which fuses parallel loops.
 std::unique_ptr<Pass> createParallelLoopFusionPass();
@@ -29,8 +40,20 @@ std::unique_ptr<Pass> createParallelLoopFusionPass();
 std::unique_ptr<Pass> createParallelLoopSpecializationPass();
 
 /// Creates a pass which tiles innermost parallel loops.
+/// If noMinMaxBounds, the upper bound of the inner loop will
+/// be a same value among different outter loop iterations, and
+/// an additional inbound check will be emitted inside the internal
+/// loops.
 std::unique_ptr<Pass>
-createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
+createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {},
+                             bool noMinMaxBounds = false);
+
+/// Creates a pass which folds arith ops on induction variable into
+/// loop range.
+std::unique_ptr<Pass> createForLoopRangeFoldingPass();
+
+// Creates a pass which lowers for loops into while loops.
+std::unique_ptr<Pass> createForToWhileLoopPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

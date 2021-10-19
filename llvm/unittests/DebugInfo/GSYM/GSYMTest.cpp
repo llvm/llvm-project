@@ -1,9 +1,8 @@
 //===- llvm/unittest/DebugInfo/GSYMTest.cpp -------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -2517,4 +2516,28 @@ TEST(GSYMTest, TestDWARFDeadStripAddr8) {
   ASSERT_EQ(ExpFI->Range, AddressRange(0x1000, 0x2000));
   StringRef MethodName = GR->getString(ExpFI->Name);
   EXPECT_EQ(MethodName, "main");
+}
+
+TEST(GSYMTest, TestGsymCreatorMultipleSymbolsWithNoSize) {
+  // Multiple symbols at the same address with zero size were being emitted
+  // instead of being combined into a single entry. This function tests to make
+  // sure we only get one symbol.
+  uint8_t UUID[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  GsymCreator GC;
+  GC.setUUID(UUID);
+  constexpr uint64_t BaseAddr = 0x1000;
+  constexpr uint8_t AddrOffSize = 1;
+  const uint32_t Func1Name = GC.insertString("foo");
+  const uint32_t Func2Name = GC.insertString("bar");
+  GC.addFunctionInfo(FunctionInfo(BaseAddr, 0, Func1Name));
+  GC.addFunctionInfo(FunctionInfo(BaseAddr, 0, Func2Name));
+  Error Err = GC.finalize(llvm::nulls());
+  ASSERT_FALSE(Err);
+  TestEncodeDecode(GC, llvm::support::little, GSYM_VERSION, AddrOffSize,
+                   BaseAddr,
+                   1, // NumAddresses
+                   ArrayRef<uint8_t>(UUID));
+  TestEncodeDecode(GC, llvm::support::big, GSYM_VERSION, AddrOffSize, BaseAddr,
+                   1, // NumAddresses
+                   ArrayRef<uint8_t>(UUID));
 }

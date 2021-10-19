@@ -23,16 +23,16 @@ Sections:
     Address:         0x08
     Content:         "3232"
 ProgramHeaders:
-  - Type: PT_LOAD
-    Flags: [ PF_X, PF_R ]
-    VAddr: 0x00
-    Sections:
-      - Section: .text
-  - Type: PT_LOAD
-    Flags: [ PF_R ]
-    VAddr: 0x08
-    Sections:
-      - Section: .data
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x00
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x08
+    FirstSec: .data
+    LastSec:  .data
 
 # CHECK:       0000000 c3c3 c3c3 0000 0000 3232
 # SIZE:        10

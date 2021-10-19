@@ -1,5 +1,7 @@
-// RUN: %clang -O1 -fexperimental-new-pass-manager -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s -check-prefix=CHECK-NEWPM
-// RUN: %clang -O1 -fno-experimental-new-pass-manager -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s -check-prefix=CHECK-OLDPM
+// This tests loop unrolling and loop deletion (enabled under -O1)
+// RUN: %clang_cc1 -std=c11 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -std=c99 -O1 -fno-unroll-loops -S -o - %s -emit-llvm | FileCheck %s --check-prefix C99
+
 extern int a[16];
 int b = 0;
 int foo(void) {
@@ -9,10 +11,8 @@ int foo(void) {
   return b;
 }
 // Check br i1 to make sure that the loop is fully unrolled
-// CHECK-LABEL-NEWPM: foo
-// CHECK-NOT-NEWPM: br i1
-// CHECK-LABEL-OLDPM: foo
-// CHECK-NOT-OLDPM: br i1
+// CHECK-LABEL: foo
+// CHECK-NOT: br i1
 
 void Helper() {
   const int *nodes[5];
@@ -26,17 +26,12 @@ void Helper() {
 }
 
 // Check br i1 to make sure the loop is gone, there will still be a label branch for the infinite loop.
-// CHECK-LABEL-NEWPM: Helper
-// CHECK-NEWPM: br label
-// CHECK-NEWPM-NOT: br i1
-// CHECK-NEWPM: br label
-
-// The old pass manager doesn't remove the while loop so check for 5 load i32*.
-// CHECK-LABEL-OLDPM: Helper
-// CHECK-OLDPM: br label
-// CHECK-OLDPM: load i32*
-// CHECK-OLDPM: load i32*
-// CHECK-OLDPM: load i32*
-// CHECK-OLDPM: load i32*
-// CHECK-OLDPM: load i32*
-// CHECK-OLDPM: ret
+// In C99, there was no forward progress requirement, so we expect the infinite loop to still exist,
+// but for C11 and onwards, the infinite loop can be deleted.
+// CHECK-LABEL: Helper
+// C99: br label
+// C99-NOT: br i1
+// C99: br label
+// CHECK: entry:
+// CHECK-NOT: br i1
+// CHECK-NEXT: ret void

@@ -16,6 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CommandLine.h"
+
+#include "DebugOptions.h"
+
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -72,8 +75,8 @@ template class opt<int>;
 template class opt<std::string>;
 template class opt<char>;
 template class opt<bool>;
-}
-} // end namespace llvm::cl
+} // namespace cl
+} // namespace llvm
 
 // Pin the vtables to this file.
 void GenericOptionValue::anchor() {}
@@ -199,7 +202,7 @@ public:
     if (Opt.Subs.empty())
       addLiteralOption(Opt, &*TopLevelSubCommand, Name);
     else {
-      for (auto SC : Opt.Subs)
+      for (auto *SC : Opt.Subs)
         addLiteralOption(Opt, SC, Name);
     }
   }
@@ -260,7 +263,7 @@ public:
     if (O->Subs.empty()) {
       addOption(O, &*TopLevelSubCommand);
     } else {
-      for (auto SC : O->Subs)
+      for (auto *SC : O->Subs)
         addOption(O, SC);
     }
   }
@@ -277,10 +280,10 @@ public:
       auto I = Sub.OptionsMap.find(Name);
       if (I != End && I->getValue() == O)
         Sub.OptionsMap.erase(I);
-      }
+    }
 
     if (O->getFormattingFlag() == cl::Positional)
-      for (auto Opt = Sub.PositionalOpts.begin();
+      for (auto *Opt = Sub.PositionalOpts.begin();
            Opt != Sub.PositionalOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.PositionalOpts.erase(Opt);
@@ -288,7 +291,7 @@ public:
         }
       }
     else if (O->getMiscFlags() & cl::Sink)
-      for (auto Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
+      for (auto *Opt = Sub.SinkOpts.begin(); Opt != Sub.SinkOpts.end(); ++Opt) {
         if (*Opt == O) {
           Sub.SinkOpts.erase(Opt);
           break;
@@ -303,10 +306,10 @@ public:
       removeOption(O, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           removeOption(O, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           removeOption(O, SC);
       }
     }
@@ -342,10 +345,10 @@ public:
       updateArgStr(O, NewName, &*TopLevelSubCommand);
     else {
       if (O->isInAllSubCommands()) {
-        for (auto SC : RegisteredSubCommands)
+        for (auto *SC : RegisteredSubCommands)
           updateArgStr(O, NewName, SC);
       } else {
-        for (auto SC : O->Subs)
+        for (auto *SC : O->Subs)
           updateArgStr(O, NewName, SC);
       }
     }
@@ -462,9 +465,9 @@ void Option::addCategory(OptionCategory &C) {
   // Maintain backward compatibility by replacing the default GeneralCategory
   // if it's still set.  Otherwise, just add the new one.  The GeneralCategory
   // must be explicitly added if you want multiple categories that include it.
-  if (&C != &GeneralCategory && Categories[0] == &GeneralCategory)
+  if (&C != &getGeneralCategory() && Categories[0] == &getGeneralCategory())
     Categories[0] = &C;
-  else if (find(Categories, &C) == Categories.end())
+  else if (!is_contained(Categories, &C))
     Categories.push_back(&C);
 }
 
@@ -474,9 +477,6 @@ void Option::reset() {
   if (isDefaultOption())
     removeArgument();
 }
-
-// Initialise the general option category.
-OptionCategory llvm::cl::GeneralCategory("General options");
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);
@@ -531,11 +531,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   // If we have an equals sign, remember the value.
   if (EqualPos == StringRef::npos) {
     // Look up the option.
-    auto I = Sub.OptionsMap.find(Arg);
-    if (I == Sub.OptionsMap.end())
-      return nullptr;
-
-    return I != Sub.OptionsMap.end() ? I->second : nullptr;
+    return Sub.OptionsMap.lookup(Arg);
   }
 
   // If the argument before the = is a valid option name and the option allows
@@ -545,7 +541,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
   if (I == Sub.OptionsMap.end())
     return nullptr;
 
-  auto O = I->second;
+  auto *O = I->second;
   if (O->getFormattingFlag() == cl::AlwaysPrefix)
     return nullptr;
 
@@ -557,7 +553,7 @@ Option *CommandLineParser::LookupOption(SubCommand &Sub, StringRef &Arg,
 SubCommand *CommandLineParser::LookupSubCommand(StringRef Name) {
   if (Name.empty())
     return &*TopLevelSubCommand;
-  for (auto S : RegisteredSubCommands) {
+  for (auto *S : RegisteredSubCommands) {
     if (S == &*AllSubCommands)
       continue;
     if (S->getName().empty())
@@ -603,7 +599,7 @@ static Option *LookupNearestOption(StringRef Arg,
 
     bool PermitValue = O->getValueExpectedFlag() != cl::ValueDisallowed;
     StringRef Flag = PermitValue ? LHS : Arg;
-    for (auto Name : OptionNames) {
+    for (const auto &Name : OptionNames) {
       unsigned Distance = StringRef(Name).edit_distance(
           Flag, /*AllowReplacements=*/true, /*MaxEditDistance=*/BestDistance);
       if (!Best || Distance < BestDistance) {
@@ -832,7 +828,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     // Consume runs of whitespace.
     if (Token.empty()) {
       while (I != E && isWhitespace(Src[I])) {
-        // Mark the end of lines in response files
+        // Mark the end of lines in response files.
         if (MarkEOLs && Src[I] == '\n')
           NewArgv.push_back(nullptr);
         ++I;
@@ -868,7 +864,10 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     // End the token if this is whitespace.
     if (isWhitespace(C)) {
       if (!Token.empty())
-        NewArgv.push_back(Saver.save(StringRef(Token)).data());
+        NewArgv.push_back(Saver.save(Token.str()).data());
+      // Mark the end of lines in response files.
+      if (MarkEOLs && C == '\n')
+        NewArgv.push_back(nullptr);
       Token.clear();
       continue;
     }
@@ -879,10 +878,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
 
   // Append the last token after hitting EOF with no whitespace.
   if (!Token.empty())
-    NewArgv.push_back(Saver.save(StringRef(Token)).data());
-  // Mark the end of response files
-  if (MarkEOLs)
-    NewArgv.push_back(nullptr);
+    NewArgv.push_back(Saver.save(Token.str()).data());
 }
 
 /// Backslashes are interpreted in a rather complicated way in the Windows-style
@@ -956,11 +952,11 @@ tokenizeWindowsCommandLineImpl(StringRef Src, StringSaver &Saver,
         ++I;
       StringRef NormalChars = Src.slice(Start, I);
       if (I >= E || isWhitespaceOrNull(Src[I])) {
-        if (I < E && Src[I] == '\n')
-          MarkEOL();
         // No special characters: slice out the substring and start the next
         // token. Copy the string if the caller asks us to.
         AddToken(AlwaysCopy ? Saver.save(NormalChars) : NormalChars);
+        if (I < E && Src[I] == '\n')
+          MarkEOL();
       } else if (Src[I] == '\"') {
         Token += NormalChars;
         State = QUOTED;
@@ -1142,8 +1138,9 @@ static llvm::Error ExpandResponseFile(
 /// StringSaver and tokenization strategy.
 bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                              SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
-                             bool RelativeNames, llvm::vfs::FileSystem &FS,
-                             llvm::Optional<llvm::StringRef> CurrentDir) {
+                             bool RelativeNames,
+                             llvm::Optional<llvm::StringRef> CurrentDir,
+                             llvm::vfs::FileSystem &FS) {
   bool AllExpanded = true;
   struct ResponseFileRecord {
     std::string File;
@@ -1208,7 +1205,7 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
     };
 
     // Check for recursive response files.
-    if (std::any_of(FileStack.begin() + 1, FileStack.end(), IsEquivalent)) {
+    if (any_of(drop_begin(FileStack), IsEquivalent)) {
       // This file is recursive, so we leave it in the argument stream and
       // move on.
       AllExpanded = false;
@@ -1251,6 +1248,15 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return AllExpanded;
 }
 
+bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
+                             SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
+                             bool RelativeNames,
+                             llvm::Optional<StringRef> CurrentDir) {
+  return ExpandResponseFiles(Saver, std::move(Tokenizer), Argv, MarkEOLs,
+                             RelativeNames, std::move(CurrentDir),
+                             *vfs::getRealFileSystem());
+}
+
 bool cl::expandResponseFiles(int Argc, const char *const *Argv,
                              const char *EnvVar, StringSaver &Saver,
                              SmallVectorImpl<const char *> &NewArgv) {
@@ -1277,20 +1283,22 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
   }
   if (llvm::Error Err =
           ExpandResponseFile(CfgFile, Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true,
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true,
                              *llvm::vfs::getRealFileSystem())) {
     // TODO: The error should be propagated up the stack.
     llvm::consumeError(std::move(Err));
     return false;
   }
   return ExpandResponseFiles(Saver, cl::tokenizeConfigFile, Argv,
-                             /*MarkEOLs*/ false, /*RelativeNames*/ true);
+                             /*MarkEOLs=*/false, /*RelativeNames=*/true);
 }
 
+static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
                                  const char *EnvVar,
                                  bool LongOptionsUseDoubleDash) {
+  initCommonOptions();
   SmallVector<const char *, 20> NewArgv;
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -1313,12 +1321,20 @@ bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                                Errs, LongOptionsUseDoubleDash);
 }
 
+/// Reset all options at least once, so that we can parse different options.
 void CommandLineParser::ResetAllOptionOccurrences() {
-  // So that we can parse different command lines multiple times in succession
-  // we reset all option values to look like they have never been seen before.
-  for (auto SC : RegisteredSubCommands) {
+  // Reset all option values to look like they have never been seen before.
+  // Options might be reset twice (they can be reference in both OptionsMap
+  // and one of the other members), but that does not harm.
+  for (auto *SC : RegisteredSubCommands) {
     for (auto &O : SC->OptionsMap)
       O.second->reset();
+    for (Option *O : SC->PositionalOpts)
+      O->reset();
+    for (Option *O : SC->SinkOpts)
+      O->reset();
+    if (SC->ConsumeAfterOpt)
+      SC->ConsumeAfterOpt->reset();
   }
 }
 
@@ -1372,7 +1388,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
-  for (auto O: DefaultOptions) {
+  for (auto *O: DefaultOptions) {
     addOption(O, true);
   }
 
@@ -1730,6 +1746,19 @@ void Option::printHelpStr(StringRef HelpStr, size_t Indent,
   }
 }
 
+void Option::printEnumValHelpStr(StringRef HelpStr, size_t BaseIndent,
+                                 size_t FirstLineIndentedBy) {
+  const StringRef ValHelpPrefix = "  ";
+  assert(BaseIndent >= FirstLineIndentedBy);
+  std::pair<StringRef, StringRef> Split = HelpStr.split('\n');
+  outs().indent(BaseIndent - FirstLineIndentedBy)
+      << ArgHelpPrefix << ValHelpPrefix << Split.first << "\n";
+  while (!Split.second.empty()) {
+    Split = Split.second.split('\n');
+    outs().indent(BaseIndent + ValHelpPrefix.size()) << Split.first << "\n";
+  }
+}
+
 // Print out the option for the alias.
 void alias::printOptionInfo(size_t GlobalWidth) const {
   outs() << PrintArg(ArgStr);
@@ -1918,7 +1947,9 @@ unsigned generic_parser_base::findOption(StringRef Name) {
 static StringRef EqValue = "=<value>";
 static StringRef EmptyOption = "<empty>";
 static StringRef OptionPrefix = "    =";
-static size_t OptionPrefixesSize = OptionPrefix.size() + ArgHelpPrefix.size();
+static size_t getOptionPrefixesSize() {
+  return OptionPrefix.size() + ArgHelpPrefix.size();
+}
 
 static bool shouldPrintOption(StringRef Name, StringRef Description,
                               const Option &O) {
@@ -1936,7 +1967,7 @@ size_t generic_parser_base::getOptionWidth(const Option &O) const {
       if (!shouldPrintOption(Name, getDescription(i), O))
         continue;
       size_t NameSize = Name.empty() ? EmptyOption.size() : Name.size();
-      Size = std::max(Size, NameSize + OptionPrefixesSize);
+      Size = std::max(Size, NameSize + getOptionPrefixesSize());
     }
     return Size;
   } else {
@@ -1975,17 +2006,17 @@ void generic_parser_base::printOptionInfo(const Option &O,
       StringRef Description = getDescription(i);
       if (!shouldPrintOption(OptionName, Description, O))
         continue;
-      assert(GlobalWidth >= OptionName.size() + OptionPrefixesSize);
-      size_t NumSpaces = GlobalWidth - OptionName.size() - OptionPrefixesSize;
+      size_t FirstLineIndent = OptionName.size() + getOptionPrefixesSize();
       outs() << OptionPrefix << OptionName;
       if (OptionName.empty()) {
         outs() << EmptyOption;
-        assert(NumSpaces >= EmptyOption.size());
-        NumSpaces -= EmptyOption.size();
+        assert(FirstLineIndent >= EmptyOption.size());
+        FirstLineIndent += EmptyOption.size();
       }
       if (!Description.empty())
-        outs().indent(NumSpaces) << ArgHelpPrefix << "  " << Description;
-      outs() << '\n';
+        Option::printEnumValHelpStr(Description, GlobalWidth, FirstLineIndent);
+      else
+        outs() << '\n';
     }
   } else {
     if (!O.HelpStr.empty())
@@ -2207,7 +2238,7 @@ public:
              << " [options]";
     }
 
-    for (auto Opt : PositionalOpts) {
+    for (auto *Opt : PositionalOpts) {
       if (Opt->hasArgStr())
         outs() << " --" << Opt->ArgStr;
       outs() << " " << Opt->HelpStr;
@@ -2243,7 +2274,7 @@ public:
     printOptions(Opts, MaxArgLen);
 
     // Print any extra help the user has declared.
-    for (auto I : GlobalParser->MoreHelp)
+    for (const auto &I : GlobalParser->MoreHelp)
       outs() << I;
     GlobalParser->MoreHelp.clear();
   }
@@ -2355,105 +2386,6 @@ public:
 
 } // End anonymous namespace
 
-// Declare the four HelpPrinter instances that are used to print out help, or
-// help-hidden as an uncategorized list or in categories.
-static HelpPrinter UncategorizedNormalPrinter(false);
-static HelpPrinter UncategorizedHiddenPrinter(true);
-static CategorizedHelpPrinter CategorizedNormalPrinter(false);
-static CategorizedHelpPrinter CategorizedHiddenPrinter(true);
-
-// Declare HelpPrinter wrappers that will decide whether or not to invoke
-// a categorizing help printer
-static HelpPrinterWrapper WrappedNormalPrinter(UncategorizedNormalPrinter,
-                                               CategorizedNormalPrinter);
-static HelpPrinterWrapper WrappedHiddenPrinter(UncategorizedHiddenPrinter,
-                                               CategorizedHiddenPrinter);
-
-// Define a category for generic options that all tools should have.
-static cl::OptionCategory GenericCategory("Generic Options");
-
-// Define uncategorized help printers.
-// --help-list is hidden by default because if Option categories are being used
-// then --help behaves the same as --help-list.
-static cl::opt<HelpPrinter, true, parser<bool>> HLOp(
-    "help-list",
-    cl::desc("Display list of available options (--help-list-hidden for more)"),
-    cl::location(UncategorizedNormalPrinter), cl::Hidden, cl::ValueDisallowed,
-    cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::opt<HelpPrinter, true, parser<bool>>
-    HLHOp("help-list-hidden", cl::desc("Display list of all available options"),
-          cl::location(UncategorizedHiddenPrinter), cl::Hidden,
-          cl::ValueDisallowed, cl::cat(GenericCategory),
-          cl::sub(*AllSubCommands));
-
-// Define uncategorized/categorized help printers. These printers change their
-// behaviour at runtime depending on whether one or more Option categories have
-// been declared.
-static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HOp("help", cl::desc("Display available options (--help-hidden for more)"),
-        cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
-        cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::alias HOpA("h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
-                      cl::DefaultOption);
-
-static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HHOp("help-hidden", cl::desc("Display all available options"),
-         cl::location(WrappedHiddenPrinter), cl::Hidden, cl::ValueDisallowed,
-         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::opt<bool> PrintOptions(
-    "print-options",
-    cl::desc("Print non-default options after command line parsing"),
-    cl::Hidden, cl::init(false), cl::cat(GenericCategory),
-    cl::sub(*AllSubCommands));
-
-static cl::opt<bool> PrintAllOptions(
-    "print-all-options",
-    cl::desc("Print all option values after command line parsing"), cl::Hidden,
-    cl::init(false), cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-void HelpPrinterWrapper::operator=(bool Value) {
-  if (!Value)
-    return;
-
-  // Decide which printer to invoke. If more than one option category is
-  // registered then it is useful to show the categorized help instead of
-  // uncategorized help.
-  if (GlobalParser->RegisteredOptionCategories.size() > 1) {
-    // unhide --help-list option so user can have uncategorized output if they
-    // want it.
-    HLOp.setHiddenFlag(NotHidden);
-
-    CategorizedPrinter = true; // Invoke categorized printer
-  } else
-    UncategorizedPrinter = true; // Invoke uncategorized printer
-}
-
-// Print the value of each option.
-void cl::PrintOptionValues() { GlobalParser->printOptionValues(); }
-
-void CommandLineParser::printOptionValues() {
-  if (!PrintOptions && !PrintAllOptions)
-    return;
-
-  SmallVector<std::pair<const char *, Option *>, 128> Opts;
-  sortOpts(ActiveSubCommand->OptionsMap, Opts, /*ShowHidden*/ true);
-
-  // Compute the maximum argument length...
-  size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
-
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, PrintAllOptions);
-}
-
-static VersionPrinterTy OverrideVersionPrinter = nullptr;
-
-static std::vector<VersionPrinterTy> *ExtraVersionPrinters = nullptr;
-
 #if defined(__GNUC__)
 // GCC and GCC-compatible compilers define __OPTIMIZE__ when optimizations are
 // enabled.
@@ -2509,62 +2441,207 @@ public:
 #endif
     OS << '\n';
   }
-  void operator=(bool OptionWasSpecified) {
-    if (!OptionWasSpecified)
-      return;
+  void operator=(bool OptionWasSpecified);
+};
 
-    if (OverrideVersionPrinter != nullptr) {
-      OverrideVersionPrinter(outs());
-      exit(0);
-    }
-    print();
+struct CommandLineCommonOptions {
+  // Declare the four HelpPrinter instances that are used to print out help, or
+  // help-hidden as an uncategorized list or in categories.
+  HelpPrinter UncategorizedNormalPrinter{false};
+  HelpPrinter UncategorizedHiddenPrinter{true};
+  CategorizedHelpPrinter CategorizedNormalPrinter{false};
+  CategorizedHelpPrinter CategorizedHiddenPrinter{true};
+  // Declare HelpPrinter wrappers that will decide whether or not to invoke
+  // a categorizing help printer
+  HelpPrinterWrapper WrappedNormalPrinter{UncategorizedNormalPrinter,
+                                          CategorizedNormalPrinter};
+  HelpPrinterWrapper WrappedHiddenPrinter{UncategorizedHiddenPrinter,
+                                          CategorizedHiddenPrinter};
+  // Define a category for generic options that all tools should have.
+  cl::OptionCategory GenericCategory{"Generic Options"};
 
-    // Iterate over any registered extra printers and call them to add further
-    // information.
-    if (ExtraVersionPrinters != nullptr) {
-      outs() << '\n';
-      for (const auto &I : *ExtraVersionPrinters)
-        I(outs());
-    }
+  // Define uncategorized help printers.
+  // --help-list is hidden by default because if Option categories are being
+  // used then --help behaves the same as --help-list.
+  cl::opt<HelpPrinter, true, parser<bool>> HLOp{
+      "help-list",
+      cl::desc(
+          "Display list of available options (--help-list-hidden for more)"),
+      cl::location(UncategorizedNormalPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
 
-    exit(0);
-  }
+  cl::opt<HelpPrinter, true, parser<bool>> HLHOp{
+      "help-list-hidden",
+      cl::desc("Display list of all available options"),
+      cl::location(UncategorizedHiddenPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  // Define uncategorized/categorized help printers. These printers change their
+  // behaviour at runtime depending on whether one or more Option categories
+  // have been declared.
+  cl::opt<HelpPrinterWrapper, true, parser<bool>> HOp{
+      "help",
+      cl::desc("Display available options (--help-hidden for more)"),
+      cl::location(WrappedNormalPrinter),
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::alias HOpA{"h", cl::desc("Alias for --help"), cl::aliasopt(HOp),
+                 cl::DefaultOption};
+
+  cl::opt<HelpPrinterWrapper, true, parser<bool>> HHOp{
+      "help-hidden",
+      cl::desc("Display all available options"),
+      cl::location(WrappedHiddenPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<bool> PrintOptions{
+      "print-options",
+      cl::desc("Print non-default options after command line parsing"),
+      cl::Hidden,
+      cl::init(false),
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<bool> PrintAllOptions{
+      "print-all-options",
+      cl::desc("Print all option values after command line parsing"),
+      cl::Hidden,
+      cl::init(false),
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  VersionPrinterTy OverrideVersionPrinter = nullptr;
+
+  std::vector<VersionPrinterTy> ExtraVersionPrinters;
+
+  // Define the --version option that prints out the LLVM version for the tool
+  VersionPrinter VersionPrinterInstance;
+
+  cl::opt<VersionPrinter, true, parser<bool>> VersOp{
+      "version", cl::desc("Display the version of this program"),
+      cl::location(VersionPrinterInstance), cl::ValueDisallowed,
+      cl::cat(GenericCategory)};
 };
 } // End anonymous namespace
 
-// Define the --version option that prints out the LLVM version for the tool
-static VersionPrinter VersionPrinterInstance;
+// Lazy-initialized global instance of options controlling the command-line
+// parser and general handling.
+static ManagedStatic<CommandLineCommonOptions> CommonOptions;
 
-static cl::opt<VersionPrinter, true, parser<bool>>
-    VersOp("version", cl::desc("Display the version of this program"),
-           cl::location(VersionPrinterInstance), cl::ValueDisallowed,
-           cl::cat(GenericCategory));
+static void initCommonOptions() {
+  *CommonOptions;
+  initDebugCounterOptions();
+  initGraphWriterOptions();
+  initSignalsOptions();
+  initStatisticOptions();
+  initTimerOptions();
+  initTypeSizeOptions();
+  initWithColorOptions();
+  initDebugOptions();
+  initRandomSeedOptions();
+}
+
+OptionCategory &cl::getGeneralCategory() {
+  // Initialise the general option category.
+  static OptionCategory GeneralCategory{"General options"};
+  return GeneralCategory;
+}
+
+void VersionPrinter::operator=(bool OptionWasSpecified) {
+  if (!OptionWasSpecified)
+    return;
+
+  if (CommonOptions->OverrideVersionPrinter != nullptr) {
+    CommonOptions->OverrideVersionPrinter(outs());
+    exit(0);
+  }
+  print();
+
+  // Iterate over any registered extra printers and call them to add further
+  // information.
+  if (!CommonOptions->ExtraVersionPrinters.empty()) {
+    outs() << '\n';
+    for (const auto &I : CommonOptions->ExtraVersionPrinters)
+      I(outs());
+  }
+
+  exit(0);
+}
+
+void HelpPrinterWrapper::operator=(bool Value) {
+  if (!Value)
+    return;
+
+  // Decide which printer to invoke. If more than one option category is
+  // registered then it is useful to show the categorized help instead of
+  // uncategorized help.
+  if (GlobalParser->RegisteredOptionCategories.size() > 1) {
+    // unhide --help-list option so user can have uncategorized output if they
+    // want it.
+    CommonOptions->HLOp.setHiddenFlag(NotHidden);
+
+    CategorizedPrinter = true; // Invoke categorized printer
+  } else
+    UncategorizedPrinter = true; // Invoke uncategorized printer
+}
+
+// Print the value of each option.
+void cl::PrintOptionValues() { GlobalParser->printOptionValues(); }
+
+void CommandLineParser::printOptionValues() {
+  if (!CommonOptions->PrintOptions && !CommonOptions->PrintAllOptions)
+    return;
+
+  SmallVector<std::pair<const char *, Option *>, 128> Opts;
+  sortOpts(ActiveSubCommand->OptionsMap, Opts, /*ShowHidden*/ true);
+
+  // Compute the maximum argument length...
+  size_t MaxArgLen = 0;
+  for (size_t i = 0, e = Opts.size(); i != e; ++i)
+    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+
+  for (size_t i = 0, e = Opts.size(); i != e; ++i)
+    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+}
 
 // Utility function for printing the help message.
 void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
   if (!Hidden && !Categorized)
-    UncategorizedNormalPrinter.printHelp();
+    CommonOptions->UncategorizedNormalPrinter.printHelp();
   else if (!Hidden && Categorized)
-    CategorizedNormalPrinter.printHelp();
+    CommonOptions->CategorizedNormalPrinter.printHelp();
   else if (Hidden && !Categorized)
-    UncategorizedHiddenPrinter.printHelp();
+    CommonOptions->UncategorizedHiddenPrinter.printHelp();
   else
-    CategorizedHiddenPrinter.printHelp();
+    CommonOptions->CategorizedHiddenPrinter.printHelp();
 }
 
 /// Utility function for printing version number.
-void cl::PrintVersionMessage() { VersionPrinterInstance.print(); }
+void cl::PrintVersionMessage() {
+  CommonOptions->VersionPrinterInstance.print();
+}
 
-void cl::SetVersionPrinter(VersionPrinterTy func) { OverrideVersionPrinter = func; }
+void cl::SetVersionPrinter(VersionPrinterTy func) {
+  CommonOptions->OverrideVersionPrinter = func;
+}
 
 void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
-  if (!ExtraVersionPrinters)
-    ExtraVersionPrinters = new std::vector<VersionPrinterTy>;
-
-  ExtraVersionPrinters->push_back(func);
+  CommonOptions->ExtraVersionPrinters.push_back(func);
 }
 
 StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+  initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
   assert(is_contained(Subs, &Sub));
@@ -2577,10 +2654,10 @@ cl::getRegisteredSubcommands() {
 }
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
+  initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
     for (auto &Cat : I.second->Categories) {
-      if (Cat != &Category &&
-          Cat != &GenericCategory)
+      if (Cat != &Category && Cat != &CommonOptions->GenericCategory)
         I.second->setHiddenFlag(cl::ReallyHidden);
     }
   }
@@ -2588,9 +2665,11 @@ void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
 
 void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
+  initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
     for (auto &Cat : I.second->Categories) {
-      if (find(Categories, Cat) == Categories.end() && Cat != &GenericCategory)
+      if (!is_contained(Categories, Cat) &&
+          Cat != &CommonOptions->GenericCategory)
         I.second->setHiddenFlag(cl::ReallyHidden);
     }
   }

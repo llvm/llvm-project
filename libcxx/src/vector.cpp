@@ -10,6 +10,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __vector_base_common<true>;
+void __vector_base_common<true>::__throw_length_error() const {
+    _VSTD::__throw_length_error("vector");
+}
+
+void __vector_base_common<true>::__throw_out_of_range() const {
+    _VSTD::__throw_out_of_range("vector");
+}
 
 _LIBCPP_END_NAMESPACE_STD

@@ -122,10 +122,10 @@ public:
 
     static const uint32_t CriticalEdgeMultiplier = 1000;
 
-    for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-      Instruction *TI = BB->getTerminator();
+    for (BasicBlock &BB : F) {
+      Instruction *TI = BB.getTerminator();
       uint64_t BBWeight =
-          (BFI != nullptr ? BFI->getBlockFreq(&*BB).getFrequency() : 2);
+          (BFI != nullptr ? BFI->getBlockFreq(&BB).getFrequency() : 2);
       uint64_t Weight = 2;
       if (int successors = TI->getNumSuccessors()) {
         for (int i = 0; i != successors; ++i) {
@@ -139,16 +139,16 @@ public:
               scaleFactor = UINT64_MAX;
           }
           if (BPI != nullptr)
-            Weight = BPI->getEdgeProbability(&*BB, TargetBB).scale(scaleFactor);
+            Weight = BPI->getEdgeProbability(&BB, TargetBB).scale(scaleFactor);
           if (Weight == 0)
             Weight++;
-          auto *E = &addEdge(&*BB, TargetBB, Weight);
+          auto *E = &addEdge(&BB, TargetBB, Weight);
           E->IsCritical = Critical;
-          LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to "
+          LLVM_DEBUG(dbgs() << "  Edge: from " << BB.getName() << " to "
                             << TargetBB->getName() << "  w=" << Weight << "\n");
 
           // Keep track of entry/exit edges:
-          if (&*BB == Entry) {
+          if (&BB == Entry) {
             if (Weight > MaxEntryOutWeight) {
               MaxEntryOutWeight = Weight;
               EntryOutgoing = E;
@@ -165,12 +165,12 @@ public:
         }
       } else {
         ExitBlockFound = true;
-        Edge *ExitO = &addEdge(&*BB, nullptr, BBWeight);
+        Edge *ExitO = &addEdge(&BB, nullptr, BBWeight);
         if (BBWeight > MaxExitOutWeight) {
           MaxExitOutWeight = BBWeight;
           ExitOutgoing = ExitO;
         }
-        LLVM_DEBUG(dbgs() << "  Edge: from " << BB->getName() << " to fake exit"
+        LLVM_DEBUG(dbgs() << "  Edge: from " << BB.getName() << " to fake exit"
                           << " w = " << BBWeight << "\n");
       }
     }

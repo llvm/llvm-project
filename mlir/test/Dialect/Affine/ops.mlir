@@ -95,16 +95,16 @@ func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 // -----
 
 func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
-  %c1 = constant 1 : index
-  %c0 = constant 0 : index
-  %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
   affine.for %arg3 = 0 to %arg2 step 768 {
-    %13 = dim %0, %c1 : memref<?x?xf32>
+    %13 = memref.dim %0, %c1 : memref<?x?xf32>
     affine.for %arg4 = 0 to %13 step 264 {
-      %18 = dim %0, %c0 : memref<?x?xf32>
-      %20 = std.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
+      %18 = memref.dim %0, %c0 : memref<?x?xf32>
+      %20 = memref.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
                           to memref<?x?xf32, offset : ?, strides : [?, ?]>
-      %24 = dim %20, %c0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
+      %24 = memref.dim %20, %c0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
       affine.for %arg5 = 0 to %24 step 768 {
         "foo"() : () -> ()
       }
@@ -120,12 +120,12 @@ func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
 // CHECK-LABEL: func @valid_symbol_affine_scope
 func @valid_symbol_affine_scope(%n : index, %A : memref<?xf32>) {
   test.affine_scope {
-    %c1 = constant 1 : index
-    %l = subi %n, %c1 : index
+    %c1 = arith.constant 1 : index
+    %l = arith.subi %n, %c1 : index
     // %l, %n are valid symbols since test.affine_scope defines a new affine
     // scope.
     affine.for %i = %l to %n {
-      %m = subi %l, %i : index
+      %m = arith.subi %l, %i : index
       test.affine_scope {
         // %m and %n are valid symbols.
         affine.for %j = %m to %n {
@@ -169,10 +169,36 @@ func @parallel(%A : memref<100x100xf32>, %N : index) {
 
 // -----
 
+// CHECK-LABEL: @parallel_min_max
+// CHECK: %[[A:.*]]: index, %[[B:.*]]: index, %[[C:.*]]: index, %[[D:.*]]: index
+func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
+  // CHECK: affine.parallel (%{{.*}}, %{{.*}}, %{{.*}}) =
+  // CHECK:                 (max(%[[A]], %[[B]])
+  // CHECK:              to (%[[C]], min(%[[C]], %[[D]]), %[[B]])
+  affine.parallel (%i, %j, %k) = (max(%a, %b), %b, max(%a, %c))
+                              to (%c, min(%c, %d), %b) {
+    affine.yield
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @parallel_no_ivs
+func @parallel_no_ivs() {
+  // CHECK: affine.parallel () = () to ()
+  affine.parallel () = () to () {
+    affine.yield
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @affine_if
 func @affine_if() -> f32 {
-  // CHECK: %[[ZERO:.*]] = constant {{.*}} : f32
-  %zero = constant 0.0 : f32
+  // CHECK: %[[ZERO:.*]] = arith.constant {{.*}} : f32
+  %zero = arith.constant 0.0 : f32
   // CHECK: %[[OUT:.*]] = affine.if {{.*}}() -> f32 {
   %0 = affine.if affine_set<() : ()> () -> f32 {
     // CHECK: affine.yield %[[ZERO]] : f32
@@ -184,3 +210,53 @@ func @affine_if() -> f32 {
   // CHECK: return %[[OUT]] : f32
   return %0 : f32
 }
+
+// -----
+
+//  Test affine.for with yield values.
+
+#set = affine_set<(d0): (d0 - 10 >= 0)>
+
+// CHECK-LABEL: func @yield_loop
+func @yield_loop(%buffer: memref<1024xf32>) -> f32 {
+  %sum_init_0 = arith.constant 0.0 : f32
+  %res = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_init_0) -> f32 {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    %sum_next = affine.if #set(%i) -> (f32) {
+      %new_sum = arith.addf %sum_iter, %t : f32
+      affine.yield %new_sum : f32
+    } else {
+      affine.yield %sum_iter : f32
+    }
+    affine.yield %sum_next : f32
+  }
+  return %res : f32
+}
+// CHECK:      %[[const_0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[output:.*]] = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%{{.*}} = %[[const_0]]) -> (f32) {
+// CHECK:        affine.if #set(%{{.*}}) -> f32 {
+// CHECK:          affine.yield %{{.*}} : f32
+// CHECK-NEXT:   } else {
+// CHECK-NEXT:     affine.yield %{{.*}} : f32
+// CHECK-NEXT:   }
+// CHECK-NEXT:   affine.yield %{{.*}} : f32
+// CHECK-NEXT: }
+// CHECK-NEXT: return %[[output]] : f32
+
+// CHECK-LABEL: func @affine_for_multiple_yield
+func @affine_for_multiple_yield(%buffer: memref<1024xf32>) -> (f32, f32) {
+  %init_0 = arith.constant 0.0 : f32
+  %res1, %res2 = affine.for %i = 0 to 10 step 2 iter_args(%iter_arg1 = %init_0, %iter_arg2 = %init_0) -> (f32, f32) {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    %ret1 = arith.addf %t, %iter_arg1 : f32
+    %ret2 = arith.addf %t, %iter_arg2 : f32
+    affine.yield %ret1, %ret2 : f32, f32
+  }
+  return %res1, %res2 : f32, f32
+}
+// CHECK:      %[[const_0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[output:[0-9]+]]:2 = affine.for %{{.*}} = 0 to 10 step 2 iter_args(%[[iter_arg1:.*]] = %[[const_0]], %[[iter_arg2:.*]] = %[[const_0]]) -> (f32, f32) {
+// CHECK:        %[[res1:.*]] = arith.addf %{{.*}}, %[[iter_arg1]] : f32
+// CHECK-NEXT:   %[[res2:.*]] = arith.addf %{{.*}}, %[[iter_arg2]] : f32
+// CHECK-NEXT:   affine.yield %[[res1]], %[[res2]] : f32, f32
+// CHECK-NEXT: }

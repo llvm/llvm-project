@@ -38,7 +38,7 @@ frameInfo:
 # CHECK: localFrameSize:  0
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
-      stack-id: sve-vec, callee-saved-register: '', callee-saved-restored: true,
+      stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 machineFunctionInfo: {}
 body:             |

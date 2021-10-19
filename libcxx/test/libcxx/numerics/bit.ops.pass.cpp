@@ -32,7 +32,7 @@ int main(int, char **)
 
     static_assert( std::__libcpp_popcount(v) == 7, "");
     static_assert( std::__bit_log2(v) == 12, "");
-    static_assert(!std::__ispow2(v), "");
+    static_assert(!std::__has_single_bit(v), "");
     }
 #endif
 
@@ -49,7 +49,7 @@ int main(int, char **)
 
     ASSERT_SAME_TYPE(int,      decltype(std::__libcpp_popcount(v)));
     ASSERT_SAME_TYPE(unsigned, decltype(std::__bit_log2(v)));
-    ASSERT_SAME_TYPE(bool,     decltype(std::__ispow2(v)));
+    ASSERT_SAME_TYPE(bool,     decltype(std::__has_single_bit(v)));
 
 
     assert( std::__rotl(v, 3) == 0x91a2b3c0U);
@@ -62,7 +62,7 @@ int main(int, char **)
 
     assert( std::__libcpp_popcount(v) == 13);
     assert( std::__bit_log2(v) == 28);
-    assert(!std::__ispow2(v));
+    assert(!std::__has_single_bit(v));
     }
 
     return 0;

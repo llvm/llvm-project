@@ -24,6 +24,19 @@
 # CHECK-NEXT:   Section: Undefined
 # CHECK-NEXT: }
 
+## The version of an unfetched lazy symbol is VER_NDX_GLOBAL. It is not affected by version scripts.
+# RUN: echo "v1 { *; };" > %t2.script
+# RUN: ld.lld -shared --version-script %t2.script %t.o --start-lib %t1.o --end-lib -o %t2.so
+# RUN: llvm-readelf --dyn-syms %t2.so | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2: NOTYPE WEAK DEFAULT UND foo{{$}}
+
+# RUN: ld.lld -shared --soname=tshared --version-script %t2.script %t1.o -o %tshared.so
+# RUN: ld.lld -shared --version-script %t2.script %t.o --start-lib %t1.o --end-lib %tshared.so -o %t3.so
+# RUN: llvm-readelf --dyn-syms %t3.so | FileCheck %s --check-prefix=CHECK3
+
+# CHECK3: NOTYPE WEAK DEFAULT UND foo@v1
+
 .text
  callq foo@PLT
 .weak foo

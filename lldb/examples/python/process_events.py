@@ -199,7 +199,7 @@ def main(argv):
         type='string',
         metavar='DIR',
         dest='working_dir',
-        help='The the current working directory when launching a process.',
+        help='The current working directory when launching a process.',
         default=None)
     parser.add_option(
         '-p',

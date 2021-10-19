@@ -1,20 +1,14 @@
-
-
-
 import unittest2
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
     THREAD_COUNT = 5
 
-    @skipIfDarwinEmbedded # <rdar://problem/34539270> lldb-server tests not updated to work on ios etc yet
-    @skipIfDarwinEmbedded # <rdar://problem/27005337>
     def gather_stop_replies_via_qThreadStopInfo(self, thread_count):
         # Set up the inferior args.
         inferior_args = []
@@ -106,33 +100,25 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         return (stop_replies, thread_dicts)
 
-    def qThreadStopInfo_works_for_multiple_threads(self, thread_count):
-        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(thread_count)
+    @skipIfNetBSD
+    def test_qThreadStopInfo_works_for_multiple_threads(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(self.THREAD_COUNT)
         triple = self.dbg.GetSelectedPlatform().GetTriple()
         # Consider one more thread created by calling DebugBreakProcess.
         if re.match(".*-.*-windows", triple):
-            self.assertGreaterEqual(len(stop_replies), thread_count)
+            self.assertGreaterEqual(len(stop_replies), self.THREAD_COUNT)
         else:
-            self.assertEqual(len(stop_replies), thread_count)
+            self.assertEqual(len(stop_replies), self.THREAD_COUNT)
 
-    @debugserver_test
-    def test_qThreadStopInfo_works_for_multiple_threads_debugserver(self):
-        self.init_debugserver_test()
+    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48418")
+    @expectedFailureNetBSD
+    def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(self):
         self.build()
         self.set_inferior_startup_launch()
-        self.qThreadStopInfo_works_for_multiple_threads(self.THREAD_COUNT)
 
-    @llgs_test
-    @skipIfNetBSD
-    def test_qThreadStopInfo_works_for_multiple_threads_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadStopInfo_works_for_multiple_threads(self.THREAD_COUNT)
-
-    def qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(
-            self, thread_count):
-        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(thread_count)
+        (stop_replies, _) = self.gather_stop_replies_via_qThreadStopInfo(self.THREAD_COUNT)
         self.assertIsNotNone(stop_replies)
 
         no_stop_reason_count = sum(
@@ -147,56 +133,9 @@ class TestGdbRemote_qThreadStopInfo(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Consider one more thread created by calling DebugBreakProcess.
         if re.match(".*-.*-windows", triple):
-            self.assertGreaterEqual(no_stop_reason_count, thread_count - 1)
+            self.assertGreaterEqual(no_stop_reason_count, self.THREAD_COUNT - 1)
         else:
-            self.assertEqual(no_stop_reason_count, thread_count - 1)
+            self.assertEqual(no_stop_reason_count, self.THREAD_COUNT - 1)
 
         # Only one thread should should indicate a stop reason.
         self.assertEqual(with_stop_reason_count, 1)
-
-    @debugserver_test
-    def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt_debugserver(
-            self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(
-            self.THREAD_COUNT)
-
-    @expectedFailureNetBSD
-    @llgs_test
-    def test_qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt_llgs(
-            self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadStopInfo_only_reports_one_thread_stop_reason_during_interrupt(
-            self.THREAD_COUNT)
-
-    def qThreadStopInfo_has_valid_thread_names(
-            self, thread_count, expected_thread_name):
-        (_, thread_dicts) = self.gather_stop_replies_via_qThreadStopInfo(thread_count)
-        self.assertIsNotNone(thread_dicts)
-
-        for thread_dict in list(thread_dicts.values()):
-            name = thread_dict.get("name")
-            self.assertIsNotNone(name)
-            self.assertEqual(name, expected_thread_name)
-
-    @unittest2.skip("MacOSX doesn't have a default thread name")
-    @debugserver_test
-    def test_qThreadStopInfo_has_valid_thread_names_debugserver(self):
-        self.init_debugserver_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadStopInfo_has_valid_thread_names(self.THREAD_COUNT, "a.out")
-
-    # test requires OS with set, equal thread names by default.
-    # Windows thread does not have name property, equal names as the process's by default.
-    @skipUnlessPlatform(["linux", "windows"])
-    @llgs_test
-    def test_qThreadStopInfo_has_valid_thread_names_llgs(self):
-        self.init_llgs_test()
-        self.build()
-        self.set_inferior_startup_launch()
-        self.qThreadStopInfo_has_valid_thread_names(self.THREAD_COUNT, "a.out")

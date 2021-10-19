@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
 ; FIXME: Merge with DAG test
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]

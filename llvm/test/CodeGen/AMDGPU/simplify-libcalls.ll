@@ -1,6 +1,9 @@
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink  <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
 ; GCN-POSTLINK: call fast float @_Z3sinf(
@@ -788,5 +791,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK: attributes #[[$NOUNWIND_READONLY]] = { nounwind readonly }
+; GCN-PRELINK: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind readonly }
 attributes #0 = { nounwind }

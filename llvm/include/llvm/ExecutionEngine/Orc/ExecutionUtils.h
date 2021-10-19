@@ -18,13 +18,12 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
-#include "llvm/ExecutionEngine/Orc/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <algorithm>
 #include <cstdint>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -40,17 +39,6 @@ class Value;
 namespace orc {
 
 class ObjectLayer;
-
-/// Run a main function, returning the result.
-///
-/// If the optional ProgramName argument is given then it will be inserted
-/// before the strings in Args as the first argument to the called function.
-///
-/// It is legal to have an empty argument list and no program name, however
-/// many main functions will expect a name argument at least, and will fail
-/// if none is provided.
-int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
-              Optional<StringRef> ProgramName = None);
 
 /// This iterator provides a convenient way to iterate over the elements
 ///        of an llvm.global_ctors/llvm.global_dtors instance.
@@ -152,56 +140,6 @@ inline iterator_range<StaticInitGVIterator> getStaticInitGVs(Module &M) {
   return make_range(StaticInitGVIterator(M), StaticInitGVIterator());
 }
 
-/// Convenience class for recording constructor/destructor names for
-///        later execution.
-template <typename JITLayerT>
-class LegacyCtorDtorRunner {
-public:
-  /// Construct a CtorDtorRunner for the given range using the given
-  ///        name mangling function.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      LegacyCtorDtorRunner(std::vector<std::string> CtorDtorNames,
-                           VModuleKey K),
-      "ORCv1 utilities (utilities with the 'Legacy' prefix) are deprecated. "
-      "Please use the ORCv2 CtorDtorRunner utility instead");
-
-  LegacyCtorDtorRunner(ORCv1DeprecationAcknowledgement,
-                       std::vector<std::string> CtorDtorNames, VModuleKey K)
-      : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
-
-  /// Run the recorded constructors/destructors through the given JIT
-  ///        layer.
-  Error runViaLayer(JITLayerT &JITLayer) const {
-    using CtorDtorTy = void (*)();
-
-    for (const auto &CtorDtorName : CtorDtorNames) {
-      if (auto CtorDtorSym = JITLayer.findSymbolIn(K, CtorDtorName, false)) {
-        if (auto AddrOrErr = CtorDtorSym.getAddress()) {
-          CtorDtorTy CtorDtor =
-            reinterpret_cast<CtorDtorTy>(static_cast<uintptr_t>(*AddrOrErr));
-          CtorDtor();
-        } else
-          return AddrOrErr.takeError();
-      } else {
-        if (auto Err = CtorDtorSym.takeError())
-          return Err;
-        else
-          return make_error<JITSymbolNotFound>(CtorDtorName);
-      }
-    }
-    return Error::success();
-  }
-
-private:
-  std::vector<std::string> CtorDtorNames;
-  orc::VModuleKey K;
-};
-
-template <typename JITLayerT>
-LegacyCtorDtorRunner<JITLayerT>::LegacyCtorDtorRunner(
-    std::vector<std::string> CtorDtorNames, VModuleKey K)
-    : CtorDtorNames(std::move(CtorDtorNames)), K(K) {}
-
 class CtorDtorRunner {
 public:
   CtorDtorRunner(JITDylib &JD) : JD(JD) {}
@@ -250,45 +188,6 @@ protected:
                                void *DSOHandle);
 };
 
-class LegacyLocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
-public:
-  /// Create a runtime-overrides class.
-  template <typename MangleFtorT>
-  LLVM_ATTRIBUTE_DEPRECATED(
-      LegacyLocalCXXRuntimeOverrides(const MangleFtorT &Mangle),
-      "ORCv1 utilities (utilities with the 'Legacy' prefix) are deprecated. "
-      "Please use the ORCv2 LocalCXXRuntimeOverrides utility instead");
-
-  template <typename MangleFtorT>
-  LegacyLocalCXXRuntimeOverrides(ORCv1DeprecationAcknowledgement,
-                                 const MangleFtorT &Mangle) {
-    addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
-    addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
-  }
-
-  /// Search overrided symbols.
-  JITEvaluatedSymbol searchOverrides(const std::string &Name) {
-    auto I = CXXRuntimeOverrides.find(Name);
-    if (I != CXXRuntimeOverrides.end())
-      return JITEvaluatedSymbol(I->second, JITSymbolFlags::Exported);
-    return nullptr;
-  }
-
-private:
-  void addOverride(const std::string &Name, JITTargetAddress Addr) {
-    CXXRuntimeOverrides.insert(std::make_pair(Name, Addr));
-  }
-
-  StringMap<JITTargetAddress> CXXRuntimeOverrides;
-};
-
-template <typename MangleFtorT>
-LegacyLocalCXXRuntimeOverrides::LegacyLocalCXXRuntimeOverrides(
-    const MangleFtorT &Mangle) {
-  addOverride(Mangle("__dso_handle"), toTargetAddress(&DSOHandleOverride));
-  addOverride(Mangle("__cxa_atexit"), toTargetAddress(&CXAAtExitOverride));
-}
-
 class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
   Error enable(JITDylib &JD, MangleAndInterner &Mangler);
@@ -315,7 +214,7 @@ private:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the given DynamicLibrary that
 /// passes the 'Allow' predicate will be added to the JITDylib.
-class DynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
+class DynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(const SymbolStringPtr &)>;
 
@@ -343,7 +242,7 @@ public:
     return Load(nullptr, GlobalPrefix, std::move(Allow));
   }
 
-  Error tryToGenerate(LookupKind K, JITDylib &JD,
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
 
@@ -358,7 +257,7 @@ private:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the archive will result in
 /// the containing object being added to the JITDylib.
-class StaticLibraryDefinitionGenerator : public JITDylib::DefinitionGenerator {
+class StaticLibraryDefinitionGenerator : public DefinitionGenerator {
 public:
   /// Try to create a StaticLibraryDefinitionGenerator from the given path.
   ///
@@ -381,7 +280,7 @@ public:
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer);
 
-  Error tryToGenerate(LookupKind K, JITDylib &JD,
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
 

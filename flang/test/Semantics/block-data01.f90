@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test BLOCK DATA subprogram (14.3)
 block data foo
   !ERROR: IMPORT is not allowed in a BLOCK DATA subprogram

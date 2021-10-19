@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_COFF_IMPORT_FILE_H
-#define LLVM_OBJECT_COFF_IMPORT_FILE_H
+#ifndef LLVM_OBJECT_COFFIMPORTFILE_H
+#define LLVM_OBJECT_COFFIMPORTFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/COFF.h"

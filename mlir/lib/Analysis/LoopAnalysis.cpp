@@ -15,11 +15,13 @@
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/AffineStructures.h"
 #include "mlir/Analysis/NestedMatcher.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Support/MathExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include <type_traits>
 
@@ -30,21 +32,19 @@ using namespace mlir;
 /// expression is simplified before returning. This method only utilizes map
 /// composition to construct lower and upper bounds before computing the trip
 /// count expressions.
-void mlir::buildTripCountMapAndOperands(
+void mlir::getTripCountMapAndOperands(
     AffineForOp forOp, AffineMap *tripCountMap,
     SmallVectorImpl<Value> *tripCountOperands) {
-  int64_t loopSpan;
-
+  MLIRContext *context = forOp.getContext();
   int64_t step = forOp.getStep();
-  OpBuilder b(forOp.getOperation());
-
+  int64_t loopSpan;
   if (forOp.hasConstantBounds()) {
     int64_t lb = forOp.getConstantLowerBound();
     int64_t ub = forOp.getConstantUpperBound();
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap = b.getConstantAffineMap(ceilDiv(loopSpan, step));
+    *tripCountMap = AffineMap::getConstantMap(ceilDiv(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
@@ -63,7 +63,7 @@ void mlir::buildTripCountMapAndOperands(
   SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
                                          lbMap.getResult(0));
   auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, b.getContext());
+                                   lbSplatExpr, context);
   AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
@@ -80,14 +80,10 @@ void mlir::buildTripCountMapAndOperands(
 /// Returns the trip count of the loop if it's a constant, None otherwise. This
 /// method uses affine expression analysis (in turn using getTripCount) and is
 /// able to determine constant trip count in non-trivial cases.
-// FIXME(mlir-team): this is really relying on buildTripCountMapAndOperands;
-// being an analysis utility, it shouldn't. Replace with a version that just
-// works with analysis structures (FlatAffineConstraints) and thus doesn't
-// update the IR.
 Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
-  buildTripCountMapAndOperands(forOp, &map, &operands);
+  getTripCountMapAndOperands(forOp, &map, &operands);
 
   if (!map)
     return None;
@@ -113,7 +109,7 @@ Optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
 uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
-  buildTripCountMapAndOperands(forOp, &map, &operands);
+  getTripCountMapAndOperands(forOp, &map, &operands);
 
   if (!map)
     return 1;
@@ -327,11 +323,23 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
 
 bool mlir::isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
                                   NestedPattern &vectorTransferMatcher) {
+  *memRefDim = -1;
   VectorizableOpFun fun([memRefDim](AffineForOp loop, Operation &op) {
     auto load = dyn_cast<AffineLoadOp>(op);
     auto store = dyn_cast<AffineStoreOp>(op);
-    return load ? isContiguousAccess(loop.getInductionVar(), load, memRefDim)
-                : isContiguousAccess(loop.getInductionVar(), store, memRefDim);
+    int thisOpMemRefDim = -1;
+    bool isContiguous = load ? isContiguousAccess(loop.getInductionVar(), load,
+                                                  &thisOpMemRefDim)
+                             : isContiguousAccess(loop.getInductionVar(), store,
+                                                  &thisOpMemRefDim);
+    if (thisOpMemRefDim != -1) {
+      // If memory accesses vary across different dimensions then the loop is
+      // not vectorizable.
+      if (*memRefDim != -1 && *memRefDim != thisOpMemRefDim)
+        return false;
+      *memRefDim = thisOpMemRefDim;
+    }
+    return isContiguous;
   });
   return isVectorizableLoopBodyWithOpCond(loop, fun, vectorTransferMatcher);
 }
@@ -379,4 +387,106 @@ bool mlir::isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts) {
     }
   }
   return true;
+}
+
+/// Returns true if `value` (transitively) depends on iteration-carried values
+/// of the given `ancestorOp`.
+static bool dependsOnCarriedVals(Value value,
+                                 ArrayRef<BlockArgument> iterCarriedArgs,
+                                 Operation *ancestorOp) {
+  // Compute the backward slice of the value.
+  SetVector<Operation *> slice;
+  getBackwardSlice(value, &slice,
+                   [&](Operation *op) { return !ancestorOp->isAncestor(op); });
+
+  // Check that none of the operands of the operations in the backward slice are
+  // loop iteration arguments, and neither is the value itself.
+  SmallPtrSet<Value, 8> iterCarriedValSet(iterCarriedArgs.begin(),
+                                          iterCarriedArgs.end());
+  if (iterCarriedValSet.contains(value))
+    return true;
+
+  for (Operation *op : slice)
+    for (Value operand : op->getOperands())
+      if (iterCarriedValSet.contains(operand))
+        return true;
+
+  return false;
+}
+
+/// Utility to match a generic reduction given a list of iteration-carried
+/// arguments, `iterCarriedArgs` and the position of the potential reduction
+/// argument within the list, `redPos`. If a reduction is matched, returns the
+/// reduced value and the topologically-sorted list of combiner operations
+/// involved in the reduction. Otherwise, returns a null value.
+///
+/// The matching algorithm relies on the following invariants, which are subject
+/// to change:
+///  1. The first combiner operation must be a binary operation with the
+///     iteration-carried value and the reduced value as operands.
+///  2. The iteration-carried value and combiner operations must be side
+///     effect-free, have single result and a single use.
+///  3. Combiner operations must be immediately nested in the region op
+///     performing the reduction.
+///  4. Reduction def-use chain must end in a terminator op that yields the
+///     next iteration/output values in the same order as the iteration-carried
+///     values in `iterCarriedArgs`.
+///  5. `iterCarriedArgs` must contain all the iteration-carried/output values
+///     of the region op performing the reduction.
+///
+/// This utility is generic enough to detect reductions involving multiple
+/// combiner operations (disabled for now) across multiple dialects, including
+/// Linalg, Affine and SCF. For the sake of genericity, it does not return
+/// specific enum values for the combiner operations since its goal is also
+/// matching reductions without pre-defined semantics in core MLIR. It's up to
+/// each client to make sense out of the list of combiner operations. It's also
+/// up to each client to check for additional invariants on the expected
+/// reductions not covered by this generic matching.
+Value mlir::matchReduction(ArrayRef<BlockArgument> iterCarriedArgs,
+                           unsigned redPos,
+                           SmallVectorImpl<Operation *> &combinerOps) {
+  assert(redPos < iterCarriedArgs.size() && "'redPos' is out of bounds");
+
+  BlockArgument redCarriedVal = iterCarriedArgs[redPos];
+  if (!redCarriedVal.hasOneUse())
+    return nullptr;
+
+  // For now, the first combiner op must be a binary op.
+  Operation *combinerOp = *redCarriedVal.getUsers().begin();
+  if (combinerOp->getNumOperands() != 2)
+    return nullptr;
+  Value reducedVal = combinerOp->getOperand(0) == redCarriedVal
+                         ? combinerOp->getOperand(1)
+                         : combinerOp->getOperand(0);
+
+  Operation *redRegionOp =
+      iterCarriedArgs.front().getOwner()->getParent()->getParentOp();
+  if (dependsOnCarriedVals(reducedVal, iterCarriedArgs, redRegionOp))
+    return nullptr;
+
+  // Traverse the def-use chain starting from the first combiner op until a
+  // terminator is found. Gather all the combiner ops along the way in
+  // topological order.
+  while (!combinerOp->mightHaveTrait<OpTrait::IsTerminator>()) {
+    if (!MemoryEffectOpInterface::hasNoEffect(combinerOp) ||
+        combinerOp->getNumResults() != 1 || !combinerOp->hasOneUse() ||
+        combinerOp->getParentOp() != redRegionOp)
+      return nullptr;
+
+    combinerOps.push_back(combinerOp);
+    combinerOp = *combinerOp->getUsers().begin();
+  }
+
+  // Limit matching to single combiner op until we can properly test reductions
+  // involving multiple combiners.
+  if (combinerOps.size() != 1)
+    return nullptr;
+
+  // Check that the yielded value is in the same position as in
+  // `iterCarriedArgs`.
+  Operation *terminatorOp = combinerOp;
+  if (terminatorOp->getOperand(redPos) != combinerOps.back()->getResults()[0])
+    return nullptr;
+
+  return reducedVal;
 }

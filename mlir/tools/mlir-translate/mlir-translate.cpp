@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/InitAllDialects.h"
 #include "mlir/InitAllTranslations.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Translation.h"
 
 using namespace mlir;
-
 
 namespace mlir {
 // Defined in the test directory, no public header.

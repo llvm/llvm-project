@@ -60,9 +60,9 @@ public:
       lldb_private::LazyBool &private_shared_cache) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   void PutToLog(lldb_private::Log *log) const;
@@ -103,10 +103,6 @@ protected:
                                             // exec's when talking to
                                             // debugservers that don't support
                                             // the "reason:exec" annotation.
-
-private:
-  DynamicLoaderMacOS(const DynamicLoaderMacOS &) = delete;
-  const DynamicLoaderMacOS &operator=(const DynamicLoaderMacOS &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_MACOSX_DYLD_DYNAMICLOADERMACOS_H

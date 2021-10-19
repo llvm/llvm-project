@@ -9,7 +9,7 @@
 
 ; Spills eax, putting original esp at +4.
 ; No stack adjustment if declared with no error code
-define x86_intrcc void @test_isr_no_ecode(%struct.interrupt_frame* %frame) {
+define x86_intrcc void @test_isr_no_ecode(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame) {
   ; CHECK-LABEL: test_isr_no_ecode:
   ; CHECK: pushl %eax
   ; CHECK: movl 12(%esp), %eax
@@ -29,7 +29,7 @@ define x86_intrcc void @test_isr_no_ecode(%struct.interrupt_frame* %frame) {
 
 ; Spills eax and ecx, putting original esp at +8. Stack is adjusted up another 4 bytes
 ; before return, popping the error code.
-define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i32 %ecode) {
+define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame, i32 %ecode) {
   ; CHECK-LABEL: test_isr_ecode
   ; CHECK: pushl %ecx
   ; CHECK: pushl %eax
@@ -42,9 +42,9 @@ define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i32 %eco
   ; CHECK0-LABEL: test_isr_ecode
   ; CHECK0: pushl %ecx
   ; CHECK0: pushl %eax
-  ; CHECK0: movl 8(%esp), %eax
-  ; CHECK0: leal 12(%esp), %ecx
-  ; CHECK0: movl 8(%ecx), %ecx
+  ; CHECK0: movl 8(%esp), %ecx
+  ; CHECK0: leal 12(%esp), %eax
+  ; CHECK0: movl 8(%eax), %eax
   ; CHECK0: popl %eax
   ; CHECK0: popl %ecx
   ; CHECK0: addl $4, %esp
@@ -56,7 +56,7 @@ define x86_intrcc void @test_isr_ecode(%struct.interrupt_frame* %frame, i32 %eco
 }
 
 ; All clobbered registers must be saved
-define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* %frame, i32 %ecode) {
+define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame, i32 %ecode) {
   call void asm sideeffect "", "~{eax},~{ebx},~{ebp}"()
   ; CHECK-LABEL: test_isr_clobbers
   ; CHECK: pushl %ebp
@@ -82,7 +82,7 @@ define x86_intrcc void @test_isr_clobbers(%struct.interrupt_frame* %frame, i32 %
 @f80 = common global x86_fp80 0xK00000000000000000000, align 4
 
 ; Test that the presence of x87 does not crash the FP stackifier
-define x86_intrcc void @test_isr_x87(%struct.interrupt_frame* %frame) {
+define x86_intrcc void @test_isr_x87(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame) {
   ; CHECK-LABEL: test_isr_x87
   ; CHECK-DAG: fldt f80
   ; CHECK-DAG: fld1
@@ -98,7 +98,7 @@ entry:
 
 ; Use a frame pointer to check the offsets. No return address, arguments start
 ; at EBP+4.
-define dso_local x86_intrcc void @test_fp_1(%struct.interrupt_frame* %p) #0 {
+define dso_local x86_intrcc void @test_fp_1(%struct.interrupt_frame* byval(%struct.interrupt_frame) %p) #0 {
   ; CHECK-LABEL: test_fp_1:
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: pushl %ebp
@@ -119,7 +119,7 @@ entry:
 }
 
 ; The error code is between EBP and the interrupt_frame.
-define dso_local x86_intrcc void @test_fp_2(%struct.interrupt_frame* %p, i32 %err) #0 {
+define dso_local x86_intrcc void @test_fp_2(%struct.interrupt_frame* byval(%struct.interrupt_frame) %p, i32 %err) #0 {
   ; CHECK-LABEL: test_fp_2:
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: pushl %ebp
@@ -143,7 +143,7 @@ entry:
 }
 
 ; Test argument copy elision when copied to a local alloca.
-define x86_intrcc void @test_copy_elide(%struct.interrupt_frame* %frame, i32 %err) #0 {
+define x86_intrcc void @test_copy_elide(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame, i32 %err) #0 {
   ; CHECK-LABEL: test_copy_elide:
   ; CHECK: # %bb.0: # %entry
   ; CHECK-NEXT: pushl %ebp

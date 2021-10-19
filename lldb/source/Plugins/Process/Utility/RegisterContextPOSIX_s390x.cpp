@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cerrno>
+#include <cstdint>
 #include <cstring>
-#include <errno.h>
-#include <stdint.h>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -98,7 +98,7 @@ RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
   }
 }
 
-RegisterContextPOSIX_s390x::~RegisterContextPOSIX_s390x() {}
+RegisterContextPOSIX_s390x::~RegisterContextPOSIX_s390x() = default;
 
 void RegisterContextPOSIX_s390x::Invalidate() {}
 

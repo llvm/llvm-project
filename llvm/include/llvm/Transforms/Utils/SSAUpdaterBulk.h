@@ -70,10 +70,6 @@ public:
   /// rewritten value when RewriteAllUses is called.
   void AddUse(unsigned Var, Use *U);
 
-  /// Return true if the SSAUpdater already has a value for the specified
-  /// variable in the specified block.
-  bool HasValueForBlock(unsigned Var, BasicBlock *BB);
-
   /// Perform all the necessary updates, including new PHI-nodes insertion and
   /// the requested uses update.
   ///

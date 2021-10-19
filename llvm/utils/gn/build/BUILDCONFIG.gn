@@ -22,7 +22,7 @@ set_defaults("static_library") {
   configs = shared_binary_target_configs
 }
 set_defaults("shared_library") {
-  configs = shared_binary_target_configs
+  configs = shared_binary_target_configs + [ "//llvm/utils/gn/build:zdefs" ]
 }
 set_defaults("source_set") {
   configs = shared_binary_target_configs

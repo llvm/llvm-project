@@ -20,18 +20,18 @@ union DebugInfo;
 }
 
 namespace lld {
-namespace coff {
-class OutputSection;
-class SectionChunk;
-class SymbolTable;
+class Timer;
 
-void createPDB(SymbolTable *symtab,
-               llvm::ArrayRef<OutputSection *> outputSections,
-               llvm::ArrayRef<uint8_t> sectionTable,
+namespace coff {
+class SectionChunk;
+class COFFLinkerContext;
+
+void createPDB(COFFLinkerContext &ctx, llvm::ArrayRef<uint8_t> sectionTable,
                llvm::codeview::DebugInfo *buildId);
 
 llvm::Optional<std::pair<llvm::StringRef, uint32_t>>
 getFileLineCodeView(const SectionChunk *c, uint32_t addr);
+
 } // namespace coff
 } // namespace lld
 

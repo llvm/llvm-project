@@ -32,7 +32,7 @@ class CppModuleConfiguration {
     /// the path was already set.
     LLVM_NODISCARD bool TrySet(llvm::StringRef path);
     /// Return the path if there is one.
-    std::string Get() const {
+    llvm::StringRef Get() const {
       assert(m_valid && "Called Get() on an invalid SetOncePath?");
       return m_path;
     }
@@ -57,12 +57,9 @@ class CppModuleConfiguration {
 
 public:
   /// Creates a configuration by analyzing the given list of used source files.
-  ///
-  /// Currently only looks at the used paths and doesn't actually access the
-  /// files on the disk.
   explicit CppModuleConfiguration(const FileSpecList &support_files);
   /// Creates an empty and invalid configuration.
-  CppModuleConfiguration() {}
+  CppModuleConfiguration() = default;
 
   /// Returns true iff this is a valid configuration that can be used to
   /// load and compile modules.

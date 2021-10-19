@@ -50,6 +50,7 @@ struct IncludeStyle {
 
   /// Dependent on the value, multiple ``#include`` blocks can be sorted
   /// as one and divided based on category.
+  /// \version 7
   IncludeBlocksStyle IncludeBlocks;
 
   /// See documentation of ``IncludeCategories``.
@@ -60,8 +61,11 @@ struct IncludeStyle {
     int Priority;
     /// The custom priority to sort before grouping.
     int SortPriority;
+    /// If the regular expression is case sensitive.
+    bool RegexIsCaseSensitive;
     bool operator==(const IncludeCategory &Other) const {
-      return Regex == Other.Regex && Priority == Other.Priority;
+      return Regex == Other.Regex && Priority == Other.Priority &&
+             RegexIsCaseSensitive == Other.RegexIsCaseSensitive;
     }
   };
 
@@ -84,13 +88,16 @@ struct IncludeStyle {
   /// (https://llvm.org/docs/CodingStandards.html#include-style). However, you
   /// can also assign negative priorities if you have certain headers that
   /// always need to be first.
-  /// 
+  ///
   /// There is a third and optional field ``SortPriority`` which can used while
-  /// ``IncludeBloks = IBS_Regroup`` to define the priority in which ``#includes``
-  /// should be ordered, and value of ``Priority`` defines the order of
-  /// ``#include blocks`` and also enables to group ``#includes`` of different
-  /// priority for order.``SortPriority`` is set to the value of ``Priority``
-  /// as default if it is not assigned.
+  /// ``IncludeBlocks = IBS_Regroup`` to define the priority in which
+  /// ``#includes`` should be ordered. The value of ``Priority`` defines the
+  /// order of ``#include blocks`` and also allows the grouping of ``#includes``
+  /// of different priority. ``SortPriority`` is set to the value of
+  /// ``Priority`` as default if it is not assigned.
+  ///
+  /// Each regular expression can be marked as case sensitive with the field
+  /// ``CaseSensitive``, per default it is not.
   ///
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}
@@ -98,6 +105,7 @@ struct IncludeStyle {
   ///     - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
   ///       Priority:        2
   ///       SortPriority:    2
+  ///       CaseSensitive:   true
   ///     - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
   ///       Priority:        3
   ///     - Regex:           '<[[:alnum:].]+>'
@@ -106,6 +114,7 @@ struct IncludeStyle {
   ///       Priority:        1
   ///       SortPriority:    0
   /// \endcode
+  /// \version 7
   std::vector<IncludeCategory> IncludeCategories;
 
   /// Specify a regular expression of suffixes that are allowed in the
@@ -119,6 +128,7 @@ struct IncludeStyle {
   ///
   /// For example, if configured to "(_test)?$", then a header a.h would be seen
   /// as the "main" include in both a.cc and a_test.cc.
+  /// \version 7
   std::string IncludeIsMainRegex;
 
   /// Specify a regular expression for files being formatted
@@ -139,6 +149,7 @@ struct IncludeStyle {
   /// also being respected in later phase). Without this option set,
   /// ``ClassImpl.hpp`` would not have the main include file put on top
   /// before any other include.
+  /// \version 7
   std::string IncludeIsMainSourceRegex;
 };
 

@@ -134,13 +134,13 @@ void r37(bool b) requires requires { 1 } {}
 // expected-error@-1 {{expected ';' at end of requirement}}
 
 bool r38 = requires { requires { 1; }; };
-// expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
+// expected-error@-1 {{requires expression in requirement body; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
 bool r39 = requires { requires () { 1; }; };
-// expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
+// expected-error@-1 {{requires expression in requirement body; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
 bool r40 = requires { requires (int i) { i; }; };
-// expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
+// expected-error@-1 {{requires expression in requirement body; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
 bool r41 = requires { requires (); };
 // expected-error@-1 {{expected expression}}

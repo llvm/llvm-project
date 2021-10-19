@@ -19,34 +19,32 @@ body:             |
     ; GCN-LABEL: name: handleMove_bundle
     ; GCN: liveins: $sgpr4_sgpr5
     ; GCN: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
-    ; GCN: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 0, 0, 0 :: (dereferenceable invariant load 4, align 16, addrspace 4)
+    ; GCN: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GCN: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN: $vcc_hi = IMPLICIT_DEF
     ; GCN: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
-    ; GCN: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store 4, addrspace 3)
+    ; GCN: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (store (s32), addrspace 3)
     ; GCN: $vgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     ; GCN: $m0 = S_MOV_B32 0
     ; GCN: BUNDLE implicit $vgpr0, implicit $m0, implicit $exec {
-    ; GCN:   DS_GWS_INIT $vgpr0, 11, 0, implicit $m0, implicit $exec :: (store 4)
+    ; GCN:   DS_GWS_INIT $vgpr0, 11, implicit $m0, implicit $exec :: (store (s32))
     ; GCN:   S_WAITCNT 0
     ; GCN: }
-    ; GCN: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_2]], 0, 0, implicit $exec :: (store 4, addrspace 3)
+    ; GCN: DS_WRITE_B32_gfx9 [[V_MOV_B32_e32_1]], [[V_MOV_B32_e32_2]], 0, 0, implicit $exec :: (store (s32), addrspace 3)
     ; GCN: S_ENDPGM 0
-    $vcc_hi = IMPLICIT_DEF
     %2:sgpr_64 = COPY $sgpr4_sgpr5
-    %5:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %2, 0, 0, 0 :: (dereferenceable invariant load 4, align 16, addrspace 4)
+    %5:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %2, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     %6:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %7:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    DS_WRITE_B32_gfx9 %7, %6, 0, 0, implicit $exec :: (store 4, addrspace 3)
+    DS_WRITE_B32_gfx9 %7, %6, 0, 0, implicit $exec :: (store (s32), addrspace 3)
     $m0 = S_MOV_B32 0
     $vgpr0 = COPY %5
     BUNDLE implicit killed $vgpr0, implicit $m0, implicit $exec {
-      DS_GWS_INIT $vgpr0, 11, 0, implicit $m0, implicit $exec :: (store 4)
+      DS_GWS_INIT $vgpr0, 11, implicit $m0, implicit $exec :: (store (s32))
       S_WAITCNT 0
     }
     %8:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
-    DS_WRITE_B32_gfx9 %7, %8, 0, 0, implicit $exec :: (store 4, addrspace 3)
+    DS_WRITE_B32_gfx9 %7, %8, 0, 0, implicit $exec :: (store (s32), addrspace 3)
     S_ENDPGM 0
 
 ...

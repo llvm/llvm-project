@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx14_17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr1512 { // dr1512: 4
   void f(char *p) {
@@ -28,10 +28,10 @@ namespace dr1512 { // dr1512: 4
   template<typename A, typename B, typename C> void composite_pointer_type_is_ord() {
     composite_pointer_type_is_base<A, B, C>();
 
-    typedef __typeof(val<A>() < val<B>()) cmp;
-    typedef __typeof(val<A>() <= val<B>()) cmp;
-    typedef __typeof(val<A>() > val<B>()) cmp;
-    typedef __typeof(val<A>() >= val<B>()) cmp;
+    typedef __typeof(val<A>() < val<B>()) cmp;  // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() <= val<B>()) cmp; // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() > val<B>()) cmp;  // cxx17-warning 2 {{ordered comparison of function pointers}}
+    typedef __typeof(val<A>() >= val<B>()) cmp; // cxx17-warning 2 {{ordered comparison of function pointers}}
     typedef bool cmp;
   }
 
@@ -79,8 +79,8 @@ namespace dr1512 { // dr1512: 4
     no_composite_pointer_type<const int (A::*)(), volatile int (C::*)()>();
 
 #if __cplusplus > 201402
-    composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>();
-    composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>();
+    composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>(); // expected-note {{requested here}}
+    composite_pointer_type_is_ord<int (*)(), int (*)() noexcept, int (*)()>(); // expected-note {{requested here}}
     composite_pointer_type_is_unord<int (A::*)() noexcept, int (A::*)(), int (A::*)()>();
     composite_pointer_type_is_unord<int (A::*)(), int (A::*)() noexcept, int (A::*)()>();
     // FIXME: This looks like a standard defect; these should probably all have type 'int (B::*)()'.
@@ -113,7 +113,7 @@ namespace dr1512 { // dr1512: 4
   }
 
 #if __cplusplus >= 201103L
-  template<typename T> struct Wrap { operator T(); }; // expected-note 4{{converted to type 'nullptr_t'}} expected-note 4{{converted to type 'int *'}}
+  template<typename T> struct Wrap { operator T(); }; // expected-note 4{{converted to type 'std::nullptr_t'}} expected-note 4{{converted to type 'int *'}}
   void test_overload() {
     using nullptr_t = decltype(nullptr);
     void(Wrap<nullptr_t>() == Wrap<nullptr_t>());
@@ -127,7 +127,7 @@ namespace dr1512 { // dr1512: 4
     // but then only convert as far as 'nullptr_t', which we then can't convert to 'int*'.
     void(Wrap<nullptr_t>() == Wrap<int*>());
     void(Wrap<nullptr_t>() != Wrap<int*>());
-    void(Wrap<nullptr_t>() < Wrap<int*>()); // expected-error {{invalid operands to binary expression ('Wrap<nullptr_t>' and 'Wrap<int *>')}}
+    void(Wrap<nullptr_t>() < Wrap<int*>()); // expected-error {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<int *>')}}
     void(Wrap<nullptr_t>() > Wrap<int*>()); // expected-error {{invalid operands}}
     void(Wrap<nullptr_t>() <= Wrap<int*>()); // expected-error {{invalid operands}}
     void(Wrap<nullptr_t>() >= Wrap<int*>()); // expected-error {{invalid operands}}
@@ -237,6 +237,20 @@ namespace dr1550 { // dr1550: yes
   int f(bool b, int n) {
     return (b ? (throw 0) : n) + (b ? n : (throw 0));
   }
+}
+
+namespace dr1558 { // dr1558: 12
+#if __cplusplus >= 201103L
+  template<class T, class...> using first_of = T;
+  template<class T> first_of<void, typename T::type> f(int); // expected-note {{'int' cannot be used prior to '::'}}
+  template<class T> void f(...) = delete; // expected-note {{deleted}}
+
+  struct X { typedef void type; };
+  void test() {
+    f<X>(0);
+    f<int>(0); // expected-error {{deleted}}
+  }
+#endif
 }
 
 namespace dr1560 { // dr1560: 3.5

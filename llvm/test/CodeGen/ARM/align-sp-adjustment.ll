@@ -11,7 +11,7 @@
 @.str.3 = private unnamed_addr constant [2 x i8] c"d\00", align 1
 
 declare i32* @_Z4bar3iiPKcS0_i(i32, i32, i8*, i8*, i32)
-declare void @_Z4bar1i8struct_2(i32, %struct.struct_2* byval align 4)
+declare void @_Z4bar1i8struct_2(i32, %struct.struct_2* byval(%struct.struct_2) align 4)
 declare i32 @_Z4bar2PiPKc(i32*, i8*)
 
 define void @_Z3fooiiiii(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) #0 {
@@ -38,7 +38,7 @@ for.inc:
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
-  call void @_Z4bar1i8struct_2(i32 %p4, %struct.struct_2* byval nonnull align 4 %params) #4
+  call void @_Z4bar1i8struct_2(i32 %p4, %struct.struct_2* byval(%struct.struct_2) nonnull align 4 %params) #4
   br label %cleanup.8
 
 cleanup.8:

@@ -34,7 +34,6 @@ static_library("profile") {
     "GCDAProfiling.c",
     "InstrProfiling.c",
     "InstrProfiling.h",
-    "InstrProfilingBiasVar.c",
     "InstrProfilingBuffer.c",
     "InstrProfilingFile.c",
     "InstrProfilingInternal.c",
@@ -64,9 +63,9 @@ static_library("profile") {
 
   if (current_os != "win") {
     defines = [
-      "COMPILER_RT_TARGET_HAS_ATOMICS",
-      "COMPILER_RT_TARGET_HAS_FCNTL_LCK",
-      "COMPILER_RT_TARGET_HAS_UNAME",
+      "COMPILER_RT_HAS_UNAME",
+      "COMPILER_RT_HAS_ATOMICS",
+      "COMPILER_RT_HAS_FCNTL_LCK",
     ]
   }
 }

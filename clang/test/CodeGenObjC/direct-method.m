@@ -120,7 +120,7 @@ __attribute__((objc_root_class))
 
 // CHECK-LABEL: define hidden void @"\01-[Root getAggregate]"(
 - (struct my_aggregate_struct)getAggregate __attribute__((objc_direct)) {
-  // CHECK: %struct.my_aggregate_struct* noalias sret align 4 [[RETVAL:%[^,]*]],
+  // CHECK: %struct.my_aggregate_struct* noalias sret(%struct.my_aggregate_struct) align 4 [[RETVAL:%[^,]*]],
 
   // loading parameters
   // CHECK-LABEL: entry:
@@ -204,7 +204,7 @@ __attribute__((objc_direct_members))
 @end
 
 int useRoot(Root *r) {
-  // CHECK-LABEL: define i32 @useRoot
+  // CHECK-LABEL: define{{.*}} i32 @useRoot
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root getInt]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Root intProperty2]"
@@ -212,7 +212,7 @@ int useRoot(Root *r) {
 }
 
 int useFoo(Foo *f) {
-  // CHECK-LABEL: define i32 @useFoo
+  // CHECK-LABEL: define{{.*}} i32 @useFoo
   // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInExtension]"
@@ -231,7 +231,7 @@ __attribute__((objc_root_class))
 @end
 
 int useRootDeclOnly(RootDeclOnly *r) {
-  // CHECK-LABEL: define i32 @useRootDeclOnly
+  // CHECK-LABEL: define{{.*}} i32 @useRootDeclOnly
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[RootDeclOnly intProperty]"
   return [r intProperty];
 }

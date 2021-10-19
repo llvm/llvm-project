@@ -1,6 +1,4 @@
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-mapping-scale=5 -S | FileCheck %s
 ; RUN: opt < %s -passes='asan-pipeline' -asan-mapping-scale=5 -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
@@ -8,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Here we check that the global redzone sizes grow with the object size.
 
 @G10 = global [10 x i8] zeroinitializer, align 1
-; CHECK: @G10 = global { [10 x i8], [54 x i8] }
+; CHECK: @G10 = global { [10 x i8], [22 x i8] }
 
 @G31 = global [31 x i8] zeroinitializer, align 1
 @G32 = global [32 x i8] zeroinitializer, align 1

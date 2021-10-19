@@ -1,4 +1,4 @@
-; RUN: opt -O3 -S -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -passes='default<O3>,print<scalar-evolution>' -S < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:m-p:40:64:64:32-i32:32-i16:16-i8:8-n32"
 
@@ -114,7 +114,7 @@ declare void @use(i1)
 declare void @llvm.experimental.guard(i1, ...)
 
 ; This tests getRangeRef acts as intended with different idx size.
-; CHECK: max backedge-taken count is 318
+; CHECK: Loop %loop: Unpredictable max backedge-taken count.
 define void @test_range_ref1(i8 %t) {
  entry:
   %t.ptr = inttoptr i8 %t to i8*

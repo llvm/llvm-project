@@ -1,4 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck -check-prefixes=CHECK,CHECKLX %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s | FileCheck -check-prefixes=CHECK,CHECKAIX %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck -check-prefixes=CHECK,CHECKAIX32 %s
 
 ; The instructions ADDIStocHA8/LDtocL are used to calculate the address of
 ; globals. The ones that are in bb.3.if.end could not be hoisted by Machine
@@ -17,12 +19,12 @@
 ;
 ;    %4 = COPY %x3
 ;    %5 = ADDIStocHA8 %x2, @ga
-;    %6 = LDtocL @ga, killed %5 :: (load 8 from got)
-;    %7 = LWZ 0, %6 :: (volatile dereferenceable load 4 from @ga)
+;    %6 = LDtocL @ga, killed %5 :: (load (s64) from got)
+;    %7 = LWZ 0, %6 :: (volatile dereferenceable load (s32) from @ga)
 ;    %8 = ADDIStocHA8 %x2, @gb
-;    %9 = LDtocL @gb, killed %8 :: (load 8 from got)
-;    %10 = LWZ 0, killed %9 :: (volatile dereferenceable load 4 from @gb)
-;    %0 = LWZ 0, %6 :: (volatile dereferenceable load 4 from @ga)
+;    %9 = LDtocL @gb, killed %8 :: (load (s64) from got)
+;    %10 = LWZ 0, killed %9 :: (volatile dereferenceable load (s32) from @gb)
+;    %0 = LWZ 0, %6 :: (volatile dereferenceable load (s32) from @ga)
 ;    %11 = CMPW killed %7, killed %10
 ;    BCC 44, killed %11, %bb.2.if.then
 ;    B %bb.3.if.end
@@ -31,7 +33,7 @@
 ;    %1 = PHI %0, %bb.0.entry, %3, %bb.3.if.end
 ;    ADJCALLSTACKDOWN 32, 0, implicit-def dead %r1, implicit %r1
 ;    %20 = COPY %x2
-;    STD %20, 24, %x1 :: (store 8 into stack + 24)
+;    STD %20, 24, %x1 :: (store (s64) into stack + 24)
 ;    %21 = EXTSW_32_64 %1
 ;    %x3 = COPY %21
 ;    %x12 = COPY %4
@@ -48,13 +50,13 @@
 ;    %2 = PHI %0, %bb.0.entry, %3, %bb.3.if.end
 ;    %12 = ADDI %2, 1
 ;    %13 = ADDIStocHA8 %x2, @ga
-;    %14 = LDtocL @ga, killed %13 :: (load 8 from got)
-;    STW killed %12, 0, %14 :: (volatile store 4 into @ga)
-;    %15 = LWZ 0, %14 :: (volatile dereferenceable load 4 from @ga)
+;    %14 = LDtocL @ga, killed %13 :: (load (s64) from got)
+;    STW killed %12, 0, %14 :: (volatile store (s32) into @ga)
+;    %15 = LWZ 0, %14 :: (volatile dereferenceable load (s32) from @ga)
 ;    %16 = ADDIStocHA8 %x2, @gb
-;    %17 = LDtocL @gb, killed %16 :: (load 8 from got)
-;    %18 = LWZ 0, killed %17 :: (volatile dereferenceable load 4 from @gb)
-;    %3 = LWZ 0, %14 :: (volatile dereferenceable load 4 from @ga)
+;    %17 = LDtocL @gb, killed %16 :: (load (s64) from got)
+;    %18 = LWZ 0, killed %17 :: (volatile dereferenceable load (s32) from @gb)
+;    %3 = LWZ 0, %14 :: (volatile dereferenceable load (s32) from @ga)
 ;    %19 = CMPW killed %15, killed %18
 ;    BCC 44, killed %19, %bb.2.if.then
 ;    B %bb.3.if.end
@@ -65,22 +67,32 @@ define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK:         addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC1@toc@ha
-; CHECK-NEXT:    mr 12, 3
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC1@toc@l(5)
-; CHECK-NEXT:    lwz 6, 0(4)
-; CHECK-NEXT:    lwz 7, 0(5)
-; CHECK-NEXT:    cmpw 6, 7
-; CHECK-NEXT:    lwz 6, 0(4)
-; CHECK-NEXT:    bgt 0, .LBB0_2
-; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC0@toc@ha
-; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC1@toc@ha
-; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_1: # %if.end
-; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC0@toc@ha
-; CHECK-NOT:    addis {{[0-9]+}}, 2, .LC1@toc@ha
+; CHECKLX:        addis 4, 2, .LC0@toc@ha
+; CHECKLX-NEXT:   addis 5, 2, .LC1@toc@ha
+; CHECKLX-NEXT:   mr 12, 3
+; CHECKLX-NEXT:   ld 4, .LC0@toc@l(4)
+; CHECKLX-NEXT:   ld 5, .LC1@toc@l(5)
+; CHECKLX-NEXT:   lwz 6, 0(4)
+; CHECKLX-NEXT:   lwz 7, 0(5)
+; CHECKLX-NEXT:   cmpw 6, 7
+; CHECKLX-NEXT:   lwz 6, 0(4)
+; CHECKLX-NEXT:   bgt 0, .LBB0_2
+; CHECKLX-NOT:    addis {{[0-9]+}}, 2, .LC0@toc@ha
+; CHECKLX-NOT:    addis {{[0-9]+}}, 2, .LC1@toc@ha
+; CHECKLX-NEXT:   .p2align 5
+; CHECKLX-NEXT: .LBB0_1: # %if.end
+; CHECKLX-NOT:    addis {{[0-9]+}}, 2, .LC0@toc@ha
+; CHECKLX-NOT:    addis {{[0-9]+}}, 2, .LC1@toc@ha
+; CHECKAIX:        ld 5, L..C0(2)
+; CHECKAIX-NEXT:   ld 6, L..C1(2)
+; CHECKAIX-NEXT: L..BB0_1: # %if.end
+; CHECKAIX-NOT:    ld {{[0-9]+}}, L..C0(2)
+; CHECKAIX-NOT:    ld {{[0-9]+}}, L..C1(2)
+; CHECKAIX32:        lwz 5, L..C0(2)
+; CHECKAIX32-NEXT:   lwz 6, L..C1(2)
+; CHECKAIX32-NEXT: L..BB0_1: # %if.end
+; CHECKAIX32-NOT:    lwz 5, L..C0(2)
+; CHECKAIX32-NOT:    lwz 6, L..C1(2)
 ; CHECK:    blr
 entry:
   %0 = load volatile i32, i32* @ga, align 4

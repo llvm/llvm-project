@@ -23,11 +23,7 @@ class TestFrameVar(TestBase):
         self.do_test()
 
     def do_test(self):
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         # Now create a breakpoint in main.c at the source matching
         # "Set a breakpoint here"
@@ -49,8 +45,8 @@ class TestFrameVar(TestBase):
         # Did we hit our breakpoint?
         from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
         threads = get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
@@ -64,28 +60,28 @@ class TestFrameVar(TestBase):
         result = interp.HandleCommand("frame var -l", command_result)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "frame var -a didn't succeed")
         output = command_result.GetOutput()
-        self.assertTrue("argc" in output, "Args didn't find argc")
-        self.assertTrue("argv" in output, "Args didn't find argv")
-        self.assertTrue("test_var" not in output, "Args found a local")
-        self.assertTrue("g_var" not in output, "Args found a global")
+        self.assertIn("argc", output, "Args didn't find argc")
+        self.assertIn("argv", output, "Args didn't find argv")
+        self.assertNotIn("test_var", output, "Args found a local")
+        self.assertNotIn("g_var", output, "Args found a global")
 
         # Just get locals:
         result = interp.HandleCommand("frame var -a", command_result)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "frame var -a didn't succeed")
         output = command_result.GetOutput()
-        self.assertTrue("argc" not in output, "Locals found argc")
-        self.assertTrue("argv" not in output, "Locals found argv")
-        self.assertTrue("test_var" in output, "Locals didn't find test_var")
-        self.assertTrue("g_var" not in output, "Locals found a global")
+        self.assertNotIn("argc", output, "Locals found argc")
+        self.assertNotIn("argv", output, "Locals found argv")
+        self.assertIn("test_var", output, "Locals didn't find test_var")
+        self.assertNotIn("g_var", output, "Locals found a global")
 
         # Get the file statics:
         result = interp.HandleCommand("frame var -l -a -g", command_result)
         self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, "frame var -a didn't succeed")
         output = command_result.GetOutput()
-        self.assertTrue("argc" not in output, "Globals found argc")
-        self.assertTrue("argv" not in output, "Globals found argv")
-        self.assertTrue("test_var" not in output, "Globals found test_var")
-        self.assertTrue("g_var" in output, "Globals didn't find g_var")
+        self.assertNotIn("argc", output, "Globals found argc")
+        self.assertNotIn("argv", output, "Globals found argv")
+        self.assertNotIn("test_var", output, "Globals found test_var")
+        self.assertIn("g_var", output, "Globals didn't find g_var")
 
 
 

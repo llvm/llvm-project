@@ -1,5 +1,8 @@
 // Check that clang can use a PCH created from libclang.
 
+// https://PR46644
+// XFAIL: arm64-apple
+
 // This test doesn't use -fdisable-module-hash and hence requires that
 // CompilerInvocation::getModuleHash() computes exactly the same hash
 // for c-index-test and clang, which in turn requires that the both use

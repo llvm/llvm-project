@@ -9,7 +9,6 @@
 // This file implements loop unrolling.
 //
 //===----------------------------------------------------------------------===//
-
 #include "PassDetail.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -45,11 +44,13 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
       : AffineLoopUnrollBase<LoopUnroll>(other),
         getUnrollFactor(other.getUnrollFactor) {}
   explicit LoopUnroll(
-      Optional<unsigned> unrollFactor = None, bool unrollFull = false,
+      Optional<unsigned> unrollFactor = None, bool unrollUpToFactor = false,
+      bool unrollFull = false,
       const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr)
       : getUnrollFactor(getUnrollFactor) {
     if (unrollFactor)
       this->unrollFactor = *unrollFactor;
+    this->unrollUpToFactor = unrollUpToFactor;
     this->unrollFull = unrollFull;
   }
 
@@ -95,7 +96,7 @@ void LoopUnroll::runOnFunction() {
         loops.push_back(forOp);
     });
     for (auto forOp : loops)
-      loopUnrollFull(forOp);
+      (void)loopUnrollFull(forOp);
     return;
   }
 
@@ -126,13 +127,15 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
   if (unrollFull)
     return loopUnrollFull(forOp);
   // Otherwise, unroll by the given unroll factor.
+  if (unrollUpToFactor)
+    return loopUnrollUpToFactor(forOp, unrollFactor);
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createLoopUnrollPass(
-    int unrollFactor, bool unrollFull,
+    int unrollFactor, bool unrollUpToFactor, bool unrollFull,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor) {
   return std::make_unique<LoopUnroll>(
-      unrollFactor == -1 ? None : Optional<unsigned>(unrollFactor), unrollFull,
-      getUnrollFactor);
+      unrollFactor == -1 ? None : Optional<unsigned>(unrollFactor),
+      unrollUpToFactor, unrollFull, getUnrollFactor);
 }

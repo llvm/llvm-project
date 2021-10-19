@@ -162,7 +162,7 @@ std::string GlobalValue::getGlobalIdentifier() const {
 StringRef GlobalValue::getSection() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
-    if (const GlobalObject *GO = GA->getBaseObject())
+    if (const GlobalObject *GO = GA->getAliaseeObject())
       return GO->getSection();
     return "";
   }
@@ -172,7 +172,7 @@ StringRef GlobalValue::getSection() const {
 const Comdat *GlobalValue::getComdat() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.
-    if (const GlobalObject *GO = GA->getBaseObject())
+    if (const GlobalObject *GO = GA->getAliaseeObject())
       return const_cast<GlobalObject *>(GO)->getComdat();
     return nullptr;
   }
@@ -280,11 +280,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-const GlobalObject *GlobalValue::getBaseObject() const {
+const GlobalObject *GlobalValue::getAliaseeObject() const {
   if (auto *GO = dyn_cast<GlobalObject>(this))
     return GO;
-  if (auto *GA = dyn_cast<GlobalIndirectSymbol>(this))
-    return GA->getBaseObject();
+  if (auto *GA = dyn_cast<GlobalAlias>(this))
+    return GA->getAliaseeObject();
   return nullptr;
 }
 
@@ -352,11 +352,15 @@ GlobalVariable::GlobalVariable(Type *Ty, bool constant, LinkageTypes Link,
 GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                LinkageTypes Link, Constant *InitVal,
                                const Twine &Name, GlobalVariable *Before,
-                               ThreadLocalMode TLMode, unsigned AddressSpace,
+                               ThreadLocalMode TLMode,
+                               Optional<unsigned> AddressSpace,
                                bool isExternallyInitialized)
     : GlobalObject(Ty, Value::GlobalVariableVal,
                    OperandTraits<GlobalVariable>::op_begin(this),
-                   InitVal != nullptr, Link, Name, AddressSpace),
+                   InitVal != nullptr, Link, Name,
+                   AddressSpace
+                       ? *AddressSpace
+                       : M.getDataLayout().getDefaultGlobalsAddressSpace()),
       isConstantGlobal(constant),
       isExternallyInitializedConstant(isExternallyInitialized) {
   assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
@@ -460,11 +464,6 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases) {
   return nullptr;
 }
 
-const GlobalObject *GlobalIndirectSymbol::getBaseObject() const {
-  DenseSet<const GlobalAlias *> Aliases;
-  return findBaseObject(getOperand(0), Aliases);
-}
-
 //===----------------------------------------------------------------------===//
 // GlobalAlias Implementation
 //===----------------------------------------------------------------------===//
@@ -498,8 +497,7 @@ GlobalAlias *GlobalAlias::create(Type *Ty, unsigned AddressSpace,
 
 GlobalAlias *GlobalAlias::create(LinkageTypes Link, const Twine &Name,
                                  GlobalValue *Aliasee) {
-  PointerType *PTy = Aliasee->getType();
-  return create(PTy->getElementType(), PTy->getAddressSpace(), Link, Name,
+  return create(Aliasee->getValueType(), Aliasee->getAddressSpace(), Link, Name,
                 Aliasee);
 }
 
@@ -519,6 +517,11 @@ void GlobalAlias::setAliasee(Constant *Aliasee) {
   assert((!Aliasee || Aliasee->getType() == getType()) &&
          "Alias and aliasee types should match!");
   setIndirectSymbol(Aliasee);
+}
+
+const GlobalObject *GlobalAlias::getAliaseeObject() const {
+  DenseSet<const GlobalAlias *> Aliases;
+  return findBaseObject(getOperand(0), Aliases);
 }
 
 //===----------------------------------------------------------------------===//
@@ -546,4 +549,9 @@ void GlobalIFunc::removeFromParent() {
 
 void GlobalIFunc::eraseFromParent() {
   getParent()->getIFuncList().erase(getIterator());
+}
+
+const Function *GlobalIFunc::getResolverFunction() const {
+  DenseSet<const GlobalAlias *> Aliases;
+  return cast<Function>(findBaseObject(getIndirectSymbol(), Aliases));
 }

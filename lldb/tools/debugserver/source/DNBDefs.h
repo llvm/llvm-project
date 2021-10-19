@@ -13,11 +13,13 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBDEFS_H
 
-#include <signal.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <csignal>
+#include <cstdint>
+#include <cstdio>
+#include <string>
 #include <sys/syslimits.h>
 #include <unistd.h>
+#include <vector>
 
 // Define nub_addr_t and the invalid address value from the architecture
 #if defined(__x86_64__) || defined(__arm64__) || defined(__aarch64__)
@@ -316,9 +318,14 @@ struct DNBExecutableImageInfo {
 };
 
 struct DNBRegionInfo {
+public:
+  DNBRegionInfo()
+      : addr(0), size(0), permissions(0), dirty_pages(), vm_types() {}
   nub_addr_t addr;
   nub_addr_t size;
   uint32_t permissions;
+  std::vector<nub_addr_t> dirty_pages;
+  std::vector<std::string> vm_types;
 };
 
 enum DNBProfileDataScanType {

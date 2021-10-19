@@ -75,29 +75,24 @@ private:
 namespace llvm {
 namespace orc {
 
+char RTDyldObjectLinkingLayer::ID;
+
+using BaseT = RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>;
+
 RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
     ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
-    : ObjectLayer(ES), GetMemoryManager(GetMemoryManager) {}
-
-RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
-  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  for (auto &MemMgr : MemMgrs) {
-    for (auto *L : EventListeners)
-      L->notifyFreeingObject(
-          static_cast<uint64_t>(reinterpret_cast<uintptr_t>(MemMgr.get())));
-    MemMgr->deregisterEHFrames();
-  }
+    : BaseT(ES), GetMemoryManager(GetMemoryManager) {
+  ES.registerResourceManager(*this);
 }
 
-void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
-                                    std::unique_ptr<MemoryBuffer> O) {
-  assert(O && "Object must not be null");
+RTDyldObjectLinkingLayer::~RTDyldObjectLinkingLayer() {
+  assert(MemMgrs.empty() && "Layer destroyed with resources still attached");
+}
 
-  // This method launches an asynchronous link step that will fulfill our
-  // materialization responsibility. We need to switch R to be heap
-  // allocated before that happens so it can live as long as the asynchronous
-  // link needs it to (i.e. it must be able to outlive this method).
-  auto SharedR = std::make_shared<MaterializationResponsibility>(std::move(R));
+void RTDyldObjectLinkingLayer::emit(
+    std::unique_ptr<MaterializationResponsibility> R,
+    std::unique_ptr<MemoryBuffer> O) {
+  assert(O && "Object must not be null");
 
   auto &ES = getExecutionSession();
 
@@ -105,7 +100,7 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
 
   if (!Obj) {
     getExecutionSession().reportError(Obj.takeError());
-    SharedR->failMaterialization();
+    R->failMaterialization();
     return;
   }
 
@@ -121,7 +116,7 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
           continue;
       } else {
         ES.reportError(SymType.takeError());
-        R.failMaterialization();
+        R->failMaterialization();
         return;
       }
 
@@ -129,7 +124,7 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
       if (!SymFlagsOrErr) {
         // TODO: Test this error.
         ES.reportError(SymFlagsOrErr.takeError());
-        R.failMaterialization();
+        R->failMaterialization();
         return;
       }
 
@@ -139,46 +134,44 @@ void RTDyldObjectLinkingLayer::emit(MaterializationResponsibility R,
           InternalSymbols->insert(*SymName);
         else {
           ES.reportError(SymName.takeError());
-          R.failMaterialization();
+          R->failMaterialization();
           return;
         }
       }
     }
   }
 
-  auto K = R.getVModuleKey();
-  RuntimeDyld::MemoryManager *MemMgr = nullptr;
+  auto MemMgr = GetMemoryManager();
+  auto &MemMgrRef = *MemMgr;
 
-  // Create a record a memory manager for this object.
-  {
-    auto Tmp = GetMemoryManager();
-    std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-    MemMgrs.push_back(std::move(Tmp));
-    MemMgr = MemMgrs.back().get();
-  }
+  // Switch to shared ownership of MR so that it can be captured by both
+  // lambdas below.
+  std::shared_ptr<MaterializationResponsibility> SharedR(std::move(R));
 
   JITDylibSearchOrderResolver Resolver(*SharedR);
 
   jitLinkForORC(
       object::OwningBinary<object::ObjectFile>(std::move(*Obj), std::move(O)),
-      *MemMgr, Resolver, ProcessAllSections,
-      [this, K, SharedR, MemMgr, InternalSymbols](
+      MemMgrRef, Resolver, ProcessAllSections,
+      [this, SharedR, &MemMgrRef, InternalSymbols](
           const object::ObjectFile &Obj,
-          std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+          RuntimeDyld::LoadedObjectInfo &LoadedObjInfo,
           std::map<StringRef, JITEvaluatedSymbol> ResolvedSymbols) {
-        return onObjLoad(K, *SharedR, Obj, MemMgr, std::move(LoadedObjInfo),
+        return onObjLoad(*SharedR, Obj, MemMgrRef, LoadedObjInfo,
                          ResolvedSymbols, *InternalSymbols);
       },
-      [this, K, SharedR, MemMgr](object::OwningBinary<object::ObjectFile> Obj,
-                                 Error Err) mutable {
-        onObjEmit(K, *SharedR, std::move(Obj), MemMgr, std::move(Err));
+      [this, SharedR, MemMgr = std::move(MemMgr)](
+          object::OwningBinary<object::ObjectFile> Obj,
+          std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+          Error Err) mutable {
+        onObjEmit(*SharedR, std::move(Obj), std::move(MemMgr),
+                  std::move(LoadedObjInfo), std::move(Err));
       });
 }
 
 void RTDyldObjectLinkingLayer::registerJITEventListener(JITEventListener &L) {
   std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  assert(llvm::none_of(EventListeners,
-                       [&](JITEventListener *O) { return O == &L; }) &&
+  assert(!llvm::is_contained(EventListeners, &L) &&
          "Listener has already been registered");
   EventListeners.push_back(&L);
 }
@@ -191,9 +184,9 @@ void RTDyldObjectLinkingLayer::unregisterJITEventListener(JITEventListener &L) {
 }
 
 Error RTDyldObjectLinkingLayer::onObjLoad(
-    VModuleKey K, MaterializationResponsibility &R,
-    const object::ObjectFile &Obj, RuntimeDyld::MemoryManager *MemMgr,
-    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo,
+    MaterializationResponsibility &R, const object::ObjectFile &Obj,
+    RuntimeDyld::MemoryManager &MemMgr,
+    RuntimeDyld::LoadedObjectInfo &LoadedObjInfo,
     std::map<StringRef, JITEvaluatedSymbol> Resolved,
     std::set<StringRef> &InternalSymbols) {
   SymbolFlagsMap ExtraSymbolsToClaim;
@@ -274,19 +267,16 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   }
 
   if (NotifyLoaded)
-    NotifyLoaded(K, Obj, *LoadedObjInfo);
-
-  std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-  assert(!LoadedObjInfos.count(MemMgr) && "Duplicate loaded info for MemMgr");
-  LoadedObjInfos[MemMgr] = std::move(LoadedObjInfo);
+    NotifyLoaded(R, Obj, LoadedObjInfo);
 
   return Error::success();
 }
 
 void RTDyldObjectLinkingLayer::onObjEmit(
-    VModuleKey K, MaterializationResponsibility &R,
+    MaterializationResponsibility &R,
     object::OwningBinary<object::ObjectFile> O,
-    RuntimeDyld::MemoryManager *MemMgr, Error Err) {
+    std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr,
+    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObjInfo, Error Err) {
   if (Err) {
     getExecutionSession().reportError(std::move(Err));
     R.failMaterialization();
@@ -306,27 +296,60 @@ void RTDyldObjectLinkingLayer::onObjEmit(
   // Run EventListener notifyLoaded callbacks.
   {
     std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
-    auto LOIItr = LoadedObjInfos.find(MemMgr);
-    assert(LOIItr != LoadedObjInfos.end() && "LoadedObjInfo missing");
     for (auto *L : EventListeners)
-      L->notifyObjectLoaded(
-          static_cast<uint64_t>(reinterpret_cast<uintptr_t>(MemMgr)), *Obj,
-          *LOIItr->second);
-    LoadedObjInfos.erase(MemMgr);
+      L->notifyObjectLoaded(pointerToJITTargetAddress(MemMgr.get()), *Obj,
+                            *LoadedObjInfo);
   }
 
   if (NotifyEmitted)
-    NotifyEmitted(K, std::move(ObjBuffer));
+    NotifyEmitted(R, std::move(ObjBuffer));
+
+  if (auto Err = R.withResourceKeyDo(
+          [&](ResourceKey K) { MemMgrs[K].push_back(std::move(MemMgr)); })) {
+    getExecutionSession().reportError(std::move(Err));
+    R.failMaterialization();
+  }
 }
 
-LegacyRTDyldObjectLinkingLayer::LegacyRTDyldObjectLinkingLayer(
-    ExecutionSession &ES, ResourcesGetter GetResources,
-    NotifyLoadedFtor NotifyLoaded, NotifyFinalizedFtor NotifyFinalized,
-    NotifyFreedFtor NotifyFreed)
-    : ES(ES), GetResources(std::move(GetResources)),
-      NotifyLoaded(std::move(NotifyLoaded)),
-      NotifyFinalized(std::move(NotifyFinalized)),
-      NotifyFreed(std::move(NotifyFreed)), ProcessAllSections(false) {}
+Error RTDyldObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
+
+  std::vector<MemoryManagerUP> MemMgrsToRemove;
+
+  getExecutionSession().runSessionLocked([&] {
+    auto I = MemMgrs.find(K);
+    if (I != MemMgrs.end()) {
+      std::swap(MemMgrsToRemove, I->second);
+      MemMgrs.erase(I);
+    }
+  });
+
+  {
+    std::lock_guard<std::mutex> Lock(RTDyldLayerMutex);
+    for (auto &MemMgr : MemMgrsToRemove) {
+      for (auto *L : EventListeners)
+        L->notifyFreeingObject(pointerToJITTargetAddress(MemMgr.get()));
+      MemMgr->deregisterEHFrames();
+    }
+  }
+
+  return Error::success();
+}
+
+void RTDyldObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
+                                                       ResourceKey SrcKey) {
+  auto I = MemMgrs.find(SrcKey);
+  if (I != MemMgrs.end()) {
+    auto &SrcMemMgrs = I->second;
+    auto &DstMemMgrs = MemMgrs[DstKey];
+    DstMemMgrs.reserve(DstMemMgrs.size() + SrcMemMgrs.size());
+    for (auto &MemMgr : SrcMemMgrs)
+      DstMemMgrs.push_back(std::move(MemMgr));
+
+    // Erase SrcKey entry using value rather than iterator I: I may have been
+    // invalidated when we looked up DstKey.
+    MemMgrs.erase(SrcKey);
+  }
+}
 
 } // End namespace orc.
 } // End namespace llvm.

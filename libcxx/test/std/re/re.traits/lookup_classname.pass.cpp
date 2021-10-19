@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <regex>
 
 // template <class charT> struct regex_traits;
@@ -56,7 +58,7 @@ test_w(const char_type* A,
 int main(int, char**)
 {
 //  if __regex_word is not distinct from all the classes, bad things happen
-//  See https://bugs.llvm.org/show_bug.cgi?id=26476 for an example.
+//  See https://llvm.org/PR26476 for an example.
     LIBCPP_ASSERT((std::ctype_base::space  & std::regex_traits<char>::__regex_word) == 0);
     LIBCPP_ASSERT((std::ctype_base::print  & std::regex_traits<char>::__regex_word) == 0);
     LIBCPP_ASSERT((std::ctype_base::cntrl  & std::regex_traits<char>::__regex_word) == 0);
@@ -156,6 +158,7 @@ int main(int, char**)
     test("", std::ctype_base::mask());
     test("digits", std::ctype_base::mask());
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test(L"d", std::ctype_base::digit);
     test(L"D", std::ctype_base::digit);
     test(L"d", std::ctype_base::digit, true);
@@ -243,6 +246,7 @@ int main(int, char**)
     test(L"dig", std::ctype_base::mask());
     test(L"", std::ctype_base::mask());
     test(L"digits", std::ctype_base::mask());
+#endif
 
   return 0;
 }

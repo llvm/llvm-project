@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.7 C1594 - prohibited assignments in pure subprograms
 
 module used
@@ -18,6 +18,14 @@ module m
     real, allocatable :: co[:]
   end type
  contains
+  integer pure function purefunc(x)
+    integer, intent(in) :: x
+    purefunc = x
+  end function
+  integer pure function f00(p0)
+    procedure(purefunc) :: p0
+    f00 = p0(1)
+  end function
   pure function test(ptr, in, hpd)
     use used
     type(t), pointer :: ptr, ptr2
@@ -29,6 +37,7 @@ module m
     type(hasCoarray), pointer :: hcp
     integer :: n
     common /block/ y
+    external :: extfunc
     !ERROR: Pure subprogram 'test' may not define 'x' because it is host-associated
     x%a = 0.
     !ERROR: Pure subprogram 'test' may not define 'y' because it is in a COMMON block
@@ -63,6 +72,8 @@ module m
     hp = hpd ! C1594(5)
     !ERROR: A pure subprogram may not copy the value of 'hpd' because it is an INTENT(IN) dummy argument and has the POINTER component '%p'
     allocate(alloc, source=hpd)
+    !ERROR: Actual procedure argument for dummy argument 'p0=' of a PURE procedure must have an explicit interface
+    n = f00(extfunc)
    contains
     pure subroutine internal
       type(hasPtr) :: localhp

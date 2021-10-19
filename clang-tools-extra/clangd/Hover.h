@@ -58,7 +58,7 @@ struct HoverInfo {
   std::string Documentation;
   /// Source code containing the definition of the symbol.
   std::string Definition;
-
+  const char *DefinitionLanguage = "cpp";
   /// Access specifier for declarations inside class/struct/unions, empty for
   /// others.
   std::string AccessSpecifier;
@@ -77,6 +77,8 @@ struct HoverInfo {
   llvm::Optional<uint64_t> Size;
   /// Contains the offset of fields within the enclosing class.
   llvm::Optional<uint64_t> Offset;
+  /// Contains the padding following a field within the enclosing class.
+  llvm::Optional<uint64_t> Padding;
   // Set when symbol is inside function call. Contains information extracted
   // from the callee definition about the argument this is passed as.
   llvm::Optional<Param> CalleeArgInfo;

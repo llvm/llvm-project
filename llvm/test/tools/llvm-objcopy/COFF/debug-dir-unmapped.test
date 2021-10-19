@@ -6,7 +6,7 @@
 
 # RUN: not llvm-objcopy --remove-section .rdata %t.in.exe %t.out.exe 2>&1 | FileCheck %s
 
-# CHECK: error: '{{.*}}{{/|\\}}debug-dir-unmapped.test.tmp.out.exe': debug directory payload outside of mapped sections not supported
+# CHECK: error: '{{.*}}{{/|\\}}debug-dir-unmapped.test.tmp.out.exe': debug directory payload not found
 
 --- !COFF
 OptionalHeader:

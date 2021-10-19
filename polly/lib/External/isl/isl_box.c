@@ -432,6 +432,48 @@ __isl_give isl_fixed_box *isl_set_get_simple_fixed_box_hull(
 	return box;
 }
 
+/* Check whether the output elements lie on a rectangular lattice,
+ * possibly depending on the parameters and the input dimensions.
+ * Return a tile in this lattice.
+ * If no stride information can be found, then return a tile of size 1
+ * (and offset 0).
+ *
+ * Obtain stride information in each output dimension separately and
+ * combine the results.
+ */
+__isl_give isl_fixed_box *isl_map_get_range_lattice_tile(
+	__isl_keep isl_map *map)
+{
+	int i;
+	isl_size n;
+	isl_space *space;
+	isl_fixed_box *box;
+
+	n = isl_map_dim(map, isl_dim_out);
+	if (n < 0)
+		return NULL;
+	space = isl_map_get_space(map);
+	box = isl_fixed_box_init(space);
+
+	for (i = 0; i < n; ++i) {
+		isl_val *stride;
+		isl_aff *offset;
+		isl_stride_info *si;
+
+		si = isl_map_get_range_stride_info(map, i);
+		stride = isl_stride_info_get_stride(si);
+		offset = isl_stride_info_get_offset(si);
+		isl_stride_info_free(si);
+
+		box = isl_fixed_box_set_valid_extent(box, i, offset, stride);
+
+		isl_aff_free(offset);
+		isl_val_free(stride);
+	}
+
+	return box;
+}
+
 #undef BASE
 #define BASE multi_val
 #include "print_yaml_field_templ.c"

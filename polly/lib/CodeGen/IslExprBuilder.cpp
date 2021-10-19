@@ -231,7 +231,8 @@ Value *IslExprBuilder::createOpNAry(__isl_take isl_ast_expr *Expr) {
   return V;
 }
 
-Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
+std::pair<Value *, Type *>
+IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "isl ast expression not of type isl_ast_op");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_access &&
@@ -281,7 +282,7 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     isl_ast_expr_free(Expr);
     if (PollyDebugPrinting)
       RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");
-    return Base;
+    return {Base, SAI->getElementType()};
   }
 
   IndexOp = nullptr;
@@ -313,7 +314,9 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
 
     const SCEV *DimSCEV = SAI->getDimensionSize(u);
 
-    llvm::ValueToValueMap Map(GlobalMap.begin(), GlobalMap.end());
+    llvm::ValueToSCEVMapTy Map;
+    for (auto &KV : GlobalMap)
+      Map[KV.first] = SE.getSCEV(KV.second);
     DimSCEV = SCEVParameterRewriter::rewrite(DimSCEV, SE, Map);
     Value *DimSize =
         expandCodeFor(S, SE, DL, "polly", DimSCEV, DimSCEV->getType(),
@@ -331,18 +334,20 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
     IndexOp = createMul(IndexOp, DimSize, "polly.access.mul." + BaseName);
   }
 
-  Access = Builder.CreateGEP(Base, IndexOp, "polly.access." + BaseName);
+  Access = Builder.CreateGEP(SAI->getElementType(), Base, IndexOp,
+                             "polly.access." + BaseName);
 
   if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "\n");
   isl_ast_expr_free(Expr);
-  return Access;
+  return {Access, SAI->getElementType()};
 }
 
 Value *IslExprBuilder::createOpAccess(isl_ast_expr *Expr) {
-  Value *Addr = createAccessAddress(Expr);
-  assert(Addr && "Could not create op access address");
-  return Builder.CreateLoad(Addr, Addr->getName() + ".load");
+  auto Info = createAccessAddress(Expr);
+  assert(Info.first && "Could not create op access address");
+  return Builder.CreateLoad(Info.second, Info.first,
+                            Info.first->getName() + ".load");
 }
 
 Value *IslExprBuilder::createOpBin(__isl_take isl_ast_expr *Expr) {
@@ -702,7 +707,7 @@ Value *IslExprBuilder::createOpAddressOf(__isl_take isl_ast_expr *Expr) {
   assert(isl_ast_expr_get_op_type(Op) == isl_ast_op_access &&
          "Expected address of operator to be an access expression.");
 
-  Value *V = createAccessAddress(Op);
+  Value *V = createAccessAddress(Op).first;
 
   isl_ast_expr_free(Expr);
 

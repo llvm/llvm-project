@@ -35,10 +35,10 @@ class DirectiveLanguage {
 
   // Make the enum values available in the namespace. This allows us to
   // write something like Enum_X if we have a `using namespace cppNamespace`.
-  bit makeEnumAvailableInNamespace = 0;
+  bit makeEnumAvailableInNamespace = false;
 
   // Generate include and macro to enable LLVM BitmaskEnum.
-  bit enableBitmaskEnumInNamespace = 0;
+  bit enableBitmaskEnumInNamespace = false;
 
   // Header file included in the implementation code generated. Ususally the
   // output file of the declaration code generation. Can be left blank.
@@ -63,7 +63,7 @@ class ClauseVal<string n, int v, bit uv> {
   bit isUserValue = uv;
 
   // Set clause value used by default when unknown.
-  bit isDefault = 0;
+  bit isDefault = false;
 }
 
 // Information about a specific clause.
@@ -77,37 +77,30 @@ class Clause<string c> {
   // Optional class holding value of the clause in clang AST.
   string clangClass = "";
 
-  // Optional class holding the clause in flang AST. If left blank, the class
-  // is assumed to be the name of the clause with capitalized word and
-  // underscores removed.
-  // ex: async -> Async
-  //     num_threads -> NumThreads
+  // Optional class holding value of the clause in flang AST.
   string flangClass = "";
 
-  // Optional class holding value of the clause in flang AST.
-  string flangClassValue = "";
-
-  // If set to 1, value is optional. Not optional by default.
-  bit isValueOptional = 0;
+  // If set to true, value is optional. Not optional by default.
+  bit isValueOptional = false;
 
   // Name of enum when there is a list of allowed clause values.
   string enumClauseValue = "";
 
   // List of allowed clause values
   list<ClauseVal> allowedClauseValues = [];
-  // If set to 1, value class is part of a list. Single class by default.
-  bit isValueList = 0;
+  // If set to true, value class is part of a list. Single class by default.
+  bit isValueList = false;
 
   // Define a default value such as "*".
   string defaultValue = "";
 
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
-  bit isImplicit = 0;
+  bit isImplicit = false;
 
   // Set clause used by default when unknown. Function returning the kind
   // of enumeration will use this clause as the default.
-  bit isDefault = 0;
+  bit isDefault = false;
 }
 
 // Hold information about clause validity by version.
@@ -131,6 +124,10 @@ class Directive<string d> {
   // function.
   string alternativeName = "";
 
+  // Clauses cannot appear twice in the three allowed lists below. Also, since
+  // required implies allowed, the same clause cannot appear in both the
+  // allowedClauses and requiredClauses lists.
+
   // List of allowed clauses for the directive.
   list<VersionedClause> allowedClauses = [];
 
@@ -144,5 +141,5 @@ class Directive<string d> {
   list<VersionedClause> requiredClauses = [];
 
   // Set directive used by default when unknown.
-  bit isDefault = 0;
+  bit isDefault = false;
 }

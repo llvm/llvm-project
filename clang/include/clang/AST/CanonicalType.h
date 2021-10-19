@@ -215,8 +215,8 @@ inline CanQualType Type::getCanonicalTypeUnqualified() const {
   return CanQualType::CreateUnsafe(getCanonicalTypeInternal());
 }
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           CanQualType T) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             CanQualType T) {
   DB << static_cast<QualType>(T);
   return DB;
 }

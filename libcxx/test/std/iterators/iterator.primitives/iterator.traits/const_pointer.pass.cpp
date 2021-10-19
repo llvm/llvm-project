@@ -34,5 +34,9 @@ int main(int, char**)
     static_assert((std::is_same<It::reference, const A&>::value), "");
     static_assert((std::is_same<It::iterator_category, std::random_access_iterator_tag>::value), "");
 
-  return 0;
+#if TEST_STD_VER > 17
+    ASSERT_SAME_TYPE(It::iterator_concept, std::contiguous_iterator_tag);
+#endif
+
+    return 0;
 }

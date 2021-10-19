@@ -35,10 +35,10 @@ body:             |
 
     ; CHECK-LABEL: name: stack_fold_addpd
     ; CHECK: liveins: $xmm0, $xmm1
-    ; CHECK: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, $xmm1 :: (store 16 into %stack.0)
+    ; CHECK: MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, $xmm1 :: (store (s128) into %stack.0)
     ; CHECK: [[COPY:%[0-9]+]]:vr128 = COPY $xmm0
     ; CHECK: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $xmm1, 12 /* clobber */, implicit-def dead early-clobber $xmm2, 12 /* clobber */, implicit-def dead early-clobber $xmm3, 12 /* clobber */, implicit-def dead early-clobber $xmm4, 12 /* clobber */, implicit-def dead early-clobber $xmm5, 12 /* clobber */, implicit-def dead early-clobber $xmm6, 12 /* clobber */, implicit-def dead early-clobber $xmm7, 12 /* clobber */, implicit-def dead early-clobber $xmm8, 12 /* clobber */, implicit-def dead early-clobber $xmm9, 12 /* clobber */, implicit-def dead early-clobber $xmm10, 12 /* clobber */, implicit-def dead early-clobber $xmm11, 12 /* clobber */, implicit-def dead early-clobber $xmm12, 12 /* clobber */, implicit-def dead early-clobber $xmm13, 12 /* clobber */, implicit-def dead early-clobber $xmm14, 12 /* clobber */, implicit-def dead early-clobber $xmm15, 12 /* clobber */, implicit-def dead early-clobber $eflags
-    ; CHECK: [[COPY]]:vr128 = nofpexcept ADDPDrm [[COPY]], %stack.0, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load 16 from %stack.0)
+    ; CHECK: [[COPY]]:vr128 = nofpexcept ADDPDrm [[COPY]], %stack.0, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load (s128) from %stack.0)
     ; CHECK: $xmm0 = COPY [[COPY]]
     ; CHECK: RET 0, $xmm0
     %1:vr128 = COPY $xmm1

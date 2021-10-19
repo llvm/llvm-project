@@ -12,11 +12,11 @@
 #define HEADER
 
 // CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [5 x i64] zeroinitializer
-// 96 = 0x60 = OMP_MAP_TARGET_PARAM | OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [5 x i64] [i64 96, i64 96, i64 96, i64 96, i64 96]
-// 32 = 0x20 = OMP_MAP_TARGET_PARAM
+// 64 = 0x40 = OMP_MAP_RETURN_PARAM
+// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [5 x i64] [i64 64, i64 64, i64 64, i64 64, i64 64]
+// 0 = OMP_MAP_NONE
 // 281474976710720 = 0x1000000000040 = OMP_MAP_MEMBER_OF | OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES2:@.+]] = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710720, i64 281474976710720, i64 281474976710720, i64 281474976710720]
+// CHECK-DAG: [[MAPTYPES2:@.+]] = private unnamed_addr constant [5 x i64] [i64 0, i64 281474976710720, i64 281474976710720, i64 281474976710720, i64 281474976710720]
 struct S {
   int a = 0;
   int *ptr = &a;
@@ -85,7 +85,7 @@ int main() {
 // CHECK: store float* [[VLA_ADDR]], float** [[PTR4_VLA_ADDR]],
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_begin_mapper(i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES1]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES1]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES1]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES1]], i32 0, i32 0), i8** null, i8** null)
 // CHECK: [[A_REF:%.+]] = load float*, float** [[BPTR0_A_ADDR]],
 // CHECK: [[REF_REF:%.+]] = load float*, float** [[BPTR2_REF_ADDR]],
 // CHECK: store float* [[REF_REF]], float** [[TMP_REF_ADDR:%.+]],
@@ -113,7 +113,7 @@ int main() {
 // CHECK: store float [[INC]], float* [[VLA0_ADDR]],
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_end_mapper(i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES1]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES1]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[SIZES1]], i32 0, i32 0), i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES1]], i32 0, i32 0), i8** null, i8** null)
 
 // CHECK: foo
 // %this.addr = alloca %struct.S*, align 8
@@ -187,7 +187,7 @@ int main() {
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
 // CHECK: [[SIZE:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_begin_mapper(i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_begin_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
 // CHECK: [[A_ADDR:%.+]] = load i32*, i32** [[BPTR1_A_ADDR]],
 // CHECK: store i32* [[A_ADDR]], i32** [[A_REF:%.+]],
 // CHECK: [[PTR_ADDR:%.+]] = load i32**, i32*** [[BPTR2_PTR_ADDR]],
@@ -219,6 +219,6 @@ int main() {
 // CHECK: [[BPTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[BPTRS]], i32 0, i32 0
 // CHECK: [[PTR:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[PTRS]], i32 0, i32 0
 // CHECK: [[SIZE:%.+]] = getelementptr inbounds [5 x i64], [5 x i64]* [[SIZES]], i32 0, i32 0
-// CHECK: call void @__tgt_target_data_end_mapper(i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null)
+// CHECK: call void @__tgt_target_data_end_mapper(%struct.ident_t* @{{.+}}, i64 -1, i32 5, i8** [[BPTR]], i8** [[PTR]], i64* [[SIZE]], i64* getelementptr inbounds ([5 x i64], [5 x i64]* [[MAPTYPES2]], i32 0, i32 0), i8** null, i8** null)
 
 #endif

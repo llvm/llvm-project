@@ -18,10 +18,10 @@
 ; CHECK: .param .u64 {{.+}}
 ; CHECK: )
 ; CHECK: {
-; CHECK: .reg .pred      %p<2>;
-; CHECK: .reg .f32       %f<5>;
-; CHECK: .reg .b32       %r<6>;
-; CHECK: .reg .b64       %rd<8>;
+; CHECK-DAG: .reg .pred      %p<2>;
+; CHECK-DAG: .reg .f32       %f<5>;
+; CHECK-DAG: .reg .b32       %r<6>;
+; CHECK-DAG: .reg .b64       %rd<8>;
 ; CHECK: .loc [[DEBUG_INFO_CU:[0-9]+]] 5 0
 ; CHECK: ld.param.u32    %r{{.+}}, [{{.+}}];
 ; CHECK: .loc [[BUILTUIN_VARS_H:[0-9]+]] 78 180
@@ -702,12 +702,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:	}
 ; CHECK-NEXT:	.section	.debug_info
 ; CHECK-NEXT:	{
-; CHECK-NEXT:.b32 10039                              // Length of Unit
+; CHECK-NEXT:.b32 10029                              // Length of Unit
 ; CHECK-NEXT:.b8 2                                   // DWARF version number
 ; CHECK-NEXT:.b8 0
 ; CHECK-NEXT:.b32 .debug_abbrev                      // Offset Into Abbrev. Section
 ; CHECK-NEXT:.b8 8                                   // Address Size (in bytes)
-; CHECK-NEXT:.b8 1                                   // Abbrev [1] 0xb:0x2730 DW_TAG_compile_unit
+; CHECK-NEXT:.b8 1                                   // Abbrev [1] 0xb:0x2726 DW_TAG_compile_unit
 ; CHECK-NEXT:.b8 0                                   // DW_AT_producer
 ; CHECK-NEXT:.b8 4                                   // DW_AT_language
 ; CHECK-NEXT:.b8 0
@@ -8306,7 +8306,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 3                                   // DW_AT_decl_line
 ; CHECK-NEXT:.b32 3345                               // DW_AT_type
 ; CHECK-NEXT:.b8 0                                   // End Of Children Mark
-; CHECK-NEXT:.b8 40                                  // Abbrev [40] 0x2671:0xc9 DW_TAG_subprogram
+; CHECK-NEXT:.b8 40                                  // Abbrev [40] 0x2671:0xbf DW_TAG_subprogram
 ; CHECK-NEXT:.b64 Lfunc_begin0                       // DW_AT_low_pc
 ; CHECK-NEXT:.b64 Lfunc_end0                         // DW_AT_high_pc
 ; CHECK-NEXT:.b8 1                                   // DW_AT_frame_base
@@ -8386,7 +8386,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 12                                  // DW_AT_call_file
 ; CHECK-NEXT:.b8 6                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 37                                  // DW_AT_call_column
-; CHECK-NEXT:.b8 43                                  // Abbrev [43] 0x2711:0x28 DW_TAG_inlined_subroutine
+; CHECK-NEXT:.b8 43                                  // Abbrev [43] 0x2711:0x1e DW_TAG_inlined_subroutine
 ; CHECK-NEXT:.b32 9791                               // DW_AT_abstract_origin
 ; CHECK-NEXT:.b64 Ltmp9                              // DW_AT_low_pc
 ; CHECK-NEXT:.b64 Ltmp10                             // DW_AT_high_pc
@@ -8394,11 +8394,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-NEXT:.b8 8                                   // DW_AT_call_line
 ; CHECK-NEXT:.b8 5                                   // DW_AT_call_column
 ; CHECK-NEXT:.b8 44                                  // Abbrev [44] 0x2729:0x5 DW_TAG_formal_parameter
-; CHECK-NEXT:.b32 9811                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b8 44                                  // Abbrev [44] 0x272e:0x5 DW_TAG_formal_parameter
 ; CHECK-NEXT:.b32 9820                               // DW_AT_abstract_origin
-; CHECK-NEXT:.b8 44                                  // Abbrev [44] 0x2733:0x5 DW_TAG_formal_parameter
-; CHECK-NEXT:.b32 9829                               // DW_AT_abstract_origin
 ; CHECK-NEXT:.b8 0                                   // End Of Children Mark
 ; CHECK-NEXT:.b8 0                                   // End Of Children Mark
 ; CHECK-NEXT:.b8 0                                   // End Of Children Mark

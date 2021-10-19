@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
 // FILE_DEPENDENCIES: test.dat
 
 // <fstream>
@@ -31,6 +30,7 @@ int main(int, char**)
         fs >> x;
         assert(x == 3.25);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::wifstream fso("test.dat");
         std::wifstream fs;
@@ -39,6 +39,7 @@ int main(int, char**)
         fs >> x;
         assert(x == 3.25);
     }
+#endif
 
   return 0;
 }

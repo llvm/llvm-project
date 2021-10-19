@@ -1,5 +1,5 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
-# RUN: | FileCheck -check-prefixes=CHECK %s
+# RUN:   | FileCheck -check-prefixes=CHECK %s
 
 # CHECK: error: unexpected token, expected identifier
 .option

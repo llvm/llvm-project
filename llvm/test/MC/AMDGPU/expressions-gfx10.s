@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck -check-prefix=NOGFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=NOGFX10 --implicit-check-not=error: %s
 
 i1=1
 
@@ -64,10 +64,10 @@ s_sub_u32 s0, u, u1
 // NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, 123, u
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u1
-// NOGFX10: error: invalid literal operand
+// NOGFX10: error: only one literal operand is allowed

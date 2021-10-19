@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck --check-prefix=CHECK --check-prefix=FINI --check-prefix=NULL %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; Test that @llvm.global_dtors is properly lowered into @llvm.global_ctors,
@@ -50,6 +49,8 @@ declare void @after_the_null()
   { i32, void ()*, i8* } { i32 65535, void ()* null, i8* null },
   { i32, void ()*, i8* } { i32 65535, void ()* @after_the_null, i8* null }
 ]
+
+; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; CHECK-LABEL: .Lcall_dtors.0:
 ; CHECK-NEXT: .functype .Lcall_dtors.0 (i32) -> (){{$}}
@@ -185,8 +186,6 @@ declare void @after_the_null()
 ;      CHECK: .int32  .Lregister_call_dtors$1{{$}}
 
 ; CHECK-LABEL: .weak __dso_handle
-
-; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; We shouldn't make use of a .fini_array section.
 

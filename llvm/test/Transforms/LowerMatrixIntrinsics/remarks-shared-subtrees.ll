@@ -17,7 +17,9 @@
 ; YAML-NEXT:    - NumLoads:        '0'
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '0'
-; YAML-NEXT:    - String:          ' compute ops'
+; YAML-NEXT:    - String:          ' compute ops, '
+; YAML-NEXT:   - NumExposedTransposes: '0'
+; YAML-NEXT:   - String:          ' exposed transposes'
 ; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
@@ -45,7 +47,9 @@
 ; YAML-NEXT:    - NumLoads:        '45'
 ; YAML-NEXT:    - String:          ' loads, '
 ; YAML-NEXT:    - NumComputeOps:   '120'
-; YAML-NEXT:    - String:          ' compute ops'
+; YAML-NEXT:    - String:          ' compute ops, '
+; YAML-NEXT:   - NumExposedTransposes: '0'
+; YAML-NEXT:   - String:          ' exposed transposes'
 ; YAML-NEXT:    - String:          ",\nadditionally "
 ; YAML-NEXT:    - NumStores:       '0'
 ; YAML-NEXT:    - String:          ' stores, '
@@ -87,8 +91,8 @@
 ; STDERR-NEXT:   10)
 define void @test_2leafs(double* %arg1, double* %arg2, double* %arg3, i64 %stride) !dbg !8 {
 bb:
-  %shared.load = tail call <8 x double> @llvm.matrix.column.major.load.v8f64.p0f64(double* %arg1, i64 %stride, i1 false, i32 2, i32 4), !dbg !10, !noalias !10
-  %shared.load.2 = tail call <30 x double> @llvm.matrix.column.major.load.v30f64.p0f64(double* %arg3, i64 %stride, i1 false, i32 2, i32 15), !dbg !10, !noalias !10
+  %shared.load = tail call <8 x double> @llvm.matrix.column.major.load.v8f64.p0f64(double* %arg1, i64 %stride, i1 false, i32 2, i32 4), !dbg !10
+  %shared.load.2 = tail call <30 x double> @llvm.matrix.column.major.load.v30f64.p0f64(double* %arg3, i64 %stride, i1 false, i32 2, i32 15), !dbg !10
   %tmp17 = tail call <8 x double> @llvm.matrix.transpose.v8f64(<8 x double> %shared.load, i32 2, i32 4), !dbg !10
   tail call void @llvm.matrix.column.major.store.v8f64.p0f64(<8 x double> %tmp17, double* %arg3, i64 10, i1 false, i32 4, i32 2), !dbg !10
   %tmp18 = tail call <60 x double> @llvm.matrix.column.major.load.v60f64.p0f64(double* %arg2, i64 20, i1 false, i32 4, i32 15), !dbg !11

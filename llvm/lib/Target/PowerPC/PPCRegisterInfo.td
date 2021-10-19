@@ -16,6 +16,12 @@ def sub_eq : SubRegIndex<1, 2>;
 def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
 def sub_64 : SubRegIndex<64>;
+def sub_vsx0 : SubRegIndex<128>;
+def sub_vsx1 : SubRegIndex<128, 128>;
+def sub_pair0 : SubRegIndex<256>;
+def sub_pair1 : SubRegIndex<256, 256>;
+def sub_gp8_x0 : SubRegIndex<64>;
+def sub_gp8_x1 : SubRegIndex<64, 64>;
 }
 
 
@@ -94,6 +100,36 @@ class CRBIT<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
 }
 
+// ACC - One of the 8 512-bit VSX accumulators.
+class ACC<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
+  let HWEncoding{2-0} = num;
+  let SubRegs = subregs;
+}
+
+// UACC - One of the 8 512-bit VSX accumulators prior to being primed.
+// Without using this register class, the register allocator has no way to
+// differentiate a primed accumulator from an unprimed accumulator.
+// This may result in invalid copies between primed and unprimed accumulators.
+class UACC<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
+  let HWEncoding{2-0} = num;
+  let SubRegs = subregs;
+}
+
+// VSR Pairs - One of the 32 paired even-odd consecutive VSRs.
+class VSRPair<bits<5> num, string n, list<Register> subregs> : PPCReg<n> {
+  let HWEncoding{4-0} = num;
+  let SubRegs = subregs;
+}
+
+// GP8Pair - Consecutive even-odd paired GP8.
+class GP8Pair<string n, bits<5> EvenIndex> : PPCReg<n> {
+  assert !eq(EvenIndex{0}, 0), "Index should be even.";
+  let HWEncoding{4-0} = EvenIndex;
+  let SubRegs = [!cast<GP8>("X"#EvenIndex), !cast<GP8>("X"#!add(EvenIndex, 1))];
+  let DwarfNumbers = [-1, -1];
+  let SubRegIndices = [sub_gp8_x0, sub_gp8_x1];
+}
+
 // General-purpose registers
 foreach Index = 0-31 in {
   def R#Index : GPR<Index, "r"#Index>, DwarfRegNum<[-2, Index]>;
@@ -141,6 +177,28 @@ foreach Index = 0-31 in {
 // asm printing.
 foreach Index = 32-63 in {
   def VSX#Index : VSXReg<Index, "vs"#Index>;
+}
+
+let SubRegIndices = [sub_vsx0, sub_vsx1] in {
+  // VSR pairs 0 - 15 (corresponding to VSRs 0 - 30 paired with 1 - 31).
+  foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+    def VSRp#!srl(Index, 1) : VSRPair<!srl(Index, 1), "vsp"#Index,
+                                      [!cast<VSRL>("VSL"#Index), !cast<VSRL>("VSL"#!add(Index, 1))]>,
+                              DwarfRegNum<[-1, -1]>;
+  }
+
+  // VSR pairs 16 - 31 (corresponding to VSRs 32 - 62 paired with 33 - 63).
+  foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+    def VSRp#!add(!srl(Index, 1), 16) :
+      VSRPair<!add(!srl(Index, 1), 16), "vsp"#!add(Index, 32),
+              [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
+      DwarfRegNum<[-1, -1]>;
+  }
+}
+
+// 16 paired even-odd consecutive GP8s.
+foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+  def G8p#!srl(Index, 1) : GP8Pair<"r"#Index, Index>;
 }
 
 // The representation of r0 when treated as the constant 0.
@@ -245,9 +303,14 @@ def GPRC : RegisterClass<"PPC", [i32,f32], 32, (add (sequence "R%u", 2, 12),
                                                     R31, R0, R1, FP, BP)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub GPRC, R2), R2)];
+  // On AIX, CSRs are allocated starting from R31 according to:
+  // https://www.ibm.com/docs/en/ssw_aix_72/assembler/assembler_pdf.pdf.
+  // This also helps setting the correct `NumOfGPRsSaved' in traceback table.
+  let AltOrders = [(add (sub GPRC, R2), R2),
+                   (add (sequence "R%u", 2, 12),
+                        (sequence "R%u", 31, 13), R0, R1, FP, BP)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
@@ -256,9 +319,11 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
                                                 X31, X13, X0, X1, FP8, BP8)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub G8RC, X2), X2)];
+  let AltOrders = [(add (sub G8RC, X2), X2),
+                   (add (sequence "X%u", 2, 12),
+                        (sequence "X%u", 31, 13), X0, X1, FP8, BP8)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
@@ -268,18 +333,22 @@ def G8RC : RegisterClass<"PPC", [i64], 64, (add (sequence "X%u", 2, 12),
 def GPRC_NOR0 : RegisterClass<"PPC", [i32,f32], 32, (add (sub GPRC, R0), ZERO)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub GPRC_NOR0, R2), R2)];
+  let AltOrders = [(add (sub GPRC_NOR0, R2), R2),
+                   (add (sequence "R%u", 2, 12),
+                        (sequence "R%u", 31, 13), R1, FP, BP, ZERO)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
 def G8RC_NOX0 : RegisterClass<"PPC", [i64], 64, (add (sub G8RC, X0), ZERO8)> {
   // On non-Darwin PPC64 systems, R2 can be allocated, but must be restored, so
   // put it at the end of the list.
-  let AltOrders = [(add (sub G8RC_NOX0, X2), X2)];
+  let AltOrders = [(add (sub G8RC_NOX0, X2), X2),
+                   (add (sequence "X%u", 2, 12),
+                        (sequence "X%u", 31, 13), X1, FP8, BP8, ZERO8)];
   let AltOrderSelect = [{
-    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+    return MF.getSubtarget<PPCSubtarget>().getGPRAllocationOrderIdx();
   }];
 }
 
@@ -367,8 +436,95 @@ def CTRRC8 : RegisterClass<"PPC", [i64], 64, (add CTR8)> {
   let isAllocatable = 0;
 }
 
+def LRRC : RegisterClass<"PPC", [i32], 32, (add LR)> {
+  let isAllocatable = 0;
+}
+def LR8RC : RegisterClass<"PPC", [i64], 64, (add LR8)> {
+  let isAllocatable = 0;
+}
+
 def VRSAVERC : RegisterClass<"PPC", [i32], 32, (add VRSAVE)>;
 def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
   let CopyCost = -1;
 }
 
+let SubRegIndices = [sub_pair0, sub_pair1] in {
+  def ACC0 : ACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[-1, -1]>;
+  def ACC1 : ACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[-1, -1]>;
+  def ACC2 : ACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[-1, -1]>;
+  def ACC3 : ACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[-1, -1]>;
+  def ACC4 : ACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[-1, -1]>;
+  def ACC5 : ACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[-1, -1]>;
+  def ACC6 : ACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
+  def ACC7 : ACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
+}
+def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
+                                                      ACC4, ACC5, ACC6, ACC7)> {
+  // The AllocationPriority is in the range [0, 63]. Assigned the ACC registers
+  // the highest possible priority in this range to force the register allocator
+  // to assign these registers first. This is done because the ACC registers
+  // must represent 4 advacent vector registers. For example ACC1 must be
+  // VS4 - VS7. The value here must be at least 32 as we want to allocate
+  // these registers even before we allocate global ranges.
+  let AllocationPriority = 63;
+  let Size = 512;
+}
+
+let SubRegIndices = [sub_pair0, sub_pair1] in {
+  def UACC0 : UACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[-1, -1]>;
+  def UACC1 : UACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[-1, -1]>;
+  def UACC2 : UACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[-1, -1]>;
+  def UACC3 : UACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[-1, -1]>;
+  def UACC4 : UACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[-1, -1]>;
+  def UACC5 : UACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[-1, -1]>;
+  def UACC6 : UACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
+  def UACC7 : UACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
+}
+def UACCRC : RegisterClass<"PPC", [v512i1], 128,
+                           (add UACC0, UACC1, UACC2, UACC3,
+                                UACC4, UACC5, UACC6, UACC7)> {
+  // The AllocationPriority for the UACC registers is still high and must be at
+  // least 32 as we want to allocate these registers before we allocate other
+  // global ranges. The value must be less than the AllocationPriority of the
+  // ACC registers.
+  let AllocationPriority = 36;
+  let Size = 512;
+}
+
+// FIXME: This allocation order may increase stack frame size when allocating
+// non-volatile registers.
+//
+// Placing Altivec registers first and allocate the rest as underlying VSX
+// ones, to reduce interference with accumulator registers (lower 32 VSRs).
+// This reduces copies when loading for accumulators, which is common use for
+// paired VSX registers.
+def VSRpRC :
+  RegisterClass<"PPC", [v256i1], 128,
+                (add VSRp17, VSRp18, VSRp16, VSRp19, VSRp20, VSRp21,
+                     VSRp22, VSRp23, VSRp24, VSRp25, VSRp31, VSRp30,
+                     VSRp29, VSRp28, VSRp27, VSRp26,
+                     (sequence "VSRp%u", 0, 6),
+                     (sequence "VSRp%u", 15, 7))> {
+  // Give the VSRp registers a non-zero AllocationPriority. The value is less
+  // than 32 as these registers should not always be allocated before global
+  // ranges and the value should be less than the AllocationPriority - 32 for
+  // the UACC registers. Even global VSRp registers should be allocated after
+  // the UACC registers have been chosen.
+  let AllocationPriority = 2;
+  let Size = 256;
+}
+
+// Make AllocationOrder as similar as G8RC's to avoid potential spilling.
+// Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
+// at last.
+def G8pRC :
+  RegisterClass<"PPC", [i128], 128,
+                (add (sequence "G8p%u", 1, 5),
+                     (sequence "G8p%u", 14, 7),
+                     G8p15, G8p6, G8p0)> {
+  let AltOrders = [(add (sub G8pRC, G8p1), G8p1)];
+  let AltOrderSelect = [{
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+  }];
+  let Size = 128;
+}

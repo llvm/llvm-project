@@ -18,13 +18,11 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_step_out_python(self):
         """Test stepping out using a python breakpoint command."""
         self.build()
         self.do_set_python_command_from_python()
 
-    @skipIfReproducer # side_effect bypasses reproducer
     def test_bkpt_cmd_bad_arguments(self):
         """Test what happens when pass structured data to a command:"""
         self.build()
@@ -36,11 +34,9 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_set_python_command_from_python(self):
-        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
+        self.target = self.createTestTarget()
 
         body_bkpt = self.target.BreakpointCreateBySourceRegex(
             "Set break point at this line.", self.main_source_spec)
@@ -58,6 +54,17 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
             "Set break point at this line.", self.main_source_spec)
         self.assertTrue(fancier_bkpt, VALID_BREAKPOINT)
 
+        # Also test the list version of this:
+        file_list = lldb.SBFileSpecList()
+        file_list.Append(self.main_source_spec)
+        module_list = lldb.SBFileSpecList()
+        module_list.Append(self.target.GetExecutable())
+        
+        list_bkpt = self.target.BreakpointCreateBySourceRegex(
+            "Set break point at this line.", module_list, file_list)
+        self.assertTrue(list_bkpt, VALID_BREAKPOINT)
+
+        
         not_so_fancy_bkpt = self.target.BreakpointCreateBySourceRegex(
             "Set break point at this line.", self.main_source_spec)
         self.assertTrue(not_so_fancy_bkpt, VALID_BREAKPOINT)
@@ -118,13 +125,21 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         error = not_so_fancy_bkpt.SetScriptCallbackFunction("bktptcmd.empty_extra_args", empty_args)
         self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
 
+        # Do list breakpoint like fancy:
+        stream.Clear()
+        stream.Print('{"side_effect" : "I come from list input"}')
+        extra_args.SetFromJSON(stream)
+        error = list_bkpt.SetScriptCallbackFunction("bktptcmd.a_list_function", extra_args)
+        self.assertTrue(error.Success(), "Failed to add callback %s"%(error.GetCString()))
+        
         # Clear out canary variables
         side_effect.bktptcmd = None
         side_effect.callback = None
         side_effect.fancy    = None
         side_effect.fancier  = None
         side_effect.not_so_fancy = None
-
+        side_effect.a_list_function = None
+        
         # Now launch the process, and do not stop at entry point.
         self.process = self.target.LaunchSimple(
             None, None, self.get_process_working_directory())
@@ -137,19 +152,18 @@ class PythonBreakpointCommandSettingTestCase(TestBase):
         self.assertEquals(len(threads), 1, "Stopped at inner breakpoint.")
         self.thread = threads[0]
 
+        print("* Num Locations: {0} ; Hit Count {1}".format(list_bkpt.GetNumLocations(), list_bkpt.GetHitCount()))
         self.assertEquals("callback was here", side_effect.callback)
         self.assertEquals("function was here", side_effect.bktptcmd)
         self.assertEquals("I am fancy", side_effect.fancy)
         self.assertEquals("I am fancier", side_effect.fancier)
         self.assertEquals("Not so fancy", side_effect.not_so_fancy)
+        self.assertEquals("I come from list input", side_effect.from_list)
 
     def do_bad_args_to_python_command(self):
-        exe = self.getBuildArtifact("a.out")
         error = lldb.SBError()
 
-        self.target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
-
+        self.target = self.createTestTarget()
 
         self.expect("command script import --allow-reload ./bktptcmd.py")
 

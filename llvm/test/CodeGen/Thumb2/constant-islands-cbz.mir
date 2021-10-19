@@ -24,10 +24,10 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -42,7 +42,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -63,10 +63,10 @@ body:             |
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0, $cpsr = tADDrr killed renamable $r0, renamable $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1 = t2ADDrs renamable $r0, killed renamable $r1, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -83,7 +83,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -107,7 +107,7 @@ body:             |
   ; CHECK:   tBcc %bb.2, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -123,7 +123,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -143,10 +143,10 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r1 = t2ADDrs renamable $r0, killed renamable $r1, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -162,7 +162,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -186,7 +186,7 @@ body:             |
   ; CHECK:   tBcc %bb.2, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -202,7 +202,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -222,10 +222,10 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0 = t2ADDrs killed renamable $r0, killed renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ killed $r1, %bb.2
+  ; CHECK:   tCBZ killed renamable $r1, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -241,7 +241,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -261,10 +261,10 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0 = t2ADDrs renamable $r1, killed renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ killed $r1, %bb.2
+  ; CHECK:   tCBZ killed renamable $r1, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -280,7 +280,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:
@@ -305,7 +305,7 @@ body:             |
   ; CHECK:   tBcc %bb.2, 0 /* CC::eq */, killed $cpsr
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
-  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
+  ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load (s32) from %ir.x)
   ; CHECK:   tTAILJMPdND @c, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp, implicit killed $r0
   ; CHECK: bb.2:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
@@ -322,7 +322,7 @@ body:             |
   bb.2:
     liveins: $r0
 
-    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load 4 from %ir.x)
+    renamable $r0 = tLDRi killed renamable $r0, 0, 14, $noreg :: (load (s32) from %ir.x)
     tTAILJMPdND @c, 14, $noreg, implicit $sp, implicit $sp, implicit killed $r0
 
   bb.1:

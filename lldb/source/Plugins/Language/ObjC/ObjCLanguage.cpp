@@ -53,14 +53,6 @@ lldb_private::ConstString ObjCLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
-// PluginInterface protocol
-
-lldb_private::ConstString ObjCLanguage::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t ObjCLanguage::GetPluginVersion() { return 1; }
-
 // Static Functions
 
 Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {
@@ -225,13 +217,16 @@ ConstString ObjCLanguage::MethodName::GetFullNameWithoutCategory(
   return ConstString();
 }
 
-std::vector<ConstString>
+std::vector<Language::MethodNameVariant>
 ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
-  std::vector<ConstString> variant_names;
+  std::vector<Language::MethodNameVariant> variant_names;
   ObjCLanguage::MethodName objc_method(method_name.GetCString(), false);
   if (!objc_method.IsValid(false)) {
     return variant_names;
   }
+
+  variant_names.emplace_back(objc_method.GetSelector(),
+                             lldb::eFunctionNameTypeSelector);
 
   const bool is_class_method =
       objc_method.GetType() == MethodName::eTypeClassMethod;
@@ -242,29 +237,41 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (is_class_method || is_instance_method) {
     if (name_sans_category)
-      variant_names.emplace_back(name_sans_category);
+      variant_names.emplace_back(name_sans_category,
+                                 lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
 
     strm.Printf("+%s", objc_method.GetFullName().GetCString());
-    variant_names.emplace_back(strm.GetString());
+    variant_names.emplace_back(ConstString(strm.GetString()),
+                               lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     strm.Printf("-%s", objc_method.GetFullName().GetCString());
-    variant_names.emplace_back(strm.GetString());
+    variant_names.emplace_back(ConstString(strm.GetString()),
+                               lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     if (name_sans_category) {
       strm.Printf("+%s", name_sans_category.GetCString());
-      variant_names.emplace_back(strm.GetString());
+      variant_names.emplace_back(ConstString(strm.GetString()),
+                                 lldb::eFunctionNameTypeFull);
       strm.Clear();
 
       strm.Printf("-%s", name_sans_category.GetCString());
-      variant_names.emplace_back(strm.GetString());
+      variant_names.emplace_back(ConstString(strm.GetString()),
+                                 lldb::eFunctionNameTypeFull);
     }
   }
 
   return variant_names;
+}
+
+bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+  ConstString demangled_name = mangled.GetDemangledName();
+  if (!demangled_name)
+    return false;
+  return ObjCLanguage::IsPossibleObjCMethodName(demangled_name.GetCString());
 }
 
 static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
@@ -390,6 +397,9 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       "NSArray summary provider", ConstString("NSArray"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
+      "NSArray summary provider", ConstString("NSConstantArray"), appkit_flags);
+  AddCXXSummary(
+      objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "NSArray summary provider", ConstString("NSMutableArray"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
@@ -422,6 +432,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                 lldb_private::formatters::NSDictionarySummaryProvider<false>,
                 "NSDictionary summary provider", ConstString("NSDictionary"),
                 appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSDictionarySummaryProvider<false>,
+                "NSDictionary summary provider",
+                ConstString("NSConstantDictionary"), appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSDictionarySummaryProvider<false>,
                 "NSDictionary summary provider",
@@ -530,6 +544,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
                   ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
+                  "NSArray synthetic children", ConstString("NSConstantArray"),
+                  ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSArraySyntheticFrontEndCreator,
                   "NSArray synthetic children", ConstString("NSMutableArray"),
                   ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(objc_category_sp,
@@ -554,6 +572,11 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       objc_category_sp,
       lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
       "NSDictionary synthetic children", ConstString("__NSDictionaryM"),
+      ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(
+      objc_category_sp,
+      lldb_private::formatters::NSDictionarySyntheticFrontEndCreator,
+      "NSDictionary synthetic children", ConstString("NSConstantDictionary"),
       ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(
       objc_category_sp,
@@ -776,6 +799,18 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "NSNumber summary provider", ConstString("NSNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantIntegerNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantDoubleNumber"), appkit_flags);
+  AddCXXSummary(objc_category_sp,
+                lldb_private::formatters::NSNumberSummaryProvider,
+                "NSNumber summary provider",
+                ConstString("NSConstantFloatNumber"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSNumberSummaryProvider,
       "CFNumberRef summary provider", ConstString("CFNumberRef"), appkit_flags);
@@ -891,7 +926,8 @@ lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
   static TypeCategoryImplSP g_category;
 
   llvm::call_once(g_initialize, [this]() -> void {
-    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
+                                               g_category);
     if (g_category) {
       LoadCoreMediaFormatters(g_category);
       LoadObjCFormatters(g_category);
@@ -990,8 +1026,11 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
       bool result = false;
 
       if (auto *target = exe_scope->CalculateTarget().get()) {
-        if (auto *clang_modules_decl_vendor =
-                target->GetClangModulesDeclVendor()) {
+        auto *persistent_vars = llvm::cast<ClangPersistentVariables>(
+            target->GetPersistentExpressionStateForLanguage(
+                lldb::eLanguageTypeC));
+        if (std::shared_ptr<ClangModulesDeclVendor> clang_modules_decl_vendor =
+                persistent_vars->GetClangModulesDeclVendor()) {
           ConstString key_cs(key);
           auto types = clang_modules_decl_vendor->FindTypes(
               key_cs, /*max_matches*/ UINT32_MAX);
@@ -1116,7 +1155,7 @@ bool ObjCLanguage::IsNilReference(ValueObject &valobj) {
 bool ObjCLanguage::IsSourceFile(llvm::StringRef file_path) const {
   const auto suffixes = {".h", ".m", ".M"};
   for (auto suffix : suffixes) {
-    if (file_path.endswith_lower(suffix))
+    if (file_path.endswith_insensitive(suffix))
       return true;
   }
   return false;

@@ -28,7 +28,7 @@ static __device__ __host__ unsigned t2(signed char input) {
 }
 
 static __device__ __host__ double t3(double x) {
-  register long double result;
+  long double result;
   __asm __volatile("frndint"
                    : "=t"(result)
                    : "0"(x));

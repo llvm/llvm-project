@@ -26,8 +26,6 @@
 #include "isl/ctx.h"
 #include "isl/isl-noexceptions.h"
 
-using namespace llvm;
-
 namespace polly {
 
 /// The accumulated dependence information for a SCoP.
@@ -125,6 +123,10 @@ struct Dependences {
   /// @return True if the new schedule is valid, false if it reverses
   ///         dependences.
   bool isValidSchedule(Scop &S, const StatementToIslMapTy &NewSchedules) const;
+
+  /// Return true of the schedule @p NewSched is a schedule for @S that does not
+  /// violate any dependences.
+  bool isValidSchedule(Scop &S, isl::schedule NewSched) const;
 
   /// Print the stored dependence information.
   void print(llvm::raw_ostream &OS) const;

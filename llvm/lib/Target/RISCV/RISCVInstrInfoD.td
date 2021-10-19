@@ -31,9 +31,9 @@ def RISCVSplitF64     : SDNode<"RISCVISD::SplitF64", SDT_RISCVSplitF64>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPFMAD_rrr_frm<RISCVOpcode opcode, string opcodestr>
-    : RVInstR4<0b01, opcode, (outs FPR64:$rd),
-               (ins FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, frmarg:$funct3),
-                opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
+    : RVInstR4Frm<0b01, opcode, (outs FPR64:$rd),
+                  (ins FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, frmarg:$funct3),
+                  opcodestr, "$rd, $rs1, $rs2, $rs3, $funct3">;
 
 class FPFMADDynFrmAlias<FPFMAD_rrr_frm Inst, string OpcodeStr>
     : InstAlias<OpcodeStr#" $rd, $rs1, $rs2, $rs3",
@@ -82,16 +82,16 @@ def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
           Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_D  : FPFMAD_rrr_frm<OPC_MADD, "fmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMADD_D, "fmadd.d">;
 def FMSUB_D  : FPFMAD_rrr_frm<OPC_MSUB, "fmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMSUB_D, "fmsub.d">;
 def FNMSUB_D : FPFMAD_rrr_frm<OPC_NMSUB, "fnmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMSUB_D, "fnmsub.d">;
 def FNMADD_D : FPFMAD_rrr_frm<OPC_NMADD, "fnmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMADD_D, "fnmadd.d">;
 
 def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">,
@@ -281,11 +281,8 @@ def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, FPR64:$rs3),
 def : Pat<(fma (fneg FPR64:$rs1), FPR64:$rs2, (fneg FPR64:$rs3)),
           (FNMADD_D FPR64:$rs1, FPR64:$rs2, FPR64:$rs3, 0b111)>;
 
-// The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
-// canonical NaN when giving a signaling NaN. This doesn't match the LLVM
-// behaviour (see https://bugs.llvm.org/show_bug.cgi?id=27363). However, the
-// draft 2.3 ISA spec changes the definition of fmin and fmax in a way that
-// matches LLVM's fminnum and fmaxnum
+// The ratified 20191213 ISA spec defines fmin and fmax in a way that matches
+// LLVM's fminnum and fmaxnum.
 // <https://github.com/riscv/riscv-isa-manual/commit/cd20cee7efd9bac7c5aa127ec3b451749d2b3cce>.
 def : PatFpr64Fpr64<fminnum, FMIN_D>;
 def : PatFpr64Fpr64<fmaxnum, FMAX_D>;
@@ -299,32 +296,15 @@ def : PatFpr64Fpr64<setolt, FLT_D>;
 def : PatFpr64Fpr64<setle, FLE_D>;
 def : PatFpr64Fpr64<setole, FLE_D>;
 
-// Define pattern expansions for setcc operations which aren't directly
-// handled by a RISC-V instruction and aren't expanded in the SelectionDAG
-// Legalizer.
-
-def : Pat<(seto FPR64:$rs1, FPR64:$rs2),
-          (AND (FEQ_D FPR64:$rs1, FPR64:$rs1),
-               (FEQ_D FPR64:$rs2, FPR64:$rs2))>;
-def : Pat<(seto FPR64:$rs1, FPR64:$rs1),
-          (FEQ_D $rs1, $rs1)>;
-
-def : Pat<(setuo FPR64:$rs1, FPR64:$rs2),
-          (SLTIU (AND (FEQ_D FPR64:$rs1, FPR64:$rs1),
-                      (FEQ_D FPR64:$rs2, FPR64:$rs2)),
-                 1)>;
-def : Pat<(setuo FPR64:$rs1, FPR64:$rs1),
-          (SLTIU (FEQ_D $rs1, $rs1), 1)>;
-
 def Select_FPR64_Using_CC_GPR : SelectCC_rrirr<FPR64, GPR>;
 
 /// Loads
 
-defm : LdPat<load, FLD>;
+defm : LdPat<load, FLD, f64>;
 
 /// Stores
 
-defm : StPat<store, FSD, FPR64>;
+defm : StPat<store, FSD, FPR64, f64>;
 
 /// Pseudo-instructions needed for the soft-float ABI with RV32D
 
@@ -345,40 +325,63 @@ def SplitF64Pseudo
 let Predicates = [HasStdExtD, IsRV32] in {
 
 /// Float constants
-def : Pat<(f64 (fpimm0)), (FCVT_D_W X0)>;
+def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
 
 // double->[u]int. Round-to-zero must be used.
-def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_W_D FPR64:$rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_WU_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (fp_to_uint FPR64:$rs1)), (FCVT_WU_D FPR64:$rs1, 0b001)>;
+
+// Saturating double->[u]int32.
+def : Pat<(i32 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(i32 (riscv_fcvt_xu_rtz FPR64:$rs1)), (FCVT_WU_D $rs1, 0b001)>;
+
+// float->int32 with current rounding mode.
+def : Pat<(i32 (lrint FPR64:$rs1)), (FCVT_W_D $rs1, 0b111)>;
+
+// float->int32 rounded to nearest with ties rounded away from zero.
+def : Pat<(i32 (lround FPR64:$rs1)), (FCVT_W_D $rs1, 0b100)>;
 
 // [u]int->double.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_W GPR:$rs1)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU GPR:$rs1)>;
+def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1)>;
+def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1)>;
 } // Predicates = [HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtD, IsRV64] in {
 
 /// Float constants
-def : Pat<(f64 (fpimm0)), (FMV_D_X X0)>;
+def : Pat<(f64 (fpimm0)), (FMV_D_X (i64 X0))>;
 
-def : Pat<(bitconvert GPR:$rs1), (FMV_D_X GPR:$rs1)>;
-def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
+// Moves (no conversion)
+def : Pat<(bitconvert (i64 GPR:$rs1)), (FMV_D_X GPR:$rs1)>;
+def : Pat<(i64 (bitconvert FPR64:$rs1)), (FMV_X_D FPR64:$rs1)>;
 
-// FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
-// because fpto[u|s]i produce poison if the value can't fit into the target.
-// We match the single case below because fcvt.wu.d sign-extends its result so
-// is cheaper than fcvt.lu.d+sext.w.
-def : Pat<(sext_inreg (zexti32 (fp_to_uint FPR64:$rs1)), i32),
-          (FCVT_WU_D $rs1, 0b001)>;
+// Use target specific isd nodes to help us remember the result is sign
+// extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
+// duplicated if it has another user that didn't need the sign_extend.
+def : Pat<(riscv_fcvt_w_rtz_rv64 FPR64:$rs1),  (FCVT_W_D $rs1, 0b001)>;
+def : Pat<(riscv_fcvt_wu_rtz_rv64 FPR64:$rs1), (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
-def : Pat<(sint_to_fp (sext_inreg GPR:$rs1, i32)), (FCVT_D_W $rs1)>;
-def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_D_WU $rs1)>;
+def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
+def : Pat<(uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
 
-def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_L_D FPR64:$rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_LU_D FPR64:$rs1, 0b001)>;
+// Saturating double->[u]int64.
+def : Pat<(i64 (riscv_fcvt_x_rtz FPR64:$rs1)), (FCVT_L_D $rs1, 0b001)>;
+def : Pat<(i64 (riscv_fcvt_xu_rtz FPR64:$rs1)), (FCVT_LU_D $rs1, 0b001)>;
+
+// double->[u]int64. Round-to-zero must be used.
+def : Pat<(i64 (fp_to_sint FPR64:$rs1)), (FCVT_L_D FPR64:$rs1, 0b001)>;
+def : Pat<(i64 (fp_to_uint FPR64:$rs1)), (FCVT_LU_D FPR64:$rs1, 0b001)>;
+
+// double->int64 with current rounding mode.
+def : Pat<(i64 (lrint FPR64:$rs1)), (FCVT_L_D $rs1, 0b111)>;
+def : Pat<(i64 (llrint FPR64:$rs1)), (FCVT_L_D $rs1, 0b111)>;
+
+// double->int64 rounded to nearest with ties rounded away from zero.
+def : Pat<(i64 (lround FPR64:$rs1)), (FCVT_L_D $rs1, 0b100)>;
+def : Pat<(i64 (llround FPR64:$rs1)), (FCVT_L_D $rs1, 0b100)>;
 
 // [u]int64->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_L GPR:$rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_LU GPR:$rs1, 0b111)>;
+def : Pat<(sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L GPR:$rs1, 0b111)>;
+def : Pat<(uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU GPR:$rs1, 0b111)>;
 } // Predicates = [HasStdExtD, IsRV64]

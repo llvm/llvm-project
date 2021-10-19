@@ -203,7 +203,7 @@ __isl_give isl_ast_build *isl_ast_build_clear_local_info(
 	__isl_take isl_ast_build *build);
 __isl_give isl_ast_build *isl_ast_build_increase_depth(
 	__isl_take isl_ast_build *build);
-int isl_ast_build_get_depth(__isl_keep isl_ast_build *build);
+isl_size isl_ast_build_get_depth(__isl_keep isl_ast_build *build);
 isl_size isl_ast_build_dim(__isl_keep isl_ast_build *build,
 	enum isl_dim_type type);
 __isl_give isl_space *isl_ast_build_get_space(

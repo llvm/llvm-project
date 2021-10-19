@@ -1,0 +1,53 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+#                     \0 b a z\0 s o m e l i b . s o\0 f o o\0
+    Content:         "0062617a00736f6d656c69622e736f00666f6f00"
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000001018
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000010
+    Entries:
+      - Tag:             DT_SONAME
+        Value:           0x0000000000000005
+      - Tag:             DT_STRSZ
+        Value:           0x0000000000000014
+      - Tag:             DT_STRTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_SYMTAB
+        Value:           0x0000000000001000
+      - Tag:             DT_NULL
+        Value:           0x0000000000000000
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x1000
+    Align:    8
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_X, PF_R ]
+    VAddr:    0x1018
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+# CHECK:      --- !ifs-v1
+# CHECK-NEXT: IfsVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
+# CHECK-NEXT: SoName: somelib.so{{$}}
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Symbols: []
+# CHECK-NEXT: ...

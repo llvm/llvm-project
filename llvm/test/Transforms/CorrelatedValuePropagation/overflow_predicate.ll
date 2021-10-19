@@ -13,12 +13,12 @@ define i1 @uadd_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @uadd_ov_false(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], -102
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -45,12 +45,12 @@ define i1 @uadd_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @uadd_ov_true(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], -100
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -77,12 +77,12 @@ define i1 @sadd_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @sadd_ov_false(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 26
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -109,12 +109,12 @@ define i1 @sadd_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @sadd_ov_true(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 28
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -141,12 +141,12 @@ define i1 @usub_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @usub_ov_false(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], 101
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -173,12 +173,12 @@ define i1 @usub_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @usub_ov_true(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[X]], 99
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -205,12 +205,12 @@ define i1 @ssub_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @ssub_ov_false(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -27
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -237,12 +237,12 @@ define i1 @ssub_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @ssub_ov_true(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 100)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -29
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -269,12 +269,12 @@ define i1 @umul_ov_false(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @umul_ov_false(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 24
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -301,12 +301,12 @@ define i1 @umul_ov_true(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @umul_ov_true(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[X]], 26
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -334,12 +334,12 @@ define i1 @smul_ov_false_bound1(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @smul_ov_false_bound1(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[X]], -11
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -366,12 +366,12 @@ define i1 @smul_ov_false_bound2(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @smul_ov_false_bound2(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[X]], 11
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -399,12 +399,12 @@ define i1 @smul_ov_true_bound1(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @smul_ov_true_bound1(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], -13
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -431,12 +431,12 @@ define i1 @smul_ov_true_bound2(i8 %x, i8* %px, i1* %pc) {
 ; CHECK-LABEL: @smul_ov_true_bound2(
 ; CHECK-NEXT:    [[VAL_OV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]]
+; CHECK-NEXT:    store i8 [[VAL]], i8* [[PX:%.*]], align 1
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[OVERFLOW:%.*]], label [[TRAP:%.*]]
 ; CHECK:       overflow:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], 13
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -466,10 +466,8 @@ define i1 @uadd_val(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i8 [[VAL]], 100
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -481,9 +479,6 @@ define i1 @uadd_val(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp ugt i8 %val, 100
   store i1 %c1, i1* %pc
   %c2 = icmp uge i8 %val, 100
@@ -501,10 +496,8 @@ define i1 @sadd_val(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -28
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -516,9 +509,6 @@ define i1 @sadd_val(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp sgt i8 %val, -28
   store i1 %c1, i1* %pc
   %c2 = icmp sge i8 %val, -28
@@ -536,10 +526,8 @@ define i1 @usub_val(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -101
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -551,9 +539,6 @@ define i1 @usub_val(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp ult i8 %val, 155
   store i1 %c1, i1* %pc
   %c2 = icmp ule i8 %val, 155
@@ -571,10 +556,8 @@ define i1 @ssub_val(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 27
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -586,9 +569,6 @@ define i1 @ssub_val(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp slt i8 %val, 27
   store i1 %c1, i1* %pc
   %c2 = icmp sle i8 %val, 27
@@ -606,10 +586,8 @@ define i1 @umul_val(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[VAL]], -6
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -621,9 +599,6 @@ define i1 @umul_val(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp ult i8 %val, 250
   store i1 %c1, i1* %pc
   %c2 = icmp ule i8 %val, 250
@@ -641,10 +616,8 @@ define i1 @smul_val_bound1(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i8 [[VAL]], 120
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -656,9 +629,6 @@ define i1 @smul_val_bound1(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp slt i8 %val, 120
   store i1 %c1, i1* %pc
   %c2 = icmp sle i8 %val, 120
@@ -676,10 +646,8 @@ define i1 @smul_val_bound2(i8 %x, i1* %pc) {
 ; CHECK-NEXT:    br i1 [[OV]], label [[TRAP:%.*]], label [[NO_OVERFLOW:%.*]]
 ; CHECK:       no_overflow:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractvalue { i8, i1 } [[VAL_OV]], 0
-; CHECK-NEXT:    br label [[SPLIT:%.*]]
-; CHECK:       split:
 ; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i8 [[VAL]], -120
-; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]]
+; CHECK-NEXT:    store i1 [[C1]], i1* [[PC:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       trap:
 ; CHECK-NEXT:    call void @llvm.trap()
@@ -691,9 +659,6 @@ define i1 @smul_val_bound2(i8 %x, i1* %pc) {
 
 no_overflow:
   %val = extractvalue {i8, i1} %val_ov, 0
-  br label %split
-
-split:
   %c1 = icmp sgt i8 %val, -120
   store i1 %c1, i1* %pc
   %c2 = icmp sge i8 %val, -120

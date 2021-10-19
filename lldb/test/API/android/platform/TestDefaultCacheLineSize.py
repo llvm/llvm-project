@@ -17,8 +17,7 @@ class DefaultCacheLineSizeTestCase(TestBase):
     @skipUnlessTargetAndroid
     def test_cache_line_size(self):
         self.build(dictionary=self.getBuildFlags())
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
+        target = self.createTestTarget()
         self.assertTrue(target and target.IsValid(), "Target is valid")
 
         breakpoint = target.BreakpointCreateByName("main")

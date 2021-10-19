@@ -15,6 +15,7 @@
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunreachable-code"
+#pragma GCC diagnostic ignored "-Wdeprecated" // dynamic exception specifications are deprecated
 #endif
 
 struct A
@@ -80,7 +81,7 @@ void u_handler()
     exit(0);
 }
 
-int main()
+int main(int, char**)
 {
     std::set_unexpected(u_handler);
     try
@@ -105,4 +106,6 @@ int main()
         assert(false);
     }
     assert(false);
+
+    return 0;
 }

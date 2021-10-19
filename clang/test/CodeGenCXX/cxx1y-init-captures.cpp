@@ -10,7 +10,7 @@ void f() {
   (void) [s(S{})] {};
 }
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define{{.*}} void @_Z1fv(
 // CHECK: call void @_ZN1SC1Ev(
 // CHECK: call void @"_ZZ1fvEN3$_0D1Ev"(
 
@@ -23,7 +23,7 @@ void g() {
   [a(1), b(2)] { return a + b; } ();
 }
 
-// CHECK-LABEL: define void @_Z1gv(
+// CHECK-LABEL: define{{.*}} void @_Z1gv(
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 0
 // CHECK: store i32 1, i32*
 // CHECK: getelementptr inbounds {{.*}}, i32 0, i32 1
@@ -38,7 +38,7 @@ void g() {
 
 // CHECK: add nsw i32
 
-// CHECK-LABEL: define void @_Z18init_capture_dtorsv
+// CHECK-LABEL: define{{.*}} void @_Z18init_capture_dtorsv
 void init_capture_dtors() {
   // Ensure that init-captures are not treated as separate full-expressions.
   struct HasDtor { ~HasDtor() {} };
@@ -52,7 +52,7 @@ void init_capture_dtors() {
 }
 
 int h(int a) {
-  // CHECK-LABEL: define i32 @_Z1hi(
+  // CHECK-LABEL: define{{.*}} i32 @_Z1hi(
   // CHECK: %[[A_ADDR:.*]] = alloca i32,
   // CHECK: %[[OUTER:.*]] = alloca
   // CHECK: store i32 {{.*}}, i32* %[[A_ADDR]],
@@ -66,7 +66,7 @@ int h(int a) {
   // CHECK: load i32, i32* %[[A_ADDR]],
   // CHECK: store i32
   //
-  // CHECK: call i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* %[[OUTER]])
+  // CHECK: call i32 @"_ZZ1hiENK3$_2clEv"({{.*}}* {{[^,]*}} %[[OUTER]])
   return [&b(a), c(a)] {
     // CHECK-LABEL: define internal i32 @"_ZZ1hiENK3$_2clEv"(
     // CHECK: %[[OUTER_ADDR:.*]] = alloca
@@ -86,7 +86,7 @@ int h(int a) {
     // CHECK-NEXT: load i32, i32* %
     // CHECK-NEXT: store i32
     //
-    // CHECK: call i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* %[[INNER]])
+    // CHECK: call i32 @"_ZZZ1hiENK3$_2clEvENKUlvE_clEv"({{.*}}* {{[^,]*}} %[[INNER]])
     return [=, &c] {
       // CHECK-LABEL: define internal void @"_ZZ1fvEN3$_0D2Ev"(
       // CHECK: call void @_ZN1SD1Ev(

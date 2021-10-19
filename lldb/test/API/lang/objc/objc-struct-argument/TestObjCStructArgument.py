@@ -20,7 +20,6 @@ class TestObjCStructArgument(TestBase):
         self.break_line = line_number(
             self.main_source, '// Set breakpoint here.')
 
-    @skipUnlessDarwin
     @add_test_categories(['pyapi'])
     @skipIf(debug_info=no_match(["gmodules"]), oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'arm64'])  # this test program only builds for ios with -gmodules
     def test_with_python_api(self):

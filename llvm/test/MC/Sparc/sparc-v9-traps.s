@@ -300,4 +300,8 @@
         tvs %xcc, 82
         tvs %xcc, %g1 + %i2
         tvs %xcc, %i5 + 41
-      
+
+        ! CHECK: sir 0                  ! encoding: [0x9f,0x80,0x20,0x00]
+        ! CHECK: sir 123                ! encoding: [0x9f,0x80,0x20,0x7b]
+        sir
+        sir 123

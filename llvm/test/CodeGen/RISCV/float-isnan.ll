@@ -8,13 +8,13 @@ define zeroext i1 @float_is_nan(float %a) nounwind {
 ; RV32IF-LABEL: float_is_nan:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    feq.s a0, fa0, fa0
-; RV32IF-NEXT:    seqz a0, a0
+; RV32IF-NEXT:    xori a0, a0, 1
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: float_is_nan:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    seqz a0, a0
+; RV64IF-NEXT:    xori a0, a0, 1
 ; RV64IF-NEXT:    ret
   %1 = fcmp uno float %a, 0.000000e+00
   ret i1 %1

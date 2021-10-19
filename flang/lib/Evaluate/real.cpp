@@ -262,6 +262,126 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Divide(
 }
 
 template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  if (IsNotANumber()) {
+    result.value = NotANumber();
+    if (IsSignalingNaN()) {
+      result.flags.set(RealFlag::InvalidArgument);
+    }
+  } else if (IsNegative()) {
+    if (IsZero()) {
+      // SQRT(-0) == -0 in IEEE-754.
+      result.value.word_ = result.value.word_.IBSET(bits - 1);
+    } else {
+      result.value = NotANumber();
+    }
+  } else if (IsInfinite()) {
+    // SQRT(+Inf) == +Inf
+    result.value = Infinity(false);
+  } else {
+    int expo{UnbiasedExponent()};
+    if (expo < -1 || expo > 1) {
+      // Reduce the range to [0.5 .. 4.0) by dividing by an integral power
+      // of four to avoid trouble with very large and very small values
+      // (esp. truncation of subnormals).
+      // SQRT(2**(2a) * x) = SQRT(2**(2a)) * SQRT(x) = 2**a * SQRT(x)
+      Real scaled;
+      int adjust{expo / 2};
+      scaled.Normalize(false, expo - 2 * adjust + exponentBias, GetFraction());
+      result = scaled.SQRT(rounding);
+      result.value.Normalize(false,
+          result.value.UnbiasedExponent() + adjust + exponentBias,
+          result.value.GetFraction());
+      return result;
+    }
+    // Compute the square root of the reduced value with the slow but
+    // reliable bit-at-a-time method.  Start with a clear significand and
+    // half of the unbiased exponent, and then try to set significand bits
+    // in descending order of magnitude without exceeding the exact result.
+    expo = expo / 2 + exponentBias;
+    result.value.Normalize(false, expo, Fraction::MASKL(1));
+    Real initialSq{result.value.Multiply(result.value).value};
+    if (Compare(initialSq) == Relation::Less) {
+      // Initial estimate is too large; this can happen for values just
+      // under 1.0.
+      --expo;
+      result.value.Normalize(false, expo, Fraction::MASKL(1));
+    }
+    for (int bit{significandBits - 1}; bit >= 0; --bit) {
+      Word word{result.value.word_};
+      result.value.word_ = word.IBSET(bit);
+      auto squared{result.value.Multiply(result.value, rounding)};
+      if (squared.flags.test(RealFlag::Overflow) ||
+          squared.flags.test(RealFlag::Underflow) ||
+          Compare(squared.value) == Relation::Less) {
+        result.value.word_ = word;
+      }
+    }
+    // The computed square root has a square that's not greater than the
+    // original argument.  Check this square against the square of the next
+    // larger Real and return that one if its square is closer in magnitude to
+    // the original argument.
+    Real resultSq{result.value.Multiply(result.value).value};
+    Real diff{Subtract(resultSq).value.ABS()};
+    if (diff.IsZero()) {
+      return result; // exact
+    }
+    Real ulp;
+    ulp.Normalize(false, expo, Fraction::MASKR(1));
+    Real nextAfter{result.value.Add(ulp).value};
+    auto nextAfterSq{nextAfter.Multiply(nextAfter)};
+    if (!nextAfterSq.flags.test(RealFlag::Overflow) &&
+        !nextAfterSq.flags.test(RealFlag::Underflow)) {
+      Real nextAfterDiff{Subtract(nextAfterSq.value).value.ABS()};
+      if (nextAfterDiff.Compare(diff) == Relation::Less) {
+        result.value = nextAfter;
+        if (nextAfterDiff.IsZero()) {
+          return result; // exact
+        }
+      }
+    }
+    result.flags.set(RealFlag::Inexact);
+  }
+  return result;
+}
+
+// HYPOT(x,y) = SQRT(x**2 + y**2) by definition, but those squared intermediate
+// values are susceptible to over/underflow when computed naively.
+// Assuming that x>=y, calculate instead:
+//   HYPOT(x,y) = SQRT(x**2 * (1+(y/x)**2))
+//              = ABS(x) * SQRT(1+(y/x)**2)
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
+    const Real &y, Rounding rounding) const {
+  ValueWithRealFlags<Real> result;
+  if (IsNotANumber() || y.IsNotANumber()) {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = NotANumber();
+  } else if (ABS().Compare(y.ABS()) == Relation::Less) {
+    return y.HYPOT(*this);
+  } else if (IsZero()) {
+    return result; // x==y==0
+  } else {
+    auto yOverX{y.Divide(*this, rounding)}; // y/x
+    bool inexact{yOverX.flags.test(RealFlag::Inexact)};
+    auto squared{yOverX.value.Multiply(yOverX.value, rounding)}; // (y/x)**2
+    inexact |= squared.flags.test(RealFlag::Inexact);
+    Real one;
+    one.Normalize(false, exponentBias, Fraction::MASKL(1)); // 1.0
+    auto sum{squared.value.Add(one, rounding)}; // 1.0 + (y/x)**2
+    inexact |= sum.flags.test(RealFlag::Inexact);
+    auto sqrt{sum.value.SQRT()};
+    inexact |= sqrt.flags.test(RealFlag::Inexact);
+    result = sqrt.value.Multiply(ABS(), rounding);
+    if (inexact) {
+      result.flags.set(RealFlag::Inexact);
+    }
+  }
+  return result;
+}
+
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::ToWholeNumber(
     common::RoundingMode mode) const {
   ValueWithRealFlags<Real> result{*this};
@@ -439,7 +559,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::Read(
 
 template <typename W, int P> std::string Real<W, P>::DumpHexadecimal() const {
   if (IsNotANumber()) {
-    return "NaN 0x"s + word_.Hexadecimal();
+    return "NaN0x"s + word_.Hexadecimal();
   } else if (IsNegative()) {
     return "-"s + Negate().DumpHexadecimal();
   } else if (IsInfinite()) {
@@ -496,14 +616,15 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
     }
   } else {
     using B = decimal::BinaryFloatingPointNumber<P>;
-    const auto *value{reinterpret_cast<const B *>(this)};
-    char buffer[24000]; // accommodate real*16
+    B value{word_.template ToUInt<typename B::RawType>()};
+    char buffer[common::MaxDecimalConversionDigits(P) +
+        EXTRA_DECIMAL_CONVERSION_SPACE];
     decimal::DecimalConversionFlags flags{}; // default: exact representation
     if (minimal) {
       flags = decimal::Minimize;
     }
     auto result{decimal::ConvertToDecimal<P>(buffer, sizeof buffer, flags,
-        static_cast<int>(sizeof buffer), decimal::RoundNearest, *value)};
+        static_cast<int>(sizeof buffer), decimal::RoundNearest, value)};
     const char *p{result.str};
     if (DEREF(p) == '-' || *p == '+') {
       o << *p++;

@@ -53,7 +53,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     // in the def-use chain needs to be changed.
     auto *J = dyn_cast<Instruction>(JU);
     if (J && J->getType()->isIntOrIntVectorTy() &&
-        !DB.getDemandedBits(J).isAllOnesValue()) {
+        !DB.getDemandedBits(J).isAllOnes()) {
       Visited.insert(J);
       WorkList.push_back(J);
     }
@@ -84,7 +84,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
       // that in the def-use chain needs to be changed.
       auto *K = dyn_cast<Instruction>(KU);
       if (K && Visited.insert(K).second && K->getType()->isIntOrIntVectorTy() &&
-          !DB.getDemandedBits(K).isAllOnesValue())
+          !DB.getDemandedBits(K).isAllOnes())
         WorkList.push_back(K);
     }
   }
@@ -103,12 +103,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     // Remove instructions that are dead, either because they were not reached
     // during analysis or have no demanded bits.
     if (DB.isInstructionDead(&I) ||
-        (I.getType()->isIntOrIntVectorTy() &&
-         DB.getDemandedBits(&I).isNullValue() &&
+        (I.getType()->isIntOrIntVectorTy() && DB.getDemandedBits(&I).isZero() &&
          wouldInstructionBeTriviallyDead(&I))) {
-      salvageDebugInfo(I);
       Worklist.push_back(&I);
-      I.dropAllReferences();
       Changed = true;
       continue;
     }
@@ -155,6 +152,11 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     }
   }
 
+  for (Instruction *&I : llvm::reverse(Worklist)) {
+    salvageDebugInfo(*I);
+    I->dropAllReferences();
+  }
+
   for (Instruction *&I : Worklist) {
     ++NumRemoved;
     I->eraseFromParent();
@@ -170,7 +172,6 @@ PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

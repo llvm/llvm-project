@@ -708,7 +708,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_ExplicitCtorClass@@YA?AVExplicitCtorClass@@AEAV1@@Z"(%class.ExplicitCtorClass* noalias sret %agg.result, %class.ExplicitCtorClass* dereferenceable(1) %arg) #0 !dbg !37 {
+define dso_local void @"?Func_ExplicitCtorClass@@YA?AVExplicitCtorClass@@AEAV1@@Z"(%class.ExplicitCtorClass* noalias sret(%class.ExplicitCtorClass) %agg.result, %class.ExplicitCtorClass* dereferenceable(1) %arg) #0 !dbg !37 {
 entry:
   %arg.addr = alloca %class.ExplicitCtorClass*, align 8
   store %class.ExplicitCtorClass* %arg, %class.ExplicitCtorClass** %arg.addr, align 8
@@ -718,7 +718,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultedCtorClass@@YA?AVDefaultedCtorClass@@AEAV1@@Z"(%class.DefaultedCtorClass* noalias sret %agg.result, %class.DefaultedCtorClass* dereferenceable(1) %arg) #0 !dbg !49 {
+define dso_local void @"?Func_DefaultedCtorClass@@YA?AVDefaultedCtorClass@@AEAV1@@Z"(%class.DefaultedCtorClass* noalias sret(%class.DefaultedCtorClass) %agg.result, %class.DefaultedCtorClass* dereferenceable(1) %arg) #0 !dbg !49 {
 entry:
   %arg.addr = alloca %class.DefaultedCtorClass*, align 8
   store %class.DefaultedCtorClass* %arg, %class.DefaultedCtorClass** %arg.addr, align 8
@@ -728,7 +728,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultArgumentCtorClass@@YA?AVDefaultArgumentCtorClass@@AEAV1@@Z"(%class.DefaultArgumentCtorClass* noalias sret %agg.result, %class.DefaultArgumentCtorClass* dereferenceable(1) %arg) #0 !dbg !61 {
+define dso_local void @"?Func_DefaultArgumentCtorClass@@YA?AVDefaultArgumentCtorClass@@AEAV1@@Z"(%class.DefaultArgumentCtorClass* noalias sret(%class.DefaultArgumentCtorClass) %agg.result, %class.DefaultArgumentCtorClass* dereferenceable(1) %arg) #0 !dbg !61 {
 entry:
   %arg.addr = alloca %class.DefaultArgumentCtorClass*, align 8
   store %class.DefaultArgumentCtorClass* %arg, %class.DefaultArgumentCtorClass** %arg.addr, align 8
@@ -738,7 +738,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_UserDtorClass@@YA?AVUserDtorClass@@AEAV1@@Z"(%class.UserDtorClass* noalias sret %agg.result, %class.UserDtorClass* dereferenceable(1) %arg) #0 !dbg !73 {
+define dso_local void @"?Func_UserDtorClass@@YA?AVUserDtorClass@@AEAV1@@Z"(%class.UserDtorClass* noalias sret(%class.UserDtorClass) %agg.result, %class.UserDtorClass* dereferenceable(1) %arg) #0 !dbg !73 {
 entry:
   %arg.addr = alloca %class.UserDtorClass*, align 8
   store %class.UserDtorClass* %arg, %class.UserDtorClass** %arg.addr, align 8
@@ -748,7 +748,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_DefaultedDtorClass@@YA?AVDefaultedDtorClass@@AEAV1@@Z"(%class.DefaultedDtorClass* noalias sret %agg.result, %class.DefaultedDtorClass* dereferenceable(1) %arg) #0 !dbg !85 {
+define dso_local void @"?Func_DefaultedDtorClass@@YA?AVDefaultedDtorClass@@AEAV1@@Z"(%class.DefaultedDtorClass* noalias sret(%class.DefaultedDtorClass) %agg.result, %class.DefaultedDtorClass* dereferenceable(1) %arg) #0 !dbg !85 {
 entry:
   %arg.addr = alloca %class.DefaultedDtorClass*, align 8
   store %class.DefaultedDtorClass* %arg, %class.DefaultedDtorClass** %arg.addr, align 8
@@ -758,7 +758,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_AClass@@YA?AVAClass@@AEAV1@@Z"(%class.AClass* noalias sret %agg.result, %class.AClass* dereferenceable(1) %arg) #0 !dbg !97 {
+define dso_local void @"?Func_AClass@@YA?AVAClass@@AEAV1@@Z"(%class.AClass* noalias sret(%class.AClass) %agg.result, %class.AClass* dereferenceable(1) %arg) #0 !dbg !97 {
 entry:
   %arg.addr = alloca %class.AClass*, align 8
   store %class.AClass* %arg, %class.AClass** %arg.addr, align 8
@@ -794,7 +794,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z"(%struct.BStruct* noalias sret %agg.result, %struct.BStruct* dereferenceable(1) %arg) #0 !dbg !122 {
+define dso_local void @"?Func_BStruct@@YA?AUBStruct@@AEAU1@@Z"(%struct.BStruct* noalias sret(%struct.BStruct) %agg.result, %struct.BStruct* dereferenceable(1) %arg) #0 !dbg !122 {
 entry:
   %arg.addr = alloca %struct.BStruct*, align 8
   store %struct.BStruct* %arg, %struct.BStruct** %arg.addr, align 8
@@ -825,7 +825,7 @@ entry:
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @"?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z"(%union.BUnion* noalias sret %agg.result, %union.BUnion* dereferenceable(1) %arg) #0 !dbg !151 {
+define dso_local void @"?Func_BUnion@@YA?ATBUnion@@AEAT1@@Z"(%union.BUnion* noalias sret(%union.BUnion) %agg.result, %union.BUnion* dereferenceable(1) %arg) #0 !dbg !151 {
 entry:
   %arg.addr = alloca %union.BUnion*, align 8
   store %union.BUnion* %arg, %union.BUnion** %arg.addr, align 8

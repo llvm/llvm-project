@@ -37,7 +37,8 @@ int main(int, char**)
             new std::ctype<char>(new std::ctype<char>::mask[256], true));
         assert(globalMemCounter.checkDeleteArrayCalledEq(0));
     }
-    assert(globalMemCounter.checkDeleteArrayCalledEq(1));
+    ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(
+        globalMemCounter.checkDeleteArrayCalledEq(1));
 
   return 0;
 }

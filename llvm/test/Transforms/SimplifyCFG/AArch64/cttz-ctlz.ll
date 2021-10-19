@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg -mtriple=aarch64 < %s | FileCheck %s
+; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -mtriple=aarch64 < %s | FileCheck %s
 
 define i32 @ctlz(i32 %A) {
 ; CHECK-LABEL: @ctlz(

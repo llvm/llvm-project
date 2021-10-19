@@ -233,6 +233,7 @@
 // AARCH64-NEXT: #define __SIZE_TYPE__ long unsigned int
 // AARCH64-NEXT: #define __SIZE_WIDTH__ 64
 // AARCH64_CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
+// AARCH64_CXX: #define __STDCPP_THREADS__ 1
 // AARCH64-NEXT: #define __STDC_HOSTED__ 1
 // AARCH64-NEXT: #define __STDC_UTF_16__ 1
 // AARCH64-NEXT: #define __STDC_UTF_32__ 1
@@ -530,6 +531,9 @@
 // AARCH64-DARWIN: #define __WINT_TYPE__ int
 // AARCH64-DARWIN: #define __WINT_WIDTH__ 32
 // AARCH64-DARWIN: #define __aarch64__ 1
+
+// RUN: %clang_cc1 -E -dM -triple=aarch64-apple-ios7.0 -x c++ < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-DARWIN-CXX %s
+// AARCH64-DARWIN-CXX: #define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-MSVC %s
 

@@ -20,10 +20,14 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
+
+using namespace PatternMatch;
 
 // We use this fixture to ensure that we clean up ScalarEvolution before
 // deleting the PassManager.
@@ -114,20 +118,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 
   ScalarEvolution SE = buildSE(*F);
   auto *S = SE.getSCEV(CastB);
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
-  Value *V =
-      Exp.expandCodeFor(cast<SCEVAddExpr>(S)->getOperand(1), nullptr, Br);
-
-  // Expect the expansion code contains:
-  //   %0 = bitcast i32* %bitcast2 to i8*
-  //   %uglygep = getelementptr i8, i8* %0, i64 -1
-  //   %1 = bitcast i8* %uglygep to i32*
-  EXPECT_TRUE(isa<BitCastInst>(V));
-  Instruction *Gep = cast<Instruction>(V)->getPrevNode();
-  EXPECT_TRUE(isa<GetElementPtrInst>(Gep));
-  EXPECT_TRUE(isa<ConstantInt>(Gep->getOperand(1)));
-  EXPECT_EQ(cast<ConstantInt>(Gep->getOperand(1))->getSExtValue(), -1);
-  EXPECT_TRUE(isa<BitCastInst>(Gep->getPrevNode()));
+  EXPECT_TRUE(isa<SCEVUnknown>(S));
 }
 
 // Make sure that SCEV doesn't introduce illegal ptrtoint/inttoptr instructions
@@ -915,6 +906,62 @@ TEST_F(ScalarEvolutionExpanderTest, SCEVExpandNonAffineAddRec) {
   TestNoCanonicalIV(GetAR5);
   TestNarrowCanonicalIV(GetAR5);
   TestMatchingCanonicalIV(GetAR5, ARBitWidth);
+}
+
+TEST_F(ScalarEvolutionExpanderTest, ExpandNonIntegralPtrWithNullBase) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  std::unique_ptr<Module> M =
+      parseAssemblyString("target datalayout = "
+                          "\"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:"
+                          "128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2\""
+                          "define float addrspace(1)* @test(i64 %offset) { "
+                          "  %ptr = getelementptr inbounds float, float "
+                          "addrspace(1)* null, i64 %offset"
+                          "  ret float addrspace(1)* %ptr"
+                          "}",
+                          Err, C);
+
+  assert(M && "Could not parse module?");
+  assert(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto &I = GetInstByName(F, "ptr");
+    auto PtrPlus1 =
+        SE.getAddExpr(SE.getSCEV(&I), SE.getConstant(I.getType(), 1));
+    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+
+    Value *V = Exp.expandCodeFor(PtrPlus1, I.getType(), &I);
+    I.replaceAllUsesWith(V);
+
+    // Check that the expander created:
+    // define float addrspace(1)* @test(i64 %off) {
+    //   %scevgep = getelementptr float, float addrspace(1)* null, i64 %off
+    //   %scevgep1 = bitcast float addrspace(1)* %scevgep to i8 addrspace(1)*
+    //   %uglygep = getelementptr i8, i8 addrspace(1)* %scevgep1, i64 1
+    //   %uglygep2 = bitcast i8 addrspace(1)* %uglygep to float addrspace(1)*
+    //   %ptr = getelementptr inbounds float, float addrspace(1)* null, i64 %off
+    //   ret float addrspace(1)* %uglygep2
+    // }
+
+    auto *Cast = dyn_cast<BitCastInst>(V);
+    EXPECT_TRUE(Cast);
+    EXPECT_EQ(Cast->getType(), I.getType());
+    auto *GEP = dyn_cast<GetElementPtrInst>(Cast->getOperand(0));
+    EXPECT_TRUE(GEP);
+    EXPECT_TRUE(match(GEP->getOperand(1), m_SpecificInt(1)));
+    auto *Cast1 = dyn_cast<BitCastInst>(GEP->getPointerOperand());
+    EXPECT_TRUE(Cast1);
+    auto *GEP1 = dyn_cast<GetElementPtrInst>(Cast1->getOperand(0));
+    EXPECT_TRUE(GEP1);
+    EXPECT_TRUE(cast<Constant>(GEP1->getPointerOperand())->isNullValue());
+    EXPECT_EQ(GEP1->getOperand(1), &*F.arg_begin());
+    EXPECT_EQ(cast<PointerType>(GEP1->getPointerOperand()->getType())
+                  ->getAddressSpace(),
+              cast<PointerType>(I.getType())->getAddressSpace());
+    EXPECT_FALSE(verifyFunction(F, &errs()));
+  });
 }
 
 } // end namespace llvm

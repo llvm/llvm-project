@@ -34,7 +34,6 @@
 #include <memory>
 
 #include "test_macros.h"
-#include "type_id.h"
 
 template <class Tp, class Up>
 constexpr bool check_tag(Up) {

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -41,6 +40,7 @@ int main(int, char**)
         assert(t.translate_nocase('a') == 'a');
         assert(t.translate_nocase('1') == '1');
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         std::regex_traits<wchar_t> t;
         assert(t.translate_nocase(L' ') == L' ');
@@ -61,6 +61,7 @@ int main(int, char**)
         assert(t.translate_nocase(L'\xDA') == L'\xFA');
         assert(t.translate_nocase(L'\xFA') == L'\xFA');
     }
+#endif
 
   return 0;
 }

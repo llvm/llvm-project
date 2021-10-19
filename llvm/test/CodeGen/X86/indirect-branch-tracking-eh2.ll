@@ -1,5 +1,5 @@
-; RUN: llc -mtriple x86_64-unknown-unknown -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=NUM
-; RUN: llc -mtriple x86_64-unknown-unknown -exception-model sjlj -verify-machineinstrs=0 < %s | FileCheck %s --check-prefix=SJLJ
+; RUN: llc -mtriple x86_64-unknown-unknown -exception-model sjlj -verify-machineinstrs=0 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s --check-prefix=NUM
+; RUN: llc -mtriple x86_64-unknown-unknown -exception-model sjlj -verify-machineinstrs=0 -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s --check-prefix=SJLJ
 
 ; NUM-COUNT-3: endbr64
 

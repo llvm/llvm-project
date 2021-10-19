@@ -18,11 +18,9 @@ namespace process_netbsd {
 
 class NativeProcessNetBSD;
 
-class NativeRegisterContextNetBSD : public NativeRegisterContextRegisterInfo {
+class NativeRegisterContextNetBSD
+    : public virtual NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextNetBSD(NativeThreadProtocol &native_thread,
-                              RegisterInfoInterface *reg_info_interface_p);
-
   // This function is implemented in the NativeRegisterContextNetBSD_*
   // subclasses to create a new instance of the host specific
   // NativeRegisterContextNetBSD. The implementations can't collide as only one
@@ -31,10 +29,8 @@ public:
   static NativeRegisterContextNetBSD *
   CreateHostNativeRegisterContextNetBSD(const ArchSpec &target_arch,
                                         NativeThreadProtocol &native_thread);
-  virtual Status
+  virtual llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextNetBSD &source) = 0;
-
-  virtual Status ClearWatchpointHit(uint32_t wp_index) = 0;
 
 protected:
   Status DoRegisterSet(int req, void *buf);

@@ -151,20 +151,20 @@
 
 // RUN: %clang %s -### -target arm-unknown-freebsd10.0 -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM %s
-// CHECK-ARM: "-cc1"{{.*}}" "-fsjlj-exceptions"
+// CHECK-ARM: "-cc1"{{.*}}" "-exception-model=sjlj"
 // CHECK-ARM: as{{.*}}" "-mfpu=softvfp"{{.*}}"-matpcs"
 // CHECK-ARM-EABI-NOT: as{{.*}}" "-mfpu=vfp"
 
 // RUN: %clang %s -### -target arm-gnueabi-freebsd10.0 -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-EABI %s
-// CHECK-ARM-EABI-NOT: "-cc1"{{.*}}" "-fsjlj-exceptions"
+// CHECK-ARM-EABI-NOT: "-cc1"{{.*}}" "-exception-model=sjlj"
 // CHECK-ARM-EABI: as{{.*}}" "-mfpu=softvfp" "-meabi=5"
 // CHECK-ARM-EABI-NOT: as{{.*}}" "-mfpu=vfp"
 // CHECK-ARM-EABI-NOT: as{{.*}}" "-matpcs"
 
 // RUN: %clang %s -### -target arm-gnueabihf-freebsd10.0 -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM-EABIHF %s
-// CHECK-ARM-EABIHF-NOT: "-cc1"{{.*}}" "-fsjlj-exceptions"
+// CHECK-ARM-EABIHF-NOT: "-cc1"{{.*}}" "-exception-model=sjlj"
 // CHECK-ARM-EABIHF: as{{.*}}" "-mfpu=vfp" "-meabi=5"
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-mfpu=softvfp"
 // CHECK-ARM-EABIHF-NOT: as{{.*}}" "-matpcs"
@@ -176,7 +176,7 @@
 // RUN: %clang -mcpu=ultrasparc -target sparc64-unknown-freebsd8 %s -### -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
 // CHECK-SPARC-CPU: cc1{{.*}}" "-target-cpu" "ultrasparc"
-// CHECK-SPARC-CPU: as{{.*}}" "-Av9
+// CHECK-SPARC-CPU: as{{.*}}" "-Av9a
 
 // Check that -G flags are passed to the linker for mips
 // RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \
@@ -204,4 +204,4 @@
 
 // RUN: %clang -target ppc64-unknown-freebsd13.0 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=PPC64-MUNWIND %s
-// PPC64-MUNWIND: -munwind-table
+// PPC64-MUNWIND: "-funwind-tables=2"

@@ -49,6 +49,13 @@ Sections:
 # CONTENT-NEXT: - Name:    .oversized
 # CONTENT-NEXT:   Type:    SHT_HASH
 # CONTENT-NEXT:   Content: '0100000002000000030000000400000000'
+# CONTENT-NEXT: - Name:    .overflow1
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: 01000000FFFFFFFF{{$}}
+# CONTENT-NEXT: - Name:    .overflow2
+# CONTENT-NEXT:   Type:    SHT_HASH
+# CONTENT-NEXT:   Content: FFFFFFFF01000000{{$}}
+# CONTENT-NEXT: ...
 
 --- !ELF
 FileHeader:
@@ -74,3 +81,54 @@ Sections:
   - Name:    .oversized
     Type:    SHT_HASH
     Content: '0100000002000000030000000400000000'
+## Case 5, 6: NChain/NBucket are incorrect and causing 32-bit
+##            unsigned overflows of intermediate expressions.
+  - Name:    .overflow1
+    Type:    SHT_HASH
+    Bucket:  [ ]
+    Chain:   [ ]
+    NBucket: 0x1
+    NChain:  0xffffffff
+  - Name:    .overflow2
+    Type:    SHT_HASH
+    Bucket:  [ ]
+    Chain:   [ ]
+    NBucket: 0xffffffff
+    NChain:  0x1
+
+## Check how we dump the "EntSize" field. When the sh_entsize is 4,
+## we don't print it, because it is the default value for the SHT_HASH section.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=ENT-SIZE
+
+# ENT-SIZE:      - Name:    .hash.entsize.0
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   EntSize: 0x0
+# ENT-SIZE-NEXT:   Content: ''
+# ENT-SIZE-NEXT: - Name:    .hash.entsize.4.default
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   Content: ''
+# ENT-SIZE-NEXT: - Name:    .hash.entsize.255
+# ENT-SIZE-NEXT:   Type:    SHT_HASH
+# ENT-SIZE-NEXT:   EntSize: 0xFF
+# ENT-SIZE-NEXT:   Content: ''
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .hash.entsize.0
+    Type:    SHT_HASH
+    EntSize: 0
+    Size:    0
+  - Name:    .hash.entsize.4.default
+    Type:    SHT_HASH
+    EntSize: 4
+    Size:    0
+  - Name:    .hash.entsize.255
+    Type:    SHT_HASH
+    EntSize: 255
+    Size:    0

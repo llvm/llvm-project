@@ -63,10 +63,10 @@ DynamicSymbols:
   - Name: foo
   - Name: bar
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x100
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 ## Case 2: Check the output for aliases.
 ## a) Check the two-letter alias --dt is equivalent to the --dyn-symbols
@@ -90,7 +90,7 @@ ProgramHeaders:
 # RUN: llvm-readelf %t2.so --dyn-symbols 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2.so --implicit-check-not=warning: -DNAME=.dynsym --check-prefix=NOPHDRS-GNU
 
-# NOPHDRS-LLVM: warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-LLVM: warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-LLVM:      DynamicSymbols [
 # NOPHDRS-LLVM-NEXT:   Symbol {
 # NOPHDRS-LLVM-NEXT:     Name:  (0)
@@ -112,7 +112,7 @@ ProgramHeaders:
 # NOPHDRS-LLVM-NEXT:   }
 # NOPHDRS-LLVM-NEXT: ]
 
-# NOPHDRS-GNU:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# NOPHDRS-GNU:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # NOPHDRS-NAMEWARN: warning: '[[FILE]]': unable to get the name of SHT_DYNSYM section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # NOPHDRS-GNU:      Symbol table '[[NAME]]' contains 2 entries:
 # NOPHDRS-GNU-NEXT:  Num:    Value          Size Type    Bind   Vis       Ndx Name
@@ -153,7 +153,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefixes=NOSHT-DYNSYM,NOSHT-DYNSYM-LLVM
 # RUN: llvm-readelf %t3.so --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t3.so --check-prefix=NOSHT-DYNSYM
 
-# NOSHT-DYNSYM:           warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
+# NOSHT-DYNSYM:           warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0x0
 # NOSHT-DYNSYM-LLVM:      DynamicSymbols [
 # NOSHT-DYNSYM-LLVM-NEXT: ]
 
@@ -181,7 +181,7 @@ DynamicSymbols:
 # RUN: llvm-readobj %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-LLVM
 # RUN: llvm-readelf %t4.so --dyn-symbols 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefixes=BROKEN-DTSYMTAB,BROKEN-DTSYMTAB-GNU
 
-# BROKEN-DTSYMTAB:      warning: '[[FILE]]': Unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
+# BROKEN-DTSYMTAB:      warning: '[[FILE]]': unable to parse DT_SYMTAB: virtual address is not in any segment: 0xffff1234
 # BROKEN-DTSYMTAB-LLVM: Name: foo
 # BROKEN-DTSYMTAB-GNU:  1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
 
@@ -201,10 +201,10 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0000
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x0000
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 ## Case 6: Check that if we can get the location of the dynamic symbol table using both the DT_SYMTAB value
 ## and the section headers table then we prefer the former and report a warning.
@@ -238,54 +238,104 @@ Sections:
 DynamicSymbols:
   - Name: foo
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x0000
-    Sections:
-      - Section: .mydynsym
+  - Type:     PT_LOAD
+    VAddr:    0x0000
+    FirstSec: .mydynsym
+    LastSec:  .mydynsym
 
 ## Case 7: Check how we dump versioned symbols. Use both -V and --dyn-symbols
 ## to check that printed version is consistent.
+## A default version is one that is contained in the version table (SHT_GNU_versym)
+## and only available for defined symbols. We use the "@@" prefix to print it.
+
+## Check how we dump undefined symbols.
+
 # RUN: yaml2obj %s --docnum=6 -o %t6
-# RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-LLVM
-# RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-GNU
+# RUN: llvm-readobj -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-UND-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6 | FileCheck %s --check-prefix=VERSIONED-UND-GNU
 
-# VERSIONED-LLVM:      Symbol {
-# VERSIONED-LLVM:        Name: foo (16)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM-NEXT: Symbol {
-# VERSIONED-LLVM-NEXT:   Name: bar@@Default (12)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM-NEXT: Symbol {
-# VERSIONED-LLVM-NEXT:   Name: zed@NonDefault (20)
-# VERSIONED-LLVM-NEXT:   Value: 0x0
-# VERSIONED-LLVM-NEXT:   Size: 0
-# VERSIONED-LLVM-NEXT:   Binding: Local (0x0)
-# VERSIONED-LLVM-NEXT:   Type: None (0x0)
-# VERSIONED-LLVM-NEXT:   Other: 0
-# VERSIONED-LLVM-NEXT:   Section: Undefined (0x0)
-# VERSIONED-LLVM-NEXT: }
-# VERSIONED-LLVM: VersionSymbols [
-# VERSIONED-LLVM:  Name: foo
-# VERSIONED-LLVM:  Name: bar@@Default
-# VERSIONED-LLVM:  Name: zed@NonDefault
+# VERSIONED-UND-LLVM:       DynamicSymbols [
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name:  (0)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: localversym (28)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: globalversym (40)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: aaa@v2 (65)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: bbb@v3hidden (61)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: ccc@v4 (57)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT:   Symbol {
+# VERSIONED-UND-LLVM-NEXT:     Name: ddd@v5hidden (53)
+# VERSIONED-UND-LLVM-NEXT:     Value: 0x0
+# VERSIONED-UND-LLVM-NEXT:     Size: 0
+# VERSIONED-UND-LLVM-NEXT:     Binding: Local (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Type: None (0x0)
+# VERSIONED-UND-LLVM-NEXT:     Other: 0
+# VERSIONED-UND-LLVM-NEXT:     Section: Undefined (0x0)
+# VERSIONED-UND-LLVM-NEXT:   }
+# VERSIONED-UND-LLVM-NEXT: ]
+# VERSIONED-UND-LLVM:      VersionSymbols [
+# VERSIONED-UND-LLVM:          Name: localversym
+# VERSIONED-UND-LLVM:          Name: globalversym
+# VERSIONED-UND-LLVM:          Name: aaa@v2
+# VERSIONED-UND-LLVM:          Name: bbb@v3hidden
+# VERSIONED-UND-LLVM:          Name: ccc@v4
+# VERSIONED-UND-LLVM:          Name: ddd@v5hidden
 
-# VERSIONED-GNU:      Num:    Value          Size Type    Bind   Vis       Ndx Name
-# VERSIONED-GNU:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND foo
-# VERSIONED-GNU-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND bar@@Default
-# VERSIONED-GNU-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND zed@NonDefault
-# VERSIONED-GNU:      000:   0 (*local*) 1 (*global*) 2 (Default) 3h(NonDefault)
+# VERSIONED-UND-GNU:      Num:    Value          Size Type    Bind   Vis     Ndx Name
+# VERSIONED-UND-GNU:        1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND localversym
+# VERSIONED-UND-GNU-NEXT:   2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND globalversym
+# VERSIONED-UND-GNU-NEXT:   3: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND aaa@v2
+# VERSIONED-UND-GNU-NEXT:   4: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND bbb@v3hidden
+# VERSIONED-UND-GNU-NEXT:   5: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND ccc@v4
+# VERSIONED-UND-GNU-NEXT:   6: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT UND ddd@v5hidden
+# VERSIONED-UND-GNU:      000:   0 (*local*)  0 (*local*) 1 (*global*) 2 (v2)
+# VERSIONED-UND-GNU:      004:   3h(v3hidden) 4 (v4)      5h(v5hidden)
 
 --- !ELF
 FileHeader:
@@ -300,30 +350,154 @@ Sections:
     AddressAlign: 0x2
     EntSize:      0x2
 ## 0x8000 is a special VERSYM_HIDDEN bit.
-    Entries:      [ 0, 1, 2, 0x8003 ]
+## Here we have: VER_NDX_LOCAL (0), VER_NDX_GLOBAL (1), two versions
+## from the SHT_GNU_verdef section (2, 0x8003) and two versions
+## from the SHT_GNU_verneed section (4, 0x8005).
+    Entries:      [ 0, 0, 1, 2, 0x8003, 4, 0x8005 ]
   - Name:         .gnu.version_d
     Type:         SHT_GNU_verdef
     Flags:        [ SHF_ALLOC ]
-    Link:         .dynstr
     AddressAlign: 0x4
-    Info:         0x2
     Entries:
-      - Version:    1
-        Flags:      0
-        VersionNdx: 2
-        Hash:       0
+      - VersionNdx: 2
         Names:
-          - Default
-      - Version:    1
-        Flags:      0
-        VersionNdx: 3
-        Hash:       0
+          - v2
+      - VersionNdx: 3
         Names:
-          - NonDefault
+          - v3hidden
+  - Name:  .gnu.version_r
+    Type:  SHT_GNU_verneed
+    Flags: [ SHF_ALLOC ]
+    Dependencies:
+      - Version: 1
+        File:    file1.so
+        Entries:
+          - Name:  v4
+            Other: 4
+            Hash:  0
+            Flags: 0
+      - Version: 1
+        File:    file2.0
+        Entries:
+          - Name:  v5hidden
+            Other: 5
+            Hash:  0
+            Flags: 0
 DynamicSymbols:
-  - Name: foo
-  - Name: bar
-  - Name: zed
+  - Name:  localversym
+    Index: [[INDEX=<none>]]
+  - Name:  globalversym
+    Index: [[INDEX=<none>]]
+  - Name:  aaa
+    Index: [[INDEX=<none>]]
+  - Name:  [[NAME=bbb]]
+    Type:  [[TYPE=STT_NOTYPE]]
+    Index: [[INDEX_BBB=<none>]]
+  - Name:  [[NAME=ccc]]
+    Type:  [[TYPE=STT_NOTYPE]]
+    Index: [[INDEX=<none>]]
+  - Name:  ddd
+    Index: [[INDEX=<none>]]
+
+## In this case all dynamic symbols are defined. Check that we print the
+## "@@" prefix for default versions as expected.
+
+# RUN: yaml2obj %s --docnum=6 -DINDEX=1 -DINDEX_BBB=1 -o %t6.def
+# RUN: llvm-readobj -V --dyn-symbols %t6.def | FileCheck %s --check-prefix=VERSIONED-DEF-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.def | FileCheck %s --check-prefix=VERSIONED-DEF-GNU
+
+# VERSIONED-DEF-LLVM:      DynamicSymbols [
+# VERSIONED-DEF-LLVM:        Symbol {
+# VERSIONED-DEF-LLVM:          Name:    localversym (28)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    globalversym (40)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    aaa@@v2 (65)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    bbb@v3hidden (61)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    ccc@v4 (57)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM-NEXT:   Symbol {
+# VERSIONED-DEF-LLVM-NEXT:     Name:    ddd@v5hidden (53)
+# VERSIONED-DEF-LLVM:          Section: .gnu.version (0x1)
+# VERSIONED-DEF-LLVM-NEXT:   }
+# VERSIONED-DEF-LLVM:      VersionSymbols [
+# VERSIONED-DEF-LLVM:          Name: localversym
+# VERSIONED-DEF-LLVM:          Name: globalversym
+# VERSIONED-DEF-LLVM:          Name: aaa@@v2
+# VERSIONED-DEF-LLVM:          Name: bbb@v3hidden
+# VERSIONED-DEF-LLVM:          Name: ccc@v4
+# VERSIONED-DEF-LLVM:          Name: ddd@v5hidden
+
+# VERSIONED-DEF-GNU:      Num: {{.*}} Vis     Ndx Name
+# VERSIONED-DEF-GNU:        1: {{.*}} DEFAULT   1 localversym
+# VERSIONED-DEF-GNU-NEXT:   2: {{.*}} DEFAULT   1 globalversym
+# VERSIONED-DEF-GNU-NEXT:   3: {{.*}} DEFAULT   1 aaa@@v2
+# VERSIONED-DEF-GNU-NEXT:   4: {{.*}} DEFAULT   1 bbb@v3hidden
+# VERSIONED-DEF-GNU-NEXT:   5: {{.*}} DEFAULT   1 ccc@v4
+# VERSIONED-DEF-GNU-NEXT:   6: {{.*}} DEFAULT   1 ddd@v5hidden
+
+## Check the behavior for unnamed versioned section symbols.
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX_BBB=SHN_ABS --docnum=6 -o %t6.sec.sym
+# RUN: llvm-readobj -V --dyn-symbols %t6.sec.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.sym --check-prefix=VERSIONED-SEC-SYM-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.sec.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.sym --check-prefix=VERSIONED-SEC-SYM-GNU
+
+# VERSIONED-SEC-SYM-LLVM: DynamicSymbols [
+# VERSIONED-SEC-SYM-LLVM:  Name: localversym (28)
+# VERSIONED-SEC-SYM-LLVM:  Name: globalversym (40)
+# VERSIONED-SEC-SYM-LLVM:  Name: aaa@v2 (57)
+# VERSIONED-SEC-SYM-LLVM: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# VERSIONED-SEC-SYM-LLVM:  Name: <?> (0)
+# VERSIONED-SEC-SYM-LLVM: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# VERSIONED-SEC-SYM-LLVM:  Name: <?> (0)
+# VERSIONED-SEC-SYM-LLVM:  Name: ddd@v5hidden (53)
+# VERSIONED-SEC-SYM-LLVM: VersionSymbols [
+# VERSIONED-SEC-SYM-LLVM:  Name: localversym
+# VERSIONED-SEC-SYM-LLVM:  Name: globalversym
+# VERSIONED-SEC-SYM-LLVM:  Name: aaa@v2
+# VERSIONED-SEC-SYM-LLVM:  Name: <?>
+# VERSIONED-SEC-SYM-LLVM:  Name: <?>
+# VERSIONED-SEC-SYM-LLVM:  Name: ddd@v5hidden
+
+# VERSIONED-SEC-SYM-GNU:     Symbol table '.dynsym' contains 7 entries:
+# VERSIONED-SEC-SYM-GNU:        Num: {{.*}} Ndx Name
+# VERSIONED-SEC-SYM-GNU:          1: {{.*}} UND localversym
+# VERSIONED-SEC-SYM-GNU-NEXT:     2: {{.*}} UND globalversym
+# VERSIONED-SEC-SYM-GNU-NEXT:     3: {{.*}} UND aaa@v2
+# VERSIONED-SEC-SYM-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# VERSIONED-SEC-SYM-GNU-NEXT:     4: {{.*}} ABS <?>
+# VERSIONED-SEC-SYM-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0x0 (SHN_UNDEF)
+# VERSIONED-SEC-SYM-GNU-NEXT:     5: {{.*}} UND <?>
+# VERSIONED-SEC-SYM-GNU-NEXT:     6: {{.*}} UND ddd@v5hidden
+
+## Check we print a proper warning when an unnamed versioned section symbol has st_shndx = SHN_XINDEX, but there
+## is no SHT_SYMTAB_SHNDX section in the object.
+# RUN: yaml2obj %s -DTYPE=STT_SECTION -DNAME="''" -DINDEX_BBB=SHN_XINDEX --docnum=6 -o %t6.sec.xindex.sym
+# RUN: llvm-readobj -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-LLVM
+# RUN: llvm-readelf -V --dyn-symbols %t6.sec.xindex.sym 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t6.sec.xindex.sym --check-prefix=VERSIONED-SEC-SYM-XINDEX-GNU
+
+# VERSIONED-SEC-SYM-XINDEX-LLVM:       Name: aaa@v2 (57)
+# VERSIONED-SEC-SYM-XINDEX-LLVM:      warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
+# VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT: Symbol {
+# VERSIONED-SEC-SYM-XINDEX-LLVM-NEXT:  Name: <?> (0)
+
+# VERSIONED-SEC-SYM-XINDEX-GNU:      3: {{.*}} UND aaa@v2
+# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (4), but unable to locate the extended symbol index table
+# VERSIONED-SEC-SYM-XINDEX-GNU-NEXT: 4: {{.*}} RSV[0xffff] <?>
 
 ## Case 8: Check what we print when:
 ## a) The dynamic symbol table does not exist.
@@ -402,11 +576,15 @@ DynamicSymbols: []
 ## c) In the case when the DT_SYMENT tag is present, we report when it's value does not match the
 #     value of the symbol size for the platform.
 # RUN: yaml2obj %s -D BITS=32 --docnum=12 -o %t12
-# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
-# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readobj --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
+# RUN: llvm-readelf --dyn-symbols %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID3
 # RUN: yaml2obj %s -D BITS=64 --docnum=12 -o %t13
-# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
-# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readobj --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
+# RUN: llvm-readelf --dyn-symbols %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --implicit-check-not=warning: --check-prefix=DYNSYM-SIZE-INVALID4
 
 # DYNSYM-SIZE-INVALID3: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x10){{$}}
 # DYNSYM-SIZE-INVALID4: warning: '[[FILE]]': DT_SYMENT value of 0x123 is not the size of a symbol (0x18){{$}}
@@ -439,10 +617,10 @@ Sections:
     Address: 0x100
     Size:    0x1
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x100
-    Sections:
-      - Section: .dynsym
+  - Type:     PT_LOAD
+    VAddr:    0x100
+    FirstSec: .dynsym
+    LastSec:  .dynsym
 
 --- !ELF
 FileHeader:
@@ -453,6 +631,8 @@ Sections:
   - Name:    .dynamic
     Type:    SHT_DYNAMIC
     Entries:
+      - Tag:   DT_SYMENT
+        Value: 0x123
       - Tag:   DT_SYMENT
         Value: 0x123
       - Tag:   DT_NULL
@@ -533,11 +713,10 @@ DynamicSymbols:
 ## An arbitrary valid symbol to document we report an error before dumping it.
   - StName:  0x1
 ProgramHeaders:
-  - Type:  PT_LOAD
-    Flags: [ PF_R ]
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    FirstSec: .dynstr
+    LastSec:  .dynamic
 
 ## Case 11: check various warnings we report when fields of the SHT_DYNSYM section are broken.
 
@@ -562,6 +741,7 @@ Sections:
   - Name:     .dynsym
     Type:     SHT_DYNSYM
     EntSize:  [[ENTSIZE=<none>]]
+    Link:     [[LINK=<none>]]
     ShOffset: [[OFFSET=<none>]]
     ShSize:   [[SIZE=<none>]]
 DynamicSymbols:
@@ -594,3 +774,65 @@ DynamicSymbols:
 
 # SIZE-BROKEN-LLVM:      DynamicSymbols [
 # SIZE-BROKEN-LLVM-NEXT: ]
+
+## d) check we report a warning when the sh_link field of the SHT_DYNSYM section
+##    is not a valid section index or is not an index of a valid string table.
+# RUN: yaml2obj --docnum=14 %s -DLINK=0xffffffff -o %t16.link
+# RUN: llvm-readobj %t16.link --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+## Also test that we are able to dump section headers even if the .dynsym section's sh_link field is broken.
+# RUN: llvm-readobj %t16.link --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-SEC-HDRS-LLVM,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link \
+# RUN:   --check-prefixes=LINK-BROKEN1,LINK-SEC-HDRS-GNU,LINK-BROKEN-GNU
+
+# RUN: yaml2obj --docnum=14 %s -DLINK=0x0 -o %t16.link.0
+# RUN: llvm-readobj %t16.link.0 --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link.0 --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+## Also test that we are able to dump section headers even if the .dynsym section's sh_link field is broken.
+# RUN: llvm-readobj %t16.link.0 --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-SEC-HDRS-LLVM,LINK-BROKEN-LLVM --implicit-check-not=warning:
+# RUN: llvm-readelf %t16.link.0 --section-headers --dyn-symbols 2>&1 | FileCheck %s -DFILE=%t16.link.0 \
+# RUN:   --check-prefixes=LINK-BROKEN2,LINK-SEC-HDRS-GNU,LINK-BROKEN-GNU --implicit-check-not=warning:
+
+# LINK-BROKEN1: warning: '[[FILE]]': unable to get the string table for the SHT_DYNSYM section with index 1: invalid section index: 4294967295
+# LINK-BROKEN2: warning: '[[FILE]]': unable to get the string table for the SHT_DYNSYM section with index 1: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
+
+# LINK-SEC-HDRS-LLVM: Sections [
+# LINK-SEC-HDRS-GNU:  There are 5 section headers, starting at offset 0x80:
+
+# LINK-BROKEN-LLVM:      DynamicSymbols [
+# LINK-BROKEN-LLVM-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
+# LINK-BROKEN-LLVM-NEXT:   Symbol {
+# LINK-BROKEN-LLVM-NEXT:     Name: <?> (0)
+# LINK-BROKEN-LLVM-NEXT:     Value: 0x0
+# LINK-BROKEN-LLVM-NEXT:     Size: 0
+# LINK-BROKEN-LLVM-NEXT:     Binding: Local (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Type: None (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Other: 0
+# LINK-BROKEN-LLVM-NEXT:     Section: Undefined (0x0)
+# LINK-BROKEN-LLVM-NEXT:   }
+# LINK-BROKEN-LLVM-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
+# LINK-BROKEN-LLVM-NEXT:   Symbol {
+# LINK-BROKEN-LLVM-NEXT:     Name: <?> (1)
+# LINK-BROKEN-LLVM-NEXT:     Value: 0x0
+# LINK-BROKEN-LLVM-NEXT:     Size: 0
+# LINK-BROKEN-LLVM-NEXT:     Binding: Local (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Type: None (0x0)
+# LINK-BROKEN-LLVM-NEXT:     Other: 0
+# LINK-BROKEN-LLVM-NEXT:     Section: Undefined (0x0)
+# LINK-BROKEN-LLVM-NEXT:   }
+# LINK-BROKEN-LLVM-NEXT: ]
+
+# LINK-BROKEN-GNU:      Symbol table '.dynsym' contains 2 entries:
+# LINK-BROKEN-GNU-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
+# LINK-BROKEN-GNU-NEXT: warning: '[[FILE]]': st_name (0x0) is past the end of the string table of size 0x0
+# LINK-BROKEN-GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>
+# LINK-BROKEN-GNU-NEXT: warning: '[[FILE]]': st_name (0x1) is past the end of the string table of size 0x0
+# LINK-BROKEN-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND <?>

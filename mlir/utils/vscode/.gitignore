@@ -1,0 +1,7 @@
+out
+node_modules
+.vscode-test
+*.vsix
+grammar.json
+
+!.vscode

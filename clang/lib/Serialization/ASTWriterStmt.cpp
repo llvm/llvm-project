@@ -115,6 +115,7 @@ void ASTStmtWriter::VisitDefaultStmt(DefaultStmt *S) {
 
 void ASTStmtWriter::VisitLabelStmt(LabelStmt *S) {
   VisitStmt(S);
+  Record.push_back(S->isSideEntry());
   Record.AddDeclRef(S->getDecl());
   Record.AddStmt(S->getSubStmt());
   Record.AddSourceLocation(S->getIdentLoc());
@@ -137,11 +138,10 @@ void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
   bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
   bool HasInit = S->getInit() != nullptr;
 
-  Record.push_back(S->isConstexpr());
   Record.push_back(HasElse);
   Record.push_back(HasVar);
   Record.push_back(HasInit);
-
+  Record.push_back(static_cast<uint64_t>(S->getStatementKind()));
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getThen());
   if (HasElse)
@@ -579,6 +579,17 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   Code = serialization::EXPR_CONSTANT;
 }
 
+void ASTStmtWriter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
+  VisitExpr(E);
+
+  Record.AddSourceLocation(E->getLocation());
+  Record.AddSourceLocation(E->getLParenLocation());
+  Record.AddSourceLocation(E->getRParenLocation());
+  Record.AddTypeSourceInfo(E->getTypeSourceInfo());
+
+  Code = serialization::EXPR_SYCL_UNIQUE_STABLE_NAME;
+}
+
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
 
@@ -946,12 +957,16 @@ void ASTStmtWriter::VisitObjCBridgedCastExpr(ObjCBridgedCastExpr *E) {
 void ASTStmtWriter::VisitCastExpr(CastExpr *E) {
   VisitExpr(E);
   Record.push_back(E->path_size());
+  Record.push_back(E->hasStoredFPFeatures());
   Record.AddStmt(E->getSubExpr());
   Record.push_back(E->getCastKind()); // FIXME: stable encoding
 
   for (CastExpr::path_iterator
          PI = E->path_begin(), PE = E->path_end(); PI != PE; ++PI)
     Record.AddCXXBaseSpecifier(**PI);
+
+  if (E->hasStoredFPFeatures())
+    Record.push_back(E->getFPFeatures().getAsOpaqueInt());
 }
 
 void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
@@ -1003,7 +1018,7 @@ void ASTStmtWriter::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   VisitCastExpr(E);
   Record.push_back(E->isPartOfExplicitCast());
 
-  if (E->path_size() == 0)
+  if (E->path_size() == 0 && !E->hasStoredFPFeatures())
     AbbrevToUse = Writer.getExprImplicitCastAbbrev();
 
   Code = serialization::EXPR_IMPLICIT_CAST;
@@ -1896,7 +1911,7 @@ ASTStmtWriter::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
 void
 ASTStmtWriter::VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->arg_size());
+  Record.push_back(E->getNumArgs());
   for (CXXUnresolvedConstructExpr::arg_iterator
          ArgI = E->arg_begin(), ArgE = E->arg_end(); ArgI != ArgE; ++ArgI)
     Record.AddStmt(*ArgI);
@@ -2014,6 +2029,7 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getParameter());
+  Record.push_back(E->isReferenceParameter());
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
   Code = serialization::EXPR_SUBST_NON_TYPE_TEMPLATE_PARM;
@@ -2165,16 +2181,34 @@ void ASTStmtWriter::VisitSEHLeaveStmt(SEHLeaveStmt *S) {
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
 
+void ASTStmtWriter::VisitOMPCanonicalLoop(OMPCanonicalLoop *S) {
+  VisitStmt(S);
+  for (Stmt *SubStmt : S->SubStmts)
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_OMP_CANONICAL_LOOP;
+}
+
 void ASTStmtWriter::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
   Record.writeOMPChildren(E->Data);
   Record.AddSourceLocation(E->getBeginLoc());
   Record.AddSourceLocation(E->getEndLoc());
 }
 
-void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
+void ASTStmtWriter::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
   VisitStmt(D);
-  Record.writeUInt32(D->getCollapsedNumber());
+  Record.writeUInt32(D->getLoopsNumber());
   VisitOMPExecutableDirective(D);
+}
+
+void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
+  VisitOMPLoopBasedDirective(D);
+}
+
+void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
+  VisitStmt(D);
+  Record.push_back(D->getNumClauses());
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPParallelDirective(OMPParallelDirective *D) {
@@ -2187,6 +2221,22 @@ void ASTStmtWriter::VisitOMPParallelDirective(OMPParallelDirective *D) {
 void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPLoopTransformationDirective(
+    OMPLoopTransformationDirective *D) {
+  VisitOMPLoopBasedDirective(D);
+  Record.writeUInt32(D->getNumGeneratedLoops());
+}
+
+void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_TILE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+  Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {
@@ -2518,6 +2568,25 @@ void ASTStmtWriter::VisitOMPTargetTeamsDistributeSimdDirective(
     OMPTargetTeamsDistributeSimdDirective *D) {
   VisitOMPLoopDirective(D);
   Code = serialization::STMT_OMP_TARGET_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPInteropDirective(OMPInteropDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_INTEROP_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Record.AddSourceLocation(D->getTargetCallLoc());
+  Code = serialization::STMT_OMP_DISPATCH_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_MASKED_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

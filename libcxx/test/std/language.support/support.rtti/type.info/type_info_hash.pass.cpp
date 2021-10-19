@@ -8,6 +8,8 @@
 
 // test type_info
 
+// UNSUPPORTED: no-rtti
+
 #include <typeinfo>
 #include <cstring>
 #include <cassert>

@@ -28,14 +28,14 @@
 // RUN:   | FileCheck -check-prefix=CHK-NO-FOPENMP %s
 // RUN:   %clang -### -fopenmp=libgomp -fopenmp-targets=powerpc64le-ibm-linux-gnu  %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-NO-FOPENMP %s
-// CHK-NO-FOPENMP: error: The option -fopenmp-targets must be used in conjunction with a -fopenmp option compatible with offloading, please use -fopenmp=libomp or -fopenmp=libiomp5.
+// CHK-NO-FOPENMP: error: '-fopenmp-targets' must be used in conjunction with a '-fopenmp' option compatible with offloading; e.g., '-fopenmp=libomp' or '-fopenmp=libiomp5'
 
 /// ###########################################################################
 
 /// Check warning for duplicate offloading targets.
 // RUN:   %clang -### -ccc-print-phases -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu,powerpc64le-ibm-linux-gnu  %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-DUPLICATES %s
-// CHK-DUPLICATES: warning: The OpenMP offloading target 'powerpc64le-ibm-linux-gnu' is similar to target 'powerpc64le-ibm-linux-gnu' already specified - will be ignored.
+// CHK-DUPLICATES: warning: OpenMP offloading target 'powerpc64le-ibm-linux-gnu' is similar to target 'powerpc64le-ibm-linux-gnu' already specified; will be ignored
 
 /// ###########################################################################
 
@@ -215,13 +215,13 @@
 // CHK-PHASES-WITH-CUDA: 0: input, "[[INPUT:.+\.c]]", cuda, (host-cuda-openmp)
 // CHK-PHASES-WITH-CUDA: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda-openmp)
 // CHK-PHASES-WITH-CUDA: 2: compiler, {1}, ir, (host-cuda-openmp)
-// CHK-PHASES-WITH-CUDA: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_20)
-// CHK-PHASES-WITH-CUDA: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_20)
-// CHK-PHASES-WITH-CUDA: 5: compiler, {4}, ir, (device-cuda, sm_20)
-// CHK-PHASES-WITH-CUDA: 6: backend, {5}, assembler, (device-cuda, sm_20)
-// CHK-PHASES-WITH-CUDA: 7: assembler, {6}, object, (device-cuda, sm_20)
-// CHK-PHASES-WITH-CUDA: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_20)" {7}, object
-// CHK-PHASES-WITH-CUDA: 9: offload, "device-cuda (nvptx64-nvidia-cuda:sm_20)" {6}, assembler
+// CHK-PHASES-WITH-CUDA: 3: input, "[[INPUT]]", cuda, (device-cuda, sm_{{.*}})
+// CHK-PHASES-WITH-CUDA: 4: preprocessor, {3}, cuda-cpp-output, (device-cuda, sm_{{.*}})
+// CHK-PHASES-WITH-CUDA: 5: compiler, {4}, ir, (device-cuda, sm_{{.*}})
+// CHK-PHASES-WITH-CUDA: 6: backend, {5}, assembler, (device-cuda, sm_{{.*}})
+// CHK-PHASES-WITH-CUDA: 7: assembler, {6}, object, (device-cuda, sm_{{.*}})
+// CHK-PHASES-WITH-CUDA: 8: offload, "device-cuda (nvptx64-nvidia-cuda:sm_{{.*}})" {7}, object
+// CHK-PHASES-WITH-CUDA: 9: offload, "device-cuda (nvptx64-nvidia-cuda:sm_{{.*}})" {6}, assembler
 // CHK-PHASES-WITH-CUDA: 10: linker, {8, 9}, cuda-fatbin, (device-cuda)
 // CHK-PHASES-WITH-CUDA: 11: offload, "host-cuda-openmp (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (nvptx64-nvidia-cuda)" {10}, ir
 // CHK-PHASES-WITH-CUDA: 12: backend, {11}, assembler, (host-cuda-openmp)
@@ -492,7 +492,7 @@
 // CHK-UBJOBS-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBJOBS-SAME: [[HOSTPP:[^\\/]+\.i]],
 // CHK-UBJOBS-SAME: [[T1PP:[^\\/]+\.i]],
-// CHK-UBJOBS-SAME: [[T2PP:[^\\/]+\.i]]" "-unbundle"
+// CHK-UBJOBS-SAME: [[T2PP:[^\\/]+\.i]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-disable-llvm-passes" {{.*}}"-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu" {{.*}}"-o" "
 // CHK-UBJOBS-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]"
 // CHK-UBJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-obj" {{.*}}"-fopenmp" {{.*}}"-o" "
@@ -501,7 +501,7 @@
 // CHK-UBJOBS-ST-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBJOBS-ST-SAME: [[HOSTPP:[^\\/,]+\.i]],
 // CHK-UBJOBS-ST-SAME: [[T1PP:[^\\/,]+\.i]],
-// CHK-UBJOBS-ST-SAME: [[T2PP:[^\\/,]+\.i]]" "-unbundle"
+// CHK-UBJOBS-ST-SAME: [[T2PP:[^\\/,]+\.i]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-disable-llvm-passes" {{.*}}"-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu" {{.*}}"-o" "
 // CHK-UBJOBS-ST-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]"
 // CHK-UBJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-S" {{.*}}"-fopenmp" {{.*}}"-o" "
@@ -560,7 +560,7 @@
 // CHK-UBJOBS2-SAME: [[INPUT:[^\\/]+\.o]]" "-outputs=
 // CHK-UBJOBS2-SAME: [[HOSTOBJ:[^\\/]+\.o]],
 // CHK-UBJOBS2-SAME: [[T1OBJ:[^\\/]+\.o]],
-// CHK-UBJOBS2-SAME: [[T2OBJ:[^\\/]+\.o]]" "-unbundle"
+// CHK-UBJOBS2-SAME: [[T2OBJ:[^\\/]+\.o]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-SAME: [[T1BIN:[^\\/]+\.out]]" {{.*}}"{{.*}}[[T1OBJ]]"
 // CHK-UBJOBS2: ld{{(\.exe)?}}" {{.*}}"-o" "
@@ -576,7 +576,7 @@
 // CHK-UBJOBS2-ST-SAME: [[INPUT:[^\\/]+\.o]]" "-outputs=
 // CHK-UBJOBS2-ST-SAME: [[HOSTOBJ:[^\\/,]+\.o]],
 // CHK-UBJOBS2-ST-SAME: [[T1OBJ:[^\\/,]+\.o]],
-// CHK-UBJOBS2-ST-SAME: [[T2OBJ:[^\\/,]+\.o]]" "-unbundle"
+// CHK-UBJOBS2-ST-SAME: [[T2OBJ:[^\\/,]+\.o]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBJOBS2-ST-NOT: clang-offload-bundler{{.*}}in.so
 // CHK-UBJOBS2-ST: ld{{(\.exe)?}}" {{.*}}"-o" "
 // CHK-UBJOBS2-ST-SAME: [[T1BIN:[^\\/]+\.out-openmp-powerpc64le-ibm-linux-gnu]]" {{.*}}"{{.*}}[[T1OBJ]]"
@@ -606,7 +606,7 @@
 // CHK-UBUJOBS-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBUJOBS-SAME: [[HOSTPP:[^\\/]+\.i]],
 // CHK-UBUJOBS-SAME: [[T1PP:[^\\/]+\.i]],
-// CHK-UBUJOBS-SAME: [[T2PP:[^\\/]+\.i]]" "-unbundle"
+// CHK-UBUJOBS-SAME: [[T2PP:[^\\/]+\.i]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBUJOBS: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-disable-llvm-passes" {{.*}}"-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu" {{.*}}"-o" "
 // CHK-UBUJOBS-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]"
 
@@ -614,7 +614,7 @@
 // CHK-UBUJOBS-ST-SAME: [[INPUT:[^\\/]+\.i]]" "-outputs=
 // CHK-UBUJOBS-ST-SAME: [[HOSTPP:[^\\/,]+\.i]],
 // CHK-UBUJOBS-ST-SAME: [[T1PP:[^\\/,]+\.i]],
-// CHK-UBUJOBS-ST-SAME: [[T2PP:[^\\/,]+\.i]]" "-unbundle"
+// CHK-UBUJOBS-ST-SAME: [[T2PP:[^\\/,]+\.i]]" "-unbundle" "-allow-missing-bundles"
 // CHK-UBUJOBS-ST: clang{{.*}}" "-cc1" "-triple" "powerpc64le-unknown-linux" {{.*}}"-emit-llvm-bc" {{.*}}"-fopenmp" {{.*}}"-disable-llvm-passes" {{.*}}"-fopenmp-targets=powerpc64le-ibm-linux-gnu,x86_64-pc-linux-gnu" {{.*}}"-o" "
 // CHK-UBUJOBS-ST-SAME: [[HOSTBC:[^\\/]+\.bc]]" "-x" "cpp-output" "{{.*}}[[HOSTPP]]"
 

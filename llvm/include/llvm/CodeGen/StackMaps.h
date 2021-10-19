@@ -148,9 +148,13 @@ public:
 ///   <StackMaps::ConstantOp>, <calling convention>,
 ///   <StackMaps::ConstantOp>, <statepoint flags>,
 ///   <StackMaps::ConstantOp>, <num deopt args>, [deopt args...],
-///   <gc base/derived pairs...> <gc allocas...>
-/// Note that the last two sets of arguments are not currently length
-///   prefixed.
+///   <StackMaps::ConstantOp>, <num gc pointer args>, [gc pointer args...],
+///   <StackMaps::ConstantOp>, <num gc allocas>, [gc allocas args...],
+///   <StackMaps::ConstantOp>, <num  entries in gc map>, [base/derived pairs]
+///   base/derived pairs in gc map are logical indices into <gc pointer args>
+///   section.
+///   All gc pointers assigned to VRegs produce new value (in form of MI Def
+///   operand) and are tied to it.
 class StatepointOpers {
   // TODO:: we should change the STATEPOINT representation so that CC and
   // Flags should be part of meta operands, with args and deopt operands, and
@@ -217,6 +221,28 @@ public:
   /// Return the statepoint flags.
   uint64_t getFlags() const { return MI->getOperand(getFlagsIdx()).getImm(); }
 
+  uint64_t getNumDeoptArgs() const {
+    return MI->getOperand(getNumDeoptArgsIdx()).getImm();
+  }
+
+  /// Get index of number of gc map entries.
+  unsigned getNumGcMapEntriesIdx();
+
+  /// Get index of number of gc allocas.
+  unsigned getNumAllocaIdx();
+
+  /// Get index of number of GC pointers.
+  unsigned getNumGCPtrIdx();
+
+  /// Get index of first GC pointer operand of -1 if there are none.
+  int getFirstGCPtrIdx();
+
+  /// Get vector of base/derived pairs from statepoint.
+  /// Elements are indices into GC Pointer operand list (logical).
+  /// Returns number of elements in GCMap.
+  unsigned
+  getGCPointerMap(SmallVectorImpl<std::pair<unsigned, unsigned>> &GCMap);
+
 private:
   const MachineInstr *MI;
   unsigned NumDefs;
@@ -260,6 +286,10 @@ public:
   using OpType = enum { DirectMemRefOp, IndirectMemRefOp, ConstantOp };
 
   StackMaps(AsmPrinter &AP);
+
+  /// Get index of next meta operand.
+  /// Similar to parseOperand, but does not actually parses operand meaning.
+  static unsigned getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx);
 
   void reset() {
     CSInfos.clear();
@@ -332,6 +362,13 @@ private:
   parseOperand(MachineInstr::const_mop_iterator MOI,
                MachineInstr::const_mop_iterator MOE, LocationVec &Locs,
                LiveOutVec &LiveOuts) const;
+
+  /// Specialized parser of statepoint operands.
+  /// They do not directly correspond to StackMap record entries.
+  void parseStatepointOpers(const MachineInstr &MI,
+                            MachineInstr::const_mop_iterator MOI,
+                            MachineInstr::const_mop_iterator MOE,
+                            LocationVec &Locations, LiveOutVec &LiveOuts);
 
   /// Create a live-out register record for the given register @p Reg.
   LiveOutReg createLiveOutReg(unsigned Reg,

@@ -96,7 +96,7 @@ LoadCommands:
   - cmd:             LC_LOAD_DYLINKER
     cmdsize:         32
     name:            12
-    PayloadString:   /usr/lib/dyld
+    Content:         /usr/lib/dyld
     ZeroPadBytes:    7
   - cmd:             LC_UUID
     cmdsize:         24
@@ -119,7 +119,7 @@ LoadCommands:
       timestamp:       2
       current_version: 7864576
       compatibility_version: 65536
-    PayloadString:   '/usr/lib/libc++.1.dylib'
+    Content:         '/usr/lib/libc++.1.dylib'
     ZeroPadBytes:    1
   - cmd:             LC_LOAD_DYLIB
     cmdsize:         56
@@ -128,7 +128,7 @@ LoadCommands:
       timestamp:       2
       current_version: 80349697
       compatibility_version: 65536
-    PayloadString:   /usr/lib/libSystem.B.dylib
+    Content:         /usr/lib/libSystem.B.dylib
     ZeroPadBytes:    6
   - cmd:             LC_FUNCTION_STARTS
     cmdsize:         16
@@ -214,10 +214,10 @@ LinkEditData:
 #CHECK:       Imm:             1
 #CHECK:     - Opcode:          REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ExtraData:       [ 0x0000000000000028 ]
+#CHECK:       ExtraData:       [ 0x28 ]
 #CHECK:     - Opcode:          REBASE_OPCODE_DO_REBASE_ULEB_TIMES
 #CHECK:       Imm:             0
-#CHECK:       ExtraData:       [ 0x000000000000000F ]
+#CHECK:       ExtraData:       [ 0xF ]
 #CHECK:     - Opcode:          REBASE_OPCODE_DONE
 #CHECK:       Imm:             0
 #CHECK:   BindOpcodes:     
@@ -232,7 +232,7 @@ LinkEditData:
 #CHECK:       Symbol:          ''
 #CHECK:     - Opcode:          BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB
 #CHECK:       Imm:             2
-#CHECK:       ULEBExtraData:   [ 0x0000000000000000 ]
+#CHECK:       ULEBExtraData:   [ 0x0 ]
 #CHECK:       Symbol:          ''
 #CHECK:     - Opcode:          BIND_OPCODE_DO_BIND
 #CHECK:       Imm:             0

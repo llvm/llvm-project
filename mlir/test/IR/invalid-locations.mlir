@@ -4,14 +4,14 @@
 
 func @location_missing_l_paren() {
 ^bb:
-  return loc) // expected-error {{expected '(' in inline location}}
+  return loc) // expected-error {{expected '(' in location}}
 }
 
 // -----
 
 func @location_missing_r_paren() {
 ^bb:
-  return loc(unknown // expected-error@+1 {{expected ')' in inline location}}
+  return loc(unknown // expected-error@+1 {{expected ')' in location}}
 }
 
 // -----
@@ -98,3 +98,27 @@ func @location_fused_missing_r_square() {
 ^bb:
   return loc(fused[unknown) // expected-error {{expected ']' in fused location}}
 }
+
+// -----
+
+func @location_invalid_alias() {
+  // expected-error@+1 {{expected location, but found dialect attribute: '#foo.loc'}}
+  return loc(#foo.loc)
+}
+
+// -----
+
+func @location_invalid_alias() {
+  // expected-error@+1 {{operation location alias was never defined}}
+  return loc(#invalid_alias)
+}
+
+// -----
+
+func @location_invalid_alias() {
+  // expected-error@+1 {{expected location, but found 'true'}}
+  return loc(#non_loc)
+}
+
+#non_loc = true
+

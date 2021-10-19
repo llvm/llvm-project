@@ -28,7 +28,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/Architecture.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -36,13 +36,13 @@ using namespace llvm::object;
 static const StringRef ToolName = "llvm-lipo";
 static LLVMContext LLVMCtx;
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(Twine Message) {
+[[noreturn]] static void reportError(Twine Message) {
   WithColor::error(errs(), ToolName) << Message << "\n";
   errs().flush();
   exit(EXIT_FAILURE);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(Error E) {
+[[noreturn]] static void reportError(Error E) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -51,7 +51,7 @@ LLVM_ATTRIBUTE_NORETURN static void reportError(Error E) {
   reportError(Buf);
 }
 
-LLVM_ATTRIBUTE_NORETURN static void reportError(StringRef File, Error E) {
+[[noreturn]] static void reportError(StringRef File, Error E) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
@@ -118,17 +118,17 @@ struct Config {
   LipoAction ActionToPerform;
 };
 
-static Slice createSliceFromArchive(const Archive *A) {
+static Slice createSliceFromArchive(const Archive &A) {
   Expected<Slice> ArchiveOrSlice = Slice::create(A, &LLVMCtx);
   if (!ArchiveOrSlice)
-    reportError(A->getFileName(), ArchiveOrSlice.takeError());
+    reportError(A.getFileName(), ArchiveOrSlice.takeError());
   return *ArchiveOrSlice;
 }
 
-static Slice createSliceFromIR(const IRObjectFile *IRO, unsigned Align) {
+static Slice createSliceFromIR(const IRObjectFile &IRO, unsigned Align) {
   Expected<Slice> IROrErr = Slice::create(IRO, Align);
   if (!IROrErr)
-    reportError(IRO->getFileName(), IROrErr.takeError());
+    reportError(IRO.getFileName(), IROrErr.takeError());
   return *IROrErr;
 }
 
@@ -159,14 +159,14 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
                 " option");
 
   if (InputArgs.size() == 0) {
-    // PrintHelp does not accept Twine.
-    T.PrintHelp(errs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
+    // printHelp does not accept Twine.
+    T.printHelp(errs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
     exit(EXIT_FAILURE);
   }
 
   if (InputArgs.hasArg(LIPO_help)) {
-    // PrintHelp does not accept Twine.
-    T.PrintHelp(outs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
+    // printHelp does not accept Twine.
+    T.printHelp(outs(), "llvm-lipo input[s] option[s]", "llvm-lipo");
     exit(EXIT_SUCCESS);
   }
 
@@ -331,8 +331,8 @@ readInputBinaries(ArrayRef<InputFile> InputFiles) {
       const auto S = B->isMachO()
                          ? Slice(*cast<MachOObjectFile>(B))
                          : B->isArchive()
-                               ? createSliceFromArchive(cast<Archive>(B))
-                               : createSliceFromIR(cast<IRObjectFile>(B), 0);
+                               ? createSliceFromArchive(*cast<Archive>(B))
+                               : createSliceFromIR(*cast<IRObjectFile>(B), 0);
       const auto SpecifiedCPUType = MachO::getCPUTypeFromArchitecture(
                                         MachO::getArchitectureFromName(
                                             Triple(*IF.ArchType).getArchName()))
@@ -350,9 +350,9 @@ readInputBinaries(ArrayRef<InputFile> InputFiles) {
   return InputBinaries;
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void verifyArch(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                       ArrayRef<std::string> VerifyArchList) {
+[[noreturn]] static void
+verifyArch(ArrayRef<OwningBinary<Binary>> InputBinaries,
+           ArrayRef<std::string> VerifyArchList) {
   assert(!VerifyArchList.empty() &&
          "The list of architectures should be non-empty");
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
@@ -396,8 +396,7 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
           O.getAsIRObject(LLVMCtx);
       if (IROrError) {
         consumeError(MachOObjOrError.takeError());
-        Expected<Slice> SliceOrErr =
-            Slice::create(IROrError->get(), O.getAlign());
+        Expected<Slice> SliceOrErr = Slice::create(**IROrError, O.getAlign());
         if (!SliceOrErr) {
           reportError(Binary->getFileName(), SliceOrErr.takeError());
           continue;
@@ -409,8 +408,7 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
       if (ArchiveOrError) {
         consumeError(MachOObjOrError.takeError());
         consumeError(IROrError.takeError());
-        OS << createSliceFromArchive(ArchiveOrError->get()).getArchString()
-           << " ";
+        OS << createSliceFromArchive(**ArchiveOrError).getArchString() << " ";
         continue;
       }
       consumeError(ArchiveOrError.takeError());
@@ -428,22 +426,22 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
 
   // This should be always the case, as this is tested in readInputBinaries
   const auto *IR = cast<IRObjectFile>(Binary);
-  Expected<Slice> SliceOrErr = createSliceFromIR(IR, 0);
+  Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
   if (!SliceOrErr)
     reportError(IR->getFileName(), SliceOrErr.takeError());
   
   OS << SliceOrErr->getArchString() << " \n";
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void printArchs(ArrayRef<OwningBinary<Binary>> InputBinaries) {
+[[noreturn]] static void
+printArchs(ArrayRef<OwningBinary<Binary>> InputBinaries) {
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
   printBinaryArchs(InputBinaries.front().getBinary(), outs());
   exit(EXIT_SUCCESS);
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void printInfo(ArrayRef<OwningBinary<Binary>> InputBinaries) {
+[[noreturn]] static void
+printInfo(ArrayRef<OwningBinary<Binary>> InputBinaries) {
   // Group universal and thin files together for compatibility with cctools lipo
   for (auto &IB : InputBinaries) {
     const Binary *Binary = IB.getBinary();
@@ -465,9 +463,9 @@ static void printInfo(ArrayRef<OwningBinary<Binary>> InputBinaries) {
   exit(EXIT_SUCCESS);
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void thinSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                      StringRef ArchType, StringRef OutputFileName) {
+[[noreturn]] static void thinSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                                   StringRef ArchType,
+                                   StringRef OutputFileName) {
   assert(!ArchType.empty() && "The architecture type should be non-empty");
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Thin expects a single output file");
@@ -540,9 +538,8 @@ static void updateAlignments(Range &Slices,
 static void checkUnusedAlignments(ArrayRef<Slice> Slices,
                                   const StringMap<const uint32_t> &Alignments) {
   auto HasArch = [&](StringRef Arch) {
-    return llvm::find_if(Slices, [Arch](Slice S) {
-             return S.getArchString() == Arch;
-           }) != Slices.end();
+    return llvm::any_of(Slices,
+                        [Arch](Slice S) { return S.getArchString() == Arch; });
   };
   for (StringRef Arch : Alignments.keys())
     if (!HasArch(Arch))
@@ -575,21 +572,20 @@ buildSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
             O.getAsIRObject(LLVMCtx);
         if (IROrError) {
           consumeError(BinaryOrError.takeError());
-          Slice S = createSliceFromIR(
-              static_cast<IRObjectFile *>(IROrError.get().get()), O.getAlign());
+          Slice S = createSliceFromIR(**IROrError, O.getAlign());
           ExtractedObjects.emplace_back(std::move(IROrError.get()));
           Slices.emplace_back(std::move(S));
           continue;
         }
         reportError(InputBinary->getFileName(), BinaryOrError.takeError());
       }
-    } else if (auto O = dyn_cast<MachOObjectFile>(InputBinary)) {
+    } else if (const auto *O = dyn_cast<MachOObjectFile>(InputBinary)) {
       Slices.emplace_back(*O);
-    } else if (auto A = dyn_cast<Archive>(InputBinary)) {
-      Slices.push_back(createSliceFromArchive(A));
+    } else if (const auto *A = dyn_cast<Archive>(InputBinary)) {
+      Slices.push_back(createSliceFromArchive(*A));
     } else if (const auto *IRO = dyn_cast<IRObjectFile>(InputBinary)) {
       // Original Apple's lipo set the alignment to 0
-      Expected<Slice> SliceOrErr = Slice::create(IRO, 0);
+      Expected<Slice> SliceOrErr = Slice::create(*IRO, 0);
       if (!SliceOrErr) {
         reportError(InputBinary->getFileName(), SliceOrErr.takeError());
         continue;
@@ -603,10 +599,10 @@ buildSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
   return Slices;
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                                  const StringMap<const uint32_t> &Alignments,
-                                  StringRef OutputFileName) {
+[[noreturn]] static void
+createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
+                      const StringMap<const uint32_t> &Alignments,
+                      StringRef OutputFileName) {
   assert(InputBinaries.size() >= 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Create expects a single output file");
 
@@ -623,10 +619,10 @@ static void createUniversalBinary(ArrayRef<OwningBinary<Binary>> InputBinaries,
   exit(EXIT_SUCCESS);
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                         const StringMap<const uint32_t> &Alignments,
-                         StringRef ArchType, StringRef OutputFileName) {
+[[noreturn]] static void
+extractSlice(ArrayRef<OwningBinary<Binary>> InputBinaries,
+             const StringMap<const uint32_t> &Alignments, StringRef ArchType,
+             StringRef OutputFileName) {
   assert(!ArchType.empty() &&
          "The architecture type should be non-empty");
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
@@ -682,11 +678,10 @@ buildReplacementSlices(ArrayRef<OwningBinary<Binary>> ReplacementBinaries,
   return Slices;
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
-                          const StringMap<const uint32_t> &Alignments,
-                          StringRef OutputFileName,
-                          ArrayRef<InputFile> ReplacementFiles) {
+[[noreturn]] static void
+replaceSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
+              const StringMap<const uint32_t> &Alignments,
+              StringRef OutputFileName, ArrayRef<InputFile> ReplacementFiles) {
   assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
   assert(!OutputFileName.empty() && "Replace expects a single output file");
 

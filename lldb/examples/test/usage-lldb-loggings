@@ -88,8 +88,7 @@ lldb.pre_flight: def pre_flight(self):
     import lldb
     import lldbtest
 
-    dname = os.path.join(os.environ["LLDB_TEST"],
-                         os.environ["LLDB_SESSION_DIRNAME"])
+    dname = os.path.join(os.environ["LLDB_TEST"])
     if not os.path.isdir(dname):
         os.mkdir(dname)
     dest = os.path.join(dname, "lldb_log-%s-%s-%s.txt" % (self.getArchitecture(), self.getCompiler(), self.id()))

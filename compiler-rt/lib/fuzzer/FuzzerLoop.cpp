@@ -354,8 +354,10 @@ void Fuzzer::PrintStats(const char *Where, const char *End, size_t Units,
 }
 
 void Fuzzer::PrintFinalStats() {
+  if (Options.PrintFullCoverage)
+    TPC.PrintCoverage(/*PrintAllCounters=*/true);
   if (Options.PrintCoverage)
-    TPC.PrintCoverage();
+    TPC.PrintCoverage(/*PrintAllCounters=*/false);
   if (Options.PrintCorpusStats)
     Corpus.PrintStats();
   if (!Options.PrintFinalStats)
@@ -386,7 +388,7 @@ void Fuzzer::SetMaxMutationLen(size_t MaxMutationLen) {
 
 void Fuzzer::CheckExitOnSrcPosOrItem() {
   if (!Options.ExitOnSrcPos.empty()) {
-    static auto *PCsSet = new Set<uintptr_t>;
+    static auto *PCsSet = new std::set<uintptr_t>;
     auto HandlePC = [&](const TracePC::PCTableEntry *TE) {
       if (!PCsSet->insert(TE->PC).second)
         return;
@@ -411,20 +413,26 @@ void Fuzzer::CheckExitOnSrcPosOrItem() {
 void Fuzzer::RereadOutputCorpus(size_t MaxSize) {
   if (Options.OutputCorpus.empty() || !Options.ReloadIntervalSec)
     return;
-  Vector<Unit> AdditionalCorpus;
-  ReadDirToVectorOfUnits(Options.OutputCorpus.c_str(), &AdditionalCorpus,
-                         &EpochOfLastReadOfOutputCorpus, MaxSize,
-                         /*ExitOnError*/ false);
+  std::vector<Unit> AdditionalCorpus;
+  std::vector<std::string> AdditionalCorpusPaths;
+  ReadDirToVectorOfUnits(
+      Options.OutputCorpus.c_str(), &AdditionalCorpus,
+      &EpochOfLastReadOfOutputCorpus, MaxSize,
+      /*ExitOnError*/ false,
+      (Options.Verbosity >= 2 ? &AdditionalCorpusPaths : nullptr));
   if (Options.Verbosity >= 2)
     Printf("Reload: read %zd new units.\n", AdditionalCorpus.size());
   bool Reloaded = false;
-  for (auto &U : AdditionalCorpus) {
+  for (size_t i = 0; i != AdditionalCorpus.size(); ++i) {
+    auto &U = AdditionalCorpus[i];
     if (U.size() > MaxSize)
       U.resize(MaxSize);
     if (!Corpus.HasUnit(U)) {
       if (RunOne(U.data(), U.size())) {
         CheckExitOnSrcPosOrItem();
         Reloaded = true;
+        if (Options.Verbosity >= 2)
+          Printf("Reloaded %s\n", AdditionalCorpusPaths[i].c_str());
       }
     }
   }
@@ -438,8 +446,9 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
   if (!(TotalNumberOfRuns & (TotalNumberOfRuns - 1)) &&
       secondsSinceProcessStartUp() >= 2)
     PrintStats("pulse ");
-  if (TimeOfUnit > TimeOfLongestUnitInSeconds * 1.1 &&
-      TimeOfUnit >= Options.ReportSlowUnits) {
+  auto Threshhold =
+      static_cast<long>(static_cast<double>(TimeOfLongestUnitInSeconds) * 1.1);
+  if (TimeOfUnit > Threshhold && TimeOfUnit >= Options.ReportSlowUnits) {
     TimeOfLongestUnitInSeconds = TimeOfUnit;
     Printf("Slowest unit: %zd s:\n", TimeOfLongestUnitInSeconds);
     WriteUnitToFileWithPrefix({Data, Data + Size}, "slow-unit-");
@@ -448,7 +457,7 @@ void Fuzzer::PrintPulseAndReportSlowInput(const uint8_t *Data, size_t Size) {
 
 static void WriteFeatureSetToFile(const std::string &FeaturesDir,
                                   const std::string &FileName,
-                                  const Vector<uint32_t> &FeatureSet) {
+                                  const std::vector<uint32_t> &FeatureSet) {
   if (FeaturesDir.empty() || FeatureSet.empty()) return;
   WriteToFile(reinterpret_cast<const uint8_t *>(FeatureSet.data()),
               FeatureSet.size() * sizeof(FeatureSet[0]),
@@ -463,22 +472,57 @@ static void RenameFeatureSetFile(const std::string &FeaturesDir,
              DirPlusFile(FeaturesDir, NewFile));
 }
 
+static void WriteEdgeToMutationGraphFile(const std::string &MutationGraphFile,
+                                         const InputInfo *II,
+                                         const InputInfo *BaseII,
+                                         const std::string &MS) {
+  if (MutationGraphFile.empty())
+    return;
+
+  std::string Sha1 = Sha1ToString(II->Sha1);
+
+  std::string OutputString;
+
+  // Add a new vertex.
+  OutputString.append("\"");
+  OutputString.append(Sha1);
+  OutputString.append("\"\n");
+
+  // Add a new edge if there is base input.
+  if (BaseII) {
+    std::string BaseSha1 = Sha1ToString(BaseII->Sha1);
+    OutputString.append("\"");
+    OutputString.append(BaseSha1);
+    OutputString.append("\" -> \"");
+    OutputString.append(Sha1);
+    OutputString.append("\" [label=\"");
+    OutputString.append(MS);
+    OutputString.append("\"];\n");
+  }
+
+  AppendToFile(OutputString, MutationGraphFile);
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
-                    InputInfo *II, bool *FoundUniqFeatures) {
+                    InputInfo *II, bool ForceAddToCorpus,
+                    bool *FoundUniqFeatures) {
   if (!Size)
     return false;
+  // Largest input length should be INT_MAX.
+  assert(Size < std::numeric_limits<uint32_t>::max());
 
   ExecuteCallback(Data, Size);
+  auto TimeOfUnit = duration_cast<microseconds>(UnitStopTime - UnitStartTime);
 
   UniqFeatureSetTmp.clear();
   size_t FoundUniqFeaturesOfII = 0;
   size_t NumUpdatesBefore = Corpus.NumFeatureUpdates();
-  TPC.CollectFeatures([&](size_t Feature) {
-    if (Corpus.AddFeature(Feature, Size, Options.Shrink))
+  TPC.CollectFeatures([&](uint32_t Feature) {
+    if (Corpus.AddFeature(Feature, static_cast<uint32_t>(Size), Options.Shrink))
       UniqFeatureSetTmp.push_back(Feature);
     if (Options.Entropic)
       Corpus.UpdateFeatureFrequency(II, Feature);
-    if (Options.ReduceInputs && II)
+    if (Options.ReduceInputs && II && !II->NeverReduce)
       if (std::binary_search(II->UniqFeatureSet.begin(),
                              II->UniqFeatureSet.end(), Feature))
         FoundUniqFeaturesOfII++;
@@ -487,13 +531,16 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
-  if (NumNewFeatures) {
+  if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
-    auto NewII = Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures,
-                                    MayDeleteFile, TPC.ObservedFocusFunction(),
-                                    UniqFeatureSetTmp, DFT, II);
+    auto NewII =
+        Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
+                           TPC.ObservedFocusFunction(), ForceAddToCorpus,
+                           TimeOfUnit, UniqFeatureSetTmp, DFT, II);
     WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
                           NewII->UniqFeatureSet);
+    WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
+                                 MD.MutationSequence());
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -508,6 +555,8 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
   }
   return false;
 }
+
+void Fuzzer::TPCUpdateObservedPCs() { TPC.UpdateObservedPCs(); }
 
 size_t Fuzzer::GetCurrentUnitInFuzzingThead(const uint8_t **Data) const {
   assert(InFuzzingThread());
@@ -535,7 +584,10 @@ static bool LooseMemeq(const uint8_t *A, const uint8_t *B, size_t Size) {
          !memcmp(A + Size - Limit / 2, B + Size - Limit / 2, Limit / 2);
 }
 
-void Fuzzer::ExecuteCallback(const uint8_t *Data, size_t Size) {
+// This method is not inlined because it would cause a test to fail where it
+// is part of the stack unwinding. See D97975 for details.
+ATTRIBUTE_NOINLINE void Fuzzer::ExecuteCallback(const uint8_t *Data,
+                                                size_t Size) {
   TPC.RecordInitialStack();
   TotalNumberOfRuns++;
   assert(InFuzzingThread());
@@ -600,7 +652,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
   PrintStats(Text, "");
   if (Options.Verbosity) {
     Printf(" L: %zd/%zd ", U.size(), Corpus.MaxInputSize());
-    MD.PrintMutationSequence();
+    MD.PrintMutationSequence(Options.Verbosity >= 2);
     Printf("\n");
   }
 }
@@ -664,8 +716,11 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
-  if (Options.DoCrossOver)
-    MD.SetCrossOverWith(&Corpus.ChooseUnitToMutate(MD.GetRand()).U);
+  if (Options.DoCrossOver) {
+    auto &CrossOverII = Corpus.ChooseUnitToCrossOverWith(
+        MD.GetRand(), Options.CrossOverUniformDist);
+    MD.SetCrossOverWith(&CrossOverII.U);
+  }
   const auto &U = II.U;
   memcpy(BaseSha1, II.Sha1, sizeof(BaseSha1));
   assert(CurrentUnitData);
@@ -700,7 +755,7 @@ void Fuzzer::MutateAndTestOne() {
 
     bool FoundUniqFeatures = false;
     bool NewCov = RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II,
-                         &FoundUniqFeatures);
+                         /*ForceAddToCorpus*/ false, &FoundUniqFeatures);
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);
     if (NewCov) {
@@ -729,7 +784,7 @@ void Fuzzer::PurgeAllocator() {
   LastAllocatorPurgeAttemptTime = system_clock::now();
 }
 
-void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
+void Fuzzer::ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles) {
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 4096;
   size_t MaxSize = 0;
@@ -768,7 +823,9 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
     for (auto &SF : CorporaFiles) {
       auto U = FileToVector(SF.File, MaxInputLen, /*ExitOnError=*/false);
       assert(U.size() <= MaxInputLen);
-      RunOne(U.data(), U.size());
+      RunOne(U.data(), U.size(), /*MayDeleteFile*/ false, /*II*/ nullptr,
+             /*ForceAddToCorpus*/ Options.KeepSeed,
+             /*FoundUniqFeatures*/ nullptr);
       CheckExitOnSrcPosOrItem();
       TryDetectingAMemoryLeak(U.data(), U.size(),
                               /*DuringInitialCorpusExecution*/ true);
@@ -792,7 +849,7 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
   }
 }
 
-void Fuzzer::Loop(Vector<SizedFile> &CorporaFiles) {
+void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
   auto FocusFunctionOrAuto = Options.FocusFunction;
   DFT.Init(Options.DataFlowTrace, &FocusFunctionOrAuto, CorporaFiles,
            MD.GetRand());

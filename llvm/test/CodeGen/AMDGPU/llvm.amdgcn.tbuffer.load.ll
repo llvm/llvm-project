@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=GCN %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+;RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=GCN %s
+;RUN: llc -global-isel=0 < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}tbuffer_load:
 ; GCN: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT]
@@ -33,8 +33,8 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_load_immoffs_large
-; GCN: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] offset:4095
 ; GCN: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_SSCALED] offset:73
+; GCN: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, 61 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] offset:4095
 ; GCN: tbuffer_load_format_xyzw {{v\[[0-9]+:[0-9]+\]}}, off, {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] offset:1
 ; GCN: s_waitcnt
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_large(<4 x i32> inreg, i32 inreg %soffs) {

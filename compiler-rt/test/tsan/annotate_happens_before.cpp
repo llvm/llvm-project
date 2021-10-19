@@ -7,23 +7,7 @@ Annotations usage example.
 Tsan does not see synchronization in barrier_wait.
 ANNOTATE_HAPPENS_BEFORE/AFTER communicate the synchronization to tsan
 and prevent the race report.
-
-If the compiler does not support __has_feature macro, then you can build with
-CFLAGS="-fsanitize=thread -DTHREAD_SANITIZER" and then use
-#ifdef THREAD_SANITIZER to enabled annotations.
 */
-
-#if defined(__has_feature) && __has_feature(thread_sanitizer)
-# define ANNOTATE_HAPPENS_BEFORE(addr) \
-    AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
-# define ANNOTATE_HAPPENS_AFTER(addr) \
-    AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
-extern "C" void AnnotateHappensBefore(const char *f, int l, void *addr);
-extern "C" void AnnotateHappensAfter(const char *f, int l, void *addr);
-#else
-# define ANNOTATE_HAPPENS_BEFORE(addr)
-# define ANNOTATE_HAPPENS_AFTER(addr)
-#endif
 
 int Global;
 

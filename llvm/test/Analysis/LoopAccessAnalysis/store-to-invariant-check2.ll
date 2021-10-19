@@ -1,4 +1,3 @@
-; RUN: opt < %s -loop-accesses -analyze  | FileCheck %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test to confirm LAA will not find store to invariant address.

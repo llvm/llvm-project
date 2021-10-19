@@ -1,12 +1,8 @@
 #include <stdio.h>
 
-void bar(unsigned i)
-{
-  printf("%d\n", i);
-}
+void __attribute__((noinline)) bar(unsigned i) { printf("%d\n", i); }
 
-void foo(unsigned j)
-{
+void __attribute__((noinline)) foo(unsigned j) {
   unsigned i = j;
   bar(i);
   i = 10;

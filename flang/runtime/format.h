@@ -34,13 +34,15 @@ struct MutableModes {
   bool pad{true}; // PAD= mode on READ
   char delim{'\0'}; // DELIM=
   short scale{0}; // kP
+  bool inNamelist{false}; // skip ! comments
+  bool nonAdvancing{false}; // ADVANCE='NO', or $ or \ in FORMAT
 };
 
 // A single edit descriptor extracted from a FORMAT
 struct DataEdit {
   char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
 
-  // Special internal data edit descriptors for list-directed I/O
+  // Special internal data edit descriptors for list-directed & NAMELIST I/O
   static constexpr char ListDirected{'g'}; // non-COMPLEX list-directed
   static constexpr char ListDirectedRealPart{'r'}; // emit "(r," or "(r;"
   static constexpr char ListDirectedImaginaryPart{'z'}; // emit "z)"
@@ -50,32 +52,28 @@ struct DataEdit {
         descriptor == ListDirectedImaginaryPart;
   }
 
+  static constexpr char DefinedDerivedType{'d'}; // DT user-defined derived type
+
   char variation{'\0'}; // N, S, or X for EN, ES, EX
   std::optional<int> width; // the 'w' field; optional for A
   std::optional<int> digits; // the 'm' or 'd' field
   std::optional<int> expoDigits; // 'Ee' field
   MutableModes modes;
   int repeat{1};
-};
 
-// FormatControl<A> requires that A have these member functions;
-// these default implementations just crash if called.
-struct DefaultFormatControlCallbacks : public IoErrorHandler {
-  using IoErrorHandler::IoErrorHandler;
-  DataEdit GetNextDataEdit(int = 1);
-  bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
-  bool Emit(const char16_t *, std::size_t);
-  bool Emit(const char32_t *, std::size_t);
-  std::optional<char32_t> GetCurrentChar();
-  bool AdvanceRecord(int = 1);
-  void BackspaceRecord();
-  void HandleAbsolutePosition(std::int64_t);
-  void HandleRelativePosition(std::int64_t);
+  // "iotype" &/or "v_list" values for a DT'iotype'(v_list)
+  // user-defined derived type data edit descriptor
+  static constexpr std::size_t maxIoTypeChars{32};
+  static constexpr std::size_t maxVListEntries{4};
+  std::uint8_t ioTypeChars{0};
+  std::uint8_t vListEntries{0};
+  char ioType[maxIoTypeChars];
+  int vList[maxVListEntries];
 };
 
 // Generates a sequence of DataEdits from a FORMAT statement or
 // default-CHARACTER string.  Driven by I/O item list processing.
-// Errors are fatal.  See clause 13.4 in Fortran 2018 for background.
+// Errors are fatal.  See subclause 13.4 in Fortran 2018 for background.
 template <typename CONTEXT> class FormatControl {
 public:
   using Context = CONTEXT;
@@ -97,7 +95,8 @@ public:
   }
 
   // Extracts the next data edit descriptor, handling control edit descriptors
-  // along the way.
+  // along the way.  If maxRepeat==0, this is a peek at the next data edit
+  // descriptor.
   DataEdit GetNextDataEdit(Context &, int maxRepeat = 1);
 
   // Emit any remaining character literals after the last data item (on output)

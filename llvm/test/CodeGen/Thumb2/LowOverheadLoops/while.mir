@@ -106,8 +106,8 @@ body:             |
   ; CHECK: bb.2.while.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1
-  ; CHECK:   renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (load 2 from %ir.scevgep4)
-  ; CHECK:   early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14 /* CC::al */, $noreg :: (store 2 into %ir.scevgep7)
+  ; CHECK:   renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14 /* CC::al */, $noreg :: (load (s16) from %ir.scevgep4)
+  ; CHECK:   early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14 /* CC::al */, $noreg :: (store (s16) into %ir.scevgep7)
   ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.while.end:
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
@@ -119,7 +119,7 @@ body:             |
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
-    t2WhileLoopStart $r2, %bb.3, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR $r2, %bb.3, implicit-def dead $cpsr
     tB %bb.1, 14, $noreg
 
   bb.1.while.body.preheader:
@@ -134,8 +134,8 @@ body:             |
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $r0, $r1
 
-    renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14, $noreg :: (load 2 from %ir.scevgep4)
-    early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14, $noreg :: (store 2 into %ir.scevgep7)
+    renamable $r2, renamable $r1 = t2LDRH_PRE killed renamable $r1, 2, 14, $noreg :: (load (s16) from %ir.scevgep4)
+    early-clobber renamable $r0 = t2STRH_PRE killed renamable $r2, killed renamable $r0, 2, 14, $noreg :: (store (s16) into %ir.scevgep7)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14, $noreg

@@ -12,13 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
 
@@ -29,7 +29,7 @@ static void promoteIfBlock(AffineIfOp ifOp, bool elseBlock) {
   if (elseBlock)
     assert(ifOp.hasElse() && "else block expected");
 
-  Block *destBlock = ifOp.getOperation()->getBlock();
+  Block *destBlock = ifOp->getBlock();
   Block *srcBlock = elseBlock ? ifOp.getElseBlock() : ifOp.getThenBlock();
   destBlock->getOperations().splice(
       Block::iterator(ifOp), srcBlock->getOperations(), srcBlock->begin(),
@@ -92,7 +92,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.
-  ifOp.setAttr(idForIfOp, b.getBoolAttr(true));
+  ifOp->setAttr(idForIfOp, b.getBoolAttr(true));
   hoistOverOpClone = b.clone(*hoistOverOp, operandMap);
 
   // Promote the 'then' block of the original affine.if in the then version.
@@ -107,7 +107,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // Find the clone of the original affine.if op in the else version.
   AffineIfOp ifCloneInElse;
   hoistOverOpClone->walk([&](AffineIfOp ifClone) {
-    if (!ifClone.getAttr(idForIfOp))
+    if (!ifClone->getAttr(idForIfOp))
       return WalkResult::advance();
     ifCloneInElse = ifClone;
     return WalkResult::interrupt();
@@ -129,19 +129,64 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   return hoistedIfOp;
 }
 
-/// Replace affine.for with a 1-d affine.parallel and clone the former's body
-/// into the latter while remapping values.
-void mlir::affineParallelize(AffineForOp forOp) {
+LogicalResult
+mlir::affineParallelize(AffineForOp forOp,
+                        ArrayRef<LoopReduction> parallelReductions) {
+  // Fail early if there are iter arguments that are not reductions.
+  unsigned numReductions = parallelReductions.size();
+  if (numReductions != forOp.getNumIterOperands())
+    return failure();
+
   Location loc = forOp.getLoc();
   OpBuilder outsideBuilder(forOp);
+  AffineMap lowerBoundMap = forOp.getLowerBoundMap();
+  ValueRange lowerBoundOperands = forOp.getLowerBoundOperands();
+  AffineMap upperBoundMap = forOp.getUpperBoundMap();
+  ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
+
   // Creating empty 1-D affine.parallel op.
+  auto reducedValues = llvm::to_vector<4>(llvm::map_range(
+      parallelReductions, [](const LoopReduction &red) { return red.value; }));
+  auto reductionKinds = llvm::to_vector<4>(llvm::map_range(
+      parallelReductions, [](const LoopReduction &red) { return red.kind; }));
   AffineParallelOp newPloop = outsideBuilder.create<AffineParallelOp>(
-      loc, llvm::None, llvm::None, forOp.getLowerBoundMap(),
-      forOp.getLowerBoundOperands(), forOp.getUpperBoundMap(),
-      forOp.getUpperBoundOperands());
-  // Steal the body of the old affine for op and erase it.
+      loc, ValueRange(reducedValues).getTypes(), reductionKinds,
+      llvm::makeArrayRef(lowerBoundMap), lowerBoundOperands,
+      llvm::makeArrayRef(upperBoundMap), upperBoundOperands,
+      llvm::makeArrayRef(forOp.getStep()));
+  // Steal the body of the old affine for op.
   newPloop.region().takeBody(forOp.region());
+  Operation *yieldOp = &newPloop.getBody()->back();
+
+  // Handle the initial values of reductions because the parallel loop always
+  // starts from the neutral value.
+  SmallVector<Value> newResults;
+  newResults.reserve(numReductions);
+  for (unsigned i = 0; i < numReductions; ++i) {
+    Value init = forOp.getIterOperands()[i];
+    // This works because we are only handling single-op reductions at the
+    // moment. A switch on reduction kind or a mechanism to collect operations
+    // participating in the reduction will be necessary for multi-op reductions.
+    Operation *reductionOp = yieldOp->getOperand(i).getDefiningOp();
+    assert(reductionOp && "yielded value is expected to be produced by an op");
+    outsideBuilder.getInsertionBlock()->getOperations().splice(
+        outsideBuilder.getInsertionPoint(), newPloop.getBody()->getOperations(),
+        reductionOp);
+    reductionOp->setOperands({init, newPloop->getResult(i)});
+    forOp->getResult(i).replaceAllUsesWith(reductionOp->getResult(0));
+  }
+
+  // Update the loop terminator to yield reduced values bypassing the reduction
+  // operation itself (now moved outside of the loop) and erase the block
+  // arguments that correspond to reductions. Note that the loop always has one
+  // "main" induction variable whenc coming from a non-parallel for.
+  unsigned numIVs = 1;
+  yieldOp->setOperands(reducedValues);
+  newPloop.getBody()->eraseArguments(
+      llvm::to_vector<4>(llvm::seq<unsigned>(numIVs, numReductions + numIVs)));
+
   forOp.erase();
+  return success();
 }
 
 // Returns success if any hoisting happened.
@@ -156,10 +201,11 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // effective (no unused operands). Since the pattern rewriter's folding is
   // entangled with application of patterns, we may fold/end up erasing the op,
   // in which case we return with `folded` being set.
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(ifOp.getContext());
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   bool erased;
-  applyOpPatternsAndFold(ifOp, patterns, &erased);
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+  (void)applyOpPatternsAndFold(ifOp, frozenPatterns, &erased);
   if (erased) {
     if (folded)
       *folded = true;
@@ -187,9 +233,200 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
 
   // Canonicalize to remove dead else blocks (happens whenever an 'if' moves up
   // a sequence of affine.fors that are all perfectly nested).
-  applyPatternsAndFoldGreedily(
-      hoistedIfOp.getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
-      std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(
+      hoistedIfOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
+      frozenPatterns);
 
   return success();
+}
+
+// Return the min expr after replacing the given dim.
+AffineExpr mlir::substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
+                              AffineExpr max, bool positivePath) {
+  if (e == dim)
+    return positivePath ? min : max;
+  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
+    AffineExpr lhs = bin.getLHS();
+    AffineExpr rhs = bin.getRHS();
+    if (bin.getKind() == mlir::AffineExprKind::Add)
+      return substWithMin(lhs, dim, min, max, positivePath) +
+             substWithMin(rhs, dim, min, max, positivePath);
+
+    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
+    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
+    if (c1 && c1.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
+    if (c2 && c2.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), substWithMin(lhs, dim, min, max, !positivePath), c2);
+    return getAffineBinaryOpExpr(
+        bin.getKind(), substWithMin(lhs, dim, min, max, positivePath),
+        substWithMin(rhs, dim, min, max, positivePath));
+  }
+  return e;
+}
+
+void mlir::normalizeAffineParallel(AffineParallelOp op) {
+  // Loops with min/max in bounds are not normalized at the moment.
+  if (op.hasMinMaxBounds())
+    return;
+
+  AffineMap lbMap = op.lowerBoundsMap();
+  SmallVector<int64_t, 8> steps = op.getSteps();
+  // No need to do any work if the parallel op is already normalized.
+  bool isAlreadyNormalized =
+      llvm::all_of(llvm::zip(steps, lbMap.getResults()), [](auto tuple) {
+        int64_t step = std::get<0>(tuple);
+        auto lbExpr =
+            std::get<1>(tuple).template dyn_cast<AffineConstantExpr>();
+        return lbExpr && lbExpr.getValue() == 0 && step == 1;
+      });
+  if (isAlreadyNormalized)
+    return;
+
+  AffineValueMap ranges;
+  AffineValueMap::difference(op.getUpperBoundsValueMap(),
+                             op.getLowerBoundsValueMap(), &ranges);
+  auto builder = OpBuilder::atBlockBegin(op.getBody());
+  auto zeroExpr = builder.getAffineConstantExpr(0);
+  SmallVector<AffineExpr, 8> lbExprs;
+  SmallVector<AffineExpr, 8> ubExprs;
+  for (unsigned i = 0, e = steps.size(); i < e; ++i) {
+    int64_t step = steps[i];
+
+    // Adjust the lower bound to be 0.
+    lbExprs.push_back(zeroExpr);
+
+    // Adjust the upper bound expression: 'range / step'.
+    AffineExpr ubExpr = ranges.getResult(i).ceilDiv(step);
+    ubExprs.push_back(ubExpr);
+
+    // Adjust the corresponding IV: 'lb + i * step'.
+    BlockArgument iv = op.getBody()->getArgument(i);
+    AffineExpr lbExpr = lbMap.getResult(i);
+    unsigned nDims = lbMap.getNumDims();
+    auto expr = lbExpr + builder.getAffineDimExpr(nDims) * step;
+    auto map = AffineMap::get(/*dimCount=*/nDims + 1,
+                              /*symbolCount=*/lbMap.getNumSymbols(), expr);
+
+    // Use an 'affine.apply' op that will be simplified later in subsequent
+    // canonicalizations.
+    OperandRange lbOperands = op.getLowerBoundsOperands();
+    OperandRange dimOperands = lbOperands.take_front(nDims);
+    OperandRange symbolOperands = lbOperands.drop_front(nDims);
+    SmallVector<Value, 8> applyOperands{dimOperands};
+    applyOperands.push_back(iv);
+    applyOperands.append(symbolOperands.begin(), symbolOperands.end());
+    auto apply = builder.create<AffineApplyOp>(op.getLoc(), map, applyOperands);
+    iv.replaceAllUsesExcept(apply, apply);
+  }
+
+  SmallVector<int64_t, 8> newSteps(op.getNumDims(), 1);
+  op.setSteps(newSteps);
+  auto newLowerMap = AffineMap::get(
+      /*dimCount=*/0, /*symbolCount=*/0, lbExprs, op.getContext());
+  op.setLowerBounds({}, newLowerMap);
+  auto newUpperMap = AffineMap::get(ranges.getNumDims(), ranges.getNumSymbols(),
+                                    ubExprs, op.getContext());
+  op.setUpperBounds(ranges.getOperands(), newUpperMap);
+}
+
+/// Normalizes affine.for ops. If the affine.for op has only a single iteration
+/// only then it is simply promoted, else it is normalized in the traditional
+/// way, by converting the lower bound to zero and loop step to one. The upper
+/// bound is set to the trip count of the loop. For now, original loops must
+/// have lower bound with a single result only. There is no such restriction on
+/// upper bounds.
+void mlir::normalizeAffineFor(AffineForOp op) {
+  if (succeeded(promoteIfSingleIteration(op)))
+    return;
+
+  // Check if the forop is already normalized.
+  if (op.hasConstantLowerBound() && (op.getConstantLowerBound() == 0) &&
+      (op.getStep() == 1))
+    return;
+
+  // Check if the lower bound has a single result only. Loops with a max lower
+  // bound can't be normalized without additional support like
+  // affine.execute_region's. If the lower bound does not have a single result
+  // then skip this op.
+  if (op.getLowerBoundMap().getNumResults() != 1)
+    return;
+
+  Location loc = op.getLoc();
+  OpBuilder opBuilder(op);
+  int64_t origLoopStep = op.getStep();
+
+  // Calculate upperBound for normalized loop.
+  SmallVector<Value, 4> ubOperands;
+  AffineBound lb = op.getLowerBound();
+  AffineBound ub = op.getUpperBound();
+  ubOperands.reserve(ub.getNumOperands() + lb.getNumOperands());
+  AffineMap origLbMap = lb.getMap();
+  AffineMap origUbMap = ub.getMap();
+
+  // Add dimension operands from upper/lower bound.
+  for (unsigned j = 0, e = origUbMap.getNumDims(); j < e; ++j)
+    ubOperands.push_back(ub.getOperand(j));
+  for (unsigned j = 0, e = origLbMap.getNumDims(); j < e; ++j)
+    ubOperands.push_back(lb.getOperand(j));
+
+  // Add symbol operands from upper/lower bound.
+  for (unsigned j = 0, e = origUbMap.getNumSymbols(); j < e; ++j)
+    ubOperands.push_back(ub.getOperand(origUbMap.getNumDims() + j));
+  for (unsigned j = 0, e = origLbMap.getNumSymbols(); j < e; ++j)
+    ubOperands.push_back(lb.getOperand(origLbMap.getNumDims() + j));
+
+  // Add original result expressions from lower/upper bound map.
+  SmallVector<AffineExpr, 1> origLbExprs(origLbMap.getResults().begin(),
+                                         origLbMap.getResults().end());
+  SmallVector<AffineExpr, 2> origUbExprs(origUbMap.getResults().begin(),
+                                         origUbMap.getResults().end());
+  SmallVector<AffineExpr, 4> newUbExprs;
+
+  // The original upperBound can have more than one result. For the new
+  // upperBound of this loop, take difference of all possible combinations of
+  // the ub results and lb result and ceildiv with the loop step. For e.g.,
+  //
+  //  affine.for %i1 = 0 to min affine_map<(d0)[] -> (d0 + 32, 1024)>(%i0)
+  //  will have an upperBound map as,
+  //  affine_map<(d0)[] -> (((d0 + 32) - 0) ceildiv 1, (1024 - 0) ceildiv
+  //  1)>(%i0)
+  //
+  // Insert all combinations of upper/lower bound results.
+  for (unsigned i = 0, e = origUbExprs.size(); i < e; ++i) {
+    newUbExprs.push_back(
+        (origUbExprs[i] - origLbExprs[0]).ceilDiv(origLoopStep));
+  }
+
+  // Construct newUbMap.
+  AffineMap newUbMap =
+      AffineMap::get(origLbMap.getNumDims() + origUbMap.getNumDims(),
+                     origLbMap.getNumSymbols() + origUbMap.getNumSymbols(),
+                     newUbExprs, opBuilder.getContext());
+
+  // Normalize the loop.
+  op.setUpperBound(ubOperands, newUbMap);
+  op.setLowerBound({}, opBuilder.getConstantAffineMap(0));
+  op.setStep(1);
+
+  // Calculate the Value of new loopIV. Create affine.apply for the value of
+  // the loopIV in normalized loop.
+  opBuilder.setInsertionPointToStart(op.getBody());
+  SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
+                                   lb.getOperands().begin() +
+                                       lb.getMap().getNumDims());
+  // Add an extra dim operand for loopIV.
+  lbOperands.push_back(op.getInductionVar());
+  // Add symbol operands from lower bound.
+  for (unsigned j = 0, e = origLbMap.getNumSymbols(); j < e; ++j)
+    lbOperands.push_back(lb.getOperand(origLbMap.getNumDims() + j));
+
+  AffineExpr origIVExpr = opBuilder.getAffineDimExpr(lb.getMap().getNumDims());
+  AffineExpr newIVExpr = origIVExpr * origLoopStep + origLbMap.getResult(0);
+  AffineMap ivMap = AffineMap::get(origLbMap.getNumDims() + 1,
+                                   origLbMap.getNumSymbols(), newIVExpr);
+  Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
+  op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
 }

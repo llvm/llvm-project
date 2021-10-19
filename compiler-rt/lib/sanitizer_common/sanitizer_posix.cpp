@@ -239,6 +239,7 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   return true;
 }
 
+#if !SANITIZER_MAC
 void DumpProcessMap() {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   const sptr kBufSize = 4095;
@@ -252,6 +253,7 @@ void DumpProcessMap() {
   Report("End of process memory map.\n");
   UnmapOrDie(filename, kBufSize);
 }
+#endif
 
 const char *GetPwd() {
   return GetEnv("PWD");
@@ -273,8 +275,8 @@ void ReportFile::Write(const char *buffer, uptr length) {
 
 bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/false);
-  InternalScopedString buff(kMaxPathLength);
-  MemoryMappedSegment segment(buff.data(), kMaxPathLength);
+  InternalMmapVector<char> buff(kMaxPathLength);
+  MemoryMappedSegment segment(buff.data(), buff.size());
   while (proc_maps.Next(&segment)) {
     if (segment.IsExecutable() &&
         internal_strcmp(module, segment.filename) == 0) {

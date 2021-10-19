@@ -23,37 +23,31 @@ define void @t0(<2 x i64>* %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind read
 define void @t2(<3 x i64>* %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-LABEL: t2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %r9, %xmm1
-; CHECK-NEXT:    movq %r8, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    movq %rdx, %xmm1
+; CHECK-NEXT:    movq %r9, %xmm0
+; CHECK-NEXT:    movq %r8, %xmm1
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    movq %rdx, %xmm0
 ; CHECK-NEXT:    movq %rsi, %xmm2
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; CHECK-NEXT:    movq %rcx, %xmm1
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; CHECK-NEXT:    movq %rcx, %xmm0
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm5, %xmm5
-; CHECK-NEXT:    pxor %xmm5, %xmm1
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
-; CHECK-NEXT:    pxor %xmm5, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm1[0,2]
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
-; CHECK-NEXT:    pxor %xmm5, %xmm3
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
-; CHECK-NEXT:    pxor %xmm5, %xmm0
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
-; CHECK-NEXT:    andps %xmm2, %xmm0
-; CHECK-NEXT:    pmovzxdq {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero
-; CHECK-NEXT:    psllq $63, %xmm1
-; CHECK-NEXT:    psrad $31, %xmm1
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
+; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm1
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[0,2]
+; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    andnps %xmm1, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,2,3,3]
 ; CHECK-NEXT:    psllq $63, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-NEXT:    movq %xmm0, 16(%rdi)
+; CHECK-NEXT:    pmovsxdq %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rdi)
+; CHECK-NEXT:    movq %xmm0, 16(%rdi)
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne <3 x i64> %src1, zeroinitializer
   %cmp2 = icmp ne <3 x i64> %src2, zeroinitializer

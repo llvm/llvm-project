@@ -2,6 +2,8 @@
 ; RUN: echo 'foo bb20' >> %t
 ; RUN: opt -S -extract-blocks -extract-blocks-file=%t %s | FileCheck %s --check-prefix=CHECK-NO-ERASE
 ; RUN: opt -S -extract-blocks -extract-blocks-file=%t -extract-blocks-erase-funcs %s | FileCheck %s --check-prefix=CHECK-ERASE
+; RUN: opt -S -passes=extract-blocks -extract-blocks-file=%t %s | FileCheck %s --check-prefix=CHECK-NO-ERASE
+; RUN: opt -S -passes=extract-blocks -extract-blocks-file=%t -extract-blocks-erase-funcs %s | FileCheck %s --check-prefix=CHECK-ERASE
 
 ; CHECK-NO-ERASE: @foo(
 ; CHECK-NO-ERASE: @foo.bb9(

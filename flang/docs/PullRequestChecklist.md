@@ -1,3 +1,11 @@
+<!--===- docs/PullRequestChecklist.md 
+
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+
 # Pull request checklist
 Please review the following items before submitting a pull request.  This list
 can also be used when reviewing pull requests.
@@ -28,7 +36,7 @@ even though I've read the style guide, they regularly trip me up.
    clang-format will do this for most code.  But you may need to break up long
    strings.
 *  Review declarations for proper use of `constexpr` and `const`.
-*  Follow the C++ [naming guidelines](C++style.md#naming).
+*  Follow the C++ [naming guidelines](C++style.html#naming)
 *  Ensure that the names evoke their purpose and are consistent with existing code.
 *  Used braced initializers.
 *  Review pointer and reference types to make sure that you're using them

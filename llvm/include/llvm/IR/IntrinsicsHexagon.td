@@ -253,6 +253,124 @@ Hexagon_v32i32_v32i32v16i32i64_rtt_Intrinsic<"HEXAGON_V6_vrmpyub_rtt_acc">;
 def int_hexagon_V6_vrmpyub_rtt_acc_128B :
 Hexagon_v64i32_v64i32v32i32i64_rtt_Intrinsic<"HEXAGON_V6_vrmpyub_rtt_acc_128B">;
 
+// HVX conditional loads/stores
+
+class Hexagon_pred_vload_imm<LLVMType ValTy>
+  : Hexagon_NonGCC_Intrinsic<
+      [ValTy],
+      [llvm_i1_ty, LLVMPointerType<ValTy>, llvm_i32_ty],
+      [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+       ImmArg<ArgIndex<2>>]>;
+
+class Hexagon_pred_vload_imm_64B:  Hexagon_pred_vload_imm<llvm_v16i32_ty>;
+class Hexagon_pred_vload_imm_128B: Hexagon_pred_vload_imm<llvm_v32i32_ty>;
+
+def int_hexagon_V6_vL32b_pred_ai:            Hexagon_pred_vload_imm_64B;
+def int_hexagon_V6_vL32b_npred_ai:           Hexagon_pred_vload_imm_64B;
+def int_hexagon_V6_vL32b_nt_pred_ai:         Hexagon_pred_vload_imm_64B;
+def int_hexagon_V6_vL32b_nt_npred_ai:        Hexagon_pred_vload_imm_64B;
+def int_hexagon_V6_vL32b_pred_ai_128B:      Hexagon_pred_vload_imm_128B;
+def int_hexagon_V6_vL32b_npred_ai_128B:     Hexagon_pred_vload_imm_128B;
+def int_hexagon_V6_vL32b_nt_pred_ai_128B:   Hexagon_pred_vload_imm_128B;
+def int_hexagon_V6_vL32b_nt_npred_ai_128B:  Hexagon_pred_vload_imm_128B;
+
+class Hexagom_pred_vload_upd<LLVMType ValTy, bit TakesImm>
+  : Hexagon_NonGCC_Intrinsic<
+      [ValTy, LLVMPointerType<ValTy>],
+      [llvm_i1_ty, LLVMPointerType<ValTy>, llvm_i32_ty],
+      !if(TakesImm,
+          [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+           ImmArg<ArgIndex<2>>],
+          [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>])>;
+
+class Hexagom_pred_vload_upd_64B<bit TakesImm>
+  : Hexagom_pred_vload_upd<llvm_v16i32_ty, TakesImm>;
+class Hexagom_pred_vload_upd_128B<bit TakesImm>
+  : Hexagom_pred_vload_upd<llvm_v32i32_ty, TakesImm>;
+
+def int_hexagon_V6_vL32b_pred_pi:            Hexagom_pred_vload_upd_64B<1>;
+def int_hexagon_V6_vL32b_npred_pi:           Hexagom_pred_vload_upd_64B<1>;
+def int_hexagon_V6_vL32b_nt_pred_pi:         Hexagom_pred_vload_upd_64B<1>;
+def int_hexagon_V6_vL32b_nt_npred_pi:        Hexagom_pred_vload_upd_64B<1>;
+def int_hexagon_V6_vL32b_pred_pi_128B:      Hexagom_pred_vload_upd_128B<1>;
+def int_hexagon_V6_vL32b_npred_pi_128B:     Hexagom_pred_vload_upd_128B<1>;
+def int_hexagon_V6_vL32b_nt_pred_pi_128B:   Hexagom_pred_vload_upd_128B<1>;
+def int_hexagon_V6_vL32b_nt_npred_pi_128B:  Hexagom_pred_vload_upd_128B<1>;
+
+def int_hexagon_V6_vL32b_pred_ppu:           Hexagom_pred_vload_upd_64B<0>;
+def int_hexagon_V6_vL32b_npred_ppu:          Hexagom_pred_vload_upd_64B<0>;
+def int_hexagon_V6_vL32b_nt_pred_ppu:        Hexagom_pred_vload_upd_64B<0>;
+def int_hexagon_V6_vL32b_nt_npred_ppu:       Hexagom_pred_vload_upd_64B<0>;
+def int_hexagon_V6_vL32b_pred_ppu_128B:     Hexagom_pred_vload_upd_128B<0>;
+def int_hexagon_V6_vL32b_npred_ppu_128B:    Hexagom_pred_vload_upd_128B<0>;
+def int_hexagon_V6_vL32b_nt_pred_ppu_128B:  Hexagom_pred_vload_upd_128B<0>;
+def int_hexagon_V6_vL32b_nt_npred_ppu_128B: Hexagom_pred_vload_upd_128B<0>;
+
+
+class Hexagon_pred_vstore_imm<LLVMType ValTy>
+  : Hexagon_NonGCC_Intrinsic<
+      [],
+      [llvm_i1_ty, LLVMPointerType<ValTy>, llvm_i32_ty, ValTy],
+      [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+       ImmArg<ArgIndex<2>>]>;
+
+class Hexagon_pred_vstore_imm_64B:  Hexagon_pred_vstore_imm<llvm_v16i32_ty>;
+class Hexagon_pred_vstore_imm_128B: Hexagon_pred_vstore_imm<llvm_v32i32_ty>;
+
+def int_hexagon_V6_vS32b_pred_ai:            Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32b_npred_ai:           Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32Ub_pred_ai:           Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32Ub_npred_ai:          Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32b_nt_pred_ai:         Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32b_nt_npred_ai:        Hexagon_pred_vstore_imm_64B;
+def int_hexagon_V6_vS32b_pred_ai_128B:      Hexagon_pred_vstore_imm_128B;
+def int_hexagon_V6_vS32b_npred_ai_128B:     Hexagon_pred_vstore_imm_128B;
+def int_hexagon_V6_vS32Ub_pred_ai_128B:     Hexagon_pred_vstore_imm_128B;
+def int_hexagon_V6_vS32Ub_npred_ai_128B:    Hexagon_pred_vstore_imm_128B;
+def int_hexagon_V6_vS32b_nt_pred_ai_128B:   Hexagon_pred_vstore_imm_128B;
+def int_hexagon_V6_vS32b_nt_npred_ai_128B:  Hexagon_pred_vstore_imm_128B;
+
+class Hexagon_pred_vstore_upd<LLVMType ValTy, bit TakesImm>
+  : Hexagon_NonGCC_Intrinsic<
+      [LLVMPointerType<ValTy>],
+      [llvm_i1_ty, LLVMPointerType<ValTy>, llvm_i32_ty, ValTy],
+      !if(TakesImm,
+          [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>,
+           ImmArg<ArgIndex<2>>],
+          [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>])>;
+
+class Hexagon_pred_vstore_upd_64B<bit TakesImm>
+  : Hexagon_pred_vstore_upd<llvm_v16i32_ty, TakesImm>;
+class Hexagon_pred_vstore_upd_128B<bit TakesImm>
+  : Hexagon_pred_vstore_upd<llvm_v32i32_ty, TakesImm>;
+
+def int_hexagon_V6_vS32b_pred_pi:            Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32b_npred_pi:           Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32Ub_pred_pi:           Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32Ub_npred_pi:          Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32b_nt_pred_pi:         Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32b_nt_npred_pi:        Hexagon_pred_vstore_upd_64B<1>;
+def int_hexagon_V6_vS32b_pred_pi_128B:      Hexagon_pred_vstore_upd_128B<1>;
+def int_hexagon_V6_vS32b_npred_pi_128B:     Hexagon_pred_vstore_upd_128B<1>;
+def int_hexagon_V6_vS32Ub_pred_pi_128B:     Hexagon_pred_vstore_upd_128B<1>;
+def int_hexagon_V6_vS32Ub_npred_pi_128B:    Hexagon_pred_vstore_upd_128B<1>;
+def int_hexagon_V6_vS32b_nt_pred_pi_128B:   Hexagon_pred_vstore_upd_128B<1>;
+def int_hexagon_V6_vS32b_nt_npred_pi_128B:  Hexagon_pred_vstore_upd_128B<1>;
+
+def int_hexagon_V6_vS32b_pred_ppu:           Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32b_npred_ppu:          Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32Ub_pred_ppu:          Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32Ub_npred_ppu:         Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32b_nt_pred_ppu:        Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32b_nt_npred_ppu:       Hexagon_pred_vstore_upd_64B<0>;
+def int_hexagon_V6_vS32b_pred_ppu_128B:     Hexagon_pred_vstore_upd_128B<0>;
+def int_hexagon_V6_vS32b_npred_ppu_128B:    Hexagon_pred_vstore_upd_128B<0>;
+def int_hexagon_V6_vS32Ub_pred_ppu_128B:    Hexagon_pred_vstore_upd_128B<0>;
+def int_hexagon_V6_vS32Ub_npred_ppu_128B:   Hexagon_pred_vstore_upd_128B<0>;
+def int_hexagon_V6_vS32b_nt_pred_ppu_128B:  Hexagon_pred_vstore_upd_128B<0>;
+def int_hexagon_V6_vS32b_nt_npred_ppu_128B: Hexagon_pred_vstore_upd_128B<0>;
+
+
 // HVX Vector predicate casts.
 // These intrinsics do not emit (nor do they correspond to) any instructions,
 // they are no-ops.
@@ -265,6 +383,8 @@ Hexagon_NonGCC_Intrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 
 // Masked vector stores
 //
+// These are all deprecated, the intrinsics matching instruction names
+// should be used instead, e.g. int_hexagon_V6_vS32b_qpred_ai, etc.
 
 class Hexagon_custom_vms_Intrinsic
   : Hexagon_NonGCC_Intrinsic<

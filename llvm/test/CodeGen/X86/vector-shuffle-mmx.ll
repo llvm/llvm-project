@@ -35,7 +35,7 @@ define void @test1() {
 ; X32-NEXT:    .cfi_def_cfa_offset 8
 ; X32-NEXT:    .cfi_offset %edi, -8
 ; X32-NEXT:    pxor %mm0, %mm0
-; X32-NEXT:    movq LCPI1_0, %mm1 ## mm1 = 0x7070606040400000
+; X32-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm1 ## mm1 = 0x7070606040400000
 ; X32-NEXT:    xorl %edi, %edi
 ; X32-NEXT:    maskmovq %mm1, %mm0
 ; X32-NEXT:    popl %edi
@@ -44,7 +44,7 @@ define void @test1() {
 ; X64-LABEL: test1:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    pxor %mm0, %mm0
-; X64-NEXT:    movq {{.*}}(%rip), %mm1 ## mm1 = 0x7070606040400000
+; X64-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm1 ## mm1 = 0x7070606040400000
 ; X64-NEXT:    xorl %edi, %edi
 ; X64-NEXT:    maskmovq %mm1, %mm0
 ; X64-NEXT:    retq
@@ -73,7 +73,7 @@ define void @test2() nounwind {
 ;
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movq _tmp_V2i@{{.*}}(%rip), %rax
+; X64-NEXT:    movq _tmp_V2i@GOTPCREL(%rip), %rax
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; X64-NEXT:    movq %xmm0, (%rax)

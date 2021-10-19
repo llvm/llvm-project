@@ -23,7 +23,7 @@
 # ELF32-NEXT:  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
 # ELF32-NEXT:  L (link order), O (extra OS processing required), G (group), T (TLS),
 # ELF32-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
-# ELF32-NEXT:  p (processor specific)
+# ELF32-NEXT:  R (retain), p (processor specific)
 
 --- !ELF
 FileHeader:
@@ -97,7 +97,7 @@ Symbols:
 # ELF64-NEXT:  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
 # ELF64-NEXT:  L (link order), O (extra OS processing required), G (group), T (TLS),
 # ELF64-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
-# ELF64-NEXT:  l (large), p (processor specific)
+# ELF64-NEXT:  R (retain), l (large), p (processor specific)
 
 ## For an EM_ARM target we print "y" for the SHF_ARM_PURECODE section flag.
 ## Check we mention it in the flag key.
@@ -109,4 +109,4 @@ Symbols:
 # ARM-NEXT:  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
 # ARM-NEXT:  L (link order), O (extra OS processing required), G (group), T (TLS),
 # ARM-NEXT:  C (compressed), x (unknown), o (OS specific), E (exclude),
-# ARM-NEXT:  y (purecode), p (processor specific)
+# ARM-NEXT:  R (retain), y (purecode), p (processor specific)

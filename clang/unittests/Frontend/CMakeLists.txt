@@ -12,6 +12,8 @@ add_clang_unittest(FrontendTests
   ParsedSourceLocationTest.cpp
   PCHPreambleTest.cpp
   OutputStreamTest.cpp
+  TextDiagnosticTest.cpp
+  UtilsTest.cpp
   )
 clang_target_link_libraries(FrontendTests
   PRIVATE

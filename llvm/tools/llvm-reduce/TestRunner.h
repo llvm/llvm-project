@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMREDUCE_TESTRUNNER_H
-#define LLVM_TOOLS_LLVMREDUCE_TESTRUNNER_H
+#ifndef LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
+#define LLVM_TOOLS_LLVM_REDUCE_TESTRUNNER_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Module.h"
@@ -24,16 +24,20 @@ namespace llvm {
 // respective filename.
 class TestRunner {
 public:
-  TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs);
+  TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs,
+             std::unique_ptr<Module> Program);
 
   /// Runs the interesting-ness test for the specified file
   /// @returns 0 if test was successful, 1 if otherwise
   int run(StringRef Filename);
 
   /// Returns the most reduced version of the original testcase
-  Module *getProgram() const { return Program.get(); }
+  Module &getProgram() const { return *Program; }
 
-  void setProgram(std::unique_ptr<Module> P) { Program = std::move(P); }
+  void setProgram(std::unique_ptr<Module> P) {
+    assert(P && "Setting null program?");
+    Program = std::move(P);
+  }
 
 private:
   StringRef TestName;

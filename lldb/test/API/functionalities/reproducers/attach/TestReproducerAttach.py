@@ -15,12 +15,10 @@ class ReproducerAttachTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfFreeBSD
     @skipIfNetBSD
     @skipIfWindows
     @skipIfRemote
     @skipIfiOSSimulator
-    @skipIfReproducer
     def test_reproducer_attach(self):
         """Test thread creation after process attach."""
         exe = '%s_%d' % (self.testMethodName, os.getpid())

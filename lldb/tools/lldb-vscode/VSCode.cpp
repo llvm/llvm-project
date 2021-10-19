@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
+#include <cstdarg>
 #include <fstream>
 #include <mutex>
-#include <stdarg.h>
+#include <sstream>
 
 #include "LLDBUtils.h"
 #include "VSCode.h"
@@ -28,8 +30,7 @@ namespace lldb_vscode {
 VSCode g_vsc;
 
 VSCode::VSCode()
-    : variables(), broadcaster("lldb-vscode"), num_regs(0), num_locals(0),
-      num_globals(0), log(),
+    : broadcaster("lldb-vscode"),
       exception_breakpoints(
           {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
            {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
@@ -38,7 +39,10 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false) {
+      stop_at_entry(false), is_attach(false), reverse_request_seq(0),
+      waiting_for_run_in_terminal(false),
+      progress_event_reporter(
+          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -224,6 +228,104 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
   SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// interface ProgressStartEvent extends Event {
+//   event: 'progressStart';
+//
+//   body: {
+//     /**
+//      * An ID that must be used in subsequent 'progressUpdate' and
+//      'progressEnd'
+//      * events to make them refer to the same progress reporting.
+//      * IDs must be unique within a debug session.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Mandatory (short) title of the progress reporting. Shown in the UI to
+//      * describe the long running operation.
+//      */
+//     title: string;
+//
+//     /**
+//      * The request ID that this progress report is related to. If specified a
+//      * debug adapter is expected to emit
+//      * progress events for the long running request until the request has
+//      been
+//      * either completed or cancelled.
+//      * If the request ID is omitted, the progress report is assumed to be
+//      * related to some general activity of the debug adapter.
+//      */
+//     requestId?: number;
+//
+//     /**
+//      * If true, the request that reports progress may be canceled with a
+//      * 'cancel' request.
+//      * So this property basically controls whether the client should use UX
+//      that
+//      * supports cancellation.
+//      * Clients that don't support cancellation are allowed to ignore the
+//      * setting.
+//      */
+//     cancellable?: boolean;
+//
+//     /**
+//      * Optional, more detailed progress message.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressUpdateEvent extends Event {
+//   event: 'progressUpdate';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'progressStart' event.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressEndEvent extends Event {
+//   event: 'progressEnd';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'ProgressStartEvent'.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//   };
+// }
+
+void VSCode::SendProgressEvent(uint64_t progress_id, const char *message,
+                               uint64_t completed, uint64_t total) {
+  progress_event_reporter.Push(progress_id, message, completed, total);
+}
+
 void __attribute__((format(printf, 3, 4)))
 VSCode::SendFormattedOutput(OutputType o, const char *format, ...) {
   char buffer[1024];
@@ -279,10 +381,12 @@ lldb::SBFrame VSCode::GetLLDBFrame(const llvm::json::Object &arguments) {
 
 llvm::json::Value VSCode::CreateTopLevelScopes() {
   llvm::json::Array scopes;
-  scopes.emplace_back(CreateScope("Locals", VARREF_LOCALS, num_locals, false));
-  scopes.emplace_back(
-      CreateScope("Globals", VARREF_GLOBALS, num_globals, false));
-  scopes.emplace_back(CreateScope("Registers", VARREF_REGS, num_regs, false));
+  scopes.emplace_back(CreateScope("Locals", VARREF_LOCALS,
+                                  g_vsc.variables.locals.GetSize(), false));
+  scopes.emplace_back(CreateScope("Globals", VARREF_GLOBALS,
+                                  g_vsc.variables.globals.GetSize(), false));
+  scopes.emplace_back(CreateScope("Registers", VARREF_REGS,
+                                  g_vsc.variables.registers.GetSize(), false));
   return llvm::json::Value(std::move(scopes));
 }
 
@@ -354,12 +458,114 @@ void VSCode::SetTarget(const lldb::SBTarget target) {
         lldb::SBTarget::eBroadcastBitBreakpointChanged);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded);
   }
+}
+
+PacketStatus VSCode::GetNextObject(llvm::json::Object &object) {
+  std::string json = ReadJSON();
+  if (json.empty())
+    return PacketStatus::EndOfFile;
+
+  llvm::StringRef json_sref(json);
+  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
+  if (!json_value) {
+    auto error = json_value.takeError();
+    if (log) {
+      std::string error_str;
+      llvm::raw_string_ostream strm(error_str);
+      strm << error;
+      strm.flush();
+      *log << "error: failed to parse JSON: " << error_str << std::endl
+           << json << std::endl;
+    }
+    return PacketStatus::JSONMalformed;
+  }
+  object = *json_value->getAsObject();
+  if (!json_value->getAsObject()) {
+    if (log)
+      *log << "error: json packet isn't a object" << std::endl;
+    return PacketStatus::JSONNotObject;
+  }
+  return PacketStatus::Success;
+}
+
+bool VSCode::HandleObject(const llvm::json::Object &object) {
+  const auto packet_type = GetString(object, "type");
+  if (packet_type == "request") {
+    const auto command = GetString(object, "command");
+    auto handler_pos = request_handlers.find(std::string(command));
+    if (handler_pos != request_handlers.end()) {
+      handler_pos->second(object);
+      return true; // Success
+    } else {
+      if (log)
+        *log << "error: unhandled command \"" << command.data() << std::endl;
+      return false; // Fail
+    }
+  }
+  return false;
+}
+
+PacketStatus VSCode::SendReverseRequest(llvm::json::Object request,
+                                        llvm::json::Object &response) {
+  request.try_emplace("seq", ++reverse_request_seq);
+  SendJSON(llvm::json::Value(std::move(request)));
+  while (true) {
+    PacketStatus status = GetNextObject(response);
+    const auto packet_type = GetString(response, "type");
+    if (packet_type == "response")
+      return status;
+    else {
+      // Not our response, we got another packet
+      HandleObject(response);
+    }
+  }
+  return PacketStatus::EndOfFile;
+}
+
+void VSCode::RegisterRequestCallback(std::string request,
+                                     RequestCallback callback) {
+  request_handlers[request] = callback;
+}
+
+void Variables::Clear() {
+  locals.Clear();
+  globals.Clear();
+  registers.Clear();
+  expandable_variables.clear();
+}
+
+int64_t Variables::GetNewVariableRefence(bool is_permanent) {
+  if (is_permanent)
+    return next_permanent_var_ref++;
+  return next_temporary_var_ref++;
+}
+
+bool Variables::IsPermanentVariableReference(int64_t var_ref) {
+  return var_ref >= PermanentVariableStartIndex;
+}
+
+lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
+  if (IsPermanentVariableReference(var_ref)) {
+    auto pos = expandable_permanent_variables.find(var_ref);
+    if (pos != expandable_permanent_variables.end())
+      return pos->second;
+  } else {
+    auto pos = expandable_variables.find(var_ref);
+    if (pos != expandable_variables.end())
+      return pos->second;
+  }
+  return lldb::SBValue();
+}
+
+int64_t Variables::InsertExpandableVariable(lldb::SBValue variable,
+                                            bool is_permanent) {
+  int64_t var_ref = GetNewVariableRefence(is_permanent);
+  if (is_permanent)
+    expandable_permanent_variables.insert(std::make_pair(var_ref, variable));
+  else
+    expandable_variables.insert(std::make_pair(var_ref, variable));
+  return var_ref;
 }
 
 } // namespace lldb_vscode

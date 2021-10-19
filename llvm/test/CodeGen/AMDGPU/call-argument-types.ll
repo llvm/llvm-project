@@ -52,8 +52,8 @@ declare hidden i32 @external_i32_func_i32(i32) #0
 
 ; Structs
 declare hidden void @external_void_func_struct_i8_i32({ i8, i32 }) #0
-declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval) #0
-declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret, { i8, i32 } addrspace(5)* byval) #0
+declare hidden void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
+declare hidden void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* sret({ i8, i32 }), { i8, i32 } addrspace(5)* byval({ i8, i32 })) #0
 
 declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 
@@ -66,7 +66,7 @@ declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 1{{$}}
 ; MESA-DAG: s_mov_b64 s[2:3], s[38:39]
 
@@ -86,39 +86,34 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_signext@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+4
-
-; GCN: s_waitcnt vmcnt(0)
-; GCN-NEXT: v_bfe_i32 v0, v0, 0, 1
+; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+12
+; GCN-NEXT: v_bfe_i32 v0, [[VAR]], 0, 1
 ; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   %var = load volatile i1, i1 addrspace(1)* undef
-  call void @external_void_func_i1_signext(i1 %var)
+  call void @external_void_func_i1_signext(i1 signext %var)
   ret void
 }
 
 ; FIXME: load should be scheduled before getpc
 ; GCN-LABEL: {{^}}test_call_external_void_func_i1_zeroext:
 
-; HSA: buffer_load_ubyte v0
+; HSA: buffer_load_ubyte [[VAL:v[0-9]+]]
 ; HSA-DAG: s_mov_b32 s32, 0{{$}}
 
-; MESA: buffer_load_ubyte v0
+; MESA: buffer_load_ubyte [[VAL:v[0-9]+]]
 ; MESA-DAG: s_mov_b32 s32, 0{{$}}
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+4
-
-
-; GCN: s_waitcnt vmcnt(0)
-; GCN-NEXT: v_and_b32_e32 v0, 1, v0
+; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
+; GCN-NEXT: v_and_b32_e32 v0, 1, [[VAL]]
 ; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   %var = load volatile i1, i1 addrspace(1)* undef
-  call void @external_void_func_i1_zeroext(i1 %var)
+  call void @external_void_func_i1_zeroext(i1 zeroext %var)
   ret void
 }
 
@@ -126,7 +121,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 0x7b
 
 ; GCN-DAG: s_mov_b32 s32, 0{{$}}
@@ -141,37 +136,37 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; FIXME: don't wait before call
 ; GCN-LABEL: {{^}}test_call_external_void_func_i8_signext:
 
-; GCN-DAG: buffer_load_sbyte v0
+; GCN-DAG: buffer_load_sbyte [[VAL:v[0-9]+]]
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_signext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
-  call void @external_void_func_i8_signext(i8 %var)
+  call void @external_void_func_i8_signext(i8 signext %var)
   ret void
 }
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_i8_zeroext:
 
-; GCN-DAG: buffer_load_ubyte v0
+; GCN-DAG: buffer_load_ubyte [[VAL:v[0-9]+]]
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_zeroext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
-  call void @external_void_func_i8_zeroext(i8 %var)
+  call void @external_void_func_i8_zeroext(i8 zeroext %var)
   ret void
 }
 
@@ -188,19 +183,19 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_i16_signext:
 
-; GCN-DAG: buffer_load_sshort v0
+; GCN-DAG: buffer_load_sshort [[VAL:v[0-9]+]]
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_signext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
-  call void @external_void_func_i16_signext(i16 %var)
+  call void @external_void_func_i16_signext(i16 signext %var)
   ret void
 }
 
@@ -208,16 +203,16 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_zeroext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_zeroext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_zeroext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
-  call void @external_void_func_i16_zeroext(i16 %var)
+  call void @external_void_func_i16_zeroext(i16 zeroext %var)
   ret void
 }
 
@@ -225,7 +220,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i32@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i32@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i32@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 42
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -241,7 +236,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GCN-DAG: v_mov_b32_e32 v1, 0{{$}}
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i64@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i64@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i64@rel32@hi+12
 ; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
@@ -681,7 +676,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   %gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %val, i32 0, i32 1
   store i8 3, i8 addrspace(5)* %gep0
   store i32 8, i32 addrspace(5)* %gep1
-  call void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %val)
+  call void @external_void_func_byval_struct_i8_i32({ i8, i32 } addrspace(5)* byval({ i8, i32 }) %val)
   ret void
 }
 
@@ -713,7 +708,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   %in.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %in.val, i32 0, i32 1
   store i8 3, i8 addrspace(5)* %in.gep0
   store i32 8, i32 addrspace(5)* %in.gep1
-  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %out.val, { i8, i32 } addrspace(5)* %in.val)
+  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32({ i8, i32 } addrspace(5)* %out.val, { i8, i32 } addrspace(5)* byval({ i8, i32 }) %in.val)
   %out.gep0 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 0
   %out.gep1 = getelementptr inbounds { i8, i32 }, { i8, i32 } addrspace(5)* %out.val, i32 0, i32 1
   %out.val0 = load i8, i8 addrspace(5)* %out.gep0
@@ -744,19 +739,19 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:8
-; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GCN: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:12
+; GCN: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
 
 ; GCN: s_getpc_b64
 
-; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:4
-; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 entry:
   %alloca = alloca double, align 8, addrspace(5)
-  tail call void @byval_align16_f64_arg(<32 x i32> %val, double addrspace(5)* byval align 16 %alloca)
+  tail call void @byval_align16_f64_arg(<32 x i32> %val, double addrspace(5)* byval(double) align 16 %alloca)
   ret void
 }
 
@@ -777,12 +772,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3i32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 11
 ; GCN: s_getpc
@@ -806,12 +801,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3f32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 0x41300000
 ; GCN: s_getpc
@@ -836,20 +831,20 @@ entry:
 ; GCN-LABEL: {{^}}stack_8xv5i32:
 
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
 ; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
 ; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
 ; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 7
@@ -870,20 +865,20 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_8xv5f32:
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
 ; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
 ; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
 ; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 0x40e00000
@@ -902,7 +897,7 @@ entry:
   ret void
 }
 
-declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval align 16) #0
+declare hidden void @byval_align16_f64_arg(<32 x i32>, double addrspace(5)* byval(double) align 16) #0
 declare hidden void @stack_passed_f64_arg(<32 x i32>, double) #0
 declare hidden void @external_void_func_12xv3i32(<3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>,
     <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <3 x i32>) #0

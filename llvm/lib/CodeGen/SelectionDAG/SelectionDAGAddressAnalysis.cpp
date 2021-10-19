@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
@@ -96,18 +98,28 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   int64_t PtrDiff;
   if (NumBytes0.hasValue() && NumBytes1.hasValue() &&
       BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
+    // If the size of memory access is unknown, do not use it to analysis.
+    // One example of unknown size memory access is to load/store scalable
+    // vector objects on the stack.
     // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
     // following situations arise:
-    IsAlias = !(
-        // [----BasePtr0----]
-        //                         [---BasePtr1--]
-        // ========PtrDiff========>
-        (*NumBytes0 <= PtrDiff) ||
-        //                     [----BasePtr0----]
-        // [---BasePtr1--]
-        // =====(-PtrDiff)====>
-        (PtrDiff + *NumBytes1 <= 0)); // i.e. *NumBytes1 < -PtrDiff.
-    return true;
+    if (PtrDiff >= 0 &&
+        *NumBytes0 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+      // [----BasePtr0----]
+      //                         [---BasePtr1--]
+      // ========PtrDiff========>
+      IsAlias = !(*NumBytes0 <= PtrDiff);
+      return true;
+    }
+    if (PtrDiff < 0 &&
+        *NumBytes1 != static_cast<int64_t>(MemoryLocation::UnknownSize)) {
+      //                     [----BasePtr0----]
+      // [---BasePtr1--]
+      // =====(-PtrDiff)====>
+      IsAlias = !((PtrDiff + *NumBytes1) <= 0);
+      return true;
+    }
+    return false;
   }
   // If both BasePtr0 and BasePtr1 are FrameIndexes, we will not be
   // able to calculate their relative offset if at least one arises
@@ -132,13 +144,27 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
   bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
   bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
 
-  // If of mismatched base types or checkable indices we can check
-  // they do not alias.
-  if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
-       (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
-      (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1)) {
-    IsAlias = false;
-    return true;
+  if ((IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1)) {
+    // We can derive NoAlias In case of mismatched base types.
+    if (IsFI0 != IsFI1 || IsGV0 != IsGV1 || IsCV0 != IsCV1) {
+      IsAlias = false;
+      return true;
+    }
+    if (IsGV0 && IsGV1) {
+      auto *GV0 = cast<GlobalAddressSDNode>(BasePtr0.getBase())->getGlobal();
+      auto *GV1 = cast<GlobalAddressSDNode>(BasePtr1.getBase())->getGlobal();
+      // It doesn't make sense to access one global value using another globals
+      // values address, so we can assume that there is no aliasing in case of
+      // two different globals (unless we have symbols that may indirectly point
+      // to each other).
+      // FIXME: This is perhaps a bit too defensive. We could try to follow the
+      // chain with aliasee information for GlobalAlias variables to find out if
+      // we indirect symbols may alias or not.
+      if (GV0 != GV1 && !isa<GlobalAlias>(GV0) && !isa<GlobalAlias>(GV1)) {
+        IsAlias = false;
+        return true;
+      }
+    }
   }
   return false; // Cannot determine whether the pointers alias.
 }

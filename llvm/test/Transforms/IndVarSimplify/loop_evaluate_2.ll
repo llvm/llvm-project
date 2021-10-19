@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -loop-deletion -simplifycfg | opt -analyze -loops | FileCheck %s
+; RUN: opt < %s -passes='loop(loop-deletion),simplifycfg' -simplifycfg-require-and-preserve-domtree=1 | opt -passes='print<loops>' -disable-output 2>&1 | FileCheck %s
 ; PR1179
 
 ; CHECK-NOT: Loop Containing

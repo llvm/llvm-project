@@ -1,13 +1,13 @@
 # RUN: yaml2obj %s -o %t
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --strip-unneeded %t %t2
-# Verify that llvm-objcopy has not modified the input.
+## Verify that llvm-objcopy has not modified the input.
 # RUN: cmp %t %t1
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s
 
-# Verify that --keep-file-symbols works together with --strip-unneeded
+## Verify that --keep-file-symbols works together with --strip-unneeded
 # RUN: llvm-objcopy --keep-file-symbols --strip-unneeded %t %t2b
-# RUN: llvm-readobj --symbols %t2b | FileCheck %s --check-prefix=FILESYM
+# RUN: llvm-readobj --symbols %t2b | FileCheck %s --check-prefixes=CHECK,FILESYM
 
 # RUN: llvm-objcopy --strip-unneeded-symbol=bar \
 # RUN:              %t %t3
@@ -16,10 +16,16 @@
 # RUN: llvm-objcopy --regex --strip-unneeded-symbol='.*' %t %t4
 # RUN: cmp %t2 %t4
 
+## Verify that --strip-unneeded-symbols removes all unneeded symbols listed in
+## the file, but not those that aren't.
+## In this case, fileSymbol isn't mentioned (so isn't removed), barbaz is
+## mentioned, but isn't removed (because it is needed) and bar, foobar and
+## foobaz are mentioned and removed.
 # RUN: echo " bar # bar " > %t.list.txt
 # RUN: echo "foobar" >> %t.list.txt
 # RUN: echo "foobaz" >> %t.list.txt
 # RUN: echo " # comment " >> %t.list.txt
+# RUN: echo "barbaz" >> %t.list.txt
 # RUN: llvm-objcopy --strip-unneeded-symbols %t.list.txt %t %t5
 # RUN: cmp %t2b %t5
 
@@ -27,7 +33,7 @@
 # RUN: llvm-objcopy --regex --strip-unneeded-symbols %t.list2.txt %t %t6
 # RUN: cmp %t2 %t6
 
-# Verify that llvm-strip modifies the symbol table the same way.
+## Verify that llvm-strip modifies the symbol table the same way.
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: cmp %t %t2
 
@@ -78,6 +84,7 @@ Symbols:
     Value:    0x1010
   - Name:     fileSymbol
     Type:     STT_FILE
+    Index:    SHN_ABS
   - Name:     sectionSymbol
     Type:     STT_SECTION
   - Name:     foobar
@@ -127,6 +134,15 @@ Symbols:
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
 #CHECK-NEXT:  }
+#FILESYM-NEXT:Symbol {
+#FILESYM-NEXT:  Name: fileSymbol
+#FILESYM-NEXT:  Value: 0x0
+#FILESYM-NEXT:  Size: 0
+#FILESYM-NEXT:  Binding: Local
+#FILESYM-NEXT:  Type: File
+#FILESYM-NEXT:  Other: 0
+#FILESYM-NEXT:  Section: Absolute
+#FILESYM-NEXT:}
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: sectionSymbol
 #CHECK-NEXT:    Value: 0x0
@@ -156,8 +172,6 @@ Symbols:
 #CHECK-NEXT:  }
 #CHECK-NEXT:]
 
-#FILESYM:       Name: fileSymbol
-#FILESYM-NEXT:  Value: 0x0
 
 #STRIP-BAR-NOT: Name: bar ({{.*}})
 #REMAIN: Name: foobar

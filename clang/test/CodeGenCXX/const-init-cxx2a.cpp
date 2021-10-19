@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-pch -o %t.pch %s -std=c++2a
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -include-pch %t.pch -x c++ /dev/null -emit-llvm -o - -std=c++2a | FileCheck %s --implicit-check-not=cxx_global_var_init --implicit-check-not=cxa_atexit
 
-// CHECK: @a = global i32 123,
+// CHECK: @a ={{.*}} global i32 123,
 int a = (delete new int, 123);
 
 struct B {
@@ -11,7 +11,7 @@ struct B {
   constexpr ~B() { n *= 5; }
   int n = 123;
 };
-// CHECK: @b = global {{.*}} i32 123
+// CHECK: @b ={{.*}} global {{.*}} i32 123
 extern constexpr B b = B();
 
 // CHECK: @_ZL1c = internal global {{.*}} i32 123
@@ -23,13 +23,13 @@ struct D {
   constexpr ~D() {}
 };
 D d;
-// CHECK: @d = global {{.*}} zeroinitializer
+// CHECK: @d ={{.*}} global {{.*}} zeroinitializer
 
 D d_arr[3];
-// CHECK: @d_arr = global {{.*}} zeroinitializer
+// CHECK: @d_arr ={{.*}} global {{.*}} zeroinitializer
 
 thread_local D d_tl;
-// CHECK: @d_tl = thread_local global {{.*}} zeroinitializer
+// CHECK: @d_tl ={{.*}} thread_local global {{.*}} zeroinitializer
 
 // CHECK-NOT: @llvm.global_ctors
 

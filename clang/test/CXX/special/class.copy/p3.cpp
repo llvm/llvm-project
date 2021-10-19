@@ -13,7 +13,7 @@ void f(X<int>) { }
 struct Y : X<int> { };
 struct Z : X<float> { };
 
-// CHECK: define i32 @main()
+// CHECK: define{{.*}} i32 @main()
 int main() {
   // CHECK: call void @_ZN1YC1Ev
   // CHECK: call void @_ZN1XIiEC1ERKS0_

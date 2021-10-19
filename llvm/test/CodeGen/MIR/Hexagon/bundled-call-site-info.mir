@@ -37,7 +37,7 @@ callSites:
 body:             |
   bb.0.entry:
     BUNDLE implicit-def $r29, implicit-def $r30, implicit-def dead $r0, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31 {
-      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31 :: (store 4 into stack)
+      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31 :: (store (s32) into stack)
       $r0 = A2_tfrsi 12345
       J2_call @callee, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit internal killed $r29, implicit internal killed $r0, implicit-def $r29
     }

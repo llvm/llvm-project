@@ -9,38 +9,25 @@
 // test bitset<N> operator~() const;
 
 #include <bitset>
-#include <cstdlib>
 #include <cassert>
+#include <cstddef>
+#include <vector>
 
+#include "../bitset_test_cases.h"
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_CLANG)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#elif defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
-
 template <std::size_t N>
-std::bitset<N>
-make_bitset()
-{
-    std::bitset<N> v;
-    for (std::size_t i = 0; i < N; ++i)
-        v[i] = static_cast<bool>(std::rand() & 1);
-    return v;
+void test_not_all() {
+    std::vector<std::bitset<N> > const cases = get_test_cases<N>();
+    for (std::size_t c = 0; c != cases.size(); ++c) {
+        std::bitset<N> v1 = cases[c];
+        std::bitset<N> v2 = ~v1;
+        for (std::size_t i = 0; i < v1.size(); ++i)
+            assert(v2[i] == ~v1[i]);
+    }
 }
 
-template <std::size_t N>
-void test_not_all()
-{
-    std::bitset<N> v1 = make_bitset<N>();
-    std::bitset<N> v2 = ~v1;
-    for (std::size_t i = 0; i < N; ++i)
-        assert(v2[i] == ~v1[i]);
-}
-
-int main(int, char**)
-{
+int main(int, char**) {
     test_not_all<0>();
     test_not_all<1>();
     test_not_all<31>();
@@ -51,5 +38,5 @@ int main(int, char**)
     test_not_all<65>();
     test_not_all<1000>();
 
-  return 0;
+    return 0;
 }

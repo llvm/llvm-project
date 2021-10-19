@@ -6,8 +6,7 @@
 ; RUN:     -mattr=+vsx -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-BE
 
-define dso_local <8 x i8> @test8x32(i32 %i1, i32 %i2, i32 %i3, i32 %i4,
-                                    i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
+define dso_local <8 x i8> @test8x32(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
 ; CHECK-LABEL: test8x32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rldimi r3, r4, 32, 0
@@ -113,8 +112,7 @@ define dso_local <4 x i16> @test4x64(i64 %i1, i64 %i2, i64 %i3, i64 %i4) {
 ret <4 x i16> %v2
 }
 
-define dso_local <8 x i16> @test8x24(i32 %i1, i32 %i2, i32 %i3, i32 %i4,
-                                     i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
+define dso_local <8 x i16> @test8x24(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6, i32 %i7, i32 %i8) {
 ; CHECK-LABEL: test8x24:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mtvsrd v2, r3

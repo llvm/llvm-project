@@ -40,7 +40,7 @@ body:             |
     %3:vr64bit = nofpexcept WFADB %0, %1, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 14, 8, implicit killed $cc
-    VST64 %3, %2, 0, $noreg :: (store 8 into %ir.Dst)
+    VST64 %3, %2, 0, $noreg :: (store (s64) into %ir.Dst)
     Return
 
 ...

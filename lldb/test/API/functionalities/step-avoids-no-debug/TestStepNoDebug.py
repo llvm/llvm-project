@@ -31,6 +31,7 @@ class StepAvoidsNoDebugTestCase(TestBase):
             ">=",
             "3.9"],
         archs=["i386"],
+        oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug with dwarf."""
@@ -47,9 +48,10 @@ class StepAvoidsNoDebugTestCase(TestBase):
             ">=",
             "3.9"],
         archs=["i386"],
+        oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549")
     @expectedFailureAll(archs=["arm64"], bugnumber="<rdar://problem/34026777>")  # lldb doesn't step past last source line in function on arm64
-    @expectedFailureAll(archs=["aarch64"], oslist=["linux"],
+    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd", "linux"],
                         bugnumber="llvm.org/pr44057")
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug with dwarf."""
@@ -76,8 +78,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
             "Could not find source pattern " +
             pattern)
         cur_line = self.thread.frames[0].GetLineEntry().GetLine()
-        self.assertTrue(
-            cur_line == target_line,
+        self.assertEqual(
+            cur_line, target_line,
             "Stepped to line %d instead of expected %d with pattern '%s'." %
             (cur_line,
              target_line,

@@ -123,14 +123,18 @@ void Deallocate(void *p) {
 
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
                  uptr alignment) {
-  RegisterDeallocation(p);
   if (new_size > max_malloc_size) {
-    allocator.Deallocate(GetAllocatorCache(), p);
-    return ReportAllocationSizeTooBig(new_size, stack);
+    ReportAllocationSizeTooBig(new_size, stack);
+    return nullptr;
   }
-  p = allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
-  RegisterAllocation(stack, p, new_size);
-  return p;
+  RegisterDeallocation(p);
+  void *new_p =
+      allocator.Reallocate(GetAllocatorCache(), p, new_size, alignment);
+  if (new_p)
+    RegisterAllocation(stack, new_p, new_size);
+  else if (new_size != 0)
+    RegisterAllocation(stack, p, new_size);
+  return new_p;
 }
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end) {
@@ -309,6 +313,16 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
     return kIgnoreObjectInvalid;
   }
 }
+
+void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
+  // This function can be used to treat memory reachable from `tctx` as live.
+  // This is useful for threads that have been created but not yet started.
+
+  // This is currently a no-op because the LSan `pthread_create()` interceptor
+  // blocks until the child thread starts which keeps the thread's `arg` pointer
+  // live.
+}
+
 } // namespace __lsan
 
 using namespace __lsan;

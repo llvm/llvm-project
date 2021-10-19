@@ -48,22 +48,29 @@ relative:
 ## Treat them as PC relative relocations.
 # RELOC:      0x18 R_RISCV_CALL target 0x0
 # RELOC-NEXT: 0x20 R_RISCV_JAL target 0x0
+# RELOC-NEXT: 0x24 R_RISCV_BRANCH target 0x0
 
 # PC-LABEL:    <branch>:
-# PC-NEXT:     auipc ra, 1048559
-# PC-NEXT:     jalr -368(ra)
-## FIXME: llvm-objdump -d should print the address, instead of the offset.
-# PC-NEXT:     j -70008
+# PC-NEXT:     auipc ra, 0
+# PC-NEXT:     jalr ra
+# PC-NEXT:     [[#%x,ADDR:]]:
+# PC-SAME:                    j 0x[[#ADDR]]
+# PC-NEXT:     [[#%x,ADDR:]]:
+# PC-SAME:                    beqz zero, 0x[[#ADDR]]
 
 ## If .dynsym exists, an undefined weak symbol is preemptible.
 ## We create a PLT entry and redirect the reference to it.
 # PLT-LABEL:   <branch>:
 # PLT-NEXT:    auipc ra, 0
 # PLT-NEXT:    jalr 56(ra)
-# PLT-NEXT:    j -70448
+# PLT-NEXT:    [[#%x,ADDR:]]:
+# PLT-SAME:                   j 0x[[#ADDR]]
+# PLT-NEXT:    [[#%x,ADDR:]]:
+# PLT-SAME:                   beqz zero, 0x[[#ADDR]]
 branch:
   call target
   jal x0, target
+  beq x0, x0, target
 
 ## Absolute relocations are resolved to 0.
 # RELOC:      0x0 R_RISCV_64 target 0x3

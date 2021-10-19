@@ -1,0 +1,6 @@
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
+; RUN: not wasm-ld -o %t.wasm --relocatable --export-table %t.o 2>&1 | FileCheck %s --check-prefix=EXPORT
+; RUN: not wasm-ld -o %t.wasm --relocatable --growable-table %t.o 2>&1 | FileCheck %s --check-prefix=GROWABLE
+
+; EXPORT: error: --relocatable is incompatible with --export-table
+; GROWABLE: error: --relocatable is incompatible with --growable-table

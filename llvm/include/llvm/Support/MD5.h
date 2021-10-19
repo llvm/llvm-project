@@ -39,18 +39,6 @@ template <unsigned N> class SmallString;
 template <typename T> class ArrayRef;
 
 class MD5 {
-  // Any 32-bit or wider unsigned integer data type will do.
-  typedef uint32_t MD5_u32plus;
-
-  MD5_u32plus a = 0x67452301;
-  MD5_u32plus b = 0xefcdab89;
-  MD5_u32plus c = 0x98badcfe;
-  MD5_u32plus d = 0x10325476;
-  MD5_u32plus hi = 0;
-  MD5_u32plus lo = 0;
-  uint8_t buffer[64];
-  MD5_u32plus block[16];
-
 public:
   struct MD5Result {
     std::array<uint8_t, 16> Bytes;
@@ -90,6 +78,14 @@ public:
   /// Finishes off the hash and puts the result in result.
   void final(MD5Result &Result);
 
+  /// Finishes off the hash, and returns a reference to the 16-byte hash data.
+  StringRef final();
+
+  /// Finishes off the hash, and returns a reference to the 16-byte hash data.
+  /// This is suitable for getting the MD5 at any time without invalidating the
+  /// internal state, so that more calls can be made into `update`.
+  StringRef result();
+
   /// Translates the bytes in \p Res to a hex string that is
   /// deposited into \p Str. The result will be of length 32.
   static void stringifyResult(MD5Result &Result, SmallString<32> &Str);
@@ -98,6 +94,23 @@ public:
   static std::array<uint8_t, 16> hash(ArrayRef<uint8_t> Data);
 
 private:
+  // Any 32-bit or wider unsigned integer data type will do.
+  typedef uint32_t MD5_u32plus;
+
+  // Internal State
+  struct {
+    MD5_u32plus a = 0x67452301;
+    MD5_u32plus b = 0xefcdab89;
+    MD5_u32plus c = 0x98badcfe;
+    MD5_u32plus d = 0x10325476;
+    MD5_u32plus hi = 0;
+    MD5_u32plus lo = 0;
+    uint8_t buffer[64];
+    MD5_u32plus block[16];
+  } InternalState;
+
+  MD5Result Result;
+
   const uint8_t *body(ArrayRef<uint8_t> Data);
 };
 

@@ -112,7 +112,7 @@ entry:
   ret fp128 %2
 ; CHECK-LABEL: insert_exp_qp
 ; CHECK-DAG: mtfprd [[FPREG:f[0-9]+]], r3
-; CHECK-DAG: lxvx [[VECREG:v[0-9]+]]
+; CHECK-DAG: lxv [[VECREG:v[0-9]+]]
 ; CHECK: xsiexpqp v2, [[VECREG]], [[FPREG]]
 ; CHECK: blr
 }
@@ -127,7 +127,7 @@ entry:
   %1 = call i64 @llvm.ppc.scalar.extract.expq(fp128 %0)
   ret i64 %1
 ; CHECK-LABEL: extract_exp
-; CHECK: lxvx [[VECIN:v[0-9]+]]
+; CHECK: lxv [[VECIN:v[0-9]+]]
 ; CHECK: xsxexpqp [[VECOUT:v[0-9]+]], [[VECIN]]
 ; CHECK: mfvsrd r3, [[VECOUT]]
 ; CHECK: blr

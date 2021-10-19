@@ -262,8 +262,7 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the new instruction.
   ///
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   /// Returns true iff the routine could find two commutable operands in the
@@ -283,6 +282,10 @@ public:
   /// commutable with the operand#1.
   bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
+
+  /// Returns true if we have preference on the operands order in MI, the
+  /// commute decision is returned in Commute.
+  bool hasCommutePreference(MachineInstr &MI, bool &Commute) const override;
 
   /// Returns an adjusted FMA opcode that must be used in FMA instruction that
   /// performs the same computations as the given \p MI but which has the
@@ -316,6 +319,17 @@ public:
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
+
+  Optional<ExtAddrMode>
+  getAddrModeFromMemoryOp(const MachineInstr &MemI,
+                          const TargetRegisterInfo *TRI) const override;
+
+  bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
+                               int64_t &ImmVal) const override;
+
+  bool preservesZeroValueInReg(const MachineInstr *MI,
+                               const Register NullValueReg,
+                               const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
@@ -428,7 +442,7 @@ public:
                                int64_t Offset2,
                                unsigned NumLoads) const override;
 
-  void getNoop(MCInst &NopInst) const override;
+  MCInst getNop() const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
@@ -495,14 +509,14 @@ public:
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
-                      Register &SrcReg2, int &CmpMask,
-                      int &CmpValue) const override;
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
 
   /// optimizeCompareInstr - Check if there exists an earlier instruction that
   /// operates on the same source operands and sets flags in the same way as
   /// Compare; remove Compare if possible.
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
-                            Register SrcReg2, int CmpMask, int CmpValue,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
   /// optimizeLoadInstr - Try to remove the load by folding it to a register
@@ -577,7 +591,6 @@ private:
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc,
-                                             MachineFunction::iterator &MFI,
                                              MachineInstr &MI,
                                              LiveVariables *LV,
                                              bool Is8BitOp) const;

@@ -44,7 +44,6 @@
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;
-using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
@@ -60,12 +59,21 @@ struct Edge {
 struct ExportInfo {
   uint64_t address;
   uint8_t flags = 0;
-  explicit ExportInfo(const Symbol &sym) : address(sym.getVA()) {
+  ExportInfo(const Symbol &sym, uint64_t imageBase)
+      : address(sym.getVA() - imageBase) {
+    using namespace llvm::MachO;
+    // Set the symbol type.
     if (sym.isWeakDef())
       flags |= EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
-    if (sym.isTlv())
-      flags |= EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
     // TODO: Add proper support for re-exports & stub-and-resolver flags.
+
+    // Set the symbol kind.
+    if (sym.isTlv()) {
+      flags |= EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
+    } else if (auto *defined = dyn_cast<Defined>(&sym)) {
+      if (defined->isAbsolute())
+        flags |= EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE;
+    }
   }
 };
 
@@ -100,7 +108,7 @@ bool TrieNode::updateOffset(size_t &nextOffset) {
   }
   // Compute size of all child edges.
   ++nodeSize; // Byte for number of children.
-  for (Edge &edge : edges) {
+  for (const Edge &edge : edges) {
     nodeSize += edge.substring.size() + 1             // String length.
                 + getULEB128Size(edge.child->offset); // Offset len.
   }
@@ -199,7 +207,7 @@ tailcall:
 
   if (isTerminal) {
     assert(j - i == 1); // no duplicate symbols
-    node->info = ExportInfo(*pivotSymbol);
+    node->info = ExportInfo(*pivotSymbol, imageBase);
   } else {
     // This is the tail-call-optimized version of the following:
     // sortAndBuild(vec.slice(i, j - i), node, lastPos, pos + 1);

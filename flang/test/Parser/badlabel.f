@@ -1,4 +1,4 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -E -fno-reformat %s 2>&1 | FileCheck %s
 ! CHECK: Label digit is not in fixed-form label field
       1 continue
 ! CHECK: Label digit is not in fixed-form label field

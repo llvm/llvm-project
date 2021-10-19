@@ -14,7 +14,7 @@ function(find_standalone_test_dependencies)
 
   # Find executables.
   find_program(OPENMP_LLVM_LIT_EXECUTABLE
-    NAMES llvm-lit lit.py lit
+    NAMES llvm-lit.py llvm-lit lit.py lit
     PATHS ${OPENMP_LLVM_TOOLS_DIR})
   if (NOT OPENMP_LLVM_LIT_EXECUTABLE)
     message(STATUS "Cannot find llvm-lit.")
@@ -50,13 +50,6 @@ endfunction()
 if (${OPENMP_STANDALONE_BUILD})
   find_standalone_test_dependencies()
 
-  # Make sure we can use the console pool for recent CMake and Ninja > 1.5.
-  if (CMAKE_VERSION VERSION_LESS 3.1.20141117)
-    set(cmake_3_2_USES_TERMINAL)
-  else()
-    set(cmake_3_2_USES_TERMINAL USES_TERMINAL)
-  endif()
-
   # Set lit arguments.
   set(DEFAULT_LIT_ARGS "-sv --show-unsupported --show-xfail")
   if (MSVC OR XCODE)
@@ -65,7 +58,13 @@ if (${OPENMP_STANDALONE_BUILD})
   set(OPENMP_LIT_ARGS "${DEFAULT_LIT_ARGS}" CACHE STRING "Options for lit.")
   separate_arguments(OPENMP_LIT_ARGS)
 else()
-  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  if (NOT TARGET "FileCheck")
+    message(STATUS "Cannot find 'FileCheck'.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE)
+  else()
+    set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/FileCheck)
+  endif()
   set(OPENMP_NOT_EXECUTABLE ${LLVM_RUNTIME_OUTPUT_INTDIR}/not)
 endif()
 
@@ -189,7 +188,7 @@ function(add_openmp_testsuite target comment)
       COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
-      ${cmake_3_2_USES_TERMINAL}
+      USES_TERMINAL
     )
   else()
     if (ARG_EXCLUDE_FROM_CHECK_ALL)
@@ -197,14 +196,14 @@ function(add_openmp_testsuite target comment)
         ${comment}
         ${ARG_UNPARSED_ARGUMENTS}
         EXCLUDE_FROM_CHECK_ALL
-        DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
+        DEPENDS clang FileCheck ${ARG_DEPENDS}
         ARGS ${ARG_ARGS}
       )
     else()
       add_lit_testsuite(${target}
         ${comment}
         ${ARG_UNPARSED_ARGUMENTS}
-        DEPENDS clang clang-resource-headers FileCheck ${ARG_DEPENDS}
+        DEPENDS clang FileCheck ${ARG_DEPENDS}
         ARGS ${ARG_ARGS}
       )
     endif()

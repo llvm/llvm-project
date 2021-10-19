@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
+// RUN: %clang_cc1 -fsyntax-only -verify -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
 
-#define EVAL_EXPR(testno, expr) int test##testno = sizeof(struct{char qq[expr];});
+#define EVAL_EXPR(testno, expr) enum { test##testno = (expr) }; struct check_positive##testno { int a[test##testno]; };
 int x;
 EVAL_EXPR(1, (_Bool)&x)
 EVAL_EXPR(2, (int)(1.0+(double)4))
@@ -14,12 +15,12 @@ EVAL_EXPR(8, (_Bool)"asdf")
 EVAL_EXPR(9, !!&x)
 EVAL_EXPR(10, ((void)1, 12))
 void g0(void);
-EVAL_EXPR(11, (g0(), 12)) // expected-error {{must have a constant size}}
+EVAL_EXPR(11, (g0(), 12)) // expected-error {{not an integer constant expression}}
 EVAL_EXPR(12, 1.0&&2.0)
-EVAL_EXPR(13, x || 3.0) // expected-error {{must have a constant size}}
+EVAL_EXPR(13, x || 3.0) // expected-error {{not an integer constant expression}}
 
 unsigned int l_19 = 1;
-EVAL_EXPR(14, (1 ^ l_19) && 1); // expected-error {{fields must have a constant size}}
+EVAL_EXPR(14, (1 ^ l_19) && 1); // expected-error {{not an integer constant expression}}
 
 void f()
 {
@@ -36,7 +37,7 @@ int g17[(3?:1) - 2];
 EVAL_EXPR(18, ((int)((void*)10 + 10)) == 20 ? 1 : -1);
 
 struct s {
-  int a[(int)-1.0f]; // expected-error {{'a' declared as an array with a negative size}}
+  int a[(int)-1.0f]; // expected-error {{array size is negative}}
 };
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
@@ -47,9 +48,9 @@ EVAL_EXPR(21, (__imag__ 2i) == 2 ? 1 : -1);
 
 EVAL_EXPR(22, (__real__ (2i+3)) == 3 ? 1 : -1);
 
-int g23[(int)(1.0 / 1.0)] = { 1 };
-int g24[(int)(1.0 / 1.0)] = { 1 , 2 }; // expected-warning {{excess elements in array initializer}}
-int g25[(int)(1.0 + 1.0)], g26 = sizeof(g25);
+int g23[(int)(1.0 / 1.0)] = { 1 }; // expected-warning {{folded to constant array}}
+int g24[(int)(1.0 / 1.0)] = { 1 , 2 }; // expected-warning {{folded to constant array}} expected-warning {{excess elements in array initializer}}
+int g25[(int)(1.0 + 1.0)], g26 = sizeof(g25); // expected-warning {{folded to constant array}}
 
 EVAL_EXPR(26, (_Complex double)0 ? -1 : 1)
 EVAL_EXPR(27, (_Complex int)0 ? -1 : 1)
@@ -74,7 +75,7 @@ const _Bool constbool = 0;
 EVAL_EXPR(35, constbool)
 EVAL_EXPR(36, constbool)
 
-EVAL_EXPR(37, (1,2.0) == 2.0 ? 1 : -1)
+EVAL_EXPR(37, ((void)1,2.0) == 2.0 ? 1 : -1)
 EVAL_EXPR(38, __builtin_expect(1,1) == 1 ? 1 : -1)
 
 // PR7884
@@ -116,17 +117,17 @@ EVAL_EXPR(42, __builtin_constant_p(pr11391.f = 1))
 // PR12043
 float varfloat;
 const float constfloat = 0;
-EVAL_EXPR(43, varfloat && constfloat) // expected-error {{must have a constant size}}
+EVAL_EXPR(43, varfloat && constfloat) // expected-error {{not an integer constant expression}}
 
 // <rdar://problem/10962435>
 EVAL_EXPR(45, ((char*)-1) + 1 == 0 ? 1 : -1)
 EVAL_EXPR(46, ((char*)-1) + 1 < (char*) -1 ? 1 : -1)
 EVAL_EXPR(47, &x < &x + 1 ? 1 : -1)
 EVAL_EXPR(48, &x != &x - 1 ? 1 : -1)
-EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // expected-error {{must have a constant size}}
+EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // expected-error {{not an integer constant expression}}
 
 extern struct Test50S Test50;
-EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // expected-error {{must have a constant size}}
+EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // expected-error {{not an integer constant expression}}
 
 // <rdar://problem/11874571>
 EVAL_EXPR(51, 0 != (float)1e99)
@@ -136,14 +137,14 @@ void PR21945() { int i = (({}), 0l); }
 
 void PR24622();
 struct PR24622 {} pr24622;
-EVAL_EXPR(52, &pr24622 == (void *)&PR24622); // expected-error {{must have a constant size}}
+EVAL_EXPR(52, &pr24622 == (void *)&PR24622); // expected-error {{not an integer constant expression}}
 
 // We evaluate these by providing 2s' complement semantics in constant
 // expressions, like we do for integers.
-void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;
-void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;
-__int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c;
-void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1];
+void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // expected-warning {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2305843009213693952 elements)}}
+void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;                  // expected-warning {{refers past the last possible element}}
+__int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c; // expected-warning {{refers past the last possible element}}
+void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1];                // expected-warning {{refers past the last possible element}}
 
 struct PR35214_X {
   int k;

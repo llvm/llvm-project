@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // RUN: clang-import-test -dump-ast -x objective-c++ -import %S/Inputs/S.m -expression %s | FileCheck %s
 
 // CHECK: ObjCTypeParamDecl

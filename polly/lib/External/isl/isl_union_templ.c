@@ -143,8 +143,6 @@ __isl_give PART *FN(FN(UNION,extract),BASE)(__isl_keep UNION *u,
 {
 	struct isl_hash_table_entry *entry;
 
-	space = isl_space_replace_params(space, FN(UNION,peek_space)(u));
-
 	entry = FN(UNION,find_part_entry)(u, space, 0);
 	if (!entry)
 		goto error;
@@ -545,6 +543,14 @@ __isl_give UNION *FN(FN(UNION,from),BASE)(__isl_take PART *part)
 	return u;
 }
 
+/* This function performs the same operation as isl_union_pw_*_from_pw_*,
+ * but is considered as a function on an isl_pw_* when exported.
+ */
+__isl_give UNION *FN(FN(PART,to_union),BASE)(__isl_take PART *part)
+{
+	return FN(FN(UNION,from),BASE)(part);
+}
+
 S(UNION,match_bin_data) {
 	UNION *u2;
 	UNION *res;
@@ -736,24 +742,15 @@ S(UNION,match_domain_data) {
 	S(UNION,match_domain_control) *control;
 };
 
-static isl_bool FN(UNION,set_has_space)(const void *entry, const void *val)
-{
-	isl_set *set = (isl_set *)entry;
-	isl_space *space = (isl_space *)val;
-
-	return isl_space_is_equal(set->dim, space);
-}
-
 /* Find the set in data->uset that lives in the same space as the domain
- * of "part", apply data->fn to *entry and this set (if any), and add
- * the result to data->res.
+ * of "part" (ignoring parameters), apply data->fn to *entry and this set
+ * (if any), and add the result to data->res.
  */
 static isl_stat FN(UNION,match_domain_entry)(__isl_take PART *part, void *user)
 {
 	S(UNION,match_domain_data) *data = user;
-	uint32_t hash;
 	struct isl_hash_table_entry *entry2;
-	isl_space *space, *uset_space;
+	isl_space *space;
 
 	if (data->control->filter) {
 		isl_bool pass = data->control->filter(part);
@@ -763,14 +760,10 @@ static isl_stat FN(UNION,match_domain_entry)(__isl_take PART *part, void *user)
 		}
 	}
 
-	uset_space = isl_union_set_peek_space(data->uset);
 	space = FN(PART,get_domain_space)(part);
 	if (data->control->match_space)
 		space = data->control->match_space(space);
-	space = isl_space_replace_params(space, uset_space);
-	hash = isl_space_get_hash(space);
-	entry2 = isl_hash_table_find(data->uset->dim->ctx, &data->uset->table,
-				     hash, &FN(UNION,set_has_space), space, 0);
+	entry2 = isl_union_set_find_entry(data->uset, space, 0);
 	isl_space_free(space);
 	if (!entry2 || entry2 == isl_hash_table_entry_none) {
 		FN(PART,free)(part);

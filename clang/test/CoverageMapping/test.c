@@ -1,12 +1,12 @@
-// RUN: %strip_comments > %t.stripped.c
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name test.c %t.stripped.c | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name test.c %s | FileCheck %s
 
 void bar();
 static void static_func();
 
                                  // CHECK: main
-int main() {                     // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+7]]:2 = #0
-                                 // CHECK-NEXT: File 0, [[@LINE+1]]:18 -> [[@LINE+1]]:24 = (#0 + #1)
+int main() {                     // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+8]]:2 = #0
+                                 // CHECK-NEXT: File 0, [[@LINE+2]]:18 -> [[@LINE+2]]:24 = (#0 + #1)
+                                 // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:18 -> [[@LINE+1]]:24 = #1, #0
   for(int i = 0; i < 10; ++i) {  // CHECK-NEXT: File 0, [[@LINE]]:26 -> [[@LINE]]:29 = #1
     bar();                       // CHECK: File 0, [[@LINE-1]]:31 -> [[@LINE+1]]:4 = #1
   }

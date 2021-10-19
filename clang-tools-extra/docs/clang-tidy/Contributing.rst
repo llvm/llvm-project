@@ -27,7 +27,7 @@ There are a few tools particularly useful when developing clang-tidy checks:
   * `clang-check`_ with the ``-ast-dump`` (and optionally ``-ast-dump-filter``)
     provides a convenient way to dump AST of a C++ program.
 
-If CMake is configured with ``CLANG_ENABLE_STATIC_ANALYZER``,
+If CMake is configured with ``CLANG_TIDY_ENABLE_STATIC_ANALYZER=NO``,
 :program:`clang-tidy` will not be built with support for the
 ``clang-analyzer-*`` checks or the ``mpi-*`` checks.
 
@@ -128,7 +128,7 @@ style used in the project. For code reviews we mostly use `LLVM Phabricator`_.
 
 Next, you need to decide which module the check belongs to. Modules
 are located in subdirectories of `clang-tidy/
-<https://github.com/llvm/llvm-project/tree/master/clang-tools-extra/clang-tidy/>`_
+<https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clang-tidy/>`_
 and contain checks targeting a certain aspect of code quality (performance,
 readability, etc.), certain coding style or standard (Google, LLVM, CERT, etc.)
 or a widely used API (e.g. MPI). Their names are same as user-facing check
@@ -211,7 +211,7 @@ can further inspect them and report diagnostics.
 
 (If you want to see an example of a useful check, look at
 `clang-tidy/google/ExplicitConstructorCheck.h
-<https://github.com/llvm/llvm-project/blob/master/clang-tools-extra/clang-tidy/google/ExplicitConstructorCheck.h>`_
+<https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/google/ExplicitConstructorCheck.h>`_
 and `clang-tidy/google/ExplicitConstructorCheck.cpp
 <https://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-tidy/google/ExplicitConstructorCheck.cpp>`_).
 

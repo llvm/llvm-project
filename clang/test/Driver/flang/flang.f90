@@ -13,7 +13,7 @@
 ! * (no type specified, resulting in an object file)
 
 ! All invocations should begin with flang -fc1, consume up to here.
-! ALL-LABEL: "{{[^"]*}}flang" "-fc1"
+! ALL-LABEL: "{{[^"]*}}flang-new" "-fc1"
 
 ! Check that f90 files are not treated as "previously preprocessed"
 ! ... in --driver-mode=flang.
@@ -23,7 +23,6 @@
 ! CHECK-E-DAG: "-o" "-"
 
 ! RUN: %clang --driver-mode=flang -### -emit-ast           %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-AST %s
-! CHECK-EMIT-AST-DAG: "-triple"
 ! CHECK-EMIT-AST-DAG: "-emit-ast"
 ! CHECK-EMIT-AST-DAG: "-o" "{{[^"]*}}.ast"
 

@@ -11,10 +11,10 @@
 
 #      LLVM-64:Relocations [
 # LLVM-64-NEXT:  Section (2) .rel.text {
-# LLVM-64-NEXT:    0x0 R_X86_64_NONE rel_0 0x0
-# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rel_neg 0x0
-# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rel_pos 0x0
-# LLVM-64-NEXT:    0x9 R_X86_64_64 rel_64 0x0
+# LLVM-64-NEXT:    0x0 R_X86_64_NONE rel_0
+# LLVM-64-NEXT:    0x1 R_X86_64_PC32 rel_neg
+# LLVM-64-NEXT:    0x5 R_X86_64_PLT32 rel_pos
+# LLVM-64-NEXT:    0x9 R_X86_64_64 rel_64
 # LLVM-64-NEXT:  }
 # LLVM-64-NEXT:  Section (3) .rela.text {
 # LLVM-64-NEXT:    0x0 R_X86_64_NONE rela_0 0x0
@@ -60,25 +60,21 @@
 # LLVM-EXPAND-64-NEXT:      Offset: 0x0
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_NONE (0)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_0 (1)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x1
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PC32 (2)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_neg (2)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x5
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_PLT32 (4)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_pos (3)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:    Relocation {
 # LLVM-EXPAND-64-NEXT:      Offset: 0x9
 # LLVM-EXPAND-64-NEXT:      Type: R_X86_64_64 (1)
 # LLVM-EXPAND-64-NEXT:      Symbol: rel_64 (4)
-# LLVM-EXPAND-64-NEXT:      Addend: 0x0
 # LLVM-EXPAND-64-NEXT:    }
 # LLVM-EXPAND-64-NEXT:  }
 # LLVM-EXPAND-64-NEXT:  Section (3) .rela.text {
@@ -211,7 +207,7 @@ Symbols:
 
 # BROKEN-REL-LLVM:      Relocations [
 # BROKEN-REL-LLVM-NEXT:   Section (2) .rel.text {
-# BROKEN-REL-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has an invalid sh_entsize: 1
+# BROKEN-REL-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has invalid sh_entsize: expected 16, but got 1
 # BROKEN-REL-LLVM-NEXT:   }
 # BROKEN-REL-LLVM-NEXT:   Section (3) .rela.text {
 # BROKEN-REL-LLVM-NEXT:     0x0 R_X86_64_NONE rela_0 0x0
@@ -224,7 +220,7 @@ Symbols:
 
 # BROKEN-REL-GNU:      Relocation section '.rel.text' at offset 0x51 contains 64 entries:
 # BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
-# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has an invalid sh_entsize: 1
+# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has invalid sh_entsize: expected 16, but got 1
 # BROKEN-REL-GNU:      Relocation section '.rela.text' at offset 0x91 contains 5 entries:
 # BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
 # BROKEN-REL-GNU-NEXT: 0000000000000000  0000000500000000 R_X86_64_NONE  0000000000000000 rela_0 + 0
@@ -243,13 +239,13 @@ Symbols:
 
 # BROKEN-RELA-LLVM:      Relocations [
 # BROKEN-RELA-LLVM-NEXT:   Section (2) .rel.text {
-# BROKEN-RELA-LLVM-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
-# BROKEN-RELA-LLVM-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# BROKEN-RELA-LLVM-NEXT:     0x0 R_X86_64_NONE rel_0{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x1 R_X86_64_PC32 rel_neg{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x5 R_X86_64_PLT32 rel_pos{{$}}
+# BROKEN-RELA-LLVM-NEXT:     0x9 R_X86_64_64 rel_64{{$}}
 # BROKEN-RELA-LLVM-NEXT:   }
 # BROKEN-RELA-LLVM-NEXT:   Section (3) .rela.text {
-# BROKEN-RELA-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
+# BROKEN-RELA-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has invalid sh_entsize: expected 24, but got 1
 # BROKEN-RELA-LLVM-NEXT:   }
 # BROKEN-RELA-LLVM-NEXT: ]
 
@@ -262,7 +258,7 @@ Symbols:
 # BROKEN-RELA-GNU-EMPTY:
 # BROKEN-RELA-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 120 entries:
 # BROKEN-RELA-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
+# BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has invalid sh_entsize: expected 24, but got 1
 
 ## Case C: check the case when relocations can't be read from SHT_REL/SHT_RELA sections
 ##         because of broken sh_link fields.
@@ -300,9 +296,9 @@ Symbols:
 
 #      LLVM-32:Relocations [
 # LLVM-32-NEXT:  Section (2) .rel.text {
-# LLVM-32-NEXT:    0x0 R_386_NONE rel_0 0x0
-# LLVM-32-NEXT:    0x1 R_386_PC32 rel_neg 0x0
-# LLVM-32-NEXT:    0x5 R_386_PLT32 rel_pos 0x0
+# LLVM-32-NEXT:    0x0 R_386_NONE rel_0
+# LLVM-32-NEXT:    0x1 R_386_PC32 rel_neg
+# LLVM-32-NEXT:    0x5 R_386_PLT32 rel_pos
 # LLVM-32-NEXT:  }
 # LLVM-32-NEXT:  Section (3) .rela.text {
 # LLVM-32-NEXT:    0x0 R_386_NONE rela_0 0x0
@@ -347,19 +343,16 @@ Symbols:
 # LLVM-EXPAND-32-NEXT:      Offset: 0x0
 # LLVM-EXPAND-32-NEXT:      Type: R_386_NONE (0)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_0 (1)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:    Relocation {
 # LLVM-EXPAND-32-NEXT:      Offset: 0x1
 # LLVM-EXPAND-32-NEXT:      Type: R_386_PC32 (2)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_neg (2)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:    Relocation {
 # LLVM-EXPAND-32-NEXT:      Offset: 0x5
 # LLVM-EXPAND-32-NEXT:      Type: R_386_PLT32 (4)
 # LLVM-EXPAND-32-NEXT:      Symbol: rel_pos (3)
-# LLVM-EXPAND-32-NEXT:      Addend: 0x0
 # LLVM-EXPAND-32-NEXT:    }
 # LLVM-EXPAND-32-NEXT:  }
 # LLVM-EXPAND-32-NEXT:  Section (3) .rela.text {
@@ -475,10 +468,10 @@ Symbols:
 # LLVM-SHNAME:      Relocations [
 # LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_REL section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # LLVM-SHNAME-NEXT:   Section (2) <?> {
-# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
-# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
-# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
-# LLVM-SHNAME-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rel_0{{$}}
+# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rel_neg{{$}}
+# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rel_pos{{$}}
+# LLVM-SHNAME-NEXT:     0x9 R_X86_64_64 rel_64{{$}}
 # LLVM-SHNAME-NEXT:   }
 # LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_RELA section with index 3: a section [index 3] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
 # LLVM-SHNAME-NEXT:   Section (3) <?> {
@@ -505,3 +498,41 @@ Symbols:
 # GNU-SHNAME-NEXT: 0000000000000005  0000000700000004 R_X86_64_PLT32 0000000000000002 rela_pos + 2
 # GNU-SHNAME-NEXT: ffffffffffffffff  0000000800000001 R_X86_64_64    0000000000000003 rela_minneg - 8000000000000000
 # GNU-SHNAME-NEXT: 0000000000000009  000000090000000b R_X86_64_32S   ffffffffffffffff rela_maxpos + 7fffffffffffffff
+
+## Check that we report a warning when a relocation has a
+## symbol index past the end of the symbol table
+
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-readobj --relocs %t3 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: -DFILE=%t3 --check-prefix=LLVM-SYMNDX
+# RUN: llvm-readelf --relocs %t3 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: -DFILE=%t3 --check-prefix=GNU-SYMNDX
+
+# LLVM-SYMNDX:      Relocations [
+# LLVM-SYMNDX-NEXT:   Section (1) .rela.text {
+# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 0 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
+# LLVM-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
+# LLVM-SYMNDX-NEXT:   }
+# LLVM-SYMNDX-NEXT: ]
+
+# GNU-SYMNDX:      Relocation section '.rela.text' at offset 0x40 contains 2 entries:
+# GNU-SYMNDX-NEXT:     Offset             Info             Type     Symbol's Value  Symbol's Name + Addend
+# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 0 in SHT_RELA section with index 1: unable to read an entry with index 2 from SHT_SYMTAB section with index 2: can't read an entry at 0x30: it goes past the end of the section (0x30)
+# GNU-SYMNDX-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 1: unable to read an entry with index 3 from SHT_SYMTAB section with index 2: can't read an entry at 0x48: it goes past the end of the section (0x30)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Relocations:
+      - Type:   R_X86_64_NONE
+        Symbol: 0x2
+      - Type:   R_X86_64_NONE
+        Symbol: 0x3
+Symbols:
+  - Name: foo

@@ -6,7 +6,7 @@
 
 // This work was done in pursuit of <rdar://13338582>.
 
-// CHECK-LABEL: define void @testFloat(float*
+// CHECK-LABEL: define{{.*}} void @testFloat(float*
 void testFloat(_Atomic(float) *fp) {
 // CHECK:      [[FP:%.*]] = alloca float*
 // CHECK-NEXT: [[X:%.*]] = alloca float
@@ -37,7 +37,7 @@ void testFloat(_Atomic(float) *fp) {
 // CHECK-NEXT: ret void
 }
 
-// CHECK: define void @testComplexFloat([[CF:{ float, float }]]*
+// CHECK: define{{.*}} void @testComplexFloat([[CF:{ float, float }]]*
 void testComplexFloat(_Atomic(_Complex float) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[CF]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[CF]], align 8
@@ -93,7 +93,7 @@ void testComplexFloat(_Atomic(_Complex float) *fp) {
 }
 
 typedef struct { short x, y, z, w; } S;
-// CHECK: define void @testStruct([[S:.*]]*
+// CHECK: define{{.*}} void @testStruct([[S:.*]]*
 void testStruct(_Atomic(S) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[S]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[S]], align 8
@@ -143,7 +143,7 @@ void testStruct(_Atomic(S) *fp) {
 }
 
 typedef struct { short x, y, z; } PS;
-// CHECK: define void @testPromotedStruct([[APS:.*]]*
+// CHECK: define{{.*}} void @testPromotedStruct([[APS:.*]]*
 void testPromotedStruct(_Atomic(PS) *fp) {
 // CHECK:      [[FP:%.*]] = alloca [[APS]]*, align 4
 // CHECK-NEXT: [[X:%.*]] = alloca [[APS]], align 8
@@ -203,7 +203,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr)
+  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store { %struct.PS, [2 x i8] }* %addr, { %struct.PS, [2 x i8] }** [[ADDR_ARG]], align 4
@@ -245,7 +245,7 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
+  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2
@@ -265,7 +265,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[ATOMIC_VAL64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_VAL]] to i64*
   // CHECK:   [[ATOMIC_RES64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_RES]] to i64*
   // CHECK:   [[VAL64:%.*]] = load i64, i64* [[ATOMIC_VAL64]], align 8
-  // CHECK:   [[RES:%.*]] = atomicrmw xchg i64* [[ADDR64]], i64 [[VAL64]] seq_cst
+  // CHECK:   [[RES:%.*]] = atomicrmw xchg i64* [[ADDR64]], i64 [[VAL64]] seq_cst, align 8
   // CHECK:   store i64 [[RES]], i64* [[ATOMIC_RES64]], align 8
   // CHECK:   [[ATOMIC_RES_STRUCT:%.*]] = bitcast i64* [[ATOMIC_RES64]] to %struct.PS*
   // CHECK:   [[AGG_RESULT8:%.*]] = bitcast %struct.PS* %agg.result to i8*
@@ -275,7 +275,7 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
 }
 
 _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
-  // CHECK:   define zeroext i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %desired, %struct.PS* %new) #0 {
+  // CHECK:   define{{.*}} zeroext i1 @test_promoted_cmpxchg({ %struct.PS, [2 x i8] }* %addr, %struct.PS* %desired, %struct.PS* %new) #0 {
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[DESIRED_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NEW_ARG:%.*]] = alloca %struct.PS*, align 4
@@ -303,7 +303,7 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   [[ATOMIC_NEW64:%.*]] = bitcast { %struct.PS, [2 x i8] }* [[ATOMIC_NEW]] to i64*
   // CHECK:   [[ATOMIC_DESIRED_VAL64:%.*]] = load i64, i64* [[ATOMIC_DESIRED64]], align 8
   // CHECK:   [[ATOMIC_NEW_VAL64:%.*]] = load i64, i64* [[ATOMIC_NEW64]], align 8
-  // CHECK:   [[RES:%.*]] = cmpxchg i64* [[ADDR64]], i64 [[ATOMIC_DESIRED_VAL64]], i64 [[ATOMIC_NEW_VAL64]] seq_cst seq_cst
+  // CHECK:   [[RES:%.*]] = cmpxchg i64* [[ADDR64]], i64 [[ATOMIC_DESIRED_VAL64]], i64 [[ATOMIC_NEW_VAL64]] seq_cst seq_cst, align 8
   // CHECK:   [[RES_VAL64:%.*]] = extractvalue { i64, i1 } [[RES]], 0
   // CHECK:   [[RES_BOOL:%.*]] = extractvalue { i64, i1 } [[RES]], 1
   // CHECK:   br i1 [[RES_BOOL]], label {{%.*}}, label {{%.*}}

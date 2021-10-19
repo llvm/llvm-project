@@ -361,3 +361,30 @@ namespace PR6181 {
   };
   
 }
+
+// Check that we do not crash on invalid code that leads to invalid base.
+namespace {
+template <typename X>
+class Foo {};
+
+template <int Y>
+class Bar;
+
+template <typename Z>
+class Bar<0> : public Foo<Z> { // expected-error{{partial specialization of 'Bar' does not use any of its template parameters}}
+  Bar() : Foo<Z>() {}
+};
+} // namespace
+
+namespace Crash {
+template<typename T>
+class Base {};
+
+template<typename T> class Foo;
+
+template <typename T>
+class Foo<int> : public Base<T> {}; // expected-error{{partial specialization of 'Foo' does not use any of its template parameters}}
+
+// verify that getASTRecordLayout doesn't crash on the ClassTemplateSpecializationDecl.
+constexpr int s = sizeof(Foo<int>);
+}

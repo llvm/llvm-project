@@ -34,8 +34,9 @@ protected:
     PMI_FPR512,
     PMI_GPR32,
     PMI_GPR64,
+    PMI_GPR128,
     PMI_FirstGPR = PMI_GPR32,
-    PMI_LastGPR = PMI_GPR64,
+    PMI_LastGPR = PMI_GPR128,
     PMI_FirstFPR = PMI_FPR16,
     PMI_LastFPR = PMI_FPR512,
     PMI_Min = PMI_FirstFPR,
@@ -48,16 +49,16 @@ protected:
   enum ValueMappingIdx {
     InvalidIdx = 0,
     First3OpsIdx = 1,
-    Last3OpsIdx = 22,
+    Last3OpsIdx = 25,
     DistanceBetweenRegBanks = 3,
-    FirstCrossRegCpyIdx = 25,
-    LastCrossRegCpyIdx = 39,
+    FirstCrossRegCpyIdx = 28,
+    LastCrossRegCpyIdx = 42,
     DistanceBetweenCrossRegCpy = 2,
-    FPExt16To32Idx = 41,
-    FPExt16To64Idx = 43,
-    FPExt32To64Idx = 45,
-    FPExt64To128Idx = 47,
-    Shift64Imm = 49
+    FPExt16To32Idx = 44,
+    FPExt16To64Idx = 46,
+    FPExt32To64Idx = 48,
+    FPExt64To128Idx = 50,
+    Shift64Imm = 52,
   };
 
   static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,
@@ -114,17 +115,20 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
   const InstructionMapping &
   getSameKindOfOperandsMapping(const MachineInstr &MI) const;
 
-  /// Returns true if the output of \p MI must be stored on a FPR register.
+  /// Maximum recursion depth for hasFPConstraints.
+  const unsigned MaxFPRSearchDepth = 2;
+
+  /// \returns true if \p MI only uses and defines FPRs.
   bool hasFPConstraints(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                     const TargetRegisterInfo &TRI) const;
+                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 
-  /// Returns true if the source registers of \p MI must all be FPRs.
+  /// \returns true if \p MI only uses FPRs.
   bool onlyUsesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                  const TargetRegisterInfo &TRI) const;
+                  const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 
-  /// Returns true if the destination register of \p MI must be a FPR.
+  /// \returns true if \p MI only defines FPRs.
   bool onlyDefinesFP(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                     const TargetRegisterInfo &TRI) const;
+                     const TargetRegisterInfo &TRI, unsigned Depth = 0) const;
 
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);

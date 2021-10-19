@@ -14,14 +14,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i8* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i8* %lsr.iv to <4 x i8>*
     %lsr.iv1416 = bitcast i8* %lsr.iv14 to <4 x i8>*
@@ -41,7 +41,7 @@
     br i1 %16, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %17 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %14)
+    %17 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -61,14 +61,14 @@
     br i1 %cmp10.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv15 = phi i8* [ %scevgep16, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i8* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv14 = bitcast i8* %lsr.iv to <4 x i8>*
     %lsr.iv1517 = bitcast i8* %lsr.iv15 to <4 x i8>*
@@ -88,7 +88,7 @@
     br i1 %16, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %17 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %14)
+    %17 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -108,14 +108,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i16* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i16* %lsr.iv to <4 x i16>*
     %lsr.iv1416 = bitcast i16* %lsr.iv14 to <4 x i16>*
@@ -135,7 +135,7 @@
     br i1 %16, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %17 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %14)
+    %17 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -155,14 +155,14 @@
     br i1 %cmp10.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv15 = phi i16* [ %scevgep16, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i16* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %14, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %15, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %15, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv14 = bitcast i16* %lsr.iv to <4 x i16>*
     %lsr.iv1517 = bitcast i16* %lsr.iv15 to <4 x i16>*
@@ -182,7 +182,7 @@
     br i1 %16, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %17 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %14)
+    %17 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %14)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -203,14 +203,14 @@
     br i1 %cmp8.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv13 = phi i32* [ %scevgep14, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %13, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %13, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv12 = bitcast i32* %lsr.iv to <4 x i32>*
     %lsr.iv1315 = bitcast i32* %lsr.iv13 to <4 x i32>*
@@ -228,7 +228,7 @@
     br i1 %14, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %15 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %12)
+    %15 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %12)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -249,14 +249,14 @@
     br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
 
   vector.ph:                                        ; preds = %entry
-    call void @llvm.set.loop.iterations.i32(i32 %5)
+    %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
     %lsr.iv14 = phi i32* [ %scevgep15, %vector.body ], [ %b, %vector.ph ]
     %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %a, %vector.ph ]
     %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %12, %vector.body ]
-    %6 = phi i32 [ %5, %vector.ph ], [ %13, %vector.body ]
+    %6 = phi i32 [ %start, %vector.ph ], [ %13, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
     %lsr.iv13 = bitcast i32* %lsr.iv to <4 x i32>*
     %lsr.iv1416 = bitcast i32* %lsr.iv14 to <4 x i32>*
@@ -274,7 +274,7 @@
     br i1 %14, label %vector.body, label %middle.block
 
   middle.block:                                     ; preds = %vector.body
-    %15 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %12)
+    %15 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %12)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -285,8 +285,8 @@
   declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32 immarg, <4 x i1>, <4 x i8>)
   declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-  declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
-  declare void @llvm.set.loop.iterations.i32(i32)
+  declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+  declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)
 
@@ -333,19 +333,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 0, $noreg :: (load 4 from %ir.lsr.iv13, align 1)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 0, $noreg :: (load 4 from %ir.lsr.iv1416, align 1)
-  ; CHECK:   renamable $q1 = nuw nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 0, $noreg, $noreg :: (load (s32) from %ir.lsr.iv13, align 1)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 0, $noreg, $noreg :: (load (s32) from %ir.lsr.iv1416, align 1)
+  ; CHECK:   renamable $q1 = nuw nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -371,29 +371,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 1, renamable $vpr :: (load 4 from %ir.lsr.iv13, align 1)
-    renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 1, renamable $vpr :: (load 4 from %ir.lsr.iv1416, align 1)
+    renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 1, renamable $vpr, $noreg :: (load (s32) from %ir.lsr.iv13, align 1)
+    renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 1, renamable $vpr, $noreg :: (load (s32) from %ir.lsr.iv1416, align 1)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = nuw nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = nuw nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, $noreg, renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...
@@ -439,19 +439,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 0, $noreg :: (load 4 from %ir.lsr.iv14, align 1)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 0, $noreg :: (load 4 from %ir.lsr.iv1517, align 1)
-  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 0, $noreg, $noreg :: (load (s32) from %ir.lsr.iv14, align 1)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 0, $noreg, $noreg :: (load (s32) from %ir.lsr.iv1517, align 1)
+  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -477,29 +477,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 1, renamable $vpr :: (load 4 from %ir.lsr.iv14, align 1)
-    renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 1, renamable $vpr :: (load 4 from %ir.lsr.iv1517, align 1)
+    renamable $r0, renamable $q1 = MVE_VLDRBU32_post killed renamable $r0, 4, 1, renamable $vpr, $noreg :: (load (s32) from %ir.lsr.iv14, align 1)
+    renamable $r1, renamable $q2 = MVE_VLDRBU32_post killed renamable $r1, 4, 1, renamable $vpr, $noreg :: (load (s32) from %ir.lsr.iv1517, align 1)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, killed renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...
@@ -546,19 +546,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg :: (load 8 from %ir.lsr.iv13, align 2)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, $noreg :: (load 8 from %ir.lsr.iv1416, align 2)
-  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv13, align 2)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv1416, align 2)
+  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -584,29 +584,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv13, align 2)
-    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv1416, align 2)
+    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr, $noreg :: (load (s64) from %ir.lsr.iv13, align 2)
+    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, renamable $vpr, $noreg :: (load (s64) from %ir.lsr.iv1416, align 2)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, $noreg, renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...
@@ -652,19 +652,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg :: (load 8 from %ir.lsr.iv14, align 2)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, $noreg :: (load 8 from %ir.lsr.iv1517, align 2)
-  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv14, align 2)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv1517, align 2)
+  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -690,29 +690,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv14, align 2)
-    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, renamable $vpr :: (load 8 from %ir.lsr.iv1517, align 2)
+    renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 1, renamable $vpr, $noreg :: (load (s64) from %ir.lsr.iv14, align 2)
+    renamable $r1, renamable $q2 = MVE_VLDRHS32_post killed renamable $r1, 8, 1, renamable $vpr, $noreg :: (load (s64) from %ir.lsr.iv1517, align 2)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, killed renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...
@@ -758,19 +758,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.lsr.iv12, align 4)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg :: (load 16 from %ir.lsr.iv1315, align 4)
-  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv12, align 4)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv1315, align 4)
+  ; CHECK:   renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -796,29 +796,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv12, align 4)
-    renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1315, align 4)
+    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv12, align 4)
+    renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv1315, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, undef renamable $q1
+    renamable $q1 = nsw MVE_VMULi32 killed renamable $q2, killed renamable $q1, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q0, killed renamable $q1, 1, killed renamable $vpr, $noreg, renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...
@@ -864,19 +864,19 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   dead $r7 = frame-setup tMOVr $sp, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
+  ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
   ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.vector.body (align 4):
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $q0, $r0, $r1
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg :: (load 16 from %ir.lsr.iv13, align 4)
-  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg :: (load 16 from %ir.lsr.iv1416, align 4)
-  ; CHECK:   renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, undef renamable $q1
-  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, killed renamable $q0
+  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv13, align 4)
+  ; CHECK:   renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 0, $noreg, $noreg :: (load (s128) from %ir.lsr.iv1416, align 4)
+  ; CHECK:   renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK:   renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 0, killed $noreg, $noreg, killed renamable $q0
   ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
-  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+  ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
   ; CHECK:   frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x50000000)
@@ -902,29 +902,29 @@ body:             |
     renamable $r12 = t2SUBri killed renamable $r3, 4, 14 /* CC::al */, $noreg, $noreg
     renamable $r3, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
     renamable $lr = nuw nsw t2ADDrs killed renamable $r3, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
-    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
-    t2DoLoopStart renamable $lr
+    renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q0
+    $lr = t2DoLoopStart renamable $lr
 
   bb.2.vector.body (align 4):
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $q0, $r0, $r1, $r2
 
-    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg
+    renamable $vpr = MVE_VCTP32 renamable $r2, 0, $noreg, $noreg
     MVE_VPST 4, implicit $vpr
-    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv13, align 4)
-    renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1416, align 4)
+    renamable $r0, renamable $q1 = MVE_VLDRWU32_post killed renamable $r0, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv13, align 4)
+    renamable $r1, renamable $q2 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr, $noreg :: (load (s128) from %ir.lsr.iv1416, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-    renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, undef renamable $q1
+    renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, $noreg, undef renamable $q1
     MVE_VPST 8, implicit $vpr
-    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, killed renamable $q0
+    renamable $q0 = MVE_VADDi32 killed renamable $q1, killed renamable $q2, 1, killed renamable $vpr, $noreg, killed renamable $q0
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
     tB %bb.3, 14 /* CC::al */, $noreg
 
   bb.3.middle.block:
     liveins: $q0
 
-    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
+    renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg, $noreg
     frame-destroy tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
 
 ...

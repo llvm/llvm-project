@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++1.0
 
 int G2 = 0;
 global int G3 = 0;
@@ -17,6 +18,9 @@ extern global float g_global_extern_var;
 extern local float g_local_extern_var;     // expected-error {{extern variable must reside in global or constant address space}}
 extern private float g_private_extern_var; // expected-error {{extern variable must reside in global or constant address space}}
 extern generic float g_generic_extern_var; // expected-error {{extern variable must reside in global or constant address space}}
+
+static void kernel bar() { // expected-error{{kernel functions cannot be declared static}}
+}
 
 void kernel foo() {
   constant int L1 = 0;

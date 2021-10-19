@@ -28,9 +28,9 @@
 ; PATTERN-MATCHING-OPTS-NEXT:        for (int c4 = 0; c4 <= 1023; c4 += 1)
 ; PATTERN-MATCHING-OPTS-NEXT:          CopyStmt_0(0, c3, c4);
 ; PATTERN-MATCHING-OPTS-NEXT:      for (int c2 = 0; c2 <= 10; c2 += 1) {
-; PATTERN-MATCHING-OPTS-NEXT:        for (int c3 = 96 * c2; c3 <= min(1023, 96 * c2 + 95); c3 += 1)
-; PATTERN-MATCHING-OPTS-NEXT:          for (int c4 = 256 * c1; c4 <= 256 * c1 + 255; c4 += 1)
-; PATTERN-MATCHING-OPTS-NEXT:            CopyStmt_1(c3, c4, 0);
+; PATTERN-MATCHING-OPTS-NEXT:        for (int c6 = 96 * c2; c6 <= min(1023, 96 * c2 + 95); c6 += 1)
+; PATTERN-MATCHING-OPTS-NEXT:          for (int c7 = 256 * c1; c7 <= 256 * c1 + 255; c7 += 1)
+; PATTERN-MATCHING-OPTS-NEXT:            CopyStmt_1(0, c1, c2, c6, c7);
 ; PATTERN-MATCHING-OPTS-NEXT:        // 1st level tiling - Points
 ; PATTERN-MATCHING-OPTS-NEXT:        // Register tiling - Tiles
 ; PATTERN-MATCHING-OPTS-NEXT:        for (int c3 = 0; c3 <= 127; c3 += 1)

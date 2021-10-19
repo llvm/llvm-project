@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -code-model=small < %s | FileCheck %s --check-prefix=SMALL
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN: -code-model=large < %s | FileCheck %s --check-prefix=LARGE
 
 @a = common global i32 0

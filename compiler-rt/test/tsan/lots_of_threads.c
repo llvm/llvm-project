@@ -10,18 +10,21 @@ void *thr(void *arg) {
 }
 
 int main() {
-  const int kThreads = 10;
+  const int kThreads = 300;
+  const int kIters = 10;
   barrier_init(&barrier, kThreads + 1);
-  pthread_t t[kThreads];
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setstacksize(&attr, 16 << 20);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-  for (int i = 0; i < kThreads; i++)
-    pthread_create(&t[i], &attr, thr, 0);
+  for (int iter = 0; iter < kIters; iter++) {
+    pthread_t threads[kThreads];
+    for (int t = 0; t < kThreads; t++)
+      pthread_create(&threads[t], &attr, thr, 0);
+    barrier_wait(&barrier);
+    for (int t = 0; t < kThreads; t++)
+      pthread_join(threads[t], 0);
+  }
   pthread_attr_destroy(&attr);
-  barrier_wait(&barrier);
-  sleep(1);
   fprintf(stderr, "DONE\n");
   return 0;
 }

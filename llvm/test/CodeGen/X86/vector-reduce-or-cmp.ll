@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BWVL
 
 ;
 ; vXi64
@@ -31,7 +31,7 @@ define i1 @test_v2i64(<2 x i64> %a0) {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %a0)
+  %1 = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %a0)
   %2 = icmp eq i64 %1, 0
   ret i1 %2
 }
@@ -60,7 +60,7 @@ define i1 @test_v4i64(<4 x i64> %a0) {
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %1 = call i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64> %a0)
+  %1 = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %a0)
   %2 = icmp ne i64 %1, 0
   ret i1 %2
 }
@@ -111,7 +111,7 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i64 @llvm.experimental.vector.reduce.or.v8i64(<8 x i64> %a0)
+  %1 = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> %a0)
   %2 = icmp eq i64 %1, 0
   ret i1 %2
 }
@@ -175,7 +175,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i64 @llvm.experimental.vector.reduce.or.v16i64(<16 x i64> %a0)
+  %1 = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> %a0)
   %2 = icmp ne i64 %1, 0
   ret i1 %2
 }
@@ -198,7 +198,7 @@ define i1 @test_v2i32(<2 x i32> %a0) {
 ; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %a0)
   %2 = icmp eq i32 %1, 0
   ret i1 %2
 }
@@ -224,7 +224,7 @@ define i1 @test_v4i32(<4 x i32> %a0) {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a0)
   %2 = icmp ne i32 %1, 0
   ret i1 %2
 }
@@ -253,7 +253,7 @@ define i1 @test_v8i32(<8 x i32> %a0) {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
   %2 = icmp eq i32 %1, 0
   ret i1 %2
 }
@@ -304,7 +304,7 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v16i32(<16 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> %a0)
   %2 = icmp ne i32 %1, 0
   ret i1 %2
 }
@@ -368,7 +368,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v32i32(<32 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v32i32(<32 x i32> %a0)
   %2 = icmp eq i32 %1, 0
   ret i1 %2
 }
@@ -391,7 +391,7 @@ define i1 @test_v2i16(<2 x i16> %a0) {
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v2i16(<2 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v2i16(<2 x i16> %a0)
   %2 = icmp eq i16 %1, 0
   ret i1 %2
 }
@@ -410,7 +410,7 @@ define i1 @test_v4i16(<4 x i16> %a0) {
 ; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> %a0)
   %2 = icmp ne i16 %1, 0
   ret i1 %2
 }
@@ -436,7 +436,7 @@ define i1 @test_v8i16(<8 x i16> %a0) {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %a0)
   %2 = icmp eq i16 %1, 0
   ret i1 %2
 }
@@ -465,7 +465,7 @@ define i1 @test_v16i16(<16 x i16> %a0) {
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %a0)
   %2 = icmp ne i16 %1, 0
   ret i1 %2
 }
@@ -516,7 +516,7 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v32i16(<32 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v32i16(<32 x i16> %a0)
   %2 = icmp eq i16 %1, 0
   ret i1 %2
 }
@@ -580,7 +580,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v64i16(<64 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v64i16(<64 x i16> %a0)
   %2 = icmp ne i16 %1, 0
   ret i1 %2
 }
@@ -603,7 +603,7 @@ define i1 @test_v2i8(<2 x i8> %a0) {
 ; AVX-NEXT:    testw %ax, %ax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v2i8(<2 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> %a0)
   %2 = icmp eq i8 %1, 0
   ret i1 %2
 }
@@ -622,7 +622,7 @@ define i1 @test_v4i8(<4 x i8> %a0) {
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v4i8(<4 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> %a0)
   %2 = icmp ne i8 %1, 0
   ret i1 %2
 }
@@ -641,7 +641,7 @@ define i1 @test_v8i8(<8 x i8> %a0) {
 ; AVX-NEXT:    testq %rax, %rax
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> %a0)
   %2 = icmp eq i8 %1, 0
   ret i1 %2
 }
@@ -667,7 +667,7 @@ define i1 @test_v16i8(<16 x i8> %a0) {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %a0)
   %2 = icmp ne i8 %1, 0
   ret i1 %2
 }
@@ -696,7 +696,7 @@ define i1 @test_v32i8(<32 x i8> %a0) {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> %a0)
   %2 = icmp eq i8 %1, 0
   ret i1 %2
 }
@@ -747,7 +747,7 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v64i8(<64 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v64i8(<64 x i8> %a0)
   %2 = icmp ne i8 %1, 0
   ret i1 %2
 }
@@ -811,7 +811,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v128i8(<128 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v128i8(<128 x i8> %a0)
   %2 = icmp eq i8 %1, 0
   ret i1 %2
 }
@@ -832,16 +832,16 @@ define i1 @trunc_v2i64(<2 x i64> %a0) {
 ;
 ; SSE41-LABEL: trunc_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: trunc_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vptest {{.*}}(%rip), %xmm0
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %1 = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %a0)
+  %1 = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %a0)
   %2 = trunc i64 %1 to i16
   %3 = icmp eq i16 %2, 0
   ret i1 %3
@@ -851,7 +851,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE2-LABEL: mask_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -862,13 +862,13 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE41-LABEL: mask_v8i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: mask_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -888,7 +888,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %a0)
+  %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
   %2 = and i32 %1, 2147483648
   %3 = icmp eq i32 %2, 0
   ret i1 %3
@@ -898,7 +898,7 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
 ; SSE2-LABEL: trunc_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -909,13 +909,13 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
 ; SSE41-LABEL: trunc_v16i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -935,7 +935,7 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %a0)
+  %1 = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %a0)
   %2 = trunc i16 %1 to i8
   %3 = icmp ne i8 %2, 0
   ret i1 %3
@@ -951,7 +951,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE2-NEXT:    por %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
@@ -968,7 +968,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE41-NEXT:    por %xmm4, %xmm2
 ; SSE41-NEXT:    por %xmm3, %xmm2
 ; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -977,7 +977,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1003,7 +1003,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call i8 @llvm.experimental.vector.reduce.or.v128i8(<128 x i8> %a0)
+  %1 = call i8 @llvm.vector.reduce.or.v128i8(<128 x i8> %a0)
   %2 = and i8 %1, 1
   %3 = icmp eq i8 %2, 0
   ret i1 %3
@@ -1014,7 +1014,7 @@ define zeroext i1 @PR44781(%struct.Box* %0) {
 ; SSE2-LABEL: PR44781:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -1025,46 +1025,173 @@ define zeroext i1 @PR44781(%struct.Box* %0) {
 ; SSE41-LABEL: PR44781:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqu (%rdi), %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR44781:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX-NEXT:    vptest {{.*}}(%rip), %xmm0
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %2 = bitcast %struct.Box* %0 to <4 x i32>*
   %3 = load <4 x i32>, <4 x i32>* %2, align 4
-  %4 = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %3)
+  %4 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %3)
   %5 = and i32 %4, 15
   %6 = icmp eq i32 %5, 0
   ret i1 %6
 }
 
-declare i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v8i64(<8 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v16i64(<16 x i64>)
+define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
+; SSE2-LABEL: mask_v3i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, %edx
+; SSE2-NEXT:    orl %ecx, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    testb $1, %dl
+; SSE2-NEXT:    je .LBB27_2
+; SSE2-NEXT:  # %bb.1:
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    retq
+; SSE2-NEXT:  .LBB27_2:
+; SSE2-NEXT:    movl $1, %eax
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: mask_v3i1:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm1
+; SSE41-NEXT:    pextrd $1, %xmm1, %eax
+; SSE41-NEXT:    movd %xmm1, %ecx
+; SSE41-NEXT:    pextrd $2, %xmm1, %edx
+; SSE41-NEXT:    orl %eax, %edx
+; SSE41-NEXT:    orl %ecx, %edx
+; SSE41-NEXT:    testb $1, %dl
+; SSE41-NEXT:    je .LBB27_2
+; SSE41-NEXT:  # %bb.1:
+; SSE41-NEXT:    xorl %eax, %eax
+; SSE41-NEXT:    retq
+; SSE41-NEXT:  .LBB27_2:
+; SSE41-NEXT:    movl $1, %eax
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: mask_v3i1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX1-NEXT:    vmovd %xmm0, %ecx
+; AVX1-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    testb $1, %dl
+; AVX1-NEXT:    je .LBB27_2
+; AVX1-NEXT:  # %bb.1:
+; AVX1-NEXT:    xorl %eax, %eax
+; AVX1-NEXT:    retq
+; AVX1-NEXT:  .LBB27_2:
+; AVX1-NEXT:    movl $1, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: mask_v3i1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX2-NEXT:    vmovd %xmm0, %ecx
+; AVX2-NEXT:    vpextrd $2, %xmm0, %edx
+; AVX2-NEXT:    orl %eax, %edx
+; AVX2-NEXT:    orl %ecx, %edx
+; AVX2-NEXT:    testb $1, %dl
+; AVX2-NEXT:    je .LBB27_2
+; AVX2-NEXT:  # %bb.1:
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    retq
+; AVX2-NEXT:  .LBB27_2:
+; AVX2-NEXT:    movl $1, %eax
+; AVX2-NEXT:    retq
+;
+; AVX512BW-LABEL: mask_v3i1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpcmpneqd %zmm1, %zmm0, %k0
+; AVX512BW-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512BW-NEXT:    korw %k1, %k0, %k1
+; AVX512BW-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512BW-NEXT:    korw %k0, %k1, %k0
+; AVX512BW-NEXT:    kmovd %k0, %eax
+; AVX512BW-NEXT:    testb $1, %al
+; AVX512BW-NEXT:    je .LBB27_2
+; AVX512BW-NEXT:  # %bb.1:
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+; AVX512BW-NEXT:  .LBB27_2:
+; AVX512BW-NEXT:    movl $1, %eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: mask_v3i1:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpcmpneqd %xmm1, %xmm0, %k0
+; AVX512BWVL-NEXT:    kshiftrw $2, %k0, %k1
+; AVX512BWVL-NEXT:    korw %k1, %k0, %k1
+; AVX512BWVL-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512BWVL-NEXT:    korw %k0, %k1, %k0
+; AVX512BWVL-NEXT:    kmovd %k0, %eax
+; AVX512BWVL-NEXT:    testb $1, %al
+; AVX512BWVL-NEXT:    je .LBB27_2
+; AVX512BWVL-NEXT:  # %bb.1:
+; AVX512BWVL-NEXT:    xorl %eax, %eax
+; AVX512BWVL-NEXT:    retq
+; AVX512BWVL-NEXT:  .LBB27_2:
+; AVX512BWVL-NEXT:    movl $1, %eax
+; AVX512BWVL-NEXT:    retq
+  %1 = icmp ne <3 x i32> %a, %b
+  %2 = call i1 @llvm.vector.reduce.or.v3i1(<3 x i1> %1)
+  br i1 %2, label %3, label %4
+3:
+  ret i32 0
+4:
+  ret i32 1
+}
 
-declare i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v16i32(<16 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v32i32(<32 x i32>)
+declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.or.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.or.v8i64(<8 x i64>)
+declare i64 @llvm.vector.reduce.or.v16i64(<16 x i64>)
 
-declare i16 @llvm.experimental.vector.reduce.or.v2i16(<2 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v32i16(<32 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v64i16(<64 x i16>)
+declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.or.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.or.v32i32(<32 x i32>)
 
-declare i8 @llvm.experimental.vector.reduce.or.v2i8(<2 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v4i8(<4 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v64i8(<64 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v128i8(<128 x i8>)
+declare i16 @llvm.vector.reduce.or.v2i16(<2 x i16>)
+declare i16 @llvm.vector.reduce.or.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.or.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.or.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.or.v32i16(<32 x i16>)
+declare i16 @llvm.vector.reduce.or.v64i16(<64 x i16>)
+
+declare i8 @llvm.vector.reduce.or.v2i8(<2 x i8>)
+declare i8 @llvm.vector.reduce.or.v4i8(<4 x i8>)
+declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.or.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.or.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.or.v64i8(<64 x i8>)
+declare i8 @llvm.vector.reduce.or.v128i8(<128 x i8>)
+
+declare i1 @llvm.vector.reduce.or.v3i1(<3 x i1>)

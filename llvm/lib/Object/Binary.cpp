@@ -44,7 +44,8 @@ StringRef Binary::getFileName() const { return Data.getBufferIdentifier(); }
 MemoryBufferRef Binary::getMemoryBufferRef() const { return Data; }
 
 Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
-                                                      LLVMContext *Context) {
+                                                       LLVMContext *Context,
+                                                       bool InitContent) {
   file_magic Type = identify_magic(Buffer.getBuffer());
 
   switch (Type) {
@@ -55,6 +56,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::elf_executable:
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
+  case file_magic::goff_object:
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:
@@ -73,7 +75,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::xcoff_object_32:
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
-    return ObjectFile::createSymbolicFile(Buffer, Type, Context);
+    return ObjectFile::createSymbolicFile(Buffer, Type, Context, InitContent);
   case file_magic::macho_universal_binary:
     return MachOUniversalBinary::create(Buffer);
   case file_magic::windows_resource:
@@ -93,17 +95,17 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   llvm_unreachable("Unexpected Binary File Type");
 }
 
-Expected<OwningBinary<Binary>> object::createBinary(StringRef Path,
-                                                    LLVMContext *Context) {
+Expected<OwningBinary<Binary>>
+object::createBinary(StringRef Path, LLVMContext *Context, bool InitContent) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
   if (std::error_code EC = FileOrErr.getError())
     return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
-      createBinary(Buffer->getMemBufferRef(), Context);
+      createBinary(Buffer->getMemBufferRef(), Context, InitContent);
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();

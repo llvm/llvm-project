@@ -1,0 +1,51 @@
+## This test is checking the handling of invalid/malformed note entries for
+## AMDGPU code object v3.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --match-full-lines --check-prefix=LLVM
+# RUN: llvm-readelf --notes %t.o | FileCheck %s --match-full-lines --check-prefix=GNU
+
+# LLVM:       Notes [
+# LLVM-NEXT:    NoteSection {
+# LLVM-NEXT:      Name: .note.nt_amdgpu_metadata
+# LLVM-NEXT:      Offset: 0x40
+# LLVM-NEXT:      Size: 0x28
+# LLVM-NEXT:      Note {
+# LLVM-NEXT:        Owner: AMDGPU
+# LLVM-NEXT:        Data size: 0x11
+# LLVM-NEXT:        Type: NT_AMDGPU_METADATA (AMDGPU Metadata)
+# LLVM-NEXT:        AMDGPU Metadata: Invalid AMDGPU Metadata
+# LLVM-NEXT:  ---
+# LLVM-NEXT:  0:               0
+# LLVM-NEXT:  amdhsa.kernels:
+# LLVM-NEXT:    - 0
+# LLVM-NEXT:  ...
+# LLVM-EMPTY:
+# LLVM-NEXT:      }
+# LLVM-NEXT:    }
+# LLVM-NEXT:  ]
+
+# GNU:      Displaying notes found in: .note.nt_amdgpu_metadata
+# GNU-NEXT:   Owner                Data size        Description
+# GNU-NEXT:   AMDGPU               0x00000011       NT_AMDGPU_METADATA (AMDGPU Metadata)
+# GNU-NEXT:     AMDGPU Metadata:
+# GNU-NEXT:         Invalid AMDGPU Metadata
+# GNU-NEXT: ---
+# GNU-NEXT: 0:               0
+# GNU-NEXT: amdhsa.kernels:
+# GNU-NEXT:   - 0
+# GNU-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:     .note.nt_amdgpu_metadata
+    Type:     SHT_NOTE
+    Notes:
+      - Name: AMDGPU
+        Type: NT_AMDGPU_METADATA
+        ## Desc contains 'amdhsa.kernels' without valid entries.
+        Desc: '82ae616d646873612e6b65726e656c7391'

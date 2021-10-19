@@ -4,19 +4,11 @@ set(lldbBase_SOURCES
     lldb.cpp
   )
 
-foreach(file
-        "${LLDB_SOURCE_DIR}/.git/logs/HEAD" # Git
-        "${LLDB_SOURCE_DIR}/.svn/wc.db"     # SVN 1.7
-        "${LLDB_SOURCE_DIR}/.svn/entries"   # SVN 1.6
-        )
-  if(EXISTS "${file}")
-    set(lldb_vc "${file}")
-    break()
-  endif()
-endforeach()
+
+find_first_existing_vc_file("${LLDB_SOURCE_DIR}" lldb_vc)
 
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
-set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
+set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake")
 
 if(lldb_vc AND LLVM_APPEND_VC_REV)
   set(lldb_source_dir ${LLDB_SOURCE_DIR})
@@ -33,9 +25,6 @@ add_custom_command(OUTPUT "${version_inc}"
 set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
-
-set_property(SOURCE lldb.cpp APPEND PROPERTY
-             COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
 
 list(APPEND lldbBase_SOURCES ${version_inc})
 

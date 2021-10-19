@@ -30,6 +30,8 @@ class MultilineCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr49408')
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
         self.build()

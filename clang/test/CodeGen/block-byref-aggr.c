@@ -13,7 +13,7 @@ void test0() {
 
  a = makeAgg();
 }
-// CHECK-LABEL:    define void @test0()
+// CHECK-LABEL:    define{{.*}} void @test0()
 // CHECK:      [[A:%.*]] = alloca [[BYREF:%.*]], align 8
 // CHECK-NEXT: alloca <{ i8*, i32, i32, i8*, %{{.*}}*, i8* }>, align 8
 // CHECK-NEXT: [[TEMP:%.*]] = alloca [[AGG]], align 4
@@ -40,7 +40,7 @@ void test1() {
   ^{ (void)a; (void)b; };
   a = b = makeAgg();
 }
-// CHECK-LABEL:    define void @test1()
+// CHECK-LABEL:    define{{.*}} void @test1()
 // CHECK:      [[A:%.*]] = alloca [[A_BYREF:%.*]], align 8
 // CHECK-NEXT: [[B:%.*]] = alloca [[B_BYREF:%.*]], align 8
 // CHECK-NEXT: alloca <{ i8*, i32, i32, i8*, %{{.*}}*, i8*, i8* }>, align 8

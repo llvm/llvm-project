@@ -254,10 +254,11 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         if (!MO.isReg())
           continue;
         Register Reg = MO.getReg();
-        if (isAnyVecReg(Reg, Partial)) {
+        // All operands need to be checked because there are instructions that
+        // operate on a partial register and produce a full register (such as
+        // XXPERMDIs).
+        if (isAnyVecReg(Reg, Partial))
           RelevantInstr = true;
-          break;
-        }
       }
 
       if (!RelevantInstr)

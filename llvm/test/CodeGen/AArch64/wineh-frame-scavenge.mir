@@ -1,0 +1,89 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+# Check where the stack variable is placed
+
+# CHECK:      - { id: 0, name: '', type: default, offset: -4, size: 4, alignment: 4,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT:     local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT:     debug-info-location: '' }
+# CHECK-NEXT: - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '$x23', callee-saved-restored: true,
+# CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 2, name: '', type: spill-slot, offset: -24, size: 8, alignment: 8,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '$x22', callee-saved-restored: true,
+# CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 3, name: '', type: spill-slot, offset: -32, size: 8, alignment: 8,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '$x21', callee-saved-restored: true,
+# CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 4, name: '', type: spill-slot, offset: -40, size: 8, alignment: 8,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '$x20', callee-saved-restored: true,
+# CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+# CHECK-NEXT: - { id: 5, name: '', type: spill-slot, offset: -48, size: 8, alignment: 8,
+# CHECK-NEXT:     stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
+# CHECK-NEXT:     debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+
+# CHECK:      early-clobber $sp = frame-setup STPXpre killed $x19, killed $x20, $sp, -6 :: (store (s64) into %stack.4), (store (s64) into %stack.5)
+# CHECK-NEXT: frame-setup SEH_SaveRegP_X 19, 20, -48
+# CHECK-NEXT: frame-setup STPXi killed $x21, killed $x22, $sp, 2 :: (store (s64) into %stack.2), (store (s64) into %stack.3)
+# CHECK-NEXT: frame-setup SEH_SaveRegP 21, 22, 16
+# CHECK-NEXT: frame-setup STRXui killed $x23, $sp, 4 :: (store (s64) into %stack.1)
+# CHECK-NEXT: frame-setup SEH_SaveReg 23, 32
+# CHECK-NEXT: frame-setup SEH_PrologEnd
+
+
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  4
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x23, $x21, $x22, $x19, $x20
+
+    renamable $x8 = ADDXri %stack.0, 0, 0
+    $x19 = ADDXrr $x0, $x8
+    $x20 = ADDXrr $x19, $x0
+    $x21 = ADDXrr $x20, killed $x19
+    $x22 = ADDXrr $x21, killed $x20
+    $x23 = ADDXrr $x22, killed $x21
+    $x0 = ADDXrr $x0, killed $x23
+
+    RET_ReallyLR
+
+...

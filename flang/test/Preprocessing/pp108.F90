@@ -1,5 +1,5 @@
-! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: res = kwm
+! RUN: %flang -E %s 2>&1 | FileCheck %s
+! CHECK: res = KWM
 ! ditto, but without & ! comment
       integer, parameter :: KWM = 666
 #define KWM 777

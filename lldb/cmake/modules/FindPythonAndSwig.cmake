@@ -38,11 +38,22 @@ endmacro()
 if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND SWIG_EXECUTABLE)
   set(PYTHONANDSWIG_FOUND TRUE)
 else()
-  find_package(SWIG 2.0)
+  find_package(SWIG 3.0)
   if (SWIG_FOUND)
       FindPython3()
   else()
-    message(STATUS "SWIG 2 or later is required for Python support in LLDB but could not be found")
+    message(STATUS "SWIG 3 or later is required for Python support in LLDB but could not be found")
+  endif()
+
+  get_property(MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+  if ("${Python3_VERSION}" VERSION_GREATER_EQUAL "3.7" AND
+      "${SWIG_VERSION}" VERSION_LESS "4.0" AND WIN32 AND (
+      ${MULTI_CONFIG} OR (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")))
+    # Technically this can happen with non-Windows builds too, but we are not
+    # able to detect whether Python was built with assertions, and only Windows
+    # has the requirement that Debug LLDB must use Debug Python.
+    message(WARNING "Debug builds of LLDB are likely to be unusable due to "
+      "<https://github.com/swig/swig/issues/1321>. Please use SWIG >= 4.0.")
   endif()
 
   include(FindPackageHandleStandardArgs)

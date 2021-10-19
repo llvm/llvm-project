@@ -4,25 +4,25 @@
 
 define i32 @test_i64_align() "frame-pointer"="all" {
 ; CHECK-LABEL: test_i64_align:
-; CHECL: movs r0, #8
+; CHECK: movs r0, #8
   ret i32 ptrtoint(i64* getelementptr(%struct, %struct* null, i32 0, i32 1) to i32)
 }
 
 define i32 @test_f64_align() "frame-pointer"="all" {
 ; CHECK-LABEL: test_f64_align:
-; CHECL: movs r0, #24
+; CHECK: movs r0, #24
   ret i32 ptrtoint(double* getelementptr(%struct, %struct* null, i32 0, i32 3) to i32)
 }
 
 define i32 @test_v2f32_align() "frame-pointer"="all" {
 ; CHECK-LABEL: test_v2f32_align:
-; CHECL: movs r0, #40
+; CHECK: movs r0, #40
   ret i32 ptrtoint(<2 x float>* getelementptr(%struct, %struct* null, i32 0, i32 5) to i32)
 }
 
 define i32 @test_v4f32_align() "frame-pointer"="all" {
 ; CHECK-LABEL: test_v4f32_align:
-; CHECL: movs r0, #64
+; CHECK: movs r0, #64
   ret i32 ptrtoint(<4 x float>* getelementptr(%struct, %struct* null, i32 0, i32 7) to i32)
 }
 

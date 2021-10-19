@@ -1,6 +1,6 @@
 # Check the simple progress bar.
-#
-# RUN: not %{lit} -j 1 -s %{inputs}/progress-bar > %t.out
+
+# RUN: not %{lit} -s %{inputs}/progress-bar > %t.out
 # RUN: FileCheck < %t.out %s
 #
 # CHECK: Testing:

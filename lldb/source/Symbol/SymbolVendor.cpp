@@ -60,9 +60,6 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
     : ModuleChild(module_sp), m_sym_file_up() {}
 
-// Destructor
-SymbolVendor::~SymbolVendor() {}
-
 // Add a representation given an object file.
 void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   ModuleSP module_sp(GetModule());
@@ -72,11 +69,3 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
       m_sym_file_up.reset(SymbolFile::FindPlugin(objfile_sp));
   }
 }
-
-// PluginInterface protocol
-lldb_private::ConstString SymbolVendor::GetPluginName() {
-  static ConstString g_name("vendor-default");
-  return g_name;
-}
-
-uint32_t SymbolVendor::GetPluginVersion() { return 1; }

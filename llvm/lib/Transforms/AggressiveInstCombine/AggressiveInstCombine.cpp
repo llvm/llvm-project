@@ -18,9 +18,11 @@
 #include "llvm-c/Transforms/AggressiveInstCombine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -39,6 +41,8 @@ using namespace PatternMatch;
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
+STATISTIC(NumGuardedFunnelShifts,
+          "Number of guarded funnel shifts transformed into funnel shifts");
 STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 
 namespace {
@@ -67,96 +71,127 @@ public:
 };
 } // namespace
 
-/// Match a pattern for a bitwise rotate operation that partially guards
-/// against undefined behavior by branching around the rotation when the shift
-/// amount is 0.
-static bool foldGuardedRotateToFunnelShift(Instruction &I) {
+/// Match a pattern for a bitwise funnel/rotate operation that partially guards
+/// against undefined behavior by branching around the funnel-shift/rotation
+/// when the shift amount is 0.
+static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
   if (I.getOpcode() != Instruction::PHI || I.getNumOperands() != 2)
     return false;
 
   // As with the one-use checks below, this is not strictly necessary, but we
   // are being cautious to avoid potential perf regressions on targets that
-  // do not actually have a rotate instruction (where the funnel shift would be
-  // expanded back into math/shift/logic ops).
+  // do not actually have a funnel/rotate instruction (where the funnel shift
+  // would be expanded back into math/shift/logic ops).
   if (!isPowerOf2_32(I.getType()->getScalarSizeInBits()))
     return false;
 
-  // Match V to funnel shift left/right and capture the source operand and
-  // shift amount in X and Y.
-  auto matchRotate = [](Value *V, Value *&X, Value *&Y) {
-    Value *L0, *L1, *R0, *R1;
+  // Match V to funnel shift left/right and capture the source operands and
+  // shift amount.
+  auto matchFunnelShift = [](Value *V, Value *&ShVal0, Value *&ShVal1,
+                             Value *&ShAmt) {
+    Value *SubAmt;
     unsigned Width = V->getType()->getScalarSizeInBits();
-    auto Sub = m_Sub(m_SpecificInt(Width), m_Value(R1));
 
-    // rotate_left(X, Y) == (X << Y) | (X >> (Width - Y))
-    auto RotL = m_OneUse(
-        m_c_Or(m_Shl(m_Value(L0), m_Value(L1)), m_LShr(m_Value(R0), Sub)));
-    if (RotL.match(V) && L0 == R0 && L1 == R1) {
-      X = L0;
-      Y = L1;
-      return Intrinsic::fshl;
+    // fshl(ShVal0, ShVal1, ShAmt)
+    //  == (ShVal0 << ShAmt) | (ShVal1 >> (Width -ShAmt))
+    if (match(V, m_OneUse(m_c_Or(
+                     m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
+                     m_LShr(m_Value(ShVal1),
+                            m_Sub(m_SpecificInt(Width), m_Value(SubAmt))))))) {
+      if (ShAmt == SubAmt) // TODO: Use m_Specific
+        return Intrinsic::fshl;
     }
 
-    // rotate_right(X, Y) == (X >> Y) | (X << (Width - Y))
-    auto RotR = m_OneUse(
-        m_c_Or(m_LShr(m_Value(L0), m_Value(L1)), m_Shl(m_Value(R0), Sub)));
-    if (RotR.match(V) && L0 == R0 && L1 == R1) {
-      X = L0;
-      Y = L1;
-      return Intrinsic::fshr;
+    // fshr(ShVal0, ShVal1, ShAmt)
+    //  == (ShVal0 >> ShAmt) | (ShVal1 << (Width - ShAmt))
+    if (match(V,
+              m_OneUse(m_c_Or(m_Shl(m_Value(ShVal0), m_Sub(m_SpecificInt(Width),
+                                                           m_Value(SubAmt))),
+                              m_LShr(m_Value(ShVal1), m_Value(ShAmt)))))) {
+      if (ShAmt == SubAmt) // TODO: Use m_Specific
+        return Intrinsic::fshr;
     }
 
     return Intrinsic::not_intrinsic;
   };
 
-  // One phi operand must be a rotate operation, and the other phi operand must
-  // be the source value of that rotate operation:
-  // phi [ rotate(RotSrc, RotAmt), RotBB ], [ RotSrc, GuardBB ]
+  // One phi operand must be a funnel/rotate operation, and the other phi
+  // operand must be the source value of that funnel/rotate operation:
+  // phi [ rotate(RotSrc, ShAmt), FunnelBB ], [ RotSrc, GuardBB ]
+  // phi [ fshl(ShVal0, ShVal1, ShAmt), FunnelBB ], [ ShVal0, GuardBB ]
+  // phi [ fshr(ShVal0, ShVal1, ShAmt), FunnelBB ], [ ShVal1, GuardBB ]
   PHINode &Phi = cast<PHINode>(I);
+  unsigned FunnelOp = 0, GuardOp = 1;
   Value *P0 = Phi.getOperand(0), *P1 = Phi.getOperand(1);
-  Value *RotSrc, *RotAmt;
-  Intrinsic::ID IID = matchRotate(P0, RotSrc, RotAmt);
-  if (IID == Intrinsic::not_intrinsic || RotSrc != P1) {
-    IID = matchRotate(P1, RotSrc, RotAmt);
-    if (IID == Intrinsic::not_intrinsic || RotSrc != P0)
+  Value *ShVal0, *ShVal1, *ShAmt;
+  Intrinsic::ID IID = matchFunnelShift(P0, ShVal0, ShVal1, ShAmt);
+  if (IID == Intrinsic::not_intrinsic ||
+      (IID == Intrinsic::fshl && ShVal0 != P1) ||
+      (IID == Intrinsic::fshr && ShVal1 != P1)) {
+    IID = matchFunnelShift(P1, ShVal0, ShVal1, ShAmt);
+    if (IID == Intrinsic::not_intrinsic ||
+        (IID == Intrinsic::fshl && ShVal0 != P0) ||
+        (IID == Intrinsic::fshr && ShVal1 != P0))
       return false;
     assert((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
            "Pattern must match funnel shift left or right");
+    std::swap(FunnelOp, GuardOp);
   }
 
   // The incoming block with our source operand must be the "guard" block.
-  // That must contain a cmp+branch to avoid the rotate when the shift amount
-  // is equal to 0. The other incoming block is the block with the rotate.
-  BasicBlock *GuardBB = Phi.getIncomingBlock(RotSrc == P1);
-  BasicBlock *RotBB = Phi.getIncomingBlock(RotSrc != P1);
+  // That must contain a cmp+branch to avoid the funnel/rotate when the shift
+  // amount is equal to 0. The other incoming block is the block with the
+  // funnel/rotate.
+  BasicBlock *GuardBB = Phi.getIncomingBlock(GuardOp);
+  BasicBlock *FunnelBB = Phi.getIncomingBlock(FunnelOp);
   Instruction *TermI = GuardBB->getTerminator();
+
+  // Ensure that the shift values dominate each block.
+  if (!DT.dominates(ShVal0, TermI) || !DT.dominates(ShVal1, TermI))
+    return false;
+
   ICmpInst::Predicate Pred;
   BasicBlock *PhiBB = Phi.getParent();
-  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(RotAmt), m_ZeroInt()),
-                         m_SpecificBB(PhiBB), m_SpecificBB(RotBB))))
+  if (!match(TermI, m_Br(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()),
+                         m_SpecificBB(PhiBB), m_SpecificBB(FunnelBB))))
     return false;
 
   if (Pred != CmpInst::ICMP_EQ)
     return false;
 
+  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+
+  if (ShVal0 == ShVal1)
+    ++NumGuardedRotates;
+  else
+    ++NumGuardedFunnelShifts;
+
+  // If this is not a rotate then the select was blocking poison from the
+  // 'shift-by-zero' non-TVal, but a funnel shift won't - so freeze it.
+  bool IsFshl = IID == Intrinsic::fshl;
+  if (ShVal0 != ShVal1) {
+    if (IsFshl && !llvm::isGuaranteedNotToBePoison(ShVal1))
+      ShVal1 = Builder.CreateFreeze(ShVal1);
+    else if (!IsFshl && !llvm::isGuaranteedNotToBePoison(ShVal0))
+      ShVal0 = Builder.CreateFreeze(ShVal0);
+  }
+
   // We matched a variation of this IR pattern:
   // GuardBB:
-  //   %cmp = icmp eq i32 %RotAmt, 0
-  //   br i1 %cmp, label %PhiBB, label %RotBB
-  // RotBB:
-  //   %sub = sub i32 32, %RotAmt
-  //   %shr = lshr i32 %X, %sub
-  //   %shl = shl i32 %X, %RotAmt
-  //   %rot = or i32 %shr, %shl
+  //   %cmp = icmp eq i32 %ShAmt, 0
+  //   br i1 %cmp, label %PhiBB, label %FunnelBB
+  // FunnelBB:
+  //   %sub = sub i32 32, %ShAmt
+  //   %shr = lshr i32 %ShVal1, %sub
+  //   %shl = shl i32 %ShVal0, %ShAmt
+  //   %fsh = or i32 %shr, %shl
   //   br label %PhiBB
   // PhiBB:
-  //   %cond = phi i32 [ %rot, %RotBB ], [ %X, %GuardBB ]
+  //   %cond = phi i32 [ %fsh, %FunnelBB ], [ %ShVal0, %GuardBB ]
   // -->
-  // llvm.fshl.i32(i32 %X, i32 %RotAmt)
-  IRBuilder<> Builder(PhiBB, PhiBB->getFirstInsertionPt());
+  // llvm.fshl.i32(i32 %ShVal0, i32 %ShVal1, i32 %ShAmt)
   Function *F = Intrinsic::getDeclaration(Phi.getModule(), IID, Phi.getType());
-  Phi.replaceAllUsesWith(Builder.CreateCall(F, {RotSrc, RotSrc, RotAmt}));
-  ++NumGuardedRotates;
+  Phi.replaceAllUsesWith(Builder.CreateCall(F, {ShVal0, ShVal1, ShAmt}));
   return true;
 }
 
@@ -171,8 +206,8 @@ struct MaskOps {
   bool FoundAnd1;
 
   MaskOps(unsigned BitWidth, bool MatchAnds)
-      : Root(nullptr), Mask(APInt::getNullValue(BitWidth)),
-        MatchAndChain(MatchAnds), FoundAnd1(false) {}
+      : Root(nullptr), Mask(APInt::getZero(BitWidth)), MatchAndChain(MatchAnds),
+        FoundAnd1(false) {}
 };
 
 /// This is a recursive helper for foldAnyOrAllBitsSet() that walks through a
@@ -203,8 +238,8 @@ static bool matchAndOrChain(Value *V, MaskOps &MOps) {
   // We need a shift-right or a bare value representing a compare of bit 0 of
   // the original source operand.
   Value *Candidate;
-  uint64_t BitIndex = 0;
-  if (!match(V, m_LShr(m_Value(Candidate), m_ConstantInt(BitIndex))))
+  const APInt *BitIndex = nullptr;
+  if (!match(V, m_LShr(m_Value(Candidate), m_APInt(BitIndex))))
     Candidate = V;
 
   // Initialize result source operand.
@@ -212,11 +247,11 @@ static bool matchAndOrChain(Value *V, MaskOps &MOps) {
     MOps.Root = Candidate;
 
   // The shift constant is out-of-range? This code hasn't been simplified.
-  if (BitIndex >= MOps.Mask.getBitWidth())
+  if (BitIndex && BitIndex->uge(MOps.Mask.getBitWidth()))
     return false;
 
   // Fill in the mask bit derived from the shift constant.
-  MOps.Mask.setBit(BitIndex);
+  MOps.Mask.setBit(BitIndex ? BitIndex->getZExtValue() : 0);
   return MOps.Root == Candidate;
 }
 
@@ -345,7 +380,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
     // iteratively in this loop rather than waiting until the end.
     for (Instruction &I : make_range(BB.rbegin(), BB.rend())) {
       MadeChange |= foldAnyOrAllBitsSet(I);
-      MadeChange |= foldGuardedRotateToFunnelShift(I);
+      MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I); 
     }
   }
@@ -360,10 +395,11 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
 
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
-static bool runImpl(Function &F, TargetLibraryInfo &TLI, DominatorTree &DT) {
+static bool runImpl(Function &F, AssumptionCache &AC, TargetLibraryInfo &TLI,
+                    DominatorTree &DT) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
-  TruncInstCombine TIC(TLI, DL, DT);
+  TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
   MadeChange |= foldUnusualPatterns(F, DT);
   return MadeChange;
@@ -372,6 +408,7 @@ static bool runImpl(Function &F, TargetLibraryInfo &TLI, DominatorTree &DT) {
 void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.setPreservesCFG();
+  AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
@@ -381,24 +418,24 @@ void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
 }
 
 bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return runImpl(F, TLI, DT);
+  return runImpl(F, AC, TLI, DT);
 }
 
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!runImpl(F, TLI, DT)) {
+  if (!runImpl(F, AC, TLI, DT)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<AAManager>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 
@@ -406,6 +443,7 @@ char AggressiveInstCombinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
                       "aggressive-instcombine",
                       "Combine pattern based expressions", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",

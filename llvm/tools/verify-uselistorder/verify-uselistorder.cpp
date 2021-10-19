@@ -136,7 +136,7 @@ bool TempFile::writeBitcode(const Module &M) const {
 bool TempFile::writeAssembly(const Module &M) const {
   LLVM_DEBUG(dbgs() << " - write assembly\n");
   std::error_code EC;
-  raw_fd_ostream OS(Filename, EC, sys::fs::OF_Text);
+  raw_fd_ostream OS(Filename, EC, sys::fs::OF_TextWithCRLF);
   if (EC) {
     errs() << "verify-uselistorder: error: " << EC.message() << "\n";
     return true;
@@ -202,14 +202,9 @@ ValueMapping::ValueMapping(const Module &M) {
     map(A.getAliasee());
   for (const GlobalIFunc &IF : M.ifuncs())
     map(IF.getResolver());
-  for (const Function &F : M) {
-    if (F.hasPrefixData())
-      map(F.getPrefixData());
-    if (F.hasPrologueData())
-      map(F.getPrologueData());
-    if (F.hasPersonalityFn())
-      map(F.getPersonalityFn());
-  }
+  for (const Function &F : M)
+    for (Value *Op : F.operands())
+      map(Op);
 
   // Function bodies.
   for (const Function &F : M) {
@@ -224,10 +219,16 @@ ValueMapping::ValueMapping(const Module &M) {
     // Constants used by instructions.
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
+          // Look through a metadata wrapper.
+          if (const auto *MAV = dyn_cast<MetadataAsValue>(Op))
+            if (const auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata()))
+              Op = VAM->getValue();
+
           if ((isa<Constant>(Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(Op))
             map(Op);
+        }
   }
 }
 
@@ -478,14 +479,9 @@ static void changeUseLists(Module &M, Changer changeValueUseList) {
     changeValueUseList(A.getAliasee());
   for (GlobalIFunc &IF : M.ifuncs())
     changeValueUseList(IF.getResolver());
-  for (Function &F : M) {
-    if (F.hasPrefixData())
-      changeValueUseList(F.getPrefixData());
-    if (F.hasPrologueData())
-      changeValueUseList(F.getPrologueData());
-    if (F.hasPersonalityFn())
-      changeValueUseList(F.getPersonalityFn());
-  }
+  for (Function &F : M)
+    for (Value *Op : F.operands())
+      changeValueUseList(Op);
 
   // Function bodies.
   for (Function &F : M) {
@@ -500,10 +496,15 @@ static void changeUseLists(Module &M, Changer changeValueUseList) {
     // Constants used by instructions.
     for (BasicBlock &BB : F)
       for (Instruction &I : BB)
-        for (Value *Op : I.operands())
+        for (Value *Op : I.operands()) {
+          // Look through a metadata wrapper.
+          if (auto *MAV = dyn_cast<MetadataAsValue>(Op))
+            if (auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata()))
+              Op = VAM->getValue();
           if ((isa<Constant>(Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(Op))
             changeValueUseList(Op);
+        }
   }
 
   if (verifyModule(M, &errs()))
@@ -529,11 +530,10 @@ int main(int argc, char **argv) {
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
-  LLVMContext Context;
-
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");
 
+  LLVMContext Context;
   SMDiagnostic Err;
 
   // Load the input module...

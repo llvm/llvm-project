@@ -80,7 +80,7 @@ SBAddress SBBreakpointLocation::GetAddress() {
 
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
-    return LLDB_RECORD_RESULT(SBAddress(&loc_sp->GetAddress()));
+    return LLDB_RECORD_RESULT(SBAddress(loc_sp->GetAddress()));
   }
 
   return LLDB_RECORD_RESULT(SBAddress());
@@ -218,8 +218,8 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
     const char *callback_function_name,
     SBStructuredData &extra_args) {
   LLDB_RECORD_METHOD(SBError, SBBreakpointLocation, SetScriptCallbackFunction,
-                     (const char *, SBStructuredData &), 
-                     callback_function_name, extra_args);
+                     (const char *, SBStructuredData &), callback_function_name,
+                     extra_args);
   SBError sb_error;
   BreakpointLocationSP loc_sp = GetSP();
 
@@ -227,7 +227,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
     Status error;
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
+    BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
     error = loc_sp->GetBreakpoint()
         .GetTarget()
         .GetDebugger()
@@ -239,7 +239,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
       sb_error.SetError(error);
     } else
       sb_error.SetErrorString("invalid breakpoint");
-    
+
     return LLDB_RECORD_RESULT(sb_error);
 }
 
@@ -254,7 +254,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
+    BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
     Status error =
         loc_sp->GetBreakpoint()
             .GetTarget()
@@ -283,7 +283,7 @@ void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
   std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
       new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
 
-  loc_sp->GetLocationOptions()->SetCommandDataCallback(cmd_data_up);
+  loc_sp->GetLocationOptions().SetCommandDataCallback(cmd_data_up);
 }
 
 bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
@@ -295,7 +295,7 @@ bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
     return false;
   StringList command_list;
   bool has_commands =
-      loc_sp->GetLocationOptions()->GetCommandLineCallbacks(command_list);
+      loc_sp->GetLocationOptions().GetCommandLineCallbacks(command_list);
   if (has_commands)
     commands.AppendList(command_list);
   return has_commands;

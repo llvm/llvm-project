@@ -1,4 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o  < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr9 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
+; RUN:     -xcoff-traceback-table=false -filetype=obj -o %t.o  < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECK %s
 
 define i32 @foo() #0 {

@@ -26,6 +26,6 @@ void test2(void) {
     test2_helper();
   }
 
-  // CHECK-LABEL: define void @test2()
+  // CHECK-LABEL: define{{.*}} void @test2()
   // CHECK-NOT: call void @test2_helper()
 }

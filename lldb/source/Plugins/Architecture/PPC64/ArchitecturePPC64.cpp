@@ -43,9 +43,6 @@ std::unique_ptr<Architecture> ArchitecturePPC64::Create(const ArchSpec &arch) {
   return nullptr;
 }
 
-ConstString ArchitecturePPC64::GetPluginName() { return GetPluginNameStatic(); }
-uint32_t ArchitecturePPC64::GetPluginVersion() { return 1; }
-
 static int32_t GetLocalEntryOffset(const Symbol &sym) {
   unsigned char other = sym.GetFlags() >> 8 & 0xFF;
   return llvm::ELF::decodePPC64LocalEntryOffset(other);

@@ -12,6 +12,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
@@ -600,6 +601,8 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
                    br label %for.latch
                  for.latch:
                    %cmp = icmp slt i64 %inc, %N
+                   %add = add i64 100, %N
+                   %add2 = add i64 %add, %N
                    br i1 %cmp, label %for.body, label %for.end
                  for.end:
                    ret void
@@ -610,10 +613,18 @@ TEST(CodeMoverUtils, IsSafeToMoveTest3) {
           DependenceInfo &DI) {
         Instruction *IncInst = getInstructionByName(F, "inc");
         Instruction *CmpInst = getInstructionByName(F, "cmp");
+        BasicBlock *BB0 = getBasicBlockByName(F, "for.body");
+        BasicBlock *BB1 = getBasicBlockByName(F, "for.latch");
 
         // Can move as the incoming block of %inc for %i (%for.latch) dominated
         // by %cmp.
         EXPECT_TRUE(isSafeToMoveBefore(*IncInst, *CmpInst, DT, &PDT, &DI));
+
+        // Can move as the operands of instructions in BB1 either dominate
+        // InsertPoint or appear before that instruction, e.g., %add appears
+        // before %add2 although %add does not dominate InsertPoint.
+        EXPECT_TRUE(
+            isSafeToMoveBefore(*BB1, *BB0->getTerminator(), DT, &PDT, &DI));
       });
 }
 
@@ -627,12 +638,14 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
                  if.then.first:
                    %add = add i32 %op0, %op1
                    %user = add i32 %add, 1
+                   %add2 = add i32 %op0, 1
                    br label %if.end.first
                  if.end.first:
                    br i1 %cond, label %if.end.second, label %if.then.second
                  if.then.second:
                    %sub_op0 = add i32 %op0, 1
                    %sub = sub i32 %sub_op0, %op1
+                   %sub2 = sub i32 %op0, 1
                    br label %if.end.second
                  if.end.second:
                    ret void
@@ -642,7 +655,9 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
       [&](Function &F, DominatorTree &DT, PostDominatorTree &PDT,
           DependenceInfo &DI) {
         Instruction *AddInst = getInstructionByName(F, "add");
+        Instruction *AddInst2 = getInstructionByName(F, "add2");
         Instruction *SubInst = getInstructionByName(F, "sub");
+        Instruction *SubInst2 = getInstructionByName(F, "sub2");
 
         // Cannot move as %user uses %add and %sub doesn't dominates %user.
         EXPECT_FALSE(isSafeToMoveBefore(*AddInst, *SubInst, DT, &PDT, &DI));
@@ -650,6 +665,14 @@ TEST(CodeMoverUtils, IsSafeToMoveTest4) {
         // Cannot move as %sub_op0 is an operand of %sub and %add doesn't
         // dominates %sub_op0.
         EXPECT_FALSE(isSafeToMoveBefore(*SubInst, *AddInst, DT, &PDT, &DI));
+
+        // Can move as %add2 and %sub2 are control flow equivalent,
+        // although %add2 does not strictly dominate %sub2.
+        EXPECT_TRUE(isSafeToMoveBefore(*AddInst2, *SubInst2, DT, &PDT, &DI));
+
+        // Can move as %add2 and %sub2 are control flow equivalent,
+        // although %add2 does not strictly dominate %sub2.
+        EXPECT_TRUE(isSafeToMoveBefore(*SubInst2, *AddInst2, DT, &PDT, &DI));
       });
 }
 

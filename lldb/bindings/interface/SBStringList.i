@@ -8,6 +8,9 @@
 
 namespace lldb {
 
+%feature("docstring",
+"Represents a list of strings."
+) SBStringList;
 class SBStringList
 {
 public:

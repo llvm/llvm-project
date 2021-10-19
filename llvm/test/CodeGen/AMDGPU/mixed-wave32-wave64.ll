@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10 %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1010 -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: _amdgpu_hs_main:
 

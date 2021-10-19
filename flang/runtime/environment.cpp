@@ -1,4 +1,4 @@
-//===-- runtime/environment.cpp ---------------------------------*- C++ -*-===//
+//===-- runtime/environment.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,5 +67,29 @@ void ExecutionEnvironment::Configure(
   }
 
   // TODO: Set RP/ROUND='PROCESSOR_DEFINED' from environment
+}
+
+const char *ExecutionEnvironment::GetEnv(
+    const char *name, std::size_t name_length) {
+  if (!envp) {
+    // TODO: Ask std::getenv.
+    return nullptr;
+  }
+
+  // envp is an array of strings of the form "name=value".
+  for (const char **var{envp}; *var != nullptr; ++var) {
+    const char *eq{std::strchr(*var, '=')};
+    if (!eq) {
+      // Found a malformed environment string, just ignore it.
+      continue;
+    }
+    if (static_cast<std::size_t>(eq - *var) != name_length) {
+      continue;
+    }
+    if (std::memcmp(*var, name, name_length) == 0) {
+      return eq + 1;
+    }
+  }
+  return nullptr;
 }
 } // namespace Fortran::runtime

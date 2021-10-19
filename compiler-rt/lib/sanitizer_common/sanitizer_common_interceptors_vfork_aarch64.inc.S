@@ -1,6 +1,7 @@
 #if defined(__aarch64__) && defined(__linux__)
 
 #include "sanitizer_common/sanitizer_asm.h"
+#include "builtins/assembly.h"
 
 ASM_HIDDEN(COMMON_INTERCEPTOR_SPILL_AREA)
 
@@ -9,6 +10,7 @@ ASM_HIDDEN(COMMON_INTERCEPTOR_SPILL_AREA)
 ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(vfork))
 ASM_WRAPPER_NAME(vfork):
         // Save x30 in the off-stack spill area.
+        hint    #25 // paciasp
         stp     xzr, x30, [sp, #-16]!
         bl      COMMON_INTERCEPTOR_SPILL_AREA
         ldp     xzr, x30, [sp], 16
@@ -33,11 +35,14 @@ ASM_WRAPPER_NAME(vfork):
         bl     COMMON_INTERCEPTOR_SPILL_AREA
         ldr    x30, [x0]
         ldp    x0, xzr, [sp], 16
+        hint   #29 // autiasp
 
         ret
 ASM_SIZE(vfork)
 
 .weak vfork
 .set vfork, ASM_WRAPPER_NAME(vfork)
+
+GNU_PROPERTY_BTI_PAC
 
 #endif

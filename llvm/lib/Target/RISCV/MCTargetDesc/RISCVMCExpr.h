@@ -37,7 +37,7 @@ public:
     VK_RISCV_CALL,
     VK_RISCV_CALL_PLT,
     VK_RISCV_32_PCREL,
-    VK_RISCV_Invalid
+    VK_RISCV_Invalid // Must be the last item
   };
 
 private:

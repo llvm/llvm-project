@@ -115,27 +115,26 @@ std::unique_ptr<Module> llvm::CloneModule(
   // have been created, loop through and copy the global variable referrers
   // over...  We also set the attributes on the global now.
   //
-  for (Module::const_global_iterator I = M.global_begin(), E = M.global_end();
-       I != E; ++I) {
-    if (I->isDeclaration())
+  for (const GlobalVariable &G : M.globals()) {
+    GlobalVariable *GV = cast<GlobalVariable>(VMap[&G]);
+
+    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+    G.getAllMetadata(MDs);
+    for (auto MD : MDs)
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+
+    if (G.isDeclaration())
       continue;
 
-    GlobalVariable *GV = cast<GlobalVariable>(VMap[&*I]);
-    if (!ShouldCloneDefinition(&*I)) {
+    if (!ShouldCloneDefinition(&G)) {
       // Skip after setting the correct linkage for an external reference.
       GV->setLinkage(GlobalValue::ExternalLinkage);
       continue;
     }
-    if (I->hasInitializer())
-      GV->setInitializer(MapValue(I->getInitializer(), VMap));
+    if (G.hasInitializer())
+      GV->setInitializer(MapValue(G.getInitializer(), VMap));
 
-    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-    I->getAllMetadata(MDs);
-    for (auto MD : MDs)
-      GV->addMetadata(MD.first,
-                      *MapMetadata(MD.second, VMap, RF_MoveDistinctMDs));
-
-    copyComdat(GV, &*I);
+    copyComdat(GV, &G);
   }
 
   // Similarly, copy over function bodies now...
@@ -161,7 +160,8 @@ std::unique_ptr<Module> llvm::CloneModule(
     }
 
     SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-    CloneFunctionInto(F, &I, VMap, /*ModuleLevelChanges=*/true, Returns);
+    CloneFunctionInto(F, &I, VMap, CloneFunctionChangeType::ClonedModule,
+                      Returns);
 
     if (I.hasPersonalityFn())
       F->setPersonalityFn(MapValue(I.getPersonalityFn(), VMap));
@@ -181,25 +181,13 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   // And named metadata....
-  const auto* LLVM_DBG_CU = M.getNamedMetadata("llvm.dbg.cu");
   for (Module::const_named_metadata_iterator I = M.named_metadata_begin(),
                                              E = M.named_metadata_end();
        I != E; ++I) {
     const NamedMDNode &NMD = *I;
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    if (&NMD == LLVM_DBG_CU) {
-      // Do not insert duplicate operands.
-      SmallPtrSet<const void*, 8> Visited;
-      for (const auto* Operand : NewNMD->operands())
-        Visited.insert(Operand);
-      for (const auto* Operand : NMD.operands()) {
-        auto* MappedOperand = MapMetadata(Operand, VMap);
-        if (Visited.insert(MappedOperand).second)
-          NewNMD->addOperand(MappedOperand);
-      }
-    } else
-      for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-        NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
+      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
   }
 
   return New;

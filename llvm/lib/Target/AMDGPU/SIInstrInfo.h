@@ -14,22 +14,12 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 
-#include "AMDGPUInstrInfo.h"
-#include "SIDefines.h"
+#include "AMDGPUMIRFormatter.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/Compiler.h"
-#include <cassert>
-#include <cstdint>
 
 #define GET_INSTRINFO_HEADER
 #include "AMDGPUGenInstrInfo.inc"
@@ -37,17 +27,20 @@
 namespace llvm {
 
 class APInt;
+class GCNSubtarget;
+class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
-class GCNSubtarget;
 class TargetRegisterClass;
+class ScheduleHazardRecognizer;
 
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
 private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
   TargetSchedModel SchedModel;
+  mutable std::unique_ptr<AMDGPUMIRFormatter> Formatter;
 
   // The inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -81,11 +74,15 @@ public:
 private:
   void swapOperands(MachineInstr &Inst) const;
 
-  bool moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
-                        MachineDominatorTree *MDT = nullptr) const;
-
-  void lowerSelect(SetVectorType &Worklist, MachineInstr &Inst,
+  std::pair<bool, MachineBasicBlock *>
+  moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
                    MachineDominatorTree *MDT = nullptr) const;
+
+  void lowerSelect32(SetVectorType &Worklist, MachineInstr &Inst,
+                     MachineDominatorTree *MDT = nullptr) const;
+
+  void splitSelect64(SetVectorType &Worklist, MachineInstr &Inst,
+                     MachineDominatorTree *MDT = nullptr) const;
 
   void lowerScalarAbs(SetVectorType &Worklist,
                       MachineInstr &Inst) const;
@@ -102,7 +99,8 @@ private:
                           unsigned Opcode) const;
 
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
-                               MachineInstr &Inst, unsigned Opcode) const;
+                               MachineInstr &Inst, unsigned Opcode,
+                               bool Swap = false) const;
 
   void splitScalar64BitAddSub(SetVectorType &Worklist, MachineInstr &Inst,
                               MachineDominatorTree *MDT = nullptr) const;
@@ -127,7 +125,10 @@ private:
 
   void addSCCDefUsersToVALUWorklist(MachineOperand &Op,
                                     MachineInstr &SCCDefInst,
-                                    SetVectorType &Worklist) const;
+                                    SetVectorType &Worklist,
+                                    Register NewCond = Register()) const;
+  void addSCCDefsToVALUWorklist(MachineOperand &Op,
+                                SetVectorType &Worklist) const;
 
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;
@@ -164,8 +165,7 @@ public:
     // MO_REL32_HI -> symbol@rel32@hi -> R_AMDGPU_REL32_HI.
     MO_REL32_HI = 5,
 
-    MO_LONG_BRANCH_FORWARD = 6,
-    MO_LONG_BRANCH_BACKWARD = 7,
+    MO_FAR_BRANCH_OFFSET = 6,
 
     MO_ABS32_LO = 8,
     MO_ABS32_HI = 9,
@@ -177,8 +177,14 @@ public:
     return RI;
   }
 
+  const GCNSubtarget &getSubtarget() const {
+    return ST;
+  }
+
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AAResults *AA) const override;
+
+  bool isIgnorableUse(const MachineOperand &MO) const override;
 
   bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                int64_t &Offset1,
@@ -200,10 +206,6 @@ public:
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
-
-  unsigned calculateLDSSpillAddress(MachineBasicBlock &MBB, MachineInstr &MI,
-                                    RegScavenger *RS, unsigned TmpReg,
-                                    unsigned Offset, unsigned Size) const;
 
   void materializeImmediate(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
@@ -248,9 +250,12 @@ public:
   // DstRC, then AMDGPU::COPY is returned.
   unsigned getMovOpcode(const TargetRegisterClass *DstRC) const;
 
-  const MCInstrDesc &getIndirectRegWritePseudo(
-    unsigned VecSize, unsigned EltSize, bool IsSGPR) const;
+  const MCInstrDesc &getIndirectRegWriteMovRelPseudo(unsigned VecSize,
+                                                     unsigned EltSize,
+                                                     bool IsSGPR) const;
 
+  const MCInstrDesc &getIndirectGPRIDXPseudo(unsigned VecSize,
+                                             bool IsIndirectSrc) const;
   LLVM_READONLY
   int commuteOpcode(unsigned Opc) const;
 
@@ -314,6 +319,14 @@ public:
                           Register DstReg, ArrayRef<MachineOperand> Cond,
                           Register TrueReg, Register FalseReg) const;
 
+  bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
+                      Register &SrcReg2, int64_t &CmpMask,
+                      int64_t &CmpValue) const override;
+
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
+                            Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
+                            const MachineRegisterInfo *MRI) const override;
+
   unsigned getAddressSpaceForPseudoSourceKind(
              unsigned Kind) const override;
 
@@ -321,15 +334,14 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
-  bool isFoldableCopy(const MachineInstr &MI) const;
+  static bool isFoldableCopy(const MachineInstr &MI);
 
   bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
-  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MBB,
-                                      MachineInstr &MI,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   bool isSchedulingBoundary(const MachineInstr &MI,
@@ -508,12 +520,28 @@ public:
   // i.e. global_* or scratch_*.
   static bool isSegmentSpecificFLAT(const MachineInstr &MI) {
     auto Flags = MI.getDesc().TSFlags;
-    return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
+    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
   }
 
-  // FIXME: Make this more precise
+  bool isSegmentSpecificFLAT(uint16_t Opcode) const {
+    auto Flags = get(Opcode).TSFlags;
+    return Flags & (SIInstrFlags::FlatGlobal | SIInstrFlags::FlatScratch);
+  }
+
+  static bool isFLATGlobal(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::FlatGlobal;
+  }
+
+  bool isFLATGlobal(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::FlatGlobal;
+  }
+
   static bool isFLATScratch(const MachineInstr &MI) {
-    return isSegmentSpecificFLAT(MI);
+    return MI.getDesc().TSFlags & SIInstrFlags::FlatScratch;
+  }
+
+  bool isFLATScratch(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::FlatScratch;
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
@@ -527,6 +555,32 @@ public:
 
   bool isEXP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::EXP;
+  }
+
+  static bool isAtomicNoRet(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicNoRet;
+  }
+
+  bool isAtomicNoRet(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicNoRet;
+  }
+
+  static bool isAtomicRet(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsAtomicRet;
+  }
+
+  bool isAtomicRet(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsAtomicRet;
+  }
+
+  static bool isAtomic(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & (SIInstrFlags::IsAtomicRet |
+                                   SIInstrFlags::IsAtomicNoRet);
+  }
+
+  bool isAtomic(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & (SIInstrFlags::IsAtomicRet |
+                                  SIInstrFlags::IsAtomicNoRet);
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -567,6 +621,14 @@ public:
 
   bool isDPP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::DPP;
+  }
+
+  static bool isTRANS(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TRANS;
+  }
+
+  bool isTRANS(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TRANS;
   }
 
   static bool isVOP3P(const MachineInstr &MI) {
@@ -894,19 +956,25 @@ public:
   /// Legalize all operands in this instruction.  This function may create new
   /// instructions and control-flow around \p MI.  If present, \p MDT is
   /// updated.
-  void legalizeOperands(MachineInstr &MI,
-                        MachineDominatorTree *MDT = nullptr) const;
+  /// \returns A new basic block that contains \p MI if new blocks were created.
+  MachineBasicBlock *
+  legalizeOperands(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
+
+  /// Change SADDR form of a FLAT \p Inst to its VADDR form if saddr operand
+  /// was moved to VGPR. \returns true if succeeded.
+  bool moveFlatAddrToVGPR(MachineInstr &Inst) const;
 
   /// Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary. If present, \p MDT is updated.
-  void moveToVALU(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
-
-  void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
-                        int Count) const;
+  MachineBasicBlock *moveToVALU(MachineInstr &MI,
+                                MachineDominatorTree *MDT = nullptr) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
+
+  void insertNoops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   unsigned Quantity) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
   /// Return the number of wait states that result from executing this
@@ -979,6 +1047,10 @@ public:
   ScheduleHazardRecognizer *
   CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
 
+  ScheduleHazardRecognizer *
+  CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
+                                 const ScheduleDAGMI *DAG) const override;
+
   bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 
   MachineInstr *createPHIDestinationCopy(MachineBasicBlock &MBB,
@@ -1016,13 +1088,17 @@ public:
     return isUInt<12>(Imm);
   }
 
-  unsigned getNumFlatOffsetBits(unsigned AddrSpace, bool Signed) const;
-
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that
   /// interprets the offset as signed.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         bool Signed) const;
+                         uint64_t FlatVariant) const;
+
+  /// Split \p COffsetVal into {immediate offset field, remainder offset}
+  /// values.
+  std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
+                                              unsigned AddrSpace,
+                                              uint64_t FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does
@@ -1036,11 +1112,7 @@ public:
   const TargetRegisterClass *getRegClass(const MCInstrDesc &TID, unsigned OpNum,
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF)
-    const override {
-    if (OpNum >= TID.getNumOperands())
-      return nullptr;
-    return RI.getRegClass(TID.OpInfo[OpNum].RegClass);
-  }
+    const override;
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
@@ -1054,6 +1126,12 @@ public:
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  const MIRFormatter *getMIRFormatter() const override {
+    if (!Formatter.get())
+      Formatter = std::make_unique<AMDGPUMIRFormatter>();
+    return Formatter.get();
+  }
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 };
@@ -1137,19 +1215,38 @@ namespace AMDGPU {
   int getMUBUFNoLdsInst(uint16_t Opcode);
 
   LLVM_READONLY
-  int getAtomicRetOp(uint16_t Opcode);
-
-  LLVM_READONLY
   int getAtomicNoRetOp(uint16_t Opcode);
 
   LLVM_READONLY
   int getSOPKOp(uint16_t Opcode);
 
+  /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
+  /// of a VADDR form.
   LLVM_READONLY
   int getGlobalSaddrOp(uint16_t Opcode);
 
+  /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
+  /// of a SADDR form.
+  LLVM_READONLY
+  int getGlobalVaddrOp(uint16_t Opcode);
+
   LLVM_READONLY
   int getVCMPXNoSDstOp(uint16_t Opcode);
+
+  /// \returns ST form with only immediate offset of a FLAT Scratch instruction
+  /// given an \p Opcode of an SS (SADDR) form.
+  LLVM_READONLY
+  int getFlatScratchInstSTfromSS(uint16_t Opcode);
+
+  /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
+  /// of an SV (VADDR) form.
+  LLVM_READONLY
+  int getFlatScratchInstSSfromSV(uint16_t Opcode);
+
+  /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
+  /// of an SS (SADDR) form.
+  LLVM_READONLY
+  int getFlatScratchInstSVfromSS(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

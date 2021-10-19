@@ -304,14 +304,14 @@ class FI8_MOV32R16_ins<string asmstr, InstrItinClass itin>:
 //
 // MULT
 //
-class FMULT16_ins<string asmstr, InstrItinClass itin> :
+class FMULT16_ins<string asmstr> :
   MipsPseudo16<(outs), (ins CPU16Regs:$rx, CPU16Regs:$ry),
                !strconcat(asmstr, "\t$rx, $ry"), []>;
 
 //
 // MULT-LO
 //
-class FMULT16_LO_ins<string asmstr, InstrItinClass itin> :
+class FMULT16_LO_ins<string asmstr> :
   MipsPseudo16<(outs CPU16Regs:$rz), (ins CPU16Regs:$rx, CPU16Regs:$ry),
                !strconcat(asmstr, "\t$rx, $ry\n\tmflo\t$rz"), []> {
   let isCodeGenOnly=1;
@@ -895,13 +895,13 @@ def Mflo16: FRR16_M_ins<0b10010, "mflo", IIM16Alu> {
 //
 // Pseudo Instruction for mult
 //
-def MultRxRy16:  FMULT16_ins<"mult",  IIM16Alu> {
+def MultRxRy16:  FMULT16_ins<"mult"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
 }
 
-def MultuRxRy16: FMULT16_ins<"multu", IIM16Alu> {
+def MultuRxRy16: FMULT16_ins<"multu"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -912,7 +912,7 @@ def MultuRxRy16: FMULT16_ins<"multu", IIM16Alu> {
 // Purpose: Multiply Word
 // To multiply 32-bit signed integers.
 //
-def MultRxRyRz16: FMULT16_LO_ins<"mult", IIM16Alu> {
+def MultRxRyRz16: FMULT16_LO_ins<"mult"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];
@@ -923,7 +923,7 @@ def MultRxRyRz16: FMULT16_LO_ins<"mult", IIM16Alu> {
 // Purpose: Multiply Unsigned Word
 // To multiply 32-bit unsigned integers.
 //
-def MultuRxRyRz16: FMULT16_LO_ins<"multu", IIM16Alu> {
+def MultuRxRyRz16: FMULT16_LO_ins<"multu"> {
   let isCommutable = 1;
   let hasSideEffects = 0;
   let Defs = [HI0, LO0];

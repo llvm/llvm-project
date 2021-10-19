@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -mllvm -enable-npm-optnone -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
 // RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O1 -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=O1
-// RUN: %clang_cc1 -fexperimental-new-pass-manager -mllvm -enable-npm-optnone -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
+// RUN: %clang_cc1 -fexperimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
 // RUN: %clang_cc1 -fno-experimental-new-pass-manager -triple x86_64-unknown-linux-gnu -O0 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=O0
 //
 // Ensure that we place appropriate lifetime markers around indirectly returned
@@ -60,13 +60,13 @@ struct S baz(int i, volatile int *j) {
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
     //
-    // O1: call void @foo_int(%struct.S* sret align 4 %[[TMP1_ALLOCA]],
+    // O1: call void @foo_int(%struct.S* sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: call void @foo_int(%struct.S* sret align 4 %[[TMP2_ALLOCA]],
+    // O1: call void @foo_int(%struct.S* sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])

@@ -18,7 +18,7 @@ define double @fneg_f64(double %x) nounwind {
 ; SSE2-NEXT:    andl $-8, %esp
 ; SSE2-NEXT:    subl $8, %esp
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2-NEXT:    movlps %xmm0, (%esp)
 ; SSE2-NEXT:    fldl (%esp)
 ; SSE2-NEXT:    movl %ebp, %esp
@@ -40,7 +40,7 @@ define float @fneg_f32(float %x) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushl %eax
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2-NEXT:    movss %xmm0, (%esp)
 ; SSE2-NEXT:    flds (%esp)
 ; SSE2-NEXT:    popl %eax
@@ -65,7 +65,7 @@ define void @fneg_f64_mem(double* %x, double* %y) nounwind {
 ; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; SSE2-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE2-NEXT:    movsd %xmm0, (%eax)
 ; SSE2-NEXT:    retl
   %a = load double, double* %x

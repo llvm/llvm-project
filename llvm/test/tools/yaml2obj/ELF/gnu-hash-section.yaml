@@ -208,12 +208,15 @@ Sections:
     Header:
       SymNdx: 0x0
 
-## Either "Content" or "Header", "BloomFilter", "HashBuckets" and "HashBuckets" must be
-## specified when declaring a SHT_GNU_HASH section.
+## Check we emit an empty section if neither "Content", "Header",
+## "BloomFilter", "HashBuckets" nor "HashBuckets" were set.
 
-# RUN: not yaml2obj --docnum=10 %s -o %t10 2>&1 | FileCheck %s --check-prefix=NOKEYS
+# NOKEYS: Section Headers:
+# NOKEYS:  [Nr] Name      Type     Address          Off    Size
+# NOKEYS:  [ 1] .gnu.hash GNU_HASH 0000000000000000 000040 000000
 
-# NOKEYS: error: either "Content" or "Header", "BloomFilter", "HashBuckets" and "HashBuckets" must be specified
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readelf --sections %t10 | FileCheck %s --check-prefix=NOKEYS
 
 --- !ELF
 FileHeader:
@@ -224,11 +227,11 @@ Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
 
-## Test that "Header", "BloomFilter", "HashBuckets" and "HashValues" can't be used together with "Content".
+## Test that "Header", "BloomFilter", "HashBuckets" and "HashValues" can't be used together with the "Content" or "Size"
 
-# RUN: not yaml2obj --docnum=11 %s -o %t11 2>&1 | FileCheck %s --check-prefix=TOGETHER
-
-# TOGETHER: error: "Header", "BloomFilter", "HashBuckets" and "HashValues" can't be used together with "Content"
+# RUN: not yaml2obj --docnum=11 -DCONTENT="" %s 2>&1 | FileCheck %s --check-prefix=TOGETHER
+# RUN: not yaml2obj --docnum=11 -DSIZE=0 %s 2>&1 | FileCheck %s --check-prefix=TOGETHER
+# TOGETHER: error: "Header", "BloomFilter", "HashBuckets" and "HashValues" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -236,9 +239,10 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_DYN
 Sections:
-  - Name:  .gnu.hash
-    Type:  SHT_GNU_HASH
-    Content: ""
+  - Name:    .gnu.hash
+    Type:    SHT_GNU_HASH
+    Content: [[CONTENT=<none>]]
+    Size:    [[SIZE=<none>]]
     Header:
       SymNdx: 0x0
       Shift2: 0x0
@@ -273,3 +277,47 @@ Sections:
     BloomFilter: []
     HashBuckets: []
     HashValues:  []
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=13 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .gnu.hash
+    Type:    SHT_GNU_HASH
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+
+# RUN: yaml2obj --docnum=13 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=13 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:      Name: .gnu.hash
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=13 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=13 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"

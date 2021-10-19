@@ -32,16 +32,18 @@ public:
   RelType getDynRel(RelType type) const override;
   void writeGotPltHeader(uint8_t *buf) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  void writeIgotPlt(uint8_t *buf, const Symbol &s) const override;
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                          unsigned size) const override;
 
-  RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
-                          RelExpr expr) const override;
+  RelExpr adjustGotPcExpr(RelType type, int64_t addend,
+                          const uint8_t *loc) const override;
   void relaxGot(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
@@ -76,7 +78,6 @@ static const std::vector<std::vector<uint8_t>> nopInstructions = {
 X86_64::X86_64() {
   copyRel = R_X86_64_COPY;
   gotRel = R_X86_64_GLOB_DAT;
-  noneRel = R_X86_64_NONE;
   pltRel = R_X86_64_JUMP_SLOT;
   relativeRel = R_X86_64_RELATIVE;
   iRelativeRel = R_X86_64_IRELATIVE;
@@ -85,6 +86,8 @@ X86_64::X86_64() {
   tlsGotRel = R_X86_64_TPOFF64;
   tlsModuleIndexRel = R_X86_64_DTPMOD64;
   tlsOffsetRel = R_X86_64_DTPOFF64;
+  gotBaseSymInGotPlt = true;
+  gotEntrySize = 8;
   pltHeaderSize = 16;
   pltEntrySize = 16;
   ipltEntrySize = 16;
@@ -324,7 +327,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_DTPOFF64:
     return R_DTPREL;
   case R_X86_64_TPOFF32:
-    return R_TLS;
+    return R_TPREL;
   case R_X86_64_TLSDESC_CALL:
     return R_TLSDESC_CALL;
   case R_X86_64_TLSLD:
@@ -376,6 +379,12 @@ void X86_64::writeGotPltHeader(uint8_t *buf) const {
 void X86_64::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // See comments in X86::writeGotPlt.
   write64le(buf, s.getPltVA() + 6);
+}
+
+void X86_64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+  // An x86 entry is the address of the ifunc resolver function (for -z rel).
+  if (config->writeAddends)
+    write64le(buf, s.getVA());
 }
 
 void X86_64::writePltHeader(uint8_t *buf) const {
@@ -674,6 +683,55 @@ void X86_64::applyJumpInstrMod(uint8_t *loc, JumpModType type,
   }
 }
 
+int64_t X86_64::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_X86_64_8:
+  case R_X86_64_PC8:
+    return SignExtend64<8>(*buf);
+  case R_X86_64_16:
+  case R_X86_64_PC16:
+    return SignExtend64<16>(read16le(buf));
+  case R_X86_64_32:
+  case R_X86_64_32S:
+  case R_X86_64_TPOFF32:
+  case R_X86_64_GOT32:
+  case R_X86_64_GOTPC32:
+  case R_X86_64_GOTPC32_TLSDESC:
+  case R_X86_64_GOTPCREL:
+  case R_X86_64_GOTPCRELX:
+  case R_X86_64_REX_GOTPCRELX:
+  case R_X86_64_PC32:
+  case R_X86_64_GOTTPOFF:
+  case R_X86_64_PLT32:
+  case R_X86_64_TLSGD:
+  case R_X86_64_TLSLD:
+  case R_X86_64_DTPOFF32:
+  case R_X86_64_SIZE32:
+    return SignExtend64<32>(read32le(buf));
+  case R_X86_64_64:
+  case R_X86_64_TPOFF64:
+  case R_X86_64_DTPOFF64:
+  case R_X86_64_DTPMOD64:
+  case R_X86_64_PC64:
+  case R_X86_64_SIZE64:
+  case R_X86_64_GLOB_DAT:
+  case R_X86_64_GOT64:
+  case R_X86_64_GOTOFF64:
+  case R_X86_64_GOTPC64:
+  case R_X86_64_IRELATIVE:
+  case R_X86_64_RELATIVE:
+    return read64le(buf);
+  case R_X86_64_JUMP_SLOT:
+  case R_X86_64_NONE:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
+}
+
 void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   switch (rel.type) {
   case R_X86_64_8:
@@ -728,12 +786,17 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   }
 }
 
-RelExpr X86_64::adjustRelaxExpr(RelType type, const uint8_t *data,
-                                RelExpr relExpr) const {
-  if (type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX)
-    return relExpr;
-  const uint8_t op = data[-2];
-  const uint8_t modRm = data[-1];
+RelExpr X86_64::adjustGotPcExpr(RelType type, int64_t addend,
+                                const uint8_t *loc) const {
+  // Only R_X86_64_[REX_]GOTPCRELX can be relaxed. GNU as may emit GOTPCRELX
+  // with addend != -4. Such an instruction does not load the full GOT entry, so
+  // we cannot relax the relocation. E.g. movl x@GOTPCREL+4(%rip), %rax
+  // (addend=0) loads the high 32 bits of the GOT entry.
+  if ((type != R_X86_64_GOTPCRELX && type != R_X86_64_REX_GOTPCRELX) ||
+      addend != -4)
+    return R_GOT_PC;
+  const uint8_t op = loc[-2];
+  const uint8_t modRm = loc[-1];
 
   // FIXME: When PIC is disabled and foo is defined locally in the
   // lower 32 bit address space, memory operand in mov can be converted into
@@ -746,12 +809,13 @@ RelExpr X86_64::adjustRelaxExpr(RelType type, const uint8_t *data,
   if (op == 0xff && (modRm == 0x15 || modRm == 0x25))
     return R_RELAX_GOT_PC;
 
+  // We don't support test/binop instructions without a REX prefix.
+  if (type == R_X86_64_GOTPCRELX)
+    return R_GOT_PC;
+
   // Relaxation of test, adc, add, and, cmp, or, sbb, sub, xor.
   // If PIC then no relaxation is available.
-  // We also don't relax test/binop instructions without REX byte,
-  // they are 32bit operations and not common to have.
-  assert(type == R_X86_64_REX_GOTPCRELX);
-  return config->isPic ? relExpr : R_RELAX_GOT_PC_NOPIC;
+  return config->isPic ? R_GOT_PC : R_RELAX_GOT_PC_NOPIC;
 }
 
 // A subset of relaxations can only be applied for no-PIC. This method
@@ -822,7 +886,8 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
   write32le(loc, val);
 }
 
-void X86_64::relaxGot(uint8_t *loc, const Relocation &, uint64_t val) const {
+void X86_64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  checkInt(loc, val, 32, rel);
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
 

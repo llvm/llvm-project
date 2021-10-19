@@ -6,8 +6,8 @@ define void @foo(fp128 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    callq __multf3
+; CHECK-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    callq __multf3@PLT
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    popq %rax

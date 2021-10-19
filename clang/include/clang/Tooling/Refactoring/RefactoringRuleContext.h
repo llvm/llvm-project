@@ -77,7 +77,7 @@ private:
   /// might operate on.
   ASTContext *AST = nullptr;
   /// The allocator for diagnostics.
-  PartialDiagnostic::StorageAllocator DiagStorage;
+  PartialDiagnostic::DiagStorageAllocator DiagStorage;
 
   // FIXME: Remove when memoized.
   std::unique_ptr<SelectedASTNode> ASTNodeSelection;

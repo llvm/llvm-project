@@ -9,8 +9,7 @@
 #ifndef LLVM_TOOLS_OBJCOPY_OBJECT_H
 #define LLVM_TOOLS_OBJCOPY_OBJECT_H
 
-#include "Buffer.h"
-#include "CopyConfig.h"
+#include "CommonConfig.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -19,6 +18,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -48,12 +48,12 @@ class Object;
 struct Symbol;
 
 class SectionTableRef {
-  MutableArrayRef<std::unique_ptr<SectionBase>> Sections;
+  ArrayRef<std::unique_ptr<SectionBase>> Sections;
 
 public:
-  using iterator = pointee_iterator<std::unique_ptr<SectionBase> *>;
+  using iterator = pointee_iterator<const std::unique_ptr<SectionBase> *>;
 
-  explicit SectionTableRef(MutableArrayRef<std::unique_ptr<SectionBase>> Secs)
+  explicit SectionTableRef(ArrayRef<std::unique_ptr<SectionBase>> Secs)
       : Sections(Secs) {}
   SectionTableRef(const SectionTableRef &) = default;
 
@@ -61,10 +61,11 @@ public:
   iterator end() const { return iterator(Sections.data() + Sections.size()); }
   size_t size() const { return Sections.size(); }
 
-  SectionBase *getSection(uint32_t Index, Twine ErrMsg);
+  Expected<SectionBase *> getSection(uint32_t Index, Twine ErrMsg);
 
   template <class T>
-  T *getSectionOfType(uint32_t Index, Twine IndexErrMsg, Twine TypeErrMsg);
+  Expected<T *> getSectionOfType(uint32_t Index, Twine IndexErrMsg,
+                                 Twine TypeErrMsg);
 };
 
 enum ElfType { ELFT_ELF32LE, ELFT_ELF64LE, ELFT_ELF32BE, ELFT_ELF64BE };
@@ -73,56 +74,56 @@ class SectionVisitor {
 public:
   virtual ~SectionVisitor() = default;
 
-  virtual void visit(const Section &Sec) = 0;
-  virtual void visit(const OwnedDataSection &Sec) = 0;
-  virtual void visit(const StringTableSection &Sec) = 0;
-  virtual void visit(const SymbolTableSection &Sec) = 0;
-  virtual void visit(const RelocationSection &Sec) = 0;
-  virtual void visit(const DynamicRelocationSection &Sec) = 0;
-  virtual void visit(const GnuDebugLinkSection &Sec) = 0;
-  virtual void visit(const GroupSection &Sec) = 0;
-  virtual void visit(const SectionIndexSection &Sec) = 0;
-  virtual void visit(const CompressedSection &Sec) = 0;
-  virtual void visit(const DecompressedSection &Sec) = 0;
+  virtual Error visit(const Section &Sec) = 0;
+  virtual Error visit(const OwnedDataSection &Sec) = 0;
+  virtual Error visit(const StringTableSection &Sec) = 0;
+  virtual Error visit(const SymbolTableSection &Sec) = 0;
+  virtual Error visit(const RelocationSection &Sec) = 0;
+  virtual Error visit(const DynamicRelocationSection &Sec) = 0;
+  virtual Error visit(const GnuDebugLinkSection &Sec) = 0;
+  virtual Error visit(const GroupSection &Sec) = 0;
+  virtual Error visit(const SectionIndexSection &Sec) = 0;
+  virtual Error visit(const CompressedSection &Sec) = 0;
+  virtual Error visit(const DecompressedSection &Sec) = 0;
 };
 
 class MutableSectionVisitor {
 public:
   virtual ~MutableSectionVisitor() = default;
 
-  virtual void visit(Section &Sec) = 0;
-  virtual void visit(OwnedDataSection &Sec) = 0;
-  virtual void visit(StringTableSection &Sec) = 0;
-  virtual void visit(SymbolTableSection &Sec) = 0;
-  virtual void visit(RelocationSection &Sec) = 0;
-  virtual void visit(DynamicRelocationSection &Sec) = 0;
-  virtual void visit(GnuDebugLinkSection &Sec) = 0;
-  virtual void visit(GroupSection &Sec) = 0;
-  virtual void visit(SectionIndexSection &Sec) = 0;
-  virtual void visit(CompressedSection &Sec) = 0;
-  virtual void visit(DecompressedSection &Sec) = 0;
+  virtual Error visit(Section &Sec) = 0;
+  virtual Error visit(OwnedDataSection &Sec) = 0;
+  virtual Error visit(StringTableSection &Sec) = 0;
+  virtual Error visit(SymbolTableSection &Sec) = 0;
+  virtual Error visit(RelocationSection &Sec) = 0;
+  virtual Error visit(DynamicRelocationSection &Sec) = 0;
+  virtual Error visit(GnuDebugLinkSection &Sec) = 0;
+  virtual Error visit(GroupSection &Sec) = 0;
+  virtual Error visit(SectionIndexSection &Sec) = 0;
+  virtual Error visit(CompressedSection &Sec) = 0;
+  virtual Error visit(DecompressedSection &Sec) = 0;
 };
 
 class SectionWriter : public SectionVisitor {
 protected:
-  Buffer &Out;
+  WritableMemoryBuffer &Out;
 
 public:
   virtual ~SectionWriter() = default;
 
-  void visit(const Section &Sec) override;
-  void visit(const OwnedDataSection &Sec) override;
-  void visit(const StringTableSection &Sec) override;
-  void visit(const DynamicRelocationSection &Sec) override;
-  virtual void visit(const SymbolTableSection &Sec) override = 0;
-  virtual void visit(const RelocationSection &Sec) override = 0;
-  virtual void visit(const GnuDebugLinkSection &Sec) override = 0;
-  virtual void visit(const GroupSection &Sec) override = 0;
-  virtual void visit(const SectionIndexSection &Sec) override = 0;
-  virtual void visit(const CompressedSection &Sec) override = 0;
-  virtual void visit(const DecompressedSection &Sec) override = 0;
+  Error visit(const Section &Sec) override;
+  Error visit(const OwnedDataSection &Sec) override;
+  Error visit(const StringTableSection &Sec) override;
+  Error visit(const DynamicRelocationSection &Sec) override;
+  virtual Error visit(const SymbolTableSection &Sec) override = 0;
+  virtual Error visit(const RelocationSection &Sec) override = 0;
+  virtual Error visit(const GnuDebugLinkSection &Sec) override = 0;
+  virtual Error visit(const GroupSection &Sec) override = 0;
+  virtual Error visit(const SectionIndexSection &Sec) override = 0;
+  virtual Error visit(const CompressedSection &Sec) override = 0;
+  virtual Error visit(const DecompressedSection &Sec) override = 0;
 
-  explicit SectionWriter(Buffer &Buf) : Out(Buf) {}
+  explicit SectionWriter(WritableMemoryBuffer &Buf) : Out(Buf) {}
 };
 
 template <class ELFT> class ELFSectionWriter : public SectionWriter {
@@ -134,15 +135,15 @@ private:
 
 public:
   virtual ~ELFSectionWriter() {}
-  void visit(const SymbolTableSection &Sec) override;
-  void visit(const RelocationSection &Sec) override;
-  void visit(const GnuDebugLinkSection &Sec) override;
-  void visit(const GroupSection &Sec) override;
-  void visit(const SectionIndexSection &Sec) override;
-  void visit(const CompressedSection &Sec) override;
-  void visit(const DecompressedSection &Sec) override;
+  Error visit(const SymbolTableSection &Sec) override;
+  Error visit(const RelocationSection &Sec) override;
+  Error visit(const GnuDebugLinkSection &Sec) override;
+  Error visit(const GroupSection &Sec) override;
+  Error visit(const SectionIndexSection &Sec) override;
+  Error visit(const CompressedSection &Sec) override;
+  Error visit(const DecompressedSection &Sec) override;
 
-  explicit ELFSectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
+  explicit ELFSectionWriter(WritableMemoryBuffer &Buf) : SectionWriter(Buf) {}
 };
 
 template <class ELFT> class ELFSectionSizer : public MutableSectionVisitor {
@@ -154,17 +155,17 @@ private:
   using Elf_Xword = typename ELFT::Xword;
 
 public:
-  void visit(Section &Sec) override;
-  void visit(OwnedDataSection &Sec) override;
-  void visit(StringTableSection &Sec) override;
-  void visit(DynamicRelocationSection &Sec) override;
-  void visit(SymbolTableSection &Sec) override;
-  void visit(RelocationSection &Sec) override;
-  void visit(GnuDebugLinkSection &Sec) override;
-  void visit(GroupSection &Sec) override;
-  void visit(SectionIndexSection &Sec) override;
-  void visit(CompressedSection &Sec) override;
-  void visit(DecompressedSection &Sec) override;
+  Error visit(Section &Sec) override;
+  Error visit(OwnedDataSection &Sec) override;
+  Error visit(StringTableSection &Sec) override;
+  Error visit(DynamicRelocationSection &Sec) override;
+  Error visit(SymbolTableSection &Sec) override;
+  Error visit(RelocationSection &Sec) override;
+  Error visit(GnuDebugLinkSection &Sec) override;
+  Error visit(GroupSection &Sec) override;
+  Error visit(SectionIndexSection &Sec) override;
+  Error visit(CompressedSection &Sec) override;
+  Error visit(DecompressedSection &Sec) override;
 };
 
 #define MAKE_SEC_WRITER_FRIEND                                                 \
@@ -178,15 +179,16 @@ class BinarySectionWriter : public SectionWriter {
 public:
   virtual ~BinarySectionWriter() {}
 
-  void visit(const SymbolTableSection &Sec) override;
-  void visit(const RelocationSection &Sec) override;
-  void visit(const GnuDebugLinkSection &Sec) override;
-  void visit(const GroupSection &Sec) override;
-  void visit(const SectionIndexSection &Sec) override;
-  void visit(const CompressedSection &Sec) override;
-  void visit(const DecompressedSection &Sec) override;
+  Error visit(const SymbolTableSection &Sec) override;
+  Error visit(const RelocationSection &Sec) override;
+  Error visit(const GnuDebugLinkSection &Sec) override;
+  Error visit(const GroupSection &Sec) override;
+  Error visit(const SectionIndexSection &Sec) override;
+  Error visit(const CompressedSection &Sec) override;
+  Error visit(const DecompressedSection &Sec) override;
 
-  explicit BinarySectionWriter(Buffer &Buf) : SectionWriter(Buf) {}
+  explicit BinarySectionWriter(WritableMemoryBuffer &Buf)
+      : SectionWriter(Buf) {}
 };
 
 using IHexLineData = SmallVector<char, 64>;
@@ -282,36 +284,38 @@ protected:
   virtual void writeData(uint8_t Type, uint16_t Addr, ArrayRef<uint8_t> Data);
 
 public:
-  explicit IHexSectionWriterBase(Buffer &Buf) : BinarySectionWriter(Buf) {}
+  explicit IHexSectionWriterBase(WritableMemoryBuffer &Buf)
+      : BinarySectionWriter(Buf) {}
 
   uint64_t getBufferOffset() const { return Offset; }
-  void visit(const Section &Sec) final;
-  void visit(const OwnedDataSection &Sec) final;
-  void visit(const StringTableSection &Sec) override;
-  void visit(const DynamicRelocationSection &Sec) final;
+  Error visit(const Section &Sec) final;
+  Error visit(const OwnedDataSection &Sec) final;
+  Error visit(const StringTableSection &Sec) override;
+  Error visit(const DynamicRelocationSection &Sec) final;
   using BinarySectionWriter::visit;
 };
 
 // Real IHEX section writer
 class IHexSectionWriter : public IHexSectionWriterBase {
 public:
-  IHexSectionWriter(Buffer &Buf) : IHexSectionWriterBase(Buf) {}
+  IHexSectionWriter(WritableMemoryBuffer &Buf) : IHexSectionWriterBase(Buf) {}
 
   void writeData(uint8_t Type, uint16_t Addr, ArrayRef<uint8_t> Data) override;
-  void visit(const StringTableSection &Sec) override;
+  Error visit(const StringTableSection &Sec) override;
 };
 
 class Writer {
 protected:
   Object &Obj;
-  Buffer &Buf;
+  std::unique_ptr<WritableMemoryBuffer> Buf;
+  raw_ostream &Out;
 
 public:
   virtual ~Writer();
   virtual Error finalize() = 0;
   virtual Error write() = 0;
 
-  Writer(Object &O, Buffer &B) : Obj(O), Buf(B) {}
+  Writer(Object &O, raw_ostream &Out) : Obj(O), Out(Out) {}
 };
 
 template <class ELFT> class ELFWriter : public Writer {
@@ -329,7 +333,7 @@ private:
 
   void writePhdrs();
   void writeShdrs();
-  void writeSectionData();
+  Error writeSectionData();
   void writeSegmentData();
 
   void assignOffsets();
@@ -348,7 +352,7 @@ public:
 
   Error finalize() override;
   Error write() override;
-  ELFWriter(Object &Obj, Buffer &Buf, bool WSH, bool OnlyKeepDebug);
+  ELFWriter(Object &Obj, raw_ostream &Out, bool WSH, bool OnlyKeepDebug);
 };
 
 class BinaryWriter : public Writer {
@@ -361,7 +365,7 @@ public:
   ~BinaryWriter() {}
   Error finalize() override;
   Error write() override;
-  BinaryWriter(Object &Obj, Buffer &Buf) : Writer(Obj, Buf) {}
+  BinaryWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
 };
 
 class IHexWriter : public Writer {
@@ -380,7 +384,7 @@ public:
   ~IHexWriter() {}
   Error finalize() override;
   Error write() override;
-  IHexWriter(Object &Obj, Buffer &Buf) : Writer(Obj, Buf) {}
+  IHexWriter(Object &Obj, raw_ostream &Out) : Writer(Obj, Out) {}
 };
 
 class SectionBase {
@@ -389,8 +393,8 @@ public:
   Segment *ParentSegment = nullptr;
   uint64_t HeaderOffset = 0;
   uint32_t Index = 0;
-  bool HasSymbol = false;
 
+  uint32_t OriginalIndex = 0;
   uint64_t OriginalFlags = 0;
   uint64_t OriginalType = ELF::SHT_NULL;
   uint64_t OriginalOffset = std::numeric_limits<uint64_t>::max();
@@ -406,21 +410,22 @@ public:
   uint64_t Size = 0;
   uint64_t Type = ELF::SHT_NULL;
   ArrayRef<uint8_t> OriginalData;
+  bool HasSymbol = false;
 
   SectionBase() = default;
   SectionBase(const SectionBase &) = default;
 
   virtual ~SectionBase() = default;
 
-  virtual void initialize(SectionTableRef SecTable);
+  virtual Error initialize(SectionTableRef SecTable);
   virtual void finalize();
   // Remove references to these sections. The list of sections must be sorted.
   virtual Error
   removeSectionReferences(bool AllowBrokenLinks,
                           function_ref<bool(const SectionBase *)> ToRemove);
   virtual Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
-  virtual void accept(SectionVisitor &Visitor) const = 0;
-  virtual void accept(MutableSectionVisitor &Visitor) = 0;
+  virtual Error accept(SectionVisitor &Visitor) const = 0;
+  virtual Error accept(MutableSectionVisitor &Visitor) = 0;
   virtual void markSymbols();
   virtual void
   replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
@@ -434,9 +439,9 @@ private:
     bool operator()(const SectionBase *Lhs, const SectionBase *Rhs) const {
       // Some sections might have the same address if one of them is empty. To
       // fix this we can use the lexicographic ordering on ->Addr and the
-      // address of the actully stored section.
+      // original index.
       if (Lhs->OriginalOffset == Rhs->OriginalOffset)
-        return Lhs < Rhs;
+        return Lhs->OriginalIndex < Rhs->OriginalIndex;
       return Lhs->OriginalOffset < Rhs->OriginalOffset;
     }
   };
@@ -481,11 +486,12 @@ class Section : public SectionBase {
 public:
   explicit Section(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
-  void initialize(SectionTableRef SecTable) override;
+  Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
 };
 
@@ -513,8 +519,8 @@ public:
   }
 
   void appendHexData(StringRef HexData);
-  void accept(SectionVisitor &Sec) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Sec) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 };
 
 class CompressedSection : public SectionBase {
@@ -526,21 +532,28 @@ class CompressedSection : public SectionBase {
   SmallVector<char, 128> CompressedData;
 
 public:
-  CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType);
-  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
-                    uint64_t DecompressedAlign);
+  static Expected<CompressedSection>
+  create(const SectionBase &Sec, DebugCompressionType CompressionType);
+  static Expected<CompressedSection> create(ArrayRef<uint8_t> CompressedData,
+                                            uint64_t DecompressedSize,
+                                            uint64_t DecompressedAlign);
 
   uint64_t getDecompressedSize() const { return DecompressedSize; }
   uint64_t getDecompressedAlign() const { return DecompressedAlign; }
 
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
     return (S->OriginalFlags & ELF::SHF_COMPRESSED) ||
            (StringRef(S->Name).startswith(".zdebug"));
   }
+
+private:
+  CompressedSection(const SectionBase &Sec,
+                    DebugCompressionType CompressionType, Error &Err);
+  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
+                    uint64_t DecompressedAlign);
 };
 
 class DecompressedSection : public SectionBase {
@@ -556,8 +569,8 @@ public:
       Name = "." + Name.substr(2);
   }
 
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 };
 
 // There are two types of string tables that can exist, dynamic and not dynamic.
@@ -581,8 +594,8 @@ public:
   void addString(StringRef Name);
   uint32_t findIndex(StringRef Name) const;
   void prepareForLayout();
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 
   static bool classof(const SectionBase *S) {
     if (S->OriginalFlags & ELF::SHF_ALLOC)
@@ -639,18 +652,18 @@ public:
   virtual ~SectionIndexSection() {}
   void addIndex(uint32_t Index) {
     assert(Size > 0);
-    Indexes.push_back(Index);    
+    Indexes.push_back(Index);
   }
 
   void reserve(size_t NumSymbols) {
     Indexes.reserve(NumSymbols);
     Size = NumSymbols * 4;
-  }  
+  }
   void setSymTab(SymbolTableSection *SymTab) { Symbols = SymTab; }
-  void initialize(SectionTableRef SecTable) override;
+  Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 
   SectionIndexSection() {
     Name = ".symtab_shndx";
@@ -688,16 +701,17 @@ public:
   const SectionIndexSection *getShndxTable() const { return SectionIndexTable; }
   void fillShndxTable();
   const SectionBase *getStrTab() const { return SymbolNames; }
-  const Symbol *getSymbolByIndex(uint32_t Index) const;
-  Symbol *getSymbolByIndex(uint32_t Index);
+  Expected<const Symbol *> getSymbolByIndex(uint32_t Index) const;
+  Expected<Symbol *> getSymbolByIndex(uint32_t Index);
   void updateSymbols(function_ref<void(Symbol &)> Callable);
 
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
-  void initialize(SectionTableRef SecTable) override;
+  Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void replaceSectionReferences(
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
@@ -731,6 +745,8 @@ public:
   const SectionBase *getSection() const { return SecToApplyRel; }
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
 
+  StringRef getNamePrefix() const;
+
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
@@ -748,7 +764,7 @@ protected:
   SymTabType *Symbols = nullptr;
 
 public:
-  void initialize(SectionTableRef SecTable) override;
+  Error initialize(SectionTableRef SecTable) override;
   void finalize() override;
 };
 
@@ -760,9 +776,10 @@ class RelocationSection
 
 public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
-  Error removeSectionReferences(bool AllowBrokenLinks,
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
+  Error removeSectionReferences(
+      bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
@@ -798,8 +815,8 @@ public:
   void setFlagWord(ELF::Elf32_Word W) { FlagWord = W; }
   void addMember(SectionBase *Sec) { GroupMembers.push_back(Sec); }
 
-  void accept(SectionVisitor &) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
   void finalize() override;
   Error removeSectionReferences(
       bool AllowBrokenLinks,
@@ -843,8 +860,8 @@ private:
 public:
   explicit DynamicRelocationSection(ArrayRef<uint8_t> Data) : Contents(Data) {}
 
-  void accept(SectionVisitor &) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
   Error removeSectionReferences(
       bool AllowBrokenLinks,
       function_ref<bool(const SectionBase *)> ToRemove) override;
@@ -868,14 +885,14 @@ private:
 public:
   // If we add this section from an external source we can use this ctor.
   explicit GnuDebugLinkSection(StringRef File, uint32_t PrecomputedCRC);
-  void accept(SectionVisitor &Visitor) const override;
-  void accept(MutableSectionVisitor &Visitor) override;
+  Error accept(SectionVisitor &Visitor) const override;
+  Error accept(MutableSectionVisitor &Visitor) override;
 };
 
 class Reader {
 public:
   virtual ~Reader();
-  virtual std::unique_ptr<Object> create(bool EnsureSymtab) const = 0;
+  virtual Expected<std::unique_ptr<Object>> create(bool EnsureSymtab) const = 0;
 };
 
 using object::Binary;
@@ -891,7 +908,7 @@ protected:
   void initHeaderSegment();
   StringTableSection *addStrTab();
   SymbolTableSection *addSymTab(StringTableSection *StrTab);
-  void initSections();
+  Error initSections();
 
 public:
   BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
@@ -907,7 +924,7 @@ public:
       : BasicELFBuilder(), MemBuf(MB),
         NewSymbolVisibility(NewSymbolVisibility) {}
 
-  std::unique_ptr<Object> build();
+  Expected<std::unique_ptr<Object>> build();
 };
 
 class IHexELFBuilder : public BasicELFBuilder {
@@ -919,7 +936,7 @@ public:
   IHexELFBuilder(const std::vector<IHexRecord> &Records)
       : BasicELFBuilder(), Records(Records) {}
 
-  std::unique_ptr<Object> build();
+  Expected<std::unique_ptr<Object>> build();
 };
 
 template <class ELFT> class ELFBuilder {
@@ -934,21 +951,21 @@ private:
   Optional<StringRef> ExtractPartition;
 
   void setParentSegment(Segment &Child);
-  void readProgramHeaders(const ELFFile<ELFT> &HeadersFile);
-  void initGroupSection(GroupSection *GroupSec);
-  void initSymbolTable(SymbolTableSection *SymTab);
-  void readSectionHeaders();
-  void readSections(bool EnsureSymtab);
-  void findEhdrOffset();
-  SectionBase &makeSection(const Elf_Shdr &Shdr);
+  Error readProgramHeaders(const ELFFile<ELFT> &HeadersFile);
+  Error initGroupSection(GroupSection *GroupSec);
+  Error initSymbolTable(SymbolTableSection *SymTab);
+  Error readSectionHeaders();
+  Error readSections(bool EnsureSymtab);
+  Error findEhdrOffset();
+  Expected<SectionBase &> makeSection(const Elf_Shdr &Shdr);
 
 public:
   ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
              Optional<StringRef> ExtractPartition)
-      : ElfFile(*ElfObj.getELFFile()), Obj(Obj),
+      : ElfFile(ElfObj.getELFFile()), Obj(Obj),
         ExtractPartition(ExtractPartition) {}
 
-  void build(bool EnsureSymtab);
+  Error build(bool EnsureSymtab);
 };
 
 class BinaryReader : public Reader {
@@ -958,7 +975,7 @@ class BinaryReader : public Reader {
 public:
   BinaryReader(MemoryBuffer *MB, const uint8_t NewSymbolVisibility)
       : MemBuf(MB), NewSymbolVisibility(NewSymbolVisibility) {}
-  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
+  Expected<std::unique_ptr<Object>> create(bool EnsureSymtab) const override;
 };
 
 class IHexReader : public Reader {
@@ -980,7 +997,7 @@ class IHexReader : public Reader {
 public:
   IHexReader(MemoryBuffer *MB) : MemBuf(MB) {}
 
-  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
+  Expected<std::unique_ptr<Object>> create(bool EnsureSymtab) const override;
 };
 
 class ELFReader : public Reader {
@@ -988,7 +1005,7 @@ class ELFReader : public Reader {
   Optional<StringRef> ExtractPartition;
 
 public:
-  std::unique_ptr<Object> create(bool EnsureSymtab) const override;
+  Expected<std::unique_ptr<Object>> create(bool EnsureSymtab) const override;
   explicit ELFReader(Binary *B, Optional<StringRef> ExtractPartition)
       : Bin(B), ExtractPartition(ExtractPartition) {}
 };
@@ -1007,10 +1024,6 @@ private:
   };
 
 public:
-  template <class T>
-  using Range = iterator_range<
-      pointee_iterator<typename std::vector<std::unique_ptr<T>>::iterator>>;
-
   template <class T>
   using ConstRange = iterator_range<pointee_iterator<
       typename std::vector<std::unique_ptr<T>>::const_iterator>>;
@@ -1039,11 +1052,7 @@ public:
   SymbolTableSection *SymbolTable = nullptr;
   SectionIndexSection *SectionIndexTable = nullptr;
 
-  void sortSections();
-  SectionTableRef sections() { return SectionTableRef(Sections); }
-  ConstRange<SectionBase> sections() const {
-    return make_pointee_range(Sections);
-  }
+  SectionTableRef sections() const { return SectionTableRef(Sections); }
   iterator_range<
       filter_iterator<pointee_iterator<std::vector<SecPtr>::const_iterator>,
                       decltype(&sectionIsAlloc)>>
@@ -1058,11 +1067,11 @@ public:
   }
   SectionTableRef removedSections() { return SectionTableRef(RemovedSections); }
 
-  Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 
   Error removeSections(bool AllowBrokenLinks,
                        std::function<bool(const SectionBase &)> ToRemove);
+  Error replaceSections(const DenseMap<SectionBase *, SectionBase *> &FromTo);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
   template <class T, class... Ts> T &addSection(Ts &&... Args) {
     auto Sec = std::make_unique<T>(std::forward<Ts>(Args)...);
@@ -1072,7 +1081,7 @@ public:
     Ptr->Index = Sections.size();
     return *Ptr;
   }
-  void addNewSymbolTable();
+  Error addNewSymbolTable();
   Segment &addSegment(ArrayRef<uint8_t> Data) {
     Segments.emplace_back(std::make_unique<Segment>(Data));
     return *Segments.back();

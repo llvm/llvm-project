@@ -57,7 +57,7 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
 /// \param D The declaration to check.
 /// \param Message If non-null, this will be populated with the message from
 /// the availability attribute that is selected.
-/// \param ClassReceiver If we're checking the the method of a class message
+/// \param ClassReceiver If we're checking the method of a class message
 /// send, the class. Otherwise nullptr.
 static std::pair<AvailabilityResult, const NamedDecl *>
 ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
@@ -268,7 +268,7 @@ tryParseObjCMethodName(StringRef Name, SmallVectorImpl<StringRef> &SlotNames,
   for (StringRef S : SlotNames) {
     if (S.empty())
       continue;
-    if (!isValidIdentifier(S, AllowDollar))
+    if (!isValidAsciiIdentifier(S, AllowDollar))
       return None;
   }
   return NumParams;
@@ -630,8 +630,7 @@ public:
                                               const CompoundStmt *Scope) {
     LastDeclUSEFinder Visitor;
     Visitor.D = D;
-    for (auto I = Scope->body_rbegin(), E = Scope->body_rend(); I != E; ++I) {
-      const Stmt *S = *I;
+    for (const Stmt *S : llvm::reverse(Scope->body())) {
       if (!Visitor.TraverseStmt(const_cast<Stmt *>(S)))
         return S;
     }
@@ -666,13 +665,6 @@ public:
         SemaRef.Context.getTargetInfo().getPlatformMinVersion());
   }
 
-  bool TraverseDecl(Decl *D) {
-    // Avoid visiting nested functions to prevent duplicate warnings.
-    if (!D || isa<FunctionDecl>(D))
-      return true;
-    return Base::TraverseDecl(D);
-  }
-
   bool TraverseStmt(Stmt *S) {
     if (!S)
       return true;
@@ -686,17 +678,11 @@ public:
 
   bool TraverseIfStmt(IfStmt *If);
 
-  bool TraverseLambdaExpr(LambdaExpr *E) { return true; }
-
   // for 'case X:' statements, don't bother looking at the 'X'; it can't lead
   // to any useful diagnostics.
   bool TraverseCaseStmt(CaseStmt *CS) { return TraverseStmt(CS->getSubStmt()); }
 
-  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) {
-    if (PRE->isClassReceiver())
-      DiagnoseDeclAvailability(PRE->getClassReceiver(), PRE->getReceiverLocation());
-    return true;
-  }
+  bool VisitObjCPropertyRefExpr(ObjCPropertyRefExpr *PRE) { return true; }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *Msg) {
     if (ObjCMethodDecl *D = Msg->getMethodDecl()) {
@@ -919,6 +905,17 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
   DiagnoseUnguardedAvailability(*this, D).IssueDiagnostics(Body);
 }
 
+FunctionScopeInfo *Sema::getCurFunctionAvailabilityContext() {
+  if (FunctionScopes.empty())
+    return nullptr;
+
+  // Conservatively search the entire current function scope context for
+  // availability violations. This ensures we always correctly analyze nested
+  // classes, blocks, lambdas, etc. that may or may not be inside if(@available)
+  // checks themselves.
+  return FunctionScopes.front();
+}
+
 void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
                                       ArrayRef<SourceLocation> Locs,
                                       const ObjCInterfaceDecl *UnknownObjCClass,
@@ -941,11 +938,8 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
     // We need to know the @available context in the current function to
     // diagnose this use, let DiagnoseUnguardedAvailabilityViolations do that
     // when we're done parsing the current function.
-    if (getCurFunctionOrMethodDecl()) {
-      getEnclosingFunction()->HasPotentialAvailabilityViolations = true;
-      return;
-    } else if (getCurBlock() || getCurLambda()) {
-      getCurFunction()->HasPotentialAvailabilityViolations = true;
+    if (FunctionScopeInfo *Context = getCurFunctionAvailabilityContext()) {
+      Context->HasPotentialAvailabilityViolations = true;
       return;
     }
   }

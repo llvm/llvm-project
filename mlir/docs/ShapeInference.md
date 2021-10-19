@@ -291,5 +291,5 @@ function, the reference implementation of the operation will be used to derive
 the shape function. The reference implementation is general and can support the
 arbitrary computations needed to specify output shapes.
 
-[InferTypeOpInterface]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Interfaces/InferTypeOpInterface.td
-[ShapedType]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/IR/StandardTypes.h
+[InferTypeOpInterface]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/Interfaces/InferTypeOpInterface.td
+[ShapedType]: https://github.com/llvm/llvm-project/tree/main/mlir/include/mlir/IR/BuiltinTypes.h

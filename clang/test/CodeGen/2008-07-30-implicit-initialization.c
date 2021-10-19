@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -O2 -emit-llvm -o - %s | FileCheck %s
-// CHECK-LABEL: define i32 @f0()
+// CHECK-LABEL: define{{.*}} i32 @f0()
 // CHECK:   ret i32 0
-// CHECK-LABEL: define i32 @f1()
+// CHECK-LABEL: define{{.*}} i32 @f1()
 // CHECK:   ret i32 0
-// CHECK-LABEL: define i32 @f2()
+// CHECK-LABEL: define{{.*}} i32 @f2()
 // CHECK:   ret i32 0
 // <rdar://problem/6113085>
 

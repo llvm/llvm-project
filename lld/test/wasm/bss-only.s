@@ -41,3 +41,5 @@ b:
 # CHECK-NEXT:       - Name:            __data_end
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           1
+
+# CHECK-NOT: DataSegmentNames:

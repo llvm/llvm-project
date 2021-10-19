@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -enable-misched -asm-verbose -disable-block-placement < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-misched -asm-verbose -disable-block-placement -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=SI %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
@@ -159,7 +159,7 @@ exit:
 ; SI: [[LABEL_LOOP:BB[0-9]+_[0-9]+]]:
 ; SI: buffer_load_dword
 ; SI-DAG: buffer_store_dword
-; SI-DAG: s_cmpk_lg_i32 s{{[0-9+]}}, 0x100
+; SI-DAG: s_cmpk_lg_i32 s{{[0-9]+}}, 0x100
 ; SI: s_cbranch_scc1 [[LABEL_LOOP]]
 ; SI: [[LABEL_EXIT]]:
 ; SI: s_endpgm

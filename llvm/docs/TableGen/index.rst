@@ -9,8 +9,8 @@ TableGen Overview
    :hidden:
 
    BackEnds
+   BackGuide
    ProgRef
-   Deficiencies
 
 Introduction
 ============
@@ -22,18 +22,21 @@ for common features of these records to be factored out.  This reduces the
 amount of duplication in the description, reduces the chance of error, and makes
 it easier to structure domain specific information.
 
-The core part of TableGen parses a file, instantiates the declarations, and
-hands the result off to a domain-specific `backend`_ for processing.
-See the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
-description of TableGen.
+The TableGen front end parses a file, instantiates the declarations, and
+hands the result off to a domain-specific `backend`_ for processing.  See
+the :doc:`TableGen Programmer's Reference <./ProgRef>` for an in-depth
+description of TableGen. See :doc:`tblgen - Description to C++ Code
+<../CommandGuide/tblgen>` for details on the ``*-tblgen`` commands
+that run the various flavors of TableGen.
 
 The current major users of TableGen are :doc:`The LLVM Target-Independent
 Code Generator <../CodeGenerator>` and the `Clang diagnostics and attributes
 <https://clang.llvm.org/docs/UsersManual.html#controlling-errors-and-warnings>`_.
 
-Note that if you work on TableGen much, and use emacs or vim, that you can find
-an emacs "TableGen mode" and a vim language file in the ``llvm/utils/emacs`` and
-``llvm/utils/vim`` directories of your LLVM distribution, respectively.
+Note that if you work with TableGen frequently and use emacs or vim,
+you can find an emacs "TableGen mode" and a vim language file in the
+``llvm/utils/emacs`` and ``llvm/utils/vim`` directories of your LLVM
+distribution, respectively.
 
 .. _intro:
 
@@ -260,9 +263,9 @@ description of TableGen.
 TableGen backends
 =================
 
-TableGen files have no real meaning without a back-end. The default operation
-of running ``llvm-tblgen`` is to print the information in a textual format, but
-that's only useful for debugging of the TableGen files themselves. The power
+TableGen files have no real meaning without a backend. The default operation
+when running ``*-tblgen`` is to print the information in a textual format, but
+that's only useful for debugging the TableGen files themselves. The power
 in TableGen is, however, to interpret the source files into an internal 
 representation that can be generated into anything you want.
 
@@ -270,32 +273,31 @@ Current usage of TableGen is to create huge include files with tables that you
 can either include directly (if the output is in the language you're coding),
 or be used in pre-processing via macros surrounding the include of the file.
 
-Direct output can be used if the back-end already prints a table in C format
+Direct output can be used if the backend already prints a table in C format
 or if the output is just a list of strings (for error and warning messages).
 Pre-processed output should be used if the same information needs to be used
-in different contexts (like Instruction names), so your back-end should print
+in different contexts (like Instruction names), so your backend should print
 a meta-information list that can be shaped into different compile-time formats.
 
-See the `TableGen BackEnds <BackEnds.html>`_ for more information.
+See :doc:`TableGen BackEnds <./BackEnds>` for a list of available
+backends, and see the :doc:`TableGen Backend Developer's Guide <./BackGuide>`
+for information on how to write and debug a new backend.
 
 TableGen Deficiencies
 =====================
 
 Despite being very generic, TableGen has some deficiencies that have been
 pointed out numerous times. The common theme is that, while TableGen allows
-you to build Domain-Specific-Languages, the final languages that you create
+you to build domain specific languages, the final languages that you create
 lack the power of other DSLs, which in turn increase considerably the size
 and complexity of TableGen files.
 
 At the same time, TableGen allows you to create virtually any meaning of
-the basic concepts via custom-made back-ends, which can pervert the original
+the basic concepts via custom-made backends, which can pervert the original
 design and make it very hard for newcomers to understand the evil TableGen
 file.
 
-There are some in favour of extending the semantics even more, but making sure
-back-ends adhere to strict rules. Others are suggesting we should move to less,
-more powerful DSLs designed with specific purposes, or even re-using existing
+There are some in favor of extending the semantics even more, but making sure
+backends adhere to strict rules. Others are suggesting we should move to less,
+more powerful DSLs designed with specific purposes, or even reusing existing
 DSLs.
-
-Either way, this is a discussion that will likely span across several years,
-if not decades. You can read more in :doc:`TableGen Deficiencies <./Deficiencies>`.

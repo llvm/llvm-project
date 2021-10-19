@@ -15,9 +15,9 @@
 #ifndef FORTRAN_RUNTIME_IO_ERROR_H_
 #define FORTRAN_RUNTIME_IO_ERROR_H_
 
-#include "iostat.h"
-#include "memory.h"
 #include "terminator.h"
+#include "flang/Runtime/iostat.h"
+#include "flang/Runtime/memory.h"
 #include <cinttypes>
 
 namespace Fortran::runtime::io {
@@ -27,20 +27,24 @@ class IoErrorHandler : public Terminator {
 public:
   using Terminator::Terminator;
   explicit IoErrorHandler(const Terminator &that) : Terminator{that} {}
-  void Begin(const char *sourceFileName, int sourceLine);
   void HasIoStat() { flags_ |= hasIoStat; }
   void HasErrLabel() { flags_ |= hasErr; }
   void HasEndLabel() { flags_ |= hasEnd; }
   void HasEorLabel() { flags_ |= hasEor; }
   void HasIoMsg() { flags_ |= hasIoMsg; }
+  void HandleAnything() {
+    flags_ = hasIoStat | hasErr | hasEnd | hasEor | hasIoMsg;
+  }
 
-  bool InError() const { return ioStat_ != 0; }
+  bool InError() const { return ioStat_ != IostatOk; }
 
   void SignalError(int iostatOrErrno, const char *msg, ...);
   void SignalError(int iostatOrErrno);
   template <typename... X> void SignalError(const char *msg, X &&...xs) {
     SignalError(IostatGenericError, msg, std::forward<X>(xs)...);
   }
+
+  void Forward(int iostatOrErrno, const char *, std::size_t);
 
   void SignalErrno(); // SignalError(errno)
   void SignalEnd(); // input only; EOF on internal write is an error
@@ -58,7 +62,7 @@ private:
     hasIoMsg = 16, // IOMSG=
   };
   std::uint8_t flags_{0};
-  int ioStat_{0};
+  int ioStat_{IostatOk};
   OwningPtr<char> ioMsg_;
 };
 

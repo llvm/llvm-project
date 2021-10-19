@@ -1,4 +1,4 @@
-! RUN: %S/test_symbols.sh %s %t %f18 -fopenmp
+! RUN: %python %S/test_symbols.py %s %flang_fc1 -fopenmp
 
 ! 2.15.2 threadprivate Directive
 ! The threadprivate directive specifies that variables are replicated,

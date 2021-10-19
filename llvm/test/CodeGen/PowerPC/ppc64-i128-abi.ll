@@ -5,7 +5,13 @@
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-BE
+
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
@@ -13,6 +19,9 @@
 ; RUN:   --implicit-check-not xxswapd
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
 ; RUN:   -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-BE-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
@@ -23,9 +32,15 @@
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s -check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | FileCheck %s -check-prefix=CHECK-P9
+
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX \
 ; RUN:   --implicit-check-not xxswapd
+
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr9 -mattr=-vsx < %s | FileCheck %s -check-prefix=CHECK-NOVSX
 
 ; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-power9-vector -mattr=-direct-move < %s | \
@@ -63,7 +78,7 @@ define <1 x i128> @v1i128_increment_by_one(<1 x i128> %a) nounwind {
 ; FIXME: li [[R1:r[0-9]+]], 1
 ; FIXME: li [[R2:r[0-9]+]], 0
 ; FIXME: mtvsrdd [[V1:v[0-9]+]], [[R2]], [[R1]]
-; CHECK-P9: lxvx [[V1:v[0-9]+]]
+; CHECK-P9: lxv [[V1:v[0-9]+]]
 ; CHECK-P9: vadduqm v2, v2, [[V1]]
 ; CHECK-P9: blr
 
@@ -105,12 +120,12 @@ define <1 x i128> @v1i128_increment_by_val(<1 x i128> %a, <1 x i128> %b) nounwin
 ; CHECK-BE-LABEL: @v1i128_increment_by_val
 ; CHECK-BE-NOT: xxswapd {{[0-9]+}}, 34
 ; CHECK-BE-NOT: xxswapd {{[0-9]+}}, 35
-; CHECK-BE-NOT: xxswapd 34, [[RESULT]]
+; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-BE: adduqm 2, 2, 3
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @v1i128_increment_by_val
-; CHECK-NOVSX-NOT: xxswapd 34, [[RESULT]]
+; CHECK-NOVSX-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-NOVSX: adduqm 2, 2, 3
 ; CHECK-NOVSX: blr
 }
@@ -208,19 +223,19 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_one
 ; CHECK-P9: lxv
-; CHECK-P9: bl v1i128_increment_by_one
+; CHECK-P9: bl {{.?}}v1i128_increment_by_one
 ; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_one
 ; CHECK-BE: lxvw4x 34, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
-; CHECK-BE: bl v1i128_increment_by_one
+; CHECK-BE: bl {{.?}}v1i128_increment_by_one
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_v1i128_increment_by_one
 ; CHECK-NOVSX: lvx 2, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd {{[0-9]+}}, {{[0-9]+}}
-; CHECK-NOVSX: bl v1i128_increment_by_one
+; CHECK-NOVSX: bl {{.?}}v1i128_increment_by_one
 ; CHECK-NOVSX: blr
 }
 
@@ -237,9 +252,9 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-LE: blr
 
 ; CHECK-P9-LABEL: @call_v1i128_increment_by_val
-; CHECK-P9-DAG: lxvx v2
-; CHECK-P9-DAG: lxvx v3
-; CHECK-P9: bl v1i128_increment_by_val
+; CHECK-P9-DAG: lxv v2
+; CHECK-P9-DAG: lxv v3
+; CHECK-P9: bl {{.?}}v1i128_increment_by_val
 ; CHECK-P9: blr
 
 ; CHECK-BE-LABEL: @call_v1i128_increment_by_val
@@ -248,7 +263,7 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-BE-DAG: lxvw4x 35, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-BE-NOT: xxswapd 35, {{[0-9]+}}
-; CHECK-BE: bl v1i128_increment_by_val
+; CHECK-BE: bl {{.?}}v1i128_increment_by_val
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_v1i128_increment_by_val
@@ -256,7 +271,7 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 ; CHECK-NOVSX-DAG: lvx 3, {{[0-9]+}}, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd 34, {{[0-9]+}}
 ; CHECK-NOVSX-NOT: xxswapd 35, {{[0-9]+}}
-; CHECK-NOVSX: bl v1i128_increment_by_val
+; CHECK-NOVSX: bl {{.?}}v1i128_increment_by_val
 ; CHECK-NOVSX: blr
 
 }
@@ -275,13 +290,13 @@ define i128 @call_i128_increment_by_one() nounwind {
 ; CHECK-BE-LABEL: @call_i128_increment_by_one
 ; CHECK-BE-DAG: ld 3, 0([[BASEREG:[0-9]+]])
 ; CHECK-BE-DAG: ld 4, 8([[BASEREG]])
-; CHECK-BE: bl i128_increment_by_one
+; CHECK-BE: bl {{.?}}i128_increment_by_one
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_i128_increment_by_one
 ; CHECK-NOVSX-DAG: ld 3, 0([[BASEREG:[0-9]+]])
 ; CHECK-NOVSX-DAG: ld 4, 8([[BASEREG]])
-; CHECK-NOVSX: bl i128_increment_by_one
+; CHECK-NOVSX: bl {{.?}}i128_increment_by_one
 ; CHECK-NOVSX: blr
 }
 
@@ -303,7 +318,7 @@ define i128 @call_i128_increment_by_val() nounwind {
 ; CHECK-BE-DAG: ld 4, 8([[P1BASEREG]])
 ; CHECK-BE-DAG: ld 5, 0([[P2BASEREG:[0-9]+]])
 ; CHECK-BE-DAG: ld 6, 8([[P2BASEREG]])
-; CHECK-BE: bl i128_increment_by_val
+; CHECK-BE: bl {{.?}}i128_increment_by_val
 ; CHECK-BE: blr
 
 ; CHECK-NOVSX-LABEL: @call_i128_increment_by_val
@@ -311,7 +326,7 @@ define i128 @call_i128_increment_by_val() nounwind {
 ; CHECK-NOVSX-DAG: ld 4, 8([[P1BASEREG]])
 ; CHECK-NOVSX-DAG: ld 5, 0([[P2BASEREG:[0-9]+]])
 ; CHECK-NOVSX-DAG: ld 6, 8([[P2BASEREG]])
-; CHECK-NOVSX: bl i128_increment_by_val
+; CHECK-NOVSX: bl {{.?}}i128_increment_by_val
 ; CHECK-NOVSX: blr
 }
 

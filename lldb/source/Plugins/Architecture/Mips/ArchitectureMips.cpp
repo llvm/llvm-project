@@ -42,9 +42,6 @@ std::unique_ptr<Architecture> ArchitectureMips::Create(const ArchSpec &arch) {
       std::unique_ptr<Architecture>(new ArchitectureMips(arch)) : nullptr;
 }
 
-ConstString ArchitectureMips::GetPluginName() { return GetPluginNameStatic(); }
-uint32_t ArchitectureMips::GetPluginVersion() { return 1; }
-
 addr_t ArchitectureMips::GetCallableLoadAddress(addr_t code_addr,
                                                 AddressClass addr_class) const {
   bool is_alternate_isa = false;
@@ -160,7 +157,6 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
 
   InstructionList instruction_list;
   InstructionSP prev_insn;
-  bool prefer_file_cache = true; // Read from file
   uint32_t inst_to_choose = 0;
 
   Address addr = resolved_addr;
@@ -171,8 +167,7 @@ Instruction *ArchitectureMips::GetInstructionAtAddress(
     uint32_t insn_size = 0;
 
     disasm_sp->ParseInstructions(target, addr,
-                                 {Disassembler::Limit::Bytes, i * 2}, nullptr,
-                                 prefer_file_cache);
+                                 {Disassembler::Limit::Bytes, i * 2}, nullptr);
 
     uint32_t num_insns = disasm_sp->GetInstructionList().GetSize();
     if (num_insns) {

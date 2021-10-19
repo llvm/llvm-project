@@ -66,12 +66,18 @@ private:
   SimpleJIT(
       std::unique_ptr<TargetMachine> TM, DataLayout DL,
       std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
-      : TM(std::move(TM)), DL(std::move(DL)) {
+      : ES(cantFail(SelfExecutorProcessControl::Create())), TM(std::move(TM)),
+        DL(std::move(DL)) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
   }
 
 public:
+  ~SimpleJIT() {
+    if (auto Err = ES.endSession())
+      ES.reportError(std::move(Err));
+  }
+
   static Expected<std::unique_ptr<SimpleJIT>> Create() {
     auto JTMB = JITTargetMachineBuilder::detectHost();
     if (!JTMB)

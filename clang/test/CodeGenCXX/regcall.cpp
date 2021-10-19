@@ -21,7 +21,7 @@ int main()
 int __regcall foo (int i){
   return i;
 }
-// CHECK-LIN: define x86_regcallcc {{.+}}@_Z15__regcall3__foo
+// CHECK-LIN: define{{.*}} x86_regcallcc {{.+}}@_Z15__regcall3__foo
 // CHECK-WIN64: define dso_local x86_regcallcc {{.+}}@"?foo@@YwHH@Z"
 // CHECK-WIN32: define dso_local x86_regcallcc {{.+}}@"?foo@@YwHH@Z"
 
@@ -69,13 +69,13 @@ public:
 };
 
 bool __regcall operator ==(const test_class&, const test_class&){ --x; return false;}
-// CHECK-LIN-DAG: define x86_regcallcc zeroext i1 @_ZeqRK10test_classS1_
+// CHECK-LIN-DAG: define{{.*}} x86_regcallcc zeroext i1 @_ZeqRK10test_classS1_
 // CHECK-WIN64-DAG: define dso_local x86_regcallcc zeroext i1 @"??8@Yw_NAEBVtest_class@@0@Z"
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc zeroext i1 @"??8@Yw_NABVtest_class@@0@Z"
 
 test_class __regcall operator""_test_class (unsigned long long) { ++x; return test_class{};}
-// CHECK-LIN64-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* noalias sret align 4 %agg.result, i64 %0)
-// CHECK-LIN32-DAG: define x86_regcallcc void @_Zli11_test_classy(%class.test_class* inreg noalias sret align 4 %agg.result, i64 %0)
+// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(%class.test_class* noalias sret(%class.test_class) align 4 %agg.result, i64 %0)
+// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Zli11_test_classy(%class.test_class* inreg noalias sret(%class.test_class) align 4 %agg.result, i64 %0)
 // CHECK-WIN64-DAG: ??__K_test_class@@Yw?AVtest_class@@_K@Z"
 // CHECK-WIN32-DAG: ??__K_test_class@@Yw?AVtest_class@@_K@Z"
 
@@ -99,8 +99,8 @@ void force_gen() {
 long double _Complex __regcall foo(long double _Complex f) {
   return f;
 }
-// CHECK-LIN64-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* noalias sret align 16 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16 %f)
-// CHECK-LIN32-DAG: define x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* inreg noalias sret align 4 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %f)
+// CHECK-LIN64-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* noalias sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 16 %f)
+// CHECK-LIN32-DAG: define{{.*}} x86_regcallcc void @_Z15__regcall3__fooCe({ x86_fp80, x86_fp80 }* inreg noalias sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, { x86_fp80, x86_fp80 }* byval({ x86_fp80, x86_fp80 }) align 4 %f)
 // CHECK-WIN64-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)
 // CHECK-WIN32-DAG: define dso_local x86_regcallcc { double, double } @"?foo@@YwU?$_Complex@O@__clang@@U12@@Z"(double %f.0, double %f.1)
 

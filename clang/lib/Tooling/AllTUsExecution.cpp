@@ -124,7 +124,7 @@ llvm::Error AllTUsToolExecutor::execute(
             // Each thread gets an indepent copy of a VFS to allow different
             // concurrent working directories.
             IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-                llvm::vfs::createPhysicalFileSystem().release();
+                llvm::vfs::createPhysicalFileSystem();
             ClangTool Tool(Compilations, {Path},
                            std::make_shared<PCHContainerOperations>(), FS);
             Tool.appendArgumentsAdjuster(Action.second);

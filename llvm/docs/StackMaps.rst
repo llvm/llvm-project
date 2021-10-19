@@ -24,7 +24,7 @@ containing the stack map.
 LLVM emits stack map data into the object code within a designated
 :ref:`stackmap-section`. This stack map data contains a record for
 each stack map. The record stores the stack map's instruction address
-and contains a entry for each mapped value. Each entry encodes a
+and contains an entry for each mapped value. Each entry encodes a
 value's location as a register, stack offset, or constant.
 
 A patch point is an instruction address at which space is reserved for
@@ -514,4 +514,4 @@ Supported Architectures
 Support for StackMap generation and the related intrinsics requires 
 some code for each backend.  Today, only a subset of LLVM's backends 
 are supported.  The currently supported architectures are X86_64, 
-PowerPC, and Aarch64.
+PowerPC, Aarch64 and SystemZ.

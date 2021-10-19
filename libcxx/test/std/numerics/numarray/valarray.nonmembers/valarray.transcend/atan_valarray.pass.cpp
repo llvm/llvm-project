@@ -16,22 +16,10 @@
 
 #include <valarray>
 #include <cassert>
-#include <sstream>
 #include <cstddef>
 
 #include "test_macros.h"
-
-bool is_about(double x, double y, int p)
-{
-    std::ostringstream o;
-    o.precision(p);
-    scientific(o);
-    o << x;
-    std::string a = o.str();
-    o.str("");
-    o << y;
-    return a == o.str();
-}
+#include "valarray_helper.h"
 
 int main(int, char**)
 {

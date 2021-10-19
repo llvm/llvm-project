@@ -1,4 +1,5 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 %s | llvm-objdump -d --section=.text - | FileCheck %s
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 %s | llvm-objdump -d - | FileCheck %s --check-prefix=NOPAD
+# RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu -x86-pad-max-prefix-size=0 -x86-pad-for-align=1 %s | llvm-objdump -d - | FileCheck %s
 
 # This test exercises only the padding via relaxation logic.  The  interaction
 # etween prefix padding and relaxation logic can be seen in align-via-padding.s
@@ -6,6 +7,19 @@
   .file "test.c"
   .text
   .section  .text
+
+# NOPAD-LABEL: <.text>:
+# NOPAD-NEXT:     0: eb 1f           jmp 0x21 <foo>
+# NOPAD-NEXT:     2: eb 1d           jmp 0x21 <foo>
+# NOPAD-NEXT:     4: eb 1b           jmp 0x21 <foo>
+# NOPAD-NEXT:     6: eb 19           jmp 0x21 <foo>
+# NOPAD-NEXT:     8: eb 17           jmp 0x21 <foo>
+# NOPAD-NEXT:     a: eb 15           jmp 0x21 <foo>
+# NOPAD-NEXT:     c: eb 13           jmp 0x21 <foo>
+# NOPAD-NEXT:     e: 66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00  nopw    %cs:(%rax,%rax)
+# NOPAD-NEXT:    1d: 0f 1f 00        nopl (%rax)
+# NOPAD-NEXT:    20: cc              int3
+
   # Demonstrate that we can relax instructions to provide padding, not
   # just insert nops.  jmps are being used for ease of demonstration.
   # CHECK: .text

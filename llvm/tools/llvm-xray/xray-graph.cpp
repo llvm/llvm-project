@@ -312,8 +312,7 @@ void GraphRenderer::calculateVertexStatistics() {
     if (V.first != 0) {
       for (auto &E : G.inEdges(V.first)) {
         auto &A = E.second;
-        TempTimings.insert(TempTimings.end(), A.Timings.begin(),
-                           A.Timings.end());
+        llvm::append_range(TempTimings, A.Timings);
       }
       getStats(TempTimings.begin(), TempTimings.end(), G[V.first].S);
       updateMaxStats(G[V.first].S, G.GraphVertexMax);
@@ -524,7 +523,7 @@ static CommandRegistration Unused(&GraphC, []() -> Error {
   auto &GR = *GROrError;
 
   std::error_code EC;
-  raw_fd_ostream OS(GraphOutput, EC, sys::fs::OpenFlags::OF_Text);
+  raw_fd_ostream OS(GraphOutput, EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + GraphOutput + "' for writing.", EC);

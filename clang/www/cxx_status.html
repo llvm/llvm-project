@@ -27,12 +27,45 @@
 <h1>C++ Support in Clang</h1>
 <!--*************************************************************************-->
 
-<p>Clang fully implements all published ISO C++ standards
-(<a href="#cxx98">C++98 / C++03</a>,
-<a href="#cxx11">C++11</a>,
-<a href="#cxx14">C++14</a>, and
-<a href="#cxx17">C++17</a>), and some of the upcoming <a
-href="#cxx20">C++20</a> standard.
+<p>Clang implements the following published and upcoming ISO C++ standards:</p>
+
+<table width="689" border="1" cellspacing="0">
+<tr>
+ <th>Language Standard</th>
+ <th>Flag</th>
+ <th>Available in Clang?</th>
+</tr>
+<tr>
+ <td><a href="#cxx98">C++98 / C++03</a></td>
+ <td><tt>-std=c++98</tt></td>
+ <td class="full" align="center">Yes (other than <tt>export</tt>)</td>
+</tr>
+<tr>
+ <td><a href="#cxx11">C++11</a></td>
+ <td><tt>-std=c++11</tt></td>
+ <td class="full" align="center">Clang 3.3</td>
+</tr>
+<tr>
+ <td><a href="#cxx14">C++14</a></td>
+ <td><tt>-std=c++14</tt></td>
+ <td class="full" align="center">Clang 3.4</td>
+</tr>
+<tr>
+ <td><a href="#cxx17">C++17</a></td>
+ <td><tt>-std=c++17</tt></td>
+ <td class="full" align="center">Clang 5</td>
+</tr>
+<tr>
+ <td><a href="#cxx20">C++20</a></td>
+ <td><tt>-std=c++20</tt></td>
+ <td class="partial" align="center">Partial</td>
+</tr>
+<tr>
+ <td><a href="#cxx23">C++2b (tentatively C++23)</a></td>
+ <td><tt>-std=c++2b</tt></td>
+ <td class="partial" align="center">Partial</td>
+</tr>
+</table>
 
 <p>The Clang community is continually striving to improve C++ standards
 compliance between releases by submitting and tracking <a
@@ -57,12 +90,11 @@ each language mode.</p>
 
 <p>Clang 3.3 and later implement all of the <a
   href="https://www.iso.org/standard/50372.html">ISO
-  C++ 2011 standard</a>.
+  C++ 2011 standard</a>.</p>
 
-<p>By default, Clang builds C++ code according to the C++98 standard, with many
-C++11 features accepted as extensions. You can use Clang in C++11 mode with the
-<code>-std=c++11</code> option. Clang's C++11 mode can be used
-with <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
+<p>You can use Clang in C++11 mode with the <code>-std=c++11</code>
+option. Clang's C++11 mode can be used with
+<a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.</p>
 
 <details>
 <summary>List of features and minimum Clang version with support</summary>
@@ -79,7 +111,7 @@ with <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
       <td class="full" align="center">Clang 2.9</td>
       <tr> <!-- from Kona 2019-->
         <td><a href="https://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
-        <td class="none" align="center">No</td>
+        <td class="unreleased" align="center">Clang 13</td>
       </tr>
     </tr>
     <tr>
@@ -118,7 +150,7 @@ with <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
       </tr>
       <tr> <!-- from Prague-->
         <td><a href="https://wg21.link/p1957r2">P1957R2</a> (<a href="#dr">DR</a>)</td>
-        <td class="unreleased" align="center">Clang 11</td>
+        <td class="full" align="center">Clang 11</td>
       </tr>
     <tr>
       <td>Static assertions</td>
@@ -464,9 +496,10 @@ change.</span>
 
 <p>Clang 3.4 and later implement all of the <a
     href="https://www.iso.org/standard/64029.html">ISO
-    C++ 2014 standard</a>.
+    C++ 2014 standard</a>.</p>
 
-<p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
+<p>By default, Clang builds C++ code according to the C++14 standard.
+You can use Clang in C++14 mode with the <code>-std=c++14</code> option
 (use <code>-std=c++1y</code> in Clang 3.4 and earlier).</p>
 
 <details>
@@ -558,7 +591,7 @@ version 3.7.
 <h2 id="cxx17">C++17 implementation status</h2>
 
 <p>Clang 5 and later implement all the features of the
-<a href="https://www.iso.org/standard/68564.html">ISO C++ 2017 standard</a>.
+<a href="https://www.iso.org/standard/68564.html">ISO C++ 2017 standard</a>.</p>
 
 <p>You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
@@ -807,6 +840,7 @@ left to right in the callee. As a result, function parameters in calls to
 <tt>operator&amp;&amp;</tt>, <tt>operator||</tt>, and <tt>operator,</tt>
 functions using expression syntax are no longer guaranteed to be destroyed in
 reverse construction order in that ABI.
+This is not fully supported during constant expression evaluation until Clang 12.
 </span><br>
 <span id="p0522">(10): Despite being the resolution to a Defect Report, this
 feature is disabled by default in all language versions, and can be enabled
@@ -822,7 +856,7 @@ code. This issue is expected to be rectified soon.
 <h2 id="cxx20">C++20 implementation status</h2>
 
 <p>Clang has support for some of the features of the
-ISO C++ 2020 Draft International Standard.
+<a href="https://www.iso.org/standard/79358.html">ISO C++ 2020 standard</a>.</p>
 
 <p>You can use Clang in C++20 mode with the <code>-std=c++20</code> option
 (use <code>-std=c++2a</code> in Clang 9 and earlier).</p>
@@ -874,13 +908,19 @@ ISO C++ 2020 Draft International Standard.
     <tr id="p0734">
       <td rowspan="12">Concepts</td>
       <td><a href="https://wg21.link/p0734r0">P0734R0</a></td>
-      <td rowspan="4" class="full" align="center">Clang 10</td>
+      <td class="full" align="center">Clang 10</td>
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="https://wg21.link/p0857r0">P0857R0</a></td>
+        <td class="partial" align="center">
+          <details><summary>Partial</summary>
+            Constraining template template parameters is not yet supported.
+          </details>
+        </td>
       </tr>
       <tr> <!-- from San Diego -->
         <td><a href="https://wg21.link/p1084r2">P1084R2</a></td>
+        <td rowspan="2" class="full" align="center">Clang 10</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1141r2">P1141R2</a></td>
@@ -898,20 +938,25 @@ ISO C++ 2020 Draft International Standard.
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1972r0">P1972R0</a></td>
-        <td rowspan="2" class="none" align="center">No</td>
+        <td rowspan="3" class="none" align="center">No</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1980r0">P1980R0</a></td>
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p2103r0">P2103R0</a></td>
-        <td rowspan="3" class="none" align="center">No</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
+        <td rowspan="1" class="partial" align="center">
+          <details><summary>Partial</summary>
+            <tt>typename</tt> not yet optional (depends on P0634R3).
+          </details>
+        </td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2113r0">P2113R0</a></td>
+        <td rowspan="1" class="none" align="center">No</td>
       </tr>
     <!-- Albuquerque papers -->
     <tr>
@@ -966,7 +1011,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td>Access checking on specializations</td>
       <td><a href="https://wg21.link/p0692r1">P0692R1</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="unreleased" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Default constructible and assignable stateless lambdas</td>
@@ -976,7 +1021,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td>Lambdas in unevaluated contexts</td>
       <td><a href="https://wg21.link/p0315r4">P0315R4</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">Partial</td>
     </tr>
     <!-- Jacksonville papers -->
     <tr>
@@ -987,7 +1032,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td><tt>[[likely]]</tt> and <tt>[[unlikely]]</tt> attributes</td>
       <td><a href="https://wg21.link/p0479r5">P0479R5</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 12</td>
     </tr>
     <tr>
       <td><tt>typename</tt> optional in more contexts</td>
@@ -1003,7 +1048,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td rowspan="2">Class types as non-type template parameters</td>
       <td><a href="https://wg21.link/p0732r2">P0732R2</a></td>
-      <td rowspan="2" class="none" align="center">No</td>
+      <td rowspan="2" class="partial" align="center">Partial</td>
     </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1907r1">P1907R1</a></td>
@@ -1068,10 +1113,15 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td rowspan=2 class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Using consteval functions as default parameters is not yet supported.
+        </details>
+      </td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
+        <td class="unreleased" align="center">Clang 14</td>
       </tr>
     <tr>
       <td><tt>std::is_constant_evaluated</tt></td>
@@ -1115,7 +1165,7 @@ ISO C++ 2020 Draft International Standard.
     </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p1766r1">P1766R1</a> (<a href="#dr">DR</a>)</td>
-        <td class="unreleased" align="center">Clang 11</td>
+        <td class="full" align="center">Clang 11</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1811r0">P1811R0</a></td>
@@ -1170,7 +1220,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td><tt>using enum</tt></td>
       <td><a href="https://wg21.link/p1099r5">P1099R5</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 13</td>
     </tr>
     <tr>
       <td rowspan=2>Class template argument deduction for aggregates</td>
@@ -1188,7 +1238,7 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td>Permit conversions to arrays of unknown bound</td>
       <td><a href="https://wg21.link/p0388r4">P0388R4</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 14</td>
     </tr>
     <tr>
       <td><tt>constinit</tt></td>
@@ -1199,7 +1249,12 @@ ISO C++ 2020 Draft International Standard.
     <tr>
       <td>Pseudo-destructors end object lifetimes</td>
       <td><a href="https://wg21.link/p0593r6">P0593R6</a> (<a href="#dr">DR</a>)</td>
-      <td class="unreleased" align="center">Clang 11</td>
+      <td class="full" align="center">Clang 11</td>
+    </tr>
+    <tr>
+      <td>More implicit moves</td>
+      <td><a href="https://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
+      <td class="unreleased" align="center">Clang 13</td>
     </tr>
 </table>
 
@@ -1208,6 +1263,124 @@ ISO C++ 2020 Draft International Standard.
 <tt>-std=c++20</tt>, but can be enabled with <tt>-fchar8_t</tt>.
 </span>
 </p>
+</details>
+
+<h2 id="cxx23">C++2b implementation status</h2>
+
+<p>Clang has support for some of the features of the C++ standard following
+C++20, informally referred to as C++2b.</p>
+
+<p>You can use Clang in C++2b mode with the <code>-std=c++2b</code> option.</p>
+
+<details open>
+<summary>List of features and minimum Clang version with support</summary>
+
+<table width="689" border="1" cellspacing="0">
+ <tr>
+    <th>Language Feature</th>
+    <th>C++2b Proposal</th>
+    <th>Available in Clang?</th>
+ </tr>
+    <!-- Fall 2020 papers -->
+    <tr>
+      <td>Literal suffix <tt>uz</tt>, <tt>z</tt> for <tt>size_t</tt>, <tt>ssize_t</tt></td>
+      <td><a href="https://wg21.link/p0330r8">P0330R8</a></td>
+      <td class="unreleased" align="center">Clang 13</td>
+    </tr>
+    <!-- Spring 2021 papers -->
+    <tr>
+      <td>Make <tt>()</tt> in lambdas optional in all cases</td>
+      <td><a href="https://wg21.link/p1102r2">P1102R2</a></td>
+      <td class="unreleased" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td>Simpler implicit move</td>
+      <td><a href="https://wg21.link/p2266r1">P2266R1</a></td>
+      <td class="unreleased" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td><tt>if consteval</tt></td>
+      <td><a href="https://wg21.link/P1938R3">P1938R3</a></td>
+      <td class="unreleased" align="center">Clang 14</td>
+    </tr>
+    <tr>
+      <td>Allow duplicate attributes</td>
+      <td><a href="https://wg21.link/P2156R1">P2156R1</a></td>
+      <td class="unreleased" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td>Narrowing contextual conversions to bool</td>
+      <td><a href="https://wg21.link/P1401R5">P1401R5</a></td>
+      <td class="unreleased" align="center">Clang 14</td>
+    </tr>
+    <tr>
+      <td>Trimming whitespaces before line splicing</td>
+      <td><a href="https://wg21.link/P2223R2">P2223R2</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Make declaration order layout mandated</td>
+      <td><a href="https://wg21.link/p1847r4">P1874R4</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>C++ identifier syntax using UAX 31</td>
+      <td><a href="https://wg21.link/P1949R7">P1949R7</a></td>
+      <td class="unreleased" align="center">Clang 14</td>
+    </tr>
+    <tr>
+      <td>Mixed string literal concatenation</td>
+      <td><a href="https://wg21.link/p2201r1">P2201R1</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <!-- October 2021 papers -->
+    <tr>
+      <td>Deducing this</td>
+      <td><a href="https://wg21.link/P0847R7">P0847R7</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Change scope of lambda trailing-return-type</td>
+      <td><a href="https://wg21.link/P2036R3">P2036R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Multidimensional subscript operator</td>
+      <td><a href="https://wg21.link/P2128R6">P2128R6</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Non-literal variables (and labels and gotos) in constexpr functions</td>
+      <td><a href="https://wg21.link/P2242R3">P2242R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Character encoding of diagnostic text</td>
+      <td><a href="https://wg21.link/P2246R1">P2246R1</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Character sets and encodings</td>
+      <td><a href="https://wg21.link/P2314R4">P2314R4</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Consistent character literal encoding</td>
+      <td><a href="https://wg21.link/P2316R2">P2316R2</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Add support for preprocessing directives elifdef and elifndef</td>
+      <td><a href="https://wg21.link/P2334R1">P2334R1</a></td>
+      <td class="full" align="center">Clang 13</td>
+    </tr>
+    <tr>
+      <td>Extend init-statement to allow alias-declaration</td>
+      <td><a href="https://wg21.link/P2360R0">P2360R0</a></td>
+      <td class="unreleased" align="center">Clang 14</td>
+    </tr>
+
+</table>
 </details>
 
 <h2 id="dr">Defect reports</h2>

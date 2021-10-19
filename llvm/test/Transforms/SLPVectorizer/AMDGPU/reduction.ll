@@ -5,11 +5,7 @@
 define half @reduction_half4(<4 x half> %a) {
 ; GFX9-LABEL: @reduction_half4(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[A:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x half> [[A]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[BIN_RDX]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x half> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[BIN_RDX2]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH8000, <4 x half> [[A:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half4(
@@ -39,13 +35,7 @@ entry:
 define half @reduction_half8(<8 x half> %vec8) {
 ; GFX9-LABEL: @reduction_half8(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x half> [[VEC8:%.*]], <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <8 x half> [[VEC8]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x half> [[BIN_RDX]], <8 x half> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <8 x half> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x half> [[BIN_RDX2]], <8 x half> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <8 x half> [[BIN_RDX2]], [[RDX_SHUF3]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x half> [[BIN_RDX4]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[VEC8:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half8(
@@ -91,15 +81,7 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 ; GFX9-LABEL: @reduction_half16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x half> [[VEC16:%.*]], <16 x half> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <16 x half> [[VEC16]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x half> [[BIN_RDX]], <16 x half> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <16 x half> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <16 x half> [[BIN_RDX2]], <16 x half> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <16 x half> [[BIN_RDX2]], [[RDX_SHUF3]]
-; GFX9-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <16 x half> [[BIN_RDX4]], <16 x half> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX6:%.*]] = fadd fast <16 x half> [[BIN_RDX4]], [[RDX_SHUF5]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <16 x half> [[BIN_RDX6]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v16f16(half 0xH8000, <16 x half> [[VEC16:%.*]])
 ; GFX9-NEXT:    ret half [[TMP0]]
 ;
 ; VI-LABEL: @reduction_half16(
@@ -203,11 +185,7 @@ entry:
 define i16 @reduction_v4i16(<4 x i16> %a) {
 ; GFX9-LABEL: @reduction_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[A:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = add <4 x i16> [[A]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[BIN_RDX]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX2:%.*]] = add <4 x i16> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[BIN_RDX2]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[A:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_v4i16(
@@ -237,13 +215,7 @@ entry:
 define i16 @reduction_v8i16(<8 x i16> %vec8) {
 ; GFX9-LABEL: @reduction_v8i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX:%.*]] = add <8 x i16> [[VEC8]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[BIN_RDX]], <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX2:%.*]] = add <8 x i16> [[BIN_RDX]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i16> [[BIN_RDX2]], <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[BIN_RDX4:%.*]] = add <8 x i16> [[BIN_RDX2]], [[RDX_SHUF3]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[BIN_RDX4]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[VEC8:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_v8i16(
@@ -289,13 +261,7 @@ entry:
 define i16 @reduction_umin_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_umin_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <4 x i16> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> [[VEC4:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_umin_v4i16(
@@ -331,16 +297,7 @@ entry:
 define i16 @reduction_icmp_v8i16(<8 x i16> %vec8) {
 ; GFX9-LABEL: @reduction_icmp_v8i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[VEC8:%.*]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <8 x i16> [[VEC8]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP]], <8 x i16> [[VEC8]], <8 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT]], <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ult <8 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP2]], <8 x i16> [[RDX_MINMAX_SELECT]], <8 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <8 x i16> [[RDX_MINMAX_SELECT3]], <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp ult <8 x i16> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <8 x i1> [[RDX_MINMAX_CMP5]], <8 x i16> [[RDX_MINMAX_SELECT3]], <8 x i16> [[RDX_SHUF4]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[RDX_MINMAX_SELECT6]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[VEC8:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_icmp_v8i16(
@@ -402,19 +359,7 @@ entry:
 define i16 @reduction_smin_v16i16(<16 x i16> %vec16) {
 ; GFX9-LABEL: @reduction_smin_v16i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i16> [[VEC16:%.*]], <16 x i16> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <16 x i16> [[VEC16]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP]], <16 x i16> [[VEC16]], <16 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT]], <16 x i16> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP2]], <16 x i16> [[RDX_MINMAX_SELECT]], <16 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT3]], <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP5:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT3]], [[RDX_SHUF4]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT6:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP5]], <16 x i16> [[RDX_MINMAX_SELECT3]], <16 x i16> [[RDX_SHUF4]]
-; GFX9-NEXT:    [[RDX_SHUF7:%.*]] = shufflevector <16 x i16> [[RDX_MINMAX_SELECT6]], <16 x i16> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP8:%.*]] = icmp slt <16 x i16> [[RDX_MINMAX_SELECT6]], [[RDX_SHUF7]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT9:%.*]] = select <16 x i1> [[RDX_MINMAX_CMP8]], <16 x i16> [[RDX_MINMAX_SELECT6]], <16 x i16> [[RDX_SHUF7]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <16 x i16> [[RDX_MINMAX_SELECT9]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.smin.v16i16(<16 x i16> [[VEC16:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_smin_v16i16(
@@ -530,13 +475,7 @@ entry:
 define i16 @reduction_umax_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_umax_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ugt <4 x i16> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp ugt <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[VEC4:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_umax_v4i16(
@@ -572,13 +511,7 @@ entry:
 define i16 @reduction_smax_v4i16(<4 x i16> %vec4) {
 ; GFX9-LABEL: @reduction_smax_v4i16(
 ; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i16> [[VEC4:%.*]], <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <4 x i16> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i16> [[VEC4]], <4 x i16> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = icmp sgt <4 x i16> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x i16> [[RDX_MINMAX_SELECT]], <4 x i16> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[RDX_MINMAX_SELECT3]], i32 0
+; GFX9-NEXT:    [[TMP0:%.*]] = call i16 @llvm.vector.reduce.smax.v4i16(<4 x i16> [[VEC4:%.*]])
 ; GFX9-NEXT:    ret i16 [[TMP0]]
 ;
 ; VI-LABEL: @reduction_smax_v4i16(
@@ -611,31 +544,22 @@ entry:
   ret i16 %max3
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define half @reduction_fmax_v4half(<4 x half> %vec4) {
-; GFX9-LABEL: @reduction_fmax_v4half(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[VEC4:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast ogt <4 x half> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x half> [[VEC4]], <4 x half> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast ogt <4 x half> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[RDX_MINMAX_SELECT3]], i32 0
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_fmax_v4half(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
-; VI-NEXT:    [[CMP1:%.*]] = fcmp fast ogt half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
-; VI-NEXT:    [[CMP2:%.*]] = fcmp fast ogt half [[ELT2]], [[MAX1]]
-; VI-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MAX1]]
-; VI-NEXT:    [[CMP3:%.*]] = fcmp fast ogt half [[ELT3]], [[MAX2]]
-; VI-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MAX2]]
-; VI-NEXT:    ret half [[MAX3]]
+; GCN-LABEL: @reduction_fmax_v4half(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = fcmp fast ogt half [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = fcmp fast ogt half [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = fcmp fast ogt half [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MAX2]]
+; GCN-NEXT:    ret half [[MAX3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0
@@ -653,31 +577,22 @@ entry:
   ret half %max3
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define half @reduction_fmin_v4half(<4 x half> %vec4) {
-; GFX9-LABEL: @reduction_fmin_v4half(
-; GFX9-NEXT:  entry:
-; GFX9-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x half> [[VEC4:%.*]], <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp fast olt <4 x half> [[VEC4]], [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x half> [[VEC4]], <4 x half> [[RDX_SHUF]]
-; GFX9-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-; GFX9-NEXT:    [[RDX_MINMAX_CMP2:%.*]] = fcmp fast olt <4 x half> [[RDX_MINMAX_SELECT]], [[RDX_SHUF1]]
-; GFX9-NEXT:    [[RDX_MINMAX_SELECT3:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP2]], <4 x half> [[RDX_MINMAX_SELECT]], <4 x half> [[RDX_SHUF1]]
-; GFX9-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> [[RDX_MINMAX_SELECT3]], i32 0
-; GFX9-NEXT:    ret half [[TMP0]]
-;
-; VI-LABEL: @reduction_fmin_v4half(
-; VI-NEXT:  entry:
-; VI-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
-; VI-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
-; VI-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
-; VI-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
-; VI-NEXT:    [[CMP1:%.*]] = fcmp fast olt half [[ELT1]], [[ELT0]]
-; VI-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
-; VI-NEXT:    [[CMP2:%.*]] = fcmp fast olt half [[ELT2]], [[MIN1]]
-; VI-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MIN1]]
-; VI-NEXT:    [[CMP3:%.*]] = fcmp fast olt half [[ELT3]], [[MIN2]]
-; VI-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MIN2]]
-; VI-NEXT:    ret half [[MIN3]]
+; GCN-LABEL: @reduction_fmin_v4half(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x half> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x half> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x half> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x half> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = fcmp fast olt half [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], half [[ELT1]], half [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = fcmp fast olt half [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], half [[ELT2]], half [[MIN1]]
+; GCN-NEXT:    [[CMP3:%.*]] = fcmp fast olt half [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], half [[ELT3]], half [[MIN2]]
+; GCN-NEXT:    ret half [[MIN3]]
 ;
 entry:
   %elt0 = extractelement <4 x half> %vec4, i64 0

@@ -18,8 +18,6 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
-#include <string>
-#include <utility>
 
 namespace llvm {
 
@@ -53,8 +51,7 @@ protected:
 
   Comdat *ObjComdat;
   enum {
-    LastAlignmentBit = 4,
-    HasMetadataHashEntryBit,
+    LastAlignmentBit = 5,
     HasSectionHashEntryBit,
 
     GlobalObjectBits,
@@ -71,7 +68,7 @@ public:
   GlobalObject(const GlobalObject &) = delete;
 
   /// FIXME: Remove this function once transition to Align is over.
-  unsigned getAlignment() const {
+  uint64_t getAlignment() const {
     MaybeAlign Align = getAlign();
     return Align ? Align->value() : 0;
   }
@@ -127,58 +124,13 @@ public:
   Comdat *getComdat() { return ObjComdat; }
   void setComdat(Comdat *C) { ObjComdat = C; }
 
-  /// Check if this has any metadata.
-  bool hasMetadata() const { return hasMetadataHashEntry(); }
-
-  /// Check if this has any metadata of the given kind.
-  bool hasMetadata(unsigned KindID) const {
-    return getMetadata(KindID) != nullptr;
-  }
-  bool hasMetadata(StringRef Kind) const {
-    return getMetadata(Kind) != nullptr;
-  }
-
-  /// Get the current metadata attachments for the given kind, if any.
-  ///
-  /// These functions require that the function have at most a single attachment
-  /// of the given kind, and return \c nullptr if such an attachment is missing.
-  /// @{
-  MDNode *getMetadata(unsigned KindID) const;
-  MDNode *getMetadata(StringRef Kind) const;
-  /// @}
-
-  /// Appends all attachments with the given ID to \c MDs in insertion order.
-  /// If the global has no attachments with the given ID, or if ID is invalid,
-  /// leaves MDs unchanged.
-  /// @{
-  void getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const;
-  void getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const;
-  /// @}
-
-  /// Set a particular kind of metadata attachment.
-  ///
-  /// Sets the given attachment to \c MD, erasing it if \c MD is \c nullptr or
-  /// replacing it if it already exists.
-  /// @{
-  void setMetadata(unsigned KindID, MDNode *MD);
-  void setMetadata(StringRef Kind, MDNode *MD);
-  /// @}
-
-  /// Add a metadata attachment.
-  /// @{
-  void addMetadata(unsigned KindID, MDNode &MD);
-  void addMetadata(StringRef Kind, MDNode &MD);
-  /// @}
-
-  /// Appends all attachments for the global to \c MDs, sorting by attachment
-  /// ID. Attachments with the same ID appear in insertion order.
-  void
-  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
-
-  /// Erase all metadata attachments with the given kind.
-  ///
-  /// \returns true if any metadata was removed.
-  bool eraseMetadata(unsigned KindID);
+  using Value::addMetadata;
+  using Value::clearMetadata;
+  using Value::eraseMetadata;
+  using Value::getAllMetadata;
+  using Value::getMetadata;
+  using Value::hasMetadata;
+  using Value::setMetadata;
 
   /// Copy metadata from Src, adjusting offsets by Offset.
   void copyMetadata(const GlobalObject *Src, unsigned Offset);
@@ -204,20 +156,11 @@ public:
            V->getValueID() == Value::GlobalVariableVal;
   }
 
-  void clearMetadata();
-
 private:
   void setGlobalObjectFlag(unsigned Bit, bool Val) {
     unsigned Mask = 1 << Bit;
     setGlobalValueSubClassData((~Mask & getGlobalValueSubClassData()) |
                                (Val ? Mask : 0u));
-  }
-
-  bool hasMetadataHashEntry() const {
-    return getGlobalValueSubClassData() & (1 << HasMetadataHashEntryBit);
-  }
-  void setHasMetadataHashEntry(bool HasEntry) {
-    setGlobalObjectFlag(HasMetadataHashEntryBit, HasEntry);
   }
 
   StringRef getSectionImpl() const;

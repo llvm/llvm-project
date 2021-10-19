@@ -117,13 +117,21 @@ multiclass HWWriteResPair<X86FoldableSchedWrite SchedRW,
 // 2/3/7 cycle to recompute the address.
 def : WriteRes<WriteRMW, [HWPort237,HWPort4]>;
 
+// Loads, stores, and moves, not folded with other operations.
 // Store_addr on 237.
 // Store_data on 4.
 defm : X86WriteRes<WriteStore,   [HWPort237, HWPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteStoreNT, [HWPort237, HWPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteLoad,    [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteMove,    [HWPort0156], 1, [1], 1>;
+
+// Idioms that clear a register, like xorps %xmm0, %xmm0.
+// These can often bypass execution ports completely.
 def  : WriteRes<WriteZero,       []>;
+
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : X86WriteRes<WriteVecMaskedGatherWriteback, [], 5, [], 0>;
 
 // Arithmetic.
 defm : HWWriteResPair<WriteALU,    [HWPort0156], 1>;
@@ -136,12 +144,17 @@ defm : X86WriteRes<WriteIMul16Imm,    [HWPort1,HWPort0156], 4, [1,1], 2>;
 defm : X86WriteRes<WriteIMul16ImmLd,  [HWPort1,HWPort0156,HWPort23], 8, [1,1,1], 3>;
 defm : HWWriteResPair<WriteIMul16Reg, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul32,    [HWPort1,HWPort06,HWPort0156], 4, [1,1,1], 3>;
+defm : HWWriteResPair<WriteMULX32,    [HWPort1,HWPort06,HWPort0156], 3, [1,1,1], 3>;
 defm : HWWriteResPair<WriteIMul32Imm, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul32Reg, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64,    [HWPort1,HWPort6], 4, [1,1], 2>;
+defm : HWWriteResPair<WriteMULX64,    [HWPort1,HWPort6], 3, [1,1], 2>;
 defm : HWWriteResPair<WriteIMul64Imm, [HWPort1],   3>;
 defm : HWWriteResPair<WriteIMul64Reg, [HWPort1],   3>;
-def  : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def HWWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 4; }
+def  : WriteRes<WriteIMulHLd, []> {
+  let Latency = !add(HWWriteIMulH.Latency, HaswellModel.LoadLatency);
+}
 
 defm : X86WriteRes<WriteBSWAP32,   [HWPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64,   [HWPort06, HWPort15], 2, [1,1], 2>;
@@ -161,11 +174,15 @@ defm : X86WriteRes<WriteSHDrrcl,[HWPort1, HWPort06, HWPort0156], 6, [1, 1, 2], 4
 defm : X86WriteRes<WriteSHDmri, [HWPort1, HWPort23, HWPort237, HWPort0156], 10, [1, 1, 1, 1], 4>;
 defm : X86WriteRes<WriteSHDmrcl,[HWPort1, HWPort23, HWPort237, HWPort06, HWPort0156], 12, [1, 1, 1, 1, 2], 6>;
 
+// Branches don't produce values, so they have no latency, but they still
+// consume resources. Indirect branches can fold loads.
 defm : HWWriteResPair<WriteJump,   [HWPort06],  1>;
+
 defm : HWWriteResPair<WriteCRC32,  [HWPort1],   3>;
 
 defm : HWWriteResPair<WriteCMOV,  [HWPort06,HWPort0156], 2, [1,1], 2>; // Conditional move.
 defm : X86WriteRes<WriteFCMOV, [HWPort1], 3, [1], 1>; // x87 conditional move.
+
 def  : WriteRes<WriteSETCC, [HWPort06]>; // Setcc.
 def  : WriteRes<WriteSETCCStore, [HWPort06,HWPort4,HWPort237]> {
   let Latency = 2;
@@ -216,7 +233,7 @@ defm : X86WriteRes<WriteIDiv16Ld, [HWPort0,HWPort23,HWDivider], 29, [1,1,10], 2>
 defm : X86WriteRes<WriteIDiv32Ld, [HWPort0,HWPort23,HWDivider], 29, [1,1,10], 2>;
 defm : X86WriteRes<WriteIDiv64Ld, [HWPort0,HWPort23,HWDivider], 29, [1,1,10], 2>;
 
-// Scalar and vector floating point.
+// Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLD0,          [HWPort01], 1, [1], 1>;
 defm : X86WriteRes<WriteFLD1,          [HWPort01], 1, [2], 2>;
 defm : X86WriteRes<WriteFLDC,          [HWPort01], 1, [2], 2>;
@@ -301,14 +318,14 @@ defm : HWWriteResPair<WriteFSqrt64Y, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28
 defm : HWWriteResPair<WriteFSqrt64Z, [HWPort0,HWPort15,HWFPDivider], 35, [2,1,28], 3, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFSqrt80,  [HWPort0,HWFPDivider], 23, [1,17]>;
 
-defm : HWWriteResPair<WriteFMA,   [HWPort01], 5, [1], 1, 5>;
-defm : HWWriteResPair<WriteFMAX,  [HWPort01], 5, [1], 1, 6>;
-defm : HWWriteResPair<WriteFMAY,  [HWPort01], 5, [1], 1, 7>;
-defm : HWWriteResPair<WriteFMAZ,  [HWPort01], 5, [1], 1, 7>; // Unsupported = 1
-defm : HWWriteResPair<WriteDPPD,  [HWPort0,HWPort1,HWPort5],  9, [1,1,1], 3, 6>;
-defm : HWWriteResPair<WriteDPPS,  [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 6>;
-defm : HWWriteResPair<WriteDPPSY, [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>;
-defm : HWWriteResPair<WriteDPPSZ, [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>; // Unsupported = 1
+defm : HWWriteResPair<WriteFMA,    [HWPort01], 5, [1], 1, 5>;
+defm : HWWriteResPair<WriteFMAX,   [HWPort01], 5, [1], 1, 6>;
+defm : HWWriteResPair<WriteFMAY,   [HWPort01], 5, [1], 1, 7>;
+defm : HWWriteResPair<WriteFMAZ,   [HWPort01], 5, [1], 1, 7>; // Unsupported = 1
+defm : HWWriteResPair<WriteDPPD,   [HWPort0,HWPort1,HWPort5],  9, [1,1,1], 3, 6>;
+defm : HWWriteResPair<WriteDPPS,   [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 6>;
+defm : HWWriteResPair<WriteDPPSY,  [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>;
+defm : HWWriteResPair<WriteDPPSZ,  [HWPort0,HWPort1,HWPort5], 14, [2,1,1], 4, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteFSign,  [HWPort0], 1>;
 defm : X86WriteRes<WriteFRnd,            [HWPort23],  6, [1],   1>;
 defm : X86WriteRes<WriteFRndY,           [HWPort23],  6, [1],   1>;
@@ -432,6 +449,7 @@ defm : HWWriteResPair<WriteBlend,  [HWPort5], 1, [1], 1, 6>;
 defm : HWWriteResPair<WriteBlendY, [HWPort5], 1, [1], 1, 7>;
 defm : HWWriteResPair<WriteBlendZ, [HWPort5], 1, [1], 1, 7>; // Unsupported = 1
 defm : HWWriteResPair<WriteShuffle256, [HWPort5], 3, [1], 1, 7>;
+defm : HWWriteResPair<WriteVPMOV256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarShuffle256, [HWPort5], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteVarBlend,  [HWPort5], 2, [2], 2, 6>;
 defm : HWWriteResPair<WriteVarBlendY, [HWPort5], 2, [2], 2, 7>;
@@ -588,10 +606,27 @@ def : WriteRes<WriteCLMulLd, [HWPort0, HWPort5, HWPort23]> {
 def : WriteRes<WriteLDMXCSR, [HWPort0,HWPort23,HWPort0156]> { let Latency = 7; let NumMicroOps = 3; let ResourceCycles = [1,1,1]; }
 def : WriteRes<WriteSTMXCSR, [HWPort4,HWPort5,HWPort237]> { let Latency = 2; let NumMicroOps = 3; let ResourceCycles = [1,1,1]; }
 
+// Catch-all for expensive system instructions.
 def : WriteRes<WriteSystem,     [HWPort0156]> { let Latency = 100; }
+
+// Old microcoded instructions that nobody use.
 def : WriteRes<WriteMicrocoded, [HWPort0156]> { let Latency = 100; }
+
+// Fence instructions.
 def : WriteRes<WriteFence,  [HWPort23, HWPort4]>;
+
+// Nop, not very useful expect it provides a model for nops!
 def : WriteRes<WriteNop, []>;
+
+////////////////////////////////////////////////////////////////////////////////
+// Horizontal add/sub  instructions.
+////////////////////////////////////////////////////////////////////////////////
+
+defm : HWWriteResPair<WriteFHAdd,   [HWPort1, HWPort5], 5, [1,2], 3, 6>;
+defm : HWWriteResPair<WriteFHAddY,  [HWPort1, HWPort5], 5, [1,2], 3, 7>;
+defm : HWWriteResPair<WritePHAdd,  [HWPort5, HWPort15], 3, [2,1], 3, 5>;
+defm : HWWriteResPair<WritePHAddX, [HWPort5, HWPort15], 3, [2,1], 3, 6>;
+defm : HWWriteResPair<WritePHAddY, [HWPort5, HWPort15], 3, [2,1], 3, 7>;
 
 //================ Exceptions ================//
 
@@ -777,7 +812,7 @@ def : InstRW<[HWWrite3P01], (instrs COM_FIPr, COM_FIr, UCOM_FIPr, UCOM_FIr)>;
 def : InstRW<[HWWriteP1], (instregex "TST_F")>;
 
 // FXAM.
-def : InstRW<[HWWrite2P1], (instrs FXAM)>;
+def : InstRW<[HWWrite2P1], (instrs XAM_F)>;
 
 // FPREM.
 def HWWriteFPREM : SchedWriteRes<[]> {
@@ -815,16 +850,6 @@ def HWWriteFXTRACT : SchedWriteRes<[]> {
   let NumMicroOps = 17;
 }
 def : InstRW<[HWWriteFXTRACT], (instrs FXTRACT)>;
-
-////////////////////////////////////////////////////////////////////////////////
-// Horizontal add/sub  instructions.
-////////////////////////////////////////////////////////////////////////////////
-
-defm : HWWriteResPair<WriteFHAdd,  [HWPort1, HWPort5], 5, [1,2], 3, 6>;
-defm : HWWriteResPair<WriteFHAddY, [HWPort1, HWPort5], 5, [1,2], 3, 7>;
-defm : HWWriteResPair<WritePHAdd,  [HWPort5, HWPort15], 3, [2,1], 3, 5>;
-defm : HWWriteResPair<WritePHAddX, [HWPort5, HWPort15], 3, [2,1], 3, 6>;
-defm : HWWriteResPair<WritePHAddY, [HWPort5, HWPort15], 3, [2,1], 3, 7>;
 
 //=== Floating Point XMM and YMM Instructions ===//
 

@@ -14,74 +14,74 @@ void test(void) {
   generic int *gen;
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(1)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(1)* %[[RET]] to i32 addrspace(1)*
   glob = to_global(glob);
   
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(3)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(1)* %[[RET]] to i32 addrspace(1)*
   glob = to_global(loc);
  
   //CHECK: %[[ARG:.*]] = addrspacecast i32* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(1)* %[[RET]] to i32 addrspace(1)*
   glob = to_global(priv);
  
   //CHECK: %[[ARG:.*]] = bitcast i32 addrspace(4)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(1)* %[[RET]] to i32 addrspace(1)*
   glob = to_global(gen);
   
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(1)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(3)* %[[RET]] to i32 addrspace(3)*
   loc = to_local(glob);
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(3)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(3)* %[[RET]] to i32 addrspace(3)*
   loc = to_local(loc);
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(3)* %[[RET]] to i32 addrspace(3)*
   loc = to_local(priv);
 
   //CHECK: %[[ARG:.*]] = bitcast i32 addrspace(4)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(3)* @__to_local(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(3)* %[[RET]] to i32 addrspace(3)*
   loc = to_local(gen);
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(1)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8* @__to_private(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8* @__to_private(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8* %[[RET]] to i32*
   priv = to_private(glob);
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32 addrspace(3)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8* @__to_private(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8* @__to_private(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8* %[[RET]] to i32*
   priv = to_private(loc);
 
   //CHECK: %[[ARG:.*]] = addrspacecast i32* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8* @__to_private(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8* @__to_private(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8* %[[RET]] to i32*
   priv = to_private(priv);
 
   //CHECK: %[[ARG:.*]] = bitcast i32 addrspace(4)* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8* @__to_private(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8* @__to_private(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8* %[[RET]] to i32*
   priv = to_private(gen);
 
   //CHECK: %[[ARG:.*]] = addrspacecast %[[A]]* %{{.*}} to i8 addrspace(4)*
-  //CHECK: %[[RET:.*]] = call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
+  //CHECK: %[[RET:.*]] = call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %[[ARG]])
   //CHECK: %{{.*}} = bitcast i8 addrspace(1)* %[[RET]] to %[[A]] addrspace(1)*
   PA pA;
   GA gA = to_global(pA);
 
   //CHECK-NOT: addrspacecast
   //CHECK-NOT: bitcast
-  //CHECK: call i8 addrspace(1)* @__to_global(i8 addrspace(4)* %{{.*}})
+  //CHECK: call spir_func i8 addrspace(1)* @__to_global(i8 addrspace(4)* %{{.*}})
   //CHECK-NOT: addrspacecast
   //CHECK-NOT: bitcast
   generic void *gen_v;

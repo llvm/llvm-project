@@ -11,7 +11,7 @@ namespace lldb {
 "Represents a logical breakpoint and its associated settings.
 
 For example (from test/functionalities/breakpoint/breakpoint_ignore_count/
-TestBreakpointIgnoreCount.py),
+TestBreakpointIgnoreCount.py),::
 
     def breakpoint_ignore_count_python(self):
         '''Use Python APIs to set breakpoint ignore count.'''
@@ -62,13 +62,13 @@ TestBreakpointIgnoreCount.py),
 
         process.Continue()
 
-SBBreakpoint supports breakpoint location iteration, for example,
+SBBreakpoint supports breakpoint location iteration, for example,::
 
     for bl in breakpoint:
         print('breakpoint location load addr: %s' % hex(bl.GetLoadAddress()))
         print('breakpoint location condition: %s' % hex(bl.GetCondition()))
 
-and rich comparison methods which allow the API program to use,
+and rich comparison methods which allow the API program to use,::
 
     if aBreakpoint == bBreakpoint:
         ...
@@ -99,6 +99,9 @@ public:
 
     void
     ClearAllBreakpointSites ();
+
+    lldb::SBTarget
+    GetTarget() const;
 
     lldb::SBBreakpointLocation
     FindLocationByAddress (lldb::addr_t vm_addr);
@@ -181,7 +184,7 @@ public:
 
     %feature("docstring", "
     Set the name of the script function to be called when the breakpoint is hit.
-    To use this variant, the function should take (frame, bp_loc, extra_args, dict) and
+    To use this variant, the function should take (frame, bp_loc, extra_args, internal_dict) and
     when the breakpoint is hit the extra_args will be passed to the callback function.") SetScriptCallbackFunction;
     SBError
     SetScriptCallbackFunction (const char *callback_function_name,
@@ -233,6 +236,8 @@ public:
     // Can only be called from a ScriptedBreakpointResolver...
     SBError
     AddLocation(SBAddress &address);
+
+    SBStructuredData SBBreakpoint::SerializeToStructuredData();
 
     static bool
     EventIsBreakpointEvent (const lldb::SBEvent &event);
@@ -308,6 +313,10 @@ public:
 
 class SBBreakpointListImpl;
 
+
+%feature("docstring",
+"Represents a list of :py:class:`SBBreakpoint`."
+) SBBreakpointList;
 class LLDB_API SBBreakpointList
 {
 public:

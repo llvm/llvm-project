@@ -5,12 +5,19 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-gsymutil --convert %t -o %t.gsym 2>&1 | FileCheck %s --check-prefix=CONVERT
 # RUN: llvm-gsymutil --address=0x400391 --address=0x4004cd %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDR
+# RUN: echo -e "0x400391 %/t.gsym\n0x4004cd %/t.gsym" | llvm-gsymutil --addresses-from-stdin  2>&1 | FileCheck %s --check-prefix=ADDRI --dump-input=always
+# RUN: llvm-gsymutil --address=0x400391 --address=0x4004cd --verbose %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDRV --dump-input=always
 # RUN: llvm-gsymutil --address=0x400391 --address=0x4004cd --verbose %t.gsym 2>&1 | FileCheck %s --check-prefix=ADDRV --dump-input=always
 # RUN: llvm-gsymutil %t.gsym 2>&1 | FileCheck %s --check-prefix=DUMP
 
 # ADDR: Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
 # ADDR: 0x0000000000400391: _init
 # ADDR: 0x00000000004004cd: main @ /tmp/main.cpp:1
+
+# ADDRI: 0x0000000000400391: _init
+# ADDRI-EMPTY:
+# ADDRI: 0x00000000004004cd: main @ /tmp/main.cpp:1
+# ADDRI-EMPTY:
 
 # ADDRV: Looking up addresses in "{{.*\.yaml\.tmp\.gsym}}":
 # ADDRV: FunctionInfo for 0x0000000000400391:
@@ -389,26 +396,8 @@ ProgramHeaders:
     Flags: [ PF_X, PF_R ]
     VAddr: 0x0000000000400000
     Align: 1024
-    Sections:
-      - Section: .interp
-      - Section: .interp
-      - Section: .note.ABI-tag
-      - Section: .note.gnu.build-id
-      - Section: .gnu.hash
-      - Section: .gnu.version
-      - Section: .gnu.version_r
-      - Section: .rela.dyn
-      - Section: .rela.plt
-      - Section: .init
-      - Section: .plt
-      - Section: .plt.got
-      - Section: .text
-      - Section: .fini
-      - Section: .rodata
-      - Section: .eh_frame_hdr
-      - Section: .eh_frame
-      - Section: .dynsym
-      - Section: .dynstr
+    FirstSec: .interp
+    LastSec:  .dynstr
 Symbols:
   - Name:            .interp
     Type:            STT_SECTION

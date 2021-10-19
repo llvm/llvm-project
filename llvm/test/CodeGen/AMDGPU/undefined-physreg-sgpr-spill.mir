@@ -44,15 +44,15 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load (s8) from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
     $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
     $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
-    SI_SPILL_S64_SAVE $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S64_SAVE $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
     $sgpr2_sgpr3 = S_AND_B64 killed $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
     $exec = S_MOV_B64_term killed $sgpr2_sgpr3
-    SI_MASK_BRANCH %bb.2, implicit $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -68,7 +68,7 @@ body:             |
     successors:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
-    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load 8 from %stack.0, align 4, addrspace 5)
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 
   bb.3:
@@ -84,7 +84,7 @@ body:             |
 # CHECK-LABEL: {{^}}name: undefined_physreg_sgpr_spill_reorder
 # CHECK: $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
 # CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
-# CHECK: SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
+# CHECK: SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
 # CHECK: $exec = COPY killed $sgpr2_sgpr3
 name:            undefined_physreg_sgpr_spill_reorder
 alignment:       1
@@ -109,15 +109,15 @@ body:             |
     liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
     $vgpr1_vgpr2 = COPY killed $sgpr4_sgpr5, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load 1 from `i1 addrspace(4)* undef`)
+    $vgpr1 = GLOBAL_LOAD_UBYTE killed $vgpr1_vgpr2, 0, 0, implicit $exec :: (non-temporal dereferenceable invariant load (s8) from `i1 addrspace(4)* undef`)
     $vcc = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec
     $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 1, killed $vgpr1, implicit $exec
     $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, -1, killed $sgpr0_sgpr1, implicit $exec
     $sgpr0_sgpr1 = COPY $exec, implicit-def $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def dead $scc
-    SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store 8 into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (store (s64) into %stack.0, align 4, addrspace 5)
     $exec = S_MOV_B64_term killed $sgpr2_sgpr3
-    SI_MASK_BRANCH %bb.2, implicit $exec
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -133,7 +133,7 @@ body:             |
     successors:
     liveins: $sgpr8_sgpr9_sgpr10_sgpr11, $sgpr13
 
-    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load 8 from %stack.0, align 4, addrspace 5)
+    $sgpr0_sgpr1 = SI_SPILL_S64_RESTORE %stack.0, implicit $exec, implicit $sgpr8_sgpr9_sgpr10_sgpr11, implicit $sgpr13, implicit-def dead $m0 :: (load (s64) from %stack.0, align 4, addrspace 5)
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
 
   bb.3:

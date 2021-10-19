@@ -16,7 +16,7 @@
 
 #include <cstddef>
 
-#include <string.h>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -24,8 +24,7 @@ using namespace llvm::support::endian;
 
 // Default constructor.
 DataEncoder::DataEncoder()
-    : m_start(nullptr), m_end(nullptr),
-      m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
+    : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
       m_data_sp() {}
 
 // This constructor allows us to use data that is owned by someone else. The

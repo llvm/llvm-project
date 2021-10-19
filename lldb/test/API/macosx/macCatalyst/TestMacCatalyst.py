@@ -13,7 +13,6 @@ class TestMacCatalyst(TestBase):
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
-    @skipIfReproducer # This is hitting https://bugs.python.org/issue22393
     def test_macabi(self):
         """Test the x86_64-apple-ios-macabi target linked against a macos dylib"""
         self.build()
@@ -24,14 +23,14 @@ class TestMacCatalyst(TestBase):
         self.expect("image list -t -b",
                     patterns=[self.getArchitecture() +
                               r'.*-apple-ios.*-macabi a\.out'])
-        self.expect("fr v s", "Hello macCatalyst")
-        self.expect("p s", "Hello macCatalyst")
+        self.expect("fr v s", substrs=["Hello macCatalyst"])
+        self.expect("p s", substrs=["Hello macCatalyst"])
         self.check_debugserver(log)
 
     def check_debugserver(self, log):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
-        self.assertTrue('ostype' in process_info)
+        self.assertIn('ostype', process_info)
         self.assertEquals(process_info['ostype'], 'maccatalyst')
 
         aout_info = None

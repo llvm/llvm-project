@@ -22,7 +22,7 @@
 
 int main(int, char**)
 {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::multiset<int, Cmp, A> C;
     typedef C::value_type V;

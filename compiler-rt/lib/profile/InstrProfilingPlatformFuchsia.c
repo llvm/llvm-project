@@ -34,15 +34,13 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingUtil.h"
 
+/* This variable is an external reference to symbol defined by the compiler. */
+COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
+
 COMPILER_RT_VISIBILITY unsigned lprofProfileDumped() {
   return 1;
 }
 COMPILER_RT_VISIBILITY void lprofSetProfileDumped(unsigned Value) {}
-
-COMPILER_RT_VISIBILITY unsigned lprofRuntimeCounterRelocation(void) {
-  return 1;
-}
-COMPILER_RT_VISIBILITY void lprofSetRuntimeCounterRelocation(unsigned Value) {}
 
 static const char ProfileSinkName[] = "llvm-profile";
 
@@ -54,7 +52,7 @@ static inline void lprofWrite(const char *fmt, ...) {
   int ret = vsnprintf(s, sizeof(s), fmt, ap);
   va_end(ap);
 
-  __sanitizer_log_write(s, ret + 1);
+  __sanitizer_log_write(s, ret);
 }
 
 struct lprofVMOWriterCtx {
@@ -116,23 +114,23 @@ void __llvm_profile_initialize(void) {
     return;
   }
 
-  /* This symbol is defined as weak and initialized to -1 by the runtimer, but
-   * compiler will generate a strong definition initialized to 0 when runtime
-   * counter relocation is used. */
-  if (__llvm_profile_counter_bias == -1) {
-    lprofWrite("LLVM Profile: counter relocation at runtime is required\n");
-    return;
-  }
-
   const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
   const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  const uint64_t *CountersBegin = __llvm_profile_begin_counters();
+  const uint64_t *CountersEnd = __llvm_profile_end_counters();
   const uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   const uint64_t CountersOffset =
-      sizeof(__llvm_profile_header) + (DataSize * sizeof(__llvm_profile_data));
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
+      (DataSize * sizeof(__llvm_profile_data));
+  uint64_t CountersSize = CountersEnd - CountersBegin;
+
+  /* Don't publish a VMO if there are no counters. */
+  if (!CountersSize)
+    return;
 
   zx_status_t Status;
 
-  /* Create VMO to hold the profile data. */
+  /* Create a VMO to hold the profile data. */
   zx_handle_t Vmo = ZX_HANDLE_INVALID;
   Status = _zx_vmo_create(0, ZX_VMO_RESIZABLE, &Vmo);
   if (Status != ZX_OK) {
@@ -181,13 +179,12 @@ void __llvm_profile_initialize(void) {
    * also consumes the VMO handle. */
   __sanitizer_publish_data(ProfileSinkName, Vmo);
 
-  /* Use the dumpfile symbolizer markup element to write the name of VMO. */
-  lprofWrite("LLVM Profile: {{{dumpfile:%s:%s}}}\n", ProfileSinkName, VmoName);
-
   /* Update the profile fields based on the current mapping. */
-  __llvm_profile_counter_bias = (intptr_t)Mapping -
-                                (uintptr_t)__llvm_profile_begin_counters() +
-                                CountersOffset;
+  INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =
+      (intptr_t)Mapping - (uintptr_t)CountersBegin + CountersOffset;
+
+  /* Return the memory allocated for counters to OS. */
+  lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);
 }
 
 #endif

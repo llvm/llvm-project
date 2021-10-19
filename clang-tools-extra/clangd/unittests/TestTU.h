@@ -17,13 +17,15 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTTU_H
 
+#include "../TidyProvider.h"
 #include "Compiler.h"
+#include "FeatureModule.h"
 #include "ParsedAST.h"
 #include "TestFS.h"
 #include "index/Index.h"
 #include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
-#include "gtest/gtest.h"
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -58,8 +60,7 @@ struct TestTU {
   // Extra arguments for the compiler invocation.
   std::vector<std::string> ExtraArgs;
 
-  llvm::Optional<std::string> ClangTidyChecks;
-  llvm::Optional<std::string> ClangTidyWarningsAsErrors;
+  TidyProvider ClangTidyProvider = {};
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;
 
@@ -76,10 +77,14 @@ struct TestTU {
   // to eliminate this option some day.
   bool OverlayRealFileSystemForModules = false;
 
+  FeatureModuleSet *FeatureModules = nullptr;
+
   // By default, build() will report Error diagnostics as GTest errors.
   // Suppress this behavior by adding an 'error-ok' comment to the code.
+  // The result will always have getDiagnostics() populated.
   ParsedAST build() const;
-  std::shared_ptr<const PreambleData> preamble() const;
+  std::shared_ptr<const PreambleData>
+  preamble(PreambleParsedCallback PreambleCallback = nullptr) const;
   ParseInputs inputs(MockFS &FS) const;
   SymbolSlab headerSymbols() const;
   RefSlab headerRefs() const;

@@ -26,7 +26,7 @@ func:
 # FDECFIEncoding and should be DW_EH_PE_pcrel | DW_EH_PE_sdata4 (0x1b).
 
 # CHECK:   Augmentation data:     1B
-# CHECK:   DW_CFA_def_cfa: reg2 +0
+# CHECK:   DW_CFA_def_cfa: X2 +0
 #
 # CHECK: 00000014 00000010 00000018 FDE cie=00000000 pc=00000000...00000004
 # CHECK:   DW_CFA_nop:

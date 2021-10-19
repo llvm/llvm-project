@@ -8,7 +8,7 @@ define void @pr38385() {
 ; CHECK-LABEL: pr38385:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:  .L0$pb:
-; CHECK-NEXT:    leaq .L0${{.*}}(%rip), %rax
+; CHECK-NEXT:    leaq .L0$pb(%rip), %rax
 ; CHECK-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    movabsq $.L.str@GOTOFF, %rax

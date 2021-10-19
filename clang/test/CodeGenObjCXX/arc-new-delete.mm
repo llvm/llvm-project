@@ -4,7 +4,7 @@
 typedef __strong id strong_id;
 typedef __weak id weak_id;
 
-// CHECK-LABEL: define void @_Z8test_newP11objc_object
+// CHECK-LABEL: define{{.*}} void @_Z8test_newP11objc_object
 void test_new(id invalue) {
   // CHECK: [[INVALUEADDR:%.*]] = alloca i8*
   // UNOPT-NEXT: store i8* null, i8** [[INVALUEADDR]]
@@ -46,7 +46,7 @@ void test_new(id invalue) {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z14test_array_new
+// CHECK-LABEL: define{{.*}} void @_Z14test_array_new
 void test_array_new() {
   // CHECK: call noalias nonnull i8* @_Znam
   // CHECK: store i64 17, i64*
@@ -60,7 +60,7 @@ void test_array_new() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z11test_deletePU8__strongP11objc_objectPU6__weakS0_
+// CHECK-LABEL: define{{.*}} void @_Z11test_deletePU8__strongP11objc_objectPU6__weakS0_
 void test_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK: br i1
   // UNOPT: call void @llvm.objc.storeStrong(i8** {{.*}}, i8* null)
@@ -76,7 +76,7 @@ void test_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z17test_array_deletePU8__strongP11objc_objectPU6__weakS0_
+// CHECK-LABEL: define{{.*}} void @_Z17test_array_deletePU8__strongP11objc_objectPU6__weakS0_
 void test_array_delete(__strong id *sptr, __weak id *wptr) {
   // CHECK: icmp eq i8** [[BEGIN:%.*]], null
   // CHECK: [[LEN:%.*]] = load i64, i64* {{%.*}}

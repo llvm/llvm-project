@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -25,7 +25,7 @@ class XCOFFDumper : public ObjDumper {
 
 public:
   XCOFFDumper(const XCOFFObjectFile &Obj, ScopedPrinter &Writer)
-      : ObjDumper(Writer), Obj(Obj) {}
+      : ObjDumper(Writer, Obj.getFileName()), Obj(Obj) {}
 
   void printFileHeaders() override;
   void printSectionHeaders() override;
@@ -35,16 +35,18 @@ public:
   void printUnwindInfo() override;
   void printStackMap() const override;
   void printNeededLibraries() override;
+  void printStringTable() override;
 
 private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
   template <typename T> void printGenericSectionHeader(T &Sec) const;
   template <typename T> void printOverflowSectionHeader(T &Sec) const;
   void printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr);
-  void printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr);
+  void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
   void printSectAuxEntForStat(const XCOFFSectAuxEntForStat *AuxEntPtr);
   void printSymbol(const SymbolRef &);
-  void printRelocations(ArrayRef<XCOFFSectionHeader32> Sections);
+  template <typename Shdr, typename RelTy>
+  void printRelocations(ArrayRef<Shdr> Sections);
   const XCOFFObjectFile &Obj;
 };
 } // anonymous namespace
@@ -105,9 +107,9 @@ void XCOFFDumper::printSectionHeaders() {
 
 void XCOFFDumper::printRelocations() {
   if (Obj.is64Bit())
-    llvm_unreachable("64-bit relocation output not implemented!");
+    printRelocations<XCOFFSectionHeader64, XCOFFRelocation64>(Obj.sections64());
   else
-    printRelocations(Obj.sections32());
+    printRelocations<XCOFFSectionHeader32, XCOFFRelocation32>(Obj.sections32());
 }
 
 static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
@@ -122,28 +124,40 @@ static const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
 #undef ECase
 };
 
-void XCOFFDumper::printRelocations(ArrayRef<XCOFFSectionHeader32> Sections) {
+template <typename Shdr, typename RelTy>
+void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   if (!opts::ExpandRelocs)
     report_fatal_error("Unexpanded relocation output not implemented.");
 
   ListScope LS(W, "Relocations");
   uint16_t Index = 0;
-  for (const auto &Sec : Sections) {
+  for (const Shdr &Sec : Sections) {
     ++Index;
     // Only the .text, .data, .tdata, and STYP_DWARF sections have relocation.
     if (Sec.Flags != XCOFF::STYP_TEXT && Sec.Flags != XCOFF::STYP_DATA &&
         Sec.Flags != XCOFF::STYP_TDATA && Sec.Flags != XCOFF::STYP_DWARF)
       continue;
-    auto Relocations = unwrapOrError(Obj.getFileName(), Obj.relocations(Sec));
+    Expected<ArrayRef<RelTy>> ErrOrRelocations = Obj.relocations<Shdr, RelTy>(Sec);
+    if (Error E = ErrOrRelocations.takeError()) {
+      reportUniqueWarning(std::move(E));
+      continue;
+    }
+
+    const ArrayRef<RelTy> Relocations = *ErrOrRelocations;
     if (Relocations.empty())
       continue;
 
     W.startLine() << "Section (index: " << Index << ") " << Sec.getName()
                   << " {\n";
-    for (auto Reloc : Relocations) {
-      StringRef SymbolName = unwrapOrError(
-          Obj.getFileName(), Obj.getSymbolNameByIndex(Reloc.SymbolIndex));
+    for (const RelTy Reloc : Relocations) {
+      Expected<StringRef> ErrOrSymbolName =
+          Obj.getSymbolNameByIndex(Reloc.SymbolIndex);
+      if (Error E = ErrOrSymbolName.takeError()) {
+        reportUniqueWarning(std::move(E));
+        continue;
+      }
 
+      StringRef SymbolName = *ErrOrSymbolName;
       DictScope RelocScope(W, "Relocation");
       W.printHex("Virtual Address", Reloc.VirtualAddress);
       W.printNumber("Symbol", SymbolName, Reloc.SymbolIndex);
@@ -165,10 +179,17 @@ static const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
 #undef ECase
 };
 
+static const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(AUX_EXCEPT), ECase(AUX_FCN), ECase(AUX_SYM), ECase(AUX_FILE),
+    ECase(AUX_CSECT),  ECase(AUX_SECT)
+#undef ECase
+};
+
 void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
-  if (Obj.is64Bit())
-    report_fatal_error(
-        "Printing for File Auxiliary Entry in 64-bit is unimplemented.");
+  assert((!Obj.is64Bit() || AuxEntPtr->AuxType == XCOFF::AUX_FILE) &&
+         "Mismatched auxiliary type!");
   StringRef FileName =
       unwrapOrError(Obj.getFileName(), Obj.getCFileName(AuxEntPtr));
   DictScope SymDs(W, "File Auxiliary Entry");
@@ -177,19 +198,22 @@ void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
   W.printString("Name", FileName);
   W.printEnum("Type", static_cast<uint8_t>(AuxEntPtr->Type),
               makeArrayRef(FileStringType));
+  if (Obj.is64Bit()) {
+    W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
+                makeArrayRef(SymAuxType));
+  }
 }
 
 static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
     {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
-        ECase(XMC_PR),   ECase(XMC_RO),     ECase(XMC_DB),
-        ECase(XMC_GL),   ECase(XMC_XO),     ECase(XMC_SV),
-        ECase(XMC_SV64), ECase(XMC_SV3264), ECase(XMC_TI),
-        ECase(XMC_TB),   ECase(XMC_RW),     ECase(XMC_TC0),
-        ECase(XMC_TC),   ECase(XMC_TD),     ECase(XMC_DS),
-        ECase(XMC_UA),   ECase(XMC_BS),     ECase(XMC_UC),
-        ECase(XMC_TL),   ECase(XMC_TE)
+        ECase(XMC_PR), ECase(XMC_RO), ECase(XMC_DB),   ECase(XMC_GL),
+        ECase(XMC_XO), ECase(XMC_SV), ECase(XMC_SV64), ECase(XMC_SV3264),
+        ECase(XMC_TI), ECase(XMC_TB), ECase(XMC_RW),   ECase(XMC_TC0),
+        ECase(XMC_TC), ECase(XMC_TD), ECase(XMC_DS),   ECase(XMC_UA),
+        ECase(XMC_BS), ECase(XMC_UC), ECase(XMC_TL),   ECase(XMC_UL),
+        ECase(XMC_TE)
 #undef ECase
 };
 
@@ -200,27 +224,32 @@ static const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
 #undef ECase
 };
 
-void XCOFFDumper::printCsectAuxEnt32(const XCOFFCsectAuxEnt32 *AuxEntPtr) {
-  assert(!Obj.is64Bit() && "32-bit interface called on 64-bit object file.");
+void XCOFFDumper::printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef) {
+  assert((!Obj.is64Bit() || AuxEntRef.getAuxType64() == XCOFF::AUX_CSECT) &&
+         "Mismatched auxiliary type!");
 
   DictScope SymDs(W, "CSECT Auxiliary Entry");
-  W.printNumber("Index",
-                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
-  if (AuxEntPtr->isLabel())
-    W.printNumber("ContainingCsectSymbolIndex", AuxEntPtr->SectionOrLength);
-  else
-    W.printNumber("SectionLen", AuxEntPtr->SectionOrLength);
-  W.printHex("ParameterHashIndex", AuxEntPtr->ParameterHashIndex);
-  W.printHex("TypeChkSectNum", AuxEntPtr->TypeChkSectNum);
+  W.printNumber("Index", Obj.getSymbolIndex(AuxEntRef.getEntryAddress()));
+  W.printNumber(AuxEntRef.isLabel() ? "ContainingCsectSymbolIndex"
+                                    : "SectionLen",
+                AuxEntRef.getSectionOrLength());
+  W.printHex("ParameterHashIndex", AuxEntRef.getParameterHashIndex());
+  W.printHex("TypeChkSectNum", AuxEntRef.getTypeChkSectNum());
   // Print out symbol alignment and type.
-  W.printNumber("SymbolAlignmentLog2", AuxEntPtr->getAlignmentLog2());
-  W.printEnum("SymbolType", AuxEntPtr->getSymbolType(),
+  W.printNumber("SymbolAlignmentLog2", AuxEntRef.getAlignmentLog2());
+  W.printEnum("SymbolType", AuxEntRef.getSymbolType(),
               makeArrayRef(CsectSymbolTypeClass));
   W.printEnum("StorageMappingClass",
-              static_cast<uint8_t>(AuxEntPtr->StorageMappingClass),
+              static_cast<uint8_t>(AuxEntRef.getStorageMappingClass()),
               makeArrayRef(CsectStorageMappingClass));
-  W.printHex("StabInfoIndex", AuxEntPtr->StabInfoIndex);
-  W.printHex("StabSectNum", AuxEntPtr->StabSectNum);
+
+  if (Obj.is64Bit()) {
+    W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_CSECT),
+                makeArrayRef(SymAuxType));
+  } else {
+    W.printHex("StabInfoIndex", AuxEntRef.getStabInfoIndex32());
+    W.printHex("StabSectNum", AuxEntRef.getStabSectNum32());
+  }
 }
 
 void XCOFFDumper::printSectAuxEntForStat(
@@ -302,53 +331,62 @@ static const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
 };
 
 void XCOFFDumper::printSymbol(const SymbolRef &S) {
-  if (Obj.is64Bit())
-    report_fatal_error("64-bit support is unimplemented.");
-
   DataRefImpl SymbolDRI = S.getRawDataRefImpl();
-  const XCOFFSymbolEntry *SymbolEntPtr = Obj.toSymbolEntry(SymbolDRI);
+  XCOFFSymbolRef SymbolEntRef = Obj.toSymbolRef(SymbolDRI);
 
-  XCOFFSymbolRef XCOFFSymRef(SymbolDRI, &Obj);
-  uint8_t NumberOfAuxEntries = XCOFFSymRef.getNumberOfAuxEntries();
+  uint8_t NumberOfAuxEntries = SymbolEntRef.getNumberOfAuxEntries();
 
   DictScope SymDs(W, "Symbol");
 
   StringRef SymbolName =
-      unwrapOrError(Obj.getFileName(), Obj.getSymbolName(SymbolDRI));
+      unwrapOrError(Obj.getFileName(), SymbolEntRef.getName());
 
-  W.printNumber("Index",
-                Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(SymbolEntPtr)));
+  W.printNumber("Index", Obj.getSymbolIndex(SymbolEntRef.getEntryAddress()));
   W.printString("Name", SymbolName);
-  W.printHex(GetSymbolValueName(SymbolEntPtr->StorageClass),
-             SymbolEntPtr->Value);
+  W.printHex(GetSymbolValueName(SymbolEntRef.getStorageClass()),
+             SymbolEntRef.getValue());
 
   StringRef SectionName =
-      unwrapOrError(Obj.getFileName(), Obj.getSymbolSectionName(SymbolEntPtr));
+      unwrapOrError(Obj.getFileName(), Obj.getSymbolSectionName(SymbolEntRef));
 
   W.printString("Section", SectionName);
-  if (XCOFFSymRef.getStorageClass() == XCOFF::C_FILE) {
-    W.printEnum("Source Language ID",
-                SymbolEntPtr->CFileLanguageIdAndTypeId.LanguageId,
+  if (SymbolEntRef.getStorageClass() == XCOFF::C_FILE) {
+    W.printEnum("Source Language ID", SymbolEntRef.getLanguageIdForCFile(),
                 makeArrayRef(CFileLangIdClass));
-    W.printEnum("CPU Version ID",
-                SymbolEntPtr->CFileLanguageIdAndTypeId.CpuTypeId,
+    W.printEnum("CPU Version ID", SymbolEntRef.getCPUTypeIddForCFile(),
                 makeArrayRef(CFileCpuIdClass));
   } else
-    W.printHex("Type", SymbolEntPtr->SymbolType);
+    W.printHex("Type", SymbolEntRef.getSymbolType());
 
-  W.printEnum("StorageClass", static_cast<uint8_t>(SymbolEntPtr->StorageClass),
+  W.printEnum("StorageClass",
+              static_cast<uint8_t>(SymbolEntRef.getStorageClass()),
               makeArrayRef(SymStorageClass));
-  W.printNumber("NumberOfAuxEntries", SymbolEntPtr->NumberOfAuxEntries);
+  W.printNumber("NumberOfAuxEntries", NumberOfAuxEntries);
 
   if (NumberOfAuxEntries == 0)
     return;
 
-  switch (XCOFFSymRef.getStorageClass()) {
+  switch (SymbolEntRef.getStorageClass()) {
   case XCOFF::C_FILE:
     // If the symbol is C_FILE and has auxiliary entries...
-    for (int i = 1; i <= NumberOfAuxEntries; i++) {
+    for (int I = 1; I <= NumberOfAuxEntries; I++) {
+      uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+          SymbolEntRef.getEntryAddress(), I);
+
+      if (Obj.is64Bit() &&
+          *Obj.getSymbolAuxType(AuxAddress) != XCOFF::SymbolAuxType::AUX_FILE) {
+        W.startLine() << "!Unexpected raw auxiliary entry data:\n";
+        W.startLine() << format_bytes(
+                             ArrayRef<uint8_t>(
+                                 reinterpret_cast<const uint8_t *>(AuxAddress),
+                                 XCOFF::SymbolTableEntrySize),
+                             0, XCOFF::SymbolTableEntrySize)
+                      << "\n";
+        continue;
+      }
+
       const XCOFFFileAuxEnt *FileAuxEntPtr =
-          reinterpret_cast<const XCOFFFileAuxEnt *>(SymbolEntPtr + i);
+          reinterpret_cast<const XCOFFFileAuxEnt *>(AuxAddress);
 #ifndef NDEBUG
       Obj.checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(FileAuxEntPtr));
 #endif
@@ -357,34 +395,52 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
     break;
   case XCOFF::C_EXT:
   case XCOFF::C_WEAKEXT:
-  case XCOFF::C_HIDEXT:
+  case XCOFF::C_HIDEXT: {
     // If the symbol is for a function, and it has more than 1 auxiliary entry,
     // then one of them must be function auxiliary entry which we do not
     // support yet.
-    if (XCOFFSymRef.isFunction() && NumberOfAuxEntries >= 2)
+    if (SymbolEntRef.isFunction() && NumberOfAuxEntries >= 2)
       report_fatal_error("Function auxiliary entry printing is unimplemented.");
 
     // If there is more than 1 auxiliary entry, instead of printing out
-    // error information, print out the raw Auxiliary entry from 1st till
-    // the last - 1. The last one must be a CSECT Auxiliary Entry.
-    for (int i = 1; i < NumberOfAuxEntries; i++) {
+    // error information, print out the raw Auxiliary entry.
+    // For 32-bit object, print from first to the last - 1. The last one must be
+    // a CSECT Auxiliary Entry.
+    // For 64-bit object, print from first to last and skips if SymbolAuxType is
+    // AUX_CSECT.
+    for (int I = 1; I <= NumberOfAuxEntries; I++) {
+      if (I == NumberOfAuxEntries && !Obj.is64Bit())
+        break;
+
+      uintptr_t AuxAddress = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+          SymbolEntRef.getEntryAddress(), I);
+      if (Obj.is64Bit() &&
+          *Obj.getSymbolAuxType(AuxAddress) == XCOFF::SymbolAuxType::AUX_CSECT)
+        continue;
+
       W.startLine() << "!Unexpected raw auxiliary entry data:\n";
       W.startLine() << format_bytes(
-          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(SymbolEntPtr + i),
+          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(AuxAddress),
                             XCOFF::SymbolTableEntrySize));
     }
 
-    // The symbol's last auxiliary entry is a CSECT Auxiliary Entry.
-    printCsectAuxEnt32(XCOFFSymRef.getXCOFFCsectAuxEnt32());
+    auto ErrOrCsectAuxRef = SymbolEntRef.getXCOFFCsectAuxRef();
+    if (!ErrOrCsectAuxRef)
+      reportUniqueWarning(ErrOrCsectAuxRef.takeError());
+    else
+      printCsectAuxEnt(*ErrOrCsectAuxRef);
+
     break;
+  }
   case XCOFF::C_STAT:
     if (NumberOfAuxEntries > 1)
       report_fatal_error(
           "C_STAT symbol should not have more than 1 auxiliary entry.");
 
     const XCOFFSectAuxEntForStat *StatAuxEntPtr;
-    StatAuxEntPtr =
-        reinterpret_cast<const XCOFFSectAuxEntForStat *>(SymbolEntPtr + 1);
+    StatAuxEntPtr = reinterpret_cast<const XCOFFSectAuxEntForStat *>(
+        XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+            SymbolEntRef.getEntryAddress(), 1));
 #ifndef NDEBUG
     Obj.checkSymbolEntryPointer(reinterpret_cast<uintptr_t>(StatAuxEntPtr));
 #endif
@@ -400,7 +456,9 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
     for (int i = 1; i <= NumberOfAuxEntries; i++) {
       W.startLine() << "!Unexpected raw auxiliary entry data:\n";
       W.startLine() << format_bytes(
-          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(SymbolEntPtr + i),
+          ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(
+                                XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+                                    SymbolEntRef.getEntryAddress(), i)),
                             XCOFF::SymbolTableEntrySize));
     }
     break;
@@ -411,6 +469,17 @@ void XCOFFDumper::printSymbols() {
   ListScope Group(W, "Symbols");
   for (const SymbolRef &S : Obj.symbols())
     printSymbol(S);
+}
+
+void XCOFFDumper::printStringTable() {
+  DictScope DS(W, "StringTable");
+  StringRef StrTable = Obj.getStringTable();
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
 }
 
 void XCOFFDumper::printDynamicSymbols() {
@@ -426,7 +495,43 @@ void XCOFFDumper::printStackMap() const {
 }
 
 void XCOFFDumper::printNeededLibraries() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  ListScope D(W, "NeededLibraries");
+  auto ImportFilesOrError = Obj.getImportFileTable();
+  if (!ImportFilesOrError) {
+    reportUniqueWarning(ImportFilesOrError.takeError());
+    return;
+  }
+
+  StringRef ImportFileTable = ImportFilesOrError.get();
+  const char *CurrentStr = ImportFileTable.data();
+  const char *TableEnd = ImportFileTable.end();
+  // Default column width for names is 13 even if no names are that long.
+  size_t BaseWidth = 13;
+
+  // Get the max width of BASE columns.
+  for (size_t StrIndex = 0; CurrentStr < TableEnd; ++StrIndex) {
+    size_t CurrentLen = strlen(CurrentStr);
+    CurrentStr += strlen(CurrentStr) + 1;
+    if (StrIndex % 3 == 1)
+      BaseWidth = std::max(BaseWidth, CurrentLen);
+  }
+
+  auto &OS = static_cast<formatted_raw_ostream &>(W.startLine());
+  // Each entry consists of 3 strings: the path_name, base_name and
+  // archive_member_name. The first entry is a default LIBPATH value and other
+  // entries have no path_name. We just dump the base_name and
+  // archive_member_name here.
+  OS << left_justify("BASE", BaseWidth)  << " MEMBER\n";
+  CurrentStr = ImportFileTable.data();
+  for (size_t StrIndex = 0; CurrentStr < TableEnd;
+       ++StrIndex, CurrentStr += strlen(CurrentStr) + 1) {
+    if (StrIndex >= 3 && StrIndex % 3 != 0) {
+      if (StrIndex % 3 == 1)
+        OS << "  " << left_justify(CurrentStr, BaseWidth) << " ";
+      else
+        OS << CurrentStr << "\n";
+    }
+  }
 }
 
 static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Miscellaneous constraint and requirement checking on declarations:
 ! - 8.5.6.2 & 8.5.6.3 constraints on coarrays
 ! - 8.5.19 constraints on the VOLATILE attribute
@@ -6,7 +6,7 @@
 module m
   !ERROR: 'mustbedeferred' is an ALLOCATABLE coarray and must have a deferred coshape
   real, allocatable :: mustBeDeferred[*]  ! C827
-  !ERROR: Component 'mustbeexplicit' is a non-ALLOCATABLE coarray and must have an explicit coshape
+  !ERROR: 'mustbeexplicit' is a non-ALLOCATABLE coarray and must have an explicit coshape
   real :: mustBeExplicit[:]  ! C828
   type :: hasCoarray
     real, allocatable :: coarray[:]

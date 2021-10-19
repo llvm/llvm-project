@@ -13,8 +13,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -31,6 +31,7 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName,
   TheTargetMachine.reset(
       static_cast<LLVMTargetMachine *>(TheTarget->createTargetMachine(
           Triple, CpuName, Features, Options, Reloc::Model::Static)));
+  assert(TheTargetMachine && "unable to create target machine");
   TheExegesisTarget = ExegesisTarget::lookup(TheTargetMachine->getTargetTriple());
   if (!TheExegesisTarget) {
     errs() << "no exegesis target for " << Triple << ", using default\n";
@@ -60,13 +61,15 @@ std::unique_ptr<LLVMTargetMachine> LLVMState::createTargetMachine() const {
 }
 
 bool LLVMState::canAssemble(const MCInst &Inst) const {
-  MCObjectFileInfo ObjectFileInfo;
-  MCContext Context(TheTargetMachine->getMCAsmInfo(),
-                    TheTargetMachine->getMCRegisterInfo(), &ObjectFileInfo);
+  MCContext Context(TheTargetMachine->getTargetTriple(),
+                    TheTargetMachine->getMCAsmInfo(),
+                    TheTargetMachine->getMCRegisterInfo(),
+                    TheTargetMachine->getMCSubtargetInfo());
   std::unique_ptr<const MCCodeEmitter> CodeEmitter(
       TheTargetMachine->getTarget().createMCCodeEmitter(
           *TheTargetMachine->getMCInstrInfo(), *TheTargetMachine->getMCRegisterInfo(),
           Context));
+  assert(CodeEmitter && "unable to create code emitter");
   SmallVector<char, 16> Tmp;
   raw_svector_ostream OS(Tmp);
   SmallVector<MCFixup, 4> Fixups;

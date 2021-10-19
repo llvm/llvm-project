@@ -34,12 +34,10 @@ class SharedLibTestCase(TestBase):
             "expression GetMeASubFoo(my_foo_ptr)",
             startstr="(sub_foo *) $")
 
-    @expectedFailureNetBSD
     def test_expr(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.common_test_expr(True)
 
-    @expectedFailureNetBSD
     def test_expr_no_preload(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable, but with preloading disabled"""
         self.common_test_expr(False)

@@ -6,7 +6,12 @@ endmacro()
 if(LLVM_ENABLE_DIA_SDK)
   include_directories(${MSVC_DIA_SDK_DIR}/include)
   set(LIBPDB_LINK_FOLDERS "${MSVC_DIA_SDK_DIR}\\lib")
-  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+  if ("$ENV{VSCMD_ARG_TGT_ARCH}" STREQUAL "arm64")
+    set(LIBPDB_LINK_FOLDERS "${LIBPDB_LINK_FOLDERS}\\arm64")
+  elseif ("$ENV{VSCMD_ARG_TGT_ARCH}" STREQUAL "arm")
+    set(LIBPDB_LINK_FOLDERS "${LIBPDB_LINK_FOLDERS}\\arm")
+  elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(LIBPDB_LINK_FOLDERS "${LIBPDB_LINK_FOLDERS}\\amd64")
   endif()
   file(TO_CMAKE_PATH "${LIBPDB_LINK_FOLDERS}\\diaguids.lib" LIBPDB_ADDITIONAL_LIBRARIES)
@@ -55,8 +60,10 @@ add_pdb_impl_folder(Native
   Native/NativeEnumLineNumbers.cpp
   Native/NativeEnumModules.cpp
   Native/NativeEnumTypes.cpp
+  Native/NativeEnumSymbols.cpp
   Native/NativeExeSymbol.cpp
   Native/NativeFunctionSymbol.cpp
+  Native/NativeInlineSiteSymbol.cpp
   Native/NativeLineNumber.cpp
   Native/NativePublicSymbol.cpp
   Native/NativeRawSymbol.cpp
@@ -134,6 +141,13 @@ add_llvm_component_library(LLVMDebugInfoPDB
 
   ADDITIONAL_HEADER_DIRS
   ${LIBPDB_ADDITIONAL_HEADER_DIRS}
+
+  LINK_COMPONENTS
+  BinaryFormat
+  Object
+  Support
+  DebugInfoCodeView
+  DebugInfoMSF
   )
 
 target_link_libraries(LLVMDebugInfoPDB INTERFACE "${LIBPDB_ADDITIONAL_LIBRARIES}")

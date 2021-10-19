@@ -10,6 +10,6 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
 // This helper is going to be uniqued, so it should not have a line
 // number between file and type.
 
-// CHECK: distinct !DISubprogram(name: "__os_log_helper_1_0_1_4_0",
-// CHECK-SAME:                   file: !{{[0-9+]}}, type
+// CHECK: distinct !DISubprogram(linkageName: "__os_log_helper_1_0_1_4_0",
+// CHECK-SAME:                   file: !{{.*}}, type
 // CHECK-SAME:                   flags: DIFlagArtificial

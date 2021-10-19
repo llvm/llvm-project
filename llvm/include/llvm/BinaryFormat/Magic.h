@@ -27,6 +27,7 @@ struct file_magic {
     elf_executable,    ///< ELF Executable image
     elf_shared_object, ///< ELF dynamically linked shared lib
     elf_core,          ///< ELF core image
+    goff_object,       ///< GOFF object file
     macho_object,      ///< Mach-O Object file
     macho_executable,  ///< Mach-O Executable
     macho_fixed_virtual_memory_shared_lib,    ///< Mach-O Shared Lib, FVM

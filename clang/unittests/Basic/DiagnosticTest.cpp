@@ -74,7 +74,7 @@ TEST(DiagnosticTest, fatalsAsError) {
 TEST(DiagnosticTest, diagnosticError) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
-  PartialDiagnostic::StorageAllocator Alloc;
+  PartialDiagnostic::DiagStorageAllocator Alloc;
   llvm::Expected<std::pair<int, int>> Value = DiagnosticError::create(
       SourceLocation(), PartialDiagnostic(diag::err_cannot_open_file, Alloc)
                             << "file"

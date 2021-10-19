@@ -17,8 +17,9 @@
 // CHECK: br {{.*}}, label %do.body, label %do.end, !llvm.loop ![[LMD1:[0-9]+]]
 // CHECK-LABEL: do.end:
 // CHECK-NOT: llvm.loop
-// CHECK: ![[LMD1]] = distinct !{![[LMD1]], ![[LMD2:[0-9]+]]}
-// CHECK: ![[LMD2]] = !{!"llvm.loop.unroll.count", i32 4}
+// CHECK: ![[LMD1]] = distinct !{![[LMD1]], [[LMD2:![0-9]+]], ![[LMD3:[0-9]+]]}
+// CHECK: [[LMD2]] = !{!"llvm.loop.mustprogress"}
+// CHECK: ![[LMD3]] = !{!"llvm.loop.unroll.count", i32 4}
 
 int test(int a[], int n) {
   int i = 0;

@@ -67,7 +67,7 @@ defm LOAD_F32 : WebAssemblyLoad<F32, "f32.load", 0x2a, []>;
 defm LOAD_F64 : WebAssemblyLoad<F64, "f64.load", 0x2b, []>;
 
 // Select loads with no constant offset.
-multiclass LoadPatNoOffset<ValueType ty, PatFrag kind, string inst> {
+multiclass LoadPatNoOffset<ValueType ty, SDPatternOperator kind, string inst> {
   def : Pat<(ty (kind I32:$addr)), (!cast<NI>(inst # "_A32") 0, 0, I32:$addr)>,
         Requires<[HasAddr32]>;
   def : Pat<(ty (kind (i64 I64:$addr))), (!cast<NI>(inst # "_A64") 0, 0, I64:$addr)>,
@@ -82,7 +82,7 @@ defm : LoadPatNoOffset<f64, load, "LOAD_F64">;
 // Select loads with a constant offset.
 
 // Pattern with address + immediate offset
-multiclass LoadPatImmOff<ValueType ty, PatFrag kind, PatFrag operand,
+multiclass LoadPatImmOff<ValueType ty, SDPatternOperator kind, PatFrag operand,
                          string inst> {
   def : Pat<(ty (kind (operand I32:$addr, imm:$off))),
             (!cast<NI>(inst # "_A32") 0, imm:$off, I32:$addr)>,
@@ -102,7 +102,7 @@ defm : LoadPatImmOff<f32, load, or_is_add, "LOAD_F32">;
 defm : LoadPatImmOff<f64, load, or_is_add, "LOAD_F64">;
 
 // Select loads with just a constant offset.
-multiclass LoadPatOffsetOnly<ValueType ty, PatFrag kind, string inst> {
+multiclass LoadPatOffsetOnly<ValueType ty, SDPatternOperator kind, string inst> {
   def : Pat<(ty (kind imm:$off)),
             (!cast<NI>(inst # "_A32") 0, imm:$off, (CONST_I32 0))>,
         Requires<[HasAddr32]>;
@@ -116,11 +116,11 @@ defm : LoadPatOffsetOnly<i64, load, "LOAD_I64">;
 defm : LoadPatOffsetOnly<f32, load, "LOAD_F32">;
 defm : LoadPatOffsetOnly<f64, load, "LOAD_F64">;
 
-multiclass LoadPatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
+multiclass LoadPatGlobalAddrOffOnly<ValueType ty, SDPatternOperator kind, string inst> {
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off))),
             (!cast<NI>(inst # "_A32") 0, tglobaladdr:$off, (CONST_I32 0))>,
         Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(ty (kind (WebAssemblywrapper tglobaladdr:$off))),
+  def : Pat<(ty (kind (WebAssemblyWrapper tglobaladdr:$off))),
             (!cast<NI>(inst # "_A64") 0, tglobaladdr:$off, (CONST_I64 0))>,
         Requires<[IsNotPIC, HasAddr64]>;
 }
@@ -313,11 +313,11 @@ defm : StorePatOffsetOnly<f32, store, "STORE_F32">;
 defm : StorePatOffsetOnly<f64, store, "STORE_F64">;
 
 multiclass StorePatGlobalAddrOffOnly<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
             (!cast<NI>(inst # "_A32") 0, tglobaladdr:$off, (CONST_I32 0),
              ty:$val)>,
         Requires<[IsNotPIC, HasAddr32]>;
-  def : Pat<(kind ty:$val, (WebAssemblywrapper tglobaladdr:$off)),
+  def : Pat<(kind ty:$val, (WebAssemblyWrapper tglobaladdr:$off)),
             (!cast<NI>(inst # "_A64") 0, tglobaladdr:$off, (CONST_I64 0),
              ty:$val)>,
         Requires<[IsNotPIC, HasAddr64]>;

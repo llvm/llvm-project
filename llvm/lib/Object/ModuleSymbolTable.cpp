@@ -36,6 +36,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -43,7 +44,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -99,16 +99,18 @@ initializeRecordStreamer(const Module &M,
   if (!MCII)
     return;
 
-  MCObjectFileInfo MOFI;
-  MCContext MCCtx(MAI.get(), MRI.get(), &MOFI);
-  MOFI.InitMCObjectFileInfo(TT, /*PIC*/ false, MCCtx);
-  MOFI.setSDKVersion(M.getSDKVersion());
-  RecordStreamer Streamer(MCCtx, M);
-  T->createNullTargetStreamer(Streamer);
-
   std::unique_ptr<MemoryBuffer> Buffer(MemoryBuffer::getMemBuffer(InlineAsm));
   SourceMgr SrcMgr;
   SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+
+  MCContext MCCtx(TT, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
+  MOFI->setSDKVersion(M.getSDKVersion());
+  MCCtx.setObjectFileInfo(MOFI.get());
+  RecordStreamer Streamer(MCCtx, M);
+  T->createNullTargetStreamer(Streamer);
+
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
@@ -202,7 +204,7 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
     if (GVar->isConstant())
       Res |= BasicSymbolRef::SF_Const;
   }
-  if (dyn_cast_or_null<Function>(GV->getBaseObject()))
+  if (isa_and_nonnull<Function>(GV->getAliaseeObject()) || isa<GlobalIFunc>(GV))
     Res |= BasicSymbolRef::SF_Executable;
   if (isa<GlobalAlias>(GV))
     Res |= BasicSymbolRef::SF_Indirect;

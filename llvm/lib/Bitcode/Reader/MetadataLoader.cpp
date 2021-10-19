@@ -17,7 +17,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -63,7 +62,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -75,7 +73,6 @@
 #include <deque>
 #include <limits>
 #include <map>
-#include <memory>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -368,7 +365,7 @@ public:
   ~PlaceholderQueue() {
     assert(empty() && "PlaceholderQueue hasn't been flushed before being destroyed");
   }
-  bool empty() { return PHs.empty(); }
+  bool empty() const { return PHs.empty(); }
   DistinctMDOperandPlaceholder &getPlaceholderOp(unsigned ID);
   void flush(BitcodeReaderMetadataList &MetadataList);
 
@@ -440,6 +437,20 @@ class MetadataLoader::MetadataLoaderImpl {
 
   /// Index that keeps track of where to find a metadata record in the stream.
   std::vector<uint64_t> GlobalMetadataBitPosIndex;
+
+  /// Cursor position of the start of the global decl attachments, to enable
+  /// loading using the index built for lazy loading, instead of forward
+  /// references.
+  uint64_t GlobalDeclAttachmentPos = 0;
+
+#ifndef NDEBUG
+  /// Sanity check that we end up parsing all of the global decl attachments.
+  unsigned NumGlobalDeclAttachSkipped = 0;
+  unsigned NumGlobalDeclAttachParsed = 0;
+#endif
+
+  /// Load the global decl attachments, using the index built for lazy loading.
+  Expected<bool> loadGlobalDeclAttachments();
 
   /// Populate the index above to enable lazily loading of metadata, and load
   /// the named metadata as well as the transitively referenced global
@@ -539,8 +550,7 @@ class MetadataLoader::MetadataLoaderImpl {
               SmallVector<uint64_t, 8> Ops;
               Ops.append(std::next(DIExpr->elements_begin()),
                          DIExpr->elements_end());
-              auto *E = DIExpression::get(Context, Ops);
-              DDI->setOperand(2, MetadataAsValue::get(Context, E));
+              DDI->setExpression(DIExpression::get(Context, Ops));
             }
   }
 
@@ -665,7 +675,7 @@ public:
     return FunctionsWithSPs.lookup(F);
   }
 
-  bool hasSeenOldLoopTags() { return HasSeenOldLoopTags; }
+  bool hasSeenOldLoopTags() const { return HasSeenOldLoopTags; }
 
   Error parseMetadataAttachment(
       Function &F, const SmallVectorImpl<Instruction *> &InstructionList);
@@ -673,7 +683,7 @@ public:
   Error parseMetadataKinds();
 
   void setStripTBAA(bool Value) { StripTBAA = Value; }
-  bool isStrippingTBAA() { return StripTBAA; }
+  bool isStrippingTBAA() const { return StripTBAA; }
 
   unsigned size() const { return MetadataList.size(); }
   void shrinkTo(unsigned N) { MetadataList.shrinkTo(N); }
@@ -684,8 +694,10 @@ Expected<bool>
 MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
   IndexCursor = Stream;
   SmallVector<uint64_t, 64> Record;
+  GlobalDeclAttachmentPos = 0;
   // Get the abbrevs, and preload record positions to make them lazy-loadable.
   while (true) {
+    uint64_t SavedPos = IndexCursor.GetCurrentBitNo();
     Expected<BitstreamEntry> MaybeEntry = IndexCursor.advanceSkippingSubblocks(
         BitstreamCursor::AF_DontPopBlockAtEnd);
     if (!MaybeEntry)
@@ -820,25 +832,11 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
         break;
       }
       case bitc::METADATA_GLOBAL_DECL_ATTACHMENT: {
-        // FIXME: we need to do this early because we don't materialize global
-        // value explicitly.
-        if (Error Err = IndexCursor.JumpToBit(CurrentPos))
-          return std::move(Err);
-        Record.clear();
-        if (Expected<unsigned> MaybeRecord =
-                IndexCursor.readRecord(Entry.ID, Record))
-          ;
-        else
-          return MaybeRecord.takeError();
-        if (Record.size() % 2 == 0)
-          return error("Invalid record");
-        unsigned ValueID = Record[0];
-        if (ValueID >= ValueList.size())
-          return error("Invalid record");
-        if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID]))
-          if (Error Err = parseGlobalObjectAttachment(
-                  *GO, ArrayRef<uint64_t>(Record).slice(1)))
-            return std::move(Err);
+        if (!GlobalDeclAttachmentPos)
+          GlobalDeclAttachmentPos = SavedPos;
+#ifndef NDEBUG
+        NumGlobalDeclAttachSkipped++;
+#endif
         break;
       }
       case bitc::METADATA_KIND:
@@ -876,6 +874,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_OBJC_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
+      case bitc::METADATA_GENERIC_SUBRANGE:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -884,6 +883,83 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       }
       break;
     }
+    }
+  }
+}
+
+// Load the global decl attachments after building the lazy loading index.
+// We don't load them "lazily" - all global decl attachments must be
+// parsed since they aren't materialized on demand. However, by delaying
+// their parsing until after the index is created, we can use the index
+// instead of creating temporaries.
+Expected<bool> MetadataLoader::MetadataLoaderImpl::loadGlobalDeclAttachments() {
+  // Nothing to do if we didn't find any of these metadata records.
+  if (!GlobalDeclAttachmentPos)
+    return true;
+  // Use a temporary cursor so that we don't mess up the main Stream cursor or
+  // the lazy loading IndexCursor (which holds the necessary abbrev ids).
+  BitstreamCursor TempCursor = Stream;
+  SmallVector<uint64_t, 64> Record;
+  // Jump to the position before the first global decl attachment, so we can
+  // scan for the first BitstreamEntry record.
+  if (Error Err = TempCursor.JumpToBit(GlobalDeclAttachmentPos))
+    return std::move(Err);
+  while (true) {
+    Expected<BitstreamEntry> MaybeEntry = TempCursor.advanceSkippingSubblocks(
+        BitstreamCursor::AF_DontPopBlockAtEnd);
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      // Sanity check that we parsed them all.
+      assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
+      return true;
+    case BitstreamEntry::Record:
+      break;
+    }
+    uint64_t CurrentPos = TempCursor.GetCurrentBitNo();
+    Expected<unsigned> MaybeCode = TempCursor.skipRecord(Entry.ID);
+    if (!MaybeCode)
+      return MaybeCode.takeError();
+    if (MaybeCode.get() != bitc::METADATA_GLOBAL_DECL_ATTACHMENT) {
+      // Anything other than a global decl attachment signals the end of
+      // these records. sanity check that we parsed them all.
+      assert(NumGlobalDeclAttachSkipped == NumGlobalDeclAttachParsed);
+      return true;
+    }
+#ifndef NDEBUG
+    NumGlobalDeclAttachParsed++;
+#endif
+    // FIXME: we need to do this early because we don't materialize global
+    // value explicitly.
+    if (Error Err = TempCursor.JumpToBit(CurrentPos))
+      return std::move(Err);
+    Record.clear();
+    if (Expected<unsigned> MaybeRecord =
+            TempCursor.readRecord(Entry.ID, Record))
+      ;
+    else
+      return MaybeRecord.takeError();
+    if (Record.size() % 2 == 0)
+      return error("Invalid record");
+    unsigned ValueID = Record[0];
+    if (ValueID >= ValueList.size())
+      return error("Invalid record");
+    if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID])) {
+      // Need to save and restore the current position since
+      // parseGlobalObjectAttachment will resolve all forward references which
+      // would require parsing from locations stored in the index.
+      CurrentPos = TempCursor.GetCurrentBitNo();
+      if (Error Err = parseGlobalObjectAttachment(
+              *GO, ArrayRef<uint64_t>(Record).slice(1)))
+        return std::move(Err);
+      if (Error Err = TempCursor.JumpToBit(CurrentPos))
+        return std::move(Err);
     }
   }
 }
@@ -916,6 +992,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
       // on-demand.
       MetadataList.resize(MDStringRef.size() +
                           GlobalMetadataBitPosIndex.size());
+
+      // Now that we have built the index, load the global decl attachments
+      // that were deferred during that process. This avoids creating
+      // temporaries.
+      SuccessOrErr = loadGlobalDeclAttachments();
+      if (!SuccessOrErr)
+        return SuccessOrErr.takeError();
+      assert(SuccessOrErr.get());
 
       // Reading the named metadata created forward references and/or
       // placeholders, that we flush here.
@@ -997,12 +1081,12 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   if (Error Err = IndexCursor.JumpToBit(
           GlobalMetadataBitPosIndex[ID - MDStringRef.size()]))
     report_fatal_error("lazyLoadOneMetadata failed jumping: " +
-                       toString(std::move(Err)));
+                       Twine(toString(std::move(Err))));
   Expected<BitstreamEntry> MaybeEntry = IndexCursor.advanceSkippingSubblocks();
   if (!MaybeEntry)
     // FIXME this drops the error on the floor.
     report_fatal_error("lazyLoadOneMetadata failed advanceSkippingSubblocks: " +
-                       toString(MaybeEntry.takeError()));
+                       Twine(toString(MaybeEntry.takeError())));
   BitstreamEntry Entry = MaybeEntry.get();
   ++NumMDRecordLoaded;
   if (Expected<unsigned> MaybeCode =
@@ -1010,9 +1094,10 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
     if (Error Err =
             parseOneMetadata(Record, MaybeCode.get(), Placeholders, Blob, ID))
       report_fatal_error("Can't lazyload MD, parseOneMetadata: " +
-                         toString(std::move(Err)));
+                         Twine(toString(std::move(Err))));
   } else
-    report_fatal_error("Can't lazyload MD: " + toString(MaybeCode.takeError()));
+    report_fatal_error("Can't lazyload MD: " +
+                       Twine(toString(MaybeCode.takeError())));
 }
 
 /// Ensure that all forward-references and placeholders are resolved.
@@ -1287,6 +1372,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
+  case bitc::METADATA_GENERIC_SUBRANGE: {
+    Metadata *Val = nullptr;
+    Val = GET_OR_DISTINCT(DIGenericSubrange,
+                          (Context, getMDOrNull(Record[1]),
+                           getMDOrNull(Record[2]), getMDOrNull(Record[3]),
+                           getMDOrNull(Record[4])));
+
+    MetadataList.assignValue(Val, NextMetadataNo);
+    IsDistinct = Record[0] & 1;
+    NextMetadataNo++;
+    break;
+  }
   case bitc::METADATA_ENUMERATOR: {
     if (Record.size() < 3)
       return error("Invalid record");
@@ -1341,7 +1438,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_DERIVED_TYPE: {
-    if (Record.size() < 12 || Record.size() > 13)
+    if (Record.size() < 12 || Record.size() > 14)
       return error("Invalid record");
 
     // DWARF address space is encoded as N->getDWARFAddressSpace() + 1. 0 means
@@ -1349,6 +1446,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Optional<unsigned> DWARFAddressSpace;
     if (Record.size() > 12 && Record[12])
       DWARFAddressSpace = Record[12] - 1;
+
+    Metadata *Annotations = nullptr;
+    if (Record.size() > 13 && Record[13])
+      Annotations = getMDOrNull(Record[13]);
 
     IsDistinct = Record[0];
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
@@ -1359,13 +1460,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                          getDITypeRefOrNull(Record[5]),
                          getDITypeRefOrNull(Record[6]), Record[7], Record[8],
                          Record[9], DWARFAddressSpace, Flags,
-                         getDITypeRefOrNull(Record[11]))),
+                         getDITypeRefOrNull(Record[11]), Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
   }
   case bitc::METADATA_COMPOSITE_TYPE: {
-    if (Record.size() < 16 || Record.size() > 20)
+    if (Record.size() < 16 || Record.size() > 22)
       return error("Invalid record");
 
     // If we have a UUID and this is not a forward declaration, lookup the
@@ -1392,6 +1493,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *DataLocation = nullptr;
     Metadata *Associated = nullptr;
     Metadata *Allocated = nullptr;
+    Metadata *Rank = nullptr;
+    Metadata *Annotations = nullptr;
     auto *Identifier = getMDString(Record[15]);
     // If this module is being parsed so that it can be ThinLTO imported
     // into another module, composite types only need to be imported
@@ -1420,6 +1523,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Associated = getMDOrNull(Record[18]);
         Allocated = getMDOrNull(Record[19]);
       }
+      if (Record.size() > 20) {
+        Rank = getMDOrNull(Record[20]);
+      }
+      if (Record.size() > 21) {
+        Annotations = getMDOrNull(Record[21]);
+      }
     }
     DICompositeType *CT = nullptr;
     if (Identifier)
@@ -1427,7 +1536,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
           Context, *Identifier, Tag, Name, File, Line, Scope, BaseType,
           SizeInBits, AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
           VTableHolder, TemplateParams, Discriminator, DataLocation, Associated,
-          Allocated);
+          Allocated, Rank, Annotations);
 
     // Create a node if we didn't get a lazy ODR type.
     if (!CT)
@@ -1436,7 +1545,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                             SizeInBits, AlignInBits, OffsetInBits, Flags,
                             Elements, RuntimeLang, VTableHolder, TemplateParams,
                             Identifier, Discriminator, DataLocation, Associated,
-                            Allocated));
+                            Allocated, Rank, Annotations));
     if (!IsNotUsedInTypeRef && Identifier)
       MetadataList.addTypeRef(*Identifier, *cast<DICompositeType>(CT));
 
@@ -1464,19 +1573,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
 
   case bitc::METADATA_MODULE: {
-    if (Record.size() < 5 || Record.size() > 8)
+    if (Record.size() < 5 || Record.size() > 9)
       return error("Invalid record");
 
-    unsigned Offset = Record.size() >= 7 ? 2 : 1;
+    unsigned Offset = Record.size() >= 8 ? 2 : 1;
     IsDistinct = Record[0];
     MetadataList.assignValue(
         GET_OR_DISTINCT(
             DIModule,
-            (Context, Record.size() >= 7 ? getMDOrNull(Record[1]) : nullptr,
+            (Context, Record.size() >= 8 ? getMDOrNull(Record[1]) : nullptr,
              getMDOrNull(Record[0 + Offset]), getMDString(Record[1 + Offset]),
              getMDString(Record[2 + Offset]), getMDString(Record[3 + Offset]),
              getMDString(Record[4 + Offset]),
-             Record.size() <= 7 ? 0 : Record[7])),
+             Record.size() <= 7 ? 0 : Record[7],
+             Record.size() <= 8 ? false : Record[8])),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1584,6 +1694,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasFn = false;
     bool HasThisAdj = true;
     bool HasThrownTypes = true;
+    bool HasAnnotations = false;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
     if (!HasSPFlags) {
@@ -1595,6 +1706,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       }
       HasThisAdj = Record.size() >= 20;
       HasThrownTypes = Record.size() >= 21;
+    } else {
+      HasAnnotations = Record.size() >= 19;
     }
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
     DISubprogram *SP = GET_OR_DISTINCT(
@@ -1617,7 +1730,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          getMDOrNull(Record[14 + OffsetB]),                 // declaration
          getMDOrNull(Record[15 + OffsetB]),                 // retainedNodes
          HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
-                        : nullptr                           // thrownTypes
+                        : nullptr,                          // thrownTypes
+         HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
+                        : nullptr                           // annotations
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
@@ -1759,13 +1874,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Version = Record[0] >> 1;
 
     if (Version == 2) {
+      Metadata *Annotations = nullptr;
+      if (Record.size() > 12)
+        Annotations = getMDOrNull(Record[12]);
+
       MetadataList.assignValue(
           GET_OR_DISTINCT(
               DIGlobalVariable,
               (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
                getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
                getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-               getMDOrNull(Record[9]), getMDOrNull(Record[10]), Record[11])),
+               getMDOrNull(Record[9]), getMDOrNull(Record[10]), Record[11],
+               Annotations)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1778,7 +1898,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                            getMDString(Record[2]), getMDString(Record[3]),
                            getMDOrNull(Record[4]), Record[5],
                            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                           getMDOrNull(Record[10]), nullptr, Record[11])),
+                           getMDOrNull(Record[10]), nullptr, Record[11],
+                           nullptr)),
           NextMetadataNo);
 
       NextMetadataNo++;
@@ -1811,7 +1932,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
           (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
            getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
            getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-           getMDOrNull(Record[10]), nullptr, AlignInBits));
+           getMDOrNull(Record[10]), nullptr, AlignInBits, nullptr));
 
       DIGlobalVariableExpression *DGVE = nullptr;
       if (Attach || Expr)
@@ -1841,18 +1962,23 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasTag = !HasAlignment && Record.size() > 8;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7 + HasTag]);
     uint32_t AlignInBits = 0;
+    Metadata *Annotations = nullptr;
     if (HasAlignment) {
-      if (Record[8 + HasTag] > (uint64_t)std::numeric_limits<uint32_t>::max())
+      if (Record[8] > (uint64_t)std::numeric_limits<uint32_t>::max())
         return error("Alignment value is too large");
-      AlignInBits = Record[8 + HasTag];
+      AlignInBits = Record[8];
+      if (Record.size() > 9)
+        Annotations = getMDOrNull(Record[9]);
     }
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DILocalVariable,
                         (Context, getMDOrNull(Record[1 + HasTag]),
                          getMDString(Record[2 + HasTag]),
                          getMDOrNull(Record[3 + HasTag]), Record[4 + HasTag],
                          getDITypeRefOrNull(Record[5 + HasTag]),
-                         Record[6 + HasTag], Flags, AlignInBits)),
+                         Record[6 + HasTag], Flags, AlignInBits,
+                         Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1919,17 +2045,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_IMPORTED_ENTITY: {
-    if (Record.size() != 6 && Record.size() != 7)
+    if (Record.size() < 6 && Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
-    bool HasFile = (Record.size() == 7);
+    bool HasFile = (Record.size() >= 7);
+    bool HasElements = (Record.size() >= 8);
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIImportedEntity,
                         (Context, Record[1], getMDOrNull(Record[2]),
                          getDITypeRefOrNull(Record[3]),
                          HasFile ? getMDOrNull(Record[6]) : nullptr,
-                         HasFile ? Record[4] : 0, getMDString(Record[5]))),
+                         HasFile ? Record[4] : 0, getMDString(Record[5]),
+                         HasElements ? getMDOrNull(Record[7]) : nullptr)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1972,6 +2100,23 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // block with METADATA_BLOCK_ID.
     if (Error Err = parseMetadataKindRecord(Record))
       return Err;
+    break;
+  }
+  case bitc::METADATA_ARG_LIST: {
+    SmallVector<ValueAsMetadata *, 4> Elts;
+    Elts.reserve(Record.size());
+    for (uint64_t Elt : Record) {
+      Metadata *MD = getMD(Elt);
+      if (isa<MDNode>(MD) && cast<MDNode>(MD)->isTemporary())
+        return error(
+            "Invalid record: DIArgList should not contain forward refs");
+      if (!isa<ValueAsMetadata>(MD))
+        return error("Invalid record");
+      Elts.push_back(cast<ValueAsMetadata>(MD));
+    }
+
+    MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
     break;
   }
   }
@@ -2024,7 +2169,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
     auto K = MDKindMap.find(Record[I]);
     if (K == MDKindMap.end())
       return error("Invalid ID");
-    MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
+    MDNode *MD =
+        dyn_cast_or_null<MDNode>(getMetadataFwdRefOrLoad(Record[I + 1]));
     if (!MD)
       return error("Invalid metadata attachment: expect fwd ref to MDNode");
     GO.addMetadata(K->second, *MD);

@@ -149,18 +149,18 @@ body:             |
   ; CHECK-NOT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION
   bb.0:
     liveins: $r3, $r4, $q0, $q3, $q4, $q5
-    $q5 = MVE_VDUP32 $r3, 0, $noreg, $q5
-    $q4 = MVE_VDUP32 $r4, 0, $noreg, $q4
-    $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $q0
-    t2DoLoopStart $r4
+    $q5 = MVE_VDUP32 $r3, 0, $noreg, $noreg, $q5
+    $q4 = MVE_VDUP32 $r4, 0, $noreg, $noreg, $q4
+    $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $noreg, $q0
+    $lr = t2DoLoopStart $r4
     $r0 = MVE_VMOV_from_lane_32 renamable $q0, 1, 14, $noreg
     tBL 14, $noreg, @z
   bb.1:
     liveins: $r3, $r4, $q0, $q3, $q4, $q5
-    $q5 = MVE_VDUP32 $r3, 0, $noreg, $q5
-    $q4 = MVE_VDUP32 $r4, 0, $noreg, $q4
-    $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $q0
-    t2DoLoopStart $r4
+    $q5 = MVE_VDUP32 $r3, 0, $noreg, $noreg, $q5
+    $q4 = MVE_VDUP32 $r4, 0, $noreg, $noreg, $q4
+    $q0 = MVE_VADDf32 $q4, $q5, 0, $noreg, $noreg, $q0
+    $lr = t2DoLoopStart $r4
     $r0 = MVE_VMOV_from_lane_32 renamable $q0, 1, 14, $noreg
     tBL 14, $noreg, @z
   bb.2:

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=0 -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -inline-threshold=0 -inline-enable-priority-order=true -S | FileCheck %s
 
 ; The 'test1_' prefixed functions test the basic 'last callsite' inline
 ; threshold adjustment where we specifically inline the last call site of an
@@ -259,10 +260,10 @@ entry:
   ; constant expression cannot be inlined because the constant expression forms
   ; a second use. If this part starts failing we need to use more complex
   ; constant expressions to reference a particular function with them.
-  %sink = alloca i1
-  store volatile i1 icmp ne (i64 ptrtoint (void (i1)* @test4_g to i64), i64 ptrtoint(void (i1)* @test4_g to i64)), i1* %sink
+  %sink = alloca i64
+  store volatile i64 mul (i64 ptrtoint (void (i1)* @test4_g to i64), i64 ptrtoint(void (i1)* @test4_g to i64)), i64* %sink
   call void @test4_g(i1 true)
-; CHECK: store volatile i1 false
+; CHECK: store volatile i64 mul (i64 ptrtoint (void (i1)* @test4_g to i64), i64 ptrtoint (void (i1)* @test4_g to i64)), i64* %sink
 ; CHECK: call void @test4_g(i1 true)
 
   ret void

@@ -31,7 +31,7 @@ volatile char x;
 volatile int y = 1;
 volatile int z0, z1, z2, z3, z4, z5, z6, z7, z8, z9, z10, z11, z12, z13;
 
-void recursive_func(char *p) {
+void recursive_func(uintptr_t parent_frame_address) {
 #if defined(SMALL_FRAME)
   char *buf = 0;
 #elif defined(SAVE_ALL_THE_REGISTERS)
@@ -69,14 +69,13 @@ void recursive_func(char *p) {
 #else
   char buf[BS];
   // Check that the stack grows in the righ direction, unless we use fake stack.
-  if (p && !__asan_get_current_fake_stack())
-    assert(p - buf >= BS);
+  assert(parent_frame_address > (uintptr_t)__builtin_frame_address(0));
   buf[rand() % BS] = 1;
   buf[rand() % BS] = 2;
   x = buf[rand() % BS];
 #endif
   if (y)
-    recursive_func(buf);
+    recursive_func((uintptr_t)__builtin_frame_address(0));
   x = 1; // prevent tail call optimization
   // CHECK: {{stack-overflow on address 0x.* \(pc 0x.* bp 0x.* sp 0x.* T.*\)}}
   // If stack overflow happens during function prologue, stack trace may be
@@ -85,7 +84,7 @@ void recursive_func(char *p) {
 }
 
 void *ThreadFn(void* unused) {
-  recursive_func(0);
+  recursive_func((uintptr_t)__builtin_frame_address(0));
   return 0;
 }
 
@@ -110,7 +109,7 @@ int main(int argc, char **argv) {
   pthread_create(&t, 0, ThreadFn, 0);
   pthread_join(t, 0);
 #else
-  recursive_func(0);
+  recursive_func((uintptr_t)__builtin_frame_address(0));
 #endif
   return 0;
 }

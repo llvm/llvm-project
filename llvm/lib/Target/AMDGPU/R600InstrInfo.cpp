@@ -13,33 +13,11 @@
 
 #include "R600InstrInfo.h"
 #include "AMDGPU.h"
-#include "AMDGPUInstrInfo.h"
-#include "AMDGPUSubtarget.h"
+#include "MCTargetDesc/R600MCTargetDesc.h"
+#include "R600.h"
 #include "R600Defines.h"
-#include "R600FrameLowering.h"
-#include "R600RegisterInfo.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/BitVector.h"
+#include "R600Subtarget.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
-#include <cassert>
-#include <cstdint>
-#include <cstring>
-#include <iterator>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -963,8 +941,9 @@ R600InstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) con
   return false;
 }
 
-bool R600InstrInfo::DefinesPredicate(MachineInstr &MI,
-                                     std::vector<MachineOperand> &Pred) const {
+bool R600InstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                      std::vector<MachineOperand> &Pred,
+                                      bool SkipDead) const {
   return isPredicateSetter(MI.getOpcode());
 }
 
@@ -1225,7 +1204,7 @@ int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
   const R600FrameLowering *TFL = ST.getFrameLowering();
 
   Register IgnoredFrameReg;
-  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
+  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg).getFixed();
 
   return getIndirectIndexBegin(MF) + Offset;
 }

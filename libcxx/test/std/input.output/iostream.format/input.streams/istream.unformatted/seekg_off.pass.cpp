@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // <istream>
 
@@ -66,6 +64,7 @@ int main(int, char**)
         assert(is.fail());
         assert(seekoff_called == 2);
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         testbuf<wchar_t> sb(L" 123456789");
         std::wistream is(&sb);
@@ -76,6 +75,7 @@ int main(int, char**)
         assert(is.fail());
         assert(seekoff_called == 4);
     }
+#endif
     {
         testbuf<char> sb(" 123456789");
         std::istream is(&sb);

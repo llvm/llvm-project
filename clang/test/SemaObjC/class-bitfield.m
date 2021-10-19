@@ -5,7 +5,7 @@
   int a : -1; // expected-error{{bit-field 'a' has negative width}}
 
   // rdar://6081627
-  int b : 33; // expected-error{{width of bit-field 'b' (33 bits) exceeds width of its type (32 bits)}}
+  int b : 33; // expected-error{{width of bit-field 'b' (33 bits) exceeds the width of its type (32 bits)}}
 
   int c : (1 + 0.25); // expected-error{{integer constant expression must have integer type}}
   int d : (int)(1 + 0.25); 

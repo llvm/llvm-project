@@ -40,10 +40,10 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: ![[TBAA]] = !{![[TAG1:[0-9]+]], ![[TAG1]], i64 0}
 ; CHECK: ![[TAG1]] = !{!"int", !{{[0-9]+}}, i64 0}
 ; CHECK: ![[RANGE]] = !{i32 10, i32 25}
-; CHECK: ![[ALIAS_SCOPE]] = !{![[SCOPE0:[0-9]+]], ![[SCOPE2:[0-9]+]], ![[SCOPE1:[0-9]+]]}
+; CHECK: ![[ALIAS_SCOPE]] = !{![[SCOPE0:[0-9]+]], ![[SCOPE1:[0-9]+]], ![[SCOPE2:[0-9]+]]}
 ; CHECK: ![[SCOPE0]] = distinct !{![[SCOPE0]], !{{[0-9]+}}, !"scope0"}
-; CHECK: ![[SCOPE2]] = distinct !{![[SCOPE2]], !{{[0-9]+}}, !"scope2"}
 ; CHECK: ![[SCOPE1]] = distinct !{![[SCOPE1]], !{{[0-9]+}}, !"scope1"}
+; CHECK: ![[SCOPE2]] = distinct !{![[SCOPE2]], !{{[0-9]+}}, !"scope2"}
 ; CHECK: ![[NOALIAS]] = !{![[SCOPE3:[0-9]+]]}
 ; CHECK: ![[SCOPE3]] = distinct !{![[SCOPE3]], !{{[0-9]+}}, !"scope3"}
 

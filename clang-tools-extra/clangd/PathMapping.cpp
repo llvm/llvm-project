@@ -8,6 +8,7 @@
 #include "PathMapping.h"
 #include "Transport.h"
 #include "URI.h"
+#include "support/Logger.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errno.h"
@@ -39,7 +40,7 @@ llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
     llvm::StringRef Body = Uri->body();
     if (Body.consume_front(From) && (Body.empty() || Body.front() == '/')) {
       std::string MappedBody = (To + Body).str();
-      return URI(Uri->scheme(), Uri->authority(), MappedBody.c_str())
+      return URI(Uri->scheme(), Uri->authority(), MappedBody)
           .toString();
     }
   }
@@ -156,8 +157,7 @@ llvm::Expected<std::string> parsePath(llvm::StringRef Path) {
       Converted = "/" + Converted;
     return Converted;
   }
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "Path not absolute: " + Path);
+  return error("Path not absolute: {0}", Path);
 }
 
 } // namespace
@@ -174,9 +174,7 @@ parsePathMappings(llvm::StringRef RawPathMappings) {
     std::tie(PathPair, Rest) = Rest.split(",");
     std::tie(ClientPath, ServerPath) = PathPair.split("=");
     if (ClientPath.empty() || ServerPath.empty())
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Not a valid path mapping pair: " +
-                                         PathPair);
+      return error("Not a valid path mapping pair: {0}", PathPair);
     llvm::Expected<std::string> ParsedClientPath = parsePath(ClientPath);
     if (!ParsedClientPath)
       return ParsedClientPath.takeError();

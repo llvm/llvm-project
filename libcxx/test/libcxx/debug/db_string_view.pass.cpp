@@ -9,10 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: windows
 // UNSUPPORTED: libcpp-no-if-constexpr
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
+// UNSUPPORTED: libcxx-no-debug-mode
 
 // test container debugging
 
@@ -22,18 +21,22 @@
 #include "debug_mode_helper.h"
 
 void test_null_argument() {
-  EXPECT_DEATH(std::string_view(nullptr));
-  EXPECT_DEATH(std::string_view(NULL));
+  // C++2b prohibits construction of string_view from nullptr_t.
+  const char* nullp = nullptr;
+  const char* null = NULL;
+  (void)nullp;
+  (void)null;
+  EXPECT_DEATH((std::string_view(nullp)));
+  EXPECT_DEATH((std::string_view(null)));
   EXPECT_DEATH(std::string_view(static_cast<const char*>(0)));
   {
     std::string_view v;
-    EXPECT_DEATH(((void)(v == nullptr)));
-    EXPECT_DEATH(((void)(nullptr == v)));
+    EXPECT_DEATH(((void)(v == nullp)));
+    EXPECT_DEATH(((void)(nullp == v)));
   }
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test_null_argument();
 
   return 0;

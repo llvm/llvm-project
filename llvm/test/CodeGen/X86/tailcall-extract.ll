@@ -184,7 +184,7 @@ exit:
 }
 
 
-declare { i8*, i64 } @foo(i64)
-declare { i8*, i64 } @bar(i64)
-declare { {i8*, i64}, i64 } @baz(i64)
-declare { {i8*, i64}, i64 } @qux(i64)
+declare dso_local { i8*, i64 } @foo(i64)
+declare dso_local { i8*, i64 } @bar(i64)
+declare dso_local { {i8*, i64}, i64 } @baz(i64)
+declare dso_local { {i8*, i64}, i64 } @qux(i64)

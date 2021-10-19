@@ -150,7 +150,7 @@ void State::addCallStack(unsigned Limit) {
       }
     }
 
-    SmallVector<char, 128> Buffer;
+    SmallString<128> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     F->describe(Out);
     addDiag(CallLocation, diag::note_constexpr_call_here) << Out.str();

@@ -37,9 +37,8 @@ static Optional<std::string> format(StringRef input,
   opts.SetEscapeNonPrintables(true);
   opts.SetIgnoreMaxLength(false);
   opts.SetEscapeStyle(escape_style);
-  DataExtractor extractor(input.data(), input.size(),
-                          endian::InlHostByteOrder(), sizeof(void *));
-  opts.SetData(extractor);
+  opts.SetData(DataExtractor(input.data(), input.size(),
+                             endian::InlHostByteOrder(), sizeof(void *)));
   const bool success = StringPrinter::ReadBufferAndDumpToStream<elem_ty>(opts);
   if (!success)
     return llvm::None;

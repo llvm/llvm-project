@@ -19,6 +19,7 @@ class TestOSPluginStepping(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
+    @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48352")
     def test_python_os_plugin(self):
         """Test that stepping works when the OS Plugin doesn't report all
            threads at every stop"""
@@ -27,6 +28,7 @@ class TestOSPluginStepping(TestBase):
         self.run_python_os_step_missing_thread(False)
 
     @skipIfWindows
+    @skipIf(oslist=["freebsd"], bugnumber="llvm.org/pr48352")
     def test_python_os_plugin_prune(self):
         """Test that pruning the unreported PlanStacks works"""
         self.build()
@@ -111,6 +113,6 @@ class TestOSPluginStepping(TestBase):
             self.process.Continue()
             os_thread = self.get_os_thread()
             self.assertTrue(os_thread.IsValid(), "The OS thread is back after continue")
-            self.assertTrue("step out" in os_thread.GetStopDescription(100), "Completed step out plan")
+            self.assertIn("step out", os_thread.GetStopDescription(100), "Completed step out plan")
         
         

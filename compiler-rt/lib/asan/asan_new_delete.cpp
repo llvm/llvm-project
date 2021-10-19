@@ -11,15 +11,13 @@
 // Interceptors for operators new and delete.
 //===----------------------------------------------------------------------===//
 
+#include <stddef.h>
+
 #include "asan_allocator.h"
 #include "asan_internal.h"
-#include "asan_malloc_local.h"
 #include "asan_report.h"
 #include "asan_stack.h"
-
 #include "interception/interception.h"
-
-#include <stddef.h>
 
 // C++ operators can't have dllexport attributes on Windows. We export them
 // anyway by passing extra -export flags to the linker, which is exactly that
@@ -45,7 +43,7 @@ COMMENT_EXPORT("??_V@YAXPAX@Z")                   // operator delete[]
 #endif
 #undef COMMENT_EXPORT
 #else
-#define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE
+#define CXX_OPERATOR_ATTRIBUTE INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 #endif
 
 using namespace __asan;
@@ -72,14 +70,12 @@ enum class align_val_t: size_t {};
 // For local pool allocation, align to SHADOW_GRANULARITY to match asan
 // allocator behavior.
 #define OPERATOR_NEW_BODY(type, nothrow)            \
-  MAYBE_ALLOCATE_FROM_LOCAL_POOL(nothrow);          \
   GET_STACK_TRACE_MALLOC;                           \
   void *res = asan_memalign(0, size, &stack, type); \
   if (!nothrow && UNLIKELY(!res))                   \
     ReportOutOfMemory(size, &stack);                \
   return res;
 #define OPERATOR_NEW_BODY_ALIGN(type, nothrow)                \
-  MAYBE_ALLOCATE_FROM_LOCAL_POOL(nothrow);                    \
   GET_STACK_TRACE_MALLOC;                                     \
   void *res = asan_memalign((uptr)align, size, &stack, type); \
   if (!nothrow && UNLIKELY(!res))                             \
@@ -135,23 +131,19 @@ INTERCEPTOR(void *, _ZnamRKSt9nothrow_t, size_t size, std::nothrow_t const&) {
 #endif  // !SANITIZER_MAC
 
 #define OPERATOR_DELETE_BODY(type) \
-  if (IS_FROM_LOCAL_POOL(ptr)) return;\
-  GET_STACK_TRACE_FREE;\
+  GET_STACK_TRACE_FREE;            \
   asan_delete(ptr, 0, 0, &stack, type);
 
 #define OPERATOR_DELETE_BODY_SIZE(type) \
-  if (IS_FROM_LOCAL_POOL(ptr)) return;\
-  GET_STACK_TRACE_FREE;\
+  GET_STACK_TRACE_FREE;                 \
   asan_delete(ptr, size, 0, &stack, type);
 
 #define OPERATOR_DELETE_BODY_ALIGN(type) \
-  if (IS_FROM_LOCAL_POOL(ptr)) return;\
-  GET_STACK_TRACE_FREE;\
+  GET_STACK_TRACE_FREE;                  \
   asan_delete(ptr, 0, static_cast<uptr>(align), &stack, type);
 
 #define OPERATOR_DELETE_BODY_SIZE_ALIGN(type) \
-  if (IS_FROM_LOCAL_POOL(ptr)) return;\
-  GET_STACK_TRACE_FREE;\
+  GET_STACK_TRACE_FREE;                       \
   asan_delete(ptr, size, static_cast<uptr>(align), &stack, type);
 
 #if !SANITIZER_MAC

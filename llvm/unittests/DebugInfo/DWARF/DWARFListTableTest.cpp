@@ -73,4 +73,30 @@ TEST(DWARFListTableHeader, TruncatedHeader) {
   EXPECT_EQ(Header.length(), 6u);
 }
 
+TEST(DWARFListTableHeader, OffsetEntryCount) {
+  static const char SecData[] = "\x10\x00\x00\x00" // Length
+                                "\x05\x00"         // Version
+                                "\x08"             // Address size
+                                "\x00"             // Segment selector size
+                                "\x01\x00\x00\x00" // Offset entry count
+                                "\x04\x00\x00\x00" // offset[0]
+                                "\x04"             // DW_RLE_offset_pair
+                                "\x01"             // ULEB128 starting offset
+                                "\x02"             // ULEB128 ending offset
+                                "\x00";            // DW_RLE_end_of_list
+  DWARFDataExtractor Extractor(StringRef(SecData, sizeof(SecData) - 1),
+                               /*isLittleEndian=*/true,
+                               /*AddrSize=*/4);
+  DWARFListTableHeader Header(/*SectionName=*/".debug_rnglists",
+                              /*ListTypeString=*/"range");
+  uint64_t Offset = 0;
+  EXPECT_FALSE(!!Header.extract(Extractor, &Offset));
+  Optional<uint64_t> Offset0 = Header.getOffsetEntry(Extractor, 0);
+  EXPECT_TRUE(!!Offset0);
+  EXPECT_EQ(Offset0, uint64_t(4));
+  Optional<uint64_t> Offset1 = Header.getOffsetEntry(Extractor, 1);
+  EXPECT_FALSE(!!Offset1);
+  EXPECT_EQ(Header.length(), sizeof(SecData) - 1);
+}
+
 } // end anonymous namespace

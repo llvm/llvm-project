@@ -1,5 +1,19 @@
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
+// Builtins inside a namespace inside an extern "C" must be considered builtins.
+extern "C" {
+namespace X {
+double __builtin_fabs(double);
+float __builtin_fabsf(float) noexcept;
+} // namespace X
+}
+
+int o = X::__builtin_fabs(-2.0);
+// CHECK: @o ={{.*}} global i32 2, align 4
+
+long p = X::__builtin_fabsf(-3.0f);
+// CHECK: @p ={{.*}} global i64 3, align 8
+
 // PR8839
 extern "C" char memmove();
 

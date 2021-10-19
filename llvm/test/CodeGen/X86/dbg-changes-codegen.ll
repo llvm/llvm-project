@@ -35,10 +35,10 @@
 %struct.Wibble = type { i32 }
 %struct.Flibble = type { i8 }
 
-@pfoo = global %struct.Foo* null, align 8
-@wibble1 = global %struct.Wibble* null, align 8
-@wibble2 = global %struct.Wibble* null, align 8
-@flibble = global %struct.Flibble zeroinitializer, align 1
+@pfoo = dso_local global %struct.Foo* null, align 8
+@wibble1 = dso_local global %struct.Wibble* null, align 8
+@wibble2 = dso_local global %struct.Wibble* null, align 8
+@flibble = dso_local global %struct.Flibble zeroinitializer, align 1
 
 ; Function Attrs: nounwind readonly uwtable
 define zeroext i1 @_ZN3Foo3batEv(%struct.Foo* %this) #0 align 2 {
@@ -50,7 +50,7 @@ entry:
 }
 
 ; Function Attrs: nounwind uwtable
-define void @_Z3bazv() #1 {
+define dso_local void @_Z3bazv() #1 {
 entry:
   %0 = load %struct.Wibble*, %struct.Wibble** @wibble1, align 8
   tail call void @llvm.dbg.value(metadata %struct.Flibble* undef, i64 0, metadata !65, metadata !DIExpression()), !dbg !DILocation(scope: !1)

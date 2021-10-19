@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++11 -emit-llvm -triple %itanium_abi_triple -o - %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-return-type -Wno-main -std=c++20 -emit-llvm -triple x86_64-linux-gnu -o - %s | FileCheck %s --check-prefixes=CHECK,CXX20
 // expected-no-diagnostics
 
 namespace test1 {
@@ -211,4 +212,153 @@ template <int N>
 __make_integer_seq<std::integer_sequence, int, N> make() {}
 template __make_integer_seq<std::integer_sequence, int, 5> make<5>();
 // CHECK: define weak_odr {{.*}} @_ZN6test154makeILi5EEE18__make_integer_seqISt16integer_sequenceiXT_EEv(
+}
+
+namespace test16 {
+  // Ensure we properly form substitutions for template names in prefixes.
+  // CHECK: @_ZN6test161fINS_1TEEEvNT_1UIiE1VIiEENS5_IfEE
+  template<typename T> void f(typename T::template U<int>::template V<int>, typename T::template U<int>::template V<float>);
+  struct T { template<typename I> struct U { template<typename J> using V = int; }; };
+  void g() { f<T>(1, 2); }
+}
+
+#if __cplusplus >= 202002L
+namespace cxx20 {
+  template<auto> struct A {};
+  template<typename T, T V> struct B {};
+
+  int x;
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadL_ZNS_1xEEEEE(
+  void f(A<&x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPiXadL_ZNS_1xEEEEE(
+  void f(B<int*, &x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvPKiadL_ZNS_1xEEEEE(
+  void f(A<(const int*)&x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPKiXadL_ZNS_1xEEEEE(
+  void f(B<const int*, &x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvPvadL_ZNS_1xEEEEE(
+  void f(A<(void*)&x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPvXadL_ZNS_1xEEEEE(
+  void f(B<void*, (void*)&x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvPKvadL_ZNS_1xEEEEE(
+  void f(A<(const void*)&x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIPKvXadL_ZNS_1xEEEEE(
+  void f(B<const void*, (const void*)&x>) {}
+
+  struct Q { int x; };
+
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXadL_ZNS_1Q1xEEEEE(
+  void f(A<&Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIMNS_1QEiXadL_ZNS1_1xEEEEE
+  void f(B<int Q::*, &Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1AIXcvMNS_1QEKiadL_ZNS1_1xEEEEE(
+  void f(A<(const int Q::*)&Q::x>) {}
+  // CXX20: define {{.*}} @_ZN5cxx201fENS_1BIMNS_1QEKiXadL_ZNS1_1xEEEEE(
+  void f(B<const int Q::*, (const int Q::*)&Q::x>) {}
+}
+#endif
+
+namespace test17 {
+  // Ensure we mangle the types for non-type template arguments if we've lost
+  // track of argument / parameter correspondence.
+  template<int A, int ...B> struct X {};
+
+  // CHECK: define {{.*}} @_ZN6test171fILi1EJLi2ELi3ELi4EEEEvNS_1XIXT_EJLi5EXspT0_ELi6EEEE
+  template<int D, int ...C> void f(X<D, 5u, C..., 6u>) {}
+  void g() { f<1, 2, 3, 4>({}); }
+
+  // Note: there is no J...E here, because we can't form a pack argument, and
+  // the 5u and 6u are mangled with the original type 'j' (unsigned int) not
+  // with the resolved type 'i' (signed int).
+  // CHECK: define {{.*}} @_ZN6test171hILi4EJLi1ELi2ELi3EEEEvNS_1XIXspT0_ELj5EXT_ELj6EEE
+  template<int D, int ...C> void h(X<C..., 5u, D, 6u>) {}
+  void i() { h<4, 1, 2, 3>({}); }
+
+#if __cplusplus >= 201402L
+  template<int A, const volatile int*> struct Y {};
+  int n;
+  // Case 1: &n is a resolved template argument, with a known parameter:
+  // mangled with no conversion.
+  // CXX20: define {{.*}} @_ZN6test172j1ILi1EEEvNS_1YIXT_EXadL_ZNS_1nEEEEE
+  template<int N> void j1(Y<N, (const int*)&n>) {}
+  // Case 2: &n is an unresolved template argument, with an unknown
+  // corresopnding parameter: mangled as the source expression.
+  // CXX20: define {{.*}} @_ZN6test172j2IJLi1EEEEvNS_1YIXspT_EXcvPKiadL_ZNS_1nEEEEE
+  template<int ...Ns> void j2(Y<Ns..., (const int*)&n>) {}
+  // Case 3: &n is a resolved template argument, with a known parameter, but
+  // for a template that can be overloaded on type: mangled with the parameter type.
+  // CXX20: define {{.*}} @_ZN6test172j3ILi1EEEvDTplT_clL_ZNS_1yIXcvPVKiadL_ZNS_1nEEEEEivEEE
+  template<const volatile int*> int y();
+  template<int N> void j3(decltype(N + y<(const int*)&n>())) {}
+  void k() {
+    j1<1>(Y<1, &n>());
+    j2<1>(Y<1, &n>());
+    j3<1>(0);
+  }
+#endif
+}
+
+namespace partially_dependent_template_args {
+  namespace test1 {
+    template<bool B> struct enable { using type = int; };
+    template<typename ...> struct and_ { static constexpr bool value = true; };
+    template<typename T> inline typename enable<and_<T, T, T>::value>::type f(T) {}
+    // FIXME: GCC and ICC form a J...E mangling for the pack here. Clang
+    // doesn't do so when mangling an <unresolved-prefix>. It's not clear who's
+    // right. See https://github.com/itanium-cxx-abi/cxx-abi/issues/113.
+    // CHECK: @_ZN33partially_dependent_template_args5test11fIiEENS0_6enableIXsr4and_IT_S3_S3_EE5valueEE4typeES3_
+    void g() { f(0); }
+  }
+
+  namespace test2 {
+    struct X { int n; };
+    template<unsigned> int f(X);
+
+    template<typename T> void g1(decltype(f<0>(T()))) {}
+    template<typename T> void g2(decltype(f<0>({}) + T())) {}
+    template<typename T> void g3(decltype(f<0>(X{}) + T())) {}
+    template<int N> void g4(decltype(f<0>(X{N})));
+
+    // The first of these mangles the unconverted argument Li0E because the
+    // callee is unresolved, the rest mangle the converted argument Lj0E
+    // because the callee is resolved.
+    void h() {
+      // CHECK: @_ZN33partially_dependent_template_args5test22g1INS0_1XEEEvDTcl1fILi0EEcvT__EEE
+      g1<X>({});
+      // CHECK: @_ZN33partially_dependent_template_args5test22g2IiEEvDTplclL_ZNS0_1fILj0EEEiNS0_1XEEilEEcvT__EE
+      g2<int>({});
+      // CHECK: @_ZN33partially_dependent_template_args5test22g3IiEEvDTplclL_ZNS0_1fILj0EEEiNS0_1XEEtlS3_EEcvT__EE
+      g3<int>({});
+      // CHECK: @_ZN33partially_dependent_template_args5test22g4ILi0EEEvDTclL_ZNS0_1fILj0EEEiNS0_1XEEtlS3_T_EEE
+      g4<0>({});
+    }
+  }
+}
+
+namespace fixed_size_parameter_pack {
+  template<typename ...T> struct A {
+    template<T ...> struct B {};
+  };
+  template<int ...Ns> void f(A<unsigned, char, long long>::B<0, Ns...>);
+  void g() { f<1, 2>({}); }
+}
+
+namespace type_qualifier {
+  template<typename T> using int_t = int;
+  template<typename T> void f(decltype(int_t<T*>() + 1)) {}
+  // FIXME: This mangling doesn't work: we need to mangle the
+  // instantiation-dependent 'int_t' operand.
+  // CHECK: @_ZN14type_qualifier1fIPiEEvDTplcvi_ELi1EE
+  template void f<int*>(int);
+
+  // Note that this template has different constraints but would mangle the
+  // same:
+  //template<typename T> void f(decltype(int_t<typename T::type>() + 1)) {}
+
+  struct impl { using type = void; };
+  template<typename T> using alias = impl;
+  template<typename T> void g(decltype(alias<T*>::type(), 1)) {}
+  // FIXME: Similarly we need to mangle the `T*` in here.
+  // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
+  template void g<int*>(int);
 }

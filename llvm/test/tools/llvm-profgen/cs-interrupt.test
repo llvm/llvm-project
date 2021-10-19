@@ -1,0 +1,59 @@
+;; The test fails on Windows. Fix it before removing the following requirement.
+; REQUIRES: x86_64-linux
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-interrupt.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --skip-symbolization --profile-summary-cold-count=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNWINDER
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-interrupt.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0
+>>>>>>> 02ea7084c370 ([llvm-profgen] Support LBR only perf script)
+; RUN: FileCheck %s --input-file %t
+
+; CHECK:[main:1 @ foo]:88:0
+; CHECK: 2: 5
+; CHECK: 3: 5 bar:5
+; CHECK:[main:1 @ foo:3 @ bar]:74:5
+; CHECK: 0: 5
+; CHECK: 1: 5
+; CHECK: 2: 3
+; CHECK: 5: 4
+
+; CHECK-UNWINDER:      [main:1 @ foo]
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5ff-62f:5
+; CHECK-UNWINDER-NEXT:   634-637:4
+; CHECK-UNWINDER-NEXT:   645-645:5
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   62f->5b0:5
+; CHECK-UNWINDER-NEXT:   637->645:5
+; CHECK-UNWINDER-NEXT:   645->5ff:5
+; CHECK-UNWINDER-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5b0-5c8:2
+; CHECK-UNWINDER-NEXT:   5b0-5d7:3
+; CHECK-UNWINDER-NEXT:   5e5-5e9:4
+; CHECK-UNWINDER-NEXT:   3
+; CHECK-UNWINDER-NEXT:   5c8->5dc:2
+; CHECK-UNWINDER-NEXT:   5d7->5e5:4
+; CHECK-UNWINDER-NEXT:   5e9->634:4
+
+
+; original code:
+; clang -O0 -g test.c -o a.out
+#include <stdio.h>
+
+int bar(int x, int y) {
+  if (x % 3) {
+    return x - y;
+  }
+  return x + y;
+}
+
+void foo() {
+  int s, i = 0;
+  while (i++ < 4000 * 4000)
+    if (i % 91) s = bar(i, s); else s += 30;
+  printf("sum is %d\n", s);
+}
+
+int main() {
+  foo();
+  return 0;
+}

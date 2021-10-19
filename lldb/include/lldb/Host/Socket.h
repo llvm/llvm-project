@@ -103,9 +103,9 @@ public:
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }
   WaitableHandle GetWaitableHandle() override;
 
-  static bool DecodeHostAndPort(llvm::StringRef host_and_port,
-                                std::string &host_str, std::string &port_str,
-                                int32_t &port, Status *error_ptr);
+  static llvm::Error DecodeHostAndPort(llvm::StringRef host_and_port,
+                                       std::string &host_str,
+                                       std::string &port_str, uint16_t &port);
 
   // If this Socket is connected then return the URI used to connect.
   virtual std::string GetRemoteConnectionURI() const { return ""; };

@@ -64,6 +64,12 @@ public:
       return false;
     }
 
+    bool GetTaggedPointerInfoSigned(uint64_t *info_bits = nullptr,
+                                    int64_t *value_bits = nullptr,
+                                    uint64_t *payload = nullptr) override {
+      return false;
+    }
+
     uint64_t GetInstanceSize() override { return m_instance_size; }
 
     ObjCISA GetISA() override { return m_isa; }
@@ -97,12 +103,13 @@ public:
                                 Address &address,
                                 Value::ValueType &value_type) override;
 
-  UtilityFunction *CreateObjectChecker(const char *) override;
+  llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateObjectChecker(std::string, ExecutionContext &exe_ctx) override;
 
   // PluginInterface protocol
-  ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
   ObjCRuntimeVersions GetRuntimeVersion() const override {
     return ObjCRuntimeVersions::eAppleObjC_V1;
@@ -119,8 +126,7 @@ protected:
 
   class HashTableSignature {
   public:
-    HashTableSignature()
-        : m_count(0), m_num_buckets(0), m_buckets_ptr(LLDB_INVALID_ADDRESS) {}
+    HashTableSignature() = default;
 
     bool NeedsUpdate(uint32_t count, uint32_t num_buckets,
                      lldb::addr_t buckets_ptr) {
@@ -136,9 +142,9 @@ protected:
     }
 
   protected:
-    uint32_t m_count;
-    uint32_t m_num_buckets;
-    lldb::addr_t m_buckets_ptr;
+    uint32_t m_count = 0;
+    uint32_t m_num_buckets = 0;
+    lldb::addr_t m_buckets_ptr = LLDB_INVALID_ADDRESS;
   };
 
   lldb::addr_t GetISAHashTablePointer();

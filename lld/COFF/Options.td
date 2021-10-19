@@ -9,6 +9,11 @@ class F<string name> : Flag<["/", "-", "/?", "-?"], name>;
 class P<string name, string help> :
       Joined<["/", "-", "/?", "-?"], name#":">, HelpText<help>;
 
+// Same as P<> above, but without help texts, for private undocumented
+// options.
+class P_priv<string name> :
+      Joined<["/", "-", "/?", "-?"], name#":">;
+
 // Boolean flag which can be suffixed by ":no". Using it unsuffixed turns the
 // flag on and using it suffixed by ":no" turns it off.
 multiclass B<string name, string help_on, string help_off> {
@@ -28,9 +33,12 @@ def aligncomm : P<"aligncomm", "Set common symbol alignment">;
 def alternatename : P<"alternatename", "Define weak alias">;
 def base    : P<"base", "Base address of the program">;
 def color_diagnostics: Flag<["--"], "color-diagnostics">,
-    HelpText<"Use colors in diagnostics">;
+    HelpText<"Alias for --color-diagnostics=always">;
+def no_color_diagnostics: Flag<["--"], "no-color-diagnostics">,
+    HelpText<"Alias for --color-diagnostics=never">;
 def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
-    HelpText<"Use colors in diagnostics; one of 'always', 'never', 'auto'">;
+    HelpText<"Use colors in diagnostics (default: auto)">,
+    MetaVarName<"[auto,always,never]">;
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -50,8 +58,9 @@ def implib  : P<"implib", "Import library name">;
 def lib : F<"lib">,
     HelpText<"Act like lib.exe; must be first argument if present">;
 def libpath : P<"libpath", "Additional library search path">;
-def linkrepro : P<"linkrepro",
-    "Dump linker invocation and input files for debugging">;
+def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
+    MetaVarName<"directory">,
+    HelpText<"Write repro.tar containing inputs and command to reproduce link">;
 def lldignoreenv : F<"lldignoreenv">,
     HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache",
@@ -59,7 +68,7 @@ def lldltocache : P<"lldltocache",
 def lldltocachepolicy : P<"lldltocachepolicy",
     "Pruning policy for the ThinLTO cache">;
 def lldsavetemps : F<"lldsavetemps">,
-    HelpText<"Save temporary files instead of deleting them">;
+    HelpText<"Save intermediate LTO compilation results">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;
@@ -68,8 +77,6 @@ def opt     : P<"opt", "Control optimizations">;
 def order   : P<"order", "Put functions in order">;
 def out     : P<"out", "Path to file to write output">;
 def natvis : P<"natvis", "Path to natvis file to embed in the PDB">;
-def no_color_diagnostics: F<"no-color-diagnostics">,
-    HelpText<"Do not use colors in diagnostics">;
 def pdb : P<"pdb", "PDB file path">;
 def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
@@ -129,8 +136,9 @@ def noentry : F<"noentry">,
 def profile : F<"profile">;
 def repro : F<"Brepro">,
     HelpText<"Use a hash of the executable as the PE header timestamp">;
-def reproduce : P<"reproduce",
-    "Dump linker invocation and input files for debugging">;
+def reproduce : Joined<["/", "-", "/?", "-?"], "reproduce:">,
+    MetaVarName<"filename">,
+    HelpText<"Write tar file containing inputs and command to reproduce link">;
 def swaprun : P<"swaprun",
   "Comma-separated list of 'cd' or 'net'">;
 def swaprun_cd : F<"swaprun:cd">, Alias<swaprun>, AliasArgs<["cd"]>,
@@ -194,7 +202,7 @@ def help_q : Flag<["/??", "-??", "/?", "-?"], "">, Alias<help>;
 defm auto_import : B_priv<"auto-import">;
 defm runtime_pseudo_reloc : B_priv<"runtime-pseudo-reloc">;
 def end_lib : F<"end-lib">,
-  HelpText<"Ends group of objects treated as if they were in a library">;
+  HelpText<"End group of objects treated as if they were in a library">;
 def exclude_all_symbols : F<"exclude-all-symbols">;
 def export_all_symbols : F<"export-all-symbols">;
 defm demangle : B<"demangle",
@@ -205,13 +213,15 @@ def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
 def noseh : F<"noseh">;
+def osversion : P_priv<"osversion">;
 def output_def : Joined<["/", "-", "/?", "-?"], "output-def:">;
 def pdb_source_path : P<"pdbsourcepath",
     "Base path used to make relative source file path absolute in PDB">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
 def start_lib : F<"start-lib">,
-  HelpText<"Starts group of objects treated as if they were in a library">;
+  HelpText<"Start group of objects treated as if they were in a library">;
+defm stdcall_fixup : B_priv<"stdcall-fixup">;
 def thinlto_emit_imports_files :
     F<"thinlto-emit-imports-files">,
     HelpText<"Emit .imports files with -thinlto-index-only">;
@@ -230,8 +240,16 @@ def thinlto_prefix_replace: P<
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
+def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
+    HelpText<"Perform context sensitive PGO instrumentation">;
+def lto_cs_profile_file : P<"lto-cs-profile-file",
+    "Context sensitive profile file path">;
+defm lto_pgo_warn_mismatch: B<
+     "lto-pgo-warn-mismatch",
+     "turn on warnings about profile cfg mismatch (default)>",
+     "turn off warnings about profile cfg mismatch">;
 def dash_dash_version : Flag<["--"], "version">,
-  HelpText<"Print version information">;
+  HelpText<"Display the version number and exit">;
 def threads
     : P<"threads", "Number of threads. '1' disables multi-threading. By "
                    "default all available hardware threads are used">;
@@ -246,12 +264,13 @@ def print_symbol_order: P<
     "print-symbol-order",
     "Print a symbol order specified by /call-graph-ordering-file and "
     "/call-graph-profile-sort into the specified file">;
+def wrap : P_priv<"wrap">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;
-def lldmap_file : Joined<["/", "-", "/?", "-?"], "lldmap:">;
+def lldmap_file : P_priv<"lldmap">;
 def map : F<"map">;
-def map_file : Joined<["/", "-", "/?", "-?"], "map:">;
+def map_file : P_priv<"map">;
 def show_timing : F<"time">;
 def summary : F<"summary">;
 
@@ -259,19 +278,21 @@ def summary : F<"summary">;
 // The flags below do nothing. They are defined only for link.exe compatibility.
 //==============================================================================
 
-class QF<string name> : Joined<["/", "-", "/?", "-?"], name#":">;
-
 def ignoreidl : F<"ignoreidl">;
+def ltcg : F<"ltcg">;
 def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;
 def editandcontinue : F<"editandcontinue">;
 def fastfail : F<"fastfail">;
 
-def delay : QF<"delay">;
-def errorreport : QF<"errorreport">;
-def idlout : QF<"idlout">;
-def maxilksize : QF<"maxilksize">;
-def tlbid : QF<"tlbid">;
-def tlbout : QF<"tlbout">;
-def verbose_all : QF<"verbose">;
-def guardsym : QF<"guardsym">;
+def delay : P_priv<"delay">;
+def errorreport : P_priv<"errorreport">;
+def idlout : P_priv<"idlout">;
+def ilk : P_priv<"ilk">;
+def ltcg_opt : P_priv<"ltcg">;
+def ltcgout : P_priv<"ltcgout">;
+def maxilksize : P_priv<"maxilksize">;
+def tlbid : P_priv<"tlbid">;
+def tlbout : P_priv<"tlbout">;
+def verbose_all : P_priv<"verbose">;
+def guardsym : P_priv<"guardsym">;

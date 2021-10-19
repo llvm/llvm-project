@@ -1,9 +1,14 @@
 // RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=clc++2021 -cl-ext=-__opencl_c_generic_address_space,-__opencl_c_pipes -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
 // RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
 // RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
 // RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -cl-std=CL3.0 -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
 
 // SPIR: %struct.S = type { i32, i32, i32* }
 // CL20SPIR: %struct.S = type { i32, i32, i32 addrspace(4)* }
@@ -87,13 +92,13 @@ void f(int *arg) {
 
 typedef int int_td;
 typedef int *intp_td;
-// SPIR: define {{(dso_local )?}}void @test_typedef(i32 addrspace(1)* %x, i32 addrspace(2)* %y, i32* %z)
+// SPIR: define {{(dso_local )?}}void @{{.*}}test_typedef{{.*}}(i32 addrspace(1)* %x, i32 addrspace(2)* %y, i32* %z)
 void test_typedef(global int_td *x, constant int_td *y, intp_td z) {
   *x = *y;
   *z = 0;
 }
 
-// SPIR: define {{(dso_local )?}}void @test_struct()
+// SPIR: define {{(dso_local )?}}void @{{.*}}test_struct{{.*}}()
 void test_struct() {
   // SPIR: %ps = alloca %struct.S*
   // CL20SPIR: %ps = alloca %struct.S addrspace(4)*
@@ -107,11 +112,11 @@ void test_struct() {
 #endif
 }
 
-// SPIR-LABEL: define {{(dso_local )?}}void @test_void_par()
+// SPIR-LABEL: define {{(dso_local )?}}void @{{.*}}test_void_par{{.*}}()
 void test_void_par(void) {}
 
 // On ppc64 returns signext i32.
-// SPIR-LABEL: define{{.*}} i32 @test_func_return_type()
+// SPIR-LABEL: define{{.*}} i32 @{{.*}}test_func_return_type{{.*}}()
 int test_func_return_type(void) {
   return 0;
 }

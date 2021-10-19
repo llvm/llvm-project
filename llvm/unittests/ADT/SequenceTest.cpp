@@ -7,34 +7,212 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Sequence.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include <list>
+#include <algorithm>
+#include <numeric>
 
 using namespace llvm;
 
+using testing::ElementsAre;
+
 namespace {
 
-TEST(SequenceTest, Basic) {
-  int x = 0;
-  for (int i : seq(0, 10)) {
-    EXPECT_EQ(x, i);
-    x++;
-  }
-  EXPECT_EQ(10, x);
+using detail::canTypeFitValue;
+using detail::CheckedInt;
 
-  auto my_seq = seq(0, 4);
-  EXPECT_EQ(4, my_seq.end() - my_seq.begin());
-  for (int i : {0, 1, 2, 3})
-    EXPECT_EQ(i, (int)my_seq.begin()[i]);
+using IntegralTypes = testing::Types<uint8_t,   // 0
+                                     uint16_t,  // 1
+                                     uint32_t,  // 2
+                                     uint64_t,  // 3
+                                     uintmax_t, // 4
+                                     int8_t,    // 5
+                                     int16_t,   // 6
+                                     int32_t,   // 7
+                                     int64_t,   // 8
+                                     intmax_t   // 9
+                                     >;
 
-  EXPECT_TRUE(my_seq.begin() < my_seq.end());
+template <class T> class StrongIntTest : public testing::Test {};
+TYPED_TEST_SUITE(StrongIntTest, IntegralTypes, );
+TYPED_TEST(StrongIntTest, Operations) {
+  using T = TypeParam;
+  auto Max = std::numeric_limits<T>::max();
+  auto Min = std::numeric_limits<T>::min();
 
-  auto adjusted_begin = my_seq.begin() + 2;
-  auto adjusted_end = my_seq.end() - 2;
-  EXPECT_TRUE(adjusted_begin == adjusted_end);
-  EXPECT_EQ(2, *adjusted_begin);
-  EXPECT_EQ(2, *adjusted_end);
+  // We bail out for types that are not entirely representable within intmax_t.
+  if (!canTypeFitValue<intmax_t>(Max) || !canTypeFitValue<intmax_t>(Min))
+    return;
+
+  // All representable values convert back and forth.
+  EXPECT_EQ(CheckedInt::from(Min).template to<T>(), Min);
+  EXPECT_EQ(CheckedInt::from(Max).template to<T>(), Max);
+
+  // Addition -2, -1, 0, 1, 2.
+  const T Expected = Max / 2;
+  const CheckedInt Actual = CheckedInt::from(Expected);
+  EXPECT_EQ((Actual + -2).template to<T>(), Expected - 2);
+  EXPECT_EQ((Actual + -1).template to<T>(), Expected - 1);
+  EXPECT_EQ((Actual + 0).template to<T>(), Expected);
+  EXPECT_EQ((Actual + 1).template to<T>(), Expected + 1);
+  EXPECT_EQ((Actual + 2).template to<T>(), Expected + 2);
+
+  // EQ/NEQ
+  EXPECT_EQ(Actual, Actual);
+  EXPECT_NE(Actual, Actual + 1);
+
+  // Difference
+  EXPECT_EQ(Actual - Actual, 0);
+  EXPECT_EQ((Actual + 1) - Actual, 1);
+  EXPECT_EQ(Actual - (Actual + 2), -2);
+}
+
+TEST(StrongIntTest, Enums) {
+  enum UntypedEnum { A = 3 };
+  EXPECT_EQ(CheckedInt::from(A).to<UntypedEnum>(), A);
+
+  enum TypedEnum : uint32_t { B = 3 };
+  EXPECT_EQ(CheckedInt::from(B).to<TypedEnum>(), B);
+
+  enum class ScopedEnum : uint16_t { C = 3 };
+  EXPECT_EQ(CheckedInt::from(ScopedEnum::C).to<ScopedEnum>(), ScopedEnum::C);
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST(StrongIntDeathTest, OutOfBounds) {
+  // Values above 'INTMAX_MAX' are not representable.
+  EXPECT_DEATH(CheckedInt::from<uintmax_t>(INTMAX_MAX + 1ULL), "Out of bounds");
+  EXPECT_DEATH(CheckedInt::from<uintmax_t>(UINTMAX_MAX), "Out of bounds");
+  // Casting to narrower type asserts when out of bounds.
+  EXPECT_DEATH(CheckedInt::from(-1).to<uint8_t>(), "Out of bounds");
+  EXPECT_DEATH(CheckedInt::from(256).to<uint8_t>(), "Out of bounds");
+  // Operations leading to intmax_t overflow assert.
+  EXPECT_DEATH(CheckedInt::from(INTMAX_MAX) + 1, "Out of bounds");
+  EXPECT_DEATH(CheckedInt::from(INTMAX_MIN) + -1, "Out of bounds");
+  EXPECT_DEATH(CheckedInt::from(INTMAX_MIN) - CheckedInt::from(INTMAX_MAX),
+               "Out of bounds");
+}
+#endif
+
+TEST(SafeIntIteratorTest, Operations) {
+  detail::SafeIntIterator<int, false> Forward(0);
+  detail::SafeIntIterator<int, true> Reverse(0);
+
+  const auto SetToZero = [&]() {
+    Forward = detail::SafeIntIterator<int, false>(0);
+    Reverse = detail::SafeIntIterator<int, true>(0);
+  };
+
+  // Equality / Comparisons
+  SetToZero();
+  EXPECT_EQ(Forward, Forward);
+  EXPECT_LT(Forward - 1, Forward);
+  EXPECT_LE(Forward, Forward);
+  EXPECT_LE(Forward - 1, Forward);
+  EXPECT_GT(Forward + 1, Forward);
+  EXPECT_GE(Forward, Forward);
+  EXPECT_GE(Forward + 1, Forward);
+
+  EXPECT_EQ(Reverse, Reverse);
+  EXPECT_LT(Reverse - 1, Reverse);
+  EXPECT_LE(Reverse, Reverse);
+  EXPECT_LE(Reverse - 1, Reverse);
+  EXPECT_GT(Reverse + 1, Reverse);
+  EXPECT_GE(Reverse, Reverse);
+  EXPECT_GE(Reverse + 1, Reverse);
+
+  // Dereference
+  SetToZero();
+  EXPECT_EQ(*Forward, 0);
+  EXPECT_EQ(*Reverse, 0);
+
+  // Indexing
+  SetToZero();
+  EXPECT_EQ(Forward[2], 2);
+  EXPECT_EQ(Reverse[2], -2);
+
+  // Pre-increment
+  SetToZero();
+  ++Forward;
+  EXPECT_EQ(*Forward, 1);
+  ++Reverse;
+  EXPECT_EQ(*Reverse, -1);
+
+  // Pre-decrement
+  SetToZero();
+  --Forward;
+  EXPECT_EQ(*Forward, -1);
+  --Reverse;
+  EXPECT_EQ(*Reverse, 1);
+
+  // Post-increment
+  SetToZero();
+  EXPECT_EQ(*(Forward++), 0);
+  EXPECT_EQ(*Forward, 1);
+  EXPECT_EQ(*(Reverse++), 0);
+  EXPECT_EQ(*Reverse, -1);
+
+  // Post-decrement
+  SetToZero();
+  EXPECT_EQ(*(Forward--), 0);
+  EXPECT_EQ(*Forward, -1);
+  EXPECT_EQ(*(Reverse--), 0);
+  EXPECT_EQ(*Reverse, 1);
+
+  // Compound assignment operators
+  SetToZero();
+  Forward += 1;
+  EXPECT_EQ(*Forward, 1);
+  Reverse += 1;
+  EXPECT_EQ(*Reverse, -1);
+  SetToZero();
+  Forward -= 2;
+  EXPECT_EQ(*Forward, -2);
+  Reverse -= 2;
+  EXPECT_EQ(*Reverse, 2);
+
+  // Arithmetic
+  SetToZero();
+  EXPECT_EQ(*(Forward + 3), 3);
+  EXPECT_EQ(*(Reverse + 3), -3);
+  SetToZero();
+  EXPECT_EQ(*(Forward - 4), -4);
+  EXPECT_EQ(*(Reverse - 4), 4);
+
+  // Difference
+  SetToZero();
+  EXPECT_EQ(Forward - Forward, 0);
+  EXPECT_EQ(Reverse - Reverse, 0);
+  EXPECT_EQ((Forward + 1) - Forward, 1);
+  EXPECT_EQ(Forward - (Forward + 1), -1);
+  EXPECT_EQ((Reverse + 1) - Reverse, 1);
+  EXPECT_EQ(Reverse - (Reverse + 1), -1);
+}
+
+TEST(SequenceTest, Iteration) {
+  EXPECT_THAT(seq(-4, 5), ElementsAre(-4, -3, -2, -1, 0, 1, 2, 3, 4));
+  EXPECT_THAT(reverse(seq(-4, 5)), ElementsAre(4, 3, 2, 1, 0, -1, -2, -3, -4));
+
+  EXPECT_THAT(seq_inclusive(-4, 5),
+              ElementsAre(-4, -3, -2, -1, 0, 1, 2, 3, 4, 5));
+  EXPECT_THAT(reverse(seq_inclusive(-4, 5)),
+              ElementsAre(5, 4, 3, 2, 1, 0, -1, -2, -3, -4));
+}
+
+TEST(SequenceTest, Distance) {
+  const auto Forward = seq(0, 10);
+  EXPECT_EQ(std::distance(Forward.begin(), Forward.end()), 10);
+  EXPECT_EQ(std::distance(Forward.rbegin(), Forward.rend()), 10);
+}
+
+TEST(SequenceTest, Dereference) {
+  const auto Forward = seq(0, 10).begin();
+  EXPECT_EQ(Forward[0], 0);
+  EXPECT_EQ(Forward[2], 2);
+  const auto Backward = seq(0, 10).rbegin();
+  EXPECT_EQ(Backward[0], 9);
+  EXPECT_EQ(Backward[2], 7);
 }
 
 } // anonymous namespace

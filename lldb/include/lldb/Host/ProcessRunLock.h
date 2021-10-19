@@ -9,8 +9,8 @@
 #ifndef LLDB_HOST_PROCESSRUNLOCK_H
 #define LLDB_HOST_PROCESSRUNLOCK_H
 
-#include <stdint.h>
-#include <time.h>
+#include <cstdint>
+#include <ctime>
 
 #include "lldb/lldb-defines.h"
 
@@ -35,7 +35,7 @@ public:
 
   class ProcessRunLocker {
   public:
-    ProcessRunLocker() : m_lock(nullptr) {}
+    ProcessRunLocker() = default;
 
     ~ProcessRunLocker() { Unlock(); }
 
@@ -64,7 +64,7 @@ public:
       }
     }
 
-    ProcessRunLock *m_lock;
+    ProcessRunLock *m_lock = nullptr;
 
   private:
     ProcessRunLocker(const ProcessRunLocker &) = delete;
@@ -73,7 +73,7 @@ public:
 
 protected:
   lldb::rwlock_t m_rwlock;
-  bool m_running;
+  bool m_running = false;
 
 private:
   ProcessRunLock(const ProcessRunLock &) = delete;

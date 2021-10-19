@@ -13,8 +13,8 @@
 
 #define check(condition)                                                       \
   if (!(condition)) {                                                          \
-    fprintf(stderr, "error: %s: %d: " STR(condition) "\n", __FILE__,           \
-            __LINE__);                                                         \
+    fprintf(stderr, "error: %s: %d: %s\n", __FILE__, __LINE__,                 \
+            STR(condition));                                                   \
     exit(1);                                                                   \
   }
 

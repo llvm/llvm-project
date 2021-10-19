@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.4.2.2 constraints and restrictions for calls to implicit
 ! interfaces
 

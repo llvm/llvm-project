@@ -139,11 +139,10 @@ static bool checkForMigration(StringRef resourcesPath,
 }
 
 static void printResult(FileRemapper &remapper, raw_ostream &OS) {
-  PreprocessorOptions PPOpts;
-  remapper.applyMappings(PPOpts);
-  // The changed files will be in memory buffers, print them.
-  for (const auto &RB : PPOpts.RemappedFileBuffers)
-    OS << RB.second->getBuffer();
+  remapper.forEachMapping([](StringRef, StringRef) {},
+                          [&](StringRef, const llvm::MemoryBufferRef &Buffer) {
+                            OS << Buffer.getBuffer();
+                          });
 }
 
 static bool performTransformations(StringRef resourcesPath,
@@ -208,11 +207,13 @@ static bool performTransformations(StringRef resourcesPath,
 static bool filesCompareEqual(StringRef fname1, StringRef fname2) {
   using namespace llvm;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> file1 = MemoryBuffer::getFile(fname1);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> file1 =
+      MemoryBuffer::getFile(fname1, /*IsText=*/true);
   if (!file1)
     return false;
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> file2 = MemoryBuffer::getFile(fname2);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> file2 =
+      MemoryBuffer::getFile(fname2, /*IsText=*/true);
   if (!file2)
     return false;
 
@@ -241,7 +242,7 @@ static bool verifyTransformedFiles(ArrayRef<std::string> resultFiles) {
   if (RemappingsFile.empty())
     inputBuf = MemoryBuffer::getSTDIN();
   else
-    inputBuf = MemoryBuffer::getFile(RemappingsFile);
+    inputBuf = MemoryBuffer::getFile(RemappingsFile, /*IsText=*/true);
   if (!inputBuf) {
     errs() << "error: could not read remappings input\n";
     return true;

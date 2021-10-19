@@ -101,7 +101,7 @@ struct B {
   static int (B::*d)[10];
 };
 
-// CHECK-LABEL: define i32 @_Z1fv()
+// CHECK-LABEL: define{{.*}} i32 @_Z1fv()
 int f() {
   // Vectors should be treated as fundamental types.
   typedef short __v4hi __attribute__ ((__vector_size__ (8)));

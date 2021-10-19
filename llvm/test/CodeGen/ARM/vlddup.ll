@@ -222,7 +222,7 @@ define <8 x i8> @vld2dupi8(i8* %A) nounwind {
         ret <8 x i8> %tmp5
 }
 
-define void @vld2dupi8_preinc(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a, i32 %b) nounwind {
+define void @vld2dupi8_preinc(%struct.__neon_int8x8x2_t* noalias nocapture sret(%struct.__neon_int8x8x2_t) %agg.result, i8** noalias nocapture %a, i32 %b) nounwind {
 ;CHECK-LABEL: vld2dupi8_preinc:
 ;CHECK: vld2.8 {d16[], d17[]}, [r2]
 entry:
@@ -241,7 +241,7 @@ entry:
   ret void
 }
 
-define void @vld2dupi8_postinc_fixed(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a) nounwind {
+define void @vld2dupi8_postinc_fixed(%struct.__neon_int8x8x2_t* noalias nocapture sret(%struct.__neon_int8x8x2_t) %agg.result, i8** noalias nocapture %a) nounwind {
 entry:
 ;CHECK-LABEL: vld2dupi8_postinc_fixed:
 ;CHECK: vld2.8 {d16[], d17[]}, [r2]!
@@ -260,7 +260,7 @@ entry:
   ret void
 }
 
-define void @vld2dupi8_postinc_variable(%struct.__neon_int8x8x2_t* noalias nocapture sret %agg.result, i8** noalias nocapture %a, i32 %n) nounwind {
+define void @vld2dupi8_postinc_variable(%struct.__neon_int8x8x2_t* noalias nocapture sret(%struct.__neon_int8x8x2_t) %agg.result, i8** noalias nocapture %a, i32 %n) nounwind {
 entry:
 ;CHECK-LABEL: vld2dupi8_postinc_variable:
 ;CHECK: vld2.8 {d16[], d17[]}, [r3], r2

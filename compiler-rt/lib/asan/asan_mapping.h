@@ -72,6 +72,13 @@
 // || `[0x2000000000, 0x23ffffffff]` || LowShadow  ||
 // || `[0x0000000000, 0x1fffffffff]` || LowMem     ||
 //
+// Default Linux/RISCV64 Sv39 mapping:
+// || `[0x1555550000, 0x3fffffffff]` || HighMem    ||
+// || `[0x0fffffa000, 0x1555555fff]` || HighShadow ||
+// || `[0x0effffa000, 0x0fffff9fff]` || ShadowGap  ||
+// || `[0x0d55550000, 0x0effff9fff]` || LowShadow  ||
+// || `[0x0000000000, 0x0d5554ffff]` || LowMem     ||
+//
 // Default Linux/AArch64 (39-bit VMA) mapping:
 // || `[0x2000000000, 0x7fffffffff]` || highmem    ||
 // || `[0x1400000000, 0x1fffffffff]` || highshadow ||
@@ -143,17 +150,11 @@
 // || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
-//
-// Shadow mapping on Myriad2 (for shadow scale 5):
-// || `[0x9ff80000, 0x9fffffff]` || ShadowGap  ||
-// || `[0x9f000000, 0x9ff7ffff]` || LowShadow  ||
-// || `[0x80000000, 0x9effffff]` || LowMem     ||
-// || `[0x00000000, 0x7fffffff]` || Ignored    ||
 
 #if defined(ASAN_SHADOW_SCALE)
 static const u64 kDefaultShadowScale = ASAN_SHADOW_SCALE;
 #else
-static const u64 kDefaultShadowScale = SANITIZER_MYRIAD2 ? 5 : 3;
+static const u64 kDefaultShadowScale = 3;
 #endif
 static const u64 kDefaultShadowSentinel = ~(uptr)0;
 static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
@@ -161,6 +162,7 @@ static const u64 kDefaultShadowOffset64 = 1ULL << 44;
 static const u64 kDefaultShort64bitShadowOffset =
     0x7FFFFFFF & (~0xFFFULL << kDefaultShadowScale);  // < 2G.
 static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;
+static const u64 kRiscv64_ShadowOffset64 = 0xd55550000;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const u64 kPPC64_ShadowOffset64 = 1ULL << 44;
@@ -171,15 +173,6 @@ static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
 static const u64 kNetBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kNetBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
 static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
-
-static const u64 kMyriadMemoryOffset32 = 0x80000000ULL;
-static const u64 kMyriadMemorySize32 = 0x20000000ULL;
-static const u64 kMyriadMemoryEnd32 =
-    kMyriadMemoryOffset32 + kMyriadMemorySize32 - 1;
-static const u64 kMyriadShadowOffset32 =
-    (kMyriadMemoryOffset32 + kMyriadMemorySize32 -
-     (kMyriadMemorySize32 >> kDefaultShadowScale));
-static const u64 kMyriadCacheBitMask32 = 0x40000000ULL;
 
 #define SHADOW_SCALE kDefaultShadowScale
 
@@ -198,8 +191,6 @@ static const u64 kMyriadCacheBitMask32 = 0x40000000ULL;
 #    define SHADOW_OFFSET kWindowsShadowOffset32
 #  elif SANITIZER_IOS
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
-#  elif SANITIZER_MYRIAD2
-#    define SHADOW_OFFSET kMyriadShadowOffset32
 #  else
 #    define SHADOW_OFFSET kDefaultShadowOffset32
 #  endif
@@ -208,6 +199,8 @@ static const u64 kMyriadCacheBitMask32 = 0x40000000ULL;
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
 #  elif SANITIZER_MAC && defined(__aarch64__)
 #    define SHADOW_OFFSET __asan_shadow_memory_dynamic_address
+#elif SANITIZER_RISCV64
+#define SHADOW_OFFSET kRiscv64_ShadowOffset64
 #  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64
 #  elif defined(__powerpc64__)
@@ -268,10 +261,8 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 
 }  // namespace __asan
 
-#if SANITIZER_MYRIAD2
-#include "asan_mapping_myriad.h"
-#elif defined(__sparc__) && SANITIZER_WORDSIZE == 64
-#include "asan_mapping_sparc64.h"
+#if defined(__sparc__) && SANITIZER_WORDSIZE == 64
+#  include "asan_mapping_sparc64.h"
 #else
 #define MEM_TO_SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
 
@@ -353,7 +344,7 @@ static inline bool AddrIsInShadowGap(uptr a) {
 
 }  // namespace __asan
 
-#endif  // SANITIZER_MYRIAD2
+#endif
 
 namespace __asan {
 
@@ -383,8 +374,6 @@ static inline bool AddrIsAlignedByGranularity(uptr a) {
 
 static inline bool AddressIsPoisoned(uptr a) {
   PROFILE_ASAN_MAPPING();
-  if (SANITIZER_MYRIAD2 && !AddrIsInMem(a) && !AddrIsInShadow(a))
-    return false;
   const uptr kAccessSize = 1;
   u8 *shadow_address = (u8*)MEM_TO_SHADOW(a);
   s8 shadow_value = *shadow_address;

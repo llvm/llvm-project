@@ -16,11 +16,13 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/config.h" // plugin-api.h requires HAVE_STDINT_H
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Caching.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -199,7 +201,7 @@ namespace options {
   // Sample profile file path
   static std::string sample_profile;
   // New pass manager
-  static bool new_pass_manager = false;
+  static bool new_pass_manager = LLVM_ENABLE_NEW_PASS_MANAGER;
   // Debug new pass manager
   static bool debug_pass_manager = false;
   // Directory to store the .dwo files.
@@ -213,6 +215,7 @@ namespace options {
   static std::string RemarksFilename;
   static std::string RemarksPasses;
   static bool RemarksWithHotness = false;
+  static Optional<uint64_t> RemarksHotnessThreshold = 0;
   static std::string RemarksFormat;
 
   // Context sensitive PGO options.
@@ -285,6 +288,8 @@ namespace options {
       cs_profile_path = std::string(opt);
     } else if (opt == "new-pass-manager") {
       new_pass_manager = true;
+    } else if (opt == "legacy-pass-manager") {
+      new_pass_manager = false;
     } else if (opt == "debug-pass-manager") {
       debug_pass_manager = true;
     } else if (opt == "whole-program-visibility") {
@@ -297,6 +302,12 @@ namespace options {
       RemarksPasses = std::string(opt);
     } else if (opt == "opt-remarks-with-hotness") {
       RemarksWithHotness = true;
+    } else if (opt.consume_front("opt-remarks-hotness-threshold=")) {
+      auto ResultOrErr = remarks::parseHotnessThresholdOption(opt);
+      if (!ResultOrErr)
+        message(LDPL_FATAL, "Invalid remarks hotness threshold: %s", opt);
+      else
+        RemarksHotnessThreshold = *ResultOrErr;
     } else if (opt.consume_front("opt-remarks-format=")) {
       RemarksFormat = std::string(opt);
     } else if (opt.consume_front("stats-file=")) {
@@ -612,8 +623,10 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     sym.comdat_key = nullptr;
     int CI = Sym.getComdatIndex();
     if (CI != -1) {
-      StringRef C = Obj->getComdatTable()[CI];
-      sym.comdat_key = strdup(C.str().c_str());
+      // Not setting comdat_key for nodeduplicate ensuress we don't deduplicate.
+      std::pair<StringRef, Comdat::SelectionKind> C = Obj->getComdatTable()[CI];
+      if (C.second != Comdat::NoDeduplicate)
+        sym.comdat_key = strdup(C.first.str().c_str());
     }
 
     sym.resolution = LDPR_UNKNOWN;
@@ -680,7 +693,7 @@ static const void *getSymbolsAndView(claimed_file &F) {
 static void getThinLTOOldAndNewSuffix(std::string &OldSuffix,
                                       std::string &NewSuffix) {
   assert(options::thinlto_object_suffix_replace.empty() ||
-         options::thinlto_object_suffix_replace.find(";") != StringRef::npos);
+         options::thinlto_object_suffix_replace.find(';') != StringRef::npos);
   StringRef SuffixReplace = options::thinlto_object_suffix_replace;
   auto Split = SuffixReplace.split(';');
   OldSuffix = std::string(Split.first);
@@ -737,10 +750,13 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
 
     case LDPR_RESOLVED_IR:
     case LDPR_RESOLVED_EXEC:
-    case LDPR_RESOLVED_DYN:
     case LDPR_PREEMPTED_IR:
     case LDPR_PREEMPTED_REG:
     case LDPR_UNDEF:
+      break;
+
+    case LDPR_RESOLVED_DYN:
+      R.ExportDynamic = true;
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY:
@@ -754,6 +770,9 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
 
     case LDPR_PREVAILING_DEF_IRONLY_EXP:
       R.Prevailing = !isUndefined(Sym);
+      // Identify symbols exported dynamically, and that therefore could be
+      // referenced by a shared library not visible to the linker.
+      R.ExportDynamic = true;
       if (!Res.CanOmitFromDynSym)
         R.VisibleToRegularObj = true;
       break;
@@ -836,7 +855,7 @@ static CodeGenOpt::Level getCGOptLevel() {
 static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
                                       std::string &NewPrefix) {
   StringRef PrefixReplace = options::thinlto_prefix_replace;
-  assert(PrefixReplace.empty() || PrefixReplace.find(";") != StringRef::npos);
+  assert(PrefixReplace.empty() || PrefixReplace.find(';') != StringRef::npos);
   auto Split = PrefixReplace.split(';');
   OldPrefix = std::string(Split.first);
   NewPrefix = std::string(Split.second);
@@ -852,7 +871,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   ThinBackend Backend;
 
   Conf.CPU = options::mcpu;
-  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple());
 
   // Disable the new X86 relax relocations since gold might not support them.
   // FIXME: Check the gold version or add a new option to enable them.
@@ -901,7 +920,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   case options::OT_BC_ONLY:
     Conf.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
       std::error_code EC;
-      raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::OF_None);
+      SmallString<128> TaskFilename;
+      getOutputFileName(output_name, /* TempOutFile */ false, TaskFilename,
+                        Task);
+      raw_fd_ostream OS(TaskFilename, EC, sys::fs::OpenFlags::OF_None);
       if (EC)
         message(LDPL_FATAL, "Failed to write the output file.");
       WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ false);
@@ -931,6 +953,7 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.RemarksFilename = options::RemarksFilename;
   Conf.RemarksPasses = options::RemarksPasses;
   Conf.RemarksWithHotness = options::RemarksWithHotness;
+  Conf.RemarksHotnessThreshold = options::RemarksHotnessThreshold;
   Conf.RemarksFormat = options::RemarksFormat;
 
   // Use new pass manager if set in driver

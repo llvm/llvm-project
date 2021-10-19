@@ -7,14 +7,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 
 namespace Fortran::evaluate {
+
+static std::optional<ConstantSubscript> GetConstantLength(
+    FoldingContext &context, Expr<SomeType> &&expr) {
+  expr = Fold(context, std::move(expr));
+  if (auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(expr)}) {
+    if (auto len{chExpr->LEN()}) {
+      return ToInt64(*len);
+    }
+  }
+  return std::nullopt;
+}
+
+template <typename T>
+static std::optional<ConstantSubscript> GetConstantLength(
+    FoldingContext &context, FunctionRef<T> &funcRef, int zeroBasedArg) {
+  if (auto *expr{funcRef.UnwrapArgExpr(zeroBasedArg)}) {
+    return GetConstantLength(context, std::move(*expr));
+  } else {
+    return std::nullopt;
+  }
+}
+
+template <typename T>
+static std::optional<Scalar<T>> Identity(
+    Scalar<T> str, std::optional<ConstantSubscript> len) {
+  if (len) {
+    return CharacterUtils<T::kind>::REPEAT(
+        str, std::max<ConstantSubscript>(*len, 0));
+  } else {
+    return std::nullopt;
+  }
+}
 
 template <int KIND>
 Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Character, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Character, KIND>;
+  using StringType = Scalar<T>; // std::string or larger
+  using SingleCharType = typename StringType::value_type; // char &c.
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
@@ -32,10 +67,25 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
         context, std::move(funcRef), CharacterUtils<KIND>::ADJUSTR);
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
+  } else if (name == "maxval") {
+    SingleCharType least{0};
+    if (auto identity{Identity<T>(
+            StringType{least}, GetConstantLength(context, funcRef, 0))}) {
+      return FoldMaxvalMinval<T>(
+          context, std::move(funcRef), RelationalOperator::GT, *identity);
+    }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
+  } else if (name == "minval") {
+    // Collating sequences correspond to positive integers (3.31)
+    SingleCharType most{0x7fffffff >> (8 * (4 - KIND))};
+    if (auto identity{Identity<T>(
+            StringType{most}, GetConstantLength(context, funcRef, 0))}) {
+      return FoldMaxvalMinval<T>(
+          context, std::move(funcRef), RelationalOperator::LT, *identity);
+    }
   } else if (name == "new_line") {
     return Expr<T>{Constant<T>{CharacterUtils<KIND>::NEW_LINE()}};
   } else if (name == "repeat") { // not elemental
@@ -52,8 +102,7 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
   }
-  // TODO: cshift, eoshift, maxval, minval, pack, reduce,
-  // spread, transfer, transpose, unpack
+  // TODO: transfer
   return Expr<T>{std::move(funcRef)};
 }
 

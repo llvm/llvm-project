@@ -123,12 +123,17 @@ defm : X86WriteRes<WriteIMul16ImmLd,   [SKXPort1,SKXPort0156,SKXPort23], 8, [1,1
 defm : X86WriteRes<WriteIMul16Reg,     [SKXPort1],   3, [1], 1>;
 defm : X86WriteRes<WriteIMul16RegLd,   [SKXPort1,SKXPort0156,SKXPort23], 8, [1,1,1], 3>;
 defm : SKXWriteResPair<WriteIMul32,    [SKXPort1,SKXPort06,SKXPort0156], 4, [1,1,1], 3>;
+defm : SKXWriteResPair<WriteMULX32,    [SKXPort1,SKXPort06,SKXPort0156], 3, [1,1,1], 3>;
 defm : SKXWriteResPair<WriteIMul32Imm, [SKXPort1],   3>;
 defm : SKXWriteResPair<WriteIMul32Reg, [SKXPort1],   3>;
 defm : SKXWriteResPair<WriteIMul64,    [SKXPort1,SKXPort5], 4, [1,1], 2>;
+defm : SKXWriteResPair<WriteMULX64,    [SKXPort1,SKXPort5], 3, [1,1], 2>;
 defm : SKXWriteResPair<WriteIMul64Imm, [SKXPort1],   3>;
 defm : SKXWriteResPair<WriteIMul64Reg, [SKXPort1],   3>;
-def : WriteRes<WriteIMulH, []> { let Latency = 3; }
+def SKXWriteIMulH : WriteRes<WriteIMulH, []> { let Latency = 4; }
+def  : WriteRes<WriteIMulHLd, []> {
+  let Latency = !add(SKXWriteIMulH.Latency, SkylakeServerModel.LoadLatency);
+}
 
 defm : X86WriteRes<WriteBSWAP32, [SKXPort15], 1, [1], 1>;
 defm : X86WriteRes<WriteBSWAP64, [SKXPort06, SKXPort15], 2, [1,1], 2>;
@@ -202,6 +207,10 @@ defm : X86WriteRes<WriteLoad,    [SKXPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteStore,   [SKXPort237, SKXPort4], 1, [1,1], 1>;
 defm : X86WriteRes<WriteStoreNT, [SKXPort237, SKXPort4], 1, [1,1], 2>;
 defm : X86WriteRes<WriteMove,    [SKXPort0156], 1, [1], 1>;
+
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : X86WriteRes<WriteVecMaskedGatherWriteback, [], 5, [], 0>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.
@@ -583,6 +592,7 @@ def : WriteRes<WriteSystem,     [SKXPort0156]> { let Latency = 100; } // def Wri
 defm : SKXWriteResPair<WriteFShuffle256, [SKXPort5], 3, [1], 1, 7>; // Fp 256-bit width vector shuffles.
 defm : SKXWriteResPair<WriteFVarShuffle256, [SKXPort5], 3, [1], 1, 7>; // Fp 256-bit width vector variable shuffles.
 defm : SKXWriteResPair<WriteShuffle256, [SKXPort5], 3, [1], 1, 7>;  // 256-bit width vector shuffles.
+defm : SKXWriteResPair<WriteVPMOV256, [SKXPort5], 3, [1], 1, 7>;  // 256-bit width packed vector width-changing move.
 defm : SKXWriteResPair<WriteVarShuffle256, [SKXPort5], 3, [1], 1, 7>;  // 256-bit width vector variable shuffles.
 
 // Old microcoded instructions that nobody use.

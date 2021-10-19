@@ -408,6 +408,14 @@ namespace ARMII {
     // its input, typically reading from the top/bottom halves of the input(s).
     DoubleWidthResult = 1 << 23,
 
+    // The vector element size for MVE instructions. 00 = i8, 01 = i16, 10 = i32
+    // and 11 = i64. This is the largest type if multiple are present, so a
+    // MVE_VMOVLs8bh is ize 01=i16, as it extends from a i8 to a i16. There are
+    // some caveats so cannot be used blindly, such as exchanging VMLADAVA's and
+    // complex instructions, which may use different input lanes.
+    VecSizeShift = 24,
+    VecSize = 3 << VecSizeShift,
+
     //===------------------------------------------------------------------===//
     // Code domain.
     DomainShift   = 15,

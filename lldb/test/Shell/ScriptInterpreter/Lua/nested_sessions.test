@@ -1,11 +1,9 @@
-# REQUIRES: lua
 # RUN: mkdir -p %t
 # RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t/foo
 # RUN: echo "int main() { return 0; }" | %clang_host -x c - -o %t/bar
 # RUN:  %lldb --script-language lua -o "file %t/bar" -o "file %t/foo" -s %S/Inputs/nested_sessions.in  -s %S/Inputs/nested_sessions_2.in 2>&1 | FileCheck %s
 # CHECK: script
 # CHECK-NEXT: foo foo
-# CHECK-NEXT: foo bar
 # CHECK-NEXT: foo bar
 # CHECK-NEXT: foo bar
 # CHECK: script

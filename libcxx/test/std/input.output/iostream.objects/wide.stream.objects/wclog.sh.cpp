@@ -10,17 +10,16 @@
 
 // istream wclog;
 
+// XFAIL: libcpp-has-no-wide-characters
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
+// FILE_DEPENDENCIES: ../check-stderr.sh
 // RUN: %{build}
-// RUN: %{exec} %t.exe 2> %t.err
-// RUN: grep -e 'Hello World!' %t.err
+// RUN: %{exec} bash check-stderr.sh "%t.exe" "1234"
 
 #include <iostream>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    std::wclog << L"Hello World!\n";
-
+int main(int, char**) {
+    std::wclog << L"1234";
     return 0;
 }

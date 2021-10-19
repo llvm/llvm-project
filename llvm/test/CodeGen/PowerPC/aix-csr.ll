@@ -47,29 +47,29 @@ entry:
 
 ; MIR64: liveins: $x3, $x16, $x22, $x30
 
-; MIR64-DAG: STD killed $x16, -128, $x1 :: (store 8 into %fixed-stack.2, align 16)
-; MIR64-DAG: STD killed $x22, -80, $x1 :: (store 8 into %fixed-stack.1, align 16)
-; MIR64-DAG: STD killed $x30, -16, $x1 :: (store 8 into %fixed-stack.0, align 16)
+; MIR64-DAG: STD killed $x16, -128, $x1 :: (store (s64) into %fixed-stack.2, align 16)
+; MIR64-DAG: STD killed $x22, -80, $x1 :: (store (s64) into %fixed-stack.1, align 16)
+; MIR64-DAG: STD killed $x30, -16, $x1 :: (store (s64) into %fixed-stack.0, align 16)
 
 ; MIR64:     INLINEASM
 
-; MIR64-DAG: $x30 = LD -16, $x1 :: (load 8 from %fixed-stack.0, align 16)
-; MIR64-DAG: $x22 = LD -80, $x1 :: (load 8 from %fixed-stack.1, align 16)
-; MIR64-DAG: $x16 = LD -128, $x1 :: (load 8 from %fixed-stack.2, align 16)
+; MIR64-DAG: $x30 = LD -16, $x1 :: (load (s64) from %fixed-stack.0, align 16)
+; MIR64-DAG: $x22 = LD -80, $x1 :: (load (s64) from %fixed-stack.1, align 16)
+; MIR64-DAG: $x16 = LD -128, $x1 :: (load (s64) from %fixed-stack.2, align 16)
 ; MIR64:     BLR8 implicit $lr8, implicit $rm, implicit $x3
 
 
 ; MIR32: liveins: $r3, $r16, $r22, $r30
 
-; MIR32-DAG: STW killed $r16, -64, $r1 :: (store 4 into %fixed-stack.2, align 16)
-; MIR32-DAG: STW killed $r22, -40, $r1 :: (store 4 into %fixed-stack.1, align 8)
-; MIR32-DAG: STW killed $r30, -8, $r1 :: (store 4 into %fixed-stack.0, align 8)
+; MIR32-DAG: STW killed $r16, -64, $r1 :: (store (s32) into %fixed-stack.2, align 16)
+; MIR32-DAG: STW killed $r22, -40, $r1 :: (store (s32) into %fixed-stack.1, align 8)
+; MIR32-DAG: STW killed $r30, -8, $r1 :: (store (s32) into %fixed-stack.0, align 8)
 
 ; MIR32:     INLINEASM
 
-; MIR32-DAG: $r30 = LWZ -8, $r1 :: (load 4 from %fixed-stack.0, align 8)
-; MIR32-DAG: $r22 = LWZ -40, $r1 :: (load 4 from %fixed-stack.1, align 8)
-; MIR32-DAG: $r16 = LWZ -64, $r1 :: (load 4 from %fixed-stack.2, align 16)
+; MIR32-DAG: $r30 = LWZ -8, $r1 :: (load (s32) from %fixed-stack.0, align 8)
+; MIR32-DAG: $r22 = LWZ -40, $r1 :: (load (s32) from %fixed-stack.1, align 8)
+; MIR32-DAG: $r16 = LWZ -64, $r1 :: (load (s32) from %fixed-stack.2, align 16)
 ; MIR32:     BLR implicit $lr, implicit $rm, implicit $r3
 
 
@@ -161,24 +161,24 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 ; MIR64:       $x0 = MFLR8 implicit $lr8
 ; MIR64-NEXT:  STD killed $x0, 16, $x1
 ; MIR64-NEXT:  $x1 = STDU $x1, -400, $x1
-; MIR64-DAG:   STD killed $x14, 112, $x1 :: (store 8 into %fixed-stack.6, align 16)
-; MIR64-DAG:   STD killed $x25, 200, $x1 :: (store 8 into %fixed-stack.5)
-; MIR64-DAG:   STD killed $x31, 248, $x1 :: (store 8 into %fixed-stack.4)
-; MIR64-DAG:   STFD killed $f14, 256, $x1 :: (store 8 into %fixed-stack.3, align 16)
-; MIR64-DAG:   STFD killed $f19, 296, $x1 :: (store 8 into %fixed-stack.2)
-; MIR64-DAG:   STFD killed $f21, 312, $x1 :: (store 8 into %fixed-stack.1)
-; MIR64-DAG:   STFD killed $f31, 392, $x1 :: (store 8 into %fixed-stack.0)
+; MIR64-DAG:   STD killed $x14, 112, $x1 :: (store (s64) into %fixed-stack.6, align 16)
+; MIR64-DAG:   STD killed $x25, 200, $x1 :: (store (s64) into %fixed-stack.5)
+; MIR64-DAG:   STD killed $x31, 248, $x1 :: (store (s64) into %fixed-stack.4)
+; MIR64-DAG:   STFD killed $f14, 256, $x1 :: (store (s64) into %fixed-stack.3, align 16)
+; MIR64-DAG:   STFD killed $f19, 296, $x1 :: (store (s64) into %fixed-stack.2)
+; MIR64-DAG:   STFD killed $f21, 312, $x1 :: (store (s64) into %fixed-stack.1)
+; MIR64-DAG:   STFD killed $f31, 392, $x1 :: (store (s64) into %fixed-stack.0)
 
 ; MIR64:       INLINEASM
 ; MIR64-NEXT:  BL8_NOP
 
-; MIR64-DAG:   $f31 = LFD 392, $x1 :: (load 8 from %fixed-stack.0)
-; MIR64-DAG:   $f21 = LFD 312, $x1 :: (load 8 from %fixed-stack.1)
-; MIR64-DAG:   $f19 = LFD 296, $x1 :: (load 8 from %fixed-stack.2)
-; MIR64-DAG:   $f14 = LFD 256, $x1 :: (load 8 from %fixed-stack.3, align 16)
-; MIR64-DAG:   $x31 = LD 248, $x1 :: (load 8 from %fixed-stack.4)
-; MIR64-DAG:   $x25 = LD 200, $x1 :: (load 8 from %fixed-stack.5)
-; MIR64-DAG:   $x14 = LD 112, $x1 :: (load 8 from %fixed-stack.6, align 16)
+; MIR64-DAG:   $f31 = LFD 392, $x1 :: (load (s64) from %fixed-stack.0)
+; MIR64-DAG:   $f21 = LFD 312, $x1 :: (load (s64) from %fixed-stack.1)
+; MIR64-DAG:   $f19 = LFD 296, $x1 :: (load (s64) from %fixed-stack.2)
+; MIR64-DAG:   $f14 = LFD 256, $x1 :: (load (s64) from %fixed-stack.3, align 16)
+; MIR64-DAG:   $x31 = LD 248, $x1 :: (load (s64) from %fixed-stack.4)
+; MIR64-DAG:   $x25 = LD 200, $x1 :: (load (s64) from %fixed-stack.5)
+; MIR64-DAG:   $x14 = LD 112, $x1 :: (load (s64) from %fixed-stack.6, align 16)
 ; MIR64:       $x1 = ADDI8 $x1, 400
 ; MIR64-NEXT:  $x0 = LD 16, $x1
 ; MIR64-NEXT:  MTLR8 $x0, implicit-def $lr8
@@ -190,26 +190,26 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 ; MIR32:      $r0 = MFLR implicit $lr
 ; MIR32-NEXT: STW killed $r0, 8, $r1
 ; MIR32-NEXT: $r1 = STWU $r1, -288, $r1
-; MIR32-DAG:  STW killed $r13, 68, $r1 :: (store 4 into %fixed-stack.7)
-; MIR32-DAG:  STW killed $r14, 72, $r1 :: (store 4 into %fixed-stack.6, align 8)
-; MIR32-DAG:  STW killed $r25, 116, $r1 :: (store 4 into %fixed-stack.5)
-; MIR32-DAG:  STW killed $r31, 140, $r1 :: (store 4 into %fixed-stack.4)
-; MIR32-DAG:  STFD killed $f14, 144, $r1 :: (store 8 into %fixed-stack.3, align 16)
-; MIR32-DAG:  STFD killed $f19, 184, $r1 :: (store 8 into %fixed-stack.2)
-; MIR32-DAG:  STFD killed $f21, 200, $r1 :: (store 8 into %fixed-stack.1)
-; MIR32-DAG:  STFD killed $f31, 280, $r1 :: (store 8 into %fixed-stack.0)
+; MIR32-DAG:  STW killed $r13, 68, $r1 :: (store (s32) into %fixed-stack.7)
+; MIR32-DAG:  STW killed $r14, 72, $r1 :: (store (s32) into %fixed-stack.6, align 8)
+; MIR32-DAG:  STW killed $r25, 116, $r1 :: (store (s32) into %fixed-stack.5)
+; MIR32-DAG:  STW killed $r31, 140, $r1 :: (store (s32) into %fixed-stack.4)
+; MIR32-DAG:  STFD killed $f14, 144, $r1 :: (store (s64) into %fixed-stack.3, align 16)
+; MIR32-DAG:  STFD killed $f19, 184, $r1 :: (store (s64) into %fixed-stack.2)
+; MIR32-DAG:  STFD killed $f21, 200, $r1 :: (store (s64) into %fixed-stack.1)
+; MIR32-DAG:  STFD killed $f31, 280, $r1 :: (store (s64) into %fixed-stack.0)
 
 ; MIR32:      INLINEASM
 ; MIR32:      BL_NOP
 
-; MIR32-DAG:  $f31 = LFD 280, $r1 :: (load 8 from %fixed-stack.0)
-; MIR32-DAG:  $f21 = LFD 200, $r1 :: (load 8 from %fixed-stack.1)
-; MIR32-DAG:  $f19 = LFD 184, $r1 :: (load 8 from %fixed-stack.2)
-; MIR32-DAG:  $f14 = LFD 144, $r1 :: (load 8 from %fixed-stack.3, align 16)
-; MIR32-DAG:  $r31 = LWZ 140, $r1 :: (load 4 from %fixed-stack.4)
-; MIR32-DAG:  $r25 = LWZ 116, $r1 :: (load 4 from %fixed-stack.5)
-; MIR32-DAG:  $r14 = LWZ 72, $r1 :: (load 4 from %fixed-stack.6, align 8)
-; MIR32-DAG:  $r13 = LWZ 68, $r1 :: (load 4 from %fixed-stack.7)
+; MIR32-DAG:  $f31 = LFD 280, $r1 :: (load (s64) from %fixed-stack.0)
+; MIR32-DAG:  $f21 = LFD 200, $r1 :: (load (s64) from %fixed-stack.1)
+; MIR32-DAG:  $f19 = LFD 184, $r1 :: (load (s64) from %fixed-stack.2)
+; MIR32-DAG:  $f14 = LFD 144, $r1 :: (load (s64) from %fixed-stack.3, align 16)
+; MIR32-DAG:  $r31 = LWZ 140, $r1 :: (load (s32) from %fixed-stack.4)
+; MIR32-DAG:  $r25 = LWZ 116, $r1 :: (load (s32) from %fixed-stack.5)
+; MIR32-DAG:  $r14 = LWZ 72, $r1 :: (load (s32) from %fixed-stack.6, align 8)
+; MIR32-DAG:  $r13 = LWZ 68, $r1 :: (load (s32) from %fixed-stack.7)
 ; MIR32:      $r1 = ADDI $r1, 288
 ; MIR32-NEXT: $r0 = LWZ 8, $r1
 ; MIR32-NEXT: MTLR $r0, implicit-def $lr

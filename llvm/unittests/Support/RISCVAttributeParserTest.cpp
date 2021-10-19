@@ -49,7 +49,7 @@ static bool testAttribute(unsigned Tag, unsigned Value, unsigned ExpectedTag,
 }
 
 static bool testTagString(unsigned Tag, const char *name) {
-  return ELFAttrs::attrTypeAsString(Tag, RISCVAttrs::RISCVAttributeTags)
+  return ELFAttrs::attrTypeAsString(Tag, RISCVAttrs::getRISCVAttributeTags())
              .str() == name;
 }
 

@@ -1,9 +1,9 @@
-; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE %s
-; RUN: llc -mattr=+promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE -check-prefix=HSA %s
-; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-ALLOCA %s
-; RUN: llc -mattr=-promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck  -check-prefix=GCN -check-prefix=GCN-ALLOCA -check-prefix=HSA %s
-; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-PROMOTE %s
-; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN  -check-prefix=GCN-ALLOCA %s
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mattr=+promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mattr=-promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck  --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
 
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -18,7 +18,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; GCN-ALLOCA: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, v{{[0-9]+}}, v0
 
-; GCN-PROMOTE: v_cmp_eq_u32_e64 vcc, [[IN]], 1
+; GCN-PROMOTE: s_cmp_eq_u32 [[IN]], 1
+; GCN-PROMOTE-NEXT: s_cselect_b64 vcc, -1, 0
 ; GCN-PROMOTE-NEXT: v_addc_u32_e32 [[RESULT:v[0-9]+]], vcc, 0, v0, vcc
 
 ; GCN: buffer_store_dword [[RESULT]]

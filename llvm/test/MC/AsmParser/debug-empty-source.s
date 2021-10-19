@@ -1,3 +1,5 @@
+// XFAIL: -aix
+// UNSUPPORTED: -zos
 // REQUIRES: default_triple
 // RUN: llvm-mc %s -o -| FileCheck %s
 

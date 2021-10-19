@@ -48,6 +48,11 @@ namespace TailPredication {
   };
 }
 
+// For controlling conversion of memcpy into Tail Predicated loop.
+namespace TPLoop {
+enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
+}
+
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
@@ -103,8 +108,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
-  bool shouldFavorBackedgeIndex(const Loop *L) const;
-  bool shouldFavorPostInc() const;
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
@@ -115,18 +120,26 @@ public:
 
   Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                IntrinsicInst &II) const;
+  Optional<Value *> simplifyDemandedVectorEltsIntrinsic(
+      InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
+      APInt &UndefElts2, APInt &UndefElts3,
+      std::function<void(Instruction *, unsigned, APInt, APInt &)>
+          SimplifyAndSetOp) const;
 
   /// \name Scalar TTI Implementations
   /// @{
 
-  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                            Type *Ty);
+  InstructionCost getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                        const APInt &Imm, Type *Ty);
 
   using BaseT::getIntImmCost;
-  int getIntImmCost(const APInt &Imm, Type *Ty, TTI::TargetCostKind CostKind);
+  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
+                                TTI::TargetCostKind CostKind);
 
-  int getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Imm,
-                        Type *Ty, TTI::TargetCostKind CostKind);
+  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
+                                    const APInt &Imm, Type *Ty,
+                                    TTI::TargetCostKind CostKind,
+                                    Instruction *Inst = nullptr);
 
   /// @}
 
@@ -148,16 +161,20 @@ public:
     return 13;
   }
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(32);
+    case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasNEON())
-        return 128;
+        return TypeSize::getFixed(128);
       if (ST->hasMVEIntegerOps())
-        return 128;
-      return 0;
+        return TypeSize::getFixed(128);
+      return TypeSize::getFixed(0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(0);
     }
-
-    return 32;
+    llvm_unreachable("Unsupported register kind");
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) {
@@ -178,59 +195,43 @@ public:
     return isLegalMaskedGather(Ty, Alignment);
   }
 
-  int getMemcpyCost(const Instruction *I);
+  InstructionCost getMemcpyCost(const Instruction *I);
 
-  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp);
+  int getNumMemOps(const IntrinsicInst *I) const;
 
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                                 ArrayRef<int> Mask, int Index,
+                                 VectorType *SubTp);
+
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;
 
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const;
 
-  bool shouldExpandReduction(const IntrinsicInst *II) const {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::experimental_vector_reduce_v2_fadd:
-    case Intrinsic::experimental_vector_reduce_v2_fmul:
-      // We don't have legalization support for ordered FP reductions.
-      if (!II->getFastMathFlags().allowReassoc())
-        return true;
-      // Can't legalize reductions with soft floats.
-      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs();
+  bool shouldExpandReduction(const IntrinsicInst *II) const { return false; }
 
-    case Intrinsic::experimental_vector_reduce_fmin:
-    case Intrinsic::experimental_vector_reduce_fmax:
-      // Can't legalize reductions with soft floats, and NoNan will create
-      // fminimum which we do not know how to lower.
-      return TLI->useSoftFloat() || !TLI->getSubtarget()->hasFPRegs() ||
-             !II->getFastMathFlags().noNaNs();
+  InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                                 const Instruction *I = nullptr);
 
-    default:
-      // Don't expand anything else, let legalization deal with it.
-      return false;
-    }
-  }
+  InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                   TTI::CastContextHint CCH,
+                                   TTI::TargetCostKind CostKind,
+                                   const Instruction *I = nullptr);
 
-  int getCFInstrCost(unsigned Opcode,
-                     TTI::TargetCostKind CostKind);
+  InstructionCost getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
+                                     CmpInst::Predicate VecPred,
+                                     TTI::TargetCostKind CostKind,
+                                     const Instruction *I = nullptr);
 
-  int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
-                       const Instruction *I = nullptr);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
 
-  int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                         TTI::TargetCostKind CostKind,
-                         const Instruction *I = nullptr);
+  InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
+                                            const SCEV *Ptr);
 
-  int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
-
-  int getAddressComputationCost(Type *Val, ScalarEvolution *SE,
-                                const SCEV *Ptr);
-
-  int getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueKind Op1Info = TTI::OK_AnyValue,
       TTI::OperandValueKind Op2Info = TTI::OK_AnyValue,
       TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
@@ -238,21 +239,35 @@ public:
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
 
-  int getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                      unsigned AddressSpace,
-                      TTI::TargetCostKind CostKind,
-                      const Instruction *I = nullptr);
+  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
+                                  MaybeAlign Alignment, unsigned AddressSpace,
+                                  TTI::TargetCostKind CostKind,
+                                  const Instruction *I = nullptr);
 
-  int getInterleavedMemoryOpCost(
+  InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
+                                        Align Alignment, unsigned AddressSpace,
+                                        TTI::TargetCostKind CostKind);
+
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-      Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,
+      Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
 
-  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                  const Value *Ptr, bool VariableMask,
-                                  Align Alignment, TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr);
+  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                         const Value *Ptr, bool VariableMask,
+                                         Align Alignment,
+                                         TTI::TargetCostKind CostKind,
+                                         const Instruction *I = nullptr);
+
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                             Optional<FastMathFlags> FMF,
+                                             TTI::TargetCostKind CostKind);
+  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
+                                              Type *ResTy, VectorType *ValTy,
+                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
 
   bool maybeLoweredToCall(Instruction &I);
   bool isLoweredToCall(const Function *F);
@@ -267,7 +282,8 @@ public:
                                    DominatorTree *DT,
                                    const LoopAccessInfo *LAI);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                               TTI::UnrollingPreferences &UP);
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE);
 
   bool emitGetActiveLaneMask() const;
 
@@ -278,12 +294,41 @@ public:
     // variables or functions in constant data, so don't convert switches to
     // lookup tables if any of the values would need relocation.
     if (ST->isROPI() || ST->isRWPI())
-      return !C->needsRelocation();
+      return !C->needsDynamicRelocation();
 
     return true;
   }
   /// @}
 };
+
+/// isVREVMask - Check if a vector shuffle corresponds to a VREV
+/// instruction with the specified blocksize.  (The order of the elements
+/// within each block of the vector is reversed.)
+inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
+  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
+         "Only possible block sizes for VREV are: 16, 32, 64");
+
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz != 8 && EltSz != 16 && EltSz != 32)
+    return false;
+
+  unsigned BlockElts = M[0] + 1;
+  // If the first shuffle index is UNDEF, be optimistic.
+  if (M[0] < 0)
+    BlockElts = BlockSize / EltSz;
+
+  if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
+    return false;
+
+  for (unsigned i = 0, e = M.size(); i < e; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
+      return false;
+  }
+
+  return true;
+}
 
 } // end namespace llvm
 

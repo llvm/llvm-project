@@ -54,14 +54,16 @@ define void @test2(double* %ptr, i32 %skip) {
   ret void
 }
 
-; Same as @test1, but the assume just guarantees %skip > -3, which is not
-; enough to derive NoAlias
+; Same as @test1, this time the assume just guarantees %skip > -3, which is
+; enough to derive NoAlias for %ptr and %col.ptr.2 (distance is more than 3
+; doubles, and we load 1 double), but not %col.ptr.1 and %col.ptr.2 (distance
+; is more than 3 doubles, and we load 6 doubles).
 define void @test3(double* %ptr, i32 %skip) {
 ; CHECK-LABEL: Function: test3: 4 pointers, 1 call sites
 ; CHECK-NEXT:  MustAlias:   <6 x double>* %col.ptr.1, double* %ptr
-; CHECK-NEXT:  MayAlias:    double* %col.ptr.2, double* %ptr
+; CHECK-NEXT:  NoAlias:     double* %col.ptr.2, double* %ptr
 ; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.1, double* %col.ptr.2
-; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.2.cast, double* %ptr
+; CHECK-NEXT:  NoAlias:     <6 x double>* %col.ptr.2.cast, double* %ptr
 ; CHECK-NEXT:  MayAlias:    <6 x double>* %col.ptr.1, <6 x double>* %col.ptr.2.cast
 ; CHECK-NEXT:  MustAlias:   <6 x double>* %col.ptr.2.cast, double* %col.ptr.2
 ; CHECK-NEXT:  NoModRef:  Ptr: double* %ptr <->  call void @llvm.assume(i1 %gt)
@@ -113,4 +115,20 @@ define void @test4(double* %ptr, i32 %skip) {
   ret void
 }
 
+define void @symmetry([0 x i8]* %ptr, i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: Function: symmetry
+; CHECK: NoAlias: i8* %gep1, i8* %gep2
+;
+  %b.cmp = icmp slt i32 %b, 0
+  call void @llvm.assume(i1 %b.cmp)
+  %gep1 = getelementptr [0 x i8], [0 x i8]* %ptr, i32 %a, i32 %b
+  call void @barrier()
+  %c.cmp = icmp sgt i32 %c, -1
+  call void @llvm.assume(i1 %c.cmp)
+  %c.off = add nuw nsw i32 %c, 1
+  %gep2 = getelementptr [0 x i8], [0 x i8]* %ptr, i32 %a, i32 %c.off
+  ret void
+}
+
 declare void @llvm.assume(i1 %cond)
+declare void @barrier()

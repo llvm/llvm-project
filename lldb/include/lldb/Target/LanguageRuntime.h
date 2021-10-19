@@ -59,8 +59,6 @@ protected:
 
 class LanguageRuntime : public Runtime, public PluginInterface {
 public:
-  ~LanguageRuntime() override;
-
   static LanguageRuntime *FindPlugin(Process *process,
                                      lldb::LanguageType language);
 
@@ -175,12 +173,52 @@ public:
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
   static char ID;
 
-protected:
-  LanguageRuntime(Process *process);
+  /// A language runtime may be able to provide a special UnwindPlan for
+  /// the frame represented by the register contents \a regctx when that
+  /// frame is not following the normal ABI conventions.
+  /// Instead of using the normal UnwindPlan for the function, we will use
+  /// this special UnwindPlan for this one backtrace.
+  /// One example of this would be a language that has asynchronous functions,
+  /// functions that may not be currently-executing, while waiting on other
+  /// asynchronous calls they made, but are part of a logical backtrace that
+  /// we want to show the developer because that's how they think of the
+  /// program flow.
+  ///
+  /// \param[in] thread
+  ///     The thread that the unwind is happening on.
+  ///
+  /// \param[in] regctx
+  ///     The RegisterContext for the frame we need to create an UnwindPlan.
+  ///     We don't yet have a StackFrame when we're selecting the UnwindPlan.
+  ///
+  /// \param[out] behaves_like_zeroth_frame
+  ///     With normal ABI calls, all stack frames except the zeroth frame need
+  ///     to have the return-pc value backed up by 1 for symbolication purposes.
+  ///     For these LanguageRuntime unwind plans, they may not follow normal ABI
+  ///     calling conventions and the return pc may need to be symbolicated
+  ///     as-is.
+  ///
+  /// \return
+  ///     Returns an UnwindPlan to find the caller frame if it should be used,
+  ///     instead of the UnwindPlan that would normally be used for this
+  ///     function.
+  static lldb::UnwindPlanSP
+  GetRuntimeUnwindPlan(lldb_private::Thread &thread,
+                       lldb_private::RegisterContext *regctx,
+                       bool &behaves_like_zeroth_frame);
 
-private:
-  LanguageRuntime(const LanguageRuntime &) = delete;
-  const LanguageRuntime &operator=(const LanguageRuntime &) = delete;
+protected:
+  // The static GetRuntimeUnwindPlan method above is only implemented in the
+  // base class; subclasses may override this protected member if they can
+  // provide one of these UnwindPlans.
+  virtual lldb::UnwindPlanSP
+  GetRuntimeUnwindPlan(lldb::ProcessSP process_sp,
+                       lldb_private::RegisterContext *regctx,
+                       bool &behaves_like_zeroth_frame) {
+    return lldb::UnwindPlanSP();
+  }
+
+  LanguageRuntime(Process *process);
 };
 
 } // namespace lldb_private

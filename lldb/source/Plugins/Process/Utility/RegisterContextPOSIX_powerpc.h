@@ -14,8 +14,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class ProcessMonitor;
-
 // Internal codes for all powerpc registers.
 enum {
   k_first_gpr_powerpc,

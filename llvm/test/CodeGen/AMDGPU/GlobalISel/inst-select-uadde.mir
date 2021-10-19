@@ -27,7 +27,6 @@ body: |
     ; WAVE64: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; WAVE64: S_ENDPGM 0, implicit [[S_ADDC_U32_]], implicit [[S_CSELECT_B32_]]
     ; WAVE32-LABEL: name: uadde_s32_s1_sss
-    ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; WAVE32: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
@@ -69,7 +68,6 @@ body: |
     ; WAVE64: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_ADDC_U32_e64_1]], implicit $exec
     ; WAVE64: S_ENDPGM 0, implicit [[V_ADDC_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
     ; WAVE32-LABEL: name: uadde_s32_s1_vvv
-    ; WAVE32: $vcc_hi = IMPLICIT_DEF
     ; WAVE32: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; WAVE32: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2

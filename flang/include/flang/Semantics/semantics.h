@@ -16,6 +16,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Parser/message.h"
 #include <iosfwd>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,7 +31,7 @@ class IntrinsicTypeDefaultKinds;
 namespace Fortran::parser {
 struct Name;
 struct Program;
-class CookedSource;
+class AllCookedSources;
 struct AssociateConstruct;
 struct BlockConstruct;
 struct CaseConstruct;
@@ -60,7 +61,7 @@ using ConstructStack = std::vector<ConstructNode>;
 class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
-      const common::LanguageFeatureControl &, parser::AllSources &);
+      const common::LanguageFeatureControl &, parser::AllCookedSources &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -89,7 +90,7 @@ public:
   Scope &globalScope() { return globalScope_; }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
-  parser::AllSources &allSources() { return allSources_; }
+  parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -170,7 +171,15 @@ public:
   void ActivateIndexVar(const parser::Name &, IndexVarKind);
   void DeactivateIndexVar(const parser::Name &);
   SymbolVector GetIndexVars(IndexVarKind);
+  SourceName SaveTempName(std::string &&);
   SourceName GetTempName(const Scope &);
+
+  // Locate and process the contents of a built-in module on demand
+  Scope *GetBuiltinModule(const char *name);
+
+  // Defines builtinsScope_ from the __Fortran_builtins module
+  void UseFortranBuiltinsModule();
+  const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
 private:
   void CheckIndexVarRedefine(
@@ -179,7 +188,7 @@ private:
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl languageFeatures_;
-  parser::AllSources &allSources_;
+  parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::string moduleDirectory_{"."s};
@@ -196,18 +205,19 @@ private:
     parser::CharBlock location;
     IndexVarKind kind;
   };
-  std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
-  std::set<SymbolRef> errorSymbols_;
-  std::vector<std::string> tempNames_;
+  std::map<SymbolRef, const IndexVarInfo, SymbolAddressCompare>
+      activeIndexVars_;
+  UnorderedSymbolSet errorSymbols_;
+  std::set<std::string> tempNames_;
+  const Scope *builtinsScope_{nullptr}; // module __Fortran_builtins
 };
 
 class Semantics {
 public:
   explicit Semantics(SemanticsContext &context, parser::Program &program,
-      parser::CookedSource &cooked, bool debugModuleWriter = false)
-      : context_{context}, program_{program}, cooked_{cooked} {
+      bool debugModuleWriter = false)
+      : context_{context}, program_{program} {
     context.set_debugModuleWriter(debugModuleWriter);
-    context.globalScope().AddSourceRange(parser::CharBlock{cooked.data()});
   }
 
   SemanticsContext &context() const { return context_; }
@@ -223,7 +233,6 @@ public:
 private:
   SemanticsContext &context_;
   parser::Program &program_;
-  const parser::CookedSource &cooked_;
 };
 
 // Base class for semantics checkers.

@@ -66,6 +66,14 @@ namespace tooling {
 
 class CompilationDatabase;
 
+/// Retrieves the flags of the `-cc1` job in `Compilation` that has only source
+/// files as its inputs.
+/// Returns nullptr if there are no such jobs or multiple of them. Note that
+/// offloading jobs are ignored.
+const llvm::opt::ArgStringList *
+getCC1Arguments(DiagnosticsEngine *Diagnostics,
+                driver::Compilation *Compilation);
+
 /// Interface to process a clang::CompilerInvocation.
 ///
 /// If your tool is based on FrontendAction, you should be deriving from
@@ -260,17 +268,16 @@ public:
 
   ~ToolInvocation();
 
-  /// Set a \c DiagnosticConsumer to use during parsing.
+  /// Set a \c DiagnosticConsumer to use during driver command-line parsing and
+  /// the action invocation itself.
   void setDiagnosticConsumer(DiagnosticConsumer *DiagConsumer) {
     this->DiagConsumer = DiagConsumer;
   }
 
-  /// Map a virtual file to be used while running the tool.
-  ///
-  /// \param FilePath The path at which the content will be mapped.
-  /// \param Content A null terminated buffer of the file's content.
-  // FIXME: remove this when all users have migrated!
-  void mapVirtualFile(StringRef FilePath, StringRef Content);
+  /// Set a \c DiagnosticOptions to use during driver command-line parsing.
+  void setDiagnosticOptions(DiagnosticOptions *DiagOpts) {
+    this->DiagOpts = DiagOpts;
+  }
 
   /// Run the clang invocation.
   ///
@@ -278,8 +285,6 @@ public:
   bool run();
 
  private:
-  void addFileMappingsTo(SourceManager &SourceManager);
-
   bool runInvocation(const char *BinaryName,
                      driver::Compilation *Compilation,
                      std::shared_ptr<CompilerInvocation> Invocation,
@@ -290,9 +295,8 @@ public:
   bool OwnsAction;
   FileManager *Files;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-  // Maps <file name> -> <file content>.
-  llvm::StringMap<StringRef> MappedFileContents;
   DiagnosticConsumer *DiagConsumer = nullptr;
+  DiagnosticOptions *DiagOpts = nullptr;
 };
 
 /// Utility to run a FrontendAction over a set of files.

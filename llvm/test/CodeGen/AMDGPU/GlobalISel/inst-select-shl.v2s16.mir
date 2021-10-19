@@ -77,7 +77,6 @@ body: |
     ; GFX9: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_PK_LSHLREV_B16_]]
     ; GFX10-LABEL: name: shl_v2s16_sv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
@@ -117,7 +116,6 @@ body: |
     ; GFX9: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_PK_LSHLREV_B16_]]
     ; GFX10-LABEL: name: shl_v2s16_vs
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
@@ -157,7 +155,6 @@ body: |
     ; GFX9: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_PK_LSHLREV_B16_]]
     ; GFX10-LABEL: name: shl_v2s16_vv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[V_PK_LSHLREV_B16_:%[0-9]+]]:vgpr_32 = V_PK_LSHLREV_B16 8, [[COPY1]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $exec

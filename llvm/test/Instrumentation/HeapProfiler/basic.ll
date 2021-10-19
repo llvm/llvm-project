@@ -1,15 +1,17 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -heapprof -heapprof-module -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -heapprof -heapprof-module -heapprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: opt < %s -memprof -memprof-module -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -memprof -memprof-module -memprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
-; We need the requires since both heapprof and heapprof-module require reading module level metadata which is done once by the heapprof-globals-md analysis
-; RUN: opt < %s -passes='function(heapprof),module(heapprof-module)' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -passes='function(heapprof),module(heapprof-module)' -heapprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; We need the requires since both memprof and memprof-module require reading module level metadata which is done once by the memprof-globals-md analysis
+; RUN: opt < %s -passes='function(memprof),module(memprof-module)' -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes='function(memprof),module(memprof-module)' -memprof-mapping-scale=5 -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-unknown-linux-gnu"
-; CHECK: @llvm.global_ctors = {{.*}}@heapprof.module_ctor
+
+; CHECK: @llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @memprof.module_ctor to i8*)]
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @memprof.module_ctor, i8* null }]
 
 define i32 @test_load(i32* %a) {
 entry:
@@ -17,7 +19,7 @@ entry:
   ret i32 %tmp1
 }
 ; CHECK-LABEL: @test_load
-; CHECK:         %[[SHADOW_OFFSET:[^ ]*]] = load i64, i64* @__heapprof_shadow_memory_dynamic_address
+; CHECK:         %[[SHADOW_OFFSET:[^ ]*]] = load i64, i64* @__memprof_shadow_memory_dynamic_address
 ; CHECK-NEXT:    %[[LOAD_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
 ; CHECK-NEXT:    %[[MASKED_ADDR:[^ ]*]] = and i64 %[[LOAD_ADDR]], -64
 ; CHECK-S3-NEXT: %[[SHIFTED_ADDR:[^ ]*]] = lshr i64 %[[MASKED_ADDR]], 3
@@ -37,7 +39,7 @@ entry:
   ret void
 }
 ; CHECK-LABEL: @test_store
-; CHECK:         %[[SHADOW_OFFSET:[^ ]*]] = load i64, i64* @__heapprof_shadow_memory_dynamic_address
+; CHECK:         %[[SHADOW_OFFSET:[^ ]*]] = load i64, i64* @__memprof_shadow_memory_dynamic_address
 ; CHECK-NEXT:    %[[STORE_ADDR:[^ ]*]] = ptrtoint i32* %a to i64
 ; CHECK-NEXT:    %[[MASKED_ADDR:[^ ]*]] = and i64 %[[STORE_ADDR]], -64
 ; CHECK-S3-NEXT: %[[SHIFTED_ADDR:[^ ]*]] = lshr i64 %[[MASKED_ADDR]], 3
@@ -127,14 +129,14 @@ define void @i80test(i80* %a, i80* %b) nounwind uwtable {
 ; CHECK:      store i80 %t, i80* %b
 ; CHECK:      ret void
 
-; heapprof should not instrument functions with available_externally linkage.
+; memprof should not instrument functions with available_externally linkage.
 define available_externally i32 @f_available_externally(i32* %a)  {
 entry:
   %tmp1 = load i32, i32* %a
   ret i32 %tmp1
 }
 ; CHECK-LABEL: @f_available_externally
-; CHECK-NOT: __heapprof_shadow_memory_dynamic_address
+; CHECK-NOT: __memprof_shadow_memory_dynamic_address
 ; CHECK: ret i32
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
@@ -150,9 +152,9 @@ define void @memintr_test(i8* %a, i8* %b) nounwind uwtable {
 }
 
 ; CHECK-LABEL: memintr_test
-; CHECK: __heapprof_memset
-; CHECK: __heapprof_memmove
-; CHECK: __heapprof_memcpy
+; CHECK: __memprof_memset
+; CHECK: __memprof_memmove
+; CHECK: __memprof_memcpy
 ; CHECK: ret void
 
 declare void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* nocapture writeonly, i8, i64, i32) nounwind
@@ -161,7 +163,7 @@ declare void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* nocapture w
 
 define void @memintr_element_atomic_test(i8* %a, i8* %b) nounwind uwtable {
   ; This is a canary test to make sure that these don't get lowered into calls that don't
-  ; have the element-atomic property. Eventually, heapprof will have to be enhanced to lower
+  ; have the element-atomic property. Eventually, memprof will have to be enhanced to lower
   ; these properly.
   ; CHECK-LABEL: memintr_element_atomic_test
   ; CHECK: tail call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 100, i32 1)
@@ -175,5 +177,5 @@ define void @memintr_element_atomic_test(i8* %a, i8* %b) nounwind uwtable {
 }
 
 
-; CHECK: define internal void @heapprof.module_ctor()
-; CHECK: call void @__heapprof_init()
+; CHECK: define internal void @memprof.module_ctor()
+; CHECK: call void @__memprof_init()

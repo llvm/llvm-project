@@ -100,7 +100,7 @@ error:
   ret void
 }
 
-declare void @dummy(i1) nounwind argmemonly
+declare void @dummy(i1) nounwind willreturn
 define void @can_fold_some_use_before_assume(i32* %array) {
 
 ; CHECK-LABEL:@can_fold_some_use_before_assume

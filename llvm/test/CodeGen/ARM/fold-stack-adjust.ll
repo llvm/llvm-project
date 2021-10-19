@@ -1,5 +1,5 @@
 ; Disable shrink-wrapping on the first test otherwise we wouldn't
-; exerce the path for PR18136.
+; exercise the path for PR18136.
 ; RUN: llc -mtriple=thumbv7-apple-none-macho < %s -enable-shrink-wrap=false -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-FNSTART,CHECK
 ; RUN: llc -mtriple=thumbv6m-apple-none-macho -frame-pointer=all < %s -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-FNSTART,CHECK-T1
 ; RUN: llc -mtriple=thumbv6m-apple-none-macho < %s -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-FNSTART,CHECK-T1-NOFP
@@ -30,12 +30,12 @@ define void @check_simple() minsize {
   ; iOS always has a frame pointer and messing with the push affects
   ; how it's set in the prologue. Make sure we get that right.
 ; CHECK-IOS: push {r3, r4, r5, r6, r7, lr}
-; CHECK-NOT: sub sp,
+; CHECK-IOS-NOT: sub sp,
 ; CHECK-IOS: add r7, sp, #16
-; CHECK-NOT: sub sp,
+; CHECK-IOS-NOT: sub sp,
 ; ...
-; CHECK-NOT: add sp,
-; CHEC: pop {r3, r4, r5, r6, r7, pc}
+; CHECK-IOS-NOT: add sp,
+; CHECK-IOS: pop {r0, r1, r2, r3, r7, pc}
 
   %var = alloca i8, i32 16
   call void @bar(i8* %var)

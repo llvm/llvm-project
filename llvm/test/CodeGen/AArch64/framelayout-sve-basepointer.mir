@@ -14,7 +14,7 @@ frameInfo:
 stack:
   - { id: 0, type: variable-sized,  alignment: 1 }
   - { id: 1, name: '', size: 16, alignment: 8 }
-  - { id: 2, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 2, stack-id: scalable-vector, size: 16, alignment: 16 }
 body: |
   bb.0:
     liveins: $x0

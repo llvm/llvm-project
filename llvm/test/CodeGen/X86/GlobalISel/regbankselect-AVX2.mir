@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2 --global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2 --global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=GREEDY
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2 --global-isel                       -run-pass=regbankselect %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx2 --global-isel -regbankselect-greedy -run-pass=regbankselect %s -o - | FileCheck %s
 
 --- |
   define void @test_mul_vec256() {
@@ -110,7 +110,7 @@ body:             |
     liveins: $rdi
 
     %0(p0) = COPY $rdi
-    %1(<8 x s32>) = G_LOAD %0(p0) :: (load 32 from %ir.p1, align 1)
+    %1(<8 x s32>) = G_LOAD %0(p0) :: (load (<8 x s32>) from %ir.p1, align 1)
     $ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -133,7 +133,7 @@ body:             |
 
     %0(<8 x s32>) = COPY $ymm0
     %1(p0) = COPY $rdi
-    G_STORE %0(<8 x s32>), %1(p0) :: (store 32 into %ir.p1, align 1)
+    G_STORE %0(<8 x s32>), %1(p0) :: (store (<8 x s32>) into %ir.p1, align 1)
     RET 0
 
 ...

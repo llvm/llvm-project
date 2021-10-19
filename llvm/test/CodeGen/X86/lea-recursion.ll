@@ -9,40 +9,40 @@
 ; fixed, the test commands above will need to be updated to expect fewer
 ; lea instructions.
 
-@g0 = weak global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=8]
-@g1 = weak global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=7]
+@g0 = weak dso_local global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=8]
+@g1 = weak dso_local global [1000 x i32] zeroinitializer, align 32		; <[1000 x i32]*> [#uses=7]
 
-define void @foo() {
+define dso_local void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
-; CHECK-NEXT:    movl {{.*}}(%rip), %ecx
+; CHECK-NEXT:    movl g0(%rip), %eax
+; CHECK-NEXT:    movl g1(%rip), %ecx
 ; CHECK-NEXT:    leal (%rax,%rcx), %edx
 ; CHECK-NEXT:    leal 1(%rax,%rcx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+4(%rip)
+; CHECK-NEXT:    movl g1+4(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rdx), %ecx
 ; CHECK-NEXT:    leal 2(%rax,%rdx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+8(%rip)
+; CHECK-NEXT:    movl g1+8(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rcx), %edx
 ; CHECK-NEXT:    leal 2(%rax,%rcx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+12(%rip)
+; CHECK-NEXT:    movl g1+12(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rdx), %ecx
 ; CHECK-NEXT:    leal 2(%rax,%rdx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+16(%rip)
+; CHECK-NEXT:    movl g1+16(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rcx), %edx
 ; CHECK-NEXT:    leal 2(%rax,%rcx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+20(%rip)
+; CHECK-NEXT:    movl g1+20(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rdx), %ecx
 ; CHECK-NEXT:    leal 2(%rax,%rdx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
-; CHECK-NEXT:    movl g1+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl %eax, g0+24(%rip)
+; CHECK-NEXT:    movl g1+24(%rip), %eax
 ; CHECK-NEXT:    leal 2(%rax,%rcx), %eax
-; CHECK-NEXT:    movl %eax, g0+{{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, g0+28(%rip)
 ; CHECK-NEXT:    retq
 entry:
 	%tmp4 = load i32, i32* getelementptr ([1000 x i32], [1000 x i32]* @g0, i32 0, i32 0)		; <i32> [#uses=1]

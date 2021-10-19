@@ -225,6 +225,11 @@ Command-line parameters
 ``-fprebuilt-module-path=<directory>``
   Specify the path to the prebuilt modules. If specified, we will look for modules in this directory for a given top-level module name. We don't need a module map for loading prebuilt modules in this directory and the compiler will not try to rebuild these modules. This can be specified multiple times.
 
+``-fprebuilt-implicit-modules``
+  Enable prebuilt implicit modules. If a prebuilt module is not found in the
+  prebuilt modules paths (specified via ``-fprebuilt-module-path``), we will
+  look for a matching implicit module in the prebuilt modules paths.
+
 -cc1 Options
 ~~~~~~~~~~~~
 
@@ -234,6 +239,123 @@ Command-line parameters
   and diagnostics. Using this option may lead to an excessive number of modules
   being built if the command line arguments are not homogeneous across your
   build.
+
+Using Prebuilt Modules
+----------------------
+
+Below are a few examples illustrating uses of prebuilt modules via the different options.
+
+First, let's set up files for our examples.
+
+.. code-block:: c
+
+  /* A.h */
+  #ifdef ENABLE_A
+  void a() {}
+  #endif
+
+.. code-block:: c
+
+  /* B.h */
+  #include "A.h"
+
+.. code-block:: c
+
+  /* use.c */
+  #include "B.h"
+  void use() {
+  #ifdef ENABLE_A
+    a();
+  #endif
+  }
+
+.. code-block:: c
+
+  /* module.modulemap */
+  module A {
+    header "A.h"
+  }
+  module B {
+    header "B.h"
+    export *
+  }
+
+In the examples below, the compilation of ``use.c`` can be done without ``-cc1``, but the commands used to prebuild the modules would need to be updated to take into account the default options passed to ``clang -cc1``. (See ``clang use.c -v``)
+Note also that, since we use ``-cc1``, we specify the ``-fmodule-map-file=`` or ``-fimplicit-module-maps`` options explicitly. When using the clang driver, ``-fimplicit-module-maps`` is implied by ``-fmodules``.
+
+First let us use an explicit mapping from modules to files.
+
+.. code-block:: sh
+
+  rm -rf prebuilt ; mkdir prebuilt
+  clang -cc1 -emit-module -o prebuilt/A.pcm -fmodules module.modulemap -fmodule-name=A
+  clang -cc1 -emit-module -o prebuilt/B.pcm -fmodules module.modulemap -fmodule-name=B -fmodule-file=A=prebuilt/A.pcm
+  clang -cc1 -emit-obj use.c -fmodules -fmodule-map-file=module.modulemap -fmodule-file=A=prebuilt/A.pcm -fmodule-file=B=prebuilt/B.pcm
+
+Instead of of specifying the mappings manually, it can be convenient to use the ``-fprebuilt-module-path`` option. Let's also use ``-fimplicit-module-maps`` instead of manually pointing to our module map.
+
+.. code-block:: sh
+
+  rm -rf prebuilt; mkdir prebuilt
+  clang -cc1 -emit-module -o prebuilt/A.pcm -fmodules module.modulemap -fmodule-name=A
+  clang -cc1 -emit-module -o prebuilt/B.pcm -fmodules module.modulemap -fmodule-name=B -fprebuilt-module-path=prebuilt
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt
+
+A trick to prebuild all modules required for our source file in one command is to generate implicit modules while using the ``-fdisable-module-hash`` option.
+
+.. code-block:: sh
+
+  rm -rf prebuilt ; mkdir prebuilt
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fmodules-cache-path=prebuilt -fdisable-module-hash
+  ls prebuilt/*.pcm
+  # prebuilt/A.pcm  prebuilt/B.pcm
+
+Note that with explicit or prebuilt modules, we are responsible for, and should be particularly careful about the compatibility of our modules.
+Using mismatching compilation options and modules may lead to issues.
+
+.. code-block:: sh
+
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -DENABLE_A
+  # use.c:4:10: warning: implicit declaration of function 'a' is invalid in C99 [-Wimplicit-function-declaration]
+  #   return a(x);
+  #          ^
+  # 1 warning generated.
+
+So we need to maintain multiple versions of prebuilt modules. We can do so using a manual module mapping, or pointing to a different prebuilt module cache path. For example:
+
+.. code-block:: sh
+
+  rm -rf prebuilt ; mkdir prebuilt ; rm -rf prebuilt_a ; mkdir prebuilt_a
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fmodules-cache-path=prebuilt -fdisable-module-hash
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fmodules-cache-path=prebuilt_a -fdisable-module-hash -DENABLE_A
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt
+  clang -cc1 -emit-obj use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt_a -DENABLE_A
+
+
+Instead of managing the different module versions manually, we can build implicit modules in a given cache path (using ``-fmodules-cache-path``), and reuse them as prebuilt implicit modules by passing ``-fprebuilt-module-path`` and ``-fprebuilt-implicit-modules``.
+
+.. code-block:: sh
+
+  rm -rf prebuilt; mkdir prebuilt
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fmodules-cache-path=prebuilt
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fmodules-cache-path=prebuilt -DENABLE_A
+  find prebuilt -name "*.pcm"
+  # prebuilt/1AYBIGPM8R2GA/A-3L1K4LUA6O31.pcm
+  # prebuilt/1AYBIGPM8R2GA/B-3L1K4LUA6O31.pcm
+  # prebuilt/VH0YZMF1OIRK/A-3L1K4LUA6O31.pcm
+  # prebuilt/VH0YZMF1OIRK/B-3L1K4LUA6O31.pcm
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -fprebuilt-implicit-modules
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -fprebuilt-implicit-modules -DENABLE_A
+
+Finally we want to allow implicit modules for configurations that were not prebuilt. When using the clang driver a module cache path is implicitly selected. Using ``-cc1``, we simply add use the ``-fmodules-cache-path`` option.
+
+.. code-block:: sh
+
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -fprebuilt-implicit-modules -fmodules-cache-path=cache
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -fprebuilt-implicit-modules -fmodules-cache-path=cache -DENABLE_A
+  clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-module-path=prebuilt -fprebuilt-implicit-modules -fmodules-cache-path=cache -DENABLE_A -DOTHER_OPTIONS
+
+This way, a single directory containing multiple variants of modules can be prepared and reused. The options configuring the module cache are independent of other options.
 
 Module Semantics
 ================

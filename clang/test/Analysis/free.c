@@ -12,17 +12,23 @@ void *alloca(size_t);
 
 void t1 () {
   int a[] = { 1 };
-  free(a); // expected-warning {{Argument to free() is the address of the local variable 'a', which is not memory allocated by malloc()}}
+  free(a);
+  // expected-warning@-1{{Argument to free() is the address of the local variable 'a', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'a'}}
 }
 
 void t2 () {
   int a = 1;
-  free(&a); // expected-warning {{Argument to free() is the address of the local variable 'a', which is not memory allocated by malloc()}}
+  free(&a);
+  // expected-warning@-1{{Argument to free() is the address of the local variable 'a', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'a'}}
 }
 
 void t3 () {
   static int a[] = { 1 };
-  free(a); // expected-warning {{Argument to free() is the address of the static variable 'a', which is not memory allocated by malloc()}}
+  free(a);
+  // expected-warning@-1{{Argument to free() is the address of the static variable 'a', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'a'}}
 }
 
 void t4 (char *x) {
@@ -35,7 +41,9 @@ void t5 () {
 }
 
 void t6 () {
-  free((void*)1000); // expected-warning {{Argument to free() is a constant address (1000), which is not memory allocated by malloc()}}
+  free((void*)1000);
+  // expected-warning@-1{{Argument to free() is a constant address (1000), which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object '(void *)1000'}}
 }
 
 void t7 (char **x) {
@@ -49,11 +57,15 @@ void t8 (char **x) {
 
 void t9 () {
 label:
-  free(&&label); // expected-warning {{Argument to free() is the address of the label 'label', which is not memory allocated by malloc()}}
+  free(&&label);
+  // expected-warning@-1{{Argument to free() is the address of the label 'label', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'label'}}
 }
 
 void t10 () {
-  free((void*)&t10); // expected-warning {{Argument to free() is the address of the function 't10', which is not memory allocated by malloc()}}
+  free((void*)&t10);
+  // expected-warning@-1{{Argument to free() is the address of the function 't10', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 't10'}}
 }
 
 void t11 () {
@@ -67,19 +79,40 @@ void t12 () {
 }
 
 void t13 () {
-  free(^{return;}); // expected-warning {{Argument to free() is a block, which is not memory allocated by malloc()}}
+  free(^{return;});
+  // expected-warning@-1{{Argument to free() is a block, which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object: block expression}}
 }
 
 void t14 (char a) {
-  free(&a); // expected-warning {{Argument to free() is the address of the parameter 'a', which is not memory allocated by malloc()}}
+  free(&a);
+  // expected-warning@-1{{Argument to free() is the address of the parameter 'a', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'a'}}
 }
 
 static int someGlobal[2];
 void t15 () {
-  free(someGlobal); // expected-warning {{Argument to free() is the address of the global variable 'someGlobal', which is not memory allocated by malloc()}}
+  free(someGlobal);
+  // expected-warning@-1{{Argument to free() is the address of the global variable 'someGlobal', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'someGlobal'}}
 }
 
 void t16 (char **x, int offset) {
   // Unknown value
   free(x[offset]); // no-warning
+}
+
+int *iptr(void);
+void t17(void) {
+  free(iptr); // Oops, forgot to call iptr().
+  // expected-warning@-1{{Argument to free() is the address of the function 'iptr', which is not memory allocated by malloc()}}
+  // expected-warning@-2{{attempt to call free on non-heap object 'iptr'}}
+}
+
+struct S {
+  const char* p;
+};
+
+void t18 (struct S s) {
+  free((void*)(unsigned long long)s.p); // no warning
 }

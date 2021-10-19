@@ -132,7 +132,7 @@ void PassByValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void PassByValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           cxxConstructorDecl(
               forEachConstructorInitializer(
                   cxxCtorInitializer(
@@ -216,8 +216,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
               Initializer->getLParenLoc().getLocWithOffset(1), "std::move(")
        << Inserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Initializer->getSourceLocation()),
-              "utility",
-              /*IsAngled=*/true);
+              "<utility>");
 }
 
 } // namespace modernize

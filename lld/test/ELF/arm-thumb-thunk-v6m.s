@@ -33,7 +33,7 @@ far:
 // CHECK: Disassembly of section .text_low:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:       94:        00 f0 00 f8     bl      #0
+// CHECK-NEXT:       94:        00 f0 00 f8     bl      0x98 <__Thumbv6MABSLongThunk_far>
 // CHECK: <__Thumbv6MABSLongThunk_far>:
 // CHECK-NEXT:       98:        03 b4   push    {r0, r1}
 // CHECK-NEXT:       9a:        01 48   ldr     r0, [pc, #4]
@@ -48,7 +48,7 @@ far:
 // CHECK-PI: Disassembly of section .text_low:
 // CHECK-PI-EMPTY:
 // CHECK-PI-NEXT: <_start>:
-// CHECK-PI-NEXT:      130:     00 f0 00 f8     bl      #0
+// CHECK-PI-NEXT:      130:     00 f0 00 f8     bl      0x134 <__Thumbv6MPILongThunk_far>
 // CHECK-PI: <__Thumbv6MPILongThunk_far>:
 // CHECK-PI-NEXT:      134:     01 b4   push    {r0}
 // CHECK-PI-NEXT:      136:     02 48   ldr     r0, [pc, #8]

@@ -1,4 +1,4 @@
-; RUN: not --crash llc -march=amdgcn -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not --crash llc -march=amdgcn -verify-machineinstrs -amdgpu-enable-lower-module-lds=false < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: LLVM ERROR: Unsupported expression in static initializer: addrspacecast ([256 x i32] addrspace(3)* @lds.arr to [256 x i32] addrspace(4)*)
 

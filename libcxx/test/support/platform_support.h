@@ -25,17 +25,6 @@
 #   define LOCALE_fr_CA_ISO8859_1 "fr-CA"
 #   define LOCALE_ru_RU_UTF_8     "ru-RU"
 #   define LOCALE_zh_CN_UTF_8     "zh-CN"
-#elif defined(__CloudABI__)
-    // Timezones are integrated into locales through LC_TIMEZONE_MASK on
-    // CloudABI. LC_ALL_MASK can only be used if a timezone has also been
-    // provided. UTC should be all right.
-#   define LOCALE_en_US           "en_US"
-#   define LOCALE_en_US_UTF_8     "en_US.UTF-8@UTC"
-#   define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8@UTC"
-#   define LOCALE_fr_CA_ISO8859_1 "fr_CA.ISO-8859-1@UTC"
-#   define LOCALE_cs_CZ_ISO8859_2 "cs_CZ.ISO-8859-2@UTC"
-#   define LOCALE_ru_RU_UTF_8     "ru_RU.UTF-8@UTC"
-#   define LOCALE_zh_CN_UTF_8     "zh_CN.UTF-8@UTC"
 #else
 #   define LOCALE_en_US           "en_US"
 #   define LOCALE_en_US_UTF_8     "en_US.UTF-8"
@@ -56,7 +45,7 @@
 #include <codecvt>
 #include <locale>
 #include <string>
-#if defined(_WIN32) || defined(__MINGW32__)
+#if defined(_WIN32)
 #   include <io.h> // _mktemp_s
 #else
 #   include <unistd.h> // close
@@ -69,17 +58,10 @@ extern "C" {
 }
 #endif
 
-#ifndef __CloudABI__
 inline
 std::string get_temp_file_name()
 {
-#if defined(__MINGW32__)
-    char Path[MAX_PATH + 1];
-    char FN[MAX_PATH + 1];
-    do { } while (0 == GetTempPath(MAX_PATH+1, Path));
-    do { } while (0 == GetTempFileName(Path, "libcxx", 0, FN));
-    return FN;
-#elif defined(_WIN32)
+#if defined(_WIN32)
     char Name[] = "libcxx.XXXXXX";
     if (_mktemp_s(Name, sizeof(Name)) != 0) abort();
     return Name;
@@ -108,6 +90,18 @@ std::wstring get_wide_temp_file_name()
 }
 #endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
 
-#endif // __CloudABI__
+#if defined(_CS_GNU_LIBC_VERSION)
+inline bool glibc_version_less_than(char const* version) {
+  std::string test_version = std::string("glibc ") + version;
+
+  size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, (size_t)0);
+  char *current_version = new char[n];
+  confstr(_CS_GNU_LIBC_VERSION, current_version, n);
+
+  bool result = strverscmp(current_version, test_version.c_str()) < 0;
+  delete[] current_version;
+  return result;
+}
+#endif // _CS_GNU_LIBC_VERSION
 
 #endif // PLATFORM_SUPPORT_H

@@ -333,7 +333,7 @@ body:             |
   
     %1:g8rc = COPY $x4
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %0, $x0 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: li 3, 44
     ; CHECK: ldx 3, 3, 0
     $x3 = COPY %2
@@ -381,7 +381,7 @@ body:             |
   
     %1:g8rc = LI8 44
     %0:g8rc_and_g8rc_nox0 = LI8 44
-    %2:g8rc = LDX $zero8, %1 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX $zero8, %1 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(0)
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -428,7 +428,7 @@ body:             |
   
     $x0 = LI8 44
     %0:g8rc_and_g8rc_nox0 = COPY $x3
-    %2:g8rc = LDX %0, $x0 :: (load 8 from %ir.1, !tbaa !3)
+    %2:g8rc = LDX %0, $x0 :: (load (s64) from %ir.1, !tbaa !3)
     ; CHECK: ld 3, 44(3)
     $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit $x3

@@ -621,6 +621,7 @@ def : ReadAdvance<ReadID,      0>;
 def : ReadAdvance<ReadExtrHi,  0>;
 def : ReadAdvance<ReadAdrBase, 0>;
 def : ReadAdvance<ReadVLD,     0>;
+def : ReadAdvance<ReadST,      0>;
 
 //===----------------------------------------------------------------------===//
 // 3. Instruction Tables.
@@ -1356,7 +1357,12 @@ def : InstRW<[THX3T110Write_5Cyc_F01], (instrs FMOVXDHighr, FMOVDXHighr)>;
 // ASIMD shift by register, basic, Q-form
 // ASIMD shift by register, complex, D-form
 // ASIMD shift by register, complex, Q-form
-def : WriteRes<WriteV, [THX3T110FP0123]> {
+def : WriteRes<WriteVd, [THX3T110FP0123]> {
+  let Latency = 5;
+  let NumMicroOps = 4;
+  let ResourceCycles = [4];
+}
+def : WriteRes<WriteVq, [THX3T110FP0123]> {
   let Latency = 5;
   let NumMicroOps = 4;
   let ResourceCycles = [4];

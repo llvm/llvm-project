@@ -419,10 +419,8 @@ public:
     explicit limited_allocator(limited_allocator<U, N> const& other)
         : handle_(other.handle_) {}
 
-private:
-    limited_allocator& operator=(const limited_allocator&);// = delete;
+    limited_allocator& operator=(const limited_allocator&) = delete;
 
-public:
     pointer allocate(size_type n) { return handle_->template allocate<T>(n); }
     void deallocate(pointer p, size_type n) { handle_->deallocate(p, n); }
     size_type max_size() const {return N;}
@@ -443,4 +441,4 @@ inline bool operator!=(limited_allocator<T, N> const& LHS,
 }
 
 
-#endif  // TEST_ALLOCATOR_H
+#endif // TEST_ALLOCATOR_H

@@ -24,8 +24,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SymbolRemappingReader.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -41,7 +41,7 @@ using namespace llvm;
 static Expected<std::unique_ptr<MemoryBuffer>>
 setupMemoryBuffer(const Twine &Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
+      MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/true);
   if (std::error_code EC = BufferOrErr.getError())
     return errorCodeToError(EC);
   return std::move(BufferOrErr.get());
@@ -159,16 +159,16 @@ Error TextInstrProfReader::readHeader() {
 
   while (Line->startswith(":")) {
     StringRef Str = Line->substr(1);
-    if (Str.equals_lower("ir"))
+    if (Str.equals_insensitive("ir"))
       IsIRInstr = true;
-    else if (Str.equals_lower("fe"))
+    else if (Str.equals_insensitive("fe"))
       IsIRInstr = false;
-    else if (Str.equals_lower("csir")) {
+    else if (Str.equals_insensitive("csir")) {
       IsIRInstr = true;
       IsCS = true;
-    } else if (Str.equals_lower("entry_first"))
+    } else if (Str.equals_insensitive("entry_first"))
       IsEntryFirst = true;
-    else if (Str.equals_lower("not_entry_first"))
+    else if (Str.equals_insensitive("not_entry_first"))
       IsEntryFirst = false;
     else
       return error(instrprof_error::bad_header);
@@ -366,6 +366,10 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   if (GET_VERSION(Version) != RawInstrProf::Version)
     return error(instrprof_error::unsupported_version);
 
+  BinaryIdsSize = swap(Header.BinaryIdsSize);
+  if (BinaryIdsSize % sizeof(uint64_t))
+    return error(instrprof_error::bad_header);
+
   CountersDelta = swap(Header.CountersDelta);
   NamesDelta = swap(Header.NamesDelta);
   auto DataSize = swap(Header.DataSize);
@@ -378,7 +382,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto DataSizeInBytes = DataSize * sizeof(RawInstrProf::ProfileData<IntPtrT>);
   auto PaddingSize = getNumPaddingBytes(NamesSize);
 
-  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header);
+  // Profile data starts after profile header and binary ids if exist.
+  ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
   ptrdiff_t CountersOffset =
       DataOffset + DataSizeInBytes + PaddingBytesBeforeCounters;
   ptrdiff_t NamesOffset = CountersOffset + (sizeof(uint64_t) * CountersSize) +
@@ -392,9 +397,17 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
       Start + DataOffset);
   DataEnd = Data + DataSize;
+
+  // Binary ids start just after the header.
+  BinaryIdsStart =
+      reinterpret_cast<const uint8_t *>(&Header) + sizeof(RawInstrProf::Header);
   CountersStart = reinterpret_cast<const uint64_t *>(Start + CountersOffset);
   NamesStart = Start + NamesOffset;
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
+
+  const uint8_t *BufferEnd = (const uint8_t *)DataBuffer->getBufferEnd();
+  if (BinaryIdsStart + BinaryIdsSize > BufferEnd)
+    return error(instrprof_error::bad_header);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = createSymtab(*NewSymtab.get()))
@@ -431,7 +444,15 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   // may itself be corrupt.
   if (MaxNumCounters < 0 || NumCounters > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);
+
+  // We need to compute the in-buffer counter offset from the in-memory address
+  // distance. The initial CountersDelta is the in-memory address difference
+  // start(__llvm_prf_cnts)-start(__llvm_prf_data), so SrcData->CounterPtr -
+  // CountersDelta computes the offset into the in-buffer counter section.
+  //
+  // CountersDelta decreases as we advance to the next data record.
   ptrdiff_t CounterOffset = getCounterOffset(CounterPtr);
+  CountersDelta -= sizeof(*Data);
   if (CounterOffset < 0 || CounterOffset > MaxNumCounters ||
       ((uint32_t)CounterOffset + NumCounters) > (uint32_t)MaxNumCounters)
     return error(instrprof_error::malformed);
@@ -503,6 +524,51 @@ Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) 
 
   // Iterate.
   advanceData();
+  return success();
+}
+
+static size_t RoundUp(size_t size, size_t align) {
+  return (size + align - 1) & ~(align - 1);
+}
+
+template <class IntPtrT>
+Error RawInstrProfReader<IntPtrT>::printBinaryIds(raw_ostream &OS) {
+  if (BinaryIdsSize == 0)
+    return success();
+
+  OS << "Binary IDs: \n";
+  const uint8_t *BI = BinaryIdsStart;
+  const uint8_t *BIEnd = BinaryIdsStart + BinaryIdsSize;
+  while (BI < BIEnd) {
+    size_t Remaining = BIEnd - BI;
+
+    // There should be enough left to read the binary ID size field.
+    if (Remaining < sizeof(uint64_t))
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
+    uint64_t BinaryIdLen = swap(*reinterpret_cast<const uint64_t *>(BI));
+
+    // There should be enough left to read the binary ID size field, and the
+    // binary ID.
+    if (Remaining < sizeof(BinaryIdLen) + BinaryIdLen)
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
+    // Increment by binary id length data type size.
+    BI += sizeof(BinaryIdLen);
+    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::malformed);
+
+    for (uint64_t I = 0; I < BinaryIdLen; I++)
+      OS << format("%02x", BI[I]);
+    OS << "\n";
+
+    // Increment by binary id data length, rounded to the next 8 bytes. This
+    // accounts for the zero-padding after each build ID.
+    BI += RoundUp(BinaryIdLen, sizeof(uint64_t));
+    if (BI > (const uint8_t *)DataBuffer->getBufferEnd())
+      return make_error<InstrProfError>(instrprof_error::malformed);
+  }
+
   return success();
 }
 

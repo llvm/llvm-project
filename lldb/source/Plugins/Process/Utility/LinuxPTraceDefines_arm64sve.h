@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_LINUXPTRACEDEFINES_ARM64SVE_H
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 namespace sve {
@@ -65,7 +65,7 @@ const uint16_t sve_context_size = 16;
  * The same convention applies when returning from a signal: a caller
  * will need to remove or resize the sve_context block if it wants to
  * make the SVE registers live when they were previously non-live or
- * vice-versa.  This may require the the caller to allocate fresh
+ * vice-versa.  This may require the caller to allocate fresh
  * memory and/or move other context blocks in the signal frame.
  *
  * Changing the vector length during signal return is not permitted:

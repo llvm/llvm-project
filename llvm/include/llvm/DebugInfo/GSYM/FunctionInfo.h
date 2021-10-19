@@ -15,11 +15,12 @@
 #include "llvm/DebugInfo/GSYM/LookupResult.h"
 #include "llvm/DebugInfo/GSYM/Range.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include <cstdint>
 #include <tuple>
-#include <vector>
 
 namespace llvm {
 class raw_ostream;
+
 namespace gsym {
 
 class GsymReader;
@@ -213,4 +214,4 @@ raw_ostream &operator<<(raw_ostream &OS, const FunctionInfo &R);
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H
+#endif // LLVM_DEBUGINFO_GSYM_FUNCTIONINFO_H

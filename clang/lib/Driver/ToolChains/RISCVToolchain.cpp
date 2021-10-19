@@ -8,8 +8,8 @@
 
 #include "RISCVToolchain.h"
 #include "CommonArgs.h"
-#include "InputInfo.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,6 +29,21 @@ static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
   if (const auto &PathsCallback = Multilibs.filePathsCallback())
     for (const auto &Path : PathsCallback(Multilib))
       addPathIfExists(D, InstallPath + Path, Paths);
+}
+
+// This function tests whether a gcc installation is present either
+// through gcc-toolchain argument or in the same prefix where clang
+// is installed. This helps decide whether to instantiate this toolchain
+// or Baremetal toolchain.
+bool RISCVToolChain::hasGCCToolchain(const Driver &D,
+                                     const llvm::opt::ArgList &Args) {
+  if (Args.getLastArg(options::OPT_gcc_toolchain))
+    return true;
+
+  SmallString<128> GCCDir;
+  llvm::sys::path::append(GCCDir, D.Dir, "..", D.getTargetTriple(),
+                          "lib/crt0.o");
+  return llvm::sys::fs::exists(GCCDir);
 }
 
 /// RISCV Toolchain
@@ -97,7 +112,8 @@ void RISCVToolChain::addLibStdCxxIncludePaths(
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   addLibStdCXXIncludePaths(computeSysRoot() + "/include/c++/" + Version.Text,
-      "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+                           TripleStr, Multilib.includeSuffix(), DriverArgs,
+                           CC1Args);
 }
 
 std::string RISCVToolChain::computeSysRoot() const {
@@ -165,13 +181,14 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
   Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.AddAllArgs(CmdArgs, options::OPT_u);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_T_Group, options::OPT_e, options::OPT_s,
                    options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
-
-  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   // TODO: add C++ includes and libs if compiling C++.
 
@@ -191,8 +208,8 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
-  C.addCommand(
-      std::make_unique<Command>(JA, *this, ResponseFileSupport::AtFileCurCP(),
-                                Args.MakeArgString(Linker), CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
+      CmdArgs, Inputs, Output));
 }
 // RISCV tools end.

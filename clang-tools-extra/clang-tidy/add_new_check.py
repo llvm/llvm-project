@@ -9,18 +9,24 @@
 #===-----------------------------------------------------------------------===#
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
+import io
 import os
 import re
 import sys
-
 
 # Adapts the module's CMakelist file. Returns 'True' if it could add a new
 # entry and 'False' if the entry already existed.
 def adapt_cmake(module_path, check_name_camel):
   filename = os.path.join(module_path, 'CMakeLists.txt')
-  with open(filename, 'r') as f:
+
+  # The documentation files are encoded using UTF-8, however on Windows the
+  # default encoding might be different (e.g. CP-1252). To make sure UTF-8 is
+  # always used, use `io.open(filename, mode, encoding='utf8')` for reading and
+  # writing files here and elsewhere.
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   cpp_file = check_name_camel + '.cpp'
@@ -31,7 +37,7 @@ def adapt_cmake(module_path, check_name_camel):
       return False
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     cpp_found = False
     file_added = False
     for line in lines:
@@ -51,7 +57,7 @@ def write_header(module_path, module, namespace, check_name, check_name_camel):
   check_name_dashes = module + '-' + check_name
   filename = os.path.join(module_path, check_name_camel) + '.h'
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     header_guard = ('LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_' + module.upper() + '_'
                     + check_name_camel.upper() + '_H')
     f.write('//===--- ')
@@ -104,7 +110,7 @@ public:
 def write_implementation(module_path, module, namespace, check_name_camel):
   filename = os.path.join(module_path, check_name_camel) + '.cpp'
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     f.write('//===--- ')
     f.write(os.path.basename(filename))
     f.write(' - clang-tidy ')
@@ -158,11 +164,11 @@ def adapt_module(module_path, module, check_name, check_name_camel):
       lambda p: p.lower() == module.lower() + 'tidymodule.cpp',
       os.listdir(module_path)))[0]
   filename = os.path.join(module_path, modulecpp)
-  with open(filename, 'r') as f:
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     header_added = False
     header_found = False
     check_added = False
@@ -217,7 +223,7 @@ def add_release_notes(module_path, module, check_name):
   check_name_dashes = module + '-' + check_name
   filename = os.path.normpath(os.path.join(module_path,
                                            '../../docs/ReleaseNotes.rst'))
-  with open(filename, 'r') as f:
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
 
   lineMatcher = re.compile('New checks')
@@ -225,7 +231,7 @@ def add_release_notes(module_path, module, check_name):
   checkMatcher = re.compile('- New :doc:`(.*)')
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     note_added = False
     header_found = False
     add_note_here = False
@@ -271,7 +277,7 @@ def write_test(module_path, module, check_name, test_extension):
   filename = os.path.normpath(os.path.join(module_path, '../../test/clang-tidy/checkers',
                                            check_name_dashes + '.' + test_extension))
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     f.write("""// RUN: %%check_clang_tidy %%s %(check_name_dashes)s %%t
 
 // FIXME: Add something that triggers the check here.
@@ -307,7 +313,7 @@ def update_checks_list(clang_tidy_path):
   docs_dir = os.path.join(clang_tidy_path, '../docs/clang-tidy/checks')
   filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
   # Read the content of the current list.rst file
-  with open(filename, 'r') as f:
+  with io.open(filename, 'r', encoding='utf8') as f:
     lines = f.readlines()
   # Get all existing docs
   doc_files = list(filter(lambda s: s.endswith('.rst') and s != 'list.rst',
@@ -317,13 +323,13 @@ def update_checks_list(clang_tidy_path):
   def has_auto_fix(check_name):
     dirname, _, check_name = check_name.partition("-")
 
-    checkerCode = get_actual_filename(dirname,
-                                      get_camel_name(check_name) + '.cpp')
+    checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                       get_camel_name(check_name) + '.cpp')
 
-    if not os.path.isfile(checkerCode):
+    if not os.path.isfile(checker_code):
       return ""
 
-    with open(checkerCode) as f:
+    with io.open(checker_code, encoding='utf8') as f:
       code = f.read()
       if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
         # Some simple heuristics to figure out if a checker has an autofix or not.
@@ -333,7 +339,7 @@ def update_checks_list(clang_tidy_path):
   def process_doc(doc_file):
     check_name = doc_file.replace('.rst', '')
 
-    with open(os.path.join(docs_dir, doc_file), 'r') as doc:
+    with io.open(os.path.join(docs_dir, doc_file), 'r', encoding='utf8') as doc:
       content = doc.read()
       match = re.search('.*:orphan:.*', content)
 
@@ -376,7 +382,7 @@ def update_checks_list(clang_tidy_path):
   checks_alias = map(format_link_alias, doc_files)
 
   print('Updating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     for line in lines:
       f.write(line)
       if line.strip() == ".. csv-table::":
@@ -397,7 +403,7 @@ def write_docs(module_path, module, check_name):
   filename = os.path.normpath(os.path.join(
       module_path, '../../docs/clang-tidy/checks/', check_name_dashes + '.rst'))
   print('Creating %s...' % filename)
-  with open(filename, 'w') as f:
+  with io.open(filename, 'w', encoding='utf8') as f:
     f.write(""".. title:: clang-tidy - %(check_name_dashes)s
 
 %(check_name_dashes)s

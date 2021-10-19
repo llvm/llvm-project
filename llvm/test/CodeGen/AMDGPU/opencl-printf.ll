@@ -1,6 +1,7 @@
 ; RUN: opt -mtriple=r600-- -amdgpu-printf-runtime-binding -mcpu=r600 -S < %s | FileCheck --check-prefix=FUNC --check-prefix=R600 %s
 ; RUN: opt -mtriple=amdgcn-- -amdgpu-printf-runtime-binding -mcpu=fiji -S < %s | FileCheck --check-prefix=FUNC --check-prefix=GCN %s
 ; RUN: opt -mtriple=amdgcn--amdhsa -amdgpu-printf-runtime-binding -mcpu=fiji -S < %s | FileCheck --check-prefix=FUNC --check-prefix=GCN %s
+; RUN: opt -mtriple=amdgcn--amdhsa -passes=amdgpu-printf-runtime-binding -mcpu=fiji -S < %s | FileCheck --check-prefix=FUNC --check-prefix=GCN %s
 
 ; FUNC-LABEL: @test_kernel(
 ; R600-LABEL: entry

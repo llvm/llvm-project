@@ -92,10 +92,35 @@ AffineExpr::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
   llvm_unreachable("Unknown AffineExpr");
 }
 
-/// Replace symbols[0 .. numDims - 1] by symbols[shift .. shift + numDims - 1].
-AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift) const {
+AffineExpr AffineExpr::replaceDims(ArrayRef<AffineExpr> dimReplacements) const {
+  return replaceDimsAndSymbols(dimReplacements, {});
+}
+
+AffineExpr
+AffineExpr::replaceSymbols(ArrayRef<AffineExpr> symReplacements) const {
+  return replaceDimsAndSymbols({}, symReplacements);
+}
+
+/// Replace dims[offset ... numDims)
+/// by dims[offset + shift ... shift + numDims).
+AffineExpr AffineExpr::shiftDims(unsigned numDims, unsigned shift,
+                                 unsigned offset) const {
+  SmallVector<AffineExpr, 4> dims;
+  for (unsigned idx = 0; idx < offset; ++idx)
+    dims.push_back(getAffineDimExpr(idx, getContext()));
+  for (unsigned idx = offset; idx < numDims; ++idx)
+    dims.push_back(getAffineDimExpr(idx + shift, getContext()));
+  return replaceDimsAndSymbols(dims, {});
+}
+
+/// Replace symbols[offset ... numSymbols)
+/// by symbols[offset + shift ... shift + numSymbols).
+AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift,
+                                    unsigned offset) const {
   SmallVector<AffineExpr, 4> symbols;
-  for (unsigned idx = 0; idx < numSymbols; ++idx)
+  for (unsigned idx = 0; idx < offset; ++idx)
+    symbols.push_back(getAffineSymbolExpr(idx, getContext()));
+  for (unsigned idx = offset; idx < numSymbols; ++idx)
     symbols.push_back(getAffineSymbolExpr(idx + shift, getContext()));
   return replaceDimsAndSymbols({}, symbols);
 }
@@ -257,6 +282,17 @@ bool AffineExpr::isFunctionOfDim(unsigned position) const {
   if (auto expr = this->dyn_cast<AffineBinaryOpExpr>()) {
     return expr.getLHS().isFunctionOfDim(position) ||
            expr.getRHS().isFunctionOfDim(position);
+  }
+  return false;
+}
+
+bool AffineExpr::isFunctionOfSymbol(unsigned position) const {
+  if (getKind() == AffineExprKind::SymbolId) {
+    return *this == mlir::getAffineSymbolExpr(position, getContext());
+  }
+  if (auto expr = this->dyn_cast<AffineBinaryOpExpr>()) {
+    return expr.getLHS().isFunctionOfSymbol(position) ||
+           expr.getRHS().isFunctionOfSymbol(position);
   }
   return false;
 }
@@ -791,6 +827,15 @@ static AffineExpr simplifyMod(AffineExpr lhs, AffineExpr rhs) {
       return lBin.getRHS() % rhsConst.getValue();
     if (lrhsDiv % rhsConst.getValue() == 0)
       return lBin.getLHS() % rhsConst.getValue();
+  }
+
+  // Simplify (e % a) % b to e % b when b evenly divides a
+  if (lBin && lBin.getKind() == AffineExprKind::Mod) {
+    auto intermediate = lBin.getRHS().dyn_cast<AffineConstantExpr>();
+    if (intermediate && intermediate.getValue() >= 1 &&
+        mod(intermediate.getValue(), rhsConst.getValue()) == 0) {
+      return lBin.getLHS() % rhsConst.getValue();
+    }
   }
 
   return nullptr;

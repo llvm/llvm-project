@@ -41,8 +41,8 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/SanitizerBlacklist.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -102,7 +102,7 @@ bool Decl::isOutOfLine() const {
 
 TranslationUnitDecl::TranslationUnitDecl(ASTContext &ctx)
     : Decl(TranslationUnit, nullptr, SourceLocation()),
-      DeclContext(TranslationUnit), Ctx(ctx) {}
+      DeclContext(TranslationUnit), redeclarable_base(ctx), Ctx(ctx) {}
 
 //===----------------------------------------------------------------------===//
 // NamedDecl Implementation
@@ -1078,6 +1078,44 @@ bool NamedDecl::isLinkageValid() const {
   return L == getCachedLinkage();
 }
 
+ReservedIdentifierStatus
+NamedDecl::isReserved(const LangOptions &LangOpts) const {
+  const IdentifierInfo *II = getIdentifier();
+
+  // This triggers at least for CXXLiteralIdentifiers, which we already checked
+  // at lexing time.
+  if (!II)
+    return ReservedIdentifierStatus::NotReserved;
+
+  ReservedIdentifierStatus Status = II->isReserved(LangOpts);
+  if (isReservedAtGlobalScope(Status) && !isReservedInAllContexts(Status)) {
+    // This name is only reserved at global scope. Check if this declaration
+    // conflicts with a global scope declaration.
+    if (isa<ParmVarDecl>(this) || isTemplateParameter())
+      return ReservedIdentifierStatus::NotReserved;
+
+    // C++ [dcl.link]/7:
+    //   Two declarations [conflict] if [...] one declares a function or
+    //   variable with C language linkage, and the other declares [...] a
+    //   variable that belongs to the global scope.
+    //
+    // Therefore names that are reserved at global scope are also reserved as
+    // names of variables and functions with C language linkage.
+    const DeclContext *DC = getDeclContext()->getRedeclContext();
+    if (DC->isTranslationUnit())
+      return Status;
+    if (auto *VD = dyn_cast<VarDecl>(this))
+      if (VD->isExternC())
+        return ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
+    if (auto *FD = dyn_cast<FunctionDecl>(this))
+      if (FD->isExternC())
+        return ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
+    return ReservedIdentifierStatus::NotReserved;
+  }
+
+  return Status;
+}
+
 ObjCStringFormatFamily NamedDecl::getObjCFStringFormattingFamily() const {
   StringRef name = getName();
   if (name.empty()) return SFF_None;
@@ -1299,7 +1337,8 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
     // we should not make static local variables in the function hidden.
     LV = getLVForDecl(FD, computation);
     if (isa<VarDecl>(D) && useInlineVisibilityHidden(FD) &&
-        !LV.isVisibilityExplicit()) {
+        !LV.isVisibilityExplicit() &&
+        !Context.getLangOpts().VisibilityInlinesHiddenStaticLocalVar) {
       assert(cast<VarDecl>(D)->isStaticLocal());
       // If this was an implicitly hidden inline method, check again for
       // explicit visibility on the parent class, and use that for static locals
@@ -1346,6 +1385,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
     case Decl::NamespaceAlias:
     case Decl::ParmVar:
     case Decl::Using:
+    case Decl::UsingEnum:
     case Decl::UsingShadow:
     case Decl::UsingDirective:
       return LinkageInfo::none();
@@ -1393,6 +1433,15 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
       }
 
       break;
+    }
+
+    case Decl::TemplateParamObject: {
+      // The template parameter object can be referenced from anywhere its type
+      // and value can be referenced.
+      auto *TPO = cast<TemplateParamObjectDecl>(D);
+      LinkageInfo LV = getLVForType(*TPO->getType(), computation);
+      LV.merge(getLVForValue(TPO->getValue(), computation));
+      return LV;
     }
   }
 
@@ -1477,10 +1526,13 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
 }
 
 LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
-  return getLVForDecl(D,
-                      LVComputationKind(usesTypeVisibility(D)
-                                            ? NamedDecl::VisibilityForType
-                                            : NamedDecl::VisibilityForValue));
+  NamedDecl::ExplicitVisibilityKind EK = usesTypeVisibility(D)
+                                             ? NamedDecl::VisibilityForType
+                                             : NamedDecl::VisibilityForValue;
+  LVComputationKind CK(EK);
+  return getLVForDecl(D, D->getASTContext().getLangOpts().IgnoreXCOFFVisibility
+                             ? CK.forLinkageOnly()
+                             : CK);
 }
 
 Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
@@ -1590,21 +1642,36 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
   ContextsTy Contexts;
 
   // Collect named contexts.
-  while (Ctx) {
-    if (isa<NamedDecl>(Ctx))
-      Contexts.push_back(Ctx);
-    Ctx = Ctx->getParent();
+  DeclarationName NameInScope = getDeclName();
+  for (; Ctx; Ctx = Ctx->getParent()) {
+    // Suppress anonymous namespace if requested.
+    if (P.SuppressUnwrittenScope && isa<NamespaceDecl>(Ctx) &&
+        cast<NamespaceDecl>(Ctx)->isAnonymousNamespace())
+      continue;
+
+    // Suppress inline namespace if it doesn't make the result ambiguous.
+    if (P.SuppressInlineNamespace && Ctx->isInlineNamespace() && NameInScope &&
+        cast<NamespaceDecl>(Ctx)->isRedundantInlineQualifierFor(NameInScope))
+      continue;
+
+    // Skip non-named contexts such as linkage specifications and ExportDecls.
+    const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
+    if (!ND)
+      continue;
+
+    Contexts.push_back(Ctx);
+    NameInScope = ND->getDeclName();
   }
 
-  for (const DeclContext *DC : llvm::reverse(Contexts)) {
+  for (unsigned I = Contexts.size(); I != 0; --I) {
+    const DeclContext *DC = Contexts[I - 1];
     if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-      printTemplateArgumentList(OS, TemplateArgs.asArray(), P);
+      printTemplateArgumentList(
+          OS, TemplateArgs.asArray(), P,
+          Spec->getSpecializedTemplate()->getTemplateParameters());
     } else if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
-      if (P.SuppressUnwrittenScope &&
-          (ND->isAnonymousNamespace() || ND->isInline()))
-        continue;
       if (ND->isAnonymousNamespace()) {
         OS << (P.MSVCFormatting ? "`anonymous namespace\'"
                                 : "(anonymous namespace)");
@@ -1797,8 +1864,7 @@ template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
   if (decl->getNumTemplateParameterLists() > 0)
     return decl->getTemplateParameterList(0)->getTemplateLoc();
-  else
-    return decl->getInnerLocStart();
+  return decl->getInnerLocStart();
 }
 
 SourceLocation DeclaratorDecl::getTypeSpecStartLoc() const {
@@ -2106,10 +2172,9 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    else if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && isInline())
       return Definition;
-    else
-      return DeclarationOnly;
+    return DeclarationOnly;
   }
   // C99 6.7p5:
   //   A definition of an identifier is a declaration for that identifier that
@@ -2167,14 +2232,18 @@ VarDecl *VarDecl::getActingDefinition() {
     return nullptr;
 
   VarDecl *LastTentative = nullptr;
-  VarDecl *First = getFirstDecl();
-  for (auto I : First->redecls()) {
-    Kind = I->isThisDeclarationADefinition();
+
+  // Loop through the declaration chain, starting with the most recent.
+  for (VarDecl *Decl = getMostRecentDecl(); Decl;
+       Decl = Decl->getPreviousDecl()) {
+    Kind = Decl->isThisDeclarationADefinition();
     if (Kind == Definition)
       return nullptr;
-    else if (Kind == TentativeDefinition)
-      LastTentative = I;
+    // Record the first (most recent) TentativeDefinition that is encountered.
+    if (Kind == TentativeDefinition && !LastTentative)
+      LastTentative = Decl;
   }
+
   return LastTentative;
 }
 
@@ -2244,8 +2313,7 @@ VarDecl *VarDecl::getInitializingDeclaration() {
     if (I->isThisDeclarationADefinition()) {
       if (isStaticDataMember())
         return I;
-      else
-        Def = I;
+      Def = I;
     }
   }
   return Def;
@@ -2276,14 +2344,20 @@ void VarDecl::setInit(Expr *I) {
   Init = I;
 }
 
-bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
+bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   const LangOptions &Lang = C.getLangOpts();
 
-  if (!Lang.CPlusPlus)
+  // OpenCL permits const integral variables to be used in constant
+  // expressions, like in C++98.
+  if (!Lang.CPlusPlus && !Lang.OpenCL)
     return false;
 
   // Function parameters are never usable in constant expressions.
   if (isa<ParmVarDecl>(this))
+    return false;
+
+  // The values of weak variables are never usable in constant expressions.
+  if (isWeak())
     return false;
 
   // In C++11, any variable of reference type can be used in a constant
@@ -2294,7 +2368,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
   // Only const objects can be used in constant expressions in C++. C++98 does
   // not require the variable to be non-volatile, but we consider this to be a
   // defect.
-  if (!getType().isConstQualified() || getType().isVolatileQualified())
+  if (!getType().isConstant(C) || getType().isVolatileQualified())
     return false;
 
   // In C++, const, non-volatile variables of integral or enumeration types
@@ -2307,7 +2381,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
   return Lang.CPlusPlus11 && isConstexpr();
 }
 
-bool VarDecl::isUsableInConstantExpressions(ASTContext &Context) const {
+bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
   // C++2a [expr.const]p3:
   //   A variable is usable in constant expressions after its initializing
   //   declaration is encountered...
@@ -2320,7 +2394,16 @@ bool VarDecl::isUsableInConstantExpressions(ASTContext &Context) const {
   if (!DefVD->mightBeUsableInConstantExpressions(Context))
     return false;
   //   ... and its initializer is a constant initializer.
-  return DefVD->checkInitIsICE();
+  if (Context.getLangOpts().CPlusPlus && !DefVD->hasConstantInitialization())
+    return false;
+  // C++98 [expr.const]p1:
+  //   An integral constant-expression can involve only [...] const variables
+  //   or static data members of integral or enumeration types initialized with
+  //   [integer] constant expressions (dcl.init)
+  if ((Context.getLangOpts().CPlusPlus || Context.getLangOpts().OpenCL) &&
+      !Context.getLangOpts().CPlusPlus11 && !DefVD->hasICEInitializer(Context))
+    return false;
+  return true;
 }
 
 /// Convert the initializer for this declaration to the elaborated EvaluatedStmt
@@ -2340,14 +2423,21 @@ EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
   return Eval;
 }
 
-APValue *VarDecl::evaluateValue() const {
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValue(Notes);
+EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
+  return Init.dyn_cast<EvaluatedStmt *>();
 }
 
-APValue *VarDecl::evaluateValue(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+APValue *VarDecl::evaluateValue() const {
+  SmallVector<PartialDiagnosticAt, 8> Notes;
+  return evaluateValueImpl(Notes, hasConstantInitialization());
+}
+
+APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                    bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
+
+  const auto *Init = cast<Expr>(Eval->Value);
+  assert(!Init->isValueDependent());
 
   // We only produce notes indicating why an initializer is non-constant the
   // first time it is evaluated. FIXME: The notes won't always be emitted the
@@ -2355,20 +2445,23 @@ APValue *VarDecl::evaluateValue(
   if (Eval->WasEvaluated)
     return Eval->Evaluated.isAbsent() ? nullptr : &Eval->Evaluated;
 
-  const auto *Init = cast<Expr>(Eval->Value);
-  assert(!Init->isValueDependent());
-
   if (Eval->IsEvaluating) {
     // FIXME: Produce a diagnostic for self-initialization.
-    Eval->CheckedICE = true;
-    Eval->IsICE = false;
     return nullptr;
   }
 
   Eval->IsEvaluating = true;
 
-  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, getASTContext(),
-                                            this, Notes);
+  ASTContext &Ctx = getASTContext();
+  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
+                                            IsConstantInitialization);
+
+  // In C++11, this isn't a constant initializer if we produced notes. In that
+  // case, we can't keep the result, because it may only be correct under the
+  // assumption that the initializer is a constant context.
+  if (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus11 &&
+      !Notes.empty())
+    Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
   // or that it's empty (so that there's nothing to clean up) if evaluation
@@ -2376,76 +2469,69 @@ APValue *VarDecl::evaluateValue(
   if (!Result)
     Eval->Evaluated = APValue();
   else if (Eval->Evaluated.needsCleanup())
-    getASTContext().addDestruction(&Eval->Evaluated);
+    Ctx.addDestruction(&Eval->Evaluated);
 
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;
-
-  // In C++11, we have determined whether the initializer was a constant
-  // expression as a side-effect.
-  if (getASTContext().getLangOpts().CPlusPlus11 && !Eval->CheckedICE) {
-    Eval->CheckedICE = true;
-    Eval->IsICE = Result && Notes.empty();
-  }
 
   return Result ? &Eval->Evaluated : nullptr;
 }
 
 APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
+  if (EvaluatedStmt *Eval = getEvaluatedStmt())
     if (Eval->WasEvaluated)
       return &Eval->Evaluated;
 
   return nullptr;
 }
 
-bool VarDecl::isInitKnownICE() const {
-  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
-    return Eval->CheckedICE;
+bool VarDecl::hasICEInitializer(const ASTContext &Context) const {
+  const Expr *Init = getInit();
+  assert(Init && "no initializer");
+
+  EvaluatedStmt *Eval = ensureEvaluatedStmt();
+  if (!Eval->CheckedForICEInit) {
+    Eval->CheckedForICEInit = true;
+    Eval->HasICEInit = Init->isIntegerConstantExpr(Context);
+  }
+  return Eval->HasICEInit;
+}
+
+bool VarDecl::hasConstantInitialization() const {
+  // In C, all globals (and only globals) have constant initialization.
+  if (hasGlobalStorage() && !getASTContext().getLangOpts().CPlusPlus)
+    return true;
+
+  // In C++, it depends on whether the evaluation at the point of definition
+  // was evaluatable as a constant initializer.
+  if (EvaluatedStmt *Eval = getEvaluatedStmt())
+    return Eval->HasConstantInitialization;
 
   return false;
 }
 
-bool VarDecl::isInitICE() const {
-  assert(isInitKnownICE() &&
-         "Check whether we already know that the initializer is an ICE");
-  return Init.get<EvaluatedStmt *>()->IsICE;
-}
-
-bool VarDecl::checkInitIsICE() const {
-  // Initializers of weak variables are never ICEs.
-  if (isWeak())
-    return false;
-
+bool VarDecl::checkForConstantInitialization(
+    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
-  if (Eval->CheckedICE)
-    // We have already checked whether this subexpression is an
-    // integral constant expression.
-    return Eval->IsICE;
+  // If we ask for the value before we know whether we have a constant
+  // initializer, we can compute the wrong value (for example, due to
+  // std::is_constant_evaluated()).
+  assert(!Eval->WasEvaluated &&
+         "already evaluated var value before checking for constant init");
+  assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
 
-  const auto *Init = cast<Expr>(Eval->Value);
-  assert(!Init->isValueDependent());
+  assert(!cast<Expr>(Eval->Value)->isValueDependent());
 
-  // In C++11, evaluate the initializer to check whether it's a constant
-  // expression.
-  if (getASTContext().getLangOpts().CPlusPlus11) {
-    SmallVector<PartialDiagnosticAt, 8> Notes;
-    evaluateValue(Notes);
-    return Eval->IsICE;
-  }
+  // Evaluate the initializer to check whether it's a constant expression.
+  Eval->HasConstantInitialization =
+      evaluateValueImpl(Notes, true) && Notes.empty();
 
-  // It's an ICE whether or not the definition we found is
-  // out-of-line.  See DR 721 and the discussion in Clang PR
-  // 6206 for details.
+  // If evaluation as a constant initializer failed, allow re-evaluation as a
+  // non-constant initializer if we later find we want the value.
+  if (!Eval->HasConstantInitialization)
+    Eval->WasEvaluated = false;
 
-  if (Eval->CheckingICE)
-    return false;
-  Eval->CheckingICE = true;
-
-  Eval->IsICE = Init->isIntegerConstantExpr(getASTContext());
-  Eval->CheckingICE = false;
-  Eval->CheckedICE = true;
-  return Eval->IsICE;
+  return Eval->HasConstantInitialization;
 }
 
 bool VarDecl::isParameterPack() const {
@@ -2466,6 +2552,14 @@ bool VarDecl::isEscapingByref() const {
 
 bool VarDecl::isNonEscapingByref() const {
   return hasAttr<BlocksAttr>() && !NonParmVarDeclBits.EscapingByref;
+}
+
+bool VarDecl::hasDependentAlignment() const {
+  QualType T = getType();
+  return T->isDependentType() || T->isUndeducedAutoType() ||
+         llvm::any_of(specific_attrs<AlignedAttr>(), [](const AlignedAttr *AA) {
+           return AA->isAlignmentDependent();
+         });
 }
 
 VarDecl *VarDecl::getTemplateInstantiationPattern() const {
@@ -2598,7 +2692,7 @@ bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
 
 QualType::DestructionKind
 VarDecl::needsDestruction(const ASTContext &Ctx) const {
-  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
+  if (EvaluatedStmt *Eval = getEvaluatedStmt())
     if (Eval->HasConstantDestruction)
       return QualType::DK_none;
 
@@ -2694,6 +2788,21 @@ SourceRange ParmVarDecl::getSourceRange() const {
   return DeclaratorDecl::getSourceRange();
 }
 
+bool ParmVarDecl::isDestroyedInCallee() const {
+  // ns_consumed only affects code generation in ARC
+  if (hasAttr<NSConsumedAttr>())
+    return getASTContext().getLangOpts().ObjCAutoRefCount;
+
+  // FIXME: isParamDestroyedInCallee() should probably imply
+  // isDestructedType()
+  auto *RT = getType()->getAs<RecordType>();
+  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+      getType().isDestructedType())
+    return true;
+
+  return false;
+}
+
 Expr *ParmVarDecl::getDefaultArg() {
   assert(!hasUnparsedDefaultArg() && "Default argument is not yet parsed!");
   assert(!hasUninstantiatedDefaultArg() &&
@@ -2767,7 +2876,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            SourceLocation StartLoc,
                            const DeclarationNameInfo &NameInfo, QualType T,
                            TypeSourceInfo *TInfo, StorageClass S,
-                           bool isInlineSpecified,
+                           bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
                            Expr *TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
@@ -2790,10 +2899,10 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasDefaultedFunctionInfo = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
-  FunctionDeclBits.ConstexprKind = ConstexprKind;
+  FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(ConstexprKind);
   FunctionDeclBits.InstantiationIsPending = false;
   FunctionDeclBits.UsesSEHTry = false;
-  FunctionDeclBits.UsesFPIntrin = false;
+  FunctionDeclBits.UsesFPIntrin = UsesFPIntrin;
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
@@ -2867,10 +2976,55 @@ bool FunctionDecl::hasTrivialBody() const {
   return false;
 }
 
-bool FunctionDecl::isDefined(const FunctionDecl *&Definition) const {
-  for (auto I : redecls()) {
-    if (I->isThisDeclarationADefinition()) {
-      Definition = I;
+bool FunctionDecl::isThisDeclarationInstantiatedFromAFriendDefinition() const {
+  if (!getFriendObjectKind())
+    return false;
+
+  // Check for a friend function instantiated from a friend function
+  // definition in a templated class.
+  if (const FunctionDecl *InstantiatedFrom =
+          getInstantiatedFromMemberFunction())
+    return InstantiatedFrom->getFriendObjectKind() &&
+           InstantiatedFrom->isThisDeclarationADefinition();
+
+  // Check for a friend function template instantiated from a friend
+  // function template definition in a templated class.
+  if (const FunctionTemplateDecl *Template = getDescribedFunctionTemplate()) {
+    if (const FunctionTemplateDecl *InstantiatedFrom =
+            Template->getInstantiatedFromMemberTemplate())
+      return InstantiatedFrom->getFriendObjectKind() &&
+             InstantiatedFrom->isThisDeclarationADefinition();
+  }
+
+  return false;
+}
+
+bool FunctionDecl::isDefined(const FunctionDecl *&Definition,
+                             bool CheckForPendingFriendDefinition) const {
+  for (const FunctionDecl *FD : redecls()) {
+    if (FD->isThisDeclarationADefinition()) {
+      Definition = FD;
+      return true;
+    }
+
+    // If this is a friend function defined in a class template, it does not
+    // have a body until it is used, nevertheless it is a definition, see
+    // [temp.inst]p2:
+    //
+    // ... for the purpose of determining whether an instantiated redeclaration
+    // is valid according to [basic.def.odr] and [class.mem], a declaration that
+    // corresponds to a definition in the template is considered to be a
+    // definition.
+    //
+    // The following code must produce redefinition error:
+    //
+    //     template<typename T> struct C20 { friend void func_20() {} };
+    //     C20<int> c20i;
+    //     void func_20() {}
+    //
+    if (CheckForPendingFriendDefinition &&
+        FD->isThisDeclarationInstantiatedFromAFriendDefinition()) {
+      Definition = FD;
       return true;
     }
   }
@@ -3042,7 +3196,9 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
     return false;
 
   const FunctionDecl *Definition;
-  return hasBody(Definition) && Definition->isInlineSpecified();
+  return hasBody(Definition) && Definition->isInlineSpecified() &&
+         Definition->hasAttr<AlwaysInlineAttr>() &&
+         Definition->hasAttr<GNUInlineAttr>();
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {
@@ -3162,44 +3318,26 @@ FunctionDecl *FunctionDecl::getCanonicalDecl() { return getFirstDecl(); }
 /// functions as their wrapped builtins. This shouldn't be done in general, but
 /// it's useful in Sema to diagnose calls to wrappers based on their semantics.
 unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
-  unsigned BuiltinID;
+  unsigned BuiltinID = 0;
 
   if (const auto *ABAA = getAttr<ArmBuiltinAliasAttr>()) {
     BuiltinID = ABAA->getBuiltinName()->getBuiltinID();
-  } else {
-    if (!getIdentifier())
-      return 0;
-
-    BuiltinID = getIdentifier()->getBuiltinID();
+  } else if (const auto *BAA = getAttr<BuiltinAliasAttr>()) {
+    BuiltinID = BAA->getBuiltinName()->getBuiltinID();
+  } else if (const auto *A = getAttr<BuiltinAttr>()) {
+    BuiltinID = A->getID();
   }
 
   if (!BuiltinID)
     return 0;
 
-  ASTContext &Context = getASTContext();
-  if (Context.getLangOpts().CPlusPlus) {
-    const auto *LinkageDecl =
-        dyn_cast<LinkageSpecDecl>(getFirstDecl()->getDeclContext());
-    // In C++, the first declaration of a builtin is always inside an implicit
-    // extern "C".
-    // FIXME: A recognised library function may not be directly in an extern "C"
-    // declaration, for instance "extern "C" { namespace std { decl } }".
-    if (!LinkageDecl) {
-      if (BuiltinID == Builtin::BI__GetExceptionInfo &&
-          Context.getTargetInfo().getCXXABI().isMicrosoft())
-        return Builtin::BI__GetExceptionInfo;
-      return 0;
-    }
-    if (LinkageDecl->getLanguage() != LinkageSpecDecl::lang_c)
-      return 0;
-  }
-
   // If the function is marked "overloadable", it has a different mangled name
   // and is not the C library function.
   if (!ConsiderWrapperFunctions && hasAttr<OverloadableAttr>() &&
-      !hasAttr<ArmBuiltinAliasAttr>())
+      (!hasAttr<ArmBuiltinAliasAttr>() && !hasAttr<BuiltinAliasAttr>()))
     return 0;
 
+  ASTContext &Context = getASTContext();
   if (!Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
     return BuiltinID;
 
@@ -3515,8 +3653,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
 OverloadedOperatorKind FunctionDecl::getOverloadedOperator() const {
   if (getDeclName().getNameKind() == DeclarationName::CXXOperatorName)
     return getDeclName().getCXXOverloadedOperator();
-  else
-    return OO_None;
+  return OO_None;
 }
 
 /// getLiteralIdentifier - The literal suffix identifier this function
@@ -3524,8 +3661,7 @@ OverloadedOperatorKind FunctionDecl::getOverloadedOperator() const {
 const IdentifierInfo *FunctionDecl::getLiteralIdentifier() const {
   if (getDeclName().getNameKind() == DeclarationName::CXXLiteralOperatorName)
     return getDeclName().getCXXLiteralIdentifier();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
@@ -3640,7 +3776,13 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
   }
 
-  if (MemberSpecializationInfo *Info = getMemberSpecializationInfo()) {
+  // Check for a declaration of this function that was instantiated from a
+  // friend definition.
+  const FunctionDecl *FD = nullptr;
+  if (!isDefined(FD, /*CheckForPendingFriendDefinition=*/true))
+    FD = this;
+
+  if (MemberSpecializationInfo *Info = FD->getMemberSpecializationInfo()) {
     if (ForDefinition &&
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
@@ -3852,8 +3994,8 @@ SourceLocation FunctionDecl::getPointOfInstantiation() const {
         = TemplateOrSpecialization.dyn_cast<
                                         FunctionTemplateSpecializationInfo*>())
     return FTSInfo->getPointOfInstantiation();
-  else if (MemberSpecializationInfo *MSInfo
-             = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>())
+  if (MemberSpecializationInfo *MSInfo =
+          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();
@@ -3960,34 +4102,40 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BIbzero:
     return Builtin::BIbzero;
 
+  case Builtin::BIfree:
+    return Builtin::BIfree;
+
   default:
     if (isExternC()) {
       if (FnInfo->isStr("memset"))
         return Builtin::BImemset;
-      else if (FnInfo->isStr("memcpy"))
+      if (FnInfo->isStr("memcpy"))
         return Builtin::BImemcpy;
-      else if (FnInfo->isStr("mempcpy"))
+      if (FnInfo->isStr("mempcpy"))
         return Builtin::BImempcpy;
-      else if (FnInfo->isStr("memmove"))
+      if (FnInfo->isStr("memmove"))
         return Builtin::BImemmove;
-      else if (FnInfo->isStr("memcmp"))
+      if (FnInfo->isStr("memcmp"))
         return Builtin::BImemcmp;
-      else if (FnInfo->isStr("bcmp"))
+      if (FnInfo->isStr("bcmp"))
         return Builtin::BIbcmp;
-      else if (FnInfo->isStr("strncpy"))
+      if (FnInfo->isStr("strncpy"))
         return Builtin::BIstrncpy;
-      else if (FnInfo->isStr("strncmp"))
+      if (FnInfo->isStr("strncmp"))
         return Builtin::BIstrncmp;
-      else if (FnInfo->isStr("strncasecmp"))
+      if (FnInfo->isStr("strncasecmp"))
         return Builtin::BIstrncasecmp;
-      else if (FnInfo->isStr("strncat"))
+      if (FnInfo->isStr("strncat"))
         return Builtin::BIstrncat;
-      else if (FnInfo->isStr("strndup"))
+      if (FnInfo->isStr("strndup"))
         return Builtin::BIstrndup;
-      else if (FnInfo->isStr("strlen"))
+      if (FnInfo->isStr("strlen"))
         return Builtin::BIstrlen;
-      else if (FnInfo->isStr("bzero"))
+      if (FnInfo->isStr("bzero"))
         return Builtin::BIbzero;
+    } else if (isInStdNamespace()) {
+      if (FnInfo->isStr("free"))
+        return Builtin::BIfree;
     }
     break;
   }
@@ -4466,6 +4614,13 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
 void RecordDecl::completeDefinition() {
   assert(!isCompleteDefinition() && "Cannot redefine record!");
   TagDecl::completeDefinition();
+
+  ASTContext &Ctx = getASTContext();
+
+  // Layouts are dumped when computed, so if we are dumping for all complete
+  // types, we need to force usage to get types that wouldn't be used elsewhere.
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete)
+    (void)Ctx.getASTRecordLayout(this);
 }
 
 /// isMsStruct - Get whether or not this record uses ms_struct layout.
@@ -4507,7 +4662,7 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
       (SanitizerKind::Address | SanitizerKind::KernelAddress);
   if (!EnabledAsanMask || !Context.getLangOpts().SanitizeAddressFieldPadding)
     return false;
-  const auto &Blacklist = Context.getSanitizerBlacklist();
+  const auto &NoSanitizeList = Context.getNoSanitizeList();
   const auto *CXXRD = dyn_cast<CXXRecordDecl>(this);
   // We may be able to relax some of these requirements.
   int ReasonToReject = -1;
@@ -4523,12 +4678,11 @@ bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {
     ReasonToReject = 4;  // has trivial destructor.
   else if (CXXRD->isStandardLayout())
     ReasonToReject = 5;  // is standard layout.
-  else if (Blacklist.isBlacklistedLocation(EnabledAsanMask, getLocation(),
+  else if (NoSanitizeList.containsLocation(EnabledAsanMask, getLocation(),
                                            "field-padding"))
     ReasonToReject = 6;  // is in an excluded file.
-  else if (Blacklist.isBlacklistedType(EnabledAsanMask,
-                                       getQualifiedNameAsString(),
-                                       "field-padding"))
+  else if (NoSanitizeList.containsType(
+               EnabledAsanMask, getQualifiedNameAsString(), "field-padding"))
     ReasonToReject = 7;  // The type is excluded.
 
   if (EmitRemark) {
@@ -4705,11 +4859,9 @@ char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
 void ValueDecl::anchor() {}
 
 bool ValueDecl::isWeak() const {
-  for (const auto *I : attrs())
-    if (isa<WeakAttr>(I) || isa<WeakRefAttr>(I))
-      return true;
-
-  return isWeakImported();
+  auto *MostRecent = getMostRecentDecl();
+  return MostRecent->hasAttr<WeakAttr>() ||
+         MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
 }
 
 void ImplicitParamDecl::anchor() {}
@@ -4731,26 +4883,24 @@ ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
   return new (C, ID) ImplicitParamDecl(C, QualType(), ImplicitParamKind::Other);
 }
 
-FunctionDecl *FunctionDecl::Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation StartLoc,
-                                   const DeclarationNameInfo &NameInfo,
-                                   QualType T, TypeSourceInfo *TInfo,
-                                   StorageClass SC, bool isInlineSpecified,
-                                   bool hasWrittenPrototype,
-                                   ConstexprSpecKind ConstexprKind,
-                                   Expr *TrailingRequiresClause) {
-  FunctionDecl *New =
-      new (C, DC) FunctionDecl(Function, C, DC, StartLoc, NameInfo, T, TInfo,
-                               SC, isInlineSpecified, ConstexprKind,
-                               TrailingRequiresClause);
+FunctionDecl *
+FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                     const DeclarationNameInfo &NameInfo, QualType T,
+                     TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
+                     bool isInlineSpecified, bool hasWrittenPrototype,
+                     ConstexprSpecKind ConstexprKind,
+                     Expr *TrailingRequiresClause) {
+  FunctionDecl *New = new (C, DC) FunctionDecl(
+      Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
+      isInlineSpecified, ConstexprKind, TrailingRequiresClause);
   New->setHasWrittenPrototype(hasWrittenPrototype);
   return New;
 }
 
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) FunctionDecl(Function, C, nullptr, SourceLocation(),
-                                  DeclarationNameInfo(), QualType(), nullptr,
-                                  SC_None, false, CSK_unspecified, nullptr);
+  return new (C, ID) FunctionDecl(
+      Function, C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(),
+      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified, nullptr);
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {

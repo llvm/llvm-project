@@ -8,6 +8,7 @@
 
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "gtest/gtest.h"
 
 namespace {
 
@@ -58,12 +59,12 @@ TEST_F(AArch64GISelMITest, TestCSE) {
 
   // Make sure buildConstant with a vector type doesn't crash, and the elements
   // CSE.
-  auto Splat0 = CSEB.buildConstant(LLT::vector(2, s32), 0);
+  auto Splat0 = CSEB.buildConstant(LLT::fixed_vector(2, s32), 0);
   EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, Splat0->getOpcode());
   EXPECT_EQ(Splat0.getReg(1), Splat0.getReg(2));
   EXPECT_EQ(&*MIBCst, MRI->getVRegDef(Splat0.getReg(1)));
 
-  auto FSplat = CSEB.buildFConstant(LLT::vector(2, s32), 1.0);
+  auto FSplat = CSEB.buildFConstant(LLT::fixed_vector(2, s32), 1.0);
   EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, FSplat->getOpcode());
   EXPECT_EQ(FSplat.getReg(1), FSplat.getReg(2));
   EXPECT_EQ(&*MIBFP0, MRI->getVRegDef(FSplat.getReg(1)));
@@ -136,4 +137,72 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   auto Undef1 = CSEB.buildUndef(s16);
   EXPECT_EQ(&*Undef0, &*Undef1);
 }
+
+TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s32{LLT::scalar(32)};
+  // We want to check that when the CSE hit is on the next instruction, i.e. at
+  // the current insert pt, that the insertion point is moved ahead of the
+  // instruction.
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  CSEB.buildConstant(s32, 0);
+  auto MIBCst2 = CSEB.buildConstant(s32, 2);
+
+  // Move the insert point before the second constant.
+  CSEB.setInsertPt(CSEB.getMBB(), --CSEB.getInsertPt());
+  auto MIBCst3 = CSEB.buildConstant(s32, 2);
+  EXPECT_TRUE(&*MIBCst2 == &*MIBCst3);
+  EXPECT_TRUE(CSEB.getInsertPt() == CSEB.getMBB().end());
+}
+
+TEST_F(AArch64GISelMITest, TestConstantFoldCTL) {
+  setUp();
+  if (!TM)
+    return;
+
+  LLT s32 = LLT::scalar(32);
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+  auto Cst8 = CSEB.buildConstant(s32, 8);
+  auto *CtlzDef = &*CSEB.buildCTLZ(s32, Cst8);
+  EXPECT_TRUE(CtlzDef->getOpcode() == TargetOpcode::G_CONSTANT);
+  EXPECT_TRUE(CtlzDef->getOperand(1).getCImm()->getZExtValue() == 28);
+
+  // Test vector.
+  auto Cst16 = CSEB.buildConstant(s32, 16);
+  auto Cst32 = CSEB.buildConstant(s32, 32);
+  auto Cst64 = CSEB.buildConstant(s32, 64);
+  LLT VecTy = LLT::fixed_vector(4, s32);
+  auto BV = CSEB.buildBuildVector(VecTy, {Cst8.getReg(0), Cst16.getReg(0),
+                                          Cst32.getReg(0), Cst64.getReg(0)});
+  CSEB.buildCTLZ(VecTy, BV);
+
+  auto CheckStr = R"(
+  ; CHECK: [[CST8:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  ; CHECK: [[CST28:%[0-9]+]]:_(s32) = G_CONSTANT i32 28
+  ; CHECK: [[CST16:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK: [[CST32:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+  ; CHECK: [[CST64:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+  ; CHECK: [[BV1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[CST8]]:_(s32), [[CST16]]:_(s32), [[CST32]]:_(s32), [[CST64]]:_(s32)
+  ; CHECK: [[CST27:%[0-9]+]]:_(s32) = G_CONSTANT i32 27
+  ; CHECK: [[CST26:%[0-9]+]]:_(s32) = G_CONSTANT i32 26
+  ; CHECK: [[CST25:%[0-9]+]]:_(s32) = G_CONSTANT i32 25
+  ; CHECK: [[BV2:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[CST28]]:_(s32), [[CST27]]:_(s32), [[CST26]]:_(s32), [[CST25]]:_(s32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

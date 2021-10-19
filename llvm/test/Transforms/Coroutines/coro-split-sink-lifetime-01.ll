@@ -1,7 +1,6 @@
 ; Tests that coro-split will optimize the lifetime.start maker of each local variable,
 ; sink them to the places after the suspend block.
-; RUN: opt < %s -coro-split -S | FileCheck %s
-; RUN: opt < %s -passes=coro-split -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 %"struct.std::coroutine_handle" = type { i8* }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
@@ -43,9 +42,9 @@ exit:
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:         %testval = alloca i32, align 4
+; CHECK-NEXT:    getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    %0 = bitcast i32* %testval to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
-; CHECK-NEXT:    getelementptr inbounds %a.Frame
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
 ; CHECK-NEXT:    %val = load i32, i32* %Result
 ; CHECK-NEXT:    %test = load i32, i32* %testval
@@ -68,4 +67,3 @@ declare i8* @llvm.coro.free(token, i8* nocapture readonly) #2
 declare i1 @llvm.coro.end(i8*, i1) #3
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #4
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #4
-

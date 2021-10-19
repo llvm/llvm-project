@@ -1,8 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; Verify that DAG combine rules for LD1 + sext/zext don't apply when the
 ; result of LD1 has multiple uses
@@ -36,6 +32,7 @@ define <vscale x 2 x i64> @no_dag_combine_sext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_sext
 ; CHECK:  	ld1b	{ z1.d }, p0/z, [z0.d, #16]
 ; CHECK-NEXT:	ptrue	p0.d
+; CHECK-NEXT: movprfx z0, z1
 ; CHECK-NEXT:	sxtb	z0.d, p0/m, z1.d
 ; CHECK-NEXT:	st1b	{ z1.d }, p1, [x0]
 ; CHECK-NEXT:	ret

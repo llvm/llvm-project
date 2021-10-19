@@ -6,23 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file
-/// This pass creates bundles of SMEM and VMEM instructions forming memory
-/// clauses if XNACK is enabled. Def operands of clauses are marked as early
-/// clobber to make sure we will not override any source within a clause.
+/// \file This pass extends the live ranges of registers used as pointers in
+/// sequences of adjacent SMEM and VMEM instructions if XNACK is enabled. A
+/// load that would overwrite a pointer would require breaking the soft clause.
+/// Artificially extend the live ranges of the pointer operands by adding
+/// implicit-def early-clobber operands throughout the soft clause.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
 #include "GCNRegPressure.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -60,11 +54,14 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-private:
-  template <typename Callable>
-  void forAllLanes(Register Reg, LaneBitmask LaneMask, Callable Func) const;
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
+  }
 
-  bool canBundle(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
+private:
+  bool canBundle(const MachineInstr &MI, const RegUse &Defs,
+                 const RegUse &Uses) const;
   bool checkPressure(const MachineInstr &MI, GCNDownwardRPTracker &RPT);
   void collectRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses) const;
   bool processRegUses(const MachineInstr &MI, RegUse &Defs, RegUse &Uses,
@@ -108,12 +105,12 @@ static bool isSMEMClauseInst(const MachineInstr &MI) {
 // There no sense to create store clauses, they do not define anything,
 // thus there is nothing to set early-clobber.
 static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
-  if (MI.isDebugValue() || MI.isBundled())
+  assert(!MI.isDebugInstr() && "debug instructions should not reach here");
+  if (MI.isBundled())
     return false;
   if (!MI.mayLoad() || MI.mayStore())
     return false;
-  if (AMDGPU::getAtomicNoRetOp(MI.getOpcode()) != -1 ||
-      AMDGPU::getAtomicRetOp(MI.getOpcode()) != -1)
+  if (SIInstrInfo::isAtomic(MI))
     return false;
   if (IsVMEMClause && !isVMEMClauseInst(MI))
     return false;
@@ -150,63 +147,10 @@ static unsigned getMopState(const MachineOperand &MO) {
   return S;
 }
 
-template <typename Callable>
-void SIFormMemoryClauses::forAllLanes(Register Reg, LaneBitmask LaneMask,
-                                      Callable Func) const {
-  if (LaneMask.all() || Reg.isPhysical() ||
-      LaneMask == MRI->getMaxLaneMaskForVReg(Reg)) {
-    Func(0);
-    return;
-  }
-
-  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-  unsigned E = TRI->getNumSubRegIndices();
-  SmallVector<unsigned, AMDGPU::NUM_TARGET_SUBREGS> CoveringSubregs;
-  for (unsigned Idx = 1; Idx < E; ++Idx) {
-    // Is this index even compatible with the given class?
-    if (TRI->getSubClassWithSubReg(RC, Idx) != RC)
-      continue;
-    LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(Idx);
-    // Early exit if we found a perfect match.
-    if (SubRegMask == LaneMask) {
-      Func(Idx);
-      return;
-    }
-
-    if ((SubRegMask & ~LaneMask).any() || (SubRegMask & LaneMask).none())
-      continue;
-
-    CoveringSubregs.push_back(Idx);
-  }
-
-  llvm::sort(CoveringSubregs, [this](unsigned A, unsigned B) {
-    LaneBitmask MaskA = TRI->getSubRegIndexLaneMask(A);
-    LaneBitmask MaskB = TRI->getSubRegIndexLaneMask(B);
-    unsigned NA = MaskA.getNumLanes();
-    unsigned NB = MaskB.getNumLanes();
-    if (NA != NB)
-      return NA > NB;
-    return MaskA.getHighestLane() > MaskB.getHighestLane();
-  });
-
-  for (unsigned Idx : CoveringSubregs) {
-    LaneBitmask SubRegMask = TRI->getSubRegIndexLaneMask(Idx);
-    if ((SubRegMask & ~LaneMask).any() || (SubRegMask & LaneMask).none())
-      continue;
-
-    Func(Idx);
-    LaneMask &= ~SubRegMask;
-    if (LaneMask.none())
-      return;
-  }
-
-  llvm_unreachable("Failed to find all subregs to cover lane mask");
-}
-
 // Returns false if there is a use of a def already in the map.
 // In this case we must break the clause.
-bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
-                                    RegUse &Defs, RegUse &Uses) const {
+bool SIFormMemoryClauses::canBundle(const MachineInstr &MI, const RegUse &Defs,
+                                    const RegUse &Uses) const {
   // Check interference with defs.
   for (const MachineOperand &MO : MI.operands()) {
     // TODO: Prologue/Epilogue Insertion pass does not process bundled
@@ -223,7 +167,7 @@ bool SIFormMemoryClauses::canBundle(const MachineInstr &MI,
     if (MO.isTied())
       return false;
 
-    RegUse &Map = MO.isDef() ? Uses : Defs;
+    const RegUse &Map = MO.isDef() ? Uses : Defs;
     auto Conflict = Map.find(Reg);
     if (Conflict == Map.end())
       continue;
@@ -251,9 +195,19 @@ bool SIFormMemoryClauses::checkPressure(const MachineInstr &MI,
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
   unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+
+  // Don't push over half the register budget. We don't want to introduce
+  // spilling just to form a soft clause.
+  //
+  // FIXME: This pressure check is fundamentally broken. First, this is checking
+  // the global pressure, not the pressure at this specific point in the
+  // program. Second, it's not accounting for the increased liveness of the use
+  // operands due to the early clobber we will introduce. Third, the pressure
+  // tracking does not account for the alignment requirements for SGPRs, or the
+  // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum() <= MaxVGPRs &&
-      MaxPressure.getSGPRNum() <= MaxSGPRs) {
+      MaxPressure.getVGPRNum(ST->hasGFX90AInsts()) <= MaxVGPRs / 2 &&
+      MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
     return true;
   }
@@ -324,25 +278,41 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
       MF.getFunction(), "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
+    GCNDownwardRPTracker RPT(*LIS);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
       Next = std::next(I);
+
+      if (MI.isMetaInstruction())
+        continue;
 
       bool IsVMEM = isVMEMClauseInst(MI);
 
       if (!isValidClauseInst(MI, IsVMEM))
         continue;
 
+      if (!RPT.getNext().isValid())
+        RPT.reset(MI);
+      else { // Advance the state to the current MI.
+        RPT.advance(MachineBasicBlock::const_iterator(MI));
+        RPT.advanceBeforeNext();
+      }
+
+      const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
-      GCNDownwardRPTracker RPT(*LIS);
-      RPT.reset(MI);
-
-      if (!processRegUses(MI, Defs, Uses, RPT))
+      if (!processRegUses(MI, Defs, Uses, RPT)) {
+        RPT.reset(MI, &LiveRegsCopy);
         continue;
+      }
 
+      MachineBasicBlock::iterator LastClauseInst = Next;
       unsigned Length = 1;
       for ( ; Next != E && Length < FuncMaxClause; ++Next) {
+        // Debug instructions should not change the kill insertion.
+        if (Next->isMetaInstruction())
+          continue;
+
         if (!isValidClauseInst(*Next, IsVMEM))
           break;
 
@@ -352,40 +322,84 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
         if (!processRegUses(*Next, Defs, Uses, RPT))
           break;
 
+        LastClauseInst = Next;
         ++Length;
       }
-      if (Length < 2)
+      if (Length < 2) {
+        RPT.reset(MI, &LiveRegsCopy);
         continue;
+      }
 
       Changed = true;
       MFI->limitOccupancy(LastRecordedOccupancy);
 
-      auto B = BuildMI(MBB, I, DebugLoc(), TII->get(TargetOpcode::BUNDLE));
-      Ind->insertMachineInstrInMaps(*B);
+      assert(!LastClauseInst->isMetaInstruction());
 
-      for (auto BI = I; BI != Next; ++BI) {
-        BI->bundleWithPred();
-        Ind->removeSingleMachineInstrFromMaps(*BI);
+      SlotIndex ClauseLiveInIdx = LIS->getInstructionIndex(MI);
+      SlotIndex ClauseLiveOutIdx =
+          LIS->getInstructionIndex(*LastClauseInst).getNextIndex();
 
-        for (MachineOperand &MO : BI->defs())
-          if (MO.readsReg())
-            MO.setIsInternalRead(true);
-      }
+      // Track the last inserted kill.
+      MachineInstrBuilder Kill;
 
-      for (auto &&R : Defs) {
-        forAllLanes(R.first, R.second.second, [&R, &B](unsigned SubReg) {
-          unsigned S = R.second.first | RegState::EarlyClobber;
-          if (!SubReg)
-            S &= ~(RegState::Undef | RegState::Dead);
-          B.addDef(R.first, S, SubReg);
-        });
-      }
-
+      // Insert one kill per register, with operands covering all necessary
+      // subregisters.
       for (auto &&R : Uses) {
-        forAllLanes(R.first, R.second.second, [&R, &B](unsigned SubReg) {
-          B.addUse(R.first, R.second.first & ~RegState::Kill, SubReg);
-        });
+        Register Reg = R.first;
+        if (Reg.isPhysical())
+          continue;
+
+        // Collect the register operands we should extend the live ranges of.
+        SmallVector<std::tuple<unsigned, unsigned>> KillOps;
+        const LiveInterval &LI = LIS->getInterval(R.first);
+
+        if (!LI.hasSubRanges()) {
+          if (!LI.liveAt(ClauseLiveOutIdx)) {
+            KillOps.emplace_back(R.second.first | RegState::Kill,
+                                 AMDGPU::NoSubRegister);
+          }
+        } else {
+          LaneBitmask KilledMask;
+          for (const LiveInterval::SubRange &SR : LI.subranges()) {
+            if (SR.liveAt(ClauseLiveInIdx) && !SR.liveAt(ClauseLiveOutIdx))
+              KilledMask |= SR.LaneMask;
+          }
+
+          if (KilledMask.none())
+            continue;
+
+          SmallVector<unsigned> KilledIndexes;
+          bool Success = TRI->getCoveringSubRegIndexes(
+              *MRI, MRI->getRegClass(Reg), KilledMask, KilledIndexes);
+          (void)Success;
+          assert(Success && "Failed to find subregister mask to cover lanes");
+          for (unsigned SubReg : KilledIndexes) {
+            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+          }
+        }
+
+        if (KillOps.empty())
+          continue;
+
+        // We only want to extend the live ranges of used registers. If they
+        // already have existing uses beyond the bundle, we don't need the kill.
+        //
+        // It's possible all of the use registers were already live past the
+        // bundle.
+        Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
+                       DebugLoc(), TII->get(AMDGPU::KILL));
+        for (auto &Op : KillOps)
+          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        Ind->insertMachineInstrInMaps(*Kill);
       }
+
+      if (!Kill) {
+        RPT.reset(MI, &LiveRegsCopy);
+        continue;
+      }
+
+      // Restore the state after processing the end of the bundle.
+      RPT.reset(*Kill, &LiveRegsCopy);
 
       for (auto &&R : Defs) {
         Register Reg = R.first;

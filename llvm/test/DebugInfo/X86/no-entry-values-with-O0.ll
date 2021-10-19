@@ -2,6 +2,10 @@
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
 ; RUN: llc -O0  -dwarf-version=5 -debugger-tune=gdb -march=x86-64 -filetype=obj < %s \
 ; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -O0  -dwarf-version=5 -debugger-tune=lldb -march=x86-64 -filetype=obj < %s \
+; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
+; RUN: llc -force-instr-ref-livedebugvalues=1 -O0  -dwarf-version=5 -debugger-tune=gdb -march=x86-64 -filetype=obj < %s \
+; RUN:  | llvm-dwarfdump - | FileCheck --implicit-check-not=DW_OP_entry_value %s
 
 ; The call-site-params are created iff corresponding DISubprogram contains
 ; the AllCallsDescribed DIFlag.

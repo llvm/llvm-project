@@ -6,7 +6,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK: @f
 ; Expect that the pointer indvar has been converted into an integer indvar.
-; CHECK: %index.next = add i64 %index, 4
+; CHECK: %index.next = add nuw i64 %index, 4
 define i32 @f(i32* readonly %a, i32* readnone %b) #0 {
 entry:
   %cmp.6 = icmp ult i32* %a, %b

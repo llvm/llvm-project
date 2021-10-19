@@ -3,7 +3,7 @@
 
 // NOT-UB-NOT: __ubsan_handle_invalid_builtin
 
-// CHECK: define void @check_ctz
+// CHECK: define{{.*}} void @check_ctz
 void check_ctz(int n) {
   // CHECK: [[NOT_ZERO:%.*]] = icmp ne i32 [[N:%.*]], 0, !nosanitize
   // CHECK-NEXT: br i1 [[NOT_ZERO]]
@@ -23,7 +23,7 @@ void check_ctz(int n) {
   __builtin_ctzll(n);
 }
 
-// CHECK: define void @check_clz
+// CHECK: define{{.*}} void @check_clz
 void check_clz(int n) {
   // CHECK: [[NOT_ZERO:%.*]] = icmp ne i32 [[N:%.*]], 0, !nosanitize
   // CHECK-NEXT: br i1 [[NOT_ZERO]]

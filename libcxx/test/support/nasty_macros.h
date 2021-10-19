@@ -56,7 +56,15 @@
 #ifndef _WIN32
 #define __allocator NASTY_MACRO
 #define __deallocate NASTY_MACRO
+#define __deref NASTY_MACRO
+#define __full NASTY_MACRO
+#define __in NASTY_MACRO
+#define __inout NASTY_MACRO
+#define __nz NASTY_MACRO
 #define __out NASTY_MACRO
+#define __part NASTY_MACRO
+#define __post NASTY_MACRO
+#define __pre NASTY_MACRO
 #endif
 
 #define __output NASTY_MACRO

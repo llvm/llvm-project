@@ -1,9 +1,9 @@
 ; RUN: llc < %s -asm-verbose=false -O2 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mattr=+reference-types -O2 | FileCheck --check-prefix=REF %s
 ; RUN: llc < %s -asm-verbose=false -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=YAML %s
 
 ; This tests pointer features that may codegen differently in wasm64.
 
-target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "wasm64-unknown-unknown"
 
 define void @bar(i32 %n) {
@@ -35,24 +35,29 @@ entry:
 ; CHECK-NEXT: local.get 0
 ; CHECK-NEXT: i32.wrap_i64
 ; CHECK-NEXT: call_indirect (i32) -> ()
+; REF:        call_indirect __indirect_function_table, (i32) -> ()
 
 ; CHECK:      .functype test () -> ()
 ; CHECK-NEXT: i64.const bar
 ; CHECK-NEXT: call foo
 
 
-; Check we're emitting a 64-bit reloc for `i64.const bar` and the global.
+; Check we're emitting a 64-bit relocs for the call_indirect, the
+; `i64.const bar` reference in code, and the global.
 
 ; YAML:      Memory:
 ; YAML-NEXT:   Flags:   [ IS_64 ]
-; YAML-NEXT:   Initial: 0x00000001
+; YAML-NEXT:   Minimum: 0x1
 
 ; YAML:      - Type:   CODE
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x00000016
+; YAML-NEXT:   Offset: 0x16
+; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64
+; YAML-NEXT:   Index:  0
+; YAML-NEXT:   Offset: 0x29
 
 ; YAML:      - Type:   DATA
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_I64
 ; YAML-NEXT:   Index:  0
-; YAML-NEXT:   Offset: 0x00000006
+; YAML-NEXT:   Offset: 0x6

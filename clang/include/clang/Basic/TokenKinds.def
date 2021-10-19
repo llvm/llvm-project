@@ -98,6 +98,8 @@ PPKEYWORD(if)
 PPKEYWORD(ifdef)
 PPKEYWORD(ifndef)
 PPKEYWORD(elif)
+PPKEYWORD(elifdef)
+PPKEYWORD(elifndef)
 PPKEYWORD(else)
 PPKEYWORD(endif)
 PPKEYWORD(defined)
@@ -436,6 +438,7 @@ TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)
 KEYWORD(__builtin_va_arg            , KEYALL)
 KEYWORD(__extension__               , KEYALL)
 KEYWORD(__float128                  , KEYALL)
+KEYWORD(__ibm128                    , KEYALL)
 KEYWORD(__imag                      , KEYALL)
 KEYWORD(__int128                    , KEYALL)
 KEYWORD(__label__                   , KEYALL)
@@ -586,7 +589,7 @@ ALIAS("write_only", __write_only    , KEYOPENCLC | KEYOPENCLCXX)
 ALIAS("read_write", __read_write    , KEYOPENCLC | KEYOPENCLCXX)
 // OpenCL builtins
 KEYWORD(__builtin_astype            , KEYOPENCLC | KEYOPENCLCXX)
-UNARY_EXPR_OR_TYPE_TRAIT(vec_step, VecStep, KEYOPENCLC | KEYALTIVEC | KEYZVECTOR)
+UNARY_EXPR_OR_TYPE_TRAIT(vec_step, VecStep, KEYOPENCLC | KEYOPENCLCXX | KEYALTIVEC | KEYZVECTOR)
 #define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCLC | KEYOPENCLCXX)
 #include "clang/Basic/OpenCLImageTypes.def"
 KEYWORD(pipe                        , KEYOPENCLC | KEYOPENCLCXX)
@@ -650,6 +653,7 @@ ALIAS("__volatile__" , volatile   , KEYALL)
 // Type nullability.
 KEYWORD(_Nonnull                 , KEYALL)
 KEYWORD(_Nullable                , KEYALL)
+KEYWORD(_Nullable_result         , KEYALL)
 KEYWORD(_Null_unspecified        , KEYALL)
 
 // Microsoft extensions which should be disabled in strict conformance mode
@@ -693,12 +697,12 @@ ALIAS("_declspec"        , __declspec , KEYMS)
 ALIAS("_pascal"      , __pascal   , KEYBORLAND)
 
 // Clang Extensions.
-KEYWORD(__builtin_convertvector     , KEYALL)
-ALIAS("__char16_t"   , char16_t     , KEYCXX)
-ALIAS("__char32_t"   , char32_t     , KEYCXX)
-KEYWORD(__builtin_bit_cast          , KEYALL)
-KEYWORD(__builtin_available         , KEYALL)
-KEYWORD(__builtin_unique_stable_name, KEYALL)
+KEYWORD(__builtin_convertvector          , KEYALL)
+ALIAS("__char16_t"   , char16_t          , KEYCXX)
+ALIAS("__char32_t"   , char32_t          , KEYCXX)
+KEYWORD(__builtin_bit_cast               , KEYALL)
+KEYWORD(__builtin_available              , KEYALL)
+KEYWORD(__builtin_sycl_unique_stable_name, KEYSYCL)
 
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
@@ -824,10 +828,16 @@ PRAGMA_ANNOTATION(pragma_redefine_extname)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fp_contract)
 
-// Annotation for #pragma STDC FENV_ACCESS
+// Annotations for #pragma STDC FENV_ACCESS and #pragma fenv_access (MS compat)
 // The lexer produces these so that they only take effect when the parser
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_access)
+PRAGMA_ANNOTATION(pragma_fenv_access_ms)
+
+// Annotation for #pragma STDC FENV_ROUND
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_fenv_round)
 
 // Annotation for #pragma float_control
 // The lexer produces these so that they only take effect when the parser
@@ -855,6 +865,13 @@ PRAGMA_ANNOTATION(pragma_ms_pragma)
 PRAGMA_ANNOTATION(pragma_opencl_extension)
 
 // Annotations for OpenMP pragma directives - #pragma omp ...
+// The parser produces this annotation token when it parses an [[omp::*]]
+// attribute. The tokens from the attribute argument list are replayed to the
+// token stream with this leading token (and a trailing pragma_openmp_end) so
+// that the parser can reuse the OpenMP parsing logic but still be able to
+// distinguish between a real pragma and a converted pragma. It is not marked
+// as a PRAGMA_ANNOTATION because it doesn't get generated from a #pragma.
+ANNOTATION(attr_openmp)
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma omp ... directives.
 PRAGMA_ANNOTATION(pragma_openmp)

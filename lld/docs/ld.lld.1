@@ -72,10 +72,22 @@ field to the specified name.
 Link against shared libraries.
 .It Fl -Bstatic , Fl -static , Fl -dn
 Do not link against shared libraries.
-.It Fl -Bsymbolic
-Bind defined symbols locally.
-.It Fl -Bsymbolic-functions
-Bind defined function symbols locally.
+.It Fl Bno-symbolic
+Don't bind default visibility defined symbols locally for
+.Fl shared
+(default).
+.It Fl Bsymbolic
+Bind default visibility defined symbols locally for
+.Fl shared.
+Also set the
+.Dv DF_SYMBOLIC
+flag.
+.It Fl Bsymbolic-functions
+Bind default visibility defined function symbols locally for
+.Fl shared.
+.It Fl Bsymbolic-non-weak-functions
+Bind default visibility defined STB_GLOBAL function symbols locally for
+.Fl shared.
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
@@ -155,12 +167,15 @@ Specify the dynamic linker to be used for a dynamically linked executable.
 This is recorded in an ELF segment of type
 .Dv PT_INTERP .
 .It Fl -dynamic-list Ns = Ns Ar file
-Read a list of dynamic symbols from
-.Ar file .
-(executable) Put matched non-local defined symbols to the dynamic symbol table.
-(shared object) References to matched non-local STV_DEFAULT symbols shouldn't be bound to definitions within the shared object. Implies
+Similar to
+.Cm --export-dynamic-symbol-list .
+When creating a shared object, implies
 .Cm -Bsymbolic
 but does not set DF_SYMBOLIC
+.It Fl -EB
+Select the big-endian format in the OUTPUT_FORMAT command.
+.It Fl -EL
+Select the little-endian format in the OUTPUT_FORMAT command.
 .It Fl -eh-frame-hdr
 Request creation of
 .Li .eh_frame_hdr
@@ -181,6 +196,19 @@ Maximum number of errors to emit before stopping.
 A value of zero indicates that there is no limit.
 .It Fl -error-unresolved-symbols
 Report unresolved symbols as errors.
+.It Fl -error-handing-script Ns = Ns Ar script_path
+Call script
+.Ar script_path
+upon some error, with
+.Ar tag
+as first argument, and an extra parameter as second argument. The script is
+expected to return 0 on success. Any other value is considered a generic error.
+.Ar tag
+may be
+.Cm missing-lib
+followed by the name of the missing library.
+.Cm undefined-symbol
+followed by the name of the undefined symbol.
 .It Fl -execute-only
 Mark executable sections unreadable.
 This option is currently only supported on AArch64.
@@ -196,6 +224,12 @@ Put symbols in the dynamic symbol table.
 .Cm -Bsymbolic-functions
 or
 .Cm --dynamic-list
+.It Fl -export-dynamic-symbol-list Ns = Ns Ar file
+Read a list of dynamic symbol patterns from
+.Ar file .
+Apply
+.Cm --export-dynamic-symbol
+on each pattern.
 .It Fl -fatal-warnings
 Treat warnings as errors.
 .It Fl -filter Ns = Ns Ar value , Fl F Ar value
@@ -298,6 +332,8 @@ Do not demangle symbol names.
 Inhibit output of an
 .Li .interp
 section.
+.It Fl -no-fortran-common
+Do not search archive members for definitions to override COMMON symbols.
 .It Fl -no-gc-sections
 Disable garbage collection of unused sections.
 .It Fl -no-gnu-unique
@@ -468,7 +504,8 @@ Set address of section.
 .It Fl -shared , Fl -Bsharable
 Build a shared object.
 .It Fl -shuffle-sections Ns = Ns Ar seed
-Shuffle input sections using the given seed. If 0, use a random seed.
+Shuffle matched sections using the given seed before mapping them to the output sections.
+If -1, reverse the section order. If 0, use a random seed.
 .It Fl -soname Ns = Ns Ar value , Fl h Ar value
 Set
 .Dv DT_SONAME
@@ -483,6 +520,8 @@ Start a grouping of objects that should be treated as if they were together
 in an archive.
 .It Fl -strip-all , Fl s
 Strip all symbols.
+Implies
+.Fl -strip-debug .
 .It Fl -strip-debug , Fl S
 Strip debugging information.
 .It Fl -symbol-ordering-file Ns = Ns Ar file
@@ -619,8 +658,17 @@ linkers, and may be removed in the future.
 Report unresolved symbols as warnings.
 .It Fl -whole-archive
 Force load of all members in a static library.
+.It Fl -why-extract Ns = Ns Ar file
+Print to a file about why archive members are extracted.
 .It Fl -wrap Ns = Ns Ar symbol
-Use wrapper functions for symbol.
+Redirect
+.Ar symbol
+references to
+.Ar __wrap_symbol
+and
+.Ar __real_symbol
+references to
+.Ar symbol.
 .It Fl z Ar option
 Linker option extensions.
 .Bl -tag -width indent -compact
@@ -775,6 +823,12 @@ The stack size is recorded as the size of the
 .Ar size .
 .Dv PT_GNU_STACK
 program segment.
+.Pp
+.It Cm start-stop-gc
+Don't let __start_/__stop_ references retain the associated C identifier name sections (default).
+.Pp
+.It Cm nostart-stop-gc
+Let __start_/__stop_ references retain the associated C identifier name sections.
 .Pp
 .It Cm text
 Do not allow relocations against read-only segments.

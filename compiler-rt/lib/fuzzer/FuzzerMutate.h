@@ -24,8 +24,11 @@ public:
   ~MutationDispatcher() {}
   /// Indicate that we are about to start a new sequence of mutations.
   void StartMutationSequence();
-  /// Print the current sequence of mutations.
-  void PrintMutationSequence();
+  /// Print the current sequence of mutations. Only prints the full sequence
+  /// when Verbose is true.
+  void PrintMutationSequence(bool Verbose = true);
+  /// Return the current sequence of mutations.
+  std::string MutationSequence();
   /// Indicate that the current sequence of mutations was successful.
   void RecordSuccessfulMutationSequence();
   /// Mutates data by invoking user-provided mutator.
@@ -40,9 +43,9 @@ public:
   size_t Mutate_InsertByte(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by inserting several repeated bytes.
   size_t Mutate_InsertRepeatedBytes(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by chanding one byte.
+  /// Mutates data by changing one byte.
   size_t Mutate_ChangeByte(uint8_t *Data, size_t Size, size_t MaxSize);
-  /// Mutates data by chanding one bit.
+  /// Mutates data by changing one bit.
   size_t Mutate_ChangeBit(uint8_t *Data, size_t Size, size_t MaxSize);
   /// Mutates data by copying/inserting a part of data into a different place.
   size_t Mutate_CopyPart(uint8_t *Data, size_t Size, size_t MaxSize);
@@ -74,7 +77,7 @@ public:
   /// that have '1' in Mask.
   /// Mask.size() should be >= Size.
   size_t MutateWithMask(uint8_t *Data, size_t Size, size_t MaxSize,
-                        const Vector<uint8_t> &Mask);
+                        const std::vector<uint8_t> &Mask);
 
   /// Applies one of the default mutations. Provided as a service
   /// to mutation authors.
@@ -101,7 +104,7 @@ public:
   size_t AddWordFromDictionary(Dictionary &D, uint8_t *Data, size_t Size,
                                size_t MaxSize);
   size_t MutateImpl(uint8_t *Data, size_t Size, size_t MaxSize,
-                    Vector<Mutator> &Mutators);
+                    std::vector<Mutator> &Mutators);
 
   size_t InsertPartOf(const uint8_t *From, size_t FromSize, uint8_t *To,
                       size_t ToSize, size_t MaxToSize);
@@ -126,29 +129,26 @@ public:
 
   // Dictionary provided by the user via -dict=DICT_FILE.
   Dictionary ManualDictionary;
-  // Temporary dictionary modified by the fuzzer itself,
-  // recreated periodically.
-  Dictionary TempAutoDictionary;
   // Persistent dictionary modified by the fuzzer, consists of
   // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;
 
-  Vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
+  std::vector<DictionaryEntry *> CurrentDictionaryEntrySequence;
 
   static const size_t kCmpDictionaryEntriesDequeSize = 16;
   DictionaryEntry CmpDictionaryEntriesDeque[kCmpDictionaryEntriesDequeSize];
   size_t CmpDictionaryEntriesDequeIdx = 0;
 
   const Unit *CrossOverWith = nullptr;
-  Vector<uint8_t> MutateInPlaceHere;
-  Vector<uint8_t> MutateWithMaskTemp;
+  std::vector<uint8_t> MutateInPlaceHere;
+  std::vector<uint8_t> MutateWithMaskTemp;
   // CustomCrossOver needs its own buffer as a custom implementation may call
   // LLVMFuzzerMutate, which in turn may resize MutateInPlaceHere.
-  Vector<uint8_t> CustomCrossOverInPlaceHere;
+  std::vector<uint8_t> CustomCrossOverInPlaceHere;
 
-  Vector<Mutator> Mutators;
-  Vector<Mutator> DefaultMutators;
-  Vector<Mutator> CurrentMutatorSequence;
+  std::vector<Mutator> Mutators;
+  std::vector<Mutator> DefaultMutators;
+  std::vector<Mutator> CurrentMutatorSequence;
 };
 
 }  // namespace fuzzer

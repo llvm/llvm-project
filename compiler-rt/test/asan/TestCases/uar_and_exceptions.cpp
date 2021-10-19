@@ -1,6 +1,8 @@
 // Test that use-after-return works with exceptions.
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 %run %t
+// RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always
+// RUN: %run %t
 
 #include <stdio.h>
 

@@ -14,6 +14,10 @@ using namespace mlir;
 namespace {
 struct SideEffectsPass
     : public PassWrapper<SideEffectsPass, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-side-effects"; }
+  StringRef getDescription() const final {
+    return "Test side effects interfaces";
+  }
   void runOnOperation() override {
     auto module = getOperation();
 
@@ -43,8 +47,24 @@ struct SideEffectsPass
 
         if (instance.getValue())
           diag << " on a value,";
+        else if (SymbolRefAttr symbolRef = instance.getSymbolRef())
+          diag << " on a symbol '" << symbolRef << "',";
 
         diag << " on resource '" << instance.getResource()->getName() << "'";
+      }
+    });
+
+    SmallVector<TestEffects::EffectInstance, 1> testEffects;
+    module.walk([&](TestEffectOpInterface op) {
+      testEffects.clear();
+      op.getEffects(testEffects);
+
+      if (testEffects.empty())
+        return;
+
+      for (const TestEffects::EffectInstance &instance : testEffects) {
+        op.emitRemark() << "found a parametric effect with "
+                        << instance.getParameters();
       }
     });
   }
@@ -52,8 +72,5 @@ struct SideEffectsPass
 } // end anonymous namespace
 
 namespace mlir {
-void registerSideEffectTestPasses() {
-  PassRegistration<SideEffectsPass>("test-side-effects",
-                                    "Test side effects interfaces");
-}
+void registerSideEffectTestPasses() { PassRegistration<SideEffectsPass>(); }
 } // namespace mlir

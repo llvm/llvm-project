@@ -1,8 +1,27 @@
-@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s | llvm-readobj --symbols - \
-@ RUN:   | FileCheck %s
+@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s | llvm-readelf -s - | FileCheck %s
 
 @ RUN: llvm-mc -triple armv7-eabi -filetype asm -o - %s \
 @ RUN:   | FileCheck --check-prefix=ASM %s
+
+@ CHECK:      Num:    Value  Size Type    Bind   Vis      Ndx Name
+@ CHECK-NEXT:   0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND
+@ CHECK-NEXT:   1: 00000000     0 FUNC    LOCAL  DEFAULT    2 arm_func
+@ CHECK-NEXT:   2: 00000000     0 NOTYPE  LOCAL  DEFAULT    2 $a.0
+@ CHECK-NEXT:   3: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func
+@ CHECK-NEXT:   4: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func2
+@ CHECK-NEXT:   5: 00000001     0 FUNC    LOCAL  DEFAULT    2 alias_arm_func3
+@ CHECK-NEXT:   6: 00000005     0 FUNC    LOCAL  DEFAULT    2 thumb_func
+@ CHECK-NEXT:   7: 00000004     0 NOTYPE  LOCAL  DEFAULT    2 $t.1
+@ CHECK-NEXT:   8: 00000005     0 FUNC    LOCAL  DEFAULT    2 alias_thumb_func
+@ CHECK-NEXT:   9: 5eed1e55     0 FUNC    LOCAL  DEFAULT  ABS seedless
+@ CHECK-NEXT:  10: e665a1ad     0 FUNC    LOCAL  DEFAULT  ABS eggsalad
+@ CHECK-NEXT:  11: face1e55     0 FUNC    LOCAL  DEFAULT  ABS faceless
+@ CHECK-NEXT:  12: 00000000     0 OBJECT  LOCAL  DEFAULT    3 alias_undefined_data
+@ CHECK-NEXT:  13: 00000000     0 OBJECT  LOCAL  DEFAULT    3 badblood
+@ CHECK-NEXT:  14: 00000004     0 OBJECT  LOCAL  DEFAULT    3 bedazzle
+@ CHECK-NEXT:  15: 00000005     0 FUNC    LOCAL  DEFAULT    3 alias_defined_data
+@ CHECK-NEXT:  16: 00000007     0 FUNC    LOCAL  DEFAULT    2 alpha
+@ CHECK-NEXT:  17: 00000007     0 FUNC    LOCAL  DEFAULT    2 beta
 
 	.syntax unified
 
@@ -56,97 +75,3 @@ alpha:
         .type beta,%function
 
 	.thumb_set beta, alpha
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_arm_func
-@ CHECK:   Value: 0x1
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_arm_func2
-@ CHECK:   Value: 0x1
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_arm_func3
-@ CHECK:   Value: 0x1
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_defined_data
-@ CHECK:   Value: 0x5
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_thumb_func
-@ CHECK:   Value: 0x5
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alias_undefined_data
-@ CHECK:   Value: 0x0
-@ CHECK:   Type: Object
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: alpha
-@ CHECK:   Value: 0x7
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: arm_func
-@ CHECK:   Value: 0x0
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK:      Symbol {
-@ CHECK:        Name: badblood
-@ CHECK-NEXT:   Value: 0x0
-@ CHECK-NEXT:   Size: 0
-@ CHECK-NEXT:   Binding: Local
-@ CHECK-NEXT:   Type: Object
-@ CHECK-NEXT:   Other: 0
-@ CHECK-NEXT:   Section: .data
-@ CHECK-NEXT: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: bedazzle
-@ CHECK:   Value: 0x4
-@ CHECK:   Type: Object
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: beta
-@ CHECK:   Value: 0x7
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: eggsalad
-@ CHECK:   Value: 0xE665A1AD
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: faceless
-@ CHECK:   Value: 0xFACE1E55
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: seedless
-@ CHECK:   Value: 0x5EED1E55
-@ CHECK:   Type: Function
-@ CHECK: }
-
-@ CHECK: Symbol {
-@ CHECK:   Name: thumb_func
-@ CHECK:   Value: 0x5
-@ CHECK:   Type: Function
-@ CHECK: }

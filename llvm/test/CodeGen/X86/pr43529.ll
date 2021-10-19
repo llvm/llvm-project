@@ -9,7 +9,7 @@ define i32 @a() nounwind {
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    subl $a, %eax
-; CHECK-NEXT:    calll d
+; CHECK-NEXT:    calll d@PLT
 ; CHECK-NEXT:    cmpl $a, %esi
 ; CHECK-NEXT:    jbe .LBB0_2
 ; CHECK-NEXT:    .p2align 4, 0x90

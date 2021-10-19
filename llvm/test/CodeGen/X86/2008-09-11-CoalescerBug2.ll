@@ -3,8 +3,8 @@
 ; RUN: llc -pre-RA-sched=source < %s -mtriple=i686-unknown-linux -mcpu=corei7 | FileCheck %s --check-prefix=SOURCE-SCHED
 ; PR2748
 
-@g_73 = external global i32
-@g_5 = external global i32
+@g_73 = external dso_local global i32
+@g_5 = external dso_local global i32
 
 define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-LABEL: func_44:
@@ -13,8 +13,8 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    movl g_5, %eax
 ; SOURCE-SCHED-NEXT:    sarl %eax
 ; SOURCE-SCHED-NEXT:    xorl %ecx, %ecx
-; SOURCE-SCHED-NEXT:    cmpl $1, %eax
-; SOURCE-SCHED-NEXT:    setg %cl
+; SOURCE-SCHED-NEXT:    cmpl $2, %eax
+; SOURCE-SCHED-NEXT:    setge %cl
 ; SOURCE-SCHED-NEXT:    movb g_73, %dl
 ; SOURCE-SCHED-NEXT:    xorl %eax, %eax
 ; SOURCE-SCHED-NEXT:    subb {{[0-9]+}}(%esp), %al
@@ -32,7 +32,7 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    pushl $0
 ; SOURCE-SCHED-NEXT:    pushl %ecx
 ; SOURCE-SCHED-NEXT:    pushl %edx
-; SOURCE-SCHED-NEXT:    calll func_48
+; SOURCE-SCHED-NEXT:    calll func_48@PLT
 ; SOURCE-SCHED-NEXT:    addl $28, %esp
 ; SOURCE-SCHED-NEXT:    retl
 entry:

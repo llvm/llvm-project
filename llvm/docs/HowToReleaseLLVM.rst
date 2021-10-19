@@ -50,9 +50,16 @@ The release process is roughly as follows:
 
 * Finally, release!
 
-The release process will be accelerated for dot releases.  If the first round
-of testing finds no critical bugs and no regressions since the last major release,
-then additional rounds of testing will not be required.
+* Announce bug fix release schedule to the LLVM community and update the website.
+
+* Tag bug fix -rc1 after 4 weeks have passed.
+
+* Tag bug fix -rc2 4 weeks after -rc1.
+
+* Tag additional -rc candidates, if needed, to fix critical issues in
+  previous -rc releases.
+
+* Tag final release.
 
 Release Process
 ===============
@@ -66,51 +73,46 @@ Release Administrative Tasks
 This section describes a few administrative tasks that need to be done for the
 release process to begin.  Specifically, it involves:
 
-* Creating the release branch,
+* Updating version numbers,
 
-* Setting version numbers, and
+* Creating the release branch, and
 
 * Tagging release candidates for the release team to begin testing.
 
 Create Release Branch
 ^^^^^^^^^^^^^^^^^^^^^
 
-Branch the Subversion trunk using the following procedure:
+Branch the Git trunk using the following procedure:
 
 #. Remind developers that the release branching is imminent and to refrain from
    committing patches that might break the build.  E.g., new features, large
    patches for works in progress, an overhaul of the type system, an exciting
    new TableGen feature, etc.
 
-#. Verify that the current Subversion trunk is in decent shape by
+#. Verify that the current git trunk is in decent shape by
    examining nightly tester and buildbot results.
 
-#. Create the release branch for ``llvm``, ``clang``, and other sub-projects,
-   from the last known good revision.  The branch's name is
-   ``release_XY``, where ``X`` is the major and ``Y`` the minor release
-   numbers.  Use ``utils/release/tag.sh`` to tag the release.
+#. Bump the version in trunk to N.0.0git and tag the commit with llvmorg-N-init.
+   If ``X`` is the version to be released, then ``N`` is ``X + 1``.
 
-#. Advise developers that they may now check their patches into the Subversion
-   tree again.
+::
 
-#. The Release Manager should switch to the release branch, because all changes
-   to the release will now be done in the branch.  The easiest way to do this is
-   to grab a working copy using the following commands:
+  $ git tag -a llvmorg-N-init
 
-   ::
+#. Clear the release notes in trunk.
 
-     $ svn co https://llvm.org/svn/llvm-project/llvm/branches/release_XY llvm-X.Y
+#. Create the release branch from the last known good revision from before the
+   version bump.  The branch's name is release/X.x where ``X`` is the major version
+   number and ``x`` is just the letter ``x``.
 
-     $ svn co https://llvm.org/svn/llvm-project/cfe/branches/release_XY clang-X.Y
-
-     $ svn co https://llvm.org/svn/llvm-project/test-suite/branches/release_XY test-suite-X.Y
+#. All tags and branches need to be created in both the llvm/llvm-project and
+   llvm/llvm-test-suite repos.
 
 Update LLVM Version
 ^^^^^^^^^^^^^^^^^^^
 
 After creating the LLVM release branch, update the release branches'
-``CMakeLists.txt`` versions from '``X.Ysvn``' to '``X.Y``'.
-Update it on mainline as well to be the next version ('``X.Y+1svn``').
+``CMakeLists.txt`` versions from '``X.0.0git``' to '``X.0.0``'.
 
 In addition, the version numbers of all the Bugzilla components must be updated
 for the next release.
@@ -118,26 +120,33 @@ for the next release.
 Tagging the LLVM Release Candidates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Tag release candidates using the tag.sh script in utils/release.
+Tag release candidates:
 
 ::
 
-  $ ./tag.sh -release X.Y.Z -rc $RC
+  $ git tag -a llvmorg-X.Y.Z-rcN
 
-The Release Manager may supply pre-packaged source tarballs for users.  This can
+The Release Manager must supply pre-packaged source tarballs for users.  This can
 be done with the export.sh script in utils/release.
+
+Tarballs, release binaries,  or any other release artifacts must be uploaded to
+GitHub.  This can be done using the github-upload-release.py script in utils/release.
+
+::
+
+  $ github-upload-release.py upload --token <github-token> --release X.Y.Z-rcN --files <release_files>
 
 ::
 
   $ ./export.sh -release X.Y.Z -rc $RC
 
 This will generate source tarballs for each LLVM project being validated, which
-can be uploaded to the website for further testing.
+can be uploaded to github for further testing.
 
-Build Clang Binary Distribution
+Build The Binary Distribution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Creating the ``clang`` binary distribution requires following the instructions
+Creating the binary distribution requires following the instructions
 :doc:`here <ReleaseProcess>`.
 
 That process will perform both Release+Asserts and Release builds but only
@@ -151,23 +160,16 @@ The minimum required version of the tools you'll need are :doc:`here <GettingSta
 Release Qualification Criteria
 ------------------------------
 
-A release is qualified when it has no regressions from the previous release (or
-baseline).  Regressions are related to correctness first and performance second.
-(We may tolerate some minor performance regressions if they are deemed
-necessary for the general quality of the compiler.)
+There are no official release qualification criteria.  It is up to the
+the release manager to determine when a release is ready.  The release manager
+should pay attention to the results of community testing, the number of outstanding
+bugs, and then number of regressions when determining whether or not to make a
+release.
 
-More specifically, Clang/LLVM is qualified when it has a clean test with all
-supported sub-projects included (``make check-all``), per target, and it has no
-regressions with the ``test-suite`` in relation to the previous release.
-
-Regressions are new failures in the set of tests that are used to qualify
-each product and only include things on the list.  Every release will have
-some bugs in it.  It is the reality of developing a complex piece of
-software.  We need a very concrete and definitive release criteria that
-ensures we have monotonically improving quality on some metric.  The metric we
-use is described below.  This doesn't mean that we don't care about other
-criteria, but these are the criteria which we found to be most important and
-which must be satisfied before a release can go out.
+The community values time based releases, so releases should not be delayed for
+too long unless there are critical issues remaining.  In most cases, the only
+kind of bugs that are critical enough to block a release would be a major regression
+from a previous release.
 
 Official Testing
 ----------------
@@ -286,34 +288,35 @@ Below are the rules regarding patching the release branch:
    manager, the official release testers or the code owners with approval from
    the release manager.
 
-#. During the first round of testing, patches that fix regressions or that are
-   small and relatively risk free (verified by the appropriate code owner) are
-   applied to the branch.  Code owners are asked to be very conservative in
-   approving patches for the branch.  We reserve the right to reject any patch
-   that does not fix a regression as previously defined.
+#. Release managers are encouraged, but not required, to get approval from code
+   owners before approving patches.  If there is no code owner or the code owner
+   is unreachable then release managers can ask approval from patch reviewers or
+   other developers active in that area.
 
-#. During the remaining rounds of testing, only patches that fix critical
-   regressions may be applied.
+#. *Before RC1* Patches should be limited to bug fixes, important optimization
+   improvements, or completion of features that were started before the branch
+   was created.  As with all phases, release managers and code owners can reject
+   patches that are deemed too invasive.
 
-#. For dot releases all patches must maintain both API and ABI compatibility with
-   the previous major release.  Only bug-fixes will be accepted.
+#. *Before RC2* Patches should be limited to bug fixes or backend specific
+   improvements that are determined to be very safe.
+
+#. *Before RC3/Final Major Release* Patches should be limited to critical
+   bugs or regressions.
+
+#. *Bug fix releases* Patches should be limited to bug fixes or very safe
+   and critical performance improvements.  Patches must maintain both API and
+   ABI compatibility with the previous major release.
+
 
 Merging Patches
 ^^^^^^^^^^^^^^^
 
-The ``utils/release/merge.sh`` script can be used to merge individual revisions
-into any one of the llvm projects. To merge revision ``$N`` into project
-``$PROJ``, do:
+Use the ``git cherry-pick -x`` command to merge patches to the release branch:
 
-#. ``svn co https://llvm.org/svn/llvm-project/$PROJ/branches/release_XX
-   $PROJ.src``
-
-#. ``$PROJ.src/utils/release/merge.sh --proj $PROJ --rev $N``
+#. ``git cherry-pick -x abcdef0``
 
 #. Run regression tests.
-
-#. ``cd $PROJ.src``. Run the ``svn commit`` command printed out by ``merge.sh``
-   in step 2.
 
 Release Final Tasks
 -------------------
@@ -325,29 +328,24 @@ demo page.
 Update Documentation
 ^^^^^^^^^^^^^^^^^^^^
 
-Review the documentation and ensure that it is up to date.  The "Release Notes"
-must be updated to reflect new features, bug fixes, new known issues, and
-changes in the list of supported platforms.  The "Getting Started Guide" should
-be updated to reflect the new release version number tag available from
-Subversion and changes in basic system requirements.  Merge both changes from
-mainline into the release branch.
+Review the documentation in the release branch and ensure that it is up
+to date.  The "Release Notes" must be updated to reflect new features, bug
+fixes, new known issues, and changes in the list of supported platforms.
+The "Getting Started Guide" should be updated to reflect the new release
+version number tag available from Subversion and changes in basic system
+requirements.
 
 .. _tag:
 
 Tag the LLVM Final Release
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Tag the final release sources using the tag.sh script in utils/release.
+Tag the final release sources:
 
 ::
 
-  $ ./tag.sh -release X.Y.Z -final
-
-Update the LLVM Demo Page
--------------------------
-
-The LLVM demo page must be updated to use the new release.  This consists of
-using the new ``clang`` binary and building LLVM.
+  $ git tag -a llvmorg-X.Y.Z
+  $ git push https://github.com/llvm/llvm-project.git llvmorg-X.Y.Z
 
 Update the LLVM Website
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -355,27 +353,22 @@ Update the LLVM Website
 The website must be updated before the release announcement is sent out.  Here
 is what to do:
 
-#. Check out the ``www`` module from Subversion.
+#. Check out the ``www-releases`` module from GitHub.
 
-#. Create a new sub-directory ``X.Y`` in the releases directory.
-
-#. Commit the ``llvm``, ``test-suite``, ``clang`` source and binaries in this
-   new directory.
+#. Create a new sub-directory ``X.Y.Z`` in the releases directory.
 
 #. Copy and commit the ``llvm/docs`` and ``LICENSE.txt`` files into this new
-   directory.  The docs should be built with ``BUILD_FOR_WEBSITE=1``.
+   directory.
 
-#. Commit the ``index.html`` to the ``release/X.Y`` directory to redirect (use
-   from previous release).
-
-#. Update the ``releases/download.html`` file with the new release.
+#. Update the ``releases/download.html`` file with links to the release
+   binaries on GitHub.
 
 #. Update the ``releases/index.html`` with the new release and link to release
    documentation.
 
-#. Finally, update the main page (``index.html`` and sidebar) to point to the
-   new release and release announcement.  Make sure this all gets committed back
-   into Subversion.
+#. Finally checkout the llvm-www repo and update the main page
+   (``index.html`` and sidebar) to point to the new release and release
+   announcement.
 
 Announce the Release
 ^^^^^^^^^^^^^^^^^^^^

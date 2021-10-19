@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s -check-prefix=MFS-DEFAULTS
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefix=MFS-OPTS2
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
-;; Check that cold block is moved to .text.unlikely.
+;; Check that cold block is moved to .text.split.
 ; MFS-DEFAULTS-LABEL: foo1
-; MFS-DEFAULTS:       .section        .text.unlikely.foo1
+; MFS-DEFAULTS:       .section        .text.split.foo1
 ; MFS-DEFAULTS-NEXT:  foo1.cold:
 ; MFS-DEFAULTS-NOT:   callq   bar
 ; MFS-DEFAULTS-NEXT:  callq   baz
@@ -65,7 +65,7 @@ define void @foo3(i1 zeroext %0) nounwind !section_prefix !15 {
 define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ;; Check that count threshold works.
 ; MFS-OPTS1-LABEL: foo4
-; MFS-OPTS1:       .section        .text.unlikely.foo4
+; MFS-OPTS1:       .section        .text.split.foo4
 ; MFS-OPTS1-NEXT:  foo4.cold:
 ; MFS-OPTS1-NOT:   callq    bar
 ; MFS-OPTS1-NOT:   callq    baz
@@ -99,7 +99,7 @@ define void @foo4(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 define void @foo5(i1 zeroext %0, i1 zeroext %1) nounwind !prof !20 {
 ;; Check that profile summary info cutoff works.
 ; MFS-OPTS2-LABEL: foo5
-; MFS-OPTS2:       .section        .text.unlikely.foo5
+; MFS-OPTS2:       .section        .text.split.foo5
 ; MFS-OPTS2-NEXT:       foo5.cold:
 ; MFS-OPTS2-NOT:   callq    bar
 ; MFS-OPTS2-NOT:   callq    baz
@@ -150,12 +150,12 @@ define void @foo6(i1 zeroext %0) nounwind section "nosplit" !prof !14 {
 }
 
 define i32 @foo7(i1 zeroext %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !14 {
-;; Check that cold ehpads are not split out.
+;; Check that a single cold ehpad is split out.
 ; MFS-DEFAULTS-LABEL: foo7
-; MFS-DEFAULTS:       .section        .text.unlikely.foo7,"ax",@progbits
+; MFS-DEFAULTS:       .section        .text.split.foo7,"ax",@progbits
 ; MFS-DEFAULTS-NEXT:  foo7.cold:
-; MFS-DEFAULTS-NOT:   callq   _Unwind_Resume
 ; MFS-DEFAULTS:       callq   baz
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
 entry:
   invoke void @_Z1fv()
           to label %try.cont unwind label %lpad
@@ -182,6 +182,67 @@ try.cont:
   ret i32 %7
 }
 
+define i32 @foo8(i1 zeroext %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !14 {
+;; Check that all ehpads are treated as hot if one of them is hot.
+; MFS-DEFAULTS-LABEL: foo8
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
+; MFS-DEFAULTS:       callq   _Unwind_Resume@PLT
+; MFS-DEFAULTS:       .section        .text.split.foo8,"ax",@progbits
+; MFS-DEFAULTS-NEXT:  foo8.cold:
+; MFS-DEFAULTS:       callq   baz
+entry:
+  invoke void @_Z1fv()
+          to label %try.cont unwind label %lpad1
+
+lpad1:
+  %1 = landingpad { i8*, i32 }
+          cleanup
+          catch i8* bitcast (i8** @_ZTIi to i8*)
+  resume { i8*, i32 } %1
+
+try.cont:
+  br i1 %0, label %hot, label %cold, !prof !17
+
+hot:
+  %2 = call i32 @bar()
+  invoke void @_Z1fv()
+          to label %exit unwind label %lpad2, !prof !21
+
+lpad2:
+  %3 = landingpad { i8*, i32 }
+          cleanup
+          catch i8* bitcast (i8** @_ZTIi to i8*)
+  resume { i8*, i32 } %3
+
+cold:
+  %4 = call i32 @baz()
+  br label %exit
+
+exit:
+  %5 = tail call i32 @qux()
+  ret i32 %5
+}
+
+define void @foo9(i1 zeroext %0) nounwind #0 !prof !14 {
+;; Check that function with section attribute is not split.
+; MFS-DEFAULTS-LABEL: foo9
+; MFS-DEFAULTS-NOT:   foo9.cold:
+  br i1 %0, label %2, label %4, !prof !17
+
+2:                                                ; preds = %1
+  %3 = call i32 @bar()
+  br label %6
+
+4:                                                ; preds = %1
+  %5 = call i32 @baz()
+  br label %6
+
+6:                                                ; preds = %4, %2
+  %7 = tail call i32 @qux()
+  ret void
+}
+
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()
@@ -190,6 +251,8 @@ declare void @_Z1fv()
 declare i32 @__gxx_personality_v0(...)
 
 @_ZTIi = external constant i8*
+
+attributes #0 = { "implicit-section-name"="nosplit" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
@@ -207,8 +270,8 @@ declare i32 @__gxx_personality_v0(...)
 !12 = !{i32 999900, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 7000}
-!15 = !{!"function_section_prefix", !".hot"}
-!16 = !{!"function_section_prefix", !".unlikely"}
+!15 = !{!"function_section_prefix", !"hot"}
+!16 = !{!"function_section_prefix", !"unlikely"}
 !17 = !{!"branch_weights", i32 7000, i32 0}
 !18 = !{!"branch_weights", i32 3000, i32 4000}
 !19 = !{!"branch_weights", i32 1000, i32 6000}

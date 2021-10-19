@@ -43,4 +43,4 @@ struct MakeGuardsExplicitPass : public PassInfoMixin<MakeGuardsExplicitPass> {
 
 } // namespace llvm
 
-#endif //LLVM_TRANSFORMS_SCALAR_MAKEGUARDSEXPLICIT_H
+#endif // LLVM_TRANSFORMS_SCALAR_MAKEGUARDSEXPLICIT_H

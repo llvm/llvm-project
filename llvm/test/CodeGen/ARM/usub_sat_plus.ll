@@ -104,34 +104,34 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 ; CHECK-T1-LABEL: func16:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    muls r1, r2, r1
-; CHECK-T1-NEXT:    uxth r2, r1
-; CHECK-T1-NEXT:    cmp r0, r2
-; CHECK-T1-NEXT:    bhi .LBB2_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB2_2:
+; CHECK-T1-NEXT:    uxth r1, r1
 ; CHECK-T1-NEXT:    subs r0, r0, r1
-; CHECK-T1-NEXT:    uxth r0, r0
+; CHECK-T1-NEXT:    bhs .LBB2_2
+; CHECK-T1-NEXT:  @ %bb.1:
+; CHECK-T1-NEXT:    movs r0, #0
+; CHECK-T1-NEXT:  .LBB2_2:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func16:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    mul r3, r1, r2
-; CHECK-T2-NEXT:    uxth r3, r3
-; CHECK-T2-NEXT:    cmp r0, r3
-; CHECK-T2-NEXT:    it hi
-; CHECK-T2-NEXT:    movhi r3, r0
-; CHECK-T2-NEXT:    mls r0, r1, r2, r3
-; CHECK-T2-NEXT:    uxth r0, r0
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func16:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
+; CHECK-T2NODSP-NEXT:    uxth r1, r1
+; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
+; CHECK-T2NODSP-NEXT:    it lo
+; CHECK-T2NODSP-NEXT:    movlo r0, #0
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func16:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    uqsub16 r0, r0, r1
+; CHECK-T2DSP-NEXT:    uxth r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mul r3, r1, r2
-; CHECK-ARM-NEXT:    uxth r3, r3
-; CHECK-ARM-NEXT:    cmp r0, r3
-; CHECK-ARM-NEXT:    movhi r3, r0
-; CHECK-ARM-NEXT:    mls r0, r1, r2, r3
+; CHECK-ARM-NEXT:    mul r1, r1, r2
+; CHECK-ARM-NEXT:    uqsub16 r0, r0, r1
 ; CHECK-ARM-NEXT:    uxth r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i16 %y, %z
@@ -143,34 +143,34 @@ define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; CHECK-T1-LABEL: func8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    muls r1, r2, r1
-; CHECK-T1-NEXT:    uxtb r2, r1
-; CHECK-T1-NEXT:    cmp r0, r2
-; CHECK-T1-NEXT:    bhi .LBB3_2
-; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r2
-; CHECK-T1-NEXT:  .LBB3_2:
+; CHECK-T1-NEXT:    uxtb r1, r1
 ; CHECK-T1-NEXT:    subs r0, r0, r1
-; CHECK-T1-NEXT:    uxtb r0, r0
+; CHECK-T1-NEXT:    bhs .LBB3_2
+; CHECK-T1-NEXT:  @ %bb.1:
+; CHECK-T1-NEXT:    movs r0, #0
+; CHECK-T1-NEXT:  .LBB3_2:
 ; CHECK-T1-NEXT:    bx lr
 ;
-; CHECK-T2-LABEL: func8:
-; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    mul r3, r1, r2
-; CHECK-T2-NEXT:    uxtb r3, r3
-; CHECK-T2-NEXT:    cmp r0, r3
-; CHECK-T2-NEXT:    it hi
-; CHECK-T2-NEXT:    movhi r3, r0
-; CHECK-T2-NEXT:    mls r0, r1, r2, r3
-; CHECK-T2-NEXT:    uxtb r0, r0
-; CHECK-T2-NEXT:    bx lr
+; CHECK-T2NODSP-LABEL: func8:
+; CHECK-T2NODSP:       @ %bb.0:
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
+; CHECK-T2NODSP-NEXT:    uxtb r1, r1
+; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
+; CHECK-T2NODSP-NEXT:    it lo
+; CHECK-T2NODSP-NEXT:    movlo r0, #0
+; CHECK-T2NODSP-NEXT:    bx lr
+;
+; CHECK-T2DSP-LABEL: func8:
+; CHECK-T2DSP:       @ %bb.0:
+; CHECK-T2DSP-NEXT:    muls r1, r2, r1
+; CHECK-T2DSP-NEXT:    uqsub8 r0, r0, r1
+; CHECK-T2DSP-NEXT:    uxtb r0, r0
+; CHECK-T2DSP-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func8:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    smulbb r3, r1, r2
-; CHECK-ARM-NEXT:    uxtb r3, r3
-; CHECK-ARM-NEXT:    cmp r0, r3
-; CHECK-ARM-NEXT:    movhi r3, r0
-; CHECK-ARM-NEXT:    mls r0, r1, r2, r3
+; CHECK-ARM-NEXT:    smulbb r1, r1, r2
+; CHECK-ARM-NEXT:    uqsub8 r0, r0, r1
 ; CHECK-ARM-NEXT:    uxtb r0, r0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i8 %y, %z
@@ -183,36 +183,29 @@ define zeroext i4 @func4(i4 zeroext %x, i4 zeroext %y, i4 zeroext %z) nounwind {
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    muls r1, r2, r1
 ; CHECK-T1-NEXT:    movs r2, #15
-; CHECK-T1-NEXT:    mov r3, r1
-; CHECK-T1-NEXT:    ands r3, r2
-; CHECK-T1-NEXT:    cmp r0, r3
-; CHECK-T1-NEXT:    bhi .LBB4_2
+; CHECK-T1-NEXT:    ands r2, r1
+; CHECK-T1-NEXT:    subs r0, r0, r2
+; CHECK-T1-NEXT:    bhs .LBB4_2
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:    mov r0, r3
+; CHECK-T1-NEXT:    movs r0, #0
 ; CHECK-T1-NEXT:  .LBB4_2:
-; CHECK-T1-NEXT:    subs r0, r0, r1
-; CHECK-T1-NEXT:    ands r0, r2
 ; CHECK-T1-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: func4:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    mul r3, r1, r2
-; CHECK-T2-NEXT:    and r3, r3, #15
-; CHECK-T2-NEXT:    cmp r0, r3
-; CHECK-T2-NEXT:    it hi
-; CHECK-T2-NEXT:    movhi r3, r0
-; CHECK-T2-NEXT:    mls r0, r1, r2, r3
-; CHECK-T2-NEXT:    and r0, r0, #15
+; CHECK-T2-NEXT:    muls r1, r2, r1
+; CHECK-T2-NEXT:    and r1, r1, #15
+; CHECK-T2-NEXT:    subs r0, r0, r1
+; CHECK-T2-NEXT:    it lo
+; CHECK-T2-NEXT:    movlo r0, #0
 ; CHECK-T2-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: func4:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    smulbb r3, r1, r2
-; CHECK-ARM-NEXT:    and r3, r3, #15
-; CHECK-ARM-NEXT:    cmp r0, r3
-; CHECK-ARM-NEXT:    movhi r3, r0
-; CHECK-ARM-NEXT:    mls r0, r1, r2, r3
-; CHECK-ARM-NEXT:    and r0, r0, #15
+; CHECK-ARM-NEXT:    smulbb r1, r1, r2
+; CHECK-ARM-NEXT:    and r1, r1, #15
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    movlo r0, #0
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i4 %y, %z
   %tmp = call i4 @llvm.usub.sat.i4(i4 %x, i4 %a)

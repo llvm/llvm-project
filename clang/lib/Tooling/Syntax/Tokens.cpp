@@ -183,7 +183,39 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
   return Text.substr(Begin, length());
 }
 
+void TokenBuffer::indexExpandedTokens() {
+  // No-op if the index is already created.
+  if (!ExpandedTokIndex.empty())
+    return;
+  ExpandedTokIndex.reserve(ExpandedTokens.size());
+  // Index ExpandedTokens for faster lookups by SourceLocation.
+  for (size_t I = 0, E = ExpandedTokens.size(); I != E; ++I) {
+    SourceLocation Loc = ExpandedTokens[I].location();
+    if (Loc.isValid())
+      ExpandedTokIndex[Loc] = I;
+  }
+}
+
 llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
+  if (R.isInvalid())
+    return {};
+  if (!ExpandedTokIndex.empty()) {
+    // Quick lookup if `R` is a token range.
+    // This is a huge win since majority of the users use ranges provided by an
+    // AST. Ranges in AST are token ranges from expanded token stream.
+    const auto B = ExpandedTokIndex.find(R.getBegin());
+    const auto E = ExpandedTokIndex.find(R.getEnd());
+    if (B != ExpandedTokIndex.end() && E != ExpandedTokIndex.end()) {
+      const Token *L = ExpandedTokens.data() + B->getSecond();
+      // Add 1 to End to make a half-open range.
+      const Token *R = ExpandedTokens.data() + E->getSecond() + 1;
+      if (L > R)
+        return {};
+      return {L, R};
+    }
+  }
+  // Slow case. Use `isBeforeInTranslationUnit` to binary search for the
+  // required range.
   return getTokensCovering(expandedTokens(), R, *SourceMgr);
 }
 
@@ -575,11 +607,11 @@ public:
     // A's startpoint.
     if (!Range.getBegin().isFileID()) {
       Range.setBegin(SM.getExpansionLoc(Range.getBegin()));
-      assert(Collector->Expansions.count(Range.getBegin().getRawEncoding()) &&
+      assert(Collector->Expansions.count(Range.getBegin()) &&
              "Overlapping macros should have same expansion location");
     }
 
-    Collector->Expansions[Range.getBegin().getRawEncoding()] = Range.getEnd();
+    Collector->Expansions[Range.getBegin()] = Range.getEnd();
     LastExpansionEnd = Range.getEnd();
   }
   // FIXME: handle directives like #pragma, #include, etc.
@@ -711,8 +743,8 @@ private:
       // If we know mapping bounds at [NextSpelled, KnownEnd] (macro expansion)
       // then we want to partition our (empty) mapping.
       //   [Start, NextSpelled) [NextSpelled, KnownEnd] (KnownEnd, Target)
-      SourceLocation KnownEnd = CollectedExpansions.lookup(
-          SpelledTokens[NextSpelled].location().getRawEncoding());
+      SourceLocation KnownEnd =
+          CollectedExpansions.lookup(SpelledTokens[NextSpelled].location());
       if (KnownEnd.isValid()) {
         FlushMapping(); // Emits [Start, NextSpelled)
         while (NextSpelled < SpelledTokens.size() &&
@@ -749,7 +781,7 @@ private:
       // We need no mapping for file tokens copied to the expanded stream.
     } else {
       // We found a new macro expansion. We should have its spelling bounds.
-      auto End = CollectedExpansions.lookup(Expansion.getRawEncoding());
+      auto End = CollectedExpansions.lookup(Expansion);
       assert(End.isValid() && "Macro expansion wasn't captured?");
 
       // Mapping starts here...

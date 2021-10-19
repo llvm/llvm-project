@@ -106,10 +106,10 @@ define amdgpu_kernel void @no_extract_volatile_load_extract0(i32 addrspace(1)* %
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s8, s2
 ; GCN-NEXT:    s_mov_b32 s9, s3
-; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -130,10 +130,10 @@ define amdgpu_kernel void @no_extract_volatile_load_extract2(i32 addrspace(1)* %
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s8, s2
 ; GCN-NEXT:    s_mov_b32 s9, s3
-; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v2, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -147,23 +147,26 @@ define amdgpu_kernel void @no_extract_volatile_load_dynextract(i32 addrspace(1)*
 ; GCN-LABEL: no_extract_volatile_load_dynextract:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    s_load_dword s12, s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s10, s2
 ; GCN-NEXT:    s_mov_b32 s11, s3
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s8, s6
-; GCN-NEXT:    s_mov_b32 s9, s7
-; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
-; GCN-NEXT:    v_cmp_eq_u32_e64 vcc, s12, 1
+; GCN-NEXT:    s_mov_b32 s8, s6
+; GCN-NEXT:    s_mov_b32 s9, s7
+; GCN-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_cmp_eq_u32 s12, 1
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s12, 2
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e64 vcc, s12, 2
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
+; GCN-NEXT:    s_cmp_eq_u32 s12, 3
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e64 vcc, s12, 3
+; GCN-NEXT:    s_cselect_b64 vcc, -1, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm

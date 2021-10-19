@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.7 (C1583-C1590, C1592-C1599) constraints and restrictions
 ! for pure procedures.
 ! (C1591 is tested in call11.f90; C1594 in call12.f90.)
@@ -87,7 +87,7 @@ module m
     real, save :: v1
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v2 = 0.
-    !TODO: once we have DATA: !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real :: v3
     data v3/0./
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
@@ -157,8 +157,9 @@ module m
     close(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram
     backspace(1) ! C1597
+    !Also checks parsing of variant END FILE spelling
     !ERROR: External I/O is not allowed in a pure subprogram
-    endfile(1) ! C1597
+    end file(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram
     rewind(1) ! C1597
     !ERROR: External I/O is not allowed in a pure subprogram
@@ -183,7 +184,6 @@ module m
   pure subroutine s14
     integer :: img, nimgs, i[*], tmp
                                    ! implicit sync all
-    !ERROR: Procedure 'this_image' referenced in pure subprogram 's14' must be pure too
     img = this_image()
     nimgs = num_images()
     i = img                       ! i is ready to use

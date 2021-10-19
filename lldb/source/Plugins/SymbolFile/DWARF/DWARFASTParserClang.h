@@ -73,7 +73,6 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
@@ -83,11 +82,9 @@ protected:
       DIEToModuleMap;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
       DIEToDeclMap;
-  typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
   lldb_private::TypeSystemClang &m_ast;
   DIEToDeclMap m_die_to_decl;
-  DeclToDIEMap m_decl_to_die;
   DIEToDeclContextMap m_die_to_decl_ctx;
   DeclContextToDIEMap m_decl_ctx_to_die;
   DIEToModuleMap m_die_to_module;
@@ -111,10 +108,9 @@ protected:
   bool ParseChildMembers(
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-      std::vector<int> &member_accessibilities,
       std::vector<DWARFDIE> &member_function_dies,
       DelayedPropertyList &delayed_properties,
-      lldb::AccessType &default_accessibility, bool &is_a_class,
+      const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
@@ -191,12 +187,26 @@ private:
     }
   };
 
+  /// Parses a DW_TAG_APPLE_property DIE and appends the parsed data to the
+  /// list of delayed Objective-C properties.
+  ///
+  /// Note: The delayed property needs to be finalized to actually create the
+  /// property declarations in the module AST.
+  ///
+  /// \param die The DW_TAG_APPLE_property DIE that will be parsed.
+  /// \param parent_die The parent DIE.
+  /// \param class_clang_type The Objective-C class that will contain the
+  /// created property.
+  /// \param delayed_properties The list of delayed properties that the result
+  /// will be appended to.
+  void ParseObjCProperty(const DWARFDIE &die, const DWARFDIE &parent_die,
+                         const lldb_private::CompilerType &class_clang_type,
+                         DelayedPropertyList &delayed_properties);
+
   void
   ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
-                    std::vector<int> &member_accessibilities,
                     lldb::AccessType default_accessibility,
-                    DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
@@ -217,6 +227,28 @@ private:
                               ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
+
+  /// Parses a DW_TAG_inheritance DIE into a base/super class.
+  ///
+  /// \param die The DW_TAG_inheritance DIE to parse.
+  /// \param parent_die The parent DIE of the given DIE.
+  /// \param class_clang_type The C++/Objective-C class representing parent_die.
+  /// For an Objective-C class this method sets the super class on success. For
+  /// a C++ class this will *not* add the result as a base class.
+  /// \param default_accessibility The default accessibility that is given to
+  /// base classes if they don't have an explicit accessibility set.
+  /// \param module_sp The current Module.
+  /// \param base_classes The list of C++ base classes that will be appended
+  /// with the parsed base class on success.
+  /// \param layout_info The layout information that will be updated for C++
+  /// base classes with the base offset.
+  void ParseInheritance(
+      const DWARFDIE &die, const DWARFDIE &parent_die,
+      const lldb_private::CompilerType class_clang_type,
+      const lldb::AccessType default_accessibility,
+      const lldb::ModuleSP &module_sp,
+      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
+      lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

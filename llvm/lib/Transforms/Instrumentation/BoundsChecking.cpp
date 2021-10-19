@@ -32,7 +32,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <vector>
+#include <utility>
 
 using namespace llvm;
 

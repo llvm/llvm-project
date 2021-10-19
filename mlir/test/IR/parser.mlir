@@ -46,120 +46,164 @@
 
 // CHECK-DAG: #set{{[0-9]+}} = affine_set<(d0)[s0] : (d0 - 2 >= 0, -d0 + 4 >= 0)>
 
-// CHECK: func @foo(i32, i64) -> f32
-func @foo(i32, i64) -> f32
+// CHECK: func private @foo(i32, i64) -> f32
+func private @foo(i32, i64) -> f32
 
-// CHECK: func @bar()
-func @bar() -> ()
+// CHECK: func private @bar()
+func private @bar() -> ()
 
-// CHECK: func @baz() -> (i1, index, f32)
-func @baz() -> (i1, index, f32)
+// CHECK: func private @baz() -> (i1, index, f32)
+func private @baz() -> (i1, index, f32)
 
-// CHECK: func @missingReturn()
-func @missingReturn()
+// CHECK: func private @missingReturn()
+func private @missingReturn()
 
-// CHECK: func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
-func @int_types(i1, i2, i4, i7, i87) -> (i1, index, i19)
+// CHECK: func private @int_types(i0, i1, i2, i4, i7, i87) -> (i1, index, i19)
+func private @int_types(i0, i1, i2, i4, i7, i87) -> (i1, index, i19)
 
-// CHECK: func @sint_types(si2, si4) -> (si7, si1023)
-func @sint_types(si2, si4) -> (si7, si1023)
+// CHECK: func private @sint_types(si2, si4) -> (si7, si1023)
+func private @sint_types(si2, si4) -> (si7, si1023)
 
-// CHECK: func @uint_types(ui2, ui4) -> (ui7, ui1023)
-func @uint_types(ui2, ui4) -> (ui7, ui1023)
+// CHECK: func private @uint_types(ui2, ui4) -> (ui7, ui1023)
+func private @uint_types(ui2, ui4) -> (ui7, ui1023)
 
+// CHECK: func private @float_types(f80, f128)
+func private @float_types(f80, f128)
 
-// CHECK: func @vectors(vector<1xf32>, vector<2x4xf32>)
-func @vectors(vector<1 x f32>, vector<2x4xf32>)
+// CHECK: func private @vectors(vector<1xf32>, vector<2x4xf32>)
+func private @vectors(vector<1 x f32>, vector<2x4xf32>)
 
-// CHECK: func @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
-func @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
+// CHECK: func private @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
+func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
                  tensor<1x?x4x?x?xi32>, tensor<i8>)
 
-// CHECK: func @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
-func @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
+// CHECK: func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+func private @tensor_encoding(tensor<16x32xf64, "sparse">)
+
+// CHECK: func private @memrefs(memref<1x?x4x?x?xi32, #map{{[0-9]+}}>, memref<8xi8>)
+func private @memrefs(memref<1x?x4x?x?xi32, #map0>, memref<8xi8, #map1, #map1>)
 
 // Test memref affine map compositions.
 
-// CHECK: func @memrefs2(memref<2x4x8xi8, 1>)
-func @memrefs2(memref<2x4x8xi8, #map2, 1>)
+// CHECK: func private @memrefs2(memref<2x4x8xi8, 1>)
+func private @memrefs2(memref<2x4x8xi8, #map2, 1>)
 
-// CHECK: func @memrefs23(memref<2x4x8xi8, #map{{[0-9]+}}>)
-func @memrefs23(memref<2x4x8xi8, #map2, #map3, 0>)
+// CHECK: func private @memrefs23(memref<2x4x8xi8, #map{{[0-9]+}}>)
+func private @memrefs23(memref<2x4x8xi8, #map2, #map3, 0>)
 
-// CHECK: func @memrefs234(memref<2x4x8xi8, #map{{[0-9]+}}, #map{{[0-9]+}}, 3>)
-func @memrefs234(memref<2x4x8xi8, #map2, #map3, #map4, 3>)
+// CHECK: func private @memrefs234(memref<2x4x8xi8, #map{{[0-9]+}}, #map{{[0-9]+}}, 3>)
+func private @memrefs234(memref<2x4x8xi8, #map2, #map3, #map4, 3>)
 
 // Test memref inline affine map compositions, minding that identity maps are removed.
 
-// CHECK: func @memrefs3(memref<2x4x8xi8>)
-func @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
+// CHECK: func private @memrefs3(memref<2x4x8xi8>)
+func private @memrefs3(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>>)
 
-// CHECK: func @memrefs33(memref<2x4x8xi8, #map{{[0-9]+}}, 1>)
-func @memrefs33(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>, 1>)
+// CHECK: func private @memrefs33(memref<2x4x8xi8, #map{{[0-9]+}}, 1>)
+func private @memrefs33(memref<2x4x8xi8, affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1, d0, d2)>, 1>)
 
-// CHECK: func @memrefs_drop_triv_id_inline(memref<2xi8>)
-func @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
+// CHECK: func private @memrefs_drop_triv_id_inline(memref<2xi8>)
+func private @memrefs_drop_triv_id_inline(memref<2xi8, affine_map<(d0) -> (d0)>>)
 
-// CHECK: func @memrefs_drop_triv_id_inline0(memref<2xi8>)
-func @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>, 0>)
+// CHECK: func private @memrefs_drop_triv_id_inline0(memref<2xi8>)
+func private @memrefs_drop_triv_id_inline0(memref<2xi8, affine_map<(d0) -> (d0)>, 0>)
 
-// CHECK: func @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
-func @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
+// CHECK: func private @memrefs_drop_triv_id_inline1(memref<2xi8, 1>)
+func private @memrefs_drop_triv_id_inline1(memref<2xi8, affine_map<(d0) -> (d0)>, 1>)
 
 // Identity maps should be dropped from the composition, but not the pair of
 // "interchange" maps that, if composed, would be also an identity.
-// CHECK: func @memrefs_drop_triv_id_composition(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_composition(memref<2x2xi8,
+// CHECK: func private @memrefs_drop_triv_id_composition(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_composition(memref<2x2xi8,
                                                 affine_map<(d0, d1) -> (d1, d0)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>,
                                                 affine_map<(d0, d1) -> (d1, d0)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>,
                                                 affine_map<(d0, d1) -> (d0, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_trailing(memref<2x2xi8, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_trailing(memref<2x2xi8, affine_map<(d0, d1) -> (d1, d0)>,
+// CHECK: func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_trailing(memref<2x2xi8, affine_map<(d0, d1) -> (d1, d0)>,
                                                    affine_map<(d0, d1) -> (d0, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_middle(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
-func @memrefs_drop_triv_id_middle(memref<2x2xi8,
+// CHECK: func private @memrefs_drop_triv_id_middle(memref<2x2xi8, #map{{[0-9]+}}, #map{{[0-9]+}}>)
+func private @memrefs_drop_triv_id_middle(memref<2x2xi8,
                                          affine_map<(d0, d1) -> (d0, d1 + 1)>,
                                          affine_map<(d0, d1) -> (d0, d1)>,
                                          affine_map<(d0, d1) -> (d0 + 1, d1)>>)
 
-// CHECK: func @memrefs_drop_triv_id_multiple(memref<2xi8>)
-func @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>>)
+// CHECK: func private @memrefs_drop_triv_id_multiple(memref<2xi8>)
+func private @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>>)
 
 // These maps appeared before, so they must be uniqued and hoisted to the beginning.
 // Identity map should be removed.
-// CHECK: func @memrefs_compose_with_id(memref<2x2xi8, #map{{[0-9]+}}>)
-func @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
+// CHECK: func private @memrefs_compose_with_id(memref<2x2xi8, #map{{[0-9]+}}>)
+func private @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
                                              affine_map<(d0, d1) -> (d1, d0)>>)
 
+// Test memref with custom memory space
 
-// CHECK: func @complex_types(complex<i1>) -> complex<f32>
-func @complex_types(complex<i1>) -> complex<f32>
+// CHECK: func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
+func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
 
+// CHECK: func private @memrefs_map_nospace(memref<5x6x7xf32, #map{{[0-9]+}}>)
+func private @memrefs_map_nospace(memref<5x6x7xf32, #map3>)
 
-// CHECK: func @memref_with_index_elems(memref<1x?xindex>)
-func @memref_with_index_elems(memref<1x?xindex>)
+// CHECK: func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
+func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
 
-// CHECK: func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
-func @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
+// CHECK: func private @memrefs_map_intspace(memref<5x6x7xf32, #map{{[0-9]+}}, 5>)
+func private @memrefs_map_intspace(memref<5x6x7xf32, #map3, 5>)
 
-// CHECK: func @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
-func @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+// CHECK: func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
+func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
 
-// CHECK: func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
-func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
+// CHECK: func private @memrefs_map_strspace(memref<5x6x7xf32, #map{{[0-9]+}}, "private">)
+func private @memrefs_map_strspace(memref<5x6x7xf32, #map3, "private">)
 
-// CHECK: func @unranked_memref_with_index_elems(memref<*xindex>)
-func @unranked_memref_with_index_elems(memref<*xindex>)
+// CHECK: func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1 : i64}>)
+func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1}>)
 
-// CHECK: func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
-func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+// CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]+}}, {memSpace = "special", subIndex = 3 : i64}>)
+func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
-// CHECK: func @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
-func @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
+// CHECK: func private @complex_types(complex<i1>) -> complex<f32>
+func private @complex_types(complex<i1>) -> complex<f32>
+
+// CHECK: func private @memref_with_index_elems(memref<1x?xindex>)
+func private @memref_with_index_elems(memref<1x?xindex>)
+
+// CHECK: func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
+func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
+
+// CHECK: func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
+
+// CHECK: func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+
+// CHECK: func private @memref_of_memref(memref<1xmemref<1xf64>>)
+func private @memref_of_memref(memref<1xmemref<1xf64>>)
+
+// CHECK: func private @memref_of_unranked_memref(memref<1xmemref<*xf32>>)
+func private @memref_of_unranked_memref(memref<1xmemref<*xf32>>)
+
+// CHECK: func private @unranked_memref_of_memref(memref<*xmemref<1xf32>>)
+func private @unranked_memref_of_memref(memref<*xmemref<1xf32>>)
+
+// CHECK: func private @unranked_memref_of_unranked_memref(memref<*xmemref<*xi32>>)
+func private @unranked_memref_of_unranked_memref(memref<*xmemref<*xi32>>)
+
+// CHECK: func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
+func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
+
+// CHECK: func private @unranked_memref_with_index_elems(memref<*xindex>)
+func private @unranked_memref_with_index_elems(memref<*xindex>)
+
+// CHECK: func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+func private @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+
+// CHECK: func private @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
+func private @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
 // CHECK-LABEL: func @simpleCFG(%{{.*}}: i32, %{{.*}}: f32) -> i1 {
 func @simpleCFG(%arg0: i32, %f: f32) -> i1 {
@@ -282,10 +326,10 @@ func @complex_loops() {
 
 // CHECK: func @triang_loop(%{{.*}}: index, %{{.*}}: memref<?x?xi32>) {
 func @triang_loop(%arg0: index, %arg1: memref<?x?xi32>) {
-  %c = constant 0 : i32       // CHECK: %{{.*}} = constant 0 : i32
+  %c = arith.constant 0 : i32       // CHECK: %{{.*}} = arith.constant 0 : i32
   affine.for %i0 = 1 to %arg0 {      // CHECK: affine.for %{{.*}} = 1 to %{{.*}} {
     affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to %{{.*}} {
-      store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
+      memref.store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
     }          // CHECK:     }
   }            // CHECK:   }
   return       // CHECK:   return
@@ -317,8 +361,8 @@ func @loop_bounds(%N : index) {
        affine.for %k = #bound_map1 (%w1, %i)[%N] to affine_map<(i, j)[s] -> (i + j + s)> (%w2, %j)[%s] {
           // CHECK: "foo"(%{{.*}}, %{{.*}}, %{{.*}}) : (index, index, index) -> ()
           "foo"(%i, %j, %k) : (index, index, index)->()
-          // CHECK: %{{.*}} = constant 30 : index
-          %c = constant 30 : index
+          // CHECK: %{{.*}} = arith.constant 30 : index
+          %c = arith.constant 30 : index
           // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})
           %u = affine.apply affine_map<(d0, d1)->(d0+d1)> (%N, %c)
           // CHECK: affine.for %{{.*}} = max #map{{.*}}(%{{.*}})[%{{.*}}] to min #map{{.*}}(%{{.*}})[%{{.*}}] {
@@ -334,21 +378,21 @@ func @loop_bounds(%N : index) {
 
 // CHECK-LABEL: func @ifinst(%{{.*}}: index) {
 func @ifinst(%N: index) {
-  %c = constant 200 : index // CHECK   %{{.*}} = constant 200
+  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
   affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
     affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
-      %x = constant 1 : i32
-       // CHECK: %{{.*}} = constant 1 : i32
+      %x = arith.constant 1 : i32
+       // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     } else { // CHECK } else {
       affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK  affine.if (#set1(%{{.*}})[%{{.*}}]) {
-        // CHECK: %{{.*}} = constant 1 : index
-        %u = constant 1 : index
+        // CHECK: %{{.*}} = arith.constant 1 : index
+        %u = arith.constant 1 : index
         // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
         %w = affine.apply affine_map<(d0,d1)[s0] -> (d0+d1+s0)> (%i, %i) [%u]
       } else {            // CHECK     } else {
-        %v = constant 3 : i32 // %c3_i32 = constant 3 : i32
+        %v = arith.constant 3 : i32 // %c3_i32 = arith.constant 3 : i32
       }
     }       // CHECK     }
   }         // CHECK   }
@@ -357,11 +401,11 @@ func @ifinst(%N: index) {
 
 // CHECK-LABEL: func @simple_ifinst(%{{.*}}: index) {
 func @simple_ifinst(%N: index) {
-  %c = constant 200 : index // CHECK   %{{.*}} = constant 200
+  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
   affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
     affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
-      %x = constant 1 : i32
-       // CHECK: %{{.*}} = constant 1 : i32
+      %x = arith.constant 1 : i32
+       // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     }       // CHECK     }
@@ -455,7 +499,7 @@ func @verbose_terminators() -> (i1, i17) {
   "std.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = dense<[1, 1, 2]>: vector<3xi32>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
-  %true = constant true
+  %true = arith.constant true
 // CHECK:  return %{{.*}}, %{{.*}} : i1, i17
   "std.return"(%true, %a) : (i1, i17) -> ()
 
@@ -502,24 +546,24 @@ func @condbr_moarargs() -> (i32) {
 // Test pretty printing of constant names.
 // CHECK-LABEL: func @constants
 func @constants() -> (i32, i23, i23, i1, i1) {
-  // CHECK: %{{.*}} = constant 42 : i32
-  %x = constant 42 : i32
-  // CHECK: %{{.*}} = constant 17 : i23
-  %y = constant 17 : i23
+  // CHECK: %{{.*}} = arith.constant 42 : i32
+  %x = arith.constant 42 : i32
+  // CHECK: %{{.*}} = arith.constant 17 : i23
+  %y = arith.constant 17 : i23
 
   // This is a redundant definition of 17, the asmprinter gives it a unique name
-  // CHECK: %{{.*}} = constant 17 : i23
-  %z = constant 17 : i23
+  // CHECK: %{{.*}} = arith.constant 17 : i23
+  %z = arith.constant 17 : i23
 
-  // CHECK: %{{.*}} = constant true
-  %t = constant true
-  // CHECK: %{{.*}} = constant false
-  %f = constant false
+  // CHECK: %{{.*}} = arith.constant true
+  %t = arith.constant true
+  // CHECK: %{{.*}} = arith.constant false
+  %f = arith.constant false
 
   // The trick to parse type declarations should not interfere with hex
   // literals.
-  // CHECK: %{{.*}} = constant 3890 : i32
-  %h = constant 0xf32 : i32
+  // CHECK: %{{.*}} = arith.constant 3890 : i32
+  %h = arith.constant 0xf32 : i32
 
   // CHECK: return %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
   return %x, %y, %z, %t, %f : i32, i23, i23, i1, i1
@@ -565,17 +609,17 @@ func @floatAttrs() -> () {
   return
 }
 
-// CHECK-LABEL: func @externalfuncattr
-func @externalfuncattr() -> ()
+// CHECK-LABEL: func private @externalfuncattr
+func private @externalfuncattr() -> ()
   // CHECK: attributes {dialect.a = "a\22quoted\22string", dialect.b = 4.000000e+00 : f64, dialect.c = tensor<*xf32>}
   attributes {dialect.a = "a\"quoted\"string", dialect.b = 4.0, dialect.c = tensor<*xf32>}
 
-// CHECK-LABEL: func @funcattrempty
-func @funcattrempty() -> ()
+// CHECK-LABEL: func private @funcattrempty
+func private @funcattrempty() -> ()
   attributes {}
 
-// CHECK-LABEL: func @funcattr
-func @funcattr() -> ()
+// CHECK-LABEL: func private @funcattr
+func private @funcattr() -> ()
   // CHECK: attributes {dialect.a = "a\22quoted\22string", dialect.b = 4.000000e+00 : f64, dialect.c = tensor<*xf32>}
   attributes {dialect.a = "a\"quoted\"string", dialect.b = 4.0, dialect.c = tensor<*xf32>} {
 ^bb0:
@@ -609,7 +653,7 @@ func @funcsimplemap(%arg0: index, %arg1: index) -> () {
           // CHECK: affine.for %{{.*}} = 0 to #map{{[a-z_0-9]*}}()[%{{.*}}, %{{.*}}] {
             affine.for %i5 = 0 to #map_non_simple3()[%arg0] {
             // CHECK: affine.for %{{.*}} = 0 to #map{{[a-z_0-9]*}}()[%{{.*}}] {
-              %c42_i32 = constant 42 : i32
+              %c42_i32 = arith.constant 42 : i32
             }
           }
         }
@@ -766,7 +810,7 @@ func @sparsetensorattr() -> () {
 // CHECK: "fooi32"() {bar = sparse<> : tensor<1x1xi32>} : () -> ()
   "fooi32"(){bar = sparse<> : tensor<1x1xi32>} : () -> ()
 // CHECK: "fooi64"() {bar = sparse<0, -1> : tensor<1xi64>} : () -> ()
-  "fooi64"(){bar = sparse<[[0]], [-1]> : tensor<1xi64>} : () -> ()
+  "fooi64"(){bar = sparse<[0], [-1]> : tensor<1xi64>} : () -> ()
 // CHECK: "foo2"() {bar = sparse<> : tensor<0xi32>} : () -> ()
   "foo2"(){bar = sparse<> : tensor<0xi32>} : () -> ()
 // CHECK: "foo3"() {bar = sparse<> : tensor<i32>} : () -> ()
@@ -845,7 +889,7 @@ func @no_integer_set_constraints() {
 
 // CHECK-LABEL: func @verbose_if(
 func @verbose_if(%N: index) {
-  %c = constant 200 : index
+  %c = arith.constant 200 : index
 
   // CHECK: affine.if #set{{.*}}(%{{.*}})[%{{.*}}, %{{.*}}] {
   "affine.if"(%c, %N, %c) ({
@@ -888,11 +932,11 @@ func @dialect_attrs()
   return
 }
 
-// CHECK-LABEL: func @_valid.function$name
-func @_valid.function$name()
+// CHECK-LABEL: func private @_valid.function$name
+func private @_valid.function$name()
 
-// CHECK-LABEL: func @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
-func @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
+// CHECK-LABEL: func private @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
+func private @external_func_arg_attrs(i32, i1 {dialect.attr = 10 : i64}, i32)
 
 // CHECK-LABEL: func @func_arg_attrs(%{{.*}}: i1 {dialect.attr = 10 : i64})
 func @func_arg_attrs(%arg0: i1 {dialect.attr = 10 : i64}) {
@@ -904,17 +948,17 @@ func @func_result_attrs(%arg0: f32) -> (f32 {dialect.attr = 1}) {
   return %arg0 : f32
 }
 
-// CHECK-LABEL: func @empty_tuple(tuple<>)
-func @empty_tuple(tuple<>)
+// CHECK-LABEL: func private @empty_tuple(tuple<>)
+func private @empty_tuple(tuple<>)
 
-// CHECK-LABEL: func @tuple_single_element(tuple<i32>)
-func @tuple_single_element(tuple<i32>)
+// CHECK-LABEL: func private @tuple_single_element(tuple<i32>)
+func private @tuple_single_element(tuple<i32>)
 
-// CHECK-LABEL: func @tuple_multi_element(tuple<i32, i16, f32>)
-func @tuple_multi_element(tuple<i32, i16, f32>)
+// CHECK-LABEL: func private @tuple_multi_element(tuple<i32, i16, f32>)
+func private @tuple_multi_element(tuple<i32, i16, f32>)
 
-// CHECK-LABEL: func @tuple_nested(tuple<tuple<tuple<i32>>>)
-func @tuple_nested(tuple<tuple<tuple<i32>>>)
+// CHECK-LABEL: func private @tuple_nested(tuple<tuple<tuple<i32>>>)
+func private @tuple_nested(tuple<tuple<tuple<i32>>>)
 
 // CHECK-LABEL: func @pretty_form_multi_result
 func @pretty_form_multi_result() -> (i16, i16) {
@@ -1002,9 +1046,6 @@ func @scoped_names() {
   return
 }
 
-// CHECK-LABEL: func @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
-func @loc_attr(i1 {foo.loc_attr = loc(callsite("foo" at "mysource.cc":10:8))})
-
 // CHECK-LABEL: func @dialect_attribute_with_type
 func @dialect_attribute_with_type() {
   // CHECK-NEXT: foo = #foo.attr : i32
@@ -1014,19 +1055,19 @@ func @dialect_attribute_with_type() {
 // CHECK-LABEL: @f16_special_values
 func @f16_special_values() {
   // F16 NaNs.
-  // CHECK: constant 0x7C01 : f16
-  %0 = constant 0x7C01 : f16
-  // CHECK: constant 0x7FFF : f16
-  %1 = constant 0x7FFF : f16
-  // CHECK: constant 0xFFFF : f16
-  %2 = constant 0xFFFF : f16
+  // CHECK: arith.constant 0x7C01 : f16
+  %0 = arith.constant 0x7C01 : f16
+  // CHECK: arith.constant 0x7FFF : f16
+  %1 = arith.constant 0x7FFF : f16
+  // CHECK: arith.constant 0xFFFF : f16
+  %2 = arith.constant 0xFFFF : f16
 
   // F16 positive infinity.
-  // CHECK: constant 0x7C00 : f16
-  %3 = constant 0x7C00 : f16
+  // CHECK: arith.constant 0x7C00 : f16
+  %3 = arith.constant 0x7C00 : f16
   // F16 negative infinity.
-  // CHECK: constant 0xFC00 : f16
-  %4 = constant 0xFC00 : f16
+  // CHECK: arith.constant 0xFC00 : f16
+  %4 = arith.constant 0xFC00 : f16
 
   return
 }
@@ -1034,23 +1075,23 @@ func @f16_special_values() {
 // CHECK-LABEL: @f32_special_values
 func @f32_special_values() {
   // F32 signaling NaNs.
-  // CHECK: constant 0x7F800001 : f32
-  %0 = constant 0x7F800001 : f32
-  // CHECK: constant 0x7FBFFFFF : f32
-  %1 = constant 0x7FBFFFFF : f32
+  // CHECK: arith.constant 0x7F800001 : f32
+  %0 = arith.constant 0x7F800001 : f32
+  // CHECK: arith.constant 0x7FBFFFFF : f32
+  %1 = arith.constant 0x7FBFFFFF : f32
 
   // F32 quiet NaNs.
-  // CHECK: constant 0x7FC00000 : f32
-  %2 = constant 0x7FC00000 : f32
-  // CHECK: constant 0xFFFFFFFF : f32
-  %3 = constant 0xFFFFFFFF : f32
+  // CHECK: arith.constant 0x7FC00000 : f32
+  %2 = arith.constant 0x7FC00000 : f32
+  // CHECK: arith.constant 0xFFFFFFFF : f32
+  %3 = arith.constant 0xFFFFFFFF : f32
 
   // F32 positive infinity.
-  // CHECK: constant 0x7F800000 : f32
-  %4 = constant 0x7F800000 : f32
+  // CHECK: arith.constant 0x7F800000 : f32
+  %4 = arith.constant 0x7F800000 : f32
   // F32 negative infinity.
-  // CHECK: constant 0xFF800000 : f32
-  %5 = constant 0xFF800000 : f32
+  // CHECK: arith.constant 0xFF800000 : f32
+  %5 = arith.constant 0xFF800000 : f32
 
   return
 }
@@ -1058,28 +1099,28 @@ func @f32_special_values() {
 // CHECK-LABEL: @f64_special_values
 func @f64_special_values() {
   // F64 signaling NaNs.
-  // CHECK: constant 0x7FF0000000000001 : f64
-  %0 = constant 0x7FF0000000000001 : f64
-  // CHECK: constant 0x7FF8000000000000 : f64
-  %1 = constant 0x7FF8000000000000 : f64
+  // CHECK: arith.constant 0x7FF0000000000001 : f64
+  %0 = arith.constant 0x7FF0000000000001 : f64
+  // CHECK: arith.constant 0x7FF8000000000000 : f64
+  %1 = arith.constant 0x7FF8000000000000 : f64
 
   // F64 quiet NaNs.
-  // CHECK: constant 0x7FF0000001000000 : f64
-  %2 = constant 0x7FF0000001000000 : f64
-  // CHECK: constant 0xFFF0000001000000 : f64
-  %3 = constant 0xFFF0000001000000 : f64
+  // CHECK: arith.constant 0x7FF0000001000000 : f64
+  %2 = arith.constant 0x7FF0000001000000 : f64
+  // CHECK: arith.constant 0xFFF0000001000000 : f64
+  %3 = arith.constant 0xFFF0000001000000 : f64
 
   // F64 positive infinity.
-  // CHECK: constant 0x7FF0000000000000 : f64
-  %4 = constant 0x7FF0000000000000 : f64
+  // CHECK: arith.constant 0x7FF0000000000000 : f64
+  %4 = arith.constant 0x7FF0000000000000 : f64
   // F64 negative infinity.
-  // CHECK: constant 0xFFF0000000000000 : f64
-  %5 = constant 0xFFF0000000000000 : f64
+  // CHECK: arith.constant 0xFFF0000000000000 : f64
+  %5 = arith.constant 0xFFF0000000000000 : f64
 
   // Check that values that can't be represented with the default format, use
   // hex instead.
-  // CHECK: constant 0xC1CDC00000000000 : f64
-  %6 = constant 0xC1CDC00000000000 : f64
+  // CHECK: arith.constant 0xC1CDC00000000000 : f64
+  %6 = arith.constant 0xC1CDC00000000000 : f64
 
   return
 }
@@ -1087,23 +1128,23 @@ func @f64_special_values() {
 // CHECK-LABEL: @bfloat16_special_values
 func @bfloat16_special_values() {
   // bfloat16 signaling NaNs.
-  // CHECK: constant 0x7F81 : bf16
-  %0 = constant 0x7F81 : bf16
-  // CHECK: constant 0xFF81 : bf16
-  %1 = constant 0xFF81 : bf16
+  // CHECK: arith.constant 0x7F81 : bf16
+  %0 = arith.constant 0x7F81 : bf16
+  // CHECK: arith.constant 0xFF81 : bf16
+  %1 = arith.constant 0xFF81 : bf16
 
   // bfloat16 quiet NaNs.
-  // CHECK: constant 0x7FC0 : bf16
-  %2 = constant 0x7FC0 : bf16
-  // CHECK: constant 0xFFC0 : bf16
-  %3 = constant 0xFFC0 : bf16
+  // CHECK: arith.constant 0x7FC0 : bf16
+  %2 = arith.constant 0x7FC0 : bf16
+  // CHECK: arith.constant 0xFFC0 : bf16
+  %3 = arith.constant 0xFFC0 : bf16
 
   // bfloat16 positive infinity.
-  // CHECK: constant 0x7F80 : bf16
-  %4 = constant 0x7F80 : bf16
+  // CHECK: arith.constant 0x7F80 : bf16
+  %4 = arith.constant 0x7F80 : bf16
   // bfloat16 negative infinity.
-  // CHECK: constant 0xFF80 : bf16
-  %5 = constant 0xFF80 : bf16
+  // CHECK: arith.constant 0xFF80 : bf16
+  %5 = arith.constant 0xFF80 : bf16
 
   return
 }
@@ -1113,8 +1154,8 @@ func @bfloat16_special_values() {
 // the decimal form instead.
 // CHECK-LABEL: @f32_potential_precision_loss()
 func @f32_potential_precision_loss() {
-  // CHECK: constant -1.23697901 : f32
-  %0 = constant -1.23697901 : f32
+  // CHECK: arith.constant -1.23697901 : f32
+  %0 = arith.constant -1.23697901 : f32
   return
 }
 
@@ -1148,8 +1189,8 @@ func @op_with_region_args() {
 
 // CHECK-LABEL: func @op_with_passthrough_region_args
 func @op_with_passthrough_region_args() {
-  // CHECK: [[VAL:%.*]] = constant
-  %0 = constant 10 : index
+  // CHECK: [[VAL:%.*]] = arith.constant
+  %0 = arith.constant 10 : index
 
   // CHECK: test.isolated_region [[VAL]] {
   // CHECK-NEXT: "foo.consumer"([[VAL]]) : (index)
@@ -1171,16 +1212,23 @@ func @op_with_passthrough_region_args() {
   return
 }
 
-// CHECK-LABEL: func @ptr_to_function() -> !unreg.ptr<() -> ()>
-func @ptr_to_function() -> !unreg.ptr<() -> ()>
+// CHECK-LABEL: func private @ptr_to_function() -> !unreg.ptr<() -> ()>
+func private @ptr_to_function() -> !unreg.ptr<() -> ()>
 
-// CHECK-LABEL: func @escaped_string_char(i1 {foo.value = "\0A"})
-func @escaped_string_char(i1 {foo.value = "\n"})
+// CHECK-LABEL: func private @escaped_string_char(i1 {foo.value = "\0A"})
+func private @escaped_string_char(i1 {foo.value = "\n"})
 
-// CHECK-LABEL: func @wrapped_keyword_test
-func @wrapped_keyword_test() {
-  // CHECK: test.wrapped_keyword foo.keyword
-  test.wrapped_keyword foo.keyword
+// CHECK-LABEL: func @parse_integer_literal_test
+func @parse_integer_literal_test() {
+  // CHECK: test.parse_integer_literal : 5
+  test.parse_integer_literal : 5
+  return
+}
+
+// CHECK-LABEL: func @parse_wrapped_keyword_test
+func @parse_wrapped_keyword_test() {
+  // CHECK: test.parse_wrapped_keyword foo.keyword
+  test.parse_wrapped_keyword foo.keyword
   return
 }
 
@@ -1191,13 +1239,19 @@ func @"\"_string_symbol_reference\""() {
   return
 }
 
-// CHECK-LABEL: func @string_attr_name
-// CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
-func @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
+// CHECK-LABEL: func private @parse_opaque_attr_escape
+func private @parse_opaque_attr_escape() {
+    // CHECK: value = #foo<"\22escaped\\\0A\22">
+    "foo.constant"() {value = #foo<"\"escaped\\\n\"">} : () -> ()
+}
 
-// CHECK-LABEL: func @nested_reference
+// CHECK-LABEL: func private @string_attr_name
+// CHECK-SAME: {"0 . 0", nested = {"0 . 0"}}
+func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
+
+// CHECK-LABEL: func private @nested_reference
 // CHECK: ref = @some_symbol::@some_nested_symbol
-func @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
+func private @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
 
 // CHECK-LABEL: func @custom_asm_names
 func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32, i32) {
@@ -1253,9 +1307,40 @@ func @pretty_names() {
   return
 }
 
+
+// This tests the behavior of "default dialect":
+// operations like `test.default_dialect` can define a default dialect
+// used in nested region.
+// CHECK-LABEL: func @default_dialect
+func @default_dialect(%bool : i1) {
+  test.default_dialect {
+    // The test dialect is the default in this region, the following two
+    // operations are parsed identically.
+    // CHECK-NOT: test.parse_integer_literal
+    parse_integer_literal : 5
+    // CHECK: parse_integer_literal : 6
+    test.parse_integer_literal : 6
+    // Verify that only an op prefix is stripped, not an attribute value for
+    // example.
+    // CHECK:  "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+    "test.op_with_attr"() {test.attr = "test.value"} : () -> ()
+
+    // TODO: remove this after removing the special casing for std in the printer.
+    // Verify that operations in the standard dialect keep the `std.` prefix.
+    // CHECK: std.assert
+    assert %bool, "Assertion"
+    "test.terminator"() : ()->()
+  }
+  // The same operation outside of the region does not have an std. prefix.
+  // CHECK-NOT: std.assert
+  // CHECK: assert
+  assert %bool, "Assertion"
+  return
+}
+
 // CHECK-LABEL: func @unreachable_dominance_violation_ok
 func @unreachable_dominance_violation_ok() -> i1 {
-// CHECK:   [[VAL:%.*]] = constant false
+// CHECK:   [[VAL:%.*]] = arith.constant false
 // CHECK:   return [[VAL]] : i1
 // CHECK: ^bb1:   // no predecessors
 // CHECK:   [[VAL2:%.*]]:3 = "bar"([[VAL3:%.*]]) : (i64) -> (i1, i1, i1)
@@ -1266,7 +1351,7 @@ func @unreachable_dominance_violation_ok() -> i1 {
 // CHECK:   [[VAL3]] = "foo"() : () -> i64
 // CHECK:   return [[VAL2]]#1 : i1
 // CHECK: }
-  %c = constant false
+  %c = arith.constant false
   return %c : i1
 ^bb1:
   // %1 is not dominated by it's definition, but block is not reachable.
@@ -1381,3 +1466,7 @@ test.graph_region {
   %2 = "bar"(%1) : (i64) -> i64
   "unregistered_terminator"() : () -> ()
 }) {sym_name = "unregistered_op_dominance_violation_ok", type = () -> i1} : () -> ()
+
+// This is an unregister operation, the printing/parsing is handled by the dialect.
+// CHECK: test.dialect_custom_printer custom_format
+test.dialect_custom_printer custom_format

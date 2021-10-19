@@ -6,7 +6,7 @@
 %struct.wibble = type { %struct.pluto, i32, i8* }
 %struct.pluto = type { i32, i32, i32 }
 
-@global = external global [0 x %struct.wibble]
+@global = external dso_local global [0 x %struct.wibble]
 
 define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-LABEL: foo:
@@ -32,14 +32,14 @@ define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %bb8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %rax, %rbx
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    callq hoge
+; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    movq %r12, %rdi
-; CHECK-NEXT:    callq hoge
+; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb15
@@ -49,7 +49,7 @@ define i32 @foo(i32 %arg, i32 (i8*)* %arg3) nounwind {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.4: # %bb17
-; CHECK-NEXT:    callq widget
+; CHECK-NEXT:    callq widget@PLT
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  .LBB0_5: # %bb18
 ; CHECK-NEXT:    movw $0, 14(%rbx)

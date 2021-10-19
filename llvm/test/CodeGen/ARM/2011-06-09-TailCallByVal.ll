@@ -33,8 +33,8 @@ target triple = "thumbv7-apple-darwin10"
 
 define i32 @"\01_fnmatch"(i8* %pattern, i8* %string, i32 %flags) nounwind optsize {
 entry:
-  %call4 = tail call i32 @fnmatch1(i8* %pattern, i8* %string, i8* %string, i32 %flags, %union.__mbstate_t* byval @"\01_fnmatch.initial", %union.__mbstate_t* byval @"\01_fnmatch.initial", %struct._xlocale* undef, i32 64) optsize
+  %call4 = tail call i32 @fnmatch1(i8* %pattern, i8* %string, i8* %string, i32 %flags, %union.__mbstate_t* byval(%union.__mbstate_t) @"\01_fnmatch.initial", %union.__mbstate_t* byval(%union.__mbstate_t) @"\01_fnmatch.initial", %struct._xlocale* undef, i32 64) optsize
   ret i32 %call4
 }
 
-declare i32 @fnmatch1(i8*, i8*, i8*, i32, %union.__mbstate_t* byval, %union.__mbstate_t* byval, %struct._xlocale*, i32) nounwind optsize
+declare i32 @fnmatch1(i8*, i8*, i8*, i32, %union.__mbstate_t* byval(%union.__mbstate_t), %union.__mbstate_t* byval(%union.__mbstate_t), %struct._xlocale*, i32) nounwind optsize

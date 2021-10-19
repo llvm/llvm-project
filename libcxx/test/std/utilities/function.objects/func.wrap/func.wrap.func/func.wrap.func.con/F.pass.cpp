@@ -71,35 +71,35 @@ int main(int, char**)
     std::function<int(int)> f = A();
     assert(A::count == 1);
     assert(globalMemCounter.checkOutstandingNewEq(1));
-    assert(f.target<A>());
-    assert(f.target<int(*)(int)>() == 0);
+    RTTI_ASSERT(f.target<A>());
+    RTTI_ASSERT(f.target<int(*)(int)>() == 0);
     }
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
     std::function<int(int)> f = g;
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<int(*)(int)>());
-    assert(f.target<A>() == 0);
+    RTTI_ASSERT(f.target<int(*)(int)>());
+    RTTI_ASSERT(f.target<A>() == 0);
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
     std::function<int(int)> f = (int (*)(int))0;
     assert(!f);
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<int(*)(int)>() == 0);
-    assert(f.target<A>() == 0);
+    RTTI_ASSERT(f.target<int(*)(int)>() == 0);
+    RTTI_ASSERT(f.target<A>() == 0);
     }
     {
     std::function<int(const A*, int)> f = &A::foo;
     assert(f);
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<int (A::*)(int) const>() != 0);
+    RTTI_ASSERT(f.target<int (A::*)(int) const>() != 0);
     }
     {
       std::function<void(int)> f(&g);
       assert(f);
-      assert(f.target<int(*)(int)>() != 0);
+      RTTI_ASSERT(f.target<int(*)(int)>() != 0);
       f(1);
     }
     {

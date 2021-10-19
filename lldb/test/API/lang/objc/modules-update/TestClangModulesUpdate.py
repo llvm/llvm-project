@@ -12,9 +12,8 @@ from lldbsuite.test import lldbutil
 class TestClangModuleUpdate(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
     @skipIf(debug_info=no_match(["gmodules"]))
-    @skipIfReproducer # VFS is a snapshot.
+    @skipIfDarwin # rdar://76540904
     def test_expr(self):
         with open(self.getBuildArtifact("module.modulemap"), "w") as f:
             f.write("""

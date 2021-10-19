@@ -24,7 +24,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -1114,10 +1114,12 @@ GetOptionsForPyObject(const PythonObject &obj) {
   auto writable = As<bool>(obj.CallMethod("writable"));
   if (!writable)
     return writable.takeError();
-  if (readable.get())
-    options |= File::eOpenOptionRead;
-  if (writable.get())
-    options |= File::eOpenOptionWrite;
+  if (readable.get() && writable.get())
+    options |= File::eOpenOptionReadWrite;
+  else if (writable.get())
+    options |= File::eOpenOptionWriteOnly;
+  else if (readable.get())
+    options |= File::eOpenOptionReadOnly;
   return options;
 #else
   PythonString py_mode = obj.GetAttributeValue("mode").AsType<PythonString>();
@@ -1413,7 +1415,10 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
   if (!options)
     return options.takeError();
 
-  if (options.get() & File::eOpenOptionWrite) {
+  File::OpenOptions rw =
+      options.get() & (File::eOpenOptionReadOnly | File::eOpenOptionWriteOnly |
+                       File::eOpenOptionReadWrite);
+  if (rw == File::eOpenOptionWriteOnly || rw == File::eOpenOptionReadWrite) {
     // LLDB and python will not share I/O buffers.  We should probably
     // flush the python buffers now.
     auto r = CallMethod("flush");

@@ -12,6 +12,8 @@
 
 // iter_type put(iter_type s, ios_base& iob, char_type fill, double v) const;
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <locale>
 #include <ios>
 #include <cassert>

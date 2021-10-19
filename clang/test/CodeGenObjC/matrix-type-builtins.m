@@ -12,7 +12,7 @@ __attribute__((objc_root_class))
 @end
 
 void test_transpose_placeholder_get(DoubleMatrixValue *m, double2x4 *r) {
-  // CHECK-LABEL: define void @test_transpose_placeholder_get(
+  // CHECK-LABEL: define{{.*}} void @test_transpose_placeholder_get(
   // CHECK:         [[MATRIX:%.*]] = call <8 x double> bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to <8 x double> (i8*, i8*)*)(
   // CHECK-NEXT:   [[MT:%.*]] = call <8 x double> @llvm.matrix.transpose.v8f64(<8 x double> %call, i32 4, i32 2)
   // CHECK-NEXT:   [[R_ADDR:%.*]] = load [8 x double]*, [8 x double]** %r.addr, align 8
@@ -32,7 +32,7 @@ __attribute__((objc_root_class))
 @end
 
 void test_transpose_placeholder_set(UnsignedMatrixValue *m, u4x3 *r) {
-  // CHECK-LABEL: define void @test_transpose_placeholder_set(
+  // CHECK-LABEL: define{{.*}} void @test_transpose_placeholder_set(
   // CHECK:         [[MATRIX:%.*]] = load <12 x i32>, <12 x i32>* {{.*}}, align 4
   // CHECK-NEXT:    [[MT:%.*]] = call <12 x i32> @llvm.matrix.transpose.v12i32(<12 x i32> [[MATRIX]], i32 4, i32 3)
   // CHECK:         call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, <12 x i32>)*)(i8* {{.*}}, i8* {{.*}}, <12 x i32> [[MT]])
@@ -52,22 +52,22 @@ __attribute__((objc_root_class))
 @end
 
 void test_column_major_load(PtrValue *Ptr, IntValue *Stride) {
-  // CHECK-LABEL: define void @test_column_major_load(%2* %Ptr, %3* %Stride) #4 {
+  // CHECK-LABEL: define{{.*}} void @test_column_major_load(%2* %Ptr, %3* %Stride) #4 {
   // CHECK:         [[STRIDE:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
   // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
-  // CHECK-NEXT:    call <12 x i32> @llvm.matrix.column.major.load.v12i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 3, i32 4)
+  // CHECK-NEXT:    call <12 x i32> @llvm.matrix.column.major.load.v12i32.i64(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 3, i32 4)
 
   u3x4 m = __builtin_matrix_column_major_load(Ptr.value, 3, 4, Stride.value);
 }
 
 void test_column_major_store(UnsignedMatrixValue *M, PtrValue *Ptr, IntValue *Stride) {
-  // CHECK-LABEL: define void @test_column_major_store(%1* %M, %2* %Ptr, %3* %Stride) #3 {
+  // CHECK-LABEL: define{{.*}} void @test_column_major_store(%1* %M, %2* %Ptr, %3* %Stride) #3 {
   // CHECK:         [[M:%.*]] = call <12 x i32> bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to <12 x i32> (i8*, i8*)*)
   // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
   // CHECK:         [[IDX:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
   // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v12i32(<12 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 3, i32 4)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v12i32.i64(<12 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 3, i32 4)
 
   __builtin_matrix_column_major_store(M.value, Ptr.value, Stride.value);
 }

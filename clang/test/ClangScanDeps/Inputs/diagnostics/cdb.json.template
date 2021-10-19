@@ -1,0 +1,7 @@
+[
+  {
+    "directory": "DIR",
+    "command": "clang -c DIR/tu.c -fmodules -target i386-apple-ios14.0-simulator -fmodules-cache-path=DIR/cache -Wno-error=invalid-ios-deployment-target -o DIR/tu.o",
+    "file": "DIR/tu.c"
+  }
+]

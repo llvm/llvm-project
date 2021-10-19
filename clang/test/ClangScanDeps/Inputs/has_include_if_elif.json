@@ -3,5 +3,10 @@
   "directory": "DIR",
   "command": "clang -E DIR/has_include_if_elif2.cpp -IInputs",
   "file": "DIR/has_include_if_elif2.cpp"
+},
+{
+  "directory": "DIR",
+  "command": "clang-cl /E /IInputs -- DIR/has_include_if_elif2_clangcl.cpp",
+  "file": "DIR/has_include_if_elif2_clangcl.cpp"
 }
 ]

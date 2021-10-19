@@ -129,6 +129,9 @@ llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R);
 // Note that clang also uses closed source ranges, which this can't handle!
 Range halfOpenToRange(const SourceManager &SM, CharSourceRange R);
 
+// Expand range `A` to also contain `B`.
+void unionRanges(Range &A, Range B);
+
 // Converts an offset to a clang line/column (1-based, columns are bytes).
 // The offset must be in range [0, Code.size()].
 // Prefer to use SourceManager if one is available.
@@ -181,6 +184,8 @@ struct Edit {
   tooling::Replacements Replacements;
   std::string InitialCode;
 
+  Edit() = default;
+
   Edit(llvm::StringRef Code, tooling::Replacements Reps)
       : Replacements(std::move(Reps)), InitialCode(Code) {}
 
@@ -200,6 +205,10 @@ using FileEdits = llvm::StringMap<Edit>;
 /// Formats the edits and code around it according to Style. Changes
 /// Replacements to formatted ones if succeeds.
 llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style);
+
+/// Apply an incremental update to a text document.
+llvm::Error applyChange(std::string &Contents,
+                        const TextDocumentContentChangeEvent &Change);
 
 /// Collects identifiers with counts in the source code.
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
@@ -245,6 +254,10 @@ struct SpelledWord {
                                               const syntax::TokenBuffer &TB,
                                               const LangOptions &LangOpts);
 };
+
+/// Return true if the \p TokenName is in the list of reversed keywords of the
+/// language.
+bool isKeyword(llvm::StringRef TokenName, const LangOptions &LangOpts);
 
 /// Heuristically determine namespaces visible at a point, without parsing Code.
 /// This considers using-directives and enclosing namespace-declarations that

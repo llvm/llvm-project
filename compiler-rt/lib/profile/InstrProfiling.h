@@ -101,13 +101,13 @@ void __llvm_profile_reset_counters(void);
 /*!
  * \brief Merge profile data from buffer.
  *
- * Read profile data form buffer \p Profile  and merge with
- * in-process profile counters. The client is expected to
- * have checked or already knows the profile data in the
- * buffer matches the in-process counter structure before
- * calling it.
+ * Read profile data form buffer \p Profile  and merge with in-process profile
+ * counters. The client is expected to have checked or already knows the profile
+ * data in the buffer matches the in-process counter structure before calling
+ * it. Returns 0 (success) if the profile data is valid. Upon reading
+ * invalid/corrupted profile data, returns 1 (failure).
  */
-void __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
+int __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
 
 /*! \brief Check if profile in buffer matches the current binary.
  *
@@ -150,7 +150,7 @@ int __llvm_profile_write_file(void);
 int __llvm_orderfile_write_file(void);
 /*!
  * \brief this is a wrapper interface to \c __llvm_profile_write_file.
- * After this interface is invoked, a arleady dumped flag will be set
+ * After this interface is invoked, an already dumped flag will be set
  * so that profile won't be dumped again during program exit.
  * Invocation of interface __llvm_profile_reset_counters will clear
  * the flag. This interface is designed to be used to collect profile
@@ -194,7 +194,8 @@ int __llvm_orderfile_dump(void);
 void __llvm_profile_set_filename(const char *Name);
 
 /*!
- * \brief Set the FILE object for writing instrumentation data.
+ * \brief Set the FILE object for writing instrumentation data. Return 0 if set
+ * successfully or return 1 if failed.
  *
  * Sets the FILE object to be used for subsequent calls to
  * \a __llvm_profile_write_file(). The profile file name set by environment
@@ -213,13 +214,12 @@ void __llvm_profile_set_filename(const char *Name);
  * instrumented image/DSO). This API only modifies the file object within the
  * copy of the runtime available to the calling image.
  *
- * Warning: This is a no-op if continuous mode (\ref
- * __llvm_profile_is_continuous_mode_enabled) is on. The reason for this is
- * that in continuous mode, profile counters are mmap()'d to the profile at
- * program initialization time. Support for transferring the mmap'd profile
- * counts to a new file has not been implemented.
+ * Warning: This is a no-op if EnableMerge is 0 in continuous mode (\ref
+ * __llvm_profile_is_continuous_mode_enabled), because disable merging requires
+ * copying the old profile file to new profile file and this function is usually
+ * used when the proess doesn't have permission to open file.
  */
-void __llvm_profile_set_file_object(FILE *File, int EnableMerge);
+int __llvm_profile_set_file_object(FILE *File, int EnableMerge);
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);
@@ -301,14 +301,11 @@ void __llvm_profile_set_dumped();
 COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 /*!
- * This variable is defined in InstrProfiling.c. Its main purpose is to
- * encode the raw profile version value and other format related information
- * such as whether the profile is from IR based instrumentation. The variable
- * is defined as weak so that compiler can emit an overriding definition
- * depending on user option.  Since we don't support mixing FE and IR based
- * data in the same raw profile data file (in other words, shared libs and
- * main program are expected to be instrumented in the same way), there is
- * no need for this variable to be hidden.
+ * This variable is defined in InstrProfilingVersionVar.c as a hidden symbol.
+ * Its main purpose is to encode the raw profile version value and other format
+ * related information such as whether the profile is from IR based
+ * instrumentation. The variable is defined as weak so that compiler can emit an
+ * overriding definition depending on user option.
  */
 extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
@@ -318,12 +315,5 @@ extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
  * from compiler command line. This variable has default visibility.
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
-
-/*!
- * This variable is a weak symbol defined in InstrProfilingBiasVar.c. It
- * allows compiler instrumentation to provide overriding definition with
- * value from compiler command line. This variable has hidden visibility.
- */
-COMPILER_RT_VISIBILITY extern intptr_t __llvm_profile_counter_bias;
 
 #endif /* PROFILE_INSTRPROFILING_H_ */

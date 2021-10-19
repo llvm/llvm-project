@@ -38,7 +38,7 @@ public:
 
   llvm::support::endianness getEndian() const override { return Endian; }
 
-  Error readBytes(uint32_t Offset, uint32_t Size,
+  Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override {
     auto ExpectedIndex = translateOffsetIndex(Offset);
     if (!ExpectedIndex)
@@ -52,7 +52,7 @@ public:
     return Error::success();
   }
 
-  Error readLongestContiguousChunk(uint32_t Offset,
+  Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override {
     auto ExpectedIndex = translateOffsetIndex(Offset);
     if (!ExpectedIndex)
@@ -66,7 +66,7 @@ public:
     computeItemOffsets();
   }
 
-  uint32_t getLength() override {
+  uint64_t getLength() override {
     return ItemEndOffsets.empty() ? 0 : ItemEndOffsets.back();
   }
 
@@ -74,22 +74,21 @@ private:
   void computeItemOffsets() {
     ItemEndOffsets.clear();
     ItemEndOffsets.reserve(Items.size());
-    uint32_t CurrentOffset = 0;
+    uint64_t CurrentOffset = 0;
     for (const auto &Item : Items) {
-      uint32_t Len = Traits::length(Item);
+      uint64_t Len = Traits::length(Item);
       assert(Len > 0 && "no empty items");
       CurrentOffset += Len;
       ItemEndOffsets.push_back(CurrentOffset);
     }
   }
 
-  Expected<uint32_t> translateOffsetIndex(uint32_t Offset) {
+  Expected<uint32_t> translateOffsetIndex(uint64_t Offset) {
     // Make sure the offset is somewhere in our items array.
     if (Offset >= getLength())
       return make_error<BinaryStreamError>(stream_error_code::stream_too_short);
     ++Offset;
-    auto Iter =
-        std::lower_bound(ItemEndOffsets.begin(), ItemEndOffsets.end(), Offset);
+    auto Iter = llvm::lower_bound(ItemEndOffsets, Offset);
     size_t Idx = std::distance(ItemEndOffsets.begin(), Iter);
     assert(Idx < Items.size() && "binary search for offset failed");
     return Idx;
@@ -99,7 +98,7 @@ private:
   ArrayRef<T> Items;
 
   // Sorted vector of offsets to accelerate lookup.
-  std::vector<uint32_t> ItemEndOffsets;
+  std::vector<uint64_t> ItemEndOffsets;
 };
 
 } // end namespace llvm

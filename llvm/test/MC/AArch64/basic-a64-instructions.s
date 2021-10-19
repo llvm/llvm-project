@@ -3842,6 +3842,7 @@ _func:
 	msr PMINTENSET_EL1, x12
 	msr PMINTENCLR_EL1, x12
 	msr PMOVSSET_EL0, x12
+	msr PMMIR_EL1, x12
 	msr MAIR_EL1, x12
 	msr MAIR_EL2, x12
 	msr MAIR_EL3, x12
@@ -4095,6 +4096,7 @@ _func:
 // CHECK: msr      {{pmintenset_el1|PMINTENSET_EL1}}, x12        // encoding: [0x2c,0x9e,0x18,0xd5]
 // CHECK: msr      {{pmintenclr_el1|PMINTENCLR_EL1}}, x12        // encoding: [0x4c,0x9e,0x18,0xd5]
 // CHECK: msr      {{pmovsset_el0|PMOVSSET_EL0}}, x12          // encoding: [0x6c,0x9e,0x1b,0xd5]
+// CHECK: msr      {{pmmir_el1|PMMIR_EL1}}, x12        // encoding: [0xcc,0x9e,0x18,0xd5]
 // CHECK: msr      {{mair_el1|MAIR_EL1}}, x12              // encoding: [0x0c,0xa2,0x18,0xd5]
 // CHECK: msr      {{mair_el2|MAIR_EL2}}, x12              // encoding: [0x0c,0xa2,0x1c,0xd5]
 // CHECK: msr      {{mair_el3|MAIR_EL3}}, x12              // encoding: [0x0c,0xa2,0x1e,0xd5]
@@ -4392,6 +4394,7 @@ _func:
 	mrs x9, PMINTENSET_EL1
 	mrs x9, PMINTENCLR_EL1
 	mrs x9, PMOVSSET_EL0
+	mrs x9, PMMIR_EL1
 	mrs x9, MAIR_EL1
 	mrs x9, MAIR_EL2
 	mrs x9, MAIR_EL3
@@ -4694,6 +4697,7 @@ _func:
 // CHECK: mrs      x9, {{pmintenset_el1|PMINTENSET_EL1}}         // encoding: [0x29,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{pmintenclr_el1|PMINTENCLR_EL1}}         // encoding: [0x49,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{pmovsset_el0|PMOVSSET_EL0}}           // encoding: [0x69,0x9e,0x3b,0xd5]
+// CHECK: mrs      x9, {{pmmir_el1|PMMIR_EL1}}             // encoding: [0xc9,0x9e,0x38,0xd5]
 // CHECK: mrs      x9, {{mair_el1|MAIR_EL1}}               // encoding: [0x09,0xa2,0x38,0xd5]
 // CHECK: mrs      x9, {{mair_el2|MAIR_EL2}}               // encoding: [0x09,0xa2,0x3c,0xd5]
 // CHECK: mrs      x9, {{mair_el3|MAIR_EL3}}               // encoding: [0x09,0xa2,0x3e,0xd5]

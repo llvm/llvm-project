@@ -1,14 +1,14 @@
-; RUN: llc < %s -march=mips -relocation-model=static | \
+; RUN: llc < %s -mtriple=mips -relocation-model=static | \
 ; RUN: FileCheck %s -check-prefix=STATIC-O32 
-; RUN: llc < %s -march=mips -relocation-model=pic | \
+; RUN: llc < %s -mtriple=mips -relocation-model=pic | \
 ; RUN: FileCheck %s -check-prefix=PIC-O32 
-; RUN: llc < %s -march=mips64 -relocation-model=pic -mcpu=mips4 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=pic -mcpu=mips4 | \
 ; RUN:     FileCheck %s -check-prefix=PIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=static -mcpu=mips4 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=static -mcpu=mips4 | \
 ; RUN:     FileCheck %s -check-prefix=STATIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=pic -mcpu=mips64 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=pic -mcpu=mips64 | \
 ; RUN:     FileCheck %s -check-prefix=PIC-N64
-; RUN: llc < %s -march=mips64 -relocation-model=static -mcpu=mips64 | \
+; RUN: llc < %s -mtriple=mips64 -relocation-model=static -mcpu=mips64 | \
 ; RUN:     FileCheck %s -check-prefix=STATIC-N64
 
 define i32 @main() nounwind readnone {

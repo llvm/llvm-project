@@ -7,7 +7,6 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-@skipIfReproducer # FIXME: Unexpected packet during (active) replay
 class StepScriptedTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -59,7 +58,7 @@ class StepScriptedTestCase(TestBase):
         # Make sure we got a good error:
         self.assertTrue(err.Fail(), "We got a failure state")
         msg = err.GetCString()
-        self.assertTrue("NoSuchModule.NoSuchPlan" in msg, "Mentioned missing class")
+        self.assertIn("NoSuchModule.NoSuchPlan", msg, "Mentioned missing class")
         
         # Make sure we didn't let the process run:
         self.assertEqual(stop_id, process.GetStopID(), "Process didn't run")

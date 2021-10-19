@@ -11,7 +11,7 @@ define double @strict(double %e) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    popq %rax
@@ -28,7 +28,7 @@ define double @strict(double %e) nounwind {
 define double @fast(double %e) nounwind {
 ; CHECK-LABEL: fast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin # TAILCALL
+; CHECK-NEXT:    jmp sin@PLT # TAILCALL
   %f = fsub fast double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub fast double 0.0, %g
@@ -40,7 +40,7 @@ define double @fast(double %e) nounwind {
 define double @nsz(double %e) nounwind {
 ; CHECK-LABEL: nsz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin # TAILCALL
+; CHECK-NEXT:    jmp sin@PLT # TAILCALL
   %f = fsub nsz double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub nsz double 0.0, %g
@@ -55,8 +55,8 @@ define double @semi_strict1(double %e) nounwind {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
-; CHECK-NEXT:    callq sin
-; CHECK-NEXT:    vxorpd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-NEXT:    callq sin@PLT
+; CHECK-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %f = fsub double 0.0, %e
@@ -71,7 +71,7 @@ define double @semi_strict2(double %e) nounwind {
 ; CHECK-LABEL: semi_strict2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq sin
+; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    popq %rax
@@ -88,7 +88,7 @@ define double @semi_strict2(double %e) nounwind {
 define double @fn_attr(double %e) nounwind #0 {
 ; CHECK-LABEL: fn_attr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp sin # TAILCALL
+; CHECK-NEXT:    jmp sin@PLT # TAILCALL
   %f = fsub double 0.0, %e
   %g = call double @sin(double %f) readonly
   %h = fsub double 0.0, %g

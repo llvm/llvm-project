@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -35,6 +36,8 @@ VERegisterInfo::VERegisterInfo() : VEGenRegisterInfo(VE::SX10) {}
 const MCPhysReg *
 VERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   switch (MF->getFunction().getCallingConv()) {
+  case CallingConv::Fast:
+    // Being explicit (same as standard CC).
   default:
     return CSR_SaveList;
   case CallingConv::PreserveAll:
@@ -45,6 +48,8 @@ VERegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 const uint32_t *VERegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                                      CallingConv::ID CC) const {
   switch (CC) {
+  case CallingConv::Fast:
+    // Being explicit (same as standard CC).
   default:
     return CSR_RegMask;
   case CallingConv::PreserveAll:
@@ -82,15 +87,50 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
          ++ItAlias)
       Reserved.set(*ItAlias);
 
+  // Reserve constant registers.
+  Reserved.set(VE::VM0);
+  Reserved.set(VE::VMP0);
+
   return Reserved;
 }
 
-bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const { return false; }
+bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
+  switch (PhysReg) {
+  case VE::VM0:
+  case VE::VMP0:
+    return true;
+  default:
+    return false;
+  }
+}
 
 const TargetRegisterClass *
 VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                    unsigned Kind) const {
   return &VE::I64RegClass;
+}
+
+static unsigned offsetToDisp(MachineInstr &MI) {
+  // Default offset in instruction's operands (reg+reg+imm).
+  unsigned OffDisp = 2;
+
+#define RRCAS_multi_cases(NAME) NAME##rir : case NAME##rii
+
+  {
+    using namespace llvm::VE;
+    switch (MI.getOpcode()) {
+    case RRCAS_multi_cases(TS1AML):
+    case RRCAS_multi_cases(TS1AMW):
+    case RRCAS_multi_cases(CASL):
+    case RRCAS_multi_cases(CASW):
+      // These instructions use AS format (reg+imm).
+      OffDisp = 1;
+      break;
+    }
+  }
+#undef RRCAS_multi_cases
+
+  return OffDisp;
 }
 
 static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
@@ -100,7 +140,7 @@ static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
   // VE has 32 bit offset field, so no need to expand a target instruction.
   // Directly encode it.
   MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
-  MI.getOperand(FIOperandNum + 2).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum + offsetToDisp(MI)).ChangeToImmediate(Offset);
 }
 
 void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -116,9 +156,9 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   Register FrameReg;
   int Offset;
-  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
+  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
 
-  Offset += MI.getOperand(FIOperandNum + 2).getImm();
+  Offset += MI.getOperand(FIOperandNum + offsetToDisp(MI)).getImm();
 
   if (MI.getOpcode() == VE::STQrii) {
     const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -157,27 +197,4 @@ void VERegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register VERegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return VE::SX9;
-}
-
-// VE has no architectural need for stack realignment support,
-// except that LLVM unfortunately currently implements overaligned
-// stack objects by depending upon stack realignment support.
-// If that ever changes, this can probably be deleted.
-bool VERegisterInfo::canRealignStack(const MachineFunction &MF) const {
-  if (!TargetRegisterInfo::canRealignStack(MF))
-    return false;
-
-  // VE always has a fixed frame pointer register, so don't need to
-  // worry about needing to reserve it. [even if we don't have a frame
-  // pointer for our frame, it still cannot be used for other things,
-  // or register window traps will be SADNESS.]
-
-  // If there's a reserved call frame, we can use VE to access locals.
-  if (getFrameLowering(MF)->hasReservedCallFrame(MF))
-    return true;
-
-  // Otherwise, we'd need a base pointer, but those aren't implemented
-  // for VE at the moment.
-
-  return false;
 }

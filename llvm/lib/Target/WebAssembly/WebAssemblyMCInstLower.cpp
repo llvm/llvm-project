@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
@@ -38,86 +38,60 @@ cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
+extern cl::opt<bool> WasmEnableEmEH;
+extern cl::opt<bool> WasmEnableEmSjLj;
+
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
-  auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+  if (!isa<Function>(Global)) {
+    auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+    // If the symbol doesn't have an explicit WasmSymbolType yet and the
+    // GlobalValue is actually a WebAssembly global, then ensure the symbol is a
+    // WASM_SYMBOL_TYPE_GLOBAL.
+    if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
+        !WasmSym->getType()) {
+      const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
+      const TargetMachine &TM = MF.getTarget();
+      const Function &CurrentFunc = MF.getFunction();
+      SmallVector<MVT, 1> VTs;
+      computeLegalValueVTs(CurrentFunc, TM, Global->getValueType(), VTs);
+      if (VTs.size() != 1)
+        report_fatal_error("Aggregate globals not yet implemented");
 
-  if (const auto *FuncTy = dyn_cast<FunctionType>(Global->getValueType())) {
-    const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-    const TargetMachine &TM = MF.getTarget();
-    const Function &CurrentFunc = MF.getFunction();
-
-    SmallVector<MVT, 1> ResultMVTs;
-    SmallVector<MVT, 4> ParamMVTs;
-    const auto *const F = dyn_cast<Function>(Global);
-    computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
-
-    auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
-    WasmSym->setSignature(Signature.get());
-    Printer.addSignature(std::move(Signature));
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+      bool Mutable = true;
+      wasm::ValType Type = WebAssembly::toValType(VTs[0]);
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+      WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
+    }
+    return WasmSym;
   }
 
+  const auto *FuncTy = cast<FunctionType>(Global->getValueType());
+  const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
+  const TargetMachine &TM = MF.getTarget();
+  const Function &CurrentFunc = MF.getFunction();
+
+  SmallVector<MVT, 1> ResultMVTs;
+  SmallVector<MVT, 4> ParamMVTs;
+  const auto *const F = dyn_cast<Function>(Global);
+  computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+  auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
+
+  bool InvokeDetected = false;
+  auto *WasmSym = Printer.getMCSymbolForFunction(
+      F, WasmEnableEmEH || WasmEnableEmSjLj, Signature.get(), InvokeDetected);
+  WasmSym->setSignature(Signature.get());
+  Printer.addSignature(std::move(Signature));
+  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   return WasmSym;
 }
 
 MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
     const MachineOperand &MO) const {
-  const char *Name = MO.getSymbolName();
-  auto *WasmSym = cast<MCSymbolWasm>(Printer.GetExternalSymbolSymbol(Name));
-  const WebAssemblySubtarget &Subtarget = Printer.getSubtarget();
-
-  // Except for certain known symbols, all symbols used by CodeGen are
-  // functions. It's OK to hardcode knowledge of specific symbols here; this
-  // method is precisely there for fetching the signatures of known
-  // Clang-provided symbols.
-  if (strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0 ||
-      strcmp(Name, "__memory_base") == 0 || strcmp(Name, "__table_base") == 0 ||
-      strcmp(Name, "__tls_size") == 0 || strcmp(Name, "__tls_align") == 0) {
-    bool Mutable =
-        strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0;
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    WasmSym->setGlobalType(wasm::WasmGlobalType{
-        uint8_t(Subtarget.hasAddr64() && strcmp(Name, "__table_base") != 0
-                    ? wasm::WASM_TYPE_I64
-                    : wasm::WASM_TYPE_I32),
-        Mutable});
-    return WasmSym;
-  }
-
-  SmallVector<wasm::ValType, 4> Returns;
-  SmallVector<wasm::ValType, 4> Params;
-  if (strcmp(Name, "__cpp_exception") == 0) {
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_EVENT);
-    // We can't confirm its signature index for now because there can be
-    // imported exceptions. Set it to be 0 for now.
-    WasmSym->setEventType(
-        {wasm::WASM_EVENT_ATTRIBUTE_EXCEPTION, /* SigIndex */ 0});
-    // We may have multiple C++ compilation units to be linked together, each of
-    // which defines the exception symbol. To resolve them, we declare them as
-    // weak.
-    WasmSym->setWeak(true);
-    WasmSym->setExternal(true);
-
-    // All C++ exceptions are assumed to have a single i32 (for wasm32) or i64
-    // (for wasm64) param type and void return type. The reaon is, all C++
-    // exception values are pointers, and to share the type section with
-    // functions, exceptions are assumed to have void return type.
-    Params.push_back(Subtarget.hasAddr64() ? wasm::ValType::I64
-                                           : wasm::ValType::I32);
-  } else { // Function symbols
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-    getLibcallSignature(Subtarget, Name, Returns, Params);
-  }
-  auto Signature =
-      std::make_unique<wasm::WasmSignature>(std::move(Returns), std::move(Params));
-  WasmSym->setSignature(Signature.get());
-  Printer.addSignature(std::move(Signature));
-
-  return WasmSym;
+  return Printer.getOrCreateWasmSymbol(MO.getSymbolName());
 }
 
 MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
@@ -128,11 +102,17 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
   switch (TargetFlags) {
     case WebAssemblyII::MO_NO_FLAG:
       break;
+    case WebAssemblyII::MO_GOT_TLS:
+      Kind = MCSymbolRefExpr::VK_WASM_GOT_TLS;
+      break;
     case WebAssemblyII::MO_GOT:
       Kind = MCSymbolRefExpr::VK_GOT;
       break;
     case WebAssemblyII::MO_MEMORY_BASE_REL:
       Kind = MCSymbolRefExpr::VK_WASM_MBREL;
+      break;
+    case WebAssemblyII::MO_TLS_BASE_REL:
+      Kind = MCSymbolRefExpr::VK_WASM_TLSREL;
       break;
     case WebAssemblyII::MO_TABLE_BASE_REL:
       Kind = MCSymbolRefExpr::VK_WASM_TBREL;
@@ -151,8 +131,10 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
       report_fatal_error("Function addresses with offsets not supported");
     if (WasmSym->isGlobal())
       report_fatal_error("Global indexes with offsets not supported");
-    if (WasmSym->isEvent())
-      report_fatal_error("Event indexes with offsets not supported");
+    if (WasmSym->isTag())
+      report_fatal_error("Tag indexes with offsets not supported");
+    if (WasmSym->isTable())
+      report_fatal_error("Table indexes with offsets not supported");
 
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
@@ -188,6 +170,10 @@ static wasm::ValType getType(const TargetRegisterClass *RC) {
     return wasm::ValType::F64;
   if (RC == &WebAssembly::V128RegClass)
     return wasm::ValType::V128;
+  if (RC == &WebAssembly::EXTERNREFRegClass)
+    return wasm::ValType::EXTERNREF;
+  if (RC == &WebAssembly::FUNCREFRegClass)
+    return wasm::ValType::FUNCREF;
   llvm_unreachable("Unexpected register class");
 }
 
@@ -266,19 +252,24 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
                                          SmallVector<wasm::ValType, 4>());
             break;
           }
+        } else if (Info.OperandType == WebAssembly::OPERAND_HEAPTYPE) {
+          assert(static_cast<WebAssembly::HeapType>(MO.getImm()) !=
+                 WebAssembly::HeapType::Invalid);
+          // With typed function references, this will need a case for type
+          // index operands.  Otherwise, fall through.
         }
       }
       MCOp = MCOperand::createImm(MO.getImm());
       break;
     }
     case MachineOperand::MO_FPImmediate: {
-      // TODO: MC converts all floating point immediate operands to double.
-      // This is fine for numeric values, but may cause NaNs to change bits.
       const ConstantFP *Imm = MO.getFPImm();
+      const uint64_t BitPattern =
+          Imm->getValueAPF().bitcastToAPInt().getZExtValue();
       if (Imm->getType()->isFloatTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToFloat());
+        MCOp = MCOperand::createSFPImm(static_cast<uint32_t>(BitPattern));
       else if (Imm->getType()->isDoubleTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToDouble());
+        MCOp = MCOperand::createDFPImm(BitPattern);
       else
         llvm_unreachable("unknown floating point immediate type");
       break;
@@ -287,15 +278,9 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       MCOp = lowerSymbolOperand(MO, GetGlobalAddressSymbol(MO));
       break;
     case MachineOperand::MO_ExternalSymbol:
-      // The target flag indicates whether this is a symbol for a
-      // variable or a function.
-      assert(MO.getTargetFlags() == 0 &&
-             "WebAssembly uses only symbol flags on ExternalSymbols");
       MCOp = lowerSymbolOperand(MO, GetExternalSymbolSymbol(MO));
       break;
     case MachineOperand::MO_MCSymbol:
-      // This is currently used only for LSDA symbols (GCC_except_table),
-      // because global addresses or other external symbols are handled above.
       assert(MO.getTargetFlags() == 0 &&
              "WebAssembly does not use target flags on MCSymbol");
       MCOp = lowerSymbolOperand(MO, MO.getMCSymbol());

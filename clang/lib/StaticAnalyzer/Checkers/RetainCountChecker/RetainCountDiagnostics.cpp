@@ -13,6 +13,8 @@
 
 #include "RetainCountDiagnostics.h"
 #include "RetainCountChecker.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 using namespace ento;
@@ -89,7 +91,7 @@ static std::string getPrettyTypeName(QualType QT) {
   return QT.getAsString();
 }
 
-/// Write information about the type state change to {@code os},
+/// Write information about the type state change to @c os,
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
                                const RefVal *PrevT,
@@ -164,8 +166,8 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
-/// Finds argument index of the out paramter in the call {@code S}
-/// corresponding to the symbol {@code Sym}.
+/// Finds argument index of the out paramter in the call @c S
+/// corresponding to the symbol @c Sym.
 /// If none found, returns None.
 static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
                                              const LocationContext *LCtx,
@@ -337,11 +339,15 @@ public:
 
 class RefLeakReportVisitor : public RefCountReportVisitor {
 public:
-  RefLeakReportVisitor(SymbolRef sym) : RefCountReportVisitor(sym) {}
+  RefLeakReportVisitor(SymbolRef Sym, const MemRegion *LastBinding)
+      : RefCountReportVisitor(Sym), LastBinding(LastBinding) {}
 
   PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
                                     const ExplodedNode *N,
                                     PathSensitiveBugReport &BR) override;
+
+private:
+  const MemRegion *LastBinding;
 };
 
 } // end namespace retaincountchecker
@@ -610,6 +616,41 @@ static Optional<std::string> describeRegion(const MemRegion *MR) {
   return None;
 }
 
+using Bindings = llvm::SmallVector<std::pair<const MemRegion *, SVal>, 4>;
+
+class VarBindingsCollector : public StoreManager::BindingsHandler {
+  SymbolRef Sym;
+  Bindings &Result;
+
+public:
+  VarBindingsCollector(SymbolRef Sym, Bindings &ToFill)
+      : Sym(Sym), Result(ToFill) {}
+
+  bool HandleBinding(StoreManager &SMgr, Store Store, const MemRegion *R,
+                     SVal Val) override {
+    SymbolRef SymV = Val.getAsLocSymbol();
+    if (!SymV || SymV != Sym)
+      return true;
+
+    if (isa<NonParamVarRegion>(R))
+      Result.emplace_back(R, Val);
+
+    return true;
+  }
+};
+
+Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
+                                    const ExplodedNode *Node, SymbolRef Sym) {
+  Bindings Result;
+  VarBindingsCollector Collector{Sym, Result};
+  while (Result.empty() && Node) {
+    Manager.iterBindings(Node->getState(), Collector);
+    Node = Node->getFirstPred();
+  }
+
+  return Result;
+}
+
 namespace {
 // Find the first node in the current function context that referred to the
 // tracked symbol and the memory location that value was stored to. Note, the
@@ -729,14 +770,6 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   // assigned to different variables, etc.
   BR.markInteresting(Sym);
 
-  // We are reporting a leak.  Walk up the graph to get to the first node where
-  // the symbol appeared, and also get the first VarDecl that tracked object
-  // is stored to.
-  AllocationInfo AllocI = GetAllocationSite(BRC.getStateManager(), EndN, Sym);
-
-  const MemRegion* FirstBinding = AllocI.R;
-  BR.markInteresting(AllocI.InterestingMethodContext);
-
   PathDiagnosticLocation L = cast<RefLeakReport>(BR).getEndOfPath();
 
   std::string sbuf;
@@ -744,7 +777,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
 
   os << "Object leaked: ";
 
-  Optional<std::string> RegionDescription = describeRegion(FirstBinding);
+  Optional<std::string> RegionDescription = describeRegion(LastBinding);
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
   } else {
@@ -753,7 +786,7 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   }
 
   // Get the retain count.
-  const RefVal* RV = getRefBinding(EndN->getState(), Sym);
+  const RefVal *RV = getRefBinding(EndN->getState(), Sym);
   assert(RV);
 
   if (RV->getKind() == RefVal::ErrorLeakReturned) {
@@ -794,14 +827,15 @@ RefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
                 " Foundation";
         } else if (RV->getObjKind() == ObjKind::OS) {
           std::string FuncName = FD->getNameAsString();
-          os << "whose name ('" << FuncName
-            << "') starts with '" << StringRef(FuncName).substr(0, 3) << "'";
+          os << "whose name ('" << FuncName << "') starts with '"
+             << StringRef(FuncName).substr(0, 3) << "'";
         }
       }
     }
   } else {
     os << " is not referenced later in this execution path and has a retain "
-          "count of +" << RV->getCount();
+          "count of +"
+       << RV->getCount();
   }
 
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
@@ -812,7 +846,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
     : PathSensitiveBugReport(D, D.getDescription(), n), Sym(sym),
       isLeak(isLeak) {
   if (!isLeak)
-    addVisitor(std::make_unique<RefCountReportVisitor>(sym));
+    addVisitor<RefCountReportVisitor>(sym);
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
@@ -820,19 +854,19 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                StringRef endText)
     : PathSensitiveBugReport(D, D.getDescription(), endText, n) {
 
-  addVisitor(std::make_unique<RefCountReportVisitor>(sym));
+  addVisitor<RefCountReportVisitor>(sym);
 }
 
-void RefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
-  const SourceManager& SMgr = Ctx.getSourceManager();
+void RefLeakReport::deriveParamLocation(CheckerContext &Ctx) {
+  const SourceManager &SMgr = Ctx.getSourceManager();
 
-  if (!sym->getOriginRegion())
+  if (!Sym->getOriginRegion())
     return;
 
-  auto *Region = dyn_cast<DeclRegion>(sym->getOriginRegion());
+  auto *Region = dyn_cast<DeclRegion>(Sym->getOriginRegion());
   if (Region) {
     const Decl *PDecl = Region->getDecl();
-    if (PDecl && isa<ParmVarDecl>(PDecl)) {
+    if (isa_and_nonnull<ParmVarDecl>(PDecl)) {
       PathDiagnosticLocation ParamLocation =
           PathDiagnosticLocation::create(PDecl, SMgr);
       Location = ParamLocation;
@@ -842,8 +876,7 @@ void RefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
   }
 }
 
-void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
-                                          SymbolRef sym) {
+void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx) {
   // Most bug reports are cached at the location where they occurred.
   // With leaks, we want to unique them by the location where they were
   // allocated, and only report a single path.  To do this, we need to find
@@ -854,13 +887,13 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   // same SourceLocation.
   const ExplodedNode *AllocNode = nullptr;
 
-  const SourceManager& SMgr = Ctx.getSourceManager();
+  const SourceManager &SMgr = Ctx.getSourceManager();
 
   AllocationInfo AllocI =
-      GetAllocationSite(Ctx.getStateManager(), getErrorNode(), sym);
+      GetAllocationSite(Ctx.getStateManager(), getErrorNode(), Sym);
 
   AllocNode = AllocI.N;
-  AllocBinding = AllocI.R;
+  AllocFirstBinding = AllocI.R;
   markInteresting(AllocI.InterestingMethodContext);
 
   // Get the SourceLocation for the allocation site.
@@ -870,13 +903,12 @@ void RefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (!AllocStmt) {
-    AllocBinding = nullptr;
+    AllocFirstBinding = nullptr;
     return;
   }
 
-  PathDiagnosticLocation AllocLocation =
-    PathDiagnosticLocation::createBegin(AllocStmt, SMgr,
-                                        AllocNode->getLocationContext());
+  PathDiagnosticLocation AllocLocation = PathDiagnosticLocation::createBegin(
+      AllocStmt, SMgr, AllocNode->getLocationContext());
   Location = AllocLocation;
 
   // Set uniqieing info, which will be used for unique the bug reports. The
@@ -891,7 +923,8 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
   llvm::raw_string_ostream os(Description);
   os << "Potential leak of an object";
 
-  Optional<std::string> RegionDescription = describeRegion(AllocBinding);
+  Optional<std::string> RegionDescription =
+      describeRegion(AllocBindingToReport);
   if (RegionDescription) {
     os << " stored into '" << *RegionDescription << '\'';
   } else {
@@ -901,16 +934,75 @@ void RefLeakReport::createDescription(CheckerContext &Ctx) {
   }
 }
 
-RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
-                             ExplodedNode *n, SymbolRef sym,
-                             CheckerContext &Ctx)
-    : RefCountReport(D, LOpts, n, sym, /*isLeak=*/true) {
+void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
+                                        ExplodedNode *Node) {
+  if (!AllocFirstBinding)
+    // If we don't have any bindings, we won't be able to find any
+    // better binding to report.
+    return;
 
-  deriveAllocLocation(Ctx, sym);
-  if (!AllocBinding)
-    deriveParamLocation(Ctx, sym);
+  // If the original region still contains the leaking symbol...
+  if (Node->getState()->getSVal(AllocFirstBinding).getAsSymbol() == Sym) {
+    // ...it is the best binding to report.
+    AllocBindingToReport = AllocFirstBinding;
+    return;
+  }
+
+  // At this point, we know that the original region doesn't contain the leaking
+  // when the actual leak happens.  It means that it can be confusing for the
+  // user to see such description in the message.
+  //
+  // Let's consider the following example:
+  //   Object *Original = allocate(...);
+  //   Object *New = Original;
+  //   Original = allocate(...);
+  //   Original->release();
+  //
+  // Complaining about a leaking object "stored into Original" might cause a
+  // rightful confusion because 'Original' is actually released.
+  // We should complain about 'New' instead.
+  Bindings AllVarBindings =
+      getAllVarBindingsForSymbol(Ctx.getStateManager(), Node, Sym);
+
+  // While looking for the last var bindings, we can still find
+  // `AllocFirstBinding` to be one of them.  In situations like this,
+  // it would still be the easiest case to explain to our users.
+  if (!AllVarBindings.empty() &&
+      llvm::count_if(AllVarBindings,
+                     [this](const std::pair<const MemRegion *, SVal> Binding) {
+                       return Binding.first == AllocFirstBinding;
+                     }) == 0) {
+    // Let's pick one of them at random (if there is something to pick from).
+    AllocBindingToReport = AllVarBindings[0].first;
+
+    // Because 'AllocBindingToReport' is not the the same as
+    // 'AllocFirstBinding', we need to explain how the leaking object
+    // got from one to another.
+    //
+    // NOTE: We use the actual SVal stored in AllocBindingToReport here because
+    //       trackStoredValue compares SVal's and it can get trickier for
+    //       something like derived regions if we want to construct SVal from
+    //       Sym. Instead, we take the value that is definitely stored in that
+    //       region, thus guaranteeing that trackStoredValue will work.
+    bugreporter::trackStoredValue(AllVarBindings[0].second.castAs<KnownSVal>(),
+                                  AllocBindingToReport, *this);
+  } else {
+    AllocBindingToReport = AllocFirstBinding;
+  }
+}
+
+RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
+                             ExplodedNode *N, SymbolRef Sym,
+                             CheckerContext &Ctx)
+    : RefCountReport(D, LOpts, N, Sym, /*isLeak=*/true) {
+
+  deriveAllocLocation(Ctx);
+  findBindingToReport(Ctx, N);
+
+  if (!AllocFirstBinding)
+    deriveParamLocation(Ctx);
 
   createDescription(Ctx);
 
-  addVisitor(std::make_unique<RefLeakReportVisitor>(sym));
+  addVisitor<RefLeakReportVisitor>(Sym, AllocBindingToReport);
 }

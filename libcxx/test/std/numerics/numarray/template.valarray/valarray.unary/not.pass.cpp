@@ -38,7 +38,7 @@ int main(int, char**)
         std::valarray<bool> v2 = !(v + v);
         assert(v2.size() == v.size());
         for (std::size_t i = 0; i < v2.size(); ++i)
-            assert(v2[i] == !(2 * v[i]));
+            assert(v2[i] == !(v[i] + v[i]));
     }
 
   return 0;

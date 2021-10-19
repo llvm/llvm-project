@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main
@@ -109,7 +109,7 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: Only the TO, FROM, TOFROM, or ALLOC map types are permitted for MAP clauses on the TARGET directive
+  !ERROR: Only the TO, FROM, TOFROM, ALLOC map types are permitted for MAP clauses on the TARGET directive
   !$omp target map(delete:a)
   do i = 1, N
      a = 3.14
@@ -122,7 +122,7 @@ program main
   enddo
   !$omp end target data
 
-  !ERROR: At least one MAP clause must appear on the TARGET DATA directive
+  !ERROR: At least one of MAP clause must appear on the TARGET DATA directive
   !$omp target data device(0)
   do i = 1, N
      a = 3.14
@@ -132,7 +132,7 @@ program main
   !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
   !$omp target enter data map(to:a) if(.true.) if(.false.)
 
-  !ERROR: Only the TO or ALLOC map types are permitted for MAP clauses on the TARGET ENTER DATA directive
+  !ERROR: Only the TO, ALLOC map types are permitted for MAP clauses on the TARGET ENTER DATA directive
   !$omp target enter data map(from:a)
 
   !$omp target exit data map(delete:a)
@@ -140,10 +140,11 @@ program main
   !ERROR: At most one DEVICE clause can appear on the TARGET EXIT DATA directive
   !$omp target exit data map(from:a) device(0) device(1)
 
-  !ERROR: Only the FROM, RELEASE, or DELETE map types are permitted for MAP clauses on the TARGET EXIT DATA directive
+  !ERROR: Only the FROM, RELEASE, DELETE map types are permitted for MAP clauses on the TARGET EXIT DATA directive
   !$omp target exit data map(to:a)
 
   !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute
   do i = 1, N
      a = 3.14
@@ -152,6 +153,17 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !$omp distribute
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
   !$omp distribute collapse(2) collapse(3)
   do i = 1, N
@@ -165,6 +177,22 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !ERROR: At most one COLLAPSE clause can appear on the DISTRIBUTE directive
+  !$omp distribute collapse(2) collapse(3)
+  do i = 1, N
+     do j = 1, N
+        do k = 1, N
+           a = 3.14
+        enddo
+     enddo
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute dist_schedule(static, 2)
   do i = 1, N
      a = 3.14
@@ -173,12 +201,34 @@ program main
   !$omp end target
 
   !$omp target
+  !$omp teams
+  !$omp distribute dist_schedule(static, 2)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  !$omp target
+  !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
   !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end distribute
+  !$omp end target
+
+  !$omp target
+  !$omp teams
+  !ERROR: At most one DIST_SCHEDULE clause can appear on the DISTRIBUTE directive
+  !$omp distribute dist_schedule(static, 2) dist_schedule(static, 3)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end distribute
+  !$omp end teams
   !$omp end target
 
 end program main

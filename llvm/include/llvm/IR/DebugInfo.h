@@ -19,14 +19,32 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
 namespace llvm {
 
+class DbgDeclareInst;
+class DbgValueInst;
 class DbgVariableIntrinsic;
 class Instruction;
 class Module;
+
+/// Finds all intrinsics declaring local variables as living in the memory that
+/// 'V' points to. This may include a mix of dbg.declare and
+/// dbg.addr intrinsics.
+TinyPtrVector<DbgVariableIntrinsic *> FindDbgAddrUses(Value *V);
+
+/// Like \c FindDbgAddrUses, but only returns dbg.declare intrinsics, not
+/// dbg.addr.
+TinyPtrVector<DbgDeclareInst *> FindDbgDeclareUses(Value *V);
+
+/// Finds the llvm.dbg.value intrinsics describing a value.
+void findDbgValues(SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V);
+
+/// Finds the debug info intrinsics describing a value.
+void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
 
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
@@ -52,11 +70,11 @@ bool stripDebugInfo(Function &F);
 bool stripNonLineTableDebugInfo(Module &M);
 
 /// Update the debug locations contained within the MD_loop metadata attached
-/// to the instruction \p I, if one exists. \p Updater is applied to each debug
-/// location in the MD_loop metadata: the returned value is included in the
+/// to the instruction \p I, if one exists. \p Updater is applied to Metadata
+/// operand in the MD_loop metadata: the returned value is included in the
 /// updated loop metadata node if it is non-null.
 void updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<DILocation *(const DILocation &)> Updater);
+    Instruction &I, function_ref<Metadata *(Metadata *)> Updater);
 
 /// Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);
@@ -81,15 +99,15 @@ public:
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
 
+  /// Process subprogram.
+  void processSubprogram(DISubprogram *SP);
+
   /// Clear all lists.
   void reset();
 
 private:
-  void InitializeTypeMap(const Module &M);
-
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
-  void processSubprogram(DISubprogram *SP);
   void processType(DIType *DT);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);

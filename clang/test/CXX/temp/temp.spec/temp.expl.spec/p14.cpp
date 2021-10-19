@@ -3,7 +3,7 @@
 template<class T> void f(T) { /* ... */ }
 template<class T> inline void g(T) { /* ... */ }
 
-// CHECK: define void @_Z1gIiEvT_
+// CHECK: define{{.*}} void @_Z1gIiEvT_
 template<> void g<>(int) { /* ... */ }
 
 template<class T>
@@ -21,10 +21,10 @@ template<class T>
 inline void X<T>::h() {
 }
 
-// CHECK: define void @_ZN1XIiE1fEv
+// CHECK: define{{.*}} void @_ZN1XIiE1fEv
 template<> void X<int>::f() { }
 
-// CHECK: define void @_ZN1XIiE1hEv
+// CHECK: define{{.*}} void @_ZN1XIiE1hEv
 template<> void X<int>::h() { }
 
 // CHECK: define linkonce_odr void @_Z1fIiEvT_

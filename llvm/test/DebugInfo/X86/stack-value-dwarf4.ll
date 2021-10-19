@@ -13,6 +13,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-DWARF2-NEXT: .byte   48
 ; CHECK-DWARF2-NEXT: .byte   147
 ; CHECK-DWARF2-NEXT: .byte   2
+; CHECK-DWARF2: .byte   8                       # DW_AT_location
+; CHECK-DWARF2-NEXT: .byte   17
+; CHECK-DWARF2-NEXT: .byte   127
+; CHECK-DWARF2-NEXT: .byte   147
+; CHECK-DWARF2-NEXT: .byte   2
+; CHECK-DWARF2-NEXT: .byte   17
+; CHECK-DWARF2-NEXT: .byte   126
+; CHECK-DWARF2-NEXT: .byte   147
+; CHECK-DWARF2-NEXT: .byte   2
+; CHECK-DWARF2-NEXT: .byte   0          # End Of Children Mark
 
 ; CHECK-DWARF4: .byte   8                       # DW_AT_location
 ; CHECK-DWARF4-NEXT:.byte   52
@@ -23,9 +33,21 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-DWARF4-NEXT:.byte   159
 ; CHECK-DWARF4-NEXT:.byte   147
 ; CHECK-DWARF4-NEXT:.byte   2
+; CHECK-DWARF4: .byte   10                      # DW_AT_location
+; CHECK-DWARF4-NEXT: .byte   17
+; CHECK-DWARF4-NEXT: .byte   127
+; CHECK-DWARF4-NEXT: .byte   159
+; CHECK-DWARF4-NEXT: .byte   147
+; CHECK-DWARF4-NEXT: .byte   2
+; CHECK-DWARF4-NEXT: .byte   17
+; CHECK-DWARF4-NEXT: .byte   126
+; CHECK-DWARF4-NEXT: .byte   159
+; CHECK-DWARF4-NEXT: .byte   147
+; CHECK-DWARF4-NEXT: .byte   2
+; CHECK-DWARF4-NEXT: .byte   0          # End Of Children Mark
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang", file: !4, globals: !1, emissionKind: FullDebug)
-!1 = !{!2, !10}
+!1 = !{!2, !10, !11, !14}
 !2 = !DIGlobalVariableExpression(var: !8, expr: !3)
 !3 = !DIExpression(DW_OP_constu, 4, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 16)
 !4 = !DIFile(filename: "<stdin>", directory: "/")
@@ -35,6 +57,11 @@ target triple = "x86_64-unknown-linux-gnu"
 !8 = distinct !DIGlobalVariable(name: "a", scope: null, isLocal: false, isDefinition: true, type: !5)
 !9 = !DIExpression(DW_OP_constu, 0, DW_OP_stack_value, DW_OP_LLVM_fragment, 16, 16)
 !10 = !DIGlobalVariableExpression(var: !8, expr: !9)
+!11 = !DIGlobalVariableExpression(var: !13, expr: !12)
+!12 = !DIExpression(DW_OP_consts, 18446744073709551615, DW_OP_stack_value, DW_OP_LLVM_fragment, 0, 16)
+!13 = distinct !DIGlobalVariable(name: "b", scope: null, isLocal: false, isDefinition: true, type: !5)
+!14 = !DIGlobalVariableExpression(var: !13, expr: !15)
+!15 = !DIExpression(DW_OP_consts, 18446744073709551614, DW_OP_stack_value, DW_OP_LLVM_fragment, 16, 16)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}

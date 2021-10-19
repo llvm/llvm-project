@@ -13,7 +13,7 @@
 namespace __llvm_libc {
 
 // TODO: Look at benefits for comparing words at a time.
-int LLVM_LIBC_ENTRYPOINT(strcmp)(const char *left, const char *right) {
+LLVM_LIBC_FUNCTION(int, strcmp, (const char *left, const char *right)) {
   for (; *left && *left == *right; ++left, ++right)
     ;
   return *reinterpret_cast<const unsigned char *>(left) -

@@ -33,7 +33,7 @@ RegisterContextCorePOSIX_s390x::RegisterContextCorePOSIX_s390x(
   m_fpr.SetByteOrder(fpregset.GetByteOrder());
 }
 
-RegisterContextCorePOSIX_s390x::~RegisterContextCorePOSIX_s390x() {}
+RegisterContextCorePOSIX_s390x::~RegisterContextCorePOSIX_s390x() = default;
 
 bool RegisterContextCorePOSIX_s390x::ReadGPR() { return true; }
 

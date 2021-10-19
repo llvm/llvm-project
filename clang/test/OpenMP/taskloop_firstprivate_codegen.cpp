@@ -58,7 +58,7 @@ T tmain() {
 int main() {
   static int sivar;
 #ifdef LAMBDA
-  // LAMBDA: [[G:@.+]] = global double
+  // LAMBDA: [[G:@.+]] ={{.*}} global double
   // LAMBDA: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
   // LAMBDA-LABEL: @main
   // LAMBDA: call{{( x86_thiscallcc)?}} void [[OUTER_LAMBDA:@.+]](
@@ -78,7 +78,7 @@ int main() {
 // LAMBDA: ret
 #pragma omp taskloop firstprivate(g, sivar)
   for (int i = 0; i < 10; ++i) {
-    // LAMBDA: define {{.+}} void [[INNER_LAMBDA:@.+]](%{{.+}}* [[ARG_PTR:%.+]])
+    // LAMBDA: define {{.+}} void [[INNER_LAMBDA:@.+]]({{.+}} [[ARG_PTR:%.+]])
     // LAMBDA: store %{{.+}}* [[ARG_PTR]], %{{.+}}** [[ARG_PTR_REF:%.+]],
     // LAMBDA: [[ARG_PTR:%.+]] = load %{{.+}}*, %{{.+}}** [[ARG_PTR_REF]]
     // LAMBDA: [[G_PTR_REF:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* [[ARG_PTR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -91,7 +91,7 @@ int main() {
     sivar = 11;
     // LAMBDA: store double 1.0{{.+}}, double* %{{.+}},
     // LAMBDA: store i{{[0-9]+}} 11, i{{[0-9]+}}* %{{.+}},
-    // LAMBDA: call void [[INNER_LAMBDA]](%
+    // LAMBDA: call void [[INNER_LAMBDA]]({{.+}}
     // LAMBDA: ret
     [&]() {
       g = 2;
@@ -101,7 +101,8 @@ int main() {
   }();
   return 0;
 #elif defined(BLOCKS)
-  // BLOCKS: [[G:@.+]] = global double
+  // BLOCKS: [[G:@.+]] ={{.*}} global double
+  // BLOCKS: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
   // BLOCKS-LABEL: @main
   // BLOCKS: call void {{%.+}}(i8
   ^{
@@ -123,7 +124,7 @@ int main() {
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
     // BLOCKS: store volatile double 2.0{{.+}}, double*
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
-    // BLOCKS-NOT: [[ISVAR]]{{[[^:word:]]}}
+    // BLOCKS-NOT: [[SIVAR]]{{[[^:word:]]}}
     // BLOCKS: store i{{[0-9]+}} 22, i{{[0-9]+}}*
     // BLOCKS-NOT: [[SIVAR]]{{[[^:word:]]}}
     // BLOCKS: ret
@@ -163,7 +164,7 @@ int main() {
 }
 
 // CHECK: [[SIVAR:.+]] = internal global i{{[0-9]+}} 0,
-// CHECK: define i{{[0-9]+}} @main()
+// CHECK: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: alloca [[S_DOUBLE_TY]],
 // CHECK: [[TEST:%.+]] = alloca [[S_DOUBLE_TY]],
 // CHECK: [[T_VAR_ADDR:%.+]] = alloca i32,
@@ -172,7 +173,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_DOUBLE_TY]],
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[LOC:%.+]])
 
-// CHECK: call {{.*}} [[S_DOUBLE_TY_COPY_CONSTR:@.+]]([[S_DOUBLE_TY]]* [[TEST]],
+// CHECK: call {{.*}} [[S_DOUBLE_TY_COPY_CONSTR:@.+]]([[S_DOUBLE_TY]]* {{[^,]*}} [[TEST]],
 
 // Store original variables in capture struct.
 // CHECK: [[S_ARR_REF:%.+]] = getelementptr inbounds [[CAP_MAIN_TY]], [[CAP_MAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -203,7 +204,7 @@ int main() {
 // s_arr;
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: bitcast [2 x [[S_DOUBLE_TY]]]* %{{.+}} to [[S_DOUBLE_TY]]*
-// CHECK: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* [[S_ARR_CUR:%[^,]+]],
+// CHECK: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[S_ARR_CUR:%[^,]+]],
 // CHECK: getelementptr [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: getelementptr [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} 1
 // CHECK: icmp eq
@@ -211,7 +212,7 @@ int main() {
 
 // var;
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
-// CHECK-NEXT: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF]], [[S_DOUBLE_TY]]* {{.*}},
+// CHECK-NEXT: call void [[S_DOUBLE_TY_COPY_CONSTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]], [[S_DOUBLE_TY]]* {{.*}},
 
 // t_var;
 // CHECK: [[PRIVATE_T_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
@@ -277,7 +278,8 @@ int main() {
 // CHECK: store void (i8*, ...)* bitcast (void ([[PRIVATES_MAIN_TY]]*, [[S_DOUBLE_TY]]**, i32**, [2 x [[S_DOUBLE_TY]]]**, [2 x i32]**, i32**)* [[PRIVATES_MAP_FN]] to void (i8*, ...)*), void (i8*, ...)** [[MAP_FN_ADDR:%.+]],
 // CHECK: [[MAP_FN:%.+]] = load void (i8*, ...)*, void (i8*, ...)** [[MAP_FN_ADDR]],
 
-// CHECK: call void (i8*, ...) [[MAP_FN]](i8* %{{.+}}, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]], i32** [[PRIV_T_VAR_ADDR]], [2 x [[S_DOUBLE_TY]]]** [[PRIV_S_ARR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], i32** [[PRIV_SIVAR_ADDR]])
+// CHECK: [[FN:%.+]] = bitcast void (i8*, ...)* [[MAP_FN]] to void (i8*,
+// CHECK: call void [[FN]](i8* %{{.+}}, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]], i32** [[PRIV_T_VAR_ADDR]], [2 x [[S_DOUBLE_TY]]]** [[PRIV_S_ARR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], i32** [[PRIV_SIVAR_ADDR]])
 
 // CHECK: [[PRIV_VAR:%.+]] = load [[S_DOUBLE_TY]]*, [[S_DOUBLE_TY]]** [[PRIV_VAR_ADDR]],
 // CHECK: [[PRIV_T_VAR:%.+]] = load i32*, i32** [[PRIV_T_VAR_ADDR]],
@@ -315,11 +317,11 @@ int main() {
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_MAIN_TY]], [[KMP_TASK_MAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 1
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_MAIN_TY]], [[PRIVATES_MAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 1
-// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* [[PRIVATE_VAR_REF]])
+// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]])
 // CHECK: getelementptr inbounds [2 x [[S_DOUBLE_TY]]], [2 x [[S_DOUBLE_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: [[PRIVATE_S_ARR_ELEM_REF:%.+]] = getelementptr inbounds [[S_DOUBLE_TY]], [[S_DOUBLE_TY]]* %{{.+}}, i{{.+}} -1
-// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* [[PRIVATE_S_ARR_ELEM_REF]])
+// CHECK: call void [[S_DOUBLE_TY_DESTR]]([[S_DOUBLE_TY]]* {{[^,]*}} [[PRIVATE_S_ARR_ELEM_REF]])
 // CHECK: icmp eq
 // CHECK: br i1
 // CHECK: ret i32
@@ -333,7 +335,7 @@ int main() {
 // CHECK: [[VAR_ADDR:%.+]] = alloca [[S_INT_TY]],
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[LOC:%.+]])
 
-// CHECK: call {{.*}} [[S_INT_TY_COPY_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]],
+// CHECK: call {{.*}} [[S_INT_TY_COPY_CONSTR:@.+]]([[S_INT_TY]]* {{[^,]*}} [[TEST]],
 
 // Store original variables in capture struct.
 // CHECK: [[S_ARR_REF:%.+]] = getelementptr inbounds [[CAP_TMAIN_TY]], [[CAP_TMAIN_TY]]* %{{.+}}, i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -376,14 +378,14 @@ int main() {
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: bitcast [2 x [[S_INT_TY]]]* %{{.+}} to [[S_INT_TY]]*
 // CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
-// CHECK: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* [[S_ARR_CUR:%[^,]+]],
+// CHECK: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[S_ARR_CUR:%[^,]+]],
 // CHECK: getelementptr [[S_INT_TY]], [[S_INT_TY]]* [[S_ARR_CUR]], i{{.+}} 1
 // CHECK: icmp eq
 // CHECK: br i1
 
 // var;
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK-NEXT: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* [[PRIVATE_VAR_REF]],
+// CHECK-NEXT: call void [[S_INT_TY_COPY_CONSTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]],
 
 // Provide pointer to destructor function, which will destroy private variables at the end of the task.
 // CHECK: [[DESTRUCTORS_REF:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], [[KMP_TASK_T_TY]]* [[TASK]], i{{.+}} 0, i{{.+}} 3
@@ -426,7 +428,8 @@ int main() {
 // CHECK-DAG: [[PRIV_VAR_ADDR:%.+]] = alloca [[S_INT_TY]]*,
 // CHECK: store void (i8*, ...)* bitcast (void ([[PRIVATES_TMAIN_TY]]*, i32**, [2 x i32]**, [2 x [[S_INT_TY]]]**, [[S_INT_TY]]**)* [[PRIVATES_MAP_FN]] to void (i8*, ...)*), void (i8*, ...)** [[MAP_FN_ADDR:%.+]],
 // CHECK: [[MAP_FN:%.+]] = load void (i8*, ...)*, void (i8*, ...)** [[MAP_FN_ADDR]],
-// CHECK: call void (i8*, ...) [[MAP_FN]](i8* %{{.+}}, i32** [[PRIV_T_VAR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], [2 x [[S_INT_TY]]]** [[PRIV_S_ARR_ADDR]], [[S_INT_TY]]** [[PRIV_VAR_ADDR]])
+// CHECK: [[FN:%.+]] = bitcast void (i8*, ...)* [[MAP_FN]] to void (i8*,
+// CHECK: call void [[FN]](i8* %{{.+}}, i32** [[PRIV_T_VAR_ADDR]], [2 x i32]** [[PRIV_VEC_ADDR]], [2 x [[S_INT_TY]]]** [[PRIV_S_ARR_ADDR]], [[S_INT_TY]]** [[PRIV_VAR_ADDR]])
 // CHECK: [[PRIV_T_VAR:%.+]] = load i32*, i32** [[PRIV_T_VAR_ADDR]],
 // CHECK: [[PRIV_VEC:%.+]] = load [2 x i32]*, [2 x i32]** [[PRIV_VEC_ADDR]],
 // CHECK: [[PRIV_S_ARR:%.+]] = load [2 x [[S_INT_TY]]]*, [2 x [[S_INT_TY]]]** [[PRIV_S_ARR_ADDR]],
@@ -461,11 +464,11 @@ int main() {
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], [[KMP_TASK_TMAIN_TY]]* [[RES_KMP_TASK:%.+]], i{{[0-9]+}} 0, i{{[0-9]+}} 2
 // CHECK: [[PRIVATE_S_ARR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 2
 // CHECK: [[PRIVATE_VAR_REF:%.+]] = getelementptr inbounds [[PRIVATES_TMAIN_TY]], [[PRIVATES_TMAIN_TY]]* [[PRIVATES]], i{{.+}} 0, i{{.+}} 3
-// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[PRIVATE_VAR_REF]])
+// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_VAR_REF]])
 // CHECK: getelementptr inbounds [2 x [[S_INT_TY]]], [2 x [[S_INT_TY]]]* [[PRIVATE_S_ARR_REF]], i{{.+}} 0, i{{.+}} 0
 // CHECK: getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} 2
 // CHECK: [[PRIVATE_S_ARR_ELEM_REF:%.+]] = getelementptr inbounds [[S_INT_TY]], [[S_INT_TY]]* %{{.+}}, i{{.+}} -1
-// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* [[PRIVATE_S_ARR_ELEM_REF]])
+// CHECK: call void [[S_INT_TY_DESTR]]([[S_INT_TY]]* {{[^,]*}} [[PRIVATE_S_ARR_ELEM_REF]])
 // CHECK: icmp eq
 // CHECK: br i1
 // CHECK: ret i32

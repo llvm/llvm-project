@@ -32,15 +32,15 @@ Further, the scheme can be applied:
 [Real](https://en.wikipedia.org/wiki/Real_number) number divided by a *scale*.
 We will call the result of the divided real the *scaled value*.
 
-$$ real\_value = scaled\_value * scale $$
+$$ real\\_value = scaled\\_value * scale $$
 
 The scale can be interpreted as the distance, in real units, between neighboring
-scaled values. For example, if the scale is $$ \pi $$, then fixed point values
-with this scale can only represent multiples of $$ \pi $$, and nothing in
+scaled values. For example, if the scale is $ \pi $, then fixed point values
+with this scale can only represent multiples of $ \pi $, and nothing in
 between. The maximum rounding error to convert an arbitrary Real to a fixed
-point value with a given $$ scale $$ is $$ \frac{scale}{2} $$. Continuing the
-previous example, when $$ scale = \pi $$, the maximum rounding error will be $$
-\frac{\pi}{2} $$.
+point value with a given $ scale $ is $ \frac{scale}{2} $. Continuing the
+previous example, when $ scale = \pi $, the maximum rounding error will be $
+\frac{\pi}{2} $.
 
 Multiplication can be performed on scaled values with different scales, using
 the same algorithm as multiplication of real values (note that product scaled
@@ -58,7 +58,7 @@ Mathematically speaking, affine values are the result of
 Alternatively (and equivalently), subtracting a zero point from an affine value results in a
 scaled value:
 
-$$ real\_value = scaled\_value * scale = (affine\_value - zero\_point) * scale $$
+$$ real\\_value = scaled\\_value * scale = (affine\\_value - zero\\_point) * scale $$
 
 Essentially, affine values are a shift of the scaled values by some constant
 amount. Arithmetic (i.e., addition, subtraction, multiplication, division)
@@ -78,7 +78,7 @@ corresponding to those signed integers are going to waste.
 In order to exactly represent the real zero with an integral-valued affine
 value, the zero point must be an integer between the minimum and maximum affine
 value (inclusive). For example, given an affine value represented by an 8 bit
-unsigned integer, we have: $$ 0 \leq zero\_point \leq 255$$. This is important,
+unsigned integer, we have: $ 0 \leq zero\\_point \leq 255 $. This is important,
 because in convolution-like operations of deep neural networks, we frequently
 need to zero-pad inputs and outputs, so zero must be exactly representable, or
 the result will be biased.
@@ -88,7 +88,7 @@ the result will be biased.
 Real values, fixed point values, and affine values relate through the following
 equation, which demonstrates how to convert one type of number to another:
 
-$$ real\_value = scaled\_value * scale = (affine\_value - zero\_point) * scale $$
+$$ real\\_value = scaled\\_value * scale = (affine\\_value - zero\\_point) * scale $$
 
 Note that computers generally store mathematical values using a finite number of
 bits. Thus, while the above conversions are exact, to store the result in a
@@ -115,13 +115,13 @@ not required that all representable values of the integral type are used):
 
 $$
 \begin{align*}
-af&fine\_value_{uint8 \, or \, uint16} \\
-      &= clampToTargetSize(roundToNearestInteger( \frac{real\_value_{Single}}{scale_{Single}})_{sint32} + zero\_point_{uint8 \, or \, uint16})
+af&fine\\_value_{uint8 \\, or \\, uint16} \\\\
+      &= clampToTargetSize(roundToNearestInteger( \frac{real\\_value_{Single}}{scale_{Single}})_{sint32} + zero\\_point_{uint8 \, or \, uint16})
 \end{align*}
 $$
 
-In the above, we assume that $$real\_value$$ is a Single, $$scale$$ is a Single,
-$$roundToNearestInteger$$ returns a signed 32-bit integer, and $$zero\_point$$
+In the above, we assume that $real\\_value$ is a Single, $scale$ is a Single,
+$roundToNearestInteger$ returns a signed 32-bit integer, and $zero\\_point$
 is an unsigned 8-bit or 16-bit integer. Note that bit depth and number of fixed
 point values are indicative of common types on typical hardware but is not
 constrained to particular bit depths or a requirement that the entire range of
@@ -136,13 +136,13 @@ can be performed:
 
 $$
 \begin{align*}
-re&al\_value_{Single} \\
-      &= roundToNearestFloat((affine\_value_{uint8 \, or \, uint16} - zero\_point_{uint8 \, or \, uint16})_{sint32})_{Single} * scale_{Single}
+re&al\\_value_{Single} \\\\
+      &= roundToNearestFloat((affine\\_value_{uint8 \\, or \\, uint16} - zero\\_point_{uint8 \\, or \\, uint16})_{sint32})_{Single} * scale_{Single}
 \end{align*}
 $$
 
 In the above, we assume that the result of subtraction is in 32-bit signed
-integer format, and that $$roundToNearestFloat$$ returns a Single.
+integer format, and that $roundToNearestFloat$ returns a Single.
 
 #### Affine to fixed point
 
@@ -150,7 +150,9 @@ When the affine and fixed point scales are the same, subtract the zero point
 from the affine value to get the equivalent fixed point value.
 
 $$
-scaled\_value = affine\_value_{non\mbox{-}negative} - zero\_point_{non\mbox{-}negative}
+\begin{align*}
+  scaled\\_value = affine\\_value_{non\mbox{-}negative} - zero\\_point_{non\mbox{-}negative}
+\end{align*}
 $$
 
 #### Fixed point to affine
@@ -159,7 +161,9 @@ When the affine and fixed point scales are the same, add the zero point to the
 fixed point value to get the equivalent affine value.
 
 $$
-affine\_value_{non\mbox{-}negative} = scaled\_value + zero\_point_{non\mbox{-}negative}
+\begin{align*}
+  affine\\_value_{non\mbox{-}negative} = scaled\\_value + zero\\_point_{non\mbox{-}negative}
+\end{align*}
 $$
 
 ## Usage within MLIR
@@ -173,10 +177,10 @@ MLIR:
         mapping between *expressed* values (typically of a floating point
         computer type) and *storage* values (typically of an integral computer
         type).
-    *   [Type conversion ops](#quantized-type-conversion-ops) for converting
+    *   [Type conversion ops](#quantized-type-conversion-operations) for converting
         between types based on a QuantizedType and its *expressed* and *storage*
         sub-types.
-    *   [Instrumentation ops](#instrumentation-and-constraint-ops) for assigning
+    *   [Instrumentation ops](#instrumentation-and-constraint-operations) for assigning
         instrumentation points within the computation where runtime statistics
         may help guide the quantization process.
 

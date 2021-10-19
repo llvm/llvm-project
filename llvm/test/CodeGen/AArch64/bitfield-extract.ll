@@ -91,7 +91,7 @@ define signext i16 @test10(i64 %a) {
 define void @test11(i64 %a) {
   %tmp = lshr i64 %a, 23
   %res = trunc i64 %tmp to i16
-  call void @use(i16 %res, i64 %tmp)
+  call void @use(i16 signext %res, i64 %tmp)
   ret void
 }
 

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -11,7 +10,7 @@
 
 // <tuple>
 
-// See llvm.org/PR20855
+// See https://llvm.org/PR20855.
 
 #include <functional>
 #include <tuple>

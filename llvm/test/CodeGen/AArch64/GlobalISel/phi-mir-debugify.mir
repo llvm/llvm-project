@@ -36,40 +36,40 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0, debug-location !10
-  ; CHECK:   DBG_VALUE [[COPY]](s32), $noreg, !8, !DIExpression(), debug-location !10
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0, debug-location !11
+  ; CHECK:   DBG_VALUE [[COPY]](s32), $noreg, !9, !DIExpression(), debug-location !11
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0, debug-location !DILocation(line: 2, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[C]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[C]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 2, column: 1, scope: !5)
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1, debug-location !DILocation(line: 3, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[C1]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[C1]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 3, column: 1, scope: !5)
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2, debug-location !DILocation(line: 4, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[C2]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[C2]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 4, column: 1, scope: !5)
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[COPY]](s32), [[C]], debug-location !DILocation(line: 5, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[ICMP]](s1), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[ICMP]](s1), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 5, column: 1, scope: !5)
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.1, debug-location !DILocation(line: 6, column: 1, scope: !5)
   ; CHECK:   G_BR %bb.2, debug-location !DILocation(line: 7, column: 1, scope: !5)
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C1]], debug-location !DILocation(line: 8, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[ADD]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 8, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[ADD]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 8, column: 1, scope: !5)
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ADD]](s32), debug-location !DILocation(line: 9, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[TRUNC]](s1), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 9, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[TRUNC]](s1), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 9, column: 1, scope: !5)
   ; CHECK:   G_BR %bb.3, debug-location !DILocation(line: 10, column: 1, scope: !5)
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[C2]], debug-location !DILocation(line: 11, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[ADD1]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 11, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[ADD1]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 11, column: 1, scope: !5)
   ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[ADD1]](s32), debug-location !DILocation(line: 12, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[TRUNC1]](s1), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 12, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[TRUNC1]](s1), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 12, column: 1, scope: !5)
   ; CHECK: bb.3:
   ; CHECK:   [[PHI:%[0-9]+]]:_(s1) = G_PHI [[TRUNC]](s1), %bb.1, [[TRUNC1]](s1), %bb.2, debug-location !DILocation(line: 13, column: 1, scope: !5)
   ; CHECK:   [[PHI1:%[0-9]+]]:_(s1) = G_PHI [[TRUNC]](s1), %bb.1, [[TRUNC1]](s1), %bb.2, debug-location !DILocation(line: 14, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[PHI]](s1), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 13, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[PHI1]](s1), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 14, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[PHI]](s1), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 13, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[PHI1]](s1), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 14, column: 1, scope: !5)
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[PHI]](s1), debug-location !DILocation(line: 15, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE [[ZEXT]](s32), $noreg, !8, !DIExpression(), debug-location !DILocation(line: 15, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE [[ZEXT]](s32), $noreg, !9, !DIExpression(), debug-location !DILocation(line: 15, column: 1, scope: !5)
   ; CHECK:   $w0 = COPY [[ZEXT]](s32), debug-location !DILocation(line: 16, column: 1, scope: !5)
-  ; CHECK:   DBG_VALUE $w0, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 16, column: 1, scope: !5)
+  ; CHECK:   DBG_VALUE $w0, $noreg, !9, !DIExpression(), debug-location !DILocation(line: 16, column: 1, scope: !5)
   ; CHECK:   RET_ReallyLR implicit $w0, debug-location !DILocation(line: 17, column: 1, scope: !5)
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)

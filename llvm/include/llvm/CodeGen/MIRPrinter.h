@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_MIRPRINTER_H
-#define LLVM_LIB_CODEGEN_MIRPRINTER_H
+#ifndef LLVM_CODEGEN_MIRPRINTER_H
+#define LLVM_CODEGEN_MIRPRINTER_H
 
 namespace llvm {
 

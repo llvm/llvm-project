@@ -1,7 +1,10 @@
 # RUN: llvm-objdump --macho --lazy-bind %p/Inputs/lazy-bind.macho-x86_64 \
-# RUN:   | FileCheck %s 
+# RUN:   | FileCheck %s --match-full-lines --strict-whitespace
 
-
-# CHECK: __DATA   __la_symbol_ptr    0x100001010   libfoo          _foo
-# CHECK: __DATA   __la_symbol_ptr    0x100001018   libbar          _bar
-# CHECK: __DATA   __la_symbol_ptr    0x100001020   libSystem       _malloc
+#      CHECK:{{.*}}lazy-bind.macho-x86_64:
+#CHECK-EMPTY:
+# CHECK-NEXT:Lazy bind table:
+# CHECK-NEXT:segment  section            address     dylib            symbol
+# CHECK-NEXT:__DATA   __la_symbol_ptr    0x100001010 libfoo           _foo
+# CHECK-NEXT:__DATA   __la_symbol_ptr    0x100001018 libbar           _bar
+# CHECK-NEXT:__DATA   __la_symbol_ptr    0x100001020 libSystem        _malloc

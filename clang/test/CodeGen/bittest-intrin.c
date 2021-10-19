@@ -34,20 +34,20 @@ void test_arm(long *base, long idx) {
 #endif
 
 // X64-LABEL: define dso_local void @test32(i32* %base, i32 %idx)
-// X64: call i8 asm sideeffect "btl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
-// X64: call i8 asm sideeffect "btcl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
-// X64: call i8 asm sideeffect "btrl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
-// X64: call i8 asm sideeffect "btsl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
-// X64: call i8 asm sideeffect "lock btrl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
-// X64: call i8 asm sideeffect "lock btsl $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "btl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "btcl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "btrl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "btsl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "lock btrl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
+// X64: call i8 asm sideeffect "lock btsl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %{{.*}}, i32 {{.*}})
 
 // X64-LABEL: define dso_local void @test64(i64* %base, i64 %idx)
-// X64: call i8 asm sideeffect "btq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
-// X64: call i8 asm sideeffect "btcq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
-// X64: call i8 asm sideeffect "btrq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
-// X64: call i8 asm sideeffect "btsq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
-// X64: call i8 asm sideeffect "lock btrq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
-// X64: call i8 asm sideeffect "lock btsq $2, ($1)\0A\09setc ${0:b}", "=r,r,r,~{{.*}}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "btq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "btcq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "btrq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "btsq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "lock btrq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
+// X64: call i8 asm sideeffect "lock btsq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %{{.*}}, i64 {{.*}})
 
 // ARM-LABEL: define dso_local {{.*}}void @test32(i32* %base, i32 %idx)
 // ARM: %[[IDXHI:[^ ]*]] = ashr i32 %{{.*}}, 3
@@ -107,7 +107,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[IDXLO:[^ ]*]] = and i8 %[[IDX8]], 7
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
 // ARM: %[[NOTMASK:[^ ]*]] = xor i8 %[[MASK]], -1
-// ARM: %[[BYTE:[^ ]*]] = atomicrmw and i8* %[[BYTEADDR]], i8 %[[NOTMASK]] seq_cst
+// ARM: %[[BYTE:[^ ]*]] = atomicrmw and i8* %[[BYTEADDR]], i8 %[[NOTMASK]] seq_cst, align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -118,7 +118,7 @@ void test_arm(long *base, long idx) {
 // ARM: %[[IDX8:[^ ]*]] = trunc i32 %{{.*}} to i8
 // ARM: %[[IDXLO:[^ ]*]] = and i8 %[[IDX8]], 7
 // ARM: %[[MASK:[^ ]*]] = shl i8 1, %[[IDXLO]]
-// ARM: %[[BYTE:[^ ]*]] = atomicrmw or i8* %[[BYTEADDR]], i8 %[[MASK]] seq_cst
+// ARM: %[[BYTE:[^ ]*]] = atomicrmw or i8* %[[BYTEADDR]], i8 %[[MASK]] seq_cst, align 1
 // ARM: %[[BYTESHR:[^ ]*]] = lshr i8 %[[BYTE]], %[[IDXLO]]
 // ARM: %[[RES:[^ ]*]] = and i8 %[[BYTESHR]], 1
 // ARM: store volatile i8 %[[RES]], i8* @sink, align 1
@@ -127,9 +127,9 @@ void test_arm(long *base, long idx) {
 // Just look for the atomicrmw instructions.
 
 // ARM-LABEL: define dso_local {{.*}}void @test_arm(i32* %base, i32 %idx)
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release
-// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} acquire
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} release
-// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} monotonic
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} acquire, align 1
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} release, align 1
+// ARM: atomicrmw and i8* %{{.*}}, i8 {{.*}} monotonic, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} acquire, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} release, align 1
+// ARM: atomicrmw or i8* %{{.*}}, i8 {{.*}} monotonic, align 1

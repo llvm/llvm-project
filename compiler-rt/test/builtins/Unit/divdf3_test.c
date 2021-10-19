@@ -92,5 +92,26 @@ int main()
     if (test__divdf3(0x1.0p+0, 0x1.00000001p+0, UINT64_C(0x3fefffffffe00000)))
       return 1;
 
+    // smallest normal value divided by 2.0
+    if (test__divdf3(0x1.0p-1022, 2., UINT64_C(0x0008000000000000)))
+      return 1;
+    // smallest subnormal result
+    if (test__divdf3(0x1.0p-1022, 0x1.0p+52, UINT64_C(0x0000000000000001)))
+      return 1;
+
+    // some misc test cases obtained by fuzzing against h/w implementation
+    if (test__divdf3(0x1.fdc239dd64735p-658, -0x1.fff9364c0843fp-948, UINT64_C(0xd20fdc8fc0ceffb1)))
+      return 1;
+    if (test__divdf3(-0x1.78abb261d47c8p+794, 0x1.fb01d537cc5aep+266, UINT64_C(0xe0e7c6148ffc23e3)))
+      return 1;
+    if (test__divdf3(-0x1.da7dfe6048b8bp-875, 0x1.ffc7ea3ff60a4p-610, UINT64_C(0xaf5dab1fe0269e2a)))
+      return 1;
+    if (test__divdf3(0x1.0p-1022, 0x1.9p+5, UINT64_C(0x000051eb851eb852)))
+      return 1;
+    if (test__divdf3(0x1.0p-1022, 0x1.0028p+41, UINT64_C(0x00000000000007ff)))
+      return 1;
+    if (test__divdf3(0x1.0p-1022, 0x1.0028p+52, UINT64_C(0x1)))
+      return 1;
+
     return 0;
 }

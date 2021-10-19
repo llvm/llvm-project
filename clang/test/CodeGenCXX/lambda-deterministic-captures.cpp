@@ -15,7 +15,7 @@ void foo() {
   }();
 }
 
-// CHECK: define void @_Z3foov
+// CHECK: define{{.*}} void @_Z3foov
 // CHECK: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 0
 // CHECK-NEXT: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
 // CHECK-NEXT: store float 0.000

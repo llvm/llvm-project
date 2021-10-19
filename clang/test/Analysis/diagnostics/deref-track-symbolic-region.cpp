@@ -28,16 +28,16 @@ void testRefParam(int *ptr) {
 }
 
 int testRefToNullPtr() {
-  int *p = 0; // expected-note {{'p' initialized to a null pointer value}}
+  int *p = 0;         // expected-note {{'p' initialized to a null pointer value}}
   int *const &p2 = p; // expected-note{{'p2' initialized here}}
-  int *p3 = p2; // expected-note {{'p3' initialized to a null pointer value}}
-  return *p3; // expected-warning {{Dereference of null pointer}}
-              // expected-note@-1{{Dereference of null pointer}}
+  int *p3 = p2;       // expected-note {{'p3' initialized to a null pointer value}}
+  return *p3;         // expected-warning {{Dereference of null pointer}}
+                      // expected-note@-1{{Dereference of null pointer}}
 }
 
 int testRefToNullPtr2() {
-  int *p = 0; // expected-note {{'p' initialized to a null pointer value}}
-  int *const &p2 = p;// expected-note{{'p2' initialized here}}
-  return *p2; //expected-warning {{Dereference of null pointer}}
-              // expected-note@-1{{Dereference of null pointer}}
+  int *p = 0;         // expected-note {{'p' initialized to a null pointer value}}
+  int *const &p2 = p; // expected-note{{'p2' initialized here}}
+  return *p2;         //expected-warning {{Dereference of null pointer}}
+                      // expected-note@-1{{Dereference of null pointer}}
 }

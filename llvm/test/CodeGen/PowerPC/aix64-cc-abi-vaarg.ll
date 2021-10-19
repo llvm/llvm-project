@@ -1,9 +1,9 @@
 ; RUN: llc -O2 -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
-; RUN: FileCheck --check-prefixes=CHECK,64BIT %s
+; RUN: FileCheck --check-prefix=64BIT %s
 
 ; RUN: llc -O2 -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN: -mtriple powerpc64-ibm-aix-xcoff < %s | \
-; RUN: FileCheck --check-prefixes=CHECKASM,ASM64 %s
+; RUN: FileCheck --check-prefix=ASM64 %s
 
   define i32 @int_va_arg(i32 %a, ...) local_unnamed_addr  {
   entry:
@@ -54,23 +54,23 @@
 ; 64BIT-LABEL:   body:             |
 ; 64BIT-DAG:     bb.0.entry:
 ; 64BIT-DAG:     liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10
-; 64BIT-DAG:     STD killed renamable $x4, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0)
-; 64BIT-DAG:     STD killed renamable $x5, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8)
-; 64BIT-DAG:     STD killed renamable $x6, 16, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x7, 24, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x8, 32, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store 8)
+; 64BIT-DAG:     STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
+; 64BIT-DAG:     STD killed renamable $x5, 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
+; 64BIT-DAG:     STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
 ; 64BIT-DAG:     renamable $x11 = ADDI8 %fixed-stack.0, 0
-; 64BIT-DAG:     STD renamable $x11, 0, %stack.1.arg2 :: (store 8 into %ir.1)
-; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load 8 from %ir.arg2)
+; 64BIT-DAG:     STD renamable $x11, 0, %stack.1.arg2 :: (store (s64) into %ir.1)
+; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
 ; 64BIT-DAG:     renamable $x9 = ADDI8 renamable $x6, 4
 ; 64BIT-DAG:     renamable $x7 = ADDI8 %fixed-stack.0, 4
-; 64BIT-DAG:     renamable $r8 = LWZ 0, %fixed-stack.0 :: (load 4 from %fixed-stack.0, align 8)
-; 64BIT-DAG:     STD killed renamable $x11, 0, %stack.0.arg1 :: (store 8 into %ir.0)
-; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store 8 into %ir.arg1)
-; 64BIT-DAG:     STD killed renamable $x9, 0, %stack.1.arg2 :: (store 8 into %ir.arg2)
-; 64BIT-DAG:     renamable $r4 = LWZ 0, killed renamable $x6 :: (load 4)
+; 64BIT-DAG:     renamable $r8 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 8)
+; 64BIT-DAG:     STD killed renamable $x11, 0, %stack.0.arg1 :: (store (s64) into %ir.0)
+; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
+; 64BIT-DAG:     STD killed renamable $x9, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
+; 64BIT-DAG:     renamable $r4 = LWZ 0, killed renamable $x6 :: (load (s32))
 ; 64BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r8, renamable $r3, implicit killed $x3
 ; 64BIT-DAG:     renamable $r4 = RLWINM killed renamable $r4, 1, 0, 30
 ; 64BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4, implicit-def $x3
@@ -148,7 +148,7 @@
 
 ; 64BIT-LABEL:   body:             |
 ; 64BIT-DAG:     liveins: $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10
-; 64BIT-DAG:     renamable $r11 = LWZ 0, %fixed-stack.0 :: (load 4 from %fixed-stack.0, align 16)
+; 64BIT-DAG:     renamable $r11 = LWZ 0, %fixed-stack.0 :: (load (s32) from %fixed-stack.0, align 16)
 ; 64BIT-DAG:     renamable $r3 = nsw ADD4 renamable $r4, renamable $r3, implicit killed $x3, implicit killed $x4
 ; 64BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
 ; 64BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r6, implicit killed $x6
@@ -217,22 +217,22 @@
 ; 64BIT-LABEL:   body:             |
 ; 64BIT-DAG:     liveins: $f1, $x4, $x5, $x6, $x7, $x8, $x9, $x10
 ; 64BIT-DAG:     renamable $x3 = ADDI8 %fixed-stack.0, 0
-; 64BIT-DAG:     STD killed renamable $x4, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0)
-; 64BIT-DAG:     STD killed renamable $x5, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8)
-; 64BIT-DAG:     STD killed renamable $x6, 16, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x7, 24, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x8, 32, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store 8)
-; 64BIT-DAG:     STD renamable $x3, 0, %stack.1.arg2 :: (store 8 into %ir.1)
-; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load 8 from %ir.arg2)
+; 64BIT-DAG:     STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
+; 64BIT-DAG:     STD killed renamable $x5, 8, %fixed-stack.0 :: (store (s64) into %fixed-stack.0 + 8)
+; 64BIT-DAG:     STD killed renamable $x6, 16, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x7, 24, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x8, 32, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x9, 40, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD killed renamable $x10, 48, %fixed-stack.0 :: (store (s64))
+; 64BIT-DAG:     STD renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.1)
+; 64BIT-DAG:     renamable $x6 = LD 0, %stack.1.arg2 :: (load (s64) from %ir.arg2)
 ; 64BIT-DAG:     renamable $x7 = ADDI8 %fixed-stack.0, 8
-; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.0.arg1 :: (store 8 into %ir.0)
-; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store 8 into %ir.arg1)
-; 64BIT-DAG:     renamable $f0 = LFD 0, %fixed-stack.0 :: (load 8)
+; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.0.arg1 :: (store (s64) into %ir.0)
+; 64BIT-DAG:     STD killed renamable $x7, 0, %stack.0.arg1 :: (store (s64) into %ir.arg1)
+; 64BIT-DAG:     renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
 ; 64BIT-DAG:     renamable $x3 = ADDI8 renamable $x6, 8
-; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.1.arg2 :: (store 8 into %ir.arg2)
-; 64BIT-DAG:     renamable $f2 = LFD 0, killed renamable $x6 :: (load 8)
+; 64BIT-DAG:     STD killed renamable $x3, 0, %stack.1.arg2 :: (store (s64) into %ir.arg2)
+; 64BIT-DAG:     renamable $f2 = LFD 0, killed renamable $x6 :: (load (s64))
 ; 64BIT-DAG:     renamable $f0 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
 ; 64BIT-DAG:     renamable $f1 = nofpexcept FADD killed renamable $f2, renamable $f2, implicit $rm
 ; 64BIT-DAG:     renamable $f1 = nofpexcept FADD killed renamable $f0, killed renamable $f1, implicit $rm
@@ -319,7 +319,7 @@
 
 ; 64BIT-LABEL:     body:             |
 ; 64BIT-DAG:       liveins: $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8, $f9, $f10, $f11, $f12, $f13
-; 64BIT-DAG:       renamable $f0 = LFD 0, %fixed-stack.0 :: (load 8)
+; 64BIT-DAG:       renamable $f0 = LFD 0, %fixed-stack.0 :: (load (s64))
 ; 64BIT-DAG:       renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f2, implicit $rm
 ; 64BIT-DAG:       renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f3, implicit $rm
 ; 64BIT-DAG:       renamable $f1 = nofpexcept FADD killed renamable $f1, killed renamable $f4, implicit $rm

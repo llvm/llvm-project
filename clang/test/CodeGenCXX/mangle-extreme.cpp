@@ -2,7 +2,7 @@
 
 struct X { };
 
-// CHECK-LABEL: define void @_Z1fPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP1XS13_S12_S11_S10_SZ_SY_SX_SW_SV_SU_ST_SS_SR_SQ_SP_SO_SN_SM_SL_SK_SJ_SI_SH_SG_SF_SE_SD_SC_SB_SA_S9_S8_S7_S6_S5_S4_S3_S2_S1_S0_S_(
+// CHECK-LABEL: define{{.*}} void @_Z1fPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP1XS13_S12_S11_S10_SZ_SY_SX_SW_SV_SU_ST_SS_SR_SQ_SP_SO_SN_SM_SL_SK_SJ_SI_SH_SG_SF_SE_SD_SC_SB_SA_S9_S8_S7_S6_S5_S4_S3_S2_S1_S0_S_(
 void f(X****************************************,
        X****************************************,
        X***************************************,

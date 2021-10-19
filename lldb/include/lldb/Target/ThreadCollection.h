@@ -28,7 +28,7 @@ public:
 
   ThreadCollection(collection threads);
 
-  virtual ~ThreadCollection() {}
+  virtual ~ThreadCollection() = default;
 
   uint32_t GetSize();
 

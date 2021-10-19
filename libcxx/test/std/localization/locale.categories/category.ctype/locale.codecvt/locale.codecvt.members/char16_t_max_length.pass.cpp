@@ -12,6 +12,9 @@
 
 // int max_length() const throw();
 
+// This test runs in C++20, but we have deprecated codecvt<char(16|32), char, mbstate_t> in C++20.
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <locale>
 #include <cassert>
 

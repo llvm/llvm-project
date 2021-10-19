@@ -21,6 +21,6 @@ Sections:
     Type: SHT_PROGBITS
     Content: 'facefeed'
 ProgramHeaders:
-  - Type: PT_LOAD
-    Sections:
-      - Section: .text
+  - Type:     PT_LOAD
+    FirstSec: .text
+    LastSec:  .text

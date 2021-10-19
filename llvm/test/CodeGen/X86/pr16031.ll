@@ -7,15 +7,14 @@ define i64 @main(i1 %tobool1) nounwind {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $-12, %eax
-; CHECK-NEXT:    movl $-1, %edx
-; CHECK-NEXT:    cmovel %edx, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl $-1, %ecx
+; CHECK-NEXT:    cmovel %ecx, %eax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    addl $-1, %esi
-; CHECK-NEXT:    movl $-1, %esi
-; CHECK-NEXT:    adcl $-1, %esi
-; CHECK-NEXT:    cmovsl %ecx, %eax
-; CHECK-NEXT:    cmovsl %ecx, %edx
+; CHECK-NEXT:    adcl $-1, %ecx
+; CHECK-NEXT:    cmovsl %edx, %eax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
 entry:

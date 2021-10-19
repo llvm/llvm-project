@@ -9,7 +9,7 @@
 #include "src/errno/llvmlibc_errno.h"
 #include "utils/UnitTest/Test.h"
 
-TEST(ErrnoTest, Basic) {
+TEST(LlvmLibcErrnoTest, Basic) {
   int test_val = 123;
   llvmlibc_errno = test_val;
   ASSERT_EQ(test_val, llvmlibc_errno);

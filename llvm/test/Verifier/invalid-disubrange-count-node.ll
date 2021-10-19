@@ -33,5 +33,5 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 !19 = !DILocalVariable(name: "vla", scope: !7, file: !1, line: 21, type: !20)
 !20 = !DICompositeType(tag: DW_TAG_array_type, baseType: !10, align: 32, elements: !21)
 !21 = !{!22}
-; CHECK: Count must either be a signed constant or a DIVariable
+; CHECK: Count must be signed constant or DIVariable or DIExpression
 !22 = !DISubrange(count: !17)

@@ -3,11 +3,11 @@
 ;
 ; RUN: opt -module-summary < %s -o %t.bc
 ; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
-; RUN:   -r %t.bc,test,px -r %t.bc,bar,x \
+; RUN:   -r %t.bc,test,px -r %t.bc,bar,px -r %t.bc,externfunc,x \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 ; RUN: llvm-lto2 run -o %t.out %t.bc -save-temps \
-; RUN:   -r %t.bc,test,px -r %t.bc,bar,x -use-new-pm \
+; RUN:   -r %t.bc,test,px -r %t.bc,bar,px -r %t.bc,externfunc,x -use-new-pm \
 ; RUN:   -lto-sample-profile-file=%S/Inputs/load-sample-prof-icp.prof
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 
@@ -26,9 +26,14 @@ define void @test(void ()*) #0 !dbg !7 {
   ret void
 }
 
-declare void @bar() local_unnamed_addr
+declare void @externfunc()
 
-attributes #0 = {"use-sample-profile"}
+define void @bar() #0 {
+  call void @externfunc()
+  ret void
+}
+
+attributes #0 = {"use-sample-profile" noinline}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

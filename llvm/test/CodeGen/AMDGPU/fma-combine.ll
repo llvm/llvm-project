@@ -16,9 +16,9 @@ declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
 
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
 ; FUNC-LABEL: {{^}}combine_to_fma_f64_0:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @combine_to_fma_f64_0(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
@@ -40,10 +40,10 @@ define amdgpu_kernel void @combine_to_fma_f64_0(double addrspace(1)* noalias %ou
 
 ; (fadd (fmul x, y), z) -> (fma x, y, z)
 ; FUNC-LABEL: {{^}}combine_to_fma_f64_0_2use:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -73,9 +73,9 @@ define amdgpu_kernel void @combine_to_fma_f64_0_2use(double addrspace(1)* noalia
 
 ; (fadd x, (fmul y, z)) -> (fma y, z, x)
 ; FUNC-LABEL: {{^}}combine_to_fma_f64_1:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @combine_to_fma_f64_1(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
@@ -97,9 +97,9 @@ define amdgpu_kernel void @combine_to_fma_f64_1(double addrspace(1)* noalias %ou
 
 ; (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_0_f64:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
@@ -121,10 +121,10 @@ define amdgpu_kernel void @combine_to_fma_fsub_0_f64(double addrspace(1)* noalia
 
 ; (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_f64_0_2use:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -154,9 +154,9 @@ define amdgpu_kernel void @combine_to_fma_fsub_f64_0_2use(double addrspace(1)* n
 
 ; (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_1_f64:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
@@ -178,10 +178,10 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64(double addrspace(1)* noalia
 
 ; (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_1_f64_2use:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], [[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -211,9 +211,9 @@ define amdgpu_kernel void @combine_to_fma_fsub_1_f64_2use(double addrspace(1)* n
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_2_f64:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
 ; SI: v_fma_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI: buffer_store_dwordx2 [[RESULT]]
 define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalias %out, double addrspace(1)* noalias %in) #1 {
@@ -237,10 +237,10 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64(double addrspace(1)* noalia
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_2_f64_2uses_neg:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -272,10 +272,10 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_neg(double addrspace(
 
 ; (fsub (fneg (fmul x, y)), z) -> (fma (fneg x), y, (fneg z))
 ; FUNC-LABEL: {{^}}combine_to_fma_fsub_2_f64_2uses_mul:
-; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
+; SI-DAG: buffer_load_dwordx2 [[A:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[B:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[C:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[D:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
 ; SI-DAG: v_fma_f64 [[RESULT0:v\[[0-9]+:[0-9]+\]]], -[[A]], [[B]], -[[C]]
 ; SI-DAG: v_fma_f64 [[RESULT1:v\[[0-9]+:[0-9]+\]]], [[A]], [[B]], -[[D]]
 ; SI-DAG: buffer_store_dwordx2 [[RESULT0]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
@@ -308,11 +308,11 @@ define amdgpu_kernel void @combine_to_fma_fsub_2_f64_2uses_mul(double addrspace(
 ; fold (fsub (fma x, y, (fmul u, v)), z) -> (fma x, y (fma u, v, (fneg z)))
 
 ; FUNC-LABEL: {{^}}aggressive_combine_to_fma_fsub_0_f64:
-; SI-DAG: buffer_load_dwordx2 [[X:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[Y:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
-; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32{{$}}
+; SI-DAG: buffer_load_dwordx2 [[X:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[Y:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32 glc{{$}}
 
 ; SI-SAFE: v_mul_f64 [[TMP0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]]
 ; SI-SAFE: v_fma_f64 [[TMP1:v\[[0-9]+:[0-9]+\]]], [[X]], [[Y]], [[TMP0]]
@@ -349,11 +349,11 @@ define amdgpu_kernel void @aggressive_combine_to_fma_fsub_0_f64(double addrspace
 ;   -> (fma (fneg y), z, (fma (fneg u), v, x))
 
 ; FUNC-LABEL: {{^}}aggressive_combine_to_fma_fsub_1_f64:
-; SI-DAG: buffer_load_dwordx2 [[X:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
-; SI-DAG: buffer_load_dwordx2 [[Y:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16{{$}}
-; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24{{$}}
-; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32{{$}}
+; SI-DAG: buffer_load_dwordx2 [[X:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[Y:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[Z:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:16 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[U:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:24 glc{{$}}
+; SI-DAG: buffer_load_dwordx2 [[V:v\[[0-9]+:[0-9]+\]]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:32 glc{{$}}
 
 ; SI-SAFE: v_mul_f64 [[TMP0:v\[[0-9]+:[0-9]+\]]], [[U]], [[V]]
 ; SI-SAFE: v_fma_f64 [[TMP1:v\[[0-9]+:[0-9]+\]]], [[Y]], [[Z]], [[TMP0]]
@@ -647,7 +647,7 @@ define amdgpu_kernel void @fma_neg_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float -2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out
@@ -669,7 +669,7 @@ define amdgpu_kernel void @fma_2.0_neg_a_b_f32(float addrspace(1)* %out, float a
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fma.f32(float 2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out

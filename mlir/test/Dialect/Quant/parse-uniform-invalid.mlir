@@ -56,9 +56,9 @@
 !qalias = type !quant.uniform<i-1<-4:3>:f32, 0.99872:127>
 
 // -----
-// Unrecognized storage type: storage size == 0
+// Unrecognized storage type: storage size
 // expected-error@+1 {{invalid integer width}}
-!qalias = type !quant.uniform<i0<-4:3>:f32, 0.99872:127>
+!qalias = type !quant.uniform<i123123123120<-4:3>:f32, 0.99872:127>
 
 // -----
 // Illegal storage min/max: max - min < 0

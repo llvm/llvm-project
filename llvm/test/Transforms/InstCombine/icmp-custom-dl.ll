@@ -199,6 +199,24 @@ define i1 @icmp_and_ashr_multiuse(i32 %X) {
   ret i1 %and3
 }
 
+define i1 @icmp_and_ashr_multiuse_logical(i32 %X) {
+; CHECK-LABEL: @icmp_and_ashr_multiuse_logical(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 240
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 224
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X]], 496
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i32 [[TMP2]], 432
+; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    ret i1 [[AND3]]
+;
+  %shr = ashr i32 %X, 4
+  %and = and i32 %shr, 15
+  %and2 = and i32 %shr, 31 ; second use of the shift
+  %tobool = icmp ne i32 %and, 14
+  %tobool2 = icmp ne i32 %and2, 27
+  %and3 = select i1 %tobool, i1 %tobool2, i1 false
+  ret i1 %and3
+}
+
 define i1 @icmp_lshr_and_overshift(i8 %X) {
 ; CHECK-LABEL: @icmp_lshr_and_overshift(
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ugt i8 [[X:%.*]], 31

@@ -1,6 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false -enable-emscripten-sjlj -wasm-keep-registers | FileCheck %s
 
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
@@ -19,7 +18,7 @@ entry:
   ; It needs to be the first argument (that's what we're testing here)
   ; CHECK: i32.const $push[[FPTR:[0-9]+]]=, returns_struct
   ; This is the sret stack region (as an offset from the stack pointer local)
-  ; CHECK: call "__invoke_{i32.i32}", $pop[[FPTR]]
+  ; CHECK: call invoke_vi, $pop[[FPTR]]
   %ret = call {i32, i32} @returns_struct()
   ret {i32, i32} %ret
 }

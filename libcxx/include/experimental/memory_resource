@@ -116,7 +116,7 @@ public:
         { return do_is_equal(__other); }
 
 // 8.5.3, memory.resource.priv
-protected:
+private:
     virtual void* do_allocate(size_t, size_t) = 0;
     virtual void do_deallocate(void*, size_t, size_t) = 0;
     virtual bool do_is_equal(memory_resource const &) const _NOEXCEPT = 0;
@@ -183,11 +183,8 @@ public:
     // 8.6.3, memory.polymorphic.allocator.mem
     _LIBCPP_INLINE_VISIBILITY
     _ValueType* allocate(size_t __n) {
-        if (__n > __max_size()) {
-            __throw_length_error(
-                "std::experimental::pmr::polymorphic_allocator<T>::allocate(size_t n)"
-                " 'n' exceeds maximum supported size");
-        }
+        if (__n > __max_size())
+            __throw_bad_array_new_length();
         return static_cast<_ValueType*>(
             __res_->allocate(__n * sizeof(_ValueType), _LIBCPP_ALIGNOF(_ValueType))
         );
@@ -381,14 +378,11 @@ public:
     { return __alloc_; }
 
 // 8.7.3, memory.resource.adaptor.mem
-protected:
+private:
     virtual void * do_allocate(size_t __bytes, size_t)
     {
-        if (__bytes > __max_size()) {
-            __throw_length_error(
-                "std::experimental::pmr::resource_adaptor<T>::do_allocate(size_t bytes, size_t align)"
-                " 'bytes' exceeds maximum supported size");
-        }
+        if (__bytes > __max_size())
+            __throw_bad_array_new_length();
         size_t __s = __aligned_allocation_size(__bytes, _MaxAlign) / _MaxAlign;
         return __alloc_.allocate(__s);
     }
@@ -407,7 +401,6 @@ protected:
         return __p  ? __alloc_ == __p->__alloc_ : false;
     }
 
-private:
     _LIBCPP_INLINE_VISIBILITY
     size_t __max_size() const _NOEXCEPT {
         return numeric_limits<size_t>::max() - _MaxAlign;

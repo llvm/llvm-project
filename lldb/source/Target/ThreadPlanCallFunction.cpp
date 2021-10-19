@@ -209,7 +209,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 }
 
-void ThreadPlanCallFunction::WillPop() { DoTakedown(PlanSucceeded()); }
+void ThreadPlanCallFunction::DidPop() { DoTakedown(PlanSucceeded()); }
 
 void ThreadPlanCallFunction::GetDescription(Stream *s, DescriptionLevel level) {
   if (level == eDescriptionLevelBrief) {
@@ -454,8 +454,8 @@ void ThreadPlanCallFunction::SetStopOthers(bool new_value) {
   m_subplan_sp->SetStopOthers(new_value);
 }
 
-bool ThreadPlanCallFunction::RestoreThreadState() {
-  return GetThread().RestoreThreadStateFromCheckpoint(m_stored_thread_state);
+void ThreadPlanCallFunction::RestoreThreadState() {
+  GetThread().RestoreThreadStateFromCheckpoint(m_stored_thread_state);
 }
 
 void ThreadPlanCallFunction::SetReturnValue() {

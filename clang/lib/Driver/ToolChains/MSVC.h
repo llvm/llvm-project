@@ -34,27 +34,6 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
-
-class LLVM_LIBRARY_VISIBILITY Compiler : public Tool {
-public:
-  Compiler(const ToolChain &TC)
-      : Tool("visualstudio::Compiler", "compiler", TC) {}
-
-  bool hasIntegratedAssembler() const override { return true; }
-  bool hasIntegratedCPP() const override { return true; }
-  bool isLinkJob() const override { return false; }
-
-  void ConstructJob(Compilation &C, const JobAction &JA,
-                    const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::opt::ArgList &TCArgs,
-                    const char *LinkingOutput) const override;
-
-  std::unique_ptr<Command> GetCommand(Compilation &C, const JobAction &JA,
-                                      const InputInfo &Output,
-                                      const InputInfoList &Inputs,
-                                      const llvm::opt::ArgList &TCArgs,
-                                      const char *LinkingOutput) const;
-};
 } // end namespace visualstudio
 
 } // end namespace tools
@@ -126,9 +105,10 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool getWindowsSDKLibraryPath(std::string &path) const;
-  /// Check if Universal CRT should be used if available
-  bool getUniversalCRTLibraryPath(std::string &path) const;
+  bool getWindowsSDKLibraryPath(
+      const llvm::opt::ArgList &Args, std::string &path) const;
+  bool getUniversalCRTLibraryPath(const llvm::opt::ArgList &Args,
+                                  std::string &path) const;
   bool useUniversalCRT() const;
   VersionTuple
   computeMSVCVersion(const Driver *D,
@@ -141,6 +121,11 @@ public:
   void printVerboseInfo(raw_ostream &OS) const override;
 
   bool FoundMSVCInstall() const { return !VCToolChainPath.empty(); }
+
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   void AddSystemIncludeWithSubfolder(const llvm::opt::ArgList &DriverArgs,

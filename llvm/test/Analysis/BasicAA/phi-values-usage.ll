@@ -1,20 +1,14 @@
-; RUN: opt -debug-pass=Executions -phi-values -memcpyopt -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-MEMCPY
-; RUN: opt -debug-pass=Executions -memdep -instcombine -disable-output < %s 2>&1 | FileCheck %s -check-prefix=CHECK
+; RUN: opt -debug-pass-manager -aa-pipeline=basic-aa -passes='require<phi-values>,memcpyopt,instcombine' -disable-output < %s 2>&1 | FileCheck %s
 
 ; Check that phi values is not run when it's not already available, and that
 ; basicaa is not freed after a pass that preserves CFG, as it preserves CFG.
 
-; CHECK: Executing Pass 'Phi Values Analysis'
-; CHECK: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
-; CHECK: Executing Pass 'Memory Dependence Analysis'
-; CHECK-MEMCPY: Executing Pass 'MemCpy Optimization'
-; CHECK-MEMCPY-DAG: Freeing Pass 'MemCpy Optimization'
-; CHECK-DAG: Freeing Pass 'Phi Values Analysis'
-; CHECK-DAG: Freeing Pass 'Memory Dependence Analysis'
-; CHECK-MEMCPY-NOT: Freeing Pass 'Basic Alias Analysis (stateless AA impl)'
-; CHECK-NOT: Executing Pass 'Phi Values Analysis'
-; CHECK-NOT: Executing Pass 'Basic Alias Analysis (stateless AA impl)'
-; CHECK: Executing Pass 'Combine redundant instructions'
+; CHECK-DAG: Running analysis: PhiValuesAnalysis
+; CHECK-DAG: Running analysis: BasicAA
+; CHECK-DAG: Running analysis: MemorySSA
+; CHECK: Running pass: MemCpyOptPass
+; CHECK-NOT: Invalidating analysis
+; CHECK: Running pass: InstCombinePass
 
 target datalayout = "p:8:8-n8"
 

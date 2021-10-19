@@ -14,7 +14,7 @@ define double @test1(double* %P) {
 define double @test2() {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fldl {{\.LCPI.*}}
+; CHECK-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    retl
         ret double 1.234560e+03
 }

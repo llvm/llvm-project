@@ -22,7 +22,6 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "verbose_assert.h"
 
 struct RemoveFilenameTestcase {
   const char* value;
@@ -35,13 +34,21 @@ const RemoveFilenameTestcase TestCases[] =
     , {"/", "/"}
     , {"//", "//"}
     , {"///", "///"}
+#ifdef _WIN32
+    , {"\\", "\\"}
+#else
     , {"\\", ""}
+#endif
     , {".", ""}
     , {"..", ""}
     , {"/foo", "/"}
     , {"foo/bar", "foo/"}
     , {"foo/", "foo/"}
+#ifdef _WIN32
+    , {"//foo", "//foo"}
+#else
     , {"//foo", "//"}
+#endif
     , {"//foo/", "//foo/"}
     , {"//foo///", "//foo///"}
     , {"///foo", "///"}
@@ -50,7 +57,11 @@ const RemoveFilenameTestcase TestCases[] =
     , {"/foo/.", "/foo/"}
     , {"/foo/..", "/foo/"}
     , {"/foo/////", "/foo/////"}
+#ifdef _WIN32
+    , {"/foo\\\\", "/foo\\\\"}
+#else
     , {"/foo\\\\", "/"}
+#endif
     , {"/foo//\\/", "/foo//\\/"}
     , {"///foo", "///"}
     , {"file.txt", ""}
@@ -65,7 +76,7 @@ int main(int, char**)
     path p(p_orig);
     assert(p == TC.value);
     path& Ref = (p.remove_filename());
-    ASSERT_EQ(p, TC.expect) << DISPLAY(p_orig);
+    assert(p == TC.expect);
     assert(&Ref == &p);
     assert(!p.has_filename());
   }

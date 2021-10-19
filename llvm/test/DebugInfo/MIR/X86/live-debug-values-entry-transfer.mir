@@ -1,4 +1,5 @@
 # RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown | FileCheck %s
+# RUN: llc %s -o - -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -mtriple=x86_64-unknown-unknown | FileCheck %s
 #
 # In this lightly modified test case, the transfer in the entry block from
 # geti32's return value in $eax to the non-volatile $ebx should be recognized,
@@ -99,7 +100,7 @@ body:             |
     successors: %bb.2
     liveins: $ebx
 
-    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $ebx :: (store 4 into @glob)
+    MOV32mr $rip, 1, $noreg, @glob, $noreg, renamable $ebx :: (store (s32) into @glob)
 
   bb.2.loop:
     successors: %bb.1, %bb.3

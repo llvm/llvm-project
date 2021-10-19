@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 // <string_view>
 
 // constexpr const _CharT& operator[](size_type _pos) const;

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 // Match Android's default configuration, which disables Scudo's mismatch
@@ -16,12 +17,27 @@
 #define DEALLOC_TYPE_MISMATCH "true"
 #endif
 
+static void EnableMemoryTaggingIfSupported() {
+  if (!scudo::archSupportsMemoryTagging())
+    return;
+  static bool Done = []() {
+    if (!scudo::systemDetectsMemoryTagFaultsTestOnly())
+      scudo::enableSystemMemoryTaggingTestOnly();
+    return true;
+  }();
+  (void)Done;
+}
+
 // This allows us to turn on/off a Quarantine for specific tests. The Quarantine
 // parameters are on the low end, to avoid having to loop excessively in some
 // tests.
 bool UseQuarantine = true;
 extern "C" __attribute__((visibility("default"))) const char *
 __scudo_default_options() {
+  // The wrapper tests initialize the global allocator early, before main(). We
+  // need to have Memory Tagging enabled before that happens or the allocator
+  // will disable the feature entirely.
+  EnableMemoryTaggingIfSupported();
   if (!UseQuarantine)
     return "dealloc_type_mismatch=" DEALLOC_TYPE_MISMATCH;
   return "quarantine_size_kb=256:thread_local_quarantine_size_kb=128:"
@@ -29,11 +45,12 @@ __scudo_default_options() {
          "dealloc_type_mismatch=" DEALLOC_TYPE_MISMATCH;
 }
 
-int main(int argc, char **argv) {
+// The zxtest library provides a default main function that does the same thing
+// for Fuchsia builds.
 #if !SCUDO_FUCHSIA
+int main(int argc, char **argv) {
+  EnableMemoryTaggingIfSupported();
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
-#else
-  return RUN_ALL_TESTS(argc, argv);
-#endif
 }
+#endif

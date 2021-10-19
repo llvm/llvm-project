@@ -9,7 +9,7 @@
 # The same test gets shrink wrapped on Linux ARM64.
 
 # WIN64-LABEL: bb.0.entry:
-# WIN64: early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -4
+# WIN64: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -32
 # WIN64-LABEL: bb.1:
 # WIN64-LABEL: bb.2.if.then:
 
@@ -134,7 +134,7 @@ body:             |
     $x0 = ADDXri %stack.0.A, 0, 0
     BL @"?init@@YAXPEAH@Z", csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
-    renamable $w8 = LDRWui %stack.0.A, 100 :: (dereferenceable load 4 from %ir.arrayidx, !tbaa !2)
+    renamable $w8 = LDRWui %stack.0.A, 100 :: (dereferenceable load (s32) from %ir.arrayidx, !tbaa !2)
     renamable $w8 = ADDWrr killed renamable $w19, killed renamable $w8
     renamable $w0 = ADDWri killed renamable $w8, 1, 0
 

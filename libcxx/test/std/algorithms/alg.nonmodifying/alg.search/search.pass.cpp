@@ -58,12 +58,12 @@ struct MySearcher {
 
 namespace User {
 struct S {
-    S(int x) : x(x) {}
-    int x;
+    S(int x) : x_(x) {}
+    int x_;
 };
 bool operator==(S lhs, S rhs)
 {
-    return lhs.x == rhs.x;
+    return lhs.x_ == rhs.x_;
 }
 template <class T, class U>
 void make_pair(T&&, U&&) = delete;

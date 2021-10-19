@@ -146,8 +146,8 @@ void RuntimeDyldImpl::resolveLocalRelocations() {
     // The Section here (Sections[i]) refers to the section in which the
     // symbol for the relocation is located.  The SectionID in the relocation
     // entry provides the section to which the relocation will be applied.
-    int Idx = it->first;
-    uint64_t Addr = Sections[Idx].getLoadAddress();
+    unsigned Idx = it->first;
+    uint64_t Addr = getSectionLoadAddress(Idx);
     LLVM_DEBUG(dbgs() << "Resolving relocations Section #" << Idx << "\t"
                       << format("%p", (uintptr_t)Addr) << "\n");
     resolveRelocationList(it->second, Addr);
@@ -308,7 +308,9 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
                         << " flags: " << *FlagsOrErr << "\n");
-      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
+      if (!Name.empty()) // Skip absolute symbol relocations.
+        GlobalSymbolTable[Name] =
+            SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
                SymType == object::SymbolRef::ST_Unknown ||
@@ -340,8 +342,9 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
                         << " flags: " << *FlagsOrErr << "\n");
-      GlobalSymbolTable[Name] =
-          SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
+      if (!Name.empty()) // Skip absolute symbol relocations
+        GlobalSymbolTable[Name] =
+            SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
   }
 
@@ -517,6 +520,13 @@ static bool isZeroInit(const SectionRef Section) {
          SectionType == MachO::S_GB_ZEROFILL;
 }
 
+static bool isTLS(const SectionRef Section) {
+  const ObjectFile *Obj = Section.getObject();
+  if (isa<object::ELFObjectFileBase>(Obj))
+    return ELFSectionRef(Section).getFlags() & ELF::SHF_TLS;
+  return false;
+}
+
 // Compute an upper bound of the memory size that is required to load all
 // sections
 Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
@@ -546,6 +556,7 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
       unsigned Alignment = (unsigned)Alignment64 & 0xffffffffL;
       bool IsCode = Section.isText();
       bool IsReadOnly = isReadOnlyData(Section);
+      bool IsTLS = isTLS(Section);
 
       Expected<StringRef> NameOrErr = Section.getName();
       if (!NameOrErr)
@@ -579,7 +590,7 @@ Error RuntimeDyldImpl::computeTotalAllocSize(const ObjectFile &Obj,
       } else if (IsReadOnly) {
         RODataAlign = std::max(RODataAlign, Alignment);
         ROSectionSizes.push_back(SectionSize);
-      } else {
+      } else if (!IsTLS) {
         RWDataAlign = std::max(RWDataAlign, Alignment);
         RWSectionSizes.push_back(SectionSize);
       }
@@ -652,6 +663,10 @@ unsigned RuntimeDyldImpl::computeGOTSize(const ObjectFile &Obj) {
 // compute stub buffer size for the given section
 unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
                                                     const SectionRef &Section) {
+  if (!MemMgr.allowStubAllocation()) {
+    return 0;
+  }
+
   unsigned StubSize = getMaxStubSize();
   if (StubSize == 0) {
     return 0;
@@ -665,7 +680,7 @@ unsigned RuntimeDyldImpl::computeSectionStubBufSize(const ObjectFile &Obj,
 
     Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
     if (!RelSecOrErr)
-      report_fatal_error(toString(RelSecOrErr.takeError()));
+      report_fatal_error(Twine(toString(RelSecOrErr.takeError())));
 
     section_iterator RelSecI = *RelSecOrErr;
     if (!(RelSecI == Section))
@@ -769,8 +784,9 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
 
     LLVM_DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
                       << format("%p", Addr) << "\n");
-    GlobalSymbolTable[Name] =
-        SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
+    if (!Name.empty()) // Skip absolute symbol relocations.
+      GlobalSymbolTable[Name] =
+          SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
     Offset += Size;
     Addr += Size;
   }
@@ -792,6 +808,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   bool IsVirtual = Section.isVirtual();
   bool IsZeroInit = isZeroInit(Section);
   bool IsReadOnly = isReadOnlyData(Section);
+  bool IsTLS = isTLS(Section);
   uint64_t DataSize = Section.getSize();
 
   // An alignment of 0 (at least with ELF) is identical to an alignment of 1,
@@ -815,6 +832,7 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   uintptr_t Allocate;
   unsigned SectionID = Sections.size();
   uint8_t *Addr;
+  uint64_t LoadAddress = 0;
   const char *pData = nullptr;
 
   // If this section contains any bits (i.e. isn't a virtual or bss section),
@@ -843,10 +861,17 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
     Allocate = DataSize + PaddingSize + StubBufSize;
     if (!Allocate)
       Allocate = 1;
-    Addr = IsCode ? MemMgr.allocateCodeSection(Allocate, Alignment, SectionID,
-                                               Name)
-                  : MemMgr.allocateDataSection(Allocate, Alignment, SectionID,
-                                               Name, IsReadOnly);
+    if (IsTLS) {
+      auto TLSSection =
+          MemMgr.allocateTLSSection(Allocate, Alignment, SectionID, Name);
+      Addr = TLSSection.InitializationImage;
+      LoadAddress = TLSSection.Offset;
+    } else if (IsCode) {
+      Addr = MemMgr.allocateCodeSection(Allocate, Alignment, SectionID, Name);
+    } else {
+      Addr = MemMgr.allocateDataSection(Allocate, Alignment, SectionID, Name,
+                                        IsReadOnly);
+    }
     if (!Addr)
       report_fatal_error("Unable to allocate section memory!");
 
@@ -889,6 +914,10 @@ RuntimeDyldImpl::emitSection(const ObjectFile &Obj,
   Sections.push_back(
       SectionEntry(Name, Addr, DataSize, Allocate, (uintptr_t)pData));
 
+  // The load address of a TLS section is not equal to the address of its
+  // initialization image
+  if (IsTLS)
+    Sections.back().setLoadAddress(LoadAddress);
   // Debug info sections are linked as if their load address was zero
   if (!IsRequired)
     Sections.back().setLoadAddress(0);
@@ -930,6 +959,8 @@ void RuntimeDyldImpl::addRelocationForSymbol(const RelocationEntry &RE,
   if (Loc == GlobalSymbolTable.end()) {
     ExternalSymbolRelocations[SymbolName].push_back(RE);
   } else {
+    assert(!SymbolName.empty() &&
+           "Empty symbol should not be in GlobalSymbolTable");
     // Copy the RE since we want to modify its addend.
     RelocationEntry RECopy = RE;
     const auto &SymInfo = Loc->second;
@@ -1071,7 +1102,8 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
     const RelocationEntry &RE = Relocs[i];
     // Ignore relocations for sections that were not loaded
-    if (Sections[RE.SectionID].getAddress() == nullptr)
+    if (RE.SectionID != AbsoluteSymbolSection &&
+        Sections[RE.SectionID].getAddress() == nullptr)
       continue;
     resolveRelocation(RE, Value);
   }
@@ -1079,16 +1111,13 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
 
 void RuntimeDyldImpl::applyExternalSymbolRelocations(
     const StringMap<JITEvaluatedSymbol> ExternalSymbolMap) {
-  while (!ExternalSymbolRelocations.empty()) {
-
-    StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
-
-    StringRef Name = i->first();
+  for (auto &RelocKV : ExternalSymbolRelocations) {
+    StringRef Name = RelocKV.first();
+    RelocationList &Relocs = RelocKV.second;
     if (Name.size() == 0) {
       // This is an absolute symbol, use an address of zero.
       LLVM_DEBUG(dbgs() << "Resolving absolute relocations."
                         << "\n");
-      RelocationList &Relocs = i->second;
       resolveRelocationList(Relocs, 0);
     } else {
       uint64_t Addr = 0;
@@ -1099,13 +1128,6 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
         assert(RRI != ExternalSymbolMap.end() && "No result for symbol");
         Addr = RRI->second.getAddress();
         Flags = RRI->second.getFlags();
-        // The call to getSymbolAddress may have caused additional modules to
-        // be loaded, which may have added new entries to the
-        // ExternalSymbolRelocations map.  Consquently, we need to update our
-        // iterator.  This is also why retrieval of the relocation list
-        // associated with this symbol is deferred until below this point.
-        // New entries may have been added to the relocation list.
-        i = ExternalSymbolRelocations.find(Name);
       } else {
         // We found the symbol in our global table.  It was probably in a
         // Module that we loaded previously.
@@ -1116,8 +1138,8 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
       }
 
       // FIXME: Implement error handling that doesn't kill the host program!
-      if (!Addr)
-        report_fatal_error("Program used external function '" + Name +
+      if (!Addr && !Resolver.allowsZeroSymbols())
+        report_fatal_error(Twine("Program used external function '") + Name +
                            "' which could not be resolved!");
 
       // If Resolver returned UINT64_MAX, the client wants to handle this symbol
@@ -1131,15 +1153,11 @@ void RuntimeDyldImpl::applyExternalSymbolRelocations(
 
         LLVM_DEBUG(dbgs() << "Resolving relocations Name: " << Name << "\t"
                           << format("0x%lx", Addr) << "\n");
-        // This list may have been updated when we called getSymbolAddress, so
-        // don't change this code to get the list earlier.
-        RelocationList &Relocs = i->second;
         resolveRelocationList(Relocs, Addr);
       }
     }
-
-    ExternalSymbolRelocations.erase(i);
   }
+  ExternalSymbolRelocations.clear();
 }
 
 Error RuntimeDyldImpl::resolveExternalSymbols() {
@@ -1200,16 +1218,19 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 
 void RuntimeDyldImpl::finalizeAsync(
     std::unique_ptr<RuntimeDyldImpl> This,
-    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+    unique_function<void(object::OwningBinary<object::ObjectFile>,
+                         std::unique_ptr<RuntimeDyld::LoadedObjectInfo>, Error)>
         OnEmitted,
-    object::OwningBinary<object::ObjectFile> O) {
+    object::OwningBinary<object::ObjectFile> O,
+    std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info) {
 
   auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
   auto PostResolveContinuation =
-      [SharedThis, OnEmitted = std::move(OnEmitted), O = std::move(O)](
+      [SharedThis, OnEmitted = std::move(OnEmitted), O = std::move(O),
+       Info = std::move(Info)](
           Expected<JITSymbolResolver::LookupResult> Result) mutable {
         if (!Result) {
-          OnEmitted(std::move(O), Result.takeError());
+          OnEmitted(std::move(O), std::move(Info), Result.takeError());
           return;
         }
 
@@ -1223,18 +1244,19 @@ void RuntimeDyldImpl::finalizeAsync(
         SharedThis->registerEHFrames();
         std::string ErrMsg;
         if (SharedThis->MemMgr.finalizeMemory(&ErrMsg))
-          OnEmitted(std::move(O),
+          OnEmitted(std::move(O), std::move(Info),
                     make_error<StringError>(std::move(ErrMsg),
                                             inconvertibleErrorCode()));
         else
-          OnEmitted(std::move(O), Error::success());
+          OnEmitted(std::move(O), std::move(Info), Error::success());
       };
 
   JITSymbolResolver::LookupSet Symbols;
 
   for (auto &RelocKV : SharedThis->ExternalSymbolRelocations) {
     StringRef Name = RelocKV.first();
-    assert(!Name.empty() && "Symbol has no name?");
+    if (Name.empty()) // Skip absolute symbol relocations.
+      continue;
     assert(!SharedThis->GlobalSymbolTable.count(Name) &&
            "Name already processed. RuntimeDyld instances can not be re-used "
            "when finalizing with finalizeAsync.");
@@ -1258,6 +1280,14 @@ uint64_t RuntimeDyld::LoadedObjectInfo::getSectionLoadAddress(
     return RTDyld.Sections[I->second].getLoadAddress();
 
   return 0;
+}
+
+RuntimeDyld::MemoryManager::TLSSection
+RuntimeDyld::MemoryManager::allocateTLSSection(uintptr_t Size,
+                                               unsigned Alignment,
+                                               unsigned SectionID,
+                                               StringRef SectionName) {
+  report_fatal_error("allocation of TLS not implemented");
 }
 
 void RuntimeDyld::MemoryManager::anchor() {}
@@ -1418,12 +1448,12 @@ void jitLinkForORC(
     object::OwningBinary<object::ObjectFile> O,
     RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
     bool ProcessAllSections,
-    unique_function<
-        Error(const object::ObjectFile &Obj,
-              std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
-              std::map<StringRef, JITEvaluatedSymbol>)>
+    unique_function<Error(const object::ObjectFile &Obj,
+                          RuntimeDyld::LoadedObjectInfo &LoadedObj,
+                          std::map<StringRef, JITEvaluatedSymbol>)>
         OnLoaded,
-    unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+    unique_function<void(object::OwningBinary<object::ObjectFile>,
+                         std::unique_ptr<RuntimeDyld::LoadedObjectInfo>, Error)>
         OnEmitted) {
 
   RuntimeDyld RTDyld(MemMgr, Resolver);
@@ -1432,17 +1462,17 @@ void jitLinkForORC(
   auto Info = RTDyld.loadObject(*O.getBinary());
 
   if (RTDyld.hasError()) {
-    OnEmitted(std::move(O), make_error<StringError>(RTDyld.getErrorString(),
-                                                    inconvertibleErrorCode()));
+    OnEmitted(std::move(O), std::move(Info),
+              make_error<StringError>(RTDyld.getErrorString(),
+                                      inconvertibleErrorCode()));
     return;
   }
 
-  if (auto Err =
-          OnLoaded(*O.getBinary(), std::move(Info), RTDyld.getSymbolTable()))
-    OnEmitted(std::move(O), std::move(Err));
+  if (auto Err = OnLoaded(*O.getBinary(), *Info, RTDyld.getSymbolTable()))
+    OnEmitted(std::move(O), std::move(Info), std::move(Err));
 
   RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
-                                 std::move(O));
+                                 std::move(O), std::move(Info));
 }
 
 } // end namespace llvm

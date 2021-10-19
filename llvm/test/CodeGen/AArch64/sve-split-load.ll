@@ -90,15 +90,14 @@ define <vscale x 32 x i8> @masked_load_split_32i8(<vscale x 32 x i8> *%a, <vscal
 define <vscale x 32 x i16> @masked_load_split_32i16(<vscale x 32 x i16> *%a, <vscale x 32 x i1> %pg) {
 ; CHECK-LABEL: masked_load_split_32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p2.b
-; CHECK-NEXT:    zip1 p3.b, p0.b, p2.b
-; CHECK-NEXT:    zip2 p0.b, p0.b, p2.b
-; CHECK-NEXT:    ld1h { z0.h }, p3/z, [x0]
-; CHECK-NEXT:    zip1 p3.b, p1.b, p2.b
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p3.h, p1.b
+; CHECK-NEXT:    punpkhi p1.h, p1.b
+; CHECK-NEXT:    ld1h { z0.h }, p2/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    zip2 p0.b, p1.b, p2.b
 ; CHECK-NEXT:    ld1h { z2.h }, p3/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1h { z3.h }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ld1h { z3.h }, p1/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 32 x i16> @llvm.masked.load.nxv32i16(<vscale x 32 x i16> *%a, i32 1, <vscale x 32 x i1> %pg, <vscale x 32 x i16> undef)
   ret <vscale x 32 x i16> %load
@@ -107,10 +106,9 @@ define <vscale x 32 x i16> @masked_load_split_32i16(<vscale x 32 x i16> *%a, <vs
 define <vscale x 8 x i32> @masked_load_split_8i32(<vscale x 8 x i32> *%a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_load_split_8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
-; CHECK-NEXT:    ld1w { z0.s }, p2/z, [x0]
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
   %load = call <vscale x 8 x i32> @llvm.masked.load.nxv8i32(<vscale x 8 x i32> *%a, i32 1, <vscale x 8 x i1> %pg, <vscale x 8 x i32> undef)
@@ -120,15 +118,14 @@ define <vscale x 8 x i32> @masked_load_split_8i32(<vscale x 8 x i32> *%a, <vscal
 define <vscale x 8 x i64> @masked_load_split_8i64(<vscale x 8 x i64> *%a, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: masked_load_split_8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pfalse p1.b
-; CHECK-NEXT:    zip1 p2.h, p0.h, p1.h
-; CHECK-NEXT:    zip2 p0.h, p0.h, p1.h
-; CHECK-NEXT:    zip1 p3.s, p2.s, p1.s
-; CHECK-NEXT:    zip2 p2.s, p2.s, p1.s
-; CHECK-NEXT:    ld1d { z0.d }, p3/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p2/z, [x0, #1, mul vl]
-; CHECK-NEXT:    zip1 p2.s, p0.s, p1.s
-; CHECK-NEXT:    zip2 p0.s, p0.s, p1.s
+; CHECK-NEXT:    punpklo p1.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpklo p2.h, p1.b
+; CHECK-NEXT:    punpkhi p1.h, p1.b
+; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x0]
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    ld1d { z1.d }, p1/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    ld1d { z2.d }, p2/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret

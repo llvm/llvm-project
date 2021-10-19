@@ -1,13 +1,13 @@
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding < %s \
-# RUN: | FileCheck -check-prefixes=CHECK-ALIAS %s
+# RUN:   | FileCheck -check-prefixes=CHECK-ALIAS %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -show-encoding \
-# RUN: -riscv-no-aliases <%s | FileCheck -check-prefixes=CHECK-INST %s
+# RUN:   -riscv-no-aliases < %s | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj < %s \
-# RUN: | llvm-objdump  --triple=riscv64 --mattr=+c -d - \
-# RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
+# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c -d - \
+# RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype=obj < %s \
-# RUN: | llvm-objdump  --triple=riscv64 --mattr=+c -d -M no-aliases - \
-# RUN: | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST %s
+# RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c -d -M no-aliases - \
+# RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-INST %s
 
 # Tests compressed instructions available in rv64 and not in rv32.
 

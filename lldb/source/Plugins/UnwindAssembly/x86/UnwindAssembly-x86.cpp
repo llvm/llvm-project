@@ -51,12 +51,11 @@ bool UnwindAssembly_x86::GetNonCallSiteUnwindPlanFromAssembly(
   ProcessSP process_sp(thread.GetProcess());
   if (process_sp.get() == nullptr)
     return false;
-  const bool prefer_file_cache = true;
   std::vector<uint8_t> function_text(func.GetByteSize());
   Status error;
   if (process_sp->GetTarget().ReadMemory(
-          func.GetBaseAddress(), prefer_file_cache, function_text.data(),
-          func.GetByteSize(), error) == func.GetByteSize()) {
+          func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
+          error) == func.GetByteSize()) {
     RegisterContextSP reg_ctx(thread.GetRegisterContext());
     m_assembly_inspection_engine->Initialize(reg_ctx);
     return m_assembly_inspection_engine->GetNonCallSiteUnwindPlanFromAssembly(
@@ -153,12 +152,11 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
       return false;
     if (m_assembly_inspection_engine == nullptr)
       return false;
-    const bool prefer_file_cache = true;
     std::vector<uint8_t> function_text(func.GetByteSize());
     Status error;
     if (process_sp->GetTarget().ReadMemory(
-            func.GetBaseAddress(), prefer_file_cache, function_text.data(),
-            func.GetByteSize(), error) == func.GetByteSize()) {
+            func.GetBaseAddress(), function_text.data(), func.GetByteSize(),
+            error) == func.GetByteSize()) {
       RegisterContextSP reg_ctx(thread.GetRegisterContext());
       m_assembly_inspection_engine->Initialize(reg_ctx);
       return m_assembly_inspection_engine->AugmentUnwindPlanFromCallSite(
@@ -185,10 +183,9 @@ bool UnwindAssembly_x86::GetFastUnwindPlan(AddressRange &func, Thread &thread,
   ProcessSP process_sp = thread.GetProcess();
   if (process_sp) {
     Target &target(process_sp->GetTarget());
-    const bool prefer_file_cache = true;
     Status error;
-    if (target.ReadMemory(func.GetBaseAddress(), prefer_file_cache,
-                          opcode_data.data(), 4, error) == 4) {
+    if (target.ReadMemory(func.GetBaseAddress(), opcode_data.data(), 4,
+                          error) == 4) {
       uint8_t i386_push_mov[] = {0x55, 0x89, 0xe5};
       uint8_t x86_64_push_mov[] = {0x55, 0x48, 0x89, 0xe5};
 
@@ -220,12 +217,10 @@ bool UnwindAssembly_x86::FirstNonPrologueInsn(
   if (m_assembly_inspection_engine == nullptr)
     return false;
 
-  const bool prefer_file_cache = true;
   std::vector<uint8_t> function_text(func.GetByteSize());
   Status error;
-  if (target->ReadMemory(func.GetBaseAddress(), prefer_file_cache,
-                         function_text.data(), func.GetByteSize(),
-                         error) == func.GetByteSize()) {
+  if (target->ReadMemory(func.GetBaseAddress(), function_text.data(),
+                         func.GetByteSize(), error) == func.GetByteSize()) {
     size_t offset;
     if (m_assembly_inspection_engine->FindFirstNonPrologueInstruction(
             function_text.data(), func.GetByteSize(), offset)) {
@@ -243,14 +238,6 @@ UnwindAssembly *UnwindAssembly_x86::CreateInstance(const ArchSpec &arch) {
     return new UnwindAssembly_x86(arch);
   return nullptr;
 }
-
-// PluginInterface protocol in UnwindAssemblyParser_x86
-
-ConstString UnwindAssembly_x86::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t UnwindAssembly_x86::GetPluginVersion() { return 1; }
 
 void UnwindAssembly_x86::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

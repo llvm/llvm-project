@@ -11,8 +11,8 @@
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -100,14 +100,14 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.3, %bb.9
     liveins: $value_stack
-    %0:exnref = CATCH implicit-def $arguments
-    CLEANUPRET implicit-def dead $arguments
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def dead $arguments
 
   bb.3 (landing-pad):
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:exnref = CATCH implicit-def $arguments
+    %1:i32 = CATCH &__cpp_exception, implicit-def $arguments
     BR_IF %bb.4, %58:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -121,7 +121,7 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.7
     liveins: $value_stack
-    CATCHRET %bb.7, %bb.0, implicit-def dead $arguments
+    BR %bb.7, implicit-def dead $arguments
 
   bb.6:
   ; predecessors: %bb.3
@@ -138,14 +138,14 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.9
     liveins: $value_stack
-    %2:exnref = CATCH implicit-def $arguments
-    CLEANUPRET implicit-def dead $arguments
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def dead $arguments
 
   bb.9 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.8
     liveins: $value_stack
-    %3:exnref = CATCH implicit-def $arguments
-    CLEANUPRET implicit-def dead $arguments
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def dead $arguments
 
   bb.10:
   ; predecessors: %bb.6
@@ -169,7 +169,7 @@ body: |
   MachineDominanceFrontier MDF;
   MDT.runOnMachineFunction(*MF);
   MDF.getBase().analyze(MDT.getBase());
-  WEI.recalculate(MDT, MDF);
+  WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
   // |- bb2 (ehpad), bb3, bb4, bb5, bb6, bb8, bb9, bb10
@@ -257,7 +257,7 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.2, %bb.8
     liveins: $value_stack
-    %0:exnref = CATCH implicit-def $arguments
+    %0:i32 = CATCH &__cpp_exception, implicit-def $arguments
     BR_IF %bb.2, %32:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.8, implicit-def $arguments
 
@@ -271,7 +271,7 @@ body: |
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:exnref = CATCH implicit-def $arguments
+    %1:i32 = CATCH &__cpp_exception, implicit-def $arguments
     BR_IF %bb.4, %43:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -285,7 +285,7 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.7(0x80000000); %bb.7(200.00%)
     liveins: $value_stack
-    CATCHRET %bb.7, %bb.1, implicit-def dead $arguments
+    BR %bb.7, implicit-def dead $arguments
 
   bb.6:
   ; predecessors: %bb.3
@@ -297,7 +297,7 @@ body: |
   ; predecessors: %bb.2, %bb.5
     successors: %bb.9(0x80000000); %bb.9(200.00%)
     liveins: $value_stack
-    CATCHRET %bb.9, %bb.0, implicit-def dead $arguments
+    BR %bb.9, implicit-def dead $arguments
 
   bb.8:
   ; predecessors: %bb.1
@@ -313,14 +313,14 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.11
     liveins: $value_stack
-    %2:exnref = CATCH implicit-def $arguments
-    CLEANUPRET implicit-def dead $arguments
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def dead $arguments
 
   bb.11 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.10
     liveins: $value_stack
-    %3:exnref = CATCH implicit-def $arguments
-    CLEANUPRET implicit-def dead $arguments
+    CATCH_ALL implicit-def $arguments
+    RETHROW 0, implicit-def dead $arguments
 
   bb.12:
   ; predecessors: %bb.6
@@ -344,7 +344,7 @@ body: |
   MachineDominanceFrontier MDF;
   MDT.runOnMachineFunction(*MF);
   MDF.getBase().analyze(MDT.getBase());
-  WEI.recalculate(MDT, MDF);
+  WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
   // |- bb1 (ehpad), bb2, bb3, bb4, bb5, bb6, bb7, bb8, bb10, bb11, bb12

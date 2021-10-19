@@ -16,7 +16,7 @@ entry:
 ; CHECK: str
 ; CHECK-NOT:bne
   %st = alloca %struct.SmallStruct, align 4
-  %call = call i32 @e1(%struct.SmallStruct* byval %st)
+  %call = call i32 @e1(%struct.SmallStruct* byval(%struct.SmallStruct) %st)
   ret i32 0
 }
 
@@ -37,7 +37,7 @@ entry:
 ; NACL: str
 ; NACL: bne
   %st = alloca %struct.LargeStruct, align 4
-  %call = call i32 @e2(%struct.LargeStruct* byval %st)
+  %call = call i32 @e2(%struct.LargeStruct* byval(%struct.LargeStruct) %st)
   ret i32 0
 }
 
@@ -55,18 +55,18 @@ entry:
 ; NACL: vst1
 ; NACL: bne
   %st = alloca %struct.LargeStruct, align 16
-  %call = call i32 @e3(%struct.LargeStruct* byval align 16 %st)
+  %call = call i32 @e3(%struct.LargeStruct* byval(%struct.LargeStruct) align 16 %st)
   ret i32 0
 }
 
-declare i32 @e1(%struct.SmallStruct* nocapture byval %in) nounwind
-declare i32 @e2(%struct.LargeStruct* nocapture byval %in) nounwind
-declare i32 @e3(%struct.LargeStruct* nocapture byval align 16 %in) nounwind
+declare i32 @e1(%struct.SmallStruct* nocapture byval(%struct.SmallStruct) %in) nounwind
+declare i32 @e2(%struct.LargeStruct* nocapture byval(%struct.LargeStruct) %in) nounwind
+declare i32 @e3(%struct.LargeStruct* nocapture byval(%struct.LargeStruct) align 16 %in) nounwind
 
 ; rdar://12442472
 ; We can't do tail call since address of s is passed to the callee and part of
 ; s is in caller's local frame.
-define void @f3(%struct.SmallStruct* nocapture byval %s) nounwind optsize {
+define void @f3(%struct.SmallStruct* nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
 ; CHECK-LABEL: f3
 ; CHECK: bl _consumestruct
 entry:
@@ -75,7 +75,7 @@ entry:
   ret void
 }
 
-define void @f4(%struct.SmallStruct* nocapture byval %s) nounwind optsize {
+define void @f4(%struct.SmallStruct* nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
 ; CHECK-LABEL: f4
 ; CHECK: bl _consumestruct
 entry:
@@ -86,7 +86,7 @@ entry:
 }
 
 ; We can do tail call here since s is in the incoming argument area.
-define void @f5(i32 %a, i32 %b, i32 %c, i32 %d, %struct.SmallStruct* nocapture byval %s) nounwind optsize {
+define void @f5(i32 %a, i32 %b, i32 %c, i32 %d, %struct.SmallStruct* nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
 ; CHECK-LABEL: f5
 ; CHECK: b{{(\.w)?}} _consumestruct
 entry:
@@ -95,7 +95,7 @@ entry:
   ret void
 }
 
-define void @f6(i32 %a, i32 %b, i32 %c, i32 %d, %struct.SmallStruct* nocapture byval %s) nounwind optsize {
+define void @f6(i32 %a, i32 %b, i32 %c, i32 %d, %struct.SmallStruct* nocapture byval(%struct.SmallStruct) %s) nounwind optsize {
 ; CHECK-LABEL: f6
 ; CHECK: b{{(\.w)?}} _consumestruct
 entry:
@@ -110,12 +110,12 @@ declare void @consumestruct(i8* nocapture %structp, i32 %structsize) nounwind
 ; PR17309
 %struct.I.8 = type { [10 x i32], [3 x i8] }
 
-declare void @use_I(%struct.I.8* byval)
+declare void @use_I(%struct.I.8* byval(%struct.I.8))
 define void @test_I_16() {
 ; CHECK-LABEL: test_I_16
 ; CHECK: ldrb
 ; CHECK: strb
 entry:
-  call void @use_I(%struct.I.8* byval align 16 undef)
+  call void @use_I(%struct.I.8* byval(%struct.I.8) align 16 undef)
   ret void
 }

@@ -434,3 +434,151 @@ define <2 x i32> @ashr_lshr_inv_vec_wrong_pred(<2 x i32> %x, <2 x i32> %y) {
   %ret = select <2 x i1> %cmp, <2 x i32> %r, <2 x i32> %l
   ret <2 x i32> %ret
 }
+
+define i32 @lshr_sub_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_sub_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub nsw i32 %x, %y
+  %shr = lshr i32 %sub, 31
+  ret i32 %shr
+}
+
+; negative test - must shift sign-bit
+
+define i32 @lshr_sub_wrong_amount(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_sub_wrong_amount(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 30
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub nsw i32 %x, %y
+  %shr = lshr i32 %sub, 30
+  ret i32 %shr
+}
+
+; negative test - must have nsw
+
+define i32 @lshr_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub i32 %x, %y
+  %shr = lshr i32 %sub, 31
+  ret i32 %shr
+}
+
+; negative test - one-use
+
+define i32 @lshr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+; CHECK-LABEL: @lshr_sub_nsw_extra_use(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub nsw i32 %x, %y
+  store i32 %sub, i32* %p
+  %shr = lshr i32 %sub, 31
+  ret i32 %shr
+}
+
+define <3 x i42> @lshr_sub_nsw_splat(<3 x i42> %x, <3 x i42> %y) {
+; CHECK-LABEL: @lshr_sub_nsw_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i42> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = zext <3 x i1> [[TMP1]] to <3 x i42>
+; CHECK-NEXT:    ret <3 x i42> [[SHR]]
+;
+  %sub = sub nsw <3 x i42> %x, %y
+  %shr = lshr <3 x i42> %sub, <i42 41, i42 41, i42 41>
+  ret <3 x i42> %shr
+}
+
+define <3 x i42> @lshr_sub_nsw_splat_undef(<3 x i42> %x, <3 x i42> %y) {
+; CHECK-LABEL: @lshr_sub_nsw_splat_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i42> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i42> [[SUB]], <i42 41, i42 undef, i42 41>
+; CHECK-NEXT:    ret <3 x i42> [[SHR]]
+;
+  %sub = sub nsw <3 x i42> %x, %y
+  %shr = lshr <3 x i42> %sub, <i42 41, i42 undef, i42 41>
+  ret <3 x i42> %shr
+}
+
+define i17 @ashr_sub_nsw(i17 %x, i17 %y) {
+; CHECK-LABEL: @ashr_sub_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i17 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i17
+; CHECK-NEXT:    ret i17 [[SHR]]
+;
+  %sub = sub nsw i17 %x, %y
+  %shr = ashr i17 %sub, 16
+  ret i17 %shr
+}
+
+; negative test - must shift sign-bit
+
+define i17 @ashr_sub_wrong_amount(i17 %x, i17 %y) {
+; CHECK-LABEL: @ashr_sub_wrong_amount(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i17 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i17 [[SUB]], 15
+; CHECK-NEXT:    ret i17 [[SHR]]
+;
+  %sub = sub nsw i17 %x, %y
+  %shr = ashr i17 %sub, 15
+  ret i17 %shr
+}
+
+; negative test - must have nsw
+
+define i32 @ashr_sub(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub i32 %x, %y
+  %shr = ashr i32 %sub, 31
+  ret i32 %shr
+}
+
+; negative test - one-use
+
+define i32 @ashr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+; CHECK-LABEL: @ashr_sub_nsw_extra_use(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SUB]], 31
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %sub = sub nsw i32 %x, %y
+  store i32 %sub, i32* %p
+  %shr = ashr i32 %sub, 31
+  ret i32 %shr
+}
+
+define <3 x i43> @ashr_sub_nsw_splat(<3 x i43> %x, <3 x i43> %y) {
+; CHECK-LABEL: @ashr_sub_nsw_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i43> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = sext <3 x i1> [[TMP1]] to <3 x i43>
+; CHECK-NEXT:    ret <3 x i43> [[SHR]]
+;
+  %sub = sub nsw <3 x i43> %x, %y
+  %shr = ashr <3 x i43> %sub, <i43 42, i43 42, i43 42>
+  ret <3 x i43> %shr
+}
+
+define <3 x i43> @ashr_sub_nsw_splat_undef(<3 x i43> %x, <3 x i43> %y) {
+; CHECK-LABEL: @ashr_sub_nsw_splat_undef(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <3 x i43> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr <3 x i43> [[SUB]], <i43 42, i43 undef, i43 42>
+; CHECK-NEXT:    ret <3 x i43> [[SHR]]
+;
+  %sub = sub nsw <3 x i43> %x, %y
+  %shr = ashr <3 x i43> %sub, <i43 42, i43 undef, i43 42>
+  ret <3 x i43> %shr
+}

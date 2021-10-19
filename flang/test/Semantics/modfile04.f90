@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 ! modfile with subprograms
 
 module m1
@@ -6,7 +6,7 @@ module m1
   end type
 contains
 
-  pure subroutine s(x, y) bind(c)
+  pure subroutine Ss(x, y) bind(c)
     logical x
     intent(inout) y
     intent(in) x
@@ -53,7 +53,7 @@ end module m3
 !type::t
 !end type
 !contains
-!pure subroutine s(x,y) bind(c)
+!pure subroutine ss(x,y) bind(c, name="ss")
 !logical(4),intent(in)::x
 !real(4),intent(inout)::y
 !end

@@ -8,6 +8,8 @@
 
 # CHECK-NODEMANGLE: error: {{.*}}.o: undefined symbol: _Z3fooi
 
+.functype _Z3fooi (i32) -> ()
+
   .globl  _start
 _start:
   .functype _start () -> ()
@@ -15,4 +17,3 @@ _start:
   call  _Z3fooi
   end_function
 
-.functype _Z3fooi (i32) -> ()

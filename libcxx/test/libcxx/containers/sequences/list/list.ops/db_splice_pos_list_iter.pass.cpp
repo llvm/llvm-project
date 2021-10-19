@@ -6,29 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // <list>
 
 // void splice(const_iterator position, list<T,Allocator>& x, iterator i);
 
-#define _LIBCPP_DEBUG 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 
 #include <list>
-#include <cstdlib>
-#include <cassert>
 
 #include "test_macros.h"
+#include "debug_macros.h"
 
 int main(int, char**)
 {
     {
         std::list<int> v1(3);
         std::list<int> v2(3);
-        v1.splice(v1.begin(), v2, v1.begin());
-        assert(false);
+        TEST_LIBCPP_ASSERT_FAILURE(
+            v1.splice(v1.begin(), v2, v1.begin()),
+            "list::splice(iterator, list, iterator) called with the second iterator not referring to the list argument");
     }
 
   return 0;

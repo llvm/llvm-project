@@ -25,11 +25,13 @@ config.name = 'Flang'
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.f', '.F', '.ff', '.FOR', '.for', '.f77', '.f90', '.F90',
-                   '.ff90', '.f95', '.F95', '.ff95', '.fpp', '.FPP', '.cuf',
-                   '.CUF', '.f18', '.F18', '.fir']
+config.suffixes = ['.c', '.cpp', '.f', '.F', '.ff', '.FOR', '.for', '.f77', '.f90', '.F90',
+                   '.ff90', '.f95', '.F95', '.ff95', '.fpp', '.FPP', '.cuf'
+                   '.CUF', '.f18', '.F18', '.fir', '.f03', '.F03', '.f08', '.F08']
 
 config.substitutions.append(('%PATH%', config.environment['PATH']))
+config.substitutions.append(('%llvmshlibdir', config.llvm_shlib_dir))
+config.substitutions.append(('%pluginext', config.llvm_plugin_ext))
 
 llvm_config.use_default_substitutions()
 
@@ -37,6 +39,14 @@ llvm_config.use_default_substitutions()
 # subdirectories contain auxiliary inputs for various tests in their parent
 # directories.
 config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
+
+# If the flang examples are built, add examples to the config
+if config.flang_examples:
+    config.available_features.add('examples')
+
+# Plugins (loadable modules)
+if config.has_plugins:
+    config.available_features.add('plugins')
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -58,10 +68,27 @@ if config.flang_standalone_build:
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
-  ToolSubst('%f18', command=FindTool('f18'),
-    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
-    unresolved='fatal')
-]
+        ToolSubst('%flang', command=FindTool('flang-new'), unresolved='fatal'),
+    ToolSubst('%flang_fc1', command=FindTool('flang-new'), extra_args=['-fc1'],
+        unresolved='fatal')]
+
+# Define some variables to help us test that the flang runtime doesn't depend on
+# the C++ runtime libraries. For this we need a C compiler. If for some reason
+# we don't have one, we can just disable the test.
+if config.cc:
+    libruntime = os.path.join(config.flang_lib_dir, 'libFortranRuntime.a')
+    libdecimal = os.path.join(config.flang_lib_dir, 'libFortranDecimal.a')
+    include = os.path.join(config.flang_src_dir, 'include')
+
+    if os.path.isfile(libruntime) and os.path.isfile(libdecimal) and os.path.isdir(include):
+        config.available_features.add('c-compiler')
+        tools.append(ToolSubst('%cc', command=config.cc, unresolved='fatal'))
+        tools.append(ToolSubst('%libruntime', command=libruntime,
+            unresolved='fatal'))
+        tools.append(ToolSubst('%libdecimal', command=libdecimal,
+            unresolved='fatal'))
+        tools.append(ToolSubst('%include', command=include,
+            unresolved='fatal'))
 
 if config.flang_standalone_build:
     llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir])

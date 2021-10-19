@@ -2,49 +2,20 @@
 // Check extends before
 // --------------------------------------------------
 
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu \
+// RUN: %libomptarget-compile-generic \
 // RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-fail-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-fail-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-fail-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=BEFORE
-// RUN: %libomptarget-run-fail-x86_64-pc-linux-gnu 2>&1 \
-// RUN: | %fcheck-x86_64-pc-linux-gnu
+// RUN: %libomptarget-run-fail-generic 2>&1 \
+// RUN: | %fcheck-generic
 
 // --------------------------------------------------
 // Check extends after
 // --------------------------------------------------
 
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu \
+// RUN: %libomptarget-compile-generic \
 // RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-fail-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
+// RUN: %libomptarget-run-fail-generic 2>&1 \
+// RUN: | %fcheck-generic
 
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-fail-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-fail-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu \
-// RUN:   -fopenmp-version=51 -DEXTENDS=AFTER
-// RUN: %libomptarget-run-fail-x86_64-pc-linux-gnu 2>&1 \
-// RUN: | %fcheck-x86_64-pc-linux-gnu
 
 // END.
 
@@ -98,7 +69,7 @@ int main() {
 
   // CHECK: Libomptarget message: explicit extension not allowed: host address specified is 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes), but device allocation maps to host at 0x{{0*}}[[#SMALL_ADDR]] ([[#SMALL_BYTES]] bytes)
   // CHECK: Libomptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes)
-  // CHECK: Libomptarget error: Call to getOrAllocTgtPtr returned null pointer ('present' map type modifier).
+  // CHECK: Libomptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
   // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc: arr[SMALL])
   {

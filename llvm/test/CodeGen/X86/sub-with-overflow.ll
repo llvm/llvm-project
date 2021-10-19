@@ -13,14 +13,14 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    jno .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %overflow
 ; CHECK-NEXT:    movl $no, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %normal
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $ok, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
@@ -49,14 +49,14 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    jae .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %carry
 ; CHECK-NEXT:    movl $no, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB1_1: # %normal
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $ok, (%esp)
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl

@@ -5,7 +5,7 @@
 typedef int mode_t;
 typedef unsigned long size_t;
 
-const int TRUE = 1;
+enum { TRUE = 1 };
 
 int open(const char *pathname, int flags) __attribute__((enable_if(!(flags & O_CREAT), "must specify mode when using O_CREAT"))) __attribute__((overloadable));  // expected-note{{candidate disabled: must specify mode when using O_CREAT}}
 int open(const char *pathname, int flags, mode_t mode) __attribute__((overloadable));  // expected-note{{candidate function not viable: requires 3 arguments, but 2 were provided}}
@@ -114,7 +114,7 @@ void f(int n) __attribute__((enable_if(unresolvedid, "chosen when 'unresolvedid'
 int global;
 void f(int n) __attribute__((enable_if(global == 0, "chosen when 'global' is zero")));  // expected-error{{'enable_if' attribute expression never produces a constant expression}}  // expected-note{{subexpression not valid in a constant expression}}
 
-const int cst = 7;
+enum { cst = 7 };
 void return_cst(void) __attribute__((overloadable)) __attribute__((enable_if(cst == 7, "chosen when 'cst' is 7")));
 void test_return_cst() { return_cst(); }
 

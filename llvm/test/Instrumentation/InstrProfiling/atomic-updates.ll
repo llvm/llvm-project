@@ -2,7 +2,7 @@
 
 target triple = "x86_64-apple-macosx10.10.0"
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
+@__profn_foo = private constant [3 x i8] c"foo"
 
 ; CHECK-LABEL: define void @foo
 ; CHECK-NEXT: atomicrmw add i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_foo, i64 0, i64 0), i64 1 monotonic

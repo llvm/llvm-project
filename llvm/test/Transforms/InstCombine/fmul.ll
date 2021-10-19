@@ -781,6 +781,30 @@ define float @fmul_fadd_distribute(float %x) {
   ret float %t3
 }
 
+define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
+; CHECK-LABEL: @fmul_fadd_distribute_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 6.000000e+03, float 6.000000e+03>
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <2 x float> [[TMP1]], <float 1.200000e+07, float 1.200000e+07>
+; CHECK-NEXT:    ret <2 x float> [[T3]]
+;
+  %t1 = fadd <2 x float> <float 2.0e+3, float 2.0e+3>, %x
+  %t3 = fmul reassoc <2 x float> %t1, <float 6.0e+3, float 6.0e+3>
+  ret <2 x float> %t3
+}
+
+define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @fmul_fadd_distribute_scalablevec(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.000000e+03, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i32 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
+;
+  %t1 = fadd <vscale x 2 x float> shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 2.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer), %x
+  %t3 = fmul reassoc <vscale x 2 x float> %t1, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+
+
+  ret <vscale x 2 x float> %t3
+}
+
 ; (X - C1) * C2 --> (X * C2) - C1*C2
 
 define float @fmul_fsub_distribute1(float %x) {
@@ -1169,6 +1193,7 @@ define double @fmul_sqrt_select(double %x, i1 %c) {
 define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
 ; CHECK-LABEL: @mul_scalable_splat_zero(
 ; CHECK-NEXT:    ret <vscale x 2 x float> zeroinitializer
+;
   %shuf = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 0.0, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
   %t3 = fmul fast <vscale x 2 x float> %shuf, %z
   ret <vscale x 2 x float> %t3

@@ -16,6 +16,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/PluginManager.h"
+#include "llvm/ADT/Optional.h"
 
 class InstructionLLVMC;
 
@@ -42,9 +43,9 @@ public:
                             bool append, bool data_from_file) override;
 
   // PluginInterface protocol
-  lldb_private::ConstString GetPluginName() override;
-
-  uint32_t GetPluginVersion() override;
+  llvm::StringRef GetPluginName() override {
+    return GetPluginNameStatic().GetStringRef();
+  }
 
 protected:
   friend class InstructionLLVMC;
@@ -73,6 +74,12 @@ protected:
   InstructionLLVMC *m_inst;
   std::mutex m_mutex;
   bool m_data_from_file;
+  // Save the AArch64 ADRP instruction word and address it was at,
+  // in case the next instruction is an ADD to the same register;
+  // this is a pc-relative address calculation and we need both
+  // parts to calculate the symbolication.
+  lldb::addr_t m_adrp_address;
+  llvm::Optional<uint32_t> m_adrp_insn;
 
   // Since we need to make two actual MC Disassemblers for ARM (ARM & THUMB),
   // and there's a bit of goo to set up and own in the MC disassembler world,

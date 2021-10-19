@@ -132,6 +132,20 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
   case X86::VCMPPSZrrib:    case X86::VCMPPSZrribk:
   case X86::VCMPSDZrrb_Int: case X86::VCMPSDZrrb_Intk:
   case X86::VCMPSSZrrb_Int: case X86::VCMPSSZrrb_Intk:
+  case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
+  case X86::VCMPPHZ256rmi:  case X86::VCMPPHZ256rri:
+  case X86::VCMPPHZrmi:     case X86::VCMPPHZrri:
+  case X86::VCMPSHZrm:      case X86::VCMPSHZrr:
+  case X86::VCMPSHZrm_Int:  case X86::VCMPSHZrr_Int:
+  case X86::VCMPPHZ128rmik: case X86::VCMPPHZ128rrik:
+  case X86::VCMPPHZ256rmik: case X86::VCMPPHZ256rrik:
+  case X86::VCMPPHZrmik:    case X86::VCMPPHZrrik:
+  case X86::VCMPSHZrm_Intk: case X86::VCMPSHZrr_Intk:
+  case X86::VCMPPHZ128rmbi: case X86::VCMPPHZ128rmbik:
+  case X86::VCMPPHZ256rmbi: case X86::VCMPPHZ256rmbik:
+  case X86::VCMPPHZrmbi:    case X86::VCMPPHZrmbik:
+  case X86::VCMPPHZrrib:    case X86::VCMPPHZrribk:
+  case X86::VCMPSHZrrb_Int: case X86::VCMPSHZrrb_Intk:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);
@@ -152,11 +166,15 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
       if ((Desc.TSFlags & X86II::FormMask) == X86II::MRMSrcMem) {
         if (Desc.TSFlags & X86II::EVEX_B) {
           // Broadcast form.
-          // Load size is based on W-bit.
-          if (Desc.TSFlags & X86II::VEX_W)
+          // Load size is word for TA map. Otherwise it is based on W-bit.
+          if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
+            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
+            printwordmem(MI, CurOp++, OS);
+          } else if (Desc.TSFlags & X86II::VEX_W) {
             printqwordmem(MI, CurOp++, OS);
-          else
+          } else {
             printdwordmem(MI, CurOp++, OS);
+          }
 
           // Print the number of elements broadcasted.
           unsigned NumElts;
@@ -166,18 +184,28 @@ bool X86IntelInstPrinter::printVecCompareInstr(const MCInst *MI, raw_ostream &OS
             NumElts = (Desc.TSFlags & X86II::VEX_W) ? 4 : 8;
           else
             NumElts = (Desc.TSFlags & X86II::VEX_W) ? 2 : 4;
+          if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA) {
+            assert(!(Desc.TSFlags & X86II::VEX_W) && "Unknown W-bit value!");
+            NumElts *= 2;
+          }
           OS << "{1to" << NumElts << "}";
         } else {
-          if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XS)
-            printdwordmem(MI, CurOp++, OS);
-          else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD)
+          if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XS) {
+            if ((Desc.TSFlags & X86II::OpMapMask) == X86II::TA)
+              printwordmem(MI, CurOp++, OS);
+            else
+              printdwordmem(MI, CurOp++, OS);
+          } else if ((Desc.TSFlags & X86II::OpPrefixMask) == X86II::XD) {
+            assert((Desc.TSFlags & X86II::OpMapMask) != X86II::TA &&
+                   "Unexpected op map!");
             printqwordmem(MI, CurOp++, OS);
-          else if (Desc.TSFlags & X86II::EVEX_L2)
+          } else if (Desc.TSFlags & X86II::EVEX_L2) {
             printzmmwordmem(MI, CurOp++, OS);
-          else if (Desc.TSFlags & X86II::VEX_L)
+          } else if (Desc.TSFlags & X86II::VEX_L) {
             printymmwordmem(MI, CurOp++, OS);
-          else
+          } else {
             printxmmwordmem(MI, CurOp++, OS);
+          }
         }
       } else {
         printOperand(MI, CurOp++, OS);
@@ -349,7 +377,7 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
     uint64_t Target;
     if (MIA->evaluateBranch(*MI, 0, 0, Target))
       return;
-    if (MIA->evaluateMemoryOperandAddress(*MI, 0, 0))
+    if (MIA->evaluateMemoryOperandAddress(*MI, /*STI=*/nullptr, 0, 0))
       return;
   }
   const MCOperand &BaseReg  = MI->getOperand(Op+X86::AddrBaseReg);

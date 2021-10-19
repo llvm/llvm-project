@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/TargetAndABI.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -24,6 +24,12 @@ class TestSpirvEntryPointABIPass
     : public PassWrapper<TestSpirvEntryPointABIPass,
                          OperationPass<gpu::GPUModuleOp>> {
 public:
+  StringRef getArgument() const final { return "test-spirv-entry-point-abi"; }
+  StringRef getDescription() const final {
+    return "Set the spv.entry_point_abi attribute on GPU kernel function "
+           "within the "
+           "module, intended for testing only";
+  }
   TestSpirvEntryPointABIPass() = default;
   TestSpirvEntryPointABIPass(const TestSpirvEntryPointABIPass &) {}
   void runOnOperation() override;
@@ -44,21 +50,18 @@ void TestSpirvEntryPointABIPass::runOnOperation() {
   MLIRContext *context = &getContext();
   StringRef attrName = spirv::getEntryPointABIAttrName();
   for (gpu::GPUFuncOp gpuFunc : gpuModule.getOps<gpu::GPUFuncOp>()) {
-    if (!gpu::GPUDialect::isKernel(gpuFunc) || gpuFunc.getAttr(attrName))
+    if (!gpu::GPUDialect::isKernel(gpuFunc) || gpuFunc->getAttr(attrName))
       continue;
     SmallVector<int32_t, 3> workgroupSizeVec(workgroupSize.begin(),
                                              workgroupSize.end());
     workgroupSizeVec.resize(3, 1);
-    gpuFunc.setAttr(attrName,
-                    spirv::getEntryPointABIAttr(workgroupSizeVec, context));
+    gpuFunc->setAttr(attrName,
+                     spirv::getEntryPointABIAttr(workgroupSizeVec, context));
   }
 }
 
 namespace mlir {
 void registerTestSpirvEntryPointABIPass() {
-  PassRegistration<TestSpirvEntryPointABIPass> registration(
-      "test-spirv-entry-point-abi",
-      "Set the spv.entry_point_abi attribute on GPU kernel function within the "
-      "module, intended for testing only");
+  PassRegistration<TestSpirvEntryPointABIPass>();
 }
 } // namespace mlir

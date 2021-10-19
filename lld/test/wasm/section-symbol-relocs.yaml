@@ -42,11 +42,11 @@ Sections:
 # RELOC:        Relocations:
 # RELOC-NEXT:       - Type:            R_WASM_SECTION_OFFSET_I32
 # RELOC-NEXT:         Index:           0
-# RELOC-NEXT:         Offset:          0x00000007
+# RELOC-NEXT:         Offset:          0x7
 # RELOC-NEXT:         Addend:          6
 # RELOC-NEXT:       - Type:            R_WASM_SECTION_OFFSET_I32
 # RELOC-NEXT:         Index:           1
-# RELOC-NEXT:         Offset:          0x0000000B
+# RELOC-NEXT:         Offset:          0xB
 # RELOC-NEXT:         Addend:          3
 # RELOC-NEXT:    Name:            green
 #
@@ -54,8 +54,8 @@ Sections:
 # RELOC-NEXT:     - Index:           0
 # RELOC-NEXT:       Kind:            SECTION
 # RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
-# RELOC-NEXT:       Section:         2
+# RELOC-NEXT:       Section:         1
 # RELOC-NEXT:     - Index:           1
 # RELOC-NEXT:       Kind:            SECTION
 # RELOC-NEXT:       Flags:           [ BINDING_LOCAL ]
-# RELOC-NEXT:       Section:         3
+# RELOC-NEXT:       Section:         2

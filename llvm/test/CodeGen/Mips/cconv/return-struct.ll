@@ -149,7 +149,7 @@ entry:
 
 ; Ensure that large structures (>128-bit) are returned indirectly.
 ; We pick an extremely large structure so we don't have to match inlined memcpy's.
-define void @ret_struct_128xi16({[128 x i16]}* sret %returnval) {
+define void @ret_struct_128xi16({[128 x i16]}* sret({[128 x i16]}) %returnval) {
 entry:
         %0 = bitcast {[128 x i16]}* %returnval to i8*
         call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 %0, i8* align 2 bitcast ({[128 x i16]}* @struct_128xi16 to i8*), i64 256, i1 false)

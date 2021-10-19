@@ -43,7 +43,7 @@ void PrintASCIIByte(uint8_t Byte) {
   else if (Byte >= 32 && Byte < 127)
     Printf("%c", Byte);
   else
-    Printf("\\x%02x", Byte);
+    Printf("\\%03o", Byte);
 }
 
 void PrintASCII(const uint8_t *Data, size_t Size, const char *PrintAfter) {
@@ -111,7 +111,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U) {
         char Hex[] = "0xAA";
         Hex[2] = Str[Pos + 2];
         Hex[3] = Str[Pos + 3];
-        U->push_back(strtol(Hex, nullptr, 16));
+        U->push_back(static_cast<uint8_t>(strtol(Hex, nullptr, 16)));
         Pos += 3;
         continue;
       }
@@ -124,7 +124,7 @@ bool ParseOneDictionaryEntry(const std::string &Str, Unit *U) {
   return true;
 }
 
-bool ParseDictionaryFile(const std::string &Text, Vector<Unit> *Units) {
+bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
   if (Text.empty()) {
     Printf("ParseDictionaryFile: file does not exist or is empty\n");
     return false;
@@ -226,10 +226,11 @@ unsigned NumberOfCpuCores() {
   return N;
 }
 
-size_t SimpleFastHash(const uint8_t *Data, size_t Size) {
-  size_t Res = 0;
+uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial) {
+  uint64_t Res = Initial;
+  const uint8_t *Bytes = static_cast<const uint8_t *>(Data);
   for (size_t i = 0; i < Size; i++)
-    Res = Res * 11 + Data[i];
+    Res = Res * 11 + Bytes[i];
   return Res;
 }
 

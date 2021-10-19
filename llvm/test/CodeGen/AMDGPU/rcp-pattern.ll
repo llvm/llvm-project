@@ -94,7 +94,7 @@ define amdgpu_kernel void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src)
 ; GCN: buffer_store_dword [[RCP]]
 define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
-  %src.fabs.fneg = fsub float -0.0, %src.fabs
+  %src.fabs.fneg = fneg float %src.fabs
   %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
@@ -108,7 +108,7 @@ define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float
 ; GCN: buffer_store_dword [[MUL]]
 define amdgpu_kernel void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
-  %src.fabs.fneg = fsub float -0.0, %src.fabs
+  %src.fabs.fneg = fneg float %src.fabs
   %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store volatile float %rcp, float addrspace(1)* %out, align 4
 

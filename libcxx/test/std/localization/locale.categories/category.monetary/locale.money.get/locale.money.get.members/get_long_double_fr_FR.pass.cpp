@@ -11,6 +11,8 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // REQUIRES: locale.fr_FR.UTF-8
 
 // <locale>
@@ -29,7 +31,7 @@
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
 
-typedef std::money_get<char, input_iterator<const char*> > Fn;
+typedef std::money_get<char, cpp17_input_iterator<const char*> > Fn;
 
 class my_facet
     : public Fn
@@ -39,7 +41,8 @@ public:
         : Fn(refs) {}
 };
 
-typedef std::money_get<wchar_t, input_iterator<const wchar_t*> > Fw;
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+typedef std::money_get<wchar_t, cpp17_input_iterator<const wchar_t*> > Fw;
 
 class my_facetw
     : public Fw
@@ -49,15 +52,15 @@ public:
         : Fw(refs) {}
 };
 
-
 // GLIBC 2.27 and newer use U2027 (narrow non-breaking space) as a thousands sep.
 // this function converts the spaces in string inputs to that character if need
-// be.
+// be. FreeBSD's locale data also uses U2027 since 2018.
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-#ifndef TEST_GLIBC_PREREQ
-#define TEST_GLIBC_PREREQ(x, y) 0
+#if defined(_CS_GNU_LIBC_VERSION) || defined(__FreeBSD__)
+#if defined(_CS_GNU_LIBC_VERSION)
+  if (glibc_version_less_than("2.27"))
+    return in;
 #endif
-#if TEST_GLIBC_PREREQ(2,27)
   std::wstring out;
   unsigned I = 0;
   bool seen_decimal = false;
@@ -75,6 +78,7 @@ static std::wstring convert_thousands_sep(std::wstring const& in) {
   return in;
 #endif
 }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 int main(int, char**)
 {
@@ -84,16 +88,18 @@ int main(int, char**)
                           new std::moneypunct_byname<char, false>(loc_name)));
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<char, true>(loc_name)));
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<wchar_t, false>(loc_name)));
     ios.imbue(std::locale(ios.getloc(),
                           new std::moneypunct_byname<wchar_t, true>(loc_name)));
+#endif
     {
         const my_facet f(1);
         // char, national
         {   // zero
             std::string v = "0,00";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -104,7 +110,7 @@ int main(int, char**)
         }
         {   // negative one
             std::string v = "-0,01";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -115,7 +121,7 @@ int main(int, char**)
         }
         {   // positive
             std::string v = "1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -126,7 +132,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1 234 567,89";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -137,7 +143,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1234567,89";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -149,7 +155,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -161,7 +167,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -172,7 +178,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::string v = "-0,01 \u20ac";  // EURO SIGN
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -184,7 +190,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::string v = "-0,01 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -195,7 +201,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::string v = "1 234 567,89 \u20ac";  // EURO SIGN
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -207,7 +213,7 @@ int main(int, char**)
         {   // positive, showbase
             std::string v = "1 234 567,89 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -220,7 +226,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -233,7 +239,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "1 234 567,89 EUR -";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -244,7 +250,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::string v = "1 234 567,89 EUR -";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -260,7 +266,7 @@ int main(int, char**)
         // char, international
         {   // zero
             std::string v = "0,00";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -271,7 +277,7 @@ int main(int, char**)
         }
         {   // negative one
             std::string v = "-0,01";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -282,7 +288,7 @@ int main(int, char**)
         }
         {   // positive
             std::string v = "1 234 567,89 ";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -293,7 +299,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1 234 567,89";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -304,7 +310,7 @@ int main(int, char**)
         }
         {   // negative
             std::string v = "-1234567,89";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -316,7 +322,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 EUR";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -328,7 +334,7 @@ int main(int, char**)
         {   // zero, showbase
             std::string v = "0,00 EUR";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -339,7 +345,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::string v = "-0,01 EUR";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -351,7 +357,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::string v = "-0,01 EUR";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -362,7 +368,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::string v = "1 234 567,89 EUR";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -374,7 +380,7 @@ int main(int, char**)
         {   // positive, showbase
             std::string v = "1 234 567,89 EUR";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -387,7 +393,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "-1 234 567,89 EUR";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -400,7 +406,7 @@ int main(int, char**)
         {   // negative, showbase
             std::string v = "1 234 567,89 Eu-";
             showbase(ios);
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -411,7 +417,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::string v = "1 234 567,89 Eu-";
-            typedef input_iterator<const char*> I;
+            typedef cpp17_input_iterator<const char*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -421,12 +427,13 @@ int main(int, char**)
             assert(ex == 123456789);
         }
     }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         const my_facetw f(1);
         // wchar_t, national
         {   // zero
             std::wstring v = L"0,00";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -437,7 +444,7 @@ int main(int, char**)
         }
         {   // negative one
             std::wstring v = L"-0,01";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -448,7 +455,7 @@ int main(int, char**)
         }
         {   // positive
             std::wstring v = convert_thousands_sep(L"1 234 567,89 ");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -459,7 +466,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = convert_thousands_sep(L"-1 234 567,89");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -470,7 +477,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1234567,89";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -482,7 +489,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -494,7 +501,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -505,7 +512,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::wstring v = L"-0,01 \u20ac";  // EURO SIGN
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -517,7 +524,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::wstring v = L"-0,01 \u20ac";  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -528,7 +535,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 \u20ac");  // EURO SIGN
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -540,7 +547,7 @@ int main(int, char**)
         {   // positive, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 \u20ac");  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -553,7 +560,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"-1 234 567,89 \u20ac");  // EURO SIGN
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -566,7 +573,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 EUR -");
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -577,7 +584,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 EUR -");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -592,7 +599,7 @@ int main(int, char**)
         // wchar_t, international
         {   // zero
             std::wstring v = L"0,00";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -603,7 +610,7 @@ int main(int, char**)
         }
         {   // negative one
             std::wstring v = L"-0,01";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -614,7 +621,7 @@ int main(int, char**)
         }
         {   // positive
             std::wstring v = convert_thousands_sep(L"1 234 567,89 ");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -625,7 +632,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = convert_thousands_sep(L"-1 234 567,89");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -636,7 +643,7 @@ int main(int, char**)
         }
         {   // negative
             std::wstring v = L"-1234567,89";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -648,7 +655,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 EUR";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -660,7 +667,7 @@ int main(int, char**)
         {   // zero, showbase
             std::wstring v = L"0,00 EUR";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -671,7 +678,7 @@ int main(int, char**)
         }
         {   // negative one, showbase
             std::wstring v = L"-0,01 EUR";
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -683,7 +690,7 @@ int main(int, char**)
         {   // negative one, showbase
             std::wstring v = L"-0,01 EUR";
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -694,7 +701,7 @@ int main(int, char**)
         }
         {   // positive, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 EUR");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -706,7 +713,7 @@ int main(int, char**)
         {   // positive, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 EUR");
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -719,7 +726,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"-1 234 567,89 EUR");
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -732,7 +739,7 @@ int main(int, char**)
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 Eu-");
             showbase(ios);
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -743,7 +750,7 @@ int main(int, char**)
         }
         {   // negative, showbase
             std::wstring v = convert_thousands_sep(L"1 234 567,89 Eu-");
-            typedef input_iterator<const wchar_t*> I;
+            typedef cpp17_input_iterator<const wchar_t*> I;
             long double ex;
             std::ios_base::iostate err = std::ios_base::goodbit;
             I iter = f.get(I(v.data()), I(v.data() + v.size()),
@@ -753,6 +760,7 @@ int main(int, char**)
             assert(ex == 123456789);
         }
     }
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;
 }

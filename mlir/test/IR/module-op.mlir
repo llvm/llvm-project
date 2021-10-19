@@ -1,18 +1,16 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -mlir-print-debuginfo -mlir-print-local-scope  | FileCheck %s
 
 // CHECK: module {
 module {
 }
 
-// CHECK: module {
-// CHECK-NEXT: }
-module {
-  "module_terminator"() : () -> ()
-}
+// -----
 
 // CHECK: module attributes {foo.attr = true} {
 module attributes {foo.attr = true} {
 }
+
+// -----
 
 // CHECK: module {
 module {
@@ -54,4 +52,13 @@ module @foo {
     module @bar attributes {foo.bar} {
     }
   }
+}
+
+// -----
+
+// expected-error@below {{expects at most one data layout attribute}}
+// expected-note@below {{'test.another_attribute' is a data layout attribute}}
+// expected-note@below {{'test.random_attribute' is a data layout attribute}}
+module attributes { test.random_attribute = #dlti.dl_spec<>,
+                    test.another_attribute = #dlti.dl_spec<>} {
 }

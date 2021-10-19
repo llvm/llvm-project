@@ -66,6 +66,14 @@ namespace types {
   /// isAcceptedByClang - Can clang handle this input type.
   bool isAcceptedByClang(ID Id);
 
+  /// isDerivedFromC - Is the input derived from C.
+  ///
+  /// That is, does the lexer follow the rules of
+  /// TokenConcatenation::AvoidConcat. If this is the case, the preprocessor may
+  /// add and remove whitespace between tokens. Used to determine whether the
+  /// input can be processed by -fminimize-whitespace.
+  bool isDerivedFromC(ID Id);
+
   /// isCXX - Is this a "C++" input (C++ and Obj-C++ sources and headers).
   bool isCXX(ID Id);
 
@@ -80,6 +88,9 @@ namespace types {
 
   /// isObjC - Is this an "ObjC" input (Obj-C and Obj-C++ sources and headers).
   bool isObjC(ID Id);
+
+  /// isOpenCL - Is this an "OpenCL" input.
+  bool isOpenCL(ID Id);
 
   /// isFortran - Is this a Fortran input.
   bool isFortran(ID Id);
@@ -100,7 +111,7 @@ namespace types {
   /// getCompilationPhases - Get the list of compilation phases ('Phases') to be
   /// done for type 'Id' up until including LastPhase.
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
-  getCompilationPhases(ID Id, phases::ID LastPhase = phases::LastPhase);
+  getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(const clang::driver::Driver &Driver,
                        llvm::opt::DerivedArgList &DAL, ID Id);

@@ -86,9 +86,9 @@ Column column(StringRef Str, unsigned Width, const T &Value) {
 }
 
 // Specify the default column widths.
-size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10,
-                              16, 16, 10, 12, 18, 10};
-size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8};
+size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10, 16,
+                              16, 10, 12, 18, 10, 12, 18, 10};
+size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8, 10, 8, 8};
 
 /// Adjust column widths to fit long file paths and function names.
 void adjustColumnWidths(ArrayRef<StringRef> Files,
@@ -239,6 +239,23 @@ void CoverageReport::render(const FileCoverageSummary &File,
         << '%';
   else
     OS << column("-", FileReportColumns[12], Column::RightAlignment);
+
+  if (Options.ShowBranchSummary) {
+    OS << format("%*u", FileReportColumns[13],
+                 (unsigned)File.BranchCoverage.getNumBranches());
+    Options.colored_ostream(OS, LineCoverageColor)
+        << format("%*u", FileReportColumns[14],
+                  (unsigned)(File.BranchCoverage.getNumBranches() -
+                             File.BranchCoverage.getCovered()));
+    if (File.BranchCoverage.getNumBranches())
+      Options.colored_ostream(OS, LineCoverageColor)
+          << format("%*.2f", FileReportColumns[15] - 1,
+                    File.BranchCoverage.getPercentCovered())
+          << '%';
+    else
+      OS << column("-", FileReportColumns[15], Column::RightAlignment);
+  }
+
   OS << "\n";
 }
 
@@ -273,6 +290,19 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
       << format("%*.2f", FunctionReportColumns[6] - 1,
                 Function.LineCoverage.getPercentCovered())
       << '%';
+  if (Options.ShowBranchSummary) {
+    OS << format("%*u", FunctionReportColumns[7],
+                 (unsigned)Function.BranchCoverage.getNumBranches());
+    Options.colored_ostream(OS, LineCoverageColor)
+        << format("%*u", FunctionReportColumns[8],
+                  (unsigned)(Function.BranchCoverage.getNumBranches() -
+                             Function.BranchCoverage.getCovered()));
+    Options.colored_ostream(
+        OS, determineCoveragePercentageColor(Function.BranchCoverage))
+        << format("%*.2f", FunctionReportColumns[9] - 1,
+                  Function.BranchCoverage.getPercentCovered())
+        << '%';
+  }
   OS << "\n";
 }
 
@@ -301,6 +331,10 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
        << column("Lines", FunctionReportColumns[4], Column::RightAlignment)
        << column("Miss", FunctionReportColumns[5], Column::RightAlignment)
        << column("Cover", FunctionReportColumns[6], Column::RightAlignment);
+    if (Options.ShowBranchSummary)
+      OS << column("Branches", FunctionReportColumns[7], Column::RightAlignment)
+         << column("Miss", FunctionReportColumns[8], Column::RightAlignment)
+         << column("Cover", FunctionReportColumns[9], Column::RightAlignment);
     OS << "\n";
     renderDivider(FunctionReportColumns, OS);
     OS << "\n";
@@ -310,6 +344,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       ++Totals.ExecutionCount;
       Totals.RegionCoverage += Function.RegionCoverage;
       Totals.LineCoverage += Function.LineCoverage;
+      Totals.BranchCoverage += Function.BranchCoverage;
       render(Function, DC, OS);
     }
     if (Totals.ExecutionCount) {
@@ -420,7 +455,13 @@ void CoverageReport::renderFileReports(
        << column("Executed", FileReportColumns[9], Column::RightAlignment);
   OS << column("Lines", FileReportColumns[10], Column::RightAlignment)
      << column("Missed Lines", FileReportColumns[11], Column::RightAlignment)
-     << column("Cover", FileReportColumns[12], Column::RightAlignment) << "\n";
+     << column("Cover", FileReportColumns[12], Column::RightAlignment);
+  if (Options.ShowBranchSummary)
+    OS << column("Branches", FileReportColumns[13], Column::RightAlignment)
+       << column("Missed Branches", FileReportColumns[14],
+                 Column::RightAlignment)
+       << column("Cover", FileReportColumns[15], Column::RightAlignment);
+  OS << "\n";
   renderDivider(FileReportColumns, OS);
   OS << "\n";
 

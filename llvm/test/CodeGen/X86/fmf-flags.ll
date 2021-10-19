@@ -4,14 +4,14 @@
 
 declare float @llvm.sqrt.f32(float %x);
 
-define float @fast_recip_sqrt(float %x) {
+define dso_local float @fast_recip_sqrt(float %x) {
 ; X64-LABEL: fast_recip_sqrt:
 ; X64:       # %bb.0:
 ; X64-NEXT:    rsqrtss %xmm0, %xmm1
 ; X64-NEXT:    mulss %xmm1, %xmm0
 ; X64-NEXT:    mulss %xmm1, %xmm0
-; X64-NEXT:    addss {{.*}}(%rip), %xmm0
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm1
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    mulss %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
@@ -29,16 +29,16 @@ define float @fast_recip_sqrt(float %x) {
 
 declare float @llvm.fmuladd.f32(float %a, float %b, float %c);
 
-define float @fast_fmuladd_opts(float %a , float %b , float %c) {
+define dso_local float @fast_fmuladd_opts(float %a , float %b , float %c) {
 ; X64-LABEL: fast_fmuladd_opts:
 ; X64:       # %bb.0:
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fast_fmuladd_opts:
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fmuls {{\.LCPI.*}}
+; X86-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    retl
   %res = call fast float @llvm.fmuladd.f32(float %a, float 2.0, float %a)
   ret float %res
@@ -46,24 +46,24 @@ define float @fast_fmuladd_opts(float %a , float %b , float %c) {
 
 ; The multiply is strict.
 
-@mul1 = common global double 0.000000e+00, align 4
+@mul1 = common dso_local global double 0.000000e+00, align 4
 
-define double @not_so_fast_mul_add(double %x) {
+define dso_local double @not_so_fast_mul_add(double %x) {
 ; X64-LABEL: not_so_fast_mul_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    mulsd %xmm0, %xmm1
-; X64-NEXT:    mulsd {{.*}}(%rip), %xmm0
-; X64-NEXT:    movsd %xmm1, {{.*}}(%rip)
+; X64-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movsd %xmm1, mul1(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: not_so_fast_mul_add:
 ; X86:       # %bb.0:
 ; X86-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-NEXT:    fld %st(0)
-; X86-NEXT:    fmull {{\.LCPI.*}}
+; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fxch %st(1)
-; X86-NEXT:    fmull {{\.LCPI.*}}
+; X86-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fxch %st(1)
 ; X86-NEXT:    fstpl mul1
 ; X86-NEXT:    retl
@@ -75,19 +75,19 @@ define double @not_so_fast_mul_add(double %x) {
 
 ; The sqrt is strict.
 
-@sqrt1 = common global float 0.000000e+00, align 4
+@sqrt1 = common dso_local global float 0.000000e+00, align 4
 
-define float @not_so_fast_recip_sqrt(float %x) {
+define dso_local float @not_so_fast_recip_sqrt(float %x) {
 ; X64-LABEL: not_so_fast_recip_sqrt:
 ; X64:       # %bb.0:
 ; X64-NEXT:    rsqrtss %xmm0, %xmm1
 ; X64-NEXT:    sqrtss %xmm0, %xmm2
 ; X64-NEXT:    mulss %xmm1, %xmm0
 ; X64-NEXT:    mulss %xmm1, %xmm0
-; X64-NEXT:    addss {{.*}}(%rip), %xmm0
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm1
+; X64-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    mulss %xmm1, %xmm0
-; X64-NEXT:    movss %xmm2, {{.*}}(%rip)
+; X64-NEXT:    movss %xmm2, sqrt1(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: not_so_fast_recip_sqrt:
@@ -106,19 +106,19 @@ define float @not_so_fast_recip_sqrt(float %x) {
   ret float %z
 }
 
-define float @div_arcp_by_const(half %x) {
+define dso_local float @div_arcp_by_const(half %x) {
 ; X64-LABEL: div_arcp_by_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
-; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
-; X64-NEXT:    callq __gnu_f2h_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X64-NEXT:    movzwl %ax, %edi
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    jmp __gnu_h2f_ieee # TAILCALL
+; X64-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
 ;
 ; X86-LABEL: div_arcp_by_const:
 ; X86:       # %bb.0:
@@ -127,7 +127,7 @@ define float @div_arcp_by_const(half %x) {
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __gnu_h2f_ieee
-; X86-NEXT:    fmuls {{\.LCPI.*}}
+; X86-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll __gnu_f2h_ieee
 ; X86-NEXT:    movzwl %ax, %eax

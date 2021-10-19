@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10.0.0 -fblocks -emit-llvm -o - %s -fexceptions -std=c++14 | FileCheck --check-prefixes=CHECK,CXX14 %s
 
-// CHECK-LABEL: define void @_ZN19non_inline_function3fooEv()
+// CHECK-LABEL: define{{.*}} void @_ZN19non_inline_function3fooEv()
 // CHECK-LABEL: define internal void @"_ZZN19non_inline_function3fooEvENK3$_0clEi"(%class.anon
 // CHECK-LABEL: define internal signext i8 @"_ZZZN19non_inline_function3fooEvENK3$_0clEiENKUlcE_clEc"(%class.anon
 namespace non_inline_function {
@@ -21,6 +21,13 @@ namespace non_template {
   };
   L l; 
 }
+
+// It's important that this is not in a namespace; we're testing the mangling
+// of lambdas in top-level inline variables here.
+inline auto lambda_in_inline_variable = [] {};
+template<typename T> struct Wrap {};
+// CHECK-LABEL: define {{.*}} @_Z30test_lambda_in_inline_variable4WrapIN25lambda_in_inline_variableMUlvE_EE
+void test_lambda_in_inline_variable(Wrap<decltype(lambda_in_inline_variable)>) {}
 
 namespace lambdas_in_NSDMIs_template_class {
 template<class T>

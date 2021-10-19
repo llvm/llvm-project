@@ -19,5 +19,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(AArch64Tests
   InstSizes.cpp
-  TestStackOffset.cpp
+  DecomposeStackOffsetTest.cpp
+  MatrixRegisterAliasing.cpp
   )

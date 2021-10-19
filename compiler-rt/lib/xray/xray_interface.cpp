@@ -360,7 +360,7 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
     return XRayPatchingStatus::FAILED;
   }
 
-  // Here we compute the minumum sled and maximum sled associated with a
+  // Here we compute the minimum sled and maximum sled associated with a
   // particular function ID.
   auto SledRange = InstrMap.SledsIndex ? InstrMap.SledsIndex[FuncId - 1]
                                        : findFunctionSleds(FuncId, InstrMap);

@@ -6,15 +6,23 @@
 ;   for (i = 0; i < 8000; i++)
 ;     data[i] = d;
 ; }
-; 
+;
 ; This loop will be unrolled by 96 and vectorized on power9.
 ; icmp for loop iteration index and loop trip count(384) has LSRUse for 'reg({0,+,384})'.
-; Make sure above icmp does not impact LSR choose best formulae sets based on 'reg({(192 + %0),+,384})' 
+; Make sure above icmp does not impact LSR choose best formulae sets based on 'reg({(192 + %0),+,384})'
 
 define void @foo(float* nocapture %data, float %d) {
 ; CHECK-LABEL: foo:
-; CHECK:  .LBB0_1: # %vector.body
-; CHECK:         stxv 0, -192(4)
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscvdpspn 0, 1
+; CHECK-NEXT:    li 5, 83
+; CHECK-NEXT:    addi 4, 3, 192
+; CHECK-NEXT:    mtctr 5
+; CHECK-NEXT:    xxspltw 0, 0, 0
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB0_1: # %vector.body
+; CHECK-NEXT:    #
+; CHECK-NEXT:    stxv 0, -192(4)
 ; CHECK-NEXT:    stxv 0, -176(4)
 ; CHECK-NEXT:    stxv 0, -160(4)
 ; CHECK-NEXT:    stxv 0, -144(4)
@@ -40,6 +48,40 @@ define void @foo(float* nocapture %data, float %d) {
 ; CHECK-NEXT:    stxv 0, 176(4)
 ; CHECK-NEXT:    addi 4, 4, 384
 ; CHECK-NEXT:    bdnz .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %for.body
+; CHECK-NEXT:    stfs 1, 31872(3)
+; CHECK-NEXT:    stfs 1, 31876(3)
+; CHECK-NEXT:    stfs 1, 31880(3)
+; CHECK-NEXT:    stfs 1, 31884(3)
+; CHECK-NEXT:    stfs 1, 31888(3)
+; CHECK-NEXT:    stfs 1, 31892(3)
+; CHECK-NEXT:    stfs 1, 31896(3)
+; CHECK-NEXT:    stfs 1, 31900(3)
+; CHECK-NEXT:    stfs 1, 31904(3)
+; CHECK-NEXT:    stfs 1, 31908(3)
+; CHECK-NEXT:    stfs 1, 31912(3)
+; CHECK-NEXT:    stfs 1, 31916(3)
+; CHECK-NEXT:    stfs 1, 31920(3)
+; CHECK-NEXT:    stfs 1, 31924(3)
+; CHECK-NEXT:    stfs 1, 31928(3)
+; CHECK-NEXT:    stfs 1, 31932(3)
+; CHECK-NEXT:    stfs 1, 31936(3)
+; CHECK-NEXT:    stfs 1, 31940(3)
+; CHECK-NEXT:    stfs 1, 31944(3)
+; CHECK-NEXT:    stfs 1, 31948(3)
+; CHECK-NEXT:    stfs 1, 31952(3)
+; CHECK-NEXT:    stfs 1, 31956(3)
+; CHECK-NEXT:    stfs 1, 31960(3)
+; CHECK-NEXT:    stfs 1, 31964(3)
+; CHECK-NEXT:    stfs 1, 31968(3)
+; CHECK-NEXT:    stfs 1, 31972(3)
+; CHECK-NEXT:    stfs 1, 31976(3)
+; CHECK-NEXT:    stfs 1, 31980(3)
+; CHECK-NEXT:    stfs 1, 31984(3)
+; CHECK-NEXT:    stfs 1, 31988(3)
+; CHECK-NEXT:    stfs 1, 31992(3)
+; CHECK-NEXT:    stfs 1, 31996(3)
+; CHECK-NEXT:    blr
 
 entry:
   %broadcast.splatinsert16 = insertelement <4 x float> undef, float %d, i32 0

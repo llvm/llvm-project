@@ -6,8 +6,8 @@
 //
 //===------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGADDR_H
-#define LLVM_DEBUGINFO_DWARFDEBUGADDR_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -74,8 +74,26 @@ public:
   /// Return the full length of this table, including the length field.
   /// Return None if the length cannot be identified reliably.
   Optional<uint64_t> getFullLength() const;
+
+  /// Return the DWARF format of this table.
+  dwarf::DwarfFormat getFormat() const { return Format; }
+
+  /// Return the length of this table.
+  uint64_t getLength() const { return Length; }
+
+  /// Return the version of this table.
+  uint16_t getVersion() const { return Version; }
+
+  /// Return the address size of this table.
+  uint8_t getAddressSize() const { return AddrSize; }
+
+  /// Return the segment selector size of this table.
+  uint8_t getSegmentSelectorSize() const { return SegSize; }
+
+  /// Return the parsed addresses of this table.
+  ArrayRef<uint64_t> getAddressEntries() const { return Addrs; }
 };
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGADDR_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGADDR_H

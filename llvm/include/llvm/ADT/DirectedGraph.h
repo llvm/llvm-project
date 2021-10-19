@@ -38,8 +38,10 @@ public:
 
   /// Static polymorphism: delegate implementation (via isEqualTo) to the
   /// derived class.
-  bool operator==(const EdgeType &E) const { return getDerived().isEqualTo(E); }
-  bool operator!=(const EdgeType &E) const { return !operator==(E); }
+  bool operator==(const DGEdge &E) const {
+    return getDerived().isEqualTo(E.getDerived());
+  }
+  bool operator!=(const DGEdge &E) const { return !operator==(E); }
 
   /// Retrieve the target node this edge connects to.
   const NodeType &getTargetNode() const { return TargetNode; }
@@ -91,8 +93,12 @@ public:
 
   /// Static polymorphism: delegate implementation (via isEqualTo) to the
   /// derived class.
-  bool operator==(const NodeType &N) const { return getDerived().isEqualTo(N); }
-  bool operator!=(const NodeType &N) const { return !operator==(N); }
+  friend bool operator==(const NodeType &M, const NodeType &N) {
+    return M.isEqualTo(N);
+  }
+  friend bool operator!=(const NodeType &M, const NodeType &N) {
+    return !(M == N);
+  }
 
   const_iterator begin() const { return Edges.begin(); }
   const_iterator end() const { return Edges.end(); }
@@ -223,7 +229,7 @@ public:
       if (*Node == N)
         continue;
       Node->findEdgesTo(N, TempList);
-      EL.insert(EL.end(), TempList.begin(), TempList.end());
+      llvm::append_range(EL, TempList);
       TempList.clear();
     }
     return !EL.empty();

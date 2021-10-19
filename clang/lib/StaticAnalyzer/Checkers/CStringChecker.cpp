@@ -19,7 +19,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -346,7 +346,7 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   // Get the size of the array.
   const auto *superReg = cast<SubRegion>(ER->getSuperRegion());
   DefinedOrUnknownSVal Size =
-      getDynamicSize(state, superReg, C.getSValBuilder());
+      getDynamicExtent(state, superReg, C.getSValBuilder());
 
   // Get the index of the accessed element.
   DefinedOrUnknownSVal Idx = ER->getIndex().castAs<DefinedOrUnknownSVal>();
@@ -923,7 +923,7 @@ bool CStringChecker::IsFirstBufInBound(CheckerContext &C,
 
   // Get the size of the array.
   const SubRegion *superReg = cast<SubRegion>(ER->getSuperRegion());
-  DefinedOrUnknownSVal SizeDV = getDynamicSize(state, superReg, svalBuilder);
+  DefinedOrUnknownSVal SizeDV = getDynamicExtent(state, superReg, svalBuilder);
 
   // Get the index of the accessed element.
   DefinedOrUnknownSVal Idx = ER->getIndex().castAs<DefinedOrUnknownSVal>();
@@ -1060,7 +1060,7 @@ bool CStringChecker::memsetAux(const Expr *DstBuffer, SVal CharVal,
   if (Offset.isValid() && !Offset.hasSymbolicOffset() &&
       Offset.getOffset() == 0) {
     // Get the base region's size.
-    DefinedOrUnknownSVal SizeDV = getDynamicSize(State, BR, svalBuilder);
+    DefinedOrUnknownSVal SizeDV = getDynamicExtent(State, BR, svalBuilder);
 
     ProgramStateRef StateWholeReg, StateNotWholeReg;
     std::tie(StateWholeReg, StateNotWholeReg) =
@@ -2039,7 +2039,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
         RightStrRef = RightStrRef.substr(0, s2Term);
 
       // Use StringRef's comparison methods to compute the actual result.
-      int compareRes = IgnoreCase ? LeftStrRef.compare_lower(RightStrRef)
+      int compareRes = IgnoreCase ? LeftStrRef.compare_insensitive(RightStrRef)
                                   : LeftStrRef.compare(RightStrRef);
 
       // The strcmp function returns an integer greater than, equal to, or less

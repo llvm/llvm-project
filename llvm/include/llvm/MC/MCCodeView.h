@@ -166,8 +166,6 @@ public:
                    unsigned FileNo, unsigned Line, unsigned Column,
                    bool PrologueEnd, bool IsStmt);
 
-  bool isValidCVFileNumber(unsigned FileNumber);
-
   /// Add a line entry.
   void addLineEntry(const MCCVLoc &LineEntry);
 

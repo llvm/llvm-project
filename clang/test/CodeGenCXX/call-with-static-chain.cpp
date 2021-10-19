@@ -25,8 +25,8 @@ void test() {
   // CHECK64: call i32 bitcast (i32 (i64, i64, i64, i64, i64, i64, %struct.A*)* @f1 to i32 (i8*, i64, i64, i64, i64, i64, i64, %struct.A*)*)(i8* nest bitcast (i32 (i64, i64, i64, i64, i64, i64, %struct.A*)* @f1 to i8*)
   __builtin_call_with_static_chain(f1(a, a, a, a), f1);
 
-  // CHECK32: call void bitcast (void (%struct.B*)* @f2 to void (%struct.B*, i8*)*)(%struct.B* sret align 4 %{{[0-9a-z]+}}, i8* nest bitcast (void (%struct.B*)* @f2 to i8*))
-  // CHECK64: call void bitcast (void (%struct.B*)* @f2 to void (%struct.B*, i8*)*)(%struct.B* sret align 8 %{{[0-9a-z]+}}, i8* nest bitcast (void (%struct.B*)* @f2 to i8*))
+  // CHECK32: call void bitcast (void (%struct.B*)* @f2 to void (%struct.B*, i8*)*)(%struct.B* sret(%struct.B) align 4 %{{[0-9a-z]+}}, i8* nest bitcast (void (%struct.B*)* @f2 to i8*))
+  // CHECK64: call void bitcast (void (%struct.B*)* @f2 to void (%struct.B*, i8*)*)(%struct.B* sret(%struct.B) align 8 %{{[0-9a-z]+}}, i8* nest bitcast (void (%struct.B*)* @f2 to i8*))
   __builtin_call_with_static_chain(f2(), f2);
 
   // CHECK32: call i64 bitcast (i64 ()* @f3 to i64 (i8*)*)(i8* nest bitcast (i64 ()* @f3 to i8*))

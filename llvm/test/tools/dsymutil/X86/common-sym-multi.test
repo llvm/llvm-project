@@ -33,7 +33,7 @@ CHECK:     DW_AT_location{{.*}}DW_OP_addr 0x100001000)
 
 DEBUGMAP: filename:{{.*}}common1.o
 DEBUGMAP: symbols:
-DEBUGMAP: sym: _i, binAddr: 0x0000000100001000, size: 0x00000000
+DEBUGMAP: sym: _i, binAddr: 0x100001000, size: 0x0
 DEBUGMAP: filename:{{.*}}common2.o
 DEBUGMAP: symbols:
-DEBUGMAP: sym: _i, binAddr: 0x0000000100001000, size: 0x00000000
+DEBUGMAP: sym: _i, binAddr: 0x100001000, size: 0x0

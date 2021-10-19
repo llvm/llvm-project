@@ -1,4 +1,4 @@
-! RUN: %S/test_folding.sh %s %t %f18
+! RUN: %python %S/test_folding.py %s %flang_fc1
 module m
   complex, parameter :: z1 = 1. + (2., 3.)
   logical, parameter :: test_z1 = z1 == (3., 3.)

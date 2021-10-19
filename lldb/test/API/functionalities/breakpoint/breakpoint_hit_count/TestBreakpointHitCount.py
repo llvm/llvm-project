@@ -24,10 +24,7 @@ class BreakpointHitCountTestCase(TestBase):
     def test_breakpoint_one_shot(self):
         """Check that one-shot breakpoints trigger only once."""
         self.build()
-
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         self.runCmd("tb a")
         process = target.LaunchSimple(
@@ -56,10 +53,7 @@ class BreakpointHitCountTestCase(TestBase):
 
     def do_test_breakpoint_location_hit_count(self):
         """Use Python APIs to check breakpoint hit count."""
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         # Create a breakpoint in main.cpp by name 'a',
         # there should be two locations.
@@ -93,8 +87,8 @@ class BreakpointHitCountTestCase(TestBase):
 
         frame0 = thread.GetFrameAtIndex(0)
         location1 = breakpoint.FindLocationByAddress(frame0.GetPC())
-        self.assertTrue(
-            frame0.GetLineEntry().GetLine() == self.a_int_body_line_no,
+        self.assertEqual(
+            frame0.GetLineEntry().GetLine(), self.a_int_body_line_no,
             "Stopped in int a(int)")
         self.assertTrue(location1)
         self.assertEqual(location1.GetHitCount(), 1)
@@ -110,8 +104,8 @@ class BreakpointHitCountTestCase(TestBase):
 
         frame0 = thread.GetFrameAtIndex(0)
         location2 = breakpoint.FindLocationByAddress(frame0.GetPC())
-        self.assertTrue(
-            frame0.GetLineEntry().GetLine() == self.a_float_body_line_no,
+        self.assertEqual(
+            frame0.GetLineEntry().GetLine(), self.a_float_body_line_no,
             "Stopped in float a(float)")
         self.assertTrue(location2)
         self.assertEqual(location2.GetHitCount(), 1)

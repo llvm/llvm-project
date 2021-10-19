@@ -29,7 +29,12 @@
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Delinearization.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
@@ -105,9 +110,7 @@ static const SCEV *computeTripCount(const Loop &L, ScalarEvolution &SE) {
   if (isa<SCEVCouldNotCompute>(BackedgeTakenCount) ||
       !isa<SCEVConstant>(BackedgeTakenCount))
     return nullptr;
-
-  return SE.getAddExpr(BackedgeTakenCount,
-                       SE.getOne(BackedgeTakenCount->getType()));
+  return SE.getTripCountFromExitCount(BackedgeTakenCount);
 }
 
 //===----------------------------------------------------------------------===//
@@ -145,7 +148,7 @@ IndexedReference::IndexedReference(Instruction &StoreOrLoadInst,
 
 Optional<bool> IndexedReference::hasSpacialReuse(const IndexedReference &Other,
                                                  unsigned CLS,
-                                                 AliasAnalysis &AA) const {
+                                                 AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -202,7 +205,7 @@ Optional<bool> IndexedReference::hasTemporalReuse(const IndexedReference &Other,
                                                   unsigned MaxDistance,
                                                   const Loop &L,
                                                   DependenceInfo &DI,
-                                                  AliasAnalysis &AA) const {
+                                                  AAResults &AA) const {
   assert(IsValid && "Expecting a valid reference");
 
   if (BasePointer != Other.getBasePointer() && !isAliased(Other, AA)) {
@@ -288,8 +291,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     const SCEV *Coeff = getLastCoefficient();
     const SCEV *ElemSize = Sizes.back();
     const SCEV *Stride = SE.getMulExpr(Coeff, ElemSize);
-    const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
     Type *WiderType = SE.getWiderType(Stride->getType(), TripCount->getType());
+    const SCEV *CacheLineSize = SE.getConstant(WiderType, CLS);
     if (SE.isKnownNegative(Stride))
       Stride = SE.getNegativeSCEV(Stride);
     Stride = SE.getNoopOrAnyExtend(Stride, WiderType);
@@ -342,8 +345,8 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                 << "', AccessFn: " << *AccessFn << "\n");
 
-    SE.delinearize(AccessFn, Subscripts, Sizes,
-                   SE.getElementSize(&StoreOrLoadInst));
+    llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
+                      SE.getElementSize(&StoreOrLoadInst));
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {
@@ -423,9 +426,7 @@ bool IndexedReference::isConsecutive(const Loop &L, unsigned CLS) const {
 
 const SCEV *IndexedReference::getLastCoefficient() const {
   const SCEV *LastSubscript = getLastSubscript();
-  assert(isa<SCEVAddRecExpr>(LastSubscript) &&
-         "Expecting a SCEV add recurrence expression");
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LastSubscript);
+  auto *AR = cast<SCEVAddRecExpr>(LastSubscript);
   return AR->getStepRecurrence(SE);
 }
 
@@ -457,7 +458,7 @@ bool IndexedReference::isSimpleAddRecurrence(const SCEV &Subscript,
 }
 
 bool IndexedReference::isAliased(const IndexedReference &Other,
-                                 AliasAnalysis &AA) const {
+                                 AAResults &AA) const {
   const auto &Loc1 = MemoryLocation::get(&StoreOrLoadInst);
   const auto &Loc2 = MemoryLocation::get(&Other.StoreOrLoadInst);
   return AA.isMustAlias(Loc1, Loc2);
@@ -476,7 +477,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
 
 CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
                      ScalarEvolution &SE, TargetTransformInfo &TTI,
-                     AliasAnalysis &AA, DependenceInfo &DI,
+                     AAResults &AA, DependenceInfo &DI,
                      Optional<unsigned> TRT)
     : Loops(Loops), TripCounts(), LoopCosts(),
       TRT((TRT == None) ? Optional<unsigned>(TemporalReuseThreshold) : TRT),
@@ -495,14 +496,13 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
 std::unique_ptr<CacheCost>
 CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
                         DependenceInfo &DI, Optional<unsigned> TRT) {
-  if (Root.getParentLoop()) {
+  if (!Root.isOutermost()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
   }
 
   LoopVectorTy Loops;
-  for (Loop *L : breadth_first(&Root))
-    Loops.push_back(L);
+  append_range(Loops, breadth_first(&Root));
 
   if (!getInnerMostLoop(Loops)) {
     LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "

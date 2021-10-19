@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Confirm enforcement of constraints and restrictions in 7.7
 ! C7107, C7108, C7109
 
@@ -76,4 +76,10 @@ subroutine bozchecks
   res = MERGE_BITS(B"1101",3,B"1011")
 
   res = REAL(B"1101")
+
+  !ERROR: BOZ argument requires an explicit interface
+  call implictSub(Z'12345')
+
+  !ERROR: Output item must not be a BOZ literal constant
+  print "(Z18)", Z"76543210"
 end subroutine

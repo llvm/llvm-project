@@ -22,14 +22,15 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     DoubleComplex, Byte, StarKind, QuadPrecision, SlashInitialization,
     TripletInArrayConstructor, MissingColons, SignedComplexLiteral,
     OldStyleParameter, ComplexConstructor, PercentLOC, SignedPrimary, FileName,
-    Convert, Dispose, IOListLeadingComma, AbbreviatedEditDescriptor,
-    ProgramParentheses, PercentRefAndVal, OmitFunctionDummies, CrayPointer,
-    Hollerith, ArithmeticIF, Assign, AssignedGOTO, Pause, OpenACC, OpenMP,
-    CruftAfterAmpersand, ClassicCComments, AdditionalFormats, BigIntLiterals,
-    RealDoControls, EquivalenceNumericWithCharacter, AdditionalIntrinsics,
-    AnonymousParents, OldLabelDoEndStatements, LogicalIntegerAssignment,
-    EmptySourceFile, ProgramReturn, ImplicitNoneTypeNever,
-    ImplicitNoneTypeAlways)
+    Carriagecontrol, Convert, Dispose, IOListLeadingComma,
+    AbbreviatedEditDescriptor, ProgramParentheses, PercentRefAndVal,
+    OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF, Assign,
+    AssignedGOTO, Pause, OpenACC, OpenMP, CruftAfterAmpersand, ClassicCComments,
+    AdditionalFormats, BigIntLiterals, RealDoControls,
+    EquivalenceNumericWithCharacter, AdditionalIntrinsics, AnonymousParents,
+    OldLabelDoEndStatements, LogicalIntegerAssignment, EmptySourceFile,
+    ProgramReturn, ImplicitNoneTypeNever, ImplicitNoneTypeAlways,
+    ForwardRefDummyImplicitNone, OpenAccessAppend, BOZAsDefaultInteger)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 
@@ -47,6 +48,7 @@ public:
     disable_.set(LanguageFeature::BackslashEscapes);
     disable_.set(LanguageFeature::LogicalAbbreviations);
     disable_.set(LanguageFeature::XOROperator);
+    disable_.set(LanguageFeature::OldStyleParameter);
   }
   LanguageFeatureControl(const LanguageFeatureControl &) = default;
   void Enable(LanguageFeature f, bool yes = true) { disable_.set(f, !yes); }

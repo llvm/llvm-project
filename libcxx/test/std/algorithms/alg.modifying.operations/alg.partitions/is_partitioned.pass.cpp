@@ -9,7 +9,7 @@
 // <algorithm>
 
 // template <class InputIterator, class Predicate>
-//     constpexr bool       // constexpr after C++17
+//     constexpr bool       // constexpr after C++17
 //     is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
 #include <algorithm>
@@ -39,8 +39,8 @@ int main(int, char**) {
   {
     const int ia[] = {1, 2, 3, 4, 5, 6};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(!std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                                input_iterator<const int *>(std::end(ia)),
+    assert(!std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                                cpp17_input_iterator<const int *>(std::end(ia)),
                                 std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));
@@ -48,8 +48,8 @@ int main(int, char**) {
   {
     const int ia[] = {1, 3, 5, 2, 4, 6};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                               input_iterator<const int *>(std::end(ia)),
+    assert(std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                               cpp17_input_iterator<const int *>(std::end(ia)),
                                std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));
@@ -57,8 +57,8 @@ int main(int, char**) {
   {
     const int ia[] = {2, 4, 6, 1, 3, 5};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(!std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                                input_iterator<const int *>(std::end(ia)),
+    assert(!std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                                cpp17_input_iterator<const int *>(std::end(ia)),
                                 std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));
@@ -66,8 +66,8 @@ int main(int, char**) {
   {
     const int ia[] = {1, 3, 5, 2, 4, 6, 7};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(!std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                                input_iterator<const int *>(std::end(ia)),
+    assert(!std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                                cpp17_input_iterator<const int *>(std::end(ia)),
                                 std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));
@@ -75,8 +75,8 @@ int main(int, char**) {
   {
     const int ia[] = {1, 3, 5, 2, 4, 6, 7};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                               input_iterator<const int *>(std::begin(ia)),
+    assert(std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                               cpp17_input_iterator<const int *>(std::begin(ia)),
                                std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::begin(ia)));
@@ -84,8 +84,8 @@ int main(int, char**) {
   {
     const int ia[] = {1, 3, 5, 7, 9, 11, 2};
     unary_counting_predicate<is_odd, int> pred((is_odd()));
-    assert(std::is_partitioned(input_iterator<const int *>(std::begin(ia)),
-                               input_iterator<const int *>(std::end(ia)),
+    assert(std::is_partitioned(cpp17_input_iterator<const int *>(std::begin(ia)),
+                               cpp17_input_iterator<const int *>(std::end(ia)),
                                std::ref(pred)));
     assert(static_cast<std::ptrdiff_t>(pred.count()) <=
            std::distance(std::begin(ia), std::end(ia)));

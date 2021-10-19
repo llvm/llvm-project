@@ -173,5 +173,5 @@ define void @round_custom(i64* %a, i64* %b) {
 ; CHECK: declare <2 x double> @llvm.pow.v2f64(<2 x double>, <2 x double>) [[ATTR0]]
 ; CHECK: declare <2 x double> @llvm.exp2.v2f64(<2 x double>) [[ATTR0]]
 
-; CHECK: attributes [[ATTR0]] = { nounwind readnone speculatable willreturn }
+; CHECK: attributes [[ATTR0]] = { nofree nosync nounwind readnone speculatable willreturn }
 

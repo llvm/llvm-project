@@ -155,3 +155,7 @@ integration documentation can be found in the [recommonmark docs].
 
 [Common Mark spec]: http://spec.commonmark.org/0.28/
 [recommonmark docs]: http://recommonmark.readthedocs.io/en/latest/index.html
+
+## Generating the documentation
+
+see [Sphinx Quickstart Template](SphinxQuickstartTemplate.html#generating-the-documentation)

@@ -75,7 +75,7 @@ body: |
     ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
-    %2:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     %3:_(s32) = G_SEXT %2
     %4:_(s32) = G_CONSTANT i32 1
     %5:_(s1) = G_ICMP intpred(ne), %1:_(s32), %4:_
@@ -112,15 +112,15 @@ body: |
 # a test of the debug output and a test.
 #
 # CHECK-WORKLIST-LABEL: Generic MI Combiner for: multiple_copies
-# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST:       Preferred use is: [[IN2:%[0-9]+]]:_(s32) = G_SEXT [[IN0]]:_(s8)
-# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST-DAG:   Changing: [[IN3:%[0-9]+]]:_(s8) = G_ADD [[IN0]]:_, [[IN4:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN3]]:_(s8) = G_ADD [[NEW1:%[0-9]+]]:_, [[IN4]]:_
 # CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[NEW2:%[0-9]+]]:_, [[IN6]]:_
 # CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
-# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST-DAG:   Created: [[NEW1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST-DAG:   Created: [[NEW2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST:       Try combining
@@ -140,7 +140,7 @@ body: |
     ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
-    %2:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_TRUNC [[T0]](s32)
     %3:_(s32) = G_SEXT %2
     %4:_(s32) = G_CONSTANT i32 1
@@ -178,7 +178,7 @@ body: |
     ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
-    %2:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     %3:_(s32) = G_CONSTANT i32 1
     %4:_(s1) = G_ICMP intpred(ne), %1:_(s32), %3:_
     G_BRCOND %4:_(s1), %bb.1
@@ -211,9 +211,9 @@ body: |
     $w0 = COPY %10
     $w1 = COPY %11
 # CHECK-WORKLIST-LABEL: Generic MI Combiner for: sink_to_phi_nondominating
-# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST:       Try combining [[IN0:%[0-9]+]]:_(s8) = G_LOAD [[IN1:%[0-9]+]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST:       Preferred use is: [[IN2:%[0-9]+]]:_(s32) = G_SEXT [[IN0]]:_(s8)
-# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST-DAG:   Changing: [[IN0]]:_(s8) = G_LOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST-DAG:   Creating: G_TRUNC
 # CHECK-WORKLIST-DAG:   Changing: [[IN3:%[0-9]+]]:_(s8) = G_ADD [[IN0]]:_, [[IN4:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN3]]:_(s8) = G_ADD [[OUT1:%[0-9]+]]:_, [[IN4]]:_
@@ -221,7 +221,7 @@ body: |
 # CHECK-WORKLIST-DAG:   Changing: [[IN5:%[0-9]+]]:_(s8) = G_SUB [[IN0]]:_, [[IN6:%[0-9]+]]:_
 # CHECK-WORKLIST-DAG:   Changed: [[IN5]]:_(s8) = G_SUB [[OUT2:%[0-9]+]]:_, [[IN6]]:_
 # CHECK-WORKLIST-DAG:   Erasing: [[IN2]]:_(s32) = G_SEXT [[IN0]]:_(s8)
-# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load 1 from %ir.addr)
+# CHECK-WORKLIST-DAG:   Changed: [[IN2]]:_(s32) = G_SEXTLOAD [[IN1]]:_(p0){{.*}} :: (load (s8) from %ir.addr)
 # CHECK-WORKLIST-DAG:   Created: [[OUT1]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST-DAG:   Created: [[OUT2]]:_(s8) = G_TRUNC [[IN2]]:_(s32)
 # CHECK-WORKLIST:       Try combining
@@ -238,7 +238,7 @@ body: |
     ; CHECK: [[T0:%[0-9]+]]:_(s32) = G_SEXTLOAD
     %0:_(p0) = COPY $x0
     %1:_(s32) = COPY $w1
-    %2:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     %3:_(s32) = G_SEXT %2
     %4:_(s32) = G_CONSTANT i32 1
     %5:_(s1) = G_ICMP intpred(ne), %1:_(s32), %4:_
@@ -287,10 +287,10 @@ body: |
   bb.0.entry:
     liveins: $x0, $w1
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
-    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
-    G_STORE %1(s8), %0(p0) :: (store 1 into %ir.addr)
-    ; CHECK: G_STORE %1(s8), %0(p0) :: (store 1 into %ir.addr)
+    %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr)
+    G_STORE %1(s8), %0(p0) :: (store (s8) into %ir.addr)
+    ; CHECK: G_STORE %1(s8), %0(p0) :: (store (s8) into %ir.addr)
 ...
 
 ---
@@ -302,8 +302,8 @@ body: |
   bb.0.entry:
     liveins: $x0, $w1
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
-    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load 1 from %ir.addr)
+    %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
+    ; CHECK: %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.addr)
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %1(s8)
     ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.hint), %1(s8)
 ...

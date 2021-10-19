@@ -38,7 +38,7 @@ define double @foo(i32 %stat, i32 %i, double** %p) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi double* [ [[DOTPRE]], [[ENTRY_SW_BB2_CRIT_EDGE]] ], [ [[TMP0]], [[IF_END]] ]
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[TMP3]], i64 [[IDXPROM3_PRE_PHI]]
 ; CHECK-NEXT:    [[SUB6:%.*]] = fsub double 3.000000e+00, [[TMP2]]
-; CHECK-NEXT:    store double [[SUB6]], double* [[ARRAYIDX5]]
+; CHECK-NEXT:    store double [[SUB6]], double* [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -93,18 +93,15 @@ return:                                           ; preds = %sw.default, %sw.bb2
 
 define void @test_shortcut_safe(i1 %tst, i32 %p1, i32* %a) {
 ; CHECK-LABEL: @test_shortcut_safe(
-; CHECK-NEXT:    br i1 [[TST:%.*]], label [[SEXT1:%.*]], label [[DOTPRE_DEST_CRIT_EDGE:%.*]]
-; CHECK:       .pre.dest_crit_edge:
-; CHECK-NEXT:    [[DOTPRE1:%.*]] = sext i32 [[P1:%.*]] to i64
-; CHECK-NEXT:    br label [[PRE_DEST:%.*]]
+; CHECK-NEXT:    br i1 [[TST:%.*]], label [[SEXT1:%.*]], label [[PRE_DEST:%.*]]
 ; CHECK:       pre.dest:
-; CHECK-NEXT:    [[DOTPRE_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE1]], [[DOTPRE_DEST_CRIT_EDGE]] ], [ [[IDXPROM2_PRE_PHI:%.*]], [[SEXT_USE:%.*]] ]
-; CHECK-NEXT:    br label [[SEXT_USE]]
+; CHECK-NEXT:    [[DOTPRE:%.*]] = sext i32 [[P1:%.*]] to i64
+; CHECK-NEXT:    br label [[SEXT_USE:%.*]]
 ; CHECK:       sext1:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[P1]] to i64
 ; CHECK-NEXT:    br label [[SEXT_USE]]
 ; CHECK:       sext.use:
-; CHECK-NEXT:    [[IDXPROM2_PRE_PHI]] = phi i64 [ [[IDXPROM]], [[SEXT1]] ], [ [[DOTPRE_PRE_PHI]], [[PRE_DEST]] ]
+; CHECK-NEXT:    [[IDXPROM2_PRE_PHI:%.*]] = phi i64 [ [[IDXPROM]], [[SEXT1]] ], [ [[DOTPRE]], [[PRE_DEST]] ]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM2_PRE_PHI]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    tail call void @g(i32 [[VAL]])

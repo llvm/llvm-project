@@ -4,7 +4,7 @@
 ; CHECK-LABEL: vec_mul_reduce_add
 
 ; CHECK: vector.ph:
-; CHECK:  call void @llvm.set.loop.iterations.i32
+; CHECK:  %start = call i32 @llvm.start.loop.iterations.i32
 ; CHECK:  br label %vector.body
 
 ; CHECK: vector.body:
@@ -16,7 +16,7 @@
 
 ; CHECK: middle.block:
 ; CHECK: [[VPSEL:%[^ ]+]] = select <4 x i1> [[VCTP]],
-; CHECK: call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[VPSEL]])
+; CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[VPSEL]])
 
 define i32 @vec_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32 %N) {
 entry:
@@ -30,10 +30,7 @@ entry:
   br i1 %cmp8, label %for.cond.cleanup, label %vector.ph
 
 vector.ph:                                        ; preds = %entry
-  %trip.count.minus.1 = add i32 %N, -1
-  %broadcast.splatinsert11 = insertelement <4 x i32> undef, i32 %trip.count.minus.1, i32 0
-  %broadcast.splat12 = shufflevector <4 x i32> %broadcast.splatinsert11, <4 x i32> undef, <4 x i32> zeroinitializer
-  call void @llvm.set.loop.iterations.i32(i32 %5)
+  %start = call i32 @llvm.start.loop.iterations.i32(i32 %5)
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
@@ -41,16 +38,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %lsr.iv2 = phi i32* [ %scevgep3, %vector.body ], [ %a, %vector.ph ]
   %lsr.iv = phi i32* [ %scevgep, %vector.body ], [ %b, %vector.ph ]
   %vec.phi = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ %9, %vector.body ]
-  %6 = phi i32 [ %5, %vector.ph ], [ %10, %vector.body ]
+  %6 = phi i32 [ %start, %vector.ph ], [ %10, %vector.body ]
   %lsr.iv24 = bitcast i32* %lsr.iv2 to <4 x i32>*
   %lsr.iv1 = bitcast i32* %lsr.iv to <4 x i32>*
-  %broadcast.splatinsert = insertelement <4 x i32> undef, i32 %index, i32 0
-  %broadcast.splat = shufflevector <4 x i32> %broadcast.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
-  %induction = add <4 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3>
-
-  ; %7 = icmp ule <4 x i32> %induction, %broadcast.splat12
   %7 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
-
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv24, i32 4, <4 x i1> %7, <4 x i32> undef)
   %wide.masked.load13 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1, i32 4, <4 x i1> %7, <4 x i32> undef)
   %8 = mul nsw <4 x i32> %wide.masked.load13, %wide.masked.load
@@ -64,7 +55,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %12 = select <4 x i1> %7, <4 x i32> %9, <4 x i32> %vec.phi
-  %13 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %12)
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %12)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -73,7 +64,7 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 }
 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
-declare void @llvm.set.loop.iterations.i32(i32)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.start.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

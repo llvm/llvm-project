@@ -8,9 +8,21 @@ import os
 
 import lit.formats
 
+# Copied from libcxx's config.py
+def get_lit_conf(name, default=None):
+    # Allow overriding on the command line using --param=<name>=<val>
+    val = lit_config.params.get(name, None)
+    if val is None:
+        val = getattr(config, name, None)
+        if val is None:
+            val = default
+    return val
+
+emulator = get_lit_conf('emulator', None)
+
 # Setup test format
 llvm_build_mode = getattr(config, "llvm_build_mode", "Debug")
-config.test_format = lit.formats.GoogleTest(llvm_build_mode, "Test")
+config.test_format = lit.formats.GoogleTest(llvm_build_mode, "Test", emulator)
 
 # Setup test suffixes.
 config.suffixes = []
@@ -34,6 +46,10 @@ if config.host_os == 'Darwin':
   # 64-bit Darwin. Using more scales badly and hogs the system due to
   # inefficient handling of large mmap'd regions (terabytes) by the kernel.
   lit_config.parallelism_groups["shadow-memory"] = 3
+  # Disable libmalloc nanoallocator due to crashes running on macOS 12.0.
+  #
+  # rdar://80086125
+  config.environment['MallocNanoZone'] = '0'
 
   # The test config gets pickled and sent to multiprocessing workers, and that
   # only works for code if it is stored at the top level of some module.

@@ -281,7 +281,7 @@ public:
   }
 
   /// Read an arbitrary constant value, advancing Idx.
-  APValue readAPValue();
+  // APValue readAPValue(); (inherited)
 
   /// Read an integral value, advancing Idx.
   // llvm::APInt readAPInt(); (inherited)
@@ -350,7 +350,7 @@ struct SavedStreamPosition {
   ~SavedStreamPosition() {
     if (llvm::Error Err = Cursor.JumpToBit(Offset))
       llvm::report_fatal_error(
-          "Cursor should always be able to go back, failed: " +
+          llvm::Twine("Cursor should always be able to go back, failed: ") +
           toString(std::move(Err)));
   }
 

@@ -1,8 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
-#include <pthread.h>
-#include <unistd.h>
-
-extern "C" void AnnotateRWLockAcquired(const char *f, int l, void *m, long rw);
+#include "test.h"
 
 void *ThreadFunc(void *m) {
   AnnotateRWLockAcquired(__FILE__, __LINE__, m, 1);

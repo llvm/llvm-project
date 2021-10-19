@@ -9,7 +9,7 @@
 --- |
   target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
   target triple = "s390x-unknown-linux-gnu"
-  
+
   @g_54 = external dso_local unnamed_addr global i8, align 2
   @g_69 = external dso_local unnamed_addr global i32, align 4
   @g_189 = external dso_local unnamed_addr global i16, align 2
@@ -21,14 +21,11 @@
   @0 = internal unnamed_addr global i8 74, align 2
   @g_1055 = external dso_local unnamed_addr global i16, align 2
   @g_195 = external dso_local global i64**, align 8
-  
-  ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
-  
-  ; Function Attrs: argmemonly nounwind
-  declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
-  
-  ; Function Attrs: nounwind
+
+  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #0
+
+  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #0
+
   define dso_local fastcc void @func_32(i8 zeroext %arg, i16 zeroext %arg1) unnamed_addr #1 {
   bb:
     %tmp = alloca i32, align 4
@@ -37,7 +34,7 @@
     %tmp4 = getelementptr inbounds [5 x [5 x i32***]], [5 x [5 x i32***]]* %tmp2, i64 0, i64 2, i64 2
     %tmp5 = bitcast i32**** %tmp4 to i64***
     br label %bb6
-  
+
   bb6:                                              ; preds = %bb40, %bb
     %tmp7 = phi i8 [ 0, %bb ], [ %tmp43, %bb40 ]
     %tmp8 = phi i16 [ %arg1, %bb ], [ %tmp41, %bb40 ]
@@ -45,231 +42,213 @@
     %tmp10 = sext i8 %tmp7 to i64
     %tmp11 = add nsw i64 %tmp10, 1
     %tmp12 = getelementptr inbounds [10 x i8], [10 x i8]* @g_314, i64 0, i64 %tmp11
-    %tmp13 = load volatile i8, i8* %tmp12, align 1, !tbaa !1
+    %tmp13 = load volatile i8, i8* %tmp12, align 1
     br i1 undef, label %bb39, label %bb14
-  
+
   bb14:                                             ; preds = %bb6
-    %tmp15 = load i64**, i64*** @g_195, align 8, !tbaa !4
-    %tmp16 = load volatile i8, i8* %tmp12, align 1, !tbaa !1
-    store i32 7, i32* %tmp, align 4, !tbaa !6
-    call void @llvm.lifetime.start.p0i8(i64 200, i8* nonnull %tmp3) #2
-    store i32 580868341, i32* @g_69, align 4, !tbaa !6
+    %tmp15 = load i64**, i64*** @g_195, align 8
+    %tmp16 = load volatile i8, i8* %tmp12, align 1
+    store i32 7, i32* %tmp, align 4
+    call void @llvm.lifetime.start.p0i8(i64 200, i8* nonnull %tmp3)
+    store i32 580868341, i32* @g_69, align 4
     %tmp17 = zext i8 %tmp9 to i64
-    %tmp18 = load i64, i64* @g_352, align 8, !tbaa !8
+    %tmp18 = load i64, i64* @g_352, align 8
     %tmp19 = and i64 %tmp18, %tmp17
     %tmp20 = icmp ne i64 %tmp19, 1
     %tmp21 = zext i1 %tmp20 to i64
-    %tmp22 = load i64*, i64** %tmp15, align 8, !tbaa !4
-    store i64 %tmp21, i64* %tmp22, align 8, !tbaa !8
-    %tmp23 = load i32, i32* @g_334, align 4, !tbaa !6
+    %tmp22 = load i64*, i64** %tmp15, align 8
+    store i64 %tmp21, i64* %tmp22, align 8
+    %tmp23 = load i32, i32* @g_334, align 4
     %tmp24 = xor i32 %tmp23, 1
-    store i32 %tmp24, i32* @g_334, align 4, !tbaa !6
+    store i32 %tmp24, i32* @g_334, align 4
     %tmp25 = zext i8 %tmp9 to i16
     %tmp26 = mul i16 %tmp25, 26036
     %tmp27 = load i64**, i64*** %tmp5, align 8
     br label %bb28
-  
+
   bb28:                                             ; preds = %bb14
     %tmp29 = mul i16 %tmp26, %tmp8
     %tmp30 = zext i16 %tmp29 to i32
-    store i32 %tmp30, i32* @g_69, align 4, !tbaa !6
-    store i8 0, i8* @g_226, align 2, !tbaa !1
+    store i32 %tmp30, i32* @g_69, align 4
+    store i8 0, i8* @g_226, align 2
     br label %bb32
-  
+
   bb31:                                             ; preds = %bb35
-    call void @llvm.lifetime.end.p0i8(i64 200, i8* nonnull %tmp3) #2
+    call void @llvm.lifetime.end.p0i8(i64 200, i8* nonnull %tmp3)
     br label %bb40
-  
+
   bb32:                                             ; preds = %bb34, %bb28
-    store i16 1, i16* @g_1055, align 2, !tbaa !10
-    store i64 0, i64* @g_352, align 8, !tbaa !8
-    store i32* @g_334, i32** undef, align 8, !tbaa !4
+    store i16 1, i16* @g_1055, align 2
+    store i64 0, i64* @g_352, align 8
+    store i32* @g_334, i32** undef, align 8
     %tmp33 = or i64 0, 1
-    store i64 %tmp33, i64* @g_352, align 8, !tbaa !8
-    store i32* @g_334, i32** null, align 8, !tbaa !4
+    store i64 %tmp33, i64* @g_352, align 8
+    store i32* @g_334, i32** null, align 8
     br label %bb34
-  
+
   bb34:                                             ; preds = %bb32
     br i1 false, label %bb32, label %bb35
-  
+
   bb35:                                             ; preds = %bb34
-    store i32* %tmp, i32** undef, align 8, !tbaa !4
-    store i8 0, i8* @0, align 2, !tbaa !1
-    store i16 2, i16* @g_189, align 2, !tbaa !10
-    store i8 1, i8* @g_54, align 2, !tbaa !1
+    store i32* %tmp, i32** undef, align 8
+    store i8 0, i8* @0, align 2
+    store i16 2, i16* @g_189, align 2
+    store i8 1, i8* @g_54, align 2
     store i1 true, i1* @g_747, align 2
-    store i64 0, i64* undef, align 8, !tbaa !8
-    %tmp36 = load i64*, i64** undef, align 8, !tbaa !4
-    %tmp37 = load i64, i64* %tmp36, align 8, !tbaa !4
-    %tmp38 = load i64*, i64** %tmp27, align 8, !tbaa !4
-    store i64 %tmp37, i64* %tmp38, align 8, !tbaa !4
-    store i16 0, i16* @g_189, align 2, !tbaa !10
+    store i64 0, i64* undef, align 8
+    %tmp36 = load i64*, i64** undef, align 8
+    %tmp37 = load i64, i64* %tmp36, align 8
+    %tmp38 = load i64*, i64** %tmp27, align 8
+    store i64 %tmp37, i64* %tmp38, align 8
+    store i16 0, i16* @g_189, align 2
     br label %bb31
-  
+
   bb39:                                             ; preds = %bb6
     br label %bb40
-  
+
   bb40:                                             ; preds = %bb39, %bb31
     %tmp41 = phi i16 [ undef, %bb39 ], [ 0, %bb31 ]
-    %tmp42 = load volatile i8, i8* %tmp12, align 1, !tbaa !1
+    %tmp42 = load volatile i8, i8* %tmp12, align 1
     %tmp43 = add i8 %tmp7, 1
     br i1 false, label %bb6, label %bb44
-  
+
   bb44:                                             ; preds = %bb40
     unreachable
   }
-  
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
-  
-  attributes #0 = { argmemonly nounwind "target-cpu"="z13" }
-  attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="z13" "target-features"="+transactional-execution,+vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #2 = { nounwind }
-  
-  !llvm.ident = !{!0}
-  
-  !0 = !{!"clang version 8.0.0"}
-  !1 = !{!2, !2, i64 0}
-  !2 = !{!"omnipotent char", !3, i64 0}
-  !3 = !{!"Simple C/C++ TBAA"}
-  !4 = !{!5, !5, i64 0}
-  !5 = !{!"any pointer", !2, i64 0}
-  !6 = !{!7, !7, i64 0}
-  !7 = !{!"int", !2, i64 0}
-  !8 = !{!9, !9, i64 0}
-  !9 = !{!"long", !2, i64 0}
-  !10 = !{!11, !11, i64 0}
-  !11 = !{!"short", !2, i64 0}
+
+  attributes #0 = { argmemonly nofree nosync nounwind willreturn }
+  attributes #1 = { nounwind }
+  attributes #2 = { nofree nosync nounwind willreturn }
 
 ...
 ---
 name:            func_32
 alignment:       16
 tracksRegLiveness: true
-liveins:         
-  - { reg: '$r2d', virtual-reg: '%10' }
-  - { reg: '$r3d', virtual-reg: '%11' }
-frameInfo:       
+liveins:
+  - { reg: '$r2d', virtual-reg: '%0' }
+  - { reg: '$r3d', virtual-reg: '%1' }
+frameInfo:
   maxAlignment:    8
-stack:           
-  - { id: 0, name: tmp, size: 4, alignment: 4, stack-id: default }
-  - { id: 1, name: tmp2, size: 200, alignment: 8, stack-id: default }
+stack:
+  - { id: 0, name: tmp, size: 4, alignment: 4 }
+  - { id: 1, name: tmp2, size: 200, alignment: 8 }
 body:             |
   bb.0.bb:
     liveins: $r2d, $r3d
-  
-    %11:gr64bit = COPY killed $r3d
-    %10:gr64bit = COPY killed $r2d
-    %13:grx32bit = COPY killed %11.subreg_l32
-    %12:grx32bit = COPY killed %10.subreg_l32
-    %1:addr64bit = LA %stack.1.tmp2, 96, $noreg
-    %14:gr32bit = LHIMux 0
-    %18:addr64bit = LARL @g_314
-    %23:gr32bit = IIFMux 580868341
-    %26:addr64bit = LARL @g_352
-    %29:gr64bit = LGHI 0
-    %32:addr64bit = LARL @g_334
-    %33:gr32bit = LHIMux 1
-    %39:addr64bit = LARL @g_226
-    %44:gr64bit = LGHI 1
-    %46:gr64bit = LA %stack.0.tmp, 0, $noreg
-    %48:addr64bit = LARL @0
-    %49:gr32bit = LHIMux 2
-    %50:addr64bit = LARL @g_54
-    %51:addr64bit = LARL @g_747
-    %61:grx32bit = COPY %14
-    %62:gr32bit = COPY killed %13
-    %63:grx32bit = COPY killed %12
-  
+
+    %1:gr64bit = COPY killed $r3d
+    %0:gr64bit = COPY killed $r2d
+    %2:grx32bit = COPY killed %1.subreg_l32
+    %3:grx32bit = COPY killed %0.subreg_l32
+    %4:addr64bit = LA %stack.1.tmp2, 96, $noreg
+    %5:gr32bit = LHIMux 0
+    %6:addr64bit = LARL @g_314
+    %7:gr32bit = IIFMux 580868341
+    %8:addr64bit = LARL @g_352
+    %9:gr64bit = LGHI 0
+    %10:addr64bit = LARL @g_334
+    %11:gr32bit = LHIMux 1
+    %12:addr64bit = LARL @g_226
+    %13:gr64bit = LGHI 1
+    %14:gr64bit = LA %stack.0.tmp, 0, $noreg
+    %15:addr64bit = LARL @0
+    %16:gr32bit = LHIMux 2
+    %17:addr64bit = LARL @g_54
+    %18:addr64bit = LARL @g_747
+    %19:grx32bit = COPY %5
+    %20:gr32bit = COPY killed %2
+    %21:grx32bit = COPY killed %3
+
   bb.1.bb6:
-    %4:grx32bit = COPY killed %63
-    %3:gr32bit = COPY killed %62
-    %2:grx32bit = COPY killed %61
-    undef %15.subreg_l32:gr64bit = COPY %2
-    %17:addr64bit = LGBR killed %15
-    %5:addr64bit = LA %17, 1, %18
-    dead %19:grx32bit = LBMux killed %17, 1, %18 :: (volatile load 1 from %ir.tmp12, !tbaa !1)
-    CHIMux %14, 0, implicit-def $cc
+    %22:grx32bit = COPY killed %21
+    %23:gr32bit = COPY killed %20
+    %24:grx32bit = COPY killed %19
+    undef %25.subreg_l32:gr64bit = COPY %24
+    %26:addr64bit = LGBR killed %25
+    %27:addr64bit = LA %26, 1, %6
+    dead %28:grx32bit = LBMux killed %26, 1, %6 :: (volatile load (s8) from %ir.tmp12)
+    CHIMux %5, 0, implicit-def $cc
     BRC 14, 6, %bb.7, implicit killed $cc
     J %bb.2
-  
+
   bb.2.bb14:
-    %21:addr64bit = LGRL @g_195 :: (dereferenceable load 8 from @g_195, !tbaa !4)
-    dead %22:grx32bit = LBMux %5, 0, $noreg :: (volatile load 1 from %ir.tmp12, !tbaa !1)
-    MVHI %stack.0.tmp, 0, 7 :: (store 4 into %ir.tmp, !tbaa !6)
-    STRL %23, @g_69 :: (store 4 into @g_69, !tbaa !6)
-    undef %24.subreg_l32:gr64bit = COPY %4
-    %27:gr64bit = LLGC %26, 7, $noreg :: (dereferenceable load 1 from @g_352 + 7, !tbaa !8)
-    %28:gr64bit = COPY killed %27
-    %28:gr64bit = RNSBG %28, killed %24, 0, 63, 0, implicit-def dead $cc
-    CGHI killed %28, 1, implicit-def $cc
-    %30:gr64bit = COPY %29
-    %30:gr64bit = LOCGHI %30, 1, 14, 6, implicit killed $cc
-    %31:addr64bit = LG killed %21, 0, $noreg :: (load 8 from %ir.tmp15)
-    STG killed %30, killed %31, 0, $noreg :: (store 8 into %ir.tmp22)
-    %34:gr32bit = COPY %33
-    %34:gr32bit = X %34, %32, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @g_334, !tbaa !6)
-    STRL killed %34, @g_334 :: (store 4 into @g_334, !tbaa !6)
-    %35:gr32bit = LLCRMux killed %4
-    %36:gr32bit = COPY killed %35
-    %36:gr32bit = MHI %36, 26036
-    %7:addr64bit = LG %1, 0, $noreg :: (dereferenceable load 8 from %ir.tmp5)
-  
+    %29:addr64bit = LGRL @g_195 :: (dereferenceable load (s64) from @g_195)
+    dead %30:grx32bit = LBMux %27, 0, $noreg :: (volatile load (s8) from %ir.tmp12)
+    MVHI %stack.0.tmp, 0, 7 :: (store (s32) into %ir.tmp)
+    STRL %7, @g_69 :: (store (s32) into @g_69)
+    undef %31.subreg_l32:gr64bit = COPY %22
+    %32:gr64bit = LLGC %8, 7, $noreg :: (dereferenceable load (s8) from @g_352 + 7)
+    %33:gr64bit = COPY killed %32
+    %33:gr64bit = RNSBG %33, killed %31, 0, 63, 0, implicit-def dead $cc
+    CGHI killed %33, 1, implicit-def $cc
+    %34:gr64bit = COPY %9
+    %34:gr64bit = LOCGHI %34, 1, 14, 6, implicit killed $cc
+    %35:addr64bit = LG killed %29, 0, $noreg :: (load (s64) from %ir.tmp15)
+    STG killed %34, killed %35, 0, $noreg :: (store (s64) into %ir.tmp22)
+    %36:gr32bit = COPY %11
+    %36:gr32bit = X %36, %10, 0, $noreg, implicit-def dead $cc :: (dereferenceable load (s32) from @g_334)
+    STRL killed %36, @g_334 :: (store (s32) into @g_334)
+    %37:gr32bit = LLCRMux killed %22
+    %38:gr32bit = COPY killed %37
+    %38:gr32bit = MHI %38, 26036
+    %39:addr64bit = LG %4, 0, $noreg :: (dereferenceable load (s64) from %ir.tmp5)
+
   bb.3.bb28:
-    %37:gr32bit = COPY killed %36
-    %37:gr32bit = MSR %37, killed %3
-    %38:gr32bit = LLHRMux killed %37
-    STRL killed %38, @g_69 :: (store 4 into @g_69, !tbaa !6)
-    MVI %39, 0, 0 :: (store 1 into @g_226, align 2, !tbaa !1)
+    %40:gr32bit = COPY killed %38
+    %40:gr32bit = MSR %40, killed %23
+    %41:gr32bit = LLHRMux killed %40
+    STRL killed %41, @g_69 :: (store (s32) into @g_69)
+    MVI %12, 0, 0 :: (store (s8) into @g_226, align 2)
     J %bb.4
-  
+
   bb.4.bb32:
-    STHRL %33, @g_1055 :: (store 2 into @g_1055, !tbaa !10)
-    STGRL %29, @g_352 :: (store 8 into @g_352, !tbaa !8)
-    STG %32, undef %43:addr64bit, 0, $noreg :: (store 8 into `i32** undef`)
-    STGRL %44, @g_352 :: (store 8 into @g_352, !tbaa !8)
-    STG %32, $noreg, 0, $noreg :: (store 8 into `i32** null`)
-  
+    STHRL %11, @g_1055 :: (store (s16) into @g_1055)
+    STGRL %9, @g_352 :: (store (s64) into @g_352)
+    STG %10, undef %42:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    STGRL %13, @g_352 :: (store (s64) into @g_352)
+    STG %10, $noreg, 0, $noreg :: (store (s64) into `i32** null`)
+
   bb.5.bb34:
     successors: %bb.4(0x7c000000), %bb.6(0x04000000)
-  
-    CHIMux %14, 0, implicit-def $cc
+
+    CHIMux %5, 0, implicit-def $cc
     BRC 14, 6, %bb.4, implicit killed $cc
     J %bb.6
-  
+
   bb.6.bb35:
-    STG %46, undef %47:addr64bit, 0, $noreg :: (store 8 into `i32** undef`)
-    MVI %48, 0, 0 :: (store 1 into @0, align 2, !tbaa !1)
-    STHRL %49, @g_189 :: (store 2 into @g_189, !tbaa !10)
-    MVI %50, 0, 1 :: (store 1 into @g_54, align 2, !tbaa !1)
-    MVI %51, 0, 1 :: (store 1 into @g_747, align 2)
-    MVGHI undef %52:addr64bit, 0, 0 :: (store 8 into `i64* undef`)
-    %53:gr64bit = LG $noreg, 0, $noreg :: (load 8 from %ir.tmp36)
-    %54:addr64bit = LG killed %7, 0, $noreg :: (load 8 from %ir.tmp27)
-    STG killed %53, killed %54, 0, $noreg :: (store 8 into %ir.tmp38)
-    STHRL %14, @g_189 :: (store 2 into @g_189, !tbaa !10)
-    %60:grx32bit = LHIMux 0
-    %64:grx32bit = COPY killed %60
+    STG %14, undef %43:addr64bit, 0, $noreg :: (store (s64) into `i32** undef`)
+    MVI %15, 0, 0 :: (store (s8) into @0, align 2)
+    STHRL %16, @g_189 :: (store (s16) into @g_189)
+    MVI %17, 0, 1 :: (store (s8) into @g_54, align 2)
+    MVI %18, 0, 1 :: (store (s8) into @g_747, align 2)
+    MVGHI undef %44:addr64bit, 0, 0 :: (store (s64) into `i64* undef`)
+    %45:gr64bit = LG $noreg, 0, $noreg :: (load (s64) from %ir.tmp36)
+    %46:addr64bit = LG killed %39, 0, $noreg :: (load (s64) from %ir.tmp27)
+    STG killed %45, killed %46, 0, $noreg :: (store (s64) into %ir.tmp38)
+    STHRL %5, @g_189 :: (store (s16) into @g_189)
+    %47:grx32bit = LHIMux 0
+    %48:grx32bit = COPY killed %47
     J %bb.8
-  
+
   bb.7.bb39:
-    %64:grx32bit = IMPLICIT_DEF
-  
+    %48:grx32bit = IMPLICIT_DEF
+
   bb.8.bb40:
     successors: %bb.1(0x7fffffff), %bb.9(0x00000001)
-  
-    %8:grx32bit = COPY killed %64
-    dead %59:grx32bit = LBMux killed %5, 0, $noreg :: (volatile load 1 from %ir.tmp12, !tbaa !1)
-    %9:grx32bit = COPY killed %2
-    %9:grx32bit = AHIMux %9, 1, implicit-def dead $cc
-    %58:grx32bit = LHIMux 0
-    CHIMux %58, 0, implicit-def $cc
-    %61:grx32bit = COPY killed %9
-    %62:gr32bit = COPY killed %8
-    %63:grx32bit = COPY killed %58
+
+    %49:grx32bit = COPY killed %48
+    dead %50:grx32bit = LBMux killed %27, 0, $noreg :: (volatile load (s8) from %ir.tmp12)
+    %51:grx32bit = COPY killed %24
+    %51:grx32bit = AHIMux %51, 1, implicit-def dead $cc
+    %52:grx32bit = LHIMux 0
+    CHIMux %52, 0, implicit-def $cc
+    %19:grx32bit = COPY killed %51
+    %20:gr32bit = COPY killed %49
+    %21:grx32bit = COPY killed %52
     BRC 14, 6, %bb.1, implicit killed $cc
     J %bb.9
-  
+
   bb.9.bb44:
 
 ...

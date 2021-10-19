@@ -22,6 +22,7 @@ add_clang_library(clangDaemonTweaks OBJECT
   ExtractFunction.cpp
   ExtractVariable.cpp
   ObjCLocalizeStringLiteral.cpp
+  PopulateSwitch.cpp
   RawStringLiteral.cpp
   RemoveUsingNamespace.cpp
   SwapIfBranches.cpp

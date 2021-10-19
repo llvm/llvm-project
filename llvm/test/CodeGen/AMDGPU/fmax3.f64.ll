@@ -4,7 +4,7 @@
 declare double @llvm.maxnum.f64(double, double) nounwind readnone
 
 ; SI-LABEL: {{^}}test_fmax3_f64:
-; SI: buffer_load_dwordx2 [[REGA:v\[[0-9]+:[0-9]+\]]], off, s[{{[0-9]+:[0-9]+}}], 0{{$}}
+; SI: buffer_load_dwordx2 [[REGA:v\[[0-9]+:[0-9]+\]]], off, s[{{[0-9]+:[0-9]+}}], 0 glc{{$}}
 ; SI: buffer_load_dwordx2 [[REGB:v\[[0-9]+:[0-9]+\]]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
 ; SI: buffer_load_dwordx2 [[REGC:v\[[0-9]+:[0-9]+\]]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:16
 ; SI: v_max_f64 [[QUIET_A:v\[[0-9]+:[0-9]+\]]], [[REGA]], [[REGA]]

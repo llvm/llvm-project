@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++11 -analyzer-config exploration_strategy=unexplored_first_queue %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify -std=c++11 -DDFS=1 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++14 -analyzer-config exploration_strategy=unexplored_first_queue %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify -std=c++14 -DDFS=1 %s
 
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
@@ -510,4 +510,40 @@ void parm_by_ref_as_loop_counter(int &i) {
   for (i = 0; i < 10; ++i) {
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
   }
+}
+
+void capture_by_value_as_loop_counter() {
+  int out = 0;
+  auto l = [i = out]() mutable {
+    for (i = 0; i < 10; ++i) {
+      clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    }
+  };
+}
+
+void capture_by_ref_as_loop_counter() {
+  int out = 0;
+  auto l = [&i = out]() {
+    for (i = 0; i < 10; ++i) {
+      clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    }
+  };
+}
+
+void capture_implicitly_by_value_as_loop_counter() {
+  int i = 0;
+  auto l = [=]() mutable {
+    for (i = 0; i < 10; ++i) {
+      clang_analyzer_numTimesReached(); // expected-warning {{10}}
+    }
+  };
+}
+
+void capture_implicitly_by_ref_as_loop_counter() {
+  int i = 0;
+  auto l = [&]() mutable {
+    for (i = 0; i < 10; ++i) {
+      clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    }
+  };
 }

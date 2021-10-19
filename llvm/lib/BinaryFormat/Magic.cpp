@@ -71,6 +71,11 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::xcoff_object_64;
     break;
 
+  case 0x03:
+    if (startswith(Magic, "\x03\xF0\x00"))
+      return file_magic::goff_object;
+    break;
+
   case 0xDE: // 0x0B17C0DE = BC wraper
     if (startswith(Magic, "\xDE\xC0\x17\x0B"))
       return file_magic::bitcode;
@@ -223,7 +228,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
 }
 
 std::error_code llvm::identify_magic(const Twine &Path, file_magic &Result) {
-  auto FileOrError = MemoryBuffer::getFile(Path, -1LL, false);
+  auto FileOrError = MemoryBuffer::getFile(Path, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
   if (!FileOrError)
     return FileOrError.getError();
 

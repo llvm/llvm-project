@@ -1,0 +1,331 @@
+## In this file we have tests for the SHT_SYMTAB_SHNDX section
+## and the DT_SYMTAB_SHNDX dynamic tag.
+
+## Check that different SHT_SYMTAB_SHNDX sections can be used with different symbol tables.
+## In this test we check that we print different section indexes for regular and dynamic
+## symbol tables that are linked to different SHT_SYMTAB_SHNDX sections.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --symbols --dyn-syms %t1 2>&1 | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --symbols --dyn-syms %t1 2>&1 | FileCheck %s --check-prefix=LLVM
+
+# GNU:      Symbol table '.dynsym' contains 3 entries:
+# GNU-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
+# GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     3 dynsym1
+# GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 dynsym2
+# GNU:      Symbol table '.symtab' contains 3 entries:
+# GNU-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
+# GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 sym1
+# GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT     1 sym2
+
+# LLVM:      Symbols [
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name:  (0)
+# LLVM:          Section: Undefined (0x0)
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name: sym1 (6)
+# LLVM:          Section: .section2 (0x2)
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name: sym2 (1)
+# LLVM:          Section: .section1 (0x1)
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+# LLVM:      DynamicSymbols [
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name:  (0)
+# LLVM:          Section: Undefined (0x0)
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name: dynsym1 (9)
+# LLVM:          Section: .section3 (0x3)
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Symbol {
+# LLVM-NEXT:     Name: dynsym2 (1)
+# LLVM:          Section: .section2 (0x2)
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .section1
+    Type: SHT_PROGBITS
+  - Name: .section2
+    Type: SHT_PROGBITS
+  - Name: .section3
+    Type: SHT_PROGBITS
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Offset:  0x1000
+    Entries:
+      - Tag:   [[TAGNAME=DT_SYMTAB_SHNDX]]
+        Value: [[SYMTABSHNDX=0x2100]] ## Address of .bar section.
+      - Tag:   DT_NULL
+        Value: 0
+## By naming the SHT_SYMTAB_SHNDX sections to .foo and .bar we verify that we
+## don't use their names to locate them.
+  - Name:    .foo
+    Type:    SHT_SYMTAB_SHNDX
+    Flags:   [ SHF_ALLOC ]
+    Link:    [[SHNDXLINK=.symtab]]
+    Entries: [ 0, 2, 1 ]
+    Offset:  0x2000
+    Address: 0x2000
+  - Name:    .bar
+    Type:    SHT_SYMTAB_SHNDX
+    Flags:   [ SHF_ALLOC ]
+    Link:    .dynsym
+    Entries: [ 0, 3, 2 ]
+    Offset:  0x2100
+    Address: 0x2100
+Symbols:
+  - Name:  sym1
+    Index: SHN_XINDEX
+  - Name:  sym2
+    Index: SHN_XINDEX
+DynamicSymbols:
+  - Name:  dynsym1
+    Index: SHN_XINDEX
+  - Name:  dynsym2
+    Index: SHN_XINDEX
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .bar
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+
+## Check that we locate the SHT_SYMTAB_SHNDX section using the DT_SYMTAB_SHNDX
+## dynamic tag when dumping dynamic symbols. In this case we make the value of
+## DT_SYMTAB_SHNDX point to the SHT_SYMTAB_SHNDX section that is
+## linked with the static symbol table and check that we use it.
+
+# RUN: yaml2obj --docnum=1 -DSYMTABSHNDX=0x2000 %s -o %t2
+# RUN: llvm-readelf --dyn-syms %t2 2>&1 | FileCheck %s --check-prefix=DYNTAG-GNU
+# RUN: llvm-readobj --dyn-syms %t2 2>&1 | FileCheck %s --check-prefix=DYNTAG-LLVM
+
+# DYNTAG-GNU:      Symbol table '.dynsym' contains 3 entries:
+# DYNTAG-GNU-NEXT:    Num:    Value  Size Type    Bind   Vis     Ndx Name
+# DYNTAG-GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT UND
+# DYNTAG-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   2 dynsym1
+# DYNTAG-GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT   1 dynsym2
+
+# DYNTAG-LLVM:          Name: dynsym1 (9)
+# DYNTAG-LLVM:          Section: .section2 (0x2)
+# DYNTAG-LLVM-NEXT:   }
+# DYNTAG-LLVM-NEXT:   Symbol {
+# DYNTAG-LLVM-NEXT:     Name: dynsym2 (1)
+# DYNTAG-LLVM:          Section: .section1 (0x1)
+# DYNTAG-LLVM-NEXT:   }
+# DYNTAG-LLVM-NEXT: ]
+
+## Check that we report a warning when we dump a dynamic symbol table that
+## contains symbols with extended indices, but we don't have a DT_SYMTAB_SHNDX tag to locate
+## the corresponding extended indexes table.
+
+# RUN: yaml2obj --docnum=1 -DTAGNAME=0x0 -DSYMTABSHNDX=0x0 %s -o %t3
+# RUN: llvm-readelf --symbols --dyn-syms %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=NOTAG-GNU
+# RUN: llvm-readobj --symbols --dyn-syms %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=NOTAG-LLVM
+
+# NOTAG-GNU:      Symbol table '.dynsym' contains 3 entries:
+# NOTAG-GNU-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
+# NOTAG-GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# NOTAG-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+# NOTAG-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff] dynsym1
+# NOTAG-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
+# NOTAG-GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff] dynsym2
+
+# NOTAG-LLVM:      Symbol {
+# NOTAG-LLVM:          Name: dynsym1 (9)
+# NOTAG-LLVM-NEXT:     Value: 0x0
+# NOTAG-LLVM-NEXT:     Size: 0
+# NOTAG-LLVM-NEXT:     Binding: Local (0x0)
+# NOTAG-LLVM-NEXT:     Type: None (0x0)
+# NOTAG-LLVM-NEXT:     Other: 0
+# NOTAG-LLVM-NEXT: warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+# NOTAG-LLVM-NEXT:     Section: Reserved (0xFFFF)
+# NOTAG-LLVM-NEXT:   }
+# NOTAG-LLVM-NEXT:   Symbol {
+# NOTAG-LLVM-NEXT:     Name: dynsym2 (1)
+# NOTAG-LLVM-NEXT:     Value: 0x0
+# NOTAG-LLVM-NEXT:     Size: 0
+# NOTAG-LLVM-NEXT:     Binding: Local (0x0)
+# NOTAG-LLVM-NEXT:     Type: None (0x0)
+# NOTAG-LLVM-NEXT:     Other: 0
+# NOTAG-LLVM-NEXT: warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
+# NOTAG-LLVM-NEXT:     Section: Reserved (0xFFFF)
+# NOTAG-LLVM-NEXT:   }
+
+## In this case we have a SHT_SYMTAB_SHNDX section with a sh_link field that has a
+## value that is larger than the number of sections. Check we report a warning.
+
+# RUN: yaml2obj --docnum=1 -DSHNDXLINK=0xFF %s -o %t4
+# RUN: llvm-readelf --symbols --dyn-syms %t4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefixes=BROKENLINK,BROKENLINK-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --symbols --dyn-syms %t4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t4 --check-prefixes=BROKENLINK,BROKENLINK-LLVM --implicit-check-not=warning:
+
+# BROKENLINK: warning: '[[FILE]]': unable to get the associated symbol table for SHT_SYMTAB_SHNDX section with index 5: sh_link (255) is greater than or equal to the total number of sections (12)
+
+# BROKENLINK-GNU:      warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+# BROKENLINK-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff] sym1
+# BROKENLINK-GNU-NEXT: warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
+# BROKENLINK-GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff] sym2
+
+# BROKENLINK-LLVM:      Symbol {
+# BROKENLINK-LLVM:        Name: sym1 (6)
+# BROKENLINK-LLVM:      warning: '[[FILE]]': found an extended symbol index (1), but unable to locate the extended symbol index table
+# BROKENLINK-LLVM-NEXT:   Section: Reserved (0xFFFF)
+# BROKENLINK-LLVM-NEXT: }
+# BROKENLINK-LLVM-NEXT: Symbol {
+# BROKENLINK-LLVM-NEXT:   Name: sym2 (1)
+# BROKENLINK-LLVM:      warning: '[[FILE]]': found an extended symbol index (2), but unable to locate the extended symbol index table
+# BROKENLINK-LLVM-NEXT:   Section: Reserved (0xFFFF)
+# BROKENLINK-LLVM-NEXT: }
+
+## Check we report a warning when multiple SHT_SYMTAB_SHNDX sections are linked to a symbol table.
+## In this case, 2 sections are linked to the dynamic symbol table. Check it doesn't affect
+## anything, because the SHT_SYMTAB_SHNDX section specified by the DT_SYMTAB_SHNDX tag is still used.
+
+# RUN: yaml2obj --docnum=1 -DSHNDXLINK=.dynsym %s -o %t.multiple
+# RUN: llvm-readelf --symbols --dyn-syms %t.multiple 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.multiple --check-prefix=MULTIPLE-GNU
+# RUN: llvm-readobj --symbols --dyn-syms %t.multiple 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.multiple --check-prefix=MULTIPLE-LLVM
+
+# MULTIPLE-GNU:      warning: '[[FILE]]': multiple SHT_SYMTAB_SHNDX sections are linked to SHT_SYMTAB_SHNDX section with index 6
+# MULTIPLE-GNU:      Symbol table '.dynsym' contains 3 entries:
+# MULTIPLE-GNU-NEXT:    Num:    Value  Size Type    Bind   Vis     Ndx Name
+# MULTIPLE-GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT UND
+# MULTIPLE-GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT   3 dynsym1
+# MULTIPLE-GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT   2 dynsym2
+
+# MULTIPLE-LLVM:      Symbol {
+# MULTIPLE-LLVM:        Name: dynsym1 (9)
+# MULTIPLE-LLVM-NEXT:   Value: 0x0
+# MULTIPLE-LLVM-NEXT:   Size: 0
+# MULTIPLE-LLVM-NEXT:   Binding: Local (0x0)
+# MULTIPLE-LLVM-NEXT:   Type: None (0x0)
+# MULTIPLE-LLVM-NEXT:   Other: 0
+# MULTIPLE-LLVM-NEXT:   Section: .section3 (0x3)
+# MULTIPLE-LLVM-NEXT: }
+# MULTIPLE-LLVM-NEXT: Symbol {
+# MULTIPLE-LLVM-NEXT:   Name: dynsym2 (1)
+# MULTIPLE-LLVM-NEXT:   Value: 0x0
+# MULTIPLE-LLVM-NEXT:   Size: 0
+# MULTIPLE-LLVM-NEXT:   Binding: Local (0x0)
+# MULTIPLE-LLVM-NEXT:   Type: None (0x0)
+# MULTIPLE-LLVM-NEXT:   Other: 0
+# MULTIPLE-LLVM-NEXT:   Section: .section2 (0x2)
+# MULTIPLE-LLVM-NEXT: }
+
+## In this case we have a SHT_SYMTAB_SHNDX section placed right before
+## the end of the file. This table is broken: it contains fewer entries than
+## the number of dynamic symbols.
+## Check we report a warning when trying to read an extended symbol index past
+## the end of the file.
+
+# RUN: yaml2obj --docnum=2 %s -o %t.pastend
+# RUN: llvm-readelf --dyn-syms %t.pastend 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.pastend --check-prefix=PASTEND-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj --dyn-syms %t.pastend 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.pastend --check-prefix=PASTEND-LLVM --implicit-check-not=warning:
+
+# PASTEND-GNU:      1: 00000000 0 NOTYPE  LOCAL  DEFAULT 1 dynsym1
+# PASTEND-GNU-NEXT: warning: '[[FILE]]': unable to read an extended symbol table at index 2: can't read past the end of the file
+# PASTEND-GNU-NEXT: 2: 00000000 0 NOTYPE  LOCAL  DEFAULT RSV[0xffff] dynsym2
+
+# PASTEND-LLVM:      Symbol {
+# PASTEND-LLVM:       Name: dynsym2 (1)
+# PASTEND-LLVM-NEXT:  Value: 0x0
+# PASTEND-LLVM-NEXT:  Size: 0
+# PASTEND-LLVM-NEXT:  Binding: Local (0x0)
+# PASTEND-LLVM-NEXT:  Type: None (0x0)
+# PASTEND-LLVM-NEXT:  Other: 0
+# PASTEND-LLVM-NEXT: warning: '[[FILE]]': unable to read an extended symbol table at index 2: can't read past the end of the file
+# PASTEND-LLVM-NEXT:  Section: Reserved (0xFFFF)
+# PASTEND-LLVM-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .section1
+    Type: SHT_PROGBITS
+  - Name: .section2
+    Type: SHT_PROGBITS
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Offset:  0x1000
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x1500
+      - Tag:   DT_HASH
+        Value: 0x1600
+      - Tag:   DT_STRTAB
+        Value: 0x1700
+      - Tag:   DT_STRSZ
+        Value: 17 ## ".dynsym1.dynsym2."
+      - Tag:   DT_SYMTAB_SHNDX
+        Value: 0x2000
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Offset:  0x1500
+    Address: 0x1500
+## We need the .hash table to infer the number
+## of dynamic symbols.
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Offset:  0x1600
+    Address: 0x1600
+    Bucket:  [ 1 ]
+    Chain:   [ 1, 2, 3 ]
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Offset:  0x1700
+    Address: 0x1700
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0, 1 ]
+    Offset:  0x2000
+    Address: 0x2000
+  - Type:      SectionHeaderTable
+    NoHeaders: true
+DynamicSymbols:
+  - Name:  dynsym1
+    Index: SHN_XINDEX
+  - Name:  dynsym2
+    Index: SHN_XINDEX
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .symtab_shndx
+  - Type:     PT_DYNAMIC
+    VAddr:    0x1000
+    FirstSec: .dynamic
+    LastSec:  .dynamic

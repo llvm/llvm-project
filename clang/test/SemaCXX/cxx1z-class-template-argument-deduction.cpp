@@ -17,7 +17,7 @@ namespace std {
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
-template<typename T> constexpr bool has_type(T) { return true; }
+template<typename T> constexpr bool has_type(T&) { return true; }
 
 std::initializer_list il = {1, 2, 3, 4, 5};
 
@@ -416,6 +416,17 @@ B b(0, {});
 
 }
 
+namespace no_crash_on_default_arg {
+class A {
+  template <typename T> class B {
+    B(int c = 1);
+  };
+  // This used to crash due to unparsed default arg above. The diagnostic could
+  // be improved, but the point of this test is to simply check we do not crash.
+  B(); // expected-error {{deduction guide declaration without trailing return type}}
+};
+} // namespace no_crash_on_default_arg
+
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wctad-maybe-unsupported"
 namespace test_implicit_ctad_warning {
@@ -526,6 +537,38 @@ namespace PR45124 {
   __thread b g;
 }
 
+namespace PR47175 {
+  template<typename T> struct A { A(T); T x; };
+  template<typename T> int &&n = A(T()).x;
+  int m = n<int>;
+}
+
+// Ensure we don't crash when CTAD fails.
+template <typename T1, typename T2>
+struct Foo {   // expected-note{{candidate function template not viable}}
+  Foo(T1, T2); // expected-note{{candidate function template not viable}}
+};
+
+template <typename... Args>
+void insert(Args &&...args);
+
+void foo() {
+  insert(Foo(2, 2, 2)); // expected-error{{no viable constructor or deduction guide}}
+}
+
+namespace PR52139 {
+  struct Abstract {
+    template <class... Ts>
+    struct overloaded : Ts... {
+      using Ts::operator()...;
+    };
+    template <class... Ts>
+    overloaded(Ts...) -> overloaded<Ts...>;
+
+  private:
+    virtual void f() = 0;
+  };
+}
 #else
 
 // expected-no-diagnostics

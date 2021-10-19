@@ -13,7 +13,11 @@
 #endif
 
 #if defined(__clang__)
-  #if !defined(COMPILER_CLANG)
+  #if defined(__ibmxl__)
+    #if !defined(COMPILER_IBMXL)
+      #define COMPILER_IBMXL
+    #endif
+  #elif !defined(COMPILER_CLANG)
     #define COMPILER_CLANG
   #endif
 #elif defined(_MSC_VER)
@@ -58,6 +62,8 @@
   #define BENCHMARK_OS_NETBSD 1
 #elif defined(__OpenBSD__)
   #define BENCHMARK_OS_OPENBSD 1
+#elif defined(__DragonFly__)
+  #define BENCHMARK_OS_DRAGONFLY 1
 #elif defined(__linux__)
   #define BENCHMARK_OS_LINUX 1
 #elif defined(__native_client__)
@@ -70,6 +76,10 @@
 #define BENCHMARK_OS_FUCHSIA 1
 #elif defined (__SVR4) && defined (__sun)
 #define BENCHMARK_OS_SOLARIS 1
+#elif defined(__QNX__)
+#define BENCHMARK_OS_QNX 1
+#elif defined(__MVS__)
+#define BENCHMARK_OS_ZOS 1
 #endif
 
 #if defined(__ANDROID__) && defined(__GLIBCXX__)

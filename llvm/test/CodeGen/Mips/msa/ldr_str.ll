@@ -11,47 +11,47 @@
 define void @llvm_mips_ldr_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
-; MIPS32R5-EB-NEXT:    # implicit-def: $at
-; MIPS32R5-EB-NEXT:    lwr $1, 23($5)
-; MIPS32R5-EB-NEXT:    lwl $1, 20($5)
 ; MIPS32R5-EB-NEXT:    # implicit-def: $v0
-; MIPS32R5-EB-NEXT:    lwr $2, 19($5)
-; MIPS32R5-EB-NEXT:    lwl $2, 16($5)
-; MIPS32R5-EB-NEXT:    fill.w $w0, $1
-; MIPS32R5-EB-NEXT:    insert.w $w0[1], $2
+; MIPS32R5-EB-NEXT:    lwr $2, 23($5)
+; MIPS32R5-EB-NEXT:    lwl $2, 20($5)
+; MIPS32R5-EB-NEXT:    # implicit-def: $at
+; MIPS32R5-EB-NEXT:    lwr $1, 19($5)
+; MIPS32R5-EB-NEXT:    lwl $1, 16($5)
+; MIPS32R5-EB-NEXT:    fill.w $w0, $2
+; MIPS32R5-EB-NEXT:    insert.w $w0[1], $1
 ; MIPS32R5-EB-NEXT:    st.d $w0, 0($4)
 ; MIPS32R5-EB-NEXT:    jr $ra
 ; MIPS32R5-EB-NEXT:    nop
 ;
 ; MIPS32R5-EL-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R5-EL:       # %bb.0: # %entry
-; MIPS32R5-EL-NEXT:    # implicit-def: $at
-; MIPS32R5-EL-NEXT:    lwr $1, 16($5)
-; MIPS32R5-EL-NEXT:    lwl $1, 19($5)
 ; MIPS32R5-EL-NEXT:    # implicit-def: $v0
-; MIPS32R5-EL-NEXT:    lwr $2, 20($5)
-; MIPS32R5-EL-NEXT:    lwl $2, 23($5)
-; MIPS32R5-EL-NEXT:    fill.w $w0, $1
-; MIPS32R5-EL-NEXT:    insert.w $w0[1], $2
+; MIPS32R5-EL-NEXT:    lwr $2, 16($5)
+; MIPS32R5-EL-NEXT:    lwl $2, 19($5)
+; MIPS32R5-EL-NEXT:    # implicit-def: $at
+; MIPS32R5-EL-NEXT:    lwr $1, 20($5)
+; MIPS32R5-EL-NEXT:    lwl $1, 23($5)
+; MIPS32R5-EL-NEXT:    fill.w $w0, $2
+; MIPS32R5-EL-NEXT:    insert.w $w0[1], $1
 ; MIPS32R5-EL-NEXT:    st.d $w0, 0($4)
 ; MIPS32R5-EL-NEXT:    jr $ra
 ; MIPS32R5-EL-NEXT:    nop
 ;
 ; MIPS32R6-EB-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R6-EB:       # %bb.0: # %entry
-; MIPS32R6-EB-NEXT:    lw $1, 20($5)
-; MIPS32R6-EB-NEXT:    lw $2, 16($5)
-; MIPS32R6-EB-NEXT:    fill.w $w0, $1
-; MIPS32R6-EB-NEXT:    insert.w $w0[1], $2
+; MIPS32R6-EB-NEXT:    lw $2, 20($5)
+; MIPS32R6-EB-NEXT:    lw $1, 16($5)
+; MIPS32R6-EB-NEXT:    fill.w $w0, $2
+; MIPS32R6-EB-NEXT:    insert.w $w0[1], $1
 ; MIPS32R6-EB-NEXT:    st.d $w0, 0($4)
 ; MIPS32R6-EB-NEXT:    jrc $ra
 ;
 ; MIPS32R6-EL-LABEL: llvm_mips_ldr_d_test:
 ; MIPS32R6-EL:       # %bb.0: # %entry
-; MIPS32R6-EL-NEXT:    lw $1, 16($5)
-; MIPS32R6-EL-NEXT:    lw $2, 20($5)
-; MIPS32R6-EL-NEXT:    fill.w $w0, $1
-; MIPS32R6-EL-NEXT:    insert.w $w0[1], $2
+; MIPS32R6-EL-NEXT:    lw $2, 16($5)
+; MIPS32R6-EL-NEXT:    lw $1, 20($5)
+; MIPS32R6-EL-NEXT:    fill.w $w0, $2
+; MIPS32R6-EL-NEXT:    insert.w $w0[1], $1
 ; MIPS32R6-EL-NEXT:    st.d $w0, 0($4)
 ; MIPS32R6-EL-NEXT:    jrc $ra
 ;
@@ -122,43 +122,43 @@ define void @llvm_mips_str_d_test(<2 x i64>* %val, i8* %ptr) nounwind {
 ; MIPS32R5-EB-LABEL: llvm_mips_str_d_test:
 ; MIPS32R5-EB:       # %bb.0: # %entry
 ; MIPS32R5-EB-NEXT:    ld.d $w0, 0($4)
-; MIPS32R5-EB-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32R5-EB-NEXT:    copy_s.w $2, $w0[1]
-; MIPS32R5-EB-NEXT:    swr $1, 19($5)
-; MIPS32R5-EB-NEXT:    swl $1, 16($5)
-; MIPS32R5-EB-NEXT:    swr $2, 23($5)
-; MIPS32R5-EB-NEXT:    swl $2, 20($5)
+; MIPS32R5-EB-NEXT:    copy_s.w $2, $w0[0]
+; MIPS32R5-EB-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32R5-EB-NEXT:    swr $2, 19($5)
+; MIPS32R5-EB-NEXT:    swl $2, 16($5)
+; MIPS32R5-EB-NEXT:    swr $1, 23($5)
+; MIPS32R5-EB-NEXT:    swl $1, 20($5)
 ; MIPS32R5-EB-NEXT:    jr $ra
 ; MIPS32R5-EB-NEXT:    nop
 ;
 ; MIPS32R5-EL-LABEL: llvm_mips_str_d_test:
 ; MIPS32R5-EL:       # %bb.0: # %entry
 ; MIPS32R5-EL-NEXT:    ld.d $w0, 0($4)
-; MIPS32R5-EL-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32R5-EL-NEXT:    copy_s.w $2, $w0[1]
-; MIPS32R5-EL-NEXT:    swr $1, 16($5)
-; MIPS32R5-EL-NEXT:    swl $1, 19($5)
-; MIPS32R5-EL-NEXT:    swr $2, 20($5)
-; MIPS32R5-EL-NEXT:    swl $2, 23($5)
+; MIPS32R5-EL-NEXT:    copy_s.w $2, $w0[0]
+; MIPS32R5-EL-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32R5-EL-NEXT:    swr $2, 16($5)
+; MIPS32R5-EL-NEXT:    swl $2, 19($5)
+; MIPS32R5-EL-NEXT:    swr $1, 20($5)
+; MIPS32R5-EL-NEXT:    swl $1, 23($5)
 ; MIPS32R5-EL-NEXT:    jr $ra
 ; MIPS32R5-EL-NEXT:    nop
 ;
 ; MIPS32R6-EB-LABEL: llvm_mips_str_d_test:
 ; MIPS32R6-EB:       # %bb.0: # %entry
 ; MIPS32R6-EB-NEXT:    ld.d $w0, 0($4)
-; MIPS32R6-EB-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32R6-EB-NEXT:    copy_s.w $2, $w0[1]
-; MIPS32R6-EB-NEXT:    sw $1, 20($5)
-; MIPS32R6-EB-NEXT:    sw $2, 16($5)
+; MIPS32R6-EB-NEXT:    copy_s.w $2, $w0[0]
+; MIPS32R6-EB-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32R6-EB-NEXT:    sw $2, 20($5)
+; MIPS32R6-EB-NEXT:    sw $1, 16($5)
 ; MIPS32R6-EB-NEXT:    jrc $ra
 ;
 ; MIPS32R6-EL-LABEL: llvm_mips_str_d_test:
 ; MIPS32R6-EL:       # %bb.0: # %entry
 ; MIPS32R6-EL-NEXT:    ld.d $w0, 0($4)
-; MIPS32R6-EL-NEXT:    copy_s.w $1, $w0[0]
-; MIPS32R6-EL-NEXT:    copy_s.w $2, $w0[1]
-; MIPS32R6-EL-NEXT:    sw $1, 16($5)
-; MIPS32R6-EL-NEXT:    sw $2, 20($5)
+; MIPS32R6-EL-NEXT:    copy_s.w $2, $w0[0]
+; MIPS32R6-EL-NEXT:    copy_s.w $1, $w0[1]
+; MIPS32R6-EL-NEXT:    sw $2, 16($5)
+; MIPS32R6-EL-NEXT:    sw $1, 20($5)
 ; MIPS32R6-EL-NEXT:    jrc $ra
 ;
 ; MIPS64R6-LABEL: llvm_mips_str_d_test:

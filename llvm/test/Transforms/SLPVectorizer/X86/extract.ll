@@ -6,7 +6,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @fextr(double* %ptr) {
 ; CHECK-LABEL: @fextr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef, align 16
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[LD]], <double 0.000000e+00, double 1.100000e+00>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <2 x double>*
@@ -29,12 +29,12 @@ entry:
 define void @fextr1(double* %ptr) {
 ; CHECK-LABEL: @fextr1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef
-; CHECK-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <2 x double> [[LD]], <2 x double> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* undef, align 16
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[REORDER_SHUFFLE]], <double 3.400000e+00, double 1.200000e+00>
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[LD]], <double 1.200000e+00, double 3.400000e+00>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP0]], <2 x double>* [[TMP1]], align 4
+; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], <2 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -53,11 +53,11 @@ entry:
 define void @fextr2(double* %ptr) {
 ; CHECK-LABEL: @fextr2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load <4 x double>, <4 x double>* undef
+; CHECK-NEXT:    [[LD:%.*]] = load <4 x double>, <4 x double>* undef, align 32
 ; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x double> [[LD]], i32 0
 ; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x double> [[LD]], i32 1
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[V0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 5.500000e+00, double 6.600000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double* [[P0]] to <2 x double>*

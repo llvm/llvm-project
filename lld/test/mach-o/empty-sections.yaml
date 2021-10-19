@@ -1,4 +1,4 @@
-# RUN: ld64.lld -arch x86_64 -r %s -o %t
+# RUN: ld64.lld.darwinold -arch x86_64 -r %s -o %t
 #
 # Test that writing empty mach-o sections does not segfault the linker.
 #

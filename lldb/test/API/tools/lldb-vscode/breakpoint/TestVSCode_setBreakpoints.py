@@ -21,11 +21,17 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         lldbvscode_testcase.VSCodeTestCaseBase.setUp(self)
 
         self.main_basename = 'main-copy.cpp'
-        self.main_path = self.getBuildArtifact(self.main_basename)
+        self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
     @skipIfWindows
     @skipIfRemote
     def test_source_map(self):
+        """
+        This test simulates building two files in a folder, and then moving
+        each source to a different folder. Then, the debug session is started
+        with the corresponding source maps to have breakpoints and frames
+        working.
+        """
         self.build_and_create_debug_adaptor()
 
         other_basename = 'other-copy.c'
@@ -87,6 +93,16 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEqual(other_basename, breakpoint['source']['name'])
         self.assertEqual(new_other_path, breakpoint['source']['path'])
 
+        # now we check the stack trace making sure that we got mapped source paths
+        frames = self.vscode.request_stackTrace()['body']['stackFrames']
+
+        self.assertEqual(frames[0]['source']['name'], other_basename)
+        self.assertEqual(frames[0]['source']['path'], new_other_path)
+
+        self.assertEqual(frames[1]['source']['name'], self.main_basename)
+        self.assertEqual(frames[1]['source']['path'], new_main_path)
+
+
     @skipIfWindows
     @skipIfRemote
     def test_set_and_clear(self):
@@ -125,7 +141,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 self.assertTrue(line, lines[index])
                 # Store the "id" of the breakpoint that was set for later
                 line_to_id[line] = breakpoint['id']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint verified")
 
@@ -151,7 +167,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -170,7 +186,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                 # making sure the breakpoint ID didn't change
                 self.assertEquals(line_to_id[line], breakpoint['id'],
                                 "verify previous breakpoints stayed the same")
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -200,7 +216,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
 
@@ -215,9 +231,51 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
                             "expect %u source breakpoints" % (len(lines)))
             for breakpoint in breakpoints:
                 line = breakpoint['line']
-                self.assertTrue(line in lines, "line expected in lines array")
+                self.assertIn(line, lines, "line expected in lines array")
                 self.assertTrue(breakpoint['verified'],
                                 "expect breakpoint still verified")
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_clear_breakpoints_unset_breakpoints(self):
+        '''Test clearing breakpoints like test_set_and_clear, but clear
+           breakpoints by omitting the breakpoints array instead of sending an
+           empty one.'''
+        lines = [line_number('main.cpp', 'break 12'),
+                 line_number('main.cpp', 'break 13')]
+
+        # Visual Studio Code Debug Adaptors have no way to specify the file
+        # without launching or attaching to a process, so we must start a
+        # process in order to be able to set breakpoints.
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+
+        # Set one breakpoint and verify that it got set correctly.
+        response = self.vscode.request_setBreakpoints(self.main_path, lines)
+        line_to_id = {}
+        breakpoints = response['body']['breakpoints']
+        self.assertEquals(len(breakpoints), len(lines),
+                        "expect %u source breakpoints" % (len(lines)))
+        for (breakpoint, index) in zip(breakpoints, range(len(lines))):
+            line = breakpoint['line']
+            self.assertTrue(line, lines[index])
+            # Store the "id" of the breakpoint that was set for later
+            line_to_id[line] = breakpoint['id']
+            self.assertIn(line, lines, "line expected in lines array")
+            self.assertTrue(breakpoint['verified'],
+                            "expect breakpoint verified")
+
+        # Now clear all breakpoints for the source file by not setting the
+        # lines array.
+        lines = None
+        response = self.vscode.request_setBreakpoints(self.main_path, lines)
+        breakpoints = response['body']['breakpoints']
+        self.assertEquals(len(breakpoints), 0, "expect no source breakpoints")
+
+        # Verify with the target that all breakpoints have been cleared.
+        response = self.vscode.request_testGetTargetBreakpoints()
+        breakpoints = response['body']['breakpoints']
+        self.assertEquals(len(breakpoints), 0, "expect no source breakpoints")
 
     @skipIfWindows
     @skipIfRemote

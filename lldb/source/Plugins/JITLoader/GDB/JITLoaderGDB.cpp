@@ -105,11 +105,9 @@ public:
   }
 };
 
-typedef std::shared_ptr<PluginProperties> JITLoaderGDBPropertiesSP;
-
-static const JITLoaderGDBPropertiesSP &GetGlobalPluginProperties() {
-  static const auto g_settings_sp(std::make_shared<PluginProperties>());
-  return g_settings_sp;
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
 }
 
 template <typename ptr_t>
@@ -160,7 +158,7 @@ void JITLoaderGDB::DebuggerInitialize(Debugger &debugger) {
           debugger, PluginProperties::GetSettingName())) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForJITLoaderPlugin(
-        debugger, GetGlobalPluginProperties()->GetValueProperties(),
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
         ConstString("Properties for the JIT LoaderGDB plug-in."),
         is_global_setting);
   }
@@ -291,8 +289,8 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
   jit_descriptor<ptr_t> jit_desc;
   const size_t jit_desc_size = sizeof(jit_desc);
   Status error;
-  size_t bytes_read = m_process->DoReadMemory(m_jit_descriptor_addr, &jit_desc,
-                                              jit_desc_size, error);
+  size_t bytes_read = m_process->ReadMemory(m_jit_descriptor_addr, &jit_desc,
+                                            jit_desc_size, error);
   if (bytes_read != jit_desc_size || !error.Success()) {
     LLDB_LOGF(log, "JITLoaderGDB::%s failed to read JIT descriptor",
               __FUNCTION__);
@@ -412,7 +410,7 @@ lldb_private::ConstString JITLoaderGDB::GetPluginNameStatic() {
 JITLoaderSP JITLoaderGDB::CreateInstance(Process *process, bool force) {
   JITLoaderSP jit_loader_sp;
   bool enable;
-  switch (GetGlobalPluginProperties()->GetEnable()) {
+  switch (GetGlobalPluginProperties().GetEnable()) {
     case EnableJITLoaderGDB::eEnableJITLoaderGDBOn:
       enable = true;
       break;
@@ -433,12 +431,6 @@ const char *JITLoaderGDB::GetPluginDescriptionStatic() {
   return "JIT loader plug-in that watches for JIT events using the GDB "
          "interface.";
 }
-
-lldb_private::ConstString JITLoaderGDB::GetPluginName() {
-  return GetPluginNameStatic();
-}
-
-uint32_t JITLoaderGDB::GetPluginVersion() { return 1; }
 
 void JITLoaderGDB::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

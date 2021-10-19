@@ -33,6 +33,7 @@ intermediate LLVM representation.
    GoldPlugin
    HowToBuildOnARM
    HowToBuildWithPGO
+   HowToBuildWindowsItaniumPrograms
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
@@ -42,6 +43,10 @@ intermediate LLVM representation.
    MemorySSA
    MergeFunctions
    MCJITDesignAndImplementation
+   ORCv2
+   OpaquePointers
+   JITLink
+   NewPassManager
    NVPTXUsage
    Phabricator
    Passes
@@ -54,6 +59,7 @@ intermediate LLVM representation.
    TableGenFundamentals
    Vectorizers
    WritingAnLLVMPass
+   WritingAnLLVMNewPMPass
    WritingAnLLVMBackend
    yaml2obj
 
@@ -106,6 +112,10 @@ Optimizations
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
+
+:doc:`WritingAnLLVMNewPMPass`
+   Information on how to write LLVM transformations under the new pass
+   manager.
 
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
@@ -166,6 +176,14 @@ JIT
 :doc:`MCJITDesignAndImplementation`
    Describes the inner workings of MCJIT execution engine.
 
+:doc:`ORCv2`
+   Describes the design and implementation of the ORC APIs, including some
+   usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
+
+:doc:`JITLink`
+   Describes the design and APIs for the JITLink library, ORC's new JIT
+   linker.
+
 :doc:`DebuggingJITedCode`
    How to debug JITed code with GDB.
 
@@ -181,6 +199,9 @@ Additional Topics
 :doc:`AddingConstrainedIntrinsics`
    Gives the steps necessary when adding a new constrained math intrinsic
    to LLVM.
+
+:doc:`HowToBuildWindowsItaniumPrograms`
+   Notes on assembling a Windows Itanium environment.
 
 :doc:`HowToCrossCompileBuiltinsOnArm`
    Notes on cross-building and testing the compiler-rt builtins for Arm.

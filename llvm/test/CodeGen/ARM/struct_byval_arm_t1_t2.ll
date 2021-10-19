@@ -25,33 +25,33 @@
 ;cleanup if the number of bytes does not divide evenly by the store size
 
 %struct.A = type <{ [ 10 x i32 ] }> ; 40 bytes
-declare void @use_A(%struct.A* byval)
+declare void @use_A(%struct.A* byval(%struct.A))
 %struct.B = type <{ [ 10 x i32 ], i8 }> ; 41 bytes
-declare void @use_B(%struct.B* byval)
+declare void @use_B(%struct.B* byval(%struct.B))
 %struct.C = type <{ [ 10 x i32 ], [ 3 x i8 ] }> ; 43 bytes
-declare void @use_C(%struct.C* byval)
+declare void @use_C(%struct.C* byval(%struct.C))
 %struct.D = type <{ [ 100 x i32 ] }> ; 400 bytes
-declare void @use_D(%struct.D* byval)
+declare void @use_D(%struct.D* byval(%struct.D))
 %struct.E = type <{ [ 100 x i32 ], i8 }> ; 401 bytes
-declare void @use_E(%struct.E* byval)
+declare void @use_E(%struct.E* byval(%struct.E))
 %struct.F = type <{ [ 100 x i32 ], [ 3 x i8 ] }> ; 403 bytes
-declare void @use_F(%struct.F* byval)
+declare void @use_F(%struct.F* byval(%struct.F))
 %struct.G = type  { [ 10 x i32 ] }  ; 40 bytes
-declare void @use_G(%struct.G* byval)
+declare void @use_G(%struct.G* byval(%struct.G))
 %struct.H = type  { [ 10 x i32 ], i8 }  ; 41 bytes
-declare void @use_H(%struct.H* byval)
+declare void @use_H(%struct.H* byval(%struct.H))
 %struct.I = type  { [ 10 x i32 ], [ 3 x i8 ] }  ; 43 bytes
-declare void @use_I(%struct.I* byval)
+declare void @use_I(%struct.I* byval(%struct.I))
 %struct.J = type  { [ 100 x i32 ] }  ; 400 bytes
-declare void @use_J(%struct.J* byval)
+declare void @use_J(%struct.J* byval(%struct.J))
 %struct.K = type  { [ 100 x i32 ], i8 }  ; 401 bytes
-declare void @use_K(%struct.K* byval)
+declare void @use_K(%struct.K* byval(%struct.K))
 %struct.L = type  { [ 100 x i32 ], [ 3 x i8 ] }  ; 403 bytes
-declare void @use_L(%struct.L* byval)
+declare void @use_L(%struct.L* byval(%struct.L))
 %struct.M = type  { [  64 x i8 ] }   ; 64 bytes
-declare void @use_M(%struct.M* byval)
+declare void @use_M(%struct.M* byval(%struct.M))
 %struct.N = type  { [ 128 x i8 ] }  ; 128 bytes
-declare void @use_N(%struct.N* byval)
+declare void @use_N(%struct.N* byval(%struct.N))
 
 ;ARM-LABEL:    <test_A_1>:
 ;THUMB2-LABEL: <test_A_1>:
@@ -71,7 +71,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.A, align 1
-    call void @use_A(%struct.A* byval align 1 %a)
+    call void @use_A(%struct.A* byval(%struct.A) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_A_2>:
@@ -92,7 +92,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.A, align 2
-    call void @use_A(%struct.A* byval align 2 %a)
+    call void @use_A(%struct.A* byval(%struct.A) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_A_4>:
@@ -113,7 +113,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.A, align 4
-    call void @use_A(%struct.A* byval align 4 %a)
+    call void @use_A(%struct.A* byval(%struct.A) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_A_8>:
@@ -135,7 +135,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.A, align 8
-    call void @use_A(%struct.A* byval align 8 %a)
+    call void @use_A(%struct.A* byval(%struct.A) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_A_16>:
@@ -159,7 +159,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.A, align 16
-    call void @use_A(%struct.A* byval align 16 %a)
+    call void @use_A(%struct.A* byval(%struct.A) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_B_1>:
@@ -180,7 +180,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.B, align 1
-    call void @use_B(%struct.B* byval align 1 %a)
+    call void @use_B(%struct.B* byval(%struct.B) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_B_2>:
@@ -205,7 +205,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.B, align 2
-    call void @use_B(%struct.B* byval align 2 %a)
+    call void @use_B(%struct.B* byval(%struct.B) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_B_4>:
@@ -230,7 +230,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.B, align 4
-    call void @use_B(%struct.B* byval align 4 %a)
+    call void @use_B(%struct.B* byval(%struct.B) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_B_8>:
@@ -256,7 +256,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.B, align 8
-    call void @use_B(%struct.B* byval align 8 %a)
+    call void @use_B(%struct.B* byval(%struct.B) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_B_16>:
@@ -282,7 +282,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.B, align 16
-    call void @use_B(%struct.B* byval align 16 %a)
+    call void @use_B(%struct.B* byval(%struct.B) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_C_1>:
@@ -303,7 +303,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.C, align 1
-    call void @use_C(%struct.C* byval align 1 %a)
+    call void @use_C(%struct.C* byval(%struct.C) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_C_2>:
@@ -328,7 +328,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.C, align 2
-    call void @use_C(%struct.C* byval align 2 %a)
+    call void @use_C(%struct.C* byval(%struct.C) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_C_4>:
@@ -354,7 +354,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.C, align 4
-    call void @use_C(%struct.C* byval align 4 %a)
+    call void @use_C(%struct.C* byval(%struct.C) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_C_8>:
@@ -381,7 +381,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.C, align 8
-    call void @use_C(%struct.C* byval align 8 %a)
+    call void @use_C(%struct.C* byval(%struct.C) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_C_16>:
@@ -408,7 +408,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.C, align 16
-    call void @use_C(%struct.C* byval align 16 %a)
+    call void @use_C(%struct.C* byval(%struct.C) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_D_1>:
@@ -433,7 +433,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.D, align 1
-    call void @use_D(%struct.D* byval align 1 %a)
+    call void @use_D(%struct.D* byval(%struct.D) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_D_2>:
@@ -458,7 +458,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.D, align 2
-    call void @use_D(%struct.D* byval align 2 %a)
+    call void @use_D(%struct.D* byval(%struct.D) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_D_4>:
@@ -483,7 +483,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.D, align 4
-    call void @use_D(%struct.D* byval align 4 %a)
+    call void @use_D(%struct.D* byval(%struct.D) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_D_8>:
@@ -509,7 +509,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.D, align 8
-    call void @use_D(%struct.D* byval align 8 %a)
+    call void @use_D(%struct.D* byval(%struct.D) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_D_16>:
@@ -535,7 +535,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.D, align 16
-    call void @use_D(%struct.D* byval align 16 %a)
+    call void @use_D(%struct.D* byval(%struct.D) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_E_1>:
@@ -560,7 +560,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.E, align 1
-    call void @use_E(%struct.E* byval align 1 %a)
+    call void @use_E(%struct.E* byval(%struct.E) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_E_2>:
@@ -589,7 +589,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.E, align 2
-    call void @use_E(%struct.E* byval align 2 %a)
+    call void @use_E(%struct.E* byval(%struct.E) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_E_4>:
@@ -618,7 +618,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.E, align 4
-    call void @use_E(%struct.E* byval align 4 %a)
+    call void @use_E(%struct.E* byval(%struct.E) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_E_8>:
@@ -648,7 +648,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.E, align 8
-    call void @use_E(%struct.E* byval align 8 %a)
+    call void @use_E(%struct.E* byval(%struct.E) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_E_16>:
@@ -678,7 +678,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.E, align 16
-    call void @use_E(%struct.E* byval align 16 %a)
+    call void @use_E(%struct.E* byval(%struct.E) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_F_1>:
@@ -703,7 +703,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.F, align 1
-    call void @use_F(%struct.F* byval align 1 %a)
+    call void @use_F(%struct.F* byval(%struct.F) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_F_2>:
@@ -732,7 +732,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.F, align 2
-    call void @use_F(%struct.F* byval align 2 %a)
+    call void @use_F(%struct.F* byval(%struct.F) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_F_4>:
@@ -762,7 +762,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.F, align 4
-    call void @use_F(%struct.F* byval align 4 %a)
+    call void @use_F(%struct.F* byval(%struct.F) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_F_8>:
@@ -793,7 +793,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.F, align 8
-    call void @use_F(%struct.F* byval align 8 %a)
+    call void @use_F(%struct.F* byval(%struct.F) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_F_16>:
@@ -824,7 +824,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.F, align 16
-    call void @use_F(%struct.F* byval align 16 %a)
+    call void @use_F(%struct.F* byval(%struct.F) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_G_1>:
@@ -845,7 +845,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.G, align 1
-    call void @use_G(%struct.G* byval align 1 %a)
+    call void @use_G(%struct.G* byval(%struct.G) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_G_2>:
@@ -866,7 +866,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.G, align 2
-    call void @use_G(%struct.G* byval align 2 %a)
+    call void @use_G(%struct.G* byval(%struct.G) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_G_4>:
@@ -887,7 +887,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.G, align 4
-    call void @use_G(%struct.G* byval align 4 %a)
+    call void @use_G(%struct.G* byval(%struct.G) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_G_8>:
@@ -909,7 +909,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.G, align 8
-    call void @use_G(%struct.G* byval align 8 %a)
+    call void @use_G(%struct.G* byval(%struct.G) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_G_16>:
@@ -931,7 +931,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.G, align 16
-    call void @use_G(%struct.G* byval align 16 %a)
+    call void @use_G(%struct.G* byval(%struct.G) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_H_1>:
@@ -952,7 +952,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.H, align 1
-    call void @use_H(%struct.H* byval align 1 %a)
+    call void @use_H(%struct.H* byval(%struct.H) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_H_2>:
@@ -973,7 +973,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.H, align 2
-    call void @use_H(%struct.H* byval align 2 %a)
+    call void @use_H(%struct.H* byval(%struct.H) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_H_4>:
@@ -994,7 +994,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.H, align 4
-    call void @use_H(%struct.H* byval align 4 %a)
+    call void @use_H(%struct.H* byval(%struct.H) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_H_8>:
@@ -1016,7 +1016,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.H, align 8
-    call void @use_H(%struct.H* byval align 8 %a)
+    call void @use_H(%struct.H* byval(%struct.H) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_H_16>:
@@ -1038,7 +1038,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.H, align 16
-    call void @use_H(%struct.H* byval align 16 %a)
+    call void @use_H(%struct.H* byval(%struct.H) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_I_1>:
@@ -1059,7 +1059,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.I, align 1
-    call void @use_I(%struct.I* byval align 1 %a)
+    call void @use_I(%struct.I* byval(%struct.I) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_I_2>:
@@ -1080,7 +1080,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.I, align 2
-    call void @use_I(%struct.I* byval align 2 %a)
+    call void @use_I(%struct.I* byval(%struct.I) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_I_4>:
@@ -1101,7 +1101,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.I, align 4
-    call void @use_I(%struct.I* byval align 4 %a)
+    call void @use_I(%struct.I* byval(%struct.I) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_I_8>:
@@ -1123,7 +1123,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.I, align 8
-    call void @use_I(%struct.I* byval align 8 %a)
+    call void @use_I(%struct.I* byval(%struct.I) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_I_16>:
@@ -1145,7 +1145,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.I, align 16
-    call void @use_I(%struct.I* byval align 16 %a)
+    call void @use_I(%struct.I* byval(%struct.I) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_J_1>:
@@ -1170,7 +1170,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.J, align 1
-    call void @use_J(%struct.J* byval align 1 %a)
+    call void @use_J(%struct.J* byval(%struct.J) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_J_2>:
@@ -1195,7 +1195,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.J, align 2
-    call void @use_J(%struct.J* byval align 2 %a)
+    call void @use_J(%struct.J* byval(%struct.J) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_J_4>:
@@ -1220,7 +1220,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.J, align 4
-    call void @use_J(%struct.J* byval align 4 %a)
+    call void @use_J(%struct.J* byval(%struct.J) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_J_8>:
@@ -1246,7 +1246,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.J, align 8
-    call void @use_J(%struct.J* byval align 8 %a)
+    call void @use_J(%struct.J* byval(%struct.J) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_J_16>:
@@ -1272,7 +1272,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.J, align 16
-    call void @use_J(%struct.J* byval align 16 %a)
+    call void @use_J(%struct.J* byval(%struct.J) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_K_1>:
@@ -1297,7 +1297,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.K, align 1
-    call void @use_K(%struct.K* byval align 1 %a)
+    call void @use_K(%struct.K* byval(%struct.K) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_K_2>:
@@ -1322,7 +1322,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.K, align 2
-    call void @use_K(%struct.K* byval align 2 %a)
+    call void @use_K(%struct.K* byval(%struct.K) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_K_4>:
@@ -1347,7 +1347,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.K, align 4
-    call void @use_K(%struct.K* byval align 4 %a)
+    call void @use_K(%struct.K* byval(%struct.K) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_K_8>:
@@ -1373,7 +1373,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.K, align 8
-    call void @use_K(%struct.K* byval align 8 %a)
+    call void @use_K(%struct.K* byval(%struct.K) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_K_16>:
@@ -1399,7 +1399,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.K, align 16
-    call void @use_K(%struct.K* byval align 16 %a)
+    call void @use_K(%struct.K* byval(%struct.K) align 16 %a)
     ret void
   }
 ;ARM-LABEL:    <test_L_1>:
@@ -1424,7 +1424,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrb    r{{[0-9]+}}, [{{.*}}], #1
   entry:
     %a = alloca %struct.L, align 1
-    call void @use_L(%struct.L* byval align 1 %a)
+    call void @use_L(%struct.L* byval(%struct.L) align 1 %a)
     ret void
   }
 ;ARM-LABEL:    <test_L_2>:
@@ -1449,7 +1449,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldrh    r{{[0-9]+}}, [{{.*}}], #2
   entry:
     %a = alloca %struct.L, align 2
-    call void @use_L(%struct.L* byval align 2 %a)
+    call void @use_L(%struct.L* byval(%struct.L) align 2 %a)
     ret void
   }
 ;ARM-LABEL:    <test_L_4>:
@@ -1474,7 +1474,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  ldr     r{{[0-9]+}}, [{{.*}}], #4
   entry:
     %a = alloca %struct.L, align 4
-    call void @use_L(%struct.L* byval align 4 %a)
+    call void @use_L(%struct.L* byval(%struct.L) align 4 %a)
     ret void
   }
 ;ARM-LABEL:    <test_L_8>:
@@ -1500,7 +1500,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.L, align 8
-    call void @use_L(%struct.L* byval align 8 %a)
+    call void @use_L(%struct.L* byval(%struct.L) align 8 %a)
     ret void
   }
 ;ARM-LABEL:    <test_L_16>:
@@ -1526,7 +1526,7 @@ declare void @use_N(%struct.N* byval)
 ;T1POST-NOT:  vld1.32 {d{{[0-9]+}}, d{{[0-9]+}}}, [{{.*}}]!
   entry:
     %a = alloca %struct.L, align 16
-    call void @use_L(%struct.L* byval align 16 %a)
+    call void @use_L(%struct.L* byval(%struct.L) align 16 %a)
     ret void
   }
 ;V8MBASE-LABEL: <test_M>:
@@ -1537,7 +1537,7 @@ declare void @use_N(%struct.N* byval)
 ;V8MBASE-NOT:  movw
   entry:
     %a = alloca %struct.M, align 1
-    call void @use_M(%struct.M* byval align 1 %a)
+    call void @use_M(%struct.M* byval(%struct.M) align 1 %a)
     ret void
   }
 ;V8MBASE-LABEL: <test_N>:
@@ -1547,6 +1547,6 @@ declare void @use_N(%struct.N* byval)
 ;V8MBASE-NOT:  b       #{{[0-9]+}}
   entry:
     %a = alloca %struct.N, align 1
-    call void @use_N(%struct.N* byval align 1 %a)
+    call void @use_N(%struct.N* byval(%struct.N) align 1 %a)
     ret void
   }

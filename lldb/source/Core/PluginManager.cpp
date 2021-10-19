@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -20,7 +21,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <assert.h>
+#include <cassert>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -38,11 +39,11 @@ typedef bool (*PluginInitCallback)();
 typedef void (*PluginTermCallback)();
 
 struct PluginInfo {
-  PluginInfo() : plugin_init_callback(nullptr), plugin_term_callback(nullptr) {}
+  PluginInfo() = default;
 
   llvm::sys::DynamicLibrary library;
-  PluginInitCallback plugin_init_callback;
-  PluginTermCallback plugin_term_callback;
+  PluginInitCallback plugin_init_callback = nullptr;
+  PluginTermCallback plugin_term_callback = nullptr;
 };
 
 typedef std::map<FileSpec, PluginInfo> PluginTerminateMap;
@@ -264,12 +265,13 @@ public:
   const std::vector<Instance> &GetInstances() const { return m_instances; }
   std::vector<Instance> &GetInstances() { return m_instances; }
 
-private:
   Instance *GetInstanceAtIndex(uint32_t idx) {
     if (idx < m_instances.size())
       return &m_instances[idx];
     return nullptr;
   }
+
+private:
   std::vector<Instance> m_instances;
 };
 
@@ -683,11 +685,26 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile) {
+                               const FileSpec &outfile,
+                               lldb::SaveCoreStyle &core_style,
+                               const ConstString plugin_name) {
+  if (!plugin_name) {
+    // Try saving core directly from the process plugin first.
+    llvm::Expected<bool> ret = process_sp->SaveCore(outfile.GetPath());
+    if (!ret)
+      return Status(ret.takeError());
+    if (ret.get())
+      return Status();
+  }
+
+  // Fall back to object plugins.
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (instance.save_core && instance.save_core(process_sp, outfile, error))
+    if (plugin_name && instance.name != plugin_name)
+      continue;
+    if (instance.save_core &&
+        instance.save_core(process_sp, outfile, core_style, error))
       return error;
   }
   error.SetErrorString(
@@ -1005,6 +1022,127 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
   return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
 }
 
+#pragma mark Trace
+
+struct TraceInstance
+    : public PluginInstance<TraceCreateInstanceForSessionFile> {
+  TraceInstance(
+      ConstString name, std::string description,
+      CallbackType create_callback_for_session_file,
+      TraceCreateInstanceForLiveProcess create_callback_for_live_process,
+      llvm::StringRef schema)
+      : PluginInstance<TraceCreateInstanceForSessionFile>(
+            name, std::move(description), create_callback_for_session_file),
+        schema(schema),
+        create_callback_for_live_process(create_callback_for_live_process) {}
+
+  llvm::StringRef schema;
+  TraceCreateInstanceForLiveProcess create_callback_for_live_process;
+};
+
+typedef PluginInstances<TraceInstance> TraceInstances;
+
+static TraceInstances &GetTracePluginInstances() {
+  static TraceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    ConstString name, const char *description,
+    TraceCreateInstanceForSessionFile create_callback_for_session_file,
+    TraceCreateInstanceForLiveProcess create_callback_for_live_process,
+    llvm::StringRef schema) {
+  return GetTracePluginInstances().RegisterPlugin(
+      name, description, create_callback_for_session_file,
+      create_callback_for_live_process, schema);
+}
+
+bool PluginManager::UnregisterPlugin(
+    TraceCreateInstanceForSessionFile create_callback_for_session_file) {
+  return GetTracePluginInstances().UnregisterPlugin(
+      create_callback_for_session_file);
+}
+
+TraceCreateInstanceForSessionFile
+PluginManager::GetTraceCreateCallback(ConstString plugin_name) {
+  return GetTracePluginInstances().GetCallbackForName(plugin_name);
+}
+
+TraceCreateInstanceForLiveProcess
+PluginManager::GetTraceCreateCallbackForLiveProcess(ConstString plugin_name) {
+  for (const TraceInstance &instance : GetTracePluginInstances().GetInstances())
+    if (instance.name == plugin_name)
+      return instance.create_callback_for_live_process;
+  return nullptr;
+}
+
+llvm::StringRef PluginManager::GetTraceSchema(ConstString plugin_name) {
+  for (const TraceInstance &instance : GetTracePluginInstances().GetInstances())
+    if (instance.name == plugin_name)
+      return instance.schema;
+  return llvm::StringRef();
+}
+
+llvm::StringRef PluginManager::GetTraceSchema(size_t index) {
+  if (TraceInstance *instance =
+          GetTracePluginInstances().GetInstanceAtIndex(index))
+    return instance->schema;
+  return llvm::StringRef();
+}
+
+#pragma mark TraceExporter
+
+struct TraceExporterInstance
+    : public PluginInstance<TraceExporterCreateInstance> {
+  TraceExporterInstance(
+      ConstString name, std::string description,
+      TraceExporterCreateInstance create_instance,
+      ThreadTraceExportCommandCreator create_thread_trace_export_command)
+      : PluginInstance<TraceExporterCreateInstance>(
+            name, std::move(description), create_instance),
+        create_thread_trace_export_command(create_thread_trace_export_command) {
+  }
+
+  ThreadTraceExportCommandCreator create_thread_trace_export_command;
+};
+
+typedef PluginInstances<TraceExporterInstance> TraceExporterInstances;
+
+static TraceExporterInstances &GetTraceExporterInstances() {
+  static TraceExporterInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    ConstString name, const char *description,
+    TraceExporterCreateInstance create_callback,
+    ThreadTraceExportCommandCreator create_thread_trace_export_command) {
+  return GetTraceExporterInstances().RegisterPlugin(
+      name, description, create_callback, create_thread_trace_export_command);
+}
+
+TraceExporterCreateInstance
+PluginManager::GetTraceExporterCreateCallback(ConstString plugin_name) {
+  return GetTraceExporterInstances().GetCallbackForName(plugin_name);
+}
+
+bool PluginManager::UnregisterPlugin(
+    TraceExporterCreateInstance create_callback) {
+  return GetTraceExporterInstances().UnregisterPlugin(create_callback);
+}
+
+ThreadTraceExportCommandCreator
+PluginManager::GetThreadTraceExportCommandCreatorAtIndex(uint32_t index) {
+  if (TraceExporterInstance *instance =
+          GetTraceExporterInstances().GetInstanceAtIndex(index))
+    return instance->create_thread_trace_export_command;
+  return nullptr;
+}
+
+const char *PluginManager::GetTraceExporterPluginNameAtIndex(uint32_t index) {
+  return GetTraceExporterInstances().GetNameAtIndex(index);
+}
+
 #pragma mark UnwindAssembly
 
 typedef PluginInstance<UnwindAssemblyCreateInstance> UnwindAssemblyInstance;
@@ -1218,6 +1356,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetSymbolFileInstances().PerformDebuggerCallback(debugger);
   GetOperatingSystemInstances().PerformDebuggerCallback(debugger);
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
+  GetTracePluginInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.
@@ -1296,8 +1435,9 @@ namespace {
 typedef lldb::OptionValuePropertiesSP
 GetDebuggerPropertyForPluginsPtr(Debugger &, ConstString, ConstString,
                                  bool can_create);
+}
 
-lldb::OptionValuePropertiesSP
+static lldb::OptionValuePropertiesSP
 GetSettingForPlugin(Debugger &debugger, ConstString setting_name,
                     ConstString plugin_type_name,
                     GetDebuggerPropertyForPluginsPtr get_debugger_property =
@@ -1313,13 +1453,13 @@ GetSettingForPlugin(Debugger &debugger, ConstString setting_name,
   return properties_sp;
 }
 
-bool CreateSettingForPlugin(
-    Debugger &debugger, ConstString plugin_type_name,
-    ConstString plugin_type_desc,
-    const lldb::OptionValuePropertiesSP &properties_sp, ConstString description,
-    bool is_global_property,
-    GetDebuggerPropertyForPluginsPtr get_debugger_property =
-        GetDebuggerPropertyForPlugins) {
+static bool
+CreateSettingForPlugin(Debugger &debugger, ConstString plugin_type_name,
+                       ConstString plugin_type_desc,
+                       const lldb::OptionValuePropertiesSP &properties_sp,
+                       ConstString description, bool is_global_property,
+                       GetDebuggerPropertyForPluginsPtr get_debugger_property =
+                           GetDebuggerPropertyForPlugins) {
   if (properties_sp) {
     lldb::OptionValuePropertiesSP plugin_type_properties_sp(
         get_debugger_property(debugger, plugin_type_name, plugin_type_desc,
@@ -1334,14 +1474,12 @@ bool CreateSettingForPlugin(
   return false;
 }
 
-const char *kDynamicLoaderPluginName("dynamic-loader");
-const char *kPlatformPluginName("platform");
-const char *kProcessPluginName("process");
-const char *kSymbolFilePluginName("symbol-file");
-const char *kJITLoaderPluginName("jit-loader");
-const char *kStructuredDataPluginName("structured-data");
-
-} // anonymous namespace
+static const char *kDynamicLoaderPluginName("dynamic-loader");
+static const char *kPlatformPluginName("platform");
+static const char *kProcessPluginName("process");
+static const char *kSymbolFilePluginName("symbol-file");
+static const char *kJITLoaderPluginName("jit-loader");
+static const char *kStructuredDataPluginName("structured-data");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin(Debugger &debugger,

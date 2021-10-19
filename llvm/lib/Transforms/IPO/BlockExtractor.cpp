@@ -11,10 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/BlockExtractor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,17 +36,15 @@ static cl::opt<std::string> BlockExtractorFile(
     "extract-blocks-file", cl::value_desc("filename"),
     cl::desc("A file containing list of basic blocks to extract"), cl::Hidden);
 
-cl::opt<bool> BlockExtractorEraseFuncs("extract-blocks-erase-funcs",
-                                       cl::desc("Erase the existing functions"),
-                                       cl::Hidden);
+static cl::opt<bool>
+    BlockExtractorEraseFuncs("extract-blocks-erase-funcs",
+                             cl::desc("Erase the existing functions"),
+                             cl::Hidden);
 namespace {
-class BlockExtractor : public ModulePass {
-  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupsOfBlocks;
-  bool EraseFunctions;
-  /// Map a function name to groups of blocks.
-  SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
-      BlocksByName;
-
+class BlockExtractor {
+public:
+  BlockExtractor(bool EraseFunctions) : EraseFunctions(EraseFunctions) {}
+  bool runOnModule(Module &M);
   void init(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
                 &GroupsOfBlocksToExtract) {
     for (const SmallVectorImpl<BasicBlock *> &GroupOfBlocks :
@@ -57,11 +57,26 @@ class BlockExtractor : public ModulePass {
       loadFile();
   }
 
+private:
+  SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupsOfBlocks;
+  bool EraseFunctions;
+  /// Map a function name to groups of blocks.
+  SmallVector<std::pair<std::string, SmallVector<std::string, 4>>, 4>
+      BlocksByName;
+
+  void loadFile();
+  void splitLandingPadPreds(Function &F);
+};
+
+class BlockExtractorLegacyPass : public ModulePass {
+  BlockExtractor BE;
+  bool runOnModule(Module &M) override;
+
 public:
   static char ID;
-  BlockExtractor(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
-                 bool EraseFunctions)
-      : ModulePass(ID), EraseFunctions(EraseFunctions) {
+  BlockExtractorLegacyPass(const SmallVectorImpl<BasicBlock *> &BlocksToExtract,
+                           bool EraseFunctions)
+      : ModulePass(ID), BE(EraseFunctions) {
     // We want one group per element of the input list.
     SmallVector<SmallVector<BasicBlock *, 16>, 4> MassagedGroupsOfBlocks;
     for (BasicBlock *BB : BlocksToExtract) {
@@ -69,39 +84,38 @@ public:
       NewGroup.push_back(BB);
       MassagedGroupsOfBlocks.push_back(NewGroup);
     }
-    init(MassagedGroupsOfBlocks);
+    BE.init(MassagedGroupsOfBlocks);
   }
 
-  BlockExtractor(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
-                     &GroupsOfBlocksToExtract,
-                 bool EraseFunctions)
-      : ModulePass(ID), EraseFunctions(EraseFunctions) {
-    init(GroupsOfBlocksToExtract);
+  BlockExtractorLegacyPass(const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
+                               &GroupsOfBlocksToExtract,
+                           bool EraseFunctions)
+      : ModulePass(ID), BE(EraseFunctions) {
+    BE.init(GroupsOfBlocksToExtract);
   }
 
-  BlockExtractor() : BlockExtractor(SmallVector<BasicBlock *, 0>(), false) {}
-  bool runOnModule(Module &M) override;
-
-private:
-  void loadFile();
-  void splitLandingPadPreds(Function &F);
+  BlockExtractorLegacyPass()
+      : BlockExtractorLegacyPass(SmallVector<BasicBlock *, 0>(), false) {}
 };
+
 } // end anonymous namespace
 
-char BlockExtractor::ID = 0;
-INITIALIZE_PASS(BlockExtractor, "extract-blocks",
+char BlockExtractorLegacyPass::ID = 0;
+INITIALIZE_PASS(BlockExtractorLegacyPass, "extract-blocks",
                 "Extract basic blocks from module", false, false)
 
-ModulePass *llvm::createBlockExtractorPass() { return new BlockExtractor(); }
+ModulePass *llvm::createBlockExtractorPass() {
+  return new BlockExtractorLegacyPass();
+}
 ModulePass *llvm::createBlockExtractorPass(
     const SmallVectorImpl<BasicBlock *> &BlocksToExtract, bool EraseFunctions) {
-  return new BlockExtractor(BlocksToExtract, EraseFunctions);
+  return new BlockExtractorLegacyPass(BlocksToExtract, EraseFunctions);
 }
 ModulePass *llvm::createBlockExtractorPass(
     const SmallVectorImpl<SmallVector<BasicBlock *, 16>>
         &GroupsOfBlocksToExtract,
     bool EraseFunctions) {
-  return new BlockExtractor(GroupsOfBlocksToExtract, EraseFunctions);
+  return new BlockExtractorLegacyPass(GroupsOfBlocksToExtract, EraseFunctions);
 }
 
 /// Gets all of the blocks specified in the input file.
@@ -232,4 +246,16 @@ bool BlockExtractor::runOnModule(Module &M) {
   }
 
   return Changed;
+}
+
+bool BlockExtractorLegacyPass::runOnModule(Module &M) {
+  return BE.runOnModule(M);
+}
+
+PreservedAnalyses BlockExtractorPass::run(Module &M,
+                                          ModuleAnalysisManager &AM) {
+  BlockExtractor BE(false);
+  BE.init(SmallVector<SmallVector<BasicBlock *, 16>, 0>());
+  return BE.runOnModule(M) ? PreservedAnalyses::none()
+                           : PreservedAnalyses::all();
 }

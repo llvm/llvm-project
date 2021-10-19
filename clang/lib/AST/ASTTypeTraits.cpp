@@ -14,35 +14,43 @@
 
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/TypeLoc.h"
 
 using namespace clang;
 
 const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
-  { NKI_None, "<None>" },
-  { NKI_None, "TemplateArgument" },
-  { NKI_None, "TemplateArgumentLoc" },
-  { NKI_None, "TemplateName" },
-  { NKI_None, "NestedNameSpecifierLoc" },
-  { NKI_None, "QualType" },
-  { NKI_None, "TypeLoc" },
-  { NKI_None, "CXXBaseSpecifier" },
-  { NKI_None, "CXXCtorInitializer" },
-  { NKI_None, "NestedNameSpecifier" },
-  { NKI_None, "Decl" },
+    {NKI_None, "<None>"},
+    {NKI_None, "TemplateArgument"},
+    {NKI_None, "TemplateArgumentLoc"},
+    {NKI_None, "TemplateName"},
+    {NKI_None, "NestedNameSpecifierLoc"},
+    {NKI_None, "QualType"},
+#define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
+#include "clang/AST/TypeLocNodes.def"
+    {NKI_None, "TypeLoc"},
+    {NKI_None, "CXXBaseSpecifier"},
+    {NKI_None, "CXXCtorInitializer"},
+    {NKI_None, "NestedNameSpecifier"},
+    {NKI_None, "Decl"},
 #define DECL(DERIVED, BASE) { NKI_##BASE, #DERIVED "Decl" },
 #include "clang/AST/DeclNodes.inc"
-  { NKI_None, "Stmt" },
+    {NKI_None, "Stmt"},
 #define STMT(DERIVED, BASE) { NKI_##BASE, #DERIVED },
 #include "clang/AST/StmtNodes.inc"
-  { NKI_None, "Type" },
+    {NKI_None, "Type"},
 #define TYPE(DERIVED, BASE) { NKI_##BASE, #DERIVED "Type" },
 #include "clang/AST/TypeNodes.inc"
-  { NKI_None, "OMPClause" },
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+    {NKI_None, "OMPClause"},
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) {NKI_OMPClause, #Class},
+#include "llvm/Frontend/OpenMP/OMP.inc"
+    {NKI_None, "Attr"},
+#define ATTR(A) {NKI_Attr, #A "Attr"},
+#include "clang/Basic/AttrList.inc"
 };
 
 bool ASTNodeKind::isBaseOf(ASTNodeKind Other, unsigned *Distance) const {
@@ -60,6 +68,17 @@ bool ASTNodeKind::isBaseOf(NodeKindId Base, NodeKindId Derived,
   if (Distance)
     *Distance = Dist;
   return Derived == Base;
+}
+
+ASTNodeKind ASTNodeKind::getCladeKind() const {
+  NodeKindId LastId = KindId;
+  while (LastId) {
+    NodeKindId ParentId = AllKindInfo[LastId].ParentId;
+    if (ParentId == NKI_None)
+      return LastId;
+    LastId = ParentId;
+  }
+  return NKI_None;
 }
 
 StringRef ASTNodeKind::asStringRef() const { return AllKindInfo[KindId].Name; }
@@ -111,27 +130,47 @@ ASTNodeKind ASTNodeKind::getFromNode(const Type &T) {
   llvm_unreachable("invalid type kind");
  }
 
+ ASTNodeKind ASTNodeKind::getFromNode(const TypeLoc &T) {
+   switch (T.getTypeLocClass()) {
+#define ABSTRACT_TYPELOC(CLASS, PARENT)
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case TypeLoc::CLASS:                                                         \
+    return ASTNodeKind(NKI_##CLASS##TypeLoc);
+#include "clang/AST/TypeLocNodes.def"
+   }
+   llvm_unreachable("invalid typeloc kind");
+ }
+
 ASTNodeKind ASTNodeKind::getFromNode(const OMPClause &C) {
   switch (C.getClauseKind()) {
-#define OMP_CLAUSE_CLASS(Enum, Str, Class)                                     \
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class)                                         \
   case llvm::omp::Clause::Enum:                                                \
     return ASTNodeKind(NKI_##Class);
-#define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
+#define CLAUSE_NO_CLASS(Enum, Str)                                             \
   case llvm::omp::Clause::Enum:                                                \
     llvm_unreachable("unexpected OpenMP clause kind");
-  default:
-    break;
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#include "llvm/Frontend/OpenMP/OMP.inc"
   }
-  llvm_unreachable("invalid stmt kind");
+  llvm_unreachable("invalid omp clause kind");
+}
+
+ASTNodeKind ASTNodeKind::getFromNode(const Attr &A) {
+  switch (A.getKind()) {
+#define ATTR(A)                                                                \
+  case attr::A:                                                                \
+    return ASTNodeKind(NKI_##A##Attr);
+#include "clang/Basic/AttrList.inc"
+  }
+  llvm_unreachable("invalid attr kind");
 }
 
 void DynTypedNode::print(llvm::raw_ostream &OS,
                          const PrintingPolicy &PP) const {
   if (const TemplateArgument *TA = get<TemplateArgument>())
-    TA->print(PP, OS);
+    TA->print(PP, OS, /*IncludeType*/ true);
   else if (const TemplateArgumentLoc *TAL = get<TemplateArgumentLoc>())
-    TAL->getArgument().print(PP, OS);
+    TAL->getArgument().print(PP, OS, /*IncludeType*/ true);
   else if (const TemplateName *TN = get<TemplateName>())
     TN->print(OS, PP);
   else if (const NestedNameSpecifier *NNS = get<NestedNameSpecifier>())
@@ -151,6 +190,8 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
     S->printPretty(OS, nullptr, PP);
   else if (const Type *T = get<Type>())
     QualType(T, 0).print(OS, PP);
+  else if (const Attr *A = get<Attr>())
+    A->printPretty(OS, PP);
   else
     OS << "Unable to print values of type " << NodeKind.asStringRef() << "\n";
 }
@@ -182,5 +223,9 @@ SourceRange DynTypedNode::getSourceRange() const {
     return TAL->getSourceRange();
   if (const auto *C = get<OMPClause>())
     return SourceRange(C->getBeginLoc(), C->getEndLoc());
+  if (const auto *CBS = get<CXXBaseSpecifier>())
+    return CBS->getSourceRange();
+  if (const auto *A = get<Attr>())
+    return A->getRange();
   return SourceRange();
 }

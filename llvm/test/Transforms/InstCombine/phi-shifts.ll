@@ -9,7 +9,7 @@ define i64 @fuzz15217(i1 %cond, i8* %Ptr, i64 %Val) {
 ; CHECK:       two:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret i64 undef
+; CHECK-NEXT:    ret i64 poison
 ;
 entry:
   br i1 %cond, label %end, label %two

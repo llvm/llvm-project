@@ -58,11 +58,14 @@ There are currently the following groups of checks:
 Name prefix            Description
 ====================== =========================================================
 ``abseil-``            Checks related to Abseil library.
+``altera-``            Checks related to OpenCL programming for FPGAs.
 ``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
 ``bugprone-``          Checks that target bugprone code constructs.
 ``cert-``              Checks related to CERT Secure Coding Guidelines.
 ``clang-analyzer-``    Clang Static Analyzer checks.
+``concurrency-``       Checks related to concurrent programming (including
+                       threads, fibers, coroutines, etc.).
 ``cppcoreguidelines-`` Checks related to C++ Core Guidelines.
 ``darwin-``            Checks related to Darwin coding conventions.
 ``fuchsia-``           Checks related to Fuchsia coding conventions.
@@ -170,6 +173,12 @@ An overview of all the command-line options:
                                      errors were found. If compiler errors have
                                      attached fix-its, clang-tidy will apply them as
                                      well.
+    --fix-notes                    - 
+                                     If a warning has no fix, but a single fix can 
+                                     be found through an associated diagnostic note, 
+                                     apply the fix. 
+                                     Specifying this flag will implicitly enable the 
+                                     '--fix' flag.
     --format-style=<string>        -
                                      Style for formatting code around applied fixes:
                                        - 'none' (default) turns off formatting
@@ -286,17 +295,19 @@ using explicit casts, etc.
 
 If a specific suppression mechanism is not available for a certain warning, or
 its use is not desired for some reason, :program:`clang-tidy` has a generic
-mechanism to suppress diagnostics using ``NOLINT`` or ``NOLINTNEXTLINE``
-comments.
+mechanism to suppress diagnostics using ``NOLINT``, ``NOLINTNEXTLINE``, and
+``NOLINTBEGIN`` ... ``NOLINTEND`` comments.
 
 The ``NOLINT`` comment instructs :program:`clang-tidy` to ignore warnings on the
 *same line* (it doesn't apply to a function, a block of code or any other
-language construct, it applies to the line of code it is on). If introducing the
-comment in the same line would change the formatting in undesired way, the
+language construct; it applies to the line of code it is on). If introducing the
+comment in the same line would change the formatting in an undesired way, the
 ``NOLINTNEXTLINE`` comment allows to suppress clang-tidy warnings on the *next
-line*.
+line*. The ``NOLINTBEGIN`` and ``NOLINTEND`` comments allow suppressing
+clang-tidy warnings on *multiple lines* (affecting all lines between the two
+comments).
 
-Both comments can be followed by an optional list of check names in parentheses
+All comments can be followed by an optional list of check names in parentheses
 (see below for the formal syntax).
 
 For example:
@@ -316,9 +327,16 @@ For example:
     // Silence only the specified diagnostics for the next line
     // NOLINTNEXTLINE(google-explicit-constructor, google-runtime-int)
     Foo(bool param);
+
+    // Silence only the specified checks for all lines between the BEGIN and END
+    // NOLINTBEGIN(google-explicit-constructor, google-runtime-int)
+    Foo(short param);
+    Foo(long param);
+    // NOLINTEND(google-explicit-constructor, google-runtime-int)
   };
 
-The formal syntax of ``NOLINT``/``NOLINTNEXTLINE`` is the following:
+The formal syntax of ``NOLINT``, ``NOLINTNEXTLINE``, and ``NOLINTBEGIN`` ...
+``NOLINTEND`` is the following:
 
 .. parsed-literal::
 
@@ -336,11 +354,22 @@ The formal syntax of ``NOLINT``/``NOLINTNEXTLINE`` is the following:
   lint-command:
     **NOLINT**
     **NOLINTNEXTLINE**
+    **NOLINTBEGIN**
+    **NOLINTEND**
 
-Note that whitespaces between ``NOLINT``/``NOLINTNEXTLINE`` and the opening
+Note that whitespaces between
+``NOLINT``/``NOLINTNEXTLINE``/``NOLINTBEGIN``/``NOLINTEND`` and the opening
 parenthesis are not allowed (in this case the comment will be treated just as
-``NOLINT``/``NOLINTNEXTLINE``), whereas in check names list (inside the
-parenthesis) whitespaces can be used and will be ignored.
+``NOLINT``/``NOLINTNEXTLINE``/``NOLINTBEGIN``/``NOLINTEND``), whereas in the
+check names list (inside the parentheses), whitespaces can be used and will be
+ignored.
+
+All ``NOLINTBEGIN`` comments must be paired by an equal number of ``NOLINTEND``
+comments. Moreover, a pair of comments must have matching arguments -- for
+example, ``NOLINTBEGIN(check-name)`` can be paired with
+``NOLINTEND(check-name)`` but not with ``NOLINTEND`` `(zero arguments)`.
+:program:`clang-tidy` will generate a ``clang-tidy-nolint`` error diagnostic if
+any ``NOLINTBEGIN``/``NOLINTEND`` comment violates these requirements.
 
 .. _LibTooling: https://clang.llvm.org/docs/LibTooling.html
 .. _How To Setup Tooling For LLVM: https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html

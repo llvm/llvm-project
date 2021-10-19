@@ -89,5 +89,5 @@ if.end:
 declare float @convergent_func(float, float) #0
 declare float @func(float, float) #1
 
-attributes #0 = { nounwind readnone convergent }
-attributes #1 = { nounwind readnone }
+attributes #0 = { nounwind readnone convergent willreturn }
+attributes #1 = { nounwind readnone willreturn }

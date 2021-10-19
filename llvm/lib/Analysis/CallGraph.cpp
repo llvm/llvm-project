@@ -80,7 +80,9 @@ void CallGraph::addToCallGraph(Function *F) {
   // If this function has external linkage or has its address taken and
   // it is not a callback, then anything could call it.
   if (!F->hasLocalLinkage() ||
-      F->hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true))
+      F->hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
+                         /* IgnoreAssumeLikeCalls */ true,
+                         /* IgnoreLLVMUsed */ false))
     ExternalCallingNode->addCalledFunction(nullptr, Node);
 
   populateCallGraphNode(Node);
@@ -165,20 +167,6 @@ Function *CallGraph::removeFunctionFromModule(CallGraphNode *CGN) {
 
   M.getFunctionList().remove(F);
   return F;
-}
-
-/// spliceFunction - Replace the function represented by this node by another.
-/// This does not rescan the body of the function, so it is suitable when
-/// splicing the body of the old function to the new while also updating all
-/// callers from old to new.
-void CallGraph::spliceFunction(const Function *From, const Function *To) {
-  assert(FunctionMap.count(From) && "No CallGraphNode for function!");
-  assert(!FunctionMap.count(To) &&
-         "Pointing CallGraphNode at a function that already exists");
-  FunctionMapTy::iterator I = FunctionMap.find(From);
-  I->second->F = const_cast<Function*>(To);
-  FunctionMap[To] = std::move(I->second);
-  FunctionMap.erase(I);
 }
 
 // getOrInsertFunction - This method is identical to calling operator[], but

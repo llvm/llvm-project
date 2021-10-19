@@ -33,9 +33,9 @@
 #include <cstdint>
 #include <string>
 
-#include <ctype.h>
-#include <inttypes.h>
-#include <string.h>
+#include <cctype>
+#include <cinttypes>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -120,9 +120,8 @@ static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
 }
 
 DataExtractor::DataExtractor()
-    : m_start(nullptr), m_end(nullptr),
-      m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
-      m_data_sp(), m_target_byte_size(1) {}
+    : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
+      m_data_sp() {}
 
 // This constructor allows us to use data that is owned by someone else. The
 // data must stay around as long as this object is valid.

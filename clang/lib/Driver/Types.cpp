@@ -126,7 +126,7 @@ bool types::isAcceptedByClang(ID Id) {
 
   case TY_Asm:
   case TY_C: case TY_PP_C:
-  case TY_CL:
+  case TY_CL: case TY_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
   case TY_HIP:
@@ -147,6 +147,45 @@ bool types::isAcceptedByClang(ID Id) {
   }
 }
 
+bool types::isDerivedFromC(ID Id) {
+  switch (Id) {
+  default:
+    return false;
+
+  case TY_PP_C:
+  case TY_C:
+  case TY_CL:
+  case TY_CLCXX:
+  case TY_PP_CUDA:
+  case TY_CUDA:
+  case TY_CUDA_DEVICE:
+  case TY_PP_HIP:
+  case TY_HIP:
+  case TY_HIP_DEVICE:
+  case TY_PP_ObjC:
+  case TY_PP_ObjC_Alias:
+  case TY_ObjC:
+  case TY_PP_CXX:
+  case TY_CXX:
+  case TY_PP_ObjCXX:
+  case TY_PP_ObjCXX_Alias:
+  case TY_ObjCXX:
+  case TY_RenderScript:
+  case TY_PP_CHeader:
+  case TY_CHeader:
+  case TY_CLHeader:
+  case TY_PP_ObjCHeader:
+  case TY_ObjCHeader:
+  case TY_PP_CXXHeader:
+  case TY_CXXHeader:
+  case TY_PP_ObjCXXHeader:
+  case TY_ObjCXXHeader:
+  case TY_CXXModule:
+  case TY_PP_CXXModule:
+    return true;
+  }
+}
+
 bool types::isObjC(ID Id) {
   switch (Id) {
   default:
@@ -159,6 +198,8 @@ bool types::isObjC(ID Id) {
     return true;
   }
 }
+
+bool types::isOpenCL(ID Id) { return Id == TY_CL || Id == TY_CLCXX; }
 
 bool types::isCXX(ID Id) {
   switch (Id) {
@@ -247,6 +288,7 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
            .Case("cc", TY_CXX)
            .Case("CC", TY_CXX)
            .Case("cl", TY_CL)
+           .Case("clcpp", TY_CLCXX)
            .Case("cp", TY_CXX)
            .Case("cu", TY_CUDA)
            .Case("hh", TY_CXXHeader)
@@ -320,46 +362,7 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
                             llvm::opt::DerivedArgList &DAL, ID Id) {
-  phases::ID LastPhase;
-
-  // Filter to compiler mode. When the compiler is run as a preprocessor then
-  // compilation is not an option.
-  // -S runs the compiler in Assembly listing mode.
-  if (Driver.CCCIsCPP() || DAL.getLastArg(options::OPT_E) ||
-      DAL.getLastArg(options::OPT__SLASH_EP) ||
-      DAL.getLastArg(options::OPT_M, options::OPT_MM) ||
-      DAL.getLastArg(options::OPT__SLASH_P))
-    LastPhase = phases::Preprocess;
-
-  // --precompile only runs up to precompilation.
-  // This is a clang extension and is not compatible with GCC.
-  else if (DAL.getLastArg(options::OPT__precompile))
-    LastPhase = phases::Precompile;
-
-  // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  else if (DAL.getLastArg(options::OPT_fsyntax_only) ||
-           DAL.getLastArg(options::OPT_print_supported_cpus) ||
-           DAL.getLastArg(options::OPT_module_file_info) ||
-           DAL.getLastArg(options::OPT_verify_pch) ||
-           DAL.getLastArg(options::OPT_rewrite_objc) ||
-           DAL.getLastArg(options::OPT_rewrite_legacy_objc) ||
-           DAL.getLastArg(options::OPT__migrate) ||
-           DAL.getLastArg(options::OPT__analyze) ||
-           DAL.getLastArg(options::OPT_emit_ast))
-    LastPhase = phases::Compile;
-
-  else if (DAL.getLastArg(options::OPT_S) ||
-           DAL.getLastArg(options::OPT_emit_llvm))
-    LastPhase = phases::Backend;
-
-  else if (DAL.getLastArg(options::OPT_c))
-    LastPhase = phases::Assemble;
-
-  // Generally means, do every phase until Link.
-  else
-    LastPhase = phases::LastPhase;
-
-  return types::getCompilationPhases(Id, LastPhase);
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {
@@ -394,6 +397,7 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
   case types::TY_ObjCXX:
     return types::TY_ObjCXXHeader;
   case types::TY_CL:
+  case types::TY_CLCXX:
     return types::TY_CLHeader;
   }
 }

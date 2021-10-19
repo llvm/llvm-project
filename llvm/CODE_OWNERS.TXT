@@ -9,6 +9,10 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 (S) and (I) IRC handle. Each entry should contain at least the (N), (E) and
 (D) fields.
 
+N: Paul C. Anagnostopoulos
+E: paul@windfall.com
+D: TableGen
+
 N: Matt Arsenault
 E: Matthew.Arsenault@amd.com
 E: arsenm2@gmail.com
@@ -50,20 +54,16 @@ N: Andrey Churbanov
 E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
+N: Johannes Doerfert
+E: jdoerfert@anl.gov
+D: OpenMP target offloading
+
 N: Greg Clayton
 E: clayborg@gmail.com
 D: LLDB
 
-N: Pete Couperus
-E: petecoup@synopsys.com
-D: ARC backend (lib/Target/ARC/*)
-
-N: Philip Reames
-E: listmail@philipreames.com
-D: IndVar Simplify, Scalar Evolution
-
-N: Marshall Clow
-E: mclow.lists@gmail.com
+N: Louis Dionne
+E: ldionne.2@gmail.com
 D: libc++
 
 N: Peter Collingbourne
@@ -85,7 +85,11 @@ D: Branch weights and BlockFrequencyInfo
 
 N: Hal Finkel
 E: hfinkel@anl.gov
-D: The loop reroller, alias analysis and the PowerPC target
+D: The loop reroller and alias analysis
+
+N: Nemanja Ivanovic
+E: nemanja.i.ibm@gmail.com
+D: PowerPC Backend
 
 N: Dan Gohman
 E: llvm@sunfishcode.online
@@ -114,6 +118,11 @@ D: NVPTX Target (lib/Target/NVPTX/*)
 N: Lang Hames
 E: lhames@gmail.com
 D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
+
+N: Min-Yih Hsu
+E: minyihh@uci.edu
+E: yihshyng223@gmail.com
+D: M68k Target (lib/Target/M68k/*)
 
 N: Teresa Johnson
 E: tejohnson@google.com
@@ -144,10 +153,6 @@ E: sabre@nondot.org
 W: http://nondot.org/~sabre/
 D: Everything not covered by someone else
 
-N: Robert Lytton
-E: robert@xmos.com
-D: XCore Backend
-
 N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
@@ -172,9 +177,17 @@ N: Krzysztof Parzyszek
 E: kparzysz@quicinc.com
 D: Hexagon Backend
 
+N: Nigel Perks
+E: nigelp@xmos.com
+D: XCore Backend
+
 N: Jacques Pienaar
 E: jpienaar@google.com
 D: Lanai Backend
+
+N: Philip Reames
+E: listmail@philipreames.com
+D: IndVar Simplify, Scalar Evolution
 
 N: Paul Robinson
 E: paul_robinson@playstation.sony.com
@@ -187,6 +200,10 @@ D: Fast-Isel
 N: Duncan Sands
 E: baldrick@free.fr
 D: DragonEgg
+
+N: Mark Schimmel
+E: marksl@synopsys.com
+D: ARC backend (lib/Target/ARC/*)
 
 N: Kostya Serebryany
 E: kcc@google.com
@@ -210,7 +227,6 @@ D: MemorySanitizer (LLVM part)
 
 N: Craig Topper
 E: craig.topper@gmail.com
-E: craig.topper@intel.com
 D: X86 Backend
 
 N: Ulrich Weigand
@@ -228,3 +244,7 @@ D: llvm-objcopy (tools/llvm-objcopy)
 N: Martin Storsjö
 E: martin@martin.st
 D: MinGW
+
+N: Zi Xuan Wu (Zeson)
+E: zixuan.wu@linux.alibaba.com
+D: C-SKY backend (lib/Target/CSKY/*)

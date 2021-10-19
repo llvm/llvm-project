@@ -18,10 +18,12 @@
 #include "CopyConstructorInitCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DynamicStaticInitializersCheck.h"
+#include "EasilySwappableParametersCheck.h"
 #include "ExceptionEscapeCheck.h"
 #include "FoldInitTypeCheck.h"
 #include "ForwardDeclarationNamespaceCheck.h"
 #include "ForwardingReferenceOverloadCheck.h"
+#include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
@@ -40,6 +42,7 @@
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
+#include "SignalHandlerCheck.h"
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
@@ -49,6 +52,7 @@
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
 #include "SuspiciousIncludeCheck.h"
+#include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
 #include "SuspiciousSemicolonCheck.h"
@@ -59,6 +63,7 @@
 #include "TooSmallLoopVariableCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
+#include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
@@ -88,6 +93,8 @@ public:
         "bugprone-dangling-handle");
     CheckFactories.registerCheck<DynamicStaticInitializersCheck>(
         "bugprone-dynamic-static-initializers");
+    CheckFactories.registerCheck<EasilySwappableParametersCheck>(
+        "bugprone-easily-swappable-parameters");
     CheckFactories.registerCheck<ExceptionEscapeCheck>(
         "bugprone-exception-escape");
     CheckFactories.registerCheck<FoldInitTypeCheck>(
@@ -96,6 +103,8 @@ public:
         "bugprone-forward-declaration-namespace");
     CheckFactories.registerCheck<ForwardingReferenceOverloadCheck>(
         "bugprone-forwarding-reference-overload");
+    CheckFactories.registerCheck<ImplicitWideningOfMultiplicationResultCheck>(
+        "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
@@ -133,6 +142,7 @@ public:
         "bugprone-posix-return");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
+    CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");
     CheckFactories.registerCheck<SignedCharMisuseCheck>(
         "bugprone-signed-char-misuse");
     CheckFactories.registerCheck<SizeofContainerCheck>(
@@ -151,6 +161,8 @@ public:
         "bugprone-suspicious-enum-usage");
     CheckFactories.registerCheck<SuspiciousIncludeCheck>(
         "bugprone-suspicious-include");
+    CheckFactories.registerCheck<SuspiciousMemoryComparisonCheck>(
+        "bugprone-suspicious-memory-comparison");
     CheckFactories.registerCheck<SuspiciousMemsetUsageCheck>(
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
@@ -173,6 +185,8 @@ public:
         "bugprone-undelegated-constructor");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
         "bugprone-unhandled-self-assignment");
+    CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(
+        "bugprone-unhandled-exception-at-new");
     CheckFactories.registerCheck<UnusedRaiiCheck>(
         "bugprone-unused-raii");
     CheckFactories.registerCheck<UnusedReturnValueCheck>(

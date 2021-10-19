@@ -1,7 +1,7 @@
 ; Test basic address sanitizer instrumentation.
 ;
-; RUN: opt < %s -hwasan -hwasan-instrument-with-calls -S | FileCheck %s --check-prefixes=CHECK,ABORT
-; RUN: opt < %s -hwasan -hwasan-instrument-with-calls -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER
+; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -S | FileCheck %s --check-prefixes=CHECK,ABORT
+; RUN: opt < %s -passes=hwasan -hwasan-instrument-with-calls -hwasan-recover=1 -S | FileCheck %s --check-prefixes=CHECK,RECOVER
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -197,7 +197,7 @@ entry:
 
 ; CHECK: declare void @__hwasan_init()
 
-; CHECK:      define internal void @hwasan.module_ctor() comdat {
+; CHECK:      define internal void @hwasan.module_ctor() #[[#]] comdat {
 ; CHECK-NEXT:   call void @__hwasan_init()
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: }

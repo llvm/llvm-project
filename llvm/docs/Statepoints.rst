@@ -393,7 +393,7 @@ to unmanaged code. The resulting relocation sequence is:
     ret i8 addrspace(1)* %obj.relocated
   }
 
-During lowering, this will result in a instruction selection DAG that looks
+During lowering, this will result in an instruction selection DAG that looks
 something like:
 
 ::
@@ -430,209 +430,13 @@ strategy-specific lowering is not present, and all GC transitions are emitted as
 as single no-op before and after the call instruction. These no-ops are often
 removed by the backend during dead machine instruction elimination.
 
+Before the abstract machine model is lowered to the explicit statepoint model
+of relocations by the :ref:`RewriteStatepointsForGC` pass it is possible for
+any derived pointer to get its base pointer and offset from the base pointer
+by using the ``gc.get.pointer.base`` and the ``gc.get.pointer.offset``
+intrinsics respectively. These intrinsics are inlined by the
+:ref:`RewriteStatepointsForGC` pass and must not be used after this pass.
 
-Intrinsics
-===========
-
-.. _gc_statepoint:
-
-'llvm.experimental.gc.statepoint' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare token
-        @llvm.experimental.gc.statepoint(i64 <id>, i32 <num patch bytes>,
-                       func_type <target>, 
-                       i64 <#call args>, i64 <flags>,
-                       ... (call parameters),
-                       i64 0, i64 0)
-
-Overview:
-"""""""""
-
-The statepoint intrinsic represents a call which is parse-able by the
-runtime.
-
-Operands:
-"""""""""
-
-The 'id' operand is a constant integer that is reported as the ID
-field in the generated stackmap.  LLVM does not interpret this
-parameter in any way and its meaning is up to the statepoint user to
-decide.  Note that LLVM is free to duplicate code containing
-statepoint calls, and this may transform IR that had a unique 'id' per
-lexical call to statepoint to IR that does not.
-
-If 'num patch bytes' is non-zero then the call instruction
-corresponding to the statepoint is not emitted and LLVM emits 'num
-patch bytes' bytes of nops in its place.  LLVM will emit code to
-prepare the function arguments and retrieve the function return value
-in accordance to the calling convention; the former before the nop
-sequence and the latter after the nop sequence.  It is expected that
-the user will patch over the 'num patch bytes' bytes of nops with a
-calling sequence specific to their runtime before executing the
-generated machine code.  There are no guarantees with respect to the
-alignment of the nop sequence.  Unlike :doc:`StackMaps` statepoints do
-not have a concept of shadow bytes.  Note that semantically the
-statepoint still represents a call or invoke to 'target', and the nop
-sequence after patching is expected to represent an operation
-equivalent to a call or invoke to 'target'.
-
-The 'target' operand is the function actually being called.  The
-target can be specified as either a symbolic LLVM function, or as an
-arbitrary Value of appropriate function type.  Note that the function
-type must match the signature of the callee and the types of the 'call
-parameters' arguments.
-
-The '#call args' operand is the number of arguments to the actual
-call.  It must exactly match the number of arguments passed in the
-'call parameters' variable length section.
-
-The 'flags' operand is used to specify extra information about the
-statepoint. This is currently only used to mark certain statepoints
-as GC transitions. This operand is a 64-bit integer with the following
-layout, where bit 0 is the least significant bit:
-
-  +-------+---------------------------------------------------+
-  | Bit # | Usage                                             |
-  +=======+===================================================+
-  |     0 | Set if the statepoint is a GC transition, cleared |
-  |       | otherwise.                                        |
-  +-------+---------------------------------------------------+
-  |  1-63 | Reserved for future use; must be cleared.         |
-  +-------+---------------------------------------------------+
-
-The 'call parameters' arguments are simply the arguments which need to
-be passed to the call target.  They will be lowered according to the
-specified calling convention and otherwise handled like a normal call
-instruction.  The number of arguments must exactly match what is
-specified in '# call args'.  The types must match the signature of
-'target'.
-
-The 'call parameter' attributes must be followed by two 'i64 0' constants.
-These were originally the length prefixes for 'gc transition parameter' and
-'deopt parameter' arguments, but the role of these parameter sets have been
-entirely replaced with the corresponding operand bundles.  In a future
-revision, these now redundant arguments will be removed.
-
-Semantics:
-""""""""""
-
-A statepoint is assumed to read and write all memory.  As a result,
-memory operations can not be reordered past a statepoint.  It is
-illegal to mark a statepoint as being either 'readonly' or 'readnone'.
-
-Note that legal IR can not perform any memory operation on a 'gc
-pointer' argument of the statepoint in a location statically reachable
-from the statepoint.  Instead, the explicitly relocated value (from a
-``gc.relocate``) must be used.
-
-'llvm.experimental.gc.result' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare type*
-        @llvm.experimental.gc.result(token %statepoint_token)
-
-Overview:
-"""""""""
-
-``gc.result`` extracts the result of the original call instruction
-which was replaced by the ``gc.statepoint``.  The ``gc.result``
-intrinsic is actually a family of three intrinsics due to an
-implementation limitation.  Other than the type of the return value,
-the semantics are the same.
-
-Operands:
-"""""""""
-
-The first and only argument is the ``gc.statepoint`` which starts
-the safepoint sequence of which this ``gc.result`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
-by a ``gc.statepoint`` is legal here.
-
-Semantics:
-""""""""""
-
-The ``gc.result`` represents the return value of the call target of
-the ``statepoint``.  The type of the ``gc.result`` must exactly match
-the type of the target.  If the call target returns void, there will
-be no ``gc.result``.
-
-A ``gc.result`` is modeled as a 'readnone' pure function.  It has no
-side effects since it is just a projection of the return value of the
-previous call represented by the ``gc.statepoint``.
-
-'llvm.experimental.gc.relocate' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare <pointer type>
-        @llvm.experimental.gc.relocate(token %statepoint_token, 
-                                       i32 %base_offset, 
-                                       i32 %pointer_offset)
-
-Overview:
-"""""""""
-
-A ``gc.relocate`` returns the potentially relocated value of a pointer
-at the safepoint.
-
-Operands:
-"""""""""
-
-The first argument is the ``gc.statepoint`` which starts the
-safepoint sequence of which this ``gc.relocation`` is a part.
-Despite the typing of this as a generic token, *only* the value defined 
-by a ``gc.statepoint`` is legal here.
-
-The second and third arguments are both indices into operands of their
-corresponding statepoint.  If the statepoint has a :ref:`gc-live <ob_gc_live>`
-operand bundle, then both arguments are indices into the operand bundle's
-operands. If there is no "gc-live" bundle, then the index is into the
-statepoint's list of arguments.  This index must land within the 'gc
-parameter' section of the statepoint's argument list.  Use of the "gc-live"
-form is recommended.
-
-The second argument is an index which specifies the allocation for the pointer
-being relocated. The associated value must be within the object with which the
-pointer being relocated is associated. The optimizer is free to change *which*
-interior derived pointer is reported, provided that it does not replace an
-actual base pointer with another interior derived pointer. Collectors are
-allowed to rely on the base pointer operand remaining an actual base pointer if
-so constructed.
-
-The third argument is an index which specify the (potentially) derived pointer
-being relocated.  It is legal for this index to be the same as the second
-argument if-and-only-if a base pointer is being relocated.
-
-Semantics:
-""""""""""
-
-The return value of ``gc.relocate`` is the potentially relocated value
-of the pointer specified by its arguments.  It is unspecified how the
-value of the returned pointer relates to the argument to the
-``gc.statepoint`` other than that a) it points to the same source
-language object with the same offset, and b) the 'based-on'
-relationship of the newly relocated pointers is a projection of the
-unrelocated pointers.  In particular, the integer value of the pointer
-returned is unspecified.
-
-A ``gc.relocate`` is modeled as a ``readnone`` pure function.  It has no
-side effects since it is just a way to extract information about work
-done during the actual call modeled by the ``gc.statepoint``.
 
 .. _statepoint-stackmap-format:
 
@@ -703,7 +507,7 @@ Safepoint Semantics & Verification
 
 The fundamental correctness property for the compiled code's
 correctness w.r.t. the garbage collector is a dynamic one.  It must be
-the case that there is no dynamic trace such that a operation
+the case that there is no dynamic trace such that an operation
 involving a potentially relocated pointer is observably-after a
 safepoint which could relocate it.  'observably-after' is this usage
 means that an outside observer could observe this sequence of events
@@ -816,6 +620,54 @@ could be successfully parsed.
 In practice, RewriteStatepointsForGC should be run much later in the pass 
 pipeline, after most optimization is already done.  This helps to improve 
 the quality of the generated code when compiled with garbage collection support.
+
+.. _RewriteStatepointsForGC_intrinsic_lowering:
+
+RewriteStatepointsForGC intrinsic lowering
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As a part of lowering to the explicit model of relocations
+RewriteStatepointsForGC performs GC specific lowering for the following
+intrinsics:
+
+* ``gc.get.pointer.base``
+* ``gc.get.pointer.offset``
+* ``llvm.memcpy.element.unordered.atomic.*``
+* ``llvm.memmove.element.unordered.atomic.*``
+
+There are two possible lowerings for the memcpy and memmove operations:
+GC leaf lowering and GC parseable lowering. If a call is explicitly marked with
+"gc-leaf-function" attribute the call is lowered to a GC leaf call to
+'``__llvm_memcpy_element_unordered_atomic_*``' or
+'``__llvm_memmove_element_unordered_atomic_*``' symbol. Such a call can not
+take a safepoint. Otherwise, the call is made GC parseable by wrapping the
+call into a statepoint. This makes it possible to take a safepoint during
+copy operation. Note that a GC parseable copy operation is not required to
+take a safepoint. For example, a short copy operation may be performed without
+taking a safepoint.
+
+GC parseable calls to '``llvm.memcpy.element.unordered.atomic.*``',
+'``llvm.memmove.element.unordered.atomic.*``' intrinsics are lowered to calls
+to '``__llvm_memcpy_element_unordered_atomic_safepoint_*``',
+'``__llvm_memmove_element_unordered_atomic_safepoint_*``' symbols respectively.
+This way the runtime can provide implementations of copy operations with and
+without safepoints.
+
+GC parseable lowering also involves adjusting the arguments for the call.
+Memcpy and memmove intrinsics take derived pointers as source and destination
+arguments. If a copy operation takes a safepoint it might need to relocate the
+underlying source and destination objects. This requires the corresponding base
+pointers to be available in the copy operation. In order to make the base
+pointers available RewriteStatepointsForGC replaces derived pointers with base
+pointer and offset pairs. For example:
+
+.. code-block:: llvm
+
+  declare void @__llvm_memcpy_element_unordered_atomic_safepoint_1(
+    i8 addrspace(1)*  %dest_base, i64 %dest_offset,
+    i8 addrspace(1)*  %src_base, i64 %src_offset,
+    i64 %length)
+
 
 .. _PlaceSafepoints:
 

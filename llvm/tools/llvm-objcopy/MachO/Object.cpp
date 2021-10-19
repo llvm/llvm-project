@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Object.h"
-#include "../llvm-objcopy.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <unordered_set>
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
 
 const SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) const {
   assert(Index < Symbols.size() && "invalid symbol index");
@@ -27,9 +25,7 @@ SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) {
 
 void SymbolTable::removeSymbols(
     function_ref<bool(const std::unique_ptr<SymbolEntry> &)> ToRemove) {
-  Symbols.erase(
-      std::remove_if(std::begin(Symbols), std::end(Symbols), ToRemove),
-      std::end(Symbols));
+  llvm::erase_if(Symbols, ToRemove);
 }
 
 void Object::updateLoadCommandIndexes() {
@@ -49,6 +45,9 @@ void Object::updateLoadCommandIndexes() {
       break;
     case MachO::LC_DATA_IN_CODE:
       DataInCodeCommandIndex = Index;
+      break;
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
+      LinkerOptimizationHintCommandIndex = Index;
       break;
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
@@ -111,28 +110,54 @@ Error Object::removeSections(
   return Error::success();
 }
 
-void Object::addLoadCommand(LoadCommand LC) {
-  LoadCommands.push_back(std::move(LC));
+uint64_t Object::nextAvailableSegmentAddress() const {
+  uint64_t HeaderSize =
+      is64Bit() ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
+  uint64_t Addr = HeaderSize + Header.SizeOfCmds;
+  for (const LoadCommand &LC : LoadCommands) {
+    const MachO::macho_load_command &MLC = LC.MachOLoadCommand;
+    switch (MLC.load_command_data.cmd) {
+    case MachO::LC_SEGMENT:
+      Addr = std::max(Addr,
+                      static_cast<uint64_t>(MLC.segment_command_data.vmaddr) +
+                          MLC.segment_command_data.vmsize);
+      break;
+    case MachO::LC_SEGMENT_64:
+      Addr = std::max(Addr, MLC.segment_command_64_data.vmaddr +
+                                MLC.segment_command_64_data.vmsize);
+      break;
+    default:
+      continue;
+    }
+  }
+  return Addr;
 }
 
 template <typename SegmentType>
-static void constructSegment(SegmentType &Seg,
-                             llvm::MachO::LoadCommandType CmdType,
-                             StringRef SegName) {
+static void
+constructSegment(SegmentType &Seg, llvm::MachO::LoadCommandType CmdType,
+                 StringRef SegName, uint64_t SegVMAddr, uint64_t SegVMSize) {
   assert(SegName.size() <= sizeof(Seg.segname) && "too long segment name");
   memset(&Seg, 0, sizeof(SegmentType));
   Seg.cmd = CmdType;
   strncpy(Seg.segname, SegName.data(), SegName.size());
+  Seg.maxprot |=
+      (MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE);
+  Seg.initprot |=
+      (MachO::VM_PROT_READ | MachO::VM_PROT_WRITE | MachO::VM_PROT_EXECUTE);
+  Seg.vmaddr = SegVMAddr;
+  Seg.vmsize = SegVMSize;
 }
 
-LoadCommand &Object::addSegment(StringRef SegName) {
+LoadCommand &Object::addSegment(StringRef SegName, uint64_t SegVMSize) {
   LoadCommand LC;
+  const uint64_t SegVMAddr = nextAvailableSegmentAddress();
   if (is64Bit())
     constructSegment(LC.MachOLoadCommand.segment_command_64_data,
-                     MachO::LC_SEGMENT_64, SegName);
+                     MachO::LC_SEGMENT_64, SegName, SegVMAddr, SegVMSize);
   else
     constructSegment(LC.MachOLoadCommand.segment_command_data,
-                     MachO::LC_SEGMENT, SegName);
+                     MachO::LC_SEGMENT, SegName, SegVMAddr, SegVMSize);
 
   LoadCommands.push_back(std::move(LC));
   return LoadCommands.back();
@@ -156,6 +181,14 @@ Optional<StringRef> LoadCommand::getSegmentName() const {
   }
 }
 
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm
+Optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
+  const MachO::macho_load_command &MLC = MachOLoadCommand;
+  switch (MLC.load_command_data.cmd) {
+  case MachO::LC_SEGMENT:
+    return MLC.segment_command_data.vmaddr;
+  case MachO::LC_SEGMENT_64:
+    return MLC.segment_command_64_data.vmaddr;
+  default:
+    return None;
+  }
+}

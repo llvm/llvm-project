@@ -17,14 +17,14 @@ struct ObjCBlockMember {
 
 // The Weak object that is passed is destructed in this constructor.
 
-// CHECK: define void @_ZN12ContainsWeakC2E4Weak(
+// CHECK: define{{.*}} void @_ZN12ContainsWeakC2E4Weak(
 // CHECK: call void @_ZN4WeakC1ERKS_(
 // CHECK: call void @_ZN4WeakD1Ev(
 
 // Check that the Weak object passed to this constructor is not destructed after
 // the delegate constructor is called.
 
-// CHECK: define void @_ZN12ContainsWeakC1E4Weak(
+// CHECK: define{{.*}} void @_ZN12ContainsWeakC1E4Weak(
 // CHECK: call void @_ZN12ContainsWeakC2E4Weak(
 // CHECK-NEXT: ret void
 
@@ -42,7 +42,7 @@ ContainsWeak::ContainsWeak(Weak a) : w(a) {}
 
 // The Weak object that is passed is destructed in this constructor.
 
-// CHECK: define void @_ZN4BaseC2E4Weak(
+// CHECK: define{{.*}} void @_ZN4BaseC2E4Weak(
 // CHECK: call void @_ZN4WeakD1Ev(
 // CHECK: ret void
 
@@ -65,14 +65,14 @@ struct Derived : Base {
 
 Derived d(Weak(0));
 
-// CHECK-LABEL: define void @_Z42test_ObjCMember_default_construct_destructv(
+// CHECK-LABEL: define{{.*}} void @_Z42test_ObjCMember_default_construct_destructv(
 void test_ObjCMember_default_construct_destruct() {
   // CHECK: call void @_ZN10ObjCMemberC1Ev
   // CHECK: call void @_ZN10ObjCMemberD1Ev
   ObjCMember m1;
 }
 
-// CHECK-LABEL: define void @_Z39test_ObjCMember_copy_construct_destruct10ObjCMember
+// CHECK-LABEL: define{{.*}} void @_Z39test_ObjCMember_copy_construct_destruct10ObjCMember
 void test_ObjCMember_copy_construct_destruct(ObjCMember m1) {
   // CHECK: call void @_ZN10ObjCMemberC1ERKS_
   // CHECK: call void @_ZN10ObjCMemberD1Ev
@@ -80,7 +80,7 @@ void test_ObjCMember_copy_construct_destruct(ObjCMember m1) {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z27test_ObjCMember_copy_assign10ObjCMemberS_
+// CHECK-LABEL: define{{.*}} void @_Z27test_ObjCMember_copy_assign10ObjCMemberS_
 void test_ObjCMember_copy_assign(ObjCMember m1, ObjCMember m2) {
   // CHECK: {{call.*_ZN10ObjCMemberaSERKS_}}
   m1 = m2;
@@ -94,7 +94,7 @@ void test_ObjCMember_copy_assign(ObjCMember m1, ObjCMember m2) {
 // CHECK:      call void @llvm.objc.storeStrong
 // CHECK:      ret
 
-// CHECK-LABEL: define void @_Z47test_ObjCArrayMember_default_construct_destructv
+// CHECK-LABEL: define{{.*}} void @_Z47test_ObjCArrayMember_default_construct_destructv
 void test_ObjCArrayMember_default_construct_destruct() {
   // CHECK: call void @_ZN15ObjCArrayMemberC1Ev
   ObjCArrayMember m1;
@@ -102,7 +102,7 @@ void test_ObjCArrayMember_default_construct_destruct() {
   // CHECK: ret void
 }
 
-// CHECK-LABEL: define void @_Z44test_ObjCArrayMember_copy_construct_destruct15ObjCArrayMember
+// CHECK-LABEL: define{{.*}} void @_Z44test_ObjCArrayMember_copy_construct_destruct15ObjCArrayMember
 void test_ObjCArrayMember_copy_construct_destruct(ObjCArrayMember m1) {
   // CHECK: call void @_ZN15ObjCArrayMemberC1ERKS_
   ObjCArrayMember m2 = m1;
@@ -124,7 +124,7 @@ void test_ObjCArrayMember_copy_assign(ObjCArrayMember m1, ObjCArrayMember m2) {
 // CHECK-NEXT: br label
 // CHECK: ret
 
-// CHECK-LABEL: define void @_Z47test_ObjCBlockMember_default_construct_destructv
+// CHECK-LABEL: define{{.*}} void @_Z47test_ObjCBlockMember_default_construct_destructv
 void test_ObjCBlockMember_default_construct_destruct() {
   // CHECK: call void @_ZN15ObjCBlockMemberC1Ev
   ObjCBlockMember m;
@@ -132,7 +132,7 @@ void test_ObjCBlockMember_default_construct_destruct() {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z44test_ObjCBlockMember_copy_construct_destruct15ObjCBlockMember
+// CHECK-LABEL: define{{.*}} void @_Z44test_ObjCBlockMember_copy_construct_destruct15ObjCBlockMember
 void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
   // CHECK: call void @_ZN15ObjCBlockMemberC1ERKS_
   ObjCBlockMember m2 = m1;
@@ -141,7 +141,7 @@ void test_ObjCBlockMember_copy_construct_destruct(ObjCBlockMember m1) {
   // CHECK-NEXT: ret void
 }
 
-// CHECK-LABEL: define void @_Z32test_ObjCBlockMember_copy_assign15ObjCBlockMemberS_
+// CHECK-LABEL: define{{.*}} void @_Z32test_ObjCBlockMember_copy_assign15ObjCBlockMemberS_
 void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
   // CHECK: {{call.*_ZN15ObjCBlockMemberaSERKS_}}
   m1 = m2;

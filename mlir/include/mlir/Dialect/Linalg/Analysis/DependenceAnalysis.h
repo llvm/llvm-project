@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 #define MLIR_DIALECT_LINALG_ANALYSIS_DEPENDENCEANALYSIS_H_
 
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
 
@@ -43,31 +44,119 @@ private:
 /// views as SSA values.
 class LinalgDependenceGraph {
 public:
-  struct LinalgOpView {
-    Operation *op;
-    Value view;
-  };
+  enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
+  // TODO: OpOperand tracks dependencies on buffer operands. Tensor result will
+  // need an extension to use OpResult.
   struct LinalgDependenceGraphElem {
+    using OpView = PointerUnion<OpOperand *, Value>;
     // dependentOpView may be either:
     //   1. src in the case of dependencesIntoGraphs.
     //   2. dst in the case of dependencesFromDstGraphs.
-    LinalgOpView dependentOpView;
+    OpView dependentOpView;
     // View in the op that is used to index in the graph:
     //   1. src in the case of dependencesFromDstGraphs.
     //   2. dst in the case of dependencesIntoGraphs.
-    Value indexingView;
+    OpView indexingOpView;
+    // Type of the dependence.
+    DependenceType dependenceType;
+
+    // Return the Operation that owns the operand or result represented in
+    // `opView`.
+    static Operation *getOwner(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->getOwner();
+      return opView.get<Value>().cast<OpResult>().getOwner();
+    }
+    // Return the operand or the result Value represented by the `opView`.
+    static Value getValue(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->get();
+      return opView.get<Value>();
+    }
+    // Return the indexing map of the operand/result in `opView` specified in
+    // the owning LinalgOp. If the owner is not a LinalgOp returns llvm::None.
+    static Optional<AffineMap> getIndexingMap(OpView opView) {
+      auto owner = dyn_cast<LinalgOp>(getOwner(opView));
+      if (!owner)
+        return llvm::None;
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return owner.getTiedIndexingMap(operand);
+      return owner.getTiedIndexingMap(owner.getOutputOperand(
+          opView.get<Value>().cast<OpResult>().getResultNumber()));
+    }
+    // Return the operand number if the `opView` is an OpOperand *. Otherwise
+    // return llvm::None.
+    static Optional<unsigned> getOperandNumber(OpView opView) {
+      if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
+        return operand->getOperandNumber();
+      return llvm::None;
+    }
+    // Return the result number if the `opView` is an OpResult. Otherwise return
+    // llvm::None.
+    static Optional<unsigned> getResultNumber(OpView opView) {
+      if (OpResult result = opView.dyn_cast<Value>().cast<OpResult>())
+        return result.getResultNumber();
+      return llvm::None;
+    }
+
+    // Return the owner of the dependent OpView.
+    Operation *getDependentOp() const { return getOwner(dependentOpView); }
+
+    // Return the owner of the indexing OpView.
+    Operation *getIndexingOp() const { return getOwner(indexingOpView); }
+
+    // Return the operand or result stored in the dependentOpView.
+    Value getDependentValue() const { return getValue(dependentOpView); }
+
+    // Return the operand or result stored in the indexingOpView.
+    Value getIndexingValue() const { return getValue(indexingOpView); }
+
+    // If the dependent OpView is an operand, return operand number. Return
+    // llvm::None otherwise.
+    Optional<unsigned> getDependentOpViewOperandNum() const {
+      return getOperandNumber(dependentOpView);
+    }
+
+    // If the indexing OpView is an operand, return operand number. Return
+    // llvm::None otherwise.
+    Optional<unsigned> getIndexingOpViewOperandNum() const {
+      return getOperandNumber(indexingOpView);
+    }
+
+    // If the dependent OpView is a result value, return the result
+    // number. Return llvm::None otherwise.
+    Optional<unsigned> getDependentOpViewResultNum() const {
+      return getResultNumber(dependentOpView);
+    }
+
+    // If the dependent OpView is a result value, return the result
+    // number. Return llvm::None otherwise.
+    Optional<unsigned> getIndexingOpViewResultNum() const {
+      return getResultNumber(indexingOpView);
+    }
+
+    // Return the indexing map of the operand/result in the dependent OpView as
+    // specified in the owner of the OpView.
+    Optional<AffineMap> getDependentOpViewIndexingMap() const {
+      return getIndexingMap(dependentOpView);
+    }
+
+    // Return the indexing map of the operand/result in the indexing OpView as
+    // specified in the owner of the OpView.
+    Optional<AffineMap> getIndexingOpViewIndexingMap() const {
+      return getIndexingMap(indexingOpView);
+    }
   };
   using LinalgDependences = SmallVector<LinalgDependenceGraphElem, 8>;
   using DependenceGraph = DenseMap<Operation *, LinalgDependences>;
   using dependence_iterator = LinalgDependences::const_iterator;
   using dependence_range = iterator_range<dependence_iterator>;
 
-  enum DependenceType { RAR = 0, RAW, WAR, WAW, NumTypes };
   static StringRef getDependenceTypeStr(DependenceType depType);
 
   // Builds a linalg dependence graph for the ops of type LinalgOp under `f`.
   static LinalgDependenceGraph buildDependenceGraph(Aliases &aliases, FuncOp f);
-  LinalgDependenceGraph(Aliases &aliases, ArrayRef<Operation *> ops);
+  LinalgDependenceGraph(Aliases &aliases, ArrayRef<LinalgOp> ops);
 
   /// Returns the X such that op -> X is a dependence of type dt.
   dependence_range getDependencesFrom(Operation *src, DependenceType dt) const;
@@ -98,6 +187,52 @@ public:
                                                  LinalgOp dstLinalgOp,
                                                  Value view) const;
 
+  /// Returns true if the two operations have the specified dependence from
+  /// `srcLinalgOp` to `dstLinalgOp`.
+  bool hasDependenceFrom(LinalgOp srcLinalgOp, LinalgOp dstLinalgOp,
+                         ArrayRef<DependenceType> depTypes = {
+                             DependenceType::RAW, DependenceType::WAW}) const;
+
+  /// Returns true if the `linalgOp` has dependences into it.
+  bool hasDependentOperationsInto(LinalgOp linalgOp,
+                                  ArrayRef<DependenceType> depTypes = {
+                                      DependenceType::RAW,
+                                      DependenceType::WAW}) const;
+
+  /// Returns true if the `linalgOp` has dependences from it.
+  bool hasDependentOperationsFrom(LinalgOp linalgOp,
+                                  ArrayRef<DependenceType> depTypes = {
+                                      DependenceType::RAW,
+                                      DependenceType::WAW}) const;
+
+  /// Returns true if the `linalgOp` has dependences into or from it.
+  bool hasDependentOperations(LinalgOp linalgOp,
+                              ArrayRef<DependenceType> depTypes = {
+                                  DependenceType::RAW,
+                                  DependenceType::WAW}) const;
+
+  /// Returns all operations that have a dependence into `linalgOp` of types
+  /// listed in `depTypes`.
+  SmallVector<LinalgDependenceGraphElem, 2> getDependentOperationsInto(
+      LinalgOp linalgOp, ArrayRef<DependenceType> depTypes = {
+                             DependenceType::RAW, DependenceType::WAW}) const;
+
+  /// Returns all operations that have a dependence from `linalgOp` of types
+  /// listed in `depTypes`.
+  SmallVector<LinalgDependenceGraphElem, 2> getDependentOperationsFrom(
+      LinalgOp linalgOp, ArrayRef<DependenceType> depTypes = {
+                             DependenceType::RAW, DependenceType::WAW}) const;
+
+  /// Returns all dependent operations (into and from) given `operation`.
+  SmallVector<LinalgDependenceGraphElem, 2>
+  getDependentOperations(LinalgOp linalgOp,
+                         ArrayRef<DependenceType> depTypes = {
+                             DependenceType::RAW, DependenceType::WAW}) const;
+
+  void print(raw_ostream &os) const;
+
+  void dump() const;
+
 private:
   // Keep dependences in both directions, this is not just a performance gain
   // but it also reduces usage errors.
@@ -116,8 +251,9 @@ private:
   // Uses std::pair to keep operations and view together and avoid usage errors
   // related to src/dst and producer/consumer terminology in the context of
   // dependences.
-  void addDependenceElem(DependenceType dt, LinalgOpView indexingOpView,
-                         LinalgOpView dependentOpView);
+  void addDependenceElem(DependenceType dt,
+                         LinalgDependenceGraphElem::OpView indexingOpView,
+                         LinalgDependenceGraphElem::OpView dependentOpView);
 
   /// Implementation detail for findCoveringxxx.
   SmallVector<Operation *, 8>
@@ -126,7 +262,7 @@ private:
                                         ArrayRef<DependenceType> types) const;
 
   Aliases &aliases;
-  SmallVector<Operation *, 8> linalgOps;
+  SmallVector<LinalgOp, 8> linalgOps;
   DenseMap<Operation *, unsigned> linalgOpPositions;
 };
 } // namespace linalg

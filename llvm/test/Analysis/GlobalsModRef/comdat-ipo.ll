@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -globals-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,globals-aa -passes=gvn -S | FileCheck %s
 
 ; See PR26774
 

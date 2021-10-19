@@ -1,3 +1,18 @@
+version: 0.24
+date: Sun 25 Apr 2021 03:56:37 PM CEST
+changes:
+	- improved (C++) bindings (inherit methods, renamed exports)
+	- initial templated C++ bindings
+	- detect bounds on constant polynomials as tight
+---
+version: 0.23
+date: Sun 01 Nov 2020 02:41:20 PM CET
+changes:
+	- minor improvements to coalescing
+	- use build compiler to build extract_interface
+	- add some convenience functions
+	- ignore parameters in isl_union_* hash tables
+---
 version: 0.22.1
 date: Sun Jan 12 10:48:18 CET 2020
 changes:
@@ -6,6 +21,7 @@ changes:
 version: 0.22
 date: Fri Nov  1 18:39:30 CET 2019
 changes:
+	- require C++11 to generate bindings
 	- improved bindings
 	- scheduler fix involving fixed dimensions
 	- accept ranges in tuples during parsing

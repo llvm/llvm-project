@@ -6,9 +6,9 @@ define double @frem_f64(double %a, double %b) nounwind {
 ; RV32ID-LABEL: frem_f64:
 ; RV32ID:       # %bb.0:
 ; RV32ID-NEXT:    addi sp, sp, -16
-; RV32ID-NEXT:    sw ra, 12(sp)
-; RV32ID-NEXT:    call fmod
-; RV32ID-NEXT:    lw ra, 12(sp)
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    call fmod@plt
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    addi sp, sp, 16
 ; RV32ID-NEXT:    ret
   %1 = frem double %a, %b

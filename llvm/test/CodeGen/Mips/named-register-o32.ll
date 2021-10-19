@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -relocation-model=static -mattr=+noabicalls < %s | FileCheck %s
+; RUN: llc -mtriple=mips -relocation-model=static -mattr=+noabicalls < %s | FileCheck %s
 
 define i32* @get_gp() {
 entry:

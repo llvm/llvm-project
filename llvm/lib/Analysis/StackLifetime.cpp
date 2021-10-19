@@ -257,14 +257,12 @@ void StackLifetime::calculateLiveIntervals() {
       unsigned AllocaNo = It.second.AllocaNo;
 
       if (IsStart) {
-        assert(!Started.test(AllocaNo) || Start[AllocaNo] == BBStart);
         if (!Started.test(AllocaNo)) {
           Started.set(AllocaNo);
           Ended.reset(AllocaNo);
           Start[AllocaNo] = InstNo;
         }
       } else {
-        assert(!Ended.test(AllocaNo));
         if (Started.test(AllocaNo)) {
           LiveRanges[AllocaNo].addRange(Start[AllocaNo], InstNo);
           Started.reset(AllocaNo);
@@ -292,7 +290,7 @@ LLVM_DUMP_METHOD void StackLifetime::dumpBlockLiveness() const {
     const BasicBlock *BB = IT.getFirst();
     const BlockLifetimeInfo &BlockInfo = BlockLiveness.find(BB)->getSecond();
     auto BlockRange = BlockInstRange.find(BB)->getSecond();
-    dbgs() << "  BB [" << BlockRange.first << ", " << BlockRange.second
+    dbgs() << "  BB (" << BB->getName() << ") [" << BlockRange.first << ", " << BlockRange.second
            << "): begin " << BlockInfo.Begin << ", end " << BlockInfo.End
            << ", livein " << BlockInfo.LiveIn << ", liveout "
            << BlockInfo.LiveOut << "\n";
@@ -399,4 +397,20 @@ PreservedAnalyses StackLifetimePrinterPass::run(Function &F,
   SL.run();
   SL.print(OS);
   return PreservedAnalyses::all();
+}
+
+void StackLifetimePrinterPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<StackLifetimePrinterPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  switch (Type) {
+  case StackLifetime::LivenessType::May:
+    OS << "may";
+    break;
+  case StackLifetime::LivenessType::Must:
+    OS << "must";
+    break;
+  }
+  OS << ">";
 }

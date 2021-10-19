@@ -1,5 +1,5 @@
 // RUN: %clang -w -target x86_64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 %s | \
-// RUN:      FileCheck %s -check-prefixes=CHECK,CHECK-O0 --implicit-check-not=llvm.lifetime
+// RUN:      FileCheck %s -check-prefixes=CHECK --implicit-check-not=llvm.lifetime
 // RUN: %clang -w -target x86_64-linux-gnu -S -emit-llvm -o - -fno-exceptions -O0 \
 // RUN:     -fsanitize=address -fsanitize-address-use-after-scope %s | \
 // RUN:     FileCheck %s -check-prefixes=CHECK,LIFETIME

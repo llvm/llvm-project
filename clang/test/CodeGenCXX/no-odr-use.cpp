@@ -6,7 +6,7 @@
 // CHECK-CXX2A-DAG: @_ZN7PR422765State1mE = linkonce_odr constant [2 x { i64, i64 }] [{ {{.*}} @_ZN7PR422765State2f1Ev {{.*}}, i64 0 }, { {{.*}} @_ZN7PR422765State2f2Ev {{.*}}, i64 0 }], comdat
 
 struct A { int x, y[2]; int arr[3]; };
-// CHECK-LABEL: define i32 @_Z1fi(
+// CHECK-LABEL: define{{.*}} i32 @_Z1fi(
 int f(int i) {
   // CHECK: call void {{.*}}memcpy{{.*}}({{.*}}, {{.*}} @__const._Z1fi.a
   constexpr A a = {1, 2, 3, 4, 5, 6};
@@ -36,7 +36,7 @@ namespace PR42276 {
     using l = void (State::*)();
     static constexpr l m[]{&State::f1, &State::f2};
   };
-  // CHECK-LABEL: define void @_ZN7PR422765State16syncDirtyObjectsEv(
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
   void State::syncDirtyObjects() {
     for (int i = 0; i < sizeof(m) / sizeof(m[0]); ++i)
       // CHECK-CXX11: getelementptr inbounds [2 x { i64, i64 }], [2 x { i64, i64 }]* @_ZN7PR422765State1mE.const, i64 0, i64 %

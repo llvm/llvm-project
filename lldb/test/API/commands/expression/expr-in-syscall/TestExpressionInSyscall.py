@@ -14,17 +14,13 @@ class ExprSyscallTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
     @expectedFailureNetBSD
-    @skipIfReproducer
     def test_setpgid(self):
         self.build()
         self.expr_syscall()
 
     def expr_syscall(self):
-        exe = self.getBuildArtifact("a.out")
-
         # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
+        target = self.createTestTarget()
 
         listener = lldb.SBListener("my listener")
 

@@ -2,6 +2,11 @@ import("//llvm/tools/binutils_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
+tablegen("BitcodeStripOpts") {
+  visibility = [ ":llvm-objcopy" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 tablegen("InstallNameToolOpts") {
   visibility = [ ":llvm-objcopy" ]
   args = [ "-gen-opt-parser-defs" ]
@@ -18,6 +23,7 @@ tablegen("StripOpts") {
 }
 
 symlinks = [
+  "llvm-bitcode-strip",
   "llvm-install-name-tool",
   "llvm-strip",
 ]
@@ -45,6 +51,7 @@ group("symlinks") {
 
 executable("llvm-objcopy") {
   deps = [
+    ":BitcodeStripOpts",
     ":InstallNameToolOpts",
     ":ObjcopyOpts",
     ":StripOpts",
@@ -55,13 +62,11 @@ executable("llvm-objcopy") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "Buffer.cpp",
     "COFF/COFFObjcopy.cpp",
     "COFF/Object.cpp",
     "COFF/Reader.cpp",
     "COFF/Writer.cpp",
-    "CopyConfig.cpp",
-    "ELF/ELFConfig.cpp",
+    "ConfigManager.cpp",
     "ELF/ELFObjcopy.cpp",
     "ELF/Object.cpp",
     "MachO/MachOLayoutBuilder.cpp",

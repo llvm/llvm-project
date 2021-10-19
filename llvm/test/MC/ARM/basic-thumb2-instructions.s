@@ -647,10 +647,16 @@ adds sp, #-4096
         dbg #5
         dbg #0
         dbg #15
+        dbg.w #0
+        it ne
+        dbgne.w #0
 
 @ CHECK: dbg	#5                      @ encoding: [0xaf,0xf3,0xf5,0x80]
 @ CHECK: dbg	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
 @ CHECK: dbg	#15                     @ encoding: [0xaf,0xf3,0xff,0x80]
+@ CHECK: dbg	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
+@ CHECK: it	ne                      @ encoding: [0x18,0xbf]
+@ CHECK: dbgne	#0                      @ encoding: [0xaf,0xf3,0xf0,0x80]
 
 
 @------------------------------------------------------------------------------
@@ -1871,17 +1877,25 @@ adds sp, #-4096
 @ ORN
 @------------------------------------------------------------------------------
         orn r4, r5, #0xf000
+        orn.w r4, r5, #0xf000
         orn r4, r5, r6
+        orn.w r4, r5, r6
         orns r4, r5, r6
+        orns.w r4, r5, r6
         orn r4, r5, r6, lsl #5
+        orn.w r4, r5, r6, lsl #5
         orns r4, r5, r6, lsr #5
         orn r4, r5, r6, lsr #5
         orns r4, r5, r6, asr #5
         orn r4, r5, r6, ror #5
 
 @ CHECK: orn	r4, r5, #61440          @ encoding: [0x65,0xf4,0x70,0x44]
+@ CHECK: orn	r4, r5, #61440          @ encoding: [0x65,0xf4,0x70,0x44]
+@ CHECK: orn	r4, r5, r6              @ encoding: [0x65,0xea,0x06,0x04]
 @ CHECK: orn	r4, r5, r6              @ encoding: [0x65,0xea,0x06,0x04]
 @ CHECK: orns	r4, r5, r6              @ encoding: [0x75,0xea,0x06,0x04]
+@ CHECK: orns	r4, r5, r6              @ encoding: [0x75,0xea,0x06,0x04]
+@ CHECK: orn	r4, r5, r6, lsl #5      @ encoding: [0x65,0xea,0x46,0x14]
 @ CHECK: orn	r4, r5, r6, lsl #5      @ encoding: [0x65,0xea,0x46,0x14]
 @ CHECK: orns	r4, r5, r6, lsr #5      @ encoding: [0x75,0xea,0x56,0x14]
 @ CHECK: orn	r4, r5, r6, lsr #5      @ encoding: [0x65,0xea,0x56,0x14]
@@ -2264,14 +2278,26 @@ adds sp, #-4096
 @ RSB (register)
 @------------------------------------------------------------------------------
         rsb r4, r8
+        rsb.w r4, r8
         rsb r4, r9, r8
+        rsb.w r4, r9, r8
         rsb r1, r4, r8, asr #3
+        rsb.w r1, r4, r8, asr #3
         rsbs r2, r1, r7, lsl #1
+        rsbs.w r2, r1, r7, lsl #1
+        rsbs r0, r1, r2
+        rsbs.w r0, r1, r2
 
 @ CHECK: rsb	r4, r4, r8              @ encoding: [0xc4,0xeb,0x08,0x04]
+@ CHECK: rsb	r4, r4, r8              @ encoding: [0xc4,0xeb,0x08,0x04]
+@ CHECK: rsb	r4, r9, r8              @ encoding: [0xc9,0xeb,0x08,0x04]
 @ CHECK: rsb	r4, r9, r8              @ encoding: [0xc9,0xeb,0x08,0x04]
 @ CHECK: rsb	r1, r4, r8, asr #3      @ encoding: [0xc4,0xeb,0xe8,0x01]
+@ CHECK: rsb	r1, r4, r8, asr #3      @ encoding: [0xc4,0xeb,0xe8,0x01]
 @ CHECK: rsbs	r2, r1, r7, lsl #1      @ encoding: [0xd1,0xeb,0x47,0x02]
+@ CHECK: rsbs	r2, r1, r7, lsl #1      @ encoding: [0xd1,0xeb,0x47,0x02]
+@ CHECK: rsbs	r0, r1, r2              @ encoding: [0xd1,0xeb,0x02,0x00]
+@ CHECK: rsbs	r0, r1, r2              @ encoding: [0xd1,0xeb,0x02,0x00]
 
 
 @------------------------------------------------------------------------------

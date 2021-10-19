@@ -293,7 +293,7 @@ static llvm::Error loadFileList(StringRef fileListPath,
 
 /// Parse number assuming it is base 16, but allow 0x prefix.
 static bool parseNumberBase16(StringRef numStr, uint64_t &baseAddress) {
-  if (numStr.startswith_lower("0x"))
+  if (numStr.startswith_insensitive("0x"))
     numStr = numStr.drop_front(2);
   return numStr.getAsInteger(16, baseAddress);
 }
@@ -307,6 +307,7 @@ static void parseLLVMOptions(const LinkingContext &ctx) {
     for (unsigned i = 0; i != numArgs; ++i)
       args[i + 1] = ctx.llvmOptions()[i];
     args[numArgs + 1] = nullptr;
+    llvm::cl::ResetAllOptionOccurrences();
     llvm::cl::ParseCommandLineOptions(numArgs + 1, args);
   }
 }
@@ -382,7 +383,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         !parsedArgs.getLastArg(OPT_test_file_usage)) {
       // If no -arch and no options at all, print usage message.
       if (parsedArgs.size() == 0) {
-        table.PrintHelp(llvm::outs(),
+        table.printHelp(llvm::outs(),
                         (std::string(args[0]) + " [options] file...").c_str(),
                         "LLVM Linker", false);
       } else {

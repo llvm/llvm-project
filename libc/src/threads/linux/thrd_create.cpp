@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/threads/thrd_create.h"
 #include "config/linux/syscall.h" // For syscall function.
 #include "include/errno.h"        // For E* error values.
 #include "include/sys/mman.h"     // For PROT_* and MAP_* definitions.
@@ -15,9 +16,9 @@
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
-#include "src/threads/linux/thread_utils.h"
+#include "src/threads/linux/Futex.h"
+#include "src/threads/linux/Thread.h"
 
-#include <linux/futex.h> // For futex operations.
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
 
@@ -35,8 +36,8 @@ static __attribute__((noinline)) void start_thread() {
                                      start_args->func(start_args->arg));
 }
 
-int LLVM_LIBC_ENTRYPOINT(thrd_create)(thrd_t *thread, thrd_start_t func,
-                                      void *arg) {
+LLVM_LIBC_FUNCTION(int, thrd_create,
+                   (thrd_t * thread, thrd_start_t func, void *arg)) {
   unsigned clone_flags =
       CLONE_VM        // Share the memory space with the parent.
       | CLONE_FS      // Share the file system with the parent.
@@ -60,8 +61,8 @@ int LLVM_LIBC_ENTRYPOINT(thrd_create)(thrd_t *thread, thrd_start_t func,
   thread->__stack = stack;
   thread->__stack_size = ThreadParams::DefaultStackSize;
   thread->__retval = -1;
-  FutexData *clear_tid_address =
-      reinterpret_cast<FutexData *>(thread->__clear_tid);
+  FutexWord *clear_tid_address =
+      reinterpret_cast<FutexWord *>(thread->__clear_tid);
   *clear_tid_address = ThreadParams::ClearTIDValue;
 
   // When the new thread is spawned by the kernel, the new thread gets the
@@ -81,13 +82,15 @@ int LLVM_LIBC_ENTRYPOINT(thrd_create)(thrd_t *thread, thrd_start_t func,
   // but it might differ for other architectures. So, make this call
   // architecture independent. May be implement a glibc like wrapper for clone
   // and use it here.
-  long clone_result =
+  long register clone_result asm("rax");
+  clone_result =
       __llvm_libc::syscall(SYS_clone, clone_flags, adjusted_stack,
                            &thread->__tid, clear_tid_address, 0);
 
   if (clone_result == 0) {
     start_thread();
   } else if (clone_result < 0) {
+    __llvm_libc::munmap(thread->__stack, thread->__stack_size);
     int error_val = -clone_result;
     return error_val == ENOMEM ? thrd_nomem : thrd_error;
   }

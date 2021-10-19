@@ -42,7 +42,7 @@ bool isReferencedOutsideOfCallExpr(const FunctionDecl &Function,
 bool hasLoopStmtAncestor(const DeclRefExpr &DeclRef, const Decl &Decl,
                          ASTContext &Context) {
   auto Matches = match(
-      traverse(ast_type_traits::TK_AsIs,
+      traverse(TK_AsIs,
                decl(forEachDescendant(declRefExpr(
                    equalsNode(&DeclRef),
                    unless(hasAncestor(stmt(anyOf(forStmt(), cxxForRangeStmt(),
@@ -83,7 +83,7 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
       decl().bind("param"));
   Finder->addMatcher(
       traverse(
-          ast_type_traits::TK_AsIs,
+          TK_AsIs,
           functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),
                        unless(cxxMethodDecl(anyOf(isOverride(), isFinal()))),
                        has(typeLoc(forEach(ExpensiveValueParamDecl))),
@@ -95,7 +95,7 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Param = Result.Nodes.getNodeAs<ParmVarDecl>("param");
   const auto *Function = Result.Nodes.getNodeAs<FunctionDecl>("functionDecl");
 
-  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   FunctionParmMutationAnalyzer &Analyzer =
       MutationAnalyzers.try_emplace(Function, *Function, *Result.Context)
@@ -137,13 +137,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Diag =
       diag(Param->getLocation(),
-           IsConstQualified ? "the const qualified parameter %0 is "
-                              "copied for each invocation; consider "
-                              "making it a reference"
-                            : "the parameter %0 is copied for each "
-                              "invocation but only used as a const reference; "
-                              "consider making it a const reference")
-      << paramNameOrIndex(Param->getName(), Index);
+           "the %select{|const qualified }0parameter %1 is copied for each "
+           "invocation%select{ but only used as a const reference|}0; consider "
+           "making it a %select{const |}0reference")
+      << IsConstQualified << paramNameOrIndex(Param->getName(), Index);
   // Do not propose fixes when:
   // 1. the ParmVarDecl is in a macro, since we cannot place them correctly
   // 2. the function is virtual as it might break overrides
@@ -203,8 +200,7 @@ void UnnecessaryValueParamCheck::handleMoveFix(const ParmVarDecl &Var,
   Diag << FixItHint::CreateInsertion(CopyArgument.getBeginLoc(), "std::move(")
        << FixItHint::CreateInsertion(EndLoc, ")")
        << Inserter.createIncludeInsertion(
-              SM.getFileID(CopyArgument.getBeginLoc()), "utility",
-              /*IsAngled=*/true);
+              SM.getFileID(CopyArgument.getBeginLoc()), "<utility>");
 }
 
 } // namespace performance

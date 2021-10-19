@@ -18,7 +18,7 @@
 // DEVICE-DAG: [[C_ADDR:.+]] = internal global i32 0,
 // DEVICE-DAG: [[CD_ADDR:@.+]] ={{ hidden | }}global %struct.S zeroinitializer,
 // HOST-DAG: @[[C_ADDR:.+]] = internal global i32 0,
-// HOST-DAG: @[[CD_ADDR:.+]] ={{ hidden | }}global %struct.S zeroinitializer,
+// HOST-DAG: @[[CD_ADDR:.+]] ={{( hidden | dso_local)?}} global %struct.S zeroinitializer,
 
 #pragma omp declare target
 int foo() { return 0; }
@@ -73,15 +73,15 @@ S cd = doo() + car() + caz() + baz();
 // DEVICE-DAG: ret void
 
 // HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[C_ADDR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[C_ADDR]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (i32* @[[C_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-DAG: @.omp_offloading.entry.[[C_ADDR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* bitcast (i32* @[[C_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[CD_ADDR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[CD_ADDR]] = weak constant %struct.__tgt_offload_entry { i8* bitcast (%struct.S* @[[CD_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-DAG: @.omp_offloading.entry.[[CD_ADDR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* bitcast (%struct.S* @[[CD_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[C_CTOR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[C_CTOR]] = weak constant %struct.__tgt_offload_entry { i8* @[[C_CTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 2, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-DAG: @.omp_offloading.entry.[[C_CTOR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* @[[C_CTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 2, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}}= internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[CD_CTOR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[CD_CTOR]] = weak constant %struct.__tgt_offload_entry { i8* @[[CD_CTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 2, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-DAG: @.omp_offloading.entry.[[CD_CTOR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* @[[CD_CTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 2, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}}= internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[CD_DTOR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[CD_DTOR]] = weak constant %struct.__tgt_offload_entry { i8* @[[CD_DTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 4, i32 0 }, section "omp_offloading_entries", align 1
+// HOST-DAG: @.omp_offloading.entry.[[CD_DTOR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* @[[CD_DTOR]], i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 0, i32 4, i32 0 }, section "omp_offloading_entries", align 1
 int maini1() {
   int a;
 #pragma omp target map(tofrom : a)
@@ -91,9 +91,9 @@ int maini1() {
   return 0;
 }
 
-// DEVICE: define weak void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
-// DEVICE: [[C:%.+]] = load i32, i32* [[C_ADDR]],
-// DEVICE: store i32 [[C]], i32* %
+// DEVICE-DAG: define weak{{.*}} void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-7]](i32* nonnull align {{[0-9]+}} dereferenceable{{[^,]*}}
+// DEVICE-DAG: [[C:%.+]] = load i32, i32* [[C_ADDR]],
+// DEVICE-DAG: store i32 [[C]], i32* %
 
 // HOST: define internal void @__omp_offloading_{{.*}}_{{.*}}maini1{{.*}}_l[[@LINE-11]](i32* nonnull align {{[0-9]+}} dereferenceable{{.*}})
 // HOST: [[C:%.*]] = load i32, i32* @[[C_ADDR]],

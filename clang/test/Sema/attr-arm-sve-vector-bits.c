@@ -1,11 +1,16 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=128 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=256 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=512 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=128 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=256 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=512 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=1024 -fallow-half-arguments-and-returns %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -ffreestanding -fsyntax-only -verify -msve-vector-bits=2048 -fallow-half-arguments-and-returns %s
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#include <stdint.h>
 
+#define N __ARM_FEATURE_SVE_BITS
+
+typedef __fp16 float16_t;
+typedef float float32_t;
+typedef double float64_t;
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
 typedef __SVInt32_t svint32_t;
@@ -19,6 +24,7 @@ typedef __SVFloat32_t svfloat32_t;
 typedef __SVFloat64_t svfloat64_t;
 
 #if defined(__ARM_FEATURE_SVE_BF16)
+typedef __bf16 bfloat16_t;
 typedef __SVBFloat16_t svbfloat16_t;
 #endif
 
@@ -42,6 +48,23 @@ typedef svfloat64_t fixed_float64_t __attribute__((arm_sve_vector_bits(N)));
 typedef svbfloat16_t fixed_bfloat16_t __attribute__((arm_sve_vector_bits(N)));
 
 typedef svbool_t fixed_bool_t __attribute__((arm_sve_vector_bits(N)));
+
+// GNU vector types
+typedef int8_t gnu_int8_t __attribute__((vector_size(N / 8)));
+typedef int16_t gnu_int16_t __attribute__((vector_size(N / 8)));
+typedef int32_t gnu_int32_t __attribute__((vector_size(N / 8)));
+typedef int64_t gnu_int64_t __attribute__((vector_size(N / 8)));
+
+typedef uint8_t gnu_uint8_t __attribute__((vector_size(N / 8)));
+typedef uint16_t gnu_uint16_t __attribute__((vector_size(N / 8)));
+typedef uint32_t gnu_uint32_t __attribute__((vector_size(N / 8)));
+typedef uint64_t gnu_uint64_t __attribute__((vector_size(N / 8)));
+
+typedef float16_t gnu_float16_t __attribute__((vector_size(N / 8)));
+typedef float32_t gnu_float32_t __attribute__((vector_size(N / 8)));
+typedef float64_t gnu_float64_t __attribute__((vector_size(N / 8)));
+
+typedef bfloat16_t gnu_bfloat16_t __attribute__((vector_size(N / 8)));
 
 // Attribute must have a single argument
 typedef svint8_t no_argument __attribute__((arm_sve_vector_bits));         // expected-error {{'arm_sve_vector_bits' attribute takes one argument}}
@@ -100,13 +123,56 @@ int alignof_int8_var_ptr = __alignof__(extern_int8_ptr);
 void f(int c) {
   fixed_int8_t fs8;
   svint8_t ss8;
+  gnu_int8_t gs8;
 
+  // Check conditional expressions where the result is ambiguous are
+  // ill-formed.
   void *sel __attribute__((unused));
-  sel = c ? ss8 : fs8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
-  sel = c ? fs8 : ss8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
+  sel = c ? ss8 : fs8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  sel = c ? fs8 : ss8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
 
-  sel = fs8 + ss8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
-  sel = ss8 + fs8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
+  sel = c ? gs8 : ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+  sel = c ? ss8 : gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  sel = c ? gs8 : fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+  sel = c ? fs8 : gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  // Check binary expressions where the result is ambiguous are ill-formed.
+  ss8 = ss8 + fs8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  ss8 = ss8 + gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  fs8 = fs8 + ss8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  fs8 = fs8 + gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  gs8 = gs8 + ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+  gs8 = gs8 + fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  ss8 += fs8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  ss8 += gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  fs8 += ss8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  fs8 += gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  gs8 += ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+  gs8 += fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  ss8 = ss8 == fs8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  ss8 = ss8 == gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  fs8 = fs8 == ss8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  fs8 = fs8 == gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  gs8 = gs8 == ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+  gs8 = gs8 == fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  ss8 = ss8 & fs8; // expected-error {{invalid operands to binary expression}}
+  ss8 = ss8 & gs8; // expected-error {{invalid operands to binary expression}}
+
+  fs8 = fs8 & ss8; // expected-error {{invalid operands to binary expression}}
+  fs8 = fs8 & gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
+
+  gs8 = gs8 & ss8; // expected-error {{invalid operands to binary expression}}
+  gs8 = gs8 & fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
 }
 
 // --------------------------------------------------------------------------//
@@ -176,37 +242,46 @@ union union_bool { fixed_bool_t x, y[5]; };
 // --------------------------------------------------------------------------//
 // Implicit casts
 
-#define TEST_CAST(TYPE)                                          \
-  sv##TYPE##_t to_sv##TYPE##_t(fixed_##TYPE##_t x) { return x; } \
-  fixed_##TYPE##_t from_sv##TYPE##_t(sv##TYPE##_t x) { return x; }
+#define TEST_CAST_COMMON(TYPE)                                              \
+  sv##TYPE##_t to_sv##TYPE##_t_from_fixed(fixed_##TYPE##_t x) { return x; } \
+  fixed_##TYPE##_t from_sv##TYPE##_t_to_fixed(sv##TYPE##_t x) { return x; }
 
-TEST_CAST(int8)
-TEST_CAST(int16)
-TEST_CAST(int32)
-TEST_CAST(int64)
-TEST_CAST(uint8)
-TEST_CAST(uint16)
-TEST_CAST(uint32)
-TEST_CAST(uint64)
-TEST_CAST(float16)
-TEST_CAST(float32)
-TEST_CAST(float64)
-TEST_CAST(bfloat16)
-TEST_CAST(bool)
+#define TEST_CAST_GNU(PREFIX, TYPE)                                                          \
+  gnu_##TYPE##_t to_gnu_##TYPE##_t_from_##PREFIX##TYPE##_t(PREFIX##TYPE##_t x) { return x; } \
+  PREFIX##TYPE##_t from_gnu_##TYPE##_t_to_##PREFIX##TYPE##_t(gnu_##TYPE##_t x) { return x; }
+
+#define TEST_CAST_VECTOR(TYPE) \
+  TEST_CAST_COMMON(TYPE)       \
+  TEST_CAST_GNU(sv, TYPE)      \
+  TEST_CAST_GNU(fixed_, TYPE)
+
+TEST_CAST_VECTOR(int8)
+TEST_CAST_VECTOR(int16)
+TEST_CAST_VECTOR(int32)
+TEST_CAST_VECTOR(int64)
+TEST_CAST_VECTOR(uint8)
+TEST_CAST_VECTOR(uint16)
+TEST_CAST_VECTOR(uint32)
+TEST_CAST_VECTOR(uint64)
+TEST_CAST_VECTOR(float16)
+TEST_CAST_VECTOR(float32)
+TEST_CAST_VECTOR(float64)
+TEST_CAST_VECTOR(bfloat16)
+TEST_CAST_COMMON(bool)
 
 // Test the implicit conversion only applies to valid types
-fixed_int8_t to_fixed_int8_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_int8_t' (vector of {{[0-9]+}} 'signed char' values)}}
 fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
+
+// Test implicit conversion between SVE and GNU vector is invalid when
+// __ARM_FEATURE_SVE_BITS != N
+#if defined(__ARM_FEATURE_SVE_BITS) && __ARM_FEATURE_SVE_BITS == 512
+typedef int32_t int4 __attribute__((vector_size(16)));
+svint32_t badcast(int4 x) { return x; } // expected-error {{returning 'int4' (vector of 4 'int32_t' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
+#endif
 
 // Test conversion between predicate and uint8 is invalid, both have the same
 // memory representation.
 fixed_bool_t to_fixed_bool_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
-
-// Test the implicit conversion only applies to fixed-length types
-typedef signed int vSInt32 __attribute__((__vector_size__(16)));
-svint32_t to_svint32_t_from_gnut(vSInt32 x) { return x; } // expected-error-re {{returning 'vSInt32' (vector of {{[0-9]+}} 'int' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
-
-vSInt32 to_gnut_from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'vSInt32' (vector of {{[0-9]+}} 'int' values)}}
 
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably
@@ -232,3 +307,78 @@ svbool_t __attribute__((overloadable)) svfunc(svbool_t op1, svbool_t op2);
 TEST_CALL(int32)
 TEST_CALL(float64)
 TEST_CALL(bool)
+
+// --------------------------------------------------------------------------//
+// Vector initialization
+
+#if __ARM_FEATURE_SVE_BITS == 256
+
+typedef svint32_t int32x8 __attribute__((arm_sve_vector_bits(N)));
+typedef svfloat64_t float64x4 __attribute__((arm_sve_vector_bits(N)));
+
+int32x8 foo = {1, 2, 3, 4, 5, 6, 7, 8};
+int32x8 foo2 = {1, 2, 3, 4, 5, 6, 7, 8, 9}; // expected-warning{{excess elements in vector initializer}}
+
+float64x4 bar = {1.0, 2.0, 3.0, 4.0};
+float64x4 bar2 = {1.0, 2.0, 3.0, 4.0, 5.0}; // expected-warning{{excess elements in vector initializer}}
+
+#endif
+
+// --------------------------------------------------------------------------//
+// Vector ops
+
+#define TEST_BINARY(TYPE, NAME, OP)                  \
+  TYPE NAME##_##TYPE(TYPE op1, TYPE op2) {           \
+    return op1 OP op2;                               \
+  }                                                  \
+  TYPE compound##NAME##_##TYPE(TYPE op1, TYPE op2) { \
+    op1 OP##= op2;                                   \
+    return op1;                                      \
+  }
+
+#define TEST_COMPARISON(TYPE, NAME, OP)    \
+  TYPE NAME##_##TYPE(TYPE op1, TYPE op2) { \
+    return op1 OP op2;                     \
+  }
+
+#define TEST_UNARY(TYPE, NAME, OP) \
+  TYPE NAME##_##TYPE(TYPE op1) {   \
+    return OP op1;                 \
+  }
+
+#define TEST_OPS(TYPE)           \
+  TEST_BINARY(TYPE, add, +)      \
+  TEST_BINARY(TYPE, sub, -)      \
+  TEST_BINARY(TYPE, mul, *)      \
+  TEST_BINARY(TYPE, div, /)      \
+  TEST_COMPARISON(TYPE, eq, ==)  \
+  TEST_COMPARISON(TYPE, ne, !=)  \
+  TEST_COMPARISON(TYPE, lt, <)   \
+  TEST_COMPARISON(TYPE, gt, >)   \
+  TEST_COMPARISON(TYPE, lte, <=) \
+  TEST_COMPARISON(TYPE, gte, >=) \
+  TEST_UNARY(TYPE, nop, +)       \
+  TEST_UNARY(TYPE, neg, -)
+
+#define TEST_INT_OPS(TYPE)   \
+  TEST_OPS(TYPE)             \
+  TEST_BINARY(TYPE, mod, %)  \
+  TEST_BINARY(TYPE, and, &)  \
+  TEST_BINARY(TYPE, or, |)   \
+  TEST_BINARY(TYPE, xor, ^)  \
+  TEST_BINARY(TYPE, shl, <<) \
+  TEST_BINARY(TYPE, shr, <<) \
+  TEST_UNARY(TYPE, not, ~)
+
+TEST_INT_OPS(fixed_int8_t)
+TEST_INT_OPS(fixed_int16_t)
+TEST_INT_OPS(fixed_int32_t)
+TEST_INT_OPS(fixed_int64_t)
+TEST_INT_OPS(fixed_uint8_t)
+TEST_INT_OPS(fixed_uint16_t)
+TEST_INT_OPS(fixed_uint32_t)
+TEST_INT_OPS(fixed_uint64_t)
+
+TEST_OPS(fixed_float16_t)
+TEST_OPS(fixed_float32_t)
+TEST_OPS(fixed_float64_t)

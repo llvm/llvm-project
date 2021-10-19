@@ -36,6 +36,17 @@ namespace llvm {
 
 class FoldingSetNodeID;
 
+// Provide PointerLikeTypeTraits for clang::Expr*, this default one requires a
+// full definition of Expr, but this file only sees a forward del because of
+// the dependency.
+template <> struct PointerLikeTypeTraits<clang::Expr *> {
+  static inline void *getAsVoidPointer(clang::Expr *P) { return P; }
+  static inline clang::Expr *getFromVoidPointer(void *P) {
+    return static_cast<clang::Expr *>(P);
+  }
+  static constexpr int NumLowBitsAvailable = 2;
+};
+
 } // namespace llvm
 
 namespace clang {
@@ -378,7 +389,8 @@ public:
   TemplateArgument getPackExpansionPattern() const;
 
   /// Print this template argument to the given output stream.
-  void print(const PrintingPolicy &Policy, raw_ostream &Out) const;
+  void print(const PrintingPolicy &Policy, raw_ostream &Out,
+             bool IncludeType) const;
 
   /// Debugging aid that dumps the template argument.
   void dump(raw_ostream &Out) const;
@@ -393,56 +405,51 @@ public:
 /// Location information for a TemplateArgument.
 struct TemplateArgumentLocInfo {
 private:
-  struct T {
+  struct TemplateTemplateArgLocInfo {
     // FIXME: We'd like to just use the qualifier in the TemplateName,
     // but template arguments get canonicalized too quickly.
     NestedNameSpecifier *Qualifier;
     void *QualifierLocData;
-    unsigned TemplateNameLoc;
-    unsigned EllipsisLoc;
+    SourceLocation TemplateNameLoc;
+    SourceLocation EllipsisLoc;
   };
 
-  union {
-    struct T Template;
-    Expr *Expression;
-    TypeSourceInfo *Declarator;
-  };
+  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
+      Pointer;
+
+  TemplateTemplateArgLocInfo *getTemplate() const {
+    return Pointer.get<TemplateTemplateArgLocInfo *>();
+  }
 
 public:
-  constexpr TemplateArgumentLocInfo() : Template({nullptr, nullptr, 0, 0}) {}
+  TemplateArgumentLocInfo() {}
+  TemplateArgumentLocInfo(TypeSourceInfo *Declarator) { Pointer = Declarator; }
 
-  TemplateArgumentLocInfo(TypeSourceInfo *TInfo) : Declarator(TInfo) {}
-
-  TemplateArgumentLocInfo(Expr *E) : Expression(E) {}
-
-  TemplateArgumentLocInfo(NestedNameSpecifierLoc QualifierLoc,
+  TemplateArgumentLocInfo(Expr *E) { Pointer = E; }
+  // Ctx is used for allocation -- this case is unusually large and also rare,
+  // so we store the payload out-of-line.
+  TemplateArgumentLocInfo(ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
                           SourceLocation TemplateNameLoc,
-                          SourceLocation EllipsisLoc) {
-    Template.Qualifier = QualifierLoc.getNestedNameSpecifier();
-    Template.QualifierLocData = QualifierLoc.getOpaqueData();
-    Template.TemplateNameLoc = TemplateNameLoc.getRawEncoding();
-    Template.EllipsisLoc = EllipsisLoc.getRawEncoding();
-  }
+                          SourceLocation EllipsisLoc);
 
   TypeSourceInfo *getAsTypeSourceInfo() const {
-    return Declarator;
+    return Pointer.get<TypeSourceInfo *>();
   }
 
-  Expr *getAsExpr() const {
-    return Expression;
-  }
+  Expr *getAsExpr() const { return Pointer.get<Expr *>(); }
 
   NestedNameSpecifierLoc getTemplateQualifierLoc() const {
-    return NestedNameSpecifierLoc(Template.Qualifier,
-                                  Template.QualifierLocData);
+    const auto *Template = getTemplate();
+    return NestedNameSpecifierLoc(Template->Qualifier,
+                                  Template->QualifierLocData);
   }
 
   SourceLocation getTemplateNameLoc() const {
-    return SourceLocation::getFromRawEncoding(Template.TemplateNameLoc);
+    return getTemplate()->TemplateNameLoc;
   }
 
   SourceLocation getTemplateEllipsisLoc() const {
-    return SourceLocation::getFromRawEncoding(Template.EllipsisLoc);
+    return getTemplate()->EllipsisLoc;
   }
 };
 
@@ -453,7 +460,7 @@ class TemplateArgumentLoc {
   TemplateArgumentLocInfo LocInfo;
 
 public:
-  constexpr TemplateArgumentLoc() {}
+  TemplateArgumentLoc() {}
 
   TemplateArgumentLoc(const TemplateArgument &Argument,
                       TemplateArgumentLocInfo Opaque)
@@ -475,12 +482,12 @@ public:
            Argument.getKind() == TemplateArgument::Expression);
   }
 
-  TemplateArgumentLoc(const TemplateArgument &Argument,
+  TemplateArgumentLoc(ASTContext &Ctx, const TemplateArgument &Argument,
                       NestedNameSpecifierLoc QualifierLoc,
                       SourceLocation TemplateNameLoc,
                       SourceLocation EllipsisLoc = SourceLocation())
       : Argument(Argument),
-        LocInfo(QualifierLoc, TemplateNameLoc, EllipsisLoc) {
+        LocInfo(Ctx, QualifierLoc, TemplateNameLoc, EllipsisLoc) {
     assert(Argument.getKind() == TemplateArgument::Template ||
            Argument.getKind() == TemplateArgument::TemplateExpansion);
   }
@@ -506,7 +513,8 @@ public:
   }
 
   TypeSourceInfo *getTypeSourceInfo() const {
-    assert(Argument.getKind() == TemplateArgument::Type);
+    if (Argument.getKind() != TemplateArgument::Type)
+      return nullptr;
     return LocInfo.getAsTypeSourceInfo();
   }
 
@@ -681,8 +689,8 @@ struct alignas(void *) ASTTemplateKWAndArgsInfo {
                 TemplateArgumentListInfo &List) const;
 };
 
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    const TemplateArgument &Arg);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      const TemplateArgument &Arg);
 
 inline TemplateSpecializationType::iterator
     TemplateSpecializationType::end() const {

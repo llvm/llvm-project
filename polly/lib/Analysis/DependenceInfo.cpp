@@ -25,6 +25,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include "isl/aff.h"
 #include "isl/ctx.h"
@@ -189,9 +190,9 @@ static void collectInfo(Scop &S, isl_union_map *&Read,
 
 /// Fix all dimension of @p Zero to 0 and add it to @p user
 static void fixSetToZero(isl::set Zero, isl::union_set *User) {
-  for (unsigned i = 0; i < Zero.dim(isl::dim::set); i++)
+  for (auto i : seq<isl_size>(0, Zero.tuple_dim().release()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
-  *User = User->add_set(Zero);
+  *User = User->unite(Zero);
 }
 
 /// Compute the privatization dependences for a given dependency @p Map
@@ -635,14 +636,26 @@ void Dependences::calculateDependences(Scop &S) {
   LLVM_DEBUG(dump());
 }
 
+bool Dependences::isValidSchedule(Scop &S, isl::schedule NewSched) const {
+  // TODO: Also check permutable/coincident flags as well.
+
+  StatementToIslMapTy NewSchedules;
+  for (auto NewMap : NewSched.get_map().get_map_list()) {
+    auto Stmt = reinterpret_cast<ScopStmt *>(
+        NewMap.get_tuple_id(isl::dim::in).get_user());
+    NewSchedules[Stmt] = NewMap;
+  }
+
+  return isValidSchedule(S, NewSchedules);
+}
+
 bool Dependences::isValidSchedule(
     Scop &S, const StatementToIslMapTy &NewSchedule) const {
   if (LegalityCheckDisabled)
     return true;
 
   isl::union_map Dependences = getDependences(TYPE_RAW | TYPE_WAW | TYPE_WAR);
-  isl::space Space = S.getParamSpace();
-  isl::union_map Schedule = isl::union_map::empty(Space);
+  isl::union_map Schedule = isl::union_map::empty(S.getIslCtx());
 
   isl::space ScheduleSpace;
 
@@ -657,23 +670,29 @@ bool Dependences::isValidSchedule(
     assert(!StmtScat.is_null() &&
            "Schedules that contain extension nodes require special handling.");
 
-    if (!ScheduleSpace)
+    if (ScheduleSpace.is_null())
       ScheduleSpace = StmtScat.get_space().range();
 
-    Schedule = Schedule.add_map(StmtScat);
+    Schedule = Schedule.unite(StmtScat);
   }
 
   Dependences = Dependences.apply_domain(Schedule);
   Dependences = Dependences.apply_range(Schedule);
 
   isl::set Zero = isl::set::universe(ScheduleSpace);
-  for (unsigned i = 0; i < Zero.dim(isl::dim::set); i++)
+  for (auto i : seq<isl_size>(0, Zero.tuple_dim().release()))
     Zero = Zero.fix_si(isl::dim::set, i, 0);
 
   isl::union_set UDeltas = Dependences.deltas();
   isl::set Deltas = singleton(UDeltas, ScheduleSpace);
 
-  isl::map NonPositive = Deltas.lex_le_set(Zero);
+  isl::space Space = Deltas.get_space();
+  isl::map NonPositive = isl::map::universe(Space.map_from_set());
+  NonPositive =
+      NonPositive.lex_le_at(isl::multi_pw_aff::identity_on_domain(Space));
+  NonPositive = NonPositive.intersect_domain(Deltas);
+  NonPositive = NonPositive.intersect_range(Zero);
+
   return NonPositive.is_empty();
 }
 
@@ -777,7 +796,7 @@ void Dependences::releaseMemory() {
 isl::union_map Dependences::getDependences(int Kinds) const {
   assert(hasValidDependences() && "No valid dependences available");
   isl::space Space = isl::manage_copy(RAW).get_space();
-  isl::union_map Deps = Deps.empty(Space);
+  isl::union_map Deps = Deps.empty(Space.ctx());
 
   if (Kinds & TYPE_RAW)
     Deps = Deps.unite(isl::manage_copy(RAW));

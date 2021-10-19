@@ -10,6 +10,7 @@
 #define LLVM_MC_MCELFSTREAMER_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCObjectStreamer.h"
 
@@ -38,7 +39,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void InitSections(bool NoExecStack) override;
+  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, const MCExpr *Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment *F,
@@ -52,8 +53,8 @@ public:
                         unsigned ByteAlignment) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
-  void emitELFSymverDirective(StringRef AliasName,
-                              const MCSymbol *Aliasee) override;
+  void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
+                              bool KeepOriginalSym) override;
 
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                              unsigned ByteAlignment) override;
@@ -79,13 +80,59 @@ public:
   void emitBundleLock(bool AlignToEnd) override;
   void emitBundleUnlock() override;
 
+  /// ELF object attributes section emission support
+  struct AttributeItem {
+    // This structure holds all attributes, accounting for their string /
+    // numeric value, so we can later emit them in declaration order, keeping
+    // all in the same vector.
+    enum {
+      HiddenAttribute = 0,
+      NumericAttribute,
+      TextAttribute,
+      NumericAndTextAttributes
+    } Type;
+    unsigned Tag;
+    unsigned IntValue;
+    std::string StringValue;
+  };
+
+  // Attributes that are added and managed entirely by target.
+  SmallVector<AttributeItem, 64> Contents;
+  void setAttributeItem(unsigned Attribute, unsigned Value,
+                        bool OverwriteExisting);
+  void setAttributeItem(unsigned Attribute, StringRef Value,
+                        bool OverwriteExisting);
+  void setAttributeItems(unsigned Attribute, unsigned IntValue,
+                         StringRef StringValue, bool OverwriteExisting);
+  void emitAttributesSection(StringRef Vendor, const Twine &Section,
+                             unsigned Type, MCSection *&AttributeSection) {
+    createAttributesSection(Vendor, Section, Type, AttributeSection, Contents);
+  }
+
+private:
+  AttributeItem *getAttributeItem(unsigned Attribute);
+  size_t calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec);
+  void createAttributesSection(StringRef Vendor, const Twine &Section,
+                               unsigned Type, MCSection *&AttributeSection,
+                               SmallVector<AttributeItem, 64> &AttrsVec);
+
+  // GNU attributes that will get emitted at the end of the asm file.
+  SmallVector<AttributeItem, 64> GNUAttributes;
+
+public:
+  void emitGNUAttribute(unsigned Tag, unsigned Value) override {
+    AttributeItem Item = {AttributeItem::NumericAttribute, Tag, Value,
+                          std::string(StringRef(""))};
+    GNUAttributes.push_back(Item);
+  }
+
 private:
   bool isBundleLocked() const;
   void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
-  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
+  void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
   void finalizeCGProfile();
 
   /// Merge the content of the fragment \p EF into the fragment \p DF.

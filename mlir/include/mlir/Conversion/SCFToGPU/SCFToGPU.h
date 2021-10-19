@@ -12,10 +12,13 @@
 
 namespace mlir {
 class AffineForOp;
-class MLIRContext;
-class OwningRewritePatternList;
+class ConversionTarget;
 struct LogicalResult;
+class MLIRContext;
 class Value;
+class Operation;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class ForOp;
@@ -41,8 +44,14 @@ LogicalResult convertAffineLoopNestToGPULaunch(AffineForOp forOp,
 
 /// Adds the conversion pattern from `scf.parallel` to `gpu.launch` to the
 /// provided pattern list.
-void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
-                                       MLIRContext *ctx);
+void populateParallelLoopToGPUPatterns(RewritePatternSet &patterns);
+
+/// Configures the rewrite target such that only `scf.parallel` operations that
+/// are not rewritten by the provided patterns are legal.
+void configureParallelLoopToGPULegality(ConversionTarget &target);
+
+/// Clean up after applyPartialConversion/applyFullConversion call.
+void finalizeParallelLoopToGPUConversion(Operation *op);
 
 } // namespace mlir
 

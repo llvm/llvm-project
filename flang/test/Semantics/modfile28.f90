@@ -1,4 +1,4 @@
-! RUN: %S/test_modfile.sh %s %t %f18
+! RUN: %python %S/test_modfile.py %s %flang_fc1
 
 ! Test UTF-8 support in character literals
 ! Note: Module files are encoded in UTF-8.

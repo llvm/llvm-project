@@ -30,16 +30,15 @@ define void @main() #0 {
 ; CHECK-NEXT:    br i1 undef, label [[COND_TRUE63_US:%.*]], label [[COND_FALSE66_US:%.*]]
 ; CHECK:       cond.false66.us:
 ; CHECK-NEXT:    [[ADD_I276_US:%.*]] = fadd double 0.000000e+00, undef
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double [[ADD_I276_US]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double undef, i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 0.000000e+00, double 0xBFA5CC2D1960285F>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 1.400000e+02, double 1.400000e+02>
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], <double 5.000000e+01, double 5.200000e+01>
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> undef, [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[AGG_TMP99208_SROA_0_0_IDX]] to <2 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[ADD_I276_US]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[TMP0]], <double 0.000000e+00, double 0xBFA5CC2D1960285F>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 1.400000e+02, double 1.400000e+02>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 5.000000e+01, double 5.200000e+01>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> undef, [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[AGG_TMP99208_SROA_0_0_IDX]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[AGG_TMP101211_SROA_0_0_IDX]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[AGG_TMP101211_SROA_0_0_IDX]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP7]], align 8
 ; CHECK-NEXT:    unreachable
 ; CHECK:       cond.true63.us:
 ; CHECK-NEXT:    unreachable
@@ -111,7 +110,7 @@ define void @_Z8radianceRK3RayiPt() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN78:%.*]], label [[IF_THEN38:%.*]]
 ; CHECK:       if.then38:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> undef, double undef, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double undef, double poison>, double undef, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> undef, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> undef, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> undef, [[TMP2]]

@@ -1,9 +1,8 @@
 //===-------------- MachO.cpp - JIT linker function for MachO -------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,39 +26,29 @@ using namespace llvm;
 namespace llvm {
 namespace jitlink {
 
-void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
-
-  // We don't want to do full MachO validation here. Just parse enough of the
-  // header to find out what MachO linker to use.
-
-  StringRef Data = Ctx->getObjectBuffer().getBuffer();
-  if (Data.size() < 4) {
-    StringRef BufferName = Ctx->getObjectBuffer().getBufferIdentifier();
-    Ctx->notifyFailed(make_error<JITLinkError>("Truncated MachO buffer \"" +
-                                               BufferName + "\""));
-    return;
-  }
+Expected<std::unique_ptr<LinkGraph>>
+createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer) {
+  StringRef Data = ObjectBuffer.getBuffer();
+  if (Data.size() < 4)
+    return make_error<JITLinkError>("Truncated MachO buffer \"" +
+                                    ObjectBuffer.getBufferIdentifier() + "\"");
 
   uint32_t Magic;
   memcpy(&Magic, Data.data(), sizeof(uint32_t));
   LLVM_DEBUG({
     dbgs() << "jitLink_MachO: magic = " << format("0x%08" PRIx32, Magic)
-           << ", identifier = \""
-           << Ctx->getObjectBuffer().getBufferIdentifier() << "\"\n";
+           << ", identifier = \"" << ObjectBuffer.getBufferIdentifier()
+           << "\"\n";
   });
 
-  if (Magic == MachO::MH_MAGIC || Magic == MachO::MH_CIGAM) {
-    Ctx->notifyFailed(
-        make_error<JITLinkError>("MachO 32-bit platforms not supported"));
-    return;
-  } else if (Magic == MachO::MH_MAGIC_64 || Magic == MachO::MH_CIGAM_64) {
+  if (Magic == MachO::MH_MAGIC || Magic == MachO::MH_CIGAM)
+    return make_error<JITLinkError>("MachO 32-bit platforms not supported");
+  else if (Magic == MachO::MH_MAGIC_64 || Magic == MachO::MH_CIGAM_64) {
 
-    if (Data.size() < sizeof(MachO::mach_header_64)) {
-      StringRef BufferName = Ctx->getObjectBuffer().getBufferIdentifier();
-      Ctx->notifyFailed(make_error<JITLinkError>("Truncated MachO buffer \"" +
-                                                 BufferName + "\""));
-      return;
-    }
+    if (Data.size() < sizeof(MachO::mach_header_64))
+      return make_error<JITLinkError>("Truncated MachO buffer \"" +
+                                      ObjectBuffer.getBufferIdentifier() +
+                                      "\"");
 
     // Read the CPU type from the header.
     uint32_t CPUType;
@@ -74,15 +63,27 @@ void jitLink_MachO(std::unique_ptr<JITLinkContext> Ctx) {
 
     switch (CPUType) {
     case MachO::CPU_TYPE_ARM64:
-      return jitLink_MachO_arm64(std::move(Ctx));
+      return createLinkGraphFromMachOObject_arm64(ObjectBuffer);
     case MachO::CPU_TYPE_X86_64:
-      return jitLink_MachO_x86_64(std::move(Ctx));
+      return createLinkGraphFromMachOObject_x86_64(ObjectBuffer);
     }
+    return make_error<JITLinkError>("MachO-64 CPU type not valid");
+  } else
+    return make_error<JITLinkError>("Unrecognized MachO magic value");
+}
+
+void link_MachO(std::unique_ptr<LinkGraph> G,
+                std::unique_ptr<JITLinkContext> Ctx) {
+
+  switch (G->getTargetTriple().getArch()) {
+  case Triple::aarch64:
+    return link_MachO_arm64(std::move(G), std::move(Ctx));
+  case Triple::x86_64:
+    return link_MachO_x86_64(std::move(G), std::move(Ctx));
+  default:
     Ctx->notifyFailed(make_error<JITLinkError>("MachO-64 CPU type not valid"));
     return;
   }
-
-  Ctx->notifyFailed(make_error<JITLinkError>("MachO magic not valid"));
 }
 
 } // end namespace jitlink

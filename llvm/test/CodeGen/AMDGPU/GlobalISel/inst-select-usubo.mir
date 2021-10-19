@@ -38,7 +38,6 @@ body: |
     ; GFX9: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX9: S_ENDPGM 0, implicit [[S_SUB_U32_]], implicit [[S_CSELECT_B32_]]
     ; GFX10-LABEL: name: usubo_s32_s1_sss
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10: [[S_SUB_U32_:%[0-9]+]]:sreg_32 = S_SUB_U32 [[COPY]], [[COPY1]], implicit-def $scc
@@ -81,7 +80,6 @@ body: |
     ; GFX9: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
     ; GFX10-LABEL: name: usubo_s32_s1_vvv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX10: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
@@ -128,7 +126,6 @@ body: |
     ; GFX9: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
     ; GFX10-LABEL: name: usubo_s32_s1_vsv
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
@@ -179,7 +176,6 @@ body: |
     ; GFX9: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_1]], 0, [[V_MOV_B32_e32_]], [[V_SUB_CO_U32_e64_1]], implicit $exec
     ; GFX9: S_ENDPGM 0, implicit [[V_SUB_CO_U32_e64_]], implicit [[V_CNDMASK_B32_e64_]]
     ; GFX10-LABEL: name: usubo_s32_s1_vvs
-    ; GFX10: $vcc_hi = IMPLICIT_DEF
     ; GFX10: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[V_SUB_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUB_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUB_CO_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec

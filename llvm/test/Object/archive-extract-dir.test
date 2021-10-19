@@ -6,6 +6,6 @@ RUN: rm -f test.a
 RUN: llvm-ar rc          test.a foo
 RUN: rm foo
 RUN: mkdir foo
-RUN: not llvm-ar x test.a foo 2>&1 | FileCheck %s
+RUN: not llvm-ar x test.a foo 2>&1 | FileCheck -DMSG=%errc_EISDIR %s
 
-CHECK: foo: {{[Ii]}}s a directory
+CHECK: foo: [[MSG]]

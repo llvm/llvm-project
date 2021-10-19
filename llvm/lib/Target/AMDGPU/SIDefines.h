@@ -7,12 +7,19 @@
 /// \file
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCInstrDesc.h"
-
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInstrDesc.h"
+
 namespace llvm {
+
+// This needs to be kept in sync with the field bits in SIRegisterClass.
+enum SIRCFlags : uint8_t {
+  // For vector registers.
+  HasVGPR = 1 << 0,
+  HasAGPR = 1 << 1
+}; // enum SIRCFlags
 
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
@@ -33,26 +40,27 @@ enum : uint64_t {
   VOP2 = 1 << 8,
   VOPC = 1 << 9,
 
- // TODO: Should this be spilt into VOP3 a and b?
+  // TODO: Should this be spilt into VOP3 a and b?
   VOP3 = 1 << 10,
   VOP3P = 1 << 12,
 
   VINTRP = 1 << 13,
   SDWA = 1 << 14,
   DPP = 1 << 15,
+  TRANS = 1 << 16,
 
   // Memory instruction formats.
-  MUBUF = 1 << 16,
-  MTBUF = 1 << 17,
-  SMRD = 1 << 18,
-  MIMG = 1 << 19,
-  EXP = 1 << 20,
-  FLAT = 1 << 21,
-  DS = 1 << 22,
+  MUBUF = 1 << 17,
+  MTBUF = 1 << 18,
+  SMRD = 1 << 19,
+  MIMG = 1 << 20,
+  EXP = 1 << 21,
+  FLAT = 1 << 22,
+  DS = 1 << 23,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 23,
-  SGPRSpill = 1 << 24,
+  VGPRSpill = 1 << 24,
+  SGPRSpill = 1 << 25,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -89,8 +97,8 @@ enum : uint64_t {
   // Is a D16 buffer instruction.
   D16Buf = UINT64_C(1) << 50,
 
-  // FLAT instruction accesses FLAT_GLBL or FLAT_SCRATCH segment.
-  IsNonFlatSeg = UINT64_C(1) << 51,
+  // FLAT instruction accesses FLAT_GLBL segment.
+  FlatGlobal = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
   FPDPRounding = UINT64_C(1) << 52,
@@ -102,7 +110,16 @@ enum : uint64_t {
   IsMAI = UINT64_C(1) << 54,
 
   // Is a DOT instruction.
-  IsDOT = UINT64_C(1) << 55
+  IsDOT = UINT64_C(1) << 55,
+
+  // FLAT instruction accesses FLAT_SCRATCH segment.
+  FlatScratch = UINT64_C(1) << 56,
+
+  // Atomic without return.
+  IsAtomicNoRet = UINT64_C(1) << 57,
+
+  // Atomic with return.
+  IsAtomicRet = UINT64_C(1) << 58
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -122,57 +139,67 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
-  enum OperandType : unsigned {
-    /// Operands with register or 32-bit immediate
-    OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
-    OPERAND_REG_IMM_INT64,
-    OPERAND_REG_IMM_INT16,
-    OPERAND_REG_IMM_FP32,
-    OPERAND_REG_IMM_FP64,
-    OPERAND_REG_IMM_FP16,
-    OPERAND_REG_IMM_V2FP16,
-    OPERAND_REG_IMM_V2INT16,
+enum OperandType : unsigned {
+  /// Operands with register or 32-bit immediate
+  OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_REG_IMM_INT64,
+  OPERAND_REG_IMM_INT16,
+  OPERAND_REG_IMM_FP32,
+  OPERAND_REG_IMM_FP64,
+  OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_FP16_DEFERRED,
+  OPERAND_REG_IMM_FP32_DEFERRED,
+  OPERAND_REG_IMM_V2FP16,
+  OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_V2INT32,
+  OPERAND_REG_IMM_V2FP32,
 
-    /// Operands with register or inline constant
-    OPERAND_REG_INLINE_C_INT16,
-    OPERAND_REG_INLINE_C_INT32,
-    OPERAND_REG_INLINE_C_INT64,
-    OPERAND_REG_INLINE_C_FP16,
-    OPERAND_REG_INLINE_C_FP32,
-    OPERAND_REG_INLINE_C_FP64,
-    OPERAND_REG_INLINE_C_V2FP16,
-    OPERAND_REG_INLINE_C_V2INT16,
+  /// Operands with register or inline constant
+  OPERAND_REG_INLINE_C_INT16,
+  OPERAND_REG_INLINE_C_INT32,
+  OPERAND_REG_INLINE_C_INT64,
+  OPERAND_REG_INLINE_C_FP16,
+  OPERAND_REG_INLINE_C_FP32,
+  OPERAND_REG_INLINE_C_FP64,
+  OPERAND_REG_INLINE_C_V2INT16,
+  OPERAND_REG_INLINE_C_V2FP16,
+  OPERAND_REG_INLINE_C_V2INT32,
+  OPERAND_REG_INLINE_C_V2FP32,
 
-    /// Operands with an AccVGPR register or inline constant
-    OPERAND_REG_INLINE_AC_INT16,
-    OPERAND_REG_INLINE_AC_INT32,
-    OPERAND_REG_INLINE_AC_FP16,
-    OPERAND_REG_INLINE_AC_FP32,
-    OPERAND_REG_INLINE_AC_V2FP16,
-    OPERAND_REG_INLINE_AC_V2INT16,
+  /// Operand with 32-bit immediate that uses the constant bus.
+  OPERAND_KIMM32,
+  OPERAND_KIMM16,
 
-    OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-    OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2INT16,
+  /// Operands with an AccVGPR register or inline constant
+  OPERAND_REG_INLINE_AC_INT16,
+  OPERAND_REG_INLINE_AC_INT32,
+  OPERAND_REG_INLINE_AC_FP16,
+  OPERAND_REG_INLINE_AC_FP32,
+  OPERAND_REG_INLINE_AC_FP64,
+  OPERAND_REG_INLINE_AC_V2INT16,
+  OPERAND_REG_INLINE_AC_V2FP16,
+  OPERAND_REG_INLINE_AC_V2INT32,
+  OPERAND_REG_INLINE_AC_V2FP32,
 
-    OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
-    OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2INT16,
+  OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
+  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
-    OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT16,
-    OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_V2INT16,
+  OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
+  OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_V2FP32,
 
-    OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
-    OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
+  OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT16,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_V2FP32,
 
-    // Operand for source modifiers for VOP instructions
-    OPERAND_INPUT_MODS,
+  OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
+  OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
-    // Operand for SDWA instructions
-    OPERAND_SDWA_VOPC_DST,
+  // Operand for source modifiers for VOP instructions
+  OPERAND_INPUT_MODS,
 
-    /// Operand with 32-bit immediate that uses the constant bus.
-    OPERAND_KIMM32,
-    OPERAND_KIMM16
-  };
+  // Operand for SDWA instructions
+  OPERAND_SDWA_VOPC_DST
+
+};
 }
 
 // Input operand modifiers bit-masks
@@ -217,7 +244,8 @@ enum EncBits : unsigned {
   SRC1_ENABLE = 1 << ID_SRC1,
   SRC2_ENABLE = 1 << ID_SRC2,
   DST_ENABLE = 1 << ID_DST,
-  ENABLE_MASK = SRC0_ENABLE | SRC1_ENABLE | SRC2_ENABLE | DST_ENABLE
+  ENABLE_MASK = SRC0_ENABLE | SRC1_ENABLE | SRC2_ENABLE | DST_ENABLE,
+  UNDEF = 0xFFFF
 };
 
 } // namespace VGPRIndexMode
@@ -242,8 +270,8 @@ enum : unsigned {
   SGPR_MAX_GFX10 = 105,
   TTMP_VI_MIN = 112,
   TTMP_VI_MAX = 123,
-  TTMP_GFX9_GFX10_MIN = 108,
-  TTMP_GFX9_GFX10_MAX = 123,
+  TTMP_GFX9PLUS_MIN = 108,
+  TTMP_GFX9PLUS_MAX = 123,
   INLINE_INTEGER_C_MIN = 128,
   INLINE_INTEGER_C_POSITIVE_MAX = 192, // 64
   INLINE_INTEGER_C_MAX = 208,
@@ -258,15 +286,33 @@ enum : unsigned {
 } // namespace AMDGPU
 
 namespace AMDGPU {
+namespace CPol {
+
+enum CPol {
+  GLC = 1,
+  SLC = 2,
+  DLC = 4,
+  SCC = 16,
+  ALL = GLC | SLC | DLC | SCC
+};
+
+} // namespace CPol
+
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
   ID_UNKNOWN_ = -1,
   ID_INTERRUPT = 1,
-  ID_GS,
-  ID_GS_DONE,
-  ID_GS_ALLOC_REQ = 9,
-  ID_GET_DOORBELL = 10,
+  ID_GS = 2,
+  ID_GS_DONE = 3,
+  ID_SAVEWAVE = 4,           // added in GFX8
+  ID_STALL_WAVE_GEN = 5,     // added in GFX9
+  ID_HALT_WAVES = 6,         // added in GFX9
+  ID_ORDERED_PS_DONE = 7,    // added in GFX9
+  ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
+  ID_GS_ALLOC_REQ = 9,       // added in GFX9
+  ID_GET_DOORBELL = 10,      // added in GFX9
+  ID_GET_DDID = 11,          // added in GFX10
   ID_SYSMSG = 15,
   ID_GAPS_LAST_, // Indicate that sequence has gaps.
   ID_GAPS_FIRST_ = ID_INTERRUPT,
@@ -284,16 +330,16 @@ enum Op { // Both GS and SYS operation IDs.
   OP_MASK_ = (((1 << OP_WIDTH_) - 1) << OP_SHIFT_),
   // GS operations are encoded in bits 5:4
   OP_GS_NOP = 0,
-  OP_GS_CUT,
-  OP_GS_EMIT,
-  OP_GS_EMIT_CUT,
+  OP_GS_CUT = 1,
+  OP_GS_EMIT = 2,
+  OP_GS_EMIT_CUT = 3,
   OP_GS_LAST_,
   OP_GS_FIRST_ = OP_GS_NOP,
   // SYS operations are encoded in bits 6:4
   OP_SYS_ECC_ERR_INTERRUPT = 1,
-  OP_SYS_REG_RD,
-  OP_SYS_HOST_TRAP_ACK,
-  OP_SYS_TTRACE_PC,
+  OP_SYS_REG_RD = 2,
+  OP_SYS_HOST_TRAP_ACK = 3,
+  OP_SYS_TTRACE_PC = 4,
   OP_SYS_LAST_,
   OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
 };
@@ -635,6 +681,7 @@ enum SDWA9EncValues : unsigned {
 
 namespace DPP {
 
+// clang-format off
 enum DppCtrl : unsigned {
   QUAD_PERM_FIRST   = 0,
   QUAD_PERM_ID      = 0xE4, // identity permutation
@@ -669,12 +716,17 @@ enum DppCtrl : unsigned {
   BCAST31           = 0x143,
   DPP_UNUSED8_FIRST = 0x144,
   DPP_UNUSED8_LAST  = 0x14F,
+  ROW_NEWBCAST_FIRST= 0x150,
+  ROW_NEWBCAST_LAST = 0x15F,
+  ROW_SHARE0        = 0x150,
   ROW_SHARE_FIRST   = 0x150,
   ROW_SHARE_LAST    = 0x15F,
+  ROW_XMASK0        = 0x160,
   ROW_XMASK_FIRST   = 0x160,
   ROW_XMASK_LAST    = 0x16F,
   DPP_LAST          = ROW_XMASK_LAST
 };
+// clang-format on
 
 enum DppFiMode {
   DPP_FI_0  = 0,
@@ -684,19 +736,78 @@ enum DppFiMode {
 };
 
 } // namespace DPP
+
+namespace Exp {
+
+enum Target : unsigned {
+  ET_MRT0 = 0,
+  ET_MRT7 = 7,
+  ET_MRTZ = 8,
+  ET_NULL = 9,
+  ET_POS0 = 12,
+  ET_POS3 = 15,
+  ET_POS4 = 16,          // GFX10+
+  ET_POS_LAST = ET_POS4, // Highest pos used on any subtarget
+  ET_PRIM = 20,          // GFX10+
+  ET_PARAM0 = 32,
+  ET_PARAM31 = 63,
+
+  ET_NULL_MAX_IDX = 0,
+  ET_MRTZ_MAX_IDX = 0,
+  ET_PRIM_MAX_IDX = 0,
+  ET_MRT_MAX_IDX = 7,
+  ET_POS_MAX_IDX = 4,
+  ET_PARAM_MAX_IDX = 31,
+
+  ET_INVALID = 255,
+};
+
+} // namespace Exp
+
+namespace VOP3PEncoding {
+
+enum OpSel : uint64_t {
+  OP_SEL_HI_0 = UINT64_C(1) << 59,
+  OP_SEL_HI_1 = UINT64_C(1) << 60,
+  OP_SEL_HI_2 = UINT64_C(1) << 14,
+};
+
+} // namespace VOP3PEncoding
+
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028
+#define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
+#define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
+#define   S_00B028_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
+#define   G_00B028_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
+#define   C_00B028_MEM_ORDERED                                        0xFDFFFFFF
+
 #define R_00B02C_SPI_SHADER_PGM_RSRC2_PS                                0x00B02C
 #define   S_00B02C_EXTRA_LDS_SIZE(x)                                  (((x) & 0xFF) << 8)
 #define R_00B128_SPI_SHADER_PGM_RSRC1_VS                                0x00B128
+#define   S_00B128_MEM_ORDERED(x)                                     (((x) & 0x1) << 27)
+#define   G_00B128_MEM_ORDERED(x)                                     (((x) >> 27) & 0x1)
+#define   C_00B128_MEM_ORDERED                                        0xF7FFFFFF
+
 #define R_00B228_SPI_SHADER_PGM_RSRC1_GS                                0x00B228
+#define   S_00B228_WGP_MODE(x)                                        (((x) & 0x1) << 27)
+#define   G_00B228_WGP_MODE(x)                                        (((x) >> 27) & 0x1)
+#define   C_00B228_WGP_MODE                                           0xF7FFFFFF
+#define   S_00B228_MEM_ORDERED(x)                                     (((x) & 0x1) << 25)
+#define   G_00B228_MEM_ORDERED(x)                                     (((x) >> 25) & 0x1)
+#define   C_00B228_MEM_ORDERED                                        0xFDFFFFFF
+
 #define R_00B328_SPI_SHADER_PGM_RSRC1_ES                                0x00B328
 #define R_00B428_SPI_SHADER_PGM_RSRC1_HS                                0x00B428
+#define   S_00B428_WGP_MODE(x)                                        (((x) & 0x1) << 26)
+#define   G_00B428_WGP_MODE(x)                                        (((x) >> 26) & 0x1)
+#define   C_00B428_WGP_MODE                                           0xFBFFFFFF
+#define   S_00B428_MEM_ORDERED(x)                                     (((x) & 0x1) << 24)
+#define   G_00B428_MEM_ORDERED(x)                                     (((x) >> 24) & 0x1)
+#define   C_00B428_MEM_ORDERED                                        0xFEFFFFFF
+
 #define R_00B528_SPI_SHADER_PGM_RSRC1_LS                                0x00B528
-#define R_00B848_COMPUTE_PGM_RSRC1                                      0x00B848
-#define   S_00B028_VGPRS(x)                                           (((x) & 0x3F) << 0)
-#define   S_00B028_SGPRS(x)                                           (((x) & 0x0F) << 6)
 
 #define R_00B84C_COMPUTE_PGM_RSRC2                                      0x00B84C
 #define   S_00B84C_SCRATCH_EN(x)                                      (((x) & 0x1) << 0)

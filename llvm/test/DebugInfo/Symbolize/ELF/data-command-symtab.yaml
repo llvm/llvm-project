@@ -1,0 +1,52 @@
+## Function and data symbols have different addresses so internally we treat
+## STT_NOTYPE/STT_FUNC/STT_DATA/etc the same. The DATA command may get a function
+## as result. For regular applications, the input addresses are guaranteed to be
+## related to data symbols.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-symbolizer --obj=%t 'DATA 0x1000' 'DATA 0x2000' 'DATA 0x2002' | FileCheck %s
+
+# CHECK:       func
+# CHECK-NEXT:  4096 1
+# CHECK-EMPTY:
+# CHECK-NEXT:  data
+# CHECK-NEXT:  8192 2
+# CHECK-EMPTY:
+# CHECK-NEXT:  notype
+# CHECK-NEXT:  8194 3
+# CHECK-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    1
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x2000
+    Size:    5
+Symbols:
+  - Name:    func
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    1
+  - Name:    data
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_GLOBAL
+    Value:   0x2000
+    Size:    2
+  - Name:    notype
+    Section: .data
+    Binding: STB_GLOBAL
+    Value:   0x2002
+    Size:    3

@@ -1,122 +1,80 @@
-// REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
-// RUN: ld.lld -shared -soname=so %t2.o -o %t2.so
-// RUN: ld.lld -shared %t.o %t2.so -o %t
-// RUN: ld.lld %t.o %t2.so -o %t3
-// RUN: llvm-readobj -S -r %t | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
-// RUN: llvm-readobj -S -r %t3 | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t3 | FileCheck --check-prefix=DISASM2 %s
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/shared.s -o %t2.o
+# RUN: ld.lld -shared -soname=t2 %t2.o -o %t2.so
 
-// CHECK:      Name: .plt
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT: Flags [
-// CHECK-NEXT:   SHF_ALLOC
-// CHECK-NEXT:   SHF_EXECINSTR
-// CHECK-NEXT: ]
-// CHECK-NEXT: Address: 0x1320
-// CHECK-NEXT: Offset:
-// CHECK-NEXT: Size: 64
-// CHECK-NEXT: Link: 0
-// CHECK-NEXT: Info: 0
-// CHECK-NEXT: AddressAlignment: 16
+# RUN: ld.lld %t.o %t2.so -o %t
+# RUN: ld.lld -shared %t.o %t2.so -o %t.so
+# RUN: llvm-readelf -S -r %t | FileCheck %s --check-prefix=CHECK1
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=DISASM,DISASM1
+# RUN: llvm-readelf -S -r %t.so | FileCheck %s --check-prefix=CHECK2
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefixes=DISASM,DISASM2
 
-// CHECK:      Relocations [
-// CHECK-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK-NEXT:     0x3438 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK-NEXT:     0x3440 R_X86_64_JUMP_SLOT zed 0x0
-// CHECK-NEXT:     0x3448 R_X86_64_JUMP_SLOT _start 0x0
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]
+# CHECK1:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK1:      .plt      PROGBITS 00000000002012e0 0002e0 000030 00 AX   0   0 16
+# CHECK1:      .got.plt  PROGBITS 00000000002033e0 0003e0 000028 00 WA   0   0  8
+# CHECK1:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
+# CHECK1:      00000000002033f8 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 bar + 0
+# CHECK1-NEXT: 0000000000203400 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 weak + 0
 
-// CHECK2:      Name: .plt
-// CHECK2-NEXT: Type: SHT_PROGBITS
-// CHECK2-NEXT: Flags [
-// CHECK2-NEXT:   SHF_ALLOC
-// CHECK2-NEXT:   SHF_EXECINSTR
-// CHECK2-NEXT: ]
-// CHECK2-NEXT: Address: 0x2012E0
-// CHECK2-NEXT: Offset:
-// CHECK2-NEXT: Size: 48
-// CHECK2-NEXT: Link: 0
-// CHECK2-NEXT: Info: 0
-// CHECK2-NEXT: AddressAlignment: 16
+# CHECK2:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
+# CHECK2:      .plt      PROGBITS 0000000000001310 000310 000030 00 AX   0   0 16
+# CHECK2:      .got.plt  PROGBITS 0000000000003400 000400 000028 00 WA   0   0  8
+# CHECK2:      Relocation section '.rela.plt' at offset {{.*}} contains 2 entries:
+# CHECK2:      0000000000003418 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 bar + 0
+# CHECK2-NEXT: 0000000000003420 {{.*}} R_X86_64_JUMP_SLOT 0000000000000000 weak + 0
 
-// CHECK2:      Relocations [
-// CHECK2-NEXT:   Section ({{.*}}) .rela.plt {
-// CHECK2-NEXT:     0x2033F8 R_X86_64_JUMP_SLOT bar 0x0
-// CHECK2-NEXT:     0x203400 R_X86_64_JUMP_SLOT zed 0x0
-// CHECK2-NEXT:   }
-// CHECK2-NEXT: ]
+# DISASM:       <_start>:
+# DISASM-NEXT:    callq {{.*}} <local>
+# DISASM-NEXT:    callq {{.*}} <bar@plt>
+# DISASM-NEXT:    jmp   {{.*}} <bar@plt>
+# DISASM-NEXT:    jmp   {{.*}} <weak@plt>
 
-// DISASM:      <_start>:
-// DISASM-NEXT:   jmp  {{.*}} <bar@plt>
-// DISASM-NEXT:   jmp  {{.*}} <bar@plt>
-// DISASM-NEXT:   jmp  {{.*}} <zed@plt>
-// DISASM-NEXT:   jmp  {{.*}} <_start@plt>
+# DISASM1:      Disassembly of section .plt:
+# DISASM1-EMPTY:
+# DISASM1-NEXT: <.plt>:
+# DISASM1-NEXT: 2012e0:     pushq 8450(%rip)  # 0x2033e8
+# DISASM1-NEXT:             jmpq *8452(%rip)  # 0x2033f0
+# DISASM1-NEXT:             nopl (%rax)
+# DISASM1-EMPTY:
+# DISASM1-NEXT: <bar@plt>:
+# DISASM1-NEXT: 2012f0:     jmpq *8450(%rip)  # 0x2033f8
+# DISASM1-NEXT:             pushq $0
+# DISASM1-NEXT:             jmp 0x2012e0 <.plt>
+# DISASM1-EMPTY:
+# DISASM1-NEXT: <weak@plt>:
+# DISASM1-NEXT: 201300:     jmpq *8442(%rip)  # 0x203400
+# DISASM1-NEXT:             pushq $1
+# DISASM1-NEXT:             jmp 0x2012e0 <.plt>
+# DISASM1-NOT:  {{.}}
 
-// 0x3018 - 0x1036  = 8162
-// 0x3020 - 0x1046  = 8154
-// 0x3028 - 0x1056  = 8146
-
-// DISASM:      Disassembly of section .plt:
-// DISASM-EMPTY:
-// DISASM-NEXT: <.plt>:
-// DISASM-NEXT:   1320:       pushq 8450(%rip)
-// DISASM-NEXT:               jmpq *8452(%rip)
-// DISASM-NEXT:               nopl (%rax)
-// DISASM-EMPTY:
-// DISASM-NEXT:   <bar@plt>:
-// DISASM-NEXT:   1330:       jmpq *8450(%rip)
-// DISASM-NEXT:               pushq $0
-// DISASM-NEXT:               jmp 0x1320 <.plt>
-// DISASM-EMPTY:
-// DISASM-NEXT:   <zed@plt>:
-// DISASM-NEXT:   1340:       jmpq *8442(%rip)
-// DISASM-NEXT:               pushq $1
-// DISASM-NEXT:               jmp 0x1320 <.plt>
-// DISASM-EMPTY:
-// DISASM-NEXT:   <_start@plt>:
-// DISASM-NEXT:   1350:       jmpq *8434(%rip)
-// DISASM-NEXT:               pushq $2
-// DISASM-NEXT:               jmp 0x1320 <.plt>
-
-// 0x201030 - (0x201000 + 1) - 4 = 43
-// 0x201030 - (0x201005 + 1) - 4 = 38
-// 0x201040 - (0x20100a + 1) - 4 = 49
-// 0x201000 - (0x20100f + 1) - 4 = -20
-
-// DISASM2:      <_start>:
-// DISASM2-NEXT:   jmp  0x2012f0 <bar@plt>
-// DISASM2-NEXT:   jmp  0x2012f0 <bar@plt>
-// DISASM2-NEXT:   jmp  0x201300 <zed@plt>
-// DISASM2-NEXT:   jmp  0x2012c0 <_start>
-
-// 0x202018 - 0x201036  = 4066
-// 0x202020 - 0x201046  = 4058
-
-// DISASM2:      Disassembly of section .plt:
-// DISASM2-EMPTY:
-// DISASM2-NEXT: <.plt>:
-// DISASM2-NEXT:  2012e0:       pushq 8450(%rip)
-// DISASM2-NEXT:                jmpq *8452(%rip)
-// DISASM2-NEXT:                nopl  (%rax)
-// DISASM2-EMPTY:
-// DISASM2-NEXT: <bar@plt>:
-// DISASM2-NEXT:  2012f0:       jmpq *8450(%rip)
-// DISASM2-NEXT:                pushq $0
-// DISASM2-NEXT:                jmp 0x2012e0 <.plt>
-// DISASM2-EMPTY:
-// DISASM2-NEXT: <zed@plt>:
-// DISASM2-NEXT:  201300:       jmpq *8442(%rip)
-// DISASM2-NEXT:                pushq $1
-// DISASM2-NEXT:                jmp 0x2012e0 <.plt>
-// DISASM2-NOT:   {{.}}
+# DISASM2:      Disassembly of section .plt:
+# DISASM2-EMPTY:
+# DISASM2-NEXT: <.plt>:
+# DISASM2-NEXT:   1310:     pushq 8434(%rip)  # 0x3408
+# DISASM2-NEXT:             jmpq *8436(%rip)  # 0x3410
+# DISASM2-NEXT:             nopl (%rax)
+# DISASM2-EMPTY:
+# DISASM2-NEXT: <bar@plt>:
+# DISASM2-NEXT:   1320:     jmpq *8434(%rip)  # 0x3418
+# DISASM2-NEXT:             pushq $0
+# DISASM2-NEXT:             jmp 0x1310 <.plt>
+# DISASM2-EMPTY:
+# DISASM2-NEXT: <weak@plt>:
+# DISASM2-NEXT:   1330:     jmpq *8426(%rip)  # 0x3420
+# DISASM2-NEXT:             pushq $1
+# DISASM2-NEXT:             jmp 0x1310 <.plt>
+# DISASM2-NOT:  {{.}}
 
 .global _start
+.weak weak
+
 _start:
-  jmp bar@PLT
-  jmp bar@PLT
-  jmp zed@PLT
-  jmp _start@plt
+  call local
+  call bar
+  jmp bar@plt
+  jmp weak
+
+## foo is local and non-preemptale, no PLT is generated.
+local:
+  ret

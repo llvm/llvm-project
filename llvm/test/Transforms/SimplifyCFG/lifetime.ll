@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; Test that a lifetime intrinsic isn't removed because that would change semantics
 

@@ -5,11 +5,10 @@
 
 # CHECK:      --- !ELF
 # CHECK-NEXT: FileHeader:
-# CHECK-NEXT:   Class:     ELFCLASS64
-# CHECK-NEXT:   Data:      ELFDATA2LSB
-# CHECK-NEXT:   OSABI:     ELFOSABI_GNU
-# CHECK-NEXT:   Type:      ET_REL
-# CHECK-NEXT:   Machine:   EM_NONE
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   OSABI: ELFOSABI_GNU
+# CHECK-NEXT:   Type:  ET_REL
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name:    foo
 # CHECK-NEXT:     Type:    STT_OBJECT

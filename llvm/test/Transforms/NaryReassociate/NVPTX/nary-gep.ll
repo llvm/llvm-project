@@ -1,4 +1,4 @@
-; RUN: opt < %s -nary-reassociate -early-cse -S | FileCheck %s
+; RUN: opt < %s -nary-reassociate -early-cse -earlycse-debug-hash -S | FileCheck %s
 ; RUN: opt < %s -passes='nary-reassociate' -S | opt -early-cse -S | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"

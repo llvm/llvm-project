@@ -59,20 +59,20 @@ int main(int, char**)
     std::function<int(int)> f = A();
     assert(A::count == 1);
     assert(globalMemCounter.checkOutstandingNewEq(1));
-    assert(f.target<A>());
+    RTTI_ASSERT(f.target<A>());
     f = nullptr;
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<A>() == 0);
+    RTTI_ASSERT(f.target<A>() == 0);
     }
     {
     std::function<int(int)> f = g;
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<int(*)(int)>());
-    assert(f.target<A>() == 0);
+    RTTI_ASSERT(f.target<int(*)(int)>());
+    RTTI_ASSERT(f.target<A>() == 0);
     f = nullptr;
     assert(globalMemCounter.checkOutstandingNewEq(0));
-    assert(f.target<int(*)(int)>() == 0);
+    RTTI_ASSERT(f.target<int(*)(int)>() == 0);
     }
 
   return 0;

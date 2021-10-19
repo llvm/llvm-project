@@ -62,6 +62,26 @@ define half @test_fmul(half %a, half %b) #0 {
   ret half %r
 }
 
+; CHECK-CVT-LABEL: test_fmadd:
+; CHECK-CVT-NEXT: fcvt s1, h1
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fmul s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: fcvt s0, h0
+; CHECK-CVT-NEXT: fcvt s1, h2
+; CHECK-CVT-NEXT: fadd s0, s0, s1
+; CHECK-CVT-NEXT: fcvt h0, s0
+; CHECK-CVT-NEXT: ret
+
+; CHECK-FP16-LABEL: test_fmadd:
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
+; CHECK-FP16-NEXT: ret
+
+define half @test_fmadd(half %a, half %b, half %c) #0 {
+  %mul = fmul fast half %a, %b
+  %r = fadd fast half %mul, %c
+  ret half %r
+}
 ; CHECK-CVT-LABEL: test_fdiv:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -124,9 +144,9 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-COMMON-LABEL: test_call_flipped:
 ; CHECK-COMMON-NEXT: stp x29, x30, [sp, #-16]!
 ; CHECK-COMMON-NEXT: mov  x29, sp
-; CHECK-COMMON-NEXT: mov.16b  v2, v0
-; CHECK-COMMON-NEXT: mov.16b  v0, v1
-; CHECK-COMMON-NEXT: mov.16b  v1, v2
+; CHECK-COMMON-NEXT: fmov  s2, s0
+; CHECK-COMMON-NEXT: fmov  s0, s1
+; CHECK-COMMON-NEXT: fmov  s1, s2
 ; CHECK-COMMON-NEXT: bl {{_?}}test_callee
 ; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
 ; CHECK-COMMON-NEXT: ret
@@ -136,9 +156,9 @@ define half @test_call_flipped(half %a, half %b) #0 {
 }
 
 ; CHECK-COMMON-LABEL: test_tailcall_flipped:
-; CHECK-COMMON-NEXT: mov.16b  v2, v0
-; CHECK-COMMON-NEXT: mov.16b  v0, v1
-; CHECK-COMMON-NEXT: mov.16b  v1, v2
+; CHECK-COMMON-NEXT: fmov  s2, s0
+; CHECK-COMMON-NEXT: fmov  s0, s1
+; CHECK-COMMON-NEXT: fmov  s1, s2
 ; CHECK-COMMON-NEXT: b {{_?}}test_callee
 define half @test_tailcall_flipped(half %a, half %b) #0 {
   %r = tail call half @test_callee(half %b, half %a)
@@ -169,8 +189,6 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ; CHECK-CVT-DAG: fcvt s1, h1
 ; CHECK-CVT-DAG: fcvt s0, h0
 ; CHECK-CVT-DAG: fcmp s2, s3
-; CHECK-CVT-DAG: cset [[CC:w[0-9]+]], ne
-; CHECK-CVT-DAG: cmp [[CC]], #0
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -208,8 +226,6 @@ define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
 ; CHECK-CVT-DAG:  fcvt s0, h0
 ; CHECK-CVT-DAG:  fcvt s1, h1
 ; CHECK-CVT-DAG:  fcmp s2, s3
-; CHECK-CVT-DAG:  cset w8, ne
-; CHECK-CVT-NEXT: cmp w8, #0
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -470,13 +486,13 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK-COMMON-LABEL: test_fccmp:
 ; CHECK-CVT:      fcvt  s0, h0
 ; CHECK-CVT-NEXT: fmov  s1, #8.00000000
-; CHECK-CVT-NEXT: fmov  s2, #5.00000000
 ; CHECK-CVT-NEXT: fcmp  s0, s1
+; CHECK-CVT-NEXT: fmov  s1, #5.00000000
 ; CHECK-CVT-NEXT: cset  w8, gt
-; CHECK-CVT-NEXT: fcmp  s0, s2
+; CHECK-CVT-NEXT: fcmp  s0, s1
 ; CHECK-CVT-NEXT: cset  w9, mi
 ; CHECK-CVT-NEXT: tst   w8, w9
-; CHECK-CVT-NEXT: fcsel s0, s0, s2, ne
+; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
 ; CHECK-CVT-NEXT: fcvt  h0, s0
 ; CHECK-CVT-NEXT: str   h0, [x0]
 ; CHECK-CVT-NEXT: ret
@@ -501,20 +517,14 @@ define void @test_fccmp(half %in, half* %out) {
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: fcmp s0, s1
-; CHECK-CVT-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-CVT-NEXT: str  wzr, [x0]
-; CHECK-CVT-NEXT: ret
-; CHECK-CVT-NEXT: [[BRCC_ELSE]]:
-; CHECK-CVT-NEXT: str  wzr, [x1]
+; CHECK-CVT-NEXT: csel x8, x0, x1, pl
+; CHECK-CVT-NEXT: str wzr, [x8]
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_br_cc:
 ; CHECK-FP16-NEXT: fcmp h0, h1
-; CHECK-FP16-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-FP16-NEXT: str  wzr, [x0]
-; CHECK-FP16-NEXT: ret
-; CHECK-FP16-NEXT: [[BRCC_ELSE]]:
-; CHECK-FP16-NEXT: str  wzr, [x1]
+; CHECK-FP16-NEXT: csel x8, x0, x1, pl
+; CHECK-FP16-NEXT: str wzr, [x8]
 ; CHECK-FP16-NEXT: ret
 
 define void @test_br_cc(half %a, half %b, i32* %p1, i32* %p2) #0 {
@@ -532,11 +542,11 @@ else:
 ; CHECK-COMMON: mov  x[[PTR:[0-9]+]], x0
 ; CHECK-COMMON: ldr  h[[AB:[0-9]+]], [x0]
 ; CHECK-COMMON: [[LOOP:LBB[0-9_]+]]:
-; CHECK-COMMON: mov.16b  v[[R:[0-9]+]], v[[AB]]
+; CHECK-COMMON: fmov  s[[R:[0-9]+]], s[[AB]]
 ; CHECK-COMMON: ldr  h[[AB]], [x[[PTR]]]
 ; CHECK-COMMON: mov  x0, x[[PTR]]
 ; CHECK-COMMON: bl {{_?}}test_dummy
-; CHECK-COMMON: mov.16b  v0, v[[R]]
+; CHECK-COMMON: fmov  s0, s[[R]]
 ; CHECK-COMMON: ret
 define half @test_phi(half* %p1) #0 {
 entry:
@@ -756,7 +766,7 @@ define half @test_bitcast_i16tohalf(i16 %a) #0 {
 
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -776,6 +786,7 @@ declare half @llvm.trunc.f16(half %a) #0
 declare half @llvm.rint.f16(half %a) #0
 declare half @llvm.nearbyint.f16(half %a) #0
 declare half @llvm.round.f16(half %a) #0
+declare half @llvm.roundeven.f16(half %a) #0
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 declare half @llvm.aarch64.neon.frecpe.f16(half %a) #0
 declare half @llvm.aarch64.neon.frecpx.f16(half %a) #0
@@ -818,7 +829,7 @@ define half @test_sqrt(half %a) #0 {
 ; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
 ; CHECK-COMMON-NEXT: ret
 define half @test_powi(half %a, i32 %b) #0 {
-  %r = call half @llvm.powi.f16(half %a, i32 %b)
+  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
   ret half %r
 }
 
@@ -1089,9 +1100,9 @@ define half @test_maxnum(half %a, half %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign:
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
-; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bit.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
@@ -1107,15 +1118,15 @@ define half @test_copysign(half %a, half %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign_f32:
-; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
+; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: bit.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_copysign_f32:
-; CHECK-FP16-NEXT: fcvt h1, s1
 ; CHECK-FP16-NEXT: movi.8h	v2, #128, lsl #8
+; CHECK-FP16-NEXT: fcvt h1, s1
 ; CHECK-FP16-NEXT: bit.16b v0, v1, v2
 ; CHECK-FP16-NEXT: ret
 
@@ -1126,16 +1137,16 @@ define half @test_copysign_f32(half %a, float %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_copysign_f64:
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, d1
 ; CHECK-CVT-NEXT: fcvt s0, h0
-; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bit.16b v0, v1, v2
 ; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_copysign_f64:
-; CHECK-FP16-NEXT: fcvt h1, d1
 ; CHECK-FP16-NEXT: movi.8h v2, #128, lsl #8
+; CHECK-FP16-NEXT: fcvt h1, d1
 ; CHECK-FP16-NEXT: bit.16b v0, v1, v2
 ; CHECK-FP16-NEXT: ret
 
@@ -1149,9 +1160,9 @@ define half @test_copysign_f64(half %a, double %b) #0 {
 ; away the (fpext (fp_round <result>)) here.
 
 ; CHECK-CVT-LABEL: test_copysign_extended:
+; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
-; CHECK-CVT-NEXT: movi.4s v2, #128, lsl #24
 ; CHECK-CVT-NEXT: bit.16b v0, v1, v2
 ; CHECK-CVT-NEXT: ret
 
@@ -1293,6 +1304,32 @@ define half @test_round(half %a) #0 {
   ret half %r
 }
 
+; CHECK-CVT-LABEL: test_roundeven:
+; CHECK-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; CHECK-CVT-NEXT: frintn [[INT32:s[0-9]+]], [[FLOAT32]]
+; CHECK-CVT-NEXT: fcvt h0, [[INT32]]
+; CHECK-CVT-NEXT: ret
+
+; GISEL-CVT-LABEL: test_roundeven:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frintn [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+
+; CHECK-FP16-LABEL: test_roundeven:
+; CHECK-FP16-NEXT: frintn h0, h0
+; CHECK-FP16-NEXT: ret
+
+; GISEL-FP16-LABEL: test_roundeven:
+; GISEL-FP16-NEXT: frintn h0, h0
+; GISEL-FP16-NEXT: ret
+
+define half @test_roundeven(half %a) #0 {
+  %r = call half @llvm.roundeven.f16(half %a)
+  ret half %r
+}
+
 ; CHECK-CVT-LABEL: test_fmuladd:
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
@@ -1305,8 +1342,7 @@ define half @test_round(half %a) #0 {
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_fmuladd:
-; CHECK-FP16-NEXT: fmul h0, h0, h1
-; CHECK-FP16-NEXT: fadd h0, h0, h2
+; CHECK-FP16-NEXT: fmadd h0, h0, h1, h2
 ; CHECK-FP16-NEXT: ret
 
 define half @test_fmuladd(half %a, half %b, half %c) #0 {

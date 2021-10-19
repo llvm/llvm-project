@@ -10,7 +10,7 @@ define i32 @a(i32 %x) nounwind {
 ; CHECK-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jns .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    calll b
+; CHECK-NEXT:    calll b@PLT
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl

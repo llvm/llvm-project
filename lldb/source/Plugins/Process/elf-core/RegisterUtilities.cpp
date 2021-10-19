@@ -34,5 +34,5 @@ DataExtractor lldb_private::getRegset(llvm::ArrayRef<CoreNote> Notes,
   uint32_t Type = *TypeOr;
   auto Iter = llvm::find_if(
       Notes, [Type](const CoreNote &Note) { return Note.info.n_type == Type; });
-  return Iter == Notes.end() ? DataExtractor() : Iter->data;
+  return Iter == Notes.end() ? DataExtractor() : DataExtractor(Iter->data);
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -scalar-evolution -analyze | FileCheck %s
+; RUN: opt < %s -passes='print<scalar-evolution>' 2>&1 | FileCheck %s
 
 ; CHECK: -->  (1 + (zext i4 {-8,+,-8}<%loop> to i32))<nuw><nsw>
 

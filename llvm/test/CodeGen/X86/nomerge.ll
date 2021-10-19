@@ -20,7 +20,7 @@ if.end3:
   ret void
 }
 
-declare void @bar()
+declare dso_local void @bar()
 
 attributes #0 = { nomerge }
 

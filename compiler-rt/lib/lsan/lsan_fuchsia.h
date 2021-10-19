@@ -23,7 +23,7 @@
 
 namespace __lsan {
 
-class ThreadContext : public ThreadContextLsanBase {
+class ThreadContext final : public ThreadContextLsanBase {
  public:
   explicit ThreadContext(int tid);
   void OnCreated(void *arg) override;

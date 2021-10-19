@@ -22,8 +22,8 @@
 # CHECK-NEXT:   0000: 00000000 04000000
 # CHECK-NEXT: )
 
-# CHECK:      R_386_TLS_TPOFF - 0x0
-# CHECK-NEXT: R_386_TLS_TPOFF - 0x0
+# CHECK:      R_386_TLS_TPOFF -
+# CHECK-NEXT: R_386_TLS_TPOFF -
 
 	movl	bar1@GOTNTPOFF(%eax), %ecx
 	movl	bar2@GOTNTPOFF(%eax), %eax

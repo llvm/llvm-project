@@ -40,8 +40,19 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   // Handle CPU name is 'native'.
   if (CPU == "native")
     return std::string(llvm::sys::getHostCPUName());
-  else if (CPU.size())
+
+  if (CPU.size())
     return CPU;
+
+  if (Triple.isTargetMachineMac() &&
+      Triple.getArch() == llvm::Triple::aarch64) {
+    // Apple Silicon macs default to M1 CPUs.
+    return "apple-m1";
+  }
+
+  // arm64e requires v8.3a and only runs on apple-a12 and later CPUs.
+  if (Triple.isArm64e())
+    return "apple-a12";
 
   // Make sure we pick the appropriate Apple CPU if -arch is used or when
   // targetting a Darwin OS.
@@ -68,9 +79,13 @@ static bool DecodeAArch64Features(const Driver &D, StringRef text,
     else
       return false;
 
-    // +sve implies +f32mm if the base architecture is v8.6A
-    // it isn't the case in general that sve implies both f64mm and f32mm
-    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A) && Feature == "sve")
+    // +sve implies +f32mm if the base architecture is v8.6A, v8.7A, v9.1A or
+    // v9.2A. It isn't the case in general that sve implies both f64mm and f32mm
+    if ((ArchKind == llvm::AArch64::ArchKind::ARMV8_6A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV8_7A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_1A ||
+         ArchKind == llvm::AArch64::ArchKind::ARMV9_2A) &&
+        Feature == "sve")
       Features.push_back("+f32mm");
   }
   return true;
@@ -94,7 +109,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     if (!llvm::AArch64::getArchFeatures(ArchKind, Features))
       return false;
 
-    unsigned Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
+    uint64_t Extension = llvm::AArch64::getDefaultExtensions(CPU, ArchKind);
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
    }
@@ -173,12 +188,25 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
-                                       std::vector<StringRef> &Features) {
+                                       std::vector<StringRef> &Features,
+                                       bool ForAS) {
   Arg *A;
   bool success = true;
   // Enable NEON by default.
   Features.push_back("+neon");
-  if ((A = Args.getLastArg(options::OPT_march_EQ)))
+  llvm::StringRef WaMArch = "";
+  if (ForAS)
+    for (const auto *A :
+         Args.filtered(options::OPT_Wa_COMMA, options::OPT_Xassembler))
+      for (StringRef Value : A->getValues())
+        if (Value.startswith("-march="))
+          WaMArch = Value.substr(7);
+  // Call getAArch64ArchFeaturesFromMarch only if "-Wa,-march=" or
+  // "-Xassembler -march" is detected. Otherwise it may return false
+  // and causes Clang to error out.
+  if (WaMArch.size())
+    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Features);
+  else if ((A = Args.getLastArg(options::OPT_march_EQ)))
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);
@@ -223,11 +251,17 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     StringRef Scope = A->getValue();
     bool EnableRetBr = false;
     bool EnableBlr = false;
-    if (Scope != "none" && Scope != "all") {
+    bool DisableComdat = false;
+    if (Scope != "none") {
       SmallVector<StringRef, 4> Opts;
       Scope.split(Opts, ",");
       for (auto Opt : Opts) {
         Opt = Opt.trim();
+        if (Opt == "all") {
+          EnableBlr = true;
+          EnableRetBr = true;
+          continue;
+        }
         if (Opt == "retbr") {
           EnableRetBr = true;
           continue;
@@ -236,19 +270,27 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
           EnableBlr = true;
           continue;
         }
+        if (Opt == "comdat") {
+          DisableComdat = false;
+          continue;
+        }
+        if (Opt == "nocomdat") {
+          DisableComdat = true;
+          continue;
+        }
         D.Diag(diag::err_invalid_sls_hardening)
             << Scope << A->getAsString(Args);
         break;
       }
-    } else if (Scope == "all") {
-      EnableRetBr = true;
-      EnableBlr = true;
     }
 
     if (EnableRetBr)
       Features.push_back("+harden-sls-retbr");
     if (EnableBlr)
       Features.push_back("+harden-sls-blr");
+    if (DisableComdat) {
+      Features.push_back("+harden-sls-nocomdat");
+    }
   }
 
   // En/disable crc
@@ -306,7 +348,10 @@ fp16_fml_fallthrough:
       NoCrypto = true;
   }
 
-  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
+  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.1a") != ItEnd ||
+      std::find(ItBegin, ItEnd, "+v9.2a") != ItEnd) {
     if (HasCrypto && !NoCrypto) {
       // Check if we have NOT disabled an algorithm with something like:
       //   +crypto, -algorithm
@@ -365,15 +410,19 @@ fp16_fml_fallthrough:
     }
   }
 
-  auto V8_6Pos = llvm::find(Features, "+v8.6a");
-  if (V8_6Pos != std::end(Features))
-    V8_6Pos = Features.insert(std::next(V8_6Pos), {"+i8mm", "+bf16"});
+  const char *Archs[] = {"+v8.6a", "+v8.7a", "+v9.1a", "+v9.2a"};
+  auto Pos = std::find_first_of(Features.begin(), Features.end(),
+                                std::begin(Archs), std::end(Archs));
+  if (Pos != std::end(Features))
+    Pos = Features.insert(std::next(Pos), {"+i8mm", "+bf16"});
 
-  bool HasSve = llvm::is_contained(Features, "+sve");
-  // -msve-vector-bits=<bits> flag is valid only if SVE is enabled.
-  if (Args.hasArg(options::OPT_msve_vector_bits_EQ))
-    if (!HasSve)
-      D.Diag(diag::err_drv_invalid_sve_vector_bits);
+  // Enable SVE2 by default on Armv9-A.
+  // It can still be disabled if +nosve2 is present.
+  const char *SVE2Archs[] = {"+v9a", "+v9.1a", "+v9.2a"};
+  Pos = std::find_first_of(Features.begin(), Features.end(),
+                           std::begin(SVE2Archs), std::end(SVE2Archs));
+  if (Pos != Features.end())
+    Features.insert(++Pos, "+sve2");
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access)) {

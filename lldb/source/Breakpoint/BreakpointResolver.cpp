@@ -65,7 +65,7 @@ BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        lldb::addr_t offset)
     : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
 
-BreakpointResolver::~BreakpointResolver() {}
+BreakpointResolver::~BreakpointResolver() = default;
 
 BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     const StructuredData::Dictionary &resolver_dict, Status &error) {
@@ -180,29 +180,29 @@ void BreakpointResolver::ResolveBreakpoint(SearchFilter &filter) {
 namespace {
 struct SourceLoc {
   uint32_t line = UINT32_MAX;
-  uint32_t column;
-  SourceLoc(uint32_t l, uint32_t c) : line(l), column(c ? c : UINT32_MAX) {}
+  uint16_t column;
+  SourceLoc(uint32_t l, llvm::Optional<uint16_t> c)
+      : line(l), column(c ? *c : LLDB_INVALID_COLUMN_NUMBER) {}
   SourceLoc(const SymbolContext &sc)
       : line(sc.line_entry.line),
-        column(sc.line_entry.column ? sc.line_entry.column : UINT32_MAX) {}
+        column(sc.line_entry.column ? sc.line_entry.column
+                                    : LLDB_INVALID_COLUMN_NUMBER) {}
 };
 
-bool operator<(const SourceLoc a, const SourceLoc b) {
-  if (a.line < b.line)
+bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
+  if (lhs.line < rhs.line)
     return true;
-  if (a.line > b.line)
+  if (lhs.line > rhs.line)
     return false;
-  uint32_t a_col = a.column ? a.column : UINT32_MAX;
-  uint32_t b_col = b.column ? b.column : UINT32_MAX;
-  return a_col < b_col;
+  //  uint32_t a_col = lhs.column ? lhs.column : LLDB_INVALID_COLUMN_NUMBER;
+  //  uint32_t b_col = rhs.column ? rhs.column : LLDB_INVALID_COLUMN_NUMBER;
+  return lhs.column < rhs.column;
 }
 } // namespace
 
-void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
-                                            SymbolContextList &sc_list,
-                                            bool skip_prologue,
-                                            llvm::StringRef log_ident,
-                                            uint32_t line, uint32_t column) {
+void BreakpointResolver::SetSCMatchesByLine(
+    SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
+    llvm::StringRef log_ident, uint32_t line, llvm::Optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
     all_scs.push_back(sc_list[i]);
@@ -228,13 +228,13 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
 
     if (column) {
       // If a column was requested, do a more precise match and only
-      // return the first location that comes after or at the
+      // return the first location that comes before or at the
       // requested location.
-      SourceLoc requested(line, column);
+      SourceLoc requested(line, *column);
       // First, filter out all entries left of the requested column.
       worklist_end = std::remove_if(
           worklist_begin, worklist_end,
-          [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
+          [&](const SymbolContext &sc) { return requested < SourceLoc(sc); });
       // Sort the remaining entries by (line, column).
       llvm::sort(worklist_begin, worklist_end,
                  [](const SymbolContext &a, const SymbolContext &b) {

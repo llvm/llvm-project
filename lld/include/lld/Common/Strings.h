@@ -32,16 +32,20 @@ void saveBuffer(llvm::StringRef buffer, const llvm::Twine &path);
 // glob pattern in the sense of GlobPattern.
 class SingleStringMatcher {
 public:
-  // Create a StringPattern from Pattern to be matched exactly irregardless
+  // Create a StringPattern from Pattern to be matched exactly regardless
   // of globbing characters if ExactMatch is true.
   SingleStringMatcher(llvm::StringRef Pattern);
 
   // Match s against this pattern, exactly if ExactMatch is true.
   bool match(llvm::StringRef s) const;
 
+  // Returns true for pattern "*" which will match all inputs.
+  bool isTrivialMatchAll() const {
+    return !ExactMatch && GlobPatternMatcher.isTrivialMatchAll();
+  }
+
 private:
-  // Whether to do an exact match irregardless of the presence of wildcard
-  // character.
+  // Whether to do an exact match regardless of wildcard characters.
   bool ExactMatch;
 
   // GlobPattern object if not doing an exact match.
@@ -69,7 +73,7 @@ public:
   // Add a new pattern to the existing ones to match against.
   void addPattern(SingleStringMatcher Matcher) { patterns.push_back(Matcher); }
 
-  bool empty() { return patterns.empty(); }
+  bool empty() const { return patterns.empty(); }
 
   // Match s against the patterns.
   bool match(llvm::StringRef s) const;

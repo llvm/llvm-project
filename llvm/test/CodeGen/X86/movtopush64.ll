@@ -99,7 +99,7 @@ entry:
 ; NORMAL: pushq $ext
 ; NORMAL: pushq $7
 ; NORMAL: callq ten_params_ptr
-@ext = external constant i8
+@ext = external dso_local constant i8
 define void @test5() {
 entry:
   call void @ten_params_ptr(i32 1, i64 2, i32 3, i64 4, i32 5, i64 6, i32 7, i8* @ext, i32 9, i64 10)
@@ -157,7 +157,7 @@ entry:
 ; NORMAL: pushq [[REG]]
 ; NORMAL: pushq $7
 ; NORMAL: callq ten_params
-@the_global = external global i64
+@the_global = external dso_local global i64
 define void @test8() {
   %myload = load i64, i64* @the_global
   store i64 42, i64* @the_global

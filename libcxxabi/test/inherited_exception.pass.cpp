@@ -10,10 +10,10 @@
 //
 //  C++ ABI 15.3:
 //  A handler is a match for an exception object of type E if
-//  /  *  The handler is of type cv T or cv T& and E and T are the same type   \
-//  |     (ignoring the top-level cv-qualifiers), or                           |
-//  |  *  the handler is of type cv T or cv T& and T is an unambiguous base    |
-//  \     class of E, or                                                       /
+//  >  *  The handler is of type cv T or cv T& and E and T are the same type   <
+//  >     (ignoring the top-level cv-qualifiers), or                           <
+//  >  *  the handler is of type cv T or cv T& and T is an unambiguous base    <
+//  >     class of E, or                                                       <
 //     *  the handler is of type cv1 T* cv2 and E is a pointer type that can
 //        be converted to the type of the handler by either or both of
 //          o  a standard pointer conversion (4.10 [conv.ptr]) not involving
@@ -26,12 +26,10 @@
 
 // UNSUPPORTED: no-exceptions
 
-// Clang emits  warnings about exceptions of type 'Child' being caught by
-// an earlier handler of type 'Base'. Congrats clang, you've just
-// diagnosed the behavior under test.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wexceptions"
-#endif
+// Compilers emit warnings about exceptions of type 'Child' being caught by
+// an earlier handler of type 'Base'. Congrats, you've just diagnosed the
+// behavior under test.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
 #include <assert.h>
 
@@ -71,7 +69,7 @@ void f3() {
   throw static_cast<Base2*>(&child);
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -170,4 +168,6 @@ int main()
     {
         assert(false);
     }
+
+    return 0;
 }

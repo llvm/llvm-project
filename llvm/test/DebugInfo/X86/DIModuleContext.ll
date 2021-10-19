@@ -1,6 +1,6 @@
 source_filename = "test/DebugInfo/X86/DIModuleContext.ll"
 target triple = "x86_64-apple-macosx"
-; RUN: %llc_dwarf %s -o - -filetype=obj \
+; RUN: llc %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s
 ; CHECK: DW_TAG_module
 ; CHECK-NOT: NULL

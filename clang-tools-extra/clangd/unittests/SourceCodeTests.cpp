@@ -27,6 +27,7 @@ namespace clangd {
 namespace {
 
 using llvm::Failed;
+using llvm::FailedWithMessage;
 using llvm::HasValue;
 
 MATCHER_P2(Pos, Line, Col, "") {
@@ -787,6 +788,239 @@ TEST(SourceCodeTests, isHeaderFile) {
   // want to treat it as a header.
   LangOpts.IsHeaderFile = false;
   EXPECT_TRUE(isHeaderFile("header.h", LangOpts));
+}
+
+TEST(SourceCodeTests, isKeywords) {
+  LangOptions LangOpts;
+  LangOpts.CPlusPlus20 = true;
+  EXPECT_TRUE(isKeyword("int", LangOpts));
+  EXPECT_TRUE(isKeyword("return", LangOpts));
+  EXPECT_TRUE(isKeyword("co_await", LangOpts));
+
+  // these are identifiers (not keywords!) with special meaning in some
+  // contexts.
+  EXPECT_FALSE(isKeyword("final", LangOpts));
+  EXPECT_FALSE(isKeyword("override", LangOpts));
+}
+
+struct IncrementalTestStep {
+  llvm::StringRef Src;
+  llvm::StringRef Contents;
+};
+
+int rangeLength(llvm::StringRef Code, const Range &Rng) {
+  llvm::Expected<size_t> Start = positionToOffset(Code, Rng.start);
+  llvm::Expected<size_t> End = positionToOffset(Code, Rng.end);
+  assert(Start);
+  assert(End);
+  return *End - *Start;
+}
+
+/// Send the changes one by one to updateDraft, verify the intermediate results.
+void stepByStep(llvm::ArrayRef<IncrementalTestStep> Steps) {
+  std::string Code = Annotations(Steps.front().Src).code().str();
+
+  for (size_t I = 1; I < Steps.size(); I++) {
+    Annotations SrcBefore(Steps[I - 1].Src);
+    Annotations SrcAfter(Steps[I].Src);
+    llvm::StringRef Contents = Steps[I - 1].Contents;
+    TextDocumentContentChangeEvent Event{
+        SrcBefore.range(),
+        rangeLength(SrcBefore.code(), SrcBefore.range()),
+        Contents.str(),
+    };
+
+    EXPECT_THAT_ERROR(applyChange(Code, Event), llvm::Succeeded());
+    EXPECT_EQ(Code, SrcAfter.code());
+  }
+}
+
+TEST(ApplyEditsTest, Simple) {
+  // clang-format off
+  IncrementalTestStep Steps[] =
+    {
+      // Replace a range
+      {
+R"cpp(static int
+hello[[World]]()
+{})cpp",
+        "Universe"
+      },
+      // Delete a range
+      {
+R"cpp(static int
+hello[[Universe]]()
+{})cpp",
+        ""
+      },
+      // Add a range
+      {
+R"cpp(static int
+hello[[]]()
+{})cpp",
+        "Monde"
+      },
+      {
+R"cpp(static int
+helloMonde()
+{})cpp",
+        ""
+      }
+    };
+  // clang-format on
+
+  stepByStep(Steps);
+}
+
+TEST(ApplyEditsTest, MultiLine) {
+  // clang-format off
+  IncrementalTestStep Steps[] =
+    {
+      // Replace a range
+      {
+R"cpp(static [[int
+helloWorld]]()
+{})cpp",
+R"cpp(char
+welcome)cpp"
+      },
+      // Delete a range
+      {
+R"cpp(static char[[
+welcome]]()
+{})cpp",
+        ""
+      },
+      // Add a range
+      {
+R"cpp(static char[[]]()
+{})cpp",
+        R"cpp(
+cookies)cpp"
+      },
+      // Replace the whole file
+      {
+R"cpp([[static char
+cookies()
+{}]])cpp",
+        R"cpp(#include <stdio.h>
+)cpp"
+      },
+      // Delete the whole file
+      {
+        R"cpp([[#include <stdio.h>
+]])cpp",
+        "",
+      },
+      // Add something to an empty file
+      {
+        "[[]]",
+        R"cpp(int main() {
+)cpp",
+      },
+      {
+        R"cpp(int main() {
+)cpp",
+        ""
+      }
+    };
+  // clang-format on
+
+  stepByStep(Steps);
+}
+
+TEST(ApplyEditsTest, WrongRangeLength) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 0;
+  Change.range->end.character = 2;
+  Change.rangeLength = 10;
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    FailedWithMessage("Change's rangeLength (10) doesn't match "
+                                      "the computed range length (2)."));
+}
+
+TEST(ApplyEditsTest, EndBeforeStart) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 5;
+  Change.range->end.line = 0;
+  Change.range->end.character = 3;
+
+  EXPECT_THAT_ERROR(
+      applyChange(Code, Change),
+      FailedWithMessage(
+          "Range's end position (0:3) is before start position (0:5)"));
+}
+
+TEST(ApplyEditsTest, StartCharOutOfRange) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 100;
+  Change.range->end.line = 0;
+  Change.range->end.character = 100;
+  Change.text = "foo";
+
+  EXPECT_THAT_ERROR(
+      applyChange(Code, Change),
+      FailedWithMessage("utf-16 offset 100 is invalid for line 0"));
+}
+
+TEST(ApplyEditsTest, EndCharOutOfRange) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 0;
+  Change.range->end.character = 100;
+  Change.text = "foo";
+
+  EXPECT_THAT_ERROR(
+      applyChange(Code, Change),
+      FailedWithMessage("utf-16 offset 100 is invalid for line 0"));
+}
+
+TEST(ApplyEditsTest, StartLineOutOfRange) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 100;
+  Change.range->start.character = 0;
+  Change.range->end.line = 100;
+  Change.range->end.character = 0;
+  Change.text = "foo";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    FailedWithMessage("Line value is out of range (100)"));
+}
+
+TEST(ApplyEditsTest, EndLineOutOfRange) {
+  std::string Code = "int main() {}\n";
+
+  TextDocumentContentChangeEvent Change;
+  Change.range.emplace();
+  Change.range->start.line = 0;
+  Change.range->start.character = 0;
+  Change.range->end.line = 100;
+  Change.range->end.character = 0;
+  Change.text = "foo";
+
+  EXPECT_THAT_ERROR(applyChange(Code, Change),
+                    FailedWithMessage("Line value is out of range (100)"));
 }
 
 } // namespace

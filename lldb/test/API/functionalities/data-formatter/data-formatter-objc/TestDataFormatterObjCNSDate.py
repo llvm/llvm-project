@@ -15,10 +15,9 @@ import datetime
 
 class ObjCDataFormatterNSDate(ObjCDataFormatterTestCase):
 
-    @skipUnlessDarwin
     def test_nsdate_with_run_command(self):
         """Test formatters for  NSDate."""
-        self.appkit_tester_impl(self.nsdate_data_formatter_commands)
+        self.appkit_tester_impl(self.nsdate_data_formatter_commands, False)
 
     def nsdate_data_formatter_commands(self):
         self.expect(

@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
   character(kind=1,len=50) internal_file
   character(kind=1,len=100) msg
   character(20) sign
@@ -86,6 +86,9 @@
 
   !ERROR: If UNIT=* appears, REC must not appear
   write(*, rec=13) 'Ok'
+
+  !ERROR: Must have INTEGER type, but is REAL(4)
+  write(unit, *) 'Ok'
 
   !ERROR: If ADVANCE appears, UNIT=internal-file must not appear
   write(internal_file, advance='yes', fmt=1) 'Ok'

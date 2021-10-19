@@ -112,6 +112,20 @@ public:
   unsigned State;
 };
 
+class PragmaMarkCallbacks : public PPCallbacks {
+public:
+  struct Mark {
+    SourceLocation Location;
+    std::string Trivia;
+  };
+
+  std::vector<Mark> Marks;
+
+  void PragmaMark(SourceLocation Loc, StringRef Trivia) override {
+    Marks.emplace_back(Mark{Loc, Trivia.str()});
+  }
+};
+
 // PPCallbacks test fixture.
 class PPCallbacksTest : public ::testing::Test {
 protected:
@@ -256,6 +270,36 @@ protected:
     return Callbacks->Results;
   }
 
+  std::vector<PragmaMarkCallbacks::Mark>
+  PragmaMarkCall(const char *SourceText) {
+    std::unique_ptr<llvm::MemoryBuffer> SourceBuf =
+        llvm::MemoryBuffer::getMemBuffer(SourceText, "test.c");
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(SourceBuf)));
+
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
+    TrivialModuleLoader ModLoader;
+
+    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
+                    SourceMgr, HeaderInfo, ModLoader, /*IILookup=*/nullptr,
+                    /*OwnsHeaderSearch=*/false);
+    PP.Initialize(*Target);
+
+    auto *Callbacks = new PragmaMarkCallbacks;
+    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(Callbacks));
+
+    // Lex source text.
+    PP.EnterMainSourceFile();
+    while (true) {
+      Token Tok;
+      PP.Lex(Tok);
+      if (Tok.is(tok::eof))
+        break;
+    }
+
+    return Callbacks->Marks;
+  }
+
   PragmaOpenCLExtensionCallbacks::CallbackParameters
   PragmaOpenCLExtensionCall(const char *SourceText) {
     LangOptions OpenCLLangOpts;
@@ -279,7 +323,7 @@ protected:
     // according to LangOptions, so we init Parser to register opencl
     // pragma handlers
     ASTContext Context(OpenCLLangOpts, SourceMgr, PP.getIdentifierTable(),
-                       PP.getSelectorTable(), PP.getBuiltinInfo());
+                       PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
     Context.InitBuiltinTypes(*Target);
 
     ASTConsumer Consumer;
@@ -422,6 +466,24 @@ TEST_F(PPCallbacksTest, OpenCLExtensionPragmaDisabled) {
   ASSERT_EQ("cl_khr_fp16", Parameters.Name);
   unsigned ExpectedState = 0;
   ASSERT_EQ(ExpectedState, Parameters.State);
+}
+
+TEST_F(PPCallbacksTest, CollectMarks) {
+  const char *Source =
+    "#pragma mark\n"
+    "#pragma mark\r\n"
+    "#pragma mark - trivia\n"
+    "#pragma mark - trivia\r\n";
+
+  auto Marks = PragmaMarkCall(Source);
+
+  ASSERT_EQ(4u, Marks.size());
+  ASSERT_TRUE(Marks[0].Trivia.empty());
+  ASSERT_TRUE(Marks[1].Trivia.empty());
+  ASSERT_FALSE(Marks[2].Trivia.empty());
+  ASSERT_FALSE(Marks[3].Trivia.empty());
+  ASSERT_EQ(" - trivia", Marks[2].Trivia);
+  ASSERT_EQ(" - trivia", Marks[3].Trivia);
 }
 
 TEST_F(PPCallbacksTest, DirectiveExprRanges) {

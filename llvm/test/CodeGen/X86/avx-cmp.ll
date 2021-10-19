@@ -49,12 +49,12 @@ define void @render(double %a0) nounwind {
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    vmovsd (%rsp), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    vucomisd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    jne .LBB2_5
 ; CHECK-NEXT:    jnp .LBB2_2
 ; CHECK-NEXT:  .LBB2_5: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    callq scale
+; CHECK-NEXT:    callq scale@PLT
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %for.end52
 ; CHECK-NEXT:    addq $8, %rsp

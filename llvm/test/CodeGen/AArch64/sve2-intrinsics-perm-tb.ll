@@ -64,6 +64,18 @@ define <vscale x 8 x half> @tbl2_fh(<vscale x 8 x half> %a, <vscale x 8 x half> 
   ret <vscale x 8 x half> %out
 }
 
+define <vscale x 8 x bfloat> @tbl2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %unused,
+                                        <vscale x 8 x bfloat> %b, <vscale x 8 x i16> %c) #0 {
+; CHECK-LABEL: tbl2_bf16:
+; CHECK: mov z1.d, z0.d
+; CHECK-NEXT: tbl z0.h, { z1.h, z2.h }, z3.h
+; CHECK-NEXT: ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl2.nxv8bf16(<vscale x 8 x bfloat> %a,
+                                                                    <vscale x 8 x bfloat> %b,
+                                                                    <vscale x 8 x i16> %c)
+  ret <vscale x 8 x bfloat> %out
+}
+
 define <vscale x 4 x float> @tbl2_fs(<vscale x 4 x float> %a, <vscale x 4 x float> %unused,
                                      <vscale x 4 x float> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: tbl2_fs:
@@ -180,6 +192,8 @@ declare <vscale x 2 x i64> @llvm.aarch64.sve.tbl2.nxv2i64(<vscale x 2 x i64>, <v
 declare <vscale x 8 x half> @llvm.aarch64.sve.tbl2.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x i16>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.tbl2.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i32>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.tbl2.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i64>)
+
+declare <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl2.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x i16>)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.tbx.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.tbx.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)

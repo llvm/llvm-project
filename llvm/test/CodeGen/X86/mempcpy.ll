@@ -13,14 +13,14 @@
 
 ; Also see mempcpy-32.ll
 
-@G = common global i8* null, align 8
+@G = common dso_local global i8* null, align 8
 
 ; CHECK-LABEL: RET_MEMPCPY:
 ; CHECK: movq [[REG:%r[a-z0-9]+]], {{.*}}G
 ; CHECK: callq {{.*}}memcpy
 ; CHECK: movq [[REG]], %rax
 ;
-define i8* @RET_MEMPCPY(i8* %DST, i8* %SRC, i64 %N) {
+define dso_local i8* @RET_MEMPCPY(i8* %DST, i8* %SRC, i64 %N) {
   %add.ptr = getelementptr inbounds i8, i8* %DST, i64 %N
   store i8* %add.ptr, i8** @G, align 8
   %call = tail call i8* @mempcpy(i8* %DST, i8* %SRC, i64 %N) 

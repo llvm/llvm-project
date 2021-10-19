@@ -82,7 +82,6 @@ Stencil deref(llvm::StringRef ExprId);
 /// If \p ExprId is of pointer type, constructs an idiomatic dereferencing of
 /// the expression bound to \p ExprId, including wrapping it in parentheses, if
 /// needed. Otherwise, generates the original expression source.
-/// FIXME: Identify smart-pointers as pointer types.
 Stencil maybeDeref(llvm::StringRef ExprId);
 
 /// Constructs an expression that idiomatically takes the address of the
@@ -94,7 +93,6 @@ Stencil addressOf(llvm::StringRef ExprId);
 /// idiomatically takes the address of the expression bound to \p ExprId,
 /// including wrapping \p ExprId in parentheses, if needed. Otherwise, generates
 /// the original expression source.
-/// FIXME: Identify smart-pointers as pointer types.
 Stencil maybeAddressOf(llvm::StringRef ExprId);
 
 /// Constructs a `MemberExpr` that accesses the named member (\p Member) of the
@@ -119,9 +117,50 @@ inline Stencil ifBound(llvm::StringRef Id, llvm::StringRef TrueText,
                  detail::makeStencil(FalseText));
 }
 
+/// Chooses between multiple stencils, based on the presence of bound nodes. \p
+/// CaseStencils takes a vector of (ID, \c Stencil) pairs and checks each ID in
+/// order to see if it's bound to a node.  If so, the associated \c Stencil is
+/// run and all other cases are ignored.  An optional \p DefaultStencil can be
+/// provided to be run if all cases are exhausted beacause none of the provided
+/// IDs are bound.  If no default case is provided and all cases are exhausted,
+/// the stencil will fail with error `llvm::errc::result_out_of_range`.
+///
+/// For example, say one matches a statement's type with:
+///     anyOf(
+///       qualType(isInteger()).bind("int"),
+///       qualType(realFloatingPointType()).bind("float"),
+///       qualType(isAnyCharacter()).bind("char"),
+///       booleanType().bind("bool"))
+///
+/// Then, one can decide in a stencil how to construct a literal.
+///     cat("a = ",
+///         selectBound(
+///             {{"int", cat("0")},
+///              {"float", cat("0.0")},
+///              {"char", cat("'\\0'")},
+///              {"bool", cat("false")}}))
+///
+/// In addition, one could supply a default case for all other types:
+///     selectBound(
+///         {{"int", cat("0")},
+///          ...
+///          {"bool", cat("false")}},
+///         cat("{}"))
+Stencil selectBound(std::vector<std::pair<std::string, Stencil>> CaseStencils,
+                    Stencil DefaultStencil = nullptr);
+
 /// Wraps a \c MatchConsumer in a \c Stencil, so that it can be used in a \c
 /// Stencil.  This supports user-defined extensions to the \c Stencil language.
 Stencil run(MatchConsumer<std::string> C);
+
+/// Produces a human-readable rendering of the node bound to `Id`, suitable for
+/// diagnostics and debugging. This operator can be applied to any node, but is
+/// targeted at those whose source cannot be printed directly, including:
+///
+/// * Types. represented based on their structure. Note that namespace
+///   qualifiers are always printed, with the anonymous namespace represented
+///   explicitly. No desugaring or canonicalization is applied.
+Stencil describe(llvm::StringRef Id);
 
 /// For debug use only; semantics are not guaranteed.
 ///

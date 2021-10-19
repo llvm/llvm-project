@@ -1,4 +1,4 @@
-; RUN: %lli -disable-lazy-compilation=false -relocation-model=pic -code-model=small %s
+; RUN: %lli -jit-kind=mcjit -disable-lazy-compilation=false -relocation-model=pic -code-model=small %s
 ; XFAIL: mips-, mipsel-, i686, i386, aarch64, arm
 
 define i32 @main() nounwind {

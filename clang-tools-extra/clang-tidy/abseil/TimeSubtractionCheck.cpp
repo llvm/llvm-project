@@ -20,7 +20,7 @@ namespace tidy {
 namespace abseil {
 
 // Returns `true` if `Range` is inside a macro definition.
-static bool InsideMacroDefinition(const MatchFinder::MatchResult &Result,
+static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
                                   SourceRange Range) {
   return !clang::Lexer::makeFileCharRange(
               clang::CharSourceRange::getCharRange(Range),
@@ -93,7 +93,7 @@ void TimeSubtractionCheck::emitDiagnostic(const Expr *Node,
 }
 
 void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
-  for (auto ScaleName :
+  for (const char *ScaleName :
        {"Hours", "Minutes", "Seconds", "Millis", "Micros", "Nanos"}) {
     std::string TimeInverse = (llvm::Twine("ToUnix") + ScaleName).str();
     llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(TimeInverse);
@@ -131,7 +131,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binop");
   std::string InverseName =
       Result.Nodes.getNodeAs<FunctionDecl>("func_decl")->getNameAsString();
-  if (InsideMacroDefinition(Result, BinOp->getSourceRange()))
+  if (insideMacroDefinition(Result, BinOp->getSourceRange()))
     return;
 
   llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(InverseName);
@@ -140,7 +140,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
 
   const auto *OuterCall = Result.Nodes.getNodeAs<CallExpr>("outer_call");
   if (OuterCall) {
-    if (InsideMacroDefinition(Result, OuterCall->getSourceRange()))
+    if (insideMacroDefinition(Result, OuterCall->getSourceRange()))
       return;
 
     // We're working with the first case of matcher, and need to replace the
@@ -166,7 +166,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
                              .bind("arg"))),
                      *BinOp, *Result.Context));
     if (MaybeCallArg && MaybeCallArg->getArg(0)->IgnoreImpCasts() == BinOp &&
-        !InsideMacroDefinition(Result, MaybeCallArg->getSourceRange())) {
+        !insideMacroDefinition(Result, MaybeCallArg->getSourceRange())) {
       // Handle the case where the matched expression is inside a call which
       // converts it from the inverse to a Duration.  In this case, we replace
       // the outer with just the subtraction expression, which gives the right

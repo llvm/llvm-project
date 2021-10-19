@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -26,6 +27,7 @@
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -128,20 +130,21 @@ private:
     case MVT::i64:
     case MVT::f32:
     case MVT::f64:
-    case MVT::exnref:
       return VT;
+    case MVT::funcref:
+    case MVT::externref:
+      if (Subtarget->hasReferenceTypes())
+        return VT;
+      break;
     case MVT::f16:
       return MVT::f32;
     case MVT::v16i8:
     case MVT::v8i16:
     case MVT::v4i32:
     case MVT::v4f32:
-      if (Subtarget->hasSIMD128())
-        return VT;
-      break;
     case MVT::v2i64:
     case MVT::v2f64:
-      if (Subtarget->hasUnimplementedSIMD128())
+      if (Subtarget->hasSIMD128())
         return VT;
       break;
     default:
@@ -154,7 +157,7 @@ private:
   void addLoadStoreOperands(const Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand *MMO);
   unsigned maskI1Value(unsigned Reg, const Value *V);
-  unsigned getRegForI1Value(const Value *V, bool &Not);
+  unsigned getRegForI1Value(const Value *V, const BasicBlock *BB, bool &Not);
   unsigned zeroExtendToI32(unsigned Reg, const Value *V,
                            MVT::SimpleValueType From);
   unsigned signExtendToI32(unsigned Reg, const Value *V,
@@ -415,19 +418,16 @@ unsigned WebAssemblyFastISel::maskI1Value(unsigned Reg, const Value *V) {
   return zeroExtendToI32(Reg, V, MVT::i1);
 }
 
-unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V, bool &Not) {
+unsigned WebAssemblyFastISel::getRegForI1Value(const Value *V,
+                                               const BasicBlock *BB,
+                                               bool &Not) {
   if (const auto *ICmp = dyn_cast<ICmpInst>(V))
     if (const ConstantInt *C = dyn_cast<ConstantInt>(ICmp->getOperand(1)))
-      if (ICmp->isEquality() && C->isZero() && C->getType()->isIntegerTy(32)) {
+      if (ICmp->isEquality() && C->isZero() && C->getType()->isIntegerTy(32) &&
+          ICmp->getParent() == BB) {
         Not = ICmp->isTrueWhenEqual();
         return getRegForValue(ICmp->getOperand(0));
       }
-
-  Value *NotV;
-  if (match(V, m_Not(m_Value(NotV))) && V->getType()->isIntegerTy(32)) {
-    Not = true;
-    return getRegForValue(NotV);
-  }
 
   Not = false;
   unsigned Reg = getRegForValue(V);
@@ -645,11 +645,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
   unsigned I = 0;
   for (auto const &Arg : F->args()) {
     const AttributeList &Attrs = F->getAttributes();
-    if (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftSelf) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftError) ||
-        Attrs.hasParamAttribute(I, Attribute::InAlloca) ||
-        Attrs.hasParamAttribute(I, Attribute::Nest))
+    if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Attrs.hasParamAttr(I, Attribute::InAlloca) ||
+        Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
 
     Type *ArgTy = Arg.getType();
@@ -704,9 +704,13 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       Opc = WebAssembly::ARGUMENT_v2f64;
       RC = &WebAssembly::V128RegClass;
       break;
-    case MVT::exnref:
-      Opc = WebAssembly::ARGUMENT_exnref;
-      RC = &WebAssembly::EXNREFRegClass;
+    case MVT::funcref:
+      Opc = WebAssembly::ARGUMENT_funcref;
+      RC = &WebAssembly::FUNCREFRegClass;
+      break;
+    case MVT::externref:
+      Opc = WebAssembly::ARGUMENT_externref;
+      RC = &WebAssembly::EXTERNREFRegClass;
       break;
     default:
       return false;
@@ -806,8 +810,11 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     case MVT::v2f64:
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
-    case MVT::exnref:
-      ResultReg = createResultReg(&WebAssembly::EXNREFRegClass);
+    case MVT::funcref:
+      ResultReg = createResultReg(&WebAssembly::FUNCREFRegClass);
+      break;
+    case MVT::externref:
+      ResultReg = createResultReg(&WebAssembly::EXTERNREFRegClass);
       break;
     default:
       return false;
@@ -815,25 +822,25 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   }
 
   SmallVector<unsigned, 8> Args;
-  for (unsigned I = 0, E = Call->getNumArgOperands(); I < E; ++I) {
+  for (unsigned I = 0, E = Call->arg_size(); I < E; ++I) {
     Value *V = Call->getArgOperand(I);
     MVT::SimpleValueType ArgTy = getSimpleType(V->getType());
     if (ArgTy == MVT::INVALID_SIMPLE_VALUE_TYPE)
       return false;
 
     const AttributeList &Attrs = Call->getAttributes();
-    if (Attrs.hasParamAttribute(I, Attribute::ByVal) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftSelf) ||
-        Attrs.hasParamAttribute(I, Attribute::SwiftError) ||
-        Attrs.hasParamAttribute(I, Attribute::InAlloca) ||
-        Attrs.hasParamAttribute(I, Attribute::Nest))
+    if (Attrs.hasParamAttr(I, Attribute::ByVal) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftSelf) ||
+        Attrs.hasParamAttr(I, Attribute::SwiftError) ||
+        Attrs.hasParamAttr(I, Attribute::InAlloca) ||
+        Attrs.hasParamAttr(I, Attribute::Nest))
       return false;
 
     unsigned Reg;
 
-    if (Attrs.hasParamAttribute(I, Attribute::SExt))
+    if (Attrs.hasParamAttr(I, Attribute::SExt))
       Reg = getRegForSignedValue(V);
-    else if (Attrs.hasParamAttribute(I, Attribute::ZExt))
+    else if (Attrs.hasParamAttr(I, Attribute::ZExt))
       Reg = getRegForUnsignedValue(V);
     else
       Reg = getRegForValue(V);
@@ -859,9 +866,32 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   if (IsDirect) {
     MIB.addGlobalAddress(Func);
   } else {
-    // Add placeholders for the type index and immediate flags
+    // Placeholder for the type index.
     MIB.addImm(0);
-    MIB.addImm(0);
+    // The table into which this call_indirect indexes.
+    MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+        MF->getMMI().getContext(), Subtarget);
+    if (Subtarget->hasReferenceTypes()) {
+      MIB.addSym(Table);
+    } else {
+      // Otherwise for the MVP there is at most one table whose number is 0, but
+      // we can't write a table symbol or issue relocations.  Instead we just
+      // ensure the table is live.
+      Table->setNoStrip();
+      MIB.addImm(0);
+    }
+    // See if we must truncate the function pointer.
+    // CALL_INDIRECT takes an i32, but in wasm64 we represent function pointers
+    // as 64-bit for uniformity with other pointer types.
+    // See also: WebAssemblyISelLowering.cpp: LowerCallResults
+    if (Subtarget->hasAddr64()) {
+      auto Wrap = BuildMI(*FuncInfo.MBB, std::prev(FuncInfo.InsertPt), DbgLoc,
+                          TII.get(WebAssembly::I32_WRAP_I64));
+      unsigned Reg32 = createResultReg(&WebAssembly::I32RegClass);
+      Wrap.addReg(Reg32, RegState::Define);
+      Wrap.addReg(CalleeReg);
+      CalleeReg = Reg32;
+    }
   }
 
   for (unsigned ArgReg : Args)
@@ -879,7 +909,8 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
   const auto *Select = cast<SelectInst>(I);
 
   bool Not;
-  unsigned CondReg = getRegForI1Value(Select->getCondition(), Not);
+  unsigned CondReg =
+      getRegForI1Value(Select->getCondition(), I->getParent(), Not);
   if (CondReg == 0)
     return false;
 
@@ -916,9 +947,13 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
     Opc = WebAssembly::SELECT_F64;
     RC = &WebAssembly::F64RegClass;
     break;
-  case MVT::exnref:
-    Opc = WebAssembly::SELECT_EXNREF;
-    RC = &WebAssembly::EXNREFRegClass;
+  case MVT::funcref:
+    Opc = WebAssembly::SELECT_FUNCREF;
+    RC = &WebAssembly::FUNCREFRegClass;
+    break;
+  case MVT::externref:
+    Opc = WebAssembly::SELECT_EXTERNREF;
+    RC = &WebAssembly::EXTERNREFRegClass;
     break;
   default:
     return false;
@@ -1133,7 +1168,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   }
 
   Register Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
-                                        In, I->getOperand(0)->hasOneUse());
+                                        In);
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
@@ -1147,6 +1182,8 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
 bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const auto *Load = cast<LoadInst>(I);
   if (Load->isAtomic())
+    return false;
+  if (!WebAssembly::isDefaultAddressSpace(Load->getPointerAddressSpace()))
     return false;
   if (!Subtarget->hasSIMD128() && Load->getType()->isVectorTy())
     return false;
@@ -1205,6 +1242,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   const auto *Store = cast<StoreInst>(I);
   if (Store->isAtomic())
+    return false;
+  if (!WebAssembly::isDefaultAddressSpace(Store->getPointerAddressSpace()))
     return false;
   if (!Subtarget->hasSIMD128() &&
       Store->getValueOperand()->getType()->isVectorTy())
@@ -1271,7 +1310,7 @@ bool WebAssemblyFastISel::selectBr(const Instruction *I) {
   MachineBasicBlock *FBB = FuncInfo.MBBMap[Br->getSuccessor(1)];
 
   bool Not;
-  unsigned CondReg = getRegForI1Value(Br->getCondition(), Not);
+  unsigned CondReg = getRegForI1Value(Br->getCondition(), Br->getParent(), Not);
   if (CondReg == 0)
     return false;
 
@@ -1321,16 +1360,17 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   case MVT::v2i64:
   case MVT::v4f32:
   case MVT::v2f64:
-  case MVT::exnref:
+  case MVT::funcref:
+  case MVT::externref:
     break;
   default:
     return false;
   }
 
   unsigned Reg;
-  if (FuncInfo.Fn->getAttributes().hasAttribute(0, Attribute::SExt))
+  if (FuncInfo.Fn->getAttributes().hasRetAttr(Attribute::SExt))
     Reg = getRegForSignedValue(RV);
-  else if (FuncInfo.Fn->getAttributes().hasAttribute(0, Attribute::ZExt))
+  else if (FuncInfo.Fn->getAttributes().hasRetAttr(Attribute::ZExt))
     Reg = getRegForUnsignedValue(RV);
   else
     Reg = getRegForValue(RV);

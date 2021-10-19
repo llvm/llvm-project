@@ -108,10 +108,21 @@ void Language::ForEach(std::function<bool(Language *)> callback) {
     }
   });
 
-  std::lock_guard<std::mutex> guard(GetLanguagesMutex());
-  LanguagesMap &map(GetLanguagesMap());
-  for (const auto &entry : map) {
-    if (!callback(entry.second.get()))
+  // callback may call a method in Language that attempts to acquire the same
+  // lock (such as Language::ForEach or Language::FindPlugin). To avoid a
+  // deadlock, we do not use callback while holding the lock.
+  std::vector<Language *> loaded_plugins;
+  {
+    std::lock_guard<std::mutex> guard(GetLanguagesMutex());
+    LanguagesMap &map(GetLanguagesMap());
+    for (const auto &entry : map) {
+      if (entry.second)
+        loaded_plugins.push_back(entry.second.get());
+    }
+  }
+
+  for (auto *lang : loaded_plugins) {
+    if (!callback(lang))
       break;
   }
 }
@@ -184,7 +195,7 @@ struct language_name_pair language_names[] = {
     {"fortran03", eLanguageTypeFortran03},
     {"fortran08", eLanguageTypeFortran08},
     // Vendor Extensions
-    {"mipsassem", eLanguageTypeMipsAssembler},
+    {"assembler", eLanguageTypeMipsAssembler},
     {"renderscript", eLanguageTypeExtRenderScript},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
@@ -196,7 +207,7 @@ static uint32_t num_languages =
 
 LanguageType Language::GetLanguageTypeFromString(llvm::StringRef string) {
   for (const auto &L : language_names) {
-    if (string.equals_lower(L.name))
+    if (string.equals_insensitive(L.name))
       return static_cast<LanguageType>(L.type);
   }
 
@@ -448,7 +459,7 @@ void Language::GetDefaultExceptionResolverDescription(bool catch_on,
            catch_on ? "on" : "off", throw_on ? "on" : "off");
 }
 // Constructor
-Language::Language() {}
+Language::Language() = default;
 
 // Destructor
-Language::~Language() {}
+Language::~Language() = default;

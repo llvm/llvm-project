@@ -12,6 +12,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -19,6 +20,8 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+
+using VPRecipeOrVPValueTy = PointerUnion<VPRecipeBase *, VPValue *>;
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -53,6 +56,11 @@ class VPRecipeBuilder {
   // marked by having a nullptr entry in this map.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
 
+  /// Cross-iteration reduction & first-order recurrence phis for which we need
+  /// to add the incoming value from the backedge after all recipes have been
+  /// created.
+  SmallVector<VPWidenPHIRecipe *, 4> PhisToFix;
+
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
@@ -61,33 +69,40 @@ class VPRecipeBuilder {
   /// Check if the load or store instruction \p I should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryInstructionRecipe *
-  tryToWidenMemory(Instruction *I, VFRange &Range, VPlanPtr &Plan);
+  VPRecipeBase *tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
+                                 VFRange &Range, VPlanPtr &Plan);
 
   /// Check if an induction recipe should be constructed for \I. If so build and
   /// return it. If not, return null.
-  VPWidenIntOrFpInductionRecipe *tryToOptimizeInductionPHI(PHINode *Phi) const;
+  VPWidenIntOrFpInductionRecipe *
+  tryToOptimizeInductionPHI(PHINode *Phi, ArrayRef<VPValue *> Operands) const;
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
   VPWidenIntOrFpInductionRecipe *
-  tryToOptimizeInductionTruncate(TruncInst *I, VFRange &Range) const;
+  tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
+                                 VFRange &Range, VPlan &Plan) const;
 
-  /// Handle non-loop phi nodes. Currently all such phi nodes are turned into
-  /// a sequence of select instructions as the vectorizer currently performs
-  /// full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, VPlanPtr &Plan);
+  /// Handle non-loop phi nodes. Return a VPValue, if all incoming values match
+  /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned
+  /// into a sequence of select instructions as the vectorizer currently
+  /// performs full if-conversion.
+  VPRecipeOrVPValueTy tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
+                                 VPlanPtr &Plan);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
   /// decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, VFRange &Range,
-                                    VPlan &Plan) const;
+  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+                                    VFRange &Range) const;
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, VPlan &Plan) const;
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands) const;
+
+  /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
+  VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
 
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
@@ -97,10 +112,13 @@ public:
       : OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM), PSE(PSE),
         Builder(Builder) {}
 
-  /// Check if a recipe can be create for \p I withing the given VF \p Range.
-  /// If a recipe can be created, return it. Otherwise return nullptr.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr, VFRange &Range,
-                                       VPlanPtr &Plan);
+  /// Check if an existing VPValue can be used for \p Instr or a recipe can be
+  /// create for \p I withing the given VF \p Range. If an existing VPValue can
+  /// be used or if a recipe can be created, return it. Otherwise return a
+  /// VPRecipeOrVPValueTy with nullptr.
+  VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr,
+                                             ArrayRef<VPValue *> Operands,
+                                             VFRange &Range, VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
@@ -151,8 +169,11 @@ public:
   /// \p Range.Start to \p Range.End.
   VPBasicBlock *handleReplication(
       Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      DenseMap<Instruction *, VPReplicateRecipe *> &PredInst2Recipe,
       VPlanPtr &Plan);
+
+  /// Add the incoming values from the backedge to reduction & first-order
+  /// recurrence cross-iteration phis.
+  void fixHeaderPhis();
 };
 } // end namespace llvm
 

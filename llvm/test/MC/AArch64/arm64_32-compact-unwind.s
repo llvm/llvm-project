@@ -4,7 +4,7 @@
 ; The compact unwind format in ILP32 mode is pretty much the same, except
 ; references to addresses (function, personality, LSDA) are pointer-sized.
 
-; CHECK: Contents of section __compact_unwind:
+; CHECK: Contents of section __LD,__compact_unwind:
 ; CHECK-NEXT:  0004 00000000 04000000 00000002 00000000
 ; CHECK-NEXT:  0014 00000000
         .globl  _test_compact_unwind

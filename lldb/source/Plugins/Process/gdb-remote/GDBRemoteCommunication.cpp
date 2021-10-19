@@ -8,9 +8,9 @@
 
 #include "GDBRemoteCommunication.h"
 
+#include <climits>
+#include <cstring>
 #include <future>
-#include <limits.h>
-#include <string.h>
 #include <sys/stat.h>
 
 #include "lldb/Core/StreamFile.h"
@@ -22,7 +22,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
@@ -1173,7 +1172,9 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
             port_cstr, num_bytes, std::chrono::seconds{10}, num_bytes);
         if (error.Success() && (port != nullptr)) {
           assert(num_bytes > 0 && port_cstr[num_bytes - 1] == '\0');
-          uint16_t child_port = StringConvert::ToUInt32(port_cstr, 0);
+          uint16_t child_port = 0;
+          // FIXME: improve error handling
+          llvm::to_integer(port_cstr, child_port);
           if (*port == 0 || *port == child_port) {
             *port = child_port;
             LLDB_LOGF(log,
@@ -1234,7 +1235,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
   const int backlog = 5;
   TCPSocket listen_socket(true, child_processes_inherit);
   if (llvm::Error error =
-          listen_socket.Listen("127.0.0.1:0", backlog).ToError())
+          listen_socket.Listen("localhost:0", backlog).ToError())
     return error;
 
   Socket *accept_socket;
@@ -1243,7 +1244,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
 
   llvm::SmallString<32> remote_addr;
   llvm::raw_svector_ostream(remote_addr)
-      << "connect://127.0.0.1:" << listen_socket.GetLocalPortNumber();
+      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
 
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());

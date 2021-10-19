@@ -33,11 +33,11 @@ namespace std {
 }
 
 // CHECK: @_ZGR15globalInitList1_ = internal constant [3 x i32] [i32 1, i32 2, i32 3]
-// CHECK: @globalInitList1 = global {{[^ ]+}} { i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZGR15globalInitList1_, {{[^)]*}}), i32*
+// CHECK: @globalInitList1 ={{.*}} global {{[^ ]+}} { i32* getelementptr inbounds ([3 x i32], [3 x i32]* @_ZGR15globalInitList1_, {{[^)]*}}), i32*
 std::initializer_list<int> globalInitList1 = {1, 2, 3};
 
 void fn1(int i) {
-  // CHECK-LABEL: define void @_Z3fn1i
+  // CHECK-LABEL: define{{.*}} void @_Z3fn1i
   // temporary array
   // CHECK: [[array:%[^ ]+]] = alloca [3 x i32]
   // CHECK: getelementptr inbounds [3 x i32], [3 x i32]* [[array]], i{{32|64}} 0
@@ -66,7 +66,7 @@ struct destroyme2 {
 
 
 void fn2() {
-  // CHECK-LABEL: define void @_Z3fn2v
+  // CHECK-LABEL: define{{.*}} void @_Z3fn2v
   void target(std::initializer_list<destroyme1>);
   // objects should be destroyed before dm2, after call returns
   target({ destroyme1(), destroyme1() });
@@ -76,7 +76,7 @@ void fn2() {
 }
 
 void fn3() {
-  // CHECK-LABEL: define void @_Z3fn3v
+  // CHECK-LABEL: define{{.*}} void @_Z3fn3v
   // objects should be destroyed after dm2
   auto list = { destroyme1(), destroyme1() };
   destroyme2 dm2;

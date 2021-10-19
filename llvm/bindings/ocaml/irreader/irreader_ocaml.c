@@ -21,8 +21,7 @@
 void llvm_raise(value Prototype, char *Message);
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-CAMLprim value llvm_parse_ir(LLVMContextRef C,
-                             LLVMMemoryBufferRef MemBuf) {
+value llvm_parse_ir(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
   CAMLparam0();
   CAMLlocal2(Variant, MessageVal);
   LLVMModuleRef M;
@@ -31,5 +30,5 @@ CAMLprim value llvm_parse_ir(LLVMContextRef C,
   if (LLVMParseIRInContext(C, MemBuf, &M, &Message))
     llvm_raise(*caml_named_value("Llvm_irreader.Error"), Message);
 
-  CAMLreturn((value) M);
+  CAMLreturn((value)M);
 }

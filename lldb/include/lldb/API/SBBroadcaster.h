@@ -63,6 +63,7 @@ public:
 protected:
   friend class SBCommandInterpreter;
   friend class SBCommunication;
+  friend class SBDebugger;
   friend class SBEvent;
   friend class SBListener;
   friend class SBProcess;
@@ -76,7 +77,7 @@ protected:
 
 private:
   lldb::BroadcasterSP m_opaque_sp;
-  lldb_private::Broadcaster *m_opaque_ptr;
+  lldb_private::Broadcaster *m_opaque_ptr = nullptr;
 };
 
 } // namespace lldb

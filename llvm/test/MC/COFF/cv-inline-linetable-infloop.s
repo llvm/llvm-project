@@ -2,7 +2,7 @@
 
 # CHECK:    InlineSiteSym {
 # CHECK:      BinaryAnnotations [
-# CHECK:        ChangeLineOffset: 1
+# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x0, LineOffset: 1}
 # CHECK:        ChangeCodeLength: 0x2
 # CHECK:      ]
 # CHECK:    }

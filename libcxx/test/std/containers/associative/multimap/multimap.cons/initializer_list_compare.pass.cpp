@@ -23,7 +23,7 @@
 int main(int, char**)
 {
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef std::multimap<int, double, Cmp> C;
     typedef C::value_type V;
     C m(
@@ -55,7 +55,7 @@ int main(int, char**)
     assert(m.key_comp() == Cmp(4));
     }
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef std::multimap<int, double, Cmp, min_allocator<std::pair<const int, double>>> C;
     typedef C::value_type V;
     C m(

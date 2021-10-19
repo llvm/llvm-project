@@ -12,9 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUExportClustering.h"
-#include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/ScheduleDAGInstrs.h"
 
 using namespace llvm;
 
@@ -27,15 +27,13 @@ public:
 };
 
 static bool isExport(const SUnit &SU) {
-  const MachineInstr *MI = SU.getInstr();
-  return MI->getOpcode() == AMDGPU::EXP ||
-         MI->getOpcode() == AMDGPU::EXP_DONE;
+  return SIInstrInfo::isEXP(*SU.getInstr());
 }
 
 static bool isPositionExport(const SIInstrInfo *TII, SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  int Imm = TII->getNamedOperand(*MI, AMDGPU::OpName::tgt)->getImm();
-  return Imm >= 12 && Imm <= 15;
+  unsigned Imm = TII->getNamedOperand(*MI, AMDGPU::OpName::tgt)->getImm();
+  return Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST;
 }
 
 static void sortChain(const SIInstrInfo *TII, SmallVector<SUnit *, 8> &Chain,

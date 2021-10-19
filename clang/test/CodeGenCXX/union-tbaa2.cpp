@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -O2 -fno-experimental-new-pass-manager -std=c++11 -triple x86_64-unknown-linux-gnu -target-cpu x86-64 -target-feature +sse4.2 -target-feature +avx -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O1 -std=c++11 -triple x86_64-unknown-linux-gnu -target-cpu x86-64 -target-feature +sse4.2 -target-feature +avx -emit-llvm -o - | FileCheck %s
 
 // Testcase from llvm.org/PR32056
 
@@ -20,7 +20,6 @@ struct A {
 // CHECK: tbaa ![[OCPATH:[0-9]+]]
 // CHECK: store <4 x double>
 // CHECK: tbaa ![[OCPATH]]
-// CHECK: call
     a = _mm256_setr_pd(0.0, 1.0, 2.0, 3.0);
     b = _mm256_setr_pd(4.0, 5.0, 6.0, 7.0);
   }

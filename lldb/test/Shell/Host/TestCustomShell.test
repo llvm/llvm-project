@@ -1,15 +1,13 @@
-# This test applies to POSIX.
-# UNSUPPORTED: system-windows
-
 # FIXME: ShellExpandArguments is unimplemented on the following targets.
+# UNSUPPORTED: system-windows
 # UNSUPPORTED: system-linux
 # XFAIL: system-freebsd
 # XFAIL: system-netbsd
 # XFAIL: system-openbsd
 
 # RUN: %clang_host %S/Inputs/simple.c -g -o %t.out
-# RUN: SHELL=bogus not %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s --check-prefix ERROR
-# RUN: env -i %lldb %t.out -b -o 'run' 2>&1 | FileCheck %s
+# RUN: SHELL=bogus not %lldb %t.out -b -o 'process launch -X 1 --' 2>&1 | FileCheck %s --check-prefix ERROR
+# RUN: env -i %lldb %t.out -b -o 'process launch -X 1 --' 2>&1 | FileCheck %s
 
 # ERROR: error: shell expansion failed
 # CHECK-NOT: error: shell expansion failed

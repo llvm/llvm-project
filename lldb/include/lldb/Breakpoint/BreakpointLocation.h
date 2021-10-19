@@ -202,8 +202,8 @@ public:
   /// hasn't been done already
   ///
   /// \return
-  ///    A pointer to the breakpoint options.
-  BreakpointOptions *GetLocationOptions();
+  ///    A reference to the breakpoint options.
+  BreakpointOptions &GetLocationOptions();
 
   /// Use this to access breakpoint options from this breakpoint location.
   /// This will return the options that have a setting for the specified
@@ -214,10 +214,10 @@ public:
   /// \return
   ///     A pointer to the containing breakpoint's options if this
   ///     location doesn't have its own copy.
-  const BreakpointOptions *GetOptionsSpecifyingKind(
-      BreakpointOptions::OptionKind kind) const;
+  const BreakpointOptions &
+  GetOptionsSpecifyingKind(BreakpointOptions::OptionKind kind) const;
 
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Invoke the callback action when the breakpoint is hit.
   ///
@@ -230,6 +230,12 @@ public:
   ///     \b true if the target should stop at this breakpoint and \b
   ///     false not.
   bool InvokeCallback(StoppointCallbackContext *context);
+  
+  /// Report whether the callback for this location is synchronous or not.
+  ///
+  /// \return
+  ///     \b true if the callback is synchronous and \b false if not.
+  bool IsCallbackSynchronous();
 
   /// Returns whether we should resolve Indirect functions in setting the
   /// breakpoint site for this location.
@@ -291,6 +297,10 @@ protected:
 
   void DecrementIgnoreCount();
 
+  /// BreakpointLocation::IgnoreCountShouldStop  can only be called once
+  /// per stop.  This method checks first against the loc and then the owner.
+  /// It also takes care of decrementing the ignore counters.
+  /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
 
 private:

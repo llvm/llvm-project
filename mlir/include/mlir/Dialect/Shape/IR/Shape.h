@@ -14,9 +14,13 @@
 #ifndef MLIR_SHAPE_IR_SHAPE_H
 #define MLIR_SHAPE_IR_SHAPE_H
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -27,19 +31,14 @@ class PatternRewriter;
 namespace shape {
 
 /// Alias type for extent tensors.
-RankedTensorType getExtentTensorType(MLIRContext *ctx);
+RankedTensorType getExtentTensorType(MLIRContext *ctx,
+                                     int64_t rank = ShapedType::kDynamicSize);
 
-/// The component type corresponding to shape, element type and attribute.
-class ComponentType : public Type::TypeBase<ComponentType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
+// Check if a type is an extent tensor, e.g., tensor<?xindex>.
+bool isExtentTensorType(Type);
 
-/// The element type of the shaped type.
-class ElementType : public Type::TypeBase<ElementType, Type, TypeStorage> {
-public:
-  using Base::Base;
-};
+// Given an input shape Value, try to obtain the shape's values.
+LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues);
 
 /// The shape descriptor type represents rank and dimension sizes.
 class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {
@@ -67,12 +66,12 @@ public:
   using Base::Base;
 };
 
+} // namespace shape
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Shape/IR/ShapeOps.h.inc"
 
 #include "mlir/Dialect/Shape/IR/ShapeOpsDialect.h.inc"
-
-} // namespace shape
-} // namespace mlir
 
 #endif // MLIR_SHAPE_IR_SHAPE_H

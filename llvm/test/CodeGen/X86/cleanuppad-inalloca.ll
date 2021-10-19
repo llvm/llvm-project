@@ -25,7 +25,7 @@ entry:
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  call void @takes_two(<{ %struct.A, %struct.A }>* inalloca nonnull %argmem)
+  call void @takes_two(<{ %struct.A, %struct.A }>* inalloca(<{ %struct.A, %struct.A }>) nonnull %argmem)
   ret void
 
 ehcleanup:                                        ; preds = %entry
@@ -57,7 +57,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: addl $8, %esp
 ; CHECK: retl
 
-declare void @takes_two(<{ %struct.A, %struct.A }>* inalloca) #0
+declare void @takes_two(<{ %struct.A, %struct.A }>* inalloca(<{ %struct.A, %struct.A }>)) #0
 
 declare x86_thiscallcc %struct.A* @"\01??0A@@QAE@XZ"(%struct.A* returned) #0
 

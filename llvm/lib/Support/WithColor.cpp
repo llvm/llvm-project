@@ -7,16 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/WithColor.h"
+
+#include "DebugOptions.h"
+
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 
-cl::OptionCategory llvm::ColorCategory("Color Options");
-
-static cl::opt<cl::boolOrDefault>
-    UseColor("color", cl::cat(ColorCategory),
-             cl::desc("Use colors in output (default=autodetect)"),
-             cl::init(cl::BOU_UNSET));
+cl::OptionCategory &llvm::getColorCategory() {
+  static cl::OptionCategory ColorCategory("Color Options");
+  return ColorCategory;
+}
+namespace {
+struct CreateUseColor {
+  static void *call() {
+    return new cl::opt<cl::boolOrDefault>(
+        "color", cl::cat(getColorCategory()),
+        cl::desc("Use colors in output (default=autodetect)"),
+        cl::init(cl::BOU_UNSET));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<cl::boolOrDefault>, CreateUseColor> UseColor;
+void llvm::initWithColorOptions() { *UseColor; }
 
 WithColor::WithColor(raw_ostream &OS, HighlightColor Color, ColorMode Mode)
     : OS(OS), Mode(Mode) {
@@ -112,8 +127,8 @@ bool WithColor::colorsEnabled() {
   case ColorMode::Disable:
     return false;
   case ColorMode::Auto:
-    return UseColor == cl::BOU_UNSET ? OS.has_colors()
-                                     : UseColor == cl::BOU_TRUE;
+    return *UseColor == cl::BOU_UNSET ? OS.has_colors()
+                                      : *UseColor == cl::BOU_TRUE;
   }
   llvm_unreachable("All cases handled above.");
 }

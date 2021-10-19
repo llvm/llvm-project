@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
+! RUN: %python %S/test_errors.py %s %flang -fopenmp
 
 ! Check OpenMP declarative directives
 
@@ -9,8 +9,6 @@
 
 subroutine declare_simd_1(a, b)
   real(8), intent(inout) :: a, b
-  !ERROR: Internal: no symbol found for 'declare_simd_1'
-  !ERROR: Internal: no symbol found for 'a'
   !$omp declare simd(declare_simd_1) aligned(a)
   a = 3.14 + b
 end subroutine declare_simd_1
@@ -27,7 +25,6 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
-  !ERROR: Internal: no symbol found for 'sub1'
   !ERROR: NOTINBRANCH and INBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
@@ -47,13 +44,20 @@ module m2
 contains
   subroutine foo
     !$omp declare target
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target (foo, N, M)
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp declare target to(Q, S) link(R)
     !ERROR: MAP clause is not allowed on the DECLARE TARGET directive
     !$omp declare target map(from:Q)
     integer, parameter :: N=10000, M=1024
     integer :: i
     real :: Q(N, N), R(N,M), S(M,M)
+    !ERROR: A variable that appears in a THREADPRIVATE directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
     !$omp threadprivate(i)
   end subroutine foo
 end module m2

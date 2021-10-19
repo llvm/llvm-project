@@ -483,4 +483,66 @@ entry:
   ret i32 %r
 }
 
+@begin = external global i32*
+@end = external global i32*
+
+define void @test_memoperand_loop(i32 %data) #0 {
+; CHECK-LABEL: test_memoperand_loop:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq begin@GOTPCREL(%rip), %r8
+; CHECK-NEXT:    movq (%r8), %rax
+; CHECK-NEXT:    movq end@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq (%rcx), %rdx
+; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    movq %rax, %rcx
+entry:
+  %begin = load i32*, i32** @begin, align 8
+  %end = load i32*, i32** @end, align 8
+  br label %loop.body
+
+; CHECK-NEXT:  .LBB13_1: # %loop.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    addq $8, %rcx
+; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    ja .LBB13_3
+; CHECK-NEXT:  # %bb.2: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
+; CHECK-NEXT:    movq (%r8), %rcx
+; CHECK-NEXT:  .LBB13_3: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
+; CHECK-NEXT:    movl %edi, (%rcx)
+; CHECK-NEXT:    addq $8, %rcx
+; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    ja .LBB13_5
+; CHECK-NEXT:  # %bb.4: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:  .LBB13_5: # %loop.body
+; CHECK-NEXT:    # in Loop: Header=BB13_1 Depth=1
+; CHECK-NEXT:    movl %edi, (%rcx)
+; CHECK-NEXT:    addl $1, %esi
+; CHECK-NEXT:    cmpl $1024, %esi # imm = 0x400
+; CHECK-NEXT:    jl .LBB13_1
+loop.body:
+  %phi.iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.body ]
+  %phi.ptr = phi i32* [ %begin, %entry ], [ %dst2, %loop.body ]
+  %gep1 = getelementptr inbounds i32, i32 *%phi.ptr, i64 2
+  %cmp1 = icmp ugt i32* %gep1, %end
+  %begin_dup = load i32*, i32** @begin, align 8
+  %dst1 = select i1 %cmp1, i32* %gep1, i32* %begin_dup
+  store i32 %data, i32 *%dst1, align 4
+  %gep2 = getelementptr inbounds i32, i32 *%dst1, i64 2
+  %cmp2 = icmp ugt i32* %gep2, %end
+  %dst2 = select i1 %cmp2, i32* %gep2, i32* %begin
+  store i32 %data, i32 *%dst2, align 4
+  %iv.next = add i32 %phi.iv, 1
+  %cond = icmp slt i32 %iv.next, 1024
+  br i1 %cond, label %loop.body, label %exit
+
+; CHECK-NEXT:  # %bb.6: # %exit
+; CHECK-NEXT:    retq
+exit:
+  ret void
+}
+
 attributes #0 = {"target-cpu"="x86-64"}

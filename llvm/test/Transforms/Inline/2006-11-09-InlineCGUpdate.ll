@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -prune-eh -disable-output
+; RUN: opt < %s -inline -prune-eh -disable-output -enable-new-pm=0
 ; PR992
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"

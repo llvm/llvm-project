@@ -56,7 +56,7 @@
 //                                      tramp:  jmp QWORD [addr]
 //                                       addr:  .bytes <hook>
 //
-//    Note: <real> is equilavent to <label>.
+//    Note: <real> is equivalent to <label>.
 //
 // 3) HotPatch
 //
@@ -136,7 +136,7 @@ namespace __interception {
 static const int kAddressLength = FIRST_32_SECOND_64(4, 8);
 static const int kJumpInstructionLength = 5;
 static const int kShortJumpInstructionLength = 2;
-static const int kIndirectJumpInstructionLength = 6;
+UNUSED static const int kIndirectJumpInstructionLength = 6;
 static const int kBranchLength =
     FIRST_32_SECOND_64(kJumpInstructionLength, kIndirectJumpInstructionLength);
 static const int kDirectBranchLength = kBranchLength + kAddressLength;
@@ -165,7 +165,7 @@ static uptr GetMmapGranularity() {
   return si.dwAllocationGranularity;
 }
 
-static uptr RoundUpTo(uptr size, uptr boundary) {
+UNUSED static uptr RoundUpTo(uptr size, uptr boundary) {
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
@@ -309,7 +309,7 @@ struct TrampolineMemoryRegion {
   uptr max_size;
 };
 
-static const uptr kTrampolineScanLimitRange = 1 << 31;  // 2 gig
+UNUSED static const uptr kTrampolineScanLimitRange = 1 << 31;  // 2 gig
 static const int kMaxTrampolineRegion = 1024;
 static TrampolineMemoryRegion TrampolineRegions[kMaxTrampolineRegion];
 
@@ -398,8 +398,42 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
   return allocated_space;
 }
 
+// The following prologues cannot be patched because of the short jump
+// jumping to the patching region.
+
+// ntdll!wcslen in Win11
+//   488bc1          mov     rax,rcx
+//   0fb710          movzx   edx,word ptr [rax]
+//   4883c002        add     rax,2
+//   6685d2          test    dx,dx
+//   75f4            jne     -12
+static const u8 kPrologueWithShortJump1[] = {
+    0x48, 0x8b, 0xc1, 0x0f, 0xb7, 0x10, 0x48, 0x83,
+    0xc0, 0x02, 0x66, 0x85, 0xd2, 0x75, 0xf4,
+};
+
+// ntdll!strrchr in Win11
+//   4c8bc1          mov     r8,rcx
+//   8a01            mov     al,byte ptr [rcx]
+//   48ffc1          inc     rcx
+//   84c0            test    al,al
+//   75f7            jne     -9
+static const u8 kPrologueWithShortJump2[] = {
+    0x4c, 0x8b, 0xc1, 0x8a, 0x01, 0x48, 0xff, 0xc1,
+    0x84, 0xc0, 0x75, 0xf7,
+};
+
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
+#if SANITIZER_WINDOWS64
+  if (memcmp((u8*)address, kPrologueWithShortJump1,
+             sizeof(kPrologueWithShortJump1)) == 0 ||
+      memcmp((u8*)address, kPrologueWithShortJump2,
+             sizeof(kPrologueWithShortJump2)) == 0) {
+    return 0;
+  }
+#endif
+
   switch (*(u64*)address) {
     case 0x90909090909006EB:  // stub: jmp over 6 x nop.
       return 8;
@@ -477,6 +511,14 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xA1:  // A1 XX XX XX XX XX XX XX XX :
                 //   movabs eax, dword ptr ds:[XXXXXXXX]
       return 9;
+
+    case 0x83:
+      const u8 next_byte = *(u8*)(address + 1);
+      const u8 mod = next_byte >> 6;
+      const u8 rm = next_byte & 7;
+      if (mod == 1 && rm == 4)
+        return 5;  // 83 ModR/M SIB Disp8 Imm8
+                   //   add|or|adc|sbb|and|sub|xor|cmp [r+disp8], imm8
   }
 
   switch (*(u16*)address) {
@@ -493,6 +535,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x5641:  // push r14
     case 0x5741:  // push r15
     case 0x9066:  // Two-byte NOP
+    case 0xc084:  // test al, al
+    case 0x018a:  // mov al, byte ptr [rcx]
       return 2;
 
     case 0x058B:  // 8B 05 XX XX XX XX : mov eax, dword ptr [XX XX XX XX]
@@ -509,6 +553,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xd12b48:    // 48 2b d1 : sub rdx, rcx
     case 0x07c1f6:    // f6 c1 07 : test cl, 0x7
     case 0xc98548:    // 48 85 C9 : test rcx, rcx
+    case 0xd28548:    // 48 85 d2 : test rdx, rdx
     case 0xc0854d:    // 4d 85 c0 : test r8, r8
     case 0xc2b60f:    // 0f b6 c2 : movzx eax, dl
     case 0xc03345:    // 45 33 c0 : xor r8d, r8d
@@ -522,6 +567,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xca2b48:    // 48 2b ca : sub rcx, rdx
     case 0x10b70f:    // 0f b7 10 : movzx edx, WORD PTR [rax]
     case 0xc00b4d:    // 3d 0b c0 : or r8, r8
+    case 0xc08b41:    // 41 8b c0 : mov eax, r8d
     case 0xd18b48:    // 48 8b d1 : mov rdx, rcx
     case 0xdc8b4c:    // 4c 8b dc : mov r11, rsp
     case 0xd18b4c:    // 4c 8b d1 : mov r10, rcx

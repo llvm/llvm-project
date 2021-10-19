@@ -19,7 +19,6 @@
 #include <algorithm>
 
 using namespace clang::ast_matchers;
-using namespace clang::ast_type_traits;
 
 namespace clang {
 
@@ -127,7 +126,7 @@ void MagicNumbersCheck::registerMatchers(MatchFinder *Finder) {
 
 void MagicNumbersCheck::check(const MatchFinder::MatchResult &Result) {
 
-  TraversalKindScope RAII(*Result.Context, ast_type_traits::TK_AsIs);
+  TraversalKindScope RAII(*Result.Context, TK_AsIs);
 
   checkBoundMatch<IntegerLiteral>(Result, "integer");
   checkBoundMatch<FloatingLiteral>(Result, "float");
@@ -209,7 +208,7 @@ bool MagicNumbersCheck::isSyntheticValue(const SourceManager *SourceManager,
     return false;
 
   const StringRef BufferIdentifier =
-      SourceManager->getBuffer(FileOffset.first)->getBufferIdentifier();
+      SourceManager->getBufferOrFake(FileOffset.first).getBufferIdentifier();
 
   return BufferIdentifier.empty();
 }

@@ -1,6 +1,7 @@
 # We do not support the call site info for the target now, so we use the experimental option (-emit-call-site-info -debug-entry-values).
 
 # RUN: llc -emit-call-site-info -debug-entry-values -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -emit-call-site-info -debug-entry-values -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -o - %s | FileCheck %s
 
 # Verify that the entry values for the input parameters are inserted after the
 # bundles which contains the registers' clobbering instructions (the calls to
@@ -85,7 +86,7 @@ body:             |
     CFI_INSTRUCTION offset $r31, -4
     CFI_INSTRUCTION offset $r30, -8
     BUNDLE implicit-def $r29, implicit-def $r30, implicit-def dead $pc, implicit-def dead $r31, implicit-def dead $r0, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !18 {
-      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !18 :: (store 4 into stack)
+      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !18 :: (store (s32) into stack)
       J2_call @clobber, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit internal killed $r29, implicit-def $r29, implicit-def dead $r0, debug-location !18
     }
     BUNDLE implicit-def dead $r0, implicit-def $d15, implicit-def $r30, implicit-def $r31, implicit-def $pc, implicit-def $r29, implicit killed $r30, implicit killed $framekey, debug-location !19 {
@@ -113,7 +114,6 @@ body:             |
     liveins: $r0
 
     DBG_VALUE $r0, $noreg, !22, !DIExpression(), debug-location !23
-    DBG_VALUE $r0, $noreg, !22, !DIExpression(), debug-location !23
     BUNDLE implicit-def dead $p0, implicit-def $pc, implicit killed $r0, implicit killed $r31, debug-location !24 {
       renamable $p0 = C2_cmpeqi killed renamable $r0, 0, debug-location !24
       PS_jmprettnew internal killed $p0, killed $r31, implicit-def $pc, implicit-def $pc, implicit killed undef $r0, debug-location !27
@@ -124,7 +124,7 @@ body:             |
     CFI_INSTRUCTION offset $r31, -4
     CFI_INSTRUCTION offset $r30, -8
     BUNDLE implicit-def $r29, implicit-def $r30, implicit-def $pc, implicit-def $r31, implicit-def dead $r0, implicit $r29, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !25 {
-      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !25 :: (store 4 into stack)
+      $r29 = S2_allocframe $r29, 0, implicit-def $r30, implicit killed $framekey, implicit killed $framelimit, implicit killed $r30, implicit killed $r31, debug-location !25 :: (store (s32) into stack)
       J2_call @clobber, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit internal killed $r29, implicit-def $r29, implicit-def dead $r0, debug-location !25
     }
     $d15 = L2_deallocframe killed $r30, implicit-def $r29, implicit killed $framekey

@@ -2,11 +2,11 @@
 ; RUN: llc -mtriple=i386-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=32-ALL,32-GOOD-RA
 ; RUN: llc -mtriple=i386-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=32-ALL,32-FAST-RA
 
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=64-ALL,64-FAST-RA
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA-SAHF
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefixes=64-ALL,64-FAST-RA-SAHF
-; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mcpu=corei7 %s -o - | FileCheck %s --check-prefixes=64-ALL,64-GOOD-RA-SAHF
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mattr=+sahf -pre-RA-sched=fast %s -o - | FileCheck %s --check-prefix=64-ALL
+; RUN: llc -mtriple=x86_64-linux-gnu -verify-machineinstrs -mcpu=corei7 %s -o - | FileCheck %s --check-prefix=64-ALL
 
 declare i32 @foo()
 declare i32 @bar(i64)
@@ -39,7 +39,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; 32-GOOD-RA-NEXT:    subl $8, %esp
 ; 32-GOOD-RA-NEXT:    pushl %edx
 ; 32-GOOD-RA-NEXT:    pushl %eax
-; 32-GOOD-RA-NEXT:    calll bar
+; 32-GOOD-RA-NEXT:    calll bar@PLT
 ; 32-GOOD-RA-NEXT:    addl $16, %esp
 ; 32-GOOD-RA-NEXT:    testb %bl, %bl
 ; 32-GOOD-RA-NEXT:    jne .LBB0_3
@@ -70,7 +70,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; 32-FAST-RA-NEXT:    subl $8, %esp
 ; 32-FAST-RA-NEXT:    pushl %edx
 ; 32-FAST-RA-NEXT:    pushl %eax
-; 32-FAST-RA-NEXT:    calll bar
+; 32-FAST-RA-NEXT:    calll bar@PLT
 ; 32-FAST-RA-NEXT:    addl $16, %esp
 ; 32-FAST-RA-NEXT:    testb %bl, %bl
 ; 32-FAST-RA-NEXT:    jne .LBB0_3
@@ -93,7 +93,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; 64-ALL-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; 64-ALL-NEXT:    setne %bl
 ; 64-ALL-NEXT:    movq %rax, %rdi
-; 64-ALL-NEXT:    callq bar
+; 64-ALL-NEXT:    callq bar@PLT
 ; 64-ALL-NEXT:    testb %bl, %bl
 ; 64-ALL-NEXT:    jne .LBB0_2
 ; 64-ALL-NEXT:  # %bb.1: # %t
@@ -218,7 +218,7 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
 ; 32-GOOD-RA-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; 32-GOOD-RA-NEXT:    lock cmpxchgl %esi, (%ecx)
 ; 32-GOOD-RA-NEXT:    sete %bl
-; 32-GOOD-RA-NEXT:    calll foo
+; 32-GOOD-RA-NEXT:    calll foo@PLT
 ; 32-GOOD-RA-NEXT:    testb %bl, %bl
 ; 32-GOOD-RA-NEXT:    jne .LBB2_2
 ; 32-GOOD-RA-NEXT:  # %bb.1: # %entry
@@ -240,7 +240,7 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
 ; 32-FAST-RA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; 32-FAST-RA-NEXT:    lock cmpxchgl %esi, (%ecx)
 ; 32-FAST-RA-NEXT:    sete %bl
-; 32-FAST-RA-NEXT:    calll foo
+; 32-FAST-RA-NEXT:    calll foo@PLT
 ; 32-FAST-RA-NEXT:    testb %bl, %bl
 ; 32-FAST-RA-NEXT:    jne .LBB2_2
 ; 32-FAST-RA-NEXT:  # %bb.1: # %entry
@@ -261,7 +261,7 @@ define i32 @test_feed_cmov(i32* %addr, i32 %desired, i32 %new) nounwind {
 ; 64-ALL-NEXT:    movl %esi, %eax
 ; 64-ALL-NEXT:    lock cmpxchgl %edx, (%rdi)
 ; 64-ALL-NEXT:    sete %bpl
-; 64-ALL-NEXT:    callq foo
+; 64-ALL-NEXT:    callq foo@PLT
 ; 64-ALL-NEXT:    testb %bpl, %bpl
 ; 64-ALL-NEXT:    cmovnel %ebx, %eax
 ; 64-ALL-NEXT:    addq $8, %rsp

@@ -3,6 +3,7 @@
 // RUN: llvm-mc -triple arm -mcpu=cortex-a75 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-a76 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=neoverse-n1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
+// RUN: llvm-mc -triple arm -mcpu=neoverse-n2 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-a77 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-a78 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-x1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK

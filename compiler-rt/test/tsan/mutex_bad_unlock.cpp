@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
-extern "C" void AnnotateRWLockReleased(const char *f, int l, void *m, long rw);
+#include "test.h"
 
 int main() {
   int m = 0;

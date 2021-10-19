@@ -19,6 +19,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
+#include "llvm/Support/raw_ostream.h"
 #include <forward_list>
 
 namespace Fortran::parser {
@@ -47,10 +48,13 @@ Symbol *Resolve(const parser::Name &, Symbol *);
 parser::MessageFixedText WithIsFatal(
     const parser::MessageFixedText &msg, bool isFatal);
 
-// Is this the name of a defined operator, e.g. ".foo."
-bool IsDefinedOperator(const SourceName &);
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
+
+// Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
+// `operator(==)`). GetAllNames() returns them all, including symbolName.
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &, const SourceName &);
 
 template <typename T>
 MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
@@ -72,32 +76,32 @@ std::optional<std::int64_t> EvaluateInt64(
 // Analyze a generic-spec and generate a symbol name and GenericKind for it.
 class GenericSpecInfo {
 public:
-  GenericSpecInfo(const parser::DefinedOpName &x) { Analyze(x); }
-  GenericSpecInfo(const parser::GenericSpec &x) { Analyze(x); }
+  explicit GenericSpecInfo(const parser::DefinedOpName &x) { Analyze(x); }
+  explicit GenericSpecInfo(const parser::GenericSpec &x) { Analyze(x); }
 
   GenericKind kind() const { return kind_; }
   const SourceName &symbolName() const { return symbolName_.value(); }
-  // Some intrinsic operators have more than one name (e.g. `operator(.eq.)` and
-  // `operator(==)`). GetAllNames() returns them all, including symbolName.
-  std::forward_list<std::string> GetAllNames(SemanticsContext &) const;
   // Set the GenericKind in this symbol and resolve the corresponding
   // name if there is one
   void Resolve(Symbol *) const;
-  Symbol *FindInScope(SemanticsContext &, const Scope &) const;
+  friend llvm::raw_ostream &operator<<(
+      llvm::raw_ostream &, const GenericSpecInfo &);
 
 private:
+  void Analyze(const parser::DefinedOpName &);
+  void Analyze(const parser::GenericSpec &);
+
   GenericKind kind_;
   const parser::Name *parseName_{nullptr};
   std::optional<SourceName> symbolName_;
-
-  void Analyze(const parser::DefinedOpName &);
-  void Analyze(const parser::GenericSpec &);
 };
 
 // Analyze a parser::ArraySpec or parser::CoarraySpec
 ArraySpec AnalyzeArraySpec(SemanticsContext &, const parser::ArraySpec &);
 ArraySpec AnalyzeArraySpec(
     SemanticsContext &, const parser::ComponentArraySpec &);
+ArraySpec AnalyzeDeferredShapeSpecList(
+    SemanticsContext &, const parser::DeferredShapeSpecList &);
 ArraySpec AnalyzeCoarraySpec(
     SemanticsContext &context, const parser::CoarraySpec &);
 

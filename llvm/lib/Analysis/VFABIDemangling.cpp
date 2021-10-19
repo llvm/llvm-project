@@ -290,9 +290,9 @@ bool verifyAllVectorsHaveSameWidth(FunctionType *Signature) {
 
   assert(VecTys.size() > 1 && "Invalid number of elements.");
   const ElementCount EC = VecTys[0]->getElementCount();
-  return llvm::all_of(
-      llvm::make_range(VecTys.begin() + 1, VecTys.end()),
-      [&EC](VectorType *VTy) { return (EC == VTy->getElementCount()); });
+  return llvm::all_of(llvm::drop_begin(VecTys), [&EC](VectorType *VTy) {
+    return (EC == VTy->getElementCount());
+  });
 }
 
 #endif // NDEBUG
@@ -454,7 +454,7 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   if (!M.getFunction(VectorName))
     return None;
 
-  const VFShape Shape({VF, IsScalable, Parameters});
+  const VFShape Shape({ElementCount::get(VF, IsScalable), Parameters});
   return VFInfo({Shape, std::string(ScalarName), std::string(VectorName), ISA});
 }
 

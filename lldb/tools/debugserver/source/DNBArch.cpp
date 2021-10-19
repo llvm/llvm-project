@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DNBArch.h"
-#include <assert.h>
+#include <cassert>
 #include <mach/mach.h>
 
 #include <map>
@@ -21,6 +21,7 @@
 typedef std::map<uint32_t, DNBArchPluginInfo> CPUPluginInfoMap;
 
 static uint32_t g_current_cpu_type = 0;
+static uint32_t g_current_cpu_subtype = 0;
 CPUPluginInfoMap g_arch_plugins;
 
 static const DNBArchPluginInfo *GetArchInfo() {
@@ -31,15 +32,17 @@ static const DNBArchPluginInfo *GetArchInfo() {
   return NULL;
 }
 
-uint32_t DNBArchProtocol::GetArchitecture() { return g_current_cpu_type; }
+uint32_t DNBArchProtocol::GetCPUType() { return g_current_cpu_type; }
+uint32_t DNBArchProtocol::GetCPUSubType() { return g_current_cpu_subtype; }
 
-bool DNBArchProtocol::SetArchitecture(uint32_t cpu_type) {
+bool DNBArchProtocol::SetArchitecture(uint32_t cpu_type, uint32_t cpu_subtype) {
   g_current_cpu_type = cpu_type;
+  g_current_cpu_subtype = cpu_subtype;
   bool result = g_arch_plugins.find(g_current_cpu_type) != g_arch_plugins.end();
-  DNBLogThreadedIf(
-      LOG_PROCESS,
-      "DNBArchProtocol::SetDefaultArchitecture (cpu_type=0x%8.8x) => %i",
-      cpu_type, result);
+  DNBLogThreadedIf(LOG_PROCESS,
+                   "DNBArchProtocol::SetDefaultArchitecture (cpu_type=0x%8.8x, "
+                   "cpu_subtype=0x%8.8x) => %i",
+                   cpu_type, cpu_subtype, result);
   return result;
 }
 

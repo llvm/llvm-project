@@ -80,8 +80,8 @@ enum { k_num_register_sets = 2 };
 
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
-  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
-         "Register setting path assumes this is a 64-bit host");
+  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 4) &&
+         "Register setting path assumes this is a 32-bit host");
   return new RegisterInfoPOSIX_arm(target_arch);
 }
 

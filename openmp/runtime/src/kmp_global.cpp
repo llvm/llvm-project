@@ -46,6 +46,9 @@ volatile int __kmp_init_gtid = FALSE;
 volatile int __kmp_init_common = FALSE;
 volatile int __kmp_init_middle = FALSE;
 volatile int __kmp_init_parallel = FALSE;
+volatile int __kmp_init_hidden_helper = FALSE;
+volatile int __kmp_init_hidden_helper_threads = FALSE;
+volatile int __kmp_hidden_helper_team_done = FALSE;
 #if KMP_USE_MONITOR
 volatile int __kmp_init_monitor =
     0; /* 1 - launched, 2 - actually started (Windows* OS only) */
@@ -107,8 +110,8 @@ char const *__kmp_barrier_type_name[bs_last_barrier] = {"plain", "forkjoin"
                                                         "reduction"
 #endif // KMP_FAST_REDUCTION_BARRIER
 };
-char const *__kmp_barrier_pattern_name[bp_last_bar] = {"linear", "tree",
-                                                       "hyper", "hierarchical"};
+char const *__kmp_barrier_pattern_name[bp_last_bar] = {
+    "linear", "tree", "hyper", "hierarchical", "dist"};
 
 int __kmp_allThreadsSpecified = 0;
 size_t __kmp_align_alloc = CACHE_LINE;
@@ -163,6 +166,7 @@ int __kmp_zero_bt = FALSE;
 int __kmp_ncores = 0;
 #endif
 int __kmp_chunk = 0;
+int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
 #if KMP_OS_LINUX && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
@@ -205,6 +209,15 @@ const char *__kmp_speculative_statsfile = "-";
 int __kmp_display_env = FALSE;
 int __kmp_display_env_verbose = FALSE;
 int __kmp_omp_cancellation = FALSE;
+int __kmp_nteams = 0;
+int __kmp_teams_thread_limit = 0;
+
+#if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
+int __kmp_user_level_mwait = FALSE;
+int __kmp_umwait_enabled = FALSE;
+int __kmp_mwait_enabled = FALSE;
+int __kmp_mwait_hints = 0;
+#endif
 
 /* map OMP 3.0 schedule types with our internal schedule types */
 enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
@@ -234,8 +247,6 @@ KMPAffinity *__kmp_affinity_dispatch = NULL;
 #if KMP_USE_HWLOC
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
-int __kmp_numa_detected = FALSE;
-int __kmp_tile_depth = 0;
 #endif
 
 #if KMP_OS_WINDOWS
@@ -250,7 +261,7 @@ kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity = NULL;
 
 size_t __kmp_affin_mask_size = 0;
 enum affinity_type __kmp_affinity_type = affinity_default;
-enum affinity_gran __kmp_affinity_gran = affinity_gran_default;
+kmp_hw_t __kmp_affinity_gran = KMP_HW_UNKNOWN;
 int __kmp_affinity_gran_levels = -1;
 int __kmp_affinity_dups = TRUE;
 enum affinity_top_method __kmp_affinity_top_method =
@@ -269,17 +280,10 @@ char *__kmp_cpuinfo_file = NULL;
 #endif /* KMP_AFFINITY_SUPPORTED */
 
 kmp_nested_proc_bind_t __kmp_nested_proc_bind = {NULL, 0, 0};
+kmp_proc_bind_t __kmp_teams_proc_bind = proc_bind_spread;
 int __kmp_affinity_num_places = 0;
 int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
-
-kmp_hws_item_t __kmp_hws_socket = {0, 0};
-kmp_hws_item_t __kmp_hws_node = {0, 0};
-kmp_hws_item_t __kmp_hws_tile = {0, 0};
-kmp_hws_item_t __kmp_hws_core = {0, 0};
-kmp_hws_item_t __kmp_hws_proc = {0, 0};
-int __kmp_hws_requested = 0;
-int __kmp_hws_abs_flag = 0; // absolute or per-item number requested
 
 kmp_int32 __kmp_default_device = 0;
 
@@ -305,6 +309,13 @@ omp_allocator_handle_t const omp_pteam_mem_alloc =
     (omp_allocator_handle_t const)7;
 omp_allocator_handle_t const omp_thread_mem_alloc =
     (omp_allocator_handle_t const)8;
+// Preview of target memory support
+omp_allocator_handle_t const llvm_omp_target_host_mem_alloc =
+    (omp_allocator_handle_t const)100;
+omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc =
+    (omp_allocator_handle_t const)101;
+omp_allocator_handle_t const llvm_omp_target_device_mem_alloc =
+    (omp_allocator_handle_t const)102;
 omp_allocator_handle_t const kmp_max_mem_alloc =
     (omp_allocator_handle_t const)1024;
 omp_allocator_handle_t __kmp_def_allocator = omp_default_mem_alloc;
@@ -319,6 +330,13 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
+// Preview of target memory support
+omp_memspace_handle_t const llvm_omp_target_host_mem_space =
+    (omp_memspace_handle_t const)100;
+omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
+    (omp_memspace_handle_t const)101;
+omp_memspace_handle_t const llvm_omp_target_device_mem_space =
+    (omp_memspace_handle_t const)102;
 
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
@@ -410,7 +428,7 @@ kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */
-/* data written to rarely by masters, read often by workers */
+/* data written to rarely by primary threads, read often by workers */
 /* TODO: None of this global padding stuff works consistently because the order
    of declaration is not necessarily correlated to storage order. To fix this,
    all the important globals must be put in a big structure instead. */
@@ -418,7 +436,7 @@ KMP_ALIGN_CACHE
 kmp_info_t **__kmp_threads = NULL;
 kmp_root_t **__kmp_root = NULL;
 
-/* data read/written to often by masters */
+/* data read/written to often by primary threads */
 KMP_ALIGN_CACHE
 volatile int __kmp_nth = 0;
 volatile int __kmp_all_nth = 0;
@@ -530,5 +548,10 @@ kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 
 // OMP Pause Resources
 kmp_pause_status_t __kmp_pause_status = kmp_not_paused;
+
+// Nesting mode
+int __kmp_nesting_mode = 0;
+int __kmp_nesting_mode_nlevels = 1;
+int *__kmp_nesting_nth_level;
 
 // end of file //

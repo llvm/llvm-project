@@ -45,12 +45,22 @@ public:
 
   // Returns the user-readable description of this constraint. If the
   // description is not provided, returns the TableGen def name.
-  StringRef getDescription() const;
+  StringRef getSummary() const;
 
   // Constraint kind
   enum Kind { CK_Attr, CK_Region, CK_Successor, CK_Type, CK_Uncategorized };
 
   Kind getKind() const { return kind; }
+
+  /// Get an opaque pointer to the constraint.
+  const void *getAsOpaquePointer() const { return def; }
+  /// Construct a constraint from the opaque pointer representation.
+  static Constraint getFromOpaquePointer(const void *ptr) {
+    return Constraint(reinterpret_cast<const llvm::Record *>(ptr));
+  }
+
+  // Return the underlying def.
+  const llvm::Record *getDef() const { return def; }
 
 protected:
   Constraint(Kind kind, const llvm::Record *record);

@@ -54,10 +54,15 @@ def WriteTrans64    : SchedWrite;
 // Half rate 64-bit instructions.
 def Write64Bit : SchedWrite;
 
+// Integer multiplications.
+def WriteIntMul : SchedWrite;
+
 // mAI multipass instructions.
 def Write2PassMAI  : SchedWrite;
 def Write8PassMAI  : SchedWrite;
 def Write16PassMAI : SchedWrite;
+def Write4PassDGEMM : SchedWrite;
+def Write8PassDGEMM : SchedWrite;
 
 // FIXME: Should there be a class for instructions which are VALU
 // instructions and have VALU rates, but write to the SALU (i.e. VOPC
@@ -80,6 +85,7 @@ class SISchedMachineModel : SchedMachineModel {
 
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
+def SIDPFullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
@@ -101,8 +107,14 @@ def HWVMEM   : ProcResource<1> {
 def HWVALU   : ProcResource<1> {
   let BufferSize = 1;
 }
+def HWTransVALU : ProcResource<1> { // Transcendental VALU
+  let BufferSize = 1;
+}
 def HWRC   : ProcResource<1> { // Register destination cache
   let BufferSize = 1;
+}
+def HWXDL   : ProcResource<1> { // MFMA CU
+  let BufferSize = 0;
 }
 
 class HWWriteRes<SchedWrite write, list<ProcResourceKind> resources,
@@ -125,6 +137,7 @@ def MIReadVGPR : SchedReadVariant<[
 // The latency values are 1 / (operations / cycle) / 4.
 multiclass SICommonWriteRes {
 
+  let RetireOOO = 1 in { // llvm-mca specific flag
   def : HWWriteRes<WriteBranch,  [HWBranch], 8>;
   def : HWWriteRes<WriteExport,  [HWExport], 4>;
   def : HWWriteRes<WriteLDS,     [HWLGKM],   5>; // Can be between 2 and 64
@@ -134,16 +147,22 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<WriteBarrier, [HWBranch], 500>; // XXX: Guessed ???
 
   def : HWVALUWriteRes<Write32Bit,         1>;
-  def : HWVALUWriteRes<Write64Bit,         2>;
   def : HWVALUWriteRes<WriteFloatCvt,      4>;
   def : HWVALUWriteRes<WriteTrans32,       4>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
-  def : HWVALUWriteRes<Write2PassMAI,      2>;
-  def : HWVALUWriteRes<Write8PassMAI,      8>;
-  def : HWVALUWriteRes<Write16PassMAI,    16>;
+
+  def : HWVALUWriteRes<Write4PassDGEMM,    4>;
+  def : HWVALUWriteRes<Write8PassDGEMM,   16>;
+
+  let ResourceCycles = [2] in
+  def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
+  let ResourceCycles = [8] in
+  def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
+  let ResourceCycles = [16] in
+  def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
+  } // End RetireOOO = 1
 
   def : ReadAdvance<MIVGPRRead, -2>;
-  def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32$")>;
 
   // Technically mfma reads can be from 0 to 4 cycles but that does not make
   // sense to model because its register setup is huge. In particular if we
@@ -152,10 +171,6 @@ multiclass SICommonWriteRes {
   // need to consume 2 or 4 more vgprs to be initialized before the acc
   // write sequence. Just assume worst case here.
   def : ReadAdvance<MIMFMARead, -4>;
-
-  def : InstRW<[Write2PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._4X4X")>;
-  def : InstRW<[Write8PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._16X16X")>;
-  def : InstRW<[Write16PassMAI, MIMFMARead], (instregex "^V_MFMA_..._32X32X")>;
 }
 
 def PredIsVGPR32Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) <= 32}]>;
@@ -169,11 +184,15 @@ let SchedModel = SIFullSpeedModel in {
 
 defm : SICommonWriteRes;
 
-def : HWVALUWriteRes<WriteFloatFMA,   1>;
-def : HWVALUWriteRes<WriteDouble,     4>;
-def : HWVALUWriteRes<WriteDoubleAdd,  2>;
-def : HWVALUWriteRes<WriteDoubleCvt,  4>;
-def : HWVALUWriteRes<WriteTrans64,    4>;
+let RetireOOO = 1 in { // llvm-mca specific flag
+def : HWVALUWriteRes<Write64Bit,       2>;
+def : HWVALUWriteRes<WriteIntMul,      4>;
+def : HWVALUWriteRes<WriteFloatFMA,    1>;
+def : HWVALUWriteRes<WriteDouble,      4>;
+def : HWVALUWriteRes<WriteDoubleAdd,   2>;
+def : HWVALUWriteRes<WriteDoubleCvt,   4>;
+def : HWVALUWriteRes<WriteTrans64,     4>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
@@ -183,30 +202,64 @@ let SchedModel = SIQuarterSpeedModel in {
 
 defm : SICommonWriteRes;
 
-def : HWVALUWriteRes<WriteFloatFMA, 16>;
-def : HWVALUWriteRes<WriteDouble,   16>;
-def : HWVALUWriteRes<WriteDoubleAdd, 8>;
-def : HWVALUWriteRes<WriteDoubleCvt, 4>;
-def : HWVALUWriteRes<WriteTrans64,  16>;
+let RetireOOO = 1 in { // llvm-mca specific flag
+def : HWVALUWriteRes<Write64Bit,       2>;
+def : HWVALUWriteRes<WriteIntMul,      4>;
+def : HWVALUWriteRes<WriteFloatFMA,    16>;
+def : HWVALUWriteRes<WriteDouble,      16>;
+def : HWVALUWriteRes<WriteDoubleAdd,    8>;
+def : HWVALUWriteRes<WriteDoubleCvt,    4>;
+def : HWVALUWriteRes<WriteTrans64,     16>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
+def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
+def : InstRW<[Write2PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._4X4X")>;
+def : InstRW<[Write8PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._16X16X")>;
+def : InstRW<[Write16PassMAI, MIMFMARead], (instregex "^V_MFMA_..._32X32X")>;
 
 }  // End SchedModel = SIQuarterSpeedModel
+
+let SchedModel = SIDPFullSpeedModel in {
+
+defm : SICommonWriteRes;
+
+let RetireOOO = 1 in { // llvm-mca specific flag
+def : HWVALUWriteRes<WriteFloatFMA,    1>;
+def : HWVALUWriteRes<WriteDouble,      1>;
+def : HWVALUWriteRes<WriteDoubleAdd,   1>;
+def : HWVALUWriteRes<WriteDoubleCvt,   1>;
+def : HWVALUWriteRes<WriteTrans64,     4>;
+def : HWVALUWriteRes<WriteIntMul,      1>;
+def : HWVALUWriteRes<Write64Bit,       1>;
+} // End RetireOOO = 1
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
+def : InstRW<[Write64Bit], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
+def : InstRW<[Write2PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_4X4X")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X")>;
+def : InstRW<[Write16PassMAI,  MIMFMARead], (instregex "^V_MFMA_.32_32X32X")>;
+def : InstRW<[Write4PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_4X4X")>;
+def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
+
+} // End SchedModel = SIDPFullSpeedModel
 
 let SchedModel = GFX10SpeedModel in {
 
 // The latency values are 1 / (operations / cycle).
 // Add 1 stall cycle for VGPR read.
+let RetireOOO = 1 in { // llvm-mca specific flag
 def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteFloatCvt,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   6>;
-def : HWWriteRes<WriteTrans32,       [HWVALU, HWRC],   10>;
+def : HWWriteRes<WriteTrans32,       [HWTransVALU, HWRC], 10>;
 def : HWWriteRes<WriteQuarterRate32, [HWVALU, HWRC],   8>;
 def : HWWriteRes<WriteFloatFMA,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteDouble,        [HWVALU, HWRC],   22>;
 def : HWWriteRes<WriteDoubleAdd,     [HWVALU, HWRC],   22>;
 def : HWWriteRes<WriteDoubleCvt,     [HWVALU, HWRC],   22>;
-def : HWWriteRes<WriteTrans64,       [HWVALU, HWRC],   24>;
+def : HWWriteRes<WriteIntMul,        [HWVALU, HWRC],   8>;
+def : HWWriteRes<WriteTrans64,       [HWVALU, HWTransVALU, HWRC], 24>;
 
 def : HWWriteRes<WriteBranch,        [HWBranch],       32>;
 def : HWWriteRes<WriteExport,        [HWExport, HWRC], 16>;
@@ -215,6 +268,7 @@ def : HWWriteRes<WriteSALU,          [HWSALU,   HWRC], 2>;
 def : HWWriteRes<WriteSMEM,          [HWLGKM,   HWRC], 20>;
 def : HWWriteRes<WriteVMEM,          [HWVMEM,   HWRC], 320>;
 def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 

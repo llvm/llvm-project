@@ -1,7 +1,7 @@
 ; This test checks emission of .debug_macro.dwo section when
 ; -gdwarf-5 -gsplit-dwarf -fdebug-macro is specified.
 
-; RUN: %llc_dwarf -dwarf-version=5 -O0 -filetype=obj \
+; RUN: llc -dwarf-version=5 -O0 -filetype=obj \
 ; RUN: -split-dwarf-file=foo.dwo < %s | llvm-dwarfdump -debug-macro -debug-info -debug-line -v - | FileCheck %s
 
 ; CHECK-LABEL:  .debug_info contents:

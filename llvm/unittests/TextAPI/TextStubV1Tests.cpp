@@ -7,9 +7,9 @@
 //===-----------------------------------------------------------------------===/
 
 #include "TextStubHelpers.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
-#include "llvm/TextAPI/MachO/TextAPIReader.h"
-#include "llvm/TextAPI/MachO/TextAPIWriter.h"
+#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/TextAPIReader.h"
+#include "llvm/TextAPI/TextAPIWriter.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
@@ -451,8 +451,8 @@ TEST(TBDv1, MalformedFile2) {
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
   ASSERT_EQ(
-      "malformed file\nTest.tbd:5:9: error: unknown key 'foobar'\nfoobar: "
-      "\"Unsupported key\"\n        ^~~~~~~~~~~~~~~~~\n",
+      "malformed file\nTest.tbd:5:1: error: unknown key 'foobar'\nfoobar: "
+      "\"Unsupported key\"\n^~~~~~\n",
       ErrorMessage);
 }
 

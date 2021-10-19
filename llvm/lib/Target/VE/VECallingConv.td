@@ -21,7 +21,11 @@ def CC_VE_C_Stack: CallingConv<[
   CCAssignToStack<0, 8>
 ]>;
 
-def CC_VE : CallingConv<[
+///// C Calling Convention (VE ABI v2.1) /////
+//
+// Reference: https://www.nec.com/en/global/prod/hpc/aurora/document/VE-ABI_v2.1.pdf
+//
+def CC_VE_C : CallingConv<[
   // All arguments get passed in generic registers if there is space.
 
   // Promote i1/i8/i16/i32 arguments to i64.
@@ -51,6 +55,7 @@ def CC_VE : CallingConv<[
   CCDelegateTo<CC_VE_C_Stack>
 ]>;
 
+///// Standard vararg C Calling Convention (VE ABI v2.1) /////
 // All arguments get passed in stack for varargs function or non-prototyped
 // function.
 def CC_VE2 : CallingConv<[
@@ -70,7 +75,7 @@ def CC_VE2 : CallingConv<[
   CCAssignToStack<0, 8>
 ]>;
 
-def RetCC_VE : CallingConv<[
+def RetCC_VE_C : CallingConv<[
   // Promote i1/i8/i16/i32 return values to i64.
   CCIfType<[i1, i8, i16, i32], CCPromoteToType<i64>>,
 
@@ -92,9 +97,57 @@ def RetCC_VE : CallingConv<[
                                    [SX0, SX1, SX3, SX5]>>,
 ]>;
 
+///// Custom fastcc /////
+//
+// This passes vector params and return values in registers.  Scalar values are
+// handled conforming to the standard cc.
+def CC_VE_Fast : CallingConv<[
+  // vector --> generic vector registers
+  CCIfType<[v256i32, v256f32, v256i64, v256f64],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+  // TODO: make this conditional on packed mode
+  CCIfType<[v512i32, v512f32],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+
+  // vector mask --> generic vector mask registers
+  CCIfType<[v256i1],
+           CCAssignToReg<[VM1, VM2, VM3, VM4, VM5, VM6, VM7]>>,
+
+  // pair of vector mask --> generic vector mask registers
+  CCIfType<[v512i1],
+           CCAssignToRegWithShadow<[VMP1, VMP2, VMP3],
+                                   [VM1, VM3, VM5]>>,
+
+  // Follow the standard C CC for scalars.
+  CCDelegateTo<CC_VE_C>
+]>;
+
+def RetCC_VE_Fast : CallingConv<[
+  // vector --> generic vector registers
+  CCIfType<[v256i32, v256f32, v256i64, v256f64],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+  // TODO: make this conditional on packed mode
+  CCIfType<[v512i32, v512f32],
+           CCAssignToReg<[V0, V1, V2, V3, V4, V5, V6, V7]>>,
+
+  // vector mask --> generic vector mask registers
+  CCIfType<[v256i1],
+           CCAssignToReg<[VM1, VM2, VM3, VM4, VM5, VM6, VM7]>>,
+
+  // pair of vector mask --> generic vector mask registers
+  CCIfType<[v512i1],
+           CCAssignToRegWithShadow<[VMP1, VMP2, VMP3],
+                                   [VM1, VM3, VM5]>>,
+
+  // Follow the standard C CC for scalars.
+  CCDelegateTo<RetCC_VE_C>
+]>;
+
 // Callee-saved registers
 def CSR : CalleeSavedRegs<(add (sequence "SX%u", 18, 33))>;
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 // PreserveAll (clobbers s62,s63) - used for ve_grow_stack
-def CSR_preserve_all : CalleeSavedRegs<(add (sequence "SX%u", 0, 61))>;
+def CSR_preserve_all : CalleeSavedRegs<(add (sequence "SX%u", 0, 61),
+                                            (sequence "V%u", 0, 63),
+                                            (sequence "VM%u", 1, 15))>;

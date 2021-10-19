@@ -74,8 +74,6 @@ def FRAMEri : Operand<iPTR> {
   let MIOperandInfo = (ops R600_Reg32:$ptr, i32imm:$index);
 }
 
-def ADDRParam : ComplexPattern<i32, 2, "SelectADDRParam", [], []>;
-def ADDRDWord : ComplexPattern<i32, 1, "SelectADDRDWord", [], []>;
 def ADDRVTX_READ : ComplexPattern<i32, 2, "SelectADDRVTX_READ", [], []>;
 def ADDRGA_CONST_OFFSET : ComplexPattern<i32, 1, "SelectGlobalValueConstantOffset", [], []>;
 def ADDRGA_VAR_OFFSET : ComplexPattern<i32, 2, "SelectGlobalValueVariableOffset", [], []>;
@@ -211,16 +209,6 @@ class R600_3OP <bits<5> inst, string opName, list<dag> pattern,
   let Inst{31-0}  = Word0;
   let Inst{63-32} = Word1;
 }
-
-class R600_REDUCTION <bits<11> inst, dag ins, string asm, list<dag> pattern,
-                      InstrItinClass itin = VecALU> :
-  InstR600 <(outs R600_Reg32:$dst),
-          ins,
-          asm,
-          pattern,
-          itin>;
-
-
 
 } // End mayLoad = 1, mayStore = 0, hasSideEffects = 0
 
@@ -815,7 +803,7 @@ def DUMMY_CHAIN : R600WrapperInst <
 
 let isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in {
 
-class MOV_IMM <ValueType vt, Operand immType> : R600WrapperInst <
+class MOV_IMM <Operand immType> : R600WrapperInst <
   (outs R600_Reg32:$dst),
   (ins immType:$imm),
   "",
@@ -826,20 +814,20 @@ class MOV_IMM <ValueType vt, Operand immType> : R600WrapperInst <
 
 } // end let isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1
 
-def MOV_IMM_I32 : MOV_IMM<i32, i32imm>;
+def MOV_IMM_I32 : MOV_IMM<i32imm>;
 def : R600Pat <
   (imm:$val),
   (MOV_IMM_I32 imm:$val)
 >;
 
-def MOV_IMM_GLOBAL_ADDR : MOV_IMM<iPTR, i32imm>;
+def MOV_IMM_GLOBAL_ADDR : MOV_IMM<i32imm>;
 def : R600Pat <
   (AMDGPUconstdata_ptr tglobaladdr:$addr),
   (MOV_IMM_GLOBAL_ADDR tglobaladdr:$addr)
 >;
 
 
-def MOV_IMM_F32 : MOV_IMM<f32, f32imm>;
+def MOV_IMM_F32 : MOV_IMM<f32imm>;
 def : R600Pat <
   (fpimm:$val),
   (MOV_IMM_F32  fpimm:$val)

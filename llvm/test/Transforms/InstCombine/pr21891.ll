@@ -1,4 +1,4 @@
-; RUN: opt %s -instcombine
+; RUN: opt < %s -instcombine
 
 define i32 @f(i32 %theNumber) {
 entry:

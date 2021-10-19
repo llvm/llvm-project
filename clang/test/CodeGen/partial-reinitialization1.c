@@ -42,7 +42,7 @@ struct P3 {
     } q;
 };
 
-// CHECK: @l3 = global %struct.P3 { %struct.Q3 { %struct.R1 { i32 1, i32 2, i32 3 }, %struct.R2 { i32 0, i32 10, i32 0 } } }
+// CHECK: @l3 ={{.*}} global %struct.P3 { %struct.Q3 { %struct.R1 { i32 1, i32 2, i32 3 }, %struct.R2 { i32 0, i32 10, i32 0 } } }
 struct P3 l3 = {
   (struct Q3){ { 1, 2, 3 }, { 4, 5, 6 } },
                     .q.r2 = { 7, 8, 9 },
@@ -68,7 +68,7 @@ struct P5 {
 };
 
 // A three-pass test
-// CHECK: @l5 = global %struct.P5 { i32 1, %struct.Q5 { i32 6, i32 9, i32 8 }, i32 5 }
+// CHECK: @l5 ={{.*}} global %struct.P5 { i32 1, %struct.Q5 { i32 6, i32 9, i32 8 }, i32 5 }
 struct P5 l5 = { 1, { 2, 3, 4 }, 5,
                  .q = { 6, 7, 8 },
                  .q.b = 9 };

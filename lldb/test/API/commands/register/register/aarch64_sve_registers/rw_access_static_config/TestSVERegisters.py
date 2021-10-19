@@ -10,35 +10,57 @@ from lldbsuite.test import lldbutil
 
 class RegisterCommandsTestCase(TestBase):
 
-    def targetHasSVE(self):
-        triple = self.dbg.GetSelectedPlatform().GetTriple()
-
-        # TODO other platforms, please implement this function
-        if not re.match(".*-.*-linux", triple):
-            return False
-
-        # Need to do something different for non-Linux/Android targets
-        cpuinfo_path = self.getBuildArtifact("cpuinfo")
-        if configuration.lldb_platform_name:
-            self.runCmd('platform get-file "/proc/cpuinfo" ' + cpuinfo_path)
-        else:
-            cpuinfo_path = "/proc/cpuinfo"
-
-        try:
-            f = open(cpuinfo_path, 'r')
-            cpuinfo = f.read()
-            f.close()
-        except:
-            return False
-
-        return " sve " in cpuinfo
-
     def check_sve_register_size(self, set, name, expected):
         reg_value = set.GetChildMemberWithName(name)
         self.assertTrue(reg_value.IsValid(),
                         'Verify we have a register named "%s"' % (name))
         self.assertEqual(reg_value.GetByteSize(), expected,
                          'Verify "%s" == %i' % (name, expected))
+
+    def check_sve_regs_read(self, z_reg_size):
+        p_reg_size = int(z_reg_size / 8)
+
+        for i in range(32):
+            z_regs_value = '{' + \
+                ' '.join('0x{:02x}'.format(i + 1)
+                         for _ in range(z_reg_size)) + '}'
+            self.expect("register read " + 'z%i' %
+                        (i), substrs=[z_regs_value])
+
+        p_value_bytes = ['0xff', '0x55', '0x11', '0x01', '0x00']
+        for i in range(16):
+            p_regs_value = '{' + \
+                ' '.join(p_value_bytes[i % 5] for _ in range(p_reg_size)) + '}'
+            self.expect("register read " + 'p%i' % (i), substrs=[p_regs_value])
+
+        self.expect("register read ffr", substrs=[p_regs_value])
+
+    def check_sve_regs_read_after_write(self, z_reg_size):
+        p_reg_size = int(z_reg_size / 8)
+
+        z_regs_value = '{' + \
+            ' '.join(('0x9d' for _ in range(z_reg_size))) + '}'
+
+        p_regs_value = '{' + \
+            ' '.join(('0xee' for _ in range(p_reg_size))) + '}'
+
+        for i in range(32):
+            self.runCmd('register write ' + 'z%i' %
+                        (i) + " '" + z_regs_value + "'")
+
+        for i in range(32):
+            self.expect("register read " + 'z%i' % (i), substrs=[z_regs_value])
+
+        for i in range(16):
+            self.runCmd('register write ' + 'p%i' %
+                        (i) + " '" + p_regs_value + "'")
+
+        for i in range(16):
+            self.expect("register read " + 'p%i' % (i), substrs=[p_regs_value])
+
+        self.runCmd('register write ' + 'ffr ' + "'" + p_regs_value + "'")
+
+        self.expect("register read " + 'ffr', substrs=[p_regs_value])
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -53,7 +75,7 @@ class RegisterCommandsTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        if not self.targetHasSVE():
+        if not self.isAArch64SVE():
             self.skipTest('SVE registers must be supported.')
 
         lldbutil.run_break_set_by_file_and_line(
@@ -108,7 +130,7 @@ class RegisterCommandsTestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        if not self.targetHasSVE():
+        if not self.isAArch64SVE():
             self.skipTest('SVE registers must be supported.')
 
         lldbutil.run_break_set_by_file_and_line(
@@ -140,43 +162,17 @@ class RegisterCommandsTestCase(TestBase):
 
         z_reg_size = vg_reg_value * 8
 
-        p_reg_size = int(z_reg_size / 8)
+        self.check_sve_regs_read(z_reg_size)
 
-        for i in range(32):
-            z_regs_value = '{' + \
-                ' '.join('0x{:02x}'.format(i + 1)
-                         for _ in range(z_reg_size)) + '}'
-            self.expect("register read " + 'z%i' %
-                        (i), substrs=[z_regs_value])
+        # Evaluate simple expression and print function expr_eval_func address.
+        self.expect("p expr_eval_func", substrs=["= 0x"])
 
-        p_value_bytes = ['0xff', '0x55', '0x11', '0x01', '0x00']
-        for i in range(16):
-            p_regs_value = '{' + \
-                ' '.join(p_value_bytes[i % 5] for _ in range(p_reg_size)) + '}'
-            self.expect("register read " + 'p%i' % (i), substrs=[p_regs_value])
+        # Evaluate expression call function expr_eval_func.
+        self.expect_expr("expr_eval_func()",
+                         result_type="int", result_value="1")
 
-        self.expect("register read ffr", substrs=[p_regs_value])
+        # We called a jitted function above which must not have changed SVE
+        # vector length or register values.
+        self.check_sve_regs_read(z_reg_size)
 
-        z_regs_value = '{' + \
-            ' '.join(('0x9d' for _ in range(z_reg_size))) + '}'
-
-        p_regs_value = '{' + \
-            ' '.join(('0xee' for _ in range(p_reg_size))) + '}'
-
-        for i in range(32):
-            self.runCmd('register write ' + 'z%i' %
-                        (i) + " '" + z_regs_value + "'")
-
-        for i in range(32):
-            self.expect("register read " + 'z%i' % (i), substrs=[z_regs_value])
-
-        for i in range(16):
-            self.runCmd('register write ' + 'p%i' %
-                        (i) + " '" + p_regs_value + "'")
-
-        for i in range(16):
-            self.expect("register read " + 'p%i' % (i), substrs=[p_regs_value])
-
-        self.runCmd('register write ' + 'ffr ' + "'" + p_regs_value + "'")
-
-        self.expect("register read " + 'ffr', substrs=[p_regs_value])
+        self.check_sve_regs_read_after_write(z_reg_size)

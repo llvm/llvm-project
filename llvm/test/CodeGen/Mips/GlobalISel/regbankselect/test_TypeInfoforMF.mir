@@ -24,11 +24,11 @@ body:             |
     ; MIPS32-LABEL: name: outgoing_gpr
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.i32_ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.i32_ptr)
     ; MIPS32: $v0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
-    %1:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.i32_ptr)
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.i32_ptr)
     $v0 = COPY %1(s32)
     RetRA implicit $v0
 
@@ -45,11 +45,11 @@ body:             |
     ; MIPS32-LABEL: name: outgoing_fpr
     ; MIPS32: liveins: $a0
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.float_ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.float_ptr)
     ; MIPS32: $f0 = COPY [[LOAD]](s32)
     ; MIPS32: RetRA implicit $f0
     %0:_(p0) = COPY $a0
-    %1:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.float_ptr)
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.float_ptr)
     $f0 = COPY %1(s32)
     RetRA implicit $f0
 
@@ -67,15 +67,15 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.i32_ptr1)
-    ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY1]](p0) :: (load 4 from %ir.i32_ptr2)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.i32_ptr1)
+    ; MIPS32: [[LOAD1:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY1]](p0) :: (load (s32) from %ir.i32_ptr2)
     ; MIPS32: [[ADD:%[0-9]+]]:gprb(s32) = G_ADD [[LOAD1]], [[LOAD]]
     ; MIPS32: $v0 = COPY [[ADD]](s32)
     ; MIPS32: RetRA implicit $v0
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.i32_ptr1)
-    %3:_(s32) = G_LOAD %1(p0) :: (load 4 from %ir.i32_ptr2)
+    %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.i32_ptr1)
+    %3:_(s32) = G_LOAD %1(p0) :: (load (s32) from %ir.i32_ptr2)
     %4:_(s32) = G_ADD %3, %2
     $v0 = COPY %4(s32)
     RetRA implicit $v0
@@ -94,15 +94,15 @@ body:             |
     ; MIPS32: liveins: $a0, $a1
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(p0) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(p0) = COPY $a1
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load 4 from %ir.float_ptr1)
-    ; MIPS32: [[LOAD1:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY1]](p0) :: (load 4 from %ir.float_ptr2)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.float_ptr1)
+    ; MIPS32: [[LOAD1:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY1]](p0) :: (load (s32) from %ir.float_ptr2)
     ; MIPS32: [[FADD:%[0-9]+]]:fprb(s32) = G_FADD [[LOAD]], [[LOAD1]]
     ; MIPS32: $f0 = COPY [[FADD]](s32)
     ; MIPS32: RetRA implicit $f0
     %0:_(p0) = COPY $a0
     %1:_(p0) = COPY $a1
-    %2:_(s32) = G_LOAD %0(p0) :: (load 4 from %ir.float_ptr1)
-    %3:_(s32) = G_LOAD %1(p0) :: (load 4 from %ir.float_ptr2)
+    %2:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.float_ptr1)
+    %3:_(s32) = G_LOAD %1(p0) :: (load (s32) from %ir.float_ptr2)
     %4:_(s32) = G_FADD %2, %3
     $f0 = COPY %4(s32)
     RetRA implicit $f0
@@ -122,7 +122,7 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.a)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.a)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
@@ -132,7 +132,7 @@ body:             |
     %0:_(s32) = COPY $a0
     %3:_(s32) = COPY $a1
     %2:_(p0) = COPY $a2
-    %4:_(s32) = G_LOAD %2(p0) :: (load 4 from %ir.a)
+    %4:_(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.a)
     %7:_(s32) = G_CONSTANT i32 1
     %8:_(s32) = COPY %3(s32)
     %6:_(s32) = G_AND %8, %7
@@ -155,7 +155,7 @@ body:             |
     ; MIPS32: [[COPY:%[0-9]+]]:fprb(s32) = COPY $f12
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.a)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.a)
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY [[COPY1]](s32)
     ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY3]], [[C]]
@@ -165,7 +165,7 @@ body:             |
     %0:_(s32) = COPY $f12
     %3:_(s32) = COPY $a1
     %2:_(p0) = COPY $a2
-    %4:_(s32) = G_LOAD %2(p0) :: (load 4 from %ir.a)
+    %4:_(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.a)
     %7:_(s32) = G_CONSTANT i32 1
     %8:_(s32) = COPY %3(s32)
     %6:_(s32) = G_AND %8, %7
@@ -189,7 +189,7 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY $a3
-    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.i32_ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.i32_ptr)
     ; MIPS32: [[ADD:%[0-9]+]]:gprb(s32) = G_ADD [[COPY1]], [[COPY]]
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY3]](s32)
@@ -201,7 +201,7 @@ body:             |
     %1:_(s32) = COPY $a1
     %2:_(p0) = COPY $a2
     %4:_(s32) = COPY $a3
-    %5:_(s32) = G_LOAD %2(p0) :: (load 4 from %ir.i32_ptr)
+    %5:_(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.i32_ptr)
     %6:_(s32) = G_ADD %1, %0
     %9:_(s32) = G_CONSTANT i32 1
     %10:_(s32) = COPY %4(s32)
@@ -226,7 +226,7 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:fprb(s32) = COPY $f14
     ; MIPS32: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:gprb(s32) = COPY $a3
-    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.float_ptr)
+    ; MIPS32: [[LOAD:%[0-9]+]]:fprb(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir.float_ptr)
     ; MIPS32: [[FADD:%[0-9]+]]:fprb(s32) = G_FADD [[COPY1]], [[COPY]]
     ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[COPY3]](s32)
@@ -238,7 +238,7 @@ body:             |
     %1:_(s32) = COPY $f14
     %2:_(p0) = COPY $a2
     %4:_(s32) = COPY $a3
-    %5:_(s32) = G_LOAD %2(p0) :: (load 4 from %ir.float_ptr)
+    %5:_(s32) = G_LOAD %2(p0) :: (load (s32) from %ir.float_ptr)
     %6:_(s32) = G_FADD %1, %0
     %9:_(s32) = G_CONSTANT i32 1
     %10:_(s32) = COPY %4(s32)

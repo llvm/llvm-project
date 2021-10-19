@@ -16,7 +16,7 @@ define float @foo(%swift_error** swifterror %error_ptr_ref) {
 ; CHECK-O0-LABEL: foo:
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r0, %r2
+; CHECK-O0: lgr [[T0:%r[0-9]+]], %r2
 ; CHECK-O0: mvi 8(%r2), 1
 entry:
   %call = call i8* @malloc(i64 16)
@@ -118,19 +118,17 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-NOT: %r9
 ; CHECK: br %r14
 ; CHECK-O0-LABEL: foo_if:
-; CHECK-O0: chi %r2, 0
 ; spill to stack
 ; CHECK-O0: stg %r9, [[OFFS:[0-9]+]](%r15)
+; CHECK-O0: chi %r2, 0
 ; CHECK-O0: je
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr %r[[REG1:[0-9]+]], %r2
+; CHECK-O0: lgr %r9, %r2
 ; CHECK-O0: mvi 8(%r2), 1
-; CHECK-O0: lgr %r9, %r[[REG1]]
 ; CHECK-O0: br %r14
 ; reload from stack
-; CHECK-O0: lg %r[[REG2:[0-9]+]], [[OFFS]](%r15)
-; CHECK-O0: lgr %r9, %r[[REG2]]
+; CHECK-O0: lg %r9, [[OFFS]](%r15)
 ; CHECK-O0: br %r14
 entry:
   %cond = icmp ne i32 %cc, 0
@@ -169,11 +167,10 @@ define float @foo_loop(%swift_error** swifterror %error_ptr_ref, i32 %cc, float 
 ; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
 ; CHECK-O0: lgr %r[[REG1:[0-9]+]], %r2
-; CHECK-O0: mvi 8(%r2), 1
+; CHECK-O0: mvi 8(%r[[REG1]]), 1
 ; CHECK-O0: jnh
 ; reload from stack
-; CHECK-O0: lg %r[[REG2:[0-9]+]], [[OFFS:[0-9]+]](%r15)
-; CHECK-O0: lgr %r9, %r[[REG2]]
+; CHECK-O0: lg %r9, [[OFFS:[0-9]+]](%r15)
 ; CHECK-O0: br %r14
 entry:
   br label %bb_loop
@@ -201,7 +198,7 @@ bb_end:
 
 ; "foo_sret" is a function that takes a swifterror parameter, it also has a sret
 ; parameter.
-define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
+define void @foo_sret(%struct.S* sret(%struct.S) %agg.result, i32 %val1, %swift_error** swifterror %error_ptr_ref) {
 ; CHECK-LABEL: foo_sret:
 ; CHECK-DAG: lgr %r[[REG1:[0-9]+]], %r2
 ; CHECK-DAG: lr %r[[REG2:[0-9]+]], %r3
@@ -214,18 +211,17 @@ define void @foo_sret(%struct.S* sret %agg.result, i32 %val1, %swift_error** swi
 ; CHECK: br %r14
 
 ; CHECK-O0-LABEL: foo_sret:
-; CHECK-O0: lghi %r{{.*}}, 16
 ; spill sret to stack
-; CHECK-O0: stg %r2, [[OFFS1:[0-9]+]](%r15)
-; CHECK-O0: lgr %r2, %r{{.*}}
-; CHECK-O0: st %r3, [[OFFS2:[0-9]+]](%r15)
+; CHECK-O0-DAG: stg %r2, [[OFFS1:[0-9]+]](%r15)
+; CHECK-O0-DAG: st %r3, [[OFFS2:[0-9]+]](%r15)
+; CHECK-O0: lghi %r2, 16
 ; CHECK-O0: brasl %r14, malloc
-; CHECK-O0: lgr {{.*}}, %r2
-; CHECK-O0: mvi 8(%r2), 1
+; CHECK-O0-DAG: lgr %r[[REG3:[0-9]+]], %r2
+; CHECK-O0-DAG: mvi 8(%r[[REG3]]), 1
 ; CHECK-O0-DAG: lg %r[[REG1:[0-9]+]], [[OFFS1]](%r15)
+; CHECK-O0-DAG: lgr %r9, %r[[REG3]]
 ; CHECK-O0-DAG: l %r[[REG2:[0-9]+]], [[OFFS2]](%r15)
 ; CHECK-O0: st %r[[REG2]], 4(%r[[REG1]])
-; CHECK-O0: lgr %r9, {{.*}}
 ; CHECK-O0: br %r14
 entry:
   %call = call i8* @malloc(i64 16)
@@ -255,8 +251,6 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-O0-LABEL: caller3:
 ; CHECK-O0: lghi %r9, 0
 ; CHECK-O0: lhi %r3, 1
-; CHECK-O0: stg %r2, {{.*}}(%r15)
-; CHECK-O0: lgr %r2, {{.*}}
 ; CHECK-O0: brasl %r14, foo_sret
 ; CHECK-O0: lgr {{.*}}, %r9
 ; CHECK-O0: cghi %r9, 0
@@ -271,7 +265,7 @@ entry:
   %s = alloca %struct.S, align 8
   %error_ptr_ref = alloca swifterror %swift_error*
   store %swift_error* null, %swift_error** %error_ptr_ref
-  call void @foo_sret(%struct.S* sret %s, i32 1, %swift_error** swifterror %error_ptr_ref)
+  call void @foo_sret(%struct.S* sret(%struct.S) %s, i32 1, %swift_error** swifterror %error_ptr_ref)
   %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
   %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
   %tmp = bitcast %swift_error* %error_from_foo to i8*

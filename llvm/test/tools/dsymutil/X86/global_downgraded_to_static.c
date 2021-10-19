@@ -10,7 +10,7 @@
 #if defined(FILE1)
 int global_to_become_static = 42;
 // CHECK: sym: _global_to_become_static,
-// CHECK-SAME: binAddr: 0x0000000100001000
+// CHECK-SAME: binAddr: 0x100001000
 int foo() {
   return global_to_become_static;
 }

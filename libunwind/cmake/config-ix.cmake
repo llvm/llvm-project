@@ -16,16 +16,26 @@ if (NOT LIBUNWIND_USE_COMPILER_RT)
   endif ()
 endif()
 
-# libunwind is built with -nodefaultlibs, so we want all our checks to also
-# use this option, otherwise we may end up with an inconsistency between
+# libunwind is using -nostdlib++ at the link step when available,
+# otherwise -nodefaultlibs is used. We want all our checks to also
+# use one of these options, otherwise we may end up with an inconsistency between
 # the flags we think we require during configuration (if the checks are
-# performed without -nodefaultlibs) and the flags that are actually
-# required during compilation (which has the -nodefaultlibs). libc is
+# performed without one of those options) and the flags that are actually
+# required during compilation (which has the -nostdlib++ or -nodefaultlibs). libc is
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
-check_c_compiler_flag(-nodefaultlibs LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
-if (LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+
+check_c_compiler_flag(-nostdlib++ LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
+if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG)
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+else()
+  check_c_compiler_flag(-nodefaultlibs LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
+  if (LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
+  endif()
+endif()
+
+if (LIBUNWIND_SUPPORTS_NOSTDLIBXX_FLAG OR LIBUNWIND_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBUNWIND_HAS_C_LIB)
     list(APPEND CMAKE_REQUIRED_LIBRARIES c)
   endif ()

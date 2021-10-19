@@ -1,4 +1,4 @@
-!RUN: %f18 -fdebug-dump-symbols -fparse-only %s | FileCheck %s
+!RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
 
 ! Size and alignment with EQUIVALENCE and COMMON
 
@@ -36,4 +36,28 @@ module md                   !CHECK: Module scope: md size=1 alignment=1
   real(2) :: d4             !CHECK: d4, PUBLIC size=2 offset=0:
   common /common1/ d3,d2,d1 !CHECK: common1 size=10 offset=0: CommonBlockDetails alignment=4:
   common /common2/ d4       !CHECK: common2 size=2 offset=0: CommonBlockDetails alignment=2:
+end
+
+! Test extension of common block size through equivalence statements.
+module me
+  integer :: i1, j1, l1(10)
+  equivalence(i1, l1)
+  common /common3/ j1, i1   ! CHECK: common3 size=44 offset=0: CommonBlockDetails alignment=4:
+
+  integer :: i2, j2, l2(10)
+  equivalence(i2, l2(2))
+  common /common4/ j2, i2   ! CHECK: common4 size=40 offset=0: CommonBlockDetails alignment=4:
+
+  integer :: i3, j3, l3(10)
+  equivalence(i3, l3)
+  common /common5/ i3, j3   ! CHECK: common5 size=40 offset=0: CommonBlockDetails alignment=4:
+
+  integer :: i4, j4, l4(10), k4(10)
+  equivalence(i4, l4)
+  equivalence(l4(10), k4)
+  common /common6/ i4, j4   ! CHECK: common6 size=76 offset=0: CommonBlockDetails alignment=4:
+
+  integer :: i5, j5, l5(10)
+  equivalence(l5(1), i5)
+  common /common7/ j5, i5   ! CHECK: common7 size=44 offset=0: CommonBlockDetails alignment=4:
 end

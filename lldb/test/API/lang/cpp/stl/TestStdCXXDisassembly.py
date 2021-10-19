@@ -17,7 +17,6 @@ class StdCXXDisassembleTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
-    @expectedFailureNetBSD
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()

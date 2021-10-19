@@ -49,7 +49,7 @@ define void @call1(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; i686-NEXT:    .cfi_offset %edi, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    calll test
+; i686-NEXT:    calll test@PLT
 ; i686-NEXT:    fstpt (%edi)
 ; i686-NEXT:    fstpt (%esi)
 ; i686-NEXT:    popl %esi
@@ -70,7 +70,7 @@ define void @call1(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    .cfi_offset %r14, -16
 ; x86_64-NEXT:    movq %rsi, %r14
 ; x86_64-NEXT:    movq %rdi, %rbx
-; x86_64-NEXT:    callq test
+; x86_64-NEXT:    callq test@PLT
 ; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    fstpt (%r14)
 ; x86_64-NEXT:    addq $8, %rsp
@@ -101,7 +101,7 @@ define void @call2(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; i686-NEXT:    .cfi_offset %edi, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; i686-NEXT:    calll test
+; i686-NEXT:    calll test@PLT
 ; i686-NEXT:    fxch %st(1)
 ; i686-NEXT:    fstpt (%edi)
 ; i686-NEXT:    fstpt (%esi)
@@ -123,7 +123,7 @@ define void @call2(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    .cfi_offset %r14, -16
 ; x86_64-NEXT:    movq %rsi, %r14
 ; x86_64-NEXT:    movq %rdi, %rbx
-; x86_64-NEXT:    callq test
+; x86_64-NEXT:    callq test@PLT
 ; x86_64-NEXT:    fxch %st(1)
 ; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    fstpt (%r14)
@@ -151,7 +151,7 @@ define void @call3(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; i686-NEXT:    .cfi_def_cfa_offset 8
 ; i686-NEXT:    .cfi_offset %esi, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    calll test
+; i686-NEXT:    calll test@PLT
 ; i686-NEXT:    fstp %st(1)
 ; i686-NEXT:    fstpt (%esi)
 ; i686-NEXT:    popl %esi
@@ -164,7 +164,7 @@ define void @call3(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    .cfi_def_cfa_offset 16
 ; x86_64-NEXT:    .cfi_offset %rbx, -16
 ; x86_64-NEXT:    movq %rdi, %rbx
-; x86_64-NEXT:    callq test
+; x86_64-NEXT:    callq test@PLT
 ; x86_64-NEXT:    fstp %st(1)
 ; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    popq %rbx
@@ -184,7 +184,7 @@ define void @call4(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; i686-NEXT:    .cfi_def_cfa_offset 8
 ; i686-NEXT:    .cfi_offset %esi, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    calll test
+; i686-NEXT:    calll test@PLT
 ; i686-NEXT:    fstp %st(0)
 ; i686-NEXT:    fstpt (%esi)
 ; i686-NEXT:    popl %esi
@@ -197,7 +197,7 @@ define void @call4(x86_fp80 *%P1, x86_fp80 *%P2) {
 ; x86_64-NEXT:    .cfi_def_cfa_offset 16
 ; x86_64-NEXT:    .cfi_offset %rbx, -16
 ; x86_64-NEXT:    movq %rsi, %rbx
-; x86_64-NEXT:    callq test
+; x86_64-NEXT:    callq test@PLT
 ; x86_64-NEXT:    fstp %st(0)
 ; x86_64-NEXT:    fstpt (%rbx)
 ; x86_64-NEXT:    popq %rbx

@@ -267,8 +267,8 @@ define i64 @sel_1_2(i64 %x, i64 %y) {
 define i8 @sel_1_neg1(i32 %x) {
 ; CHECK-LABEL: sel_1_neg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $42, %edi
-; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    shlb $2, %al
 ; CHECK-NEXT:    decb %al
 ; CHECK-NEXT:    retq
@@ -299,8 +299,8 @@ define i32 @sel_1_neg1_32(i32 %x) {
 ; CHECK-LABEL: sel_1_neg1_32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $42, %edi
-; CHECK-NEXT:    setg %al
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
 ; CHECK-NEXT:    leal -1(%rax,%rax,8), %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
@@ -378,10 +378,10 @@ define i64 @select_pow2_diff_neg_invert(i1 zeroext %cond) {
 define i8 @sel_67_neg125(i32 %x) {
 ; CHECK-LABEL: sel_67_neg125:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $42, %edi
+; CHECK-NEXT:    cmpl $43, %edi
 ; CHECK-NEXT:    movl $67, %ecx
 ; CHECK-NEXT:    movl $131, %eax
-; CHECK-NEXT:    cmovgl %ecx, %eax
+; CHECK-NEXT:    cmovgel %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42

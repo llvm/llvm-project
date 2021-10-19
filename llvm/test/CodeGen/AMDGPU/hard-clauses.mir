@@ -9,9 +9,9 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: nop1
     ; CHECK: liveins: $sgpr0_sgpr1
-    ; CHECK: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    ; CHECK: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     ; CHECK: S_NOP 2
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_NOP 2
 ...
 
@@ -25,13 +25,34 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit $sgpr0_sgpr1 {
     ; CHECK:   S_CLAUSE 2
-    ; CHECK:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    ; CHECK:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     ; CHECK:   S_NOP 2
-    ; CHECK:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0, 0
+    ; CHECK:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
     ; CHECK: }
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_NOP 2
-    $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0, 0
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+...
+
+---
+name: nop3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; CHECK-LABEL: name: nop3
+    ; CHECK: liveins: $sgpr0_sgpr1
+    ; CHECK: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit $sgpr0_sgpr1 {
+    ; CHECK:   S_CLAUSE 2
+    ; CHECK:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    ; CHECK:   S_NOP 2
+    ; CHECK:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+    ; CHECK: }
+    ; CHECK: S_NOP 2
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    S_NOP 2
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+    S_NOP 2
 ...
 
 ---
@@ -44,168 +65,238 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
     ; CHECK: BUNDLE implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit-def $vgpr5, implicit-def $vgpr5_lo16, implicit-def $vgpr5_hi16, implicit-def $vgpr6, implicit-def $vgpr6_lo16, implicit-def $vgpr6_hi16, implicit-def $vgpr7, implicit-def $vgpr7_lo16, implicit-def $vgpr7_hi16, implicit-def $vgpr8, implicit-def $vgpr8_lo16, implicit-def $vgpr8_hi16, implicit-def $vgpr9, implicit-def $vgpr9_lo16, implicit-def $vgpr9_hi16, implicit-def $vgpr10, implicit-def $vgpr10_lo16, implicit-def $vgpr10_hi16, implicit-def $vgpr11, implicit-def $vgpr11_lo16, implicit-def $vgpr11_hi16, implicit-def $vgpr12, implicit-def $vgpr12_lo16, implicit-def $vgpr12_hi16, implicit-def $vgpr13, implicit-def $vgpr13_lo16, implicit-def $vgpr13_hi16, implicit-def $vgpr14, implicit-def $vgpr14_lo16, implicit-def $vgpr14_hi16, implicit-def $vgpr15, implicit-def $vgpr15_lo16, implicit-def $vgpr15_hi16, implicit-def $vgpr16, implicit-def $vgpr16_lo16, implicit-def $vgpr16_hi16, implicit-def $vgpr17, implicit-def $vgpr17_lo16, implicit-def $vgpr17_hi16, implicit-def $vgpr18, implicit-def $vgpr18_lo16, implicit-def $vgpr18_hi16, implicit-def $vgpr19, implicit-def $vgpr19_lo16, implicit-def $vgpr19_hi16, implicit-def $vgpr20, implicit-def $vgpr20_lo16, implicit-def $vgpr20_hi16, implicit-def $vgpr21, implicit-def $vgpr21_lo16, implicit-def $vgpr21_hi16, implicit-def $vgpr22, implicit-def $vgpr22_lo16, implicit-def $vgpr22_hi16, implicit-def $vgpr23, implicit-def $vgpr23_lo16, implicit-def $vgpr23_hi16, implicit-def $vgpr24, implicit-def $vgpr24_lo16, implicit-def $vgpr24_hi16, implicit-def $vgpr25, implicit-def $vgpr25_lo16, implicit-def $vgpr25_hi16, implicit-def $vgpr26, implicit-def $vgpr26_lo16, implicit-def $vgpr26_hi16, implicit-def $vgpr27, implicit-def $vgpr27_lo16, implicit-def $vgpr27_hi16, implicit-def $vgpr28, implicit-def $vgpr28_lo16, implicit-def $vgpr28_hi16, implicit-def $vgpr29, implicit-def $vgpr29_lo16, implicit-def $vgpr29_hi16, implicit-def $vgpr30, implicit-def $vgpr30_lo16, implicit-def $vgpr30_hi16, implicit-def $vgpr31, implicit-def $vgpr31_lo16, implicit-def $vgpr31_hi16, implicit-def $vgpr32, implicit-def $vgpr32_lo16, implicit-def $vgpr32_hi16, implicit-def $vgpr33, implicit-def $vgpr33_lo16, implicit-def $vgpr33_hi16, implicit-def $vgpr34, implicit-def $vgpr34_lo16, implicit-def $vgpr34_hi16, implicit-def $vgpr35, implicit-def $vgpr35_lo16, implicit-def $vgpr35_hi16, implicit-def $vgpr36, implicit-def $vgpr36_lo16, implicit-def $vgpr36_hi16, implicit-def $vgpr37, implicit-def $vgpr37_lo16, implicit-def $vgpr37_hi16, implicit-def $vgpr38, implicit-def $vgpr38_lo16, implicit-def $vgpr38_hi16, implicit-def $vgpr39, implicit-def $vgpr39_lo16, implicit-def $vgpr39_hi16, implicit-def $vgpr40, implicit-def $vgpr40_lo16, implicit-def $vgpr40_hi16, implicit-def $vgpr41, implicit-def $vgpr41_lo16, implicit-def $vgpr41_hi16, implicit-def $vgpr42, implicit-def $vgpr42_lo16, implicit-def $vgpr42_hi16, implicit-def $vgpr43, implicit-def $vgpr43_lo16, implicit-def $vgpr43_hi16, implicit-def $vgpr44, implicit-def $vgpr44_lo16, implicit-def $vgpr44_hi16, implicit-def $vgpr45, implicit-def $vgpr45_lo16, implicit-def $vgpr45_hi16, implicit-def $vgpr46, implicit-def $vgpr46_lo16, implicit-def $vgpr46_hi16, implicit-def $vgpr47, implicit-def $vgpr47_lo16, implicit-def $vgpr47_hi16, implicit-def $vgpr48, implicit-def $vgpr48_lo16, implicit-def $vgpr48_hi16, implicit-def $vgpr49, implicit-def $vgpr49_lo16, implicit-def $vgpr49_hi16, implicit-def $vgpr50, implicit-def $vgpr50_lo16, implicit-def $vgpr50_hi16, implicit-def $vgpr51, implicit-def $vgpr51_lo16, implicit-def $vgpr51_hi16, implicit-def $vgpr52, implicit-def $vgpr52_lo16, implicit-def $vgpr52_hi16, implicit-def $vgpr53, implicit-def $vgpr53_lo16, implicit-def $vgpr53_hi16, implicit-def $vgpr54, implicit-def $vgpr54_lo16, implicit-def $vgpr54_hi16, implicit-def $vgpr55, implicit-def $vgpr55_lo16, implicit-def $vgpr55_hi16, implicit-def $vgpr56, implicit-def $vgpr56_lo16, implicit-def $vgpr56_hi16, implicit-def $vgpr57, implicit-def $vgpr57_lo16, implicit-def $vgpr57_hi16, implicit-def $vgpr58, implicit-def $vgpr58_lo16, implicit-def $vgpr58_hi16, implicit-def $vgpr59, implicit-def $vgpr59_lo16, implicit-def $vgpr59_hi16, implicit-def $vgpr60, implicit-def $vgpr60_lo16, implicit-def $vgpr60_hi16, implicit-def $vgpr61, implicit-def $vgpr61_lo16, implicit-def $vgpr61_hi16, implicit-def $vgpr62, implicit-def $vgpr62_lo16, implicit-def $vgpr62_hi16, implicit-def $vgpr63, implicit-def $vgpr63_lo16, implicit-def $vgpr63_hi16, implicit-def $vgpr64, implicit-def $vgpr64_lo16, implicit-def $vgpr64_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; CHECK:   S_CLAUSE 63
-    ; CHECK:   $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 12, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 20, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr6 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 24, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr7 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 28, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr8 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 32, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr9 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 36, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr10 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 40, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr11 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 44, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr12 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 48, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr13 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 52, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr14 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 56, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr15 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 60, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr16 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 64, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr17 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 68, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr18 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 72, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr19 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 76, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr20 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 80, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr21 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 84, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr22 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 88, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr23 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 92, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr24 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 96, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr25 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 100, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr26 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 104, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr27 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 108, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr28 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 112, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr29 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 116, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr30 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 120, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr31 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 124, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr32 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 128, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr33 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 132, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr34 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 136, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr35 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 140, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr36 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 144, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr37 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 148, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr38 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 152, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr39 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 156, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr40 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 160, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr41 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 164, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr42 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 168, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr43 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 172, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr44 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 176, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr45 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 180, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr46 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 184, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr47 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 188, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr48 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 192, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr49 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 196, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr50 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 200, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr51 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 204, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr52 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 208, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr53 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 212, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr54 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 216, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr55 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 220, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr56 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 224, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr57 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 228, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr58 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 232, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr59 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 236, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr60 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 240, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr61 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 244, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr62 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 248, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr63 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 252, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr64 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 256, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 12, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 20, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr6 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 24, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr7 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 28, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr8 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 32, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr9 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 36, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr10 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 40, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr11 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 44, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr12 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 48, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr13 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 52, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr14 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 56, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr15 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 60, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr16 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 64, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr17 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 68, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr18 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 72, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr19 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 76, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr20 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 80, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr21 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 84, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr22 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 88, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr23 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 92, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr24 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 96, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr25 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 100, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr26 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 104, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr27 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 108, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr28 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 112, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr29 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 116, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr30 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 120, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr31 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 124, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr32 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 128, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr33 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 132, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr34 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 136, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr35 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 140, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr36 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 144, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr37 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 148, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr38 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 152, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr39 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 156, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr40 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 160, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr41 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 164, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr42 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 168, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr43 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 172, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr44 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 176, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr45 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 180, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr46 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 184, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr47 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 188, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr48 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 192, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr49 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 196, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr50 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 200, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr51 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 204, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr52 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 208, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr53 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 212, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr54 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 216, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr55 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 220, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr56 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 224, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr57 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 228, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr58 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 232, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr59 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 236, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr60 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 240, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr61 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 244, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr62 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 248, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr63 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 252, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr64 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 256, 0, 0, 0, implicit $exec
     ; CHECK: }
     ; CHECK: BUNDLE implicit-def $vgpr65, implicit-def $vgpr65_lo16, implicit-def $vgpr65_hi16, implicit-def $vgpr66, implicit-def $vgpr66_lo16, implicit-def $vgpr66_hi16, implicit-def $vgpr67, implicit-def $vgpr67_lo16, implicit-def $vgpr67_hi16, implicit-def $vgpr68, implicit-def $vgpr68_lo16, implicit-def $vgpr68_hi16, implicit-def $vgpr69, implicit-def $vgpr69_lo16, implicit-def $vgpr69_hi16, implicit-def $vgpr70, implicit-def $vgpr70_lo16, implicit-def $vgpr70_hi16, implicit-def $vgpr71, implicit-def $vgpr71_lo16, implicit-def $vgpr71_hi16, implicit-def $vgpr72, implicit-def $vgpr72_lo16, implicit-def $vgpr72_hi16, implicit-def $vgpr73, implicit-def $vgpr73_lo16, implicit-def $vgpr73_hi16, implicit-def $vgpr74, implicit-def $vgpr74_lo16, implicit-def $vgpr74_hi16, implicit-def $vgpr75, implicit-def $vgpr75_lo16, implicit-def $vgpr75_hi16, implicit-def $vgpr76, implicit-def $vgpr76_lo16, implicit-def $vgpr76_hi16, implicit-def $vgpr77, implicit-def $vgpr77_lo16, implicit-def $vgpr77_hi16, implicit-def $vgpr78, implicit-def $vgpr78_lo16, implicit-def $vgpr78_hi16, implicit-def $vgpr79, implicit-def $vgpr79_lo16, implicit-def $vgpr79_hi16, implicit-def $vgpr80, implicit-def $vgpr80_lo16, implicit-def $vgpr80_hi16, implicit $vgpr0, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $exec {
     ; CHECK:   S_CLAUSE 15
-    ; CHECK:   $vgpr65 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr66 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 264, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr67 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 268, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr68 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 272, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr69 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 276, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr70 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 280, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr71 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 284, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr72 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 288, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr73 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 292, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr74 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 296, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr75 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 300, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr76 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 304, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr77 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 308, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr78 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 312, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr79 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 316, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK:   $vgpr80 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 320, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr65 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr66 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 264, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr67 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 268, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr68 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 272, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr69 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 276, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr70 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 280, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr71 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 284, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr72 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 288, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr73 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 292, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr74 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 296, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr75 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 300, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr76 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 304, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr77 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 308, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr78 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 312, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr79 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 316, 0, 0, 0, implicit $exec
+    ; CHECK:   $vgpr80 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 320, 0, 0, 0, implicit $exec
     ; CHECK: }
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 12, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 20, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr6 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 24, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr7 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 28, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr8 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 32, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr9 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 36, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr10 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 40, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr11 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 44, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr12 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 48, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr13 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 52, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr14 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 56, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr15 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 60, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr16 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 64, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr17 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 68, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr18 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 72, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr19 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 76, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr20 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 80, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr21 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 84, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr22 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 88, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr23 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 92, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr24 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 96, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr25 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 100, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr26 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 104, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr27 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 108, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr28 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 112, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr29 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 116, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr30 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 120, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr31 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 124, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr32 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 128, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr33 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 132, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr34 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 136, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr35 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 140, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr36 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 144, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr37 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 148, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr38 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 152, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr39 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 156, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr40 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 160, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr41 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 164, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr42 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 168, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr43 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 172, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr44 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 176, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr45 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 180, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr46 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 184, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr47 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 188, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr48 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 192, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr49 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 196, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr50 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 200, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr51 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 204, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr52 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 208, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr53 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 212, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr54 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 216, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr55 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 220, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr56 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 224, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr57 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 228, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr58 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 232, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr59 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 236, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr60 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 240, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr61 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 244, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr62 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 248, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr63 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 252, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr64 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 256, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr65 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr66 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 264, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr67 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 268, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr68 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 272, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr69 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 276, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr70 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 280, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr71 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 284, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr72 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 288, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr73 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 292, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr74 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 296, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr75 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 300, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr76 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 304, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr77 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 308, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr78 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 312, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr79 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 316, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr80 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 320, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4, 0, 0, 0, implicit $exec
+    $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 8, 0, 0, 0, implicit $exec
+    $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 12, 0, 0, 0, implicit $exec
+    $vgpr4 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 16, 0, 0, 0, implicit $exec
+    $vgpr5 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 20, 0, 0, 0, implicit $exec
+    $vgpr6 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 24, 0, 0, 0, implicit $exec
+    $vgpr7 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 28, 0, 0, 0, implicit $exec
+    $vgpr8 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 32, 0, 0, 0, implicit $exec
+    $vgpr9 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 36, 0, 0, 0, implicit $exec
+    $vgpr10 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 40, 0, 0, 0, implicit $exec
+    $vgpr11 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 44, 0, 0, 0, implicit $exec
+    $vgpr12 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 48, 0, 0, 0, implicit $exec
+    $vgpr13 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 52, 0, 0, 0, implicit $exec
+    $vgpr14 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 56, 0, 0, 0, implicit $exec
+    $vgpr15 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 60, 0, 0, 0, implicit $exec
+    $vgpr16 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 64, 0, 0, 0, implicit $exec
+    $vgpr17 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 68, 0, 0, 0, implicit $exec
+    $vgpr18 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 72, 0, 0, 0, implicit $exec
+    $vgpr19 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 76, 0, 0, 0, implicit $exec
+    $vgpr20 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 80, 0, 0, 0, implicit $exec
+    $vgpr21 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 84, 0, 0, 0, implicit $exec
+    $vgpr22 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 88, 0, 0, 0, implicit $exec
+    $vgpr23 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 92, 0, 0, 0, implicit $exec
+    $vgpr24 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 96, 0, 0, 0, implicit $exec
+    $vgpr25 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 100, 0, 0, 0, implicit $exec
+    $vgpr26 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 104, 0, 0, 0, implicit $exec
+    $vgpr27 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 108, 0, 0, 0, implicit $exec
+    $vgpr28 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 112, 0, 0, 0, implicit $exec
+    $vgpr29 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 116, 0, 0, 0, implicit $exec
+    $vgpr30 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 120, 0, 0, 0, implicit $exec
+    $vgpr31 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 124, 0, 0, 0, implicit $exec
+    $vgpr32 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 128, 0, 0, 0, implicit $exec
+    $vgpr33 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 132, 0, 0, 0, implicit $exec
+    $vgpr34 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 136, 0, 0, 0, implicit $exec
+    $vgpr35 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 140, 0, 0, 0, implicit $exec
+    $vgpr36 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 144, 0, 0, 0, implicit $exec
+    $vgpr37 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 148, 0, 0, 0, implicit $exec
+    $vgpr38 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 152, 0, 0, 0, implicit $exec
+    $vgpr39 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 156, 0, 0, 0, implicit $exec
+    $vgpr40 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 160, 0, 0, 0, implicit $exec
+    $vgpr41 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 164, 0, 0, 0, implicit $exec
+    $vgpr42 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 168, 0, 0, 0, implicit $exec
+    $vgpr43 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 172, 0, 0, 0, implicit $exec
+    $vgpr44 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 176, 0, 0, 0, implicit $exec
+    $vgpr45 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 180, 0, 0, 0, implicit $exec
+    $vgpr46 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 184, 0, 0, 0, implicit $exec
+    $vgpr47 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 188, 0, 0, 0, implicit $exec
+    $vgpr48 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 192, 0, 0, 0, implicit $exec
+    $vgpr49 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 196, 0, 0, 0, implicit $exec
+    $vgpr50 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 200, 0, 0, 0, implicit $exec
+    $vgpr51 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 204, 0, 0, 0, implicit $exec
+    $vgpr52 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 208, 0, 0, 0, implicit $exec
+    $vgpr53 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 212, 0, 0, 0, implicit $exec
+    $vgpr54 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 216, 0, 0, 0, implicit $exec
+    $vgpr55 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 220, 0, 0, 0, implicit $exec
+    $vgpr56 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 224, 0, 0, 0, implicit $exec
+    $vgpr57 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 228, 0, 0, 0, implicit $exec
+    $vgpr58 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 232, 0, 0, 0, implicit $exec
+    $vgpr59 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 236, 0, 0, 0, implicit $exec
+    $vgpr60 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 240, 0, 0, 0, implicit $exec
+    $vgpr61 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 244, 0, 0, 0, implicit $exec
+    $vgpr62 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 248, 0, 0, 0, implicit $exec
+    $vgpr63 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 252, 0, 0, 0, implicit $exec
+    $vgpr64 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 256, 0, 0, 0, implicit $exec
+    $vgpr65 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 260, 0, 0, 0, implicit $exec
+    $vgpr66 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 264, 0, 0, 0, implicit $exec
+    $vgpr67 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 268, 0, 0, 0, implicit $exec
+    $vgpr68 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 272, 0, 0, 0, implicit $exec
+    $vgpr69 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 276, 0, 0, 0, implicit $exec
+    $vgpr70 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 280, 0, 0, 0, implicit $exec
+    $vgpr71 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 284, 0, 0, 0, implicit $exec
+    $vgpr72 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 288, 0, 0, 0, implicit $exec
+    $vgpr73 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 292, 0, 0, 0, implicit $exec
+    $vgpr74 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 296, 0, 0, 0, implicit $exec
+    $vgpr75 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 300, 0, 0, 0, implicit $exec
+    $vgpr76 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 304, 0, 0, 0, implicit $exec
+    $vgpr77 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 308, 0, 0, 0, implicit $exec
+    $vgpr78 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 312, 0, 0, 0, implicit $exec
+    $vgpr79 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 316, 0, 0, 0, implicit $exec
+    $vgpr80 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 320, 0, 0, 0, implicit $exec
+...
+
+---
+name: mimg_nsa
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; CHECK-LABEL: name: mimg_nsa
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+...
+
+---
+name: mimg_nsa_mixed
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; CHECK-LABEL: name: mimg_nsa_mixed
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    ; CHECK: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK: $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    ; CHECK: $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx10 $vgpr5_vgpr6, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
+    $vgpr20_vgpr21_vgpr22_vgpr23 = IMAGE_SAMPLE_D_V4_V9_nsa_gfx10 $vgpr3, $vgpr8, $vgpr7, $vgpr5, $vgpr4, $vgpr6, $vgpr0, $vgpr2, $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, 15, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+...
+
+---
+name: kill
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4
+    ; CHECK-LABEL: name: kill
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr4
+    ; CHECK: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit $sgpr0_sgpr1, implicit undef $sgpr4 {
+    ; CHECK:   S_CLAUSE 1
+    ; CHECK:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    ; CHECK:   KILL undef renamable $sgpr4
+    ; CHECK:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+    ; CHECK: }
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    KILL undef renamable $sgpr4
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+...
+
+---
+name: kill2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $sgpr4, $sgpr5
+    ; CHECK-LABEL: name: kill2
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr4, $sgpr5
+    ; CHECK: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit $sgpr0_sgpr1, implicit undef $sgpr4 {
+    ; CHECK:   S_CLAUSE 1
+    ; CHECK:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    ; CHECK:   KILL undef renamable $sgpr4
+    ; CHECK:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+    ; CHECK: }
+    ; CHECK: KILL undef renamable $sgpr5
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    KILL undef renamable $sgpr4
+    $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
+    KILL undef renamable $sgpr5
 ...

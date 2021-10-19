@@ -5,7 +5,9 @@
 # RUN: llvm-objdump -T %t1 | \
 # RUN:   FileCheck %s --match-full-lines --strict-whitespace --check-prefix=DYNSYM
 
-#       DYNSYM:DYNAMIC SYMBOL TABLE:
+#       DYNSYM:{{.*}}file format elf64-x86-64
+# DYNSYM-EMPTY:
+#  DYNSYM-NEXT:DYNAMIC SYMBOL TABLE:
 #  DYNSYM-NEXT:0000000000000000 l    DO .data	0000000000000000 localsym
 #  DYNSYM-NEXT:0000000000000000 g    DO .data	0000000000000000 globalsym
 #  DYNSYM-NEXT:0000000000000000 u    DO .data	0000000000000000 uniqueglobalsym

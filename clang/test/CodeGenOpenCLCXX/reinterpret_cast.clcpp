@@ -1,0 +1,28 @@
+//RUN: %clang_cc1 %s -triple spir -emit-llvm -O0 -o - | FileCheck %s
+
+typedef int int2 __attribute__((ext_vector_type(2)));
+typedef int int4 __attribute__((ext_vector_type(4)));
+typedef long long2 __attribute__((ext_vector_type(2)));
+
+//CHECK-LABEL: define{{.*}} spir_func void @_Z3barPU3AS1Dv2_i
+void bar(global int2 *in) {
+  //CHECK: bitcast <2 x i32> %{{[0-9]+}} to i64
+  auto l = reinterpret_cast<long>(in[0]);
+  //CHECK: bitcast i64 %{{[0-9]+}} to <2 x i32>
+  auto i2 = reinterpret_cast<int2>(l);
+
+  __private short s1;
+  // CHECK: %{{[0-9]+}} = load i16, i16* %s1, align 2
+  // CHECK-NEXT: store i16 %{{[0-9]+}}, i16* %s2, align 2
+  auto s2 = reinterpret_cast<__private short>(s1);
+  // CHECK: %{{[0-9]+}} = load i16, i16* %s1, align 2
+  // CHECK-NEXT: store i16 %{{[0-9]+}}, i16* %s3, align 2
+  auto s3 = reinterpret_cast<decltype(s1)>(s1);
+  // CHECK: %{{[0-9]+}} = load i16, i16* %s1, align 2
+  // CHECK-NEXT: store i16 %{{[0-9]+}}, i16* %s4, align 2
+  auto s4 = reinterpret_cast<__global short>(s1);
+
+  int4 i4;
+  //CHECK: bitcast <4 x i32> %{{[0-9]+}} to <2 x i64>
+  auto l2 = reinterpret_cast<long2>(i4);
+}

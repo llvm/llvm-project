@@ -3,17 +3,17 @@
 // RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 --start-address=1048576 --stop-address=1048604 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=2097152 --stop-address=2097162 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777220 --stop-address=16777232 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 --start-address=16777232 --stop-address=16777242 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 --start-address=32505860 --stop-address=32505870 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 --start-address=35651584 --stop-address=35651590 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK6 %s
-// RUN: llvm-objdump -d %t2 --start-address=36700160 --stop-address=36700168 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
-// RUN: llvm-objdump -d %t2 --start-address=48234500 --stop-address=48234512 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK8 %s
-// RUN: llvm-objdump -d %t2 --start-address=53477380 --stop-address=53477392 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK9 %s
-// RUN: llvm-objdump -d %t2 --start-address=68157440 --stop-address=68157452 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
-// RUN: llvm-objdump -d %t2 --start-address=69206016 --stop-address=69206024 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK11 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x100000 --stop-address=0x10001c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x200000 --stop-address=0x20000a | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1000004 --stop-address=0x1000010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1000010 --stop-address=0x100001a | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x1f00004 --stop-address=0x1f0000e | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x2200000 --stop-address=0x2200006 | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x2300000 --stop-address=0x2300008 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x2e00004 --stop-address=0x2e00010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK8 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x3300004 --stop-address=0x3300010 | FileCheck --check-prefix=CHECK9 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x4100000 --stop-address=0x410000c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
+// RUN: llvm-objdump -d %t2 --start-address=0x4200000 --stop-address=0x4200008 | FileCheck --check-prefix=CHECK11 %s
 
 // Test the Range extension Thunks for ARM and Thumb when all the code is in a
 // single OutputSection. The ARM branches and branch and link instructions
@@ -62,12 +62,12 @@ _start:
  bne afunc32
 // CHECK1:  <afunc00>:
 // CHECK1-NEXT:   100000:       1e ff 2f e1     bx      lr
-// CHECK1-NEXT:   100004:       fd ff 7b fa     blx     #32505844
-// CHECK1-NEXT:   100008:       fd ff 3b ea     b       #15728628
-// CHECK1-NEXT:   10000c:       fc ff 3b 0a     beq     #15728624
-// CHECK1-NEXT:   100010:       fa ff 7f eb     bl      #33554408
-// CHECK1-NEXT:   100014:       f9 ff 7f ea     b       #33554404
-// CHECK1-NEXT:   100018:       f8 ff 7f 1a     bne     #33554400
+// CHECK1-NEXT:   100004:       fd ff 7b fa     blx     0x2000000 <tfunc31>
+// CHECK1-NEXT:   100008:       fd ff 3b ea     b       0x1000004 <__ARMv7ABSLongThunk_tfunc31>
+// CHECK1-NEXT:   10000c:       fc ff 3b 0a     beq     0x1000004 <__ARMv7ABSLongThunk_tfunc31>
+// CHECK1-NEXT:   100010:       fa ff 7f eb     bl      0x2100000 <afunc32>
+// CHECK1-NEXT:   100014:       f9 ff 7f ea     b       0x2100000 <afunc32>
+// CHECK1-NEXT:   100018:       f8 ff 7f 1a     bne     0x2100000 <afunc32>
  THUMBFUNCTION 01
 // Expect Thumb bl to be in range (can use blx to change state)
  bl afunc14
@@ -75,8 +75,8 @@ _start:
  b.w afunc14
 // CHECK2: <tfunc01>:
 // CHECK2-NEXT:   200000:       70 47   bx      lr
-// CHECK2-NEXT:   200002:       ff f0 fe c7     blx     #13631484
-// CHECK2-NEXT:   200006:       00 f2 03 90     b.w     #14680070 <__Thumbv7ABSLongThunk_afunc14>
+// CHECK2-NEXT:   200002:       ff f0 fe c7     blx     0xf00000 <afunc14>
+// CHECK2-NEXT:   200006:       00 f2 03 90     b.w     0x1000010 <__Thumbv7ABSLongThunk_afunc14>
 
  ARMFUNCTION 02
  THUMBFUNCTION 03
@@ -127,12 +127,12 @@ _start:
  bl afunc00
 // CHECK6:  <tfunc33>:
 // CHECK6-NEXT:  2200000:       70 47   bx      lr
-// CHECK6-NEXT:  2200002:       ff f4 ff ff     bl      #-3145730
+// CHECK6-NEXT:  2200002:       ff f4 ff ff     bl      0x1f00004 <__Thumbv7ABSLongThunk_afunc00>
  ARMFUNCTION 34
 // Out of range, can reach earlier Thunk Section
 // CHECK7:  <afunc34>:
 // CHECK7-NEXT:  2300000:       1e ff 2f e1     bx      lr
-// CHECK7-NEXT:  2300004:       fe ff ef fa     blx     #-4194312 <__Thumbv7ABSLongThunk_afunc00
+// CHECK7-NEXT:  2300004:       fe ff ef fa     blx     0x1f00004 <__Thumbv7ABSLongThunk_afunc00>
  bl afunc00
  THUMBFUNCTION 35
  ARMFUNCTION 36
@@ -161,7 +161,7 @@ _start:
 // CHECK9-NEXT:  3300008:       c0 f2 30 2c     movt    r12, #560
 // CHECK9-NEXT:  330000c:       60 47   bx      r12
 // CHECK9: <__Thumbv7ABSLongThunk_tfunc35>:
-// CHECK9-NEXT:  330000e:       ff f4 f7 97     b.w     #-15728658 <tfunc35>
+// CHECK9-NEXT:  330000e:       ff f4 f7 97     b.w     0x2400000 <tfunc35>
  THUMBFUNCTION 51
  ARMFUNCTION 52
  THUMBFUNCTION 53
@@ -180,14 +180,14 @@ _start:
  bl afunc34
  b  tfunc35
 // CHECK10: <afunc64>:
-// CHECK10-NEXT:  4100000:       1e ff 2f e1     bx      lr
-// CHECK10-NEXT:  4100004:      fd ff 87 eb     bl      #-31457292 <afunc34>
-// CHECK10-NEXT:  4100008:      fd ff b3 ea     b       #-19922956 <__ARMv7ABSLongThunk_tfunc35>
+// CHECK10-NEXT:  4100000:      1e ff 2f e1     bx      lr
+// CHECK10-NEXT:  4100004:      fd ff 87 eb     bl      0x2300000 <afunc34>
+// CHECK10-NEXT:  4100008:      fd ff b3 ea     b       0x2e00004 <__ARMv7ABSLongThunk_tfunc35>
  THUMBFUNCTION 65
 // afunc34 and tfunc35 are both out of range
  bl afunc34
  bl tfunc35
 // CHECK11: <tfunc65>:
 // CHECK11:  4200000:   70 47   bx      lr
-// CHECK11-NEXT:  4200002:      ff f4 ff d7     bl      #-15728642
-// CHECK11-NEXT:  4200006:      00 f5 02 d0     bl      #-15728636
+// CHECK11-NEXT:  4200002:      ff f4 ff d7     bl      0x3300004 <__Thumbv7ABSLongThunk_afunc34>
+// CHECK11-NEXT:  4200006:      00 f5 02 d0     bl      0x330000e <__Thumbv7ABSLongThunk_tfunc35>

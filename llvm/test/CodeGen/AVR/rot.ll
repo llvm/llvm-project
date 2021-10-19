@@ -6,14 +6,14 @@
 define i8 @rol8(i8 %val, i8 %amt) {
   ; CHECK:      andi r22, 7
 
-  ; CHECK-NEXT: cpi r22, 0
-  ; CHECK-NEXT: breq .LBB0_2
+  ; CHECK-NEXT: dec r22
+  ; CHECK-NEXT: brmi .LBB0_2
 
 ; CHECK-NEXT: .LBB0_1:
   ; CHECK-NEXT: lsl r24
   ; CHECK-NEXT: adc r24, r1
-  ; CHECK-NEXT: subi r22, 1
-  ; CHECK-NEXT: brne .LBB0_1
+  ; CHECK-NEXT: dec r22
+  ; CHECK-NEXT: brpl .LBB0_1
 
 ; CHECK-NEXT: .LBB0_2:
   ; CHECK-NEXT: ret
@@ -33,16 +33,15 @@ define i8 @rol8(i8 %val, i8 %amt) {
 define i8 @ror8(i8 %val, i8 %amt) {
   ; CHECK:      andi r22, 7
 
-  ; CHECK-NEXT: cpi r22, 0
-  ; CHECK-NEXT: breq .LBB1_2
+  ; CHECK-NEXT: dec r22
+  ; CHECK-NEXT: brmi .LBB1_2
 
 ; CHECK-NEXT: .LBB1_1:
-  ; CHECK-NEXT: lsr r24
-  ; CHECK-NEXT: ldi r0, 0
-  ; CHECK-NEXT: ror r0
-  ; CHECK-NEXT: or r24, r0
-  ; CHECK-NEXT: subi r22, 1
-  ; CHECK-NEXT: brne .LBB1_1
+  ; CHECK-NEXT: bst r24, 0
+  ; CHECK-NEXT: ror r24
+  ; CHECK-NEXT: bld r24, 7
+  ; CHECK-NEXT: dec r22
+  ; CHECK-NEXT: brpl .LBB1_1
 
 ; CHECK-NEXT: .LBB1_2:
   ; CHECK-NEXT: ret

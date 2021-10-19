@@ -1,12 +1,13 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -mattr=-altivec -filetype=obj -o %t.o < %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -mattr=-altivec \
+; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN: FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
-; RUN: llvm-readobj -t %t.o | FileCheck --check-prefix=SYM %s
+; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefix=DIS_REL %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -mattr=-altivec -filetype=obj < %s 2>&1 | \
+; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -mattr=-altivec -data-sections=false -filetype=obj < %s 2>&1 | \
 ; RUN: FileCheck --check-prefix=XCOFF64 %s
 ; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
 
@@ -36,7 +37,7 @@ declare i32 @bar(i32)
 ; OBJ-NEXT:   NumberOfSections: 2
 ; OBJ-NEXT:   TimeStamp: None (0x0)
 ; OBJ-NEXT:   SymbolTableOffset: 0x13C
-; OBJ-NEXT:   SymbolTableEntries: 26
+; OBJ-NEXT:   SymbolTableEntries: 27
 ; OBJ-NEXT:   OptionalHeaderSize: 0x0
 ; OBJ-NEXT:   Flags: 0x0
 ; OBJ-NEXT: }
@@ -78,7 +79,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT:   Section (index: 1) .text {
 ; RELOC-NEXT:   Relocation {
 ; RELOC-NEXT:     Virtual Address: 0x10
-; RELOC-NEXT:     Symbol: .bar (0)
+; RELOC-NEXT:     Symbol: .bar (1)
 ; RELOC-NEXT:     IsSigned: Yes
 ; RELOC-NEXT:     FixupBitValue: 0
 ; RELOC-NEXT:     Length: 26
@@ -86,7 +87,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
 ; RELOC-NEXT:     Virtual Address: 0x1A
-; RELOC-NEXT:     Symbol: globalA (22)
+; RELOC-NEXT:     Symbol: globalA (23)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
 ; RELOC-NEXT:     Length: 16
@@ -94,7 +95,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT:   }
 ; RELOC-NEXT:   Relocation {
 ; RELOC-NEXT:     Virtual Address: 0x1E
-; RELOC-NEXT:     Symbol: globalB (24)
+; RELOC-NEXT:     Symbol: globalB (25)
 ; RELOC-NEXT:     IsSigned: No
 ; RELOC-NEXT:     FixupBitValue: 0
 ; RELOC-NEXT:     Length: 16
@@ -104,7 +105,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT: Section (index: 2) .data {
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x70
-; RELOC-NEXT:   Symbol: arr (14)
+; RELOC-NEXT:   Symbol: arr (15)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
@@ -112,7 +113,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x74
-; RELOC-NEXT:   Symbol: .foo (6)
+; RELOC-NEXT:   Symbol: .foo (7)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
@@ -120,7 +121,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x78
-; RELOC-NEXT:   Symbol: TOC (20)
+; RELOC-NEXT:   Symbol: TOC (21)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
@@ -128,7 +129,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x80
-; RELOC-NEXT:   Symbol: globalA (10)
+; RELOC-NEXT:   Symbol: globalA (11)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
@@ -136,7 +137,7 @@ declare i32 @bar(i32)
 ; RELOC-NEXT: }
 ; RELOC-NEXT: Relocation {
 ; RELOC-NEXT:   Virtual Address: 0x84
-; RELOC-NEXT:   Symbol: globalB (12)
+; RELOC-NEXT:   Symbol: globalB (13)
 ; RELOC-NEXT:   IsSigned: No
 ; RELOC-NEXT:   FixupBitValue: 0
 ; RELOC-NEXT:   Length: 32
@@ -148,6 +149,16 @@ declare i32 @bar(i32)
 ; SYM:      Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
+; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Value (SymbolTableIndex): 0x0
+; SYM-NEXT:     Section: N_DEBUG
+; SYM-NEXT:     Source Language ID: TB_C (0x0)
+; SYM-NEXT:     CPU Version ID: 0x0
+; SYM-NEXT:     StorageClass: C_FILE (0x67)
+; SYM-NEXT:     NumberOfAuxEntries: 0
+; SYM-NEXT:   }
+; SYM-NEXT:   Symbol {
+; SYM-NEXT:     Index: [[#INDX:]]
 ; SYM-NEXT:     Name: .bar
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: N_UNDEF
@@ -155,7 +166,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 1
+; SYM-NEXT:       Index: [[#INDX+1]]
 ; SYM-NEXT:       SectionLen: 0
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -167,7 +178,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 2
+; SYM-NEXT:     Index: [[#INDX+2]]
 ; SYM-NEXT:     Name: bar
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: N_UNDEF
@@ -175,7 +186,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 3
+; SYM-NEXT:       Index: [[#INDX+3]]
 ; SYM-NEXT:       SectionLen: 0
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -187,7 +198,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 4
+; SYM-NEXT:     Index: [[#INDX+4]]
 ; SYM-NEXT:     Name: .text
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: .text
@@ -195,7 +206,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 5
+; SYM-NEXT:       Index: [[#INDX+5]]
 ; SYM-NEXT:       SectionLen: 64
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -207,7 +218,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 6
+; SYM-NEXT:     Index: [[#INDX+6]]
 ; SYM-NEXT:     Name: .foo
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: .text
@@ -215,8 +226,8 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 7
-; SYM-NEXT:       ContainingCsectSymbolIndex: 4
+; SYM-NEXT:       Index: [[#INDX+7]]
+; SYM-NEXT:       ContainingCsectSymbolIndex: [[#INDX+4]]
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
@@ -227,7 +238,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 8
+; SYM-NEXT:     Index: [[#INDX+8]]
 ; SYM-NEXT:     Name: .data
 ; SYM-NEXT:     Value (RelocatableAddress): 0x40
 ; SYM-NEXT:     Section: .data
@@ -235,7 +246,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 9
+; SYM-NEXT:       Index: [[#INDX+9]]
 ; SYM-NEXT:       SectionLen: 52
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -247,7 +258,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 10
+; SYM-NEXT:     Index: [[#INDX+10]]
 ; SYM-NEXT:     Name: globalA
 ; SYM-NEXT:     Value (RelocatableAddress): 0x40
 ; SYM-NEXT:     Section: .data
@@ -255,8 +266,8 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 11
-; SYM-NEXT:       ContainingCsectSymbolIndex: 8
+; SYM-NEXT:       Index: [[#INDX+11]]
+; SYM-NEXT:       ContainingCsectSymbolIndex: [[#INDX+8]]
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
@@ -267,7 +278,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 12
+; SYM-NEXT:     Index: [[#INDX+12]]
 ; SYM-NEXT:     Name: globalB
 ; SYM-NEXT:     Value (RelocatableAddress): 0x44
 ; SYM-NEXT:     Section: .data
@@ -275,8 +286,8 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 13
-; SYM-NEXT:       ContainingCsectSymbolIndex: 8
+; SYM-NEXT:       Index: [[#INDX+13]]
+; SYM-NEXT:       ContainingCsectSymbolIndex: [[#INDX+8]]
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
@@ -287,7 +298,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 14
+; SYM-NEXT:     Index: [[#INDX+14]]
 ; SYM-NEXT:     Name: arr
 ; SYM-NEXT:     Value (RelocatableAddress): 0x48
 ; SYM-NEXT:     Section: .data
@@ -295,8 +306,8 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 15
-; SYM-NEXT:       ContainingCsectSymbolIndex: 8
+; SYM-NEXT:       Index: [[#INDX+15]]
+; SYM-NEXT:       ContainingCsectSymbolIndex: [[#INDX+8]]
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
@@ -307,7 +318,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 16
+; SYM-NEXT:     Index: [[#INDX+16]]
 ; SYM-NEXT:     Name: p
 ; SYM-NEXT:     Value (RelocatableAddress): 0x70
 ; SYM-NEXT:     Section: .data
@@ -315,8 +326,8 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 17
-; SYM-NEXT:       ContainingCsectSymbolIndex: 8
+; SYM-NEXT:       Index: [[#INDX+17]]
+; SYM-NEXT:       ContainingCsectSymbolIndex: [[#INDX+8]]
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
 ; SYM-NEXT:       SymbolAlignmentLog2: 0
@@ -327,7 +338,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 18
+; SYM-NEXT:     Index: [[#INDX+18]]
 ; SYM-NEXT:     Name: foo
 ; SYM-NEXT:     Value (RelocatableAddress): 0x74
 ; SYM-NEXT:     Section: .data
@@ -335,7 +346,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_EXT (0x2)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 19
+; SYM-NEXT:       Index: [[#INDX+19]]
 ; SYM-NEXT:       SectionLen: 12
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -347,7 +358,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 20
+; SYM-NEXT:     Index: [[#INDX+20]]
 ; SYM-NEXT:     Name: TOC
 ; SYM-NEXT:     Value (RelocatableAddress): 0x80
 ; SYM-NEXT:     Section: .data
@@ -355,7 +366,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 21
+; SYM-NEXT:       Index: [[#INDX+21]]
 ; SYM-NEXT:       SectionLen: 0
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -367,7 +378,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 22
+; SYM-NEXT:     Index: [[#INDX+22]]
 ; SYM-NEXT:     Name: globalA
 ; SYM-NEXT:     Value (RelocatableAddress): 0x80
 ; SYM-NEXT:     Section: .data
@@ -375,7 +386,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 23
+; SYM-NEXT:       Index: [[#INDX+23]]
 ; SYM-NEXT:       SectionLen: 4
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
@@ -387,7 +398,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     }
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
-; SYM-NEXT:     Index: 24
+; SYM-NEXT:     Index: [[#INDX+24]]
 ; SYM-NEXT:     Name: globalB
 ; SYM-NEXT:     Value (RelocatableAddress): 0x84
 ; SYM-NEXT:     Section: .data
@@ -395,7 +406,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; SYM-NEXT:     NumberOfAuxEntries: 1
 ; SYM-NEXT:     CSECT Auxiliary Entry {
-; SYM-NEXT:       Index: 25
+; SYM-NEXT:       Index: [[#INDX+25]]
 ; SYM-NEXT:       SectionLen: 4
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0

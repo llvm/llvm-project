@@ -13,9 +13,9 @@ define void @f1(i32 %a1, i32 %a2) {
 }
 
 ; CHECK: .lcomm .L_MergedGlobals,8,4
+; CHECK: .section .drectve,"yn"
+; CHECK: .ascii " /EXPORT:y,DATA"
 ; CHECK: .globl x
 ; CHECK: .set x, .L_MergedGlobals
 ; CHECK: .globl y
 ; CHECK: .set y, .L_MergedGlobals+4
-; CHECK: .section .drectve,"yn"
-; CHECK: .ascii " /EXPORT:y,DATA"

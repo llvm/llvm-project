@@ -1,4 +1,4 @@
-; RUN: opt -function-attrs --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
+; RUN: opt -enable-new-pm=1 -function-attrs --disable-nofree-inference=false -S < %s | FileCheck %s --check-prefix=FNATTR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -12,7 +12,7 @@ declare void @_ZdaPv(i8*) local_unnamed_addr #2
 
 
 ; TEST 1 (positive case)
-; FNATTR: Function Attrs: noinline norecurse nounwind readnone uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind readnone uwtable
 ; FNATTR-NEXT: define void @only_return()
 define void @only_return() #0 {
     ret void
@@ -78,14 +78,14 @@ end:
 ; }
 
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion1()
 define void @mutual_recursion1() #0 {
   call void @mutual_recursion2()
   ret void
 }
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; FNATTR-NEXT: define void @mutual_recursion2()
 define void @mutual_recursion2() #0 {
   call void @mutual_recursion1()
@@ -132,7 +132,7 @@ define noalias i8* @call_realloc(i8* nocapture %0, i64 %1) local_unnamed_addr #0
 ; FNATTR-NEXT: declare void @nofree_function()
 declare void @nofree_function() nofree readnone #0
 
-; FNATTR: Function Attrs: noinline nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; FNATTR-NEXT: define void @call_nofree_function()
 define void @call_nofree_function() #0 {
     tail call void @nofree_function()
@@ -168,7 +168,7 @@ define void @call_both() #0 {
 
 ; TEST 10 (positive case)
 ; Call intrinsic function
-; FNATTRS: Function Attrs: noinline readnone speculatable
+; FNATTRS: Function Attrs: nofree noinline nosync readnone speculatable
 ; FNATTRS-NEXT: declare float @llvm.floor.f32(float %0)
 declare float @llvm.floor.f32(float)
 

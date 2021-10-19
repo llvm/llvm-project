@@ -3,26 +3,26 @@
 
 %struct.S = type <{ i16, i24, [5 x i8], i8, i16, [2 x i8] }>
 
-@z = global { i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] } { i16 -724, i8 94, i8 -18, i8 5, i8 undef, i8 96, i8 104, i8 -24, i8 10, i8 0, [5 x i8] undef }, align 8
-@tf_3_var_136 = global i64 0, align 8
+@z = dso_local global { i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] } { i16 -724, i8 94, i8 -18, i8 5, i8 undef, i8 96, i8 104, i8 -24, i8 10, i8 0, [5 x i8] undef }, align 8
+@tf_3_var_136 = dso_local global i64 0, align 8
 @.str = private unnamed_addr constant [6 x i8] c"%llu\0A\00", align 1
 
-define void @PR35763() {
+define dso_local void @PR35763() {
 ; CHECK-LABEL: PR35763:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
-; CHECK-NEXT:    orl z+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl z(%rip), %eax
+; CHECK-NEXT:    orl z+2(%rip), %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movl z+{{.*}}(%rip), %eax
-; CHECK-NEXT:    movzbl z+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    movq %rax, tf_3_var_136(%rip)
+; CHECK-NEXT:    movl z+6(%rip), %eax
+; CHECK-NEXT:    movzbl z+10(%rip), %ecx
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    movabsq $1090921758719, %rax # imm = 0xFE0000FFFF
 ; CHECK-NEXT:    andq %rcx, %rax
-; CHECK-NEXT:    movl %eax, z+{{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, z+6(%rip)
 ; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movb %al, z+{{.*}}(%rip)
+; CHECK-NEXT:    movb %al, z+10(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 0), align 8

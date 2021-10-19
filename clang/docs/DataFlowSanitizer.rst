@@ -137,61 +137,123 @@ For example:
   fun:memcpy=uninstrumented
   fun:memcpy=custom
 
-Example
-=======
+For instrumented functions, the ABI list supports a ``force_zero_labels``
+category, which will make all stores and return values set zero labels.
+Functions should never be labelled with both ``force_zero_labels``
+and ``uninstrumented`` or any of the unistrumented wrapper kinds.
 
-The following program demonstrates label propagation by checking that
-the correct labels are propagated.
+For example:
+
+.. code-block:: none
+
+  # e.g. void writes_data(char* out_buf, int out_buf_len) {...}
+  # Applying force_zero_labels will force out_buf shadow to zero.
+  fun:writes_data=force_zero_labels
+
+
+Compilation Flags
+-----------------
+
+* ``-dfsan-abilist`` -- The additional ABI list files that control how shadow
+  parameters are passed. File names are separated by comma.
+* ``-dfsan-combine-pointer-labels-on-load`` -- Controls whether to include or
+  ignore the labels of pointers in load instructions. Its default value is true.
+  For example:
 
 .. code-block:: c++
 
-  #include <sanitizer/dfsan_interface.h>
-  #include <assert.h>
+  v = *p;
 
-  int main(void) {
-    int i = 1;
-    dfsan_label i_label = dfsan_create_label("i", 0);
-    dfsan_set_label(i_label, &i, sizeof(i));
+If the flag is true, the label of ``v`` is the union of the label of ``p`` and
+the label of ``*p``. If the flag is false, the label of ``v`` is the label of
+just ``*p``.
 
-    int j = 2;
-    dfsan_label j_label = dfsan_create_label("j", 0);
-    dfsan_set_label(j_label, &j, sizeof(j));
+* ``-dfsan-combine-pointer-labels-on-store`` -- Controls whether to include or
+  ignore the labels of pointers in store instructions. Its default value is
+  false. For example:
 
-    int k = 3;
-    dfsan_label k_label = dfsan_create_label("k", 0);
-    dfsan_set_label(k_label, &k, sizeof(k));
+.. code-block:: c++
 
-    dfsan_label ij_label = dfsan_get_label(i + j);
-    assert(dfsan_has_label(ij_label, i_label));
-    assert(dfsan_has_label(ij_label, j_label));
-    assert(!dfsan_has_label(ij_label, k_label));
+  *p = v;
 
-    dfsan_label ijk_label = dfsan_get_label(i + j + k);
-    assert(dfsan_has_label(ijk_label, i_label));
-    assert(dfsan_has_label(ijk_label, j_label));
-    assert(dfsan_has_label(ijk_label, k_label));
+If the flag is true, the label of ``*p`` is the union of the label of ``p`` and
+the label of ``v``. If the flag is false, the label of ``*p`` is the label of
+just ``v``.
 
-    return 0;
-  }
+* ``-dfsan-combine-offset-labels-on-gep`` -- Controls whether to propagate
+  labels of offsets in GEP instructions. Its default value is true. For example:
 
-fast16labels mode
-=================
+.. code-block:: c++
 
-If you need 16 or fewer labels, you can use fast16labels instrumentation for
-less CPU and code size overhead.  To use fast16labels instrumentation, you'll
-need to specify `-fsanitize=dataflow -mllvm -dfsan-fast-16-labels` in your
-compile and link commands and use a modified API for creating and managing
-labels.
+  p += i;
 
-In fast16labels mode, base labels are simply 16-bit unsigned integers that are
-powers of 2 (i.e. 1, 2, 4, 8, ..., 32768), and union labels are created by ORing
-base labels.  In this mode DFSan does not manage any label metadata, so the
-functions `dfsan_create_label`, `dfsan_union`, `dfsan_get_label_info`,
-`dfsan_has_label`, `dfsan_has_label_with_desc`, `dfsan_get_label_count`, and
-`dfsan_dump_labels` are unsupported.  Instead of using them, the user should
-maintain any necessary metadata about base labels themselves.
+If the flag is true, the label of ``p`` is the union of the label of ``p`` and
+the label of ``i``. If the flag is false, the label of ``p`` is unchanged.
 
-For example:
+* ``-dfsan-track-select-control-flow`` -- Controls whether to track the control
+  flow of select instructions. Its default value is true. For example:
+
+.. code-block:: c++
+
+  v = b? v1: v2;
+
+If the flag is true, the label of ``v`` is the union of the labels of ``b``,
+``v1`` and ``v2``.  If the flag is false, the label of ``v`` is the union of the
+labels of just ``v1`` and ``v2``.
+
+* ``-dfsan-event-callbacks`` -- An experimental feature that inserts callbacks for
+  certain data events. Currently callbacks are only inserted for loads, stores,
+  memory transfers (i.e. memcpy and memmove), and comparisons. Its default value
+  is false. If this flag is set to true, a user must provide definitions for the
+  following callback functions:
+
+.. code-block:: c++
+
+  void __dfsan_load_callback(dfsan_label Label, void* Addr);
+  void __dfsan_store_callback(dfsan_label Label, void* Addr);
+  void __dfsan_mem_transfer_callback(dfsan_label *Start, size_t Len);
+  void __dfsan_cmp_callback(dfsan_label CombinedLabel);
+
+* ``-dfsan-track-origins`` -- Controls how to track origins. When its value is
+  0, the runtime does not track origins. When its value is 1, the runtime tracks
+  origins at memory store operations. When its value is 2, the runtime tracks
+  origins at memory load and store operations. Its default value is 0.
+
+* ``-dfsan-instrument-with-call-threshold`` -- If a function being instrumented
+  requires more than this number of origin stores, use callbacks instead of
+  inline checks (-1 means never use callbacks). Its default value is 3500.
+
+Environment Variables
+---------------------
+
+* ``warn_unimplemented`` -- Whether to warn on unimplemented functions. Its
+  default value is false.
+* ``strict_data_dependencies`` -- Whether to propagate labels only when there is
+  explicit obvious data dependency (e.g., when comparing strings, ignore the fact
+  that the output of the comparison might be implicit data-dependent on the
+  content of the strings). This applies only to functions with ``custom`` category
+  in ABI list. Its default value is true.
+* ``origin_history_size`` -- The limit of origin chain length. Non-positive values
+  mean unlimited. Its default value is 16.
+* ``origin_history_per_stack_limit`` -- The limit of origin node's references count.
+  Non-positive values mean unlimited. Its default value is 20000.
+* ``store_context_size`` -- The depth limit of origin tracking stack traces. Its
+  default value is 20.
+* ``zero_in_malloc`` -- Whether to zero shadow space of new allocated memory. Its
+  default value is true.
+* ``zero_in_free`` --- Whether to zero shadow space of deallocated memory. Its
+  default value is true.
+
+Example
+=======
+
+DataFlowSanitizer supports up to 8 labels, to achieve low CPU and code
+size overhead. Base labels are simply 8-bit unsigned integers that are
+powers of 2 (i.e. 1, 2, 4, 8, ..., 128), and union labels are created
+by ORing base labels.
+
+The following program demonstrates label propagation by checking that
+the correct labels are propagated.
 
 .. code-block:: c++
 
@@ -216,6 +278,11 @@ For example:
     assert(!(ij_label & k_label));  // ij_label doesn't have k_label
     assert(ij_label == 3);  // Verifies all of the above
 
+    // Or, equivalently:
+    assert(dfsan_has_label(ij_label, i_label));
+    assert(dfsan_has_label(ij_label, j_label));
+    assert(!dfsan_has_label(ij_label, k_label));
+
     dfsan_label ijk_label = dfsan_get_label(i + j + k);
 
     assert(ijk_label & i_label);  // ijk_label has i_label
@@ -223,8 +290,51 @@ For example:
     assert(ijk_label & k_label);  // ijk_label has k_label
     assert(ijk_label == 7);  // Verifies all of the above
 
+    // Or, equivalently:
+    assert(dfsan_has_label(ijk_label, i_label));
+    assert(dfsan_has_label(ijk_label, j_label));
+    assert(dfsan_has_label(ijk_label, k_label));
+
     return 0;
   }
+
+Origin Tracking
+===============
+
+DataFlowSanitizer can track origins of labeled values. This feature is enabled by
+``-mllvm -dfsan-track-origins=1``. For example,
+
+.. code-block:: console
+
+    % cat test.cc
+    #include <sanitizer/dfsan_interface.h>
+    #include <stdio.h>
+
+    int main(int argc, char** argv) {
+      int i = 0;
+      dfsan_set_label(i_label, &i, sizeof(i));
+      int j = i + 1;
+      dfsan_print_origin_trace(&j, "A flow from i to j");
+      return 0;
+    }
+
+    % clang++ -fsanitize=dataflow -mllvm -dfsan-track-origins=1 -fno-omit-frame-pointer -g -O2 test.cc
+    % ./a.out
+    Taint value 0x1 (at 0x7ffd42bf415c) origin tracking (A flow from i to j)
+    Origin value: 0x13900001, Taint value was stored to memory at
+      #0 0x55676db85a62 in main test.cc:7:7
+      #1 0x7f0083611bbc in __libc_start_main libc-start.c:285
+
+    Origin value: 0x9e00001, Taint value was created at
+      #0 0x55676db85a08 in main test.cc:6:3
+      #1 0x7f0083611bbc in __libc_start_main libc-start.c:285
+
+By ``-mllvm -dfsan-track-origins=1`` DataFlowSanitizer collects only
+intermediate stores a labeled value went through. Origin tracking slows down
+program execution by a factor of 2x on top of the usual DataFlowSanitizer
+slowdown and increases memory overhead by 1x. By ``-mllvm -dfsan-track-origins=2``
+DataFlowSanitizer also collects intermediate loads a labeled value went through.
+This mode slows down program execution by a factor of 4x.
 
 Current status
 ==============

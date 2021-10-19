@@ -4,6 +4,7 @@
 # RUN: llvm-objcopy --dump-section .text=%t4 %t %t5
 # RUN: llvm-objcopy --dump-section .foo=%t6 %t %t7
 # RUN: not llvm-objcopy --dump-section .bar=%t8 %t %t9 2>&1 | FileCheck %s --check-prefix=NOBITS -DINPUT=%t
+# RUN: llvm-objcopy --dump-section .text=%t10 --dump-section .foo=%t11 %t /dev/null
 # RUN: llvm-objcopy --dump-section .empty=%t.empty %t /dev/null
 # RUN: od -t x1 %t2 | FileCheck %s --ignore-case
 # RUN: od -t x1 %t6 | FileCheck %s --ignore-case --check-prefix=NON-ALLOC
@@ -11,6 +12,8 @@
 # RUN: wc -c %t.empty | FileCheck %s --check-prefix=EMPTY
 # RUN: diff %t2 %t3
 # RUN: diff %t4 %t3
+# RUN: diff %t10 %t3
+# RUN: diff %t11 %t6
 
 !ELF
 FileHeader:
@@ -35,10 +38,10 @@ Sections:
     Type:            SHT_NOBITS
     Flags:           [ SHF_WRITE ]
 ProgramHeaders:
-- Type: PT_LOAD
-  Flags: [ PF_X, PF_R ]
-  Sections:
-    - Section: .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
 
 # CHECK: 0000000 de ad be ef
 
@@ -49,3 +52,15 @@ ProgramHeaders:
 # NOBITS: error: '[[INPUT]]': cannot dump section '.bar': it has no contents
 
 # EMPTY: 0
+
+# RUN: not llvm-objcopy --dump-section =/dev/null %t /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR -DFILE=%t "-DSECTION="
+# RUN: not llvm-objcopy --dump-section .missing=/dev/null %t /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR -DFILE=%t -DSECTION=.missing
+
+# ERR: error: '[[FILE]]': section '[[SECTION]]' not found
+
+# RUN: not llvm-objcopy --dump-section .text %t /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+# RUN: not llvm-objcopy --dump-section .text= %t /dev/null 2>&1 | FileCheck %s --check-prefix=ERR2
+
+# ERR2: error: bad format for --dump-section, expected section=file

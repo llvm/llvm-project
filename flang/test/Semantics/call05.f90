@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18
+! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.5.2.5 constraints and restrictions for POINTER & ALLOCATABLE
 ! arguments when both sides of the call have the same attributes.
 
@@ -89,9 +89,9 @@ module m
     call spp(up)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 't'
     call spa(ua)
-    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type
+    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spp(pp2)
-    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type
+    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spa(pa2)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call smp(mpmat)

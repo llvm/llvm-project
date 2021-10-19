@@ -12,7 +12,7 @@
 // struct allocator_traits
 // {
 //     template <class Ptr, class... Args>
-//         static void construct(allocator_type& a, Ptr p, Args&&... args);
+//     static constexpr void construct(allocator_type& a, Ptr p, Args&&... args);
 //     ...
 // };
 
@@ -31,124 +31,147 @@ struct A
 
 };
 
-int b_construct = 0;
-
 template <class T>
 struct B
 {
     typedef T value_type;
 
+    TEST_CONSTEXPR_CXX20 B(int& count) : count_(count) {}
+
 #if TEST_STD_VER >= 11
     template <class U, class ...Args>
-    void construct(U* p, Args&& ...args)
+    TEST_CONSTEXPR_CXX20 void construct(U* p, Args&& ...args)
     {
-        ++b_construct;
+        ++count_;
+#if TEST_STD_VER > 17
+        std::construct_at(p, std::forward<Args>(args)...);
+#else
         ::new ((void*)p) U(std::forward<Args>(args)...);
+#endif
     }
 #endif
+
+    int& count_;
 };
 
 struct A0
 {
-    static int count;
-    A0() {++count;}
+    TEST_CONSTEXPR_CXX20 A0(int* count) {++*count;}
 };
-
-int A0::count = 0;
 
 struct A1
 {
-    static int count;
-    A1(char c)
+    TEST_CONSTEXPR_CXX20 A1(int* count, char c)
     {
         assert(c == 'c');
-        ++count;
+        ++*count;
     }
 };
-
-int A1::count = 0;
 
 struct A2
 {
-    static int count;
-    A2(char c, int i)
+    TEST_CONSTEXPR_CXX20 A2(int* count, char c, int i)
     {
         assert(c == 'd');
         assert(i == 5);
-        ++count;
+        ++*count;
     }
 };
 
-int A2::count = 0;
-
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool test()
 {
     {
-        A0::count = 0;
-        A<int> a;
-        std::aligned_storage<sizeof(A0)>::type a0;
-        assert(A0::count == 0);
-        std::allocator_traits<A<int> >::construct(a, (A0*)&a0);
-        assert(A0::count == 1);
+        int A0_count = 0;
+        A<A0> a;
+        std::allocator<A0> alloc;
+        A0* a0 = alloc.allocate(1);
+        assert(A0_count == 0);
+        std::allocator_traits<A<A0> >::construct(a, a0, &A0_count);
+        assert(A0_count == 1);
+        alloc.deallocate(a0, 1);
     }
     {
-        A1::count = 0;
-        A<int> a;
-        std::aligned_storage<sizeof(A1)>::type a1;
-        assert(A1::count == 0);
-        std::allocator_traits<A<int> >::construct(a, (A1*)&a1, 'c');
-        assert(A1::count == 1);
+        int A1_count = 0;
+        A<A1> a;
+        std::allocator<A1> alloc;
+        A1* a1 = alloc.allocate(1);
+        assert(A1_count == 0);
+        std::allocator_traits<A<A1> >::construct(a, a1, &A1_count, 'c');
+        assert(A1_count == 1);
+        alloc.deallocate(a1, 1);
     }
     {
-        A2::count = 0;
-        A<int> a;
-        std::aligned_storage<sizeof(A2)>::type a2;
-        assert(A2::count == 0);
-        std::allocator_traits<A<int> >::construct(a, (A2*)&a2, 'd', 5);
-        assert(A2::count == 1);
+        int A2_count = 0;
+        A<A2> a;
+        std::allocator<A2> alloc;
+        A2* a2 = alloc.allocate(1);
+        assert(A2_count == 0);
+        std::allocator_traits<A<A2> >::construct(a, a2, &A2_count, 'd', 5);
+        assert(A2_count == 1);
+        alloc.deallocate(a2, 1);
     }
     {
       typedef IncompleteHolder* VT;
       typedef A<VT> Alloc;
       Alloc a;
-      std::aligned_storage<sizeof(VT)>::type store;
-      std::allocator_traits<Alloc>::construct(a, (VT*)&store, nullptr);
+      std::allocator<VT> alloc;
+      VT* vt = alloc.allocate(1);
+      std::allocator_traits<Alloc>::construct(a, vt, nullptr);
+      alloc.deallocate(vt, 1);
     }
+
 #if TEST_STD_VER >= 11
     {
-        A0::count = 0;
-        b_construct = 0;
-        B<int> b;
-        std::aligned_storage<sizeof(A0)>::type a0;
-        assert(A0::count == 0);
+        int A0_count = 0;
+        int b_construct = 0;
+        B<A0> b(b_construct);
+        std::allocator<A0> alloc;
+        A0* a0 = alloc.allocate(1);
+        assert(A0_count == 0);
         assert(b_construct == 0);
-        std::allocator_traits<B<int> >::construct(b, (A0*)&a0);
-        assert(A0::count == 1);
+        std::allocator_traits<B<A0> >::construct(b, a0, &A0_count);
+        assert(A0_count == 1);
         assert(b_construct == 1);
+        alloc.deallocate(a0, 1);
     }
     {
-        A1::count = 0;
-        b_construct = 0;
-        B<int> b;
-        std::aligned_storage<sizeof(A1)>::type a1;
-        assert(A1::count == 0);
+        int A1_count = 0;
+        int b_construct = 0;
+        B<A1> b(b_construct);
+        std::allocator<A1> alloc;
+        A1* a1 = alloc.allocate(1);
+        assert(A1_count == 0);
         assert(b_construct == 0);
-        std::allocator_traits<B<int> >::construct(b, (A1*)&a1, 'c');
-        assert(A1::count == 1);
+        std::allocator_traits<B<A1> >::construct(b, a1, &A1_count, 'c');
+        assert(A1_count == 1);
         assert(b_construct == 1);
+        alloc.deallocate(a1, 1);
     }
     {
-        A2::count = 0;
-        b_construct = 0;
-        B<int> b;
-        std::aligned_storage<sizeof(A2)>::type a2;
-        assert(A2::count == 0);
+        int A2_count = 0;
+        int b_construct = 0;
+        B<A2> b(b_construct);
+        std::allocator<A2> alloc;
+        A2* a2 = alloc.allocate(1);
+        assert(A2_count == 0);
         assert(b_construct == 0);
-        std::allocator_traits<B<int> >::construct(b, (A2*)&a2, 'd', 5);
-        assert(A2::count == 1);
+        std::allocator_traits<B<A2> >::construct(b, a2, &A2_count, 'd', 5);
+        assert(A2_count == 1);
         assert(b_construct == 1);
+        alloc.deallocate(a2, 1);
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+
+    return 0;
 }

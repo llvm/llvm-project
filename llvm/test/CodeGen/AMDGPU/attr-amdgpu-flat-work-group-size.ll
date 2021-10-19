@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=-code-object-v3 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=2 < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=2 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=HSAMD %s
 
 ; CHECK-LABEL: {{^}}min_64_max_64:
 ; CHECK: SGPRBlocks: 0
@@ -129,7 +129,7 @@ define amdgpu_kernel void @min_1024_max_1024() #3 {
 }
 attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 
-; HSAMD: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; HSAMD: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; HSAMD: Version: [ 1, 0 ]
 ; HSAMD: Kernels:
 ; HSAMD: - Name:                 min_64_max_64

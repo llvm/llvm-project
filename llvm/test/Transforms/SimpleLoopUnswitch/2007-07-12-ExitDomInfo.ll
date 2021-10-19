@@ -1,5 +1,4 @@
-; RUN: opt < %s -simple-loop-unswitch -instcombine -disable-output
-; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -instcombine -disable-output
+; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -instcombine -disable-output
 
 @str3 = external constant [3 x i8]		; <[3 x i8]*> [#uses=1]
 

@@ -13,6 +13,13 @@
 # RUN: ld.lld -pie %t.64.o -o %t.64
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefixes=LE %s
 
+# RUN: not ld.lld -shared %t.32.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+
+# ERR: error: relocation R_RISCV_TPREL_HI20 against .LANCHOR0 cannot be used with -shared
+# ERR: error: relocation R_RISCV_TPREL_LO12_I against .LANCHOR0 cannot be used with -shared
+# ERR: error: relocation R_RISCV_TPREL_HI20 against a cannot be used with -shared
+# ERR: error: relocation R_RISCV_TPREL_LO12_S against a cannot be used with -shared
+
 # NM: {{0*}}00000008 b .LANCHOR0
 # NM: {{0*}}0000000c B a
 

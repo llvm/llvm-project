@@ -55,7 +55,7 @@ define float @test_fminf(float %x, float %y) {
 define float @test_fminf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fminf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fminf # TAILCALL
+; CHECK-NEXT:    jmp fminf@PLT # TAILCALL
   %z = call float @fminf(float %x, float %y) readnone
   ret float %z
 }
@@ -102,7 +102,7 @@ define x86_fp80 @test_fminl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fminl
+; CHECK-NEXT:    callq fminl@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -181,7 +181,7 @@ define x86_fp80 @test_intrinsic_fminl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fminl
+; CHECK-NEXT:    callq fminl@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -584,12 +584,12 @@ define <4 x float> @minnum_intrinsic_nnan_attr_v4f32(<4 x float> %a, <4 x float>
 define float @test_minnum_const_op1(float %x) {
 ; SSE-LABEL: test_minnum_const_op1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    minss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_minnum_const_op1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = call float @llvm.minnum.f32(float 1.0, float %x)
   ret float %r
@@ -598,14 +598,22 @@ define float @test_minnum_const_op1(float %x) {
 define float @test_minnum_const_op2(float %x) {
 ; SSE-LABEL: test_minnum_const_op2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    minss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_minnum_const_op2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vminss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = call float @llvm.minnum.f32(float %x, float 1.0)
+  ret float %r
+}
+
+define float @test_minnum_const_nan(float %x) {
+; CHECK-LABEL: test_minnum_const_nan:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %r = call float @llvm.minnum.f32(float %x, float 0x7fff000000000000)
   ret float %r
 }
 

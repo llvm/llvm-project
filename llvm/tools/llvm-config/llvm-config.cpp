@@ -358,7 +358,7 @@ int main(int argc, char **argv) {
   } else {
     ActivePrefix = CurrentExecPrefix;
     ActiveIncludeDir = ActivePrefix + "/include";
-    SmallString<256> path(StringRef(LLVM_TOOLS_INSTALL_DIR));
+    SmallString<256> path(LLVM_TOOLS_INSTALL_DIR);
     sys::fs::make_absolute(ActivePrefix, path);
     ActiveBinDir = std::string(path.str());
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
@@ -381,6 +381,7 @@ int main(int argc, char **argv) {
     SharedExt = "dll";
     SharedVersionedExt = LLVM_DYLIB_VERSION ".dll";
     if (HostTriple.isOSCygMing()) {
+      SharedPrefix = "lib";
       StaticExt = "a";
       StaticPrefix = "lib";
     } else {

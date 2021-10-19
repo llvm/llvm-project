@@ -18,6 +18,7 @@
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
+#include <ctime>
 #include <string>
 #include <utility>
 
@@ -88,6 +89,20 @@ struct InlineAsmIdentifierInfo {
 private:
   // Discriminate using the current kind.
   IdKind Kind;
+};
+
+// Generic type information for an assembly object.
+// All sizes measured in bytes.
+struct AsmTypeInfo {
+  StringRef Name;
+  unsigned Size = 0;
+  unsigned ElementSize = 0;
+  unsigned Length = 0;
+};
+
+struct AsmFieldInfo {
+  AsmTypeInfo Type;
+  unsigned Offset = 0;
 };
 
 /// Generic Sema callback for assembly parser.
@@ -168,21 +183,28 @@ public:
   virtual void setParsingMSInlineAsm(bool V) = 0;
   virtual bool isParsingMSInlineAsm() = 0;
 
+  virtual bool discardLTOSymbol(StringRef) const { return false; }
+
   virtual bool isParsingMasm() const { return false; }
 
-  virtual bool lookUpField(StringRef Name, StringRef &Type,
-                           unsigned &Offset) const {
+  virtual bool defineMacro(StringRef Name, StringRef Value) { return true; }
+
+  virtual bool lookUpField(StringRef Name, AsmFieldInfo &Info) const {
     return true;
   }
-  virtual bool lookUpField(StringRef Base, StringRef Member, StringRef &Type,
-                           unsigned &Offset) const {
+  virtual bool lookUpField(StringRef Base, StringRef Member,
+                           AsmFieldInfo &Info) const {
+    return true;
+  }
+
+  virtual bool lookUpType(StringRef Name, AsmTypeInfo &Info) const {
     return true;
   }
 
   /// Parse MS-style inline assembly.
   virtual bool parseMSInlineAsm(
-      void *AsmLoc, std::string &AsmString, unsigned &NumOutputs,
-      unsigned &NumInputs, SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
+      std::string &AsmString, unsigned &NumOutputs, unsigned &NumInputs,
+      SmallVectorImpl<std::pair<void *, bool>> &OpDecls,
       SmallVectorImpl<std::string> &Constraints,
       SmallVectorImpl<std::string> &Clobbers, const MCInstrInfo *MII,
       const MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
@@ -239,6 +261,8 @@ public:
   /// success.
   bool parseOptionalToken(AsmToken::TokenKind T);
 
+  bool parseComma() { return parseToken(AsmToken::Comma, "expected comma"); }
+  bool parseEOL();
   bool parseEOL(const Twine &ErrMsg);
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);
@@ -281,7 +305,8 @@ public:
   /// \param Res - The value of the expression. The result is undefined
   /// on error.
   /// \return - False on success.
-  virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) = 0;
+  virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
+                                AsmTypeInfo *TypeInfo) = 0;
 
   /// Parse an arbitrary expression, assuming that an initial '(' has
   /// already been consumed.
@@ -313,6 +338,9 @@ public:
   /// \return - False on success.
   virtual bool parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
                                      SMLoc &EndLoc) = 0;
+
+  /// Parse a .gnu_attribute.
+  bool parseGNUAttribute(SMLoc L, int64_t &Tag, int64_t &IntegerValue);
 };
 
 /// Create an MCAsmParser instance for parsing assembly similar to gas syntax
@@ -321,7 +349,7 @@ MCAsmParser *createMCAsmParser(SourceMgr &, MCContext &, MCStreamer &,
 
 /// Create an MCAsmParser instance for parsing Microsoft MASM-style assembly
 MCAsmParser *createMCMasmParser(SourceMgr &, MCContext &, MCStreamer &,
-                                const MCAsmInfo &, unsigned CB = 0);
+                                const MCAsmInfo &, struct tm, unsigned CB = 0);
 
 } // end namespace llvm
 

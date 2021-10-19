@@ -45,49 +45,39 @@ using namespace llvm;
 
 #define DEBUG_TYPE "sancov"
 
-static const char *const SanCovTracePCIndirName =
-    "__sanitizer_cov_trace_pc_indir";
-static const char *const SanCovTracePCName = "__sanitizer_cov_trace_pc";
-static const char *const SanCovTraceCmp1 = "__sanitizer_cov_trace_cmp1";
-static const char *const SanCovTraceCmp2 = "__sanitizer_cov_trace_cmp2";
-static const char *const SanCovTraceCmp4 = "__sanitizer_cov_trace_cmp4";
-static const char *const SanCovTraceCmp8 = "__sanitizer_cov_trace_cmp8";
-static const char *const SanCovTraceConstCmp1 =
-    "__sanitizer_cov_trace_const_cmp1";
-static const char *const SanCovTraceConstCmp2 =
-    "__sanitizer_cov_trace_const_cmp2";
-static const char *const SanCovTraceConstCmp4 =
-    "__sanitizer_cov_trace_const_cmp4";
-static const char *const SanCovTraceConstCmp8 =
-    "__sanitizer_cov_trace_const_cmp8";
-static const char *const SanCovTraceDiv4 = "__sanitizer_cov_trace_div4";
-static const char *const SanCovTraceDiv8 = "__sanitizer_cov_trace_div8";
-static const char *const SanCovTraceGep = "__sanitizer_cov_trace_gep";
-static const char *const SanCovTraceSwitchName = "__sanitizer_cov_trace_switch";
-static const char *const SanCovModuleCtorTracePcGuardName =
+const char SanCovTracePCIndirName[] = "__sanitizer_cov_trace_pc_indir";
+const char SanCovTracePCName[] = "__sanitizer_cov_trace_pc";
+const char SanCovTraceCmp1[] = "__sanitizer_cov_trace_cmp1";
+const char SanCovTraceCmp2[] = "__sanitizer_cov_trace_cmp2";
+const char SanCovTraceCmp4[] = "__sanitizer_cov_trace_cmp4";
+const char SanCovTraceCmp8[] = "__sanitizer_cov_trace_cmp8";
+const char SanCovTraceConstCmp1[] = "__sanitizer_cov_trace_const_cmp1";
+const char SanCovTraceConstCmp2[] = "__sanitizer_cov_trace_const_cmp2";
+const char SanCovTraceConstCmp4[] = "__sanitizer_cov_trace_const_cmp4";
+const char SanCovTraceConstCmp8[] = "__sanitizer_cov_trace_const_cmp8";
+const char SanCovTraceDiv4[] = "__sanitizer_cov_trace_div4";
+const char SanCovTraceDiv8[] = "__sanitizer_cov_trace_div8";
+const char SanCovTraceGep[] = "__sanitizer_cov_trace_gep";
+const char SanCovTraceSwitchName[] = "__sanitizer_cov_trace_switch";
+const char SanCovModuleCtorTracePcGuardName[] =
     "sancov.module_ctor_trace_pc_guard";
-static const char *const SanCovModuleCtor8bitCountersName =
+const char SanCovModuleCtor8bitCountersName[] =
     "sancov.module_ctor_8bit_counters";
-static const char *const SanCovModuleCtorBoolFlagName =
-    "sancov.module_ctor_bool_flag";
+const char SanCovModuleCtorBoolFlagName[] = "sancov.module_ctor_bool_flag";
 static const uint64_t SanCtorAndDtorPriority = 2;
 
-static const char *const SanCovTracePCGuardName =
-    "__sanitizer_cov_trace_pc_guard";
-static const char *const SanCovTracePCGuardInitName =
-    "__sanitizer_cov_trace_pc_guard_init";
-static const char *const SanCov8bitCountersInitName =
-    "__sanitizer_cov_8bit_counters_init";
-static const char *const SanCovBoolFlagInitName =
-    "__sanitizer_cov_bool_flag_init";
-static const char *const SanCovPCsInitName = "__sanitizer_cov_pcs_init";
+const char SanCovTracePCGuardName[] = "__sanitizer_cov_trace_pc_guard";
+const char SanCovTracePCGuardInitName[] = "__sanitizer_cov_trace_pc_guard_init";
+const char SanCov8bitCountersInitName[] = "__sanitizer_cov_8bit_counters_init";
+const char SanCovBoolFlagInitName[] = "__sanitizer_cov_bool_flag_init";
+const char SanCovPCsInitName[] = "__sanitizer_cov_pcs_init";
 
-static const char *const SanCovGuardsSectionName = "sancov_guards";
-static const char *const SanCovCountersSectionName = "sancov_cntrs";
-static const char *const SanCovBoolFlagSectionName = "sancov_bools";
-static const char *const SanCovPCsSectionName = "sancov_pcs";
+const char SanCovGuardsSectionName[] = "sancov_guards";
+const char SanCovCountersSectionName[] = "sancov_cntrs";
+const char SanCovBoolFlagSectionName[] = "sancov_bools";
+const char SanCovPCsSectionName[] = "sancov_pcs";
 
-static const char *const SanCovLowestStackName = "__sancov_lowest_stack";
+const char SanCovLowestStackName[] = "__sancov_lowest_stack";
 
 static cl::opt<int> ClCoverageLevel(
     "sanitizer-coverage-level",
@@ -338,13 +328,20 @@ PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
 std::pair<Value *, Value *>
 ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
-  GlobalVariable *SecStart = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionStart(Section));
+  // Use ExternalWeak so that if all sections are discarded due to section
+  // garbage collection, the linker will not report undefined symbol errors.
+  // Windows defines the start/stop symbols in compiler-rt so no need for
+  // ExternalWeak.
+  GlobalValue::LinkageTypes Linkage = TargetTriple.isOSBinFormatCOFF()
+                                          ? GlobalVariable::ExternalLinkage
+                                          : GlobalVariable::ExternalWeakLinkage;
+  GlobalVariable *SecStart =
+      new GlobalVariable(M, Ty, false, Linkage, nullptr,
+                         getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
-  GlobalVariable *SecEnd = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionEnd(Section));
+  GlobalVariable *SecEnd =
+      new GlobalVariable(M, Ty, false, Linkage, nullptr,
+                         getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())
@@ -355,7 +352,8 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
   auto SecStartI8Ptr = IRB.CreatePointerCast(SecStart, Int8PtrTy);
   auto GEP = IRB.CreateGEP(Int8Ty, SecStartI8Ptr,
                            ConstantInt::get(IntptrTy, sizeof(uint64_t)));
-  return std::make_pair(IRB.CreatePointerCast(GEP, Ty), SecEnd);
+  return std::make_pair(IRB.CreatePointerCast(GEP, PointerType::getUnqual(Ty)),
+                        SecEnd);
 }
 
 Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
@@ -365,8 +363,9 @@ Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
   auto SecStart = SecStartEnd.first;
   auto SecEnd = SecStartEnd.second;
   Function *CtorFunc;
+  Type *PtrTy = PointerType::getUnqual(Ty);
   std::tie(CtorFunc, std::ignore) = createSanitizerCtorAndInitFunctions(
-      M, CtorName, InitFunctionName, {Ty, Ty}, {SecStart, SecEnd});
+      M, CtorName, InitFunctionName, {PtrTy, PtrTy}, {SecStart, SecEnd});
   assert(CtorFunc->getName() == CtorName);
 
   if (TargetTriple.supportsCOMDAT()) {
@@ -385,7 +384,6 @@ Function *ModuleSanitizerCoverage::CreateInitCallsForSections(
     // to include the sancov constructor. This way the linker can deduplicate
     // the constructors but always leave one copy.
     CtorFunc->setLinkage(GlobalValue::WeakODRLinkage);
-    appendToUsed(M, CtorFunc);
   }
   return CtorFunc;
 }
@@ -470,7 +468,7 @@ bool ModuleSanitizerCoverage::instrumentModule(
   Constant *SanCovLowestStackConstant =
       M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
   SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
-  if (!SanCovLowestStack) {
+  if (!SanCovLowestStack || SanCovLowestStack->getValueType() != IntptrTy) {
     C->emitError(StringRef("'") + SanCovLowestStackName +
                  "' should not be declared by the user");
     return true;
@@ -491,57 +489,48 @@ bool ModuleSanitizerCoverage::instrumentModule(
 
   if (FunctionGuardArray)
     Ctor = CreateInitCallsForSections(M, SanCovModuleCtorTracePcGuardName,
-                                      SanCovTracePCGuardInitName, Int32PtrTy,
+                                      SanCovTracePCGuardInitName, Int32Ty,
                                       SanCovGuardsSectionName);
   if (Function8bitCounterArray)
     Ctor = CreateInitCallsForSections(M, SanCovModuleCtor8bitCountersName,
-                                      SanCov8bitCountersInitName, Int8PtrTy,
+                                      SanCov8bitCountersInitName, Int8Ty,
                                       SanCovCountersSectionName);
   if (FunctionBoolArray) {
     Ctor = CreateInitCallsForSections(M, SanCovModuleCtorBoolFlagName,
-                                      SanCovBoolFlagInitName, Int1PtrTy,
+                                      SanCovBoolFlagInitName, Int1Ty,
                                       SanCovBoolFlagSectionName);
   }
   if (Ctor && Options.PCTable) {
-    auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrPtrTy);
+    auto SecStartEnd = CreateSecStartEnd(M, SanCovPCsSectionName, IntptrTy);
     FunctionCallee InitFunction = declareSanitizerInitFunction(
         M, SanCovPCsInitName, {IntptrPtrTy, IntptrPtrTy});
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
   }
-  // We don't reference these arrays directly in any of our runtime functions,
-  // so we need to prevent them from being dead stripped.
-  if (TargetTriple.isOSBinFormatMachO())
-    appendToUsed(M, GlobalsToAppendToUsed);
+  appendToUsed(M, GlobalsToAppendToUsed);
   appendToCompilerUsed(M, GlobalsToAppendToCompilerUsed);
   return true;
 }
 
 // True if block has successors and it dominates all of them.
 static bool isFullDominator(const BasicBlock *BB, const DominatorTree *DT) {
-  if (succ_begin(BB) == succ_end(BB))
+  if (succ_empty(BB))
     return false;
 
-  for (const BasicBlock *SUCC : make_range(succ_begin(BB), succ_end(BB))) {
-    if (!DT->dominates(BB, SUCC))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(successors(BB), [&](const BasicBlock *SUCC) {
+    return DT->dominates(BB, SUCC);
+  });
 }
 
 // True if block has predecessors and it postdominates all of them.
 static bool isFullPostDominator(const BasicBlock *BB,
                                 const PostDominatorTree *PDT) {
-  if (pred_begin(BB) == pred_end(BB))
+  if (pred_empty(BB))
     return false;
 
-  for (const BasicBlock *PRED : make_range(pred_begin(BB), pred_end(BB))) {
-    if (!PDT->dominates(BB, PRED))
-      return false;
-  }
-
-  return true;
+  return llvm::all_of(predecessors(BB), [&](const BasicBlock *PRED) {
+    return PDT->dominates(BB, PRED);
+  });
 }
 
 static bool shouldInstrumentBlock(const Function &F, const BasicBlock *BB,
@@ -633,6 +622,8 @@ void ModuleSanitizerCoverage::instrumentFunction(
     return;
   if (Blocklist && Blocklist->inSection("coverage", "fun", F.getName()))
     return;
+  if (F.hasFnAttribute(Attribute::NoSanitizeCoverage))
+    return;
   if (Options.CoverageType >= SanitizerCoverageOptions::SCK_Edge)
     SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions().setIgnoreUnreachableDests());
   SmallVector<Instruction *, 8> IndirCalls;
@@ -692,16 +683,26 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
-  if (TargetTriple.supportsCOMDAT() && !F.isInterposable())
-    if (auto Comdat =
-            GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
+  if (TargetTriple.supportsCOMDAT() &&
+      (TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+    if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedSize()));
-  GlobalsToAppendToUsed.push_back(Array);
-  GlobalsToAppendToCompilerUsed.push_back(Array);
-  MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
-  Array->addMetadata(LLVMContext::MD_associated, *MD);
+
+  // sancov_pcs parallels the other metadata section(s). Optimizers (e.g.
+  // GlobalOpt/ConstantMerge) may not discard sancov_pcs and the other
+  // section(s) as a unit, so we conservatively retain all unconditionally in
+  // the compiler.
+  //
+  // With comdat (COFF/ELF), the linker can guarantee the associated sections
+  // will be retained or discarded as a unit, so llvm.compiler.used is
+  // sufficient. Otherwise, conservatively make all of them retained by the
+  // linker.
+  if (Array->hasComdat())
+    GlobalsToAppendToCompilerUsed.push_back(Array);
+  else
+    GlobalsToAppendToUsed.push_back(Array);
 
   return Array;
 }
@@ -811,7 +812,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           C = ConstantExpr::getCast(CastInst::ZExt, It.getCaseValue(), Int64Ty);
         Initializers.push_back(C);
       }
-      llvm::sort(Initializers.begin() + 2, Initializers.end(),
+      llvm::sort(drop_begin(Initializers, 2),
                  [](const Constant *A, const Constant *B) {
                    return cast<ConstantInt>(A)->getLimitedValue() <
                           cast<ConstantInt>(B)->getLimitedValue();
@@ -849,10 +850,10 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
     Function &, ArrayRef<GetElementPtrInst *> GepTraceTargets) {
   for (auto GEP : GepTraceTargets) {
     IRBuilder<> IRB(GEP);
-    for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
-      if (!isa<ConstantInt>(*I) && (*I)->getType()->isIntegerTy())
+    for (Use &Idx : GEP->indices())
+      if (!isa<ConstantInt>(Idx) && Idx->getType()->isIntegerTy())
         IRB.CreateCall(SanCovTraceGepFunction,
-                       {IRB.CreateIntCast(*I, IntptrTy, true)});
+                       {IRB.CreateIntCast(Idx, IntptrTy, true)});
   }
 }
 
@@ -899,13 +900,16 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   DebugLoc EntryLoc;
   if (IsEntryBB) {
     if (auto SP = F.getSubprogram())
-      EntryLoc = DebugLoc::get(SP->getScopeLine(), 0, SP);
+      EntryLoc = DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP);
     // Keep static allocas and llvm.localescape calls in the entry block.  Even
     // if we aren't splitting the block, it's nice for allocas to be before
     // calls.
     IP = PrepareToSplitEntryBlock(BB, IP);
   } else {
     EntryLoc = IP->getDebugLoc();
+    if (!EntryLoc)
+      if (auto *SP = F.getSubprogram())
+        EntryLoc = DILocation::get(SP->getContext(), 0, 0, SP);
   }
 
   IRBuilder<> IRB(&*IP);

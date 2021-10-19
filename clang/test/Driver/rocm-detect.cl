@@ -13,9 +13,10 @@
 
 // RUN: %clang -### -v -target amdgcn-amd-amdhsa -mcpu=gfx902 -nogpulib \
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=COMMON,GFX902,NODEFAULTLIBS %s
+// RUN:   | FileCheck -check-prefixes=COMMON,NODEFAULTLIBS %s
 
-
-// GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902. Provide its path via --rocm-path or --rocm-device-lib-path, or pass -nogpulib to build without ROCm device library
+// GFX902-DEFAULTLIBS: error: cannot find ROCm device library for gfx902; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
 
 // NODEFAULTLIBS-NOT: error: cannot find
+
+// COMMON: "-triple" "amdgcn-amd-amdhsa"

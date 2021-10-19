@@ -46,6 +46,7 @@ protected:
     SymbolKindUnset,
     SymbolKindCOFF,
     SymbolKindELF,
+    SymbolKindGOFF,
     SymbolKindMachO,
     SymbolKindWasm,
     SymbolKindXCOFF,
@@ -94,7 +95,8 @@ protected:
 
   mutable unsigned IsRegistered : 1;
 
-  /// This symbol is visible outside this translation unit.
+  /// True if this symbol is visible outside this translation unit. Note: ELF
+  /// uses binding instead of this bit.
   mutable unsigned IsExternal : 1;
 
   /// This symbol is private extern.
@@ -274,6 +276,8 @@ public:
   bool isELF() const { return Kind == SymbolKindELF; }
 
   bool isCOFF() const { return Kind == SymbolKindCOFF; }
+
+  bool isGOFF() const { return Kind == SymbolKindGOFF; }
 
   bool isMachO() const { return Kind == SymbolKindMachO; }
 

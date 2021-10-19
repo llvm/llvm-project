@@ -13,8 +13,14 @@ def MySubNested : TextSubstitution<"%sub{MyGoodBad}1 %sub{MyKinds}2 are %sub{MyG
 
 let Group = MyGroup in {
 
-// CHECK:      |:warning:`warning:` |nbsp| :diagtext:`this is my diff text`|
-// CHECK-NEXT: +-----------------------------------------------------------+
+// CHECK:      |:warning:`warning:` |nbsp| |+--------------------------------------------------------------------+|
+// CHECK-NEXT: |                           ||+------------------------------------------------------------------+||
+// CHECK-NEXT: |                           |||:placeholder:`A` |nbsp| :diagtext:`is not` |nbsp| :placeholder:`B`|||
+// CHECK-NEXT: |                           ||+------------------------------------------------------------------+||
+// CHECK-NEXT: |                           |+--------------------------------------------------------------------+|
+// CHECK-NEXT: |                           ||:diagtext:`this is my diff text`                                    ||
+// CHECK-NEXT: |                           |+--------------------------------------------------------------------+|
+// CHECK-NEXT: +---------------------------+----------------------------------------------------------------------+
 def CheckDiff : Warning<"%diff{$ is not $|this is my diff text}0,1">;
 
 

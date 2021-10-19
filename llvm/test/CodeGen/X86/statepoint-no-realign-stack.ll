@@ -24,7 +24,7 @@ define void @can_realign(<8 x i32>* %p) {
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
@@ -43,7 +43,7 @@ define void @no_realign(<8 x i32>* %p) "no-realign-stack" {
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -68,7 +68,7 @@ define <4 x i8 addrspace(1)*> @spillfill_can_realign(<4 x i8 addrspace(1)*> %obj
 ; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    vmovaps (%rsp), %ymm0
 ; CHECK-NEXT:    movq %rbp, %rsp
@@ -88,7 +88,7 @@ define <4 x i8 addrspace(1)*> @spillfill_no_realign(<4 x i8 addrspace(1)*> %obj)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0
 ; CHECK-NEXT:    addq $40, %rsp

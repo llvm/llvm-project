@@ -1,0 +1,17 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
+
+---
+name: invalid_scavenge_fi
+fixedStack:
+  - { id: 0, type: spill-slot, offset: 0, size: 16, alignment: 4, stack-id: noalloc }
+stack:
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4, stack-id: noalloc }
+machineFunctionInfo:
+  # CHECK: [[@LINE+1]]:17: invalid frame index 2
+  scavengeFI: '%stack.2'
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

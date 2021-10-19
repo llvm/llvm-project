@@ -15,11 +15,21 @@
 #include "polly/Canonicalization.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/EarlyCSE.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "llvm/Transforms/Scalar/LoopRotation.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 
 using namespace llvm;
 using namespace polly;
@@ -31,7 +41,6 @@ static cl::opt<bool>
 
 void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
   bool UseMemSSA = true;
-  PM.add(polly::createRewriteByrefParamsPass());
   PM.add(llvm::createPromoteMemoryToRegisterPass());
   PM.add(llvm::createEarlyCSEPass(UseMemSSA));
   PM.add(llvm::createInstructionCombiningPass());
@@ -49,7 +58,77 @@ void polly::registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM) {
   }
   PM.add(llvm::createInstructionCombiningPass());
   PM.add(llvm::createIndVarSimplifyPass());
-  PM.add(polly::createCodePreparationPass());
+}
+
+/// Adapted from llvm::PassBuilder::buildInlinerPipeline
+static ModuleInlinerWrapperPass
+buildInlinePasses(llvm::OptimizationLevel Level) {
+  InlineParams IP = getInlineParams(200);
+  ModuleInlinerWrapperPass MIWP(IP);
+
+  // Require the GlobalsAA analysis for the module so we can query it within
+  // the CGSCC pipeline.
+  MIWP.addModulePass(RequireAnalysisPass<GlobalsAA, Module>());
+  // Invalidate AAManager so it can be recreated and pick up the newly available
+  // GlobalsAA.
+  MIWP.addModulePass(
+      createModuleToFunctionPassAdaptor(InvalidateAnalysisPass<AAManager>()));
+
+  // Require the ProfileSummaryAnalysis for the module so we can query it within
+  // the inliner pass.
+  MIWP.addModulePass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
+
+  // Now begin the main postorder CGSCC pipeline.
+  // FIXME: The current CGSCC pipeline has its origins in the legacy pass
+  // manager and trying to emulate its precise behavior. Much of this doesn't
+  // make a lot of sense and we should revisit the core CGSCC structure.
+  CGSCCPassManager &MainCGPipeline = MIWP.getPM();
+
+  // Now deduce any function attributes based in the current code.
+  MainCGPipeline.addPass(PostOrderFunctionAttrsPass());
+
+  return MIWP;
+}
+
+FunctionPassManager
+polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
+                                         llvm::OptimizationLevel Level) {
+  FunctionPassManager FPM;
+
+  bool UseMemSSA = true;
+  FPM.addPass(PromotePass());
+  FPM.addPass(EarlyCSEPass(UseMemSSA));
+  FPM.addPass(InstCombinePass());
+  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(TailCallElimPass());
+  FPM.addPass(SimplifyCFGPass());
+  FPM.addPass(ReassociatePass());
+  {
+    LoopPassManager LPM;
+    LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
+    FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
+        std::move(LPM), /*UseMemorySSA=*/false,
+        /*UseBlockFrequencyInfo=*/false));
+  }
+  if (PollyInliner) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    MPM.addPass(buildInlinePasses(Level));
+    FPM = FunctionPassManager();
+
+    FPM.addPass(PromotePass());
+    FPM.addPass(SimplifyCFGPass());
+    FPM.addPass(InstCombinePass());
+  }
+  FPM.addPass(InstCombinePass());
+  {
+    LoopPassManager LPM;
+    LPM.addPass(IndVarSimplifyPass());
+    FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
+        std::move(LPM), /*UseMemorySSA=*/false,
+        /*UseBlockFrequencyInfo=*/true));
+  }
+
+  return FPM;
 }
 
 namespace {

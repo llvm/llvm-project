@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN -check-prefix=SICIVI -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN -check-prefix=SICIVI -check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs -amdgpu-scalar-ir-passes=false < %s | FileCheck -check-prefix=GCN %s
 
 ; These tests are split out from umed3.ll and smed3.ll and use the
 ; -amdgpu-scalar-ir-passes=false flag, because InstSimplify would constant

@@ -35,12 +35,11 @@ public:
   };
 
   struct PointerAsArraySettings {
-    size_t m_element_count;
-    size_t m_base_element;
-    size_t m_stride;
+    size_t m_element_count = 0;
+    size_t m_base_element = 0;
+    size_t m_stride = 0;
 
-    PointerAsArraySettings()
-        : m_element_count(0), m_base_element(0), m_stride() {}
+    PointerAsArraySettings() = default;
 
     PointerAsArraySettings(size_t elem_count, size_t base_elem = 0,
                            size_t stride = 1)
@@ -61,8 +60,6 @@ public:
   }
 
   DumpValueObjectOptions();
-
-  DumpValueObjectOptions(const DumpValueObjectOptions &rhs) = default;
 
   DumpValueObjectOptions(ValueObject &valobj);
 

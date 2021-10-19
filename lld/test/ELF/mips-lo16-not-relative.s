@@ -12,7 +12,7 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section (7) .rel.dyn {
-# CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_COPY data0 0x0
+# CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_COPY data0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

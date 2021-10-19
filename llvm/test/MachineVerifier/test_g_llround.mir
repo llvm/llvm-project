@@ -1,0 +1,23 @@
+#RUN: not --crash llc -march=aarch64 -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_llround
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0:
+    liveins: $x0, $q0
+    %ptr:_(p0) = COPY $x0
+    %vector:_(<2 x s64>) = COPY $q0
+
+    ; CHECK: Bad machine code: All register operands must have scalar types
+    ; CHECK: instruction: %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
+    %no_ptrs:_(s64) = G_LROUND %ptr:_(p0)
+
+    ; CHECK: Bad machine code: All register operands must have scalar types
+    ; CHECK: instruction: %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)
+    %no_vectors:_(s64) = G_LROUND %vector:_(<2 x s64>)

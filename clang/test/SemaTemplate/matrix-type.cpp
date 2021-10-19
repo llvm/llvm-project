@@ -17,7 +17,7 @@ void matrix_template_3() {
 
 void instantiate_template_3() {
   matrix_template_3<1, 10>();
-  matrix_template_3<0, 10>(); // expected-note{{in instantiation of function template specialization 'matrix_template_3<0, 10>' requested here}}
+  matrix_template_3<0, 10>(); // expected-note{{in instantiation of function template specialization 'matrix_template_3<0U, 10U>' requested here}}
 }
 
 template <int Rows, unsigned Cols>
@@ -27,7 +27,7 @@ void matrix_template_4() {
 
 void instantiate_template_4() {
   matrix_template_4<2, 10>();
-  matrix_template_4<-3, 10>(); // expected-note{{in instantiation of function template specialization 'matrix_template_4<-3, 10>' requested here}}
+  matrix_template_4<-3, 10>(); // expected-note{{in instantiation of function template specialization 'matrix_template_4<-3, 10U>' requested here}}
 }
 
 template <class T, unsigned long R, unsigned long C>

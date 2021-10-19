@@ -1,7 +1,7 @@
-# RUN: llc -mtriple=x86_64-linux-gnu                                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=SSE
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=NO_AVX512F --check-prefix=AVX
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=NO_AVX512VL --check-prefix=AVX512ALL --check-prefix=AVX512F
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ALL --check-prefix=AVX512ALL --check-prefix=AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu                                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,SSE
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,AVX
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512VL,AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512VL
 
 --- |
   define i64 @test_sub_i64(i64 %arg1, i64 %arg2) {

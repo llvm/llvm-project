@@ -64,7 +64,7 @@ define amdgpu_kernel void @commute_add_lit_fabs_f32(float addrspace(1)* %out, fl
 }
 
 ; FUNC-LABEL: @commute_add_fabs_f32
-; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[Y:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_add_f32_e64 [[REG:v[0-9]+]], [[X]], |[[Y]]|
 ; SI: buffer_store_dword [[REG]]
@@ -81,7 +81,7 @@ define amdgpu_kernel void @commute_add_fabs_f32(float addrspace(1)* %out, float 
 }
 
 ; FUNC-LABEL: @commute_mul_fneg_f32
-; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[Y:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_mul_f32_e64 [[REG:v[0-9]+]], [[X]], -[[Y]]
 ; SI: buffer_store_dword [[REG]]
@@ -98,7 +98,7 @@ define amdgpu_kernel void @commute_mul_fneg_f32(float addrspace(1)* %out, float 
 }
 
 ; FUNC-LABEL: @commute_mul_fabs_fneg_f32
-; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[Y:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_mul_f32_e64 [[REG:v[0-9]+]], [[X]], -|[[Y]]|
 ; SI: buffer_store_dword [[REG]]
@@ -117,7 +117,7 @@ define amdgpu_kernel void @commute_mul_fabs_fneg_f32(float addrspace(1)* %out, f
 
 ; There's no reason to commute this.
 ; FUNC-LABEL: @commute_mul_fabs_x_fabs_y_f32
-; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[Y:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_mul_f32_e64 [[REG:v[0-9]+]], |[[X]]|, |[[Y]]|
 ; SI: buffer_store_dword [[REG]]
@@ -135,7 +135,7 @@ define amdgpu_kernel void @commute_mul_fabs_x_fabs_y_f32(float addrspace(1)* %ou
 }
 
 ; FUNC-LABEL: @commute_mul_fabs_x_fneg_fabs_y_f32
-; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[X:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[Y:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_mul_f32_e64 [[REG:v[0-9]+]], |[[X]]|, -|[[Y]]|
 ; SI: buffer_store_dword [[REG]]
@@ -157,7 +157,7 @@ define amdgpu_kernel void @commute_mul_fabs_x_fneg_fabs_y_f32(float addrspace(1)
 ; though we have negate modifier on src2.
 
 ; SI-LABEL: {{^}}fma_a_2.0_neg_b_f32
-; SI-DAG: buffer_load_dword [[R1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; SI-DAG: buffer_load_dword [[R1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 glc{{$}}
 ; SI-DAG: buffer_load_dword [[R2:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; SI: v_fma_f32 [[RESULT:v[0-9]+]], [[R1]], 2.0, |[[R2]]|
 ; SI: buffer_store_dword [[RESULT]]

@@ -27,7 +27,36 @@ public:
   explicit StringMapEntryBase(size_t keyLength) : keyLength(keyLength) {}
 
   size_t getKeyLength() const { return keyLength; }
+
+protected:
+  /// Helper to tail-allocate \p Key. It'd be nice to generalize this so it
+  /// could be reused elsewhere, maybe even taking an llvm::function_ref to
+  /// type-erase the allocator and put it in a source file.
+  template <typename AllocatorTy>
+  static void *allocateWithKey(size_t EntrySize, size_t EntryAlign,
+                               StringRef Key, AllocatorTy &Allocator);
 };
+
+// Define out-of-line to dissuade inlining.
+template <typename AllocatorTy>
+void *StringMapEntryBase::allocateWithKey(size_t EntrySize, size_t EntryAlign,
+                                          StringRef Key,
+                                          AllocatorTy &Allocator) {
+  size_t KeyLength = Key.size();
+
+  // Allocate a new item with space for the string at the end and a null
+  // terminator.
+  size_t AllocSize = EntrySize + KeyLength + 1;
+  void *Allocation = Allocator.Allocate(AllocSize, EntryAlign);
+  assert(Allocation && "Unhandled out-of-memory");
+
+  // Copy the string information.
+  char *Buffer = reinterpret_cast<char *>(Allocation) + EntrySize;
+  if (KeyLength > 0)
+    ::memcpy(Buffer, Key.data(), KeyLength);
+  Buffer[KeyLength] = 0; // Null terminate for convenience of clients.
+  return Allocation;
+}
 
 /// StringMapEntryStorage - Holds the value in a StringMapEntry.
 ///
@@ -55,7 +84,7 @@ public:
 
 template <> class StringMapEntryStorage<NoneType> : public StringMapEntryBase {
 public:
-  explicit StringMapEntryStorage(size_t keyLength, NoneType none = None)
+  explicit StringMapEntryStorage(size_t keyLength, NoneType = None)
       : StringMapEntryBase(keyLength) {}
   StringMapEntryStorage(StringMapEntryStorage &entry) = delete;
 
@@ -90,26 +119,9 @@ public:
   template <typename AllocatorTy, typename... InitTy>
   static StringMapEntry *Create(StringRef key, AllocatorTy &allocator,
                                 InitTy &&... initVals) {
-    size_t keyLength = key.size();
-
-    // Allocate a new item with space for the string at the end and a null
-    // terminator.
-    size_t allocSize = sizeof(StringMapEntry) + keyLength + 1;
-    size_t alignment = alignof(StringMapEntry);
-
-    StringMapEntry *newItem =
-        static_cast<StringMapEntry *>(allocator.Allocate(allocSize, alignment));
-    assert(newItem && "Unhandled out-of-memory");
-
-    // Construct the value.
-    new (newItem) StringMapEntry(keyLength, std::forward<InitTy>(initVals)...);
-
-    // Copy the string information.
-    char *strBuffer = const_cast<char *>(newItem->getKeyData());
-    if (keyLength > 0)
-      memcpy(strBuffer, key.data(), keyLength);
-    strBuffer[keyLength] = 0; // Null terminate for convenience of clients.
-    return newItem;
+    return new (StringMapEntryBase::allocateWithKey(
+        sizeof(StringMapEntry), alignof(StringMapEntry), key, allocator))
+        StringMapEntry(key.size(), std::forward<InitTy>(initVals)...);
   }
 
   /// GetStringMapEntryFromKeyData - Given key data that is known to be embedded

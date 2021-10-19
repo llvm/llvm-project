@@ -19,7 +19,7 @@ CFCBundle::CFCBundle(CFURLRef url)
     : CFCReleaser<CFBundleRef>(url ? CFBundleCreate(NULL, url) : NULL) {}
 
 // Destructor
-CFCBundle::~CFCBundle() {}
+CFCBundle::~CFCBundle() = default;
 
 // Set the path for a bundle by supplying a
 bool CFCBundle::SetPath(const char *path) {

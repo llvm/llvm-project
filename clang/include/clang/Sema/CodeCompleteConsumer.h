@@ -329,6 +329,9 @@ public:
     /// Code completion inside the filename part of a #include directive.
     CCC_IncludedFile,
 
+    /// Code completion of an attribute name.
+    CCC_Attribute,
+
     /// An unknown context, in which we are recovering from a parsing
     /// error and don't know which completions we should give.
     CCC_Recovery
@@ -991,9 +994,6 @@ inline bool operator>=(const CodeCompletionResult &X,
                        const CodeCompletionResult &Y) {
   return !(X < Y);
 }
-
-raw_ostream &operator<<(raw_ostream &OS,
-                              const CodeCompletionString &CCS);
 
 /// Abstract interface for a consumer of code-completion
 /// information.

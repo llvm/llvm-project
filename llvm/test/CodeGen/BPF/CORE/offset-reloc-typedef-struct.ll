@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source code:
 ;   typedef int _int;
@@ -14,7 +13,9 @@
 ;   int test(s *arg) {
 ;     return get_value(_(&arg->b));
 ;   }
-; clang -target bpf -S -O2 -g -emit-llvm test.c
+; clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 %struct.__s = type { i32, i32 }
 
@@ -22,7 +23,7 @@
 define dso_local i32 @test(%struct.__s* %arg) local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata %struct.__s* %arg, metadata !21, metadata !DIExpression()), !dbg !22
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ss(%struct.__s* %arg, i32 1, i32 1), !dbg !23, !llvm.preserve.access.index !14
+  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ss(%struct.__s* elementtype(%struct.__s) %arg, i32 1, i32 1), !dbg !23, !llvm.preserve.access.index !14
   %1 = bitcast i32* %0 to i8*, !dbg !23
   %call = tail call i32 @get_value(i8* %1) #4, !dbg !24
   ret i32 %call, !dbg !25

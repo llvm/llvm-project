@@ -421,3 +421,15 @@ bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
   // AllOnes is contradictory.
   return isa<CheckImmAllOnesVMatcher>(M);
 }
+
+bool CheckCondCodeMatcher::isContradictoryImpl(const Matcher *M) const {
+  if (const auto *CCCM = dyn_cast<CheckCondCodeMatcher>(M))
+    return CCCM->getCondCodeName() != getCondCodeName();
+  return false;
+}
+
+bool CheckChild2CondCodeMatcher::isContradictoryImpl(const Matcher *M) const {
+  if (const auto *CCCCM = dyn_cast<CheckChild2CondCodeMatcher>(M))
+    return CCCCM->getCondCodeName() != getCondCodeName();
+  return false;
+}

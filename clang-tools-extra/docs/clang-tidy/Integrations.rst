@@ -2,12 +2,17 @@
 Clang-tidy IDE/Editor Integrations
 ==================================
 
-.. _Clangd: https://clang.llvm.org/extra/clangd.html
+.. _clangd: http://clangd.llvm.org/
+.. _is available: https://clangd.llvm.org/installation.html#editor-plugins
+.. _more: https://langserver.org/#implementations-client
 
 Apart from being a standalone tool, :program:`clang-tidy` is integrated into
-various IDEs, code analyzers, and editors. Besides, it is currently being
-integrated into Clangd_. The following table shows the most
-well-known :program:`clang-tidy` integrations in detail.
+various IDEs, code analyzers, and editors. We recommend using clangd_ which
+integrates :program:`clang-tidy` and `is available`_ in most major editors
+through plugins (Vim, Emacs, Visual Studio Code, Sublime Text and more_).
+
+The following table shows the most well-known :program:`clang-tidy`
+integrations in detail.
 
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |                                      |        Feature                                                                                                                                           |
@@ -18,7 +23,7 @@ well-known :program:`clang-tidy` integrations in detail.
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |Clang Power Tools for Visual Studio   |         \-\            |               \+\               |           \-\            |                 \+\                     |           \-\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
-|Clangd                                |         \+\            |               \-\               |           \-\            |                 \-\                     |           \-\            |
+|Clangd                                |         \+\            |               \-\               |           \-\            |                 \+\                     |           \-\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |CLion IDE                             |         \+\            |               \+\               |           \+\            |                 \+\                     |           \+\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
@@ -77,7 +82,7 @@ possible with the `Clang Tools`_ analyzer.
 .. _ReSharper C++: https://www.jetbrains.com/help/resharper/Clang_Tidy_Integration.html
 .. _Visual Assist: https://docs.wholetomato.com/default.asp?W761
 .. _Clang Power Tools: https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools
-.. _clang-tidy-vs: https://github.com/llvm/llvm-project/tree/master/clang-tools-extra/clang-tidy-vs
+.. _clang-tidy-vs: https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clang-tidy-vs
 
 `MS Visual Studio`_ has a native clang-tidy-vs_ plugin and also can integrate
 :program:`clang-tidy` by means of three other tools. The `ReSharper C++`_

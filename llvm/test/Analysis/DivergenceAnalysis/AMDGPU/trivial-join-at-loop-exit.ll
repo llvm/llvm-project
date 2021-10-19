@@ -1,7 +1,4 @@
-; RUN: opt -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
-; XFAIL: *
-
-; https://bugs.llvm.org/show_bug.cgi?id=46372
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: bb2:
 ; CHECK-NOT: DIVERGENT:       %Guard.bb2 = phi i1 [ true, %bb1 ], [ false, %bb0 ]

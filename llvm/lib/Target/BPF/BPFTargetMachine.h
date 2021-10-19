@@ -34,11 +34,14 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  TargetTransformInfo getTargetTransformInfo(const Function &F) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
 
   void adjustPassManager(PassManagerBuilder &) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
 };
 }
 

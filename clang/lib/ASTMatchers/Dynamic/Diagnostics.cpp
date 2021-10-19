@@ -100,6 +100,10 @@ static StringRef errorTypeToFormatString(Diagnostics::ErrorType Type) {
     return "Value not found: $0";
   case Diagnostics::ET_RegistryUnknownEnumWithReplace:
     return "Unknown value '$1' for arg $0; did you mean '$2'";
+  case Diagnostics::ET_RegistryNonNodeMatcher:
+    return "Matcher not a node matcher: $0";
+  case Diagnostics::ET_RegistryMatcherNoWithSupport:
+    return "Matcher does not support with call.";
 
   case Diagnostics::ET_ParserStringError:
     return "Error parsing string token: <$0>";
@@ -123,6 +127,10 @@ static StringRef errorTypeToFormatString(Diagnostics::ErrorType Type) {
     return "Error parsing numeric literal: <$0>";
   case Diagnostics::ET_ParserOverloadedType:
     return "Input value has unresolved overloaded type: $0";
+  case Diagnostics::ET_ParserMalformedChainedExpr:
+    return "Period not followed by valid chained call.";
+  case Diagnostics::ET_ParserFailedToBuildMatcher:
+    return "Failed to build matcher: $0.";
 
   case Diagnostics::ET_None:
     return "<N/A>";

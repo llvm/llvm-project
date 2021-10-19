@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_EPOCH_TRACKER_H
-#define LLVM_ADT_EPOCH_TRACKER_H
+#ifndef LLVM_ADT_EPOCHTRACKER_H
+#define LLVM_ADT_EPOCHTRACKER_H
 
 #include "llvm/Config/abi-breaking.h"
 

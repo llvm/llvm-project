@@ -1,4 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fimplicit-none-type-always
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fimplicit-none
 
 !ERROR: No explicit type declared for 'f'
 function f()

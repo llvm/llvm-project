@@ -65,7 +65,7 @@ public:
       return MaybeStat.getError();
     assert(!MaybeStat->isDirectory() && "not a file");
     assert(isValid() && "not initialized");
-    return StringRef(Contents);
+    return Contents.str();
   }
 
   /// \returns The error or the status of the entry.
@@ -103,7 +103,8 @@ private:
 };
 
 /// This class is a shared cache, that caches the 'stat' and 'open' calls to the
-/// underlying real file system.
+/// underlying real file system. It distinguishes between minimized and original
+/// files.
 ///
 /// It is sharded based on the hash of the key to reduce the lock contention for
 /// the worker threads.
@@ -114,21 +115,62 @@ public:
     CachedFileSystemEntry Value;
   };
 
-  DependencyScanningFilesystemSharedCache();
-
   /// Returns a cache entry for the corresponding key.
   ///
   /// A new cache entry is created if the key is not in the cache. This is a
   /// thread safe call.
-  SharedFileSystemEntry &get(StringRef Key);
+  SharedFileSystemEntry &get(StringRef Key, bool Minimized);
 
 private:
-  struct CacheShard {
-    std::mutex CacheLock;
-    llvm::StringMap<SharedFileSystemEntry, llvm::BumpPtrAllocator> Cache;
+  class SingleCache {
+  public:
+    SingleCache();
+
+    SharedFileSystemEntry &get(StringRef Key);
+
+  private:
+    struct CacheShard {
+      std::mutex CacheLock;
+      llvm::StringMap<SharedFileSystemEntry, llvm::BumpPtrAllocator> Cache;
+    };
+    std::unique_ptr<CacheShard[]> CacheShards;
+    unsigned NumShards;
   };
-  std::unique_ptr<CacheShard[]> CacheShards;
-  unsigned NumShards;
+
+  SingleCache CacheMinimized;
+  SingleCache CacheOriginal;
+};
+
+/// This class is a local cache, that caches the 'stat' and 'open' calls to the
+/// underlying real file system. It distinguishes between minimized and original
+/// files.
+class DependencyScanningFilesystemLocalCache {
+private:
+  using SingleCache =
+      llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator>;
+
+  SingleCache CacheMinimized;
+  SingleCache CacheOriginal;
+
+  SingleCache &selectCache(bool Minimized) {
+    return Minimized ? CacheMinimized : CacheOriginal;
+  }
+
+public:
+  void setCachedEntry(StringRef Filename, bool Minimized,
+                      const CachedFileSystemEntry *Entry) {
+    SingleCache &Cache = selectCache(Minimized);
+    bool IsInserted = Cache.try_emplace(Filename, Entry).second;
+    (void)IsInserted;
+    assert(IsInserted && "local cache is updated more than once");
+  }
+
+  const CachedFileSystemEntry *getCachedEntry(StringRef Filename,
+                                              bool Minimized) {
+    SingleCache &Cache = selectCache(Minimized);
+    auto It = Cache.find(Filename);
+    return It == Cache.end() ? nullptr : It->getValue();
+  }
 };
 
 /// A virtual file system optimized for the dependency discovery.
@@ -153,32 +195,26 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
   openFileForRead(const Twine &Path) override;
 
-  /// The set of files that should not be minimized.
-  llvm::StringSet<> IgnoredFiles;
+  void clearIgnoredFiles() { IgnoredFiles.clear(); }
+  void ignoreFile(StringRef Filename);
 
 private:
-  void setCachedEntry(StringRef Filename, const CachedFileSystemEntry *Entry) {
-    bool IsInserted = Cache.try_emplace(Filename, Entry).second;
-    (void)IsInserted;
-    assert(IsInserted && "local cache is updated more than once");
-  }
-
-  const CachedFileSystemEntry *getCachedEntry(StringRef Filename) {
-    auto It = Cache.find(Filename);
-    return It == Cache.end() ? nullptr : It->getValue();
-  }
+  bool shouldIgnoreFile(StringRef Filename);
 
   llvm::ErrorOr<const CachedFileSystemEntry *>
   getOrCreateFileSystemEntry(const StringRef Filename);
 
+  /// The global cache shared between worker threads.
   DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
-  llvm::StringMap<const CachedFileSystemEntry *, llvm::BumpPtrAllocator> Cache;
+  DependencyScanningFilesystemLocalCache Cache;
   /// The optional mapping structure which records information about the
   /// excluded conditional directive skip mappings that are used by the
   /// currently active preprocessor.
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
+  /// The set of files that should not be minimized.
+  llvm::StringSet<> IgnoredFiles;
 };
 
 } // end namespace dependencies

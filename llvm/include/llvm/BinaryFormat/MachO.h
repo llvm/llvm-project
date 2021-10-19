@@ -83,6 +83,7 @@ enum {
   MH_NO_HEAP_EXECUTION = 0x01000000u,
   MH_APP_EXTENSION_SAFE = 0x02000000u,
   MH_NLIST_OUTOFSYNC_WITH_DYLDINFO = 0x04000000u,
+  MH_SIM_SUPPORT = 0x08000000u,
   MH_DYLIB_IN_CACHE = 0x80000000u,
 };
 
@@ -398,6 +399,7 @@ enum RelocationInfoType {
   // Constant values for the r_type field in an
   // llvm::MachO::relocation_info or llvm::MachO::scattered_relocation_info
   // structure.
+  GENERIC_RELOC_INVALID = 0xff,
   GENERIC_RELOC_VANILLA = 0,
   GENERIC_RELOC_PAIR = 1,
   GENERIC_RELOC_SECTDIFF = 2,
@@ -2004,6 +2006,203 @@ union alignas(4) macho_load_command {
 #include "llvm/BinaryFormat/MachO.def"
 };
 LLVM_PACKED_END
+
+/* code signing attributes of a process */
+
+enum CodeSignAttrs {
+  CS_VALID = 0x00000001,          /* dynamically valid */
+  CS_ADHOC = 0x00000002,          /* ad hoc signed */
+  CS_GET_TASK_ALLOW = 0x00000004, /* has get-task-allow entitlement */
+  CS_INSTALLER = 0x00000008,      /* has installer entitlement */
+
+  CS_FORCED_LV =
+      0x00000010, /* Library Validation required by Hardened System Policy */
+  CS_INVALID_ALLOWED = 0x00000020, /* (macOS Only) Page invalidation allowed by
+                                      task port policy */
+
+  CS_HARD = 0x00000100,             /* don't load invalid pages */
+  CS_KILL = 0x00000200,             /* kill process if it becomes invalid */
+  CS_CHECK_EXPIRATION = 0x00000400, /* force expiration checking */
+  CS_RESTRICT = 0x00000800,         /* tell dyld to treat restricted */
+
+  CS_ENFORCEMENT = 0x00001000, /* require enforcement */
+  CS_REQUIRE_LV = 0x00002000,  /* require library validation */
+  CS_ENTITLEMENTS_VALIDATED =
+      0x00004000, /* code signature permits restricted entitlements */
+  CS_NVRAM_UNRESTRICTED =
+      0x00008000, /* has com.apple.rootless.restricted-nvram-variables.heritable
+                     entitlement */
+
+  CS_RUNTIME = 0x00010000,       /* Apply hardened runtime policies */
+  CS_LINKER_SIGNED = 0x00020000, /* Automatically signed by the linker */
+
+  CS_ALLOWED_MACHO =
+      (CS_ADHOC | CS_HARD | CS_KILL | CS_CHECK_EXPIRATION | CS_RESTRICT |
+       CS_ENFORCEMENT | CS_REQUIRE_LV | CS_RUNTIME | CS_LINKER_SIGNED),
+
+  CS_EXEC_SET_HARD = 0x00100000, /* set CS_HARD on any exec'ed process */
+  CS_EXEC_SET_KILL = 0x00200000, /* set CS_KILL on any exec'ed process */
+  CS_EXEC_SET_ENFORCEMENT =
+      0x00400000, /* set CS_ENFORCEMENT on any exec'ed process */
+  CS_EXEC_INHERIT_SIP =
+      0x00800000, /* set CS_INSTALLER on any exec'ed process */
+
+  CS_KILLED = 0x01000000, /* was killed by kernel for invalidity */
+  CS_DYLD_PLATFORM =
+      0x02000000, /* dyld used to load this is a platform binary */
+  CS_PLATFORM_BINARY = 0x04000000, /* this is a platform binary */
+  CS_PLATFORM_PATH =
+      0x08000000, /* platform binary by the fact of path (osx only) */
+
+  CS_DEBUGGED = 0x10000000, /* process is currently or has previously been
+                debugged and allowed to run with invalid pages */
+  CS_SIGNED = 0x20000000, /* process has a signature (may have gone invalid) */
+  CS_DEV_CODE =
+      0x40000000, /* code is dev signed, cannot be loaded into prod signed code
+                     (will go away with rdar://problem/28322552) */
+  CS_DATAVAULT_CONTROLLER =
+      0x80000000, /* has Data Vault controller entitlement */
+
+  CS_ENTITLEMENT_FLAGS = (CS_GET_TASK_ALLOW | CS_INSTALLER |
+                          CS_DATAVAULT_CONTROLLER | CS_NVRAM_UNRESTRICTED),
+};
+
+/* executable segment flags */
+
+enum CodeSignExecSegFlags {
+
+  CS_EXECSEG_MAIN_BINARY = 0x1,     /* executable segment denotes main binary */
+  CS_EXECSEG_ALLOW_UNSIGNED = 0x10, /* allow unsigned pages (for debugging) */
+  CS_EXECSEG_DEBUGGER = 0x20,       /* main binary is debugger */
+  CS_EXECSEG_JIT = 0x40,            /* JIT enabled */
+  CS_EXECSEG_SKIP_LV = 0x80,        /* OBSOLETE: skip library validation */
+  CS_EXECSEG_CAN_LOAD_CDHASH = 0x100, /* can bless cdhash for execution */
+  CS_EXECSEG_CAN_EXEC_CDHASH = 0x200, /* can execute blessed cdhash */
+
+};
+
+/* Magic numbers used by Code Signing */
+
+enum CodeSignMagic {
+  CSMAGIC_REQUIREMENT = 0xfade0c00, /* single Requirement blob */
+  CSMAGIC_REQUIREMENTS =
+      0xfade0c01, /* Requirements vector (internal requirements) */
+  CSMAGIC_CODEDIRECTORY = 0xfade0c02,      /* CodeDirectory blob */
+  CSMAGIC_EMBEDDED_SIGNATURE = 0xfade0cc0, /* embedded form of signature data */
+  CSMAGIC_EMBEDDED_SIGNATURE_OLD = 0xfade0b02, /* XXX */
+  CSMAGIC_EMBEDDED_ENTITLEMENTS = 0xfade7171,  /* embedded entitlements */
+  CSMAGIC_DETACHED_SIGNATURE =
+      0xfade0cc1, /* multi-arch collection of embedded signatures */
+  CSMAGIC_BLOBWRAPPER = 0xfade0b01, /* CMS Signature, among other things */
+
+  CS_SUPPORTSSCATTER = 0x20100,
+  CS_SUPPORTSTEAMID = 0x20200,
+  CS_SUPPORTSCODELIMIT64 = 0x20300,
+  CS_SUPPORTSEXECSEG = 0x20400,
+  CS_SUPPORTSRUNTIME = 0x20500,
+  CS_SUPPORTSLINKAGE = 0x20600,
+
+  CSSLOT_CODEDIRECTORY = 0, /* slot index for CodeDirectory */
+  CSSLOT_INFOSLOT = 1,
+  CSSLOT_REQUIREMENTS = 2,
+  CSSLOT_RESOURCEDIR = 3,
+  CSSLOT_APPLICATION = 4,
+  CSSLOT_ENTITLEMENTS = 5,
+
+  CSSLOT_ALTERNATE_CODEDIRECTORIES =
+      0x1000, /* first alternate CodeDirectory, if any */
+  CSSLOT_ALTERNATE_CODEDIRECTORY_MAX = 5, /* max number of alternate CD slots */
+  CSSLOT_ALTERNATE_CODEDIRECTORY_LIMIT =
+      CSSLOT_ALTERNATE_CODEDIRECTORIES +
+      CSSLOT_ALTERNATE_CODEDIRECTORY_MAX, /* one past the last */
+
+  CSSLOT_SIGNATURESLOT = 0x10000, /* CMS Signature */
+  CSSLOT_IDENTIFICATIONSLOT = 0x10001,
+  CSSLOT_TICKETSLOT = 0x10002,
+
+  CSTYPE_INDEX_REQUIREMENTS = 0x00000002, /* compat with amfi */
+  CSTYPE_INDEX_ENTITLEMENTS = 0x00000005, /* compat with amfi */
+
+  CS_HASHTYPE_SHA1 = 1,
+  CS_HASHTYPE_SHA256 = 2,
+  CS_HASHTYPE_SHA256_TRUNCATED = 3,
+  CS_HASHTYPE_SHA384 = 4,
+
+  CS_SHA1_LEN = 20,
+  CS_SHA256_LEN = 32,
+  CS_SHA256_TRUNCATED_LEN = 20,
+
+  CS_CDHASH_LEN = 20,    /* always - larger hashes are truncated */
+  CS_HASH_MAX_SIZE = 48, /* max size of the hash we'll support */
+
+  /*
+   * Currently only to support Legacy VPN plugins, and Mac App Store
+   * but intended to replace all the various platform code, dev code etc. bits.
+   */
+  CS_SIGNER_TYPE_UNKNOWN = 0,
+  CS_SIGNER_TYPE_LEGACYVPN = 5,
+  CS_SIGNER_TYPE_MAC_APP_STORE = 6,
+
+  CS_SUPPL_SIGNER_TYPE_UNKNOWN = 0,
+  CS_SUPPL_SIGNER_TYPE_TRUSTCACHE = 7,
+  CS_SUPPL_SIGNER_TYPE_LOCAL = 8,
+};
+
+struct CS_CodeDirectory {
+  uint32_t magic;         /* magic number (CSMAGIC_CODEDIRECTORY) */
+  uint32_t length;        /* total length of CodeDirectory blob */
+  uint32_t version;       /* compatibility version */
+  uint32_t flags;         /* setup and mode flags */
+  uint32_t hashOffset;    /* offset of hash slot element at index zero */
+  uint32_t identOffset;   /* offset of identifier string */
+  uint32_t nSpecialSlots; /* number of special hash slots */
+  uint32_t nCodeSlots;    /* number of ordinary (code) hash slots */
+  uint32_t codeLimit;     /* limit to main image signature range */
+  uint8_t hashSize;       /* size of each hash in bytes */
+  uint8_t hashType;       /* type of hash (cdHashType* constants) */
+  uint8_t platform;       /* platform identifier; zero if not platform binary */
+  uint8_t pageSize;       /* log2(page size in bytes); 0 => infinite */
+  uint32_t spare2;        /* unused (must be zero) */
+
+  /* Version 0x20100 */
+  uint32_t scatterOffset; /* offset of optional scatter vector */
+
+  /* Version 0x20200 */
+  uint32_t teamOffset; /* offset of optional team identifier */
+
+  /* Version 0x20300 */
+  uint32_t spare3;      /* unused (must be zero) */
+  uint64_t codeLimit64; /* limit to main image signature range, 64 bits */
+
+  /* Version 0x20400 */
+  uint64_t execSegBase;  /* offset of executable segment */
+  uint64_t execSegLimit; /* limit of executable segment */
+  uint64_t execSegFlags; /* executable segment flags */
+};
+
+static_assert(sizeof(CS_CodeDirectory) == 88, "");
+
+struct CS_BlobIndex {
+  uint32_t type;   /* type of entry */
+  uint32_t offset; /* offset of entry */
+};
+
+struct CS_SuperBlob {
+  uint32_t magic;  /* magic number */
+  uint32_t length; /* total length of SuperBlob */
+  uint32_t count;  /* number of index entries following */
+  /* followed by Blobs in no particular order as indicated by index offsets */
+};
+
+enum SecCSDigestAlgorithm {
+  kSecCodeSignatureNoHash = 0,     /* null value */
+  kSecCodeSignatureHashSHA1 = 1,   /* SHA-1 */
+  kSecCodeSignatureHashSHA256 = 2, /* SHA-256 */
+  kSecCodeSignatureHashSHA256Truncated =
+      3,                           /* SHA-256 truncated to first 20 bytes */
+  kSecCodeSignatureHashSHA384 = 4, /* SHA-384 */
+  kSecCodeSignatureHashSHA512 = 5, /* SHA-512 */
+};
 
 } // end namespace MachO
 } // end namespace llvm

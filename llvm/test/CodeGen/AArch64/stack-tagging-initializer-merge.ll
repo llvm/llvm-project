@@ -306,3 +306,17 @@ entry:
 ; CHECK:  call void @llvm.aarch64.stgp(i8* {{.*}}, i64 46360584388608, i64 0)
 ; CHECK:  call void @llvm.aarch64.stgp(i8* {{.*}}, i64 0, i64 3038287259199220266)
 ; CHECK:  ret void
+
+define void @LargeAlloca() sanitize_memtag {
+entry:
+  %x = alloca i32, i32 256, align 16
+  %0 = bitcast i32* %x to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 16 %0, i8 42, i64 256, i1 false)
+  call void @use(i8* nonnull %0)
+  ret void
+}
+
+; CHECK-LABEL: define void @LargeAlloca(
+; CHECK:  call void @llvm.aarch64.settag(i8* {{.*}}, i64 1024)
+; CHECK:  call void @llvm.memset.p0i8.i64(i8* {{.*}}, i8 42, i64 256,
+; CHECK:  ret void

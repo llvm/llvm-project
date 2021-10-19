@@ -41,7 +41,6 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
 
      Use Ninja instead of Make: "-G Ninja"
      Build with assertions on: "-DLLVM_ENABLE_ASSERTIONS=True"
-     Force Python2: "-DPYTHON_EXECUTABLE=/usr/bin/python2"
      Local (non-sudo) install path: "-DCMAKE_INSTALL_PREFIX=$HOME/llvm/install"
      CPU flags: "DCMAKE_C_FLAGS=-mcpu=cortex-a15" (same for CXX_FLAGS)
 

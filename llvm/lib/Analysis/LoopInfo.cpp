@@ -20,6 +20,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfoImpl.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -34,6 +35,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -169,8 +171,8 @@ PHINode *Loop::getCanonicalInductionVariable() const {
 }
 
 /// Get the latch condition instruction.
-static ICmpInst *getLatchCmpInst(const Loop &L) {
-  if (BasicBlock *Latch = L.getLoopLatch())
+ICmpInst *Loop::getLatchCmpInst() const {
+  if (BasicBlock *Latch = getLoopLatch())
     if (BranchInst *BI = dyn_cast_or_null<BranchInst>(Latch->getTerminator()))
       if (BI->isConditional())
         return dyn_cast<ICmpInst>(BI->getCondition());
@@ -181,7 +183,7 @@ static ICmpInst *getLatchCmpInst(const Loop &L) {
 /// Return the final value of the loop induction variable if found.
 static Value *findFinalIVValue(const Loop &L, const PHINode &IndVar,
                                const Instruction &StepInst) {
-  ICmpInst *LatchCmpInst = getLatchCmpInst(L);
+  ICmpInst *LatchCmpInst = L.getLatchCmpInst();
   if (!LatchCmpInst)
     return nullptr;
 
@@ -295,7 +297,7 @@ PHINode *Loop::getInductionVariable(ScalarEvolution &SE) const {
 
   BasicBlock *Header = getHeader();
   assert(Header && "Expected a valid loop header");
-  ICmpInst *CmpInst = getLatchCmpInst(*this);
+  ICmpInst *CmpInst = getLatchCmpInst();
   if (!CmpInst)
     return nullptr;
 
@@ -379,10 +381,6 @@ BranchInst *Loop::getLoopGuardBranch() const {
   if (!ExitFromLatch)
     return nullptr;
 
-  BasicBlock *ExitFromLatchSucc = ExitFromLatch->getUniqueSuccessor();
-  if (!ExitFromLatchSucc)
-    return nullptr;
-
   BasicBlock *GuardBB = Preheader->getUniquePredecessor();
   if (!GuardBB)
     return nullptr;
@@ -396,7 +394,17 @@ BranchInst *Loop::getLoopGuardBranch() const {
   BasicBlock *GuardOtherSucc = (GuardBI->getSuccessor(0) == Preheader)
                                    ? GuardBI->getSuccessor(1)
                                    : GuardBI->getSuccessor(0);
-  return (GuardOtherSucc == ExitFromLatchSucc) ? GuardBI : nullptr;
+
+  // Check if ExitFromLatch (or any BasicBlock which is an empty unique
+  // successor of ExitFromLatch) is equal to GuardOtherSucc. If
+  // skipEmptyBlockUntil returns GuardOtherSucc, then the guard branch for the
+  // loop is GuardBI (return GuardBI), otherwise return nullptr.
+  if (&LoopNest::skipEmptyBlockUntil(ExitFromLatch, GuardOtherSucc,
+                                     /*CheckUniquePred=*/true) ==
+      GuardOtherSucc)
+    return GuardBI;
+  else
+    return nullptr;
 }
 
 bool Loop::isCanonical(ScalarEvolution &SE) const {
@@ -431,6 +439,10 @@ static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
     for (const Use &U : I.uses()) {
       const Instruction *UI = cast<Instruction>(U.getUser());
       const BasicBlock *UserBB = UI->getParent();
+
+      // For practical purposes, we consider that the use in a PHI
+      // occurs in the respective predecessor block. For more info,
+      // see the `phi` doc in LangRef and the LCSSA doc.
       if (const PHINode *P = dyn_cast<PHINode>(UI))
         UserBB = P->getIncomingBlock(U);
 
@@ -535,6 +547,22 @@ void Loop::setLoopAlreadyUnrolled() {
   setLoopID(NewLoopID);
 }
 
+void Loop::setLoopMustProgress() {
+  LLVMContext &Context = getHeader()->getContext();
+
+  MDNode *MustProgress = findOptionMDForLoop(this, "llvm.loop.mustprogress");
+
+  if (MustProgress)
+    return;
+
+  MDNode *MustProgressMD =
+      MDNode::get(Context, MDString::get(Context, "llvm.loop.mustprogress"));
+  MDNode *LoopID = getLoopID();
+  MDNode *NewLoopID =
+      makePostTransformationMetadata(Context, LoopID, {}, {MustProgressMD});
+  setLoopID(NewLoopID);
+}
+
 bool Loop::isAnnotatedParallel() const {
   MDNode *DesiredLoopIdMetadata = getLoopID();
 
@@ -546,7 +574,7 @@ bool Loop::isAnnotatedParallel() const {
   SmallPtrSet<MDNode *, 4>
       ParallelAccessGroups; // For scalable 'contains' check.
   if (ParallelAccesses) {
-    for (const MDOperand &MD : drop_begin(ParallelAccesses->operands(), 1)) {
+    for (const MDOperand &MD : drop_begin(ParallelAccesses->operands())) {
       MDNode *AccGroup = cast<MDNode>(MD.get());
       assert(isValidAsAccessGroup(AccGroup) &&
              "List item must be an access group");
@@ -595,15 +623,7 @@ bool Loop::isAnnotatedParallel() const {
       if (!LoopIdMD)
         return false;
 
-      bool LoopIdMDFound = false;
-      for (const MDOperand &MDOp : LoopIdMD->operands()) {
-        if (MDOp == DesiredLoopIdMetadata) {
-          LoopIdMDFound = true;
-          break;
-        }
-      }
-
-      if (!LoopIdMDFound)
+      if (!llvm::is_contained(LoopIdMD->operands(), DesiredLoopIdMetadata))
         return false;
     }
   }
@@ -649,7 +669,7 @@ Loop::LocRange Loop::getLocRange() const {
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
 LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
-  print(dbgs(), /*Depth=*/0, /*Verbose=*/true);
+  print(dbgs(), /*Verbose=*/true);
 }
 #endif
 
@@ -744,9 +764,8 @@ void UnloopUpdater::updateBlockParents() {
 void UnloopUpdater::removeBlocksFromAncestors() {
   // Remove all unloop's blocks (including those in nested subloops) from
   // ancestors below the new parent loop.
-  for (Loop::block_iterator BI = Unloop.block_begin(), BE = Unloop.block_end();
-       BI != BE; ++BI) {
-    Loop *OuterParent = LI->getLoopFor(*BI);
+  for (BasicBlock *BB : Unloop.blocks()) {
+    Loop *OuterParent = LI->getLoopFor(BB);
     if (Unloop.contains(OuterParent)) {
       while (OuterParent->getParentLoop() != &Unloop)
         OuterParent = OuterParent->getParentLoop();
@@ -757,14 +776,14 @@ void UnloopUpdater::removeBlocksFromAncestors() {
     for (Loop *OldParent = Unloop.getParentLoop(); OldParent != OuterParent;
          OldParent = OldParent->getParentLoop()) {
       assert(OldParent && "new loop is not an ancestor of the original");
-      OldParent->removeBlockFromLoop(*BI);
+      OldParent->removeBlockFromLoop(BB);
     }
   }
 }
 
 /// Update the parent loop for all subloops directly nested within unloop.
 void UnloopUpdater::updateSubloopParents() {
-  while (!Unloop.empty()) {
+  while (!Unloop.isInnermost()) {
     Loop *Subloop = *std::prev(Unloop.end());
     Unloop.removeChildLoop(std::prev(Unloop.end()));
 
@@ -862,19 +881,16 @@ void LoopInfo::erase(Loop *Unloop) {
   auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
-  if (!Unloop->getParentLoop()) {
+  if (Unloop->isOutermost()) {
     // Since BBLoop had no parent, Unloop blocks are no longer in a loop.
-    for (Loop::block_iterator I = Unloop->block_begin(),
-                              E = Unloop->block_end();
-         I != E; ++I) {
-
+    for (BasicBlock *BB : Unloop->blocks()) {
       // Don't reparent blocks in subloops.
-      if (getLoopFor(*I) != Unloop)
+      if (getLoopFor(BB) != Unloop)
         continue;
 
       // Blocks no longer have a parent but are still referenced by Unloop until
       // the Unloop object is deleted.
-      changeLoopFor(*I, nullptr);
+      changeLoopFor(BB, nullptr);
     }
 
     // Remove the loop from the top-level LoopInfo object.
@@ -887,7 +903,7 @@ void LoopInfo::erase(Loop *Unloop) {
     }
 
     // Move all of the subloops to the top-level.
-    while (!Unloop->empty())
+    while (!Unloop->isInnermost())
       addTopLevelLoop(Unloop->removeChildLoop(std::prev(Unloop->end())));
 
     return;
@@ -913,6 +929,31 @@ void LoopInfo::erase(Loop *Unloop) {
       break;
     }
   }
+}
+
+bool
+LoopInfo::wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                            const BasicBlock *ExitBB) const {
+  if (V->getType()->isTokenTy())
+    // We can't form PHIs of token type, so the definition of LCSSA excludes
+    // values of that type.
+    return false;
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+  const Loop *L = getLoopFor(I->getParent());
+  if (!L)
+    return false;
+  if (L->contains(ExitBB))
+    // Could be an exit bb of a subloop and contained in defining loop
+    return false;
+
+  // We found a (new) out-of-loop use location, for a value defined in-loop.
+  // (Note that because of LCSSA, we don't have to account for values defined
+  // in sibling loops.  Such values will have LCSSA phis of their own in the
+  // common parent loop.)
+  return true;
 }
 
 AnalysisKey LoopAnalysis::Key;
@@ -1005,6 +1046,77 @@ MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
   return findOptionMDForLoopID(TheLoop->getLoopID(), Name);
 }
 
+/// Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
+                                                            StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return nullptr;
+  case 2:
+    return &MD->getOperand(1);
+  default:
+    llvm_unreachable("loop metadata has 0 or 1 operand");
+  }
+}
+
+Optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                  StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    // When the value is absent it is interpreted as 'attribute set'.
+    return true;
+  case 2:
+    if (ConstantInt *IntMD =
+            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      return IntMD->getZExtValue();
+    return true;
+  }
+  llvm_unreachable("unexpected number of options");
+}
+
+bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
+  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
+}
+
+llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                      StringRef Name) {
+  const MDOperand *AttrMD =
+      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
+  if (!AttrMD)
+    return None;
+
+  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
+  if (!IntMD)
+    return None;
+
+  return IntMD->getSExtValue();
+}
+
+int llvm::getIntLoopAttribute(const Loop *TheLoop, StringRef Name,
+                              int Default) {
+  return getOptionalIntLoopAttribute(TheLoop, Name).getValueOr(Default);
+}
+
+static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
+
+bool llvm::hasMustProgress(const Loop *L) {
+  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
+}
+
+bool llvm::isMustProgress(const Loop *L) {
+  return L->getHeader()->getParent()->mustProgress() || hasMustProgress(L);
+}
+
 bool llvm::isValidAsAccessGroup(MDNode *Node) {
   return Node->getNumOperands() == 0 && Node->isDistinct();
 }
@@ -1017,8 +1129,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
   SmallVector<Metadata *, 4> MDs;
 
   // Reserve first location for self reference to the LoopID metadata node.
-  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
-  MDs.push_back(TempNode.get());
+  MDs.push_back(nullptr);
 
   // Remove metadata for the transformation that has been applied or that became
   // outdated.

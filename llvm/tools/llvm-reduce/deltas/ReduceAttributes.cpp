@@ -1,4 +1,4 @@
-//===- ReduceAttributes.cpp - Specialized Delta Pass -------------------===//
+//===- ReduceAttributes.cpp - Specialized Delta Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,14 +49,14 @@ using AttrPtrVecVecTy = SmallVector<AttrPtrIdxVecVecTy, 3>;
 /// Given ChunksToKeep, produce a map of global variables/functions/calls
 /// and indexes of attributes to be preserved for each of them.
 class AttributeRemapper : public InstVisitor<AttributeRemapper> {
-  Oracle O;
+  Oracle &O;
 
 public:
   DenseMap<GlobalVariable *, AttrPtrVecTy> GlobalVariablesToRefine;
   DenseMap<Function *, AttrPtrVecVecTy> FunctionsToRefine;
   DenseMap<CallBase *, AttrPtrVecVecTy> CallsToRefine;
 
-  explicit AttributeRemapper(ArrayRef<Chunk> ChunksToKeep) : O(ChunksToKeep) {}
+  explicit AttributeRemapper(Oracle &O) : O(O) {}
 
   void visitModule(Module &M) {
     for (GlobalVariable &GV : M.getGlobalList())
@@ -84,7 +84,7 @@ public:
                           AttrPtrVecVecTy &AttributeSetsToPreserve) {
     assert(AttributeSetsToPreserve.empty() && "Should not be sharing vectors.");
     AttributeSetsToPreserve.reserve(AL.getNumAttrSets());
-    for (unsigned SetIdx : seq(AL.index_begin(), AL.index_end())) {
+    for (unsigned SetIdx : AL.indexes()) {
       AttrPtrIdxVecVecTy AttributesToPreserve;
       AttributesToPreserve.first = SetIdx;
       visitAttributeSet(AL.getAttributes(AttributesToPreserve.first),
@@ -167,12 +167,11 @@ AttributeList convertAttributeRefVecToAttributeList(
 }
 
 /// Removes out-of-chunk attributes from module.
-static void extractAttributesFromModule(std::vector<Chunk> ChunksToKeep,
-                                        Module *Program) {
-  AttributeRemapper R(ChunksToKeep);
+static void extractAttributesFromModule(Oracle &O, Module &Program) {
+  AttributeRemapper R(O);
   R.visit(Program);
 
-  LLVMContext &C = Program->getContext();
+  LLVMContext &C = Program.getContext();
   for (const auto &I : R.GlobalVariablesToRefine)
     I.first->setAttributes(convertAttributeRefToAttributeSet(C, I.second));
   for (const auto &I : R.FunctionsToRefine)
@@ -182,7 +181,7 @@ static void extractAttributesFromModule(std::vector<Chunk> ChunksToKeep,
 }
 
 /// Counts the amount of attributes.
-static int countAttributes(Module *Program) {
+static int countAttributes(Module &Program) {
   AttributeCounter C;
 
   // TODO: Silence index with --quiet flag

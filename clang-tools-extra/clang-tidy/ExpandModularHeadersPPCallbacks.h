@@ -94,7 +94,8 @@ private:
                   SrcMgr::CharacteristicKind) override;
   void PragmaOpenCLExtension(SourceLocation NameLoc, const IdentifierInfo *,
                              SourceLocation StateLoc, unsigned) override;
-  void PragmaWarning(SourceLocation Loc, StringRef, ArrayRef<int>) override;
+  void PragmaWarning(SourceLocation Loc, PragmaWarningSpecifier,
+                     ArrayRef<int>) override;
   void PragmaWarningPush(SourceLocation Loc, int) override;
   void PragmaWarningPop(SourceLocation Loc) override;
   void PragmaAssumeNonNullBegin(SourceLocation Loc) override;

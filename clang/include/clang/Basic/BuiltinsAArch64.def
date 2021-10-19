@@ -99,6 +99,26 @@ BUILTIN(__builtin_arm_tcommit, "v", "n")
 BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
+// Armv8.5-A FP rounding intrinsics
+BUILTIN(__builtin_arm_frint32zf, "ff", "")
+BUILTIN(__builtin_arm_frint32z, "dd", "")
+BUILTIN(__builtin_arm_frint64zf, "ff", "")
+BUILTIN(__builtin_arm_frint64z, "dd", "")
+BUILTIN(__builtin_arm_frint32xf, "ff", "")
+BUILTIN(__builtin_arm_frint32x, "dd", "")
+BUILTIN(__builtin_arm_frint64xf, "ff", "")
+BUILTIN(__builtin_arm_frint64x, "dd", "")
+
+// Armv8.5-A Random number generation intrinsics
+BUILTIN(__builtin_arm_rndr,   "iWUi*", "n")
+BUILTIN(__builtin_arm_rndrrs, "iWUi*", "n")
+
+// Armv8.7-A load/store 64-byte intrinsics
+BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n")
+BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n")
+BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n")
+BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n")
+
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
@@ -152,6 +172,11 @@ TARGET_HEADER_BUILTIN(_InterlockedCompareExchange_rel,   "NiNiD*NiNi",     "nh",
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_acq, "LLiLLiD*LLiLLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_nf,  "LLiLLiD*LLiLLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedCompareExchange64_rel, "LLiLLiD*LLiLLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128,    "UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128_acq,"UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128_nf ,"UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedCompareExchange128_rel,"UcLLiD*LLiLLiLLi*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedOr8_acq,  "ccD*c",       "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedOr8_nf,   "ccD*c",       "nh", "intrin.h", ALL_MS_LANGUAGES, "")
@@ -217,6 +242,9 @@ TARGET_HEADER_BUILTIN(__getReg, "ULLii", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_ReadStatusReg,  "LLii",  "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_WriteStatusReg, "viLLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_AddressOfReturnAddress, "v*", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
+TARGET_HEADER_BUILTIN(__mulh,  "SLLiSLLiSLLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__umulh, "ULLiULLiULLi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
 #undef BUILTIN
 #undef LANGBUILTIN

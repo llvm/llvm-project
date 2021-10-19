@@ -74,8 +74,8 @@ struct compare<wrapper<T>>
 struct test_one_policy
 {
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
-    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN // dummy specializations to skip testing in case of broken configuration
+#if defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) ||                                                             \
+    defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) // dummy specializations to skip testing in case of broken configuration
     template <typename Iterator, typename Size>
     void
     operator()(pstl::execution::unsequenced_policy, Iterator data_b, Iterator data_e, Iterator actual_b,

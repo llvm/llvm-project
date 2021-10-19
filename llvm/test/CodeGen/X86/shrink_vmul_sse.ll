@@ -5,7 +5,7 @@
 ;
 ; RUN: llc -mtriple=i386-pc-linux-gnu -mattr=+sse < %s | FileCheck %s
 
-@c = external global i32*, align 8
+@c = external dso_local global i32*, align 8
 
 define void @mul_2xi8(i8* nocapture readonly %a, i8* nocapture readonly %b, i64 %index) nounwind {
 ; CHECK-LABEL: mul_2xi8:

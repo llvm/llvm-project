@@ -33,21 +33,20 @@ using namespace clang;
 using namespace ento;
 
 bool CheckerManager::hasPathSensitiveCheckers() const {
-  return !StmtCheckers.empty()              ||
-         !PreObjCMessageCheckers.empty()    ||
-         !PostObjCMessageCheckers.empty()   ||
-         !PreCallCheckers.empty()    ||
-         !PostCallCheckers.empty()   ||
-         !LocationCheckers.empty()          ||
-         !BindCheckers.empty()              ||
-         !EndAnalysisCheckers.empty()       ||
-         !EndFunctionCheckers.empty()           ||
-         !BranchConditionCheckers.empty()   ||
-         !LiveSymbolsCheckers.empty()       ||
-         !DeadSymbolsCheckers.empty()       ||
-         !RegionChangesCheckers.empty()     ||
-         !EvalAssumeCheckers.empty()        ||
-         !EvalCallCheckers.empty();
+  const auto IfAnyAreNonEmpty = [](const auto &... Callbacks) -> bool {
+    bool Result = false;
+    // FIXME: Use fold expressions in C++17.
+    LLVM_ATTRIBUTE_UNUSED int Unused[]{0, (Result |= !Callbacks.empty())...};
+    return Result;
+  };
+  return IfAnyAreNonEmpty(
+      StmtCheckers, PreObjCMessageCheckers, ObjCMessageNilCheckers,
+      PostObjCMessageCheckers, PreCallCheckers, PostCallCheckers,
+      LocationCheckers, BindCheckers, EndAnalysisCheckers,
+      BeginFunctionCheckers, EndFunctionCheckers, BranchConditionCheckers,
+      NewAllocatorCheckers, LiveSymbolsCheckers, DeadSymbolsCheckers,
+      RegionChangesCheckers, PointerEscapeCheckers, EvalAssumeCheckers,
+      EvalCallCheckers, EndOfTranslationUnitCheckers);
 }
 
 void CheckerManager::finishedCheckerRegistration() {

@@ -16,8 +16,8 @@ func @verifyLargerBenefit() -> i32 {
   return %result : i32
 }
 
-// CHECK-LABEL: func @remap_input_1_to_0()
-func @remap_input_1_to_0(i16)
+// CHECK-LABEL: func private @remap_input_1_to_0()
+func private @remap_input_1_to_0(i16)
 
 // CHECK-LABEL: func @remap_input_1_to_1(%arg0: f64)
 func @remap_input_1_to_1(%arg0: i64) {
@@ -36,8 +36,9 @@ func @remap_call_1_to_1(%arg0: i64) {
 
 // CHECK-LABEL: func @remap_input_1_to_N({{.*}}f16, {{.*}}f16)
 func @remap_input_1_to_N(%arg0: f32) -> f32 {
- // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
- "test.return"(%arg0) : (f32) -> ()
+  // CHECK-NEXT: [[CAST:%.*]] = "test.cast"(%arg0, %arg1) : (f16, f16) -> f32
+  // CHECK-NEXT: "test.return"{{.*}} : (f16, f16) -> ()
+  "test.return"(%arg0) : (f32) -> ()
 }
 
 // CHECK-LABEL: func @remap_input_1_to_N_remaining_use(%arg0: f16, %arg1: f16)
@@ -172,18 +173,28 @@ func @bounded_recursion() {
 
 // -----
 
-func @fail_to_convert_illegal_op() -> i32 {
-  // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
-  %result = "test.illegal_op_f"() : () -> (i32)
-  return %result : i32
+// expected-remark@+1 {{applyPartialConversion failed}}
+builtin.module {
+
+  func @fail_to_convert_illegal_op() -> i32 {
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    %result = "test.illegal_op_f"() : () -> (i32)
+    return %result : i32
+  }
+
 }
 
 // -----
 
-func @fail_to_convert_illegal_op_in_region() {
-  // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
-  "test.region_builder"() : () -> ()
-  return
+// expected-remark@+1 {{applyPartialConversion failed}}
+builtin.module {
+
+  func @fail_to_convert_illegal_op_in_region() {
+    // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
+    "test.region_builder"() : () -> ()
+    return
+  }
+
 }
 
 // -----
@@ -191,17 +202,21 @@ func @fail_to_convert_illegal_op_in_region() {
 // Check that the entry block arguments of a region are untouched in the case
 // of failure.
 
-// CHECK-LABEL: func @fail_to_convert_region
-func @fail_to_convert_region() {
-  // CHECK-NEXT: "test.region"
-  // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: i64):
-  "test.region"() ({
-    ^bb1(%i0: i64):
-      // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
-      "test.region_builder"() : () -> ()
-      "test.valid"() : () -> ()
-  }) : () -> ()
-  return
+// expected-remark@+1 {{applyPartialConversion failed}}
+builtin.module {
+
+  func @fail_to_convert_region() {
+    // CHECK: "test.region"
+    // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: i64):
+    "test.region"() ({
+      ^bb1(%i0: i64):
+        // expected-error@+1 {{failed to legalize operation 'test.region_builder'}}
+        "test.region_builder"() : () -> ()
+        "test.valid"() : () -> ()
+    }) : () -> ()
+    return
+  }
+
 }
 
 // -----
@@ -268,4 +283,29 @@ func @undo_child_created_before_parent() {
   "test.illegal_op_with_region_anchor"() : () -> ()
   // expected-remark@+1 {{op 'std.return' is not legalizable}}
   return
+}
+
+// -----
+
+// Check that a conversion pattern on `test.blackhole` can mark the producer
+// for deletion.
+// CHECK-LABEL: @blackhole
+func @blackhole() {
+  %input = "test.blackhole_producer"() : () -> (i32)
+  "test.blackhole"(%input) : (i32) -> ()
+  // expected-remark@+1 {{op 'std.return' is not legalizable}}
+  return
+}
+
+// -----
+
+// expected-remark@+1 {{applyPartialConversion failed}}
+builtin.module {
+
+  func @create_unregistered_op_in_pattern() -> i32 {
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_g'}}
+    %0 = "test.illegal_op_g"() : () -> (i32)
+    "test.return"(%0) : (i32) -> ()
+  }
+
 }

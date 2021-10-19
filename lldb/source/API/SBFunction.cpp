@@ -22,9 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBFunction::SBFunction() : m_opaque_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFunction);
-}
+SBFunction::SBFunction() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFunction); }
 
 SBFunction::SBFunction(lldb_private::Function *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}
@@ -132,10 +130,10 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
         m_opaque_ptr->GetAddressRange().GetBaseAddress().GetModule());
     if (target_sp && module_sp) {
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
-      const bool prefer_file_cache = false;
+      const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
           module_sp->GetArchitecture(), nullptr, flavor, *target_sp,
-          m_opaque_ptr->GetAddressRange(), prefer_file_cache));
+          m_opaque_ptr->GetAddressRange(), force_live_memory));
     }
   }
   return LLDB_RECORD_RESULT(sb_instructions);
@@ -152,7 +150,7 @@ SBAddress SBFunction::GetStartAddress() {
 
   SBAddress addr;
   if (m_opaque_ptr)
-    addr.SetAddress(&m_opaque_ptr->GetAddressRange().GetBaseAddress());
+    addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
   return LLDB_RECORD_RESULT(addr);
 }
 
@@ -163,7 +161,7 @@ SBAddress SBFunction::GetEndAddress() {
   if (m_opaque_ptr) {
     addr_t byte_size = m_opaque_ptr->GetAddressRange().GetByteSize();
     if (byte_size > 0) {
-      addr.SetAddress(&m_opaque_ptr->GetAddressRange().GetBaseAddress());
+      addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
       addr->Slide(byte_size);
     }
   }

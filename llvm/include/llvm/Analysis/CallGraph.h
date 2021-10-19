@@ -87,13 +87,6 @@ class CallGraph {
   /// or calling an external function.
   std::unique_ptr<CallGraphNode> CallsExternalNode;
 
-  /// Replace the function represented by this node by another.
-  ///
-  /// This does not rescan the body of the function, so it is suitable when
-  /// splicing the body of one function to another while also updating all
-  /// callers from the old function to the new.
-  void spliceFunction(const Function *From, const Function *To);
-
 public:
   explicit CallGraph(Module &M);
   CallGraph(CallGraph &&Arg);

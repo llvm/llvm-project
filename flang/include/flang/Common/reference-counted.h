@@ -19,6 +19,7 @@ namespace Fortran::common {
 template <typename A> class ReferenceCounted {
 public:
   ReferenceCounted() {}
+  int references() const { return references_; }
   void TakeReference() { ++references_; }
   void DropReference() {
     if (--references_ == 0) {

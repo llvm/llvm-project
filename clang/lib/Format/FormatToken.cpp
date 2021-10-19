@@ -53,6 +53,7 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw___bf16:
   case tok::kw__Float16:
   case tok::kw___float128:
+  case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
   case tok::kw___underlying_type:
@@ -62,6 +63,7 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw_char32_t:
   case tok::kw_typeof:
   case tok::kw_decltype:
+  case tok::kw__Atomic:
     return true;
   default:
     return false;

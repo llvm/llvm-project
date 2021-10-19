@@ -19,7 +19,8 @@
 #include "llvm/ADT/SetVector.h"
 
 namespace polly {
-using namespace llvm;
+using llvm::GlobalValue;
+using llvm::GlobalVariable;
 
 /// This ParallelLoopGenerator subclass handles the generation of parallelized
 /// code, utilizing the LLVM OpenMP library.

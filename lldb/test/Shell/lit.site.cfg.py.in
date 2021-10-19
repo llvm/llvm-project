@@ -6,6 +6,7 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_libs_dir = "@LLDB_LIBS_DIR@"
 config.lldb_tools_dir = "@LLDB_TOOLS_DIR@"
@@ -21,6 +22,7 @@ config.lldb_bitness = 64 if @LLDB_IS_64_BITS@ else 32
 config.lldb_enable_python = @LLDB_ENABLE_PYTHON@
 config.lldb_enable_lua = @LLDB_ENABLE_LUA@
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
+config.lldb_system_debugserver = @LLDB_USE_SYSTEM_DEBUGSERVER@
 # The shell tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
@@ -42,4 +44,4 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLDB_SOURCE_DIR@/test/Shell/lit.cfg.py")
+lit_config.load_config(config, os.path.join(config.lldb_src_root, "test", "Shell", "lit.cfg.py"))

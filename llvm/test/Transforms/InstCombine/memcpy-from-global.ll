@@ -73,12 +73,13 @@ declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* nocapture, i8 addrspace
 
 @G = constant %T {i8 1, [123 x i8] zeroinitializer }
 @H = constant [2 x %U] zeroinitializer, align 16
+@I = internal addrspace(1) constant [4 x float] zeroinitializer , align 4
 
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B1:%.*]] = alloca [124 x i8], align 8
 ; CHECK-NEXT:    [[B1_SUB:%.*]] = getelementptr inbounds [124 x i8], [124 x i8]* [[B1]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(124) [[B1_SUB]], i8* nonnull align 16 dereferenceable(124) getelementptr inbounds (%T, %T* @G, i64 0, i32 0), i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(124) [[B1_SUB]], i8* noundef nonnull align 16 dereferenceable(124) getelementptr inbounds (%T, %T* @G, i64 0, i32 0), i64 124, i1 false)
 ; CHECK-NEXT:    call void @bar(i8* nonnull [[B1_SUB]])
 ; CHECK-NEXT:    ret void
 ;
@@ -101,7 +102,7 @@ define void @test2_no_null_opt() #0 {
 ; CHECK-LABEL: @test2_no_null_opt(
 ; CHECK-NEXT:    [[B1:%.*]] = alloca [124 x i8], align 8
 ; CHECK-NEXT:    [[B1_SUB:%.*]] = getelementptr inbounds [124 x i8], [124 x i8]* [[B1]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 dereferenceable(124) [[B1_SUB]], i8* align 16 dereferenceable(124) getelementptr inbounds (%T, %T* @G, i64 0, i32 0), i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef align 8 dereferenceable(124) [[B1_SUB]], i8* noundef align 16 dereferenceable(124) getelementptr inbounds (%T, %T* @G, i64 0, i32 0), i64 124, i1 false)
 ; CHECK-NEXT:    call void @bar(i8* [[B1_SUB]])
 ; CHECK-NEXT:    ret void
 ;
@@ -125,7 +126,7 @@ define void @test2_addrspacecast() {
 ; CHECK-NEXT:    [[B1:%.*]] = alloca [124 x i8], align 8
 ; CHECK-NEXT:    [[B1_SUB:%.*]] = getelementptr inbounds [124 x i8], [124 x i8]* [[B1]], i64 0, i64 0
 ; CHECK-NEXT:    [[B:%.*]] = addrspacecast i8* [[B1_SUB]] to i8 addrspace(1)*
-; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* align 4 dereferenceable(124) [[B]], i8 addrspace(1)* align 4 dereferenceable(124) addrspacecast (i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0) to i8 addrspace(1)*), i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* noundef align 4 dereferenceable(124) [[B]], i8 addrspace(1)* noundef align 4 dereferenceable(124) addrspacecast (i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0) to i8 addrspace(1)*), i64 124, i1 false)
 ; CHECK-NEXT:    call void @bar_as1(i8 addrspace(1)* [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -153,7 +154,7 @@ declare void @bar_as1(i8 addrspace(1)*)
 ;; Should be able to eliminate the alloca.
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0)) #2
+; CHECK-NEXT:    call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0)) [[ATTR2:#.*]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -165,7 +166,7 @@ define void @test3() {
 
 define void @test3_addrspacecast() {
 ; CHECK-LABEL: @test3_addrspacecast(
-; CHECK-NEXT:    call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0)) #2
+; CHECK-NEXT:    call void @bar(i8* getelementptr inbounds (%T, %T* @G, i64 0, i32 0)) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -178,37 +179,37 @@ define void @test3_addrspacecast() {
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
+; CHECK-NEXT:    call void @baz(i8* byval(i8) getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   %a = bitcast %T* %A to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @baz(i8* byval %a)
+  call void @baz(i8* byval(i8) %a)
   ret void
 }
 
 declare void @llvm.lifetime.start.p0i8(i64, i8*)
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    call void @baz(i8* byval getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
+; CHECK-NEXT:    call void @baz(i8* byval(i8) getelementptr inbounds (%T, %T* @G, i64 0, i32 0))
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   %a = bitcast %T* %A to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %a)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 bitcast (%T* @G to i8*), i64 124, i1 false)
-  call void @baz(i8* byval %a)
+  call void @baz(i8* byval(i8) %a)
   ret void
 }
 
 
-declare void @baz(i8* byval)
+declare void @baz(i8* byval(i8))
 
 
 define void @test6() {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    call void @bar(i8* bitcast ([2 x %U]* @H to i8*)) #2
+; CHECK-NEXT:    call void @bar(i8* bitcast ([2 x %U]* @H to i8*)) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -220,7 +221,7 @@ define void @test6() {
 
 define void @test7() {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    call void @bar(i8* bitcast ([2 x %U]* @H to i8*)) #2
+; CHECK-NEXT:    call void @bar(i8* bitcast ([2 x %U]* @H to i8*)) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -234,8 +235,8 @@ define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    [[A:%.*]] = bitcast %U* [[AL]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(20) [[A]], i8* nonnull align 4 dereferenceable(20) bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*), i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(i8* nonnull [[A]]) #2
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(20) [[A]], i8* noundef nonnull align 4 dereferenceable(20) bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*), i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(i8* nonnull [[A]]) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %al = alloca %U, align 16
@@ -250,8 +251,8 @@ define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    [[A:%.*]] = bitcast %U* [[AL]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p1i8.i64(i8* nonnull align 16 dereferenceable(20) [[A]], i8 addrspace(1)* align 4 dereferenceable(20) addrspacecast (i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*) to i8 addrspace(1)*), i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(i8* nonnull [[A]]) #2
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p1i8.i64(i8* noundef nonnull align 16 dereferenceable(20) [[A]], i8 addrspace(1)* noundef align 4 dereferenceable(20) addrspacecast (i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*) to i8 addrspace(1)*), i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(i8* nonnull [[A]]) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %Al = alloca %U, align 16
@@ -263,7 +264,7 @@ define void @test8_addrspacecast() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*)) #2
+; CHECK-NEXT:    call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*)) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -275,7 +276,7 @@ define void @test9() {
 
 define void @test9_addrspacecast() {
 ; CHECK-LABEL: @test9_addrspacecast(
-; CHECK-NEXT:    call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*)) #2
+; CHECK-NEXT:    call void @bar(i8* bitcast (%U* getelementptr inbounds ([2 x %U], [2 x %U]* @H, i64 0, i64 1) to i8*)) [[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -294,8 +295,8 @@ define void @test9_small_global() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CC:%.*]] = alloca [1000000 x i8], align 16
 ; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1000000 x i8], [1000000 x i8]* [[CC]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(3) [[ARRAYDECAY]], i8* nonnull align 16 dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i64 0, i64 0), i64 3, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(1000000) getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i64 0, i64 0), i8* nonnull align 16 dereferenceable(1000000) [[ARRAYDECAY]], i64 1000000, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(3) [[ARRAYDECAY]], i8* noundef nonnull align 16 dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i64 0, i64 0), i64 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(1000000) getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i64 0, i64 0), i8* noundef nonnull align 16 dereferenceable(1000000) [[ARRAYDECAY]], i64 1000000, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -311,7 +312,7 @@ entry:
 define void @test10_same_global() {
 ; CHECK-LABEL: @test10_same_global(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 16 dereferenceable(3) getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i64 0, i64 0), i8* nonnull align 16 dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i64 0, i64 0), i64 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 16 dereferenceable(3) getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i64 0, i64 0), i8* noundef nonnull align 16 dereferenceable(3) getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i64 0, i64 0), i64 3, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -321,6 +322,42 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %arraydecay, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZL3KKK, i32 0, i32 0), i64 3, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([1000000 x i8], [1000000 x i8]* @bbb, i32 0, i32 0), i8* %arraydecay, i64 3, i1 false)
   ret void
+}
+
+; Should replace alloca with global even when the global is in a different address space
+define float @test11(i64 %i) {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: [[GEP:%.*]] = getelementptr [4 x float], [4 x float] addrspace(1)* @I, i64 0, i64 %i
+; CHECK-NEXT: [[LD:%.*]] = load float, float addrspace(1)* [[GEP]]
+; CHECK-NEXT: ret float [[LD]]
+
+entry:
+  %a = alloca [4 x float], align 4
+  %b = bitcast [4 x float]* %a to i8*
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %b)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* align 4 %b, i8 addrspace(1)* align 4 bitcast ([4 x float] addrspace(1)* @I to i8 addrspace(1)*), i64 16, i1 false)
+  %g = getelementptr inbounds [4 x float], [4 x float]* %a, i64 0, i64 %i
+  %r = load float, float* %g, align 4
+  ret float %r
+}
+
+; If the memcpy is volatile, it should not be removed
+define float @test11_volatile(i64 %i) {
+; CHECK-LABEL: @test11_volatile(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: alloca
+; CHECK: call void @llvm.lifetime.start.p0i8
+; CHECK: call void @llvm.memcpy
+
+entry:
+  %a = alloca [4 x float], align 4
+  %b = bitcast [4 x float]* %a to i8*
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %b)
+  call void @llvm.memcpy.p0i8.p1i8.i64(i8* align 4 %b, i8 addrspace(1)* align 4 bitcast ([4 x float] addrspace(1)* @I to i8 addrspace(1)*), i64 16, i1 true)
+  %g = getelementptr inbounds [4 x float], [4 x float]* %a, i64 0, i64 %i
+  %r = load float, float* %g, align 4
+  ret float %r
 }
 
 attributes #0 = { null_pointer_is_valid }

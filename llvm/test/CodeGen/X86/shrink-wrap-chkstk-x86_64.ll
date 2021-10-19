@@ -13,7 +13,7 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    callq ___chkstk_ms
 ; CHECK-NEXT:    subq %rax, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4144
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %select.true.sink
@@ -24,7 +24,7 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    shrq $32, %rax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %select.end
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, b(%rip)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    # kill: def $ecx killed $ecx killed $rcx
 ; CHECK-NEXT:    callq fn2

@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -triple i686-windows -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MS
+// RUN: %clang_cc1 -std=c++11 -triple i686-windows         -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-MS
 // RUN: %clang_cc1 -std=c++11 -triple i686-windows-itanium -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-IA
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-scei-ps4      -fdeclspec -emit-llvm %s -o - | FileCheck %s -check-prefix CHECK-PS4
 
 template <typename>
 struct s {};
@@ -16,3 +17,5 @@ template class __declspec(dllexport) t<char>;
 // CHECK-IA: dllexport {{.*}} @_ZN1tIcEaSERKS0_
 // CHECK-IA: dllexport {{.*}} @_ZN1sIcEaSERKS0_
 
+// CHECK-PS4-NOT: @_ZN1tIcEaSERKS0_
+// CHECK-PS4-NOT: @_ZN1sIcEaSERKS0_

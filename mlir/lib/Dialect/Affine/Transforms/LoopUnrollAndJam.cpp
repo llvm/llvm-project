@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -74,5 +75,5 @@ void LoopUnrollAndJam::runOnFunction() {
   // any for operation.
   auto &entryBlock = getFunction().front();
   if (auto forOp = dyn_cast<AffineForOp>(entryBlock.front()))
-    loopUnrollJamByFactor(forOp, unrollJamFactor);
+    (void)loopUnrollJamByFactor(forOp, unrollJamFactor);
 }

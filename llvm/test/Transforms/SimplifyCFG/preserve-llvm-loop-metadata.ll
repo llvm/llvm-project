@@ -1,5 +1,5 @@
-; RUN: opt -simplifycfg -keep-loops=false -S < %s | FileCheck %s
-; RUN: opt -passes='simplify-cfg<no-keep-loops>' -S < %s | FileCheck %s
+; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -keep-loops=false -S < %s | FileCheck %s
+; RUN: opt -passes='simplifycfg<no-keep-loops>' -S < %s | FileCheck %s
 
 define void @test1(i32 %n) #0 {
 entry:

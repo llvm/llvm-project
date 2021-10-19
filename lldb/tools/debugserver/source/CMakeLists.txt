@@ -2,7 +2,6 @@ include(CheckCXXCompilerFlag)
 include(CheckLibraryExists)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 include_directories(${LLDB_SOURCE_DIR}/source)
-include_directories(MacOSX/DarwinLog)
 
 include_directories(MacOSX)
 
@@ -60,7 +59,10 @@ endfunction()
 # llvm dependencies in the current scope to the empty set.
 set(LLVM_COMMON_DEPENDS)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_SOURCE_DIR}/../resources/lldb-debugserver-Info.plist")
+set(DEBUGSERVER_RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../resources")
+set(DEBUGSERVER_INFO_PLIST "${DEBUGSERVER_RESOURCE_DIR}/lldb-debugserver-Info.plist")
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -Wl,-sectcreate,__TEXT,__info_plist,${DEBUGSERVER_INFO_PLIST}")
 
 check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments"
                         CXX_SUPPORTS_NO_GNU_ZERO_VARIADIC_MACRO_ARGUMENTS)
@@ -78,6 +80,30 @@ check_cxx_compiler_flag("-Wno-extended-offsetof"
                         CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
 if (CXX_SUPPORTS_NO_EXTENDED_OFFSETOF)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-extended-offsetof")
+endif ()
+
+# When compiling for arm, build debugserver 2 way fat with an arm64 and arm64e
+# slice. You can only debug arm64e processes using an arm64e debugserver.
+include(CheckCSourceCompiles)
+check_c_source_compiles(
+    "
+    #include <TargetConditionals.h>
+    #if TARGET_CPU_ARM
+    #if TARGET_OS_OSX
+    #warning Building for macOS
+    #else
+    #error Not building for macOS
+    #endif
+    #else
+    #error Not building for ARM
+    #endif
+    int main() { return 0; }
+    "
+    BUILDING_FOR_ARM_OSX
+)
+
+if (BUILDING_FOR_ARM_OSX)
+  set(CMAKE_OSX_ARCHITECTURES "arm64;arm64e")
 endif ()
 
 check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
@@ -109,6 +135,10 @@ if(APPLE)
     find_library(MOBILESERVICES_LIBRARY MobileCoreServices
       PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
     find_library(LOCKDOWN_LIBRARY lockdown)
+    if (APPLE_EMBEDDED STREQUAL "watchos")
+      find_library(CAROUSELSERVICES_LIBRARY CarouselServices
+        PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
+    endif()
 
     if(NOT BACKBOARD_LIBRARY)
       set(SKIP_TEST_DEBUGSERVER ON CACHE BOOL "" FORCE)
@@ -122,10 +152,13 @@ endif()
 
 if(LLDB_USE_ENTITLEMENTS)
   if(APPLE_EMBEDDED)
-    set(entitlements ${CMAKE_CURRENT_SOURCE_DIR}/debugserver-entitlements.plist)
+    set(entitlements ${DEBUGSERVER_RESOURCE_DIR}/debugserver-entitlements.plist)
   else()
-    # Same entitlements file as used for lldb-server
-    set(entitlements ${LLDB_SOURCE_DIR}/resources/debugserver-macosx-entitlements.plist)
+    if (LLDB_USE_PRIVATE_ENTITLEMENTS)
+      set(entitlements ${DEBUGSERVER_RESOURCE_DIR}/debugserver-macosx-private-entitlements.plist)
+    else()
+      set(entitlements ${DEBUGSERVER_RESOURCE_DIR}/debugserver-macosx-entitlements.plist)
+    endif()
   endif()
 endif()
 
@@ -173,8 +206,8 @@ set(lldbDebugserverCommonSources
   DNBThreadResumeActions.cpp
   JSON.cpp
   StdStringExtractor.cpp
+  StringConvert.cpp
   # JSON reader depends on the following LLDB-common files
-  ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
   ${LLDB_SOURCE_DIR}/source/Host/common/SocketAddress.cpp
   # end JSON reader dependencies
   libdebugserver.cpp
@@ -202,7 +235,12 @@ set(lldbDebugserverCommonSources
   ${generated_mach_interfaces}
   ${DEBUGSERVER_VERS_GENERATED_FILE})
 
-add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+# Tell LLVM not to complain about these source files.
+set(LLVM_OPTIONAL_SOURCES
+  ${lldbDebugserverCommonSources}
+  debugserver.cpp)
+
+add_lldb_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
 set_target_properties(lldbDebugserverCommon PROPERTIES FOLDER "lldb libraries/debugserver")
 
 target_link_libraries(lldbDebugserverCommon
@@ -214,8 +252,8 @@ target_link_libraries(lldbDebugserverCommon
                       ${SPRINGBOARD_LIBRARY}
                       ${MOBILESERVICES_LIBRARY}
                       ${LOCKDOWN_LIBRARY}
+                      ${CAROUSELSERVICES_LIBRARY}
                       lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog
                       ${FOUNDATION_LIBRARY}
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION}
@@ -224,7 +262,6 @@ if(HAVE_LIBCOMPRESSION)
   set_property(TARGET lldbDebugserverCommon APPEND PROPERTY
                 COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
 endif()
-set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
 add_lldb_tool(debugserver ADD_TO_FRAMEWORK
   debugserver.cpp
   LINK_LIBS lldbDebugserverCommon
@@ -266,6 +303,11 @@ if(APPLE_EMBEDDED)
     WITH_FBS
     WITH_BKS
     )
+  if(CAROUSELSERVICES_LIBRARY)
+    set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
+      WITH_CAROUSEL
+      )
+  endif()
   set_property(TARGET debugserver APPEND PROPERTY COMPILE_DEFINITIONS
     WITH_LOCKDOWN
     WITH_FBS
@@ -275,13 +317,12 @@ if(APPLE_EMBEDDED)
     -F${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks
     )
 
-  add_library(lldbDebugserverCommon_NonUI ${lldbDebugserverCommonSources})
+  add_lldb_library(lldbDebugserverCommon_NonUI ${lldbDebugserverCommonSources})
   target_link_libraries(lldbDebugserverCommon_NonUI
                       INTERFACE ${COCOA_LIBRARY}
                       ${CORE_FOUNDATION_LIBRARY}
                       ${FOUNDATION_LIBRARY}
                       lldbDebugserverArchSupport
-                      lldbDebugserverDarwin_DarwinLog
                       ${SECURITY_LIBRARY}
                       ${LIBCOMPRESSION})
   if(HAVE_LIBCOMPRESSION)

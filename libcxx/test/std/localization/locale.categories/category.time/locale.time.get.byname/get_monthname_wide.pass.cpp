@@ -9,6 +9,7 @@
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.zh_CN.UTF-8
+// XFAIL: libcpp-has-no-wide-characters
 
 // <locale>
 
@@ -25,7 +26,7 @@
 
 #include "platform_support.h" // locale name macros
 
-typedef input_iterator<const wchar_t*> I;
+typedef cpp17_input_iterator<const wchar_t*> I;
 
 typedef std::time_get_byname<wchar_t, I> F;
 

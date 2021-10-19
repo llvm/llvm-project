@@ -31,7 +31,7 @@ Matcher *ConvertPatternToMatcher(const PatternToMatch &Pattern,unsigned Variant,
                                  const CodeGenDAGPatterns &CGP);
 void OptimizeMatcher(std::unique_ptr<Matcher> &Matcher,
                      const CodeGenDAGPatterns &CGP);
-void EmitMatcherTable(const Matcher *Matcher, const CodeGenDAGPatterns &CGP,
+void EmitMatcherTable(Matcher *Matcher, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
 
 
@@ -41,6 +41,7 @@ class Matcher {
   // The next matcher node that is executed after this one.  Null if this is the
   // last stage of a match.
   std::unique_ptr<Matcher> Next;
+  size_t Size; // Size in bytes of matcher and all its children (if any).
   virtual void anchor();
 public:
   enum KindTy {
@@ -85,7 +86,10 @@ public:
     EmitNode,             // Create a DAG node
     EmitNodeXForm,        // Run a SDNodeXForm
     CompleteMatch,        // Finish a match and update the results.
-    MorphNodeTo           // Build a node, finish a match and update results.
+    MorphNodeTo,          // Build a node, finish a match and update results.
+
+    // Highest enum value; watch out when adding more.
+    HighestKind = MorphNodeTo
   };
   const KindTy Kind;
 
@@ -94,6 +98,8 @@ protected:
 public:
   virtual ~Matcher() {}
 
+  unsigned getSize() const { return Size; }
+  void setSize(unsigned sz) { Size = sz; }
   KindTy getKind() const { return Kind; }
 
   Matcher *getNext() { return Next.get(); }
@@ -629,6 +635,7 @@ private:
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckCondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
+  bool isContradictoryImpl(const Matcher *M) const override;
 };
 
 /// CheckChild2CondCodeMatcher - This checks to see if child 2 node is a
@@ -650,6 +657,7 @@ private:
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChild2CondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
+  bool isContradictoryImpl(const Matcher *M) const override;
 };
 
 /// CheckValueTypeMatcher - This checks to see if the current node is a
@@ -700,7 +708,7 @@ public:
   const ComplexPattern &getPattern() const { return Pattern; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  const std::string getName() const { return Name; }
+  std::string getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
   static bool classof(const Matcher *N) {
@@ -757,8 +765,8 @@ private:
   }
 };
 
-/// CheckImmAllOnesVMatcher - This check if the current node is an build vector
-/// of all ones.
+/// CheckImmAllOnesVMatcher - This checks if the current node is a build_vector
+/// or splat_vector of all ones.
 class CheckImmAllOnesVMatcher : public Matcher {
 public:
   CheckImmAllOnesVMatcher() : Matcher(CheckImmAllOnesV) {}
@@ -773,8 +781,8 @@ private:
   bool isContradictoryImpl(const Matcher *M) const override;
 };
 
-/// CheckImmAllZerosVMatcher - This check if the current node is an build vector
-/// of all zeros.
+/// CheckImmAllZerosVMatcher - This checks if the current node is a
+/// build_vector or splat_vector of all zeros.
 class CheckImmAllZerosVMatcher : public Matcher {
 public:
   CheckImmAllZerosVMatcher() : Matcher(CheckImmAllZerosV) {}

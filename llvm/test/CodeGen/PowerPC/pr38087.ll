@@ -17,7 +17,7 @@ define void @draw_llvm_vs_variant0(<4 x float> %x) {
 ; CHECK-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-NEXT:    xxspltw vs0, vs0, 2
 ; CHECK-NEXT:    xvmaddasp vs0, v2, v2
-; CHECK-NEXT:    stxvx vs0, 0, r3
+; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
   %.size = load i32, i32* undef

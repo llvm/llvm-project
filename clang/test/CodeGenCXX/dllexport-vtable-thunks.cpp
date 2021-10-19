@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-windows-gnu -fdeclspec -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-windows-itanium -fdeclspec -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-gnu     -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS="dso_local dllexport"
+// RUN: %clang_cc1 -triple x86_64-windows-itanium -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS="dso_local dllexport"
+// RUN: %clang_cc1 -triple x86_64-scei-ps4        -fdeclspec -emit-llvm -o - %s | FileCheck %s -DDSO_ATTRS=dllexport
 
 struct __declspec(dllexport) A {
   virtual void m();
@@ -11,7 +12,7 @@ struct __declspec(dllexport) C : A, B {
   virtual void m();
 };
 void C::m() {}
-// CHECK: define dso_local dllexport void @_ZThn8_N1C1mEv
+// CHECK: define{{.*}} [[DSO_ATTRS]] void @_ZThn8_N1C1mEv
 
 struct Base {
   virtual void m();
@@ -20,4 +21,4 @@ struct __declspec(dllexport) Derived : virtual Base {
   virtual void m();
 };
 void Derived::m() {}
-// CHECK: define dso_local dllexport void @_ZTv0_n24_N7Derived1mEv
+// CHECK: define{{.*}} [[DSO_ATTRS]] void @_ZTv0_n24_N7Derived1mEv

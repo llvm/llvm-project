@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -arcmt-check -verify -triple x86_64-apple-darwin10 -fsyntax-only -fblocks %s
+// RUN: %clang_cc1 -arcmt-action=check -verify -triple x86_64-apple-darwin10 -fsyntax-only -fblocks %s
 
 // Classes that have an Objective-C object pointer.
 struct HasObjectMember0 {
@@ -80,7 +80,7 @@ int check_non_pod_block1[__is_pod(int (^ __unsafe_unretained)(int))? 1 : -1];
 
 struct FlexibleArrayMember0 {
   int length;
-  id array[]; // expected-error{{flexible array member 'array' of type 'id __strong[]' with non-trivial destruction}}
+  id array[]; // expected-error{{flexible array member 'array' of type '__strong id []' with non-trivial destruction}}
 };
 
 struct FlexibleArrayMember1 {

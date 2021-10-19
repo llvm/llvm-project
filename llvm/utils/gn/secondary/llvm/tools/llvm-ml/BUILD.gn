@@ -1,7 +1,16 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-ml" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("llvm-ml") {
   deps = [
+    ":Opts",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
   ]

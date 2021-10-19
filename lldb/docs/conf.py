@@ -10,14 +10,30 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import print_function
 
-import sys, os
+import sys, os, re
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+building_man_page = tags.has('builder-man')
+
+# For the website we need to setup the path to the generated LLDB module that
+# we can generate documentation for its API.
+if not building_man_page:
+    # If extensions (or modules to document with autodoc) are in another directory,
+    # add these directories to sys.path here. If the directory is relative to the
+    # documentation root, use os.path.abspath to make it absolute, like shown here.
+
+    # Add the current directory that contains the mock _lldb native module which
+    # is imported by the `lldb` module.
+    sys.path.insert(0, os.path.abspath("."))
+    # Add the build directory that contains the `lldb` module. LLDB_SWIG_MODULE is
+    # set by CMake.
+    sys.path.insert(0, os.getenv("LLDB_SWIG_MODULE"))
+
+# Put the generated Python API documentation in the 'python_api' folder. This
+# also defines the URL these files will have in the generated website.
+automodapi_toctreedirnm = 'python_api'
 
 # -- General configuration -----------------------------------------------------
 
@@ -28,11 +44,37 @@ from datetime import date
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.todo', 'sphinx.ext.mathjax', 'sphinx.ext.intersphinx']
 
+autodoc_default_options = {
+    'special-members': '__int__, __len__, __hex__, __oct__, __iter__',
+}
+
+# Unless we only generate the basic manpage we need the plugin for generating
+# the Python API documentation.
+if not building_man_page:
+    extensions.append('sphinx_automodapi.automodapi')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = {
+    '.rst': 'restructuredtext',
+}
+
+try:
+  import recommonmark
+except ImportError:
+  # manpages do not use any .md sources
+  if not building_man_page:
+    raise
+else:
+  import sphinx
+  if sphinx.version_info >= (3, 0):
+    # This requires 0.5 or later.
+    extensions.append('recommonmark')
+  else:
+    source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
+  source_suffix['.md'] = 'markdown'
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -68,9 +110,15 @@ copyright = u'2007-%d, The LLDB Team' % date.today().year
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['_build', 'analyzer']
-
-# The reST default role (used for this markup: `text`) to use for all documents.
-#default_role = None
+# Ignore the generated Python documentation that is only used on the website.
+# Without this we will get a lot of warnings about doc pages that aren't
+# included by any doctree (as the manpage ignores those pages but they are
+# potentially still around from a previous website generation).
+if building_man_page:
+    exclude_patterns.append(automodapi_toctreedirnm)
+# Use the recommended 'any' rule so that referencing SB API classes is possible
+# by just writing `SBData`.
+default_role = 'any'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
@@ -100,7 +148,9 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    'font_size': '11pt'
+    'font_size': '11pt',
+    # Don't generate any links to GitHub.
+    'github_button' : 'false',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -228,11 +278,26 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [('man/lldb', 'lldb', u'LLDB Documentation', [u'LLVM project'], 1)]
+man_pages = [('man/lldb', 'lldb', u'LLDB Documentation', [u'LLVM project'], 1),
+             ('man/lldb-server', 'lldb-server', u'LLDB Documentation', [u'LLVM project'], 1),
+             ]
 
 # If true, show URL addresses after external links.
 #man_show_urls = False
 
+def process_md(name):
+    file_subpath = os.path.join(command_guide_subpath, name)
+    with open(os.path.join(command_guide_path, name)) as f:
+        title = f.readline().rstrip('\n')
+
+        m = re.match(r'^# (\S+) - (.+)$', title)
+        if m is None:
+            print("error: invalid title in %r "
+                  "(expected '# <name> - <description>')" % file_subpath,
+                  file=sys.stderr)
+        else:
+            man_pages.append((file_subpath.replace('.md',''), m.group(1),
+                              m.group(2), man_page_authors, 1))
 
 # -- Options for Texinfo output ------------------------------------------------
 
@@ -253,3 +318,36 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+empty_attr_summary = re.compile(r'\.\. rubric:: Attributes Summary\s*\.\. autosummary::\s*\.\. rubric::')
+empty_attr_documentation = re.compile(r'\.\. rubric:: Attributes Documentation\s*\.\. rubric::')
+
+def cleanup_source(app, docname, source):
+    """ Cleans up source files generated by automodapi. """
+    # Don't cleanup anything beside automodapi-generated sources.
+    if not automodapi_toctreedirnm in docname:
+      return
+    processed = source[0]
+
+    # Don't show the list of inheritance info as there is no inheritance in the
+    # SBI API. This avoids all the repeated text on all doc pages that a
+    # class inherits from 'object'.
+
+    processed = processed.replace(":show-inheritance:", "")
+    # Remove the SWIG generated 'thisown' attribute. It just bloats the generated
+    # documentation and users shouldn't fiddle with the value anyway.
+    processed = re.sub(r'~SB[a-zA-Z]+\.thisown', "", processed)
+    processed = processed.replace("  .. autoattribute:: thisown", "")
+
+    # After removing 'thisown', many objects don't have any attributes left.
+    # Remove all now empty attribute summary/documentation sections with
+    # some rather ugly regex.
+    processed = empty_attr_summary.sub('.. rubric::', processed)
+    processed = empty_attr_documentation.sub('.. rubric::', processed)
+
+    # Replace the original source with the processed one (source is a single
+    # element list).
+    source[0] = processed
+
+def setup(app):
+    app.connect('source-read', cleanup_source)

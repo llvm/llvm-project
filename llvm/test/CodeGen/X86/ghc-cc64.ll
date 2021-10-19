@@ -2,23 +2,23 @@
 
 ; Check the GHC call convention works (x86-64)
 
-@base  = external global i64 ; assigned to register: R13
-@sp    = external global i64 ; assigned to register: rbp
-@hp    = external global i64 ; assigned to register: R12
-@r1    = external global i64 ; assigned to register: rbx
-@r2    = external global i64 ; assigned to register: R14
-@r3    = external global i64 ; assigned to register: rsi
-@r4    = external global i64 ; assigned to register: rdi
-@r5    = external global i64 ; assigned to register: R8
-@r6    = external global i64 ; assigned to register: R9
-@splim = external global i64 ; assigned to register: R15
+@base  = external dso_local global i64 ; assigned to register: R13
+@sp    = external dso_local global i64 ; assigned to register: rbp
+@hp    = external dso_local global i64 ; assigned to register: R12
+@r1    = external dso_local global i64 ; assigned to register: rbx
+@r2    = external dso_local global i64 ; assigned to register: R14
+@r3    = external dso_local global i64 ; assigned to register: rsi
+@r4    = external dso_local global i64 ; assigned to register: rdi
+@r5    = external dso_local global i64 ; assigned to register: R8
+@r6    = external dso_local global i64 ; assigned to register: R9
+@splim = external dso_local global i64 ; assigned to register: R15
 
-@f1 = external global float  ; assigned to register: xmm1
-@f2 = external global float  ; assigned to register: xmm2
-@f3 = external global float  ; assigned to register: xmm3
-@f4 = external global float  ; assigned to register: xmm4
-@d1 = external global double ; assigned to register: xmm5
-@d2 = external global double ; assigned to register: xmm6
+@f1 = external dso_local global float  ; assigned to register: xmm1
+@f2 = external dso_local global float  ; assigned to register: xmm2
+@f3 = external dso_local global float  ; assigned to register: xmm3
+@f4 = external dso_local global float  ; assigned to register: xmm4
+@d1 = external dso_local global double ; assigned to register: xmm5
+@d2 = external dso_local global double ; assigned to register: xmm6
 
 define void @zap(i64 %a, i64 %b) nounwind {
 entry:

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-flat-for-global -denormal-fp-math=preserve-sign -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 
 ; GCN-LABEL: {{^}}s_pack_v2f16:

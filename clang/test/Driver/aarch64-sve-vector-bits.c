@@ -22,21 +22,6 @@
 // CHECK-2048: "-msve-vector-bits=2048"
 // CHECK-SCALABLE-NOT: "-msve-vector-bits=
 
-// Bail out if -msve-vector-bits is specified without SVE enabled
-// -----------------------------------------------------------------------------
-// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -msve-vector-bits=128 \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-SVE-ERROR %s
-// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -msve-vector-bits=256 \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-SVE-ERROR %s
-// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -msve-vector-bits=512 \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-SVE-ERROR %s
-// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -msve-vector-bits=1024 \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-SVE-ERROR %s
-// RUN: %clang -c %s -### -target aarch64-none-linux-gnu -msve-vector-bits=2048 \
-// RUN:  2>&1 | FileCheck --check-prefix=CHECK-NO-SVE-ERROR %s
-
-// CHECK-NO-SVE-ERROR: error: '-msve-vector-bits' is not supported without SVE enabled
-
 // Error out if an unsupported value is passed to -msve-vector-bits.
 // -----------------------------------------------------------------------------
 // RUN: %clang -c %s -### -target aarch64-none-linux-gnu -march=armv8-a+sve \

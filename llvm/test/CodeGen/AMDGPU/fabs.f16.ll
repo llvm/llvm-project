@@ -10,7 +10,7 @@
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN: s_and_b32 [[RESULT:s[0-9]+]], [[VAL]], 0x7fff
 ; GCN: v_mov_b32_e32 [[V_RESULT:v[0-9]+]], [[RESULT]]
-; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[V_RESULT]]
+; GCN: {{flat|global}}_store_short v{{.+}}, [[V_RESULT]]
 define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
   %bc= bitcast i16 %in to half
   %fabs = call half @llvm.fabs.f16(half %bc)
@@ -22,7 +22,7 @@ define amdgpu_kernel void @s_fabs_free_f16(half addrspace(1)* %out, i16 %in) {
 ; GCN: s_load_dword [[VAL:s[0-9]+]]
 ; GCN: s_and_b32 [[RESULT:s[0-9]+]], [[VAL]], 0x7fff
 ; GCN: v_mov_b32_e32 [[V_RESULT:v[0-9]+]], [[RESULT]]
-; GCN: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[V_RESULT]]
+; GCN: {{flat|global}}_store_short v{{.+}}, [[V_RESULT]]
 define amdgpu_kernel void @s_fabs_f16(half addrspace(1)* %out, half %in) {
   %fabs = call half @llvm.fabs.f16(half %in)
   store half %fabs, half addrspace(1)* %out
@@ -65,7 +65,7 @@ define amdgpu_kernel void @s_fabs_v4f16(<4 x half> addrspace(1)* %out, <4 x half
 ; GFX89-NOT: and
 ; GFX89: v_mov_b32_e32 [[V_IN1:v[0-9]+]], [[IN1]]
 ; GFX89: v_mul_f16_e64 [[RESULT:v[0-9]+]], |[[IN0]]|, [[V_IN1]]
-; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX89: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @fabs_fold_f16(half addrspace(1)* %out, half %in0, half %in1) {
   %fabs = call half @llvm.fabs.f16(half %in0)
   %fmul = fmul half %fabs, %in1

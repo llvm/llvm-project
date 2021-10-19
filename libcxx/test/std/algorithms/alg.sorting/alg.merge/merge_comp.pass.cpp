@@ -5,257 +5,94 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// REQUIRES: long_tests
 
 // <algorithm>
 
 // template<InputIterator InIter1, InputIterator InIter2, typename OutIter,
-//          Predicate<auto, InIter2::value_type, InIter1::value_type> Compare>
+//          CopyConstructible Compare>
 //   requires OutputIterator<OutIter, InIter1::reference>
 //         && OutputIterator<OutIter, InIter2::reference>
-//         && CopyConstructible<Compare>
+//         && Predicate<Compare, InIter1::value_type, InIter2::value_type>
+//         && Predicate<Compare, InIter2::value_type, InIter1::value_type>
 //   constexpr OutIter       // constexpr after C++17
-//   merge(InIter1 first1, InIter1 last1,
-//         InIter2 first2, InIter2 last2, OutIter result, Compare comp);
+//   merge(InIter1 first1, InIter1 last1, InIter2 first2, InIter2 last2,
+//         OutIter result, Compare comp);
 
 #include <algorithm>
-#include <functional>
-#include <random>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "counting_predicates.h"
+#include "../sortable_helpers.h"
 
-// #if TEST_STD_VER > 17
-// TEST_CONSTEXPR bool test_constexpr() {
-//           int ia[]       = {0, 1, 2, 3, 4};
-//           int ib[]       = {2, 4, 6, 8};
-//           int ic[]       = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//     const int expected[] = {0, 1, 2, 2, 3, 4, 4, 6, 8};
-//
-//     auto it = std::merge(std::begin(ia), std::end(ia),
-//                          std::begin(ib), std::end(ib),
-//                          std::begin(ic), [](int a, int b) {return a == b; });
-//     return std::distance(std::begin(ic), it) == (std::size(ia) + std::size(ib))
-//         && *it == 0
-//         && std::equal(std::begin(ic), it, std::begin(expected), std::end(expected))
-//         ;
-//     }
-// #endif
-
-std::mt19937 randomness;
-
-template <class InIter1, class InIter2, class OutIter>
-void
-test()
+template<class T, class Iter1, class Iter2, class OutIter>
+TEST_CONSTEXPR_CXX20 void test4()
 {
+    const T a[] = {11, 33, 31, 41};
+    const T b[] = {22, 32, 43, 42, 52};
     {
-    unsigned N = 100000;
-    int* ia = new int[N];
-    int* ib = new int[N];
-    int* ic = new int[2*N];
-    for (unsigned i = 0; i < N; ++i)
-        ia[i] = 2*i;
-    for (unsigned i = 0; i < N; ++i)
-        ib[i] = 2*i+1;
-    std::reverse(ia, ia+N);
-    std::reverse(ib, ib+N);
-    binary_counting_predicate<std::greater<int>, int, int> pred((std::greater<int>()));
-    OutIter r = std::merge(InIter1(ia), InIter1(ia+N),
-                           InIter2(ib), InIter2(ib+N), OutIter(ic), pred);
-    assert(base(r) == ic+2*N);
-    assert(ic[0] == static_cast<int>(2*N-1));
-    assert(ic[2*N-1] == 0);
-    assert(std::is_sorted(ic, ic+2*N, std::greater<int>()));
-    assert(pred.count() <= (N + N - 1));
-    delete [] ic;
-    delete [] ib;
-    delete [] ia;
+        T result[20] = {};
+        T expected[] = {11, 22, 33, 31, 32, 41, 43, 42, 52};
+        OutIter end = std::merge(Iter1(a), Iter1(a+4), Iter2(b), Iter2(b+5), OutIter(result), typename T::Comparator());
+        assert(std::lexicographical_compare(result, base(end), expected, expected+9, T::less) == 0);
+        for (const T *it = base(end); it != result+20; ++it) {
+            assert(it->value == 0);
+        }
     }
     {
-    unsigned N = 100;
-    int* ia = new int[N];
-    int* ib = new int[N];
-    int* ic = new int[2*N];
-    for (unsigned i = 0; i < 2*N; ++i)
-        ic[i] = i;
-    std::shuffle(ic, ic+2*N, randomness);
-    std::copy(ic, ic+N, ia);
-    std::copy(ic+N, ic+2*N, ib);
-    std::sort(ia, ia+N, std::greater<int>());
-    std::sort(ib, ib+N, std::greater<int>());
-    binary_counting_predicate<std::greater<int>, int, int> pred((std::greater<int>()));
-    OutIter r = std::merge(InIter1(ia), InIter1(ia+N),
-                           InIter2(ib), InIter2(ib+N), OutIter(ic), pred);
-    assert(base(r) == ic+2*N);
-    assert(ic[0] == static_cast<int>(2*N-1));
-    assert(ic[2*N-1] == 0);
-    assert(std::is_sorted(ic, ic+2*N, std::greater<int>()));
-    assert(pred.count() <= (N + N - 1));
-    delete [] ic;
-    delete [] ib;
-    delete [] ia;
+        T result[20] = {};
+        T expected[] = {11, 22, 32, 33, 31, 43, 42, 41, 52};
+        OutIter end = std::merge(Iter1(b), Iter1(b+5), Iter2(a), Iter2(a+4), OutIter(result), typename T::Comparator());
+        assert(std::lexicographical_compare(result, base(end), expected, expected+9, T::less) == 0);
+        for (const T *it = base(end); it != result+20; ++it) {
+            assert(it->value == 0);
+        }
     }
+}
+
+template<class T, class Iter1, class Iter2>
+TEST_CONSTEXPR_CXX20 void test3()
+{
+    test4<T, Iter1, Iter2, output_iterator<T*> >();
+    test4<T, Iter1, Iter2, forward_iterator<T*> >();
+    test4<T, Iter1, Iter2, bidirectional_iterator<T*> >();
+    test4<T, Iter1, Iter2, random_access_iterator<T*> >();
+    test4<T, Iter1, Iter2, T*>();
+}
+
+template<class T, class Iter1>
+TEST_CONSTEXPR_CXX20 void test2()
+{
+    test3<T, Iter1, cpp17_input_iterator<const T*> >();
+    test3<T, Iter1, forward_iterator<const T*> >();
+    test3<T, Iter1, bidirectional_iterator<const T*> >();
+    test3<T, Iter1, random_access_iterator<const T*> >();
+    test3<T, Iter1, const T*>();
+}
+
+template<class T>
+TEST_CONSTEXPR_CXX20 void test1()
+{
+    test2<T, cpp17_input_iterator<const T*> >();
+    test2<T, forward_iterator<const T*> >();
+    test2<T, bidirectional_iterator<const T*> >();
+    test2<T, random_access_iterator<const T*> >();
+    test2<T, const T*>();
+}
+
+TEST_CONSTEXPR_CXX20 bool test()
+{
+    test1<TrivialSortableWithComp>();
+    test1<NonTrivialSortableWithComp>();
+    return true;
 }
 
 int main(int, char**)
 {
-    test<input_iterator<const int*>, input_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, input_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, input_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, input_iterator<const int*>, int*>();
-
-    test<input_iterator<const int*>, forward_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, forward_iterator<const int*>, int*>();
-
-    test<input_iterator<const int*>, bidirectional_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, bidirectional_iterator<const int*>, int*>();
-
-    test<input_iterator<const int*>, random_access_iterator<const int*>, output_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<const int*>, forward_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, random_access_iterator<const int*>, int*>();
-
-    test<input_iterator<const int*>, const int*, output_iterator<int*> >();
-    test<input_iterator<const int*>, const int*, forward_iterator<int*> >();
-    test<input_iterator<const int*>, const int*, bidirectional_iterator<int*> >();
-    test<input_iterator<const int*>, const int*, random_access_iterator<int*> >();
-    test<input_iterator<const int*>, const int*, int*>();
-
-    test<forward_iterator<const int*>, input_iterator<const int*>, output_iterator<int*> >();
-    test<forward_iterator<const int*>, input_iterator<const int*>, forward_iterator<int*> >();
-    test<forward_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<forward_iterator<const int*>, input_iterator<const int*>, random_access_iterator<int*> >();
-    test<forward_iterator<const int*>, input_iterator<const int*>, int*>();
-
-    test<forward_iterator<const int*>, forward_iterator<const int*>, output_iterator<int*> >();
-    test<forward_iterator<const int*>, forward_iterator<const int*>, forward_iterator<int*> >();
-    test<forward_iterator<const int*>, forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<forward_iterator<const int*>, forward_iterator<const int*>, random_access_iterator<int*> >();
-    test<forward_iterator<const int*>, forward_iterator<const int*>, int*>();
-
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*>, output_iterator<int*> >();
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<forward_iterator<const int*>, bidirectional_iterator<const int*>, int*>();
-
-    test<forward_iterator<const int*>, random_access_iterator<const int*>, output_iterator<int*> >();
-    test<forward_iterator<const int*>, random_access_iterator<const int*>, forward_iterator<int*> >();
-    test<forward_iterator<const int*>, random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<forward_iterator<const int*>, random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<forward_iterator<const int*>, random_access_iterator<const int*>, int*>();
-
-    test<forward_iterator<const int*>, const int*, output_iterator<int*> >();
-    test<forward_iterator<const int*>, const int*, forward_iterator<int*> >();
-    test<forward_iterator<const int*>, const int*, bidirectional_iterator<int*> >();
-    test<forward_iterator<const int*>, const int*, random_access_iterator<int*> >();
-    test<forward_iterator<const int*>, const int*, int*>();
-
-    test<bidirectional_iterator<const int*>, input_iterator<const int*>, output_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, input_iterator<const int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, input_iterator<const int*>, int*>();
-
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*>, output_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*>, forward_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, forward_iterator<const int*>, int*>();
-
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>, output_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, bidirectional_iterator<const int*>, int*>();
-
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*>, output_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*>, forward_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, random_access_iterator<const int*>, int*>();
-
-    test<bidirectional_iterator<const int*>, const int*, output_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, const int*, forward_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, const int*, bidirectional_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, const int*, random_access_iterator<int*> >();
-    test<bidirectional_iterator<const int*>, const int*, int*>();
-
-    test<random_access_iterator<const int*>, input_iterator<const int*>, output_iterator<int*> >();
-    test<random_access_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, input_iterator<const int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, input_iterator<const int*>, int*>();
-
-    test<random_access_iterator<const int*>, forward_iterator<const int*>, output_iterator<int*> >();
-    test<random_access_iterator<const int*>, forward_iterator<const int*>, forward_iterator<int*> >();
-    test<random_access_iterator<const int*>, forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, forward_iterator<const int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, forward_iterator<const int*>, int*>();
-
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*>, output_iterator<int*> >();
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, bidirectional_iterator<const int*>, int*>();
-
-    test<random_access_iterator<const int*>, random_access_iterator<const int*>, output_iterator<int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<const int*>, forward_iterator<int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, random_access_iterator<const int*>, int*>();
-
-    test<random_access_iterator<const int*>, const int*, output_iterator<int*> >();
-    test<random_access_iterator<const int*>, const int*, forward_iterator<int*> >();
-    test<random_access_iterator<const int*>, const int*, bidirectional_iterator<int*> >();
-    test<random_access_iterator<const int*>, const int*, random_access_iterator<int*> >();
-    test<random_access_iterator<const int*>, const int*, int*>();
-
-    test<const int*, input_iterator<const int*>, output_iterator<int*> >();
-    test<const int*, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<const int*, input_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<const int*, input_iterator<const int*>, random_access_iterator<int*> >();
-    test<const int*, input_iterator<const int*>, int*>();
-
-    test<const int*, forward_iterator<const int*>, output_iterator<int*> >();
-    test<const int*, forward_iterator<const int*>, forward_iterator<int*> >();
-    test<const int*, forward_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<const int*, forward_iterator<const int*>, random_access_iterator<int*> >();
-    test<const int*, forward_iterator<const int*>, int*>();
-
-    test<const int*, bidirectional_iterator<const int*>, output_iterator<int*> >();
-    test<const int*, bidirectional_iterator<const int*>, forward_iterator<int*> >();
-    test<const int*, bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<const int*, bidirectional_iterator<const int*>, random_access_iterator<int*> >();
-    test<const int*, bidirectional_iterator<const int*>, int*>();
-
-    test<const int*, random_access_iterator<const int*>, output_iterator<int*> >();
-    test<const int*, random_access_iterator<const int*>, forward_iterator<int*> >();
-    test<const int*, random_access_iterator<const int*>, bidirectional_iterator<int*> >();
-    test<const int*, random_access_iterator<const int*>, random_access_iterator<int*> >();
-    test<const int*, random_access_iterator<const int*>, int*>();
-
-    test<const int*, const int*, output_iterator<int*> >();
-    test<const int*, const int*, forward_iterator<int*> >();
-    test<const int*, const int*, bidirectional_iterator<int*> >();
-    test<const int*, const int*, random_access_iterator<int*> >();
-    test<const int*, const int*, int*>();
-
+    test();
 #if TEST_STD_VER > 17
-//  Not yet - waiting on std::copy
-//     static_assert(test_constexpr());
+    static_assert(test());
 #endif
 
-  return 0;
+    return 0;
 }

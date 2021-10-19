@@ -51,6 +51,11 @@ class CCIfPreallocated<CCAction A> : CCIf<"ArgFlags.isPreallocated()", A> {
 class CCIfSwiftSelf<CCAction A> : CCIf<"ArgFlags.isSwiftSelf()", A> {
 }
 
+/// CCIfSwiftAsync - If the current argument has swiftasync parameter attribute,
+/// apply Action A.
+class CCIfSwiftAsync<CCAction A> : CCIf<"ArgFlags.isSwiftAsync()", A> {
+}
+
 /// CCIfSwiftError - If the current argument has swifterror parameter attribute,
 /// apply Action A.
 class CCIfSwiftError<CCAction A> : CCIf<"ArgFlags.isSwiftError()", A> {
@@ -187,15 +192,15 @@ class CallingConv<list<CCAction> actions> {
 
   /// If true, this calling convention will be emitted as externally visible in
   /// the llvm namespaces instead of as a static function.
-  bit Entry = 0;
+  bit Entry = false;
 
-  bit Custom = 0;
+  bit Custom = false;
 }
 
 /// CustomCallingConv - An instance of this is used to declare calling
 /// conventions that are implemented using a custom function of the same name.
 class CustomCallingConv : CallingConv<[]> {
-  let Custom = 1;
+  let Custom = true;
 }
 
 /// CalleeSavedRegs - A list of callee saved registers for a given calling

@@ -13,13 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 
@@ -41,16 +42,11 @@ enum DispatchPackedOffsets {
 };
 
 class AMDGPULowerKernelAttributes : public ModulePass {
-  Module *Mod = nullptr;
-
 public:
   static char ID;
 
   AMDGPULowerKernelAttributes() : ModulePass(ID) {}
 
-  bool processUse(CallInst *CI);
-
-  bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
 
   StringRef getPassName() const override {
@@ -64,19 +60,14 @@ public:
 
 } // end anonymous namespace
 
-bool AMDGPULowerKernelAttributes::doInitialization(Module &M) {
-  Mod = &M;
-  return false;
-}
-
-bool AMDGPULowerKernelAttributes::processUse(CallInst *CI) {
+static bool processUse(CallInst *CI) {
   Function *F = CI->getParent()->getParent();
 
   auto MD = F->getMetadata("reqd_work_group_size");
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-    F->getFnAttribute("uniform-work-group-size").getValueAsString() == "true";
+    F->getFnAttribute("uniform-work-group-size").getValueAsBool();
 
   if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize)
     return false;
@@ -89,7 +80,7 @@ bool AMDGPULowerKernelAttributes::processUse(CallInst *CI) {
   Value *GridSizeY = nullptr;
   Value *GridSizeZ = nullptr;
 
-  const DataLayout &DL = Mod->getDataLayout();
+  const DataLayout &DL = F->getParent()->getDataLayout();
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -239,7 +230,7 @@ bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
   StringRef DispatchPtrName
     = Intrinsic::getName(Intrinsic::amdgcn_dispatch_ptr);
 
-  Function *DispatchPtr = Mod->getFunction(DispatchPtrName);
+  Function *DispatchPtr = M.getFunction(DispatchPtrName);
   if (!DispatchPtr) // Dispatch ptr not used.
     return false;
 
@@ -258,12 +249,31 @@ bool AMDGPULowerKernelAttributes::runOnModule(Module &M) {
 }
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerKernelAttributes, DEBUG_TYPE,
-                      "AMDGPU IR optimizations", false, false)
-INITIALIZE_PASS_END(AMDGPULowerKernelAttributes, DEBUG_TYPE, "AMDGPU IR optimizations",
-                    false, false)
+                      "AMDGPU Kernel Attributes", false, false)
+INITIALIZE_PASS_END(AMDGPULowerKernelAttributes, DEBUG_TYPE,
+                    "AMDGPU Kernel Attributes", false, false)
 
 char AMDGPULowerKernelAttributes::ID = 0;
 
 ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
   return new AMDGPULowerKernelAttributes();
+}
+
+PreservedAnalyses
+AMDGPULowerKernelAttributesPass::run(Function &F, FunctionAnalysisManager &AM) {
+  StringRef DispatchPtrName =
+      Intrinsic::getName(Intrinsic::amdgcn_dispatch_ptr);
+
+  Function *DispatchPtr = F.getParent()->getFunction(DispatchPtrName);
+  if (!DispatchPtr) // Dispatch ptr not used.
+    return PreservedAnalyses::all();
+
+  for (Instruction &I : instructions(F)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->getCalledFunction() == DispatchPtr)
+        processUse(CI);
+    }
+  }
+
+  return PreservedAnalyses::all();
 }

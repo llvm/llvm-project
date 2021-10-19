@@ -41,6 +41,7 @@ class MachineOperand;
 class TargetInstrInfo;
 class TargetRegisterInfo;
 class VirtRegMap;
+class VirtRegAuxInfo;
 
 class LiveRangeEdit : private MachineRegisterInfo::Delegate {
 public:
@@ -56,14 +57,14 @@ public:
 
     /// Called when a virtual register is no longer used. Return false to defer
     /// its deletion from LiveIntervals.
-    virtual bool LRE_CanEraseVirtReg(unsigned) { return true; }
+    virtual bool LRE_CanEraseVirtReg(Register) { return true; }
 
     /// Called before shrinking the live range of a virtual register.
-    virtual void LRE_WillShrinkVirtReg(unsigned) {}
+    virtual void LRE_WillShrinkVirtReg(Register) {}
 
     /// Called after cloning a virtual register.
     /// This is used for new registers representing connected components of Old.
-    virtual void LRE_DidCloneVirtReg(unsigned New, unsigned Old) {}
+    virtual void LRE_DidCloneVirtReg(Register New, Register Old) {}
   };
 
 private:
@@ -95,11 +96,6 @@ private:
 
   /// scanRemattable - Identify the Parent values that may rematerialize.
   void scanRemattable(AAResults *aa);
-
-  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
-  /// OrigIdx are also available with the same value at UseIdx.
-  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
-                          SlotIndex UseIdx) const;
 
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
@@ -152,7 +148,7 @@ public:
     return *Parent;
   }
 
-  Register getReg() const { return getParent().reg; }
+  Register getReg() const { return getParent().reg(); }
 
   /// Iterator for accessing the new registers added by this edit.
   using iterator = SmallVectorImpl<Register>::const_iterator;
@@ -206,6 +202,11 @@ public:
     explicit Remat(VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
 
+  /// allUsesAvailableAt - Return true if all registers used by OrigMI at
+  /// OrigIdx are also available with the same value at UseIdx.
+  bool allUsesAvailableAt(const MachineInstr *OrigMI, SlotIndex OrigIdx,
+                          SlotIndex UseIdx) const;
+
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
   /// When cheapAsAMove is set, only cheap remats are allowed.
@@ -248,8 +249,7 @@ public:
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.
-  void calculateRegClassAndHint(MachineFunction &, const MachineLoopInfo &,
-                                const MachineBlockFrequencyInfo &);
+  void calculateRegClassAndHint(MachineFunction &, VirtRegAuxInfo &);
 };
 
 } // end namespace llvm

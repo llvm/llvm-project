@@ -1,0 +1,9 @@
+# RUN: %lldb-noinit -x -s %s | FileCheck %s
+settings show symbols.clang-modules-cache-path
+q
+# This test checks that we get *any* clang modules cache path by default. The
+# actual path depends on the operating system.
+# CHECK: symbols.clang-modules-cache-path (file) = "
+# Clang treats an empty path in the same way as 'no path', so explicitly check
+# that we never have an empty path by default.
+# CHECK-NOT: symbols.clang-modules-cache-path (file) = ""

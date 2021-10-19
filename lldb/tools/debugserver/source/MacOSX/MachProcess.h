@@ -78,22 +78,24 @@ public:
   };
 
   // Child process control
-  pid_t AttachForDebug(pid_t pid, char *err_str, size_t err_len);
+  pid_t AttachForDebug(pid_t pid, bool unmask_signals, char *err_str,
+                       size_t err_len);
   pid_t LaunchForDebug(const char *path, char const *argv[], char const *envp[],
                        const char *working_directory, const char *stdin_path,
                        const char *stdout_path, const char *stderr_path,
                        bool no_stdio, nub_launch_flavor_t launch_flavor,
-                       int disable_aslr, const char *event_data, DNBError &err);
+                       int disable_aslr, const char *event_data,
+                       bool unmask_signals, DNBError &err);
 
   static uint32_t GetCPUTypeForLocalProcess(pid_t pid);
   static pid_t ForkChildForPTraceDebugging(const char *path, char const *argv[],
                                            char const *envp[],
                                            MachProcess *process, DNBError &err);
   static pid_t PosixSpawnChildForPTraceDebugging(
-      const char *path, cpu_type_t cpu_type, char const *argv[],
-      char const *envp[], const char *working_directory, const char *stdin_path,
-      const char *stdout_path, const char *stderr_path, bool no_stdio,
-      MachProcess *process, int disable_aslr, DNBError &err);
+      const char *path, cpu_type_t cpu_type, cpu_subtype_t cpu_subtype,
+      char const *argv[], char const *envp[], const char *working_directory,
+      const char *stdin_path, const char *stdout_path, const char *stderr_path,
+      bool no_stdio, MachProcess *process, int disable_aslr, DNBError &err);
   nub_addr_t GetDYLDAllImageInfosAddress();
   static const void *PrepareForAttach(const char *path,
                                       nub_launch_flavor_t launch_flavor,
@@ -107,7 +109,7 @@ public:
   pid_t BoardServiceLaunchForDebug(const char *app_bundle_path,
                                    char const *argv[], char const *envp[],
                                    bool no_stdio, bool disable_aslr,
-                                   const char *event_data,
+                                   const char *event_data, bool unmask_signals,
                                    DNBError &launch_err);
   pid_t BoardServiceForkChildForPTraceDebugging(
       const char *path, char const *argv[], char const *envp[], bool no_stdio,
@@ -128,7 +130,7 @@ public:
 #ifdef WITH_SPRINGBOARD
   pid_t SBLaunchForDebug(const char *app_bundle_path, char const *argv[],
                          char const *envp[], bool no_stdio, bool disable_aslr,
-                         DNBError &launch_err);
+                         bool unmask_signals, DNBError &launch_err);
   static pid_t SBForkChildForPTraceDebugging(const char *path,
                                              char const *argv[],
                                              char const *envp[], bool no_stdio,
@@ -250,6 +252,7 @@ public:
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
       const std::vector<struct binary_image_information> &image_infos);
+  uint32_t GetPlatform();
   /// Get the runtime platform from DYLD via SPI.
   uint32_t GetProcessPlatformViaDYLDSPI();
   /// Use the dyld SPI present in macOS 10.12, iOS 10, tvOS 10,
@@ -341,6 +344,9 @@ public:
 
   bool ProcessUsingFrontBoard();
 
+  // Size of addresses in the inferior process (4 or 8).
+  int GetInferiorAddrSize(pid_t pid);
+
   Genealogy::ThreadActivitySP GetGenealogyInfoForThread(nub_thread_t tid,
                                                         bool &timed_out);
 
@@ -373,6 +379,7 @@ private:
 
   pid_t m_pid;           // Process ID of child process
   cpu_type_t m_cpu_type; // The CPU type of this process
+  uint32_t m_platform;   // The platform of this process
   int m_child_stdin;
   int m_child_stdout;
   int m_child_stderr;

@@ -50,7 +50,7 @@ hook into.
 
 The first thing we need to do is to define the constraints on inlining
 operations in the Toy dialect. This information is provided through a
-[dialect interface](../../Interfaces.md#dialect-interfaces). This is essentially
+[dialect interface](../../Interfaces.md/#dialect-interfaces). This is essentially
 a class containing a set of virtual hooks which the dialect can override.
 In this case, the interface is `DialectInlinerInterface`.
 
@@ -61,10 +61,18 @@ In this case, the interface is `DialectInlinerInterface`.
 struct ToyInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
+  /// This hook checks to see if the given callable operation is legal to inline
+  /// into the given call. For Toy this hook can simply return true, as the Toy
+  /// Call operation is always inlinable.
+  bool isLegalToInline(Operation *call, Operation *callable,
+                       bool wouldBeCloned) const final {
+    return true;
+  }
+
   /// This hook checks to see if the given operation is legal to inline into the
   /// given region. For Toy this hook can simply return true, as all Toy
   /// operations are inlinable.
-  bool isLegalToInline(Operation *, Region *,
+  bool isLegalToInline(Operation *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
@@ -87,18 +95,34 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 };
 ```
 
+Besides, the inliner will only discard private-visible unused function
+definitions. We also have to set the visibility of functions (except the
+main function) in the MLIR generator.
+
+```c++
+/// Emit a new function and add it to the MLIR module.
+mlir::FuncOp mlirGen(FunctionAST &funcAST) {
+  ...
+  // If this function isn't main, then set the visibility to private.
+  if (funcAST.getProto()->getName() != "main")
+    function.setPrivate();
+
+  return function;
+}
+```
+
 We then register our dialect interface directly on the Toy dialect, similarly to
 how we did for operations.
 
 ```c++
-ToyDialect::ToyDialect(mlir::MLIRContext *ctx) : mlir::Dialect("toy", ctx) {
+void ToyDialect::initialize() {
   addInterfaces<ToyInlinerInterface>();
 }
 ```
 
 Next, we need to provide a way for the inliner to know that `toy.generic_call`
 represents a call to a function. MLIR provides an
-[operation interface](../../Interfaces.md#operation-interfaces) that can be used
+[operation interface](../../Interfaces.md/#attributeoperationtype-interfaces) that can be used
 to mark an operation as being "call-like". Unlike dialect interfaces, operation
 interfaces provide a more refined granularity of information that is specific
 and core to a single operation. The interface that we will be adding here is the
@@ -164,7 +188,7 @@ func @main() {
 }
 ```
 
-We have two calls to multiple_transpose that we would like to inline into main,
+We have two calls to multiply_transpose that we would like to inline into main,
 but if we look at the output nothing has changed. We are missing one last subtle
 piece: there is a hidden type conversion on the edge of the call. If we look at
 the above, the operands to the generic_call are of type `tensor<2x3xf64>`, while
@@ -174,26 +198,50 @@ to add a new operation to the Toy dialect, `ToyCastOp`(toy.cast), to represent
 casts between two different shapes.
 
 ```tablegen
-def CastOp : Toy_Op<"cast", [NoSideEffect, SameOperandsAndResultShape]> {
+def CastOp : Toy_Op<"cast", [
+    DeclareOpInterfaceMethods<CastOpInterface>,
+    NoSideEffect,
+    SameOperandsAndResultShape]
+  > {
   let summary = "shape cast operation";
   let description = [{
     The "cast" operation converts a tensor from one type to an equivalent type
     without changing any data elements. The source and destination types
-    must both be tensor types with the same element type. If both are ranked
-    then the rank should be the same and static dimensions should match. The
-    operation is invalid if converting to a mismatching constant dimension.
+    must both be tensor types with the same element type. If both are ranked,
+    then shape is required to match. The operation is invalid if converting
+    to a mismatching constant dimension.
   }];
 
   let arguments = (ins F64Tensor:$input);
   let results = (outs F64Tensor:$output);
-
-  // Set the folder bit so that we can fold redundant cast operations.
-  let hasFolder = 1;
 }
 ```
 
-We can then override the necessary hook on the ToyInlinerInterface to insert
-this for us when necessary:
+Note that the definition of this cast operation adds a `CastOpInterface` to the
+traits list. This interface provides several utilities for cast-like operation,
+such as folding identity casts and verification. We hook into this interface by
+providing a definition for the `areCastCompatible` method:
+
+```c++
+/// Returns true if the given set of input and result types are compatible with
+/// this cast operation. This is required by the `CastOpInterface` to verify
+/// this operation and provide other additional utilities.
+bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  // The inputs must be Tensors with the same element type.
+  TensorType input = inputs.front().dyn_cast<TensorType>();
+  TensorType output = outputs.front().dyn_cast<TensorType>();
+  if (!input || !output || input.getElementType() != output.getElementType())
+    return false;
+  // The shape is required to match if both types are ranked.
+  return !input.hasRank() || !output.hasRank() || input == output;
+}
+
+```
+
+With a proper cast operation, we can now override the necessary hook on the
+ToyInlinerInterface to insert it for us when necessary:
 
 ```c++
 struct ToyInlinerInterface : public DialectInlinerInterface {
@@ -252,7 +300,7 @@ can define an operation interface that can be specified on operations that need
 to have their result shapes inferred.
 
 Similarly to operations, we can also
-[define operation interfaces](../../OpDefinitions.md#operation-interfaces) using
+[define operation interfaces](../../Interfaces.md/#attributeoperationtype-interfaces) using
 the operation definition specification (ODS) framework.
 
 The interface is defined by inheriting from `OpInterface`, which takes the name
@@ -273,7 +321,7 @@ Next, we define the interface methods that the operations will need to provide.
 An interface method is comprised of: a description; a C++ return type in string
 form; a method name in string form; and a few optional components, depending on
 the need. See the
-[ODS documentation](../../OpDefinitions.md#operation-interfaces) for more
+[ODS documentation](../../Interfaces.md/#attributeoperationtype-interfaces) for more
 information.
 
 ```tablegen
@@ -310,7 +358,7 @@ void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 At this point, each of the necessary Toy operations provide a mechanism by which
 to infer their output shapes. The ShapeInferencePass is a FunctionPass: it will
 run on each Function in isolation. MLIR also supports general
-[OperationPasses](../../PassManagement.md#operation-pass) that run on any isolated
+[OperationPasses](../../PassManagement.md/#operation-pass) that run on any isolated
 operation (i.e. other function-like operations), but here our module only
 contains functions, so there is no need to generalize to all operations.
 

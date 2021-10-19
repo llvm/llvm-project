@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // 'do_bytes' throws a std::range_error unexpectedly
-// XFAIL: LIBCXX-WINDOWS-FIXME
+// XFAIL: LIBCXX-WINDOWS-FIXME, powerpc-ibm-aix
+
+// XFAIL: libcpp-has-no-wide-characters
 
 // UNSUPPORTED: c++03
 

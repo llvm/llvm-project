@@ -24,7 +24,7 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
@@ -34,16 +34,26 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm"
 
 // Emscripten's asm.js-style exception handling
-static cl::opt<bool> EnableEmException(
-    "enable-emscripten-cxx-exceptions",
-    cl::desc("WebAssembly Emscripten-style exception handling"),
-    cl::init(false));
+cl::opt<bool>
+    WasmEnableEmEH("enable-emscripten-cxx-exceptions",
+                   cl::desc("WebAssembly Emscripten-style exception handling"),
+                   cl::init(false));
 
 // Emscripten's asm.js-style setjmp/longjmp handling
-static cl::opt<bool> EnableEmSjLj(
+cl::opt<bool> WasmEnableEmSjLj(
     "enable-emscripten-sjlj",
     cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
     cl::init(false));
+
+// Exception handling using wasm EH instructions
+cl::opt<bool> WasmEnableEH("wasm-enable-eh",
+                           cl::desc("WebAssembly exception handling"),
+                           cl::init(false));
+
+// setjmp/longjmp handling using wasm EH instrutions
+cl::opt<bool> WasmEnableSjLj("wasm-enable-sjlj",
+                             cl::desc("WebAssembly setjmp/longjmp handling"),
+                             cl::init(false));
 
 // A command-line option to keep implicit locals
 // for the purpose of testing with lit/llc ONLY.
@@ -77,6 +87,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMemIntrinsicResultsPass(PR);
   initializeWebAssemblyRegStackifyPass(PR);
   initializeWebAssemblyRegColoringPass(PR);
+  initializeWebAssemblyNullifyDebugValueListsPass(PR);
   initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
   initializeWebAssemblyLateEHPreparePass(PR);
   initializeWebAssemblyExceptionInfoPass(PR);
@@ -87,6 +98,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyRegNumberingPass(PR);
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyMCLowerPrePassPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -118,11 +130,17 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, Optional<Reloc::Model> RM,
     Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
-    : LLVMTargetMachine(T,
-                        TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
-                                         : "e-m:e-p:32:32-i64:64-n32:64-S128",
-                        TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
-                        getEffectiveCodeModel(CM, CodeModel::Large), OL),
+    : LLVMTargetMachine(
+          T,
+          TT.isArch64Bit()
+              ? (TT.isOSEmscripten()
+                     ? "e-m:e-p:64:64-i64:64-f128:64-n32:64-S128-ni:1:10:20"
+                     : "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1:10:20")
+              : (TT.isOSEmscripten()
+                     ? "e-m:e-p:32:32-i64:64-f128:64-n32:64-S128-ni:1:10:20"
+                     : "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1:10:20"),
+          TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
+          getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()) {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
@@ -144,6 +162,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 }
 
 WebAssemblyTargetMachine::~WebAssemblyTargetMachine() = default; // anchor.
+
+const WebAssemblySubtarget *WebAssemblyTargetMachine::getSubtargetImpl() const {
+  return getSubtargetImpl(std::string(getTargetCPU()),
+                          std::string(getTargetFeatureString()));
+}
 
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(std::string CPU,
@@ -191,6 +214,7 @@ public:
     FeatureBitset Features = coalesceFeatures(M);
 
     std::string FeatureStr = getFeatureString(Features);
+    WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
 
@@ -271,10 +295,9 @@ private:
   bool stripThreadLocals(Module &M) {
     bool Stripped = false;
     for (auto &GV : M.globals()) {
-      if (GV.getThreadLocalMode() !=
-          GlobalValue::ThreadLocalMode::NotThreadLocal) {
+      if (GV.isThreadLocal()) {
         Stripped = true;
-        GV.setThreadLocalMode(GlobalValue::ThreadLocalMode::NotThreadLocal);
+        GV.setThreadLocal(false);
       }
     }
     return Stripped;
@@ -319,12 +342,13 @@ public:
   void addPostRegAlloc() override;
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
+  bool addPreISel() override;
 
   // No reg alloc
-  bool addRegAssignmentFast() override { return false; }
+  bool addRegAssignAndRewriteFast() override { return false; }
 
   // No reg alloc
-  bool addRegAssignmentOptimized() override { return false; }
+  bool addRegAssignAndRewriteOptimized() override { return false; }
 };
 } // end anonymous namespace
 
@@ -342,13 +366,50 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
   return nullptr; // No reg alloc
 }
 
+static void checkSanityForEHAndSjLj(const TargetMachine *TM) {
+  // Sanity checking related to -exception-model
+  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
+  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error("-exception-model=wasm not allowed with "
+                       "-enable-emscripten-cxx-exceptions");
+  if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-eh only allowed with -exception-model=wasm");
+  if (WasmEnableSjLj && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-wasm-enable-sjlj only allowed with -exception-model=wasm");
+  if ((!WasmEnableEH && !WasmEnableSjLj) &&
+      TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    report_fatal_error(
+        "-exception-model=wasm only allowed with at least one of "
+        "-wasm-enable-eh or -wasm-enable-sjj");
+
+  // You can't enable two modes of EH at the same time
+  if (WasmEnableEmEH && WasmEnableEH)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  // You can't enable two modes of SjLj at the same time
+  if (WasmEnableEmSjLj && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (WasmEnableEmEH && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+  // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
+  // measure, but some code will error out at compile time in this combination.
+  // See WebAssemblyLowerEmscriptenEHSjLj pass for details.
+}
+
 //===----------------------------------------------------------------------===//
 // The following functions are called from lib/CodeGen/Passes.cpp to modify
 // the CodeGen pass sequence.
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  // Runs LowerAtomicPass if necessary
+  // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module
@@ -368,23 +429,27 @@ void WebAssemblyPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None)
     addPass(createWebAssemblyOptimizeReturned());
 
+  checkSanityForEHAndSjLj(TM);
+
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
   // blocks. Lowering invokes when there is no EH support is done in
-  // TargetPassConfig::addPassesToHandleExceptions, but this runs after this
-  // function and SjLj handling expects all invokes to be lowered before.
-  if (!EnableEmException &&
-      TM->Options.ExceptionModel == ExceptionHandling::None) {
+  // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
+  // passes and Emscripten SjLj handling expects all invokes to be lowered
+  // before.
+  if (!WasmEnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
     addPass(createUnreachableBlockEliminationPass());
   }
 
-  // Handle exceptions and setjmp/longjmp if enabled.
-  if (EnableEmException || EnableEmSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLj(EnableEmException,
-                                                   EnableEmSjLj));
+  // Handle exceptions and setjmp/longjmp if enabled. Unlike Wasm EH preparation
+  // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
+  // transformation algorithms with Emscripten SjLj, so we run
+  // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
+  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLj());
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
@@ -436,12 +501,16 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
 
+  // Nullify DBG_VALUE_LISTs that we cannot handle.
+  addPass(createWebAssemblyNullifyDebugValueLists());
+
   // Eliminate multiple-entry loops.
   addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
-  addPass(createWebAssemblyLateEHPrepare());
+  if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
+    addPass(createWebAssemblyLateEHPrepare());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
@@ -496,6 +565,15 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Fix debug_values whose defs have been stackified.
   if (!WasmDisableExplicitLocals)
     addPass(createWebAssemblyDebugFixup());
+
+  // Collect information to prepare for MC lowering / asm printing.
+  addPass(createWebAssemblyMCLowerPrePass());
+}
+
+bool WebAssemblyPassConfig::addPreISel() {
+  TargetPassConfig::addPreISel();
+  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
 }
 
 yaml::MachineFunctionInfo *

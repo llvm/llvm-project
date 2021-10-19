@@ -442,10 +442,7 @@ public:
   /// Return true if there is exactly one operand defining the specified
   /// register.
   bool hasOneDef(Register RegNo) const {
-    def_iterator DI = def_begin(RegNo);
-    if (DI == def_end())
-      return false;
-    return ++DI == def_end();
+    return hasSingleElement(def_operands(RegNo));
   }
 
   /// Returns the defining operand if there is exactly one operand defining the
@@ -511,10 +508,7 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    use_iterator UI = use_begin(RegNo);
-    if (UI == use_end())
-      return false;
-    return ++UI == use_end();
+    return hasSingleElement(use_operands(RegNo));
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
@@ -625,14 +619,10 @@ public:
   /// function. Writing to a constant register has no effect.
   bool isConstantPhysReg(MCRegister PhysReg) const;
 
-  /// Returns true if either isConstantPhysReg or TRI->isCallerPreservedPhysReg
-  /// returns true. This is a utility member function.
-  bool isCallerPreservedOrConstPhysReg(MCRegister PhysReg) const;
-
   /// Get an iterator over the pressure sets affected by the given physical or
   /// virtual register. If RegUnit is physical, it must be a register unit (from
   /// MCRegUnitIterator).
-  PSetIterator getPressureSets(unsigned RegUnit) const;
+  PSetIterator getPressureSets(Register RegUnit) const;
 
   //===--------------------------------------------------------------------===//
   // Virtual Register Info
@@ -831,14 +821,42 @@ public:
   /// deleted during LiveDebugVariables analysis.
   void markUsesInDebugValueAsUndef(Register Reg) const;
 
-  /// updateDbgUsersToReg - Update a collection of DBG_VALUE instructions
+  /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(Register Reg,
-                           ArrayRef<MachineInstr*> Users) const {
+  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                           ArrayRef<MachineInstr *> Users) const {
+    SmallSet<MCRegister, 4> OldRegUnits;
+    for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo()); RUI.isValid();
+         ++RUI)
+      OldRegUnits.insert(*RUI);
+
+    // If this operand is a register, check whether it overlaps with OldReg.
+    // If it does, replace with NewReg.
+    auto UpdateOp = [this, &NewReg, &OldReg, &OldRegUnits](MachineOperand &Op) {
+      if (Op.isReg()) {
+        for (MCRegUnitIterator RUI(OldReg, getTargetRegisterInfo());
+             RUI.isValid(); ++RUI) {
+          if (OldRegUnits.contains(*RUI)) {
+            Op.setReg(NewReg);
+            break;
+          }
+        }
+      }
+    };
+
+    // Iterate through (possibly several) operands to DBG_VALUEs and update
+    // each. For DBG_PHIs, only one operand will be present.
     for (MachineInstr *MI : Users) {
-      assert(MI->isDebugInstr());
-      assert(MI->getOperand(0).isReg());
-      MI->getOperand(0).setReg(Reg);
+      if (MI->isDebugValue()) {
+        for (auto &Op : MI->debug_operands())
+          UpdateOp(Op);
+        assert(MI->hasDebugOperandForReg(NewReg) &&
+               "Expected debug value to have some overlap with OldReg");
+      } else if (MI->isDebugPHI()) {
+        UpdateOp(MI->getOperand(0));
+      } else {
+        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
+      }
     }
   }
 
@@ -852,9 +870,9 @@ public:
 
   /// Return true if the specified register is modified or read in this
   /// function. This checks that no machine operands exist for the register or
-  /// any of its aliases. The register is also considered used when it is set
-  /// in the UsedPhysRegMask.
-  bool isPhysRegUsed(MCRegister PhysReg) const;
+  /// any of its aliases. If SkipRegMaskTest is false, the register is
+  /// considered used when it is set in the UsedPhysRegMask.
+  bool isPhysRegUsed(MCRegister PhysReg, bool SkipRegMaskTest = false) const;
 
   /// addPhysRegsUsedFromRegMask - Mark any registers not in RegMask as used.
   /// This corresponds to the bit mask attached to register mask operands.
@@ -907,7 +925,7 @@ public:
   ///
   /// Reserved registers may belong to an allocatable register class, but the
   /// target has explicitly requested that they are not used.
-  bool isReserved(Register PhysReg) const {
+  bool isReserved(MCRegister PhysReg) const {
     return getReservedRegs().test(PhysReg.id());
   }
 
@@ -959,7 +977,7 @@ public:
   MCRegister getLiveInPhysReg(Register VReg) const;
 
   /// getLiveInVirtReg - If PReg is a live-in physical register, return the
-  /// corresponding live-in physical register.
+  /// corresponding live-in virtual register.
   Register getLiveInVirtReg(MCRegister PReg) const;
 
   /// EmitLiveInCopies - Emit copies to initialize livein virtual registers
@@ -978,12 +996,19 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineOperand;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_iterator(MachineOperand *op) : Op(op) {
@@ -1018,11 +1043,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
-
     defusechain_iterator() = default;
 
     bool operator==(const defusechain_iterator &x) const {
@@ -1084,12 +1104,19 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_instr_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_instr_iterator {
     friend class MachineRegisterInfo;
 
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = MachineInstr;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+  private:
     MachineOperand *Op = nullptr;
 
     explicit defusechain_instr_iterator(MachineOperand *op) : Op(op) {
@@ -1124,11 +1151,6 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
-
     defusechain_instr_iterator() = default;
 
     bool operator==(const defusechain_instr_iterator &x) const {
@@ -1187,14 +1209,13 @@ class PSetIterator {
 public:
   PSetIterator() = default;
 
-  PSetIterator(unsigned RegUnit, const MachineRegisterInfo *MRI) {
+  PSetIterator(Register RegUnit, const MachineRegisterInfo *MRI) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
-    if (Register::isVirtualRegister(RegUnit)) {
+    if (RegUnit.isVirtual()) {
       const TargetRegisterClass *RC = MRI->getRegClass(RegUnit);
       PSet = TRI->getRegClassPressureSets(RC);
       Weight = TRI->getRegClassWeight(RC).RegWeight;
-    }
-    else {
+    } else {
       PSet = TRI->getRegUnitPressureSets(RegUnit);
       Weight = TRI->getRegUnitWeight(RegUnit);
     }
@@ -1216,8 +1237,8 @@ public:
   }
 };
 
-inline PSetIterator MachineRegisterInfo::
-getPressureSets(unsigned RegUnit) const {
+inline PSetIterator
+MachineRegisterInfo::getPressureSets(Register RegUnit) const {
   return PSetIterator(RegUnit, this);
 }
 

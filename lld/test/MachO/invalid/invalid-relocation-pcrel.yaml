@@ -1,8 +1,10 @@
 # REQUIRES: x86
-# RUN: yaml2obj %s -o %t.o
-# RUN: not lld -flavor darwinnew -o %t %t.o 2>&1 | FileCheck %s -DFILE=%t.o
+# RUN: rm -rf %t; mkdir %t
+# RUN: yaml2obj %s -o %t/test.o
+# RUN: llvm-ar rcs %t/test.a %t/test.o
+# RUN: not %lld -o /dev/null %t/test.a 2>&1 | FileCheck %s
 #
-# CHECK: error: invalid relocation at offset 1 of __TEXT,__text in [[FILE]]: relocations of type 0 must not be pcrel
+# CHECK: error: UNSIGNED relocation must not be PC-relative at offset 1 of __TEXT,__text in {{.*}}test.a(test.o)
 
 !mach-o
 FileHeader:

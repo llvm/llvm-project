@@ -48,8 +48,8 @@ void testXXSLDWI(int index) {
 }
 
 void testCTF(int index) {
-  vec_ctf(vsi, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}}
-  vec_ctf(vui, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}}
+  vec_ctf(vsi, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}} expected-error {{argument to '__builtin_altivec_vcfux' must be a constant integer}}
+  vec_ctf(vui, index); //expected-error {{argument to '__builtin_altivec_vcfsx' must be a constant integer}} expected-error {{argument to '__builtin_altivec_vcfux' must be a constant integer}}
 }
 
 void testVCFSX(int index) {

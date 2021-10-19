@@ -1,0 +1,34 @@
+## Test that --strip-all removes debug, linking, and producers sections, but not
+## known or unknown-custom sections.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --strip-all %t %t2
+# RUN: obj2yaml %t2 | FileCheck --implicit-check-not=Type: %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Type: TYPE
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:        Name: foo
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: DEADBEEF
+  - Type: CUSTOM
+    Name: foo
+    Payload: CAFE

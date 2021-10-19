@@ -10,15 +10,15 @@ func @main() {
 }
 
 // CHECK-LABEL: func @main()
-// CHECK:         [[VAL_0:%.*]] = constant 1.000000e+00 : f64
-// CHECK:         [[VAL_1:%.*]] = constant 2.000000e+00 : f64
-// CHECK:         [[VAL_2:%.*]] = constant 3.000000e+00 : f64
-// CHECK:         [[VAL_3:%.*]] = constant 4.000000e+00 : f64
-// CHECK:         [[VAL_4:%.*]] = constant 5.000000e+00 : f64
-// CHECK:         [[VAL_5:%.*]] = constant 6.000000e+00 : f64
-// CHECK:         [[VAL_6:%.*]] = alloc() : memref<3x2xf64>
-// CHECK:         [[VAL_7:%.*]] = alloc() : memref<3x2xf64>
-// CHECK:         [[VAL_8:%.*]] = alloc() : memref<2x3xf64>
+// CHECK-DAG:     [[VAL_0:%.*]] = arith.constant 1.000000e+00 : f64
+// CHECK-DAG:     [[VAL_1:%.*]] = arith.constant 2.000000e+00 : f64
+// CHECK-DAG:     [[VAL_2:%.*]] = arith.constant 3.000000e+00 : f64
+// CHECK-DAG:     [[VAL_3:%.*]] = arith.constant 4.000000e+00 : f64
+// CHECK-DAG:     [[VAL_4:%.*]] = arith.constant 5.000000e+00 : f64
+// CHECK-DAG:     [[VAL_5:%.*]] = arith.constant 6.000000e+00 : f64
+// CHECK:         [[VAL_6:%.*]] = memref.alloc() : memref<3x2xf64>
+// CHECK:         [[VAL_7:%.*]] = memref.alloc() : memref<3x2xf64>
+// CHECK:         [[VAL_8:%.*]] = memref.alloc() : memref<2x3xf64>
 // CHECK:         affine.store [[VAL_0]], [[VAL_8]][0, 0] : memref<2x3xf64>
 // CHECK:         affine.store [[VAL_1]], [[VAL_8]][0, 1] : memref<2x3xf64>
 // CHECK:         affine.store [[VAL_2]], [[VAL_8]][0, 2] : memref<2x3xf64>
@@ -33,22 +33,22 @@ func @main() {
 // CHECK:           affine.for [[VAL_13:%.*]] = 0 to 2 {
 // CHECK:             [[VAL_14:%.*]] = affine.load [[VAL_7]]{{\[}}[[VAL_12]], [[VAL_13]]] : memref<3x2xf64>
 // CHECK:             [[VAL_15:%.*]] = affine.load [[VAL_7]]{{\[}}[[VAL_12]], [[VAL_13]]] : memref<3x2xf64>
-// CHECK:             [[VAL_16:%.*]] = mulf [[VAL_14]], [[VAL_15]] : f64
+// CHECK:             [[VAL_16:%.*]] = arith.mulf [[VAL_14]], [[VAL_15]] : f64
 // CHECK:             affine.store [[VAL_16]], [[VAL_6]]{{\[}}[[VAL_12]], [[VAL_13]]] : memref<3x2xf64>
 // CHECK:         toy.print [[VAL_6]] : memref<3x2xf64>
-// CHECK:         dealloc [[VAL_8]] : memref<2x3xf64>
-// CHECK:         dealloc [[VAL_7]] : memref<3x2xf64>
-// CHECK:         dealloc [[VAL_6]] : memref<3x2xf64>
+// CHECK:         memref.dealloc [[VAL_8]] : memref<2x3xf64>
+// CHECK:         memref.dealloc [[VAL_7]] : memref<3x2xf64>
+// CHECK:         memref.dealloc [[VAL_6]] : memref<3x2xf64>
 
 // OPT-LABEL: func @main()
-// OPT:         [[VAL_0:%.*]] = constant 1.000000e+00 : f64
-// OPT:         [[VAL_1:%.*]] = constant 2.000000e+00 : f64
-// OPT:         [[VAL_2:%.*]] = constant 3.000000e+00 : f64
-// OPT:         [[VAL_3:%.*]] = constant 4.000000e+00 : f64
-// OPT:         [[VAL_4:%.*]] = constant 5.000000e+00 : f64
-// OPT:         [[VAL_5:%.*]] = constant 6.000000e+00 : f64
-// OPT:         [[VAL_6:%.*]] = alloc() : memref<3x2xf64>
-// OPT:         [[VAL_7:%.*]] = alloc() : memref<2x3xf64>
+// OPT-DAG:     [[VAL_0:%.*]] = arith.constant 1.000000e+00 : f64
+// OPT-DAG:     [[VAL_1:%.*]] = arith.constant 2.000000e+00 : f64
+// OPT-DAG:     [[VAL_2:%.*]] = arith.constant 3.000000e+00 : f64
+// OPT-DAG:     [[VAL_3:%.*]] = arith.constant 4.000000e+00 : f64
+// OPT-DAG:     [[VAL_4:%.*]] = arith.constant 5.000000e+00 : f64
+// OPT-DAG:     [[VAL_5:%.*]] = arith.constant 6.000000e+00 : f64
+// OPT:         [[VAL_6:%.*]] = memref.alloc() : memref<3x2xf64>
+// OPT:         [[VAL_7:%.*]] = memref.alloc() : memref<2x3xf64>
 // OPT:         affine.store [[VAL_0]], [[VAL_7]][0, 0] : memref<2x3xf64>
 // OPT:         affine.store [[VAL_1]], [[VAL_7]][0, 1] : memref<2x3xf64>
 // OPT:         affine.store [[VAL_2]], [[VAL_7]][0, 2] : memref<2x3xf64>
@@ -58,8 +58,8 @@ func @main() {
 // OPT:         affine.for [[VAL_8:%.*]] = 0 to 3 {
 // OPT:           affine.for [[VAL_9:%.*]] = 0 to 2 {
 // OPT:             [[VAL_10:%.*]] = affine.load [[VAL_7]]{{\[}}[[VAL_9]], [[VAL_8]]] : memref<2x3xf64>
-// OPT:             [[VAL_11:%.*]] = mulf [[VAL_10]], [[VAL_10]] : f64
+// OPT:             [[VAL_11:%.*]] = arith.mulf [[VAL_10]], [[VAL_10]] : f64
 // OPT:             affine.store [[VAL_11]], [[VAL_6]]{{\[}}[[VAL_8]], [[VAL_9]]] : memref<3x2xf64>
 // OPT:         toy.print [[VAL_6]] : memref<3x2xf64>
-// OPT:         dealloc [[VAL_7]] : memref<2x3xf64>
-// OPT:         dealloc [[VAL_6]] : memref<3x2xf64>
+// OPT:         memref.dealloc [[VAL_7]] : memref<2x3xf64>
+// OPT:         memref.dealloc [[VAL_6]] : memref<3x2xf64>

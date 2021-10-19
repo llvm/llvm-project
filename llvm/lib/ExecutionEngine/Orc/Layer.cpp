@@ -22,16 +22,18 @@ namespace orc {
 
 IRLayer::~IRLayer() {}
 
-Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
+Error IRLayer::add(ResourceTrackerSP RT, ThreadSafeModule TSM) {
+  assert(RT && "RT can not be null");
+  auto &JD = RT->getJITDylib();
   return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
-      *this, *getManglingOptions(), std::move(TSM), std::move(K)));
+                       *this, *getManglingOptions(), std::move(TSM)),
+                   std::move(RT));
 }
 
 IRMaterializationUnit::IRMaterializationUnit(
     ExecutionSession &ES, const IRSymbolMapper::ManglingOptions &MO,
-    ThreadSafeModule TSM, VModuleKey K)
-    : MaterializationUnit(SymbolFlagsMap(), nullptr, std::move(K)),
-      TSM(std::move(TSM)) {
+    ThreadSafeModule TSM)
+    : MaterializationUnit(SymbolFlagsMap(), nullptr), TSM(std::move(TSM)) {
 
   assert(this->TSM && "Module must not be null");
 
@@ -96,10 +98,9 @@ IRMaterializationUnit::IRMaterializationUnit(
 }
 
 IRMaterializationUnit::IRMaterializationUnit(
-    ThreadSafeModule TSM, VModuleKey K, SymbolFlagsMap SymbolFlags,
+    ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
     SymbolStringPtr InitSymbol, SymbolNameToDefinitionMap SymbolToDefinition)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol),
-                          std::move(K)),
+    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol)),
       TSM(std::move(TSM)), SymbolToDefinition(std::move(SymbolToDefinition)) {}
 
 StringRef IRMaterializationUnit::getName() const {
@@ -126,14 +127,12 @@ void IRMaterializationUnit::discard(const JITDylib &JD,
 }
 
 BasicIRLayerMaterializationUnit::BasicIRLayerMaterializationUnit(
-    IRLayer &L, const IRSymbolMapper::ManglingOptions &MO, ThreadSafeModule TSM,
-    VModuleKey K)
-    : IRMaterializationUnit(L.getExecutionSession(), MO, std::move(TSM),
-                            std::move(K)),
-      L(L), K(std::move(K)) {}
+    IRLayer &L, const IRSymbolMapper::ManglingOptions &MO, ThreadSafeModule TSM)
+    : IRMaterializationUnit(L.getExecutionSession(), MO, std::move(TSM)), L(L) {
+}
 
 void BasicIRLayerMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
+    std::unique_ptr<MaterializationResponsibility> R) {
 
   // Throw away the SymbolToDefinition map: it's not usable after we hand
   // off the module.
@@ -144,8 +143,8 @@ void BasicIRLayerMaterializationUnit::materialize(
     TSM = cloneToNewContext(TSM);
 
 #ifndef NDEBUG
-  auto &ES = R.getTargetJITDylib().getExecutionSession();
-  auto &N = R.getTargetJITDylib().getName();
+  auto &ES = R->getTargetJITDylib().getExecutionSession();
+  auto &N = R->getTargetJITDylib().getName();
 #endif // NDEBUG
 
   LLVM_DEBUG(ES.runSessionLocked(
@@ -156,21 +155,23 @@ void BasicIRLayerMaterializationUnit::materialize(
   }););
 }
 
+char ObjectLayer::ID;
+
 ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 
 ObjectLayer::~ObjectLayer() {}
 
-Error ObjectLayer::add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
-                       VModuleKey K) {
-  auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(K),
-                                                           std::move(O));
+Error ObjectLayer::add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O) {
+  assert(RT && "RT can not be null");
+  auto ObjMU = BasicObjectLayerMaterializationUnit::Create(*this, std::move(O));
   if (!ObjMU)
     return ObjMU.takeError();
-  return JD.define(std::move(*ObjMU));
+  auto &JD = RT->getJITDylib();
+  return JD.define(std::move(*ObjMU), std::move(RT));
 }
 
 Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
-BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L, VModuleKey K,
+BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L,
                                             std::unique_ptr<MemoryBuffer> O) {
   auto ObjSymInfo =
       getObjectSymbolInfo(L.getExecutionSession(), O->getMemBufferRef());
@@ -183,15 +184,14 @@ BasicObjectLayerMaterializationUnit::Create(ObjectLayer &L, VModuleKey K,
 
   return std::unique_ptr<BasicObjectLayerMaterializationUnit>(
       new BasicObjectLayerMaterializationUnit(
-          L, K, std::move(O), std::move(SymbolFlags), std::move(InitSymbol)));
+          L, std::move(O), std::move(SymbolFlags), std::move(InitSymbol)));
 }
 
 BasicObjectLayerMaterializationUnit::BasicObjectLayerMaterializationUnit(
-    ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O,
-    SymbolFlagsMap SymbolFlags, SymbolStringPtr InitSymbol)
-    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol),
-                          std::move(K)),
-      L(L), O(std::move(O)) {}
+    ObjectLayer &L, std::unique_ptr<MemoryBuffer> O, SymbolFlagsMap SymbolFlags,
+    SymbolStringPtr InitSymbol)
+    : MaterializationUnit(std::move(SymbolFlags), std::move(InitSymbol)), L(L),
+      O(std::move(O)) {}
 
 StringRef BasicObjectLayerMaterializationUnit::getName() const {
   if (O)
@@ -200,7 +200,7 @@ StringRef BasicObjectLayerMaterializationUnit::getName() const {
 }
 
 void BasicObjectLayerMaterializationUnit::materialize(
-    MaterializationResponsibility R) {
+    std::unique_ptr<MaterializationResponsibility> R) {
   L.emit(std::move(R), std::move(O));
 }
 

@@ -1017,7 +1017,7 @@ void Interpreter::SwitchToNewBasicBlock(BasicBlock *Dest, ExecutionContext &SF){
 void Interpreter::visitAllocaInst(AllocaInst &I) {
   ExecutionContext &SF = ECStack.back();
 
-  Type *Ty = I.getType()->getElementType();  // Type to be allocated
+  Type *Ty = I.getAllocatedType(); // Type to be allocated
 
   // Get the number of elements being allocated by the array...
   unsigned NumElements =

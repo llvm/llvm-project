@@ -33,7 +33,7 @@ define void @f1(<4 x float> %init, <4 x float> *%base, i32 %count) {
 ; CHECK:   %add.i1 = fadd float %val.i1, %val.i3
 ; CHECK:   %add.i2 = fadd float %acc.i0, %acc.i2
 ; CHECK:   %add.i3 = fadd float %acc.i1, %acc.i3
-; CHECK:   %add.upto0 = insertelement <4 x float> undef, float %add.i0, i32 0
+; CHECK:   %add.upto0 = insertelement <4 x float> poison, float %add.i0, i32 0
 ; CHECK:   %add.upto1 = insertelement <4 x float> %add.upto0, float %add.i1, i32 1
 ; CHECK:   %add.upto2 = insertelement <4 x float> %add.upto1, float %add.i2, i32 2
 ; CHECK:   %add = insertelement <4 x float> %add.upto2, float %add.i3, i32 3
@@ -247,7 +247,7 @@ define <4 x float> @f6(<4 x float> %x) {
 ; CHECK: %res.i2 = fadd float %x.i2, 3.0{{[e+0]*}}, !fpmath ![[TAG]]
 ; CHECK: %x.i3 = extractelement <4 x float> %x, i32 3
 ; CHECK: %res.i3 = fadd float %x.i3, 4.0{{[e+0]*}}, !fpmath ![[TAG]]
-; CHECK: %res.upto0 = insertelement <4 x float> undef, float %res.i0, i32 0
+; CHECK: %res.upto0 = insertelement <4 x float> poison, float %res.i0, i32 0
 ; CHECK: %res.upto1 = insertelement <4 x float> %res.upto0, float %res.i1, i32 1
 ; CHECK: %res.upto2 = insertelement <4 x float> %res.upto1, float %res.i2, i32 2
 ; CHECK: %res = insertelement <4 x float> %res.upto2, float %res.i3, i32 3
@@ -403,7 +403,7 @@ define <4 x float> @f14(<4 x float> %acc, i32 %count) {
 ; CHECK: %this_acc.i2 = phi float [ %acc.i2, %entry ], [ %next_acc.i2, %loop ]
 ; CHECK: %this_acc.i3 = phi float [ %acc.i3, %entry ], [ %next_acc.i3, %loop ]
 ; CHECK: %this_count = phi i32 [ %count, %entry ], [ %next_count, %loop ]
-; CHECK: %this_acc.upto0 = insertelement <4 x float> undef, float %this_acc.i0, i32 0
+; CHECK: %this_acc.upto0 = insertelement <4 x float> poison, float %this_acc.i0, i32 0
 ; CHECK: %this_acc.upto1 = insertelement <4 x float> %this_acc.upto0, float %this_acc.i1, i32 1
 ; CHECK: %this_acc.upto2 = insertelement <4 x float> %this_acc.upto1, float %this_acc.i2, i32 2
 ; CHECK: %this_acc = insertelement <4 x float> %this_acc.upto2, float %this_acc.i3, i32 3
@@ -440,7 +440,7 @@ define void @f15(<4 x float> %init, <4 x float> *%base, i32 %count) {
 ; CHECK: %neg.i1 = fneg float %val.i1
 ; CHECK: %neg.i2 = fneg float %val.i2
 ; CHECK: %neg.i3 = fneg float %val.i3
-; CHECK: %neg.upto0 = insertelement <4 x float> undef, float %neg.i0, i32 0
+; CHECK: %neg.upto0 = insertelement <4 x float> poison, float %neg.i0, i32 0
 ; CHECK: %neg.upto1 = insertelement <4 x float> %neg.upto0, float %neg.i1, i32 1
 ; CHECK: %neg.upto2 = insertelement <4 x float> %neg.upto1, float %neg.i2, i32 2
 ; CHECK: %neg = insertelement <4 x float> %neg.upto2, float %neg.i3, i32 3
@@ -543,7 +543,7 @@ define <2 x float> @f22(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 define <2 x i32> @f23_crash(<2 x i32> %srcvec, i32 %v1) {
 ; CHECK-LABEL: @f23_crash(
 ; CHECK: %v0 = extractelement <2 x i32> %srcvec, i32 0
-; CHECK: %t1.upto0 = insertelement <2 x i32> undef, i32 %v0, i32 0
+; CHECK: %t1.upto0 = insertelement <2 x i32> poison, i32 %v0, i32 0
 ; CHECK: %t1 = insertelement <2 x i32> %t1.upto0, i32 %v1, i32 1
 ; CHECK: ret <2 x i32> %t1
   %v0 = extractelement <2 x i32> %srcvec, i32 0

@@ -1,5 +1,5 @@
 ========================================
-Clang 12.0.0 (In-Progress) Release Notes
+Clang 14.0.0 (In-Progress) Release Notes
 ========================================
 
 .. contents::
@@ -10,7 +10,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Clang 12 release.
+   These are in-progress notes for the upcoming Clang 14 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release 12.0.0. Here we
+frontend, part of the LLVM Compiler Infrastructure, release 14.0.0. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
@@ -35,7 +35,7 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Clang 12.0.0?
+What's New in Clang 14.0.0?
 ===========================
 
 Some of the major new features and improvements to Clang are listed
@@ -46,74 +46,53 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- ...
+-  ...
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- ...
+- -Wbitwise-instead-of-logical (part of -Wbool-operation) warns about use of bitwise operators with boolean operands which have side effects.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- The builtin intrinsics ``__builtin_bitreverse8``, ``__builtin_bitreverse16``,
-  ``__builtin_bitreverse32`` and ``__builtin_bitreverse64`` may now be used
-  within constant expressions.
-
-- The builtin intrinsics ``__builtin_rotateleft8``, ``__builtin_rotateleft16``,
-  ``__builtin_rotateleft32`` and ``__builtin_rotateleft64`` may now be used
-  within constant expressions.
-
-- The builtin intrinsics ``__builtin_rotateright8``, ``__builtin_rotateright16``,
-  ``__builtin_rotateright32`` and ``__builtin_rotateright64`` may now be used
-  within constant expressions.
+- Maximum _ExtInt size was decreased from 16,777,215 bits to 8,388,608 bits.
+  Motivation for this was discussed in PR51829.
 
 New Compiler Flags
 ------------------
 
 - ...
 
-- -fpch-codegen and -fpch-debuginfo generate shared code and/or debuginfo
-  for contents of a precompiled header in a separate object file. This object
-  file needs to be linked in, but its contents do not need to be generated
-  for other objects using the precompiled header. This should usually save
-  compile time. If not using clang-cl, the separate object file needs to
-  be created explicitly from the precompiled header.
-  Example of use:
-
-  .. code-block:: console
-
-    $ clang++ -x c++-header header.h -o header.pch -fpch-codegen -fpch-debuginfo
-    $ clang++ -c header.pch -o shared.o
-    $ clang++ -c source.cpp -o source.o -include-pch header.pch
-    $ clang++ -o binary source.o shared.o
-
-  - Using -fpch-instantiate-templates when generating the precompiled header
-    usually increases the amount of code/debuginfo that can be shared.
-  - In some cases, especially when building with optimizations enabled, using
-    -fpch-codegen may generate so much code in the shared object that compiling
-    it may be a net loss in build time.
-  - Since headers may bring in private symbols of other libraries, it may be
-    sometimes necessary to discard unused symbols (such as by adding
-    -Wl,--gc-sections on ELF platforms to the linking command, and possibly
-    adding -fdata-sections -ffunction-sections to the command generating
-    the shared object).
-
 Deprecated Compiler Flags
 -------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
 
 - ...
 
 Modified Compiler Flags
 -----------------------
 
-- On ELF, ``-gz`` now defaults to ``-gz=zlib`` with the integrated assembler.
-  It produces ``SHF_COMPRESSED`` style compression of debug information. GNU
-  binutils 2.26 or newer, or lld is required to link produced object files. Use
-  ``-gz=zlib-gnu`` to get the old behavior.
+- Support has been added for the following processors (``-mcpu`` identifiers in parentheses):
+
+  - RISC-V SiFive E20 (``sifive-e20``).
+  - RISC-V SiFive E21 (``sifive-e21``).
+  - RISC-V SiFive E24 (``sifive-e24``).
+  - RISC-V SiFive E34 (``sifive-e34``).
+  - RISC-V SiFive S21 (``sifive-s21``).
+  - RISC-V SiFive S51 (``sifive-s51``).
+  - RISC-V SiFive S54 (``sifive-s54``).
+  - RISC-V SiFive S76 (``sifive-s76``).
+
+- Support has been added for the following architectures (``-march`` identifiers in parentheses):
+
+  - Armv9-A (``armv9-a``).
+  - Armv9.1-A (``armv9.1-a``).
+  - Armv9.2-A (``armv9.2-a``).
+
+Removed Compiler Flags
+-------------------------
+
+- ...
 
 New Pragmas in Clang
 --------------------
@@ -123,24 +102,63 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Attributes loaded as clang plugins which are sensitive to LangOpts must
+  now override ``acceptsLangOpts`` instead of ``diagLangOpts``.
+  Returning false will produce a generic "attribute ignored" diagnostic, as
+  with clang's built-in attributes.
+  If plugins want to provide richer diagnostics, they can do so when the
+  attribute is handled instead, e.g. in ``handleDeclAttribute``.
+  (This was changed in order to better support attributes in code completion).
+
+- __has_cpp_attribute, __has_c_attribute, __has_attribute, and __has_declspec
+  will now macro expand their argument. This causes a change in behavior for
+  code using ``__has_cpp_attribute(__clang__::attr)`` (and same for
+  ``__has_c_attribute``) where it would previously expand to ``0`` for all
+  attributes, but will now issue an error due to the expansion of the
+  predefined ``__clang__`` macro.
 
 Windows Support
 ---------------
 
+- An MSVC compatibility workaround for C++ operator names was removed. As a
+  result, the ``<query.h>`` Windows SDK header may not compile out of the box.
+  Users should use a recent SDK and pass ``-DQUERY_H_RESTRICTION_PERMISSIVE``
+  or pass ``/permissive`` to disable C++ operator names altogether. See
+  `PR42427 <https://llvm.org/pr42427>` for more info.
+
 C Language Changes in Clang
 ---------------------------
 
-- ...
+- The value of ``__STDC_VERSION__`` has been bumped to ``202000L`` when passing
+  ``-std=c2x`` so that it can be distinguished from C17 mode. This value is
+  expected to change again when C23 is published.
+- Wide multi-characters literals such as ``L'ab'`` that would previously be interpreted as ``L'b'``
+  are now ill-formed in all language modes. The motivation for this change is outlined in
+  `P2362 <wg21.link/P2362>`_.
+- Support for ``__attribute__((error("")))`` and
+  ``__attribute__((warning("")))`` function attributes have been added.
+- The maximum allowed alignment has been increased from 2^29 to 2^32.
 
 C++ Language Changes in Clang
 -----------------------------
 
 - ...
 
-C++1z Feature Support
+C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 ...
+
+C++2b Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Implemented `P1938R3: if consteval <https://wg21.link/P1938R3>`_.
+- Implemented `P2360R0: Extend init-statement to allow alias-declaration <https://wg21.link/P2360R0>`_.
+
+
+CUDA Language Changes in Clang
+------------------------------
+
+- Clang now supports CUDA versions up to 11.4.
+- Default GPU architecture has been changed from sm_20 to sm_35.
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -156,7 +174,8 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- ...
+- ``clang-nvlink-wrapper`` tool introduced to support linking of cubin files archived in an archive. See :doc:`ClangNvlinkWrapper`.
+
 
 CUDA Support in Clang
 ---------------------
@@ -166,87 +185,48 @@ CUDA Support in Clang
 X86 Support in Clang
 --------------------
 
-- The x86 intrinsics ``_mm_popcnt_u32``, ``_mm_popcnt_u64``, ``_popcnt32``,
-  ``_popcnt64``, ``__popcntd`` and ``__popcntq``  may now be used within
-  constant expressions.
+- Support for ``AVX512-FP16`` instructions has been added.
 
-- The x86 intrinsics ``_bit_scan_forward``, ``__bsfd`` and ``__bsfq`` may now
-  be used within constant expressions.
+Arm and AArch64 Support in Clang
+--------------------------------
 
-- The x86 intrinsics ``_bit_scan_reverse``, ``__bsrd`` and ``__bsrq`` may now
-  be used within constant expressions.
-
-- The x86 intrinsics ``__bswap``, ``__bswapd``, ``__bswap64`` and ``__bswapq``
-  may now be used within constant expressions.
-
-- The x86 intrinsics ``_castf32_u32``, ``_castf64_u64``, ``_castu32_f32`` and
-  ``_castu64_f64`` may now be used within constant expressions.
-
-- The x86 intrinsics ``__rolb``, ``__rolw``, ``__rold``, ``__rolq`, ``_rotl``,
-  ``_rotwl`` and ``_lrotl`` may now be used within constant expressions.
-
-- The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
-  ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
-
-- Support for -march=sapphirerapids was added.
-
-- The -mtune command line option is no longer ignored for X86. This can be used
-  to request microarchitectural optimizations independent on -march. -march=<cpu>
-  implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
-  specified.
+- Support has been added for the following processors (command-line identifiers in parentheses):
+  - Arm Cortex-A510 (``cortex-a510``)
 
 Internal API Changes
 --------------------
-
-These are major API changes that have happened since the 11.0.0 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
 
 - ...
 
 Build System Changes
 --------------------
 
-These are major changes to the build system that have happened since the 11.0.0
-release of Clang. Users of the build system should adjust accordingly.
-
 - ...
 
 AST Matchers
 ------------
 
-- ...
+- ``TypeLoc`` AST Matchers are now available. These matchers provide helpful
+  utilities for matching ``TypeLoc`` nodes, such as the ``pointerTypeLoc``
+  matcher or the ``hasReturnTypeLoc`` matcher. The addition of these matchers
+  was made possible by changes to the handling of ``TypeLoc`` nodes that
+  allows them to enjoy the same static type checking as other AST node kinds.
 
 clang-format
 ------------
 
-- Option ``BitFieldColonSpacing`` has been added that decides how
-  space should be added around identifier, colon and bit-width in
-  bitfield definitions.
+- Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
+  correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
-  .. code-block:: c++
+- Option ``QualifierAligment`` has been added in order to auto-arrange the
+  positioning of specifiers/qualifiers
+  `const` `volatile` `static` `inline` `constexpr` `restrict`
+  in variable and parameter declarations to be either ``Right`` aligned
+  or ``Left`` aligned or ``Custom`` using ``QualifierOrder``.
 
-    // Both (default)
-    struct F {
-      unsigned dscp : 6;
-      unsigned ecn  : 2; // AlignConsecutiveBitFields=true
-    };
-    // None
-    struct F {
-      unsigned dscp:6;
-      unsigned ecn :2;
-    };
-    // Before
-    struct F {
-      unsigned dscp :6;
-      unsigned ecn  :2;
-    };
-    // After
-    struct F {
-      unsigned dscp: 6;
-      unsigned ecn : 2;
-    };
-
+- Option ``QualifierOrder`` has been added to allow the order
+  `const` `volatile` `static` `inline` `constexpr` `restrict`
+  to be controlled relative to the `type`.
 
 libclang
 --------

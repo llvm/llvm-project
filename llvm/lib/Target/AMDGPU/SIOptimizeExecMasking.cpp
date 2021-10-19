@@ -7,15 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUSubtarget.h"
+#include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIInstrInfo.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -179,9 +174,14 @@ static unsigned getSaveExecOp(unsigned Opc) {
 // register allocation, so turn them back into normal instructions.
 static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case AMDGPU::S_MOV_B64_term:
   case AMDGPU::S_MOV_B32_term: {
-    MI.setDesc(TII.get(AMDGPU::COPY));
+    bool RegSrc = MI.getOperand(1).isReg();
+    MI.setDesc(TII.get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+    return true;
+  }
+  case AMDGPU::S_MOV_B64_term: {
+    bool RegSrc = MI.getOperand(1).isReg();
+    MI.setDesc(TII.get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B64));
     return true;
   }
   case AMDGPU::S_XOR_B64_term: {
@@ -194,6 +194,12 @@ static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
     MI.setDesc(TII.get(AMDGPU::S_XOR_B32));
+    return true;
+  }
+  case AMDGPU::S_OR_B64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_OR_B64));
     return true;
   }
   case AMDGPU::S_OR_B32_term: {
@@ -212,6 +218,18 @@ static bool removeTerminatorBit(const SIInstrInfo &TII, MachineInstr &MI) {
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
     MI.setDesc(TII.get(AMDGPU::S_ANDN2_B32));
+    return true;
+  }
+  case AMDGPU::S_AND_B64_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_AND_B64));
+    return true;
+  }
+  case AMDGPU::S_AND_B32_term: {
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(TII.get(AMDGPU::S_AND_B32));
     return true;
   }
   default:

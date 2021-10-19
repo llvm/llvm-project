@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: intrinsic not supported on subtarget

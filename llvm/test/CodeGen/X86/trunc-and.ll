@@ -28,12 +28,12 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
 %struct.anon = type { [9 x i8], [3 x i8] }
 
-@b = common local_unnamed_addr global %struct.anon zeroinitializer, align 4
+@b = common dso_local local_unnamed_addr global %struct.anon zeroinitializer, align 4
 
-define i32 @d() {
+define dso_local i32 @d() {
 ; CHECK-LABEL: d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl b+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    movzbl b+8(%rip), %ecx
 ; CHECK-NEXT:    andl $7, %ecx
 ; CHECK-NEXT:    movl $d, %eax
 ; CHECK-NEXT:    addl %ecx, %eax

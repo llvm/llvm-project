@@ -66,8 +66,7 @@ CoreSimulatorSupport::Process::Process(Status error)
 CoreSimulatorSupport::Process::Process(lldb::pid_t p, Status error)
     : m_pid(p), m_error(error) {}
 
-CoreSimulatorSupport::DeviceType::DeviceType()
-    : m_dev(nil), m_model_identifier() {}
+CoreSimulatorSupport::DeviceType::DeviceType() : m_model_identifier() {}
 
 CoreSimulatorSupport::DeviceType::DeviceType(id d)
     : m_dev(d), m_model_identifier() {}
@@ -87,8 +86,7 @@ CoreSimulatorSupport::DeviceType::GetProductFamilyID() {
   return ProductFamilyID([m_dev productFamilyID]);
 }
 
-CoreSimulatorSupport::DeviceRuntime::DeviceRuntime()
-    : m_dev(nil), m_os_version() {}
+CoreSimulatorSupport::DeviceRuntime::DeviceRuntime() : m_os_version() {}
 
 CoreSimulatorSupport::DeviceRuntime::DeviceRuntime(id d)
     : m_dev(d), m_os_version() {}
@@ -99,8 +97,7 @@ bool CoreSimulatorSupport::DeviceRuntime::IsAvailable() {
   return [m_dev available];
 }
 
-CoreSimulatorSupport::Device::Device()
-    : m_dev(nil), m_dev_type(), m_dev_runtime() {}
+CoreSimulatorSupport::Device::Device() : m_dev_type(), m_dev_runtime() {}
 
 CoreSimulatorSupport::Device::Device(id d)
     : m_dev(d), m_dev_type(), m_dev_runtime() {}
@@ -407,25 +404,19 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
         const int master_fd = launch_info.GetPTY().GetPrimaryFileDescriptor();
         if (master_fd != PseudoTerminal::invalid_fd) {
           // Check in case our file action open wants to open the secondary
-          const char *secondary_path =
-              launch_info.GetPTY().GetSecondaryName(NULL, 0);
-          if (secondary_path) {
-            FileSpec secondary_spec(secondary_path);
-            if (file_spec == secondary_spec) {
-              int secondary_fd =
-                  launch_info.GetPTY().GetSecondaryFileDescriptor();
-              if (secondary_fd == PseudoTerminal::invalid_fd)
-                secondary_fd =
-                    launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
-              if (secondary_fd == PseudoTerminal::invalid_fd) {
-                error.SetErrorStringWithFormat(
-                    "unable to open secondary pty '%s'", secondary_path);
-                return error; // Failure
-              }
-              [options setValue:[NSNumber numberWithInteger:secondary_fd]
-                         forKey:key];
-              return error; // Success
+          FileSpec secondary_spec(launch_info.GetPTY().GetSecondaryName());
+          if (file_spec == secondary_spec) {
+            int secondary_fd =
+                launch_info.GetPTY().GetSecondaryFileDescriptor();
+            if (secondary_fd == PseudoTerminal::invalid_fd) {
+              if (llvm::Error Err = launch_info.GetPTY().OpenSecondary(O_RDWR))
+                return Status(std::move(Err));
             }
+            secondary_fd = launch_info.GetPTY().GetSecondaryFileDescriptor();
+            assert(secondary_fd != PseudoTerminal::invalid_fd);
+            [options setValue:[NSNumber numberWithInteger:secondary_fd]
+                       forKey:key];
+            return error; // Success
           }
         }
         Status posix_error;
@@ -434,10 +425,12 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
             open(file_spec.GetPath().c_str(), oflag, S_IRUSR | S_IWUSR);
         if (created_fd >= 0) {
           auto file_options = File::OpenOptions(0);
-          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
-            file_options |= File::eOpenOptionRead;
-          if ((oflag & O_RDWR) || (oflag & O_RDONLY))
-            file_options |= File::eOpenOptionWrite;
+          if (oflag & O_RDWR)
+            file_options |= File::eOpenOptionReadWrite;
+          else if (oflag & O_WRONLY)
+            file_options |= File::eOpenOptionWriteOnly;
+          else if (oflag & O_RDONLY)
+            file_options |= File::eOpenOptionReadOnly;
           file = std::make_shared<NativeFile>(created_fd, file_options, true);
           [options setValue:[NSNumber numberWithInteger:created_fd] forKey:key];
           return error; // Success

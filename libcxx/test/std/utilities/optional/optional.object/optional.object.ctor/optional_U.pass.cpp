@@ -22,7 +22,7 @@
 using std::optional;
 
 template <class T, class U>
-void
+TEST_CONSTEXPR_CXX20 void
 test(optional<U>&& rhs, bool is_going_to_throw = false)
 {
     bool rhs_engaged = static_cast<bool>(rhs);
@@ -48,37 +48,39 @@ class X
 {
     int i_;
 public:
-    X(int i) : i_(i) {}
-    X(X&& x) : i_(std::exchange(x.i_, 0)) {}
-    ~X() {i_ = 0;}
-    friend bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
+    TEST_CONSTEXPR_CXX20 X(int i) : i_(i) {}
+    TEST_CONSTEXPR_CXX20 X(X&& x) : i_(std::exchange(x.i_, 0)) {}
+    TEST_CONSTEXPR_CXX20 ~X() {i_ = 0;}
+    friend constexpr bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
 };
-
-int count = 0;
 
 struct Z
 {
     Z(int) { TEST_THROW(6); }
 };
 
-int main(int, char**)
+template<class T, class U>
+TEST_CONSTEXPR_CXX20 bool test_all()
 {
     {
-        optional<short> rhs;
-        test<int>(std::move(rhs));
+        optional<T> rhs;
+        test<U>(std::move(rhs));
     }
     {
-        optional<short> rhs(short{3});
-        test<int>(std::move(rhs));
+        optional<T> rhs(short{3});
+        test<U>(std::move(rhs));
     }
-    {
-        optional<int> rhs;
-        test<X>(std::move(rhs));
-    }
-    {
-        optional<int> rhs(3);
-        test<X>(std::move(rhs));
-    }
+    return true;
+}
+
+int main(int, char**)
+{
+    test_all<short, int>();
+    test_all<int, X>();
+#if TEST_STD_VER > 17
+    static_assert(test_all<short, int>());
+    static_assert(test_all<int, X>());
+#endif
     {
         optional<int> rhs;
         test<Z>(std::move(rhs));

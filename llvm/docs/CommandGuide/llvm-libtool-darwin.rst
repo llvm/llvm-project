@@ -64,6 +64,10 @@ OPTIONS
   :option:`-L` and before the default search path. The default search path
   includes directories `/lib`, `/usr/lib` and `/usr/local/lib`.
 
+.. option:: -no_warning_for_no_symbols
+
+   Do not warn about files that have no symbols.
+
 .. option:: -o <filename>
 
   Specify the output file name. Must be specified exactly once.

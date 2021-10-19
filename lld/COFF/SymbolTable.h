@@ -25,6 +25,7 @@ namespace coff {
 
 class Chunk;
 class CommonChunk;
+class COFFLinkerContext;
 class Defined;
 class DefinedAbsolute;
 class DefinedRegular;
@@ -47,6 +48,8 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
+  SymbolTable(COFFLinkerContext &ctx) : ctx(ctx) {}
+
   void addFile(InputFile *file);
 
   // Emit errors for symbols that cannot be resolved.
@@ -57,15 +60,17 @@ public:
   // symbols and warn about imported local symbols.
   void resolveRemainingUndefines();
 
-  void loadMinGWAutomaticImports();
+  // Load lazy objects that are needed for MinGW automatic import and for
+  // doing stdcall fixups.
+  void loadMinGWSymbols();
   bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
 
   // Returns a list of chunks of selected symbols.
-  std::vector<Chunk *> getChunks();
+  std::vector<Chunk *> getChunks() const;
 
   // Returns a symbol for a given name. Returns a nullptr if not found.
-  Symbol *find(StringRef name);
-  Symbol *findUnderscore(StringRef name);
+  Symbol *find(StringRef name) const;
+  Symbol *findUnderscore(StringRef name) const;
 
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
@@ -87,6 +92,7 @@ public:
   Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
   void addLazyArchive(ArchiveFile *f, const Archive::Symbol &sym);
   void addLazyObject(LazyObjFile *f, StringRef n);
+  void addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym, StringRef n);
   Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
   Symbol *addRegular(InputFile *f, StringRef n,
                      const llvm::object::coff_symbol_generic *s = nullptr,
@@ -128,11 +134,13 @@ private:
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
+
+  COFFLinkerContext &ctx;
 };
 
-extern SymbolTable *symtab;
-
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
+
+StringRef ltrim1(StringRef s, const char *chars);
 
 } // namespace coff
 } // namespace lld

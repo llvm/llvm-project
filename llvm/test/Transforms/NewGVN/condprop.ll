@@ -5,8 +5,8 @@
 declare void @foo(i1)
 declare void @bar(i32)
 
-define void @test3(i32 %x, i32 %y) {
-; CHECK-LABEL: @test3(
+define void @test_and(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XZ]], [[YZ]]
@@ -35,6 +35,100 @@ nope:
   call void @foo(i1 %z)
   ret void
 }
+
+define void @test_and_logical(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_and_logical(
+; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 [[YZ]], i1 false
+; CHECK-NEXT:    br i1 [[Z]], label [[BOTH_ZERO:%.*]], label [[NOPE:%.*]]
+; CHECK:       both_zero:
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       nope:
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %xz = icmp eq i32 %x, 0
+  %yz = icmp eq i32 %y, 0
+  %z = select i1 %xz, i1 %yz, i1 false
+  br i1 %z, label %both_zero, label %nope
+both_zero:
+  call void @foo(i1 %xz)
+  call void @foo(i1 %yz)
+  call void @bar(i32 %x)
+  call void @bar(i32 %y)
+  ret void
+nope:
+  call void @foo(i1 %z)
+  ret void
+}
+
+define void @test_or(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_or(
+; CHECK-NEXT:    [[XZ:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[YZ:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[Z:%.*]] = or i1 [[XZ]], [[YZ]]
+; CHECK-NEXT:    br i1 [[Z]], label [[NOPE:%.*]], label [[BOTH_ZERO:%.*]]
+; CHECK:       both_zero:
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       nope:
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    ret void
+;
+  %xz = icmp ne i32 %x, 0
+  %yz = icmp ne i32 %y, 0
+  %z = or i1 %xz, %yz
+  br i1 %z, label %nope, label %both_zero
+both_zero:
+  call void @foo(i1 %xz)
+  call void @foo(i1 %yz)
+  call void @bar(i32 %x)
+  call void @bar(i32 %y)
+  ret void
+nope:
+  call void @foo(i1 %z)
+  ret void
+}
+
+define void @test_or_logical(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_or_logical(
+; CHECK-NEXT:    [[XZ:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[YZ:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 true, i1 [[YZ]]
+; CHECK-NEXT:    br i1 [[Z]], label [[NOPE:%.*]], label [[BOTH_ZERO:%.*]]
+; CHECK:       both_zero:
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @foo(i1 false)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       nope:
+; CHECK-NEXT:    call void @foo(i1 true)
+; CHECK-NEXT:    ret void
+;
+  %xz = icmp ne i32 %x, 0
+  %yz = icmp ne i32 %y, 0
+  %z = select i1 %xz, i1 true, i1 %yz
+  br i1 %z, label %nope, label %both_zero
+both_zero:
+  call void @foo(i1 %xz)
+  call void @foo(i1 %yz)
+  call void @bar(i32 %x)
+  call void @bar(i32 %y)
+  ret void
+nope:
+  call void @foo(i1 %z)
+  ret void
+}
+
 define void @test4(i1 %b, i32 %x) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]

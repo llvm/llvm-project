@@ -14,11 +14,12 @@
 #ifndef OMPTARGET_H
 #define OMPTARGET_H
 
-#include "target_impl.h"
-#include "common/debug.h"     // debug
-#include "interface.h" // interfaces with omp, compiler, and user
+#include "common/allocator.h"
+#include "common/debug.h" // debug
 #include "common/state-queue.h"
 #include "common/support.h"
+#include "interface.h" // interfaces with omp, compiler, and user
+#include "target_impl.h"
 
 #define OMPTARGET_NVPTX_VERSION 1.1
 
@@ -34,74 +35,15 @@
 #define BARRIER_COUNTER 0
 #define ORDERED_COUNTER 1
 
-// arguments needed for L0 parallelism only.
-class omptarget_nvptx_SharedArgs {
-public:
-  // All these methods must be called by the master thread only.
-  INLINE void Init() {
-    args  = buffer;
-    nArgs = MAX_SHARED_ARGS;
-  }
-  INLINE void DeInit() {
-    // Free any memory allocated for outlined parallel function with a large
-    // number of arguments.
-    if (nArgs > MAX_SHARED_ARGS) {
-      SafeFree(args, "new extended args");
-      Init();
-    }
-  }
-  INLINE void EnsureSize(size_t size) {
-    if (size > nArgs) {
-      if (nArgs > MAX_SHARED_ARGS) {
-        SafeFree(args, "new extended args");
-      }
-      args = (void **)SafeMalloc(size * sizeof(void *), "new extended args");
-      nArgs = size;
-    }
-  }
-  // Called by all threads.
-  INLINE void **GetArgs() const { return args; };
-private:
-  // buffer of pre-allocated arguments.
-  void *buffer[MAX_SHARED_ARGS];
-  // pointer to arguments buffer.
-  // starts off as a pointer to 'buffer' but can be dynamically allocated.
-  void **args;
-  // starts off as MAX_SHARED_ARGS but can increase in size.
-  uint32_t nArgs;
-};
-
-extern DEVICE SHARED omptarget_nvptx_SharedArgs
-    omptarget_nvptx_globalArgs;
-
-// Data structure to keep in shared memory that traces the current slot, stack,
-// and frame pointer as well as the active threads that didn't exit the current
-// environment.
-struct DataSharingStateTy {
-  __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
-  void *StackPtr[DS_Max_Warp_Number];
-  void * volatile FramePtr[DS_Max_Warp_Number];
-  __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
-};
-// Additional worker slot type which is initialized with the default worker slot
+// Worker slot type which is initialized with the default worker slot
 // size of 4*32 bytes.
-struct __kmpc_data_sharing_worker_slot_static {
+struct __kmpc_data_sharing_slot {
   __kmpc_data_sharing_slot *Next;
   __kmpc_data_sharing_slot *Prev;
   void *PrevSlotStackPtr;
   void *DataEnd;
   char Data[DS_Worker_Warp_Slot_Size];
 };
-// Additional master slot type which is initialized with the default master slot
-// size of 4 bytes.
-struct __kmpc_data_sharing_master_slot_static {
-  __kmpc_data_sharing_slot *Next;
-  __kmpc_data_sharing_slot *Prev;
-  void *PrevSlotStackPtr;
-  void *DataEnd;
-  char Data[DS_Slot_Size];
-};
-extern DEVICE SHARED DataSharingStateTy DataSharingState;
 
 ////////////////////////////////////////////////////////////////////////////////
 // task ICV and (implicit & explicit) task state
@@ -204,37 +146,6 @@ public:
   // init
   INLINE void InitTeamDescr();
 
-  INLINE __kmpc_data_sharing_slot *RootS(int wid, bool IsMasterThread) {
-    // If this is invoked by the master thread of the master warp then
-    // initialize it with a smaller slot.
-    if (IsMasterThread) {
-      // Do not initialize this slot again if it has already been initalized.
-      if (master_rootS[0].DataEnd == &master_rootS[0].Data[0] + DS_Slot_Size)
-        return 0;
-      // Initialize the pointer to the end of the slot given the size of the
-      // data section. DataEnd is non-inclusive.
-      master_rootS[0].DataEnd = &master_rootS[0].Data[0] + DS_Slot_Size;
-      // We currently do not have a next slot.
-      master_rootS[0].Next = 0;
-      master_rootS[0].Prev = 0;
-      master_rootS[0].PrevSlotStackPtr = 0;
-      return (__kmpc_data_sharing_slot *)&master_rootS[0];
-    }
-    // Do not initialize this slot again if it has already been initalized.
-    if (worker_rootS[wid].DataEnd ==
-        &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size)
-      return 0;
-    // Initialize the pointer to the end of the slot given the size of the data
-    // section. DataEnd is non-inclusive.
-    worker_rootS[wid].DataEnd =
-        &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size;
-    // We currently do not have a next slot.
-    worker_rootS[wid].Next = 0;
-    worker_rootS[wid].Prev = 0;
-    worker_rootS[wid].PrevSlotStackPtr = 0;
-    return (__kmpc_data_sharing_slot *)&worker_rootS[wid];
-  }
-
   INLINE __kmpc_data_sharing_slot *GetPreallocatedSlotAddr(int wid) {
     worker_rootS[wid].DataEnd =
         &worker_rootS[wid].Data[0] + DS_Worker_Warp_Slot_Size;
@@ -252,8 +163,7 @@ private:
       workDescrForActiveParallel; // one, ONLY for the active par
 
   ALIGN(16)
-  __kmpc_data_sharing_worker_slot_static worker_rootS[WARPSIZE];
-  ALIGN(16) __kmpc_data_sharing_master_slot_static master_rootS[1];
+  __kmpc_data_sharing_slot worker_rootS[DS_Max_Warp_Number];
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -312,9 +222,9 @@ private:
 /// Memory manager for statically allocated memory.
 class omptarget_nvptx_SimpleMemoryManager {
 private:
-  ALIGN(128) struct MemDataTy {
+  struct MemDataTy {
     volatile unsigned keys[OMP_STATE_COUNT];
-  } MemData[MAX_SM];
+  } MemData[MAX_SM] ALIGN(128);
 
   INLINE static uint32_t hash(unsigned key) {
     return key & (OMP_STATE_COUNT - 1);
@@ -331,20 +241,23 @@ public:
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern DEVICE omptarget_nvptx_SimpleMemoryManager
-    omptarget_nvptx_simpleMemoryManager;
-extern DEVICE SHARED uint32_t usedMemIdx;
-extern DEVICE SHARED uint32_t usedSlotIdx;
-extern DEVICE SHARED uint8_t
-    parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
-extern DEVICE SHARED uint16_t threadLimit;
-extern DEVICE SHARED uint16_t threadsInTeam;
-extern DEVICE SHARED uint16_t nThreads;
-extern DEVICE SHARED
-    omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
+extern omptarget_nvptx_SimpleMemoryManager omptarget_nvptx_simpleMemoryManager;
+extern uint32_t EXTERN_SHARED(usedMemIdx);
+extern uint32_t EXTERN_SHARED(usedSlotIdx);
+#if _OPENMP
+extern uint8_t parallelLevel[MAX_THREADS_PER_TEAM / WARPSIZE];
+#pragma omp allocate(parallelLevel) allocator(omp_pteam_mem_alloc)
+#else
+extern uint8_t EXTERN_SHARED(parallelLevel)[MAX_THREADS_PER_TEAM / WARPSIZE];
+#endif
+extern uint16_t EXTERN_SHARED(threadLimit);
+extern uint16_t EXTERN_SHARED(threadsInTeam);
+extern uint16_t EXTERN_SHARED(nThreads);
+extern omptarget_nvptx_ThreadPrivateContext *
+    EXTERN_SHARED(omptarget_nvptx_threadPrivateContext);
 
-extern DEVICE SHARED uint32_t execution_param;
-extern DEVICE SHARED void *ReductionScratchpadPtr;
+extern int8_t EXTERN_SHARED(execution_param);
+extern void *EXTERN_SHARED(ReductionScratchpadPtr);
 
 ////////////////////////////////////////////////////////////////////////////////
 // work function (outlined parallel/simd functions) and arguments.
@@ -352,8 +265,7 @@ extern DEVICE SHARED void *ReductionScratchpadPtr;
 ////////////////////////////////////////////////////////////////////////////////
 
 typedef void *omptarget_nvptx_WorkFn;
-extern volatile DEVICE SHARED omptarget_nvptx_WorkFn
-    omptarget_nvptx_workFn;
+extern omptarget_nvptx_WorkFn EXTERN_SHARED(omptarget_nvptx_workFn);
 
 ////////////////////////////////////////////////////////////////////////////////
 // get private data structures
@@ -368,6 +280,11 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor(int globalThreadId);
 ////////////////////////////////////////////////////////////////////////////////
 // inlined implementation
 ////////////////////////////////////////////////////////////////////////////////
+
+INLINE uint32_t __kmpc_impl_ffs(uint32_t x) { return __builtin_ffs(x); }
+INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
+INLINE uint32_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
+INLINE uint32_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
 
 #include "common/omptargeti.h"
 

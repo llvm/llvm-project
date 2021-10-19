@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: apple-clang-9
+
 // <chrono>
 
 // template <class Duration> class hh_mm_ss;

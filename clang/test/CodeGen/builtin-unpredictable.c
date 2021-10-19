@@ -12,7 +12,7 @@ extern "C" {
 
 void foo();
 void branch(int x) {
-// CHECK-LABEL: define void @branch(
+// CHECK-LABEL: define{{.*}} void @branch(
 
 // CHECK-NOT: builtin_unpredictable
 // CHECK: !unpredictable [[METADATA:.+]]

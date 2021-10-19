@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner=false < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner=false -hexagon-vector-combine=false < %s | FileCheck %s
 
 ; Test that the vsplat and vmemu are not all serialized due to chain edges
 ; caused by the hasSideEffects flag. The exact code generation may change

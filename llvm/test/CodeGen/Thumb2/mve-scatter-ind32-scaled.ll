@@ -238,21 +238,11 @@ define arm_aapcs_vfpcc void @ext_scaled_i16_i32_2gep(i16* %base, <4 x i32>* %off
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q2, [r1]
 ; CHECK-NEXT:    vmov.i32 q1, #0xa
-; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    vshl.i32 q2, q2, #1
 ; CHECK-NEXT:    vadd.i32 q2, q2, r0
 ; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    strh r1, [r0]
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    strh r1, [r0]
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    strh r1, [r0]
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vstrh.32 q0, [r2, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i32>, <4 x i32>* %offptr, align 4

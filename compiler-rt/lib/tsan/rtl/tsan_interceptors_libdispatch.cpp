@@ -240,10 +240,10 @@ SANITIZER_WEAK_IMPORT void dispatch_barrier_async_and_wait(
 SANITIZER_WEAK_IMPORT void dispatch_barrier_async_and_wait_f(
     dispatch_queue_t queue, void *context, dispatch_function_t work);
 
-DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false)
 DISPATCH_INTERCEPT_SYNC_F(dispatch_async_and_wait_f, false)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_async_and_wait, true)
+DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false)
 DISPATCH_INTERCEPT_SYNC_F(dispatch_barrier_async_and_wait_f, true)
+DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_async_and_wait, true)
 #endif
 
 

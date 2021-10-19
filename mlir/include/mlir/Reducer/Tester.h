@@ -9,7 +9,7 @@
 // This file defines the Tester class used in the MLIR Reduce tool.
 //
 // A Tester object is passed as an argument to the reduction passes and it is
-// used to run the interestigness testing script on the different generated
+// used to run the interestingness testing script on the different generated
 // reduced variants of the test case.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 
 #include <vector>
 
-#include "mlir/IR/Module.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -32,12 +32,21 @@ namespace mlir {
 /// case file.
 class Tester {
 public:
+  enum class Interestingness {
+    True,
+    False,
+    Untested,
+  };
+
   Tester(StringRef testScript, ArrayRef<std::string> testScriptArgs);
 
   /// Runs the interestingness testing script on a MLIR test case file. Returns
   /// true if the interesting behavior is present in the test case or false
   /// otherwise.
-  bool isInteresting(StringRef testCase) const;
+  std::pair<Interestingness, size_t> isInteresting(ModuleOp module) const;
+
+  /// Return whether the file in the given path is interesting.
+  Interestingness isInteresting(StringRef testCase) const;
 
 private:
   StringRef testScript;

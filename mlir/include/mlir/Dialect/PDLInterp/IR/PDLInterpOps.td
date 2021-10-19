@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS
 #define MLIR_DIALECT_PDLINTERP_IR_PDLINTERPOPS
 
-include "mlir/Dialect/PDL/IR/PDLBase.td"
+include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -34,8 +34,18 @@ def PDLInterp_Dialect : Dialect {
   }];
 
   let name = "pdl_interp";
-  let cppNamespace = "mlir::pdl_interp";
+  let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
+  let extraClassDeclaration = [{
+    /// Returns the name of the function containing the matcher code. This
+    /// function is called by the interpreter when matching an operation.
+    static StringRef getMatcherFunctionName() { return "matcher"; }
+
+    /// Returns the name of the module containing the rewrite functions. These
+    /// functions are invoked by distinct patterns within the matcher function
+    /// to rewrite the IR after a successful match.
+    static StringRef getRewriterModuleName() { return "rewriters"; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,12 +108,12 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
     ```mlir
     // Apply `myConstraint` to the entities defined by `input`, `attr`, and
     // `op`.
-    pdl_interp.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    pdl_interp.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation) -> ^matchDest, ^failureDest
     ```
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
   let assemblyFormat = [{
     $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict `->`
@@ -120,32 +130,35 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
   let description = [{
     `pdl_interp.apply_rewrite` operations invoke an external rewriter that has
     been registered with the interpreter to perform the rewrite after a
-    successful match. The rewrite is passed the root operation being matched, a
-    set of additional positional arguments generated within the matcher, and a
-    set of constant parameters.
+    successful match. The rewrite is passed a set of positional arguments,
+    and a set of constant parameters. The rewrite function may return any
+    number of results.
 
     Example:
 
     ```mlir
     // Rewriter operating solely on the root operation.
-    pdl_interp.apply_rewrite "rewriter" on %root
+    pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation)
+
+    // Rewriter operating solely on the root operation and return an attribute.
+    %attr = pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation) : !pdl.attribute
 
     // Rewriter operating on the root operation along with additional arguments
     // from the matcher.
-    pdl_interp.apply_rewrite "rewriter"(%value : !pdl.value) on %root
+    pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation, %value : !pdl.value)
 
     // Rewriter operating on the root operation along with additional arguments
     // and constant parameters.
-    pdl_interp.apply_rewrite "rewriter"[42](%value : !pdl.value) on %root
+    pdl_interp.apply_rewrite "rewriter"[42](%root : !pdl.operation, %value : !pdl.value)
     ```
   }];
   let arguments = (ins StrAttr:$name,
-                       PDL_Operation:$root,
-                       Variadic<PDL_PositionalValue>:$args,
+                       Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
+  let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `on` $root
-    attr-dict
+    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
+    (`:` type($results)^)? attr-dict
   }];
 }
 
@@ -155,7 +168,7 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
 
 def PDLInterp_AreEqualOp
     : PDLInterp_PredicateOp<"are_equal", [NoSideEffect, SameTypeOperands]> {
-  let summary = "Check if two positional values are equivalent";
+  let summary = "Check if two positional values or ranges are equivalent";
   let description = [{
     `pdl_interp.are_equal` operations compare two positional values for
     equality. On success, this operation branches to the true destination,
@@ -168,8 +181,7 @@ def PDLInterp_AreEqualOp
     ```
   }];
 
-  let arguments = (ins PDL_PositionalValue:$lhs,
-                       PDL_PositionalValue:$rhs);
+  let arguments = (ins PDL_AnyType:$lhs, PDL_AnyType:$rhs);
   let assemblyFormat = "operands `:` type($lhs) attr-dict `->` successors";
 }
 
@@ -229,19 +241,29 @@ def PDLInterp_CheckOperandCountOp
   let summary = "Check the number of operands of an `Operation`";
   let description = [{
     `pdl_interp.check_operand_count` operations compare the number of operands
-    of a given operation value with a constant. On success, this operation
-    branches to the true destination, otherwise the false destination is taken.
+    of a given operation value with a constant. The comparison is either exact
+    or at_least, with the latter used to compare against a minimum number of
+    expected operands. On success, this operation branches to the true
+    destination, otherwise the false destination is taken.
 
     Example:
 
     ```mlir
+    // Check for exact equality.
     pdl_interp.check_operand_count of %op is 2 -> ^matchDest, ^failureDest
+
+    // Check for at least N operands.
+    pdl_interp.check_operand_count of %op is at_least 2 -> ^matchDest, ^failureDest
     ```
   }];
 
   let arguments = (ins PDL_Operation:$operation,
-                       Confined<I32Attr, [IntNonNegative]>:$count);
-  let assemblyFormat = "`of` $operation `is` $count attr-dict `->` successors";
+                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       UnitAttr:$compareAtLeast);
+  let assemblyFormat = [{
+    `of` $operation `is` (`at_least` $compareAtLeast^)? $count attr-dict
+    `->` successors
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -276,19 +298,29 @@ def PDLInterp_CheckResultCountOp
   let summary = "Check the number of results of an `Operation`";
   let description = [{
     `pdl_interp.check_result_count` operations compare the number of results
-    of a given operation value with a constant. On success, this operation
-    branches to the true destination, otherwise the false destination is taken.
+    of a given operation value with a constant. The comparison is either exact
+    or at_least, with the latter used to compare against a minimum number of
+    expected results. On success, this operation branches to the true
+    destination, otherwise the false destination is taken.
 
     Example:
 
     ```mlir
-    pdl_interp.check_result_count of %op is 0 -> ^matchDest, ^failureDest
+    // Check for exact equality.
+    pdl_interp.check_result_count of %op is 2 -> ^matchDest, ^failureDest
+
+    // Check for at least N results.
+    pdl_interp.check_result_count of %op is at_least 2 -> ^matchDest, ^failureDest
     ```
   }];
 
   let arguments = (ins PDL_Operation:$operation,
-                       Confined<I32Attr, [IntNonNegative]>:$count);
-  let assemblyFormat = "`of` $operation `is` $count attr-dict `->` successors";
+                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       UnitAttr:$compareAtLeast);
+  let assemblyFormat = [{
+    `of` $operation `is` (`at_least` $compareAtLeast^)? $count attr-dict
+    `->` successors
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -306,12 +338,36 @@ def PDLInterp_CheckTypeOp
     Example:
 
     ```mlir
-    pdl_interp.check_type %type is 0 -> ^matchDest, ^failureDest
+    pdl_interp.check_type %type is i32 -> ^matchDest, ^failureDest
     ```
   }];
 
   let arguments = (ins PDL_Type:$value, TypeAttr:$type);
   let assemblyFormat = "$value `is` $type attr-dict `->` successors";
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CheckTypesOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CheckTypesOp
+    : PDLInterp_PredicateOp<"check_types", [NoSideEffect]> {
+  let summary = "Compare a range of types to a range of known values";
+  let description = [{
+    `pdl_interp.check_types` operations compare a range of types with a
+    statically known range of types. On success, this operation branches
+    to the true destination, otherwise the false destination is taken.
+
+    Example:
+
+    ```mlir
+    pdl_interp.check_types %type are [i32, i64] -> ^matchDest, ^failureDest
+    ```
+  }];
+
+  let arguments = (ins PDL_RangeOf<PDL_Type>:$value,
+                       TypeArrayAttr:$types);
+  let assemblyFormat = "$value `are` $types attr-dict `->` successors";
 }
 
 //===----------------------------------------------------------------------===//
@@ -328,7 +384,7 @@ def PDLInterp_CreateAttributeOp
     Example:
 
     ```mlir
-    pdl_interp.create_attribute 10 : i64
+    %attr = pdl_interp.create_attribute 10 : i64
     ```
   }];
 
@@ -337,42 +393,9 @@ def PDLInterp_CreateAttributeOp
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
-              "Attribute value", [{
-    build(builder, state, builder.getType<pdl::AttributeType>(), value);
-  }]>];
-}
-
-//===----------------------------------------------------------------------===//
-// pdl_interp::CreateNativeOp
-//===----------------------------------------------------------------------===//
-
-def PDLInterp_CreateNativeOp : PDLInterp_Op<"create_native"> {
-  let summary = "Call a native creation method to construct an `Attribute`, "
-                "`Operation`, `Type`, or `Value`";
-  let description = [{
-    `pdl_interp.create_native` operations invoke a native C++ function, that has
-    been registered externally with the consumer of PDL, to create an
-    `Attribute`, `Operation`, `Type`, or `Value`. The native function must
-    produce a value of the specified return type, and may accept any number of
-    positional arguments and constant attribute parameters.
-
-    Example:
-
-    ```mlir
-    %ret = pdl_interp.create_native "myNativeFunc"[42, "gt"](%arg0, %arg1) : !pdl.attribute
-    ```
-  }];
-
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_PositionalValue>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_PositionalValue:$result);
-  let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
-    attr-dict
-  }];
-  let verifier = ?;
+    OpBuilder<(ins "Attribute":$value), [{
+      build($_builder, $_state, $_builder.getType<pdl::AttributeType>(), value);
+    }]>];
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,32 +407,38 @@ def PDLInterp_CreateOperationOp
   let summary = "Create an instance of a specific `Operation`";
   let description = [{
     `pdl_interp.create_operation` operations create an `Operation` instance with
-    the specified attributes, operands, and result types.
+    the specified attributes, operands, and result types. See `pdl.operation`
+    for a more detailed description on the interpretation of the arguments to
+    this operation.
 
     Example:
 
     ```mlir
     // Create an instance of a `foo.op` operation.
-    %op = pdl_interp.create_operation "foo.op"(%arg0) {"attrA" = %attr0} -> %type, %type
+    %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> (%type : !pdl.type)
     ```
   }];
 
   let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_Value>:$operands,
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operands,
                        Variadic<PDL_Attribute>:$attributes,
                        StrArrayAttr:$attributeNames,
-                       Variadic<PDL_Type>:$types);
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$types);
   let results = (outs PDL_Operation:$operation);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, StringRef name, "
-              "ValueRange types, ValueRange operands, ValueRange attributes, "
-              "ArrayAttr attributeNames", [{
-    build(builder, state, builder.getType<pdl::OperationType>(), name,
-          operands, attributes, attributeNames, types);
-  }]>];
-  let parser = [{ return ::parseCreateOperationOp(parser, result); }];
-  let printer = [{ ::print(p, *this); }];
+    OpBuilder<(ins "StringRef":$name, "ValueRange":$types,
+      "ValueRange":$operands, "ValueRange":$attributes,
+      "ArrayAttr":$attributeNames), [{
+      build($_builder, $_state, $_builder.getType<pdl::OperationType>(), name,
+            operands, attributes, attributeNames, types);
+    }]>
+  ];
+  let assemblyFormat = [{
+    $name (`(` $operands^ `:` type($operands) `)`)?
+    custom<CreateOperationOpAttributes>($attributes, $attributeNames)
+    (`->` `(` $types^ `:` type($types) `)`)? attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -434,10 +463,32 @@ def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [NoSideEffect]> {
   let assemblyFormat = "$value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, TypeAttr type", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), type);
+    OpBuilder<(ins "TypeAttr":$type), [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>(), type);
     }]>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CreateTypesOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CreateTypesOp : PDLInterp_Op<"create_types", [NoSideEffect]> {
+  let summary = "Create an interpreter handle to a range of constant `Type`s";
+  let description = [{
+    `pdl_interp.create_types` operations generate a handle within the
+    interpreter for a specific range of constant type values.
+
+    Example:
+
+    ```mlir
+    pdl_interp.create_types [i64, i64]
+    ```
+  }];
+
+  let arguments = (ins TypeArrayAttr:$value);
+  let results = (outs PDL_RangeOf<PDL_Type>:$result);
+  let assemblyFormat = "$value attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -529,8 +580,8 @@ def PDLInterp_GetAttributeTypeOp
   let assemblyFormat = "`of` $value attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value value", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), value);
+    OpBuilder<(ins "Value":$value), [{
+      build($_builder, $_state, $_builder.getType<pdl::TypeType>(), value);
     }]>
   ];
 }
@@ -544,19 +595,20 @@ def PDLInterp_GetDefiningOpOp
   let summary = "Get the defining operation of a `Value`";
   let description = [{
     `pdl_interp.get_defining_op` operations try to get the defining operation
-    of a specific value. If the value is not an operation result, null is
-    returned.
+    of a specific value or range of values. In the case of range, the defining
+    op of the first value is returned. If the value is not an operation result
+    or range of operand results, null is returned.
 
     Example:
 
     ```mlir
-    %op = pdl_interp.get_defining_op of %value
+    %op = pdl_interp.get_defining_op of %value : !pdl.value
     ```
   }];
 
-  let arguments = (ins PDL_Value:$value);
+  let arguments = (ins PDL_InstOrRangeOf<PDL_Value>:$value);
   let results = (outs PDL_Operation:$operation);
-  let assemblyFormat = "`of` $value attr-dict";
+  let assemblyFormat = "`of` $value `:` type($value) attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -584,6 +636,49 @@ def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [NoSideEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl_interp::GetOperandsOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [NoSideEffect]> {
+  let summary = "Get a specified operand group from an `Operation`";
+  let description = [{
+    `pdl_interp.get_operands` operations try to get a specific operand
+    group from an operation. If the expected result is a single Value, null is
+    returned if the operand group is not of size 1. If a range is expected,
+    null is returned if the operand group is invalid. If no index is provided,
+    the returned operand group corresponds to all operands of the operation.
+
+    Example:
+
+    ```mlir
+    // Get the first group of operands from an operation, and expect a single
+    // element.
+    %operand = pdl_interp.get_operands 0 of %op : !pdl.value
+
+    // Get the first group of operands from an operation.
+    %operands = pdl_interp.get_operands 0 of %op : !pdl.range<value>
+
+    // Get all of the operands from an operation.
+    %operands = pdl_interp.get_operands of %op : !pdl.range<value>
+    ```
+  }];
+
+  let arguments = (ins
+    PDL_Operation:$operation,
+    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+  );
+  let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
+  let assemblyFormat = "($index^)? `of` $operation `:` type($value) attr-dict";
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$operation,
+                   "Optional<unsigned>":$index), [{
+      build($_builder, $_state, resultType, operation,
+            index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // pdl_interp::GetResultOp
 //===----------------------------------------------------------------------===//
 
@@ -608,58 +703,116 @@ def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [NoSideEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
-// pdl_interp::GetValueTypeOp
+// pdl_interp::GetResultsOp
 //===----------------------------------------------------------------------===//
 
-// Get a type from the root operation, held in the rewriter context.
-def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect]> {
-  let summary = "Get the result type of a specified `Value`";
+def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [NoSideEffect]> {
+  let summary = "Get a specified result group from an `Operation`";
   let description = [{
-    `pdl_interp.get_value_type` operations get the resulting type of a specific
-    value.
+    `pdl_interp.get_results` operations try to get a specific result group
+    from an operation. If the expected result is a single Value, null is
+    returned if the result group is not of size 1. If a range is expected,
+    null is returned if the result group is invalid. If no index is provided,
+    the returned operand group corresponds to all results of the operation.
 
     Example:
 
     ```mlir
-    %type = pdl_interp.get_value_type of %value
+    // Get the first group of results from an operation, and expect a single
+    // element.
+    %result = pdl_interp.get_results 0 of %op : !pdl.value
+
+    // Get the first group of results from an operation.
+    %results = pdl_interp.get_results 0 of %op : !pdl.range<value>
+
+    // Get all of the results from an operation.
+    %results = pdl_interp.get_results of %op : !pdl.range<value>
     ```
   }];
 
-  let arguments = (ins PDL_Value:$value);
-  let results = (outs PDL_Type:$result);
-  let assemblyFormat = "`of` $value attr-dict";
+  let arguments = (ins
+    PDL_Operation:$operation,
+    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+  );
+  let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
+  let assemblyFormat = "($index^)? `of` $operation `:` type($value) attr-dict";
+  let builders = [
+    OpBuilder<(ins "Type":$resultType, "Value":$operation,
+                   "Optional<unsigned>":$index), [{
+      build($_builder, $_state, resultType, operation,
+            index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
+    }]>,
+    OpBuilder<(ins "Value":$operation), [{
+      build($_builder, $_state,
+            pdl::RangeType::get($_builder.getType<pdl::ValueType>()), operation,
+            IntegerAttr());
+    }]>,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::GetValueTypeOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect,
+     TypesMatchWith<"`value` type matches arity of `result`",
+                    "result", "value", "getGetValueTypeOpValueType($_self)">]> {
+  let summary = "Get the result type of a specified `Value`";
+  let description = [{
+    `pdl_interp.get_value_type` operations get the resulting type of a specific
+    value or range thereof.
+
+    Example:
+
+    ```mlir
+    // Get the type of a single value.
+    %type = pdl_interp.get_value_type of %value : !pdl.type
+
+    // Get the types of a value range.
+    %type = pdl_interp.get_value_type of %values : !pdl.range<type>
+    ```
+  }];
+
+  let arguments = (ins PDL_InstOrRangeOf<PDL_Value>:$value);
+  let results = (outs PDL_InstOrRangeOf<PDL_Type>:$result);
+  let assemblyFormat = "`of` $value `:` type($result) attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value value", [{
-      build(builder, state, builder.getType<pdl::TypeType>(), value);
+    OpBuilder<(ins "Value":$value), [{
+      Type valType = value.getType();
+      Type typeType = $_builder.getType<pdl::TypeType>();
+      build($_builder, $_state,
+            valType.isa<pdl::RangeType>() ? pdl::RangeType::get(typeType)
+                                          : typeType,
+            value);
     }]>
   ];
 }
 
 //===----------------------------------------------------------------------===//
-// pdl_interp::InferredTypeOp
+// pdl_interp::InferredTypesOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_InferredTypeOp : PDLInterp_Op<"inferred_type"> {
-  let summary = "Generate a handle to a Type that is \"inferred\"";
+def PDLInterp_InferredTypesOp : PDLInterp_Op<"inferred_types"> {
+  let summary = "Generate a handle to a range of Types that are \"inferred\"";
   let description = [{
-    `pdl_interp.inferred_type` operations generate a handle to a type that
-    should be inferred. This signals to other operations, such as
-    `pdl_interp.create_operation`, that this type should be inferred.
+    `pdl_interp.inferred_types` operations generate handles to ranges of types
+    that should be inferred. This signals to other operations, such as
+    `pdl_interp.create_operation`, that these types should be inferred.
 
     Example:
 
     ```mlir
-    pdl_interp.inferred_type
+    %types = pdl_interp.inferred_types
     ```
   }];
-  let results = (outs PDL_Type:$type);
+  let results = (outs PDL_RangeOf<PDL_Type>:$type);
   let assemblyFormat = "attr-dict";
-
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state", [{
-      build(builder, state, builder.getType<pdl::TypeType>());
-    }]>,
+    OpBuilder<(ins), [{
+      build($_builder, $_state,
+            pdl::RangeType::get($_builder.getType<pdl::TypeType>()));
+    }]>
   ];
 }
 
@@ -671,7 +824,8 @@ def PDLInterp_IsNotNullOp
     : PDLInterp_PredicateOp<"is_not_null", [NoSideEffect]> {
   let summary = "Check if a positional value is non-null";
   let description = [{
-    `pdl_interp.is_not_null` operations check that a positional value exists. On
+    `pdl_interp.is_not_null` operations check that a positional value or range
+    exists. For ranges, this does not mean that the range was simply empty. On
     success, this operation branches to the true destination. Otherwise, the
     false destination is taken.
 
@@ -682,7 +836,7 @@ def PDLInterp_IsNotNullOp
     ```
   }];
 
-  let arguments = (ins PDL_PositionalValue:$value);
+  let arguments = (ins PDL_AnyType:$value);
   let assemblyFormat = "$value `:` type($value) attr-dict `->` successors";
 }
 
@@ -707,7 +861,7 @@ def PDLInterp_RecordMatchOp
     ```
   }];
 
-  let arguments = (ins Variadic<PDL_PositionalValue>:$inputs,
+  let arguments = (ins Variadic<PDL_AnyType>:$inputs,
                        Variadic<PDL_Operation>:$matchedOps,
                        SymbolRefAttr:$rewriter,
                        OptionalAttr<StrAttr>:$rootKind,
@@ -739,12 +893,15 @@ def PDLInterp_ReplaceOp : PDLInterp_Op<"replace"> {
 
     ```mlir
     // Replace root node with 2 values:
-    pdl_interp.replace %root with (%val0, %val1)
+    pdl_interp.replace %root with (%val0, %val1 : !pdl.type, !pdl.type)
     ```
   }];
   let arguments = (ins PDL_Operation:$operation,
-                       Variadic<PDL_Value>:$replValues);
-  let assemblyFormat = "$operation `with` `(` $replValues `)` attr-dict";
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$replValues);
+  let assemblyFormat = [{
+    $operation `with` ` ` `(` ($replValues^ `:` type($replValues))? `)`
+    attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -763,7 +920,7 @@ def PDLInterp_SwitchAttributeOp
     Example:
 
     ```mlir
-    pdl_interp.switch_attribute %attr to [10, true] -> ^10Dest, ^trueDest, ^defaultDest
+    pdl_interp.switch_attribute %attr to [10, true](^10Dest, ^trueDest) -> ^defaultDest
     ```
   }];
   let arguments = (ins PDL_Attribute:$attribute, ArrayAttr:$caseValues);
@@ -772,10 +929,9 @@ def PDLInterp_SwitchAttributeOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value attribute,"
-              "ArrayRef<Attribute> caseValues,"
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
-    build(builder, state, attribute, builder.getArrayAttr(caseValues),
+    OpBuilder<(ins "Value":$attribute, "ArrayRef<Attribute>":$caseValues,
+      "Block *":$defaultDest, "BlockRange":$dests), [{
+    build($_builder, $_state, attribute, $_builder.getArrayAttr(caseValues),
           defaultDest, dests);
   }]>];
 }
@@ -806,10 +962,9 @@ def PDLInterp_SwitchOperandCountOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<int32_t> counts, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
-    build(builder, state, operation, builder.getI32VectorAttr(counts),
+    OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
+    build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
 }
@@ -830,7 +985,7 @@ def PDLInterp_SwitchOperationNameOp
     Example:
 
     ```mlir
-    pdl_interp.switch_operation_name of %op to ["foo.op", "bar.op"] -> ^fooDest, ^barDest, ^defaultDest
+    pdl_interp.switch_operation_name of %op to ["foo.op", "bar.op"](^fooDest, ^barDest) -> ^defaultDest
     ```
   }];
 
@@ -841,12 +996,11 @@ def PDLInterp_SwitchOperationNameOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<OperationName> names, "
-              "Block *defaultDest, ArrayRef<Block *> dests", [{
+    OpBuilder<(ins "Value":$operation, "ArrayRef<OperationName>":$names,
+      "Block *":$defaultDest, "BlockRange":$dests), [{
       auto stringNames = llvm::to_vector<8>(llvm::map_range(names,
           [](OperationName name) { return name.getStringRef(); }));
-      build(builder, state, operation, builder.getStrArrayAttr(stringNames),
+      build($_builder, $_state, operation, $_builder.getStrArrayAttr(stringNames),
             defaultDest, dests);
     }]>,
   ];
@@ -868,7 +1022,7 @@ def PDLInterp_SwitchResultCountOp
     Example:
 
     ```mlir
-    pdl_interp.switch_result_count of %op to [0, 2] -> ^0Dest, ^2Dest, ^defaultDest
+    pdl_interp.switch_result_count of %op to [0, 2](^0Dest, ^2Dest) -> ^defaultDest
     ```
   }];
 
@@ -878,10 +1032,9 @@ def PDLInterp_SwitchResultCountOp
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value operation, "
-              "ArrayRef<int32_t> counts, Block *defaultDest, "
-              "ArrayRef<Block *> dests", [{
-    build(builder, state, operation, builder.getI32VectorAttr(counts),
+    OpBuilder<(ins "Value":$operation, "ArrayRef<int32_t>":$counts,
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
+    build($_builder, $_state, operation, $_builder.getI32VectorAttr(counts),
           defaultDest, dests);
   }]>];
 }
@@ -911,15 +1064,56 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
   }];
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, Value edge, "
-              "TypeRange types, Block *defaultDest, ArrayRef<Block *> dests", [{
-      build(builder, state, edge, builder.getTypeArrayAttr(types), defaultDest,
-            dests);
+    OpBuilder<(ins "Value":$edge, "ArrayRef<Attribute>":$types,
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
+      build($_builder, $_state, edge, $_builder.getArrayAttr(types),
+            defaultDest, dests);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     auto getCaseTypes() { return caseValues().getAsValueRange<TypeAttr>(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::SwitchTypesOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_SwitchTypesOp : PDLInterp_SwitchOp<"switch_types",
+                                                 [NoSideEffect]> {
+  let summary = "Switch on a range of `Type` values";
+  let description = [{
+    `pdl_interp.switch_types` operations compare a range of types with a set of
+    statically known ranges. If the value matches one of the provided case
+    values the destination for that case value is taken, otherwise the default
+    destination is taken.
+
+    Example:
+
+    ```mlir
+    pdl_interp.switch_types %type is [[i32], [i64, i64]] -> ^i32Dest, ^i64Dest, ^defaultDest
+    ```
+  }];
+
+  let arguments = (ins
+    PDL_RangeOf<PDL_Type>:$value,
+    TypedArrayAttrBase<TypeArrayAttr, "type-array array attribute">:$caseValues
+  );
+  let assemblyFormat = [{
+    $value `to` $caseValues `(` $cases `)` attr-dict `->` $defaultDest
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$edge, "ArrayRef<Attribute>":$types,
+                   "Block *":$defaultDest, "BlockRange":$dests), [{
+      build($_builder, $_state, edge, $_builder.getArrayAttr(types),
+            defaultDest, dests);
+    }]>,
+  ];
+
+  let extraClassDeclaration = [{
+    auto getCaseTypes() { return caseValues().getAsRange<ArrayAttr>(); }
   }];
 }
 

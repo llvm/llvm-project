@@ -17,8 +17,9 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
@@ -33,11 +34,13 @@ struct Session;
 /// ObjectLinkingLayer with additional support for symbol promotion.
 class LLVMJITLinkObjectLinkingLayer : public orc::ObjectLinkingLayer {
 public:
+  using orc::ObjectLinkingLayer::add;
+
   LLVMJITLinkObjectLinkingLayer(Session &S,
                                 jitlink::JITLinkMemoryManager &MemMgr);
 
-  Error add(orc::JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
-            orc::VModuleKey K = orc::VModuleKey()) override;
+  Error add(orc::ResourceTrackerSP RT,
+            std::unique_ptr<MemoryBuffer> O) override;
 
 private:
   Session &S;
@@ -45,10 +48,11 @@ private:
 
 struct Session {
   orc::ExecutionSession ES;
-  std::unique_ptr<orc::TargetProcessControl> TPC;
-  orc::JITDylib *MainJD;
+  orc::JITDylib *MainJD = nullptr;
   LLVMJITLinkObjectLinkingLayer ObjLayer;
   std::vector<orc::JITDylib *> JDSearchOrder;
+
+  ~Session();
 
   static Expected<std::unique_ptr<Session>> Create(Triple TT);
   void dumpSessionInfo(raw_ostream &OS);
@@ -89,7 +93,7 @@ struct Session {
   DenseMap<StringRef, StringRef> CanonicalWeakDefs;
 
 private:
-  Session(Triple TT, uint64_t PageSize, Error &Err);
+  Session(std::unique_ptr<orc::ExecutorProcessControl> EPC, Error &Err);
 };
 
 /// Record symbols, GOT entries, stubs, and sections for ELF file.

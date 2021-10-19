@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMREDUCE_LLVMREDUCE_DELTA_H
-#define LLVM_TOOLS_LLVMREDUCE_LLVMREDUCE_DELTA_H
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
 
 #include "TestRunner.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -24,27 +24,27 @@
 namespace llvm {
 
 struct Chunk {
-  int begin;
-  int end;
+  int Begin;
+  int End;
 
   /// Helper function to verify if a given Target-index is inside the Chunk
-  bool contains(int Index) const { return Index >= begin && Index <= end; }
+  bool contains(int Index) const { return Index >= Begin && Index <= End; }
 
   void print() const {
-    errs() << "[" << begin;
-    if (end - begin != 0)
-      errs() << "," << end;
+    errs() << "[" << Begin;
+    if (End - Begin != 0)
+      errs() << "," << End;
     errs() << "]";
   }
 
   /// Operator when populating CurrentChunks in Generic Delta Pass
   friend bool operator!=(const Chunk &C1, const Chunk &C2) {
-    return C1.begin != C2.begin || C1.end != C2.end;
+    return C1.Begin != C2.Begin || C1.End != C2.End;
   }
 
   /// Operator used for sets
   friend bool operator<(const Chunk &C1, const Chunk &C2) {
-    return std::tie(C1.begin, C1.end) < std::tie(C2.begin, C2.end);
+    return std::tie(C1.Begin, C1.End) < std::tie(C2.Begin, C2.End);
   }
 };
 
@@ -60,8 +60,7 @@ class Oracle {
   ArrayRef<Chunk> ChunksToKeep;
 
 public:
-  explicit Oracle(ArrayRef<Chunk> ChunksToKeep_)
-      : ChunksToKeep(ChunksToKeep_) {}
+  explicit Oracle(ArrayRef<Chunk> ChunksToKeep) : ChunksToKeep(ChunksToKeep) {}
 
   /// Should be called for each feature on which we are operating.
   /// Name is self-explanatory - if returns true, then it should be preserved.
@@ -74,7 +73,7 @@ public:
     auto _ = make_scope_exit([&]() { ++Index; }); // Next time - next feature.
 
     // Is this the last feature in the chunk?
-    if (ChunksToKeep.front().end == Index)
+    if (ChunksToKeep.front().End == Index)
       ChunksToKeep = ChunksToKeep.drop_front(); // Onto next chunk.
 
     return ShouldKeep;
@@ -102,9 +101,9 @@ public:
 ///
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
-void runDeltaPass(TestRunner &Test, int Targets,
-                  std::function<void(const std::vector<Chunk> &, Module *)>
-                      ExtractChunksFromModule);
+void runDeltaPass(
+    TestRunner &Test, int Targets,
+    function_ref<void(Oracle &, Module &)> ExtractChunksFromModule);
 } // namespace llvm
 
 #endif

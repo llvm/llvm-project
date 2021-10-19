@@ -1,10 +1,11 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux --asm-macro-max-nesting-depth=40000 %s -o %t.o
-// RUN: echo "SECTIONS { \
-// RUN:          .text1 0x10000 : { *(.text.*) } \
-// RUN:          .text2 0xf010000 : { *(.target) } } " > %t.script
-// RUN: ld.lld --script %t.script -fix-cortex-a53-843419 %t.o -o %t2 --print-map 2>&1 | FileCheck %s
+// RUN: split-file %s %t
+// RUN: llvm-mc -filetype=obj -triple=aarch64 --asm-macro-max-nesting-depth=40000 %t/asm -o %t.o
+// RUN: ld.lld -T %t/lds -fix-cortex-a53-843419 %t.o -o %t2 --print-map 2>&1 | FileCheck %s
+/// %t2 is more than 128MiB. Delete it early.
+// RUN: rm %t.o %t2
 
+//--- asm
 /// We use %(\parameter) to evaluate expression, which requires .altmacro.
  .altmacro
 
@@ -85,3 +86,13 @@ far\from:
  .global dat1
 dat1:
  .xword 0
+
+//--- lds
+PHDRS {
+  low PT_LOAD FLAGS(0x1 | 0x4);
+  high PT_LOAD FLAGS(0x1 | 0x4);
+}
+SECTIONS {
+  .text1 0x10000 : { *(.text.*) } :low
+  .text2 0xf010000 : { *(.target) } :high
+}

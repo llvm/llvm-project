@@ -301,6 +301,41 @@ define i8 @smax_nsw(i8 %a, i8 %b) {
   ret i8 %r
 }
 
+
+define i8 @abs_swapped_sge(i8 %a) {
+; CHECK-LABEL: @abs_swapped_sge(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 0
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp sge i8 %a, 0
+  %cmp2 = icmp slt i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+
+define i8 @nabs_swapped_sge(i8 %a) {
+; CHECK-LABEL: @nabs_swapped_sge(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[A]], 0
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i8 [[A]], 0
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 [[NEG]]
+; CHECK-NEXT:    ret i8 0
+;
+  %neg = sub i8 0, %a
+  %cmp1 = icmp slt i8 %a, 0
+  %cmp2 = icmp sge i8 %a, 0
+  %m1 = select i1 %cmp1, i8 %a, i8 %neg
+  %m2 = select i1 %cmp2, i8 %neg, i8 %a
+  %r = xor i8 %m2, %m1
+  ret i8 %r
+}
+
 ; Abs/nabs may exist with non-canonical operands. Value tracking can match those.
 ; But we do not use value tracking, so we expect instcombine will canonicalize
 ; this code to a form that allows CSE.
@@ -684,6 +719,27 @@ define i32 @select_not_invert_pred_cond_wrong_select_op(i8 %x, i8 %y, i32 %t, i3
   ret i32 %r
 }
 
+; This test is a reproducer for a bug involving inverted min/max selects
+; hashing differently but comparing as equal.  It exhibits such a pair of
+; values, and we run this test with -earlycse-debug-hash which would catch
+; the disagreement and fail if it regressed.
+; EarlyCSE should be able to detect the 2nd redundant `select` and eliminate
+; it.
+define i32 @inverted_max(i32 %i) {
+; CHECK-LABEL: @inverted_max(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 0, [[I:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = select i1 [[CMP]], i32 [[I]], i32 0
+; CHECK-NEXT:    [[CMPINV:%.*]] = icmp sgt i32 0, [[I]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[M1]], [[M1]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp sle i32 0, %i
+  %m1 = select i1 %cmp, i32 %i, i32 0
+  %cmpinv = icmp sgt i32 0, %i
+  %m2 = select i1 %cmpinv, i32 0, i32 %i
+  %r = add i32 %m1, %m2
+  ret i32 %r
+}
 
 ; This test is a reproducer for a bug involving inverted min/max selects
 ; hashing differently but comparing as equal.  It exhibits such a pair of
@@ -1029,6 +1085,49 @@ define i16 @umul_fix_scale(i16 %a, i16 %b, i32 %s) {
   ret i16 %o
 }
 
+; TODO: handle >2 args
+
+define float @fma(float %a, float %b, float %c) {
+; CHECK-LABEL: @fma(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.fma.f32(float [[B]], float [[A]], float [[C]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %y = call float @llvm.fma.f32(float %b, float %a, float %c)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
+define float @fma_different_add_ops(float %a, float %b, float %c, float %d) {
+; CHECK-LABEL: @fma_different_add_ops(
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.fma.f32(float [[A:%.*]], float [[B:%.*]], float [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.fma.f32(float [[B]], float [[A]], float [[D:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %x = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %y = call float @llvm.fma.f32(float %b, float %a, float %d)
+  %r = fdiv nnan float %x, %y
+  ret float %r
+}
+
+; TODO: handle >2 args
+
+define <2 x double> @fmuladd(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: @fmuladd(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[B]], <2 x double> [[A]], <2 x double> [[C]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv nnan <2 x double> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %x = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c)
+  %y = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> %b, <2 x double> %a, <2 x double> %c)
+  %r = fdiv nnan <2 x double> %x, %y
+  ret <2 x double> %r
+}
+
 declare float @llvm.maxnum.f32(float, float)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
@@ -1051,3 +1150,6 @@ declare i16 @llvm.smul.fix.i16(i16, i16, i32)
 declare i16 @llvm.umul.fix.i16(i16, i16, i32)
 declare <3 x i16> @llvm.smul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
 declare <3 x i16> @llvm.umul.fix.sat.v3i16(<3 x i16>, <3 x i16>, i32)
+
+declare float @llvm.fma.f32(float, float, float)
+declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>)

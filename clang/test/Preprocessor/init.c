@@ -9,6 +9,15 @@
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
+//
+// CXX2B:#define __GNUG__ 4
+// CXX2B:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX2B:#define __GXX_RTTI 1
+// CXX2B:#define __GXX_WEAK__ 1
+// CXX2B:#define __cplusplus 202101L
+// CXX2B:#define __private_extern__ extern
+//
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
 //
@@ -106,10 +115,12 @@
 // COMMON:#define __STDC__ 1
 // COMMON:#define __VERSION__ {{.*}}
 // COMMON:#define __clang__ 1
+// COMMON:#define __clang_literal_encoding__ {{.*}}
 // COMMON:#define __clang_major__ {{[0-9]+}}
 // COMMON:#define __clang_minor__ {{[0-9]+}}
 // COMMON:#define __clang_patchlevel__ {{[0-9]+}}
 // COMMON:#define __clang_version__ {{.*}}
+// COMMON:#define __clang_wide_literal_encoding__ {{.*}}
 // COMMON:#define __llvm__ 1
 //
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-win32 < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
@@ -121,6 +132,13 @@
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
+//
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s
+//
+// GXX2B:#define __GNUG__ 4
+// GXX2B:#define __GXX_WEAK__ 1
+// GXX2B:#define __cplusplus 202101L
+// GXX2B:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2a -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
@@ -855,189 +873,6 @@
 // AMDGPU:#define cl_khr_local_int32_base_atomics 1
 // AMDGPU:#define cl_khr_local_int32_extended_atomics 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=s390x-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix S390X %s
-// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=s390x-none-none -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix S390X -check-prefix S390X-CXX %s
-//
-// S390X:#define __BIGGEST_ALIGNMENT__ 8
-// S390X:#define __CHAR16_TYPE__ unsigned short
-// S390X:#define __CHAR32_TYPE__ unsigned int
-// S390X:#define __CHAR_BIT__ 8
-// S390X:#define __CHAR_UNSIGNED__ 1
-// S390X:#define __DBL_DENORM_MIN__ 4.9406564584124654e-324
-// S390X:#define __DBL_DIG__ 15
-// S390X:#define __DBL_EPSILON__ 2.2204460492503131e-16
-// S390X:#define __DBL_HAS_DENORM__ 1
-// S390X:#define __DBL_HAS_INFINITY__ 1
-// S390X:#define __DBL_HAS_QUIET_NAN__ 1
-// S390X:#define __DBL_MANT_DIG__ 53
-// S390X:#define __DBL_MAX_10_EXP__ 308
-// S390X:#define __DBL_MAX_EXP__ 1024
-// S390X:#define __DBL_MAX__ 1.7976931348623157e+308
-// S390X:#define __DBL_MIN_10_EXP__ (-307)
-// S390X:#define __DBL_MIN_EXP__ (-1021)
-// S390X:#define __DBL_MIN__ 2.2250738585072014e-308
-// S390X:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
-// S390X:#define __FLT_DENORM_MIN__ 1.40129846e-45F
-// S390X:#define __FLT_DIG__ 6
-// S390X:#define __FLT_EPSILON__ 1.19209290e-7F
-// S390X:#define __FLT_EVAL_METHOD__ 0
-// S390X:#define __FLT_HAS_DENORM__ 1
-// S390X:#define __FLT_HAS_INFINITY__ 1
-// S390X:#define __FLT_HAS_QUIET_NAN__ 1
-// S390X:#define __FLT_MANT_DIG__ 24
-// S390X:#define __FLT_MAX_10_EXP__ 38
-// S390X:#define __FLT_MAX_EXP__ 128
-// S390X:#define __FLT_MAX__ 3.40282347e+38F
-// S390X:#define __FLT_MIN_10_EXP__ (-37)
-// S390X:#define __FLT_MIN_EXP__ (-125)
-// S390X:#define __FLT_MIN__ 1.17549435e-38F
-// S390X:#define __FLT_RADIX__ 2
-// S390X:#define __INT16_C_SUFFIX__
-// S390X:#define __INT16_FMTd__ "hd"
-// S390X:#define __INT16_FMTi__ "hi"
-// S390X:#define __INT16_MAX__ 32767
-// S390X:#define __INT16_TYPE__ short
-// S390X:#define __INT32_C_SUFFIX__
-// S390X:#define __INT32_FMTd__ "d"
-// S390X:#define __INT32_FMTi__ "i"
-// S390X:#define __INT32_MAX__ 2147483647
-// S390X:#define __INT32_TYPE__ int
-// S390X:#define __INT64_C_SUFFIX__ L
-// S390X:#define __INT64_FMTd__ "ld"
-// S390X:#define __INT64_FMTi__ "li"
-// S390X:#define __INT64_MAX__ 9223372036854775807L
-// S390X:#define __INT64_TYPE__ long int
-// S390X:#define __INT8_C_SUFFIX__
-// S390X:#define __INT8_FMTd__ "hhd"
-// S390X:#define __INT8_FMTi__ "hhi"
-// S390X:#define __INT8_MAX__ 127
-// S390X:#define __INT8_TYPE__ signed char
-// S390X:#define __INTMAX_C_SUFFIX__ L
-// S390X:#define __INTMAX_FMTd__ "ld"
-// S390X:#define __INTMAX_FMTi__ "li"
-// S390X:#define __INTMAX_MAX__ 9223372036854775807L
-// S390X:#define __INTMAX_TYPE__ long int
-// S390X:#define __INTMAX_WIDTH__ 64
-// S390X:#define __INTPTR_FMTd__ "ld"
-// S390X:#define __INTPTR_FMTi__ "li"
-// S390X:#define __INTPTR_MAX__ 9223372036854775807L
-// S390X:#define __INTPTR_TYPE__ long int
-// S390X:#define __INTPTR_WIDTH__ 64
-// S390X:#define __INT_FAST16_FMTd__ "hd"
-// S390X:#define __INT_FAST16_FMTi__ "hi"
-// S390X:#define __INT_FAST16_MAX__ 32767
-// S390X:#define __INT_FAST16_TYPE__ short
-// S390X:#define __INT_FAST32_FMTd__ "d"
-// S390X:#define __INT_FAST32_FMTi__ "i"
-// S390X:#define __INT_FAST32_MAX__ 2147483647
-// S390X:#define __INT_FAST32_TYPE__ int
-// S390X:#define __INT_FAST64_FMTd__ "ld"
-// S390X:#define __INT_FAST64_FMTi__ "li"
-// S390X:#define __INT_FAST64_MAX__ 9223372036854775807L
-// S390X:#define __INT_FAST64_TYPE__ long int
-// S390X:#define __INT_FAST8_FMTd__ "hhd"
-// S390X:#define __INT_FAST8_FMTi__ "hhi"
-// S390X:#define __INT_FAST8_MAX__ 127
-// S390X:#define __INT_FAST8_TYPE__ signed char
-// S390X:#define __INT_LEAST16_FMTd__ "hd"
-// S390X:#define __INT_LEAST16_FMTi__ "hi"
-// S390X:#define __INT_LEAST16_MAX__ 32767
-// S390X:#define __INT_LEAST16_TYPE__ short
-// S390X:#define __INT_LEAST32_FMTd__ "d"
-// S390X:#define __INT_LEAST32_FMTi__ "i"
-// S390X:#define __INT_LEAST32_MAX__ 2147483647
-// S390X:#define __INT_LEAST32_TYPE__ int
-// S390X:#define __INT_LEAST64_FMTd__ "ld"
-// S390X:#define __INT_LEAST64_FMTi__ "li"
-// S390X:#define __INT_LEAST64_MAX__ 9223372036854775807L
-// S390X:#define __INT_LEAST64_TYPE__ long int
-// S390X:#define __INT_LEAST8_FMTd__ "hhd"
-// S390X:#define __INT_LEAST8_FMTi__ "hhi"
-// S390X:#define __INT_LEAST8_MAX__ 127
-// S390X:#define __INT_LEAST8_TYPE__ signed char
-// S390X:#define __INT_MAX__ 2147483647
-// S390X:#define __LDBL_DENORM_MIN__ 6.47517511943802511092443895822764655e-4966L
-// S390X:#define __LDBL_DIG__ 33
-// S390X:#define __LDBL_EPSILON__ 1.92592994438723585305597794258492732e-34L
-// S390X:#define __LDBL_HAS_DENORM__ 1
-// S390X:#define __LDBL_HAS_INFINITY__ 1
-// S390X:#define __LDBL_HAS_QUIET_NAN__ 1
-// S390X:#define __LDBL_MANT_DIG__ 113
-// S390X:#define __LDBL_MAX_10_EXP__ 4932
-// S390X:#define __LDBL_MAX_EXP__ 16384
-// S390X:#define __LDBL_MAX__ 1.18973149535723176508575932662800702e+4932L
-// S390X:#define __LDBL_MIN_10_EXP__ (-4931)
-// S390X:#define __LDBL_MIN_EXP__ (-16381)
-// S390X:#define __LDBL_MIN__ 3.36210314311209350626267781732175260e-4932L
-// S390X:#define __LONG_LONG_MAX__ 9223372036854775807LL
-// S390X:#define __LONG_MAX__ 9223372036854775807L
-// S390X:#define __NO_INLINE__ 1
-// S390X:#define __POINTER_WIDTH__ 64
-// S390X:#define __PTRDIFF_TYPE__ long int
-// S390X:#define __PTRDIFF_WIDTH__ 64
-// S390X:#define __SCHAR_MAX__ 127
-// S390X:#define __SHRT_MAX__ 32767
-// S390X:#define __SIG_ATOMIC_MAX__ 2147483647
-// S390X:#define __SIG_ATOMIC_WIDTH__ 32
-// S390X:#define __SIZEOF_DOUBLE__ 8
-// S390X:#define __SIZEOF_FLOAT__ 4
-// S390X:#define __SIZEOF_INT__ 4
-// S390X:#define __SIZEOF_LONG_DOUBLE__ 16
-// S390X:#define __SIZEOF_LONG_LONG__ 8
-// S390X:#define __SIZEOF_LONG__ 8
-// S390X:#define __SIZEOF_POINTER__ 8
-// S390X:#define __SIZEOF_PTRDIFF_T__ 8
-// S390X:#define __SIZEOF_SHORT__ 2
-// S390X:#define __SIZEOF_SIZE_T__ 8
-// S390X:#define __SIZEOF_WCHAR_T__ 4
-// S390X:#define __SIZEOF_WINT_T__ 4
-// S390X:#define __SIZE_TYPE__ long unsigned int
-// S390X:#define __SIZE_WIDTH__ 64
-// S390X-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
-// S390X:#define __UINT16_C_SUFFIX__
-// S390X:#define __UINT16_MAX__ 65535
-// S390X:#define __UINT16_TYPE__ unsigned short
-// S390X:#define __UINT32_C_SUFFIX__ U
-// S390X:#define __UINT32_MAX__ 4294967295U
-// S390X:#define __UINT32_TYPE__ unsigned int
-// S390X:#define __UINT64_C_SUFFIX__ UL
-// S390X:#define __UINT64_MAX__ 18446744073709551615UL
-// S390X:#define __UINT64_TYPE__ long unsigned int
-// S390X:#define __UINT8_C_SUFFIX__
-// S390X:#define __UINT8_MAX__ 255
-// S390X:#define __UINT8_TYPE__ unsigned char
-// S390X:#define __UINTMAX_C_SUFFIX__ UL
-// S390X:#define __UINTMAX_MAX__ 18446744073709551615UL
-// S390X:#define __UINTMAX_TYPE__ long unsigned int
-// S390X:#define __UINTMAX_WIDTH__ 64
-// S390X:#define __UINTPTR_MAX__ 18446744073709551615UL
-// S390X:#define __UINTPTR_TYPE__ long unsigned int
-// S390X:#define __UINTPTR_WIDTH__ 64
-// S390X:#define __UINT_FAST16_MAX__ 65535
-// S390X:#define __UINT_FAST16_TYPE__ unsigned short
-// S390X:#define __UINT_FAST32_MAX__ 4294967295U
-// S390X:#define __UINT_FAST32_TYPE__ unsigned int
-// S390X:#define __UINT_FAST64_MAX__ 18446744073709551615UL
-// S390X:#define __UINT_FAST64_TYPE__ long unsigned int
-// S390X:#define __UINT_FAST8_MAX__ 255
-// S390X:#define __UINT_FAST8_TYPE__ unsigned char
-// S390X:#define __UINT_LEAST16_MAX__ 65535
-// S390X:#define __UINT_LEAST16_TYPE__ unsigned short
-// S390X:#define __UINT_LEAST32_MAX__ 4294967295U
-// S390X:#define __UINT_LEAST32_TYPE__ unsigned int
-// S390X:#define __UINT_LEAST64_MAX__ 18446744073709551615UL
-// S390X:#define __UINT_LEAST64_TYPE__ long unsigned int
-// S390X:#define __UINT_LEAST8_MAX__ 255
-// S390X:#define __UINT_LEAST8_TYPE__ unsigned char
-// S390X:#define __USER_LABEL_PREFIX__
-// S390X:#define __WCHAR_MAX__ 2147483647
-// S390X:#define __WCHAR_TYPE__ int
-// S390X:#define __WCHAR_WIDTH__ 32
-// S390X:#define __WINT_TYPE__ int
-// S390X:#define __WINT_WIDTH__ 32
-// S390X:#define __s390__ 1
-// S390X:#define __s390x__ 1
-//
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-rtems-elf < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=sparc-none-netbsd < /dev/null | FileCheck -match-full-lines -check-prefix SPARC -check-prefix SPARC-NETOPENBSD %s
@@ -1580,6 +1415,7 @@
 //
 // RUN: %clang_cc1 -triple arm-linux-androideabi -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix ANDROID %s
 // ANDROID-NOT:#define __ANDROID_API__
+// ANDROID-NOT:#define __ANDROID_MIN_SDK_VERSION__
 // ANDROID:#define __ANDROID__ 1
 // ANDROID-NOT:#define __gnu_linux__
 //
@@ -1590,7 +1426,8 @@
 // X86_64-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 //
 // RUN: %clang_cc1 -triple arm-linux-androideabi20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix ANDROID20 %s
-// ANDROID20:#define __ANDROID_API__ 20
+// ANDROID20:#define __ANDROID_API__ __ANDROID_MIN_SDK_VERSION__
+// ANDROID20:#define __ANDROID_MIN_SDK_VERSION__ 20
 // ANDROID20:#define __ANDROID__ 1
 // ANDROID-NOT:#define __gnu_linux__
 //
@@ -1627,10 +1464,21 @@
 // OPENBSD:#define __WCHAR_TYPE__ int
 // OPENBSD:#define __WINT_TYPE__ int
 //
+// RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
+// RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
+// RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC %s
+// OPENBSD-STDC:#define __STDC_NO_ATOMICS__ 1
+// OPENBSD-STDC:#define __STDC_NO_THREADS__ 1
+//
+// RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=amd64-unknown-openbsd < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD-STDC-N %s
+// OPENBSD-STDC-N-NOT:#define __STDC_NO_ATOMICS__ 1
+// OPENBSD-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=xcore-none-none < /dev/null | FileCheck -match-full-lines -check-prefix XCORE %s
 // XCORE:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // XCORE:#define __LITTLE_ENDIAN__ 1
 // XCORE:#define __XS1B__ 1
+// XCORE:#define __xcore__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown \
 // RUN:   < /dev/null \
@@ -1638,17 +1486,33 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-unknown-unknown \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-emscripten \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,EMSCRIPTEN %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-emscripten -pthread -target-feature +atomics \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,EMSCRIPTEN,EMSCRIPTEN-THREADS %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-emscripten \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,EMSCRIPTEN %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY32,WEBASSEMBLY-WASI %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm64-wasi \
 // RUN:   < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY,WEBASSEMBLY64,WEBASSEMBLY-WASI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown -x c++ \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=wasm32-unknown-unknown -x c++ -pthread -target-feature +atomics \
+// RUN:   < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefixes=WEBASSEMBLY-CXX-ATOMICS %s
 //
 // WEBASSEMBLY32:#define _ILP32 1
 // WEBASSEMBLY32-NOT:#define _LP64
 // WEBASSEMBLY64-NOT:#define _ILP32
 // WEBASSEMBLY64:#define _LP64 1
+// EMSCRIPTEN-THREADS:#define _REENTRANT 1
 // WEBASSEMBLY-NEXT:#define __ATOMIC_ACQUIRE 2
 // WEBASSEMBLY-NEXT:#define __ATOMIC_ACQ_REL 4
 // WEBASSEMBLY-NEXT:#define __ATOMIC_CONSUME 1
@@ -1688,6 +1552,8 @@
 // WEBASSEMBLY-NEXT:#define __DBL_MIN__ 2.2250738585072014e-308
 // WEBASSEMBLY-NEXT:#define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 // WEBASSEMBLY-NOT:#define __ELF__
+// EMSCRIPTEN-THREADS-NEXT:#define __EMSCRIPTEN_PTHREADS__ 1
+// EMSCRIPTEN-NEXT:#define __EMSCRIPTEN__ 1
 // WEBASSEMBLY-NEXT:#define __FINITE_MATH_ONLY__ 0
 // WEBASSEMBLY-NEXT:#define __FLOAT128__ 1
 // WEBASSEMBLY-NOT:#define __FLT16_DECIMAL_DIG__
@@ -1991,13 +1857,17 @@
 // WEBASSEMBLY-NOT:#define __WINT_UNSIGNED__
 // WEBASSEMBLY-NEXT:#define __WINT_WIDTH__ 32
 // WEBASSEMBLY-NEXT:#define __clang__ 1
+// WEBASSEMBLY-NEXT:#define __clang_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_major__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_minor__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_patchlevel__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __clang_version__ "{{.*}}"
+// WEBASSEMBLY-NEXT:#define __clang_wide_literal_encoding__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __llvm__ 1
-// WEBASSEMBLY-NOT:#define __unix
-// WEBASSEMBLY-NOT:#define __unix__
+// WEBASSEMBLY-WASI-NOT:#define __unix
+// WEBASSEMBLY-WASI-NOT:#define __unix__
+// EMSCRIPTEN-NEXT:#define __unix 1
+// EMSCRIPTEN-NEXT:#define __unix__ 1
 // WEBASSEMBLY-WASI-NEXT:#define __wasi__ 1
 // WEBASSEMBLY-NOT:#define __wasm_simd128__
 // WEBASSEMBLY-NOT:#define __wasm_simd256__
@@ -2012,6 +1882,12 @@
 // WEBASSEMBLY64-NEXT:#define __wasm64 1
 // WEBASSEMBLY64-NEXT:#define __wasm64__ 1
 // WEBASSEMBLY-NEXT:#define __wasm__ 1
+// EMSCRIPTEN:#define unix 1
+// WEBASSEMBLY-WASI-NOT:#define unix 1
+// WEBASSEMBLY-CXX-NOT:_REENTRANT
+// WEBASSEMBLY-CXX-NOT:__STDCPP_THREADS__
+// WEBASSEMBLY-CXX-ATOMICS:#define _REENTRANT 1
+// WEBASSEMBLY-CXX-ATOMICS:#define __STDCPP_THREADS__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple i686-windows-cygnus < /dev/null | FileCheck -match-full-lines -check-prefix CYGWIN-X32 %s
 // CYGWIN-X32: #define __USER_LABEL_PREFIX__ _
@@ -2080,7 +1956,7 @@
 // AVR:#define __GXX_ABI_VERSION 1002
 // AVR:#define __INT16_C_SUFFIX__
 // AVR:#define __INT16_MAX__ 32767
-// AVR:#define __INT16_TYPE__ short
+// AVR:#define __INT16_TYPE__ int
 // AVR:#define __INT32_C_SUFFIX__ L
 // AVR:#define __INT32_MAX__ 2147483647L
 // AVR:#define __INT32_TYPE__ long int
@@ -2155,7 +2031,7 @@
 // AVR:#define __SIZE_TYPE__ unsigned int
 // AVR:#define __STDC__ 1
 // AVR:#define __UINT16_MAX__ 65535U
-// AVR:#define __UINT16_TYPE__ unsigned short
+// AVR:#define __UINT16_TYPE__ unsigned int
 // AVR:#define __UINT32_C_SUFFIX__ UL
 // AVR:#define __UINT32_MAX__ 4294967295UL
 // AVR:#define __UINT32_TYPE__ long unsigned int

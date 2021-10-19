@@ -82,7 +82,7 @@ declare void @llvm.va_end(i8*) #1
 ; Function Attrs: nounwind
 define i32 @main() #0 {
 entry:
-  %call = tail call i32 (i32, ...) @foo(i32 undef, i32 2, %struct.AAA* byval align 4 @aaa, i32 4)
+  %call = tail call i32 (i32, ...) @foo(i32 undef, i32 2, %struct.AAA* byval(%struct.AAA) align 4 @aaa, i32 4)
   %call1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), i32 %call) #1
   ret i32 %call
 }

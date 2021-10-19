@@ -8,37 +8,40 @@
 %0 = type { i64, i32 }
 
 define i32 @test1(%0* %p, %0* %q, i1 %r) nounwind {
-; CHECK-LABEL: test1:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    addq $8, %rdi
-; CHECK-NEXT:    addq $8, %rsi
-; CHECK-NEXT:    testb $1, %dl
-; CHECK-NEXT:    cmovneq %rdi, %rsi
-; CHECK-NEXT:    movl (%rsi), %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test1:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testb $1, %dl
+; GENERIC-NEXT:    cmoveq %rsi, %rdi
+; GENERIC-NEXT:    movl 8(%rdi), %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test1:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testb $1, %dl
+; ATOM-NEXT:    cmoveq %rsi, %rdi
+; ATOM-NEXT:    movl 8(%rdi), %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test1:
 ; ATHLON:       ## %bb.0:
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    addl $8, %ecx
-; ATHLON-NEXT:    addl $8, %eax
 ; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    cmovnel %ecx, %eax
-; ATHLON-NEXT:    movl (%eax), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmovnel %eax, %ecx
+; ATHLON-NEXT:    movl (%ecx), %eax
+; ATHLON-NEXT:    movl 8(%eax), %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test1:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    testb $1, %cl
-; MCU-NEXT:    jne .LBB0_1
-; MCU-NEXT:  # %bb.2:
-; MCU-NEXT:    addl $8, %edx
-; MCU-NEXT:    movl (%edx), %eax
-; MCU-NEXT:    retl
-; MCU-NEXT:  .LBB0_1:
-; MCU-NEXT:    addl $8, %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    jne .LBB0_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %edx, %eax
+; MCU-NEXT:  .LBB0_2:
+; MCU-NEXT:    movl 8(%eax), %eax
 ; MCU-NEXT:    retl
   %t0 = load %0, %0* %p
   %t1 = load %0, %0* %q
@@ -102,7 +105,7 @@ define i32 @test2() nounwind {
 ;
 ; MCU-LABEL: test2:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    calll return_false
+; MCU-NEXT:    calll return_false@PLT
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB1_2
@@ -137,14 +140,14 @@ define float @test3(i32 %x) nounwind readnone {
 ; GENERIC-NEXT:    xorl %eax, %eax
 ; GENERIC-NEXT:    testl %edi, %edi
 ; GENERIC-NEXT:    sete %al
-; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; GENERIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test3:
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; ATOM-NEXT:    testl %edi, %edi
 ; ATOM-NEXT:    sete %al
 ; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -155,7 +158,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; ATHLON-NEXT:    xorl %eax, %eax
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    sete %al
-; ATHLON-NEXT:    flds LCPI2_0(,%eax,4)
+; ATHLON-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test3:
@@ -163,7 +166,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    sete %cl
-; MCU-NEXT:    flds {{\.LCPI.*}}(,%ecx,4)
+; MCU-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; MCU-NEXT:    retl
 entry:
   %0 = icmp eq i32 %x, 0
@@ -185,7 +188,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON:       ## %bb.0: ## %entry
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    fldl {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    flds LCPI3_0
+; ATHLON-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; ATHLON-NEXT:    xorl %ecx, %ecx
 ; ATHLON-NEXT:    fucompi %st(1), %st
 ; ATHLON-NEXT:    fstp %st(0)
@@ -197,7 +200,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:    fldl {{[0-9]+}}(%esp)
-; MCU-NEXT:    flds {{\.LCPI.*}}
+; MCU-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; MCU-NEXT:    fucompp
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    xorl %edx, %edx
@@ -292,39 +295,39 @@ define void @test6(i32 %C, <4 x float>* %A, <4 x float>* %B) nounwind {
 ;
 ; ATHLON-LABEL: test6:
 ; ATHLON:       ## %bb.0:
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    flds 12(%ecx)
-; ATHLON-NEXT:    flds 8(%ecx)
-; ATHLON-NEXT:    flds 4(%ecx)
-; ATHLON-NEXT:    flds (%ecx)
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    flds 12(%eax)
+; ATHLON-NEXT:    flds 8(%eax)
+; ATHLON-NEXT:    flds 4(%eax)
 ; ATHLON-NEXT:    flds (%eax)
+; ATHLON-NEXT:    flds (%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    fxch %st(1)
 ; ATHLON-NEXT:    fcmove %st(1), %st
 ; ATHLON-NEXT:    fstp %st(1)
-; ATHLON-NEXT:    flds 4(%eax)
+; ATHLON-NEXT:    flds 4(%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(2)
 ; ATHLON-NEXT:    fcmove %st(2), %st
 ; ATHLON-NEXT:    fstp %st(2)
-; ATHLON-NEXT:    flds 8(%eax)
+; ATHLON-NEXT:    flds 8(%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(3)
 ; ATHLON-NEXT:    fcmove %st(3), %st
 ; ATHLON-NEXT:    fstp %st(3)
-; ATHLON-NEXT:    flds 12(%eax)
+; ATHLON-NEXT:    flds 12(%ecx)
 ; ATHLON-NEXT:    fmul %st, %st(0)
 ; ATHLON-NEXT:    fxch %st(4)
 ; ATHLON-NEXT:    fcmove %st(4), %st
 ; ATHLON-NEXT:    fstp %st(4)
 ; ATHLON-NEXT:    fxch %st(3)
-; ATHLON-NEXT:    fstps 12(%ecx)
+; ATHLON-NEXT:    fstps 12(%eax)
 ; ATHLON-NEXT:    fxch %st(1)
-; ATHLON-NEXT:    fstps 8(%ecx)
-; ATHLON-NEXT:    fstps 4(%ecx)
-; ATHLON-NEXT:    fstps (%ecx)
+; ATHLON-NEXT:    fstps 8(%eax)
+; ATHLON-NEXT:    fstps 4(%eax)
+; ATHLON-NEXT:    fstps (%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test6:
@@ -394,14 +397,14 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; GENERIC-NEXT:    testl %edi, %edi
 ; GENERIC-NEXT:    setns %al
 ; GENERIC-NEXT:    shlq $4, %rax
-; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; GENERIC-NEXT:    fldt (%rax,%rcx)
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test7:
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; ATOM-NEXT:    testl %edi, %edi
 ; ATOM-NEXT:    setns %al
 ; ATOM-NEXT:    shlq $4, %rax
@@ -414,7 +417,7 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; ATHLON-NEXT:    notl %eax
 ; ATHLON-NEXT:    shrl $27, %eax
 ; ATHLON-NEXT:    andl $-16, %eax
-; ATHLON-NEXT:    fldt LCPI6_0(%eax)
+; ATHLON-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test7:
@@ -422,7 +425,7 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; MCU-NEXT:    notl %eax
 ; MCU-NEXT:    shrl $27, %eax
 ; MCU-NEXT:    andl $-16, %eax
-; MCU-NEXT:    fldt {{\.LCPI.*}}(%eax)
+; MCU-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%eax)
 ; MCU-NEXT:    retl
   %tmp9 = icmp sgt i32 %tmp8, -1
   %retval = select i1 %tmp9, x86_fp80 0xK4005B400000000000000, x86_fp80 0xK40078700000000000000
@@ -505,43 +508,43 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; ATHLON-NEXT:    pushl %edi
 ; ATHLON-NEXT:    pushl %esi
 ; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    cmovnel %eax, %ecx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %ecx, %eax
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    cmovnel %eax, %edx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmovnel %edx, %ecx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; ATHLON-NEXT:    cmovnel %eax, %esi
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %edx, %esi
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; ATHLON-NEXT:    cmovnel %eax, %edi
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %edx, %edi
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; ATHLON-NEXT:    cmovnel %eax, %ebx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %edx, %ebx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; ATHLON-NEXT:    cmovnel %eax, %ebp
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %edx, %ebp
+; ATHLON-NEXT:    movl (%eax), %eax
 ; ATHLON-NEXT:    movl (%ecx), %ecx
-; ATHLON-NEXT:    movl (%edx), %edx
-; ATHLON-NEXT:    movl (%esi), %esi
-; ATHLON-NEXT:    movl (%edi), %edi
+; ATHLON-NEXT:    movl (%esi), %edx
+; ATHLON-NEXT:    movl (%edi), %esi
 ; ATHLON-NEXT:    movl (%ebx), %ebx
-; ATHLON-NEXT:    movl (%ebp), %ebp
+; ATHLON-NEXT:    movl (%ebp), %edi
+; ATHLON-NEXT:    decl %eax
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; ATHLON-NEXT:    movl %eax, 20(%ebp)
 ; ATHLON-NEXT:    decl %ecx
-; ATHLON-NEXT:    movl %ecx, 20(%eax)
+; ATHLON-NEXT:    movl %ecx, 16(%ebp)
 ; ATHLON-NEXT:    decl %edx
-; ATHLON-NEXT:    movl %edx, 16(%eax)
+; ATHLON-NEXT:    movl %edx, 12(%ebp)
 ; ATHLON-NEXT:    decl %esi
-; ATHLON-NEXT:    movl %esi, 12(%eax)
-; ATHLON-NEXT:    decl %edi
-; ATHLON-NEXT:    movl %edi, 8(%eax)
+; ATHLON-NEXT:    movl %esi, 8(%ebp)
 ; ATHLON-NEXT:    decl %ebx
-; ATHLON-NEXT:    movl %ebx, 4(%eax)
-; ATHLON-NEXT:    decl %ebp
-; ATHLON-NEXT:    movl %ebp, (%eax)
+; ATHLON-NEXT:    movl %ebx, 4(%ebp)
+; ATHLON-NEXT:    decl %edi
+; ATHLON-NEXT:    movl %edi, (%ebp)
 ; ATHLON-NEXT:    popl %esi
 ; ATHLON-NEXT:    popl %edi
 ; ATHLON-NEXT:    popl %ebx
@@ -557,63 +560,59 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB7_1
 ; MCU-NEXT:  # %bb.2:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; MCU-NEXT:    je .LBB7_5
 ; MCU-NEXT:  .LBB7_4:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MCU-NEXT:    movl (%ecx), %ecx
 ; MCU-NEXT:    je .LBB7_8
 ; MCU-NEXT:  .LBB7_7:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    movl (%esi), %esi
 ; MCU-NEXT:    je .LBB7_11
 ; MCU-NEXT:  .LBB7_10:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    movl (%edi), %edi
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:    je .LBB7_14
 ; MCU-NEXT:  .LBB7_13:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; MCU-NEXT:    movl (%ebx), %ebx
-; MCU-NEXT:    je .LBB7_17
-; MCU-NEXT:  .LBB7_16:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; MCU-NEXT:    jmp .LBB7_18
-; MCU-NEXT:  .LBB7_1:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; MCU-NEXT:    movl (%eax), %eax
+; MCU-NEXT:    jmp .LBB7_15
+; MCU-NEXT:  .LBB7_1:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
 ; MCU-NEXT:    jne .LBB7_4
 ; MCU-NEXT:  .LBB7_5:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; MCU-NEXT:    movl (%ecx), %ecx
 ; MCU-NEXT:    jne .LBB7_7
 ; MCU-NEXT:  .LBB7_8:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; MCU-NEXT:    movl (%esi), %esi
 ; MCU-NEXT:    jne .LBB7_10
 ; MCU-NEXT:  .LBB7_11:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; MCU-NEXT:    movl (%edi), %edi
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:    jne .LBB7_13
 ; MCU-NEXT:  .LBB7_14:
-; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; MCU-NEXT:    movl (%ebx), %ebx
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; MCU-NEXT:  .LBB7_15:
+; MCU-NEXT:    movl (%edi), %ebx
+; MCU-NEXT:    movl (%ecx), %edi
+; MCU-NEXT:    movl (%esi), %esi
+; MCU-NEXT:    movl (%ebp), %ecx
+; MCU-NEXT:    movl (%eax), %eax
 ; MCU-NEXT:    jne .LBB7_16
-; MCU-NEXT:  .LBB7_17:
+; MCU-NEXT:  # %bb.17:
+; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
+; MCU-NEXT:    jmp .LBB7_18
+; MCU-NEXT:  .LBB7_16:
 ; MCU-NEXT:    leal {{[0-9]+}}(%esp), %ebp
 ; MCU-NEXT:  .LBB7_18:
 ; MCU-NEXT:    movl (%ebp), %ebp
 ; MCU-NEXT:    decl %ebp
-; MCU-NEXT:    decl %ebx
-; MCU-NEXT:    decl %edi
-; MCU-NEXT:    decl %esi
-; MCU-NEXT:    decl %ecx
 ; MCU-NEXT:    decl %eax
-; MCU-NEXT:    movl %eax, 20(%edx)
-; MCU-NEXT:    movl %ecx, 16(%edx)
+; MCU-NEXT:    decl %ecx
+; MCU-NEXT:    decl %esi
+; MCU-NEXT:    decl %edi
+; MCU-NEXT:    decl %ebx
+; MCU-NEXT:    movl %ebx, 20(%edx)
+; MCU-NEXT:    movl %edi, 16(%edx)
 ; MCU-NEXT:    movl %esi, 12(%edx)
-; MCU-NEXT:    movl %edi, 8(%edx)
-; MCU-NEXT:    movl %ebx, 4(%edx)
+; MCU-NEXT:    movl %ecx, 8(%edx)
+; MCU-NEXT:    movl %eax, 4(%edx)
 ; MCU-NEXT:    movl %ebp, (%edx)
 ; MCU-NEXT:    popl %esi
 ; MCU-NEXT:    popl %edi
@@ -1206,9 +1205,9 @@ define void @clamp_i8(i32 %src, i8* %dst) {
 define void @clamp(i32 %src, i16* %dst) {
 ; GENERIC-LABEL: clamp:
 ; GENERIC:       ## %bb.0:
-; GENERIC-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
+; GENERIC-NEXT:    cmpl $32768, %edi ## imm = 0x8000
 ; GENERIC-NEXT:    movl $32767, %eax ## imm = 0x7FFF
-; GENERIC-NEXT:    cmovlel %edi, %eax
+; GENERIC-NEXT:    cmovll %edi, %eax
 ; GENERIC-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
 ; GENERIC-NEXT:    movl $32768, %ecx ## imm = 0x8000
 ; GENERIC-NEXT:    cmovgel %eax, %ecx
@@ -1217,10 +1216,10 @@ define void @clamp(i32 %src, i16* %dst) {
 ;
 ; ATOM-LABEL: clamp:
 ; ATOM:       ## %bb.0:
-; ATOM-NEXT:    cmpl $32767, %edi ## imm = 0x7FFF
+; ATOM-NEXT:    cmpl $32768, %edi ## imm = 0x8000
 ; ATOM-NEXT:    movl $32767, %eax ## imm = 0x7FFF
 ; ATOM-NEXT:    movl $32768, %ecx ## imm = 0x8000
-; ATOM-NEXT:    cmovlel %edi, %eax
+; ATOM-NEXT:    cmovll %edi, %eax
 ; ATOM-NEXT:    cmpl $-32768, %eax ## imm = 0x8000
 ; ATOM-NEXT:    cmovgel %eax, %ecx
 ; ATOM-NEXT:    movw %cx, (%rsi)
@@ -1230,9 +1229,9 @@ define void @clamp(i32 %src, i16* %dst) {
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    cmpl $32767, %ecx ## imm = 0x7FFF
+; ATHLON-NEXT:    cmpl $32768, %ecx ## imm = 0x8000
 ; ATHLON-NEXT:    movl $32767, %edx ## imm = 0x7FFF
-; ATHLON-NEXT:    cmovlel %ecx, %edx
+; ATHLON-NEXT:    cmovll %ecx, %edx
 ; ATHLON-NEXT:    cmpl $-32768, %edx ## imm = 0x8000
 ; ATHLON-NEXT:    movl $32768, %ecx ## imm = 0x8000
 ; ATHLON-NEXT:    cmovgel %edx, %ecx
@@ -1241,9 +1240,9 @@ define void @clamp(i32 %src, i16* %dst) {
 ;
 ; MCU-LABEL: clamp:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    cmpl $32767, %eax # imm = 0x7FFF
+; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
 ; MCU-NEXT:    movl $32767, %ecx # imm = 0x7FFF
-; MCU-NEXT:    jg .LBB22_2
+; MCU-NEXT:    jge .LBB22_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB22_2:
@@ -1544,4 +1543,152 @@ entry:
  %0 = or i32 %B, %A
  %1 = select i1 %cmp10, i32 %A, i32 %0
  ret i32 %1
+}
+
+define i64 @PR51612(i64 %x, i64 %y) {
+; CHECK-LABEL: PR51612:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    leal 1(%rsi), %eax
+; CHECK-NEXT:    incq %rdi
+; CHECK-NEXT:    cmovnel %edi, %eax
+; CHECK-NEXT:    andl 10, %eax
+; CHECK-NEXT:    retq
+;
+; ATHLON-LABEL: PR51612:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    incl %edx
+; ATHLON-NEXT:    addl $1, %eax
+; ATHLON-NEXT:    adcl $0, %ecx
+; ATHLON-NEXT:    cmovbl %edx, %eax
+; ATHLON-NEXT:    andl 10, %eax
+; ATHLON-NEXT:    xorl %edx, %edx
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: PR51612:
+; MCU:       # %bb.0:
+; MCU-NEXT:    addl $1, %eax
+; MCU-NEXT:    adcl $0, %edx
+; MCU-NEXT:    jae .LBB31_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; MCU-NEXT:    incl %eax
+; MCU-NEXT:  .LBB31_2:
+; MCU-NEXT:    andl 10, %eax
+; MCU-NEXT:    xorl %edx, %edx
+; MCU-NEXT:    retl
+  %add = add i64 %x, 1
+  %inc = add i64 %y, 1
+  %tobool = icmp eq i64 %add, 0
+  %sel = select i1 %tobool, i64 %inc, i64 %add
+  %i = load i32, i32* inttoptr (i32 10 to i32*), align 4
+  %conv = zext i32 %i to i64
+  %and = and i64 %sel, %conv
+  ret i64 %and
+}
+
+; The next 2 tests are for additional bugs based on PR51612.
+
+declare { i8, i1 } @llvm.uadd.with.overflow.i8(i8, i8) nounwind readnone
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
+
+define i8 @select_uaddo_common_op0(i8 %a, i8 %b, i8 %c, i1 %cond) {
+; GENERIC-LABEL: select_uaddo_common_op0:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    ## kill: def $edi killed $edi def $rdi
+; GENERIC-NEXT:    testb $1, %cl
+; GENERIC-NEXT:    cmovel %edx, %esi
+; GENERIC-NEXT:    leal (%rsi,%rdi), %eax
+; GENERIC-NEXT:    ## kill: def $al killed $al killed $eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_uaddo_common_op0:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    testb $1, %cl
+; ATOM-NEXT:    ## kill: def $edi killed $edi def $rdi
+; ATOM-NEXT:    cmovel %edx, %esi
+; ATOM-NEXT:    leal (%rsi,%rdi), %eax
+; ATOM-NEXT:    ## kill: def $al killed $al killed $eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_uaddo_common_op0:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movb {{[0-9]+}}(%esp), %al
+; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    cmovnel %ecx, %edx
+; ATHLON-NEXT:    addb (%edx), %al
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_uaddo_common_op0:
+; MCU:       # %bb.0:
+; MCU-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; MCU-NEXT:    jne .LBB32_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %ecx, %edx
+; MCU-NEXT:  .LBB32_2:
+; MCU-NEXT:    addb %dl, %al
+; MCU-NEXT:    # kill: def $al killed $al killed $eax
+; MCU-NEXT:    retl
+  %ab = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+  %ac = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %c)
+  %ab0 = extractvalue { i8, i1 } %ab, 0
+  %ac0 = extractvalue { i8, i1 } %ac, 0
+  %sel = select i1 %cond, i8 %ab0, i8 %ac0
+  ret i8 %sel
+}
+
+define i32 @select_uaddo_common_op1(i32 %a, i32 %b, i32 %c, i1 %cond) {
+; GENERIC-LABEL: select_uaddo_common_op1:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    ## kill: def $esi killed $esi def $rsi
+; GENERIC-NEXT:    ## kill: def $edi killed $edi def $rdi
+; GENERIC-NEXT:    testb $1, %cl
+; GENERIC-NEXT:    cmovel %edx, %edi
+; GENERIC-NEXT:    leal (%rdi,%rsi), %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_uaddo_common_op1:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    ## kill: def $edi killed $edi def $rdi
+; ATOM-NEXT:    testb $1, %cl
+; ATOM-NEXT:    ## kill: def $esi killed $esi def $rsi
+; ATOM-NEXT:    cmovel %edx, %edi
+; ATOM-NEXT:    leal (%rdi,%rsi), %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_uaddo_common_op1:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmovnel %eax, %ecx
+; ATHLON-NEXT:    movl (%ecx), %eax
+; ATHLON-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_uaddo_common_op1:
+; MCU:       # %bb.0:
+; MCU-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; MCU-NEXT:    jne .LBB33_2
+; MCU-NEXT:  # %bb.1:
+; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:  .LBB33_2:
+; MCU-NEXT:    addl %edx, %eax
+; MCU-NEXT:    retl
+  %ab = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  %cb = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %c, i32 %b)
+  %ab0 = extractvalue { i32, i1 } %ab, 0
+  %cb0 = extractvalue { i32, i1 } %cb, 0
+  %sel = select i1 %cond, i32 %ab0, i32 %cb0
+  ret i32 %sel
 }

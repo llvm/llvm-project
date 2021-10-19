@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
-#define LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
+#ifndef LLVM_CODEGEN_RDFREGISTERS_H
+#define LLVM_CODEGEN_RDFREGISTERS_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -113,12 +113,6 @@ namespace rdf {
 
     const uint32_t *getRegMaskBits(RegisterId R) const {
       return RegMasks.get(Register::stackSlot2Index(R));
-    }
-
-    LLVM_ATTRIBUTE_DEPRECATED(RegisterRef normalize(RegisterRef RR),
-      "This function is now an identity function");
-    RegisterRef normalize(RegisterRef RR) const {
-      return RR;
     }
 
     bool alias(RegisterRef RA, RegisterRef RB) const {
@@ -282,4 +276,4 @@ namespace std {
     }
   };
 }
-#endif // LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
+#endif // LLVM_CODEGEN_RDFREGISTERS_H

@@ -9,8 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   assert(argc == 2);
   if (!strcmp(argv[1], "pointers")) {
     void *p = malloc(1U << 16);
